@@ -1,5 +1,5 @@
-// P-DZIENNIK-ZDARZEN (E2-PR2a, E2-PR2b1, E2-PR2b2, E2-PR3a1, E2-PR3a1b, E2-PR3a2) — strażniki uśpienia bloku dziennika
-// zdarzeń w vilda_vault.js:
+// P-DZIENNIK-ZDARZEN (E2-PR2a, E2-PR2b1, E2-PR2b2, E2-PR3a1, E2-PR3a1b, E2-PR3a2, E2-PR3a3) — strażniki uśpienia bloku
+// dziennika zdarzeń w vilda_vault.js:
 // kod produkcyjny woła nowe funkcje wyłącznie z listy miejsc (literał MIEJSCA_POZA_BLOKIEM); bez bramki działają
 // sprzątanie po koncie, część Bev_ oraz kasowanie bazy (deleteDatabase) i podsumowanie wyniku (resultSummary) z części
 // Bob_, a reszta kończy się na bramce: bez otwarcia bazy kolejki, szyfrowania i żądań. Sprzątanie po koncie: kasowanie
@@ -17,6 +17,11 @@
 // zmiany do kolejki, a kroki operacji złożonych porządkują je w obrębie karty przeglądarki. Przy zamkniętej bramce
 // każda emisja to jeden odczyt pola bramki i nic więcej (bez otwarcia bazy kolejki, szyfrowania zdarzeń, blokad, kluczy
 // i żądań); hak, który niczego nie oznacza, i kroki nie czytają bramki; emissionsSettled działa bez bramki.
+// E2-PR3a3: importy (import karty z pliku — ns, scalanie kopii konta — ss, odtworzenie konta z kopii — as) są krokiem
+// i emitują partią wersje zapisane przez import i encje sekcji pliku (Bem_sekcje); znak końca partii (Bem_partia) to wpis
+// do zbioru w pamięci, a słuchacze onBulkChange (klucz _eventLog, 37 kluczy) są wołani po ostatnim dopisaniu partii.
+// Przy zamkniętej bramce każda emisja importu to jeden odczyt pola bramki, partia nie trafia do łańcucha i słuchacze nie
+// są wołani; rejestracja słuchacza działa bez bramki, pól okna i magazynów.
 // Testy źródła (vilda_vault.js, pliki produktu z git ls-files) i eksportu (prawdziwy sejf w oknie uprzęży, dane wyłącznie
 // fikcyjne).
 //
@@ -29,7 +34,9 @@
 //         bramce i zablokowanym sejfie daje pełne podsumowanie synchronicznie, bez odczytu pól okna (także
 //         VILDA_EVENT_LOG), bez zegara i bez wywołań magazynu sejfu. emissionsSettled (niechronione, E2-PR3a2) po zapisach
 //         przy zamkniętej bramce i przy zablokowanym sejfie: obietnica rozstrzygnięta wartością undefined, bez odczytu pól
-//         okna (także VILDA_EVENT_LOG), bez zegara i bez wywołań magazynu sejfu.
+//         okna (także VILDA_EVENT_LOG), bez zegara i bez wywołań magazynu sejfu. onBulkChange (niechronione, E2-PR3a3)
+//         z funkcją i bez (brak argumentu, liczba, obiekt) przy zamkniętej bramce i przy zablokowanym sejfie:
+//         synchronicznie undefined, bez odczytu pól okna, bez zegara, bez wywołań magazynu sejfu i bez wywołania słuchacza.
 //   U2(a) identyfikatory Bev_, Bob_ i Bem_ leżą między znacznikami bloku (każdy znacznik dokładnie raz) poza literałem
 //         miejsc: `_eventLog:Bev_EKSPORT` oraz wywołania z MIEJSCA_POZA_BLOKIEM (funkcja otaczająca → nazwa → liczba;
 //         wyrażenie funkcyjne jako „<najbliższa deklaracja>/(funkcja zagnieżdżona)”; drzewo składni: każde wywołanie
@@ -48,14 +55,18 @@
 //         dokładnie raz, za literałem Bev_EKSPORT; w części Bev_ identyfikatory Bob_ wyłącznie w tym literale (17 kluczy
 //         magazynu kolejki i kwarantanny) i jedno Bob_wKasowaniu w Bev_start (adapter sejfu strzeżony przy kasowaniu
 //         konta). Znacznik emisji dokładnie raz, za częścią Bob_, przed znacznikiem końca (blok w trzech częściach);
-//         w części Bev_ jedyny Bem_ to `emissionsSettled: Bem_gotowe` w literale Bev_EKSPORT, w części Bob_ żadnego;
-//         w części Bob_ dochodzi Bob_dopiszZ (blokada współdzielona konta przed Bob_dopiszPod; woła je enqueue i łańcuch
-//         dopisań części Bem_).
+//         w części Bev_ jedyne Bem_ to `emissionsSettled: Bem_gotowe` i (E2-PR3a3) `onBulkChange: Bem_naPartie`
+//         w literale Bev_EKSPORT, w części Bob_ żadnego; w części Bob_ dochodzi Bob_dopiszZ (blokada współdzielona konta
+//         przed Bob_dopiszPod; woła je enqueue i łańcuch dopisań części Bem_). E2-PR3a3: w importach (ns, ss, as) para
+//         kroku, Bem_zmiana wersji zapisanych przez import (ns 1 i ss 2 w wyrażeniach funkcyjnych, as 1), Bem_sekcje
+//         i Bem_partia — 5 wpisów literału więcej (30 wpisów, 43 wywołania Bem_); Bem_zmiana, Bem_sekcje i Bem_partia
+//         importu w bloku try kroku, Bem_sekcje i Bem_partia w samej funkcji importu, Bem_partia z literałem nazwy metody
+//         API tej funkcji, w as krok w bloku try, którego finally woła He(); samokontrola wariantami zła.
 //   U2(b) żaden plik produktu poza vilda_vault.js (git ls-files *.js *.mjs *.cjs *.html *.htm bez tests/ i docs/) nie
 //         zawiera `_eventLog`, applyEncryptedEvent, encryptEvent, nazw 14 builderów, nazw API magazynu (gateOpen,
-//         outbox…), emissionsSettled, VILDA_EVENT_LOG, klucza urządzenia, nazwy bazy kolejki (vilda_sync_ poza
-//         vilda_sync_integration.js), Bev_, Bob_ ani Bem_ (bez nazw ogólnych: enqueue, eventBytes, kinds, deleteDatabase
-//         — istnieją w innych plikach).
+//         outbox…), emissionsSettled, onBulkChange (E2-PR3a3), VILDA_EVENT_LOG, klucza urządzenia, nazwy bazy kolejki
+//         (vilda_sync_ poza vilda_sync_integration.js), Bev_, Bob_ ani Bem_ (bez nazw ogólnych: enqueue, eventBytes, kinds,
+//         deleteDatabase — istnieją w innych plikach).
 //   U2(c) część Bev_: lista zakazana (zapis, emisja, sieć, magazyny przeglądarki, legacy buildery delt, eksport
 //         ładunku, console.), także w komentarzach; część Bob_: własna lista tekstowa i reguła domknięcia na drzewie
 //         składni (acorn + eslint-scope): wolne identyfikatory wyłącznie z listy, pola okna tylko w swoich funkcjach,
@@ -73,14 +84,16 @@
 //         Date, setTimeout, localStorage, indexedDB, navigator, fetch i console w żadnym miejscu drzewa; Bob_bramka raz,
 //         jako pierwsza instrukcja Bem_zmiana (`if (!Bob_bramka()) return;`, potem jedno try z catch); Bob_wejscie
 //         i Bob_dopiszZ wyłącznie w Bem_dopisz (async, jedno try z catch); emisja i kroki synchroniczne; Bem_zHaka czysta
-//         jak podsumowanie wyniku — z samokontrolą.
+//         jak podsumowanie wyniku — z samokontrolą. E2-PR3a3: lista wolnych identyfikatorów bez zmian; synchroniczne także
+//         Bem_sekcje, Bem_partia, Bem_naPartie i Bem_powiadom; Bem_partia, Bem_naPartie i Bem_powiadom czyste (bez
+//         bramki, emisji i części Bob_ w domknięciu), Bem_sekcje sięga poza siebie tylko do Bem_SEKCJE i Bem_zmiana.
 //   U2(d) najwyższy poziom bloku (AST): w części Bev_ nazwy ^Bev_, w części Bob_ ^Bob_, w części Bem_ ^Bem_ (z nazwami
 //         wiążącymi części emisji); wyłącznie deklaracje function / async function oraz const z literałem,
 //         Object.freeze(…) albo new Map() / new Set(); argumenty Object.freeze tylko z literałów, tablic, obiektów (bez
 //         kluczy obliczanych i rozwinięć), identyfikatorów, wyrażeń funkcyjnych i zagnieżdżonego Object.freeze — bez
 //         odczytów przy ładowaniu.
-//   U2(e) eksport _eventLog zamrożony; klucze = dokładnie lista (36: 18 z E2-PR2a, 11 kluczy magazynu kolejki z E2-PR2b1,
-//         6 kluczy kwarantanny i podsumowania wyniku z E2-PR2b2 i emissionsSettled z E2-PR3a2).
+//   U2(e) eksport _eventLog zamrożony; klucze = dokładnie lista (37: 18 z E2-PR2a, 11 kluczy magazynu kolejki z E2-PR2b1,
+//         6 kluczy kwarantanny i podsumowania wyniku z E2-PR2b2, emissionsSettled z E2-PR3a2 i onBulkChange z E2-PR3a3).
 //   U4    krótki scenariusz sejfu na adapterze IndexedDB nad atrapą przy zamkniętej bramce (każda istniejąca operacja
 //         magazynu, także kwarantanny): databases() bez vilda_sync_*, brak klucza o przedrostku vilda-sync-device-v1.
 //   U4′   zwykłe użycie z usunięciem konta przy zamkniętej bramce (sejf jak w przeglądarce, moduły punktu
@@ -90,8 +103,8 @@
 //         i hak VildaPersistence.onPreferenceWrite (klucz cloud-synced, sejf odblokowany i zablokowany) przy zamkniętej
 //         bramce: odczyty pola bramki = liczba emisji na krok, 0 wpisów vilda_sync_* atrapy, 0 kluczy vilda-sync-*,
 //         0 blokad vilda-sync*, operacje crypto.subtle i żądania sieci jak na sejfie bez wstawek emisji (kopia źródła
-//         z wywołaniami Bem_ spoza bloku zastąpionymi przez void 0; jedyne żądanie to wysyłka koperty klucza „roaming”),
-//         0 sendBeacon i XMLHttpRequest.
+//         z wywołaniami Bem_ spoza bloku zastąpionymi przez void 0 — od E2-PR3a3 43 wstawki; jedyne żądanie to wysyłka
+//         koperty klucza „roaming”), 0 sendBeacon i XMLHttpRequest.
 // Każdy przypadek, który tnie blok na części, zaczyna od sprawdzenia, że znacznik magazynu jest dokładnie raz (przypadki
 // części Bem_ — także znacznik emisji).
 // Czerwone na sejfie bez kasowania konta (E2-PR2b2): literał miejsc poza blokiem U2(a) (tekst i drzewo składni), Bob_wKasowaniu
@@ -103,6 +116,12 @@
 // kluczy), U4′ ×2 (odczyty pola bramki 0 zamiast 4), U5; zielone z natury (strażniki regresji): pozostałe przypadki U1,
 // U2(b), samokontrole wzorców, form i reguł, położenie bloku i znacznik magazynu, listy tekstowe i reguła domknięcia
 // części Bob_, U2(d) części Bev_ i Bob_, U4.
+// Czerwone na bazie E2-PR3a3 (sejf 422a9a7b — z częścią emisji, bez partii importu; 10 przypadków): U1 listy kluczy
+// chronionych i niechronionych (bez onBulkChange) i U1 onBulkChange, U2(a) literał miejsc (tekst i drzewo składni) i Bem_
+// w części Bev_ (bez onBulkChange: Bem_naPartie), U2(c) domknięcie części Bem_ (brak deklaracji Bem_sekcje, Bem_partia,
+// Bem_naPartie, Bem_powiadom) i czystość funkcji partii, U2(d) części Bem_ (nazwy wiążące), U2(e) (37 kluczy), U5
+// (27 wstawek zamiast 43); zielone z natury (strażniki regresji): pozostałe przypadki U1, U2(b), samokontrole form
+// (także form importów — kod syntetyczny), wzorców i reguł, U4, U4′.
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
@@ -132,14 +151,18 @@ const ZMIANA = Object.freeze({ seq: 1, eid: '00000000-0000-4000-8000-00000000000
 const NIECZYTELNY = Object.freeze({ status: 'unreadable', reason: 'decrypt' });
 // Klucz części emisji (E2-PR3a2): rozstrzygnięcie łańcuchów dopisań, bez bramki.
 const KLUCZ_EMISJI = 'emissionsSettled';
-const KLUCZE_EKSPORTU = ['kinds', ...BUILDERY, 'encryptEvent', 'eventBytes', 'applyEncryptedEvent', ...KLUCZE_MAGAZYNU, KLUCZ_EMISJI];
+// Klucz partii importu (E2-PR3a3): rejestracja słuchacza onBulkChange, bez bramki i pól okna.
+const KLUCZ_PARTII = 'onBulkChange';
+const KLUCZE_EKSPORTU = ['kinds', ...BUILDERY, 'encryptEvent', 'eventBytes', 'applyEncryptedEvent', ...KLUCZE_MAGAZYNU, KLUCZ_EMISJI, KLUCZ_PARTII];
 const RODZAJE = ['snap', 'pfull', 'ptomb', 'stomb', 'pnote', 'pnotetomb', 'note', 'notetomb', 'plist', 'plisttomb', 'pref', 'pk', 'pktomb', 'cred'];
 const ile = (tekst, fragment) => tekst.split(fragment).length - 1;
 const ID_BEV_BOB = /(?<![A-Za-z0-9_$])B(?:ev|ob|em)_[A-Za-z0-9_$]*/g;
 // Wywołania części dziennika spoza bloku: funkcja otaczająca → nazwa → liczba. Sprzątanie po koncie w removeUser i ponowienie
 // przy odblokowaniu (E2-PR3a1); emisja zmian (E2-PR3a2): emitery hooków sejfu (Bem_hak przed słuchaczami), miejsca zapisu bez
 // haka (Bem_zmiana; w wyrażeniu funkcyjnym — „<najbliższa deklaracja>/(funkcja zagnieżdżona)”) i kroki operacji złożonych
-// (Bem_krokStart tuż przed try, Bem_krokKoniec jako jedyna instrukcja jego finally).
+// (Bem_krokStart tuż przed try, Bem_krokKoniec jako jedyna instrukcja jego finally). Importy partią (E2-PR3a3): import
+// karty z pliku (ns), scalanie (ss) i odtworzenie kopii konta (as) są krokiem; w kroku wersje zapisane przez import
+// (Bem_zmiana — w ns i ss w wyrażeniu funkcyjnym), sekcje pliku (Bem_sekcje) i znak końca partii (Bem_partia).
 const MIEJSCA_POZA_BLOKIEM = Object.freeze({
   PatientCheckpointRemoveUser: { Bob_oznacz: 1, Bob_odznacz: 1 },
   Buk_obce: { Bob_poKasowaniuSejfu: 1 },
@@ -166,7 +189,16 @@ const MIEJSCA_POZA_BLOKIEM = Object.freeze({
   Ad: { Bem_krokStart: 1, Bem_krokKoniec: 1 },
   Bkz_doKosza: { Bem_krokStart: 1, Bem_krokKoniec: 1 },
   qa: { Bem_krokStart: 1, Bem_krokKoniec: 1 },
+  ns: { Bem_krokStart: 1, Bem_krokKoniec: 1, Bem_sekcje: 1, Bem_partia: 1 },
+  'ns/(funkcja zagnieżdżona)': { Bem_zmiana: 1 },
+  ss: { Bem_krokStart: 1, Bem_krokKoniec: 1, Bem_sekcje: 1, Bem_partia: 1 },
+  'ss/(funkcja zagnieżdżona)': { Bem_zmiana: 2 },
+  as: { Bem_krokStart: 1, Bem_krokKoniec: 1, Bem_zmiana: 1, Bem_sekcje: 1, Bem_partia: 1 },
 });
+// Importy partią (E2-PR3a3): funkcja → nazwa metody API, którą podaje jedyny argument Bem_partia (literał napisu).
+// W `as` (odtworzenie konta z kopii) krok leży w bloku try, którego finally woła He() (słuchacze odblokowania) — wpisy
+// partii idą do łańcucha, zanim ruszą słuchacze odblokowania.
+const IMPORTY = Object.freeze({ ns: 'importPatientFromEnvelope', ss: 'mergeVaultBackup', as: 'restoreVaultBackup' });
 // Emitery hooków (E2-PR3a2): funkcja → nazwa hooka, którą podaje pierwszy argument Bem_hak (drugi — pierwszy parametr
 // emitera, czyli ładunek bez zmian).
 const EMITERY = Object.freeze({
@@ -230,7 +262,10 @@ const znacznikEmisjiRaz = () => {
 // wyrażenia przecinkowego w instrukcji ciała), z argumentami (nazwa hooka emitera, pierwszy parametr emitera), przed
 // pierwszym …forEach( słuchaczy; Bem_krokStart() — instrukcja tuż przed try tego samego bloku, a jego finally ma jedyną
 // instrukcję Bem_krokKoniec(); Bem_krokKoniec() wyłącznie w takim finally. Funkcja otaczająca wyrażenia funkcyjnego:
-// „<najbliższa deklaracja>/(funkcja zagnieżdżona)”.
+// „<najbliższa deklaracja>/(funkcja zagnieżdżona)”. Importy partią (E2-PR3a3, literał IMPORTY): Bem_zmiana, Bem_sekcje
+// i Bem_partia w funkcji importu leżą w bloku try jej kroku; Bem_sekcje i Bem_partia w formie domyślnej, w samej funkcji
+// importu (nie w zagnieżdżonej), Bem_partia z jedynym argumentem — literałem nazwy metody API; w `as` instrukcja
+// Bem_krokStart() leży w bloku try, którego finally woła He().
 function miejscaPozaBlokiem(zrodlo) {
   const ast = parse(zrodlo, { ecmaVersion: 'latest', sourceType: 'script' });
   const rodzic = new Map();
@@ -259,6 +294,17 @@ function miejscaPozaBlokiem(zrodlo) {
     const szukaj = (x) => { if (jest || !x || typeof x.type !== 'string') return; if (test(x)) { jest = true; return; } for (const k of Object.keys(x)) { const y = x[k]; if (Array.isArray(y)) y.forEach(szukaj); else if (y && typeof y.type === 'string') szukaj(y); } };
     szukaj(n);
     return jest;
+  };
+  // Węzeł n leży w bloku try kroku (try tuż po instrukcji Bem_krokStart()) w obrębie deklaracji d.
+  const wKroku = (n, d) => {
+    let c = n;
+    let w = rodzic.get(c);
+    while (w && w !== d) {
+      if (w.type === 'TryStatement' && w.block === c && instrukcjaWywolania(poprzednia(w), 'Bem_krokStart')) return true;
+      c = w;
+      w = rodzic.get(w);
+    }
+    return false;
   };
   const wywolanie = (x, nazwa) => x.type === 'CallExpression' && x.callee.type === 'Identifier' && x.callee.name === nazwa;
   const metoda = (x, nazwa) => x.type === 'CallExpression' && x.callee.type === 'MemberExpression' && !x.callee.computed && x.callee.property.name === nazwa;
@@ -294,6 +340,24 @@ function miejscaPozaBlokiem(zrodlo) {
       continue;
     }
     if (!(wyzej.type === 'ExpressionStatement' || nieOstatni(wyzej, p))) { bledy.push(`${gdzie}: wynik użyty (${wyzej.type})`); continue; }
+    // Importy partią (E2-PR3a3): emisje w funkcjach importu (także w ich wyrażeniach funkcyjnych) i znak końca partii leżą
+    // w bloku try kroku; Bem_sekcje i Bem_partia tylko w samej funkcji importu (nie w zagnieżdżonej), Bem_partia z jednym
+    // argumentem — literałem nazwy metody API tej funkcji; w `as` krok w bloku try, którego finally woła He().
+    const fImp = f && f.type === 'FunctionDeclaration' ? f : deklaracja(id);
+    const imp = fImp && fImp.id && Object.hasOwn(IMPORTY, fImp.id.name) ? fImp.id.name : null;
+    if (imp && ['Bem_zmiana', 'Bem_sekcje', 'Bem_partia'].includes(id.name) && !wKroku(p, fImp)) bledy.push(`${gdzie}: poza blokiem try kroku importu`);
+    if ((id.name === 'Bem_sekcje' || id.name === 'Bem_partia') && (!imp || f !== fImp)) bledy.push(`${gdzie}: poza funkcją importu (${Object.keys(IMPORTY).join(', ')}) albo w funkcji zagnieżdżonej`);
+    if (id.name === 'Bem_partia' && imp) {
+      const a0 = p.arguments[0];
+      if (p.arguments.length !== 1 || a0.type !== 'Literal' || a0.value !== IMPORTY[imp]) bledy.push(`${gdzie}: argument inny niż '${IMPORTY[imp]}'`);
+    }
+    if (id.name === 'Bem_krokStart' && imp === 'as') {
+      const blokTry = wyzej.type === 'ExpressionStatement' ? rodzic.get(wyzej) : null;
+      const tr = blokTry ? rodzic.get(blokTry) : null;
+      if (!(tr && tr.type === 'TryStatement' && tr.block === blokTry && tr.finalizer && zawiera(tr.finalizer, (x) => wywolanie(x, 'He')))) {
+        bledy.push(`${gdzie}: krok odtworzenia konta poza blokiem try, którego finally woła He()`);
+      }
+    }
     if (id.name === 'Bem_hak') {
       const hak = Object.hasOwn(EMITERY, fn) ? EMITERY[fn] : null;
       const [nazwaHaka, ladunek] = p.arguments;
@@ -381,8 +445,9 @@ beforeAll(() => {
 
 describe('U1: bramka zamknięta — każda chroniona operacja magazynu kończy się na bramce', () => {
   // Klucze bez bramki: z E2-PR2a (nie dotykają magazynu kolejki), gateOpen i resultSummary (czyste), deleteDatabase
-  // (sprzątanie po koncie) oraz emissionsSettled (E2-PR3a2: rozstrzygnięcie łańcuchów dopisań, bez pól okna i magazynów).
-  const NIECHRONIONE = ['kinds', ...BUILDERY, 'encryptEvent', 'eventBytes', 'applyEncryptedEvent', 'gateOpen', 'resultSummary', 'deleteDatabase', KLUCZ_EMISJI];
+  // (sprzątanie po koncie), emissionsSettled (E2-PR3a2: rozstrzygnięcie łańcuchów dopisań, bez pól okna i magazynów)
+  // oraz onBulkChange (E2-PR3a3: rejestracja słuchacza partii importu, bez pól okna i magazynów).
+  const NIECHRONIONE = ['kinds', ...BUILDERY, 'encryptEvent', 'eventBytes', 'applyEncryptedEvent', 'gateOpen', 'resultSummary', 'deleteDatabase', KLUCZ_EMISJI, KLUCZ_PARTII];
   const EID = '00000000-0000-4000-8000-000000000001';
   const ARGUMENTY = (k) => ({
     enqueue: ['snap', k], outboxCount: [], outboxList: [], outboxTake: [], outboxAccept: [[EID]],
@@ -485,7 +550,7 @@ describe('U1: bramka zamknięta — każda chroniona operacja magazynu kończy s
     await kazdaNaBramce(o.win, o.ev, { patientId: r.patientId, snapshotId: r.snapshotId });
   });
 
-  it('U1 (E2-PR2b2, E2-PR3a2): chronione klucze eksportu = operacje kolejki i kwarantanny (14), każdy z argumentami w U1; niechronione — klucze E2-PR2a, gateOpen, resultSummary, deleteDatabase, emissionsSettled', () => {
+  it('U1 (E2-PR2b2, E2-PR3a2, E2-PR3a3): chronione klucze eksportu = operacje kolejki i kwarantanny (14), każdy z argumentami w U1; niechronione — klucze E2-PR2a, gateOpen, resultSummary, deleteDatabase, emissionsSettled, onBulkChange', () => {
     const { win, timery } = okno();
     okna.push({ timery });
     const ev = win.VildaVault._eventLog;
@@ -638,6 +703,32 @@ describe('U1: bramka zamknięta — każda chroniona operacja magazynu kończy s
       expect(m.wyw.slice(przed), `${stan}: wywołania magazynu sejfu`).toEqual([]);
     }
   });
+
+  it('U1 (E2-PR3a3): onBulkChange (bez bramki) przy zamkniętej bramce i przy zablokowanym sejfie — z funkcją i bez (brak argumentu, liczba, obiekt): synchronicznie undefined, bez odczytu pól okna (indexedDB, localStorage, crypto, VILDA_EVENT_LOG), bez zegara, bez wywołań magazynu sejfu i bez wywołania słuchacza', async () => {
+    const o = okno();
+    okna.push(o);
+    const v = o.win.VildaVault;
+    expect(typeof v._eventLog.onBulkChange, 'API partii importu (onBulkChange)').toBe('function');
+    const m = magazynZRejestrem(v.createInMemoryAdapter());
+    v.setStorageAdapter(m.adapter);
+    await v.createUser('Fikcyjne#Bramka!2026aa', { label: 'Fikcyjna Lekarka Bramka', iterations: 1000 });
+    await v.savePatient(naglowek(1), { dedup: false });
+    await makrozadania(50);
+    const ZERO = { indexedDB: 0, localStorage: 0, crypto: 0, VILDA_EVENT_LOG: 0 };
+    let wywolania = 0;
+    const sluchacz = () => { wywolania += 1; };
+    for (const stan of ['bramka zamknięta', 'sejf zablokowany']) {
+      if (stan === 'sejf zablokowany') v.lock('manual');
+      const przed = m.wyw.length;
+      for (const [opis, argumenty] of [['funkcja', [sluchacz]], ['bez argumentu', []], ['liczba', [1]], ['obiekt', [{ fikcyjny: true }]]]) {
+        const r = bezDostepuSync(o.win, () => v._eventLog.onBulkChange(...argumenty));
+        expect(r, `${stan}: ${opis}`).toEqual({ s: undefined, blad: null, obietnica: false, zegar: 0, odczyty: ZERO });
+      }
+      await makrozadania(20);
+      expect(m.wyw.slice(przed), `${stan}: wywołania magazynu sejfu`).toEqual([]);
+    }
+    expect(wywolania, 'słuchacz bez wywołania przy rejestracji').toBe(0);
+  });
 });
 
 describe('U2(a): identyfikatory Bev_, Bob_ i Bem_ tylko w bloku; _eventLog dokładnie raz', () => {
@@ -692,6 +783,9 @@ describe('U2(a): identyfikatory Bev_, Bob_ i Bem_ tylko w bloku; _eventLog dokł
     'async function Bpu_usun(t,Bpu_s){Bem_krokStart();try{const A=b;return W(A,!0)}finally{Bem_krokKoniec()}}',
     'async function Ad(t,e){Bem_krokStart();try{const A=b;return W(A,U)}finally{Bem_krokKoniec()}}',
     'async function qa(){Bem_krokStart();try{if(!T())throw new Error("x");return{persons:a,notes:s}}finally{Bem_krokKoniec()}}',
+    'async function ns(t,e,Bpb_o){const Bpi_s=Bses_opcje(null);Bem_krokStart();try{const O=[],N=[];await Bzw_podBlokada(k,async function(){await Bkz_poImporcie(O);if(O.length)Bem_zmiana("snap",O.map(function(Bq){return{patientId:i,snapshotId:Bq.snapshotId}}),Bpi_s)});if(N.length){try{const C=await Le({patientNotes:N});_=C.n;Bem_sekcje({patientNotes:N},Bpi_s)}catch(Bpi_x){g()}}Bem_partia("importPatientFromEnvelope");return W(A,{patientId:i})}catch(Bpi_x){throw Bpz_zamien(Bpi_s,Bpi_x)}finally{Bem_krokKoniec()}}',
+    'async function ss(t,e,Bpb_o){Bem_krokStart();try{const A=b;for(const u of m)await Bzw_podBlokada(k,async function(){if(A>0){Bem_zmiana("snap",Bng_zs.map(function(Bq){return{patientId:u.patientId,snapshotId:Bq.snapshotId}}));y++}else{d++;if(Bng_zn.length)Bem_zmiana("snap",Bng_zn.map(function(Bq){return{patientId:u.patientId,snapshotId:Bq.snapshotId}}))}});await Le(a);Bem_sekcje(a);Bem_partia("mergeVaultBackup");return W(A,{mergedPatientCount:y})}finally{Bem_krokKoniec()}}',
+    'async function as(t,e,n){await Qe(),Ae();try{Bem_krokStart();try{for(const C of m){E+=1;if(J.length)Bem_zmiana("snap",J.filter(function(tt){return tt&&tt.snapshotId}).map(function(tt){return{patientId:C.patientId,snapshotId:tt.snapshotId}}))}await Le(p);Bem_sekcje(p);Bem_partia("restoreVaultBackup");return W(A,{userId:w})}finally{Bem_krokKoniec()}}finally{He()}}',
   ].join('\n');
   // Wariant jest czerwony, gdy wyszukiwacz zgłasza błąd formy albo lista miejsc różni się od literału (bez względu na kolejność).
   const czerwony = (kod) => { const w = miejscaPozaBlokiem(kod); return w.bledy.length + (takieSame(w.miejsca, MIEJSCA_POZA_BLOKIEM) ? 0 : 1); };
@@ -712,7 +806,7 @@ describe('U2(a): identyfikatory Bev_, Bob_ i Bem_ tylko w bloku; _eventLog dokł
       DOBRE.replace('catch (e) { Bob_odznacz(userId, PatientCheckpointSyncMark); throw e; } finally { g(); }', 'catch (e) { throw e; } finally { g(); } Bob_odznacz(userId, PatientCheckpointSyncMark);'),
       DOBRE.replace('const PatientCheckpointSyncMark=Bob_oznacz(userId);', 'let PatientCheckpointSyncMark=Bob_oznacz(userId);'),
       `${DOBRE}\nfunction Inna() { Bob_poRejestrze(u); }`,
-      `${DOBRE}\nfunction ns() { Bem_partia(1); }`,
+      `${DOBRE}\nfunction fs() { Bem_partia(1); }`,
       DOBRE.replace('try{go()}catch(x){r(x);} Bob_poOdblokowaniu(); }', 'try{go()}catch(x){r(x);} }').replace('$n.forEach(function(n){ n(e); });', '$n.forEach(function(n){ n(e); Bob_poOdblokowaniu(); });'),
       DOBRE.replace('try { Buk_usuniete.add(uid); Bob_poKasowaniuSejfu(uid); } catch (x) { g(); }', 'Buk_usuniete.add(uid); Bob_poKasowaniuSejfu(uid);'),
       DOBRE.replace('Bob_poKasowaniuSejfu(uid); } catch (x) { g(); }', '} catch (x) { Bob_poKasowaniuSejfu(uid); }'),
@@ -745,10 +839,44 @@ describe('U2(a): identyfikatory Bev_, Bob_ i Bem_ tylko w bloku; _eventLog dokł
       DOBRE.replace('Bem_hak("onCredentialChanged",t)', 'Bem_hak("onPasskeyChanged",t)'),
       DOBRE.replace('Bem_hak("onPatientListChanged",t)', 'Bem_hak("onPatientListChanged",{action:"save"})'),
       DOBRE.replace("  Bem_hak('onPatientDeleted', detail);", "  if (detail) Bem_hak('onPatientDeleted', detail);"),
-      `${DOBRE}\nfunction ns() { Bem_zmiana('snap', przepisane); }`,
+      `${DOBRE}\nfunction fs() { Bem_zmiana('snap', przepisane); }`,
       `${DOBRE}\nfunction Le(t) { Bem_hak('onPatientNoteChanged', t); Xr.forEach(function (c) { c(t); }); }`,
       DOBRE.replace("    Bem_zmiana('pnotetomb', id, o);", "    [id].forEach(function (x) { Bem_zmiana('pnotetomb', x, o); });"),
       DOBRE.replace('a+=1;}', 'a+=1;f(Bem_zmiana);}'),
+    ];
+    for (const [i, kod] of zle.entries()) {
+      expect(kod, `wariant ${i} różni się od form z literału`).not.toBe(DOBRE);
+      expect(czerwony(kod), `wariant ${i}`).toBeGreaterThan(0);
+    }
+  });
+
+  it('samokontrola form importów (E2-PR3a3): Bem_partia z inną nazwą, bez literału, poza krokiem albo w funkcji zagnieżdżonej, Bem_sekcje i Bem_zmiana importu poza krokiem, krok odtworzenia konta zamknięty po He() albo poza try z He() — czerwone', () => {
+    const PARTIA_AS = 'Bem_partia("restoreVaultBackup");return W(A,{userId:w})}finally{Bem_krokKoniec()}}finally{He()}}';
+    // Literał miejsc bez zmian — czerwone wyłącznie z reguły formy.
+    const tylkoForma = [
+      DOBRE.replace('Bem_partia("importPatientFromEnvelope")', 'Bem_partia("mergeVaultBackup")'),
+      DOBRE.replace('Bem_partia("mergeVaultBackup")', 'Bem_partia(nazwa)'),
+      DOBRE.replace('Bem_partia("mergeVaultBackup")', 'Bem_partia("mergeVaultBackup",1)'),
+      DOBRE.replace(PARTIA_AS, 'return W(A,{userId:w})}finally{Bem_krokKoniec()}Bem_partia("restoreVaultBackup")}finally{He()}}'),
+      DOBRE.replace('await Le(a);Bem_sekcje(a);Bem_partia("mergeVaultBackup");return W(A,{mergedPatientCount:y})}finally{Bem_krokKoniec()}}',
+        'await Le(a);Bem_partia("mergeVaultBackup");return W(A,{mergedPatientCount:y})}finally{Bem_krokKoniec()}Bem_sekcje(a)}'),
+      DOBRE.replace('async function ss(t,e,Bpb_o){Bem_krokStart();try{const A=b;for(const u of m)await Bzw_podBlokada(k,async function(){',
+        'async function ss(t,e,Bpb_o){const A=b;for(const u of m)await Bzw_podBlokada(k,async function(){').replace('}});await Le(a);Bem_sekcje(a);', '}});Bem_krokStart();try{await Le(a);Bem_sekcje(a);'),
+      DOBRE.replace('try{Bem_krokStart();try{for(const C of m){', 'Bem_krokStart();try{try{for(const C of m){').replace(PARTIA_AS, 'Bem_partia("restoreVaultBackup");return W(A,{userId:w})}finally{He()}}finally{Bem_krokKoniec()}}'),
+      DOBRE.replace('try{Bem_krokStart();try{for(const C of m){', 'Bem_krokStart();try{for(const C of m){').replace('}finally{Bem_krokKoniec()}}finally{He()}}', '}finally{Bem_krokKoniec()}He()}'),
+    ];
+    for (const [i, kod] of tylkoForma.entries()) {
+      expect(kod, `wariant formy ${i} różni się od form z literału`).not.toBe(DOBRE);
+      const w = miejscaPozaBlokiem(kod);
+      expect(takieSame(w.miejsca, MIEJSCA_POZA_BLOKIEM), `wariant formy ${i}: literał miejsc bez zmian`).toBe(true);
+      expect(w.bledy.length, `wariant formy ${i}`).toBeGreaterThan(0);
+    }
+    const zle = [
+      DOBRE.replace('Bem_partia("importPatientFromEnvelope");return', '[0].forEach(function(){Bem_partia("importPatientFromEnvelope")});return'),
+      DOBRE.replace('Bem_sekcje({patientNotes:N},Bpi_s)', '[N].forEach(function(x){Bem_sekcje({patientNotes:x},Bpi_s)})'),
+      DOBRE.replace('try{Bem_krokStart();try{for(const C of m){', 'for(const C of m){Bem_zmiana("snap",[])}try{Bem_krokStart();try{for(const C of m){'),
+      `${DOBRE}\nfunction fs() { Bem_sekcje(t); }`,
+      `${DOBRE}\nfunction fs() { Bem_krokStart();try{Bem_partia("importPatientFromEnvelope")}finally{Bem_krokKoniec()} }`,
     ];
     for (const [i, kod] of zle.entries()) {
       expect(kod, `wariant ${i} różni się od form z literału`).not.toBe(DOBRE);
@@ -806,13 +934,13 @@ describe('U2(a): identyfikatory Bev_, Bob_ i Bem_ tylko w bloku; _eventLog dokł
     expect(bem.trim().length, 'część Bem_ nie jest pusta').toBeGreaterThan(1000);
   });
 
-  it('U2(a) (E2-PR3a2): w części Bev_ jedyny identyfikator Bem_ to emissionsSettled: Bem_gotowe w literale Bev_EKSPORT; w części Bob_ brak Bem_', () => {
+  it('U2(a) (E2-PR3a2, E2-PR3a3): w części Bev_ jedyne identyfikatory Bem_ to emissionsSettled: Bem_gotowe i onBulkChange: Bem_naPartie w literale Bev_EKSPORT; w części Bob_ brak Bem_', () => {
     znacznikEmisjiRaz();
     const { a, bev, bob } = czesci();
     const lit = literalEksportu();
     const wBev = [...bev.matchAll(/(?<![A-Za-z0-9_$])Bem_[A-Za-z0-9_$]*/g)].map((m) => ({ poz: a + m.index, nazwa: m[0] }));
-    expect(wBev.map((x) => `${x.nazwa}${x.poz > lit.start && x.poz < lit.koniec ? ' w Bev_EKSPORT' : ''}`), 'Bem_ w części Bev_').toEqual(['Bem_gotowe w Bev_EKSPORT']);
-    expect([...lit.tekst.matchAll(/(\w+)\s*:\s*(Bem_[A-Za-z0-9_$]*)/g)].map((m) => `${m[1]}: ${m[2]}`)).toEqual([`${KLUCZ_EMISJI}: Bem_gotowe`]);
+    expect(wBev.map((x) => `${x.nazwa}${x.poz > lit.start && x.poz < lit.koniec ? ' w Bev_EKSPORT' : ''}`), 'Bem_ w części Bev_').toEqual(['Bem_gotowe w Bev_EKSPORT', 'Bem_naPartie w Bev_EKSPORT']);
+    expect([...lit.tekst.matchAll(/(\w+)\s*:\s*(Bem_[A-Za-z0-9_$]*)/g)].map((m) => `${m[1]}: ${m[2]}`)).toEqual([`${KLUCZ_EMISJI}: Bem_gotowe`, `${KLUCZ_PARTII}: Bem_naPartie`]);
     expect(bob.match(/(?<![A-Za-z0-9_$])Bem_[A-Za-z0-9_$]*/g), 'Bem_ w części Bob_').toBe(null);
   });
 
@@ -844,9 +972,9 @@ describe('U2(a): identyfikatory Bev_, Bob_ i Bem_ tylko w bloku; _eventLog dokł
 
 describe('U2(b): pliki produktu poza sejfem nie znają nowego API', () => {
   const NAZWY = ['_eventLog', 'applyEncryptedEvent', 'encryptEvent', ...BUILDERY, 'VILDA_EVENT_LOG', PRZEDROSTEK_URZADZENIA,
-    ...KLUCZE_MAGAZYNU.filter((k) => k !== 'enqueue' && k !== 'deleteDatabase'), KLUCZ_EMISJI];
+    ...KLUCZE_MAGAZYNU.filter((k) => k !== 'enqueue' && k !== 'deleteDatabase'), KLUCZ_EMISJI, KLUCZ_PARTII];
   const WZORCE = [/vilda_sync_(?!integration\.js)/, /(?<![A-Za-z0-9_$])Bev_/, /(?<![A-Za-z0-9_$])Bob_/, /(?<![A-Za-z0-9_$])Bem_/];
-  it('żaden plik produktu poza vilda_vault.js nie zawiera _eventLog, nazw API dziennika, magazynu i emisji (emissionsSettled), VILDA_EVENT_LOG, klucza urządzenia, nazwy bazy kolejki, Bev_, Bob_ ani Bem_', () => {
+  it('żaden plik produktu poza vilda_vault.js nie zawiera _eventLog, nazw API dziennika, magazynu, emisji i partii (emissionsSettled, onBulkChange), VILDA_EVENT_LOG, klucza urządzenia, nazwy bazy kolejki, Bev_, Bob_ ani Bem_', () => {
     const winne = [];
     for (const plik of plikiProdukcyjne()) {
       const tresc = fs.readFileSync(path.join(KORZEN, plik), 'utf8');
@@ -1155,8 +1283,10 @@ describe('U2(c): wywołania zakazane i reguła domknięcia części magazynu', (
   // Zakazane w części Bem_ w każdym miejscu drzewa (wolne, lokalne i jako nazwy pól): okno, zegar, magazyny przeglądarki,
   // sieć, Web Locks, konsola.
   const ZAKAZANE_BEM = ['v', 'Date', 'setTimeout', 'localStorage', 'indexedDB', 'navigator', 'fetch', 'console'];
-  // Funkcje części Bem_ wołane z emiterów i operacji: synchroniczne (emitery nie czekają na wynik kolejki).
-  const SYNCHRONICZNE_BEM = ['Bem_hak', 'Bem_zHaka', 'Bem_zmiana', 'Bem_krokStart', 'Bem_krokKoniec'];
+  // Funkcje części Bem_ wołane z emiterów i operacji: synchroniczne (emitery nie czekają na wynik kolejki). E2-PR3a3:
+  // także sekcje pliku i znak końca partii (wołane z importów), rejestracja słuchacza partii i powiadomienie słuchaczy.
+  const SYNCHRONICZNE_BEM = ['Bem_hak', 'Bem_zHaka', 'Bem_zmiana', 'Bem_krokStart', 'Bem_krokKoniec', 'Bem_sekcje', 'Bem_partia', 'Bem_naPartie',
+    'Bem_powiadom'];
   function analizujBem(zrodlo) {
     const ast = parse(zrodlo, { ecmaVersion: 'latest', sourceType: 'script', ranges: true });
     const sm = analyze(ast, { ecmaVersion: 2022, sourceType: 'script' });
@@ -1219,6 +1349,27 @@ describe('U2(c): wywołania zakazane i reguła domknięcia części magazynu', (
     expect(!!f && !f.async && !f.generator, 'Bem_zHaka synchroniczna').toBe(true);
   });
 
+  it('część Bem_ (E2-PR3a3): Bem_partia, Bem_naPartie i Bem_powiadom są czyste — w domknięciu wywołań bez bramki, emisji, sesji, części Bob_ i pól okna; Bem_sekcje sięga poza siebie tylko do Bem_SEKCJE i Bem_zmiana (bramka wyłącznie przez emisję)', () => {
+    znacznikEmisjiRaz();
+    const tekst = blok().tekst;
+    for (const nazwa of ['Bem_partia', 'Bem_naPartie', 'Bem_powiadom']) {
+      const { osiagniete } = domkniecie(tekst, nazwa);
+      expect(osiagniete.has(nazwa), nazwa).toBe(true);
+      expect(nieczyste(tekst, nazwa), `${nazwa}: wolne identyfikatory spoza listy czystych`).toEqual([]);
+      expect([...osiagniete].filter((x) => !x.startsWith('Bem_') || ['Bem_zmiana', 'Bem_hak', 'Bem_sekcje', 'Bem_doLancucha', 'Bem_dopisz'].includes(x)),
+        `${nazwa}: funkcje bramki, emisji i magazynu w domknięciu`).toEqual([]);
+    }
+    const ast = parse(czesci().bem, { ecmaVersion: 'latest', sourceType: 'script', ranges: true });
+    const sm = analyze(ast, { ecmaVersion: 2022, sourceType: 'script' });
+    const f = ast.body.find((s) => s.type === 'FunctionDeclaration' && s.id.name === 'Bem_sekcje');
+    expect(!!f, 'deklaracja Bem_sekcje').toBe(true);
+    const odwolania = sm.scopes.flatMap((sc) => sc.references)
+      .filter((r) => r.identifier.range[0] >= f.range[0] && r.identifier.range[1] <= f.range[1])
+      .filter((r) => !r.resolved || r.resolved.scope.type === 'global')
+      .map((r) => r.identifier.name);
+    expect([...new Set(odwolania)].filter((n) => !CZYSTE.has(n)).sort(), 'Bem_sekcje: odwołania poza funkcję').toEqual(['Bem_SEKCJE', 'Bem_zmiana']);
+  });
+
   it('samokontrola reguły domknięcia części Bem_: okno, zegar, magazyny, sieć, konsola, stan logowania, bramka poza Bem_zmiana albo nie jako pierwsza instrukcja, wejście i dopisanie poza Bem_dopisz, emisja async — czerwone; część w kształcie z projektu zielona', () => {
     const DOBRA = [
       'const Bem_ogony = new Map();',
@@ -1231,6 +1382,12 @@ describe('U2(c): wywołania zakazane i reguła domknięcia części magazynu', (
       'function Bem_doLancucha(z) { const p = (Bem_ogony.get(z.uid) || Promise.resolve()).then(function () { return Bem_dopisz(z); }); Bem_ogony.set(z.uid, p); }',
       'async function Bem_dopisz(z) { try { if (Bob_wejscie() || Bob_argumentyDopisania(z.kind, z.klucze, undefined)) return; await Bob_dopiszZ(z.kind, z.klucze, undefined, z.s, z.uid); } catch (x) { } }',
       'function Bem_gotowe() { return Promise.all(Array.from(Bem_ogony.values())).then(function () { return undefined; }); }',
+      'const Bem_partie = new Set();',
+      'const Bem_sluchaczePartii = new Set();',
+      'function Bem_sekcje(l, s) { try { const ids = Array.isArray(l.patientNotes) ? l.patientNotes.map(function (e) { return e.id; }) : []; if (ids.length) Bem_zmiana("pnote", ids, s); const k = l.userPreferences && typeof l.userPreferences === "object" ? Object.keys(l.userPreferences) : []; if (k.length) Bem_zmiana("pref", k, s); } catch (x) { } }',
+      'function Bem_partia(nazwa) { if ((Bem_kroki.get("n") || 0) > 0) Bem_partie.add(String(nazwa)); }',
+      'function Bem_naPartie(cb) { if (typeof cb === "function") Bem_sluchaczePartii.add(cb); }',
+      'function Bem_powiadom(p) { Bem_sluchaczePartii.forEach(function (cb) { try { cb({ reason: p.reason, count: p.wiersze }); } catch (x) { } }); }',
     ].join('\n');
     expect(analizujBem(DOBRA)).toEqual([]);
     const czerwone = [
@@ -1257,6 +1414,13 @@ describe('U2(c): wywołania zakazane i reguła domknięcia części magazynu', (
       `${DOBRA}\nfunction Bem_x() { return I().getRegistryEntry(1); }`,
       `${DOBRA}\nfunction Bem_x() { return Bob_dopiszPod(); }`,
       `${DOBRA}\nfunction Bem_x() { return crypto.subtle; }`,
+      // E2-PR3a3: sekcje pliku z bramką poza Bem_zmiana, powiadomienie z konsolą, partia z polem okna, funkcje partii async.
+      DOBRA.replace('function Bem_sekcje(l, s) { try {', 'function Bem_sekcje(l, s) { if (!Bob_bramka()) return; try {'),
+      DOBRA.replace('try { cb({ reason: p.reason, count: p.wiersze }); } catch (x) { }', 'try { cb({ reason: p.reason, count: p.wiersze }); } catch (x) { console.warn(x); }'),
+      DOBRA.replace('if (typeof cb === "function") Bem_sluchaczePartii.add(cb);', 'if (typeof cb === "function" && v.VILDA_EVENT_LOG) Bem_sluchaczePartii.add(cb);'),
+      DOBRA.replace('function Bem_partia(nazwa) {', 'async function Bem_partia(nazwa) {'),
+      DOBRA.replace('function Bem_powiadom(p) {', 'async function Bem_powiadom(p) {'),
+      DOBRA.replace('function Bem_powiadom(p) { Bem_sluchaczePartii.forEach(function (cb) {', 'function Bem_powiadom(p) { Bob_wejscie(); Bem_sluchaczePartii.forEach(function (cb) {'),
     ];
     for (const [i, kod] of czerwone.entries()) {
       expect(kod, `wariant ${i} różni się od części w kształcie z projektu`).not.toBe(DOBRA);
@@ -1328,7 +1492,9 @@ describe('U2(d): najwyższy poziom bloku — tylko deklaracje bez skutków przy 
   });
   // Nazwy wiążące części emisji (funkcje i stan w pamięci dokumentu).
   const NAZWY_BEM = ['Bem_hak', 'Bem_zHaka', 'Bem_zmiana', 'Bem_krokStart', 'Bem_krokKoniec', 'Bem_doLancucha', 'Bem_dopisz', 'Bem_gotowe',
-    'Bem_klucz', 'Bem_RANGI', 'Bem_ogony', 'Bem_kroki', 'Bem_odlozone'];
+    'Bem_klucz', 'Bem_RANGI', 'Bem_ogony', 'Bem_kroki', 'Bem_odlozone',
+    // E2-PR3a3: partie importu.
+    'Bem_sekcje', 'Bem_partia', 'Bem_naPartie', 'Bem_powiadom', 'Bem_partie', 'Bem_sluchaczePartii', 'Bem_SEKCJE'];
   it('U2(d) (E2-PR3a2): część Bem_ (^Bem_) — function / async function albo const z literałem, Object.freeze(…) z dozwolonymi typami, new Map() / new Set(); są nazwy wiążące części', () => {
     znacznikEmisjiRaz();
     const ast = parse(czesci().bem, { ecmaVersion: 'latest', sourceType: 'script' });
@@ -1351,10 +1517,10 @@ describe('U2(d): najwyższy poziom bloku — tylko deklaracje bez skutków przy 
 });
 
 describe('U2(e): eksport _eventLog zamrożony, klucze dokładnie z listy', () => {
-  it('Object.isFrozen, klucze = lista E2-PR2a, 11 kluczy magazynu kolejki, 6 kluczy kwarantanny i podsumowania wyniku oraz emissionsSettled z E2-PR3a2 (36), kinds zamrożone (14 rodzajów), funkcje', () => {
+  it('Object.isFrozen, klucze = lista E2-PR2a, 11 kluczy magazynu kolejki, 6 kluczy kwarantanny i podsumowania wyniku, emissionsSettled z E2-PR3a2 i onBulkChange z E2-PR3a3 (37), kinds zamrożone (14 rodzajów), funkcje', () => {
     expect(typeof eksport).toBe('object');
     expect(Object.isFrozen(eksport)).toBe(true);
-    expect(KLUCZE_EKSPORTU).toHaveLength(36);
+    expect(KLUCZE_EKSPORTU).toHaveLength(37);
     expect(Object.keys(eksport).sort()).toEqual([...KLUCZE_EKSPORTU].sort());
     expect(Object.isFrozen(eksport.kinds)).toBe(true);
     expect(eksport.kinds).toEqual(RODZAJE);

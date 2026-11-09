@@ -1,5 +1,8 @@
-// P-DZIENNIK-ZDARZEN (E2-PR3a2) — mechanizm emisji zmian do kolejki: emitery hooków i miejsca zapisu sejfu wołają
-// emisję (część Bem_ bloku), emisja kończy się na bramce albo dopisuje zmianę w tle łańcuchem dopisań konta.
+// P-DZIENNIK-ZDARZEN (E2-PR3a2, E2-PR3a3) — mechanizm emisji zmian do kolejki: emitery hooków i miejsca zapisu sejfu
+// wołają emisję (część Bem_ bloku), emisja kończy się na bramce albo dopisuje zmianę w tle łańcuchem dopisań konta.
+// E2-PR3a3: importy (import karty z pliku, scalanie i odtworzenie kopii konta) są krokiem — partia to emisje kroku
+// importu, idzie do łańcucha przy zamknięciu kroku, a po ostatnim dopisaniu partii (znacznik na końcu łańcucha konta)
+// słuchacze VildaVault._eventLog.onBulkChange dostają { reason: nazwa metody importu, count: liczba dopisanych wierszy }.
 // Prawdziwy sejf w oknie uprzęży tests/support/okno-magazynu.mjs (emisja: true, moduły punktu odzyskiwania) na adapterze
 // IndexedDB sejfu nad atrapą tests/support/atrapa-indexeddb.mjs (tryb „Komputer prywatny”, jeśli przypadek nie mówi
 // inaczej), atrapa Web Locks okna (o.locks: test trzyma blokadę vilda-sync-db:<userId>, żeby łańcuch stał), sztuczny zegar
@@ -9,7 +12,8 @@
 // Dane WYŁĄCZNIE FIKCYJNE („Testowy Jan…”, „Fikcyjna notatka…”), bez PESEL.
 //
 // PRZYPADKI
-//   EM1  bramka zamknięta: każda metoda danych z listy METODY_DANYCH uprzęży — odczyty pola bramki = liczba emisji (> 0),
+//   EM1  bramka zamknięta: każda metoda danych z listy METODY_DANYCH uprzęży (od E2-PR3a3 także restoreVaultBackup) —
+//        odczyty pola bramki = liczba emisji (> 0),
 //        w trakcie emisji 0 odczytów indexedDB, localStorage i crypto (opakowane funkcje Bem_ w kopii sejfu), 0 żądań
 //        blokad vilda-sync*, 0 wpisów vilda_sync_* w dzienniku atrapy.
 //   EM2  hak bez znaczenia (usunięcie wersji z isSnapshotDelete, scalanie notatek pacjenta i list z akcją merge, zmiana
@@ -40,17 +44,38 @@
 //        zamknięta w trakcie łańcucha — bez wiersza.
 //   EM23 dwie karty przeglądarki: każda ma własny łańcuch, wiersze obu w jednej kolejce, w każdej karcie FIFO.
 //   EM24 dwie poprawki szybko po sobie przed dopisaniem: jeden wiersz z treścią późniejszą (reguła ogona).
+//   EM25 krok importu (scalenie kopii z wersją z kosza i sekcjami): przy zamknięciu kroku emisje są, a w łańcuchu
+//        jeszcze nic; wiersze w kolejności rang; wersja z kosza (emisja zapisu importu i zdjęcia wpisu kosza) jeden raz.
+//   EM26 onBulkChange po ostatnim dopisaniu partii: w słuchaczu wszystkie wiersze partii są w kolejce; jedno wywołanie
+//        na import, ładunek dokładnie { reason, count }, osobny obiekt dla każdego słuchacza.
+//   EM27 bramka zamknięta, import karty, scalenie i odtworzenie kopii konta: odczyty pola bramki = liczba emisji, w emisji
+//        0 odczytów indexedDB, localStorage i crypto, bez bazy vilda_sync_*, blokad kolejki i wywołania słuchacza.
+//   EM28 „Komputer w pracy” i „Zaloguj jednorazowo” przy otwartej bramce (import karty, scalenie kopii konta): bez bazy
+//        kolejki, kluczy vilda-sync-*, blokad i wywołania słuchacza.
+//   EM29 słuchacz rzuca: drugi słuchacz wywołany, następne dopisania, następna partia i emissionsSettled bez zmian.
+//   EM30 import pliku karty przerwany zmianą sesji (konto B, ponowne zalogowanie A, sama blokada): krok zamknięty
+//        (następna emisja nie czeka), bez onBulkChange, wpisy partii z sesją importu — bez wiersza.
+//   EM31 blokada konta trzymana przez test: import kończy się przed wierszami partii, po zwolnieniu wiersze
+//        i onBulkChange; limit 20 s — count bez wpisu, który nie dał wiersza, łańcuch idzie dalej.
+//   EM32 emissionsSettled czeka na znacznik partii: rozstrzyga się po wywołaniu słuchacza.
+//   EM33 dwa importy kolejno: dwa wywołania, każde z własnym count; znak końca partii poza krokiem bez skutku (kopia
+//        sejfu z dodatkowym wywołaniem Bem_partia w emiterze onPatientSaved: poza krokiem — bez wywołania, w kroku
+//        „Scal pacjentów” — jedno).
 //
 // Przypadki mechanizmu zaczynają od sprawdzenia, że sejf ma część emisji (Bem_zmiana w kopii z licznikiem); strażniki
-// regresji (EM3, EM4, EM19 enqueue, EM20) — bez tego sprawdzenia.
+// regresji (EM3, EM4, EM19 enqueue, EM20, EM28) — bez tego sprawdzenia.
 // Czerwone na bazie (sejf bez części emisji): EM1, EM2, EM5–EM18, EM19 (łańcuch emisji), EM21–EM24. Zielone z natury
 // (strażniki regresji): EM3, EM4 (bez emisji nic nie powstaje), EM19 (enqueue — blokada konta była już w enqueue), EM20.
+// Czerwone na bazie E2-PR3a3 (sejf 422a9a7b — z częścią emisji, bez partii importu; 12 przypadków): EM1 (odtworzenie
+// konta z kopii bez emisji), EM25, EM26, EM29, EM30 ×3, EM31 ×2, EM32, EM33 ×2 (brak onBulkChange i wierszy sekcji).
+// Zielone z natury (strażniki regresji): EM27, EM28 (zamknięta bramka i tryby bez kolejki: bez bazy kolejki i bez
+// wywołania słuchacza także przed partiami; emisje z reguły zdjęcia wpisu kosza z E2-PR3a2), EM2–EM24.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   METODY_DANYCH, SKRYPTY_PUNKTU, drugieOkno, nazwaBazy, nazwaBlokady, oknoMagazynu, przechwycZadaniaWTle, zmienRekord,
 } from '../support/okno-magazynu.mjs';
 import { naglowek } from './sesja-zapisu-uprzaz.mjs';
-import { licznikEmisji } from '../support/sejf-bez-wstawek.mjs';
+import { ZRODLO_SEJFU, licznikEmisji } from '../support/sejf-bez-wstawek.mjs';
 
 const START = Date.parse('2026-03-02T08:00:00.000Z');
 const NOWE_HASLO = 'Fikcyjne#NoweHaslo!2026xx';
@@ -79,11 +104,11 @@ afterEach(async () => {
 });
 
 // Okno z kopią sejfu z licznikiem emisji i polem bramki z getterem (odczyty liczone od chwili po utworzeniu kont).
-// opcje: bramka (true — otwarta), opakuj i przy (licznik), wymagajEmisji (domyślnie true: sejf musi mieć Bem_zmiana —
-// przypadek mechanizmu emisji kończy się od razu na sejfie bez części emisji; false — strażniki regresji EM3, EM4,
-// EM19 enqueue i EM20), reszta do oknoMagazynu.
-async function okno({ bramka = false, opakuj = false, przy = null, wymagajEmisji = true, ...reszta } = {}) {
-  const l = licznikEmisji({ opakuj: opakuj && wymagajEmisji, przy });
+// opcje: bramka (true — otwarta), opakuj, przy i zrodlo (licznik; zrodlo — tekst sejfu zamiast pliku z repozytorium),
+// wymagajEmisji (domyślnie true: sejf musi mieć Bem_zmiana — przypadek mechanizmu emisji kończy się od razu na sejfie bez
+// części emisji; false — strażniki regresji EM3, EM4, EM19 enqueue, EM20 i EM28), reszta do oknoMagazynu.
+async function okno({ bramka = false, opakuj = false, przy = null, zrodlo = undefined, wymagajEmisji = true, ...reszta } = {}) {
+  const l = licznikEmisji({ opakuj: opakuj && wymagajEmisji, przy, ...(zrodlo ? { zrodlo } : {}) });
   if (wymagajEmisji) expect(l.jest, 'część emisji sejfu (Bem_zmiana)').toBe(true);
   const o = await oknoMagazynu({ konta: 'A', skrypty: SKRYPTY_PUNKTU, ...reszta, emisja: true, bramka: false, zrodla: { 'vilda_vault.js': l.zaladuj } });
   okna.push(o);
@@ -253,6 +278,14 @@ function operacjeDanych(o) {
       tik();
       return v.mergeVaultBackup(kopia, o.A.haslo);
     }, { przygotowanie: 3 }],
+    // Odtworzenie konta z kopii (E2-PR3a3) emituje wersje każdej karty i sekcje kopii w sesji nowego konta — na końcu
+    // listy, bo potem zalogowane jest konto z kopii.
+    ['restoreVaultBackup', async () => {
+      const kopia = await v.exportVaultBackup();
+      tik();
+      o.zablokuj();
+      return v.restoreVaultBackup(kopia, o.A.haslo, { label: 'Fikcyjne konto z kopii' });
+    }],
   ];
 }
 
@@ -804,5 +837,339 @@ describe('EM19–EM24: dopisanie, enqueue, usuwanie konta, emissionsSettled, dwi
     expect((await B.ev.applyEncryptedEvent(wiersze[0].env)).status).toBe('applied');
     await B.cisza();
     expect((await B.v.getPatientNote(n.id)).body).toBe('Fikcyjna treść 3.');
+  }, 60_000);
+});
+
+// ── EM25–EM33: partie importu (E2-PR3a3) ─────────────────────────────────────────────────────────────────────────────
+// Karta „Testowy Jan<i>” (dwie wersje) z dwiema notatkami, plik karty, potem „Usuń pacjenta”: import pliku przywraca
+// kartę — partia snap ×2, pnote ×2 (4 wiersze).
+async function plikKartyUsunietej(o, i = 1) {
+  const k = await karta(o, i);
+  const N = [];
+  for (const n of [1, 2]) {
+    N.push((await o.v.savePatientNote({ patientId: k.P, title: `Fikcyjna notatka ${n}`, body: 'Fikcyjna treść.', category: 'inne' })).id);
+    tik();
+  }
+  const plik = await o.v.exportPatientEnvelope(k.P);
+  tik();
+  await o.v.removePatient(k.P);
+  tik();
+  return { ...k, N, plik };
+}
+// Słuchacz onBulkChange zapisujący ładunki (sejf bez części partii — wyjątek, przypadek czerwony).
+const sluchaczPartii = (o) => {
+  const l = [];
+  o.ev.onBulkChange((d) => { l.push(d); });
+  return l;
+};
+// Klucze emisji (Bem_zmiana dostaje klucz jednej encji albo tablicę kluczy).
+const kluczeEmisji = (e) => (Array.isArray(e.klucze) ? e.klucze : [e.klucze]);
+const szablon = (tytul = 'Fikcyjny szablon') => ({ title: tytul, category: 'badanie', body: 'Fikcyjna treść szablonu.' });
+
+describe('EM25–EM33: partie importu (E2-PR3a3)', () => {
+  it('EM25: krok importu — scalenie kopii z wersją z kosza i sekcjami: partia idzie do łańcucha dopiero przy zamknięciu kroku, wiersze w kolejności rang, wersja z kosza jeden raz', async () => {
+    const zamkniecia = [];
+    const stan = { o: null };
+    const przy = (nazwa, faza) => {
+      if (faza === 'wejscie' && nazwa === 'Bem_krokKoniec' && stan.o) zamkniecia.push({ zadan: stan.o.zadaniaKolejki().length, emisji: stan.o.l.emisje.length });
+    };
+    const o = await okno({ bramka: true, opakuj: true, przy });
+    const k = await karta(o);
+    const n = await o.v.savePatientNote({ patientId: k.P, title: 'Fikcyjna notatka', body: 'Fikcyjna treść.', category: 'inne' });
+    tik();
+    const L = await o.v.saveNote(szablon());
+    tik();
+    const LI = await o.v.savePatientList({ name: 'Fikcyjna lista', memberIds: [k.P] });
+    tik();
+    await o.v.setWaitlistSchedule('Fikcyjny zabieg 1', { dateISO: '2026-12-01' });
+    tik();
+    const kopia = await o.v.exportVaultBackup();
+    tik();
+    await o.v.moveSnapshotToTrash(k.P, k.S1);
+    tik();
+    await o.gotowe();
+    const partie = sluchaczPartii(o);
+    const s0 = ostatni(o);
+    const z0 = o.zadaniaKolejki().length;
+    const e0 = o.l.emisje.length;
+    stan.o = o;
+    await o.v.mergeVaultBackup(kopia, o.A.haslo);
+    stan.o = null;
+    await o.gotowe();
+    expect(zamkniecia.map((z) => ({ wpisyLancucha: z.zadan - z0, emisje: z.emisji - e0 })), 'przy zamknięciu kroku importu: emisje są, w łańcuchu jeszcze nic')
+      .toEqual([{ wpisyLancucha: 0, emisje: o.l.emisje.length - e0 }]);
+    const emisje = o.l.emisje.slice(e0);
+    expect(emisje.flatMap(kluczeEmisji).filter((x) => x && x.snapshotId === k.S1).length, 'wersja z kosza: emisja zapisu importu i zdjęcia wpisu kosza').toBe(2);
+    expect(po(o, s0).map((w) => [w.kind, w.entityKey]), 'wiersze w kolejności rang, wersja z kosza raz').toEqual([
+      ['snap', `${k.P}/${k.S1}`], ['pnote', n.id], ['note', L.id], ['plist', LI.id], ['pref', 'wlsched'],
+    ]);
+    // Wpisy łańcucha = żądania blokady konta: wersja raz, każda encja sekcji pliku z nagrobkiem tego samego identyfikatora
+    // (nagrobek bez rekordu — wpis bez wiersza), preferencja.
+    expect(o.zadaniaKolejki().length - z0, 'wpisy łańcucha').toBe(1 + 2 + 2 + 2 + 1);
+    expect(partie).toEqual([{ reason: 'mergeVaultBackup', count: 5 }]);
+  }, 60_000);
+
+  it('EM26: onBulkChange po ostatnim dopisaniu partii — w słuchaczu wszystkie wiersze partii są w kolejce; jedno wywołanie na import, ładunek dokładnie { reason, count }, osobny obiekt dla każdego słuchacza', async () => {
+    const o = await okno({ bramka: true });
+    const k = await plikKartyUsunietej(o);
+    await o.gotowe();
+    const s0 = ostatni(o);
+    const wywolania = [];
+    for (const nr of [1, 2]) o.ev.onBulkChange((d) => { wywolania.push({ nr, d, klucze: Object.keys(d).sort(), wKolejce: rodzaje(po(o, s0)) }); });
+    tik();
+    const r = await o.v.importPatientFromEnvelope(k.plik, o.A.haslo);
+    expect(r.patientId, 'kontrola: import karty z pliku').toBe(k.P);
+    await o.gotowe();
+    const partia = ['snap', 'snap', 'pnote', 'pnote'];
+    expect(rodzaje(po(o, s0))).toEqual(partia);
+    expect(wywolania.map((x) => ({ nr: x.nr, klucze: x.klucze, wKolejce: x.wKolejce }))).toEqual([
+      { nr: 1, klucze: ['count', 'reason'], wKolejce: partia }, { nr: 2, klucze: ['count', 'reason'], wKolejce: partia },
+    ]);
+    for (const x of wywolania) expect(x.d).toEqual({ reason: 'importPatientFromEnvelope', count: 4 });
+    expect(wywolania[0].d, 'każdy słuchacz dostaje własny obiekt').not.toBe(wywolania[1].d);
+  }, 60_000);
+
+  // Wersja w koszu wraca z pliku i z kopii konta, a zdjęcie wpisu kosza emituje wersję (reguła miejsca zapisu
+  // z E2-PR3a2, niezależna od partii); emisje każdego importu (> 0) sprawdza EM1.
+  it('EM27: bramka zamknięta — import karty, scalenie i odtworzenie kopii konta: odczyty pola bramki = liczba emisji, w emisji bez indexedDB, localStorage i crypto, bez bazy vilda_sync_*, blokad kolejki i wywołania słuchacza', async () => {
+    const o = await okno({ opakuj: true });
+    const pola = { indexedDB: 0, localStorage: 0, crypto: 0 };
+    for (const pole of Object.keys(pola)) {
+      const w = o.win[pole];
+      Object.defineProperty(o.win, pole, { get() { if (o.l.wEmisji()) pola[pole] += 1; return w; }, configurable: true });
+    }
+    const partie = [];
+    if (typeof o.ev.onBulkChange === 'function') o.ev.onBulkChange((d) => { partie.push(d); });
+    const k = await karta(o);
+    await o.v.savePatientNote({ patientId: k.P, title: 'Fikcyjna notatka', body: 'Fikcyjna treść.', category: 'inne' });
+    tik();
+    await o.v.savePatientList({ name: 'Fikcyjna lista', memberIds: [k.P] });
+    tik();
+    const plik = await o.v.exportPatientEnvelope(k.P);
+    const kopia = await o.v.exportVaultBackup();
+    tik();
+    await o.cisza();
+    const doKosza = async () => { await o.v.moveSnapshotToTrash(k.P, k.S1); tik(); };
+    const wyniki = {};
+    for (const [nazwa, fn] of [
+      ['importPatientFromEnvelope', async () => { await doKosza(); return o.v.importPatientFromEnvelope(plik, o.A.haslo); }],
+      ['mergeVaultBackup', async () => { await doKosza(); return o.v.mergeVaultBackup(kopia, o.A.haslo); }],
+      ['restoreVaultBackup', () => { o.zablokuj(); return o.v.restoreVaultBackup(kopia, o.A.haslo, { label: 'Fikcyjne konto z kopii' }); }],
+    ]) {
+      tik();
+      const z = { odczyty: o.bramka.odczyty, emisje: o.l.emisje.length };
+      const r = await wynik(fn());
+      await o.cisza();
+      wyniki[nazwa] = { ok: r.ok, odczyty: o.bramka.odczyty - z.odczyty, emisje: o.l.emisje.length - z.emisje };
+    }
+    const zle = Object.entries(wyniki).filter(([, w]) => !w.ok || w.odczyty !== w.emisje);
+    expect(zle, JSON.stringify(wyniki)).toEqual([]);
+    expect(Object.values(wyniki).reduce((n, w) => n + w.emisje, 0), 'emisje importów').toBeGreaterThan(0);
+    await o.ev.emissionsSettled();
+    await o.cisza();
+    expect(pola, 'odczyty pól okna w trakcie emisji').toEqual({ indexedDB: 0, localStorage: 0, crypto: 0 });
+    expect(partie, 'wywołania słuchacza partii').toEqual([]);
+    expect((await o.idb.databases()).map((d) => d.name).filter((n) => n.startsWith('vilda_sync_')), 'bazy vilda_sync_*').toEqual([]);
+    expect(o.logKolejki(), 'wpisy vilda_sync_* w dzienniku atrapy').toEqual([]);
+    expect(o.zadaniaKolejki(), 'żądania blokad vilda-sync*').toEqual([]);
+    expect(Object.keys(o.lokalny.m).filter((n) => n.startsWith('vilda-sync-')), 'klucze vilda-sync-*').toEqual([]);
+  }, 60_000);
+
+  it('EM28: „Komputer w pracy” i „Zaloguj jednorazowo” przy otwartej bramce — import karty i scalenie kopii konta: bez bazy kolejki, kluczy vilda-sync-*, blokad i wywołania słuchacza; odczyty bramki = liczba emisji', async () => {
+    for (const [nazwa, opcje] of [['Komputer w pracy', { chmura: ['A'] }], ['Zaloguj jednorazowo', { jednorazowo: true }]]) {
+      const o = await okno({ bramka: true, wymagajEmisji: false, ...opcje });
+      const partie = [];
+      if (typeof o.ev.onBulkChange === 'function') o.ev.onBulkChange((d) => { partie.push(d); });
+      const z = o.znacznik();
+      const k = await karta(o);
+      await o.v.savePatientNote({ patientId: k.P, title: 'Fikcyjna notatka', body: 'Fikcyjna treść.', category: 'inne' });
+      tik();
+      const plik = await o.v.exportPatientEnvelope(k.P);
+      const kopia = await o.v.exportVaultBackup();
+      tik();
+      // Wersja w koszu wraca z pliku i z kopii konta: zdjęcie wpisu kosza emituje wersję (reguła z E2-PR3a2).
+      const doKosza = async () => { await o.v.moveSnapshotToTrash(k.P, k.S1); tik(); };
+      const e0 = o.l.emisje.length;
+      await doKosza();
+      expect((await wynik(o.v.importPatientFromEnvelope(plik, o.A.haslo))).ok, `${nazwa}: import karty`).toBe(true);
+      tik();
+      await doKosza();
+      expect((await wynik(o.v.mergeVaultBackup(kopia, o.A.haslo))).ok, `${nazwa}: scalenie kopii konta`).toBe(true);
+      await o.gotowe();
+      expect(o.l.emisje.length - e0, `${nazwa}: emisje kosza i importów`).toBeGreaterThan(2);
+      expect(o.bramka.odczyty, `${nazwa}: odczyty bramki = liczba emisji`).toBe(o.l.emisje.length);
+      expect(partie, `${nazwa}: wywołania słuchacza partii`).toEqual([]);
+      expect((await o.idb.databases()).map((d) => d.name).filter((n) => n.startsWith('vilda_sync_')), nazwa).toEqual([]);
+      expect(o.logKolejki(z), `${nazwa}: wpisy vilda_sync_* w dzienniku atrapy`).toEqual([]);
+      expect(Object.keys(o.lokalny.m).filter((n) => n.startsWith('vilda-sync-')), `${nazwa}: klucze vilda-sync-*`).toEqual([]);
+      expect(o.zadaniaKolejki(), `${nazwa}: blokady vilda-sync*`).toEqual([]);
+    }
+  }, 60_000);
+
+  it('EM29: słuchacz rzuca — drugi słuchacz wywołany, następne dopisania, następna partia i emissionsSettled bez zmian', async () => {
+    const o = await okno({ bramka: true });
+    const k1 = await plikKartyUsunietej(o, 1);
+    const k2 = await plikKartyUsunietej(o, 2);
+    await o.gotowe();
+    const s0 = ostatni(o);
+    const wywolania = [];
+    o.ev.onBulkChange(() => { wywolania.push('rzuca'); throw new Error('Fikcyjny błąd słuchacza'); });
+    o.ev.onBulkChange((d) => { wywolania.push(`${d.reason} ${d.count}`); });
+    tik();
+    await o.v.importPatientFromEnvelope(k1.plik, o.A.haslo);
+    tik();
+    const n = await o.v.saveNote(szablon());
+    await o.gotowe();
+    expect(wywolania).toEqual(['rzuca', 'importPatientFromEnvelope 4']);
+    tik();
+    await o.v.importPatientFromEnvelope(k2.plik, o.A.haslo);
+    await o.gotowe();
+    expect(wywolania).toEqual(['rzuca', 'importPatientFromEnvelope 4', 'rzuca', 'importPatientFromEnvelope 4']);
+    const w = po(o, s0);
+    expect(rodzaje(w)).toEqual(['snap', 'snap', 'pnote', 'pnote', 'note', 'snap', 'snap', 'pnote', 'pnote']);
+    expect(w[4].entityKey).toBe(n.id);
+  }, 60_000);
+
+  // Łańcuch stoi na blokadzie konta (wpis zmiany sprzed importu czeka), więc wpisy partii ruszają dopiero po zmianie
+  // sesji; niosą sesję importu.
+  it.each(['B', 'A', 'blokada'])('EM30: import pliku karty przerwany zmianą sesji („%s”) — krok zamknięty (następna emisja nie czeka), bez onBulkChange; wpisy partii z sesją importu po zmianie sesji bez wiersza (P-SESJA-ZAPISU)', async (wariant) => {
+    const o = await okno({ bramka: true, konta: 'AB' });
+    const k = await plikKartyUsunietej(o);
+    await o.gotowe();
+    const s0 = ostatni(o);
+    const sB = ostatni(o, 'B');
+    const partie = sluchaczPartii(o);
+    const h = await o.locks.trzymaj(o.blokadaKonta);
+    await o.v.saveNote(szablon('Fikcyjny szablon przed importem'));
+    await o.locks.czekajNaKolejke(o.blokadaKonta, 1);
+    tik();
+    const e0 = o.l.emisje.length;
+    const hak = o.idb.__atrapa.hak({ przy: 'success', baza: `vilda_user_${o.uid}`, sklep: 'patients', metoda: 'put' }, () => { o.zablokuj(); });
+    const r = await wynik(o.v.importPatientFromEnvelope(k.plik, o.A.haslo));
+    hak.rozbroj();
+    expect(hak.wywolany, 'kontrola: zapis rekordu karty w imporcie').toBe(1);
+    expect([r.ok, r.kod], r.komunikat).toEqual([false, 'SESSION_CHANGED']);
+    expect(o.l.emisje.slice(e0).map((e) => [e.kind, kluczeEmisji(e).length, e.sesja]), 'emisja wersji importu przed zmianą sesji, z sesją importu').toEqual([['snap', 2, true]]);
+    if (wariant !== 'blokada') await o.zaloguj(wariant);
+    await h.zwolnij();
+    await o.gotowe();
+    expect(po(o, s0), 'bez wierszy konta A').toEqual([]);
+    expect(o.kolejka('B').filter((w) => w.seqLocal > sB), 'bez wierszy konta B').toEqual([]);
+    expect(partie, 'bez onBulkChange').toEqual([]);
+    if (wariant === 'blokada') await o.zaloguj('A');
+    const kto = wariant === 'B' ? 'B' : 'A';
+    const s1 = ostatni(o, kto);
+    tik();
+    const n = await o.v.saveNote(szablon('Fikcyjny szablon po imporcie'));
+    await o.gotowe();
+    expect(o.kolejka(kto).filter((w) => w.seqLocal > s1).map((w) => [w.kind, w.entityKey]), 'następna emisja dopisana od razu').toEqual([['note', n.id]]);
+  }, 60_000);
+
+  it('EM31: blokada wyłączna konta trzymana przez test — import kończy się przed wierszami partii; po zwolnieniu wiersze i onBulkChange', async () => {
+    const o = await okno({ bramka: true });
+    const k = await plikKartyUsunietej(o);
+    await o.gotowe();
+    const s0 = ostatni(o);
+    const partie = sluchaczPartii(o);
+    const h = await o.locks.trzymaj(o.blokadaKonta);
+    tik();
+    const r = await o.v.importPatientFromEnvelope(k.plik, o.A.haslo);
+    expect(r.patientId, 'import zakończony').toBe(k.P);
+    await o.locks.czekajNaKolejke(o.blokadaKonta, 1);
+    await o.spokoj();
+    expect({ wiersze: po(o, s0), partie }, 'przed zwolnieniem blokady').toEqual({ wiersze: [], partie: [] });
+    await h.zwolnij();
+    await o.gotowe();
+    expect(rodzaje(po(o, s0))).toEqual(['snap', 'snap', 'pnote', 'pnote']);
+    expect(partie).toEqual([{ reason: 'importPatientFromEnvelope', count: 4 }]);
+  }, 60_000);
+
+  it('EM31: limit 20 s czekania na blokadę konta w partii — wpis bez wiersza nie wlicza się do count, łańcuch idzie dalej', async () => {
+    const o = await okno({ bramka: true });
+    const k = await plikKartyUsunietej(o);
+    await o.gotowe();
+    const s0 = ostatni(o);
+    const z0 = o.zadaniaKolejki().length;
+    const partie = sluchaczPartii(o);
+    const h = await o.locks.trzymaj(o.blokadaKonta);
+    tik();
+    await o.v.importPatientFromEnvelope(k.plik, o.A.haslo);
+    await o.locks.czekajNaKolejke(o.blokadaKonta, 1);
+    expect(o.timery.oczekujace().map((t) => t.ms), 'zegar limitu blokady').toContain(20000);
+    const z1 = o.locks.zadania.length;
+    expect(o.timery.odpal((t) => t.ms === 20000), 'limit pierwszego wpisu partii').toBe(1);
+    await o.locks.czekajNaZadanie(o.blokadaKonta, { od: z1 });
+    await h.zwolnij();
+    await o.gotowe();
+    expect(o.zadaniaKolejki().slice(z0).map((z) => z.wynik)[0], 'pierwszy wpis partii przerwany po limicie').toBe('przerwana');
+    expect(rodzaje(po(o, s0)), 'pierwsza wersja bez wiersza, reszta partii dopisana').toEqual(['snap', 'pnote', 'pnote']);
+    expect(partie).toEqual([{ reason: 'importPatientFromEnvelope', count: 3 }]);
+  }, 60_000);
+
+  it('EM32: emissionsSettled czeka na znacznik partii — rozstrzyga się po wywołaniu słuchacza onBulkChange', async () => {
+    const o = await okno({ bramka: true });
+    const k = await plikKartyUsunietej(o);
+    await o.gotowe();
+    const stan = { sluchacz: 0, wChwiliRozstrzygniecia: null };
+    o.ev.onBulkChange(() => { stan.sluchacz += 1; });
+    const h = await o.locks.trzymaj(o.blokadaKonta);
+    tik();
+    await o.v.importPatientFromEnvelope(k.plik, o.A.haslo);
+    await o.locks.czekajNaKolejke(o.blokadaKonta, 1);
+    const p = o.ev.emissionsSettled().then(() => { stan.wChwiliRozstrzygniecia = stan.sluchacz; });
+    await o.spokoj();
+    expect(stan, 'łańcuch stoi — emissionsSettled czeka, słuchacz jeszcze nie').toEqual({ sluchacz: 0, wChwiliRozstrzygniecia: null });
+    await h.zwolnij();
+    await p;
+    expect(stan.wChwiliRozstrzygniecia, 'słuchacz wywołany przed rozstrzygnięciem').toBe(1);
+  }, 60_000);
+
+  it('EM33: dwa importy kolejno — dwa wywołania, każde z własnym count; w każdym słuchaczu wiersze swojej partii są już w kolejce', async () => {
+    const o = await okno({ bramka: true });
+    const k1 = await plikKartyUsunietej(o, 1);
+    const q = await o.v.savePatient(naglowek(2), { dedup: false });
+    tik();
+    const plikQ = await o.v.exportPatientEnvelope(q.patientId);
+    tik();
+    await o.v.removePatient(q.patientId);
+    tik();
+    await o.gotowe();
+    const s0 = ostatni(o);
+    const wywolania = [];
+    o.ev.onBulkChange((d) => { wywolania.push({ ...d, wKolejce: po(o, s0).length }); });
+    await o.v.importPatientFromEnvelope(k1.plik, o.A.haslo);
+    tik();
+    await o.v.importPatientFromEnvelope(plikQ, o.A.haslo);
+    await o.gotowe();
+    expect(wywolania).toEqual([
+      { reason: 'importPatientFromEnvelope', count: 4, wKolejce: 4 }, { reason: 'importPatientFromEnvelope', count: 1, wKolejce: 5 },
+    ]);
+    expect(po(o, s0).map((w) => [w.kind, w.entityKey]).slice(4)).toEqual([['snap', `${q.patientId}/${q.snapshotId}`]]);
+  }, 60_000);
+
+  // Kopia sejfu, w której emiter onPatientSaved woła na początku Bem_partia (znak końca partii) — także poza krokiem importu.
+  it('EM33: znak końca partii poza krokiem bez skutku — zapisy kart poza krokiem, potem krok bez importu („Usuń pacjenta”): bez wywołania; ten sam znak w kroku („Scal pacjentów”): jedno wywołanie z count kroku', async () => {
+    const KOTWICA = 'function Bem_hak(nazwa, d) {\n';
+    expect(ZRODLO_SEJFU.split(KOTWICA).length - 1, 'kotwica w części emisji').toBe(1);
+    expect(ZRODLO_SEJFU.includes('function Bem_partia('), 'Bem_partia w części emisji').toBe(true);
+    const zrodlo = ZRODLO_SEJFU.replace(KOTWICA, `${KOTWICA}  if (nazwa === 'onPatientSaved') Bem_partia('fikcyjna-partia');\n`);
+    const o = await okno({ bramka: true, zrodlo });
+    const wywolania = [];
+    o.ev.onBulkChange((d) => { wywolania.push(d); });
+    const cel = await karta(o, 1);
+    const zr = await karta(o, 2);
+    const p3 = await o.v.savePatient(naglowek(3), { dedup: false });
+    tik();
+    await o.gotowe();
+    expect(wywolania, 'zapisy kart poza krokiem').toEqual([]);
+    await o.v.removePatient(p3.patientId);
+    await o.gotowe();
+    expect(wywolania, 'krok „Usuń pacjenta” po zapisach kart poza krokiem').toEqual([]);
+    const s0 = ostatni(o);
+    tik();
+    await o.v.mergePatients(zr.P, cel.P);
+    await o.gotowe();
+    expect(po(o, s0).length, 'kontrola: wiersze kroku „Scal pacjentów”').toBeGreaterThan(0);
+    expect(wywolania, 'znak w kroku „Scal pacjentów”').toEqual([{ reason: 'fikcyjna-partia', count: po(o, s0).length }]);
   }, 60_000);
 });

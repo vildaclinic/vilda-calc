@@ -30,7 +30,9 @@
 //       beacon (true — navigator.sendBeacon i win.fetch = polaczenie.beacon / fetchOkna), blokady (true — atrapaBlokad),
 //       krypto (false — atrapaKrypto), rejestrMagazynu (true — magazynZRejestrem), dodatki (pola okna), ip,
 //       blokadyWOsi (RegExp, domyślnie /^vilda-sync-/), konto (opcje createUser nowego konta, np. { storageMode:
-//       'cloud-only' } — tryb „Komputer w pracy” jak w tests/unit/sesja-zapisu-uprzaz.mjs; bliźniak dziedziczy konto).
+//       'cloud-only' } — tryb „Komputer w pracy” jak w tests/unit/sesja-zapisu-uprzaz.mjs; bliźniak dziedziczy konto),
+//       zrodla ({ plik: (win) => void } — przekazywane do okno(): plik z listy skryptów sejfu ładuje podana funkcja
+//       zamiast pliku z repozytorium, np. kopia z rejestrem łańcucha w teście A ≡ B, E2-PR3a3; bez opcji jak dotąd).
 //   sprzatnijUrzadzenia({ czekaj = true }) → Promise — afterEach: zwalnia bramy, czeka na ciszę (także na operacje
 //       synchronizacji w toku), zamyka urządzenia, sprawdza naruszenia i żądania w locie wszystkich atrap oraz strażnika;
 //       rzuca z listą (przy limicie ciszy: „operacja synchronizacji w toku: <urządzenie> <operacja>”).
@@ -309,6 +311,7 @@ export async function utworzUrzadzenie(o = {}) {
     dokument: dokumentZOsia((opis) => wOsi('dokument', opis)),
     navigator: beacon ? { sendBeacon: polaczenie.beacon, onLine: true } : { onLine: true },
     dodatki: { VILDA_SYNC_WORKER_URL: polaczenie.adres, ...(beacon ? { fetch: polaczenie.fetchOkna } : {}), Blob, CustomEvent, ...(o.dodatki || {}) },
+    ...(o.zrodla ? { zrodla: o.zrodla } : {}),
   });
   const win = ow.win;
   const vault = win.VildaVault;

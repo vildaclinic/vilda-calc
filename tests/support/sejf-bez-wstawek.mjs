@@ -7,6 +7,9 @@
 // _eventLog działa, a kod poza blokiem nie woła żadnej funkcji bloku: hooki, zapisy i usuwanie konta jak w sejfie, do
 // którego nic z bloku nie wpięto. Kopia z licznikiem emisji ma jako pierwszą instrukcję Bem_zmiana wywołanie funkcji
 // testu (parametr wykonania, nie pole okna), więc liczy emisje bez dotykania okna; w repozytorium kodu licznika nie ma.
+// Kopia z rejestrem łańcucha (E2-PR3a3, test A ≡ B na prawdziwych emiterach) różni się od sejfu dwoma miejscami części
+// emisji: Bem_zmiana bez warunku trybu i IndexedDB (urządzenia uprzęży mają sejf na adapterze w pamięci) i Bem_doLancucha,
+// które zamiast dopisania oddaje wpis funkcji testu; emitery, kroki, rangi i pomijanie powtórzeń są te same co w sejfie.
 // Wykonanie tekstu jak w tests/support/load-browser-script.mjs: new Function('window', 'globalThis', …, tekst).
 // Uprząż okna (okno() w tests/unit/sesja-zapisu-uprzaz.mjs, oknoMagazynu w tests/support/okno-magazynu.mjs) ładuje taki
 // tekst przez opcję zrodla: { 'vilda_vault.js': (win) => zaladujZrodlo(win, tekst) }.
@@ -25,7 +28,15 @@
 //       bez funkcji Bem_zmiana, np. sejf sprzed E2-PR3a2: kopia = źródło). opakuj: true — dodatkowo funkcje Bem_hak,
 //       Bem_zHaka, Bem_zmiana, Bem_krokStart i Bem_krokKoniec (synchroniczne) wywoływane przez opakowanie o tej samej
 //       nazwie: `__testEmisji.wejscie(nazwa)`, wywołanie, w finally `__testEmisji.wyjscie(nazwa)`.
-//   zaladujZrodlo(win, zrodlo, test = null) — wykonanie tekstu w oknie; test — obiekt __testEmisji kopii z licznikiem.
+//   zRejestremLancucha(zrodlo = ZRODLO_SEJFU) → tekst kopii z rejestrem łańcucha: w Bem_zmiana warunek
+//       `if (!T() || !Bob_trybPrywatny() || !Bob_idb()) return;` → `if (!T()) return;`, a ciało Bem_doLancucha zaczyna się
+//       od `__testEmisji.lancuch(z); return;` (wpis łańcucha — { kind, klucze, s, uid } albo znacznik partii { uid,
+//       znacznik } — trafia do rejestru testu; bez bazy kolejki, szyfrowania i Bob_dopiszZ). Bramka zostaje: okno potrzebuje
+//       pola VILDA_EVENT_LOG = true. Samokontrola: znacznik części emisji i każda z dwóch kotwic dokładnie raz, kotwice
+//       w części emisji (warunek trybu w ciele Bem_zmiana), wynik parsuje się — inaczej wyjątek (np. sejf sprzed E2-PR3a2).
+//       Ładowanie: zaladujZrodlo(win, tekst, { lancuch(z) }).
+//   zaladujZrodlo(win, zrodlo, test = null) — wykonanie tekstu w oknie; test — obiekt __testEmisji kopii z licznikiem
+//       albo kopii z rejestrem łańcucha.
 //   licznikEmisji({ zrodlo = ZRODLO_SEJFU, opakuj = false, przy = null } = {}) → l — licznik jednego okna:
 //       l.emisje ([{ kind, klucze, sesja }] każdego wywołania Bem_zmiana, sesja: true — podana sesja operacji),
 //       l.jest, l.wEmisji() (true w trakcie opakowanej funkcji Bem_*; tylko opakuj), l.zaladuj(win) (do opcji zrodla);
@@ -127,6 +138,25 @@ export function zLicznikiem(zrodlo = ZRODLO_SEJFU, { opakuj = false } = {}) {
   for (const [i, n, tekst] of zmiany.sort((x, y) => y[0] - x[0])) wynik = wynik.slice(0, i) + tekst + wynik.slice(i + n);
   drzewo(wynik);
   return { zrodlo: wynik, jest: true };
+}
+
+const KOTWICA_TRYBU = 'if (!T() || !Bob_trybPrywatny() || !Bob_idb()) return;';
+const KOTWICA_LANCUCHA = 'function Bem_doLancucha(z) {';
+export function zRejestremLancucha(zrodlo = ZRODLO_SEJFU) {
+  if (ile(zrodlo, ZNACZNIK_EMISJI) !== 1) throw new Error('kopia z rejestrem łańcucha: znacznik części emisji nie dokładnie raz');
+  for (const k of [KOTWICA_TRYBU, KOTWICA_LANCUCHA]) {
+    if (ile(zrodlo, k) !== 1) throw new Error(`kopia z rejestrem łańcucha: kotwica nie dokładnie raz: ${k}`);
+  }
+  const { z } = granicaBloku(zrodlo);
+  const emisja = zrodlo.indexOf(ZNACZNIK_EMISJI);
+  const zmiana = deklaracja(drzewo(zrodlo), 'Bem_zmiana');
+  const iTrybu = zrodlo.indexOf(KOTWICA_TRYBU), iLancucha = zrodlo.indexOf(KOTWICA_LANCUCHA);
+  if (!zmiana || iTrybu < zmiana.body.start || iTrybu > zmiana.body.end) throw new Error('kopia z rejestrem łańcucha: warunek trybu poza ciałem Bem_zmiana');
+  if (iLancucha < emisja || iLancucha > z) throw new Error('kopia z rejestrem łańcucha: Bem_doLancucha poza częścią emisji');
+  const wynik = zrodlo.replace(KOTWICA_TRYBU, 'if (!T()) return;')
+    .replace(KOTWICA_LANCUCHA, `${KOTWICA_LANCUCHA} __testEmisji.lancuch(z); return;`);
+  drzewo(wynik);
+  return wynik;
 }
 
 export function zaladujZrodlo(win, zrodlo, test = null) {
