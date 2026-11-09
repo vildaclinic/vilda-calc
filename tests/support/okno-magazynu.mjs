@@ -30,7 +30,10 @@
 //       i zdarzenia storage między oknami: niżej), databases (false — window.indexedDB okna bez databases(), ta sama
 //       atrapa), zdarzenia (true — prawdziwy cel zdarzeń okna: niżej; domyślnie addEventListener i dispatchEvent okna
 //       nic nie robią), pola (obiekt — pola okna ustawione przed załadowaniem skryptów, ostatnie: nadpisują pola
-//       uprzęży o tej samej nazwie; drugieOkno ich nie dziedziczy).
+//       uprzęży o tej samej nazwie; drugieOkno ich nie dziedziczy), emisja (true — o.v to VildaVault jak w przeglądarce:
+//       zapisy danych sejfu przy otwartej bramce dopisują zmiany do kolejki; domyślnie metody danych z listy
+//       METODY_DANYCH idą przez o.v przy zamkniętej bramce — pole VILDA_EVENT_LOG na czas wywołania false, potem
+//       przywrócone — więc wiersze kolejki powstają tylko z jawnych dopisań testu; drugieOkno jej nie dziedziczy).
 //   drugieOkno(o, opcje) → Promise<o2> — nowe okno na tej samej atrapie z kontami o.A / o.B (bez tworzenia kont); dzieli
 //       z o atrapę IndexedDB, atrapę Web Locks (o.locks; okno bez navigator.locks daje drugie też bez), localStorage
 //       (o.lokalny), listę skryptów (o.skrypty) i rodzinę okien (szyna BroadcastChannel, rozsyłanie zapisów localStorage),
@@ -437,7 +440,7 @@ export async function oknoMagazynu(opcje = {}) {
     return b && b.sklepy[sklep] ? b.sklepy[sklep].wiersze : null;
   };
   const o = {
-    win, v, ev: v._eventLog, idb, A, B, timery: o0.timery, dziennik: o0.dziennik, krypto, locks: o0.locks, lokalny, skrypty, rodzina,
+    win, v: opcje.emisja === true ? v : widokBezEmisji(win, v), ev: v._eventLog, idb, A, B, timery: o0.timery, dziennik: o0.dziennik, krypto, locks: o0.locks, lokalny, skrypty, rodzina,
     przeladowania: () => przeladowania, zamiany,
     propaguj: () => {
       if (!propaguj) throw new Error("propaguj(): okno bez localStorage: 'osobny'");
@@ -451,6 +454,41 @@ export async function oknoMagazynu(opcje = {}) {
     logKolejki: (z = { log: 0 }) => idb.__atrapa.log.slice(z.log).filter((w) => typeof w[1] === 'string' && w[1].startsWith('vilda_sync_')),
   };
   return o;
+}
+
+// Metody danych sejfu, których zapis emituje zmianę do kolejki (E2-PR3a2). Lista jawna: wzorzec nazw objąłby też
+// removeUser i inne operacje konta, które muszą widzieć otwartą bramkę.
+export const METODY_DANYCH = Object.freeze([
+  'savePatient', 'updateSnapshotPayload', 'setSnapshotPinned', 'updateMeasurementRow', 'deleteMeasurementRow',
+  'moveSnapshotToTrash', 'restoreTrashedSnapshot', 'restoreSnapshotAsNew', 'pruneSnapshotsForPatient', 'mergePatients',
+  'mergeExternalIntoPatient', 'promoteExternalToBase', 'saveExternalPatient', 'removePatient', 'savePatientNote',
+  'savePatientNoteOnce', 'updateExistingPatientNote', 'removePatientNote', 'removeExistingPatientNote',
+  'completePatientNote', 'uncompletePatientNote', 'noShowPatientNote', 'snoozePatientNote', 'saveNote', 'removeNote',
+  'savePatientList', 'deletePatientList', 'addPatientToList', 'removePatientFromList', 'setWaitlistSchedule',
+  'addWaitlistList', 'removeWaitlistList', 'changePassword', 'resetPasswordWhileUnlocked', 'registerPasskey',
+  'registerPasskeyForRoaming', 'removePasskey', 'mutateCarePlan', 'saveReminderOutcome', 'migrateExternalNotesToRegistry',
+  'importLegacyJsonPatient',
+]);
+// Widok VildaVault, w którym metody z METODY_DANYCH działają przy zamkniętej bramce (pole okna na czas wywołania
+// false, potem przywrócone: ten sam deskryptor albo brak pola); pozostałe pola bez zmian.
+function widokBezEmisji(win, v) {
+  const lista = new Set(METODY_DANYCH);
+  return new Proxy(v, {
+    get(cel, nazwa) {
+      const f = cel[nazwa];
+      if (typeof f !== 'function' || !lista.has(nazwa)) return f;
+      return async (...argumenty) => {
+        const bylo = Object.getOwnPropertyDescriptor(win, 'VILDA_EVENT_LOG');
+        win.VILDA_EVENT_LOG = false;
+        try {
+          return await f.apply(cel, argumenty);
+        } finally {
+          if (bylo) Object.defineProperty(win, 'VILDA_EVENT_LOG', bylo);
+          else delete win.VILDA_EVENT_LOG;
+        }
+      };
+    },
+  });
 }
 
 export function drugieOkno(o, opcje = {}) {

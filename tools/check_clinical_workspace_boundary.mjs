@@ -6,7 +6,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const BASE = 'efc11c97a5c8e0e7ffadaae9dd8e828a9344264ad4e9517c8abb47aca683c603';
+const BASE = '09c83bf53046fb4900e60857b0663c5e8a0b480957617ab5de05fddc2e6cdad0';
 const START = '/* BEGIN VILDA CLINICAL WORKSPACE NATIVE V1 */\n';
 const END = '/* END VILDA CLINICAL WORKSPACE NATIVE V1 */\n';
 const digest = value => createHash('sha256').update(value).digest('hex');
