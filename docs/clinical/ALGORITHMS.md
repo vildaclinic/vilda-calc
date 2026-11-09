@@ -21420,6 +21420,149 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
+## Dziennik zdarzeń: importy partią i zgodność emiterów z testem A ≡ B — uśpione (P-DZIENNIK-ZDARZEN, E2-PR3a3, SW 1.1.493, `vilda_vault.js` 261, 2026-11-09)
+
+**Zmiana kliniczna: NIE** — wzory, progi, jednostki, interpretacje, zapis danych pacjentów, scalanie, format kopii
+i synchronizacja bez zmian. Dla użytkownika dziś nic się nie zmienia: bramka dziennika zdarzeń jest zamknięta, więc
+import karty z pliku, scalenie kopii konta i odtworzenie konta z kopii tylko ją sprawdzają (jeden odczyt pola w pamięci
+strony na zmianę) i kończą. Po włączeniu dziennika (PR włączający) każda wizyta, notatka, notatka biblioteki, lista
+i preferencja z importowanego pliku trafi do kolejki jako osobne zdarzenie, a po ostatnim — sygnał dla wysyłki. Wpływ
+kliniczny dziś: brak.
+
+**Skąd.** Plan `docs/SYNC_PRZYROSTOWA_PLAN.md`, wiersz 6c tabeli „Podział etapu 2”, tabela 3.5 (wiersz 17) i rozdział
+3.2. Decyzje właściciela z 2026-11-04: kolejność „najpierw wizyty” (pytanie 12.2) i naprawa utraty K6 w osobnym PR
+E2-PR3c (pytanie 12.3). Decyzja z 2026-11-09: różnica opisu wpisu Kosza między urządzeniami po wymianie pełnych kopii,
+widoczna w losowym przebiegu testu A ≡ B (profil pełny), trafia do zakresu E2-PR3c.
+
+### E2-PR3a3
+
+**Uśpienie.** „Każde wywołanie kończy się na bramce: bez otwarcia bazy, szyfrowania i żądań.” Przy zamkniętej bramce
+import tylko przegląda w pamięci tablice odszyfrowanego pliku; słuchacze `onBulkChange` nie są wołani. Eksport
+`VildaVault._eventLog` ma 37 kluczy: nowy `onBulkChange(cb)` (rejestracja słuchacza, bez bramki, pól okna i magazynów).
+
+**Sesja.** Operacje kolejki i kwarantanny sprawdzają sesję tak jak zapis karty (P-SESJA-ZAPISU): zmiana sesji w trakcie
+kończy operację bez zapisu. Wpisy partii importu karty niosą sesję importu, wpisy scalenia kopii — sesję z chwili
+emisji, wpisy odtworzenia konta — sesję konta odtworzonego z kopii.
+
+**Gdzie powstaje zdarzenie** (import = krok emisji, jak operacje złożone z E2-PR3a2):
+
+| Import | Wersje (`snap`) | Sekcje pliku |
+|---|---|---|
+| import karty z pliku (`importPatientFromEnvelope`, `ns`) | wersje zapisane przez import | notatki pacjenta z nagrobkami |
+| scalenie kopii konta (`mergeVaultBackup`, `ss`) | nowe wersje istniejących kart i wersje kart dopisanych | notatki pacjenta, notatki biblioteki i listy (z nagrobkami), preferencje |
+| odtworzenie konta z kopii (`restoreVaultBackup`, `as`) | każda wersja każdej karty kopii | jak scalenie kopii |
+
+Zasada sekcji: każda encja z pliku, która po imporcie jest w sklepie, daje zdarzenie (także encja bez zmiany — bez
+skutku u odbiorcy); encja, której nie ma w sklepie, nie daje wiersza. Wersje pominięte przez import (już w karcie,
+leżące pod inną kartą, karta pominięta jako usunięta albo scalona) nie dają zdarzenia. Wersja z kosza, która wraca
+z pliku, daje jeden `snap` (emisja w `Bkz_poImporcie` i w imporcie, powtórzenie pominięte w kroku). Bez zdarzenia:
+zdjęcie nagrobka karty i nagrobków notatek przy imporcie (niesie je zdarzenie encji z nowszą chwilą), rekordy konta
+z kopii (opakowania kluczy, rejestr, materiał synchronizacji), poświadczenie konta odtworzonego (bez daty zmiany hasła),
+import starego formatu (przez zapis karty, E2-PR3a2).
+
+**Partia i `onBulkChange`.** Zdarzenia importu idą do kolejki po zakończeniu kroku, stabilnie według kolejności rang
+(wersje, notatki pacjenta, ich nagrobki, notatki biblioteki, ich nagrobki, listy, ich nagrobki, preferencje), tym samym
+łańcuchem dopisań konta i przez `Bob_dopiszZ` (blokada współdzielona konta, najwyżej 20 s); import na łańcuch nie czeka.
+Po ostatnim dopisaniu partii słuchacze `onBulkChange` dostają `{ reason, count }`: `reason` — nazwa metody importu,
+`count` — liczba dopisanych wierszy; jedno wywołanie na krok importu. Bez wywołania, gdy partia nie trafiła do łańcucha
+(zamknięta bramka, tryb bez kolejki, zablokowany sejf) albo import przerwał wyjątek. Błąd słuchacza nie przerywa łańcucha;
+`emissionsSettled` czeka także na sygnał partii. Odtworzenie konta z kopii dopisuje partię samo (sesja konta z kopii
+jest ustawiona przed zapisami).
+
+**Tryby.** Kolejka tylko w trybie „Komputer prywatny” przy odblokowanym sejfie.
+
+**Zmiana bez wiersza.** Wpis partii bez wiersza nie wraca do importu; `count` liczy tylko wiersze. Wymaganie dla
+E2-PR3a4: zmianę bez wiersza dokłada przegląd kolejki, a przegląd po pierwszym odblokowaniu konta odtworzonego z kopii
+nie dubluje partii.
+
+**Test A ≡ B na prawdziwych emiterach.** Zdarzenia w teście pochodzą z prawdziwych emiterów sejfu: kopia sejfu testu
+zapisuje wpisy łańcucha do rejestru (urządzenia testu mają sejf w pamięci, więc bez tej kopii emisja kończyłaby się na
+warunku trybu), a koperty powstają z builderów w kolejności łańcucha. Model („emiter doskonały”) zostaje wyrocznią:
+w każdej mutacji ten sam ciąg rang i te same encje w każdej randze; jedyna dozwolona różnica — kolejność encji w obrębie
+rangi. Jawny wyjątek: rejestracja klucza dostępu w punkcie 1 (na urządzeniu testu API odmawia; emiter sprawdza test
+pokrycia). Model dostał regułę: zdjęcie wpisu kosza wersji obecnej w karcie daje `snap` tej wersji (nośnik pól karty —
+dowolny `snap` tej karty w kroku). Preferencja i usunięcie klucza dostępu w punkcie 1 idą przez API. Wyniki W1–W4 przy
+zdarzeniach z emiterów są takie same jak przy zdarzeniach z modelu (ziarna domyślne — literały bez zmian). W pliku 1430 porównań emiterów z modelem, wszystkie zgodne; w przebiegu 10 losowych ziaren trzech profili 2805 porównań, 10 różnic wyłącznie kolejności w obrębie rangi (w „Scal pacjentów”), 0 niezgodności.
+
+**Znane różnice i straty.**
+- K6 — „ZNANA UTRATA (zdarzenia; naprawa: E2-PR3c)”: poprawka wizyty na drugim urządzeniu, zanim to urządzenie wyśle
+  zmianę, a potem „Scal pacjentów” na pierwszym — po zdarzeniach i pełnej wymianie poprawka ginie na obu urządzeniach;
+  same pełne kopie ją zachowują (pole `blobyKlinicznie` literału). Naprawa zmianą reguły scalania w E2-PR3c (decyzja
+  12.3); warunek E2-PR6 „0 znanych utrat” bez zmian.
+- R2-E3 — „ZNANA RÓŻNICA (naprawa: E3-PR0)” (decyzja 12.2), literał bez zmian.
+
+**Przy zamkniętej bramce (co nowego).**
+
+| Skutek | Wartość |
+|---|---|
+| odczyt pola `VILDA_EVENT_LOG` | jeden na emisję; w zapisie bazowym: import karty 3, scalenie kopii 3, odtworzenie konta 10 |
+| bazy `vilda_sync_*`, klucze `vilda-sync-*`, blokady `vilda-sync*`, szyfrowanie zdarzeń, żądania sieci, wywołania `onBulkChange` | 0 |
+| zapis bazowy (`tests/fixtures/dziennik-zapis-bazowy.json`) | zmienia się tylko `odczytyBramki`: 46, 46, 44, 46 (było 30, 30, 28, 30) (Ze, prywatny, chmura, jednorazowo) |
+| e2e uśpienia | bez zmian (scenariusz bez importów) |
+
+**Kontrola granicy obrazu sejfu.** Przeliczone skróty `BASE`, `baseVaultSHA256` i `integratedVaultSHA256` (reguła
+z E2-PR3a2); fragment natywny, haki, moduły i paczka bez zmian.
+
+**ESLint.** Liczba wyjątków `no-useless-assignment` dla `vilda_vault.js` w `eslint-suppressions.json` spadła z 16 do 15
+(po kroku wokół scalenia kopii przypisanie w nim przestało być zgłaszane); bez nowych wyjątków.
+
+**Testy.** Dane wyłącznie fikcyjne, bez PESEL. Zmienione:
+- `tests/unit/sync-pokrycie-mutacji.test.mjs` — 73 przypadki (było 61): wiersz 17 — import karty z pliku (karta
+  usunięta, nowa wersja z notatką, wersja z kosza → jeden `snap`), scalenie kopii konta (bliźniaka i własnej, także
+  z nagrobkiem karty u odbiorcy starszym i nowszym), odtworzenie konta z kopii; odbiorca po zdarzeniach ≡ odbiorca po
+  pełnym ładunku; `onBulkChange` z literałem przypadku i `count` równym liczbie wierszy; trzy importy w domyślnym oknie
+  uprzęży bez wierszy i bez operacji na bazie kolejki.
+- `tests/unit/sync-dziennik-emisja.test.mjs` — 39 przypadków (było 26): EM25–EM33 (partia jako krok, kolejność rang,
+  jeden wiersz wersji z kosza, `onBulkChange` po ostatnim dopisaniu, brak wywołania przy zamkniętej bramce, w trybach
+  bez kolejki i po wyjątku importu, słuchacz rzucający, `emissionsSettled` czeka na sygnał partii, sesja — konto B,
+  ponowne zalogowanie, blokada, limit blokady konta, `Bem_partia` poza krokiem bez skutku); EM1 z `restoreVaultBackup`.
+- `tests/unit/sync-dziennik-wlasnosciowy.test.mjs` (A ≡ B) — 125 przypadków (było 118): zdarzenia z prawdziwych
+  emiterów, porównanie z modelem w każdej mutacji (AB1–AB6), K6; literały istniejących scenariuszy bez zmian.
+- `tests/unit/sync-dziennik-uspienie.test.mjs` — 44 przypadki (było 41): literał miejsc poza blokiem z importami
+  (30 wpisów, 43 wywołania), formy wywołań w imporcie (w bloku `try` kroku; nazwa partii — literał metody API funkcji;
+  w odtworzeniu konta krok wewnątrz `try`, którego `finally` woła słuchaczy odblokowania), samokontrola wariantami zła,
+  reguła domknięcia i czystość nowych funkcji części `Bem_`, 37 kluczy eksportu, `onBulkChange` niechronione.
+- `tests/unit/sync-dziennik-haki.test.mjs` — 11 przypadków: liczby wstawek w sejfie bez wstawek; przy otwartej bramce
+  kroki importu scenariusza wołają `onBulkChange` (ładunki hooków bez zmian także przy importach).
+- `tests/unit/sync-dziennik-zapis-bazowy.test.mjs` i fikstura — 15 przypadków (+1 pominięty): w fiksturze zmieniły się
+  tylko cztery pola `odczytyBramki`.
+- Uprząż: `tests/support/sejf-bez-wstawek.mjs` (kopia sejfu z rejestrem łańcucha), `tests/support/urzadzenie-sync.mjs`
+  (opcja `zrodla`), `tests/unit/s4d7-wspolne.mjs` (ładowanie sejfu w urządzeniach katalogu), `tests/support/okno-magazynu.mjs`
+  (`restoreVaultBackup` w `METODY_DANYCH`).
+- e2e — bez zmian.
+
+Pełny `npm test` i e2e — wyniki w opisie PR.
+
+**Czerwone na bazie** (`origin/audyt` `422a9a7b` z testami tego PR): sync-pokrycie-mutacji 10 z 73 (importy z wierszem i sygnał partii; zielone z natury: wiersze 1 i 4–16, import wersji
+z kosza — emisja od E2-PR3a2, importy w domyślnym oknie uprzęży, samokontrola); sync-dziennik-emisja 12 z 39;
+sync-dziennik-uspienie 10 z 44; sync-dziennik-haki 1 z 11; sync-dziennik-zapis-bazowy 5 z 15 (liczba odczytów bramki);
+A ≡ B 0 z 125 (emitery istnieją od E2-PR3a2, a program losowy nie ma importów — cały plik jest strażnikiem regresji);
+razem 38.
+
+**Mutanty.** 33 mutanty kodu importów, części emisji, uprzęży, kontroli granicy i porównania w teście A ≡ B (brak kroku albo emisji w każdym imporcie, sekcje bez nagrobków, preferencji albo identyfikatorów z sekcji nagrobków, sygnał partii przed wpisami albo bez wpisów, liczba wpisów zamiast wierszy, słuchacz bez ochrony, bez pomijania powtórzeń, `Bem_partia` poza krokiem, odczyt bramki w rejestracji słuchacza, zła albo brakująca nazwa partii, brak klucza eksportu, sesja importu, lista metod uprzęży, nieprzeliczone skróty, porównanie zawsze zgodne, model bez reguły zdjęcia wpisu kosza, kopia z warunkiem trybu, dodatkowy wyjątek z literału): 33 zabite.
+
+**Wymagania dla następnych PR.**
+- **E2-PR3a4.** Przegląd kolejki dokłada zmiany partii bez wiersza; przegląd po pierwszym odblokowaniu konta odtworzonego
+  z kopii nie dubluje partii.
+- **E2-PR3b.** Haki H1 i H2 w teście A ≡ B z modelu na emitery (rejestr łańcucha obejmie wtedy scalanie).
+- **E2-PR3c.** Literał K6 na brak utraty; analiza i naprawa różnicy opisu wpisu Kosza po wymianie pełnych kopii (decyzja
+  z 2026-11-09).
+- **E2-PR4.** Nadawca słucha `onBulkChange`; budżet wysyłki przy dużej partii (plan 3.6).
+- **E3-PR0.** Literał R2-E3.
+- Kolejne PR zmieniające `vilda_vault.js` poza fragmentem natywnym — przeliczenie skrótów kontroli granicy; nowe miejsce
+  zapisu albo import — emisja w kroku albo reguła „świadomie lokalne” (test pokrycia).
+
+**Ograniczenia.** Atrapa IndexedDB i Chromium (WebKit i Firefox niezmierzone); zdarzenie niesie stan encji z chwili
+dopisania; kolejność zdarzeń obowiązuje w obrębie karty przeglądarki; w teście A ≡ B urządzenia mają sejf w pamięci
+(dopisanie do bazy kolejki sprawdzają testy pokrycia i magazynu); program losowy A ≡ B nie ma importów (wiersz 17
+sprawdza test pokrycia).
+
+**Cofnięcie** = rewert PR (przy zamkniętej bramce nic nie powstaje na dysku; rewert cofa też skróty kontroli granicy).
+
+**Gdzie w kodzie.** `vilda_vault.js`: blok P-DZIENNIK-ZDARZEN, linie 5671–8007 (2337 linii); część `Bem_` 7814–8006 (14 funkcji: dochodzą `Bem_sekcje`, `Bem_partia`, `Bem_naPartie`, `Bem_powiadom`; stałe `Bem_partie`, `Bem_sluchaczePartii`, `Bem_SEKCJE`; 10 849 B). Poza blokiem: krok (`Bem_krokStart` przed `try`, `Bem_krokKoniec` w `finally`), emisja wersji (`Bem_zmiana`), sekcje (`Bem_sekcje`) i nazwa partii (`Bem_partia`) w `ns`, `ss` i `as`; w `Bev_EKSPORT` klucz `onBulkChange: Bem_naPartie`.
+
+**Wersje.** `vilda_vault.js` 260 → 261, `vilda_chrome.js` 264 → 265 i `vilda_session_bridge.js` 181 → 182 (wstrzykują sejf), SW 1.1.492 → 1.1.493; baza `origin/audyt` `422a9a7b` (po vildaclinic/vilda-calc#912). Bez nowego pliku w pamięci offline.
+
 ## Dziennik zdarzeń: dopisywanie zmian do kolejki w miejscach zapisu — uśpione (P-DZIENNIK-ZDARZEN, E2-PR3a2, SW 1.1.492, `vilda_vault.js` 260, 2026-11-09)
 
 **Zmiana kliniczna: NIE** — wzory, progi, jednostki, interpretacje, zapis danych pacjentów, scalanie, format kopii
