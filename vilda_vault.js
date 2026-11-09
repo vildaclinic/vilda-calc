@@ -8048,11 +8048,13 @@ async function Bob_sieroty(uid) {
 // Silnik przegladu (krok lancucha dopisan konta, sesja s i konto uid z chwili wywolania): wejscie kolejki i sesja;
 // przy odblokowaniu najpierw przeglad sierot; stan kolejki, prog, przeglad sklepow sejfu (czesc a), pokrycie (wiersz
 // encji z createdAtISO nie wczesniejszym niz chwila zmiany albo para z taka chwila), dopisanie encji niepokrytych po
-// kolei wedlug rangi rodzaju (rangi z czesci c), przy rownej randze wedlug chwili, kazde przez Bob_dopiszZ. Pierwsze
-// nieudane dopisanie inne niz brak encji konczy przeglad bez zapisu znacznika; zakonczony zapisuje znacznik i pary.
-// Nigdy nie rzuca. Wynik { ok: true, kandydaci, dopisane } albo odmowa (z polem dopisane po starcie dopisan) — bez
-// kluczy encji.
-async function Bob_przeglad(uid, s, pary, rangi, sieroty) {
+// kolei wedlug rangi rodzaju (rangi z czesci c), przy rownej randze wedlug chwili, kazde przez Bob_dopiszZ. Wpisy
+// wymuszone (braki z czesci c: Map rodzaj|klucz -> { kind, klucze } wpisow lancucha bez wiersza) ida do dopisania bez
+// wzgledu na okno i pokrycie — chwila zmiany z pliku importu bywa starsza niz znacznik, a wiersz sprzed usuniecia karty
+// nie niesie stanu po jej odtworzeniu; udane dopisanie albo brak encji zdejmuje wpis z mapy. Pierwsze nieudane
+// dopisanie inne niz brak encji konczy przeglad bez zapisu znacznika; zakonczony zapisuje znacznik i pary. Nigdy nie
+// rzuca. Wynik { ok: true, kandydaci, dopisane } albo odmowa (z polem dopisane po starcie dopisan) — bez kluczy encji.
+async function Bob_przeglad(uid, s, pary, rangi, sieroty, wymuszone) {
   try {
     const odm = Bob_wejscie() || Bob_poSesji(s);
     if (odm) return Bob_odmowa(odm);
@@ -8084,7 +8086,16 @@ async function Bob_przeglad(uid, s, pary, rangi, sieroty) {
       const c = wszystkie.get(x.karta ? 'karta|' + x.karta : x.klucz);
       return !!c && c >= x.chwila;
     };
-    const doDopisania = lista.map(function (x, i) { return { x: x, i: i }; }).filter(function (e) { return !pokryta(e.x); });
+    const wym = wymuszone instanceof Map ? wymuszone : null;
+    const kandydaci = lista.map(function (x, i) { return { x: x, i: i }; });
+    if (wym) {
+      const wLiscie = new Set(lista.map(function (x) { return x.klucz; }));
+      wym.forEach(function (e, kl) {
+        if (wLiscie.has(kl) || Bob_argumentyDopisania(e.kind, e.klucze, undefined)) return;
+        kandydaci.push({ x: { kind: e.kind, klucze: e.klucze, klucz: kl, chwila: '', karta: null }, i: kandydaci.length });
+      });
+    }
+    const doDopisania = kandydaci.filter(function (e) { return (wym && wym.has(e.x.klucz)) || !pokryta(e.x); });
     doDopisania.sort(function (e, f) {
       return (rangi[e.x.kind] - rangi[f.x.kind]) || (e.x.chwila < f.x.chwila ? -1 : e.x.chwila > f.x.chwila ? 1 : 0) || (e.i - f.i);
     });
@@ -8093,6 +8104,7 @@ async function Bob_przeglad(uid, s, pary, rangi, sieroty) {
       const w = await Bob_dopiszZ(e.x.kind, e.x.klucze, undefined, s, uid);
       if (w && w.ok === true) dopisane += 1;
       else if (!(w && w.powod === 'brak')) return Object.assign({}, w, { dopisane: dopisane });
+      if (wym) wym.delete(e.x.klucz);
     }
     const z = await Bob_przegladZapisz(uid, s, start, wszystkie);
     if (!z.ok) return Object.assign({}, z, { dopisane: dopisane });
@@ -8101,7 +8113,7 @@ async function Bob_przeglad(uid, s, pary, rangi, sieroty) {
       const prog = Bob_cofnij(start, Bob_MARGINES_MS);
       Array.from(kryte.keys()).forEach(function (kl) { if (!(kryte.get(kl) > prog)) kryte.delete(kl); });
     }
-    return { ok: true, kandydaci: lista.length, dopisane: dopisane };
+    return { ok: true, kandydaci: kandydaci.length, dopisane: dopisane };
   } catch (x) {
     return Bob_nieprzewidziany(x);
   }
@@ -8167,7 +8179,8 @@ function Bob_poOdblokowaniu() {
  * lancucha konta) sluchacze onBulkChange dostaja { reason: nazwa metody importu, count: liczba dopisanych wierszy } —
  * jedno wywolanie na krok importu, bez wywolania, gdy partia nie trafila do lancucha. Przeglad kolejki (sweepOutbox,
  * E2-PR3a4) to krok lancucha dopisan konta: rusza po wczesniejszych wpisach konta (w otwartym kroku — po jego wpisach),
- * a dokladany przez niego brak wiersza idzie tym samym Bob_dopiszZ. Wyzwalacze bez zegarow i nasluchow: poczatek
+ * a dokladany przez niego brak wiersza idzie tym samym Bob_dopiszZ; wpisy lancucha bez wiersza w tym dokumencie (pamiec
+ * brakow) dopisuje bez wzgledu na okno i pokrycie. Wyzwalacze bez zegarow i nasluchow: poczatek
  * odblokowania (z przegladem sierot), bezczynnosc lancucha konta po limicie blokady konta (przeglad pilny; SYNC_DB_DELETED
  * go nie ustawia) albo po dobie od ostatniego przegladu, eksport sweepOutbox. Scalanie z chmury poza krokiem (Le)
  * zapamietuje pary encji z ladunku, zeby przeglad nie odsylal stanu z chmury jako zmiany wlasnej. Opis:
@@ -8188,6 +8201,11 @@ const Bem_sluchaczePartii = new Set();
 const Bem_pary = new Map();
 const Bem_pilne = new Set();
 const Bem_poKroku = new Map();
+// Pamiec brakow: wpisy lancucha konta bez wiersza w tym dokumencie (userId -> Map(rodzaj|klucz -> { kind, klucze })) —
+// przeglad dopisuje je bez wzgledu na okno i pokrycie. Bez wpisu: odmowy bez kolejki (bramka, tryb, konto, argument,
+// brak IndexedDB) i konto usuwane (SYNC_DB_DELETED).
+const Bem_braki = new Map();
+const Bem_BEZ_BRAKU = Object.freeze(['bramka', 'tryb', 'konto', 'argument', 'rodzaj', 'brak-indexeddb']);
 // Sekcje ladunku importu: encja i jej nagrobek (ten sam identyfikator) — oba rodzaje dla kazdego identyfikatora.
 const Bem_SEKCJE = Object.freeze([['pnote', 'pnotetomb', 'patientNotes', 'patientNoteTombstones'],
   ['note', 'notetomb', 'notes', 'noteTombstones'], ['plist', 'plisttomb', 'patientLists', 'patientListTombstones']]);
@@ -8290,7 +8308,8 @@ function Bem_krokKoniec() {
 }
 // Dopisanie na koniec lancucha konta (kolejno, w kolejnosci wywolan w tym dokumencie); znacznik partii importu — po
 // wpisach partii, powiadomienie sluchaczy onBulkChange; wpis przegladu — krok przegladu kolejki. Wynik dopisania:
-// udane liczy sie do partii, limit blokady konta (SYNC_DB_TIMEOUT) ustawia przeglad pilny konta. Po zdjeciu ostatniego
+// udane liczy sie do partii, limit blokady konta (SYNC_DB_TIMEOUT) ustawia przeglad pilny konta, nieudane trafia do
+// pamieci brakow (Bem_brak), a udane albo brak encji ja zdejmuje. Po zdjeciu ostatniego
 // wpisu konta innego niz przeglad — przeglad pilny albo nalezny (Bem_poBezczynnosci).
 function Bem_doLancucha(z) {
   const poprz = Bem_ogony.get(z.uid) || Promise.resolve();
@@ -8301,6 +8320,7 @@ function Bem_doLancucha(z) {
     if (z.przeglad || z.znacznik || !w) return;
     if (w.ok === true && z.partia) z.partia.wiersze += 1;
     if (w.code === 'SYNC_DB_TIMEOUT') Bem_pilne.add(z.uid);
+    Bem_brak(z, w);
   });
   Bem_ogony.set(z.uid, p);
   p.then(function () {
@@ -8310,12 +8330,13 @@ function Bem_doLancucha(z) {
   });
 }
 // Jedno dopisanie lancucha: wejscie kolejki (bramka mogla sie zamknac, sejf zablokowac), potem Bob_dopiszZ z sesja
-// i kontem z chwili emisji. Nigdy nie odrzuca; wynik Bob_dopiszZ (albo null po odmowie wejscia) — dla licznika wierszy
-// partii i przegladu pilnego po limicie blokady konta; wynik nie wraca do miejsca zapisu (zmiane bez wiersza doklada
-// przeglad kolejki).
+// i kontem z chwili emisji. Nigdy nie odrzuca; wynik Bob_dopiszZ albo odmowa wejscia ({ ok: false, powod }) — dla
+// licznika wierszy partii, przegladu pilnego po limicie blokady konta i pamieci brakow; wynik nie wraca do miejsca
+// zapisu (zmiane bez wiersza doklada przeglad kolejki).
 async function Bem_dopisz(z) {
   try {
-    if (Bob_wejscie() || Bob_argumentyDopisania(z.kind, z.klucze, undefined)) return null;
+    const odm = Bob_wejscie() || Bob_argumentyDopisania(z.kind, z.klucze, undefined);
+    if (odm) return { ok: false, powod: odm };
     return await Bob_dopiszZ(z.kind, z.klucze, undefined, z.s, z.uid);
   } catch (x) {
     // jak wyzej: emisja nie zmienia wyniku zapisu
@@ -8357,6 +8378,30 @@ function Bem_powiadom(p) {
       // sluchacz nie przerywa lancucha
     }
   });
+}
+// Klucz encji wpisu w postaci kluczy przegladu: rodzaj|klucz (wersja — patientId/snapshotId, poswiadczenie — cred).
+function Bem_kluczEncji(z) {
+  if (z.kind === 'snap') return 'snap|' + z.klucze.patientId + '/' + z.klucze.snapshotId;
+  return z.kind + '|' + (z.kind === 'cred' ? 'cred' : String(z.klucze));
+}
+// Pamiec brakow po wyniku dopisania wpisu lancucha: udane albo brak encji zdejmuje wpis tej encji; odmowa bez kolejki
+// i konto usuwane — bez zmiany; inne nieudane (limit blokady konta, brak miejsca, blokada sejfu, zmiana sesji, blad
+// zapisu) — wpis encji do dopisania w przegladzie (konto wpisu). Nigdy nie rzuca.
+function Bem_brak(z, w) {
+  try {
+    const k = Bem_kluczEncji(z);
+    const m = Bem_braki.get(z.uid);
+    if (w.ok === true || w.powod === 'brak') {
+      if (m) m.delete(k);
+      return;
+    }
+    if (w.code === 'SYNC_DB_DELETED' || Bem_BEZ_BRAKU.indexOf(w.powod) >= 0) return;
+    const n = m || new Map();
+    n.set(k, { kind: z.kind, klucze: z.klucze });
+    Bem_braki.set(z.uid, n);
+  } catch (x) {
+    // bez wpisu; zmiane z chwila w oknie doklada przeglad
+  }
 }
 // Warunek kolejki bez bramki (sejf odblokowany, „Komputer prywatny”, IndexedDB): powod odmowy albo null.
 function Bem_kolejka() {
@@ -8418,12 +8463,13 @@ function Bem_przeglad(sieroty) {
 function Bem_przegladTeraz() {
   return Bem_przeglad(false);
 }
-// Krok przegladu w lancuchu: silnik z parami scalania konta i rangami rodzajow; po zakonczonym — pary scalania przyciete
+// Krok przegladu w lancuchu: silnik z parami scalania konta, rangami rodzajow i pamiecia brakow konta (silnik zdejmuje
+// z niej wpisy dopisane); po zakonczonym — pary scalania przyciete
 // do nowego progu okna; obietnice wywolujacych rozstrzygniete wynikiem.
 async function Bem_przegladKrok(z) {
   let w;
   try {
-    w = await Bob_przeglad(z.uid, z.s, Bem_pary.get(z.uid) || null, Bem_RANGI, z.sieroty === true);
+    w = await Bob_przeglad(z.uid, z.s, Bem_pary.get(z.uid) || null, Bem_RANGI, z.sieroty === true, Bem_braki.get(z.uid) || null);
     const m = Bem_pary.get(z.uid);
     const prog = Bob_przegladProg(z.uid);
     if (w && w.ok === true && m && prog) Array.from(m.keys()).forEach(function (k) { if (!(m.get(k) > prog)) m.delete(k); });

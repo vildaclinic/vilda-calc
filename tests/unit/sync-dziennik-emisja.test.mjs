@@ -65,8 +65,8 @@
 //        (następna emisja nie czeka), bez onBulkChange, wpisy partii z sesją importu — bez wiersza.
 //   EM31 blokada konta trzymana przez test: import kończy się przed wierszami partii, po zwolnieniu wiersze
 //        i onBulkChange; limit 20 s — count bez wpisu, który nie dał wiersza, łańcuch idzie dalej; od E2-PR3a4 po partii
-//        przegląd pilny dokłada poświadczenie konta, a wersja z limitu ma wiersz sprzed usunięcia karty utworzony nie
-//        wcześniej niż jej chwila zmiany (pokrycie wierszem).
+//        przegląd pilny dokłada wersję z limitu (pamięć braków — bez względu na okno i na wiersz tej wersji sprzed
+//        usunięcia karty) i poświadczenie konta; następny przegląd nic nie dokłada.
 //   EM32 emissionsSettled czeka na znacznik partii: rozstrzyga się po wywołaniu słuchacza.
 //   EM33 dwa importy kolejno: dwa wywołania, każde z własnym count; znak końca partii poza krokiem bez skutku (kopia
 //        sejfu z dodatkowym wywołaniem Bem_partia w emiterze onPatientSaved: poza krokiem — bez wywołania, w kroku
@@ -82,7 +82,7 @@
 // wywołania słuchacza także przed partiami; emisje z reguły zdjęcia wpisu kosza z E2-PR3a2), EM2–EM24.
 // Czerwone na bazie E2-PR3a4 (sejf 77b05e6f — bez przeglądu kolejki; 4 przypadki): EM2 (scalenie z chmury bez odczytu
 // bramki), EM6 (bez przeglądu pilnego po limicie), EM27 (odtworzenie konta bez przeglądu przy odblokowaniu), EM31
-// z limitem (bez poświadczenia z przeglądu pilnego). Zielone z natury (strażniki regresji): EM1 (odczyty pola = emisje
+// z limitem (bez przeglądu pilnego). Zielone z natury (strażniki regresji): EM1 (odczyty pola = emisje
 // + przeglądy + scalenia z licznika w kopii sejfu — równość zachodzi też bez przeglądu), pozostałe przypadki.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -1114,7 +1114,7 @@ describe('EM25–EM33: partie importu (E2-PR3a3)', () => {
     expect(partie).toEqual([{ reason: 'importPatientFromEnvelope', count: 4 }]);
   }, 60_000);
 
-  it('EM31: limit 20 s czekania na blokadę konta w partii — wpis bez wiersza nie wlicza się do count, łańcuch idzie dalej; po partii przegląd pilny (E2-PR3a4, pierwszy w dokumencie) dokłada poświadczenie konta, a wersję z limitu uznaje za pokrytą — ma ona w kolejce wiersz sprzed usunięcia karty utworzony nie wcześniej niż jej chwila zmiany (savedAtISO z pliku)', async () => {
+  it('EM31: limit 20 s czekania na blokadę konta w partii — wpis bez wiersza nie wlicza się do count, łańcuch idzie dalej; po partii przegląd pilny (E2-PR3a4, pierwszy w dokumencie) dokłada wersję z limitu (pamięć braków: mimo wiersza tej wersji sprzed usunięcia karty i chwili zmiany z pliku) i poświadczenie konta', async () => {
     const o = await okno({ bramka: true });
     const k = await plikKartyUsunietej(o);
     await o.gotowe();
@@ -1132,10 +1132,13 @@ describe('EM25–EM33: partie importu (E2-PR3a3)', () => {
     await h.zwolnij();
     await o.gotowe();
     expect(o.zadaniaKolejki().slice(z0).map((z) => z.wynik)[0], 'pierwszy wpis partii przerwany po limicie').toBe('przerwana');
-    expect(rodzaje(po(o, s0)), 'pierwsza wersja bez wiersza, reszta partii dopisana, potem przegląd pilny: poświadczenie').toEqual(['snap', 'pnote', 'pnote', 'cred']);
+    expect(rodzaje(po(o, s0)), 'pierwsza wersja bez wiersza, reszta partii dopisana, potem przegląd pilny: wersja z limitu i poświadczenie').toEqual(['snap', 'pnote', 'pnote', 'snap', 'cred']);
     expect(po(o, s0)[0].entityKey, 'wiersz partii: druga wersja').toBe(`${k.P}/${k.S2}`);
+    expect(po(o, s0)[3].entityKey, 'wiersz przeglądu pilnego: pierwsza wersja').toBe(`${k.P}/${k.S1}`);
     const nagrobek = o.kolejka('A').find((w) => w.kind === 'ptomb' && w.entityKey === k.P);
-    expect(o.kolejka('A').filter((w) => w.kind === 'snap' && w.entityKey === `${k.P}/${k.S1}`).map((w) => w.seqLocal < nagrobek.seqLocal), 'pierwsza wersja: jeden wiersz, sprzed nagrobka karty').toEqual([true]);
+    expect(o.kolejka('A').filter((w) => w.kind === 'snap' && w.entityKey === `${k.P}/${k.S1}`).map((w) => w.seqLocal > nagrobek.seqLocal), 'pierwsza wersja: wiersz sprzed nagrobka karty i wiersz po nim').toEqual([false, true]);
+    await o.gotowe();
+    expect((await o.ev.sweepOutbox()).dopisane, 'następny przegląd: nic do dołożenia (wpis zdjęty z pamięci braków)').toBe(0);
     expect(partie).toEqual([{ reason: 'importPatientFromEnvelope', count: 3 }]);
   }, 60_000);
 

@@ -66,11 +66,14 @@
 //        10 własnych, po scaleniu pełnego ładunku 0, po przeładowaniu 0.
 //   PG27 nagrobek klucza dostępu usuniętego przy zablokowanym sejfie: przy odblokowaniu pktomb.
 //   PG28 przegląd rusza przed słuchaczami odblokowania: emissionsSettled() ze słuchacza onUnlock czeka na przegląd.
+//   PG29 pamięć braków: wpis łańcucha bez wiersza (limit blokady konta, blokada sejfu) przegląd dokłada bez względu na
+//        okno i na wiersz tej encji sprzed usunięcia karty (wersje z pliku importu z chwilami sprzed okna); następny
+//        przegląd nic.
 //
 // Każdy przypadek poza strażnikami PG10 i PG25 zaczyna od sprawdzenia, że sejf ma część przeglądu
 // (VildaVault._eventLog.sweepOutbox).
-// Czerwone na bazie (77b05e6f — sejf bez przeglądu kolejki; 35 przypadków z wariantami): 33 — PG1–PG9 (PG6 ×2, PG9 ×2),
-// PG11–PG24 (PG11 ×2, PG19 ×2, PG21 ×2, PG23 ×2, PG24 ×2), PG26–PG28. Zielone z natury (strażniki regresji): PG10
+// Czerwone na bazie (77b05e6f — sejf bez przeglądu kolejki; 37 przypadków z wariantami): 35 — PG1–PG9 (PG6 ×2, PG9 ×2),
+// PG11–PG24 (PG11 ×2, PG19 ×2, PG21 ×2, PG23 ×2, PG24 ×2), PG26–PG28, PG29 ×2. Zielone z natury (strażniki regresji): PG10
 // (bez przeglądu nie ma przeglądu pilnego po SYNC_DB_DELETED), PG25 (tryby bez kolejki: bez bazy, kluczy i blokad także
 // bez przeglądu).
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -1133,5 +1136,68 @@ describe('PG26–PG28: 10 dni bez połączenia, klucz dostępu przy blokadzie, k
     await o.gotowe();
     await czekajNa(() => stan.poRozstrzygnieciu, 'emissionsSettled ze słuchacza');
     expect(stan).toEqual({ wSluchaczu: [], poRozstrzygnieciu: ['cred|cred'] });
+  }, 60_000);
+});
+
+// Plik karty z chwilami sprzed okna przeglądu: karta z dwiema wersjami zapisana przy otwartej bramce (wiersze kolejki),
+// eksport do pliku, „Usuń pacjenta”, potem dwie doby i przegląd — znacznik po chwilach wersji z pliku.
+async function plikSprzedOkna(o) {
+  const k = await karta(o, 1);
+  await o.gotowe();
+  const plik = await o.v.exportPatientEnvelope(k.P);
+  tik();
+  await o.v.removePatient(k.P);
+  await o.gotowe();
+  tik(2 * DOBA);
+  expect((await o.ev.sweepOutbox()).ok, 'przegląd przed importem').toBe(true);
+  await o.gotowe();
+  expect(metaKonta(o).przeglad > iso(zegar - 2 * DOBA), 'znacznik po chwilach wersji z pliku').toBe(true);
+  return { ...k, plik };
+}
+
+describe('PG29: pamięć braków', () => {
+  it('PG29: wpis partii importu bez wiersza po limicie blokady konta (wersja z pliku z chwilą sprzed okna, w kolejce wiersz tej wersji sprzed usunięcia karty) — przegląd pilny dokłada ją mimo okna i tego wiersza; następny przegląd nic', async () => {
+    const o = await okno();
+    await o.zaloguj('A');
+    await o.gotowe();
+    const k = await plikSprzedOkna(o);
+    const s0 = ostatni(o);
+    const h = await o.locks.trzymaj(nazwaBlokady(o.uid));
+    tik();
+    await o.v.importPatientFromEnvelope(k.plik, o.A.haslo);
+    await o.locks.czekajNaKolejke(nazwaBlokady(o.uid), 1);
+    expect(o.timery.odpal((t) => t.ms === 20000), 'limit pierwszego wpisu partii').toBe(1);
+    await o.locks.czekajNaKolejke(nazwaBlokady(o.uid), 1);
+    await h.zwolnij();
+    await o.gotowe();
+    expect(po(o, s0), 'wiersz partii (druga wersja), potem przegląd pilny: pierwsza wersja').toEqual([`snap|${k.P}/${k.S2}`, `snap|${k.P}/${k.S1}`]);
+    const nagrobek = o.kolejka('A').find((w) => w.kind === 'ptomb' && w.entityKey === k.P);
+    expect(o.kolejka('A').filter((w) => klucz(w) === `snap|${k.P}/${k.S1}`).map((w) => w.seqLocal > nagrobek.seqLocal), 'pierwsza wersja: wiersz sprzed nagrobka karty i po nim').toEqual([false, true]);
+    tik(MIN);
+    expect((await o.ev.sweepOutbox()).dopisane, 'następny przegląd').toBe(0);
+    await o.gotowe();
+    expect(po(o, s0)).toHaveLength(2);
+  }, 60_000);
+
+  it('PG29: wpisy partii importu bez wiersza po blokadzie sejfu w trakcie czekania na blokadę konta — przy ponownym odblokowaniu przegląd dokłada obie wersje z pliku (chwile sprzed okna)', async () => {
+    const o = await okno();
+    await o.zaloguj('A');
+    await o.gotowe();
+    const k = await plikSprzedOkna(o);
+    const s0 = ostatni(o);
+    const h = await o.locks.trzymaj(nazwaBlokady(o.uid));
+    tik();
+    await o.v.importPatientFromEnvelope(k.plik, o.A.haslo);
+    await o.locks.czekajNaKolejke(nazwaBlokady(o.uid), 1);
+    o.zablokuj();
+    await h.zwolnij();
+    await o.gotowe();
+    expect(po(o, s0), 'po blokadzie sejfu: bez wierszy').toEqual([]);
+    tik(MIN);
+    await o.zaloguj('A');
+    await o.gotowe();
+    expect(po(o, s0), 'przegląd przy odblokowaniu').toEqual(snapy(k));
+    tik(MIN);
+    expect((await o.ev.sweepOutbox()).dopisane, 'następny przegląd').toBe(0);
   }, 60_000);
 });

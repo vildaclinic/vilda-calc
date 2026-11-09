@@ -1442,7 +1442,7 @@ describe('U2(c): wywołania zakazane i reguła domknięcia części magazynu', (
   // E2-PR3a4: wstawki przeglądu kolejki (Bem_przeglad w odblokowaniu, Bem_zChmury w scalaniu), eksport sweepOutbox,
   // przegląd po bezczynności łańcucha i warunek kolejki.
   const SYNCHRONICZNE_BEM = ['Bem_hak', 'Bem_zHaka', 'Bem_zmiana', 'Bem_krokStart', 'Bem_krokKoniec', 'Bem_sekcje', 'Bem_partia', 'Bem_naPartie',
-    'Bem_powiadom', 'Bem_zChmury', 'Bem_przeglad', 'Bem_przegladTeraz', 'Bem_poBezczynnosci', 'Bem_kolejka'];
+    'Bem_powiadom', 'Bem_zChmury', 'Bem_przeglad', 'Bem_przegladTeraz', 'Bem_poBezczynnosci', 'Bem_kolejka', 'Bem_brak', 'Bem_kluczEncji'];
   // Warunek otwartego kroku w Bem_zChmury (przed bramką: importy w kroku nie czytają bramki).
   const WARUNEK_KROKU = "if ((Bem_kroki.get('n') || 0) > 0) return;";
   function analizujBem(zrodlo) {
@@ -1491,6 +1491,8 @@ describe('U2(c): wywołania zakazane i reguła domknięcia części magazynu', (
     if (!zc || zc.body.body.length !== 3 || !tryZCatch(t0)) naruszenia.push('Bem_zChmury: po bramce inna instrukcja niż jedno try z catch');
     const pb = dekl.get('Bem_poBezczynnosci');
     if (!pb || pb.body.body.length !== 1 || !tryZCatch(pb.body.body[0])) naruszenia.push('Bem_poBezczynnosci: nie jedno try z catch');
+    const br = dekl.get('Bem_brak');
+    if (!br || br.body.body.length !== 1 || !tryZCatch(br.body.body[0])) naruszenia.push('Bem_brak: nie jedno try z catch');
     const odwolania = (gdzie.Bob_bramka || []).slice().sort().join();
     if (odwolania !== 'Bem_przeglad,Bem_zChmury,Bem_zmiana') naruszenia.push(`Bob_bramka: ${odwolania || 'brak'} zamiast po jednym odwołaniu w Bem_zmiana, Bem_przeglad i Bem_zChmury`);
     for (const n of ['Bob_wejscie', 'Bob_dopiszZ']) {
@@ -1612,6 +1614,10 @@ describe('U2(c): wywołania zakazane i reguła domknięcia części magazynu', (
       'function Bem_przegladTeraz() { return Bem_przeglad(false); }',
       'async function Bem_przegladKrok(z) { let w; try { w = await Bob_przeglad(z.uid, z.s, Bem_pary.get(z.uid) || null, Bem_RANGI, z.sieroty === true); Bob_przegladProg(z.uid); } catch (x) { w = { ok: false }; } z.gotowe.forEach(function (f) { f(w); }); return w; }',
       'function Bem_poBezczynnosci(uid) { try { if (!Bem_pilne.has(uid) && !Bob_przegladNalezny(uid)) return; if (!T() || Bses_opcje(null).Bses_s.u !== uid) return; Bem_pilne.delete(uid); Bem_przeglad(false); } catch (x) { } }',
+      // E2-PR3a4: pamięć braków.
+      'const Bem_braki = new Map();',
+      'function Bem_kluczEncji(z) { return z.kind + "|" + String(z.klucze); }',
+      'function Bem_brak(z, w) { try { const m = Bem_braki.get(z.uid) || new Map(); if (w.ok === true) m.delete(Bem_kluczEncji(z)); else m.set(Bem_kluczEncji(z), { kind: z.kind, klucze: z.klucze }); Bem_braki.set(z.uid, m); } catch (x) { } }',
     ].join('\n');
     expect(analizujBem(DOBRA)).toEqual([]);
     const czerwone = [
@@ -1744,7 +1750,9 @@ describe('U2(d): najwyższy poziom bloku — tylko deklaracje bez skutków przy 
     'Bem_sekcje', 'Bem_partia', 'Bem_naPartie', 'Bem_powiadom', 'Bem_partie', 'Bem_sluchaczePartii', 'Bem_SEKCJE',
     // E2-PR3a4: przegląd kolejki i pary scalania z chmury.
     'Bem_pary', 'Bem_pilne', 'Bem_poKroku', 'Bem_kolejka', 'Bem_zChmury', 'Bem_przeglad', 'Bem_przegladTeraz', 'Bem_przegladKrok',
-    'Bem_poBezczynnosci'];
+    'Bem_poBezczynnosci',
+    // E2-PR3a4: pamięć braków (wpisy łańcucha bez wiersza — przegląd dopisuje je bez względu na okno i pokrycie).
+    'Bem_braki', 'Bem_BEZ_BRAKU', 'Bem_brak', 'Bem_kluczEncji'];
   it('U2(d) (E2-PR3a2): część Bem_ (^Bem_) — function / async function albo const z literałem, Object.freeze(…) z dozwolonymi typami, new Map() / new Set(); są nazwy wiążące części', () => {
     znacznikEmisjiRaz();
     const ast = parse(czesci().bem, { ecmaVersion: 'latest', sourceType: 'script' });
