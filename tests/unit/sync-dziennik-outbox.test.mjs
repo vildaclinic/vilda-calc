@@ -50,7 +50,8 @@
 //   PG16 pary scalania w sesji: po scaleniu pełnego ładunku bliźniaka dopisane tylko 2 wersje własne; pary w meta.
 //   PG17 pary utrwalone: po przeładowaniu strony i odblokowaniu 0 wierszy (wiersz, gdyby powstał, zastosowany
 //        u bliźniaka nie zmienia jego eksportu).
-//   PG18 pary z wierszy przyjętych (outboxAccept): 0 w sesji i 0 po przeładowaniu.
+//   PG18 pary z wierszy przyjętych (outboxAccept): 0 w sesji i 0 po przeładowaniu; późniejsza zmiana bez wiersza tej samej
+//        encji dołożona (para pokrywa tylko stan z chwili utworzenia wiersza).
 //   PG19 pamięć par ograniczona i wygasająca: para z chwilą nie późniejszą niż próg pominięta, po przeglądzie w meta
 //        tylko pary po nowym progu; ładunek z 20 001 parami — w meta 20 000 najpóźniejszych.
 //   PG20 importy (import pliku karty, scalenie i odtworzenie kopii konta): bez odczytu bramki w scaleniu i bez par —
@@ -73,8 +74,8 @@
 //
 // Każdy przypadek poza strażnikami PG10 i PG25 zaczyna od sprawdzenia, że sejf ma część przeglądu
 // (VildaVault._eventLog.sweepOutbox).
-// Czerwone na bazie (77b05e6f — sejf bez przeglądu kolejki; 37 przypadków z wariantami): 35 — PG1–PG9 (PG6 ×2, PG9 ×2),
-// PG11–PG24 (PG11 ×2, PG19 ×2, PG21 ×2, PG23 ×2, PG24 ×2), PG26–PG28, PG29 ×2. Zielone z natury (strażniki regresji): PG10
+// Czerwone na bazie (77b05e6f — sejf bez przeglądu kolejki; 40 przypadków z wariantami): 38 — PG1–PG9 (PG6 ×3, PG7 ×2,
+// PG9 ×2), PG11–PG24 (PG11 ×2, PG18 ×2, PG19 ×2, PG21 ×2, PG23 ×2, PG24 ×2), PG26–PG28, PG29 ×2. Zielone z natury (strażniki regresji): PG10
 // (bez przeglądu nie ma przeglądu pilnego po SYNC_DB_DELETED), PG25 (tryby bez kolejki: bez bazy, kluczy i blokad także
 // bez przeglądu).
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -831,6 +832,23 @@ describe('PG16–PG19: pamięć par', () => {
     await o2.gotowe();
     expect(o2.l.przeglady).toEqual([{ sieroty: true }]);
     expect(o2.kolejka('A'), 'po przeładowaniu').toEqual([]);
+  }, 60_000);
+
+  it('PG18: para z wiersza przyjętego pokrywa tylko stan z chwili utworzenia wiersza — późniejsza zmiana bez wiersza tej samej encji dołożona', async () => {
+    const o = await okno();
+    await o.zaloguj('A');
+    const n = await o.v.saveNote({ title: 'Fikcyjny szablon', category: 'badanie', body: 'Fikcyjna treść 1.' });
+    await o.gotowe();
+    const pr = await o.ev.outboxAccept(o.kolejka('A').map((w) => w.eid));
+    expect(pr).toMatchObject({ ok: true });
+    await o.gotowe();
+    tik(MIN);
+    await o.bezEmisji(() => o.v.saveNote({ id: n.id, title: 'Fikcyjny szablon', category: 'badanie', body: 'Fikcyjna treść 2.' }));
+    tik(MIN);
+    const sw = await o.ev.sweepOutbox();
+    await o.gotowe();
+    expect([sw.ok, sw.dopisane]).toEqual([true, 1]);
+    expect(klucze(o)).toEqual([`note|${n.id}`]);
   }, 60_000);
 
   it('PG19: pamięć par ograniczona i wygasająca — para z chwilą nie późniejszą niż próg pominięta; po przeglądzie w meta tylko pary z chwilą po nowym progu', async () => {
