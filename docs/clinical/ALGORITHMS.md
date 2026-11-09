@@ -22157,12 +22157,13 @@ P-USUN-KONTO-KARTY; te same w planie: wiersze 6a′, 6b–6d, 7a, 8 i 12 tabeli 
   z bazą sejfu i blokuje się, „Usuń konto” nie czeka, identyfikator urządzenia nie zostaje; testy nie zamykają za drugą
   kartę jej połączeń z bazą sejfu, żeby „Usuń konto” się skończyło. Dalsze wymagania — wykonane w E2-PR3a1c (wpis
   wyżej).
-- **E2-PR3a2.**
+- **E2-PR3a2** — wykonane w E2-PR3a2 (wpis P-DZIENNIK-ZDARZEN, E2-PR3a2, wyżej).
   - Wewnętrzne dopisanie `Bob_dopiszZ` budowane nad `Bob_dopiszPod`, z blokadą współdzieloną konta braną przed nim.
   - Porównanie zapisu bazowego z sejfem bez wstawek (w tej kopii sejfu `Bob_oznacz(…)` zastąpione przez `false`):
     dozwolona różnica `databases()` +1 w krokach usunięcia konta tylko poza wariantem „Zaloguj jednorazowo”.
-  - E2e uśpienia: `databases()` w kroku usunięcia konta 3/3/1 („Komputer prywatny”/„Komputer w pracy”/„Zaloguj
-    jednorazowo”; od E2-PR3a1c, wcześniej 2/2/1), blokada wyłączna tylko poza trybem „Zaloguj jednorazowo”.
+  - E2e uśpienia: `databases()` w kroku usunięcia konta 4/4/2 („Komputer prywatny”/„Komputer w pracy”/„Zaloguj
+    jednorazowo”; od vildaclinic/vilda-calc#910, wcześniej 3/3/1 od E2-PR3a1c i 2/2/1), blokada wyłączna tylko poza
+    trybem „Zaloguj jednorazowo”.
   - Literał miejsc poza blokiem rośnie od dzisiejszego `MIEJSCA_POZA_BLOKIEM`.
   - Łańcuch dopisań może czekać na blokadę konta do 20 s; zapis karty na niego nie czeka (emitery nie czekają na wynik
     kolejki). Przyjęte w projekcie E2-PR3a.
@@ -22790,6 +22791,9 @@ E3-PR0).
     w `removeUser`.
   - Rejestracja i logowanie kluczem dostępu (WebAuthn) oraz hak `VildaPersistence` (poza zapisem bazowym z tego PR):
     test, że przy zamkniętej bramce kończą się na bramce, bez otwarcia bazy kolejki, szyfrowania zdarzeń i żądań.
+  - Wykonane w E2-PR3a2 (wpis P-DZIENNIK-ZDARZEN, E2-PR3a2, wyżej): emitery nie czekają na wynik kolejki, zapis bazowy
+    zmienia tylko liczba odczytów bramki, rejestracja i logowanie kluczem dostępu oraz hak `VildaPersistence` kończą się
+    na bramce (U5). Brak miejsca przy dopisaniu — przegląd w E2-PR3a4.
 - **E2-PR4.**
   - Bramka rozszerzona o flagę `vilda-event-log-v1` i `features.events`. Nadawca sprawdza tryb konta także z wpisu
     rejestru.
@@ -23252,6 +23256,10 @@ literał na wynik zgodny.
     niezmierzony).
   - Do sprawdzenia: emisja nagrobka notatki przy „Usuń pacjenta” (`Bnp_usunZPacjentem`, wiersz 8 tabeli 3.5).
   - Pomiar `sweepOutbox` wobec rekordów pochodnych scalania.
+  - Wykonane w E2-PR3a2 (wpis P-DZIENNIK-ZDARZEN, E2-PR3a2, wyżej): kolejność w kroku (kroki operacji złożonych),
+    nośnik pól karty (`snap` także w „Przywróć”, gdy wizyta jest już w karcie), nagrobek notatki przy „Usuń pacjenta”
+    (sprawdzone: powstaje w usunięciu notatki i w odnowieniu nagrobka, bez osobnej emisji). Pomiar `sweepOutbox` —
+    E2-PR3a4.
 - **E2-PR3b.**
   - Hak H1: przegrany nagrobek karty → pełna karta (`pfull`, `setId` z karty i chwili nagrobka, dedup).
   - Hak H2 „zawsze do kolejki”: notatka, której nagrobek zniknął w partii i której rekord zmieniło scalanie, idzie do
