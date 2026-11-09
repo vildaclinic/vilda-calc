@@ -41,7 +41,12 @@ const nativeTabTest = test.extend({
       const forceClose = setTimeout(() => { if (child.exitCode === null) child.kill('SIGKILL'); }, 5000);
       try { await browser?.close(); } finally {
         try { if (child.exitCode === null) child.kill(); await exited; }
-        finally { clearTimeout(forceClose); await rm(profile, { recursive: true, force: true }); }
+        finally {
+          clearTimeout(forceClose);
+          // Chromium helpers can finish closing their profile files just after
+          // the main child exits. Retry transient ENOTEMPTY/EBUSY cleanup only.
+          await rm(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+        }
       }
     }
   }, { scope: 'worker' }],

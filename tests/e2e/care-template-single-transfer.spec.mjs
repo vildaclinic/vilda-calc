@@ -343,6 +343,6 @@ test('single-template import and export work after a cold restart with the real 
   } finally {
     if (context) await context.close();
     await server.stop();
-    await rm(profile, { recursive: true, force: true });
+    await rm(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
   }
 });
