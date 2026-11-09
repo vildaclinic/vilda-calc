@@ -34,6 +34,10 @@
 //       zapisy danych sejfu przy otwartej bramce dopisują zmiany do kolejki; domyślnie metody danych z listy
 //       METODY_DANYCH idą przez o.v przy zamkniętej bramce — pole VILDA_EVENT_LOG na czas wywołania false, potem
 //       przywrócone — więc wiersze kolejki powstają tylko z jawnych dopisań testu; drugieOkno jej nie dziedziczy),
+//       przeglad (true — przegląd kolejki na początku odblokowania jak w przeglądarce, E2-PR3a4; domyślnie zakładanie
+//       kont i logowania uprzęży oraz metody odblokowania z listy METODY_ODBLOKOWANIA przez o.v idą przy zamkniętej
+//       bramce — pole VILDA_EVENT_LOG na czas wywołania własnością danych false, potem przywrócony poprzedni deskryptor —
+//       więc odblokowanie nie dopisuje do kolejki; drugieOkno jej nie dziedziczy),
 //       zrodla ({ plik: (win) => void } — plik z listy skryptów ładuje podana funkcja zamiast pliku z repozytorium,
 //       np. sejf bez wstawek albo kopia z licznikiem emisji z tests/support/sejf-bez-wstawek.mjs; przekazywane do okno()
 //       uprzęży sesji; drugieOkno dziedziczy tę samą funkcję, chyba że opcje podają własne; bez opcji — jak dotąd).
@@ -357,6 +361,17 @@ export async function oknoMagazynu(opcje = {}) {
   const win = o0.win;
   v = win.VildaVault;
   if (opcje.bramka !== false) win.VILDA_EVENT_LOG = true;
+  // E2-PR3a4: przegląd kolejki przy odblokowaniu — domyślnie wyłączony w uprzęży (pole okna na czas odblokowania false
+  // jako własność danych, potem przywrócony deskryptor); przeglad: true — jak w przeglądarce.
+  const przeglad = opcje.przeglad === true;
+  const bezPrzegladu = async (fn) => {
+    if (przeglad) return fn();
+    const bylo = Object.getOwnPropertyDescriptor(win, 'VILDA_EVENT_LOG');
+    Object.defineProperty(win, 'VILDA_EVENT_LOG', { value: false, writable: true, configurable: true });
+    try { return await fn(); } finally {
+      if (bylo) Object.defineProperty(win, 'VILDA_EVENT_LOG', bylo); else delete win.VILDA_EVENT_LOG;
+    }
+  };
 
   const sygnatura = () => [idb.__atrapa.log.length, krypto.log.length, o0.dziennik.length, idb.__atrapa.wToku(), kryptoWToku].join();
   async function spokoj(n = 30) {
@@ -388,7 +403,7 @@ export async function oknoMagazynu(opcje = {}) {
   async function zaloguj(k) {
     if (v.isUnlocked()) zablokuj();
     const konto = k === 'A' ? A : B;
-    await v.unlockUser(konto.userId, konto.haslo);
+    await bezPrzegladu(() => v.unlockUser(konto.userId, konto.haslo));
     stan.nrSesji += 1;
     await tlo();
   }
@@ -405,7 +420,7 @@ export async function oknoMagazynu(opcje = {}) {
     zablokuj(wariant === 'blokada' ? 'idle' : 'manual');
     if (wariant === 'blokada') return { sesja: Promise.resolve(znacznik()), koniec: Promise.resolve(znacznik()) };
     const konto = wariant === 'A' ? A : B;
-    const koniec = v.unlockUser(konto.userId, konto.haslo).then(() => { stan.nrSesji += 1; return znacznik(); });
+    const koniec = bezPrzegladu(() => v.unlockUser(konto.userId, konto.haslo)).then(() => { stan.nrSesji += 1; return znacznik(); });
     koniec.catch(() => {});
     const sesjaGotowa = (async () => {
       for (let i = 0; i < 100_000 && !(v.isUnlocked() && v.getCurrentUser().userId === konto.userId); i += 1) await makrozadanie();
@@ -423,12 +438,12 @@ export async function oknoMagazynu(opcje = {}) {
   const konta = opcje.konta || 'AB';
   if (!opcje.istniejace) {
     if (konta.includes('B')) {
-      B.userId = (await v.createUser(HASLO_B, { label: 'Fikcyjny Lekarz B', iterations: 1000, ...tryb('B') })).userId;
+      B.userId = (await bezPrzegladu(() => v.createUser(HASLO_B, { label: 'Fikcyjny Lekarz B', iterations: 1000, ...tryb('B') }))).userId;
       stan.nrSesji += 1;
       await tlo();
       zablokuj();
     }
-    A.userId = (await v.createUser(HASLO_A, { label: 'Fikcyjna Lekarka A', iterations: 1000, ...tryb('A') })).userId;
+    A.userId = (await bezPrzegladu(() => v.createUser(HASLO_A, { label: 'Fikcyjna Lekarka A', iterations: 1000, ...tryb('A') }))).userId;
     stan.nrSesji += 1;
     await tlo();
   }
@@ -444,7 +459,7 @@ export async function oknoMagazynu(opcje = {}) {
     return b && b.sklepy[sklep] ? b.sklepy[sklep].wiersze : null;
   };
   const o = {
-    win, v: opcje.emisja === true ? v : widokBezEmisji(win, v), ev: v._eventLog, idb, A, B, timery: o0.timery, dziennik: o0.dziennik, krypto, locks: o0.locks, lokalny, skrypty, zrodla: opcje.zrodla, rodzina,
+    win, v: widokOdblokowania(opcje.emisja === true ? v : widokBezEmisji(win, v), bezPrzegladu), ev: v._eventLog, idb, A, B, timery: o0.timery, dziennik: o0.dziennik, krypto, locks: o0.locks, lokalny, skrypty, zrodla: opcje.zrodla, rodzina,
     przeladowania: () => przeladowania, zamiany,
     propaguj: () => {
       if (!propaguj) throw new Error("propaguj(): okno bez localStorage: 'osobny'");
@@ -495,6 +510,19 @@ function widokBezEmisji(win, v) {
   });
 }
 
+// E2-PR3a4: metody odblokowania (przegląd kolejki na początku odblokowania) — przy przeglad: false przy zamkniętej bramce.
+export const METODY_ODBLOKOWANIA = Object.freeze(['createUser', 'unlockUser', 'unlockUserWithRecoveryKey', 'unlockWithPasskey',
+  'unlockWithPasskeyConditional', 'unlockWithPasskeyEphemeral', 'unlockWithPasskeyAndPersist', 'tryRestoreSession', 'importSyncCode']);
+function widokOdblokowania(v, bezPrzegladu) {
+  const lista = new Set(METODY_ODBLOKOWANIA);
+  return new Proxy(v, {
+    get(cel, nazwa) {
+      const f = cel[nazwa];
+      if (typeof f !== 'function' || !lista.has(nazwa)) return f;
+      return (...a) => bezPrzegladu(() => f.apply(cel, a));
+    },
+  });
+}
 export function drugieOkno(o, opcje = {}) {
   return oknoMagazynu({
     skrypty: o.skrypty, zrodla: o.zrodla, locks: o.locks || false, localStorage: o.lokalny, ...opcje, idb: o.idb, istniejace: { A: o.A, B: o.B },
