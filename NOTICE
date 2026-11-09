@@ -46,3 +46,9 @@ docs/clinical/ALGORITHMS.md for the source of each algorithm and data set.
 "Vilda", "Vilda Clinic", "wagaiwzrost.pl", and the associated logos and marks
 are not licensed under the Apache License, Version 2.0. Section 6 of the
 License applies: no trademark rights are granted.
+
+The clinical template content in templates/sga/ is a separately licensed
+work by Maciej Flader. It is not offered under the software Apache-2.0
+license. Its custom terms are embedded in the .vilda-template.json file
+and reproduced in templates/sga/LICENSE.txt; source medical documents
+retain their respective rights.

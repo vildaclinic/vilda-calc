@@ -52,3 +52,7 @@ Katalog publiczny, marketplace, płatności, weryfikacja wydawców i automatyczn
 - Rozpoznany duplikat i ponowienie nie nadpisują innego szablonu ani nie tworzą kopii po cichu.
 - Zapis i synchronizacja zachowują stare definicje i historię; nieobsługiwany klient nie usuwa nowych danych.
 - Podgląd i potwierdzenie działają na desktopie i telefonie, a import/eksport korzystają z zasobów dostępnych po zimnym uruchomieniu offline.
+
+## Pierwszy szablon do importu
+
+[SGA/IUGR — kwalifikacja, wersja 1.0, Maciej Flader](../templates/sga/README.md). Osobny plik do świadomego importu, bez automatycznej instalacji i bez katalogu szablonów. Treść i własne warunki udostępniania zaakceptował właściciel 9.11.2026 r. Warunki tego opracowania są zapisane w pliku i nie są zastępowane licencją kodu aplikacji.
