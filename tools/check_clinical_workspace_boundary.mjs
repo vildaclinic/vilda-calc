@@ -6,7 +6,10 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const BASE = '5f4d142871064ea689eb74d02c305b53d003d96c5f63498ea91d9d6c94cefb44';
+// Pinned base: #905 (c8d8442) vault, E2-PR3a2 (#912), P-PLAN-POTOMEK (#913, care-plan
+// descendant adoption in the synchronization merge) and E2-PR3a3 (import batches in the
+// event-log emission; docs/clinical/ALGORITHMS.md).
+const BASE = '060ec5fd17f57c9473d8cf6db55e6776e79e54d9a6ef9b1026612d5612262fa4';
 const START = '/* BEGIN VILDA CLINICAL WORKSPACE NATIVE V1 */\n';
 const END = '/* END VILDA CLINICAL WORKSPACE NATIVE V1 */\n';
 const digest = value => createHash('sha256').update(value).digest('hex');
