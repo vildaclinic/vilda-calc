@@ -1,4 +1,4 @@
-// P-DZIENNIK-ZDARZEN (E2-PR2b, E2-PR3a1, E2-PR3a1c, E2-PR3a2) — kolejka zmian jest uśpiona: zwykła praca z sejfem w prawdziwej przeglądarce
+// P-DZIENNIK-ZDARZEN (E2-PR2b, E2-PR3a1, E2-PR3a1c, E2-PR3a2, E2-PR3a4) — kolejka zmian jest uśpiona: zwykła praca z sejfem w prawdziwej przeglądarce
 // przy zamkniętej bramce nie otwiera i nie tworzy bazy kolejki (vilda_sync_<userId>), nie szyfruje zdarzeń, nie zapisuje
 // ani nie usuwa kluczy vilda-sync-* w localStorage (identyfikator urządzenia, znacznik ponowienia kasowania) i nie wysyła
 // żądań. Jedyny skutek E2-PR3a1 przy zamkniętej bramce to sprzątanie po koncie poza trybem „Zaloguj jednorazowo”:
@@ -12,6 +12,10 @@
 // Od E2-PR3a2 zapisy danych sejfu emitują zmiany do kolejki: przy zamkniętej bramce każda emisja to jeden odczyt pola
 // bramki i nic więcej (kolumna bramka na krok, BRAMKA; bez otwarcia bazy kolejki, szyfrowania zdarzeń, blokad, kluczy
 // i żądań — pozostałe liczniki bez zmian).
+// Od E2-PR3a4 odblokowanie (także zalogowanie przy założeniu konta) zaczyna się od przeglądu kolejki: przy zamkniętej
+// bramce to jeden odczyt pola bramki i nic więcej — bez listy baz, bazy kolejki, kluczy, blokad, szyfrowania i żądań
+// (kolumna bramka: o jeden więcej w krokach „konto” i „odblokowanie”, wariant bez navigator.locks: BRAMKA_BEZ_LOCKS;
+// pozostałe kolumny bez zmian).
 // Bieżący vilda_vault.js na stronie-uprzęży z serwera testów; skrypt startowy strony (przed skryptami sejfu) liczy na
 // krok: odczyty pola okna VILDA_EVENT_LOG (getter; tylko na stronie bez elementu o tym id), wywołania
 // IDBFactory.prototype.open / deleteDatabase / databases, SubtleCrypto.prototype.encrypt,
@@ -24,9 +28,13 @@
 // wyniku zastosowania zdarzenia jako funkcja czysta działa). Literały kroków (ENCRYPT, DATABASES) zmierzone w Chromium
 // na sejfie bez kasowania kolejki; DATABASES w kroku usunięcia konta = pomiar + 2 poza trybem „Zaloguj jednorazowo”
 // (kasowanie kolejki i sprzątanie po koncie z E2-PR3a1c; w nim = pomiar); BRAMKA zmierzona w Chromium na sejfie
-// z emisją (E2-PR3a2). Czerwone na sejfie sprzed E2-PR3a2: trzy tryby (kolumna bramka: same zera) i wariant bez
-// navigator.locks (0 odczytów zamiast 1); zielone z natury: dwa przypadki strony z elementem o id VILDA_EVENT_LOG (bez
-// licznika bramki). Dane wyłącznie fikcyjne.
+// z emisją (E2-PR3a2), od E2-PR3a4 — na sejfie z przeglądem kolejki. Czerwone na sejfie sprzed E2-PR3a2: trzy tryby
+// (kolumna bramka: same zera) i wariant bez navigator.locks (0 odczytów zamiast 1); zielone z natury: dwa przypadki strony
+// z elementem o id VILDA_EVENT_LOG (bez licznika bramki).
+// Czerwone na sejfie sprzed E2-PR3a4 (77b05e6f): trzy tryby (kolumna bramka: 0 zamiast 1 w krokach „konto”
+// i „odblokowanie”) i wariant bez navigator.locks (1 odczyt zamiast 2); zielone z natury: dwa przypadki strony
+// z elementem o id VILDA_EVENT_LOG.
+// Dane wyłącznie fikcyjne.
 import { expect, test } from '@playwright/test';
 
 const PAGE = '/__fikcyjny-dziennik-zdarzen-uspienie.html';
@@ -53,10 +61,11 @@ const DATABASES = Object.fromEntries(TRYBY.map((t) => [t, KROKI.map((k) => (k ==
 // Odczyty pola okna VILDA_EVENT_LOG na krok (E2-PR3a2: jeden na emisję zmiany; te same w trzech trybach) — pomiar
 // w Chromium. Emitują: zapis karty i wersji, kosz (wpis kosza), „Przywróć”, notatka, szablon, lista, „Scal pacjentów”
 // (przeniesiona wersja, wersja karty celu i nagrobek karty źródłowej), „Usuń pacjenta” i zmiana hasła; konto, blokada,
-// odblokowanie i usunięcie konta — bez emisji.
-const BRAMKA = [0, 1, 1, 1, 1, 1, 1, 1, 1, 3, 1, 1, 1, 0, 0, 0];
-// Wariant bez navigator.locks: jeden zapis karty.
-const BRAMKA_BEZ_LOCKS = 1;
+// odblokowanie i usunięcie konta — bez emisji. E2-PR3a4: przegląd kolejki przy odblokowaniu to jeden odczyt pola —
+// w krokach „konto” (zalogowanie po założeniu) i „odblokowanie”.
+const BRAMKA = [1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 1, 1, 1, 0, 1, 0];
+// Wariant bez navigator.locks: przegląd kolejki przy zalogowaniu po założeniu konta i jeden zapis karty.
+const BRAMKA_BEZ_LOCKS = 2;
 // LockManager.prototype.request z nazwą vilda-sync*: tylko w kroku usunięcia konta, wyłączna, poza trybem jednorazowym.
 const BLOKADY = Object.fromEntries(TRYBY.map((t) => [t, KROKI.map((k) => (k === 'usunięcie konta' && t !== 'jednorazowo' ? ['exclusive'] : []))]));
 const KARTA = { name: 'Testowy Jan', user: { lastName: 'Testowy', firstName: 'Jan', sex: 'M', height: 120, weight: 22, dobISO: '2016-03-12' } };
@@ -208,7 +217,7 @@ test.describe('Dziennik zdarzeń: kolejka zmian uśpiona w prawdziwej przegląda
     const s = await slad(page);
     bezKolejki(s);
     expect(s.blokady, 'blokady vilda-sync*').toEqual([]);
-    expect(s.bramka, 'odczyty pola bramki (jeden na emisję)').toBe(BRAMKA_BEZ_LOCKS);
+    expect(s.bramka, 'odczyty pola bramki (jeden na emisję i jeden na przegląd kolejki przy odblokowaniu)').toBe(BRAMKA_BEZ_LOCKS);
     expect(zadania).toEqual([]);
   });
 
