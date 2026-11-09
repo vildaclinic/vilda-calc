@@ -21420,6 +21420,177 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
+## Dziennik zdarzeń: dopisywanie zmian do kolejki w miejscach zapisu — uśpione (P-DZIENNIK-ZDARZEN, E2-PR3a2, SW 1.1.492, `vilda_vault.js` 260, 2026-11-09)
+
+**Zmiana kliniczna: NIE** — wzory, progi, jednostki, interpretacje, zapis danych pacjentów, scalanie, format kopii
+i synchronizacja bez zmian. Dla użytkownika dziś nic się nie zmienia: bramka dziennika zdarzeń jest zamknięta, więc
+każde miejsce zapisu tylko ją sprawdza (jeden odczyt pola w pamięci strony) i kończy. Po włączeniu dziennika (PR
+włączający, E2-PR4 i E2-PR6) każda zmiana karty, wizyty, kosza, notatki, planu opieki, przypomnienia, notatki
+biblioteki, listy, preferencji, klucza dostępu i hasła trafi do kolejki jako osobne zdarzenie. Wpływ kliniczny dziś:
+brak.
+
+**Skąd.** Plan `docs/SYNC_PRZYROSTOWA_PLAN.md`, wiersz 6b tabeli „Podział etapu 2”, rozdział 3.2 („Dopisanie”)
+i tabela 3.5 (wiersze 1 i 4–16). Decyzje właściciela z 2026-11-04: podział E2-PR3a na cztery części (pytanie 12.1)
+i kolejność „najpierw wizyty” w „Scal pacjentów” (pytanie 12.2). Decyzja z 2026-11-09: ten PR przelicza przypięte
+skróty obrazu sejfu w kontroli granicy (niżej).
+
+### E2-PR3a2
+
+**Uśpienie.** „Każde wywołanie kończy się na bramce: bez otwarcia bazy, szyfrowania i żądań.” Kod emisji to trzecia
+część bloku P-DZIENNIK-ZDARZEN (prefiks `Bem_`, za znacznikiem `/* P-DZIENNIK-ZDARZEN: emisja */`). Emisja czyta pole
+okna `VILDA_EVENT_LOG` jako pierwszą instrukcję i przy zamkniętej bramce kończy: bez odczytu `indexedDB`,
+`localStorage` i `crypto`, bez żądania Web Locks, bez otwarcia bazy kolejki, bez szyfrowania zdarzeń, bez kluczy
+i bez żądań sieci. Hak, który niczego nie oznacza (scalanie z chmury, usunięcie wersji bez nagrobka), bramki nie
+czyta. Kroki operacji złożonych to tylko licznik w pamięci strony. Eksport `VildaVault._eventLog` ma 36 kluczy: nowy
+`emissionsSettled` (bez bramki, bez pól okna i magazynów; dla testów i nadawcy z E2-PR4).
+
+**Sesja.** Operacje kolejki i kwarantanny sprawdzają sesję tak jak zapis karty (P-SESJA-ZAPISU): zmiana sesji w trakcie
+kończy operację bez zapisu. Dopisanie z miejsca zapisu niesie sesję z chwili zapisu (sesję operacji, gdy operacja ją
+podaje — „Scal pacjentów”, „Scal z istniejącym”, „Usuń pacjenta”, zapis notatki, „Przywróć”); blokada sejfu,
+przełączenie konta albo ponowne zalogowanie przed dopisaniem albo w jego trakcie kończy je bez wiersza.
+
+**Gdzie powstaje zdarzenie** (emisja w emiterach haków sejfu przed słuchaczami oraz w miejscach zapisu bez haka):
+
+| Operacja | Rodzaj zdarzenia | Miejsce |
+|---|---|---|
+| zapis karty i nowej wizyty, „przywróć wersję jako nową”, osoba spoza bazy, import starego formatu | `snap` | hak `onPatientSaved` (`Vn`) |
+| poprawka wizyty, gwiazdka, odpięcie, edycja i usunięcie pomiaru | `snap` | hak `onPatientSaved` (`Vn`) |
+| „Przywróć” z kosza | `snap` | hak `onPatientSaved`; gdy wizyta jest już w karcie — emisja bezpośrednia tylko przy zapisanym nagłówku karty |
+| wizyty przeniesione pod kartę celu w „Scal pacjentów” | `snap` | emisja bezpośrednia w pętli przenoszenia |
+| wizyty przepisane po imporcie wpisu z kosza | `snap` | emisja bezpośrednia w `Bkz_poImporcie` |
+| „Kosz” | `stomb` | emisja bezpośrednia po zapisie wpisu kosza i usunięciu wizyty |
+| retencja | `stomb` (jedno na wizytę) | emisja bezpośrednia dla nagrobków, które zostały |
+| „Usuń pacjenta” (także w „Scal pacjentów” i „Scal z istniejącym”) | `ptomb` | hak `onPatientDeleted` (`ws`) |
+| notatka pacjenta, plan opieki, przypomnienie (zapis, ukończenie, odwołanie, „nie przyszedł”, odłożenie) | `pnote` | hak `onPatientNoteChanged` (`qr`) |
+| usunięcie notatki pacjenta, także przy „Usuń pacjenta” | `pnotetomb` | hak `onPatientNoteChanged` (`qr`) |
+| zapis notatki, który zostawia nagrobek w stanie „czeka” | `pnotetomb` | emisja bezpośrednia w `Bnp_poZapisie` |
+| notatka biblioteki: zapis, usunięcie | `note`, `notetomb` | hak `onNoteChanged` (`Qr`) |
+| lista: zapis, usunięcie | `plist`, `plisttomb` | hak `onPatientListChanged` (`jn`) |
+| preferencja zapisana przez hak `VildaPersistence` | `pref` | emisja bezpośrednia w `Ps`, tylko gdy zapisało |
+| poczekalnia (harmonogram, listy) | `pref` | emisja bezpośrednia w `Aj` |
+| klucz dostępu: rejestracja, usunięcie | `pk`, `pktomb` | hak `onPasskeyChanged` (`Yn`) |
+| zmiana hasła, reset hasła przy odblokowanym sejfie | `cred` | hak `onCredentialChanged` (`Qe2`) |
+
+Nagrobek notatki przy „Usuń pacjenta” powstaje w usunięciu notatki i w odnowieniu nagrobka (sprawdzone; bez osobnej
+emisji w `Bnp_usunZPacjentem`). Plany opieki i przypomnienia to notatki pacjenta — obejmuje je hak `qr`, także zapis
+z modułu planów opieki (fragment natywny bez zmian). Akcje `save` i `delete` emiterów haków oznaczają zapis lokalny;
+scalanie z chmury używa akcji `merge` i `merge-delete` (bez zdarzenia). Nowe miejsce zapisu danych z sekcji ładunku
+synchronizacji ma emisję albo regułę „świadomie lokalne” (test pokrycia).
+
+**Bez zdarzenia (świadomie lokalne).** Usunięcie wersji bez nagrobka (`deleteSnapshot`, D-8 A); scalanie z chmury
+(`Le`, `ps`, `applyEncryptedEvent` i ich kroki); ratunek notatki D-21 (hak w E2-PR3b); zmiana hasła z chmury
+(`password-changed-remotely`); porządki pól notatek (`mo`) i rozdzielenie nazwisk (`Ja`) — ta sama treść, liczone na
+każdym urządzeniu; przenumerowanie `seq` i licznik wizyt (lokalne); zdjęcie nagrobka przy zapisie (niesie je zdarzenie
+encji); opakowania kluczy, materiał synchronizacji, rejestr i tryb; cienie wersji; importy `ns`, `ss`, `as` (poza
+`Bkz_poImporcie`) — E2-PR3a3.
+
+**Kolejność w kroku.** „Wersje, także przeniesione pod kartę celu „Scal pacjentów”, potem wpisy kosza, potem nagrobki
+kart, potem reszta” (notatki pacjenta, ich nagrobki, notatki biblioteki, ich nagrobki, listy, ich nagrobki,
+preferencje, klucze dostępu, ich nagrobki, hasło). Operacje złożone („Scal pacjentów”, „Scal z istniejącym”, „Usuń
+pacjenta”, zapis notatki, „Kosz”, przeniesienie wpisów spoza bazy) są krokiem: emisje w trakcie kroku czekają do jego
+końca i idą stabilnie według tej kolejności, bez powtórzeń tej samej encji w tej samej sesji. W „Scal pacjentów”:
+„najpierw wizyty” (pytanie 12.2): `snap` przed `ptomb`; R2-E3 zostaje „ZNANA RÓŻNICA” do E3-PR0. Kolejność obowiązuje
+w obrębie karty przeglądarki.
+
+**Emitery nie czekają.** Emisja niczego nie zwraca i nigdy nie rzuca; dopisanie idzie w tle łańcuchem dopisań konta,
+po kolei, w kolejności emisji. Każde dopisanie idzie przez wewnętrzne `Bob_dopiszZ`, budowane nad `Bob_dopiszPod`:
+blokada współdzielona konta `vilda-sync-db:<userId>` brana przed nim. Łańcuch dopisań może czekać na blokadę konta do
+20 s; zapis karty na niego nie czeka. Publiczne `enqueue` woła to samo `Bob_dopiszZ` — zachowanie bez zmian. Treść
+wiersza powstaje w chwili dopisania (builder czyta bieżący stan sklepu), więc dwie szybkie zmiany tej samej encji dają
+jeden wiersz z późniejszą treścią (łączenie wpisów na ogonie kolejki).
+
+**Tryby.** Kolejka tylko w trybie „Komputer prywatny” przy odblokowanym sejfie; „Komputer w pracy”, „Zaloguj
+jednorazowo” i sejf w pamięci — emisja kończy się po bramce, bez bazy kolejki, blokad i kluczy.
+
+**Zmiana bez wiersza.** Wynik dopisania nie wraca do miejsca zapisu. Encja usunięta przed dopisaniem nie daje wiersza
+(jej nagrobek ma własne zdarzenie). Wymaganie dla E2-PR3a4: zmianę bez wiersza dokłada przegląd kolejki
+(`sweepOutbox`); do tego czasu bramka jest zamknięta, a pełna wysyłka działa jak dziś.
+
+**Przy zamkniętej bramce (co nowego).**
+
+| Skutek | Wartość |
+|---|---|
+| odczyt pola `VILDA_EVENT_LOG` | jeden na zdarzenie (emisję); hak bez znaczenia — 0 |
+| bazy `vilda_sync_*`, klucze `vilda-sync-*`, blokady `vilda-sync*`, szyfrowanie zdarzeń, żądania sieci | 0 |
+| zapis bazowy (`tests/fixtures/dziennik-zapis-bazowy.json`) | zmienia się tylko `odczytyBramki`: 30, 30, 28, 30 (Ze, prywatny, chmura, jednorazowo) |
+| sejf bez wstawek wobec sejfu | różnica `databases()` +1 w krokach usunięcia konta tylko poza „Zaloguj jednorazowo” (z E2-PR3a1) i `odczytyBramki` |
+| e2e uśpienia | odczyty pola na krok `[0, 1, 1, 1, 1, 1, 1, 1, 1, 3, 1, 1, 1, 0, 0, 0]` (konto, karta, wersja, kosz, „Przywróć”, notatka, szablon, lista, druga karta, „Scal pacjentów”, trzecia karta, „Usuń pacjenta”, zmiana hasła, blokada, odblokowanie, usunięcie konta) (te same w trzech trybach); `databases()` w kroku usunięcia konta 4/4/2 (od vildaclinic/vilda-calc#910; wcześniej 3/3/1 od E2-PR3a1c i 2/2/1 od E2-PR3a1) — bez zmian |
+| rejestracja i logowanie kluczem dostępu (WebAuthn), hak `VildaPersistence` | kończą się na bramce: bez bazy kolejki, szyfrowania zdarzeń i żądań (U5) |
+
+**Kontrola granicy obrazu sejfu.** Od vildaclinic/vilda-calc#910 `npm run test:repo` sprawdza, że `vilda_vault.js` to
+przypięty obraz bazowy plus fragment natywny planów opieki i jego 16 haków. Ten PR przelicza trzy skróty: `BASE`
+w `tools/check_clinical_workspace_boundary.mjs` oraz `baseVaultSHA256` i `integratedVaultSHA256`
+w `runtime/clinical-workspace-v1/manifest.json`; fragment natywny, haki, moduły i paczka bez zmian. Reguła dla
+kolejnych PR zmieniających `vilda_vault.js` poza fragmentem: to samo przeliczenie; składanie fragmentu w repozytorium
+źródeł startuje od obrazu bazowego po tym PR.
+
+**Testy.** Dane wyłącznie fikcyjne, bez PESEL. Nowe:
+- `tests/unit/sync-pokrycie-mutacji.test.mjs` — 61 przypadków: każda mutacja z wierszy 1 i 4–16 tabeli 3.5 na
+  prawdziwym sejfie z otwartą bramką (okno uprzęży z `emisja: true`); wiersze kolejki po mutacji (rodzaje w kolejności
+  `seqLocal`) i odbiorca-bliźniak po zastosowaniu tych zdarzeń ≡ odbiorca po pełnym ładunku; odbiorca bez nagrobka —
+  także stan równy nadawcy; z nagrobkiem karty u odbiorcy starszym niż mutacja (mutacja podnosząca chwilę karty: klasa
+  „karta częściowa” — wersje, których zdarzenia nie niosą, naprawa w E2-PR3b; pełny ładunek bez różnicy) i nowszym
+  (karta nieobecna u obu odbiorców, a po scaleniu eksportu odbiorcy karta znika u nadawcy, wiersze nadawcy zostają);
+  scalanie z chmury bez wierszy; samokontrola listy metod danych uprzęży.
+- `tests/unit/sync-dziennik-emisja.test.mjs` — 26 przypadków (EM1–EM24): przy zamkniętej bramce każda metoda danych
+  czyta pole bramki tyle razy, ile emituje (licznik w kopii sejfu), bez `indexedDB`, `localStorage`, `crypto`, blokad
+  i bazy kolejki; hak bez znaczenia bez odczytu; tryby bez kolejki; zablokowany sejf; emitery nie czekają (blokada konta
+  trzymana przez test); limit 20 s; kolejność łańcucha; sesja z chwili zapisu (blokada sejfu, przełączenie konta,
+  „Scal pacjentów” przerwane zmianą sesji); kroki, kolejność rang, zagnieżdżenie, wyjątek w kroku, powtórzenia; blokada
+  współdzielona przed `Bob_dopiszPod`; `enqueue` bez zmian; usuwanie konta w trakcie; `emissionsSettled`; dwie karty
+  przeglądarki; dwie szybkie poprawki → jeden wiersz.
+- `tests/unit/sync-dziennik-haki.test.mjs` — 11 przypadków (KH1–KH6): ładunki i kolejność wywołań 8 hooków
+  `VildaVault.on…` równe na sejfie i na sejfie bez wstawek, przy zamkniętej i otwartej bramce (także `snapshotId: null`
+  przy usunięciu wersji, `onPatientListChanged` bez `deletedAtISO`, liczba `syncPush`).
+- Uprząż: `tests/support/sejf-bez-wstawek.mjs` (kopia źródła sejfu bez wywołań bloku poza nim; `Bob_oznacz(…)` →
+  `false`) i `tests/support/encje-ladunku.mjs` (model encji wydzielony bez zmian z testu A ≡ B).
+
+Zmienione:
+- `tests/unit/sync-dziennik-uspienie.test.mjs` — 41 przypadków (było 31): literał miejsc poza blokiem z emiterami,
+  miejscami zapisu i krokami (z formami wywołań i samokontrolą wariantami zła), trzy części bloku, reguła domknięcia
+  części `Bem_`, eksport 36 kluczy, U4′ (odczyty bramki = liczba emisji), U5 (klucze dostępu i hak `VildaPersistence`;
+  żądania i operacje `crypto.subtle` jak na sejfie bez wstawek — jedyne żądanie to dotychczasowa kopia klucza „roaming”).
+- `tests/unit/sync-dziennik-zapis-bazowy.test.mjs` i fikstura — 15 przypadków (+1 pominięty: nagranie): w fiksturze
+  zmieniły się tylko cztery pola `odczytyBramki`; odczyty pola okna = liczba emisji w każdym wariancie; porównanie
+  z sejfem bez wstawek.
+- e2e `tests/e2e/dziennik-zdarzen-uspienie.spec.mjs` — 6 przypadków: kolumna odczytów bramki na krok; reszta literałów
+  bez zmian.
+- `tests/unit/sync-dziennik-wlasnosciowy.test.mjs` (A ≡ B) — 118 przypadków bez zmian wyniku; model encji importowany.
+- Uprząż okna magazynu: opcja `emisja` (domyślnie metody danych z jawnej listy `METODY_DANYCH` idą przy zamkniętej
+  bramce, więc starsze testy kolejki widzą tylko jawne dopisania), opcja `zrodla` (podmiana źródła pliku okna);
+  scenariusz magazynu zapisuje dane przy zamkniętej bramce. Wyniki starszych testów kolejki, konta i kart bez zmian.
+
+Pełny `npm test` (polityka repozytorium, kontrole granicy, ESLint, składnia, testy jednostkowe, PRO) i e2e — wyniki w opisie PR.
+
+**Czerwone na bazie** (`origin/audyt` `aab11479` z testami tego PR): sync-pokrycie-mutacji 58 z 61 (zielone z natury: dwa przypadki scalania i usunięcia wersji bez wiersza oraz
+samokontrola uprzęży); sync-dziennik-emisja 22 z 26 (zielone: tryby bez kolejki, zablokowany sejf, blokada w `enqueue`,
+`enqueue` bez zmian); sync-dziennik-haki 1 z 11 (samokontrola sejfu bez wstawek; reszta to strażniki ładunków);
+sync-dziennik-uspienie 14 z 41; sync-dziennik-zapis-bazowy 5 z 15 (liczba odczytów bramki); e2e uśpienia 4 z 6 (kolumna
+odczytów bramki; dwa przypadki strony z elementem o `id` `VILDA_EVENT_LOG` zielone).
+
+**Mutanty.** 47 mutantów kodu emisji, uprzęży i kontroli granicy (brak emisji w każdym emiterze i miejscu zapisu, złe mapowanie akcji, brak kroku, sortowanie, powtórzenia, zagnieżdżenie, bramka nie pierwsza, czekanie na emisję, sesja ujęta przy dopisaniu, dopisanie bez blokady konta, limit 10 s, jeden łańcuch dla kont, brak warunku trybu, `emissionsSettled` od razu, lista metod uprzęży, nieprzeliczone skróty): 45 zabitych, 2 równoważne — emisja z retencji także dla wersji, której usunięcie się nie udało (builder nie znajduje jej nagrobka, bez wiersza), oraz emisja bez sprawdzenia sesji (dopisanie sprawdza sesję po uzyskaniu blokady konta, bez wiersza).
+
+**Wymagania dla następnych PR.**
+- **E2-PR3a3.** Partie importu (`ns`, `ss`, `as`) przez ten sam łańcuch dopisań i `Bob_dopiszZ`, z krokiem wokół
+  importu. Model A ≡ B: nośnik pól karty — dowolny `snap` tej karty w kroku (prawdziwy emiter w „Przywróć”, gdy wizyta
+  jest już w karcie, wysyła `snap` wersji przywracanej).
+- **E2-PR3a4.** Przegląd kolejki dokłada zmiany bez wiersza (wyżej), w tym nagrobek klucza dostępu usuniętego przy
+  zablokowanym sejfie.
+- **E2-PR3b.** W teście pokrycia wariant „nagrobek starszy u odbiorcy” przy nowej wersji przechodzi z „karta częściowa”
+  na brak różnicy po haku `pfull`.
+- **E2-PR4.** Nadawca może czekać na `emissionsSettled` przed wysyłką partii; `syncPush()` w `Yn` według decyzji 7.
+- Kolejne PR zmieniające `vilda_vault.js` poza fragmentem natywnym — przeliczenie skrótów kontroli granicy.
+
+**Ograniczenia.** Atrapa IndexedDB i Chromium (WebKit i Firefox niezmierzone). Kolejność zdarzeń obowiązuje w obrębie
+karty przeglądarki. Zdarzenie niesie stan encji z chwili dopisania.
+
+**Cofnięcie** = rewert PR (przy zamkniętej bramce nic nie powstaje na dysku). Po rewercie trzeba też cofnąć skróty
+kontroli granicy (rewert robi to sam).
+
+**Gdzie w kodzie.** `vilda_vault.js`: blok P-DZIENNIK-ZDARZEN, linie 5671–7947 (2277 linii); część `Bev_` 5671–6331, część `Bob_` 6332–7812 (w niej nowe `Bob_dopiszZ`), część `Bem_` 7813–7946 (10 funkcji: `Bem_pole`, `Bem_zHaka`, `Bem_hak`, `Bem_zmiana`, `Bem_krokStart`, `Bem_klucz`, `Bem_krokKoniec`, `Bem_doLancucha`, `Bem_dopisz`, `Bem_gotowe`; 7483 B). Poza blokiem: `Bem_hak` w `Vn`, `ws`, `qr`, `Qr`, `jn`, `Yn`, `Qe2`; `Bem_zmiana` w `Ps`, `Aj`, `Bnp_poZapisie`, `Bsc_podBlokada`, `Bkz_poImporcie`, `Bkz_przywrocWSesji`, `Bkz_doKosza`, `Bkz_przytnij`; kroki (`Bem_krokStart` przed `try`, `Bem_krokKoniec` w `finally`) w `Bsc0`, `$a`, `Bpu_usun`, `Ad`, `Bkz_doKosza`, `qa`.
+
+**Wersje.** `vilda_vault.js` 259 → 260, `vilda_chrome.js` 263 → 264 i `vilda_session_bridge.js` 180 → 181 (wstrzykują sejf), SW 1.1.491 → 1.1.492; baza `origin/audyt` `aab11479` (po vildaclinic/vilda-calc#911). Bez nowego pliku w pamięci offline.
+
 ## Sejf: „Usuń konto” a inne karty — dziennik dostępu, ustawienia kopii, karta odświeżona, lista kont, podpowiedź przy czekaniu i dokończenie przerwanego usuwania (P-USUN-KONTO-KARTY, E2-PR3a1c, SW 1.1.489, `vilda_vault.js` 257, 2026-11-08)
 
 **Zmiana kliniczna: NIE** — wzory, progi, jednostki, interpretacje, zapis danych pacjentów, scalanie, format kopii
@@ -22157,12 +22328,13 @@ P-USUN-KONTO-KARTY; te same w planie: wiersze 6a′, 6b–6d, 7a, 8 i 12 tabeli 
   z bazą sejfu i blokuje się, „Usuń konto” nie czeka, identyfikator urządzenia nie zostaje; testy nie zamykają za drugą
   kartę jej połączeń z bazą sejfu, żeby „Usuń konto” się skończyło. Dalsze wymagania — wykonane w E2-PR3a1c (wpis
   wyżej).
-- **E2-PR3a2.**
+- **E2-PR3a2** — wykonane w E2-PR3a2 (wpis P-DZIENNIK-ZDARZEN, E2-PR3a2, wyżej).
   - Wewnętrzne dopisanie `Bob_dopiszZ` budowane nad `Bob_dopiszPod`, z blokadą współdzieloną konta braną przed nim.
   - Porównanie zapisu bazowego z sejfem bez wstawek (w tej kopii sejfu `Bob_oznacz(…)` zastąpione przez `false`):
     dozwolona różnica `databases()` +1 w krokach usunięcia konta tylko poza wariantem „Zaloguj jednorazowo”.
-  - E2e uśpienia: `databases()` w kroku usunięcia konta 3/3/1 („Komputer prywatny”/„Komputer w pracy”/„Zaloguj
-    jednorazowo”; od E2-PR3a1c, wcześniej 2/2/1), blokada wyłączna tylko poza trybem „Zaloguj jednorazowo”.
+  - E2e uśpienia: `databases()` w kroku usunięcia konta 4/4/2 („Komputer prywatny”/„Komputer w pracy”/„Zaloguj
+    jednorazowo”; od vildaclinic/vilda-calc#910, wcześniej 3/3/1 od E2-PR3a1c i 2/2/1), blokada wyłączna tylko poza
+    trybem „Zaloguj jednorazowo”.
   - Literał miejsc poza blokiem rośnie od dzisiejszego `MIEJSCA_POZA_BLOKIEM`.
   - Łańcuch dopisań może czekać na blokadę konta do 20 s; zapis karty na niego nie czeka (emitery nie czekają na wynik
     kolejki). Przyjęte w projekcie E2-PR3a.
@@ -22790,6 +22962,9 @@ E3-PR0).
     w `removeUser`.
   - Rejestracja i logowanie kluczem dostępu (WebAuthn) oraz hak `VildaPersistence` (poza zapisem bazowym z tego PR):
     test, że przy zamkniętej bramce kończą się na bramce, bez otwarcia bazy kolejki, szyfrowania zdarzeń i żądań.
+  - Wykonane w E2-PR3a2 (wpis P-DZIENNIK-ZDARZEN, E2-PR3a2, wyżej): emitery nie czekają na wynik kolejki, zapis bazowy
+    zmienia tylko liczba odczytów bramki, rejestracja i logowanie kluczem dostępu oraz hak `VildaPersistence` kończą się
+    na bramce (U5). Brak miejsca przy dopisaniu — przegląd w E2-PR3a4.
 - **E2-PR4.**
   - Bramka rozszerzona o flagę `vilda-event-log-v1` i `features.events`. Nadawca sprawdza tryb konta także z wpisu
     rejestru.
@@ -23252,6 +23427,10 @@ literał na wynik zgodny.
     niezmierzony).
   - Do sprawdzenia: emisja nagrobka notatki przy „Usuń pacjenta” (`Bnp_usunZPacjentem`, wiersz 8 tabeli 3.5).
   - Pomiar `sweepOutbox` wobec rekordów pochodnych scalania.
+  - Wykonane w E2-PR3a2 (wpis P-DZIENNIK-ZDARZEN, E2-PR3a2, wyżej): kolejność w kroku (kroki operacji złożonych),
+    nośnik pól karty (`snap` także w „Przywróć”, gdy wizyta jest już w karcie), nagrobek notatki przy „Usuń pacjenta”
+    (sprawdzone: powstaje w usunięciu notatki i w odnowieniu nagrobka, bez osobnej emisji). Pomiar `sweepOutbox` —
+    E2-PR3a4.
 - **E2-PR3b.**
   - Hak H1: przegrany nagrobek karty → pełna karta (`pfull`, `setId` z karty i chwili nagrobka, dedup).
   - Hak H2 „zawsze do kolejki”: notatka, której nagrobek zniknął w partii i której rekord zmieniło scalanie, idzie do

@@ -33,6 +33,17 @@
 // znacznikiem chwili pierwszego wpisu zamiast samej chwili (pierwszyWpisBezZmian — chwila po ponownym wpisie ta sama).
 export async function scenariuszMagazynu(win, pomocnik) {
   'use strict'; // także po fn.toString() w przeglądarce (skrypt strony nie jest modułem)
+  // Zapisy danych scenariusza przy zamkniętej bramce (E2-PR3a2: zapis przy otwartej bramce sam dopisuje zmianę do
+  // kolejki); wiersze kolejki powstają tylko z jawnych enqueue scenariusza.
+  const bezEmisji = async (fn) => {
+    const bylo = win.VILDA_EVENT_LOG;
+    win.VILDA_EVENT_LOG = false;
+    try {
+      return await fn();
+    } finally {
+      win.VILDA_EVENT_LOG = bylo;
+    }
+  };
   const v = win.VildaVault;
   const ev = v._eventLog;
   const W = { bramka: ev.gateOpen(), wyniki: [] };
@@ -91,12 +102,12 @@ export async function scenariuszMagazynu(win, pomocnik) {
   const uid = v.getCurrentUser().userId;
   etykiety.set(uid, 'U');
   const nazwa = 'vilda_sync_' + uid;
-  const k = await v.savePatient(naglowek(1), { dedup: false });
-  const n = (await v.savePatientNote({ patientId: k.patientId, title: 'Fikcyjna notatka', body: 'Fikcyjna treść.', category: 'inne' })).id;
-  const n2 = (await v.savePatientNote({ patientId: k.patientId, title: 'Fikcyjna notatka 2', body: 'Fikcyjna treść 2.', category: 'inne' })).id;
+  const k = await bezEmisji(() => v.savePatient(naglowek(1), { dedup: false }));
+  const n = (await bezEmisji(() => v.savePatientNote({ patientId: k.patientId, title: 'Fikcyjna notatka', body: 'Fikcyjna treść.', category: 'inne' }))).id;
+  const n2 = (await bezEmisji(() => v.savePatientNote({ patientId: k.patientId, title: 'Fikcyjna notatka 2', body: 'Fikcyjna treść 2.', category: 'inne' }))).id;
   const duza = naglowek(2, { advanced: { opis: 'Fikcyjny opis '.repeat(10000) } });
-  const p = await v.savePatient(duza, { dedup: false });
-  await v.savePatient(duza, { dedup: false, patientId: p.patientId });
+  const p = await bezEmisji(() => v.savePatient(duza, { dedup: false }));
+  await bezEmisji(() => v.savePatient(duza, { dedup: false, patientId: p.patientId }));
   const wersja = { patientId: k.patientId, snapshotId: k.snapshotId };
 
   zapiszKw('quarantineCount (bez bazy)', await ev.quarantineCount());
@@ -191,7 +202,7 @@ export async function scenariuszMagazynu(win, pomocnik) {
   const uid2 = v.getCurrentUser().userId;
   etykiety.set(uid2, 'U2');
   const nazwa2 = 'vilda_sync_' + uid2;
-  const k2 = await v.savePatient(naglowek(3), { dedup: false });
+  const k2 = await bezEmisji(() => v.savePatient(naglowek(3), { dedup: false }));
   const wersja2 = { patientId: k2.patientId, snapshotId: k2.snapshotId };
   zapisz('enqueue snap (konto 2)', await ev.enqueue('snap', wersja2));
   const idb = win.indexedDB;
