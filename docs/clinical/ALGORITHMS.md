@@ -21473,7 +21473,7 @@ jest ustawiona przed zapisami).
 
 **Zmiana bez wiersza.** Wpis partii bez wiersza nie wraca do importu; `count` liczy tylko wiersze. Wymaganie dla
 E2-PR3a4: zmianę bez wiersza dokłada przegląd kolejki, a przegląd po pierwszym odblokowaniu konta odtworzonego z kopii
-nie dubluje partii.
+nie dubluje partii — wykonane w E2-PR3a4 (wpis P-DZIENNIK-ZDARZEN, E2-PR3a4, wyżej).
 
 **Test A ≡ B na prawdziwych emiterach.** Zdarzenia w teście pochodzą z prawdziwych emiterów sejfu: kopia sejfu testu
 zapisuje wpisy łańcucha do rejestru (urządzenia testu mają sejf w pamięci, więc bez tej kopii emisja kończyłaby się na
@@ -21543,7 +21543,7 @@ razem 38.
 
 **Wymagania dla następnych PR.**
 - **E2-PR3a4.** Przegląd kolejki dokłada zmiany partii bez wiersza; przegląd po pierwszym odblokowaniu konta odtworzonego
-  z kopii nie dubluje partii.
+  z kopii nie dubluje partii. Wykonane w E2-PR3a4 (wpis wyżej).
 - **E2-PR3b.** Haki H1 i H2 w teście A ≡ B z modelu na emitery (rejestr łańcucha obejmie wtedy scalanie).
 - **E2-PR3c.** Literał K6 na brak utraty; analiza i naprawa różnicy opisu wpisu Kosza po wymianie pełnych kopii (decyzja
   z 2026-11-09).
@@ -21724,7 +21724,8 @@ jednorazowo” i sejf w pamięci — emisja kończy się po bramce, bez bazy kol
 
 **Zmiana bez wiersza.** Wynik dopisania nie wraca do miejsca zapisu. Encja usunięta przed dopisaniem nie daje wiersza
 (jej nagrobek ma własne zdarzenie). Wymaganie dla E2-PR3a4: zmianę bez wiersza dokłada przegląd kolejki
-(`sweepOutbox`); do tego czasu bramka jest zamknięta, a pełna wysyłka działa jak dziś.
+(`sweepOutbox`); do tego czasu bramka jest zamknięta, a pełna wysyłka działa jak dziś. Wykonane w E2-PR3a4 (wpis
+P-DZIENNIK-ZDARZEN, E2-PR3a4, wyżej).
 
 **Przy zamkniętej bramce (co nowego).**
 
@@ -21795,7 +21796,7 @@ odczytów bramki; dwa przypadki strony z elementem o `id` `VILDA_EVENT_LOG` ziel
   `Bob_dopiszZ`, z krokiem wokół importu. Model A ≡ B: nośnik pól karty — dowolny `snap` tej karty w kroku (prawdziwy emiter w „Przywróć”, gdy wizyta
   jest już w karcie, wysyła `snap` wersji przywracanej).
 - **E2-PR3a4.** Przegląd kolejki dokłada zmiany bez wiersza (wyżej), w tym nagrobek klucza dostępu usuniętego przy
-  zablokowanym sejfie.
+  zablokowanym sejfie. Wykonane w E2-PR3a4 (wpis P-DZIENNIK-ZDARZEN, E2-PR3a4, wyżej).
 - **E2-PR3b.** W teście pokrycia wariant „nagrobek starszy u odbiorcy” przy nowej wersji przechodzi z „karta częściowa”
   na brak różnicy po haku `pfull`.
 - **E2-PR4.** Nadawca może czekać na `emissionsSettled` przed wysyłką partii; `syncPush()` w `Yn` według decyzji 7.
@@ -22563,7 +22564,9 @@ P-USUN-KONTO-KARTY; te same w planie: wiersze 6a′, 6b–6d, 7a, 8 i 12 tabeli 
 - **E2-PR3a4.** Przegląd sierot `vilda_sync_*` przez to samo kasowanie kolejki konta (blokada wyłączna, znacznik według
   reguły wyżej), nigdy w trybie „Zaloguj jednorazowo”; odczyty przeglądu przez strzeżony adapter sejfu; wynik
   `SYNC_DB_TIMEOUT` (limit blokady) ustawia przegląd pilny, `SYNC_DB_DELETED` nie; przegląd na początku odblokowania,
-  a ponowienie kasowania zostaje ostatnią instrukcją odblokowania.
+  a ponowienie kasowania zostaje ostatnią instrukcją odblokowania. Wykonane w E2-PR3a4 (wpis P-DZIENNIK-ZDARZEN,
+  E2-PR3a4, wyżej); ponowienie kasowania zostaje po słuchaczach i `go()`, a ostatnią instrukcją odblokowania jest od
+  E2-PR3a1c ponowienie dziennika dostępu (P-USUN-KONTO-KARTY).
 - **E2-PR3c** (decyzja 12.3). Naprawa utraty poprawki wizyty przy „Scal pacjentów” po zdarzeniach zmianą reguły
   scalania: osobny PR z wpisem ALGORITHMS i akceptacją właściciela (decyzja 9); w teście A ≡ B od E2-PR3a3 jako „ZNANA
   UTRATA (zdarzenia)” z pozycją naprawy E2-PR3c (wpisane w E2-PR3a3). Od 2026-11-09 (decyzja właściciela) w E2-PR3c
@@ -22596,7 +22599,7 @@ P-USUN-KONTO-KARTY; te same w planie: wiersze 6a′, 6b–6d, 7a, 8 i 12 tabeli 
   urządzenia), po limicie blokady konta i po nieudanym albo niedokończonym kasowaniu.
 - Od E2-PR3a1b „Usuń konto” nie czeka na drugą kartę z aktualną wersją aplikacji (wpis wyżej); czeka nadal na kartę
   z wersją sprzed E2-PR3a1b albo z otwartym oknem pytania, a kasowanie kolejki czeka wtedy razem z nim.
-- Dopisywanie zmian do kolejki dochodzi w E2-PR3a2 i E2-PR3a3, przegląd kolejki — w E2-PR3a4.
+- Dopisywanie zmian do kolejki dochodzi w E2-PR3a2 i E2-PR3a3, przegląd kolejki — w E2-PR3a4 (wykonane).
 
 **Cofnięcie** = rewert PR. Przy zamkniętej bramce baza kolejki nie powstaje, więc bazy nie trzeba sprzątać. Znacznik
 ponowienia powstaje przy zamkniętej bramce tylko po nieudanym albo niedokończonym kasowaniu; z tym PR zdejmuje go
@@ -23108,7 +23111,7 @@ kasowania (blokada konta, wpis wyżej), a jeden nadawca na konto dochodzi w E2-P
 
 **Błędy i limity.**
 - **Brak miejsca:** transakcja przerywa się w całości i nic częściowego nie zostaje; kod `SYNC_DB_QUOTA`, także przy
-  tworzeniu bazy. Zdarzenie nie trafia wtedy do kolejki; dołoży je przegląd `sweepOutbox` z E2-PR3a.
+  tworzeniu bazy. Zdarzenie nie trafia wtedy do kolejki; dołoży je przegląd `sweepOutbox` z E2-PR3a (wykonane w E2-PR3a4).
 - **Limit 10 s** na otwarcie bazy (`SYNC_DB_TIMEOUT`; spóźnione otwarcie jest zamykane) i na kasowanie (`w-toku`).
 - **Kody bez treści.** Kod błędu bazy powstaje tylko z nazwy błędu (np. `QuotaExceededError` → `SYNC_DB_QUOTA`), nigdy
   z komunikatu. Nieprzewidziany wyjątek daje swój kod (bez kodu — nazwę wyjątku, np. `TypeError`) tylko wtedy, gdy
@@ -23178,14 +23181,14 @@ E3-PR0).
   - Kasowanie klucza `vilda-sync-device-v1:<userId>` razem z kontem, w tym samym miejscu co kasowanie bazy (pytanie
     10.2).
   - Wspólna koordynacja tworzenia i kasowania bazy między kartami (Web Lock na konto). Emitery nie czekają na wynik
-    kolejki w ścieżce zapisu. Brak miejsca przy dopisaniu dokłada przegląd `sweepOutbox`.
+    kolejki w ścieżce zapisu. Brak miejsca przy dopisaniu dokłada przegląd `sweepOutbox` (wykonane w E2-PR3a4).
   - Zapis bazowy z tego PR zostaje bez zmian poza liczbą odczytów bramki (= liczba emisji) i krokami kasowania
     w `removeUser`.
   - Rejestracja i logowanie kluczem dostępu (WebAuthn) oraz hak `VildaPersistence` (poza zapisem bazowym z tego PR):
     test, że przy zamkniętej bramce kończą się na bramce, bez otwarcia bazy kolejki, szyfrowania zdarzeń i żądań.
   - Wykonane w E2-PR3a2 (wpis P-DZIENNIK-ZDARZEN, E2-PR3a2, wyżej): emitery nie czekają na wynik kolejki, zapis bazowy
     zmienia tylko liczba odczytów bramki, rejestracja i logowanie kluczem dostępu oraz hak `VildaPersistence` kończą się
-    na bramce (U5). Brak miejsca przy dopisaniu — przegląd w E2-PR3a4.
+    na bramce (U5). Brak miejsca przy dopisaniu — przegląd w E2-PR3a4 (wykonane).
 - **E2-PR4.**
   - Bramka rozszerzona o flagę `vilda-event-log-v1` i `features.events`. Nadawca sprawdza tryb konta także z wpisu
     rejestru.
@@ -23654,7 +23657,7 @@ literał na wynik zgodny.
   - Wykonane w E2-PR3a2 (wpis P-DZIENNIK-ZDARZEN, E2-PR3a2, wyżej): kolejność w kroku (kroki operacji złożonych),
     nośnik pól karty (`snap` także w „Przywróć”, gdy wizyta jest już w karcie), nagrobek notatki przy „Usuń pacjenta”
     (sprawdzone: powstaje w usunięciu notatki i w odnowieniu nagrobka, bez osobnej emisji). Pomiar `sweepOutbox` —
-    E2-PR3a4.
+    E2-PR3a4: wykonane (wpis P-DZIENNIK-ZDARZEN, E2-PR3a4, wyżej — rekordy pochodne scalania).
 - **E2-PR3b.**
   - Hak H1: przegrany nagrobek karty → pełna karta (`pfull`, `setId` z karty i chwili nagrobka, dedup).
   - Hak H2 „zawsze do kolejki”: notatka, której nagrobek zniknął w partii i której rekord zmieniło scalanie, idzie do
