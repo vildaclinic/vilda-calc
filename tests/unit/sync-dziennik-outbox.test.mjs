@@ -30,9 +30,10 @@
 //   PG5  pierwsza aktywacja nie dopisuje całej bazy (50 kart sprzed 2 h, klucz sprzed 1 h): 0 wierszy i bez bazy
 //        kolejki; znacznik w meta dopiero w bazie z pierwszym wierszem (przy następnym zakończonym przeglądzie).
 //   PG6  zmiana bez wiersza w trakcie sesji — dołożona przy odblokowaniu, drugi przegląd nic; zmiana w trakcie przeglądu
-//        (zapis znacznika wstrzymany, zegar + 15 min) — znacznik to start przeglądu, następny przegląd ją dokłada.
+//        (zapis znacznika albo dopisanie przeglądu wstrzymane, zegar + 15 i + 20 min) — znacznik to start przeglądu,
+//        następny przegląd ją dokłada.
 //   PG7  wiersz oczekujący sprzed późniejszej zmiany bez wiersza: jeden wiersz z nowszą chwilą, nowym seqLocal i nowszą
-//        treścią (łączenie na ogonie).
+//        treścią (łączenie na ogonie); wiersz w stanie inflight (wzięty do wysyłki) pokrywa encję.
 //   PG8  pokrycie przeglądu: każda z 26 mutacji danych, wiersze emisji usunięte w atrapie — przegląd dokłada każdą encję
 //        emisji; nadmiar = literał (snap najnowszej wersji przy zmianie karty bez nowej wersji).
 //   PG9  limit blokady konta (SYNC_DB_TIMEOUT): po zwolnieniu blokady przegląd pilny dokłada snap bez innej czynności;
@@ -380,6 +381,51 @@ describe('PG2–PG7: znacznik przeglądu, pierwszy znacznik, zmiana bez wiersza,
     await o.gotowe();
     expect(sw).toEqual({ ok: true, kandydaci: 3, dopisane: 1 });
     expect(po(o, s0)).toEqual([`note|${n}`]);
+  }, 60_000);
+
+  it('PG6: zmiana bez wiersza w trakcie dopisania przeglądu (dopisanie wstrzymane, zegar +1 min, zmiana, +20 min) — znacznik to start przeglądu, nie chwila końca; następny przegląd ją dokłada', async () => {
+    const o = await okno();
+    await o.zaloguj('A');
+    await o.gotowe();
+    tik(MIN);
+    const n1 = await o.bezEmisji(() => notatkaBiblioteki(o, 'Fikcyjny szablon 1'));
+    tik(MIN);
+    const start = iso();
+    const s0 = ostatni(o);
+    const h = wstrzymaj(o, { przy: 'commit', baza: nazwaBazy(o.uid), tryb: 'readwrite' });
+    const p = o.ev.sweepOutbox();
+    await h.czeka;
+    tik(MIN);
+    const n2 = await o.bezEmisji(() => notatkaBiblioteki(o, 'Fikcyjny szablon 2'));
+    tik(20 * MIN);
+    h.zwolnij();
+    const w1 = await p;
+    await o.gotowe();
+    expect([w1.ok, w1.dopisane], 'pierwszy przegląd: zmiana sprzed startu').toEqual([true, 1]);
+    expect(po(o, s0)).toEqual([`note|${n1}`]);
+    expect(metaKonta(o).przeglad, 'znacznik = start przeglądu').toBe(start);
+    const s1 = ostatni(o);
+    const w2 = await o.ev.sweepOutbox();
+    await o.gotowe();
+    expect([w2.ok, w2.dopisane], 'następny przegląd: zmiana z chwilą po starcie poprzedniego').toEqual([true, 1]);
+    expect(po(o, s1)).toEqual([`note|${n2}`]);
+  }, 60_000);
+
+  it('PG7: wiersz w dowolnym stanie pokrywa encję — po wzięciu wierszy do wysyłki (inflight) przegląd niczego nie dokłada', async () => {
+    const o = await okno();
+    await o.zaloguj('A');
+    await notatkaBiblioteki(o);
+    await karta(o, 1);
+    await o.gotowe();
+    const wziete = await o.ev.outboxTake();
+    expect(wziete.ok, 'outboxTake').toBe(true);
+    expect(o.kolejka('A').map((w) => w.state).filter((x) => x !== 'inflight'), 'wszystkie wiersze w wysyłce').toEqual([]);
+    tik(MIN);
+    const s0 = ostatni(o);
+    const sw = await o.ev.sweepOutbox();
+    await o.gotowe();
+    expect([sw.ok, sw.dopisane]).toEqual([true, 0]);
+    expect(po(o, s0)).toEqual([]);
   }, 60_000);
 
   it('PG7: wiersz oczekujący sprzed późniejszej zmiany bez wiersza — jeden wiersz encji z nowszą chwilą i nowym seqLocal (łączenie na ogonie), treść nowsza', async () => {
