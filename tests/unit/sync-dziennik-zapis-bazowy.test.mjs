@@ -1,4 +1,4 @@
-// P-DZIENNIK-ZDARZEN (E2-PR2b, E2-PR3a1, E2-PR3a1c, E2-PR3a2) — zapis bazowy „bramka wyłączona” (U3).
+// P-DZIENNIK-ZDARZEN (E2-PR2b, E2-PR3a1, E2-PR3a1c, E2-PR3a2, E2-PR3a3) — zapis bazowy „bramka wyłączona” (U3).
 //
 // Ten sam deterministyczny scenariusz sejfu w czterech wariantach okna daje dokładnie te ślady, które zapisano
 // w tests/fixtures/dziennik-zapis-bazowy.json. Fiksturę nagrano na sejfie, który ma magazyn kolejki i przy usuwaniu
@@ -21,6 +21,15 @@
 // sejfu poza „databases” o jeden mniej w krokach „usunięcie konta z kopii” i „usunięcie konta” wariantów Ze, prywatny
 // i chmura (sprawdzenie bazy kolejki z E2-PR3a1: „databases ×4” wobec „×3”) i 0 odczytów bramki; w wariancie „Zaloguj
 // jednorazowo” — zapis przebiegu równy w całości.
+//
+// E2-PR3a3: importy (import karty z pliku, scalanie i odtworzenie kopii konta) emitują partią wersje zapisane przez
+// import i encje sekcji pliku; przy zamkniętej bramce każda emisja to jeden odczyt pola okna, więc kroki „import karty
+// innego konta”, „scalenie kopii innego konta” i „odtworzenie konta z kopii” mają 3, 3 i 10 odczytów bramki więcej.
+// W fiksturze E2-PR3a3 zmienia wyłącznie cztery pola odczytyBramki (Ze 46, prywatny 46, chmura 44, jednorazowo 46,
+// z przebiegu na sejfie z partiami); reszta zapisu przebiegu (kroki, IndexedDB, localStorage, crypto, powiadomienia,
+// wyniki) bez zmian. Czerwone na bazie E2-PR3a3 (sejf 422a9a7b): odczyty bramki = liczba emisji (fikstura) i determinizm
+// ×4 (pole odczytyBramki: 30/30/28/30); zielone z natury (strażniki regresji): zapis przebiegu kroków ×4, sejf bez
+// wstawek ×4, brak bazy kolejki i klucza urządzenia, fikstura.
 //
 // Pełny zapis planów z etapami dodaje świeży odczyt databases() przed ścieżką V1.
 // Chroni to przed starym cache braku markera w drugiej karcie, także po błędzie

@@ -1,4 +1,4 @@
-// P-DZIENNIK-ZDARZEN (E2-PR3a2) — test pokrycia mutacji jako różnica stanu odbiorcy. Każda mutacja danych sejfu przy
+// P-DZIENNIK-ZDARZEN (E2-PR3a2, E2-PR3a3) — test pokrycia mutacji jako różnica stanu odbiorcy. Każda mutacja danych sejfu przy
 // otwartej bramce (pole okna VILDA_EVENT_LOG) w trybie „Komputer prywatny” dopisuje do kolejki zmian wiersze, z których
 // odbiorca dostaje ten sam stan co z pełnego ładunku. Prawdziwy sejf w oknie uprzęży tests/support/okno-magazynu.mjs
 // z emisja: true (sejf jak w przeglądarce) nad atrapą tests/support/atrapa-indexeddb.mjs, sztuczny zegar (tylko Date)
@@ -24,6 +24,11 @@
 // Samokontrola uprzęży: w mutacji wołane są metody danych z METODY_DANYCH (tests/support/okno-magazynu.mjs), odczyty
 // albo scalanie; każda metoda, która w przypadku daje wiersz, jest w METODY_DANYCH — domyślne okno uprzęży woła je przy
 // zamkniętej bramce, inaczej przypadek starszego testu magazynu dostałby wiersze emisji po cichu.
+// Partie importu (E2-PR3a3, wiersz 17 tabeli 3.5 planu): okno A ma słuchacza VildaVault._eventLog.onBulkChange od
+// utworzenia; wywołania w trakcie mutacji (lista czyszczona tuż przed nią) = literał przypadku [{ reason, count }] — reason
+// to nazwa metody importu, count = liczba wierszy po mutacji; przypadki bez importu — bez wywołania. Odtworzenie konta
+// z kopii: wiersze z kolejki konta z kopii, odbiorcy B i B′ — okna na kopii baz atrapy sprzed danych konta źródłowego
+// (to samo konto, ten sam klucz), więc odbiorca zdarzeń dostaje cały stan konta z wierszy partii.
 //
 // PRZYPADKI
 //   PM1  nowa karta → snap.
@@ -40,8 +45,8 @@
 //   PM14 przywróć wersję jako nową → snap.
 //   PM15 retencja 2 wersji → stomb, stomb.
 //   PM16 retencja z wersją, której nie udało się usunąć → stomb tylko nagrobka, który został.
-//   PM17 import pliku karty z wersją leżącą w koszu → wśród wierszy snap przepisanej wersji (rev + 1); tylko wiersze
-//        (pełna różnica importu — E2-PR3a3).
+//   PM17 import pliku karty z wersją leżącą w koszu → snap przepisanej wersji (rev + 1), jeden wiersz, choć wersję
+//        emitują zapis importu i zdjęcie wpisu kosza; onBulkChange count 1 (E2-PR3a3: pełna różnica stanu odbiorcy).
 //   PM18 „Scal pacjentów” (źródło: 2 wersje, notatka, lista) → snap ×3, ptomb, pnote, plist.
 //   PM19 „Scal z istniejącym” (osoba spoza bazy z notatką i listą) → ptomb, pnote, plist.
 //   PM20 „Usuń pacjenta” z 2 notatkami → ptomb, pnotetomb ×2.
@@ -63,6 +68,22 @@
 //   PM39 usunięcie wersji (deleteSnapshot, lokalne) → bez wierszy.
 //   PM40 scalanie z chmury przy otwartej bramce (mergeSyncPayload, applyEncryptedDelta, applyEncryptedEvent) → bez
 //        wierszy, bez operacji na bazie kolejki i bez blokady konta.
+//   PM41 import pliku karty usuniętej (2 wersje, 2 notatki; odbiorcy mają nagrobek karty i notatek) → snap ×2, pnote ×2;
+//        karta i notatki wracają u odbiorców; onBulkChange count 4.
+//   PM42 import pliku karty z nową wersją i notatką bliźniaka → snap, pnote (bez wersji obecnej w karcie); count 2;
+//        także z nagrobkiem u odbiorcy starszym i nowszym.
+//   PM43 scalenie kopii konta bliźniaka (nowa karta z 2 wersjami, nowa wersja karty istniejącej, nowa i poprawiona
+//        notatka, notatka biblioteki, lista, usunięta lista, poczekalnia) → snap ×3, pnote ×2, note, plist, plisttomb,
+//        pref; count 9; także z nagrobkiem starszym i nowszym.
+//   PM44 scalenie własnej kopii konta (bez nowych danych) → pnote ×3, note, plist, pref bez skutku u odbiorcy, bez snap
+//        (wersje obecne w karcie); count 6.
+//   PM45 odtworzenie konta z kopii (2 karty, 3 wersje, notatka, usunięta notatka, notatka biblioteki, lista, usunięta
+//        lista, poczekalnia) → w kolejce konta z kopii snap ×3, pnote, pnotetomb, note, plist, plisttomb, pref; count 9;
+//        odbiorcy = konto źródłowe sprzed danych: encje(B) = encje(B′), D(konto z kopii, B) = cred (konto z kopii nie ma
+//        daty zmiany hasła).
+//   PM46 import starego formatu (importLegacyJsonPatient) → snap przez zapis karty, bez partii.
+//   PM47 importy przy zamkniętej bramce (domyślne okno uprzęży: import karty, scalenie i odtworzenie kopii konta) → bez
+//        wierszy, bez onBulkChange, bez bazy kolejki i operacji na niej.
 //   Samokontrola uprzęży (METODY_DANYCH).
 //
 // Czerwone na bazie (sejf origin/audyt aab11479 z tym plikiem i uprzężą tego PR): 58 z 61 — „część emisji istnieje”
@@ -70,6 +91,11 @@
 // przepisanej wersji).
 // Zielone z natury (strażniki regresji): PM39, PM40 — mutacja bez wiersza także na bazie; samokontrola uprzęży nie
 // zależy od sejfu.
+// Czerwone na bazie E2-PR3a3 (sejf 422a9a7b — z częścią emisji, bez partii importu — z tym plikiem i uprzężą tego PR):
+// 10 z 73 — „część partii istnieje” (brak onBulkChange), PM41, PM42 ×3, PM43 ×3, PM45 (brak wierszy partii), PM44
+// (brak wierszy encji sekcji). Zielone z natury (strażniki regresji): PM17 (zdjęcie wpisu kosza emituje wersję —
+// reguła miejsca zapisu z E2-PR3a2; wywołania onBulkChange sprawdzane tylko na sejfie z częścią partii), PM46 (import
+// starego formatu przez zapis karty, bez partii), PM47 (zamknięta bramka), PM1–PM40 i samokontrola uprzęży.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { METODY_DANYCH, oknoMagazynu, przechwycZadaniaWTle } from '../support/okno-magazynu.mjs';
 import { naglowek } from './sesja-zapisu-uprzaz.mjs';
@@ -110,9 +136,10 @@ function zZegarem(v, wolane = null) {
     },
   });
 }
-// Bliźniak: niezależna kopia baz atrapy, to samo konto (ten sam klucz), bramka zamknięta; B.z — widok z krokiem zegara.
-async function blizniak(o) {
-  const B = await oknoMagazynu({ idb: o.idb.__atrapa.klonuj(), istniejace: { A: o.A, B: o.B }, bramka: false, konta: 'A', zaloguj: 'A' });
+// Bliźniak: niezależna kopia baz atrapy (domyślnie baz okna o; idb — inna atrapa, np. kopia sprzed danych), to samo
+// konto (ten sam klucz), bramka zamknięta; B.z — widok z krokiem zegara.
+async function blizniak(o, idb = o.idb) {
+  const B = await oknoMagazynu({ idb: idb.__atrapa.klonuj(), istniejace: { A: o.A, B: o.B }, bramka: false, konta: 'A', zaloguj: 'A' });
   okna.push(B);
   B.z = zZegarem(B.v);
   return B;
@@ -137,33 +164,58 @@ function kanon(lad) {
 const listaEncji = (lad) => [...encje(lad)].map(([k, e]) => [k, e.val]).sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
 const opisD = (d) => d.map((x) => `${x.rodzaj}:${x.klucz}${x.tylko ? ` (tylko ${x.tylko})` : ` [${x.sciezki.join(', ')}]`}`);
 const maKarte = (lad, pid) => (lad.patients || []).some((p) => p.patientId === pid);
+// Klucze ułożone w obrębie kolejnych grup o podanych długościach (ta sama ranga; kolejność encji w randze idzie za
+// kolejnością zapisów importu i nie zmienia stanu odbiorcy), reszta bez zmian.
+const wGrupach = (...dlugosci) => (l) => {
+  const w = [];
+  let i = 0;
+  for (const n of dlugosci) { w.push(...l.slice(i, i + n).sort()); i += n; }
+  return [...w, ...l.slice(i)];
+};
 
 // ── Przebieg przypadku ───────────────────────────────────────────────────────────────────────────────────────────────
-// p: { przygotuj(v, s, o)?, mutacja(v, s, o), opcjeOkna? }; nagrobek: null | 'starszy' | 'nowszy' — B i B′ usuwają kartę
-// s.P przed mutacją A albo po niej.
+// p: { przygotuj(v, s, o)?, mutacja(v, s, o), opcjeOkna?, odbiorcySprzedDanych? (B i B′ z kopii baz atrapy zrobionej
+// przed przygotowaniem), przedMutacja(B, B′, s)? (kontrola odbiorców), konto(s)? (konto, z którego kolejki idą wiersze;
+// domyślnie A — wiersze od ostatniego seqLocal sprzed mutacji, inne konto — wszystkie) }; nagrobek: null | 'starszy' |
+// 'nowszy' — B i B′ usuwają kartę s.P przed mutacją A albo po niej.
 async function przebieg(p, nagrobek = null) {
   const o = await oknoMagazynu({ konta: 'A', emisja: true, ...(p.opcjeOkna || {}) });
   okna.push(o);
+  // Słuchacz partii importu (E2-PR3a3); sejf bez części partii nie ma onBulkChange (przypadek „część partii istnieje”
+  // jest wtedy czerwony).
+  const partie = typeof o.ev.onBulkChange === 'function' ? [] : null;
+  if (partie) o.ev.onBulkChange((d) => { partie.push(d); });
   const wolane = [];
   const v = zZegarem(o.v, wolane);
   const s = {};
+  let zrodloOdbiorcow = o.idb;
+  if (p.odbiorcySprzedDanych) {
+    krok();
+    await ucichnij(o);
+    zrodloOdbiorcow = o.idb.__atrapa.klonuj(); // konto A bez danych (ten sam klucz główny co kopia konta)
+  }
   if (p.przygotuj) await p.przygotuj(v, s, o);
   krok();
   await ucichnij(o);
-  const B = await blizniak(o);
-  const Bl = await blizniak(o);
+  const B = await blizniak(o, zrodloOdbiorcow);
+  const Bl = await blizniak(o, zrodloOdbiorcow);
   // Nagrobek w tej samej chwili u B i u B′, minutę od mutacji (poza pasmem ratunku notatek 1 s).
   const usunUOdbiorcow = async () => { krok(60_000); await B.v.removePatient(s.P); await Bl.v.removePatient(s.P); await B.cisza(); await Bl.cisza(); };
   if (nagrobek === 'starszy') { await usunUOdbiorcow(); krok(60_000); }
+  if (p.przedMutacja) await p.przedMutacja(B, Bl, s);
   const s0 = ostatniSeq(o);
   const znacznik = o.znacznik();
   wolane.length = 0;
+  if (partie) partie.length = 0;
   await p.mutacja(v, s, o);
   const metody = wolane.slice();
   krok();
   await ucichnij(o);
+  const partieMutacji = partie ? partie.slice() : null;
   if (nagrobek === 'nowszy') await usunUOdbiorcow();
-  const wiersze = o.kolejka('A').filter((w) => w.seqLocal > s0);
+  const konto = p.konto ? p.konto(s) : 'A';
+  const od = konto === 'A' ? s0 : 0;
+  const wiersze = o.kolejka(konto).filter((w) => w.seqLocal > od);
   const statusy = [];
   for (const w of wiersze) statusy.push((await B.ev.applyEncryptedEvent(w.env)).status);
   await B.cisza();
@@ -172,16 +224,23 @@ async function przebieg(p, nagrobek = null) {
   const eA = await o.v.exportSyncPayload();
   const eB = await B.v.exportSyncPayload();
   const eBl = await Bl.v.exportSyncPayload();
-  return { o, B, Bl, s, wiersze, statusy, metody, znacznik, eA, eB, eBl, dB: D(kanon(eA), kanon(eB)), dBl: D(kanon(eA), kanon(eBl)) };
+  return {
+    o, B, Bl, s, s0, wiersze, statusy, metody, znacznik, partie: partieMutacji, eA, eB, eBl, dB: D(kanon(eA), kanon(eB)), dBl: D(kanon(eA), kanon(eBl)),
+  };
 }
 
-// Wiersze (literał, wszystkie applied u B, klucze encji) i metody mutacji (samokontrola).
+// Wiersze (literał, wszystkie applied u B, klucze encji), wywołania onBulkChange (literał; count = liczba wierszy po
+// mutacji) i metody mutacji (samokontrola).
 function sprawdzWiersze(r, p) {
   if (p.wiersze) expect(r.wiersze.map(opisWiersza), `${p.nr}: rodzaje i stany wierszy po mutacji (kolejność seqLocal)`).toEqual(p.wiersze);
   expect(r.statusy, `${p.nr}: applyEncryptedEvent na B`).toEqual(r.wiersze.map(() => 'applied'));
   if (p.klucze) {
     const uloz = p.uloz || ((l) => l);
     expect(uloz(r.wiersze.map((w) => w.entityKey)), `${p.nr}: klucze encji wierszy`).toEqual(uloz(p.klucze(r.s)));
+  }
+  if (r.partie) {
+    expect(r.partie, `${p.nr}: wywołania onBulkChange w mutacji`).toEqual(p.partie || []);
+    if (r.partie.length) expect(r.partie.reduce((n, d) => n + d.count, 0), `${p.nr}: count = liczba wierszy po mutacji`).toBe(r.wiersze.length);
   }
   expect(r.metody.filter((m) => !ODCZYTY.has(m)), `${p.nr}: metody mutacji (bez odczytów)`).toEqual(p.metody);
 }
@@ -192,6 +251,7 @@ async function sprawdz(p, nagrobek = null) {
   if (!nagrobek) {
     expect(listaEncji(r.eB), `${p.nr}: encje(B) = encje(B′)`).toEqual(listaEncji(r.eBl));
     expect(opisD(r.dB), `${p.nr}: D(A, B)`).toEqual(p.roznica ? p.roznica(r) : []);
+    if (p.kontrola) await p.kontrola(r);
     return r;
   }
   const P = r.s.P;
@@ -256,7 +316,9 @@ const hakPreferencji = { zapis: null };
 // ── Przypadki ────────────────────────────────────────────────────────────────────────────────────────────────────────
 // nr, opis, przygotuj?, mutacja, metody (wołane w mutacji, bez odczytów), wiersze, klucze?, uloz? (kolejność kluczy
 // bez znaczenia w grupie: ta sama ranga, kolejność z listy sklepu), warianty? (nagrobek u odbiorcy), podnosi? ('wersje' |
-// 'karta'), roznica? (D(A, B) bez nagrobka), roznicaNagrobka? (dodatkowe pozycje D przy nagrobku), sprawdzStan?
+// 'karta'), roznica? (D(A, B) bez nagrobka), roznicaNagrobka? (dodatkowe pozycje D przy nagrobku), sprawdzStan?,
+// partie? (wywołania onBulkChange w mutacji; domyślnie bez wywołań), kontrola(r)? (dodatkowe sprawdzenie po D bez
+// nagrobka), opcje przebiegu: opcjeOkna?, odbiorcySprzedDanych?, przedMutacja?, konto?
 const PRZYPADKI = [
   { nr: 'PM1', opis: 'nowa karta', metody: ['savePatient'], wiersze: ['snap'],
     mutacja: async (v, s) => { const r = await v.savePatient(naglowek(1), { dedup: false }); s.P = r.patientId; s.S = r.snapshotId; },
@@ -380,7 +442,9 @@ const PRZYPADKI = [
     },
     klucze: (s) => s.wynik.prunedIds },
   // Przepis jak w przypieta-w3-import.test.mjs (import zapisu usuniętego do kosza): plik karty sprzed kosza, potem import.
-  { nr: 'PM17', opis: 'import pliku karty z wersją leżącą w koszu', metody: ['importPatientFromEnvelope'],
+  // Wersję z kosza emitują zapis importu i zdjęcie wpisu kosza (Bkz_poImporcie) — w kroku importu jeden wiersz.
+  { nr: 'PM17', opis: 'import pliku karty z wersją leżącą w koszu', metody: ['importPatientFromEnvelope'], wiersze: ['snap'],
+    partie: [{ reason: 'importPatientFromEnvelope', count: 1 }],
     przygotuj: async (v, s, o) => {
       s.w = (await karta(v, s, 1, [22, 23])).w;
       s.rev = (await o.v.getPatient(s.P)).snapshots.find((x) => x.snapshotId === s.w[0]).rev;
@@ -388,10 +452,11 @@ const PRZYPADKI = [
       await v.moveSnapshotToTrash(s.P, s.w[0]);
     },
     mutacja: async (v, s, o) => { await v.importPatientFromEnvelope(s.plik, o.A.haslo); },
-    sprawdzStan: async (r) => {
+    klucze: (s) => [`${s.P}/${s.w[0]}`],
+    kontrola: async (r) => {
       const { s } = r;
-      expect(r.wiersze.filter((w) => w.kind === 'snap').map((w) => w.entityKey), 'PM17: wiersz snap przepisanej wersji').toContain(`${s.P}/${s.w[0]}`);
       expect((await r.o.v.getPatient(s.P)).snapshots.find((x) => x.snapshotId === s.w[0]).rev, 'PM17: wersja z kosza z rev + 1').toBe(s.rev + 1);
+      expect((await r.B.v.listTrashedSnapshots()).map((e) => e.snapshotId), 'PM17: wpis kosza zdjęty u odbiorcy zdarzeń').toEqual([]);
     } },
   { nr: 'PM18', opis: '„Scal pacjentów” (źródło: 2 wersje, notatka, lista)', metody: ['mergePatients'],
     wiersze: ['snap', 'snap', 'snap', 'ptomb', 'pnote', 'plist'],
@@ -616,17 +681,168 @@ const PRZYPADKI = [
       expect(o.logKolejki(r.znacznik), 'PM40: bez operacji na bazie kolejki').toEqual([]);
       expect(o.locks.zadania.slice(s.zadania0).filter((z) => z.nazwa.startsWith('vilda-sync-db:')).length, 'PM40: bez blokady konta').toBe(0);
     } },
+  // ── Importy partią (E2-PR3a3, wiersz 17) ──
+  // Plik karty sprzed „Usuń pacjenta”; bliźniaki powstają po usunięciu, więc mają nagrobek karty i nagrobki notatek.
+  // Import zdejmuje nagrobki u A bez zdarzenia — niesie je snap z kartą o chwili importu i pnote (jak zapis).
+  { nr: 'PM41', opis: 'import pliku karty usuniętej (2 wersje, 2 notatki; odbiorcy z nagrobkiem karty i notatek)', metody: ['importPatientFromEnvelope'],
+    wiersze: ['snap', 'snap', 'pnote', 'pnote'], partie: [{ reason: 'importPatientFromEnvelope', count: 4 }],
+    przygotuj: async (v, s, o) => {
+      s.w = (await karta(v, s, 1, [22, 23])).w;
+      s.N = [(await v.savePatientNote(NOTATKA(s.P, 'Fikcyjna 1'))).id, (await v.savePatientNote(NOTATKA(s.P, 'Fikcyjna 2'))).id];
+      s.plik = await o.v.exportPatientEnvelope(s.P);
+      await v.removePatient(s.P);
+    },
+    przedMutacja: async (B, Bl, s) => {
+      for (const [nazwa, x] of [['B', B], ['B′', Bl]]) {
+        const lad = await x.v.exportSyncPayload();
+        expect({ karta: maKarte(lad, s.P), ptomb: (lad.tombstones || []).some((t) => t.patientId === s.P), pnotetomb: (lad.patientNoteTombstones || []).map((t) => t.id).sort() },
+          `kontrola: ${nazwa} bez karty, z nagrobkiem karty i notatek`).toEqual({ karta: false, ptomb: true, pnotetomb: [...s.N].sort() });
+      }
+    },
+    mutacja: async (v, s, o) => { await v.importPatientFromEnvelope(s.plik, o.A.haslo); },
+    klucze: (s) => [...s.w.map((id) => `${s.P}/${id}`), ...s.N], uloz: wGrupach(2, 2),
+    kontrola: async (r) => {
+      const notatki = (lad) => (lad.patientNotes || []).map((n) => n.id).sort();
+      expect({ B: maKarte(r.eB, r.s.P), Bl: maKarte(r.eBl, r.s.P), nB: notatki(r.eB), nBl: notatki(r.eBl) }, 'PM41: karta i notatki wracają u odbiorców')
+        .toEqual({ B: true, Bl: true, nB: [...r.s.N].sort(), nBl: [...r.s.N].sort() });
+    } },
+  // Bliźniak K dopisuje wersję i notatkę, A importuje plik karty K — wersja obecna w karcie A bez wiersza.
+  { nr: 'PM42', opis: 'import pliku karty z nową wersją i notatką bliźniaka', metody: ['importPatientFromEnvelope'], wiersze: ['snap', 'pnote'],
+    partie: [{ reason: 'importPatientFromEnvelope', count: 2 }], warianty: ['starszy', 'nowszy'],
+    przygotuj: async (v, s, o) => {
+      await karta(v, s, 1, [22]);
+      krok(); await ucichnij(o);
+      const K = await blizniak(o);
+      s.S = (await K.z.savePatient(naglowek(1, { masa: 24 }), { dedup: false, patientId: s.P })).snapshotId;
+      s.N = (await K.z.savePatientNote(NOTATKA(s.P, 'Fikcyjna notatka bliźniaka'))).id;
+      s.plik = await K.v.exportPatientEnvelope(s.P);
+    },
+    mutacja: async (v, s, o) => { await v.importPatientFromEnvelope(s.plik, o.A.haslo); },
+    klucze: (s) => [`${s.P}/${s.S}`, s.N] },
+  // Bliźniak K: nowa wersja karty P, nowa karta Q z 2 wersjami i notatką, poprawka notatki n0 karty P, notatka biblioteki,
+  // lista z Q, usunięcie listy L0, termin poczekalni; A scala kopię konta K.
+  { nr: 'PM43', opis: 'scalenie kopii konta bliźniaka (nowa karta z 2 wersjami, nowa wersja karty istniejącej, nowa i poprawiona notatka, notatka biblioteki, lista, usunięta lista, poczekalnia)',
+    metody: ['mergeVaultBackup'], wiersze: ['snap', 'snap', 'snap', 'pnote', 'pnote', 'note', 'plist', 'plisttomb', 'pref'],
+    partie: [{ reason: 'mergeVaultBackup', count: 9 }], warianty: ['starszy', 'nowszy'],
+    przygotuj: async (v, s, o) => {
+      await karta(v, s, 1, [22]);
+      s.L0 = (await v.savePatientList({ name: 'Fikcyjna lista 0', memberIds: [s.P] })).id;
+      s.n0 = (await v.savePatientNote(NOTATKA(s.P, 'Fikcyjna notatka 0'))).id;
+      krok(); await ucichnij(o);
+      const K = await blizniak(o);
+      s.S = (await K.z.savePatient(naglowek(1, { masa: 24 }), { dedup: false, patientId: s.P })).snapshotId;
+      const q = await karta(K.z, {}, 2, [30, 31]);
+      s.Q = q.pid; s.wQ = q.w;
+      s.nQ = (await K.z.savePatientNote(NOTATKA(s.Q, 'Fikcyjna notatka bliźniaka'))).id;
+      await K.z.savePatientNote(NOTATKA(s.P, 'Fikcyjna notatka 0 (poprawiona)', { id: s.n0 }));
+      s.L = (await K.z.saveNote({ title: 'Fikcyjny szablon bliźniaka', category: 'badanie', body: 'Fikcyjna treść szablonu.' })).id;
+      s.LK = (await K.z.savePatientList({ name: 'Fikcyjna lista bliźniaka', memberIds: [s.Q] })).id;
+      await K.z.deletePatientList(s.L0);
+      await K.z.setWaitlistSchedule('Fikcyjna procedura', { dateISO: '2026-03-15' });
+      s.kopia = await K.v.exportVaultBackup();
+    },
+    mutacja: async (v, s, o) => { await v.mergeVaultBackup(s.kopia, o.A.haslo); },
+    klucze: (s) => [`${s.P}/${s.S}`, ...s.wQ.map((id) => `${s.Q}/${id}`), s.nQ, s.n0, s.L, s.LK, s.L0, 'wlsched'], uloz: wGrupach(3, 2),
+    // Nagrobek karty P u odbiorców zabiera też notatkę n0 (nagrobek notatki), poprawioną u A.
+    roznicaNagrobka: (r) => [`pnote:${r.s.n0} (tylko x)`, `pnotetomb:${r.s.n0} (tylko y)`] },
+  // Kopia własnego konta: wersje są w kartach (bez snap), każda encja sekcji pliku daje wiersz o treści, którą odbiorca
+  // już ma; nagrobki z builderem bez rekordu — bez wiersza.
+  { nr: 'PM44', opis: 'scalenie własnej kopii konta (bez nowych danych)', metody: ['mergeVaultBackup'],
+    wiersze: ['pnote', 'pnote', 'pnote', 'note', 'plist', 'pref'], partie: [{ reason: 'mergeVaultBackup', count: 6 }],
+    przygotuj: async (v, s, o) => {
+      await karta(v, s, 1, [22, 23]);
+      await karta(v, {}, 2, [30]);
+      s.N = [];
+      for (let i = 1; i <= 3; i += 1) s.N.push((await v.savePatientNote(NOTATKA(s.P, `Fikcyjna notatka ${i}`))).id);
+      s.L = (await v.saveNote({ title: 'Fikcyjny szablon', category: 'badanie', body: 'Fikcyjna treść szablonu.' })).id;
+      s.LI = (await v.savePatientList({ name: 'Fikcyjna lista', memberIds: [s.P] })).id;
+      await v.setWaitlistSchedule('Fikcyjna procedura', { dateISO: '2026-03-15' });
+      s.kopia = await o.v.exportVaultBackup();
+    },
+    przedMutacja: async (B, Bl, s) => { s.encjeB = listaEncji(await B.v.exportSyncPayload()); },
+    mutacja: async (v, s, o) => { await v.mergeVaultBackup(s.kopia, o.A.haslo); },
+    klucze: (s) => [...s.N, s.L, s.LI, 'wlsched'], uloz: wGrupach(3),
+    kontrola: async (r) => { expect(listaEncji(r.eB), 'PM44: wiersze bez skutku u odbiorcy (encje B przed i po)').toEqual(r.s.encjeB); } },
+  // Odtworzenie konta z kopii tworzy nowe konto (sesja konta z kopii przed pierwszym zapisem) — partia idzie do jego
+  // kolejki. Odbiorcy: konto źródłowe sprzed danych (ten sam klucz), więc cały stan konta przychodzi z wierszy partii.
+  { nr: 'PM45', opis: 'odtworzenie konta z kopii (2 karty, 3 wersje, notatka, usunięta notatka, notatka biblioteki, lista, usunięta lista, poczekalnia)',
+    metody: ['restoreVaultBackup'], wiersze: ['snap', 'snap', 'snap', 'pnote', 'pnotetomb', 'note', 'plist', 'plisttomb', 'pref'],
+    partie: [{ reason: 'restoreVaultBackup', count: 9 }], odbiorcySprzedDanych: true, konto: (s) => s.wynik.userId,
+    przygotuj: async (v, s, o) => {
+      s.w = (await karta(v, s, 1, [22, 23])).w;
+      const k2 = await karta(v, {}, 2, [30]);
+      s.P2 = k2.pid; s.w2 = k2.w;
+      s.N = (await v.savePatientNote(NOTATKA(s.P, 'Fikcyjna notatka 1'))).id;
+      s.Nu = (await v.savePatientNote(NOTATKA(s.P, 'Fikcyjna notatka 2'))).id;
+      await v.removePatientNote(s.Nu);
+      s.L = (await v.saveNote({ title: 'Fikcyjny szablon', category: 'badanie', body: 'Fikcyjna treść szablonu.' })).id;
+      s.Lu = (await v.savePatientList({ name: 'Fikcyjna lista do usunięcia', memberIds: [s.P] })).id;
+      await v.deletePatientList(s.Lu);
+      s.LI = (await v.savePatientList({ name: 'Fikcyjna lista', memberIds: [s.P] })).id;
+      await v.setWaitlistSchedule('Fikcyjna procedura', { dateISO: '2026-03-15' });
+      s.kopia = await o.v.exportVaultBackup();
+    },
+    przedMutacja: async (B, Bl, s) => {
+      for (const [nazwa, x] of [['B', B], ['B′', Bl]]) expect((await x.v.listPatients()).length, `kontrola: ${nazwa} — konto źródłowe bez kart`).toBe(0);
+    },
+    mutacja: async (v, s, o) => { o.zablokuj(); s.wynik = await v.restoreVaultBackup(s.kopia, o.A.haslo, { label: 'Fikcyjne konto z kopii' }); },
+    klucze: (s) => [...s.w.map((id) => `${s.P}/${id}`), ...s.w2.map((id) => `${s.P2}/${id}`), s.N, s.Nu, s.L, s.LI, s.Lu, 'wlsched'],
+    uloz: wGrupach(3),
+    // Konto z kopii ma passwordUpdatedAtISO: null — builder poświadczenia nie daje zdarzenia, więc cred zostaje różnicą
+    // wobec odbiorców (u B i u B′ ta sama).
+    roznica: () => ['cred:cred [(wartość)]'],
+    kontrola: async (r) => {
+      expect(r.o.v.getCurrentUser().userId, 'PM45: sesja konta z kopii').toBe(r.s.wynik.userId);
+      expect(r.s.wynik.userId, 'PM45: nowe konto').not.toBe(r.o.A.userId);
+      expect(r.o.kolejka('A').filter((w) => w.seqLocal > r.s0), 'PM45: kolejka konta źródłowego bez nowych wierszy').toEqual([]);
+      expect(opisD(r.dBl), 'PM45: D(konto z kopii, B′) = D(konto z kopii, B)').toEqual(opisD(r.dB));
+    } },
+  // Strażnik: import starego formatu idzie przez zapis karty (emiter onPatientSaved) — bez kroku importu i bez partii.
+  { nr: 'PM46', opis: 'import starego formatu (importLegacyJsonPatient)', metody: ['importLegacyJsonPatient'], wiersze: ['snap'], partie: [],
+    mutacja: async (v, s) => { const r = await v.importLegacyJsonPatient(naglowek(5)); s.P = r.patientId; s.S = r.snapshotId; },
+    klucze: (s) => [`${s.P}/${s.S}`] },
+  // Domyślne okno uprzęży (emisja: false): metody z METODY_DANYCH przy zamkniętej bramce, poza nimi pole okna true.
+  { nr: 'PM47', opis: 'importy przy zamkniętej bramce (import karty, scalenie i odtworzenie kopii konta)', metody: ['importPatientFromEnvelope', 'mergeVaultBackup', 'restoreVaultBackup'],
+    wiersze: [], partie: [], opcjeOkna: { emisja: false },
+    przygotuj: async (v, s, o) => {
+      await karta(v, s, 1, [22, 23]);
+      await v.savePatientNote(NOTATKA(s.P));
+      await v.saveNote({ title: 'Fikcyjny szablon', category: 'badanie', body: 'Fikcyjna treść szablonu.' });
+      s.plik = await o.v.exportPatientEnvelope(s.P);
+      s.kopia = await o.v.exportVaultBackup();
+      await v.removePatient(s.P);
+    },
+    mutacja: async (v, s, o) => {
+      await v.importPatientFromEnvelope(s.plik, o.A.haslo);
+      await v.mergeVaultBackup(s.kopia, o.A.haslo);
+      o.zablokuj();
+      s.wynik = await v.restoreVaultBackup(s.kopia, o.A.haslo, { label: 'Fikcyjne konto z kopii' });
+    },
+    sprawdzStan: async (r) => {
+      const { o, s } = r;
+      expect(o.win.VILDA_EVENT_LOG, 'kontrola: pole bramki okna poza metodami danych').toBe(true);
+      expect({ A: o.jestBaza('A'), zKopii: o.jestBaza(s.wynik.userId) }, 'PM47: bez bazy kolejki').toEqual({ A: false, zKopii: false });
+      expect(o.logKolejki(r.znacznik), 'PM47: bez operacji na bazie kolejki').toEqual([]);
+      expect((await o.idb.databases()).map((d) => d.name).filter((n) => n.startsWith('vilda_sync_')), 'PM47: bazy vilda_sync_*').toEqual([]);
+      expect((await o.v.listPatients()).length, 'kontrola: konto z kopii ma kartę').toBe(1);
+    } },
 ];
 
-describe('pokrycie mutacji: wiersze kolejki i stan odbiorcy (E2-PR3a2)', () => {
+describe('pokrycie mutacji: wiersze kolejki i stan odbiorcy (E2-PR3a2, E2-PR3a3)', () => {
   it('część emisji istnieje: VildaVault._eventLog.emissionsSettled', async () => {
     const o = await oknoMagazynu({ konta: 'A', emisja: true });
     okna.push(o);
     expect(typeof o.ev.emissionsSettled).toBe('function');
   });
+  it('część partii istnieje: VildaVault._eventLog.onBulkChange', async () => {
+    const o = await oknoMagazynu({ konta: 'A', emisja: true });
+    okna.push(o);
+    expect(typeof o.ev.onBulkChange).toBe('function');
+  });
   const OPIS_NAGROBKA = { starszy: 'nagrobek karty u odbiorcy starszy niż mutacja', nowszy: 'nagrobek karty u odbiorcy nowszy niż mutacja' };
   for (const p of PRZYPADKI) {
-    const w = p.wiersze ? p.wiersze.join(', ') || 'bez wierszy' : 'wśród wierszy snap przepisanej wersji';
+    const partia = p.partie && p.partie.length ? `; onBulkChange ${p.partie.map((d) => `${d.reason} ${d.count}`).join(', ')}` : '';
+    const w = (p.wiersze.join(', ') || 'bez wierszy') + partia;
     it(`${p.nr} ${p.opis}: ${w}; odbiorca bez nagrobka`, async () => { await sprawdz(p); }, CZAS);
     for (const n of p.warianty || []) it(`${p.nr} ${p.opis}: ${w}; ${OPIS_NAGROBKA[n]}`, async () => { await sprawdz(p, n); }, CZAS);
   }

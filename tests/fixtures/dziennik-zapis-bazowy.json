@@ -1449,7 +1449,7 @@
    ],
    "bazy": [],
    "kluczUrzadzenia": false,
-   "odczytyBramki": 30
+   "odczytyBramki": 46
   },
   "prywatny": {
    "ladowanie": {
@@ -2836,7 +2836,7 @@
     "vilda_registry"
    ],
    "kluczUrzadzenia": false,
-   "odczytyBramki": 30
+   "odczytyBramki": 46
   },
   "chmura": {
    "ladowanie": {
@@ -3949,7 +3949,7 @@
     "vilda_registry"
    ],
    "kluczUrzadzenia": false,
-   "odczytyBramki": 28
+   "odczytyBramki": 44
   },
   "jednorazowo": {
    "ladowanie": {
@@ -4894,7 +4894,7 @@
    ],
    "bazy": [],
    "kluczUrzadzenia": false,
-   "odczytyBramki": 30
+   "odczytyBramki": 46
   }
  }
 }
