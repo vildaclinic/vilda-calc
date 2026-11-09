@@ -84,8 +84,7 @@ body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).
 .vcp .vcp-button-row, .vcp .vcp-detail-bottom { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-10px); margin-top: var(--space-14px); }
 .vcp .vcp-detail-bottom { justify-content: space-between; margin-top: var(--space-20px); }
 .vcp .vcp-outline { border-color: #bcd2d5; color: var(--vcp-teal); background: #fff; font-size: 13px; }
-.vcp .vcp-primary { border-color: var(--vcp-teal); background: var(--vcp-teal); color: #fff; font-size: 13px; font-weight: 500; }
-.vcp .vcp-primary:hover { background: #066f74; border-color: #066f74; }
+.vcp .vcp-primary { font-size: 13px; font-weight: 500; }
 .vcp .vcp-decision, .vcp .vcp-closed { padding: 15px; border: var(--border-hairline) solid #edddbd; background: #fff8ed; border-radius: var(--radius-10); margin-top: var(--space-20px); font-size: 13px; line-height: 1.6; }
 .vcp .vcp-decision strong { color: #8d5817; display: block; margin-bottom: 5px; }
 .vcp .vcp-closed { border-color: #cfe4d9; background: #eef7f3; }
@@ -333,8 +332,9 @@ dialog.vcp.vcp-dialog.vcp-reminders-dialog.vcp-dialog-short { --vcp-dialog-gap: 
 .vcp-reminders-dialog.vcp-dialog-short .vcp-form-patient { margin-bottom: 2px; font-size: 10px; line-height: 14px; }
 .vcp-reminders-dialog.vcp-dialog-short .vcp-form-body { padding: var(--space-10px) var(--space-14px); }
 .vcp-reminders-dialog.vcp-dialog-short .vcp-form-actions { padding: var(--space-6px) var(--space-14px); }
-.vcp.vcp .vcp-primary { background: var(--vcp-teal)!important; border-color: var(--vcp-teal)!important; color: #fff!important; font-weight: 500!important; }
-.vcp.vcp .vcp-primary:hover { background: #066f74!important; border-color: #066f74!important; }
+.vcp.vcp .vcp-primary { background: var(--chrome-active-bg, linear-gradient(135deg, var(--primary, #00838d), var(--secondary, #00b0a6)))!important; border-color: transparent!important; color: #fff!important; font-weight: 600!important; box-shadow: none!important; }
+.vcp.vcp .vcp-primary:is(:hover,:focus-visible):not(:disabled):not([aria-disabled=true]) { filter: brightness(.96); }
+.vcp.vcp .vcp-primary:disabled, .vcp.vcp .vcp-primary[aria-disabled=true] { filter: none; }
 .vcp.vcp .vcp-outline { background: #fff!important; border-color: #bcd2d5!important; color: var(--vcp-teal)!important; }
 .vcp.vcp .vcp-step-actions button { border: 0!important; background: transparent!important; color: var(--vcp-teal)!important; padding: var(--space-4px) 0!important; }
 .vcp.vcp .vcp-step-actions .vcp-action { background: #eef7f4!important; border: var(--border-hairline) solid #d4e7e1!important; padding: var(--space-6px) var(--space-10px)!important; }
@@ -375,4 +375,63 @@ dialog.vcp.vcp-dialog.vcp-reminders-dialog.vcp-dialog-short { --vcp-dialog-gap: 
   .vcp .vcp-field input,
   .vcp .vcp-field select,
   .vcp .vcp-field textarea { font-size: 16.8px; }
+}
+/* A new plan keeps both creation paths in one form. */
+.vcp .vcp-create-modes { display: flex; gap: var(--space-8px); margin-bottom: var(--space-16px); }
+.vcp .vcp-create-modes button { flex: 1 1 0; min-height: 44px; font-size: 16px; }
+.vcp .vcp-create-modes button.is-active { color: var(--vcp-teal)!important; background: var(--vcp-soft)!important; border-color: var(--vcp-teal)!important; }
+.vcp .vcp-mode-question { margin: var(--space-12px) 0; }
+.vcp .vcp-mode-question button { min-height: 44px; margin: var(--space-4px); }
+.vcp .vcp-stage { margin: var(--space-16px) 0; padding: var(--space-14px); border: var(--border-hairline) solid var(--vcp-line); border-radius: var(--radius-9); }
+.vcp .vcp-stage > .vcp-section-heading { flex-wrap: wrap; gap: var(--space-8px); }
+.vcp .vcp-stage > .vcp-section-heading h3 { margin: 0; font-size: 17px; line-height: 1.4; }
+.vcp .vcp-stage .vcp-step { margin-top: var(--space-14px); }
+.vcp .vcp-stage .vcp-step-title { font-size: 16px; line-height: 1.45; }
+.vcp .vcp-stage .vcp-description, .vcp .vcp-staged-facts { font-size: 16px; line-height: 1.5; }
+.vcp .vcp-stage .vcp-help { font-size: 14px; line-height: 1.5; }
+.vcp .vcp-stage .vcp-status { font-size: 12px; }
+.vcp .vcp-stage .vcp-step-actions button { font-size: 16px; }
+.vcp .vcp-staged-facts p { margin: var(--space-8px) 0; }
+.vcp .vcp-stage button, .vcp .vcp-staged-evidence button { min-height: 44px; }
+.vcp .vcp-staged-evidence { margin: var(--space-16px) 0; }
+.vcp .vcp-staged-evidence[hidden] { display: none!important; }
+.vcp .vcp-staged-evidence .vcp-result-preview { overflow-wrap: anywhere; }
+.vcp.vcp-staged-dialog .vcp-field input,
+.vcp.vcp-staged-dialog .vcp-field select,
+.vcp.vcp-staged-dialog .vcp-field textarea,
+.vcp.vcp-staged-dialog .vcp-field > span,
+.vcp.vcp-staged-dialog .vcp-check,
+.vcp.vcp-staged-dialog button { font-size: 16px; }
+.vcp.vcp-staged-dialog .vcp-field input,
+.vcp.vcp-staged-dialog .vcp-field select,
+.vcp.vcp-staged-dialog button,
+.vcp.vcp-staged-dialog .vcp-check { min-height: 44px; }
+.vcp.vcp-staged-dialog .vcp-check { align-items: center; }
+.vcp.vcp-staged-dialog .vcp-help,
+.vcp.vcp-staged-dialog .vcp-notice,
+.vcp.vcp-staged-dialog .vcp-form-patient { font-size: 14px; }
+.vcp.vcp-staged-dialog .vcp-form-actions { flex-wrap: wrap; }
+dialog.vcp.vcp-dialog.vcp-setup-dialog { width: 620px; padding: var(--space-20px); font-size: 16px; }
+dialog.vcp.vcp-dialog.vcp-setup-dialog[open] { display: flex; flex-direction: column; gap: var(--space-16px); }
+.vcp.vcp-setup-dialog h2 { flex: 0 0 auto; font-size: 22px; line-height: 1.35; }
+.vcp.vcp-setup-dialog > p { flex: 0 0 auto; line-height: 1.5; }
+.vcp.vcp-setup-dialog .vcp-setup-body { min-height: 0; overflow-y: auto; overflow-wrap: anywhere; display: grid; gap: var(--space-12px); }
+.vcp.vcp-setup-dialog .vcp-setup-body label { display: flex; flex-direction: column; gap: var(--space-8px); font-size: 16px; }
+.vcp.vcp-setup-dialog .vcp-setup-body textarea { display: block; width: 100%; max-width: 100%; min-height: 80px; padding: var(--space-10px); font-size: 16px; line-height: 1.5; overflow-wrap: anywhere; resize: vertical; }
+.vcp.vcp-setup-dialog .vcp-setup-body .vcp-check { flex-direction: row; align-items: center; min-height: 44px; }
+.vcp.vcp-setup-dialog .vcp-setup-status { font-size: 14px; }
+.vcp.vcp-setup-dialog .vcp-setup-actions { display: flex; flex-wrap: wrap; gap: var(--space-10px); justify-content: flex-end; flex: 0 0 auto; }
+.vcp.vcp-setup-dialog button { min-height: 44px; font-size: 16px; white-space: normal; }
+.vcp.vcp-conflict-dialog .vcp-conflict-patient { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-12px); }
+.vcp.vcp-conflict-dialog .vcp-conflict-patient > h3 { grid-column: 1 / -1; font-size: 18px; margin: 0; }
+.vcp.vcp-conflict-dialog .vcp-conflict-patient > p { grid-column: 1 / -1; margin: 0; }
+.vcp.vcp-conflict-dialog .vcp-conflict-branch { min-width: 0; padding: var(--space-12px); border: var(--border-hairline) solid var(--color-border, #d8e6e9); border-radius: var(--radius-8); line-height: 1.5; }
+.vcp.vcp-conflict-dialog .vcp-conflict-warning { padding: var(--space-12px); border: var(--border-hairline) solid #e6c484; background: #fff8eb; color: #765413; line-height: 1.5; }
+@media (max-width: 700px) {
+  .vcp .vcp-stage { padding: var(--space-12px); }
+  .vcp .vcp-stage .vcp-step { gap: var(--space-8px); }
+  .vcp .vcp-stage .vcp-step-actions { gap: var(--space-8px) var(--space-12px); }
+  dialog.vcp.vcp-dialog.vcp-setup-dialog { padding: var(--space-16px); }
+  .vcp.vcp-setup-dialog .vcp-setup-actions button { flex: 1 1 150px; }
+  .vcp.vcp-conflict-dialog .vcp-conflict-patient { grid-template-columns: minmax(0, 1fr); }
 }

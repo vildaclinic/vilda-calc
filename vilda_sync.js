@@ -4,6 +4,120 @@
  * method is only compatibility with old bundles/test doubles; a present method
  * returning anything other than the explicit legacy descriptor fails closed.
  * The ordinary inactive path is synchronous and does no identity/storage I/O. */
+// Clinical sync dispatch only. Existing template transport and every legacy
+// HTTP/payload/identity guard remain byte-for-byte in the generated runtime.
+var WorkspaceSyncFlight = null, WorkspaceSyncLastAck = null, WorkspaceSyncGeneration = 0, WorkspaceSyncBoundVaults = [];
+
+function WorkspaceSyncOwner(vault) {
+  var user = vault && typeof vault.getCurrentUser === 'function' ? vault.getCurrentUser() : null;
+  return user && typeof user.userId === 'string' ? user.userId : null;
+}
+function WorkspaceSyncBind(vault) {
+  if (!vault || WorkspaceSyncBoundVaults.indexOf(vault) >= 0 || typeof vault.onLock !== 'function') return;
+  WorkspaceSyncBoundVaults.push(vault);
+  vault.onLock(function () {
+    WorkspaceSyncGeneration++;
+    if (WorkspaceSyncFlight && WorkspaceSyncFlight.vault === vault) WorkspaceSyncFlight = null;
+    if (WorkspaceSyncLastAck && WorkspaceSyncLastAck.vault === vault) WorkspaceSyncLastAck = null;
+  });
+}
+function WorkspaceSyncCheck(vault, owner, generation) {
+  if (o.VildaVault !== vault || !vault || typeof vault.isUnlocked !== 'function' || !vault.isUnlocked()
+    || WorkspaceSyncOwner(vault) !== owner || generation !== WorkspaceSyncGeneration) throw u('Sesja synchronizacji została zmieniona.', 'SESSION_CHANGED');
+}
+function WorkspaceSyncStatusShape(value) {
+  if (!value || typeof value !== 'object' || !Number.isSafeInteger(value.revision) || value.revision < 1
+    || !Number.isSafeInteger(value.pendingCount) || value.pendingCount < 0
+    || !Number.isSafeInteger(value.conflictCount) || value.conflictCount < 0
+    || !Number.isSafeInteger(value.remoteHeadSeq) || value.remoteHeadSeq < 0
+    || typeof value.bootstrapRequired !== 'boolean' || typeof value.localWriteAvailable !== 'boolean'
+    || !['synced', 'pending', 'conflict', 'bootstrap-required', 'not-admitted'].includes(value.status))
+    throw u('Nie można potwierdzić stanu synchronizacji danych pacjentów.', 'CLINICAL_WORKSPACE_STATUS_INVALID');
+  return { status: value.status, revision: value.revision, pendingCount: value.pendingCount,
+    conflictCount: value.conflictCount, remoteHeadSeq: value.remoteHeadSeq,
+    bootstrapRequired: value.bootstrapRequired, localWriteAvailable: value.localWriteAvailable };
+}
+async function WorkspaceSyncPrepared(operation) {
+  var vault = I(), owner = WorkspaceSyncOwner(vault);
+  WorkspaceSyncBind(vault); var generation = WorkspaceSyncGeneration;
+  if (typeof vault.preparePatientClinicalRoute !== 'function') return { vault: vault, owner: owner, generation: generation, mode: 'legacy' };
+  var selection = await vault.preparePatientClinicalRoute();
+  WorkspaceSyncCheck(vault, owner, generation);
+  if (selection && selection.mode === 'legacy') return { vault: vault, owner: owner, generation: generation, mode: 'legacy' };
+  if (!selection || selection.mode !== 'protected-workspace' || typeof vault.syncPatientWorkspace !== 'function'
+    || typeof vault.getPatientWorkspaceStatus !== 'function') {
+    var error = PatientClinicalRouteFailure(operation) || u('Dane pacjentów nie są jeszcze gotowe do synchronizacji.', 'CLINICAL_WORKSPACE_NOT_READY');
+    throw error;
+  }
+  return { vault: vault, owner: owner, generation: generation, mode: 'protected-workspace' };
+}
+function WorkspaceSyncUnsent(status) {
+  var code = status.conflictCount || status.status === 'conflict' ? 'CLINICAL_WORKSPACE_CONFLICT'
+    : status.pendingCount || status.status === 'pending' ? 'CLINICAL_WORKSPACE_PENDING' : 'CLINICAL_WORKSPACE_NOT_READY';
+  var message = code === 'CLINICAL_WORKSPACE_CONFLICT' ? 'Zachowano obie wersje zmian. Uzgodnij je przed dalszą synchronizacją.'
+    : code === 'CLINICAL_WORKSPACE_PENDING' ? 'Zmiany zapisano na tym urządzeniu i oczekują na synchronizację.'
+      : 'Najpierw zakończ przygotowanie danych pacjentów.';
+  return u(message, code, { patientWorkspace: true, workspaceStatus: status });
+}
+function WorkspaceSyncNative(context, operation, refresh) {
+  var vault = context.vault, owner = context.owner, generation = context.generation, current = WorkspaceSyncFlight;
+  if (current && current.vault === vault && current.owner === owner && current.generation === generation) {
+    if (refresh && !current.refresh) return current.promise.then(function () {
+      WorkspaceSyncCheck(vault, owner, generation); return WorkspaceSyncNative(context, operation, true);
+    });
+    return current.promise;
+  }
+  var flight = { vault: vault, owner: owner, generation: generation, refresh: refresh, promise: null };
+  flight.promise = Promise.resolve().then(async function () {
+    WorkspaceSyncCheck(vault, owner, generation);
+    y(L, { operation: operation, patientWorkspace: true });
+    var before = WorkspaceSyncStatusShape(await vault.getPatientWorkspaceStatus());
+    WorkspaceSyncCheck(vault, owner, generation);
+    if (o.navigator && o.navigator.onLine === false) throw u('Brak połączenia. Zmiany pozostają zapisane na tym urządzeniu.',
+      'CLINICAL_WORKSPACE_OFFLINE', { patientWorkspace: true, workspaceStatus: before });
+    var status = WorkspaceSyncStatusShape(await vault.syncPatientWorkspace({ refresh: refresh }));
+    WorkspaceSyncCheck(vault, owner, generation);
+    if (status.status !== 'synced' || status.pendingCount || status.conflictCount || status.bootstrapRequired
+      || status.remoteHeadSeq < 1) throw WorkspaceSyncUnsent(status);
+    WorkspaceSyncLastAck = { vault: vault, owner: owner, at: new Date().toISOString(), revision: status.revision };
+    var result = { action: 'workspace-synced', patientWorkspace: true, updated: status.revision !== before.revision, status: status };
+    y(p, { operation: operation, patientWorkspace: true, result: result });
+    return result;
+  }).catch(function (error) {
+    try { WorkspaceSyncCheck(vault, owner, generation); } catch (changed) { error = changed; }
+    if (error && error.code !== 'SESSION_CHANGED') y(k, { operation: operation, patientWorkspace: true, error: error });
+    throw error;
+  });
+  WorkspaceSyncFlight = flight;
+  function WorkspaceSyncFinish() { if (WorkspaceSyncFlight === flight) WorkspaceSyncFlight = null; }
+  flight.promise.then(WorkspaceSyncFinish, WorkspaceSyncFinish);
+  return flight.promise;
+}
+function WorkspaceSyncDispatch(operation, refresh, legacy) {
+  // An old vault bundle has no protected-route selector. Keep its original
+  // promise and microtask ordering: wrapping that promise can start a second
+  // full upload before the existing keepalive queue has joined its callers.
+  var vault = o.VildaVault;
+  if (vault && typeof vault.preparePatientClinicalRoute !== 'function') return legacy();
+  return WorkspaceSyncPrepared('sync-' + operation).then(function (context) {
+    if (context.mode === 'legacy') return legacy();
+    return WorkspaceSyncNative(context, operation, refresh);
+  }, function (error) {
+    if (error && error.code !== 'SESSION_CHANGED') y(k, { operation: operation, patientWorkspace: true, error: error });
+    throw error;
+  });
+}
+async function WorkspaceSyncReadStatus(legacy) {
+  var context = await WorkspaceSyncPrepared('sync-status');
+  if (context.mode === 'legacy') return legacy();
+  var status = WorkspaceSyncStatusShape(await context.vault.getPatientWorkspaceStatus());
+  WorkspaceSyncCheck(context.vault, context.owner, context.generation);
+  var ack = WorkspaceSyncLastAck;
+  return { registered: status.remoteHeadSeq > 0, localEtag: null,
+    lastSyncAt: ack && ack.vault === context.vault && ack.owner === context.owner && ack.revision === status.revision ? ack.at : null,
+    patientWorkspace: true, status: status.status, revision: status.revision, pendingCount: status.pendingCount,
+    conflictCount: status.conflictCount, remoteHeadSeq: status.remoteHeadSeq, bootstrapRequired: status.bootstrapRequired };
+}
 function PatientClinicalRouteFailure(operation) {
   var vault = o && o.VildaVault;
   if (!vault) return null;
@@ -500,7 +614,7 @@ function Bws_poRotacji() {
     }
   } catch (x) {}
 }
-async function Bpw_pull(){PatientClinicalRequireLegacy("sync-pull");var CareReplay=null,CareReplayed=false;var t=I(),Bpw_kto=Bpw_konto(t);y(L,{operation:"pull"});var e;try{e=await t.getSyncMaterial()}catch(E){throw y(k,{operation:"pull",error:E}),E}PatientClinicalRequireLegacy("sync-pull");var a=e.slotId,r=e.authToken,n=e.syncEncKey,i=j(),c=m(a);K()&&M==null&&(M=Pt(a,t));try{Brv_stop(a);if(c.registered){var S=await f(i+"/v1/slots/"+a+"/status",{method:"GET",headers:{Authorization:"Bearer "+r}});if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();PatientClinicalRequireLegacy("sync-pull");if(S.status===401)throw C(a),u("VildaSync: b\u0142\u0105d uwierzytelnienia przy pull. Slot m\xF3g\u0142 zosta\u0107 usuni\u0119ty.","AUTH_FAILED");if(!S.ok)throw u("VildaSync: b\u0142\u0105d odczytu statusu ("+S.status+").","STATUS_FAILED",{httpStatus:S.status});var w=await S.json();if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();PatientClinicalRequireLegacy("sync-pull")}else{var l=await f(i+"/v1/slots/"+a+"/status",{method:"GET",headers:{Authorization:"Bearer "+r}});if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();PatientClinicalRequireLegacy("sync-pull");if(!l.ok){P();var d={action:"not-registered",httpStatus:l.status};return y(p,{operation:"pull",result:d}),d}var s=await l.json();if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();PatientClinicalRequireLegacy("sync-pull");c.registered=!0,c.localEtag=null,M=null,vt(a),St(a),T(a,c);var w=s}var h=K()?M:c.localEtag;CareReplay=h&&h===w.etag?await CareSyncReplay(t,a,w.etag):null;PatientClinicalRequireLegacy("sync-pull");if(h&&h===w.etag&&!CareReplay){var D=await Vt();if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();PatientClinicalRequireLegacy("sync-pull");if(D)c.localEtag=null,M=null,vt(a),St(a);else{P();var _={action:"up-to-date",etag:w.etag};return Bpw_dren(a,r,i,t,Bpw_kto,_),y(p,{operation:"pull",result:_}),_}}var g={Authorization:"Bearer "+r},v=CareReplay?null:K()?M:c.localEtag;v&&(g["If-None-Match"]='"'+v+'"');var A=await f(i+"/v1/slots/"+a+"/blob",{method:"GET",headers:g},Bgz_czas({byteLength:w&&typeof w.size=="number"?w.size:0}));if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();PatientClinicalRequireLegacy("sync-pull");if(A.status===304){P();var F={action:"up-to-date",etag:v};return Bpw_dren(a,r,i,t,Bpw_kto,F),y(p,{operation:"pull",result:F}),F}if(A.status===401)throw u("VildaSync: b\u0142\u0105d uwierzytelnienia przy pobieraniu bloba.","AUTH_FAILED");if(A.status===404){P();var H={action:"no-remote-blob"};return Bpw_dren(a,r,i,t,Bpw_kto,H),y(p,{operation:"pull",result:H}),H}if(!A.ok)throw u("VildaSync: b\u0142\u0105d pobierania danych ("+A.status+").","DOWNLOAD_FAILED",{httpStatus:A.status});var x=await Bnd_czytaj(A,w&&typeof w.size=="number"?w.size:0),W;PatientClinicalRequireLegacy("sync-pull");Bnd_zglos({phase:"decrypt"});try{W=await ut(x,n)}catch{throw u("VildaSync: b\u0142\u0105d odszyfrowania danych. Mo\u017Cliwa zmiana masterKey lub uszkodzenie danych.","DECRYPT_FAILED")}W=await Bgz_rozpakuj(W);var U;try{U=JSON.parse(new TextDecoder().decode(W))}catch{throw u("VildaSync: uszkodzone dane sync (nieprawid\u0142owy format JSON).","PARSE_FAILED")}if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();PatientClinicalRequireLegacy("sync-pull");PatientClinicalRequireLegacy("apply-sync-payload");var et=await t.mergeSyncPayload(U,{onProgress:function(E){try{typeof o.document<"u"&&o.document.dispatchEvent&&o.document.dispatchEvent(new CustomEvent("vilda:vault-merge-progress",{detail:E,bubbles:!1}))}catch{}}});PatientClinicalRequireLegacy("apply-sync-payload");var V=Lt(A.headers.get("ETag"))||w.etag;CareReplayed=true;c.localEtag=V,c.rawSize=W.byteLength,c.rawEtag=V,c.lastSyncAt=new Date().toISOString(),M=V,ft(a,V,t),T(a,c),P();var J={action:"merged",etag:V,mergeResult:et,staleDevice:et&&et.staleDevice||null};return Nv(J.staleDevice),Qcs(et&&et.clockSkew||null),Bpw_dren(a,r,i,t,Bpw_kto,J),y(p,{operation:"pull",result:J}),J}catch(E){/* P-SESJA-ZAPISU (przeglad 4, ADW4-3): blad pobrania po zalogowaniu innego konta albo blokadzie (np. /status 500, siec, limit czasu) — SESSION_CHANGED: nalezy do poprzedniej sesji. */var Bpw_e=Bpw_inneKonto(t,Bpw_kto)?Bpw_przerwane():E;throw y(k,{operation:"pull",error:Bpw_e}),Bpw_e}finally{CareSyncReplayDone(CareReplay,CareReplayed)}}async function Ht(){PatientClinicalRequireLegacy("sync-full");I(),y(L,{operation:"full"});try{var t=await Y(),e=await ht(),a={pull:t,push:e};PatientClinicalRequireLegacy("sync-full");return y(p,{operation:"full",result:a}),a}catch(r){throw y(k,{operation:"full",error:r}),r}}async function xt(){PatientClinicalRequireLegacy("sync-status");var t=I(),e=await t.getSyncMaterial();PatientClinicalRequireLegacy("sync-status");return m(e.slotId)}async function Wt(){PatientClinicalRequireLegacy("sync-state-clear");var t=I(),e=await t.getSyncMaterial();PatientClinicalRequireLegacy("sync-state-clear");C(e.slotId)}async function Jt(){PatientClinicalRequireLegacy("delete-sync-slot");
+async function Bpw_pull(){PatientClinicalRequireLegacy("sync-pull");var CareReplay=null,CareReplayed=false;var t=I(),Bpw_kto=Bpw_konto(t);y(L,{operation:"pull"});var e;try{e=await t.getSyncMaterial()}catch(E){throw y(k,{operation:"pull",error:E}),E}PatientClinicalRequireLegacy("sync-pull");var a=e.slotId,r=e.authToken,n=e.syncEncKey,i=j(),c=m(a);K()&&M==null&&(M=Pt(a,t));try{Brv_stop(a);if(c.registered){var S=await f(i+"/v1/slots/"+a+"/status",{method:"GET",headers:{Authorization:"Bearer "+r}});if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();PatientClinicalRequireLegacy("sync-pull");if(S.status===401)throw C(a),u("VildaSync: b\u0142\u0105d uwierzytelnienia przy pull. Slot m\xF3g\u0142 zosta\u0107 usuni\u0119ty.","AUTH_FAILED");if(!S.ok)throw u("VildaSync: b\u0142\u0105d odczytu statusu ("+S.status+").","STATUS_FAILED",{httpStatus:S.status});var w=await S.json();if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();PatientClinicalRequireLegacy("sync-pull")}else{var l=await f(i+"/v1/slots/"+a+"/status",{method:"GET",headers:{Authorization:"Bearer "+r}});if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();PatientClinicalRequireLegacy("sync-pull");if(!l.ok){P();var d={action:"not-registered",httpStatus:l.status};return y(p,{operation:"pull",result:d}),d}var s=await l.json();if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();PatientClinicalRequireLegacy("sync-pull");c.registered=!0,c.localEtag=null,M=null,vt(a),St(a),T(a,c);var w=s}var h=K()?M:c.localEtag;CareReplay=h&&h===w.etag?await CareSyncReplay(t,a,w.etag):null;PatientClinicalRequireLegacy("sync-pull");if(h&&h===w.etag&&!CareReplay){var D=await Vt();if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();PatientClinicalRequireLegacy("sync-pull");if(D)c.localEtag=null,M=null,vt(a),St(a);else{P();var _={action:"up-to-date",etag:w.etag};return Bpw_dren(a,r,i,t,Bpw_kto,_),y(p,{operation:"pull",result:_}),_}}var g={Authorization:"Bearer "+r},v=CareReplay?null:K()?M:c.localEtag;v&&(g["If-None-Match"]='"'+v+'"');var A=await f(i+"/v1/slots/"+a+"/blob",{method:"GET",headers:g},Bgz_czas({byteLength:w&&typeof w.size=="number"?w.size:0}));if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();PatientClinicalRequireLegacy("sync-pull");if(A.status===304){P();var F={action:"up-to-date",etag:v};return Bpw_dren(a,r,i,t,Bpw_kto,F),y(p,{operation:"pull",result:F}),F}if(A.status===401)throw u("VildaSync: b\u0142\u0105d uwierzytelnienia przy pobieraniu bloba.","AUTH_FAILED");if(A.status===404){P();var H={action:"no-remote-blob"};return Bpw_dren(a,r,i,t,Bpw_kto,H),y(p,{operation:"pull",result:H}),H}if(!A.ok)throw u("VildaSync: b\u0142\u0105d pobierania danych ("+A.status+").","DOWNLOAD_FAILED",{httpStatus:A.status});var x=await Bnd_czytaj(A,w&&typeof w.size=="number"?w.size:0),W;PatientClinicalRequireLegacy("sync-pull");Bnd_zglos({phase:"decrypt"});try{W=await ut(x,n)}catch{throw u("VildaSync: b\u0142\u0105d odszyfrowania danych. Mo\u017Cliwa zmiana masterKey lub uszkodzenie danych.","DECRYPT_FAILED")}W=await Bgz_rozpakuj(W);var U;try{U=JSON.parse(new TextDecoder().decode(W))}catch{throw u("VildaSync: uszkodzone dane sync (nieprawid\u0142owy format JSON).","PARSE_FAILED")}if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();PatientClinicalRequireLegacy("sync-pull");PatientClinicalRequireLegacy("apply-sync-payload");var et=await t.mergeSyncPayload(U,{onProgress:function(E){try{typeof o.document<"u"&&o.document.dispatchEvent&&o.document.dispatchEvent(new CustomEvent("vilda:vault-merge-progress",{detail:E,bubbles:!1}))}catch{}}});PatientClinicalRequireLegacy("apply-sync-payload");var V=Lt(A.headers.get("ETag"))||w.etag;CareReplayed=true;c.localEtag=V,c.rawSize=W.byteLength,c.rawEtag=V,c.lastSyncAt=new Date().toISOString(),M=V,ft(a,V,t),T(a,c),P();var J={action:"merged",etag:V,mergeResult:et,staleDevice:et&&et.staleDevice||null};return Nv(J.staleDevice),Qcs(et&&et.clockSkew||null),Bpw_dren(a,r,i,t,Bpw_kto,J),y(p,{operation:"pull",result:J}),J}catch(E){/* P-SESJA-ZAPISU (przeglad 4, ADW4-3): blad pobrania po zalogowaniu innego konta albo blokadzie (np. /status 500, siec, limit czasu) — SESSION_CHANGED: nalezy do poprzedniej sesji. */var Bpw_e=Bpw_inneKonto(t,Bpw_kto)?Bpw_przerwane():E;throw y(k,{operation:"pull",error:Bpw_e}),Bpw_e}finally{CareSyncReplayDone(CareReplay,CareReplayed)}}async function Ht(){PatientClinicalRequireLegacy("sync-full");I(),y(L,{operation:"full"});try{var t=await Y(),e=await ht(),a={pull:t,push:e};PatientClinicalRequireLegacy("sync-full");return y(p,{operation:"full",result:a}),a}catch(r){throw y(k,{operation:"full",error:r}),r}}async function xt(){return WorkspaceSyncReadStatus(async function () {PatientClinicalRequireLegacy("sync-status");var t=I(),e=await t.getSyncMaterial();PatientClinicalRequireLegacy("sync-status");return m(e.slotId)});}async function Wt(){PatientClinicalRequireLegacy("sync-state-clear");var t=I(),e=await t.getSyncMaterial();PatientClinicalRequireLegacy("sync-state-clear");C(e.slotId)}async function Jt(){PatientClinicalRequireLegacy("delete-sync-slot");
   var ticket=TLibOperationContext(),vault=I(),material=await vault.getSyncMaterial();
   PatientClinicalRequireLegacy("delete-sync-slot");TLibFence(ticket.ctx,ticket.token);
   var assertCurrent=await TLibGuardLegacyDelete(material.slotId,material.authToken,ticket);
@@ -1041,17 +1155,7 @@ function TLibExplicit ( ) {
 function TLibAutomatic() {
   if (TLibCurrent(TLibActive)) TLibStart(true).catch(function () {});
 }
-function TLibPullCycle ( options ) {
-  TLibAutomatic ( ) ;
-  // P-SYNC-STRONY: Bdz_syncPull bez opcji czekajNaDrenaz zwraca tę samą obietnicę co Y.
-  return Bdz_syncPull ( options )
-}
-function TLibPushCycle ( options ) {
-  TLibAutomatic ( ) ;
-  return ht ( options )
-}
-function TLibFullCycle ( ) {
-  TLibAutomatic ( ) ;
-  return Ht ( )
-}
+function TLibPullCycle ( options ) {TLibAutomatic(); return WorkspaceSyncDispatch("pull", true, function () { return Bdz_syncPull(options); });}
+function TLibPushCycle ( options ) {TLibAutomatic(); return WorkspaceSyncDispatch("push", false, function () { return ht(options); });}
+function TLibFullCycle ( ) {TLibAutomatic(); return WorkspaceSyncDispatch("full", true, function () { return Ht(); });}
 o.VildaSync={syncPush:TLibPushCycle,syncPull:TLibPullCycle,syncFull:TLibFullCycle,activateTemplateLibrarySync:TLibActivate,deactivateTemplateLibrarySync:TLibDeactivate,syncTemplateLibrary:TLibExplicit,getTemplateLibrarySyncStatus:TLibGetStatus,continueTemplateLibrarySync:TLibAutomatic,inspectTemplateLibraryAuthority:TLibInspectAuthority,resetSessionPullGuard:Ut,getSyncStatus:xt,clearSyncState:Wt,deleteSyncSlot:Jt,onSyncStart:Zt,onSyncComplete:Qt,onSyncError:Rt,probeNewDevice:Xt,restorePrevBlob:qt,revokeAllDevices:$t,uploadToSlot:pt,deleteSlotWithMaterial:_t,_loadSyncState:PatientClinicalLoadState,_saveSyncState:PatientClinicalSaveState,_clearSyncStateForSlot:PatientClinicalClearState,detectApi:Bdz_detectApi,getDrainStatus:Bdz_getDrainStatus,getChangesCursor:Bdz_getChangesCursor,isPagedActive:Bdz_isPagedActive}})(typeof window<"u"?window:typeof globalThis<"u"?globalThis:null);

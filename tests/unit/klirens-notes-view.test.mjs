@@ -191,7 +191,7 @@ describe('Klirens note details are lazy and scope-safe', () => {
     expect(node.textContent).toContain('Nie udało się otworzyć');
     expect(node.textContent).not.toContain('internal');
     const artifact = fs.readFileSync('vilda_auth_ui.js', 'utf8');
-    expect(artifact).toContain('if(S&&S.category==="wynik-klirens")return ClcrNotesCard(S,a,r,n);');
-    expect(artifact).toContain('function ga(t){if(t&&t.note&&t.note.category==="wynik-klirens")');
+    expect(artifact).toContain('if(S&&S.category==="wynik-klirens"&&!CareNoteAccess.readOnly)return ClcrNotesCard(S,a,r,n);');
+    expect(artifact).toContain('function CareOpenLegacyNoteEditor(t){if(t&&t.note&&t.note.category==="wynik-klirens")');
   });
 });

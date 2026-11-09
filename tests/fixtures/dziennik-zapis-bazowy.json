@@ -18,7 +18,9 @@
       "iterations": 1000
      },
      "tlo": 1,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases ×2"
+     ],
      "localStorage": [],
      "sessionStorage": [
       "set vilda-vault-session-v2"
@@ -49,7 +51,9 @@
       "snapshotCount": 1
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [
       "set vilda-note-changed-ping-v1"
      ],
@@ -76,7 +80,9 @@
       "snapshotCount": 2
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [
       "set vilda-note-changed-ping-v1"
      ],
@@ -102,7 +108,9 @@
       "isUpdate": true
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases ×2"
+     ],
      "localStorage": [
       "set vilda-note-changed-ping-v1"
      ],
@@ -127,7 +135,9 @@
       "pinned": true
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [
       "set vilda-note-changed-ping-v1"
      ],
@@ -152,7 +162,9 @@
       "pinned": false
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [
       "set vilda-note-changed-ping-v1"
      ],
@@ -178,7 +190,9 @@
       "wasPinned": false
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [
       "set vilda-note-changed-ping-v1"
      ],
@@ -208,7 +222,9 @@
      "krok": "przywróć z kosza",
      "wynik": {},
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [
       "set vilda-note-changed-ping-v1"
      ],
@@ -242,7 +258,9 @@
       "snapshotCount": 3
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [
       "set vilda-note-changed-ping-v1"
      ],
@@ -268,7 +286,9 @@
       "remainingSnapshotCount": 2
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases ×2"
+     ],
      "localStorage": [
       "set vilda-note-changed-ping-v1"
      ],
@@ -294,7 +314,9 @@
       "prunedIds": "#1"
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [
       "set vilda-note-changed-ping-v1"
      ],
@@ -324,7 +346,9 @@
       "isNew": true
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [
       "set vilda-note-changed-ping-v1"
      ],
@@ -347,7 +371,9 @@
       "isNew": false
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [
       "set vilda-note-changed-ping-v1"
      ],
@@ -369,7 +395,9 @@
      "krok": "notatka pacjenta: usuń",
      "wynik": true,
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [
       "set vilda-note-changed-ping-v1"
      ],
@@ -391,7 +419,9 @@
       "isNew": true
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [],
      "sessionStorage": [],
      "krypto": 1,
@@ -407,7 +437,9 @@
      "krok": "notatka biblioteki: usuń",
      "wynik": true,
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [],
      "sessionStorage": [],
      "krypto": 0,
@@ -431,7 +463,9 @@
       "rule": null
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [],
      "sessionStorage": [],
      "krypto": 1,
@@ -447,7 +481,9 @@
      "krok": "lista: usuń",
      "wynik": {},
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [],
      "sessionStorage": [],
      "krypto": 0,
@@ -467,7 +503,9 @@
       "stepId": null
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [
       "set vilda-note-changed-ping-v1",
       "set vilda-note-changed-ping-v1"
@@ -500,7 +538,9 @@
       "snapshotCount": 1
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [
       "set vilda-note-changed-ping-v1"
      ],
@@ -528,7 +568,9 @@
       "snapshotsMoved": 1
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [
       "set vilda-note-changed-ping-v1",
       "set vilda-note-changed-ping-v1"
@@ -580,7 +622,9 @@
       "snapshotCount": 1
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [
       "set vilda-note-changed-ping-v1"
      ],
@@ -601,7 +645,9 @@
      "krok": "usuń pacjenta",
      "wynik": true,
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [
       "set vilda-note-changed-ping-v1"
      ],
@@ -662,10 +708,12 @@
       "updatedSnapshotCount": 0
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases ×2"
+     ],
      "localStorage": [],
      "sessionStorage": [],
-     "krypto": 20,
+     "krypto": 23,
      "powiadomienia": {},
      "magazyn": [
       "listPatientsForUser(<uid>)",
@@ -682,6 +730,7 @@
       "getUserMeta(<uid>)",
       "getUserMeta(<uid>)",
       "getUserMeta(<uid>)",
+      "listPatientNotesForUser(<uid>)",
       "getUserMeta(<uid>)",
       "listPatientsForUser(<uid>)",
       "getUserMeta(<uid>)",
@@ -752,14 +801,17 @@
       "updatedSnapshotCount": 0
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases ×2"
+     ],
      "localStorage": [],
      "sessionStorage": [],
-     "krypto": 11,
+     "krypto": 12,
      "powiadomienia": {},
      "magazyn": [
       "listPatientsForUser(<uid>)",
       "listSnapshotsForUser(<uid>)",
+      "listPatientNotesForUser(<uid>)",
       "getUserMeta(<uid>)",
       "listPatientsForUser(<uid>)",
       "getUserMeta(<uid>)",
@@ -800,16 +852,19 @@
       "status": "applied"
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [],
      "sessionStorage": [],
-     "krypto": 11,
+     "krypto": 12,
      "powiadomienia": {},
      "magazyn": [
       "getPatientForUser(<uid>)",
       "listSnapshotsForUser(<uid>)",
       "getPatientForUser(<uid>)",
       "getSnapshotForUser(<uid>)",
+      "listPatientNotesForUser(<uid>)",
       "getUserMeta(<uid>)",
       "listPatientsForUser(<uid>)",
       "getUserMeta(<uid>)",
@@ -854,12 +909,14 @@
       "totalSnapshots": 2
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [
       "set vilda-note-changed-ping-v1"
      ],
      "sessionStorage": [],
-     "krypto": 13,
+     "krypto": 14,
      "powiadomienia": {
       "onPatientNoteChanged": 1
      },
@@ -874,6 +931,7 @@
       "removeTombstoneForUser(<uid>)",
       "removePatientNoteTombstoneForUser(<uid>)",
       "getPatientNoteForUser(<uid>)",
+      "listPatientNotesForUser(<uid>)",
       "getUserMeta(<uid>)",
       "listPatientsForUser(<uid>)",
       "getUserMeta(<uid>)",
@@ -932,10 +990,12 @@
       "updatedWaitlistScheduleCount": 0
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [],
      "sessionStorage": [],
-     "krypto": 9,
+     "krypto": 10,
      "powiadomienia": {},
      "magazyn": [
       "listPatientsForUser(<uid>)",
@@ -953,6 +1013,7 @@
       "putPatientForUser(<uid>)",
       "getUserMeta(<uid>)",
       "getUserMeta(<uid>)",
+      "listPatientNotesForUser(<uid>)",
       "getUserMeta(<uid>)",
       "listPatientsForUser(<uid>)",
       "getUserMeta(<uid>)",
@@ -990,7 +1051,9 @@
       "totalSnapshots": 1
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [
       "set vilda-note-changed-ping-v1"
      ],
@@ -1017,7 +1080,9 @@
       "snapshotCount": 1
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [
       "set vilda-note-changed-ping-v1"
      ],
@@ -1041,7 +1106,9 @@
       "notesMoved": 0
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [
       "set vilda-note-changed-ping-v1"
      ],
@@ -1071,7 +1138,9 @@
       "snapshotCount": 4
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases ×2"
+     ],
      "localStorage": [
       "set vilda-note-changed-ping-v1"
      ],
@@ -1099,7 +1168,9 @@
      "krok": "tryb przechowywania: zmiana",
      "wynik": {},
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [],
      "sessionStorage": [],
      "krypto": 0,
@@ -1113,7 +1184,9 @@
      "krok": "tryb przechowywania: powrót",
      "wynik": {},
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [],
      "sessionStorage": [],
      "krypto": 0,
@@ -1128,7 +1201,7 @@
      "wynik": {},
      "tlo": 0,
      "indexedDB": [
-      "databases"
+      "databases ×3"
      ],
      "localStorage": [
       "set vilda-care-template-lifecycle-v1:<uid>",
@@ -1165,7 +1238,9 @@
      "krok": "kopia konta",
      "wynik": null,
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [],
      "sessionStorage": [],
      "krypto": 17,
@@ -1212,7 +1287,9 @@
       "snapshotCount": 8
      },
      "tlo": 1,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases ×2"
+     ],
      "localStorage": [
       "set vilda-note-changed-ping-v1",
       "set vilda-note-changed-ping-v1",
@@ -1244,6 +1321,7 @@
       "putPatientForUser(<uid2>)",
       "putSnapshotForUser(<uid2>)",
       "putPatientForUser(<uid2>)",
+      "listPatientNotesForUser(<uid2>)",
       "getUserMeta(<uid2>)",
       "listPatientsForUser(<uid2>)",
       "getUserMeta(<uid2>)",
@@ -1298,7 +1376,9 @@
       "passwordPolicy": null
      },
      "tlo": 1,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases ×2"
+     ],
      "localStorage": [],
      "sessionStorage": [
       "set vilda-vault-session-v2"
@@ -1322,7 +1402,7 @@
      "tlo": 0,
      "indexedDB": [
       "abort-upgrade clinical-authority-checkpoints-v1",
-      "databases ×2",
+      "databases ×4",
       "open clinical-authority-checkpoints-v1 null",
       "upgrade clinical-authority-checkpoints-v1 0 1"
      ],
@@ -1345,7 +1425,7 @@
      "tlo": 0,
      "indexedDB": [
       "abort-upgrade clinical-authority-checkpoints-v1",
-      "databases ×2",
+      "databases ×4",
       "open clinical-authority-checkpoints-v1 null",
       "upgrade clinical-authority-checkpoints-v1 0 1"
      ],
@@ -1369,7 +1449,7 @@
    ],
    "bazy": [],
    "kluczUrzadzenia": false,
-   "odczytyBramki": 0
+   "odczytyBramki": 46
   },
   "prywatny": {
    "ladowanie": {
@@ -1387,6 +1467,7 @@
      },
      "tlo": 1,
      "indexedDB": [
+      "databases ×2",
       "open vilda_registry 1",
       "open vilda_user_<uid> 5",
       "success vilda_registry 1",
@@ -1422,6 +1503,7 @@
      },
      "tlo": 0,
      "indexedDB": [
+      "databases",
       "tx vilda_user_<uid> [patients] readonly complete ×2",
       "tx vilda_user_<uid> [patients] readonly start ×2",
       "tx vilda_user_<uid> [patients] readwrite complete",
@@ -1451,6 +1533,7 @@
      },
      "tlo": 0,
      "indexedDB": [
+      "databases",
       "tx vilda_user_<uid> [patients] readonly complete ×4",
       "tx vilda_user_<uid> [patients] readonly start ×4",
       "tx vilda_user_<uid> [patients] readwrite complete",
@@ -1478,6 +1561,7 @@
      },
      "tlo": 0,
      "indexedDB": [
+      "databases ×2",
       "tx vilda_user_<uid> [meta] readonly complete",
       "tx vilda_user_<uid> [meta] readonly start",
       "tx vilda_user_<uid> [patients] readonly complete ×2",
@@ -1505,6 +1589,7 @@
      },
      "tlo": 0,
      "indexedDB": [
+      "databases",
       "tx vilda_user_<uid> [meta] readonly complete",
       "tx vilda_user_<uid> [meta] readonly start",
       "tx vilda_user_<uid> [patients] readonly complete ×2",
@@ -1532,6 +1617,7 @@
      },
      "tlo": 0,
      "indexedDB": [
+      "databases",
       "tx vilda_user_<uid> [meta] readonly complete",
       "tx vilda_user_<uid> [meta] readonly start",
       "tx vilda_user_<uid> [patients] readonly complete ×2",
@@ -1560,6 +1646,7 @@
      },
      "tlo": 0,
      "indexedDB": [
+      "databases",
       "tx vilda_user_<uid> [meta] readonly complete ×6",
       "tx vilda_user_<uid> [meta] readonly start ×6",
       "tx vilda_user_<uid> [meta] readwrite complete",
@@ -1587,6 +1674,7 @@
      "wynik": {},
      "tlo": 0,
      "indexedDB": [
+      "databases",
       "tx vilda_user_<uid> [meta] readonly complete ×3",
       "tx vilda_user_<uid> [meta] readonly start ×3",
       "tx vilda_user_<uid> [meta] readwrite complete",
@@ -1620,6 +1708,7 @@
      },
      "tlo": 0,
      "indexedDB": [
+      "databases",
       "tx vilda_user_<uid> [patients] readonly complete ×4",
       "tx vilda_user_<uid> [patients] readonly start ×4",
       "tx vilda_user_<uid> [patients] readwrite complete",
@@ -1647,6 +1736,7 @@
      },
      "tlo": 0,
      "indexedDB": [
+      "databases ×2",
       "tx vilda_user_<uid> [patients] readonly complete ×2",
       "tx vilda_user_<uid> [patients] readonly start ×2",
       "tx vilda_user_<uid> [patients] readwrite complete",
@@ -1673,6 +1763,7 @@
      },
      "tlo": 0,
      "indexedDB": [
+      "databases",
       "tx vilda_user_<uid> [meta] readonly complete ×2",
       "tx vilda_user_<uid> [meta] readonly start ×2",
       "tx vilda_user_<uid> [meta] readwrite complete",
@@ -1702,6 +1793,7 @@
      },
      "tlo": 0,
      "indexedDB": [
+      "databases",
       "tx vilda_user_<uid> [patientNoteTombstones] readonly complete ×2",
       "tx vilda_user_<uid> [patientNoteTombstones] readonly start ×2",
       "tx vilda_user_<uid> [patientNoteTombstones] readwrite complete",
@@ -1727,6 +1819,7 @@
      },
      "tlo": 0,
      "indexedDB": [
+      "databases",
       "tx vilda_user_<uid> [patientNoteTombstones] readonly complete",
       "tx vilda_user_<uid> [patientNoteTombstones] readonly start",
       "tx vilda_user_<uid> [patientNoteTombstones] readwrite complete",
@@ -1752,6 +1845,7 @@
      "wynik": true,
      "tlo": 0,
      "indexedDB": [
+      "databases",
       "tx vilda_user_<uid> [patientNoteTombstones] readwrite complete",
       "tx vilda_user_<uid> [patientNoteTombstones] readwrite start",
       "tx vilda_user_<uid> [patientNotes] readonly complete ×2",
@@ -1775,6 +1869,7 @@
      },
      "tlo": 0,
      "indexedDB": [
+      "databases",
       "tx vilda_user_<uid> [noteTombstones] readwrite complete",
       "tx vilda_user_<uid> [noteTombstones] readwrite start",
       "tx vilda_user_<uid> [notes] readwrite complete",
@@ -1792,6 +1887,7 @@
      "wynik": true,
      "tlo": 0,
      "indexedDB": [
+      "databases",
       "tx vilda_user_<uid> [noteTombstones] readwrite complete",
       "tx vilda_user_<uid> [noteTombstones] readwrite start",
       "tx vilda_user_<uid> [notes] readonly complete",
@@ -1818,6 +1914,7 @@
      },
      "tlo": 0,
      "indexedDB": [
+      "databases",
       "tx vilda_user_<uid> [patientListTombstones] readwrite complete",
       "tx vilda_user_<uid> [patientListTombstones] readwrite start",
       "tx vilda_user_<uid> [patientLists] readwrite complete",
@@ -1835,6 +1932,7 @@
      "wynik": {},
      "tlo": 0,
      "indexedDB": [
+      "databases",
       "tx vilda_user_<uid> [patientListTombstones] readwrite complete",
       "tx vilda_user_<uid> [patientListTombstones] readwrite start",
       "tx vilda_user_<uid> [patientLists] readwrite complete",
@@ -1856,6 +1954,7 @@
      },
      "tlo": 0,
      "indexedDB": [
+      "databases",
       "tx vilda_user_<uid> [patientNoteTombstones,patientNotes,patients,tombstones] readwrite complete",
       "tx vilda_user_<uid> [patientNoteTombstones,patientNotes,patients,tombstones] readwrite start",
       "tx vilda_user_<uid> [patientNoteTombstones] readonly complete ×2",
@@ -1888,6 +1987,7 @@
      },
      "tlo": 0,
      "indexedDB": [
+      "databases",
       "tx vilda_user_<uid> [patients] readonly complete ×2",
       "tx vilda_user_<uid> [patients] readonly start ×2",
       "tx vilda_user_<uid> [patients] readwrite complete",
@@ -1918,6 +2018,7 @@
      },
      "tlo": 0,
      "indexedDB": [
+      "databases",
       "tx vilda_user_<uid> [meta] readonly complete ×2",
       "tx vilda_user_<uid> [meta] readonly start ×2",
       "tx vilda_user_<uid> [patientLists] readonly complete",
@@ -1961,6 +2062,7 @@
      },
      "tlo": 0,
      "indexedDB": [
+      "databases",
       "tx vilda_user_<uid> [patients] readonly complete ×2",
       "tx vilda_user_<uid> [patients] readonly start ×2",
       "tx vilda_user_<uid> [patients] readwrite complete",
@@ -1984,6 +2086,7 @@
      "wynik": true,
      "tlo": 0,
      "indexedDB": [
+      "databases",
       "tx vilda_user_<uid> [meta] readonly complete ×2",
       "tx vilda_user_<uid> [meta] readonly start ×2",
       "tx vilda_user_<uid> [patientNoteTombstones] readonly complete",
@@ -2048,6 +2151,7 @@
      },
      "tlo": 0,
      "indexedDB": [
+      "databases ×2",
       "open vilda_registry 1",
       "success vilda_registry 1",
       "tx vilda_registry [users] readwrite complete",
@@ -2072,8 +2176,8 @@
       "tx vilda_user_<uid> [patientNoteTombstones] readonly start ×3",
       "tx vilda_user_<uid> [patientNoteTombstones] readwrite complete",
       "tx vilda_user_<uid> [patientNoteTombstones] readwrite start",
-      "tx vilda_user_<uid> [patientNotes] readonly complete ×5",
-      "tx vilda_user_<uid> [patientNotes] readonly start ×5",
+      "tx vilda_user_<uid> [patientNotes] readonly complete ×6",
+      "tx vilda_user_<uid> [patientNotes] readonly start ×6",
       "tx vilda_user_<uid> [patients] readonly complete ×7",
       "tx vilda_user_<uid> [patients] readonly start ×7",
       "tx vilda_user_<uid> [snapshots] readonly complete ×3",
@@ -2085,7 +2189,7 @@
      ],
      "localStorage": [],
      "sessionStorage": [],
-     "krypto": 20,
+     "krypto": 23,
      "powiadomienia": {}
     },
     {
@@ -2116,6 +2220,7 @@
      },
      "tlo": 0,
      "indexedDB": [
+      "databases ×2",
       "tx vilda_user_<uid> [meta] readonly complete ×6",
       "tx vilda_user_<uid> [meta] readonly start ×6",
       "tx vilda_user_<uid> [noteTombstones] readonly complete",
@@ -2134,8 +2239,8 @@
       "tx vilda_user_<uid> [patientNoteTombstones] readonly start ×2",
       "tx vilda_user_<uid> [patientNoteTombstones] readwrite complete",
       "tx vilda_user_<uid> [patientNoteTombstones] readwrite start",
-      "tx vilda_user_<uid> [patientNotes] readonly complete ×2",
-      "tx vilda_user_<uid> [patientNotes] readonly start ×2",
+      "tx vilda_user_<uid> [patientNotes] readonly complete ×3",
+      "tx vilda_user_<uid> [patientNotes] readonly start ×3",
       "tx vilda_user_<uid> [patients] readonly complete ×6",
       "tx vilda_user_<uid> [patients] readonly start ×6",
       "tx vilda_user_<uid> [snapshots] readonly complete ×3",
@@ -2147,7 +2252,7 @@
      ],
      "localStorage": [],
      "sessionStorage": [],
-     "krypto": 11,
+     "krypto": 12,
      "powiadomienia": {}
     },
     {
@@ -2157,6 +2262,7 @@
      },
      "tlo": 0,
      "indexedDB": [
+      "databases",
       "tx vilda_user_<uid> [meta] readonly complete ×6",
       "tx vilda_user_<uid> [meta] readonly start ×6",
       "tx vilda_user_<uid> [noteTombstones] readonly complete",
@@ -2175,8 +2281,8 @@
       "tx vilda_user_<uid> [patientNoteTombstones] readonly start ×2",
       "tx vilda_user_<uid> [patientNoteTombstones] readwrite complete",
       "tx vilda_user_<uid> [patientNoteTombstones] readwrite start",
-      "tx vilda_user_<uid> [patientNotes] readonly complete ×2",
-      "tx vilda_user_<uid> [patientNotes] readonly start ×2",
+      "tx vilda_user_<uid> [patientNotes] readonly complete ×3",
+      "tx vilda_user_<uid> [patientNotes] readonly start ×3",
       "tx vilda_user_<uid> [patients] readonly complete ×7",
       "tx vilda_user_<uid> [patients] readonly start ×7",
       "tx vilda_user_<uid> [snapshots] readonly complete ×4",
@@ -2188,7 +2294,7 @@
      ],
      "localStorage": [],
      "sessionStorage": [],
-     "krypto": 11,
+     "krypto": 12,
      "powiadomienia": {}
     },
     {
@@ -2202,6 +2308,7 @@
      },
      "tlo": 0,
      "indexedDB": [
+      "databases",
       "tx vilda_user_<uid> [meta] readonly complete ×4",
       "tx vilda_user_<uid> [meta] readonly start ×4",
       "tx vilda_user_<uid> [noteTombstones] readonly complete",
@@ -2220,8 +2327,8 @@
       "tx vilda_user_<uid> [patientNoteTombstones] readonly start ×2",
       "tx vilda_user_<uid> [patientNoteTombstones] readwrite complete ×2",
       "tx vilda_user_<uid> [patientNoteTombstones] readwrite start ×2",
-      "tx vilda_user_<uid> [patientNotes] readonly complete ×4",
-      "tx vilda_user_<uid> [patientNotes] readonly start ×4",
+      "tx vilda_user_<uid> [patientNotes] readonly complete ×5",
+      "tx vilda_user_<uid> [patientNotes] readonly start ×5",
       "tx vilda_user_<uid> [patientNotes] readwrite complete",
       "tx vilda_user_<uid> [patientNotes] readwrite start",
       "tx vilda_user_<uid> [patients] readonly complete ×6",
@@ -2239,7 +2346,7 @@
       "set vilda-note-changed-ping-v1"
      ],
      "sessionStorage": [],
-     "krypto": 13,
+     "krypto": 14,
      "powiadomienia": {
       "onPatientNoteChanged": 1
      }
@@ -2275,6 +2382,7 @@
      },
      "tlo": 0,
      "indexedDB": [
+      "databases",
       "tx vilda_user_<uid> [meta] readonly complete ×7",
       "tx vilda_user_<uid> [meta] readonly start ×7",
       "tx vilda_user_<uid> [noteTombstones] readonly complete",
@@ -2293,8 +2401,8 @@
       "tx vilda_user_<uid> [patientNoteTombstones] readonly start ×2",
       "tx vilda_user_<uid> [patientNoteTombstones] readwrite complete",
       "tx vilda_user_<uid> [patientNoteTombstones] readwrite start",
-      "tx vilda_user_<uid> [patientNotes] readonly complete ×3",
-      "tx vilda_user_<uid> [patientNotes] readonly start ×3",
+      "tx vilda_user_<uid> [patientNotes] readonly complete ×4",
+      "tx vilda_user_<uid> [patientNotes] readonly start ×4",
       "tx vilda_user_<uid> [patients] readonly complete ×7",
       "tx vilda_user_<uid> [patients] readonly start ×7",
       "tx vilda_user_<uid> [patients] readwrite complete",
@@ -2310,7 +2418,7 @@
      ],
      "localStorage": [],
      "sessionStorage": [],
-     "krypto": 9,
+     "krypto": 10,
      "powiadomienia": {}
     },
     {
@@ -2324,6 +2432,7 @@
      },
      "tlo": 0,
      "indexedDB": [
+      "databases",
       "tx vilda_user_<uid> [patients] readonly complete ×2",
       "tx vilda_user_<uid> [patients] readonly start ×2",
       "tx vilda_user_<uid> [patients] readwrite complete",
@@ -2353,6 +2462,7 @@
      },
      "tlo": 0,
      "indexedDB": [
+      "databases",
       "tx vilda_user_<uid> [patients] readonly complete ×2",
       "tx vilda_user_<uid> [patients] readonly start ×2",
       "tx vilda_user_<uid> [patients] readwrite complete",
@@ -2379,6 +2489,7 @@
      },
      "tlo": 0,
      "indexedDB": [
+      "databases",
       "tx vilda_user_<uid> [meta] readonly complete ×2",
       "tx vilda_user_<uid> [meta] readonly start ×2",
       "tx vilda_user_<uid> [patientLists] readonly complete",
@@ -2412,6 +2523,7 @@
      },
      "tlo": 0,
      "indexedDB": [
+      "databases ×2",
       "tx vilda_user_<uid> [patients] readonly complete ×6",
       "tx vilda_user_<uid> [patients] readonly start ×6",
       "tx vilda_user_<uid> [patients] readwrite complete",
@@ -2437,6 +2549,7 @@
      "wynik": {},
      "tlo": 0,
      "indexedDB": [
+      "databases",
       "open vilda_registry 1 ×2",
       "success vilda_registry 1 ×2",
       "tx vilda_registry [users] readonly complete",
@@ -2454,6 +2567,7 @@
      "wynik": {},
      "tlo": 0,
      "indexedDB": [
+      "databases",
       "open vilda_registry 1 ×2",
       "success vilda_registry 1 ×2",
       "tx vilda_registry [users] readonly complete",
@@ -2471,7 +2585,7 @@
      "wynik": {},
      "tlo": 0,
      "indexedDB": [
-      "databases",
+      "databases ×3",
       "tx vilda_user_<uid> [meta] readonly complete ×2",
       "tx vilda_user_<uid> [meta] readonly start ×2",
       "tx vilda_user_<uid> [meta] readwrite complete",
@@ -2511,6 +2625,7 @@
      "wynik": null,
      "tlo": 0,
      "indexedDB": [
+      "databases",
       "tx vilda_user_<uid> [meta] readonly complete",
       "tx vilda_user_<uid> [meta] readonly start",
       "tx vilda_user_<uid> [noteTombstones] readonly complete",
@@ -2562,6 +2677,7 @@
      },
      "tlo": 1,
      "indexedDB": [
+      "databases ×2",
       "open vilda_registry 1",
       "open vilda_user_<uid2> 5",
       "success vilda_registry 1",
@@ -2588,8 +2704,8 @@
       "tx vilda_user_<uid2> [patientNoteTombstones] readonly start ×2",
       "tx vilda_user_<uid2> [patientNoteTombstones] readwrite complete",
       "tx vilda_user_<uid2> [patientNoteTombstones] readwrite start",
-      "tx vilda_user_<uid2> [patientNotes] readonly complete ×6",
-      "tx vilda_user_<uid2> [patientNotes] readonly start ×6",
+      "tx vilda_user_<uid2> [patientNotes] readonly complete ×7",
+      "tx vilda_user_<uid2> [patientNotes] readonly start ×7",
       "tx vilda_user_<uid2> [patientNotes] readwrite complete ×3",
       "tx vilda_user_<uid2> [patientNotes] readwrite start ×3",
       "tx vilda_user_<uid2> [patients] readonly complete",
@@ -2638,6 +2754,7 @@
      },
      "tlo": 1,
      "indexedDB": [
+      "databases ×2",
       "open vilda_registry 1 ×3",
       "success vilda_registry 1 ×3",
       "tx vilda_registry [users] readonly complete ×2",
@@ -2663,7 +2780,7 @@
      "indexedDB": [
       "abort-upgrade clinical-authority-checkpoints-v1",
       "close vilda_user_<uid2>",
-      "databases ×2",
+      "databases ×4",
       "delete-success vilda_user_<uid2>",
       "deleteDatabase vilda_user_<uid2>",
       "open clinical-authority-checkpoints-v1 null",
@@ -2690,7 +2807,7 @@
      "indexedDB": [
       "abort-upgrade clinical-authority-checkpoints-v1",
       "close vilda_user_<uid>",
-      "databases ×2",
+      "databases ×4",
       "delete-success vilda_user_<uid>",
       "deleteDatabase vilda_user_<uid>",
       "open clinical-authority-checkpoints-v1 null",
@@ -2719,7 +2836,7 @@
     "vilda_registry"
    ],
    "kluczUrzadzenia": false,
-   "odczytyBramki": 0
+   "odczytyBramki": 46
   },
   "chmura": {
    "ladowanie": {
@@ -2737,6 +2854,7 @@
      },
      "tlo": 1,
      "indexedDB": [
+      "databases ×2",
       "open vilda_registry 1",
       "open vilda_user_<uid> 5",
       "success vilda_registry 1",
@@ -2770,7 +2888,9 @@
       "snapshotCount": 1
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [
       "set vilda-note-changed-ping-v1"
      ],
@@ -2792,7 +2912,9 @@
       "snapshotCount": 2
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [
       "set vilda-note-changed-ping-v1"
      ],
@@ -2811,6 +2933,7 @@
      },
      "tlo": 0,
      "indexedDB": [
+      "databases ×2",
       "tx vilda_user_<uid> [meta] readonly complete",
       "tx vilda_user_<uid> [meta] readonly start"
      ],
@@ -2832,6 +2955,7 @@
      },
      "tlo": 0,
      "indexedDB": [
+      "databases",
       "tx vilda_user_<uid> [meta] readonly complete",
       "tx vilda_user_<uid> [meta] readonly start"
      ],
@@ -2853,6 +2977,7 @@
      },
      "tlo": 0,
      "indexedDB": [
+      "databases",
       "tx vilda_user_<uid> [meta] readonly complete",
       "tx vilda_user_<uid> [meta] readonly start"
      ],
@@ -2875,6 +3000,7 @@
      },
      "tlo": 0,
      "indexedDB": [
+      "databases",
       "tx vilda_user_<uid> [meta] readonly complete ×6",
       "tx vilda_user_<uid> [meta] readonly start ×6",
       "tx vilda_user_<uid> [meta] readwrite complete",
@@ -2896,6 +3022,7 @@
      "wynik": {},
      "tlo": 0,
      "indexedDB": [
+      "databases",
       "tx vilda_user_<uid> [meta] readonly complete ×3",
       "tx vilda_user_<uid> [meta] readonly start ×3",
       "tx vilda_user_<uid> [meta] readwrite complete",
@@ -2922,7 +3049,9 @@
       "snapshotCount": 3
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [
       "set vilda-note-changed-ping-v1"
      ],
@@ -2940,7 +3069,9 @@
       "remainingSnapshotCount": 2
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases ×2"
+     ],
      "localStorage": [
       "set vilda-note-changed-ping-v1"
      ],
@@ -2960,6 +3091,7 @@
      },
      "tlo": 0,
      "indexedDB": [
+      "databases",
       "tx vilda_user_<uid> [meta] readonly complete ×2",
       "tx vilda_user_<uid> [meta] readonly start ×2",
       "tx vilda_user_<uid> [meta] readwrite complete",
@@ -2982,7 +3114,9 @@
       "isNew": true
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [
       "set vilda-note-changed-ping-v1"
      ],
@@ -3000,7 +3134,9 @@
       "isNew": false
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [
       "set vilda-note-changed-ping-v1"
      ],
@@ -3016,7 +3152,9 @@
      "krok": "notatka pacjenta: usuń",
      "wynik": true,
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [
       "set vilda-note-changed-ping-v1"
      ],
@@ -3035,6 +3173,7 @@
      },
      "tlo": 0,
      "indexedDB": [
+      "databases",
       "tx vilda_user_<uid> [noteTombstones] readwrite complete",
       "tx vilda_user_<uid> [noteTombstones] readwrite start",
       "tx vilda_user_<uid> [notes] readwrite complete",
@@ -3052,6 +3191,7 @@
      "wynik": true,
      "tlo": 0,
      "indexedDB": [
+      "databases",
       "tx vilda_user_<uid> [noteTombstones] readwrite complete",
       "tx vilda_user_<uid> [noteTombstones] readwrite start",
       "tx vilda_user_<uid> [notes] readonly complete",
@@ -3077,7 +3217,9 @@
       "rule": null
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [],
      "sessionStorage": [
       "set veph:cloud-only:per-user-v1"
@@ -3091,7 +3233,9 @@
      "krok": "lista: usuń",
      "wynik": {},
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [],
      "sessionStorage": [
       "set veph:cloud-only:per-user-v1"
@@ -3107,7 +3251,9 @@
       "odrzucona": "bez kodu"
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [],
      "sessionStorage": [],
      "krypto": 1,
@@ -3123,7 +3269,9 @@
       "snapshotCount": 1
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [
       "set vilda-note-changed-ping-v1"
      ],
@@ -3147,6 +3295,7 @@
      },
      "tlo": 0,
      "indexedDB": [
+      "databases",
       "tx vilda_user_<uid> [meta] readonly complete ×2",
       "tx vilda_user_<uid> [meta] readonly start ×2"
      ],
@@ -3173,7 +3322,9 @@
       "snapshotCount": 1
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [
       "set vilda-note-changed-ping-v1"
      ],
@@ -3190,6 +3341,7 @@
      "wynik": true,
      "tlo": 0,
      "indexedDB": [
+      "databases",
       "tx vilda_user_<uid> [meta] readonly complete ×2",
       "tx vilda_user_<uid> [meta] readonly start ×2"
      ],
@@ -3248,6 +3400,7 @@
      },
      "tlo": 0,
      "indexedDB": [
+      "databases ×2",
       "open vilda_registry 1",
       "success vilda_registry 1",
       "tx vilda_registry [users] readwrite complete",
@@ -3298,6 +3451,7 @@
      },
      "tlo": 0,
      "indexedDB": [
+      "databases ×2",
       "tx vilda_user_<uid> [meta] readonly complete ×6",
       "tx vilda_user_<uid> [meta] readonly start ×6",
       "tx vilda_user_<uid> [noteTombstones] readonly complete",
@@ -3321,6 +3475,7 @@
      },
      "tlo": 0,
      "indexedDB": [
+      "databases",
       "tx vilda_user_<uid> [meta] readonly complete ×6",
       "tx vilda_user_<uid> [meta] readonly start ×6",
       "tx vilda_user_<uid> [noteTombstones] readonly complete",
@@ -3348,6 +3503,7 @@
      },
      "tlo": 0,
      "indexedDB": [
+      "databases",
       "tx vilda_user_<uid> [meta] readonly complete ×4",
       "tx vilda_user_<uid> [meta] readonly start ×4",
       "tx vilda_user_<uid> [noteTombstones] readonly complete",
@@ -3399,6 +3555,7 @@
      },
      "tlo": 0,
      "indexedDB": [
+      "databases",
       "tx vilda_user_<uid> [meta] readonly complete ×7",
       "tx vilda_user_<uid> [meta] readonly start ×7",
       "tx vilda_user_<uid> [noteTombstones] readonly complete",
@@ -3425,7 +3582,9 @@
       "totalSnapshots": 1
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [
       "set vilda-note-changed-ping-v1"
      ],
@@ -3447,7 +3606,9 @@
       "snapshotCount": 1
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [
       "set vilda-note-changed-ping-v1"
      ],
@@ -3467,6 +3628,7 @@
      },
      "tlo": 0,
      "indexedDB": [
+      "databases",
       "tx vilda_user_<uid> [meta] readonly complete ×2",
       "tx vilda_user_<uid> [meta] readonly start ×2"
      ],
@@ -3487,7 +3649,9 @@
       "snapshotCount": 4
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases ×2"
+     ],
      "localStorage": [
       "set vilda-note-changed-ping-v1"
      ],
@@ -3504,6 +3668,7 @@
      "wynik": {},
      "tlo": 0,
      "indexedDB": [
+      "databases",
       "open vilda_registry 1 ×2",
       "success vilda_registry 1 ×2",
       "tx vilda_registry [users] readonly complete",
@@ -3521,6 +3686,7 @@
      "wynik": {},
      "tlo": 0,
      "indexedDB": [
+      "databases",
       "open vilda_registry 1 ×2",
       "success vilda_registry 1 ×2",
       "tx vilda_registry [users] readonly complete",
@@ -3538,7 +3704,7 @@
      "wynik": {},
      "tlo": 0,
      "indexedDB": [
-      "databases",
+      "databases ×3",
       "tx vilda_user_<uid> [meta] readonly complete ×2",
       "tx vilda_user_<uid> [meta] readonly start ×2",
       "tx vilda_user_<uid> [meta] readwrite complete",
@@ -3578,6 +3744,7 @@
      "wynik": null,
      "tlo": 0,
      "indexedDB": [
+      "databases",
       "tx vilda_user_<uid> [meta] readonly complete",
       "tx vilda_user_<uid> [meta] readonly start",
       "tx vilda_user_<uid> [noteTombstones] readonly complete",
@@ -3621,6 +3788,7 @@
      },
      "tlo": 1,
      "indexedDB": [
+      "databases ×2",
       "open vilda_registry 1",
       "open vilda_user_<uid2> 5",
       "success vilda_registry 1",
@@ -3647,8 +3815,8 @@
       "tx vilda_user_<uid2> [patientNoteTombstones] readonly start ×2",
       "tx vilda_user_<uid2> [patientNoteTombstones] readwrite complete",
       "tx vilda_user_<uid2> [patientNoteTombstones] readwrite start",
-      "tx vilda_user_<uid2> [patientNotes] readonly complete ×4",
-      "tx vilda_user_<uid2> [patientNotes] readonly start ×4",
+      "tx vilda_user_<uid2> [patientNotes] readonly complete ×5",
+      "tx vilda_user_<uid2> [patientNotes] readonly start ×5",
       "tx vilda_user_<uid2> [patientNotes] readwrite complete",
       "tx vilda_user_<uid2> [patientNotes] readwrite start",
       "tx vilda_user_<uid2> [patients] readonly complete",
@@ -3695,6 +3863,7 @@
      },
      "tlo": 1,
      "indexedDB": [
+      "databases ×2",
       "open vilda_registry 1 ×3",
       "success vilda_registry 1 ×3",
       "tx vilda_registry [users] readonly complete ×2",
@@ -3721,7 +3890,7 @@
      "indexedDB": [
       "abort-upgrade clinical-authority-checkpoints-v1",
       "close vilda_user_<uid2>",
-      "databases ×2",
+      "databases ×4",
       "delete-success vilda_user_<uid2>",
       "deleteDatabase vilda_user_<uid2>",
       "open clinical-authority-checkpoints-v1 null",
@@ -3748,7 +3917,7 @@
      "indexedDB": [
       "abort-upgrade clinical-authority-checkpoints-v1",
       "close vilda_user_<uid>",
-      "databases ×2",
+      "databases ×4",
       "delete-success vilda_user_<uid>",
       "deleteDatabase vilda_user_<uid>",
       "open clinical-authority-checkpoints-v1 null",
@@ -3780,7 +3949,7 @@
     "vilda_registry"
    ],
    "kluczUrzadzenia": false,
-   "odczytyBramki": 0
+   "odczytyBramki": 44
   },
   "jednorazowo": {
    "ladowanie": {
@@ -3797,7 +3966,9 @@
       "iterations": 1000
      },
      "tlo": 1,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases ×2"
+     ],
      "localStorage": [],
      "sessionStorage": [
       "set veph:vault:adapter-v1",
@@ -3819,7 +3990,9 @@
       "snapshotCount": 1
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [
       "set vilda-note-changed-ping-v1"
      ],
@@ -3841,7 +4014,9 @@
       "snapshotCount": 2
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [
       "set vilda-note-changed-ping-v1"
      ],
@@ -3859,7 +4034,9 @@
       "isUpdate": true
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases ×2"
+     ],
      "localStorage": [
       "set vilda-note-changed-ping-v1"
      ],
@@ -3877,7 +4054,9 @@
       "pinned": true
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [
       "set vilda-note-changed-ping-v1"
      ],
@@ -3895,7 +4074,9 @@
       "pinned": false
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [
       "set vilda-note-changed-ping-v1"
      ],
@@ -3914,7 +4095,9 @@
       "wasPinned": false
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [
       "set vilda-note-changed-ping-v1"
      ],
@@ -3930,7 +4113,9 @@
      "krok": "przywróć z kosza",
      "wynik": {},
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [
       "set vilda-note-changed-ping-v1"
      ],
@@ -3952,7 +4137,9 @@
       "snapshotCount": 3
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [
       "set vilda-note-changed-ping-v1"
      ],
@@ -3970,7 +4157,9 @@
       "remainingSnapshotCount": 2
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases ×2"
+     ],
      "localStorage": [
       "set vilda-note-changed-ping-v1"
      ],
@@ -3989,7 +4178,9 @@
       "prunedIds": "#1"
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [
       "set vilda-note-changed-ping-v1"
      ],
@@ -4007,7 +4198,9 @@
       "isNew": true
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [
       "set vilda-note-changed-ping-v1"
      ],
@@ -4025,7 +4218,9 @@
       "isNew": false
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [
       "set vilda-note-changed-ping-v1"
      ],
@@ -4041,7 +4236,9 @@
      "krok": "notatka pacjenta: usuń",
      "wynik": true,
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [
       "set vilda-note-changed-ping-v1"
      ],
@@ -4059,7 +4256,9 @@
       "isNew": true
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [],
      "sessionStorage": [
       "set veph:vault:adapter-v1"
@@ -4073,7 +4272,9 @@
      "krok": "notatka biblioteki: usuń",
      "wynik": true,
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [],
      "sessionStorage": [
       "set veph:vault:adapter-v1"
@@ -4094,7 +4295,9 @@
       "rule": null
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [],
      "sessionStorage": [
       "set veph:vault:adapter-v1"
@@ -4108,7 +4311,9 @@
      "krok": "lista: usuń",
      "wynik": {},
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [],
      "sessionStorage": [
       "set veph:vault:adapter-v1"
@@ -4126,7 +4331,9 @@
       "stepId": null
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [
       "set vilda-note-changed-ping-v1",
       "set vilda-note-changed-ping-v1"
@@ -4149,7 +4356,9 @@
       "snapshotCount": 1
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [
       "set vilda-note-changed-ping-v1"
      ],
@@ -4172,7 +4381,9 @@
       "snapshotsMoved": 1
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [
       "set vilda-note-changed-ping-v1",
       "set vilda-note-changed-ping-v1"
@@ -4196,7 +4407,9 @@
       "snapshotCount": 1
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [
       "set vilda-note-changed-ping-v1"
      ],
@@ -4212,7 +4425,9 @@
      "krok": "usuń pacjenta",
      "wynik": true,
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [
       "set vilda-note-changed-ping-v1"
      ],
@@ -4264,12 +4479,14 @@
       "updatedSnapshotCount": 0
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases ×2"
+     ],
      "localStorage": [],
      "sessionStorage": [
       "set veph:vault:adapter-v1"
      ],
-     "krypto": 20,
+     "krypto": 23,
      "powiadomienia": {}
     },
     {
@@ -4299,12 +4516,14 @@
       "updatedSnapshotCount": 0
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases ×2"
+     ],
      "localStorage": [],
      "sessionStorage": [
       "set veph:vault:adapter-v1"
      ],
-     "krypto": 11,
+     "krypto": 12,
      "powiadomienia": {}
     },
     {
@@ -4313,12 +4532,14 @@
       "status": "applied"
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [],
      "sessionStorage": [
       "set veph:vault:adapter-v1"
      ],
-     "krypto": 11,
+     "krypto": 12,
      "powiadomienia": {}
     },
     {
@@ -4331,14 +4552,16 @@
       "totalSnapshots": 2
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [
       "set vilda-note-changed-ping-v1"
      ],
      "sessionStorage": [
       "set veph:vault:adapter-v1"
      ],
-     "krypto": 13,
+     "krypto": 14,
      "powiadomienia": {
       "onPatientNoteChanged": 1
      }
@@ -4373,12 +4596,14 @@
       "updatedWaitlistScheduleCount": 0
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [],
      "sessionStorage": [
       "set veph:vault:adapter-v1"
      ],
-     "krypto": 9,
+     "krypto": 10,
      "powiadomienia": {}
     },
     {
@@ -4391,7 +4616,9 @@
       "totalSnapshots": 1
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [
       "set vilda-note-changed-ping-v1"
      ],
@@ -4413,7 +4640,9 @@
       "snapshotCount": 1
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [
       "set vilda-note-changed-ping-v1"
      ],
@@ -4432,7 +4661,9 @@
       "notesMoved": 0
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [
       "set vilda-note-changed-ping-v1"
      ],
@@ -4450,7 +4681,9 @@
       "snapshotCount": 4
      },
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases ×2"
+     ],
      "localStorage": [
       "set vilda-note-changed-ping-v1"
      ],
@@ -4466,7 +4699,9 @@
      "krok": "tryb przechowywania: zmiana",
      "wynik": {},
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [],
      "sessionStorage": [
       "set veph:vault:adapter-v1"
@@ -4478,7 +4713,9 @@
      "krok": "tryb przechowywania: powrót",
      "wynik": {},
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [],
      "sessionStorage": [
       "set veph:vault:adapter-v1"
@@ -4491,7 +4728,7 @@
      "wynik": {},
      "tlo": 0,
      "indexedDB": [
-      "databases"
+      "databases ×3"
      ],
      "localStorage": [
       "set vilda-care-template-lifecycle-v1:<uid>",
@@ -4521,7 +4758,9 @@
      "krok": "kopia konta",
      "wynik": null,
      "tlo": 0,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases"
+     ],
      "localStorage": [],
      "sessionStorage": [],
      "krypto": 17,
@@ -4554,7 +4793,9 @@
       "snapshotCount": 8
      },
      "tlo": 1,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases ×2"
+     ],
      "localStorage": [
       "set vilda-note-changed-ping-v1",
       "set vilda-note-changed-ping-v1",
@@ -4593,7 +4834,9 @@
       "passwordPolicy": null
      },
      "tlo": 1,
-     "indexedDB": [],
+     "indexedDB": [
+      "databases ×2"
+     ],
      "localStorage": [],
      "sessionStorage": [
       "set veph:vault:adapter-v1",
@@ -4611,7 +4854,7 @@
      "tlo": 0,
      "indexedDB": [
       "abort-upgrade clinical-authority-checkpoints-v1",
-      "databases",
+      "databases ×2",
       "open clinical-authority-checkpoints-v1 null",
       "upgrade clinical-authority-checkpoints-v1 0 1"
      ],
@@ -4631,7 +4874,7 @@
      "tlo": 0,
      "indexedDB": [
       "abort-upgrade clinical-authority-checkpoints-v1",
-      "databases",
+      "databases ×2",
       "open clinical-authority-checkpoints-v1 null",
       "upgrade clinical-authority-checkpoints-v1 0 1"
      ],
@@ -4651,7 +4894,7 @@
    ],
    "bazy": [],
    "kluczUrzadzenia": false,
-   "odczytyBramki": 0
+   "odczytyBramki": 46
   }
  }
 }

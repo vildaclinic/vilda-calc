@@ -1,0 +1,43 @@
+{
+  "namespace": "vilda-clinical-workspace-backup-boundary",
+  "version": 1,
+  "sourceRef": "c8d8442e26ac870fc5764408be8e81976eddde3b",
+  "baselineNote": "Settings baseline includes the earlier reviewed template-library and recovery-button append-only integrations.",
+  "files": [
+    {
+      "path": "vilda_file_export.js",
+      "baseSHA256": "9ec1ebe6cee9aafc3a8a7d9bfd6ab151070785e256d575e76980192b4523d15a",
+      "integratedSHA256": "2c4849a7fb3b19450b4fb9c99ec359641bbc9e6eeac813c223ffd592db74a632",
+      "inserted": "\n/* Clinical workspace backup boundary. Resolve the real native marker before\n   advertising or starting any legacy export. No backup preferences or legacy\n   ciphertext formats are rewritten here. */\n/* eslint-disable no-func-assign -- Narrow wrappers preserve the pinned legacy function bodies and their internal call sites. */\nasync function ClinicalBackupAvailability() {\n  var vault = u(), user = vault && vault.getCurrentUser && vault.getCurrentUser();\n  var message = 'Automatyczne kopie .wiw nie są dostępne dla dokumentacji z planami z etapami. Zapisz pełną kopię: Ustawienia → Kopie zapasowe → Kopia i odtwarzanie.';\n  var reason = 'route-unavailable';\n  try {\n    if (!vault || !vault.isUnlocked() || !user || typeof vault.preparePatientClinicalRoute !== 'function') throw new Error('Unavailable');\n    var session = typeof vault.captureSyncOperationSession === 'function' ? vault.captureSyncOperationSession() : null;\n    var route = await vault.preparePatientClinicalRoute();\n    if (session && typeof vault.assertSyncOperationSession === 'function') vault.assertSyncOperationSession(session);\n    var current = vault.getCurrentUser();\n    if (!vault.isUnlocked() || !current || current.userId !== user.userId) throw new Error('Changed');\n    if (route && route.mode === 'legacy') return { supported: true };\n    if (route && route.mode === 'protected-workspace') reason = 'protected-workspace';\n  } catch (_) { /* An unavailable/unverified marker never authorizes legacy export. */ }\n  if (reason === 'route-unavailable') message = 'Nie można potwierdzić dostępności kopii .wiw dla tego konta. Kopia automatyczna nie jest aktywna. Otwórz „Kopia i odtwarzanie” w Ustawieniach.';\n  return { supported: false, reason: reason, message: message,\n    recoveryAvailable: !!(vault && typeof vault.showPatientWorkspaceRecovery === 'function') };\n}\nfunction ClinicalBackupError(status) {\n  var error = new Error(status.message); error.code = 'CLINICAL_WORKSPACE_LEGACY_BACKUP_UNAVAILABLE'; return error;\n}\nconst ClinicalBackupOriginalStatus = ue, ClinicalBackupOriginalAuto = K;\nconst ClinicalBackupOriginalAccount = I, ClinicalBackupOriginalPatient = ce;\nconst ClinicalBackupOriginalEnabled = se, ClinicalBackupOriginalInterval = ie;\nue = async function () {\n  var vault = u(); if (!vault || !vault.isUnlocked()) return null;\n  var availability = await ClinicalBackupAvailability();\n  if (availability.supported) {\n    var legacyStatus = await ClinicalBackupOriginalStatus();\n    availability = await ClinicalBackupAvailability();\n    if (availability.supported) return legacyStatus;\n  }\n  return Object.assign({}, availability, { enabled: false, effectivelyEnabled: false,\n    cloudOnly: E(), intervalMin: null, lastBackupAtISO: null, lastBackupFilename: null,\n    lastBackupMethod: null, sinceLastMs: null, nextDueMs: null, throttled: false });\n};\nK = async function (options) {\n  var vault = u(); if (!vault || !vault.isUnlocked()) return { skipped: true, reason: 'locked' };\n  var status = await ClinicalBackupAvailability();\n  if (!status.supported) return { skipped: true, reason: status.reason, message: status.message, supported: false };\n  return ClinicalBackupOriginalAuto(options);\n};\nfunction ClinicalBackupLegacyOnly(original) {\n  return async function () {\n    var status = await ClinicalBackupAvailability();\n    if (!status.supported) throw ClinicalBackupError(status);\n    return original.apply(this, arguments);\n  };\n}\nI = ClinicalBackupLegacyOnly(ClinicalBackupOriginalAccount);\nce = ClinicalBackupLegacyOnly(ClinicalBackupOriginalPatient);\nse = ClinicalBackupLegacyOnly(ClinicalBackupOriginalEnabled);\nie = ClinicalBackupLegacyOnly(ClinicalBackupOriginalInterval);\n/* eslint-enable no-func-assign */\n",
+      "patches": []
+    },
+    {
+      "path": "inline_ustawienia_04.js",
+      "baseSHA256": "5061df580689c72a4f58b84e2383a48559813774dbb73fa246f03898cfa21e3a",
+      "integratedSHA256": "2943a0107b744100559b22d2d7b143db17e7746bd80fab8e095786b76de794ba",
+      "inserted": "\n/* .wiw settings reflect actual native-route availability, including marker\n   discovery after reload/cutover. Full protected backups have their own UI. */\nvar ClinicalBackupOriginalLabels = null;\nfunction ClinicalBackupSettingsAvailability(status) {\n  var note = n('backupSectionNote'), description = n('backupFolderDesc'), manual = n('downloadVaultBackupBtn');\n  if (!ClinicalBackupOriginalLabels) ClinicalBackupOriginalLabels = {\n    note: note && note.textContent, description: description && description.textContent\n  };\n  var link = n('clinicalWorkspaceBackupLink');\n  var unavailable = !!status && status.supported === false;\n  if (link) link.hidden = !unavailable;\n  if (!unavailable) {\n    if (note && ClinicalBackupOriginalLabels.note) note.textContent = ClinicalBackupOriginalLabels.note;\n    if (manual && manual.hasAttribute('data-clinical-backup-unavailable')) {\n      manual.disabled = false; manual.removeAttribute('data-clinical-backup-unavailable');\n    }\n    return false;\n  }\n  for (var id of ['autoBackupEnabledToggle','autoBackupIntervalSelect','autoBackupRunNowBtn','downloadVaultBackupBtn','backupChooseFolderBtn','backupClearFolderBtn']) {\n    var control = n(id); if (control) control.disabled = true;\n  }\n  if (manual) manual.setAttribute('data-clinical-backup-unavailable', '1');\n  var toggle = n('autoBackupEnabledToggle'); if (toggle) toggle.checked = false;\n  e(n('autoBackupTag'), 'Niedost\\u0119pny dla tego zapisu');\n  e(n('backupSupportChip'), 'Pe\\u0142na kopia dokumentacji');\n  e(n('backupFolderTag'), 'Kopie .wiw niedost\\u0119pne');\n  e(n('backupFolderChip'), 'Kopie .wiw niedost\\u0119pne');\n  e(n('autoBackupStatus'), status.message); e(n('vaultBackupStatus'), status.message);\n  e(note, status.message); e(description, status.message);\n  return true;\n}\n",
+      "patches": [
+        {
+          "name": "folder-route",
+          "before": "async function me(){const t=window.VildaFileExport,o=window.VildaVault;",
+          "after": "async function me(){const t=window.VildaFileExport,o=window.VildaVault;if(t&&typeof t.getAutoBackupStatus===\"function\"&&o&&o.isUnlocked()&&ClinicalBackupSettingsAvailability(await t.getAutoBackupStatus()))return;"
+        },
+        {
+          "name": "auto-route",
+          "before": "M&&(M.disabled=!1,M.checked=!!i.enabled),W&&(W.disabled=!1,W.value=String(i.intervalMin))",
+          "after": "if(ClinicalBackupSettingsAvailability(i))return;M&&(M.disabled=!1,M.checked=!!i.enabled),W&&(W.disabled=!1,W.value=String(i.intervalMin))"
+        },
+        {
+          "name": "skip-message",
+          "before": "e(J,\"Pomini\\u0119te: \"+(i.reason||\"\"))",
+          "after": "e(J,i.message||\"Pomini\\u0119te: \"+(i.reason||\"\"))"
+        },
+        {
+          "name": "keep-operation-result",
+          "before": "finally{R.disabled=!1,R.textContent=o,await re()}",
+          "after": "finally{const d=J&&J.textContent,u=window.VildaVault&&window.VildaVault.getCurrentUser();R.disabled=!1,R.textContent=o,await re();const k=window.VildaVault&&window.VildaVault.getCurrentUser();if(d&&u&&k&&u.userId===k.userId)e(J,d)}"
+        }
+      ]
+    }
+  ]
+}

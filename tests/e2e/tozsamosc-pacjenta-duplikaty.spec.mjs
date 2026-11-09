@@ -127,21 +127,23 @@ async function pacjenci(page) {
   });
 }
 
-/* Wczytanie pacjenta tak, jak robi to zakładka Pacjenci: treść do formularza przez
-   `applyLoadedData` + zdarzenie z identyfikatorem, z którego `custom-fixes.js` ustawia bieżącego
-   pacjenta. Prawdziwy przycisk „Wczytaj tego pacjenta" siedzi w domknięciu `vilda_auth_ui.js`
-   i nie da się go wywołać z testu, ale obie ścieżki przechodzą przez te same funkcje. */
+/* Protokół zakładki Pacjenci: zamiar przed odczytem, natywne applyLoadedData i powiązane
+   zdarzenie z identyfikatorem, z którego custom-fixes.js ustawia bieżącego pacjenta. */
 async function wczytaj(page, patientId) {
-  await page.evaluate(async (pid) => {
+  expect(await page.evaluate(async (pid) => {
+    const api = window.VildaDataImportExport;
+    const load = api.captureAcceptedPatientLoad({ patientId: pid });
+    if (!load) return false;
     const p = await window.VildaVault.getPatient(pid);
     const snap = p && p.snapshots && p.snapshots[0];
     if (!snap || !snap.payload) throw new Error('brak zapisu do wczytania');
-    window.applyLoadedData(snap.payload);
-    document.dispatchEvent(new CustomEvent('vilda:patient-loaded', {
-      detail: { patientId: pid, savedAtISO: snap.savedAtISO || null, snapshotCount: p.snapshotCount || 1 },
-    }));
-    return true;
-  }, patientId);
+    return api.runAcceptedPatientLoad(load, snap.payload, {
+      apply: (payload) => window.applyLoadedData(payload),
+      publish: (operationDetail) => document.dispatchEvent(new CustomEvent('vilda:patient-loaded', {
+        detail: { patientId: pid, savedAtISO: snap.savedAtISO || null, snapshotCount: p.snapshotCount || 1, ...operationDetail },
+      })),
+    });
+  }, patientId), 'przyjęte wczytanie pacjenta').toBe(true);
   await page.waitForFunction(() => typeof window._vildaCurrentPatientId === 'string');
   return true;
 }
@@ -239,7 +241,20 @@ test.describe('Dopisanie daty urodzenia nie tworzy drugiego pacjenta', () => {
     await expect(page.locator('#lastName')).toHaveValue(NAZWISKO);
     await expect(page.locator('#lastName')).toHaveJSProperty('readOnly', true);
     await expect(page.locator('#firstName')).toHaveJSProperty('readOnly', true);
+    // Closing the native chooser precedes the load operation's final settled signal.
+    // Destructive actions must wait for the real decision boundary, not bypass it.
+    await expect.poll(() => page.evaluate(() => window.VildaSaveStatusIndicator.getCurrentDecision().ready)).toBe(true);
+    // An untouched New visit can legitimately clear without a warning. Make
+    // this an explicit unsaved visit so the guard's expected branch is fixed.
+    await page.locator('#height').fill('105');
+    await page.locator('#weight').fill('18');
+    await page.locator('#weight').blur();
+    await expect.poll(() => page.evaluate(() => window.VildaSaveStatusIndicator.getCurrentDecision()))
+      .toMatchObject({ ready: true, state: 'dirty' });
     await page.locator('#clearAllDataBtn').click();
+    const warning = page.getByRole('dialog', { name: 'Zapisać zmiany przed wyczyszczeniem?', exact: true });
+    await expect(warning).toBeVisible();
+    await warning.getByRole('button', { name: 'Odrzuć zmiany i wyczyść', exact: true }).click();
     await expect(page.locator('#lastName')).toHaveValue('');
     await expect(page.locator('#firstName')).toHaveValue('');
     await expect(page.locator('#lastName')).toBeEditable();

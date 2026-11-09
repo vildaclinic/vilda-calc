@@ -1,13 +1,50 @@
-// P-DZIENNIK-ZDARZEN (E2-PR2b, E2-PR3a1) — zapis bazowy „bramka wyłączona” (U3).
+// P-DZIENNIK-ZDARZEN (E2-PR2b, E2-PR3a1, E2-PR3a1c, E2-PR3a2, E2-PR3a3) — zapis bazowy „bramka wyłączona” (U3).
 //
 // Ten sam deterministyczny scenariusz sejfu w czterech wariantach okna daje dokładnie te ślady, które zapisano
-// w tests/fixtures/dziennik-zapis-bazowy.json. Fiksturę nagrano na sejfie z magazynem kolejki i kasowaniem kolejki przy
-// usuwaniu konta; pola opis i bazaVault (sha256 sejfu) pochodzą z pierwszego nagrania, na sejfie bez magazynu kolejki.
-// Wobec pierwszego nagrania różni się wyłącznie usuwanie konta poza trybem „Zaloguj jednorazowo”: jedno dodatkowe
-// wywołanie listy baz (sprawdzenie bazy kolejki), czyli „databases ×2” w krokach „usunięcie konta z kopii” i „usunięcie
-// konta” wariantów Ze, prywatny i chmura (6 komórek). Zadaniem testu jest przenieść dowód „bramka wyłączona” przez
-// E2-PR3a: wolno zmienić wyłącznie liczbę odczytów bramki (o liczbę emisji) i ślady kroków „usunięcie konta…” o kroki
-// kasowania kolejki (plan, wiersz E2-PR3a; od E2-PR3a1 — jak wyżej) — nic więcej.
+// w tests/fixtures/dziennik-zapis-bazowy.json. Fiksturę nagrano na sejfie, który ma magazyn kolejki i przy usuwaniu
+// konta kasuje kolejkę, dziennik dostępu i ustawienia kopii zapasowej konta; pola opis i bazaVault (sha256 sejfu)
+// pochodzą z pierwszego nagrania, na sejfie bez magazynu kolejki. Wobec pierwszego nagrania różni się wyłącznie
+// usuwanie konta poza trybem „Zaloguj jednorazowo”: dwa dodatkowe wywołania listy baz — od E2-PR3a1 sprawdzenie bazy
+// kolejki, od E2-PR3a1c sprawdzenie bazy dziennika dostępu konta i bazy ustawień eksportu (jedno wywołanie) — czyli
+// „databases ×3” w krokach „usunięcie konta z kopii” i „usunięcie konta” wariantów Ze, prywatny i chmura (6 komórek;
+// nagranie E2-PR3a1c zmieniło w nich tylko „databases ×2” na „databases ×3”). Zadaniem testu jest przenieść dowód
+// „bramka wyłączona” przez E2-PR3a: wolno zmienić wyłącznie liczbę odczytów bramki (o liczbę emisji) i ślady kroków
+// „usunięcie konta…” o kroki kasowania kolejki (plan, wiersz E2-PR3a; od E2-PR3a1 i E2-PR3a1c — jak wyżej) — nic
+// więcej.
+//
+// E2-PR3a2: sejf woła emisję zmian do kolejki w miejscach zapisu; przy zamkniętej bramce każda emisja to jeden odczyt
+// pola okna i nic więcej, więc liczba odczytów bramki = liczba emisji (licznik w kopii sejfu z
+// tests/support/sejf-bez-wstawek.mjs: wywołanie funkcji testu jako pierwsza instrukcja Bem_zmiana), a zapis przebiegu
+// kroków bez zmian — nagranie E2-PR3a2 zmieniło w fiksturze wyłącznie cztery pola odczytyBramki (Ze 30, prywatny 30,
+// chmura 28, jednorazowo 30). Przypadek „sejf bez wstawek”: ten sam scenariusz na kopii sejfu, w której każde wywołanie
+// Bem_* i Bob_* poza blokiem P-DZIENNIK-ZDARZEN jest zastąpione `void 0` (Bob_oznacz — `false`), daje zapis przebiegu
+// sejfu poza „databases” o jeden mniej w krokach „usunięcie konta z kopii” i „usunięcie konta” wariantów Ze, prywatny
+// i chmura (sprawdzenie bazy kolejki z E2-PR3a1: „databases ×4” wobec „×3”) i 0 odczytów bramki; w wariancie „Zaloguj
+// jednorazowo” — zapis przebiegu równy w całości.
+//
+// E2-PR3a3: importy (import karty z pliku, scalanie i odtworzenie kopii konta) emitują partią wersje zapisane przez
+// import i encje sekcji pliku; przy zamkniętej bramce każda emisja to jeden odczyt pola okna, więc kroki „import karty
+// innego konta”, „scalenie kopii innego konta” i „odtworzenie konta z kopii” mają 3, 3 i 10 odczytów bramki więcej.
+// W fiksturze E2-PR3a3 zmienia wyłącznie cztery pola odczytyBramki (Ze 46, prywatny 46, chmura 44, jednorazowo 46,
+// z przebiegu na sejfie z partiami); reszta zapisu przebiegu (kroki, IndexedDB, localStorage, crypto, powiadomienia,
+// wyniki) bez zmian. Czerwone na bazie E2-PR3a3 (sejf 422a9a7b): odczyty bramki = liczba emisji (fikstura) i determinizm
+// ×4 (pole odczytyBramki: 30/30/28/30); zielone z natury (strażniki regresji): zapis przebiegu kroków ×4, sejf bez
+// wstawek ×4, brak bazy kolejki i klucza urządzenia, fikstura.
+//
+// Pełny zapis planów z etapami dodaje świeży odczyt databases() przed ścieżką V1.
+// Chroni to przed starym cache braku markera w drugiej karcie, także po błędzie
+// localStorage. Po integracji #905 usuwanie konta ma databases ×4: trzy
+// odczyty obecnej bazy i jeden świeży odczyt znacznika chronionego zapisu.
+// Nagranie wszystkich wariantów potwierdza zmianę tylko sześciu tych komórek.
+// Zmieniono wyłącznie krotności databases; żadnych nowych otwarć baz,
+// zapisów, kryptografii, powiadomień ani wyników operacji. Pierwotny hash bazy zachowano.
+//
+// Plany z etapami w sejfie V1 sprawdzają dokumentację przed scaleniem/importem:
+// jeden zbiorczy odczyt patientNotes (readonly) i odszyfrowanie istniejących
+// kandydatów do zmiany/usunięcia wykrywają osierocone odnośniki i chronią historię
+// planu. Fikstura uwzględnia wyłącznie te dodatkowe odczyty i operacje kryptografii
+// w krokach scalania, importu i odtwarzania. Zapisy, wyniki, powiadomienia oraz
+// localStorage/sessionStorage pozostają identyczne; pierwotny opis i hash zachowano.
 //
 // WARIANTY (każde okno ma atrapę IndexedDB z tests/support/atrapa-indexeddb.mjs i moduły punktu odzyskiwania)
 //   Ze           sejf na adapterze w pamięci z rejestrem wywołań (magazynZRejestrem);
@@ -41,12 +78,14 @@
 //
 // NAGRANIE fikstury: E2_ZAPIS_BAZOWY=nagraj npx vitest run --maxWorkers=1 tests/unit/sync-dziennik-zapis-bazowy.test.mjs
 // — przy zamkniętej bramce. Tryb nagrania odmawia (nie zapisuje pliku), gdy trzy przebiegi wariantu nie są równe albo
-// gdy w którymkolwiek wariancie pole bramki było czytane, powstała baza vilda_sync_* albo klucz o przedrostku
+// gdy w którymkolwiek wariancie liczba odczytów pola bramki różni się od liczby emisji (czwarty przebieg, na kopii sejfu
+// z licznikiem emisji, z zapisem przebiegu równym pierwszemu), powstała baza vilda_sync_* albo klucz o przedrostku
 // vilda-sync-device-v1. Pierwsze nagranie (E2-PR2b1) zrobiono na sejfie bazy bez magazynu kolejki (sejf z uśpionym
 // magazynem daje te same ślady); ponowne (E2-PR3a1) — na sejfie z magazynem kolejki i kasowaniem kolejki przy usuwaniu
-// konta, z polami opis i bazaVault przeniesionymi z pierwszego nagrania (tryb nagrania zapisuje je od nowa). PR, który
-// zmienia ślad sejfu w krokach scenariusza, nagrywa fiksturę ponownie i wymienia w opisie zmienione kroki. Dane
-// wyłącznie fikcyjne.
+// konta, z polami opis i bazaVault przeniesionymi z pierwszego nagrania (tryb nagrania zapisuje je od nowa); kolejne
+// (E2-PR3a1c) — na sejfie, który przy usuwaniu konta kasuje też dziennik dostępu i ustawienia kopii konta, z tymi
+// samymi przeniesionymi polami opis i bazaVault. PR, który zmienia ślad sejfu w krokach scenariusza, nagrywa fiksturę
+// ponownie i wymienia w opisie zmienione kroki. Dane wyłącznie fikcyjne.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
@@ -55,6 +94,7 @@ import { Worker } from 'node:worker_threads';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
 import { AtrapaIDBKeyRange, utworzIndexedDB } from '../support/atrapa-indexeddb.mjs';
 import { atrapaKrypto, magazynZRejestrem, naglowek, okno, repo } from './sesja-zapisu-uprzaz.mjs';
+import { bezWstawek, licznikEmisji, zaladujZrodlo } from '../support/sejf-bez-wstawek.mjs';
 
 const PLIK_FIKSTURY = path.join(repo, 'tests/fixtures/dziennik-zapis-bazowy.json');
 const NAGRANIE = process.env.E2_ZAPIS_BAZOWY === 'nagraj';
@@ -136,7 +176,9 @@ async function zObciazeniem(fn) {
   try { return await fn(); } finally { stan.dziala = false; await petla; await watek.terminate(); }
 }
 
-async function przebieg(wariant, { przerwa = 0 } = {}) {
+// zaladujSejf — funkcja (win) => void ładująca vilda_vault.js w miejsce pliku z repozytorium (kopia z licznikiem emisji,
+// sejf bez wstawek); bez niej — plik z repozytorium.
+async function przebieg(wariant, { przerwa = 0, zaladujSejf = null } = {}) {
   const inne = await obceKonto();
   vi.useFakeTimers({ toFake: ['Date'] });
   let zegar = START;
@@ -166,7 +208,10 @@ async function przebieg(wariant, { przerwa = 0 } = {}) {
   const o = okno({ skrypty: [], krypto: { ...krypto, crypto: { ...krypto.crypto, subtle } }, dodatki: { indexedDB: idb } });
   let odczytyBramki = 0;
   Object.defineProperty(o.win, 'VILDA_EVENT_LOG', { get() { odczytyBramki += 1; return undefined; }, configurable: true });
-  for (const plik of SKRYPTY) loadBrowserScript(plik, o.win);
+  for (const plik of SKRYPTY) {
+    if (plik === 'vilda_vault.js' && zaladujSejf) zaladujSejf(o.win);
+    else loadBrowserScript(plik, o.win);
+  }
   const v = o.win.VildaVault;
   const m = wariant === 'Ze' ? magazynZRejestrem(v.createInMemoryAdapter()) : null;
   if (m) v.setStorageAdapter(m.adapter);
@@ -328,6 +373,15 @@ async function przebieg(wariant, { przerwa = 0 } = {}) {
 const zwykle = {};
 const zwykly = (w) => { if (!zwykle[w]) zwykle[w] = przebieg(w); return zwykle[w]; };
 const bezOdczytow = ({ odczytyBramki, ...reszta }) => reszta;
+// Przebieg na kopii sejfu z licznikiem emisji: { zapis, emisje }.
+async function zLicznikiem(w, opcje = {}) {
+  const l = licznikEmisji();
+  const zapis = await przebieg(w, { ...opcje, zaladujSejf: l.zaladuj });
+  return { zapis, emisje: l.emisje.length };
+}
+const ZRODLO_BEZ_WSTAWEK = bezWstawek();
+// Kroki, w których sejf sprawdza listę baz raz więcej niż sejf bez wstawek (sprawdzenie bazy kolejki przy usuwaniu konta).
+const USUNIECIA_KONT = ['usunięcie konta z kopii', 'usunięcie konta'];
 const fikstura = () => {
   if (!existsSync(PLIK_FIKSTURY)) throw new Error('brak fikstury: nagraj ją na kopii bazy (E2_ZAPIS_BAZOWY=nagraj, nagłówek pliku)');
   return JSON.parse(readFileSync(PLIK_FIKSTURY, 'utf8'));
@@ -352,13 +406,39 @@ describe.skipIf(NAGRANIE)('zapis bazowy „bramka wyłączona” (U3)', () => {
     porownaj(await zwykly(w), fikstura().warianty[w], w);
   }, 120_000);
 
-  it('odczyty pola okna VILDA_EVENT_LOG = 0 we wszystkich wariantach (także przy ładowaniu skryptów)', async () => {
+  it('odczyty pola okna VILDA_EVENT_LOG = liczba emisji we wszystkich wariantach (licznik w kopii sejfu; także przy ładowaniu skryptów), równe fiksturze i więcej niż 0', async () => {
     const odczyty = {};
-    for (const w of WARIANTY) odczyty[w] = (await zwykly(w)).odczytyBramki;
-    expect(odczyty).toEqual({ Ze: 0, prywatny: 0, chmura: 0, jednorazowo: 0 });
+    const emisje = {};
+    const odczytyKopii = {};
+    for (const w of WARIANTY) {
+      odczyty[w] = (await zwykly(w)).odczytyBramki;
+      const k = await zLicznikiem(w);
+      emisje[w] = k.emisje;
+      odczytyKopii[w] = k.zapis.odczytyBramki;
+    }
+    expect(odczytyKopii, 'kopia z licznikiem: odczyty bramki = liczba emisji').toEqual(emisje);
+    expect(odczyty, 'sejf: odczyty bramki = liczba emisji').toEqual(emisje);
+    expect(Object.values(emisje).filter((n) => !(n > 0)), 'liczba emisji w każdym wariancie > 0').toEqual([]);
     const f = fikstura();
     expect(Object.fromEntries(WARIANTY.map((w) => [w, f.warianty[w].odczytyBramki]))).toEqual(odczyty);
   }, 240_000);
+
+  it.each(WARIANTY)('sejf bez wstawek %s: zapis przebiegu równy zapisowi przebiegu sejfu poza „databases” +1 w usunięciu kont (poza „Zaloguj jednorazowo”) i odczytami bramki (0)', async (w) => {
+    const sejf = await zwykly(w);
+    const bez = await przebieg(w, { zaladujSejf: (win) => zaladujZrodlo(win, ZRODLO_BEZ_WSTAWEK) });
+    expect(bez.odczytyBramki, 'sejf bez wstawek: odczyty bramki').toBe(0);
+    const oczekiwany = JSON.parse(JSON.stringify(bezOdczytow(bez)));
+    if (w !== 'jednorazowo') {
+      for (const nazwa of USUNIECIA_KONT) {
+        const kSejfu = sejf.kroki.find((k) => k.krok === nazwa);
+        const k = oczekiwany.kroki.find((x) => x.krok === nazwa);
+        const lista = (x) => x.indexedDB.filter((e) => /^databases( ×\d+)?$/.test(e));
+        expect([lista(kSejfu), lista(k)], `${w}: ${nazwa}`).toEqual([['databases ×4'], ['databases ×3']]);
+        k.indexedDB = k.indexedDB.map((e) => (e === 'databases ×3' ? 'databases ×4' : e)).sort();
+      }
+    }
+    porownaj(bezOdczytow(sejf), oczekiwany, `${w}, sejf bez wstawek`);
+  }, 120_000);
 
   it('po scenariuszu nie ma bazy vilda_sync_* ani klucza o przedrostku vilda-sync-device-v1 (4 warianty)', async () => {
     for (const w of WARIANTY) {
@@ -381,15 +461,17 @@ describe.skipIf(NAGRANIE)('zapis bazowy „bramka wyłączona” (U3)', () => {
 });
 
 describe.runIf(NAGRANIE)('nagranie zapisu bazowego (bramka zamknięta)', () => {
-  it('nagrywa fiksturę: każdy wariant trzy razy (zwykły, z przerwą, z obciążeniem), wszystkie równe, bez odczytu bramki, bazy kolejki i klucza urządzenia', async () => {
+  it('nagrywa fiksturę: każdy wariant trzy razy (zwykły, z przerwą, z obciążeniem), wszystkie równe, odczyty bramki = liczba emisji, bez bazy kolejki i klucza urządzenia', async () => {
     const warianty = {};
     for (const w of WARIANTY) {
       const a = await przebieg(w);
       const b = await przebieg(w, { przerwa: PRZERWA_MS });
       const c = await zObciazeniem(() => przebieg(w));
+      const d = await zLicznikiem(w);
       expect(b, `${w}: przebieg z przerwą`).toEqual(a);
       expect(c, `${w}: przebieg z obciążeniem`).toEqual(a);
-      expect(a.odczytyBramki, `${w}: odczyty pola okna VILDA_EVENT_LOG`).toBe(0);
+      expect(d.zapis, `${w}: przebieg kopii z licznikiem emisji`).toEqual(a);
+      expect(a.odczytyBramki, `${w}: odczyty pola okna VILDA_EVENT_LOG = liczba emisji`).toBe(d.emisje);
       expect(a.bazy.filter((n) => n.startsWith('vilda_sync_')), `${w}: bazy kolejki po scenariuszu`).toEqual([]);
       expect(a.kluczUrzadzenia, `${w}: klucz urządzenia po scenariuszu`).toBe(false);
       for (const k of a.kroki) expect(k.indexedDB.filter((x) => /vilda_sync_/.test(x)), `${w}: ${k.krok}`).toEqual([]);

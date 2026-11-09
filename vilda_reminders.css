@@ -1577,9 +1577,20 @@ html.vilda-phone .vb22 .vb22-outcome-actions .vb22-primary {
 }
 
 .vb22.vb22 .vb22-primary {
-  background: var(--vb-teal)!important;
-  border-color: var(--vb-teal)!important;
-  color: #fff!important
+  background: var(--chrome-active-bg, linear-gradient(135deg, var(--primary, #00838d), var(--secondary, #00b0a6)))!important;
+  border-color: transparent!important;
+  color: #fff!important;
+  font-weight: 600!important;
+  box-shadow: none!important;
+}
+
+.vb22.vb22 .vb22-primary:is(:hover,:focus-visible):not(:disabled):not([aria-disabled=true]) {
+  filter: brightness(.96)
+}
+
+.vb22.vb22 .vb22-primary:disabled,
+.vb22.vb22 .vb22-primary[aria-disabled=true] {
+  filter: none
 }
 
 .vb22.vb22 .vb22-tabs button {

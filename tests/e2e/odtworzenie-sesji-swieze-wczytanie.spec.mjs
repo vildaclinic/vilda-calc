@@ -69,12 +69,17 @@ async function przygotujXwczytanegoIY(page) {
     const b = await window.VildaVault.savePatient(JSON.parse(JSON.stringify(y)), { dedup: false });
     return { x: a.patientId, y: b.patientId };
   }, [X, Y]);
-  await page.evaluate(async (pid) => {
+  expect(await page.evaluate(async (pid) => {
+    const api = window.VildaDataImportExport;
+    const load = api.captureAcceptedPatientLoad({ patientId: pid });
+    if (!load) return false;
     const p = await window.VildaVault.getPatient(pid);
-    window.applyLoadedData(p.snapshots[0].payload);
-    document.dispatchEvent(new CustomEvent('vilda:patient-loaded',
-      { detail: { patientId: pid, source: 'pick' } }));
-  }, ids.x);
+    return api.runAcceptedPatientLoad(load, p.snapshots[0].payload, {
+      apply: (payload) => window.applyLoadedData(payload),
+      publish: (operationDetail) => document.dispatchEvent(new CustomEvent('vilda:patient-loaded',
+        { detail: { patientId: pid, source: 'pick', ...operationDetail } })),
+    });
+  }, ids.x), 'przyjęte wczytanie pacjenta X').toBe(true);
   await expect.poll(() => page.evaluate(() => {
     const m = window.VildaPersistence && window.VildaPersistence.readMainSession();
     return m && m.name;
@@ -120,15 +125,22 @@ test('pacjent wczytany przed startowym odtworzeniem sesji nie dostaje migawki po
     && window.VildaInit && window.VildaInit.isInitialized('app:main-session-restore-init'),
   null, { polling: 100, timeout: 30_000 });
 
-  // Wczytanie Y tą drogą, którą idzie skok do punktu GH: applyLoadedData, identyfikator, zdarzenie.
-  await page.evaluate(async (pid) => {
+  // Skok do punktu GH: zamiar przed odczytem, przyjęte applyLoadedData, identyfikator i powiązane zdarzenie.
+  expect(await page.evaluate(async (pid) => {
+    const api = window.VildaDataImportExport;
+    const load = api.captureAcceptedPatientLoad({ patientId: pid });
+    if (!load) return false;
     const p = await window.VildaVault.getPatient(pid);
-    window.applyLoadedData(p.snapshots[0].payload);
-    window._vildaCurrentPatientId = pid;
-    window.sessionStorage.setItem('vildaCurrentPatientId', pid);
-    document.dispatchEvent(new CustomEvent('vilda:patient-loaded',
-      { detail: { patientId: pid, source: 'pick' } }));
-  }, ids.y);
+    return api.runAcceptedPatientLoad(load, p.snapshots[0].payload, {
+      apply: (payload) => window.applyLoadedData(payload),
+      publish: (operationDetail) => {
+        window._vildaCurrentPatientId = pid;
+        window.sessionStorage.setItem('vildaCurrentPatientId', pid);
+        document.dispatchEvent(new CustomEvent('vilda:patient-loaded',
+          { detail: { patientId: pid, source: 'pick', ...operationDetail } }));
+      },
+    });
+  }, ids.y), 'przyjęte wczytanie pacjenta Y przy wstrzymanych klatkach').toBe(true);
 
   // Karta wraca na wierzch: odtworzenie dostaje swoje klatki.
   await page.evaluate(() => window.__e2ePuscKlatki());

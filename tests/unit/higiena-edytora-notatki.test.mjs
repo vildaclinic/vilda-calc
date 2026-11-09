@@ -76,7 +76,7 @@ describe('G29 — pola tekstowe arkusza notatki nie gadają z przeglądarką', (
 
 describe('G31 — typografia i jedno źródło tekstów bramki', () => {
   it('okno usunięcia notatki zamyka cudzysłów', () => {
-    expect(ui).toContain('Usun\\u0105\\u0107 notatk\\u0119 \\u201E"+ut+\'\\u201D? Akcja propaguje');
+    expect(ui).toContain('"Usunąć notatkę „" + title + "”? Akcja propaguje');
   });
 
   it('pusta lista notatek i podpowiedź Historii też', () => {

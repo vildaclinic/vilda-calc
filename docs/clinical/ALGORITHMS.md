@@ -13626,6 +13626,24 @@ Dwie karty, ten sam pacjent, ten sam dzień, różnica 2,0 cm. Nikt tego nie zap
 
 *Strażnicy:* `tests/unit/prognoza-wartosc-z-publikacji.test.mjs` (13) — obie liczby w `methods[]` i ich różnica równa korekcie, metoda bez reguły z liczbami równymi, przypadek bez żadnej korekty, **pin liczby konsensusu**, wiersz z wartością z publikacji, nota z kwotą i powodem, brak noty bez korekty, przedział NIE zwężony, clamp działa także na wartości z publikacji, akapit „Skąd te liczby" z opisem clampu i bez niego. `tests/e2e/prognoza-wartosc-z-publikacji.spec.mjs` (2) — obie karty na prawdziwej stronie podają **tę samą liczbę**, wiersz nazywa korektę; **zmierzona czerwień 2 z 2**. Zaktualizowany `tests/unit/prognoza-bledy-systematyczne.test.mjs` (odwrócona reguła wiersza, dołożone twierdzenia o nocie i akapicie). Nowy test w `tests/e2e/prognoza-konsensus-karta.spec.mjs` (nota w rozwiniętym bloku).
 
+### P-DOCPRO-PROGNOZA — te same zależności prognozy wzrostu na Start i DocPro (07.11.2026)
+
+**Zakres i wpływ.** Naprawa ładowania istniejącego modułu po zgłoszeniu właściciela: ten sam wczytany pacjent ma prognozę wzrostu ostatecznego na Start, a w DocPro pojawia się „Brak danych do obliczenia”. Nie zmieniają się wzory, współczynniki, tablice, populacje, kwalifikacja metod, interpolacja, jednostki, zaokrąglenia ani wagi konsensusu. Zmiana może jednak przywrócić brakujący wynik albo zmienić wcześniej zubożony konsensus w DocPro: strona zaczyna używać pełnego zestawu istniejących metod, tak jak Start. Nie jest to nowa walidacja kliniczna metod.
+
+**Przyczyna i kod.** `docpro.html` ładował silnik `vilda_advanced_growth.js` i kartę `vilda_growth_card_c.js`, lecz pomijał cztery zależności obecne na Start: `bayley_pinneau_data.js`, `rwt_data.js`, `reinehr_cdgp_data.js` i `advanced_growth_kowd.js`. Przy poprawnych, identycznych danych formularza Bayley–Pinneau i RWT zwracały `missing-dataset`, a adapter profilu KOWD/Reinehr był niedostępny. Zwykłe przeliczenie zastępowało odtworzoną pamięć `advancedGrowthData` nowym modelem z mniejszą liczbą metod. Poprawka dodaje do DocPro te same pliki i wersje, w tej samej kolejności, z `defer` przed `app.js`. Wynik nadal oblicza wspólny silnik z bieżących danych; strona nie kopiuje napisu ani dawnej liczby z innej ramki. Odtwarzanie, historia pomiarów, granice pacjenta i konta oraz odcisk świeżości prognozy z **ADV-REPORT-1** pozostają bez zmian.
+
+**Istniejące źródła, populacje i ograniczenia.** Ta poprawka korzysta z dotychczasowych danych i kontraktów, bez ponownej transkrypcji lub rozszerzania wskazań:
+
+- **Bayley–Pinneau:** Bayley N, Pinneau SR. *Tables for predicting adult height from skeletal age: revised for use with the Greulich-Pyle hand standards.* **J Pediatr 1952;40:423–441**, [PMID 14918032](https://pubmed.ncbi.nlm.nih.gov/14918032/); wiersze czynników według płci, wieku kostnego i grupy dojrzałości; tablice błędu IV/V z domyślną próbą walidacyjną Berkeley Growth Study. Pochodzenie fotografii właściciela, sprostowanie oraz przyjęta korekta błędu są opisane w `bayley_pinneau_data.js:meta` i wpisie **GROWTH-PRED-AUDYT1**. Wzrost i prognoza w cm, wiek w latach/miesiącach, czynnik bezwymiarowy; obowiązują dotychczasowe granice właściwej tablicy płci i dojrzałości. Przybliżenie przedziału błędu 90% pozostaje dostępne od wieku metrykalnego 8 lat, z dotychczasowym zastrzeżeniem braku rozdziału błędów na grupy dojrzałości.
+- **RWT:** Roche, Wainer i Thissen, *The RWT Method for the Prediction of Adult Stature*, **Pediatrics 56(6):1026–1033, 1975**, [PMID 172855](https://pubmed.ncbi.nlm.nih.gov/172855/); tablice i rycina błędu wskazane w `rwt_data.js:meta`. Dotychczasowy zakres wieku metrykalnego: chłopcy 1–16 lat, dziewczęta 1–14 lat. Wzrost dziecka i obojga rodziców w cm, masa w kg, wiek kostny w latach, wynik w cm. Zachowane są interpolacja między wierszami, korekta długości +1,25 cm oraz możliwość użycia wieku metrykalnego zamiast brakującego kostnego wyłącznie **przed** 13 lat u chłopców i **przed** 8 lat u dziewcząt. Ograniczenia do populacji źródłowej i przybliżenie błędu z ryciny pozostają takie jak na Start.
+- **Reinehr/KOWD:** Reinehr i wsp., *A New Model of Adult Height Prediction Validated in Boys with Constitutional Delay of Growth and Puberty*, **Horm Res Paediatr. 2019;91:186–194**, [DOI 10.1159/000499712](https://doi.org/10.1159/000499712), **tablica 2**; `reinehr_cdgp_data.js:meta` i istniejący adapter `advanced_growth_kowd.js`. Nadal tylko chłopcy od 12 lat, z opóźnieniem wieku kostnego **>1 roku** i dotychczasową kwalifikacją KOWD; zakres wieku kostnego 10,5–15,5 roku. Wzrost/wynik w cm, wiek w latach/miesiącach. Zachowane są oznaczenia węzła 10,5 roku zapożyczonego z kolumny zbiorczej dla opóźnienia ≥2 lat oraz ekstrapolowanych w publikacji węzłów 14,5–15,5 roku, bez ekstrapolacji aplikacji poza zakres. Populacja źródłowa była nieleczona, z wykluczeniem opisanych chorób; nie dodano rozpoznawania KOWD ani kwalifikacji terapii. Obowiązują dotychczasowe ostrzeżenia profilu i zakres niepewności.
+
+**Fikcyjny przypadek regresyjny.** Pomiar 17.06.2026, chłopiec urodzony 17.06.2013, 13 lat 0 miesięcy, 158 cm, 46 kg, wiek kostny 12 lat, matka 165 cm, ojciec 180 cm, siatka OLAF. Historia: 84 mies./123,6 cm/23,9 kg; 108 mies./135 cm/29,9 kg; 120 mies./141 cm/33 kg; 144 mies./153 cm/40 kg. Rzeczywiste wczytanie, zapis i przejście Start → DocPro → Start na bazie `e6d91d2e` dawało konsensus **183,69965571730623 → 182,34049417467875 → 183,69965571730623 cm** przy identycznych polach. W DocPro brakowało BP/RWT; KR/TW2 pozostały dostępne. Oczekiwany wynik po poprawce to **183,69965571730623 cm** na obu stronach, prezentowany **183,7 cm ±5,1 cm**, z tym samym zestawem czterech metod i MPH. Jest to wartość referencyjna rzeczywistych, niezmienionych funkcji produkcyjnych, a nie nowy wzór w teście.
+
+**Odtworzenie dokładnego komunikatu.** Drugi fikcyjny przypadek ma tę samą datę i antropometrię, lecz płeć żeńską, wiek kostny **10,5 roku**, brak wzrostów rodziców, pustą historię pomiarów i nieznany status menarche. Na bazie Start pokazuje **176,9 cm ±2,6 cm**, wyłącznie metodą Bayley–Pinneau; DocPro pokazuje widoczne **„Prognoza wzrostu ostatecznego: Brak danych do obliczenia”**, a powrót na Start przywraca 176,9 cm. Pola, zapisany rekord i referencja zapisu pozostają identyczne, a odcisk prognozy zgadza się z bieżącymi danymi. Oczekiwane po poprawce jest 176,9 cm ±2,6 cm również w DocPro, z zachowaniem istniejącego ostrzeżenia o opóźnieniu wieku kostnego o 30 miesięcy. Brak rodziców nadal wyklucza RWT/KR, a nieznany status menarche nadal blokuje TW2 w tym przypadku; poprawka nie uzupełnia tych danych ani nie omija kwalifikacji.
+
+**Ochrona regresyjna.** `tests/unit/docpro-height-forecast-loading.test.mjs` sprawdza rzeczywiste znaczniki HTML: każda zależność dokładnie raz, identyczny adres jak na Start, `defer`, brak `async`, kolejność tabel i adaptera oraz ładowanie przed `app.js`. Pięć przypadków było czerwonych przed poprawką, a po dodaniu zależności jest zielonych. Test nie kopiuje obliczeń klinicznych. Istniejące testy `reinehr-2019-audyt`, `kowd-dane-rekord` i `docpro-dziedziczy-pokwitanie` chronią granice źródeł i kwalifikacji: **44/44 PASS**, łącznie z nowym strażnikiem **49/49 PASS**. Rzeczywiste przejścia przeglądarkowe sprawdzają wynik wspólnego producenta. Pełne wyniki walidacji i identyfikator PR zostają podane w opisie zmiany; agent nie nadaje statusu „zatwierdzone klinicznie”.
+
 ### P-PROGNOZA-KONSENSUS — w „Podsumowaniu wyników" jedna prognoza zamiast czterech (SW 1.0.937, 2026-09-15, zlecenie właściciela)
 
 **Stan przed zmianą.** Karta „Podsumowanie wyników" wypisywała jako prognozę wzrostu ostatecznego **cztery równorzędne wiersze** — Bayley–Pinneau, RWT, Khamis–Roche, Reinehr 2019 — każdy z własnym przedziałem i bez jednego słowa o tym, który jest odpowiedzią aplikacji. Na fikcyjnym przypadku z tej zmiany (dziewczynka 10 lat, 145 cm, 38,5 kg, wiek kostny 9 lat, rodzice 165/178 cm) rozstrzał wynosił **168,9–173,7 cm**.
@@ -13811,6 +13829,257 @@ pacjenta w nieaktywnej karcie, opóźnione zdarzenia i kolejki, zmianę konta,
 przeładowanie dokumentu, zapis przy schowaniu zakładki, bieżące edycje
 oraz jawne czyszczenie. Test przeglądarkowy używa fikcyjnego sejfu i natywnego
 wyboru „Nowy pomiar”; kontroluje także niezmienność zapisanego rekordu i notatki.
+
+### P-STAN-PRODUCENCI — SGA, PAL i historie pomiarów a stan zapisu, 2026-11-07
+
+Korekta funkcjonalna producentów danych, kolejny etap po P-ZAPIS-POTWIERDZONY
+i ochronie zapisów sesji ze starszych paneli. Automatyczne zdarzenie z tymi samymi
+danymi nie jest edycją pacjenta. Nie zmieniamy referencji potwierdzonego zapisu
+ani reguł porównania, aby ukryć rzeczywistą różnicę.
+
+**SGA.** Powtórzone `input/change` zachowuje kompletną utrwaloną ocenę, wybrane
+źródła i pierwotny `computedAtISO`, gdy wejścia się nie zmieniły. Prawdziwa edycja
+unieważnia tę ocenę; aktualny podgląd wyniku jest osobnym stanem. Automatyczne
+uzupełnianie z danych okołoporodowych nie dopisuje parametrów pod obliczoną oceną.
+Obsługiwany historyczny zapis z pustym polem dni zachowuje dosłowne `days: ''`.
+
+Jawne wyczyszczenie SGA oraz usunięcie wcześniej podanej wartości mają osobną
+intencję w istniejącym stanie UI DocPro (`moduleStates.sgaBirthUi`). Nie dodajemy
+jej do klinicznej sekcji `birth`, wersji pacjenta ani referencji zapisu.
+Odtwarzanie UI oraz odpowiedzi odroczonych odczytów sprawdzają konto, pacjenta
+i aktualność operacji. Własny zapis i odświeżenie bieżącej wizyty zachowują
+intencję czyszczenia. Zaakceptowane nowe wczytanie lub przywrócenie zapisu ją
+kończy, także przy tym samym PID w zachowanej ramce DocPro. Usuwana jest wtedy
+wyłącznie stara kopia SGA i jej intencja z UI; pozostałe karty zachowują swój
+stan. Natywne „Przywróć zapis” odtwarza rzeczywistą sekcję `birth`, także `null`.
+Anulowanie przywrócenia nie zmienia formularza.
+
+**Częściowe formularze.** Natywny zapis z DocPro korzysta dla niewidocznych tam
+pól z tego samego modelu własności co odczyt stanu. Źródłem przenoszonych danych
+jest dokładna treść ostatniego udanego zapisu bieżącej sesji roboczej albo
+dokładny, zaakceptowany odczyt podczas jej odtwarzania. Dowód obejmuje konto,
+sesję klucza, pacjenta, konkretną operację i aktywny dokument. Przy odtwarzaniu
+jest wiązany przed odczytem i przenoszony tylko przez własny krok wczytania;
+nie ustanawiamy go ponownie z dowolnego stanu po zakończeniu odtwarzania.
+Gotowy formularz nie musi czekać na odroczony automatyczny zapis sesji, aby
+umożliwić świadome „Zapisz dane”. Brak aktualnego dowodu
+powoduje odmowę zapisu wymagającego tych danych, a nie odczyt przypadkowego
+starszego szkicu. Widoczny formularz nadal odpowiada za swoje edycje, puste
+pola i puste listy. Dotychczasowe jawne, kompletne kolektory zachowują API.
+Nie generujemy pomiarów ani nie wykonujemy dodatkowych obliczeń w „Zapisz”.
+
+Przy starcie zapisanej sesji pacjenta odczyt czeka na rzeczywiste zakończenie
+inicjalizacji uwierzytelnienia, także jeśli sejf jest już otwarty, lecz trwa
+jeszcze ustanawianie klucza. Dowód powstaje po tej granicy; nie odnawiamy
+nieaktualnego potwierdzenia na podstawie zgodnego PID.
+Ta sama granica obejmuje anonimowy szkic przed nadaniem pierwszego PID:
+zarówno już odblokowane konto, jak i rzeczywisty start AuthUI, który jeszcze
+ustala konto i nie jest w trybie gościa. Odczyt po rozstrzygnięciu tego startu
+wiąże dane z końcowym kluczem. Jawny tryb gościa i starszy adapter bez tej
+informacji zachowują dotychczasową ścieżkę; samo oczekiwanie nie nadaje prawa
+do zapisu ani nie odnawia wcześniejszego potwierdzenia.
+
+Gotowość uwzględnia także już zaplanowane odtworzenie istniejącej sesji,
+zanim wykona się jego pierwszy callback. Samo wspólne uzupełnienie pól nie
+potwierdza jeszcze odtworzenia danych niewidocznych w częściowym formularzu.
+Świeży formularz bez sesji nie dostaje tej blokady. Jawny kompletny zapis
+zachowuje wcześniejszą możliwość zakończenia starego, jeszcze nierozpoczętego
+odtwarzania; nadal przechodzi wszystkie kontrole aktywnego odtwarzania,
+konta, właściciela i przenoszonych danych. Gotowość nie zastępuje tych kontroli.
+
+Odtworzenie wspólnych pól może także zlecić istniejące odroczone obliczenie
+spożycia. Gotowość zapisu obejmuje zakończenie tego konkretnego zadania,
+a nie tylko zamontowanie jego wierszy. Wykryty przypadek: anonimowy formularz
+13 lat, 158 cm, 46 kg oraz wpis zaawansowany 10 lat, 141 cm, 33 kg. Po F5
+oba wiersze były już w formularzu spożycia, lecz przez krótkie okno model
+zawierał tylko bieżący pomiar i brak wyniku. Zapis w tym oknie mógł utrwalić
+ten wcześniejszy stan. Zakończenie już zaplanowanego obliczenia pozwala
+zapisać pełny bieżący model; „Zapisz” nie uruchamia dodatkowego przeliczenia.
+Znacznik gotowości jest związany z odtwarzaniem i zadaniem, nie nadaje
+uprawnień do danych i nie zmienia referencji. Zwykłe wpisywanie poza
+odtwarzaniem zachowuje dotychczasowe zachowanie. Błąd obliczenia nie oznacza
+gotowości do zapisu; kolejne udane obliczenie lub reset kończą ten stan.
+
+Przeniesiony zamiar wczytania z innej strony czeka na zakończenie początkowego
+odtwarzania przed pobraniem danych wybranego pacjenta. Dopiero wtedy powstaje
+nowe potwierdzenie tej konkretnej operacji. Zapobiega to unieważnieniu
+jawnego wyboru przez kończące się w tle zastosowanie starszej migawki.
+Zmiana konta, klucza, dokumentu, wizyty lub nowsza czynność użytkownika
+nadal anuluje wcześniejszą operację; anulowany zamiar nie wraca po F5.
+
+Pierwszy natywny zapis może nadać PID, zanim odroczony zapis formularza
+zastąpi wcześniejszy pusty szkic. Kontynuację tej samej wizyty potwierdza
+wynik rzeczywiście zakończonego zapisu, związany z jego pierwotną operacją,
+a nie zgodność nazwiska z tym szkicem. Następny zwykły zapis sesji podczas
+nawigacji może dzięki temu przekazać aktualne pomiary. Samo zdarzenie
+`source: save`, zgodny PID lub późniejszy odczyt rekordu nie odnawiają
+nieaktualnego uprawnienia. Referencja zapisu pozostaje niezmieniona.
+
+Zakończenie ładowania tej samej ramki nie rozpoczyna nowej wizyty. Jeżeli
+formularz i odtwarzanie były gotowe przed zdarzeniem `load`, potwierdzenie
+zapisu sesji nadal dotyczy dokładnie tego samego dokumentu i aktywacji.
+Generacja potwierdzenia uwzględnia kończące się ładowanie. Rzeczywista
+wymiana dokumentu, ponowne żądanie przeładowania, zmiana aktywnej ramki,
+konta lub klucza nadal odrzucają starsze potwierdzenia.
+
+Jawne odtworzenie sesji podczas nawigacji wykonuje rzeczywiste zastosowanie
+potwierdzonego szkicu także wtedy, gdy docelowy panel zdążył już odtworzyć
+wspólne pola anonimowego formularza. Przed zastosowaniem sprawdzane są
+oryginalny dowód sprzed odczytu, niezmieniona treść źródła i bieżące pola.
+Zmiana pola, konta lub operacji w trakcie odczytu albo callbacku przerywa
+odtworzenie. Automatyczny start nadal zachowuje ochronę lokalnie wypełnionego
+formularza; sam stan „kept-form” nie staje się dowodem własności.
+
+Wybór pacjenta w trybie podglądu zapisanych danych Klirensu kończy tę samą
+potwierdzoną operację wczytania i publikuje jej PID. Podgląd nadal nie wykonuje
+kroków pełnego odtworzenia pól klinicznych; „Odtwórz zapis” zachowuje osobny
+wybór użytkownika. Jest to przywrócenie istniejącego kontraktu wyboru karty,
+bez zmiany jednostek, wyniku Klirensu i zasad ponowienia zapisu po scaleniu.
+
+Sesja z jawnym imieniem lub nazwiskiem zachowuje ten podział również przy
+wieloczłonowym nazwisku i pustym drugim polu. Po ustawieniu nazwy zbiorczej
+odtwarzane są oba pola, bez dopisywania imienia przez parser pierwszego słowa.
+Gdy obu części brakuje, pozostaje dotychczasowy parser; gdy przenoszone części
+nie zgadzają się z rzeczywiście zmienioną nazwą zbiorczą, nie nadpisują edycji.
+Ta zgodność nazw dotyczy wyłącznie prezentacji pól i nie zastępuje potwierdzenia
+tożsamości, sesji ani operacji wczytania.
+
+Odmowa własnego zapisu do usuniętej lub scalonej karty może wyzerować jej PID.
+Tylko ta konkretna odmowa, z oryginalnym aktualnym potwierdzeniem operacji,
+pozwala kontynuować bieżący formularz jako nieprzypisany. Stary bilet zapisu
+zostaje unieważniony. Kolejne świadome kliknięcie używa istniejącego mechanizmu
+karty docelowej i zachowuje bieżące edycje; dowolne zdarzenie lub sama zgodna
+nazwa nie uprawniają do przejęcia danych.
+
+Przy normalizacji odtwarzanego zapisu lub przyjęciu nowszego stanu Klirensu
+niezmieniona treść odczytanego szkicu jest osobnym warunkiem własności.
+Przenoszone wartości pochodzą z ładunku rzeczywiście przyjętego przez importer,
+a aktualne, jawne wyczyszczenie danych Klirensu nadal ma pierwszeństwo.
+
+Na stronie głównej ten sam model własności chroni ustawienia kart DocPro,
+których kontrolek ta strona nie zawiera. Zapis sesji nie może zastąpić ich
+wartościami `null`. Regresja przechodzi przez rzeczywisty zapis trzech wybranych
+ustawień kalkulatora bisfosfonianów, nawigację i ponowny zapis; dotyczy wyborów
+kalkulatora, bez dodawania zdarzenia wykonanej terapii.
+
+Jawne wczytanie ma osobne potwierdzenie operacji. Przed oczekiwaniem na odczyt
+lub zgodę użytkownika zostaje powiązane z kontem, sesją klucza, dokumentem,
+żądaniem oraz docelowym PID. Potwierdzenie obejmuje rzeczywiście przyjęty
+ładunek i publikację tożsamości tej samej operacji. Pozwala zachować pola
+DocPro również w pierwszym zapisie po „Nowym pomiarze” i „Przywróć zapis”.
+Sama zgodna nazwa, aktualny PID ani dowolne zdarzenie wczytania nie zastępują
+tego potwierdzenia. Przejście A → B → A sprawdza różne ustawienia obu pacjentów,
+każdy udany zapis sesji po publikacji PID oraz niezmienność wcześniejszych wersji.
+
+Wywołania z historii wersji i skoku do terapii GH zachowują tę samą granicę
+operacji. Historia wersji sprawdza ją także przed trwałym przywróceniem wersji.
+Przekazywany przy nawigacji identyfikator pacjenta pozostaje lokalizatorem;
+docelowy dokument pobiera dane na nowo z bieżącego sejfu i sprawdza własną
+operację przed ich zastosowaniem. Anulowanie, zmiana konta lub nowsze żądanie
+nie pozwalają starszemu odczytowi ustanowić nowego stanu formularza.
+
+**Historie i ponowienie zdarzeń.** Powtórzenie niezmienionych wejść karty
+spożycia nie resetuje obliczonego wyniku i historii. Zapamiętana podstawa jest
+związana z sesją klucza sejfu oraz bieżącym pacjentem i wczytaniem. Przypisanie
+PID przy pierwszym własnym zapisie wymaga zweryfikowanego potwierdzenia tej
+operacji; zwykłe powiadomienie nie ustanawia nowej podstawy. Rzeczywista edycja
+zachowuje dotychczasowe unieważnienie wyniku.
+
+Pasywne zdarzenie pól głównego formularza nie tworzy pomiaru w zamkniętej,
+pustej karcie spożycia. Zapobiega to dopisaniu bieżącego wiersza przez
+powtórzony `change` przy opuszczaniu pola, gdy nie było edycji wymagającej
+resetu. Istniejące dane, także częściowy wpis i jawne zero, nadal otrzymują
+aktualny pomiar. Otwarcie karty, dodawanie historii i odtwarzanie korzystają
+z dotychczasowego aktualizatora bez tego ograniczenia. Nie zmienia się próg
+Cole ani reguła automatycznego rozwijania karty.
+
+Brak bieżącego wzrostu lub masy nie może zastąpić pierwszego archiwalnego
+pomiaru pustymi polami. `null` nie jest liczbą zero; jawne numeryczne zero nadal
+zachowuje swój kontrakt. Późniejsze uzupełnienie wieku z DOB aktualizuje
+rzeczywisty bieżący wiersz albo tworzy go osobno; nie przejmuje wiersza archiwum
+na podstawie pozycji czy podobieństwa wartości. Podstawowa historia jest
+odtwarzana z danych zaakceptowanego wczytania przed powiadomieniem kalkulatorów,
+które mogłyby odczytać jeszcze pustą tabelę.
+
+Zdarzenia wieku wysyłane podczas przyjęcia zapisanej daty urodzenia zachowują
+historię spożycia. Istniejący blok odtwarzania `bezZnaczaniaEdycji` w module DOB
+wstrzymuje reset tej historii wyłącznie na czas własnego synchronicznego
+wywołania i przywraca poprzednią flagę również po błędzie lub zagnieżdżonym
+odtworzeniu. Ręczna edycja DOB pozostaje poza tym blokiem i nadal unieważnia
+wynik spożycia. Regresja obejmuje zapis z samym DOB, osobny pomiar archiwalny,
+zapis do sejfu, F5 oraz rzeczywistą zmianę daty przez użytkownika.
+
+Podstawowa historia zachowuje również obsługiwane metadane `uid`, `dateISO`
+oraz dodatni liczbowy `boneAgeYears`. Są związane z konkretnym wierszem DOM,
+dlatego edycja, sortowanie i usunięcie wiersza nie przenoszą ich na inny pomiar.
+Nowy wiersz nie dziedziczy metadanych po poprzednim. Regresja używa dwóch
+pomiarów o tym samym wieku, ale odrębnych identyfikatorach i datach, oraz
+rzeczywistego zapisu i ponownego uruchomienia formularza.
+
+**Zmiana zachowania synchronizacji historii:** osobno zapisane historie
+zachowują własność swoich wierszy. Edycja, dodanie lub wyczyszczenie historii
+podstawowej nie zastępuje całej historii zaawansowanej i odwrotnie. Nie
+odtwarzamy rzekomego powiązania archiwalnych wierszy z samego wieku, pozycji
+ani równych wartości. Zachowane są rzeczywiste pary nowych wierszy tworzone
+przez przyciski dodawania historii zaawansowanej i spożycia w bieżącym
+dokumencie; powiązanie wymaga tych konkretnych elementów i bieżącej wizyty.
+Obecna pusta lista różni się od sekcji nieobecnej w starszym formacie;
+dotychczasowe wyprowadzenie brakującej historii pozostaje dostępne.
+Nie dodajemy identyfikatorów do zapisanych pomiarów ani migracji rekordów.
+Opóźniony finalizator poprzedniego wczytania nie może zwolnić ochrony bieżącej
+wizyty.
+
+Po odtworzeniu karta spożycia zachowuje pusty wiersz edycji obok istniejącego,
+wypełnionego wiersza bieżącego pomiaru. Jest to wyłącznie odtworzenie pól
+interfejsu: wszystkie cztery wartości są puste, wiersz nie dostaje identyfikatora
+powiązania, a kolektor nie dodaje go do historii klinicznej. Nie uruchamia to
+obliczeń ani kopiowania między historiami. Brak bieżącego pomiaru lub
+nieaktualny właściciel odtwarzania nie tworzą takiego wiersza.
+
+**Istniejąca tożsamość GH.** Ochrona niezależnie odtworzonych historii nie
+zmienia wcześniejszego kontraktu P-GH-TOZSAMOSC. Istniejące lustro punktu
+terapii odzyskuje `data-gh-id` / `data-gh-sync`, a oznaczone lustro bez punktu
+źródłowego jest usuwane. Wydzielony blok rozpoznawania GH ma dokładnie te same
+reguły i tolerancję co wcześniej. Ta ścieżka nie kopiuje pól pomiarowych,
+nie dodaje wierszy ani nie paruje pozostałych historii; działa po zakończeniu
+odtworzenia w aktualnym zakresie pacjenta i sesji.
+
+Natywne wczytanie z Karty pacjenta może opublikować docelowy PID przed końcem
+asynchronicznego importu GH. Kontynuacja zachowuje oryginalny token operacji
+i dowód sesji klucza; dopuszcza wyłącznie własną, potwierdzoną publikację PID
+przez nadal aktualne wczytanie. Dowolne zdarzenie `patient-loaded` tego nie
+potwierdza. Kontynuacja nie zmienia referencji zapisu ani fazy odtwarzania.
+Inny token, pacjent, sejf, klucz, konto, sekwencja apply lub nowsze wczytanie
+wykluczają przyjęcie spóźnionego finalizatora.
+
+**Kolejność PAL i wpływ na wynik.** Przed synchronizacją PAL karty spożycia
+wykonywany jest istniejący dobór automatycznego PAL planu dla aktualnych,
+kompletnych danych. Następnie działa zwykłe obliczenie. Ręczny wybór, także
+równy wartości domyślnej, zachowuje pierwszeństwo. Przypadek syntetyczny:
+chłopiec, 123 miesiące, 141 cm, 34 kg; poprzedni pomiar 111 miesięcy, 133 cm,
+30 kg. W bazie `a0665089` szybki zapis mógł utrwalić PAL 1,4 i 1767 kcal/d,
+po czym odroczony producent bez edycji zmieniał je na PAL 1,6 i 2007 kcal/d.
+Po poprawce pierwsze obliczenie, zapis i późniejszy widok mają PAL 1,6 oraz
+2007 kcal/d i te same dwa pomiary. To korekta kolejności przygotowania wejść,
+która może zmienić przedwcześnie pokazywany lub zapisywany wynik na dotychczasowy
+wynik ustabilizowanego interfejsu. Wzory, współczynniki, normy, jednostki,
+progi i zasady doboru PAL oraz silniki SGA pozostają bez zmian.
+
+Podstawą jest istniejący `vildaUpdatePrepResolvePlanPalValue` i aktualne reguły
+opisane w ENERGY-PAL-TABELA oraz P-DIETA-STAB; ich treść pozostaje identyczna.
+Zmiana przenosi przygotowanie kontrolek przed obliczenie spożycia.
+
+Regresje wykonują rzeczywiste kontrolery i kolektory. Testy przeglądarkowe
+`patient-producer-consistency` i `automatic-pal-producer-order` używają
+fikcyjnego zaszyfrowanego sejfu, natywnego zapisu i potwierdzonej wersji;
+sprawdzają także późniejszą prawdziwą edycję oraz niezmienność innych rekordów.
+Puste pola wieku nadal podlegają P-PUSTY-WIEK z #901. Warunek blokowania płci
+z #902 obowiązuje również producenta wspólnego bufora formularza: automatyczne
+odtworzenie pustego, anonimowego formularza nie ustanawia `sexLocked` tylko
+dlatego, że selektor ma domyślną wartość. Zapisana tożsamość i jawne wczytanie
+zachowują dotychczasowy kontrakt blokady. Regresja obejmuje także drugie i trzecie
+wejście do zachowanej ramki DocPro, która odczytuje wspólny bufor.
+Miganie przycisków menu podczas nawigacji pozostaje następnym etapem.
 
 ### P-ZAPIS-POTWIERDZONY — referencja potwierdzonej treści i gotowość formularza, 2026-11-06
 
@@ -21251,6 +21520,727 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
+## Dziennik zdarzeń: importy partią i zgodność emiterów z testem A ≡ B — uśpione (P-DZIENNIK-ZDARZEN, E2-PR3a3, SW 1.1.494, `vilda_vault.js` 262, 2026-11-09)
+
+**Zmiana kliniczna: NIE** — wzory, progi, jednostki, interpretacje, zapis danych pacjentów, scalanie, format kopii
+i synchronizacja bez zmian. Dla użytkownika dziś nic się nie zmienia: bramka dziennika zdarzeń jest zamknięta, więc
+import karty z pliku, scalenie kopii konta i odtworzenie konta z kopii tylko ją sprawdzają (jeden odczyt pola w pamięci
+strony na zmianę) i kończą. Po włączeniu dziennika (PR włączający) każda wizyta, notatka, notatka biblioteki, lista
+i preferencja z importowanego pliku trafi do kolejki jako osobne zdarzenie, a po ostatnim — sygnał dla wysyłki. Wpływ
+kliniczny dziś: brak.
+
+**Skąd.** Plan `docs/SYNC_PRZYROSTOWA_PLAN.md`, wiersz 6c tabeli „Podział etapu 2”, tabela 3.5 (wiersz 17) i rozdział
+3.2. Decyzje właściciela z 2026-11-04: kolejność „najpierw wizyty” (pytanie 12.2) i naprawa utraty K6 w osobnym PR
+E2-PR3c (pytanie 12.3). Decyzja z 2026-11-09: różnica opisu wpisu Kosza między urządzeniami po wymianie pełnych kopii,
+widoczna w losowym przebiegu testu A ≡ B (profil pełny), trafia do zakresu E2-PR3c.
+
+### E2-PR3a3
+
+**Uśpienie.** „Każde wywołanie kończy się na bramce: bez otwarcia bazy, szyfrowania i żądań.” Przy zamkniętej bramce
+import tylko przegląda w pamięci tablice odszyfrowanego pliku; słuchacze `onBulkChange` nie są wołani. Eksport
+`VildaVault._eventLog` ma 37 kluczy: nowy `onBulkChange(cb)` (rejestracja słuchacza, bez bramki, pól okna i magazynów).
+
+**Sesja.** Operacje kolejki i kwarantanny sprawdzają sesję tak jak zapis karty (P-SESJA-ZAPISU): zmiana sesji w trakcie
+kończy operację bez zapisu. Wpisy partii importu karty niosą sesję importu, wpisy scalenia kopii — sesję z chwili
+emisji, wpisy odtworzenia konta — sesję konta odtworzonego z kopii.
+
+**Gdzie powstaje zdarzenie** (import = krok emisji, jak operacje złożone z E2-PR3a2):
+
+| Import | Wersje (`snap`) | Sekcje pliku |
+|---|---|---|
+| import karty z pliku (`importPatientFromEnvelope`, `ns`) | wersje zapisane przez import | notatki pacjenta z nagrobkami |
+| scalenie kopii konta (`mergeVaultBackup`, `ss`) | nowe wersje istniejących kart i wersje kart dopisanych | notatki pacjenta, notatki biblioteki i listy (z nagrobkami), preferencje |
+| odtworzenie konta z kopii (`restoreVaultBackup`, `as`) | każda wersja każdej karty kopii | jak scalenie kopii |
+
+Zasada sekcji: każda encja z pliku, która po imporcie jest w sklepie, daje zdarzenie (także encja bez zmiany — bez
+skutku u odbiorcy); encja, której nie ma w sklepie, nie daje wiersza. Wersje pominięte przez import (już w karcie,
+leżące pod inną kartą, karta pominięta jako usunięta albo scalona) nie dają zdarzenia. Wersja z kosza, która wraca
+z pliku, daje jeden `snap` (emisja w `Bkz_poImporcie` i w imporcie, powtórzenie pominięte w kroku). Bez zdarzenia:
+zdjęcie nagrobka karty i nagrobków notatek przy imporcie (niesie je zdarzenie encji z nowszą chwilą), rekordy konta
+z kopii (opakowania kluczy, rejestr, materiał synchronizacji), poświadczenie konta odtworzonego (bez daty zmiany hasła),
+import starego formatu (przez zapis karty, E2-PR3a2).
+
+**Partia i `onBulkChange`.** Zdarzenia importu idą do kolejki po zakończeniu kroku, stabilnie według kolejności rang
+(wersje, notatki pacjenta, ich nagrobki, notatki biblioteki, ich nagrobki, listy, ich nagrobki, preferencje), tym samym
+łańcuchem dopisań konta i przez `Bob_dopiszZ` (blokada współdzielona konta, najwyżej 20 s); import na łańcuch nie czeka.
+Po ostatnim dopisaniu partii słuchacze `onBulkChange` dostają `{ reason, count }`: `reason` — nazwa metody importu,
+`count` — liczba dopisanych wierszy; jedno wywołanie na krok importu. Bez wywołania, gdy partia nie trafiła do łańcucha
+(zamknięta bramka, tryb bez kolejki, zablokowany sejf) albo import przerwał wyjątek. Błąd słuchacza nie przerywa łańcucha;
+`emissionsSettled` czeka także na sygnał partii. Odtworzenie konta z kopii dopisuje partię samo (sesja konta z kopii
+jest ustawiona przed zapisami).
+
+**Tryby.** Kolejka tylko w trybie „Komputer prywatny” przy odblokowanym sejfie.
+
+**Zmiana bez wiersza.** Wpis partii bez wiersza nie wraca do importu; `count` liczy tylko wiersze. Wymaganie dla
+E2-PR3a4: zmianę bez wiersza dokłada przegląd kolejki, a przegląd po pierwszym odblokowaniu konta odtworzonego z kopii
+nie dubluje partii.
+
+**Test A ≡ B na prawdziwych emiterach.** Zdarzenia w teście pochodzą z prawdziwych emiterów sejfu: kopia sejfu testu
+zapisuje wpisy łańcucha do rejestru (urządzenia testu mają sejf w pamięci, więc bez tej kopii emisja kończyłaby się na
+warunku trybu), a koperty powstają z builderów w kolejności łańcucha. Model („emiter doskonały”) zostaje wyrocznią:
+w każdej mutacji ten sam ciąg rang i te same encje w każdej randze; jedyna dozwolona różnica — kolejność encji w obrębie
+rangi. Jawny wyjątek: rejestracja klucza dostępu w punkcie 1 (na urządzeniu testu API odmawia; emiter sprawdza test
+pokrycia). Model dostał regułę: zdjęcie wpisu kosza wersji obecnej w karcie daje `snap` tej wersji (nośnik pól karty —
+dowolny `snap` tej karty w kroku). Preferencja i usunięcie klucza dostępu w punkcie 1 idą przez API. Wyniki W1–W4 przy
+zdarzeniach z emiterów są takie same jak przy zdarzeniach z modelu (ziarna domyślne — literały bez zmian). W pliku 1430 porównań emiterów z modelem, wszystkie zgodne; w przebiegu 10 losowych ziaren trzech profili 2805 porównań, 10 różnic wyłącznie kolejności w obrębie rangi (w „Scal pacjentów”), 0 niezgodności.
+
+**Znane różnice i straty.**
+- K6 — „ZNANA UTRATA (zdarzenia; naprawa: E2-PR3c)”: poprawka wizyty na drugim urządzeniu, zanim to urządzenie wyśle
+  zmianę, a potem „Scal pacjentów” na pierwszym — po zdarzeniach i pełnej wymianie poprawka ginie na obu urządzeniach;
+  same pełne kopie ją zachowują (pole `blobyKlinicznie` literału). Naprawa zmianą reguły scalania w E2-PR3c (decyzja
+  12.3); warunek E2-PR6 „0 znanych utrat” bez zmian.
+- R2-E3 — „ZNANA RÓŻNICA (naprawa: E3-PR0)” (decyzja 12.2), literał bez zmian.
+
+**Przy zamkniętej bramce (co nowego).**
+
+| Skutek | Wartość |
+|---|---|
+| odczyt pola `VILDA_EVENT_LOG` | jeden na emisję; w zapisie bazowym: import karty 3, scalenie kopii 3, odtworzenie konta 10 |
+| bazy `vilda_sync_*`, klucze `vilda-sync-*`, blokady `vilda-sync*`, szyfrowanie zdarzeń, żądania sieci, wywołania `onBulkChange` | 0 |
+| zapis bazowy (`tests/fixtures/dziennik-zapis-bazowy.json`) | zmienia się tylko `odczytyBramki`: 46, 46, 44, 46 (było 30, 30, 28, 30) (Ze, prywatny, chmura, jednorazowo) |
+| e2e uśpienia | bez zmian (scenariusz bez importów) |
+
+**Kontrola granicy obrazu sejfu.** Przeliczone skróty `BASE`, `baseVaultSHA256` i `integratedVaultSHA256` (reguła
+z E2-PR3a2); fragment natywny, haki, moduły i paczka bez zmian.
+
+**ESLint.** Liczba wyjątków `no-useless-assignment` dla `vilda_vault.js` w `eslint-suppressions.json` spadła z 16 do 15
+(po kroku wokół scalenia kopii przypisanie w nim przestało być zgłaszane); bez nowych wyjątków.
+
+**Testy.** Dane wyłącznie fikcyjne, bez PESEL. Zmienione:
+- `tests/unit/sync-pokrycie-mutacji.test.mjs` — 73 przypadki (było 61): wiersz 17 — import karty z pliku (karta
+  usunięta, nowa wersja z notatką, wersja z kosza → jeden `snap`), scalenie kopii konta (bliźniaka i własnej, także
+  z nagrobkiem karty u odbiorcy starszym i nowszym), odtworzenie konta z kopii; odbiorca po zdarzeniach ≡ odbiorca po
+  pełnym ładunku; `onBulkChange` z literałem przypadku i `count` równym liczbie wierszy; trzy importy w domyślnym oknie
+  uprzęży bez wierszy i bez operacji na bazie kolejki.
+- `tests/unit/sync-dziennik-emisja.test.mjs` — 39 przypadków (było 26): EM25–EM33 (partia jako krok, kolejność rang,
+  jeden wiersz wersji z kosza, `onBulkChange` po ostatnim dopisaniu, brak wywołania przy zamkniętej bramce, w trybach
+  bez kolejki i po wyjątku importu, słuchacz rzucający, `emissionsSettled` czeka na sygnał partii, sesja — konto B,
+  ponowne zalogowanie, blokada, limit blokady konta, `Bem_partia` poza krokiem bez skutku); EM1 z `restoreVaultBackup`.
+- `tests/unit/sync-dziennik-wlasnosciowy.test.mjs` (A ≡ B) — 125 przypadków (było 118): zdarzenia z prawdziwych
+  emiterów, porównanie z modelem w każdej mutacji (AB1–AB6), K6; literały istniejących scenariuszy bez zmian.
+- `tests/unit/sync-dziennik-uspienie.test.mjs` — 44 przypadki (było 41): literał miejsc poza blokiem z importami
+  (30 wpisów, 43 wywołania), formy wywołań w imporcie (w bloku `try` kroku; nazwa partii — literał metody API funkcji;
+  w odtworzeniu konta krok wewnątrz `try`, którego `finally` woła słuchaczy odblokowania), samokontrola wariantami zła,
+  reguła domknięcia i czystość nowych funkcji części `Bem_`, 37 kluczy eksportu, `onBulkChange` niechronione.
+- `tests/unit/sync-dziennik-haki.test.mjs` — 11 przypadków: liczby wstawek w sejfie bez wstawek; przy otwartej bramce
+  kroki importu scenariusza wołają `onBulkChange` (ładunki hooków bez zmian także przy importach).
+- `tests/unit/sync-dziennik-zapis-bazowy.test.mjs` i fikstura — 15 przypadków (+1 pominięty): w fiksturze zmieniły się
+  tylko cztery pola `odczytyBramki`.
+- Uprząż: `tests/support/sejf-bez-wstawek.mjs` (kopia sejfu z rejestrem łańcucha), `tests/support/urzadzenie-sync.mjs`
+  (opcja `zrodla`), `tests/unit/s4d7-wspolne.mjs` (ładowanie sejfu w urządzeniach katalogu), `tests/support/okno-magazynu.mjs`
+  (`restoreVaultBackup` w `METODY_DANYCH`).
+- e2e — bez zmian.
+
+Pełny `npm test` i e2e — wyniki w opisie PR.
+
+**Czerwone na bazie** (`origin/audyt` `422a9a7b` z testami tego PR): sync-pokrycie-mutacji 10 z 73 (importy z wierszem i sygnał partii; zielone z natury: wiersze 1 i 4–16, import wersji
+z kosza — emisja od E2-PR3a2, importy w domyślnym oknie uprzęży, samokontrola); sync-dziennik-emisja 12 z 39;
+sync-dziennik-uspienie 10 z 44; sync-dziennik-haki 1 z 11; sync-dziennik-zapis-bazowy 5 z 15 (liczba odczytów bramki);
+A ≡ B 0 z 125 (emitery istnieją od E2-PR3a2, a program losowy nie ma importów — cały plik jest strażnikiem regresji);
+razem 38.
+
+**Mutanty.** 33 mutanty kodu importów, części emisji, uprzęży, kontroli granicy i porównania w teście A ≡ B (brak kroku albo emisji w każdym imporcie, sekcje bez nagrobków, preferencji albo identyfikatorów z sekcji nagrobków, sygnał partii przed wpisami albo bez wpisów, liczba wpisów zamiast wierszy, słuchacz bez ochrony, bez pomijania powtórzeń, `Bem_partia` poza krokiem, odczyt bramki w rejestracji słuchacza, zła albo brakująca nazwa partii, brak klucza eksportu, sesja importu, lista metod uprzęży, nieprzeliczone skróty, porównanie zawsze zgodne, model bez reguły zdjęcia wpisu kosza, kopia z warunkiem trybu, dodatkowy wyjątek z literału): 33 zabite.
+
+**Wymagania dla następnych PR.**
+- **E2-PR3a4.** Przegląd kolejki dokłada zmiany partii bez wiersza; przegląd po pierwszym odblokowaniu konta odtworzonego
+  z kopii nie dubluje partii.
+- **E2-PR3b.** Haki H1 i H2 w teście A ≡ B z modelu na emitery (rejestr łańcucha obejmie wtedy scalanie).
+- **E2-PR3c.** Literał K6 na brak utraty; analiza i naprawa różnicy opisu wpisu Kosza po wymianie pełnych kopii (decyzja
+  z 2026-11-09).
+- **E2-PR4.** Nadawca słucha `onBulkChange`; budżet wysyłki przy dużej partii (plan 3.6).
+- **E3-PR0.** Literał R2-E3.
+- Kolejne PR zmieniające `vilda_vault.js` poza fragmentem natywnym — przeliczenie skrótów kontroli granicy; nowe miejsce
+  zapisu albo import — emisja w kroku albo reguła „świadomie lokalne” (test pokrycia).
+
+**Ograniczenia.** Atrapa IndexedDB i Chromium (WebKit i Firefox niezmierzone); zdarzenie niesie stan encji z chwili
+dopisania; kolejność zdarzeń obowiązuje w obrębie karty przeglądarki; w teście A ≡ B urządzenia mają sejf w pamięci
+(dopisanie do bazy kolejki sprawdzają testy pokrycia i magazynu); program losowy A ≡ B nie ma importów (wiersz 17
+sprawdza test pokrycia).
+
+**Cofnięcie** = rewert PR (przy zamkniętej bramce nic nie powstaje na dysku; rewert cofa też skróty kontroli granicy).
+
+**Gdzie w kodzie.** `vilda_vault.js`: blok P-DZIENNIK-ZDARZEN, linie 5671–8007 (2337 linii); część `Bem_` 7814–8006 (14 funkcji: dochodzą `Bem_sekcje`, `Bem_partia`, `Bem_naPartie`, `Bem_powiadom`; stałe `Bem_partie`, `Bem_sluchaczePartii`, `Bem_SEKCJE`; 10 849 B). Poza blokiem: krok (`Bem_krokStart` przed `try`, `Bem_krokKoniec` w `finally`), emisja wersji (`Bem_zmiana`), sekcje (`Bem_sekcje`) i nazwa partii (`Bem_partia`) w `ns`, `ss` i `as`; w `Bev_EKSPORT` klucz `onBulkChange: Bem_naPartie`.
+
+**Wersje.** `vilda_vault.js` 261 → 262, `vilda_chrome.js` 265 → 266 i `vilda_session_bridge.js` 182 → 183 (wstrzykują sejf), SW 1.1.493 → 1.1.494; baza `origin/audyt` `296f05b3` (po vildaclinic/vilda-calc#913; projekt i „czerwone na bazie” z `422a9a7b`, po vildaclinic/vilda-calc#912). Po scaleniu #913 skróty kontroli granicy przeliczone od nowa. Bez nowego pliku w pamięci offline.
+
+## Plany opieki: przewinięcie do potomka zapisuje wersję nadawcy, bez nowej rewizji (P-PLAN-POTOMEK, SW 1.1.493, `vilda_vault.js` 261, 2026-11-09)
+
+**Zmiana kliniczna: NIE** — wzory, progi, jednostki, interpretacje, treść planów, kroków i ustaleń bez zmian. Zmienia
+się wyłącznie metadana wersji (`rev`, `updatedAtISO`) rekordu planu opieki zapisywanego podczas scalania synchronizacji
+(`mergeSyncPayload`, także delta `applyEncryptedDelta`). Wymaga akceptacji właściciela jako zmiana synchronizacji.
+
+**Skąd.** Pomiar z testu pokrycia synchronizacji (przypadek PM26 „plan opieki: usuń wpis planu”,
+`tests/unit/sync-pokrycie-mutacji.test.mjs` z E2-PR3a2, vildaclinic/vilda-calc#912, dane fikcyjne; w #912 zapisany
+jako oczekiwana różnica `D(A, B)` = `pnote [rev, updatedAtISO]`): urządzenie A tworzy plan, dodaje wpis
+(`addNote`) i go usuwa (`removePlanNote`); urządzenie B (kopia sprzed usunięcia) scala pełny ładunek A. B miało tę samą
+treść planu, ale `rev` 4 zamiast 3 i `updatedAtISO` równe chwili scalenia; kolejne wymiany pełnych ładunków tego nie
+wyrównywały, więc różnica stanu odbiorcy (A ≡ B) nie była pusta.
+
+**Przyczyna.** `CareMvpMergeContexts` rozpoznaje przypadek „przychodzący plan jest ścisłym potomkiem lokalnego”
+(historia pochodzenia lokalnej kopii zawiera się w przychodzącej) i zwraca dokładnie przychodzący kontekst z
+`changed: true`. Zapis w scalaniu notatek pacjenta traktował każde `changed` jak nowy wynik scalenia:
+`rev = max(lokalny, przychodzący) + 1`, `updatedAtISO = teraz`. Dla wyniku równoległych zmian to właściwe (nowa
+wersja, której nie ma żadna strona), dla przewinięcia — nie: odbiorca tworzył własną rewizję identycznej treści.
+
+**Odpowiedzi na pytania zlecenia.**
+1. Zapis przy przewinięciu jest potrzebny (zmienia się treść planu u odbiorcy), ale nowa rewizja i chwila scalenia —
+   nie. Dokumentacja planów („potwierdzony potomek zastępuje przodka”) i istniejący test zbieżności
+   (`care-plans-vault.test.mjs`, równe `rev` i `updatedAtISO` na obu urządzeniach) zakładają zbieżność wersji, więc
+   podbicie było odstępstwem od zamiaru, nie decyzją projektową.
+2. Pętli zapisów ani wysyłek nie było: przy kolejnej wymianie obie strony trafiały w gałąź „przychodzący zawiera się
+   w lokalnym” (`ignoreIncoming`) i niczego nie zapisywały ani nie zgłaszały. Zdarzenie scalenia (`merge`) nie planuje
+   pełnej wysyłki, ale `vilda_sync_integration.js` wysyła po nim deltę scalonej notatki (`Bt`); przed zmianą była to
+   kopia z `rev` 4, którą A przyjmowało bez zapisu — jedna dodatkowa wysyłka na przewinięcie, bez odbicia. Po zmianie
+   ta delta niesie dokładnie wersję A. A nie przyjmuje wyższego `rev` B o tej samej treści — to zamierzone (bez
+   przepisywania przyjętego planu) i zostaje bez zmian. Skutek był więc stały, ale ograniczony: rozjazd
+   `rev`/`updatedAtISO` do następnej zmiany planu, po jednym podbiciu przy każdym przewinięciu, oraz data modyfikacji
+   planu równa chwili scalenia, zależna od zegara odbiorcy.
+
+**Reguła po zmianie.** Gdy wynik scalenia jest przewinięciem do przychodzącego potomka (`fastForward`) i przychodzący
+`rev` jest wyższy od lokalnego, zapis bierze `rev` i `updatedAtISO` z ładunku, jak zwykła notatka wygrywająca scalanie.
+Bez zmian zostają:
+- wynik równoległych zmian i przegląd po synchronizacji: `max(rev) + 1` i bieżąca chwila;
+- przewinięcie do potomka, którego `rev` nie przewyższa lokalnego (np. kopia po wcześniejszym podbiciu): nadal
+  `max(rev) + 1` i bieżąca chwila. Konflikt edycji planu wykrywa tylko `rev` (`mutateCarePlan`, `baseRev`), więc zmiana
+  treści przy niezmienionym `rev` pozwoliłaby otwartemu formularzowi nadpisać nową treść bez konfliktu;
+- gałąź „przychodzący zawiera się w lokalnym” (ponowne dostarczenie przodka, ta sama treść z wyższym `rev`): bez zapisu.
+Plany w formacie przenośnym (użycie szablonu, fragment natywny) nie przechodzą przez `CareMvpMergeContexts` i nie
+zmieniają się.
+
+**Przypadki syntetyczne (wejście → oczekiwany wynik)** — `tests/unit/care-plans-sync-descendant.test.mjs`, prawdziwy
+zaszyfrowany sejf (`vilda_crypto.js`, `vilda_vault.js`, adapter pamięciowy), fikcyjne konta:
+- PM26: A `create` → `addNote` → `removePlanNote` (rev 3, 12:04); B z kopią sprzed usunięcia (rev 2) scala ładunek A
+  o 12:05 → B: rev 3, `updatedAtISO` 12:04, ta sama treść, wpis usunięty, jeden zapis i jedno zdarzenie zmiany planu;
+  trzy wymiany pełnych ładunków w obie strony → zero zapisów i zdarzeń planu, wersje równe (na bazie: B rev 4, 12:05);
+- B opóźnione o kilka operacji (`addStep`, `edit`, `complete`) → po pełnym ładunku i po delcie `applyEncryptedDelta`
+  dokładnie wersja A (na bazie: rev o 1 wyższy i chwila scalenia);
+- zegar A cofnięty (usunięcie wpisu o 11:00, kopia B z 12:03) → B przyjmuje rev i `updatedAtISO` 11:00 z A (na bazie:
+  rev 4, chwila scalenia 12:30);
+- równoległe `addNote` na A i B → B: `max(rev) + 1`, chwila scalenia, przegląd po synchronizacji, oba ustalenia
+  (bez zmian; zielone także na bazie);
+- B z zawyżonym `rev` tej samej treści → A niczego nie zapisuje; potomek A o niższym `rev` → B: `max(rev) + 1`,
+  formularz otwarty na starym `rev` dostaje konflikt; następny potomek z B o wyższym `rev` → A przyjmuje dokładnie
+  wersję B, kolejne wymiany bez zapisów (na bazie końcowa zbieżność czerwona: rev 7 wobec 6).
+Na bazie `aab1147` cztery z pięciu przypadków są czerwone, przypadek równoległy zielony. Do tego PM26 w
+`tests/unit/sync-pokrycie-mutacji.test.mjs` traci oczekiwaną różnicę (`roznica`): różnica stanu odbiorcy po zdarzeniach
+i po pełnym ładunku jest pusta; na sejfie z `422a9a7b` (po #912) ten przypadek jest czerwony (`D(A, B)` niepuste).
+
+**Ograniczenia.** Rekordy, które już mają rozjechane `rev`/`updatedAtISO` (sprzed zmiany), wyrównują się przy
+następnej zmianie planu po stronie z wyższym `rev` albo przy potomku o wyższym `rev`; poprawka nie przepisuje ich sama.
+Dwa urządzenia, które równolegle scalą nawzajem swoje wersje sprzed scalenia, nadal mają równy `rev`, ale własne chwile
+scalenia (przypadek bez zmian; wyrównanie samych metadanych przy równej treści wymagałoby osobnej decyzji).
+
+**Przypięcie sejfu.** Zmiana leży poza fragmentem natywnym (`CareMvpMergeContexts` i zapis w scalaniu notatek), więc
+zmienia bazę przypiętą od #910/#911, jak wcześniej E2-PR3a2 (#912): `tools/check_clinical_workspace_boundary.mjs`
+(`BASE` `1cd4cba4…`) i `runtime/clinical-workspace-v1/manifest.json` (`baseVaultSHA256` `1cd4cba4…`,
+`integratedVaultSHA256` `5f5ced47…`). Różnica nowej bazy wobec bazy po #912 (`3422e1ce…`) to wyłącznie dwa miejsca
+tej poprawki. Budowniczy natywnej integracji w prywatnym `vilda-source` (`tools/build-clinical-workspace-runtime.mjs`,
+`BASE_SHA256`) wymaga tego samego przypięcia — do decyzji właściciela, poza tym PR.
+
+**Wersje.** `vilda_vault.js?v=260→261`, `vilda_chrome.js?v=264→265`, `vilda_session_bridge.js?v=181→182` (wstrzykują
+sejf); SW 1.1.492 → **1.1.493**; baza `origin/audyt` `422a9a7b` (po #912).
+
+## Dziennik zdarzeń: dopisywanie zmian do kolejki w miejscach zapisu — uśpione (P-DZIENNIK-ZDARZEN, E2-PR3a2, SW 1.1.492, `vilda_vault.js` 260, 2026-11-09)
+
+**Zmiana kliniczna: NIE** — wzory, progi, jednostki, interpretacje, zapis danych pacjentów, scalanie, format kopii
+i synchronizacja bez zmian. Dla użytkownika dziś nic się nie zmienia: bramka dziennika zdarzeń jest zamknięta, więc
+każde miejsce zapisu tylko ją sprawdza (jeden odczyt pola w pamięci strony) i kończy. Po włączeniu dziennika (PR
+włączający, E2-PR4 i E2-PR6) każda zmiana karty, wizyty, kosza, notatki, planu opieki, przypomnienia, notatki
+biblioteki, listy, preferencji, klucza dostępu i hasła trafi do kolejki jako osobne zdarzenie. Wpływ kliniczny dziś:
+brak.
+
+**Skąd.** Plan `docs/SYNC_PRZYROSTOWA_PLAN.md`, wiersz 6b tabeli „Podział etapu 2”, rozdział 3.2 („Dopisanie”)
+i tabela 3.5 (wiersze 1 i 4–16). Decyzje właściciela z 2026-11-04: podział E2-PR3a na cztery części (pytanie 12.1)
+i kolejność „najpierw wizyty” w „Scal pacjentów” (pytanie 12.2). Decyzja z 2026-11-09: ten PR przelicza przypięte
+skróty obrazu sejfu w kontroli granicy (niżej).
+
+### E2-PR3a2
+
+**Uśpienie.** „Każde wywołanie kończy się na bramce: bez otwarcia bazy, szyfrowania i żądań.” Kod emisji to trzecia
+część bloku P-DZIENNIK-ZDARZEN (prefiks `Bem_`, za znacznikiem `/* P-DZIENNIK-ZDARZEN: emisja */`). Emisja czyta pole
+okna `VILDA_EVENT_LOG` jako pierwszą instrukcję i przy zamkniętej bramce kończy: bez odczytu `indexedDB`,
+`localStorage` i `crypto`, bez żądania Web Locks, bez otwarcia bazy kolejki, bez szyfrowania zdarzeń, bez kluczy
+i bez żądań sieci. Hak, który niczego nie oznacza (scalanie z chmury, usunięcie wersji bez nagrobka), bramki nie
+czyta. Kroki operacji złożonych to tylko licznik w pamięci strony. Eksport `VildaVault._eventLog` ma 36 kluczy: nowy
+`emissionsSettled` (bez bramki, bez pól okna i magazynów; dla testów i nadawcy z E2-PR4).
+
+**Sesja.** Operacje kolejki i kwarantanny sprawdzają sesję tak jak zapis karty (P-SESJA-ZAPISU): zmiana sesji w trakcie
+kończy operację bez zapisu. Dopisanie z miejsca zapisu niesie sesję z chwili zapisu (sesję operacji, gdy operacja ją
+podaje — „Scal pacjentów”, „Scal z istniejącym”, „Usuń pacjenta”, zapis notatki, „Przywróć”); blokada sejfu,
+przełączenie konta albo ponowne zalogowanie przed dopisaniem albo w jego trakcie kończy je bez wiersza.
+
+**Gdzie powstaje zdarzenie** (emisja w emiterach haków sejfu przed słuchaczami oraz w miejscach zapisu bez haka):
+
+| Operacja | Rodzaj zdarzenia | Miejsce |
+|---|---|---|
+| zapis karty i nowej wizyty, „przywróć wersję jako nową”, osoba spoza bazy, import starego formatu | `snap` | hak `onPatientSaved` (`Vn`) |
+| poprawka wizyty, gwiazdka, odpięcie, edycja i usunięcie pomiaru | `snap` | hak `onPatientSaved` (`Vn`) |
+| „Przywróć” z kosza | `snap` | hak `onPatientSaved`; gdy wizyta jest już w karcie — emisja bezpośrednia wersji przywracanej (zdjęcie wpisu kosza niesie zdarzenie wersji; do 2026-11-09 ten wiersz podawał błędnie „tylko przy zapisanym nagłówku karty”) |
+| wizyty przeniesione pod kartę celu w „Scal pacjentów” | `snap` | emisja bezpośrednia w pętli przenoszenia |
+| wizyty przepisane po imporcie wpisu z kosza | `snap` | emisja bezpośrednia w `Bkz_poImporcie` |
+| „Kosz” | `stomb` | emisja bezpośrednia po zapisie wpisu kosza i usunięciu wizyty |
+| retencja | `stomb` (jedno na wizytę) | emisja bezpośrednia dla nagrobków, które zostały |
+| „Usuń pacjenta” (także w „Scal pacjentów” i „Scal z istniejącym”) | `ptomb` | hak `onPatientDeleted` (`ws`) |
+| notatka pacjenta, plan opieki, przypomnienie (zapis, ukończenie, odwołanie, „nie przyszedł”, odłożenie) | `pnote` | hak `onPatientNoteChanged` (`qr`) |
+| usunięcie notatki pacjenta, także przy „Usuń pacjenta” | `pnotetomb` | hak `onPatientNoteChanged` (`qr`) |
+| zapis notatki, który zostawia nagrobek w stanie „czeka” | `pnotetomb` | emisja bezpośrednia w `Bnp_poZapisie` |
+| notatka biblioteki: zapis, usunięcie | `note`, `notetomb` | hak `onNoteChanged` (`Qr`) |
+| lista: zapis, usunięcie | `plist`, `plisttomb` | hak `onPatientListChanged` (`jn`) |
+| preferencja zapisana przez hak `VildaPersistence` | `pref` | emisja bezpośrednia w `Ps`, tylko gdy zapisało |
+| poczekalnia (harmonogram, listy) | `pref` | emisja bezpośrednia w `Aj` |
+| klucz dostępu: rejestracja, usunięcie | `pk`, `pktomb` | hak `onPasskeyChanged` (`Yn`) |
+| zmiana hasła, reset hasła przy odblokowanym sejfie | `cred` | hak `onCredentialChanged` (`Qe2`) |
+
+Nagrobek notatki przy „Usuń pacjenta” powstaje w usunięciu notatki i w odnowieniu nagrobka (sprawdzone; bez osobnej
+emisji w `Bnp_usunZPacjentem`). Plany opieki i przypomnienia to notatki pacjenta — obejmuje je hak `qr`, także zapis
+z modułu planów opieki (fragment natywny bez zmian). Akcje `save` i `delete` emiterów haków oznaczają zapis lokalny;
+scalanie z chmury używa akcji `merge` i `merge-delete` (bez zdarzenia). Nowe miejsce zapisu danych z sekcji ładunku
+synchronizacji ma emisję albo regułę „świadomie lokalne” (test pokrycia).
+
+**Bez zdarzenia (świadomie lokalne).** Usunięcie wersji bez nagrobka (`deleteSnapshot`, D-8 A); scalanie z chmury
+(`Le`, `ps`, `applyEncryptedEvent` i ich kroki); ratunek notatki D-21 (hak w E2-PR3b); zmiana hasła z chmury
+(`password-changed-remotely`); porządki pól notatek (`mo`) i rozdzielenie nazwisk (`Ja`) — ta sama treść, liczone na
+każdym urządzeniu; przenumerowanie `seq` i licznik wizyt (lokalne); zdjęcie nagrobka przy zapisie (niesie je zdarzenie
+encji); opakowania kluczy, materiał synchronizacji, rejestr i tryb; cienie wersji; importy `ns`, `ss`, `as` (poza
+`Bkz_poImporcie`) — od E2-PR3a3 partią (wpis wyżej).
+
+**Kolejność w kroku.** „Wersje, także przeniesione pod kartę celu „Scal pacjentów”, potem wpisy kosza, potem nagrobki
+kart, potem reszta” (notatki pacjenta, ich nagrobki, notatki biblioteki, ich nagrobki, listy, ich nagrobki,
+preferencje, klucze dostępu, ich nagrobki, hasło). Operacje złożone („Scal pacjentów”, „Scal z istniejącym”, „Usuń
+pacjenta”, zapis notatki, „Kosz”, przeniesienie wpisów spoza bazy) są krokiem: emisje w trakcie kroku czekają do jego
+końca i idą stabilnie według tej kolejności, bez powtórzeń tej samej encji w tej samej sesji. W „Scal pacjentów”:
+„najpierw wizyty” (pytanie 12.2): `snap` przed `ptomb`; R2-E3 zostaje „ZNANA RÓŻNICA” do E3-PR0. Kolejność obowiązuje
+w obrębie karty przeglądarki.
+
+**Emitery nie czekają.** Emisja niczego nie zwraca i nigdy nie rzuca; dopisanie idzie w tle łańcuchem dopisań konta,
+po kolei, w kolejności emisji. Każde dopisanie idzie przez wewnętrzne `Bob_dopiszZ`, budowane nad `Bob_dopiszPod`:
+blokada współdzielona konta `vilda-sync-db:<userId>` brana przed nim. Łańcuch dopisań może czekać na blokadę konta do
+20 s; zapis karty na niego nie czeka. Publiczne `enqueue` woła to samo `Bob_dopiszZ` — zachowanie bez zmian. Treść
+wiersza powstaje w chwili dopisania (builder czyta bieżący stan sklepu), więc dwie szybkie zmiany tej samej encji dają
+jeden wiersz z późniejszą treścią (łączenie wpisów na ogonie kolejki).
+
+**Tryby.** Kolejka tylko w trybie „Komputer prywatny” przy odblokowanym sejfie; „Komputer w pracy”, „Zaloguj
+jednorazowo” i sejf w pamięci — emisja kończy się po bramce, bez bazy kolejki, blokad i kluczy.
+
+**Zmiana bez wiersza.** Wynik dopisania nie wraca do miejsca zapisu. Encja usunięta przed dopisaniem nie daje wiersza
+(jej nagrobek ma własne zdarzenie). Wymaganie dla E2-PR3a4: zmianę bez wiersza dokłada przegląd kolejki
+(`sweepOutbox`); do tego czasu bramka jest zamknięta, a pełna wysyłka działa jak dziś.
+
+**Przy zamkniętej bramce (co nowego).**
+
+| Skutek | Wartość |
+|---|---|
+| odczyt pola `VILDA_EVENT_LOG` | jeden na zdarzenie (emisję); hak bez znaczenia — 0 |
+| bazy `vilda_sync_*`, klucze `vilda-sync-*`, blokady `vilda-sync*`, szyfrowanie zdarzeń, żądania sieci | 0 |
+| zapis bazowy (`tests/fixtures/dziennik-zapis-bazowy.json`) | zmienia się tylko `odczytyBramki`: 30, 30, 28, 30 (Ze, prywatny, chmura, jednorazowo) |
+| sejf bez wstawek wobec sejfu | różnica `databases()` +1 w krokach usunięcia konta tylko poza „Zaloguj jednorazowo” (z E2-PR3a1) i `odczytyBramki` |
+| e2e uśpienia | odczyty pola na krok `[0, 1, 1, 1, 1, 1, 1, 1, 1, 3, 1, 1, 1, 0, 0, 0]` (konto, karta, wersja, kosz, „Przywróć”, notatka, szablon, lista, druga karta, „Scal pacjentów”, trzecia karta, „Usuń pacjenta”, zmiana hasła, blokada, odblokowanie, usunięcie konta) (te same w trzech trybach); `databases()` w kroku usunięcia konta 4/4/2 (od vildaclinic/vilda-calc#910; wcześniej 3/3/1 od E2-PR3a1c i 2/2/1 od E2-PR3a1) — bez zmian |
+| rejestracja i logowanie kluczem dostępu (WebAuthn), hak `VildaPersistence` | kończą się na bramce: bez bazy kolejki, szyfrowania zdarzeń i żądań (U5) |
+
+**Kontrola granicy obrazu sejfu.** Od vildaclinic/vilda-calc#910 `npm run test:repo` sprawdza, że `vilda_vault.js` to
+przypięty obraz bazowy plus fragment natywny planów opieki i jego 16 haków. Ten PR przelicza trzy skróty: `BASE`
+w `tools/check_clinical_workspace_boundary.mjs` oraz `baseVaultSHA256` i `integratedVaultSHA256`
+w `runtime/clinical-workspace-v1/manifest.json`; fragment natywny, haki, moduły i paczka bez zmian. Reguła dla
+kolejnych PR zmieniających `vilda_vault.js` poza fragmentem: to samo przeliczenie; składanie fragmentu w repozytorium
+źródeł startuje od obrazu bazowego po tym PR.
+
+**Testy.** Dane wyłącznie fikcyjne, bez PESEL. Nowe:
+- `tests/unit/sync-pokrycie-mutacji.test.mjs` — 61 przypadków: każda mutacja z wierszy 1 i 4–16 tabeli 3.5 na
+  prawdziwym sejfie z otwartą bramką (okno uprzęży z `emisja: true`); wiersze kolejki po mutacji (rodzaje w kolejności
+  `seqLocal`) i odbiorca-bliźniak po zastosowaniu tych zdarzeń ≡ odbiorca po pełnym ładunku; odbiorca bez nagrobka —
+  także stan równy nadawcy; z nagrobkiem karty u odbiorcy starszym niż mutacja (mutacja podnosząca chwilę karty: klasa
+  „karta częściowa” — wersje, których zdarzenia nie niosą, naprawa w E2-PR3b; pełny ładunek bez różnicy) i nowszym
+  (karta nieobecna u obu odbiorców, a po scaleniu eksportu odbiorcy karta znika u nadawcy, wiersze nadawcy zostają);
+  scalanie z chmury bez wierszy; samokontrola listy metod danych uprzęży.
+- `tests/unit/sync-dziennik-emisja.test.mjs` — 26 przypadków (EM1–EM24): przy zamkniętej bramce każda metoda danych
+  czyta pole bramki tyle razy, ile emituje (licznik w kopii sejfu), bez `indexedDB`, `localStorage`, `crypto`, blokad
+  i bazy kolejki; hak bez znaczenia bez odczytu; tryby bez kolejki; zablokowany sejf; emitery nie czekają (blokada konta
+  trzymana przez test); limit 20 s; kolejność łańcucha; sesja z chwili zapisu (blokada sejfu, przełączenie konta,
+  „Scal pacjentów” przerwane zmianą sesji); kroki, kolejność rang, zagnieżdżenie, wyjątek w kroku, powtórzenia; blokada
+  współdzielona przed `Bob_dopiszPod`; `enqueue` bez zmian; usuwanie konta w trakcie; `emissionsSettled`; dwie karty
+  przeglądarki; dwie szybkie poprawki → jeden wiersz.
+- `tests/unit/sync-dziennik-haki.test.mjs` — 11 przypadków (KH1–KH6): ładunki i kolejność wywołań 8 hooków
+  `VildaVault.on…` równe na sejfie i na sejfie bez wstawek, przy zamkniętej i otwartej bramce (także `snapshotId: null`
+  przy usunięciu wersji, `onPatientListChanged` bez `deletedAtISO`, liczba `syncPush`).
+- Uprząż: `tests/support/sejf-bez-wstawek.mjs` (kopia źródła sejfu bez wywołań bloku poza nim; `Bob_oznacz(…)` →
+  `false`) i `tests/support/encje-ladunku.mjs` (model encji wydzielony bez zmian z testu A ≡ B).
+
+Zmienione:
+- `tests/unit/sync-dziennik-uspienie.test.mjs` — 41 przypadków (było 31): literał miejsc poza blokiem z emiterami,
+  miejscami zapisu i krokami (z formami wywołań i samokontrolą wariantami zła), trzy części bloku, reguła domknięcia
+  części `Bem_`, eksport 36 kluczy, U4′ (odczyty bramki = liczba emisji), U5 (klucze dostępu i hak `VildaPersistence`;
+  żądania i operacje `crypto.subtle` jak na sejfie bez wstawek — jedyne żądanie to dotychczasowa kopia klucza „roaming”).
+- `tests/unit/sync-dziennik-zapis-bazowy.test.mjs` i fikstura — 15 przypadków (+1 pominięty: nagranie): w fiksturze
+  zmieniły się tylko cztery pola `odczytyBramki`; odczyty pola okna = liczba emisji w każdym wariancie; porównanie
+  z sejfem bez wstawek.
+- e2e `tests/e2e/dziennik-zdarzen-uspienie.spec.mjs` — 6 przypadków: kolumna odczytów bramki na krok; reszta literałów
+  bez zmian.
+- `tests/unit/sync-dziennik-wlasnosciowy.test.mjs` (A ≡ B) — 118 przypadków bez zmian wyniku; model encji importowany.
+- Uprząż okna magazynu: opcja `emisja` (domyślnie metody danych z jawnej listy `METODY_DANYCH` idą przy zamkniętej
+  bramce, więc starsze testy kolejki widzą tylko jawne dopisania), opcja `zrodla` (podmiana źródła pliku okna);
+  scenariusz magazynu zapisuje dane przy zamkniętej bramce. Wyniki starszych testów kolejki, konta i kart bez zmian.
+
+Pełny `npm test` (polityka repozytorium, kontrole granicy, ESLint, składnia, testy jednostkowe, PRO) i e2e — wyniki w opisie PR.
+
+**Czerwone na bazie** (`origin/audyt` `aab11479` z testami tego PR): sync-pokrycie-mutacji 58 z 61 (zielone z natury: dwa przypadki scalania i usunięcia wersji bez wiersza oraz
+samokontrola uprzęży); sync-dziennik-emisja 22 z 26 (zielone: tryby bez kolejki, zablokowany sejf, blokada w `enqueue`,
+`enqueue` bez zmian); sync-dziennik-haki 1 z 11 (samokontrola sejfu bez wstawek; reszta to strażniki ładunków);
+sync-dziennik-uspienie 14 z 41; sync-dziennik-zapis-bazowy 5 z 15 (liczba odczytów bramki); e2e uśpienia 4 z 6 (kolumna
+odczytów bramki; dwa przypadki strony z elementem o `id` `VILDA_EVENT_LOG` zielone).
+
+**Mutanty.** 47 mutantów kodu emisji, uprzęży i kontroli granicy (brak emisji w każdym emiterze i miejscu zapisu, złe mapowanie akcji, brak kroku, sortowanie, powtórzenia, zagnieżdżenie, bramka nie pierwsza, czekanie na emisję, sesja ujęta przy dopisaniu, dopisanie bez blokady konta, limit 10 s, jeden łańcuch dla kont, brak warunku trybu, `emissionsSettled` od razu, lista metod uprzęży, nieprzeliczone skróty): 45 zabitych, 2 równoważne — emisja z retencji także dla wersji, której usunięcie się nie udało (builder nie znajduje jej nagrobka, bez wiersza), oraz emisja bez sprawdzenia sesji (dopisanie sprawdza sesję po uzyskaniu blokady konta, bez wiersza).
+
+**Wymagania dla następnych PR.**
+- **E2-PR3a3** — wykonane w E2-PR3a3 (wpis wyżej). Partie importu (`ns`, `ss`, `as`) przez ten sam łańcuch dopisań i
+  `Bob_dopiszZ`, z krokiem wokół importu. Model A ≡ B: nośnik pól karty — dowolny `snap` tej karty w kroku (prawdziwy emiter w „Przywróć”, gdy wizyta
+  jest już w karcie, wysyła `snap` wersji przywracanej).
+- **E2-PR3a4.** Przegląd kolejki dokłada zmiany bez wiersza (wyżej), w tym nagrobek klucza dostępu usuniętego przy
+  zablokowanym sejfie.
+- **E2-PR3b.** W teście pokrycia wariant „nagrobek starszy u odbiorcy” przy nowej wersji przechodzi z „karta częściowa”
+  na brak różnicy po haku `pfull`.
+- **E2-PR4.** Nadawca może czekać na `emissionsSettled` przed wysyłką partii; `syncPush()` w `Yn` według decyzji 7.
+- Kolejne PR zmieniające `vilda_vault.js` poza fragmentem natywnym — przeliczenie skrótów kontroli granicy.
+
+**Ograniczenia.** Atrapa IndexedDB i Chromium (WebKit i Firefox niezmierzone). Kolejność zdarzeń obowiązuje w obrębie
+karty przeglądarki. Zdarzenie niesie stan encji z chwili dopisania.
+
+**Cofnięcie** = rewert PR (przy zamkniętej bramce nic nie powstaje na dysku). Po rewercie trzeba też cofnąć skróty
+kontroli granicy (rewert robi to sam).
+
+**Gdzie w kodzie.** `vilda_vault.js`: blok P-DZIENNIK-ZDARZEN, linie 5671–7947 (2277 linii); część `Bev_` 5671–6331, część `Bob_` 6332–7812 (w niej nowe `Bob_dopiszZ`), część `Bem_` 7813–7946 (10 funkcji: `Bem_pole`, `Bem_zHaka`, `Bem_hak`, `Bem_zmiana`, `Bem_krokStart`, `Bem_klucz`, `Bem_krokKoniec`, `Bem_doLancucha`, `Bem_dopisz`, `Bem_gotowe`; 7483 B). Poza blokiem: `Bem_hak` w `Vn`, `ws`, `qr`, `Qr`, `jn`, `Yn`, `Qe2`; `Bem_zmiana` w `Ps`, `Aj`, `Bnp_poZapisie`, `Bsc_podBlokada`, `Bkz_poImporcie`, `Bkz_przywrocWSesji`, `Bkz_doKosza`, `Bkz_przytnij`; kroki (`Bem_krokStart` przed `try`, `Bem_krokKoniec` w `finally`) w `Bsc0`, `$a`, `Bpu_usun`, `Ad`, `Bkz_doKosza`, `qa`.
+
+**Wersje.** `vilda_vault.js` 259 → 260, `vilda_chrome.js` 263 → 264 i `vilda_session_bridge.js` 180 → 181 (wstrzykują sejf), SW 1.1.491 → 1.1.492; baza `origin/audyt` `aab11479` (po vildaclinic/vilda-calc#911). Bez nowego pliku w pamięci offline.
+
+## Sejf: „Usuń konto” a inne karty — dziennik dostępu, ustawienia kopii, karta odświeżona, lista kont, podpowiedź przy czekaniu i dokończenie przerwanego usuwania (P-USUN-KONTO-KARTY, E2-PR3a1c, SW 1.1.489, `vilda_vault.js` 257, 2026-11-08)
+
+**Zmiana kliniczna: NIE** — wzory, progi, jednostki, interpretacje, zapis danych pacjentów, scalanie, format kopii
+i synchronizacja bez zmian. Dla użytkownika: „Usuń konto” usuwa też dziennik dostępu i ustawienia kopii zapasowej tego
+konta (same pliki kopii bez zmian; dziennik można wcześniej zapisać przyciskiem „Eksportuj dziennik” w Ustawieniach).
+Jeśli konto usunięto w innej karcie przeglądarki, karta, w której było otwarte, także po odświeżeniu albo po powrocie
+z innej strony pokazuje ekran logowania bez tego konta z banerem „Konto zostało usunięte z tej przeglądarki.”. Ekrany
+„Kto się loguje?” i „Witamy” w innych kartach bez sesji odświeżają się same — bez usuniętego konta i z tym samym
+banerem. Gdy usuwanie czeka na inną kartę, pod przyciskiem „Usuń to konto” pojawia się podpowiedź; dopóki usuwanie trwa,
+przeglądarka pyta przed zamknięciem strony. Jeśli strona mimo to zostanie zamknięta albo odświeżona, aplikacja sama
+dokończy usuwanie przy następnym wyświetleniu listy kont. Wpływ kliniczny: brak — dane pacjentów i ich zapis się nie
+zmieniają.
+
+**Skąd.** Plan `docs/SYNC_PRZYROSTOWA_PLAN.md`, wiersz 6a″ tabeli „Podział etapu 2”. Decyzje właściciela:
+- 2026-11-04 — zachowanie drugiej karty przy „Usuń konto” w osobnym małym PR (pytanie 12.4);
+- 2026-11-05 — dwa PR po kolei: E2-PR3a1b (wpis niżej), potem ten (dziennik dostępu konta, karta odświeżona albo
+  odtworzona, ekran logowania w kartach bez sesji, podpowiedź przy czekaniu i `beforeunload`); teksty komunikatów
+  dosłownie (tekst 4 — niżej);
+- 2026-11-06 — decyzje z E2-PR3a1b (baner w aplikacji zainstalowanej po własnym „Usuń konto”, ekran logowania z banerem
+  przy usunięciu w ostatnich krokach logowania) obowiązują bez zmian;
+- 2026-11-07 — dziennik dostępu konta usuwany razem z kontem; aplikacja dokończy usuwanie przerwane zamknięciem albo
+  odświeżeniem strony przy liście kont; baner tekst 1 także na „Kto się loguje?” i „Witamy” w kartach bez sesji, gdy
+  lista odświeży się po usunięciu konta.
+
+Od przyjęcia E2-PR3a1c decyzja 12.4 ma pełne brzmienie; biblioteka szablonów — według zasad modułu szablonów.
+
+### E2-PR3a1c
+
+**Zachowanie po zmianie** (teksty 1–3 jak w E2-PR3a1b, tekst 4 niżej):
+1. Dziennik dostępu konta (baza `vilda_audit_v1_<userId>`) jest usuwany razem z kontem, także przy drugiej karcie
+   i w aplikacji zainstalowanej: po „Usuń konto” pełna lista baz przeglądarki zawiera tylko bazy wspólne. „Usuń
+   konto” na dziennik nie czeka; jeśli inna karta ze starszą wersją aplikacji go trzyma, kasowanie kończy się samo po
+   jej zamknięciu albo przy następnym logowaniu. Bazę dziennika zakłada tylko wpis odblokowania (logowanie, założenie
+   konta, odtworzenie sesji), niezależnie od tego, co strona czyta z dziennika przy logowaniu; bez bazy dziennik jest
+   pusty („✓ spójny (0)”); po usunięciu konta nie ma bazy jego dziennika także wtedy, gdy logowanie w innej karcie
+   zbiegło się z usunięciem. Dziennik działa przez całą sesję także po przywróceniu sesji przy wczytaniu strony: moduł
+   dziennika wczytany, gdy sejf jest już odblokowany, zapisuje jeden wpis odblokowania tej sesji.
+2. Karta odświeżona albo odtworzona (przeładowanie, pamięć przeglądarki, wznowienie) po usunięciu konta w innej karcie:
+   ekran logowania bez tego konta z banerem tekst 1, przy każdym odświeżeniu, aż do zalogowania w tej karcie. Tak samo
+   po wygaśnięciu sesji, gdy konto w tym czasie usunięto, i po odświeżeniu karty z banerem w trakcie czekającego
+   usuwania. Jeśli usunięcie się nie uda, konto wraca przy następnym odświeżeniu — także wtedy, gdy karta odświeżona
+   w trakcie kolejnej próby usuwania tego konta pokazała ekran logowania z banerem, bez tego konta. Bez banera — jak
+   dotąd: wylogowanie, bezczynność, błąd hasła, zwykłe wygaśnięcie sesji, „Usuń konto” w tej karcie, logowanie w toku;
+   aplikacja zainstalowana po własnym „Usuń konto” — z banerem, jak bez odświeżania (decyzja z 2026-11-06). Start strony
+   po odświeżeniu przebiega jak przed tą zmianą: bez czyszczenia stanu aplikacji i bez błędów strony.
+3. „Kto się loguje?” i „Witamy” w kartach bez sesji (także w powłoce `app.html`): lista kont odświeża się sama, bez
+   kliknięcia, bez usuniętego konta i z banerem tekst 1 (decyzja z 2026-11-07); przy tej samej liście ekran nie rysuje
+   się od nowa. Formularz logowania innego konta (wpisane hasło, fokus) i pozostałe ekrany bez zmian; karta zalogowana
+   na usuwane konto rysuje ekran logowania raz. Karta bez sesji wczytana od nowa pokazuje listę bez usuniętego konta.
+4. Gdy kasowanie bazy sejfu w karcie usuwającej czeka (zdarzenie `blocked` albo brak końca po 1 s — okno pytania w innej
+   karcie nie daje `blocked`), pod przyciskiem „Usuń to konto” jest tekst 4 (`role="status"`); w aplikacji
+   zainstalowanej ten sam tekst stoi w pasku nad ekranem logowania powłoki. Przycisk jest wyłączony, a przeglądarka pyta
+   przed zamknięciem albo przeładowaniem strony, dopóki usuwanie trwa (pytanie tylko na czas usuwania). Po błędzie
+   usuwania podpowiedź znika, a przeglądarka już nie pyta przy zamykaniu strony; przejście na `index.html` po udanym
+   usunięciu — bez pytania.
+5. Usuwanie przerwane zamknięciem albo odświeżeniem strony kończy się przy następnym wyświetleniu listy kont w dowolnej
+   karcie: konto znika z listy od razu, a usuwanie biegnie w tle; po nieudanej próbie próbuje następna karta. Lista kont
+   nie powtarza usuwania, które trwa w tym samym dokumencie (konto usuwane jeden raz).
+6. „Usuń konto” usuwa też ustawienia kopii zapasowej tego konta (folder, auto-kopia, ostatnia kopia), także gdy inna
+   karta właśnie je zapisuje; ustawienia innych kont i same pliki kopii bez zmian; usuwanie tych wpisów trwa najwyżej
+   2 s.
+7. W aplikacji zainstalowanej „Usuń konto” nie wylogowuje innego konta, które ktoś zalogował w tym oknie w trakcie
+   czekania.
+8. Tryb „Zaloguj jednorazowo”: bez kasowania dziennika i usuwania ustawień kopii (punkty 1 i 6), bez znaczników,
+   ponowień i dokończenia (jak przy kasowaniu kolejki konta).
+
+**Tekst 4** (dosłownie, decyzja z 2026-11-05; jedno źródło: `VildaVault.REMOVE_USER_WAITING_TEXT`):
+„Czekam, aż inne karty z aplikacją zwolnią to konto. Zamknij je albo odpowiedz na pytanie otwarte w innej karcie. Nie
+zamykaj tej strony.” Teksty 1–3 i potwierdzenie „Usuń konto” bez zmian.
+
+**Mechanizm** (`vilda_vault.js`, nowy blok `P-USUN-KONTO-KARTY (E2-PR3a1c)` zaraz za blokiem `Buk_`, prefiks `Bkr_`;
+blok `Buk_` bez zmian):
+- **Ogłoszenie usunięcia konta.** Jeden obiekt `BroadcastChannel('vilda-konta')` na dokument (wysyła i słucha; nadawca
+  nie dostaje własnego komunikatu). Komunikat `{type: 'account-removed'}`, bez danych konta, idzie zaraz po udanym
+  usunięciu wpisu rejestru (`Bkr_oglos`; w gałęzi konta bez metadanych tylko, gdy wpis był); błąd kasowania bazy sejfu
+  albo wpisu — bez ogłoszenia. Odbiorcy — słuchacze `VildaVault.onAccountRemovedElsewhere(f)` (zwraca funkcję
+  wypisania). Przeglądarka bez kanału albo konstruktor, który rzuca — sejf działa bez ogłoszeń.
+- **Po usunięciu konta** (`Bkr_poUsunieciu` w `removeUser`, po usunięciu wpisu rejestru i po blokadzie sejfu, przed
+  kasowaniem kolejki konta; tryb „Zaloguj jednorazowo” ujęty przed blokadą, która go wyłącza): jedna lista baz
+  przeglądarki (`databases()`); kasowanie bazy dziennika dostępu konta bez czekania na inne karty, ze znacznikiem
+  ponowienia `localStorage` `vilda-audit-delete-v1:<userId>` (`"1"`) zapisanym przed `deleteDatabase` i zdejmowanym po
+  sukcesie; usunięcie wpisu konta w magazynach `folderHandlesByUser` i `preferencesByUser` bazy `vilda_export_settings`
+  (otwarcie bez zakładania — upgrade przerwany, jedna transakcja `readwrite`, zamknięcie połączenia także przy
+  `versionchange`; najwyżej 2 s, potem rezygnacja bez błędu). Bazy, której na liście nie ma, sejf nie dotyka;
+  przeglądarka bez listy baz — kasowanie i usuwanie wpisów zawsze. Krok nigdy nie odrzuca.
+- **Ponowienie** (`Bkr_ponowDziennik`, przy odblokowaniu, po powiadomieniu słuchaczy i po ponowieniu kasowania kolejki):
+  dla każdego znacznika ponowienia w tle — konto z wpisem rejestru: zdjęcie znacznika; bez wpisu: kasowanie bazy
+  dziennika od nowa (kasowanie bazy, której nie ma, jej nie zakłada).
+- **Znacznik karty** (`sessionStorage` `vilda-vault-removed-v1` = `{"v":1,"userId":"<userId>"}`, tylko identyfikator
+  konta z sesji karty, nigdy dla kont trybu „Zaloguj jednorazowo”): zapisuje go blokada z powodem
+  `user-removed-elsewhere` (w `kn`, przed powiadomieniem słuchaczy blokady), zdejmuje powiadomienie o odblokowaniu
+  (logowanie, założenie konta, odtworzenie sesji; tylko gdy znacznik jest). Odtworzenie sesji (`tryRestoreSession`) daje
+  powód `user-removed-elsewhere` i listę kont karty bez konta (w `getStatus()` i `listUsers()`; przy wygasłym zapisie
+  sesji i przy znaczniku karty — po odczycie wpisu rejestru, punkt niżej), gdy: zapis sesji nie ma metadanych konta;
+  wygasły zapis sesji należy do konta bez wpisu rejestru (poza trybem „Zaloguj jednorazowo”); zapisu sesji nie ma,
+  a znacznik karty wskazuje konto bez wpisu rejestru albo konto w trakcie usuwania (znacznik cyklu konta w stanie
+  `removing`). Konto w trakcie usuwania jest tylko ukryte na liście tej karty (bez odmów operacji), żeby lista kont
+  mogła dokończyć jego przerwane usuwanie. Ekran logowania czyta powód przy starcie (`getStatus()`) i rysuje baner
+  tekst 1.
+- **Start strony nie czeka na odczyt wpisu rejestru** (wygasły zapis sesji, znacznik karty): `tryRestoreSession()`
+  kończy się jak dotąd, na odczyt czekają lista kont i stan sejfu (obietnica odczytu `Bkr_startu`, czekana
+  w `listUsers`).
+- **Pamięć przeglądarki** (`pageshow` z `persisted` w odblokowanej sesji, poza trybem „Zaloguj jednorazowo”): próba
+  otwarcia bazy sejfu konta bez tworzenia (`Buk_zamknieta` z E2-PR3a1b) — bazy nie ma: jak kasowanie obce, blokada
+  z banerem. Bez słuchacza `resume`: karta wznowiona po zamrożeniu dostaje `versionchange`.
+- **Czekanie** (`deleteUserDatabase`): znak i zegar progu 1 s zaraz po `deleteDatabase`; `blocked` zaczyna czekanie od
+  razu, sukces albo błąd je kończy i zdejmuje zegar. Słuchacze `VildaVault.onRemoveUserWaiting(f)` (zwraca funkcję
+  wypisania) dostają `true`/`false` tylko przy zmianie (dwa kasowania naraz — jeden stan); `isRemoveUserWaiting()`
+  zwraca stan.
+- **Przerwane usuwanie** (`Bkr_lista` w `listUsers`): konto ze znacznikiem cyklu `removing`, z wpisem rejestru i bez
+  bazy sejfu na liście baz znika z listy od razu, a usuwanie kończy się w tle (`Bkr_dokoncz`: raz na dokument, bez hasła
+  — gałąź konta bez metadanych; nieudana próba przywraca znacznik cyklu, więc próbuje następny dokument). Kandydaci
+  z pełnej listy rejestru; `databases()` tylko, gdy któreś konto ma ten znacznik. Bez dokończenia: konto kasowane w tym
+  dokumencie albo z kasowaniem obcym, nowsza wersja aplikacji, brak listy baz, tryb „Zaloguj jednorazowo”.
+- **Zapis sesji innego konta** (`kn` przy powodzie `user-removed`): zapis sesji karty zdejmowany tylko, gdy należy do
+  usuwanego konta (`Bkr_cudzaSesja`; brak zapisu, zły kształt albo błąd odczytu — zdejmowany jak dotąd).
+- Każdy dostęp do `localStorage`/`sessionStorage`, kanału i zdarzeń okna w `try`, każdy słuchacz w osobnym `try`;
+  kroki po usunięciu wpisu rejestru nie odrzucają. Literał miejsc bloku P-DZIENNIK-ZDARZEN bez zmian.
+- **Moduł dziennika** (`vilda_audit_log.js`): jedno połączenie na dokument (pamięć obietnicy otwarcia), zamykane przy
+  `versionchange`, wymuszonym zamknięciu (`close`) i blokadzie sejfu (`onLock`); otwarcie dla innego konta zamyka
+  poprzednie. Bazę zakłada tylko wpis odblokowania i tylko przy sesji tego konta (inaczej upgrade przerwany — „brak
+  bazy”); wpis odblokowania, który trafi na „brak bazy” z wcześniejszego otwarcia bez prawa zakładania (np. odczyt
+  dziennika przez stronę przy logowaniu), otwiera bazę od nowa z prawem zakładania — niezależnie od kolejności słuchaczy
+  `onUnlock`. Brak bazy: `list()` → `[]`, `verify()` → `{ok: true, count: 0}`, `clear()` → `true`, wpis pomijany.
+  Otwarcie, które założyło bazę, a w trakcie sesja tego konta się skończyła: zamknięcie i skasowanie tej (pustej) bazy
+  tylko, gdy konta nie ma już na liście kont tej karty (dziennik innej karty zalogowanej na to konto działa dalej).
+  Moduł wczytany, gdy sejf jest już odblokowany (sesja przywrócona przy wczytaniu strony): wpis odblokowania tej sesji
+  z tymi samymi warunkami co przy logowaniu (`trigger: null`); powiadomienie `onUnlock` z `trigger: "restore"` tego
+  samego przywrócenia nie dubluje wpisu (do następnej blokady).
+- **Ekran logowania** (`vilda_auth_ui.js`): przy starcie `Bkr_sluchaj` (słuchacz `onAccountRemovedElsewhere`
+  i `pageshow` z `persisted`); odczyt stanu sejfu (`getStatus()`) rusza równolegle, a ekran startowy czeka na niego
+  dopiero przed rysowaniem, po odczycie listy kont. Odświeżenie listy (`Bkr_odswiez`, jedno naraz plus jedno
+  powtórzenie): tylko na „Kto się loguje?” i „Witamy”, gdy sejf jest zablokowany, a ekran widoczny i wolny; ponowne
+  sprawdzenie po odczycie listy; bez rysowania, gdy lista jest ta sama co ostatnio narysowana (pamięć `Bkr_widoczne`
+  w module, bez atrybutu z identyfikatorem konta w DOM); rysowanie (`nr`, `ar`) bez `me()`, więc bez czyszczenia stanu
+  strony; baner tekst 1, gdy z listy znikło konto (inaczej baner ekranu bez zmian); fokus na tej samej karcie konta.
+- **Ustawienia** (`ustawienia.html`, `inline_ustawienia_04.js`): pusty `<p id="removeUserWaitHint" role="status">` pod
+  statusem „Usuń konto”; po potwierdzeniu „Usuń konto” słuchacz czekania (tekst z `REMOVE_USER_WAITING_TEXT`)
+  i `beforeunload` (dodawany po potwierdzeniu, zdejmowany przed `location.replace("index.html")` i w `catch`); przycisk
+  wyłączony do końca usuwania, także gdy formularz odświeża stan przycisków; w trakcie usuwania `pagehide` bez
+  `persisted` czyści pasek powłoki, a `pageshow` z `persisted` ustawia podpowiedź według `isRemoveUserWaiting()`.
+- **Powłoka** (`app.html`, `vilda_shell.js`, `style.css`): pusty `<p class="vilda-auth-banner" id="appShellRemoveWait"
+  role="status">` w `body` od wczytania; `VildaShell.removeUserWaiting(tekst)` zmienia tylko jego tekst; reguła blokady
+  ekranu go nie ukrywa, pasek stoi nad ekranem logowania powłoki, a pusty nie ma wypełnienia ani ramki.
+- **Ustawienia kopii** (`vilda_file_export.js`): zapis preferencji i uchwytu folderu sprawdza tuż przed utworzeniem
+  transakcji zapisu (po otwarciu bazy), że sejf jest dalej odblokowany na to samo konto; przy odmowie zamyka połączenie
+  i nie zapisuje (wybór folderu kończy się wtedy błędem „VildaFileExport: zaloguj się przed wyborem folderu kopii.”).
+
+**Ograniczenia.**
+- Karta ze starszą wersją aplikacji: jej lista kont odświeża się dopiero po kliknięciu albo odświeżeniu; „Usuń konto”
+  czeka (z podpowiedzią) do jej zamknięcia albo odświeżenia; dziennik dostępu, który ta karta trzyma, kasuje się sam po
+  jej zamknięciu albo przy następnym logowaniu.
+- Okno pytania w innej karcie i karta zamrożona albo wstrzymana w tle opóźniają „Usuń konto” (podpowiedź po 1 s).
+- Przeglądarki bez pytania przy zamykaniu strony (Safari na iPhonie i iPadzie) pokazują tylko podpowiedź.
+- Po skasowaniu dziennika narzędziami przeglądarki dziennik zaczyna się od nowa przy następnym logowaniu albo wczytaniu
+  strony; do tego czasu nowe zdarzenia nie są zapisywane.
+- Karta wczytana z sesją usuwanego konta w trakcie czekającego usuwania pokazuje ekran logowania dopiero po jego końcu.
+- Blokada z bezczynności w trakcie czekania blokuje sejf jak zawsze, a przeglądarka pyta przed opuszczeniem strony
+  (usuwanie trwa).
+- Karta bez sesji wczytana od nowa po powrocie (Chromium usuwa ją z pamięci przeglądarki przy ogłoszeniu usunięcia
+  konta) pokazuje listę bez konta, bez banera.
+- Zmierzono w Chromium 153 (pamięć przeglądarki: strona usuwanego konta jest z niej usuwana i wczytuje się od nowa —
+  test e2e z włączoną pamięcią stron; karta wznowiona po zamrożeniu dostaje `versionchange`); WebKit (Safari i każda
+  przeglądarka na iPhonie i iPadzie) i Firefox niezmierzone. Testy e2e repo nie zamrażają kart; testy jednostkowe
+  działają na atrapie IndexedDB wzorowanej na Chromium.
+- Test pełnej listy baz — konto bez biblioteki szablonów (biblioteka ma własne zasady usuwania).
+
+**Cofnięcie** = rewert PR. Bez czytelnika po rewercie: w otwartych kartach klucz `sessionStorage`
+`vilda-vault-removed-v1` do ich zamknięcia; rzadko klucz `localStorage` `vilda-audit-delete-v1:<userId>` (tylko gdy
+kasowanie dziennika nie zdążyło się skończyć). Nowych baz brak.
+
+**Testy.** Dane wyłącznie fikcyjne, bez PESEL. Nowe:
+- `tests/unit/sejf-usun-konto-karty-2.test.mjs` — 104 przypadki (UK21–UK53 z wariantami) na prawdziwym sejfie z modułami
+  punktu odzyskiwania nad atrapą IndexedDB, z prawdziwym `vilda_audit_log.js` i `vilda_file_export.js`; ekran logowania
+  — wycinek prawdziwego `vilda_auth_ui.js` z lekką atrapą DOM; druga karta to drugie okno na tej samej atrapie.
+  Dziennik (UK21–UK28, UK52: usuwanie z kontem przy jednej i dwóch kartach, jedno połączenie, zakładanie tylko przy
+  odblokowaniu, logowanie w innej karcie w trakcie usuwania, wylogowanie w trakcie zakładania, gdy inna karta loguje to
+  samo konto, karta ze starszą wersją, znacznik ponowienia, kolejność, tryb „Zaloguj jednorazowo”, moduł wczytany po
+  przywróceniu sesji); ustawienia kopii (UK29); karta odświeżona albo odtworzona (UK30–UK36); baner startu (UK37);
+  ogłoszenie (UK38, UK39); lista kont w kartach bez sesji (UK40, UK41); czekanie (UK42–UK47); strażniki tekstowe
+  Ustawień i powłoki (UK48); przerwane usuwanie (UK49 (a)–(k), w tym: usuwania, które trwa w tym dokumencie, lista kont
+  nie powtarza); zapis sesji innego konta (UK50); start ekranu logowania (UK51); start bez czekania na odczyt wpisu
+  rejestru (UK53). Skutki w tle sprawdzane po zdarzeniach w logu atrapy, bez stałych opóźnień. Wyrocznia baz — pełna
+  lista baz atrapy.
+- `tests/e2e/usun-konto-karty-2.spec.mjs` — 11 przypadków pełnej aplikacji w prawdziwym Chromium: PA4 (karta zalogowana
+  odświeżona po banerze; jedno konto, dwa konta i dwa odświeżenia; start bez czyszczenia stanu aplikacji i bez błędów
+  strony), PA5 (powrót z innej strony), PA6 (aplikacja zainstalowana odświeżona po usunięciu w innej karcie i po własnym
+  „Usuń konto”), PA7 (bez banera: blokada `manual`, bezczynność, wygasła sesja istniejącego konta, własne „Usuń konto”
+  w zwykłej karcie Ustawień; start bez czyszczenia stanu i bez błędów strony), PA8 („Kto się loguje?” w karcie bez
+  sesji; formularz hasła innego konta bez zmian; karta zalogowana rysuje ekran logowania raz), PA9 („Witamy” i powłoka
+  bez sesji), PA10 (karta ze starszą wersją: podpowiedź, przycisk wyłączony, pytanie przy zamknięciu i przeładowaniu, po
+  zwolnieniu `index.html` bez pytania), PA10b (błąd usuwania w trakcie czekania), PA11 (okno pytania: podpowiedź po
+  1 s), PA12 (aplikacja zainstalowana: pasek na wierzchu nad „Witamy” z banerem, pytanie przy zamknięciu okna,
+  przeładowanie ramki Ustawień czyści pasek), PA13 (strona usuwająca zamknięta w trakcie czekania — usuwanie kończy się
+  przy liście kont w następnej karcie); w PA10, PA12 i PA13 także wyrocznia pełnej listy baz.
+- `tests/e2e/usun-konto-karty-pamiec.spec.mjs` — 3 przypadki, PA14 (a)–(c), z włączoną pamięcią stron (przeglądarka bez
+  domyślnego argumentu Playwrighta `--disable-back-forward-cache`, serwer z `Cache-Control: max-age=600`): kontrola
+  `pageshow.persisted`, karta zalogowana na usuwane konto i karta bez sesji po usunięciu konta. Pełny Chromium
+  (`channel: 'chromium'`) także w CI, bo powłoka bez okna (Chrome Headless Shell) nie ma pamięci stron.
+
+Zmienione:
+- `tests/support/usun-konto-karty-chromium.mjs` — wyrocznia baz jako warunek: po usunięciu każda baza z pełnej listy
+  przeglądarki należy do baz wspólnych (`ghTherapyDB`, `vilda_export_settings`, `vilda_registry`), a żadna baza wspólna
+  sprzed usunięcia nie znika (lista „przed” porównywana bez `ghTherapyDB` — dawnej bazy punktów terapii GH, która
+  w scenariuszach z kartą `index.html` jest od początku albo powstaje w trakcie); okna przeglądarki obsługiwane według
+  typu (`confirm`, `beforeunload`); rejestrator ekranów logowania, podpowiedzi, paska, zdarzeń czyszczenia stanu
+  aplikacji i błędów strony; serwer z opcją nagłówka pamięci; scenariusze PA4–PA14 i scenariusz dziennika po
+  przywróceniu sesji. PA3 sprawdza też ustawienia kopii (w miejscu uchwytu folderu wartość zastępcza: prawdziwy uchwyt
+  katalogu w tej bazie kończył proces Chromium 153 awarią przy wczytaniu kolejnej karty).
+- `tests/e2e/usun-konto-karty.spec.mjs` — 4 → 5 przypadków: PA1, PA1′ i PA2 z wyrocznią pełnej listy, PA3 także
+  z ustawieniami kopii (usuniętego konta usunięte, drugiego konta bez zmian) i dziennik dostępu po przywróceniu sesji
+  (bazy dziennika nie ma, moduł dziennika wczytany, gdy sejf jest już odblokowany — wpis odblokowania zakłada bazę,
+  zdarzenie sesji zapisane, dziennik spójny).
+- `tests/e2e/dziennik-zdarzen-uspienie.spec.mjs` — `databases()` w kroku usunięcia konta 2 → 3 poza trybem „Zaloguj
+  jednorazowo” (w nim 1, bez zmian).
+- `tests/unit/sync-dziennik-zapis-bazowy.test.mjs` i `tests/fixtures/dziennik-zapis-bazowy.json` — nagranie ponowne:
+  różnica dokładnie w 6 komórkach, „databases ×2” → „databases ×3” w krokach „usunięcie konta z kopii” i „usunięcie
+  konta” trzech wariantów poza trybem „Zaloguj jednorazowo” (jedna lista baz w sprzątaniu po koncie); pola `opis`
+  i `bazaVault` przeniesione z pierwszego nagrania.
+- `tests/unit/chmura-przywrocenie-po-terminie.test.mjs` — odtworzenie sesji bez konta w magazynie: zdjęty klucz sesji
+  i znacznik karty z identyfikatorem konta.
+- `tests/unit/auth-boot-readiness.test.mjs` — dwie atrapy parametrów (`Bkr_sluchaj`, `Bkr_banerStartu`) dla wycinka
+  startu; asercje bez zmian.
+- `tests/support/okno-magazynu.mjs` — opcja okna `pola` (pola okna ustawione przed załadowaniem skryptów); domyślne okno
+  bez zmian.
+- `tests/fixtures/czasy-e2e.json` — wagi odłamków e2e: `usun-konto-karty.spec.mjs` 84,9 → 67,1 s, nowe
+  `usun-konto-karty-2.spec.mjs` 147,3 s i `usun-konto-karty-pamiec.spec.mjs` 25,4 s.
+
+KA1–KA7 i UK1–UK20 bez zmian. Wynik na stanie końcowym (przed podbiciem wersji): `sejf-usun-konto-karty-2` 104/104 (20
+przebiegów z rzędu), `sejf-usun-konto-karty` 57/57, `sync-dziennik-konto` 71/71, `sync-dziennik-uspienie` 31/31, zapis
+bazowy 11/11 (+1 pominięty — tryb nagrania), `auth-boot-readiness` 6/6, `chmura-przywrocenie-po-terminie` 5/5,
+`rozjazd-zegarow-sync` 12/12; e2e w Chromium 153.0.8010.12: trzy specy `usun-konto-karty*`, `dieta-tempo-rata-g1`
+(edycja oceny dojrzewania zaraz po starcie), `chmura-po-blokadzie` i `dziennik-zdarzen-uspienie` 40/40 w dwóch
+przebiegach, PA4 i PA7 po 8 przebiegów; PA14 zielone także w CI; ESLint bez problemów, składnia poprawna. Powtarzalność:
+nowy plik jednostkowy 20 przebiegów po 4 procesy naraz — jeden wariant wyniku; każdy przypadek PA 20 przebiegów
+zielonych (16 przy 4 procesach naraz, 2 przy jednym, 2 pojedyncze), KA1–KA7 po 14 — na wersji testów sprzed dopisania
+sprawdzenia startu (PA4, PA7) i piątego testu `usun-konto-karty`.
+
+**Czerwone na bazie** (kopie `origin/audyt` z testami i wsparciem tego PR, kod bazy):
+
+| Plik | Baza | Czerwone | Zielone |
+|---|---|---|---|
+| `sejf-usun-konto-karty-2` | `48f7c775` (po vildaclinic/vilda-calc#906) | 69 | 35 (strażniki: UK23 (c), UK24b, UK24d (wariant), UK26 (c), UK27 (1), UK28, UK29 (b) ×2, UK31b (wariant), UK32 (a) ×3 i (b)–(e), UK33 (4), UK34, UK36 (wariant) ×3, UK39 (a)–(c), UK49 (b)–(e), (h), (j), (k), UK50 (wariant) ×2, UK52 (b), UK53 (a)) |
+| `sync-dziennik-zapis-bazowy` | `48f7c775` | 6 (warianty Ze, prywatny i chmura: zgodność z fiksturą i powtarzalność) | 5 (+1 pominięty — tryb nagrania) |
+| `chmura-przywrocenie-po-terminie` | `48f7c775` | 1 | 4 |
+| e2e `usun-konto-karty`, `-2`, `-pamiec` (PA) | `48f7c775` | 16 (PA1, PA1′, PA2, PA3, dziennik dostępu po przywróceniu sesji, PA4–PA6, PA8–PA13, PA10b, PA14 (b)) | 3 (PA7, PA14 (a), PA14 (c)) |
+| e2e `dziennik-zdarzen-uspienie` | `48f7c775` | 2 („Komputer prywatny”, „Komputer w pracy”) | 4 |
+
+- Powód: brak nowego zachowania (inny wynik albo brak wyniku w limicie czasu) albo brak funkcji (`TypeError`, brak
+  wycinka w `vilda_auth_ui.js`).
+- E2e na `48f7c775`: PA w dwóch przebiegach, `dziennik-zdarzen-uspienie` w jednym; ten sam podział co wcześniej w trzech
+  przebiegach na `e6d91d2e` (po vildaclinic/vilda-calc#903), z testami PA sprzed dopisania sprawdzenia startu (PA4, PA7)
+  i piątego testu `usun-konto-karty`.
+
+**Mutanty** (kopie, jedna zmiana na przebieg, na kodzie tego PR): 100 — 97 zabitych (91 przypadkami jednostkowymi,
+6 tylko przypadkami PA w Chromium), 3 równoważne (bez skutku dla wymagań). W Chromium sprawdzono 34 mutanty, które mają
+odpowiednik w scenariuszach w przeglądarce: 23 zabite przypadkami w Chromium, pozostałe 11 zabijają przypadki
+jednostkowe.
+
+**Pomiary** (Chromium 153.0.8010.12; kod i testy z 2026-11-07; 32 przebiegi przy 4 procesach naraz): „Usuń konto”
+w pełnej aplikacji od kliknięcia do przejścia na `index.html` — PA1 117–1471 ms (mediana 538), PA1′ 421–1689 ms (1024);
+w aplikacji zainstalowanej wpis rejestru znika po 126–1166 ms (339), a nowa ramka Ustawień jest po 4125–6507 ms (5360)
+(PA2); podpowiedź od kliknięcia — przy karcie ze starszą wersją (`blocked`) 17–256 ms (58), przy oknie pytania w innej
+karcie 1011–1586 ms (1075; zdarzenia `blocked` brak w 32 z 32); tekst 4 w PA1 i PA1′ — ani razu. Pamięć stron (16
+przebiegów): kontrola `persisted: true` 16/16; karta zalogowana na usuwane konto i karta bez sesji po usunięciu —
+usunięte z pamięci stron i wczytane od nowa 16/16 (powody Chromium `IgnoreEventAndEvict` i `BroadcastChannelOnMessage`),
+karta bez sesji bez banera 16/16. Start stron `index.html`, `docpro.html`, `kalkulator-klirens.html` i `app.html` (bez
+kont, konto bez sesji, sesja odtworzona, dokończenie przerwanego usuwania, wygasła sesja istniejącego konta, znacznik
+karty; po 4 przebiegi, 2026-11-08): bez czyszczenia stanu aplikacji przy starcie; czasy startu (`DOMContentLoaded`,
+pierwszy ekran logowania) w granicach rozrzutu bazy. „Usuń konto”: jedna lista baz więcej, usuwanie ustawień kopii
+najwyżej 2 s.
+
+**Gdzie w kodzie.** `vilda_vault.js` +443 / −5 linii (blok i pięć zmienionych linii zminifikowanych: 103, 168, 171, 174
+i eksport 10628); w `vilda_audit_log.js`, `vilda_auth_ui.js`, `inline_ustawienia_04.js` i `vilda_file_export.js` zmiany
+tylko w liniach zminifikowanych: wstawki i kilka zamienionych wyrażeń (`inline_ustawienia_04.js` — stan przycisku „Usuń
+to konto” w `Ne`; `vilda_audit_log.js` — otwarcie bazy oraz wynik `verify()` i `clear()` przy braku bazy;
+`vilda_file_export.js` — zapis preferencji i uchwytu folderu ze strażnikiem, błąd przy wyborze folderu;
+`vilda_auth_ui.js` — start ekranu logowania).
+- Blok `P-USUN-KONTO-KARTY (E2-PR3a1c)` w `vilda_vault.js`: linie 788–1225 (438 linii, 18 518 B), zaraz za `Buk_lista`
+  (blok E2-PR3a1b, linie 631–787, bez zmian); komentarze bez znaków diakrytycznych (92 linie komentarza), jedyna linia
+  z polskimi znakami — tekst 4. Stałe i stan (16): `Bkr_DZIENNIK`, `Bkr_ZNACZNIK_DZIENNIKA`, `Bkr_ZNACZNIK_KARTY`,
+  `Bkr_USTAWIENIA`, `Bkr_MAGAZYNY_USTAWIEN`, `Bkr_PROG_CZEKANIA_MS` (1000), `Bkr_LIMIT_USTAWIEN_MS` (2000), `Bkr_POWOD`,
+  `Bkr_TEKST_CZEKANIA`, `Bkr_sluchaczeUsuniecia`, `Bkr_kanal`, `Bkr_ukryte`, `Bkr_startu`, `Bkr_czekajace`,
+  `Bkr_sluchaczeCzekania`, `Bkr_dokonczone`; przy wczytaniu obiekt kanału `vilda-konta` i słuchacz `pageshow` (oba
+  w `try`). Funkcje (26): `Bkr_konto`, `Bkr_zapisz`, `Bkr_wolaj`, `Bkr_nazwyBaz`, `Bkr_oglos`, `Bkr_naUsuniecie`,
+  `Bkr_znacznikDziennika`, `Bkr_kasujDziennik`, `Bkr_kasujUstawieniaKopii`, `Bkr_poUsunieciu`, `Bkr_ponowDziennik`,
+  `Bkr_odczytKarty`, `Bkr_zapiszKarte`, `Bkr_wyczyscKarte`, `Bkr_wUsuwaniu`, `Bkr_usunietaSesja`, `Bkr_bezSesji`,
+  `Bkr_wygaslyZapis`, `Bkr_poPowrocie`, `Bkr_czekaj`, `Bkr_czekanie`, `Bkr_naCzekanie`, `Bkr_czeka`, `Bkr_dokoncz`,
+  `Bkr_lista`, `Bkr_cudzaSesja`.
+- Wstawki w liniach zminifikowanych `vilda_vault.js` (bez komentarzy, nowe identyfikatory z prefiksem `Bkr_`):
+
+| Miejsce | Wstawka |
+|---|---|
+| `xa` (`removeUser`), gałąź konta bez metadanych (171) | `Bkr_oglos()` w warunku istniejącego wpisu rejestru, po `removeRegistryEntry`; `await Bkr_poUsunieciu(t, yt)` po `Bob_poRejestrze`, przed `Bob_kasujKonto` |
+| `xa`, gałąź zwykła (174) | `const Bkr_j=yt` przed `deleteUserDatabase` (tryb „Zaloguj jednorazowo” ujęty przed blokadą); `Bkr_oglos()` po `removeRegistryEntry`; `await Bkr_poUsunieciu(t, Bkr_j)` po `kn("user-removed")`, przed `Bob_kasujKonto` |
+| `deleteUserDatabase` (103) | `const Bkr_z=Bkr_czekanie()` po `deleteDatabase`; `Bkr_z()` w `onsuccess` i `onerror`, `Bkr_z(!0)` w `onblocked` |
+| `kn` (blokada, 168) | `const Bkr_u=b`; przy `user-removed-elsewhere` `Bkr_zapiszKarte(Bkr_u)` przed powiadomieniem słuchaczy; przy `user-removed` zapis sesji zdejmowany tylko, gdy nie `Bkr_cudzaSesja(Bkr_u)` |
+| `He` (powiadomienie o odblokowaniu, 103) | `Bkr_wyczyscKarte()` na początku; `Bkr_ponowDziennik()` po `Bob_poOdblokowaniu()` |
+| `_a` (`tryRestoreSession`, 168) | bez zapisu sesji: `Bkr_startu=Bkr_bezSesji()`; wygasły zapis: `Bkr_startu=Bkr_wygaslyZapis(e)`; zapis bez metadanych konta: `Bkr_usunietaSesja(e.userId)` |
+| `Ee` (`listUsers`, 168) | czekanie na `Bkr_startu`; `Buk_lista(await Bkr_lista(await I().listRegistry()))` |
+| eksport `VildaVault` (10628) | `onRemoveUserWaiting`, `isRemoveUserWaiting`, `REMOVE_USER_WAITING_TEXT`, `onAccountRemovedElsewhere` |
+
+- Blok `P-DZIENNIK-ZDARZEN` bez zmian (linie 5658–7792, przesunięte o 438); w bloku `Bkr_` nie ma identyfikatorów
+  `Bob_`, `Bev_` ani `Bem_`.
+- `vilda_audit_log.js` (jedna linia, 3885 → 5334 B): stan `Bkr_pol` (pamięć połączenia), `Bkr_BRAK` („brak bazy”),
+  `Bkr_wst` (wpis przy wczytaniu); funkcje `Bkr_kasujPusta` (skasowanie pustej bazy, gdy konta nie ma na liście kont
+  karty) i `Bkr_zamknij`; otwarcie `v(Bkr_z)` z prawem zakładania tylko dla wpisu odblokowania, z `onupgradeneeded`
+  (przerwanie bez prawa albo bez sesji tego konta), `onversionchange`, `onclose`, sprawdzeniem sesji w `onsuccess`
+  i „brakiem bazy” w `onerror`; `list`, `verify`, `clear` przy braku bazy; słuchacz `onLock` i wpis przy wczytaniu.
+- `vilda_auth_ui.js` (+2366 B, linie 1 i 3282), 6 wstawek: przed `me` stan `Bkr_widoczne`, `Bkr_wToku`, `Bkr_jeszcze`
+  i funkcje `Bkr_banerStartu`, `Bkr_sluchaj`, `Bkr_widac`, `Bkr_ekran`, `Bkr_odswiez`, `Bkr_odswiezRaz`; w `me` czekanie
+  na napis banera po odczycie listy kont, przed rysowaniem; `Bkr_widoczne` w `ar` („Witamy”) i `nr` („Kto się
+  loguje?”); przy starcie `Bkr_sluchaj()` po `Xi()` oraz `getStatus()` bez czekania i `me(…then(Bkr_banerStartu…))`.
+- `inline_ustawienia_04.js` (+1204 B, linie 1 i 8; plik tylko ASCII), 3 zmiany: na początku zakresu `Bkr_trwa`,
+  `Bkr_bu`, `Bkr_powloka`, `Bkr_podpowiedz`, `Bkr_tekst`, `Bkr_czekanie`, `Bkr_koniec` i słuchacze `pagehide`
+  i `pageshow`; obsługa „Usuń to konto” (`Bkr_czekanie(t)` po potwierdzeniu, `Bkr_koniec` przed
+  `location.replace("index.html")` i w `catch`); stan przycisków (`Ne`) — zamieniony warunek: przycisk wyłączony, dopóki
+  `Bkr_trwa`.
+- `vilda_file_export.js` (+444 B), 4 zmiany: `putPrefs` i `putFolderHandle` z trzecim argumentem (strażnik tuż przed
+  transakcją zapisu), zapis preferencji i wybór folderu ze strażnikiem `Bkr_tenSam`.
+- `vilda_shell.js`: funkcja `Bkr_czekanieUsuwania` z komentarzem (linie 56–63) i pole eksportu `removeUserWaiting`
+  (linia 1103); `app.html:188` i `ustawienia.html:1449` — po jednym elemencie `role="status"`; `style.css:6186`
+  (wyjątek `:not(#appShellRemoveWait)` w regule blokady) i 6190–6204 (komentarz, reguły `#appShellRemoveWait`
+  i `#appShellRemoveWait:empty`).
+
+**Wersje.** Baza `origin/audyt` `a745299f` (po vildaclinic/vilda-calc#909). `vilda_vault.js` 256 → 257,
+`vilda_auth_ui.js` 550 → 551, `vilda_audit_log.js` 1 → 2, `vilda_file_export.js` 8 → 9, `vilda_shell.js` 81 → 82,
+`inline_ustawienia_04.js` 17 → 18 i `style.css` 95 → 96 (zmieniona treść); `vilda_chrome.js` 260 → 261
+i `vilda_session_bridge.js` 177 → 178 (wstrzykują plik z nowym `?v=`); SW 1.1.488 → **1.1.489**.
+
 ## Sejf: „Usuń konto” przy drugiej karcie — druga karta wraca do ekranu logowania, usuwanie nie czeka (P-USUN-KONTO-KARTY, E2-PR3a1b, SW 1.1.479, `vilda_vault.js` 256, 2026-11-06)
 
 **Zmiana kliniczna: NIE** — wzory, progi, jednostki, interpretacje, zapis, scalanie, format kopii i synchronizacja bez
@@ -21263,8 +22253,8 @@ danych kasowanych przez „Usuń konto” się nie zmienia.
 **Skąd.** Plan `docs/SYNC_PRZYROSTOWA_PLAN.md`, wiersz 6a′ tabeli „Podział etapu 2”. Decyzje właściciela:
 - 2026-11-04 — zachowanie drugiej karty przy „Usuń konto” w osobnym małym PR (pytanie 12.4);
 - 2026-11-05 — dwa PR po kolei: ten (druga karta, aplikacja zainstalowana, logowanie w toku, przyszła zmiana wersji bazy
-  sejfu), potem E2-PR3a1c (wymagania niżej; plan, wiersz 6a″; do jego przyjęcia decyzja 12.4 jest zawężona); teksty
-  komunikatów dosłownie;
+  sejfu), potem E2-PR3a1c (wpis wyżej; plan, wiersz 6a″; od jego przyjęcia decyzja 12.4 ma pełne brzmienie,
+  biblioteka szablonów — według zasad modułu szablonów); teksty komunikatów dosłownie;
 - 2026-11-06 — baner także w aplikacji zainstalowanej po własnym „Usuń konto” (punkt 6 niżej) i ekran logowania
   z banerem, gdy usunięcie przyjdzie w ostatnich krokach logowania (punkt 4).
 
@@ -21306,7 +22296,7 @@ danych kasowanych przez „Usuń konto” się nie zmienia.
 3. błąd `APP_UPDATED`: „Aplikację zaktualizowano w innej karcie. Odśwież tę stronę.”
 
 Obiekt błędu niesie kod i stały komunikat, bez danych konta. Czwarty tekst tej decyzji (podpowiedź przy czekaniu)
-należy do E2-PR3a1c.
+— E2-PR3a1c (wpis wyżej).
 
 **Mechanizm** (`vilda_vault.js`, blok `P-USUN-KONTO-KARTY`, prefiks `Buk_`; stan dokumentu tylko w pamięci okna, wspólny
 dla wszystkich instancji adaptera IndexedDB w dokumencie):
@@ -21357,7 +22347,8 @@ dla wszystkich instancji adaptera IndexedDB w dokumencie):
   Operacje kolejki i kwarantanny sprawdzają sesję tak jak zapis karty (P-SESJA-ZAPISU): zmiana sesji w trakcie kończy
   operację bez zapisu.
 
-**Wymagania dla E2-PR3a1c** (zakres z decyzji z 2026-11-05; te same w planie, wiersz 6a″):
+**Wymagania dla E2-PR3a1c** — wykonane w E2-PR3a1c (wpis wyżej, tam też ograniczenia; zakres z decyzji z 2026-11-05; te
+same w planie, wiersz 6a″):
 - Dziennik dostępu konta: baza `vilda_audit_v1_<userId>` objęta „Usuń konto”, także przy drugiej karcie (jej połączenia
   z tą bazą zamykają się przy `versionchange`, jak przy bazie sejfu); test: pełna lista baz przeglądarki po usunięciu
   konta = bazy wspólne.
@@ -21372,7 +22363,9 @@ dla wszystkich instancji adaptera IndexedDB w dokumencie):
 
 **Ograniczenia.**
 - „Usuń konto” czeka, gdy inna karta ma wersję aplikacji sprzed tej zmiany (do jej zamknięcia albo odświeżenia) albo
-  otwarte okno z pytaniem (do odpowiedzi — wtedy tamta karta wraca do ekranu logowania); potem kończy się samo.
+  otwarte okno z pytaniem (do odpowiedzi — wtedy tamta karta wraca do ekranu logowania); potem kończy się samo. Od
+  E2-PR3a1c (wpis wyżej) w tym czasie pod przyciskiem „Usuń to konto” jest podpowiedź (tekst 4), przeglądarka pyta przed
+  zamknięciem strony, a usuwanie przerwane zamknięciem albo odświeżeniem strony kończy się przy liście kont.
 - Karta zamrożona albo wstrzymana w tle (np. na telefonie) może opóźnić „Usuń konto”.
 - Zmierzono w Chromium 153; WebKit (Safari i każda przeglądarka na iPhonie i iPadzie) i Firefox niezmierzone. Testy
   jednostkowe działają na atrapie IndexedDB wzorowanej na Chromium i nie zależą od kolejności zdarzeń `complete`
@@ -21399,8 +22392,9 @@ sprzątać.
   z banerem), PA3 (dwa konta: „Kto się loguje?” z banerem tylko z drugim kontem, pamięć PRO unieważniona raz; logowanie
   w toku w trzeciej karcie — tekst 2 w formularzu, bez banera; blokady `manual` i `idle` bez banera). Wyrocznia baz:
   bazy przeglądarki przed „Usuń konto” i po nim (dwa kolejne odczyty listy baz w odstępie 100 ms równe oczekiwanym) —
-  po usunięciu nie ma bazy sejfu ani bazy kolejki konta, bazy wspólne bez zmian. Konto bez biblioteki szablonów. Czasy
-  „Usuń konto” w adnotacji testu, poza porównywanym wynikiem.
+  po usunięciu nie ma bazy sejfu ani bazy kolejki konta, bazy wspólne bez zmian (od E2-PR3a1c — wyrocznia na pełnej
+  liście baz, wpis wyżej). Konto bez biblioteki szablonów. Czasy „Usuń konto” w adnotacji testu, poza porównywanym
+  wynikiem.
 
 Zmienione:
 - `tests/support/dwie-karty-chromium.mjs` i `tests/e2e/dziennik-zdarzen-dwie-karty.spec.mjs` — 3 → 7 przypadków
@@ -21436,7 +22430,8 @@ KA5: `removeUser` od wywołania do wyniku, pomiar dodatkowy w 16 z 22 przebiegó
 kliknięcia do przejścia na `index.html` (PA1, PA1′) 34–1186 ms; w aplikacji zainstalowanej wpis rejestru znika po
 57–652 ms (PA2).
 
-**Czerwone na bazie** (kopia `origin/audyt` `83fa119` z testami i wsparciem tego PR, sejf bazy):
+**Czerwone na bazie** (kopia `origin/audyt` `83fa119` z testami i wsparciem tego PR, sejf bazy; powtórzone na
+`6649e7bd` (po vildaclinic/vilda-calc#898) — ten sam wynik, jednostkowe i e2e):
 
 | Plik | Czerwone | Zielone |
 |---|---|---|
@@ -21504,7 +22499,7 @@ konto” są te same. Wpływ kliniczny dziś: brak. Wpis opisuje czwarty kawałe
 i E2-PR2b2, wpisy niżej), uśpiony poza samym kasowaniem przy „Usuń konto” i jego ponowieniem przy odblokowaniu. Dalej:
 E2-PR3a1b (druga karta przeglądarki z tym samym kontem blokuje się przy „Usuń konto”, a usuwanie kończy się bez
 czekania na nią; wpis wyżej), E2-PR3a1c (dziennik dostępu konta i reszta zakresu „Usuń konto” przy drugiej karcie;
-wymagania we wpisie wyżej), E2-PR3a2 (dopisywanie zmian do kolejki w miejscach zapisu), E2-PR3a3 (importy i zgodność
+wpis wyżej), E2-PR3a2 (dopisywanie zmian do kolejki w miejscach zapisu), E2-PR3a3 (importy i zgodność
 prawdziwych zdarzeń z modelem testu) i E2-PR3a4 (przegląd kolejki).
 
 **Skąd.** Plan `docs/SYNC_PRZYROSTOWA_PLAN.md`, wiersz 6a tabeli „Podział etapu 2” (do 2026-11-05 wiersz 6, E2-PR3a),
@@ -21651,25 +22646,28 @@ same ślady.
 P-USUN-KONTO-KARTY; te same w planie: wiersze 6a′, 6b–6d, 7a, 8 i 12 tabeli „Podział etapu 2”).
 - **E2-PR3a1b** (decyzja 12.4) — wykonane w E2-PR3a1b (wpis wyżej, P-USUN-KONTO-KARTY): druga karta zamyka połączenia
   z bazą sejfu i blokuje się, „Usuń konto” nie czeka, identyfikator urządzenia nie zostaje; testy nie zamykają za drugą
-  kartę jej połączeń z bazą sejfu, żeby „Usuń konto” się skończyło. Dalsze wymagania — E2-PR3a1c (wpis wyżej).
-- **E2-PR3a2.**
+  kartę jej połączeń z bazą sejfu, żeby „Usuń konto” się skończyło. Dalsze wymagania — wykonane w E2-PR3a1c (wpis
+  wyżej).
+- **E2-PR3a2** — wykonane w E2-PR3a2 (wpis P-DZIENNIK-ZDARZEN, E2-PR3a2, wyżej).
   - Wewnętrzne dopisanie `Bob_dopiszZ` budowane nad `Bob_dopiszPod`, z blokadą współdzieloną konta braną przed nim.
   - Porównanie zapisu bazowego z sejfem bez wstawek (w tej kopii sejfu `Bob_oznacz(…)` zastąpione przez `false`):
     dozwolona różnica `databases()` +1 w krokach usunięcia konta tylko poza wariantem „Zaloguj jednorazowo”.
-  - E2e uśpienia: `databases()` w kroku usunięcia konta 2/2/1 („Komputer prywatny”/„Komputer w pracy”/„Zaloguj
-    jednorazowo”), blokada wyłączna tylko poza trybem „Zaloguj jednorazowo”.
+  - E2e uśpienia: `databases()` w kroku usunięcia konta 4/4/2 („Komputer prywatny”/„Komputer w pracy”/„Zaloguj
+    jednorazowo”; od vildaclinic/vilda-calc#910, wcześniej 3/3/1 od E2-PR3a1c i 2/2/1), blokada wyłączna tylko poza
+    trybem „Zaloguj jednorazowo”.
   - Literał miejsc poza blokiem rośnie od dzisiejszego `MIEJSCA_POZA_BLOKIEM`.
   - Łańcuch dopisań może czekać na blokadę konta do 20 s; zapis karty na niego nie czeka (emitery nie czekają na wynik
     kolejki). Przyjęte w projekcie E2-PR3a.
-- **E2-PR3a3.** Dopisania partii importu idą tym samym dopisaniem pod blokadą konta. W teście A ≡ B „ZNANA RÓŻNICA”
-  R2-E3 z pozycją naprawy E3-PR0 (decyzja 12.2).
+- **E2-PR3a3** — wykonane w E2-PR3a3 (wpis P-DZIENNIK-ZDARZEN, E2-PR3a3, wyżej). Dopisania partii importu idą tym samym
+  dopisaniem pod blokadą konta. W teście A ≡ B „ZNANA RÓŻNICA” R2-E3 z pozycją naprawy E3-PR0 (decyzja 12.2).
 - **E2-PR3a4.** Przegląd sierot `vilda_sync_*` przez to samo kasowanie kolejki konta (blokada wyłączna, znacznik według
   reguły wyżej), nigdy w trybie „Zaloguj jednorazowo”; odczyty przeglądu przez strzeżony adapter sejfu; wynik
   `SYNC_DB_TIMEOUT` (limit blokady) ustawia przegląd pilny, `SYNC_DB_DELETED` nie; przegląd na początku odblokowania,
   a ponowienie kasowania zostaje ostatnią instrukcją odblokowania.
 - **E2-PR3c** (decyzja 12.3). Naprawa utraty poprawki wizyty przy „Scal pacjentów” po zdarzeniach zmianą reguły
   scalania: osobny PR z wpisem ALGORITHMS i akceptacją właściciela (decyzja 9); w teście A ≡ B od E2-PR3a3 jako „ZNANA
-  UTRATA (zdarzenia)” z pozycją naprawy E2-PR3c.
+  UTRATA (zdarzenia)” z pozycją naprawy E2-PR3c (wpisane w E2-PR3a3). Od 2026-11-09 (decyzja właściciela) w E2-PR3c
+  także analiza i naprawa różnicy opisu wpisu Kosza po wymianie pełnych kopii (wpis E2-PR3a3).
 - **E2-PR4.**
   - Kasowanie kolejki konta przy istniejącym wpisie rejestru — ponowienie przy odblokowaniu, kasowanie przy zmianie
     trybu przechowywania, `removeUser` identyfikatora konta trwałego w trybie „Zaloguj jednorazowo” — nie zostawia tego
@@ -22285,6 +23283,9 @@ E3-PR0).
     w `removeUser`.
   - Rejestracja i logowanie kluczem dostępu (WebAuthn) oraz hak `VildaPersistence` (poza zapisem bazowym z tego PR):
     test, że przy zamkniętej bramce kończą się na bramce, bez otwarcia bazy kolejki, szyfrowania zdarzeń i żądań.
+  - Wykonane w E2-PR3a2 (wpis P-DZIENNIK-ZDARZEN, E2-PR3a2, wyżej): emitery nie czekają na wynik kolejki, zapis bazowy
+    zmienia tylko liczba odczytów bramki, rejestracja i logowanie kluczem dostępu oraz hak `VildaPersistence` kończą się
+    na bramce (U5). Brak miejsca przy dopisaniu — przegląd w E2-PR3a4.
 - **E2-PR4.**
   - Bramka rozszerzona o flagę `vilda-event-log-v1` i `features.events`. Nadawca sprawdza tryb konta także z wpisu
     rejestru.
@@ -22717,7 +23718,10 @@ i `Q8-obca-2` wobec dzisiejszej aplikacji niezmierzone).
 literał na wynik zgodny.
 - **„ZNANA RÓŻNICA” R2-E3:** po „Scal pacjentów” wizyta chwilowo znika na drugim urządzeniu, do najbliższej pełnej
   wysyłki. Naprawa: E3-PR0 (pytanie 12.2, 2026-11-04: zostaje kolejność ogólna „najpierw wizyty”; wcześniej
-  „E2-PR3a (kolejność zdarzeń) albo E3-PR0”).
+  „E2-PR3a (kolejność zdarzeń) albo E3-PR0”; od E2-PR3a3 w teście „ZNANA RÓŻNICA (naprawa: E3-PR0)”).
+- **„ZNANA UTRATA (zdarzenia)” K6** (od E2-PR3a3 w teście): poprawka wizyty z drugiego urządzenia sprzed „Scal
+  pacjentów” na pierwszym ginie po zdarzeniach i pełnej wymianie; same pełne kopie ją zachowują. Naprawa: E2-PR3c
+  (pytanie 12.3).
 - **„ZNANA RÓŻNICA” R5-E1:** przy trzech urządzeniach wizyta jest w karcie na jednym, a w Koszu na drugim, do pełnej
   wysyłki; po niej jest w Koszu na wszystkich. Naprawa: E3-PR0.
 - **„ZNANA UTRATA” R3-E1:** po dwóch wskrzeszeniach tej samej notatki na dwóch urządzeniach późniejszy tekst ginie na
@@ -22747,6 +23751,10 @@ literał na wynik zgodny.
     niezmierzony).
   - Do sprawdzenia: emisja nagrobka notatki przy „Usuń pacjenta” (`Bnp_usunZPacjentem`, wiersz 8 tabeli 3.5).
   - Pomiar `sweepOutbox` wobec rekordów pochodnych scalania.
+  - Wykonane w E2-PR3a2 (wpis P-DZIENNIK-ZDARZEN, E2-PR3a2, wyżej): kolejność w kroku (kroki operacji złożonych),
+    nośnik pól karty (`snap` także w „Przywróć”, gdy wizyta jest już w karcie), nagrobek notatki przy „Usuń pacjenta”
+    (sprawdzone: powstaje w usunięciu notatki i w odnowieniu nagrobka, bez osobnej emisji). Pomiar `sweepOutbox` —
+    E2-PR3a4.
 - **E2-PR3b.**
   - Hak H1: przegrany nagrobek karty → pełna karta (`pfull`, `setId` z karty i chwili nagrobka, dedup).
   - Hak H2 „zawsze do kolejki”: notatka, której nagrobek zniknął w partii i której rekord zmieniło scalanie, idzie do
@@ -35142,6 +36150,52 @@ formularze w powłoce `app.html`: pierwszy własny zapis, odtworzenie po edycji 
 i cyklu GH, przełączanie ramek, F5 i kontrola prawidłowego wyboru „Nowy pomiar”.
 Dane testowe są wyłącznie fikcyjne.
 
+### Pusty wiek przy przejściu Start → DocPro → Start (P-PUSTY-WIEK, 2026-11-07)
+
+Korekta funkcjonalna zapisu i odtwarzania danych wejściowych, bez zmiany wzorów,
+norm, jednostek ani progów wieku. Kolektor `collectUserData` w
+`vilda_data_import_export.js` dopisywał `ageMonths: 0`, nawet gdy oba pola wieku
+były puste. Po odtworzeniu i kolejnym zebraniu formularza powstawało także
+`age: 0`, co uruchamiało prawidłową dla jawnego zera prezentację wieku w tygodniach.
+
+- Dwa puste pola dają teraz `age: null, ageMonths: null` w sesji i zapisie/eksporcie.
+  „Nowy pomiar” bez daty urodzenia wymaga podania bieżącego wieku; brak wieku nie
+  może zostać zastąpiony automatycznym zerem, aby umożliwić zapis.
+- Jawne zero pozostaje wartością: `0 lat` bez miesięcy daje `0/0`, same `0 miesięcy`
+  także `0/0`; same `6 miesięcy` dają `0/6`, a `10 lat` bez miesięcy — `10/0`.
+  Data urodzenia i jawny wiek w tygodniach zachowują dotychczasowy kontrakt.
+- Odtworzenie samych ustawień widoku bez wybranego ani nazwanego pacjenta nie
+  pokazuje komunikatu „Ten pacjent nie ma jeszcze pomiaru”. Rzeczywiste wczytanie
+  rekordu oraz odtworzenie kontekstu nazwanego/wybranego pacjenta zachowują komunikat.
+- Nie przepisujemy istniejących rekordów ani starych zer: nie można bezpiecznie
+  odróżnić zera dopisanego przez dawny kolektor od świadomie podanego wieku noworodka.
+
+Regresje wykonują rzeczywisty kolektor i importer (`main-session-blank-age-roundtrip`)
+oraz natywną nawigację powłoki (`empty-patient-navigation`): pusty formularz na
+desktopie i ekranie 390 px, trzy powroty przez DocPro i F5, zachowanie nazwiska bez
+wieku oraz zapis fikcyjnego noworodka z kontrolą niezmienności całego rekordu sejfu.
+Wpływ kliniczny ogranicza się do usunięcia niepodanego wieku z wejść; nie zmieniamy
+obliczeń dla rzeczywiście podanych danych.
+
+### Edytowalna płeć pustego formularza po DocPro (P-PUSTA-PLEC, 2026-11-07)
+
+Importer nakładał `sex.disabled = true` przy każdym odtworzeniu sesji
+z `user.sex`, również gdy był to pusty formularz z domyślną płcią i preferencjami.
+Po Start → DocPro → Start pole „Płeć” stawało się niedostępne mimo braku
+wczytanego pacjenta.
+
+Odtworzenie anonimowego, nienazwanego formularza przywraca wartość płci bez
+nakładania tej blokady. Jawny import oraz sesja z nazwą lub identyfikatorem
+pacjenta zachowują dotychczasową ochronę tożsamości. Nie zdejmujemy blokady
+ustanowionej przez inny moduł. Wartości M/F, wiek, pomiary, wzory, normy
+i zapisane rekordy pozostają bez zmian; zachowana jest poprawka P-PUSTY-WIEK.
+
+Testy wykonują rzeczywisty kolektor i importer oraz natywną nawigację:
+trzy powroty i F5 przy 1440 i 390 px, nienazwany roboczy pomiar z płcią F
+oraz zapis noworodka z kontrolą blokady i niezmienności całego rekordu.
+Obserwacja aktualizacji sesji utworzonej na poprzedniej wersji potwierdza
+edytowalne pole po przeładowaniu i następnym powrocie z DocPro.
+
 ## Świeżo wczytany pacjent wygrywa ze startowym odtworzeniem sesji (P-SWIEZE-WCZYTANIE, SW 1.1.165, 2026-10-05)
 
 **Zmiana kliniczna: NIE** — żaden wzór, próg, jednostka, dawka ani interpretacja. Zmienia się kolejność dwóch kroków przy starcie strony: odtworzenia sesji karty i wczytania pacjenta. Zlecenie właściciela 2026-10-05.
@@ -35272,3 +36326,12 @@ Normy są danymi w `clcr_potassium_dzm_data.js`, przekazywanymi do `clcr_potassi
 Jedna karta B: Norma dla wieku · Labcorp, neutralne liczby normy, bursztynowe odchylenie. W zakresie laboratoryjnym nie wyklucza nadmiernej utraty nerkowej przy hipokaliemii. Sam niski/wysoki wynik nie rozpoznaje hipo-/hiperkaliemii. Brak automatycznego progu utraty nerkowej lub nowego pola potasu we krwi. Zero neutralne z uwagą o raporcie; mały dodatni wynik nie zmienia się w0. Usunięto nieuzasadniony limit stężenia200 mmol/L i rozbieżność readiness/renderera. Ujemne dane są odrzucane także w edycji i zapisie. Dokładna ilość jest oceniana przed skróceniem prezentacji, operandy/wynik muszą być skończone; dodatni underflow/overflow blokują wynik. Przykład M40,100 mmol/L×1500mL/24h→150 mmol/24h, powyżej20–116; 0,001×1500mL→0,0015, nigdy0.
 
 Jeden kanoniczny pomiar `K_mmol_d` / `clcr:K_mmol_d`; migawka `clcr-potassium-dzm`v1 zamraża dokładną ilość, wejścia/proweniencję, czas, kontekst, źródło/populację, normę i ocenę. Badania, Notatki i historia pozostają zgodne. Brak normy ma `outOfRange:null`, bez fałszywego „W zakresie”. Odczyt nie reinterpretuje dawnej historii, świadoma edycja zachowuje ID i nie dopisuje historycznego24h. Zapis tylko do zapisanej wybranej karty pacjenta. Kliniczne źródła i komplet testów rzeczywistych funkcji opisano w dokumentacji modułu.
+
+
+## SGA/IUGR — przenośny szablon kwalifikacji 1.0 (2026-11-09)
+
+Źródła: program MZ B.64, obwieszczenie 16.09.2026, obowiązuje od 1.10.2026; formularz CZD VI A/VI B (bez jednoznacznej daty wersji). Pełne adresy i treść: [szablon](../../templates/sga/README.md). Autor opracowania: Maciej Flader; treść kliniczna zaakceptowana przez właściciela 9.11.2026.
+
+Populacja: dzieci oceniane do programu leczenia GH z powodu niskorosłości po SGA/IUGR w Polsce. Jest to lista postępowania (3 etapy, 10 kroków), nie algorytm kwalifikacji, dawkowania ani kalkulator SDS. Normy urodzeniowe wymagają wskazanego źródła i wieku ciążowego; historia IUGR nie zastępuje kryterium SGA. Rozbieżności dokumentów dotyczące oceny GH i granicy wieku oceny psychologicznej rozstrzyga ośrodek. Brak automatycznych terminów, dawek lub decyzji kwalifikacyjnej.
+
+Przypadek syntetyczny: import pliku do biblioteki fikcyjnego lekarza → 3 etapy/10 kroków i zachowane źródła/prawa → niezależne lokalne identyfikatory. Import i utworzenie planu nie oznaczają wykonania badań ani zakwalifikowania dziecka. Grupowane badania wymagają świadomej decyzji po ocenie kompletu, nie samego odebrania jednego wyniku. Test używa produkcyjnego kodeka i modelu. Nie zmieniono żadnych wzorów ani dotychczasowych interpretacji aplikacji.

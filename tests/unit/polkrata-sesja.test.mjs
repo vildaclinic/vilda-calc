@@ -650,7 +650,7 @@ async function scalZBlokada(d, poBlokadzie) {
 describe('S4 po P-CHMURA-OPIS: treść kosza z cienia na liście po usunięciu wersji — z magazynu z chwili usunięcia', () => {
   it('„Zaloguj jednorazowo”: blokada po usunięciu wersji — treść kosza z cienia z magazynu sesji, bez bazy IndexedDB', async () => {
     const otwarte = [];
-    const d = await scenKoszZCienia({ jednorazowo: true, indexedDB: { open(n) { otwarte.push(n); return {}; }, deleteDatabase() { return {}; } } });
+    const d = await scenKoszZCienia({ jednorazowo: true, indexedDB: { async databases() { return []; }, open(n) { otwarte.push(n); return {}; }, deleteDatabase() { return {}; } } });
     const w = await scalZBlokada(d, () => {
       // Pamięć sesji veph:* czyści przy końcu sesji jednorazowej VildaPersistence (tu nieładowany) — jak ona:
       d.P.__win.sessionStorage.removeItem('veph:vault:adapter-v1');

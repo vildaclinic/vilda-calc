@@ -87,6 +87,11 @@ test('opóźnione DOB z rekordu: Start w powłoce i DocPro pokazują aktualne ce
   start = await ramka(page, 'Start');
   await start.waitForFunction(() => window.VildaVault.isUnlocked()
     && !document.documentElement.classList.contains('vilda-auth-locked') && typeof window.saveUserData === 'function');
+  // Prepare the fictional visit only after the real startup producer settles;
+  // an unlocked vault alone does not mean its form is ready for editing/Save.
+  const prepared = await start.evaluate(() => window.VildaDataImportExport.whenInitialMainSessionRestoreSettled());
+  expect(prepared.ready, 'initial session is ready before preparing the fictional visit').toBe(true);
+  await start.waitForFunction(() => window.VildaDataImportExport.getSaveReadiness().ready, null, { polling: 100 });
   await start.evaluate(() => {
     const values = { lastName: 'Fikcyjny', firstName: 'Eksportowy', sex: 'M', dobInput: '20-07-2009', height: '174', weight: '62' };
     for (const [id, value] of Object.entries(values)) {
@@ -106,6 +111,12 @@ test('opóźnione DOB z rekordu: Start w powłoce i DocPro pokazują aktualne ce
   await page.reload({ waitUntil: 'load' });
   start = await ramka(page, 'Start');
   await expect(start.locator('#results')).toContainText('Wzrost: 29 centyl');
+  // The restored percentile can already be painted while auth and the
+  // remaining session producers are still working. First wait for those real
+  // producers; the unchanged Saved assertion then checks SSI publication.
+  const restored = await start.evaluate(() => window.VildaDataImportExport.whenInitialMainSessionRestoreSettled());
+  expect(restored.ready, 'F5 main-session restore completed successfully').toBe(true);
+  await start.waitForFunction(() => window.VildaDataImportExport.getSaveReadiness().ready, null, { polling: 100 });
   await expect.poll(() => start.evaluate(() => window.VildaSaveStatusIndicator.getState())).toBe('saved');
   await odtworzZOpóźnieniem(start, pid);
 

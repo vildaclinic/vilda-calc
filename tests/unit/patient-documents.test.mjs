@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import fs from 'node:fs';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
 
 function setup({ lazy = false, frame = null } = {}) {
@@ -28,7 +29,158 @@ function setup({ lazy = false, frame = null } = {}) {
 }
 const ready = { shouldShow: true, proMode: true, isDocPro: false };
 
+describe('Dokumenty — fresh summary after the native intake restore completes', () => {
+  function restoring() {
+    const h = setup();
+    h.intake = { pending: true, failed: false };
+    h.w.vildaGetIntakeRestoreReadiness = () => h.intake;
+    h.w.VildaDataImportExport.isMainSessionRestorePending = () => h.intake.pending;
+    h.api.setSummaryState(ready);
+    h.rendered = { ...ready };
+    h.w.updateProfessionalSummaryCard = vi.fn(() => h.api.setSummaryState(h.rendered));
+    h.complete = () => {
+      h.intake = { pending: false, failed: false };
+      h.d.dispatchEvent(new Event('vilda:intake-restore-readiness'));
+    };
+    return h;
+  }
+
+  it('reads a fresh native summary after pending ownership settles, without rebinding the old boolean', async () => {
+    const h = restoring();
+    expect(h.api.getReadinessPhase()).toBe('preparing');
+    h.complete();
+    h.d.dispatchEvent(new Event('vilda:intake-restore-readiness'));
+    await Promise.resolve();
+    expect(h.w.updateProfessionalSummaryCard).toHaveBeenCalledOnce();
+    expect(h.api.getState().disabled).toBe(false);
+    h.d.dispatchEvent(new Event('vilda:intake-restore-readiness'));
+    await Promise.resolve();
+    expect(h.w.updateProfessionalSummaryCard).toHaveBeenCalledOnce();
+  });
+
+  it('uses the actual empty result after completion instead of the previous available summary', async () => {
+    const h = restoring();
+    h.rendered.shouldShow = false;
+    h.complete();
+    await Promise.resolve();
+    expect(h.w.updateProfessionalSummaryCard).toHaveBeenCalledOnce();
+    expect(h.api.getReadinessPhase()).toBe('unavailable');
+    expect(h.api.getState().disabled).toBe(true);
+  });
+
+  it('does not reschedule itself if a failing renderer emits another completion event', async () => {
+    const h = restoring();
+    h.w.updateProfessionalSummaryCard.mockImplementation(() => {
+      h.d.dispatchEvent(new Event('vilda:intake-restore-readiness'));
+      throw new Error('Fictional renderer failure');
+    });
+    h.complete();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(h.w.updateProfessionalSummaryCard).toHaveBeenCalledOnce();
+    expect(h.api.getState().disabled).toBe(true);
+  });
+
+  it.each([false, true])('runs outside the actual synchronous result batch, clear=%s', async (clear) => {
+    const h = restoring();
+    loadBrowserScript('vilda_html.js', h.w);
+    const report = fs.readFileSync(new URL('../../vilda_patient_report.js', import.meta.url), 'utf8');
+    const wrapper = report.slice(report.indexOf('function updateProfessionalSummaryCard(e) {'), report.indexOf('function patientReportEscapeHtml'));
+    const render = vi.fn(() => h.api.setSummaryState(h.rendered));
+    const node = { isConnected: true };
+    h.w.updateProfessionalSummaryCard = new Function('window', 'document', 'renderProfessionalSummaryCardImmediately', `${wrapper};return updateProfessionalSummaryCard;`)(h.w, { getElementById: () => node }, render);
+    h.w.VildaHtml.withResultRefreshBatch(() => {
+      h.complete();
+      if (clear) h.d.dispatchEvent(new Event('vilda:user-state-cleared'));
+      expect(render).not.toHaveBeenCalled();
+    });
+    await Promise.resolve();
+    expect(render).toHaveBeenCalledTimes(clear ? 0 : 1);
+    expect(h.api.getState().disabled).toBe(clear);
+  });
+
+  it.each(['pending', 'failed', 'throw', 'missing-renderer'])('does not publish a replacement summary while %s', async (reason) => {
+    const h = restoring();
+    if (reason === 'failed') h.intake = { pending: false, failed: true };
+    if (reason === 'throw') h.w.vildaGetIntakeRestoreReadiness = () => { throw new Error('unavailable'); };
+    if (reason === 'missing-renderer') { h.intake = { pending: false, failed: false }; delete h.w.updateProfessionalSummaryCard; }
+    const render = h.w.updateProfessionalSummaryCard;
+    h.d.dispatchEvent(new CustomEvent('vilda:intake-restore-readiness', { detail: { pending: false, failed: false } }));
+    await Promise.resolve();
+    if (render) expect(render).not.toHaveBeenCalled();
+    expect(h.api.getState().disabled).toBe(true);
+  });
+
+  const changes = {
+    clear: h => h.d.dispatchEvent(new Event('vilda:user-state-cleared')),
+    patient: h => h.values.set('vildaCurrentPatientId', 'fictional-new-patient'),
+    visit: h => { h.w.VildaDataImportExport.getApplyLoadedDataSequence = () => 2; },
+    loaded: h => { h.w.lastLoadedData = {}; },
+    source: h => { h.source.value = 'WHO'; },
+    account: h => { h.vaultState.userId = 'fictional-other-account'; },
+    key: h => { h.vaultState.generation += 1; },
+    hidden: h => { h.w.frameElement = { hidden: true }; },
+    document: h => { h.w.document = new EventTarget(); },
+    restarted: h => { h.intake = { pending: true, failed: false }; },
+  };
+
+  it.each(Object.keys(changes))('retires the queued fresh render after %s changes', async (change) => {
+    const h = restoring();
+    h.complete();
+    changes[change](h);
+    await Promise.resolve();
+    expect(h.w.updateProfessionalSummaryCard).not.toHaveBeenCalled();
+    expect(h.api.getState().disabled).toBe(true);
+  });
+
+  it.each(['clear', 'patient', 'account', 'key'])('rejects a stale result before publication if %s changes inside the renderer', async (change) => {
+    const h = restoring(), enabled = [];
+    h.d.addEventListener('vilda:patient-documents-state', event => { if (!event.detail.disabled) enabled.push(event.detail); });
+    h.w.updateProfessionalSummaryCard.mockImplementation(() => {
+      changes[change](h);
+      h.api.setSummaryState(ready);
+    });
+    h.complete();
+    await Promise.resolve();
+    expect(h.w.updateProfessionalSummaryCard).toHaveBeenCalledOnce();
+    expect(enabled).toEqual([]);
+    expect(h.api.getState().disabled).toBe(true);
+  });
+});
+
 describe('Dokumenty pacjenta — native readiness and operation ownership', () => {
+  it('separates transient readiness from actual unavailable content without changing getState shape', () => {
+    const { api, w } = setup();
+    expect(api.getReadinessPhase()).toBe('preparing');
+    expect(Object.keys(api.getState()).sort()).toEqual(['busy', 'disabled', 'reason']);
+    api.setSummaryState(ready);
+    expect(api.getReadinessPhase()).toBe('ready');
+    w.VildaDataImportExport.getApplyLoadedDataSequence = () => 2;
+    expect(api.getReadinessPhase()).toBe('preparing');
+    expect(api.getState().disabled).toBe(true);
+    api.setSummaryState({ ...ready, shouldShow: false });
+    expect(api.getReadinessPhase()).toBe('unavailable');
+    w.professionalMode = false;
+    expect(api.getReadinessPhase()).toBe('unavailable');
+  });
+
+  it('publishes preparing-to-unavailable even when public disabled text is identical', () => {
+    const { api, w, d } = setup();
+    const phases = [];
+    d.addEventListener('vilda:patient-documents-state', () => phases.push(api.getReadinessPhase()));
+    api.setSummaryState(ready);
+    w.__vildaPersistRestoring = true;
+    api.setSummaryState(ready);
+    w.__vildaPersistRestoring = false;
+    d.dispatchEvent(new Event('vilda:main-session-restored'));
+    expect(api.getReadinessPhase()).toBe('preparing');
+    expect(phases.at(-1)).toBe('preparing');
+    const before = api.getState();
+    api.setSummaryState({ ...ready, shouldShow: false });
+    expect(api.getState()).toEqual(before);
+    expect(phases.at(-1)).toBe('unavailable');
+  });
+
   it('requires the native summary gate and keeps the existing PRO gate', () => {
     const { api, w } = setup();
     expect(api.getState().disabled).toBe(true);

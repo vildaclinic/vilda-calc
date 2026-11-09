@@ -1948,8 +1948,14 @@
       var main = scope.querySelector('.vtap-main');
       if (!main || main._vtaWired) return false;
       main._vtaWired = true;
+      var lastOpen = !!main.open;
       main.addEventListener('toggle', function () {
-        try { w.localStorage && w.localStorage.setItem(COLLAPSE_KEY, main.open ? '0' : '1'); } catch (e2) { /* prywatny tryb */ }
+        var open = !!main.open;
+        // Początkowy toggle po renderze nie jest zmianą wyboru w tym panelu.
+        // Może dotrzeć już po zmianie preferencji w innej ramce powłoki.
+        if (open === lastOpen) return;
+        lastOpen = open;
+        try { w.localStorage && w.localStorage.setItem(COLLAPSE_KEY, open ? '0' : '1'); } catch (e2) { /* prywatny tryb */ }
       });
       return true;
     } catch (e) {

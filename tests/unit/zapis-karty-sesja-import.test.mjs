@@ -110,7 +110,7 @@ async function importDoIstniejacej(d, { bezNotatek = false } = {}) {
 }
 
 // Funkcje API sejfu są w stosie jako „Object.ns [as importPatientFromEnvelope]”.
-const W_NS = /\bns \[as importPatientFromEnvelope\]/;
+const W_NS = /\bns(?: \[as importPatientFromEnvelope\])? \(/;
 const W_KN = /\bat (async )?Kn \(/;
 const PUNKTY_IMPORTU = [
   { id: 'IP1', opis: 'po odszyfrowaniu nagłówka pliku kluczem sesji (przed odszyfrowaniem treści)', rodzaj: 'krypto', dop: { metoda: 'decrypt', wStosie: W_KN }, bezKrypto: true },
@@ -359,7 +359,7 @@ async function scalenieSpoza(d) {
   return { zew: zew.patientId, cel: cel.patientId, notatki, uruchom: () => d.v.mergeExternalIntoPatient(zew.patientId, cel.patientId) };
 }
 
-const W_ME = /\$a \[as mergeExternalIntoPatient\]/;
+const W_ME = /\$a(?: \[as mergeExternalIntoPatient\])? \(/;
 const W_USUN = /\bat (async )?Bpu_usun \(/;
 const PUNKTY_SPOZA = [
   { id: 'MP1', opis: 'po odczycie osoby spoza bazy (przed odczytem karty docelowej)', dop: { metoda: 'listSnapshotsForUser', konto: 'A', wStosie: W_ME, ktory: 1 } },

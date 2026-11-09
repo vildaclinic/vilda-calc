@@ -338,12 +338,14 @@ test.describe('panel powłoki z innym pacjentem', () => {
       expect(bezZnacznikowX(stan), `Start po powrocie nie trzyma danych X: ${JSON.stringify(stan)}`).toEqual(CZYSTO);
       if (wariant === 'oby') expect(stan.otylosc, 'własny punkt otyłości Y zostaje').toContain('ob-y1');
 
-      await wpiszPomiar(s2, 36.8, 142.1);
+      // Skok GH otwiera nową wizytę Y bez daty urodzenia: lekarz podaje też wiek.
+      await wpiszPomiar(s2, 36.8, 142.1, 11);
       await page.locator('#saveDataBtnSidebar').click();
       await expect.poll(async () => (await rekordy(s2, ids)).y.n, { timeout: 15000 }).toBe(przed.y.n + 1);
       const po = await rekordy(s2, ids);
       expect(znacznikiX(po.y.najnowszy), 'najnowszy zapis Y bez danych X').toEqual([]);
       expect(po.y.najnowszy.name).toBe('Fikcyjna Druga');
+      expect(po.y.najnowszy.user).toMatchObject({ age: 11, ageMonths: 0, weight: 36.8, height: 142.1 });
       if (wariant === 'oby') {
         expect((po.y.najnowszy.obesityTherapyPoints || []).map((x) => x.id), 'zapis Y zachowuje własny punkt otyłości').toContain('ob-y1');
       }
@@ -388,6 +390,7 @@ test.describe('panel powłoki z innym pacjentem', () => {
     await expect.poll(async () => (await rekordy(d2, ids)).y.n, { timeout: 15000 }).toBe(przed.y.n + 1);
     const po = await rekordy(d2, ids);
     expect(znacznikiX(po.y.najnowszy), 'zapis Y z DocPro bez danych X').toEqual([]);
+    expect(po.y.najnowszy.user).toMatchObject({ age: 11, ageMonths: 0, weight: 36.9, height: 142.2 });
     expect(po.x.n).toBe(przed.x.n);
   });
 
@@ -410,8 +413,9 @@ test.describe('panel powłoki z innym pacjentem', () => {
 
   test('kontrola: ten sam pacjent w obu panelach — ciepła ramka DocPro nie jest przeładowywana', async ({ page }) => {
     const start = await powlokaZKontem(page);
-    await zalozPacjentow(start, 'nogh');
+    const ids = await zalozPacjentow(start, 'nogh');
     await wczytajZListy(page, start, 'Fikcyjny Pierwszy', 'new');
+    const przed = await rekordy(start, ids);
     await page.evaluate(() => window.VildaShell.navigate('docpro'));
     const docpro = await ramka(page, 'DocPro');
     await expect(docpro.locator('#lastName')).toHaveValue('Fikcyjny', { timeout: 15000 });
@@ -419,8 +423,25 @@ test.describe('panel powłoki z innym pacjentem', () => {
 
     await page.locator('a.sidebar-link[href="index.html"]').click();
     const s = await ramka(page, 'Start');
-    await wpiszPomiar(s, 25.4, 126.8);
+    // Także X bez daty urodzenia wymaga wieku bieżącego, nowego pomiaru.
+    await wpiszPomiar(s, 25.4, 126.8, 8);
     await page.locator('#saveDataBtnSidebar').click();
+    // Nowy pomiar ma ten sam wiek co archiwalny punkt X. Jeśli natywny
+    // strażnik chroni ten punkt, przyjmujemy go z bazy i zachowujemy historię.
+    const konflikt = s.getByRole('alertdialog', { name: 'Ktoś inny zmienił ten rekord po wczytaniu danych', exact: true });
+    await expect.poll(async () => await konflikt.isVisible()
+      || (await rekordy(s, ids)).x.n === przed.x.n + 1).toBe(true);
+    if (await konflikt.isVisible()) {
+      await expect(konflikt).toContainText('wiek 8 lat, wzrost 126 cm, masa 25 kg');
+      await konflikt.getByRole('button', { name: 'Przyjmij dane z bazy', exact: true }).click();
+    }
+    await expect.poll(async () => (await rekordy(s, ids)).x.n, { timeout: 15000 }).toBe(przed.x.n + 1);
+    const po = await rekordy(s, ids);
+    expect(po.x.najnowszy.user).toMatchObject({ age: 8, ageMonths: 0, weight: 25.4, height: 126.8 });
+    expect(po.x.najnowszy.advanced.data.measurements).toEqual(expect.arrayContaining([
+      expect.objectContaining({ ageMonths: 96, ageYears: 8, height: 126, weight: 25 }),
+    ]));
+    expect(po.y, 'rekord drugiego pacjenta pozostaje bez zmian').toEqual(przed.y);
     await page.waitForTimeout(3500);
 
     await page.evaluate(() => window.VildaShell.navigate('docpro'));
@@ -443,9 +464,19 @@ test.describe('panel powłoki z innym pacjentem', () => {
 
     await page.locator('a.sidebar-link[href="index.html"]').click();
     const s = await ramka(page, 'Start');
-    await s.evaluate(async () => { await window.saveUserData(); });
+    // Sama obecność API nie oznacza końca odtwarzania po powrocie do Start.
+    // Klikamy rzeczywisty przycisk dopiero, gdy aplikacja zezwoli na zapis.
+    const zapisz = page.locator('aside.sidebar-v2 #saveDataBtnSidebar');
+    await expect(zapisz).not.toHaveAttribute('aria-disabled', 'true');
+    await expect(zapisz).toBeEnabled();
+    await zapisz.click();
     await expect.poll(() => s.evaluate(() => window.sessionStorage.getItem('vildaCurrentPatientId')), { timeout: 20000 }).not.toBeNull();
     const id = await s.evaluate(() => window.sessionStorage.getItem('vildaCurrentPatientId'));
+    const zapis = await s.evaluate(pid => window.VildaVault.getPatient(pid), id);
+    expect(zapis.snapshotCount).toBe(1);
+    expect(zapis.snapshots[0].payload.user).toMatchObject({
+      firstName: 'Nowy', lastName: 'Fikcyjny-Nowy', sex: 'M', age: 7, ageMonths: 0, weight: 23, height: 121,
+    });
     await page.waitForTimeout(1500);
 
     await page.evaluate(() => window.VildaShell.navigate('docpro'));

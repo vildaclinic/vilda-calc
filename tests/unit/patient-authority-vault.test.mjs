@@ -75,7 +75,16 @@ function browser() {
     setTimeout: vi.fn((callback, delay) => { timers.set(++timer, { callback, delay }); return timer; }),
     clearTimeout: vi.fn(id => timers.delete(id)),
     fetch: vi.fn(() => { throw new Error('Unexpected network access in fictional authority test'); }),
-    indexedDB: { open: vi.fn(() => { throw new Error('Unexpected database opening'); }), deleteDatabase: vi.fn() },
+    indexedDB: { open: vi.fn(name => {
+      if (name !== 'vilda-clinical-workspace-native-v1') throw new Error('Unexpected database opening');
+      // The new native routing domain is absent. Model an actual aborted
+      // creation probe; it must never turn this fixture into a protected user.
+      const request = { error: { name: 'AbortError' }, transaction: {
+        abort() { queueMicrotask(() => request.onerror()); }
+      } };
+      queueMicrotask(() => request.onupgradeneeded({ oldVersion: 0 }));
+      return request;
+    }), deleteDatabase: vi.fn() },
     document: {
       ...events(), hidden: false, readyState: 'complete',
       getElementById: vi.fn(() => null), querySelector: vi.fn(() => null), querySelectorAll: vi.fn(() => []),

@@ -6,6 +6,7 @@
   var d = w.document;
   if (!d || w.VildaPatientDocuments) return;
   var summary = null, summaryOwner = null, revision = 0;
+  var queuedSummaryRefresh = null, activeSummaryRefresh = null;
   var pending = null, pendingRecord = null, active = null, busy = false, lastState = '';
   var watchedVaults = new WeakSet();
   var reportLabels = [
@@ -58,24 +59,33 @@
       && a.source === b.source && a.route === b.route);
   }
 
+  function readiness() {
+    var reason = '', phase = 'ready', current;
+    if (!handlesPage()) { reason = 'Dokumenty pacjenta są dostępne na stronie głównej i DocPro.'; phase = 'unavailable'; }
+    else if (!professional()) { reason = 'Dokumenty pacjenta są dostępne w trybie PRO lub DocPro.'; phase = 'unavailable'; }
+    else if (!(current = owner())) { reason = 'Poczekaj na wczytanie danych pacjenta.'; phase = 'preparing'; }
+    else if (!summary && !(w.VildaPatientReportLoader && typeof w.VildaPatientReportLoader.ensure === 'function')) { reason = 'Przygotowywanie dokumentów pacjenta…'; phase = 'preparing'; }
+    else if (summary && !sameOwner(summaryOwner, current)) { reason = 'Uzupełnij dane, aby przygotować dokumenty pacjenta.'; phase = 'preparing'; }
+    else if (summary && !summary.shouldShow) { reason = 'Uzupełnij dane, aby przygotować dokumenty pacjenta.'; phase = 'unavailable'; }
+    return { disabled: !!reason || busy, reason: busy ? 'Przygotowywanie dokumentów pacjenta…' : reason, busy: busy, phase: busy ? 'busy' : phase };
+  }
+
   function getState() {
-    var reason = '';
-    if (!handlesPage()) reason = 'Dokumenty pacjenta są dostępne na stronie głównej i DocPro.';
-    else if (!professional()) reason = 'Dokumenty pacjenta są dostępne w trybie PRO lub DocPro.';
-    else if (!owner()) reason = 'Poczekaj na wczytanie danych pacjenta.';
-    else if (!summary && !(w.VildaPatientReportLoader && typeof w.VildaPatientReportLoader.ensure === 'function')) reason = 'Przygotowywanie dokumentów pacjenta…';
-    else if (summary && (!sameOwner(summaryOwner, owner()) || !summary.shouldShow)) reason = 'Uzupełnij dane, aby przygotować dokumenty pacjenta.';
-    return { disabled: !!reason || busy, reason: busy ? 'Przygotowywanie dokumentów pacjenta…' : reason, busy: busy };
+    var state = readiness();
+    return { disabled: state.disabled, reason: state.reason, busy: state.busy };
   }
 
   function publish() {
-    var state = getState(), signature = JSON.stringify(state);
+    // A stale summary and a ready empty summary can have the same public
+    // disabled reason. Their presentation phases must still notify the shell.
+    var value = readiness(), state = { disabled: value.disabled, reason: value.reason, busy: value.busy }, signature = JSON.stringify(value);
     if (signature === lastState) return;
     lastState = signature;
     d.dispatchEvent(new w.CustomEvent('vilda:patient-documents-state', { detail: state }));
   }
 
   function setSummaryState(value) {
+    if (activeSummaryRefresh && !summaryRefreshCurrent(activeSummaryRefresh)) return;
     summary = { shouldShow: !!(value && value.shouldShow && (value.isDocPro || value.proMode)) };
     summaryOwner = owner(true);
     publish();
@@ -148,6 +158,44 @@
       if (scope.unlocked) vault.assertSyncOperationSession(scope.token);
       return true;
     } catch (_) { return false; }
+  }
+
+  function intakeSummarySettled() {
+    var state = typeof w.vildaGetIntakeRestoreReadiness === 'function' && w.vildaGetIntakeRestoreReadiness();
+    return !!(state && state.pending === false && state.failed === false);
+  }
+
+  function summaryRefreshCurrent(record) {
+    try {
+      return w.document === d && record.revision === revision && professional()
+        && w.updateProfessionalSummaryCard === record.render && intakeSummarySettled()
+        && sameImportAccount(record.account) && sameOwner(record.owner, owner());
+    } catch (_) { return false; }
+  }
+
+  function refreshSummaryAfterIntake() {
+    if (activeSummaryRefresh) return;
+    publish();
+    try {
+      var currentOwner = owner(), render = w.updateProfessionalSummaryCard;
+      if (!intakeSummarySettled() || !professional() || !currentOwner || !summary
+        || sameOwner(summaryOwner, currentOwner) || typeof render !== 'function') return;
+      if (queuedSummaryRefresh && summaryRefreshCurrent(queuedSummaryRefresh)) return;
+      var record = { owner: currentOwner, render: render, revision: revision, account: captureImportAccount() };
+      if (!record.account || !summaryRefreshCurrent(record)) return;
+      queuedSummaryRefresh = record;
+      // The native summary may have rendered while intake was still pending.
+      // Read and render current results after completion; never rebind its old
+      // availability flag. Let a synchronous Clear/load retire this request.
+      Promise.resolve().then(function () {
+        if (queuedSummaryRefresh !== record) return;
+        queuedSummaryRefresh = null;
+        if (!summaryRefreshCurrent(record) || !summary || sameOwner(summaryOwner, record.owner)) return;
+        activeSummaryRefresh = record;
+        try { record.render.call(w); }
+        finally { activeSummaryRefresh = null; publish(); }
+      }).catch(function () { /* A failed render must not make old content ready. */ });
+    } catch (_) { /* Readiness is unavailable; keep the existing summary fenced. */ }
   }
 
   function importCompleted(event) {
@@ -414,6 +462,7 @@
     if (event.target && event.target.closest && event.target.closest('#calcForm')) invalidate();
   });
   d.addEventListener('vilda:professional-summary-updated', publish);
+  d.addEventListener('vilda:intake-restore-readiness', refreshSummaryAfterIntake);
   d.addEventListener('vildaResultsModeChanged', function () {
     if (active && !current(active)) invalidate(); else publish();
   });
@@ -432,7 +481,7 @@
       }).observe(w.frameElement, { attributes: true, attributeFilter: ['hidden', 'aria-hidden'] });
     }
   } catch (_) { /* standalone */ }
-  w.VildaPatientDocuments = Object.freeze({ handlesPage: handlesPage, getState: getState, open: open,
+  w.VildaPatientDocuments = Object.freeze({ handlesPage: handlesPage, getState: getState, getReadinessPhase: function () { return readiness().phase; }, open: open,
     close: function () { close(active); }, setSummaryState: setSummaryState });
   publish();
 })(window);

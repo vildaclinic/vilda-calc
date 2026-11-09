@@ -16,7 +16,7 @@ async function nativeTemplateVault(page, { seedTemplate = true } = {}) {
       + '<script src="/vilda_care_template_store.js"></script><script src="/vilda_vault.js"></script>',
   }));
   await page.goto(PAGE);
-  await page.waitForFunction(() => Boolean(window.VildaVault?.exportCarePlanTemplateLibrary));
+  await page.waitForFunction(() => Boolean(window.VildaVault?.saveCarePlanTemplateRevision));
   await page.evaluate(async ({ password, seedTemplate }) => {
     const vault = window.VildaVault, model = window.VildaCareTemplateModel;
     await vault.createUser(password, { iterations: 10000, label: 'Fikcyjna biblioteka natywna' });
@@ -65,53 +65,57 @@ async function nativeTemplateVault(page, { seedTemplate = true } = {}) {
   }, { password: PASSWORD, seedTemplate });
 }
 
-test('real encrypted template backup restores exact history and refuses a tampered file before any write', async ({ page }) => {
+test('withdrawn whole-library APIs leave the real encrypted library and its history intact', async ({ page }) => {
   await nativeTemplateVault(page);
   const result = await page.evaluate(async () => {
     const f = window.__fictionalNativeTemplateVault;
-    const beforeView = await f.vault.getCarePlanTemplate(f.templateId);
-    const text = await f.vault.exportCarePlanTemplateLibrary(), envelope = JSON.parse(text);
-    const before = await f.library(), tampered = structuredClone(envelope);
-    tampered.cipher.data = (tampered.cipher.data[0] === 'A' ? 'B' : 'A') + tampered.cipher.data.slice(1);
-    let refused = false;
-    try { await f.vault.importCarePlanTemplateLibrary(JSON.stringify(tampered)); } catch { refused = true; }
-    const afterRefusal = await f.library();
-    const restored = await f.vault.importCarePlanTemplateLibrary(text);
+    const initial = await f.vault.getCarePlanTemplate(f.templateId), definition = structuredClone(initial.definition);
+    definition.purpose = 'Fikcyjna zachowana druga rewizja';
+    await f.vault.saveCarePlanTemplateRevision({ templateId: f.templateId,
+      operationId: 'fictional-native-second-revision', baseToken: initial.baseToken, definition });
+    const beforeView = await f.vault.getCarePlanTemplate(f.templateId), before = await f.library();
+    const scope = await f.vault.getVaultBackupScope();
     const afterView = await f.vault.getCarePlanTemplate(f.templateId);
-    return { format: envelope.format, plaintextLeaked: text.includes(f.definition.name), refused,
-      before, afterRefusal, restored, beforeView, afterView,
+    return { exportType: typeof f.vault.exportCarePlanTemplateLibrary,
+      importType: typeof f.vault.importCarePlanTemplateLibrary, scope,
+      plaintextLeaked: JSON.stringify(before).includes(definition.name),
+      before, after: await f.library(), beforeView, afterView,
       originalClinical: f.originalClinical, clinical: await f.clinical(), changes: f.changes };
   });
-  expect(result.format).toBe('vilda-care-template-library/v1');
+  expect(result.exportType).toBe('undefined');
+  expect(result.importType).toBe('undefined');
+  expect(result.scope).toMatchObject({ includesCareTemplateLibrary: false, libraryPresent: true });
+  expect(result.scope.libraryExportAPI).toBeUndefined();
+  expect(result.scope.message).toContain('Eksportuj szablon');
   expect(result.plaintextLeaked).toBe(false);
-  expect(result.refused).toBe(true);
-  expect(result.afterRefusal).toEqual(result.before);
-  expect(result.restored.saved).toBe(true);
+  expect(result.after).toEqual(result.before);
   expect(result.afterView.definition).toEqual(result.beforeView.definition);
   expect(result.afterView.baseToken).toBe(result.beforeView.baseToken);
   expect(result.afterView.revisions).toEqual(result.beforeView.revisions);
+  expect(result.afterView.revisions).toHaveLength(2);
   expect(result.clinical).toEqual(result.originalClinical);
   expect(result.changes).toEqual([]);
 });
 
-test('another real account cannot import the first account library or expose its local records', async ({ page }) => {
+test('withdrawn bulk transfer stays unavailable after a real account switch and keeps libraries isolated', async ({ page }) => {
   await nativeTemplateVault(page);
   const result = await page.evaluate(async password => {
-    const f = window.__fictionalNativeTemplateVault, text = await f.vault.exportCarePlanTemplateLibrary();
+    const f = window.__fictionalNativeTemplateVault;
     const originalLibrary = await f.library();
     await f.vault.createUser(password, { iterations: 10000, label: 'Fikcyjne drugie konto biblioteki' });
     const nextUserId = f.vault.getCurrentUser().userId, token = await f.vault.captureCareTemplateSession();
     const before = await f.vault.listCarePlanTemplates({ archived: 'all' });
-    let errorCode = null;
-    try { await f.vault.importCarePlanTemplateLibrary(text); } catch (error) { errorCode = error.code; }
     return { changedUser: nextUserId !== f.userId, distinctKeyBinding: token.keyBinding !== f.keyBinding,
-      before, after: await f.vault.listCarePlanTemplates({ archived: 'all' }), errorCode,
+      before, after: await f.vault.listCarePlanTemplates({ archived: 'all' }),
+      exportType: typeof f.vault.exportCarePlanTemplateLibrary,
+      importType: typeof f.vault.importCarePlanTemplateLibrary,
       unavailableSource: await f.vault.getCarePlanTemplate(f.templateId), originalLibrary,
       sourceLibrary: await f.library(), originalClinical: f.originalClinical, sourceClinical: await f.clinical() };
   }, PASSWORD);
   expect(result.changedUser).toBe(true);
   expect(result.distinctKeyBinding).toBe(true);
-  expect(result.errorCode).toBe('CARE_TEMPLATE_KEY_MISMATCH');
+  expect(result.exportType).toBe('undefined');
+  expect(result.importType).toBe('undefined');
   expect(result.before).toEqual([]);
   expect(result.after).toEqual([]);
   expect(result.unavailableSource).toBeNull();

@@ -39,6 +39,9 @@ async function openMeasurement(page, { shell = false, route = 'start', source = 
     && window.__vildaSuspendAdvIntakeSync !== true
     && window.__vildaSuspendGrowthHistoryCrossSync !== true);
   await owner.waitForFunction(() => typeof window.VildaSaveFeedback?.capture === 'function');
+  // Visible fields can precede the native restore finalizer. These scenarios
+  // begin with a saveable measurement, then observe the actual save lifecycle.
+  await owner.waitForFunction(() => window.VildaDataImportExport?.getSaveReadiness?.().ready === true);
   await owner.evaluate(() => {
     window.__feedbackSaveCalls = 0;
     window.__feedbackSaveSettled = 0;
@@ -254,6 +257,9 @@ test('wolny zapis scala ponowne wywołanie, błąd pozostaje z Ponów, a ponowie
   await expect(page.locator(TOAST)).toHaveAttribute('data-state', 'saving');
   await owner.evaluate(async () => { window.__releaseSave(); await Promise.all([window.__pendingSave1, window.__pendingSave2]); });
   await expect(page.locator(TOAST)).toHaveAttribute('data-state', 'saved');
+  // The injected Vault error must reach Vault, after the previous save's
+  // own restoration has settled, rather than exercise the restore guard.
+  await owner.waitForFunction(() => window.VildaDataImportExport?.getSaveReadiness?.().ready === true);
 
   await owner.evaluate(() => {
     window.VildaVault.savePatient = async () => { throw new Error('Fikcyjny błąd zapisu E2E'); };

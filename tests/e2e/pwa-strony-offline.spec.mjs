@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { expect, test } from '@playwright/test';
+import { biezaceWersje } from '../support/wersje-zasobow.mjs';
 
 // Projekt desktop-chromium domyślnie blokuje SW (playwright.config.mjs), a launchPersistentContext
 // dziedziczy tę opcję; ten plik sprawdza prawdziwy SW, więc go włącza.
@@ -35,6 +36,9 @@ const korzen = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..
 // Strony, które SW obiecuje offline: dokument główny i strony HTML z OPTIONAL_DOCUMENTS — czytane
 // z pliku SW, żeby lista nie rozjechała się z tablicą. DocPro pierwszy, bo o niego było zgłoszenie.
 const ZRODLO_SW = fs.readFileSync(path.join(korzen, 'service-worker-kalorii.js'), 'utf8');
+const WORKSPACE_MANIFEST = JSON.parse(fs.readFileSync(path.join(korzen, 'runtime/clinical-workspace-v1/manifest.json'), 'utf8'));
+const WORKSPACE_ENTRY = WORKSPACE_MANIFEST.files.find(entry => entry.path.endsWith('/client/patient-clinical-workspace-native/index.mjs'))?.path;
+const MUTATION_ASSET = '/vilda_care_plan_mutation.js?v=' + biezaceWersje(korzen)['vilda_care_plan_mutation.js'].v;
 const DOKUMENTY_SW = [.../const OPTIONAL_DOCUMENTS = \[([\s\S]*?)\n\];/.exec(ZRODLO_SW)[1].matchAll(/'(\/[^']+\.html)'/g)]
   .map((m) => m[1]);
 const STRONY = [...new Set(['/docpro.html', '/index.html', ...DOKUMENTY_SW])];
@@ -144,6 +148,19 @@ test('prawdziwy SW bez sieci: DocPro i pozostałe strony z precache startują be
       if (strona === '/docpro.html' || strona === '/index.html') {
         await expect.poll(() => page.evaluate(() => typeof window.VildaBoneAge?.restoreContext),
           { message: 'model pochodzenia wieku kostnego działa bez sieci' }).toBe('function');
+      }
+      if (strona === '/index.html') {
+        // First import after the server has stopped: neither a warm module map
+        // nor an earlier online visit can hide a missing dependency in precache.
+        expect(WORKSPACE_ENTRY).toBeTruthy();
+        const modules = await page.evaluate(async ({ entry, mutation }) => {
+          const native = await import('/' + entry);
+          await import(mutation);
+          return { runtime: typeof native.createNativeWorkspaceRuntime,
+            application: typeof native.createCarePlanService,
+            mutation: typeof window.VildaCarePlanMutation?.prepareTransaction };
+        }, { entry: WORKSPACE_ENTRY, mutation: MUTATION_ASSET });
+        expect(modules).toEqual({ runtime: 'function', application: 'function', mutation: 'function' });
       }
       if (strona === '/docpro.html') {
         await expect.poll(() => page.evaluate(() => typeof window.VildaVault), { message: 'sejf DocPro offline' }).toBe('object');

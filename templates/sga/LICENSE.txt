@@ -1,0 +1,12 @@
+SGA/IUGR — kwalifikacja do leczenia hormonem wzrostu, wersja 1.0
+Autor opracowania: Maciej Flader
+
+Autor opracowania szablonu: Maciej Flader.
+
+Dozwolone jest wykorzystywanie szablonu w praktyce lekarskiej, także przy udzielaniu odpłatnych świadczeń medycznych.
+
+Dozwolone są modyfikacje szablonu oraz jego bezpłatne przekazywanie między lekarzami. Przy przekazywaniu oryginału lub wersji zmodyfikowanej należy zachować informację o autorze opracowania, źródłach oraz niniejszych zasadach udostępniania. Wersja zmodyfikowana powinna wskazywać autora i opis wprowadzonych zmian.
+
+Publikacja szablonu lub jego opracowań w katalogach albo marketplace’ach oraz sprzedaż szablonu lub jego opracowań wymagają osobnej zgody autora. Własna, prywatna biblioteka szablonów lekarza w aplikacji nie jest publikacją w katalogu ani marketplace.
+
+Niniejsze zasady dotyczą własnego opracowania szablonu. Nie przypisują autorowi praw do źródłowego programu terapeutycznego, urzędowego formularza, faktów medycznych ani metod postępowania medycznego. Materiały źródłowe zachowują swój odrębny status prawny.

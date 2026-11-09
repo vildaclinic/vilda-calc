@@ -5,7 +5,7 @@
   "license": "Apache-2.0",
   "description": "Narzędzia jakości i testy regresyjne dla statycznej aplikacji vilda-calc.",
   "scripts": {
-    "test:repo": "node tests/scripts/check-repository-policy.mjs",
+    "test:repo": "node tests/scripts/check-repository-policy.mjs && node tools/check_clinical_workspace_boundary.mjs && node tools/check_clinical_workspace_sync_boundary.mjs && node tools/check_clinical_workspace_backup_boundary.mjs",
     "lint": "eslint . --suppressions-location eslint-suppressions.json",
     "test:syntax": "node tests/scripts/check-js-syntax.mjs",
     "test:unit": "vitest run",

@@ -421,8 +421,14 @@ describe('karta usuwająca', () => {
     const lA = blokady(o);
     // removeUser(X) wstrzymany na liście baz przy sprawdzeniu biblioteki szablonów (ostatni krok przed kasowaniem bazy
     // sejfu; odczyt metadanych konta już był).
-    const hL = wstrzymaj(o, { przy: 'databases' });
+    // The first list now checks the protected workspace marker, before any
+    // native auth read. Let that probe finish and pause the same later library
+    // check as before; otherwise forcing close creates a different interleave.
+    const hMarker = wstrzymaj(o, { przy: 'databases' });
     const pA = usun(o);
+    await doczekaj(hMarker.czeka, 'sprawdzenie markera dokumentacji w removeUser');
+    const hL = wstrzymaj(o, { przy: 'databases' });
+    hMarker.zwolnij();
     await doczekaj(hL.czeka, 'lista baz w removeUser');
     // Wymuszone zamknięcie przy istniejącej bazie: połączenie wyjęte z mapy, próba otwarcia — baza jest, bez blokady.
     o.idb.__atrapa.wymusZamkniecie(BAZA(X));

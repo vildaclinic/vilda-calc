@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { webcrypto } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 
 const korzen = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -24,6 +25,10 @@ const korzen = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..
 // z limitem bajtów i atrapą sieci, która oddaje rozmiary plików z dysku.
 
 const ZRODLO_SW = fs.readFileSync(path.join(korzen, 'service-worker-kalorii.js'), 'utf8');
+const MANIFEST_WORKSPACE = JSON.parse(fs.readFileSync(path.join(korzen, 'runtime/clinical-workspace-v1/manifest.json'), 'utf8'));
+const PAKIET_WORKSPACE = '/' + MANIFEST_WORKSPACE.precachePack.path;
+const HISTORYCZNE_MODULY_WORKSPACE = MANIFEST_WORKSPACE.historicalFiles || [];
+const MODULY_WORKSPACE = new Set(MANIFEST_WORKSPACE.files.concat(HISTORYCZNE_MODULY_WORKSPACE).map(file => '/' + file.path));
 const POCHODZENIE = 'https://vilda.test';
 // Dowolna wartość ?v=, nie tylko liczba: edu-video-ui.css jest ładowany jako ?v=20261001v4 i ?v=20261001v7,
 // a SW traktuje jako niezmienny każdy adres z parametrem v (isImmutableVersionedRequest).
@@ -48,6 +53,7 @@ function uruchomSW({ caches = null, fetch = null } = {}) {
     location: new URL(`${POCHODZENIE}/service-worker-kalorii.js`),
     registration: {},
     clients: { claim: async () => {} },
+    crypto: webcrypto,
     addEventListener() {},
     skipWaiting() {},
   };
@@ -66,12 +72,15 @@ const rozmiarPliku = (adres) => {
   }
 };
 
-// Atrapa sieci: odpowiedź bez treści, z rozmiarem pliku w nagłówku; brak pliku → 404.
+// Atrapa sieci podaje rozmiary plików; pakiet musi oddać prawdziwe bajty,
+// ponieważ produkcyjny SW sprawdza jego hash oraz treść każdego modułu.
 async function siec(request) {
-  const rozmiar = rozmiarPliku(new URL(request.url).pathname);
+  const pathname = new URL(request.url).pathname;
+  const rozmiar = rozmiarPliku(pathname);
   return rozmiar === null
     ? new Response('', { status: 404 })
-    : new Response('', { status: 200, headers: { 'x-rozmiar': String(rozmiar) } });
+    : new Response(pathname === PAKIET_WORKSPACE ? fs.readFileSync(path.join(korzen, pathname)) : '',
+      { status: 200, headers: { 'x-rozmiar': String(rozmiar) } });
 }
 
 // Atrapa Cache Storage: osobne pamięci pod nazwami, jeden limit bajtów na całe źródło (jak quota) — put ponad limit
@@ -81,7 +90,7 @@ function pamiec(limit = Infinity, { zuzywajOdpowiedzi = false } = {}) {
   const pamieci = new Map();
   let zajete = 0;
   const klucz = (k) => { const u = new URL(typeof k === 'string' ? k : k.url, POCHODZENIE); return `${u.pathname}${u.search}`; };
-  const rozmiarOdp = (o) => Number(o?.headers?.get('x-rozmiar')) || 0;
+  const rozmiarOdp = (o) => Number(o?.headers?.get('x-rozmiar') || o?.headers?.get('content-length')) || 0;
   const otworz = (nazwa) => {
     if (!pamieci.has(nazwa)) {
       const wpisy = new Map();
@@ -280,7 +289,7 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
   const arkuszEdu = (adres) => adres.split('?')[0] === '/edu-video-ui.css';
   const aliasyEdu = () => doInstalacji().filter(arkuszEdu);
   const cssEdu = fs.readFileSync(path.join(korzen, 'edu-video-ui.css'), 'utf8');
-  const dodatkoweWspoldzieloneZasoby = ['/vilda_auth_ui.css', '/ios26-v2.css', '/vilda_shell.css', '/vilda_vault.js', '/vilda_chrome.js',
+  const dodatkoweWspoldzieloneZasoby = ['/obesity_therapy_monitor.js', '/vilda_auth_ui.css', '/ios26-v2.css', '/vilda_shell.css', '/vilda_vault.js', '/vilda_chrome.js',
     '/vilda_logger.js', '/vilda_html.js', '/vilda_init.js', '/vilda_app_helpers.js', '/vilda_frame_sync.js',
     '/vilda_crypto.js', '/vilda_persistence_adapter.js', '/vilda_crypto_strength_explainer.js',
     '/vilda_deps.js', '/vilda_update_hooks.js', '/ios26-ui.js',
@@ -305,18 +314,22 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
     '/circumference_module.js', '/wfh_module.js', '/respiratory_module.js',
     '/gh_therapy_segments.js', '/obesity_response_criteria.js',
     '/vilda_down_syndrome.js', '/flu_therapy.js', '/bisphos_therapy.js',
-    '/bisphos_therapy_monitor.js', '/lab_unit_converter.js',
-    '/antibiotic_therapy.js', '/gh_igf_therapy.js', '/gh_therapy_monitor.js',
-    '/hypertension_therapy.js', '/thyroid_cancer_kids.js'];
+    '/bisphos_therapy_monitor.js', '/lab_unit_converter.js', '/antibiotic_therapy.js', '/gh_igf_therapy.js', '/gh_therapy_monitor.js', '/hypertension_therapy.js', '/thyroid_cancer_kids.js', '/app.js', '/custom-fixes.js'];
   const wspoldzielonePary = ['/style.css', '/vilda_chrome.css', ...dodatkoweWspoldzieloneZasoby];
   const wspoldzieloneZasoby = new Set(['/edu-video-ui.css', ...wspoldzielonePary]);
   const oczekiwanePobraniaSwiezychZasobow = () => {
     const widziane = new Set();
-    return doInstalacji().filter((adres) => {
+    return doInstalacji().flatMap((adres) => {
+      // Independent mapping from the built manifest: all module cache keys
+      // stay required, but their transport makes exactly one fresh request.
+      if (MODULY_WORKSPACE.has(adres)) {
+        if (widziane.has(PAKIET_WORKSPACE)) return [];
+        widziane.add(PAKIET_WORKSPACE); return [PAKIET_WORKSPACE];
+      }
       const sciezka = adres.split('?')[0];
-      if (!wspoldzieloneZasoby.has(sciezka)) return true;
-      if (widziane.has(sciezka)) return false;
-      widziane.add(sciezka); return true;
+      if (!wspoldzieloneZasoby.has(sciezka)) return [adres];
+      if (widziane.has(sciezka)) return [];
+      widziane.add(sciezka); return [adres];
     });
   };
 
@@ -330,6 +343,13 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
     expect([...wpisy.keys()].sort(), 'wszystkie istniejące wpisy bieżące zachowują własne klucze offline')
       .toEqual(doInstalacji().filter((adres) => rozmiarPliku(adres) !== null).sort());
     expect(pobrane.filter(historyczny), 'żaden adres historyczny nie jest pobierany').toEqual([]);
+    expect(pobrane.filter(adres => adres === PAKIET_WORKSPACE)).toHaveLength(1);
+    expect(pobrane.filter(adres => MODULY_WORKSPACE.has(adres))).toEqual([]);
+    expect(MANIFEST_WORKSPACE.files).toHaveLength(51);
+    // The new publication guard has a new immutable module tree. Both earlier
+    // trees remain available to clients holding their historical URLs.
+    expect(HISTORYCZNE_MODULY_WORKSPACE).toHaveLength(100);
+    expect(MODULY_WORKSPACE.size).toBe(151);
     // Budżet: dziś ok. 390 adresów i 24 MB. Chromium przerywa zdarzenie install po 5 minutach — przy 8 Mb/s i 80 ms
     // opóźnienia na żądanie 24 MB zajęło 64 s, a 474 MB (historia) nie mieściło się nawet przy 20 Mb/s.
     const bajty = pobrane.reduce((suma, adres) => suma + (rozmiarPliku(adres) || 0), 0);
@@ -345,7 +365,7 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
     }
     expect(pobrane.filter(adres => adres.split('?')[0] === '/vilda_care_plan_model.js')).toHaveLength(1);
     expect(pobrane.filter(adres => adres.split('?')[0] === '/vilda_search_navigation.js')).toHaveLength(1);
-    for (const plik of ['/vilda_care_template_model.js', '/vilda_care_template_store.js', '/vilda_care_templates.js', '/vilda_care_templates.css']) {
+    for (const plik of ['/vilda_care_template_model.js', '/vilda_care_template_store.js', '/vilda_care_template_transfer.js', '/vilda_care_templates.js', '/vilda_care_templates.css']) {
       expect(pobrane.filter(adres => adres.split('?')[0] === plik), plik).toHaveLength(1);
     }
     for (const plik of ['/clcr_potassium_dzm_data.js', '/clcr_potassium_dzm.js', '/clcr_potassium_dzm_ui.js', '/clcr_potassium_dzm.css', '/clcr_potassium_dzm_persistence.js']) {
@@ -602,7 +622,7 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
   });
 
   it('skrypt spoza jawnej listy nadal pobiera każdy bieżący alias osobno', async () => {
-    const sciezka = '/app.js', magazyn = pamiec(Infinity, { zuzywajOdpowiedzi: true }), pobrane = [];
+    const sciezka = '/obesity_therapy.js', magazyn = pamiec(Infinity, { zuzywajOdpowiedzi: true }), pobrane = [];
     const aliasy = doInstalacji().filter(adres => adres.split('?')[0] === sciezka);
     const fetch = async request => {
       const u = new URL(request.url); if (u.pathname !== sciezka) return siec(request);
