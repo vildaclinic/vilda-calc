@@ -1,0 +1,207 @@
+{
+  "format": "vilda-care-template/v1",
+  "definition": {
+    "contentVersion": 2,
+    "name": "SGA/IUGR — kwalifikacja do leczenia hormonem wzrostu",
+    "purpose": "Lista organizująca przygotowanie dziecka do kwalifikacji w programie B.64, według wersji obowiązującej od 1.10.2026 r. Każdą grupę zamyka świadome sprawdzenie kompletu dokumentacji przez lekarza. Decyzję kwalifikacyjną podejmuje Zespół Koordynacyjny.",
+    "labels": [
+      "SGA",
+      "IUGR",
+      "Kwalifikacja",
+      "B.64"
+    ],
+    "stageOrder": [
+      "stage-1",
+      "stage-2",
+      "stage-3"
+    ],
+    "stages": [
+      {
+        "id": "stage-1",
+        "title": "Dokumentacja i ocena wstępna",
+        "stepIds": [
+          "step-1",
+          "step-2"
+        ]
+      },
+      {
+        "id": "stage-2",
+        "title": "Diagnostyka kwalifikacyjna",
+        "stepIds": [
+          "step-3",
+          "step-4",
+          "step-5",
+          "step-6",
+          "step-7",
+          "step-8",
+          "step-9"
+        ]
+      },
+      {
+        "id": "stage-3",
+        "title": "Wniosek i decyzja",
+        "stepIds": [
+          "step-10"
+        ]
+      }
+    ],
+    "steps": [
+      {
+        "id": "step-1",
+        "stageId": "stage-1",
+        "title": "Dokumentacja urodzeniowa i SGA/IUGR",
+        "taskKind": "documentation",
+        "instruction": "Zbierz wiek ciążowy, płeć oraz urodzeniową masę i długość ciała. Zapisz SDS wraz z nazwą i wersją norm dla wieku ciążowego i płci. Sprawdź kryterium urodzeniowe programu; samo rozpoznanie IUGR w wywiadzie nie zastępuje tej oceny.",
+        "requiredOutcome": "decision",
+        "reminderRule": {
+          "kind": "none"
+        },
+        "includedByDefault": true
+      },
+      {
+        "id": "step-2",
+        "stageId": "stage-1",
+        "title": "Ocena wzrastania i badanie dziecka",
+        "taskKind": "followup",
+        "instruction": "Zbierz pomiary z co najmniej 6 miesięcy obserwacji i oceń tempo wzrastania. Zapisz aktualny wzrost z centylem/SDS, masę, BMI, obwód głowy i klatki piersiowej oraz ciśnienie. Uzupełnij badanie przedmiotowe, stan pokwitania i wywiad rodzinny, w tym wzrost rodziców. Sprawdź kryterium wieku metrykalnego (>4 lata) oraz kryteria auksologiczne programu.",
+        "requiredOutcome": "decision",
+        "reminderRule": {
+          "kind": "none"
+        },
+        "includedByDefault": true
+      },
+      {
+        "id": "step-3",
+        "stageId": "stage-2",
+        "title": "Badania laboratoryjne",
+        "taskKind": "examination",
+        "instruction": "Sprawdź komplet wyników: morfologia z rozmazem; jonogram, co najmniej Na i Ca; glukoza i HbA1c; cholesterol całkowity, HDL, LDL i triglicerydy; IGF-1, IGFBP-3, TSH, fT4 i fT3. Zachowaj daty, jednostki oraz zakresy odniesienia. Krok zakończ dopiero po ocenie wszystkich wymaganych wyników.",
+        "requiredOutcome": "decision",
+        "reminderRule": {
+          "kind": "none"
+        },
+        "includedByDefault": true
+      },
+      {
+        "id": "step-4",
+        "stageId": "stage-2",
+        "title": "OGTT z oceną glikemii i insulinemii",
+        "taskKind": "examination",
+        "instruction": "Wykonaj i oceń test obciążenia glukozą z oznaczeniami glikemii i insulinemii według protokołu ośrodka. Dołącz pełny wynik z datą, punktami czasowymi i jednostkami; odnotuj wniosek lekarza.",
+        "requiredOutcome": "decision",
+        "reminderRule": {
+          "kind": "none"
+        },
+        "includedByDefault": true
+      },
+      {
+        "id": "step-5",
+        "stageId": "stage-2",
+        "title": "Ocena wydzielania hormonu wzrostu",
+        "taskKind": "examination",
+        "instruction": "Uzgodnij diagnostykę z ośrodkiem kwalifikującym. Program w kryterium GH dopuszcza testy stymulacyjne lub nocny wyrzut z co najmniej 5 pomiarami, a w wykazie badań przy kwalifikacji wymienia 2 testy stymulacyjne. Nie przyjmuj samodzielnie, że badanie nocne zawsze je zastępuje, ani nie zlecaj automatycznie obu ścieżek. Dołącz protokoły, wyniki i ocenę zgodności z programem.",
+        "requiredOutcome": "decision",
+        "reminderRule": {
+          "kind": "none"
+        },
+        "includedByDefault": true
+      },
+      {
+        "id": "step-6",
+        "stageId": "stage-2",
+        "title": "Badania obrazowe",
+        "taskKind": "examination",
+        "instruction": "Zbierz: RTG śródręcza ręki dominującej z przynasadami kości przedramienia i oceną wieku kostnego metodą Greulicha–Pyle’a; MRI okolicy podwzgórzowo-przysadkowej lub TK tej okolicy z kontrastem; USG jamy brzusznej i USG serca. Oceń komplet opisów oraz przeciwwskazania i kryterium wieku kostnego zgodnie z programem.",
+        "requiredOutcome": "decision",
+        "reminderRule": {
+          "kind": "none"
+        },
+        "includedByDefault": true
+      },
+      {
+        "id": "step-7",
+        "stageId": "stage-2",
+        "title": "Konsultacja okulistyczna",
+        "taskKind": "consultation",
+        "instruction": "Uzyskaj i oceń wynik badania dna oka. Zapisz datę badania oraz istotne wnioski konsultacji i dołącz dokumentację.",
+        "requiredOutcome": "decision",
+        "reminderRule": {
+          "kind": "none"
+        },
+        "includedByDefault": true
+      },
+      {
+        "id": "step-8",
+        "stageId": "stage-2",
+        "title": "Ocena psychologiczna",
+        "taskKind": "consultation",
+        "instruction": "Uzyskaj ocenę psychologa odpowiednią do wieku dziecka: rozwoju psychoruchowego lub intelektualnego, zgodnie z programem i ustaleniami ośrodka. Dołącz datę, opis oraz wnioski. Przy granicy 7. roku życia uzgodnij wymagany zakres z ośrodkiem; szablon nie rozstrzyga tej niejednoznaczności automatycznie.",
+        "requiredOutcome": "decision",
+        "reminderRule": {
+          "kind": "none"
+        },
+        "includedByDefault": true
+      },
+      {
+        "id": "step-9",
+        "stageId": "stage-2",
+        "title": "Dodatkowa diagnostyka według wskazań",
+        "taskKind": "consultation",
+        "instruction": "Oceń wskazania do konsultacji genetycznej i ewentualnego kariotypu lub badania molekularnego, zwłaszcza przy dysmorfii lub wadach wrodzonych. Inne konsultacje i badania hormonalne dobierz do obrazu klinicznego i wykluczenia innych przyczyn niskorosłości. Zapisz ocenę wskazań i decyzję; przy braku potrzeby dodatkowych badań odnotuj uzasadnienie. Nie traktuj wszystkich pól formularza jako badań rutynowych.",
+        "requiredOutcome": "decision",
+        "reminderRule": {
+          "kind": "none"
+        },
+        "includedByDefault": true
+      },
+      {
+        "id": "step-10",
+        "stageId": "stage-3",
+        "title": "Komplet dokumentacji, wniosek i decyzja Zespołu",
+        "taskKind": "documentation",
+        "instruction": "Sprawdź łączne spełnienie aktualnych kryteriów B.64, komplet wyników i załączników, w tym RTG śródręcza oraz siatki dotychczasowego wzrastania oraz wymagane podpisy i zgody. Przygotuj i przekaż aktualny wniosek zgodnie z wymaganiami Zespołu Koordynacyjnego. Zapisz datę wysłania, ewentualne uzupełnienia i rzeczywistą decyzję Zespołu. Samo wysłanie wniosku nie kończy tego kroku i nie oznacza zakwalifikowania do leczenia.",
+        "requiredOutcome": "decision",
+        "reminderRule": {
+          "kind": "none"
+        },
+        "includedByDefault": true
+      }
+    ],
+    "publication": {
+      "id": "vilda-sga-b64-qualification-pl-2026-10",
+      "version": "1.0",
+      "authors": [
+        "Maciej Flader"
+      ],
+      "contributors": [],
+      "sources": [
+        {
+          "title": "Minister Zdrowia — program lekowy B.64: kwalifikacja dzieci z SGA/IUGR",
+          "url": "https://www.gov.pl/web/zdrowie/obwieszczenie-ministra-zdrowia-z-dnia-16-wrzesnia-2026-r-w-sprawie-wykazu-refundowanych-lekow-srodkow-spozywczych-specjalnego-przeznaczenia-zywieniowego-oraz-wyrobow-medycznych-na-1-pazdziernika-2026-r",
+          "version": "Obwieszczenie z 16.09.2026 r.; program obowiązujący od 1.10.2026 r."
+        },
+        {
+          "title": "MZ — pakiet programów lekowych zawierający załącznik B.64",
+          "url": "https://www.gov.pl/attachment/90e9d77e-cc4a-4fc2-bc65-3ccb29581260",
+          "version": "Pakiet programów na 1.10.2026 r."
+        },
+        {
+          "title": "Zespół Koordynacyjny ds. Stosowania Hormonu Wzrostu — formularz wniosku SGA/IUGR (CZD)",
+          "url": "https://czd.pl/upload/pages/291/attachments/wzor-wniosku-o-przydzielenie-preparatu-hormonu-wzrostu-w-niskoroslosci-w-nastepstwie-sga-lub-iugr.doc",
+          "version": "Formularz VI A oraz załącznik VI B; w przesłanym dokumencie brak daty wersji"
+        }
+      ],
+      "license": {
+        "id": "custom",
+        "url": "",
+        "text": "Autor opracowania szablonu: Maciej Flader.\n\nDozwolone jest wykorzystywanie szablonu w praktyce lekarskiej, także przy udzielaniu odpłatnych świadczeń medycznych.\n\nDozwolone są modyfikacje szablonu oraz jego bezpłatne przekazywanie między lekarzami. Przy przekazywaniu oryginału lub wersji zmodyfikowanej należy zachować informację o autorze opracowania, źródłach oraz niniejszych zasadach udostępniania. Wersja zmodyfikowana powinna wskazywać autora i opis wprowadzonych zmian.\n\nPublikacja szablonu lub jego opracowań w katalogach albo marketplace’ach oraz sprzedaż szablonu lub jego opracowań wymagają osobnej zgody autora. Własna, prywatna biblioteka szablonów lekarza w aplikacji nie jest publikacją w katalogu ani marketplace.\n\nNiniejsze zasady dotyczą własnego opracowania szablonu. Nie przypisują autorowi praw do źródłowego programu terapeutycznego, urzędowego formularza, faktów medycznych ani metod postępowania medycznego. Materiały źródłowe zachowują swój odrębny status prawny.",
+        "allowRedistribution": true,
+        "allowAdaptation": true
+      },
+      "attribution": "Maciej Flader — autor własnego opracowania listy postępowania. Źródło wymagań programu: Minister Zdrowia, B.64, wersja od 1.10.2026 r.; źródło układu dokumentacji: formularz Zespołu Koordynacyjnego (CZD). Autor opracowania nie jest przedstawiany jako autor programu terapeutycznego ani formularza urzędowego.",
+      "changes": "Wersja 1.0 — treść kliniczna zaakceptowana przez właściciela aplikacji 9.11.2026 r.",
+      "origin": null
+    }
+  },
+  "contentDigest": "6b192db0878e87d336366b15fa5f98b7ee19d242a598bae9fc1ac5894fc0e60f"
+}
