@@ -314,7 +314,7 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
     '/circumference_module.js', '/wfh_module.js', '/respiratory_module.js',
     '/gh_therapy_segments.js', '/obesity_response_criteria.js',
     '/vilda_down_syndrome.js', '/flu_therapy.js', '/bisphos_therapy.js',
-    '/bisphos_therapy_monitor.js', '/lab_unit_converter.js', '/app.js', '/custom-fixes.js'];
+    '/bisphos_therapy_monitor.js', '/lab_unit_converter.js', '/app.js', '/custom-fixes.js', '/antibiotic_therapy.js'];
   const wspoldzielonePary = ['/style.css', '/vilda_chrome.css', ...dodatkoweWspoldzieloneZasoby];
   const wspoldzieloneZasoby = new Set(['/edu-video-ui.css', ...wspoldzielonePary]);
   const oczekiwanePobraniaSwiezychZasobow = () => {
@@ -346,8 +346,10 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
     expect(pobrane.filter(adres => adres === PAKIET_WORKSPACE)).toHaveLength(1);
     expect(pobrane.filter(adres => MODULY_WORKSPACE.has(adres))).toEqual([]);
     expect(MANIFEST_WORKSPACE.files).toHaveLength(51);
-    expect(HISTORYCZNE_MODULY_WORKSPACE).toHaveLength(49);
-    expect(MODULY_WORKSPACE.size).toBe(100);
+    // The new publication guard has a new immutable module tree. Both earlier
+    // trees remain available to clients holding their historical URLs.
+    expect(HISTORYCZNE_MODULY_WORKSPACE).toHaveLength(100);
+    expect(MODULY_WORKSPACE.size).toBe(151);
     // Budżet: dziś ok. 390 adresów i 24 MB. Chromium przerywa zdarzenie install po 5 minutach — przy 8 Mb/s i 80 ms
     // opóźnienia na żądanie 24 MB zajęło 64 s, a 474 MB (historia) nie mieściło się nawet przy 20 Mb/s.
     const bajty = pobrane.reduce((suma, adres) => suma + (rozmiarPliku(adres) || 0), 0);
@@ -363,7 +365,7 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
     }
     expect(pobrane.filter(adres => adres.split('?')[0] === '/vilda_care_plan_model.js')).toHaveLength(1);
     expect(pobrane.filter(adres => adres.split('?')[0] === '/vilda_search_navigation.js')).toHaveLength(1);
-    for (const plik of ['/vilda_care_template_model.js', '/vilda_care_template_store.js', '/vilda_care_templates.js', '/vilda_care_templates.css']) {
+    for (const plik of ['/vilda_care_template_model.js', '/vilda_care_template_store.js', '/vilda_care_template_transfer.js', '/vilda_care_templates.js', '/vilda_care_templates.css']) {
       expect(pobrane.filter(adres => adres.split('?')[0] === plik), plik).toHaveLength(1);
     }
     for (const plik of ['/clcr_potassium_dzm_data.js', '/clcr_potassium_dzm.js', '/clcr_potassium_dzm_ui.js', '/clcr_potassium_dzm.css', '/clcr_potassium_dzm_persistence.js']) {

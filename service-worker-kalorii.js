@@ -6123,7 +6123,10 @@ const FRESH_STATIC_ALIAS_PATHS = new Set([
   '/bisphos_therapy_monitor.js', '/lab_unit_converter.js',
   // The immutable workspace pack and mutation model retain their own requests.
   // These current static aliases share only freshly fetched install responses.
-  '/app.js', '/custom-fixes.js'
+  '/app.js', '/custom-fixes.js',
+  // The single-template codec keeps its own request. Share only freshly
+  // fetched bytes between this unchanged static module's current aliases.
+  '/antibiotic_therapy.js'
 ]);
 
 // The pack is only an installation transport: original module URLs and exact
