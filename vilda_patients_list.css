@@ -43,19 +43,26 @@
 .vilda-patients-list-picker .pt-icon { display: inline-flex; width: 20px; height: 20px; flex: 0 0 20px; align-items: center; justify-content: center; }
 .vilda-auth-root .vilda-patients2.vilda-patient-database .pt-icon svg,
 .vilda-patients-list-picker .pt-icon svg { display: block; width: 100%; height: 100%; }
-.vilda-auth-root .vilda-patients2.vilda-patient-database .pt-primary,
+.vilda-auth-root .vilda-patients2.vilda-patient-database button.pt-primary,
 .vilda-auth-root .vilda-patients2.vilda-patient-database .pt-secondary,
-.vilda-patients-list-picker .pt-primary,
+.vilda-patients-list-picker button.pt-primary,
 .vilda-patients-list-picker .pt-secondary {
   display: inline-flex; align-items: center; justify-content: center; gap: var(--space-8px);
   min-height: 46px; padding: var(--space-8px) var(--space-16px) !important; font-size: 16px !important;
   font-weight: 600 !important; border: var(--border-hairline) solid var(--pt-line, #d3e0e4) !important;
   border-radius: 7px !important; white-space: nowrap;
 }
-.vilda-auth-root .vilda-patients2.vilda-patient-database .pt-primary,
-.vilda-patients-list-picker .pt-primary { background: var(--pt-teal, #087f89) !important; color: var(--pt-on-primary, #fff) !important; border-color: var(--pt-teal, #087f89) !important; }
-.vilda-auth-root .vilda-patients2.vilda-patient-database .pt-primary:hover,
-.vilda-patients-list-picker .pt-primary:hover { background: var(--pt-teal-hover, #066e77) !important; }
+.vilda-auth-root .vilda-patients2.vilda-patient-database button.pt-primary,
+.vilda-patients-list-picker button.pt-primary { background: var(--chrome-active-bg, linear-gradient(135deg, var(--primary, #00838d), var(--secondary, #00b0a6))) !important; color: var(--pt-on-primary, #fff) !important; border-color: transparent !important; border-radius: var(--radius-9, 9px) !important; }
+.vilda-auth-root .vilda-patients2.vilda-patient-database button.pt-primary:is(:hover,:focus-visible):not(:disabled):not([aria-disabled=true]),
+.vilda-patients-list-picker button.pt-primary:is(:hover,:focus-visible):not(:disabled):not([aria-disabled=true]) { filter: brightness(.96); }
+.vilda-auth-root .vilda-patients2.vilda-patient-database button.pt-primary:disabled,
+.vilda-patients-list-picker button.pt-primary:disabled { filter: none; }
+body .vilda-pl-overlay .vilda-pl-modal .foot button.go {
+  background: var(--chrome-active-bg, linear-gradient(135deg, var(--primary, #00838d), var(--secondary, #00b0a6))) !important;
+  color: #fff !important; border-radius: var(--radius-9, 9px) !important; font-weight: 600 !important;
+}
+body .vilda-pl-overlay .vilda-pl-modal .foot button.go:is(:hover,:focus-visible):not(:disabled):not([aria-disabled=true]) { filter: brightness(.96); }
 .vilda-auth-root .vilda-patients2.vilda-patient-database .pt-secondary,
 .vilda-patients-list-picker .pt-secondary { background: var(--pt-paper, #fff) !important; color: var(--pt-ink, #111) !important; }
 .vilda-auth-root .vilda-patients2.vilda-patient-database .pt-secondary:hover,
@@ -370,6 +377,15 @@ body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contr
   --pt-warning-paper: var(--hc-input-bg);
   --pt-warning-border: var(--hc-border);
   --pt-focus: var(--hc-focus-color);
+}
+/* Keep the existing accessible palette instead of the decorative gradient. */
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) :is(.vilda-auth-root .vilda-patients2.vilda-patient-database, .vilda-patients-list-picker) .pt-primary,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-pl-overlay .vilda-pl-modal .foot button.go {
+  background: var(--pt-teal, var(--hc-text)) !important; border-color: var(--pt-teal, var(--hc-text)) !important;
+}
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) :is(.vilda-auth-root .vilda-patients2.vilda-patient-database, .vilda-patients-list-picker) .pt-primary:is(:hover,:focus-visible):not(:disabled):not([aria-disabled=true]),
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-pl-overlay .vilda-pl-modal .foot button.go:is(:hover,:focus-visible):not(:disabled):not([aria-disabled=true]) {
+  background: var(--pt-teal-hover, var(--hc-muted)) !important; filter: none;
 }
 body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) :is(.vilda-auth-root .vilda-patients2.vilda-patient-database, .vilda-patients-list-picker) :is(button, input):focus-visible {
   outline-width: var(--hc-focus-width) !important;
