@@ -59,6 +59,12 @@ function owin(baza, licz) {
   });
 }
 
+// Ładowanie sejfu w urządzeniach katalogu (E2-PR3a3): null — vilda_vault.js z repozytorium (domyślnie, jak dotąd);
+// funkcja fn(win) — ładuje sejf sama (test A ≡ B: kopia z rejestrem łańcucha), a jej wynik (rejestr okna) trafia do
+// v.__lancuch. Ustawienie obowiązuje w pliku testu, który je wywołał (vitest izoluje pliki).
+let ladowanieSejfu = null;
+export function zaladowanieSejfu(fn) { ladowanieSejfu = typeof fn === 'function' ? fn : null; }
+
 let licznik = 0;
 export async function urzadzenie(nazwa) {
   licznik += 1;
@@ -73,8 +79,10 @@ export async function urzadzenie(nazwa) {
   win.localStorage.setItem('vildaRetention', '0'); // bez retencji w tle po zapisie — przycina tylko krok scenariusza
   loadBrowserScript('vilda_crypto.js', win);
   loadBrowserScript('vilda_retention.js', win);
-  loadBrowserScript('vilda_vault.js', win);
+  if (!ladowanieSejfu) loadBrowserScript('vilda_vault.js', win);
+  const lancuch = ladowanieSejfu ? ladowanieSejfu(win) : null;
   const v = win.VildaVault;
+  if (ladowanieSejfu) v.__lancuch = lancuch;
   const licz = { aktywny: false, lista: 0, wersje: 0, karty: 0, inne: 0 };
   v.setStorageAdapter(owin(v.createInMemoryAdapter(), licz));
   await v.createUser(`S4#Pomiar!2026${licznik}aa`, { label: `${nazwa}${licznik}`, iterations: 10000 });
