@@ -170,12 +170,12 @@ function operacjeDanych(o) {
       tik();
       return v.mergePatients(s.P2, s.P1);
     }, { przygotowanie: 1 }],
-    ['saveExternalPatient', async () => { s.Z1 = (await v.saveExternalPatient({ lastName: 'Testowy', firstName: 'Jan5', sex: 'M', birthYear: '2016', contact: 'Fikcyjny kontakt' })).patientId; }],
-    ['mergeExternalIntoPatient', () => v.mergeExternalIntoPatient(s.Z1, s.P1)],
+    ['saveExternalPatient', async () => { s.spoza1 = (await v.saveExternalPatient({ lastName: 'Testowy', firstName: 'Jan5', sex: 'M', birthYear: '2016', contact: 'Fikcyjny kontakt' })).patientId; }],
+    ['mergeExternalIntoPatient', () => v.mergeExternalIntoPatient(s.spoza1, s.P1)],
     ['promoteExternalToBase', async () => {
-      s.Z2 = (await v.saveExternalPatient({ lastName: 'Testowy', firstName: 'Jan6', sex: 'M', birthYear: '2017' })).patientId;
+      s.spoza2 = (await v.saveExternalPatient({ lastName: 'Testowy', firstName: 'Jan6', sex: 'M', birthYear: '2017' })).patientId;
       tik();
-      return v.promoteExternalToBase(s.Z2, { dobISO: '2017-03-12', sex: 'M', firstName: 'Jan6', lastName: 'Testowy' });
+      return v.promoteExternalToBase(s.spoza2, { dobISO: '2017-03-12', sex: 'M', firstName: 'Jan6', lastName: 'Testowy' });
     }, { przygotowanie: 1 }],
     ['removePatient', async () => {
       s.P3 = (await v.savePatient(naglowek(3), { dedup: false })).patientId;

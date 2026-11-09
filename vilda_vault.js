@@ -7833,7 +7833,7 @@ const Bem_ogony = new Map();
 // Liczba otwartych krokow w tym dokumencie (jeden klucz) i emisje odlozone w trakcie kroku (kolejnosc emisji).
 const Bem_kroki = new Map();
 const Bem_odlozone = new Set();
-// Wlasne pole ladunku haka (bez lancucha prototypow).
+// Wlasne pole ladunku haka (bez pol dziedziczonych).
 function Bem_pole(d, k) {
   return Object.prototype.hasOwnProperty.call(d, k) ? d[k] : undefined;
 }
