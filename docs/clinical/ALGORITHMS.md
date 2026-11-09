@@ -21420,6 +21420,83 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
+## Plany opieki: przewinięcie do potomka zapisuje wersję nadawcy, bez nowej rewizji (P-PLAN-POTOMEK, SW 1.1.493, `vilda_vault.js` 261, 2026-11-09)
+
+**Zmiana kliniczna: NIE** — wzory, progi, jednostki, interpretacje, treść planów, kroków i ustaleń bez zmian. Zmienia
+się wyłącznie metadana wersji (`rev`, `updatedAtISO`) rekordu planu opieki zapisywanego podczas scalania synchronizacji
+(`mergeSyncPayload`, także delta `applyEncryptedDelta`). Wymaga akceptacji właściciela jako zmiana synchronizacji.
+
+**Skąd.** Pomiar z testu pokrycia synchronizacji (przypadek PM26 „plan opieki: usuń wpis planu”,
+`tests/unit/sync-pokrycie-mutacji.test.mjs` z E2-PR3a2, vildaclinic/vilda-calc#912, dane fikcyjne; w #912 zapisany
+jako oczekiwana różnica `D(A, B)` = `pnote [rev, updatedAtISO]`): urządzenie A tworzy plan, dodaje wpis
+(`addNote`) i go usuwa (`removePlanNote`); urządzenie B (kopia sprzed usunięcia) scala pełny ładunek A. B miało tę samą
+treść planu, ale `rev` 4 zamiast 3 i `updatedAtISO` równe chwili scalenia; kolejne wymiany pełnych ładunków tego nie
+wyrównywały, więc różnica stanu odbiorcy (A ≡ B) nie była pusta.
+
+**Przyczyna.** `CareMvpMergeContexts` rozpoznaje przypadek „przychodzący plan jest ścisłym potomkiem lokalnego”
+(historia pochodzenia lokalnej kopii zawiera się w przychodzącej) i zwraca dokładnie przychodzący kontekst z
+`changed: true`. Zapis w scalaniu notatek pacjenta traktował każde `changed` jak nowy wynik scalenia:
+`rev = max(lokalny, przychodzący) + 1`, `updatedAtISO = teraz`. Dla wyniku równoległych zmian to właściwe (nowa
+wersja, której nie ma żadna strona), dla przewinięcia — nie: odbiorca tworzył własną rewizję identycznej treści.
+
+**Odpowiedzi na pytania zlecenia.**
+1. Zapis przy przewinięciu jest potrzebny (zmienia się treść planu u odbiorcy), ale nowa rewizja i chwila scalenia —
+   nie. Dokumentacja planów („potwierdzony potomek zastępuje przodka”) i istniejący test zbieżności
+   (`care-plans-vault.test.mjs`, równe `rev` i `updatedAtISO` na obu urządzeniach) zakładają zbieżność wersji, więc
+   podbicie było odstępstwem od zamiaru, nie decyzją projektową.
+2. Pętli zapisów ani wysyłek nie było: przy kolejnej wymianie obie strony trafiały w gałąź „przychodzący zawiera się
+   w lokalnym” (`ignoreIncoming`) i niczego nie zapisywały ani nie zgłaszały. Zdarzenie scalenia (`merge`) nie planuje
+   pełnej wysyłki, ale `vilda_sync_integration.js` wysyła po nim deltę scalonej notatki (`Bt`); przed zmianą była to
+   kopia z `rev` 4, którą A przyjmowało bez zapisu — jedna dodatkowa wysyłka na przewinięcie, bez odbicia. Po zmianie
+   ta delta niesie dokładnie wersję A. A nie przyjmuje wyższego `rev` B o tej samej treści — to zamierzone (bez
+   przepisywania przyjętego planu) i zostaje bez zmian. Skutek był więc stały, ale ograniczony: rozjazd
+   `rev`/`updatedAtISO` do następnej zmiany planu, po jednym podbiciu przy każdym przewinięciu, oraz data modyfikacji
+   planu równa chwili scalenia, zależna od zegara odbiorcy.
+
+**Reguła po zmianie.** Gdy wynik scalenia jest przewinięciem do przychodzącego potomka (`fastForward`) i przychodzący
+`rev` jest wyższy od lokalnego, zapis bierze `rev` i `updatedAtISO` z ładunku, jak zwykła notatka wygrywająca scalanie.
+Bez zmian zostają:
+- wynik równoległych zmian i przegląd po synchronizacji: `max(rev) + 1` i bieżąca chwila;
+- przewinięcie do potomka, którego `rev` nie przewyższa lokalnego (np. kopia po wcześniejszym podbiciu): nadal
+  `max(rev) + 1` i bieżąca chwila. Konflikt edycji planu wykrywa tylko `rev` (`mutateCarePlan`, `baseRev`), więc zmiana
+  treści przy niezmienionym `rev` pozwoliłaby otwartemu formularzowi nadpisać nową treść bez konfliktu;
+- gałąź „przychodzący zawiera się w lokalnym” (ponowne dostarczenie przodka, ta sama treść z wyższym `rev`): bez zapisu.
+Plany w formacie przenośnym (użycie szablonu, fragment natywny) nie przechodzą przez `CareMvpMergeContexts` i nie
+zmieniają się.
+
+**Przypadki syntetyczne (wejście → oczekiwany wynik)** — `tests/unit/care-plans-sync-descendant.test.mjs`, prawdziwy
+zaszyfrowany sejf (`vilda_crypto.js`, `vilda_vault.js`, adapter pamięciowy), fikcyjne konta:
+- PM26: A `create` → `addNote` → `removePlanNote` (rev 3, 12:04); B z kopią sprzed usunięcia (rev 2) scala ładunek A
+  o 12:05 → B: rev 3, `updatedAtISO` 12:04, ta sama treść, wpis usunięty, jeden zapis i jedno zdarzenie zmiany planu;
+  trzy wymiany pełnych ładunków w obie strony → zero zapisów i zdarzeń planu, wersje równe (na bazie: B rev 4, 12:05);
+- B opóźnione o kilka operacji (`addStep`, `edit`, `complete`) → po pełnym ładunku i po delcie `applyEncryptedDelta`
+  dokładnie wersja A (na bazie: rev o 1 wyższy i chwila scalenia);
+- zegar A cofnięty (usunięcie wpisu o 11:00, kopia B z 12:03) → B przyjmuje rev i `updatedAtISO` 11:00 z A (na bazie:
+  rev 4, chwila scalenia 12:30);
+- równoległe `addNote` na A i B → B: `max(rev) + 1`, chwila scalenia, przegląd po synchronizacji, oba ustalenia
+  (bez zmian; zielone także na bazie);
+- B z zawyżonym `rev` tej samej treści → A niczego nie zapisuje; potomek A o niższym `rev` → B: `max(rev) + 1`,
+  formularz otwarty na starym `rev` dostaje konflikt; następny potomek z B o wyższym `rev` → A przyjmuje dokładnie
+  wersję B, kolejne wymiany bez zapisów (na bazie końcowa zbieżność czerwona: rev 7 wobec 6).
+Na bazie `aab1147` cztery z pięciu przypadków są czerwone, przypadek równoległy zielony. Do tego PM26 w
+`tests/unit/sync-pokrycie-mutacji.test.mjs` traci oczekiwaną różnicę (`roznica`): różnica stanu odbiorcy po zdarzeniach
+i po pełnym ładunku jest pusta; na sejfie z `422a9a7b` (po #912) ten przypadek jest czerwony (`D(A, B)` niepuste).
+
+**Ograniczenia.** Rekordy, które już mają rozjechane `rev`/`updatedAtISO` (sprzed zmiany), wyrównują się przy
+następnej zmianie planu po stronie z wyższym `rev` albo przy potomku o wyższym `rev`; poprawka nie przepisuje ich sama.
+Dwa urządzenia, które równolegle scalą nawzajem swoje wersje sprzed scalenia, nadal mają równy `rev`, ale własne chwile
+scalenia (przypadek bez zmian; wyrównanie samych metadanych przy równej treści wymagałoby osobnej decyzji).
+
+**Przypięcie sejfu.** Zmiana leży poza fragmentem natywnym (`CareMvpMergeContexts` i zapis w scalaniu notatek), więc
+zmienia bazę przypiętą od #910/#911, jak wcześniej E2-PR3a2 (#912): `tools/check_clinical_workspace_boundary.mjs`
+(`BASE` `1cd4cba4…`) i `runtime/clinical-workspace-v1/manifest.json` (`baseVaultSHA256` `1cd4cba4…`,
+`integratedVaultSHA256` `5f5ced47…`). Różnica nowej bazy wobec bazy po #912 (`3422e1ce…`) to wyłącznie dwa miejsca
+tej poprawki. Budowniczy natywnej integracji w prywatnym `vilda-source` (`tools/build-clinical-workspace-runtime.mjs`,
+`BASE_SHA256`) wymaga tego samego przypięcia — do decyzji właściciela, poza tym PR.
+
+**Wersje.** `vilda_vault.js?v=260→261`, `vilda_chrome.js?v=264→265`, `vilda_session_bridge.js?v=181→182` (wstrzykują
+sejf); SW 1.1.492 → **1.1.493**; baza `origin/audyt` `422a9a7b` (po #912).
+
 ## Dziennik zdarzeń: dopisywanie zmian do kolejki w miejscach zapisu — uśpione (P-DZIENNIK-ZDARZEN, E2-PR3a2, SW 1.1.492, `vilda_vault.js` 260, 2026-11-09)
 
 **Zmiana kliniczna: NIE** — wzory, progi, jednostki, interpretacje, zapis danych pacjentów, scalanie, format kopii

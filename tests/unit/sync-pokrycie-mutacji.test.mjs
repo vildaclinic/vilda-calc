@@ -50,8 +50,8 @@
 //   PM23 zapis notatki w stanie „czeka” → pnote, pnotetomb.
 //   PM24 usuń notatkę → pnotetomb.
 //   PM25 ukończ, cofnij ukończenie, „nie przyszedł”, odłóż → pnote.
-//   PM26 plan opieki: utwórz → pnote ×2; usuń wpis planu → pnote, pnotetomb (rev planu u odbiorców — opis przy
-//        przypadku).
+//   PM26 plan opieki: utwórz → pnote ×2; usuń wpis planu → pnote, pnotetomb (odbiorca przyjmuje dokładną wersję
+//        planu nadawcy — P-PLAN-POTOMEK).
 //   PM27 wynik przypomnienia → pnote ×2 (przypomnienie i następny kontakt).
 //   PM28 migracja wpisów spoza bazy → snap ×2 (nowe osoby), potem pnote ×3.
 //   PM29–PM30 notatka biblioteki: dodaj → note; usuń → notetomb.
@@ -473,9 +473,8 @@ const PRZYPADKI = [
     },
     klucze: (s) => [s.plan, `care-decision-${s.plan}`] },
   // Usunięcie wpisu planu (przepis jak care-plans-note-removal-vault.test.mjs). Odbiorcy — zdarzeń i pełnego ładunku tak
-  // samo — zapisują plan od nowa przy scaleniu kontekstu planu: ta sama treść, rev + 1 i chwila scalenia. To różnica
-  // scalania planu (jest i przy samym pełnym ładunku; kolejne wymiany pełnych ładunków jej nie zmieniają), nie emisji:
-  // B ≡ B′.
+  // samo — przewijają plan do potomka nadawcy i zapisują jego dokładną wersję (ta sama treść, rev i updatedAtISO;
+  // P-PLAN-POTOMEK, care-plans-sync-descendant.test.mjs). Do tej poprawki: rev + 1 i chwila scalenia jako różnica D(A, B).
   { nr: 'PM26', opis: 'plan opieki: usuń wpis planu', metody: ['mutateCarePlan'], wiersze: ['pnote', 'pnotetomb'],
     przygotuj: async (v, s) => {
       await karta(v, s, 1, [22]);
@@ -491,8 +490,7 @@ const PRZYPADKI = [
       const r = await v.mutateCarePlan({ action: 'removePlanNote', patientId: dto.patientId, planId: dto.planId, baseRev: dto.rev, operationId: 'fikcyjna-operacja-planu-3', noteId: s.wpis, linkedRev: e.linkedRev, readToken: e.readToken });
       expect(r.saved && r.plan.removedNoteIds, 'kontrola: wpis usunięty').toEqual([s.wpis]);
     },
-    klucze: (s) => [s.plan, s.wpis],
-    roznica: (r) => [`pnote:${r.s.plan} [rev, updatedAtISO]`] },
+    klucze: (s) => [s.plan, s.wpis] },
   { nr: 'PM27', opis: 'wynik przypomnienia', metody: ['saveReminderOutcome'], wiersze: ['pnote', 'pnote'],
     przygotuj: async (v, s, o) => {
       await karta(v, s, 1, [22]);
