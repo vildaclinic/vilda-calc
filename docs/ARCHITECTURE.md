@@ -193,6 +193,8 @@ Granice te są częścią kontraktu regresyjnego. Łączenie ich ponownie zwięk
 
 Nie wolno przenosić pola między pamięcią sesji, pamięcią trwałą i danymi pochodnymi bez analizy cyklu życia, zachowania wielu kart, czyszczenia oraz odtworzenia pacjenta. Samo zachowanie jednego widoku po odświeżeniu nie wystarcza jako test.
 
+**Transfer szablonu a kopia konta (2026-11-09, decyzja właściciela).** [Przenośny plik pojedynczego szablonu](CARE_TEMPLATE_TRANSFER.md) zawiera jedno opracowanie z trwałymi informacjami o autorstwie, źródłach i zasadach udostępniania. Import tworzy niezależną kopię z nowymi identyfikatorami, nie przenosi historii synchronizacji ani kluczy konta i nie zmienia planów pacjentów. Publiczny import/eksport całej biblioteki jest wycofany. **Obecna `.wiw` nie obejmuje oddzielnej biblioteki szablonów.** Polecenie, by przyszła pełna kopia `.wiw` obejmowała także tę bibliotekę i jej historię, jest utrwalone w zadaniu [P-WIW-TEMPLATE-LIBRARY](TEMPLATE_LIBRARY_BACKUP_PLAN.md), ze zgodnością dawnych kopii, odtworzeniem, scalaniem i testami synchronizacji. Ten przyszły zakres nie jest wdrażany razem z przenoszeniem jednego szablonu.
+
 Przy odtwarzaniu `vilda_persist_runtime.js` pusty `sharedUserData` nie jest
 poleceniem usunięcia niezależnego klinicznego szkicu `vildaMainSessionV1`.
 `Pp_hasRestorableMainSession()` sprawdza odłączony widok szkicu: samo konto

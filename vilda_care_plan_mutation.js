@@ -174,6 +174,7 @@
     fields(creation.draft, ['source', 'definition']);
     const definition = templates.canonicalDefinition(creation.draft.definition);
     if (!definition.ok || canonical(creation.draft.source) !== canonical(state.source)
+        || canonical(definition.definition.publication || null) !== canonical(state.source.definition.publication || null)
         || canonical(creation.documentIds) !== canonical(state.documentIds)
         || state.record.title !== definition.definition.name || context.goal !== definition.definition.purpose
         || canonical(context.stageOrder) !== canonical(definition.definition.stageOrder)
@@ -271,6 +272,7 @@
         fields(command.draft, ['source', 'definition']); checkSource(command.draft.source, templates);
         const selected = templates.canonicalDefinition(command.draft.definition);
         if (!selected.ok) fail('CARE_PLAN_DEFINITION_INVALID');
+        if (canonical(selected.definition.publication || null) !== canonical(command.draft.source.definition.publication || null)) fail('CARE_PLAN_SOURCE_INVALID');
         const definition = selected.definition, used = new Set(sourceIds(command.draft.source).concat([command.patientId, command.planId, command.operationId]));
         for (const nextId of definition.stageOrder.concat(definition.steps.map(step => step.id))) freshId(nextId, used);
         checkDocumentIds(command.documentIds, definition.steps, used);

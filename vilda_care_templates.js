@@ -32,7 +32,7 @@
     var state = { view: 'library', items: [], loaded: false, catalogReadable: false, loading: false, query: '', archived: false, capability: null,
       busy: false, error: null, feedback: '', selected: null, revisions: [], draft: null, dirty: false, wizardStep: 1,
       stageId: null, stepId: null, templateId: null, baseToken: null, operationId: null, privacyRequired: false,
-      reviewedText: null, stale: false, pending: null, uncertain: false, confirmation: null, issues: [], importData: null, limitedToLocal: false, syncInfo: '',
+      reviewedText: null, stale: false, pending: null, uncertain: false, confirmation: null, issues: [], transfer: null, adaptationAuthor: '', adaptationChanges: '', adaptationVersion: '', limitedToLocal: false, syncInfo: '',
       applicationCapability: null, application: null };
     function current() { var user = vault.getCurrentUser && vault.getCurrentUser(); return !destroyed && host.isConnected && vault.isUnlocked() && user && user.userId === ownerId && (!options.isCurrent || options.isCurrent()); }
     function node(tag, className, text) { var element = doc.createElement(tag); if (className) element.className = className; if (text != null) element.textContent = text; return element; }
@@ -80,7 +80,7 @@
     function outcomeLabel(value) { var entry = model.OUTCOMES.find(function (entry) { return entry.value === value; }); return entry ? entry.label : 'Wybierz sposób zakończenia'; }
     function kindLabel(value) { var entry = model.TASK_KINDS.find(function (entry) { return entry.value === value; }); return entry ? entry.label : 'Inny krok'; }
     function timing(rule) { return !rule || rule.kind === 'none' ? 'Bez terminu' : rule.amount === 0 ? 'W dniu uruchomienia etapu' : String(rule.amount) + ' ' + ({ day: 'dni', week: 'tygodni', month: 'miesięcy' }[rule.unit] || '') + ' po uruchomieniu etapu'; }
-    function capabilityText() { return !state.capability ? '' : !canSave() ? 'Zapisywanie szablonów jest teraz niedostępne. Odśwież bibliotekę, aby ponowić sprawdzenie.' : state.syncInfo || (state.capability.persistence === 'private-local' && !state.capability.syncAvailable ? 'Biblioteka jest zapisywana na tym urządzeniu.' : ''); }
+    function capabilityText() { return !state.capability ? '' : state.capability.message || (!canSave() ? 'Zapisywanie szablonów jest teraz niedostępne. Odśwież bibliotekę, aby ponowić sprawdzenie.' : state.syncInfo || (state.capability.persistence === 'private-local' && !state.capability.syncAvailable ? 'Biblioteka jest zapisywana na tym urządzeniu.' : '')); }
     var root = node('section', 'vcp vct' + (remindersLayout ? ' vct-reminders-layout' : '')); root.setAttribute('aria-label', 'Moje szablony');
     var header = node('header', 'vcp-form-head vct-header'), headerTitle = node('h2', '', 'Moje szablony'); headerTitle.tabIndex = -1; header.appendChild(headerTitle);
     var closeButton = button('×', 'vcp-icon', requestClose, 'Zamknij bibliotekę szablonów'); header.appendChild(closeButton); root.appendChild(header);
@@ -91,8 +91,8 @@
       feedbackSlot.appendChild(feedback); feedbackSlot.appendChild(errors);
     } else { root.appendChild(feedback); root.appendChild(errors); }
     root.appendChild(workspace); if (feedbackSlot) root.appendChild(feedbackSlot); root.appendChild(footer); host.appendChild(root);
-    var importPicker = node('input', ''); importPicker.type = 'file'; importPicker.accept = '.vctlib,application/json,application/octet-stream'; importPicker.hidden = true; importPicker.setAttribute('aria-label', 'Plik biblioteki szablonów'); root.appendChild(importPicker);
-    importPicker.addEventListener('change', function () { if (current() && importPicker.files && importPicker.files[0]) importLibrary(importPicker.files[0]); });
+    var importPicker = node('input', ''); importPicker.type = 'file'; importPicker.accept = '.vilda-template.json,application/json'; importPicker.hidden = true; importPicker.setAttribute('aria-label', 'Plik szablonu'); root.appendChild(importPicker);
+    importPicker.addEventListener('change', function () { if (current() && importPicker.files && importPicker.files[0]) importTemplate(importPicker.files[0]); });
     function renderFeedback() {
       feedback.textContent = state.feedback; feedback.hidden = !state.feedback; clear(errors);
       if (state.error) { var error = node('div', 'vcp-error', state.error); error.setAttribute('role', 'alert'); errors.appendChild(error); }
@@ -124,11 +124,13 @@
     function render() {
       if (!current()) return;
       root.classList.toggle('vct-application-mode', state.view === 'application');
+      root.classList.toggle('vct-transfer-mode', state.view === 'transfer');
       var focusedSearch = root.contains(doc.activeElement) && doc.activeElement.getAttribute('aria-label') === 'Szukaj własnego szablonu';
       var caret = focusedSearch && typeof doc.activeElement.selectionStart === 'number' ? doc.activeElement.selectionStart : null;
       fields.clear(); clear(workspace); clear(footer); closeButton.disabled = state.busy;
       renderFeedback();
       if (state.confirmation) renderConfirmation();
+      else if (state.view === 'transfer') renderTransfer();
       else if (state.view === 'application') renderApplication();
       else if (state.view === 'wizard') renderWizard();
       else if (state.view === 'detail') renderDetail();
@@ -143,7 +145,8 @@
       var filters = node('div', 'vcp-filters'); [['active', 'Aktywne'], ['archived', 'Usunięte']].forEach(function (entry) {
         var item = button(entry[1], (state.archived === (entry[0] === 'archived') ? 'is-active' : ''), function () { if (state.busy) return; state.archived = entry[0] === 'archived'; render(); }); item.setAttribute('aria-pressed', String(state.archived === (entry[0] === 'archived'))); filters.appendChild(item);
       }); toolbar.appendChild(search); toolbar.appendChild(filters);
-      var create = button('+ Nowy szablon', 'vcp-primary', function () { abandonThen(function () { beginNew(); }); }, 'Nowy szablon'); create.disabled = state.busy || !canSave(); toolbar.appendChild(create); workspace.appendChild(toolbar);
+      var create = button('+ Nowy szablon', 'vcp-primary', function () { abandonThen(function () { beginNew(); }); }, 'Nowy szablon'); create.disabled = state.busy || !canSave(); toolbar.appendChild(create);
+      var importButton = button('Importuj szablon', 'vcp-outline', chooseImportFile); importButton.disabled = state.busy || !canSave() || !transferService(); toolbar.appendChild(importButton); workspace.appendChild(toolbar);
       var cards = node('div', 'vct-library-list'); workspace.appendChild(cards);
       function draw() {
         clear(cards); var query = key(state.query), items = state.items.filter(function (item) { return !['active', 'archived'].includes(item.status) || state.archived === (item.status === 'archived'); }).filter(function (item) { return !query || key((item.title || '') + ' ' + (item.labels || []).join(' ')).includes(query); });
@@ -155,7 +158,7 @@
           help(text, item.status === 'conflict' ? 'Wymaga przeglądu zmian' : !['active', 'archived'].includes(item.status) ? 'Nie można odczytać tej wersji szablonu.' : structureCount(item.stageCount, item.stepCount) + ' · Wersja ' + item.revisionNumber);
           if (item.syncState && item.syncState.pending) help(text, 'Oczekuje na synchronizację');
           var actions = node('div', 'vct-row-actions'); actions.appendChild(button(item.status === 'conflict' ? 'Przejrzyj zmiany' : 'Podgląd', 'vcp-outline', function () { readTemplate(item.templateId); }));
-          if (item.status === 'active') actions.insertBefore(applicationButton(item, false), actions.firstChild);
+          if (item.status === 'active') { actions.insertBefore(applicationButton(item, false), actions.firstChild); var exportButton = button('Eksportuj szablon', 'vcp-text', function () { abandonThen(function () { beginExport(item.templateId); }); }, 'Eksportuj szablon: ' + (item.title || 'Szablon')); exportButton.disabled = state.busy || !transferService(); actions.appendChild(exportButton); }
           if (canChangeAvailability(item)) actions.appendChild(availabilityButton(item));
           row.appendChild(text); row.appendChild(actions); cards.appendChild(row);
         });
@@ -168,6 +171,7 @@
       if (!model.validateDefinition(definition).valid) { parent.appendChild(node('p', 'vcp-empty', 'Nie można odczytać tej definicji szablonu.')); return; }
       heading(parent, definition.name || 'Nowy szablon', 'h2'); if (definition.purpose) parent.appendChild(node('p', 'vcp-goal', definition.purpose));
       if (definition.labels.length) help(parent, definition.labels.join(' · '));
+      if (definition.publication) renderPublication(parent, definition.publication);
       orderedStages(definition).forEach(function (stage, index) {
         var box = node('article', 'vct-stage-preview'); box.dataset.templateStageId = stage.id;
         var title = node('div', 'vct-preview-heading'); heading(title, (index + 1) + '. ' + stage.title, 'h3');
@@ -185,7 +189,7 @@
       if (!selected || !selected.definition) { workspace.appendChild(node('p', 'vcp-empty', 'Nie można odczytać tej wersji szablonu.')); return; }
       var content = node('div', 'vct-scroll-pane'); preview(content, selected.definition, false); workspace.appendChild(content);
       var actions = node('div', 'vct-detail-actions');
-      if (!state.historical && selected.status === 'active') actions.appendChild(applicationButton(selected, true));
+      if (!state.historical && selected.status === 'active') { actions.appendChild(applicationButton(selected, true)); var exportAction = button('Eksportuj szablon', 'vcp-outline', function () { abandonThen(function () { beginExport(selected.templateId); }); }); exportAction.disabled = !transferService(); actions.appendChild(exportAction); }
       if (!state.historical) { var edit = button('Edytuj', 'vcp-outline', function () { abandonThen(function () { beginEdit(selected); }); }); edit.disabled = !canSave() || selected.status !== 'active'; actions.appendChild(edit); }
       var duplicate = button('Utwórz kopię', 'vcp-outline', function () { abandonThen(function () { beginDuplicate(selected.definition); }); }); duplicate.disabled = !canSave(); actions.appendChild(duplicate);
       actions.appendChild(button('Wersje', 'vcp-text', function () { readRevisions(selected.templateId); }));
@@ -202,7 +206,7 @@
     }
     async function refresh() {
       if (!current() || state.busy) return;
-      if (state.application) { state.stale = true; return; }
+      if (state.application || state.transfer) { state.stale = true; return; }
       if (state.confirmation) { state.stale = true; return; }
       var ticket = ++sequence; state.loading = true; state.catalogReadable = false; state.error = null; if (!state.loaded) render();
       try {
@@ -210,6 +214,7 @@
         if (!current() || ticket !== sequence) return;
         var syncError = null, local = capability && capability.persistence === 'private-local'; state.capability = capability;
         state.limitedToLocal = !!(local && !capability.syncAvailable); state.syncInfo = '';
+        if (capability && (capability.reasonCode === 'CARE_TEMPLATE_READER_UPDATE_REQUIRED' || capability.persistence === 'unsupported')) throw new Error(capability.message || 'Odśwież aplikację, aby odczytać tę wersję biblioteki szablonów.');
         if (capability && capability.persistence === 'remote-ack' && !capability.syncAvailable) throw new Error('Nie można teraz odczytać zdalnej biblioteki. Odśwież aplikację i spróbuj ponownie.');
         if (capability && capability.syncAvailable) {
           try {
@@ -505,15 +510,18 @@
       state.operationId = id(); state.wizardStep = metadata.editing ? 2 : 1; state.stageId = state.draft.stageOrder[0] || null;
       var stage = stageById(state.stageId); state.stepId = stage && stage.stepIds[0] || null;
       state.privacyRequired = !!metadata.privacy; state.reviewedText = null; state.pending = null; state.uncertain = false;
-      state.blockedConflict = false; state.dirty = !!metadata.dirty; state.error = null; state.feedback = ''; state.issues = []; state.view = 'wizard'; render(); focusWizardStep();
+      state.blockedConflict = false; state.adaptationAuthor = ''; state.adaptationChanges = ''; state.adaptationVersion = ''; state.dirty = !!metadata.dirty; state.error = null; state.feedback = ''; state.issues = []; state.view = 'wizard'; render(); focusWizardStep();
     }
     function beginNew() { if (!current() || !canSave()) return; beginDraft(model.createDefinitionDraft({ stageId: id(), stepId: id() }), {}); }
     function beginEdit(selected) {
       if (!canSave() || selected.status !== 'active' || !selected.definition) return;
+      if (!canAdapt(selected.definition)) { fail(new Error('Zasady udostępniania tego szablonu nie zezwalają na jego modyfikowanie.')); render(); return; }
       beginDraft({ ok: true, definition: selected.definition }, { templateId: selected.templateId, baseToken: selected.baseToken, editing: true });
     }
     function beginDuplicate(definition) {
-      if (!canSave()) return; var stageIds = Object.create(null), stepIds = Object.create(null);
+      if (!canSave()) return;
+      if (!canAdapt(definition)) { fail(new Error('Zasady udostępniania tego szablonu nie zezwalają na tworzenie zmienionej kopii.')); render(); return; }
+      var stageIds = Object.create(null), stepIds = Object.create(null);
       definition.stages.forEach(function (stage) { stageIds[stage.id] = id(); }); definition.steps.forEach(function (step) { stepIds[step.id] = id(); });
       var result = model.duplicateDefinition(definition, { stageIds: stageIds, stepIds: stepIds });
       if (result.ok) result.definition.name = definition.name + ' — kopia'; beginDraft(result, { dirty: true });
@@ -558,6 +566,7 @@
       } else if (state.wizardStep === 2) renderStructure();
       else {
         var previewPane = node('div', 'vct-scroll-pane'); preview(previewPane, state.draft, true);
+        if (needsAdaptation()) renderAdaptationFields(previewPane);
         if (state.privacyRequired) check(previewPane, 'Sprawdziłem nazwy i usunąłem informacje dotyczące pacjenta', state.reviewedText === model.reviewTextKey(state.draft), function (checked) { state.reviewedText = checked ? model.reviewTextKey(state.draft) : null; renderFooter(); });
         workspace.appendChild(previewPane);
       }
@@ -670,7 +679,12 @@
           status: template.status, headRevisionId: template.headRevisionId, revisionNumber: template.revisionNumber, baseToken: template.baseToken,
           stageCount: definition ? definition.stages.length : 0, stepCount: definition ? definition.steps.length : 0, syncState: template.syncState }); state.loaded = true;
       }
-      state.view = result.template && result.template.status === 'conflict' ? 'resolve' : 'library';
+      if (pending.transferMode === 'export-metadata' && state.transfer) {
+        state.transfer.definition = clone(pending.request.definition); state.transfer.phase = 'review'; state.transfer.selected = result.template || state.transfer.selected; state.view = 'transfer'; state.feedback = 'Zapisano autorstwo i zasady udostępniania. Możesz pobrać plik szablonu.';
+      } else {
+        if (pending.transferMode === 'import') { state.transfer = null; state.query = ''; state.archived = false; state.feedback = 'Zaimportowano nowy, niezależny szablon.'; }
+        state.view = result.template && result.template.status === 'conflict' ? 'resolve' : 'library';
+      }
       if (pending.kind === 'archive') {
         state.archived = false;
         if (state.view === 'library') {
@@ -682,7 +696,7 @@
     async function mutate(kind, request, retry) {
       if (!current() || state.busy || !canSave() && !retry) return;
       if (state.pending && !retry) { fail(new Error('Najpierw sprawdź wynik wcześniejszego zapisu.')); render(); return; }
-      var pending = retry ? state.pending : { kind: kind, request: clone(request) }, ticket = ++sequence;
+      var pending = retry ? state.pending : { kind: kind, request: clone(request), transferMode: state.transfer && state.transfer.kind === 'import' ? 'import' : state.transfer && state.transfer.kind === 'export' ? 'export-metadata' : null }, ticket = ++sequence;
       if (!pending) return; state.pending = pending; state.error = null; busy(true); render();
       try {
         var result = await vault[pending.kind === 'save' ? 'saveCarePlanTemplateRevision' : pending.kind === 'archive' ? 'setCarePlanTemplateArchived' : 'resolveCarePlanTemplateConflict'](clone(pending.request));
@@ -708,42 +722,189 @@
       } catch (error) { if (current() && ticket === sequence) fail(error); }
       finally { if (current() && ticket === sequence) { busy(false); render(); } }
     }
-    async function exportLibrary() {
-      if (!current() || state.busy || state.pending) return; var ticket = ++sequence; busy(true); state.error = null; render();
-      try {
-        var text = await vault.exportCarePlanTemplateLibrary();
-        if (!current() || ticket !== sequence) return;
-        if (typeof text !== 'string' || !win.Blob || !win.URL || typeof win.URL.createObjectURL !== 'function') throw new Error('Nie udało się przygotować pliku biblioteki w tej przeglądarce.');
-        var url = win.URL.createObjectURL(new win.Blob([text], { type: 'application/octet-stream' })), link = node('a', ''); objectURLs.add(url);
-        link.href = url; link.download = 'biblioteka-szablonow.vctlib'; doc.body.appendChild(link); link.click(); link.remove();
-        win.setTimeout(function () { win.URL.revokeObjectURL(url); objectURLs.delete(url); }, 0);
-        state.feedback = 'Pobrano szyfrowaną bibliotekę. Do jej importu zachowaj to samo konto i klucz szyfrowania.';
-      } catch (error) { if (current() && ticket === sequence) fail(error); }
-      finally { if (current() && ticket === sequence) { busy(false); render(); } }
+    function transferService() { return win.VildaCareTemplateTransfer || null; }
+    function instructionKey(definition) {
+      if (!definition) return '';
+      try { return JSON.stringify(model.instructionContent(definition)); } catch (_) { return ''; }
     }
-    async function importLibrary(file) {
-      if (!current() || state.busy || state.pending || !canSave()) return;
-      if (file) state.importData = { file: file, text: null };
-      var data = state.importData; if (!data) return; var ticket = ++sequence; busy(true); state.error = null;
-      state.feedback = 'Wczytywanie kopii biblioteki…'; render();
+    function canAdapt(definition) { var publication = definition && definition.publication; return !publication || !publication.origin || publication.license.allowAdaptation === true; }
+    function needsAdaptation() { return !!(state.draft && state.draft.publication && (!state.baseline || instructionKey(state.draft) !== instructionKey(state.baseline))); }
+    function renderPublication(parent, publication) {
+      var box = node('section', 'vct-publication'); heading(box, 'Autorstwo i zasady udostępniania', 'h3');
+      help(box, 'Autor opracowania: ' + publication.authors.join(', '));
+      if (publication.contributors.length) help(box, 'Autorzy zmian: ' + publication.contributors.join(', '));
+      help(box, 'Wersja opracowania: ' + publication.version);
+      if (publication.attribution && publication.attribution !== 'Autor opracowania: ' + publication.authors.join(', ')) box.appendChild(node('p', 'vcp-description', publication.attribution));
+      publication.sources.forEach(function (source) { help(box, 'Źródło: ' + source.title + (source.version ? ' · ' + source.version : '') + (source.url ? ' · ' + source.url : '')); });
+      help(box, publication.license.id === 'CC-BY-4.0' ? 'Licencja CC BY 4.0 — zezwala także na wykorzystanie komercyjne, z zachowaniem autorstwa i oznaczeniem zmian.' : 'Zasady określone przez autora:');
+      if (publication.license.text) box.appendChild(node('p', 'vcp-description', publication.license.text));
+      if (publication.license.url) help(box, publication.license.url);
+      if (!publication.license.allowRedistribution) help(box, 'Autor nie zezwala na dalsze przekazywanie otrzymanej kopii.');
+      if (!publication.license.allowAdaptation) help(box, 'Autor nie zezwala na modyfikowanie otrzymanej kopii.');
+      if (publication.changes) box.appendChild(node('p', 'vcp-description', 'Opis zmian: ' + publication.changes));
+      help(box, 'Autorstwo jest deklaracją zapisaną w szablonie; aplikacja nie potwierdza tożsamości autora.'); parent.appendChild(box);
+    }
+    function renderAdaptationFields(parent) {
+      var box = node('section', 'vct-publication vct-adaptation'); heading(box, 'Informacje o zmianach', 'h3');
+      help(box, 'Zachowamy pierwotnego autora, źródła i zasady udostępniania. Wskaż autora i zakres tej wersji opracowania.');
+      field(box, 'Autor zmian', 'text', state.adaptationAuthor, function (value) { state.adaptationAuthor = value; }, null, false).maxLength = 200;
+      field(box, 'Opis zmian', 'textarea', state.adaptationChanges, function (value) { state.adaptationChanges = value; }, null, false).maxLength = 1500;
+      field(box, 'Wersja opracowania', 'text', state.adaptationVersion, function (value) { state.adaptationVersion = value; }, null, false).maxLength = 80;
+      parent.appendChild(box);
+    }
+    function chooseImportFile() {
+      abandonThen(function () { importPicker.value = ''; importPicker.click(); });
+    }
+    function transferField(parent, label, type, value, update, maximum) {
+      var input = field(parent, label, type, value, function (value) { update(value); if (state.transfer) { state.transfer.rights = false; state.transfer.privacy = false; Array.from(workspace.querySelectorAll('.vcp-check')).forEach(function (label) { if (label.textContent === 'Mam prawo udostępnić ten szablon na wskazanych zasadach' || label.textContent === 'Sprawdziłem treść szablonu i nie zawiera ona danych pacjentów') { var box = label.querySelector('input'); if (box) box.checked = false; } }); } renderFooter(); }, null, false);
+      if (maximum) input.maxLength = maximum; return input;
+    }
+    async function beginExport(templateId) {
+      if (!current() || state.busy || state.pending || state.application || !transferService()) return;
+      var back = navigationContext(), ticket = ++sequence; busy(true); state.error = null; state.feedback = ''; render();
       try {
-        var limit = state.capability && state.capability.maxImportBytes;
-        if (!Number.isSafeInteger(limit) || limit <= 0) throw new Error('Odśwież aplikację, aby sprawdzić plik biblioteki.');
-        if (typeof data.file.size !== 'number' || data.file.size > limit) throw new Error('Plik biblioteki przekracza obsługiwany rozmiar.');
-        if (data.text === null) data.text = await data.file.text();
-        if (!current() || ticket !== sequence || state.importData !== data) return;
-        var result = await vault.importCarePlanTemplateLibrary(data.text);
-        if (!current() || ticket !== sequence || state.importData !== data) return;
-        if (!result || result.saved !== true) throw new Error('Nie można jeszcze potwierdzić całego importu. Wybrany plik i szkic pozostają zachowane; możesz ponowić import.');
-        state.importData = null; state.feedback = result.persistence === 'remote' ? 'Zaimportowano bibliotekę.' : 'Zaimportowano bibliotekę na tym urządzeniu.';
-        busy(false); render(); await refresh();
-      } catch (error) { if (current() && ticket === sequence) { state.feedback = ''; fail(error); } }
+        var selected = await vault.getCarePlanTemplate(templateId);
+        if (!current() || ticket !== sequence) return;
+        if (!selected || selected.status !== 'active' || selected.readOnly || !model.validateDefinition(selected.definition).valid) throw new Error('Nie można teraz wyeksportować tej wersji szablonu. Sprawdź jej podgląd.');
+        state.transfer = { kind: 'export', selected: selected, definition: clone(selected.definition), returnContext: back,
+          phase: selected.definition.publication ? 'review' : 'metadata', publicationId: id(), rights: false, privacy: false,
+          author: '', version: '1.0', license: '', terms: '', redistribution: false, adaptation: false,
+          sourceTitle: '', sourceURL: '', sourceVersion: '' };
+        state.draft = null; state.dirty = false; state.view = 'transfer';
+      } catch (error) { if (current() && ticket === sequence) fail(error); }
+      finally { if (current() && ticket === sequence) { busy(false); render(); headerTitle.focus({ preventScroll: true }); } }
+    }
+    function renderTransfer() {
+      var data = state.transfer; if (!data) return;
+      headerTitle.textContent = data.kind === 'export' ? 'Eksport szablonu' : 'Import szablonu';
+      var pane = node('div', 'vct-scroll-pane vct-transfer-pane'); workspace.appendChild(pane);
+      if (data.phase === 'loading') { help(pane, 'Sprawdzanie pliku pojedynczego szablonu…'); return; }
+      if (!data.definition) { help(pane, 'Wybierz plik pojedynczego szablonu w formacie .vilda-template.json.'); return; }
+      if (data.kind === 'export' && data.phase === 'metadata') {
+        heading(pane, 'Przed pierwszym eksportem');
+        help(pane, 'Informacje o autorstwie i udostępnianiu zapiszemy razem z nową wersją tego szablonu. Nie zostaną nadane automatycznie.');
+        transferField(pane, 'Autor opracowania', 'text', data.author, function (value) { data.author = value; }, 200);
+        transferField(pane, 'Wersja opracowania', 'text', data.version, function (value) { data.version = value; }, 80);
+        transferField(pane, 'Źródło medyczne (opcjonalnie)', 'text', data.sourceTitle, function (value) { data.sourceTitle = value; }, 240);
+        transferField(pane, 'Adres źródła (opcjonalnie)', 'url', data.sourceURL, function (value) { data.sourceURL = value; }, 2048);
+        transferField(pane, 'Wersja źródła (opcjonalnie)', 'text', data.sourceVersion, function (value) { data.sourceVersion = value; }, 240);
+        select(pane, 'Zasady udostępniania', [{ value: '', label: 'Wybierz zasady' }, { value: 'CC-BY-4.0', label: 'CC BY 4.0' }, { value: 'custom', label: 'Własne zasady autora' }], data.license, function (value) { data.license = value; data.rights = false; data.privacy = false; render(); }, null, false);
+        if (data.license === 'CC-BY-4.0') help(pane, 'CC BY 4.0 pozwala kopiować, zmieniać i wykorzystywać szablon także komercyjnie. Odbiorca zachowuje autorstwo, odnośnik do licencji i oznacza zmiany. Już udzielonej licencji nie można dowolnie cofnąć.');
+        if (data.license === 'custom') {
+          transferField(pane, 'Treść zasad udostępniania', 'textarea', data.terms, function (value) { data.terms = value; }, 12000);
+          check(pane, 'Zezwalam na przekazywanie szablonu innym osobom', data.redistribution, function (value) { data.redistribution = value; data.rights = false; render(); });
+          check(pane, 'Zezwalam na modyfikowanie szablonu', data.adaptation, function (value) { data.adaptation = value; data.rights = false; render(); });
+        }
+      }
+      if (data.kind === 'import') {
+        help(pane, 'Powstanie nowy szablon w Twojej bibliotece. Import nie zmieni istniejących szablonów ani planów pacjentów.');
+        if (data.duplicates && data.duplicates.length) help(pane, 'Ten szablon lub jego inna wersja jest już w bibliotece: ' + data.duplicates.join(', ') + '. Niczego nie nadpiszemy.');
+      } else help(pane, 'Plik zawiera jeden szablon. Nie zawiera historii biblioteki ani dokumentacji dołączonej do planów pacjentów. Sprawdź również informacje wpisane ręcznie w nazwach i instrukcjach.');
+      preview(pane, data.definition, false);
+      if (data.kind === 'export') {
+        var denied = data.definition.publication && data.definition.publication.origin && !data.definition.publication.license.allowRedistribution;
+        if (denied) help(pane, 'Nie można pobrać pliku: autor nie zezwala na dalsze przekazywanie tej kopii.');
+        check(pane, 'Mam prawo udostępnić ten szablon na wskazanych zasadach', data.rights, function (value) { data.rights = value; renderFooter(); });
+        check(pane, 'Sprawdziłem treść szablonu i nie zawiera ona danych pacjentów', data.privacy, function (value) { data.privacy = value; renderFooter(); });
+      } else {
+        check(pane, 'Zapoznałem się z autorstwem i zasadami udostępniania', data.rights, function (value) { data.rights = value; renderFooter(); });
+        if (data.duplicates && data.duplicates.length) check(pane, 'Rozumiem, że zapiszę dodatkową kopię istniejącego szablonu', data.duplicateAccepted, function (value) { data.duplicateAccepted = value; renderFooter(); });
+      }
+    }
+    async function closeTransfer() {
+      if (state.busy || state.pending) return;
+      var data = state.transfer; state.transfer = null; state.error = null; state.feedback = ''; state.view = 'library';
+      if (state.stale) await refresh();
+      render(); if (data) await restoreNavigation(data.returnContext);
+    }
+    function transferFailure(result) {
+      var issue = result && result.issues && result.issues[0], code = [result && result.reason || '', issue && issue.code || ''].join(' ');
+      if (/LIBRARY_UNSUPPORTED/.test(code)) return new Error('Pliki całej biblioteki nie są obsługiwane. Wybierz plik pojedynczego szablonu .vilda-template.json.');
+      if (/VERSION|UPDATE_REQUIRED/.test(code)) return new Error('Ten plik używa nieobsługiwanej wersji szablonu. Odśwież aplikację i spróbuj ponownie.');
+      if (/SIZE|LARGE|BYTES|FILE_LIMIT/.test(code)) return new Error('Plik szablonu przekracza obsługiwany rozmiar.');
+      if (/REDISTRIBUTION/.test(code)) return new Error('Zasady udostępniania nie zezwalają na dalsze przekazywanie tej kopii.');
+      if (/ADAPTATION/.test(code)) return new Error('Zasady udostępniania nie zezwalają na modyfikowanie tej kopii.');
+      if (/MODIF|CONTRIBUT|CHANGES|CHANGE_ATTRIBUTION/.test(code)) return new Error('Wskaż autora i opis wprowadzonych zmian przed udostępnieniem szablonu.');
+      return new Error('Nie można odczytać lub zapisać tego szablonu. Sprawdź treść, autora, źródła i zasady udostępniania. Pliki całej biblioteki nie są obsługiwane.');
+    }
+    async function importTemplate(file) {
+      if (!current() || state.busy || state.pending || state.application || !canSave()) return;
+      var service = transferService(); if (!service) { fail(new Error('Odśwież aplikację, aby importować pojedynczy szablon.')); render(); return; }
+      if (state.draft && state.dirty) { ask('Odrzucić niezapisane zmiany?', 'Import nowego szablonu zastąpi edytowany szkic. Możesz pozostać przy edycji.', function () { state.draft = null; state.dirty = false; importTemplate(file); }); return; }
+      var data = { kind: 'import', phase: 'loading', returnContext: navigationContext(), definition: null, rights: false, duplicateAccepted: false }, ticket = ++sequence;
+      state.transfer = data; state.view = 'transfer'; state.error = null; state.feedback = ''; busy(true); render();
+      try {
+        if (!file || !Number.isSafeInteger(file.size) || file.size < 1 || file.size > service.MAX_BYTES) throw new Error('Plik szablonu przekracza obsługiwany rozmiar lub jest pusty.');
+        var text = await file.text();
+        if (!current() || ticket !== sequence || state.transfer !== data) return;
+        var parsed = await service.parse(text);
+        if (!current() || ticket !== sequence || state.transfer !== data) return;
+        if (!parsed || !parsed.ok) throw transferFailure(parsed);
+        var stageIds = Object.create(null), stepIds = Object.create(null);
+        parsed.definition.stages.forEach(function (stage) { stageIds[stage.id] = id(); }); parsed.definition.steps.forEach(function (step) { stepIds[step.id] = id(); });
+        var prepared = await service.prepareImport(parsed.definition, { stageIds: stageIds, stepIds: stepIds });
+        if (!current() || ticket !== sequence || state.transfer !== data) return;
+        if (!prepared || !prepared.ok) throw transferFailure(prepared);
+        var items = await vault.listCarePlanTemplates({ archived: 'all' });
+        if (!current() || ticket !== sequence || state.transfer !== data) return;
+        if (!Array.isArray(items)) throw new Error('Nie można sprawdzić istniejących szablonów. Spróbuj ponownie.');
+        // The list DTO already contains verified definitions. Do not decrypt
+        // every revision graph a second time merely to compare publications.
+        var incoming = parsed.definition.publication;
+        data.duplicates = items.filter(function (record) {
+          var publication = record && record.definition && record.definition.publication;
+          return publication && (publication.id === incoming.id || publication.origin && publication.origin.id === incoming.id || incoming.origin && incoming.origin.id === publication.id);
+        }).map(function (record) { return record.definition.name; });
+        data.definition = prepared.definition; data.phase = 'review'; data.templateId = id(); data.operationId = id();
+        state.draft = null; state.dirty = false;
+      } catch (error) { if (current() && ticket === sequence) { data.phase = 'error'; fail(error); } }
+      finally { if (current() && ticket === sequence) { busy(false); render(); headerTitle.focus({ preventScroll: true }); } }
+    }
+    function commitImport() {
+      var data = state.transfer;
+      if (!current() || state.busy || state.pending || !data || data.kind !== 'import' || !data.definition || !data.rights || data.duplicates.length && !data.duplicateAccepted) return;
+      mutate('save', { templateId: data.templateId, operationId: data.operationId, baseToken: null, definition: data.definition });
+    }
+    function saveExportMetadata() {
+      var data = state.transfer;
+      if (!current() || state.busy || state.pending || !data || data.kind !== 'export' || data.phase !== 'metadata' || !data.rights || !data.privacy || !canSave()) return;
+      if (!data.author.trim() || !data.version.trim() || !['CC-BY-4.0', 'custom'].includes(data.license) || data.license === 'custom' && !data.terms.trim() || !data.sourceTitle.trim() && (data.sourceURL.trim() || data.sourceVersion.trim())) { fail(new Error('Uzupełnij autora, wersję opracowania i zasady udostępniania. Źródło z adresem lub wersją wymaga również nazwy.')); renderFeedback(); return; }
+      var definition = clone(data.definition); definition.contentVersion = 2;
+      definition.publication = { id: data.publicationId, version: data.version.trim(), authors: [data.author.trim()], contributors: [],
+        sources: data.sourceTitle.trim() ? [{ title: data.sourceTitle.trim(), url: data.sourceURL.trim(), version: data.sourceVersion.trim() }] : [],
+        license: { id: data.license, url: data.license === 'CC-BY-4.0' ? 'https://creativecommons.org/licenses/by/4.0/' : '', text: data.license === 'CC-BY-4.0' ? '' : data.terms.trim(), allowRedistribution: data.license === 'CC-BY-4.0' || data.redistribution, allowAdaptation: data.license === 'CC-BY-4.0' || data.adaptation },
+        attribution: 'Autor opracowania: ' + data.author.trim(), changes: '', origin: null };
+      var canonical = model.canonicalDefinition(definition);
+      if (!canonical.ok) { fail(transferFailure(canonical)); renderFeedback(); return; }
+      mutate('save', { templateId: data.selected.templateId, operationId: id(), baseToken: data.selected.baseToken, definition: canonical.definition });
+    }
+    async function exportTemplate() {
+      var data = state.transfer, service = transferService();
+      if (!current() || state.busy || state.pending || !data || data.kind !== 'export' || data.phase !== 'review' || !data.rights || !data.privacy || !service) return;
+      var ticket = ++sequence; busy(true); state.error = null; render();
+      try {
+        var exported = await service.serialize(data.definition);
+        if (!current() || ticket !== sequence || state.transfer !== data) return;
+        if (!exported || !exported.ok) throw transferFailure(exported);
+        if (!win.Blob || !win.URL || typeof win.URL.createObjectURL !== 'function') throw new Error('Ta przeglądarka nie może teraz pobrać pliku szablonu.');
+        var url = win.URL.createObjectURL(new win.Blob([exported.text], { type: 'application/json' })), link = node('a', ''); objectURLs.add(url);
+        link.href = url; link.download = exported.fileName; doc.body.appendChild(link); link.click(); link.remove();
+        win.setTimeout(function () { win.URL.revokeObjectURL(url); objectURLs.delete(url); }, 0);
+        state.feedback = 'Pobrano pojedynczy szablon. Plik możesz przekazać zgodnie z zapisanymi w nim zasadami.';
+      } catch (error) { if (current() && ticket === sequence) fail(error); }
       finally { if (current() && ticket === sequence) { busy(false); render(); } }
     }
     function saveDraft() {
       if (!current() || state.busy || state.uncertain || state.blockedConflict || !canSave() || !validate('all')) return;
       if (state.privacyRequired && state.reviewedText !== model.reviewTextKey(state.draft)) { state.wizardStep = 3; fail(new Error('Sprawdź wszystkie nazwy i potwierdź usunięcie informacji dotyczących pacjenta.')); render(); return; }
-      var canonical = model.canonicalDefinition(state.draft);
+      var definition = clone(state.draft);
+      if (needsAdaptation()) {
+        var author = state.adaptationAuthor.trim(), changes = state.adaptationChanges.trim(), version = state.adaptationVersion.trim();
+        if (!canAdapt(definition) || !author || !changes || !version || version === definition.publication.version) { state.wizardStep = 3; fail(new Error('Wskaż autora zmian, opisz wprowadzone zmiany i nadaj nowe oznaczenie wersji opracowania.')); render(); return; }
+        if (!definition.publication.contributors.includes(author)) definition.publication.contributors.push(author);
+        definition.publication.changes = [definition.publication.changes, author + ': ' + changes].filter(Boolean).join('\n'); definition.publication.version = version;
+      }
+      var canonical = model.canonicalDefinition(definition);
       if (!canonical.ok) { state.issues = canonical.issues || []; render(); return; }
       mutate('save', { templateId: state.templateId, operationId: state.operationId, baseToken: state.baseToken, definition: canonical.definition });
     }
@@ -765,6 +926,14 @@
         }
       } else if (state.pending) {
         actions.appendChild(button('Sprawdź wynik zapisu', 'vcp-outline', checkOutcome)); actions.appendChild(button('Ponów zapis', 'vcp-primary', function () { mutate(null, null, true); }));
+      } else if (state.view === 'transfer') {
+        var data = state.transfer; status.textContent = data && data.kind === 'import' ? 'Import jednego szablonu' : 'Eksport jednego szablonu';
+        actions.appendChild(button('Anuluj', 'vcp-outline', closeTransfer));
+        if (data && data.definition && data.phase !== 'error') {
+          var submit = button(data.kind === 'import' ? data.duplicates.length ? 'Zapisz dodatkową kopię' : 'Zapisz jako nowy szablon' : data.phase === 'metadata' ? 'Zapisz informacje o szablonie' : 'Pobierz szablon', 'vcp-primary', data.kind === 'import' ? commitImport : data.phase === 'metadata' ? saveExportMetadata : exportTemplate);
+          var publication = data.definition.publication;
+          submit.disabled = state.busy || !data.rights || data.kind === 'import' && (!canSave() || data.duplicates.length && !data.duplicateAccepted) || data.kind === 'export' && (!data.privacy || data.phase === 'metadata' && !canSave() || publication && publication.origin && !publication.license.allowRedistribution); actions.appendChild(submit);
+        } else if (data && data.phase === 'error') actions.appendChild(button('Wybierz inny plik', 'vcp-primary', function () { closeTransfer(); chooseImportFile(); }));
       } else if (state.view === 'wizard') {
         if (state.blockedConflict) {
           actions.appendChild(button('Zobacz bieżącą wersję', 'vcp-outline', function () { readTemplate(state.templateId); }));
@@ -779,11 +948,6 @@
           if (!state.resolveHead || !['active', 'archived'].includes(state.resolveArchive)) { fail(new Error('Wybierz wersję oraz dostępność szablonu po przeglądzie.')); renderFeedback(); return; }
           mutate('resolve', { templateId: state.selected.templateId, operationId: id(), baseToken: state.selected.baseToken, headRevisionId: state.resolveHead, archived: state.resolveArchive === 'archived' });
         }); resolve.disabled = state.busy || !canSave(); actions.appendChild(resolve); }
-        if (state.view === 'library') {
-          var exportButton = button('Eksportuj', 'vcp-text', function () { ask('Kopia biblioteki', 'Plik wymaga tego samego konta i klucza szyfrowania. Zachowaj również pełny kod synchronizacji tego konta; nowy profil o tej samej nazwie nie wystarczy do odtworzenia biblioteki.', exportLibrary); }, 'Eksportuj bibliotekę'); exportButton.disabled = state.busy || !state.capability || state.capability.readable !== true; actions.appendChild(exportButton);
-          var importButton = button('Importuj', 'vcp-text', function () { ask('Import biblioteki', 'Ta kopia wymaga tego samego konta i klucza szyfrowania. W razie odtwarzania przywróć pełny kod synchronizacji właściwego konta.', function () { importPicker.value = ''; importPicker.click(); render(); }); }, 'Importuj bibliotekę'); importButton.disabled = state.busy || !canSave(); actions.appendChild(importButton);
-          if (state.importData) actions.appendChild(button('Ponów import', 'vcp-outline', function () { importLibrary(); }));
-        }
         actions.appendChild(button('Odśwież', 'vcp-text', refresh, 'Odśwież bibliotekę'));
       }
       Array.from(actions.querySelectorAll('button')).forEach(function (item) { if (state.busy) item.disabled = true; }); footer.appendChild(actions);
@@ -796,18 +960,18 @@
       else if (state.draft && state.dirty || state.pending) ask('Zamknąć bibliotekę?', state.pending ? 'Nie potwierdzono jeszcze wyniku zapisu. Wpisana treść zostanie zamknięta; możesz najpierw sprawdzić wynik.' : 'Niezapisane zmiany w szkicu zostaną odrzucone.', destroy);
       else destroy();
     }
-    function changed() { if (!current()) return; if (state.application || state.view === 'wizard' || state.confirmation || state.busy || state.pending) { state.stale = true; return; } if (timer) win.clearTimeout(timer); timer = win.setTimeout(function () { timer = null; refresh(); }, 80); }
+    function changed() { if (!current()) return; if (state.application || state.transfer || state.view === 'wizard' || state.confirmation || state.busy || state.pending) { state.stale = true; return; } if (timer) win.clearTimeout(timer); timer = win.setTimeout(function () { timer = null; refresh(); }, 80); }
     function destroy() {
       if (destroyed) return; destroyed = true; sequence += 1; if (timer) win.clearTimeout(timer); if (lifecycle) lifecycle.disconnect();
       unsubscribe.forEach(function (fn) { if (typeof fn === 'function') fn(); }); doc.removeEventListener('vilda:sync-merged', changed);
       objectURLs.forEach(function (url) { if (win.URL) win.URL.revokeObjectURL(url); }); objectURLs.clear();
-      state.draft = null; state.pending = null; state.application = null; state.applicationCapability = null; state.importData = null; state.items = []; state.selected = null; state.revisions = []; state.reviewedText = null; fields.clear(); root.remove();
+      state.draft = null; state.pending = null; state.application = null; state.applicationCapability = null; state.transfer = null; state.items = []; state.selected = null; state.revisions = []; state.reviewedText = null; fields.clear(); root.remove();
       if (options.onBusy) options.onBusy(false, false); if (options.onClose) options.onClose();
     }
     unsubscribe.push(observe(vault, changed, destroy)); doc.addEventListener('vilda:sync-merged', changed);
     if (typeof win.MutationObserver === 'function') { lifecycle = new win.MutationObserver(function () { if (!current()) destroy(); }); lifecycle.observe(doc.body, { childList: true, subtree: true }); }
-    var controller = { refresh: refresh, destroy: destroy, requestClose: requestClose, create: function () { abandonThen(beginNew); }, copyFromPlan: copyFromPlan, open: readTemplate, exportLibrary: exportLibrary, importLibrary: importLibrary,
-      isEditing: function () { return !!state.draft || !!state.application || state.busy; }, getNavigationContext: navigationContext, restoreNavigationContext: restoreNavigation,
+    var controller = { refresh: refresh, destroy: destroy, requestClose: requestClose, create: function () { abandonThen(beginNew); }, copyFromPlan: copyFromPlan, open: readTemplate, exportTemplate: beginExport, importTemplate: importTemplate,
+      isEditing: function () { return !!state.draft || !!state.application || !!state.transfer || state.busy; }, getNavigationContext: navigationContext, restoreNavigationContext: restoreNavigation,
       getContext: function () { return { view: state.view, templateId: state.templateId, wizardStep: state.wizardStep }; } };
     if (options.onBusy) options.onBusy(false, true); render();
     Promise.resolve(refresh()).then(function () { if (!current()) return; if (options.sourcePlanId) return copyFromPlan(options.sourcePlanId); if (options.navigationContext) return restoreNavigation(options.navigationContext); }); return controller;

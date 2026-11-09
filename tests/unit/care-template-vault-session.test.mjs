@@ -84,7 +84,28 @@ describe('actual template vault session and key lifecycle fences', () => {
     await expect(d.vault.removeUser(d.userId, d.password)).rejects.toMatchObject({ code: 'CARE_TEMPLATE_LIBRARY_RETAINED' }); expect(scans).toBe(0); expect(closed).toBe(1); expect(await d.adapter.getUserMeta(d.userId)).toEqual(before); expect(d.vault.getCurrentUser().userId).toBe(d.userId);
   });
   it('does not claim the existing account backup contains the separate template library', async () => {
-    const d = await device(); expect(await d.vault.getVaultBackupScope()).toMatchObject({ includesCareTemplateLibrary: false, format: 'legacy-v1' });
+    const d = await device(), scope = await d.vault.getVaultBackupScope();
+    expect(scope).toMatchObject({ includesCareTemplateLibrary: false, format: 'legacy-v1' });
+    expect(scope.libraryExportAPI).toBeUndefined();
+    expect(scope.message).toContain('Kopia .wiw nie zawiera biblioteki szablonów');
+    expect(scope.message).toContain('Eksportuj szablon');
+    expect(scope.message).toContain('nie obejmuje historii biblioteki');
+    expect(scope.message).not.toMatch(/zaszyfrowaną kopię biblioteki|osobny zaszyfrowany plik/);
+    expect(d.vault.exportCarePlanTemplateLibrary).toBeUndefined();
+    expect(d.vault.importCarePlanTemplateLibrary).toBeUndefined();
     expect((await d.vault.getCarePlanTemplateCapability()).maxImportBytes).toBe(d.vault.CARE_TEMPLATE_BACKUP_MAX_BYTES);
+  });
+  it('requires a reload when the open library captured an older model even if the global model was updated', async () => {
+    const d = await device(), currentModel = d.win.VildaCareTemplateModel;
+    d.win.VildaCareTemplateModel = { ...currentModel, CONTENT_VERSION: 1 };
+    const captured = await d.vault.captureCareTemplateSession();
+    expect(await d.vault.getCarePlanTemplateCapability()).toMatchObject({ readable: false, canSave: false,
+      reasonCode: 'CARE_TEMPLATE_READER_UPDATE_REQUIRED', maxContentVersion: 1 });
+    d.win.VildaCareTemplateModel = currentModel;
+    const scope = await d.vault.getCarePlanTemplateCapability();
+    expect(scope).toMatchObject({ readable: false, canSave: false, reasonCode: 'CARE_TEMPLATE_READER_UPDATE_REQUIRED' });
+    expect(scope.message).toContain('Odśwież aplikację');
+    expect(await d.vault.captureCareTemplateSession()).toBe(captured);
+    expect(await d.vault.listCarePlanTemplates({ archived: 'all' })).toEqual([]);
   });
 });

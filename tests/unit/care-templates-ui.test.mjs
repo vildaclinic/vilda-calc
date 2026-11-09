@@ -27,13 +27,13 @@ function definition(model) {
 function metadata(record) {
   return { templateId: record.templateId, title: record.definition?.name || 'Fikcyjny konflikt', status: record.status,
     headRevisionId: record.headRevisionId, revisionNumber: record.revisionNumber, baseToken: record.baseToken,
-    stageCount: record.definition?.stages.length || 0, stepCount: record.definition?.steps.length || 0 };
+    stageCount: record.definition?.stages.length || 0, stepCount: record.definition?.steps.length || 0, definition: record.definition ? structuredClone(record.definition) : null };
 }
 function fixture({ records: initial = [], overrides = {} } = {}) {
   const doc = documentFixture(), host = doc.createElement('div'); doc.body.appendChild(host);
   const win = { document: doc, crypto: globalThis.crypto, setTimeout, clearTimeout, Blob: globalThis.Blob,
     URL: { createObjectURL: vi.fn(() => 'blob:fictional-template-library'), revokeObjectURL: vi.fn() } }, records = new Map(initial.map(record => [record.templateId, structuredClone(record)]));
-  loadBrowserScript('vilda_care_template_model.js', win);
+  loadBrowserScript('vilda_care_template_model.js', win); loadBrowserScript('vilda_care_template_transfer.js', win);
   let lock;
   const vault = {
     getCurrentUser: () => ({ userId: 'fictional-template-account' }), isUnlocked: () => true,
@@ -401,43 +401,160 @@ describe('Private template library browsing and revision actions', () => {
   });
 });
 
-describe('Dedicated encrypted template-library backup', () => {
-  it('explains the same-key scope before downloading the opaque encrypted blob', async () => {
-    const d = fixture(); await settle(); findButton(d.host, 'Eksportuj bibliotekę').click();
-    expect(d.host.textContent).toContain('pełny kod synchronizacji');
-    expect(d.vault.exportCarePlanTemplateLibrary).not.toHaveBeenCalled(); findButton(d.host, 'Potwierdź').click(); await settle();
-    expect(d.vault.exportCarePlanTemplateLibrary).toHaveBeenCalledTimes(1);
-    const blob = d.win.URL.createObjectURL.mock.calls[0][0];
-    expect(await blob.text()).toBe('FICTIONAL-ENCRYPTED-LIBRARY');
-    expect(d.host.textContent).toContain('Pobrano szyfrowaną bibliotekę.'); d.controller.destroy();
+function publicationDefinition(model) {
+  const value = definition(model); value.contentVersion = 2;
+  value.publication = { id: 'fictional-publication', version: '1.0', authors: ['Fikcyjna Autorka'], contributors: [],
+    sources: [{ title: 'Fikcyjne źródło', url: 'https://example.org/fictional-source', version: '2026' }],
+    license: { id: 'CC-BY-4.0', url: 'https://creativecommons.org/licenses/by/4.0/', text: '', allowRedistribution: true, allowAdaptation: true },
+    attribution: 'Opracowanie: Fikcyjna Autorka', changes: '', origin: null };
+  return value;
+}
+function checkBox(root, label) { return root.querySelectorAll('.vcp-check').find(element => element.textContent === label)?.querySelector('input'); }
+function tick(root, label, checked = true) { const box = checkBox(root, label); expect(box).toBeDefined(); box.checked = checked; box.dispatch('change'); }
+async function transferFile(d, value = publicationDefinition(d.model)) {
+  const exported = await d.win.VildaCareTemplateTransfer.serialize(value); expect(exported.ok).toBe(true);
+  return { size: Buffer.byteLength(exported.text), text: vi.fn(async () => exported.text) };
+}
+
+describe('Portable single-template transfer', () => {
+  it('offers one-template import and no whole-library interface or controller', async () => {
+    const d = fixture(); await settle();
+    expect(findButton(d.host, 'Importuj szablon')).toBeDefined();
+    expect(findButton(d.host, 'Eksportuj bibliotekę')).toBeUndefined();
+    expect(findButton(d.host, 'Importuj bibliotekę')).toBeUndefined();
+    expect(d.controller.exportLibrary).toBeUndefined(); expect(d.controller.importLibrary).toBeUndefined();
+    expect(input(d.host, 'Plik szablonu').accept).toBe('.vilda-template.json,application/json'); d.controller.destroy();
   });
 
-  it('uses the shared import size before reading a selected fictional file', async () => {
-    const d = fixture(); await settle(); const file = { size: 2048, text: vi.fn(async () => 'FICTIONAL') };
-    await d.controller.importLibrary(file);
-    expect(file.text).not.toHaveBeenCalled(); expect(d.vault.importCarePlanTemplateLibrary).not.toHaveBeenCalled();
-    expect(d.host.textContent).toContain('Plik biblioteki przekracza obsługiwany rozmiar.'); d.controller.destroy();
+  it('checks the single-file size before reading or writing', async () => {
+    const d = fixture(); await settle(); const file = { size: d.win.VildaCareTemplateTransfer.MAX_BYTES + 1, text: vi.fn(async () => 'FICTIONAL') };
+    await d.controller.importTemplate(file);
+    expect(file.text).not.toHaveBeenCalled(); expect(d.vault.saveCarePlanTemplateRevision).not.toHaveBeenCalled();
+    expect(d.host.textContent).toContain('Plik szablonu przekracza obsługiwany rozmiar'); d.controller.destroy();
   });
 
-  it('retains the selected file and existing draft after an unconfirmed import and retries exactly that ciphertext', async () => {
-    const imported = vi.fn().mockRejectedValueOnce(new Error('Fikcyjnie nie potwierdzono przesyłki.')).mockResolvedValueOnce({ saved: true, persistence: 'remote' });
-    const d = fixture({ overrides: { importCarePlanTemplateLibrary: imported } }); await newWizard(d);
-    findButton(d.host, '← Moje szablony').click();
-    const file = { size: 42, text: vi.fn(async () => 'FICTIONAL-SAME-ENCRYPTED-FILE') };
-    await d.controller.importLibrary(file);
-    expect(d.host.textContent).toContain('Fikcyjnie nie potwierdzono przesyłki.');
-    expect(findButton(d.host, 'Wróć do edycji')).toBeDefined();
-    findButton(d.host, 'Ponów import').click(); await settle();
-    expect(file.text).toHaveBeenCalledTimes(1);
-    expect(imported.mock.calls.map(call => call[0])).toEqual(['FICTIONAL-SAME-ENCRYPTED-FILE', 'FICTIONAL-SAME-ENCRYPTED-FILE']);
-    findButton(d.host, 'Wróć do edycji').click(); expect(input(d.host, 'Co jest do zrobienia?').value).toBe('Fikcyjny krok'); d.controller.destroy();
+  it('requires explicit author, license and privacy review and saves these with the revision before downloading', async () => {
+    const model = prepareModel(), selected = record(model), d = fixture({ records: [selected] }); await settle();
+    await d.controller.exportTemplate(selected.templateId);
+    expect(findButton(d.host, 'Zapisz informacje o szablonie').disabled).toBe(true);
+    change(input(d.host, 'Autor opracowania'), 'Fikcyjny Autor');
+    change(input(d.host, 'Źródło medyczne (opcjonalnie)'), 'Fikcyjne źródło');
+    change(input(d.host, 'Adres źródła (opcjonalnie)'), 'https://example.org/fictional-source');
+    change(input(d.host, 'Zasady udostępniania'), 'CC-BY-4.0');
+    expect(d.host.textContent).toContain('także komercyjnie');
+    tick(d.host, 'Mam prawo udostępnić ten szablon na wskazanych zasadach');
+    tick(d.host, 'Sprawdziłem treść szablonu i nie zawiera ona danych pacjentów');
+    findButton(d.host, 'Zapisz informacje o szablonie').click(); await settle();
+    expect(d.vault.saveCarePlanTemplateRevision).toHaveBeenCalledTimes(1);
+    expect(d.vault.saveCarePlanTemplateRevision.mock.calls[0][0]).toMatchObject({ templateId: selected.templateId, baseToken: selected.baseToken,
+      definition: { contentVersion: 2, publication: { authors: ['Fikcyjny Autor'], license: { id: 'CC-BY-4.0' } } } });
+    expect(d.win.URL.createObjectURL).not.toHaveBeenCalled();
+    findButton(d.host, 'Pobierz szablon').click(); await vi.waitFor(() => expect(d.win.URL.createObjectURL).toHaveBeenCalledTimes(1));
+    const blob = d.win.URL.createObjectURL.mock.calls[0][0], exported = await d.win.VildaCareTemplateTransfer.parse(await blob.text());
+    expect(exported.ok).toBe(true); expect(exported.definition.publication.sources[0].title).toBe('Fikcyjne źródło');
+    expect(await blob.text()).not.toContain('fictional-template-account');
+    expect(d.vault.exportCarePlanTemplateLibrary).not.toHaveBeenCalled(); d.controller.destroy();
+  });
+
+  it('previews content and rights without writing and returns to the filtered library on cancel', async () => {
+    const model = prepareModel(), selected = record(model), d = fixture({ records: [selected] }); await settle();
+    change(input(d.host, 'Szukaj własnego szablonu'), 'ogólny');
+    const file = await transferFile(d); await d.controller.importTemplate(file);
+    expect(d.host.textContent).toContain('Fikcyjna Autorka'); expect(d.host.textContent).toContain('Fikcyjne źródło');
+    expect(d.host.textContent).toContain('Fikcyjne badanie'); expect(d.vault.saveCarePlanTemplateRevision).not.toHaveBeenCalled();
+    expect(findButton(d.host, 'Zapisz jako nowy szablon').disabled).toBe(true);
+    findButton(d.host, 'Anuluj').click(); await settle();
+    expect(input(d.host, 'Szukaj własnego szablonu').value).toBe('ogólny'); expect(d.records.size).toBe(1); d.controller.destroy();
+  });
+
+  it('imports an independent copy with fresh local identities and warns on repeated publication without overwriting', async () => {
+    const d = fixture(); await settle(); const source = publicationDefinition(d.model), file = await transferFile(d, source);
+    await d.controller.importTemplate(file); tick(d.host, 'Zapoznałem się z autorstwem i zasadami udostępniania'); findButton(d.host, 'Zapisz jako nowy szablon').click(); await settle();
+    const request = d.vault.saveCarePlanTemplateRevision.mock.calls[0][0];
+    expect(request.baseToken).toBeNull(); expect(request.definition.stages[0].id).not.toBe(source.stages[0].id);
+    expect(request.definition.steps[0].id).not.toBe(source.steps[0].id);
+    expect(request.definition.publication.authors).toEqual(source.publication.authors);
+    expect(request.definition.publication.license).toEqual(source.publication.license);
+    expect(request.definition.publication.origin.id).toBe(source.publication.id);
+    await d.controller.importTemplate(file);
+    expect(d.host.textContent).toContain('jest już w bibliotece');
+    tick(d.host, 'Zapoznałem się z autorstwem i zasadami udostępniania'); expect(findButton(d.host, 'Zapisz dodatkową kopię').disabled).toBe(true);
+    tick(d.host, 'Rozumiem, że zapiszę dodatkową kopię istniejącego szablonu'); findButton(d.host, 'Zapisz dodatkową kopię').click(); await settle();
+    expect(d.records.size).toBe(2); expect(d.vault.saveCarePlanTemplateRevision.mock.calls[1][0].templateId).not.toBe(request.templateId); d.controller.destroy();
+  });
+
+  it('retries an uncertain import using the exact same independent-copy operation', async () => {
+    const saved = vi.fn().mockRejectedValueOnce(new Error('Fikcyjna utrata odpowiedzi.')).mockResolvedValueOnce({ saved: true, persistence: 'local', template: null });
+    const d = fixture({ overrides: { saveCarePlanTemplateRevision: saved } }); await settle(); const file = await transferFile(d);
+    await d.controller.importTemplate(file); tick(d.host, 'Zapoznałem się z autorstwem i zasadami udostępniania'); findButton(d.host, 'Zapisz jako nowy szablon').click(); await settle();
+    expect(d.host.textContent).toContain('Fikcyjna utrata odpowiedzi.');
+    findButton(d.host, 'Ponów zapis').click(); await settle();
+    expect(saved.mock.calls[1][0]).toEqual(saved.mock.calls[0][0]); expect(file.text).toHaveBeenCalledTimes(1);
+    expect(d.host.textContent).toContain('Zaimportowano nowy, niezależny szablon.'); d.controller.destroy();
+  });
+
+  it('rejects a whole-library payload without invoking the retired account import', async () => {
+    const d = fixture(); await settle(); const file = { size: 48, text: async () => JSON.stringify({ format: 'vilda-care-template-library/v1', cipher: 'fictional' }) };
+    await d.controller.importTemplate(file);
+    expect(d.vault.importCarePlanTemplateLibrary).not.toHaveBeenCalled(); expect(d.vault.saveCarePlanTemplateRevision).not.toHaveBeenCalled();
+    expect(d.host.textContent).toContain('nie są obsługiwane'); d.controller.destroy();
+  });
+
+  it('records the author and scope of an imported adaptation without replacing the upstream author or license', async () => {
+    const d = fixture(); await settle(); const source = publicationDefinition(d.model), file = await transferFile(d, source);
+    await d.controller.importTemplate(file); tick(d.host, 'Zapoznałem się z autorstwem i zasadami udostępniania'); findButton(d.host, 'Zapisz jako nowy szablon').click(); await settle();
+    findButton(d.host, 'Podgląd').click(); await settle(); findButton(d.host, 'Edytuj').click();
+    change(input(d.host, 'Co jest do zrobienia?'), 'Fikcyjna zmieniona instrukcja'); findButton(d.host, 'Dalej').click();
+    findButton(d.host, 'Zapisz nową wersję').click(); await settle(); expect(d.vault.saveCarePlanTemplateRevision).toHaveBeenCalledTimes(1);
+    change(input(d.host, 'Autor zmian'), 'Fikcyjny Odbiorca'); change(input(d.host, 'Opis zmian'), 'Dostosowanie fikcyjnego kroku.'); change(input(d.host, 'Wersja opracowania'), '2.0');
+    findButton(d.host, 'Zapisz nową wersję').click(); await settle();
+    const publication = d.vault.saveCarePlanTemplateRevision.mock.calls[1][0].definition.publication;
+    expect(publication.authors).toEqual(source.publication.authors); expect(publication.license).toEqual(source.publication.license);
+    expect(publication.contributors).toContain('Fikcyjny Odbiorca'); expect(publication.changes).toContain('Dostosowanie fikcyjnego kroku.'); expect(publication.version).toBe('2.0'); d.controller.destroy();
+  });
+
+  it('does not require adaptation metadata for a whitespace-only edit of a published template', async () => {
+    const model = prepareModel(), published = publicationDefinition(model), selected = record(model, { definition: published }), d = fixture({ records: [selected] }); await settle();
+    findButton(d.host, 'Podgląd').click(); await settle(); findButton(d.host, 'Edytuj').click();
+    change(input(d.host, 'Co jest do zrobienia?'), '  ' + published.steps[0].title + '  '); findButton(d.host, 'Dalej').click();
+    expect(input(d.host, 'Autor zmian')).toBeUndefined(); findButton(d.host, 'Zapisz nową wersję').click(); await settle();
+    expect(d.vault.saveCarePlanTemplateRevision).toHaveBeenCalledTimes(1);
+    expect(d.vault.saveCarePlanTemplateRevision.mock.calls[0][0].definition.publication).toEqual(published.publication); d.controller.destroy();
+  });
+
+  it('shows provider update guidance without reporting an unsupported reader as an empty library', async () => {
+    const d = fixture({ overrides: { getCarePlanTemplateCapability: vi.fn(async () => ({ readable: false, canSave: false, persistence: 'unsupported', reasonCode: 'CARE_TEMPLATE_READER_UPDATE_REQUIRED', maxContentVersion: 1, message: 'Odśwież aplikację, aby obsługiwać autorstwo i licencję.' })) } }); await settle();
+    expect(d.host.textContent).toContain('Odśwież aplikację, aby obsługiwać autorstwo i licencję.');
+    expect(d.host.textContent).not.toContain('Nie masz jeszcze własnych szablonów.'); expect(d.vault.listCarePlanTemplates).not.toHaveBeenCalled();
+    expect(findButton(d.host, 'Importuj szablon').disabled).toBe(true); d.controller.destroy();
+  });
+
+  it('honors an imported prohibition on onward sharing and adaptation', async () => {
+    const d = fixture(); await settle(); const source = publicationDefinition(d.model);
+    source.publication.license = { id: 'custom', url: '', text: 'Fikcyjne zasady: tylko własny użytek, bez modyfikowania i dalszego przekazywania.', allowRedistribution: false, allowAdaptation: false };
+    await d.controller.importTemplate(await transferFile(d, source)); tick(d.host, 'Zapoznałem się z autorstwem i zasadami udostępniania'); findButton(d.host, 'Zapisz jako nowy szablon').click(); await settle();
+    const importedId = d.vault.saveCarePlanTemplateRevision.mock.calls[0][0].templateId;
+    await d.controller.exportTemplate(importedId); expect(d.host.textContent).toContain('autor nie zezwala na dalsze przekazywanie');
+    tick(d.host, 'Mam prawo udostępnić ten szablon na wskazanych zasadach'); tick(d.host, 'Sprawdziłem treść szablonu i nie zawiera ona danych pacjentów');
+    expect(findButton(d.host, 'Pobierz szablon').disabled).toBe(true); expect(d.win.URL.createObjectURL).not.toHaveBeenCalled();
+    findButton(d.host, 'Anuluj').click(); await settle(); findButton(d.host, 'Podgląd').click(); await settle(); findButton(d.host, 'Edytuj').click();
+    expect(d.host.textContent).toContain('nie zezwalają na jego modyfikowanie'); expect(d.controller.getContext().view).toBe('detail'); d.controller.destroy();
+  });
+
+  it('clears visible rights and privacy checks when export metadata changes', async () => {
+    const model = prepareModel(), selected = record(model), d = fixture({ records: [selected] }); await settle(); await d.controller.exportTemplate(selected.templateId);
+    tick(d.host, 'Mam prawo udostępnić ten szablon na wskazanych zasadach'); tick(d.host, 'Sprawdziłem treść szablonu i nie zawiera ona danych pacjentów');
+    change(input(d.host, 'Autor opracowania'), 'Fikcyjny inny autor');
+    expect(checkBox(d.host, 'Mam prawo udostępnić ten szablon na wskazanych zasadach').checked).toBe(false);
+    expect(checkBox(d.host, 'Sprawdziłem treść szablonu i nie zawiera ona danych pacjentów').checked).toBe(false);
+    expect(findButton(d.host, 'Zapisz informacje o szablonie').disabled).toBe(true); d.controller.destroy();
   });
 
   it('does not import a file whose read finishes after the account was locked', async () => {
     let resolveText;
     const d = fixture(); await settle(); const file = { size: 42, text: () => new Promise(resolve => { resolveText = resolve; }) };
-    const loading = d.controller.importLibrary(file); d.lock(); resolveText('FICTIONAL-LATE-FILE'); await loading;
-    expect(d.vault.importCarePlanTemplateLibrary).not.toHaveBeenCalled(); expect(d.host.querySelector('.vct')).toBeNull();
+    const loading = d.controller.importTemplate(file); d.lock(); resolveText('FICTIONAL-LATE-FILE'); await loading;
+    expect(d.vault.saveCarePlanTemplateRevision).not.toHaveBeenCalled(); expect(d.host.querySelector('.vct')).toBeNull();
   });
 });
 
@@ -451,23 +568,30 @@ describe('Care-template assets load only on explicit use', () => {
   it('coalesces model/store loading and adds UI/CSS only when requested', async () => {
     const d = loader(); expect(d.requests).toHaveLength(0);
     const first = d.api.ensureTemplateLibrary({ ui: false }), second = d.api.ensureTemplateLibrary({ ui: false }); expect(first).toBe(second);
-    expect(d.requests.map(element => element.src || element.href)).toEqual(['vilda_care_template_model.js?v=2']);
-    d.win.VildaCareTemplateModel = {}; d.requests[0].onload(); await settle();
+    expect(d.requests.map(element => element.src || element.href)).toEqual(['vilda_care_template_model.js?v=3']);
+    d.win.VildaCareTemplateModel = { CONTENT_VERSION: 2 }; d.requests[0].onload(); await settle();
     expect(d.requests[1].src).toBe('vilda_care_template_store.js?v=2'); d.win.VildaCareTemplateStore = {}; d.requests[1].onload(); await first;
-    const ui = d.api.ensureTemplateLibrary(); await settle(); expect(d.requests).toHaveLength(4);
-    d.requests[2].onload(); d.win.VildaCareTemplates = { open: vi.fn() }; d.requests[3].onload(); await ui;
-    await d.api.ensureTemplateLibrary(); expect(d.requests).toHaveLength(4);
+    const ui = d.api.ensureTemplateLibrary(); await settle(); expect(d.requests).toHaveLength(3);
+    expect(d.requests[2].src).toBe('vilda_care_template_transfer.js?v=1'); d.win.VildaCareTemplateTransfer = {}; d.requests[2].onload(); await settle();
+    expect(d.requests).toHaveLength(5); d.requests[3].onload(); d.win.VildaCareTemplates = { open: vi.fn() }; d.requests[4].onload(); await ui;
+    await d.api.ensureTemplateLibrary(); expect(d.requests).toHaveLength(5);
+  });
+  it('requires an update instead of mixing a new UI with an old live model', async () => {
+    const d = loader(); d.win.VildaCareTemplateModel = { CONTENT_VERSION: 1 }; d.win.VildaCareTemplateStore = {};
+    await expect(d.api.ensureTemplateLibrary()).rejects.toThrow('odśwież aplikację');
+    expect(d.requests).toHaveLength(0);
   });
   it('allows a real retry after a failed asset without changing existing startup readiness', async () => {
     const d = loader(), failed = d.api.ensureTemplateLibrary({ ui: false }); d.requests[0].onerror(); await expect(failed).rejects.toThrow('Nie udało się wczytać');
-    const retried = d.api.ensureTemplateLibrary({ ui: false }); expect(d.requests[1].src).toBe('vilda_care_template_model.js?v=2');
-    d.win.VildaCareTemplateModel = {}; d.requests[1].onload(); await settle(); d.win.VildaCareTemplateStore = {}; d.requests[2].onload(); await retried;
+    const retried = d.api.ensureTemplateLibrary({ ui: false }); expect(d.requests[1].src).toBe('vilda_care_template_model.js?v=3');
+    d.win.VildaCareTemplateModel = { CONTENT_VERSION: 2 }; d.requests[1].onload(); await settle(); d.win.VildaCareTemplateStore = {}; d.requests[2].onload(); await retried;
   });
   it('does not open a late library dialog after a lock and unlock of the same account', async () => {
     const d = loader(); let locked; const vault = { isUnlocked: () => true, getCurrentUser: () => ({ userId: 'fictional-same-account' }), onLock: fn => { locked = fn; } };
     const opened = d.api.openTemplates({ vault }); locked();
-    d.win.VildaCareTemplateModel = {}; d.requests[0].onload(); await settle(); d.win.VildaCareTemplateStore = {}; d.requests[1].onload(); await settle();
-    d.requests[2].onload(); d.win.VildaCareTemplates = { open: vi.fn() }; d.requests[3].onload();
+    d.win.VildaCareTemplateModel = { CONTENT_VERSION: 2 }; d.requests[0].onload(); await settle(); d.win.VildaCareTemplateStore = {}; d.requests[1].onload(); await settle();
+    d.win.VildaCareTemplateTransfer = {}; d.requests[2].onload(); await settle();
+    d.requests[3].onload(); d.win.VildaCareTemplates = { open: vi.fn() }; d.requests[4].onload();
     expect(await opened).toBeNull(); expect(d.win.VildaCareTemplates.open).not.toHaveBeenCalled();
   });
 });

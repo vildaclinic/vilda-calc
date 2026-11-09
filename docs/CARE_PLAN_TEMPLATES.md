@@ -12,7 +12,9 @@ Reguła przypomnienia to brak terminu albo liczba dni, tygodni lub miesięcy od 
 
 Podgląd pokazuje wszystkie nazwy, instrukcje, kryteria zakończenia, reguły przypomnień i domyślne dołączenie. Zapis nowej wersji nie zmienia wcześniejszych wersji. Archiwizacja zachowuje treść i historię; przywrócenie do aktywnej biblioteki jest osobną czynnością. Utworzenie kopii nadaje nowe identyfikatory szablonu, etapów i kroków.
 
-Zastosowanie szablonu do pacjenta, dopasowanie jego niezależnej kopii i zapis etapów opisuje [Użycie szablonu w planie pacjenta](CARE_TEMPLATE_APPLICATION.md). Wymaga ono zgodnego zaplecza i jawnego przygotowania chronionego zapisu. Dotychczasowe ręczne plany nadal używają V1; ich dawny zapis nie otrzymuje uprawnień do modyfikowania V2.
+Zastosowanie szablonu do pacjenta, dopasowanie jego niezależnej kopii i zapis etapów opisuje [Użycie szablonu w planie pacjenta](CARE_TEMPLATE_APPLICATION.md). Zwykłe konto korzysta z istniejącego zapisu dokumentacji bez przygotowywania całego konta. Konta wcześniej uruchomione w chronionym zapisie zachowują jego odrębną ścieżkę. Dawny zapis planu nie otrzymuje uprawnień do modyfikowania nieobsługiwanej wersji.
+
+[Import i eksport pojedynczego szablonu](CARE_TEMPLATE_TRANSFER.md) umożliwia przekazanie jednego opracowania między lekarzami, z zachowaniem autora, źródeł i warunków udostępniania. Import tworzy niezależną kopię; nie scala całej biblioteki.
 
 ## Kopia układu planu pacjenta
 
@@ -56,9 +58,11 @@ Wdrożenie zgodnego API zaplecza jest zależnością przed publikacją klienta: 
 
 Kopia biblioteki musi zachować wszystkie utrzymane wersje, operacje, konflikty oraz wiedzę o ponowieniach. Dawna kopia pacjentów i Notatek sama nie stanowi kopii tej oddzielnej domeny. Interfejs eksportu musi jawnie pokazywać zakres pliku; nie wolno przedstawić niepełnego eksportu jako pełnej kopii konta.
 
-Eksport odczytuje spójny obraz magazynu w jednej transakcji. Wspólny limit zaszyfrowanego pliku `.vctlib` wynosi 512 MiB; eksport sprawdza ten sam limit co importer. Z rozliczanego limitu magazynu, stałego narzutu koperty i kodowania AES-GCM/base64 wynika mniejszy maksymalny rozmiar poprawnej kopii. Są to granice zapisu i formatu, a nie obietnica czasu importu lub wydajności edytora przy maksymalnym zbiorze.
+W interfejsie nie ma eksportu ani importu całej biblioteki. Dawny zaszyfrowany format `.vctlib` opisuje całą domenę konta i nie jest formatem pojedynczego szablonu do przekazania innemu lekarzowi. Wycofanie publicznego przepływu nie usuwa utrzymanych definicji ani ich historii; wewnętrzna zgodność magazynu i synchronizacji pozostaje odrębna od przenośnego pliku.
 
-Import sprawdza format, klucze, tożsamość, limity i cały materiał przed zmianą magazynu. Nieobsługiwane dane pozostają zachowane do odczytu przez zgodną wersję; nie stają się pustym szablonem do nadpisania. Przeniesienie do innej tożsamości nie jest ponownym oznaczeniem dawnych oczekujących operacji.
+Obecna `.wiw` nie obejmuje biblioteki szablonów. Plik `.vilda-template.json` zachowuje tylko bieżące opracowanie jednego szablonu, nie jego pełną historię. Na polecenie właściciela z 2026-11-09 zapisano przyszłe zadanie [P-WIW-TEMPLATE-LIBRARY — pełna biblioteka w `.wiw`](TEMPLATE_LIBRARY_BACKUP_PLAN.md). Nie jest ono zrealizowane przez transfer pojedynczego szablonu.
+
+Odczyt i synchronizacja sprawdzają format, tożsamość, limity i cały materiał przed zmianą magazynu. Nieobsługiwane dane pozostają zachowane do odczytu przez zgodną wersję; nie stają się pustym szablonem do nadpisania. Przeniesienie do innej tożsamości nie jest ponownym oznaczeniem dawnych oczekujących operacji.
 
 Wymiana klucza lub tożsamości oraz pełne usunięcie danych wymagają obsługi obu domen przed pierwszą destrukcyjną zmianą. Nieobsługiwana operacja zatrzymuje się z komunikatem. Samo usunięcie dawnego bloba pacjentów nie dowodzi usunięcia biblioteki. Potwierdzona część operacji i pozostała część muszą być rozróżnialne po błędzie, aby można było bezpiecznie wznowić czynność.
 
@@ -74,4 +78,4 @@ Wyniki końcowych przebiegów i ograniczenia wdrożenia są wpisywane do PR. Tes
 
 ## Przygotowanie zastosowania szablonu — etap 6a
 
-[Kontrakt chronionej domeny pacjentów](PATIENT_AUTHORITY.md) określa wybór formatu, granice tożsamości i warunki bezpiecznego zastosowania szablonu. Dotychczasowy zapis V1 nie uzyskuje prawa zapisu V2. Osobna [funkcja użycia szablonu u pacjenta](CARE_TEMPLATE_APPLICATION.md) korzysta z chronionego zapisu po jego jawnym przygotowaniu. Nie ma migracji danych ani inicjalizacji zaplecza przy odczycie.
+[Kontrakt chronionej domeny pacjentów](PATIENT_AUTHORITY.md) określa wybór formatu, granice tożsamości i warunki bezpiecznego zastosowania szablonu dla wcześniej uruchomionych kont chronionych. Dotychczasowy zapis V1 nie uzyskuje prawa zapisu V2. Zwykła [funkcja użycia szablonu u pacjenta](CARE_TEMPLATE_APPLICATION.md) nie wymaga przełączania całego konta. Nie ma migracji danych ani inicjalizacji zaplecza przy odczycie.

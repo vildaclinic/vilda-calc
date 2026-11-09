@@ -1,5 +1,4 @@
 import { expect, test } from '../support/test-czas.mjs';
-import { readFile } from 'node:fs/promises';
 import { rawCareStorage } from '../support/care-plans-model-fixture.mjs';
 import { CARE_PANEL, CARE_WORKSPACE, mutatePlan, readPlan, selectPlan } from '../support/care-plans-fixture.mjs';
 import { loadPatient, readyForPatient } from '../support/centile-live-fixture.mjs';
@@ -241,39 +240,17 @@ test('care templates discard unsaved RAM on F5 and ignore an old decoded result 
   await expect(secondLibrary.getByText('Fikcyjny zapisany szablon pierwszego konta', { exact: true })).toHaveCount(0);
 });
 
-test('care templates encrypted file export and import preserve newer archive history and reject another account before writes', async ({ page }) => {
-  const { frame, ids } = await templateFixture(page), clinicalBefore = await rawCareStorage(frame);
-  const library = await openTemplates(page), item = await saveSimpleTemplate(library, frame, 'Fikcyjny szablon osobnej szyfrowanej kopii');
-  const revisions = await templateRevisions(frame, item.templateId);
-  await library.getByRole('button', { name: 'Eksportuj bibliotekę', exact: true }).click();
-  await expect(library.locator('.vct-confirmation')).toContainText('tego samego konta i klucza szyfrowania');
-  const [download] = await Promise.all([page.waitForEvent('download'), library.getByRole('button', { name: 'Potwierdź', exact: true }).click()]);
-  expect(download.suggestedFilename()).toMatch(/\.vctlib$/);
-  const buffer = await readFile(await download.path()), text = buffer.toString('utf8'), envelope = JSON.parse(text);
-  expect(envelope).toMatchObject({ format: 'vilda-care-template-library/v1', namespace: 'care-template-library', version: 1 });
-  expect(text).not.toContain(item.title); expect(text).not.toContain(ids.a); expect(text).not.toContain(ids.b);
+test('care templates offer only a single-template transfer without changing the existing library', async ({ page }) => {
+  const { frame } = await templateFixture(page);
+  const library = await openTemplates(page), item = await saveSimpleTemplate(library, frame, 'Fikcyjny szablon osobnego pliku');
+  const before = await rawTemplateStorage(frame, { includeMeta: false });
+  const clinicalBefore = await rawCareStorage(frame);
+  await expect(library.getByRole('button', { name: 'Eksportuj bibliotekę', exact: true })).toHaveCount(0);
+  await expect(library.getByRole('button', { name: 'Importuj bibliotekę', exact: true })).toHaveCount(0);
+  await expect(library.getByRole('button', { name: 'Importuj szablon', exact: true })).toBeEnabled();
+  await expect(templateRow(library, item.templateId).getByRole('button', { name: 'Eksportuj szablon: ' + item.title, exact: true })).toBeEnabled();
   await openTemplate(library, item.templateId);
-  await library.getByRole('button', { name: /^Usuń szablon:/ }).click();
-  await library.getByRole('button', { name: 'Usuń szablon', exact: true }).click();
-  await expect(templateRow(library, item.templateId)).toHaveCount(0);
-  await library.getByRole('button', { name: 'Importuj bibliotekę', exact: true }).click();
-  await expect(library.locator('.vct-confirmation')).toContainText('tego samego konta i klucza szyfrowania');
-  const [picker] = await Promise.all([page.waitForEvent('filechooser'), library.getByRole('button', { name: 'Potwierdź', exact: true }).click()]);
-  await picker.setFiles({ name: 'fikcyjna-biblioteka.vctlib', mimeType: 'application/octet-stream', buffer });
-  await expect(library.locator('.vct-feedback')).toContainText('Zaimportowano bibliotekę na tym urządzeniu.');
-  expect((await getTemplate(frame, item.templateId)).status).toBe('archived');
-  expect(await templateRevisions(frame, item.templateId)).toEqual(revisions);
+  await expect(library.getByRole('button', { name: 'Eksportuj szablon', exact: true })).toBeEnabled();
+  expect(await rawTemplateStorage(frame, { includeMeta: false })).toEqual(before);
   expect(await rawCareStorage(frame)).toEqual(clinicalBefore);
-  await library.getByRole('button', { name: 'Zamknij bibliotekę szablonów', exact: true }).click();
-  await createSecondTemplateAccount(page);
-  await page.reload({ waitUntil: 'load' }); await readyForPatient(page); await ensureTemplates(page);
-  const second = await openTemplates(page), otherBefore = await rawTemplateStorage(page), otherClinical = await rawCareStorage(page);
-  await second.getByRole('button', { name: 'Importuj bibliotekę', exact: true }).click();
-  const [otherPicker] = await Promise.all([page.waitForEvent('filechooser'), second.getByRole('button', { name: 'Potwierdź', exact: true }).click()]);
-  await otherPicker.setFiles({ name: 'fikcyjna-biblioteka-innego-konta.vctlib', mimeType: 'application/octet-stream', buffer });
-  await expect(second.locator('.vct-errors')).toContainText('tego samego konta i klucza szyfrowania');
-  await expect(second.getByRole('button', { name: 'Ponów import', exact: true })).toBeEnabled();
-  expect(await listTemplates(page)).toEqual([]);
-  expect(await rawTemplateStorage(page)).toEqual(otherBefore);
-  expect(await rawCareStorage(page)).toEqual(otherClinical);
 });

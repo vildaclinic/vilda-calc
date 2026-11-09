@@ -7,7 +7,7 @@
   'use strict';
   if (!root) return;
 
-  const DOMAIN = 'care-template-library', VERSION = 1;
+  const DOMAIN = 'care-template-library', VERSION = 1, CONTENT_VERSION = 2;
   // The operation ID is also the immutable transport EID. Keep its grammar
   // distinct from local template/stage/step/revision identities.
   const OP_ID_PATTERN = '^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$';
@@ -144,10 +144,102 @@
     return year >= 1900 && year <= 2999 && month >= 1 && month <= 12 && day >= 1 && day <= days[month - 1] && +match[4] < 24 && +match[5] < 60 && +match[6] < 60;
   }
 
+  // Publication data travels with the immutable revision, including when a
+  // template is copied or embedded in a patient's plan. It is a declaration by
+  // the file's author, not authentication of a person's identity or permission.
+  function publicationURL(value, path, issues) {
+    if (!textField(value, 2048, false, path, issues) || !cleanText(value)) return;
+    const url = cleanText(value), host = /^https:\/\/([^/?#]+)/i.exec(url);
+    if (!/^https:\/\/[^\s<>"'`\\]+$/i.test(url) || !host || host[1].includes('@')
+        || Array.from(url).some(character => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127)) add(issues, 'CARE_TEMPLATE_PUBLICATION_URL_INVALID', path);
+  }
+  function publicationNames(value, required, path, issues) {
+    if (!list(value, 20, required ? 1 : 0, path, issues)) return;
+    const seen = new Set();
+    value.forEach((name, index) => {
+      if (textField(name, 200, true, path.concat(index), issues)) {
+        const normalized = cleanText(name);
+        if (seen.has(normalized)) add(issues, 'CARE_TEMPLATE_PUBLICATION_DUPLICATE', path.concat(index));
+        seen.add(normalized);
+      }
+    });
+  }
+  function publicationSources(value, path, issues) {
+    if (!list(value, 20, 0, path, issues)) return;
+    value.forEach((source, index) => {
+      const sourcePath = path.concat(index);
+      if (!fields(source, ['title', 'url', 'version'], sourcePath, issues)) return;
+      textField(source.title, 240, true, sourcePath.concat('title'), issues);
+      publicationURL(source.url, sourcePath.concat('url'), issues);
+      textField(source.version, 240, false, sourcePath.concat('version'), issues);
+    });
+  }
+  function publicationLicense(value, path, issues) {
+    if (!fields(value, ['id', 'url', 'text', 'allowRedistribution', 'allowAdaptation'], path, issues)) return;
+    if (!['CC-BY-4.0', 'custom'].includes(value.id)) add(issues, 'CARE_TEMPLATE_LICENSE_REQUIRED', path.concat('id'));
+    publicationURL(value.url, path.concat('url'), issues);
+    textField(value.text, 12000, value.id === 'custom', path.concat('text'), issues);
+    for (const flag of ['allowRedistribution', 'allowAdaptation']) if (typeof value[flag] !== 'boolean') add(issues, 'CARE_TEMPLATE_BOOLEAN_REQUIRED', path.concat(flag));
+    if (value.id === 'CC-BY-4.0' && (value.url !== 'https://creativecommons.org/licenses/by/4.0/' || typeof value.text !== 'string' || cleanText(value.text) !== ''
+        || value.allowRedistribution !== true || value.allowAdaptation !== true)) add(issues, 'CARE_TEMPLATE_LICENSE_MISMATCH', path);
+  }
+  function normalizedLicense(value) {
+    return { id: value.id, url: cleanText(value.url), text: cleanText(value.text),
+      allowRedistribution: value.allowRedistribution, allowAdaptation: value.allowAdaptation };
+  }
+  const normalizedSources = value => value.map(source => ({ title: cleanText(source.title), url: cleanText(source.url), version: cleanText(source.version) }));
+  function normalizedOrigin(value) {
+    return { id: value.id, version: cleanText(value.version), contentDigest: value.contentDigest, instructionDigest: value.instructionDigest,
+      authors: value.authors.map(cleanText), contributors: value.contributors.map(cleanText), sources: normalizedSources(value.sources),
+      license: normalizedLicense(value.license), attribution: cleanText(value.attribution), changes: cleanText(value.changes) };
+  }
+  function normalizedPublication(value) {
+    return { id: value.id, version: cleanText(value.version), authors: value.authors.map(cleanText), contributors: value.contributors.map(cleanText),
+      sources: normalizedSources(value.sources), license: normalizedLicense(value.license), attribution: cleanText(value.attribution),
+      changes: cleanText(value.changes), origin: value.origin === null ? null : normalizedOrigin(value.origin) };
+  }
+  function checkPublication(value, issues) {
+    const path = ['publication'];
+    if (!fields(value, ['id', 'version', 'authors', 'contributors', 'sources', 'license', 'attribution', 'changes', 'origin'], path, issues)) return;
+    const start = issues.length;
+    idField(value.id, path.concat('id'), issues);
+    textField(value.version, 80, true, path.concat('version'), issues);
+    publicationNames(value.authors, true, path.concat('authors'), issues);
+    publicationNames(value.contributors, false, path.concat('contributors'), issues);
+    publicationSources(value.sources, path.concat('sources'), issues);
+    publicationLicense(value.license, path.concat('license'), issues);
+    textField(value.attribution, 4000, false, path.concat('attribution'), issues);
+    textField(value.changes, 4000, false, path.concat('changes'), issues);
+    const origin = value.origin, originPath = path.concat('origin');
+    if (origin !== null && fields(origin, ['id', 'version', 'contentDigest', 'instructionDigest', 'authors', 'contributors', 'sources', 'license', 'attribution', 'changes'], originPath, issues)) {
+      idField(origin.id, originPath.concat('id'), issues);
+      textField(origin.version, 80, true, originPath.concat('version'), issues);
+      for (const key of ['contentDigest', 'instructionDigest']) if (!digest(origin[key])) add(issues, 'CARE_TEMPLATE_DIGEST_INVALID', originPath.concat(key));
+      publicationNames(origin.authors, true, originPath.concat('authors'), issues);
+      publicationNames(origin.contributors, false, originPath.concat('contributors'), issues);
+      publicationSources(origin.sources, originPath.concat('sources'), issues);
+      publicationLicense(origin.license, originPath.concat('license'), issues);
+      textField(origin.attribution, 4000, false, originPath.concat('attribution'), issues);
+      textField(origin.changes, 4000, false, originPath.concat('changes'), issues);
+      if (issues.length === start) {
+        const publication = normalizedPublication(value), source = publication.origin;
+        if (publication.id !== source.id || !equal(publication.authors, source.authors) || !equal(publication.license, source.license)
+            || source.sources.some(item => !publication.sources.some(candidate => equal(candidate, item)))
+            || source.contributors.some(name => !publication.contributors.includes(name))
+            || source.attribution && !publication.attribution.includes(source.attribution)
+            || source.changes && !publication.changes.includes(source.changes))
+          add(issues, 'CARE_TEMPLATE_ATTRIBUTION_REQUIRED', path);
+      }
+    }
+  }
+
   function checkDefinition(value, section) {
     const issues = [];
-    if (!fields(value, ['contentVersion', 'name', 'purpose', 'labels', 'stageOrder', 'stages', 'steps'], [], issues)) return issues;
-    if (value.contentVersion !== VERSION) add(issues, 'CARE_TEMPLATE_VERSION_UNSUPPORTED', ['contentVersion']);
+    const allowed = ['contentVersion', 'name', 'purpose', 'labels', 'stageOrder', 'stages', 'steps'];
+    if (value && value.contentVersion === CONTENT_VERSION) allowed.push('publication');
+    if (!fields(value, allowed, [], issues)) return issues;
+    if (![VERSION, CONTENT_VERSION].includes(value.contentVersion)) add(issues, 'CARE_TEMPLATE_VERSION_UNSUPPORTED', ['contentVersion']);
+    if (value.contentVersion === CONTENT_VERSION) checkPublication(value.publication, issues);
     if (section !== 'structure') {
       textField(value.name, LIMITS.maxNameUnits, true, ['name'], issues);
       textField(value.purpose, LIMITS.maxPurposeUnits, false, ['purpose'], issues);
@@ -211,13 +303,15 @@
     return issues;
   }
   function normalizedDefinition(value) {
-    return {
-      contentVersion: VERSION, name: cleanText(value.name), purpose: cleanText(value.purpose), labels: value.labels.map(cleanText),
+    const definition = {
+      contentVersion: value.contentVersion, name: cleanText(value.name), purpose: cleanText(value.purpose), labels: value.labels.map(cleanText),
       stageOrder: value.stageOrder.slice(),
       stages: value.stages.map(stage => ({ id: stage.id, title: cleanText(stage.title), stepIds: stage.stepIds.slice() })),
       steps: value.steps.map(step => ({ id: step.id, stageId: step.stageId, title: cleanText(step.title), taskKind: step.taskKind,
         instruction: cleanText(step.instruction), requiredOutcome: step.requiredOutcome, reminderRule: detached(step.reminderRule), includedByDefault: step.includedByDefault }))
     };
+    if (value.contentVersion === CONTENT_VERSION) definition.publication = normalizedPublication(value.publication);
+    return definition;
   }
   function definitionResult(value, section) {
     let input;
@@ -243,6 +337,44 @@
   function sameDefinition(left, right) {
     const first = canonicalDefinition(left), second = canonicalDefinition(right);
     return first.ok && second.ok && first.canonical === second.canonical;
+  }
+  async function definitionDigest(value) {
+    const normalized = canonicalDefinition(value);
+    if (!normalized.ok) throw new Error('CARE_TEMPLATE_DEFINITION_INVALID');
+    return sha('definition-v1', normalized.definition);
+  }
+  function instructionContent(value) {
+    const normalized = canonicalDefinition(value);
+    if (!normalized.ok) throw new Error('CARE_TEMPLATE_DEFINITION_INVALID');
+    const definition = normalized.definition, stages = new Map(definition.stages.map(stage => [stage.id, stage]));
+    const steps = new Map(definition.steps.map(step => [step.id, step]));
+    return { name: definition.name, purpose: definition.purpose, labels: definition.labels,
+      stages: definition.stageOrder.map(stageId => ({ title: stages.get(stageId).title,
+        steps: stages.get(stageId).stepIds.map(stepId => {
+          const step = steps.get(stepId);
+          return { title: step.title, taskKind: step.taskKind, instruction: step.instruction, requiredOutcome: step.requiredOutcome,
+            reminderRule: detached(step.reminderRule), includedByDefault: step.includedByDefault };
+        }) })) };
+  }
+  // Local identifiers do not make an imported template a clinical adaptation.
+  // This digest compares the reusable instructions, including order and rules.
+  async function instructionDigest(value) { return sha('instructions-v1', instructionContent(value)); }
+  async function publicationPermissionIssue(definition) {
+    if (definition.contentVersion !== CONTENT_VERSION || definition.publication.origin === null) return null;
+    if (await instructionDigest(definition) === definition.publication.origin.instructionDigest) return null;
+    if (!definition.publication.license.allowAdaptation) return 'CARE_TEMPLATE_ADAPTATION_FORBIDDEN';
+    if (!definition.publication.contributors.length || !definition.publication.changes) return 'CARE_TEMPLATE_CHANGE_ATTRIBUTION_REQUIRED';
+    return null;
+  }
+  function publicationLineageIssue(previous, next) {
+    if (previous.contentVersion !== CONTENT_VERSION) return null;
+    if (next.contentVersion !== CONTENT_VERSION || previous.publication.id !== next.publication.id) return 'CARE_TEMPLATE_ATTRIBUTION_REQUIRED';
+    const publication = previous.publication, target = next.publication;
+    if (publication.origin !== null && (!equal(publication.origin, target.origin)
+        || publication.contributors.some(name => !target.contributors.includes(name))
+        || publication.attribution && !target.attribution.includes(publication.attribution)
+        || publication.changes && !target.changes.includes(publication.changes))) return 'CARE_TEMPLATE_ATTRIBUTION_REQUIRED';
+    return null;
   }
   function draftFailure(code) { return { ok: false, requiresNameReview: false, issues: [{ code, path: [], fieldPath: '' }] }; }
   function createDefinitionDraft(options) {
@@ -393,8 +525,10 @@
     let input;
     try { input = detached(value); } catch (_) { return null; }
     if (!object(input) || !Array.isArray(input.stages) || !Array.isArray(input.steps)) return null;
-    return canonical({ name: input.name, purpose: input.purpose, labels: input.labels,
-      stages: input.stages.map(stage => stage && stage.title), steps: input.steps.map(step => step && [step.title, step.instruction]) });
+    const review = { name: input.name, purpose: input.purpose, labels: input.labels,
+      stages: input.stages.map(stage => stage && stage.title), steps: input.steps.map(step => step && [step.title, step.instruction]) };
+    if (input.contentVersion === CONTENT_VERSION) review.publication = input.publication;
+    return canonical(review);
   }
 
   function sortedRecord(value) {
@@ -538,6 +672,11 @@
     record.revisions.forEach((revision, index) => {
       const creator = data.operations.get(revision.operationId);
       if (creator && (!['create', 'revise'].includes(creator.kind) || creator.headRevisionId !== revision.id || creator.recordedAtISO !== revision.recordedAtISO)) add(issues, 'CARE_TEMPLATE_REVISION_CREATOR_INVALID', ['revisions', index]);
+      const previous = data.revisions.get(revision.parentRevisionId);
+      if (previous) {
+        const lineageIssue = publicationLineageIssue(previous.definition, revision.definition);
+        if (lineageIssue) add(issues, lineageIssue, ['revisions', index, 'definition', 'publication']);
+      }
     });
     for (const operationId of data.order) {
       const operation = data.operations.get(operationId), index = record.operations.findIndex(item => item.id === operationId), path = ['operations', index];
@@ -586,14 +725,18 @@
       // promise completion order must never select a branch or affect a token.
       const revisionChecks = await Promise.all(record.revisions.map(async revision => {
         const checks = await Promise.all([sha('definition-v1', revision.definition), sha('revision-id-v1', { templateId: record.templateId, operationId: revision.operationId })]);
-        return checks[0] === revision.contentDigest && 'ctr_' + checks[1] === revision.id;
+        const permissionIssue = await publicationPermissionIssue(revision.definition);
+        return { valid: checks[0] === revision.contentDigest && 'ctr_' + checks[1] === revision.id, permissionIssue };
       }));
       const operationChecks = await Promise.all(record.operations.map(async operation => {
         const node = detached(operation); delete node.nodeDigest;
         const checks = await Promise.all([sha('intent-v1', operation.intent), sha('operation-v1', node)]);
         return checks[0] === operation.fingerprint && checks[1] === operation.nodeDigest;
       }));
-      revisionChecks.forEach((valid, index) => { if (!valid) add(issues, 'CARE_TEMPLATE_HASH_MISMATCH', ['revisions', index]); });
+      revisionChecks.forEach((check, index) => {
+        if (!check.valid) add(issues, 'CARE_TEMPLATE_HASH_MISMATCH', ['revisions', index]);
+        if (check.permissionIssue) add(issues, check.permissionIssue, ['revisions', index, 'definition', 'publication']);
+      });
       operationChecks.forEach((valid, index) => { if (!valid) add(issues, 'CARE_TEMPLATE_HASH_MISMATCH', ['operations', index]); });
     } catch (error) { add(issues, error.message, []); }
     issues.push(...semanticIssues(record, data));
@@ -655,6 +798,10 @@
       else definition = normalized.definition;
     }
     if (issues.length) return { ok: false, reason: 'CARE_TEMPLATE_REQUEST_INVALID', issues };
+    if (definition) {
+      const permissionIssue = await publicationPermissionIssue(definition);
+      if (permissionIssue) return { ok: false, reason: permissionIssue, issues: [{ code: permissionIssue, path: ['publication'], fieldPath: 'publication' }] };
+    }
     const intent = { action: input.action, templateId: input.templateId, baseToken: input.baseToken };
     if (input.action === 'save') intent.definitionDigest = await sha('definition-v1', definition);
     else { intent.archived = input.archived; if (input.action === 'resolve') intent.headRevisionId = input.headRevisionId; }
@@ -673,6 +820,11 @@
       if (input.baseToken !== view.baseToken) return { ok: false, reason: 'CARE_TEMPLATE_STALE_BASE', issues: [] };
       if (view.needsReview && input.action !== 'resolve') return { ok: false, reason: 'CARE_TEMPLATE_RESOLUTION_REQUIRED', issues: [] };
       if (input.action === 'save' && view.archived) return { ok: false, reason: 'CARE_TEMPLATE_ARCHIVED', issues: [] };
+      if (input.action === 'save') {
+        const current = record.revisions.find(revision => revision.id === view.headRevisionId);
+        const lineageIssue = publicationLineageIssue(current.definition, definition);
+        if (lineageIssue) return { ok: false, reason: lineageIssue, issues: [{ code: lineageIssue, path: ['publication'], fieldPath: 'publication' }] };
+      }
     } else if (input.baseToken !== null || input.action !== 'save') return { ok: false, reason: 'CARE_TEMPLATE_CREATE_REQUIRED', issues: [] };
     const time = object(options) && Object.getOwnPropertyDescriptor(options, 'recordedAtISO');
     if (!time || !own(time, 'value') || !instant(time.value)) return { ok: false, reason: 'CARE_TEMPLATE_INSTANT_INVALID', issues: [] };
@@ -749,9 +901,9 @@
     return value === null ? verified : unionRecords(value, incoming);
   }
 
-  root.VildaCareTemplateModel = Object.freeze({ VERSION, OP_ID_PATTERN, validateOperationId, LIMITS, TASK_KINDS, OUTCOMES,
+  root.VildaCareTemplateModel = Object.freeze({ VERSION, CONTENT_VERSION, OP_ID_PATTERN, validateOperationId, LIMITS, TASK_KINDS, OUTCOMES,
     validateDraft, validateDefinition, canonicalDefinition, sameDefinition,
-    createDefinitionDraft, duplicateDefinition, prepareApplicationDraft, copyPatientStructureDraft, reviewTextKey,
+    createDefinitionDraft, duplicateDefinition, prepareApplicationDraft, copyPatientStructureDraft, reviewTextKey, instructionContent, instructionDigest, definitionDigest,
     decodeTemplateRecord, verifyTemplateRecord, getTemplateView, operationOutcome,
     prepareTemplateOperation, applyTemplateEvent, mergeTemplateRecords });
 })(typeof window !== 'undefined' ? window : globalThis);
