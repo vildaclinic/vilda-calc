@@ -32,7 +32,10 @@
 //   okno(opcje) → { win, timery, locks, krypto, dziennik }
 //       Okno przeglądarki z prawdziwymi skryptami. opcje: locks (false — bez navigator.locks), krypto (false — zwykłe
 //       crypto), skrypty (lista plików; domyślnie SKRYPTY_SEJFU: crypto, retention, vault), dokument, navigator, dodatki,
-//       ctx. dziennik — zapisy localStorage/sessionStorage ({ nr, magazyn, op, klucz, sesja, nrSesji }); dodatki — pola okna.
+//       ctx, zrodla. dziennik — zapisy localStorage/sessionStorage ({ nr, magazyn, op, klucz, sesja, nrSesji }); dodatki —
+//       pola okna; zrodla — { plik: (win) => void }: plik z listy skryptów ładuje podana funkcja zamiast
+//       loadBrowserScript (np. sejf bez wstawek albo kopia z licznikiem emisji z tests/support/sejf-bez-wstawek.mjs);
+//       bez opcji — jak dotąd.
 //   urzadzenie(opcje) → Promise<d>
 //       Konto B (zablokowane) i konto A (zalogowane) na JEDNYM magazynie w pamięci z rejestrem. opcje: chmura (A
 //       w trybie 'cloud-only'), chmuraB, locks, krypto, dokument, navigator, dodatki, skrypty.
@@ -471,7 +474,11 @@ export function okno(opcje = {}) {
   };
   win.window = win; win.self = win; win.top = win;
   win.localStorage.setItem('vildaRetention', '0');
-  for (const plik of opcje.skrypty || SKRYPTY_SEJFU) loadBrowserScript(plik, win);
+  for (const plik of opcje.skrypty || SKRYPTY_SEJFU) {
+    const zaladuj = opcje.zrodla && opcje.zrodla[plik];
+    if (typeof zaladuj === 'function') zaladuj(win);
+    else loadBrowserScript(plik, win);
+  }
   dziennik.length = 0;
   return { win, timery, locks, krypto, dziennik };
 }

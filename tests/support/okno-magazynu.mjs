@@ -33,11 +33,14 @@
 //       uprzęży o tej samej nazwie; drugieOkno ich nie dziedziczy), emisja (true — o.v to VildaVault jak w przeglądarce:
 //       zapisy danych sejfu przy otwartej bramce dopisują zmiany do kolejki; domyślnie metody danych z listy
 //       METODY_DANYCH idą przez o.v przy zamkniętej bramce — pole VILDA_EVENT_LOG na czas wywołania false, potem
-//       przywrócone — więc wiersze kolejki powstają tylko z jawnych dopisań testu; drugieOkno jej nie dziedziczy).
+//       przywrócone — więc wiersze kolejki powstają tylko z jawnych dopisań testu; drugieOkno jej nie dziedziczy),
+//       zrodla ({ plik: (win) => void } — plik z listy skryptów ładuje podana funkcja zamiast pliku z repozytorium,
+//       np. sejf bez wstawek albo kopia z licznikiem emisji z tests/support/sejf-bez-wstawek.mjs; przekazywane do okno()
+//       uprzęży sesji; drugieOkno dziedziczy tę samą funkcję, chyba że opcje podają własne; bez opcji — jak dotąd).
 //   drugieOkno(o, opcje) → Promise<o2> — nowe okno na tej samej atrapie z kontami o.A / o.B (bez tworzenia kont); dzieli
 //       z o atrapę IndexedDB, atrapę Web Locks (o.locks; okno bez navigator.locks daje drugie też bez), localStorage
-//       (o.lokalny), listę skryptów (o.skrypty) i rodzinę okien (szyna BroadcastChannel, rozsyłanie zapisów localStorage),
-//       jeśli opcje nie mówią inaczej. sessionStorage, zegary, crypto i dziennik — własne każdego okna.
+//       (o.lokalny), listę skryptów (o.skrypty) z opcją zrodla (o.zrodla) i rodzinę okien (szyna BroadcastChannel,
+//       rozsyłanie zapisów localStorage), jeśli opcje nie mówią inaczej. sessionStorage, zegary, crypto i dziennik — własne każdego okna.
 //       drugieOkno(o, { localStorage: 'osobny' }) dołącza do rodziny o (o też z localStorage: 'osobny').
 //
 // OPCJA localStorage: 'osobny' (włącza też zdarzenia: true)
@@ -57,7 +60,8 @@
 // OKNO o
 //   o.win, o.v (VildaVault), o.ev (VildaVault._eventLog), o.idb, o.A / o.B ({ userId, haslo }), o.timery, o.dziennik
 //   (zapisy localStorage/sessionStorage tego okna, także we wspólnym localStorage), o.locks (atrapa Web Locks albo null),
-//   o.lokalny (stan localStorage do dzielenia), o.skrypty, o.krypto (atrapaKrypto z uprzęży: log, po, przed, wstrzymaj, blad),
+//   o.lokalny (stan localStorage do dzielenia), o.skrypty, o.zrodla, o.krypto (atrapaKrypto z uprzęży: log, po, przed,
+//   wstrzymaj, blad),
 //   o.kryptoWToku() — liczba operacji crypto.subtle w toku, o.kto(uid) → 'A' | 'B' | uid, o.sesja() → 'A' | 'B' | null.
 //   o.propaguj() → Promise (tylko localStorage: 'osobny'), o.przeladowania() → liczba, o.zamiany (tylko zdarzenia: true).
 //   o.zablokuj(powod), o.zaloguj(kto) → Promise (blokada, zalogowanie, zadanie w tle i cisza),
@@ -348,7 +352,7 @@ export async function oknoMagazynu(opcje = {}) {
   }
   if (opcje.pola) Object.assign(dodatki, opcje.pola);
   const skrypty = opcje.skrypty || SKRYPTY_SEJFU;
-  const o0 = okno({ ctx, krypto: { ...krypto, crypto: { ...krypto.crypto, subtle } }, dodatki, skrypty, locks: opcje.locks });
+  const o0 = okno({ ctx, krypto: { ...krypto, crypto: { ...krypto.crypto, subtle } }, dodatki, skrypty, locks: opcje.locks, zrodla: opcje.zrodla });
   fasada.cel.dziennik = o0.dziennik;
   const win = o0.win;
   v = win.VildaVault;
@@ -440,7 +444,7 @@ export async function oknoMagazynu(opcje = {}) {
     return b && b.sklepy[sklep] ? b.sklepy[sklep].wiersze : null;
   };
   const o = {
-    win, v: opcje.emisja === true ? v : widokBezEmisji(win, v), ev: v._eventLog, idb, A, B, timery: o0.timery, dziennik: o0.dziennik, krypto, locks: o0.locks, lokalny, skrypty, rodzina,
+    win, v: opcje.emisja === true ? v : widokBezEmisji(win, v), ev: v._eventLog, idb, A, B, timery: o0.timery, dziennik: o0.dziennik, krypto, locks: o0.locks, lokalny, skrypty, zrodla: opcje.zrodla, rodzina,
     przeladowania: () => przeladowania, zamiany,
     propaguj: () => {
       if (!propaguj) throw new Error("propaguj(): okno bez localStorage: 'osobny'");
@@ -493,7 +497,7 @@ function widokBezEmisji(win, v) {
 
 export function drugieOkno(o, opcje = {}) {
   return oknoMagazynu({
-    skrypty: o.skrypty, locks: o.locks || false, localStorage: o.lokalny, ...opcje, idb: o.idb, istniejace: { A: o.A, B: o.B },
+    skrypty: o.skrypty, zrodla: o.zrodla, locks: o.locks || false, localStorage: o.lokalny, ...opcje, idb: o.idb, istniejace: { A: o.A, B: o.B },
     rodzina: o.rodzina, widokZrodla: o.lokalny,
   });
 }
