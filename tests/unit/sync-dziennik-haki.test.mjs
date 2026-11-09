@@ -1,7 +1,8 @@
-// P-DZIENNIK-ZDARZEN (E2-PR3a2) — kontrakt ładunków hooków sejfu: emisja zmian do kolejki (wstawki Bem_ w emiterach
-// hooków i miejscach zapisu, kroki operacji złożonych) nie zmienia ładunków hooków, kolejności wywołań słuchaczy ani
-// pełnej wysyłki (syncPush). Porównanie z sejfem bez wstawek (tests/support/sejf-bez-wstawek.mjs: każde wywołanie Bem_*
-// i Bob_* poza blokiem zastąpione `void 0`, Bob_oznacz(…) — `false`), ładowanym tak jak tests/support/load-browser-script.mjs.
+// P-DZIENNIK-ZDARZEN (E2-PR3a2, E2-PR3a3) — kontrakt ładunków hooków sejfu: emisja zmian do kolejki (wstawki Bem_
+// w emiterach hooków, miejscach zapisu i importach, kroki operacji złożonych, od E2-PR3a3 partie importu) nie zmienia
+// ładunków hooków, kolejności wywołań słuchaczy ani pełnej wysyłki (syncPush). Porównanie z sejfem bez wstawek
+// (tests/support/sejf-bez-wstawek.mjs: każde wywołanie Bem_* i Bob_* poza blokiem zastąpione `void 0`, Bob_oznacz(…) —
+// `false`), ładowanym tak jak tests/support/load-browser-script.mjs.
 // Okno jak w zapisie bazowym (tests/unit/sync-dziennik-zapis-bazowy.test.mjs, wariant „Komputer prywatny”: adapter
 // IndexedDB sejfu nad atrapą, moduły punktu odzyskiwania), sztuczny zegar (tylko Date, krok 1 s), zadanie w tle sejfu po
 // zalogowaniu odpalane jawnie, atrapa VildaSync (syncPush liczony; inspectTemplateLibraryAuthority na kroku nowej
@@ -22,11 +23,16 @@
 //   KH3  onPatientListChanged przy usunięciu listy: { id, action: 'delete' } bez deletedAtISO — na obu sejfach.
 //   KH4  kolejność wywołań słuchaczy (hook, słuchacz) względem siebie: sejf = sejf bez wstawek.
 //   KH5  liczba wywołań syncPush atrapy VildaSync: sejf = sejf bez wstawek (na każdym kroku).
-//   KH6  samokontrola: sejf ma część emisji (znacznik i wstawki), sejf bez wstawek nie ma Bem_ ani Bob_ poza blokiem,
-//        parsuje się i w obu przebiegach daje 0 odczytów pola bramki (sejf przy otwartej bramce — więcej niż 0).
+//   KH6  samokontrola: sejf ma część emisji (znacznik i wstawki: Bem_hak 7, Bem_zmiana 12, pary kroku 9, Bem_sekcje 3,
+//        Bem_partia 3 — razem 43), sejf bez wstawek nie ma Bem_ ani Bob_ poza blokiem, parsuje się i w obu przebiegach
+//        daje 0 odczytów pola bramki (sejf przy otwartej bramce — więcej niż 0); przy otwartej bramce trzy kroki importu
+//        scenariusza (import karty, scalenie i odtworzenie kopii konta) wołają onBulkChange — KH1–KH5 obejmują więc
+//        dopisywanie partii importu; przy zamkniętej bramce i na sejfie bez wstawek — bez wywołania.
 //
 // Czerwone na bazie (sejf bez części emisji): KH6 (znacznik i wstawki emisji). Zielone z natury (strażniki regresji):
 // KH1–KH5 — na sejfie bazy sejf i sejf bez wstawek nie różnią się co do hooków.
+// Czerwone na bazie E2-PR3a3 (sejf 422a9a7b, sprzed partii importu): KH6 (liczby wstawek, onBulkChange). Zielone
+// z natury: KH1–KH5 ×2 — ładunki hooków importów równe na sejfie i sejfie bez wstawek także przed tym PR.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
 import { AtrapaIDBKeyRange, utworzIndexedDB } from '../support/atrapa-indexeddb.mjs';
@@ -153,6 +159,10 @@ async function przebieg({ zrodlo, bramka }) {
     v[h]((d) => { wywolania.push({ hook: h, sluchacz: 1, ladunek: maska(d) }); });
     v[h]((d) => { wywolania.push({ hook: h, sluchacz: 2, ladunek: maska(d) }); });
   }
+  // Słuchacz partii importu (E2-PR3a3; sejf bez części partii go nie ma): krok scenariusza, nazwa importu, liczba wierszy.
+  const partie = [];
+  let biezacy = null;
+  if (v._eventLog && typeof v._eventLog.onBulkChange === 'function') v._eventLog.onBulkChange((d) => { partie.push({ krok: biezacy, reason: d.reason, count: d.count }); });
   async function cisza() {
     const koniec = performance.now() + 60_000;
     let stabilne = 0;
@@ -173,6 +183,7 @@ async function przebieg({ zrodlo, bramka }) {
   async function krok(nazwa, fn) {
     zegar += KROK_MS;
     vi.setSystemTime(zegar);
+    biezacy = nazwa;
     const z = { wyw: wywolania.length, push: sync.push };
     await fn();
     await cisza();
@@ -263,7 +274,7 @@ async function przebieg({ zrodlo, bramka }) {
   o.timery.wyczysc();
   vi.useRealTimers();
   vi.restoreAllMocks();
-  return { kroki, wywolania, odczytyBramki, syncPush: sync.push };
+  return { kroki, wywolania, odczytyBramki, syncPush: sync.push, partie };
 }
 
 const przebiegi = {};
@@ -334,7 +345,10 @@ describe('kontrakt ładunków hooków: sejf = sejf bez wstawek', () => {
     expect(i > a && i < z, 'znacznik emisji w bloku').toBe(true);
     const wstawki = wywolaniaPozaBlokiem(ZRODLO_SEJFU);
     const ile = (n) => wstawki.filter((w) => w.nazwa === n).length;
-    expect([ile('Bem_hak'), ile('Bem_zmiana'), ile('Bem_krokStart'), ile('Bem_krokKoniec')], 'wstawki emisji w sejfie').toEqual([7, 8, 6, 6]);
+    // E2-PR3a3: importy (ns, ss, as) — 4 emisje wersji, 3 sekcje pliku, 3 znaki końca partii i 3 pary kroku.
+    expect([ile('Bem_hak'), ile('Bem_zmiana'), ile('Bem_krokStart'), ile('Bem_krokKoniec'), ile('Bem_sekcje'), ile('Bem_partia')], 'wstawki emisji w sejfie')
+      .toEqual([7, 12, 9, 9, 3, 3]);
+    expect(wstawki.filter((w) => w.nazwa.startsWith('Bem_')).length, 'wszystkie wstawki Bem_ (bez innych nazw)').toBe(43);
     const bez = bezWstawek(ZRODLO_SEJFU);
     expect(wywolaniaPozaBlokiem(bez)).toEqual([]);
     const { a: a2, z: z2 } = granicaBloku(bez);
@@ -347,5 +361,15 @@ describe('kontrakt ładunków hooków: sejf = sejf bez wstawek', () => {
       expect((await bezW()).odczytyBramki, `sejf bez wstawek, bramka ${nazwa}`).toBe(0);
       if (nazwa === 'otwarta') expect((await sejf()).odczytyBramki, 'sejf, bramka otwarta').toBeGreaterThan(0);
     }
+    // E2-PR3a3: trzy kroki importu w scenariuszu; przy otwartej bramce partia każdego idzie do kolejki (onBulkChange po
+    // ostatnim dopisaniu partii), więc KH1–KH5 porównują ładunki hooków także przy dopisywaniu partii importu. Przy
+    // zamkniętej bramce i na sejfie bez wstawek — bez wywołania.
+    const IMPORTY = ['import karty innego konta', 'scalenie kopii innego konta', 'odtworzenie konta z kopii'];
+    const partie = (p) => p.partie.map((x) => `${x.krok}: ${x.reason}`);
+    expect(partie(await PARY[1][1]()), 'sejf, bramka otwarta: onBulkChange w krokach importu').toEqual([
+      `${IMPORTY[0]}: importPatientFromEnvelope`, `${IMPORTY[1]}: mergeVaultBackup`, `${IMPORTY[2]}: restoreVaultBackup`,
+    ]);
+    expect((await PARY[1][1]()).partie.every((x) => x.count > 0), 'sejf, bramka otwarta: count > 0').toBe(true);
+    for (const p of [await PARY[0][1](), await PARY[0][2](), await PARY[1][2]()]) expect(p.partie, 'bramka zamknięta albo sejf bez wstawek').toEqual([]);
   }, 240_000);
 });

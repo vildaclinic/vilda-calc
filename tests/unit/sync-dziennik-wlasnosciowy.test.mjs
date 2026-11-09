@@ -6,22 +6,38 @@
 // WYŁĄCZNIE FIKCYJNE („Testowy Jan…”), bez PESEL.
 //
 // MODEL. Kolejka testowa Q_X = FIFO { kind, key, atISO, env } (szyfrogram z chwili emisji, zamrożony), kursory dostaw
-// X→Y. Emisja = wyrocznia „emiter doskonały”: po każdej mutacji lokalnej na X różnica encji eksportu przed/po → builder
-// każdej zmienionej encji w tej chwili → encryptEvent → Q_X. Scalanie nie emituje — poza dwoma hakami E2-PR3b u odbiorcy
+// X→Y. Wyrocznia „emiter doskonały” (model): po każdej mutacji lokalnej na X różnica encji eksportu przed/po → builder
+// każdej zmienionej encji w tej chwili; do Q_X (encryptEvent) idą koperty prawdziwych emiterów sejfu, a model jest
+// wyrocznią porównania (EMISJA niżej). Scalanie nie emituje — poza dwoma hakami E2-PR3b u odbiorcy
 // po każdej partii: H1 (ptomb(p) przegrał, karta p jest dalej u Y → pfull(p) z setId p|deletedAtISO, dedup po setId) i H2
 // (ratunek notatki D-21 „zawsze do kolejki”: notatka, której nagrobek zniknął w partii, a rekord zmieniło scalanie →
 // pnote(id), także gdy jej koperta pnote przyszła w tej partii). Dostawa X→Y = FIFO-prefiks od kursora (losowa tylko
 // długość i przeplot nadawców), powtórka = cofnięcie kursora i ponowne zastosowanie sufiksu; każde zdarzenie przez
 // applyEncryptedEvent, status inny niż applied = błąd.
 //
-// WYMAGANIE DLA E2-PR3a — kolejność emisji w kroku: snap (także wersje przeniesione pod kartę celu „Scal pacjentów”
+// EMISJA (E2-PR3a3): zdarzenia z prawdziwych emiterów sejfu. Urządzenia (także urządzenia katalogu p. 5 —
+// zaladowanieSejfu z s4d7-wspolne.mjs) ładują kopię sejfu z rejestrem łańcucha (zRejestremLancucha,
+// tests/support/sejf-bez-wstawek.mjs) przy polu okna VILDA_EVENT_LOG = true. Kopia różni się od sejfu dwoma miejscami:
+// Bem_zmiana bez warunku trybu i IndexedDB (sejf urządzenia jest na adapterze w pamięci) i Bem_doLancucha, które zamiast
+// dopisania oddaje wpis do rejestru okna; emitery, kroki, rangi i pomijanie powtórzeń są prawdziwe. Mutacja czyści rejestr
+// przed operacją, po niej buduje koperty builderów dla wpisów rejestru konta w ich kolejności (builder null — bez
+// koperty, wyjątek buildera — błąd testu) i porównuje je z modelem: ten sam ciąg rang i te same encje w każdej randze;
+// jedyna dozwolona różnica to kolejność encji w obrębie rangi (liczona osobno: S.stat.emitery = { porownan, zgodnych,
+// wRandze }). Niezgodność = wyjątek z opisem (mutacja, ciąg modelu, ciąg emiterów, wpisy rejestru). Jawny wyjątek:
+// rejestracja klucza dostępu w p. 1 (zapis testu z pominięciem API) ma model jako źródło — literał MUTACJE_Z_MODELU.
+// Przypadki: AB1 (porównanie w każdej mutacji każdego bloku; wyjątek z opisem), AB2 (podsumowania ziaren: porownan > 0,
+// zgodnych + wRandze = porownan), AB3 (p. 4: „Przywróć”, gdy wizyta jest już w karcie), AB4 (porównanie na ciągach
+// syntetycznych), AB5 (samokontrola kopii z rejestrem), AB6 (MUTACJE_Z_MODELU).
+//
+// KOLEJNOŚĆ W KROKU (E2-PR3a2, sprawdzana na emiterach): snap (także wersje przeniesione pod kartę celu „Scal pacjentów”
 // i głowy scalenia), potem stomb, potem ptomb, potem pnote, pnotetomb, note, notetomb, plist, plisttomb, pref, pk, pktomb,
 // cred. Pola karty zmienione bez snap tej karty w kroku niesie stomb z kartą (11.2), inaczej snap(karta, najnowsza
-// wersja); karta bez wersji i bez stomb = „brak nośnika” (liczony w wyniku ziarna).
-// Do ponownej decyzji w E2-PR3a: `ptomb` przed `snap` w kroku »Scal pacjentów«. Zmierzone w sondach analizy: leczy
-// R2-E3, a w profilu pełnym uprzęży echa usuwa klasę »obecność wersji« (7 → 0; inny program niż ten plik); P1e bez zmian.
-// Niezmierzone: scenariusz K6 (poprawka przeniesionej wersji na odbiorcy); zmiana kolejności potrafi zepsuć inny przypadek
-// (N2 przeglądu E2-PR2a).
+// wersja); karta bez wersji i bez stomb = „brak nośnika” (liczony w wyniku ziarna). Zdjęcie wpisu kosza wersji, która po
+// mutacji jest w karcie, niesie snap tej wersji (jak emiter „Przywróć”, gdy wizyta jest już w karcie).
+// Decyzja 12.2 (2026-11-04): w kroku „Scal pacjentów” zostaje „najpierw wizyty”; R2-E3 (p. 6) to „ZNANA RÓŻNICA”
+// z naprawą w E3-PR0. K6 (B poprawia wizytę karty P, A „Scal pacjentów” P → Q bez wiedzy o poprawce) — zmierzone w p. 6:
+// po zdarzeniach i pełnej wymianie poprawka ginie na obu urządzeniach, same pełne kopie ją zachowują; „ZNANA UTRATA
+// (zdarzenia)” z naprawą w E2-PR3c (decyzja 12.3).
 //
 // WARUNKI (3.2). D(X, Y) — różnice encja po encji na eksportach kanonicznych (pominSeq, pominSnapshotCount), każda z klasą
 // z 3.6 albo bez (null): R2 (rev wersji ±1), R3 (rev nagrobka notatki), R4a (opis i gwiazdka wpisu kosza żywej karty),
@@ -87,17 +103,31 @@
 // i W4 (zwolnienie w N1 zostawia tylko u nadawcy wizytę albo całą kartę z notatką — charakterystyka, pełna wymiana ją
 // dowozi; przy snap i pfull w kwarantannie samo ponowienie zostawia różnicę notatki, ponowienie + sufiks — nie).
 // Każdy describe zaczyna od sprawdzenia, że VildaVault._eventLog istnieje (D1).
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { utworzAtrapeWorkera, zegarSterowany } from '../support/atrapa-workera-sync.mjs';
 import { sprzatnijUrzadzenia, utworzUrzadzenie, eksportKanoniczny } from '../support/urzadzenie-sync.mjs';
-import { appendFileSync } from 'node:fs';
+import { appendFileSync, readFileSync } from 'node:fs';
 import { okno } from './sesja-zapisu-uprzaz.mjs';
 import { createHash } from 'node:crypto';
-import { PRZYGOTOWANIA, sztucznyZegar, przesunZegar, zegar } from './s4d7-wspolne.mjs';
+import { PRZYGOTOWANIA, repoRoot, sztucznyZegar, przesunZegar, zaladowanieSejfu, zegar } from './s4d7-wspolne.mjs';
 import { SCEN as KATALOG, RUNDY, pelnyStan, widok } from './kosz-po-kluczu-wspolne.mjs';
 import { dopiszDoKolejki } from '../support/model-kolejki.mjs';
 import { AtrapaIDBKeyRange, utworzIndexedDB } from '../support/atrapa-indexeddb.mjs';
 import { D, encje, naj, sciezkiEncji, sortuj } from '../support/encje-ladunku.mjs';
+import { ZRODLO_SEJFU, zRejestremLancucha, zaladujZrodlo } from '../support/sejf-bez-wstawek.mjs';
+import { parse } from 'acorn';
+import path from 'node:path';
+
+// Kopia sejfu z rejestrem łańcucha (EMISJA): tekst raz na plik; okno z kopią ma otwartą bramkę (pole okna), a wynik
+// ładowania to rejestr okna — tablica wpisów łańcucha w kolejności wywołań Bem_doLancucha.
+const ZRODLO_EMITEROW = zRejestremLancucha();
+function zRejestrem(win) {
+  const lancuch = [];
+  win.VILDA_EVENT_LOG = true;
+  zaladujZrodlo(win, ZRODLO_EMITEROW, { lancuch: (z) => { lancuch.push(z); } });
+  return lancuch;
+}
+zaladowanieSejfu(zRejestrem); // urządzenia katalogu p. 5 (s4d7-wspolne.mjs)
 
 // ── Wspólne ──────────────────────────────────────────────────────────────────────────────────────────────────────────
 const START = Date.parse('2026-03-02T08:00:00.000Z');
@@ -273,17 +303,20 @@ function swiat(ziarno = 1) {
   return {
     ziarno, nrUrz: 0, atrapa: utworzAtrapeWorkera({ tryb: 'v37a', eventsEnabled: false, zegar: zegarSterowany() }),
     kursor: new Map(), hasla: new Map(), dziennik: [], braki: [], nrHasla: 0,
-    stat: { zdarzen: 0, dostaw: 0, pelnych: 0, h1: 0, h2: 0, w2s: { zgodne: 0, niezgodne: 0, kategorie: {}, roznice: {} }, w2sLista: [], w3: 0, w3Bledy: [], losowa: { zgodne: 0, niezgodne: 0 }, losowaLista: [], spoczynki: 0, w1Bledy: [], w2rBledy: [], w2r: 0, brakSpoczynku: [], w4: 0, w4Bledy: [], w4Klasy: [], w4R4n: 0, w4p: [] },
+    stat: { zdarzen: 0, dostaw: 0, pelnych: 0, h1: 0, h2: 0, w2s: { zgodne: 0, niezgodne: 0, kategorie: {}, roznice: {} }, w2sLista: [], w3: 0, w3Bledy: [], losowa: { zgodne: 0, niezgodne: 0 }, losowaLista: [], spoczynki: 0, w1Bledy: [], w2rBledy: [], w2r: 0, brakSpoczynku: [], w4: 0, w4Bledy: [], w4Klasy: [], w4R4n: 0, w4p: [], emitery: statEmiterow() },
     nrPomiaru: 0, losAlt: null, wskrzeszone: new Set(), profil: 'podstawowy',
   };
 }
-async function urzadzenie(S, nazwa, zBlizniaka = null) {
+// Urządzenie z kopią sejfu z rejestrem łańcucha (U.lancuch — rejestr okna; EMISJA). dodatki — dodatkowe pola okna.
+async function urzadzenie(S, nazwa, zBlizniaka = null, { dodatki = {} } = {}) {
   S.nrUrz += 1;
+  let lancuch = null;
   const d = await utworzUrzadzenie({
     atrapa: S.atrapa, nazwa: `${nazwa}-${S.nrUrz}`, zBlizniaka: zBlizniaka ? zBlizniaka.d : undefined, sync: false,
-    rejestrMagazynu: false, haslo: HASLO_POCZATKOWE, dodatki: { crypto: kryptoZiarna(S.ziarno * 7919 + S.nrUrz) },
+    rejestrMagazynu: false, haslo: HASLO_POCZATKOWE, dodatki: { crypto: kryptoZiarna(S.ziarno * 7919 + S.nrUrz), ...dodatki },
+    zrodla: { 'vilda_vault.js': (win) => { lancuch = zRejestrem(win); } },
   });
-  const U = { d, v: d.vault, ev: d.vault._eventLog, nazwa, Q: [], setIds: new Set(), stan: null, usuniete: new Set(), znaneNotatki: new Map() };
+  const U = { d, v: d.vault, ev: d.vault._eventLog, nazwa, Q: [], setIds: new Set(), stan: null, usuniete: new Set(), znaneNotatki: new Map(), lancuch };
   ustawStan(U, await eksport(U));
   if (!zBlizniaka) S.hasla.set(idHasla(U.stan), HASLO_POCZATKOWE);
   return U;
@@ -311,9 +344,13 @@ const zamknij = async (...lista) => { for (const K of lista) await K.d.zamknij()
 const kursor = (S, X, Y) => S.kursor.get(X.nazwa + '>' + Y.nazwa) || 0;
 
 // Wyrocznia „emiter doskonały” (projekt.md 7.3, specyfikacja 2a rozdz. 3.1): po mutacji lokalnej na X różnica encji
-// eksportu przed/po → builder każdej zmienionej encji w tej chwili → encryptEvent → Q_X. KOLEJNOŚĆ W KROKU (wymaganie dla
-// E2-PR3a): snap (także wersje przeniesione pod kartę celu „Scal pacjentów” i nośnik pól karty: snap najnowszej wersji),
-// potem stomb, potem ptomb, potem pnote, pnotetomb, note, notetomb, plist, plisttomb, pref, pk, pktomb, cred.
+// eksportu przed/po → builder każdej zmienionej encji w tej chwili (wyrocznia porównania z emiterami; do Q_X tylko przy
+// źródle „model” — MUTACJE_Z_MODELU). KOLEJNOŚĆ W KROKU (E2-PR3a2, sprawdzana na emiterach): snap (także wersje
+// przeniesione pod kartę celu „Scal pacjentów” i nośnik pól karty: snap najnowszej wersji), potem stomb, potem ptomb,
+// potem pnote, pnotetomb, note, notetomb, plist, plisttomb, pref, pk, pktomb, cred.
+// Zdjęcie wpisu kosza (E2-PR3a3): wpis kosza sid|pid zniknął, a wersja sid jest po mutacji w karcie (zwykle pid) i nie ma
+// jej snap w kroku → snap tej wersji (nośnik pól karty: dowolny snap tej karty w kroku; prawdziwy emiter „Przywróć”, gdy
+// wizyta jest już w karcie, wysyła snap wersji przywracanej).
 // Pola karty bez snap tej karty w kroku: stomb z kartą (11.2); inaczej snap(karta, najnowsza wersja); karta bez wersji
 // i bez stomb → „brak nośnika” (S.braki).
 const PO_STOMB = ['ptomb', 'pnote', 'pnotetomb', 'note', 'notetomb', 'plist', 'plisttomb', 'pref', 'pk', 'pktomb', 'cred'];
@@ -336,7 +373,7 @@ async function zbuduj(U, e) {
     default: throw new Error('nieznany rodzaj ' + e.kind);
   }
 }
-async function emituj(S, U, przed, po, opis = '') {
+async function emituj(S, U, przed, po, opis = '', { doKolejki: wyslij = true } = {}) {
   const zm = zmienione(przed, po);
   const koperty = { snap: [], stomb: [], reszta: [] };
   const snapKart = new Set();
@@ -348,8 +385,20 @@ async function emituj(S, U, przed, po, opis = '') {
     const k = await zbuduj(U, e);
     if (k) koperty.stomb.push(k);
   }
-  const kartyStomb = new Set(koperty.stomb.flatMap((k) => (k.patients || []).map((p) => p.patientId)));
   const kartyPo = encje(po);
+  // Zdjęcie wpisu kosza wersji obecnej w karcie → snap tej wersji (nośnik pól karty).
+  const wpisyKosza = (lad) => new Set((lad.snapshotTombstones || []).map((e) => `${e.snapshotId}|${e.patientId}`));
+  const koszPo = wpisyKosza(po);
+  const snapy = new Set(koperty.snap.map((k) => k.event.key));
+  for (const wpis of wpisyKosza(przed)) {
+    if (koszPo.has(wpis)) continue;
+    const [sid, pid] = wpis.split('|');
+    const w = kartyPo.get(`snap:${pid}/${sid}`) || [...kartyPo.values()].find((x) => x.kind === 'snap' && x.snapshotId === sid);
+    if (!w || snapy.has(`${w.patientId}/${sid}`)) continue;
+    const k = await U.ev.buildSnapshotEvent(w.patientId, sid, null);
+    if (k) { koperty.snap.push(k); snapKart.add(w.patientId); snapy.add(k.event.key); }
+  }
+  const kartyStomb = new Set(koperty.stomb.flatMap((k) => (k.patients || []).map((p) => p.patientId)));
   for (const e of zm.filter((x) => x.kind === 'karta')) {
     if (snapKart.has(e.patientId) || kartyStomb.has(e.patientId)) continue;
     const najnowsza = kartyPo.get('karta:' + e.patientId).najnowsza;
@@ -364,8 +413,65 @@ async function emituj(S, U, przed, po, opis = '') {
     }
   }
   const lista = [...koperty.snap, ...koperty.stomb, ...koperty.reszta];
-  for (const k of lista) await doKolejki(S, U, k);
+  if (wyslij) for (const k of lista) await doKolejki(S, U, k);
   return lista;
+}
+
+// ── Emitery i model (E2-PR3a3) ───────────────────────────────────────────────────────────────────────────────────────
+// Rangi rodzajów (kolejność modelu = Bem_RANGI sejfu; AB4 sprawdza obie). Porównanie zgodne(model, emitery) na ciągach
+// { kind, key }: 'rowne' (ten sam ciąg), 'wRandze' (ten sam ciąg rang i te same encje w każdej grupie kolejnych wpisów
+// tej samej rangi, inna kolejność w grupie) albo null (niezgodne: brak encji, dodatkowa encja, inna kolejność rang).
+const RANGI = Object.freeze({ snap: 0, stomb: 1, ptomb: 2, pnote: 3, pnotetomb: 4, note: 5, notetomb: 6, plist: 7, plisttomb: 8, pref: 9, pk: 10, pktomb: 11, cred: 12 });
+function zgodne(model, emitery) {
+  const ranga = (e) => { if (!(e.kind in RANGI)) throw new Error(`porównanie emiterów: rodzaj spoza rang: ${e.kind}`); return RANGI[e.kind]; };
+  const [rm, re] = [model.map(ranga), emitery.map(ranga)];
+  if (JSON.stringify(rm) !== JSON.stringify(re)) return null;
+  const klucz = (e) => `${e.kind} ${e.key}`;
+  if (model.every((e, i) => klucz(e) === klucz(emitery[i]))) return 'rowne';
+  for (let i = 0; i < rm.length;) {
+    let j = i;
+    while (j < rm.length && rm[j] === rm[i]) j += 1;
+    if (JSON.stringify(model.slice(i, j).map(klucz).sort()) !== JSON.stringify(emitery.slice(i, j).map(klucz).sort())) return null;
+    i = j;
+  }
+  return 'wRandze';
+}
+const statEmiterow = () => ({ porownan: 0, zgodnych: 0, wRandze: 0 });
+// Niezgodności emiterów z modelem w bieżącym przypadku (także te, które wyjątek mutacji zgubiłby w kroku katalogu, który
+// łapie wyjątki operacji); afterEach wymaga pustej listy (AB1). Suma porównań w pliku — druk w afterAll.
+const EMITERY_NIEZGODNE = [];
+const EMITERY_PLIK = statEmiterow();
+// Jawny wyjątek (p. 1): rejestracja klucza dostępu jest zapisem testu z pominięciem API (registerPasskey na urządzeniu
+// uprzęży kończy się odmową), więc jej źródłem jest model; źródło „model” poza tym literałem = błąd testu (AB6).
+const MUTACJE_Z_MODELU = Object.freeze(['klucz dostępu']);
+const opisKoperty = (k) => ({ kind: k.event.kind, key: k.event.key });
+const opisWpisu = (z) => (z.znacznik ? `znacznik ${z.znacznik.reason}` : `${z.kind} ${z.kind === 'snap' ? `${z.klucze.patientId}/${z.klucze.snapshotId}` : z.klucze}`);
+// Koperty z prawdziwych emiterów: wpisy rejestru konta urządzenia w ich kolejności (znaczniki partii importu pominięte),
+// builder każdego wpisu po mutacji; null — bez koperty, wyjątek buildera — błąd testu.
+async function zEmiterow(U, wpisy, uid, opis) {
+  const out = [];
+  for (const z of wpisy) {
+    if (z.znacznik || z.uid !== uid) continue;
+    const e = z.kind === 'snap' ? { kind: 'snap', patientId: z.klucze.patientId, snapshotId: z.klucze.snapshotId } : { kind: z.kind, key: z.klucze };
+    let k;
+    try { k = await zbuduj(U, e); } catch (x) { throw new Error(`AB1: builder wpisu rejestru ${opisWpisu(z)} po mutacji „${opis}” na ${U.nazwa} → wyjątek ${x && (x.code || x.message)}`); }
+    if (k) out.push(k);
+  }
+  return out;
+}
+// Porównanie kopert jednej mutacji (liczniki S.stat.emitery); niezgodne — wyjątek z opisem i wpis w EMITERY_NIEZGODNE.
+function porownaj(S, U, opis, model, emitery, wpisy) {
+  if (!S.stat.emitery) S.stat.emitery = statEmiterow();
+  const [m, e] = [model.map(opisKoperty), emitery.map(opisKoperty)];
+  const wynik = zgodne(m, e);
+  S.stat.emitery.porownan += 1;
+  if (wynik === 'rowne') S.stat.emitery.zgodnych += 1;
+  if (wynik === 'wRandze') S.stat.emitery.wRandze += 1;
+  if (wynik) return wynik;
+  const ciag = (l) => (l.length ? l.map((x) => `${x.kind} ${x.key}`).join(', ') : '(pusty)');
+  const tekst = `AB1: emitery ≠ model — ${U.nazwa}: ${opis}${S.ziarno != null ? ` (ziarno ${S.ziarno}, krok ${S.nrKroku || 0})` : ''}\n  model: ${ciag(m)}\n  emitery: ${ciag(e)}\n  rejestr: ${wpisy.length ? wpisy.map(opisWpisu).join(', ') : '(pusty)'}`;
+  EMITERY_NIEZGODNE.push(tekst);
+  throw new Error(tekst);
 }
 async function doKolejki(S, U, k) {
   if (U.jawnie) { // katalog p. 5: osobne konta, koperta jawna (bez szyfrowania — szyfrowanie pokrywa W3)
@@ -402,19 +508,34 @@ async function doKolejkiOgon(S, U, koperty) {
   if (usuniete) { S.stat.koal += 1; S.stat.koalWierszy += usuniete; } else if (kandydaci) S.stat.koalPominiete += 1;
 }
 // Mutacja lokalna na X z emisją (stan przed = ostatni eksport X; X zmienia się tylko własnymi krokami i dostawami).
-async function mutacja(S, U, opis, fn) {
+// Rejestr łańcucha X czyszczony przed operacją; po niej (i eksporcie) koperty emiterów z wpisów rejestru konta X, model
+// bez dopisania do kolejki, porównanie (AB1), do Q_X — koperty emiterów. zrodlo: 'model' — tylko MUTACJE_Z_MODELU (do Q_X
+// koperty modelu, bez porównania).
+async function mutacja(S, U, opis, fn, { zrodlo = 'emitery' } = {}) {
+  if (zrodlo !== 'emitery' && !(zrodlo === 'model' && MUTACJE_Z_MODELU.includes(opis))) throw new Error(`mutacja „${opis}”: źródło zdarzeń „${zrodlo}” spoza MUTACJE_Z_MODELU`);
+  if (!Array.isArray(U.lancuch)) throw new Error(`mutacja „${opis}”: urządzenie ${U.nazwa} bez rejestru łańcucha`);
   const przed = U.stan;
   let wynik;
   let blad = null;
+  U.lancuch.length = 0;
   try { wynik = await fn(); } catch (e) { blad = e; }
   const po = await eksport(U);
   if (idHasla(po) !== idHasla(przed) && U.noweHaslo) { S.hasla.set(idHasla(po), U.noweHaslo); }
   U.noweHaslo = null;
-  const k = await emituj(S, U, przed, po, opis);
+  const wpisy = U.lancuch.splice(0);
+  const model = await emituj(S, U, przed, po, opis, { doKolejki: zrodlo === 'model' });
+  let k = model;
+  if (zrodlo === 'emitery') {
+    k = await zEmiterow(U, wpisy, po.userId, opis);
+    const w = porownaj(S, U, opis, model, k, wpisy);
+    EMITERY_PLIK.porownan += 1;
+    EMITERY_PLIK[w === 'rowne' ? 'zgodnych' : 'wRandze'] += 1;
+    for (const x of k) await doKolejki(S, U, x);
+  }
   ustawStan(U, po);
   S.dziennik.push(`#${S.nrKroku || 0} ${new Date(teraz).toISOString().slice(11, 23)} ${U.nazwa}: ${opis}${blad ? ` → wyjątek ${blad.code || blad.message}` : ''} → [${k.map((x) => x.event.kind).join(',')}]`);
   if (blad) throw blad;
-  return { wynik, koperty: k };
+  return { wynik, koperty: k, model };
 }
 
 // Zastosowanie partii u Y (applyEncryptedEvent; każdy status inny niż applied = błąd testu).
@@ -809,7 +930,8 @@ async function w4Trzy(S, urz, n, { dowodR4n = w4p } = {}) {
 }
 
 // ── Blok deterministyczny, p. 1: każdy z 14 builderów — para „mutacja na A → zdarzenie → B” ≡ blob ─────────────────────
-// Mutacja jednej encji na A (wyrocznia emisji; pfull — porcje pełnej karty nowej karty, jak z haka H1), koperty
+// Mutacja jednej encji na A (koperty prawdziwych emiterów, porównane z modelem — EMISJA; pfull — porcje pełnej karty
+// nowej karty, jak z haka H1), koperty
 // z kolejki Q_A (szyfrogram z chwili emisji) stosowane przez applyEncryptedEvent na świeżym klonie B; wzorzec: klon B po
 // mergeSyncPayload(exportSyncPayload(A)). Także zdarzenie dwukrotnie i w obu kolejnościach z sąsiednim (następny rodzaj).
 const nowe = async (U, fn) => { const od = U.Q.length; await fn(); return U.Q.slice(od); };
@@ -830,12 +952,11 @@ const MUT = {
   notetomb: (S, b) => nowe(b.A, () => mutacja(S, b.A, 'usuń notatkę biblioteki', () => b.A.v.removeNote(b.L))),
   plist: (S, b) => nowe(b.A, () => mutacja(S, b.A, 'nowa lista', () => b.A.v.savePatientList({ name: 'Fikcyjna lista 2', memberIds: [b.R] }))),
   plisttomb: (S, b) => nowe(b.A, () => mutacja(S, b.A, 'usuń listę', () => b.A.v.deletePatientList(b.X))),
-  pref: (S, b) => nowe(b.A, () => mutacja(S, b.A, 'preferencja', () => zmienMeta(b.A, (m) => ({ ...m, userPreferences: { ...m.userPreferences, fikcyjnaPreferencja2: { value: 'Fikcyjna 2', updatedAtISO: iso() } } })))),
-  pk: (S, b) => nowe(b.A, () => mutacja(S, b.A, 'klucz dostępu', () => zmienMeta(b.A, (m) => ({ ...m, passkeys: [...m.passkeys, { credentialId: 'fikcyjny-klucz-2', deviceLabel: 'Fikcyjne urządzenie 2', createdAtISO: iso(), roaming: true }] })))),
-  pktomb: (S, b) => nowe(b.A, () => mutacja(S, b.A, 'usuń klucz dostępu', () => zmienMeta(b.A, (m) => ({
-    ...m, passkeys: m.passkeys.filter((x) => x.credentialId !== 'fikcyjny-klucz-1'),
-    passkeyTombstones: [...(m.passkeyTombstones || []), { credentialId: 'fikcyjny-klucz-1', deletedAtISO: iso() }],
-  })))),
+  // Preferencja i usunięcie klucza dostępu przez API sejfu (zdarzenie z emitera); rejestracja klucza dostępu — zapis testu
+  // (zmienMeta), źródło zdarzenia: model (MUTACJE_Z_MODELU).
+  pref: (S, b) => nowe(b.A, () => mutacja(S, b.A, 'preferencja', () => b.A.v.setWaitlistSchedule('Fikcyjna procedura', { dateISO: '2026-03-15' }))),
+  pk: (S, b) => nowe(b.A, () => mutacja(S, b.A, 'klucz dostępu', () => zmienMeta(b.A, (m) => ({ ...m, passkeys: [...m.passkeys, { credentialId: 'fikcyjny-klucz-2', deviceLabel: 'Fikcyjne urządzenie 2', createdAtISO: iso(), roaming: true }] })), { zrodlo: 'model' })),
+  pktomb: (S, b) => nowe(b.A, () => mutacja(S, b.A, 'usuń klucz dostępu', () => b.A.v.removePasskey(b.A.d.konto.userId, 'fikcyjny-klucz-1'))),
   cred: (S, b) => nowe(b.A, () => zmianaHasla(S, b.A)),
 };
 const wersjeP = (b) => [...(b.A.stan.patients.find((p) => p.patientId === b.P).snapshots)].sort((x, y) => (x.savedAtISO < y.savedAtISO ? -1 : 1)).map((s) => s.snapshotId);
@@ -874,8 +995,107 @@ describe('A ≡ B, blok deterministyczny p. 1: każdy z 14 builderów (mutacja �
   }
 });
 
+// ── Emitery i model: samokontrole (AB1, AB4–AB6; AB2 — podsumowania ziaren, AB3 — p. 4) ────────────────────────────────
+describe('A ≡ B, emitery i model: porównanie w mutacji, kopia z rejestrem łańcucha, MUTACJE_Z_MODELU', () => {
+  d1();
+  it('AB1: niezgodność emiterów z modelem w mutacji — wyjątek z opisem (mutacja, ciąg modelu, ciąg emiterów, wpisy rejestru); zgodna mutacja liczona', async () => {
+    const S = swiat(901);
+    const b = await baza(S);
+    const notatka = (tytul) => () => b.A.v.savePatientNote({ patientId: b.P, title: tytul, body: 'Fikcyjna treść', category: 'inne' });
+    krok(); await mutacja(S, b.A, 'nowa notatka P', notatka('Fikcyjna notatka 3'));
+    expect(S.stat.emitery, 'zgodna mutacja').toEqual({ porownan: 1, zgodnych: 1, wRandze: 0 });
+    // emiter milczy (bramka zamknięta na czas operacji): model [pnote], emitery — nic
+    krok();
+    const cicho = mutacja(S, b.A, 'notatka przy zamkniętej bramce', async () => {
+      b.A.d.win.VILDA_EVENT_LOG = false;
+      try { return await notatka('Fikcyjna notatka 4')(); } finally { b.A.d.win.VILDA_EVENT_LOG = true; }
+    });
+    await expect(cicho).rejects.toThrow(/^AB1: emitery ≠ model — A: notatka przy zamkniętej bramce \(ziarno 901, krok 0\)\n {2}model: pnote \S+\n {2}emitery: \(pusty\)\n {2}rejestr: \(pusty\)$/);
+    ustawStan(b.A, await eksport(b.A)); // wyjątek porównania przerywa mutację przed zapisem stanu
+    // dodatkowa encja u emitera (wpis rejestru dopisany w trakcie operacji): emitery [pnote, note], model [pnote]
+    krok();
+    const nadmiar = mutacja(S, b.A, 'notatka z dodatkowym wpisem rejestru', async () => {
+      const w = await notatka('Fikcyjna notatka 5')();
+      b.A.lancuch.push({ kind: 'note', klucze: b.L, s: null, uid: b.A.d.konto.userId });
+      return w;
+    });
+    await expect(nadmiar).rejects.toThrow(new RegExp(`model: pnote \\S+\\n {2}emitery: pnote \\S+, note ${b.L}\\n {2}rejestr: pnote \\S+, note ${b.L}$`));
+    expect(EMITERY_NIEZGODNE.splice(0).length, 'niezgodności zapisane dla afterEach (AB1)').toBe(2);
+    expect(S.stat.emitery, 'liczniki: niezgodne nie są zgodne ani „w randze”').toEqual({ porownan: 3, zgodnych: 1, wRandze: 0 });
+  }, 60_000);
+  it('AB4: porównanie na ciągach syntetycznych — ta sama kolejność i kolejność w randze zgodne, brak encji, dodatkowa encja i kolejność rang niezgodne; rangi = kolejność modelu = Bem_RANGI sejfu', () => {
+    const c = (...l) => l.map((x) => { const [kind, key] = x.split(' '); return { kind, key }; });
+    expect(zgodne(c('snap P/a', 'snap Q/b', 'stomb a', 'pnote n'), c('snap P/a', 'snap Q/b', 'stomb a', 'pnote n')), 'ta sama kolejność').toBe('rowne');
+    expect(zgodne([], []), 'oba puste').toBe('rowne');
+    expect(zgodne(c('snap P/a', 'snap Q/b', 'stomb a'), c('snap Q/b', 'snap P/a', 'stomb a')), 'kolejność w randze').toBe('wRandze');
+    expect(zgodne(c('snap P/a', 'snap Q/b'), c('snap P/a')), 'brak encji').toBe(null);
+    expect(zgodne(c('pnote n'), []), 'brak jedynej encji').toBe(null);
+    expect(zgodne(c('snap P/a'), c('snap P/a', 'snap Q/b')), 'dodatkowa encja tej samej rangi').toBe(null);
+    expect(zgodne(c('snap P/a'), c('snap P/a', 'pref k')), 'dodatkowa encja innej rangi').toBe(null);
+    expect(zgodne(c('snap P/a', 'snap Q/b'), c('snap P/a', 'snap Q/c')), 'inna encja tej samej rangi').toBe(null);
+    expect(zgodne(c('snap P/a', 'snap P/a'), c('snap P/a', 'snap Q/b')), 'powtórzenie zamiast encji').toBe(null);
+    expect(zgodne(c('snap P/a', 'pnote n'), c('pnote n', 'snap P/a')), 'kolejność rang').toBe(null);
+    expect(zgodne(c('ptomb P', 'stomb a'), c('stomb a', 'ptomb P')), 'kolejność rang (stomb przed ptomb)').toBe(null);
+    expect(() => zgodne(c('pfull P'), c('pfull P')), 'rodzaj spoza rang').toThrow(/spoza rang/);
+    // liczniki porównania: zgodnych, wRandze; niezgodne — wyjątek z opisem
+    const S = { stat: {} };
+    const k = (...l) => c(...l).map((event) => ({ event }));
+    expect(porownaj(S, { nazwa: 'X' }, 'syntetyczna 1', k('snap P/a'), k('snap P/a'), [])).toBe('rowne');
+    expect(porownaj(S, { nazwa: 'X' }, 'syntetyczna 2', k('snap P/a', 'snap Q/b'), k('snap Q/b', 'snap P/a'), [])).toBe('wRandze');
+    expect(() => porownaj(S, { nazwa: 'X' }, 'syntetyczna 3', k('pnote n'), k(), [])).toThrow(/^AB1: emitery ≠ model — X: syntetyczna 3\n {2}model: pnote n\n {2}emitery: \(pusty\)/);
+    expect(EMITERY_NIEZGODNE.splice(0).length).toBe(1);
+    expect(S.stat.emitery, '+zgodnych, +wRandze').toEqual({ porownan: 3, zgodnych: 1, wRandze: 1 });
+    // rangi testu = kolejność modelu (emituj) = Bem_RANGI sejfu
+    expect(Object.keys(RANGI), 'rangi = kolejność modelu').toEqual(['snap', 'stomb', ...PO_STOMB]);
+    const m = ZRODLO_SEJFU.match(/const Bem_RANGI = Object\.freeze\((\{[^}]*\})\);/);
+    expect(m, 'Bem_RANGI w sejfie').not.toBe(null);
+    expect(new Function(`return ${m[1]};`)(), 'rangi = Bem_RANGI sejfu').toEqual({ ...RANGI });
+  });
+  it('AB5: kopia z rejestrem łańcucha — obie kotwice dokładnie raz, wynik parsuje się, sejf sprzed E2-PR3a2 → wyjątek; zapis karty przy otwartej bramce → jeden wpis rejestru snap tej wersji, przy zamkniętej — żaden; 0 baz vilda_sync_*', async () => {
+    const ile = (t, f) => t.split(f).length - 1;
+    const [tryb, lancuch] = ['if (!T() || !Bob_trybPrywatny() || !Bob_idb()) return;', 'function Bem_doLancucha(z) {'];
+    expect([ile(ZRODLO_SEJFU, tryb), ile(ZRODLO_SEJFU, lancuch)], 'kotwice w sejfie: dokładnie raz').toEqual([1, 1]);
+    expect([ile(ZRODLO_EMITEROW, tryb), ile(ZRODLO_EMITEROW, 'if (!T()) return;'), ile(ZRODLO_EMITEROW, `${lancuch} __testEmisji.lancuch(z); return;`)],
+      'kopia: warunek trybu zdjęty, rejestr na początku Bem_doLancucha').toEqual([0, 1, 1]);
+    expect(ZRODLO_EMITEROW.replace('if (!T()) return;', tryb).replace(' __testEmisji.lancuch(z); return;', '') === ZRODLO_SEJFU, 'kopia = sejf poza dwoma miejscami').toBe(true);
+    expect(() => parse(ZRODLO_EMITEROW, { ecmaVersion: 'latest', sourceType: 'script' }), 'kopia parsuje się').not.toThrow();
+    const sprzed = readFileSync(path.join(repoRoot, 'tests/fixtures/vilda_vault-221.js.txt'), 'utf8');
+    expect(() => zRejestremLancucha(sprzed), 'sejf bez części emisji').toThrow(/kopia z rejestrem łańcucha/);
+    expect(() => zRejestremLancucha(ZRODLO_SEJFU.replace(tryb, `${tryb} ${tryb}`)), 'kotwica dwa razy').toThrow(/kotwica nie dokładnie raz/);
+    // urządzenie z kopią (adapter w pamięci, atrapa IndexedDB w oknie)
+    const S = swiat(905);
+    const idb = utworzIndexedDB();
+    const A = await urzadzenie(S, 'A', null, { dodatki: { indexedDB: idb } });
+    expect(A.d.win.VILDA_EVENT_LOG, 'bramka otwarta polem okna').toBe(true);
+    A.lancuch.length = 0;
+    krok(); const r = await A.d.zapiszKarte(1, { masa: 20 });
+    expect(A.lancuch.map((z) => [z.kind, z.klucze, z.uid]), 'rejestr po zapisie karty').toEqual([['snap', { patientId: r.patientId, snapshotId: r.snapshotId }, A.d.konto.userId]]);
+    A.lancuch.length = 0;
+    A.d.win.VILDA_EVENT_LOG = false;
+    try { krok(); await A.d.zapiszKarte(1, { masa: 21, zapis: { patientId: r.patientId, forceNewSnapshot: true } }); } finally { A.d.win.VILDA_EVENT_LOG = true; }
+    expect(A.lancuch, 'zamknięta bramka: emisja kończy się na bramce').toEqual([]);
+    expect({ bazy: Object.keys(idb.__atrapa.bazy()).filter((n) => /^vilda_sync_/.test(n)), polaczenia: idb.__atrapa.polaczenia(/^vilda_sync_/) }, 'bazy kolejki').toEqual({ bazy: [], polaczenia: 0 });
+  }, 60_000);
+  it('AB6: MUTACJE_Z_MODELU — jedyna mutacja ze źródłem „model” to p. 1 „klucz dostępu”; źródło „model” spoza literału albo inne źródło — błąd testu przed operacją', async () => {
+    expect(MUTACJE_Z_MODELU, 'literał').toEqual(['klucz dostępu']);
+    expect(Object.isFrozen(MUTACJE_Z_MODELU)).toBe(true);
+    const S = swiat(906);
+    const A = await urzadzenie(S, 'A');
+    let wywolan = 0;
+    const fn = async () => { wywolan += 1; };
+    await expect(mutacja(S, A, 'nowa notatka P', fn, { zrodlo: 'model' }), 'źródło „model” spoza literału').rejects.toThrow(/spoza MUTACJE_Z_MODELU/);
+    await expect(mutacja(S, A, 'klucz dostępu', fn, { zrodlo: 'blob' }), 'inne źródło').rejects.toThrow(/spoza MUTACJE_Z_MODELU/);
+    expect(wywolan, 'operacja nie ruszyła').toBe(0);
+    // źródło „model” z literału: do Q_A koperty modelu, bez porównania
+    const przed = { ...S.stat.emitery };
+    krok();
+    const { koperty } = await mutacja(S, A, 'klucz dostępu', () => zmienMeta(A, (m) => ({ ...m, passkeys: [...(m.passkeys || []), { credentialId: 'fikcyjny-klucz-9', deviceLabel: 'Fikcyjne urządzenie 9', createdAtISO: iso(), roaming: true }] })), { zrodlo: 'model' });
+    expect({ koperty: koperty.map(opisKoperty), Q: A.Q.map((e) => e.kind), emitery: S.stat.emitery }, 'źródło „model”').toEqual({ koperty: [{ kind: 'pk', key: 'fikcyjny-klucz-9' }], Q: ['pk'], emitery: przed });
+  }, 60_000);
+});
+
 // ── p. 2: scenariusze stomb (weryfikacja 2026-10-29: P1, P1b, P1c, P1d, P1e, znika; retencja; odbiorca bez karty) ─────
-// Bliźniaki A (nadawca) i B (odbiorca ze starym stanem). Kroki A i B przez wyrocznię emisji (także „Scal pacjentów”:
+// Bliźniaki A (nadawca) i B (odbiorca ze starym stanem). Kroki A i B przez mutację z emiterami (także „Scal pacjentów”:
 // snap wersji przeniesionych i głów scalenia pod kartą celu, potem ptomb kart źródłowych). Warunki: W2 w pierwszej pełnej
 // dostawie A→B (zdarzenia A na świeżym klonie B ≡ blob A na drugim klonie), potem punkt spoczynku, W1, W2r, W3.
 async function trzyKarty(S) {
@@ -1105,6 +1325,34 @@ describe('A ≡ B, blok deterministyczny p. 4: nagrobek pacjenta u odbiorcy', ()
       expect({ A: { ...(await stan(u.A)), karty: (await stan(u.A)).karty.sort() }, B: { ...(await stan(u.B)), karty: (await stan(u.B)).karty.sort() } }, 'po spoczynku: karta P i notatka n na obu').toEqual({ A: oczek, B: oczek });
     }, 120_000);
   }
+  // AB3 (stan jak PM12 testu pokrycia, sync-pokrycie-mutacji.test.mjs): A daje s1 do kosza, bliźniak K daje do kosza s2,
+  // A scala ładunek K — s2 jest ostatnią wersją karty A, więc zostaje w karcie i jest w koszu; A poprawia s2 (później niż
+  // usunięcie). „Przywróć” s2 — „już w karcie”: emiter wysyła snap s2, a model ma tę samą kopertę z reguły zdjęcia wpisu
+  // kosza wersji obecnej w karcie (bez reguły model nie wysyłał nic). Odbiorca zdarzeń zdejmuje wpis kosza jak pełny ładunek.
+  it('AB3: „Przywróć”, gdy wizyta jest już w karcie — emitery = model = [snap s2]; W2 w pierwszej pełnej dostawie A→K, spoczynek, W1 = ∅, W2r, W4', async () => {
+    const S = swiat(403);
+    const A = await urzadzenie(S, 'A');
+    krok(); const r1 = await A.d.zapiszKarte(1, { masa: 20 });
+    krok(); const r2 = await A.d.zapiszKarte(1, { masa: 23, zapis: { patientId: r1.patientId, forceNewSnapshot: true } });
+    krok(); ustawStan(A, await eksport(A));
+    const K = await urzadzenie(S, 'K', A);
+    const [P, s1, s2] = [r1.patientId, r1.snapshotId, r2.snapshotId];
+    krok(); await mutacja(S, A, 'kosz s1', () => A.v.moveSnapshotToTrash(P, s1, { odepnij: true }));
+    krok(); await mutacja(S, K, 'kosz s2', () => K.v.moveSnapshotToTrash(P, s2, { odepnij: true }));
+    krok(); await A.v.mergeSyncPayload(json(await K.v.exportSyncPayload())); ustawStan(A, await eksport(A));
+    expect({ karta: wersjeKarty(A, P), kosz: (await A.v.listTrashedSnapshots()).map((e) => e.snapshotId).sort() }, 'kontrola: s2 w karcie i w koszu A')
+      .toEqual({ karta: [s2], kosz: [s1, s2].sort() });
+    krok(60e3);
+    const s = (await A.v.getPatient(P)).snapshots.find((q) => q.snapshotId === s2);
+    await mutacja(S, A, 'poprawka s2', () => A.v.updateSnapshotPayload(P, s2, { ...s.payload, user: { ...s.payload.user, weight: 78 } }, { preserveSavedAt: true }));
+    krok(60e3);
+    const { wynik, koperty, model } = await mutacja(S, A, 'przywróć s2 (już w karcie)', () => A.v.restoreTrashedSnapshot(P, s2));
+    expect({ juzWKarcie: wynik && wynik.alreadyInCard, emitery: koperty.map(opisKoperty), model: model.map(opisKoperty) }, '„Przywróć” już w karcie: emitery i model')
+      .toEqual({ juzWKarcie: true, emitery: [{ kind: 'snap', key: `${P}/${s2}` }], model: [{ kind: 'snap', key: `${P}/${s2}` }] });
+    expect(await w2(S, A, K), raport(S, 'W2 A→K')).toBe(null);
+    await spoczynekZgodny(S, A, K);
+    expect((await K.v.listTrashedSnapshots()).map((e) => e.snapshotId), 'K po spoczynku: w koszu tylko s1').toEqual([s1]);
+  }, 60_000);
 });
 
 // ── p. 5: katalog kosza SCEN (kosz-po-kluczu-wspolne.mjs) — wymiana zdarzeniami wobec wymiany blobem ──────────────────
@@ -1120,6 +1368,8 @@ describe('A ≡ B, blok deterministyczny p. 4: nagrobek pacjenta u odbiorcy', ()
 // tylko w przebiegach z listy E1_KATALOG (3.6; w przebiegach z listy test sprawdza też, że po podmianie listy W4 jest
 // czerwone), oraz wyjątek Q8-obca-2 „ZNANA RÓŻNICA (zdarzenia)” (E2-PR3c): WYŁĄCZNIE klucze D z literału Q8_ZDARZENIA
 // tego przebiegu (każda inna różnica albo brak którejś z nich — czerwień; negatywy: inny przebieg, podmieniony literał).
+// E2-PR3a3: urządzenia katalogu ładują kopię sejfu z rejestrem łańcucha (zaladowanieSejfu z s4d7-wspolne.mjs, EMISJA),
+// więc koperty mutacji kroku pochodzą z prawdziwych emiterów, porównane z modelem; literały p. 5 bez zmian.
 const KAT_LISTA = ['E4b', 'E4b-1', 'E4b-2w', 'kosz-przed', 'kosz-po', 'kosz-po-2', 'E4b-ret', 'npret-pin', 'npret-K', 'PRZ0-bez', 'E1-popr-C', 'E1-C', 'Q8-obca-2', 'PRZ'];
 const KAT_KOL = ['K←C,P←K', 'C←P,C←K'];
 const KAT_URZ = ['P', 'K', 'C'];
@@ -1153,11 +1403,11 @@ async function przebiegKat(nazwa, kol, tryb, ziarno) {
   } else {
     u.X = u.pid; u.karty = { [u.pid]: 'X' }; u.wersje = { [u.s1]: 's1', [u.sid]: 'x' };
   }
-  const S = { stat: { zdarzen: 0, h1: 0, h2: 0, dostaw: 0, pelnych: 0 }, kursor: new Map(), dziennik: [], braki: [], hasla: new Map(), nrKroku: 0 };
+  const S = { stat: { zdarzen: 0, h1: 0, h2: 0, dostaw: 0, pelnych: 0, emitery: statEmiterow() }, kursor: new Map(), dziennik: [], braki: [], hasla: new Map(), nrKroku: 0 };
   const surowe = Object.fromEntries(KAT_URZ.map((n) => [n, u[n]]));
   const U = {};
   for (const n of KAT_URZ) {
-    U[n] = { v: surowe[n], ev: surowe[n]._eventLog, nazwa: n, Q: [], setIds: new Set(), stan: null, usuniete: new Set(), jawnie: true };
+    U[n] = { v: surowe[n], ev: surowe[n]._eventLog, nazwa: n, Q: [], setIds: new Set(), stan: null, usuniete: new Set(), jawnie: true, lancuch: surowe[n].__lancuch };
     ustawStan(U[n], await eksport(U[n]));
   }
   const wlasciciel = new Map(KAT_URZ.map((n) => [U[n].stan.userId, U[n]]));
@@ -1720,7 +1970,8 @@ describe('A ≡ B, blok deterministyczny p. 5: katalog kosza (zdarzenia wobec bl
 // różni się także przy samych blobach — klasa dzisiejsza) i dwóch scenariuszy „notatka pod inną kartą” (klasa dzisiejsza
 // z pomiaru: TA SAMA różnica co po zdarzeniach i po W4, ze skutkiem klinicznym — pod którą kartą leży notatka, jaka
 // treść, czy widać ją w karcie). Naprawa w E2-PR3c albo E3-PR0 ZMIENIA te literały — to zamierzone: PR naprawy przepisuje
-// je na wynik zgodny.
+// je na wynik zgodny. K6 (E2-PR3a3) ma czwarty literał: stan kliniczny świata samych blobów (blobyKlinicznie), bo utrata
+// jest widoczna tylko w stanie klinicznym.
 async function p6r2(S) {
   const A = await urzadzenie(S, 'A');
   krok(); const { patientId: P, snapshotId: v } = await A.d.zapiszKarte(1, { masa: 20 });
@@ -1732,6 +1983,15 @@ async function p6r2(S) {
   const n = new Map([[P, 'P'], [v, 'v'], [wieksza, 'Q']]);
   Q.forEach((q, i) => { if (!n.has(q)) n.set(q, 'K' + (i + 2)); });
   return { S, A, B, P, v, Q: wieksza, n };
+}
+// K6: A — karta P z wizytą v (20 kg) i karta Q z wizytą q (30 kg); B — bliźniak A.
+async function p6k6(S) {
+  const A = await urzadzenie(S, 'A');
+  krok(); const { patientId: P, snapshotId: v } = await A.d.zapiszKarte(1, { masa: 20 });
+  krok(); const { patientId: Q, snapshotId: q } = await A.d.zapiszKarte(2, { masa: 30 });
+  krok(); ustawStan(A, await eksport(A));
+  const B = await urzadzenie(S, 'B', A);
+  return { S, A, B, P, Q, v, n: new Map([[P, 'P'], [Q, 'Q'], [v, 'v'], [q, 'q']]) };
 }
 async function p6r3(S) {
   const A = await urzadzenie(S, 'A');
@@ -1781,7 +2041,7 @@ const P6 = {
     await p6przywroc(u, u.B, u.v); await p6usunPacjenta(u, u.A, u.P); await p6spoczynek(u, t);
   } },
   // Dalsze ciągi (prefiks i pozycja planu, która ma je naprawić).
-  'R2-E3': { znana: 'ZNANA RÓŻNICA (naprawa: E2-PR3a — kolejność ptomb przed snap — albo E3-PR0)', baza: p6r2, kroki: async (u, t) => {
+  'R2-E3': { znana: 'ZNANA RÓŻNICA (naprawa: E3-PR0)', baza: p6r2, kroki: async (u, t) => {
     await p6gwiazdka(u, u.B, u.v, true); await popraw(u, u.B, u.v, 27); await popraw(u, u.A, u.v, 30); await p6spoczynek(u, t);
     await scal(u, u.A, u.P, u.Q); await p6spoczynek(u, t); // A (niższa rev) „Scal pacjentów” P → Q, id Q > id P
   } },
@@ -1814,6 +2074,13 @@ const P6 = {
   } },
   'skrzyżowane Scal pacjentów (A: P → Q, B: Q → P), notatka karty P': { znana: P6_DZIS, notatki: true, baza: p6r3, kroki: async (u, t) => {
     await scal(u, u.A, u.P, u.Q); await scal(u, u.B, u.Q, u.P); await p6spoczynek(u, t);
+  } },
+  // K6 (decyzja 12.3; ostatni scenariusz — ziarno scenariusza to jego pozycja, więc pozostałe literały bez zmian):
+  // B poprawia wizytę v karty P na 27 kg, A bez wiedzy o poprawce „Scal pacjentów” P → Q. Po zdarzeniach i pełnej
+  // wymianie (W4) v ma 20 kg na obu urządzeniach — poprawka ginie; same pełne kopie ją zachowują (blobyKlinicznie: stan
+  // kliniczny w świecie samych blobów, bo samo D blobów jest puste). Naprawa w E2-PR3c przepisze ten literał.
+  'K6': { znana: 'ZNANA UTRATA (zdarzenia; naprawa: E2-PR3c)', klinicznieBloby: true, baza: p6k6, kroki: async (u, t) => {
+    await popraw(u, u.B, u.v, 27); await scal(u, u.A, u.P, u.Q); await p6spoczynek(u, t);
   } },
 };
 // Skutek kliniczny notatki n (scenariusze „notatka pod inną kartą”): pod którą kartą leży, jaka treść, czy karta jest
@@ -1980,6 +2247,22 @@ const P6_LITERALY = {
       B: 'n „Fikcyjna treść” pod P — widoczna w karcie P | notatki w kartach: karta P: n „Fikcyjna treść”; karta Q (usunięta): -',
     },
   },
+  // K6 — ZNANA UTRATA (zdarzenia): po zdarzeniach v (20 kg) pod Q tylko na A; po W4 v pod Q z 20 kg na obu (poprawka
+  // 27 kg z B zginęła), a w świecie samych blobów v pod Q ma 27 kg na obu.
+  'K6': {
+    zdarzenia: ['wersja Q/v: tylko A'],
+    w4: {
+      A: 'karty Q[v:20 q:30 #5e09:30] | Kosz - | notatki -',
+      B: 'karty Q[v:20 q:30 #5e09:30] | Kosz - | notatki -',
+      r4n: 0,
+      w4p: [],
+    },
+    bloby: [],
+    blobyKlinicznie: {
+      A: 'karty Q[v:27 q:30 #5e09:30] | Kosz - | notatki -',
+      B: 'karty Q[v:27 q:30 #5e09:30] | Kosz - | notatki -',
+    },
+  },
 };
 async function p6swiat(nr, sc, tryb) {
   ustaw(START);
@@ -2028,6 +2311,7 @@ describe('A ≡ B, blok deterministyczny p. 6: znane klasy i dalsze ciągi (lite
       const ub = await p6swiat(nr, sc, 'blob');
       wynik.bloby = trzy ? { AB: await p6D(ub, ub.A, ub.B), BC: await p6D(ub, ub.B, ub.C), CA: await p6D(ub, ub.C, ub.A) } : await p6D(ub, ub.A, ub.B);
       if (sc.notatki) wynik.blobySkutek = { A: await skutekNotatki(ub.A, ub), B: await skutekNotatki(ub.B, ub) };
+      if (sc.klinicznieBloby) wynik.blobyKlinicznie = { A: await kliniczny(ub.A, ub.n), B: await kliniczny(ub.B, ub.n) };
       P6_WYNIKI[nazwa] = wynik;
       if (process.env.E2_AB_P6) appendFileSync(process.env.E2_AB_P6, JSON.stringify({ nazwa, ...wynik }) + '\n');
       expect(wynik, `literał p. 6: ${nazwa}`).toEqual(P6_LITERALY[nazwa]);
@@ -2747,9 +3031,10 @@ const opisBledow = (w) => JSON.stringify({
   W3: w.w3Bledy, W4: w.w4Bledy, W4p: w.w4p.filter((p) => !p.ok), brakSpoczynku: w.brakSpoczynku, W2sInne: w.w2sLista.filter((x) => x.roznice.some((r) => r.kategoria === 'inne')),
 }, null, 1);
 function suma(lista) {
-  const s = { ziaren: lista.length, mutacji: 0, zdarzen: 0, dostaw: 0, pelnych: 0, spoczynki: 0, h1: 0, h2: 0, w2r: 0, w3: 0, w4: 0, w1Bledy: 0, w2rBledy: 0, w3Bledy: 0, w4Bledy: 0, w4R4n: 0, w4pZle: 0, brakSpoczynku: 0, w2sZgodne: 0, w2sNiezgodne: 0, kategorie: {}, kategorieRoznic: {}, losowaZgodne: 0, losowaNiezgodne: 0, losowaLista: [], brakiNosnika: 0, ms: 0, klasyW1: {}, klasyW2r: {}, klasyW4: {}, w1Lista: [], w2rLista: [] };
+  const s = { ziaren: lista.length, mutacji: 0, zdarzen: 0, dostaw: 0, pelnych: 0, spoczynki: 0, h1: 0, h2: 0, w2r: 0, w3: 0, w4: 0, w1Bledy: 0, w2rBledy: 0, w3Bledy: 0, w4Bledy: 0, w4R4n: 0, w4pZle: 0, brakSpoczynku: 0, w2sZgodne: 0, w2sNiezgodne: 0, kategorie: {}, kategorieRoznic: {}, losowaZgodne: 0, losowaNiezgodne: 0, losowaLista: [], brakiNosnika: 0, ms: 0, klasyW1: {}, klasyW2r: {}, klasyW4: {}, w1Lista: [], w2rLista: [], emitery: statEmiterow() };
   for (const w of lista) {
     for (const k of ['mutacji', 'zdarzen', 'dostaw', 'pelnych', 'spoczynki', 'h1', 'h2', 'w2r', 'w3', 'w4', 'w4R4n', 'ms']) s[k] += w[k];
+    for (const k of Object.keys(s.emitery)) s.emitery[k] += w.emitery[k];
     s.w1Bledy += w.w1Bledy.length; s.w2rBledy += w.w2rBledy.length; s.w3Bledy += w.w3Bledy.length; s.brakSpoczynku += w.brakSpoczynku.length;
     s.w4Bledy += w.w4Bledy.length; s.w4pZle += w.w4p.filter((p) => !p.ok).length;
     s.w2sZgodne += w.w2s.zgodne; s.w2sNiezgodne += w.w2s.niezgodne;
@@ -2763,6 +3048,12 @@ function suma(lista) {
     for (const b of w.w4Klasy) for (const k of b.klasy) s.klasyW4[k] = (s.klasyW4[k] || 0) + 1;
   }
   return s;
+}
+// AB2: w podsumowaniu ziaren są porównania emiterów z modelem (porownan > 0), a każde jest zgodne albo różni się tylko
+// kolejnością encji w obrębie rangi (zgodnych + wRandze = porownan).
+function abDwa(s) {
+  expect(s.emitery.porownan, 'AB2: porównania emiterów z modelem').toBeGreaterThan(0);
+  expect(s.emitery.zgodnych + s.emitery.wRandze, 'AB2: zgodnych + wRandze = porownan').toBe(s.emitery.porownan);
 }
 
 // Literały dla ziaren domyślnych (E2_AB_START=1, E2_AB_ZIARNA=8; specyfikacja 2a, 3.6): dokładna charakterystyka —
@@ -2799,12 +3090,13 @@ describe('A ≡ B, właściwość: profil podstawowy (W3, W4, W4p — zieleń; W
       }
     }, 180_000);
   }
-  it('podsumowanie (druk do opisu PR; ZNANE_W4_R4N)', () => {
+  it('podsumowanie (druk do opisu PR; ZNANE_W4_R4N; AB2: porównania emiterów z modelem)', () => {
     const s = suma(WYNIKI.podstawowy);
     console.log('E2-AB podstawowy', JSON.stringify(s));
     expect(s.ziaren).toBe(ZIARNA.length);
     expect(s.pelnych, 'punkty pełnej dostawy (W2s, W3)').toBeGreaterThan(0);
     expect(s.zdarzen).toBeGreaterThan(0);
+    abDwa(s);
     const dom = WYNIKI.podstawowy.filter((w) => domyslne(w.ziarno));
     if (dom.length === DOMYSLNE_ZIARNA.length) expect(dom.reduce((n, w) => n + w.w4R4n, 0), 'ZNANE_W4_R4N').toBe(ZNANE_W4_R4N);
   });
@@ -2831,11 +3123,12 @@ describe('A ≡ B, koalescencja kolejki (reguła ogona) — profil podstawowy be
       if (!KROKI && DOMYSLNE_ZIARNA_KOAL.includes(z)) expect(listaW1(w), `ZNANE_W1_KOAL (ziarno ${z})\n${opisBledow(w)}`).toEqual(ZNANE_W1_KOAL.filter((x) => x[0] === z));
     }, 180_000);
   }
-  it('podsumowanie (druk do opisu PR): suma koalescencji > 0', () => {
+  it('podsumowanie (druk do opisu PR): suma koalescencji > 0; AB2', () => {
     const s = suma(WYNIKI['podstawowy:ogon']);
     console.log('E2-AB koalescencja', JSON.stringify(s));
     expect(s.ziaren).toBe(ZIARNA_KOAL.length);
     expect(s.koal, 'dopisania, które zastąpiły wpis kolejki').toBeGreaterThan(0);
+    abDwa(s);
   });
 });
 
@@ -2867,12 +3160,16 @@ describe('A ≡ B, właściwość: profil pełny (charakterystyka; W3 i W4 z kla
         .toEqual({ W3: [], W4: [], W4p: [], brakSpoczynku: [] });
     }, 600_000);
   }
-  it('podsumowanie profilu pełnego (druk do opisu PR)', () => {
+  it('podsumowanie profilu pełnego (druk do opisu PR; AB2)', () => {
     const s = raportPelny(WYNIKI[KOAL_PELNY ? 'pelny:ogon' : 'pelny']);
     console.log('E2-AB pelny', JSON.stringify(s));
     expect(s.ziaren).toBe(ZIARNA_PELNY.length);
+    abDwa(s);
   });
 });
 
 beforeEach(() => { vi.useFakeTimers({ toFake: ['Date'] }); ustaw(START); });
 afterEach(async () => { await sprzatnijUrzadzenia(); vi.useRealTimers(); vi.restoreAllMocks(); });
+// AB1: niezgodność emiterów z modelem czerwieni przypadek także wtedy, gdy wyjątek mutacji złapał krok katalogu p. 5.
+afterEach(() => { const n = EMITERY_NIEZGODNE.splice(0); expect(n, 'AB1: emitery ≡ model w każdej mutacji przypadku').toEqual([]); });
+afterAll(() => { console.log('E2-AB emitery (plik)', JSON.stringify(EMITERY_PLIK)); });
