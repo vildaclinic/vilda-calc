@@ -6016,8 +6016,8 @@ async function Bev_pfull(patientId, dev, opcje) {
 // ten sam cel co delta nagrobka Bsw_deltaNagrobka) koperta niesie tez karte docelowa Y ze wszystkimi wersjami (sekcja
 // patients, ksztalt jak pfull; E2-PR3c1): odbiorca ma wtedy nagrobek X i karte Y z wersjami w jednym scaleniu — wersja
 // X przypieta albo poprawiona u odbiorcy przechodzi pod Y z nowsza trescia (wyjatek „zabierz”, regula przezycia
-// retencji), zamiast zniknac razem z X. Karty Y juz tu nie ma albo cel nieznany (np. „Usun pacjenta”, koperta
-// odbudowana po przeladowaniu strony) — sam nagrobek, jak dotad. Nieczytelny naglowek albo wersja Y —
+// retencji), zamiast zniknac razem z X. Karty Y juz tu nie ma albo cel nieznany w tej karcie przegladarki (np.
+// „Usun pacjenta”) — sam nagrobek, jak dotad (karte Y dowozi wtedy pelna wysylka). Nieczytelny naglowek albo wersja Y —
 // EVENT_SOURCE_UNREADABLE (jak pfull). Koperta ponad limitem zdarzenia staje sie wierszem oversize (wysylka go pomija,
 // karte Y dowozi pelna wysylka — decyzja 7).
 async function Bev_ptomb(patientId, dev) {
