@@ -21534,7 +21534,7 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
-## Dziennik zdarzeń: haki scalania — pełna karta po przegranym nagrobku i ratunek notatki do kolejki — uśpione (P-DZIENNIK-ZDARZEN, E2-PR3b, SW 1.1.500, `vilda_vault.js` 266, 2026-11-10)
+## Dziennik zdarzeń: haki scalania — pełna karta po przegranym nagrobku i ratunek notatki do kolejki — uśpione (P-DZIENNIK-ZDARZEN, E2-PR3b, SW 1.1.501, `vilda_vault.js` 266, 2026-11-10)
 
 **Zmiana kliniczna: NIE** — wzory, progi, jednostki, interpretacje, zapis danych pacjentów, reguły scalania, format
 kopii i synchronizacja bez zmian. Dla użytkownika dziś nic się nie zmienia: bramka dziennika zdarzeń jest zamknięta,
@@ -21740,7 +21740,7 @@ dopisaniu), `Bem_dopisz` i `Bem_brak` (opcje wpisu); haki scalania (8537–8603)
 `Bem_ratunek`, `Bem_paraRatunku`. Poza blokiem: `Bem_ratunek(id, u, opcje)` w `Bnp_ratuj` (5218), `Bem_przegrany(patientId,
 deletedAtISO, opcje)` w `Bsl_usunPacjenta` (5655), `Bem_przegrane(t,N,e);` w `Le` tuż po pętli nagrobków kart.
 
-**Wersje.** `vilda_vault.js` 265 → 266, `vilda_chrome.js` 271 → 272 i `vilda_session_bridge.js` 188 → 189 (wstrzykują sejf), SW 1.1.499 → 1.1.500; baza `origin/audyt` `9db5b56e` (po vildaclinic/vilda-calc#900; projekt, mutanty i „czerwone na bazie” z `4994fef9`, po vildaclinic/vilda-calc#920 — sejf bez zmiany Klirensu, która nie dotyka bloku P-DZIENNIK-ZDARZEN ani scalania). Bez nowego pliku w pamięci offline.
+**Wersje.** `vilda_vault.js` 265 → 266, `vilda_chrome.js` 271 → 272 i `vilda_session_bridge.js` 188 → 189 (wstrzykują sejf), SW 1.1.500 → 1.1.501; baza `origin/audyt` `a568e289` (po vildaclinic/vilda-calc#922; projekt, mutanty i „czerwone na bazie” z `4994fef9`, po vildaclinic/vilda-calc#920 — sejf bez zmiany Klirensu, która nie dotyka bloku P-DZIENNIK-ZDARZEN ani scalania). Bez nowego pliku w pamięci offline.
 
 ## Dziennik zdarzeń: przegląd kolejki ze znacznikiem i pamięcią par — uśpione (P-DZIENNIK-ZDARZEN, E2-PR3a4, SW 1.1.498, `vilda_vault.js` 264, 2026-11-09)
 
