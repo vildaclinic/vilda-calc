@@ -1043,6 +1043,50 @@ describe('P-KOPIA-DANE-KONTA — strażniki tutejszych rekordów, pacjent bez na
   });
 });
 
+/* E2-PR3c4 (decyzja 6, P-NOTATKI-ZA-KARTA): notatka po „Scal pacjentów” idzie za kartą, która istnieje — także przy
+   „Scal kopię konta”, gdy wygrywa tutejsza treść. A: notatka n pod p1, potem „Scal pacjentów” p1 → p2 (n pod p2). C:
+   poprawka n pod p1 (później), potem tylko nagrobek p1 z A — karta p1 usunięta, n pod p1 niewidoczna. Kopia A niesie n
+   pod p2 (starsza treść). Na bazie: podgląd 0, wynik 0, n zostaje pod p1. Po zmianie: treść C pod p2, podgląd = wynik =
+   magazyn = 1 (zmiana samej karty). Kontrola: p1 żyje na C (bez nagrobka) — n zostaje pod p1, wszystko 0. */
+async function poprawkaPodUsunieta({ nagrobek }) {
+  let nId = null;
+  const r = await przypadek({
+    przed: async (A, ids) => { nId = (await notatka(A.v, ids.p1, 'n (fikcja)')).id; },
+    po: async (A, ids) => { await A.v.mergePatients(ids.p1, ids.p2); },
+    wC: async (C, ids, A) => {
+      await chwila(5);
+      await C.v.savePatientNote({ id: nId, patientId: ids.p1, title: 'n (fikcja, poprawka C)', body: 'fikcja C', category: 'followup' });
+      if (!nagrobek) return;
+      const t = (await A.v.exportSyncPayload()).tombstones.filter((x) => x.patientId === ids.p1);
+      expect(t.length, 'nagrobek p1 po „Scal pacjentów” na A').toBe(1);
+      await C.v.mergeSyncPayload({ schemaVersion: 2, patients: [], tombstones: t, passkeys: [], passkeyTombstones: [], userPreferences: {},
+        notes: [], noteTombstones: [], patientNotes: [], patientNoteTombstones: [] });
+    },
+  });
+  const n = (await r.C.v.listAllPatientNotes()).find((x) => x.id === nId);
+  return { r, n };
+}
+describe('P-KOPIA-DANE-KONTA — notatka po „Scal pacjentów” pod kartą, która istnieje (E2-PR3c4)', () => {
+  it('[czerwony na bazie] poprawka tutaj pod kartą usuniętą, kopia niesie notatkę pod kartą docelową: treść tutejsza pod kartą docelową, podgląd = wynik = magazyn = 1', async () => {
+    const { r, n } = await poprawkaPodUsunieta({ nagrobek: true });
+    expect(await r.C.baza.getPatientForUser(r.C.uid, r.ids.p1), 'karta p1 usunięta na C').toBeFalsy();
+    expect([n.patientId === r.ids.p2, n.title, n.body]).toEqual([true, 'n (fikcja, poprawka C)', 'fikcja C']);
+    expect([r.podglad.updatedPatientNoteCount, r.wynik.updatedPatientNoteCount, roznica(r.przed.notatkiPacjentow, r.po.notatkiPacjentow).zmienione])
+      .toEqual([1, 1, 1]);
+    expect(r.podglad.replacedNewerPatientNoteCount, 'tutejsza treść nie jest zastąpiona').toBe(0);
+    expect((await r.C.v.listPatientNotesForPatient(r.ids.p2)).map((x) => x.title)).toEqual(['n (fikcja, poprawka C)']);
+    parzystosc(r);
+  });
+  it('[kontrola] ta sama poprawka, karta p1 żyje tutaj: notatka zostaje pod p1, podgląd = wynik = magazyn = 0', async () => {
+    const { r, n } = await poprawkaPodUsunieta({ nagrobek: false });
+    expect(await r.C.baza.getPatientForUser(r.C.uid, r.ids.p1), 'karta p1 żyje na C').toBeTruthy();
+    expect([n.patientId === r.ids.p1, n.title]).toEqual([true, 'n (fikcja, poprawka C)']);
+    expect([r.podglad.updatedPatientNoteCount, r.wynik.updatedPatientNoteCount, roznica(r.przed.notatkiPacjentow, r.po.notatkiPacjentow).zmienione])
+      .toEqual([0, 0, 0]);
+    parzystosc(r);
+  });
+});
+
 /* Losowe przebiegi ze stałym ziarnem (recenzja runda 2): operacje na A przed i po synchronizacji, na C po niej (część
    przebiegów bez synchronizacji; w C czasem usunięcie albo scalenie pacjenta), kopia A, podgląd i scalenie w C.
    W każdym: podgląd nie zmienia magazynu i parzystość podgląd = wynik = różnica magazynu. */
