@@ -48,12 +48,15 @@
 //   wersję wspólną dwóm kartom składa reguła W3 (treść po chwili treści S4, gwiazdka po rejestrze — Bsw_rekordW3),
 //   a nie cały rekord nowszy po chwili zmiany (Bsw_rekord). Widok (karta albo kosz z gwiazdką) we wszystkich
 //   8 kolejnościach ten sam; w E4a-Cpin-przed rev wpisu kosza i _pinned w jego treści nadal zależą od kolejności
-//   (P←C,P←K: rev 4, treść złożona z gwiazdką; pozostałe: rev 3, gwiazdka tylko w rejestrze wpisu):
+//   (P←C,P←K i od E2-PR3c2 C←P,C←K: rev 4, treść złożona z gwiazdką; pozostałe: rev 3, gwiazdka tylko w rejestrze
+//   wpisu):
 //   E4a-Cpin   P poprawia x na 74; K: X → Y → Z, K→C, kosz x; C (bez wiedzy o koszu) przypina x pod Z → karta Z 74*
 //              z rev 4 w 8 z 8 (25dfbbe0: 23* w 8 z 8; 8240e0df, E4a: 74* z rev 4 w 4 z 8, 23* z rev 3 w pozostałych)
 //   E4a-Cpin-przed jak E4a-Cpin, ale C przypina przed koszem K (K o gwiazdce nie wie) → kosz 74* w 8 z 8; wpis rev 3
-//              bez _pinned w treści w 7 z 8, w P←C,P←K rev 4 z _pinned (25dfbbe0: kosz 23* w 8 z 8; 8240e0df: kosz 74*,
-//              wpis rev 3 bez _pinned w 7 z 8, w P←C,P←K kosz 23*, wpis rev 3 z _pinned)
+//              bez _pinned w treści w 6 z 8, w P←C,P←K i C←P,C←K rev 4 z _pinned (od E2-PR3c2 w C←P,C←K: C, który
+//              scalił karty, przyjmuje poprawkę P ze starej karty do x pod Z — rekord złożony; do E2-PR3c2 rev 3 bez
+//              _pinned w 7 z 8; 25dfbbe0: kosz 23* w 8 z 8; 8240e0df: kosz 74*, wpis rev 3 bez _pinned w 7 z 8, w P←C,P←K
+//              kosz 23*, wpis rev 3 z _pinned)
 //   E4a-kontrola-Cpin jak E4a-Cpin bez kosza → karta Z 74* z rev 4 w 8 z 8 (25dfbbe0 i 8240e0df: 74* z rev 4 w 3 z 8,
 //              23* z rev 3 w 5 z 8)
 // E4a, E4a-1 i E4a-kontrola — w polkrata-katalog.test.mjs; K6 (E4a) — w kosz-nowsza-tresc.test.mjs; przerwane scalenie,
@@ -114,9 +117,10 @@ const SCEN = {
   'E4a-Cpin': [async (u) => { await popraw(u, 'P', 74); await XYZ(u); await sync(u.K, u.C); await doKosza(u, 'K'); await przypnij(u, 'C', true); },
     KARTA(74, true, 4)],
   // widok kosza 74* w 8 z 8 (decyduje rejestr gwiazdki); rev wpisu i _pinned w jego treści zależą od kolejności:
-  // w P←C,P←K rekord złożony W3 (Bsw_rekordW3: treść P, gwiazdka C, rev = max + 1) dochodzi do wpisu, w pozostałych — tylko rejestr
+  // w P←C,P←K i od E2-PR3c2 w C←P,C←K rekord złożony W3 (Bsw_rekordW3: treść P, gwiazdka C, rev = max + 1) dochodzi do
+  // wpisu, w pozostałych — tylko rejestr
   'E4a-Cpin-przed': [async (u) => { await popraw(u, 'P', 74); await XYZ(u); await sync(u.K, u.C); await przypnij(u, 'C', true); await doKosza(u, 'K'); },
-    (kol) => ({ status: 'kosz', karta: null, kosz: { masa: 74, pin: true }, n: { masa: 74, rev: kol === 'P←C,P←K' ? 4 : 3, pin: kol === 'P←C,P←K', powod: null } })],
+    (kol) => { const zl = kol === 'P←C,P←K' || kol === 'C←P,C←K'; return { status: 'kosz', karta: null, kosz: { masa: 74, pin: true }, n: { masa: 74, rev: zl ? 4 : 3, pin: zl, powod: null } }; }],
   'E4a-kontrola-Cpin': [async (u) => { await popraw(u, 'P', 74); await XYZ(u); await sync(u.K, u.C); await przypnij(u, 'C', true); },
     KARTA(74, true, 4)],
 };

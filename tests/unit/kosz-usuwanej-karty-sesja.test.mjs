@@ -445,9 +445,9 @@ describe('P-KOSZ-USUWANEJ-KARTY — strażniki źródła', () => {
     expect(z.indexOf('Bses_pilnuj(opcje);')).toBeGreaterThan(0);
     expect(z.indexOf('Bses_pilnuj(opcje);')).toBeLessThan(z.indexOf('getUserMeta(Bpc_uid)'));
   });
-  it('S6: Le — karta z ładunku w N do decyzji kosza (Bsl_koszZLadunku), usuwanie kart z kontekstem kosza (bez niego w imporcie)', () => {
+  it('S6: Le — karta z ładunku w N do decyzji kosza (Bsl_koszZLadunku), potem (poza importem, E2-PR3c2) treść dla wersji pod inną kartą, usuwanie kart z kontekstem kosza (bez niego w imporcie)', () => {
     const le = src.slice(src.indexOf('async function Le(t,e){'), src.indexOf('prunedSnapshotCount:Bkz_S.przyciete||0}'));
-    expect(le).toContain('if(!F||!F.patientId||!F.header)continue;if(N.has(F.patientId)){Bsl_koszZLadunku(Bkz_S,F);continue}');
+    expect(le).toContain('if(!F||!F.patientId||!F.header)continue;if(N.has(F.patientId)){Bsl_koszZLadunku(Bkz_S,F);if(!Bses_imp)await Bsw_zKartyZNagrobkiem(Bkz_S,F,e);continue}');
     expect(le).toContain('w+=await Bsl_usunPacjenta(j,m[j],e,Bses_imp?null:Bkz_S)');
   });
 });
