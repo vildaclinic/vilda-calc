@@ -131,8 +131,8 @@ describe('G6b–G6g — „Zostaw notatkę” na dwóch urządzeniach (E2-PR3c3,
      dawało rev 2 — niższy niż wersja A. Skutek (także dziś, przy pełnych kopiach i deltach): późniejszy tekst
      wskrzeszenia przegrywał z wcześniejszym (G6b), a stara, skasowana treść wracała z urządzenia, które o usunięciu nie
      wiedziało (G6c, G6d). Chwila utworzenia notatki: każde „Zostaw notatkę” zakłada notatkę z chwilą „teraz”, więc po
-     dwóch wskrzeszeniach każde urządzenie zostawało z własną chwilą (G6e). [CZERWONE na bazie 79483d97]: G6b–G6e
-     i strażnik G6g; G6f — kontrola (zielona na bazie). Dane wyłącznie fikcyjne. */
+     dwóch wskrzeszeniach każde urządzenie zostawało z własną chwilą (G6e, trzy przypadki). [CZERWONE na bazie 79483d97]:
+     G6b–G6e i strażnik G6g; G6f — kontrola (zielona na bazie). Dane wyłącznie fikcyjne. */
   const chwila = (ms = 6) => new Promise((r) => { setTimeout(r, ms); });
   const tresc = async (d) => (await d.vault.listAllPatientNotes()).map((n) => n.body);
   const rekord = async (d, id) => (await d.adapter.listPatientNotesForUser(d.uid)).find((n) => n.id === id) || null;
@@ -209,6 +209,24 @@ describe('G6b–G6g — „Zostaw notatkę” na dwóch urządzeniach (E2-PR3c3,
     }
   });
 
+  it('G6e [CZERWONY na bazie] dwa „Zostaw notatkę”, potem poprawka na A (wygrywa wersja z wcześniejszą chwilą utworzenia z ładunku): ta sama, najwcześniejsza chwila utworzenia na obu', async () => {
+    const u = await przygotuj();
+    await sync(u.B, u.A); await sync(u.A, u.B);
+    await chwila();
+    await zostaw(u.A, u, 'wskrzeszona na A');
+    await chwila();
+    await zostaw(u.B, u, 'wskrzeszona na B');
+    await chwila();
+    await zostaw(u.A, u, 'poprawka A po wskrzeszeniu');
+    const a = (await rekord(u.A, u.id)).createdAtISO;
+    expect(a < (await rekord(u.B, u.id)).createdAtISO, 'kontrola: chwila utworzenia na A wcześniejsza').toBe(true);
+    await sync(u.B, u.A); await sync(u.A, u.B);
+    for (const d of [u.A, u.B]) {
+      expect(await tresc(d)).toEqual(['poprawka A po wskrzeszeniu']);
+      expect((await rekord(d, u.id)).createdAtISO).toBe(a);
+    }
+  });
+
   it('G6f [kontrola] zwykła poprawka bez usunięcia: chwila utworzenia i treść jak dotąd (późniejsza poprawka wygrywa, chwila utworzenia z pierwszego zapisu)', async () => {
     const A = await dev('A'), B = await dev('B');
     const pid = idPacjenta(await A.vault.savePatient(PACJENT));
@@ -237,6 +255,8 @@ describe('G6b–G6g — „Zostaw notatkę” na dwóch urządzeniach (E2-PR3c3,
     expect(fn).toContain('n.createdAtISO > c');
     expect(fn, 'bez dodatkowego odczytu, gdy tutejszy rekord nie ma późniejszej chwili utworzenia').toContain("!(typeof e.createdAtISO === 'string' && e.createdAtISO > c)");
     expect(fn.lastIndexOf('Bses_pilnuj(opcje)')).toBeLessThan(fn.indexOf('putPatientNoteForUser('));
+    const odczyt = fn.indexOf('getPatientNoteForUser(b, g.id)'), zapis = fn.indexOf('putPatientNoteForUser(');
+    expect(fn.slice(odczyt, zapis), 'sprawdzenie sesji między odczytem a zapisem chwili utworzenia').toContain('Bses_pilnuj(opcje)');
     expect(fn.indexOf('Bses_pilnuj(opcje)')).toBeLessThan(fn.indexOf('getPatientNoteForUser('));
   });
 });

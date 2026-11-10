@@ -21595,21 +21595,28 @@ różnicy chwili utworzenia). Model haków bez zmian (zapis samej chwili utworze
 też tam (numer nagrobka i chwila utworzenia; liczniki podglądu „Scal kopię konta” bez zmian).
 
 **Testy.** Dane wyłącznie fikcyjne, bez PESEL. Nowe i zmienione:
-- `tests/unit/notatki-pacjenta-integralnosc.test.mjs` — 7 nowych przypadków G6b–G6g (19, było 12): G6b — pełne kopie do
+- `tests/unit/notatki-pacjenta-integralnosc.test.mjs` — 8 nowych przypadków G6b–G6g (20, było 12): G6b — pełne kopie do
   zgody, „Zostaw notatkę” na A, potem na B (na obu tekst B, rev 4; nagrobki po usunięciu rev 3 na obu); G6c — B
   wskrzesza, zanim A pozna usunięcie (skasowana treść nie wraca); G6d — trzy urządzenia, C z „A3” poza siecią (wszędzie
-  tekst wskrzeszenia); G6e — dwa wskrzeszenia w obu kolejnościach wymiany (ta sama, najwcześniejsza chwila utworzenia);
+  tekst wskrzeszenia); G6e — dwa wskrzeszenia w obu kolejnościach wymiany oraz dwa wskrzeszenia z późniejszą poprawką
+  na urządzeniu, które wskrzesiło wcześniej (wygrywa ładunek z wcześniejszą chwilą; wszędzie ta sama, najwcześniejsza
+  chwila utworzenia);
   G6f — kontrola: zwykła poprawka bez usunięcia jak dotąd; G6g — strażnik źródła (obie zmiany w `Le`, zapis chwili pod
   blokadą notatki na świeżym odczycie, bez dodatkowego odczytu w zwykłym scaleniu, sprawdzenia sesji).
 - `tests/unit/sync-dziennik-wlasnosciowy.test.mjs` (test A ≡ B, 132 przypadki) — literały wyżej i nagłówek.
 
 Pełny `npm test` i e2e — wyniki w opisie PR.
 
-**Czerwone na bazie** (`origin/audyt` `79483d97` z testami tego PR): 12 — `notatki-pacjenta-integralnosc` 6 (G6b, G6c,
-G6d, G6e ×2, G6g), test A ≡ B 6 (AB7 ratunek w trakcie partii, R3-0, R3-E1, R3-E2, p. 7c, ziarno 6). Zielone z natury:
+**Czerwone na bazie** (`origin/audyt` `79483d97` z testami tego PR): 13 — `notatki-pacjenta-integralnosc` 7 (G6b, G6c,
+G6d, G6e ×3, G6g), test A ≡ B 6 (AB7 ratunek w trakcie partii, R3-0, R3-E1, R3-E2, p. 7c, ziarno 6). Zielone z natury:
 G6f (kontrola), pozostałe przypadki, zapis bazowy dziennika (fikstura bez zmian).
 
-**Mutanty.** (wynik w następnym commicie)
+**Mutanty.** 9 mutantów (rev nagrobka bez notatek ładunku, tutejsza chwila utworzenia zamiast najwcześniejszej, późniejsza
+zamiast wcześniejszej, bez zapisu chwili przy wygranej tutejszej treści, zapis bez warunku na świeżym rekordzie, bez
+warunku na rekordzie z początku sekcji, dwa sprawdzenia sesji, nieprzeliczone skróty): 9 zabitych. Testy działania
+zabijają sześć (G6b–G6e, test A ≡ B, zapis bazowy dziennika — dodatkowy odczyt w zwykłym scaleniu, kontrola granicy);
+trzy (zapis bez warunku na świeżym rekordzie, dwa sprawdzenia sesji) zabija strażnik źródła G6g — ścieżki widoczne tylko
+przy równoległym zapisie w drugiej karcie przeglądarki albo zmianie sesji w trakcie scalania.
 
 **Kontrola granicy obrazu sejfu.** Przeliczone skróty `BASE`, `baseVaultSHA256` i `integratedVaultSHA256` (reguła
 z E2-PR3a2, decyzja z 2026-11-09; liczone po zdjęciu zmiany Klirensu, jak w kontroli od vildaclinic/vilda-calc#900);
