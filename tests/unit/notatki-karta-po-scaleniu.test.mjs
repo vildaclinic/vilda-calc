@@ -239,7 +239,7 @@ describe('E2-PR3c4 — strażnik źródła reguły karty notatki', () => {
   const funkcja = (nazwa) => { const a = src.indexOf(`async function ${nazwa}(`); return a < 0 ? '' : src.slice(a, src.indexOf('\n}\n', a)); };
   it('[czerwony na bazie] Le: karta martwa = nagrobek karty (tu albo z ładunku) i brak karty, odczyt leniwy raz na pacjenta; jedna martwa — druga, pełny remis — mniejszy patientId, inaczej zwycięzca treści; hak tylko przy zmianie karty; plan opieki bez reguły remisu', () => {
     expect(src).toContain('Qmart=async function(Qq){if(!Qq||!Qpt.has(Qq))return!1;if(!(Qq in Qmk)){');
-    expect(src).toContain('Qmk[Qq]=!Qk}return Qmk[Qq]}');
+    expect(src, 'błąd odczytu karty = karta żywa').toContain('try{Qk=await P.getPatientForUser(b,Qq)}catch(PatientClinicalCaught){PatientClinicalRethrow(PatientClinicalCaught);Qk={}}Qmk[Qq]=!Qk}return Qmk[Qq]}');
     expect(src).toContain('if(Qdg&&!Qdm)return Qm;if(Qdm&&!Qdg)return Qg;if(Qr)return Qg<Qm?Qg:Qm;return Qw?Qg:Qm}');
     expect(src).toContain('patientId:Qwp,bodyCipher:ti');
     expect(src).toContain('Qdn.add(g.id);if(Qwp!==g.patientId)Bem_wlasciciel(g.id,e)})}');
