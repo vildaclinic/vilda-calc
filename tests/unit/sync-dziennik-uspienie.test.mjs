@@ -1573,7 +1573,7 @@ describe('U2(c): wywołania zakazane i reguła domknięcia części magazynu', (
     expect([...new Set(wolne.map(([n]) => n))].sort(), 'wolne identyfikatory').toEqual(['Math', 'String']);
     // wywołanie w kopii części Bob_ (bez okna): karta z białej listy i spoza niej (długi identyfikator — skrót)
     const zestaw = new Function(`${ZRODLO.slice(ZRODLO.indexOf('const Bob_KOD = '), ZRODLO.indexOf('\n', ZRODLO.indexOf('const Bob_KOD = ')))}\n${wytnijFunkcje(ZRODLO, 'Bob_zestawKarty')}\nreturn Bob_zestawKarty;`)();
-    const P = '00000000-0000-4000-8000-00000000000a';
+    const P = 'a0000000-0000-4000-8000-0000000000ab';
     const d = '2026-03-02T08:01:03.000Z';
     expect(zestaw(P, d), 'karta i chwila nagrobka').toBe(`${P}:${d}`);
     const dlugi = `fikcyjny-identyfikator-karty-ze-starego-importu-${'x'.repeat(20)}`;
