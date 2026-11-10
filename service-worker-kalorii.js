@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.499';
+const SW_VERSION = '1.1.500';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -227,6 +227,7 @@ const CORE_SHELL_URLS = [
   '/clcr_clinical_safety.js?v=14',
   '/clcr_stone_safety.js?v=1',
   '/clcr_dialysis_safety.js?v=1',
+  '/clcr_dialysis_safety.js?v=2',
   '/clcr_extended_egfr.js?v=1',
   '/clcr_calculation_assumptions.js?v=1',
   '/clcr_calculation_assumptions.js?v=2',
@@ -328,6 +329,11 @@ const CORE_SHELL_URLS = [
   '/clcr_ph_dzm_ui.js?v=1',
   '/clcr_ph_dzm_ui.css?v=1',
   '/clcr_ph_dzm_persistence.js?v=1',
+  '/clcr_ktv_reference_data.js?v=1',
+  '/clcr_ktv.js?v=1',
+  '/clcr_ktv_ui.js?v=1',
+  '/clcr_ktv_ui.css?v=1',
+  '/clcr_ktv_persistence.js?v=1',
   '/clcr_ua_reference_data.js?v=1',
   '/clcr_ua.js?v=1',
   '/clcr_ua.js?v=2',
@@ -405,6 +411,7 @@ const CORE_SHELL_URLS = [
   '/clcr_notes_view.js?v=8',
   '/clcr_notes_view.js?v=9',
   '/clcr_notes_view.js?v=10',
+  '/clcr_notes_view.js?v=11',
   '/clcr_notes_view.css?v=1',
   '/clcr_result_reference_data.js?v=1',
   '/clcr_result_reference_data.js?v=2',
@@ -459,6 +466,7 @@ const CORE_SHELL_URLS = [
   '/inline_kalkulator_klirens_02.js?v=38',
   '/inline_kalkulator_klirens_02.js?v=39',
   '/inline_kalkulator_klirens_02.js?v=40',
+  '/inline_kalkulator_klirens_02.js?v=41',
   '/inline_kalkulator_klirens_03.js?v=1',
   '/inline_kalkulator_klirens_04.js?v=1',
   '/inline_kalkulator_klirens_04.js?v=4',
@@ -505,6 +513,7 @@ const CORE_SHELL_URLS = [
   '/inline_kalkulator_klirens_04.js?v=45',
   '/inline_kalkulator_klirens_04.js?v=46',
   '/inline_kalkulator_klirens_04.js?v=47',
+  '/inline_kalkulator_klirens_04.js?v=48',
   '/inline_kalkulator_klirens_05.js?v=1',
   '/inline_kalkulator_klirens_06.js?v=1',
   '/inline_kalkulator_klirens_07.js?v=1',
@@ -545,6 +554,7 @@ const CORE_SHELL_URLS = [
   '/inline_kalkulator_klirens_07.js?v=36',
   '/inline_kalkulator_klirens_07.js?v=37',
   '/inline_kalkulator_klirens_07.js?v=38',
+  '/inline_kalkulator_klirens_07.js?v=39',
   '/inline_kalkulator_klirens_08.js?v=1',
   '/inline_kalkulator_klirens_09.js?v=1',
   '/clcr_ui_workflow.css?v=1',
@@ -614,6 +624,7 @@ const CORE_SHELL_URLS = [
   '/clcr_ui_workflow.js?v=45',
   '/clcr_ui_workflow.js?v=46',
   '/clcr_ui_workflow.js?v=47',
+  '/clcr_ui_workflow.js?v=48',
   '/clcr_record_resources.js?v=1',
   '/clcr_record_resources.js?v=2',
   '/clcr_record_resources.js?v=3',
@@ -637,6 +648,7 @@ const CORE_SHELL_URLS = [
   '/clcr_record_resources.js?v=21',
   '/clcr_record_resources.js?v=22',
   '/clcr_record_resources.js?v=23',
+  '/clcr_record_resources.js?v=24',
   '/clcr_saved_calculation.js?v=1',
   '/clcr_saved_calculation.js?v=2',
   '/clcr_saved_calculation.js?v=3',
@@ -659,6 +671,7 @@ const CORE_SHELL_URLS = [
   '/clcr_saved_calculation.js?v=20',
   '/clcr_saved_calculation.js?v=21',
   '/clcr_saved_calculation.js?v=22',
+  '/clcr_saved_calculation.js?v=23',
   '/clcr_saved_legacy_calculator.js?v=1',
   '/clcr_saved_legacy_calculator.js?v=2',
   '/clcr_saved_legacy_calculator.js?v=3',
@@ -681,6 +694,7 @@ const CORE_SHELL_URLS = [
   '/clcr_saved_legacy_calculator.js?v=20',
   '/clcr_saved_legacy_calculator.js?v=21',
   '/clcr_saved_legacy_calculator.js?v=22',
+  '/clcr_saved_legacy_calculator.js?v=23',
   '/clcr_saved_results.js?v=1',
   '/clcr_saved_results.js?v=2',
   '/clcr_saved_results.js?v=3',
@@ -703,8 +717,10 @@ const CORE_SHELL_URLS = [
   '/clcr_saved_results.js?v=20',
   '/clcr_saved_results.js?v=21',
   '/clcr_saved_results.js?v=22',
+  '/clcr_saved_results.js?v=23',
   '/clcr_saved_results_view.js?v=1',
   '/clcr_saved_results_view.js?v=2',
+  '/clcr_saved_results_view.js?v=3',
   '/clcr_saved_results_view.css?v=1',
   '/clcr_result_details.js?v=1',
   '/clcr_result_details.js?v=2',
@@ -723,6 +739,7 @@ const CORE_SHELL_URLS = [
   '/clcr_result_details.js?v=15',
   '/clcr_result_details.js?v=16',
   '/clcr_result_details.js?v=17',
+  '/clcr_result_details.js?v=18',
   '/clcr_result_details.css?v=1',
   '/inline_notatki_00.js?v=2',
   '/inline_notatki_00.js?v=3',
@@ -972,6 +989,7 @@ const CORE_SHELL_URLS = [
   '/vilda_lab_history_tab.js?v=30',
   '/vilda_lab_history_tab.js?v=31',
   '/vilda_lab_history_tab.js?v=32',
+  '/vilda_lab_history_tab.js?v=33',
   '/vilda_lab_result_presentation.js?v=1',
   '/vilda_lab_result_presentation.js?v=2',
   '/vilda_lab_result_presentation.js?v=3',
@@ -2025,6 +2043,7 @@ const CORE_SHELL_URLS = [
   '/vilda_chrome.js?v=269',
   '/vilda_chrome.js?v=270',
   '/vilda_chrome.js?v=271',
+  '/vilda_chrome.js?v=272',
   '/vilda_realtime.js?v=1',
   '/vilda_realtime.js?v=2',
   '/vilda_realtime.js?v=3',
@@ -2566,6 +2585,7 @@ const CORE_SHELL_URLS = [
   '/vilda_save_status_indicator.js?v=45',
   '/vilda_save_status_indicator.js?v=46',
   '/vilda_save_status_indicator.js?v=47',
+  '/vilda_save_status_indicator.js?v=48',
   '/vilda_unsaved_guard.js?v=1',
   '/vilda_unsaved_guard.js?v=2',
   '/vilda_unsaved_guard.js?v=3',
@@ -2864,6 +2884,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_vault.js?v=263',
   '/vilda_vault.js?v=264',
   '/vilda_vault.js?v=265',
+  '/vilda_vault.js?v=266',
   '/vilda_auth_ui.js?v=535',
   '/vilda_auth_ui.js?v=536',
   '/vilda_auth_ui.js?v=537',
@@ -2883,6 +2904,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_auth_ui.js?v=551',
   '/vilda_auth_ui.js?v=552',
   '/vilda_auth_ui.js?v=553',
+  '/vilda_auth_ui.js?v=554',
   '/vilda_session_bridge.js?v=148',
   '/vilda_session_bridge.js?v=149',
   '/vilda_session_bridge.js?v=150',
@@ -2924,6 +2946,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_session_bridge.js?v=186',
   '/vilda_session_bridge.js?v=187',
   '/vilda_session_bridge.js?v=188',
+  '/vilda_session_bridge.js?v=189',
   '/vilda_sync.js?v=48',
   '/vilda_sync.js?v=49',
   '/vilda_patient_documents.js?v=1',
@@ -6066,84 +6089,94 @@ const CLINICAL_WORKSPACE_PRECACHE_PACK = Object.freeze({
 // END CLINICAL WORKSPACE PACK CONFIG
 
 const FRESH_STATIC_ALIAS_PATHS = new Set([
-  '/edu-video-ui.css', '/style.css', '/vilda_chrome.css',
-  '/vilda_auth_ui.css', '/ios26-v2.css', '/vilda_shell.css', '/vilda_vault.js', '/vilda_chrome.js',
-  // Five new potassium resources keep the same request budget. These explicit
-  // current aliases share only this installation's freshly fetched bytes.
-  '/vilda_logger.js', '/vilda_html.js', '/vilda_init.js',
-  '/vilda_app_helpers.js', '/vilda_frame_sync.js',
-  // The three checkpoint modules fit the existing installation request budget
-  // by sharing fresh current aliases of these unchanged static dependencies.
-  '/vilda_crypto.js', '/vilda_persistence_adapter.js', '/vilda_crypto_strength_explainer.js',
-  // Recovery keeps the same cold-install budget by sharing only fresh bytes
-  // between the two current aliases of these unchanged bootstrap scripts.
-  '/vilda_deps.js', '/vilda_update_hooks.js',
-  // The Search handoff adds one resource. Share the two current aliases of
-  // the unchanged UI bootstrap to retain the existing cold-install budget.
+  '/obesity_therapy_monitor.js',
+  '/edu-video-ui.css',
+  '/style.css',
+  '/vilda_chrome.css',
+  '/vilda_auth_ui.css',
+  '/ios26-v2.css',
+  '/vilda_shell.css',
+  '/vilda_vault.js',
+  '/vilda_chrome.js',
+  '/vilda_logger.js',
+  '/vilda_html.js',
+  '/vilda_init.js',
+  '/vilda_app_helpers.js',
+  '/vilda_frame_sync.js',
+  '/vilda_crypto.js',
+  '/vilda_persistence_adapter.js',
+  '/vilda_crypto_strength_explainer.js',
+  '/vilda_deps.js',
+  '/vilda_update_hooks.js',
   '/ios26-ui.js',
-  // Five urate/creatinine resources keep the same request budget. These
-  // unchanged static dependencies share only fresh current-install responses.
-  '/vilda_shell.js', '/vilda_persist_runtime.js', '/vilda_name_fix.js',
-  '/vilda_file_export.js', '/vilda_pro_ui.js',
-  // Three Ca/Cr DZM resources retain their own requests. Share only freshly
-  // fetched current aliases of these static UI dependencies.
-  '/vilda_centile_chart_header.js', '/vilda_update_prep.js', '/vilda_save_status_indicator.js',
-  // Five Mg/Ca resources retain their own requests. These unchanged static UI
-  // dependencies share only freshly fetched bytes within this installation.
-  '/vilda_module_monitor_badges.js', '/reposition.js', '/vilda_estimated_intake_dom_mount.js',
-  '/vilda_estimated_intake_runtime.js', '/vilda_estimated_intake_ui.js',
-  // Five P/Cr resources retain separate requests. These unchanged static UI
-  // aliases share only freshly fetched bytes during the current installation.
-  '/vilda_macro_practice.js', '/vilda_activity_burn.js', '/vilda_food_summary.js',
-  '/vilda_diet_plan_ui.js', '/vilda_bmi_journey.js',
-  // Five B/Cr resources retain separate requests. These five unchanged UI
-  // dependencies have both current versioned and unversioned install URLs;
-  // share only fresh responses from this installation to keep the 600 budget.
-  '/vilda_centile_landscape.js', '/vilda_summary_cards.js', '/vilda_professional_module.js',
-  '/vilda_gh_therapy_resource_audit.js', '/vilda_patient_report.js',
-  // Five K/(K+Na) resources keep their own requests. These unchanged static
-  // dependencies share only fresh current-install responses between aliases.
-  '/vilda_growth_card_c.js', '/vilda_data_import_export.js', '/vilda_advanced_growth.js',
-  '/vilda_estimated_intake.js', '/vilda_pro_access.js',
-  // The patient database view adds two resources. These unchanged static UI
-  // dependencies share only fresh current-install responses to retain 600 requests.
-  '/vilda_centile_charts.js', '/vilda_dob_age.js',
-  // Four saved-SGA resources keep their own network requests. Reuse only this
-  // installation's fresh responses for the current aliases of their existing hosts.
-  '/vilda_auth_ui.js', '/sga_birth_module.js', '/docpro_state_persist.js', '/vilda_khamis_roche.js',
-  // Five serum AG resources retain separate requests. These unchanged static
-  // dependencies reuse only freshly fetched current-install bytes across aliases.
-  '/vilda_food_data.js', '/vilda_growth_reference_data.js', '/vilda_ree_rownania_data.js',
-  '/vilda_estimated_intake_input_model.js', '/lab_units_data.js',
-  // Two compact laboratory readers keep separate fetches. Reuse only fresh
-  // responses between the versioned and unversioned current aliases of these
-  // unchanged static UI dependencies; previous immutable entries never seed them.
-  '/userData.js', '/vitalSigns.js',
-  // The five oxalate DZM assets retain their own requests. These unchanged
-  // static dependencies share only freshly fetched current-install bytes
-  // between their versioned and unversioned URLs, preserving the 600 budget.
-  '/ds_lms.js', '/reinehr_cdgp_data.js', '/vilda_centile_interpolation.js',
-  '/adult_vitals.js', '/bp_module.js',
-  // Five citrate DZM assets retain independent fetches. These unchanged static
-  // files have current versioned/unversioned aliases; share only fresh bytes
-  // from this installation, never copied immutable historical responses.
-  '/nutrition_norms.js', '/nutrition_micros.js', '/vilda_diet_recommendations.js',
-  '/vilda_anorexia_risk.js', '/advanced_growth_kowd.js',
-  // Five Ca/Cit resources retain independent fetches. Only this install's
-  // fresh responses may serve both current aliases of unchanged static files.
-  '/circumference_module.js', '/wfh_module.js', '/respiratory_module.js',
-  '/gh_therapy_segments.js', '/obesity_response_criteria.js',
-  // Five pH DZM resources retain independent fetches. These unchanged static
-  // files share only this installation's fresh bytes across current aliases;
-  // immutable responses inherited from an older cache never seed this reuse.
-  '/vilda_down_syndrome.js', '/flu_therapy.js', '/bisphos_therapy.js',
-  '/bisphos_therapy_monitor.js', '/lab_unit_converter.js',
-  // The immutable workspace pack and mutation model retain their own requests.
-  // These current static aliases share only freshly fetched install responses.
-  '/app.js', '/custom-fixes.js',
-  // The single-template codec keeps its own request. Share only freshly
-  // fetched bytes between this unchanged static module's current aliases.
-  '/antibiotic_therapy.js'
+  '/vilda_shell.js',
+  '/vilda_persist_runtime.js',
+  '/vilda_name_fix.js',
+  '/vilda_file_export.js',
+  '/vilda_pro_ui.js',
+  '/vilda_centile_chart_header.js',
+  '/vilda_update_prep.js',
+  '/vilda_save_status_indicator.js',
+  '/vilda_module_monitor_badges.js',
+  '/reposition.js',
+  '/vilda_estimated_intake_dom_mount.js',
+  '/vilda_estimated_intake_runtime.js',
+  '/vilda_estimated_intake_ui.js',
+  '/vilda_macro_practice.js',
+  '/vilda_activity_burn.js',
+  '/vilda_food_summary.js',
+  '/vilda_diet_plan_ui.js',
+  '/vilda_bmi_journey.js',
+  '/vilda_centile_landscape.js',
+  '/vilda_summary_cards.js',
+  '/vilda_professional_module.js',
+  '/vilda_gh_therapy_resource_audit.js',
+  '/vilda_patient_report.js',
+  '/vilda_growth_card_c.js',
+  '/vilda_data_import_export.js',
+  '/vilda_advanced_growth.js',
+  '/vilda_estimated_intake.js',
+  '/vilda_pro_access.js',
+  '/vilda_centile_charts.js',
+  '/vilda_dob_age.js',
+  '/vilda_auth_ui.js',
+  '/sga_birth_module.js',
+  '/docpro_state_persist.js',
+  '/vilda_khamis_roche.js',
+  '/vilda_food_data.js',
+  '/vilda_growth_reference_data.js',
+  '/vilda_ree_rownania_data.js',
+  '/vilda_estimated_intake_input_model.js',
+  '/lab_units_data.js',
+  '/userData.js',
+  '/vitalSigns.js',
+  '/ds_lms.js',
+  '/reinehr_cdgp_data.js',
+  '/vilda_centile_interpolation.js',
+  '/adult_vitals.js',
+  '/bp_module.js',
+  '/nutrition_norms.js',
+  '/nutrition_micros.js',
+  '/vilda_diet_recommendations.js',
+  '/vilda_anorexia_risk.js',
+  '/advanced_growth_kowd.js',
+  '/circumference_module.js',
+  '/wfh_module.js',
+  '/respiratory_module.js',
+  '/gh_therapy_segments.js',
+  '/obesity_response_criteria.js',
+  '/vilda_down_syndrome.js',
+  '/flu_therapy.js',
+  '/bisphos_therapy.js',
+  '/bisphos_therapy_monitor.js',
+  '/lab_unit_converter.js',
+  '/app.js',
+  '/custom-fixes.js',
+  '/antibiotic_therapy.js',
+  '/gh_igf_therapy.js',
+  '/gh_therapy_monitor.js',
+  '/hypertension_therapy.js',
+  '/thyroid_cancer_kids.js',
 ]);
 
 // The pack is only an installation transport: original module URLs and exact

@@ -796,8 +796,14 @@ test('independent histories: identical measurements remain independent after F5 
     await window.VildaVault.savePatient(payload, { patientId: id, dedup: false });
   }, { id: fixture.ids.a, basic: independentEqual });
   await loadPatient(page, fixture.ids.a, 'restore');
+  // The modal and PID are published before the loader's saved-reference
+  // finalizer. Reload only after the actual restored save state is committed;
+  // otherwise F5 aborts the setup instead of exercising the history roundtrip.
+  await expect.poll(() => decision(page)).toEqual({ ready: true, state: 'saved' });
+  expect(await reference(page)).toEqual(expect.any(String));
   await page.reload({ waitUntil: 'load' });
   await readyForPatient(page);
+  await expect.poll(() => decision(page)).toEqual({ ready: true, state: 'saved' });
   const before = await currentHistories(page), records = await vaultRecords(page, fixture.ids);
   const savedReference = await reference(page);
   expect(before.basic).toEqual(independentEqual);

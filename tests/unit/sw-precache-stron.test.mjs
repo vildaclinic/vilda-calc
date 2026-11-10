@@ -289,7 +289,7 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
   const arkuszEdu = (adres) => adres.split('?')[0] === '/edu-video-ui.css';
   const aliasyEdu = () => doInstalacji().filter(arkuszEdu);
   const cssEdu = fs.readFileSync(path.join(korzen, 'edu-video-ui.css'), 'utf8');
-  const dodatkoweWspoldzieloneZasoby = ['/vilda_auth_ui.css', '/ios26-v2.css', '/vilda_shell.css', '/vilda_vault.js', '/vilda_chrome.js',
+  const dodatkoweWspoldzieloneZasoby = ['/obesity_therapy_monitor.js', '/vilda_auth_ui.css', '/ios26-v2.css', '/vilda_shell.css', '/vilda_vault.js', '/vilda_chrome.js',
     '/vilda_logger.js', '/vilda_html.js', '/vilda_init.js', '/vilda_app_helpers.js', '/vilda_frame_sync.js',
     '/vilda_crypto.js', '/vilda_persistence_adapter.js', '/vilda_crypto_strength_explainer.js',
     '/vilda_deps.js', '/vilda_update_hooks.js', '/ios26-ui.js',
@@ -314,7 +314,7 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
     '/circumference_module.js', '/wfh_module.js', '/respiratory_module.js',
     '/gh_therapy_segments.js', '/obesity_response_criteria.js',
     '/vilda_down_syndrome.js', '/flu_therapy.js', '/bisphos_therapy.js',
-    '/bisphos_therapy_monitor.js', '/lab_unit_converter.js', '/app.js', '/custom-fixes.js', '/antibiotic_therapy.js'];
+    '/bisphos_therapy_monitor.js', '/lab_unit_converter.js', '/antibiotic_therapy.js', '/gh_igf_therapy.js', '/gh_therapy_monitor.js', '/hypertension_therapy.js', '/thyroid_cancer_kids.js', '/app.js', '/custom-fixes.js'];
   const wspoldzielonePary = ['/style.css', '/vilda_chrome.css', ...dodatkoweWspoldzieloneZasoby];
   const wspoldzieloneZasoby = new Set(['/edu-video-ui.css', ...wspoldzielonePary]);
   const oczekiwanePobraniaSwiezychZasobow = () => {
@@ -622,7 +622,7 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
   });
 
   it('skrypt spoza jawnej listy nadal pobiera każdy bieżący alias osobno', async () => {
-    const sciezka = '/gh_igf_therapy.js', magazyn = pamiec(Infinity, { zuzywajOdpowiedzi: true }), pobrane = [];
+    const sciezka = '/obesity_therapy.js', magazyn = pamiec(Infinity, { zuzywajOdpowiedzi: true }), pobrane = [];
     const aliasy = doInstalacji().filter(adres => adres.split('?')[0] === sciezka);
     const fetch = async request => {
       const u = new URL(request.url); if (u.pathname !== sciezka) return siec(request);

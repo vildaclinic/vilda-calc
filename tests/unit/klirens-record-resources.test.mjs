@@ -47,6 +47,9 @@ describe('lazy resources zapisanych obliczeń', () => {
       .toEqual(env.api.manifest.reader.map(([path]) => path.split('?')[0]));
     expect(env.requests.every((request) => request.url.startsWith('https://fictional.invalid/application/'))).toBe(true);
     expect(env.win.VildaClcrAcr).toBeUndefined();
+    expect(typeof env.win.ClcrKtvPersistence.readSnapshot).toBe('function');
+    expect(env.win.VildaClcrKtv).toBeUndefined();
+    expect(env.win.VildaClcrKtvReferenceData).toBeUndefined();
     expect(typeof env.win.ClcrMagnesiumCalciumPersistence.readSnapshot).toBe('function');
     expect(env.win.VildaClcrMagnesiumCalcium).toBeUndefined();
     expect(env.win.VildaClcrMagnesiumCalciumData).toBeUndefined();
@@ -67,6 +70,8 @@ describe('lazy resources zapisanych obliczeń', () => {
     expect(typeof details.open).toBe('function');
     expect(typeof env.win.ClcrSavedLegacyCalculator.recalculate).toBe('function');
     expect(typeof env.win.VildaClcrFehco3.evaluate).toBe('function');
+    expect(typeof env.win.VildaClcrKtv.evaluate).toBe('function');
+    expect(typeof env.win.VildaClcrKtvReferenceData.getPolicy).toBe('function');
     expect(typeof env.win.VildaClcrAcr.evaluate).toBe('function');
     expect(typeof env.win.VildaClcrMagnesiumCalcium.evaluate).toBe('function');
     expect(typeof env.win.VildaClcrMagnesiumCalciumData.getProfile).toBe('function');

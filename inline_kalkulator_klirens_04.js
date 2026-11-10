@@ -530,6 +530,13 @@ function validateField(e) {
     if (o) o.textContent = invalid ? outcome.error : "";
     return !invalid;
   }
+  if ($("formulaPicker")?.value === "KTV" && window.VildaClcrKtv?.FIELD_IDS.includes(n) && typeof window.evaluateClcrKtv === "function") {
+    const outcome = window.evaluateClcrKtv(), invalid = outcome.invalidIds?.includes(n) === true;
+    e.classList.toggle("error", invalid);
+    e.setAttribute("aria-invalid", String(invalid));
+    if (o) o.textContent = invalid ? outcome.error : "";
+    return !invalid;
+  }
   if ($("formulaPicker")?.value === "Prot_mgkg" && n.startsWith("Prot_")) {
     const outcome = evaluateClcrProteinDzm(), invalid = outcome.invalidIds?.includes(n) === true;
     e.classList.toggle("error", invalid);
@@ -665,7 +672,7 @@ function validateField(e) {
 function validateClcrAgeContext(e) {
   // Cit/Cr reference bands use completed years; zero years needs no extra
   // months or days to select the source's birth–<3-years interval.
-  if (["CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "pH24", "UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Ox_mgkg", "Na_mmol_d", "K_mmol_d", "KM_Cr", "Ca_Cr", "Mg_Ca", "PO4_Cr", "B_Cr", "K_frac", "AGs"].includes($("formulaPicker")?.value)) return;
+  if (["CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "pH24", "KTV", "UA_mgkg", "Ca_mgkg", "Mg_mgkg", "PO4_mgkg", "Prot_mgkg", "Ox_mgkg", "Na_mmol_d", "K_mmol_d", "KM_Cr", "Ca_Cr", "Mg_Ca", "PO4_Cr", "B_Cr", "K_frac", "AGs"].includes($("formulaPicker")?.value)) return;
   const n = document.getElementById("age"),
     t = document.getElementById("ageMonths");
   if (!n || (n.value || "").trim() === "") return;
@@ -681,6 +688,7 @@ function validateClcrAgeContext(e) {
 function canComputeFormula(e) {
   const n = typeof FORMULAS < "u" ? FORMULAS.find((t) => t.id === e) : null;
   if (!n) return !1;
+  if (e === "KTV" && !window.__CLCR_TEST_LEGACY_BROAD && typeof window.evaluateClcrKtv === "function") return window.evaluateClcrKtv().valid === true;
   if (e === "ACR") return evaluateClcrAcr().valid === true;
   if (e === "PCR") return evaluateClcrPcr().valid === true;
   if (e === "CaCr_spot") return evaluateClcrCacr().valid === true;
@@ -1774,7 +1782,7 @@ function update() {
       l = (i && i.value) || "",
       u = o && t >= 18,
       selectedAssumptions = resolveClcrCalculationAssumptions(l),
-      selectedSafety = ["CaCr_spot", "OxCr_spot", "CitCr_spot"].includes(l) ? { eligible: true, reason: "" } : !selectedAssumptions.allowed
+      selectedSafety = ["CaCr_spot", "OxCr_spot", "CitCr_spot", "KTV"].includes(l) ? { eligible: true, reason: "" } : !selectedAssumptions.allowed
         ? { eligible: false, reason: selectedAssumptions.blockers.map((entry) => entry.message).join(" ") }
         : l === "neonatal_egfr" ? neonatalSafety :
         l &&
@@ -3347,7 +3355,26 @@ function update() {
   const it = document.getElementById("ktvFields"),
     Ve = document.getElementById("ktvToggle");
   if (it && Ve)
-    if (
+    if (mt === "pro" && Ve.checked && $("formulaPicker")?.value === "KTV" && !window.__CLCR_TEST_LEGACY_BROAD && window.ClcrKtvUi && typeof window.evaluateClcrKtv === "function") {
+      ["ktvValidation", "ektvResult", "urrResult", "ktvInterpretation"].forEach(id => {
+        const node = $(id);
+        if (node) { node.hidden = true; node.removeAttribute("data-clcr-series"); }
+      });
+      const ktvModel = window.evaluateClcrKtv();
+      const target = $("ktvResult");
+      if (target && ktvModel) {
+        const detailsOpen = $("clcr-ktv-details")?.open === true;
+        ["data-clcr-series", "data-clcr-value", "data-clcr-display-value", "data-clcr-tone", "data-clcr-out-of-range"].forEach(name => target.removeAttribute(name));
+        target.classList.remove("result-box", "out-of-range", "warn-yellow");
+        target.classList.add("clcr-result-metric");
+        clcrSetTrustedMarkup(target, window.ClcrKtvUi.renderResult(ktvModel), "selected IHD index");
+        // Remove the legacy inline hide: the collector also checks inline visibility.
+        target.style.removeProperty("display");
+        target.hidden = false;
+        if (detailsOpen && $("clcr-ktv-details")) $("clcr-ktv-details").open = true;
+      }
+      window.ClcrKtvUi.refresh(document, ktvModel);
+    } else if (
       ((it.style.display =
         Ve.checked && mt === "pro" ? "block" : "none"),
       Ve.checked && mt === "pro")
@@ -3382,10 +3409,9 @@ function update() {
                   : readKtvNumber("ktvKru"),
                 kruUnit: "mL/min/1.73m\u00B2",
                 kruMeasuredAt: $("ktvKruMeasuredAt")?.value || "",
-                evaluationDate:
-                  typeof window.ClcrDialysisSafety.localIsoDate === "function"
-                    ? window.ClcrDialysisSafety.localIsoDate(new Date())
-                    : null,
+                evaluationDate: $("clcrVisitDate")?.value ||
+                  (typeof window.ClcrDialysisSafety.localIsoDate === "function"
+                    ? window.ClcrDialysisSafety.localIsoDate(new Date()) : null),
                 treatmentsDeliveredReliably: !!$(
                   "ktvTreatmentsDelivered",
                 )?.checked,
@@ -3557,6 +3583,10 @@ function update() {
             clcrSetTrustedMarkup(element, card, "dialysis result presentation");
             element.classList.remove("result-box", "out-of-range", "warn-yellow");
             element.classList.add("clcr-result-metric");
+            element.classList.toggle("out-of-range", tone === "danger");
+            element.classList.toggle("warn-yellow", tone === "warning");
+            element.setAttribute("data-clcr-tone", tone);
+            element.setAttribute("data-clcr-out-of-range", tone === "neutral" ? "null" : String(tone !== "success"));
             element.setAttribute("data-clcr-formula", "KTV");
             element.setAttribute("data-clcr-series", series);
             element.setAttribute("data-clcr-value", String(value));
@@ -4274,6 +4304,7 @@ const clearBtn = document.getElementById("clearBtn");
 clearBtn &&
   clearBtn.addEventListener("click", (event) => {
     event.clcrClearedFormula = $("formulaPicker")?.value || "";
+    if (event.clcrClearedFormula === "KTV") event.clcrPreservedKtvVariant = $("ktvVariant")?.value || "spktv";
     if (event.clcrClearedFormula === "K_frac") {
       event.clcrPreservedPotassiumIndexContext = window.ClcrPotassiumIndexSession?.readContext?.() || {};
     }

@@ -8717,10 +8717,11 @@ function kt(t) {
   if (norm) result.norm = norm;
   const testKey = typeof t.testKey === "string" && /^[a-z0-9_-]{1,40}$/.test(t.testKey.trim()) ? t.testKey.trim() : null;
   const unit = typeof t.unit === "string" ? Z(t.unit).trim().substring(0, 20) : "";
-  // AG is a signed difference, not a concentration. Keep its canonical signed
-  // value through save/edit; unrelated laboratory concentrations stay nonnegative.
+  // AG and URR describe signed changes, not concentrations. Keep signed
+  // canonical measurements; unrelated laboratory concentrations stay nonnegative.
   const signedSerumGap = test === "Luka anionowa surowicy (bez K)" && unit === "mmol/L";
-  const valueNum = typeof t.valueNum === "number" && isFinite(t.valueNum) && (t.valueNum >= 0 || signedSerumGap) ? t.valueNum : null;
+  const signedUrr = test === "URR — wskaźnik redukcji mocznika" && unit === "%" && testKey === "urrwskaznikredukcjimocznika";
+  const valueNum = typeof t.valueNum === "number" && isFinite(t.valueNum) && (t.valueNum >= 0 || signedSerumGap || signedUrr) ? t.valueNum : null;
   if (testKey) result.testKey = testKey;
   if (valueNum != null) result.valueNum = valueNum;
   if (unit) result.unit = unit;

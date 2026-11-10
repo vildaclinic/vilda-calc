@@ -282,7 +282,7 @@ test('Cockcroft i zmierzony klirens DZM zachowują własne jednostki bez kategor
   await expect(measured.locator('[data-clcr-category-control]')).toHaveCount(0);
 });
 
-test('FENa przyjmuje sparowanie jako założenie, dializa zachowuje potwierdzenia, bez założeń eGFR lub IFCC', async ({ page }) => {
+test('FENa przyjmuje sparowanie jako założenie, dializa zachowuje znane fakty, bez założeń eGFR lub IFCC', async ({ page }) => {
   await openCalculator(page);
   await selectFormula(page, 'FENa_spot');
   expect(await page.evaluate(() => {
@@ -320,19 +320,36 @@ test('FENa przyjmuje sparowanie jako założenie, dializa zachowuje potwierdzeni
     },
   }, { source: 'e2e-assumptions-dialysis', update: true, dispatchEvents: false, preserveAcrossVersions: true }));
   expect(applied).toBe(true);
-  // Dializa zachowuje osobne, otagowane kontenery URR i spKt/V; ich karty
-  // prezentacji pozostają wewnątrz tych kontenerów, bez podwajania serii.
-  const urr = page.locator('#clcrResultReport [data-clcr-series="KTV_urr"] .clcr-result-card');
-  const spktv = page.locator('#clcrResultReport [data-clcr-series="KTV_spktv"] .clcr-result-card');
-  await expect(urr).toBeVisible();
-  await expect(spktv).toBeVisible();
-  await expect(urr.locator('.clcr-result-value')).toHaveText('70,0');
+  // One chosen index is visible. Switching the index does not invent stable
+  // creatinine/IFCC facts or discard a known dialysis sampling contradiction.
+  const urr = card(page, 'KTV_urr');
+  const spktv = await expectOneCard(page, 'KTV_spktv', '1,40', 1.4010540127569946);
+  await expect(page.locator('#ktvRequiredCount')).toHaveText('7/7');
+  await expect(page.locator('#ui_ktvSameSession_answer')).toBeHidden();
+  await page.locator('button[data-clcr-ktv-variant="urr"]').click();
+  await expect(urr).toBeVisible(); await expect(spktv).toHaveCount(0);
+  await expect(page.locator('#clcrResultReport .clcr-result-card:visible')).toHaveCount(1);
+  await expect(page.locator('#ktvRequiredCount')).toHaveText('2/2');
+  await expect(urr.locator('.clcr-result-value')).toContainText('70,0');
+  await expect(urr).toHaveAttribute('data-clcr-value', '70');
+  await expect(urr).toHaveAttribute('data-clcr-display-unit', '%');
   await expect(page.locator('#clcrResultReport .clcr-result-assumptions')).toHaveCount(0);
   await expect(page.locator('#clcrResultReport')).not.toContainText(/standaryzowane do IFCC|brak podejrzenia AKI/);
   expect(await snapshotInputs(page)).toMatchObject({ creatinineState: 'rapidlyChanging', suspectedAKI: true });
-  await selectField(page, '#ui_ktvSameSession_answer', 'no');
+  expect(await page.evaluate(() => {
+    const saved = window.buildClcrSessionSnapshot();
+    saved.inputs.ktvSameSession = false;
+    saved.inputs.ui_ktvSameSession_answer = 'no';
+    saved.inputs.ktvKnownFacts = JSON.stringify({
+      ...JSON.parse(saved.inputs.ktvKnownFacts || '{}'), ktvSameSession: false, ui_ktvSameSession_answer: 'no',
+    });
+    return window.applyClcrSessionSnapshot(saved, { source: 'e2e-known-dialysis-sampling', update: true, dispatchEvents: false, preserveAcrossVersions: true });
+  })).toBe(true);
   await expect(urr).toHaveCount(0);
+  await page.locator('button[data-clcr-ktv-variant="spktv"]').click();
   await expect(spktv).toHaveCount(0);
+  expect(await page.evaluate(() => window.ClcrVisitSave.collectActiveDatapoints(document, { formulaId: 'KTV' }))).toEqual([]);
+  expect(await snapshotInputs(page)).toMatchObject({ creatinineState: 'rapidlyChanging', suspectedAKI: true });
 });
 
 test('historia i raport AI opisują założenia, zachowując nieznane fakty oraz wcześniejszy wynik', async ({ page }) => {

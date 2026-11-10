@@ -197,25 +197,31 @@ test('wyszukanie KT/V otwiera formularz PRO bez widocznego przełącznika', asyn
     }))
   ).toEqual({ level: 'pro', version: 'pro' });
   await expect(page.locator('#version-pro')).toHaveClass(/selected/);
-  await expect(page.locator('#ktvCard')).toBeVisible();
-  await expect(page.locator('#ktvFields')).toBeVisible();
-  await expect(page.locator('#ktvModality')).toBeVisible();
-  await expect(page.locator('#UreaPre')).toBeVisible();
-  await expect(page.locator('#UreaPost')).toBeVisible();
+  await expect(page.locator('#ktvInputCard')).toBeVisible();
+  await expect(page.locator('#ktvCard')).toBeHidden();
+  await expect(page.locator('#ktvModality')).toBeHidden();
+  for (const id of ['UreaPre', 'UreaPost', 'ktvDurationMinutes', 'ktvUF', 'ktvW', 'ktvSessionsPerWeek', 'ktvPidiDays']) {
+    await expect(page.locator('#' + id)).toBeVisible();
+    await expect(page.locator(`[data-clcr-field-id="${id}"]`)).toHaveAttribute('data-clcr-status', 'required');
+  }
+  await expect(page.locator('#ktvRequiredCount')).toHaveText('0/7');
   await expect(page.locator('#ktvToggle')).toBeHidden();
   for (const fieldId of [
     'ktvSameSession',
     'ktvPreBeforeDialysis',
     'ktvPreNoDilution',
   ]) {
-    await expect(page.locator(`#ui_${fieldId}_answer`)).toBeVisible();
+    await expect(page.locator(`#ui_${fieldId}_answer`)).toBeHidden();
   }
-  await expect(
-    page.locator('[data-clcr-field-id="ktvPostMethod"]')
-  ).toHaveAttribute('data-clcr-status', 'required');
-  await expect(page.locator('#clcrReadiness')).toContainText(
-    'Próbki przed i po pochodzą z tej samej sesji'
-  );
+  for (const id of ['ktvPostMethod', 'ktvKru', 'ktvKruMeasuredAt', 'ktvTreatmentsDelivered']) await expect(page.locator('#' + id)).toBeHidden();
+  await expect(page.locator('#clcrReadiness')).toBeHidden();
+  await page.locator('button[data-clcr-ktv-variant="ektv"]').click();
+  await expect(page.locator('#ktvRequiredCount')).toHaveText('0/8');
+  await expect(page.locator('#ktvAccessType')).toBeVisible();
+  await page.locator('button[data-clcr-ktv-variant="urr"]').click();
+  await expect(page.locator('#ktvRequiredCount')).toHaveText('0/2');
+  await expect(page.locator('#UreaPre')).toBeVisible(); await expect(page.locator('#UreaPost')).toBeVisible();
+  for (const id of ['ktvDurationMinutes', 'ktvUF', 'ktvW', 'ktvSessionsPerWeek', 'ktvPidiDays', 'ktvAccessType']) await expect(page.locator('#' + id)).toBeHidden();
 });
 
 // Citrate uses its dedicated amount inputs and clock. Historical collection
