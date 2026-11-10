@@ -352,3 +352,16 @@ przywołane zalecenia. Nowy przegląd pediatryczny Paglialonga/Patel 2026
 podkreśla ocenę szerszą niż Kt/V; nie ustanawia nowej normy w tym module.
 Brak zweryfikowanej krzywej wieku nie jest dowodem nieistnienia lokalnych
 protokołów ośrodkowych.
+
+## Zgodność z kontrolą niezmiennego obrazu sejfu
+
+Przy bazie publicznej #920 (`4994fef9`) kontrola natywnego fragmentu nadal
+weryfikuje oryginalny obraz i wszystkie moduły według niezmienionych manifestów.
+Osobny `tools/klirens-ktv-vault-delta.mjs` rozpoznaje wyłącznie dokładny,
+zaakceptowany blok sanitizera ujemnego URR (nazwa, jednostka %, canonical
+testKey i warunek wartości skończonej). Odwrócenie tego bloku dotyczy jedynie
+kopii tekstu użytej w dowodzie integralności, bez wykonania kodu i bez zmian
+uprawnień, szyfrowania, fragmentu, haków lub danych. Każda dodatkowa zmiana
+nadal powoduje błąd hashy; regresje obejmują zmianę jednostki, nazwy, testKey,
+warunku oraz bajtów poza sanitizerem i we fragmencie natywnym. Historyczny
+strażnik tożsamości pacjenta i jego piny pozostają niezmienione.

@@ -1,4 +1,3 @@
-import { restoreKtvVaultBaseline } from './klirens-ktv-vault-delta.mjs';
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -221,7 +220,7 @@ function failDifferent(before, after, file) {
   if (difference) throw new Error('Existing AST differs beyond reviewed boundary additions at ' + difference);
 }
 const vaultBefore = syntax(baseSource('vilda_vault.js'));
-const vaultSource = restoreKtvVaultBaseline(readFileSync(resolve(root, 'vilda_vault.js'), 'utf8'));
+const vaultSource = readFileSync(resolve(root, 'vilda_vault.js'), 'utf8');
 const vaultAfter = syntax(vaultSource), beforeBody = iifeBody(vaultBefore), afterBody = iifeBody(vaultAfter);
 const checkpointFound = new Set();
 function checkpointKey(node) {
