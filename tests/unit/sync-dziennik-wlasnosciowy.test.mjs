@@ -119,7 +119,10 @@
 // haków: hak karty notatki (koperta pnote(id) partii, której wersja weszła u odbiorcy, a karta notatki u odbiorcy jest
 // inna niż w kopercie → pnote(id)); koperty w Q niosą kartę notatki koperty pnote. Negatyw tabeli W4 („W4 — negatywy”)
 // na różnicy wstrzykniętej w migawkę (scenariusz jest już zbieżny); tabela DOZWOLONE bez zmian.
-// Czerwone na bazie E2-PR3c4 (sejf 2beacb33): @@CZERWONE_AB@@
+// Czerwone na bazie E2-PR3c4 (sejf 2beacb33; 3 ze 132 przypadków): p. 6 „Scal pacjentów P → Q na A, edycja notatki
+// karty P na B” i skrzyżowane „Scal pacjentów” z notatką karty P (po zdarzeniach, po W4 i przy samych blobach notatka
+// na jednym urządzeniu pod kartą usuniętą), „W4 — negatywy” (bez wstrzyknięcia scenariusz na bazie nie jest zbieżny).
+// Zielone z natury: pozostałe przypadki (w ich partiach model nie ma haka karty notatki).
 //
 // KOLEJNOŚĆ W KROKU (E2-PR3a2, sprawdzana na emiterach): snap (także wersje przeniesione pod kartę celu „Scal pacjentów”
 // i głowy scalenia), potem stomb, potem ptomb, potem pnote, pnotetomb, note, notetomb, plist, plisttomb, pref, pk, pktomb,

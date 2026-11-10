@@ -80,7 +80,7 @@ async function poczatek() {
 }
 
 describe('E2-PR3c4 — karta notatki po „Scal pacjentów”: obie karty istnieją', () => {
-  it('[czerwony na bazie] B poprawia n pod P po „Scal pacjentów” P → Q na A i dopisuje wizytę P (karta P wraca): n pod P na obu (wersja zapisana później)', async () => {
+  it('[kontrola; na bazie tak samo — nagrobek P zdjęty, gdy karta wraca] B poprawia n pod P po „Scal pacjentów” P → Q na A i dopisuje wizytę P (karta P wraca): n pod P na obu (wersja zapisana później)', async () => {
     const { A, B, ids, n } = await poczatek();
     await chwila(5);
     await A.v.mergePatients(ids.P, ids.Q);
@@ -135,7 +135,7 @@ describe('E2-PR3c4 — pełny remis, dawny rozjazd, koszt i wyścig', () => {
     expect([po.rev, po.updatedAtISO], 'ta sama wersja co na A').toEqual([(await rekord(A, n.id)).rev, (await rekord(A, n.id)).updatedAtISO]);
   });
 
-  it('[kontrola kosztu] bez różnicy kart notatki scalanie nie czyta kart w sekcji notatek; przy różnicy — jeden odczyt na kartę z nagrobkiem, raz na scalanie', async () => {
+  it('[czerwony na bazie; koszt] bez różnicy kart notatki scalanie nie czyta kart w sekcji notatek; przy różnicy — jeden odczyt na kartę z nagrobkiem, raz na scalanie', async () => {
     const { A, B, ids, n } = await rozjazd();
     const n2 = await A.v.savePatientNote({ patientId: ids.Q, title: 'n2 (fikcja)', body: 'fikcyjna druga', category: 'followup' });
     await pelny(A, B);
@@ -159,7 +159,7 @@ describe('E2-PR3c4 — pełny remis, dawny rozjazd, koszt i wyścig', () => {
       'bez różnicy kart notatki — bez dodatkowych odczytów').toBe(0);
   });
 
-  it('[kontrola] wyścig: druga karta przeglądarki poprawia n w trakcie scalania (przed zapisem karty) — zapis karty pomijany, poprawka zostaje', async () => {
+  it('[czerwony na bazie; wyścig] druga karta przeglądarki poprawia n w trakcie scalania (przed zapisem karty) — zapis karty pomijany, poprawka zostaje', async () => {
     const { A, B, ids, n } = await rozjazd();
     const pierwotne = B.baza.getPatientNoteForUser.bind(B.baza);
     let wstrzyknieto = false;
