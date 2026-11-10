@@ -4076,7 +4076,8 @@ describe('P-NOTATKI-ZA-KARTA — strażniki źródła', () => {
   it('podgląd „Scal kopię konta” liczy te same stany co Le (Bnp_zlacz, Bnp_stan), z kartą przewidywaną po pętli kart', () => {
     const plan = sekcja('async function Bks_planDanych(', 'async function Bks_mapyOczekujacych(');
     expect(plan).toContain('const stan = await Bks_stanNotatek(kontekst, kopia, tutaj, nagrobki, zKopii, nagrobkiKopii);');
-    expect(plan.split(', stan));').length - 1).toBe(2);
+    // E2-PR3c4: obie sekcje (notatki pacjentów i wpisy Terminarza) także ze zmianami samej karty (Bks_zmianyKarty).
+    expect(plan.split(', stan, zmianaKarty));').length - 1).toBe(2);
     const st = sekcja('async function Bks_stanNotatek(', 'const Bks_RODZAJE');
     expect(st).toContain('Bnp_zlacz(nagrobkiKopii.concat(nagrobki))');
     expect(st).toContain('Bks_kartaPo(kontekst, kopia, pid)');
