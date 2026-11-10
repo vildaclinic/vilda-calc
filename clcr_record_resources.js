@@ -23,6 +23,7 @@
     ["clcr_tmp_gfr_persistence.js?v=1", "ClcrTmpGfrPersistence"],
     ["clcr_ph_persistence.js?v=1", "ClcrPhPersistence"],
     ["clcr_ph_dzm_persistence.js?v=1", "ClcrPhDzmPersistence"],
+    ["clcr_ktv_persistence.js?v=1", "ClcrKtvPersistence"],
     ["clcr_ua_persistence.js?v=1", "ClcrUaPersistence"],
     ["clcr_ca_dzm_persistence.js?v=1", "ClcrCaDzmPersistence"],
     ["clcr_mg_dzm_persistence.js?v=1", "ClcrMgDzmPersistence"],
@@ -41,9 +42,9 @@
     ["clcr_serum_anion_gap_persistence.js?v=1", "ClcrSerumAnionGapPersistence"],
     // readSaved is pure and needed for the new capture format. Its recalculate
     // method is not called while opening history and resolves engines lazily.
-    ["clcr_saved_calculation.js?v=22", "ClcrSavedCalculation"],
-    ["clcr_saved_results.js?v=22", "ClcrSavedResults"],
-    ["clcr_saved_results_view.js?v=2", "ClcrSavedResultsView"],
+    ["clcr_saved_calculation.js?v=23", "ClcrSavedCalculation"],
+    ["clcr_saved_results.js?v=23", "ClcrSavedResults"],
+    ["clcr_saved_results_view.js?v=3", "ClcrSavedResultsView"],
   ];
   const editor = [
     ["clcr_ca_cit_reference_data.js?v=1", "ClcrCaCitReferenceData"],
@@ -51,7 +52,9 @@
     ["clcr_collection_duration.js?v=7", "ClcrCollectionDuration"],
     ["clcr_clinical_safety.js?v=14", "ClcrClinicalSafety"],
     ["clcr_stone_safety.js?v=1", "ClcrStoneSafety"],
-    ["clcr_dialysis_safety.js?v=1", "ClcrDialysisSafety"],
+    ["clcr_dialysis_safety.js?v=2", "ClcrDialysisSafety"],
+    ["clcr_ktv_reference_data.js?v=1", "VildaClcrKtvReferenceData"],
+    ["clcr_ktv.js?v=1", "VildaClcrKtv"],
     ["clcr_extended_egfr.js?v=1", "ClcrExtendedEgfr"],
     ["clcr_calculation_assumptions.js?v=2", "VildaClcrCalculationAssumptions"],
     ["clcr_result_reference_data.js?v=7", "ClcrResultReferenceData"],
@@ -114,8 +117,8 @@
     ["clcr_measured_clearance_reference_data.js?v=1", "ClcrMeasuredClearanceReferenceData"],
     ["clcr_measured_clearance_reference.js?v=1", "ClcrMeasuredClearanceReference"],
     ["clcr_result_presentation.js?v=8", "ClcrResultPresentation"],
-    ["clcr_saved_legacy_calculator.js?v=22", "ClcrSavedLegacyCalculator"],
-    ["clcr_result_details.js?v=17", "ClcrResultDetails"],
+    ["clcr_saved_legacy_calculator.js?v=23", "ClcrSavedLegacyCalculator"],
+    ["clcr_result_details.js?v=18", "ClcrResultDetails"],
   ];
   function load(path, name, style = false) {
     if (name && root[name]) return Promise.resolve();
@@ -176,7 +179,7 @@
     if (!notesPromise) {
       notesPromise = ensureReader().then(() => Promise.all([
         load("clcr_notes_view.css?v=1", null, true),
-        load("clcr_notes_view.js?v=10", "ClcrNotesView"),
+        load("clcr_notes_view.js?v=11", "ClcrNotesView"),
       ])).then(() => root.ClcrNotesView);
       notesPromise.catch(() => { notesPromise = null; });
     }

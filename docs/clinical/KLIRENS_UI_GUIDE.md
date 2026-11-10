@@ -636,3 +636,45 @@ jednorazowej do DZM. Techniczna skala wpisu 0–14 nie jest normą moczu.
 Zapis zachowuje dokładny odczyt, źródło i ocenę; historia nie otrzymuje
 nowej normy retrospektywnie. pH DZM i próbka jednorazowa pozostają
 oddzielnymi seriami. Źródła i ograniczenia: [audyt pH DZM](KLIRENS_PH_DZM_AUDIT.md).
+
+## Dawka hemodializy — decyzja 06.11.2026
+
+Właściciel zaakceptował [makietę przed/po desktop/mobile](https://vilda-ktv-audyt-20261106.maciej-flader.chatgpt.site)
+i wdrożenie trzech równych wariantów **spKt/V / eKt/V / URR**.
+Pokazuj jeden wybrany wynik w stałym miejscu, z jego własnym celem
+lub minimum w tej samej karcie B. Nie przenoś progu spKt/V do eKt/V
+ani nie podpisuj dawki dializy jako „Norma dla wieku”.
+
+spKt/V ma **7 wymaganych pól**, eKt/V **8** (dodatkowo dostęp AV/CVC),
+URR tylko **2 stężenia**. Wiek wykorzystuj z istniejącego kontekstu,
+bez pytania do „pełnej interpretacji”. Schemat/czas dla URR są
+opcjonalne do porównania; ich brak nie blokuje procentu. Pusty
+formularz nie zakłada 3×/tydz. i PIDI 2. Masa po HD nie jest po cichu
+zastępowana ogólną masą pacjenta.
+
+„Wyczyść” zachowuje wybrany wariant, czyści jego dane i znane fakty
+pomiaru. Nowy pacjent lub nowa sesja bez własnego wariantu zaczyna od
+spKt/V. Przełączanie sp/e/URR w obrębie tej samej sesji nie usuwa faktów.
+
+Nie dodawaj selektorów mocznik/BUN i jednostki ani ankiety o Kru,
+datę Kru, regularność i prawidłowe pobranie. Zamiast tego krótko
+opisz wspólne oznaczenie/jednostkę i próbki z jednej sesji według
+protokołu. To założenia, nie nowe potwierdzone fakty: znana sprzeczność
+pozostaje po przełączeniu wariantu, zapisie i edycji. Nie dolicza się
+czynności resztkowej ani nie obniża celu; nie zakłada się `Kru=0`.
+
+Progi są neutralne kolorystycznie. Wynik poniżej minimum jest czerwony,
+między minimum a celem bursztynowy. Na dokładnym minimum mów
+**„Minimum osiągnięte · poniżej celu”**, bez „powyżej minimum”.
+Przy pojedynczym minimum nie powielaj legendy. Nie pokazuj zaokrąglonej
+liczby sugerującej przekroczenie progu, np. 1,20 dla raw<1,2; zachowaj
+precyzję lub jawną nierówność. Brak odpowiedniego celu daje neutralną
+liczbę z konkretnym powodem, a ograniczenie samego modelu — komunikat
+bez nieuprawnionego wyniku sp/e. URR ma niezależną dostępność.
+
+Jedno obliczenie zapisuje tylko wybraną istniejącą serię KTV. Historia
+zachowuje surową liczbę, źródło, datę/wiek pomiaru i ocenę, bez
+retrospektywnego dobrania dzisiejszego celu. Obowiązują stałe szerokości,
+symetria, widoczne etykiety, mobile ≥16 px/48 px i odstęp ≥20 px pod
+„Wyczyść”. Pełne populacje, cele i ograniczenia:
+[audyt Kt/V](KLIRENS_KTV_AUDIT.md).

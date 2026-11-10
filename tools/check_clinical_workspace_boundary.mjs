@@ -1,3 +1,4 @@
+import { restoreKtvVaultBaseline } from './klirens-ktv-vault-delta.mjs';
 // Verify the exact generated native-workspace delta before the original V1
 // authority proof runs. This reduction never strips arbitrary new functions.
 import { createHash } from 'node:crypto';
@@ -37,6 +38,7 @@ function reverseOnce(text, before, after) {
   return text.replace(after, before);
 }
 export function reduceClinicalWorkspaceVault(source, repository = ROOT) {
+  source = restoreKtvVaultBaseline(source);
   if (!source.includes(START)) return source;
   const manifest = JSON.parse(readFileSync(resolve(repository, 'runtime/clinical-workspace-v1/manifest.json'), 'utf8'));
   if (manifest.namespace !== 'vilda-clinical-workspace-runtime' || manifest.version !== 1 || manifest.baseVaultSHA256 !== BASE

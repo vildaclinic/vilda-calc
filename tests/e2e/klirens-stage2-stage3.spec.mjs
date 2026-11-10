@@ -113,7 +113,7 @@ async function completeAdultKtv(page, overrides = {}) {
   };
   await zaznacz(page.locator('#ktvToggle'));
   await page.locator('#ktvModality').selectOption('IHD');
-  await page.locator('#ktvSessionsPerWeek').fill(String(input.sessions));
+  await page.locator('#ktvSessionsPerWeek').selectOption(String(input.sessions));
   await page.locator('#ktvPidiDays').selectOption(input.pidi);
   await page.locator('#ktvDurationMinutes').fill(String(input.duration));
   await page.locator('#ktvUF').fill(String(input.uf));

@@ -51,7 +51,12 @@ async function otworzKalkulator(page, { tryb }) {
 /* Etykiety, których cel (`label.control`) nie jest aktywną kontrolką pola. */
 function zlyCelEtykiet(page) {
   return page.evaluate(() => {
-    const etykiety = Array.from(document.querySelectorAll('label.clcr-field[data-clcr-field-id]'));
+    // input[type=hidden] is metadata, not an HTML labelable control. Keep
+    // auditing all ordinary controls, including conditionally hidden fields.
+    const etykiety = Array.from(document.querySelectorAll('label.clcr-field[data-clcr-field-id]')).filter((etykieta) => {
+      const pole = document.getElementById(etykieta.dataset.clcrFieldId);
+      return !(pole?.tagName === 'INPUT' && pole.type === 'hidden');
+    });
     const zle = etykiety.map((etykieta) => {
       const id = etykieta.dataset.clcrFieldId;
       const odpowiedz = document.getElementById(`ui_${id}_answer`);
@@ -107,30 +112,28 @@ test.describe('etykiety pól Klirensu wskazują pole, nie przycisk „i"', () =>
     await expect(dymek(page, 'age')).toBeHidden();
   });
 
-  test('pole z listą odpowiedzi: klik w nazwę daje fokus liście i niczego nie potwierdza', async ({ page }) => {
-    // Dialysis still requires sampling confirmations. Routine DZM uses
-    // explicit assumptions, so it no longer creates these response lists.
+  test('lista sesji Kt/V: klik w nazwę daje fokus bez domyślnego schematu i potwierdzeń próbek', async ({ page }) => {
+    // The selected dialysis UI no longer asks sampling confirmations. Its
+    // ordinary schedule select still needs a proper label/control association.
     await otworzKalkulator(page, { tryb: 'KTV' });
-    const lista = page.locator('#ui_ktvSameSession_answer');
-    for (const details of await lista.locator('xpath=ancestor::details').all()) {
-      if (await details.getAttribute('open') === null) await kliknij(details.locator(':scope > summary'));
-    }
+    const lista = page.locator('#ktvSessionsPerWeek');
     await expect(lista).toBeVisible();
     await expect(lista).toHaveValue('');
 
     const { zle } = await zlyCelEtykiet(page);
     expect(zle, JSON.stringify(zle.slice(0, 8))).toEqual([]);
 
-    await kliknij(nazwa(page, 'ktvSameSession'));
-    await expect(lista, 'fokus na liście odpowiedzi').toBeFocused();
-    await expect(lista, 'klik w nazwę nie wybiera odpowiedzi').toHaveValue('');
-    await expect(page.locator('#ktvSameSession'), 'ukryte pole wyboru zostaje niezaznaczone').not.toBeChecked();
-    await expect(dymek(page, 'ktvSameSession')).toBeHidden();
-
-    await kliknij(info(page, 'ktvSameSession'));
-    await expect(dymek(page, 'ktvSameSession')).toBeVisible();
-    await expect(lista).toHaveValue('');
-    await expect(page.locator('#ktvSameSession')).not.toBeChecked();
+    await kliknij(nazwa(page, 'ktvSessionsPerWeek'));
+    await expect(lista, 'fokus na rzeczywistej liście schematu').toBeFocused();
+    await expect(lista, 'klik w nazwę nie wybiera domyślnych trzech sesji').toHaveValue('');
+    await expect(page.locator('#ktvPidiDays')).toHaveValue('');
+    for (const id of ['ktvSameSession', 'ktvPreBeforeDialysis', 'ktvPreNoDilution']) {
+      await expect(page.locator('#' + id), 'etykieta nie potwierdza ukrytego faktu').not.toBeChecked();
+      await expect(page.locator('#ui_' + id + '_answer')).toBeHidden();
+    }
+    await expect(dymek(page, 'ktvSessionsPerWeek')).toBeHidden();
+    await expect(info(page, 'ktvSessionsPerWeek')).toBeHidden();
+    expect(await page.evaluate(() => window.evaluateClcrKtv().assumptions.samplingConfirmed)).toBe(false);
   });
 });
 

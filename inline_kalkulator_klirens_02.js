@@ -1,11 +1,6 @@
 (function () {
   const C = { basic: "basic", advanced: "advanced", spot: "spot", pro: "pro" },
-    ktvSamplingProtocol = Object.freeze([
-      "ktvPostMethod",
-      "ktvSameSession",
-      "ktvPreBeforeDialysis",
-      "ktvPreNoDilution",
-    ]),
+
     l = [
       {
         id: "egfr",
@@ -358,23 +353,10 @@
       },
       {
         id: "KTV",
-        label: "spKt/Vurea, eKt/Vurea i URR (IHD)",
+        label: "spKt/V, eKt/V i URR — hemodializa",
         version: "pro",
-        requires: [
-          "age",
-          "ktvModality",
-          "ktvSessionsPerWeek",
-          "ktvPidiDays",
-          "ktvDurationMinutes",
-          "ktvUF",
-          "ktvW",
-          "ktvUreaAnalyte",
-          "ktvUreaUnit",
-          "UreaPre",
-          "UreaPost",
-          ...ktvSamplingProtocol,
-        ],
-        note: "GFAC jest dobierany wyłącznie dla dokładnie udokumentowanej pary częstości IHD i rzeczywistego PIDI; interpretacja progowa wymaga dodatkowo protokołu próbek i aktualnego Kru.",
+        requires: ["UreaPre", "UreaPost", "ktvDurationMinutes", "ktvUF", "ktvW", "ktvSessionsPerWeek", "ktvPidiDays"],
+        note: "Wybierz spKt/V, przybliżenie eKt/V lub URR. Dane i cel dotyczą wybranej miary jednej sesji przewlekłej hemodializy przerywanej; resztkowej czynności nerek nie doliczamy.",
       },
     ];
   (function () {

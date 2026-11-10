@@ -28,19 +28,27 @@ async function otworzTerminarz(page) {
     } catch { /* brak storage — pomiń */ }
   });
   await page.goto('/terminarz.html', { waitUntil: 'load' });
-  await page.waitForFunction(() => Boolean(window.VildaVault && window.VildaTerminarz));
+  // Do not create a vault while the normal auth boot is still restoring its
+  // locked owner. That races the calendar's unlock/read callbacks in CI.
+  await page.waitForFunction(() => Boolean(window.VildaVault && window.VildaTerminarz)
+    && window.VildaAuthUI?.isBootReady());
   await page.evaluate(
     async (pw) => window.VildaVault.createUser(pw, { label: 'e2e', iterations: 10000 }),
     HASLO,
   );
+  // This editor fixture creates the account through the vault API, bypassing
+  // the auth wizard's finalization. Start the real page with that account,
+  // just as the shared patient fixtures do, before exercising the editor.
+  await page.reload({ waitUntil: 'load' });
   await page.waitForFunction(
-    () => window.VildaVault.isUnlocked() && Boolean(document.getElementById('terminarzRoot')),
+    () => window.VildaVault?.isUnlocked() && window.VildaAuthUI?.isBootReady()
+      && Boolean(document.getElementById('terminarzRoot')),
   );
   await page.evaluate(() => {
     const a = document.getElementById('vilda-auth-ui-root');
     if (a) a.style.display = 'none';
   });
-  await page.waitForTimeout(300);
+  await page.locator('#tzAddBtn').waitFor({ state: 'attached' });
   return page.evaluate(() => {
     const d = new Date();
     const p = (n) => String(n).padStart(2, '0');
