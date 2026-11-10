@@ -33,8 +33,9 @@
 // znacznikiem chwili pierwszego wpisu zamiast samej chwili (pierwszyWpisBezZmian — chwila po ponownym wpisie ta sama).
 export async function scenariuszMagazynu(win, pomocnik) {
   'use strict'; // także po fn.toString() w przeglądarce (skrypt strony nie jest modułem)
-  // Zapisy danych scenariusza przy zamkniętej bramce (E2-PR3a2: zapis przy otwartej bramce sam dopisuje zmianę do
-  // kolejki); wiersze kolejki powstają tylko z jawnych enqueue scenariusza.
+  // Zapisy danych i zakładanie kont scenariusza przy zamkniętej bramce (E2-PR3a2: zapis przy otwartej bramce sam
+  // dopisuje zmianę do kolejki; E2-PR3a4: przegląd kolejki przy odblokowaniu dopisuje zmiany bez wiersza); wiersze
+  // kolejki powstają tylko z jawnych enqueue scenariusza.
   const bezEmisji = async (fn) => {
     const bylo = win.VILDA_EVENT_LOG;
     win.VILDA_EVENT_LOG = false;
@@ -98,7 +99,7 @@ export async function scenariuszMagazynu(win, pomocnik) {
     ...dodatki,
   });
 
-  await v.createUser('Fikcyjne#Haslo!Scenariusz2026', { label: 'Fikcyjna Lekarka Scenariusz', iterations: 1000 });
+  await bezEmisji(() => v.createUser('Fikcyjne#Haslo!Scenariusz2026', { label: 'Fikcyjna Lekarka Scenariusz', iterations: 1000 }));
   const uid = v.getCurrentUser().userId;
   etykiety.set(uid, 'U');
   const nazwa = 'vilda_sync_' + uid;
@@ -198,7 +199,7 @@ export async function scenariuszMagazynu(win, pomocnik) {
     await ev.quarantinePut(zmiana(8, undefined, { iv: 'Fikcyjne-IV-8', data: 'Fikcyjny-szyfrogram-8' }), wFormat, { slotId: SLOT_A, appVersion: WERSJA }));
   zapiszKw('quarantineCount po kasowaniu', await ev.quarantineCount());
 
-  await v.createUser('Fikcyjne#Haslo!Scenariusz2026b', { label: 'Fikcyjny Lekarz Scenariusz', iterations: 1000 });
+  await bezEmisji(() => v.createUser('Fikcyjne#Haslo!Scenariusz2026b', { label: 'Fikcyjny Lekarz Scenariusz', iterations: 1000 }));
   const uid2 = v.getCurrentUser().userId;
   etykiety.set(uid2, 'U2');
   const nazwa2 = 'vilda_sync_' + uid2;

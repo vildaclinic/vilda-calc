@@ -1,4 +1,4 @@
-// P-DZIENNIK-ZDARZEN (E2-PR2b, E2-PR3a1, E2-PR3a1c, E2-PR3a2, E2-PR3a3) — zapis bazowy „bramka wyłączona” (U3).
+// P-DZIENNIK-ZDARZEN (E2-PR2b, E2-PR3a1, E2-PR3a1c, E2-PR3a2, E2-PR3a3, E2-PR3a4) — zapis bazowy „bramka wyłączona” (U3).
 //
 // Ten sam deterministyczny scenariusz sejfu w czterech wariantach okna daje dokładnie te ślady, które zapisano
 // w tests/fixtures/dziennik-zapis-bazowy.json. Fiksturę nagrano na sejfie, który ma magazyn kolejki i przy usuwaniu
@@ -30,6 +30,19 @@
 // wyniki) bez zmian. Czerwone na bazie E2-PR3a3 (sejf 422a9a7b): odczyty bramki = liczba emisji (fikstura) i determinizm
 // ×4 (pole odczytyBramki: 30/30/28/30); zielone z natury (strażniki regresji): zapis przebiegu kroków ×4, sejf bez
 // wstawek ×4, brak bazy kolejki i klucza urządzenia, fikstura.
+//
+// E2-PR3a4: przegląd kolejki. Odblokowanie zaczyna się od Bem_przeglad(true), a scalanie z chmury (Le poza krokiem
+// importu) od Bem_zChmury(t); przy zamkniętej bramce każda z tych wstawek to jeden odczyt pola okna i nic więcej (bez
+// zegara, nasłuchu, bazy, klucza, blokady, listy baz, szyfrowania i żądań), a importy w otwartym kroku bramki w scalaniu
+// nie czytają. Liczba odczytów bramki = emisje + przeglądy przy odblokowaniu + scalenia z chmury (licznik w kopii sejfu:
+// l.odczyty()) — po jednym odczycie więcej w krokach „konto”, „eksport i scalenie własnego eksportu”, „delta karty”,
+// „koperta zdarzenia”, „odtworzenie konta z kopii” i „odblokowanie” (w wariancie „Komputer w pracy” jak dotąd o dwa
+// mniej niż w pozostałych). W fiksturze E2-PR3a4 zmienia wyłącznie cztery pola odczytyBramki (Ze 52, prywatny 52,
+// chmura 50, jednorazowo 52, z przebiegu na sejfie z przeglądem kolejki); reszta zapisu przebiegu bez zmian.
+// Czerwone na bazie E2-PR3a4 (sejf 77b05e6f — bez przeglądu kolejki; 5 przypadków): odczyty bramki = emisje + przeglądy
+// + scalenia (fikstura 52/52/50/52, przebieg 46/46/44/46) i determinizm ×4 (pole odczytyBramki); zielone z natury
+// (strażniki regresji): zapis przebiegu kroków ×4, sejf bez wstawek ×4, brak bazy kolejki i klucza urządzenia,
+// fikstura.
 //
 // Pełny zapis planów z etapami dodaje świeży odczyt databases() przed ścieżką V1.
 // Chroni to przed starym cache braku markera w drugiej karcie, także po błędzie
@@ -78,8 +91,8 @@
 //
 // NAGRANIE fikstury: E2_ZAPIS_BAZOWY=nagraj npx vitest run --maxWorkers=1 tests/unit/sync-dziennik-zapis-bazowy.test.mjs
 // — przy zamkniętej bramce. Tryb nagrania odmawia (nie zapisuje pliku), gdy trzy przebiegi wariantu nie są równe albo
-// gdy w którymkolwiek wariancie liczba odczytów pola bramki różni się od liczby emisji (czwarty przebieg, na kopii sejfu
-// z licznikiem emisji, z zapisem przebiegu równym pierwszemu), powstała baza vilda_sync_* albo klucz o przedrostku
+// gdy w którymkolwiek wariancie liczba odczytów pola bramki różni się od liczby emisji, przeglądów i scaleń z chmury
+// (czwarty przebieg, na kopii sejfu z licznikiem, z zapisem przebiegu równym pierwszemu), powstała baza vilda_sync_* albo klucz o przedrostku
 // vilda-sync-device-v1. Pierwsze nagranie (E2-PR2b1) zrobiono na sejfie bazy bez magazynu kolejki (sejf z uśpionym
 // magazynem daje te same ślady); ponowne (E2-PR3a1) — na sejfie z magazynem kolejki i kasowaniem kolejki przy usuwaniu
 // konta, z polami opis i bazaVault przeniesionymi z pierwszego nagrania (tryb nagrania zapisuje je od nowa); kolejne
@@ -373,11 +386,12 @@ async function przebieg(wariant, { przerwa = 0, zaladujSejf = null } = {}) {
 const zwykle = {};
 const zwykly = (w) => { if (!zwykle[w]) zwykle[w] = przebieg(w); return zwykle[w]; };
 const bezOdczytow = ({ odczytyBramki, ...reszta }) => reszta;
-// Przebieg na kopii sejfu z licznikiem emisji: { zapis, emisje }.
+// Przebieg na kopii sejfu z licznikiem: { zapis, emisje, odczyty } — odczyty: emisje + przeglądy przy odblokowaniu
+// + scalenia z chmury (E2-PR3a4; l.odczyty() z tests/support/sejf-bez-wstawek.mjs).
 async function zLicznikiem(w, opcje = {}) {
   const l = licznikEmisji();
   const zapis = await przebieg(w, { ...opcje, zaladujSejf: l.zaladuj });
-  return { zapis, emisje: l.emisje.length };
+  return { zapis, emisje: l.emisje.length, odczyty: l.odczyty() };
 }
 const ZRODLO_BEZ_WSTAWEK = bezWstawek();
 // Kroki, w których sejf sprawdza listę baz raz więcej niż sejf bez wstawek (sprawdzenie bazy kolejki przy usuwaniu konta).
@@ -406,18 +420,20 @@ describe.skipIf(NAGRANIE)('zapis bazowy „bramka wyłączona” (U3)', () => {
     porownaj(await zwykly(w), fikstura().warianty[w], w);
   }, 120_000);
 
-  it('odczyty pola okna VILDA_EVENT_LOG = liczba emisji we wszystkich wariantach (licznik w kopii sejfu; także przy ładowaniu skryptów), równe fiksturze i więcej niż 0', async () => {
+  it('odczyty pola okna VILDA_EVENT_LOG = emisje + przeglądy przy odblokowaniu + scalenia z chmury we wszystkich wariantach (licznik w kopii sejfu; także przy ładowaniu skryptów), równe fiksturze i więcej niż 0', async () => {
     const odczyty = {};
+    const licznik = {};
     const emisje = {};
     const odczytyKopii = {};
     for (const w of WARIANTY) {
       odczyty[w] = (await zwykly(w)).odczytyBramki;
       const k = await zLicznikiem(w);
+      licznik[w] = k.odczyty;
       emisje[w] = k.emisje;
       odczytyKopii[w] = k.zapis.odczytyBramki;
     }
-    expect(odczytyKopii, 'kopia z licznikiem: odczyty bramki = liczba emisji').toEqual(emisje);
-    expect(odczyty, 'sejf: odczyty bramki = liczba emisji').toEqual(emisje);
+    expect(odczytyKopii, 'kopia z licznikiem: odczyty bramki = emisje + przeglądy + scalenia').toEqual(licznik);
+    expect(odczyty, 'sejf: odczyty bramki = emisje + przeglądy + scalenia').toEqual(licznik);
     expect(Object.values(emisje).filter((n) => !(n > 0)), 'liczba emisji w każdym wariancie > 0').toEqual([]);
     const f = fikstura();
     expect(Object.fromEntries(WARIANTY.map((w) => [w, f.warianty[w].odczytyBramki]))).toEqual(odczyty);
@@ -461,7 +477,7 @@ describe.skipIf(NAGRANIE)('zapis bazowy „bramka wyłączona” (U3)', () => {
 });
 
 describe.runIf(NAGRANIE)('nagranie zapisu bazowego (bramka zamknięta)', () => {
-  it('nagrywa fiksturę: każdy wariant trzy razy (zwykły, z przerwą, z obciążeniem), wszystkie równe, odczyty bramki = liczba emisji, bez bazy kolejki i klucza urządzenia', async () => {
+  it('nagrywa fiksturę: każdy wariant trzy razy (zwykły, z przerwą, z obciążeniem), wszystkie równe, odczyty bramki = emisje + przeglądy + scalenia, bez bazy kolejki i klucza urządzenia', async () => {
     const warianty = {};
     for (const w of WARIANTY) {
       const a = await przebieg(w);
@@ -471,7 +487,7 @@ describe.runIf(NAGRANIE)('nagranie zapisu bazowego (bramka zamknięta)', () => {
       expect(b, `${w}: przebieg z przerwą`).toEqual(a);
       expect(c, `${w}: przebieg z obciążeniem`).toEqual(a);
       expect(d.zapis, `${w}: przebieg kopii z licznikiem emisji`).toEqual(a);
-      expect(a.odczytyBramki, `${w}: odczyty pola okna VILDA_EVENT_LOG = liczba emisji`).toBe(d.emisje);
+      expect(a.odczytyBramki, `${w}: odczyty pola okna VILDA_EVENT_LOG = emisje + przeglądy + scalenia`).toBe(d.odczyty);
       expect(a.bazy.filter((n) => n.startsWith('vilda_sync_')), `${w}: bazy kolejki po scenariuszu`).toEqual([]);
       expect(a.kluczUrzadzenia, `${w}: klucz urządzenia po scenariuszu`).toBe(false);
       for (const k of a.kroki) expect(k.indexedDB.filter((x) => /vilda_sync_/.test(x)), `${w}: ${k.krok}`).toEqual([]);

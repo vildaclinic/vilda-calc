@@ -36,7 +36,9 @@
 //   M14 baza z innej wersji albo innym schematem (także sklepu quarantine); M15 versionchange w trakcie (kasowanie w
 //       drugim oknie, zmiana wersji w drugim oknie — M15d); M16 deleteDatabase (także w tym dokumencie w trakcie
 //       otwierania bazy przez dopisanie).
-//   M17 tryby logowania (także okno odblokowania konta chmurowego, M17c); M18 wejście, limit czasu (M18b, M18c).
+//   M17 tryby logowania (także okno odblokowania konta chmurowego, M17c — od E2-PR3a4 w oknie z przeglad: true, czyli
+//       z przeglądem kolejki na początku odblokowania, który kończy się na trybie konta; zielone także na sejfie bazy
+//       77b05e6f bez przeglądu — strażnik regresji); M18 wejście, limit czasu (M18b, M18c).
 //   M19 sprawdzenia sesji (P-SESJA-ZAPISU); M20 blokada; M21 konto spoza rejestru.
 //   M22 identyfikator urządzenia (osobny klucz localStorage dla każdego konta, M22b).
 //   M23 wartownik treści; M24 przepływ bez sieci (bliźniak); M25 scalanie nie dopisuje; M26 wiele okien.
@@ -2080,6 +2082,8 @@ describe('M17–M18: tryby logowania i wejście operacji', () => {
   });
 
   // Logowanie konta cloud-only zatrzymane na odczycie rejestru, gdy sesja jest już ustawiona (odblokowanie albo odtworzenie).
+  // Okno z przeglad: true (E2-PR3a4) — odblokowanie przy otwartej bramce jak w przeglądarce: operacja w trakcie logowania
+  // kończy się na trybie, a przegląd kolejki na początku odblokowania także kończy się na trybie konta (bez bazy kolejki).
   async function wOknieOdblokowania(o, start) {
     let h = wstrzymaj(o, { przy: 'success', baza: 'vilda_registry', sklep: 'users', metoda: 'get' });
     const p = start();
@@ -2094,8 +2098,8 @@ describe('M17–M18: tryby logowania i wejście operacji', () => {
     expect(o.v.isCloudOnlyAdapterActive()).toBe(false);
     return { zwolnij: () => h.zwolnij(), p };
   }
-  it('M17c: konto cloud-only, unlockUser zatrzymane na odczycie rejestru → enqueue tryb; brak bazy i klucza urządzenia', async () => {
-    const o = await nowe({ konta: 'A', chmura: ['A'] });
+  it('M17c: konto cloud-only, unlockUser zatrzymane na odczycie rejestru → enqueue tryb; brak bazy i klucza urządzenia (odblokowanie z przeglądem kolejki, E2-PR3a4)', async () => {
+    const o = await nowe({ konta: 'A', chmura: ['A'], przeglad: true });
     const k = await karta(o, 1);
     o.zablokuj();
     await o.cisza();
@@ -2108,11 +2112,11 @@ describe('M17–M18: tryby logowania i wejście operacji', () => {
     expect(kluczeUrzadzen(o)).toEqual([]);
   });
 
-  it('M17c: to samo przy odtworzeniu sesji (tryRestoreSession w drugim oknie z tym samym sessionStorage)', async () => {
+  it('M17c: to samo przy odtworzeniu sesji (tryRestoreSession w drugim oknie z tym samym sessionStorage, z przeglądem kolejki, E2-PR3a4)', async () => {
     const o = await nowe({ konta: 'A', chmura: ['A'] });
     const k = await karta(o, 1);
     await o.cisza();
-    const o2 = await oknoMagazynu({ idb: o.idb, istniejace: { A: o.A, B: o.B }, zaloguj: null, sesja: o.win.sessionStorage });
+    const o2 = await oknoMagazynu({ idb: o.idb, istniejace: { A: o.A, B: o.B }, zaloguj: null, sesja: o.win.sessionStorage, przeglad: true });
     OKNA.push(o2);
     o2.api = opakuj(o2.ev);
     const okno = await wOknieOdblokowania(o2, () => o2.v.tryRestoreSession());
@@ -2254,8 +2258,8 @@ describe('M17–M18: tryby logowania i wejście operacji', () => {
     expect(o2.idb.__atrapa.polaczenia(baza2)).toBe(0);
   });
 
-  it('M17c (kwarantanna): konto cloud-only, unlockUser zatrzymane na odczycie rejestru → quarantinePut tryb; brak bazy', async () => {
-    const o = await noweKw({ konta: 'A', chmura: ['A'] });
+  it('M17c (kwarantanna): konto cloud-only, unlockUser zatrzymane na odczycie rejestru → quarantinePut tryb; brak bazy (odblokowanie z przeglądem kolejki, E2-PR3a4)', async () => {
+    const o = await noweKw({ konta: 'A', chmura: ['A'], przeglad: true });
     const { payload, wynik } = await nieczytelny(o);
     o.zablokuj();
     await o.cisza();

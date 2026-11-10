@@ -1,3 +1,4 @@
+import { restoreKtvVaultBaseline } from './klirens-ktv-vault-delta.mjs';
 // Verify the exact generated native-workspace delta before the original V1
 // authority proof runs. This reduction never strips arbitrary new functions.
 import { createHash } from 'node:crypto';
@@ -7,9 +8,9 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 // Pinned base: #905 (c8d8442) vault, E2-PR3a2 (#912), P-PLAN-POTOMEK (#913, care-plan
-// descendant adoption in the synchronization merge) and E2-PR3a3 (import batches in the
-// event-log emission; docs/clinical/ALGORITHMS.md).
-const BASE = '060ec5fd17f57c9473d8cf6db55e6776e79e54d9a6ef9b1026612d5612262fa4';
+// descendant adoption in the synchronization merge), E2-PR3a3 (import batches in the
+// event-log emission) and E2-PR3a4 (the event-log outbox sweep; docs/clinical/ALGORITHMS.md).
+const BASE = 'e1ce98995373122423e9bd12eef64022fed097d4d508bd1b0101fbbf03afd4d2';
 const START = '/* BEGIN VILDA CLINICAL WORKSPACE NATIVE V1 */\n';
 const END = '/* END VILDA CLINICAL WORKSPACE NATIVE V1 */\n';
 const digest = value => createHash('sha256').update(value).digest('hex');
@@ -37,6 +38,7 @@ function reverseOnce(text, before, after) {
   return text.replace(after, before);
 }
 export function reduceClinicalWorkspaceVault(source, repository = ROOT) {
+  source = restoreKtvVaultBaseline(source);
   if (!source.includes(START)) return source;
   const manifest = JSON.parse(readFileSync(resolve(repository, 'runtime/clinical-workspace-v1/manifest.json'), 'utf8'));
   if (manifest.namespace !== 'vilda-clinical-workspace-runtime' || manifest.version !== 1 || manifest.baseVaultSHA256 !== BASE

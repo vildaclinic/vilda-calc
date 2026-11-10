@@ -1,8 +1,12 @@
-// P-DZIENNIK-ZDARZEN (E2-PR3a2, E2-PR3a3) — mechanizm emisji zmian do kolejki: emitery hooków i miejsca zapisu sejfu
+// P-DZIENNIK-ZDARZEN (E2-PR3a2, E2-PR3a3, E2-PR3a4) — mechanizm emisji zmian do kolejki: emitery hooków i miejsca zapisu sejfu
 // wołają emisję (część Bem_ bloku), emisja kończy się na bramce albo dopisuje zmianę w tle łańcuchem dopisań konta.
 // E2-PR3a3: importy (import karty z pliku, scalanie i odtworzenie kopii konta) są krokiem — partia to emisje kroku
 // importu, idzie do łańcucha przy zamknięciu kroku, a po ostatnim dopisaniu partii (znacznik na końcu łańcucha konta)
 // słuchacze VildaVault._eventLog.onBulkChange dostają { reason: nazwa metody importu, count: liczba dopisanych wierszy }.
+// E2-PR3a4: odblokowanie zaczyna się od przeglądu kolejki (Bem_przeglad), a scalanie z chmury poza krokiem importu od par
+// scalania (Bem_zChmury) — przy zamkniętej bramce każda z tych wstawek to jeden odczyt pola bramki, więc odczyty pola =
+// emisje + przeglądy + scalenia (licznik w kopii sejfu: l.odczyty()); wynik SYNC_DB_TIMEOUT dopisania z emisji (limit
+// blokady konta) ustawia przegląd pilny, który rusza po bezczynności łańcucha konta.
 // Prawdziwy sejf w oknie uprzęży tests/support/okno-magazynu.mjs (emisja: true, moduły punktu odzyskiwania) na adapterze
 // IndexedDB sejfu nad atrapą tests/support/atrapa-indexeddb.mjs (tryb „Komputer prywatny”, jeśli przypadek nie mówi
 // inaczej), atrapa Web Locks okna (o.locks: test trzyma blokadę vilda-sync-db:<userId>, żeby łańcuch stał), sztuczny zegar
@@ -13,16 +17,19 @@
 //
 // PRZYPADKI
 //   EM1  bramka zamknięta: każda metoda danych z listy METODY_DANYCH uprzęży (od E2-PR3a3 także restoreVaultBackup) —
-//        odczyty pola bramki = liczba emisji (> 0),
+//        odczyty pola bramki = emisje + przeglądy przy odblokowaniu + scalenia z chmury (E2-PR3a4; emisji > 0),
 //        w trakcie emisji 0 odczytów indexedDB, localStorage i crypto (opakowane funkcje Bem_ w kopii sejfu), 0 żądań
 //        blokad vilda-sync*, 0 wpisów vilda_sync_* w dzienniku atrapy.
 //   EM2  hak bez znaczenia (usunięcie wersji z isSnapshotDelete, scalanie notatek pacjenta i list z akcją merge, zmiana
-//        hasła z innego urządzenia) nie czyta bramki; zapis lokalny tego samego rodzaju czyta ją raz.
+//        hasła z innego urządzenia) nie czyta bramki — scalenie z chmury czyta ją raz w parach scalania (E2-PR3a4), bez
+//        emisji; zapis lokalny tego samego rodzaju czyta ją raz.
 //   EM3  „Komputer w pracy”, „Zaloguj jednorazowo” i sejf w pamięci przy otwartej bramce: bez bazy kolejki, klucza
 //        urządzenia i blokad; odczyty bramki = liczba emisji.
 //   EM4  zablokowany sejf (usunięcie klucza dostępu po blokadzie): bez wiersza i bez otwarcia bazy kolejki.
 //   EM5  emitery nie czekają: zapis karty kończy się, gdy blokada konta jest trzymana; wiersz snap po jej zwolnieniu.
-//   EM6  limit 20 s czekania na blokadę konta: dopisanie kończy się bez wiersza, łańcuch idzie dalej.
+//   EM6  limit 20 s czekania na blokadę konta: dopisanie kończy się bez wiersza, łańcuch idzie dalej; od E2-PR3a4 po
+//        bezczynności łańcucha przegląd pilny czeka na blokadę i po jej zwolnieniu dokłada wersję z limitu (i poświadczenie
+//        konta — pierwszy przegląd w dokumencie).
 //   EM7  łańcuch FIFO: pięć zmian różnych encji szybko po sobie daje seqLocal w kolejności emisji.
 //   EM8  blokada sejfu między zapisem a dopisaniem (dwie zmiany w łańcuchu): bez wiersza, po ponownym zalogowaniu nic
 //        nie dochodzi.
@@ -48,7 +55,8 @@
 //        jeszcze nic; wiersze w kolejności rang; wersja z kosza (emisja zapisu importu i zdjęcia wpisu kosza) jeden raz.
 //   EM26 onBulkChange po ostatnim dopisaniu partii: w słuchaczu wszystkie wiersze partii są w kolejce; jedno wywołanie
 //        na import, ładunek dokładnie { reason, count }, osobny obiekt dla każdego słuchacza.
-//   EM27 bramka zamknięta, import karty, scalenie i odtworzenie kopii konta: odczyty pola bramki = liczba emisji, w emisji
+//   EM27 bramka zamknięta, import karty, scalenie i odtworzenie kopii konta: odczyty pola bramki = emisje + przeglądy
+//        + scalenia (E2-PR3a4: scalanie w kroku importu bez odczytu, odtworzenie konta — jeden przegląd), w emisji
 //        0 odczytów indexedDB, localStorage i crypto, bez bazy vilda_sync_*, blokad kolejki i wywołania słuchacza.
 //   EM28 „Komputer w pracy” i „Zaloguj jednorazowo” przy otwartej bramce (import karty, scalenie kopii konta): bez bazy
 //        kolejki, kluczy vilda-sync-*, blokad i wywołania słuchacza.
@@ -56,7 +64,9 @@
 //   EM30 import pliku karty przerwany zmianą sesji (konto B, ponowne zalogowanie A, sama blokada): krok zamknięty
 //        (następna emisja nie czeka), bez onBulkChange, wpisy partii z sesją importu — bez wiersza.
 //   EM31 blokada konta trzymana przez test: import kończy się przed wierszami partii, po zwolnieniu wiersze
-//        i onBulkChange; limit 20 s — count bez wpisu, który nie dał wiersza, łańcuch idzie dalej.
+//        i onBulkChange; limit 20 s — count bez wpisu, który nie dał wiersza, łańcuch idzie dalej; od E2-PR3a4 po partii
+//        przegląd pilny dokłada wersję z limitu (pamięć braków — bez względu na okno i na wiersz tej wersji sprzed
+//        usunięcia karty) i poświadczenie konta; następny przegląd nic nie dokłada.
 //   EM32 emissionsSettled czeka na znacznik partii: rozstrzyga się po wywołaniu słuchacza.
 //   EM33 dwa importy kolejno: dwa wywołania, każde z własnym count; znak końca partii poza krokiem bez skutku (kopia
 //        sejfu z dodatkowym wywołaniem Bem_partia w emiterze onPatientSaved: poza krokiem — bez wywołania, w kroku
@@ -70,6 +80,10 @@
 // konta z kopii bez emisji), EM25, EM26, EM29, EM30 ×3, EM31 ×2, EM32, EM33 ×2 (brak onBulkChange i wierszy sekcji).
 // Zielone z natury (strażniki regresji): EM27, EM28 (zamknięta bramka i tryby bez kolejki: bez bazy kolejki i bez
 // wywołania słuchacza także przed partiami; emisje z reguły zdjęcia wpisu kosza z E2-PR3a2), EM2–EM24.
+// Czerwone na bazie E2-PR3a4 (sejf 77b05e6f — bez przeglądu kolejki; 4 przypadki): EM2 (scalenie z chmury bez odczytu
+// bramki), EM6 (bez przeglądu pilnego po limicie), EM27 (odtworzenie konta bez przeglądu przy odblokowaniu), EM31
+// z limitem (bez przeglądu pilnego). Zielone z natury (strażniki regresji): EM1 (odczyty pola = emisje
+// + przeglądy + scalenia z licznika w kopii sejfu — równość zachodzi też bez przeglądu), pozostałe przypadki.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   METODY_DANYCH, SKRYPTY_PUNKTU, drugieOkno, nazwaBazy, nazwaBlokady, oknoMagazynu, przechwycZadaniaWTle, zmienRekord,
@@ -290,7 +304,7 @@ function operacjeDanych(o) {
 }
 
 describe('EM1–EM4: bramka zamknięta i tryby bez kolejki', () => {
-  it('EM1: bramka zamknięta — każda metoda danych: odczyty pola bramki = liczba emisji (> 0), w emisji bez indexedDB, localStorage i crypto, bez blokad i bazy kolejki', async () => {
+  it('EM1: bramka zamknięta — każda metoda danych: odczyty pola bramki = emisje + przeglądy przy odblokowaniu + scalenia z chmury (E2-PR3a4; emisji > 0), w emisji bez indexedDB, localStorage i crypto, bez blokad i bazy kolejki', async () => {
     const o = await okno({ opakuj: true });
     atrapaKluczy(o);
     const pola = { indexedDB: 0, localStorage: 0, crypto: 0 };
@@ -303,13 +317,13 @@ describe('EM1–EM4: bramka zamknięta i tryby bez kolejki', () => {
     const wyniki = {};
     for (const [nazwa, fn, { przygotowanie = 0 } = {}] of operacje) {
       tik();
-      const z = { odczyty: o.bramka.odczyty, emisje: o.l.emisje.length, log: o.znacznik() };
+      const z = { odczyty: o.bramka.odczyty, emisje: o.l.emisje.length, licznik: o.l.odczyty(), log: o.znacznik() };
       await fn();
       await o.cisza();
       const emisje = o.l.emisje.length - z.emisje;
-      wyniki[nazwa] = { odczyty: o.bramka.odczyty - z.odczyty, emisje, wiecejNizZero: emisje - przygotowanie > 0 };
+      wyniki[nazwa] = { odczyty: o.bramka.odczyty - z.odczyty, licznik: o.l.odczyty() - z.licznik, emisje, wiecejNizZero: emisje - przygotowanie > 0 };
     }
-    const zle = Object.entries(wyniki).filter(([, w]) => w.odczyty !== w.emisje || !w.wiecejNizZero);
+    const zle = Object.entries(wyniki).filter(([, w]) => w.odczyty !== w.licznik || !w.wiecejNizZero);
     expect(zle, JSON.stringify(wyniki)).toEqual([]);
     expect(pola, 'odczyty pól okna w trakcie emisji').toEqual({ indexedDB: 0, localStorage: 0, crypto: 0 });
     expect(o.zadaniaKolejki(), 'żądania blokad vilda-sync*').toEqual([]);
@@ -319,7 +333,7 @@ describe('EM1–EM4: bramka zamknięta i tryby bez kolejki', () => {
     await o.ev.emissionsSettled();
   }, 120_000);
 
-  it('EM2: hak bez znaczenia (usunięcie wersji, scalanie notatek pacjenta i list, zmiana hasła z innego urządzenia) nie czyta bramki; zapis lokalny czyta ją raz', async () => {
+  it('EM2: hak bez znaczenia (usunięcie wersji, scalanie notatek pacjenta i list, zmiana hasła z innego urządzenia) nie czyta bramki; scalenie z chmury czyta ją raz — pary scalania (E2-PR3a4), bez emisji; zapis lokalny czyta ją raz', async () => {
     const o = await okno();
     const akcje = [];
     for (const h of ['onPatientSaved', 'onPatientNoteChanged', 'onPatientListChanged', 'onCredentialChanged']) {
@@ -337,19 +351,23 @@ describe('EM1–EM4: bramka zamknięta i tryby bez kolejki', () => {
     const ladunek = await B.v.exportSyncPayload();
     const pomiar = async (fn) => {
       tik();
-      const z = { odczyty: o.bramka.odczyty, emisje: o.l.emisje.length, akcje: akcje.length };
+      const z = { odczyty: o.bramka.odczyty, emisje: o.l.emisje.length, przeglady: o.l.przeglady.length, scalenia: o.l.scalenia.length, akcje: akcje.length };
       await fn();
       await o.cisza();
-      return { odczyty: o.bramka.odczyty - z.odczyty, emisje: o.l.emisje.length - z.emisje, akcje: akcje.slice(z.akcje) };
+      return {
+        odczyty: o.bramka.odczyty - z.odczyty, emisje: o.l.emisje.length - z.emisje, przeglady: o.l.przeglady.length - z.przeglady,
+        scalenia: o.l.scalenia.length - z.scalenia, akcje: akcje.slice(z.akcje),
+      };
     };
     const usuniecie = await pomiar(() => o.v.deleteSnapshot(k.P, k.S1));
-    expect(usuniecie).toEqual({ odczyty: 0, emisje: 0, akcje: ['onPatientSaved:isSnapshotDelete'] });
+    expect(usuniecie).toEqual({ odczyty: 0, emisje: 0, przeglady: 0, scalenia: 0, akcje: ['onPatientSaved:isSnapshotDelete'] });
     const scalenie = await pomiar(() => o.v.mergeSyncPayload(ladunek));
     expect(scalenie.akcje.filter((a) => /:(save|delete|password-changed|password-reset)$/.test(a)), 'akcje zapisu lokalnego w scaleniu').toEqual([]);
     for (const a of ['onPatientNoteChanged:merge', 'onPatientListChanged:merge', 'onCredentialChanged:password-changed-remotely']) {
       expect(scalenie.akcje, a).toContain(a);
     }
-    expect([scalenie.odczyty, scalenie.emisje], 'odczyty bramki i emisje w scaleniu').toEqual([0, 0]);
+    // Jedyny odczyt bramki w scaleniu: pary scalania z chmury (Bem_zChmury, E2-PR3a4) — hooki scalania go nie dokładają.
+    expect([scalenie.odczyty, scalenie.emisje, scalenie.przeglady, scalenie.scalenia], 'odczyty bramki, emisje, przeglądy i scalenia w scaleniu').toEqual([1, 0, 0, 1]);
     // Kontrola: zapis lokalny tych samych rodzajów — jeden odczyt bramki na emisję.
     const notatka = await pomiar(() => o.v.savePatientNote({ patientId: k.P, title: 'Fikcyjna notatka', body: 'Fikcyjna treść.', category: 'inne' }));
     const lista = await pomiar(() => o.v.savePatientList({ name: 'Fikcyjna lista', memberIds: [k.P] }));
@@ -400,22 +418,30 @@ describe('EM5–EM10: łańcuch dopisań konta, limit i sesja', () => {
     expect(o.kolejka('A').map((w) => [w.kind, w.entityKey, w.state])).toEqual([['snap', `${r.patientId}/${r.snapshotId}`, 'pending']]);
   }, 60_000);
 
-  it('EM6: limit 20 s czekania na blokadę konta — dopisanie kończy się bez wiersza, następna emisja po zwolnieniu daje wiersz', async () => {
+  it('EM6: limit 20 s czekania na blokadę konta — dopisanie kończy się bez wiersza; po bezczynności łańcucha rusza przegląd pilny (E2-PR3a4) i czeka na tę samą blokadę, po jej zwolnieniu dokłada wersję z limitu i poświadczenie konta (pierwszy przegląd w dokumencie: bez znacznika, bez klucza wysyłki i bez scalenia — każda encja); następna emisja daje wiersz', async () => {
     const o = await okno({ bramka: true });
+    const odPrzegladow = o.l.przeglady.length;
     const h = await o.locks.trzymaj(o.blokadaKonta);
-    await o.v.savePatient(naglowek(1), { dedup: false });
+    const r = await o.v.savePatient(naglowek(1), { dedup: false });
     await o.locks.czekajNaKolejke(o.blokadaKonta, 1);
     expect(o.timery.oczekujace().map((t) => t.ms), 'zegar limitu blokady').toContain(20000);
+    const z1 = o.locks.zadania.length;
     expect(o.timery.odpal((t) => t.ms === 20000)).toBe(1);
-    await o.ev.emissionsSettled();
     await o.spokoj();
-    expect(o.zadaniaKolejki().map((z) => z.wynik), 'żądanie blokady przerwane po limicie').toEqual(['przerwana']);
+    expect(o.l.przeglady.slice(odPrzegladow), 'przegląd pilny (bez przeglądu sierot) po limicie').toEqual([{ sieroty: false }]);
+    await o.locks.czekajNaZadanie(o.blokadaKonta, { od: z1 });
+    await o.spokoj();
+    expect(o.zadaniaKolejki().map((z) => z.wynik), 'żądanie blokady przerwane po limicie; dopisanie przeglądu czeka').toEqual(['przerwana', 'w-kolejce']);
     expect(o.kolejka('A')).toEqual([]);
     await h.zwolnij();
+    await o.gotowe();
+    expect(o.zadaniaKolejki().map((z) => z.wynik), 'po zwolnieniu: dopisania przeglądu').toEqual(['przerwana', 'przyznana', 'przyznana']);
+    expect(o.kolejka('A').map((w) => [w.kind, w.entityKey]), 'przegląd pilny: wersja z limitu i poświadczenie').toEqual([['snap', `${r.patientId}/${r.snapshotId}`], ['cred', 'cred']]);
+    expect(o.l.przeglady.slice(odPrzegladow), 'bez kolejnego przeglądu').toHaveLength(1);
     tik();
     const n = await o.v.saveNote({ title: 'Fikcyjny szablon', category: 'badanie', body: 'Fikcyjna treść szablonu.' });
     await o.gotowe();
-    expect(o.kolejka('A').map((w) => [w.kind, w.entityKey])).toEqual([['note', n.id]]);
+    expect(o.kolejka('A').map((w) => [w.kind, w.entityKey]).slice(2)).toEqual([['note', n.id]]);
   }, 60_000);
 
   it('EM7: łańcuch FIFO — pięć zmian różnych encji szybko po sobie: seqLocal w kolejności emisji', async () => {
@@ -931,7 +957,7 @@ describe('EM25–EM33: partie importu (E2-PR3a3)', () => {
 
   // Wersja w koszu wraca z pliku i z kopii konta, a zdjęcie wpisu kosza emituje wersję (reguła miejsca zapisu
   // z E2-PR3a2, niezależna od partii); emisje każdego importu (> 0) sprawdza EM1.
-  it('EM27: bramka zamknięta — import karty, scalenie i odtworzenie kopii konta: odczyty pola bramki = liczba emisji, w emisji bez indexedDB, localStorage i crypto, bez bazy vilda_sync_*, blokad kolejki i wywołania słuchacza', async () => {
+  it('EM27: bramka zamknięta — import karty, scalenie i odtworzenie kopii konta: odczyty pola bramki = emisje + przeglądy przy odblokowaniu + scalenia z chmury (E2-PR3a4: scalanie w kroku importu bez odczytu, odtworzenie konta — jeden przegląd), w emisji bez indexedDB, localStorage i crypto, bez bazy vilda_sync_*, blokad kolejki i wywołania słuchacza', async () => {
     const o = await okno({ opakuj: true });
     const pola = { indexedDB: 0, localStorage: 0, crypto: 0 };
     for (const pole of Object.keys(pola)) {
@@ -957,13 +983,17 @@ describe('EM25–EM33: partie importu (E2-PR3a3)', () => {
       ['restoreVaultBackup', () => { o.zablokuj(); return o.v.restoreVaultBackup(kopia, o.A.haslo, { label: 'Fikcyjne konto z kopii' }); }],
     ]) {
       tik();
-      const z = { odczyty: o.bramka.odczyty, emisje: o.l.emisje.length };
+      const z = { odczyty: o.bramka.odczyty, emisje: o.l.emisje.length, przeglady: o.l.przeglady.length, scalenia: o.l.scalenia.length };
       const r = await wynik(fn());
       await o.cisza();
-      wyniki[nazwa] = { ok: r.ok, odczyty: o.bramka.odczyty - z.odczyty, emisje: o.l.emisje.length - z.emisje };
+      wyniki[nazwa] = {
+        ok: r.ok, odczyty: o.bramka.odczyty - z.odczyty, emisje: o.l.emisje.length - z.emisje, przeglady: o.l.przeglady.length - z.przeglady,
+        scalenia: o.l.scalenia.length - z.scalenia,
+      };
     }
-    const zle = Object.entries(wyniki).filter(([, w]) => !w.ok || w.odczyty !== w.emisje);
+    const zle = Object.entries(wyniki).filter(([, w]) => !w.ok || w.odczyty !== w.emisje + w.przeglady + w.scalenia);
     expect(zle, JSON.stringify(wyniki)).toEqual([]);
+    expect(Object.values(wyniki).map((w) => [w.przeglady, w.scalenia]), 'przeglądy i scalenia z chmury: import karty, scalenie kopii, odtworzenie konta').toEqual([[0, 0], [0, 0], [1, 0]]);
     expect(Object.values(wyniki).reduce((n, w) => n + w.emisje, 0), 'emisje importów').toBeGreaterThan(0);
     await o.ev.emissionsSettled();
     await o.cisza();
@@ -1084,7 +1114,7 @@ describe('EM25–EM33: partie importu (E2-PR3a3)', () => {
     expect(partie).toEqual([{ reason: 'importPatientFromEnvelope', count: 4 }]);
   }, 60_000);
 
-  it('EM31: limit 20 s czekania na blokadę konta w partii — wpis bez wiersza nie wlicza się do count, łańcuch idzie dalej', async () => {
+  it('EM31: limit 20 s czekania na blokadę konta w partii — wpis bez wiersza nie wlicza się do count, łańcuch idzie dalej; po partii przegląd pilny (E2-PR3a4, pierwszy w dokumencie) dokłada wersję z limitu (pamięć braków: mimo wiersza tej wersji sprzed usunięcia karty i chwili zmiany z pliku) i poświadczenie konta', async () => {
     const o = await okno({ bramka: true });
     const k = await plikKartyUsunietej(o);
     await o.gotowe();
@@ -1102,7 +1132,13 @@ describe('EM25–EM33: partie importu (E2-PR3a3)', () => {
     await h.zwolnij();
     await o.gotowe();
     expect(o.zadaniaKolejki().slice(z0).map((z) => z.wynik)[0], 'pierwszy wpis partii przerwany po limicie').toBe('przerwana');
-    expect(rodzaje(po(o, s0)), 'pierwsza wersja bez wiersza, reszta partii dopisana').toEqual(['snap', 'pnote', 'pnote']);
+    expect(rodzaje(po(o, s0)), 'pierwsza wersja bez wiersza, reszta partii dopisana, potem przegląd pilny: wersja z limitu i poświadczenie').toEqual(['snap', 'pnote', 'pnote', 'snap', 'cred']);
+    expect(po(o, s0)[0].entityKey, 'wiersz partii: druga wersja').toBe(`${k.P}/${k.S2}`);
+    expect(po(o, s0)[3].entityKey, 'wiersz przeglądu pilnego: pierwsza wersja').toBe(`${k.P}/${k.S1}`);
+    const nagrobek = o.kolejka('A').find((w) => w.kind === 'ptomb' && w.entityKey === k.P);
+    expect(o.kolejka('A').filter((w) => w.kind === 'snap' && w.entityKey === `${k.P}/${k.S1}`).map((w) => w.seqLocal > nagrobek.seqLocal), 'pierwsza wersja: wiersz sprzed nagrobka karty i wiersz po nim').toEqual([false, true]);
+    await o.gotowe();
+    expect((await o.ev.sweepOutbox()).dopisane, 'następny przegląd: nic do dołożenia (wpis zdjęty z pamięci braków)').toBe(0);
     expect(partie).toEqual([{ reason: 'importPatientFromEnvelope', count: 3 }]);
   }, 60_000);
 
