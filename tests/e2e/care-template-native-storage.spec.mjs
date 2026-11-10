@@ -353,7 +353,9 @@ test('ordinary native sync retains concurrent plan versions, blocks further edit
       expect(await device.evaluate(id => window.VildaVault.getCarePlan(id), saved.id)).toEqual(merged);
     }
     await page.locator(CARE_WORKSPACE).getByRole('button', { name: 'Zamknij Przypomnienia', exact: true }).click();
-    const attention = await page.evaluate(async id => (await window.VildaVault.listPatientNotesDueByDate(new Date().toISOString()))
+    // Same day as the reminder list (end of the local day, the vault default). The current UTC instant is still the
+    // previous day between local midnight and the UTC midnight, which hid today's plan in that hour.
+    const attention = await page.evaluate(async id => (await window.VildaVault.listPatientNotesDueByDate())
       .flatMap(group => group.notes || []).filter(note => note.id === id)
       .map(note => ({ id: note.id, planId: note.careContext?.planId, syncNeedsReview: note.syncNeedsReview })), saved.id);
     expect(attention).toEqual([{ id: saved.id, planId: saved.id, syncNeedsReview: true }]);
