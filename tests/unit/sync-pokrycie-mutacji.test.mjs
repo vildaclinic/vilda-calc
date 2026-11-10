@@ -1,4 +1,4 @@
-// P-DZIENNIK-ZDARZEN (E2-PR3a2, E2-PR3a3) — test pokrycia mutacji jako różnica stanu odbiorcy. Każda mutacja danych sejfu przy
+// P-DZIENNIK-ZDARZEN (E2-PR3a2, E2-PR3a3, E2-PR3b) — test pokrycia mutacji jako różnica stanu odbiorcy. Każda mutacja danych sejfu przy
 // otwartej bramce (pole okna VILDA_EVENT_LOG) w trybie „Komputer prywatny” dopisuje do kolejki zmian wiersze, z których
 // odbiorca dostaje ten sam stan co z pełnego ładunku. Prawdziwy sejf w oknie uprzęży tests/support/okno-magazynu.mjs
 // z emisja: true (sejf jak w przeglądarce) nad atrapą tests/support/atrapa-indexeddb.mjs, sztuczny zegar (tylko Date)
@@ -14,9 +14,11 @@
 //   - B ≡ B′: encje(B) = encje(B′) (model encji z tests/support/encje-ladunku.mjs, ten sam co w teście A ≡ B);
 //   - odbiorca bez nagrobka: D(A, B) = ∅ (różnice encja po encji eksportów kanonicznych);
 //   - nagrobek karty u odbiorcy (B i B′ usuwają kartę wcześniej albo później niż mutacja A):
-//       starszy, mutacja podnosi chwilę karty (nowa wersja, kosz) — zamiast B ≡ B′: D(A, B) = dokładnie to, czego
-//         zdarzenia nie niosą („karta częściowa” — naprawa w E2-PR3b: hak pełnej karty po przegranym nagrobku),
-//         a D(A, B′) = ∅ (pełna historia z pełnego ładunku);
+//       starszy, mutacja podnosi chwilę karty (nowa wersja, kosz) — zamiast B ≡ B′: po wierszach mutacji D(A, B) =
+//         dokładnie to, czego zdarzenia mutacji nie niosą („karta częściowa”), a D(A, B′) = ∅ (pełna historia z pełnego
+//         ładunku); od E2-PR3b hak H1: nagrobek B (koperta ptomb zbudowana przy usunięciu) zastosowany na A przegrywa
+//         z nowszą chwilą karty — A dopisuje pełną kartę (jeden wiersz pfull, pending), a po jego zastosowaniu na B
+//         D(A, B) = ∅;
 //       starszy, mutacja chwili karty nie podnosi (notatka) — B ≡ B′ i D(A, B) = D(A, B′): karta tylko u A, nagrobek
 //         tylko u B;
 //       nowszy — B ≡ B′ (karty nie ma u B ani u B′), a po scaleniu eksportu B na A karta znika u A, wiersze A te same
@@ -32,11 +34,12 @@
 //
 // PRZYPADKI
 //   PM1  nowa karta → snap.
-//   PM2  nowa wersja → snap; także z nagrobkiem u odbiorcy starszym i nowszym.
+//   PM2  nowa wersja → snap; także z nagrobkiem u odbiorcy starszym (karta częściowa, po haku H1 brak różnicy) i nowszym.
 //   PM3  poprawka starszej wersji (preserveSavedAt) → snap tej wersji; także z nagrobkiem nowszym.
 //   PM4–PM5  gwiazdka, odpięcie → snap.
 //   PM6–PM7  edycja wiersza pomiaru, usunięcie bieżącego pomiaru z awansem starszego → snap.
-//   PM8  kosz → stomb; także z nagrobkiem starszym (kosz nie niesie wersji) i nowszym.
+//   PM8  kosz → stomb; także z nagrobkiem starszym (kosz nie niesie wersji: karta częściowa, po haku H1 brak różnicy)
+//        i nowszym.
 //   PM9  kosz przypiętej („Odepnij i usuń”) → stomb.
 //   PM10 „Przywróć” (zapis przywrócenia) → snap; także z nagrobkiem nowszym.
 //   PM11 „Przywróć” — „już w karcie” z przebudową nagłówka (po przerwanym „Przywróć”) → snap.
@@ -96,6 +99,10 @@
 // (brak wierszy encji sekcji). Zielone z natury (strażniki regresji): PM17 (zdjęcie wpisu kosza emituje wersję —
 // reguła miejsca zapisu z E2-PR3a2; wywołania onBulkChange sprawdzane tylko na sejfie z częścią partii), PM46 (import
 // starego formatu przez zapis karty, bez partii), PM47 (zamknięta bramka), PM1–PM40 i samokontrola uprzęży.
+// Czerwone na bazie E2-PR3b (sejf 4994fef9 — bez haków scalania — z tym plikiem i uprzężą tego PR): 2 z 73 — PM2 i PM8
+// z nagrobkiem starszym u odbiorcy (po kopercie ptomb B na A brak wiersza pfull; różnica przed hakiem = literał „karta
+// częściowa”, jak dotąd). Zielone z natury (strażniki regresji): pozostałe 71, w tym PM2 i PM8 bez nagrobka i z nagrobkiem
+// nowszym.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { METODY_DANYCH, oknoMagazynu, przechwycZadaniaWTle } from '../support/okno-magazynu.mjs';
 import { naglowek } from './sesja-zapisu-uprzaz.mjs';
@@ -199,8 +206,14 @@ async function przebieg(p, nagrobek = null) {
   await ucichnij(o);
   const B = await blizniak(o, zrodloOdbiorcow);
   const Bl = await blizniak(o, zrodloOdbiorcow);
-  // Nagrobek w tej samej chwili u B i u B′, minutę od mutacji (poza pasmem ratunku notatek 1 s).
-  const usunUOdbiorcow = async () => { krok(60_000); await B.v.removePatient(s.P); await Bl.v.removePatient(s.P); await B.cisza(); await Bl.cisza(); };
+  // Nagrobek w tej samej chwili u B i u B′, minutę od mutacji (poza pasmem ratunku notatek 1 s); koperta ptomb B
+  // zbudowana i zaszyfrowana przy usunięciu (zanim B dostanie wiersze mutacji, które zdejmą jego nagrobek).
+  let ptombB = null;
+  const usunUOdbiorcow = async () => {
+    krok(60_000); await B.v.removePatient(s.P); await Bl.v.removePatient(s.P); await B.cisza(); await Bl.cisza();
+    const k = await B.ev.buildPatientTombstoneEvent(s.P, null);
+    ptombB = k ? (await B.ev.encryptEvent(k)).env : null;
+  };
   if (nagrobek === 'starszy') { await usunUOdbiorcow(); krok(60_000); }
   if (p.przedMutacja) await p.przedMutacja(B, Bl, s);
   const s0 = ostatniSeq(o);
@@ -226,6 +239,7 @@ async function przebieg(p, nagrobek = null) {
   const eBl = await Bl.v.exportSyncPayload();
   return {
     o, B, Bl, s, s0, wiersze, statusy, metody, znacznik, partie: partieMutacji, eA, eB, eBl, dB: D(kanon(eA), kanon(eB)), dBl: D(kanon(eA), kanon(eBl)),
+    ptombB,
   };
 }
 
@@ -260,12 +274,28 @@ async function sprawdz(p, nagrobek = null) {
   const niesione = new Set(r.wiersze.filter((w) => w.kind === 'snap').map((w) => w.entityKey));
   const wersjeTylkoA = (pomin) => wersjeA.filter((sid) => !pomin.has(`${P}/${sid}`)).map((sid) => `wersja:${P}/${sid} (tylko x)`);
   if (nagrobek === 'starszy' && p.podnosi) {
-    // Karta częściowa — naprawa w E2-PR3b: nagrobek u B przegrywa z nowszą chwilą karty, a zdarzenia nie niosą starszych
+    // Karta częściowa przed hakiem: nagrobek u B przegrywa z nowszą chwilą karty, a zdarzenia mutacji nie niosą starszych
     // wersji (snap niesie jedną wersję; kosz — żadnej, a karta bez wizyt u odbiorcy bez karty nie powstaje), pełny
     // ładunek niesie całą historię.
     const oczekiwane = p.podnosi === 'karta' ? [...kartaINagrobek, ...wersjeTylkoA(niesione)] : wersjeTylkoA(niesione);
-    expect(opisD(r.dB), `${p.nr}: D(A, B) = to, czego zdarzenia nie niosą (karta częściowa)`).toEqual(oczekiwane.sort());
+    expect(opisD(r.dB), `${p.nr}: przed hakiem D(A, B) = to, czego zdarzenia mutacji nie niosą (karta częściowa)`).toEqual(oczekiwane.sort());
     expect(opisD(r.dBl), `${p.nr}: D(A, B′) = ∅`).toEqual([]);
+    // Hak H1 (E2-PR3b): nagrobek B (koperta ptomb z chwili usunięcia) przegrywa na A z nowszą chwilą karty — A dopisuje
+    // pełną kartę; B po jej zastosowaniu ma cały stan A.
+    expect(r.ptombB, `${p.nr}: kontrola — koperta ptomb B`).toBeTruthy();
+    const s1 = ostatniSeq(r.o);
+    krok();
+    expect((await r.o.ev.applyEncryptedEvent(r.ptombB)).status, `${p.nr}: ptomb B na A`).toBe('applied');
+    krok();
+    await ucichnij(r.o);
+    const hak = r.o.kolejka('A').filter((w) => w.seqLocal > s1);
+    expect(hak.map((w) => [w.kind, w.entityKey, w.state]), `${p.nr}: wiersze A z haka H1 — jedna pełna karta`).toEqual([['pfull', P, 'pending']]);
+    const st = [];
+    for (const w of hak) st.push((await r.B.ev.applyEncryptedEvent(w.env)).status);
+    await r.B.cisza();
+    expect(st, `${p.nr}: pfull na B`).toEqual(['applied']);
+    const dPo = D(kanon(await r.o.v.exportSyncPayload()), kanon(await r.B.v.exportSyncPayload()));
+    expect(opisD(dPo), `${p.nr}: po haku H1 D(A, B) = ∅`).toEqual([]);
     return r;
   }
   expect(listaEncji(r.eB), `${p.nr}: encje(B) = encje(B′)`).toEqual(listaEncji(r.eBl));
@@ -826,7 +856,7 @@ const PRZYPADKI = [
     } },
 ];
 
-describe('pokrycie mutacji: wiersze kolejki i stan odbiorcy (E2-PR3a2, E2-PR3a3)', () => {
+describe('pokrycie mutacji: wiersze kolejki i stan odbiorcy (E2-PR3a2, E2-PR3a3, E2-PR3b)', () => {
   it('część emisji istnieje: VildaVault._eventLog.emissionsSettled', async () => {
     const o = await oknoMagazynu({ konta: 'A', emisja: true });
     okna.push(o);
@@ -842,7 +872,10 @@ describe('pokrycie mutacji: wiersze kolejki i stan odbiorcy (E2-PR3a2, E2-PR3a3)
     const partia = p.partie && p.partie.length ? `; onBulkChange ${p.partie.map((d) => `${d.reason} ${d.count}`).join(', ')}` : '';
     const w = (p.wiersze.join(', ') || 'bez wierszy') + partia;
     it(`${p.nr} ${p.opis}: ${w}; odbiorca bez nagrobka`, async () => { await sprawdz(p); }, CZAS);
-    for (const n of p.warianty || []) it(`${p.nr} ${p.opis}: ${w}; ${OPIS_NAGROBKA[n]}`, async () => { await sprawdz(p, n); }, CZAS);
+    for (const n of p.warianty || []) {
+      const hak = n === 'starszy' && p.podnosi ? ' (karta częściowa; po haku H1 pfull — brak różnicy)' : '';
+      it(`${p.nr} ${p.opis}: ${w}; ${OPIS_NAGROBKA[n]}${hak}`, async () => { await sprawdz(p, n); }, CZAS);
+    }
   }
 });
 

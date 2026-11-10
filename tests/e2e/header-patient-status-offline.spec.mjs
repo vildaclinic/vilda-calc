@@ -380,7 +380,13 @@ async function searchRoundTrip(page, noteId) {
 
 for (const shell of [true, false]) {
   test(`${shell ? 'app shell' : 'standalone'}: real PWA upgrade keeps the patient and header after a cold offline restart`, async ({ playwright, browserName, launchOptions }, info) => {
-    test.setTimeout(240_000);
+    // The real upgrade caches every top-level resource changed since BASE, so
+    // this test grows with each merged change. Measured 2026-11-10: about 45 s
+    // per variant locally, about 2.7 min in CI on a fast runner and over 4 min
+    // on a slower one (the app shell variant). The limit leaves room for slower
+    // CI runners; a closer BASE (with updated committedSaveSources) is the
+    // lasting fix.
+    test.setTimeout(480_000);
     const site = await deployment();
     const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'vilda-header-status-offline-'));
     let context;
