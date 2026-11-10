@@ -21534,6 +21534,118 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
+## Dziennik zdarzeń: zdarzenie usunięcia karty po „Scal pacjentów” niesie kartę scaloną — uśpione (P-DZIENNIK-ZDARZEN, E2-PR3c1, SW 1.1.502, `vilda_vault.js` 267, 2026-11-10)
+
+**Zmiana kliniczna: NIE** — wzory, progi, jednostki, interpretacje, zapis danych pacjentów, reguły scalania, format
+kopii i synchronizacja bez zmian. Dla użytkownika dziś nic się nie zmienia: bramka dziennika zdarzeń jest zamknięta, a
+zmienia się tylko kształt zdarzenia, które powstaje dopiero przy otwartej bramce. Po włączeniu dziennika (PR włączający):
+gdy na jednym urządzeniu połączono dwie karty przyciskiem „Scal pacjentów”, a na drugim w starej karcie przypięto albo
+poprawiono wizytę, ta wizyta nie zginie — trafi do karty scalonej, z gwiazdką albo poprawką. Na pozostałych
+urządzeniach pojawi się przy najbliższej pełnej synchronizacji. Wpływ kliniczny dziś: brak.
+
+**Skąd.** Plan `docs/SYNC_PRZYROSTOWA_PLAN.md`, wiersz 7a1 tabeli „Podział etapu 2” (podział E2-PR3c); decyzje
+właściciela z 2026-11-10 (pytania 1–3 i 8, rozdział 6 planu); „ZNANE UTRATY” `npret-pin`, `npret-K` (wpis E2-PR2a, niżej)
+i K6 (wpis E2-PR3a3, niżej, decyzja 12.3).
+
+### E2-PR3c1
+
+**Uśpienie.** Bez nowych miejsc poza blokiem i bez nowych odczytów bramki: zmienia się tylko builder koperty `ptomb`
+i walidator koperty (część a bloku P-DZIENNIK-ZDARZEN), które działają wyłącznie przy otwartej bramce (dopisanie do
+kolejki) albo na wyraźne wywołanie z `VildaVault._eventLog` (38 kluczy, bez zmian). Zapis bazowy i e2e uśpienia bez zmian.
+
+**Sesja.** Operacje kolejki i kwarantanny sprawdzają sesję tak jak zapis karty (P-SESJA-ZAPISU): zmiana sesji w trakcie
+kończy operację bez zapisu. Builder sprawdza sesję po odczycie karty scalonej i listy jej wersji; zmiana sesji w trakcie
+budowy kończy się `SESSION_CHANGED`, bez koperty i bez wiersza.
+
+**Koperta `ptomb` po „Scal pacjentów”.**
+- Po „Scal pacjentów” X → Y w tej samej karcie przeglądarki (`Bsw_cele` — ten sam cel, z którego od P-SYNC-WLASCICIEL
+  korzysta delta nagrobka `Bsw_deltaNagrobka`) koperta `ptomb(X)` niesie obok nagrobku X sekcję `patients` z kartą Y
+  i wszystkimi jej wersjami — w kształcie i kolejności jak `pfull` (karta jak w `exportSyncPayload`, wersje po
+  `savedAtISO`).
+- Bez znanego celu (np. „Usuń pacjenta”, inna karta przeglądarki) albo gdy karty Y już nie ma — sam nagrobek, jak
+  dotąd; kartę scaloną dowozi wtedy pełna wysyłka (decyzja 7).
+- Nieczytelny nagłówek albo wersja karty Y — `EVENT_SOURCE_UNREADABLE` i wiersz `unreadable`, jak w `pfull` (nie goły
+  nagrobek, który mógłby usunąć przypiętą wizytę).
+- Koperta ponad limitem zdarzenia (262 144 B) — wiersz `oversize`: wysyłka go pomija, a pełna wysyłka dowozi stan
+  (decyzja 3 z 2026-11-10); do tego czasu stara karta bywa chwilowo widoczna.
+- Walidator: `ptomb` może mieć `patients` — dokładnie jedną poprawną kartę inną niż karta nagrobka; inne kształty —
+  `EVENT_ENVELOPE_INVALID`. `stomb` bez zmian.
+
+**Odbiorca.** Reguły scalania bez zmian. Koperta niesie nagrobek X i kartę Y z wersjami w jednym scaleniu — jak dzisiejsza
+delta nagrobka i pełna synchronizacja: wyjątek „zabierz” (P-SYNC-WLASCICIEL: późniejsza treść i gwiazdka
+zostają) i reguła przeżycia retencji mają kontekst, więc wersja X przypięta albo poprawiona u odbiorcy przechodzi pod Y.
+Dotąd zdarzenie `ptomb` przychodziło samo: wersja X zostawała pod X (remis `rev` z przeniesieniem, późniejsza zmiana
+tutejsza), a nagrobek usuwał potem X razem z nią.
+
+**Co naprawia (test A ≡ B).**
+- „ZNANA UTRATA (zdarzenia)” `npret-pin` i `npret-K` (obie kolejności) — bez utraty: po pełnej wymianie stan równy
+  samym pełnym kopiom; po samych zdarzeniach przypięta wizyta jest pod Y na urządzeniu, które ją przypięło.
+- Nowe przebiegi katalogu kosza `pin-scal` (gwiazdka) i `popr-scal` (poprawka) — bez utraty, równe samym pełnym kopiom.
+- K6 — bez utraty po pełnej wymianie (poprawka zostaje na obu urządzeniach); po samych zdarzeniach zostaje różnica treści
+  wizyty do pełnej wysyłki — „ZNANA RÓŻNICA (zdarzenia; naprawa: E2-PR3c2)” (strona urządzenia, które scaliło karty).
+- R2-E3 — bez różnicy także w zdarzeniach (dotąd „ZNANA RÓŻNICA”, naprawa planowana w E3-PR0; kolejność „najpierw
+  wizyty” bez zmian).
+
+**Bez zmian (decyzja 8 z 2026-11-10).** Q8-obca-2 (dwie wizyty o tej samej masie w Koszu; urządzenia mogą zostawić
+w karcie inną z nich, nic nie ginie) — do decyzji właściciela „którą wizytę zostawić”; postać gwiazdki w zapisie Kosza
+(R4n) — E3-PR0; warunek `ctx.pelny` — bez zmian.
+
+**Test A ≡ B — model haków zdarzenie po zdarzeniu.** Model haku H2 oceniał partię na stanie po całej partii, więc nie
+widział ratunku notatki w trakcie partii, gdy późniejsza własna koperta notatki w tej samej partii nadpisała uratowaną
+wersję (emitery poprawnie dają wtedy `pnote`, echo bez skutku u odbiorcy). Od E2-PR3c1 model ocenia H2 po każdym zdarzeniu
+partii (porównanie bez poluzowania), z przypadkiem deterministycznym w bloku AB7. Wynik (ziarna domyślne): 726 porównań haków partii w pliku, wszystkie ten sam ciąg (dotąd 707, w tym 3 inna kolejność w obrębie rangi); przy 40 ziarnach profilu podstawowego 1489 porównań, 0 niezgodnych (1 inna kolejność rang, jak dotąd — pełna karta przed notatką swojej karty); przy 20 ziarnach profilu pełnego 810, wszystkie równe.
+
+**Kontrola granicy obrazu sejfu.** Przeliczone skróty `BASE`, `baseVaultSHA256` i `integratedVaultSHA256` (reguła
+z E2-PR3a2, decyzja z 2026-11-09; obliczone po zdjęciu zmiany Klirensu, jak w kontroli od vildaclinic/vilda-calc#900);
+fragment natywny, haki, moduły i paczka bez zmian.
+
+**Testy.** Dane wyłącznie fikcyjne, bez PESEL. Nowe i zmienione:
+- `tests/unit/sync-scal-pacjentow-zdarzenia.test.mjs` (nowy) — 25 przypadków SZ1–SZ14: kreator (karta Y w kopercie
+  `ptomb` z łańcucha emisji i z buildera wprost, równa `pfull` i eksportowi; „Usuń pacjenta”, karta Y usunięta, inna
+  karta przeglądarki — sam nagrobek; zmiana sesji w trakcie budowy; nieczytelny nagłówek albo wersja — wiersz
+  `unreadable`; karta ponad limitem — wiersz `oversize`, pomijany w wysyłce); walidator (złe kształty `patients`
+  odrzucone, jedna karta ≠ klucz przyjęta, `stomb` i inne rodzaje bez zmian); odbiorca (`applyEncryptedEvent`
+  i `applyEncryptedDelta`, obie kolejności zdarzeń: przypięta albo poprawiona wizyta pod Y; kontrola z samym nagrobkiem —
+  wizyta znika); zamknięta bramka — bez wierszy, baz, kluczy i blokad.
+- `tests/unit/sync-dziennik-wlasnosciowy.test.mjs` (test A ≡ B) — 132 przypadki (było 127): literały `npret-pin`,
+  `npret-K`, K6, R2-E3 i skrzyżowanego „Scal pacjentów” z notatką; nowe przebiegi `pin-scal`, `popr-scal`
+  (`tests/unit/kosz-po-kluczu-wspolne.mjs`, na końcu listy — ziarna istniejących przebiegów bez zmian); etykiety Q8-obca-2,
+  R3-E1, R3-E2 i notatki pod inną kartą z pozycjami planu E2-PR3c3 i E2-PR3c4; model haków zdarzenie po zdarzeniu.
+
+Pełny `npm test` i e2e — wyniki w opisie PR.
+
+**Czerwone na bazie** (`origin/audyt` `bf8edad8` z testami tego PR): sync-scal-pacjentow-zdarzenia 17 z 25 (zielone
+z natury: brak karty Y, walidator złych kształtów, `stomb` i inne rodzaje, kontrola z samym nagrobkiem ×4, zamknięta
+bramka); test A ≡ B 12 z 132 (`npret-pin` ×2, `npret-K` ×2, `pin-scal` ×2, `popr-scal` ×2, lista zmian zachowania p. 5,
+K6, R2-E3, skrzyżowane „Scal pacjentów” z notatką); razem 29. Model haków zdarzenie po zdarzeniu — zielony także na
+bazie (model jest w teście, haki sejfu te same).
+
+**Mutanty.** 12 mutantów kodu koperty i kontroli granicy (zawsze sam nagrobek, karta scalona bez wersji albo z wersjami bez kolejności, nieczytelny nagłówek bez błędu, walidator przyjmuje kartę klucza albo kilka kart, walidator bez `patients` w `ptomb`, ponad limitem sam nagrobek, karta nagrobka zamiast scalonej, dwa sprawdzenia sesji w kreatorze, nieprzeliczone skróty): 10 zabitych, 2 równoważne (każde z dwóch sprawdzeń sesji po odczycie karty scalonej i listy jej wersji — następne sprawdzenie, przy odszyfrowaniu, i sprawdzenie w kolejce po kreatorze kończą operację tak samo).
+
+**Wymagania dla następnych PR.**
+- **E2-PR3c2.** Strona urządzenia, które scaliło karty: poprawka albo gwiazdka wizyty ze starej karty z drugiego
+  urządzenia trafia do tej wizyty w karcie scalonej (decyzja 4 z 2026-11-10); literał K6 w zdarzeniach na brak różnicy.
+- **E2-PR4.** Wiersz `oversize` koperty `ptomb` z kartą scaloną — pominięty w wysyłce bez blokowania kolejki (jak każdy
+  `oversize`); wpisy P-SYNC-SLAD liczbą.
+- **E2-PR5.** Licznik wierszy `oversize` w Ustawieniach obejmuje też takie koperty.
+- **E3-PR0.** Echo zmian pochodnych scalania (zbieżność bez pełnej wysyłki, także dla przypiętej wizyty na pozostałych
+  urządzeniach); R4n.
+- **Etap 3.** Koniec pełnej wysyłki (decyzja 7) wymaga, żeby zdarzenie `ptomb` bez znanego celu albo wiersz `oversize`
+  miały inny nośnik karty scalonej (punkt kontrolny).
+
+**Ograniczenia.** Atrapa IndexedDB i Chromium (WebKit i Firefox niezmierzone); kolejność zdarzeń obowiązuje w obrębie
+karty przeglądarki; karta scalona jedzie w kopercie tylko przy znanym celu „Scal pacjentów” (jak delta nagrobka dziś) —
+bez znanego celu sam nagrobek, a kartę scaloną dowozi pełna wysyłka; koperta jest większa o całą kartę scaloną (raz na „Scal pacjentów”); przypięta albo poprawiona
+wizyta na pozostałych urządzeniach dopiero przy pełnej synchronizacji (decyzja 2 z 2026-11-10).
+
+**Cofnięcie** = rewert PR (przy zamkniętej bramce nic nie powstaje; wiersze z kartą scaloną mogą powstać tylko przy
+otwartej bramce, a kod sprzed PR ich nie tworzy; rewert cofa też skróty kontroli granicy).
+
+**Gdzie w kodzie.** `vilda_vault.js`: blok P-DZIENNIK-ZDARZEN, linie 5676–8639; część a: `Bev_sekcjaPoprawna` (5784),
+`Bev_sprawdz` (5812), `Bev_ptomb` (6023). Poza blokiem tylko komentarz przy `Bsw_cele` (3621).
+
+**Wersje.** `vilda_vault.js` 266 → 267, `vilda_chrome.js` 272 → 273 i `vilda_session_bridge.js` 189 → 190 (wstrzykują sejf), SW 1.1.501 → 1.1.502; baza `origin/audyt` `bf8edad8` (po vildaclinic/vilda-calc#921). Bez nowego pliku w pamięci offline.
+
 ## Dziennik zdarzeń: haki scalania — pełna karta po przegranym nagrobku i ratunek notatki do kolejki — uśpione (P-DZIENNIK-ZDARZEN, E2-PR3b, SW 1.1.501, `vilda_vault.js` 266, 2026-11-10)
 
 **Zmiana kliniczna: NIE** — wzory, progi, jednostki, interpretacje, zapis danych pacjentów, reguły scalania, format
