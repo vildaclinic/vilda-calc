@@ -21518,7 +21518,8 @@ chwili (poprawka `rev` wersji, `rev` nagrobka notatki, treść wpisu kosza z kar
 parą — przegląd ich nie dokłada. Dwa przypadki z nową chwilą: plan opieki scalony równolegle bez przewinięcia (rewizja
 max + 1, chwila scalenia) i ratunek notatki przy nagrobku karty (D-21) — przegląd dokłada je jak zmianę lokalną,
 a odbiorca przyjmuje je zwykłą regułą scalania (dla planu opieki — przewinięcie do potomka, P-PLAN-POTOMEK). Nowa
-reguła scalania, która zapisuje chwilę zegara, dostaje przypadek testu przeglądu.
+reguła scalania, która zapisuje chwilę zegara, dostaje przypadek testu przeglądu. Od E2-PR3b ratunek notatki ma wiersz
+z haka H2 (para ratunku po udanym dopisaniu), więc przegląd go nie dubluje (wpis wyżej).
 
 **Przegląd sierot.** Przy odblokowaniu, przed przeglądem kolejki: bazy `vilda_sync_<userId>` kont innych niż bieżące,
 bez wpisu rejestru albo z wpisem w trybie innym niż „Komputer prywatny”, kasuje to samo kasowanie kolejki konta co
@@ -21593,7 +21594,8 @@ i 4 e2e. Test A ≡ B (125) i test pokrycia (73) bez zmian, zielone.
   objęły scalone encje; nadawca przy biciu serca woła `sweepOutbox()`, gdy minęła doba; przyjęcie wierszy wyłącznie przez
   `outboxAccept`; wpisy P-SYNC-SLAD przeglądu (liczby, bez kluczy encji); `markSyncCaughtUp` przy drenażu; budżet
   wysyłki pierwszego przeglądu (plan 3.6).
-- **E2-PR3b.** Haki H1 i H2: wiersz z haka pokrywa encję (przegląd jej nie dopisze drugi raz).
+- **E2-PR3b.** Haki H1 i H2: wiersz z haka pokrywa encję (przegląd jej nie dopisze drugi raz). Wykonane w E2-PR3b
+  (wpis wyżej).
 - **E2-PR6.** Polityka prywatności, opisując bazę `vilda_sync_<userId>`, wymienia też znacznik przeglądu i pamięć par
   (identyfikatory encji i chwile, bez treści).
 - **E3-PR0.** Hak echa zmian pochodnych scalania (pamięć par jako punkt wyjścia); literał R2-E3.
@@ -21738,7 +21740,8 @@ razem 38.
 **Wymagania dla następnych PR.**
 - **E2-PR3a4.** Przegląd kolejki dokłada zmiany partii bez wiersza; przegląd po pierwszym odblokowaniu konta odtworzonego
   z kopii nie dubluje partii. Wykonane w E2-PR3a4 (wpis wyżej).
-- **E2-PR3b.** Haki H1 i H2 w teście A ≡ B z modelu na emitery (rejestr łańcucha obejmie wtedy scalanie).
+- **E2-PR3b.** Haki H1 i H2 w teście A ≡ B z modelu na emitery (rejestr łańcucha obejmie wtedy scalanie). Wykonane
+  w E2-PR3b (wpis wyżej).
 - **E2-PR3c.** Literał K6 na brak utraty; analiza i naprawa różnicy opisu wpisu Kosza po wymianie pełnych kopii (decyzja
   z 2026-11-09).
 - **E2-PR4.** Nadawca słucha `onBulkChange`; budżet wysyłki przy dużej partii (plan 3.6).
@@ -21892,7 +21895,7 @@ scalanie z chmury używa akcji `merge` i `merge-delete` (bez zdarzenia). Nowe mi
 synchronizacji ma emisję albo regułę „świadomie lokalne” (test pokrycia).
 
 **Bez zdarzenia (świadomie lokalne).** Usunięcie wersji bez nagrobka (`deleteSnapshot`, D-8 A); scalanie z chmury
-(`Le`, `ps`, `applyEncryptedEvent` i ich kroki); ratunek notatki D-21 (hak w E2-PR3b); zmiana hasła z chmury
+(`Le`, `ps`, `applyEncryptedEvent` i ich kroki); ratunek notatki D-21 (od E2-PR3b hak H2, wpis wyżej); zmiana hasła z chmury
 (`password-changed-remotely`); porządki pól notatek (`mo`) i rozdzielenie nazwisk (`Ja`) — ta sama treść, liczone na
 każdym urządzeniu; przenumerowanie `seq` i licznik wizyt (lokalne); zdjęcie nagrobka przy zapisie (niesie je zdarzenie
 encji); opakowania kluczy, materiał synchronizacji, rejestr i tryb; cienie wersji; importy `ns`, `ss`, `as` (poza
@@ -21944,7 +21947,7 @@ kolejnych PR zmieniających `vilda_vault.js` poza fragmentem: to samo przeliczen
   prawdziwym sejfie z otwartą bramką (okno uprzęży z `emisja: true`); wiersze kolejki po mutacji (rodzaje w kolejności
   `seqLocal`) i odbiorca-bliźniak po zastosowaniu tych zdarzeń ≡ odbiorca po pełnym ładunku; odbiorca bez nagrobka —
   także stan równy nadawcy; z nagrobkiem karty u odbiorcy starszym niż mutacja (mutacja podnosząca chwilę karty: klasa
-  „karta częściowa” — wersje, których zdarzenia nie niosą, naprawa w E2-PR3b; pełny ładunek bez różnicy) i nowszym
+  „karta częściowa” — wersje, których zdarzenia nie niosą, naprawione w E2-PR3b, wpis wyżej; pełny ładunek bez różnicy) i nowszym
   (karta nieobecna u obu odbiorców, a po scaleniu eksportu odbiorcy karta znika u nadawcy, wiersze nadawcy zostają);
   scalanie z chmury bez wierszy; samokontrola listy metod danych uprzęży.
 - `tests/unit/sync-dziennik-emisja.test.mjs` — 26 przypadków (EM1–EM24): przy zamkniętej bramce każda metoda danych
@@ -21992,7 +21995,7 @@ odczytów bramki; dwa przypadki strony z elementem o `id` `VILDA_EVENT_LOG` ziel
 - **E2-PR3a4.** Przegląd kolejki dokłada zmiany bez wiersza (wyżej), w tym nagrobek klucza dostępu usuniętego przy
   zablokowanym sejfie. Wykonane w E2-PR3a4 (wpis P-DZIENNIK-ZDARZEN, E2-PR3a4, wyżej).
 - **E2-PR3b.** W teście pokrycia wariant „nagrobek starszy u odbiorcy” przy nowej wersji przechodzi z „karta częściowa”
-  na brak różnicy po haku `pfull`.
+  na brak różnicy po haku `pfull`. Wykonane w E2-PR3b (wpis wyżej).
 - **E2-PR4.** Nadawca może czekać na `emissionsSettled` przed wysyłką partii; `syncPush()` w `Yn` według decyzji 7.
 - Kolejne PR zmieniające `vilda_vault.js` poza fragmentem natywnym — przeliczenie skrótów kontroli granicy.
 
@@ -23693,7 +23696,7 @@ przypadkach zastosowanie kończy się bez dalszych zapisów i bez klasyfikowania
 - **Odpowiedniki w dzisiejszym drenażu** (`Bdz_zastosuj`; podmiana w E2-PR4): `blokada` ↔ `locked`; `busy` ↔ `busy` i `session-changed`;
   `nieczytelne` ↔ `unreadable`; `blad` ↔ `apply-error`; `zmiana`/`ok` ↔ `applied`.
 - **Scalanie z chmury nie dopisuje do kolejki.** Kolejki jeszcze nie ma. Dwa wyjątki z decyzji 9 to haki E2-PR3b
-  (niżej).
+  (niżej; w kodzie od E2-PR3b, wpis wyżej).
 
 **Zgodność ze starszą aplikacją.** Każda z 14 kopert przechodzi przez `mergeSyncPayload` starszego sejfu (wersja 221,
 fikstura testów) bez wyjątku. Stan jest taki jak po pełnym blobie dla tej encji (B13). Urządzenie bez aktualizacji
@@ -23708,7 +23711,7 @@ urządzeniach na osobnych fikcyjnych kontach, jak w katalogu, z kopertą jawną 
   - Profil pełny dokłada retencję, „Scal pacjentów” z koszem, retencję przypiętej wizyty i „Zostaw notatkę”.
 - **Emisja.**
   - Po każdej mutacji test buduje koperty każdej zmienionej encji („emiter doskonały”).
-  - Scalanie emituje tylko przez dwa haki, które w kodzie dojdą w E2-PR3b:
+  - Scalanie emituje tylko przez dwa haki, które w kodzie dojdą w E2-PR3b (od E2-PR3b w kodzie, wpis wyżej):
     - H1: przegrany nagrobek karty → pełna karta;
     - H2: ratunek notatki D-21 „zawsze do kolejki”.
 - **Dostawa.**
@@ -23857,6 +23860,7 @@ literał na wynik zgodny.
   - Hak H2 „zawsze do kolejki”: notatka, której nagrobek zniknął w partii i której rekord zmieniło scalanie, idzie do
     kolejki także wtedy, gdy w tej partii przyszła jej własna koperta. Bez tego notatka zostaje tylko na jednym
     urządzeniu (test N1, N1b).
+  - Wykonane w E2-PR3b (wpis wyżej; uśpione).
 - **E2-PR2b** (podzielony na E2-PR2b1 i E2-PR2b2, wpisy wyżej).
   - Z wyniku do kwarantanny tylko powód, a do podsumowania wyniku (`resultSummary`) tylko status, powód albo kod
     i liczniki; strażnik źródła obejmuje nowy kod (E2-PR2b2; ślady P-SYNC-SLAD z `resultSummary` — E2-PR4).
@@ -27135,7 +27139,8 @@ P1 (10 z tej poprawki i 5 z poprawki F2, #754) i 11 z jego weryfikacji 2; wejśc
 - **Etap 2 synchronizacji** (kolejka zdarzeń): ratunek wymaga wyjątku od zasady „scalanie nie dopisuje do kolejki”,
   builder `pnotetomb` musi czytać rekord ze sklepu, a zapis notatki, po którym nagrobek zostaje (`Bnp_poZapisie`:
   stan CZEKA, a po przeglądzie przeniesienia na D-7 także karta późniejsza niż `e` przy zapisie nie późniejszym niż R),
-  musi wysłać także `pnotetomb` — dopisane w `docs/SYNC_PRZYROSTOWA_PLAN.md`.
+  musi wysłać także `pnotetomb` — dopisane w `docs/SYNC_PRZYROSTOWA_PLAN.md`. Ratunek do kolejki — wykonane
+  w E2-PR3b (hak H2, uśpione; wpis P-DZIENNIK-ZDARZEN, E2-PR3b).
 
 **Nota wydania (D21-8; do wklejenia przy wydaniu).** „Notatki pacjenta (wyniki badań, leki, terminy) wracają razem
 z kartą, którą po »Usuń pacjenta« zachowano na innym urządzeniu (nowa wizyta, poprawka, gwiazdka, kosz, »Przywróć«).
