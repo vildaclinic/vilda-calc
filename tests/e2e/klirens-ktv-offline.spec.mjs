@@ -441,7 +441,11 @@ async function assertPrecedingNoteRemainsSeparate(page, note, expected, newNote)
 for (const baselineSha of [null, UPDATE_BASE_SHA]) {
   const upgrade = Boolean(baselineSha);
   test(`KTV: ${upgrade ? 'pełna aktualizacja ' + baselineSha.slice(0, 8) : 'pełna świeża instalacja'} i dwa zimne starty offline`, async ({ playwright, browserName, launchOptions }, testInfo) => {
-    test.setTimeout(180_000);
+    // Measured on 2026-11-10: locally 44.8 s (fresh) and 52.0 s (update) on audyt 79483d97, 47.2 s and 55.4 s on the
+    // E2-PR3c3 head — the change does not move it. On CI the update variant hit the former 180 s limit in both attempts
+    // while the whole shard ran 31.1 min instead of 21.0 min on the previous green run; CI needs about 3–4 times the local
+    // time, as measured for header-patient-status-offline. The limit is about 2 times that need.
+    test.setTimeout(360_000);
     const resources = resourcesFor(), startupResources = startupResourcesFor(), aliasResources = aliasResourcesFor();
     const deployment = await deploymentServer(upgrade, baselineSha);
     const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'vilda-ktv-offline-'));
