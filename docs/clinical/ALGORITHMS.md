@@ -21631,8 +21631,8 @@ rekordu); hak — w kroku importu, w partii.
 - `tests/unit/kopia-konta-dane-konta.test.mjs` — 4 nowe przypadki: poprawka tutaj pod kartą usuniętą, kopia pod kartą
   docelową (podgląd = wynik = magazyn = 1, notatka pod kartą docelową), kontrola z kartą żywą (0), karta jeszcze
   w drodze bez nagrobka (0), pełny remis z kartą w drodze (mniejszy `patientId`, 1);
-- `tests/unit/notatki-za-karta.test.mjs` — T20 „B poprawia notatkę N1 pod X” (N1 pod Y na A i B) i F1 ×3 (n1@Y na A,
-  B i C, te same `rev` i chwila zmiany);
+- `tests/unit/notatki-za-karta.test.mjs` — T20 „B poprawia notatkę N1 pod X” (N1 pod Y na A i B), F1 ×3 (n1@Y na A,
+  B i C, te same `rev` i chwila zmiany) i strażnik podglądu „Scal kopię konta” (plan notatek ze zmianami samej karty);
 - `tests/unit/sync-dziennik-wlasnosciowy.test.mjs` (test A ≡ B, 132 przypadki) — literały p. 6, model haków, negatyw
   tabeli W4 na różnicy wstrzykniętej w migawkę, nagłówek;
 - `tests/unit/sync-dziennik-uspienie.test.mjs`, `sync-dziennik-haki.test.mjs`, `notatki-pacjenta-integralnosc.test.mjs`
@@ -21642,9 +21642,9 @@ rekordu); hak — w kroku importu, w partii.
 
 Pełny `npm test` i e2e — wyniki w opisie PR.
 
-**Czerwone na bazie** (`origin/audyt` `2beacb33` z testami tego PR): 23 — `notatki-karta-po-scaleniu` 7 (dawny
+**Czerwone na bazie** (`origin/audyt` `2beacb33` z testami tego PR): 24 — `notatki-karta-po-scaleniu` 7 (dawny
 rozjazd, koszt, wyścig, pełny remis, plan opieki, dwa strażniki źródła), `kopia-konta-dane-konta` 2 (poprawka pod
-kartą usuniętą, pełny remis), `notatki-za-karta` 4 (T20 poprawka N1, F1 ×3), test A ≡ B 3 (oba scenariusze p. 6,
+kartą usuniętą, pełny remis), `notatki-za-karta` 5 (T20 poprawka N1, F1 ×3, strażnik podglądu „Scal kopię konta”), test A ≡ B 3 (oba scenariusze p. 6,
 „W4 — negatywy”), `sync-dziennik-uspienie` 5, `sync-dziennik-haki` 1 (KH6), `notatki-pacjenta-integralnosc` 1 (G6g).
 Zielone z natury: obie karty istnieją (×2; na bazie nagrobek starej karty zdejmuje karta, która wraca), kontrole
 podglądu, pozostałe przypadki, zapis bazowy dziennika (fikstura bez zmian).
