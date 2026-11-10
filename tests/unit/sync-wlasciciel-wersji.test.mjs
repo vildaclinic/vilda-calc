@@ -39,6 +39,10 @@ import { loadBrowserScript } from '../support/load-browser-script.mjs';
 // Po przeglądzie poprawki P1 D-21 (F2) 329 testów: +4 — „Usuń pacjenta” w innej karcie przeglądarki, gdy scalanie
 // czeka na blokadę karty z nagrobkiem z ładunku (dwa tryby blokad, oba [CZERWONE na ab8ead6]), kontrola starszego
 // lokalnego nagrobka i strażnik źródła Bsl_usunPacjenta (na ab8ead6 czerwony).
+// Od E2-PR3c2 (decyzja 4 właściciela z 2026-11-10) 362 testy: +33 — poprawka, gwiazdka albo edycja wiersza wizyty
+// w starej karcie na urządzeniu, które o „Scal pacjentów” nie wiedziało, trafia do tej wizyty w karcie scalonej na
+// urządzeniu, które scaliło karty (KS1–KS9); na 816282da czerwone 27 (KS1–KS5 i strażnik źródła KS9), kontrole KS6–KS8
+// zielone.
 // Wcześniejsze stany pliku: 233 testy — na `audyt` 184, na dd21d11 29 (po łańcuchu „Scal pacjentów” X → Y → Z zmiana
 // wersji w starej karcie na urządzeniu, które o scaleniach nie wiedziało, ginęła pod dawną treścią z wyższą rev; z dwóch
 // współbieżnych poprawek pod różnymi kartami wygrywała ta z urządzenia scalającego, nie późniejsza); 203 testy — na
@@ -2335,6 +2339,171 @@ describe('P-SYNC-WLASCICIEL — treść, chwila zmiany i chwila zapisu wersji z 
     expect((await A.v.getLatestSnapshot(Y)).snapshotId, 'bieżąca wersja Y bez zmian').toBe(glowaY);
     expect((await A.v.listPatients()).some((p) => p.patientId === X), 'X usunięta (nagrobek)').toBe(false);
   }, CZAS);
+});
+
+describe('P-SYNC-WLASCICIEL — poprawka albo gwiazdka wizyty starej karty na urządzeniu, które scaliło karty (E2-PR3c2)', () => {
+  /* E2-PR3c2 (decyzja 4 właściciela z 2026-11-10). A robi „Scal pacjentów” X → Y (albo X → Y → Z), a B — jeszcze bez
+     wiedzy o scaleniu — poprawia x1 z zachowaną chwilą zapisu, przypina x2 albo edytuje wiersz pomiaru x2 w starej X.
+     Chwila zapisu X na B zostaje sprzed scalenia, więc nagrobek X wygrywa na A (X w zbiorze N). Dotąd A pomijało całą
+     kartę X z ładunku B: zmiana docierała do A dopiero wtedy, gdy B samo scaliło kopię A i odesłało wynik (decyzja
+     „zabierz” na B), a gdy B już nie scalało — nie docierała wcale (po włączeniu dziennika zdarzeń ginęła na obu
+     urządzeniach). Teraz wersja z ładunku, która leży na A pod inną istniejącą kartą spoza N, oddaje tutejszemu rekordowi
+     późniejszą treść albo późniejszy rejestr gwiazdki, jak decyzja „treść” (Bsw_zKartyZNagrobkiem → Bsw_poprawTresc).
+     KS1–KS5 [CZERWONE na bazie 816282da]: A dotąd nie przyjmowało zmiany. KS6–KS8 [kontrola]: zielone na bazie
+     strażniki reguły (późniejsza zmiana tutejsza, wpis kosza, wersji tu nie ma). KS9 — strażnik źródła. */
+  const ZMIANY = {
+    'korekta x1 z zachowaną chwilą zapisu': { wersja: 'x1', zrob: (B, X, s) => B.v.updateSnapshotPayload(X, s, zapis([61]), { preserveSavedAt: true }), tresc: '61:120.5' },
+    'przypięcie x2': { wersja: 'x2', zrob: (B, X, s) => B.v.setSnapshotPinned(X, s, true), tresc: '60:120,66:123 przypięta' },
+    'edycja wiersza x2': { wersja: 'x2', zrob: (B, X) => B.v.updateMeasurementRow(X, { uid: 'm-66' }, { height: 124 }), tresc: '60:120,66:124' },
+  };
+  const WARIANTY = Object.keys(ZMIANY).flatMap((z) => KOLEJNOSCI.map((k) => [z, k]));
+  // Treść wersji (pomiary i przypięcie) pod kartą albo null.
+  async function tresc(d, patientId, snapshotId) {
+    const p = await d.v.getPatient(patientId);
+    const s = p && p.snapshots.find((q) => q.snapshotId === snapshotId);
+    return s ? `${pomiaryZ(s.payload)}${s.payload && s.payload._pinned ? ' przypięta' : ''}` : null;
+  }
+  const rekord = async (d, patientId, snapshotId) => (await d.baza.listSnapshotsForUser(d.uid, patientId)).find((s) => s.snapshotId === snapshotId);
+  // Bieżąca wersja karty (najpóźniejsza chwila zapisu) — etykieta.
+  async function biezaca(d, patientId, et) {
+    const w = (await d.baza.listSnapshotsForUser(d.uid, patientId)).sort((a, b) => (a.savedAtISO < b.savedAtISO ? 1 : -1));
+    return w.length ? et[w[0].snapshotId] : null;
+  }
+  // A: X (x1, x2) i Y (y1, y2), pełna synchronizacja z B; B zmienia wersję w X bez wiedzy o scaleniu; potem A robi
+  // „Scal pacjentów” X → Y (głowa scalenia ym), a przy dwa = true jeszcze Y → Z (głowa zm).
+  async function przygotuj(zmiana, kolejnoscId, dwa = false) {
+    const A = await urzadzenie('A'), B = await urzadzenie('B');
+    const X = await karta(A.v);
+    await chwila(4);
+    const Y = await kartaWzgledem(A, X, kolejnoscId === 'X<Y');
+    let Z = null;
+    if (dwa) { await chwila(4); Z = await kartaWzgledem(A, Y, kolejnoscId === 'X<Y'); }
+    const sync = chmura();
+    await sync(A); await sync(B);
+    const karty = dwa ? { X, Y, Z } : { X, Y };
+    const et = await etykiety(A, karty);
+    const z = ZMIANY[zmiana], sid = idPo(et, z.wersja);
+    await chwila(5);
+    await z.zrob(B, X, sid);
+    expect(await tresc(B, X, sid), 'B zmieniło wersję w X').toBe(z.tresc);
+    await chwila(5);
+    et[(await A.v.mergePatients(X, Y)).snapshotId] = 'ym';
+    if (dwa) { await chwila(5); et[(await A.v.mergePatients(Y, Z)).snapshotId] = 'zm'; }
+    const nagrobekX = (await A.baza.listTombstonesForUser(A.uid)).find((t) => t.patientId === X).deletedAtISO;
+    expect((await B.baza.getPatientForUser(B.uid, X)).lastSavedAtISO < nagrobekX, 'nagrobek X wygrywa na A (X w zbiorze N)').toBe(true);
+    return { A, B, X, Y, Z, et, sid, sync, z, cel: dwa ? Z : Y };
+  }
+  const SCALONA = { Y: karta2(5, ['x1', 'x2', 'y1', 'y2', 'ym']) };
+  const pelnaKopia = async (od, do_) => do_.v.mergeSyncPayload(kopia(await od.v.exportSyncPayload()));
+  async function oczekuj(d, p, karty, nagrobki, opis) {
+    const s = await stan(d, p.et);
+    expect(s.karty, `karty ${opis}`).toEqual(karty);
+    expect(s.nagrobki, `nagrobki ${opis}`).toEqual(nagrobki);
+    expect(s.kosz, `kosz ${opis}`).toEqual([]);
+    expect(s.sieroty, `wersje bez karty ${opis}`).toBe(0);
+  }
+
+  it.each(WARIANTY)('KS1 [CZERWONY na bazie] %s w X na B, A scala pełną kopię B, B nie scala A (%s): zmiana od razu w tej wizycie pod Y na A, bieżąca wersja Y bez zmian', async (zmiana, kolejnoscId) => {
+    const p = await przygotuj(zmiana, kolejnoscId);
+    await pelnaKopia(p.B, p.A);
+    await oczekuj(p.A, p, SCALONA, ['X'], 'A');
+    expect(await tresc(p.A, p.Y, p.sid), 'zmiana z B na A').toBe(p.z.tresc);
+    expect(await biezaca(p.A, p.Y, p.et), 'bieżąca wersja Y — głowa scalenia').toBe('ym');
+  }, CZAS);
+
+  it.each(WARIANTY)('KS2 [CZERWONY na bazie] %s w X na B, A scala kopię B, potem B scala kopię A (%s): zmiana na obu po jednej wymianie, stan zbieżny', async (zmiana, kolejnoscId) => {
+    const p = await przygotuj(zmiana, kolejnoscId);
+    await pelnaKopia(p.B, p.A);
+    await pelnaKopia(p.A, p.B);
+    for (const d of [p.A, p.B]) {
+      await oczekuj(d, p, SCALONA, ['X'], d.nazwa);
+      expect(await tresc(d, p.Y, p.sid), `zmiana z B na ${d.nazwa}`).toBe(p.z.tresc);
+      expect(await biezaca(d, p.Y, p.et), `bieżąca wersja Y na ${d.nazwa}`).toBe('ym');
+    }
+    // Kolejna wymiana niczego nie zmienia.
+    const przed = JSON.stringify([await stan(p.A, p.et), await stan(p.B, p.et)]);
+    await pelnaKopia(p.B, p.A);
+    await pelnaKopia(p.A, p.B);
+    expect(JSON.stringify([await stan(p.A, p.et), await stan(p.B, p.et)])).toBe(przed);
+  }, CZAS);
+
+  it.each(WARIANTY)('KS3 [CZERWONY na bazie] %s w X na B, delty na żywo (%s): A dostaje deltę karty X z B — zmiana pod Y; B dostaje delty Y i nagrobka X — ta sama treść', async (zmiana, kolejnoscId) => {
+    const p = await przygotuj(zmiana, kolejnoscId);
+    for (const d of await delty(p.B, [p.X])) await p.A.v.mergeSyncPayload(d);
+    await oczekuj(p.A, p, SCALONA, ['X'], 'A');
+    expect(await tresc(p.A, p.Y, p.sid), 'zmiana z B na A po delcie').toBe(p.z.tresc);
+    for (const d of await delty(p.A, [p.Y])) await p.B.v.mergeSyncPayload(d);
+    await oczekuj(p.B, p, SCALONA, ['X'], 'B');
+    expect(await tresc(p.B, p.Y, p.sid), 'zmiana z B na B').toBe(p.z.tresc);
+  }, CZAS);
+
+  it.each(KOLEJNOSCI)('KS4 [CZERWONY na bazie] korekta x1 na B, gwiazdka x1 pod Y na A po scaleniu (%s): rekord złożony — treść z B, gwiazdka z A, rev = wyższa + 1, na obu', async (kolejnoscId) => {
+    const p = await przygotuj('korekta x1 z zachowaną chwilą zapisu', kolejnoscId);
+    await chwila(5);
+    await p.A.v.setSnapshotPinned(p.Y, p.sid, true);
+    const revA = (await rekord(p.A, p.Y, p.sid)).rev || 0, revB = (await rekord(p.B, p.X, p.sid)).rev || 0;
+    await pelnaKopia(p.B, p.A);
+    await oczekuj(p.A, p, SCALONA, ['X'], 'A');
+    expect(await tresc(p.A, p.Y, p.sid), 'treść z B i gwiazdka z A').toBe('61:120.5 przypięta');
+    expect((await rekord(p.A, p.Y, p.sid)).rev, 'rev rekordu złożonego').toBe(Math.max(revA, revB) + 1);
+    await pelnaKopia(p.A, p.B);
+    await oczekuj(p.B, p, SCALONA, ['X'], 'B');
+    expect(await tresc(p.B, p.Y, p.sid), 'B ma ten sam rekord').toBe('61:120.5 przypięta');
+    expect((await rekord(p.B, p.Y, p.sid)).rev).toBe(Math.max(revA, revB) + 1);
+  }, CZAS);
+
+  it.each(WARIANTY)('KS5 [CZERWONY na bazie] %s w X na B, A scala X → Y → Z, potem scala pełną kopię B (%s): zmiana w tej wizycie pod Z', async (zmiana, kolejnoscId) => {
+    const p = await przygotuj(zmiana, kolejnoscId, true);
+    await pelnaKopia(p.B, p.A);
+    await oczekuj(p.A, p, { Z: karta2(8, ['x1', 'x2', 'y1', 'y2', 'ym', 'z1', 'z2', 'zm']) }, ['X', 'Y'], 'A');
+    expect(await tresc(p.A, p.Z, p.sid), 'zmiana z B pod Z').toBe(p.z.tresc);
+    expect(await biezaca(p.A, p.Z, p.et), 'bieżąca wersja Z — głowa drugiego scalenia').toBe('zm');
+  }, CZAS);
+
+  it.each(KOLEJNOSCI)('KS6 [kontrola] korekta x1 na B, późniejsza korekta x1 pod Y na A (%s): zostaje późniejsza korekta A', async (kolejnoscId) => {
+    const p = await przygotuj('korekta x1 z zachowaną chwilą zapisu', kolejnoscId);
+    await chwila(5);
+    await p.A.v.updateSnapshotPayload(p.Y, p.sid, zapis([62]), { preserveSavedAt: true });
+    await pelnaKopia(p.B, p.A);
+    await oczekuj(p.A, p, SCALONA, ['X'], 'A');
+    expect(await tresc(p.A, p.Y, p.sid), 'późniejsza korekta A').toBe('62:121');
+  }, CZAS);
+
+  it.each(KOLEJNOSCI)('KS7 [kontrola] korekta x1 na B, x1 w Koszu A po scaleniu (%s): decyduje kosz — x1 zostaje w Koszu, Y bez x1', async (kolejnoscId) => {
+    const p = await przygotuj('korekta x1 z zachowaną chwilą zapisu', kolejnoscId);
+    await chwila(5);
+    await p.A.v.moveSnapshotToTrash(p.Y, p.sid);
+    await pelnaKopia(p.B, p.A);
+    const s = await stan(p.A, p.et);
+    expect(s.karty).toEqual({ Y: karta2(4, ['x2', 'y1', 'y2', 'ym']) });
+    expect(s.nagrobki).toEqual(['X']);
+    expect(s.kosz).toEqual(['x1']);
+    expect(s.sieroty).toBe(0);
+  }, CZAS);
+
+  it.each(KOLEJNOSCI)('KS8 [kontrola] korekta x1 na B, „Usuń pacjenta” Y na A po scaleniu (%s): stara karta nie wraca, wizyty nie przybywa', async (kolejnoscId) => {
+    const p = await przygotuj('korekta x1 z zachowaną chwilą zapisu', kolejnoscId);
+    await chwila(5);
+    await p.A.v.removePatient(p.Y);
+    await pelnaKopia(p.B, p.A);
+    const s = await stan(p.A, p.et);
+    expect(s.karty).toEqual({});
+    expect(s.nagrobki).toEqual(['X', 'Y']);
+    expect(s.sieroty).toBe(0);
+  }, CZAS);
+
+  it('KS9 strażnik źródła: Le woła regułę po decyzji kosza karty z N i tylko poza importem; reguła odkłada decyzję „treść” do fazy przeniesień', () => {
+    const src = readFileSync(path.join(repoRoot, 'vilda_vault.js'), 'utf8');
+    expect(src).toContain('if(N.has(F.patientId)){Bsl_koszZLadunku(Bkz_S,F);if(!Bses_imp)await Bsw_zKartyZNagrobkiem(Bkz_S,F,e);continue}');
+    const a = src.indexOf('async function Bsw_zKartyZNagrobkiem(');
+    expect(a).toBeGreaterThan(0);
+    const fn = src.slice(a, src.indexOf('\n}\n', a));
+    for (const s of ['ctx.mapa.get(S.snapshotId)', 'Bsw_wersjaLokalna(ctx, S.snapshotId)', 'g.patientId === F.patientId', 'ctx.Bsw_N.has(g.patientId)', 'getPatientForUser(b, g.patientId)', 'Bsw_wklad(S, g)', "{ co: 'tresc', g: g }"]) expect(fn, s).toContain(s);
+    // Każdy odczyt i odłożenie decyzji po sprawdzeniu sesji (P-CHMURA-OPIS).
+    expect(fn.indexOf('Bses_pilnuj(opcje)')).toBeLessThan(fn.indexOf('Bsw_wersjaLokalna('));
+    expect(fn.lastIndexOf('Bses_pilnuj(opcje)')).toBeLessThan(fn.indexOf('Bsw_odloz('));
+    expect(fn.lastIndexOf('Bses_pilnuj(opcje)')).toBeGreaterThan(fn.indexOf('await V(S.payload)'));
+  });
 });
 
 describe('P-SYNC-WLASCICIEL — rev wyniku bez nadmuchania i pętla scaleń', () => {

@@ -80,11 +80,14 @@
 //      bo poprawka C (t+3) jest późniejsza niż ten nagrobek (t+1) (dotąd do tego K z x pod Z — x:23 w 10/16, x:74
 //      w 6/16). Domknięcie wymaga zmiany formatu wpisu.
 //   npret-kosz3-P — P przypina x w X i daje do kosza x3 w X (bez wiedzy o scaleniu); C przycina X; K: X → Y. Karta
-//      docelowa z ładunku K (x3 pod Y) → Y[m4,y,x:23*] w 6 z 8 kolejności; w K←C,K←P i K←P,K←C K zna już i
-//      przycięcie, i kosz x3, zanim P zobaczy jego ładunek: w ładunku K nie ma żadnej wersji X, a wszystkie wpisy
-//      wskazują X — nic nie mówi P, dokąd scalono X, i przypięta x ginie z X na trzech (jak bez tej reguły w 4 z 8;
-//      8240e0df w tych kolejnościach: K ze starą x:23 bez gwiazdki przy rundach katalogu, x:23* na trzech przy rundach
-//      cel.md). Domknięcie wymaga celu scalenia w nagrobku (zmiana formatu, P5).
+//      docelowa z ładunku K (x3 pod Y) → Y[m4,y,x:23*] w 7 z 8 kolejności (od E2-PR3c2 także K←P,K←C: K, który scalił
+//      X → Y, przyjmuje gwiazdkę x z ładunku P do x pod Y — karta X z ładunku przegrywa tam z nagrobkiem scalenia, a x
+//      leży pod żywą Y; dotąd i w tej kolejności x ginęła z X na trzech); w K←C,K←P K zna już i przycięcie, i kosz x3,
+//      zanim P zobaczy jego ładunek: x ma na K wpis retencji (decyduje kosz, gwiazdka z ładunku P nie przechodzi),
+//      w ładunku K nie ma żadnej wersji X, a wszystkie wpisy wskazują X — nic nie mówi P, dokąd scalono X, i przypięta
+//      x ginie z X na trzech (jak bez tej reguły w 4 z 8; 8240e0df w tej kolejności: K ze starą x:23 bez gwiazdki przy
+//      rundach katalogu, x:23* na trzech przy rundach cel.md). Domknięcie wymaga celu scalenia w nagrobku (zmiana
+//      formatu, P5).
 //
 // Przy zbieżnych scenariuszach: ten sam widok i ten sam pełny stan (chwile, rev, nagrobki) na trzech, stan stabilny,
 // 0 zapisów listy, wersji i kart w rundzie kontrolnej. Prawdziwy vilda_vault.js, sejfy w pamięci, sztuczny zegar,
@@ -212,11 +215,12 @@ describe('P-KOSZ-PO-KLUCZU — znane ograniczenie kosz-po-2: kosz z poprawką na
   }
 });
 
-describe('P-KOSZ-PO-KLUCZU — npret-kosz3-P: przypięta x idzie pod Y, gdy ładunek K wskazuje kartę docelową; znane ograniczenie w dwóch kolejnościach', () => {
+describe('P-KOSZ-PO-KLUCZU — npret-kosz3-P: przypięta x idzie pod Y, gdy ładunek K wskazuje kartę docelową albo K przyjmuje gwiazdkę z ładunku P (E2-PR3c2); znane ograniczenie w jednej kolejności', () => {
   const zX = 'Y[m4,y,x:23*] Z[z] | kosz x3@X:25 | nagr X', bezX = 'Y[m4,y] Z[z] | kosz x3@X:25 | nagr X';
   for (const runda of RUNDY) {
     for (const kol of KOLEJNOSCI_8) {
-      const ogr = ['K←C,K←P', 'K←P,K←C'].includes(kol);
+      // E2-PR3c2: K←P,K←C bez ograniczenia (gwiazdka z ładunku P do x pod Y na K).
+      const ogr = kol === 'K←C,K←P';
       it(`npret-kosz3-P (${kol}, rundy ${runda}): ${ogr ? 'x w żadnej karcie (bez celu scalenia)' : 'x 23* pod Y'} na trzech`, async () => {
         const r = await przebiegE3(SCEN['npret-kosz3-P'], kol, runda);
         expect(r.u.warunkiBledne, `warunki scenariusza: ${r.u.warunki.join('; ')}`).toBe(false);

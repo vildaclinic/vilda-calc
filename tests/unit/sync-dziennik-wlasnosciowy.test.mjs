@@ -90,6 +90,18 @@
 // porównań (H1 38, H2 27), 1488 ten sam ciąg, 1 inna kolejność rang (ta sama partia co wyżej: pełna karta przed swoją
 // notatką w obu).
 //
+// E2-PR3c2 (decyzja 4 właściciela z 2026-11-10, P-SYNC-WLASCICIEL): karta z ładunku przegrana z nagrobkiem pacjenta
+// oddaje późniejszą treść albo późniejszy rejestr gwiazdki wersji, która leży u odbiorcy pod inną istniejącą kartą spoza
+// zbioru N (decyzja „treść”) — urządzenie, które scaliło karty, przyjmuje poprawkę albo gwiazdkę ze starej karty
+// z koperty snap tej karty, a nie dopiero z pełnej kopii drugiego urządzenia. Przepisane literały: p. 5 npret-pin
+// C←P,C←K, pin-scal i popr-scal (obie kolejności) — po samych zdarzeniach stan = stan samych blobów (dotąd K bez
+// gwiazdki albo poprawki do pełnej wymiany); p. 6 K6 — bez etykiety „ZNANA RÓŻNICA”, zdarzenia: []; skrzyżowane „Scal
+// pacjentów” z notatką karty P — bez R2 wersji karty P w zdarzeniach. Bez zmian: npret-pin K←C,P←K i npret-K (wersja
+// z wpisem retencji — decyduje kosz), KAT_ZMIANY, KAT_ZNANE, model haków.
+// Czerwone na bazie E2-PR3c2 (sejf 816282da; 7 ze 132 przypadków): p. 5 npret-pin C←P,C←K, pin-scal ×2, popr-scal ×2
+// (po samych zdarzeniach K bez gwiazdki albo poprawki), p. 6 K6 (po zdarzeniach A: 20 kg, B: 27 kg) i skrzyżowane
+// „Scal pacjentów” z notatką karty P (R2 wersji karty P w zdarzeniach). Zielone z natury: pozostałe przypadki.
+//
 // KOLEJNOŚĆ W KROKU (E2-PR3a2, sprawdzana na emiterach): snap (także wersje przeniesione pod kartę celu „Scal pacjentów”
 // i głowy scalenia), potem stomb, potem ptomb, potem pnote, pnotetomb, note, notetomb, plist, plisttomb, pref, pk, pktomb,
 // cred. Pola karty zmienione bez snap tej karty w kroku niesie stomb z kartą (11.2), inaczej snap(karta, najnowsza
@@ -98,8 +110,8 @@
 // Decyzja 12.2 (2026-11-04): w kroku „Scal pacjentów” zostaje „najpierw wizyty”; R2-E3 (p. 6) była „ZNANA RÓŻNICA”
 // z naprawą w E3-PR0 — od E2-PR3c1 bez różnicy. K6 (B poprawia wizytę karty P, A „Scal pacjentów” P → Q bez wiedzy
 // o poprawce) — zmierzone w p. 6: do E2-PR3c1 po zdarzeniach i pełnej wymianie poprawka ginęła na obu urządzeniach (same
-// pełne kopie ją zachowują; decyzja 12.3); od E2-PR3c1 po pełnej wymianie bez utraty, a po samych zdarzeniach zostaje
-// różnica treści wizyty — „ZNANA RÓŻNICA (zdarzenia; naprawa: E2-PR3c2)”.
+// pełne kopie ją zachowują; decyzja 12.3); od E2-PR3c1 po pełnej wymianie bez utraty, a od E2-PR3c2 bez różnicy także po
+// samych zdarzeniach (w E2-PR3c1 zostawała różnica treści wizyty do pełnej wysyłki).
 //
 // WARUNKI (3.2). D(X, Y) — różnice encja po encji na eksportach kanonicznych (pominSeq, pominSnapshotCount), każda z klasą
 // z 3.6 albo bez (null): R2 (rev wersji ±1), R3 (rev nagrobka notatki), R4a (opis i gwiazdka wpisu kosza żywej karty),
@@ -1970,12 +1982,10 @@ const KAT_LITERALY = {
     blob: { stan: '3e3ec48f354a', widok: 'Y[m3,y,x3,x:23*] Z[z] | nagr X' },
     w4: { stan: '3e3ec48f354a', widok: 'Y[m3,y,x3,x:23*] Z[z] | nagr X' },
   },
+  // E2-PR3c2: K, który scalił X → Y, przyjmuje gwiazdkę x z ładunku P (karta X przegrana z nagrobkiem) — po samych
+  // zdarzeniach x:23* na trzech, stan = stan samych blobów.
   'npret-pin C←P,C←K': {
-    zdarzenia: { stan: 'f3e774c7c150', widok: {
-      P: 'Y[m3,y,x3,x:23*] Z[z] | nagr X',
-      K: 'Y[m3,y,x3] Z[z] | nagr X',
-      C: 'Y[m3,y,x3,x:23*] Z[z] | nagr X',
-    } },
+    zdarzenia: { stan: '3e3ec48f354a', widok: 'Y[m3,y,x3,x:23*] Z[z] | nagr X' },
     blob: { stan: '3e3ec48f354a', widok: 'Y[m3,y,x3,x:23*] Z[z] | nagr X' },
     w4: { stan: '3e3ec48f354a', widok: 'Y[m3,y,x3,x:23*] Z[z] | nagr X' },
   },
@@ -2143,41 +2153,27 @@ const KAT_LITERALY = {
     blob: { stan: 'd650cd56c4f2', widok: 'X[x:78] | kosz s1@X:20' },
     w4: { stan: 'd650cd56c4f2', widok: 'X[x:78] | kosz s1@X:20' },
   },
-  // pin-scal, popr-scal (E2-PR3c1): po zdarzeniach gwiazdka albo poprawka x jest pod Y na P (w C←P,C←K także na C), K
-  // dostaje ją przy pełnej wymianie; po W4 x:23* albo x:74 na trzech, stan = stan samych blobów.
+  // pin-scal, popr-scal (E2-PR3c1): po W4 x:23* albo x:74 na trzech, stan = stan samych blobów. Do E2-PR3c2 po
+  // zdarzeniach gwiazdka albo poprawka x była pod Y na P (w C←P,C←K także na C), a K dostawał ją dopiero przy pełnej
+  // wymianie; od E2-PR3c2 K przyjmuje ją z koperty karty X (przegranej tam z nagrobkiem scalenia) — po samych zdarzeniach
+  // stan = stan samych blobów.
   'pin-scal K←C,P←K': {
-    zdarzenia: { stan: 'b559b3a9d1bb', widok: {
-      P: 'Y[m2,y,x3,x:23*,x1] Z[z] | nagr X',
-      K: 'Y[m2,y,x3,x:23,x1] Z[z] | nagr X',
-      C: 'Y[m2,y,x3,x:23,x1] Z[z] | nagr X',
-    } },
+    zdarzenia: { stan: 'a4de34c0476d', widok: 'Y[m2,y,x3,x:23*,x1] Z[z] | nagr X' },
     blob: { stan: 'a4de34c0476d', widok: 'Y[m2,y,x3,x:23*,x1] Z[z] | nagr X' },
     w4: { stan: 'a4de34c0476d', widok: 'Y[m2,y,x3,x:23*,x1] Z[z] | nagr X' },
   },
   'pin-scal C←P,C←K': {
-    zdarzenia: { stan: '7d88ce22bc4d', widok: {
-      P: 'Y[m2,y,x3,x:23*,x1] Z[z] | nagr X',
-      K: 'Y[m2,y,x3,x:23,x1] Z[z] | nagr X',
-      C: 'Y[m2,y,x3,x:23*,x1] Z[z] | nagr X',
-    } },
+    zdarzenia: { stan: 'a4de34c0476d', widok: 'Y[m2,y,x3,x:23*,x1] Z[z] | nagr X' },
     blob: { stan: 'a4de34c0476d', widok: 'Y[m2,y,x3,x:23*,x1] Z[z] | nagr X' },
     w4: { stan: 'a4de34c0476d', widok: 'Y[m2,y,x3,x:23*,x1] Z[z] | nagr X' },
   },
   'popr-scal K←C,P←K': {
-    zdarzenia: { stan: 'd31357d5e130', widok: {
-      P: 'Y[m2,y,x3,x:74,x1] Z[z] | nagr X',
-      K: 'Y[m2,y,x3,x:23,x1] Z[z] | nagr X',
-      C: 'Y[m2,y,x3,x:23,x1] Z[z] | nagr X',
-    } },
+    zdarzenia: { stan: 'fca0abee2385', widok: 'Y[m2,y,x3,x:74,x1] Z[z] | nagr X' },
     blob: { stan: 'fca0abee2385', widok: 'Y[m2,y,x3,x:74,x1] Z[z] | nagr X' },
     w4: { stan: 'fca0abee2385', widok: 'Y[m2,y,x3,x:74,x1] Z[z] | nagr X' },
   },
   'popr-scal C←P,C←K': {
-    zdarzenia: { stan: '859741d90e5d', widok: {
-      P: 'Y[m2,y,x3,x:74,x1] Z[z] | nagr X',
-      K: 'Y[m2,y,x3,x:23,x1] Z[z] | nagr X',
-      C: 'Y[m2,y,x3,x:74,x1] Z[z] | nagr X',
-    } },
+    zdarzenia: { stan: 'fca0abee2385', widok: 'Y[m2,y,x3,x:74,x1] Z[z] | nagr X' },
     blob: { stan: 'fca0abee2385', widok: 'Y[m2,y,x3,x:74,x1] Z[z] | nagr X' },
     w4: { stan: 'fca0abee2385', widok: 'Y[m2,y,x3,x:74,x1] Z[z] | nagr X' },
   },
@@ -2450,9 +2446,9 @@ const P6 = {
   // B poprawia wizytę v karty P na 27 kg, A bez wiedzy o poprawce „Scal pacjentów” P → Q. Do E2-PR3c1 po zdarzeniach
   // i pełnej wymianie (W4) v miała 20 kg na obu urządzeniach (poprawka ginęła). Od E2-PR3c1 (koperta nagrobka P z kartą
   // docelową Q) po W4 v ma 27 kg na obu — W4 = stan kliniczny świata samych blobów (blobyKlinicznie; samo D blobów jest
-  // puste). Po samych zdarzeniach zostaje różnica treści v (A: 20 kg, B: 27 kg) do pełnej wymiany — „ZNANA RÓŻNICA
-  // (zdarzenia)”, naprawa w E2-PR3c2.
-  'K6': { znana: 'ZNANA RÓŻNICA (zdarzenia; naprawa: E2-PR3c2)', klinicznieBloby: true, baza: p6k6, kroki: async (u, t) => {
+  // puste). Od E2-PR3c2 (A przyjmuje poprawkę z koperty karty P, przegranej tam z nagrobkiem scalenia) bez różnicy także
+  // po samych zdarzeniach (dotąd A: 20 kg, B: 27 kg do pełnej wymiany).
+  'K6': { klinicznieBloby: true, baza: p6k6, kroki: async (u, t) => {
     await popraw(u, u.B, u.v, 27); await scal(u, u.A, u.P, u.Q); await p6spoczynek(u, t);
   } },
 };
@@ -2605,9 +2601,10 @@ const P6_LITERALY = {
       B: 'n „edycja B” pod P — karta P usunięta: n nie widać w żadnej karcie | notatki w kartach: karta P (usunięta): n „edycja B”; karta Q: -',
     },
   },
-  // Od E2-PR3c1 w zdarzeniach dochodzi R2 wersji #ce45 karty P (koperta nagrobka Q z kartą docelową P; klasa dozwolona).
+  // E2-PR3c1 dodał w zdarzeniach R2 wersji #ce45 karty P (koperta nagrobka Q z kartą docelową P; klasa dozwolona); od
+  // E2-PR3c2 bez niej — B przyjmuje z koperty karty Q (przegranej tam z nagrobkiem scalenia) tę samą rev wersji.
   'skrzyżowane Scal pacjentów (A: P → Q, B: Q → P), notatka karty P': {
-    zdarzenia: ['pnote n: patientId [notatka pod inną kartą]', 'wersja P/#ce45: rev [R2]'],
+    zdarzenia: ['pnote n: patientId [notatka pod inną kartą]'],
     w4: {
       A: 'karty P[#ce45:22 #f06d:22 #b0cd:22] | Kosz - | notatki n: Fikcyjna treść',
       B: 'karty P[#ce45:22 #f06d:22 #b0cd:22] | Kosz - | notatki n: Fikcyjna treść',
@@ -2622,11 +2619,11 @@ const P6_LITERALY = {
       B: 'n „Fikcyjna treść” pod P — widoczna w karcie P | notatki w kartach: karta P: n „Fikcyjna treść”; karta Q (usunięta): -',
     },
   },
-  // K6 — od E2-PR3c1 bez utraty po pełnej wymianie: po zdarzeniach v pod Q na obu, ale z inną treścią (A: 20 kg, B: 27 kg;
-  // różnica bez klasy — ZNANA RÓŻNICA (zdarzenia), naprawa E2-PR3c2); po W4 v pod Q z 27 kg na obu, jak w świecie samych
-  // blobów. Do E2-PR3c1: po zdarzeniach v tylko na A, po W4 v z 20 kg na obu (poprawka z B ginęła).
+  // K6 — od E2-PR3c2 bez różnicy: po zdarzeniach i po W4 v pod Q z 27 kg na obu, jak w świecie samych blobów. E2-PR3c1:
+  // po zdarzeniach v pod Q na obu z inną treścią (A: 20 kg, B: 27 kg). Do E2-PR3c1: po zdarzeniach v tylko na A, po W4
+  // v z 20 kg na obu (poprawka z B ginęła).
   'K6': {
-    zdarzenia: ['wersja Q/v: payload._contentAtISO, payload._pinnedState.h, payload.user.weight, updatedAtISO'],
+    zdarzenia: [],
     w4: {
       A: 'karty Q[v:27 q:30 #5e09:30] | Kosz - | notatki -',
       B: 'karty Q[v:27 q:30 #5e09:30] | Kosz - | notatki -',
@@ -2677,8 +2674,8 @@ describe('A ≡ B, blok deterministyczny p. 6: znane klasy i dalsze ciągi (lite
       }
       if (sc.notatki) {
         // Negatyw (3.6): ta sama różnica w profilu podstawowym (W1, W2r, W2s) i w W4 p. 1–5 — niedozwolona (czerwień).
-        // Tylko wiersze tej klasy: od E2-PR3c1 w skrzyżowanym „Scal pacjentów” po zdarzeniach dochodzi różnica R2 wersji
-        // karty P (klasa dozwolona, osobno w literale zdarzeń).
+        // Tylko wiersze tej klasy: w E2-PR3c1 w skrzyżowanym „Scal pacjentów” po zdarzeniach dochodziła różnica R2 wersji
+        // karty P (klasa dozwolona, osobno w literale zdarzeń; od E2-PR3c2 jej nie ma).
         const [a, b] = [kanon(await eksport(u.A)), kanon(await eksport(u.B))];
         for (const tabela of ['podstawowy', 'W4', 'W4:p5']) {
           const d = await sklasyfikuj(D(a, b), a, b, { tabela, przebieg: 'E1-C' });
@@ -2690,7 +2687,7 @@ describe('A ≡ B, blok deterministyczny p. 6: znane klasy i dalsze ciągi (lite
       wynik.bloby = trzy ? { AB: await p6D(ub, ub.A, ub.B), BC: await p6D(ub, ub.B, ub.C), CA: await p6D(ub, ub.C, ub.A) } : await p6D(ub, ub.A, ub.B);
       if (sc.notatki) wynik.blobySkutek = { A: await skutekNotatki(ub.A, ub), B: await skutekNotatki(ub.B, ub) };
       if (sc.klinicznieBloby) wynik.blobyKlinicznie = { A: await kliniczny(ub.A, ub.n), B: await kliniczny(ub.B, ub.n) };
-      // K6 (E2-PR3c1): po pełnej wymianie stan kliniczny jak w świecie samych blobów (bez utraty poprawki).
+      // K6 (od E2-PR3c1): po pełnej wymianie stan kliniczny jak w świecie samych blobów (bez utraty poprawki).
       if (sc.klinicznieBloby) expect({ A: wynik.w4.A, B: wynik.w4.B }, `W4 = stan kliniczny samych blobów: ${nazwa}`).toEqual(wynik.blobyKlinicznie);
       P6_WYNIKI[nazwa] = wynik;
       if (process.env.E2_AB_P6) appendFileSync(process.env.E2_AB_P6, JSON.stringify({ nazwa, ...wynik }) + '\n');
