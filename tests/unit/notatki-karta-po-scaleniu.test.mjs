@@ -1,4 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
 
 // E2-PR3c4 (decyzja 6 właściciela z 2026-11-10, P-NOTATKI-ZA-KARTA): notatka po „Scal pacjentów” idzie za kartą, która
@@ -228,5 +231,27 @@ describe('E2-PR3c4 — plan opieki po „Scal pacjentów”', () => {
       const plan = await d.v.getCarePlan(planId);
       expect([plan.patientId === ids.Q, (plan.log || []).some((e) => e.text === tekst)], 'plan pod Q z ustaleniem B').toEqual([true, true]);
     }
+  });
+});
+
+describe('E2-PR3c4 — strażnik źródła reguły karty notatki', () => {
+  const src = readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), '../../vilda_vault.js'), 'utf8');
+  const funkcja = (nazwa) => { const a = src.indexOf(`async function ${nazwa}(`); return a < 0 ? '' : src.slice(a, src.indexOf('\n}\n', a)); };
+  it('[czerwony na bazie] Le: karta martwa = nagrobek karty (tu albo z ładunku) i brak karty, odczyt leniwy raz na pacjenta; jedna martwa — druga, pełny remis — mniejszy patientId, inaczej zwycięzca treści; hak tylko przy zmianie karty; plan opieki bez reguły remisu', () => {
+    expect(src).toContain('Qmart=async function(Qq){if(!Qq||!Qpt.has(Qq))return!1;if(!(Qq in Qmk)){');
+    expect(src).toContain('Qmk[Qq]=!Qk}return Qmk[Qq]}');
+    expect(src).toContain('if(Qdg&&!Qdm)return Qm;if(Qdm&&!Qdg)return Qg;if(Qr)return Qg<Qm?Qg:Qm;return Qw?Qg:Qm}');
+    expect(src).toContain('patientId:Qwp,bodyCipher:ti');
+    expect(src).toContain('Qdn.add(g.id);if(Qwp!==g.patientId)Bem_wlasciciel(g.id,e)})}');
+    expect(src).toContain('await Qwl(g.patientId,Ej.patientId,!1,Ew===Ev&&Ex===Ey)===g.patientId&&await Bnp_zmienKarte(P,g,Ej,g.patientId,e)){Qch.push({id:g.id,patientId:g.patientId,action:"merge"});Nt++;Qdn.add(g.id)}');
+    expect(src).toContain('M.patientId!==g.patientId&&await Qmart(M.patientId)&&!await Qmart(g.patientId)){await Bnp_zapiszKarte(P,M,g.patientId,e);');
+  });
+  it('[czerwony na bazie] zapis samej karty: pod blokadą notatki, na świeżym odczycie tego samego rekordu co na początku sekcji notatek, po sprawdzeniu sesji scalania i tego samego magazynu', () => {
+    const zmien = funkcja('Bnp_zmienKarte'), zapisz = funkcja('Bnp_zapiszKarte');
+    expect(zmien).toContain('await Ac(g.id, async function () {\n    Bses_pilnuj(opcje);');
+    expect(zmien).toContain('n = await h.getPatientNoteForUser(b, g.id);');
+    expect(zmien).toContain('if (!n || n.patientId === pid || n.patientId !== e.patientId || n.rev !== e.rev || n.updatedAtISO !== e.updatedAtISO) return;');
+    expect(zmien).toContain('await Bnp_zapiszKarte(h, n, pid, opcje);');
+    expect(zapisz).toContain('Bses_pilnuj(opcje);\n  if (I() !== h) throw Bses_blad();\n  await h.putPatientNoteForUser(b, PatientClinicalWriteValue(b, Object.assign({}, n, { patientId: pid })));');
   });
 });

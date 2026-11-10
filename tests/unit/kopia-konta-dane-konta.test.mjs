@@ -1085,6 +1085,37 @@ describe('P-KOPIA-DANE-KONTA — notatka po „Scal pacjentów” pod kartą, kt
       .toEqual([0, 0, 0]);
     parzystosc(r);
   });
+  it('[kontrola] notatka tutaj pod kartą, której tu nie ma i która nie ma nagrobka (karta może być jeszcze w drodze), kopia niesie starszą wersję pod p2: notatka zostaje, podgląd = wynik = magazyn = 0', async () => {
+    let nId = null;
+    const BEZ = 'karta-fikcyjna-jeszcze-w-drodze';
+    const r = await przypadek({
+      przed: async (A, ids) => { nId = (await notatka(A.v, ids.p2, 'n (fikcja)')).id; },
+      wC: async (C) => {
+        const x = await C.baza.getPatientNoteForUser(C.uid, nId);
+        await C.baza.putPatientNoteForUser(C.uid, { ...x, patientId: BEZ, rev: (x.rev || 0) + 1, updatedAtISO: new Date().toISOString() });
+      },
+    });
+    expect((await r.C.baza.getPatientNoteForUser(r.C.uid, nId)).patientId).toBe(BEZ);
+    expect([r.podglad.updatedPatientNoteCount, r.wynik.updatedPatientNoteCount]).toEqual([0, 0]);
+    parzystosc(r);
+  });
+  // „Scal kopię konta” przepina notatkę z kopii pod tutejszą kartę, która istnieje (Bks_notatki), więc różne karty
+  // notatki dochodzą do scalania tylko wtedy, gdy tutejszej karty nie ma. Pełny remis — mniejszy patientId (jak Le).
+  it('[czerwony na bazie] pełny remis: ta sama wersja tutaj pod kartą, której tu nie ma (bez nagrobka), i w kopii pod p2: mniejszy patientId (p2), podgląd = wynik = magazyn = 1', async () => {
+    let nId = null, p2 = null;
+    const BEZ = 'zz-karta-fikcyjna-jeszcze-w-drodze';
+    const r = await przypadek({
+      przed: async (A, ids) => { p2 = ids.p2; nId = (await notatka(A.v, ids.p2, 'n (fikcja)')).id; },
+      wC: async (C) => {
+        const x = await C.baza.getPatientNoteForUser(C.uid, nId);
+        await C.baza.putPatientNoteForUser(C.uid, { ...x, patientId: BEZ });
+      },
+    });
+    expect(p2 < BEZ).toBe(true);
+    expect((await r.C.baza.getPatientNoteForUser(r.C.uid, nId)).patientId).toBe(p2);
+    expect([r.podglad.updatedPatientNoteCount, r.wynik.updatedPatientNoteCount, r.podglad.replacedNewerPatientNoteCount]).toEqual([1, 1, 0]);
+    parzystosc(r);
+  });
 });
 
 /* Losowe przebiegi ze stałym ziarnem (recenzja runda 2): operacje na A przed i po synchronizacji, na C po niej (część
