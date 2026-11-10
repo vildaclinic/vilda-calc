@@ -29,10 +29,12 @@
 //       bramki poza emisją, licznik tuż przed tym odczytem — `__testEmisji.przeglad(sieroty);` na początku ciała
 //       Bem_przeglad (przegląd kolejki) i `__testEmisji.scalenie();` w Bem_zChmury przed instrukcją z Bob_bramka() (pary
 //       scalania z chmury, po warunku otwartego kroku); źródło bez tych funkcji — bez tych liczników. Samokontrola: odczyt
-//       bramki w Bem_zChmury dokładnie raz, jako instrukcja ciała. opakuj: true — dodatkowo funkcje Bem_hak, Bem_zHaka,
-//       Bem_zmiana, Bem_krokStart i Bem_krokKoniec (synchroniczne; od E2-PR3a4 także Bem_przeglad i Bem_zChmury, jeśli
-//       są) wywoływane przez opakowanie o tej samej nazwie: `__testEmisji.wejscie(nazwa)`, wywołanie, w finally
-//       `__testEmisji.wyjscie(nazwa)`.
+//       bramki w Bem_zChmury dokładnie raz, jako instrukcja ciała. E2-PR3b (haki scalania): `__testEmisji.przegrany(p, d);`
+//       w Bem_przegrany i `__testEmisji.ratunek(id);` w Bem_ratunek, każde tuż przed instrukcją z Bob_bramka() (w obu
+//       dokładnie raz); źródło bez tych funkcji — bez tych liczników. opakuj: true — dodatkowo funkcje Bem_hak,
+//       Bem_zHaka, Bem_zmiana, Bem_krokStart i Bem_krokKoniec (synchroniczne; od E2-PR3a4 także Bem_przeglad
+//       i Bem_zChmury, od E2-PR3b Bem_przegrane, Bem_przegrany i Bem_ratunek, jeśli są) wywoływane przez opakowanie o tej
+//       samej nazwie: `__testEmisji.wejscie(nazwa)`, wywołanie, w finally `__testEmisji.wyjscie(nazwa)`.
 //   zRejestremLancucha(zrodlo = ZRODLO_SEJFU) → tekst kopii z rejestrem łańcucha: w Bem_zmiana warunek
 //       `if (!T() || !Bob_trybPrywatny() || !Bob_idb()) return;` → `if (!T()) return;`, a ciało Bem_doLancucha zaczyna się
 //       od `__testEmisji.lancuch(z); return;` (wpis łańcucha — { kind, klucze, s, uid } albo znacznik partii { uid,
@@ -45,7 +47,8 @@
 //   licznikEmisji({ zrodlo = ZRODLO_SEJFU, opakuj = false, przy = null } = {}) → l — licznik jednego okna:
 //       l.emisje ([{ kind, klucze, sesja }] każdego wywołania Bem_zmiana, sesja: true — podana sesja operacji),
 //       l.przeglady ([{ sieroty }] każdego wywołania Bem_przeglad), l.scalenia ([{}] każdego odczytu bramki
-//       w Bem_zChmury), l.odczyty() — suma trzech (odczyty pola bramki z tych funkcji),
+//       w Bem_zChmury), l.przegrane ([{ p, d }] każdego odczytu bramki w Bem_przegrany), l.ratunki ([{ id }] każdego
+//       wywołania Bem_ratunek), l.odczyty() — suma pięciu (odczyty pola bramki z tych funkcji),
 //       l.jest, l.wEmisji() (true w trakcie opakowanej funkcji Bem_*; tylko opakuj), l.zaladuj(win) (do opcji zrodla);
 //       przy(nazwa, 'wejscie' | 'wyjscie') — wołane synchronicznie na wejściu i wyjściu opakowanej funkcji.
 import fs from 'node:fs';
@@ -126,7 +129,7 @@ function deklaracja(ast, nazwa) {
 }
 const OPAKOWANE = ['Bem_hak', 'Bem_zHaka', 'Bem_zmiana', 'Bem_krokStart', 'Bem_krokKoniec'];
 // Opakowane, gdy są w źródle (od E2-PR3a4).
-const OPAKOWANE_PRZEGLADU = ['Bem_przeglad', 'Bem_zChmury'];
+const OPAKOWANE_PRZEGLADU = ['Bem_przeglad', 'Bem_zChmury', 'Bem_przegrane', 'Bem_przegrany', 'Bem_ratunek'];
 // Instrukcja ciała funkcji z odczytem bramki: `if (!Bob_bramka()) …`.
 function odczytBramki(f) {
   const l = f.body.body.filter((n) => n.type === 'IfStatement' && n.test.type === 'UnaryExpression' && n.test.operator === '!'
@@ -145,6 +148,10 @@ export function zLicznikiem(zrodlo = ZRODLO_SEJFU, { opakuj = false } = {}) {
   if (przeglad) zmiany.push([przeglad.body.start + 1, 0, ` __testEmisji.przeglad(${przeglad.params[0] ? przeglad.params[0].name : 'undefined'});`]);
   const zChmury = deklaracja(ast, 'Bem_zChmury');
   if (zChmury) zmiany.push([odczytBramki(zChmury).start, 0, '__testEmisji.scalenie(); ']);
+  const przegrany = deklaracja(ast, 'Bem_przegrany');
+  if (przegrany) zmiany.push([odczytBramki(przegrany).start, 0, `__testEmisji.przegrany(${przegrany.params.slice(0, 2).map((x) => x.name).join(', ')}); `]);
+  const ratunek = deklaracja(ast, 'Bem_ratunek');
+  if (ratunek) zmiany.push([odczytBramki(ratunek).start, 0, `__testEmisji.ratunek(${ratunek.params[0].name}); `]);
   if (opakuj) {
     for (const nazwa of [...OPAKOWANE, ...OPAKOWANE_PRZEGLADU.filter((n) => deklaracja(ast, n))]) {
       const f = deklaracja(ast, nazwa);
@@ -190,11 +197,15 @@ export function licznikEmisji({ zrodlo = ZRODLO_SEJFU, opakuj = false, przy = nu
   const emisje = [];
   const przeglady = [];
   const scalenia = [];
+  const przegrane = [];
+  const ratunki = [];
   let glebokosc = 0;
   const test = {
     zmiana(kind, klucze, s) { emisje.push({ kind, klucze, sesja: !!(s && typeof s === 'object') }); },
     przeglad(sieroty) { przeglady.push({ sieroty: sieroty === true }); },
     scalenie() { scalenia.push({}); },
+    przegrany(p, d) { przegrane.push({ p, d }); },
+    ratunek(id) { ratunki.push({ id }); },
     wejscie(nazwa) { glebokosc += 1; if (przy) przy(nazwa, 'wejscie'); },
     wyjscie(nazwa) { glebokosc -= 1; if (przy) przy(nazwa, 'wyjscie'); },
   };
@@ -202,7 +213,9 @@ export function licznikEmisji({ zrodlo = ZRODLO_SEJFU, opakuj = false, przy = nu
     emisje,
     przeglady,
     scalenia,
-    odczyty: () => emisje.length + przeglady.length + scalenia.length,
+    przegrane,
+    ratunki,
+    odczyty: () => emisje.length + przeglady.length + scalenia.length + przegrane.length + ratunki.length,
     jest: kopia.jest,
     wEmisji: () => glebokosc > 0,
     zaladuj: (win) => zaladujZrodlo(win, kopia.zrodlo, test),

@@ -8,12 +8,11 @@
 // MODEL. Kolejka testowa Q_X = FIFO { kind, key, atISO, env } (szyfrogram z chwili emisji, zamrożony), kursory dostaw
 // X→Y. Wyrocznia „emiter doskonały” (model): po każdej mutacji lokalnej na X różnica encji eksportu przed/po → builder
 // każdej zmienionej encji w tej chwili; do Q_X (encryptEvent) idą koperty prawdziwych emiterów sejfu, a model jest
-// wyrocznią porównania (EMISJA niżej). Scalanie nie emituje — poza dwoma hakami E2-PR3b u odbiorcy
-// po każdej partii: H1 (ptomb(p) przegrał, karta p jest dalej u Y → pfull(p) z setId p|deletedAtISO, dedup po setId) i H2
-// (ratunek notatki D-21 „zawsze do kolejki”: notatka, której nagrobek zniknął w partii, a rekord zmieniło scalanie →
-// pnote(id), także gdy jej koperta pnote przyszła w tej partii). Dostawa X→Y = FIFO-prefiks od kursora (losowa tylko
-// długość i przeplot nadawców), powtórka = cofnięcie kursora i ponowne zastosowanie sufiksu; każde zdarzenie przez
-// applyEncryptedEvent, status inny niż applied = błąd.
+// wyrocznią porównania (EMISJA niżej). Scalanie nie emituje — poza dwoma hakami scalania E2-PR3b u odbiorcy (HAKI
+// niżej): hak H1 (przegrany nagrobek karty → pfull(p)) i hak H2 (ratunek notatki D-21 „zawsze do kolejki” → pnote(id)),
+// od E2-PR3b także z prawdziwych emiterów sejfu, z modelem haków jako wyrocznią. Dostawa X→Y = FIFO-prefiks od kursora
+// (losowa tylko długość i przeplot nadawców), powtórka = cofnięcie kursora i ponowne zastosowanie sufiksu; każde
+// zdarzenie przez applyEncryptedEvent, status inny niż applied = błąd.
 //
 // EMISJA (E2-PR3a3): zdarzenia z prawdziwych emiterów sejfu. Urządzenia (także urządzenia katalogu p. 5 —
 // zaladowanieSejfu z s4d7-wspolne.mjs) ładują kopię sejfu z rejestrem łańcucha (zRejestremLancucha,
@@ -27,7 +26,39 @@
 // rejestracja klucza dostępu w p. 1 (zapis testu z pominięciem API) ma model jako źródło — literał MUTACJE_Z_MODELU.
 // Przypadki: AB1 (porównanie w każdej mutacji każdego bloku; wyjątek z opisem), AB2 (podsumowania ziaren: porownan > 0,
 // zgodnych + wRandze = porownan), AB3 (p. 4: „Przywróć”, gdy wizyta jest już w karcie), AB4 (porównanie na ciągach
-// syntetycznych), AB5 (samokontrola kopii z rejestrem), AB6 (MUTACJE_Z_MODELU).
+// syntetycznych; rangi z pfull), AB5 (samokontrola kopii z rejestrem), AB6 (MUTACJE_Z_MODELU), AB7 (haki z emiterów =
+// model w każdej partii każdego bloku; porównanie na ciągach syntetycznych; niezgodność — wyjątek z opisem; podsumowania
+// ziaren: porównania haków > 0, każde zgodne), AB8 (samokontrola rejestru odbiorcy: partia z przegranym nagrobkiem karty
+// i ratunkiem notatki daje wpisy pfull i pnote, przy zamkniętej bramce — żadnego).
+//
+// HAKI (E2-PR3b). Hak H1 i hak H2 to emisje części emisji sejfu (Bem_przegrane w scalaniu po pętli nagrobków kart,
+// Bem_przegrany, Bem_ratunek w ratunku notatki) przez Bem_zmiana, więc kopia z rejestrem łańcucha oddaje je testowi także
+// w scalaniu (bez zmiany kotwic kopii). Dostawa czyści rejestr odbiorcy przed zastosowaniem partii; po partii (i eksporcie)
+// wpisy rejestru konta odbiorcy w ich kolejności dają koperty builderów (pfull — porcje karty z setId wpisu, z.o.setId;
+// builder null — bez koperty, wyjątek buildera — błąd testu) i to one idą do Q_Y (porcje jednego zestawu razem przy
+// łączeniu wpisów). Model haków (hakiModelu) jest wyrocznią porównania w każdej partii: H1 — po ptomb(p) w partii karta p
+// jest dalej u odbiorcy → pfull(p) z setId p:deletedAtISO (bez powtórzeń po setId na urządzeniu); H2 — notatka pacjenta,
+// której nagrobek zniknął w partii (był przed albo przyszedł w partii), której rekord zmieniło scalanie i której nowa
+// chwila nie pochodzi z koperty pnote tej partii → pnote(id), także gdy jej koperta pnote przyszła w tej partii (ratunek
+// daje notatce nową chwilę R + 1 ms + h; notatka przyjęta zwykłą regułą ma chwilę swojej koperty i haka nie daje).
+// Zgodność: ten sam zbiór kopert (rodzaj, encja; pfull także setId), a w ciągu emiterów pełna karta przed uratowaną
+// notatką tej karty; poza tym kolejność może się różnić (emitery idą w kolejności scaleń partii, model układa haki partii
+// rodzajami: najpierw H1, potem H2). Liczniki S.stat.haki = { porownan, zgodnych, wRandze, innaKolejnosc } — ten sam
+// ciąg, inna kolejność tylko w obrębie rangi, inna kolejność rang. Niezgodność = wyjątek z opisem (odbiorca, partia, ciąg
+// modelu, ciąg emiterów, wpisy rejestru). Literały scenariuszy bez zmian wobec haków z modelu.
+// Czerwone na bazie E2-PR3b (sejf 4994fef9 — bez haków scalania; 31 ze 127 przypadków, 1 pominięty): AB4 (Bem_RANGI bez
+// pfull), AB7 i AB8 (bez wpisów rejestru z haków) oraz każdy przypadek z partią, w której model ma hak, a emitery — nic
+// (AB7, wyjątek w dostawie): p. 2 K10, p. 3 D-5, p. 4 ×4 (nagrobek starszy, K1k, N1, N1b), p. 5 ×4 (E4b-1, E4b-2w w obu
+// kolejnościach), p. 6 ×3 (R4-a, R4-a′, notatka pod inną kartą), p. 7b, p. 7d N1 ×2, negatywy W4p, ziarna 1, 3, 5, 6, 7
+// i 8 profilu podstawowego i jego podsumowanie, ziarna 1, 7 i 8 koalescencji i jej podsumowanie. Zielone z natury
+// (strażniki regresji; partie bez przegranego nagrobka i ratunku): AB1, AB3, AB5, AB6, p. 1, pozostałe p. 2, p. 4
+// „nowszy”, pozostałe p. 5 i p. 6 (w tym K6 i R2-E3), p. 7a, p. 7c, pozostałe p. 7d, klasy 3.6, ziarna 2 i 4 profilu
+// podstawowego, profil pełny.
+// Przebieg na sejfie z hakami (ziarna domyślne): 707 porównań haków partii w pliku — 704 ten sam ciąg, 3 inna kolejność
+// tylko w obrębie rangi (uratowane notatki jednej karty, wszystkie po jej pełnej karcie), 0 innej kolejności rang;
+// profil podstawowy 326 porównań (H1 9, H2 10), koalescencja 87 (H1 4, H2 6), profil pełny 73 (bez haków). Przy
+// E2_AB_ZIARNA=40 (profil podstawowy) jedna z 1489 partii ma inną kolejność rang: emitery pfull(P), pnote(n), pfull(R),
+// model pfull(P), pfull(R), pnote(n) — n jest notatką karty P, więc pełna karta idzie przed notatką w obu.
 //
 // KOLEJNOŚĆ W KROKU (E2-PR3a2, sprawdzana na emiterach): snap (także wersje przeniesione pod kartę celu „Scal pacjentów”
 // i głowy scalenia), potem stomb, potem ptomb, potem pnote, pnotetomb, note, notetomb, plist, plisttomb, pref, pk, pktomb,
@@ -303,7 +334,7 @@ function swiat(ziarno = 1) {
   return {
     ziarno, nrUrz: 0, atrapa: utworzAtrapeWorkera({ tryb: 'v37a', eventsEnabled: false, zegar: zegarSterowany() }),
     kursor: new Map(), hasla: new Map(), dziennik: [], braki: [], nrHasla: 0,
-    stat: { zdarzen: 0, dostaw: 0, pelnych: 0, h1: 0, h2: 0, w2s: { zgodne: 0, niezgodne: 0, kategorie: {}, roznice: {} }, w2sLista: [], w3: 0, w3Bledy: [], losowa: { zgodne: 0, niezgodne: 0 }, losowaLista: [], spoczynki: 0, w1Bledy: [], w2rBledy: [], w2r: 0, brakSpoczynku: [], w4: 0, w4Bledy: [], w4Klasy: [], w4R4n: 0, w4p: [], emitery: statEmiterow() },
+    stat: { zdarzen: 0, dostaw: 0, pelnych: 0, h1: 0, h2: 0, w2s: { zgodne: 0, niezgodne: 0, kategorie: {}, roznice: {} }, w2sLista: [], w3: 0, w3Bledy: [], losowa: { zgodne: 0, niezgodne: 0 }, losowaLista: [], spoczynki: 0, w1Bledy: [], w2rBledy: [], w2r: 0, brakSpoczynku: [], w4: 0, w4Bledy: [], w4Klasy: [], w4R4n: 0, w4p: [], emitery: statEmiterow(), haki: statHakow(), hakiKolejnosc: [] },
     nrPomiaru: 0, losAlt: null, wskrzeszone: new Set(), profil: 'podstawowy',
   };
 }
@@ -358,6 +389,8 @@ async function zbuduj(U, e) {
   const ev = U.ev;
   switch (e.kind) {
     case 'snap': return ev.buildSnapshotEvent(e.patientId, e.snapshotId, null);
+    // pfull (hak H1): porcje pełnej karty z setId wpisu rejestru (bez setId — losowy, jak w sejfie)
+    case 'pfull': return ev.buildPatientFullEvents(e.patientId, null, e.setId !== undefined ? { setId: e.setId } : undefined);
     case 'stomb': return ev.buildSnapshotTombstoneEvent(e.key, null);
     case 'ptomb': return ev.buildPatientTombstoneEvent(e.key, null);
     case 'pnote': return ev.buildPatientNoteEvent(e.key, null);
@@ -418,10 +451,11 @@ async function emituj(S, U, przed, po, opis = '', { doKolejki: wyslij = true } =
 }
 
 // ── Emitery i model (E2-PR3a3) ───────────────────────────────────────────────────────────────────────────────────────
-// Rangi rodzajów (kolejność modelu = Bem_RANGI sejfu; AB4 sprawdza obie). Porównanie zgodne(model, emitery) na ciągach
-// { kind, key }: 'rowne' (ten sam ciąg), 'wRandze' (ten sam ciąg rang i te same encje w każdej grupie kolejnych wpisów
-// tej samej rangi, inna kolejność w grupie) albo null (niezgodne: brak encji, dodatkowa encja, inna kolejność rang).
-const RANGI = Object.freeze({ snap: 0, stomb: 1, ptomb: 2, pnote: 3, pnotetomb: 4, note: 5, notetomb: 6, plist: 7, plisttomb: 8, pref: 9, pk: 10, pktomb: 11, cred: 12 });
+// Rangi rodzajów (kolejność modelu = Bem_RANGI sejfu; AB4 sprawdza obie; E2-PR3b: pfull z haka H1 z rangą wersji).
+// Porównanie zgodne(model, emitery) na ciągach { kind, key }: 'rowne' (ten sam ciąg), 'wRandze' (ten sam ciąg rang i te
+// same encje w każdej grupie kolejnych wpisów tej samej rangi, inna kolejność w grupie) albo null (niezgodne: brak encji,
+// dodatkowa encja, inna kolejność rang).
+const RANGI = Object.freeze({ snap: 0, pfull: 0, stomb: 1, ptomb: 2, pnote: 3, pnotetomb: 4, note: 5, notetomb: 6, plist: 7, plisttomb: 8, pref: 9, pk: 10, pktomb: 11, cred: 12 });
 function zgodne(model, emitery) {
   const ranga = (e) => { if (!(e.kind in RANGI)) throw new Error(`porównanie emiterów: rodzaj spoza rang: ${e.kind}`); return RANGI[e.kind]; };
   const [rm, re] = [model.map(ranga), emitery.map(ranga)];
@@ -445,17 +479,21 @@ const EMITERY_PLIK = statEmiterow();
 // uprzęży kończy się odmową), więc jej źródłem jest model; źródło „model” poza tym literałem = błąd testu (AB6).
 const MUTACJE_Z_MODELU = Object.freeze(['klucz dostępu']);
 const opisKoperty = (k) => ({ kind: k.event.kind, key: k.event.key });
-const opisWpisu = (z) => (z.znacznik ? `znacznik ${z.znacznik.reason}` : `${z.kind} ${z.kind === 'snap' ? `${z.klucze.patientId}/${z.klucze.snapshotId}` : z.klucze}`);
+const opisWpisu = (z) => (z.znacznik ? `znacznik ${z.znacznik.reason}` : `${z.kind} ${z.kind === 'snap' ? `${z.klucze.patientId}/${z.klucze.snapshotId}`
+  : z.kind === 'pfull' ? `${z.klucze.patientId} (setId ${z.o && z.o.setId})` : z.klucze}`);
+// Encja wpisu rejestru dla buildera (zbuduj): wersja, pełna karta (hak H1 — setId wpisu, z.o.setId) albo klucz rodzaju.
+const encjaWpisu = (z) => (z.kind === 'snap' ? { kind: 'snap', patientId: z.klucze.patientId, snapshotId: z.klucze.snapshotId }
+  : z.kind === 'pfull' ? { kind: 'pfull', patientId: z.klucze.patientId, setId: z.o ? z.o.setId : undefined } : { kind: z.kind, key: z.klucze });
 // Koperty z prawdziwych emiterów: wpisy rejestru konta urządzenia w ich kolejności (znaczniki partii importu pominięte),
 // builder każdego wpisu po mutacji; null — bez koperty, wyjątek buildera — błąd testu.
 async function zEmiterow(U, wpisy, uid, opis) {
   const out = [];
   for (const z of wpisy) {
     if (z.znacznik || z.uid !== uid) continue;
-    const e = z.kind === 'snap' ? { kind: 'snap', patientId: z.klucze.patientId, snapshotId: z.klucze.snapshotId } : { kind: z.kind, key: z.klucze };
+    const e = encjaWpisu(z);
     let k;
     try { k = await zbuduj(U, e); } catch (x) { throw new Error(`AB1: builder wpisu rejestru ${opisWpisu(z)} po mutacji „${opis}” na ${U.nazwa} → wyjątek ${x && (x.code || x.message)}`); }
-    if (k) out.push(k);
+    if (Array.isArray(k)) out.push(...k); else if (k) out.push(k);
   }
   return out;
 }
@@ -547,23 +585,26 @@ async function zastosuj(Y, partia, sposob = 'event') {
     if (!r || r.status !== 'applied') throw new Error(`${Y.nazwa}: zdarzenie ${e.kind} ${e.key} → status ${r && r.status} ${r && (r.reason || r.code || '')}`);
   }
 }
-// Haki E2-PR3b u odbiorcy Y po partii (jedyne miejsca, w których scalanie dopisuje do kolejki):
-// H1 przegrany nagrobek pacjenta — po ptomb(p) karta p nadal jest u Y → pfull(p) z setId p|deletedAtISO (dedup po setId);
-// H2 ratunek notatki D-21 (K2) — notatka pacjenta, której nagrobek zniknął w partii (był przed albo przyszedł w partii)
-// i której rekord zmieniło scalanie → pnote(id), „zawsze do kolejki” (plan:201), TAKŻE gdy w tej partii przyszła jej
-// własna koperta pnote (poprawka N1 krytyka 2a, 4.0; specyfikacja 2a, 3.1 H2: bez wyjątku notatka zostawała tylko na
-// jednym urządzeniu — B z nagrobkiem, choć karta wracała przez H1).
-async function haki(S, Y, partia, przed, po) {
-  const dodane = [];
+// ── Haki scalania E2-PR3b u odbiorcy Y po partii (HAKI w nagłówku) ──────────────────────────────────────────────────
+// Jedyne miejsca, w których scalanie dopisuje do kolejki. Koperty z prawdziwych emiterów (wpisy rejestru łańcucha
+// odbiorcy z zastosowania partii), model haków jako wyrocznia porównania w każdej partii (AB7).
+// Model (bez dopisania do kolejki; { kind, key } i setId zestawu pfull):
+// H1 przegrany nagrobek karty — po ptomb(p) w partii karta p nadal jest u Y → pfull(p) z setId p:deletedAtISO (bez
+// powtórzeń po setId na urządzeniu; ten sam zestaw co Bob_zestawKarty sejfu dla identyfikatora z białej listy);
+// H2 ratunek notatki D-21 (K2) — notatka pacjenta, której nagrobek zniknął w partii (był przed albo przyszedł w partii),
+// której rekord zmieniło scalanie i której nowa chwila nie pochodzi z koperty pnote tej partii → pnote(id), „zawsze do
+// kolejki” (plan:201), TAKŻE gdy w tej partii przyszła jej własna koperta pnote (poprawka N1 z przeglądu E2-PR2a;
+// specyfikacja 2a, 3.1 H2: bez tego notatka zostawała tylko na jednym urządzeniu — B z nagrobkiem, choć karta wracała
+// przez H1). Ratunek daje notatce chwilę R + 1 ms + h; notatka, która wróciła zwykłą regułą z własną kopertą w partii
+// (chwila tej koperty), nie jest ratunkiem — bez haka, jak w sejfie (zwykłe merge nie daje wierszy).
+function hakiModelu(Y, partia, przed, po) {
+  const model = [];
   const karty = new Set((po.patients || []).map((p) => p.patientId));
   for (const e of partia.filter((x) => x.kind === 'ptomb')) {
-    const setId = e.key + '|' + e.atISO;
+    const setId = `${e.key}:${e.atISO}`;
     if (Y.setIds.has(setId) || !karty.has(e.key)) continue;
     Y.setIds.add(setId);
-    const porcje = await Y.ev.buildPatientFullEvents(e.key, null, { setId });
-    if (S.koalescencja && porcje && porcje.length) { await doKolejki(S, Y, porcje); dodane.push(...porcje); } // zestaw razem
-    else for (const k of porcje || []) { await doKolejki(S, Y, k); dodane.push(k); }
-    S.stat.h1 += 1;
+    model.push({ kind: 'pfull', key: e.key, setId });
   }
   const a = encje(przed), b = encje(po);
   const wPartii = (kind, id) => partia.some((x) => x.kind === kind && x.key === id);
@@ -572,8 +613,77 @@ async function haki(S, Y, partia, przed, po) {
     const zmieniona = !a.has(klucz) || a.get(klucz).val !== n.val;
     const nagrobekZniknal = (a.has('pnotetomb:' + n.key) || wPartii('pnotetomb', n.key)) && !b.has('pnotetomb:' + n.key);
     if (!zmieniona || !nagrobekZniknal) continue;
-    const k = await Y.ev.buildPatientNoteEvent(n.key, null);
-    if (k) { await doKolejki(S, Y, k); dodane.push(k); S.stat.h2 += 1; }
+    const chwila = JSON.parse(n.val).updatedAtISO;
+    if (partia.some((x) => x.kind === 'pnote' && x.key === n.key && x.atISO === chwila)) continue;
+    model.push({ kind: 'pnote', key: n.key });
+  }
+  return model;
+}
+// Porównanie haków jednej partii na ciągach { kind, key, setId? } (model, emitery; kartaNotatki(id) — karta notatki
+// u odbiorcy po partii): null — niezgodne (inny zbiór kopert albo uratowana notatka przed pełną kartą swojej karty
+// w ciągu emiterów); 'rowne' — ten sam ciąg; 'wRandze' — inna kolejność tylko w obrębie rangi; 'innaKolejnosc' — inna
+// kolejność rang (np. emitery pfull(P), pnote(n), pfull(R) wobec modelu pfull(P), pfull(R), pnote(n), gdy n jest
+// notatką karty P: emitery idą w kolejności scaleń partii, model układa haki rodzajami).
+function zgodneHaki(model, emitery, kartaNotatki) {
+  const klucz = (e) => `${e.kind} ${e.key}${e.setId !== undefined ? ` ${e.setId}` : ''}`;
+  if (JSON.stringify(model.map(klucz).sort()) !== JSON.stringify(emitery.map(klucz).sort())) return null;
+  for (const [i, e] of emitery.entries()) {
+    if (e.kind !== 'pnote') continue;
+    const p = kartaNotatki(e.key);
+    if (emitery.findIndex((x) => x.kind === 'pfull' && x.key === p) > i) return null;
+  }
+  if (model.every((e, i) => klucz(e) === klucz(emitery[i]))) return 'rowne';
+  return zgodne(model, emitery) ? 'wRandze' : 'innaKolejnosc';
+}
+const statHakow = () => ({ porownan: 0, zgodnych: 0, wRandze: 0, innaKolejnosc: 0 });
+// Niezgodności haków z modelem w bieżącym przypadku (także te, które wyjątek dostawy zgubiłby w kroku katalogu, który
+// łapie wyjątki operacji); afterEach wymaga pustej listy (AB7). Suma porównań partii w pliku — druk w afterAll.
+const HAKI_NIEZGODNE = [];
+const HAKI_PLIK = statHakow();
+// Opis koperty haka (zestaw pfull — pierwsza porcja i jej setId).
+const opisHaka = (k) => { const x = Array.isArray(k) ? k[0] : k; return { kind: x.event.kind, key: x.event.key, ...(x.event.full ? { setId: x.event.full.setId } : {}) }; };
+// Porównanie haków partii (liczniki S.stat.haki); niezgodne — wyjątek z opisem i wpis w HAKI_NIEZGODNE.
+function porownajHaki(S, Y, partia, model, emitery, wpisy, po) {
+  if (!S.stat.haki) S.stat.haki = statHakow();
+  const notatki = encje(po);
+  const karta = (id) => { const n = notatki.get('pnote:' + id); return n ? n.patientId : null; };
+  const e = emitery.map(opisHaka);
+  const wynik = zgodneHaki(model, e, karta);
+  S.stat.haki.porownan += 1;
+  const ciag = (l) => (l.length ? l.map((x) => `${x.kind} ${x.key}${x.setId !== undefined ? ` (setId ${x.setId})` : ''}`).join(', ') : '(pusty)');
+  if (wynik) {
+    S.stat.haki[wynik === 'rowne' ? 'zgodnych' : wynik] += 1;
+    // partie z inną kolejnością haków (raport do opisu PR): krok, odbiorca, rodzaj różnicy, ciągi (klucze skrócone)
+    const krotko = (l) => l.map((x) => `${x.kind} ${String(x.key).slice(0, 8)}`).join(', ');
+    if (wynik !== 'rowne' && Array.isArray(S.stat.hakiKolejnosc)) S.stat.hakiKolejnosc.push(`#${S.nrKroku || 0} ${Y.nazwa} ${wynik}: model [${krotko(model)}], emitery [${krotko(e)}]`);
+    return wynik;
+  }
+  const tekst = `AB7: haki z emiterów ≠ model — ${Y.nazwa} po partii [${partia.map((x) => `${x.kind} ${x.key}`).join(', ')}]${S.ziarno != null ? ` (ziarno ${S.ziarno}, krok ${S.nrKroku || 0})` : ''}\n  model: ${ciag(model)}\n  emitery: ${ciag(e)}\n  rejestr: ${wpisy.length ? wpisy.map(opisWpisu).join(', ') : '(pusty)'}`;
+  HAKI_NIEZGODNE.push(tekst);
+  throw new Error(tekst);
+}
+// Haki po partii: wpisy rejestru konta odbiorcy z zastosowania partii (znaczniki partii pominięte) → koperty builderów
+// po partii (null — bez koperty, wyjątek buildera — błąd testu), porównanie z modelem (AB7), do Q_Y — koperty emiterów
+// (porcje zestawu pfull razem przy łączeniu wpisów, jak jedno enqueue). Wynik — dopisane koperty (porcje po kolei).
+async function haki(S, Y, partia, przed, po) {
+  const wpisy = Y.lancuch.splice(0).filter((z) => !z.znacznik && z.uid === po.userId);
+  const model = hakiModelu(Y, partia, przed, po);
+  const emitery = [];
+  for (const z of wpisy) {
+    let k;
+    try { k = await zbuduj(Y, encjaWpisu(z)); } catch (x) { throw new Error(`AB7: builder wpisu rejestru ${opisWpisu(z)} po partii na ${Y.nazwa} → wyjątek ${x && (x.code || x.message)}`); }
+    if (k && (!Array.isArray(k) || k.length)) emitery.push(k);
+  }
+  const w = porownajHaki(S, Y, partia, model, emitery, wpisy, po);
+  HAKI_PLIK.porownan += 1;
+  HAKI_PLIK[w === 'rowne' ? 'zgodnych' : w] += 1;
+  const dodane = [];
+  for (const k of emitery) {
+    if (Array.isArray(k)) {
+      if (S.koalescencja) { await doKolejki(S, Y, k); dodane.push(...k); } // zestaw razem
+      else for (const x of k) { await doKolejki(S, Y, x); dodane.push(x); }
+      S.stat.h1 += 1;
+    } else { await doKolejki(S, Y, k); dodane.push(k); S.stat.h2 += 1; }
   }
   return dodane;
 }
@@ -593,13 +703,17 @@ async function dostawa(S, X, Y, { k = Infinity, cofnij = 0, haki: zHakami = true
   if (pelna) S.stat.pelnych += 1;
   if (pelna && w2s) await sprawdzW2s(S, X, Y, partia);
   const przed = Y.stan;
+  if (!Array.isArray(Y.lancuch)) throw new Error(`dostawa ${nazwa}: odbiorca bez rejestru łańcucha`);
+  Y.lancuch.length = 0; // rejestr odbiorcy: od tej chwili wpisy haków scalania tej partii (E2-PR3b)
   await zastosuj(Y, partia);
   S.kursor.set(nazwa, c + partia.length);
   const wyslane = Math.max(X.wyslane || 0, c + partia.length);
   if (S.kolejkaLog && wyslane > (X.wyslane || 0)) S.kolejkaLog.push([X.nazwa, 'dostawa', wyslane - (X.wyslane || 0)]);
   X.wyslane = wyslane;
   const po = await eksport(Y);
-  const dodane = zHakami ? await haki(S, Y, partia, przed, po) : [];
+  let dodane = [];
+  if (zHakami) dodane = await haki(S, Y, partia, przed, po);
+  else Y.lancuch.length = 0; // bez haków: wpisy haków tej partii pominięte
   ustawStan(Y, po);
   S.dziennik.push(`#${S.nrKroku || 0} ${new Date(teraz).toISOString().slice(11, 23)} dostawa ${nazwa}: ${partia.length}${cofnij ? ` (powtórka ${Math.min(cofnij, c + cofnij)})` : ''}${pelna ? ' pełna' : ''} [${partia.map((e) => e.kind).join(',')}]${dodane.length ? ` → haki [${dodane.map((x) => x.event.kind).join(',')}]` : ''}`);
   return { partia, dodane };
@@ -995,8 +1109,8 @@ describe('A ≡ B, blok deterministyczny p. 1: każdy z 14 builderów (mutacja �
   }
 });
 
-// ── Emitery i model: samokontrole (AB1, AB4–AB6; AB2 — podsumowania ziaren, AB3 — p. 4) ────────────────────────────────
-describe('A ≡ B, emitery i model: porównanie w mutacji, kopia z rejestrem łańcucha, MUTACJE_Z_MODELU', () => {
+// ── Emitery i model: samokontrole (AB1, AB4–AB8; AB2 i AB7 — także podsumowania ziaren, AB3 — p. 4) ─────────────────────
+describe('A ≡ B, emitery i model: porównanie w mutacji, kopia z rejestrem łańcucha, MUTACJE_Z_MODELU, haki scalania', () => {
   d1();
   it('AB1: niezgodność emiterów z modelem w mutacji — wyjątek z opisem (mutacja, ciąg modelu, ciąg emiterów, wpisy rejestru); zgodna mutacja liczona', async () => {
     const S = swiat(901);
@@ -1023,7 +1137,7 @@ describe('A ≡ B, emitery i model: porównanie w mutacji, kopia z rejestrem ła
     expect(EMITERY_NIEZGODNE.splice(0).length, 'niezgodności zapisane dla afterEach (AB1)').toBe(2);
     expect(S.stat.emitery, 'liczniki: niezgodne nie są zgodne ani „w randze”').toEqual({ porownan: 3, zgodnych: 1, wRandze: 0 });
   }, 60_000);
-  it('AB4: porównanie na ciągach syntetycznych — ta sama kolejność i kolejność w randze zgodne, brak encji, dodatkowa encja i kolejność rang niezgodne; rangi = kolejność modelu = Bem_RANGI sejfu', () => {
+  it('AB4: porównanie na ciągach syntetycznych — ta sama kolejność i kolejność w randze zgodne, brak encji, dodatkowa encja i kolejność rang niezgodne; rangi = kolejność modelu = Bem_RANGI sejfu (E2-PR3b: pfull z rangą wersji)', () => {
     const c = (...l) => l.map((x) => { const [kind, key] = x.split(' '); return { kind, key }; });
     expect(zgodne(c('snap P/a', 'snap Q/b', 'stomb a', 'pnote n'), c('snap P/a', 'snap Q/b', 'stomb a', 'pnote n')), 'ta sama kolejność').toBe('rowne');
     expect(zgodne([], []), 'oba puste').toBe('rowne');
@@ -1036,7 +1150,9 @@ describe('A ≡ B, emitery i model: porównanie w mutacji, kopia z rejestrem ła
     expect(zgodne(c('snap P/a', 'snap P/a'), c('snap P/a', 'snap Q/b')), 'powtórzenie zamiast encji').toBe(null);
     expect(zgodne(c('snap P/a', 'pnote n'), c('pnote n', 'snap P/a')), 'kolejność rang').toBe(null);
     expect(zgodne(c('ptomb P', 'stomb a'), c('stomb a', 'ptomb P')), 'kolejność rang (stomb przed ptomb)').toBe(null);
-    expect(() => zgodne(c('pfull P'), c('pfull P')), 'rodzaj spoza rang').toThrow(/spoza rang/);
+    expect(zgodne(c('snap P/a', 'pfull Q'), c('pfull Q', 'snap P/a')), 'pfull w randze wersji (E2-PR3b)').toBe('wRandze');
+    expect(zgodne(c('pfull Q', 'pnote n'), c('pnote n', 'pfull Q')), 'kolejność rang (pfull przed pnote)').toBe(null);
+    expect(() => zgodne(c('phdr P'), c('phdr P')), 'rodzaj spoza rang').toThrow(/spoza rang/);
     // liczniki porównania: zgodnych, wRandze; niezgodne — wyjątek z opisem
     const S = { stat: {} };
     const k = (...l) => c(...l).map((event) => ({ event }));
@@ -1046,7 +1162,8 @@ describe('A ≡ B, emitery i model: porównanie w mutacji, kopia z rejestrem ła
     expect(EMITERY_NIEZGODNE.splice(0).length).toBe(1);
     expect(S.stat.emitery, '+zgodnych, +wRandze').toEqual({ porownan: 3, zgodnych: 1, wRandze: 1 });
     // rangi testu = kolejność modelu (emituj) = Bem_RANGI sejfu
-    expect(Object.keys(RANGI), 'rangi = kolejność modelu').toEqual(['snap', 'stomb', ...PO_STOMB]);
+    expect(Object.keys(RANGI), 'rangi = kolejność modelu (pfull z haka H1 z rangą wersji)').toEqual(['snap', 'pfull', 'stomb', ...PO_STOMB]);
+    expect(RANGI.pfull, 'pfull: ranga wersji').toBe(RANGI.snap);
     const m = ZRODLO_SEJFU.match(/const Bem_RANGI = Object\.freeze\((\{[^}]*\})\);/);
     expect(m, 'Bem_RANGI w sejfie').not.toBe(null);
     expect(new Function(`return ${m[1]};`)(), 'rangi = Bem_RANGI sejfu').toEqual({ ...RANGI });
@@ -1091,6 +1208,98 @@ describe('A ≡ B, emitery i model: porównanie w mutacji, kopia z rejestrem ła
     krok();
     const { koperty } = await mutacja(S, A, 'klucz dostępu', () => zmienMeta(A, (m) => ({ ...m, passkeys: [...(m.passkeys || []), { credentialId: 'fikcyjny-klucz-9', deviceLabel: 'Fikcyjne urządzenie 9', createdAtISO: iso(), roaming: true }] })), { zrodlo: 'model' });
     expect({ koperty: koperty.map(opisKoperty), Q: A.Q.map((e) => e.kind), emitery: S.stat.emitery }, 'źródło „model”').toEqual({ koperty: [{ kind: 'pk', key: 'fikcyjny-klucz-9' }], Q: ['pk'], emitery: przed });
+  }, 60_000);
+  // Świat haków scalania (AB7, AB8; stan jak p. 7b bez łączenia wpisów): A poprawia notatkę n karty P, B „Usuń pacjenta”
+  // P (ptomb, pnotetomb n), A bez wiedzy poprawia wizytę P. W partii B→A nagrobek karty przegrywa z kartą A (hak H1),
+  // a notatka n wraca ratunkiem D-21 z nową chwilą (hak H2).
+  async function swiatHakow(nr) {
+    const S = swiat(nr);
+    const los = rng(0x7b00 + nr);
+    vi.spyOn(Math, 'random').mockImplementation(() => (S.losAlt || los)());
+    const u = await p6r3(S); u.S = S;
+    const v = u.A.stan.patients.find((p) => p.patientId === u.P).snapshots[0].snapshotId;
+    await p6notatka(u, u.A, 'Fikcyjna poprawka notatki A');
+    await p6usunPacjenta(u, u.B, u.P);
+    await popraw(u, u.A, v, 34.9);
+    expect(u.B.Q.map((e) => e.kind), 'Q_B').toEqual(['ptomb', 'pnotetomb']);
+    krok();
+    return u;
+  }
+  it('AB7: haki scalania z emiterów = model w każdej partii — porównanie na ciągach syntetycznych (ten sam zbiór kopert, pfull z setId; pełna karta przed uratowaną notatką tej karty; brak, nadmiar, inny setId, powtórzenie i notatka przed swoją kartą — niezgodne); w dostawie: zgodne haki z kopertami emiterów w Q, powtórka partii bez haków, a przy zamkniętej bramce odbiorcy — wyjątek z opisem', async () => {
+    const c = (...l) => l.map((x) => { const [kind, key, setId] = x.split(' '); return setId ? { kind, key, setId } : { kind, key }; });
+    const karta = (id) => ({ n: 'P', m: 'R' }[id] || null);
+    expect(zgodneHaki([], [], karta), 'oba puste').toBe('rowne');
+    expect(zgodneHaki(c('pfull P P:a', 'pnote n'), c('pfull P P:a', 'pnote n'), karta), 'ten sam ciąg').toBe('rowne');
+    expect(zgodneHaki(c('pfull P P:a', 'pfull R R:b'), c('pfull R R:b', 'pfull P P:a'), karta), 'kolejność w randze').toBe('wRandze');
+    expect(zgodneHaki(c('pfull P P:a', 'pfull R R:b', 'pnote n'), c('pfull P P:a', 'pnote n', 'pfull R R:b'), karta), 'kolejność scaleń: notatka za swoją kartą, przed inną').toBe('innaKolejnosc');
+    expect(zgodneHaki(c('pfull R R:b', 'pnote n'), c('pnote n', 'pfull R R:b'), karta), 'notatka przed pełną kartą innej karty').toBe('innaKolejnosc');
+    expect(zgodneHaki(c('pfull P P:a', 'pnote n'), c('pnote n', 'pfull P P:a'), karta), 'uratowana notatka przed pełną kartą swojej karty').toBe(null);
+    expect(zgodneHaki(c('pfull P P:a', 'pnote n'), c('pfull P P:a'), karta), 'brak haka H2').toBe(null);
+    expect(zgodneHaki(c('pnote n'), c('pfull P P:a', 'pnote n'), karta), 'dodatkowy hak H1').toBe(null);
+    expect(zgodneHaki(c('pfull P P:a'), c('pfull P P:z'), karta), 'inny setId zestawu').toBe(null);
+    expect(zgodneHaki(c('pfull P P:a'), c('pfull P'), karta), 'zestaw bez setId').toBe(null);
+    expect(zgodneHaki(c('pnote n'), c('pnote n', 'pnote n'), karta), 'powtórzenie').toBe(null);
+    expect(zgodneHaki([], c('snap P/a'), karta), 'scalanie z inną emisją').toBe(null);
+    // liczniki porównania partii; niezgodne — wyjątek z opisem (odbiorca, partia, model, emitery, rejestr)
+    const S0 = { stat: {} };
+    const em = (...l) => c(...l).map((e) => (e.kind === 'pfull' ? [{ event: { kind: 'pfull', key: e.key, full: { setId: e.setId, i: 0, n: 1 } } }] : { event: { kind: e.kind, key: e.key } }));
+    const po0 = { patients: [{ patientId: 'P', snapshots: [] }], patientNotes: [{ id: 'n', patientId: 'P' }] };
+    const partia0 = [{ kind: 'ptomb', key: 'P' }, { kind: 'pnotetomb', key: 'n' }];
+    expect(porownajHaki(S0, { nazwa: 'X' }, partia0, c('pfull P P:a', 'pnote n'), em('pfull P P:a', 'pnote n'), [], po0)).toBe('rowne');
+    expect(porownajHaki(S0, { nazwa: 'X' }, partia0, c('pfull P P:a', 'pfull R R:b', 'pnote n'), em('pfull P P:a', 'pnote n', 'pfull R R:b'), [], po0)).toBe('innaKolejnosc');
+    expect(() => porownajHaki(S0, { nazwa: 'X' }, partia0, c('pfull P P:a', 'pnote n'), em('pnote n', 'pfull P P:a'), [], po0))
+      .toThrow(/^AB7: haki z emiterów ≠ model — X po partii \[ptomb P, pnotetomb n\]\n {2}model: pfull P \(setId P:a\), pnote n\n {2}emitery: pnote n, pfull P \(setId P:a\)\n {2}rejestr: \(pusty\)$/);
+    expect(HAKI_NIEZGODNE.splice(0).length, 'niezgodności zapisane dla afterEach (AB7)').toBe(1);
+    expect(S0.stat.haki, 'liczniki: niezgodne nie są liczone jako zgodne').toEqual({ porownan: 3, zgodnych: 1, wRandze: 0, innaKolejnosc: 1 });
+    // dostawa B→A na klonie A przy zamkniętej bramce: emitery milczą, model ma oba haki → wyjątek z opisem, bez dopisania
+    const u = await swiatHakow(907);
+    const S = u.S;
+    const d = u.B.Q[0].atISO;
+    const K = await klon(S, u.A, 'ab7');
+    K.d.win.VILDA_EVENT_LOG = false;
+    const esc = (x) => String(x).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    await expect(dostawa(S, u.B, K, { w2s: false }), 'zamknięta bramka odbiorcy').rejects.toThrow(new RegExp(`^AB7: haki z emiterów ≠ model — A-ab7 po partii \\[ptomb ${esc(u.P)}, pnotetomb ${esc(u.nId)}\\] \\(ziarno 907, krok 0\\)\\n {2}model: pfull ${esc(u.P)} \\(setId ${esc(`${u.P}:${d}`)}\\), pnote ${esc(u.nId)}\\n {2}emitery: \\(pusty\\)\\n {2}rejestr: \\(pusty\\)$`));
+    expect({ niezgodne: HAKI_NIEZGODNE.splice(0).length, Q: K.Q.length }, 'niezgodność zapisana, Q klonu bez haków').toEqual({ niezgodne: 1, Q: 0 });
+    // dostawa B→A na A przy otwartej bramce: haki z emiterów zgodne z modelem; do Q_A koperty emiterów; powtórka partii — bez haków
+    S.stat.haki = statHakow();
+    const { dodane } = await dostawa(S, u.B, u.A, { w2s: false });
+    expect({ dodane: dodane.map((k) => [k.event.kind, k.event.key, k.event.full ? k.event.full.setId : null]), Q: u.A.Q.slice(-2).map((e) => [e.kind, e.key]), h: [S.stat.h1, S.stat.h2] },
+      'haki A po partii B→A: pfull(P) z setId karta:chwila nagrobka, pnote(n)').toEqual({
+      dodane: [['pfull', u.P, `${u.P}:${d}`], ['pnote', u.nId, null]], Q: [['pfull', u.P], ['pnote', u.nId]], h: [1, 1],
+    });
+    const powtorka = await dostawa(S, u.B, u.A, { cofnij: 2, w2s: false });
+    expect({ partia: powtorka.partia.map((e) => e.kind), dodane: powtorka.dodane, haki: S.stat.haki }, 'powtórka partii: bez haków (zestaw pfull bez powtórzeń, notatka już uratowana)')
+      .toEqual({ partia: ['ptomb', 'pnotetomb'], dodane: [], haki: { porownan: 2, zgodnych: 2, wRandze: 0, innaKolejnosc: 0 } });
+  }, 120_000);
+  it('AB8: samokontrola rejestru odbiorcy — partia z przegranym nagrobkiem karty i ratunkiem notatki daje wpisy rejestru pfull (setId karta:chwila nagrobka) i pnote (para — chwila ratunku), przy zamkniętej bramce — żadnego; stan po partii ten sam', async () => {
+    const u = await swiatHakow(908);
+    const S = u.S;
+    const partia = u.B.Q.slice();
+    const wynik = {};
+    const stany = {};
+    for (const [nazwa, bramka] of [['otwarta', true], ['zamknięta', false]]) {
+      const K = await klon(S, u.A, `ab8-${bramka ? 'o' : 'z'}`);
+      try {
+        K.d.win.VILDA_EVENT_LOG = bramka;
+        K.lancuch.length = 0;
+        await zastosuj(K, partia);
+        const st = kanon(await eksport(K));
+        const n = (st.patientNotes || []).find((x) => x.id === u.nId);
+        stany[nazwa] = st;
+        wynik[nazwa] = {
+          wpisy: K.lancuch.map((z) => [z.kind, z.klucze, z.o || null, z.para || null, z.uid === K.d.konto.userId]),
+          stan: { karta: kartaW(st, u.P), notatka: n ? n.updatedAtISO : null, nagrobekNotatki: (st.patientNoteTombstones || []).some((x) => x.id === u.nId) },
+        };
+      } finally { await zamknij(K); }
+    }
+    const d = partia[0].atISO;
+    const chwila = wynik.otwarta.stan.notatka;
+    expect(typeof chwila === 'string' && chwila > d, 'ratunek: chwila notatki po chwili nagrobka').toBe(true);
+    expect(wynik).toEqual({
+      otwarta: { wpisy: [['pfull', { patientId: u.P }, { setId: `${u.P}:${d}` }, null, true], ['pnote', u.nId, null, chwila, true]], stan: { karta: true, notatka: chwila, nagrobekNotatki: false } },
+      zamknięta: { wpisy: [], stan: { karta: true, notatka: chwila, nagrobekNotatki: false } },
+    });
+    expect(stany.zamknięta, 'stan po partii przy zamkniętej bramce = przy otwartej').toEqual(stany.otwarta);
   }, 60_000);
 });
 
@@ -1403,7 +1612,7 @@ async function przebiegKat(nazwa, kol, tryb, ziarno) {
   } else {
     u.X = u.pid; u.karty = { [u.pid]: 'X' }; u.wersje = { [u.s1]: 's1', [u.sid]: 'x' };
   }
-  const S = { stat: { zdarzen: 0, h1: 0, h2: 0, dostaw: 0, pelnych: 0, emitery: statEmiterow() }, kursor: new Map(), dziennik: [], braki: [], hasla: new Map(), nrKroku: 0 };
+  const S = { stat: { zdarzen: 0, h1: 0, h2: 0, dostaw: 0, pelnych: 0, emitery: statEmiterow(), haki: statHakow() }, kursor: new Map(), dziennik: [], braki: [], hasla: new Map(), nrKroku: 0 };
   const surowe = Object.fromEntries(KAT_URZ.map((n) => [n, u[n]]));
   const U = {};
   for (const n of KAT_URZ) {
@@ -3031,10 +3240,12 @@ const opisBledow = (w) => JSON.stringify({
   W3: w.w3Bledy, W4: w.w4Bledy, W4p: w.w4p.filter((p) => !p.ok), brakSpoczynku: w.brakSpoczynku, W2sInne: w.w2sLista.filter((x) => x.roznice.some((r) => r.kategoria === 'inne')),
 }, null, 1);
 function suma(lista) {
-  const s = { ziaren: lista.length, mutacji: 0, zdarzen: 0, dostaw: 0, pelnych: 0, spoczynki: 0, h1: 0, h2: 0, w2r: 0, w3: 0, w4: 0, w1Bledy: 0, w2rBledy: 0, w3Bledy: 0, w4Bledy: 0, w4R4n: 0, w4pZle: 0, brakSpoczynku: 0, w2sZgodne: 0, w2sNiezgodne: 0, kategorie: {}, kategorieRoznic: {}, losowaZgodne: 0, losowaNiezgodne: 0, losowaLista: [], brakiNosnika: 0, ms: 0, klasyW1: {}, klasyW2r: {}, klasyW4: {}, w1Lista: [], w2rLista: [], emitery: statEmiterow() };
+  const s = { ziaren: lista.length, mutacji: 0, zdarzen: 0, dostaw: 0, pelnych: 0, spoczynki: 0, h1: 0, h2: 0, w2r: 0, w3: 0, w4: 0, w1Bledy: 0, w2rBledy: 0, w3Bledy: 0, w4Bledy: 0, w4R4n: 0, w4pZle: 0, brakSpoczynku: 0, w2sZgodne: 0, w2sNiezgodne: 0, kategorie: {}, kategorieRoznic: {}, losowaZgodne: 0, losowaNiezgodne: 0, losowaLista: [], brakiNosnika: 0, ms: 0, klasyW1: {}, klasyW2r: {}, klasyW4: {}, w1Lista: [], w2rLista: [], emitery: statEmiterow(), haki: statHakow(), hakiKolejnosc: [] };
   for (const w of lista) {
     for (const k of ['mutacji', 'zdarzen', 'dostaw', 'pelnych', 'spoczynki', 'h1', 'h2', 'w2r', 'w3', 'w4', 'w4R4n', 'ms']) s[k] += w[k];
     for (const k of Object.keys(s.emitery)) s.emitery[k] += w.emitery[k];
+    for (const k of Object.keys(s.haki)) s.haki[k] += w.haki[k];
+    for (const x of w.hakiKolejnosc) s.hakiKolejnosc.push(`${w.ziarno}${x}`);
     s.w1Bledy += w.w1Bledy.length; s.w2rBledy += w.w2rBledy.length; s.w3Bledy += w.w3Bledy.length; s.brakSpoczynku += w.brakSpoczynku.length;
     s.w4Bledy += w.w4Bledy.length; s.w4pZle += w.w4p.filter((p) => !p.ok).length;
     s.w2sZgodne += w.w2s.zgodne; s.w2sNiezgodne += w.w2s.niezgodne;
@@ -3054,6 +3265,12 @@ function suma(lista) {
 function abDwa(s) {
   expect(s.emitery.porownan, 'AB2: porównania emiterów z modelem').toBeGreaterThan(0);
   expect(s.emitery.zgodnych + s.emitery.wRandze, 'AB2: zgodnych + wRandze = porownan').toBe(s.emitery.porownan);
+}
+// AB7: w podsumowaniu ziaren są porównania haków scalania z emiterów z modelem (jedno na partię, porownan > 0), a każde
+// jest zgodne co do zbioru kopert (zgodnych + wRandze + innaKolejnosc = porownan; niezgodne — wyjątek w dostawie).
+function abSiedem(s) {
+  expect(s.haki.porownan, 'AB7: porównania haków z modelem').toBeGreaterThan(0);
+  expect(s.haki.zgodnych + s.haki.wRandze + s.haki.innaKolejnosc, 'AB7: zgodnych + wRandze + innaKolejnosc = porownan').toBe(s.haki.porownan);
 }
 
 // Literały dla ziaren domyślnych (E2_AB_START=1, E2_AB_ZIARNA=8; specyfikacja 2a, 3.6): dokładna charakterystyka —
@@ -3090,13 +3307,14 @@ describe('A ≡ B, właściwość: profil podstawowy (W3, W4, W4p — zieleń; W
       }
     }, 180_000);
   }
-  it('podsumowanie (druk do opisu PR; ZNANE_W4_R4N; AB2: porównania emiterów z modelem)', () => {
+  it('podsumowanie (druk do opisu PR; ZNANE_W4_R4N; AB2: porównania emiterów z modelem; AB7: porównania haków z modelem)', () => {
     const s = suma(WYNIKI.podstawowy);
     console.log('E2-AB podstawowy', JSON.stringify(s));
     expect(s.ziaren).toBe(ZIARNA.length);
     expect(s.pelnych, 'punkty pełnej dostawy (W2s, W3)').toBeGreaterThan(0);
     expect(s.zdarzen).toBeGreaterThan(0);
     abDwa(s);
+    abSiedem(s);
     const dom = WYNIKI.podstawowy.filter((w) => domyslne(w.ziarno));
     if (dom.length === DOMYSLNE_ZIARNA.length) expect(dom.reduce((n, w) => n + w.w4R4n, 0), 'ZNANE_W4_R4N').toBe(ZNANE_W4_R4N);
   });
@@ -3123,12 +3341,13 @@ describe('A ≡ B, koalescencja kolejki (reguła ogona) — profil podstawowy be
       if (!KROKI && DOMYSLNE_ZIARNA_KOAL.includes(z)) expect(listaW1(w), `ZNANE_W1_KOAL (ziarno ${z})\n${opisBledow(w)}`).toEqual(ZNANE_W1_KOAL.filter((x) => x[0] === z));
     }, 180_000);
   }
-  it('podsumowanie (druk do opisu PR): suma koalescencji > 0; AB2', () => {
+  it('podsumowanie (druk do opisu PR): suma koalescencji > 0; AB2; AB7', () => {
     const s = suma(WYNIKI['podstawowy:ogon']);
     console.log('E2-AB koalescencja', JSON.stringify(s));
     expect(s.ziaren).toBe(ZIARNA_KOAL.length);
     expect(s.koal, 'dopisania, które zastąpiły wpis kolejki').toBeGreaterThan(0);
     abDwa(s);
+    abSiedem(s);
   });
 });
 
@@ -3160,11 +3379,12 @@ describe('A ≡ B, właściwość: profil pełny (charakterystyka; W3 i W4 z kla
         .toEqual({ W3: [], W4: [], W4p: [], brakSpoczynku: [] });
     }, 600_000);
   }
-  it('podsumowanie profilu pełnego (druk do opisu PR; AB2)', () => {
+  it('podsumowanie profilu pełnego (druk do opisu PR; AB2; AB7)', () => {
     const s = raportPelny(WYNIKI[KOAL_PELNY ? 'pelny:ogon' : 'pelny']);
     console.log('E2-AB pelny', JSON.stringify(s));
     expect(s.ziaren).toBe(ZIARNA_PELNY.length);
     abDwa(s);
+    abSiedem(s);
   });
 });
 
@@ -3172,4 +3392,6 @@ beforeEach(() => { vi.useFakeTimers({ toFake: ['Date'] }); ustaw(START); });
 afterEach(async () => { await sprzatnijUrzadzenia(); vi.useRealTimers(); vi.restoreAllMocks(); });
 // AB1: niezgodność emiterów z modelem czerwieni przypadek także wtedy, gdy wyjątek mutacji złapał krok katalogu p. 5.
 afterEach(() => { const n = EMITERY_NIEZGODNE.splice(0); expect(n, 'AB1: emitery ≡ model w każdej mutacji przypadku').toEqual([]); });
-afterAll(() => { console.log('E2-AB emitery (plik)', JSON.stringify(EMITERY_PLIK)); });
+// AB7: niezgodność haków scalania z modelem czerwieni przypadek także wtedy, gdy wyjątek dostawy złapał krok katalogu p. 5.
+afterEach(() => { const n = HAKI_NIEZGODNE.splice(0); expect(n, 'AB7: haki z emiterów ≡ model w każdej partii przypadku').toEqual([]); });
+afterAll(() => { console.log('E2-AB emitery (plik)', JSON.stringify(EMITERY_PLIK)); console.log('E2-AB haki (plik)', JSON.stringify(HAKI_PLIK)); });

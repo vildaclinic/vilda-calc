@@ -21534,6 +21534,214 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
+## Dziennik zdarzeń: haki scalania — pełna karta po przegranym nagrobku i ratunek notatki do kolejki — uśpione (P-DZIENNIK-ZDARZEN, E2-PR3b, SW 1.1.501, `vilda_vault.js` 266, 2026-11-10)
+
+**Zmiana kliniczna: NIE** — wzory, progi, jednostki, interpretacje, zapis danych pacjentów, reguły scalania, format
+kopii i synchronizacja bez zmian. Dla użytkownika dziś nic się nie zmienia: bramka dziennika zdarzeń jest zamknięta,
+więc scalanie danych z chmury tylko ją sprawdza (jeden odczyt pola w pamięci strony na każdy przegrany nagrobek karty
+i każdy ratunek notatki) i kończy. Po włączeniu dziennika (PR włączający): gdy usunięcie karty („Usuń pacjenta”) na
+jednym urządzeniu przegra z późniejszą pracą w tej karcie na drugim, drugie urządzenie wyśle całą kartę ze wszystkimi
+wizytami — żeby urządzenie, które dostało tylko ostatnią wizytę, miało całą historię. Notatka uratowana razem z kartą
+(D-21) zawsze trafi do kolejki. Wpływ kliniczny dziś: brak.
+
+**Skąd.** Plan `docs/SYNC_PRZYROSTOWA_PLAN.md`, wiersz 7 tabeli „Podział etapu 2” i rozdział 3.2 („Dopisanie”,
+„Wskrzeszenie całą kartą”); decyzja 9 (dwie zmiany w scalaniu bez zmiany reguł, szczegóły do akceptacji przy PR);
+wymagania dla E2-PR3b z wpisów E2-PR3a4, E2-PR3a3, E2-PR3a2 i E2-PR2a (niżej); D-21 (P-NOTATKI-ZA-KARTA, „Etap 2
+synchronizacji”).
+
+### E2-PR3b
+
+**Uśpienie.** „Każde wywołanie kończy się na bramce: bez otwarcia bazy, szyfrowania i żądań.” Trzy nowe miejsca poza
+blokiem: `Bem_przegrane(t, N, e)` — w scalaniu (`Le`) tuż po pętli nagrobków kart, `Bem_przegrany(patientId,
+deletedAtISO, opcje)` — w `Bsl_usunPacjenta` w gałęzi karty późniejszej niż nagrobek, `Bem_ratunek(id, u, opcje)` —
+w `Bnp_ratuj` tuż po zapisie uratowanej wersji notatki. Przy zamkniętej bramce każde z nich to najwyżej jeden odczyt pola
+na przegrany nagrobek karty albo ratunek i koniec: bez budowy kopert, szyfrowania, blokad, baz `vilda_sync_*`, kluczy
+`localStorage` i zmian pamięci strony. Bez nowego hooka; eksport `VildaVault._eventLog` bez zmian (38 kluczy).
+
+**Sesja.** Operacje kolejki i kwarantanny sprawdzają sesję tak jak zapis karty (P-SESJA-ZAPISU): zmiana sesji w trakcie
+kończy operację bez zapisu. Haki niosą sesję scalania (opcje wywołania `Le`); zmiana sesji przed emisją albo w trakcie
+dopisania — bez wiersza.
+
+**Hak H1: przegrany nagrobek karty → pełna karta.**
+- Kiedy: (1) w `Le` — nagrobek karty z ładunku, którego karta nie weszła do zbioru wygranych nagrobków `N` (przegrał
+  z chwilą zapisu karty lokalnej albo z ładunku); na kartę jedna emisja z najpóźniejszą chwilą nagrobka; wstawka po
+  pętli nagrobków kart, gdy karty są już scalone; (2) w `Bsl_usunPacjenta` — karta zapisana w trakcie scalania (świeży
+  odczyt karty pod blokadą pacjenta późniejszy niż nagrobek), po poprawce licznika wersji, przed `return 0`.
+- Co: zestaw `pfull` (wszystkie wersje karty w porcjach do 262 144 B, `event.full = { setId, i, n }`), który builder
+  buduje z bieżącego stanu karty w chwili dopisania (jak każdy wiersz). `setId` z karty i chwili nagrobka:
+  `<patientId>:<deletedAtISO>`, gdy pasuje do białej listy identyfikatorów kolejki; inaczej `h` i skrót FNV-1a (8 znaków
+  szesnastkowo) z karty i chwili (`Bob_zestawKarty`, funkcja czysta). Ten sam przegrany nagrobek daje na każdym
+  urządzeniu ten sam zestaw.
+- Bez powtórzeń: ten sam zestaw drugi raz w obrębie strony nie daje emisji (`Bem_pelne`, pamięć strony, bez nowego
+  klucza `localStorage`); inny nagrobek tej karty (inna chwila) — nowy zestaw. Po odświeżeniu strony ten sam przegrany
+  nagrobek może dać zestaw jeszcze raz — u odbiorcy bez zmiany danych (scalanie jest idempotentne), tylko dodatkowy ruch.
+- Tylko poza importem: w otwartym kroku (import karty z pliku, scalenie i odtworzenie kopii konta) H1 kończy się na
+  warunku kroku, bez odczytu bramki (importy mają własną partię z E2-PR3a3).
+
+**Świadomie bez haka H1.**
+
+| Zmiana w scalaniu | Powód |
+|---|---|
+| lokalny nagrobek karty przegrywa z kartą z ładunku (`Bsl_zdejmijNagrobek`) | to urządzenie może mieć tylko część historii; całą kartę wysyła urządzenie, u którego przegrał nagrobek z ładunku; karta częściowa u odbiorcy — `partialSince` w etapie 3, w etapie 2 dowozi ją też pełna wysyłka (decyzja 7) |
+| nagrobek odłożony do następnego scalenia (brak kopii Kosza — drugie `return 0` w `Bsl_usunPacjenta`) | karta zostaje do ponowienia usunięcia; nie przegrała z zapisem |
+| nagrobek, który wygrał | karta usunięta; nagrobek niesie zdarzenie urządzenia, które usunęło kartę |
+| scalanie w kroku importu | import to zmiana lokalna z partią (E2-PR3a3) |
+| tryby „Komputer w pracy”, „Zaloguj jednorazowo”, sejf w pamięci | bez kolejki (koniec na trybie) |
+
+**Hak H2: ratunek notatki zawsze do kolejki.** `Bnp_ratuj` po zapisie uratowanej wersji (chwila R + 1 ms + h, D-21)
+dopisuje `pnote` tej notatki — zawsze, bez warunku na ładunek, więc także wtedy, gdy w tej samej partii przyszła własna
+koperta `pnote` tej notatki (bez tego notatka zostaje tylko na jednym urządzeniu: N1, N1b). Bez nowej akcji hooka:
+ładunek `qr` (`action: 'merge'`) i kolejność słuchaczy bez zmian. Zwykłe `merge`, `merge-delete`, zdjęcie nagrobka po
+scaleniu i nagrobek w stanie „czeka” — bez wiersza (zapisy pochodne bez nowej chwili; echo w E3-PR0). W kroku importu H2
+idzie do partii (bez powtórzeń tej samej encji); ratunek zmienia notatkę na tym urządzeniu, więc musi wyjść także po
+imporcie.
+
+**Kolejność.** Łańcuch dopisań konta jest kolejką w kolejności emisji. W jednym scaleniu H1 (pętla nagrobków kart, potem
+`Bem_przegrane`) poprzedza H2 (sekcja notatek), więc pełna karta idzie przed notatką tej karty — urządzenie bez karty
+skasowałoby notatkę z pasma ratunku (D-21). W kroku importu wpisy idą według rang rodzajów: `pfull` ma rangę wersji (0).
+
+**Przegląd kolejki (E2-PR3a4) a haki.** Wiersz z haka pokrywa encję: wiersz `pfull` karty (w dowolnym stanie) albo para
+jego wiersza przyjętego pokrywa wersje tej karty i nośnik pól karty z chwilą nie późniejszą niż wiersz; po udanym
+dopisaniu wiersza z H2 pamięć par konta dostaje parę ratunku `pnote|<id>` z chwilą ratunku (chwila R + 1 ms + h bywa
+późniejsza niż chwila utworzenia wiersza). Zmianę z haka bez wiersza (limit blokady konta, brak miejsca, blokada sejfu,
+zmiana sesji, błąd zapisu) dokłada przegląd kolejki z pamięci braków — z tym samym zestawem (`setId` w pamięci braków).
+Pary ze scalania nie ukrywają stanu z haka: mają chwile z ładunku, a haki dopisują stan lokalny po scaleniu. Pełna
+wysyłka zostaje przez cały etap 2 (decyzja 7).
+
+**Odbiorca.** `pfull` to koperta karty z porcją wersji — odbiorca scala ją tym samym `Le`, reguły bez zmian. Karta
+częściowa u odbiorcy (np. z jednej wersji) dostaje po zestawie całą historię nadawcy. Znak „historia może być
+niepełna” (`partialSince`) — etap 3.
+
+**Tryby.** Kolejka i haki tylko w trybie „Komputer prywatny” przy odblokowanym sejfie; w pozostałych trybach emisja
+kończy się na trybie (bez baz, kluczy `vilda-sync-*` i blokad).
+
+**Przy zamkniętej bramce (co nowego).**
+
+| Skutek | Wartość |
+|---|---|
+| odczyt pola `VILDA_EVENT_LOG` | `Le` poza krokiem: jak dotąd 1 (`Bem_zChmury`) + 1 na kartę z przegranym nagrobkiem z ładunku + 1 na ratunek notatki; `Bsl_usunPacjenta` z kartą zapisaną w trakcie scalania: 1; import: H1 0, H2 1 na ratunek |
+| budowa kopert, szyfrowanie, blokady `vilda-sync*`, bazy `vilda_sync_*`, klucze `vilda-sync-*`, żądania sieci, pamięć zestawów i par | 0 |
+| wynik `Le` i operacje sklepu sejfu | te same co na sejfie bez wstawek (test równoważności `Le`, HK1) |
+| zapis bazowy (`tests/fixtures/dziennik-zapis-bazowy.json`) | bez zmian (52, 52, 50, 52 — scenariusz nie ma przegranego nagrobka ani ratunku) |
+| e2e uśpienia (`dziennik-zdarzen-uspienie`) | bez zmian (scenariusz bez scalania z chmury) |
+
+**Test A ≡ B.** Haki H1 i H2 z prawdziwych emiterów: wpisy łańcucha dopisań odbiorcy zebrane w trakcie zastosowania
+partii, koperty z builderów (`pfull` z `setId` wpisu). Model zostaje wyrocznią porównania w każdej partii, z regułą H2
+doprecyzowaną: nowa chwila notatki nie pochodzi z koperty tej partii (notatka, która wróciła zwykłą regułą z własną
+kopertą w partii, to nie ratunek). Wynik (ziarna domyślne): 707 porównań haków partii — 704 ten sam ciąg, 3 inna kolejność tylko w obrębie rangi
+(uratowane notatki jednej karty, wszystkie po jej pełnej karcie), 0 niezgodnych; profil podstawowy 326 porównań (hak H1
+9 razy, hak H2 10), łączenie wpisów 87 (4 i 6), profil pełny 73 (bez haków). Przy 40 ziarnach profilu podstawowego 1576
+porównań, 0 niezgodnych (1571 ten sam ciąg, 4 w obrębie rangi, 1 inna kolejność rang: emitery idą w kolejności scaleń
+partii — pełna karta, jej notatka, druga pełna karta — a model układa haki rodzajami; pełna karta i tak przed notatką
+swojej karty); przy 20 ziarnach profilu pełnego 810 porównań, wszystkie równe. Literały K6 („ZNANA UTRATA (zdarzenia)”, naprawa E2-PR3c) i R2-E3 („ZNANA
+RÓŻNICA”, naprawa E3-PR0) bez zmian.
+
+**Test pokrycia.** PM2 i PM8 z nagrobkiem starszym u odbiorcy: nagrobek odbiorcy jako koperta stosowany u nadawcy, nowe
+wiersze nadawcy (hak H1: `pfull`) u odbiorcy — po haku brak różnicy (klasa „karta częściowa” zamknięta).
+
+**Kontrola granicy obrazu sejfu.** Przeliczone skróty `BASE`, `baseVaultSHA256` i `integratedVaultSHA256` (reguła
+z E2-PR3a2, decyzja z 2026-11-09); fragment natywny, haki, moduły i paczka bez zmian.
+
+**Testy.** Dane wyłącznie fikcyjne, bez PESEL. Nowe i zmienione:
+- `tests/unit/sync-wskrzeszenie-calej-karty.test.mjs` (nowy) — 32 przypadki HK1–HK16 z wariantami: równoważność `Le`
+  przy zamkniętej bramce (sejf wobec sejfu bez wstawek: ten sam wynik scalenia, ten sam zapis przebiegu atrapy
+  IndexedDB i te same operacje szyfrowania; na adapterze w pamięci ta sama lista wywołań; odczyty pola 3 wobec 0); hak H1
+  ze zdarzenia nagrobka, z pełnego ładunku i z delty (jeden zestaw, `setId` z karty i chwili nagrobka; bliźniak z kartą
+  częściową dostaje wszystkie wersje); trzy urządzenia w obu kolejnościach; karta zapisana w trakcie scalania
+  (`Bsl_usunPacjenta`); bez haka (nagrobek wygrywa, ponowienie usunięcia, lokalny nagrobek przegrywa); bez powtórzeń
+  (to samo scalenie dwa razy, powtórka koperty, nagrobek z inną chwilą, najpierw zamknięta, potem otwarta bramka);
+  `setId` spoza białej listy (skrót, ten sam na dwóch urządzeniach); hak H2 w pełnym ładunku i w partii zdarzeń z własną
+  kopertą notatki (N1); bez haka H2 (zwykłe `merge`, usunięcie notatki, nagrobek „czeka”); przegląd po hakach (wiersz
+  `pfull` pokrywa wersje, wiersze przyjęte i przeładowanie, para ratunku); pamięć braków (dopisania haków bez wiersza —
+  przegląd dokłada pełne karty z tym samym `setId` i notatkę); krok importu (H1 bez wiersza i bez odczytu bramki, H2
+  w partii, `onBulkChange` z liczbą wierszy); tryby i zmiana sesji; bez nowego hooka (13 hooków, 38 kluczy, ładunki
+  8 hooków jak na sejfie bez wstawek).
+- `tests/unit/sync-dziennik-wlasnosciowy.test.mjs` (test A ≡ B) — 127 przypadków (było 125): haki z emiterów, model
+  wyrocznią (wyżej); AB4 z rangą `pfull`; AB7 (porównanie haków na ciągach syntetycznych i w dostawie, przy zamkniętej
+  bramce odbiorcy — wyjątek z opisem, powtórka partii bez haków); AB8 (samokontrola rejestru odbiorcy: wpisy `pfull`
+  z `setId` i `pnote` z chwilą ratunku przy otwartej bramce, żadnego przy zamkniętej, ten sam stan).
+- `tests/unit/sync-pokrycie-mutacji.test.mjs` — 73 przypadki: PM2 i PM8 z nagrobkiem starszym (wyżej).
+- `tests/unit/sync-dziennik-outbox.test.mjs` — 40 przypadków: PG23 (ratunek notatki) — po scaleniu wiersze `pfull`
+  i `pnote` z haków, przegląd nie dokłada niczego.
+- `tests/unit/sync-dziennik-uspienie.test.mjs` — 50 przypadków (było 48): literał miejsc poza blokiem (33 wpisy,
+  48 wywołań), formy trzech wstawek z samokontrolą wariantami zła, reguły domknięcia części `Bem_` z nowymi funkcjami
+  (bramka jako pierwsza instrukcja haka, po niej jedno `try`), czystość `Bob_zestawKarty`, nazwy wiążące.
+- `tests/unit/sync-dziennik-haki.test.mjs` (KH6: liczby wstawek, razem 48), `tests/unit/sync-dziennik-zapis-bazowy.test.mjs`
+  (15 przypadków, +1 pominięty: fikstura bez zmian; odczyty pola = emisje + przeglądy + scalenia + przegrane nagrobki
+  + ratunki, w scenariuszu przegranych nagrobków i ratunków 0).
+- Uprząż: `tests/support/sejf-bez-wstawek.mjs` (licznik odczytów bramki w `Bem_przegrany` i `Bem_ratunek`, opakowanie
+  nowych funkcji).
+
+Pełny `npm test` i e2e — wyniki w opisie PR.
+
+**Czerwone na bazie** (`origin/audyt` `4994fef9` z testami i uprzężą tego PR): sync-wskrzeszenie-calej-karty 22 z 32 (zielone z natury:
+bez haka H1 i H2 ×6, tryby i zmiana sesji ×2, bez nowego hooka ×2 — strażniki regresji); test A ≡ B 31 z 127 (AB4, AB7,
+AB8 i każdy przypadek z partią, w której model ma hak: p. 2 K10, p. 3 D-5, p. 4 ×4, p. 5 ×4, p. 6 ×3, p. 7b, p. 7d N1 ×2,
+negatywy W4p, ziarna 1, 3, 5, 6, 7 i 8 profilu podstawowego, ziarna 1, 7 i 8 łączenia wpisów i ich podsumowania);
+sync-dziennik-uspienie 6 z 50; sync-pokrycie-mutacji 2 z 73 (PM2, PM8 z nagrobkiem starszym); sync-dziennik-outbox 1 z 40
+(PG23); sync-dziennik-haki 1 z 11 (KH6); sync-dziennik-zapis-bazowy 0 z 15 (strażnik: haki nie zmieniają zapisu
+bazowego); razem 63. Literały K6 i R2-E3 zielone także na bazie.
+
+**Mutanty.** 25 mutantów kodu haków i kontroli granicy (brak każdej z trzech wstawek, wstawka w gałęzi
+odłożonego usunięcia, hak H1 także dla wygranych nagrobków albo z `Bsl_zdejmijNagrobek`, bez warunku kroku w haku H1,
+hak H2 z warunkiem kroku, bramka po pamięci zestawów albo pamięć zestawów zmieniana przed bramką, bez pamięci zestawów,
+`setId` losowy albo z separatorem spoza białej listy, bez zapasu skrótem, `pfull` bez rangi, klucz kroku albo klucz encji
+bez `pfull`, dopisanie albo pamięć braków bez opcji wpisu, przegląd bez pokrycia wierszem `pfull`, bez pary ratunku albo
+para przy emisji, hak H2 przed zapisem uratowanej wersji, hak H1 po ratunku notatek, nieprzeliczone skróty): 24 zabite,
+1 równoważny (klucz kroku dla pełnej karty — hak H1 w otwartym kroku kończy się przed emisją, więc pełna karta nigdy nie
+trafia do kroku). Trzy z zabitych zabijają tylko strażniki formy i samokontrole: brak warunku kroku w haku H1 (import
+scala karty poza `Le`, więc warunek jest osłoną), hak H2 przed zapisem uratowanej wersji (dopisanie w łańcuchu czyta stan
+po zapisie) i para ratunku przy emisji (samokontrola rejestru AB8).
+
+**Do akceptacji właściciela (decyzja 9: „szczegóły do akceptacji właściciela przy PR”).** Rekomendacja przy każdym
+punkcie: przyjąć.
+1. **Cała karta po przegranym usunięciu.** Gdy na jednym urządzeniu ktoś użył „Usuń pacjenta”, a na drugim w tym czasie
+   dodano wizytę albo poprawiono kartę, karta zostaje (tak jest dziś). Nowość po włączeniu dziennika: drugie urządzenie
+   wyśle wtedy całą kartę ze wszystkimi wizytami, a nie tylko nową wizytę — trzecie urządzenie nie zostanie z kartą,
+   w której jest tylko ostatnia wizyta.
+2. **Kiedy nie wysyła całej karty.** Gdy usunięcie wygrywa (karta znika), gdy usunięcie tylko odłożono do następnej
+   synchronizacji (kopia do Kosza się nie zapisała) i gdy karta przychodzi z importu pliku albo kopii konta (te mają
+   własne zasady z E2-PR3a3). Urządzenie, które dostało tylko część karty, nie wysyła jej dalej — całą kartę wysyła
+   urządzenie, które ma całą historię.
+3. **Jedna wysyłka na jedno usunięcie.** To samo usunięcie daje jedną wysyłkę całej karty, dopóki strona jest otwarta; po
+   odświeżeniu strony może pójść jeszcze raz — bez zmiany danych na innych urządzeniach, tylko dodatkowy ruch (bez nowego
+   wpisu w pamięci przeglądarki).
+4. **Uratowana notatka zawsze do wysłania.** Notatka, która wraca razem z kartą przywróconą po „Usuń pacjenta” (D-21),
+   trafi do kolejki zawsze — także wtedy, gdy w tej samej porcji zmian przyszła ta sama notatka z drugiego urządzenia.
+   Karta idzie przed notatką (inaczej urządzenie bez karty skasowałoby notatkę).
+5. **Bez nowego sygnału dla innych modułów.** Plan przewidywał osobny sygnał „usunięcie przegrało”
+   (`onPatientTombstoneRejected`) dla modułu synchronizacji; od E2-PR3a2 kolejka zmian jest w sejfie, więc sygnał nie
+   jest potrzebny i nie dochodzi.
+6. **Bez zmian, choć plan dopuszczał:** warunek `ctx.pelny` (przebieg Kosza między kartami) zostaje — ewentualnie
+   w E2-PR3c; znak „historia może być niepełna” na karcie — etap 3.
+
+Po scaleniu E2-PR3b warunek decyzji 10 („test właściciela po PR ze zmianami scalania”) jest spełniony.
+
+**Wymagania dla następnych PR.**
+- **E2-PR4.** Wysyłka zestawu `pfull` w całości (porcje w jednej partii albo kolejno, bez innych wpisów tej karty
+  pomiędzy); budżet wysyłki dużej karty (plan 3.6); wpisy P-SYNC-SLAD haków (liczby, bez kluczy encji).
+- **E2-PR3c.** Opcjonalnie `ctx.pelny`; literał K6 i pozostałe „ZNANE UTRATY” na brak utraty.
+- **E3-PR0.** Echo zmian pochodnych scalania (pamięć par jako punkt wyjścia).
+- **Etap 3.** `partialSince` (odbiorca, znak w UI, lista w Ustawieniach, `pfull` ze scalania karty z `partialSince`).
+- Kolejne PR: nowe miejsce zapisu w scalaniu — emisja albo reguła „świadomie bez haka” (tabela wyżej) i przypadek
+  w `sync-wskrzeszenie-calej-karty`; zmiana `vilda_vault.js` poza fragmentem natywnym — przeliczenie skrótów kontroli
+  granicy.
+
+**Ograniczenia.** Atrapa IndexedDB i Chromium (WebKit i Firefox niezmierzone); kolejność zdarzeń obowiązuje w obrębie
+karty przeglądarki; bez powtórzeń zestawu tylko w obrębie strony (zestaw jest idempotentny u odbiorcy); karta częściowa
+u odbiorcy do dojścia pełnej karty (w etapie 2 dowozi ją też pełna wysyłka).
+
+**Cofnięcie** = rewert PR (przy zamkniętej bramce nic nie powstaje; rewert cofa też skróty kontroli granicy).
+
+**Gdzie w kodzie.** `vilda_vault.js`: blok P-DZIENNIK-ZDARZEN, linie 5675–8609 (2935 linii). Część b: `Bob_zestawKarty` (6537); w `Bob_przeglad`
+(8079) pokrycie wierszem `pfull` i wpisy pamięci braków z `o`. Część c (od 8188): `Bem_RANGI` z `pfull`, `Bem_pelne`;
+zmiany w `Bem_zmiana` (opcje `setId` i `para`), `Bem_klucz`, `Bem_kluczEncji`, `Bem_doLancucha` (para ratunku po udanym
+dopisaniu), `Bem_dopisz` i `Bem_brak` (opcje wpisu); haki scalania (8537–8603): `Bem_przegrane`, `Bem_przegrany`,
+`Bem_ratunek`, `Bem_paraRatunku`. Poza blokiem: `Bem_ratunek(id, u, opcje)` w `Bnp_ratuj` (5218), `Bem_przegrany(patientId,
+deletedAtISO, opcje)` w `Bsl_usunPacjenta` (5655), `Bem_przegrane(t,N,e);` w `Le` tuż po pętli nagrobków kart.
+
+**Wersje.** `vilda_vault.js` 265 → 266, `vilda_chrome.js` 271 → 272 i `vilda_session_bridge.js` 188 → 189 (wstrzykują sejf), SW 1.1.500 → 1.1.501; baza `origin/audyt` `a568e289` (po vildaclinic/vilda-calc#922; projekt, mutanty i „czerwone na bazie” z `4994fef9`, po vildaclinic/vilda-calc#920 — sejf bez zmiany Klirensu, która nie dotyka bloku P-DZIENNIK-ZDARZEN ani scalania). Bez nowego pliku w pamięci offline.
+
 ## Dziennik zdarzeń: przegląd kolejki ze znacznikiem i pamięcią par — uśpione (P-DZIENNIK-ZDARZEN, E2-PR3a4, SW 1.1.498, `vilda_vault.js` 264, 2026-11-09)
 
 **Zmiana kliniczna: NIE** — wzory, progi, jednostki, interpretacje, zapis danych pacjentów, scalanie, format kopii
@@ -21632,7 +21840,8 @@ chwili (poprawka `rev` wersji, `rev` nagrobka notatki, treść wpisu kosza z kar
 parą — przegląd ich nie dokłada. Dwa przypadki z nową chwilą: plan opieki scalony równolegle bez przewinięcia (rewizja
 max + 1, chwila scalenia) i ratunek notatki przy nagrobku karty (D-21) — przegląd dokłada je jak zmianę lokalną,
 a odbiorca przyjmuje je zwykłą regułą scalania (dla planu opieki — przewinięcie do potomka, P-PLAN-POTOMEK). Nowa
-reguła scalania, która zapisuje chwilę zegara, dostaje przypadek testu przeglądu.
+reguła scalania, która zapisuje chwilę zegara, dostaje przypadek testu przeglądu. Od E2-PR3b ratunek notatki ma wiersz
+z haka H2 (para ratunku po udanym dopisaniu), więc przegląd go nie dubluje (wpis wyżej).
 
 **Przegląd sierot.** Przy odblokowaniu, przed przeglądem kolejki: bazy `vilda_sync_<userId>` kont innych niż bieżące,
 bez wpisu rejestru albo z wpisem w trybie innym niż „Komputer prywatny”, kasuje to samo kasowanie kolejki konta co
@@ -21707,7 +21916,8 @@ i 4 e2e. Test A ≡ B (125) i test pokrycia (73) bez zmian, zielone.
   objęły scalone encje; nadawca przy biciu serca woła `sweepOutbox()`, gdy minęła doba; przyjęcie wierszy wyłącznie przez
   `outboxAccept`; wpisy P-SYNC-SLAD przeglądu (liczby, bez kluczy encji); `markSyncCaughtUp` przy drenażu; budżet
   wysyłki pierwszego przeglądu (plan 3.6).
-- **E2-PR3b.** Haki H1 i H2: wiersz z haka pokrywa encję (przegląd jej nie dopisze drugi raz).
+- **E2-PR3b.** Haki H1 i H2: wiersz z haka pokrywa encję (przegląd jej nie dopisze drugi raz). Wykonane w E2-PR3b
+  (wpis wyżej).
 - **E2-PR6.** Polityka prywatności, opisując bazę `vilda_sync_<userId>`, wymienia też znacznik przeglądu i pamięć par
   (identyfikatory encji i chwile, bez treści).
 - **E3-PR0.** Hak echa zmian pochodnych scalania (pamięć par jako punkt wyjścia); literał R2-E3.
@@ -21852,7 +22062,8 @@ razem 38.
 **Wymagania dla następnych PR.**
 - **E2-PR3a4.** Przegląd kolejki dokłada zmiany partii bez wiersza; przegląd po pierwszym odblokowaniu konta odtworzonego
   z kopii nie dubluje partii. Wykonane w E2-PR3a4 (wpis wyżej).
-- **E2-PR3b.** Haki H1 i H2 w teście A ≡ B z modelu na emitery (rejestr łańcucha obejmie wtedy scalanie).
+- **E2-PR3b.** Haki H1 i H2 w teście A ≡ B z modelu na emitery (rejestr łańcucha obejmie wtedy scalanie). Wykonane
+  w E2-PR3b (wpis wyżej).
 - **E2-PR3c.** Literał K6 na brak utraty; analiza i naprawa różnicy opisu wpisu Kosza po wymianie pełnych kopii (decyzja
   z 2026-11-09).
 - **E2-PR4.** Nadawca słucha `onBulkChange`; budżet wysyłki przy dużej partii (plan 3.6).
@@ -22006,7 +22217,7 @@ scalanie z chmury używa akcji `merge` i `merge-delete` (bez zdarzenia). Nowe mi
 synchronizacji ma emisję albo regułę „świadomie lokalne” (test pokrycia).
 
 **Bez zdarzenia (świadomie lokalne).** Usunięcie wersji bez nagrobka (`deleteSnapshot`, D-8 A); scalanie z chmury
-(`Le`, `ps`, `applyEncryptedEvent` i ich kroki); ratunek notatki D-21 (hak w E2-PR3b); zmiana hasła z chmury
+(`Le`, `ps`, `applyEncryptedEvent` i ich kroki); ratunek notatki D-21 (od E2-PR3b hak H2, wpis wyżej); zmiana hasła z chmury
 (`password-changed-remotely`); porządki pól notatek (`mo`) i rozdzielenie nazwisk (`Ja`) — ta sama treść, liczone na
 każdym urządzeniu; przenumerowanie `seq` i licznik wizyt (lokalne); zdjęcie nagrobka przy zapisie (niesie je zdarzenie
 encji); opakowania kluczy, materiał synchronizacji, rejestr i tryb; cienie wersji; importy `ns`, `ss`, `as` (poza
@@ -22058,7 +22269,7 @@ kolejnych PR zmieniających `vilda_vault.js` poza fragmentem: to samo przeliczen
   prawdziwym sejfie z otwartą bramką (okno uprzęży z `emisja: true`); wiersze kolejki po mutacji (rodzaje w kolejności
   `seqLocal`) i odbiorca-bliźniak po zastosowaniu tych zdarzeń ≡ odbiorca po pełnym ładunku; odbiorca bez nagrobka —
   także stan równy nadawcy; z nagrobkiem karty u odbiorcy starszym niż mutacja (mutacja podnosząca chwilę karty: klasa
-  „karta częściowa” — wersje, których zdarzenia nie niosą, naprawa w E2-PR3b; pełny ładunek bez różnicy) i nowszym
+  „karta częściowa” — wersje, których zdarzenia nie niosą, naprawione w E2-PR3b, wpis wyżej; pełny ładunek bez różnicy) i nowszym
   (karta nieobecna u obu odbiorców, a po scaleniu eksportu odbiorcy karta znika u nadawcy, wiersze nadawcy zostają);
   scalanie z chmury bez wierszy; samokontrola listy metod danych uprzęży.
 - `tests/unit/sync-dziennik-emisja.test.mjs` — 26 przypadków (EM1–EM24): przy zamkniętej bramce każda metoda danych
@@ -22106,7 +22317,7 @@ odczytów bramki; dwa przypadki strony z elementem o `id` `VILDA_EVENT_LOG` ziel
 - **E2-PR3a4.** Przegląd kolejki dokłada zmiany bez wiersza (wyżej), w tym nagrobek klucza dostępu usuniętego przy
   zablokowanym sejfie. Wykonane w E2-PR3a4 (wpis P-DZIENNIK-ZDARZEN, E2-PR3a4, wyżej).
 - **E2-PR3b.** W teście pokrycia wariant „nagrobek starszy u odbiorcy” przy nowej wersji przechodzi z „karta częściowa”
-  na brak różnicy po haku `pfull`.
+  na brak różnicy po haku `pfull`. Wykonane w E2-PR3b (wpis wyżej).
 - **E2-PR4.** Nadawca może czekać na `emissionsSettled` przed wysyłką partii; `syncPush()` w `Yn` według decyzji 7.
 - Kolejne PR zmieniające `vilda_vault.js` poza fragmentem natywnym — przeliczenie skrótów kontroli granicy.
 
@@ -23807,7 +24018,7 @@ przypadkach zastosowanie kończy się bez dalszych zapisów i bez klasyfikowania
 - **Odpowiedniki w dzisiejszym drenażu** (`Bdz_zastosuj`; podmiana w E2-PR4): `blokada` ↔ `locked`; `busy` ↔ `busy` i `session-changed`;
   `nieczytelne` ↔ `unreadable`; `blad` ↔ `apply-error`; `zmiana`/`ok` ↔ `applied`.
 - **Scalanie z chmury nie dopisuje do kolejki.** Kolejki jeszcze nie ma. Dwa wyjątki z decyzji 9 to haki E2-PR3b
-  (niżej).
+  (niżej; w kodzie od E2-PR3b, wpis wyżej).
 
 **Zgodność ze starszą aplikacją.** Każda z 14 kopert przechodzi przez `mergeSyncPayload` starszego sejfu (wersja 221,
 fikstura testów) bez wyjątku. Stan jest taki jak po pełnym blobie dla tej encji (B13). Urządzenie bez aktualizacji
@@ -23822,7 +24033,7 @@ urządzeniach na osobnych fikcyjnych kontach, jak w katalogu, z kopertą jawną 
   - Profil pełny dokłada retencję, „Scal pacjentów” z koszem, retencję przypiętej wizyty i „Zostaw notatkę”.
 - **Emisja.**
   - Po każdej mutacji test buduje koperty każdej zmienionej encji („emiter doskonały”).
-  - Scalanie emituje tylko przez dwa haki, które w kodzie dojdą w E2-PR3b:
+  - Scalanie emituje tylko przez dwa haki, które w kodzie dojdą w E2-PR3b (od E2-PR3b w kodzie, wpis wyżej):
     - H1: przegrany nagrobek karty → pełna karta;
     - H2: ratunek notatki D-21 „zawsze do kolejki”.
 - **Dostawa.**
@@ -23971,6 +24182,7 @@ literał na wynik zgodny.
   - Hak H2 „zawsze do kolejki”: notatka, której nagrobek zniknął w partii i której rekord zmieniło scalanie, idzie do
     kolejki także wtedy, gdy w tej partii przyszła jej własna koperta. Bez tego notatka zostaje tylko na jednym
     urządzeniu (test N1, N1b).
+  - Wykonane w E2-PR3b (wpis wyżej; uśpione).
 - **E2-PR2b** (podzielony na E2-PR2b1 i E2-PR2b2, wpisy wyżej).
   - Z wyniku do kwarantanny tylko powód, a do podsumowania wyniku (`resultSummary`) tylko status, powód albo kod
     i liczniki; strażnik źródła obejmuje nowy kod (E2-PR2b2; ślady P-SYNC-SLAD z `resultSummary` — E2-PR4).
@@ -27249,7 +27461,8 @@ P1 (10 z tej poprawki i 5 z poprawki F2, #754) i 11 z jego weryfikacji 2; wejśc
 - **Etap 2 synchronizacji** (kolejka zdarzeń): ratunek wymaga wyjątku od zasady „scalanie nie dopisuje do kolejki”,
   builder `pnotetomb` musi czytać rekord ze sklepu, a zapis notatki, po którym nagrobek zostaje (`Bnp_poZapisie`:
   stan CZEKA, a po przeglądzie przeniesienia na D-7 także karta późniejsza niż `e` przy zapisie nie późniejszym niż R),
-  musi wysłać także `pnotetomb` — dopisane w `docs/SYNC_PRZYROSTOWA_PLAN.md`.
+  musi wysłać także `pnotetomb` — dopisane w `docs/SYNC_PRZYROSTOWA_PLAN.md`. Ratunek do kolejki — wykonane
+  w E2-PR3b (hak H2, uśpione; wpis P-DZIENNIK-ZDARZEN, E2-PR3b).
 
 **Nota wydania (D21-8; do wklejenia przy wydaniu).** „Notatki pacjenta (wyniki badań, leki, terminy) wracają razem
 z kartą, którą po »Usuń pacjenta« zachowano na innym urządzeniu (nowa wizyta, poprawka, gwiazdka, kosz, »Przywróć«).

@@ -380,15 +380,16 @@ async function searchRoundTrip(page, noteId) {
 
 for (const shell of [true, false]) {
   test(`${shell ? 'app shell' : 'standalone'}: real PWA upgrade keeps the patient and header after a cold offline restart`, async ({ playwright, browserName, launchOptions }, info) => {
-    // Measured 2026-11-10, not a blind raise. The shell variant needs 45–48 s
-    // alone on a local 4-core machine and 77–81 s with four copies at once. In
-    // seven CI runs of 2026-11-09/10 (shard 5/8) it ran 13 times: six passed in
-    // 149.8–239.3 s, seven hit 240 s while already in the final checks (about
-    // 250 s needed), on the same commit too. Standalone took 103–150 s.
-    // BASE's changed-asset list is not the cause: the service worker update
-    // takes 6.0–6.6 s for 7, 51, 70 and 88 changed files alike, and all
-    // list-dependent steps together cost about 3 s of the 45 s.
-    test.setTimeout(shell ? 360_000 : 240_000);
+    // Measured 2026-11-10. BASE's changed-asset list is not what makes this
+    // test slow: the service worker update takes 6.0–6.6 s for 7, 51, 70 and
+    // 88 changed files alike, and all list-dependent steps together cost about
+    // 3 s, so a closer BASE would not shorten it. The shell variant needs
+    // 45–48 s alone on a local 4-core machine and 77–81 s with four copies at
+    // once. In seven CI runs of 2026-11-09/10 (shard 5/8) it ran 13 times: six
+    // passed in 149.8–239.3 s, seven hit the former 240 s limit while already
+    // in the final checks (about 250 s needed), on the same commit too.
+    // Standalone took 103–150 s. The limit is about 1.9 times the CI need.
+    test.setTimeout(480_000);
     const site = await deployment();
     const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'vilda-header-status-offline-'));
     let context;
