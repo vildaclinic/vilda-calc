@@ -1,4 +1,4 @@
-// P-DZIENNIK-ZDARZEN (E2-PR3a4) — przegląd kolejki zmian (VildaVault._eventLog.sweepOutbox; uśpione: przy zamkniętej
+// P-DZIENNIK-ZDARZEN (E2-PR3a4, E2-PR3b) — przegląd kolejki zmian (VildaVault._eventLog.sweepOutbox; uśpione: przy zamkniętej
 // bramce każde wywołanie kończy się na bramce). Przegląd porównuje encje sejfu z wierszami kolejki vilda_sync_<userId>
 // i dokłada zmianę bez wiersza (limit blokady konta, brak miejsca, blokada sejfu, zapis przy zamkniętej bramce): okno od
 // znacznika przeglądu − 10 min (rekord „przeglad” sklepu meta bazy kolejki; pierwszy znacznik — klucz ostatniej wysyłki
@@ -59,8 +59,9 @@
 //   PG21 strzeżony adapter: removeUser w toku → SYNC_DB_DELETED bez operacji na bazie sejfu i bazie kolejki; oznaczenie
 //        konta w trakcie przeglądu — koniec bez dalszych odczytów bazy sejfu.
 //   PG22 sesja: przełączenie na konto B w trakcie przeglądu A — bez wierszy u A i u B, znacznik A bez zmian.
-//   PG23 rekordy pochodne scalania z nową chwilą: plan opieki scalony równolegle (rewizja max + 1, chwila scalenia)
-//        i ratunek notatki D-21 — przegląd dokłada pnote.
+//   PG23 rekordy pochodne scalania z nową chwilą: plan opieki scalony równolegle (rewizja max + 1, chwila scalenia) —
+//        przegląd dokłada pnote; ratunek notatki D-21 ma od E2-PR3b wiersz z haka H2 (po pełnej karcie z haka H1:
+//        wiersze pfull, potem pnote) — przegląd nic nie dokłada (dopisane: 0).
 //   PG24 przegląd sierot przy odblokowaniu: baza kolejki konta bez wpisu rejestru i konta „Komputer w pracy” usunięte bez
 //        znacznika ponowienia, kolejki A i prywatnego B zostają; „Zaloguj jednorazowo” i okno bez databases() — nic.
 //   PG25 „Komputer w pracy” i „Zaloguj jednorazowo” przy otwartej bramce: koniec na trybie, bez bazy, kluczy i blokad.
@@ -78,6 +79,9 @@
 // PG9 ×2), PG11–PG24 (PG11 ×2, PG18 ×2, PG19 ×2, PG21 ×2, PG23 ×2, PG24 ×2), PG26–PG28, PG29 ×2. Zielone z natury (strażniki regresji): PG10
 // (bez przeglądu nie ma przeglądu pilnego po SYNC_DB_DELETED), PG25 (tryby bez kolejki: bez bazy, kluczy i blokad także
 // bez przeglądu).
+// Czerwone na bazie E2-PR3b (sejf 4994fef9 — bez haków scalania — z tym plikiem i uprzężą tego PR): 1 z 40 — PG23
+// (ratunek: po scaleniu bez wierszy z haków; przegląd dokłada pnote). Zielone z natury (strażniki regresji): pozostałe 39,
+// w tym PG23 planu opieki (zwykłe scalenie planu bez wiersza z haka).
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   PRZEDROSTEK_KASOWANIA, SKRYPTY_PUNKTU, bazaKolejki, drugieOkno, naAtrapie, nazwaBazy, nazwaBlokady, oknoMagazynu,
@@ -1045,7 +1049,7 @@ describe('PG23: rekordy pochodne scalania z nową chwilą', () => {
     expect(po(o, s0)).toEqual([`pnote|${f.planId}`]);
   }, 60_000);
 
-  it('PG23: ratunek notatki D-21 — bliźniak usuwa pacjenta, A dopisuje wizytę i scala pełny ładunek bliźniaka: notatka uratowana z nową chwilą, przegląd dokłada pnote', async () => {
+  it('PG23: ratunek notatki D-21 — bliźniak usuwa pacjenta, A dopisuje wizytę i scala pełny ładunek bliźniaka: notatka uratowana z nową chwilą, wiersze z haków (pfull, potem pnote), przegląd nic nie dokłada', async () => {
     const o = await okno();
     await o.zaloguj('A');
     const k = await karta(o, 1);
@@ -1062,17 +1066,20 @@ describe('PG23: rekordy pochodne scalania z nową chwilą', () => {
     await o.gotowe();
     const przed = (await o.v.getPatientNote(n)).updatedAtISO;
     const ladunek = await B.v.exportSyncPayload();
+    const s0 = ostatni(o);
     tik(MIN);
     await o.v.mergeSyncPayload(ladunek);
     tik();
     await o.gotowe();
     const notatka = await o.v.getPatientNote(n);
-    const s0 = ostatni(o);
+    // E2-PR3b: hak H1 (nagrobek karty przegrał z wizytą A) i hak H2 (ratunek notatki) — pełna karta przed notatką.
+    expect(po(o, s0), 'wiersze z haków scalania').toEqual([`pfull|${k.P}`, `pnote|${n}`]);
+    const s1 = ostatni(o);
     const sw = await o.ev.sweepOutbox();
     await o.gotowe();
     expect(notatka && notatka.updatedAtISO > przed, 'notatka uratowana z nową chwilą').toBe(true);
-    expect(sw).toEqual({ ok: true, kandydaci: 5, dopisane: 1 });
-    expect(po(o, s0)).toEqual([`pnote|${n}`]);
+    expect(sw).toEqual({ ok: true, kandydaci: 5, dopisane: 0 });
+    expect(po(o, s1), 'przegląd nic nie dokłada').toEqual([]);
   }, 60_000);
 });
 
