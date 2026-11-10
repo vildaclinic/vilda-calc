@@ -21534,6 +21534,107 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
+## „Zostaw notatkę” na dwóch urządzeniach: zostaje tekst zapisany później, chwila utworzenia ta sama (P-NOTATKI-1, E2-PR3c3, SW 1.1.505, `vilda_vault.js` 269, 2026-11-10)
+
+**Zmiana kliniczna: tak** — wzory, progi, jednostki i interpretacje bez zmian. Zmienia się, który tekst notatki pacjenta
+zostaje po synchronizacji, gdy tę samą notatkę usunięto na jednym urządzeniu, a potem „Zostaw notatkę” użyto na dwóch
+urządzeniach albo inne urządzenie miało jeszcze starą treść. Dotąd mógł zostać tekst zapisany wcześniej, a stara,
+skasowana treść mogła wrócić z urządzenia, które o usunięciu nie wiedziało — przy zwykłych pełnych kopiach i deltach.
+Teraz zostaje tekst zapisany później, a skasowana treść nie wraca. Do tego chwila utworzenia notatki jest po
+synchronizacji ta sama na wszystkich urządzeniach (najwcześniejsza), więc notatka bez terminu stoi w tym samym miejscu
+listy i osi czasu. Serwer, `vilda_sync.js`, schemat IndexedDB, format ładunku, nagrobków i zdarzeń, API
+`window.VildaVault` bez zmian.
+
+**Decyzja właściciela.** Decyzja 5 z 2026-11-10 (pytania E2-PR3c, „1–8 tak”; rozdział 6 planu): „Zostaw notatkę” na dwóch
+urządzeniach — zostaje tekst zapisany później, skasowana treść nie wraca z trzeciego urządzenia; chwila utworzenia
+notatki ta sama na wszystkich urządzeniach (zmiana działania dziś). Plan: wiersz 7a3 tabeli „Podział etapu 2”.
+
+### E2-PR3c3
+
+**Co było** (`audyt` `79483d97`; prawdziwy sejf, magazyny w pamięci, dane fikcyjne). A poprawia notatkę n dwa razy
+(rev 3, „A3”), B — znające tylko pierwszą wersję (rev 1) — usuwa n.
+- W sekcji notatek `Le` najwyższy znany `rev` notatki (P-NOTATKI-1 G6: „nagrobek go niesie dalej”) liczył się
+  z nagrobków z ładunku i tutejszych oraz z notatek tutejszych, ale nie z notatek ładunku. B, które dostało wersję A
+  (rev 3) przegraną z usunięciem, zapisywało nagrobek z rev 1; „Zostaw notatkę” na B dawało rev 2 — niższy niż wersja
+  A, a scalanie rozstrzyga najpierw po `rev`.
+- Skutki: po „Zostaw notatkę” na A (wcześniej) i na B (później) na obu zostawał tekst A; gdy B wskrzesiło notatkę,
+  zanim A poznało usunięcie, albo trzecie urządzenie miało jeszcze „A3” — wszędzie wracało „A3”, a tekst wskrzeszenia
+  ginął. W teście A ≡ B: „ZNANA UTRATA” R3-E1 i R3-E2, klasa R3 (R3-0, p. 7c, ziarno 6).
+- Każde „Zostaw notatkę” zakłada notatkę od nowa z chwilą utworzenia „teraz”, a scalanie zostawiało tutejszą chwilę,
+  więc po dwóch wskrzeszeniach każde urządzenie zostawało z własną chwilą — na zawsze (różnica `createdAtISO-notatki`).
+
+**Reguła.**
+- **Numer nagrobka.** `Qrev` liczy się także z notatek ładunku (`j.forEach(…Qrv…)`). Czyta go tylko zapis nagrobka
+  (`Bnp_nagrobekScalania` dla notatek, z którymi wygrywa nagrobek) i nagrobek CZEKA w `Bnp_ratuj`; decyzje po datach
+  (`Bnp_stan`) i podgląd „Scal kopię konta” bez zmian.
+- **Chwila utworzenia.** W gałęzi „ładunek wygrywa” — najwcześniejsza z tutejszej i z ładunku (`Bnp_utworzona`; krata,
+  wynik nie zależy od kolejności scaleń). Gdy wygrywa tutejsza treść (albo pełny remis), a ładunek zna wcześniejszą
+  chwilę — `Bnp_wczesniejUtworzona`: zapis samej chwili pod blokadą notatki, na świeżym odczycie, tylko gdy zapisana
+  chwila jest nadal późniejsza; treść, `rev`, chwila zmiany, karta i pozostałe pola bez zmian; bez licznika, bez
+  zdarzenia zmiany notatki i bez dopisania do kolejki (obie wersje wysłali ich autorzy). Gdy tutejszy rekord z początku
+  sekcji notatek nie ma późniejszej chwili — bez dodatkowego odczytu (zwykłe scalanie czyta i pisze jak dotąd; zapis
+  bazowy dziennika bez zmian).
+
+**Sesja (P-CHMURA-OPIS).** Odczyt i zapis chwili utworzenia — po sprawdzeniu sesji scalania; zmiana sesji w trakcie
+kończy scalanie `SESSION_CHANGED` bez zapisu.
+
+**Zmiana działania dziś** (pełne kopie i delty):
+- po „Zostaw notatkę” na dwóch urządzeniach zostaje tekst zapisany później, z `rev` = najwyższy znany + 1;
+- skasowana treść nie wraca z urządzenia, które o usunięciu nie wiedziało (także trzeciego);
+- nagrobek notatki po usunięciu niesie `rev` najnowszej znanej wersji (niewidoczne);
+- chwila utworzenia notatki ta sama na wszystkich urządzeniach (najwcześniejsza) — kolejność notatek bez terminu na
+  liście karty i miejsce na osi czasu;
+- zwykła poprawka bez usunięcia — bez zmian (późniejsza poprawka wygrywa, chwila utworzenia z pierwszego zapisu).
+
+**Dziennik zdarzeń (uśpiony).** Literały testu A ≡ B na korzyść: R3-0 (bez R3), R3-E1 i R3-E2 (bez „ZNANA UTRATA”: po
+pełnej wymianie tekst wskrzeszenia zapisany później na wszystkich urządzeniach; bez różnicy chwili utworzenia
+w zdarzeniach i blobach), p. 7c (bez R3), ziarno 6 (bez punktów R3), AB7 „ratunek notatki w trakcie partii” (bez
+różnicy chwili utworzenia). Model haków bez zmian (zapis samej chwili utworzenia nie jest ratunkiem notatki).
+
+**Import.** „Importuj pacjenta z pliku” i „Scal kopię konta” scalają notatki tą samą sekcją `Le` — obie zmiany działają
+też tam (numer nagrobka i chwila utworzenia; liczniki podglądu „Scal kopię konta” bez zmian).
+
+**Testy.** Dane wyłącznie fikcyjne, bez PESEL. Nowe i zmienione:
+- `tests/unit/notatki-pacjenta-integralnosc.test.mjs` — 7 nowych przypadków G6b–G6g (19, było 12): G6b — pełne kopie do
+  zgody, „Zostaw notatkę” na A, potem na B (na obu tekst B, rev 4; nagrobki po usunięciu rev 3 na obu); G6c — B
+  wskrzesza, zanim A pozna usunięcie (skasowana treść nie wraca); G6d — trzy urządzenia, C z „A3” poza siecią (wszędzie
+  tekst wskrzeszenia); G6e — dwa wskrzeszenia w obu kolejnościach wymiany (ta sama, najwcześniejsza chwila utworzenia);
+  G6f — kontrola: zwykła poprawka bez usunięcia jak dotąd; G6g — strażnik źródła (obie zmiany w `Le`, zapis chwili pod
+  blokadą notatki na świeżym odczycie, bez dodatkowego odczytu w zwykłym scaleniu, sprawdzenia sesji).
+- `tests/unit/sync-dziennik-wlasnosciowy.test.mjs` (test A ≡ B, 132 przypadki) — literały wyżej i nagłówek.
+
+Pełny `npm test` i e2e — wyniki w opisie PR.
+
+**Czerwone na bazie** (`origin/audyt` `79483d97` z testami tego PR): 12 — `notatki-pacjenta-integralnosc` 6 (G6b, G6c,
+G6d, G6e ×2, G6g), test A ≡ B 6 (AB7 ratunek w trakcie partii, R3-0, R3-E1, R3-E2, p. 7c, ziarno 6). Zielone z natury:
+G6f (kontrola), pozostałe przypadki, zapis bazowy dziennika (fikstura bez zmian).
+
+**Mutanty.** (wynik w następnym commicie)
+
+**Kontrola granicy obrazu sejfu.** Przeliczone skróty `BASE`, `baseVaultSHA256` i `integratedVaultSHA256` (reguła
+z E2-PR3a2, decyzja z 2026-11-09; liczone po zdjęciu zmiany Klirensu, jak w kontroli od vildaclinic/vilda-calc#900);
+fragment natywny, haki, moduły i paczka bez zmian.
+
+**Ograniczenia.**
+- Starsze urządzenia (sprzed tej zmiany) liczą numer nagrobka i chwilę utworzenia jak dotąd — u nich mogą zostać
+  dzisiejsze różnice, bez nowych strat (nota wydania: aktualizacja wszystkich urządzeń).
+- Chwila utworzenia zapisana regułą nie zgłasza zdarzenia zmiany notatki — otwarta lista notatek pokaże nową kolejność
+  po odświeżeniu.
+- Notatka po „Scal pacjentów” pod usuniętą kartą — bez zmian (E2-PR3c4, decyzja 6).
+
+**Wymagania dla następnych PR.**
+- **E2-PR3c4.** Literały testu A ≡ B (scenariusze „notatka pod inną kartą”) — w postaci po tym PR.
+
+**Cofnięcie** = rewert PR (bez migracji: nagrobki z wyższym `rev` i wcześniejsza chwila utworzenia to zwykłe rekordy;
+rewert cofa też skróty kontroli granicy).
+
+**Gdzie w kodzie.** `vilda_vault.js`: sekcja notatek pacjenta w `Le` (`Qrev`, gałąź „ładunek wygrywa”, gałąź
+„tutejsza wygrywa”); `Bnp_utworzona` i `Bnp_wczesniejUtworzona` obok `Bnp_ratuj`.
+
+**Wersje.** `vilda_vault.js` 268 → 269, `vilda_chrome.js` 274 → 275 i `vilda_session_bridge.js` 191 → 192 (wstrzykują
+sejf), SW 1.1.504 → 1.1.505; baza `origin/audyt` `79483d97` (po vildaclinic/vilda-calc#925). Bez nowego pliku w pamięci
+offline.
+
 ## Poprawka albo gwiazdka wizyty ze starej karty trafia do karty scalonej na urządzeniu, które scaliło karty (P-SYNC-WLASCICIEL, E2-PR3c2, SW 1.1.504, `vilda_vault.js` 268, 2026-11-10)
 
 **Zmiana kliniczna: tak** — wzory, progi, jednostki i interpretacje bez zmian. Zmienia się, z jaką treścią (pomiary, masa,
@@ -21965,7 +22066,7 @@ Po scaleniu E2-PR3b warunek decyzji 10 („test właściciela po PR ze zmianami 
 - **E2-PR3c.** Opcjonalnie `ctx.pelny`; literał K6 i pozostałe „ZNANE UTRATY” na brak utraty. Od 2026-11-10 E2-PR3c
   dzielony na E2-PR3c1–E2-PR3c5 (decyzje z 2026-11-10): `ctx.pelny` bez zmian; K6 po pełnej wymianie, `npret-pin`
   i `npret-K` — wykonane w E2-PR3c1 (wpis wyżej); K6 w zdarzeniach — wykonane w E2-PR3c2 (wpis wyżej); R3-E1 i R3-E2 —
-  E2-PR3c3.
+  wykonane w E2-PR3c3 (wpis wyżej).
 - **E3-PR0.** Echo zmian pochodnych scalania (pamięć par jako punkt wyjścia).
 - **Etap 3.** `partialSince` (odbiorca, znak w UI, lista w Ustawieniach, `pfull` ze scalania karty z `partialSince`).
 - Kolejne PR: nowe miejsce zapisu w scalaniu — emisja albo reguła „świadomie bez haka” (tabela wyżej) i przypadek
@@ -24401,9 +24502,10 @@ literał na wynik zgodny.
 - **„ZNANA RÓŻNICA” R5-E1:** przy trzech urządzeniach wizyta jest w karcie na jednym, a w Koszu na drugim, do pełnej
   wysyłki; po niej jest w Koszu na wszystkich. Naprawa: E3-PR0.
 - **„ZNANA UTRATA” R3-E1:** po dwóch wskrzeszeniach tej samej notatki na dwóch urządzeniach późniejszy tekst ginie na
-  obu; pełna wysyłka tego nie odwraca. Naprawa: E2-PR3c (od 2026-11-10: E2-PR3c3).
+  obu; pełna wysyłka tego nie odwraca. Naprawa: E2-PR3c (od 2026-11-10: E2-PR3c3) — wykonane w E2-PR3c3 (wpis
+  P-NOTATKI-1, E2-PR3c3, wyżej): bez utraty.
 - **„ZNANA UTRATA” R3-E2:** przy trzech urządzeniach wraca stara, skasowana treść notatki, a późniejszy tekst ginie.
-  Naprawa: E2-PR3c (od 2026-11-10: E2-PR3c3).
+  Naprawa: E2-PR3c (od 2026-11-10: E2-PR3c3) — wykonane w E2-PR3c3: bez utraty.
 - **„ZNANA UTRATA (zdarzenia)” `npret-pin` i `npret-K`** (katalog kosza, obie kolejności): przypięta wizyta znika na
   wszystkich urządzeniach po retencji i „Scal pacjentów”.
   - Przy samych blobach zostaje. W modelu dzisiejszej aplikacji z deltami też zostaje (76 przebiegów, sonda „delty
