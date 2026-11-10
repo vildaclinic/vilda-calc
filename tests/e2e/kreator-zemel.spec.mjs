@@ -113,3 +113,30 @@ test('poza 240 miesiącami DS nie przechodzi do zastępczej siatki populacji og�
   expect(messages).toEqual([expect.stringContaining('0–20 lat')]);
   await expect(kreator(page)).toHaveCount(0);
 });
+
+test('przejęcie sesji ramki DS → DS bez patient-loaded zamyka stary edytor i nie usuwa etykiety nowej osoby', async ({ page }) => {
+  await patient(page);
+  await page.locator('#openChartCreatorBtn').click();
+  await kreator(page).getByRole('button', { name: '+ Etykieta', exact: true }).click();
+  await kliknijDane(page, 'height', 144, 130);
+  const fresh = (await magazynWspolny(page)).free.height.at(-1);
+  const other = fictionalPatient({ firstName: 'DrugaOsobaDS', note: 'E2E-DRUGA-DS' });
+  other.clinical = { downSyndrome: true };
+  other.chartCreator.growth.free.height[0].id = fresh.id;
+  const id = await page.evaluate(async record => (await window.VildaVault.savePatient(record, { dedup: false })).patientId, other);
+  const result = await page.evaluate(({ id, record }) => {
+    // The retained frame's production restore boundary does not emit
+    // patient-loaded. The real source adapter must read this other vault card.
+    window.__zemelPatientLoads = 0;
+    document.addEventListener('vilda:patient-loaded', () => { window.__zemelPatientLoads++; });
+    sessionStorage.setItem('vildaCurrentPatientId', id);
+    window._vildaCurrentPatientId = id;
+    const applied = window.applyLoadedData(record, { isSessionRestore: true });
+    document.dispatchEvent(new CustomEvent('vilda:persist-restored'));
+    return applied;
+  }, { id, record: other });
+  expect(result).toBe(true);
+  expect(await page.evaluate(() => window.__zemelPatientLoads)).toBe(0);
+  await expect(kreator(page)).toHaveCount(0);
+  expect((await magazynWspolny(page)).free.height).toEqual(other.chartCreator.growth.free.height);
+});

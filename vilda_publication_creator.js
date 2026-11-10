@@ -148,9 +148,26 @@
   // The reference population and the patient-owned annotation store are
   // independent. Zemel keeps the same store used by the existing live chart.
   var creatorDs = false;
+  var creatorOwnerId = null;
+  var creatorOwnerRoot = null;
 
   function dsPatient() {
     return typeof w.VildaPopulacjaPacjenta === 'function' && w.VildaPopulacjaPacjenta() === 'DS';
+  }
+
+  function creatorPatientId() {
+    try { if (w.sessionStorage) return w.sessionStorage.getItem('vildaCurrentPatientId') || null; } catch (_) { /* unavailable storage */ }
+    return typeof w._vildaCurrentPatientId === 'string' ? w._vildaCurrentPatientId || null : null;
+  }
+
+  function sameCreatorPatient() {
+    return creatorOwnerId === creatorPatientId() && (!creatorOwnerRoot || creatorOwnerRoot === w.chartCreatorData);
+  }
+
+  function dsCreatorCurrent() {
+    if (!sameCreatorPatient() || !dsPatient()) return false;
+    var source = w.VildaDsSource && typeof w.VildaDsSource.getState === 'function' && w.VildaDsSource.getState();
+    return !creatorOwnerId || !!(source && source.patientId === creatorOwnerId && source.status === 'ready' && source.population === 'DS');
   }
 
   function dsAnnotationContext(months) {
@@ -231,21 +248,21 @@
 
   async function generateDsChart() {
     var owner = w.chartCreatorData;
-    var patientId = w.sessionStorage && w.sessionStorage.getItem('vildaCurrentPatientId');
+    var patientId = creatorPatientId();
     var population = dsPatient();
     var page = buildDsPageCanvas();
     if (!page) { alert('Nie udało się przygotować siatki Zemel 2015. Sprawdź dane i wiek 0–20 lat.'); return; }
     try {
       if (typeof w.vildaEnsurePdfLibraries === 'function') await w.vildaEnsurePdfLibraries();
     } catch (_) {
-      if (owner === w.chartCreatorData && patientId === (w.sessionStorage && w.sessionStorage.getItem('vildaCurrentPatientId'))) {
+      if (owner === w.chartCreatorData && patientId === creatorPatientId()) {
         alert('Nie udało się wczytać bibliotek PDF. Spróbuj ponownie.');
       }
       return;
     }
     // A delayed library download must not publish another patient's page.
     if (owner !== w.chartCreatorData || population !== dsPatient() ||
-        patientId !== (w.sessionStorage && w.sessionStorage.getItem('vildaCurrentPatientId'))) return;
+        patientId !== creatorPatientId()) return;
     var Pdf = typeof w.vildaRequireFunction === 'function'
       ? w.vildaRequireFunction('jspdf.jsPDF', { moduleName: 'inline-pdf-export' }) : w.jspdf && w.jspdf.jsPDF;
     if (typeof Pdf !== 'function') { alert('Brakuje biblioteki jsPDF potrzebnej do wygenerowania pliku PDF.'); return; }
@@ -2036,6 +2053,7 @@
 
   function closeCreator(abandon) {
     if (!ui) return;
+    if (creatorDs && !sameCreatorPatient()) abandon = true;
     // Ownership changes must never roll back a fresh label in the next
     // patient's store. User-initiated close retains its normal Cancel path.
     if (abandon !== true) { try { dismissEditor(); } catch (e) { /* ignore */ } }
@@ -2045,6 +2063,8 @@
     ui = null;
     creatorContext = 'pub';
     creatorDs = false;
+    creatorOwnerId = null;
+    creatorOwnerRoot = null;
     editLayout = 'portrait';
   }
 
@@ -3024,7 +3044,7 @@
     var useDs = dsPatient();
     if ((ctxId !== 'pub' || useDs) && w.VildaDsSource && typeof w.VildaDsSource.getState === 'function') {
       var dsState = w.VildaDsSource.getState();
-      var patientId = w.sessionStorage && w.sessionStorage.getItem('vildaCurrentPatientId');
+      var patientId = creatorPatientId();
       if (patientId && (!dsState || dsState.patientId !== patientId || dsState.status !== 'ready')) {
         alert('Poczekaj na wczytanie danych pacjenta, a następnie otwórz kreator.');
         return;
@@ -3058,6 +3078,8 @@
     }
     creatorContext = ctxId;
     creatorDs = useDs;
+    creatorOwnerId = useDs ? creatorPatientId() : null;
+    creatorOwnerRoot = null;
     ensureStyle();
     /* P-KREATOR-POZIOM: zwykła siatka 1–18 lat z wybranym PDF „1 strona A4
        poziomo” edytuje stronę poziomą; gdy jej podgląd nie powstanie, PDF
@@ -3090,6 +3112,15 @@
         ? 'Kreator siatek — Palczewska 0–3 lata'
         : (isRegular ? 'Kreator siatek — Palczewska 1–18 lat' : 'Kreator siatek do publikacji')));
     var panel = el('div', 'position:fixed;inset:0;z-index:10000;box-sizing:border-box;background:#ffffff;display:flex;flex-direction:column;overflow:hidden;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;', { id: OVERLAY_ID, role: 'dialog', 'aria-modal': 'true', 'aria-label': creatorTitle });
+    ['pointerdown', 'pointermove', 'pointerup', 'click', 'keydown'].forEach(function (event) {
+      panel.addEventListener(event, function (e) {
+        if (!ui || ui.panel !== panel) { e.stopImmediatePropagation(); return; }
+        if (creatorDs && !dsCreatorCurrent()) {
+          e.preventDefault(); e.stopImmediatePropagation();
+          closeCreator(!sameCreatorPatient());
+        }
+      }, true);
+    });
 
     /* Nag\u0142\u00f3wek */
     var head = el('div', 'display:flex;align-items:center;gap:0.6rem;padding:0.65rem 0.9rem;background:' + COLORS.card + ';border-bottom:1px solid ' + COLORS.border + ';flex-wrap:wrap;');
@@ -3424,6 +3455,7 @@
     setupInteractions();
     switchTab('height');
     scrollToChart('height');
+    creatorOwnerRoot = useDs ? w.chartCreatorData : null;
   }
 
   /* Arkusz wstrzykiwany od razu, żeby przycisk „Kreator adnotacji” w wierszu
@@ -3434,7 +3466,10 @@
       document.addEventListener(event, function () { if (ui && creatorDs) closeCreator(true); });
     });
     document.addEventListener('vilda:ds-source-state', function () {
-      if (ui && creatorDs && !dsPatient()) closeCreator(true);
+      if (ui && creatorDs && !dsCreatorCurrent()) closeCreator(!sameCreatorPatient());
+    });
+    document.addEventListener('vilda:persist-restored', function () {
+      if (ui && creatorDs && !dsCreatorCurrent()) closeCreator(!sameCreatorPatient());
     });
   }
 
