@@ -9,9 +9,9 @@ import { fileURLToPath } from 'node:url';
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 // Pinned base: #905 (c8d8442) vault, E2-PR3a2 (#912), P-PLAN-POTOMEK (#913, care-plan
 // descendant adoption in the synchronization merge), E2-PR3a3 (import batches in the
-// event-log emission), E2-PR3a4 (the event-log outbox sweep) and E2-PR3b (event-log merge hooks;
-// docs/clinical/ALGORITHMS.md).
-const BASE = '9be99c02fb071e70c1dfc4fcbd75d550248c63eb54cc6e8bc73f7ecc0c58318d';
+// event-log emission), E2-PR3a4 (the event-log outbox sweep), E2-PR3b (event-log merge hooks)
+// and E2-PR3c1 (the patient tombstone event carries the merge target; docs/clinical/ALGORITHMS.md).
+const BASE = '22ffbab4e32c0f958618734a6a658e3921b57fc469eb008bbef52052aeeea9e2';
 const START = '/* BEGIN VILDA CLINICAL WORKSPACE NATIVE V1 */\n';
 const END = '/* END VILDA CLINICAL WORKSPACE NATIVE V1 */\n';
 const digest = value => createHash('sha256').update(value).digest('hex');

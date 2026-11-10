@@ -184,4 +184,8 @@ export const SCEN = {
   PRZ: { przygotuj: 'jan2', kroki: async (u) => {
     await koszS1(u, 'P'); await naZegarze(10 * 60e3, () => doKosza(u, 'K')); await sync(u.K, u.P); await popraw(u, 'P', 78); await przywroc(u, 'P');
   } },
+  // „Scal pacjentów” bez retencji (E2-PR3c1): gwiazdka (pin-scal) albo poprawka 74 kg (popr-scal) wizyty x w karcie X na
+  // P, potem K (bez wiedzy o zmianie) „Scal pacjentów” X → Y — x przechodzi pod Y z gwiazdką albo z poprawką
+  'pin-scal': { przygotuj: 'trzyKarty', kroki: async (u) => { await przypnij(u, 'P', true); await scalPacjentow(u, 'K', 'X', 'Y'); } },
+  'popr-scal': { przygotuj: 'trzyKarty', kroki: async (u) => { await popraw(u, 'P', 74); await scalPacjentow(u, 'K', 'X', 'Y'); } },
 };

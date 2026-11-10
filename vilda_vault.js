@@ -3615,8 +3615,9 @@ function Bsw_poScaleniu(wersja, celId) {
 }
 
 // Cele „Scal pacjentow” wykonanych w tej sesji (konto|karta zrodlowa -> karta docelowa), dla delty nagrobka karty
-// zrodlowej (Bsw_deltaNagrobka). Tylko pamiec strony: zdarzenie usuniecia karty zrodlowej (onPatientDeleted) i delta
-// nagrobka powstaja zaraz po scaleniu, w tej samej karcie przegladarki.
+// zrodlowej (Bsw_deltaNagrobka) i od E2-PR3c1 dla koperty zdarzenia nagrobka karty zrodlowej (builder ptomb w bloku
+// P-DZIENNIK-ZDARZEN). Tylko pamiec strony: zdarzenie usuniecia karty zrodlowej (onPatientDeleted), delta nagrobka
+// i dopisanie koperty do kolejki powstaja zaraz po scaleniu, w tej samej karcie przegladarki.
 const Bsw_cele = new Map();
 function Bsw_zapamietajCel(zrodloId, celId) {
   try { if (b) Bsw_cele.set(b + '|' + zrodloId, celId); } catch { /* bez celu delta nagrobka idzie sama, jak dotad */ }
@@ -5796,10 +5797,16 @@ function Bev_sekcjaPoprawna(kind, key, k) {
     const p = k.patients;
     return Array.isArray(p) && p.length > 0 && p.every(function (x) { return Bev_kartaPoprawna(x) && !x.snapshots.length; });
   }
+  // ptomb po „Scal pacjentow” (E2-PR3c1): opcjonalnie dokladnie jedna karta docelowa, inna niz karta nagrobka.
+  if (kind === 'ptomb' && Bev_ma(k, 'patients')) {
+    const p = k.patients;
+    if (!(Array.isArray(p) && p.length === 1 && Bev_kartaPoprawna(p[0]) && p[0].patientId !== key)) return false;
+  }
   return s.length === 1 && s[0][Bev_ID_SEKCJI[kind]] === key;
 }
 // Walidacja koperty (encryptEvent i kazdy builder przed oddaniem wyniku): dokladne klucze event, rodzaj z listy,
 // klucz encji, atISO napis albo null, dev, full tylko w pfull, na najwyzszym poziomie wylacznie sekcja rodzaju
+// i patients tylko w stomb (karty bez wersji) i ptomb (jedna karta docelowa „Scal pacjentow”, E2-PR3c1)
 // (credential tylko w cred, snapshotTombstones tylko w stomb; exportedAtISO, lastMergeAtISO, userId, label,
 // partialSince, seq wersji i headerUpdatedAtISO odrzucone). Blad: EVENT_ENVELOPE_INVALID.
 function Bev_sprawdz(k) {
@@ -5810,7 +5817,7 @@ function Bev_sprawdz(k) {
     Bev_devPoprawny(e.dev) && (e.kind === 'pfull' ? Bev_pelnyPoprawny(e.full) : e.full === null);
   if (!zdarzenieOk) throw Bev_blad('EVENT_ENVELOPE_INVALID');
   const sekcja = Bev_SEKCJE[e.kind];
-  const dozwolone = ['schemaVersion', 'event', sekcja].concat(e.kind === 'stomb' ? ['patients'] : []);
+  const dozwolone = ['schemaVersion', 'event', sekcja].concat(e.kind === 'stomb' || e.kind === 'ptomb' ? ['patients'] : []);
   if (!Bev_kluczeW(k, dozwolone) || !Bev_ma(k, sekcja) || !Bev_sekcjaPoprawna(e.kind, e.key, k)) {
     throw Bev_blad('EVENT_ENVELOPE_INVALID');
   }
@@ -6005,7 +6012,14 @@ async function Bev_pfull(patientId, dev, opcje) {
   return Bev_porcje(karta, header, wersje, o.setId !== undefined ? o.setId : ne(), dev);
 }
 
-// 3. ptomb — nagrobek karty z najpozniejsza chwila (sam nagrobek, bez karty celu „Scal pacjentow”).
+// 3. ptomb — nagrobek karty z najpozniejsza chwila. Po „Scal pacjentow” X -> Y w tej karcie przegladarki (Bsw_cele,
+// ten sam cel co delta nagrobka Bsw_deltaNagrobka) koperta niesie tez karte docelowa Y ze wszystkimi wersjami (sekcja
+// patients, ksztalt jak pfull; E2-PR3c1): odbiorca ma wtedy nagrobek X i karte Y z wersjami w jednym scaleniu — wersja
+// X przypieta albo poprawiona u odbiorcy przechodzi pod Y z nowsza trescia (wyjatek „zabierz”, regula przezycia
+// retencji), zamiast zniknac razem z X. Karty Y juz tu nie ma albo cel nieznany w tej karcie przegladarki (np.
+// „Usun pacjenta”) — sam nagrobek, jak dotad (karte Y dowozi wtedy pelna wysylka). Nieczytelny naglowek albo wersja Y —
+// EVENT_SOURCE_UNREADABLE (jak pfull). Koperta ponad limitem zdarzenia staje sie wierszem oversize (wysylka go pomija,
+// karte Y dowozi pelna wysylka — decyzja 7).
 async function Bev_ptomb(patientId, dev) {
   const c = Bev_start(dev);
   if (!Bev_id(patientId)) throw Bev_blad('EVENT_ENVELOPE_INVALID');
@@ -6015,8 +6029,24 @@ async function Bev_ptomb(patientId, dev) {
     return t && t.patientId === patientId && t.deletedAtISO && (!m || t.deletedAtISO > m.deletedAtISO) ? t : m;
   }, null);
   if (!n) return null;
-  return Bev_sprawdz(Bev_koperta('ptomb', patientId, n.deletedAtISO, dev,
-    { tombstones: [{ patientId: patientId, deletedAtISO: n.deletedAtISO }] }, null));
+  const sekcje = { tombstones: [{ patientId: patientId, deletedAtISO: n.deletedAtISO }] };
+  const celId = Bsw_cele.get(c.u + '|' + patientId);
+  if (Bev_id(celId) && celId !== patientId) {
+    const karta = await c.a.getPatientForUser(c.u, celId);
+    Bses_pilnuj(c.s);
+    if (karta) {
+      const header = await Bev_odszyfruj(c, karta.headerCipher, 'ptomb', patientId);
+      const wersjeY = await c.a.listSnapshotsForUser(c.u, celId);
+      Bses_pilnuj(c.s);
+      const wersje = [];
+      for (const w of Array.isArray(wersjeY) ? wersjeY : []) {
+        wersje.push(Bev_wersja(w, await Bev_odszyfruj(c, w && w.payloadCipher, 'ptomb', patientId)));
+      }
+      wersje.sort(Bev_poZapisie);
+      sekcje.patients = [Bev_karta(karta, header, wersje)];
+    }
+  }
+  return Bev_sprawdz(Bev_koperta('ptomb', patientId, n.deletedAtISO, dev, sekcje, null));
 }
 
 // Wpis kosza w postaci wysylkowej — pole w pole jak element kosza w exportSyncPayload (Bkz_eksport), takze bez payload,
