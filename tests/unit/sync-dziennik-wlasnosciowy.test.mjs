@@ -110,6 +110,17 @@
 // Czerwone na bazie E2-PR3c3 (sejf 79483d97; 6 ze 132 przypadków): AB7 ratunek w trakcie partii, R3-0, R3-E1, R3-E2,
 // p. 7c, ziarno 6. Zielone z natury: pozostałe przypadki.
 //
+// E2-PR3c4 (decyzja 6 właściciela z 2026-11-10, P-NOTATKI-ZA-KARTA): notatka po „Scal pacjentów” idzie za kartą, która
+// istnieje (gdy obie istnieją — za kartą wersji zapisanej później; pełny remis — mniejszy patientId), a urządzenie, które
+// przyjęło notatkę z koperty pod inną kartą niż w kopercie, wysyła ją raz dalej (hak karty notatki, Bem_wlasciciel;
+// trzecie miejsce, w którym scalanie dopisuje do kolejki, obok H1 i H2). Przepisane literały: p. 6 „Scal pacjentów P → Q
+// na A, edycja notatki karty P na B” i skrzyżowane „Scal pacjentów” z notatką karty P — bez etykiety „ZNANA RÓŻNICA
+// (dzisiejsza)”, zdarzenia: [], bloby: [], skutek kliniczny na obu: notatka widoczna w karcie, która istnieje. Model
+// haków: hak karty notatki (koperta pnote(id) partii, której wersja weszła u odbiorcy, a karta notatki u odbiorcy jest
+// inna niż w kopercie → pnote(id)); koperty w Q niosą kartę notatki koperty pnote. Negatyw tabeli W4 („W4 — negatywy”)
+// na różnicy wstrzykniętej w migawkę (scenariusz jest już zbieżny); tabela DOZWOLONE bez zmian.
+// Czerwone na bazie E2-PR3c4 (sejf 2beacb33): @@CZERWONE_AB@@
+//
 // KOLEJNOŚĆ W KROKU (E2-PR3a2, sprawdzana na emiterach): snap (także wersje przeniesione pod kartę celu „Scal pacjentów”
 // i głowy scalenia), potem stomb, potem ptomb, potem pnote, pnotetomb, note, notetomb, plist, plisttomb, pref, pk, pktomb,
 // cred. Pola karty zmienione bez snap tej karty w kroku niesie stomb z kartą (11.2), inaczej snap(karta, najnowsza
@@ -126,8 +137,8 @@
 // R4a′ (jak R4a z inną treścią — tylko p. 6), R4n (postać gwiazdki w treści wpisu kosza; widok Kosza równy), R5
 // (obecność wpisu kosza karty usuniętej), createdAtISO-notatki i D7 (klasy dzisiejsze, profil pełny i p. 6), E1-katalog
 // (klasa dzisiejsza, tylko W4 p. 5 i tylko przebiegi z listy E1_KATALOG, gdy same bloby dają różnicę na tych samych
-// kluczach encji) i „notatka pod inną kartą” (klasa dzisiejsza po „Scal pacjentów”, także przy samych blobach; profil
-// pełny — raport, p. 6 — literał); tabela DOZWOLONE mówi, gdzie klasa nie czerwieni. Poza tabelą: wyjątek Q8-obca-2
+// kluczach encji) i „notatka pod inną kartą” (do E2-PR3c4 klasa dzisiejsza po „Scal pacjentów”, także przy samych
+// blobach; profil pełny — raport, p. 6 — dozwolona); tabela DOZWOLONE mówi, gdzie klasa nie czerwieni. Poza tabelą: wyjątek Q8-obca-2
 // „ZNANA RÓŻNICA (zdarzenia)” (do decyzji właściciela: którą wizytę zostawić) — tylko W4 p. 5 i tylko klucze D
 // z literału Q8_ZDARZENIA (klasyW4Kat).
 // - W1 (dokładna charakterystyka) — w każdym punkcie spoczynku (pełne dostawy w obie strony z hakami, ≤ 4 rundy) D(A, B)
@@ -165,8 +176,8 @@
 // zachowania”, npret-pin i npret-K (do E2-PR3c1 „ZNANA UTRATA”, od E2-PR3c1 bez utraty), pin-scal i popr-scal
 // (E2-PR3c1), „ZNANA RÓŻNICA (zdarzenia)” Q8-obca-2 (Q8_ZDARZENIA, do decyzji właściciela: którą wizytę zostawić).
 // p. 6 — znane klasy i dalsze ciągi z minimalnych odtworzeń analizy („ZNANA RÓŻNICA”, „ZNANA UTRATA” z pozycją
-// planu, która je naprawi; „ZNANA RÓŻNICA (dzisiejsza)” — notatka pod inną kartą po „Scal pacjentów”, pozycja planu
-// E2-PR3c4, decyzja właściciela z 2026-11-10). Klasy 3.6 — testy negatywne: predykat każdej klasy (pozytyw i negatywy
+// planu, która je naprawi; do E2-PR3c4 także „ZNANA RÓŻNICA (dzisiejsza)” — notatka pod inną kartą po „Scal
+// pacjentów”, od E2-PR3c4 bez różnicy). Klasy 3.6 — testy negatywne: predykat każdej klasy (pozytyw i negatywy
 // z definicji na syntetycznych parach), tabela DOZWOLONE = tabela 3.6 literałem, D z niepustymi ścieżkami, W4p zawodzi
 // na R4-a i R4-a′, W4 (dwa i trzy urządzenia) czerwone przy nieudanym W4p, przy różnicy niedozwolonej i bez punktu
 // stałego.
@@ -564,15 +575,17 @@ function porownaj(S, U, opis, model, emitery, wpisy) {
   EMITERY_NIEZGODNE.push(tekst);
   throw new Error(tekst);
 }
+// Karta notatki w kopercie pnote (model haków: hak karty notatki od E2-PR3c4); dla pozostałych kopert undefined.
+const kartaKoperty = (k) => (k.event.kind === 'pnote' && Array.isArray(k.patientNotes) && k.patientNotes[0] ? k.patientNotes[0].patientId : undefined);
 async function doKolejki(S, U, k) {
   if (U.jawnie) { // katalog p. 5: osobne konta, koperta jawna (bez szyfrowania — szyfrowanie pokrywa W3)
-    U.Q.push(Object.freeze({ kind: k.event.kind, key: k.event.key, atISO: k.event.atISO, k: Object.freeze(json(k)) }));
+    U.Q.push(Object.freeze({ kind: k.event.kind, key: k.event.key, atISO: k.event.atISO, pid: kartaKoperty(k), k: Object.freeze(json(k)) }));
     S.stat.zdarzen += 1;
     return;
   }
   if (S.koalescencja === 'ogon') { await doKolejkiOgon(S, U, Array.isArray(k) ? k : [k]); return; }
   const { env } = await U.ev.encryptEvent(k);
-  U.Q.push(Object.freeze({ kind: k.event.kind, key: k.event.key, atISO: k.event.atISO, env: Object.freeze(env) }));
+  U.Q.push(Object.freeze({ kind: k.event.kind, key: k.event.key, atISO: k.event.atISO, pid: kartaKoperty(k), env: Object.freeze(env) }));
   S.stat.zdarzen += 1;
 }
 // Kolejka z łączeniem wpisów (S.koalescencja === 'ogon', E2-PR2b): wpisy nigdy niedostarczone (indeks ≥ U.wyslane) są
@@ -591,7 +604,7 @@ async function doKolejkiOgon(S, U, koperty) {
   const nowe = [];
   for (const k of koperty) {
     const { env } = await U.ev.encryptEvent(k);
-    nowe.push(Object.freeze({ kind: k.event.kind, key: k.event.key, atISO: k.event.atISO, env: Object.freeze(env), setId: k.event.full ? k.event.full.setId : null }));
+    nowe.push(Object.freeze({ kind: k.event.kind, key: k.event.key, atISO: k.event.atISO, pid: kartaKoperty(k), env: Object.freeze(env), setId: k.event.full ? k.event.full.setId : null }));
     S.stat.zdarzen += 1;
   }
   S.kolejkaLog.push([U.nazwa, nowe[0].kind, nowe[0].key, nowe.length, nowe[0].setId]);
@@ -656,6 +669,8 @@ async function zastosuj(Y, partia, sposob = 'event') {
 // daje pnote(id) także wtedy, gdy późniejsza w tej partii koperta pnote(id) nadpisze uratowaną wersję (po całej partii
 // notatka ma chwilę tej koperty, a ocena na stanie po partii haka nie widziała). Bez stanów (partia z jednym
 // zdarzeniem) — para (przed, po), jak dotąd.
+// Hak karty notatki (E2-PR3c4, Bem_wlasciciel) — koperta pnote(id) części, której wersja weszła u Y (rekord zmieniony,
+// chwila koperty), a karta notatki u Y po części jest inna niż w kopercie (pole pid wpisu Q) → pnote(id), raz na partię.
 function hakiModelu(Y, partia, przed, po, stany = null) {
   const model = [];
   const karty = new Set((po.patients || []).map((p) => p.patientId));
@@ -677,6 +692,17 @@ function hakiModelu(Y, partia, przed, po, stany = null) {
       const chwila = JSON.parse(n.val).updatedAtISO;
       if (czesc.some((q) => q.kind === 'pnote' && q.key === n.key && q.atISO === chwila)) continue;
       model.push({ kind: 'pnote', key: n.key });
+    }
+    // Hak karty notatki (E2-PR3c4, Bem_wlasciciel): koperta pnote(id) tej części, której wersja weszła u Y (rekord
+    // zmieniony, chwila koperty), a karta notatki u Y inna niż w kopercie (reguła karty notatki: karta, która istnieje)
+    // → pnote(id); bez powtórzeń.
+    for (const q of czesc) {
+      if (q.kind !== 'pnote' || typeof q.pid !== 'string') continue;
+      const n = b.get('pnote:' + q.key);
+      if (!n || (a.has('pnote:' + q.key) && a.get('pnote:' + q.key).val === n.val)) continue;
+      const v = JSON.parse(n.val);
+      if (v.updatedAtISO !== q.atISO || v.patientId === q.pid || model.some((m) => m.kind === 'pnote' && m.key === q.key)) continue;
+      model.push({ kind: 'pnote', key: q.key });
     }
   }
   return model;
@@ -2404,7 +2430,6 @@ const p6dostawa = async (u, X, Y, tryb) => {
   return null;
 };
 const p6blob = async (X, Y) => { await Y.v.mergeSyncPayload(json(await X.v.exportSyncPayload())); ustawStan(Y, await eksport(Y)); };
-const P6_DZIS = 'ZNANA RÓŻNICA (dzisiejsza, także przy samych blobach; naprawa: osobna poprawka reguły notatek — decyzja 9; pozycja planu: E2-PR3c4, decyzja właściciela z 2026-11-10)';
 const P6 = {
   'R2-0': { baza: p6r2, kroki: async (u, t) => { await p6gwiazdka(u, u.B, u.v, true); await popraw(u, u.B, u.v, 27); await popraw(u, u.A, u.v, 30); await p6spoczynek(u, t); } },
   'R3-0': { baza: p6r3, kroki: async (u, t) => { await p6notatka(u, u.A, 'Fikcyjna treść 2'); await p6usunPacjenta(u, u.B, u.P); await p6spoczynek(u, t); } },
@@ -2444,13 +2469,14 @@ const P6 = {
     // C wraca: scala blob B, potem blob A; A i B scalają blob C (pełna wysyłka etapu 2)
     krok(60e3); await p6blob(u.B, u.C); await p6blob(u.A, u.C); await p6blob(u.C, u.A); await p6blob(u.C, u.B);
   } },
-  // NOWE (2026-11-03): klasa dzisiejsza „notatka pod inną kartą” — zdarzenia, W4 i same bloby dają TĘ SAMĄ
-  // różnicę (patientId notatki n), bo wynik robi reguła P-NOTATKI-1 (G5) dzisiejszego scalania, nie dziennik zdarzeń.
-  // Pozycja planu w nazwie (P6_DZIS): E2-PR3c4 (decyzja właściciela z 2026-11-10; osobna poprawka reguły — decyzja 9).
-  'Scal pacjentów P → Q na A, edycja notatki karty P na B (bez wiedzy o scaleniu)': { znana: P6_DZIS, notatki: true, baza: p6r3, kroki: async (u, t) => {
+  // „Notatka pod inną kartą” (2026-11-03; do E2-PR3c4 „ZNANA RÓŻNICA (dzisiejsza)”): zdarzenia, W4 i same bloby dawały
+  // TĘ SAMĄ różnicę (patientId notatki n) — robiła ją reguła P-NOTATKI-1 (G5) scalania, nie dziennik zdarzeń. Od
+  // E2-PR3c4 (decyzja 6 właściciela z 2026-11-10) notatka idzie za kartą, która istnieje — bez różnicy we wszystkich
+  // trzech światach.
+  'Scal pacjentów P → Q na A, edycja notatki karty P na B (bez wiedzy o scaleniu)': { notatki: true, baza: p6r3, kroki: async (u, t) => {
     await scal(u, u.A, u.P, u.Q); await p6notatka(u, u.B, 'edycja B'); await p6spoczynek(u, t);
   } },
-  'skrzyżowane Scal pacjentów (A: P → Q, B: Q → P), notatka karty P': { znana: P6_DZIS, notatki: true, baza: p6r3, kroki: async (u, t) => {
+  'skrzyżowane Scal pacjentów (A: P → Q, B: Q → P), notatka karty P': { notatki: true, baza: p6r3, kroki: async (u, t) => {
     await scal(u, u.A, u.P, u.Q); await scal(u, u.B, u.Q, u.P); await p6spoczynek(u, t);
   } },
   // K6 (decyzja 12.3; ostatni scenariusz — ziarno scenariusza to jego pozycja, więc pozostałe literały bez zmian):
@@ -2595,39 +2621,42 @@ const P6_LITERALY = {
       CA: [],
     },
   },
-  // „notatka pod inną kartą” (klasa dzisiejsza): skutek kliniczny — treść notatki ta sama na obu (nic nie ginie), ale na
-  // jednym urządzeniu notatka leży pod kartą usuniętą, więc w żadnej karcie jej nie widać (lista notatek karty jest pusta).
+  // „notatka pod inną kartą”: skutek kliniczny. Do E2-PR3c4 treść notatki była ta sama na obu (nic nie ginęło), ale na
+  // jednym urządzeniu notatka leżała pod kartą usuniętą, więc w żadnej karcie jej nie było widać (B: n pod P; w
+  // skrzyżowanym A: n pod Q), po zdarzeniach, po W4 i przy samych blobach. Od E2-PR3c4 n pod kartą, która istnieje, na
+  // obu: przy samych blobach i po W4 — reguła karty notatki w scalaniu; po samych zdarzeniach — także jedna dodatkowa
+  // wysyłka notatki (hak karty notatki) z urządzenia, które dało jej inną kartę niż w kopercie.
   'Scal pacjentów P → Q na A, edycja notatki karty P na B (bez wiedzy o scaleniu)': {
-    zdarzenia: ['pnote n: patientId [notatka pod inną kartą]'],
+    zdarzenia: [],
     w4: {
       A: 'karty Q[#41a7:22 #71c4:22 #102a:22] | Kosz - | notatki n: edycja B',
       B: 'karty Q[#41a7:22 #71c4:22 #102a:22] | Kosz - | notatki n: edycja B',
       skutekA: 'n „edycja B” pod Q — widoczna w karcie Q | notatki w kartach: karta P (usunięta): -; karta Q: n „edycja B”',
-      skutekB: 'n „edycja B” pod P — karta P usunięta: n nie widać w żadnej karcie | notatki w kartach: karta P (usunięta): n „edycja B”; karta Q: -',
+      skutekB: 'n „edycja B” pod Q — widoczna w karcie Q | notatki w kartach: karta P (usunięta): -; karta Q: n „edycja B”',
       r4n: 0,
       w4p: [],
     },
-    bloby: ['pnote n: patientId [notatka pod inną kartą]'],
+    bloby: [],
     blobySkutek: {
       A: 'n „edycja B” pod Q — widoczna w karcie Q | notatki w kartach: karta P (usunięta): -; karta Q: n „edycja B”',
-      B: 'n „edycja B” pod P — karta P usunięta: n nie widać w żadnej karcie | notatki w kartach: karta P (usunięta): n „edycja B”; karta Q: -',
+      B: 'n „edycja B” pod Q — widoczna w karcie Q | notatki w kartach: karta P (usunięta): -; karta Q: n „edycja B”',
     },
   },
   // E2-PR3c1 dodał w zdarzeniach R2 wersji #ce45 karty P (koperta nagrobka Q z kartą docelową P; klasa dozwolona); od
   // E2-PR3c2 bez niej — B przyjmuje z koperty karty Q (przegranej tam z nagrobkiem scalenia) tę samą rev wersji.
   'skrzyżowane Scal pacjentów (A: P → Q, B: Q → P), notatka karty P': {
-    zdarzenia: ['pnote n: patientId [notatka pod inną kartą]'],
+    zdarzenia: [],
     w4: {
       A: 'karty P[#ce45:22 #f06d:22 #b0cd:22] | Kosz - | notatki n: Fikcyjna treść',
       B: 'karty P[#ce45:22 #f06d:22 #b0cd:22] | Kosz - | notatki n: Fikcyjna treść',
-      skutekA: 'n „Fikcyjna treść” pod Q — karta Q usunięta: n nie widać w żadnej karcie | notatki w kartach: karta P: -; karta Q (usunięta): n „Fikcyjna treść”',
+      skutekA: 'n „Fikcyjna treść” pod P — widoczna w karcie P | notatki w kartach: karta P: n „Fikcyjna treść”; karta Q (usunięta): -',
       skutekB: 'n „Fikcyjna treść” pod P — widoczna w karcie P | notatki w kartach: karta P: n „Fikcyjna treść”; karta Q (usunięta): -',
       r4n: 0,
       w4p: [],
     },
-    bloby: ['pnote n: patientId [notatka pod inną kartą]'],
+    bloby: [],
     blobySkutek: {
-      A: 'n „Fikcyjna treść” pod Q — karta Q usunięta: n nie widać w żadnej karcie | notatki w kartach: karta P: -; karta Q (usunięta): n „Fikcyjna treść”',
+      A: 'n „Fikcyjna treść” pod P — widoczna w karcie P | notatki w kartach: karta P: n „Fikcyjna treść”; karta Q (usunięta): -',
       B: 'n „Fikcyjna treść” pod P — widoczna w karcie P | notatki w kartach: karta P: n „Fikcyjna treść”; karta Q (usunięta): -',
     },
   },
@@ -2684,16 +2713,9 @@ describe('A ≡ B, blok deterministyczny p. 6: znane klasy i dalsze ciągi (lite
         expect(w.warianty[1].opis, 'W4: PO-B ≡ PO-A').toEqual(w.warianty[0].opis);
         wynik.w4 = { ...w.warianty[0].opis, r4n: w.r4n, w4p: w.w4p.map((x) => x.ok) };
       }
-      if (sc.notatki) {
-        // Negatyw (3.6): ta sama różnica w profilu podstawowym (W1, W2r, W2s) i w W4 p. 1–5 — niedozwolona (czerwień).
-        // Tylko wiersze tej klasy: w E2-PR3c1 w skrzyżowanym „Scal pacjentów” po zdarzeniach dochodziła różnica R2 wersji
-        // karty P (klasa dozwolona, osobno w literale zdarzeń; od E2-PR3c2 jej nie ma).
-        const [a, b] = [kanon(await eksport(u.A)), kanon(await eksport(u.B))];
-        for (const tabela of ['podstawowy', 'W4', 'W4:p5']) {
-          const d = await sklasyfikuj(D(a, b), a, b, { tabela, przebieg: 'E1-C' });
-          expect(d.filter((r) => r.klasa === NPIK).map((r) => [r.klasa, r.dozwolona]), `„notatka pod inną kartą” w tabeli ${tabela} — czerwień`).toEqual([[NPIK, false]]);
-        }
-      }
+      // Do E2-PR3c4 scenariusze „notatka pod inną kartą” sprawdzały tu negatyw tabel (3.6) na prawdziwej różnicy; od
+      // E2-PR3c4 różnicy nie ma (literały niżej), a negatyw tabeli W4 sprawdza test „W4 — negatywy” na różnicy
+      // wstrzykniętej w migawkę, tabele — test predykatu klasy.
       await sprzatnijUrzadzenia(); vi.restoreAllMocks();
       const ub = await p6swiat(nr, sc, 'blob');
       wynik.bloby = trzy ? { AB: await p6D(ub, ub.A, ub.B), BC: await p6D(ub, ub.B, ub.C), CA: await p6D(ub, ub.C, ub.A) } : await p6D(ub, ub.A, ub.B);
@@ -3127,10 +3149,20 @@ describe('A ≡ B, klasy 3.6: predykaty (pozytywy i negatywy), tabela DOZWOLONE,
     expect((await trzy({ dowodR4n: zly }))[0], 'W4 trzech urządzeń: W4p zawodzi').toBe(false);
   }, 120_000);
   it('W4 — negatywy: różnica niedozwolona w tabeli W4 (notatka pod inną kartą) i brak punktu stałego są czerwone', async () => {
-    const npik = await p6swiat(nrP6('Scal pacjentów P → Q na A, edycja notatki karty P na B (bez wiedzy o scaleniu)'), P6['Scal pacjentów P → Q na A, edycja notatki karty P na B (bez wiedzy o scaleniu)'], 'zdarzenia');
+    const nazwaN = 'Scal pacjentów P → Q na A, edycja notatki karty P na B (bez wiedzy o scaleniu)';
+    const npik = await p6swiat(nrP6(nazwaN), P6[nazwaN], 'zdarzenia');
     const roz = (w) => [w.ok, w.warianty.map((x) => x.roznice.map((r) => [r.rodzaj, r.klasa, r.dozwolona]))];
-    expect(roz(await w4(npik.S, npik.A, npik.B, { tabela: 'p6' }, { warianty: ['PO-A'] })), 'p. 6: dozwolona').toEqual([true, [[['pnote', NPIK, 'tak']]]]);
-    expect(roz(await w4(npik.S, npik.A, npik.B, { tabela: 'W4' }, { warianty: ['PO-A'] })), 'tabela W4: czerwień').toEqual([false, [[['pnote', NPIK, false]]]]);
+    // Od E2-PR3c4 scenariusz jest zbieżny: różnicę „notatka pod inną kartą” wstrzykujemy w migawkę Y po każdej rundzie
+    // (notatka n pod usuniętą kartą P; magazyn bez zmian), żeby sprawdzić samą tabelę W4.
+    const podP = async (X, Y) => {
+      await rundaPO(X, Y);
+      const s = json(Y.stan);
+      for (const x of s.patientNotes || []) if (x.id === npik.nId) x.patientId = npik.P;
+      ustawStan(Y, s);
+    };
+    expect(roz(await w4(npik.S, npik.A, npik.B, { tabela: 'p6' }, { warianty: ['PO-A'] })), 'p. 6 bez wstrzyknięcia: zbieżne').toEqual([true, [[]]]);
+    expect(roz(await w4(npik.S, npik.A, npik.B, { tabela: 'p6' }, { warianty: ['PO-A'], runda: podP })), 'p. 6: dozwolona').toEqual([true, [[['pnote', NPIK, 'tak']]]]);
+    expect(roz(await w4(npik.S, npik.A, npik.B, { tabela: 'W4' }, { warianty: ['PO-A'], runda: podP })), 'tabela W4: czerwień').toEqual([false, [[['pnote', NPIK, false]]]]);
     await sprzatnijUrzadzenia(); vi.restoreAllMocks();
     const u = await p6swiat(nrP6('R2-0'), P6['R2-0'], 'zdarzenia');
     const stale = await w4(u.S, u.A, u.B, { tabela: 'W4' }, { warianty: ['PO-A'] });
