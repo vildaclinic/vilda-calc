@@ -14,7 +14,7 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 // correction or pin of a visit from the old card), E2-PR3c3 (patient note tombstone revision and earliest creation
 // time in the synchronization merge) and E2-PR3c4 (a patient note or care plan follows the card that exists after a
 // patient merge; docs/clinical/ALGORITHMS.md).
-const BASE = '3d164f9aa3378947b87d7e588fb6ce48e39cf93d08ea68ef59a7e97abd950233';
+const BASE = 'e170fc53ea660fa07cbed93cbf6aaa175dfe7786c99ec94c236957ee4c18ce94';
 const START = '/* BEGIN VILDA CLINICAL WORKSPACE NATIVE V1 */\n';
 const END = '/* END VILDA CLINICAL WORKSPACE NATIVE V1 */\n';
 const digest = value => createHash('sha256').update(value).digest('hex');
