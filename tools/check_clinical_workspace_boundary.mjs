@@ -13,7 +13,7 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 // E2-PR3c1 (the patient tombstone event carries the merge target), E2-PR3c2 (the merging device takes a later
 // correction or pin of a visit from the old card) and E2-PR3c3 (patient note tombstone revision and earliest creation
 // time in the synchronization merge; docs/clinical/ALGORITHMS.md).
-const BASE = '2f085cf4315548c5ecc174ebf2349229cd59c9993917811960b1b47bfe2833f5';
+const BASE = '3d164f9aa3378947b87d7e588fb6ce48e39cf93d08ea68ef59a7e97abd950233';
 const START = '/* BEGIN VILDA CLINICAL WORKSPACE NATIVE V1 */\n';
 const END = '/* END VILDA CLINICAL WORKSPACE NATIVE V1 */\n';
 const digest = value => createHash('sha256').update(value).digest('hex');

@@ -5199,7 +5199,7 @@ async function Bnp_wczesniejUtworzona(h, g, e, opcje) {
   if (!c || !g.id || !e || !(typeof e.createdAtISO === 'string' && e.createdAtISO > c) || typeof h.getPatientNoteForUser !== 'function') return;
   await Ac(g.id, async function () {
     Bses_pilnuj(opcje);
-    let n = null;
+    let n;
     try { n = await h.getPatientNoteForUser(b, g.id); } catch(PatientClinicalCaught) {PatientClinicalRethrow(PatientClinicalCaught); n = null; }
     if (!n || !(typeof n.createdAtISO === 'string' && n.createdAtISO > c)) return;
     Bses_pilnuj(opcje);
