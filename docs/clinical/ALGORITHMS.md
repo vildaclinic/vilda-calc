@@ -23974,7 +23974,8 @@ Szczegóły rodzajów:
 - **`snap` po przypięciu i odpięciu** niesie nową treść gwiazdki i nową chwilę `updatedAtISO` (test B12). To wynik dla
   E2-PR3a: gwiazdka nie wymaga osobnego zdarzenia.
 - **`ptomb`** to sam nagrobek karty (najpóźniejszy w sklepie), bez doklejania karty celu „Scal pacjentów”, które robi
-  dzisiejsza delta.
+  dzisiejsza delta. Od E2-PR3c1 (wpis wyżej) po „Scal pacjentów” w tej samej karcie przeglądarki koperta niesie też
+  kartę docelową, jak delta nagrobka.
 
 **`applyEncryptedEvent(env)` — status zamiast wyjątku.** Wejście ma kształt wiersza `/changes` (`{ iv, data }`). Wyjście
 nigdy nie jest wyjątkiem. Treść scala to samo `Le`, którego używa `applyEncryptedDelta`.
