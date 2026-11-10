@@ -21,6 +21,9 @@
  * Starsze osobne zapisy migrują raz; legacy przechowuje oryginalne układy
  * potrzebne do przeliczenia dawnych przesunięć pikselowych. Opcje dokumentu
  * i własne położenia poziomego PDF pozostają w magazynie danego kontekstu.
+ * Potwierdzona populacja DS wybiera krzywe Zemel 2015 przez istniejący
+ * VildaDsCentileModels. Kontekst zapisu adnotacji pozostaje ten sam co
+ * w podglądzie pacjenta; creatorDs jest wyłącznie stanem roboczym widoku.
  *
  * Układ adnotacji i nadpisania per siatka są zapisywane w danych karty:
  *     advancedGrowthData.pubLayout = {
@@ -142,6 +145,131 @@
      W kontekście zwykłym włączenie/treść adnotacji punktu pomiaru NIE dotyka
      checkboxów karty zaawansowanej — żyje w chartCreatorData.palRegular.shared. */
   var creatorContext = 'pub';
+  // The reference population and the patient-owned annotation store are
+  // independent. Zemel keeps the same store used by the existing live chart.
+  var creatorDs = false;
+  var creatorOwnerId = null;
+  var creatorOwnerRoot = null;
+
+  function dsPatient() {
+    return typeof w.VildaPopulacjaPacjenta === 'function' && w.VildaPopulacjaPacjenta() === 'DS';
+  }
+
+  function creatorPatientId() {
+    try { if (w.sessionStorage) return w.sessionStorage.getItem('vildaCurrentPatientId') || null; } catch (_) { /* unavailable storage */ }
+    return typeof w._vildaCurrentPatientId === 'string' ? w._vildaCurrentPatientId || null : null;
+  }
+
+  function sameCreatorPatient() {
+    return creatorOwnerId === creatorPatientId() && (!creatorOwnerRoot || creatorOwnerRoot === w.chartCreatorData);
+  }
+
+  function dsCreatorCurrent() {
+    if (!sameCreatorPatient() || !dsPatient()) return false;
+    var source = w.VildaDsSource && typeof w.VildaDsSource.getState === 'function' && w.VildaDsSource.getState();
+    return !creatorOwnerId || !!(source && source.patientId === creatorOwnerId && source.status === 'ready' && source.population === 'DS');
+  }
+
+  function dsAnnotationContext(months) {
+    var selected = document.querySelector('input[name="dataSource"]:checked');
+    var source = String(selected && selected.value || 'OLAF').toUpperCase();
+    return source === 'PALCZEWSKA' ? months < 36 ? 'palInfant' : 'palRegular' : source === 'WHO' ? 'who' : 'olaf';
+  }
+
+  function hasDsAnnotations(context) {
+    var root = w.chartCreatorData || {};
+    return (sharesGrowth(context) ? [root.growth, root.olaf, root.palRegular] : [root[context]]).some(function (store) {
+      if (!store) return false;
+      return Object.keys(store.shared || {}).length > 0 || ['height', 'weight'].some(function (metric) {
+        return Object.keys(store.layout && store.layout[metric] || {}).length > 0 ||
+          !!(store.free && Array.isArray(store.free[metric]) && store.free[metric].length);
+      });
+    });
+  }
+
+  // No LMS tables or clinical calculation here: the native Zemel producer
+  // supplies every curve sample, age boundary and presentation range.
+  function buildDsPageCanvas(args) {
+    if (!w.VildaDsCentileModels || typeof w.VildaDsCentileModels.build !== 'function' ||
+        typeof w.drawCentileGrid !== 'function' || typeof w.getCentilePlotMetrics !== 'function') return null;
+    var ageEl = document.getElementById('age'), monthsEl = document.getElementById('ageMonths');
+    var sexEl = document.getElementById('sex'), heightEl = document.getElementById('height'), weightEl = document.getElementById('weight');
+    var input = args || {};
+    if (!args) {
+      if (!ageEl || !sexEl || !heightEl || !weightEl) return null;
+      input = { sex: sexEl.value, userAgeMonths: typeof w.getCurrentCentileChartAgeMonths === 'function'
+        ? w.getCurrentCentileChartAgeMonths() : Math.round((parseFloat(ageEl.value) || 0) * 12 + (parseFloat(monthsEl && monthsEl.value) || 0)),
+      userHeight: parseFloat(heightEl.value), userWeight: parseFloat(weightEl.value) };
+    }
+    var advanced = input.growthData || (typeof w.getEffectiveCentileGrowthDataState === 'function'
+      ? w.getEffectiveCentileGrowthDataState() : w.advancedGrowthData) || {};
+    advanced = Object.assign(Object.create(advanced), { currentAgeMonths: input.userAgeMonths,
+      currentHeight: input.userHeight, currentWeight: input.userWeight });
+    var models = w.VildaDsCentileModels.build(Object.assign({}, input, { growthData: advanced }));
+    if (!models) return null;
+    var context = input.annotationContext || dsAnnotationContext(input.userAgeMonths);
+    var page = document.createElement('canvas');
+    page.width = CANVAS_W; page.height = CANVAS_H;
+    var ctx = page.getContext('2d');
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, page.width, page.height);
+    var previous = renderContextId;
+    renderContextId = context;
+    try {
+      ['height', 'weight'].forEach(function (metric, index) {
+        var model = models[metric];
+        var rect = { x: 80, y: index ? Math.floor(page.height / 2) + 60 : 40,
+          w: page.width - 160, h: Math.floor(page.height / 2) - (index ? 120 : 100) };
+        var plot = w.getCentilePlotMetrics(rect.x, rect.y, rect.w, rect.h);
+        w.drawCentileGrid(ctx, Object.assign({}, rect, model, { plotMetrics: plot,
+          bandReferenceVisible: isElementEnabled('bandReference'),
+          valueLabelVisible: isElementEnabled(metric === 'height' ? 'heightLabel' : 'weightLabel') }));
+        if (typeof w.drawCentileMeasurementSeries === 'function') {
+          w.drawCentileMeasurementSeries(ctx, Object.assign({}, rect, { plotMetrics: plot,
+            minX: model.minX, maxX: model.maxX, minY: model.minY, maxY: model.maxY,
+            points: model.points, valueKey: metric, pointRadius: 8, lastPointRadius: 8,
+            lineWidth: typeof w.getCentileChartLineWidth === 'function' ? w.getCentileChartLineWidth('historyPath', 3) : 3 }));
+        }
+        // Register the Creator's actual geometry during preview, but a plain
+        // export without annotations must not initialize any patient store.
+        if (suppressPainting || hasDsAnnotations(context)) {
+          drawAnnotations(ctx, { ctxId: context, source: 'DS', growthData: advanced, chartType: metric,
+            plotX: plot.px, plotY: plot.py, plotW: plot.pw, plotH: plot.ph,
+            ageMin: model.minX, ageMax: model.maxX, minY: model.minY, maxY: model.maxY });
+        }
+      });
+      if (isElementEnabled('footer')) {
+        ctx.save(); ctx.font = '30px sans-serif'; ctx.fillStyle = '#555555'; ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
+        ctx.fillText('Dane DS: Zemel et al., Pediatrics 2015 (0–20 lat)', page.width - 120, page.height - 30);
+        ctx.textAlign = 'left'; ctx.fillText('vildaclinic.pl', 120, page.height - 30); ctx.restore();
+      }
+    } finally { renderContextId = previous; }
+    return page;
+  }
+
+  async function generateDsChart() {
+    var owner = w.chartCreatorData;
+    var patientId = creatorPatientId();
+    var population = dsPatient();
+    var page = buildDsPageCanvas();
+    if (!page) { alert('Nie udało się przygotować siatki Zemel 2015. Sprawdź dane i wiek 0–20 lat.'); return; }
+    try {
+      if (typeof w.vildaEnsurePdfLibraries === 'function') await w.vildaEnsurePdfLibraries();
+    } catch (_) {
+      if (owner === w.chartCreatorData && patientId === creatorPatientId()) {
+        alert('Nie udało się wczytać bibliotek PDF. Spróbuj ponownie.');
+      }
+      return;
+    }
+    // A delayed library download must not publish another patient's page.
+    if (owner !== w.chartCreatorData || population !== dsPatient() ||
+        patientId !== creatorPatientId()) return;
+    var Pdf = typeof w.vildaRequireFunction === 'function'
+      ? w.vildaRequireFunction('jspdf.jsPDF', { moduleName: 'inline-pdf-export' }) : w.jspdf && w.jspdf.jsPDF;
+    if (typeof Pdf !== 'function') { alert('Brakuje biblioteki jsPDF potrzebnej do wygenerowania pliku PDF.'); return; }
+    var pdf = new Pdf({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    pdf.addImage(page.toDataURL('image/jpeg', 1), 'JPEG', 0, 0, 210, 297);
+    w.open(w.URL.createObjectURL(pdf.output('blob')), '_blank');
+  }
 
   /* Konteksty inne niż publikacyjny (magazyn centralny per rodzaj siatki). */
   var STORE_CONTEXTS = { palRegular: 1, olaf: 1, palInfant: 1, who: 1 };
@@ -837,7 +965,7 @@
       return source;
     }
     checkGeometryOwner();
-    if (context === adv.__creatorContext && !currentGeom.posScale) return currentGeom;
+    if (context === adv.__creatorContext && !currentGeom.posScale && currentGeom.source !== 'DS') return currentGeom;
     if (geomByContext[context] && geomByContext[context][chartType]) return geomByContext[context][chartType];
     if (preparingGeometry || typeof document === 'undefined') return null;
     var previousContext = creatorContext;
@@ -848,7 +976,7 @@
     preparingGeometry = true;
     try {
       creatorContext = context;
-      buildPreviewCanvases('portrait');
+      buildPreviewCanvases('portrait', true);
     } finally {
       creatorContext = previousContext;
       suppressPainting = previousSuppress;
@@ -907,7 +1035,7 @@
       }
     });
     if (adv.__readOnlySnapshot) return;
-    if (!geom.posScale) {
+    if (!geom.posScale && geom.source !== 'DS') {
       checkGeometryOwner();
       if (!geomByContext[adv.__creatorContext]) geomByContext[adv.__creatorContext] = {};
       geomByContext[adv.__creatorContext][chartType] = geom;
@@ -1106,6 +1234,7 @@
       ageMin: Number.isFinite(geom.ageMin) ? geom.ageMin : undefined,
       ageMax: Number.isFinite(geom.ageMax) ? geom.ageMax : undefined
     };
+    if (geom.source === 'DS') plotGeom.source = 'DS';
     /* P-PAL-POZIOM: strona A4 poziomo rysuje wykres na mniejszym polu niż podgląd
        kreatora. Taki render (transient) maluje adnotacje we własnej geometrii,
        ale nie nadpisuje geometrii podglądu — inaczej klikanie w podgląd po
@@ -1114,13 +1243,13 @@
        ramek czyta z położeń poziomu (framePos). */
     if (geom.layout && geom.layout.format === 'landscape') landscapeGeom(plotGeom, geom.chartType, geom.layout);
     if (!geom.transient) geomStore[geom.chartType] = plotGeom;
-    if (sharesGrowth(renderCtx) && !plotGeom.posScale) {
+    if (sharesGrowth(renderCtx) && !plotGeom.posScale && geom.source !== 'DS') {
       checkGeometryOwner();
       if (!geomByContext[renderCtx]) geomByContext[renderCtx] = {};
       geomByContext[renderCtx][geom.chartType] = plotGeom;
     }
     if (suppressPainting) return;
-    var adv = advForContext(w.advancedGrowthData || null, renderCtx);
+    var adv = advForContext(geom.growthData || w.advancedGrowthData || null, renderCtx);
     if (!adv) return;
     var items = computeLayout(ctx, adv, geom.chartType, plotGeom);
     drawItems(ctx, items);
@@ -1766,7 +1895,18 @@
     }
   }
 
-  function buildPreviewCanvases(layout) {
+  function buildPreviewCanvases(layout, generalGeometry) {
+    if (creatorDs && !generalGeometry) {
+      var dsPage;
+      suppressPainting = true;
+      try { dsPage = buildDsPageCanvas(); }
+      finally { suppressPainting = false; }
+      if (!dsPage) return null;
+      var dsCopy = document.createElement('canvas');
+      dsCopy.width = dsPage.width; dsCopy.height = dsPage.height;
+      dsCopy.getContext('2d').drawImage(dsPage, 0, 0);
+      return { height: dsPage, weight: dsCopy };
+    }
     var ageEl = document.getElementById('age');
     var ageMEl = document.getElementById('ageMonths');
     var sexEl = document.getElementById('sex');
@@ -1911,14 +2051,20 @@
     return true;
   }
 
-  function closeCreator() {
+  function closeCreator(abandon) {
     if (!ui) return;
-    try { dismissEditor(); } catch (e) { /* ignore */ }
+    if (creatorDs && !sameCreatorPatient()) abandon = true;
+    // Ownership changes must never roll back a fresh label in the next
+    // patient's store. User-initiated close retains its normal Cancel path.
+    if (abandon !== true) { try { dismissEditor(); } catch (e) { /* ignore */ } }
     try { document.removeEventListener('keydown', ui.onKeyDown); } catch (e) { /* ignore */ }
     try { ui.panel.remove(); } catch (e) { /* ignore */ }
     unlockBodyScroll();
     ui = null;
     creatorContext = 'pub';
+    creatorDs = false;
+    creatorOwnerId = null;
+    creatorOwnerRoot = null;
     editLayout = 'portrait';
   }
 
@@ -2011,7 +2157,7 @@
   /* Zmiana układu z paska Kreatora: zapis tego samego wyboru co pod przyciskiem
      siatki (preferencja konta), przebudowa podglądu i odświeżenie przycisków karty. */
   function setLayout(layout) {
-    if (!ui || creatorContext !== 'palRegular') return;
+    if (!ui || creatorContext !== 'palRegular' || creatorDs) return;
     var L = landscapeModule();
     if (!L || typeof L.writeLayout !== 'function') return;
     var want = layout === 'landscape' ? 'landscape' : 'portrait';
@@ -2095,7 +2241,7 @@
        aktywnej zakładki dorysowuje też adnotacje drugiego wykresu (bez
        interakcji) — podgląd strony jest zawsze kompletny. Tak samo strona
        A4 poziomo zwykłej siatki 1–18 lat. */
-    if (PAGE_CONTEXTS[creatorContext] || isLandscapeUi()) {
+    if (creatorDs || PAGE_CONTEXTS[creatorContext] || isLandscapeUi()) {
       var other = chart === 'height' ? 'weight' : 'height';
       var geomOther = geomFor(other);
       if (geomOther) drawClipped(geomOther, computeLayout(ctx, adv, other, geomOther));
@@ -2895,22 +3041,32 @@
        Przeliczenie musi poprzedzać sprawdzenie publicationCharts, bo może
        zaktualizować także stan trybu publikacji. */
     recalc();
+    var useDs = dsPatient();
+    if ((ctxId !== 'pub' || useDs) && w.VildaDsSource && typeof w.VildaDsSource.getState === 'function') {
+      var dsState = w.VildaDsSource.getState();
+      var patientId = creatorPatientId();
+      if (patientId && (!dsState || dsState.patientId !== patientId || dsState.status !== 'ready')) {
+        alert('Poczekaj na wczytanie danych pacjenta, a następnie otwórz kreator.');
+        return;
+      }
+    }
     if (w.VildaProAccess && typeof w.VildaProAccess.hasAccess === 'function' && !w.VildaProAccess.hasAccess()) {
       alert('Kreator siatek jest funkcj\u0105 PRO. Uaktywnij plan PRO, aby korzysta\u0107 z tej funkcji.');
       return;
     }
-    if (ctxId === 'pub' && !w.publicationCharts) {
+    if (ctxId === 'pub' && !useDs && !w.publicationCharts) {
       alert('W\u0142\u0105cz najpierw prze\u0142\u0105cznik \u201eSiatki do publikacji\u201d, aby otworzy\u0107 kreator adnotacji.');
       return;
     }
-    if (ctxId !== 'pub') {
+    if (ctxId !== 'pub' || useDs) {
       var ageEl0 = document.getElementById('age');
       var ageMEl0 = document.getElementById('ageMonths');
       var months0 = Math.round((ageEl0 && parseFloat(ageEl0.value) || 0) * 12 + (ageMEl0 && parseFloat(ageMEl0.value) || 0));
-      var minMo = ctxId === 'olaf' ? 36 : (ctxId === 'palInfant' || ctxId === 'who' ? 0 : 12);
-      var maxMo = ctxId === 'who' ? 35 : 216;
+      if (useDs) ctxId = dsAnnotationContext(months0);
+      var minMo = useDs ? 0 : ctxId === 'olaf' ? 36 : (ctxId === 'palInfant' || ctxId === 'who' ? 0 : 12);
+      var maxMo = useDs ? 240 : ctxId === 'who' ? 35 : 216;
       if (!(months0 >= minMo && months0 <= maxMo)) {
-        alert(ctxId === 'olaf'
+        alert(useDs ? 'Kreator siatek Zemel 2015 jest dostępny dla wieku 0–20 lat.' : ctxId === 'olaf'
           ? 'Kreator siatki OLAF (3\u201318 lat) jest dost\u0119pny dla wieku od 3 do 18 lat.'
           : (ctxId === 'who'
             ? 'Kreator siatki WHO (0\u20133 lata) jest dost\u0119pny dla wieku do 3 lat.'
@@ -2921,11 +3077,14 @@
       }
     }
     creatorContext = ctxId;
+    creatorDs = useDs;
+    creatorOwnerId = useDs ? creatorPatientId() : null;
+    creatorOwnerRoot = null;
     ensureStyle();
     /* P-KREATOR-POZIOM: zwykła siatka 1–18 lat z wybranym PDF „1 strona A4
        poziomo” edytuje stronę poziomą; gdy jej podgląd nie powstanie, PDF
        też wraca do pionu (generator), więc Kreator zostaje w pionie. */
-    var layout = ctxId === 'palRegular' ? preferredLayout() : 'portrait';
+    var layout = !useDs && ctxId === 'palRegular' ? preferredLayout() : 'portrait';
     editLayout = layout;
     var canvases = buildPreviewCanvases(layout);
     if (!canvases && layout === 'landscape') {
@@ -2941,11 +3100,11 @@
 
     /* Pe\u0142noekranowy tryb roboczy: warstwa na ca\u0142y viewport, strona pod spodem
        zablokowana (lockBodyScroll). */
-    var isRegular = ctxId === 'palRegular';
-    var isOlaf = ctxId === 'olaf';
-    var isInfant = ctxId === 'palInfant';
-    var isWho = ctxId === 'who';
-    var creatorTitle = isOlaf
+    var isRegular = !useDs && ctxId === 'palRegular';
+    var isOlaf = !useDs && ctxId === 'olaf';
+    var isInfant = !useDs && ctxId === 'palInfant';
+    var isWho = !useDs && ctxId === 'who';
+    var creatorTitle = useDs ? 'Kreator siatek — zespół Downa · Zemel 2015' : isOlaf
       ? 'Kreator siatek — OLAF 3–18 lat'
       : (isWho
         ? 'Kreator siatek — WHO 0–3 lata'
@@ -2953,6 +3112,15 @@
         ? 'Kreator siatek — Palczewska 0–3 lata'
         : (isRegular ? 'Kreator siatek — Palczewska 1–18 lat' : 'Kreator siatek do publikacji')));
     var panel = el('div', 'position:fixed;inset:0;z-index:10000;box-sizing:border-box;background:#ffffff;display:flex;flex-direction:column;overflow:hidden;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;', { id: OVERLAY_ID, role: 'dialog', 'aria-modal': 'true', 'aria-label': creatorTitle });
+    ['pointerdown', 'pointermove', 'pointerup', 'click', 'keydown'].forEach(function (event) {
+      panel.addEventListener(event, function (e) {
+        if (!ui || ui.panel !== panel) { e.stopImmediatePropagation(); return; }
+        if (creatorDs && !dsCreatorCurrent()) {
+          e.preventDefault(); e.stopImmediatePropagation();
+          closeCreator(!sameCreatorPatient());
+        }
+      }, true);
+    });
 
     /* Nag\u0142\u00f3wek */
     var head = el('div', 'display:flex;align-items:center;gap:0.6rem;padding:0.65rem 0.9rem;background:' + COLORS.card + ';border-bottom:1px solid ' + COLORS.border + ';flex-wrap:wrap;');
@@ -3017,6 +3185,7 @@
         group === 'header' ? 'Nag\u0142\u00f3wek i stopka' : 'Elementy siatki'));
       PUB_OPTION_DEFS.forEach(function (def) {
         if (def.group !== group) return;
+        if (useDs && ['footer', 'bandReference', 'heightLabel', 'weightLabel'].indexOf(def.key) < 0) return;
         /* strona OLAF nie rysuje stopki — opcja bez zastosowania */
         if (isOlaf && def.key === 'footer') return;
         /* strona 0–3 nie ma wiersza rodziców ani rombu MPH (MPH leży na 18 r.ż.) */
@@ -3036,7 +3205,8 @@
           flashSaveNote();
           refreshPreview();
         });
-        append(lab, cb, document.createTextNode((isRegular || isOlaf || isInfant || isWho) && def.regLabel ? def.regLabel : def.label));
+        append(lab, cb, document.createTextNode(useDs && def.key === 'footer' ? 'Źródło danych i stopka'
+          : (isRegular || isOlaf || isInfant || isWho) && def.regLabel ? def.regLabel : def.label));
         append(col, lab);
       });
       append(optsWrap, col);
@@ -3252,6 +3422,7 @@
     });
     genBtn.addEventListener('click', function () {
       try {
+        if (creatorDs) { generateDsChart().catch(function () { alert('Nie udało się wygenerować pliku PDF. Spróbuj ponownie.'); }); return; }
         if (creatorContext === 'olaf' || creatorContext === 'who') {
           /* PDF strony OLAF/WHO tą samą ścieżką co przycisk karty (źródło
              przypięte na czas asynchronicznego generowania) */
@@ -3284,12 +3455,22 @@
     setupInteractions();
     switchTab('height');
     scrollToChart('height');
+    creatorOwnerRoot = useDs ? w.chartCreatorData : null;
   }
 
   /* Arkusz wstrzykiwany od razu, żeby przycisk „Kreator adnotacji” w wierszu
      przełącznika miał właściwe kolory także pod liquid glass. */
   if (typeof document !== 'undefined') {
     try { ensureStyle(); } catch (e) { /* ignore */ }
+    ['vilda:patient-loaded', 'vilda:user-state-cleared'].forEach(function (event) {
+      document.addEventListener(event, function () { if (ui && creatorDs) closeCreator(true); });
+    });
+    document.addEventListener('vilda:ds-source-state', function () {
+      if (ui && creatorDs && !dsCreatorCurrent()) closeCreator(!sameCreatorPatient());
+    });
+    document.addEventListener('vilda:persist-restored', function () {
+      if (ui && creatorDs && !dsCreatorCurrent()) closeCreator(!sameCreatorPatient());
+    });
   }
 
   w.VildaPublicationCreator = {
@@ -3298,6 +3479,8 @@
     computeSnapshotLayout: computeSnapshotLayout,
     snapshotElementEnabled: snapshotElementEnabled,
     open: openCreator,
+    buildDsPageCanvas: buildDsPageCanvas,
+    generateDsChart: generateDsChart,
     close: closeCreator,
     /* Eksport wewnętrznych funkcji geometrii na potrzeby testów jednostkowych
        (testy wołają PRAWDZIWE funkcje produkcyjne — zob. AGENTS.md §3.5). */
