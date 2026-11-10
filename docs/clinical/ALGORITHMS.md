@@ -21720,7 +21720,9 @@ Po scaleniu E2-PR3b warunek decyzji 10 („test właściciela po PR ze zmianami 
 **Wymagania dla następnych PR.**
 - **E2-PR4.** Wysyłka zestawu `pfull` w całości (porcje w jednej partii albo kolejno, bez innych wpisów tej karty
   pomiędzy); budżet wysyłki dużej karty (plan 3.6); wpisy P-SYNC-SLAD haków (liczby, bez kluczy encji).
-- **E2-PR3c.** Opcjonalnie `ctx.pelny`; literał K6 i pozostałe „ZNANE UTRATY” na brak utraty.
+- **E2-PR3c.** Opcjonalnie `ctx.pelny`; literał K6 i pozostałe „ZNANE UTRATY” na brak utraty. Od 2026-11-10 E2-PR3c
+  dzielony na E2-PR3c1–E2-PR3c5 (decyzje z 2026-11-10): `ctx.pelny` bez zmian; K6 po pełnej wymianie, `npret-pin`
+  i `npret-K` — wykonane w E2-PR3c1 (wpis wyżej); K6 w zdarzeniach — E2-PR3c2; R3-E1 i R3-E2 — E2-PR3c3.
 - **E3-PR0.** Echo zmian pochodnych scalania (pamięć par jako punkt wyjścia).
 - **Etap 3.** `partialSince` (odbiorca, znak w UI, lista w Ustawieniach, `pfull` ze scalania karty z `partialSince`).
 - Kolejne PR: nowe miejsce zapisu w scalaniu — emisja albo reguła „świadomie bez haka” (tabela wyżej) i przypadek
@@ -22065,7 +22067,8 @@ razem 38.
 - **E2-PR3b.** Haki H1 i H2 w teście A ≡ B z modelu na emitery (rejestr łańcucha obejmie wtedy scalanie). Wykonane
   w E2-PR3b (wpis wyżej).
 - **E2-PR3c.** Literał K6 na brak utraty; analiza i naprawa różnicy opisu wpisu Kosza po wymianie pełnych kopii (decyzja
-  z 2026-11-09).
+  z 2026-11-09). Od E2-PR3c1 (wpis P-DZIENNIK-ZDARZEN, E2-PR3c1): K6 bez utraty po pełnej wymianie, w zdarzeniach —
+  E2-PR3c2; różnica opisu wpisu Kosza — przyczyna ustalona, naprawa w E2-PR3c5 (decyzja z 2026-11-10).
 - **E2-PR4.** Nadawca słucha `onBulkChange`; budżet wysyłki przy dużej partii (plan 3.6).
 - **E3-PR0.** Literał R2-E3.
 - Kolejne PR zmieniające `vilda_vault.js` poza fragmentem natywnym — przeliczenie skrótów kontroli granicy; nowe miejsce
@@ -23089,7 +23092,9 @@ P-USUN-KONTO-KARTY; te same w planie: wiersze 6a′, 6b–6d, 7a, 8 i 12 tabeli 
 - **E2-PR3c** (decyzja 12.3). Naprawa utraty poprawki wizyty przy „Scal pacjentów” po zdarzeniach zmianą reguły
   scalania: osobny PR z wpisem ALGORITHMS i akceptacją właściciela (decyzja 9); w teście A ≡ B od E2-PR3a3 jako „ZNANA
   UTRATA (zdarzenia)” z pozycją naprawy E2-PR3c (wpisane w E2-PR3a3). Od 2026-11-09 (decyzja właściciela) w E2-PR3c
-  także analiza i naprawa różnicy opisu wpisu Kosza po wymianie pełnych kopii (wpis E2-PR3a3).
+  także analiza i naprawa różnicy opisu wpisu Kosza po wymianie pełnych kopii (wpis E2-PR3a3). Od 2026-11-10 w pięciu
+  PR (E2-PR3c1–E2-PR3c5, decyzje z 2026-11-10): K6 po pełnej wymianie — wykonane w E2-PR3c1, w zdarzeniach — E2-PR3c2,
+  opis wpisu Kosza — E2-PR3c5.
 - **E2-PR4.**
   - Kasowanie kolejki konta przy istniejącym wpisie rejestru — ponowienie przy odblokowaniu, kasowanie przy zmianie
     trybu przechowywania, `removeUser` identyfikatora konta trwałego w trybie „Zaloguj jednorazowo” — nie zostawia tego
@@ -23478,7 +23483,7 @@ uśpionych PR. Decyzje z 2026-11-03, po scaleniu E2-PR2a (vildaclinic/vilda-calc
 - **11.3 — przyjęta:** E2-PR2 dzielony na E2-PR2a i E2-PR2b;
 - **cel czasu testu A ≡ B — przyjęty:** ziarna domyślne do około 75 s, cały plik do około 180 s;
 - **korekta szacunku — przyjęta:** etap 2 razem około 26 do 28 dni (zapis sprzed pytania 10.1);
-- **notatka pod inną kartą po „Scal pacjentów”:** naprawa w E2-PR3c;
+- **notatka pod inną kartą po „Scal pacjentów”:** naprawa w E2-PR3c (od 2026-11-10: E2-PR3c4);
 - **pytanie 10.1 — przyjęte:** E2-PR2b dzielony na E2-PR2b1 (ten PR) i E2-PR2b2 (kwarantanna i podsumowanie wyniku
   dla dziennika); etap 2 razem około 31 do 33 dni;
 - **pytanie 10.2 — przyjęte:** identyfikator urządzenia osobny dla każdego konta, kasowany razem z kontem od E2-PR3a
@@ -24133,7 +24138,7 @@ i `Q8-obca-2` wobec dzisiejszej aplikacji niezmierzone).
   - Osobna sprawa: „Scal pacjentów” zapisuje notatki źródła od nowa. Wcześniejsza równoległa edycja tej notatki na
     innym urządzeniu przegrywa więc jak każda starsza poprawka (późniejsza zmiana wygrywa), także dziś.
   - Naprawa: osobna poprawka reguły (decyzja 9). Naprawa w E2-PR3c (decyzja właściciela 2026-11-03, po scaleniu
-    vildaclinic/vilda-calc#869).
+    vildaclinic/vilda-calc#869); od 2026-11-10 w E2-PR3c4 (decyzja 6 z 2026-11-10).
 - **D7 i `createdAtISO` notatki.** Opis nagrobka wersji (`rev`, `updatedAtISO`, `zmianaISO`, `koszISO`) i chwila
   utworzenia notatki po dwóch równoległych wskrzeszeniach zależą od kolejności scaleń także przy samych blobach.
 
@@ -24141,25 +24146,31 @@ i `Q8-obca-2` wobec dzisiejszej aplikacji niezmierzone).
 literał na wynik zgodny.
 - **„ZNANA RÓŻNICA” R2-E3:** po „Scal pacjentów” wizyta chwilowo znika na drugim urządzeniu, do najbliższej pełnej
   wysyłki. Naprawa: E3-PR0 (pytanie 12.2, 2026-11-04: zostaje kolejność ogólna „najpierw wizyty”; wcześniej
-  „E2-PR3a (kolejność zdarzeń) albo E3-PR0”; od E2-PR3a3 w teście „ZNANA RÓŻNICA (naprawa: E3-PR0)”).
+  „E2-PR3a (kolejność zdarzeń) albo E3-PR0”; od E2-PR3a3 w teście „ZNANA RÓŻNICA (naprawa: E3-PR0)”). Od E2-PR3c1
+  bez różnicy także w zdarzeniach: zdarzenie usunięcia starej karty niesie kartę scaloną (wpis P-DZIENNIK-ZDARZEN,
+  E2-PR3c1).
 - **„ZNANA UTRATA (zdarzenia)” K6** (od E2-PR3a3 w teście): poprawka wizyty z drugiego urządzenia sprzed „Scal
   pacjentów” na pierwszym ginie po zdarzeniach i pełnej wymianie; same pełne kopie ją zachowują. Naprawa: E2-PR3c
-  (pytanie 12.3).
+  (pytanie 12.3). Od E2-PR3c1 bez utraty po pełnej wymianie; po samych zdarzeniach zostaje różnica treści wizyty do
+  pełnej wysyłki — „ZNANA RÓŻNICA (zdarzenia; naprawa: E2-PR3c2)”.
 - **„ZNANA RÓŻNICA” R5-E1:** przy trzech urządzeniach wizyta jest w karcie na jednym, a w Koszu na drugim, do pełnej
   wysyłki; po niej jest w Koszu na wszystkich. Naprawa: E3-PR0.
 - **„ZNANA UTRATA” R3-E1:** po dwóch wskrzeszeniach tej samej notatki na dwóch urządzeniach późniejszy tekst ginie na
-  obu; pełna wysyłka tego nie odwraca. Naprawa: E2-PR3c.
+  obu; pełna wysyłka tego nie odwraca. Naprawa: E2-PR3c (od 2026-11-10: E2-PR3c3).
 - **„ZNANA UTRATA” R3-E2:** przy trzech urządzeniach wraca stara, skasowana treść notatki, a późniejszy tekst ginie.
-  Naprawa: E2-PR3c.
+  Naprawa: E2-PR3c (od 2026-11-10: E2-PR3c3).
 - **„ZNANA UTRATA (zdarzenia)” `npret-pin` i `npret-K`** (katalog kosza, obie kolejności): przypięta wizyta znika na
   wszystkich urządzeniach po retencji i „Scal pacjentów”.
   - Przy samych blobach zostaje. W modelu dzisiejszej aplikacji z deltami też zostaje (76 przebiegów, sonda „delty
     dziś”, uzupełnienie), więc ta strata jest nowa także wobec dzisiejszej produkcji.
   - Przyczyna [hipoteza]: reguła przeżycia retencji działa tylko w kontekście jednego pełnego scalenia.
-  - Naprawa obowiązkowa: E2-PR3c, przed E2-PR6.
+  - Naprawa obowiązkowa: E2-PR3c, przed E2-PR6. Wykonane w E2-PR3c1 (wpis P-DZIENNIK-ZDARZEN, E2-PR3c1): przyczyną był
+    brak karty scalonej w zdarzeniu usunięcia starej karty (wyjątek „zabierz” i reguła przeżycia retencji potrzebują
+    nagrobka i karty scalonej w jednym scaleniu); hipoteza powyżej trafna tylko częściowo.
 - **„ZNANA RÓŻNICA (zdarzenia)” `Q8-obca-2`** (obie kolejności): na jednym albo dwóch z trzech urządzeń (zależnie od
   kolejności) zostaje w karcie inna z dwóch wizyt o tej samej masie (inna data i identyfikator; obie są w Koszu, nic
-  nie ginie). Naprawa: E2-PR3c.
+  nie ginie). Naprawa: E2-PR3c; od 2026-11-10 bez zmian, do decyzji właściciela „którą wizytę zostawić” (decyzja 8
+  z 2026-11-10).
 
 **Wymagania dla następnych PR.**
 - **E2-PR3a.**
