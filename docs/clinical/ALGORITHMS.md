@@ -32487,11 +32487,24 @@ kolejka nie poznała z przyjętego zdarzenia: `ce()` zapisuje poznane klucze kop
 (`Pp_poznaj`). Taki klucz kolejka odziedziczyła z migawki korzenia. Przyjęta edycja
 użytkownika zostaje, także wobec późniejszego syntetycznego echa w DOM (kontrakt
 `autosave-pauza-odtworzenia.test.mjs`). Świeży klucz zastępuje kopię z kolejki tylko
-wtedy, gdy świeży korzeń go ma, zgadza się on dokładnie z aktualnym polem formularza,
-a kopia z kolejki nie. Bez pola na stronie, przy jawnie zablokowanym sejfie i dla
-kolejki innej osoby nic się nie zmienia. Pozostałe dane, właściciel kolejki,
+wtedy, gdy świeży korzeń go ma, zgadza się on dokładnie z aktualnym, **niepustym**
+polem formularza, a kopia z kolejki nie. Bez pola na stronie, przy jawnie zablokowanym
+sejfie i dla kolejki innej osoby nic się nie zmienia. Pozostałe dane, właściciel kolejki,
 restore/clear, kolejność zapisu i API pozostają bez zmian. Całego świeżego korzenia
 nie scala się z opóźnioną kopią.
+
+**Czego poprawka celowo nie zmienia (do decyzji właściciela).** Kolejka nadal może
+dopisać starszą wartość pola wyczyszczonego bez przyjętego zdarzenia. Pierwsza wersja
+poprawki przenosiła także pustą wartość i CI to wykazało:
+`lab-puberty-johannsen.spec.mjs` („clearing the main-form date…”) był czerwony 4/4
+lokalnie i w obu próbach CI. Sonda zapisów pokazała, skąd test bierze wiek. Po powrocie
+na formularz główny pola lat i miesięcy są puste przy wciąż ustawionej dacie (tak samo na
+bazie). Po „wyczyść datę” i wpisaniu samych miesięcy `userData.js` publikuje `age: ""`,
+a lata `0` w przeliczniku pochodzą wyłącznie z przeterminowanej kopii kolejki, która
+zapisuje `age: "0"` sprzed wyczyszczenia. Ustalenie, czy puste lata przy podanych
+miesiącach mają znaczyć 0 lat (jak w sesji głównej, która zapisuje wtedy `age: 0`), czy
+wiek nieznany (jak w ocenie LH/FSH: `invalid_age`), jest zmianą funkcjonalną i wymaga
+osobnej decyzji. Dlatego ta poprawka pustych wartości nie przenosi.
 
 **Wpływ kliniczny.** Bez zmiany wzorów, norm, źródeł, progów, jednostek i formatu
 rekordu. Wspólne pola zachowują wiek, masę i wzrost widoczne w formularzu. Moduły
@@ -32501,9 +32514,10 @@ niemowlęcia) nie tracą już wieku po wpisaniu daty urodzenia tuż po wczytaniu
 **Testy.** `tests/unit/persist-current-age.test.mjs` (14) wywołuje prawdziwy adapter,
 runtime i `userData.js`: kolejność z dziennika dla każdego z czterech pól, timer
 i wymuszony zapis `pagehide`, wpis `byId`, kontrolę sprzecznego późniejszego zapisu,
-poznaną edycję wobec echa w DOM, jawne wyczyszczenie, pustą wartość ustawioną z kodu,
-brak scalania innych danych, brak pola, zablokowany sejf i zmianę `patientId`. Przed
-poprawką 8 z 14 przypadków było czerwonych; sześć kontroli jest zielonych przed i po.
+poznaną edycję wobec echa w DOM, jawne wyczyszczenie, granicę zakresu (pusta wartość nie
+jest przenoszona), brak scalania innych danych, brak pola, zablokowany sejf i zmianę
+`patientId`. Przed poprawką 7 z 14 przypadków było czerwonych; siedem kontroli jest
+zielonych przed i po.
 Istniejące testy runtime (`autosave-pauza-odtworzenia`, `persist-current-name`,
 `shared-form-coherence`, `persist-writer-authority` i inne) pozostają zielone. E2E bez
 zmian w asercjach. Lokalne odtworzenie z sondą (CPU 2×, cztery workery, ten sam przebieg

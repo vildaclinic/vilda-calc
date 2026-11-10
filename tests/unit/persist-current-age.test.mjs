@@ -163,13 +163,16 @@ describe('P-PERSIST-CURRENT-AGE — a queued autosave keeps current core form fi
     expect(h.read().weight).toBe('');
   });
 
-  it('borrows a newer empty value that matches a field cleared by code', async () => {
+  // Scope boundary, unchanged from before the fix: an empty value is never
+  // carried over, so a field emptied by code keeps the queued value. The
+  // lab-puberty-johannsen date-clear scenario relies on this existing order.
+  it('does not carry an empty fresh value over the queued one', async () => {
     const h = await harness({ rootExtra: { height: '60' } });
     h.edit('weight', '5.5');
     h.fields.height.value = '';
     h.publish({ height: '' });
     await vi.advanceTimersByTimeAsync(1000);
-    expect(h.read().height).toBe('');
+    expect(h.read().height).toBe('60');
   });
 
   it('does not merge unrelated newer data into the queue', async () => {

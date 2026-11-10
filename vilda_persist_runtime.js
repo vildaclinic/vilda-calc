@@ -154,7 +154,9 @@ function Pp_nazwa(a){
    Zapis L (timer, pagehide) usuwal wtedy wiek z korzenia i przelicznik pokazywal "Uzupelnij wiek pacjenta".
    Uzgadniamy tylko klucze, ktorych L nie poznala z przyjetego zdarzenia (odziedziczone z migawki korzenia);
    przyjeta edycja uzytkownika zostaje, takze wobec pozniejszego echa w DOM. Bierzemy swiezy klucz i jego wpis
-   byId tylko wtedy, gdy swiezy korzen go ma, zgadza sie on z aktualnym polem formularza, a kopia z kolejki nie.
+   byId tylko wtedy, gdy swiezy korzen go ma, zgadza sie on z aktualnym, NIEPUSTYM polem formularza, a kopia
+   z kolejki nie. Pustej wartosci nie przenosimy: to zachowanie (kolejka moze dopisac starsza wartosc pola
+   wyczyszczonego bez przyjetego zdarzenia) pozostaje jak dotad i jest opisane w rejestrze.
    Bez pola na stronie, przy zablokowanym sejfie i dla kolejki innej osoby (Pp_obcy wczesniej w x) nic nie
    zmieniamy; innych danych nie scalamy. Rejestr: docs/clinical/ALGORITHMS.md, P-PERSIST-CURRENT-AGE. */
 var Pp_poznane=null;
@@ -181,7 +183,7 @@ function Pp_rdzen(a){
       const el=document.getElementById(k);
       if(!el)return;
       const current=X(el);
-      if(typeof current!=="string")return;
+      if(typeof current!=="string"||current==="")return;
       if(own.call(fresh,k)&&text(fresh[k])===current&&text(a[k])!==current)a[k]=fresh[k];
       if(byId&&own.call(freshById,k)&&text(freshById[k])===current&&text(byId[k])!==current)byId[k]=freshById[k];
     });
