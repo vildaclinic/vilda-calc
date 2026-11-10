@@ -800,8 +800,8 @@
   "sha256": "2ef8b94b2a6f0cc315deb0796bba6a0bfe760c5e5bb15292334ca29f3d7c1613"
  },
  "inline_docpro_03.js": {
-  "v": 4,
-  "sha256": "01cae9b421b5be648fb6474bdad562fee8243f740070c7175af13667194144cc"
+  "v": 5,
+  "sha256": "1807cd4e816e6704a4ff41e0cdbe08da81b85a50cb488004ce87ddad894c9f30"
  },
  "inline_docpro_06.js": {
   "v": 1,
@@ -840,12 +840,12 @@
   "sha256": "4071a67d620360f9a43d50f571971814187cfd9dadcd73463fc49bc2ff2db5b5"
  },
  "inline_index_05.js": {
-  "v": 6,
-  "sha256": "01cae9b421b5be648fb6474bdad562fee8243f740070c7175af13667194144cc"
+  "v": 7,
+  "sha256": "1807cd4e816e6704a4ff41e0cdbe08da81b85a50cb488004ce87ddad894c9f30"
  },
  "inline_index_07.js": {
-  "v": 15,
-  "sha256": "3cfc706c1c5591bcb5bb1ce204f5822ed031f38a58b72831ea2309bd3408f056"
+  "v": 16,
+  "sha256": "4cab68d2884fd2dd2a8de1dae214f0b09cc91869f10ec258d510563e2347db97"
  },
  "inline_index_08.js": {
   "v": 1,
@@ -1916,8 +1916,8 @@
   "sha256": "a48d9761a71a29d0ff9862e7638eb0a95485fc042dcb1d1901886b0dab72608e"
  },
  "vilda_publication_creator.js": {
-  "v": 24,
-  "sha256": "a35082adf3ea36367741beed7ff2c7355ddd7d51b5e1e3ca85f15d0b10074da0"
+  "v": 25,
+  "sha256": "8397e5a7dead095484bc61b7360cf72ad6b000e80f7cc225076d462d447ce06a"
  },
  "vilda_raport_naglowek.js": {
   "v": 10,

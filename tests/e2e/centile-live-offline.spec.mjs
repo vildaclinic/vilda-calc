@@ -7,6 +7,8 @@ import { fileURLToPath } from 'node:url';
 import { expect, test } from '@playwright/test';
 import { createFictionalVault, fictionalPatient, loadPatient, readyForPatient, shellFrame, NOTE_A } from '../support/centile-live-fixture.mjs';
 import { openPatientDocuments, closePatientDocuments, DOCUMENTS_DIALOG } from '../support/patient-documents-ui.mjs';
+import { kreator, kliknijDane, zapiszKomentarz, magazynWspolny, generujZKreatora } from '../support/kreator-wspolne-adnotacje.mjs';
+import { wygenerujPdf, orientacja } from '../support/siatka-poziomo.mjs';
 
 test.use({ serviceWorkers: 'allow' });
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -23,6 +25,7 @@ const resourceNames = [
   'vilda_advanced_growth.js', 'growth-basic-module.js', 'vilda_auth_ui.js',
   'docpro_state_persist.js',
   'ds_lms.js', 'vilda_bmi.js', 'vilda_ds_source.js', 'inline_index_05.js', 'inline_docpro_03.js',
+  'vilda_publication_creator.js', 'inline_index_07.js',
 ];
 
 function resourcesFor(documentName) {
@@ -189,6 +192,16 @@ async function assertZemelOffline(page, frame, patientId) {
   await expect(dialog.locator('svg.vilda-centile-live-full-svg[data-source="DS"]:visible')).toHaveCount(2);
   await expect(dialog.locator('.vilda-centile-live-mph:visible')).toHaveCount(0);
   await dialog.locator('.vilda-centile-live-close').click();
+  if (await frame.locator('#openChartCreatorBtn').count()) {
+    await frame.locator('#openChartCreatorBtn').click();
+    await expect(kreator(page)).toHaveAttribute('aria-label', /Zemel 2015/);
+    await kreator(page).getByRole('button', { name: '+ Etykieta', exact: true }).click();
+    await kliknijDane(page, 'height', 144, 130);
+    await zapiszKomentarz(page, 'E2E-DS-OFF');
+    expect((await magazynWspolny(page)).free.height.some(item => item.txt === 'E2E-DS-OFF')).toBe(true);
+    expect((await wygenerujPdf(page, generujZKreatora)).map(orientacja)).toEqual(['pion']);
+    await kreator(page).getByRole('button', { name: 'Zamknij kreator' }).click();
+  }
 }
 
 // Real installation + cold browser restart + stopped origin. The first visits to

@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.499';
+const SW_VERSION = '1.1.500';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -2629,9 +2629,11 @@ const CORE_SHELL_URLS = [
   '/inline_index_05.js?v=4',
   '/inline_index_05.js?v=5',
   '/inline_index_05.js?v=6',
+  '/inline_index_05.js?v=7',
   '/inline_docpro_03.js?v=2',
   '/inline_docpro_03.js?v=3',
   '/inline_docpro_03.js?v=4',
+  '/inline_docpro_03.js?v=5',
   '/vilda_down_syndrome.js',
   '/vilda_down_syndrome.js?v=1',
   '/vilda_anorexia_risk.js',
@@ -3515,6 +3517,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_publication_creator.js?v=22',
   '/vilda_publication_creator.js?v=23',
   '/vilda_publication_creator.js?v=24',
+  '/vilda_publication_creator.js?v=25',
   '/vilda_centile_interpolation.js',
   '/vilda_centile_interpolation.js?v=1',
   '/app.js?v=192',
@@ -3527,6 +3530,7 @@ const OPTIONAL_ASSETS = [
   '/inline_index_07.js?v=13',
   '/inline_index_07.js?v=14',
   '/inline_index_07.js?v=15',
+  '/inline_index_07.js?v=16',
   '/inline_docpro_05.js?v=2',
   '/vilda_centile_interpolation.js?v=2',
   '/inline_index_03.js?v=12',
