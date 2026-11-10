@@ -24,6 +24,11 @@
 //       (filtry wygaśnięcia, chwila nie trafia do treści): Bkz_czytaj (Date.now() → Bkz_czysc: treść kosza 30 dni, nagrobek
 //       365 dni) i Ct (Date.now() + 365 dni w normalizacji Ft). Bez wywołań legacy (is, us, ls, ds, cs, Qb0, Qb1, Gc5, Gc3,
 //       Bkz_eksport, Bsw_deltaNagrobka) i bez V/Le w domknięciu. Strażnik: każda funkcja Bev_ bloku jest sklasyfikowana.
+//       E2-PR3a4 (przegląd kolejki, część a): Bev_chwila i Bev_pary czyste (lista czystych); Bev_przeglad
+//       i Bev_ostatnieScalenie — odczyt sklepów przez strzeżony adapter Bev_start, w domknięciu bez zegara, odszyfrowania,
+//       szyfrowania, zastosowania, legacy, V i Le; Bev_LISTY_PRZEGLADU — stała (Object.freeze z literałów, same metody
+//       odczytu list…ForUser).
+//       Czerwone na bazie E2-PR3a4 (sejf 77b05e6f): B7 (lista klasyfikacji ma nazwy, których sejf bazy nie ma).
 //   B8  sesja (P-SESJA-ZAPISU, opis ogólny): zablokowany sejf → VAULT_LOCKED; zmiana sesji w trakcie odczytu → SESSION_CHANGED;
 //       zmiana sesji + błąd odczytu (lista kosza, G, Ft) → SESSION_CHANGED (nie EVENT_SOURCE_UNREADABLE); strażnik tożsamości →
 //       PATIENT_AUTHORITY_UNAVAILABLE.
@@ -554,7 +559,7 @@ describe('B6/B7: bez zegara', () => {
     expect({ ...po2.patientNotes[0], clinicalDateISO: data }).toEqual(po1.patientNotes[0]);
   });
 
-  it('B7: domknięcie wywołań builderów bez zegara (poza jawnymi filtrami), bez legacy, bez V i Le; każda funkcja Bev_ sklasyfikowana', () => {
+  it('B7: domknięcie wywołań builderów bez zegara (poza jawnymi filtrami), bez legacy, bez V i Le; każda funkcja Bev_ sklasyfikowana; przegląd kolejki (E2-PR3a4) przez strzeżony adapter, bez zegara i odszyfrowania', () => {
     const src = zrodlo('vilda_vault.js');
     const ast = parse(src, { ecmaVersion: 'latest', sourceType: 'script', ranges: true });
     const sm = analyze(ast, { ecmaVersion: 2022, sourceType: 'script' });
@@ -602,10 +607,14 @@ describe('B6/B7: bez zegara', () => {
     const CZYSTE = [...BUILDERY, 'Bev_obiekt', 'Bev_id', 'Bev_ma', 'Bev_kluczeW', 'Bev_kopia', 'Bev_blad', 'Bev_nieczytelne', 'Bev_devPoprawny',
       'Bev_pelnyPoprawny', 'Bev_koperta', 'Bev_kartaPoprawna', 'Bev_sekcjaPoprawna', 'Bev_sprawdz', 'Bev_utf8', 'Bev_zDlugosci',
       'Bev_bajty', 'Bev_start', 'Bev_odszyfruj', 'Bev_moze', 'Bev_meta', 'Bev_karta', 'Bev_poprawka', 'Bev_wersja', 'Bev_poZapisie',
-      'Bev_grupuj', 'Bev_porcje', 'Bev_wpisKosza', 'Bev_zListy', 'Bev_jako'];
+      'Bev_grupuj', 'Bev_porcje', 'Bev_wpisKosza', 'Bev_zListy', 'Bev_jako',
+      // E2-PR3a4: chwila zmiany encji i pary z ładunku scalania (przegląd kolejki).
+      'Bev_chwila', 'Bev_pary'];
     const SZYFROWANIE_I_ZASTOSOWANIE = ['Bev_szyfruj', 'Bev_wynik', 'Bev_poSesji', 'Bev_kod', 'Bev_bladZastosowania', 'Bev_bladOdczytu', 'Bev_zastosuj'];
+    // E2-PR3a4: przegląd kolejki — odczyt sklepów bez odszyfrowania przez strzeżony adapter Bev_start.
+    const PRZEGLAD = ['Bev_przeglad', 'Bev_ostatnieScalenie'];
     const wBloku = [...dekl.keys()].filter((n) => n.startsWith('Bev_')).sort();
-    expect(wBloku, 'każda funkcja Bev_ jest na liście czystych albo szyfrowania/zastosowania').toEqual([...CZYSTE, ...SZYFROWANIE_I_ZASTOSOWANIE].sort());
+    expect(wBloku, 'każda funkcja Bev_ jest na liście czystych, szyfrowania/zastosowania albo przeglądu kolejki').toEqual([...CZYSTE, ...SZYFROWANIE_I_ZASTOSOWANIE, ...PRZEGLAD].sort());
     const WYJATKI = {
       Bkz_czytaj: 'Date.now() wyłącznie jako chwila filtra Bkz_czysc (treść kosza 30 dni, nagrobek 365 dni) — ten sam filtr co exportSyncPayload; chwila nie trafia do treści',
       Ct: 'Date.now() + 365 dni w normalizacji Ft: data kliniczna dalej niż rok od dziś → null — ta sama normalizacja co exportSyncPayload',
@@ -617,6 +626,22 @@ describe('B6/B7: bez zegara', () => {
       'Vn', 'ws', 'Qr', 'qr', 'vs', 'Yn', 'Qe2', 'jn', 'Bmk_zmien', 'Bkz_zmienListe']) {
       expect(d.has(zakazana), `${zakazana} w domknięciu builderów`).toBe(false);
     }
+    // E2-PR3a4: przegląd kolejki czyta sklepy przez strzeżony adapter, bez zegara, odszyfrowania i zapisu.
+    const dp = domkniecie(PRZEGLAD);
+    expect(dp.has('Bev_start'), 'przegląd kolejki przez strzeżony adapter Bev_start').toBe(true);
+    expect([...dp].filter((n) => zegar(dekl.get(n)).length), 'funkcje z zegarem w domknięciu przeglądu kolejki').toEqual([]);
+    for (const zakazana of ['Bev_odszyfruj', 'Bev_szyfruj', 'Bev_zastosuj', 'is', 'us', 'ls', 'ds', 'cs', 'Qb0', 'Qb1', 'Gc5', 'Gc3', 'Bkz_eksport',
+      'Bsw_deltaNagrobka', 'V', 'Le', 'ps', 'Vn', 'ws', 'Qr', 'qr', 'vs', 'Yn', 'Qe2', 'jn', 'Bmk_zmien', 'Bkz_zmienListe']) {
+      expect(dp.has(zakazana), `${zakazana} w domknięciu przeglądu kolejki`).toBe(false);
+    }
+    const lista = zIIFE.variables.find((z) => z.name === 'Bev_LISTY_PRZEGLADU');
+    const d0 = lista && lista.defs[0];
+    expect(!!d0 && d0.type === 'Variable' && d0.parent.kind === 'const', 'Bev_LISTY_PRZEGLADU: stała').toBe(true);
+    const init = d0.node.init;
+    expect(init.type === 'CallExpression' && init.callee.type === 'MemberExpression' && init.callee.object.name === 'Object' && init.callee.property.name === 'freeze',
+      'Bev_LISTY_PRZEGLADU: Object.freeze(…)').toBe(true);
+    const wiersze = init.arguments[0].elements.map((e) => (e.type === 'ArrayExpression' && e.elements.every((x) => x.type === 'Literal' && typeof x.value === 'string') ? e.elements.map((x) => x.value) : null));
+    expect(wiersze.filter((w) => !w || w.length !== 3 || !/^list[A-Za-z]*ForUser$/.test(w[1])), 'Bev_LISTY_PRZEGLADU: [rodzaj, metoda odczytu list…ForUser, pole klucza]').toEqual([]);
     // ciała funkcji Bev_ (wytnijFunkcje — pierwsze dopasowanie w pliku jest w bloku)
     for (const n of wBloku) expect(wytnijFunkcje(src, n), n).not.toMatch(/\bnew\s+Date\b|\bDate\.now\s*\(|(?<![A-Za-z0-9_$.])Date\s*\(|\bperformance\.now\b|\b(?:Date|performance)\s*\[/);
   });

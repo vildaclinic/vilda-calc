@@ -1,6 +1,7 @@
-// P-DZIENNIK-ZDARZEN (E2-PR3a2, E2-PR3a3) — kontrakt ładunków hooków sejfu: emisja zmian do kolejki (wstawki Bem_
-// w emiterach hooków, miejscach zapisu i importach, kroki operacji złożonych, od E2-PR3a3 partie importu) nie zmienia
-// ładunków hooków, kolejności wywołań słuchaczy ani pełnej wysyłki (syncPush). Porównanie z sejfem bez wstawek
+// P-DZIENNIK-ZDARZEN (E2-PR3a2, E2-PR3a3, E2-PR3a4) — kontrakt ładunków hooków sejfu: emisja zmian do kolejki (wstawki Bem_
+// w emiterach hooków, miejscach zapisu i importach, kroki operacji złożonych, od E2-PR3a3 partie importu, od E2-PR3a4
+// przegląd kolejki na początku odblokowania i pary scalania z chmury) nie zmienia ładunków hooków, kolejności wywołań
+// słuchaczy ani pełnej wysyłki (syncPush). Porównanie z sejfem bez wstawek
 // (tests/support/sejf-bez-wstawek.mjs: każde wywołanie Bem_* i Bob_* poza blokiem zastąpione `void 0`, Bob_oznacz(…) —
 // `false`), ładowanym tak jak tests/support/load-browser-script.mjs.
 // Okno jak w zapisie bazowym (tests/unit/sync-dziennik-zapis-bazowy.test.mjs, wariant „Komputer prywatny”: adapter
@@ -24,7 +25,8 @@
 //   KH4  kolejność wywołań słuchaczy (hook, słuchacz) względem siebie: sejf = sejf bez wstawek.
 //   KH5  liczba wywołań syncPush atrapy VildaSync: sejf = sejf bez wstawek (na każdym kroku).
 //   KH6  samokontrola: sejf ma część emisji (znacznik i wstawki: Bem_hak 7, Bem_zmiana 12, pary kroku 9, Bem_sekcje 3,
-//        Bem_partia 3 — razem 43), sejf bez wstawek nie ma Bem_ ani Bob_ poza blokiem, parsuje się i w obu przebiegach
+//        Bem_partia 3, od E2-PR3a4 Bem_przeglad 1 i Bem_zChmury 1 — razem 45), sejf bez wstawek nie ma Bem_ ani Bob_ poza
+//        blokiem, parsuje się i w obu przebiegach
 //        daje 0 odczytów pola bramki (sejf przy otwartej bramce — więcej niż 0); przy otwartej bramce trzy kroki importu
 //        scenariusza (import karty, scalenie i odtworzenie kopii konta) wołają onBulkChange — KH1–KH5 obejmują więc
 //        dopisywanie partii importu; przy zamkniętej bramce i na sejfie bez wstawek — bez wywołania.
@@ -33,6 +35,9 @@
 // KH1–KH5 — na sejfie bazy sejf i sejf bez wstawek nie różnią się co do hooków.
 // Czerwone na bazie E2-PR3a3 (sejf 422a9a7b, sprzed partii importu): KH6 (liczby wstawek, onBulkChange). Zielone
 // z natury: KH1–KH5 ×2 — ładunki hooków importów równe na sejfie i sejfie bez wstawek także przed tym PR.
+// Czerwone na bazie E2-PR3a4 (sejf 77b05e6f, bez przeglądu kolejki): KH6 (wstawki Bem_przeglad i Bem_zChmury — 43
+// zamiast 45). Zielone z natury: KH1–KH5 ×2 — ładunki hooków, kolejność słuchaczy i syncPush równe na sejfie i sejfie
+// bez wstawek także przed przeglądem kolejki.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
 import { AtrapaIDBKeyRange, utworzIndexedDB } from '../support/atrapa-indexeddb.mjs';
@@ -345,10 +350,11 @@ describe('kontrakt ładunków hooków: sejf = sejf bez wstawek', () => {
     expect(i > a && i < z, 'znacznik emisji w bloku').toBe(true);
     const wstawki = wywolaniaPozaBlokiem(ZRODLO_SEJFU);
     const ile = (n) => wstawki.filter((w) => w.nazwa === n).length;
-    // E2-PR3a3: importy (ns, ss, as) — 4 emisje wersji, 3 sekcje pliku, 3 znaki końca partii i 3 pary kroku.
-    expect([ile('Bem_hak'), ile('Bem_zmiana'), ile('Bem_krokStart'), ile('Bem_krokKoniec'), ile('Bem_sekcje'), ile('Bem_partia')], 'wstawki emisji w sejfie')
-      .toEqual([7, 12, 9, 9, 3, 3]);
-    expect(wstawki.filter((w) => w.nazwa.startsWith('Bem_')).length, 'wszystkie wstawki Bem_ (bez innych nazw)').toBe(43);
+    // E2-PR3a3: importy (ns, ss, as) — 4 emisje wersji, 3 sekcje pliku, 3 znaki końca partii i 3 pary kroku. E2-PR3a4:
+    // przegląd kolejki na początku odblokowania (He) i pary scalania z chmury (Le).
+    expect([ile('Bem_hak'), ile('Bem_zmiana'), ile('Bem_krokStart'), ile('Bem_krokKoniec'), ile('Bem_sekcje'), ile('Bem_partia'), ile('Bem_przeglad'),
+      ile('Bem_zChmury')], 'wstawki emisji w sejfie').toEqual([7, 12, 9, 9, 3, 3, 1, 1]);
+    expect(wstawki.filter((w) => w.nazwa.startsWith('Bem_')).length, 'wszystkie wstawki Bem_ (bez innych nazw)').toBe(45);
     const bez = bezWstawek(ZRODLO_SEJFU);
     expect(wywolaniaPozaBlokiem(bez)).toEqual([]);
     const { a: a2, z: z2 } = granicaBloku(bez);

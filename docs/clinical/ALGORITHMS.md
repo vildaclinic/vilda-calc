@@ -21420,6 +21420,200 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
+## Dziennik zdarzeń: przegląd kolejki ze znacznikiem i pamięcią par — uśpione (P-DZIENNIK-ZDARZEN, E2-PR3a4, SW 1.1.498, `vilda_vault.js` 264, 2026-11-09)
+
+**Zmiana kliniczna: NIE** — wzory, progi, jednostki, interpretacje, zapis danych pacjentów, scalanie, format kopii
+i synchronizacja bez zmian. Dla użytkownika dziś nic się nie zmienia: bramka dziennika zdarzeń jest zamknięta, więc
+odblokowanie sejfu i scalenie danych z chmury tylko ją sprawdzają (jeden odczyt pola w pamięci strony) i kończą. Po
+włączeniu dziennika (PR włączający) aplikacja przy odblokowaniu, raz na dobę i od razu po zbyt długim czekaniu na
+blokadę kolejki sprawdzi, czy każda zmiana karty, wizyty, notatki, listy, preferencji, klucza dostępu i hasła ma swój
+wpis w kolejce, i dołoży brakujące. Pamięta przy tym, co już jest w chmurze, więc nie wyśle drugi raz tej samej zmiany
+i nie odeśle z powrotem zmian z drugiego urządzenia. Wpływ kliniczny dziś: brak.
+
+**Skąd.** Plan `docs/SYNC_PRZYROSTOWA_PLAN.md`, wiersz 6d tabeli „Podział etapu 2” i rozdział 3.2 („Przegląd
+`sweepOutbox()`”); wymagania dla E2-PR3a4 z wpisów E2-PR3a3, E2-PR3a2, E2-PR3a1, E2-PR2b1 i E2-PR2a (niżej); decyzja
+12.1 (szacunek z pamięcią par), decyzja 7 (pełna wysyłka zostaje przez cały etap 2), decyzja 9 (scalanie z chmury nie
+dopisuje do kolejki).
+
+### E2-PR3a4
+
+**Uśpienie.** „Każde wywołanie kończy się na bramce: bez otwarcia bazy, szyfrowania i żądań.” Dwa nowe miejsca poza
+blokiem: `Bem_przeglad(true)` — pierwsza instrukcja odblokowania (`He`) i `Bem_zChmury(t)` — w scalaniu (`Le`) tuż po
+sprawdzeniu kształtu ładunku. Przy zamkniętej bramce każde z nich to jeden odczyt pola i koniec: bez zegarów,
+nasłuchów, listy baz, kluczy `localStorage`, blokad, szyfrowania i żądań. Eksport `VildaVault._eventLog` ma 38 kluczy:
+nowy `sweepOutbox()` (chroniony bramką: przy zamkniętej `{ ok: false, powod: 'bramka' }`; wynik `{ ok: true,
+kandydaci, dopisane }` albo odmowa — liczby, bez kluczy encji).
+
+**Sesja.** Operacje kolejki i kwarantanny sprawdzają sesję tak jak zapis karty (P-SESJA-ZAPISU): zmiana sesji w trakcie
+kończy operację bez zapisu. Przegląd niesie sesję z chwili wywołania (przy odblokowaniu — sesję odblokowanego konta),
+sprawdza ją po każdym odczycie i w każdym dopisaniu; blokada sejfu, przełączenie konta albo ponowne zalogowanie kończą
+go bez zapisu znacznika.
+
+**Znacznik przeglądu i okno.** Znacznik to chwila startu ostatniego zakończonego przeglądu konta (nie chwila przyjęcia
+wierszy przez serwer). Leży w bazie kolejki konta `vilda_sync_<userId>`, w sklepie `meta` (rekord `przeglad`), razem
+z pamięcią par (rekord `pary`); zapis tylko do istniejącej bazy — sam znacznik bazy nie tworzy (tworzy ją dopisanie
+wiersza, jak dotąd). Bez nowego klucza `localStorage` i bez nowego pola sejfu. Okno przeglądu: encje z chwilą zmiany
+późniejszą niż znacznik − 10 min. Bez znacznika (pierwszy przegląd): chwila ostatniej udanej wysyłki z tego urządzenia
+(`vilda-sync-last-push-ok-v1:<userId>`, P-SYNC-SLAD; ten PR klucz tylko czyta), potem `userMeta.lastSyncMergeAtISO`,
+potem wszystko. Chwila zmiany encji to ta sama chwila, którą niesie zdarzenie (`atISO` buildera): wersja — chwila
+poprawki albo zapisu, wpis kosza — późniejsza z chwil usunięcia i przycięcia, notatki i listy — `updatedAtISO` albo
+`createdAtISO`, klucz dostępu — `createdAtISO`, preferencja i hasło — chwila zmiany, nagrobki — `deletedAtISO`. Karta
+z chwilą zapisu późniejszą niż jej najnowsza wersja (poprawka starszej wersji, gwiazdka, kosz, „Przywróć”) daje `snap`
+najnowszej wersji z chwilą zapisu karty (zdarzenie niesie pola karty). Gwiazdka zmienia chwilę zmiany wersji, więc
+przegląd ją widzi. Przegląd czyta wyłącznie jawne pola rekordów, bez odszyfrowania, przez strzeżony adapter sejfu (od
+początku „Usuń konto” — `SYNC_DB_DELETED`).
+
+**Pokrycie.** Encja w oknie nie dostaje nowego wiersza, gdy ma wiersz kolejki (w dowolnym stanie) utworzony nie
+wcześniej niż jej zmiana albo gdy pamięć par mówi, że chmura ma jej stan z chwili nie wcześniejszej niż zmiana. Wiersz
+starszy niż zmiana jej nie pokrywa — nowy wiersz zastępuje oczekujący na ogonie kolejki (łączenie wpisów z E2-PR2b1).
+
+**Pamięć par (w miejsce zbioru `fromCloud` z planu).** Para to encja i chwila, do której chmura ma jej stan. Pary
+powstają (1) przy każdym scaleniu z chmury poza importem (`mergeSyncPayload`, `applyEncryptedDelta`,
+`applyEncryptedEvent`), z ładunku, przed zapisami scalania — obejmują więc także zapisy faz kosza w trakcie stosowania
+zdarzenia; (2) przy przyjęciu wierszy (`outboxAccept`) — z chwili utworzenia usuniętego wiersza, więc wysłana zmiana
+nie wychodzi drugi raz. Zwykły zbiór kluczy nie wystarcza: w etapie 2 pobranie z chmury scala pełny ładunek, który
+nazywa każdą encję konta, więc zbiór wyłączyłby z przeglądu cały sejf; para przepuszcza zmianę lokalną nowszą niż stan
+w chmurze. Import z pliku (import karty, scalenie i odtworzenie kopii konta) par nie daje — to zmiana lokalna (partia,
+E2-PR3a3). Pamięć jest ograniczona i wygasa: zostają tylko pary z chwilą w oknie następnego przeglądu, najwyżej 20 000
+(najpóźniejsze). Utrwala ją zakończony przegląd w bazie kolejki, więc po przeładowaniu strony przegląd nie odsyła encji
+scalonych z chmury; ginie z bazą kolejki („Usuń konto”, kasowanie danych przeglądarki — wtedy wraca reguła pierwszego
+znacznika). Pary niosą tylko identyfikatory encji i chwile — te same wartości leżą jawnie w sklepach sejfu tego
+urządzenia i w wierszach kolejki.
+
+**Kiedy.**
+1. Na początku odblokowania (pierwsza instrukcja, przed słuchaczami odblokowania — przegląd przed pobraniem z chmury),
+   razem z przeglądem sierot. Ponowienie kasowania kolejek kont zostaje po słuchaczach i `go()`; ostatnią instrukcją
+   odblokowania jest od E2-PR3a1c ponowienie dziennika dostępu (P-USUN-KONTO-KARTY).
+2. Przegląd pilny: wynik `SYNC_DB_TIMEOUT` dopisania z emisji (limit 20 s czekania na blokadę konta) oznacza konto,
+   a przegląd rusza, gdy łańcuch dopisań tego konta się opróżni (konto bieżącej sesji). `SYNC_DB_DELETED` przeglądu
+   pilnego nie ustawia; własne dopisania przeglądu też nie.
+3. Raz na dobę: gdy łańcuch dopisań konta się opróżni, a od startu ostatniego przeglądu albo ostatniej próby w tej karcie
+   przeglądarki minęła doba (nieudany przegląd nie wraca więc po każdym dopisaniu).
+4. `_eventLog.sweepOutbox()` (testy; wysyłka w E2-PR4).
+
+Bez własnego zegara i nasłuchów: przy zamkniętej bramce łańcuch dopisań nie powstaje, więc warunek doby nie jest nawet
+sprawdzany. Brak miejsca (`SYNC_DB_QUOTA`) nie ma osobnego wyzwalacza: zmianę dokłada najbliższy przegląd (znacznik
+przesuwa się tylko po zakończonym przeglądzie, więc chwila zmiany zostaje w oknie).
+
+**Krok łańcucha.** Przegląd jest wpisem łańcucha dopisań konta: rusza po wcześniejszych wpisach konta (więc po partii
+odtworzenia konta z kopii — bez jej powtórzeń), a wywołany w trakcie operacji złożonej — po jej wpisach. Brakujące
+encje dopisuje po kolei według rang (jak krok emisji), przy równej randze według chwili, każdą tym samym dopisaniem
+(`Bob_dopiszZ`: blokada współdzielona konta, sesja, łączenie wpisów). Pierwsze nieudane dopisanie (poza encją, której
+już nie ma) kończy przegląd bez zapisu znacznika i par. `emissionsSettled()` czeka także na przegląd.
+
+**Zmiana bez wiersza.** Zmianę bez wiersza (limit blokady konta, brak miejsca, blokada sejfu, zmiana sesji, przerwane
+dopisanie) dokłada przegląd kolejki: najpóźniej przy następnym odblokowaniu, przy limicie blokady — zaraz po opróżnieniu
+łańcucha. Także nagrobek klucza dostępu usuniętego przy zablokowanym sejfie (przy odblokowaniu). Przegląd po pierwszym
+odblokowaniu konta odtworzonego z kopii nie dubluje partii.
+
+**Pamięć braków.** Wpis łańcucha dopisań, który nie dał wiersza (limit blokady konta, brak miejsca, blokada sejfu albo
+zmiana sesji przed dopisaniem, błąd zapisu), trafia do pamięci braków konta; przegląd dopisuje go bez względu na okno
+i na wcześniejszy wiersz tej encji, a udane dopisanie albo brak encji zdejmuje wpis (także późniejsze udane dopisanie
+tej encji z emisji). Powód: wersje, notatki i listy z pliku importu niosą chwile z pliku — zwykle sprzed znacznika
+przeglądu — a wiersz tej encji sprzed usunięcia karty nie niesie stanu po jej odtworzeniu z pliku. Bez wpisu: odmowy
+bez kolejki (bramka, tryb, konto, argument, brak IndexedDB) i konto usuwane (`SYNC_DB_DELETED`).
+
+**Rekordy pochodne scalania (pomiar z planu).** Rekordy, które scalanie zapisuje z chwilami z ładunku albo bez nowej
+chwili (poprawka `rev` wersji, `rev` nagrobka notatki, treść wpisu kosza z karty), są poza oknem przeglądu albo pokryte
+parą — przegląd ich nie dokłada. Dwa przypadki z nową chwilą: plan opieki scalony równolegle bez przewinięcia (rewizja
+max + 1, chwila scalenia) i ratunek notatki przy nagrobku karty (D-21) — przegląd dokłada je jak zmianę lokalną,
+a odbiorca przyjmuje je zwykłą regułą scalania (dla planu opieki — przewinięcie do potomka, P-PLAN-POTOMEK). Nowa
+reguła scalania, która zapisuje chwilę zegara, dostaje przypadek testu przeglądu.
+
+**Przegląd sierot.** Przy odblokowaniu, przed przeglądem kolejki: bazy `vilda_sync_<userId>` kont innych niż bieżące,
+bez wpisu rejestru albo z wpisem w trybie innym niż „Komputer prywatny”, kasuje to samo kasowanie kolejki konta co
+„Usuń konto” (blokada wyłączna, znacznik ponowienia według tej samej reguły, identyfikator urządzenia konta usunięty).
+Nigdy w trybie „Zaloguj jednorazowo”. Bez listy baz (brak funkcji, błąd, limit 10 s) albo przy błędzie odczytu
+rejestru — bez kasowania. Kolejka konta prywatnego z wpisem rejestru zostaje. Przegląd sierot działa tylko przy otwartej
+bramce (przy zamkniętej ta wersja aplikacji baz kolejki nie tworzy).
+
+**Tryby.** Kolejka i przegląd tylko w trybie „Komputer prywatny” przy odblokowanym sejfie; w trybach „Komputer
+w pracy” i „Zaloguj jednorazowo” przegląd kończy się na trybie (bez baz, kluczy `vilda-sync-*` i blokad).
+
+**Świadomie bez przeglądu.** Pola „świadomie lokalne” z rozdziału 3.5 planu (`seq` wersji, opakowania kluczy, rejestr,
+stan synchronizacji, `clinicalScrubDoneV1`, preferencje `local`); usunięcie wersji bez nagrobka (D-8 A, zmiana lokalna);
+zmiany scalania bez nowej chwili (wyżej). Zdjęcie wpisu kosza niesie zdarzenie wersji z emisji; pełna wysyłka zostaje
+przez cały etap 2 (decyzja 7).
+
+**Przy zamkniętej bramce (co nowego).**
+
+| Skutek | Wartość |
+|---|---|
+| odczyt pola `VILDA_EVENT_LOG` | jeden przy odblokowaniu i jeden przy scaleniu z chmury (importy: 0 — krok) |
+| zegary, nasłuchy, lista baz, bazy `vilda_sync_*`, klucze `vilda-sync-*`, blokady `vilda-sync*`, szyfrowanie zdarzeń, żądania sieci | 0 |
+| zapis bazowy (`tests/fixtures/dziennik-zapis-bazowy.json`) | zmienia się tylko `odczytyBramki`: 52, 52, 50, 52 (było 46, 46, 44, 46) (Ze, prywatny, chmura, jednorazowo) |
+| e2e uśpienia (`dziennik-zdarzen-uspienie`) | kolumna `bramka`: +1 w krokach „konto” i „odblokowanie” (trzy tryby), wariant bez `navigator.locks` 1 → 2; pozostałe kolumny bez zmian |
+
+**Kontrola granicy obrazu sejfu.** Przeliczone skróty `BASE`, `baseVaultSHA256` i `integratedVaultSHA256` (reguła
+z E2-PR3a2, decyzja z 2026-11-09); fragment natywny, haki, moduły i paczka bez zmian.
+
+**Testy.** Dane wyłącznie fikcyjne, bez PESEL. Nowe i zmienione:
+- `tests/unit/sync-dziennik-outbox.test.mjs` (nowy) — 40 przypadków PG1–PG29 z wariantami: zamknięta bramka; pierwszy
+  znacznik (klucz wysyłki, chwila scalenia, wszystko; „pierwsza aktywacja nie dopisuje całej bazy”); znacznik = start
+  przeglądu (także przy dopisaniu i zapisie znacznika wstrzymanym w trakcie); pokrycie wierszem (także w wysyłce)
+  i łączenie na ogonie; pokrycie przeglądu — każda z 26 mutacji z listy emisji po usunięciu wierszy emisji (PG8);
+  przegląd pilny po limicie blokady konta (bez pętli), bez przeglądu pilnego po `SYNC_DB_DELETED` i po braku miejsca,
+  przegląd należny po dobie, przegląd nieudany; krok łańcucha (odtworzenie konta z kopii bez powtórzeń partii, przegląd
+  w otwartym kroku po jego wpisach); pamięć par (scalanie w sesji, utrwalenie po przeładowaniu, wiersze przyjęte,
+  ograniczenie do okna i 20 000); importy bez par; strzeżony adapter i sesja; rekordy pochodne scalania z nową chwilą
+  (plan opieki scalony równolegle, ratunek notatki); przegląd sierot (bez wpisu rejestru, „Komputer w pracy”, „Zaloguj
+  jednorazowo”, okno bez listy baz); tryby bez kolejki; 10 dni bez połączenia (bliźniak: 30 kart, 60 wersji; przy
+  odblokowaniu tylko 10 własnych notatek, po scaleniu pełnego ładunku 0, po przeładowaniu 0); nagrobek klucza dostępu
+  usuniętego przy zablokowanym sejfie; przegląd przed słuchaczami odblokowania; pamięć braków (wpis partii importu bez
+  wiersza po limicie blokady konta i po blokadzie sejfu — wersje z pliku z chwilami sprzed okna dołożone).
+- `tests/unit/sync-dziennik-uspienie.test.mjs` — 48 przypadków (było 44): literał miejsc poza blokiem (31 wpisów,
+  45 wywołań), formy wstawek w `He` i `Le` z samokontrolą wariantami zła, reguły domknięcia części `Bob_` i `Bem_`
+  z nowymi funkcjami, czystość `Bev_pary` (oraz `Bkz_ostatnie` i `Bkz_pozniejsza`), 38 kluczy eksportu, `sweepOutbox`
+  chronione bramką.
+- `tests/unit/sync-dziennik-zapis-bazowy.test.mjs` i fikstura — 15 przypadków (+1 pominięty): w fiksturze zmieniły się
+  tylko cztery pola `odczytyBramki`; odczyty pola = emisje + przeglądy + scalenia z licznika w kopii sejfu.
+- `tests/unit/sync-dziennik-emisja.test.mjs` — 39 przypadków: EM1, EM2 i EM27 z licznikiem przeglądów i scaleń; EM6
+  i EM31 — po limicie blokady konta przegląd pilny dokłada wersję z limitu.
+- `tests/unit/sync-dziennik-haki.test.mjs` (KH6: liczby wstawek), `tests/unit/sync-zdarzenia-buildery.test.mjs` (B7:
+  klasyfikacja nowych funkcji części a), `tests/unit/sync-dziennik-magazyn.test.mjs` (M17c ×3 przy przeglądzie przy
+  odblokowaniu).
+- Uprząż: `tests/support/okno-magazynu.mjs` (opcja `przeglad` — domyślnie konta i logowania uprzęży oraz metody
+  odblokowania przy zamkniętej bramce; `METODY_ODBLOKOWANIA`), `tests/support/scenariusz-magazynu.mjs` (konta przy
+  zamkniętej bramce), `tests/support/sejf-bez-wstawek.mjs` (licznik odczytów bramki w `Bem_przeglad` i `Bem_zChmury`).
+- e2e `tests/e2e/dziennik-zdarzen-uspienie.spec.mjs` — kolumna `bramka` (tabela wyżej).
+
+Pełny `npm test` i e2e — wyniki w opisie PR.
+
+**Czerwone na bazie** (`origin/audyt` `77b05e6f` z testami i uprzężą tego PR): sync-dziennik-outbox 38 z 40 (zielone z natury: PG10 — bez przeglądu pilnego po `SYNC_DB_DELETED`, PG25 — tryby bez
+kolejki); sync-dziennik-uspienie 12 z 48; sync-dziennik-zapis-bazowy 5 z 15 (liczba odczytów bramki); sync-dziennik-emisja
+4 z 39 (EM2, EM6, EM27, EM31); sync-dziennik-haki 1 z 11; sync-zdarzenia-buildery 1 z 32 (B7); sync-dziennik-magazyn
+0 z 235 (M17c — strażnik regresji); e2e uśpienia 4 z 6 (trzy tryby, wariant bez `navigator.locks`); razem 61 jednostkowych
+i 4 e2e. Test A ≡ B (125) i test pokrycia (73) bez zmian, zielone.
+
+**Mutanty.** 49 mutantów kodu przeglądu, uprzęży i kontroli granicy (brak przeglądu w odblokowaniu albo przegląd po słuchaczach, znacznik z chwili końca, bez marginesu, pierwszy znacznik bez klucza wysyłki albo bez reguły „wszystko”, pokrycie dowolnym wierszem albo tylko wierszem oczekującym, pary jako zbiór kluczy, bez progu, limitu i utrwalenia par, przyjęcie wierszy bez par albo z parą bez chwili wiersza, pary scalania bez warunku kroku albo bez bramki, przegląd poza łańcuchem albo bez czekania na koniec kroku, przegląd pilny także po `SYNC_DB_DELETED`, bez przeglądu pilnego albo z pętlą przeglądów, bez doby, próba poza dobą, znacznik po nieudanym dopisaniu, odczyty bez strzeżonego adaptera, sieroty bez sprawdzenia trybu albo rejestru, sieroty przed bramką, karta bez reguły nośnika, chwila wpisu kosza bez przycięcia, bramka po warunku kolejki, brak klucza eksportu, pary bez wersji, odblokowanie bez sierot, koniec kroku bez czekających przeglądów, dopisania bez rang, uprząż zawsze z przeglądem, silnik bez par scalania, licznik partii z każdego wyniku, pamięć braków niezapisywana, bez pierwszeństwa przed pokryciem, bez zdjęcia po dopisaniu albo bez wpisów spoza okna, nieprzeliczone skróty): 46 zabitych, 3 równoważne (przycinanie par scalania w pamięci — przycina je też zapis do bazy; jedno z kilku sprawdzeń sesji — pozostałe kończą przegląd tak samo; warunek trybu „Zaloguj jednorazowo” w przeglądzie sierot — przegląd w tym trybie nie rusza, warunek zostaje jako osłona).
+
+**Wymagania dla następnych PR.**
+- **E2-PR4.** Drenaż przy odblokowaniu czeka na zakończenie przeglądu (`sweepOutbox()` albo `emissionsSettled()`), potem
+  wysyłka, potem drenaż (plan 3.3, krok 6); po każdym drenażu, który coś scalił, przegląd — żeby znacznik i pamięć par
+  objęły scalone encje; nadawca przy biciu serca woła `sweepOutbox()`, gdy minęła doba; przyjęcie wierszy wyłącznie przez
+  `outboxAccept`; wpisy P-SYNC-SLAD przeglądu (liczby, bez kluczy encji); `markSyncCaughtUp` przy drenażu; budżet
+  wysyłki pierwszego przeglądu (plan 3.6).
+- **E2-PR3b.** Haki H1 i H2: wiersz z haka pokrywa encję (przegląd jej nie dopisze drugi raz).
+- **E2-PR6.** Polityka prywatności, opisując bazę `vilda_sync_<userId>`, wymienia też znacznik przeglądu i pamięć par
+  (identyfikatory encji i chwile, bez treści).
+- **E3-PR0.** Hak echa zmian pochodnych scalania (pamięć par jako punkt wyjścia); literał R2-E3.
+- **Etap 3.** `rewind` cofa znacznik przeglądu i czyści pamięć par.
+- Kolejne PR: nowa chwila zegara w scaleniu — przypadek testu przeglądu (jak PG23); zmiana `vilda_vault.js` poza
+  fragmentem natywnym — przeliczenie skrótów kontroli granicy; nowe miejsce zapisu — emisja w kroku albo reguła
+  „świadomie lokalne” (test pokrycia) i przypadek pokrycia przeglądu (PG8).
+
+**Ograniczenia.** Atrapa IndexedDB i Chromium (WebKit i Firefox niezmierzone, także koszt przeglądu dużego sejfu);
+kolejność zdarzeń obowiązuje w obrębie karty przeglądarki; pamięć par utrwala zakończony przegląd (wymaganie E2-PR4:
+przegląd po drenażu); w teście A ≡ B urządzenia mają sejf w pamięci, więc przegląd kończy się tam na trybie (pokrycie
+przeglądu sprawdza PG8).
+
+**Cofnięcie** = rewert PR (przy zamkniętej bramce nic nie powstaje na dysku; rekordy `przeglad` i `pary` w bazie kolejki
+powstają tylko przy otwartej bramce, a kod sprzed tego PR ich nie czyta; rewert cofa też skróty kontroli granicy).
+
+**Gdzie w kodzie.** `vilda_vault.js`: blok P-DZIENNIK-ZDARZEN, linie 5671–8500 (2830 linii). Część a (6296–6416): `Bev_chwila`, `Bev_LISTY_PRZEGLADU`, `Bev_przeglad`, `Bev_ostatnieScalenie`, `Bev_pary`; w `Bev_EKSPORT` klucz `sweepOutbox: Bem_przegladTeraz`. Część b (7914–8120): stałe przeglądu, `Bob_przeglady`, `Bob_kryte`, `Bob_kryj`, `Bob_cofnij`, `Bob_wysylka`, `Bob_przegladStan`, `Bob_przegladZapisz`, `Bob_przegladProg`, `Bob_przegladNalezny`, `Bob_sieroty`, `Bob_przeglad`; w `Bob_przyjmij` pary z wierszy przyjętych. Część c (8162–8499, 22 funkcje, 18 180 B): `Bem_pary`, `Bem_pilne`, `Bem_poKroku`, `Bem_braki`, `Bem_BEZ_BRAKU`, `Bem_kluczEncji`, `Bem_brak`, `Bem_kolejka`, `Bem_zChmury`, `Bem_przeglad`, `Bem_przegladTeraz`, `Bem_przegladKrok`, `Bem_poBezczynnosci`; zmiany w `Bem_krokKoniec`, `Bem_doLancucha`, `Bem_dopisz`. Poza blokiem: `Bem_przeglad(true)` — pierwsza instrukcja `He`, `Bem_zChmury(t)` — w `Le` po sprawdzeniu kształtu ładunku.
+
+**Wersje.** `vilda_vault.js` 263 → 264, `vilda_chrome.js` 269 → 270 i `vilda_session_bridge.js` 186 → 187 (wstrzykują sejf), SW 1.1.497 → 1.1.498; baza `origin/audyt` `205a4310` (po vildaclinic/vilda-calc#919; projekt i „czerwone na bazie” z `77b05e6f`, po vildaclinic/vilda-calc#917 — ten sam sejf). Bez nowego pliku w pamięci offline.
+
 ## Dziennik zdarzeń: importy partią i zgodność emiterów z testem A ≡ B — uśpione (P-DZIENNIK-ZDARZEN, E2-PR3a3, SW 1.1.494, `vilda_vault.js` 262, 2026-11-09)
 
 **Zmiana kliniczna: NIE** — wzory, progi, jednostki, interpretacje, zapis danych pacjentów, scalanie, format kopii
@@ -21473,7 +21667,7 @@ jest ustawiona przed zapisami).
 
 **Zmiana bez wiersza.** Wpis partii bez wiersza nie wraca do importu; `count` liczy tylko wiersze. Wymaganie dla
 E2-PR3a4: zmianę bez wiersza dokłada przegląd kolejki, a przegląd po pierwszym odblokowaniu konta odtworzonego z kopii
-nie dubluje partii.
+nie dubluje partii — wykonane w E2-PR3a4 (wpis P-DZIENNIK-ZDARZEN, E2-PR3a4, wyżej).
 
 **Test A ≡ B na prawdziwych emiterach.** Zdarzenia w teście pochodzą z prawdziwych emiterów sejfu: kopia sejfu testu
 zapisuje wpisy łańcucha do rejestru (urządzenia testu mają sejf w pamięci, więc bez tej kopii emisja kończyłaby się na
@@ -21543,7 +21737,7 @@ razem 38.
 
 **Wymagania dla następnych PR.**
 - **E2-PR3a4.** Przegląd kolejki dokłada zmiany partii bez wiersza; przegląd po pierwszym odblokowaniu konta odtworzonego
-  z kopii nie dubluje partii.
+  z kopii nie dubluje partii. Wykonane w E2-PR3a4 (wpis wyżej).
 - **E2-PR3b.** Haki H1 i H2 w teście A ≡ B z modelu na emitery (rejestr łańcucha obejmie wtedy scalanie).
 - **E2-PR3c.** Literał K6 na brak utraty; analiza i naprawa różnicy opisu wpisu Kosza po wymianie pełnych kopii (decyzja
   z 2026-11-09).
@@ -21724,7 +21918,8 @@ jednorazowo” i sejf w pamięci — emisja kończy się po bramce, bez bazy kol
 
 **Zmiana bez wiersza.** Wynik dopisania nie wraca do miejsca zapisu. Encja usunięta przed dopisaniem nie daje wiersza
 (jej nagrobek ma własne zdarzenie). Wymaganie dla E2-PR3a4: zmianę bez wiersza dokłada przegląd kolejki
-(`sweepOutbox`); do tego czasu bramka jest zamknięta, a pełna wysyłka działa jak dziś.
+(`sweepOutbox`); do tego czasu bramka jest zamknięta, a pełna wysyłka działa jak dziś. Wykonane w E2-PR3a4 (wpis
+P-DZIENNIK-ZDARZEN, E2-PR3a4, wyżej).
 
 **Przy zamkniętej bramce (co nowego).**
 
@@ -21795,7 +21990,7 @@ odczytów bramki; dwa przypadki strony z elementem o `id` `VILDA_EVENT_LOG` ziel
   `Bob_dopiszZ`, z krokiem wokół importu. Model A ≡ B: nośnik pól karty — dowolny `snap` tej karty w kroku (prawdziwy emiter w „Przywróć”, gdy wizyta
   jest już w karcie, wysyła `snap` wersji przywracanej).
 - **E2-PR3a4.** Przegląd kolejki dokłada zmiany bez wiersza (wyżej), w tym nagrobek klucza dostępu usuniętego przy
-  zablokowanym sejfie.
+  zablokowanym sejfie. Wykonane w E2-PR3a4 (wpis P-DZIENNIK-ZDARZEN, E2-PR3a4, wyżej).
 - **E2-PR3b.** W teście pokrycia wariant „nagrobek starszy u odbiorcy” przy nowej wersji przechodzi z „karta częściowa”
   na brak różnicy po haku `pfull`.
 - **E2-PR4.** Nadawca może czekać na `emissionsSettled` przed wysyłką partii; `syncPush()` w `Yn` według decyzji 7.
@@ -22563,7 +22758,9 @@ P-USUN-KONTO-KARTY; te same w planie: wiersze 6a′, 6b–6d, 7a, 8 i 12 tabeli 
 - **E2-PR3a4.** Przegląd sierot `vilda_sync_*` przez to samo kasowanie kolejki konta (blokada wyłączna, znacznik według
   reguły wyżej), nigdy w trybie „Zaloguj jednorazowo”; odczyty przeglądu przez strzeżony adapter sejfu; wynik
   `SYNC_DB_TIMEOUT` (limit blokady) ustawia przegląd pilny, `SYNC_DB_DELETED` nie; przegląd na początku odblokowania,
-  a ponowienie kasowania zostaje ostatnią instrukcją odblokowania.
+  a ponowienie kasowania zostaje ostatnią instrukcją odblokowania. Wykonane w E2-PR3a4 (wpis P-DZIENNIK-ZDARZEN,
+  E2-PR3a4, wyżej); ponowienie kasowania zostaje po słuchaczach i `go()`, a ostatnią instrukcją odblokowania jest od
+  E2-PR3a1c ponowienie dziennika dostępu (P-USUN-KONTO-KARTY).
 - **E2-PR3c** (decyzja 12.3). Naprawa utraty poprawki wizyty przy „Scal pacjentów” po zdarzeniach zmianą reguły
   scalania: osobny PR z wpisem ALGORITHMS i akceptacją właściciela (decyzja 9); w teście A ≡ B od E2-PR3a3 jako „ZNANA
   UTRATA (zdarzenia)” z pozycją naprawy E2-PR3c (wpisane w E2-PR3a3). Od 2026-11-09 (decyzja właściciela) w E2-PR3c
@@ -22596,7 +22793,7 @@ P-USUN-KONTO-KARTY; te same w planie: wiersze 6a′, 6b–6d, 7a, 8 i 12 tabeli 
   urządzenia), po limicie blokady konta i po nieudanym albo niedokończonym kasowaniu.
 - Od E2-PR3a1b „Usuń konto” nie czeka na drugą kartę z aktualną wersją aplikacji (wpis wyżej); czeka nadal na kartę
   z wersją sprzed E2-PR3a1b albo z otwartym oknem pytania, a kasowanie kolejki czeka wtedy razem z nim.
-- Dopisywanie zmian do kolejki dochodzi w E2-PR3a2 i E2-PR3a3, przegląd kolejki — w E2-PR3a4.
+- Dopisywanie zmian do kolejki dochodzi w E2-PR3a2 i E2-PR3a3, przegląd kolejki — w E2-PR3a4 (wykonane).
 
 **Cofnięcie** = rewert PR. Przy zamkniętej bramce baza kolejki nie powstaje, więc bazy nie trzeba sprzątać. Znacznik
 ponowienia powstaje przy zamkniętej bramce tylko po nieudanym albo niedokończonym kasowaniu; z tym PR zdejmuje go
@@ -23108,7 +23305,7 @@ kasowania (blokada konta, wpis wyżej), a jeden nadawca na konto dochodzi w E2-P
 
 **Błędy i limity.**
 - **Brak miejsca:** transakcja przerywa się w całości i nic częściowego nie zostaje; kod `SYNC_DB_QUOTA`, także przy
-  tworzeniu bazy. Zdarzenie nie trafia wtedy do kolejki; dołoży je przegląd `sweepOutbox` z E2-PR3a.
+  tworzeniu bazy. Zdarzenie nie trafia wtedy do kolejki; dołoży je przegląd `sweepOutbox` z E2-PR3a (wykonane w E2-PR3a4).
 - **Limit 10 s** na otwarcie bazy (`SYNC_DB_TIMEOUT`; spóźnione otwarcie jest zamykane) i na kasowanie (`w-toku`).
 - **Kody bez treści.** Kod błędu bazy powstaje tylko z nazwy błędu (np. `QuotaExceededError` → `SYNC_DB_QUOTA`), nigdy
   z komunikatu. Nieprzewidziany wyjątek daje swój kod (bez kodu — nazwę wyjątku, np. `TypeError`) tylko wtedy, gdy
@@ -23178,14 +23375,14 @@ E3-PR0).
   - Kasowanie klucza `vilda-sync-device-v1:<userId>` razem z kontem, w tym samym miejscu co kasowanie bazy (pytanie
     10.2).
   - Wspólna koordynacja tworzenia i kasowania bazy między kartami (Web Lock na konto). Emitery nie czekają na wynik
-    kolejki w ścieżce zapisu. Brak miejsca przy dopisaniu dokłada przegląd `sweepOutbox`.
+    kolejki w ścieżce zapisu. Brak miejsca przy dopisaniu dokłada przegląd `sweepOutbox` (wykonane w E2-PR3a4).
   - Zapis bazowy z tego PR zostaje bez zmian poza liczbą odczytów bramki (= liczba emisji) i krokami kasowania
     w `removeUser`.
   - Rejestracja i logowanie kluczem dostępu (WebAuthn) oraz hak `VildaPersistence` (poza zapisem bazowym z tego PR):
     test, że przy zamkniętej bramce kończą się na bramce, bez otwarcia bazy kolejki, szyfrowania zdarzeń i żądań.
   - Wykonane w E2-PR3a2 (wpis P-DZIENNIK-ZDARZEN, E2-PR3a2, wyżej): emitery nie czekają na wynik kolejki, zapis bazowy
     zmienia tylko liczba odczytów bramki, rejestracja i logowanie kluczem dostępu oraz hak `VildaPersistence` kończą się
-    na bramce (U5). Brak miejsca przy dopisaniu — przegląd w E2-PR3a4.
+    na bramce (U5). Brak miejsca przy dopisaniu — przegląd w E2-PR3a4 (wykonane).
 - **E2-PR4.**
   - Bramka rozszerzona o flagę `vilda-event-log-v1` i `features.events`. Nadawca sprawdza tryb konta także z wpisu
     rejestru.
@@ -23654,7 +23851,7 @@ literał na wynik zgodny.
   - Wykonane w E2-PR3a2 (wpis P-DZIENNIK-ZDARZEN, E2-PR3a2, wyżej): kolejność w kroku (kroki operacji złożonych),
     nośnik pól karty (`snap` także w „Przywróć”, gdy wizyta jest już w karcie), nagrobek notatki przy „Usuń pacjenta”
     (sprawdzone: powstaje w usunięciu notatki i w odnowieniu nagrobka, bez osobnej emisji). Pomiar `sweepOutbox` —
-    E2-PR3a4.
+    E2-PR3a4: wykonane (wpis P-DZIENNIK-ZDARZEN, E2-PR3a4, wyżej — rekordy pochodne scalania).
 - **E2-PR3b.**
   - Hak H1: przegrany nagrobek karty → pełna karta (`pfull`, `setId` z karty i chwili nagrobka, dedup).
   - Hak H2 „zawsze do kolejki”: notatka, której nagrobek zniknął w partii i której rekord zmieniło scalanie, idzie do
