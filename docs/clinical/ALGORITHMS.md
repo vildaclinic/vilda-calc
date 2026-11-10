@@ -21534,6 +21534,125 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
+## Poprawka albo gwiazdka wizyty ze starej karty trafia do karty scalonej na urządzeniu, które scaliło karty (P-SYNC-WLASCICIEL, E2-PR3c2, SW 1.1.504, `vilda_vault.js` 268, 2026-11-10)
+
+**Zmiana kliniczna: tak** — wzory, progi, jednostki i interpretacje bez zmian. Zmienia się, z jaką treścią (pomiary, masa,
+wzrost, gwiazdka) zostaje wizyta w karcie scalonej po synchronizacji na urządzeniu, które zrobiło „Scal pacjentów”, gdy
+na drugim urządzeniu — jeszcze bez wiedzy o scaleniu — tę wizytę w starej karcie poprawiono, przypięto albo zmieniono
+jej wiersz pomiaru. Dotąd urządzenie scalające pomijało całą starą kartę z ładunku drugiego urządzenia i dostawało
+zmianę dopiero wtedy, gdy drugie urządzenie samo scaliło jego kopię i odesłało wynik; gdy drugie urządzenie już się nie
+synchronizowało (wyłączone, starsza aplikacja), zmiana do urządzenia scalającego nie docierała. Teraz przyjmuje ją od
+razu — ten sam wynik, który dotąd dawała dopiero druga wymiana pełnych kopii. Serwer, `vilda_sync.js`, schemat
+IndexedDB, format ładunku, nagrobków i zdarzeń, API `window.VildaVault`, import pliku i „Scal kopię konta” bez zmian.
+
+**Decyzja właściciela.** Decyzja 4 z 2026-11-10 (pytania E2-PR3c, „1–8 tak”; rozdział 6 planu): urządzenie, które
+scaliło karty, przyjmuje od razu późniejszą poprawkę albo gwiazdkę wizyty zrobioną na drugim urządzeniu w starej karcie
+(zmiana działania dziś, na korzyść); import pliku i kopii konta bez tej zmiany. Plan: wiersz 7a2 tabeli „Podział
+etapu 2”.
+
+### E2-PR3c2
+
+**Co było** (`audyt` `816282da`; prawdziwy sejf, magazyny w pamięci, dane fikcyjne). A: karty X (wizyty x1, x2) i Y,
+pełna synchronizacja z B. B — bez wiedzy o scaleniu — poprawia x1 z zachowaną chwilą zapisu, przypina x2 albo edytuje
+wiersz pomiaru x2 w starej X; A robi „Scal pacjentów” X → Y. Chwila zapisu X na B zostaje sprzed scalenia, więc na A
+wygrywa nagrobek X (zbiór N).
+- A scala pełną kopię B, B nie scala A: na A zmiany z B nie ma (x1 z dawną treścią, x2 bez gwiazdki); tak samo po delcie
+  karty X z B i po dwóch scaleniach X → Y → Z.
+- A scala kopię B, potem B kopię A: B ma zmianę (wyjątek „zabierz”), A — dopiero po następnej wymianie.
+- Dziennik zdarzeń (po włączeniu; test A ≡ B): K6 — po samych zdarzeniach A 20 kg, B 27 kg do pełnej wysyłki (znana
+  różnica z E2-PR3c1); w przebiegach katalogu Kosza po „Scal pacjentów” (`pin-scal`, `popr-scal`, `npret-pin` C←P,C←K)
+  urządzenie scalające bez gwiazdki albo poprawki do pełnej wymiany.
+
+**Reguła.** `Le`, gałąź karty z ładunku przegranej z nagrobkiem pacjenta (zbiór N): po decyzji kosza
+(`Bsl_koszZLadunku`, bez zmian) i tylko poza importem — `Bsw_zKartyZNagrobkiem`. Dla każdej wersji S tej karty z treścią:
+- wersja z wpisem kosza albo retencji (`ctx.mapa`) — bez zmian (decyduje kosz: P-KOSZ-USUWANEJ-KARTY, P-KOSZ-PO-KLUCZU);
+- tutejszy rekord tej wersji (`Bsw_wersjaLokalna`) leży pod inną kartą G niż karta z ładunku, G istnieje i nie należy do
+  N (karta, która zaraz zniknie, nie przyjmuje);
+- ładunek wnosi późniejszą treść albo późniejszy rejestr gwiazdki (`Bsw_wklad`) — jak w istniejącej decyzji „treść”;
+- wtedy decyzja „treść” idzie do fazy przeniesień (`Bsw_odloz` → `Bsw_poprawTresc`): blokady obu kart w kolejności
+  rosnących id, świeży odczyt i ponowne `Bsw_wklad`, rekord `Bsw_rekordW3` z tutejszą kartą — cała nowsza kopia (`rev`
+  = wyższa z dwóch) albo rekord złożony (treść z jednej kopii, gwiazdka z drugiej, `rev` = wyższa + 1); chwila zapisu
+  wersji tutejsza (bieżąca wersja G się nie zmienia), licznik i chwila zapisu karty G bez zmian, nagłówek G
+  z najnowszej wersji.
+
+Stara karta nie wraca, wizyt nie przybywa, nagrobki bez zmian. Wersja, której tu nie ma (np. po „Usuń pacjenta” karty
+scalonej), nie wraca.
+
+**Sesja (P-CHMURA-OPIS).** Odczyty reguły (wersja, karta G) i odłożenie decyzji — po sprawdzeniu sesji scalania; zapisy
+w fazie przeniesień jak w decyzji „treść”. Zmiana sesji w trakcie kończy scalanie `SESSION_CHANGED` bez zapisu.
+
+**Zmiana działania dziś** (pełne kopie i delty, bez dziennika zdarzeń):
+- urządzenie scalające przyjmuje poprawkę, gwiazdkę albo edycję wiersza od razu — z pełnej kopii, z delty starej karty
+  z drugiego urządzenia, także po dwóch scaleniach X → Y → Z; dotąd dopiero po drugiej wymianie, a bez niej wcale;
+- poprawka z drugiego urządzenia i gwiazdka dana tu po scaleniu łączą się w rekord złożony (treść z poprawki, gwiazdka
+  stąd), tak samo na obu urządzeniach;
+- późniejsza zmiana tutejsza wygrywa jak dotąd; wizyta w Koszu zostaje w Koszu (decyduje kosz);
+- `npret-kosz3-P` (P-KOSZ-PO-KLUCZU): w kolejności K←P,K←C przypięta wizyta zostaje pod Y na trzech urządzeniach
+  (dotąd „x w żadnej karcie”); ograniczenie zostaje tylko w K←C,K←P (wizyta ma tam już wpis retencji);
+- `E4a-Cpin-przed` (P-KOSZ-USUWANEJ-KARTY): w C←P,C←K wpis Kosza z gwiazdką w treści i `rev` 4 (jak dotąd w P←C,P←K);
+  widok Kosza (74*) ten sam;
+- wynik końcowy przy dwóch aktywnych urządzeniach — ten sam co dotąd (prawa, flota z aplikacją 221, fuzz — zielone).
+
+**Dziennik zdarzeń (uśpiony).** Literały testu A ≡ B na korzyść: K6 — bez różnicy także po samych zdarzeniach (bez
+etykiety „ZNANA RÓŻNICA”); `npret-pin` C←P,C←K, `pin-scal` i `popr-scal` (obie kolejności) — po samych zdarzeniach stan
+= stan samych blobów; skrzyżowane „Scal pacjentów” z notatką — bez różnicy `rev` wersji karty P. Bez zmian: `npret-pin`
+K←C,P←K i `npret-K` (wersja z wpisem retencji), lista zmian zachowania p. 5, znane różnice, model haków. Bez nowego haka
+scalania: przyjęta tu zmiana nie dopisuje się do kolejki (pozostałe urządzenia dostają ją z koperty drugiego urządzenia
+albo przy pełnej wysyłce).
+
+**Import.** „Importuj pacjenta z pliku” i „Scal kopię konta” — bez tej reguły (decyzja 4); `Le` woła ją tylko poza
+importem.
+
+**Testy.** Dane wyłącznie fikcyjne, bez PESEL. Nowe i zmienione:
+- `tests/unit/sync-wlasciciel-wersji.test.mjs` — 33 nowe przypadki KS1–KS9 (362, było 329), każdy z trzech zmian
+  na B (korekta x1, przypięcie x2, edycja wiersza x2) i w obu kolejnościach identyfikatorów kart: KS1 — A scala pełną
+  kopię B, B nie scala A (zmiana od razu pod Y, bieżąca wersja Y bez zmian); KS2 — wymiana w obie strony (zmiana na
+  obu po jednej wymianie, kolejna wymiana bez zmian); KS3 — delty na żywo (delta karty X z B na A, delty Y i nagrobka X
+  na B); KS4 — rekord złożony (korekta B, gwiazdka A po scaleniu: `rev` = wyższa + 1 na obu); KS5 — dwa scalenia
+  X → Y → Z; kontrole zielone na bazie: KS6 (późniejsza korekta tutejsza zostaje), KS7 (wizyta w Koszu zostaje w Koszu),
+  KS8 („Usuń pacjenta” karty scalonej — stara karta nie wraca); KS9 — strażnik źródła (wywołanie w `Le` po decyzji kosza
+  i tylko poza importem, warunki reguły, decyzja „treść”, sprawdzenia sesji przed odczytami i przed odłożeniem).
+- `tests/unit/sync-dziennik-wlasnosciowy.test.mjs` (test A ≡ B, 132 przypadki) — literały wyżej i nagłówek.
+- `tests/unit/kosz-po-kluczu.test.mjs` — `npret-kosz3-P`: ograniczenie tylko w K←C,K←P.
+- `tests/unit/kosz-usuwanej-karty.test.mjs` — `E4a-Cpin-przed`: `rev` 4 z gwiazdką w treści w P←C,P←K i C←P,C←K.
+- `tests/unit/kosz-usuwanej-karty-sesja.test.mjs` — strażnik S6 na nowy tekst gałęzi N w `Le`.
+
+Pełny `npm test` i e2e — wyniki w opisie PR.
+
+**Czerwone na bazie** (`origin/audyt` `816282da` z testami tego PR): 38 — `sync-wlasciciel-wersji` 27 (KS1–KS5,
+strażnik KS9), test A ≡ B 7, `kosz-po-kluczu` 2 (`npret-kosz3-P` K←P,K←C, oba rodzaje rund), `kosz-usuwanej-karty` 1
+(`E4a-Cpin-przed` C←P,C←K), `kosz-usuwanej-karty-sesja` 1 (S6). Zielone z natury: kontrole KS6–KS8 i pozostałe
+przypadki.
+
+**Mutanty.** (wynik w następnym commicie)
+
+**Kontrola granicy obrazu sejfu.** Przeliczone skróty `BASE`, `baseVaultSHA256` i `integratedVaultSHA256` (reguła
+z E2-PR3a2, decyzja z 2026-11-09; liczone po zdjęciu zmiany Klirensu, jak w kontroli od vildaclinic/vilda-calc#900);
+fragment natywny, haki, moduły i paczka bez zmian.
+
+**Ograniczenia.**
+- Tylko wersje bez wpisu kosza i retencji: przypięta wizyta, którą urządzenie scalające zna już jako przyciętą
+  (`npret-kosz3-P` K←C,K←P, `npret-K`), dalej zależy od reguły przeżycia retencji (ograniczenia bez zmian).
+- Tylko wersje, które leżą tu pod istniejącą kartą: gdy kartę scaloną usunięto („Usuń pacjenta”), zmiana ze starej
+  karty nie wraca.
+- Koszt: jeden odczyt wersji po kluczu na wersję karty z ładunku przegranej z nagrobkiem (pełne kopie niosą tylko karty
+  żywe u nadawcy, więc to rzadkie), odszyfrowanie tylko przy wersji leżącej tu pod inną kartą (`kosz-po-kluczu-koszt`
+  zielony).
+- Magazyny w pamięci w testach jednostkowych; IndexedDB i Chromium — e2e synchronizacji i scalania.
+
+**Wymagania dla następnych PR.**
+- **E2-PR3c3, E2-PR3c4, E2-PR3c5.** Literały testu A ≡ B (p. 5, p. 6, lista zmian zachowania) i `kosz-po-kluczu`
+  (`npret-kosz3-P`) — w postaci po tym PR.
+- **E3-PR0.** Echo zmian pochodnych scalania obejmuje też zmianę przyjętą tą regułą (bez nowego haka w etapie 2).
+
+**Cofnięcie** = rewert PR (bez migracji: rekordy zapisane regułą to zwykłe rekordy wersji; rewert cofa też skróty
+kontroli granicy).
+
+**Gdzie w kodzie.** `vilda_vault.js`: `Bsw_zKartyZNagrobkiem` (5639, obok `Bsl_koszZLadunku`, 5621); wywołanie w `Le`
+(gałąź `N.has(F.patientId)`); faza przeniesień `Bsl_przeniesWersje` (4091) i `Bsw_poprawTresc` (4262) bez zmian.
+
+**Wersje.** `vilda_vault.js` 267 → 268, `vilda_chrome.js` 273 → 274 i `vilda_session_bridge.js` 190 → 191 (wstrzykują sejf), SW 1.1.503 → 1.1.504; baza `origin/audyt` `816282da` (po vildaclinic/vilda-calc#924). Bez nowego pliku w pamięci offline.
+
 ## Dziennik zdarzeń: zdarzenie usunięcia karty po „Scal pacjentów” niesie kartę scaloną — uśpione (P-DZIENNIK-ZDARZEN, E2-PR3c1, SW 1.1.503, `vilda_vault.js` 267, 2026-11-10)
 
 **Zmiana kliniczna: NIE** — wzory, progi, jednostki, interpretacje, zapis danych pacjentów, reguły scalania, format
