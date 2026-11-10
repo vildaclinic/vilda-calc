@@ -13018,6 +13018,20 @@ Nigdy odwrotnie: rozwinięcie karty **nie dodaje** DS pacjentowi, który go w re
 
 **Kotwice syntetyczne.** Chłopiec 144 mies., 137,688 cm i 39,001 kg → 50. centyl DS obu miar. Dziewczynka 144 mies., 137,855 cm i 39,053 kg → 50. centyl DS obu miar. Testy wywołują produkcyjne odczyty i generator, obejmują granice 24/36 mies., obie płcie, przełączanie rozpoznania, podgląd/pełny ekran i brak zastępczej siatki. Korekta dotyczy źródła wizualizacji i odczytów interaktywnych; istniejące obliczenia karty pacjenta oraz pliki danych pozostają bez zmian.
 
+### P-KREATOR-ZEMEL — adnotacje PRO na istniejących siatkach DS (2026-11-10)
+
+**Zakres zaakceptowany przez właściciela.** Checkbox `clinical.downSyndrome` w Karcie pacjenta wybiera dla Kreatora PRO istniejące siatki wzrostu i masy Zemel 2015. Tytuł wskazuje zespół Downa i źródło. Dostępne są dotychczasowe komentarze, strzałki, etykiety, klamry, edycja i przesuwanie ramek. Podgląd i PDF korzystają z jednego producenta strony. Po wyłączeniu rozpoznania wraca wybrane źródło populacji ogólnej; nie dodano pytania ani selektora norm.
+
+**Źródło i populacja.** Zemel BS, Pipan M, Stallings VA i wsp., „Growth Charts for Children With Down Syndrome in the United States”, *Pediatrics* 2015;136(5):e1204–e1211, PMID 26504127, DOI [10.1542/peds.2015-1652](https://doi.org/10.1542/peds.2015-1652). Obie płcie, istniejąca oś 0–240 miesięcy, wzrost/długość w cm, masa w kg. `VildaDsCentileModels.build` dostarcza te same krzywe i zakresy co dotychczasowy podgląd DS. Pozostają odziedziczone reguły 36 miesięcy i pierwszego wiersza długości przy 0 miesiącach z P-DS-LIVE. Nie zmienia się dobór LMS, interpolacja ani odczyt centyla/SDS. Brak danych DS nie uruchamia siatki populacji ogólnej.
+
+**Zapis i geometria.** Populacja krzywych jest odrębna od istniejącego kontekstu adnotacji pacjenta. Kreator wybiera ten sam magazyn co podgląd DS: `growth` dla OLAF/Palczewskiej 1–18 oraz dotychczasowe konteksty WHO/Palczewskiej niemowlęcej. Starsze adnotacje pozostają dostępne, bez osobnej kopii pomiarów. Geometria DS nie zastępuje geometrii OLAF/Palczewskiej potrzebnej do odczytu dawnych przesunięć pikselowych. Położenia współdzielonego magazynu nadal zapisują wiek i wartość w jednostkach danych. Eksport DS bez adnotacji nie tworzy pustego magazynu w rekordzie. Zmiana pacjenta unieważnia opóźniony eksport i porzuca edytor bez zapisywania do kolejnej osoby.
+
+**Przejęcie ramki.** Edytor pamięta identyfikator pacjenta oraz obiekt jego magazynu adnotacji. Potwierdzenie DS samo w sobie nie identyfikuje osoby: przy przejęciu kolejnego pacjenta DS stara flaga może być nadal prawdziwa, a ramka nie emituje `patient-loaded`. `ds-source-state` i `persist-restored` zamykają wtedy poprzedni edytor; jego zdarzenia interakcji także sprawdzają właściciela. Niedokończona etykieta nie jest wycofywana w magazynie kolejnej osoby, również przy kolizji identyfikatorów. Ten scenariusz korzysta w E2E z rzeczywistego `applyLoadedData(..., { isSessionRestore: true })` oraz natywnego odczytu kolejnej zaszyfrowanej karty DS.
+
+**Ograniczenia.** Istniejące wykresy wzrostu i masy, jedna strona A4 w pionie; BMI i obwód głowy nie są nowymi rodzajami Kreatora. Na DS nie rysuje się MPH i nie ma opcji jego włączenia. Pozostaje bramka PRO.
+
+**Przykład i walidacja.** Fikcyjny chłopiec 144 mies., 130 cm, 35 kg: checkbox DS → krzywe Zemel 0–240 mies.; etykieta w (144 mies., 130 cm) zachowuje kotwicę oraz ręczne położenie po zapisie i F5. Podgląd i PDF mają identyczne teksty i współrzędne adnotacji. `zemel-creator.test.mjs` porównuje wszystkie próbki krzywych obu płci przy 0/35/36/240 mies.; E2E `kreator-zemel*.spec.mjs` obejmują checkbox, adnotacje, zapis, dotyk, PDF i granice wieku. `centile-live-offline.spec.mjs` obejmuje adnotację i PDF po zimnym starcie bez sieci. Wpływ funkcjonalny: poprawny wybór istniejących krzywych w Kreatorze, bez zmiany norm i obliczeń klinicznych.
+
 ### GROWTH-LMS-DS — siatki zespołu Downa (Zemel 2015)
 
 | Pozycja | Wartość |
