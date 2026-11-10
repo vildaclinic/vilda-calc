@@ -21582,7 +21582,8 @@ tutejsza), a nagrobek usuwał potem X razem z nią.
   samym pełnym kopiom; po samych zdarzeniach przypięta wizyta jest pod Y na urządzeniu, które ją przypięło.
 - Nowe przebiegi katalogu kosza `pin-scal` (gwiazdka) i `popr-scal` (poprawka) — bez utraty, równe samym pełnym kopiom.
 - K6 — bez utraty po pełnej wymianie (poprawka zostaje na obu urządzeniach); po samych zdarzeniach zostaje różnica treści
-  wizyty do pełnej wysyłki — „ZNANA RÓŻNICA (zdarzenia; naprawa: E2-PR3c2)” (strona urządzenia, które scaliło karty).
+  wizyty do pełnej wysyłki — „ZNANA RÓŻNICA (zdarzenia; naprawa: E2-PR3c2)” (strona urządzenia, które scaliło karty);
+  od E2-PR3c2 bez różnicy także po samych zdarzeniach (wpis P-SYNC-WLASCICIEL, E2-PR3c2, wyżej).
 - R2-E3 — bez różnicy także w zdarzeniach (dotąd „ZNANA RÓŻNICA”, naprawa planowana w E3-PR0; kolejność „najpierw
   wizyty” bez zmian).
 
@@ -21625,6 +21626,7 @@ bazie (model jest w teście, haki sejfu te same).
 **Wymagania dla następnych PR.**
 - **E2-PR3c2.** Strona urządzenia, które scaliło karty: poprawka albo gwiazdka wizyty ze starej karty z drugiego
   urządzenia trafia do tej wizyty w karcie scalonej (decyzja 4 z 2026-11-10); literał K6 w zdarzeniach na brak różnicy.
+  Wykonane w E2-PR3c2 (wpis wyżej).
 - **E2-PR4.** Wiersz `oversize` koperty `ptomb` z kartą scaloną — pominięty w wysyłce bez blokowania kolejki (jak każdy
   `oversize`); wpisy P-SYNC-SLAD liczbą.
 - **E2-PR5.** Licznik wierszy `oversize` w Ustawieniach obejmuje też takie koperty.
@@ -21834,7 +21836,8 @@ Po scaleniu E2-PR3b warunek decyzji 10 („test właściciela po PR ze zmianami 
   pomiędzy); budżet wysyłki dużej karty (plan 3.6); wpisy P-SYNC-SLAD haków (liczby, bez kluczy encji).
 - **E2-PR3c.** Opcjonalnie `ctx.pelny`; literał K6 i pozostałe „ZNANE UTRATY” na brak utraty. Od 2026-11-10 E2-PR3c
   dzielony na E2-PR3c1–E2-PR3c5 (decyzje z 2026-11-10): `ctx.pelny` bez zmian; K6 po pełnej wymianie, `npret-pin`
-  i `npret-K` — wykonane w E2-PR3c1 (wpis wyżej); K6 w zdarzeniach — E2-PR3c2; R3-E1 i R3-E2 — E2-PR3c3.
+  i `npret-K` — wykonane w E2-PR3c1 (wpis wyżej); K6 w zdarzeniach — wykonane w E2-PR3c2 (wpis wyżej); R3-E1 i R3-E2 —
+  E2-PR3c3.
 - **E3-PR0.** Echo zmian pochodnych scalania (pamięć par jako punkt wyjścia).
 - **Etap 3.** `partialSince` (odbiorca, znak w UI, lista w Ustawieniach, `pfull` ze scalania karty z `partialSince`).
 - Kolejne PR: nowe miejsce zapisu w scalaniu — emisja albo reguła „świadomie bez haka” (tabela wyżej) i przypadek
@@ -22180,7 +22183,8 @@ razem 38.
   w E2-PR3b (wpis wyżej).
 - **E2-PR3c.** Literał K6 na brak utraty; analiza i naprawa różnicy opisu wpisu Kosza po wymianie pełnych kopii (decyzja
   z 2026-11-09). Od E2-PR3c1 (wpis P-DZIENNIK-ZDARZEN, E2-PR3c1): K6 bez utraty po pełnej wymianie, w zdarzeniach —
-  E2-PR3c2; różnica opisu wpisu Kosza — przyczyna ustalona, naprawa w E2-PR3c5 (decyzja z 2026-11-10).
+  wykonane w E2-PR3c2 (wpis wyżej); różnica opisu wpisu Kosza — przyczyna ustalona, naprawa w E2-PR3c5 (decyzja
+  z 2026-11-10).
 - **E2-PR4.** Nadawca słucha `onBulkChange`; budżet wysyłki przy dużej partii (plan 3.6).
 - **E3-PR0.** Literał R2-E3.
 - Kolejne PR zmieniające `vilda_vault.js` poza fragmentem natywnym — przeliczenie skrótów kontroli granicy; nowe miejsce
@@ -23205,7 +23209,8 @@ P-USUN-KONTO-KARTY; te same w planie: wiersze 6a′, 6b–6d, 7a, 8 i 12 tabeli 
   scalania: osobny PR z wpisem ALGORITHMS i akceptacją właściciela (decyzja 9); w teście A ≡ B od E2-PR3a3 jako „ZNANA
   UTRATA (zdarzenia)” z pozycją naprawy E2-PR3c (wpisane w E2-PR3a3). Od 2026-11-09 (decyzja właściciela) w E2-PR3c
   także analiza i naprawa różnicy opisu wpisu Kosza po wymianie pełnych kopii (wpis E2-PR3a3). Od 2026-11-10 w pięciu
-  PR (E2-PR3c1–E2-PR3c5, decyzje z 2026-11-10): K6 po pełnej wymianie — wykonane w E2-PR3c1, w zdarzeniach — E2-PR3c2,
+  PR (E2-PR3c1–E2-PR3c5, decyzje z 2026-11-10): K6 po pełnej wymianie — wykonane w E2-PR3c1, w zdarzeniach — wykonane
+  w E2-PR3c2,
   opis wpisu Kosza — E2-PR3c5.
 - **E2-PR4.**
   - Kasowanie kolejki konta przy istniejącym wpisie rejestru — ponowienie przy odblokowaniu, kasowanie przy zmianie
@@ -24264,7 +24269,7 @@ literał na wynik zgodny.
 - **„ZNANA UTRATA (zdarzenia)” K6** (od E2-PR3a3 w teście): poprawka wizyty z drugiego urządzenia sprzed „Scal
   pacjentów” na pierwszym ginie po zdarzeniach i pełnej wymianie; same pełne kopie ją zachowują. Naprawa: E2-PR3c
   (pytanie 12.3). Od E2-PR3c1 bez utraty po pełnej wymianie; po samych zdarzeniach zostaje różnica treści wizyty do
-  pełnej wysyłki — „ZNANA RÓŻNICA (zdarzenia; naprawa: E2-PR3c2)”.
+  pełnej wysyłki — „ZNANA RÓŻNICA (zdarzenia; naprawa: E2-PR3c2)”; od E2-PR3c2 bez różnicy także po samych zdarzeniach.
 - **„ZNANA RÓŻNICA” R5-E1:** przy trzech urządzeniach wizyta jest w karcie na jednym, a w Koszu na drugim, do pełnej
   wysyłki; po niej jest w Koszu na wszystkich. Naprawa: E3-PR0.
 - **„ZNANA UTRATA” R3-E1:** po dwóch wskrzeszeniach tej samej notatki na dwóch urządzeniach późniejszy tekst ginie na
@@ -25249,7 +25254,7 @@ s4d7 i `cel.md`; widok: karty z wersjami, kosz, nagrobki pacjentów; m1, m2 — 
 | npret-kosz3-K | jak npret-pin, K daje x3 do kosza pod Y | rozjazd 16/16; w 6/16 tylko K z x 23 | **Y[…, x 23\*], kosz x3** |
 | npret-nowaW | jak npret-pin, karta docelowa W nowa (P i C jej nie znają) | rozjazd 16/16; w 6/16 tylko K z x 23 | **W[…, x 23\*]** |
 | E4a-ret-pin | P: x → 74 i gwiazdka; K: X → Y → Z, retencja przycina x (`kosz-usuwanej-karty.test.mjs`) | x w żadnej karcie 8/8 | **karta Z 74\* w 8 z 8** |
-| npret-kosz3-P (ograniczenie) | P: gwiazdka x i kosz x3 w X; C: retencja X; K: X → Y | rozjazd 16/16; w 6/16 tylko K z x 23 | Y[…, x 23\*] w 12/16; w 4/16 x w żadnej karcie (niżej) |
+| npret-kosz3-P (ograniczenie) | P: gwiazdka x i kosz x3 w X; C: retencja X; K: X → Y | rozjazd 16/16; w 6/16 tylko K z x 23 | Y[…, x 23\*] w 12/16; w 4/16 x w żadnej karcie (niżej) *(Aktualizacja 2026-11-10, E2-PR3c2: Y[…, x 23\*] w 14/16, x w żadnej karcie tylko w K←C,K←P)* |
 | E4a-Cpin, -przed, kontrola-Cpin | P: x → 74 w X; K: scalenia, K→C; C przypina x pod Z (z koszem K albo bez) | 74\* albo 23\* zależnie od kolejności | **74\* w 8 z 8** (`kosz-usuwanej-karty.test.mjs`) |
 | E4b-bez-kosza, PRZ0, PRZ, E1-dwa (kontrole) | — | — | bez zmian |
 | kosz-po-2 (ograniczenie) | K: X → Y → Z; C: x → 74 w X; P (bez wiedzy): kosz x w X | K x pod Z (23 albo 74) w 16/16 | P i K bez x, kosz 74; C w 8/16 X[x 74] |
@@ -25352,7 +25357,8 @@ wobec 320 na 230); bez wpisu przycięcia — 0; 0 zapisów w stanie zbieżnym.
   urządzenie, które ją przypięło albo poprawiło, i tylko wtedy, gdy wie, dokąd scalono kartę. Nie wie, gdy żadna inna
   wizyta starej karty nie doszła do karty scalonej: urządzenie scalające zna już przycięcie i kosz (albo przycięcie)
   wszystkich pozostałych wizyt starej karty, zanim to urządzenie zobaczy jego ładunek (npret-kosz3-P: 4 z 16
-  przebiegów; łańcuch Z → X przed przycięciem: 4 z 8), albo nagrobek scalenia przyszedł deltą na żywo przed wpisem
+  przebiegów, od E2-PR3c2 2 z 16 — w kolejności K←P,K←C urządzenie scalające przyjmuje gwiazdkę z ładunku do wizyty
+  w karcie scalonej, bo nie zna jeszcze przycięcia; łańcuch Z → X przed przycięciem: 4 z 8), albo nagrobek scalenia przyszedł deltą na żywo przed wpisem
   przycięcia. Wtedy wizyta ginie na wszystkich urządzeniach, jak w pierwszej wersji tej zmiany (230: zostawała tylko na
   urządzeniu scalającym, ze starą treścią i bez gwiazdki, albo — w części kolejności — z gwiazdką na trzech;
   pierwsza wersja tej zmiany: x w żadnej karcie w 8 z 16).
@@ -25605,6 +25611,7 @@ kolejności ten sam pełny stan na trzech, stan stabilny, 0 zapisów listy, wers
 | E4a-kontrola-Cpin | jak E4a-Cpin bez kosza | karta Z 74\* w 3 z 8, 23\* w 5 z 8 | bez zmian |
 
 *(Aktualizacja 2026-10-28, P-KOSZ-PO-KLUCZU: E4a-Cpin, E4a-Cpin-przed i E4a-kontrola-Cpin — 74\* w 8 z 8: wersja wspólna dwóm kartom według W3.)*
+*(Aktualizacja 2026-11-10, E2-PR3c2: w E4a-Cpin-przed wpis Kosza z gwiazdką w treści i `rev` 4 w P←C,P←K oraz C←P,C←K, w pozostałych 6 z 8 — `rev` 3, gwiazdka tylko w rejestrze wpisu; widok Kosza 74\* bez zmian.)*
 
 Przerwane scalenie, sesja i błąd zapisu (`tests/unit/kosz-usuwanej-karty-sesja.test.mjs`):
 - zalogowanie od nowa zaraz po usunięciu karty X na urządzeniu z poprawką — scalenie kończy się `SESSION_CHANGED` bez
