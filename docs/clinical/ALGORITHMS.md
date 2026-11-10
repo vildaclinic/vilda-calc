@@ -32446,6 +32446,89 @@ ale nie zapisał stosu wywołań zmiany pola. Piętnaście prób jego oryginalne
 kolejności nie powtórzyło usterki. Deterministyczny test dowodzi opisanej luki;
 nie identyfikuje po fakcie dokładnego wywołania ze starego przebiegu CI.
 
+### P-PERSIST-CURRENT-AGE — odroczony autosave nie usuwa wieku, masy ani wzrostu bieżącego formularza, 2026-11-10
+
+**Problem.** W CI (odłamek 5/8) przypadki `hormone-lifespan-amh-age-context.spec.mjs`
+„known GA32…” i „M AMH … at 320px” kończyły się na przeliczniku kontekstem AMH
+`ageYears: null`, `ageUpperYears: null`, `ageLabel: ""` przy poprawnych `preterm`
+i `sourceStatus: 'ready'`. Ekran pokazywał „Uzupełnij wiek pacjenta.” przez całe
+5 s oczekiwania, a nagłówek przelicznika w zapisie przebiegu — „Kobieta”, bez wieku.
+Przyczyna jest w kodzie produkcyjnym, nie w samym teście. To ta sama luka co
+P-PERSIST-CURRENT-NAME, tylko dla pól podstawowych:
+
+1. kopia `L` w `vilda_persist_runtime.js` powstaje przy pierwszym **przyjętym**
+   zdarzeniu pola z bieżącego korzenia `sharedUserData`. Wartości `age`, `ageMonths`,
+   `weight`, `height` poznaje potem tylko z przyjętych zdarzeń;
+2. data urodzenia ustawia lata i miesiące z kodu (`vilda_dob_age.js`,
+   `ustawZPowiadomieniem`). Gdy pauza autosave po wczytaniu pacjenta kończy się między
+   tymi dwoma zdarzeniami, oba zapisujące odrzucają lata, a przyjmują miesiące.
+   Przy miesiącach `userData.js` publikuje cały formularz (`age: "0"`, `ageMonths: "4"`),
+   a `L` dostaje tylko miesiące;
+3. timer autosave, a potem `pagehide`, zapisuje `L` = `{ageMonths: "4", sex: "F"}`
+   i usuwa wiek z korzenia. Przelicznik nie ma wtedy wieku (`readShared()`). Pamięć dni
+   (`VildaLabNeonatalContext.read`) nie przechodzi `sameForm` (lata `"0"` wobec pustych),
+   więc zostaje tylko wiek ciążowy z rekordu. Stan jest trwały: na przeliczniku nic nie
+   zapisuje wspólnych pól ponownie.
+
+Test czekał przed nawigacją na pamięć dni, wspólne pola i sesję główną. W chwili
+sprawdzenia wspólne pola były pełne; usunął je dopiero późniejszy zapis kolejki.
+Dowód: sonda obserwująca rzeczywiste zapisy `sessionStorage` (bez zmiany danych
+przekazywanych między modułami) odtworzyła lokalnie dokładnie wynik z CI —
+`{sex: "F"}` i `{ageMonths: "4", sex: "F"}` — przy spowolnieniu CPU 2× i czterech
+workerach. Ostatni zapis usuwający wiek pochodził z `x()` (timer i `pagehide`).
+Ta sama kolejka przy każdym wczytaniu usuwa też na ok. 3,2 s wiek, masę i wzrost
+zapisane z rekordu przez `syncSharedUserDataFromLoadedData`, do ponownego rozesłania
+pól przez `custom-fixes.js`.
+
+**Naprawa.** Po dotychczasowym odrzuceniu kolejki innej osoby (`Pp_obcy`) i po
+uzgodnieniu nazwy (`Pp_nazwa`) runtime uzgadnia (`Pp_rdzen`) wyłącznie `age`,
+`ageMonths`, `weight` i `height` oraz ich wpisy `byId`. Dotyczy to tylko kluczy, których
+kolejka nie poznała z przyjętego zdarzenia: `ce()` zapisuje poznane klucze kopii
+(`Pp_poznaj`). Taki klucz kolejka odziedziczyła z migawki korzenia. Przyjęta edycja
+użytkownika zostaje, także wobec późniejszego syntetycznego echa w DOM (kontrakt
+`autosave-pauza-odtworzenia.test.mjs`). Świeży klucz zastępuje kopię z kolejki tylko
+wtedy, gdy świeży korzeń go ma, zgadza się on dokładnie z aktualnym, **niepustym**
+polem formularza, a kopia z kolejki nie. Bez pola na stronie, przy jawnie zablokowanym
+sejfie i dla kolejki innej osoby nic się nie zmienia. Pozostałe dane, właściciel kolejki,
+restore/clear, kolejność zapisu i API pozostają bez zmian. Całego świeżego korzenia
+nie scala się z opóźnioną kopią.
+
+**Czego poprawka celowo nie zmienia (do decyzji właściciela).** Kolejka nadal może
+dopisać starszą wartość pola wyczyszczonego bez przyjętego zdarzenia. Pierwsza wersja
+poprawki przenosiła także pustą wartość i CI to wykazało:
+`lab-puberty-johannsen.spec.mjs` („clearing the main-form date…”) był czerwony 4/4
+lokalnie i w obu próbach CI. Sonda zapisów pokazała, skąd test bierze wiek. Po powrocie
+na formularz główny pola lat i miesięcy są puste przy wciąż ustawionej dacie (tak samo na
+bazie). Po „wyczyść datę” i wpisaniu samych miesięcy `userData.js` publikuje `age: ""`,
+a lata `0` w przeliczniku pochodzą wyłącznie z przeterminowanej kopii kolejki, która
+zapisuje `age: "0"` sprzed wyczyszczenia. Ustalenie, czy puste lata przy podanych
+miesiącach mają znaczyć 0 lat (jak w sesji głównej, która zapisuje wtedy `age: 0`), czy
+wiek nieznany (jak w ocenie LH/FSH: `invalid_age`), jest zmianą funkcjonalną i wymaga
+osobnej decyzji. Dlatego ta poprawka pustych wartości nie przenosi.
+
+**Wpływ kliniczny.** Bez zmiany wzorów, norm, źródeł, progów, jednostek i formatu
+rekordu. Wspólne pola zachowują wiek, masę i wzrost widoczne w formularzu. Moduły
+czytające je po przejściu na inną stronę (przelicznik: zakres AMH, dzienny wiek
+niemowlęcia) nie tracą już wieku po wpisaniu daty urodzenia tuż po wczytaniu pacjenta.
+
+**Testy.** `tests/unit/persist-current-age.test.mjs` (14) wywołuje prawdziwy adapter,
+runtime i `userData.js`: kolejność z dziennika dla każdego z czterech pól, timer
+i wymuszony zapis `pagehide`, wpis `byId`, kontrolę sprzecznego późniejszego zapisu,
+poznaną edycję wobec echa w DOM, jawne wyczyszczenie, granicę zakresu (pusta wartość nie
+jest przenoszona), brak scalania innych danych, brak pola, zablokowany sejf i zmianę
+`patientId`. Przed poprawką 7 z 14 przypadków było czerwonych; siedem kontroli jest
+zielonych przed i po.
+Istniejące testy runtime (`autosave-pauza-odtworzenia`, `persist-current-name`,
+`shared-form-coherence`, `persist-writer-authority` i inne) pozostają zielone. E2E bez
+zmian w asercjach. Lokalne odtworzenie z sondą (CPU 2×, cztery workery, ten sam przebieg
+co test GA32): przed poprawką 4 z 52 prób czerwonych, każda z tym samym stanem końcowym;
+po poprawce zielone wszystkie próby (liczby w PR).
+
+**Ograniczenie dowodu.** Sonda odtworzyła wynik CI lokalnie, ale w samym CI nie
+zapisywała stosów. Że w CI zadziałała ta sama kolejność, wnioskuję z identycznego stanu
+końcowego, braku wieku w nagłówku w zapisie przebiegu i kroków testu z CI, w których
+wspólne pola przeszły kontrolę przed nawigacją.
+
 ## Stan kart DocPro należy do pacjenta; ramka DocPro w tle czyści karty po zmianie pacjenta w innej ramce (P-TOZSAMOSC-RAMEK, SW 1.1.119, `docpro_state_persist.js` 6, 2026-09-30)
 
 **Zgłoszenie.** Punkt 1 „Czego to nie naprawia” w P-TOZSAMOSC-RAMKI. Ramki powłoki `app.html` dzielą `sessionStorage`
