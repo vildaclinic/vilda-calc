@@ -102,6 +102,14 @@
 // (po samych zdarzeniach K bez gwiazdki albo poprawki), p. 6 K6 (po zdarzeniach A: 20 kg, B: 27 kg) i skrzyżowane
 // „Scal pacjentów” z notatką karty P (R2 wersji karty P w zdarzeniach). Zielone z natury: pozostałe przypadki.
 //
+// E2-PR3c3 (decyzja 5 właściciela z 2026-11-10, P-NOTATKI-ZA-KARTA): numer nagrobka notatki w scalaniu liczony także
+// z notatek ładunku, chwila utworzenia notatki = najwcześniejsza znana. Przepisane literały: p. 6 R3-0 (bez R3 w
+// zdarzeniach), R3-E1 i R3-E2 (bez „ZNANA UTRATA”: po W4 tekst wskrzeszenia zapisany później na wszystkich urządzeniach,
+// bez różnicy chwili utworzenia w zdarzeniach i blobach), p. 7c (bez R3), ziarno 6 (bez punktów R3 124 i 130 w W1
+// i W2r), AB7 „ratunek notatki w trakcie partii” (W1 bez różnicy chwili utworzenia). Model haków bez zmian.
+// Czerwone na bazie E2-PR3c3 (sejf 79483d97; 6 ze 132 przypadków): AB7 ratunek w trakcie partii, R3-0, R3-E1, R3-E2,
+// p. 7c, ziarno 6. Zielone z natury: pozostałe przypadki.
+//
 // KOLEJNOŚĆ W KROKU (E2-PR3a2, sprawdzana na emiterach): snap (także wersje przeniesione pod kartę celu „Scal pacjentów”
 // i głowy scalenia), potem stomb, potem ptomb, potem pnote, pnotetomb, note, notetomb, plist, plisttomb, pref, pk, pktomb,
 // cred. Pola karty zmienione bez snap tej karty w kroku niesie stomb z kartą (11.2), inaczej snap(karta, najnowsza
@@ -1406,7 +1414,8 @@ describe('A ≡ B, emitery i model: porównanie w mutacji, kopia z rejestrem ła
     // także przy samych blobach); W4 z klasami p. 6
     expect(await spoczynek(S, u.A, u.B), raport(S, 'punkt spoczynku (pełne dostawy w obie strony, najwyżej 4 razy)')).not.toBe(null);
     expect(S.stat.w3Bledy, 'W3: applyEncryptedDelta ≡ applyEncryptedEvent').toEqual([]);
-    expect(opisD(await w1Klasy(S, u.A, u.B, { tabela: 'p6' }), u.n, 'A', 'B'), raport(S, 'W1 (klasy)')).toEqual(['pnote n: createdAtISO [createdAtISO-notatki]']);
+    // E2-PR3c3: bez różnicy chwili utworzenia notatki (dotąd „pnote n: createdAtISO [createdAtISO-notatki]”).
+    expect(opisD(await w1Klasy(S, u.A, u.B, { tabela: 'p6' }), u.n, 'A', 'B'), raport(S, 'W1 (klasy)')).toEqual([]);
     const w = await w4(S, u.A, u.B, { tabela: 'p6' });
     expect(w.ok, raport(S, 'W4') + '\n' + JSON.stringify(w.warianty, null, 1)).toBe(true);
     const notatka = (U) => (U.stan.patientNotes || []).filter((x) => x.id === u.nId).map((x) => [x.patientId, x.body]);
@@ -2419,12 +2428,14 @@ const P6 = {
     krok(60e3); await mutacja(u.S, u.C, 'C: nowa wizyta P', () => u.C.d.zapiszKarte(1, { wzrost: 130, masa: 25, zapis: { patientId: u.P, forceNewSnapshot: true } }));
     await p6blob(u.C, u.A); await p6blob(u.C, u.B);
   } },
-  'R3-E1': { znana: 'ZNANA UTRATA (naprawa: E2-PR3c3)', baza: p6r3, kroki: async (u, t) => {
+  // R3-E1, R3-E2: do E2-PR3c3 „ZNANA UTRATA” (nagrobek notatki bez rev wersji z ładunku — wygrywał wcześniejszy tekst
+  // wskrzeszenia albo wracała stara, skasowana treść); od E2-PR3c3 bez utraty i bez różnicy chwili utworzenia.
+  'R3-E1': { baza: p6r3, kroki: async (u, t) => {
     await p6notatka(u, u.A, 'A2'); await p6notatka(u, u.A, 'A3'); await p6usunNotatke(u, u.B); await p6spoczynek(u, t);
     // „Zostaw notatkę” (P5) na obu: A wcześniej, B później
     await p6notatka(u, u.A, 'wskrzeszona na A (wcześniej)'); await p6notatka(u, u.B, 'wskrzeszona na B (później)'); await p6spoczynek(u, t);
   } },
-  'R3-E2': { znana: 'ZNANA UTRATA (naprawa: E2-PR3c3)', baza: p6r3, kroki: async (u, t) => {
+  'R3-E2': { baza: p6r3, kroki: async (u, t) => {
     await p6notatka(u, u.A, 'A2'); await p6notatka(u, u.A, 'A3');
     krok(); ustawStan(u.A, await eksport(u.A));
     u.C = await urzadzenie(u.S, 'C', u.A); // C: kopia A z „A3” (rev 3), poza siecią
@@ -2478,8 +2489,9 @@ const P6_LITERALY = {
     },
     bloby: [],
   },
+  // E2-PR3c3: bez różnicy rev nagrobka notatki (dotąd „pnotetomb n: rev [R3]”).
   'R3-0': {
-    zdarzenia: ['pnotetomb n: rev [R3]'],
+    zdarzenia: [],
     w4: {
       A: 'karty Q[#669b:22] | Kosz - | notatki -',
       B: 'karty Q[#669b:22] | Kosz - | notatki -',
@@ -2560,27 +2572,27 @@ const P6_LITERALY = {
     },
   },
   'R3-E1': {
-    zdarzenia: ['pnote n: createdAtISO [createdAtISO-notatki]'],
+    zdarzenia: [],
     w4: {
-      A: 'karty P[#34a9:22] Q[#9d24:22] | Kosz - | notatki n: wskrzeszona na A (wcześniej)',
-      B: 'karty P[#34a9:22] Q[#9d24:22] | Kosz - | notatki n: wskrzeszona na A (wcześniej)',
+      A: 'karty P[#34a9:22] Q[#9d24:22] | Kosz - | notatki n: wskrzeszona na B (później)',
+      B: 'karty P[#34a9:22] Q[#9d24:22] | Kosz - | notatki n: wskrzeszona na B (później)',
       r4n: 0,
       w4p: [],
     },
-    bloby: ['pnote n: createdAtISO [createdAtISO-notatki]'],
+    bloby: [],
   },
   'R3-E2': {
     zdarzenia: [],
     w4: {
       rund: 1,
-      A: 'karty P[#5051:22] Q[#fca6:22] | Kosz - | notatki n: A3',
-      B: 'karty P[#5051:22] Q[#fca6:22] | Kosz - | notatki n: A3',
-      C: 'karty P[#5051:22] Q[#fca6:22] | Kosz - | notatki n: A3',
+      A: 'karty P[#5051:22] Q[#fca6:22] | Kosz - | notatki n: wskrzeszona na B',
+      B: 'karty P[#5051:22] Q[#fca6:22] | Kosz - | notatki n: wskrzeszona na B',
+      C: 'karty P[#5051:22] Q[#fca6:22] | Kosz - | notatki n: wskrzeszona na B',
     },
     bloby: {
       AB: [],
-      BC: ['pnote n: createdAtISO [createdAtISO-notatki]'],
-      CA: ['pnote n: createdAtISO [createdAtISO-notatki]'],
+      BC: [],
+      CA: [],
     },
   },
   // „notatka pod inną kartą” (klasa dzisiejsza): skutek kliniczny — treść notatki ta sama na obu (nic nie ginie), ale na
@@ -2764,7 +2776,7 @@ describe('A ≡ B, blok deterministyczny p. 7: koalescencja kolejki (reguła ogo
     expect({ A: await stan(u.A), B: await stan(u.B) }, 'po spoczynku: karta P i notatka n na obu').toEqual({ A: oczek, B: oczek });
   }, 120_000);
 
-  it('p. 7c odtworzenie punktów R3 wariantu „na koniec” (ziarno 10 przebiegu 40 ziaren): B poprawia notatkę n, A ją usuwa, dostawy B→A i A→B — ta sama różnica R3 bez łączenia wpisów i z regułą ogona; W4', async () => {
+  it('p. 7c odtworzenie punktów R3 wariantu „na koniec” (ziarno 10 przebiegu 40 ziaren): B poprawia notatkę n, A ją usuwa, dostawy B→A i A→B — od E2-PR3c3 bez różnicy R3, bez łączenia wpisów i z regułą ogona; W4', async () => {
     const wyniki = {};
     for (const tryb of ['bez łączenia', 'ogon']) {
       await sprzatnijUrzadzenia(); vi.restoreAllMocks();
@@ -2781,7 +2793,8 @@ describe('A ≡ B, blok deterministyczny p. 7: koalescencja kolejki (reguła ogo
       wyniki[tryb] = { D: d.map((r) => [r.rodzaj, r.klasa, r.dozwolona, r.sciezki]), W4: w.ok, dziennik: S.dziennik.map((l) => l.replace(/^#\d+ [0-9:.]+ /, '')) };
     }
     const oczek = {
-      D: [['pnotetomb', 'R3', 'tak', ['rev']]], W4: true,
+      // E2-PR3c3: nagrobek notatki niesie rev wersji z ładunku — bez różnicy R3 (dotąd [['pnotetomb', 'R3', 'tak', ['rev']]]).
+      D: [], W4: true,
       dziennik: ['B: notatka „Fikcyjna poprawka notatki B” → [pnote]', 'A: usuń notatkę → [pnotetomb]', 'dostawa B>A: 1 pełna [pnote]', 'dostawa A>B: 1 pełna [pnotetomb]'],
     };
     expect(wyniki, 'literał p. 7c').toEqual({ 'bez łączenia': oczek, ogon: oczek });
@@ -3444,9 +3457,9 @@ function abSiedem(s) {
 // Literały dla ziaren domyślnych (E2_AB_START=1, E2_AB_ZIARNA=8; specyfikacja 2a, 3.6): dokładna charakterystyka —
 // nowa różnica, nowa klasa albo zniknięcie znanej różnicy czerwienią test. Naprawa zbieżności bez pełnej wysyłki
 // (E2-PR3c, E3-PR0) ZMIENIA te literały — to zamierzone.
-const ZNANE_W1 = [[1, 26, ['R2']], [1, 43, ['R2']], [1, 47, ['R2']], [4, 92, ['R2']], [6, 124, ['R3']], [6, 130, ['R3']]];
-const ZNANE_W2R = [[1, 26, 'A', ['R2']], [1, 43, 'A', ['R2']], [1, 47, 'A', ['R2']], [4, 92, 'A', ['R2']],
-  [6, 124, 'B', ['R3']], [6, 130, 'B', ['R3']]];
+// E2-PR3c3: bez punktów R3 ziarna 6 (124, 130) — nagrobek notatki niesie rev wersji z ładunku.
+const ZNANE_W1 = [[1, 26, ['R2']], [1, 43, ['R2']], [1, 47, ['R2']], [4, 92, ['R2']]];
+const ZNANE_W2R = [[1, 26, 'A', ['R2']], [1, 43, 'A', ['R2']], [1, 47, 'A', ['R2']], [4, 92, 'A', ['R2']]];
 const ZNANE_W4_R4N = 0; // normalizacje R4n w W4 w ziarnach domyślnych
 const DOMYSLNE_ZIARNA = [1, 2, 3, 4, 5, 6, 7, 8];
 const domyslne = (z) => !KROKI && DOMYSLNE_ZIARNA.includes(z);

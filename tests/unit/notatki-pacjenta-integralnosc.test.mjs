@@ -229,12 +229,13 @@ describe('G6b–G6g — „Zostaw notatkę” na dwóch urządzeniach (E2-PR3c3,
     expect(src).toContain('X.forEach(function(S){S&&Qrv(S.id,S.rev)}),/* E2-PR3c3');
     expect(src).toContain('j.forEach(function(S){S&&Qrv(S.id,S.rev)});');
     expect(src).toContain('createdAtISO:Bnp_utworzona(M&&M.createdAtISO,g.createdAtISO)||g.updatedAtISO');
-    expect(src).toContain('{await Bnp_wczesniejUtworzona(P,g,e);continue}');
+    expect(src).toContain('{await Bnp_wczesniejUtworzona(P,g,Ej,e);continue}');
     const a = src.indexOf('async function Bnp_wczesniejUtworzona(');
     const fn = src.slice(a, src.indexOf('\n}\n', a));
     expect(fn).toContain('await Ac(g.id,');
     expect(fn).toContain('getPatientNoteForUser(b, g.id)');
     expect(fn).toContain('n.createdAtISO > c');
+    expect(fn, 'bez dodatkowego odczytu, gdy tutejszy rekord nie ma późniejszej chwili utworzenia').toContain("!(typeof e.createdAtISO === 'string' && e.createdAtISO > c)");
     expect(fn.lastIndexOf('Bses_pilnuj(opcje)')).toBeLessThan(fn.indexOf('putPatientNoteForUser('));
     expect(fn.indexOf('Bses_pilnuj(opcje)')).toBeLessThan(fn.indexOf('getPatientNoteForUser('));
   });
