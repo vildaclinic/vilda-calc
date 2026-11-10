@@ -21624,7 +21624,16 @@ strażnik KS9), test A ≡ B 7, `kosz-po-kluczu` 2 (`npret-kosz3-P` K←P,K←C,
 (`E4a-Cpin-przed` C←P,C←K), `kosz-usuwanej-karty-sesja` 1 (S6). Zielone z natury: kontrole KS6–KS8 i pozostałe
 przypadki.
 
-**Mutanty.** (wynik w następnym commicie)
+**Mutanty.** 12 mutantów reguły i kontroli granicy (brak wywołania w `Le`, reguła także w imporcie, bez pominięcia
+wersji z wpisem kosza albo retencji, bez warunku „karta G spoza N”, bez warunku „inna karta niż karta z ładunku”, bez
+sprawdzenia istnienia karty G, bez `Bsw_wklad`, „przenies” zamiast „treść”, trzy sprawdzenia sesji, nieprzeliczone
+skróty): 11 zabitych, 1 równoważny. Testy działania zabijają trzy (brak wywołania i „przenies” zamiast „treść” — KS1–KS5,
+test A ≡ B; nieprzeliczone skróty — kontrola granicy). Osiem zabija tylko strażnik źródła KS9: w testach działania
+(`sync-wlasciciel-wersji`, test A ≡ B, Kosz, prawa i katalogi, importy, sesja) dają ten sam wynik, bo faza przeniesień
+sprawdza wszystko od nowa na świeżym odczycie (`Bsw_poprawTresc`: wersja pod G, `Bsw_wklad`, istnienie G), zapis do
+karty z N znika razem z nią, a następne sprawdzenie sesji kończy scalanie przed zapisem — warunki reguły zostają jako
+obrona przed zbędnym odczytem i zapisem. Równoważny: bez sprawdzenia sesji przed odczytem karty G (następne
+sprawdzenie, przed odłożeniem decyzji, kończy operację tak samo).
 
 **Kontrola granicy obrazu sejfu.** Przeliczone skróty `BASE`, `baseVaultSHA256` i `integratedVaultSHA256` (reguła
 z E2-PR3a2, decyzja z 2026-11-09; liczone po zdjęciu zmiany Klirensu, jak w kontroli od vildaclinic/vilda-calc#900);
