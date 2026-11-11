@@ -21534,6 +21534,140 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
+## Wysyłka zdarzeń dziennika i włącznik dziennika, uśpione (P-SYNC-ZDARZENIA, E2-PR4b, SW 1.1.509, `vilda_sync.js` 51, `vilda_vault.js` 272, 2026-11-11)
+
+**Zmiana kliniczna: nie** — wzory, progi, jednostki, interpretacje i reguły scalania bez zmian. **Działanie aplikacji
+bez zmian (uśpione).** Kod produkcyjny nie woła nowej wysyłki. Włącznik dziennika otwiera się tylko wtedy, gdy serwer
+podaje „events” w health (dziś nie podaje: `EVENTS_ENABLED = "0"`) i na urządzeniu jest flaga `vilda-event-log-v1`
+o wartości `'1'` (nikt jej nie ustawia; ukryty przełącznik dojdzie w E2-PR5). Serwer, format danych, schemat
+IndexedDB i wygląd aplikacji bez zmian.
+
+Plan: wiersz 8b tabeli „Podział etapu 2” i rozdział 3.2 („Pętla wysyłki”); decyzje z 2026-11-11 (pytania 1–6),
+rozdział 6.
+
+### E2-PR4b
+
+**Co było** (`audyt` `175cdc27`).
+- Kolejkę zmian w sejfie (E2-PR2b1–E2-PR3c5) otwierało tylko pole okna `VILDA_EVENT_LOG === true`, czyli testy. Flagi
+  urządzenia i warunku „events” z health nie było.
+- `vilda_sync.js` nie wysyłał zdarzeń (`POST /v1/slots/<slot>/events`) i nie czytał „events” z health.
+- Testów e2e nie dało się podłączyć do atrapy workera v37a (`tests/support/atrapa-workera-sync.mjs`); każdy test e2e
+  synchronizacji miał własną, uproszczoną atrapę.
+
+**Reguła.**
+- **Włącznik dziennika** `VildaSync.isEventLogEnabled()`. Tylko odczyty, po kolei:
+  1. ostatni wynik `GET /v1/health` tej strony w pamięci (ten sam co dla pobierania stronami) zawiera „events”; bez
+     tego koniec, bez żadnego odczytu magazynu przeglądarki;
+  2. flaga `vilda-event-log-v1` ma dokładnie wartość `'1'` (brak, `'0'` i każda inna wartość — wyłączone);
+  3. pobieranie stronami jest włączone (`Bdz_wlaczone`: „Komputer prywatny”, nie tryb chmurowy ani jednorazowy,
+     szybka synchronizacja i strony nie wyłączone flagami).
+
+  Błąd odczytu — wyłączone.
+- **Bramka kolejki w sejfie** (`Bob_bramka`) jest otwarta, gdy `VILDA_EVENT_LOG === true` (testy, jak dotąd) albo gdy
+  `VildaSync.isEventLogEnabled()` tego samego okna zwraca `true`. Brak `VildaSync`, inna wartość niż `true` albo
+  wyjątek — zamknięta. Ramki (iframe) nie pytają serwera o health, więc ich bramka zostaje zamknięta; dopisywanie
+  w ramkach dojdzie z nadawcą i wpięciami (E2-PR4d, E2-PR4e).
+- **Wysyłka** `VildaSync.pushEvents(events)` (plan 3.2, „Pętla wysyłki”, punkty 3, 4, 5 i 7):
+  - partia od 1 do 200 zdarzeń `{eid, iv, data}`: `eid` to UUID v4 małymi literami, bez powtórzeń w partii; `iv` ma
+    od 1 do 64 znaków; ciało do 1 MiB. Na serwer idzie dokładnie `{eid, iv, data}` (bez `z` i `aad`, plan 3.1);
+  - bez żądania: złe wejście (`argument`), wyłączony włącznik (`wylaczone`), trwająca wysyłka w tym dokumencie
+    (`w-locie` — jedno żądanie w locie), pauza po 429 we wspólnym kluczu `vilda-sync-rl-until-v1` (`pauza`, kod
+    `RATE_LIMITED`, `retryAfterMs`), zablokowany sejf (`zablokowany`), slot niezarejestrowany (`niezarejestrowany`;
+    rejestracja zostaje pełną wysyłką);
+  - żądanie: `POST /v1/slots/<slot>/events` z `Authorization: Bearer` i `Content-Type: application/json`, limit 30 s na
+    nagłówki i osobno 30 s na treść odpowiedzi (jak P-SYNC-LIMIT-ODCZYTU);
+  - zmiana sesji przed wysłaniem albo w trakcie (blokada sejfu, inne konto) — wynik `sesja`, bez skutków ubocznych
+    (P-SESJA-ZAPISU);
+  - wynik zawsze jako obiekt, funkcja nigdy nie rzuca. Wysyłka nie zgłasza `onSyncStart`, `onSyncComplete` ani
+    `onSyncError` i nie pisze śladów. To zrobi nadawca (E2-PR4d); on też sprawdzi, czy synchronizacja jest włączona.
+
+| Odpowiedź serwera | Wynik | Skutek |
+|---|---|---|
+| 200 | `{ok: true, accepted: [{eid, seq, dup}], rejected: [{eid, code}], headSeq, ts}` | kształt sprawdzony, tylko `eid` z tej partii; zły kształt albo zły JSON — `odpowiedz` (`INVALID_RESPONSE`); `ts` różni się od zegara urządzenia o ponad 60 s — zdarzenie `vilda:sync-clock-skew` ze źródłem `server` |
+| 429 | `RATE_LIMITED`, `retryAfterMs` | odstęp z `Retry-After`, inaczej z `retryAfterSeconds`, inaczej 30 s, w granicach 1–300 s, zapisany w `vilda-sync-rl-until-v1`; dłuższa pauza zapisana tam wcześniej zostaje |
+| 401 | `AUTH_FAILED` | stan slotu wyczyszczony, jak przy innych odpowiedziach 401 |
+| 404 | `EVENTS_DISABLED` | serwer bez trasy zdarzeń (np. po cofnięciu do `EVENTS_ENABLED = "0"`): „events” zdjęte z pamięci health tej strony, więc włącznik i bramka zamknięte do następnego health z „events” |
+| 413 | `PAYLOAD_TOO_LARGE` | — |
+| 415 | `UNSUPPORTED_MEDIA_TYPE` | — |
+| 400 | `INVALID_EVENTS` i `code` z ciała | — |
+| 507 | `LOG_FULL` | — |
+| 5xx | `SERVER` | — |
+| inny status | `HTTP` | — |
+| błąd sieci, limit czasu | `siec`: `NETWORK` albo `TIMEOUT` | — |
+| odmowa formatu klinicznego | `format` | — |
+
+**Uśpienie (test „flaga wyłączona”).** Dziś health produkcji nie podaje „events”, więc włącznik kończy się na
+pierwszym kroku, bez odczytu magazynu, a bramka sejfu zostaje zamknięta. Gdy serwer zacznie podawać „events” (E2-W1),
+klient bez flagi albo z `'0'` działa jak dziś: zapis bazowy (`tests/unit/sync-zadania-bazowe.test.mjs`) ma dwa nowe
+warianty z „events” w health (bez klucza i z `'0'`) z dotychczasowymi oczekiwaniami. We wszystkich wariantach nie ma
+`POST /events`, a bramka kolejki jest zamknięta; zielone także na bazie.
+
+**Narzędzia testowe.**
+- `tests/support/atrapa-workera-sync.mjs` — opcja `originy`: dodatkowe dozwolone originy v37a, jak lista
+  `ALLOWED_ORIGIN_PROD` workera;
+- `tests/support/atrapa-workera-route.mjs` (nowy) — adapter route Playwright: każde żądanie strony do serwera
+  synchronizacji (także preflight `OPTIONS`) idzie przez rdzeń atrapy `obsluz()`; CORS liczy atrapa; gniazdo na żywo
+  zamknięte.
+
+**Testy.** Dane wyłącznie fikcyjne. Nowe i zmienione:
+- `tests/unit/sync-zdarzenia-wysylka.test.mjs` (nowy, 15 przypadków, prawdziwy `vilda_sync.js` i sejf, atrapa v37a
+  z „events”):
+  - PE1 — kształt żądania (POST, Bearer, JSON, tylko `eid`/`iv`/`data`), 200 z numerami, powtórka partii daje `dup` z tymi
+    samymi numerami; PE2 — zdarzenie ponad limit serwera: `rejected` `oversize`, reszta partii przyjęta;
+  - PE3 — 429: pauza we wspólnym kluczu, następna próba w pauzie bez żądania, dłuższa pauza nie jest skracana;
+  - PE4 — 401: `AUTH_FAILED`, stan slotu wyczyszczony; PE5 — 404: włącznik i bramka zamknięte do następnego health
+    z „events”;
+  - PE6 — 413, 415, 400 z kodem, 507, 503, 500 i błąd sieci bez skutków ubocznych; PE7 — treść odpowiedzi wisi: po 30 s
+    `TIMEOUT`, żądanie przerwane;
+  - PE8 — różnica zegara: +120 s i −90 s dają zdarzenie ze źródłem `server`, +45 s nie;
+  - PE9 — jedno żądanie w locie; PE10 — slot niezarejestrowany bez żądania; PE11 — złe wejście bez żądania;
+  - PE12 — sesja: blokada w trakcie daje `sesja` bez pauzy, zablokowany sejf przed wysyłką daje `zablokowany`;
+  - PE13 — tabela włącznika (flaga brak, `'0'`, `'true'`, `'1'`; health z „events” i bez; strony wyłączone flagą, polem
+    okna i szybka synchronizacja wyłączona); bez „events” ani jednego odczytu `localStorage` i `sessionStorage`;
+  - PE14 — bramka sejfu idzie za włącznikiem tego okna; `VILDA_EVENT_LOG === true` otwiera jak dotąd; wyjątek albo
+    wartość inna niż `true` we włączniku — zamknięta;
+  - PE15 — strażnik: żaden plik produktu poza `vilda_sync.js` nie woła `pushEvents`, a `isEventLogEnabled` zna tylko
+    `vilda_vault.js`;
+- `tests/unit/sync-zadania-bazowe.test.mjs` — dwa warianty „flaga wyłączona” (28 przebiegów) i w każdym wariancie
+  sprawdzenie braku `POST /events` oraz zamkniętej bramki;
+- `tests/unit/sync-dziennik-uspienie.test.mjs` — reguła domknięcia części `Bob_`: pole okna `VildaSync` tylko
+  w `Bob_bramka`, dokładnie raz (z próbkami w samokontroli);
+- `tests/e2e/sync-zdarzenia-wysylka.spec.mjs` (nowy, 2 przypadki, prawdziwa przeglądarka, atrapa przez adapter route):
+  flaga wyłączona — przy „events” w health włącznik i bramka zamknięte, zapis karty nie tworzy bazy kolejki, bez
+  `POST /events`; flaga `'1'` — zapis karty trafia do kolejki w IndexedDB, potem `outboxTake` → `pushEvents` →
+  `accepted` (numery od 1) → `outboxAccept`, kolejka pusta, powtórka partii daje `dup`.
+
+**Czerwone na bazie** (`origin/audyt` `175cdc27` z testami tego PR): 16 — PE1–PE15 i e2e z flagą `'1'`. Zielone także
+na bazie: zapis bazowy z nowymi wariantami i e2e „flaga wyłączona” (dowód „jak dziś”).
+
+**Mutanty.** 30 mutantów, 30 zabitych, wszystkie testami działania (PE1–PE14):
+- włącznik: bez warunku „events”, flaga dowolna poza `'0'`, bez pobierania stronami, flaga czytana przed „events”;
+- partia: całe zdarzenie zamiast `eid`, `iv` i `data`, bez sprawdzenia powtórzeń, bez limitu 1 MiB, `eid` wielkimi
+  literami;
+- żądanie: bez Bearer, bez `Content-Type`, bez limitu treści, bez jednego żądania w locie, bez sprawdzenia pauzy i bez
+  sprawdzenia rejestracji;
+- odpowiedzi: 429 bez pauzy, krótsza pauza nadpisuje dłuższą, 401 bez czyszczenia stanu, 404 bez zamknięcia włącznika,
+  400 bez kodu, 507 jako błąd serwera, 5xx tylko 500, limit nagłówków jako błąd sieci, zły JSON jako błąd sieci,
+  odpowiedź z obcym `eid`, bez sprawdzenia sesji po odpowiedzi;
+- różnica zegara: tylko do przodu, zawsze;
+- bramka sejfu: bez włącznika synchronizacji, wartość prawdziwa zamiast `true`, wyjątek włącznika wychodzi z bramki.
+
+**Kontrola granic.** Sejf: przeliczone `BASE` w `tools/check_clinical_workspace_boundary.mjs` oraz `baseVaultSHA256`
+i `integratedVaultSHA256` w `runtime/clinical-workspace-v1/manifest.json`. Synchronizacja: przeliczone skróty obrazu
+bazowego i zintegrowanego `vilda_sync.js` (`tools/check_clinical_workspace_sync_boundary.mjs`,
+`runtime/clinical-workspace-sync/manifest.json`); integracja, fragment planów opieki i łaty bez zmian.
+
+**Do E2-PR5 (wygląd).** Komunikat różnicy zegara w Ustawieniach mówi dziś o „innym urządzeniu” i pokazuje się tylko
+wtedy, gdy tamten zegar jest do przodu. Dla źródła `server` potrzebny będzie osobny tekst: zegar tego urządzenia różni
+się od serwera. Dziś `pushEvents` nie jest wołane, więc to zdarzenie nie występuje.
+
+**Ograniczenia.**
+- Włącznik zależy od health tej strony (pamięć 10 min): zmiana flagi działa od razu, a zmiana po stronie serwera — po
+  następnym health albo po 404 z `/events`.
+- Ramki mają zamkniętą bramkę do E2-PR4d i E2-PR4e.
+
+**Cofnięcie** = rewert PR (bez migracji; rewert cofa też skróty kontroli granic sejfu i synchronizacji).
+
 ## Limit odczytu odpowiedzi serwera i odświeżenie widoku po szybkiej synchronizacji (P-SYNC-LIMIT-ODCZYTU, E2-PR4a, SW 1.1.508, `vilda_sync.js` 50, `vilda_sync_integration.js` 58, 2026-11-11)
 
 **Zmiana kliniczna: nie** — wzory, progi, jednostki, interpretacje i reguły scalania bez zmian. Zmienia się działanie
