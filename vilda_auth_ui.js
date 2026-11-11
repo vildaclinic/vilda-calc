@@ -699,14 +699,12 @@ function WbHistoriaWyniki(z, kontener) {
     }, [tresc, e("span", { "aria-hidden": "true", html: WbIkonaDalej, style: "display:inline-flex;flex:0 0 auto;color:#76909a;" })]);
     lista.appendChild(wiersz);
     // Zapisanego odniesienia AMH Badania jeszcze nie pokazują (osobna decyzja w planie LAB-HISTORIA), więc zostaje
-    // tutaj, zwinięte — wcześniej było w Notatkach i w Historii.
+    // tutaj, pod wierszem wyniku, w zwartym rendererze z #677 (sam ma zwijane szczegóły); klik w nim nie przenosi do Badań.
     if (odniesienie) {
-      var szczegoly = e("details", { class: "vilda-wb-hist-reference", style: "padding:4px 12px 8px;font-size:0.82rem;" + (ostatni ? "" : "border-bottom:1px solid #eeedf8;") }, [
-        e("summary", { style: "cursor:pointer;color:#44535c;min-height:32px;padding-top:6px;", text: "Zapisane odniesienie " + WbSkrot(lab.test) })
-      ]);
-      szczegoly.addEventListener("click", function (zdarzenie) { zdarzenie.stopPropagation(); });
-      HrSavedReference(szczegoly, lab);
-      lista.appendChild(szczegoly);
+      var pole = e("div", { class: "vilda-wb-hist-reference", style: "padding:4px 12px 8px;" + (ostatni ? "" : "border-bottom:1px solid #eeedf8;") });
+      pole.addEventListener("click", function (zdarzenie) { zdarzenie.stopPropagation(); });
+      HrSavedReference(pole, lab);
+      lista.appendChild(pole);
     }
   });
   kontener.appendChild(lista);
