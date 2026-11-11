@@ -21572,13 +21572,15 @@ rozdział 6.
     od 1 do 64 znaków; ciało do 1 MiB. Na serwer idzie dokładnie `{eid, iv, data}` (bez `z` i `aad`, plan 3.1);
   - bez żądania: złe wejście (`argument`), wyłączony włącznik (`wylaczone`), trwająca wysyłka w tym dokumencie
     (`w-locie` — jedno żądanie w locie), pauza po 429 we wspólnym kluczu `vilda-sync-rl-until-v1` (`pauza`, kod
-    `RATE_LIMITED`, `retryAfterMs`), zablokowany sejf (`zablokowany`), slot niezarejestrowany (`niezarejestrowany`;
-    rejestracja zostaje pełną wysyłką);
+    `RATE_LIMITED`, `retryAfterMs`), trasa formatu klinicznego inna niż legacy (`format` — sprawdzana przed
+    tożsamością konta i żądaniem, jak w innych operacjach synchronizacji), zablokowany sejf (`zablokowany`), slot
+    niezarejestrowany (`niezarejestrowany`; rejestracja zostaje pełną wysyłką);
   - żądanie: `POST /v1/slots/<slot>/events` z `Authorization: Bearer` i `Content-Type: application/json`, limit 30 s na
     nagłówki i osobno 30 s na treść odpowiedzi (jak P-SYNC-LIMIT-ODCZYTU);
   - zmiana sesji przed wysłaniem albo w trakcie (blokada sejfu, inne konto) — wynik `sesja`, bez skutków ubocznych
     (P-SESJA-ZAPISU);
-  - wynik zawsze jako obiekt, funkcja nigdy nie rzuca. Wysyłka nie zgłasza `onSyncStart`, `onSyncComplete` ani
+  - wynik zawsze jako obiekt, funkcja nigdy nie rzuca (nieoczekiwany wyjątek — `blad`, odmowa formatu klinicznego po
+    drodze — `format`). Wysyłka nie zgłasza `onSyncStart`, `onSyncComplete` ani
     `onSyncError` i nie pisze śladów. To zrobi nadawca (E2-PR4d); on też sprawdzi, czy synchronizacja jest włączona.
 
 | Odpowiedź serwera | Wynik | Skutek |
@@ -21610,7 +21612,7 @@ warianty z „events” w health (bez klucza i z `'0'`) z dotychczasowymi oczeki
   zamknięte.
 
 **Testy.** Dane wyłącznie fikcyjne. Nowe i zmienione:
-- `tests/unit/sync-zdarzenia-wysylka.test.mjs` (nowy, 15 przypadków, prawdziwy `vilda_sync.js` i sejf, atrapa v37a
+- `tests/unit/sync-zdarzenia-wysylka.test.mjs` (nowy, 16 przypadków, prawdziwy `vilda_sync.js` i sejf, atrapa v37a
   z „events”):
   - PE1 — kształt żądania (POST, Bearer, JSON, tylko `eid`/`iv`/`data`), 200 z numerami, powtórka partii daje `dup` z tymi
     samymi numerami; PE2 — zdarzenie ponad limit serwera: `rejected` `oversize`, reszta partii przyjęta;
@@ -21628,6 +21630,9 @@ warianty z „events” w health (bez klucza i z `'0'`) z dotychczasowymi oczeki
     wartość inna niż `true` we włączniku — zamknięta;
   - PE15 — strażnik: żaden plik produktu poza `vilda_sync.js` nie woła `pushEvents`, a `isEventLogEnabled` zna tylko
     `vilda_vault.js`;
+  - PE16 — trasa formatu klinicznego inna niż legacy: `format` bez sięgania po tożsamość konta i bez żądania; gdy trasa
+    zmienia się w trakcie i odczyt stanu slotu odmawia — także `format`, bez odrzuconej obietnicy;
+- `tests/unit/sync-limit-odczytu.test.mjs` — strażnik L9 obejmuje wysyłkę zdarzeń (jedno wywołanie z limitem treści);
 - `tests/unit/sync-zadania-bazowe.test.mjs` — dwa warianty „flaga wyłączona” (28 przebiegów) i w każdym wariancie
   sprawdzenie braku `POST /events` oraz zamkniętej bramki;
 - `tests/unit/sync-dziennik-uspienie.test.mjs` — reguła domknięcia części `Bob_`: pole okna `VildaSync` tylko
@@ -21637,10 +21642,10 @@ warianty z „events” w health (bez klucza i z `'0'`) z dotychczasowymi oczeki
   `POST /events`; flaga `'1'` — zapis karty trafia do kolejki w IndexedDB, potem `outboxTake` → `pushEvents` →
   `accepted` (numery od 1) → `outboxAccept`, kolejka pusta, powtórka partii daje `dup`.
 
-**Czerwone na bazie** (`origin/audyt` `175cdc27` z testami tego PR): 16 — PE1–PE15 i e2e z flagą `'1'`. Zielone także
+**Czerwone na bazie** (`origin/audyt` `175cdc27` z testami tego PR): 17 — PE1–PE16 i e2e z flagą `'1'`. Zielone także
 na bazie: zapis bazowy z nowymi wariantami i e2e „flaga wyłączona” (dowód „jak dziś”).
 
-**Mutanty.** 30 mutantów, 30 zabitych, wszystkie testami działania (PE1–PE14):
+**Mutanty.** 32 mutanty, 32 zabite, wszystkie testami działania (PE1–PE14 i PE16):
 - włącznik: bez warunku „events”, flaga dowolna poza `'0'`, bez pobierania stronami, flaga czytana przed „events”;
 - partia: całe zdarzenie zamiast `eid`, `iv` i `data`, bez sprawdzenia powtórzeń, bez limitu 1 MiB, `eid` wielkimi
   literami;
@@ -21649,6 +21654,7 @@ na bazie: zapis bazowy z nowymi wariantami i e2e „flaga wyłączona” (dowód
 - odpowiedzi: 429 bez pauzy, krótsza pauza nadpisuje dłuższą, 401 bez czyszczenia stanu, 404 bez zamknięcia włącznika,
   400 bez kodu, 507 jako błąd serwera, 5xx tylko 500, limit nagłówków jako błąd sieci, zły JSON jako błąd sieci,
   odpowiedź z obcym `eid`, bez sprawdzenia sesji po odpowiedzi;
+- format kliniczny: bez sprawdzenia trasy przed tożsamością, bez zabezpieczenia przed wyjątkiem;
 - różnica zegara: tylko do przodu, zawsze;
 - bramka sejfu: bez włącznika synchronizacji, wartość prawdziwa zamiast `true`, wyjątek włącznika wychodzi z bramki.
 
