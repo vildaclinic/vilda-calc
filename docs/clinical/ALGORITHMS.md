@@ -21534,6 +21534,96 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
+## Limit odczytu odpowiedzi serwera i odświeżenie widoku po szybkiej synchronizacji (P-SYNC-LIMIT-ODCZYTU, E2-PR4a, SW 1.1.508, `vilda_sync.js` 50, `vilda_sync_integration.js` 58, 2026-11-11)
+
+**Zmiana kliniczna: nie** — wzory, progi, jednostki, interpretacje i reguły scalania bez zmian. Zmienia się działanie
+synchronizacji w dwóch miejscach:
+- zawieszona odpowiedź serwera (nagłówki przyszły, treść stoi) kończy się po limicie czasu, a następna synchronizacja
+  próbuje od nowa — dotąd pobranie albo drenaż zmian w tej karcie stał do przeładowania strony;
+- delta z WebSocket z nową albo zmienioną wizytą w istniejącej karcie odświeża widok od razu — dotąd dopiero pełna
+  wysyłka.
+
+Serwer, format ładunku, nagrobków i zdarzeń, schemat IndexedDB, API `window.VildaSync` i `window.VildaVault` bez zmian;
+sejf (`vilda_vault.js`) bez zmian.
+
+**Decyzja właściciela.** Decyzja 2 z 2026-11-11 (pytania E2-PR4, „1–6 tak, ruszaj”; rozdział 6 planu): pierwszy PR
+E2-PR4 zmienia działanie dziś, na korzyść — zawieszona odpowiedź kończy się po limicie czasu, a zmiany z szybkiej
+synchronizacji odświeżają widok po każdym rodzaju zmiany. Plan: wiersz 8a tabeli „Podział etapu 2”.
+
+### E2-PR4a
+
+**Co było** (`audyt` `403e80b7`; prawdziwy `vilda_sync.js`, atrapa workera v37a, dane fikcyjne).
+- `f()` przerywa żądanie (`AbortController`) tylko do nagłówków odpowiedzi: zegar kończy się w `finally` po `fetch`,
+  a `json()` czytane potem nie ma limitu. Gdy serwer przysłał nagłówki i zamilkł:
+  - treść `GET /v1/health` trzymała wykrycie (jedno naraz na adres), więc drenaż stronami nie ruszał;
+  - treść strony `GET /changes` trzymała drenaż (jeden naraz w dokumencie), a `syncPull({czekajNaDrenaz:true})` się nie
+    rozstrzygało;
+  - treść `GET /changes` legacy i `GET /deltas` trzymała znacznik drenażu legacy (`at`);
+  - treść `GET /status` trzymała pobranie (znacznik pobrania w toku w integracji).
+  Każdy z tych stanów trwał do przeładowania strony.
+- `applyDelta` z WebSocket (`Ft` w integracji) odświeżał widok tylko przy dodanej albo usuniętej karcie i notatkach.
+  Nowa albo zmieniona wizyta w istniejącej karcie dawała w wyniku scalania tylko `addedSnapshotCount` albo
+  `updatedSnapshotCount` (i `mergedPatientCount`, którego `Ft` świadomie nie liczy), więc widok odświeżała dopiero
+  pełna wysyłka nadawcy. Drenaż (`wt`, `Bdz_czyZmiana`) liczył `mergedPatientCount`, więc odświeżał przy każdej
+  delcie karty, ale nie znał liczników Kosza, przycięcia, list pacjentów, preferencji i kluczy logowania.
+
+**Reguła.**
+- `f(url, init, ms, limitTresci)`: z czwartym argumentem (ms) odpowiedź zapamiętuje swój `AbortController`
+  (`Btr_odp`, `WeakMap`), a `Btr_json(odp)` czyta treść najwyżej tyle — po czasie przerywa żądanie i kończy się
+  błędem `TIMEOUT` (jak limit nagłówków). Bez czwartego argumentu `Btr_json` to zwykłe `json()`.
+- Limity treści tylko w ścieżce pobierania:
+  - `GET /v1/health` 5 s (jak nagłówki) — wynik jak przy błędzie sieci: legacy, pamięć 15 s, potem health od nowa;
+  - `GET /status` w pobraniu (obie gałęzie: zarejestrowany i nie) 30 s — pobranie kończy się błędem `TIMEOUT`
+    (`onSyncError`, jak przy limicie nagłówków);
+  - `GET /changes` stronami i legacy oraz `GET /deltas` 60 s (strona ma do 1 MiB) — drenaż stronami kończy się stopem
+    `siec` z kodem `TIMEOUT` i kursorem bez zmian, drenaż legacy jak przy każdym błędzie (połknięty, następne pobranie
+    od nowa).
+- Bez zmian: wysyłka (`/status`, `PUT /blob`, `/register`), pobranie bloba (własny limit porcji, `Bnd_krok`),
+  `restore-prev`, sonda nowego urządzenia, biblioteka szablonów (własny limit całości).
+- Liczniki zmiany: `wt` i `Bdz_czyZmiana` — 19 (dotychczasowe 9 oraz `addedSnapshotCount`, `updatedSnapshotCount`,
+  `trashedSnapshotCount`, `prunedSnapshotCount`, `addedPatientListCount`, `updatedPatientListCount`,
+  `deletedPatientListCount`, `updatedPreferenceCount`, `addedPasskeyCount`, `removedPasskeyCount`); `Ft` — te same bez
+  `mergedPatientCount` (18): ten licznik rośnie przy każdej istniejącej karcie z ładunku, także przy echu delty bez
+  zmian, więc odświeżałby widok bez potrzeby.
+
+**Zmiana działania dziś:** zawieszona odpowiedź serwera nie blokuje już synchronizacji w karcie do przeładowania
+strony; nowa i zmieniona wizyta w istniejącej karcie z WebSocket odświeża widok od razu. Kosz, przycięcie, listy
+pacjentów, preferencje i klucze logowania przychodzą dziś szybką synchronizacją tylko jako część pełnej wysyłki (ta
+zawsze odświeża widok); liczniki dla nich zadziałają, gdy zaczną przychodzić zdarzeniami (z dziennikiem).
+
+**Testy.** Dane wyłącznie fikcyjne. Nowe i zmienione:
+- `tests/unit/sync-limit-odczytu.test.mjs` (nowy, 12 przypadków):
+  - L1 — treść strony `/changes` wisi: drenaż kończy się po 60 s (stop `siec`, `TIMEOUT`), żądanie przerwane, kursor
+    stoi; następne pobranie dociąga kartę; L1k [kontrola] — treść po 50 s: drenaż czeka i scala;
+  - L2 — treść health wisi: po 5 s legacy, po 15 s health od nowa i drenaż stronami;
+  - L3 — treść `/status` wisi: pobranie kończy się po 30 s błędem `TIMEOUT`, żądanie przerwane; następne działa;
+  - L4, L5 — treść `/changes` legacy i `/deltas` wisi: po 60 s następny drenaż w tym dokumencie rusza;
+  - L6 [kontrola] — po udanym odczycie bez zegara limitu i bez przerwania;
+  - W1 — nowa i poprawiona wizyta w istniejącej karcie z WebSocket odświeżają widok; W1k [kontrola] — echo tej samej
+    delty bez zmian nie odświeża;
+  - L7–L9 — strażniki źródła (liczniki, `f` i `Btr_json`, limit tylko w ścieżce pobierania);
+- `tests/support/atrapa-workera-sync.mjs` — usterka `trescWisi` (nagłówki i połowa ciała, reszta po zwolnieniu, po
+  `ms` albo nigdy; przerwanie żądania kończy odczyt `AbortError`) i jej test K43 w `tests/unit/atrapa-workera-sync.test.mjs`;
+- `tests/unit/sync-dziennik-drenaz.test.mjs` — D36 (przeliczone sumy `Yt` i `wt`, literał `Yt`) i D37 (19 liczników).
+
+**Czerwone na bazie** (`origin/audyt` `403e80b7` z testami tego PR): 11 — L1–L5 i W1 (działanie), L7–L9 (strażniki),
+D36 i D37. Zielone z natury: L1k, L6, W1k, K43 (narzędzie testowe).
+
+**Mutanty.** @@MUTANTY@@
+
+**Kontrola granicy synchronizacji.** `tools/check_clinical_workspace_sync_boundary.mjs` i
+`runtime/clinical-workspace-sync/manifest.json`: przeliczone skróty obrazu bazowego i zintegrowanego obu plików
+(`vilda_sync.js`, `vilda_sync_integration.js`); fragment planów opieki i łaty bez zmian. Po scaleniu składanie
+fragmentu synchronizacji w repozytorium źródeł startuje od obrazu po tym PR (jak dla sejfu, decyzja z 2026-11-09).
+
+**Ograniczenia.**
+- Limit strony 60 s dotyczy całej treści: przy bardzo wolnym łączu (poniżej około 0,15 Mbit/s przy pełnej stronie
+  1 MiB) strona może nie zdążyć — drenaż kończy się wtedy `TIMEOUT`, a następny próbuje tej samej strony; treść
+  przychodzi też pełną wysyłką nadawcy. Typowa strona ma kilka kilobajtów.
+- Odczyt `/status` w wysyłce i w sondzie nowego urządzenia zostaje bez limitu treści (poza ścieżką pobierania).
+
+**Cofnięcie** = rewert PR (bez migracji; rewert cofa też skróty kontroli granicy synchronizacji).
+
 ## Kosz po przywróceniu i porządkowaniu: wizyta usunięta porządkowaniem nie wraca do Kosza (P-KOSZ-USUWANEJ-KARTY, E2-PR3c5, SW 1.1.507, `vilda_vault.js` 271, 2026-11-11)
 
 **Zmiana kliniczna: tak** — wzory, progi, jednostki i interpretacje bez zmian. Zmienia się, czy wizyta jest w Koszu po
@@ -25290,14 +25380,16 @@ teście: sha256 całych funkcji).
 
 **Czego to nie zmienia / co dalej.** E2-PR1b (wykonane w tym samym wpisie wyżej i w P-SYNC-ODPYTYWANIE-WS): włączenie
 domyślne (`'0'` wyłącza), odpytywanie co 60 s przy żywym połączeniu na żywo i odstęp ponownego łączenia od 10 s. E2-PR4: wymuszone `GET /blob` przy `requiresBase`,
-`cursorAhead` i dziurze, statusy `applyEncryptedEvent`, kwarantanna, rozszerzone liczniki `wt`/`Ft`, `markSyncCaughtUp`,
+`cursorAhead` i dziurze, statusy `applyEncryptedEvent`, kwarantanna, rozszerzone liczniki `wt`/`Ft` *(wykonane w E2-PR4a,
+P-SYNC-LIMIT-ODCZYTU)*, `markSyncCaughtUp`,
 ślady P-SYNC-SLAD; przepływ kolejki nie może zakładać, że po `czekajNaDrenaz` kursor sięga `headSeq` z chwili wywołania
 (drugie pobranie w trakcie i pobranie innego slotu — wyżej): E2-PR4 dokłada jeden drenaż po trwającym albo jawne pole
 wyniku. Przerwa po 429 i wynik health żyją w pamięci strony: nowy kontekst (przejście między stronami) może raz
 zapytać i dostać 429 z nowym `Retry-After` — świadomie. Limit czasu żądania (`f`) kończy się z nagłówkami, jak w
 dzisiejszym `Yt`: zawieszona treść odpowiedzi health albo strony `/changes` trzyma drenaż i wspólny znacznik do
 przeładowania strony, a `syncPull({czekajNaDrenaz:true})` się wtedy nie rozstrzyga; limit odczytu treści dokłada
-E2-PR4, zanim przepływ kolejki zacznie czekać na drenaż.
+E2-PR4, zanim przepływ kolejki zacznie czekać na drenaż. *(Wykonane w E2-PR4a, P-SYNC-LIMIT-ODCZYTU, 2026-11-11: limit
+odczytu treści health, `/status` w pobraniu, `/changes` i `/deltas`.)*
 
 | Wejście | Oczekiwany wynik |
 |---|---|

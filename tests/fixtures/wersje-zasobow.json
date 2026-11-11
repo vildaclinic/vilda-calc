@@ -2020,12 +2020,12 @@
   "sha256": "473bcf6945b4be2b78bbb9ef7c0ee051fb38f9bfc17578fca93bfa1a73d5b6ff"
  },
  "vilda_sync.js": {
-  "v": 49,
-  "sha256": "794c7e5f14977f873eabbdc87f8c12f47f18d696c2a7d6564ca0b0ffb17664f2"
+  "v": 50,
+  "sha256": "d3b04cf5f6b372d27c666932f0a468347313ef5599556ec180ef62cb12506d9b"
  },
  "vilda_sync_integration.js": {
-  "v": 57,
-  "sha256": "cde33bcf279741547bdc40ecc1072d98dad3c0b6c5c84b36c354784a4df80749"
+  "v": 58,
+  "sha256": "84c5f531acb3079193de8a61abe8c22f3149aaf9672ab8a12b089066e209b4aa"
  },
  "vilda_tab_guard.js": {
   "v": 5,

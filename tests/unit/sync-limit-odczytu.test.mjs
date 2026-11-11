@@ -199,6 +199,8 @@ describe('P-SYNC-LIMIT-ODCZYTU — limit odczytu treści w ścieżce pobierania'
     await deltaKarty(s, 8);
     const w = await s.B.sync.syncPull({ czekajNaDrenaz: true });
     expect(w.drain.stop).toBe('head');
+    await cisza([s.A, s.B]);
+    expect(s.B.timery.oczekujace().filter((t) => [5000, 30000, 60000].includes(t.ms)), 'bez zegara limitu odczytu po sukcesie').toEqual([]);
     const z0 = s.atrapa.zadania.length;
     await vi.advanceTimersByTimeAsync(61000);
     await cisza([s.A, s.B]);
