@@ -53,6 +53,12 @@
 // i B7); wariant '1' i 4 warianty legacy zielone (na bazie '1' daje to samo, co brak klucza po zmianie).
 //
 // Czerwone na bazie (E2-PR0): żadne — zapis bazowy, zielony na e49ff33e.
+//
+// E2-PR4b (P-SYNC-ZDARZENIA, test „flaga wyłączona”): dwa warianty DOMYŚLNIE z workerem, który podaje „events” w health
+// (EVENTS_ENABLED=1, stan po E2-W1), i klientem bez klucza vilda-event-log-v1 albo z '0'. Oczekiwania DOMYSLNIE v37a bez
+// zmian (oś, zapisy kluczy, kursory, getDrainStatus); w każdym wariancie dodatkowo: żadne POST /events i zamknięta bramka
+// kolejki sejfu. Klient z E2-PR4 bez flagi nie reaguje na „events” (warunek wstępny E2-W1). Zielone przed i po zmianie
+// (sprawdzone na bazie 175cdc27).
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { utworzAtrapeWorkera, zegarSterowany } from '../support/atrapa-workera-sync.mjs';
 import { cisza, sprzatnijUrzadzenia, utworzUrzadzenie } from '../support/urzadzenie-sync.mjs';
@@ -75,12 +81,15 @@ const WARIANTY_DOMYSLNE = [
   { nazwa: 'v37a (produkcja, EVENTS_ENABLED=0), brak klucza', atrapa: { tryb: 'v37a', eventsEnabled: false }, domyslnie: true },
   { nazwa: 'v36, brak klucza', atrapa: { tryb: 'v36' }, domyslnie: true },
   { nazwa: "v37a, vilda-sync-paged-v1 = '1'", atrapa: { tryb: 'v37a', eventsEnabled: false }, flaga: '1', domyslnie: true },
+  { nazwa: 'v37a z „events” w health (EVENTS_ENABLED=1), brak klucza vilda-event-log-v1', atrapa: { tryb: 'v37a', eventsEnabled: true }, domyslnie: true },
+  { nazwa: "v37a z „events” w health (EVENTS_ENABLED=1), vilda-event-log-v1 = '0'", atrapa: { tryb: 'v37a', eventsEnabled: true }, dziennik: '0', domyslnie: true },
 ];
 // Flaga klienta (poza pokrętłami atrapy) na każdym urządzeniu zaraz po utworzeniu — przed znacznikMagazynu(), więc poza
 // rzutem magazynu. Bliźniak B dostaje klon 'sejf' (bez kopii localStorage A), więc flaga ustawiana osobno.
 function flagaKlienta(w, d) {
   if (w.flaga != null) d.win.localStorage.setItem('vilda-sync-paged-v1', w.flaga);
   if (w.globalna !== undefined) d.win.VILDA_SYNC_PAGED = w.globalna;
+  if (w.dziennik != null) d.win.localStorage.setItem('vilda-event-log-v1', w.dziennik);
   return d;
 }
 
@@ -519,6 +528,8 @@ describe.each([...WARIANTY, ...WARIANTY_DOMYSLNE])('E2-PR0 zapis bazowy vilda_sy
       else expect(status).toMatchObject(dom.drain);
     }
     expect(wszystkie.filter((x) => x.transport === 'fetch-okna'), 'beacony bez rezerwy fetch okna').toEqual([]);
+    expect(wszystkie.filter((x) => x.trasa === 'events'), 'bez POST /events (dziennik uśpiony)').toEqual([]);
+    expect(d.vault._eventLog.gateOpen(), 'bramka kolejki sejfu zamknięta').toBe(false);
     expect(wszystkie.filter((x) => x.pozaKontraktem).length, 'usterki POZA KONTRAKTEM tylko jawne (B5)').toBe(sc.pozaKontraktem || 0);
     expect(s.atrapa.naruszenia).toEqual([]);
   });

@@ -6,10 +6,10 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-// Base images follow the latest transport change outside the clinical fragment: 2026-11-11, response body read limit
-// in the pull path and refresh counters (P-SYNC-LIMIT-ODCZYTU, E2-PR4a; docs/clinical/ALGORITHMS.md).
+// Base images follow the latest transport change outside the clinical fragment: 2026-11-11, event-log upload
+// transport and switch (P-SYNC-ZDARZENIA, E2-PR4b; before it P-SYNC-LIMIT-ODCZYTU, E2-PR4a; docs/clinical/ALGORITHMS.md).
 const bases = {
-  'vilda_sync.js': { sha256: '009002ef2d20abcf322d358dcdc1051bc3b1bf7e941e1f1a38c8da65418e573e',
+  'vilda_sync.js': { sha256: '36f1b1113975da0e8a2dfd2957065345a7502bfe79f57cdeba7be81575b70315',
     names: ['TLibPullCycle', 'TLibPushCycle', 'TLibFullCycle', 'xt'] },
   'vilda_sync_integration.js': { sha256: '48c788be6be8743a6a8ff667a6fe97990d59fc99d22c9e2f594909907618d913',
     names: ['I', 'V', 'M', 'J', 'U', 'S', 'ot', 'K', 'G', 'PatientClinicalLegacyAllowed', 'ct', 'mt', 'j'] }

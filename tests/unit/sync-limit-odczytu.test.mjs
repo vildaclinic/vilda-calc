@@ -280,6 +280,9 @@ describe('P-SYNC-LIMIT-ODCZYTU — strażniki źródła', () => {
     expect(ile('"/deltas",{method:"GET",headers:{Authorization:"Bearer "+e}},ct,Btr_LIMIT_STRONY_MS)'), 'Bt').toBe(1);
     expect(ile('"/status",{method:"GET",headers:{Authorization:"Bearer "+r}},Mt,Mt)'), 'status w pobraniu').toBe(2);
     expect(ile('Btr_LIMIT_STRONY_MS'), 'deklaracja + 3 wywołania').toBe(4);
-    expect(ile('await Btr_json('), 'odczyty z limitem: health, 2× status, Yt, Bt, 2× drenaż').toBe(7);
+    // E2-PR4b (P-SYNC-ZDARZENIA): wysyłka zdarzeń dziennika ma własny limit 30 s także na treść (plan 3.2, pkt 3) —
+    // jedno wywołanie f z czwartym argumentem i jeden odczyt Btr_json, poza pełną wysyłką, rejestracją i blobem.
+    expect(ile("body: p.cialo }, Bze_LIMIT_MS, Bze_LIMIT_MS)"), 'POST /events').toBe(1);
+    expect(ile('await Btr_json('), 'odczyty z limitem: health, 2× status, Yt, Bt, 2× drenaż, POST /events').toBe(8);
   });
 });

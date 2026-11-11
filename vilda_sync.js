@@ -242,6 +242,153 @@ function Bpw_inneKonto(t,kto){return Bpw_konto(t)!==kto}
 function Bpw_przerwane(){return u("VildaSync: pobieranie przerwane \u2014 w trakcie zablokowano sejf albo prze\u0142\u0105czono konto. Nic nie scalono.","SESSION_CHANGED")}
 function Bpw_sejfKonta(t,kto){if(!t||typeof t.applyEncryptedDelta!="function")return t;return{isUnlocked:function(){return!(typeof t.isUnlocked=="function"&&!t.isUnlocked())&&!Bpw_inneKonto(t,kto)},applyEncryptedDelta:function(x){return t.applyEncryptedDelta(x)}}}
 function Bpw_dren(a,r,i,t,kto,Bdz_w){if(Bpw_inneKonto(t,kto))return;var Bdz_s=Bpw_sejfKonta(t,kto),Bdz_p=Bdz_wlaczone()?Bdz_B(a,r,i,Bdz_s):B(a,r,i,Bdz_s).catch(function(){});Bdz_w&&typeof Bdz_w=="object"&&Bdz_wyniki.set(Bdz_w,Bdz_p)}
+/* P-SYNC-ZDARZENIA (E2-PR4b; plan docs/SYNC_PRZYROSTOWA_PLAN.md 3.2 "Petla wysylki", wiersz 8b): wysylka zdarzen
+   dziennika (POST /v1/slots/<slot>/events) i wlacznik dziennika. USPIONE: kod produkcyjny nie wola pushEvents (nadawca
+   dochodzi w E2-PR4d), a wlacznik jest otwarty tylko przy "events" w health i fladze vilda-event-log-v1 = "1".
+   isEventLogEnabled(): najpierw ostatni wynik GET /v1/health tej strony w pamieci (Bdz_api, bez magazynu): bez "events"
+   koniec bez zadnego odczytu; dopiero potem flaga (dokladnie "1") i Bdz_wlaczone() (pobieranie stronami, "Komputer
+   prywatny", nie chmurowy, nie jednorazowy; korzysta z Bdz_ nizej). Sejf czyta ten wlacznik w bramce kolejki.
+   pushEvents(events): partia 1-200 zdarzen {eid (UUID v4 malymi literami), iv, data}, cialo do 1 MiB; na serwer idzie
+   dokladnie {eid, iv, data} (bez z i aad, plan 3.1). Nigdy nie rzuca: wynik {ok:true, accepted, rejected, headSeq, ts}
+   albo {ok:false, powod, kod?, http?, retryAfterMs?}. Bez zadania: zle wejscie ('argument'), wylaczony dziennik
+   ('wylaczone'), trwajace wysylanie w tym dokumencie ('w-locie'), pauza po 429 ze wspolnego klucza
+   vilda-sync-rl-until-v1 ('pauza', RATE_LIMITED), zablokowany sejf ('zablokowany'), slot niezarejestrowany
+   ('niezarejestrowany'), trasa formatu klinicznego inna niz legacy ('format', przed tozsamoscia i zadaniem, jak inne
+   operacje synchronizacji). Limit 30 s takze na tresc odpowiedzi (Btr_json). Zmiana sesji (blokada albo inne konto) przed
+   wyslaniem albo w trakcie: 'sesja' bez skutkow ubocznych. Odpowiedzi: 200 (ksztalt sprawdzony, inaczej 'odpowiedz');
+   429 - odstep z Retry-After albo retryAfterSeconds (1-300 s, jak Bdz_odstep429) do vilda-sync-rl-until-v1 (najdalszy
+   termin wygrywa; ten sam klucz pauzy co pelna wysylka); 401 - stan slotu wyczyszczony jak przy innych 401
+   (AUTH_FAILED); 404 - zdarzenia wylaczone na serwerze: "events" zdjete z pamieci health tej strony (wlacznik zamkniety
+   do nastepnego health); 413, 415, 400 (kod z ciala), 507 log_full, 5xx; siec i TIMEOUT; odmowa formatu klinicznego
+   'format'; nieoczekiwany wyjatek 'blad'. ts z odpowiedzi 200 rozni sie od Date.now() o wiecej niz 60 s: vilda:sync-clock-skew (Qcs) ze zrodlem
+   'server'. Bez onSyncStart/Complete/Error i bez sladow: zdecyduje nadawca (E2-PR4d), on tez sprawdza wlaczona
+   synchronizacje. Tabela: ALGORITHMS P-SYNC-ZDARZENIA. */
+var Bze_KLUCZ = 'vilda-event-log-v1', Bze_RL_KLUCZ = 'vilda-sync-rl-until-v1';
+var Bze_LIMIT_MS = 3e4, Bze_ZEGAR_MS = 6e4, Bze_MAX_ZDARZEN = 200, Bze_MAX_BAJTOW = 1048576;
+var Bze_EID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+var Bze_wLocie = !1; // trwajace pushEvents w tym dokumencie (jedno zadanie w locie)
+function Bze_isEventLogEnabled() {
+  try {
+    if (!Bdz_ma(Bdz_api[j()], 'events')) return false;
+    if (!(o.localStorage && o.localStorage.getItem(Bze_KLUCZ) === '1')) return false;
+    return Bdz_wlaczone();
+  } catch (x) { return false; }
+}
+function Bze_odmowa(powod, kod, x) {
+  var w = { ok: false, powod: powod };
+  if (kod) w.kod = kod;
+  return x ? Object.assign(w, x) : w;
+}
+/* Partia na serwer albo null (zle wejscie): tylko eid, iv i data; rozmiar ciala w bajtach UTF-8. */
+function Bze_partia(events) {
+  if (!Array.isArray(events) || events.length < 1 || events.length > Bze_MAX_ZDARZEN) return null;
+  var out = [], eidy = Object.create(null);
+  for (var i = 0; i < events.length; i++) {
+    var e = events[i];
+    if (!e || typeof e != 'object' || typeof e.eid != 'string' || !Bze_EID.test(e.eid) || eidy[e.eid]) return null;
+    if (typeof e.iv != 'string' || e.iv.length < 1 || e.iv.length > 64 || typeof e.data != 'string') return null;
+    eidy[e.eid] = !0;
+    out.push({ eid: e.eid, iv: e.iv, data: e.data });
+  }
+  var cialo = JSON.stringify({ events: out });
+  if (new TextEncoder().encode(cialo).byteLength > Bze_MAX_BAJTOW) return null;
+  return { cialo: cialo, eidy: eidy };
+}
+function Bze_pauzaMs() {
+  try {
+    var t = Number(o.localStorage && o.localStorage.getItem(Bze_RL_KLUCZ)) || 0, r = t - Date.now();
+    return r > 0 ? r : 0;
+  } catch (x) { return 0; }
+}
+function Bze_ustawPauze(ms) {
+  try {
+    var t = Date.now() + ms, b = Number(o.localStorage && o.localStorage.getItem(Bze_RL_KLUCZ)) || 0;
+    o.localStorage && t > b && o.localStorage.setItem(Bze_RL_KLUCZ, String(t));
+  } catch (x) {}
+}
+function Bze_bezZdarzen(url) {
+  var a = Bdz_api[url];
+  if (a && Array.isArray(a.features)) a.features = a.features.filter(function (x) { return x !== 'events'; });
+}
+/* Odpowiedz 200: accepted [{eid, seq, dup}] i rejected [{eid, code}] tylko z eid tej partii, headSeq, ts; inaczej null. */
+function Bze_odpowiedz(c, eidy) {
+  if (!c || typeof c != 'object' || !Array.isArray(c.accepted) || !Array.isArray(c.rejected)) return null;
+  if (!Number.isSafeInteger(c.headSeq) || c.headSeq < 0 || typeof c.ts != 'number' || !isFinite(c.ts)) return null;
+  var acc = [], rej = [];
+  for (var i = 0; i < c.accepted.length; i++) {
+    var a = c.accepted[i];
+    if (!a || typeof a.eid != 'string' || !eidy[a.eid] || !Number.isSafeInteger(a.seq) || a.seq < 1 || typeof a.dup != 'boolean') return null;
+    acc.push({ eid: a.eid, seq: a.seq, dup: a.dup });
+  }
+  for (var k = 0; k < c.rejected.length; k++) {
+    var r = c.rejected[k];
+    if (!r || typeof r.eid != 'string' || !eidy[r.eid] || typeof r.code != 'string' || !r.code) return null;
+    rej.push({ eid: r.eid, code: r.code });
+  }
+  return { ok: true, accepted: acc, rejected: rej, headSeq: c.headSeq, ts: c.ts };
+}
+function Bze_zegar(ts) {
+  var d = ts - Date.now();
+  if (Math.abs(d) > Bze_ZEGAR_MS) {
+    Qcs({ offsetMs: d, thresholdMs: Bze_ZEGAR_MS, warn: !0, source: 'server', serverTsISO: new Date(ts).toISOString() });
+  }
+}
+async function Bze_pushEvents(events) {
+  var p = Bze_partia(events);
+  if (!p) return Bze_odmowa('argument');
+  if (!Bze_isEventLogEnabled()) return Bze_odmowa('wylaczone');
+  if (Bze_wLocie) return Bze_odmowa('w-locie');
+  var pz = Bze_pauzaMs();
+  if (pz > 0) return Bze_odmowa('pauza', 'RATE_LIMITED', { retryAfterMs: pz });
+  if (PatientClinicalRouteFailure('sync-events')) return Bze_odmowa('format');
+  Bze_wLocie = !0;
+  try {
+    var t, kto, mat;
+    try { t = I(); kto = Bpw_konto(t); mat = await t.getSyncMaterial(); } catch (x) { return Bze_odmowa('zablokowany'); }
+    if (Bpw_inneKonto(t, kto) || !t.isUnlocked()) return Bze_odmowa('sesja');
+    var slot = mat && mat.slotId, url = j();
+    if (typeof slot != 'string' || !slot || !m(slot).registered) return Bze_odmowa('niezarejestrowany');
+    var odp;
+    try {
+      odp = await f(url + '/v1/slots/' + slot + '/events', { method: 'POST',
+        headers: { Authorization: 'Bearer ' + mat.authToken, 'Content-Type': 'application/json' }, body: p.cialo }, Bze_LIMIT_MS, Bze_LIMIT_MS);
+    } catch (x) {
+      if (Bpw_inneKonto(t, kto) || !t.isUnlocked()) return Bze_odmowa('sesja');
+      if (x && x.patientClinicalUnavailable) return Bze_odmowa('format');
+      return Bze_odmowa('siec', x && x.code === 'TIMEOUT' ? 'TIMEOUT' : 'NETWORK');
+    }
+    var c = null, cx = null;
+    try { c = await Btr_json(odp); } catch (x) { cx = x; }
+    if (Bpw_inneKonto(t, kto) || !t.isUnlocked()) return Bze_odmowa('sesja');
+    var s = odp.status;
+    if (s === 200) {
+      if (cx && cx.name === 'SyntaxError') return Bze_odmowa('odpowiedz', 'INVALID_RESPONSE', { http: s });
+      if (cx) return Bze_odmowa('siec', cx.code === 'TIMEOUT' ? 'TIMEOUT' : 'NETWORK', { http: s });
+      var w = Bze_odpowiedz(c, p.eidy);
+      if (!w) return Bze_odmowa('odpowiedz', 'INVALID_RESPONSE', { http: s });
+      Bze_zegar(w.ts);
+      return w;
+    }
+    if (s === 429) {
+      var ms = Bdz_odstep429(odp, c);
+      Bze_ustawPauze(ms);
+      return Bze_odmowa('odmowa', 'RATE_LIMITED', { http: s, retryAfterMs: ms });
+    }
+    if (s === 401) { C(slot); return Bze_odmowa('odmowa', 'AUTH_FAILED', { http: s }); }
+    if (s === 404) { Bze_bezZdarzen(url); return Bze_odmowa('odmowa', 'EVENTS_DISABLED', { http: s }); }
+    if (s === 413) return Bze_odmowa('odmowa', 'PAYLOAD_TOO_LARGE', { http: s });
+    if (s === 415) return Bze_odmowa('odmowa', 'UNSUPPORTED_MEDIA_TYPE', { http: s });
+    if (s === 400) {
+      var k400 = c && c.error && typeof c.error.code == 'string' ? c.error.code : null;
+      return Bze_odmowa('odmowa', 'INVALID_EVENTS', k400 ? { http: s, code: k400 } : { http: s });
+    }
+    if (s === 507) return Bze_odmowa('odmowa', 'LOG_FULL', { http: s });
+    if (s >= 500) return Bze_odmowa('odmowa', 'SERVER', { http: s });
+    return Bze_odmowa('odmowa', 'HTTP', { http: s });
+  } catch (x) {
+    return Bze_odmowa(x && x.patientClinicalUnavailable ? 'format' : 'blad');
+  } finally { Bze_wLocie = !1; }
+}
 /* P-SYNC-STRONY (E2-PR1; plan docs/SYNC_PRZYROSTOWA_PLAN.md 3.3 "drainChanges"; decyzje wlasciciela 2026-10-29 nr 1 i 2):
    dziennik zmian stronami (/changes?since=N&limit=200, petla po truncated, ciaglosc seq) zamiast jednej strony legacy
    na pobranie. Od E2-PR1b (P-SYNC-STRONY-DOMYSLNIE) DOMYSLNIE WLACZONE: wylacza tylko vilda-sync-paged-v1 = "0"
@@ -1174,4 +1321,4 @@ function TLibAutomatic() {
 function TLibPullCycle ( options ) {TLibAutomatic(); return WorkspaceSyncDispatch("pull", true, function () { return Bdz_syncPull(options); });}
 function TLibPushCycle ( options ) {TLibAutomatic(); return WorkspaceSyncDispatch("push", false, function () { return ht(options); });}
 function TLibFullCycle ( ) {TLibAutomatic(); return WorkspaceSyncDispatch("full", true, function () { return Ht(); });}
-o.VildaSync={syncPush:TLibPushCycle,syncPull:TLibPullCycle,syncFull:TLibFullCycle,activateTemplateLibrarySync:TLibActivate,deactivateTemplateLibrarySync:TLibDeactivate,syncTemplateLibrary:TLibExplicit,getTemplateLibrarySyncStatus:TLibGetStatus,continueTemplateLibrarySync:TLibAutomatic,inspectTemplateLibraryAuthority:TLibInspectAuthority,resetSessionPullGuard:Ut,getSyncStatus:xt,clearSyncState:Wt,deleteSyncSlot:Jt,onSyncStart:Zt,onSyncComplete:Qt,onSyncError:Rt,probeNewDevice:Xt,restorePrevBlob:qt,revokeAllDevices:$t,uploadToSlot:pt,deleteSlotWithMaterial:_t,_loadSyncState:PatientClinicalLoadState,_saveSyncState:PatientClinicalSaveState,_clearSyncStateForSlot:PatientClinicalClearState,detectApi:Bdz_detectApi,getDrainStatus:Bdz_getDrainStatus,getChangesCursor:Bdz_getChangesCursor,isPagedActive:Bdz_isPagedActive}})(typeof window<"u"?window:typeof globalThis<"u"?globalThis:null);
+o.VildaSync={syncPush:TLibPushCycle,syncPull:TLibPullCycle,syncFull:TLibFullCycle,activateTemplateLibrarySync:TLibActivate,deactivateTemplateLibrarySync:TLibDeactivate,syncTemplateLibrary:TLibExplicit,getTemplateLibrarySyncStatus:TLibGetStatus,continueTemplateLibrarySync:TLibAutomatic,inspectTemplateLibraryAuthority:TLibInspectAuthority,resetSessionPullGuard:Ut,getSyncStatus:xt,clearSyncState:Wt,deleteSyncSlot:Jt,onSyncStart:Zt,onSyncComplete:Qt,onSyncError:Rt,probeNewDevice:Xt,restorePrevBlob:qt,revokeAllDevices:$t,uploadToSlot:pt,deleteSlotWithMaterial:_t,_loadSyncState:PatientClinicalLoadState,_saveSyncState:PatientClinicalSaveState,_clearSyncStateForSlot:PatientClinicalClearState,detectApi:Bdz_detectApi,getDrainStatus:Bdz_getDrainStatus,getChangesCursor:Bdz_getChangesCursor,isPagedActive:Bdz_isPagedActive,isEventLogEnabled:Bze_isEventLogEnabled,pushEvents:Bze_pushEvents}})(typeof window<"u"?window:typeof globalThis<"u"?globalThis:null);
