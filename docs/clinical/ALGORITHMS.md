@@ -1172,6 +1172,34 @@ ujemne UAG zachowuje właściwe położenie, a różne skale i nakładające si�
 zachowują swoje wartości i identyfikatory. Osobny krótki job WebKit sprawdza
 komputer oraz szerokości 390 i 320 px; te same scenariusze należą do zestawu Chromium.
 
+### LAB-HISTORIA 6.32 — wynik badania w jednym miejscu karty (`vilda_lab_history.js` 1.4.0, `vilda_lab_history_tab.js` 2.2.0, 2026-11-11)
+
+**Klasyfikacja: zmiana prezentacji, bez wpływu klinicznego.** Ten sam zapis
+(„Przypnij do wizyty” i edytor karty), te same wartości, jednostki, oceny,
+normy i zaokrąglenia; dzisiejsze normy nadal nie oceniają historii. Zmienia
+się tylko to, gdzie i jak krótko karta pokazuje zapisany wynik (decyzja
+właściciela z 2026-11-11, makieta zaakceptowana): pełna treść w zakładce
+„Badania”; Notatki bez wyników (linia z ich liczbą); Historia z krótkim wpisem
+„Badanie” — wyniki z jednego dnia i jednej wizyty, wiersz na wynik.
+
+`isResultNote(note)` to warunek, którym karta chowa wynik w Notatkach i kieruje
+do niego linki: kategoria „wynik-badania” i ta sama droga do widoku co
+w `buildHistoryView`. Przypadek syntetyczny: przypięte TSH 2,1 mIU/L
+(kategoria „wynik-badania”, `valueNum`, klucz `tsh`) → `true`, wpis jest
+w widoku Badań; zlecenie „Wynik: TSH” z terminem i bez wartości → `false`,
+zostaje w Notatkach; wynik Klirensu („wynik-klirens”) → `false`.
+`recordedWarning(envelope)` zwraca ostrzeżenie kliniczne zapisanej oceny tylko
+dla koperty „recorded” — ten sam tekst co pigułka 6.20 w Badaniach (LH 3 IU/L,
+dziewczynka 6 lat, Th3 → „Cechy dojrzewania zbyt wcześnie — wymagają oceny”;
+ocena unieważniona zmianą daty → brak ostrzeżenia). Krótki wpis Historii
+pokazuje to ostrzeżenie w wierszu wyniku, żeby nie znikło z osi czasu. Krótki wiersz
+dostaje tylko wynik z liczbą albo z zapisaną oceną; wynik opisowy (np. wynik kroku
+planu opieki) zostaje w Historii pełnym wpisem z tytułem i treścią.
+Testy na funkcjach produkcyjnych i prawdziwym sejfie:
+`tests/unit/lab-result-notes-projection.test.mjs`; e2e
+`tests/e2e/wyniki-badan-karta.spec.mjs`. Opis: `docs/LAB_HISTORIA_WYNIKOW_PLAN.md`,
+„Uzupełnienie z wdrożenia 6.32”.
+
 ### P-LAB-WARTOSC-BEZ-JEDNOSTKI — liczba ze starszego wpisu wyniku bez jednostki (SW 1.1.279, `vilda_vault.js` 212, 2026-10-14)
 
 **Wpływ kliniczny: tak.** Zmieniają się liczby w historii wyników dla

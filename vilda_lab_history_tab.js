@@ -12,6 +12,10 @@
  *   options.openReminders(list)                              arkusz przypomnień (Mr)
  *   options.onChanged()                                      zapis z zakładki zmienił notatki
  *   options.openClcrResult({patientId,noteId,record,vault,onChanged}) — szczegóły obliczenia, nigdy edytor lab
+ *   options.focusNoteId                                      po pierwszym odczycie otwiera szczegóły tego wyniku
+ *     (link do wyniku z Historii, wyszukiwarki, Przypomnień lub planu opieki; decyzja właściciela 2026-11-11)
+ *   options.deleteNote({ note }) → Promise<boolean>         „Usuń wpis” w szczegółach wyniku: potwierdzenie
+ *     i usunięcie robi karta (ta sama funkcja co „Usuń” w Notatkach); true = wpis usunięty
  *   options.vault, options.model, options.trend, options.storage, options.now — do testów
  *
  * Projekt: docs/LAB_HISTORIA_WYNIKOW_PLAN.md, 3.2; opis: docs/clinical/ALGORITHMS.md, „LAB-HISTORIA”.
@@ -125,6 +129,7 @@
       var resultsHost = null;
       var viewButtons = [], joinLabel = null, joinInput = null;
       var initialPending = true;
+      var pendingFocus = text(options.focusNoteId) || null;
 
       function node(tag, className, content) {
         var element = doc.createElement(tag);
@@ -299,6 +304,7 @@
           if (view.summary.missingNotes > 0 && !state.retried) { state.retried = true; schedule(); }
           state.data = { view: view, series: Array.isArray(results[0]) ? results[0] : [] };
           draw();
+          if (pendingFocus) focusRequested();
           if (view.pending.length && typeof vault.listPatientNotesDueByDate === 'function') {
             return Promise.resolve(vault.listPatientNotesDueByDate()).then(function (list) {
               if (!current(gen)) return;
@@ -372,6 +378,34 @@
         Promise.resolve(vault.getPatientNote(noteId)).then(function (note) {
           if (note && current(gen) && !(typeof vault.isUnlocked === 'function' && !vault.isUnlocked())) openEditor({ note: note });
         }).catch(function () { /* wpis zniknął — odświeżenie pokaże stan sejfu */ });
+      }
+      // „Usuń wpis” (decyzja właściciela 2026-11-11): wynik ma jedno miejsce pełnej treści, więc usuwa się go
+      // w Badaniach, a nie w Notatkach. Potwierdzenie, kontrola dostępu do wpisu i samo usunięcie należą do karty
+      // (options.deleteNote — ta sama funkcja co „Usuń” w Notatkach); zakładka czyta wpis świeżo z sejfu.
+      function removeNote(noteId) {
+        if (!noteId || !vault || typeof vault.getPatientNote !== 'function' || typeof options.deleteNote !== 'function') return;
+        var gen = state.gen;
+        Promise.resolve(vault.getPatientNote(noteId)).then(function (note) {
+          if (!note || !current(gen) || (typeof vault.isUnlocked === 'function' && !vault.isUnlocked())) return false;
+          return options.deleteNote({ note: note });
+        }).then(function (deleted) {
+          if (deleted !== true || !instance.alive()) return;
+          if (state.selected && state.selected.noteId === noteId) state.selected = null;
+          schedule();
+          if (typeof options.onChanged === 'function') options.onChanged();
+        }).catch(function () { /* wpis zniknął albo karta odmówiła — odświeżenie pokaże stan sejfu */ });
+      }
+      // Wejście z linku do wyniku (Historia, wyszukiwarka, Przypomnienia, plan opieki): po pierwszym odczycie
+      // zakładka otwiera szczegóły tego wyniku. Wpis, którego już nie ma, zostawia zwykły widok.
+      function focusRequested() {
+        var noteId = pendingFocus;
+        pendingFocus = null;
+        if (!noteId || !state.data) return;
+        var found = null;
+        state.data.view.panels.forEach(function (panel) { panel.series.forEach(function (series) {
+          series.entries.forEach(function (entry) { if (!found && entry.noteId === noteId) found = { entry: entry, view: series }; });
+        }); });
+        if (found) selectResult(found.entry, found.view);
       }
       function openEditor(request, afterSave) {
         if (typeof options.openEditor !== 'function') return;
@@ -847,7 +881,14 @@
         var comment = commentText(found.comment);
         if (comment) add(box, 'p', 'vilda-lab-hist-result-comment', comment);
         if (found.delta && found.delta.available) add(box, 'p', 'vilda-lab-hist-muted', 'Zmiana: ' + model.formatDelta(found.delta, win && win.LabUnitConverter));
-        if (typeof options.openEditor === 'function' && found.noteId) button(box, 'vilda-lab-hist-link vilda-lab-hist-edit-result', 'Edytuj wpis', function () { openNote(found.noteId); });
+        var canEdit = typeof options.openEditor === 'function' && !!found.noteId;
+        // IGF-1 z notatki leczenia GH jest częścią notatki leczenia — tę usuwa się przy leczeniu, nie tutaj.
+        var canDelete = typeof options.deleteNote === 'function' && !!found.noteId && found.source !== 'gh-note';
+        if (canEdit || canDelete) {
+          var actions = add(box, 'div', 'vilda-lab-hist-detail-actions');
+          if (canEdit) button(actions, 'vilda-lab-hist-link vilda-lab-hist-edit-result', 'Edytuj wpis', function () { openNote(found.noteId); });
+          if (canDelete) button(actions, 'vilda-lab-hist-link vilda-lab-hist-delete-result', 'Usuń wpis', function () { removeNote(found.noteId); });
+        }
         if (view.entries.length > 1) {
           var history = add(box, 'details', 'vilda-lab-hist-result-history');
           add(history, 'summary', '', 'Pozostałe wyniki (' + (view.entries.length - 1) + ')');
@@ -1062,7 +1103,7 @@
       };
     }
 
-    return Object.freeze({ version: '2.1.0', render: render, _internal: Object.freeze({ plural: plural, commentText: commentText, shortLabel: shortLabel, mergedNote: mergedNote }) });
+    return Object.freeze({ version: '2.2.0', render: render, _internal: Object.freeze({ plural: plural, commentText: commentText, shortLabel: shortLabel, mergedNote: mergedNote }) });
   }
 
   return createApi();

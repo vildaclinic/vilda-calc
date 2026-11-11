@@ -248,10 +248,12 @@ test('history retains censored and unavailable assessments without inventing num
   await page.evaluate((pid) => window.VildaAuthUI.showPatientCard(pid), patientId);
   await page.locator('.vilda-patient-tab[data-tab="timeline"]').click();
   const history = page.locator('.vilda-patient-tab-content[data-tab="timeline"]');
-  await expect(history).toContainText('Fikcyjne LH');
-  await expect(history).toContainText('<LOD');
-  await expect(history).toContainText('Fikcyjny starszy wynik');
-  await expect(history).toContainText('Fikcyjny nieczytelny kontekst');
+  // P-WYNIKI-BADAN (2026-11-11): każdy wpis zostaje na osi czasu jako krótki wiersz (badanie, wartość, komentarz)
+  // zamiast tytułu notatki; wynik cenzorowany pokazuje zapis „<LOD”, a nie liczbę.
+  await expect(history.locator(`.vilda-wb-hist-result[data-note-id="${censored.id}"]`)).toContainText('LH');
+  await expect(history.locator(`.vilda-wb-hist-result[data-note-id="${censored.id}"]`)).toContainText('<LOD');
+  await expect(history.locator(`.vilda-wb-hist-result[data-note-id="${ids.old}"]`)).toContainText('Stary zapis bez kontekstu');
+  await expect(history.locator(`.vilda-wb-hist-result[data-note-id="${ids.unavailable}"]`)).toContainText('Nieznana wersja');
   // LAB-HISTORIA PR2 (decyzja 6.12): „Trend wyników” przeniósł się do zakładki „Badania”. Historia pokazuje dalej
   // wpisy osi czasu (wyżej), a w miejscu sekcji trendu odnośnik do zakładki.
   await expect(history.locator('.vilda-lab-trend-section')).toHaveCount(0);

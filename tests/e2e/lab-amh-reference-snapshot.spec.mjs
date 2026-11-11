@@ -271,7 +271,8 @@ for (const width of [1440, 320]) test(`AMH F15 main-form reference survives pin,
   const timeline = await history(page, id);
   await expect(savedReference(timeline)).toHaveAttribute('data-reference-status', 'recorded');
   await expect(savedReference(timeline)).toContainText('2,96 ng/mL');
-  await expect(timeline.locator('span').filter({ hasText: /^AMH.*:\s*0[.,]45 ng\/mL$/ })).toHaveCount(1);
+  // P-WYNIKI-BADAN (2026-11-11): Historia pokazuje wynik krótkim wierszem (badanie, wartość) zamiast tytułu notatki.
+  await expect(timeline.locator(`.vilda-wb-hist-result[data-note-id="${saved.id}"]`)).toHaveText(/^AMH\s*0[.,]45\s*ng\/mL$/);
   await expect(timeline).toBeVisible();
   await capture(page, timeline, `${width}-history`, saved);
   await savedReference(timeline).locator('summary').click();
@@ -424,7 +425,8 @@ test('AMH saved editor preserves comments, invalidates result or date changes, a
   expect((await readNote(page, legacy.id)).labResult).toEqual(legacy.labResult);
   const timeline = await history(page, id);
   await expect(timeline).toContainText('Nowy komentarz starego wyniku');
-  await expect(timeline).toContainText('2 ng/mL = 14,3 pmol/L');
+  // P-WYNIKI-BADAN: wartość dawnego wpisu w krótkim wierszu Historii — liczba i jednostka zapisu, bez dopisanego przeliczenia.
+  await expect(timeline.locator(`.vilda-wb-hist-result[data-note-id="${legacy.id}"] .vilda-wb-hist-value`)).toHaveText('2 ng/mL');
   await expect(timeline.locator('.vilda-hormone-reference[data-reference-status="invalidated"]')).toHaveCount(2);
   await expect(savedReference(timeline)).toHaveCount(2);
 });

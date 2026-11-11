@@ -252,7 +252,8 @@ test('F7 Th3 LH<LOD pins the reviewed snapshot and history preserves it across l
   await page.evaluate((pid) => window.VildaAuthUI.showPatientCard(pid), patientId);
   await page.locator('.vilda-patient-tab[data-tab="timeline"]').click();
   const history = page.locator('.vilda-patient-tab-content[data-tab="timeline"]');
-  await expect(history).toContainText('Fikcyjny starszy wynik LH');
+  // P-WYNIKI-BADAN (2026-11-11): wpis zostaje na osi czasu jako krótki wiersz (badanie, wartość, komentarz), bez tytułu notatki.
+  await expect(history.locator(`.vilda-wb-hist-result[data-note-id="${after.find((note) => note.id !== saved.id).id}"]`)).toContainText('Zapis bez dawnego kontekstu');
   // LAB-HISTORIA PR2: wpis zostaje na osi czasu Historii, a zapisana ocena jest w zakładce „Badania”.
   await page.locator('.vilda-patient-tab[data-tab="lab"]').click();
   const recorded = (await openSavedAssessment(page, saved.id)).locator('[data-assessment-status="recorded"]');
