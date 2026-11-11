@@ -124,6 +124,14 @@
 // na jednym urządzeniu pod kartą usuniętą), „W4 — negatywy” (bez wstrzyknięcia scenariusz na bazie nie jest zbieżny).
 // Zielone z natury: pozostałe przypadki (w ich partiach model nie ma haka karty notatki).
 //
+// E2-PR3c5 (decyzja 7 właściciela z 2026-11-10, P-KOSZ-USUWANEJ-KARTY): wersja karty przegranej z nagrobkiem pacjenta
+// zmieniona po ważnym Koszu, z którą wygrywa późniejsze porządkowanie, oddaje wpisowi zmianę, opis i rejestr gwiazdki
+// (bez treści i bez cienia). Nowy scenariusz p. 6 (ostatni w bloku, więc ziarna pozostałych bez zmian): B daje v do
+// Kosza i przywraca, A przycina v porządkowaniem i robi „Scal pacjentów” P → Q — po zdarzeniach tylko różnica opisu
+// wpisu (D7), W4 z punktem stałym, bloby bez różnicy. Pozostałe literały i model haków bez zmian.
+// Czerwone na bazie E2-PR3c5 (sejf 46f3fe9c; 1 ze 133 przypadków): nowy scenariusz p. 6 (po zdarzeniach wpis Kosza
+// z treścią na A, nagrobek porządkowania na B — różnica bez klasy; W4 PO-B bez punktu stałego).
+//
 // KOLEJNOŚĆ W KROKU (E2-PR3a2, sprawdzana na emiterach): snap (także wersje przeniesione pod kartę celu „Scal pacjentów”
 // i głowy scalenia), potem stomb, potem ptomb, potem pnote, pnotetomb, note, notetomb, plist, plisttomb, pref, pk, pktomb,
 // cred. Pola karty zmienione bez snap tej karty w kroku niesie stomb z kartą (11.2), inaczej snap(karta, najnowsza

@@ -21534,6 +21534,102 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
+## Kosz po przywróceniu i porządkowaniu: wizyta usunięta porządkowaniem nie wraca do Kosza (P-KOSZ-USUWANEJ-KARTY, E2-PR3c5, SW 1.1.507, `vilda_vault.js` 271, 2026-11-11)
+
+**Zmiana kliniczna: tak** — wzory, progi, jednostki i interpretacje bez zmian. Zmienia się, czy wizyta jest w Koszu po
+synchronizacji w takim układzie: na jednym urządzeniu wizytę dano do Kosza i przywrócono, a inne urządzenie — bez wiedzy
+o tym — usunęło ją przy porządkowaniu starych wizyt i zrobiło „Scal pacjentów” jej karty. Dotąd urządzenia mogły
+pokazywać ją w Koszu ze starą treścią, a gdy wpis Kosza doszedł z trzeciego urządzenia — na stałe, i to także na
+urządzeniu, które ją przywróciło. Teraz każde urządzenie przestaje pokazywać ją w Koszu: zostaje nagrobek porządkowania
+bez treści, tak jak na urządzeniu, które ją usunęło. Serwer, `vilda_sync.js`, schemat IndexedDB, format ładunku,
+nagrobków i zdarzeń, API `window.VildaVault` bez zmian.
+
+**Decyzja właściciela.** Decyzja 7 z 2026-11-10 (pytania E2-PR3c, „1–8 tak”; rozdział 6 planu): wizyta oddana do Kosza,
+przywrócona, a potem usunięta przy porządkowaniu starych wizyt na innym urządzeniu — każde urządzenie od razu przestaje
+pokazywać ją w Koszu (zmiana działania dziś; w rzadkim układzie trzech urządzeń stara treść sprzed poprawki częściej znika
+z Kosza). Plan: wiersz 7a5 tabeli „Podział etapu 2”.
+
+### E2-PR3c5
+
+**Co było** (`audyt` `46f3fe9c`; prawdziwy sejf, magazyny w pamięci, dane fikcyjne). Karty X (trzy wizyty, s — druga,
+23 kg), Y i Z na trzech urządzeniach P, K, C. P daje s do Kosza, C zna ten wpis Kosza, P przywraca s (nowa chwila
+zmiany), K — bez wiedzy o obu — przycina s porządkowaniem i robi „Scal pacjentów” X → Y.
+- Karta z ładunku przegrana z nagrobkiem pacjenta (zbiór N w `Le`) oddawała wersje do decyzji Kosza tylko przy wygranej
+  Kosza (`Bsl_koszZLadunku` → `Bkz_pomin`). Karta usuwana tutaj — tak samo (`Bsl_koszUsuwanejKarty`). Wersja zmieniona
+  po Koszu (np. „Przywróć”), z którą wygrywa późniejsze porządkowanie, przepadała, a wpis nie poznawał jej zmiany i
+  zostawał ważnym Koszem ze starą treścią.
+- Skutki (pełne kopie i delty): K dostawał wpis Kosza z C i kartę X z P — s w Koszu z treścią 23 kg; P po wymianie z K
+  tracił przywróconą wizytę razem z kartą X — też s w Koszu z treścią 23 kg. Na stałe, w każdej kolejności wymiany.
+- W świecie zdarzeń (test A ≡ B): po zdarzeniach różnica bez klasy (wpis Kosza z treścią na jednym urządzeniu, nagrobek
+  porządkowania na drugim), a pełna wymiana w jednym kierunku zbiegała dopiero w drugiej rundzie (W4 bez punktu stałego).
+
+**Reguła.**
+- Gdy wpis jest ważnym Koszem (`Bpk_wazny`: chwila Kosza nie wcześniejsza niż znana zmiana), wersja jest od niego
+  późniejsza, a późniejsze porządkowanie z nią wygrywa (`Bkz_wygrywa`: wersja nieprzypięta, zmieniona nie później niż
+  przycięcie), wpis dostaje wkład wersji: zmianę, opis i rejestr gwiazdki — **bez treści i bez cienia** (decyzja 1
+  z 2026-10-26 bez zmian). Wpis przestaje być ważnym Koszem; zostaje nagrobek porządkowania (`Bpk_wpis`).
+- Dwa miejsca, ta sama reguła: karta z ładunku (`Bsl_koszZLadunku`) i karta usuwana tutaj (`Bsl_koszUsuwanejKarty` —
+  zapis listy przed usunięciem karty, jak dotąd przy wygranej Kosza).
+- Wersja przypięta — bez zmian (porządkowanie jej nie usuwa). Bez „Scal pacjentów” — bez zmian (karta zostaje, wersja
+  i tak dochodzi do wpisu w zwykłej pętli wersji).
+
+**Sesja (P-CHMURA-OPIS).** Bez nowych odczytów poza sesją: wersje karty usuwanej czyta się i listę zapisuje jak dotąd,
+po sprawdzeniu sesji scalania; zmiana sesji w trakcie kończy scalanie `SESSION_CHANGED` bez usunięcia karty.
+
+**Zmiana działania dziś** (pełne kopie i delty):
+- wizyta dana do Kosza, przywrócona, a potem usunięta porządkowaniem na innym urządzeniu przed „Scal pacjentów” jej
+  karty — poza Koszem na wszystkich urządzeniach (dotąd w Koszu ze starą treścią, w układzie z trzecim urządzeniem na
+  stałe). Gdy urządzenie, które scaliło karty, dostaje kopię z przywróconą wizytą przed wpisem Kosza z trzeciego
+  urządzenia, pokazuje ją w Koszu do najbliższej kopii od urządzenia, które ją przywróciło;
+- rzadki układ trzech urządzeń (Kosz na jednym, późniejsza poprawka na drugim, porządkowanie na trzecim, potem „Scal
+  pacjentów”, test E4a-kp-ret): stara treść sprzed poprawki znika z Kosza w 7 z 8 kolejności wymiany (dotąd w 2 z 8);
+  poprawka ginie w porządkowaniu, jak dotąd.
+
+**Dziennik zdarzeń (uśpiony).** Nowy scenariusz p. 6 testu A ≡ B („Kosz i Przywróć na B, porządkowanie i Scal
+pacjentów P → Q na A”, ostatni w bloku): po zdarzeniach tylko różnica opisu wpisu (D7, dozwolona), W4 z punktem stałym
+po jednej rundzie, same bloby bez różnicy. Pozostałe literały i model haków bez zmian.
+
+**Import.** „Importuj pacjenta z pliku”, „Scal kopię konta” i odtworzenie konta scalają przez `Le` bez kart z ładunku —
+bez zmian.
+
+**Testy.** Dane wyłącznie fikcyjne, bez PESEL. Nowe i zmienione:
+- `tests/unit/kosz-przywroc-porzadkowanie.test.mjs` (nowy, 6 przypadków): urządzenie scalające dostaje najpierw wpis
+  Kosza z trzeciego urządzenia, potem kopię z przywróconą wizytą; odwrotna kolejność; delta samej karty; kontrola bez
+  „Scal pacjentów” (jak na bazie); dwa znane ograniczenia przypięte tak jak na bazie (wizyta przywrócona i przypięta;
+  bez porządkowania — wynik zależny od kolejności);
+- `tests/unit/kosz-usuwanej-karty.test.mjs` — literał E4a-kp-ret (7 z 8 kolejności bez treści w Koszu) i nagłówek;
+- `tests/unit/kosz-usuwanej-karty-sesja.test.mjs` — strażnik źródła S6 (obie strony reguły, bez treści);
+- `tests/unit/sync-dziennik-wlasnosciowy.test.mjs` (test A ≡ B, 133 przypadki) — nowy scenariusz p. 6 i nagłówek.
+
+Pełny `npm test` i e2e — wyniki w opisie PR.
+
+**Czerwone na bazie** (`origin/audyt` `46f3fe9c` z testami tego PR): 10 — `kosz-przywroc-porzadkowanie` 3 (obie
+kolejności, delta), `kosz-usuwanej-karty` 5 (E4a-kp-ret), `kosz-usuwanej-karty-sesja` 1 (S6), test A ≡ B 1 (nowy
+scenariusz p. 6: W4 bez punktu stałego). Zielone z natury: kontrola bez „Scal pacjentów”, oba znane ograniczenia,
+pozostałe przypadki.
+
+**Mutanty.** @@MUTANTY@@
+
+**Kontrola granicy obrazu sejfu.** Przeliczone skróty `BASE`, `baseVaultSHA256` i `integratedVaultSHA256` (reguła
+z E2-PR3a2, decyzja z 2026-11-09; liczone po zdjęciu zmiany Klirensu, jak w kontroli od vildaclinic/vilda-calc#900);
+fragment natywny, haki, moduły i paczka bez zmian.
+
+**Ograniczenia.**
+- Późniejsza zmiana wizyty niż Kosz („Przywróć”, gwiazdka, poprawka) przegrywa ze „Scal pacjentów” jej karty na innym
+  urządzeniu, gdy porządkowanie jej nie usuwa — bez zmian (znane ograniczenie P-KOSZ-USUWANEJ-KARTY, E4a-kp; w Koszu
+  zostaje treść z chwili Kosza). Przypięte w testach tak jak na bazie.
+- Starsze urządzenia (sprzed tej zmiany) rozstrzygają jak dotąd — u nich wizyta może zostać w Koszu, bez nowych strat
+  (nota wydania: aktualizacja wszystkich urządzeń).
+
+**Cofnięcie** = rewert PR (bez migracji: nagrobek porządkowania z opisem wersji to zwykły wpis listy; rewert cofa też
+skróty kontroli granicy).
+
+**Gdzie w kodzie.** `vilda_vault.js`: `Bsl_koszZLadunku` i `Bsl_koszUsuwanejKarty` (P-KOSZ-USUWANEJ-KARTY).
+
+**Wersje.** `vilda_vault.js` 270 → 271, `vilda_chrome.js` 276 → 277 i `vilda_session_bridge.js` 193 → 194 (wstrzykują
+sejf), SW 1.1.506 → 1.1.507; baza `origin/audyt` `46f3fe9c` (po vildaclinic/vilda-calc#927). Bez nowego pliku w pamięci
+offline.
+
 ## Notatka po „Scal pacjentów” idzie za kartą, która istnieje (P-NOTATKI-ZA-KARTA, E2-PR3c4, SW 1.1.506, `vilda_vault.js` 270, 2026-11-10)
 
 **Zmiana kliniczna: tak** — wzory, progi, jednostki i interpretacje bez zmian. Zmienia się, pod którą kartą pacjenta
@@ -22574,7 +22670,7 @@ razem 38.
 - **E2-PR3c.** Literał K6 na brak utraty; analiza i naprawa różnicy opisu wpisu Kosza po wymianie pełnych kopii (decyzja
   z 2026-11-09). Od E2-PR3c1 (wpis P-DZIENNIK-ZDARZEN, E2-PR3c1): K6 bez utraty po pełnej wymianie, w zdarzeniach —
   wykonane w E2-PR3c2 (wpis wyżej); różnica opisu wpisu Kosza — przyczyna ustalona, naprawa w E2-PR3c5 (decyzja
-  z 2026-11-10).
+  z 2026-11-10) — wykonane w E2-PR3c5 (wpis „Kosz po przywróceniu i porządkowaniu”).
 - **E2-PR4.** Nadawca słucha `onBulkChange`; budżet wysyłki przy dużej partii (plan 3.6).
 - **E3-PR0.** Literał R2-E3.
 - Kolejne PR zmieniające `vilda_vault.js` poza fragmentem natywnym — przeliczenie skrótów kontroli granicy; nowe miejsce
@@ -23601,7 +23697,7 @@ P-USUN-KONTO-KARTY; te same w planie: wiersze 6a′, 6b–6d, 7a, 8 i 12 tabeli 
   także analiza i naprawa różnicy opisu wpisu Kosza po wymianie pełnych kopii (wpis E2-PR3a3). Od 2026-11-10 w pięciu
   PR (E2-PR3c1–E2-PR3c5, decyzje z 2026-11-10): K6 po pełnej wymianie — wykonane w E2-PR3c1, w zdarzeniach — wykonane
   w E2-PR3c2,
-  opis wpisu Kosza — E2-PR3c5.
+  opis wpisu Kosza — E2-PR3c5 (wykonane: wpis „Kosz po przywróceniu i porządkowaniu”).
 - **E2-PR4.**
   - Kasowanie kolejki konta przy istniejącym wpisie rejestru — ponowienie przy odblokowaniu, kasowanie przy zmianie
     trybu przechowywania, `removeUser` identyfikatora konta trwałego w trybie „Zaloguj jednorazowo” — nie zostawia tego
