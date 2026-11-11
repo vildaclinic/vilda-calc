@@ -5687,7 +5687,10 @@ async function Bsl_koszUsuwanejKarty(ctx, patientId, opcje) {
     if (!tresc || typeof tresc !== 'object') continue;
     const st = Bgw_stan(s, tresc);
     if (pozniejsza && !Bkz_wygrywa(e, Bkz_zmiana(s), st)) continue;
-    const w = Bpk_zWersja(e, Bpk_zWersji(s, pozniejsza ? null : { c: kosz >= granicaKosza ? s.payloadCipher : null, od: kosz }, st));
+    const w0 = Bpk_zWersja(e, Bpk_zWersji(s, pozniejsza ? null : { c: kosz >= granicaKosza ? s.payloadCipher : null, od: kosz }, st));
+    // Wpis uniewazniony ta wersja: bez cienia tej karty od razu (decyzja 1, jak koncowy zapis listy — Bpc_bezKarty), takze
+    // gdy scalanie skonczy sie po usunieciu karty, przed koncowym zapisem listy.
+    const w = pozniejsza ? Bpc_bezKarty(w0, patientId) : w0;
     if (JSON.stringify(w) === JSON.stringify(e)) continue;
     ctx.mapa.set(s.snapshotId, w);
     dodaj.push(w);

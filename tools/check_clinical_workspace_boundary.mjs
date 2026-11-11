@@ -15,7 +15,7 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 // time in the synchronization merge), E2-PR3c4 (a patient note or care plan follows the card that exists after a
 // patient merge) and E2-PR3c5 (a version changed after a valid trash entry and pruned later invalidates that entry;
 // docs/clinical/ALGORITHMS.md).
-const BASE = '0c6e46f43c7c7b5643d4b11a045a4f65c4b4bdacf611704f3df6532bce47d51c';
+const BASE = '8955f9dff9da071c16e031608f4cf797acc88ebc0be046973268635aeed7395e';
 const START = '/* BEGIN VILDA CLINICAL WORKSPACE NATIVE V1 */\n';
 const END = '/* END VILDA CLINICAL WORKSPACE NATIVE V1 */\n';
 const digest = value => createHash('sha256').update(value).digest('hex');

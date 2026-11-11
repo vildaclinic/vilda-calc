@@ -412,6 +412,28 @@ describe('P-KOSZ-USUWANEJ-KARTY — błąd zapisu listy, strona ładunku, wersja
       for (const n of ['P', 'K', 'C']) expect(await wpisX(u[n], u.sid), `${n}: wpis x`).toEqual({ powod: 'retencja', tresc: false });
     });
   }
+  // E2-PR3c5 (decyzja 7; decyzja 1 bez zmian): x dana do Kosza na P (C zna Kosz z P), przywrócona na P; K — bez wiedzy
+  // o obu — przycina x porządkowaniem i robi „Scal pacjentów” X → Y, potem dostaje kopię P i wpis Kosza z C. P dostaje
+  // kopię K i usuwa kartę X z wersją przywróconą: zapis listy przed usunięciem karty niesie nagrobek porządkowania bez
+  // treści i bez cienia — także gdy scalanie kończy zmiana sesji zaraz po usunięciu karty (bez końcowego zapisu listy).
+  // Bez zdjęcia cienia w tym zapisie (Bpc_bezKarty) zostawała tu do następnego scalenia treść unieważnionego Kosza w cieniu.
+  it('S10: E2-PR3c5 — x przywrócona na P, przycięta na K przed Scal pacjentów; zmiana sesji po usunięciu X na P — wpis retencji x bez treści i bez cienia, po rundach na trzech', async () => {
+    const u = await trzyKarty();
+    przesunZegar(M); await doKosza(u.P, u.sid);
+    przesunZegar(M); await sync(u.P, u.C);
+    przesunZegar(M); await u.P.restoreTrashedSnapshot(u.X, u.sid);
+    przesunZegar(M); await przytnij(u.K, u.sid);
+    przesunZegar(M); await u.K.mergePatients(u.X, u.Y);
+    przesunZegar(M);
+    expect(await pierwsze(u, 'K←P,K←C')).toEqual(['K←P: ok', 'K←C: ok']);
+    const st = przelacz(u.P, poUsunieciuX(u), false);
+    expect(await scal(u.K, u.P)).toBe('SESSION_CHANGED');
+    expect(st.zrobione, 'przełączenie po usunięciu X').toBe(true);
+    expect(await gdzie(u.P, u.sid), 'P: X usunięta razem z x').toBe(null);
+    expect(await wpisX(u.P, u.sid), 'P: wpis x z zapisu listy przed usunięciem X').toEqual({ powod: 'retencja', tresc: false });
+    await rundy(u.urz, 3);
+    for (const n of ['P', 'K', 'C']) expect(await wpisX(u[n], u.sid), `${n}: wpis x po rundach`).toEqual({ powod: 'retencja', tresc: false });
+  });
 });
 
 describe('P-KOSZ-USUWANEJ-KARTY — strażniki źródła', () => {
@@ -444,6 +466,8 @@ describe('P-KOSZ-USUWANEJ-KARTY — strażniki źródła', () => {
     expect(k).toContain('if (pozniejsza && !Bpk_wazny(Bpk_zWpisu(e))) continue;');
     expect(k).toContain('if (pozniejsza && !Bkz_wygrywa(e, Bkz_zmiana(s), st)) continue;');
     expect(k).toContain('Bpk_zWersja(e, Bpk_zWersji(s, pozniejsza ? null : { c: kosz >= granicaKosza ? s.payloadCipher : null, od: kosz }, st))');
+    // wpis unieważniony tą wersją bez cienia tej karty już w zapisie listy przed usunięciem karty (S10)
+    expect(k).toContain('const w = pozniejsza ? Bpc_bezKarty(w0, patientId) : w0;');
     const zl = src.slice(src.indexOf('function Bsl_koszZLadunku('), src.indexOf('async function Bsw_zKartyZNagrobkiem('));
     expect(zl).toContain('if (kosz && kosz >= Bkz_zmiana(S)) { Bkz_pomin(ctx, F.patientId, S); continue; }');
     expect(zl).toContain('if (kosz && Bpk_wazny(Bpk_zWpisu(e))) {');
