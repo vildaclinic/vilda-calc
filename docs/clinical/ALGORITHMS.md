@@ -21615,7 +21615,17 @@ kolejności, delta), `kosz-usuwanej-karty` 5 (E4a-kp-ret), `kosz-usuwanej-karty-
 scenariusz p. 6: W4 bez punktu stałego). Zielone z natury: kontrola bez „Scal pacjentów”, oba znane ograniczenia,
 pozostałe przypadki.
 
-**Mutanty.** @@MUTANTY@@
+**Mutanty.** 10 mutantów, 10 zabitych. Testy działania zabijają 5: bez reguły po stronie ładunku, bez reguły w karcie
+usuwanej, bez warunku wygranej porządkowania (po każdej stronie osobno) i bez zdjęcia cienia w zapisie listy przed
+usunięciem karty (S10). Pozostałe 5 zabija strażnik źródła S6; w działaniu są równoważne albo zmieniają tylko opis
+nagrobka:
+- wkład z treścią w karcie usuwanej — cień tej karty zdejmuje `Bpc_bezKarty` w tym samym zapisie;
+- wkład z rev i chwilą usunięcia po stronie ładunku — wpis nie jest już ważnym Koszem (tylko w nim liczy się rev), a treść
+  bez szyfru przegrywa z każdą treścią z szyfrem (`Bpk_trescLepsza`);
+- bez warunku ważnego Kosza (po każdej stronie osobno) — przy wpisie Kosza już nieaktualnym zmienia się tylko opis
+  nagrobka porządkowania (zmiana i opis wersji), Kosz bez zmian;
+- bez `continue` po wygranej Kosza po stronie ładunku — wpis po `Bkz_pomin` traci parę rev pokonanej wersji, ale rev,
+  gwiazdkę i treść odtwarza koniec scalania (sprawdzone z trzykrotną zmianą gwiazdki przed Koszem: ten sam wynik).
 
 **Kontrola granicy obrazu sejfu.** Przeliczone skróty `BASE`, `baseVaultSHA256` i `integratedVaultSHA256` (reguła
 z E2-PR3a2, decyzja z 2026-11-09; liczone po zdjęciu zmiany Klirensu, jak w kontroli od vildaclinic/vilda-calc#900);
