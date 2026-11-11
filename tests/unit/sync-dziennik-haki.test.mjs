@@ -356,10 +356,11 @@ describe('kontrakt ładunków hooków: sejf = sejf bez wstawek', () => {
     const ile = (n) => wstawki.filter((w) => w.nazwa === n).length;
     // E2-PR3a3: importy (ns, ss, as) — 4 emisje wersji, 3 sekcje pliku, 3 znaki końca partii i 3 pary kroku. E2-PR3a4:
     // przegląd kolejki na początku odblokowania (He) i pary scalania z chmury (Le). E2-PR3b: haki scalania — przegrane
-    // nagrobki kart w Le, karta zapisana w trakcie scalania w Bsl_usunPacjenta, ratunek notatki w Bnp_ratuj.
+    // nagrobki kart w Le, karta zapisana w trakcie scalania w Bsl_usunPacjenta, ratunek notatki w Bnp_ratuj. E2-PR3c4: hak
+    // karty notatki w Le (gałąź „ładunek wygrywa”).
     expect([ile('Bem_hak'), ile('Bem_zmiana'), ile('Bem_krokStart'), ile('Bem_krokKoniec'), ile('Bem_sekcje'), ile('Bem_partia'), ile('Bem_przeglad'),
-      ile('Bem_zChmury'), ile('Bem_przegrane'), ile('Bem_przegrany'), ile('Bem_ratunek')], 'wstawki emisji w sejfie').toEqual([7, 12, 9, 9, 3, 3, 1, 1, 1, 1, 1]);
-    expect(wstawki.filter((w) => w.nazwa.startsWith('Bem_')).length, 'wszystkie wstawki Bem_ (bez innych nazw)').toBe(48);
+      ile('Bem_zChmury'), ile('Bem_przegrane'), ile('Bem_przegrany'), ile('Bem_ratunek'), ile('Bem_wlasciciel')], 'wstawki emisji w sejfie').toEqual([7, 12, 9, 9, 3, 3, 1, 1, 1, 1, 1, 1]);
+    expect(wstawki.filter((w) => w.nazwa.startsWith('Bem_')).length, 'wszystkie wstawki Bem_ (bez innych nazw)').toBe(49);
     const bez = bezWstawek(ZRODLO_SEJFU);
     expect(wywolaniaPozaBlokiem(bez)).toEqual([]);
     const { a: a2, z: z2 } = granicaBloku(bez);

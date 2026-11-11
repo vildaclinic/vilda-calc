@@ -247,7 +247,8 @@ describe('G6b–G6g — „Zostaw notatkę” na dwóch urządzeniach (E2-PR3c3,
     expect(src).toContain('X.forEach(function(S){S&&Qrv(S.id,S.rev)}),/* E2-PR3c3');
     expect(src).toContain('j.forEach(function(S){S&&Qrv(S.id,S.rev)});');
     expect(src).toContain('createdAtISO:Bnp_utworzona(M&&M.createdAtISO,g.createdAtISO)||g.updatedAtISO');
-    expect(src).toContain('{await Bnp_wczesniejUtworzona(P,g,Ej,e);continue}');
+    // E2-PR3c4: przed zapisem chwili utworzenia — reguła karty notatki (zapis samej karty, Bnp_zmienKarte).
+    expect(src).toContain('Qdn.add(g.id)}await Bnp_wczesniejUtworzona(P,g,Ej,e);continue}');
     const a = src.indexOf('async function Bnp_wczesniejUtworzona(');
     const fn = src.slice(a, src.indexOf('\n}\n', a));
     expect(fn).toContain('await Ac(g.id,');

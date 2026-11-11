@@ -704,16 +704,17 @@ describe('P-NOTATKI-ZA-KARTA — kontrole bez zmian (pomiar D-21, wiersze 6, 7, 
       expect((await zbiezneP([c.A, c.B, c.C], c)).replace(/\+pole/g, '')).toBe(z.cel);
     });
   }
-  // T20 [kontrola]: „Scal pacjentów” X → Y na A (przepięte notatki bez nagrobków, M7), łącznie z rozjazdem G5.
+  // T20 [kontrola]: „Scal pacjentów” X → Y na A (przepięte notatki bez nagrobków, M7). Poprawka N1 pod X na B: dotąd
+  // rozjazd G5 (B zostawało z N1 pod X, bez karty); od E2-PR3c4 (decyzja 6) N1 pod Y na obu.
   const SCAL = {
-    'B poprawia wizytę X': { zrob: (c) => c.B.v.updateMeasurementRow(c.pid, { uid: 'm-60' }, { ageMonths: 60, height: 110.8, weight: 18 }) },
-    'B dopisuje wizytę X': { zrob: async (c) => { const s3 = await c.B.v.savePatient(zapisP([W60, W66, W72, W78], W78), { patientId: c.pid, dedup: false }); c.sn[s3.snapshotId] = 's3B'; } },
-    'B poprawia notatkę N1 pod X (rozjazd G5)': { zrob: (c) => c.B.v.savePatientNote({ id: c.n1, patientId: c.pid, title: 'Wynik TSH (poprawiony)', body: 'fikcyjny wynik, poprawka',
+    'B poprawia wizytę X': { wynik: 'bez zmian', zrob: (c) => c.B.v.updateMeasurementRow(c.pid, { uid: 'm-60' }, { ageMonths: 60, height: 110.8, weight: 18 }) },
+    'B dopisuje wizytę X': { wynik: 'bez zmian', zrob: async (c) => { const s3 = await c.B.v.savePatient(zapisP([W60, W66, W72, W78], W78), { patientId: c.pid, dedup: false }); c.sn[s3.snapshotId] = 's3B'; } },
+    'B poprawia notatkę N1 pod X': { wynik: 'N1 pod Y na A i B (E2-PR3c4; na bazie B z N1 pod X)', zrob: (c) => c.B.v.savePatientNote({ id: c.n1, patientId: c.pid, title: 'Wynik TSH (poprawiony)', body: 'fikcyjny wynik, poprawka',
       clinicalDateISO: '2026-10-01', labResult: { test: 'TSH', value: '2.4', valueNum: 2.4, unit: 'mIU/l' } }) },
-    'B nic': { zrob: async () => {} },
+    'B nic': { wynik: 'bez zmian', zrob: async () => {} },
   };
   for (const [zmiana, z] of Object.entries(SCAL)) {
-    it(`T20 [kontrola] „Scal pacjentów” X→Y na A, ${zmiana}: bez zmian`, async () => {
+    it(`T20 [kontrola] „Scal pacjentów” X→Y na A, ${zmiana}: ${z.wynik}`, async () => {
       const c = await poczatekP({ zY: true });
       const wynik = await c.A.v.mergePatients(c.pid, c.yid);
       c.sn[wynik.snapshotId] = 'yScal';
@@ -737,7 +738,8 @@ describe('P-NOTATKI-ZA-KARTA — kontrole bez zmian (pomiar D-21, wiersze 6, 7, 
     expect(await stan(x.urz.B, x)).toBe('karta [n1,n2] nagr[]');
   });
 });
-// Stan po T20 na bazie db0c2d50 (pomiar D-21, wiersze 10–13, ten sam wynik w zwiez.txt pomiaru); zmiana go nie dotyka.
+// Stan po T20 na bazie db0c2d50 (pomiar D-21, wiersze 10–13, ten sam wynik w zwiez.txt pomiaru); zmiana go nie dotyka
+// — poza poprawką N1 pod X (E2-PR3c4).
 const T20_Y = 'Y: yScal[110/113/116] y1[110] s2[110/113/116] s1[110/113]';
 const T20_N = 'N[N1@Y "Wynik TSH", N2@Y "Lek", N3@Y "Notatka Y"] T[]';
 const T20_CEL = {
@@ -746,10 +748,11 @@ const T20_CEL = {
     B: `X: s2[110.8/113/116]; Y: yScal[110/113/116] y1[110] s1[110/113] | ${T20_N}`,
   },
   'B dopisuje wizytę X': { A: `X: s3B[110/113/116/119]; ${T20_Y} | ${T20_N}`, B: `X: s3B[110/113/116/119]; ${T20_Y} | ${T20_N}` },
-  // Rozjazd G5 (pomiar 13): B zostaje z N1 pod X — osobny PR (D21-9).
-  'B poprawia notatkę N1 pod X (rozjazd G5)': {
+  // Dotąd rozjazd G5 (pomiar 13): B zostawało z N1 pod X (D21-9). E2-PR3c4 (decyzja 6): karta X nie istnieje, więc
+  // N1 idzie pod Y — na B przy pełnym ładunku A (wygrywa tutejsza poprawka, zmienia się sama karta).
+  'B poprawia notatkę N1 pod X': {
     A: `X: BRAK; ${T20_Y} | N[N1@Y "Wynik TSH (poprawiony)", N2@Y "Lek", N3@Y "Notatka Y"] T[]`,
-    B: `X: BRAK; ${T20_Y} | N[N1@X "Wynik TSH (poprawiony)", N2@Y "Lek", N3@Y "Notatka Y"] T[]`,
+    B: `X: BRAK; ${T20_Y} | N[N1@Y "Wynik TSH (poprawiony)", N2@Y "Lek", N3@Y "Notatka Y"] T[]`,
   },
   'B nic': { A: `X: BRAK; ${T20_Y} | ${T20_N}`, B: `X: BRAK; ${T20_Y} | ${T20_N}` },
 };
@@ -2781,15 +2784,16 @@ describe('P-NOTATKI-ZA-KARTA — przegląd przeniesienia na D-7: luki testów (M
   });
 });
 
-describe('P-NOTATKI-ZA-KARTA — przegląd przeniesienia na D-7: znane ograniczenia (F1, Z1, IM1) i granica emulacji (E2)', () => {
-  // F1 [znane ograniczenie, D21-9: rozjazd G5 po „Scal pacjentów”, tu drogą „Scal kopię konta”]. A usuwa X; B
+describe('P-NOTATKI-ZA-KARTA — przegląd przeniesienia na D-7: F1 (od E2-PR3c4 zbieżne), znane ograniczenia (Z1, IM1) i granica emulacji (E2)', () => {
+  // F1 [dotąd znane ograniczenie, D21-9: rozjazd G5 po „Scal pacjentów”, tu drogą „Scal kopię konta”]. A usuwa X; B
   // (nieświadome) stawia gwiazdkę na X; C scala kopię konta A (X zostaje, n1 w stanie CZEKA); B robi „Scal pacjentów”
   // X→Y (n1 pod Y, rev 2); C scala kopię konta B — Bks_notatki (P-KOPIA-POMIJA) zostawia notatkę z kopii pod tutejszą
   // kartą X, z tymi samymi (rev, updatedAtISO) co n1@Y na A i B; Le takiego remisu nie rozstrzyga, a nagrobek X ze
-  // scalenia notatek nie kasuje. Koniec: A i B n1@Y, C n1@X bez karty (sierota widoczna nigdzie). Na bazie ta sama droga
-  // istnieje bez usunięcia (wariant „bez usunięcia”) i z usunięciem bez kopii A („C bez kopii A”); D-21 dokłada wejście
-  // przez CZEKA (na 346dd81a wariant podstawowy jest zbieżny tylko dlatego, że C kasowało n1 przy żywej karcie X).
-  // Rozjazd znika przy następnej poprawce n1 na urządzeniu, na którym jest widoczna (A albo B).
+  // scalenia notatek nie kasuje. Dotąd koniec: A i B n1@Y, C n1@X bez karty (sierota widoczna nigdzie). Na bazie ta sama
+  // droga istnieje bez usunięcia (wariant „bez usunięcia”) i z usunięciem bez kopii A („C bez kopii A”); D-21 dokłada
+  // wejście przez CZEKA (na 346dd81a wariant podstawowy jest zbieżny tylko dlatego, że C kasowało n1 przy żywej karcie X).
+  // E2-PR3c4 (decyzja 6): przy pełnej wymianie remis rozstrzyga karta, która istnieje — n1@Y na A, B i C, te same
+  // (rev, updatedAtISO); poprawka n1 na A dalej zbieżna.
   const ola = (h, w) => ({ name: 'Testowa Ola', user: { lastName: 'Testowa', firstName: 'Ola', dobISO: '2015-05-02', sex: 'F', height: h, weight: w } });
   async function stanF1(d, c) {
     const karty = new Set((await d.v.listPatients()).map((p) => p.patientId));
@@ -2802,7 +2806,7 @@ describe('P-NOTATKI-ZA-KARTA — przegląd przeniesienia na D-7: znane ogranicze
   async function migawkaF1(urz, c) { const s = {}; for (const d of urz) s[d.nazwa] = await stanF1(d, c); return s; }
   const kopiaKontaF1 = async (z, na) => { przesun(60e3); return na.v.mergeVaultBackup(await z.v.exportVaultBackup(), z.haslo); };
   for (const wariant of ['podstawowy', 'C bez kopii A', 'bez usunięcia']) {
-    it(`F1 [znane ograniczenie] ${wariant}: „Scal pacjentów” X→Y na B, C scala kopie konta → n1@Y na A i B, n1@X bez karty na C; poprawka n1 na A leczy rozjazd`, async () => {
+    it(`F1 [czerwony na bazie] ${wariant}: „Scal pacjentów” X→Y na B, C scala kopie konta → n1@Y na A, B i C (dotąd n1@X bez karty na C); poprawka n1 na A zbieżna`, async () => {
       sztucznyZegar();
       const A = await urzadzenie('A'), B = await urzadzenie('B'), C = await urzadzenie('C');
       const urz = [A, B, C];
@@ -2823,10 +2827,10 @@ describe('P-NOTATKI-ZA-KARTA — przegląd przeniesienia na D-7: znane ogranicze
       await kopiaKontaF1(B, C);
       expect(await stanF1(C, c), 'C po kopii B: notatka pod tutejszą kartą X').toBe('X:karta Y:karta [n1@X]');
       await wszystkie(urz, 4);
-      expect(await migawkaF1(urz, c)).toEqual({ A: 'X:brak Y:karta [n1@Y]', B: 'X:brak Y:karta [n1@Y]', C: 'X:brak Y:karta [n1@X]' });
+      expect(await migawkaF1(urz, c)).toEqual({ A: 'X:brak Y:karta [n1@Y]', B: 'X:brak Y:karta [n1@Y]', C: 'X:brak Y:karta [n1@Y]' });
       const m = await metaF1(A, c);
       expect([await metaF1(B, c), await metaF1(C, c)], 'te same (rev, updatedAtISO)').toEqual([m, m]);
-      // leczenie: A poprawia n1 (widoczną pod Y)
+      // dalej: A poprawia n1 (widoczną pod Y)
       przesun(60e3); await A.v.savePatientNote({ id: c.n1, patientId: c.y, title: 'n1', body: 'fikcja n1, poprawka A' });
       await wszystkie(urz, 3);
       expect(await migawkaF1(urz, c)).toEqual({ A: 'X:brak Y:karta [n1@Y]', B: 'X:brak Y:karta [n1@Y]', C: 'X:brak Y:karta [n1@Y]' });
@@ -4072,7 +4076,8 @@ describe('P-NOTATKI-ZA-KARTA — strażniki źródła', () => {
   it('podgląd „Scal kopię konta” liczy te same stany co Le (Bnp_zlacz, Bnp_stan), z kartą przewidywaną po pętli kart', () => {
     const plan = sekcja('async function Bks_planDanych(', 'async function Bks_mapyOczekujacych(');
     expect(plan).toContain('const stan = await Bks_stanNotatek(kontekst, kopia, tutaj, nagrobki, zKopii, nagrobkiKopii);');
-    expect(plan.split(', stan));').length - 1).toBe(2);
+    // E2-PR3c4: obie sekcje (notatki pacjentów i wpisy Terminarza) także ze zmianami samej karty (Bks_zmianyKarty).
+    expect(plan.split(', stan, zmianaKarty));').length - 1).toBe(2);
     const st = sekcja('async function Bks_stanNotatek(', 'const Bks_RODZAJE');
     expect(st).toContain('Bnp_zlacz(nagrobkiKopii.concat(nagrobki))');
     expect(st).toContain('Bks_kartaPo(kontekst, kopia, pid)');

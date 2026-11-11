@@ -10957,7 +10957,7 @@ Notatka PACJENTA powiązana z wizytą: przycisk `addVisitNoteBtnSidebar` w menu 
 
 **G12 — nieodszyfrowalna notatka zostaje na urządzeniu (D4: tak, jak w bibliotece).** `buildNoteDelta` (`cs`) i `exportSyncPayload` (`is`) mapowały notatkę przez `Ft`, który przy nieudanym odszyfrowaniu oddaje `{title:"(błąd odczytu)", body:""}` **z oryginalnym `rev`** — atrapa nadpisywała czytelną treść na drugim urządzeniu (zmierzone: „Dobra treść" → „(błąd odczytu)"). Biblioteka szablonów miała tę bramkę od 1.0.833 (`Qb0`); notatki pacjenta dostają ją teraz w obu miejscach.
 
-**G5 — scalenie duplikatów kontra równoległa edycja (D6: przynależność od celu).** `mergePatients` przepina notatki zwykłym zapisem (rev+1), a scalanie zapisywało `patientId` **nadawcy**: notatka edytowana równolegle na drugim urządzeniu wracała pod usunięte źródło i znikała z Karty, Przypomnień i Terminarza (pomiar: `notatki celu na B: 0`). Teraz, gdy `patientId` z ładunku ma wygrywający nagrobek (lokalny albo z tego ładunku), a lokalny rekord notatki ma inny `patientId`, zostaje **lokalna przynależność**; treść dalej rozstrzyga „ostatni zapis wygrywa".
+**G5 — scalenie duplikatów kontra równoległa edycja (D6: przynależność od celu).** `mergePatients` przepina notatki zwykłym zapisem (rev+1), a scalanie zapisywało `patientId` **nadawcy**: notatka edytowana równolegle na drugim urządzeniu wracała pod usunięte źródło i znikała z Karty, Przypomnień i Terminarza (pomiar: `notatki celu na B: 0`). Teraz, gdy `patientId` z ładunku ma wygrywający nagrobek (lokalny albo z tego ładunku), a lokalny rekord notatki ma inny `patientId`, zostaje **lokalna przynależność**; treść dalej rozstrzyga „ostatni zapis wygrywa". Od E2-PR3c4 (decyzja 6 z 2026-11-10) G5 zastępuje reguła karty notatki — notatka idzie za kartą, która istnieje, symetrycznie na obu urządzeniach (wpis „Notatka po »Scal pacjentów« idzie za kartą, która istnieje”).
 
 **G7 — edytor notatki nie przeżywa blokady sejfu (D5: nakładka znika).** `showPatientNoteEditor` nie rejestrował `onLock`, a auto-blokada nie usuwa nakładek: na wspólnym komputerze po zalogowaniu drugiego lekarza wracał szkic poprzednika (dane pacjenta), a „Zapisz" wpisywał cudzą notatkę do jego sejfu. Edytor rejestruje teraz raz na okno `onLock`, który usuwa wszystkie nakładki `.vilda-patient-note-editor-overlay` (`onLock` nie ma wyrejestrowania, stąd jedna rejestracja globalna).
 
@@ -21534,6 +21534,159 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
+## Notatka po „Scal pacjentów” idzie za kartą, która istnieje (P-NOTATKI-ZA-KARTA, E2-PR3c4, SW 1.1.506, `vilda_vault.js` 270, 2026-11-10)
+
+**Zmiana kliniczna: tak** — wzory, progi, jednostki i interpretacje bez zmian. Zmienia się, pod którą kartą pacjenta
+leży notatka po synchronizacji, gdy na jednym urządzeniu zrobiono „Scal pacjentów”, a na drugim w tym czasie poprawiono
+notatkę w starej karcie (albo „Scal pacjentów” zrobiono na obu urządzeniach w przeciwnych kierunkach). Dotąd na jednym
+urządzeniu notatka mogła zostać pod kartą usuniętą — treść była, ale w żadnej karcie jej nie było widać, a wymiana
+tego nie naprawiała. Teraz notatka trafia do karty, która istnieje, na wszystkich urządzeniach; treść, jak dotąd,
+z poprawki zapisanej najpóźniej. Gdy istnieją obie karty (np. stara karta wróciła, bo na drugim urządzeniu dopisano do
+niej wizytę) — notatka zostaje pod kartą, pod którą zapisano ją najpóźniej. Tak samo plan opieki. Serwer,
+`vilda_sync.js`, schemat IndexedDB, format ładunku, nagrobków i zdarzeń, API `window.VildaVault` bez zmian.
+
+**Decyzja właściciela.** Decyzja 6 z 2026-11-10 (pytania E2-PR3c, „1–8 tak”; rozdział 6 planu): notatka po „Scal
+pacjentów” trafia zawsze do karty, która istnieje, z treścią z najpóźniejszej poprawki; gdy obie karty istnieją — tam,
+gdzie zapisano ją najpóźniej, tak samo na wszystkich urządzeniach; chwilową niewidoczność notatki po skrzyżowanym
+scalaniu naprawia jedna dodatkowa wysyłka notatki, uśpiona do włączenia dziennika (zmiana działania dziś). Plan: wiersz
+7a4 tabeli „Podział etapu 2”.
+
+### E2-PR3c4
+
+**Co było** (`audyt` `2beacb33`; prawdziwy sejf, magazyny w pamięci, dane fikcyjne). A robi „Scal pacjentów” P → Q
+(notatka n przechodzi pod Q), B — bez wiedzy o scaleniu — poprawia n pod P.
+- Kartę notatki `Le` rozstrzygało tylko w gałęzi „ładunek wygrywa” i niesymetrycznie (P-NOTATKI-1 G5): gdy karta
+  z ładunku miała znany nagrobek, zostawała tutejsza karta — także wtedy, gdy tutejsza karta już nie istniała. Gdy
+  wygrywała tutejsza treść, karta zostawała tutejsza bez względu na to, czy karta istnieje.
+- Skutki (pełne kopie i delty): B zostawało z n pod usuniętą kartą P (n niewidoczna na B), A z n pod Q; przy pełnym
+  remisie (ta sama wersja na obu) rozjazd był trwały. Skrzyżowane „Scal pacjentów” (A: P → Q, B: Q → P): A zostawało
+  z n pod usuniętą kartą Q. Ta sama droga przez „Scal kopię konta” (F1: notatka z kopii przepięta pod tutejszą kartę,
+  która potem znika). W teście A ≡ B: „ZNANA RÓŻNICA (dzisiejsza)” w dwóch scenariuszach p. 6, w zdarzeniach, po W4
+  i przy samych blobach; w `notatki-za-karta` T20 („rozjazd G5”) i F1 ×3 („znane ograniczenie”).
+- Podgląd „Scal kopię konta” nie przewidywał zmiany samej karty notatki (podgląd 0, wynik 0, notatka pod kartą
+  usuniętą).
+
+**Reguła karty notatki** (sekcja notatek `Le`, gdy wersja tutejsza i z ładunku leżą pod różnymi kartami):
+- **karta martwa** — nagrobek karty znany tu albo z ładunku (`Qpt`, zbiór liczony już dla G5) i brak karty w magazynie
+  po fazie kart tego scalania; odczyt karty leniwy, raz na pacjenta (`Qmart`), błąd odczytu = karta żywa;
+  pseudopacjenci notatek (`__vilda_activity__` — wpisy Terminarza bez pacjenta, `__vilda_external__`) nie mają
+  nagrobka, więc nigdy nie są martwi;
+- dokładnie jedna karta martwa — notatka pod drugą; pełny remis (`rev` i `updatedAtISO` równe) — mniejszy
+  `patientId` (jak P-SYNC-WLASCICIEL dla wersji); inaczej karta zwycięzcy treści (`Qwl`). Zastępuje G5;
+- **ładunek wygrywa** — zapis z kartą z reguły (dotąd: wyrażenie G5);
+- **wygrywa tutejsza treść albo pełny remis**, a reguła daje kartę z ładunku — `Bnp_zmienKarte`: zapis samej karty
+  tutejszego rekordu (treść, `rev`, chwile i pozostałe pola bez zmian) pod blokadą notatki, na świeżym odczycie, tylko
+  gdy rekord jest ten sam co na początku sekcji notatek (karta, `rev`, chwila zmiany — inaczej zapisała go w tym czasie
+  druga karta przeglądarki i zapis jest pomijany); licznik zmienionych notatek, zdarzenie zmiany notatki („merge”), bez
+  dopisania do kolejki (urządzenie, które przysłało ładunek, ma już tę kartę);
+- **plan opieki** (gałąź planu w `Le`): gdy wygrywa tutejsza treść, a scalenie planów niczego nie zmienia — zapis samej
+  karty (`Bnp_zapiszKarte`) tylko wtedy, gdy tutejsza karta planu jest martwa, a karta z ładunku nie; bez reguły remisu
+  (rekord planu bez zmiany treści zostaje jak był — test `care-plans-vault` „does not hydrate a tied-looking record with
+  a different patientId”); gdy scalenie planów coś zmienia — zapis z kartą z reguły, jak dotąd z kartą z G5.
+
+Przy różnicy kart notatki scalanie czyta karty z nagrobkiem raz na scalanie; bez różnicy kart — bez dodatkowych
+odczytów (zwykłe scalanie czyta i pisze jak dotąd; zapis bazowy dziennika bez zmian).
+
+**Sesja (P-CHMURA-OPIS).** Odczyt karty i zapis samej karty — po sprawdzeniu sesji scalania i tego samego magazynu;
+zmiana sesji w trakcie kończy scalanie `SESSION_CHANGED` bez zapisu.
+
+**Podgląd „Scal kopię konta”** (P-KOPIA-DANE-KONTA: podgląd = wynik = różnica magazynu). `Bks_zmianyKarty` liczy tą
+samą regułą (karta martwa = nagrobek karty tutaj — „Scal kopię konta” scala notatki bez nagrobków kart z kopii — i brak
+karty po pętli kart, `Bks_kartaPo`; dla planu opieki bez reguły remisu) notatki, którym scalanie zmieni samą kartę, choć
+wygrywa tutejsza treść; `Bks_planZbioru` liczy je jako zmienione. „Scal kopię konta” dalej przepina notatkę z kopii pod
+tutejszą kartę, która istnieje (`Bks_notatki`), więc różne karty notatki dochodzą do scalania tylko wtedy, gdy tutejszej
+karty nie ma.
+
+**Dziennik zdarzeń (uśpiony).** Hak karty notatki (`Bem_wlasciciel`, część c bloku P-DZIENNIK-ZDARZEN): w gałęzi
+„ładunek wygrywa”, gdy reguła zapisała notatkę pod inną kartą niż w kopercie — `Bem_zmiana('pnote', id, sesja)`, za
+bramką jako pierwszą instrukcją, nigdy nie rzuca; także w kroku importu (w partii). Trzecie miejsce, w którym scalanie
+dopisuje do kolejki, obok H1 i H2 (zmiana zasady „scalanie nie dopisuje do kolejki”, plan 3.1). Bez niego przy samych
+zdarzeniach skrzyżowane „Scal pacjentów” zostawiało notatkę niewidoczną na jednym urządzeniu do pełnej wysyłki. Pętli
+nie ma: u nadawcy ta sama wersja daje pełny remis, który zmienia najwyżej samą kartę, bez dopisania; każde urządzenie
+wysyła najwyżej raz na wersję treści. Przy zamkniętej bramce — jeden odczyt pola na taką notatkę, bez wpisu kolejki.
+Literały testu A ≡ B: oba scenariusze p. 6 „notatka pod inną kartą” bez „ZNANA RÓŻNICA (dzisiejsza)” — zdarzenia,
+bloby i W4 bez różnicy, notatka widoczna w karcie, która istnieje, na obu urządzeniach; model haków z hakiem karty
+notatki (koperta pnote partii, której wersja weszła u odbiorcy pod inną kartą niż w kopercie).
+
+**Zmiana działania dziś** (pełne kopie i delty):
+- notatka po „Scal pacjentów” pod kartą, która istnieje, na wszystkich urządzeniach — także po poprawce w starej
+  karcie na drugim urządzeniu i po skrzyżowanym „Scal pacjentów”; tak samo plan opieki;
+- gdy obie karty istnieją — pod kartą wersji zapisanej później (symetrycznie na obu urządzeniach; dotąd zostawała
+  tutejsza karta, gdy karta z ładunku miała jakikolwiek znany nagrobek);
+- dawny rozjazd leczy pierwsza pełna wymiana po aktualizacji (pełny remis → karta, która istnieje), o ile nagrobek
+  karty jeszcze jest (retencja nagrobków 365 dni);
+- „Scal kopię konta”: podgląd i wynik liczą zmianę samej karty jako zmienioną notatkę.
+
+**Import.** „Importuj pacjenta z pliku” i „Scal kopię konta” scalają notatki tą samą sekcją `Le` — reguła działa też
+tam (import pliku przypisuje notatki z pliku do importowanej karty, więc różnica kart wynika tylko z tutejszego
+rekordu); hak — w kroku importu, w partii.
+
+**Testy.** Dane wyłącznie fikcyjne, bez PESEL. Nowe i zmienione:
+- `tests/unit/notatki-karta-po-scaleniu.test.mjs` (nowy, 9 przypadków): obie karty istnieją (poprawka B po scaleniu —
+  pod P; przed scaleniem — pod Q), dawny rozjazd leczony pierwszą pełną wymianą (zapis samej karty, pozostałe pola
+  rekordu bez zmian), koszt (dwie notatki pod tą samą usuniętą kartą — jeden dodatkowy odczyt karty na scalanie, bez
+  różnicy kart — żadnego),
+  wyścig z drugą kartą przeglądarki (zapis karty pomijany, poprawka zostaje), pełny remis przy obu kartach usuniętych
+  (mniejszy `patientId`, w obu kierunkach), plan opieki (skrzyżowanie z ustaleniem dopisanym na B — plan pod Q na obu),
+  dwa strażniki źródła;
+- `tests/unit/kopia-konta-dane-konta.test.mjs` — 5 nowych przypadków: poprawka tutaj pod kartą usuniętą, kopia pod
+  kartą docelową (podgląd = wynik = magazyn = 1, notatka pod kartą docelową), kontrola z kartą żywą (0), karta jeszcze
+  w drodze bez nagrobka (0), pełny remis z kartą w drodze (mniejszy `patientId`, 1), plan opieki przy pełnym remisie
+  z kartą w drodze (bez reguły remisu, 0);
+- `tests/unit/notatki-za-karta.test.mjs` — T20 „B poprawia notatkę N1 pod X” (N1 pod Y na A i B), F1 ×3 (n1@Y na A,
+  B i C, te same `rev` i chwila zmiany) i strażnik podglądu „Scal kopię konta” (plan notatek ze zmianami samej karty);
+- `tests/unit/sync-dziennik-wlasnosciowy.test.mjs` (test A ≡ B, 132 przypadki) — literały p. 6, model haków, negatyw
+  tabeli W4 na różnicy wstrzykniętej w migawkę, nagłówek;
+- `tests/unit/sync-dziennik-uspienie.test.mjs`, `sync-dziennik-haki.test.mjs`, `notatki-pacjenta-integralnosc.test.mjs`
+  — literał miejsc poza blokiem (34 wpisy, 49 wywołań `Bem_`), forma wstawki (jedyna instrukcja
+  `if (Qwp !== g.patientId)` tuż po zapisie notatki, argumenty `g.id` i sesja `Le`), reguła domknięcia części `Bem_`,
+  samokontrole, KH6, G6g.
+
+Pełny `npm test` i e2e — wyniki w opisie PR.
+
+**Czerwone na bazie** (`origin/audyt` `2beacb33` z testami tego PR): 24 — `notatki-karta-po-scaleniu` 7 (dawny
+rozjazd, koszt, wyścig, pełny remis, plan opieki, dwa strażniki źródła), `kopia-konta-dane-konta` 2 (poprawka pod
+kartą usuniętą, pełny remis), `notatki-za-karta` 5 (T20 poprawka N1, F1 ×3, strażnik podglądu „Scal kopię konta”), test A ≡ B 3 (oba scenariusze p. 6,
+„W4 — negatywy”), `sync-dziennik-uspienie` 5, `sync-dziennik-haki` 1 (KH6), `notatki-pacjenta-integralnosc` 1 (G6g).
+Zielone z natury: obie karty istnieją (×2; na bazie nagrobek starej karty zdejmuje karta, która wraca), kontrole
+podglądu, pozostałe przypadki, zapis bazowy dziennika (fikstura bez zmian).
+
+**Mutanty.** 20 mutantów, 20 zabitych. Testy działania zabijają 17: karta martwa bez nagrobka, bez reguły karty
+martwej, bez reguły remisu, remis — większy `patientId`, zwycięzca treści odwrócony, gałąź „ładunek wygrywa” z kartą
+z koperty, bez haka karty notatki i hak zawsze (test A ≡ B), gałąź „tutejsza wygrywa” bez zmiany karty i bez licznika,
+zmiana karty bez porównania z rekordem z początku sekcji (wyścig), plan opieki bez zmiany karty, bez pamięci odczytu
+karty (koszt), podgląd bez zmian karty, podgląd z kartą martwą bez nagrobka, podgląd bez reguły remisu, podgląd planu
+opieki z regułą remisu. Trzy zabija tylko strażnik źródła: błąd odczytu karty = karta martwa i zapis karty bez
+sprawdzenia sesji i magazynu (ścieżki widoczne tylko przy błędzie odczytu albo zmianie sesji w trakcie scalania) oraz
+plan opieki z regułą remisu — test planów opieki „does not hydrate a tied-looking record with a different patientId”
+łapie go tylko przy jednej z dwóch kolejności losowych identyfikatorów kart.
+
+**Kontrola granicy obrazu sejfu.** Przeliczone skróty `BASE`, `baseVaultSHA256` i `integratedVaultSHA256` (reguła
+z E2-PR3a2, decyzja z 2026-11-09; liczone po zdjęciu zmiany Klirensu, jak w kontroli od vildaclinic/vilda-calc#900);
+fragment natywny, haki, moduły i paczka bez zmian.
+
+**Ograniczenia.**
+- Starsze urządzenia (sprzed tej zmiany) rozstrzygają kartę notatki jak dotąd (G5) — u nich może zostać dzisiejszy
+  rozjazd, bez nowych strat; ping-pongu nie ma (stare urządzenie przy pełnym remisie nic nie zapisuje i nie wysyła;
+  nota wydania: aktualizacja wszystkich urządzeń).
+- Dawny rozjazd po wygaśnięciu nagrobka karty (365 dni) — bez nagrobka karta nie jest martwa, więc przy pełnym remisie
+  zostaje mniejszy `patientId`.
+- Zmiana samej karty planu opieki przy pełnym remisie i obu kartach żywych — bez zmian (bez reguły remisu, wyżej).
+- Notatka pod kartą, której tu nie ma, bez nagrobka (karta jeszcze w drodze) — karta żywa; zostaje do dojścia karty
+  albo nagrobka.
+
+**Cofnięcie** = rewert PR (bez migracji: zapis samej karty to zwykły rekord notatki; rewert cofa też skróty kontroli
+granicy; wpisy kolejki z haka karty notatki — przy uśpionym dzienniku nie powstają).
+
+**Gdzie w kodzie.** `vilda_vault.js`: sekcja notatek pacjenta w `Le` (`Qmart`, `Qwl`, gałąź „ładunek wygrywa”, gałąź
+„tutejsza wygrywa”, gałąź planu opieki); `Bnp_zmienKarte` i `Bnp_zapiszKarte` obok `Bnp_wczesniejUtworzona`;
+`Bks_zmianyKarty` i `Bks_planZbioru` (podgląd „Scal kopię konta”); `Bem_wlasciciel` w części c bloku
+P-DZIENNIK-ZDARZEN.
+
+**Wersje.** `vilda_vault.js` 269 → 270, `vilda_chrome.js` 275 → 276 i `vilda_session_bridge.js` 192 → 193 (wstrzykują
+sejf), SW 1.1.505 → 1.1.506; baza `origin/audyt` `2beacb33` (po vildaclinic/vilda-calc#926). Bez nowego pliku w pamięci
+offline.
+
 ## „Zostaw notatkę” na dwóch urządzeniach: zostaje tekst zapisany później, chwila utworzenia ta sama (P-NOTATKI-1, E2-PR3c3, SW 1.1.505, `vilda_vault.js` 269, 2026-11-10)
 
 **Zmiana kliniczna: tak** — wzory, progi, jednostki i interpretacje bez zmian. Zmienia się, który tekst notatki pacjenta
@@ -21627,10 +21780,11 @@ fragment natywny, haki, moduły i paczka bez zmian.
   dzisiejsze różnice, bez nowych strat (nota wydania: aktualizacja wszystkich urządzeń).
 - Chwila utworzenia zapisana regułą nie zgłasza zdarzenia zmiany notatki — otwarta lista notatek pokaże nową kolejność
   po odświeżeniu.
-- Notatka po „Scal pacjentów” pod usuniętą kartą — bez zmian (E2-PR3c4, decyzja 6).
+- Notatka po „Scal pacjentów” pod usuniętą kartą — bez zmian (E2-PR3c4, decyzja 6) — wykonane w E2-PR3c4 (wpis wyżej).
 
 **Wymagania dla następnych PR.**
-- **E2-PR3c4.** Literały testu A ≡ B (scenariusze „notatka pod inną kartą”) — w postaci po tym PR.
+- **E2-PR3c4.** Literały testu A ≡ B (scenariusze „notatka pod inną kartą”) — w postaci po tym PR (wykonane w E2-PR3c4,
+  wpis wyżej).
 
 **Cofnięcie** = rewert PR (bez migracji: nagrobki z wyższym `rev` i wcześniejsza chwila utworzenia to zwykłe rekordy;
 rewert cofa też skróty kontroli granicy).
@@ -23836,7 +23990,7 @@ uśpionych PR. Decyzje z 2026-11-03, po scaleniu E2-PR2a (vildaclinic/vilda-calc
 - **11.3 — przyjęta:** E2-PR2 dzielony na E2-PR2a i E2-PR2b;
 - **cel czasu testu A ≡ B — przyjęty:** ziarna domyślne do około 75 s, cały plik do około 180 s;
 - **korekta szacunku — przyjęta:** etap 2 razem około 26 do 28 dni (zapis sprzed pytania 10.1);
-- **notatka pod inną kartą po „Scal pacjentów”:** naprawa w E2-PR3c (od 2026-11-10: E2-PR3c4);
+- **notatka pod inną kartą po „Scal pacjentów”:** naprawa w E2-PR3c (od 2026-11-10: E2-PR3c4; wykonane w E2-PR3c4);
 - **pytanie 10.1 — przyjęte:** E2-PR2b dzielony na E2-PR2b1 (ten PR) i E2-PR2b2 (kwarantanna i podsumowanie wyniku
   dla dziennika); etap 2 razem około 31 do 33 dni;
 - **pytanie 10.2 — przyjęte:** identyfikator urządzenia osobny dla każdego konta, kasowany razem z kontem od E2-PR3a
@@ -24491,7 +24645,8 @@ i `Q8-obca-2` wobec dzisiejszej aplikacji niezmierzone).
   - Osobna sprawa: „Scal pacjentów” zapisuje notatki źródła od nowa. Wcześniejsza równoległa edycja tej notatki na
     innym urządzeniu przegrywa więc jak każda starsza poprawka (późniejsza zmiana wygrywa), także dziś.
   - Naprawa: osobna poprawka reguły (decyzja 9). Naprawa w E2-PR3c (decyzja właściciela 2026-11-03, po scaleniu
-    vildaclinic/vilda-calc#869); od 2026-11-10 w E2-PR3c4 (decyzja 6 z 2026-11-10).
+    vildaclinic/vilda-calc#869); od 2026-11-10 w E2-PR3c4 (decyzja 6 z 2026-11-10) — wykonane w E2-PR3c4 (wpis
+    P-NOTATKI-ZA-KARTA, E2-PR3c4): notatka pod kartą, która istnieje, na obu urządzeniach.
 - **D7 i `createdAtISO` notatki.** Opis nagrobka wersji (`rev`, `updatedAtISO`, `zmianaISO`, `koszISO`) i chwila
   utworzenia notatki po dwóch równoległych wskrzeszeniach zależą od kolejności scaleń także przy samych blobach.
 
@@ -27172,7 +27327,8 @@ wszystko”):
 - D21-6 (a): stan „czeka” — notatki widoczne, dopóki nie dojdzie usunięcie karty; wtedy znikają razem z nią;
 - D21-7 (a): nagrobek bez pola z tą samą chwilą (echo starej aplikacji) to ta sama wiadomość, nie ręczne usunięcie;
 - D21-8 (a): nota wydania o aktualizacji wszystkich urządzeń przed użyciem „Usuń pacjenta”, bez blokady na serwerze;
-- D21-9 (a): sieroty (pomiar 6 i 7) i rozjazd G5 po „Scal pacjentów” (pomiar 13) — osobne PR, poza tym wpisem.
+- D21-9 (a): sieroty (pomiar 6 i 7) i rozjazd G5 po „Scal pacjentów” (pomiar 13) — osobne PR, poza tym wpisem (rozjazd G5:
+  E2-PR3c4, wpis „Notatka po »Scal pacjentów« idzie za kartą, która istnieje”).
 
 Serwer, `vilda_sync.js`, `vilda_sync_integration.js`, schemat IndexedDB (`schemaVersion` 2), interfejs i API
 `window.VildaVault` bez zmian. Format: nowe opcjonalne pole nagrobka notatki pacjenta.
@@ -27825,7 +27981,8 @@ P1 (10 z tej poprawki i 5 z poprawki F2, #754) i 11 z jego weryfikacji 2; wejśc
   urządzenia, które usunęło X, notatka czeka przy żywej karcie X, zamiast zginąć (na 346dd81a ten wariant kończył się
   zbieżnie tylko dzięki tej utracie). Rozjazd znika przy następnej poprawce notatki na urządzeniu, na którym jest
   widoczna. Naprawa — w PR klasy G5 (np. `Bks_notatki` nie przepina notatki pod tutejszą kartę, gdy karta właściciela
-  z kopii też tu istnieje).
+  z kopii też tu istnieje). Rozjazd G5 (także drogą F1) naprawiony w E2-PR3c4 regułą karty notatki w `Le` (wpis
+  „Notatka po »Scal pacjentów« idzie za kartą, która istnieje”); `Bks_notatki` bez zmian.
 - **Etap 2 synchronizacji** (kolejka zdarzeń): ratunek wymaga wyjątku od zasady „scalanie nie dopisuje do kolejki”,
   builder `pnotetomb` musi czytać rekord ze sklepu, a zapis notatki, po którym nagrobek zostaje (`Bnp_poZapisie`:
   stan CZEKA, a po przeglądzie przeniesienia na D-7 także karta późniejsza niż `e` przy zapisie nie późniejszym niż R),

@@ -229,7 +229,9 @@ const ID_BEV_BOB = /(?<![A-Za-z0-9_$])B(?:ev|ob|em)_[A-Za-z0-9_$]*/g;
 // (E2-PR3b): Bem_przegrane(t,N,e) w Le tuż po pętli nagrobków kart (hak H1 — nagrobki z ładunku poza zbiorem wygranych),
 // Bem_przegrany(patientId, deletedAtISO, opcje) w wyrażeniu funkcyjnym Bsl_usunPacjenta w gałęzi karty późniejszej niż
 // nagrobek (hak H1 — karta zapisana w trakcie scalania) i Bem_ratunek(id, u, opcje) w wyrażeniu funkcyjnym Bnp_ratuj po
-// zapisie uratowanej wersji notatki (hak H2) — 33 wpisy, 48 wywołań Bem_.
+// zapisie uratowanej wersji notatki (hak H2) — 33 wpisy, 48 wywołań Bem_. Hak karty notatki (E2-PR3c4):
+// Bem_wlasciciel(g.id, e) w wyrażeniu funkcyjnym Le (gałąź „ładunek wygrywa”) jako jedyna instrukcja
+// if (Qwp !== g.patientId) tuż po zapisie notatki — 34 wpisy, 49 wywołań Bem_.
 const MIEJSCA_POZA_BLOKIEM = Object.freeze({
   PatientCheckpointRemoveUser: { Bob_oznacz: 1, Bob_odznacz: 1 },
   Buk_obce: { Bob_poKasowaniuSejfu: 1 },
@@ -238,6 +240,7 @@ const MIEJSCA_POZA_BLOKIEM = Object.freeze({
   Le: { Bem_zChmury: 1, Bem_przegrane: 1 },
   'Bsl_usunPacjenta/(funkcja zagnieżdżona)': { Bem_przegrany: 1 },
   'Bnp_ratuj/(funkcja zagnieżdżona)': { Bem_ratunek: 1 },
+  'Le/(funkcja zagnieżdżona)': { Bem_wlasciciel: 1 },
   Vn: { Bem_hak: 1 },
   ws: { Bem_hak: 1 },
   qr: { Bem_hak: 1 },
@@ -534,6 +537,21 @@ function miejscaPozaBlokiem(zrodlo) {
       }
       const przed = wyzej.type === 'ExpressionStatement' ? poprzednia(wyzej) : null;
       if (!zdarzenieRatunku(przed) || !zapisNotatki(poprzednia(przed))) bledy.push(`${gdzie}: nie tuż po s.zdarzenia.push(…) po zapisie uratowanej wersji notatki`);
+    }
+    if (id.name === 'Bem_wlasciciel') {
+      const p1 = nazwyParametrow(deklaracja(id), 2)[1];
+      const a = p.arguments;
+      const poleG = (x, pole) => !!x && x.type === 'MemberExpression' && !x.computed && nazwany(x.object, 'g') && x.property.name === pole;
+      if (fn !== 'Le/(funkcja zagnieżdżona)' || a.length !== 2 || !poleG(a[0], 'id') || !p1 || !nazwany(a[1], p1)) {
+        bledy.push(`${gdzie}: poza wyrażeniem funkcyjnym Le albo argumenty inne niż (g.id, drugi parametr Le)`);
+      }
+      const gIf = wyzej.type === 'ExpressionStatement' ? rodzic.get(wyzej) : null;
+      const t = gIf && gIf.type === 'IfStatement' && gIf.consequent === wyzej && !gIf.alternate ? gIf.test : null;
+      if (!(t && t.type === 'BinaryExpression' && t.operator === '!==' && nazwany(t.left, 'Qwp') && poleG(t.right, 'patientId'))) {
+        bledy.push(`${gdzie}: nie jedyna instrukcja if (Qwp!==g.patientId)`);
+      }
+      const przed = gIf && gIf.type === 'IfStatement' ? poprzednia(gIf) : null;
+      if (!(przed && zawiera(przed, (x) => metoda(x, 'putPatientNoteForUser')))) bledy.push(`${gdzie}: nie tuż po zapisie notatki`);
     }
     if (id.name === 'Bob_odznacz') {
       let c = rodzic.get(p);
@@ -934,12 +952,13 @@ describe('U2(a): identyfikatory Bev_, Bob_ i Bem_ tylko w bloku; _eventLog dokł
   // Formy z literału miejsc w małych funkcjach (kształt jak w sejfie): sprzątanie po koncie (E2-PR3a1), emisja (E2-PR3a2),
   // importy (E2-PR3a3), przegląd kolejki (E2-PR3a4: He z Bem_przeglad(true) na początku, Le z Bem_zChmury(t)) i haki
   // scalania (E2-PR3b: Le z Bem_przegrane(t,N,e) po pętli nagrobków kart, Bsl_usunPacjenta z Bem_przegrany w gałęzi karty
-  // późniejszej niż nagrobek, Bnp_ratuj z Bem_ratunek po zapisie uratowanej wersji).
+  // późniejszej niż nagrobek, Bnp_ratuj z Bem_ratunek po zapisie uratowanej wersji; E2-PR3c4: Le z Bem_wlasciciel w gałęzi
+// „ładunek wygrywa” po zapisie notatki).
   const DOBRE = [
     'async function PatientCheckpointRemoveUser(userId, password) { const PatientCheckpointSyncMark=Bob_oznacz(userId); try { await f(); } catch (e) { Bob_odznacz(userId, PatientCheckpointSyncMark); throw e; } finally { g(); } }',
     'async function xa(t,e){ if(!r){ return W(A,(await I().getRegistryEntry(t)&&await I().removeRegistryEntry(W(A,t)),Bob_poRejestrze(t),await Bob_kasujKonto(t),true)); } return W(A,(await I().deleteUserDatabase(W(t,t)),await I().removeRegistryEntry(W(A,t)),Bob_poRejestrze(t),b===t&&kn("user-removed"),await Bob_kasujKonto(t),true)); }',
     'function He(t){ Bem_przeglad(true); Bkr_wyczyscKarte(); $n.forEach(function(n){ n(e); }); try{go()}catch(x){r(x);} Bob_poOdblokowaniu(); Bkr_ponowDziennik(); }',
-    'async function Le(t,e){const A=b;PatientClinicalGuard(A);if(!T())throw new Error("x");if(!t||typeof t!="object")throw new Error("VildaVault.mergeSyncPayload: format.");Bem_zChmury(t);if(PatientPortablePayload(t))await PatientPortableModules();const N=new Set;Object.keys(m).forEach(function(P){N.add(P)});if(O){const P=Array.from(N);for(let F=0;F<P.length;F++){const j=P[F];w+=await Bsl_usunPacjenta(j,m[j],e,null)}for(let F=0;F<f.length;F++){const j=f[F];j&&j.patientId&&!N.has(j.patientId)&&await Bsl_zdejmijNagrobek(j.patientId,j.deletedAtISO,e)}}Bem_przegrane(t,N,e);let Bkz_n=0;return W(A,{})}',
+    'async function Le(t,e){const A=b;PatientClinicalGuard(A);if(!T())throw new Error("x");if(!t||typeof t!="object")throw new Error("VildaVault.mergeSyncPayload: format.");Bem_zChmury(t);if(PatientPortablePayload(t))await PatientPortableModules();const N=new Set;Object.keys(m).forEach(function(P){N.add(P)});if(O){const P=Array.from(N);for(let F=0;F<P.length;F++){const j=P[F];w+=await Bsl_usunPacjenta(j,m[j],e,null)}for(let F=0;F<f.length;F++){const j=f[F];j&&j.patientId&&!N.has(j.patientId)&&await Bsl_zdejmijNagrobek(j.patientId,j.deletedAtISO,e)}}Bem_przegrane(t,N,e);let Bkz_n=0;for(const g of X)await Ac(g.id,async function(){const Qwp=await Qwl(g.patientId,M&&M.patientId);await P.putPatientNoteForUser(b,W(b,{id:g.id,patientId:Qwp})),Qch.push({id:g.id,patientId:Qwp,action:"merge"}),Qdn.add(g.id);if(Qwp!==g.patientId)Bem_wlasciciel(g.id,e)});return W(A,{})}',
     "async function Bsl_usunPacjenta(patientId, deletedAtISO, opcje, ctx) {\n  return W(A, Bsl_podBlokada(patientId, async function () {\n    const rekord = await I().getPatientForUser(b, patientId);\n    if (rekord && (rekord.lastSavedAtISO || '') > deletedAtISO) {\n      if (ile && rekord.snapshotCount !== ile) {\n        await I().putPatientForUser(b, W(b, rekord));\n      }\n      Bem_przegrany(patientId, deletedAtISO, opcje);\n      return W(A, 0);\n    }\n    let usunieta = 0;\n    if (rekord) {\n      if (ctx && !(await Bsl_koszUsuwanejKarty(ctx, patientId, opcje))) return W(A, 0);\n      await I().removePatientForUser(b, W(b, patientId));\n      usunieta = 1;\n    }\n    return W(A, usunieta);\n  }, opcje));\n}",
     "async function Bnp_ratuj(h, s, opcje) {\n  for (const [pid, ids] of wgPacjenta) {\n    try {\n      await Bsl_podBlokada(pid, async function () {\n        for (let i = 0; i < ids.length; i += 1) {\n          const id = ids[i], k = s.kanon[id];\n          await Ac(id, async function () {\n            const n = await h.getPatientNoteForUser(b, id);\n            if ((n.updatedAtISO || '') <= k.R) {\n              const u = new Date(Date.parse(k.R) + 1 + Bnp_h(z, n)).toISOString();\n              await h.putPatientNoteForUser(b, W(b, Object.assign({}, n, { updatedAtISO: u })));\n              s.zdarzenia.push({ id: id, patientId: n.patientId || null, action: 'merge' });\n              Bem_ratunek(id, u, opcje);\n              if (!s.liczone.has(id)) { s.liczone.add(id); zmienione += 1; }\n            }\n          });\n        }\n      }, opcje);\n    } catch (x) { g(); }\n  }\n}",
     'function Buk_obce(uid) { try { Buk_usuniete.add(uid); Bob_poKasowaniuSejfu(uid); } catch (x) { g(); } }',
@@ -1153,6 +1172,15 @@ describe('U2(a): identyfikatory Bev_, Bob_ i Bem_ tylko w bloku; _eventLog dokł
       DOBRE.replace('Bem_ratunek(id, u, opcje);', 'Bem_ratunek(n.id, u, opcje);'),
       DOBRE.replace('Bem_ratunek(id, u, opcje);', 'Bem_ratunek(id, u);'),
       DOBRE.replace('Bem_ratunek(id, u, opcje);', 'if (u) Bem_ratunek(id, u, opcje);'),
+      // E2-PR3c4: hak karty notatki.
+      DOBRE.replace('if(Qwp!==g.patientId)Bem_wlasciciel(g.id,e)', 'Bem_wlasciciel(g.id,e)'),
+      DOBRE.replace('if(Qwp!==g.patientId)Bem_wlasciciel(g.id,e)', 'if(Qwp===g.patientId)Bem_wlasciciel(g.id,e)'),
+      DOBRE.replace('if(Qwp!==g.patientId)Bem_wlasciciel(g.id,e)', 'if(Qwp!==g.patientId)Bem_wlasciciel(g.patientId,e)'),
+      DOBRE.replace('if(Qwp!==g.patientId)Bem_wlasciciel(g.id,e)', 'if(Qwp!==g.patientId)Bem_wlasciciel(g.id,t)'),
+      DOBRE.replace('if(Qwp!==g.patientId)Bem_wlasciciel(g.id,e)', 'if(Qwp!==g.patientId)Bem_wlasciciel(g.id)'),
+      DOBRE.replace('if(Qwp!==g.patientId)Bem_wlasciciel(g.id,e)', 'if(Qwp!==g.patientId)Bem_wlasciciel(g.id,e);else f()'),
+      DOBRE.replace('await P.putPatientNoteForUser(b,W(b,{id:g.id,patientId:Qwp})),Qch.push({id:g.id,patientId:Qwp,action:"merge"}),Qdn.add(g.id);if(Qwp!==g.patientId)Bem_wlasciciel(g.id,e)',
+        'if(Qwp!==g.patientId)Bem_wlasciciel(g.id,e);await P.putPatientNoteForUser(b,W(b,{id:g.id,patientId:Qwp})),Qch.push({id:g.id,patientId:Qwp,action:"merge"}),Qdn.add(g.id)'),
     ];
     for (const [i, kod] of tylkoForma.entries()) {
       expect(kod, `wariant formy ${i} różni się od form z literału`).not.toBe(DOBRE);
@@ -1167,6 +1195,9 @@ describe('U2(a): identyfikatory Bev_, Bob_ i Bem_ tylko w bloku; _eventLog dokł
       DOBRE.replace('Bem_przegrany(patientId, deletedAtISO, opcje);', 'await Bem_przegrany(patientId, deletedAtISO, opcje);'),
       DOBRE.replace('Bem_ratunek(id, u, opcje);', 'Bem_ratunek(id, u, opcje).then(g);'),
       DOBRE.replace('Bem_ratunek(id, u, opcje);', 'await Bem_ratunek(id, u, opcje);'),
+      DOBRE.replace('if(Qwp!==g.patientId)Bem_wlasciciel(g.id,e)', 'if(Qwp!==g.patientId)await Bem_wlasciciel(g.id,e)'),
+      DOBRE.replace('if(Qwp!==g.patientId)Bem_wlasciciel(g.id,e)', 'Qwp!==g.patientId&&Bem_wlasciciel(g.id,e)'),
+      DOBRE.replace('Bem_przegrane(t,N,e);let Bkz_n=0;', 'Bem_przegrane(t,N,e);Bem_wlasciciel(t,e);let Bkz_n=0;'),
       `${DOBRE}\nasync function Bsl_zdejmijNagrobek(p, d, o) { return Bsl_podBlokada(p, async function () { Bem_przegrany(p, d, o); return 0; }); }`,
       `${DOBRE}\nasync function Bnp_zdejmijPoScaleniu(id, u, opcje) { await f(); Bem_ratunek(id, u, opcje); }`,
       bezPrzegranego.replace('  return W(A, Bsl_podBlokada(patientId, async function () {', '  Bem_przegrany(patientId, deletedAtISO, opcje);\n  return W(A, Bsl_podBlokada(patientId, async function () {'),
@@ -1618,7 +1649,7 @@ describe('U2(c): wywołania zakazane i reguła domknięcia części magazynu', (
   // w Le i Bsl_usunPacjenta, Bem_ratunek w Bnp_ratuj) i para ratunku po udanym dopisaniu (Bem_paraRatunku w łańcuchu).
   const SYNCHRONICZNE_BEM = ['Bem_hak', 'Bem_zHaka', 'Bem_zmiana', 'Bem_krokStart', 'Bem_krokKoniec', 'Bem_sekcje', 'Bem_partia', 'Bem_naPartie',
     'Bem_powiadom', 'Bem_zChmury', 'Bem_przeglad', 'Bem_przegladTeraz', 'Bem_poBezczynnosci', 'Bem_kolejka', 'Bem_brak', 'Bem_kluczEncji',
-    'Bem_przegrane', 'Bem_przegrany', 'Bem_ratunek', 'Bem_paraRatunku'];
+    'Bem_przegrane', 'Bem_przegrany', 'Bem_ratunek', 'Bem_paraRatunku', 'Bem_wlasciciel'];
   // Warunek otwartego kroku w Bem_zChmury, Bem_przegrane i Bem_przegrany (przed bramką: importy w kroku nie czytają bramki).
   const WARUNEK_KROKU = "if ((Bem_kroki.get('n') || 0) > 0) return;";
   function analizujBem(zrodlo) {
@@ -1647,6 +1678,7 @@ describe('U2(c): wywołania zakazane i reguła domknięcia części magazynu', (
     // Bem_przegrany — bramka pierwsza po warunku otwartego kroku, Bem_ratunek — bramka jako pierwsza instrukcja (ratunek
     // także w kroku importu), po bramce jedno try z catch; Bem_przegrane — warunek otwartego kroku, potem jedno try
     // z catch, bez bramki (tylko pętla po ładunku i wywołania Bem_przegrany); Bem_paraRatunku — jedno try z catch.
+    // Hak karty notatki (E2-PR3c4): Bem_wlasciciel — bramka jako pierwsza instrukcja, po niej jedno try z catch.
     const dekl = new Map(funkcje.map((s) => [s.id.name, s]));
     const literalny = (n) => !!n && (n.type === 'Literal' || (n.type === 'ObjectExpression' && n.properties.every((q) => q.type === 'Property' && !q.computed && q.kind === 'init' && literalny(q.value))));
     const bramka = (g, zWynikiem) => !!g && g.type === 'IfStatement' && !g.alternate && g.test.type === 'UnaryExpression' && g.test.operator === '!' &&
@@ -1687,9 +1719,13 @@ describe('U2(c): wywołania zakazane i reguła domknięcia części magazynu', (
     if (!pge || pge.body.body.length !== 2 || !tryZCatch(t3)) naruszenia.push('Bem_przegrane: po warunku kroku inna instrukcja niż jedno try z catch');
     const par = dekl.get('Bem_paraRatunku');
     if (!par || par.body.body.length !== 1 || !tryZCatch(par.body.body[0])) naruszenia.push('Bem_paraRatunku: nie jedno try z catch');
+    const wl = dekl.get('Bem_wlasciciel');
+    const [g4, t4] = wl ? wl.body.body : [];
+    if (!bramka(g4, false)) naruszenia.push('Bem_wlasciciel: pierwsza instrukcja inna niż if (!Bob_bramka()) return;');
+    if (!wl || wl.body.body.length !== 2 || !tryZCatch(t4)) naruszenia.push('Bem_wlasciciel: po bramce inna instrukcja niż jedno try z catch');
     const odwolania = (gdzie.Bob_bramka || []).slice().sort().join();
-    if (odwolania !== 'Bem_przeglad,Bem_przegrany,Bem_ratunek,Bem_zChmury,Bem_zmiana') {
-      naruszenia.push(`Bob_bramka: ${odwolania || 'brak'} zamiast po jednym odwołaniu w Bem_zmiana, Bem_przeglad, Bem_zChmury, Bem_przegrany i Bem_ratunek`);
+    if (odwolania !== 'Bem_przeglad,Bem_przegrany,Bem_ratunek,Bem_wlasciciel,Bem_zChmury,Bem_zmiana') {
+      naruszenia.push(`Bob_bramka: ${odwolania || 'brak'} zamiast po jednym odwołaniu w Bem_zmiana, Bem_przeglad, Bem_zChmury, Bem_przegrany, Bem_ratunek i Bem_wlasciciel`);
     }
     for (const n of ['Bob_wejscie', 'Bob_dopiszZ']) {
       const w = gdzie[n] || [];
@@ -1820,6 +1856,8 @@ describe('U2(c): wywołania zakazane i reguła domknięcia części magazynu', (
       "function Bem_przegrany(p, d, s) { if ((Bem_kroki.get('n') || 0) > 0) return; if (!Bob_bramka()) return; try { const ses = s && s.Bses_s ? s : Bses_opcje(null); const setId = Bob_zestawKarty(p, d); const byly = Bem_pelne.get(ses.Bses_s.u) || new Set(); if (byly.has(setId)) return; byly.add(setId); Bem_pelne.set(ses.Bses_s.u, byly); Bem_zmiana('pfull', { patientId: p }, ses, { setId: setId }); } catch (x) { } }",
       "function Bem_ratunek(id, chwila, s) { if (!Bob_bramka()) return; try { Bem_zmiana('pnote', id, s && s.Bses_s ? s : Bses_opcje(null), { para: chwila }); } catch (x) { } }",
       "function Bem_paraRatunku(z) { try { const m = Bem_pary.get(z.uid) || new Map(); const k = 'pnote|' + String(z.klucze); if (!m.get(k) || z.para > m.get(k)) m.set(k, z.para); Bem_pary.set(z.uid, m); } catch (x) { } }",
+      // E2-PR3c4: hak karty notatki.
+      "function Bem_wlasciciel(id, s) { if (!Bob_bramka()) return; try { Bem_zmiana('pnote', id, s && s.Bses_s ? s : Bses_opcje(null)); } catch (x) { } }",
     ].join('\n');
     expect(analizujBem(DOBRA)).toEqual([]);
     const czerwone = [
@@ -1895,6 +1933,13 @@ describe('U2(c): wywołania zakazane i reguła domknięcia części magazynu', (
       DOBRA.replace("function Bem_paraRatunku(z) { try { const m = Bem_pary.get(z.uid) || new Map(); const k = 'pnote|' + String(z.klucze); if (!m.get(k) || z.para > m.get(k)) m.set(k, z.para); Bem_pary.set(z.uid, m); } catch (x) { } }",
         "function Bem_paraRatunku(z) { const m = Bem_pary.get(z.uid) || new Map(); m.set('pnote|' + String(z.klucze), z.para); Bem_pary.set(z.uid, m); }"),
       DOBRA.replace('function Bem_paraRatunku(z) {', 'async function Bem_paraRatunku(z) {'),
+      // E2-PR3c4: hak karty notatki — warunek kroku przed bramką, bramka nie pierwsza, async, bez catch, dopisanie poza
+      // Bem_dopisz.
+      DOBRA.replace("function Bem_wlasciciel(id, s) { if (!Bob_bramka()) return;", "function Bem_wlasciciel(id, s) { if ((Bem_kroki.get('n') || 0) > 0) return; if (!Bob_bramka()) return;"),
+      DOBRA.replace("function Bem_wlasciciel(id, s) { if (!Bob_bramka()) return; try {", 'function Bem_wlasciciel(id, s) { try { if (!Bob_bramka()) return;'),
+      DOBRA.replace('function Bem_wlasciciel(id, s) {', 'async function Bem_wlasciciel(id, s) {'),
+      DOBRA.replace("Bem_zmiana('pnote', id, s && s.Bses_s ? s : Bses_opcje(null)); } catch (x) { } }", "Bem_zmiana('pnote', id, s && s.Bses_s ? s : Bses_opcje(null)); } finally { } }"),
+      DOBRA.replace("Bem_zmiana('pnote', id, s && s.Bses_s ? s : Bses_opcje(null)); } catch (x) { } }", "Bob_dopiszZ('pnote', id, undefined, s, s.Bses_s.u); } catch (x) { } }"),
     ];
     for (const [i, kod] of czerwone.entries()) {
       expect(kod, `wariant ${i} różni się od części w kształcie z projektu`).not.toBe(DOBRA);
@@ -1975,7 +2020,9 @@ describe('U2(d): najwyższy poziom bloku — tylko deklaracje bez skutków przy 
     // E2-PR3a4: pamięć braków (wpisy łańcucha bez wiersza — przegląd dopisuje je bez względu na okno i pokrycie).
     'Bem_braki', 'Bem_BEZ_BRAKU', 'Bem_brak', 'Bem_kluczEncji',
     // E2-PR3b: haki scalania (pełna karta po przegranym nagrobku — zestawy w pamięci dokumentu, ratunek notatki i jego para).
-    'Bem_przegrane', 'Bem_przegrany', 'Bem_ratunek', 'Bem_paraRatunku', 'Bem_pelne'];
+    'Bem_przegrane', 'Bem_przegrany', 'Bem_ratunek', 'Bem_paraRatunku', 'Bem_pelne',
+    // E2-PR3c4: hak karty notatki.
+    'Bem_wlasciciel'];
   it('U2(d) (E2-PR3a2): część Bem_ (^Bem_) — function / async function albo const z literałem, Object.freeze(…) z dozwolonymi typami, new Map() / new Set(); są nazwy wiążące części', () => {
     znacznikEmisjiRaz();
     const ast = parse(czesci().bem, { ecmaVersion: 'latest', sourceType: 'script' });
