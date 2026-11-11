@@ -5677,11 +5677,20 @@ async function Bsl_koszUsuwanejKarty(ctx, patientId, opcje) {
     const e = ctx.mapa.get(s.snapshotId);
     if (!e) continue;
     const kosz = Bkz_chwilaKosza(e);
-    if (!kosz || kosz < Bkz_zmiana(s)) continue;
+    if (!kosz) continue;
+    // E2-PR3c5 (decyzja 7): wazny kosz, ktory ta wersja (zmieniona po nim) uniewaznia, a pozniejsze przyciecie z nia
+    // wygrywa — wklad bez tresci i bez cienia, jak po stronie ladunku (Bsl_koszZLadunku).
+    const pozniejsza = kosz < Bkz_zmiana(s);
+    if (pozniejsza && !Bpk_wazny(Bpk_zWpisu(e))) continue;
     let tresc;
     try { tresc = await G(s.payloadCipher.iv, s.payloadCipher.data); } catch(PatientClinicalCaught) {PatientClinicalRethrow(PatientClinicalCaught); tresc = null; }
     if (!tresc || typeof tresc !== 'object') continue;
-    const w = Bpk_zWersja(e, Bpk_zWersji(s, { c: kosz >= granicaKosza ? s.payloadCipher : null, od: kosz }, Bgw_stan(s, tresc)));
+    const st = Bgw_stan(s, tresc);
+    if (pozniejsza && !Bkz_wygrywa(e, Bkz_zmiana(s), st)) continue;
+    const w0 = Bpk_zWersja(e, Bpk_zWersji(s, pozniejsza ? null : { c: kosz >= granicaKosza ? s.payloadCipher : null, od: kosz }, st));
+    // Wpis uniewazniony ta wersja: bez cienia tej karty od razu (decyzja 1, jak koncowy zapis listy — Bpc_bezKarty), takze
+    // gdy scalanie skonczy sie po usunieciu karty, przed koncowym zapisem listy.
+    const w = pozniejsza ? Bpc_bezKarty(w0, patientId) : w0;
     if (JSON.stringify(w) === JSON.stringify(e)) continue;
     ctx.mapa.set(s.snapshotId, w);
     dodaj.push(w);
@@ -5703,13 +5712,21 @@ async function Bsl_koszUsuwanejKarty(ctx, patientId, opcje) {
 // (kandydat tresci, Bkz_pomin) — jak wersje z ladunku pokonane nagrobkiem w karcie, ktora zostaje. Poprawka nie ginie,
 // gdy urzadzenie, ktore ja ma, po wyslaniu juz nie scala albo ma starsza aplikacje i wyslalo ladunek, zanim samo scalilo
 // nagrobki. Tylko wygrana kosza (bez cienia karty usuwanej, decyzja 1); bez zapisow.
+// E2-PR3c5 (decyzja 7 z 2026-11-10): wazny kosz, z ktorym ta wersja przegrywa tylko dlatego, ze zmieniono ja po koszu
+// (typowo „Przywroc” na innym urzadzeniu), a pozniejsze przyciecie z nia wygrywa — wpis poznaje jej zmiane, opis
+// i rejestr gwiazdki (bez tresci i bez cienia — decyzja 1 bez zmian), wiec przestaje byc waznym koszem: zostaje nagrobek
+// przyciecia, jak na urzadzeniu, ktore te wersje mialo w karcie. Dotad zostawal kosz ze stara trescia.
 function Bsl_koszZLadunku(ctx, F) {
   const wersje = Array.isArray(F.snapshots) ? F.snapshots : [];
   for (let i = 0; i < wersje.length; i += 1) {
     const S = wersje[i];
     const e = S && S.snapshotId ? ctx.mapa.get(S.snapshotId) : null;
     const kosz = e ? Bkz_chwilaKosza(e) : null;
-    if (kosz && kosz >= Bkz_zmiana(S)) Bkz_pomin(ctx, F.patientId, S);
+    if (kosz && kosz >= Bkz_zmiana(S)) { Bkz_pomin(ctx, F.patientId, S); continue; }
+    if (kosz && Bpk_wazny(Bpk_zWpisu(e))) {
+      const st = Bgw_stan(S, S.payload);
+      if (Bkz_wygrywa(e, Bkz_zmiana(S), st)) ctx.mapa.set(S.snapshotId, Bpk_zWersja(e, Bpk_zWersji(S, null, st)));
+    }
   }
 }
 // E2-PR3c2 (P-SYNC-WLASCICIEL, decyzja 4 z 2026-11-10): karta z ladunku przegrywa z nagrobkiem pacjenta (N w Le), a jej

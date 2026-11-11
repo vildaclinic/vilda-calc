@@ -33,8 +33,10 @@
 //   U1-bez     K: kosz x, „Usuń pacjenta” X (bez poprawki)                             → kosz 23 r0
 //   E4a-ret    P poprawia x na 74; K: X → Y → Z, retencja przycina x (zamiast kosza)   → brak (nagrobek retencji r2,
 //              bez chwili zmianaISO z poprawki P — przycięcie nie bierze wkładu wersji karty usuwanej)
-//   E4a-kp-ret K: kosz x w X; P poprawia x później; C (bez wiedzy) przycina x; K: scalenia → kosz 23 r0 w 6 z 8, nagrobek
-//              retencji r1 w P←C,P←K i C←P,C←K — tak samo jak dotąd (późniejsze wersje nie dochodzą do wpisu kosza)
+//   E4a-kp-ret K: kosz x w X; P poprawia x później; C (bez wiedzy) przycina x; K: scalenia → nagrobek retencji r1 bez
+//              treści w 7 z 8, kosz 23 r0 w P←K,K←C (E2-PR3c5, decyzja 7: wersja zmieniona po ważnym koszu, z którą
+//              wygrywa późniejsze przycięcie, unieważnia kosz — także w karcie usuwanej i w karcie z ładunku; dotąd kosz 23 r0
+//              w 6 z 8, nagrobek retencji r1 tylko w P←C,P←K i C←P,C←K). Poprawka 74 ginie w przycięciu, jak dotąd.
 //   znane ograniczenie (opis w ALGORITHMS, P-KOSZ-USUWANEJ-KARTY) — E4a-kp bez zmian, zielone także na 25dfbbe0:
 //   E4a-kp     K: kosz x w X; P (bez wiedzy) poprawia x na 74; K: X → Y → Z           → kosz 23 r0 — poprawka późniejsza
 //              niż kosz przegrywa z „Scal pacjentów”: wpis kosza wskazuje X, a żadne urządzenie nie zna karty docelowej
@@ -104,8 +106,10 @@ const SCEN = {
   'U1-bez': [async (u) => { await doKosza(u, 'K'); await usunPacjenta(u, 'K', 'X'); }, KOSZ(23, 0)],
   'E4a-ret': [async (u) => { await popraw(u, 'P', 74); await XYZ(u); await przytnij(u, 'K'); },
     { status: 'brak', karta: null, kosz: null, n: { masa: null, rev: 2, pin: null, powod: 'retencja', zmiana: null } }],
+  // E2-PR3c5 (decyzja 7): nagrobek retencji bez treści w 7 z 8; w P←K,K←C P traci kartę X (z poprawką), zanim pozna
+  // przycięcie, a wersji zmienionej po koszu nie ma już nigdzie — kosz 23 jak dotąd
   'E4a-kp-ret': [async (u) => { await doKosza(u, 'K'); await popraw(u, 'P', 74); await przytnij(u, 'C'); await XYZ(u); },
-    (kol) => (['P←C,P←K', 'C←P,C←K'].includes(kol)
+    (kol) => (kol !== 'P←K,K←C'
       ? { status: 'brak', karta: null, kosz: null, n: { masa: null, rev: 1, powod: 'retencja' } }
       : { status: 'kosz', karta: null, kosz: { masa: 23, pin: false }, n: { masa: 23, rev: 0, powod: null } })],
   // znane ograniczenie
