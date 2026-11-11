@@ -1541,7 +1541,8 @@ Decyzja właściciela z 2026-11-11 (makieta https://claude.ai/artifact/YRYrYpHeZ
 
 ```js
 // blok przed Jo: WbJestWynikiem (VildaLabHistory.isResultNote), WbSkrot, WbWartosc, WbKomentarz, WbOstrzezenie,
-// WbOtworzBadania, WbNotatkiNaglowek (Notatki), WbHistoriaGrupuj, WbHistoriaPigulka, WbHistoriaWyniki (Historia)
+// WbOtworzBadania, WbNotatkiNaglowek (Notatki), WbWynikPomiarowy, WbHistoriaGrupuj, WbHistoriaPigulka,
+// WbHistoriaWyniki (Historia; krótki wiersz tylko dla wyniku z liczbą albo zapisaną oceną, wynik opisowy bez zmian)
 // Xo (Notatki): „+ Dodaj notatkę” i „Edytuj” — onSaved: t._wbPoZapisie = t._wbStan || null; n()
 // Xo: po filtrze ghPointId — WbNotatkiNaglowek(t, c, WbPrzed), t._wbStan = {ids, widoczne}, c bez WbJestWynikiem
 //     (całość pod typeof — wycinek Xo w care-plan-auth-ui-boundary.test.mjs nie ma funkcji Wb*)

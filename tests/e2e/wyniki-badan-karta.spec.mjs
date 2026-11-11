@@ -173,3 +173,25 @@ test('telefon 390 px: wiersze Historii co najmniej 44 px, akcje wyniku w Badania
   await expect(sekcjaNotatek(page).getByRole('button', { name: 'Wyniki badań (5) są w zakładce Badania →' })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1)).toBe(true);
 });
+
+test('wynik opisowy (bez liczby i oceny) zostaje w Historii pełnym wpisem z tytułem; w Notatkach go nie ma', async ({ page }) => {
+  const patientId = await otworzSejf(page);
+  const ids = await page.evaluate(async (pid) => {
+    const V = window.VildaVault;
+    return {
+      opisowy: (await V.savePatientNote({ patientId: pid, category: 'wynik-badania', title: 'Fikcyjne USG tarczycy', body: 'Fikcyjny opis: obraz prawidłowy.',
+        clinicalDateISO: '2026-06-02', labResult: { test: 'USG tarczycy', value: 'Wynik opisowy — pełna treść w notatce' } })).id,
+      liczbowy: (await V.savePatientNote({ patientId: pid, category: 'wynik-badania', title: 'TSH (tyreotropina): 2,1 mIU/L', body: '= 2,1 μIU/mL',
+        clinicalDateISO: '2026-06-02', labResult: { test: 'TSH (tyreotropina)', testKey: 'tsh', value: '2,1 mIU/L = 2,1 μIU/mL', valueNum: 2.1, unit: 'mIU/L' } })).id,
+    };
+  }, patientId);
+  await page.evaluate((pid) => window.VildaAuthUI.showPatientCard(pid, null, null, { activeTab: 'timeline' }), patientId);
+  await czekajNaHistorie(page);
+  const historia = sekcjaHistorii(page);
+  await expect(historia.getByText('Fikcyjne USG tarczycy', { exact: true })).toBeVisible();
+  await expect(historia.locator(`.vilda-wb-hist-result[data-note-id="${ids.opisowy}"]`)).toHaveCount(0);
+  await expect(historia.locator(`.vilda-wb-hist-result[data-note-id="${ids.liczbowy}"]`)).toHaveCount(1);
+  await page.locator('.vilda-patient-tab[data-tab="notes"]').click();
+  await expect(sekcjaNotatek(page).getByRole('button', { name: 'Wyniki badań (2) są w zakładce Badania →' })).toBeVisible();
+  await expect(sekcjaNotatek(page).locator(`[data-note-id="${ids.opisowy}"]`)).toHaveCount(0);
+});

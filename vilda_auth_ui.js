@@ -636,10 +636,17 @@ function WbNotatkiNaglowek(host, notatki, przed) {
 // Historia: wyniki z jednego dnia badania i jednej wizyty w jednym wpisie „Badanie”, w kolejności paneli Badań.
 // Wpis zostaje zdarzeniem „note” (filtr „Badanie”, sortowanie i grupy wizyt bez zmian); noteId = pierwszy wynik.
 // otworz(noteId) to droga kliknięcia notatki na osi czasu, którą karta kieruje wynik do Badań.
+// Krótki wiersz dostaje wynik z liczbą albo z zapisaną oceną (tak zapisuje „Przypnij do wizyty”). Wynik opisowy
+// (np. wynik kroku planu opieki: „Wynik opisowy — pełna treść w notatce”) zostaje pełnym wpisem z tytułem i treścią,
+// bo to one niosą jego znaczenie, a klik prowadzi jak dotąd do planu.
+function WbWynikPomiarowy(z) {
+  var lab = z && z.labResult;
+  return !!lab && (Lh3HasAssessment(lab) || typeof lab.valueNum === "number" && isFinite(lab.valueNum));
+}
 function WbHistoriaGrupuj(zdarzenia, otworz) {
   var wynik = [], grupy = {}, kolejnosc = [];
   (zdarzenia || []).forEach(function (z) {
-    if (!z || z.type !== "note" || !z.noteId || !WbJestWynikiem(z)) { wynik.push(z); return; }
+    if (!z || z.type !== "note" || !z.noteId || !WbJestWynikiem(z) || !WbWynikPomiarowy(z)) { wynik.push(z); return; }
     var dzien = typeof z.clinicalDateISO === "string" && /^\d{4}-\d{2}-\d{2}/.test(z.clinicalDateISO) ? z.clinicalDateISO.slice(0, 10) : "";
     var klucz = dzien ? (typeof z.linkedAgeMonths === "number" ? z.linkedAgeMonths : "-") + "|" + dzien : "wpis|" + z.noteId;
     var grupa = grupy[klucz];

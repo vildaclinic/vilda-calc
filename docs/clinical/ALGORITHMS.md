@@ -1192,7 +1192,9 @@ zostaje w Notatkach; wynik Klirensu („wynik-klirens”) → `false`.
 dla koperty „recorded” — ten sam tekst co pigułka 6.20 w Badaniach (LH 3 IU/L,
 dziewczynka 6 lat, Th3 → „Cechy dojrzewania zbyt wcześnie — wymagają oceny”;
 ocena unieważniona zmianą daty → brak ostrzeżenia). Krótki wpis Historii
-pokazuje to ostrzeżenie w wierszu wyniku, żeby nie znikło z osi czasu.
+pokazuje to ostrzeżenie w wierszu wyniku, żeby nie znikło z osi czasu. Krótki wiersz
+dostaje tylko wynik z liczbą albo z zapisaną oceną; wynik opisowy (np. wynik kroku
+planu opieki) zostaje w Historii pełnym wpisem z tytułem i treścią.
 Testy na funkcjach produkcyjnych i prawdziwym sejfie:
 `tests/unit/lab-result-notes-projection.test.mjs`; e2e
 `tests/e2e/wyniki-badan-karta.spec.mjs`. Opis: `docs/LAB_HISTORIA_WYNIKOW_PLAN.md`,
