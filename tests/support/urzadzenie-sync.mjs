@@ -32,7 +32,11 @@
 //       blokadyWOsi (RegExp, domyślnie /^vilda-sync-/), konto (opcje createUser nowego konta, np. { storageMode:
 //       'cloud-only' } — tryb „Komputer w pracy” jak w tests/unit/sesja-zapisu-uprzaz.mjs; bliźniak dziedziczy konto),
 //       zrodla ({ plik: (win) => void } — przekazywane do okno(): plik z listy skryptów sejfu ładuje podana funkcja
-//       zamiast pliku z repozytorium, np. kopia z rejestrem łańcucha w teście A ≡ B, E2-PR3a3; bez opcji jak dotąd).
+//       zamiast pliku z repozytorium, np. kopia z rejestrem łańcucha w teście A ≡ B, E2-PR3a3; bez opcji jak dotąd),
+//       magazynSejfu ('natywny' — E2-PR4c: sejf na natywnym adapterze IndexedDB, tryb „Komputer prywatny” z prawdziwym
+//       magazynem kolejki i kwarantanny; wymaga indexedDB (atrapa tests/support/atrapa-indexeddb.mjs) albo natywnego
+//       zBlizniaka — wtedy klon jego atrapy; test stubuje IDBKeyRange; migawka() niedostępna), nawigator (dodatkowe pola
+//       navigator, np. serviceWorker; okno dostaje wtedy MessageChannel z Node).
 //   sprzatnijUrzadzenia({ czekaj = true }) → Promise — afterEach: zwalnia bramy, czeka na ciszę (także na operacje
 //       synchronizacji w toku), zamyka urządzenia, sprawdza naruszenia i żądania w locie wszystkich atrap oraz strażnika;
 //       rzuca z listą (przy limicie ciszy: „operacja synchronizacji w toku: <urządzenie> <operacja>”).
@@ -46,7 +50,8 @@
 //
 // URZĄDZENIE d
 //   d.nazwa, d.adres, d.polaczenie, d.atrapa, d.win, d.vault, d.sync, d.konto ({ userId, haslo }), d.blokady, d.timery,
-//   d.dziennikMagazynu (zapisy localStorage/sessionStorage z okno()), d.adapter (surowy Ze), d.magazyn (rejestr albo null),
+//   d.dziennikMagazynu (zapisy localStorage/sessionStorage z okno()), d.adapter (surowy Ze; natywne — null), d.magazyn (rejestr
+//   albo null), d.indexedDB (atrapa urządzenia natywnego albo null), d.krypto (atrapa kryptografii z hakami przy krypto: true),
 //   d.slotId (po utworzeniu), d.material(), d.odblokuj(), d.zablokuj(powod), d.zapiszKarte(i, o) → { patientId },
 //   d.wyslijDelteKarty(patientId) → wynik prawdziwego Bsb_wyslij z vilda_sync_integration.js, d.eksportKanoniczny(opcje?),
 //   d.kursor(), d.zadania(), d.rzutOsi(o), d.rzutMagazynu({ od }), d.znacznik() (długość osi), d.znacznikMagazynu(),
@@ -305,12 +310,25 @@ export async function utworzUrzadzenie(o = {}) {
     naZadanie: (w) => { if (wzorBlokad.test(w.nazwa)) wOsi('blokada', `blokada ${w.nazwa} ${w.tryb}`); else licz.zdarzenia += 1; },
   });
   const beacon = o.beacon !== false;
+  const zrodloKlonu = o.zBlizniaka || null;
+  // E2-PR4c: sejf na natywnym adapterze IndexedDB (atrapa tests/support/atrapa-indexeddb.mjs) — tryb „Komputer prywatny”
+  // z prawdziwym magazynem kolejki i kwarantanny. Bliźniak natywnego urządzenia dostaje klon jego atrapy IndexedDB.
+  const natywny = o.magazynSejfu === 'natywny';
+  if (natywny && typeof globalThis.IDBKeyRange === 'undefined') {
+    throw new Error('utworzUrzadzenie: magazynSejfu natywny wymaga vi.stubGlobal(\'IDBKeyRange\', AtrapaIDBKeyRange)');
+  }
+  if (natywny && zrodloKlonu && !zrodloKlonu.indexedDB) throw new Error('utworzUrzadzenie: bliźniak natywny wymaga natywnego źródła');
+  const idb = natywny ? (o.indexedDB || (zrodloKlonu ? zrodloKlonu.indexedDB.__atrapa.klonuj() : null)) : null;
+  if (natywny && !idb) throw new Error('utworzUrzadzenie: magazynSejfu natywny wymaga indexedDB (atrapa)');
   const ow = okno({
     locks: blokady || false,
     krypto: o.krypto ? undefined : false,
     dokument: dokumentZOsia((opis) => wOsi('dokument', opis)),
-    navigator: beacon ? { sendBeacon: polaczenie.beacon, onLine: true } : { onLine: true },
-    dodatki: { VILDA_SYNC_WORKER_URL: polaczenie.adres, ...(beacon ? { fetch: polaczenie.fetchOkna } : {}), Blob, CustomEvent, ...(o.dodatki || {}) },
+    navigator: { ...(beacon ? { sendBeacon: polaczenie.beacon, onLine: true } : { onLine: true }), ...(o.nawigator || {}) },
+    dodatki: {
+      VILDA_SYNC_WORKER_URL: polaczenie.adres, ...(beacon ? { fetch: polaczenie.fetchOkna } : {}), Blob, CustomEvent,
+      ...(natywny ? { indexedDB: idb } : {}), ...(o.nawigator ? { MessageChannel } : {}), ...(o.dodatki || {}),
+    },
     ...(o.zrodla ? { zrodla: o.zrodla } : {}),
   });
   const win = ow.win;
@@ -318,15 +336,14 @@ export async function utworzUrzadzenie(o = {}) {
   const persistKey = `urz-${nr}`;
   let ostatniStan = null;
   const backend = { readState: () => null, writeState: (k, st) => { ostatniStan = structuredClone(st); }, wipe() { ostatniStan = null; } };
-  const zrodloKlonu = o.zBlizniaka || null;
-  if (zrodloKlonu) {
+  if (zrodloKlonu && !natywny) {
     const stanZrodla = await zrodloKlonu.migawka();
     backend.readState = () => structuredClone(stanZrodla);
   }
-  const adapter = vault.createInMemoryAdapter({ persistKey, durableBackend: backend, durableKey: persistKey });
-  if (adapter.whenHydrated) await adapter.whenHydrated;
-  const magazyn = o.rejestrMagazynu === false ? null : magazynZRejestrem(adapter);
-  vault.setStorageAdapter(magazyn ? magazyn.adapter : adapter);
+  const adapter = natywny ? null : vault.createInMemoryAdapter({ persistKey, durableBackend: backend, durableKey: persistKey });
+  if (adapter && adapter.whenHydrated) await adapter.whenHydrated;
+  const magazyn = natywny || o.rejestrMagazynu === false ? null : magazynZRejestrem(adapter);
+  if (!natywny) vault.setStorageAdapter(magazyn ? magazyn.adapter : adapter);
   let konto;
   if (zrodloKlonu) {
     konto = { userId: zrodloKlonu.konto.userId, haslo: zrodloKlonu.konto.haslo };
@@ -379,7 +396,7 @@ export async function utworzUrzadzenie(o = {}) {
 
   const d = {
     nazwa, adres: polaczenie.adres, polaczenie, atrapa, win, vault, sync, konto, blokady, timery: ow.timery,
-    dziennikMagazynu: ow.dziennik, adapter, magazyn, slotId, _nr: nr, _licz: licz,
+    dziennikMagazynu: ow.dziennik, adapter, magazyn, indexedDB: idb, krypto: ow.krypto, slotId, _nr: nr, _licz: licz,
     material,
     odblokuj: () => vault.unlockUser(konto.userId, konto.haslo),
     zablokuj: (powod) => vault.lock(powod || 'manual'),
@@ -405,6 +422,7 @@ export async function utworzUrzadzenie(o = {}) {
     cisza: (op) => cisza([d], op),
     // Stan adaptera do klonu: Ze odkłada utrwalenie timerem 0 ms okna — flushPersist i jedna tura setImmediate.
     async migawka() {
+      if (!adapter) throw new Error(`migawka ${nazwa}: urządzenie natywne (bliźniak przez klon atrapy IndexedDB)`);
       adapter.flushPersist();
       await tura();
       if (!ostatniStan) throw new Error(`migawka ${nazwa}: adapter nie utrwalił stanu`);

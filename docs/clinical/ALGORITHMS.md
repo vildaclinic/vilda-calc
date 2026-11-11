@@ -21534,6 +21534,199 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
+## Pobieranie zdarzeń dziennika z kwarantanną, uśpione (P-SYNC-DRENAZ-ZDARZEN, E2-PR4c, SW 1.1.510, `vilda_sync.js` 52, `vilda_vault.js` 273, 2026-11-11)
+
+**Zmiana kliniczna: nie** — wzory, progi, jednostki, interpretacje i reguły scalania bez zmian. **Działanie aplikacji
+bez zmian (uśpione).** Nowa ścieżka pobierania działa tylko przy włączonym dzienniku (`VildaSync.isEventLogEnabled()`,
+P-SYNC-ZDARZENIA): serwer podaje „events” w health (dziś nie podaje), na urządzeniu jest flaga `vilda-event-log-v1`
+o wartości `'1'` (nikt jej nie ustawia) i działa pobieranie stronami. Bez tego drenaż, pobranie i wysyłka zdarzeń
+działają bajt w bajt jak dotąd. Serwer, format danych, schemat IndexedDB i wygląd aplikacji bez zmian.
+
+Plan: wiersz 8c tabeli „Podział etapu 2” i rozdział 3.3 („drainChanges”, kroki 2–5); decyzje z 2026-11-11 nr 5 (cztery
+nowe wpisy w pamięci przeglądarki, w tym PR dwa) i nr 6 (wymuszone pełne pobranie tylko przy włączonym dzienniku,
+przeskok dziury po trzech próbach zostaje), rozdział 6; wymagania dla E2-PR4 z wpisów E2-PR2b1, E2-PR2b2 i E2-PR1.
+
+### E2-PR4c
+
+**Co było** (`audyt` `6cfbb5af`).
+- Drenaż stronami (P-SYNC-STRONY) stosował każdy wiersz `/changes` przez `applyEncryptedDelta`; wiersz nieczytelny
+  był tylko liczony, a kursor szedł dalej. Błąd zastosowania inny niż „zajęte” też przesuwał kursor.
+- Kwarantanna w sejfie (E2-PR2b2) istniała, ale nikt jej nie używał. `appliedUpTo` i lista własnych zdarzeń nie
+  istniały.
+- `requiresBase` i `cursorAhead` tylko ustawiały kursor, a dziura w numeracji zatrzymywała drenaż. Pełne pobranie nie
+  było wymuszane; treść przychodziła z najbliższą zmianą ETagu.
+- Drugie pobranie w trakcie drenażu dostawało wynik trwającego drenażu. Wiersz dopisany po odpowiedzi ostatniej strony
+  czekał na następne pobranie, więc `syncPull({ czekajNaDrenaz: true })` nie gwarantował dojścia do `headSeq`.
+- `userMeta.lastSyncMergeAtISO` ustawiało tylko scalenie pełnego ładunku (pole `exportedAtISO`). Koperta zdarzenia go
+  nie niesie.
+
+**Reguła** (wszystko poniżej tylko przy włączonym dzienniku, ujętym na starcie drenażu).
+- **Wiersz z treścią.**
+  - `eid` z pierścienia własnych zdarzeń — pominięty bez scalenia, kursor idzie dalej.
+  - Inny wiersz idzie do `applyEncryptedEvent` sejfu przez opakowanie konta (sesja jak P-SESJA-ZAPISU). Strażnik formatu
+    klinicznego jest ten sam co przy deltach: przed i po zastosowaniu, przed każdym zapisem kursora.
+- **Pierścień własnych zdarzeń** (`vilda-sync-own-eids-v1:<slot>`, decyzja 5):
+  - `pushEvents` po odpowiedzi 200 dopisuje na koniec `eid` przyjętych zdarzeń, także `dup`, bez powtórzeń;
+  - pierścień trzyma 500 ostatnich numerów, bez treści.
+
+| Wynik `applyEncryptedEvent` | Drenaż | Kursor |
+|---|---|---|
+| `applied` | zastosowane; zmiana z liczników jak dotąd (`vilda:sync-merged`) | dalej |
+| `unreadable` | `quarantinePut`: wiersz `/changes` (`seq`, `eid`, ładunek z `z` i `aad`), `slotId`, `appVersion` z `SW_VERSION`; nowy wpis — ślad `sync.event.unreadable` | dalej |
+| `unreadable`, zapis do kwarantanny nieudany (np. `SYNC_DB_QUOTA`) | stop `kwarantanna` z kodem; ślad `sync.quarantine.failed` raz na wiersz i kod | przed wierszem; następny drenaż ponawia |
+| `apply-error` | stop `zastosowanie` z kodem; licznik prób w pamięci strony (decyzja 6 z 2026-10-29); ślad `sync.event.error` przy pierwszej próbie | przed wierszem; następny drenaż ponawia |
+| `busy` | stop `busy`; kody `CARE_LINEAGE_*` i `CARE_FORMAT_*` zgłaszają `onSyncError` jak dotąd | przed wierszem |
+| `locked`, `session-changed` | stop `blokada` | bez zapisu z tej strony |
+
+- **Wersja aplikacji** dla wpisu kwarantanny pochodzi wyłącznie z `SW_VERSION`. Strona pyta service worker
+  wiadomością `VILDA_WERSJA` przez `MessageChannel` (jak P-WERSJA-APLIKACJI), raz na dokument, z limitem 2 s. Bez
+  odpowiedzi albo przy złym wzorze wersja to `null`.
+- **`SYNC_DB_SCHEMA`** z dowolnej operacji magazynu oznacza, że do końca tego przebiegu nie ma już żadnej operacji na
+  bazie kolejki (także zapisu do kwarantanny).
+- **Ponowienie kwarantanny.** Raz na dokument i slot, przed pierwszym drenażem z dziennikiem, `quarantineList()`
+  ze wszystkich slotów:
+  - wiersz z własnym `eid` — usunięty bez zastosowania;
+  - wiersz innego slotu (po rotacji tożsamości) — jedna próba zastosowania, potem usunięty, także gdy nadal
+    nieczytelny;
+  - wiersz bieżącego slotu z wersją inną niż bieżąca (znana) — próba w kolejności `seq` rosnąco:
+    - zastosowany — usunięty, a drenaż rusza od jego numeru (sufiks: ponowne zastosowanie dalszych zdarzeń;
+      kursor tylko w górę);
+    - nadal nieczytelny — `quarantinePut` zapisuje nową wersję we wpisie;
+    - inny wynik kończy ponowienia (następny drenaż próbuje od nowa);
+  - wiersz z bieżącą wersją czeka na następną aktualizację (albo na „Zwolnij” w E2-PR5).
+- **Brak części historii** (decyzja 6 z 2026-11-11). Każdy z trzech przypadków zapamiętuje w pamięci strony wymuszone
+  pełne pobranie. Następne `syncPull` pobiera wtedy `GET /blob` bez `If-None-Match`, a znacznik znika po scaleniu
+  albo po 404.
+  - `requiresBase` — kursor `oldestSeq − 1` i drenaż idzie dalej.
+  - `cursorAhead` — kursor `headSeq`, stop `ahead`.
+  - Dziura — przy pierwszym wykryciu tej dziury; ślad `sync.gap` `{od, do, proby}` przy każdej próbie. Przeskok przy
+    trzeciej próbie zostaje jak dotąd.
+- **Koniec drenażu** przy otwartym sejfie:
+  - `appliedUpTo` (`vilda-sync-applied-v1:<slot>`, decyzja 5) = kursor albo najmniejszy `seq` kwarantanny bieżącego
+    slotu minus 1. Wiersze innych slotów go nie wstrzymują. Zapis tylko przy zmianie.
+  - Przy stopie `head` — `markSyncCaughtUp()` sejfu.
+- **`markSyncCaughtUp()`** (`VildaVault._eventLog`, nowe):
+  - bramka dziennika i odblokowany sejf;
+  - `userMeta.lastSyncMergeAtISO := teraz`, co najwyżej raz na godzinę (chwila młodsza niż godzina — bez zapisu);
+  - zapis metadanych tylko w sesji z wejścia;
+  - nigdy nie rzuca: `{ ok: true, zapisano }` albo odmowa (`bramka`, `zablokowany`, `sesja`).
+- **Jeden drenaż po trwającym.** Drugie pobranie tego samego slotu w trakcie drenażu dostaje obietnicę jednego drenażu
+  po bieżącym (z danymi ostatniej prośby). Kolejne prośby dołączają do niego, więc `czekajNaDrenaz` sięga `headSeq`
+  z chwili wywołania.
+- **Ślady P-SYNC-SLAD** (dziennik dostępu, tylko przy odblokowanym sejfie) — wyłącznie z `resultSummary` albo liczb:
+  status, powód albo kod; nigdy obiekt błędu ani komunikat.
+- Operacje kolejki i kwarantanny sprawdzają sesję tak jak zapis karty (P-SESJA-ZAPISU): zmiana sesji w trakcie kończy
+  operację bez zapisu.
+
+Pola wyniku drenażu z dziennikiem (`getDrainStatus`, pole `drain`): `dziennik: true`, `wlasne`, `kwarantanna` (nowe
+wpisy), `ponowione`, `innySlot`, `wlasneWKwarantannie`, `wymus`, `proby`, `appliedUpTo`. Bez dziennika wynik ma ten sam
+kształt co dotąd.
+
+**Uśpienie.** Bez dziennika (dziś zawsze) nowa gałąź nie rusza: nie ma odczytów ani zapisów pierścienia,
+`appliedUpTo`, kwarantanny i wersji SW, nie ma wymuszonego pobrania ani drenażu po trwającym, a `pushEvents` zwraca
+`wylaczone`. Dowody: DZ12 i e2e „flaga wyłączona” (zielone także na bazie), cały zestaw P-SYNC-STRONY
+(`tests/unit/sync-dziennik-drenaz.test.mjs`, w tym D32c i D33b) i zapis bazowy bez zmian.
+
+**Narzędzia testowe.** `tests/support/urzadzenie-sync.mjs`:
+- opcja `magazynSejfu: 'natywny'` — sejf na natywnym adapterze IndexedDB nad atrapą
+  `tests/support/atrapa-indexeddb.mjs`, czyli tryb „Komputer prywatny” z prawdziwym magazynem kolejki i kwarantanny;
+  bliźniak dostaje klon atrapy;
+- opcja `nawigator` — dodatkowe pola `navigator`, np. atrapa service workera;
+- pola urządzenia `indexedDB` i `krypto` (atrapa kryptografii z hakami).
+
+Uprząż urządzenia z magazynem IndexedDB, planowana dla E2-PR4d, doszła tu, bo wymaga jej test A ≡ B kwarantanny
+na prawdziwym drenażu.
+
+**Testy.** Dane wyłącznie fikcyjne. `tests/unit/sync-zdarzenia-drenaz.test.mjs` (nowy, 23 przypadki, prawdziwy
+`vilda_sync.js` i sejf na urządzeniach natywnych, atrapa v37a z „events”, zdarzenia z prawdziwej kolejki nadawcy):
+- DZ1 — zastosowanie przez `applyEncryptedEvent` (bez `applyEncryptedDelta` w drenażu), kursor do `headSeq`,
+  `appliedUpTo`, `markSyncCaughtUp`;
+- DZ2 — pierścień: `pushEvents` dopisuje (także `dup` bez dubla), drenaż nadawcy pomija własne, 500 ostatnich;
+- DZ3 — nieczytelne (`z`, uszkodzony szyfrogram) → kwarantanna z wierszem `/changes` i `appVersion` z SW, kursor dalej,
+  `appliedUpTo` przed wpisem, ślady; DZ3b — bez SW `appVersion` `null`; DZ3c — wersja z SW spoza wzoru — `null`;
+- DZ4 — `SYNC_DB_QUOTA`: kursor przed wierszem, jeden ślad przy dwóch próbach, potem ponowienie;
+- DZ5 — `SYNC_DB_SCHEMA`: jedna próba otwarcia bazy w przebiegu;
+- DZ6 — błąd zastosowania: kursor stoi, licznik prób, jeden ślad; DZ6b — „zajęte”: stop, bez kwarantanny i śladu;
+- DZ7 — ponowienie po aktualizacji: raz na dokument, rosnąco po `seq`, sufiks (odbiorca = nadawca), nadal nieczytelny
+  z nową wersją, wiersz innego slotu bez wpływu na `appliedUpTo`, własny `eid` usunięty; DZ7b — inny slot: jedna próba
+  i usunięcie (czytelne zdarzenie zastosowane przed usunięciem); DZ7c — wiersz z bieżącą wersją czeka, z nową —
+  ponowiony; DZ7d — nadal nieczytelny bez sufiksu dostaje nową wersję;
+- DZ8 — `requiresBase`: kursor, drenaż dalej, wymuszone pełne pobranie raz; DZ9 — `cursorAhead` j.w.;
+- DZ10 — dziura: wymuszone pobranie przy pierwszym wykryciu, ślad przy każdej próbie, przeskok przy trzeciej;
+- DZ11 — jeden drenaż po trwającym (do `headSeq` z chwili wywołania), trzecia prośba dołącza;
+- DZ12 — uśpienie: „events” bez flagi — wszystko jak dotąd;
+- DZ13 — blokada sejfu w czasie zapisu do kwarantanny: bez wpisu i bez zapisu kursora; DZ13b — inne konto w tym
+  czasie: także bez śladu w dzienniku dostępu nowego konta;
+- DZ14 — `markSyncCaughtUp`: bramka, blokada (bez odczytu metadanych), raz na godzinę;
+- DZ15 — strażniki źródła;
+- DZ16 — **A ≡ B na prawdziwym drenażu** (wzorzec: blok p. 7d, świat N1 na urządzeniach natywnych; partia nadawcy
+  `[snap, pfull, pnote]` z haków H1 i H2):
+  - FIFO — odbiorca = nadawca;
+  - snap i pfull w kwarantannie bez aktualizacji — literał różnic taki sam jak „zwolnienie” w p. 7d: karta P z wizytami
+    i notatka tylko u nadawcy, nagrobki tylko u odbiorcy;
+  - po aktualizacji (ponowienie + sufiks) — odbiorca = nadawca, kwarantanna pusta, `appliedUpTo` = `headSeq`.
+
+Zmienione:
+- `tests/unit/sync-dziennik-uspienie.test.mjs` — `markSyncCaughtUp` jako klucz części `Bob_` chroniony bramką (U1,
+  U2(a), U2(e)); reguła domknięcia: odczyt i zapis chwili scalenia w metadanych tylko w `Bob_dogonione`, każde raz
+  (z próbkami w samokontroli); `vilda_sync.js` zna tylko API drenażu z kwarantanną (`_eventLog` raz, w opakowaniu
+  konta);
+- `tests/e2e/sync-zdarzenia-drenaz.spec.mjs` (nowy, 2 przypadki, prawdziwa przeglądarka, atrapa przez adapter route):
+  - flaga `'1'` — zdarzenie zastosowane, nieczytelne w kwarantannie w prawdziwym IndexedDB, `appliedUpTo` przed nim,
+    `markSyncCaughtUp`;
+  - flaga wyłączona — drenaż jak dotąd, bez nowych kluczy.
+
+**Czerwone na bazie** (`origin/audyt` `6cfbb5af` z testami i uprzężą tego PR): 22 z 23 przypadków `tests/unit/sync-zdarzenia-drenaz.test.mjs` (wszystkie poza DZ12) i e2e z flagą `'1'`. Zielone także na bazie:
+DZ12 i e2e „flaga wyłączona” (dowód „jak dziś”).
+
+**Mutanty.** 42 mutanty, 41 zabitych testami działania (DZ1–DZ16), 1 równoważny:
+- drenaż: bez gałęzi dziennika, bez pominięcia własnych, opakowanie konta bez pola zdarzeń;
+- pierścień: `pushEvents` nie dopisuje, bez limitu 500, dubluje `dup`;
+- kwarantanna: nieczytelne bez kwarantanny, nieudany zapis przesuwa kursor, `SYNC_DB_SCHEMA` bez blokady dalszych operacji,
+  wersja bez SW, wersja z SW bez wzoru, bez sprawdzenia sesji po zapisie (inne konto), ślad bez odsiewu powtórek, ślad
+  przy ponownym wpisie;
+- błąd zastosowania i „zajęte”: przesuwają kursor, ślad przy każdej próbie, licznik bez zwiększania;
+- ponowienie: bez sufiksu, także przy bieżącej wersji, przy każdym drenażu, malejąco po `seq`, nadal nieczytelny bez
+  nowej wersji, wiersz innego slotu bez usunięcia albo bez zastosowania, własny numer bez usunięcia;
+- `appliedUpTo`: zawsze = kursor, wstrzymywany przez każdy slot;
+- brak części historii: `requiresBase` kończy drenaż jak dotąd, bez wymuszenia przy `requiresBase` i `cursorAhead`,
+  wymuszenie niezdejmowane, przy każdej próbie dziury, także bez dziennika, dziura bez śladu;
+- drenaż po trwającym: brak, także bez dziennika, trzecia prośba osobnym drenażem;
+- `markSyncCaughtUp`: bez wywołania, bez progu godziny, bez bramki.
+
+Równoważny: bez sprawdzenia blokady sejfu na wejściu `markSyncCaughtUp`. Przy zablokowanym sejfie odczyt metadanych
+niczego nie czyta (zero transakcji IndexedDB), a sprawdzenie sesji po nim daje tę samą odmowę `zablokowany`. Sprawdzenie
+zostaje jako tania ochrona przed odczytem metadanych bez sesji.
+
+**Kontrola granic.**
+- Sejf: przeliczone `BASE` (`tools/check_clinical_workspace_boundary.mjs`) oraz `baseVaultSHA256`
+  i `integratedVaultSHA256` (`runtime/clinical-workspace-v1/manifest.json`).
+- Synchronizacja: przeliczone skróty obrazu bazowego i zintegrowanego `vilda_sync.js`
+  (`tools/check_clinical_workspace_sync_boundary.mjs`, `runtime/clinical-workspace-sync/manifest.json`).
+- Integracja, fragment planów opieki i łaty bez zmian.
+
+**Ograniczenia.**
+- Wymuszone pełne pobranie następuje przy następnym pobraniu (zegar co 10–60 s, ramka `changed`, fokus), nie od razu.
+  Znacznik jest tylko w pamięci strony: po przeładowaniu znika. Przy dziurze licznik prób przeżywa przeładowanie, więc
+  wymuszenia już nie będzie.
+- Licznik prób błędu zastosowania jest tylko w pamięci strony: decyzja 5 z 2026-11-11 dopuszcza cztery nowe wpisy
+  w pamięci przeglądarki.
+- `vilda:sync-merged` po dojściu do `headSeq` tylko wtedy, gdy drenaż coś zmienił (jak dotąd). Bez tego zdarzenie szłoby
+  przy każdym pobraniu (co 10–60 s).
+- Wersja z SW bywa nieznana (pierwsze otwarcie bez kontrolera). Wtedy wpis ma `appVersion` `null` i jest ponawiany przy
+  pierwszym dokumencie ze znaną wersją.
+- Wiersz kwarantanny z bieżącą wersją czeka na następną aktualizację albo na „Zwolnij” (E2-PR5).
+
+**Następne PR.**
+- E2-PR4d (nadawca): woła `syncPull({ czekajNaDrenaz: true })` po wysyłce; przegląd po drenażu, który coś scalił.
+- E2-PR4e (wpięcia): ramki realtime z `eid` (pierścień własnych) i `advanceCursorIfNext`; znacznik usuwania konta
+  w `applyEncryptedEvent`.
+- E2-PR5 (wygląd): licznik kwarantanny i „Zwolnij” z ostrzeżeniem; etykiety nowych śladów w dzienniku dostępu.
+- E2-PR6 (polityka prywatności): oba nowe klucze w pamięci przeglądarki.
+
+**Cofnięcie** = rewert PR (bez migracji; rewert cofa też skróty kontroli granic sejfu i synchronizacji). Wpisy
+kwarantanny i klucze pierścienia oraz `appliedUpTo` mogą powstać tylko przy włączonym dzienniku.
+
 ## Wysyłka zdarzeń dziennika i włącznik dziennika, uśpione (P-SYNC-ZDARZENIA, E2-PR4b, SW 1.1.509, `vilda_sync.js` 51, `vilda_vault.js` 272, 2026-11-11)
 
 **Zmiana kliniczna: nie** — wzory, progi, jednostki, interpretacje i reguły scalania bez zmian. **Działanie aplikacji
