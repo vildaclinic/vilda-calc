@@ -47,10 +47,13 @@ async function przygotuj(page, context, flaga) {
 }
 
 const zEvents = (atrapa) => atrapa.zadania.filter((z) => z.trasa === 'events').map((z) => `${z.metoda} ${z.status}`);
-// Strona przy starcie pyta o uprawnienia PRO (GET /entitlement): trasa workera poza modelem atrapy, którą adapter przerywa
-// jak błąd sieci. Przyjęta jawnie; każde inne naruszenie atrapy wywraca test.
+// Strona sama pyta o PRO: przy starcie o uprawnienia (GET /entitlement), a po świeżym zalogowaniu (tu: createUser) o okres
+// próbny (GET /trial; vilda_auth_ui.js, P-KONTO-BEZ-SERWERA). To trasy workera poza modelem atrapy, które adapter przerywa jak
+// błąd sieci. GET /trial wychodzi albo nie, zależnie od tego, czy zdąży przed przeładowaniem strony (w CI zdąża), więc obie
+// trasy są przyjęte jawnie, czy wystąpią, czy nie; każde inne naruszenie atrapy wywraca test.
+const PRO_POZA_MODELEM = /^GET \/v1\/slots\/<slot>\/(entitlement|trial) \(/;
 function naruszenia(atrapa) {
-  atrapa.przyjmijNaruszenia((n) => n.rodzaj === 'trasa-poza-modelem' && /\/entitlement /.test(n.opis));
+  atrapa.przyjmijNaruszenia((n) => n.rodzaj === 'trasa-poza-modelem' && PRO_POZA_MODELEM.test(n.opis));
   return atrapa.naruszenia;
 }
 
