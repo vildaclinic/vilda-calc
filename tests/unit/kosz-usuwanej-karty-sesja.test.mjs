@@ -437,8 +437,17 @@ describe('P-KOSZ-USUWANEJ-KARTY — strażniki źródła', () => {
     // ta sama decyzja co wersja tutejsza w Bkz_scalKoniec (tylko gałąź kosza), odczyt wersji i zapis listy w sesji scalania
     expect(k.indexOf('Bses_pilnuj(opcje);')).toBeGreaterThan(0);
     expect(k.indexOf('Bses_pilnuj(opcje);'), 'sprawdzenie sesji przed odczytem wersji karty').toBeLessThan(k.indexOf('listSnapshotsForUser(b, patientId)'));
-    expect(k).toContain('if (!kosz || kosz < Bkz_zmiana(s)) continue;');
-    expect(k).toContain('Bpk_zWersja(e, Bpk_zWersji(s, { c: kosz >= granicaKosza ? s.payloadCipher : null, od: kosz }, Bgw_stan(s, tresc)))');
+    // E2-PR3c5 (decyzja 7): oprócz wygranej kosza — wersja zmieniona po ważnym koszu, z którą wygrywa późniejsze
+    // przycięcie: wkład bez treści i bez cienia (decyzja 1 bez zmian); ta sama reguła po stronie ładunku (Bsl_koszZLadunku).
+    expect(k).toContain('if (!kosz) continue;');
+    expect(k).toContain('const pozniejsza = kosz < Bkz_zmiana(s);');
+    expect(k).toContain('if (pozniejsza && !Bpk_wazny(Bpk_zWpisu(e))) continue;');
+    expect(k).toContain('if (pozniejsza && !Bkz_wygrywa(e, Bkz_zmiana(s), st)) continue;');
+    expect(k).toContain('Bpk_zWersja(e, Bpk_zWersji(s, pozniejsza ? null : { c: kosz >= granicaKosza ? s.payloadCipher : null, od: kosz }, st))');
+    const zl = src.slice(src.indexOf('function Bsl_koszZLadunku('), src.indexOf('async function Bsw_zKartyZNagrobkiem('));
+    expect(zl).toContain('if (kosz && kosz >= Bkz_zmiana(S)) { Bkz_pomin(ctx, F.patientId, S); continue; }');
+    expect(zl).toContain('if (kosz && Bpk_wazny(Bpk_zWpisu(e))) {');
+    expect(zl).toContain('if (Bkz_wygrywa(e, Bkz_zmiana(S), st)) ctx.mapa.set(S.snapshotId, Bpk_zWersja(e, Bpk_zWersji(S, null, st)));');
     expect(k).toContain('await Bkz_zmienListe(dodaj, [], { naStarcie: ctx.naStarcie, Bses_s: opcje && opcje.Bses_s });');
     // Bkz_zmienListe: sprawdzenie sesji scalania przed pierwszym odczytem magazynu
     const z = src.slice(src.indexOf('async function Bkz_zmienListe('), src.indexOf('async function Bpk_retencjaZapisu('));

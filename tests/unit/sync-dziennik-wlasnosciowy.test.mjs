@@ -2482,7 +2482,7 @@ const P6 = {
   'skrzyżowane Scal pacjentów (A: P → Q, B: Q → P), notatka karty P': { notatki: true, baza: p6r3, kroki: async (u, t) => {
     await scal(u, u.A, u.P, u.Q); await scal(u, u.B, u.Q, u.P); await p6spoczynek(u, t);
   } },
-  // K6 (decyzja 12.3; ostatni scenariusz — ziarno scenariusza to jego pozycja, więc pozostałe literały bez zmian):
+  // K6 (decyzja 12.3; do E2-PR3c5 ostatni scenariusz — ziarno scenariusza to jego pozycja, więc nowe scenariusze idą na koniec):
   // B poprawia wizytę v karty P na 27 kg, A bez wiedzy o poprawce „Scal pacjentów” P → Q. Do E2-PR3c1 po zdarzeniach
   // i pełnej wymianie (W4) v miała 20 kg na obu urządzeniach (poprawka ginęła). Od E2-PR3c1 (koperta nagrobka P z kartą
   // docelową Q) po W4 v ma 27 kg na obu — W4 = stan kliniczny świata samych blobów (blobyKlinicznie; samo D blobów jest
@@ -2490,6 +2490,14 @@ const P6 = {
   // po samych zdarzeniach (dotąd A: 20 kg, B: 27 kg do pełnej wymiany).
   'K6': { klinicznieBloby: true, baza: p6k6, kroki: async (u, t) => {
     await popraw(u, u.B, u.v, 27); await scal(u, u.A, u.P, u.Q); await p6spoczynek(u, t);
+  } },
+  // E2-PR3c5 (decyzja 7 z 2026-11-10): B daje wizytę v do Kosza i ją przywraca; A — bez wiedzy o obu — przycina v
+  // porządkowaniem, potem „Scal pacjentów” P → Q. Zdarzenia B dochodzą do A po scaleniu: wpis Kosza z chwili kosza
+  // i wersja v przywrócona pod kartą P (przegraną tu z nagrobkiem).
+  'Kosz i Przywróć na B, porządkowanie i Scal pacjentów P → Q na A': { baza: p6r4, kroki: async (u, t) => {
+    await doKosza(u, u.B, u.v); await p6przywroc(u, u.B, u.v);
+    krok(60e3); await mutacja(u.S, u.A, 'retencja P', () => u.A.v.pruneSnapshotsForPatient(u.P, { recentHours: 0 }));
+    await scal(u, u.A, u.P, u.Q); await p6spoczynek(u, t);
   } },
 };
 // Skutek kliniczny notatki n (scenariusze „notatka pod inną kartą”): pod którą kartą leży, jaka treść, czy karta jest
@@ -2679,6 +2687,20 @@ const P6_LITERALY = {
       A: 'karty Q[v:27 q:30 #5e09:30] | Kosz - | notatki -',
       B: 'karty Q[v:27 q:30 #5e09:30] | Kosz - | notatki -',
     },
+  },
+  // E2-PR3c5 (decyzja 7): po zdarzeniach wpis v na obu bez treści (nagrobek przycięcia), różni się tylko opis (D7,
+  // dozwolona); W4 z punktem stałym po jednej rundzie, same bloby bez różnicy. Na bazie po zdarzeniach A pokazywało v
+  // w Koszu ze starą treścią (różnica bez klasy: deletedAtISO, payload, przycietoISO, powod, zmianaISO), a W4 PO-B nie
+  // miało punktu stałego (opis wpisu zbieżny dopiero po drugiej rundzie).
+  'Kosz i Przywróć na B, porządkowanie i Scal pacjentów P → Q na A': {
+    zdarzenia: ['kosz v|P: koszISO, rev, updatedAtISO, zmianaISO [D7]'],
+    w4: {
+      A: 'karty Q[w:21 #5377:30 #c19c:30] | Kosz - | notatki -',
+      B: 'karty Q[w:21 #5377:30 #c19c:30] | Kosz - | notatki -',
+      r4n: 0,
+      w4p: [],
+    },
+    bloby: [],
   },
 };
 async function p6swiat(nr, sc, tryb) {
