@@ -21624,13 +21624,15 @@ rekordu); hak — w kroku importu, w partii.
 **Testy.** Dane wyłącznie fikcyjne, bez PESEL. Nowe i zmienione:
 - `tests/unit/notatki-karta-po-scaleniu.test.mjs` (nowy, 9 przypadków): obie karty istnieją (poprawka B po scaleniu —
   pod P; przed scaleniem — pod Q), dawny rozjazd leczony pierwszą pełną wymianą (zapis samej karty, pozostałe pola
-  rekordu bez zmian), koszt (jeden dodatkowy odczyt karty z nagrobkiem na scalanie, bez różnicy kart — żadnego),
+  rekordu bez zmian), koszt (dwie notatki pod tą samą usuniętą kartą — jeden dodatkowy odczyt karty na scalanie, bez
+  różnicy kart — żadnego),
   wyścig z drugą kartą przeglądarki (zapis karty pomijany, poprawka zostaje), pełny remis przy obu kartach usuniętych
   (mniejszy `patientId`, w obu kierunkach), plan opieki (skrzyżowanie z ustaleniem dopisanym na B — plan pod Q na obu),
   dwa strażniki źródła;
-- `tests/unit/kopia-konta-dane-konta.test.mjs` — 4 nowe przypadki: poprawka tutaj pod kartą usuniętą, kopia pod kartą
-  docelową (podgląd = wynik = magazyn = 1, notatka pod kartą docelową), kontrola z kartą żywą (0), karta jeszcze
-  w drodze bez nagrobka (0), pełny remis z kartą w drodze (mniejszy `patientId`, 1);
+- `tests/unit/kopia-konta-dane-konta.test.mjs` — 5 nowych przypadków: poprawka tutaj pod kartą usuniętą, kopia pod
+  kartą docelową (podgląd = wynik = magazyn = 1, notatka pod kartą docelową), kontrola z kartą żywą (0), karta jeszcze
+  w drodze bez nagrobka (0), pełny remis z kartą w drodze (mniejszy `patientId`, 1), plan opieki przy pełnym remisie
+  z kartą w drodze (bez reguły remisu, 0);
 - `tests/unit/notatki-za-karta.test.mjs` — T20 „B poprawia notatkę N1 pod X” (N1 pod Y na A i B), F1 ×3 (n1@Y na A,
   B i C, te same `rev` i chwila zmiany) i strażnik podglądu „Scal kopię konta” (plan notatek ze zmianami samej karty);
 - `tests/unit/sync-dziennik-wlasnosciowy.test.mjs` (test A ≡ B, 132 przypadki) — literały p. 6, model haków, negatyw
@@ -21649,7 +21651,15 @@ kartą usuniętą, pełny remis), `notatki-za-karta` 5 (T20 poprawka N1, F1 ×3,
 Zielone z natury: obie karty istnieją (×2; na bazie nagrobek starej karty zdejmuje karta, która wraca), kontrole
 podglądu, pozostałe przypadki, zapis bazowy dziennika (fikstura bez zmian).
 
-**Mutanty.** @@MUTANTY@@
+**Mutanty.** 20 mutantów, 20 zabitych. Testy działania zabijają 17: karta martwa bez nagrobka, bez reguły karty
+martwej, bez reguły remisu, remis — większy `patientId`, zwycięzca treści odwrócony, gałąź „ładunek wygrywa” z kartą
+z koperty, bez haka karty notatki i hak zawsze (test A ≡ B), gałąź „tutejsza wygrywa” bez zmiany karty i bez licznika,
+zmiana karty bez porównania z rekordem z początku sekcji (wyścig), plan opieki bez zmiany karty, bez pamięci odczytu
+karty (koszt), podgląd bez zmian karty, podgląd z kartą martwą bez nagrobka, podgląd bez reguły remisu, podgląd planu
+opieki z regułą remisu. Trzy zabija tylko strażnik źródła: błąd odczytu karty = karta martwa i zapis karty bez
+sprawdzenia sesji i magazynu (ścieżki widoczne tylko przy błędzie odczytu albo zmianie sesji w trakcie scalania) oraz
+plan opieki z regułą remisu — test planów opieki „does not hydrate a tied-looking record with a different patientId”
+łapie go tylko przy jednej z dwóch kolejności losowych identyfikatorów kart.
 
 **Kontrola granicy obrazu sejfu.** Przeliczone skróty `BASE`, `baseVaultSHA256` i `integratedVaultSHA256` (reguła
 z E2-PR3a2, decyzja z 2026-11-09; liczone po zdjęciu zmiany Klirensu, jak w kontroli od vildaclinic/vilda-calc#900);

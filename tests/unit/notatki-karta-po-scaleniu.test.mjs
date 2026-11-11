@@ -142,8 +142,13 @@ describe('E2-PR3c4 — pełny remis, dawny rozjazd, koszt i wyścig', () => {
     const { A, B, ids, n } = await rozjazd();
     const n2 = await A.v.savePatientNote({ patientId: ids.Q, title: 'n2 (fikcja)', body: 'fikcyjna druga', category: 'followup' });
     await pelny(A, B);
-    const r2 = await rekord(B, n2.id);
-    await B.baza.putPatientNoteForUser(B.uid, { ...r2, patientId: ids.P });
+    // Obie notatki (n — wyleczona już przez tę pełną wymianę — i n2) znowu pod usuniętą kartą P: w mierzonym scaleniu
+    // dwie notatki różnią się kartą, a karta P ma być przeczytana raz.
+    for (const id of [n.id, n2.id]) {
+      const r = await rekord(B, id);
+      await B.baza.putPatientNoteForUser(B.uid, { ...r, patientId: ids.P });
+    }
+    expect([await gdzie(B, n.id, ids), await gdzie(B, n2.id, ids)]).toEqual(['P (bez karty)', 'P (bez karty)']);
     const policz = async (d, lad) => {
       const pierwotne = d.baza.getPatientForUser.bind(d.baza);
       const odczyty = [];

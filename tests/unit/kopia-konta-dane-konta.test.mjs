@@ -1116,6 +1116,25 @@ describe('P-KOPIA-DANE-KONTA — notatka po „Scal pacjentów” pod kartą, kt
     expect([r.podglad.updatedPatientNoteCount, r.wynik.updatedPatientNoteCount, r.podglad.replacedNewerPatientNoteCount]).toEqual([1, 1, 0]);
     parzystosc(r);
   });
+  it('[kontrola] plan opieki: ta sama wersja tutaj pod kartą w drodze i w kopii pod p2 — bez reguły remisu (plan zostaje), podgląd = wynik = magazyn = 0', async () => {
+    let planId = null;
+    const BEZ = 'zz-karta-fikcyjna-jeszcze-w-drodze';
+    const r = await przypadek({
+      przed: async (A, ids) => {
+        const w = await A.v.mutateCarePlan({ patientId: ids.p2, operationId: 'fikcyjna-operacja-planu-kopii-1', action: 'create', title: 'Fikcyjny plan kontroli' });
+        expect(w.saved).toBe(true);
+        planId = w.planId;
+      },
+      wC: async (C) => {
+        const x = await C.baza.getPatientNoteForUser(C.uid, planId);
+        expect(x && x.category).toBe('care-plan');
+        await C.baza.putPatientNoteForUser(C.uid, { ...x, patientId: BEZ });
+      },
+    });
+    expect((await r.C.baza.getPatientNoteForUser(r.C.uid, planId)).patientId).toBe(BEZ);
+    expect([r.podglad.updatedPatientNoteCount, r.wynik.updatedPatientNoteCount]).toEqual([0, 0]);
+    parzystosc(r);
+  });
 });
 
 /* Losowe przebiegi ze stałym ziarnem (recenzja runda 2): operacje na A przed i po synchronizacji, na C po niej (część
