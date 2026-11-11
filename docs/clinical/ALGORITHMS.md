@@ -21562,6 +21562,180 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
+## Nadawca kolejki zdarzeń: jedno okno wysyła za wszystkie karty, uśpione (P-SYNC-NADAWCA, E2-PR4d, SW 1.1.511, `vilda_sync.js` 53, 2026-11-11)
+
+**Zmiana kliniczna: nie** — wzory, progi, jednostki, interpretacje i reguły scalania bez zmian. **Działanie aplikacji
+bez zmian (uśpione).** Nadawca działa tylko przy włączonym dzienniku (`VildaSync.isEventLogEnabled()`,
+P-SYNC-ZDARZENIA: „events” w health, którego serwer dziś nie podaje, i flaga `vilda-event-log-v1` = `'1'`, której nikt
+nie ustawia) i przy włączonej synchronizacji. Integracja jeszcze go nie woła (wpięcia — E2-PR4e). Bez dziennika
+pobranie, zapis karty i zdarzenia strony działają jak dotąd: bez nowych słuchaczy, zegarów, kanału, blokad i kluczy.
+Serwer, format danych, schemat IndexedDB, sejf i wygląd aplikacji bez zmian.
+
+Plan: wiersz 8d tabeli „Podział etapu 2”, rozdział 3.2 („Nadawca”, „Pętla wysyłki `flushOutbox()`”, „Chowanie, ubicie,
+zamrożenie”); decyzje z 2026-11-11 nr 3 (nadawca w `vilda_sync.js`, bez nowego pliku), nr 5 (klucz bicia serca —
+trzeci z czterech nowych wpisów w pamięci przeglądarki) i nr 7 (pełny PUT z dzisiejszym harmonogramem), rozdział 6.
+
+### E2-PR4d
+
+**Co było** (`audyt` `c4d2fa5d`).
+- `pushEvents` (E2-PR4b) wysyłał partię podaną przez wywołującego, ale nikt go nie wołał. Przy włączonym dzienniku
+  wiersze kolejki w sejfie czekały bez wysyłki.
+- Nie było roli nadawcy, odstępów po błędach, budżetu żądań ani wysyłki przy chowaniu strony.
+- Ramka liczyła włącznik dziennika z własnego wyniku health (którego zwykle nie ma).
+
+**Reguła** (wszystko poniżej tylko przy włączonym dzienniku).
+- **Jeden nadawca na konto w przeglądarce.**
+  - Wysyła tylko dokument najwyższego poziomu (okno powłoki albo strona samodzielna). Ramka bierze włącznik dziennika
+    z okna nadrzędnego (ta sama domena, bez własnego health), tylko dopisuje do kolejki i pinguje `{type:'outbox'}`
+    przez istniejący kanał `vilda-sync-data` (integracja przyjmuje z niego tylko `merged`).
+  - Bicie serca `vilda-outbox-heartbeat-v1:<userId>` = `{d: identyfikator dokumentu, t: ms}` (decyzja 5). Pisze je
+    nadawca co 20 s i przy każdej partii. Bicie innego dokumentu młodsze niż 90 s — inny nadawca, bez wysyłki.
+    Starsze (albo z chwilą w przyszłości) — przejęcie: partia bierze blokadę ze `steal`. Zegar bicia nie przejmuje
+    wpisu sam; robi to dopiero partia pod skradzioną blokadą, więc zamrożony dokument z blokadą jej nie zatrzyma.
+  - Web Lock `vilda-outbox-sender:<userId>` na każdą partię (`ifAvailable`; zajęta — inny nadawca). Kolejność blokad:
+    nadawca, potem współdzielona blokada bazy w operacjach kolejki.
+- **`flushOutbox()`** — jedna wysyłka naraz w dokumencie, nigdy nie rzuca. Warunki po kolei: dokument najwyższego
+  poziomu, dziennik, synchronizacja włączona (`VildaSyncIntegration.isSyncEnabled()`, bez integracji klucz
+  `vilda-sync-enabled-v1`), sejf odblokowany, brak zatrzymania po 401, brak odstępu po błędzie, tryb konta z wpisu
+  rejestru = „Komputer prywatny”, rola. Potem partie: `outboxTake` (200 wierszy, 1 MiB), `pushEvents`, wynik według
+  tabeli. Wiersz w locie bez własnego żądania (np. po `keepalive`) — `outboxRequeueStale` (ponad 60 s) i drugi
+  odczyt. Następna partia tylko po pełnej (200 wierszy albo ciało blisko 1 MiB). Budżet: 20 żądań `/events` na 60 s
+  w dokumencie (także `keepalive`). W pauzie 429 i poza budżetem — bez pobrania wierszy, wysyłka zaplanowana na koniec.
+
+| Wynik `pushEvents` | Wiersze partii | Dalej |
+|---|---|---|
+| 200 | przyjęte — `outboxAccept`; odrzucone — `outboxReject` (`oversize` albo `rejected`, wiersze zostają); bez odpowiedzi — `pending` bez próby (`NO_RESULT`) | ślad `sync.push.ok {rows, bytes, seq}`, przy odrzuconych `sync.push.rejected {oversize, invalid}`; odstęp zerowany |
+| 429, pauza | `pending` bez próby (`RATE_LIMITED`) | wysyłka zaplanowana na koniec pauzy |
+| 401 | `pending` bez próby (`AUTH_FAILED`) | zatrzymanie do odblokowania sejfu |
+| 404 (zdarzenia wyłączone na serwerze) | zostają w locie: `pushEvents` zamyka włącznik, a z nim bramkę sejfu, więc zwrot jest odrzucony; wracają po ponownym włączeniu (`outboxRequeueStale`, ponad 60 s) | koniec bez odstępu (włącznik zamknięty do następnego health) |
+| sieć, TIMEOUT, 5xx, 507, 413, 415, 400, zła odpowiedź | `pending` z próbą + 1 i kodem | odstęp 2, 4, 8, 16, 30, 60 s, potem przy biciu serca |
+| sesja, blokada, brak rejestracji, format, wysyłka w toku | `pending` bez próby | koniec |
+
+- **`scheduleFlush()`** — w dokumencie najwyższego poziomu wysyłka po 1,5 s (kolejne wywołania w tym czasie dołączają);
+  w ramce ping na kanale. Wołają go: ping ramki, `onBulkChange` sejfu (partia importu), koniec odstępu, pauzy albo
+  budżetu, drenaż, który coś scalił, i bicie serca.
+- **`flushKeepalive()`** — przy `visibilitychange` (ukryta), `freeze`, `pagehide` i `blur`. Tylko nadawca, który już
+  wysyłał w tym dokumencie (materiał slotu w pamięci), bez trwającej wysyłki, poza pauzą i w budżecie. Pierwsze wpisy
+  o łącznym ciele do 60 000 B przez `fetch` z `keepalive` (Bearer, JSON); przy wyjątku albo odrzuceniu `fetch` —
+  `sendBeacon` z `{token, events}` i `text/plain`. Najwyżej 65 536 B w locie na dokument. Odpowiedź, gdy dojdzie,
+  jak w partii; bez rozstrzygnięcia — wiersze z powrotem bez próby. Odpowiedź beaconu jest niewidoczna, więc jego wiersze
+  zostają w locie. **Wznowienie** (`pageshow`, strona widoczna): `outboxRequeueStale` i `scheduleFlush`; serwer odrzuca
+  powtórkę po `eid` (`dup`).
+- **Cykl w pobraniu** (`syncPull` przy włączonym dzienniku): `emissionsSettled` (czeka też na przegląd przy
+  odblokowaniu), jedna partia wysyłki przed `GET /changes` (reszta przez `scheduleFlush`; trwająca wysyłka nie
+  wstrzymuje drenażu), drenaż. Drenaż, który coś scalił — `sweepOutbox` i `scheduleFlush`.
+- **Bicie serca co 20 s** (dokument najwyższego poziomu, po aktywacji): wpis bicia (własna rola), co 24 h od
+  aktywacji `sweepOutbox` z wysyłką, poza tym wysyłka po końcu odstępu.
+- **Aktywacja** raz na dokument, dopiero przy pierwszym użyciu z dziennikiem: kanał, słuchacz `onBulkChange`,
+  `onUnlock` (zdejmuje zatrzymanie po 401 i odstęp), zdarzenia strony i zegar bicia (dwa ostatnie tylko w dokumencie
+  najwyższego poziomu).
+- Błąd magazynu kolejki (`SYNC_DB_*`) — ślad `sync.queue.failed {op, code}`. Ślady (P-SYNC-SLAD) niosą tylko liczby
+  i kody.
+- Operacje kolejki i kwarantanny sprawdzają sesję tak jak zapis karty (P-SESJA-ZAPISU): zmiana sesji w trakcie kończy
+  operację bez zapisu.
+
+Wynik `flushOutbox()`: `{ ok, powod, partie, wyslane, odrzucone, kod }` (`powod` `null` przy sukcesie; `ponowZaMs` przy
+odstępie, pauzie i budżecie). Bez dziennika `flushOutbox`, `scheduleFlush` i `flushKeepalive` oddają
+`{ ok: false, powod: 'wylaczone' }` bez aktywacji.
+
+**Uśpienie.** Bez dziennika (dziś zawsze) nic z powyższego nie rusza. Dowody: NA12 (zielony także na bazie — bez flagi
+i przy serwerze bez „events” pobranie, zapis karty i zdarzenia strony bez `POST /events`, kanału nadawcy, zegarów,
+blokady i klucza bicia serca), NA13, e2e „flaga wyłączona”, zapis bazowy i cały zestaw P-SYNC-STRONY bez zmian.
+
+**Narzędzia testowe.** `tests/support/urzadzenie-sync.mjs`:
+- `karta` — druga karta tej samej przeglądarki: ta sama atrapa IndexedDB, wspólny `localStorage`, wspólna atrapa
+  Web Locks i ta sama grupa kanałów; własny `sessionStorage`, własny dokument i połączenie;
+- `ramka` — jak karta, a do tego wspólny `sessionStorage` i okno nadrzędne (`self !== top`);
+- `kanal` — atrapa `BroadcastChannel` grupy przeglądarki (dostarczanie w osobnej turze, rejestr wiadomości
+  i instancji); `zdarzeniaOkna` — zdarzenia okna na `EventTarget`; `d.zdarzenieOkna`, `d.zdarzenieDokumentu`.
+
+**Testy.** Dane wyłącznie fikcyjne. `tests/unit/sync-zdarzenia-nadawca.test.mjs` (nowy, 23 przypadki, prawdziwy
+`vilda_sync.js` i sejf na urządzeniach natywnych, atrapa v37a z „events”; zegar okna: odcinki od 1 s czekają na test):
+- NA1 — wysyłka: Bearer, wiersze usunięte, pierścień własnych, ślad, bicie serca, jedna blokada na niepełną partię;
+  odbiorca dostaje zmiany;
+- NA2 — partie FIFO po 200; w cyklu jedna partia przed `GET /changes`, reszta przez `scheduleFlush`;
+- NA3 — odrzucone `oversize` i `invalid`, wiersz bez odpowiedzi, ślady;
+- NA4 — odstępy 2…60, 60 s, w odstępie bez żądania, sukces zeruje, sieć jak serwer;
+- NA5 — 429: bez próby, wysyłka po pauzie, w pauzie bez żądania i bez pobrania wierszy (także `keepalive`);
+- NA6 — 401: zatrzymanie do odblokowania; NA6b — 404: koniec bez odstępu, wiersze w locie wracają po ponownym
+  włączeniu; NA7 — budżet 20 na 60 s (także `keepalive`);
+- NA8 — dwie karty: inny świeży nadawca, przejęcie po 90 s ze `steal` (przez partię i przez bicie serca), blokada
+  zajęta; NA9 — ramka: włącznik okna nadrzędnego, ping, nadawca wysyła wiersze ramki, ramka bez zegarów;
+- NA10 — `keepalive` (Bearer, JSON, ≤ 60 000 B) i zdarzenia strony; NA10b — `sendBeacon` przy wyjątku i odrzuceniu
+  `fetch`, wznowienie po 60 s z `dup`, beacon odrzucony; NA10c — pominięcia, wiersz ponad 60 000 B, limit 65 536 B
+  w locie, wznowienie przy widocznej stronie; NA10d — odpowiedź bez rozstrzygnięcia (503) i zmiana sesji przed
+  odpowiedzią (bez zapisu wyniku i pierścienia);
+- NA11 — trwająca wysyłka nie wstrzymuje drenażu; po scaleniu przegląd i plan, bez scalenia bez planu;
+- NA12 — uśpienie; NA13 — eksport bez dziennika; NA14 — warunki (synchronizacja, włącznik integracji, tryb z rejestru,
+  blokada, także w trakcie odczytu trybu); NA15 — blokada w trakcie żądania, potem powtórka `dup`; NA16 — bicie serca i przegląd co 24 h;
+  NA17 — `SYNC_DB_QUOTA` i ślad; NA18 — `onBulkChange` po imporcie karty z pliku; NA19 — strażniki źródła.
+
+Zmienione:
+- `tests/unit/sync-zdarzenia-drenaz.test.mjs` — DZ16: przegląd kolejki jak przy odblokowaniu z dziennikiem przed
+  pierwszą partią (świat włącza flagę po odblokowaniu; bez tego przegląd po drenażu, który coś scalił, dokładał karty
+  sprzed flagi do partii z haków);
+- `tests/unit/sync-zdarzenia-wysylka.test.mjs` — PE15: `pushEvents` woła tylko partia nadawcy;
+- `tests/unit/sync-dziennik-uspienie.test.mjs` — `vilda_sync.js` zna też API nadawcy (partie kolejki,
+  `emissionsSettled`, `onBulkChange`, `sweepOutbox`; `_eventLog` dalej raz, przez opakowanie konta), bez dopisania,
+  odrzucenia całej kolejki, bramki i szyfrowania;
+- `tests/e2e/sync-zdarzenia-wysylka.spec.mjs` — 2 nowe przypadki (prawdziwa przeglądarka, atrapa przez adapter route;
+  bez nowego pliku, bo kolejny plik e2e wydłużał test podziału na odłamki ponad jego limit czasu):
+  - flaga `'1'`, dwie karty jednego profilu — zapis karty → wysyłka nadawcy, druga karta — inny nadawca (jej wiersze
+    wysyła nadawca, także przez `keepalive` przy utracie fokusu), chowanie strony — `fetch` z `keepalive`;
+  - flaga wyłączona — zapis karty, pobranie i chowanie strony bez `POST /events` i bez klucza bicia serca.
+
+**Czerwone na bazie** (`origin/audyt` `c4d2fa5d` z testami i uprzężą tego PR): 22 z 23 przypadków NA (wszystkie poza
+NA12) i e2e z flagą `'1'`. Zielone także na bazie: NA12 i e2e „flaga wyłączona” (dowód „jak dziś”).
+
+**Mutanty.** 67 mutantów bloku nadawcy, 66 zabitych testami działania (NA1–NA19), 1 równoważny:
+- cykl w pobraniu: bez wysyłki przed drenażem, czeka na trwającą wysyłkę, wysyła wszystkie partie, bez przeglądu i planu
+  po scaleniu, plan po każdym drenażu, cykl także bez dziennika;
+- warunki: bez bramki dziennika, bez warunku synchronizacji, włącznik integracji pominięty, bez zatrzymania po 401 albo
+  bez jego zdjęcia przy odblokowaniu, bez sprawdzenia odstępu, bez trybu z rejestru, bez sesji po odczycie trybu;
+- wynik partii: odstęp bez wzrostu, sukces nie zeruje odstępu, błąd sieci bez próby, 429 z próbą, pauza bez sprawdzenia
+  przed pobraniem, 429 bez planu, 404 jak błąd sieci, odrzucone bez `outboxReject`, wiersze bez wyniku nie wracają, bez
+  śladu odrzuconych i błędu magazynu, ślad z liczbą wierszy partii zamiast przyjętych, bez `outboxRequeueStale`, dalej
+  po niepełnej partii, nigdy następna partia, cykl bez planu reszty;
+- budżet: brak, partie albo `keepalive` nieliczone, `keepalive` poza budżetem;
+- rola: pominięta, przejęcie bez `steal`, martwe bicie dalej „inny nadawca”, partia bez bicia serca, zegar przejmuje
+  bicie bez blokady, zajęta blokada pominięta;
+- ramki i kanał: ramka wysyła sama, bez włącznika okna nadrzędnego, bez pingu, nadawca nie słucha pingu, ramka ze
+  słuchaczami i zegarem; `scheduleFlush` bez odstępu 1,5 s albo z aktywacją bez dziennika;
+- `keepalive`: mimo trwającej wysyłki, bez `sendBeacon` (wyjątek, odrzucenie), bez pierścienia, bez `outboxAccept`, bez
+  limitu 60 000 B albo 65 536 B, w pauzie, bez sesji przy odpowiedzi, bez zwrotu przy braku rozstrzygnięcia;
+- strona: wznowienie bez `outboxRequeueStale`, widoczna strona jak ukryta, bez `pagehide`, `freeze` albo `blur`;
+- bicie serca: bez przeglądu co 24 h, przegląd przy każdym biciu, zegar bez ponowienia; bez `onBulkChange`.
+
+Równoważny: bez sprawdzenia sesji zaraz po pobraniu partii. Sejf sam kończy pobranie przy zmianie sesji (odmowa
+`sesja`), a następne `pushEvents` sprawdza sesję przed żądaniem; sprawdzenie zostaje jako tania ochrona.
+
+**Kontrola granic.** Synchronizacja: przeliczone skróty obrazu bazowego i zintegrowanego `vilda_sync.js`
+(`tools/check_clinical_workspace_sync_boundary.mjs`, `runtime/clinical-workspace-sync/manifest.json`). Sejf,
+integracja, fragment planów opieki i łaty bez zmian.
+
+**Ograniczenia.**
+- Zamiast `syncPull` po wysyłce (zapowiedź w E2-PR4c) wysyłka jest częścią pobrania: jedna partia przed drenażem.
+  Własne zdarzenia mają wtedy numery przed drenażem i pierścień je pomija.
+- Limit `keepalive` przeglądarki (64 KiB) jest wspólny z pełnym PUT przy chowaniu strony (do 60 000 B, bez zmian).
+  Gdy oba ruszą naraz, drugi `fetch` może zostać odrzucony — wtedy `sendBeacon`, a gdy i on odmówi, wiersze czekają
+  na następny start. Kolejność przy chowaniu ustala E2-PR4e.
+- `flushKeepalive` działa dopiero po pierwszej wysyłce w dokumencie (materiał slotu w pamięci; przy chowaniu nie ma
+  czasu na odczyt sejfu).
+- Przegląd co 24 h liczy się od aktywacji w dokumencie (przeładowanie zaczyna dobę od nowa); przegląd sejfu przy
+  odblokowaniu i po dobie bezczynności zostaje.
+- Budżet żądań jest w pamięci dokumentu; jeden nadawca na przeglądarkę daje w praktyce budżet urządzenia.
+- Odczyt trybu konta z rejestru przy błędzie oddaje „Komputer prywatny” (zachowanie sejfu bez zmian).
+- Po 404 wiersze partii czekają w locie do ponownego włączenia dziennika (bramka sejfu zamknięta razem z włącznikiem).
+
+**Następne PR.**
+- E2-PR4e (wpięcia): sześć ścieżek `sendBeacon` → `scheduleFlush`, `online`, wysyłka przed rotacją tożsamości,
+  `setStorageMode`, ramki realtime z `eid`; kolejność `keepalive` i pełnego PUT przy chowaniu strony.
+- E2-PR5 (wygląd): stan wysyłki, `oversize` i `rejected` w Ustawieniach; etykiety nowych śladów.
+- E2-PR6 (polityka prywatności): klucz bicia serca na liście nowych wpisów w pamięci przeglądarki.
+
+**Cofnięcie** = rewert PR (bez migracji; rewert cofa też skróty kontroli granicy synchronizacji). Klucz bicia serca
+może powstać tylko przy włączonym dzienniku.
+
 ## Pobieranie zdarzeń dziennika z kwarantanną, uśpione (P-SYNC-DRENAZ-ZDARZEN, E2-PR4c, SW 1.1.510, `vilda_sync.js` 52, `vilda_vault.js` 273, 2026-11-11)
 
 **Zmiana kliniczna: nie** — wzory, progi, jednostki, interpretacje i reguły scalania bez zmian. **Działanie aplikacji

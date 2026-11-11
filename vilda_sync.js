@@ -241,7 +241,7 @@ function Bpw_konto(t){if(!t||typeof t.getCurrentUser!="function")return void 0;t
 function Bpw_inneKonto(t,kto){return Bpw_konto(t)!==kto}
 function Bpw_przerwane(){return u("VildaSync: pobieranie przerwane \u2014 w trakcie zablokowano sejf albo prze\u0142\u0105czono konto. Nic nie scalono.","SESSION_CHANGED")}
 function Bpw_sejfKonta(t,kto){if(!t||typeof t.applyEncryptedDelta!="function")return t;return{isUnlocked:function(){return!(typeof t.isUnlocked=="function"&&!t.isUnlocked())&&!Bpw_inneKonto(t,kto)},applyEncryptedDelta:function(x){return t.applyEncryptedDelta(x)},zdarzenia:t._eventLog||null}}
-function Bpw_dren(a,r,i,t,kto,Bdz_w){if(Bpw_inneKonto(t,kto))return;var Bdz_s=Bpw_sejfKonta(t,kto),Bdz_p=Bdz_wlaczone()?Bdz_B(a,r,i,Bdz_s):B(a,r,i,Bdz_s).catch(function(){});Bdz_w&&typeof Bdz_w=="object"&&Bdz_wyniki.set(Bdz_w,Bdz_p)}
+function Bpw_dren(a,r,i,t,kto,Bdz_w){if(Bpw_inneKonto(t,kto))return;var Bdz_s=Bpw_sejfKonta(t,kto),Bdz_p=Bdz_wlaczone()?Bze_isEventLogEnabled()?Bns_cykl(a,r,i,Bdz_s):Bdz_B(a,r,i,Bdz_s):B(a,r,i,Bdz_s).catch(function(){});Bdz_w&&typeof Bdz_w=="object"&&Bdz_wyniki.set(Bdz_w,Bdz_p)}
 /* P-SYNC-ZDARZENIA (E2-PR4b; plan docs/SYNC_PRZYROSTOWA_PLAN.md 3.2 "Petla wysylki", wiersz 8b): wysylka zdarzen
    dziennika (POST /v1/slots/<slot>/events) i wlacznik dziennika. USPIONE: kod produkcyjny nie wola pushEvents (nadawca
    dochodzi w E2-PR4d), a wlacznik jest otwarty tylko przy "events" w health i fladze vilda-event-log-v1 = "1".
@@ -269,6 +269,10 @@ var Bze_EID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{
 var Bze_wLocie = !1; // trwajace pushEvents w tym dokumencie (jedno zadanie w locie)
 function Bze_isEventLogEnabled() {
   try {
+    if (!Bns_gora()) { // P-SYNC-NADAWCA: ramka — wlacznik okna nadrzednego (ta sama domena), bez wlasnego health
+      var g = o.top && o.top.VildaSync;
+      return !!g && g !== o.VildaSync && typeof g.isEventLogEnabled == 'function' && g.isEventLogEnabled() === true;
+    }
     if (!Bdz_ma(Bdz_api[j()], 'events')) return false;
     if (!(o.localStorage && o.localStorage.getItem(Bze_KLUCZ) === '1')) return false;
     return Bdz_wlaczone();
@@ -636,6 +640,377 @@ function Bzd_poTrwajacym(t, e, a, r) {
   Bzd_nastepny = p;
   Bzd_nastepnySlot = t;
   return p;
+}
+/* P-SYNC-NADAWCA (E2-PR4d; plan docs/SYNC_PRZYROSTOWA_PLAN.md 3.2 "Nadawca", "Petla wysylki", "Chowanie", wiersz 8d;
+   decyzje wlasciciela 2026-11-11 nr 3 i 5): nadawca kolejki zdarzen. USPIONE: nic nie rusza bez wlaczonego dziennika
+   (Bze_isEventLogEnabled); sluchacze, zegar bicia serca i kanal powstaja dopiero przy pierwszym uzyciu z dziennikiem
+   (Bns_aktywuj). Bez dziennika flushOutbox, scheduleFlush i flushKeepalive oddaja { ok: false, powod: 'wylaczone' }.
+   Jeden nadawca na konto w przegladarce: tylko dokument najwyzszego poziomu; ramka tylko dopisuje (wlacznik z okna
+   nadrzednego) i pinguje {type:'outbox'} przez kanal vilda-sync-data. Rola: bicie serca
+   vilda-outbox-heartbeat-v1:<userId> = {d: dokument, t: ms} co 20 s; bicie innego dokumentu mlodsze niz 90 s = inny
+   nadawca; starsze — przejecie (Web Lock ze steal). Web Lock vilda-outbox-sender:<userId> na kazda partie (ifAvailable;
+   kolejnosc blokad: nadawca, potem wspoldzielona blokada bazy w operacjach kolejki; nigdy wylaczna bazy pod nadawca).
+   flushOutbox: warunki (dziennik, synchronizacja wlaczona, sejf odblokowany, tryb konta z wpisu rejestru = lokalny,
+   brak zatrzymania po 401 do odblokowania, brak odstepu po bledzie, budzet 20 zadan /events na 60 s, rola), potem
+   partie: outboxTake (200, 1 MiB; czekaNaWLocie bez wlasnego zadania — outboxRequeueStale i drugi odczyt),
+   pushEvents, wynik: 200 — outboxAccept, outboxReject partia, wiersze bez odpowiedzi z powrotem (bez proby), slad
+   sync.push.ok {rows, bytes, seq}, nastepna partia tylko po pelnej; 429 — bez proby, wysylka po koncu pauzy; 401 — bez
+   proby, zatrzymanie do odblokowania; blad sieci, limit czasu, 5xx, 507 i bledy kontraktu — proba + 1 i odstep 2, 4,
+   8, 16, 30, 60 s (potem przy biciu serca); sesja, blokada, brak rejestracji, wylaczony dziennik, format — bez proby,
+   koniec. Blad magazynu kolejki — slad sync.queue.failed {op, code}. scheduleFlush: 1,5 s. flushKeepalive (hidden,
+   pagehide, freeze, blur; nadawca, ktory juz wysylal w tym dokumencie, bez trwajacej wysylki, w budzecie): pierwsze
+   wpisy do 60 000 B przez fetch keepalive (Bearer, JSON), przy wyjatku albo odrzuceniu fetch sendBeacon text/plain
+   {token, events}; najwyzej 65 536 B w locie na dokument. Wznowienie (pageshow, visible): outboxRequeueStale
+   (wiersze w locie ponad 60 s) i scheduleFlush. Cykl w pobraniu z dziennikiem: emissionsSettled (czeka takze na
+   przeglad przy odblokowaniu), jedna partia wysylki (reszta przez scheduleFlush; trwajaca wysylka nie wstrzymuje
+   drenazu), drenaz; drenaz, ktory cos scalil — sweepOutbox i scheduleFlush. Bicie serca: przeglad co 24 h. Operacje
+   kolejki i kwarantanny sprawdzaja sesje tak jak zapis karty (P-SESJA-ZAPISU): zmiana sesji w trakcie konczy
+   operacje bez zapisu.
+   Tabela: ALGORITHMS P-SYNC-NADAWCA. */
+var Bns_K_BICIE = 'vilda-outbox-heartbeat-v1:', Bns_BLOKADA = 'vilda-outbox-sender:', Bns_KANAL = 'vilda-sync-data';
+var Bns_BICIE_MS = 20000, Bns_MARTWY_MS = 90000, Bns_ZWLOKA_MS = 1500, Bns_DOBA_MS = 864e5;
+var Bns_ODSTEPY_S = [2, 4, 8, 16, 30, 60], Bns_BUDZET = 20, Bns_OKNO_MS = 60000;
+var Bns_KEEPALIVE_B = 60000, Bns_KEEPALIVE_LIMIT_B = 65536, Bns_ZAPAS_B = 263168; // zapas: zdarzenie do 256 KiB + JSON
+var Bns_dok = null;                          // identyfikator tego dokumentu (bicie serca)
+var Bns_aktywny = !1, Bns_trwa = null, Bns_zadanie = !1;
+var Bns_zegarBicia = null, Bns_zegarPlanu = null, Bns_zegarPowrotu = null;
+var Bns_zadania = [];                        // chwile zadan /events z tego dokumentu (budzet 20 na 60 s)
+var Bns_odstep = { n: 0, do: 0 };            // odstep po bledzie sieci albo serwera
+var Bns_stop401 = !1;                        // po 401: do nastepnego odblokowania
+var Bns_material = null;                     // { uid, slotId, authToken } z ostatniej wysylki (keepalive)
+var Bns_keepaliveB = 0;
+var Bns_przegladAt = 0;                      // chwila ostatniego przegladu 24 h z tego dokumentu
+var Bns_kanalObj = null;
+function Bns_gora() { try { return o.self === o.top; } catch (x) { return !1; } }
+function Bns_id() {
+  if (Bns_dok) return Bns_dok;
+  try { Bns_dok = o.crypto && typeof o.crypto.randomUUID == 'function' ? o.crypto.randomUUID() : null; } catch (x) { Bns_dok = null; }
+  if (!Bns_dok) Bns_dok = 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+  return Bns_dok;
+}
+function Bns_sejf() { var v = o.VildaVault; return v && typeof v.isUnlocked == 'function' && v.isUnlocked() ? v : null; }
+function Bns_konto(v) { try { var k = v && v.getCurrentUser(); return k && typeof k.userId == 'string' ? k.userId : null; } catch (x) { return null; } }
+// Zdarzenia sejfu przez to samo opakowanie konta co drenaz (Bpw_sejfKonta, pole zdarzenia).
+function Bns_dziennik(v) { try { var s = v && Bpw_sejfKonta(v, Bns_konto(v)); return (s && s.zdarzenia) || null; } catch (x) { return null; } }
+function Bns_syncWlaczona() {
+  try {
+    var i = o.VildaSyncIntegration;
+    if (i && typeof i.isSyncEnabled == 'function') return i.isSyncEnabled() === !0;
+    return !!(o.localStorage && o.localStorage.getItem('vilda-sync-enabled-v1') === 'true');
+  } catch (x) { return !1; }
+}
+function Bns_bicieCzytaj(uid) {
+  try {
+    var s = o.localStorage && o.localStorage.getItem(Bns_K_BICIE + uid), b = s ? JSON.parse(s) : null;
+    return b && typeof b.d == 'string' && Number.isSafeInteger(b.t) ? b : null;
+  } catch (x) { return null; }
+}
+function Bns_bicieZapisz(uid) {
+  try { if (o.localStorage) o.localStorage.setItem(Bns_K_BICIE + uid, JSON.stringify({ d: Bns_id(), t: Date.now() })); } catch (x) {}
+}
+/* 'wlasna' (brak bicia albo wlasne), 'przejecie' (cudze starsze niz 90 s albo z chwila w przyszlosci) albo 'inny'. */
+function Bns_rola(uid) {
+  var b = Bns_bicieCzytaj(uid);
+  if (!b || b.d === Bns_id()) return 'wlasna';
+  var wiek = Date.now() - b.t;
+  return wiek > Bns_MARTWY_MS || wiek < -Bns_MARTWY_MS ? 'przejecie' : 'inny';
+}
+function Bns_wynik(powod, w, dod) {
+  var r = Object.assign({ ok: powod === null, powod: powod }, w || {});
+  if (dod) Object.assign(r, dod);
+  return r;
+}
+function Bns_wBudzecie() {
+  var t = Date.now();
+  Bns_zadania = Bns_zadania.filter(function (x) { return t - x < Bns_OKNO_MS && t >= x; });
+  return Bns_zadania.length < Bns_BUDZET;
+}
+function Bns_planujZa(ms) {
+  try {
+    if (Bns_zegarPowrotu !== null) o.clearTimeout(Bns_zegarPowrotu);
+    Bns_zegarPowrotu = o.setTimeout(function () { Bns_zegarPowrotu = null; Bns_planuj(); }, Math.max(0, ms));
+  } catch (x) {}
+}
+function Bns_blad(w, op, x) {
+  var code = x && typeof x.code == 'string' ? x.code : null, powod = x && typeof x.powod == 'string' ? x.powod : 'blad';
+  if (code && code.indexOf('SYNC_DB_') === 0) Bzd_slad('sync.queue.failed', { op: op, code: code });
+  w.kod = code;
+  return powod;
+}
+/* Wiersze partii bez rozstrzygniecia serwera wracaja do pending (bezProby) albo z proba (proba = true). */
+async function Bns_zwroc(L, eidy, code, proba) {
+  if (!eidy.length) return;
+  try { await L.outboxFail(eidy, { code: code, bezProby: !proba }); } catch (x) {}
+}
+function Bns_doBudzetu() {
+  var t = Date.now(), n = Bns_zadania.length ? Math.min.apply(null, Bns_zadania) : t;
+  return Math.max(0, n + Bns_OKNO_MS - t);
+}
+/* Jedna partia pod blokada nadawcy: 'dalej' (pelna partia wyslana, moze byc nastepna), 'koniec' (pusto albo partia
+   niepelna) albo powod stopu. W pauzie 429 i poza budzetem — bez pobrania wierszy, wysylka zaplanowana na koniec. */
+async function Bns_partia(v, L, uid, w) {
+  Bns_bicieZapisz(uid);
+  var pz = Bze_pauzaMs();
+  if (pz > 0) { w.kod = 'RATE_LIMITED'; w.ponowZaMs = pz; Bns_planujZa(pz); return 'pauza'; }
+  if (!Bns_wBudzecie()) { w.ponowZaMs = Bns_doBudzetu(); Bns_planujZa(w.ponowZaMs); return 'budzet'; }
+  var t = await L.outboxTake();
+  if (!Bns_sejf() || Bns_konto(v) !== uid) return 'sesja';
+  if (!t || t.ok === !1) return Bns_blad(w, 'outboxTake', t);
+  if (t.czekaNaWLocie === !0 && !t.wiersze.length && !Bns_zadanie) {
+    var z = await L.outboxRequeueStale();
+    if (z && z.ok === !1) return Bns_blad(w, 'outboxRequeueStale', z);
+    t = await L.outboxTake();
+    if (!Bns_sejf() || Bns_konto(v) !== uid) return 'sesja';
+    if (!t || t.ok === !1) return Bns_blad(w, 'outboxTake', t);
+  }
+  if (!t.wiersze.length) return t.czekaNaWLocie === !0 ? 'w-locie' : 'koniec';
+  var eidy = t.wiersze.map(function (r) { return r.eid; });
+  Bns_zadania.push(Date.now());
+  Bns_zadanie = !0;
+  var p;
+  try {
+    p = await Bze_pushEvents(t.wiersze.map(function (r) { return { eid: r.eid, iv: r.env.iv, data: r.env.data }; }));
+  } finally { Bns_zadanie = !1; }
+  if (p && p.ok === !0) {
+    var przyjete = p.accepted.map(function (a) { return a.eid; }), odrz = p.rejected.map(function (a) { return { eid: a.eid, code: a.code }; });
+    var znane = new Set(przyjete.concat(odrz.map(function (a) { return a.eid; })));
+    var acc = await L.outboxAccept(przyjete);
+    if (acc && acc.ok === !1) Bns_blad(w, 'outboxAccept', acc);
+    if (odrz.length) {
+      var rej = await L.outboxReject(odrz);
+      if (rej && rej.ok === !1) Bns_blad(w, 'outboxReject', rej);
+    }
+    await Bns_zwroc(L, eidy.filter(function (e) { return !znane.has(e); }), 'NO_RESULT', !1);
+    Bns_odstep = { n: 0, do: 0 };
+    w.partie += 1;
+    w.wyslane += przyjete.length;
+    w.odrzucone += odrz.length;
+    Bzd_slad('sync.push.ok', { rows: przyjete.length, bytes: t.bodyBytes, seq: p.headSeq });
+    if (odrz.length) {
+      var ov = odrz.filter(function (a) { return a.code === 'oversize'; }).length;
+      Bzd_slad('sync.push.rejected', { oversize: ov, invalid: odrz.length - ov });
+    }
+    // Dalej tylko po pelnej partii (200 wierszy albo cialo blisko 1 MiB — nastepny wiersz moglby sie nie zmiescic).
+    return t.wiersze.length >= Bze_MAX_ZDARZEN || t.bodyBytes > Bze_MAX_BAJTOW - Bns_ZAPAS_B ? 'dalej' : 'koniec';
+  }
+  var kod = p && typeof p.kod == 'string' ? p.kod : null, powod = p && typeof p.powod == 'string' ? p.powod : 'blad';
+  w.kod = kod;
+  if (powod === 'pauza' || kod === 'RATE_LIMITED') {
+    await Bns_zwroc(L, eidy, 'RATE_LIMITED', !1);
+    var ms = p && typeof p.retryAfterMs == 'number' ? p.retryAfterMs : Bns_ODSTEPY_S[0] * 1000;
+    w.ponowZaMs = ms;
+    Bns_planujZa(ms);
+    return 'pauza';
+  }
+  if (kod === 'AUTH_FAILED') { await Bns_zwroc(L, eidy, kod, !1); Bns_stop401 = !0; return 'zatrzymany'; }
+  if (kod === 'EVENTS_DISABLED') { await Bns_zwroc(L, eidy, kod, !1); return 'wylaczone'; }
+  if (powod === 'siec' || powod === 'odpowiedz' || powod === 'odmowa' || powod === 'blad') {
+    await Bns_zwroc(L, eidy, kod || 'ERROR', !0);
+    var n = Math.min(Bns_odstep.n, Bns_ODSTEPY_S.length - 1), krok = Bns_ODSTEPY_S[n] * 1000;
+    Bns_odstep = { n: Bns_odstep.n + 1, do: Date.now() + krok };
+    w.ponowZaMs = krok;
+    if (Bns_odstep.n <= Bns_ODSTEPY_S.length) Bns_planujZa(krok); // po ostatnim kroku — przy biciu serca
+    return 'odstep';
+  }
+  await Bns_zwroc(L, eidy, kod || powod.toUpperCase(), !1); // sesja, zablokowany, niezarejestrowany, wylaczone, format, w-locie
+  return powod;
+}
+async function Bns_flushJeden(maks) {
+  var w = { partie: 0, wyslane: 0, odrzucone: 0, kod: null };
+  if (!Bns_gora()) return Bns_wynik('ramka', w);
+  if (!Bze_isEventLogEnabled()) return Bns_wynik('wylaczone', w);
+  Bns_aktywuj();
+  if (!Bns_syncWlaczona()) return Bns_wynik('synchronizacja-wylaczona', w);
+  var v = Bns_sejf(), L = Bns_dziennik(v);
+  if (!v || !L) return Bns_wynik('zablokowany', w);
+  var uid = Bns_konto(v);
+  if (!uid) return Bns_wynik('zablokowany', w);
+  if (Bns_stop401) return Bns_wynik('zatrzymany', w);
+  if (Date.now() < Bns_odstep.do) return Bns_wynik('odstep', w, { ponowZaMs: Bns_odstep.do - Date.now() });
+  var tryb;
+  try { tryb = await v.getStorageMode(uid); } catch (x) { tryb = null; }
+  if (!Bns_sejf() || Bns_konto(v) !== uid) return Bns_wynik('sesja', w);
+  if (tryb !== v.STORAGE_MODE_LOCAL) return Bns_wynik('tryb', w);
+  try {
+    var mat = await v.getSyncMaterial();
+    if (Bns_konto(v) === uid && mat) Bns_material = { uid: uid, slotId: mat.slotId, authToken: mat.authToken };
+  } catch (x) {}
+  var rola = Bns_rola(uid);
+  if (rola === 'inny') return Bns_wynik('inny-nadawca', w);
+  for (;;) {
+    var r = await Bns_podBlokada(uid, rola === 'przejecie', function () { return Bns_partia(v, L, uid, w); });
+    rola = 'wlasna';
+    if (r === 'zajeta') return Bns_wynik('inny-nadawca', w);
+    if (r === 'koniec') return Bns_wynik(null, w);
+    if (r !== 'dalej') return Bns_wynik(r, w);
+    if (maks && w.partie >= maks) { Bns_planuj(); return Bns_wynik(null, w, { dalej: !0 }); }
+  }
+}
+async function Bns_podBlokada(uid, steal, fn) {
+  var nl;
+  try { nl = o.navigator && o.navigator.locks; } catch (x) { nl = null; }
+  if (!nl || typeof nl.request != 'function') return fn();
+  var op = steal ? { mode: 'exclusive', steal: !0 } : { mode: 'exclusive', ifAvailable: !0 };
+  return nl.request(Bns_BLOKADA + uid, op, function (lock) { return lock ? fn() : 'zajeta'; });
+}
+/* flushOutbox(): jedna wysylka naraz w dokumencie (partie, dopoki sa i pozwala budzet); nigdy nie rzuca. maks — najwyzej
+   tyle partii, reszta przez scheduleFlush (cykl w pobraniu: jedna). */
+function Bns_flush(maks) {
+  if (Bns_trwa) return Bns_trwa;
+  var p = Bns_flushJeden(typeof maks == 'number' && maks > 0 ? maks : 0).then(null, function (x) {
+    return Bns_wynik(x && x.patientClinicalUnavailable ? 'format' : 'blad', { partie: 0, wyslane: 0, odrzucone: 0, kod: null });
+  }).then(function (r) { if (Bns_trwa === p) Bns_trwa = null; return r; });
+  Bns_trwa = p;
+  return p;
+}
+/* scheduleFlush(): w dokumencie najwyzszego poziomu wysylka po 1,5 s (kolejne wywolania w tym czasie dolaczaja);
+   w ramce ping do okna nadrzednego. */
+function Bns_planuj() {
+  try {
+    if (!Bze_isEventLogEnabled()) return { ok: !1, powod: 'wylaczone' };
+    Bns_aktywuj();
+    if (!Bns_gora()) {
+      if (Bns_kanalObj) Bns_kanalObj.postMessage({ type: 'outbox' });
+      return { ok: !0, powod: 'ramka' };
+    }
+    if (Bns_zegarPlanu === null) {
+      Bns_zegarPlanu = o.setTimeout(function () { Bns_zegarPlanu = null; Bns_flush(); }, Bns_ZWLOKA_MS);
+    }
+    return { ok: !0, powod: null };
+  } catch (x) { return { ok: !1, powod: 'blad' }; }
+}
+function Bns_beacon(url, mat, ev) {
+  try {
+    var n = o.navigator, tresc = JSON.stringify({ token: mat.authToken, events: ev });
+    return !!(n && typeof n.sendBeacon == 'function' && n.sendBeacon(url, new o.Blob([tresc], { type: 'text/plain' })));
+  } catch (x) { return !1; }
+}
+/* flushKeepalive(): przy chowaniu strony; najwyzej jedna partia do 60 000 B, w locie najwyzej 65 536 B na dokument. */
+async function Bns_keepalive() {
+  try {
+    if (!Bns_gora() || !Bze_isEventLogEnabled()) return { ok: !1, powod: 'wylaczone' };
+    var v = Bns_sejf(), L = Bns_dziennik(v), uid = Bns_konto(v), mat = Bns_material;
+    if (!L || !uid || !mat || mat.uid !== uid || Bns_trwa || Bns_zadanie || Bns_stop401) return { ok: !1, powod: 'pomin' };
+    if (PatientClinicalRouteFailure('sync-events')) return { ok: !1, powod: 'format' };
+    if (!Bns_syncWlaczona() || Bns_rola(uid) === 'inny' || !m(mat.slotId).registered) return { ok: !1, powod: 'pomin' };
+    if (Bze_pauzaMs() > 0) return { ok: !1, powod: 'pauza' };
+    if (!Bns_wBudzecie()) return { ok: !1, powod: 'budzet' };
+    var extra = JSON.stringify(mat.authToken).length + 9; // ,"token": w ciele text/plain
+    var t = await L.outboxTake({ maxBytes: Bns_KEEPALIVE_B, extraBytes: extra });
+    if (!t || t.ok === !1) return { ok: !1, powod: Bns_blad({}, 'outboxTake', t) };
+    if (!t.wiersze.length) return { ok: !1, powod: t.czekaNaWLocie ? 'w-locie' : 'pusto' };
+    var ev = t.wiersze.map(function (r) { return { eid: r.eid, iv: r.env.iv, data: r.env.data }; });
+    var eidy = t.wiersze.map(function (r) { return r.eid; }), pt = Bze_partia(ev), bajty = t.bodyBytes;
+    if (!pt) { await Bns_zwroc(L, eidy, 'ARGUMENT', !1); return { ok: !1, powod: 'argument' }; }
+    var cialo = pt.cialo;
+    if (Bns_keepaliveB + bajty > Bns_KEEPALIVE_LIMIT_B) { await Bns_zwroc(L, eidy, 'KEEPALIVE_LIMIT', !1); return { ok: !1, powod: 'limit' }; }
+    var url = j() + '/v1/slots/' + mat.slotId + '/events', sposob = 'fetch', odp = null;
+    var zwolnij = function () { Bns_keepaliveB = Math.max(0, Bns_keepaliveB - bajty); };
+    Bns_keepaliveB += bajty;
+    Bns_zadania.push(Date.now());
+    try {
+      odp = fetch(url, { method: 'POST', keepalive: !0, cache: 'no-store',
+        headers: { Authorization: 'Bearer ' + mat.authToken, 'Content-Type': 'application/json' }, body: cialo });
+    } catch (x) { odp = null; }
+    if (!odp) {
+      sposob = 'beacon';
+      var ok = Bns_beacon(url, mat, ev);
+      zwolnij();
+      if (!ok) { await Bns_zwroc(L, eidy, 'BEACON_FAILED', !1); return { ok: !1, powod: 'beacon' }; }
+    } else {
+      // Odpowiedz, gdy dojdzie (strona zyje dalej): jak w partii; bez rozstrzygniecia (blad HTTP, zly ksztalt) — wiersze
+      // z powrotem do pending bez proby. fetch odrzucony (limit keepalive przegladarki albo siec) — zapasowo sendBeacon;
+      // jego odpowiedz jest niewidoczna, wiec wiersze zostaja w locie i wracaja przy wznowieniu (60 s; serwer odrzuca
+      // powtorke po eid). Strona zamknieta: wiersze w locie wracaja przy nastepnym starcie.
+      Promise.resolve(odp).then(function (r) {
+        return r && r.ok ? Btr_json(r).then(null, function () { return null; }) : null;
+      }, function () { return Bns_beacon(url, mat, ev) ? 'beacon' : null; }).then(function (c) {
+        if (c === 'beacon' || Bns_konto(Bns_sejf()) !== uid) return null;
+        var a = c ? Bze_odpowiedz(c, pt.eidy) : null;
+        if (!a) return Bns_zwroc(L, eidy, 'KEEPALIVE', !1);
+        var znane = new Set(a.accepted.concat(a.rejected).map(function (x) { return x.eid; }));
+        Bzd_wlasneDopisz(mat.slotId, a.accepted); // pierscien wlasnych zdarzen jak w pushEvents (przed drenazem)
+        return Promise.resolve(L.outboxAccept(a.accepted.map(function (x) { return x.eid; }))).then(function () {
+          return a.rejected.length ? L.outboxReject(a.rejected.map(function (x) { return { eid: x.eid, code: x.code }; })) : null;
+        }).then(function () { return Bns_zwroc(L, eidy.filter(function (e) { return !znane.has(e); }), 'NO_RESULT', !1); });
+      }).then(null, function () {}).then(zwolnij);
+    }
+    return { ok: !0, powod: null, sposob: sposob, wiersze: eidy.length, bytes: bajty };
+  } catch (x) { return { ok: !1, powod: 'blad' }; }
+}
+/* Wznowienie strony: wpisy w locie starsze niz 60 s wracaja do pending, potem wysylka. */
+function Bns_wznow() {
+  try {
+    var v = Bns_sejf(), L = Bns_dziennik(v);
+    if (!L || !Bns_gora() || !Bze_isEventLogEnabled()) return;
+    Promise.resolve(L.outboxRequeueStale()).then(function () { Bns_planuj(); }, function () {});
+  } catch (x) {}
+}
+/* Bicie serca co 20 s (dokument najwyzszego poziomu): rola, wpis bicia (tylko wlasna rola; przejecie zapisuje dopiero
+   partia pod blokada ze steal), przeglad co 24 h, wysylka po wyczerpanych odstepach. Bez dziennika albo przy
+   zablokowanym sejfie zegar dalej tyka, nic nie robi. */
+function Bns_tik() {
+  Bns_zegarBicia = null;
+  try {
+    var v = Bns_sejf(), uid = Bns_konto(v), rola = uid ? Bns_rola(uid) : 'inny';
+    if (v && uid && Bze_isEventLogEnabled() && Bns_syncWlaczona() && rola !== 'inny') {
+      if (rola === 'wlasna') Bns_bicieZapisz(uid);
+      var L = Bns_dziennik(v), t = Date.now();
+      if (L && t - Bns_przegladAt >= Bns_DOBA_MS) {
+        Bns_przegladAt = t;
+        Promise.resolve(L.sweepOutbox()).then(function () { Bns_planuj(); }, function () {});
+      } else if (t >= Bns_odstep.do) Bns_planuj();
+    }
+  } catch (x) {}
+  try { Bns_zegarBicia = o.setTimeout(Bns_tik, Bns_BICIE_MS); } catch (x) {}
+}
+/* Aktywacja przy pierwszym uzyciu z dziennikiem: sluchacze i zegar; raz na dokument. */
+function Bns_aktywuj() {
+  if (Bns_aktywny) return;
+  Bns_aktywny = !0;
+  Bns_przegladAt = Date.now();
+  try {
+    if (typeof o.BroadcastChannel == 'function') {
+      Bns_kanalObj = new o.BroadcastChannel(Bns_KANAL);
+      if (Bns_gora()) Bns_kanalObj.addEventListener('message', function (e) { if (e && e.data && e.data.type === 'outbox') Bns_planuj(); });
+    }
+  } catch (x) { Bns_kanalObj = null; }
+  try {
+    var v = o.VildaVault, L = Bns_dziennik(v);
+    if (L && typeof L.onBulkChange == 'function') L.onBulkChange(function () { Bns_planuj(); });
+    if (v && typeof v.onUnlock == 'function') v.onUnlock(function () { Bns_stop401 = !1; Bns_odstep = { n: 0, do: 0 }; });
+  } catch (x) {}
+  if (!Bns_gora()) return;
+  try {
+    var d = o.document;
+    if (d && typeof d.addEventListener == 'function') {
+      d.addEventListener('visibilitychange', function () { if (d.visibilityState === 'hidden' || d.hidden === !0) Bns_keepalive(); else Bns_wznow(); });
+      d.addEventListener('freeze', function () { Bns_keepalive(); });
+    }
+    if (typeof o.addEventListener == 'function') {
+      o.addEventListener('pagehide', function () { Bns_keepalive(); });
+      o.addEventListener('blur', function () { Bns_keepalive(); });
+      o.addEventListener('pageshow', function () { Bns_wznow(); });
+    }
+  } catch (x) {}
+  try { Bns_zegarBicia = o.setTimeout(Bns_tik, Bns_BICIE_MS); } catch (x) {}
+}
+/* Cykl pobrania z dziennikiem (Bpw_dren): emisje domkniete, jedna partia wysylki (bez czekania na trwajaca wysylke),
+   drenaz; drenaz ze zmiana — przeglad i scheduleFlush. */
+function Bns_przeglad(L, r) {
+  return L && typeof L.sweepOutbox == 'function' && Bdz_otwarty(r) ? Promise.resolve(L.sweepOutbox()).then(null, function () { return null; }) : Promise.resolve(null);
+}
+function Bns_cykl(t, e, a, r) {
+  Bns_aktywuj();
+  var L = r && r.zdarzenia;
+  return Promise.resolve().then(function () {
+    return L && typeof L.emissionsSettled == 'function' ? L.emissionsSettled() : null;
+  }).then(function () { return Bns_trwa ? null : Bns_flush(1); }).then(null, function () { return null; }).then(function () {
+    return Bdz_B(t, e, a, r);
+  }).then(function (w) {
+    if (!w || w.zmiana !== !0) return w;
+    return Bns_przeglad(L, r).then(function () { Bns_planuj(); return w; });
+  });
 }
 /* P-SYNC-STRONY (E2-PR1; plan docs/SYNC_PRZYROSTOWA_PLAN.md 3.3 "drainChanges"; decyzje wlasciciela 2026-10-29 nr 1 i 2):
    dziennik zmian stronami (/changes?since=N&limit=200, petla po truncated, ciaglosc seq) zamiast jednej strony legacy
@@ -1575,4 +1950,4 @@ function TLibAutomatic() {
 function TLibPullCycle ( options ) {TLibAutomatic(); return WorkspaceSyncDispatch("pull", true, function () { return Bdz_syncPull(options); });}
 function TLibPushCycle ( options ) {TLibAutomatic(); return WorkspaceSyncDispatch("push", false, function () { return ht(options); });}
 function TLibFullCycle ( ) {TLibAutomatic(); return WorkspaceSyncDispatch("full", true, function () { return Ht(); });}
-o.VildaSync={syncPush:TLibPushCycle,syncPull:TLibPullCycle,syncFull:TLibFullCycle,activateTemplateLibrarySync:TLibActivate,deactivateTemplateLibrarySync:TLibDeactivate,syncTemplateLibrary:TLibExplicit,getTemplateLibrarySyncStatus:TLibGetStatus,continueTemplateLibrarySync:TLibAutomatic,inspectTemplateLibraryAuthority:TLibInspectAuthority,resetSessionPullGuard:Ut,getSyncStatus:xt,clearSyncState:Wt,deleteSyncSlot:Jt,onSyncStart:Zt,onSyncComplete:Qt,onSyncError:Rt,probeNewDevice:Xt,restorePrevBlob:qt,revokeAllDevices:$t,uploadToSlot:pt,deleteSlotWithMaterial:_t,_loadSyncState:PatientClinicalLoadState,_saveSyncState:PatientClinicalSaveState,_clearSyncStateForSlot:PatientClinicalClearState,detectApi:Bdz_detectApi,getDrainStatus:Bdz_getDrainStatus,getChangesCursor:Bdz_getChangesCursor,isPagedActive:Bdz_isPagedActive,isEventLogEnabled:Bze_isEventLogEnabled,pushEvents:Bze_pushEvents}})(typeof window<"u"?window:typeof globalThis<"u"?globalThis:null);
+o.VildaSync={syncPush:TLibPushCycle,syncPull:TLibPullCycle,syncFull:TLibFullCycle,activateTemplateLibrarySync:TLibActivate,deactivateTemplateLibrarySync:TLibDeactivate,syncTemplateLibrary:TLibExplicit,getTemplateLibrarySyncStatus:TLibGetStatus,continueTemplateLibrarySync:TLibAutomatic,inspectTemplateLibraryAuthority:TLibInspectAuthority,resetSessionPullGuard:Ut,getSyncStatus:xt,clearSyncState:Wt,deleteSyncSlot:Jt,onSyncStart:Zt,onSyncComplete:Qt,onSyncError:Rt,probeNewDevice:Xt,restorePrevBlob:qt,revokeAllDevices:$t,uploadToSlot:pt,deleteSlotWithMaterial:_t,_loadSyncState:PatientClinicalLoadState,_saveSyncState:PatientClinicalSaveState,_clearSyncStateForSlot:PatientClinicalClearState,detectApi:Bdz_detectApi,getDrainStatus:Bdz_getDrainStatus,getChangesCursor:Bdz_getChangesCursor,isPagedActive:Bdz_isPagedActive,isEventLogEnabled:Bze_isEventLogEnabled,pushEvents:Bze_pushEvents,flushOutbox:Bns_flush,scheduleFlush:Bns_planuj,flushKeepalive:Bns_keepalive}})(typeof window<"u"?window:typeof globalThis<"u"?globalThis:null);

@@ -678,6 +678,9 @@ describe('A ≡ B na prawdziwym drenażu: kwarantanna, aktualizacja, ponowienie 
     krok(); const r2 = await A.zapiszKarte(5, { wzrost: 125, masa: 21, zapis: { patientId: r1.patientId, forceNewSnapshot: true } });
     krok(); const Q = (await A.zapiszKarte(6, { masa: 30 })).patientId;
     const P = r1.patientId;
+    // Przegląd kolejki jak przy odblokowaniu z dziennikiem (świat włączył flagę po odblokowaniu): karta 1 i klucze
+    // logowania sprzed flagi idą w tej partii, a nie w przeglądzie po drenażu, który coś scalił (E2-PR4d).
+    expect((await A.vault._eventLog.sweepOutbox()).ok, 'przegląd A').toBe(true);
     await wyslij(A);
     krok(); await B.pobierz(); await A.pobierz();
     krok(); const n = await B.vault.savePatientNote({ patientId: P, title: 'Fikcyjna notatka', body: 'Fikcyjna treść N1', category: 'inne' });

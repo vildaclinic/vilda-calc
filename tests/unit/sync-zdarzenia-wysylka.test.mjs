@@ -353,7 +353,10 @@ describe('P-SYNC-ZDARZENIA — włącznik dziennika i bramka sejfu', () => {
     const zWl = pliki.filter((n) => /\bisEventLogEnabled\b/.test(fs.readFileSync(path.join(KORZEN, n), 'utf8')));
     expect(zWl).toEqual(['vilda_vault.js']);
     const sync = fs.readFileSync(path.join(KORZEN, 'vilda_sync.js'), 'utf8');
-    expect(sync.match(/\bBze_pushEvents\b/g)).toHaveLength(2); // definicja i eksport
+    expect(sync.match(/\bBze_pushEvents\b/g)).toHaveLength(3); // definicja, eksport i partia nadawcy (E2-PR4d)
+    expect(sync.match(/\bBze_pushEvents\(/g), 'jedyne wywołanie — partia nadawcy').toHaveLength(2);
+    const partia = sync.slice(sync.indexOf('async function Bns_partia('), sync.indexOf('async function Bns_flushJeden('));
+    expect(partia.match(/\bBze_pushEvents\(/g), 'wywołanie w Bns_partia').toHaveLength(1);
     expect(sync.split("'vilda-event-log-v1'").length - 1, 'klucz flagi tylko w stałej').toBe(1);
   });
 });
