@@ -21569,12 +21569,17 @@ zmiany), K — bez wiedzy o obu — przycina s porządkowaniem i robi „Scal pa
   przycięcie), wpis dostaje wkład wersji: zmianę, opis i rejestr gwiazdki — **bez treści i bez cienia** (decyzja 1
   z 2026-10-26 bez zmian). Wpis przestaje być ważnym Koszem; zostaje nagrobek porządkowania (`Bpk_wpis`).
 - Dwa miejsca, ta sama reguła: karta z ładunku (`Bsl_koszZLadunku`) i karta usuwana tutaj (`Bsl_koszUsuwanejKarty` —
-  zapis listy przed usunięciem karty, jak dotąd przy wygranej Kosza).
+  zapis listy przed usunięciem karty, jak dotąd przy wygranej Kosza). W tym zapisie wpis unieważniony wersją karty
+  usuwanej ma od razu zdjęty cień tej karty (`Bpc_bezKarty`, decyzja 1 — jak w końcowym zapisie listy), więc treść
+  unieważnionego Kosza nie zostaje w cieniu także wtedy, gdy scalanie kończy się po usunięciu karty, przed końcowym
+  zapisem listy.
 - Wersja przypięta — bez zmian (porządkowanie jej nie usuwa). Bez „Scal pacjentów” — bez zmian (karta zostaje, wersja
   i tak dochodzi do wpisu w zwykłej pętli wersji).
 
 **Sesja (P-CHMURA-OPIS).** Bez nowych odczytów poza sesją: wersje karty usuwanej czyta się i listę zapisuje jak dotąd,
-po sprawdzeniu sesji scalania; zmiana sesji w trakcie kończy scalanie `SESSION_CHANGED` bez usunięcia karty.
+po sprawdzeniu sesji scalania; zmiana sesji w trakcie kończy scalanie `SESSION_CHANGED` bez usunięcia karty. Zmiana
+sesji zaraz po usunięciu karty: na dysku zostaje nagrobek porządkowania z zapisu przed usunięciem — bez treści i bez
+cienia (test S10).
 
 **Zmiana działania dziś** (pełne kopie i delty):
 - wizyta dana do Kosza, przywrócona, a potem usunięta porządkowaniem na innym urządzeniu przed „Scal pacjentów” jej
@@ -21598,13 +21603,15 @@ bez zmian.
   „Scal pacjentów” (jak na bazie); dwa znane ograniczenia przypięte tak jak na bazie (wizyta przywrócona i przypięta;
   bez porządkowania — wynik zależny od kolejności);
 - `tests/unit/kosz-usuwanej-karty.test.mjs` — literał E4a-kp-ret (7 z 8 kolejności bez treści w Koszu) i nagłówek;
-- `tests/unit/kosz-usuwanej-karty-sesja.test.mjs` — strażnik źródła S6 (obie strony reguły, bez treści);
+- `tests/unit/kosz-usuwanej-karty-sesja.test.mjs` — S10 (nowy: zmiana sesji zaraz po usunięciu karty z wersją
+  przywróconą — wpis retencji bez treści i bez cienia, po rundach na trzech urządzeniach) i strażnik źródła S6 (obie
+  strony reguły, bez treści, zdjęcie cienia w zapisie przed usunięciem karty);
 - `tests/unit/sync-dziennik-wlasnosciowy.test.mjs` (test A ≡ B, 133 przypadki) — nowy scenariusz p. 6 i nagłówek.
 
 Pełny `npm test` i e2e — wyniki w opisie PR.
 
-**Czerwone na bazie** (`origin/audyt` `46f3fe9c` z testami tego PR): 10 — `kosz-przywroc-porzadkowanie` 3 (obie
-kolejności, delta), `kosz-usuwanej-karty` 5 (E4a-kp-ret), `kosz-usuwanej-karty-sesja` 1 (S6), test A ≡ B 1 (nowy
+**Czerwone na bazie** (`origin/audyt` `46f3fe9c` z testami tego PR): 11 — `kosz-przywroc-porzadkowanie` 3 (obie
+kolejności, delta), `kosz-usuwanej-karty` 5 (E4a-kp-ret), `kosz-usuwanej-karty-sesja` 2 (S10, S6), test A ≡ B 1 (nowy
 scenariusz p. 6: W4 bez punktu stałego). Zielone z natury: kontrola bez „Scal pacjentów”, oba znane ograniczenia,
 pozostałe przypadki.
 
