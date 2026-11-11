@@ -197,10 +197,12 @@ describe('P-SYNC-LIMIT-ODCZYTU — limit odczytu treści w ścieżce pobierania'
   it('L6 [kontrola]: po udanym odczycie nie zostaje zegar limitu ani przerwanie (60 s później bez błędu i bez dodatkowych żądań)', async () => {
     const s = await swiat();
     await deltaKarty(s, 8);
+    await cisza([s.A, s.B]);
+    const zegary0 = vi.getTimerCount();
     const w = await s.B.sync.syncPull({ czekajNaDrenaz: true });
     expect(w.drain.stop).toBe('head');
     await cisza([s.A, s.B]);
-    expect(s.B.timery.oczekujace().filter((t) => [5000, 30000, 60000].includes(t.ms)), 'bez zegara limitu odczytu po sukcesie').toEqual([]);
+    expect(vi.getTimerCount(), 'bez zegara limitu odczytu po sukcesie (te same zegary co przed pobraniem)').toBe(zegary0);
     const z0 = s.atrapa.zadania.length;
     await vi.advanceTimersByTimeAsync(61000);
     await cisza([s.A, s.B]);

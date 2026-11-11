@@ -21609,7 +21609,13 @@ zawsze odświeża widok); liczniki dla nich zadziałają, gdy zaczną przychodzi
 **Czerwone na bazie** (`origin/audyt` `403e80b7` z testami tego PR): 11 — L1–L5 i W1 (działanie), L7–L9 (strażniki),
 D36 i D37. Zielone z natury: L1k, L6, W1k, K43 (narzędzie testowe).
 
-**Mutanty.** @@MUTANTY@@
+**Mutanty.** 15 mutantów, 15 zabitych. Testy działania zabijają 12: `Btr_json` bez limitu, health, drenaż stronami,
+`Yt`, `Bt` i `/status` (gałąź zarejestrowana) bez limitu treści, limit bez przerwania żądania (L1, L3: połączenie
+zostaje), zegar limitu bez czyszczenia po sukcesie (L6: zegar wisi minutę), limit strony 6 s zamiast 60 s (L1k), `Ft`
+bez `updatedSnapshotCount`, bez `addedSnapshotCount` i z `mergedPatientCount` (W1, W1k). Strażnik źródła zabija 3:
+`/status` w gałęzi urządzenia niezarejestrowanego bez limitu (L9; ten sam odczyt co gałąź zarejestrowana z L3) oraz
+brak licznika listy w `wt` i licznika Kosza w `Bdz_czyZmiana` (D36, D37, L7) — te rodzaje zmian przychodzą dziś
+szybką synchronizacją dopiero z dziennikiem.
 
 **Kontrola granicy synchronizacji.** `tools/check_clinical_workspace_sync_boundary.mjs` i
 `runtime/clinical-workspace-sync/manifest.json`: przeliczone skróty obrazu bazowego i zintegrowanego obu plików
