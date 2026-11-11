@@ -253,13 +253,14 @@ function Bpw_dren(a,r,i,t,kto,Bdz_w){if(Bpw_inneKonto(t,kto))return;var Bdz_s=Bp
    albo {ok:false, powod, kod?, http?, retryAfterMs?}. Bez zadania: zle wejscie ('argument'), wylaczony dziennik
    ('wylaczone'), trwajace wysylanie w tym dokumencie ('w-locie'), pauza po 429 ze wspolnego klucza
    vilda-sync-rl-until-v1 ('pauza', RATE_LIMITED), zablokowany sejf ('zablokowany'), slot niezarejestrowany
-   ('niezarejestrowany'). Limit 30 s takze na tresc odpowiedzi (Btr_json). Zmiana sesji (blokada albo inne konto) przed
+   ('niezarejestrowany'), trasa formatu klinicznego inna niz legacy ('format', przed tozsamoscia i zadaniem, jak inne
+   operacje synchronizacji). Limit 30 s takze na tresc odpowiedzi (Btr_json). Zmiana sesji (blokada albo inne konto) przed
    wyslaniem albo w trakcie: 'sesja' bez skutkow ubocznych. Odpowiedzi: 200 (ksztalt sprawdzony, inaczej 'odpowiedz');
    429 - odstep z Retry-After albo retryAfterSeconds (1-300 s, jak Bdz_odstep429) do vilda-sync-rl-until-v1 (najdalszy
    termin wygrywa; ten sam klucz pauzy co pelna wysylka); 401 - stan slotu wyczyszczony jak przy innych 401
    (AUTH_FAILED); 404 - zdarzenia wylaczone na serwerze: "events" zdjete z pamieci health tej strony (wlacznik zamkniety
    do nastepnego health); 413, 415, 400 (kod z ciala), 507 log_full, 5xx; siec i TIMEOUT; odmowa formatu klinicznego
-   'format'. ts z odpowiedzi 200 rozni sie od Date.now() o wiecej niz 60 s: vilda:sync-clock-skew (Qcs) ze zrodlem
+   'format'; nieoczekiwany wyjatek 'blad'. ts z odpowiedzi 200 rozni sie od Date.now() o wiecej niz 60 s: vilda:sync-clock-skew (Qcs) ze zrodlem
    'server'. Bez onSyncStart/Complete/Error i bez sladow: zdecyduje nadawca (E2-PR4d), on tez sprawdza wlaczona
    synchronizacje. Tabela: ALGORITHMS P-SYNC-ZDARZENIA. */
 var Bze_KLUCZ = 'vilda-event-log-v1', Bze_RL_KLUCZ = 'vilda-sync-rl-until-v1';
@@ -339,6 +340,7 @@ async function Bze_pushEvents(events) {
   if (Bze_wLocie) return Bze_odmowa('w-locie');
   var pz = Bze_pauzaMs();
   if (pz > 0) return Bze_odmowa('pauza', 'RATE_LIMITED', { retryAfterMs: pz });
+  if (PatientClinicalRouteFailure('sync-events')) return Bze_odmowa('format');
   Bze_wLocie = !0;
   try {
     var t, kto, mat;
@@ -383,6 +385,8 @@ async function Bze_pushEvents(events) {
     if (s === 507) return Bze_odmowa('odmowa', 'LOG_FULL', { http: s });
     if (s >= 500) return Bze_odmowa('odmowa', 'SERVER', { http: s });
     return Bze_odmowa('odmowa', 'HTTP', { http: s });
+  } catch (x) {
+    return Bze_odmowa(x && x.patientClinicalUnavailable ? 'format' : 'blad');
   } finally { Bze_wLocie = !1; }
 }
 /* P-SYNC-STRONY (E2-PR1; plan docs/SYNC_PRZYROSTOWA_PLAN.md 3.3 "drainChanges"; decyzje wlasciciela 2026-10-29 nr 1 i 2):

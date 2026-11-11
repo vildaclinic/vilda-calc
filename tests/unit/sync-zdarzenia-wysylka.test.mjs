@@ -10,7 +10,7 @@
 // PE4 401 → AUTH_FAILED i stan slotu wyczyszczony; PE5 404 → włącznik zamknięty do następnego health; PE6 pozostałe
 // statusy i sieć; PE7 treść wisi → TIMEOUT po 30 s; PE8 różnica zegara; PE9 jedno w locie; PE10 niezarejestrowany;
 // PE11 złe wejście; PE12 sesja; PE13 tabela włącznika (bez „events” — bez odczytu magazynu); PE14 bramka sejfu;
-// PE15 strażnik: nikt w produkcie nie woła pushEvents.
+// PE15 strażnik: nikt w produkcie nie woła pushEvents; PE16 trasa formatu klinicznego inna niż legacy → format.
 import fs from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -264,6 +264,28 @@ describe('P-SYNC-ZDARZENIA — pushEvents (POST /events)', () => {
     await s.A.odblokuj();
     await cisza([s.A]);
     expect((await s.A.sync.pushEvents([zdarzenie()])).ok).toBe(true);
+  });
+});
+
+describe('P-SYNC-ZDARZENIA — format kliniczny', () => {
+  it('PE16 [czerwony na bazie]: trasa formatu klinicznego inna niż legacy → format, przed tożsamością i bez żądania; funkcja nie rzuca', async () => {
+    const s = await swiat();
+    const v = s.A.win.VildaVault;
+    const material = vi.spyOn(v, 'getSyncMaterial');
+    const trasa = v.selectPatientClinicalRoute;
+    v.selectPatientClinicalRoute = () => ({ mode: 'protected-unavailable', code: 'CLINICAL_AUTHORITY_STALE', writeAvailable: false });
+    try {
+      expect(await s.A.sync.pushEvents([zdarzenie()])).toEqual({ ok: false, powod: 'format' });
+    } finally { v.selectPatientClinicalRoute = trasa; }
+    expect(material).not.toHaveBeenCalled();
+    expect(zEvents(s)).toEqual([]);
+    // Trasa zmienia się po pierwszym sprawdzeniu (odczyt stanu slotu odmawia): wynik format, nie odrzucona obietnica.
+    v.selectPatientClinicalRoute = (op) => (op === 'sync-events' ? { mode: 'legacy', writeAvailable: false } : { mode: 'protected-unavailable', code: 'CLINICAL_AUTHORITY_STALE', writeAvailable: false });
+    try {
+      expect(await s.A.sync.pushEvents([zdarzenie()])).toEqual({ ok: false, powod: 'format' });
+    } finally { v.selectPatientClinicalRoute = trasa; }
+    expect(zEvents(s)).toEqual([]);
+    expect((await s.A.sync.pushEvents([zdarzenie()])).ok, 'trasa legacy — wysyłka działa').toBe(true);
   });
 });
 
