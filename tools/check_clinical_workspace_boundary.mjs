@@ -14,8 +14,9 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 // correction or pin of a visit from the old card), E2-PR3c3 (patient note tombstone revision and earliest creation
 // time in the synchronization merge), E2-PR3c4 (a patient note or care plan follows the card that exists after a
 // patient merge), E2-PR3c5 (a version changed after a valid trash entry and pruned later invalidates that entry)
-// and E2-PR4b (the event-log gate also opens with the synchronization switch; docs/clinical/ALGORITHMS.md).
-const BASE = '460be048e931da654384beffa3a3f7b27cc4354b8db6008e9bec260bf3c46bca';
+// E2-PR4b (the event-log gate also opens with the synchronization switch) and E2-PR4c (the last merge time is
+// recorded when the event drain reaches the head; docs/clinical/ALGORITHMS.md).
+const BASE = '33e9d0ec4d8987199321bed72d90c2fc4eb55796b405c3f891559ff5d5f5ad96';
 const START = '/* BEGIN VILDA CLINICAL WORKSPACE NATIVE V1 */\n';
 const END = '/* END VILDA CLINICAL WORKSPACE NATIVE V1 */\n';
 const digest = value => createHash('sha256').update(value).digest('hex');

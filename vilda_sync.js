@@ -240,7 +240,7 @@ function Y(t){var PatientClinicalRejection=PatientClinicalRejected("sync-pull");
 function Bpw_konto(t){if(!t||typeof t.getCurrentUser!="function")return void 0;try{var k=t.getCurrentUser();return k&&k.userId||null}catch(x){return null}}
 function Bpw_inneKonto(t,kto){return Bpw_konto(t)!==kto}
 function Bpw_przerwane(){return u("VildaSync: pobieranie przerwane \u2014 w trakcie zablokowano sejf albo prze\u0142\u0105czono konto. Nic nie scalono.","SESSION_CHANGED")}
-function Bpw_sejfKonta(t,kto){if(!t||typeof t.applyEncryptedDelta!="function")return t;return{isUnlocked:function(){return!(typeof t.isUnlocked=="function"&&!t.isUnlocked())&&!Bpw_inneKonto(t,kto)},applyEncryptedDelta:function(x){return t.applyEncryptedDelta(x)}}}
+function Bpw_sejfKonta(t,kto){if(!t||typeof t.applyEncryptedDelta!="function")return t;return{isUnlocked:function(){return!(typeof t.isUnlocked=="function"&&!t.isUnlocked())&&!Bpw_inneKonto(t,kto)},applyEncryptedDelta:function(x){return t.applyEncryptedDelta(x)},zdarzenia:t._eventLog||null}}
 function Bpw_dren(a,r,i,t,kto,Bdz_w){if(Bpw_inneKonto(t,kto))return;var Bdz_s=Bpw_sejfKonta(t,kto),Bdz_p=Bdz_wlaczone()?Bdz_B(a,r,i,Bdz_s):B(a,r,i,Bdz_s).catch(function(){});Bdz_w&&typeof Bdz_w=="object"&&Bdz_wyniki.set(Bdz_w,Bdz_p)}
 /* P-SYNC-ZDARZENIA (E2-PR4b; plan docs/SYNC_PRZYROSTOWA_PLAN.md 3.2 "Petla wysylki", wiersz 8b): wysylka zdarzen
    dziennika (POST /v1/slots/<slot>/events) i wlacznik dziennika. USPIONE: kod produkcyjny nie wola pushEvents (nadawca
@@ -367,6 +367,7 @@ async function Bze_pushEvents(events) {
       var w = Bze_odpowiedz(c, p.eidy);
       if (!w) return Bze_odmowa('odpowiedz', 'INVALID_RESPONSE', { http: s });
       Bze_zegar(w.ts);
+      Bzd_wlasneDopisz(slot, w.accepted);
       return w;
     }
     if (s === 429) {
@@ -388,6 +389,253 @@ async function Bze_pushEvents(events) {
   } catch (x) {
     return Bze_odmowa(x && x.patientClinicalUnavailable ? 'format' : 'blad');
   } finally { Bze_wLocie = !1; }
+}
+/* P-SYNC-DRENAZ-ZDARZEN (E2-PR4c; plan docs/SYNC_PRZYROSTOWA_PLAN.md 3.3 "drainChanges" kroki 2-5, wiersz 8c; decyzje
+   wlasciciela 2026-11-11 nr 5 i 6): drenaz zdarzen dziennika z kwarantanna. USPIONE: wylacznie przy wlaczonym dzienniku
+   (Bze_isEventLogEnabled() === true na starcie drenazu stronami); bez dziennika Bdz_drenaz, Bdz_B, Bpw_pull i pushEvents
+   jak dotad, bez zadnego odczytu i zapisu z tego bloku poza odczytem wlacznika.
+   Wiersz z trescia: eid z pierscienia wlasnych zdarzen (ostatnie 500 przyjete przez pushEvents w tym slocie,
+   vilda-sync-own-eids-v1:<slot>) — pominiety bez scalenia, kursor idzie. Inny — applyEncryptedEvent sejfu przez opakowanie
+   konta (straznik formatu klinicznego jak w Bdz_zastosuj): applied — zastosowane; unreadable — quarantinePut (wiersz
+   /changes: seq, eid, payload; appVersion z SW_VERSION — wiadomosc VILDA_WERSJA przez MessageChannel, raz na dokument,
+   2 s, jak P-WERSJA-APLIKACJI; bez odpowiedzi null), kursor idzie; nieudany zapis — stop 'kwarantanna', kursor przed
+   wierszem; locked i session-changed — stop 'blokada'; busy — stop 'busy' (kody CARE_* — onSyncError jak w wt);
+   apply-error — stop 'zastosowanie', kursor przed wierszem, licznik prob w pamieci dokumentu (decyzja 6 z 2026-10-29).
+   Kod SYNC_DB_SCHEMA z dowolnej operacji magazynu: do konca przebiegu bez operacji na bazie kolejki.
+   Ponowienie kwarantanny (raz na dokument i slot, przed pierwszym drenazem): wiersz wlasnego eid — usuniety; wiersz
+   innego slotu (po rotacji tozsamosci) — jedna proba, potem usuniety; wiersz biezacego slotu z wersja inna niz biezaca
+   (znana) — proba rosnaco po seq: applied — usuniety, drenaz rusza od jego numeru (sufiks; kursor tylko w gore), nadal
+   nieczytelny — quarantinePut z nowa wersja; inny wynik konczy ponowienia (nastepny drenaz od nowa).
+   requiresBase: kursor oldestSeq - 1 i drenaz dalej; cursorAhead: kursor headSeq; dziura: przy pierwszym wykryciu tej
+   dziury — kazde z nich zapamietuje wymuszone pelne pobranie (tylko pamiec): nastepne Bpw_pull pobiera GET /blob bez
+   If-None-Match, znacznik zdjety po scaleniu albo 404 (decyzja 6 z 2026-11-11; przeskok dziury przy trzecim drenazu
+   zostaje). Na koncu drenazu przy otwartym sejfie: appliedUpTo := kursor albo min(kwarantanna slotu) - 1
+   (vilda-sync-applied-v1:<slot>, zapis tylko przy zmianie); stop 'head' — markSyncCaughtUp sejfu.
+   Jeden drenaz po trwajacym: drugie pobranie tego samego slotu w trakcie drenazu dostaje obietnice jednego drenazu po
+   biezacym (kolejne prosby dolaczaja), wiec czekajNaDrenaz siega headSeq z chwili wywolania.
+   Slady P-SYNC-SLAD (VildaAuditLog przy odblokowanym sejfie) wylacznie z resultSummary albo liczb: sync.event.unreadable
+   (nowy wpis kwarantanny), sync.event.error (pierwsza proba bledu zastosowania), sync.quarantine.failed (powod i kod;
+   raz na wiersz i kod), sync.gap (od, do, proby). Operacje kolejki i kwarantanny sprawdzaja sesje tak jak zapis karty
+   (P-SESJA-ZAPISU): zmiana sesji w trakcie konczy operacje bez zapisu. Tabela: ALGORITHMS P-SYNC-DRENAZ-ZDARZEN. */
+var Bzd_K_WLASNE = 'vilda-sync-own-eids-v1:', Bzd_K_APPLIED = 'vilda-sync-applied-v1:', Bzd_WLASNE_MAX = 500;
+var Bzd_WERSJA_MS = 2000, Bzd_WERSJA_WZOR = /^[0-9A-Za-z.+-]{1,32}$/;
+var Bzd_wersja = null;                       // obietnica wersji SW (raz na dokument)
+var Bzd_sprawdzone = Object.create(null);    // slot -> ponowienie kwarantanny wykonane w tym dokumencie
+var Bzd_wymus = Object.create(null);         // slot -> powod wymuszonego pelnego pobrania ('base', 'ahead', 'dziura')
+var Bzd_proby = Object.create(null);         // slot -> { seq, proby } bledu zastosowania
+var Bzd_ostBlad = Object.create(null);       // slot -> 'seq:kod' ostatniego sladu nieudanego zapisu kwarantanny
+var Bzd_stan = new WeakMap();                // wynik drenazu -> { wlasne: Set, bezBazy }
+var Bzd_nastepny = null, Bzd_nastepnySlot = null, Bzd_nastepnyArg = null; // jeden drenaz po trwajacym
+function Bzd_wlasneCzytaj(t) {
+  try {
+    var s = o.localStorage && o.localStorage.getItem(Bzd_K_WLASNE + t), l = s ? JSON.parse(s) : [];
+    return new Set(Array.isArray(l) ? l.filter(function (x) { return typeof x == 'string' && Bze_EID.test(x); }) : []);
+  } catch (x) { return new Set(); }
+}
+/* pushEvents przy 200 (tylko z dziennikiem): eid przyjetych (takze dup) na koniec pierscienia, bez powtorzen, 500 ostatnich. */
+function Bzd_wlasneDopisz(t, przyjete) {
+  try {
+    if (!o.localStorage || typeof t != 'string' || !t) return;
+    var s = o.localStorage.getItem(Bzd_K_WLASNE + t), l = [];
+    try { l = s ? JSON.parse(s) : []; } catch (x) { l = []; }
+    if (!Array.isArray(l)) l = [];
+    var jest = new Set(l);
+    for (var i = 0; i < przyjete.length; i++) {
+      var e = przyjete[i] && przyjete[i].eid;
+      if (typeof e == 'string' && Bze_EID.test(e) && !jest.has(e)) { l.push(e); jest.add(e); }
+    }
+    if (l.length > Bzd_WLASNE_MAX) l = l.slice(l.length - Bzd_WLASNE_MAX);
+    o.localStorage.setItem(Bzd_K_WLASNE + t, JSON.stringify(l));
+  } catch (x) { /* bez pierscienia: wlasne zdarzenia scalane jak cudze (scalanie idempotentne) */ }
+}
+function Bzd_zapytajWersje() {
+  if (Bzd_wersja) return Bzd_wersja;
+  Bzd_wersja = new Promise(function (gotowe) {
+    var kanal = null, zegar = null, koniec = !1;
+    function zakoncz(v) {
+      if (koniec) return;
+      koniec = !0;
+      if (zegar !== null) try { o.clearTimeout(zegar); } catch (x) {}
+      try { kanal.port1.onmessage = null; kanal.port1.close(); } catch (x) {}
+      gotowe(v);
+    }
+    try {
+      var n = o.navigator, sw = n && n.serviceWorker && n.serviceWorker.controller;
+      if (!sw || typeof sw.postMessage != 'function' || typeof o.MessageChannel != 'function') { zakoncz(null); return; }
+      kanal = new o.MessageChannel();
+      kanal.port1.onmessage = function (ev) {
+        var d = ev && ev.data;
+        zakoncz(d && d.type === 'VILDA_WERSJA' && typeof d.wersja == 'string' && Bzd_WERSJA_WZOR.test(d.wersja) ? d.wersja : null);
+      };
+      zegar = o.setTimeout(function () { zakoncz(null); }, Bzd_WERSJA_MS);
+      sw.postMessage({ type: 'VILDA_WERSJA' }, [kanal.port2]);
+    } catch (x) { zakoncz(null); }
+  });
+  return Bzd_wersja;
+}
+function Bzd_slad(typ, dane) {
+  try {
+    var v = o.VildaVault, a = o.VildaAuditLog;
+    if (!v || typeof v.isUnlocked != 'function' || !v.isUnlocked() || !a || typeof a.log != 'function') return;
+    Promise.resolve(a.log(typ, dane)).then(null, function () {});
+  } catch (x) {}
+}
+function Bzd_skrot(r, wynik) {
+  try { return r.zdarzenia.resultSummary(wynik); } catch (x) { return { status: 'unknown' }; }
+}
+/* Wynik operacji magazynu: SYNC_DB_SCHEMA — do konca przebiegu bez operacji na bazie. */
+function Bzd_baza(w, x) {
+  var st = Bzd_stan.get(w);
+  if (st && x && x.ok === false && x.code === 'SYNC_DB_SCHEMA') st.bezBazy = !0;
+  return !!(x && x.ok === !0);
+}
+function Bzd_bezBazy(w) { var st = Bzd_stan.get(w); return !!(st && st.bezBazy); }
+function Bzd_wymusPobranie(t, w, powod) { Bzd_wymus[t] = powod; w.wymus = powod; }
+function Bzd_wymusCzytaj(t) { return typeof t == 'string' && Bzd_wymus[t] ? Bzd_wymus[t] : null; }
+function Bzd_wymusZdejmij(t) { if (typeof t == 'string') delete Bzd_wymus[t]; }
+function Bzd_czyWlasny(w, d) { var st = Bzd_stan.get(w); return !!(st && typeof d.eid == 'string' && st.wlasne.has(d.eid)); }
+/* Zastosowanie wiersza z trescia przy dzienniku: 'zmiana' | 'ok' | 'nieczytelne' | 'kwarantanna' | 'zastosowanie' |
+   'busy' | 'blokada'. Straznik formatu klinicznego przed i po wywolaniu (jego blad leci dalej: stop 'format'). */
+async function Bzd_zastosuj(t, d, r, w) {
+  if (!Bdz_otwarty(r)) return 'blokada';
+  var L = r.zdarzenia, x;
+  if (!L || typeof L.applyEncryptedEvent != 'function') return 'blokada';
+  PatientClinicalRequireLegacy('apply-sync-delta');
+  x = await L.applyEncryptedEvent(d.payload);
+  PatientClinicalRequireLegacy('apply-sync-delta');
+  if (!Bdz_otwarty(r)) return 'blokada';
+  var st = x && x.status, pr = Bzd_proby[t];
+  if (st !== 'apply-error' && pr && pr.seq === d.seq) delete Bzd_proby[t];
+  if (st === 'applied') return Bdz_czyZmiana(x.result) ? 'zmiana' : 'ok';
+  if (st === 'unreadable') return await Bzd_doKwarantanny(t, d, x, r, w) ? 'nieczytelne' : 'kwarantanna';
+  if (st === 'busy') {
+    var kod = typeof x.code == 'string' ? x.code : '';
+    if (kod.indexOf('CARE_LINEAGE_') === 0 || kod.indexOf('CARE_FORMAT_') === 0) y(k, { operation: 'pull', error: u('VildaSync: scalenie zdarzenia odrzucone (' + kod + ').', kod) });
+    return 'busy';
+  }
+  if (st === 'apply-error') {
+    var n = pr && pr.seq === d.seq ? pr.proby + 1 : 1;
+    Bzd_proby[t] = { seq: d.seq, proby: n };
+    w.proby = n;
+    w.kod = typeof x.code == 'string' ? x.code : null;
+    if (n === 1) Bzd_slad('sync.event.error', Bzd_skrot(r, x));
+    return 'zastosowanie';
+  }
+  return 'blokada'; // locked, session-changed i nieznany status: bez zapisu kursora z tej strony
+}
+async function Bzd_doKwarantanny(t, d, x, r, w) {
+  var q;
+  if (Bzd_bezBazy(w)) q = { ok: !1, powod: 'blad', code: 'SYNC_DB_SCHEMA' };
+  else {
+    var wersja = await Bzd_zapytajWersje();
+    if (!Bdz_otwarty(r)) return !1;
+    q = await r.zdarzenia.quarantinePut({ seq: d.seq, eid: d.eid, payload: d.payload }, x, { slotId: t, appVersion: wersja });
+    Bzd_baza(w, q);
+  }
+  if (!Bdz_otwarty(r)) return !1;
+  if (q && q.ok === !0) {
+    delete Bzd_ostBlad[t];
+    if (q.nowy === !0) { w.kwarantanna += 1; Bzd_slad('sync.event.unreadable', Bzd_skrot(r, x)); }
+    return !0;
+  }
+  var powod = q && typeof q.powod == 'string' ? q.powod : 'blad', code = q && typeof q.code == 'string' ? q.code : null;
+  w.kod = code;
+  var klucz = d.seq + ':' + powod + ':' + code;
+  if (Bzd_ostBlad[t] !== klucz) { Bzd_ostBlad[t] = klucz; Bzd_slad('sync.quarantine.failed', code ? { powod: powod, code: code } : { powod: powod }); }
+  return !1;
+}
+function Bzd_koperta(q) {
+  var env = { iv: q.iv, data: q.data };
+  if (q.z !== undefined) env.z = q.z;
+  if (q.aad !== undefined) env.aad = q.aad;
+  return env;
+}
+/* Ponowienie kwarantanny (raz na dokument i slot). Wynik: najmniejszy seq biezacego slotu po udanym ponowieniu
+   (start sufiksu) albo null. */
+async function Bzd_ponow(t, r, w) {
+  if (Bzd_sprawdzone[t]) return null;
+  var L = r.zdarzenia, st = Bzd_stan.get(w);
+  var lista = await L.quarantineList();
+  if (!Bdz_otwarty(r) || !Bzd_baza(w, lista)) return null;
+  var wiersze = (Array.isArray(lista.wiersze) ? lista.wiersze : []).filter(function (q) {
+    return q && typeof q.slotId == 'string' && Number.isSafeInteger(q.seq);
+  }).sort(function (a, b) { return a.slotId < b.slotId ? -1 : a.slotId > b.slotId ? 1 : a.seq - b.seq; });
+  var wersja = wiersze.length ? await Bzd_zapytajWersje() : null, od = null;
+  if (!Bdz_otwarty(r)) return null;
+  for (var i = 0; i < wiersze.length; i++) {
+    var q = wiersze[i], biez = q.slotId === t;
+    if (typeof q.eid == 'string' && st.wlasne.has(q.eid)) {
+      if (!Bzd_baza(w, await L.quarantineRelease([q.seq], { slotId: q.slotId })) || !Bdz_otwarty(r)) return od;
+      w.wlasneWKwarantannie += 1;
+      continue;
+    }
+    if (biez && (wersja === null || q.appVersion === wersja)) continue;
+    var env = Bzd_koperta(q);
+    PatientClinicalRequireLegacy('apply-sync-delta');
+    var x = await L.applyEncryptedEvent(env);
+    PatientClinicalRequireLegacy('apply-sync-delta');
+    if (!Bdz_otwarty(r)) return od;
+    var s = x && x.status;
+    if (s === 'applied' && Bdz_czyZmiana(x.result)) w.zmiana = !0;
+    if (!biez) {
+      if (s !== 'applied' && s !== 'unreadable' && s !== 'apply-error') return od;
+      if (!Bzd_baza(w, await L.quarantineRelease([q.seq], { slotId: q.slotId })) || !Bdz_otwarty(r)) return od;
+      w.innySlot += 1;
+      continue;
+    }
+    if (s === 'applied') {
+      if (!Bzd_baza(w, await L.quarantineRelease([q.seq], { slotId: t })) || !Bdz_otwarty(r)) return od;
+      w.ponowione += 1;
+      if (od === null || q.seq < od) od = q.seq;
+      continue;
+    }
+    if (s !== 'unreadable') return od;
+    if (!Bzd_baza(w, await L.quarantinePut({ seq: q.seq, eid: q.eid, payload: env }, x, { slotId: t, appVersion: wersja })) || !Bdz_otwarty(r)) return od;
+  }
+  Bzd_sprawdzone[t] = !0;
+  return od;
+}
+/* Koniec drenazu przy otwartym sejfie: appliedUpTo, a przy stop 'head' — markSyncCaughtUp. */
+async function Bzd_poDrenazu(t, r, w) {
+  if (!Bdz_otwarty(r) || w.stop === 'format') return;
+  var L = r.zdarzenia, v = bt(t);
+  if (!Bzd_bezBazy(w)) {
+    var mn = await L.quarantineMinSeq({ slotId: t });
+    if (!Bdz_otwarty(r)) return;
+    if (Bzd_baza(w, mn)) {
+      if (Number.isSafeInteger(mn.seq) && mn.seq - 1 < v) v = mn.seq - 1;
+      w.appliedUpTo = v;
+      try {
+        if (o.localStorage && o.localStorage.getItem(Bzd_K_APPLIED + t) !== String(v)) o.localStorage.setItem(Bzd_K_APPLIED + t, String(v));
+      } catch (x) {}
+    }
+  }
+  if (w.stop === 'head' && typeof L.markSyncCaughtUp == 'function') await L.markSyncCaughtUp(); // metadane konta, nie baza kolejki
+}
+/* Drenaz stronami przy dzienniku: pola wyniku, pierscien, ponowienie kwarantanny (sufiks), Bdz_drenaz, koniec. */
+async function Bzd_drenaz(t, e, a, r, n, w) {
+  w.dziennik = !0;
+  w.wlasne = 0; w.kwarantanna = 0; w.ponowione = 0; w.innySlot = 0; w.wlasneWKwarantannie = 0;
+  w.wymus = null; w.proby = null; w.appliedUpTo = null;
+  Bzd_stan.set(w, { wlasne: Bzd_wlasneCzytaj(t), bezBazy: !1 });
+  if (!r.zdarzenia) { w.stop = 'blokada'; return; }
+  var od = await Bzd_ponow(t, r, w);
+  if (!Bdz_otwarty(r)) { w.stop = 'blokada'; return; }
+  await Bdz_drenaz(t, e, a, r, od !== null && od < n ? od : n, w);
+  await Bzd_poDrenazu(t, r, w);
+}
+/* Drugie pobranie tego samego slotu w trakcie drenazu (dziennik): jeden drenaz po biezacym, z argumentami ostatniej prosby. */
+function Bzd_poTrwajacym(t, e, a, r) {
+  Bzd_nastepnyArg = [t, e, a, r];
+  if (Bzd_nastepny && Bzd_nastepnySlot === t) return Bzd_nastepny;
+  var p = Bdz_trwa.then(function () {
+    var g = Bzd_nastepnyArg;
+    if (Bzd_nastepny === p) { Bzd_nastepny = null; Bzd_nastepnySlot = null; Bzd_nastepnyArg = null; }
+    return g ? Bdz_B(g[0], g[1], g[2], g[3]) : null;
+  });
+  Bzd_nastepny = p;
+  Bzd_nastepnySlot = t;
+  return p;
 }
 /* P-SYNC-STRONY (E2-PR1; plan docs/SYNC_PRZYROSTOWA_PLAN.md 3.3 "drainChanges"; decyzje wlasciciela 2026-10-29 nr 1 i 2):
    dziennik zmian stronami (/changes?since=N&limit=200, petla po truncated, ciaglosc seq) zamiast jednej strony legacy
@@ -623,13 +871,16 @@ async function Bdz_drenaz(t, e, a, r, n, w) {
       PatientClinicalRequireLegacy('sync-cursor');
       Kt(t, c.headSeq);
       w.stop = 'ahead';
+      if (w.dziennik === true) Bzd_wymusPobranie(t, w, 'ahead');
       return;
     }
     if (c.requiresBase === true) {
       if (!Number.isSafeInteger(c.oldestSeq) || c.oldestSeq - 1 <= n) { delete Bdz_api[a]; w.stop = 'ksztalt'; return; }
       Bdz_kursorWGore(t, c.oldestSeq - 1); // nigdy z nextSince: pusta strona po /wipe ma nextSince = since
-      w.stop = 'base';
-      return;
+      if (w.dziennik !== true) { w.stop = 'base'; return; }
+      Bzd_wymusPobranie(t, w, 'base'); // P-SYNC-DRENAZ-ZDARZEN: drenaz dalej od oldestSeq - 1
+      n = c.oldestSeq - 1;
+      continue;
     }
     // zm: zmiana z wierszy tej strony; do w.zmiana dopiero po zapisie kursora (albo przy blokadzie, jak dotad), wiec
     // stop 'format' nie wysyla vilda:sync-merged za te strone (jak Yt, gdy wt albo straznik kursora rzuca)
@@ -642,14 +893,16 @@ async function Bdz_drenaz(t, e, a, r, n, w) {
         var dz = Bdz_dziuraCzytaj(t), ta = !!dz && dz.od === oczek, proby = ta ? dz.proby + 1 : 1;
         Bdz_dziuraZapisz(t, { od: oczek, do: s - 1, proby: proby, pierwszaISO: ta && dz.pierwszaISO ? dz.pierwszaISO : new Date().toISOString() });
         w.dziura = { od: oczek, do: s - 1, proby: proby };
+        if (w.dziennik === true) { Bzd_slad('sync.gap', { od: oczek, do: s - 1, proby: proby }); if (proby === 1) Bzd_wymusPobranie(t, w, 'dziura'); }
         if (proby < Bdz_DZIURA_PROBY) { sw = 'dziura'; break; }
         w.przeskok = { od: oczek, do: s - 1 }; // trzeci drenaz z ta sama dziura: kursor nad brakujacymi numerami
         ost = s - 1; // przy busy na tym wierszu kursor stanie nad dziura (blokada i 'format': bez zapisu z tej strony)
       }
       w.wierszy += 1;
       if (!d.payload || d.gap === true) { w.zaslepki += 1; ost = s; oczek = s + 1; continue; } // jak wt: bez scalenia
-      var z = await Bdz_zastosuj(d, r);
-      if (z === 'busy' || z === 'blokada') { sw = z; break; }
+      if (w.dziennik === true && Bzd_czyWlasny(w, d)) { w.wlasne += 1; ost = s; oczek = s + 1; continue; } // P-SYNC-DRENAZ-ZDARZEN
+      var z = w.dziennik === true ? await Bzd_zastosuj(t, d, r, w) : await Bdz_zastosuj(d, r);
+      if (z === 'busy' || z === 'blokada' || z === 'kwarantanna' || z === 'zastosowanie') { sw = z; break; }
       if (z === 'zmiana') zm = true;
       if (z === 'zmiana' || z === 'ok') w.zastosowane += 1;
       else if (z === 'nieczytelne') w.nieczytelne += 1;
@@ -691,7 +944,8 @@ async function Bdz_wykonaj(t, e, a, r) {
         else { w.stop = 'legacy'; await Yt(t, e, a, r); }
       } else {
         w = Bdz_wynik('strony', n);
-        await Bdz_drenaz(t, e, a, r, n, w); // sesja sprawdzana na poczatku petli, przed pierwszym zadaniem
+        if (Bze_isEventLogEnabled()) await Bzd_drenaz(t, e, a, r, n, w); // P-SYNC-DRENAZ-ZDARZEN (uspione)
+        else await Bdz_drenaz(t, e, a, r, n, w); // sesja sprawdzana na poczatku petli, przed pierwszym zadaniem
       }
     }
   } catch (x) {
@@ -712,7 +966,7 @@ async function Bdz_wykonaj(t, e, a, r) {
    vilda:sync-merged po zapisie statusu i zwolnieniu znacznikow (sluchacz widzi getDrainStatus z trwa:false), raz na
    drenaz i nie w nowej sesji; w trybie legacy wysyla je Yt, przed zapisem statusu, jak dotad. */
 function Bdz_B(t, e, a, r) {
-  if (Bdz_trwa) return Bdz_trwaSlot === t ? Bdz_trwa : Promise.resolve(null);
+  if (Bdz_trwa) return Bdz_trwaSlot !== t ? Promise.resolve(null) : Bze_isEventLogEnabled() ? Bzd_poTrwajacym(t, e, a, r) : Bdz_trwa;
   if (at) return Promise.resolve(null);
   at = !0;
   var p = Bdz_wykonaj(t, e, a, r).then(null, function () { return null; }).then(function (w) {
@@ -777,7 +1031,7 @@ function Bws_poRotacji() {
     }
   } catch (x) {}
 }
-async function Bpw_pull(){PatientClinicalRequireLegacy("sync-pull");var CareReplay=null,CareReplayed=false;var t=I(),Bpw_kto=Bpw_konto(t);y(L,{operation:"pull"});var e;try{e=await t.getSyncMaterial()}catch(E){throw y(k,{operation:"pull",error:E}),E}PatientClinicalRequireLegacy("sync-pull");var a=e.slotId,r=e.authToken,n=e.syncEncKey,i=j(),c=m(a);K()&&M==null&&(M=Pt(a,t));try{Brv_stop(a);if(c.registered){var S=await f(i+"/v1/slots/"+a+"/status",{method:"GET",headers:{Authorization:"Bearer "+r}},Mt,Mt);if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();PatientClinicalRequireLegacy("sync-pull");if(S.status===401)throw C(a),u("VildaSync: b\u0142\u0105d uwierzytelnienia przy pull. Slot m\xF3g\u0142 zosta\u0107 usuni\u0119ty.","AUTH_FAILED");if(!S.ok)throw u("VildaSync: b\u0142\u0105d odczytu statusu ("+S.status+").","STATUS_FAILED",{httpStatus:S.status});var w=await Btr_json(S);if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();PatientClinicalRequireLegacy("sync-pull")}else{var l=await f(i+"/v1/slots/"+a+"/status",{method:"GET",headers:{Authorization:"Bearer "+r}},Mt,Mt);if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();PatientClinicalRequireLegacy("sync-pull");if(!l.ok){P();var d={action:"not-registered",httpStatus:l.status};return y(p,{operation:"pull",result:d}),d}var s=await Btr_json(l);if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();PatientClinicalRequireLegacy("sync-pull");c.registered=!0,c.localEtag=null,M=null,vt(a),St(a),T(a,c);var w=s}var h=K()?M:c.localEtag;CareReplay=h&&h===w.etag?await CareSyncReplay(t,a,w.etag):null;PatientClinicalRequireLegacy("sync-pull");if(h&&h===w.etag&&!CareReplay){var D=await Vt();if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();PatientClinicalRequireLegacy("sync-pull");if(D)c.localEtag=null,M=null,vt(a),St(a);else{P();var _={action:"up-to-date",etag:w.etag};return Bpw_dren(a,r,i,t,Bpw_kto,_),y(p,{operation:"pull",result:_}),_}}var g={Authorization:"Bearer "+r},v=CareReplay?null:K()?M:c.localEtag;v&&(g["If-None-Match"]='"'+v+'"');var A=await f(i+"/v1/slots/"+a+"/blob",{method:"GET",headers:g},Bgz_czas({byteLength:w&&typeof w.size=="number"?w.size:0}));if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();PatientClinicalRequireLegacy("sync-pull");if(A.status===304){P();var F={action:"up-to-date",etag:v};return Bpw_dren(a,r,i,t,Bpw_kto,F),y(p,{operation:"pull",result:F}),F}if(A.status===401)throw u("VildaSync: b\u0142\u0105d uwierzytelnienia przy pobieraniu bloba.","AUTH_FAILED");if(A.status===404){P();var H={action:"no-remote-blob"};return Bpw_dren(a,r,i,t,Bpw_kto,H),y(p,{operation:"pull",result:H}),H}if(!A.ok)throw u("VildaSync: b\u0142\u0105d pobierania danych ("+A.status+").","DOWNLOAD_FAILED",{httpStatus:A.status});var x=await Bnd_czytaj(A,w&&typeof w.size=="number"?w.size:0),W;PatientClinicalRequireLegacy("sync-pull");Bnd_zglos({phase:"decrypt"});try{W=await ut(x,n)}catch{throw u("VildaSync: b\u0142\u0105d odszyfrowania danych. Mo\u017Cliwa zmiana masterKey lub uszkodzenie danych.","DECRYPT_FAILED")}W=await Bgz_rozpakuj(W);var U;try{U=JSON.parse(new TextDecoder().decode(W))}catch{throw u("VildaSync: uszkodzone dane sync (nieprawid\u0142owy format JSON).","PARSE_FAILED")}if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();PatientClinicalRequireLegacy("sync-pull");PatientClinicalRequireLegacy("apply-sync-payload");var et=await t.mergeSyncPayload(U,{onProgress:function(E){try{typeof o.document<"u"&&o.document.dispatchEvent&&o.document.dispatchEvent(new CustomEvent("vilda:vault-merge-progress",{detail:E,bubbles:!1}))}catch{}}});PatientClinicalRequireLegacy("apply-sync-payload");var V=Lt(A.headers.get("ETag"))||w.etag;CareReplayed=true;c.localEtag=V,c.rawSize=W.byteLength,c.rawEtag=V,c.lastSyncAt=new Date().toISOString(),M=V,ft(a,V,t),T(a,c),P();var J={action:"merged",etag:V,mergeResult:et,staleDevice:et&&et.staleDevice||null};return Nv(J.staleDevice),Qcs(et&&et.clockSkew||null),Bpw_dren(a,r,i,t,Bpw_kto,J),y(p,{operation:"pull",result:J}),J}catch(E){/* P-SESJA-ZAPISU (przeglad 4, ADW4-3): blad pobrania po zalogowaniu innego konta albo blokadzie (np. /status 500, siec, limit czasu) — SESSION_CHANGED: nalezy do poprzedniej sesji. */var Bpw_e=Bpw_inneKonto(t,Bpw_kto)?Bpw_przerwane():E;throw y(k,{operation:"pull",error:Bpw_e}),Bpw_e}finally{CareSyncReplayDone(CareReplay,CareReplayed)}}async function Ht(){PatientClinicalRequireLegacy("sync-full");I(),y(L,{operation:"full"});try{var t=await Y(),e=await ht(),a={pull:t,push:e};PatientClinicalRequireLegacy("sync-full");return y(p,{operation:"full",result:a}),a}catch(r){throw y(k,{operation:"full",error:r}),r}}async function xt(){return WorkspaceSyncReadStatus(async function () {PatientClinicalRequireLegacy("sync-status");var t=I(),e=await t.getSyncMaterial();PatientClinicalRequireLegacy("sync-status");return m(e.slotId)});}async function Wt(){PatientClinicalRequireLegacy("sync-state-clear");var t=I(),e=await t.getSyncMaterial();PatientClinicalRequireLegacy("sync-state-clear");C(e.slotId)}async function Jt(){PatientClinicalRequireLegacy("delete-sync-slot");
+async function Bpw_pull(){PatientClinicalRequireLegacy("sync-pull");var CareReplay=null,CareReplayed=false;var t=I(),Bpw_kto=Bpw_konto(t);y(L,{operation:"pull"});var e;try{e=await t.getSyncMaterial()}catch(E){throw y(k,{operation:"pull",error:E}),E}PatientClinicalRequireLegacy("sync-pull");var a=e.slotId,r=e.authToken,n=e.syncEncKey,i=j(),c=m(a);K()&&M==null&&(M=Pt(a,t));try{Brv_stop(a);if(c.registered){var S=await f(i+"/v1/slots/"+a+"/status",{method:"GET",headers:{Authorization:"Bearer "+r}},Mt,Mt);if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();PatientClinicalRequireLegacy("sync-pull");if(S.status===401)throw C(a),u("VildaSync: b\u0142\u0105d uwierzytelnienia przy pull. Slot m\xF3g\u0142 zosta\u0107 usuni\u0119ty.","AUTH_FAILED");if(!S.ok)throw u("VildaSync: b\u0142\u0105d odczytu statusu ("+S.status+").","STATUS_FAILED",{httpStatus:S.status});var w=await Btr_json(S);if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();PatientClinicalRequireLegacy("sync-pull")}else{var l=await f(i+"/v1/slots/"+a+"/status",{method:"GET",headers:{Authorization:"Bearer "+r}},Mt,Mt);if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();PatientClinicalRequireLegacy("sync-pull");if(!l.ok){P();var d={action:"not-registered",httpStatus:l.status};return y(p,{operation:"pull",result:d}),d}var s=await Btr_json(l);if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();PatientClinicalRequireLegacy("sync-pull");c.registered=!0,c.localEtag=null,M=null,vt(a),St(a),T(a,c);var w=s}var Bzd_w=Bzd_wymusCzytaj(a),h=Bzd_w?null:K()?M:c.localEtag;CareReplay=h&&h===w.etag?await CareSyncReplay(t,a,w.etag):null;PatientClinicalRequireLegacy("sync-pull");if(h&&h===w.etag&&!CareReplay){var D=await Vt();if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();PatientClinicalRequireLegacy("sync-pull");if(D)c.localEtag=null,M=null,vt(a),St(a);else{P();var _={action:"up-to-date",etag:w.etag};return Bpw_dren(a,r,i,t,Bpw_kto,_),y(p,{operation:"pull",result:_}),_}}var g={Authorization:"Bearer "+r},v=CareReplay||Bzd_w?null:K()?M:c.localEtag;v&&(g["If-None-Match"]='"'+v+'"');var A=await f(i+"/v1/slots/"+a+"/blob",{method:"GET",headers:g},Bgz_czas({byteLength:w&&typeof w.size=="number"?w.size:0}));if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();PatientClinicalRequireLegacy("sync-pull");if(A.status===304){P();var F={action:"up-to-date",etag:v};return Bpw_dren(a,r,i,t,Bpw_kto,F),y(p,{operation:"pull",result:F}),F}if(A.status===401)throw u("VildaSync: b\u0142\u0105d uwierzytelnienia przy pobieraniu bloba.","AUTH_FAILED");if(A.status===404){P();Bzd_wymusZdejmij(a);var H={action:"no-remote-blob"};return Bpw_dren(a,r,i,t,Bpw_kto,H),y(p,{operation:"pull",result:H}),H}if(!A.ok)throw u("VildaSync: b\u0142\u0105d pobierania danych ("+A.status+").","DOWNLOAD_FAILED",{httpStatus:A.status});var x=await Bnd_czytaj(A,w&&typeof w.size=="number"?w.size:0),W;PatientClinicalRequireLegacy("sync-pull");Bnd_zglos({phase:"decrypt"});try{W=await ut(x,n)}catch{throw u("VildaSync: b\u0142\u0105d odszyfrowania danych. Mo\u017Cliwa zmiana masterKey lub uszkodzenie danych.","DECRYPT_FAILED")}W=await Bgz_rozpakuj(W);var U;try{U=JSON.parse(new TextDecoder().decode(W))}catch{throw u("VildaSync: uszkodzone dane sync (nieprawid\u0142owy format JSON).","PARSE_FAILED")}if(Bpw_inneKonto(t,Bpw_kto))throw Bpw_przerwane();PatientClinicalRequireLegacy("sync-pull");PatientClinicalRequireLegacy("apply-sync-payload");var et=await t.mergeSyncPayload(U,{onProgress:function(E){try{typeof o.document<"u"&&o.document.dispatchEvent&&o.document.dispatchEvent(new CustomEvent("vilda:vault-merge-progress",{detail:E,bubbles:!1}))}catch{}}});PatientClinicalRequireLegacy("apply-sync-payload");var V=Lt(A.headers.get("ETag"))||w.etag;CareReplayed=true;c.localEtag=V,c.rawSize=W.byteLength,c.rawEtag=V,c.lastSyncAt=new Date().toISOString(),M=V,ft(a,V,t),T(a,c),P(),Bzd_wymusZdejmij(a);var J={action:"merged",etag:V,mergeResult:et,staleDevice:et&&et.staleDevice||null};return Nv(J.staleDevice),Qcs(et&&et.clockSkew||null),Bpw_dren(a,r,i,t,Bpw_kto,J),y(p,{operation:"pull",result:J}),J}catch(E){/* P-SESJA-ZAPISU (przeglad 4, ADW4-3): blad pobrania po zalogowaniu innego konta albo blokadzie (np. /status 500, siec, limit czasu) — SESSION_CHANGED: nalezy do poprzedniej sesji. */var Bpw_e=Bpw_inneKonto(t,Bpw_kto)?Bpw_przerwane():E;throw y(k,{operation:"pull",error:Bpw_e}),Bpw_e}finally{CareSyncReplayDone(CareReplay,CareReplayed)}}async function Ht(){PatientClinicalRequireLegacy("sync-full");I(),y(L,{operation:"full"});try{var t=await Y(),e=await ht(),a={pull:t,push:e};PatientClinicalRequireLegacy("sync-full");return y(p,{operation:"full",result:a}),a}catch(r){throw y(k,{operation:"full",error:r}),r}}async function xt(){return WorkspaceSyncReadStatus(async function () {PatientClinicalRequireLegacy("sync-status");var t=I(),e=await t.getSyncMaterial();PatientClinicalRequireLegacy("sync-status");return m(e.slotId)});}async function Wt(){PatientClinicalRequireLegacy("sync-state-clear");var t=I(),e=await t.getSyncMaterial();PatientClinicalRequireLegacy("sync-state-clear");C(e.slotId)}async function Jt(){PatientClinicalRequireLegacy("delete-sync-slot");
   var ticket=TLibOperationContext(),vault=I(),material=await vault.getSyncMaterial();
   PatientClinicalRequireLegacy("delete-sync-slot");TLibFence(ticket.ctx,ticket.token);
   var assertCurrent=await TLibGuardLegacyDelete(material.slotId,material.authToken,ticket);

@@ -65,7 +65,7 @@
 //        u A i u B. Operacje kolejki i kwarantanny sprawdzają sesję tak jak zapis karty (P-SESJA-ZAPISU): zmiana sesji
 //        w trakcie kończy operację bez zapisu.
 //   HK16 bez nowego publicznego hooka: hooki VildaVault (on…) jak na bazie, bez onPatientTombstoneRejected, _eventLog —
-//        38 kluczy; w scaleniu z ratunkiem ładunki 8 hooków (onPatientNoteChanged: { id, patientId, action: 'merge' })
+//        39 kluczy (od E2-PR4c z markSyncCaughtUp; do E2-PR4c 38); w scaleniu z ratunkiem ładunki 8 hooków (onPatientNoteChanged: { id, patientId, action: 'merge' })
 //        jak na sejfie bez wstawek.
 //
 // Okno A przypadku na adapterze IndexedDB (poza sejfem bez wstawek i trybami HK15) zaczyna od sprawdzenia, że sejf ma
@@ -75,7 +75,7 @@
 // HK3 ×2, HK4 ×2, HK5 ×2, HK7 ×2, HK8, HK9, HK10 ×2, HK12 ×4, HK13, HK14 ×2 (bez wierszy z haków, odczytów bramki
 // w hakach i zestawów pfull). Zielone z natury (strażniki regresji): HK6 ×3 i HK11 ×3 (scalanie bez haka nie daje
 // wierszy), HK15 ×2 (tryby i zmiana sesji bez wierszy, baz, kluczy i blokad kolejki; sprawdzenia, że haki doszły do
-// emisji — tylko na sejfie z hakami), HK16 ×2 (hooki VildaVault i 38 kluczy _eventLog bez zmian, ładunki hooków równe na
+// emisji — tylko na sejfie z hakami), HK16 ×2 (hooki VildaVault i 39 kluczy _eventLog bez zmian — od E2-PR4c z markSyncCaughtUp, ładunki hooków równe na
 // sejfie i sejfie bez wstawek); w HK14 część haka H1 (bez pfull i bez odczytu bramki w kroku importu).
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -1187,7 +1187,7 @@ describe('HK14–HK16: krok importu, tryby i sesja, hooki', () => {
     expect({ A: klucze(o, 'A'), B: klucze(o, 'B') }, 'wiersze A i B').toEqual(wiersze);
   }, CZAS);
 
-  it('HK16: bez nowego publicznego hooka — hooki VildaVault (on…) jak na bazie, bez onPatientTombstoneRejected; _eventLog — 38 kluczy', async () => {
+  it('HK16: bez nowego publicznego hooka — hooki VildaVault (on…) jak na bazie, bez onPatientTombstoneRejected; _eventLog — 39 kluczy (E2-PR4c: markSyncCaughtUp)', async () => {
     const o = await okno({ bramka: false });
     const v = o.win.VildaVault;
     expect(Object.keys(v).filter((k) => /^on[A-Z]/.test(k)).sort(), 'hooki VildaVault').toEqual([
@@ -1195,7 +1195,8 @@ describe('HK14–HK16: krok importu, tryby i sesja, hooki', () => {
       'onPatientDeleted', 'onPatientListChanged', 'onPatientNoteChanged', 'onPatientSaved', 'onPreferenceChanged', 'onRemoveUserWaiting', 'onUnlock',
     ]);
     expect('onPatientTombstoneRejected' in v, 'onPatientTombstoneRejected').toBe(false);
-    expect(Object.keys(v._eventLog), '_eventLog: 38 kluczy').toHaveLength(38);
+    expect(Object.keys(v._eventLog), '_eventLog: 39 kluczy').toHaveLength(39);
+    expect(Object.keys(v._eventLog)).toContain('markSyncCaughtUp');
   }, CZAS);
 
   it('HK16: scalenie z przegranym nagrobkiem i ratunkiem przy otwartej bramce — ładunki 8 hooków jak na sejfie bez wstawek; onPatientNoteChanged ratunku { id, patientId, action: \'merge\' }', async () => {

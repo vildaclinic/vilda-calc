@@ -6612,6 +6612,7 @@ const Bev_EKSPORT = Object.freeze({
   quarantineMinSeq: Bob_kwMin,
   quarantineRelease: Bob_kwZwolnij,
   resultSummary: Bob_skrot,
+  markSyncCaughtUp: Bob_dogonione,
   deleteDatabase: Bob_usunBaze,
   emissionsSettled: Bem_gotowe,
   onBulkChange: Bem_naPartie,
@@ -7859,6 +7860,28 @@ function Bob_skrot(wynik) {
     // pole wyniku rzucajace przy odczycie — ksztalt nieznany
   }
   return { status: 'nieznany' };
+}
+// markSyncCaughtUp() (E2-PR4c, P-SYNC-DRENAZ-ZDARZEN): drenaz zdarzen doszedl do headSeq — userMeta.lastSyncMergeAtISO
+// := teraz (koperta zdarzenia nie niesie exportedAtISO, wiec scalanie Le tego pola nie ustawia). Bramka dziennika,
+// odblokowany sejf; zapis co najwyzej raz na godzine (zapisana chwila mlodsza niz godzina — bez zapisu); zapis metadanych
+// tylko w sesji z wejscia (P-SESJA-ZAPISU). Nigdy nie rzuca: { ok: true, zapisano } albo odmowa { ok: false, powod }.
+const Bob_DOGONIONE_MS = 3600000;
+async function Bob_dogonione() {
+  try {
+    if (!Bob_bramka()) return Bob_odmowa('bramka');
+    if (!T()) return Bob_odmowa('zablokowany');
+    const s = Bses_opcje(null);
+    const byl = await Gw();
+    const po = Bob_poSesji(s);
+    if (po) return Bob_odmowa(po);
+    const wiek = Bob_wiek(byl);
+    if (wiek >= 0 && wiek < Bob_DOGONIONE_MS) return { ok: true, zapisano: false };
+    await Gx(Bob_teraz(), s);
+    const po2 = Bob_poSesji(s);
+    return po2 ? Bob_odmowa(po2) : { ok: true, zapisano: true };
+  } catch (x) {
+    return Bob_nieprzewidziany(x);
+  }
 }
 
 // ── Kasowanie bazy ──────────────────────────────────────────────────────────────────────────────────────────────────
