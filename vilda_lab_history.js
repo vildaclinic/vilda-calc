@@ -10,6 +10,9 @@
  * kategoria taka, jaką przelicznik pokazał w chwili przypięcia, bez ponownego dobierania normy.
  * Od 1.1.0 (PR5a): alias serii po dokładnej nazwie badania z listy przelicznika (decyzja 6.14) i IGF-1
  * z notatek leczenia GH w serii IGF-1, z datą kontroli, gdy brak daty badania (decyzje 6.24–6.25).
+ * Od 1.4.0 (decyzja właściciela 2026-11-11, wynik ma jedno miejsce pełnej treści): isResultNote — warunek,
+ * którym karta chowa wynik w Notatkach i kieruje do niego linki, ten sam co droga notatki do widoku Badań;
+ * recordedWarning — ostrzeżenie kliniczne zapisanej oceny dla krótkiego wpisu Historii.
  * Projekt: docs/LAB_HISTORIA_WYNIKOW_PLAN.md, 3.1; opis: docs/clinical/ALGORITHMS.md,
  * „LAB-HISTORIA — model porównania”.
  */
@@ -84,6 +87,19 @@
     if (note.medication) return 'treatment';
     if (note.labResult) return 'wynik-badania';
     return note.category || null;
+  }
+  // Wynik badania, który zakładka „Badania” pokazuje jako wpis (decyzja właściciela 2026-11-11: wynik ma jedno
+  // miejsce pełnej treści). Ten sam warunek co droga notatki do widoku: sejf (kt, Po) zapisuje i układa w serie
+  // tylko wynik z nazwą albo wartością i z kluczem serii (testKey albo skrót nazwy); buildHistoryView bierze
+  // punkt z oceną albo z liczbą, a wartość tekstową bez oceny jako wiersz tekstowy. Jawna kategoria
+  // „wynik-badania” zawęża warunek: wpis innej kategorii z polem wyniku, zlecenie bez wartości i Klirens
+  // („wynik-klirens”) zostają w Notatkach. Zgodność z widokiem: tests/unit/lab-result-notes-projection.test.mjs.
+  function isResultNote(note) {
+    if (!record(note) || note.category !== 'wynik-badania' || noteCategory(note) !== 'wynik-badania') return false;
+    var lab = note.labResult;
+    if (!record(lab) || !(text(lab.test) || text(lab.value))) return false;
+    if (!text(lab.testKey) && !seriesSlug(lab.test)) return false;
+    return own(lab, 'assessment') || finite(lab.valueNum) || !!text(lab.value);
   }
   function sampleDated(entry) { return SAMPLE_DATES.indexOf(entry.dateSource) !== -1; }
   function isoDate(value) { return typeof value === 'string' && ISO_DATE.test(value) ? value.slice(0, 10) : null; }
@@ -219,6 +235,14 @@
         ageAtSample: record(e.ageAtSample) ? e.ageAtSample : null
       }
     };
+  }
+  // Ostrzeżenie kliniczne zapisanej oceny tak, jak pigułka recordedStatus (decyzja 6.20): tylko ocena „recorded”
+  // z ostrzeżeniem klinicznym, cytowana dosłownie. Krótki wpis Historii pokazuje je w wierszu wyniku (2026-11-11),
+  // żeby ostrzeżenie nie znikło z osi czasu; pełna ocena jest w Badaniach.
+  function recordedWarning(envelope) {
+    if (!record(envelope) || envelope.status !== 'recorded') return '';
+    var e = record(envelope.evaluation) ? envelope.evaluation : {}, clinical = record(e.clinical) ? e.clinical : {};
+    return clinical.status === 'warning' ? text(clinical.title) : '';
   }
   function invalidStatus(envelope) {
     var codes = Array.isArray(envelope.reasonCodes) ? envelope.reasonCodes.slice() : [];
@@ -677,7 +701,8 @@
   }
 
   return Object.freeze({
-    version: '1.3.0', HISTORY_PANELS: HISTORY_PANELS, buildHistoryView: buildHistoryView,
-    formatDelta: formatDelta, formatDate: formatDate, normalizeUnit: normalizeUnit
+    version: '1.4.0', HISTORY_PANELS: HISTORY_PANELS, buildHistoryView: buildHistoryView,
+    formatDelta: formatDelta, formatDate: formatDate, normalizeUnit: normalizeUnit, isResultNote: isResultNote,
+    recordedWarning: recordedWarning
   });
 });

@@ -761,6 +761,18 @@
   overflow-wrap: anywhere;
 }
 
+/* „Edytuj wpis” i „Usuń wpis” obok siebie (decyzja właściciela 2026-11-11: wynik usuwa się w Badaniach). */
+.vilda-lab-hist-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4px) var(--space-20px);
+}
+
+.vilda-lab-hist button.vilda-lab-hist-delete-result {
+  color: var(--danger-strong)!important;
+}
+
 .vilda-lab-hist-result-history,
 .vilda-lab-hist-result-sources {
   border-top: var(--border-hairline) solid #d5e2e7;

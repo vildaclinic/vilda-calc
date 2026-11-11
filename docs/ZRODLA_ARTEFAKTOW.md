@@ -1534,3 +1534,23 @@ Mała fixture `save-status-pre-823-duration.json` utrwala wynik starych wydanych
 modułów wraz z SHA256; test migracji wykonuje obecny model czasu, serializer
 i SSI. Zachowanie przeglądarki sprawdza `patient-status-pwa-update.spec.mjs`
 z pełnym produkcyjnym service workerem.
+
+## Łatki P-WYNIKI-BADAN — wynik badania ma jedno miejsce pełnej treści (2026-11-11)
+
+Decyzja właściciela z 2026-11-11 (makieta https://claude.ai/artifact/YRYrYpHeZpy1EqT8ctwkDT). Opis działania: `docs/LAB_HISTORIA_WYNIKOW_PLAN.md`, „Uzupełnienie z wdrożenia 6.32”. Czytelne moduły: `vilda_lab_history.js` 1.4.0 (`isResultNote`, `recordedWarning`) i `vilda_lab_history_tab.js` 2.2.0 (opcje `focusNoteId`, `deleteNote`; klasy `.vilda-lab-hist-detail-actions`, `.vilda-lab-hist-delete-result` w `vilda_lab_history_tab.css`). W `vilda_auth_ui.js` czytelny blok `Wb*` stoi tuż przed `function Jo(t)` (w wycinku `function Lh3HasAssessment(` … `async function Xo(` czytanym przez testy), a w zminifikowanej części są punkty wpięcia:
+
+```js
+// blok przed Jo: WbJestWynikiem (VildaLabHistory.isResultNote), WbSkrot, WbWartosc, WbKomentarz, WbOstrzezenie,
+// WbOtworzBadania, WbNotatkiNaglowek (Notatki), WbHistoriaGrupuj, WbHistoriaPigulka, WbHistoriaWyniki (Historia)
+// Xo (Notatki): „+ Dodaj notatkę” i „Edytuj” — onSaved: t._wbPoZapisie = t._wbStan || null; n()
+// Xo: po filtrze ghPointId — WbNotatkiNaglowek(t, c, WbPrzed), t._wbStan = {ids, widoczne}, c bez WbJestWynikiem
+//     (całość pod typeof — wycinek Xo w care-plan-auth-ui-boundary.test.mjs nie ma funkcji Wb*)
+// $r:  }else if(t.type==="note"){if(t._wbWyniki)return WbHistoriaWyniki(t,a),a; …
+// ot, ht (Xl): pigułka kategorii przez WbHistoriaPigulka(pigułka, f) — dopisek „N wyników” (pod typeof)
+// Xl: po odnośniku P-BADANIA-TREND-HISTORIA — S = WbHistoriaGrupuj(S, id => mt({type:"note", noteId:id})) (pod typeof)
+// se(): po rozstrzygnięciu CareFocus — focusNoteId wyniku → {activeTab:"lab", labFocusNoteId, focusNoteId:null}
+// GdLabRender: render(…, {focusNoteId: r.labFocusNoteId (zużywany raz), deleteNote: ({note}) =>
+//     CareDeleteCheckedNote(note, t, null, () => GdLabHost.isConnected && remReadCurrent(CareReadOwner)), …})
+```
+
+Bez modułu `VildaLabHistory` (stary zasób w pamięci podręcznej) `WbJestWynikiem` zwraca `false`, więc Notatki, Historia i linki działają jak przed zmianą. Edytor notatki (`ga`, `CareOpenLegacyNoteEditor`) bez zmian — jego treść pilnuje odcisk SHA w `care-plan-auth-ui-boundary.test.mjs`. Testy: `tests/unit/lab-result-notes-projection.test.mjs` (prawdziwy sejf, zgodność z widokiem Badań), e2e `tests/e2e/wyniki-badan-karta.spec.mjs`.
