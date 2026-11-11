@@ -129,7 +129,8 @@
 //         (pierwsza po warunku otwartego kroku) i Bem_ratunek (pierwsza instrukcja), po bramce jedno try z catch;
 //         Bem_przegrane — warunek otwartego kroku, potem jedno try z catch, bez bramki; Bem_paraRatunku — jedno try z catch;
 //         synchroniczne także Bem_przegrane, Bem_przegrany, Bem_ratunek i Bem_paraRatunku. Bob_zestawKarty czysta jak
-//         podsumowanie wyniku (w domknięciu tylko Bob_KOD, String i Math).
+//         podsumowanie wyniku (w domknięciu tylko Bob_KOD, String i Math). E2-PR4b (P-SYNC-ZDARZENIA): pole okna VildaSync
+//         wyłącznie w Bob_bramka, dokładnie raz (włącznik dziennika z synchronizacji, po VILDA_EVENT_LOG).
 //   U2(d) najwyższy poziom bloku (AST): w części Bev_ nazwy ^Bev_, w części Bob_ ^Bob_, w części Bem_ ^Bem_ (z nazwami
 //         wiążącymi części emisji); wyłącznie deklaracje function / async function oraz const z literałem,
 //         Object.freeze(…) albo new Map() / new Set(); argumenty Object.freeze tylko z literałów, tablic, obiektów (bez
@@ -1403,7 +1404,7 @@ describe('U2(c): wywołania zakazane i reguła domknięcia części magazynu', (
   // Pola okna i funkcje, w których wolno ich użyć (napis albo wzorzec nazwy funkcji). E2-PR3a4: localStorage także w odczycie
   // chwili ostatniej wysyłki (Bob_wysylka — pierwszy znacznik przeglądu, tylko getItem klucza integracji).
   const POLA_V = {
-    VILDA_EVENT_LOG: ['Bob_bramka'], indexedDB: ['Bob_idb'], crypto: ['Bob_urzadzenie'],
+    VILDA_EVENT_LOG: ['Bob_bramka'], VildaSync: ['Bob_bramka'], indexedDB: ['Bob_idb'], crypto: ['Bob_urzadzenie'],
     localStorage: ['Bob_urzadzenie', 'Bob_urzadzenieZapisz', 'Bob_urzadzenieUsun', /^Bob_znacznik[A-Za-z]*$/, 'Bob_poOdblokowaniu', 'Bob_kasujKonto',
       'Bob_wysylka'],
     setTimeout: ['Bob_limit', 'Bob_podBlokada'], clearTimeout: ['Bob_limit', 'Bob_podBlokada'], navigator: ['Bob_blokady'],
@@ -1470,7 +1471,7 @@ describe('U2(c): wywołania zakazane i reguła domknięcia części magazynu', (
     const policz = (lista) => lista.reduce((m, x) => ({ ...m, [x]: (m[x] || 0) + 1 }), {});
     const bledy = [];
     const p = policz(uzycia.pola);
-    const raz = { 'VILDA_EVENT_LOG@Bob_bramka': 1, 'indexedDB@Bob_idb': 1, 'crypto@Bob_urzadzenie': 1, 'setTimeout@Bob_limit': 1, 'clearTimeout@Bob_limit': 1 };
+    const raz = { 'VILDA_EVENT_LOG@Bob_bramka': 1, 'VildaSync@Bob_bramka': 1, 'indexedDB@Bob_idb': 1, 'crypto@Bob_urzadzenie': 1, 'setTimeout@Bob_limit': 1, 'clearTimeout@Bob_limit': 1 };
     for (const [k, n] of Object.entries(raz)) if (p[k] !== n) bledy.push(`${k}: ${p[k] || 0} zamiast ${n}`);
     // Co najmniej raz i tylko tam (E2-PR3a1): navigator w Bob_blokady, AbortController w Bob_podBlokada.
     const conajmniej = ['navigator@Bob_blokady', 'AbortController@Bob_podBlokada'];
@@ -1505,12 +1506,14 @@ describe('U2(c): wywołania zakazane i reguła domknięcia części magazynu', (
       'function Bob_x(f) { return Bob_y(v); }', 'function Bob_y() {} function Bob_x() { return Date.now(); }', 'function Bob_idb() { return v.localStorage; }',
       'function Bob_x() { return localStorage.getItem("k"); }', 'function Bob_urzadzenie() { return v.crypto.subtle; }', "function Bob_x(o) { return Object['keys'](o); }",
       'function Bob_x() { return window.VILDA_EVENT_LOG; }', 'function Bob_x() { return self.crypto; }',
+      'function Bob_x() { return v.VildaSync; }', 'function Bob_idb() { return v.VildaSync.isEventLogEnabled(); }',
     ];
     for (const p of czerwone) expect(analizuj(p).naruszenia.length, p).toBeGreaterThan(0);
     const zielone = [
       "const Bob_ALFABET = 'ab'; function Bob_z(bajt) { return Bob_ALFABET[bajt & 31]; }", 'function Bob_idb() { return v.indexedDB; }',
       'function Bob_wiek(i) { return Date.now() - Date.parse(i); }', 'function Bob_teraz() { return new Date().toISOString(); }',
       'function Bob_bramka() { try { return v.VILDA_EVENT_LOG === true; } catch (x) { return false; } }',
+      'function Bob_bramka() { try { if (v.VILDA_EVENT_LOG === true) return true; const s = v.VildaSync; return !!s && s.isEventLogEnabled() === true; } catch (x) { return false; } }',
       'function Bob_urzadzenie(u) { const b8 = v.crypto.getRandomValues(new Uint8Array(8)); return v.localStorage.getItem(u) || b8; }',
       'function Bob_x(o) { return Object.keys(o).map((k) => Bev_utf8(k)); }', 'async function Bob_konto(u) { return I().getRegistryEntry(u); }',
     ];

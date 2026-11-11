@@ -6729,10 +6729,15 @@ const Bob_kandydaci = new Map();
 const Bob_zapisane = new Set();
 
 // ── Wejscie operacji ────────────────────────────────────────────────────────────────────────────────────────────────
-// Bramka: jedyny odczyt pola; brak pola, inna wartosc niz true albo getter rzucajacy — zamknieta.
+// Bramka: pole okna VILDA_EVENT_LOG === true (testy) albo wlacznik dziennika z synchronizacji tego okna
+// (P-SYNC-ZDARZENIA, E2-PR4b): VildaSync.isEventLogEnabled() === true — "events" w ostatnim health tej strony (pamiec),
+// flaga vilda-event-log-v1 = "1" i pobieranie stronami. Bez "events" w health wlacznik nie czyta magazynu. Brak pola,
+// inna wartosc, brak VildaSync albo wyjatek — zamknieta.
 function Bob_bramka() {
   try {
-    return v.VILDA_EVENT_LOG === true;
+    if (v.VILDA_EVENT_LOG === true) return true;
+    const s = v.VildaSync;
+    return !!s && typeof s.isEventLogEnabled === 'function' && s.isEventLogEnabled() === true;
   } catch (x) {
     return false;
   }

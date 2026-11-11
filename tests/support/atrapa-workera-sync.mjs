@@ -354,12 +354,16 @@ export function sprawdzCzystosc(...atrapy) {
  *        przy 'naruszenie' dodatkowo wpis w naruszenia
  * @param {boolean} [opcje.cors=true]  adapter fetch pokazuje skryptowi tylko nagłówki bezpieczne i z Expose-Headers
  * @param {string} [opcje.ip='203.0.113.7']  domyślne IP połączeń (CF-Connecting-IP)
+ * @param {string[]} [opcje.originy=[]]  dodatkowe dozwolone originy v37a (ALLOWED_ORIGIN_PROD jako lista po przecinku,
+ *        E1-7, src/middleware/cors.js) — np. origin strony e2e http://127.0.0.1:4173 w adapterze route Playwright
  */
 export function utworzAtrapeWorkera(opcje = {}) {
   licznikAtrap += 1;
   const id = 'w' + licznikAtrap;
   const adresBazowy = `https://${id}.${DOMENA_ATRAPY}`;
   const konf = { tryb: 'v37a', eventsEnabled: false, hub: 'sql', limity: { ...DOMYSLNE_LIMITY }, nieznanaTrasa: 'naruszenie', cors: true };
+  const originyDodatkowe = Array.isArray(opcje.originy) ? opcje.originy.map(String) : [];
+  for (const x of originyDodatkowe) if (!/^https?:\/\/[^/]+$/.test(x)) throw new Error(`atrapa: origin ${x} nie jest originem`);
   const zegar = typeof opcje.zegar === 'function' ? null : (opcje.zegar || zegarSterowany());
   const teraz = typeof opcje.zegar === 'function' ? opcje.zegar : () => zegar.teraz();
   const iso = () => new Date(teraz()).toISOString();
@@ -1041,7 +1045,7 @@ export function utworzAtrapeWorkera(opcje = {}) {
   }
   function originDozwolony(origin) {
     if (!origin) return null;
-    if (konf.tryb === 'v37a' ? ORIGINY_V37A.includes(origin) : origin === ORIGIN_V36) return origin;
+    if (konf.tryb === 'v37a' ? ORIGINY_V37A.includes(origin) || originyDodatkowe.includes(origin) : origin === ORIGIN_V36) return origin;
     return /^https?:\/\/localhost(:\d+)?$/.test(origin) ? origin : null;
   }
   function dopnij(c, r) {
