@@ -155,11 +155,15 @@ export async function openPatientLoadChoice(page, name, { observe = false, befor
   await owner.getByRole('button', { name: 'Wczytaj tego pacjenta', exact: true }).click();
   const choices = owner.locator('#vildaLoadChoiceModal');
   const guard = owner.getByRole('dialog', { name: /^Zapisać (wpisane dane|zmiany) przed wczytaniem\?$/u });
-  await expect(choices.or(guard)).toBeVisible();
+  // Under the measured CPU4 load a four-worker CI runner shows the chooser
+  // 5-7 s after the Load click returns, past the default 5 s expect budget.
+  // The per-paint probe is the oracle here; this wait only finds the dialog.
+  const chooserBudget = { timeout: 30_000 };
+  await expect(choices.or(guard)).toBeVisible(chooserBudget);
   if (await guard.isVisible()) {
     await guard.getByRole('button', { name: /^Odrzuć (dane|zmiany) i wczytaj$/u }).click();
   }
-  await expect(choices).toBeVisible();
+  await expect(choices).toBeVisible(chooserBudget);
   return owner;
 }
 

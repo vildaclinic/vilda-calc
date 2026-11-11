@@ -59,6 +59,9 @@ async function waitForSavedPaint(page, width) {
 for (const width of [1440, 390]) {
   for (const choice of ['restore', 'new']) {
     test(`${width}px: native ${choice} patient selection keeps one truthful loading presentation`, async ({ page, context }, testInfo) => {
+      // CI (four workers, CPU4 during the load): 37-51 s when green, and one
+      // attempt passed 60 s with a single native Restore click taking 20 s.
+      test.setTimeout(150_000);
       await page.setViewportSize({ width, height: 1000 });
       await installPatientLoadMenuProbe(page);
       // Mobile enters through DocPro. Its real database action returns to Start;

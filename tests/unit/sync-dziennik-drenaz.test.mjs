@@ -1901,7 +1901,8 @@ describe('E2-PR1 P-SYNC-STRONY: format kliniczny (strażniki PatientClinical* ja
   });
 });
 
-// wt z origin/audyt (strażniki formatu klinicznego z PR planów opieki #837–#849), bez zmian w E2-PR1; podział co 108 znaków.
+// wt z origin/audyt (strażniki formatu klinicznego z PR planów opieki #837–#849), bez zmian w E2-PR1; od P-SYNC-LIMIT-ODCZYTU
+// (2026-11-11) 19 liczników zmiany zamiast 9 (D37); podział co 108 znaków.
 const WT_AUDYT = [
   'async function wt(t,e){PatientClinicalRequireLegacy("apply-sync-delta");Bsp=!1;/* P-SYNC-KURSOR (przeglad ad',
   'wersarza; plan: kursor := max zastosowanego): zablokowany sejf nie stosuje delt (applyEncryptedDelta oddaje ',
@@ -1912,19 +1913,22 @@ const WT_AUDYT = [
   'wait e.applyEncryptedDelta(n.payload);PatientClinicalRequireLegacy("apply-sync-delta");i&&((i.addedPatientCo',
   'unt||0)>0||(i.deletedPatientCount||0)>0||(i.addedPatientNoteCount||0)>0||(i.updatedPatientNoteCount||0)>0||(',
   'i.deletedPatientNoteCount||0)>0||(i.mergedPatientCount||0)>0||(i.addedNoteCount||0)>0||(i.updatedNoteCount||',
-  '0)>0||(i.deletedNoteCount||0)>0)&&(a=!0)}catch(Bsd){if(Bsd&&Bsd.patientClinicalUnavailable){Bsp=!0;throw Bsd',
-  '}if(Bsd&&Bsd.vildaMergeBusy){Bsp=!0;if(typeof Bsd.code=="string"&&(Bsd.code.indexOf("CARE_LINEAGE_")===0||Bs',
-  'd.code.indexOf("CARE_FORMAT_")===0)&&!Bul())y(k,{operation:"pull",error:Bsd});break}}}!Bsp&&Bul()&&(Bsp=!0);',
-  'return a}',
+  '0)>0||(i.deletedNoteCount||0)>0||(i.addedSnapshotCount||0)>0||(i.updatedSnapshotCount||0)>0||(i.trashedSnaps',
+  'hotCount||0)>0||(i.prunedSnapshotCount||0)>0||(i.addedPatientListCount||0)>0||(i.updatedPatientListCount||0)',
+  '>0||(i.deletedPatientListCount||0)>0||(i.updatedPreferenceCount||0)>0||(i.addedPasskeyCount||0)>0||(i.remove',
+  'dPasskeyCount||0)>0)&&(a=!0)}catch(Bsd){if(Bsd&&Bsd.patientClinicalUnavailable){Bsp=!0;throw Bsd}if(Bsd&&Bsd',
+  '.vildaMergeBusy){Bsp=!0;if(typeof Bsd.code=="string"&&(Bsd.code.indexOf("CARE_LINEAGE_")===0||Bsd.code.index',
+  'Of("CARE_FORMAT_")===0)&&!Bul())y(k,{operation:"pull",error:Bsd});break}}}!Bsp&&Bul()&&(Bsp=!0);return a}',
 ].join('');
-// sha256 całych funkcji (wytnijFunkcje) z origin/audyt 5306a623 (bez zmian od 4d3ddd22): ścieżka legacy (flaga '0', tryby w pracy i jednorazowo, worker bez changes-paged) i kursor
+// sha256 całych funkcji (wytnijFunkcje) z origin/audyt 5306a623 (bez zmian od 4d3ddd22; Yt i wt od P-SYNC-LIMIT-ODCZYTU,
+// 2026-11-11: limit odczytu treści i 19 liczników): ścieżka legacy (flaga '0', tryby w pracy i jednorazowo, worker bez changes-paged) i kursor
 // (bt, Kt). Zmiana dowolnego bajtu, także w komentarzu w środku Yt, daje czerwony D36. Po zmianie tych funkcji na audyt:
 // przelicz createHash('sha256').update(wytnijFunkcje(ZRODLO, nazwa)).digest('hex') i podmień też WT_AUDYT i literały D36.
 const SHA_AUDYT = Object.freeze({
   B: 'b0a85e46cf0f4f7ad8ae76d1c9ebbade43aefb7e2f37ca31796ef8d2777c0741',
   Y: 'a31f9250360b64d063f3fa2de7467cd6b430145709fa68729de7b5e8c585dc91',
-  Yt: '072f56e75f8a3f7e045c5cb8fb9e21f9dfbb83ae7f39b08dbbf597b920c1b7f1',
-  wt: '6f43c487ec52e422965b42b75dc867c5bb644824c717bca1a162e16526f1c9bd',
+  Yt: '66557bb0074199271cb09a1806238acbcf8920de320c4f06179817d8c8e90269',
+  wt: '866f3d68574f755abeda79e2dcdacb0e662ae58e9ccf02bdd849845992cf006c',
   bt: '6680854e882595bb0cb5a66373018124fa8689257c0c96fda7f354a43a48d8a1',
   Kt: '71447b542d0e6fc4b3195f3226148291fe1b3bd2d7bc5dc4cf117228271e37b7',
 });
@@ -1935,7 +1939,7 @@ describe('E2-PR1 P-SYNC-STRONY: strażniki źródła vilda_sync.js', () => {
     }
     expect(ZRODLO).toContain('var at=!1;async function B(t,e,a,r){if(!at){at=!0;try{if(!r||typeof r.applyEncryptedDelta!="function")return;Gt()?await Yt(t,e,a,r):await Bt(t,e,a,r)}catch{}finally{at=!1}}}');
     expect(ZRODLO).toContain('\nfunction Y(t){var PatientClinicalRejection=PatientClinicalRejected("sync-pull");if(PatientClinicalRejection)return PatientClinicalRejection;if(t&&t.pierwszePobranie===!0)return Bpw_wylacznie(Bpw_pull);var e=Bpw_lk();return!Bpw_w&&!e?Bpw_pull():Bpw_bariera(e).then(Bpw_pull)}\n');
-    expect(ZRODLO).toContain('async function Yt(t,e,a,r){Bsp=!1;var n=bt(t),i=await f(a+"/v1/slots/"+t+"/changes?since="+n,{method:"GET",headers:{Authorization:"Bearer "+e}},ct);if(!(!i||!i.ok)){var c=await i.json(),l=c&&Array.isArray(c.deltas)?c.deltas:[],s=l.length?await wt(l,r):!1;');
+    expect(ZRODLO).toContain('async function Yt(t,e,a,r){Bsp=!1;var n=bt(t),i=await f(a+"/v1/slots/"+t+"/changes?since="+n,{method:"GET",headers:{Authorization:"Bearer "+e}},ct,Btr_LIMIT_STRONY_MS);if(!(!i||!i.ok)){var c=await Btr_json(i),l=c&&Array.isArray(c.deltas)?c.deltas:[],s=l.length?await wt(l,r):!1;');
     expect(ZRODLO).toContain('PatientClinicalRequireLegacy("sync-cursor");Bkm>n&&!Bsp&&Kt(t,Bkm),s&&Et("changes-drain")}}');
     expect(ZRODLO).toContain(WT_AUDYT);
     expect(ZRODLO.split('async function B(').length).toBe(2);
@@ -1946,13 +1950,13 @@ describe('E2-PR1 P-SYNC-STRONY: strażniki źródła vilda_sync.js', () => {
     expect(ZRODLO.split('function Kt(').length).toBe(2);
   });
 
-  it('D37: Bdz_czyZmiana liczy te same 9 liczników co wt', () => {
+  it('D37: Bdz_czyZmiana liczy te same 19 liczników co wt (od P-SYNC-LIMIT-ODCZYTU; wcześniej 9)', () => {
     const wt = ZRODLO.slice(ZRODLO.indexOf('async function wt('), ZRODLO.indexOf('function Et('));
     const i = ZRODLO.indexOf('function Bdz_czyZmiana(');
     expect(i).toBeGreaterThan(-1);
     const bdz = ZRODLO.slice(i, ZRODLO.indexOf('\n}', i));
     const nazwy = (t) => [...new Set([...t.matchAll(/\.(\w+)Count\b/g)].map((m) => m[1]))].sort();
-    expect(nazwy(wt)).toHaveLength(9);
+    expect(nazwy(wt)).toHaveLength(19);
     expect(nazwy(bdz)).toEqual(nazwy(wt));
   });
 

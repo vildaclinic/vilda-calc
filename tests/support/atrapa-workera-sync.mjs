@@ -59,9 +59,12 @@
 //   (src/durable/slot_hub.js:182) i przy SQLite wykrywa ogon v36 do importu (:232-246). Zmiana limitów, cors, nieznanaTrasa
 //   i eventsEnabled to pokrętła testu bez restartu (w workerze zmiana zmiennej też jest wdrożeniem; restart jawnie: ewikcjaDO).
 // SKUTEK USTERKI: usterka przypięta do żądania liczy trafienie dopiero, gdy zadziała (kod zużyty w potoku, opóźnienie,
-//   siec, zgub, zmien, ponowienieHub, lustroOpoznione). Przypięta bez skutku (np. kod, którego bieżący tryb albo stan huba
+//   siec, zgub, zmien, ponowienieHub, lustroOpoznione, trescWisi). Przypięta bez skutku (np. kod, którego bieżący tryb albo stan huba
 //   nie wytwarza: hub_unavailable na /changes v36, rate_limited na /delta przy starym DO, hub_error na DELETE v36; albo
 //   401 przed miejscem usterki) → naruszenie 'usterka-bez-skutku', meta.zastosowano false.
+// TREŚĆ WISI (usterka({gdy, trescWisi: true | { ms }}), P-SYNC-LIMIT-ODCZYTU): odpowiedź z nagłówkami i połową ciała,
+//   reszta po zwolnij(), po ms albo nigdy; abort żądania (AbortController klienta) kończy odczyt AbortError, jak przy
+//   zerwanym połączeniu w przeglądarce. Nie jest zachowaniem workera — usterka sieci między serwerem a klientem.
 // KODY USTEREK (usterka({kod})): rate_limited src/middleware/ratelimit.js:117-128, src/durable/slot_hub.js:124-133;
 //   log_import_pending src/handlers/changes.js:84-86; hub_unavailable src/handlers/delta.js:125, src/handlers/changes.js:88,
 //   src/handlers/events.js:151, src/handlers/register.js:104-111; hub_not_sqlite src/handlers/changes.js:80-83,
@@ -1253,6 +1256,10 @@ export function utworzAtrapeWorkera(opcje = {}) {
         for (const u of us.filter((q) => q.zgub)) skutek(u, 'zgub');
         wynik = 'zgubiona'; opisOsi = '✗ zgubiona'; throw BLAD_SIECI();
       }
+      // Treść wisi (P-SYNC-LIMIT-ODCZYTU): nagłówki i połowa ciała idą, reszta dopiero po zwolnieniu, po trescWisi.ms albo
+      // nigdy; przerwanie żądania (AbortController) kończy odczyt AbortError jak w przeglądarce. Tylko transport fetch.
+      const wisi = us.find((u) => u.trescWisi);
+      if (wisi) { skutek(wisi, 'trescWisi'); o = { ...o, wisi }; }
       o.meta = { trasa: w.trasa, kod: w.kod, pozaKontraktem: w.pozaKontraktem, etap: null, ...o.meta, zastosowano: brakiSkutku(x).length === 0 };
       wynik = 'odpowiedz';
       opisOsi = `← ${o.status}${o.status >= 400 && w.kod ? ' ' + w.kod : ''}`;
@@ -1320,6 +1327,28 @@ export function utworzAtrapeWorkera(opcje = {}) {
     }
     return res;
   }
+  // Ciało, które wisi po połowie: zwolnienie usterki (zwolnij), trescWisi.ms albo nigdy; abort żądania → AbortError.
+  function wiszacaTresc(cialo, sygnal, u, w) {
+    const bajty = cialo == null ? new Uint8Array(0) : (typeof cialo === 'string' ? ENC.encode(cialo) : new Uint8Array(cialo));
+    const pol = Math.floor(bajty.byteLength / 2);
+    let ctl = null; let timer = null; let koniec = false;
+    const sprzatnij = () => { koniec = true; if (timer) clearTimeout(timer); timer = null; if (sygnal) sygnal.removeEventListener('abort', przerwij); };
+    const dokonczTresc = () => { if (koniec) return; sprzatnij(); if (bajty.byteLength > pol) ctl.enqueue(bajty.slice(pol)); ctl.close(); };
+    const przerwij = () => { if (koniec) return; sprzatnij(); ctl.error(BLAD_PRZERWANIA()); };
+    return new ReadableStream({
+      start(c) {
+        ctl = c;
+        if (pol > 0) c.enqueue(bajty.slice(0, pol));
+        if (sygnal && sygnal.aborted) { przerwij(); return; }
+        if (sygnal) sygnal.addEventListener('abort', przerwij);
+        u.odlozone.push({ zwolnij: dokonczTresc });
+        if (u.zwolniona) { dokonczTresc(); return; }
+        if (Number(u.trescWisi.ms) > 0) timer = setTimeout(dokonczTresc, Number(u.trescWisi.ms));
+        u.osiagnij(w);
+      },
+      cancel() { sprzatnij(); },
+    });
+  }
   function nieprzezroczysta() {
     const odrzuc = () => Promise.reject(new TypeError('odpowiedź nieprzezroczysta (no-cors)'));
     const o = { type: 'opaque', status: 0, ok: false, statusText: '', url: '', redirected: false, headers: new Headers(), body: null, bodyUsed: false, json: odrzuc, text: odrzuc, arrayBuffer: odrzuc, blob: odrzuc };
@@ -1361,7 +1390,8 @@ export function utworzAtrapeWorkera(opcje = {}) {
         const o = await dokoncz({ ...x, url, h, ip: p.ip }, bajty, sygnal);
         if (transport === 'fetch-okna' && i.mode === 'no-cors') return nieprzezroczysta();
         const bezCiala = o.status === 204 || o.status === 304;
-        const res = new Response(bezCiala ? null : o.cialo, { status: o.status, headers: widoczneNaglowki(o.naglowki) });
+        const cialo = bezCiala ? null : (o.wisi ? wiszacaTresc(o.cialo, sygnal, o.wisi, x.w) : o.cialo);
+        const res = new Response(cialo, { status: o.status, headers: widoczneNaglowki(o.naglowki) });
         return sledzKonsumpcje(res, p.nazwa);
       } finally {
         if (i.keepalive) p.wLocieKeepalive -= rozmiar || 0;
@@ -1430,12 +1460,13 @@ export function utworzAtrapeWorkera(opcje = {}) {
     const q = {
       nr: lic.usterka, gdy: u.gdy, kod: u.kod || null, retryAfter: u.retryAfter, siec: !!u.siec, zgub: !!u.zgub,
       opoznienie: u.opoznienie || null, zmien: u.zmien || null, lustroOpoznione: !!u.lustroOpoznione, ponowienieHub: !!u.ponowienieHub,
+      trescWisi: u.trescWisi ? (typeof u.trescWisi === 'object' ? { ...u.trescWisi } : {}) : null,
       ktore: g.ktore || 1, pozostalo: g.ile == null ? 1 : g.ile, licznik: 0, trafienia: 0, aktywna: true, zwolniona: false,
       czekajacy: new Set(), odlozone: [], osiagnieta, osiagnietaJuz: false,
       osiagnij(w) { if (!q.osiagnietaJuz) { q.osiagnietaJuz = true; osiagnietaR(w); } },
     };
     // Aspekty, z których każdy musi zadziałać w przypiętym żądaniu (inaczej 'usterka-bez-skutku').
-    q.aspekty = ['kod', 'opoznienie', 'siec', 'zgub', 'zmien', 'lustroOpoznione', 'ponowienieHub'].filter((a) => q[a]);
+    q.aspekty = ['kod', 'opoznienie', 'siec', 'zgub', 'zmien', 'lustroOpoznione', 'ponowienieHub', 'trescWisi'].filter((a) => q[a]);
     q.opis = [q.kod ? 'kod ' + q.kod : null, ...q.aspekty.filter((a) => a !== 'kod'), g.trasa ? 'trasa ' + g.trasa : null].filter(Boolean).join(', ');
     if (q.lustroOpoznione && typeof u.gdy === 'object' && !u.gdy.trasa) throw new Error('usterka: lustroOpoznione wymaga gdy.trasa delta');
     usterki.push(q);
