@@ -2020,8 +2020,8 @@
   "sha256": "473bcf6945b4be2b78bbb9ef7c0ee051fb38f9bfc17578fca93bfa1a73d5b6ff"
  },
  "vilda_sync.js": {
-  "v": 52,
-  "sha256": "927a6ac4caf81205389111786eb89d7164c59012c0c89e3a8a5d9212e9e161ed"
+  "v": 53,
+  "sha256": "846c4f5189d0653cc1a0a51fdad3b869b3f3cea7bac1dedddfb2452713224356"
  },
  "vilda_sync_integration.js": {
   "v": 58,

@@ -10,7 +10,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 // quarantine (P-SYNC-DRENAZ-ZDARZEN, E2-PR4c; before it P-SYNC-ZDARZENIA, E2-PR4b, and P-SYNC-LIMIT-ODCZYTU, E2-PR4a;
 // docs/clinical/ALGORITHMS.md).
 const bases = {
-  'vilda_sync.js': { sha256: 'e445bd9dbdbc51afe25df3e2edbe44af4ed5cb7ab95b9cc6b67e61a00662c7e8',
+  'vilda_sync.js': { sha256: '40fd4e6de357ffb72da0b37c8fbc5921d0a26ffebc91e42ab46102215c0de114',
     names: ['TLibPullCycle', 'TLibPushCycle', 'TLibFullCycle', 'xt'] },
   'vilda_sync_integration.js': { sha256: '48c788be6be8743a6a8ff667a6fe97990d59fc99d22c9e2f594909907618d913',
     names: ['I', 'V', 'M', 'J', 'U', 'S', 'ot', 'K', 'G', 'PatientClinicalLegacyAllowed', 'ct', 'mt', 'j'] }

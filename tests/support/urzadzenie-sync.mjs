@@ -37,6 +37,13 @@
 //       magazynem kolejki i kwarantanny; wymaga indexedDB (atrapa tests/support/atrapa-indexeddb.mjs) albo natywnego
 //       zBlizniaka — wtedy klon jego atrapy; test stubuje IDBKeyRange; migawka() niedostępna), nawigator (dodatkowe pola
 //       navigator, np. serviceWorker; okno dostaje wtedy MessageChannel z Node).
+//       E2-PR4d (nadawca kolejki): karta (Urzadzenie natywne — druga karta TEJ SAMEJ przeglądarki: ta sama atrapa
+//       IndexedDB (nie klon), wspólny localStorage, wspólna atrapa Web Locks i ta sama grupa kanałów; własny
+//       sessionStorage, własne połączenie i własny dokument; to samo konto odblokowane hasłem), ramka (Urzadzenie
+//       natywne — ramka tego samego dokumentu: jak karta, a do tego wspólny sessionStorage i win.top = okno rodzica, więc
+//       self !== top), kanal (true — atrapa BroadcastChannel tej grupy przeglądarki; przy karcie i ramce zawsze),
+//       zdarzeniaOkna (true — addEventListener/dispatchEvent okna na EventTarget zamiast no-op; przy karcie i ramce
+//       zawsze). Dziennik zapisów wspólnego localStorage prowadzi urządzenie, które go utworzyło.
 //   sprzatnijUrzadzenia({ czekaj = true }) → Promise — afterEach: zwalnia bramy, czeka na ciszę (także na operacje
 //       synchronizacji w toku), zamyka urządzenia, sprawdza naruszenia i żądania w locie wszystkich atrap oraz strażnika;
 //       rzuca z listą (przy limicie ciszy: „operacja synchronizacji w toku: <urządzenie> <operacja>”).
@@ -57,6 +64,8 @@
 //   d.kursor(), d.zadania(), d.rzutOsi(o), d.rzutMagazynu({ od }), d.znacznik() (długość osi), d.znacznikMagazynu(),
 //   d.zaznacz(opis) (wpis 'test'), d.cisza(o), d.migawka() (stan adaptera do klonu), d.zamknij();
 //   d._licz { zdarzenia, scalenia, operacje (Map operacja → liczba w toku) } — liczniki ciszy.
+//   d.przegladarka (grupa przeglądarki: kanaly — wiadomości atrapy BroadcastChannel { kanal, od, data } w kolejności
+//   wysłania; utworzone — instancje { kanal, od }), d.zdarzenieOkna(typ), d.zdarzenieDokumentu(typ, { visibilityState }) — E2-PR4d.
 import { afterAll } from 'vitest';
 import { loadBrowserScript } from './load-browser-script.mjs';
 import { okno, magazynZRejestrem, HASLO_A, naglowek, wytnijFunkcje, zrodlo } from '../unit/sesja-zapisu-uprzaz.mjs';
@@ -270,6 +279,47 @@ export async function cisza(lista, { K = 5, limitMs = 5000 } = {}) {
   }
 }
 
+// ── Grupa przeglądarki: atrapa BroadcastChannel (E2-PR4d) ─────────────────────────────────────────────────────────────
+// Kanały o tej samej nazwie w tej samej grupie (karty i ramki jednej przeglądarki) dostają wiadomość innych instancji
+// (nie własną) w osobnej turze setImmediate, jako MessageEvent z klonem danych (structuredClone); close() kończy odbiór.
+// Każda wysłana wiadomość trafia do grupa.kanaly ({ kanal, od: nazwa urządzenia, data }); grupa.utworzone — utworzone
+// instancje ({ kanal, od }; sejf ma własny kanał vilda-notes).
+function grupaPrzegladarki() {
+  const instancje = new Map();
+  const kanaly = [];
+  const grupa = { kanaly, utworzone: [], klasa: null };
+  grupa.klasa = (wlasciciel, wlasne) => class AtrapaBroadcastChannel {
+    constructor(nazwa) {
+      this.name = String(nazwa);
+      grupa.utworzone.push({ kanal: this.name, od: wlasciciel });
+      this.onmessage = null;
+      this._et = new EventTarget();
+      this._zamkniety = false;
+      if (!instancje.has(this.name)) instancje.set(this.name, new Set());
+      instancje.get(this.name).add(this);
+      wlasne.add(this);
+    }
+    postMessage(data) {
+      if (this._zamkniety) throw new DOMException('Kanał zamknięty.', 'InvalidStateError');
+      const kopia = structuredClone(data);
+      kanaly.push({ kanal: this.name, od: wlasciciel, data: structuredClone(kopia) });
+      for (const k of instancje.get(this.name)) {
+        if (k === this) continue;
+        setImmediate(() => {
+          if (k._zamkniety) return;
+          const e = new MessageEvent('message', { data: structuredClone(kopia) });
+          k._et.dispatchEvent(e);
+          if (typeof k.onmessage === 'function') k.onmessage(e);
+        });
+      }
+    }
+    addEventListener(...a) { this._et.addEventListener(...a); }
+    removeEventListener(...a) { this._et.removeEventListener(...a); }
+    close() { this._zamkniety = true; instancje.get(this.name).delete(this); }
+  };
+  return grupa;
+}
+
 // ── Okno urządzenia ──────────────────────────────────────────────────────────────────────────────────────────────────
 function dokumentZOsia(zapisz) {
   const et = new EventTarget();
@@ -306,19 +356,29 @@ export async function utworzUrzadzenie(o = {}) {
   const licz = { zdarzenia: 0, scalenia: 0, operacje: new Map() };
   const wOsi = (rodzaj, opis) => { licz.zdarzenia += 1; atrapa.zaznacz(nazwa, rodzaj, opis); };
   const wzorBlokad = o.blokadyWOsi || /^vilda-sync-/;
-  const blokady = o.blokady === false ? null : atrapaBlokad({
-    naZadanie: (w) => { if (wzorBlokad.test(w.nazwa)) wOsi('blokada', `blokada ${w.nazwa} ${w.tryb}`); else licz.zdarzenia += 1; },
-  });
+  // E2-PR4d: druga karta albo ramka tej samej przeglądarki — wspólne IndexedDB (ta sama atrapa), localStorage, blokady i
+  // grupa kanałów; ramka także sessionStorage i okno nadrzędne.
+  const wspolne = o.ramka || o.karta || null;
+  if (wspolne && !wspolne.indexedDB) throw new Error('utworzUrzadzenie: karta i ramka wymagają natywnego urządzenia źródłowego');
+  const blokady = o.blokady === false ? null : (o.blokady && typeof o.blokady.request === 'function') ? o.blokady
+    : wspolne && wspolne.blokady ? wspolne.blokady : atrapaBlokad({
+      naZadanie: (w) => { if (wzorBlokad.test(w.nazwa)) wOsi('blokada', `blokada ${w.nazwa} ${w.tryb}`); else licz.zdarzenia += 1; },
+    });
+  const przegladarka = wspolne ? wspolne.przegladarka : grupaPrzegladarki();
+  const wlasneKanaly = new Set();
+  const zKanalem = !!wspolne || o.kanal === true;
+  const zdarzeniaOkna = !!wspolne || o.zdarzeniaOkna === true;
+  const etOkna = zdarzeniaOkna ? new EventTarget() : null;
   const beacon = o.beacon !== false;
-  const zrodloKlonu = o.zBlizniaka || null;
+  const zrodloKlonu = o.zBlizniaka || wspolne || null;
   // E2-PR4c: sejf na natywnym adapterze IndexedDB (atrapa tests/support/atrapa-indexeddb.mjs) — tryb „Komputer prywatny”
   // z prawdziwym magazynem kolejki i kwarantanny. Bliźniak natywnego urządzenia dostaje klon jego atrapy IndexedDB.
-  const natywny = o.magazynSejfu === 'natywny';
+  const natywny = o.magazynSejfu === 'natywny' || !!wspolne;
   if (natywny && typeof globalThis.IDBKeyRange === 'undefined') {
     throw new Error('utworzUrzadzenie: magazynSejfu natywny wymaga vi.stubGlobal(\'IDBKeyRange\', AtrapaIDBKeyRange)');
   }
   if (natywny && zrodloKlonu && !zrodloKlonu.indexedDB) throw new Error('utworzUrzadzenie: bliźniak natywny wymaga natywnego źródła');
-  const idb = natywny ? (o.indexedDB || (zrodloKlonu ? zrodloKlonu.indexedDB.__atrapa.klonuj() : null)) : null;
+  const idb = natywny ? (o.indexedDB || (wspolne ? wspolne.indexedDB : zrodloKlonu ? zrodloKlonu.indexedDB.__atrapa.klonuj() : null)) : null;
   if (natywny && !idb) throw new Error('utworzUrzadzenie: magazynSejfu natywny wymaga indexedDB (atrapa)');
   const ow = okno({
     locks: blokady || false,
@@ -327,11 +387,20 @@ export async function utworzUrzadzenie(o = {}) {
     navigator: { ...(beacon ? { sendBeacon: polaczenie.beacon, onLine: true } : { onLine: true }), ...(o.nawigator || {}) },
     dodatki: {
       VILDA_SYNC_WORKER_URL: polaczenie.adres, ...(beacon ? { fetch: polaczenie.fetchOkna } : {}), Blob, CustomEvent,
-      ...(natywny ? { indexedDB: idb } : {}), ...(o.nawigator ? { MessageChannel } : {}), ...(o.dodatki || {}),
+      ...(natywny ? { indexedDB: idb } : {}), ...(o.nawigator ? { MessageChannel } : {}),
+      ...(wspolne ? { localStorage: wspolne.win.localStorage } : {}), ...(o.ramka ? { sessionStorage: o.ramka.win.sessionStorage } : {}),
+      ...(zKanalem ? { BroadcastChannel: przegladarka.klasa(nazwa, wlasneKanaly) } : {}),
+      ...(etOkna ? {
+        addEventListener: (...a) => etOkna.addEventListener(...a),
+        removeEventListener: (...a) => etOkna.removeEventListener(...a),
+        dispatchEvent: (e) => etOkna.dispatchEvent(e),
+      } : {}),
+      ...(o.dodatki || {}),
     },
     ...(o.zrodla ? { zrodla: o.zrodla } : {}),
   });
   const win = ow.win;
+  if (o.ramka) win.top = o.ramka.win; // ramka: self !== top (przed załadowaniem vilda_sync.js — Nt czyta to przy starcie)
   const vault = win.VildaVault;
   const persistKey = `urz-${nr}`;
   let ostatniStan = null;
@@ -353,7 +422,7 @@ export async function utworzUrzadzenie(o = {}) {
     const u = await vault.createUser(haslo, { iterations: 1000, label: `Fikcyjna Lekarka ${nazwa}`, ...(o.konto || {}) });
     konto = { userId: u.userId, haslo };
   }
-  if (zrodloKlonu && o.klon === 'wszystko') {
+  if (zrodloKlonu && o.klon === 'wszystko' && !wspolne) {
     // „Ta sama przeglądarka po skopiowaniu profilu”: klucze źródła poza jego persistKey i vildaRetention.
     const pomin = new Set(['vildaRetention', `urz-${zrodloKlonu._nr}`]);
     for (const m of ['localStorage', 'sessionStorage']) {
@@ -397,7 +466,16 @@ export async function utworzUrzadzenie(o = {}) {
   const d = {
     nazwa, adres: polaczenie.adres, polaczenie, atrapa, win, vault, sync, konto, blokady, timery: ow.timery,
     dziennikMagazynu: ow.dziennik, adapter, magazyn, indexedDB: idb, krypto: ow.krypto, slotId, _nr: nr, _licz: licz,
+    przegladarka,
     material,
+    zdarzenieOkna(typ) {
+      if (!etOkna) throw new Error(`zdarzenieOkna ${nazwa}: urządzenie bez zdarzeniaOkna`);
+      return etOkna.dispatchEvent(new Event(typ));
+    },
+    zdarzenieDokumentu(typ, { visibilityState } = {}) {
+      if (visibilityState) { win.document.visibilityState = visibilityState; win.document.hidden = visibilityState === 'hidden'; }
+      return win.document.dispatchEvent(new Event(typ));
+    },
     odblokuj: () => vault.unlockUser(konto.userId, konto.haslo),
     zablokuj: (powod) => vault.lock(powod || 'manual'),
     zapiszKarte: (i, op = {}) => vault.savePatient(naglowek(i, op), { dedup: false, ...(op.zapis || {}) }),
@@ -434,6 +512,7 @@ export async function utworzUrzadzenie(o = {}) {
       if (operacjeWToku(d).length) OSIEROCONE.add(d);
       polaczenie.rozlacz();
       ow.timery.wyczysc();
+      for (const k of [...wlasneKanaly]) k.close();
       if (blokady) await blokady.zwolnijWszystkie();
       if (magazyn) magazyn.rozbroj();
       ow.timery.wyczysc();
