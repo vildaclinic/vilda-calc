@@ -95,6 +95,8 @@ describe('P-SYNC-LIMIT-ODCZYTU — limit odczytu treści w ścieżce pobierania'
       const w = await czekajNa(p);
       expect(w.ok).toBe(true);
       expect(w.w.drain, 'drenaż zakończony z TIMEOUT').toMatchObject({ stop: 'siec', kod: 'TIMEOUT' });
+      for (let k = 0; k < 20; k++) await tura();
+      expect(s.atrapa.ruch('B').konsumpcje, 'żądanie przerwane (połączenie zwolnione), nie tylko porzucone').toBe(0);
       expect(s.B.kursor(), 'kursor bez zmian').toBe(k0);
       expect(await maKarte(s.B, pid)).toBe(false);
     } finally { u.zwolnij(); }
@@ -150,6 +152,8 @@ describe('P-SYNC-LIMIT-ODCZYTU — limit odczytu treści w ścieżce pobierania'
       const w = await czekajNa(p);
       expect(w.ok).toBe(false);
       expect(w.e && w.e.code).toBe('TIMEOUT');
+      for (let k = 0; k < 20; k++) await tura();
+      expect(s.atrapa.ruch('B').konsumpcje, 'żądanie przerwane').toBe(0);
     } finally { u.zwolnij(); }
     await cisza([s.A, s.B]);
     const w2 = await s.B.sync.syncPull({ czekajNaDrenaz: true });
