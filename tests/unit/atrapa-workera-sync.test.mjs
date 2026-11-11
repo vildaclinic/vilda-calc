@@ -25,6 +25,7 @@
 //   K39–K40 nagłówki /status i /blob, ramka changed; kubełek na slot, 413 v36, granica eventBytes, originy v36.
 //   K41    filtr urządzenia, gdy.ktore, licznik aktywności, czytanie ciała.
 //   K42    restart instancji DO (wdrożenie, ewikcja) wobec zmiany limitów.
+//   K43    usterka trescWisi: nagłówki i połowa ciała, reszta po zwolnieniu albo po ms; abort żądania → AbortError.
 //
 // Czerwone na bazie: żadne — narzędzia testowe, zielone na e49ff33e.
 import { afterEach, describe, expect, it } from 'vitest';
@@ -961,5 +962,34 @@ describe('E2-PR0: atrapa workera vilda-sync — kontrakt v37a i v36', () => {
     expect(a.slot().dz.importRange, 'limity: bez wykrycia importu').toBe(null);
     a.ewikcjaDO();
     expect([licznikDO(a), a.slot().dz.importRange], 'ewikcja: licznik od zera i wykrycie ogona').toEqual([0, { from: 0, to: 2, first: true }]);
+  });
+
+  it('K43: usterka trescWisi — status i nagłówki od razu, ciało wisi po połowie: zwolnij() albo ms dokańczają odczyt, abort żądania kończy go AbortError', async () => {
+    const a = nowa();
+    await zarejestruj(a);
+    const A = a.polacz('A');
+    const st = (p, signal) => p.fetch(`${p.adres}/v1/slots/${SLOT}/status`, { headers: { Authorization: 'Bearer ' + TOKEN }, signal });
+    const u = a.usterka({ gdy: { trasa: 'status' }, trescWisi: true });
+    const r = await st(A);
+    expect(r.status).toBe(200);
+    let gotowe = false;
+    const k0 = a.ruch('A').konsumpcje;
+    const pj = r.json().then((x) => { gotowe = true; return x; });
+    await u.osiagnieta;
+    for (let i = 0; i < 20; i += 1) await tura();
+    expect(gotowe, 'ciało wisi').toBe(false);
+    expect(a.ruch('A').konsumpcje, 'odczyt w toku').toBeGreaterThan(k0);
+    u.zwolnij();
+    expect(typeof (await pj).updatedAt).toBe('string');
+    expect(a.ruch('A').konsumpcje).toBe(k0);
+    const k = new AbortController();
+    a.usterka({ gdy: { trasa: 'status' }, trescWisi: true });
+    const r2 = await st(A, k.signal);
+    const pj2 = r2.json();
+    for (let i = 0; i < 20; i += 1) await tura();
+    k.abort();
+    await expect(pj2).rejects.toMatchObject({ name: 'AbortError' });
+    a.usterka({ gdy: { trasa: 'status' }, trescWisi: { ms: 5 } });
+    expect(typeof (await (await st(A)).json()).updatedAt).toBe('string');
   });
 });
