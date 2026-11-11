@@ -95,7 +95,8 @@
 //         zawiera `_eventLog`, applyEncryptedEvent, encryptEvent, nazw 14 builderów, nazw API magazynu (gateOpen,
 //         outbox…), emissionsSettled, onBulkChange (E2-PR3a3), sweepOutbox (E2-PR3a4), VILDA_EVENT_LOG, klucza
 //         urządzenia, nazwy bazy kolejki (vilda_sync_ poza vilda_sync_integration.js), Bev_, Bob_ ani Bem_ (bez nazw
-//         ogólnych: enqueue, eventBytes, kinds, deleteDatabase — istnieją w innych plikach).
+//         ogólnych: enqueue, eventBytes, kinds, deleteDatabase — istnieją w innych plikach). Wyjątek: vilda_sync.js zna
+//         API drenażu z kwarantanną (E2-PR4c) i nadawcy kolejki (E2-PR4d) — dokładnie tę listę, _eventLog raz.
 //   U2(c) część Bev_: lista zakazana (zapis, emisja, sieć, magazyny przeglądarki, legacy buildery delt, eksport
 //         ładunku, console.), także w komentarzach; część Bob_: własna lista tekstowa i reguła domknięcia na drzewie
 //         składni (acorn + eslint-scope): wolne identyfikatory wyłącznie z listy, pola okna tylko w swoich funkcjach,
@@ -1304,7 +1305,10 @@ describe('U2(b): pliki produktu poza sejfem nie znają nowego API', () => {
     ...KLUCZE_MAGAZYNU.filter((k) => k !== 'enqueue' && k !== 'deleteDatabase'), KLUCZ_EMISJI, KLUCZ_PARTII, KLUCZ_PRZEGLADU];
   // E2-PR4c: drenaż zdarzeń w vilda_sync.js woła sejf przez opakowanie konta (pole zdarzenia = _eventLog).
   const DRENAZ_SYNC = ['_eventLog', 'applyEncryptedEvent', 'quarantinePut', 'quarantineList', 'quarantineMinSeq', 'quarantineRelease',
-    'resultSummary', KLUCZ_DOGONIONE];
+    'resultSummary', KLUCZ_DOGONIONE,
+    // E2-PR4d (P-SYNC-NADAWCA): nadawca kolejki w vilda_sync.js — partie kolejki, czekanie na emisje, słuchacz partii
+    // importu i przegląd kolejki (przez to samo opakowanie konta).
+    'outboxTake', 'outboxAccept', 'outboxReject', 'outboxFail', 'outboxRequeueStale', KLUCZ_EMISJI, KLUCZ_PARTII, KLUCZ_PRZEGLADU];
   const WZORCE = [/vilda_sync_(?!integration\.js)/, /(?<![A-Za-z0-9_$])Bev_/, /(?<![A-Za-z0-9_$])Bob_/, /(?<![A-Za-z0-9_$])Bem_/];
   it('żaden plik produktu poza vilda_vault.js nie zawiera _eventLog, nazw API dziennika, magazynu, emisji, partii i przeglądu kolejki (emissionsSettled, onBulkChange, sweepOutbox), VILDA_EVENT_LOG, klucza urządzenia, nazwy bazy kolejki, Bev_, Bob_ ani Bem_', () => {
     const winne = [];
@@ -1317,11 +1321,12 @@ describe('U2(b): pliki produktu poza sejfem nie znają nowego API', () => {
     expect(winne).toEqual([]);
   });
 
-  it('E2-PR4c (P-SYNC-DRENAZ-ZDARZEN): vilda_sync.js zna tylko API drenażu z kwarantanną — _eventLog dokładnie raz (opakowanie konta Bpw_sejfKonta), zastosowanie zdarzenia, kwarantanna, podsumowanie wyniku i markSyncCaughtUp; nic z kolejki, emisji ani buildera', () => {
+  it('E2-PR4c i E2-PR4d (P-SYNC-DRENAZ-ZDARZEN, P-SYNC-NADAWCA): vilda_sync.js zna tylko API drenażu z kwarantanną i nadawcy — _eventLog dokładnie raz (opakowanie konta Bpw_sejfKonta), zastosowanie zdarzenia, kwarantanna, podsumowanie wyniku, markSyncCaughtUp, partie kolejki, emissionsSettled, onBulkChange i sweepOutbox; bez dopisania, odrzucenia całej kolejki, bramki, szyfrowania ani buildera', () => {
     const tresc = fs.readFileSync(path.join(KORZEN, 'vilda_sync.js'), 'utf8');
     expect(tresc.split('_eventLog').length - 1, '_eventLog raz').toBe(1);
     expect(tresc).toContain('zdarzenia:t._eventLog||null');
     expect(NAZWY.filter((n) => tresc.includes(n)).sort()).toEqual([...DRENAZ_SYNC].sort());
+    for (const n of ['enqueue', 'outboxDiscard', 'gateOpen', 'encryptEvent', 'deleteDatabase']) expect(tresc, n).not.toContain(n);
   });
 
   it('strażnik nie jest pusty — skan widzi moduły synchronizacji, service worker i strony; wzorzec bazy kolejki przepuszcza tylko vilda_sync_integration.js', () => {
