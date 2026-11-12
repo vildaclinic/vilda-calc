@@ -378,7 +378,10 @@ function Cm_clearContext(ownSave){
   try{
     var win=source.win,doc=source.doc,clcr=!!doc.getElementById("clcrForm");
     var form=doc.getElementById(clcr?"clcrForm":"calcForm"),button=doc.getElementById(clcr?"clearBtn":"clearAllDataBtn");
-    if(!form||!button||doc.readyState==="loading"||button.disabled||button.getAttribute("aria-disabled")==="true"||button.getAttribute("aria-busy")==="true"||typeof button.click!=="function"||!Cm_clearDisplayed(button,win))return null;
+    // P-KLIRENS-WYCZYSC: on Klirens the page button clears only Klirens data and hides
+    // while no formula is active; the menu ends the work with the patient, so there it
+    // needs the displayed Klirens form, not the visible page button.
+    if(!form||!button||doc.readyState==="loading"||button.disabled||button.getAttribute("aria-disabled")==="true"||button.getAttribute("aria-busy")==="true"||typeof button.click!=="function"||!Cm_clearDisplayed(clcr?form:button,win))return null;
     var owner=Cm_clearOwner(win),host=Cm_clearOwner(r),panel=win.VildaPanelPacjent,guard=win.VildaUnsavedGuard;
     if(!owner||!host||owner.userId!==host.userId||owner.guest!==host.guest||owner.unlocked!==host.unlocked)return null;
     if(win.__vildaPersistRestoring===true||win.__vildaLustroWpis===true||panel&&typeof panel.nieaktualny==="function"&&panel.nieaktualny())return null;
