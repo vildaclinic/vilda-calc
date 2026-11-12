@@ -1,4 +1,4 @@
-import { otworzSejf } from './lab-historia-dane.mjs';
+import { bezBaneraZgody, otworzSejf } from './lab-historia-dane.mjs';
 
 /**
  * LAB-PAKIETY PR1: przelicznik jednostek z odblokowanym fikcyjnym sejfem i (opcjonalnie) fikcyjną pacjentką
@@ -16,6 +16,7 @@ export async function wczytajPacjenta(scope, patientId, dane = PACJENTKA) {
 }
 
 export async function otworzPakiet(page, { pacjent = true } = {}) {
+  await bezBaneraZgody(page);
   const patientId = await otworzSejf(page, '/przelicznik-jednostek.html');
   if (pacjent) await wczytajPacjenta(page, patientId);
   await page.locator('#labModePackage').click();
