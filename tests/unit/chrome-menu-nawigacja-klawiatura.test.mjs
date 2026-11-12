@@ -629,9 +629,16 @@ describe('Chrome: Wyczyść działa przez istniejący formularz i rzeczywisty un
     expect(h.api.clearContext(proof)).toBeNull(); expect(h.reset).not.toHaveBeenCalled();
     expect(h.name.value).toBe('Fikcyjny wpis Clear');
   });
-  it('Klirens zachowuje własny natywny reset zamiast dodawać ogólny dialog', () => {
-    const h = clearMenuEnvironment({ clcr: true }); h.menuClear.click();
-    expect(h.reset).toHaveBeenCalledOnce(); expect(h.name.value).toBe(''); expect(h.dialog()).toBeNull();
+  it('Klirens: menu pyta jak Start i DocPro, a potem wysyła pełne czyszczenie pacjenta (P-KLIRENS-WYCZYSC)', () => {
+    // Decyzja właściciela 2026-11-12: przycisk na stronie czyści tylko dane Klirensu,
+    // a menu kończy pracę z pacjentem — z tym samym strażnikiem co na innych stronach.
+    const h = clearMenuEnvironment({ clcr: true });
+    h.win.MouseEvent = class { constructor(type, init) { this.type = type; Object.assign(this, init); } };
+    h.menuClear.click();
+    expect(h.reset).not.toHaveBeenCalled(); expect(h.dialog()?.getAttribute('aria-label')).toBe('Zapisać zmiany przed wyczyszczeniem?');
+    h.button('Odrzuć zmiany i wyczyść').click();
+    expect(h.reset).toHaveBeenCalledOnce(); expect(h.reset.mock.calls[0][0].clcrClearPatient).toBe(true);
+    expect(h.name.value).toBe(''); expect(h.dialog()).toBeNull();
   });
 });
 

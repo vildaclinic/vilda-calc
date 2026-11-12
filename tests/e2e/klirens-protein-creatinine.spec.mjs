@@ -2,7 +2,7 @@ import { showClcrResults, showBadaniaView, clcrRow, clcrPoints, clcrPoint, clcrC
 import fs from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 import { czekajNaUstabilizowanyUklad, kliknij } from '../support/uklad-czekanie.mjs';
-import { enterGuest, installMemoryVault, memory, prepareBrowser, saveVisible, selectPatient, OTHER_PATIENT_ID, openShellCalculator, shellFrame } from '../support/klirens-patient-record.mjs';
+import { enterGuest, installMemoryVault, memory, prepareBrowser, saveVisible, selectPatient, OTHER_PATIENT_ID, openShellCalculator, shellFrame, odrzucObliczenieKlirensu } from '../support/klirens-patient-record.mjs';
 
 // Fictional values. Only encrypted I/O is replaced by the explicit memory vault;
 // all clinical calculations, DOM events, serializers, readers and editors are real.
@@ -462,6 +462,7 @@ test('B/Cr: zapisany pacjent, małe raw i brak normy spójne w Badaniach, Notatk
   await expect(page.locator('#clcrVisitSaveBtn')).toBeDisabled();
   await selectPatient(page);
   await kliknij(page.locator('#clearBtn'));
+  await odrzucObliczenieKlirensu(page);
   await page.waitForFunction(() => window.clcrIsResetting !== true);
   await restore(page, { BCR_protein: '.00001', BCR_creatinine: '100' });
   const model = await result(page, { raw: tinyRaw, guest: false });
@@ -553,6 +554,7 @@ test('B/Cr: Start i powrót zachowują pola; zmiana pacjenta wymaga nowego pomia
   await expect(calculator.locator('#clcrVisitSaveBtn')).toBeDisabled();
   expect((await memory(calculator)).notes.filter(note => note.patientId === OTHER_PATIENT_ID)).toEqual([]);
   await kliknij(calculator.locator('#clearBtn'));
+  await odrzucObliczenieKlirensu(calculator);
   await calculator.waitForFunction(() => window.clcrIsResetting !== true);
   await choose(calculator, FORMULA);
   await expect(page.locator('#BCR_protein')).toHaveCount(0); // form lives in the calculator iframe

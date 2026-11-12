@@ -2,7 +2,7 @@ import { showClcrResults } from '../support/badania-klirens.mjs';
 import fs from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 import { czekajNaUstabilizowanyUklad, kliknij } from '../support/uklad-czekanie.mjs';
-import { installMemoryVault, memory, saveVisible, selectPatient } from '../support/klirens-patient-record.mjs';
+import { installMemoryVault, memory, saveVisible, selectPatient, odrzucObliczenieKlirensu } from '../support/klirens-patient-record.mjs';
 import { applySession, base, card, choose, collect, details, ELECTROLYTES, expectBlocked, expectResult, inputCard, openCalculator, restore } from '../support/klirens-serum-anion-gap-browser.mjs';
 
 async function geometry(page, width) {
@@ -214,7 +214,8 @@ test('AG surowicy: zapis zachowuje małą wartość, normę z dnia obliczenia i 
   await restore(page);
   await expect(page.locator('#clcrVisitSaveBtn')).toBeDisabled();
   await selectPatient(page);
-  await kliknij(page.locator('#clearBtn')); await page.waitForFunction(() => window.clcrIsResetting !== true);
+  await kliknij(page.locator('#clearBtn')); await odrzucObliczenieKlirensu(page);
+  await page.waitForFunction(() => window.clcrIsResetting !== true);
   await restore(page, { S_Na: '139.96', S_Cl: '116', S_HCO3: '24', AGS_albuminEnabled: true, S_Albumin: '20' });
   const tiny = await expectResult(page, { raw: -.04, assessment: 'low', tone: 'warn', guest: false });
   const [note] = await saveVisible(page, '2026-11-01');

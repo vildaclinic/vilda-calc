@@ -219,7 +219,7 @@ test('a delayed Save and Clear cannot clear a different active clinical pane', a
   await expect(docpro.locator('#height')).toHaveValue('161');
 });
 
-test('Klirens menu reuses its native clear policy and retains saved documentation', async ({ page, context }) => {
+test('Klirens menu asks like Start/DocPro before clearing the patient and retains saved documentation', async ({ page, context }) => {
   const { owner } = await openFictionalClearAccount(page, context);
   const stored = await storedRecordAndNote(owner);
   await loadPatient(owner, stored.patientId, 'restore');
@@ -229,12 +229,15 @@ test('Klirens menu reuses its native clear policy and retains saved documentatio
   await page.evaluate(() => window.ClcrUiWorkflow.selectFormula('ckid_u25'));
   await expect(page.locator('#formulaPicker')).toHaveValue('ckid_u25');
   await page.locator('#clcrIdentityBar [data-ident-act="toggle"]').click();
-  // An unsaved general field would trigger Start/DocPro's guard. Klirens'
-  // existing native clear deliberately handles its specimen without that guard.
+  // P-KLIRENS-WYCZYSC (owner decision 2026-11-12): the menu ends the work with the
+  // patient on every page, so an unsaved general field and an unsaved Klirens
+  // calculation now meet the same guard as Start/DocPro.
   await page.locator('#height').fill('151');
   await page.locator('#Scr').fill('0.6');
   await clearFromMenu(page);
-  await expect(page.getByRole('dialog', { name: CLEAR_DIALOG })).toHaveCount(0);
+  const guard = page.getByRole('dialog', { name: CLEAR_DIALOG });
+  await expect(guard).toHaveCount(1);
+  await guard.getByRole('button', { name: 'Odrzuć dane i obliczenie, wyczyść' }).click();
   await expect(page.locator('#height')).toHaveValue('');
   await expect(page.locator('#Scr')).toHaveValue('');
   expect(await page.evaluate(() => window.__clearTrustedClicks)).toContainEqual({ id: 'clearBtn', trusted: false });

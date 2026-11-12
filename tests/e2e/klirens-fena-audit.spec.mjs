@@ -524,7 +524,7 @@ for (const issue of ['different-time', 'different-urine']) {
       // FE correction. The retired routine questionnaire is not a way out.
       await expect(tmpCard).toHaveCount(0);
       expect(await page.evaluate(() => window.VildaClcrTmpGfr.readInputFromDocument(document).pairedSameTime)).toBe('different');
-      await expect(page.locator('.tmp-gfr-known-sample-fact')).toContainText('Wyczyść wszystkie pola');
+      await expect(page.locator('.tmp-gfr-known-sample-fact')).toContainText('Wyczyść dane Klirensu');
       for (const [id, value] of Object.entries({ U_PO4_spot: '10', S_PO4_spot: '1', Ucr_spot: '100', Scr_spot: '1' })) {
         await expect(page.locator('#' + id)).toHaveValue(value);
       }

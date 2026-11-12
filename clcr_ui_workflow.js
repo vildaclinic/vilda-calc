@@ -4308,8 +4308,11 @@
     const clear = documentRef.getElementById("clearBtn");
     if (clear) {
       clear.addEventListener("click", (event) => {
-        const resumeCitcr = ["CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "pH24", "KTV", "Prot_mgkg", "Ox_mgkg", "Cit_mgkg", "Ca_Cit", "Na_mmol_d", "K_mmol_d", "KM_Cr", "Ca_Cr", "Mg_Ca", "PO4_Cr", "B_Cr", "K_frac", "AGs"].includes(event.clcrClearedFormula);
         const clearedFormula = event.clcrClearedFormula;
+        // P-KLIRENS-WYCZYSC: „Wyczyść dane Klirensu” (bez znacznika pełnego
+        // czyszczenia pacjenta) zawsze zostawia wybrany wzór. Pełne czyszczenie
+        // z menu i echa powłoki zachowuje dotychczasową listę wzorów.
+        const resumeCitcr = (event.clcrClearPatient !== true && !!clearedFormula) || ["CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "pH24", "KTV", "Prot_mgkg", "Ox_mgkg", "Cit_mgkg", "Ca_Cit", "Na_mmol_d", "K_mmol_d", "KM_Cr", "Ca_Cr", "Mg_Ca", "PO4_Cr", "B_Cr", "K_frac", "AGs"].includes(clearedFormula);
         global.setTimeout(() => {
           if (resumeCitcr) {
             selectFormula(clearedFormula, { guide: false });
@@ -5493,6 +5496,10 @@
     const historical = new Set(PATIENT_FACT_FIELDS);
     const form = doc.getElementById?.("clcrForm");
     Array.from(form?.querySelectorAll?.('input[type="number"][id], input[type="text"][id], textarea[id]') || []).forEach(control => {
+      // P-KLIRENS-WYCZYSC: ktvUrrDurationMinutes to tylko widok URR pola ktvDurationMinutes
+      // (clcr_ktv_ui.js, proxyField). Liczy się kanoniczne pole; lustro po zapisie
+      // eKt/V dawało fałszywe „niezapisane obliczenie”.
+      if (control.id === "ktvUrrDurationMinutes") return;
       if (!historical.has(control.id) && !["formulaSearch", "U_ACR", "U_PCR", "CITDZM_collectionHours", "OXDZM_collectionHours", "Cl24DurationHours", "UA_collectionHours", "CA_collectionHours", "MG_collectionHours", "PO4_collectionHours", "Prot_collectionHours", "Na_collectionHours", "K_collectionHours"].includes(control.id)) candidates.set(control.id, control);
     });
     const legacyAliases = { ...global.ClcrUrateCreatinineSession?.legacyAliasValues?.(), ...global.ClcrMagnesiumCalciumSession?.legacyAliasValues?.(), ...global.ClcrPhosphorusCreatinineSession?.legacyAliasValues?.(), ...global.ClcrProteinCreatinineSession?.legacyAliasValues?.() };
@@ -6078,6 +6085,17 @@
       form?.addEventListener?.("change", rememberPendingInputOrigins);
       doc.addEventListener("vilda:patient-loaded", onPatientLoaded);
       doc.addEventListener("vilda:persist-restored", onSharedStateRestored);
+      // P-KLIRENS-WYCZYSC: „Wyczyść dane Klirensu” zostawia pacjenta i usuwa pomiar.
+      // Blokada pomiaru sprzed zmiany pacjenta dotyczy tylko tego pomiaru, więc po
+      // wyczyszczeniu (bez wartości pomiaru) przestaje obowiązywać — ta sama reguła
+      // co w refresh(); dotąd zdejmowało ją dopiero pełne czyszczenie pacjenta.
+      doc.getElementById?.("clearBtn")?.addEventListener?.("click", () => {
+        if (measurementBlocked && !hasMeasurementInputs()) {
+          measurementBlocked = false;
+          blockedFromPatientId = null;
+        }
+        scheduleRefresh();
+      });
       doc.addEventListener("vilda:clcr-results-changed", event => notifyRecordChanged(event.detail));
       if (global.addEventListener) {
         global.addEventListener("focus", () => { observeSiblingPatientSaves(); notifyPatientRecordChanged(); verifySavedOperations(); });

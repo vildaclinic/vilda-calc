@@ -2,7 +2,7 @@ import { showClcrResults, clcrPoints, clcrPoint } from '../support/badania-klire
 import fs from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 import { czekajNaUstabilizowanyUklad, kliknij } from '../support/uklad-czekanie.mjs';
-import { enterGuest, installMemoryVault, memory, prepareBrowser, saveVisible, selectPatient, OTHER_PATIENT_ID, openShellCalculator, shellFrame } from '../support/klirens-patient-record.mjs';
+import { enterGuest, installMemoryVault, memory, prepareBrowser, saveVisible, selectPatient, OTHER_PATIENT_ID, openShellCalculator, shellFrame, odrzucObliczenieKlirensu } from '../support/klirens-patient-record.mjs';
 
 // Fictional values only. Clinical calculation, serializers, history and editor
 // are production code; the explicit fixture replaces encrypted I/O only.
@@ -232,6 +232,7 @@ test('K/(K+Na): surowe małe wartości i brak normy w zapisie, historii, Notatka
   await expect(page.locator('#clcrVisitSaveBtn')).toBeDisabled();
   await selectPatient(page);
   await kliknij(page.locator('#clearBtn'));
+  await odrzucObliczenieKlirensu(page);
   await page.waitForFunction(() => window.clcrIsResetting !== true);
   await restore(page, { U_K: '.000001', U_Na: '100' });
   const model = await result(page, raw, false);
@@ -302,7 +303,8 @@ test('K/(K+Na): powrót ze Startu zachowuje pola; zmiana pacjenta wymaga nowego 
   await selectPatient(calculator, OTHER_PATIENT_ID);
   await expect(calculator.locator('#clcrVisitSaveBtn')).toBeDisabled();
   expect((await memory(calculator)).notes.filter(note => note.patientId === OTHER_PATIENT_ID)).toEqual([]);
-  await kliknij(calculator.locator('#clearBtn')); await calculator.waitForFunction(() => window.clcrIsResetting !== true);
+  await kliknij(calculator.locator('#clearBtn')); await odrzucObliczenieKlirensu(calculator);
+  await calculator.waitForFunction(() => window.clcrIsResetting !== true);
   await choose(calculator, FORMULA);
   await expect(calculator.locator('#U_K')).toHaveValue(''); await expect(calculator.locator('#U_Na')).toHaveValue('');
   await blocked(calculator);

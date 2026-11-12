@@ -2,7 +2,7 @@ import { showClcrResults, showBadaniaView } from '../support/badania-klirens.mjs
 import fs from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 import { czekajNaUstabilizowanyUklad } from '../support/uklad-czekanie.mjs';
-import { enterGuest, installMemoryVault, memory, openShellCalculator, saveVisible, selectPatient } from '../support/klirens-patient-record.mjs';
+import { enterGuest, installMemoryVault, memory, openShellCalculator, saveVisible, selectPatient, odrzucObliczenieKlirensu } from '../support/klirens-patient-record.mjs';
 import { readVisibleSavedHistory } from '../support/klirens-saved-history.mjs';
 import { applySession, card, choose, DEFAULT_RESULT, details, displayedNumber, expectBlocked, expectResult, openCalculator, REMOVED_RESULT_SENTENCE, restore } from './urate-creatinine.helpers.mjs';
 
@@ -162,7 +162,8 @@ test('KM/Cr: jednostki opisują wpisane stężenia, a zero, małe liczby i niepo
 test('KM/Cr: zapis wymaga wybranej zapisanej karty pacjenta', async ({ page }) => {
   await openCalculator(page); await restore(page); await expectResult(page);
   await installMemoryVault(page, { select: false }); await expect(page.locator('#clcrVisitSaveBtn')).toBeDisabled(); expect((await memory(page)).notes).toEqual([]);
-  await page.locator('#clearBtn').click(); await page.waitForFunction(() => window.clcrIsResetting !== true);
+  await page.locator('#clearBtn').click(); await odrzucObliczenieKlirensu(page);
+  await page.waitForFunction(() => window.clcrIsResetting !== true);
   await selectPatient(page); await restore(page); await expectResult(page, { guest: false });
   const [note] = await saveVisible(page, '2026-11-02'); expect(note.patientId).toBeTruthy(); expect((await memory(page)).notes).toHaveLength(1);
 });

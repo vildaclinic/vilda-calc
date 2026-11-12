@@ -1,8 +1,16 @@
 import { expect, test } from '../support/test-czas.mjs';
+import { visibleChromeMenu } from '../support/chrome-menu-fixture.mjs';
 import { CLEAR_DIALOG, cancelThenDiscard, expectPubertyCleared, fillValidPatient,
   finishOwnReceipt, holdRealSaveReturn, loadPatient, openFictionalClearAccount,
   openPuberty, patientState, prepareDocProUserFlow, proveStaleDebounceWindow, readyClearPage, stage,
 } from '../support/clear-current-state-fixture.mjs';
+
+const clearFromMenu = async page => {
+  const menu = await visibleChromeMenu(page);
+  const clear = menu.getByRole('button', { name: 'Wyczyść', exact: true });
+  await expect(clear).toBeEnabled();
+  await clear.click();
+};
 
 test.use({ serviceWorkers: 'block', reducedMotion: 'reduce' });
 test.setTimeout(150_000);
@@ -119,7 +127,15 @@ test('Clear does not invent changes for a loaded legacy patient or defaults on S
       return decision.ready;
     }).toBe(true);
     expect(decision.state).toBe('saved');
-    await page.locator(path.includes('klirens') ? '#clearBtn' : '#clearAllDataBtn').click();
+    if (path.includes('klirens')) {
+      // P-KLIRENS-WYCZYSC (decyzja właściciela 2026-11-12): przycisk na stronie czyści tylko
+      // dane Klirensu i zostawia pacjenta; pacjenta czyści „Wyczyść” w menu, jak na Starcie.
+      await page.locator('#clearBtn').click();
+      await expect(page.getByRole('dialog')).toHaveCount(0);
+      await expect(page.locator('#height')).toHaveValue('150');
+      await expect.poll(() => page.evaluate(() => window.VildaSaveStatusIndicator.getCurrentDecision().state)).toBe('saved');
+      await clearFromMenu(page);
+    } else await page.locator('#clearAllDataBtn').click();
     await expect(page.getByRole('dialog', { name: CLEAR_DIALOG })).toHaveCount(0);
     await expect(page.locator('#height')).toHaveValue('');
     expect(await page.evaluate(id => window.VildaVault.getPatient(id), patientId)).toEqual(original);
@@ -157,7 +173,8 @@ test('restoring the loaded record preserves a saved default PAL through Klirens 
   await page.goto('/kalkulator-klirens.html', { waitUntil: 'load' });
   await readyClearPage(page);
   await expect.poll(() => page.evaluate(() => window.VildaSaveStatusIndicator.getCurrentDecision().state)).toBe('saved');
-  await page.locator('#clearBtn').click();
+  // P-KLIRENS-WYCZYSC: pacjenta w Klirensie czyści „Wyczyść” w menu (przycisk na stronie zostawia pacjenta).
+  await clearFromMenu(page);
   await expect(page.getByRole('dialog', { name: CLEAR_DIALOG })).toHaveCount(0);
   await expect(page.locator('#height')).toHaveValue('');
   expect(await page.evaluate(id => window.VildaVault.getPatient(id), patientId)).toEqual(original);

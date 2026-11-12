@@ -46,7 +46,7 @@
     const mismatch = [false, "no", "different", "different-urine"].includes(input.sameUrineSpecimen);
     layout.fact.hidden = !mismatch;
     layout.fact.textContent = mismatch
-      ? "Zapisano oznaczenia z różnych próbek moczu. Wpisane wartości pozostają w formularzu. Aby wprowadzić nową próbkę, użyj przycisku „Wyczyść wszystkie pola”." : "";
+      ? "Zapisano oznaczenia z różnych próbek moczu. Wpisane wartości pozostają w formularzu. Aby wprowadzić nową próbkę, użyj przycisku „Wyczyść dane Klirensu”." : "";
   }
 
   function createLayout(documentRef, options) {

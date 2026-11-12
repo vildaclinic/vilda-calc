@@ -2,7 +2,7 @@ import { showClcrResults, showBadaniaView, clcrRow, clcrPoints, clcrPoint } from
 import fs from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 import { czekajNaUstabilizowanyUklad, kliknij } from '../support/uklad-czekanie.mjs';
-import { enterGuest, installMemoryVault, memory, prepareBrowser, saveVisible, selectPatient } from '../support/klirens-patient-record.mjs';
+import { enterGuest, installMemoryVault, memory, prepareBrowser, saveVisible, selectPatient, odrzucObliczenieKlirensu } from '../support/klirens-patient-record.mjs';
 
 // Fictional values. Only encrypted I/O is replaced by the explicit memory vault;
 // all clinical calculations, DOM events, serializers, readers and editors are real.
@@ -354,6 +354,7 @@ test('Mg/Ca: dopiero zapisany pacjent umożliwia zapis; mały wynik pozostaje do
   // A previous unassigned measurement cannot be attributed to a newly loaded
   // patient. Start a fresh measurement through the real Clear action.
   await kliknij(page.locator('#clearBtn'));
+  await odrzucObliczenieKlirensu(page);
   await page.waitForFunction(() => window.clcrIsResetting !== true);
   await choose(page, FORMULA);
   await page.locator('#MGCA_magnesium').fill('0.00001');

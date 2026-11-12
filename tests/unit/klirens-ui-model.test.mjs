@@ -956,13 +956,13 @@ describe('Klirens — centralny model przepływu UI', () => {
     );
 
     expect(html).toContain('clcr_ui_workflow.css?v=20');
-    expect(html).toContain('clcr_ui_workflow.js?v=48');
+    expect(html).toContain('clcr_ui_workflow.js?v=49');
     expect(html).toContain('inline_kalkulator_klirens_02.js?v=41');
-    expect(html).toContain('inline_kalkulator_klirens_04.js?v=48');
-    expect(html).toContain('inline_kalkulator_klirens_07.js?v=39');
+    expect(html).toContain('inline_kalkulator_klirens_04.js?v=49');
+    expect(html).toContain('inline_kalkulator_klirens_07.js?v=40');
     expect(html).toContain('clcr_result_reference_data.js?v=7');
     expect(html).toContain('clcr_result_presentation.js?v=8');
-    expect(serviceWorker).toContain("const SW_VERSION = '1.1.519'");
+    expect(serviceWorker).toContain("const SW_VERSION = '1.1.520'");
     expect(html).toContain('clcr_calculation_assumptions.js?v=2');
     expect(serviceWorker).toContain("'/clcr_calculation_assumptions.js?v=2'");
     expect(serviceWorker).toContain("'/clcr_clinical_safety.js?v=14'");
@@ -989,9 +989,10 @@ describe('Klirens — centralny model przepływu UI', () => {
     }
     expect(html).toContain('clcr_acr_ui.js?v=2');
     expect(serviceWorker).toContain("'/clcr_acr_ui.js?v=2'");
-    expect(html).toContain('vilda_unsaved_guard.js?v=9');
+    expect(html).toContain('vilda_unsaved_guard.js?v=10');
     expect(serviceWorker).toContain("'/vilda_unsaved_guard.js?v=7'");
     expect(serviceWorker).toContain("'/vilda_unsaved_guard.js?v=9'");
+    expect(serviceWorker).toContain("'/vilda_unsaved_guard.js?v=10'");
     for (const file of [
       'clcr_measured_clearance_reference_data.js', 'clcr_measured_clearance_reference.js',
       'clcr_acr_reference_data.js', 'clcr_acr.js', 'clcr_acr_ui.css',
@@ -1005,7 +1006,7 @@ describe('Klirens — centralny model przepływu UI', () => {
       'clcr_uag_reference_data.js', 'clcr_uag.js', 'clcr_uag_ui.js', 'clcr_uag_ui.css', 'clcr_uag_persistence.js',
       'clcr_ua_reference_data.js', 'clcr_ua.js', 'clcr_ua_ui.js', 'clcr_ua_ui.css', 'clcr_ua_persistence.js',
     ]) {
-      const version = ["clcr_ua.js", "clcr_ua_ui.js", "clcr_cacr_reference_data.js", "clcr_cacr.js", "clcr_cacr_ui.js", "clcr_cacr_ui.css"].includes(file) ? 2 : 1;
+      const version = ["clcr_ua.js", "clcr_ua_ui.js", "clcr_cacr_reference_data.js", "clcr_cacr.js", "clcr_cacr_ui.js", "clcr_cacr_ui.css", "clcr_uag_ui.js"].includes(file) ? 2 : 1;
       expect(html).toContain(`${file}?v=${version}`);
       expect(serviceWorker).toContain(`'/${file}?v=${version}'`);
     }
