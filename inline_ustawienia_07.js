@@ -18,6 +18,15 @@
      nadrzednego w ramce powloki, inaczej tej strony) albo przy wlaczonej fladze (zeby dalo sie wylaczyc); bez "events"
      notka. Wlaczenie: flaga "1"; wylaczenie: usuniecie klucza (bez "0": po wlaczeniu dla wszystkich urzadzenie idzie
      za domyslnym).
+   - Zmiany do wyjasnienia (#syncProblemsBox, E2-PR5b; wiersz 9b): wiersze kolejki oversize, unreadable i rejected
+     (outboxList) i kwarantanna ze wszystkich slotow (quarantineCount, quarantineList), tylko gdy ktoras lista nie jest
+     pusta. Wiersz: rodzaj zmiany i karta (naglowki z listPatients i listExternalPatients; notatka pacjenta przez
+     getPatientNote; brak karty - "karta usunieta"), stan i chwila. Zdarzenie: numer, powod, chwila; slot inny niz
+     biezacy (getSyncMaterial) - "poprzednia tozsamosc konta". Lista budowana od nowa tylko po zmianie zestawu wierszy
+     (fokus i przyciski nie znikaja co 5 s). "Porzuc" - outboxDiscard([eid], { potwierdzone: true }); "Zwolnij" -
+     quarantineRelease([seq], { slotId }); oba po potwierdzeniu w arkuszu (fokus na "Anuluj"); odmowa albo wyjatek -
+     komunikat przy wierszu, przycisk znowu czynny. Operacje kolejki i kwarantanny sprawdzaja sesje w sejfie
+     (P-SESJA-ZAPISU).
    Tekst wylacznie przez textContent, widocznosc wylacznie przez atrybut hidden (bez stylow na elementach). Okno
    wylacznie przez w.* (test powloki uruchamia ten plik w vm z oknem bez document).
    Testy: tests/unit/sync-widok-kolejki.test.mjs, tests/e2e/sync-zdarzenia-wysylka.spec.mjs. */
@@ -48,8 +57,24 @@
     EVENTS_DISABLED: 'Pe\u0142na synchronizacja dzia\u0142a dalej.'
   };
   var Bkw_RADA_ZWYKLA = 'Aplikacja spr\u00f3buje ponownie sama.';
+  // Rodzaje zmian (jak w sejfie) -> opis; rodzaje z karta w kluczu encji (patientId albo patientId/snapshotId)
+  // i z notatka pacjenta w kluczu (id notatki).
+  var Bkw_RODZAJE = {
+    snap: 'Wizyta', pfull: 'Karta', ptomb: 'Usuni\u0119cie karty', stomb: 'Usuni\u0119cie wizyty', pnote: 'Notatka pacjenta',
+    pnotetomb: 'Usuni\u0119cie notatki pacjenta', note: 'Notatka w notatniku', notetomb: 'Usuni\u0119cie notatki z notatnika',
+    plist: 'Lista pacjent\u00f3w', plisttomb: 'Usuni\u0119cie listy pacjent\u00f3w', pref: 'Ustawienie', pk: 'Klucz logowania',
+    pktomb: 'Usuni\u0119cie klucza logowania', cred: 'Dane logowania konta'
+  };
+  var Bkw_KARTOWE = { snap: 1, pfull: 1, ptomb: 1, stomb: 1 }, Bkw_NOTATKOWE = { pnote: 1, pnotetomb: 1 };
+  // Stany wierszy "Z tego urzadzenia" i powody kwarantanny -> opis.
+  var Bkw_STANY = {
+    oversize: 'za du\u017ca, \u017ceby wys\u0142a\u0107 j\u0105 pojedynczo', rejected: 'serwer odrzuci\u0142 zmian\u0119', unreadable: 'nie da si\u0119 odczyta\u0107 zmiany'
+  };
+  var Bkw_POWODY = {
+    envelope: 'nieznany format', format: 'nieznany format', decrypt: 'nie uda\u0142o si\u0119 odszyfrowa\u0107', shape: 'nieczytelna tre\u015b\u0107'
+  };
   var Bkw_pokolenie = 0, Bkw_pokolenieKarty = 0, Bkw_odblokowane = false, Bkw_klikow = 0, Bkw_ostatniKlik = 0;
-  var Bkw_arkusz = null, Bkw_sejfPodlaczony = false;
+  var Bkw_arkusz = null, Bkw_sejfPodlaczony = false, Bkw_podpis = null;
 
   function Bkw_el(id) {
     var d = w.document;
@@ -84,6 +109,13 @@
     return s && typeof s.detectApi == 'function' ? s : null;
   }
   function Bkw_liczba(x) { return typeof x == 'number' && isFinite(x) && x >= 0 && Math.floor(x) === x; }
+  function Bkw_ma(o, k) { return Object.prototype.hasOwnProperty.call(o, k); }
+  function Bkw_nowy(tag, klasa, tekst) {
+    var e = w.document.createElement(tag);
+    if (klasa) e.className = klasa;
+    if (tekst) e.textContent = tekst;
+    return e;
+  }
 
   // Formy liczebnika: 1, 2-4 (bez 12-14), reszta.
   function Bkw_forma(n, f1, f2, f5) {
@@ -149,8 +181,10 @@
       blad.hidden = !t;
     }
   }
+  function Bkw_wierszProblemu(r) { return !!r && typeof r == 'object' && typeof r.eid == 'string' && Bkw_ma(Bkw_STANY, r.state); }
+  function Bkw_wierszKw(q) { return !!q && typeof q == 'object' && typeof q.slotId == 'string' && Bkw_liczba(q.seq); }
   async function Bkw_odswiez() {
-    if (!Bkw_el('syncOutboxBox') && !Bkw_el('syncOutboxChipWrap')) return null;
+    if (!Bkw_el('syncOutboxBox') && !Bkw_el('syncOutboxChipWrap') && !Bkw_el('syncProblemsBox')) return null;
     var nr = ++Bkw_pokolenie, stan = null;
     try {
       var L = Bkw_kolejka();
@@ -158,20 +192,178 @@
         var c = await L.outboxCount();
         if (nr !== Bkw_pokolenie) return null;
         if (c && c.ok === true && Bkw_liczba(c.pending)) {
-          var n = c.pending + (Bkw_liczba(c.inflight) ? c.inflight : 0), b = null;
-          if (n > 0 && typeof L.outboxList == 'function') {
+          var n = c.pending + (Bkw_liczba(c.inflight) ? c.inflight : 0), wiersze = [], kw = [];
+          var p = ['oversize', 'unreadable', 'rejected'].some(function (k) { return Bkw_liczba(c[k]) && c[k] > 0; });
+          if ((n > 0 || p) && typeof L.outboxList == 'function') {
             var l = null;
             try { l = await L.outboxList(); } catch (x) { l = null; }
             if (nr !== Bkw_pokolenie) return null;
-            if (l && l.ok === true) b = Bkw_ostatniBlad(l.wiersze);
+            if (l && l.ok === true && Array.isArray(l.wiersze)) wiersze = l.wiersze;
           }
-          stan = { n: n, blad: b };
+          if (typeof L.quarantineCount == 'function') {
+            var q = null;
+            try { q = await L.quarantineCount(); } catch (x) { q = null; }
+            if (nr !== Bkw_pokolenie) return null;
+            if (q && q.ok === true && Bkw_liczba(q.total) && q.total > 0 && typeof L.quarantineList == 'function') {
+              var ql = null;
+              try { ql = await L.quarantineList(); } catch (x) { ql = null; }
+              if (nr !== Bkw_pokolenie) return null;
+              if (ql && ql.ok === true && Array.isArray(ql.wiersze)) kw = ql.wiersze.filter(Bkw_wierszKw);
+            }
+          }
+          stan = { n: n, blad: Bkw_ostatniBlad(wiersze), wlasne: wiersze.filter(Bkw_wierszProblemu), kw: kw };
         }
       }
     } catch (x) { stan = null; }
     if (nr !== Bkw_pokolenie) return null;
     Bkw_pokaz(stan);
-    return stan;
+    await Bkw_pokazProblemy(stan, nr);
+    return nr === Bkw_pokolenie ? stan : null;
+  }
+
+  // -- Zmiany do wyjasnienia (E2-PR5b) --
+  function Bkw_rodzaj(kind) { return Bkw_ma(Bkw_RODZAJE, kind) ? Bkw_RODZAJE[kind] : 'Zmiana'; }
+  // Tytul wiersza z karta: nazwa (tekst; pusty - karta bez nazwy) albo null (karty nie ma na tym urzadzeniu).
+  function Bkw_tytul(kind, nazwa) {
+    if (nazwa === null) return kind === 'pfull' || kind === 'ptomb' ? 'Karta usuni\u0119ta' : Bkw_rodzaj(kind) + ' (karta usuni\u0119ta)';
+    return Bkw_rodzaj(kind) + ': ' + (nazwa || 'karta bez nazwy');
+  }
+  // eid -> tytul dla wierszy z karta; bez sejfu albo przy bledzie odczytu kart - pusto (sam rodzaj zmiany).
+  async function Bkw_opisy(wlasne) {
+    var v = Bkw_sejf(), wynik = {}, karty = new Map();
+    var potrzeba = wlasne.some(function (r) { return Bkw_ma(Bkw_KARTOWE, r.kind) || Bkw_ma(Bkw_NOTATKOWE, r.kind); });
+    if (!v || !potrzeba) return wynik;
+    try {
+      var zrodla = [];
+      if (typeof v.listPatients == 'function') zrodla.push(v.listPatients());
+      if (typeof v.listExternalPatients == 'function') zrodla.push(v.listExternalPatients());
+      if (!zrodla.length) return wynik;
+      (await Promise.all(zrodla)).forEach(function (lp) {
+        (Array.isArray(lp) ? lp : []).forEach(function (k) {
+          if (k && typeof k.patientId == 'string') karty.set(k.patientId, k.header && typeof k.header.name == 'string' ? k.header.name.trim() : '');
+        });
+      });
+    } catch (x) { return wynik; }
+    for (var i = 0; i < wlasne.length; i++) {
+      var r = wlasne[i], pid = null;
+      if (typeof r.entityKey != 'string') continue;
+      if (Bkw_ma(Bkw_KARTOWE, r.kind)) pid = r.entityKey.split('/')[0];
+      else if (Bkw_ma(Bkw_NOTATKOWE, r.kind) && typeof v.getPatientNote == 'function') {
+        try {
+          var nt = await v.getPatientNote(r.entityKey);
+          pid = nt && typeof nt.patientId == 'string' ? nt.patientId : null;
+        } catch (x) { pid = null; }
+      }
+      if (pid) wynik[r.eid] = Bkw_tytul(r.kind, karty.has(pid) ? karty.get(pid) : null);
+    }
+    return wynik;
+  }
+  // Biezacy slot konta (tylko identyfikator) albo null.
+  async function Bkw_slot() {
+    try {
+      var v = Bkw_sejf();
+      var m = v && typeof v.getSyncMaterial == 'function' ? await v.getSyncMaterial() : null;
+      return m && typeof m.slotId == 'string' ? m.slotId : null;
+    } catch (x) { return null; }
+  }
+  function Bkw_chwila(iso, przed) {
+    var k = Bkw_kiedy(iso);
+    return k ? ' \u00b7 ' + przed + k : '';
+  }
+  function Bkw_wiersz(tytul, opis, napis, etykieta, akcja) {
+    var li = Bkw_nowy('li', 'settings-kosz-wpis'), o = Bkw_nowy('div', 'settings-kosz-wpis-opis');
+    o.appendChild(Bkw_nowy('span', 'settings-kosz-wpis-karta', tytul));
+    o.appendChild(Bkw_nowy('span', 'settings-kosz-wpis-meta', opis));
+    var blad = Bkw_nowy('span', 'settings-kosz-wpis-blad');
+    blad.setAttribute('role', 'alert');
+    blad.hidden = true;
+    o.appendChild(blad);
+    var b = Bkw_nowy('button', 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small settings-backup-btn', napis);
+    b.type = 'button';
+    b.setAttribute('aria-label', etykieta);
+    b.addEventListener('click', function () { akcja(b, blad); });
+    li.appendChild(o);
+    li.appendChild(b);
+    return li;
+  }
+  function Bkw_lista(idBox, idTytul, idLista, tytul, elementy) {
+    var box = Bkw_el(idBox), lista = Bkw_el(idLista);
+    if (box) box.hidden = !elementy.length;
+    Bkw_tekst(Bkw_el(idTytul), tytul + ' (' + elementy.length + ')');
+    if (!lista) return;
+    while (lista.firstChild) lista.removeChild(lista.firstChild);
+    elementy.forEach(function (e) { lista.appendChild(e); });
+  }
+  async function Bkw_pokazProblemy(stan, nr) {
+    var box = Bkw_el('syncProblemsBox');
+    if (!box) return;
+    var wlasne = stan ? stan.wlasne : [], kw = stan ? stan.kw : [];
+    if (!wlasne.length && !kw.length) {
+      box.hidden = true;
+      Bkw_podpis = null;
+      return;
+    }
+    var slot = kw.length ? await Bkw_slot() : null;
+    if (nr !== Bkw_pokolenie) return;
+    var podpis = JSON.stringify([slot, wlasne.map(function (r) {
+      return [r.eid, r.state, r.kind, r.entityKey, r.lastAttemptAtISO || r.createdAtISO || null];
+    }), kw.map(function (q) { return [q.slotId, q.seq, q.reason, q.firstSeenAtISO]; })]);
+    if (podpis === Bkw_podpis && !box.hidden) return;
+    var opisy = await Bkw_opisy(wlasne);
+    if (nr !== Bkw_pokolenie) return;
+    Bkw_podpis = podpis;
+    Bkw_tekst(Bkw_el('syncProblemsTag'), String(wlasne.length + kw.length));
+    Bkw_lista('syncProblemsOwn', 'syncProblemsOwnTitle', 'syncProblemsOwnList', 'Z tego urz\u0105dzenia', wlasne.map(function (r) {
+      var t = Bkw_ma(opisy, r.eid) ? opisy[r.eid] : Bkw_rodzaj(r.kind);
+      return Bkw_wiersz(t, Bkw_STANY[r.state] + Bkw_chwila(r.lastAttemptAtISO || r.createdAtISO, ''), 'Porzu\u0107', 'Porzu\u0107: ' + t,
+        function (b, blad) { Bkw_porzuc(r, b, blad); });
+    }));
+    Bkw_lista('syncProblemsOther', 'syncProblemsOtherTitle', 'syncProblemsOtherList', 'Z innych urz\u0105dze\u0144', kw.map(function (q) {
+      var t = 'Zdarzenie nr ' + q.seq + (slot && q.slotId !== slot ? ' (poprzednia to\u017csamo\u015b\u0107 konta)' : '');
+      var o = (Bkw_ma(Bkw_POWODY, q.reason) ? Bkw_POWODY[q.reason] : 'nie uda\u0142o si\u0119 odczyta\u0107') + Bkw_chwila(q.firstSeenAtISO, 'od ');
+      return Bkw_wiersz(t, o, 'Zwolnij', 'Zwolnij: ' + t, function (b, blad) { Bkw_zwolnij(q, b, blad); });
+    }));
+    box.hidden = false;
+  }
+  // Akcja po potwierdzeniu: przycisk wylaczony na czas operacji; wynik bez ok: true albo wyjatek - komunikat przy
+  // wierszu i przycisk znowu czynny; sukces - lista od nowa.
+  function Bkw_akcja(b, blad, wykonaj, tekstBledu) {
+    b.disabled = true;
+    blad.hidden = true;
+    return Promise.resolve().then(wykonaj).then(null, function () { return null; }).then(function (r) {
+      if (!r || r.ok !== true) {
+        b.disabled = false;
+        blad.textContent = tekstBledu;
+        blad.hidden = false;
+        return null;
+      }
+      Bkw_podpis = null;
+      return Bkw_odswiez();
+    });
+  }
+  function Bkw_porzuc(r, b, blad) {
+    Bkw_pytanie({
+      id: 'syncProblemConfirm', tytul: 'Porzuci\u0107 t\u0119 zmian\u0119?', tak: 'Porzu\u0107', niebezpieczne: true,
+      tresc: 'Zmiana nie zostanie wys\u0142ana pojedynczo. Na inne urz\u0105dzenia trafi przy najbli\u017cszej pe\u0142nej synchronizacji.',
+      naTak: function () {
+        return Bkw_akcja(b, blad, function () {
+          var L = Bkw_kolejka();
+          return L && typeof L.outboxDiscard == 'function' ? L.outboxDiscard([r.eid], { potwierdzone: true }) : null;
+        }, 'Nie uda\u0142o si\u0119 porzuci\u0107 zmiany. Spr\u00f3buj ponownie.');
+      }
+    });
+  }
+  function Bkw_zwolnij(q, b, blad) {
+    Bkw_pytanie({
+      id: 'syncProblemConfirm', tytul: 'Zwolni\u0107 to zdarzenie?', tak: 'Zwolnij', niebezpieczne: true,
+      tresc: 'Do najbli\u017cszej pe\u0142nej synchronizacji karta pacjenta na tym urz\u0105dzeniu mo\u017ce by\u0107 niepe\u0142na albo mo\u017ce jej brakowa\u0107. Aplikacja przestanie pr\u00f3bowa\u0107 odczyta\u0107 to zdarzenie.',
+      naTak: function () {
+        return Bkw_akcja(b, blad, function () {
+          var L = Bkw_kolejka();
+          return L && typeof L.quarantineRelease == 'function' ? L.quarantineRelease([q.seq], { slotId: q.slotId }) : null;
+        }, 'Nie uda\u0142o si\u0119 zwolni\u0107 zdarzenia. Spr\u00f3buj ponownie.');
+      }
+    });
   }
 
   // Karta ukrytego przelacznika: { serwer, flaga } albo null (ukryta).
@@ -229,35 +421,27 @@
     if (a.tlo.parentNode) a.tlo.parentNode.removeChild(a.tlo);
     var d = w.document;
     if (d && d.body && d.body.classList) d.body.classList.remove('vilda-modal-alert-open');
-    if (wynik) {
-      Bkw_odblokowane = true;
-      Bkw_pokazKarte();
-    } else if (a.przed && typeof a.przed.focus == 'function') {
-      a.przed.focus();
-    }
+    if (wynik) a.naTak();
+    else if (a.przed && typeof a.przed.focus == 'function') a.przed.focus();
   }
-  function Bkw_pytaj() {
+  // Arkusz potwierdzenia (wzor AuthSheet): o = { id, tytul, tresc, tak, niebezpieczne, naTak }. Przy akcji
+  // nieodwracalnej fokus startuje na "Anuluj".
+  function Bkw_pytanie(o) {
     var d = w.document;
     if (!d || !d.body || typeof d.createElement != 'function' || Bkw_arkusz) return;
-    function el(tag, klasa, tekst) {
-      var e = d.createElement(tag);
-      if (klasa) e.className = klasa;
-      if (tekst) e.textContent = tekst;
-      return e;
-    }
-    var tlo = el('div', 'vilda-auth-overlay vilda-auth-overlay-sheet');
-    var ark = el('div', 'vilda-auth-sheet');
+    var tlo = Bkw_nowy('div', 'vilda-auth-overlay vilda-auth-overlay-sheet');
+    var ark = Bkw_nowy('div', 'vilda-auth-sheet');
     ark.setAttribute('role', 'alertdialog');
     ark.setAttribute('aria-modal', 'true');
-    ark.setAttribute('aria-labelledby', 'syncEventLogUnlockTitle');
-    ark.setAttribute('aria-describedby', 'syncEventLogUnlockBody');
-    var h = el('h3', 'vilda-auth-sheet-title', 'Odblokowa\u0107 opcje testowe?');
-    h.id = 'syncEventLogUnlockTitle';
-    var p = el('p', 'vilda-auth-sheet-body', 'Na tym urz\u0105dzeniu poka\u017ce si\u0119 prze\u0142\u0105cznik \u201eWysy\u0142aj zmiany pojedynczo (test)\u201d w opcjach zaawansowanych synchronizacji. Nikt inny go nie zobaczy.');
-    p.id = 'syncEventLogUnlockBody';
-    var akcje = el('div', 'vilda-auth-sheet-actions');
-    var tak = el('button', 'vilda-auth-btn vilda-auth-btn-primary', 'Odblokuj');
-    var nie = el('button', 'vilda-auth-btn vilda-auth-btn-ghost', 'Anuluj');
+    ark.setAttribute('aria-labelledby', o.id + 'Title');
+    ark.setAttribute('aria-describedby', o.id + 'Body');
+    var h = Bkw_nowy('h3', 'vilda-auth-sheet-title', o.tytul);
+    h.id = o.id + 'Title';
+    var p = Bkw_nowy('p', 'vilda-auth-sheet-body', o.tresc);
+    p.id = o.id + 'Body';
+    var akcje = Bkw_nowy('div', 'vilda-auth-sheet-actions');
+    var tak = Bkw_nowy('button', o.niebezpieczne ? 'vilda-auth-btn settings-kosz-btn-usun' : 'vilda-auth-btn vilda-auth-btn-primary', o.tak);
+    var nie = Bkw_nowy('button', 'vilda-auth-btn vilda-auth-btn-ghost', 'Anuluj');
     tak.type = 'button';
     nie.type = 'button';
     tak.addEventListener('click', function () { Bkw_zamknijArkusz(true); });
@@ -276,10 +460,20 @@
     ark.appendChild(p);
     ark.appendChild(akcje);
     tlo.appendChild(ark);
-    Bkw_arkusz = { tlo: tlo, przed: d.activeElement };
+    Bkw_arkusz = { tlo: tlo, przed: d.activeElement, naTak: o.naTak };
     d.body.appendChild(tlo);
     if (d.body.classList) d.body.classList.add('vilda-modal-alert-open');
-    tak.focus();
+    (o.niebezpieczne ? nie : tak).focus();
+  }
+  function Bkw_pytaj() {
+    Bkw_pytanie({
+      id: 'syncEventLogUnlock', tytul: 'Odblokowa\u0107 opcje testowe?', tak: 'Odblokuj',
+      tresc: 'Na tym urz\u0105dzeniu poka\u017ce si\u0119 prze\u0142\u0105cznik \u201eWysy\u0142aj zmiany pojedynczo (test)\u201d w opcjach zaawansowanych synchronizacji. Nikt inny go nie zobaczy.',
+      naTak: function () {
+        Bkw_odblokowane = true;
+        Bkw_pokazKarte();
+      }
+    });
   }
   // 5 klikniec linii "Wersja aplikacji", kazde do 1,5 s po poprzednim.
   function Bkw_klik() {
@@ -319,7 +513,7 @@
   function Bkw_start() {
     var d = w.document;
     if (!d || typeof d.getElementById != 'function') return;
-    if (!Bkw_el('syncOutboxBox') && !Bkw_el('syncEventLogTestCard')) return;
+    if (!Bkw_el('syncOutboxBox') && !Bkw_el('syncEventLogTestCard') && !Bkw_el('syncProblemsBox')) return;
     var wersja = Bkw_el('settingsAppVersion'), pole = Bkw_el('syncEventLogTestToggle'), sek = Bkw_el('settings-section-sync');
     if (wersja && typeof wersja.addEventListener == 'function') wersja.addEventListener('click', Bkw_klik);
     if (pole && typeof pole.addEventListener == 'function') pole.addEventListener('change', Bkw_przelacz);
@@ -341,7 +535,7 @@
   w.VildaWidokKolejki = Object.freeze({
     odswiez: Bkw_odswiez, karta: Bkw_karta, kiedy: Bkw_kiedy, ostatniBlad: Bkw_ostatniBlad,
     tekstZnaczka: Bkw_tekstZnaczka, tekstLicznika: Bkw_tekstLicznika, tekstPodpowiedzi: Bkw_tekstPodpowiedzi,
-    tekstBledu: Bkw_tekstBledu
+    tekstBledu: Bkw_tekstBledu, tytulZmiany: Bkw_tytul
   });
   if (w.document && w.document.readyState === 'loading' && typeof w.document.addEventListener == 'function') {
     w.document.addEventListener('DOMContentLoaded', Bkw_start);

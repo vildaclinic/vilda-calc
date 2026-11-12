@@ -933,6 +933,33 @@
                     <p class="settings-inline-note settings-backup-note settings-note-warn" id="syncClockSkewWarning" hidden></p>
                   </div>
 
+                  <!-- P-SYNC-WIDOK-KOLEJKI (E2-PR5b): zmiany do wyjaśnienia — wiersze kolejki, których nie da się wysłać
+                       pojedynczo, i zdarzenia z innych urządzeń w kwarantannie; widoczne tylko przy włączonym dzienniku
+                       zdarzeń i niepustej liście (inline_ustawienia_07.js). Wiersze jak w Koszu zapisów. -->
+                  <div id="syncProblemsBox" hidden>
+                    <div class="settings-backup-sep" role="separator"></div>
+                    <div class="settings-backup-section" id="syncProblemsCard">
+                      <div class="settings-control-header">
+                        <h3 class="settings-control-title">Zmiany do wyjaśnienia</h3>
+                        <span class="settings-tag" id="syncProblemsTag">0</span>
+                      </div>
+                      <p class="settings-control-desc">
+                        Tych zmian nie da się wysłać pojedynczo. Nic nie ginie: pełna synchronizacja i tak przenosi całe dane na inne urządzenia.
+                      </p>
+                      <div id="syncProblemsOwn" hidden>
+                        <h4 class="settings-control-desc" id="syncProblemsOwnTitle">Z tego urządzenia</h4>
+                        <ul class="settings-kosz-lista" id="syncProblemsOwnList" aria-labelledby="syncProblemsOwnTitle"></ul>
+                      </div>
+                      <div id="syncProblemsOther" hidden>
+                        <h4 class="settings-control-desc" id="syncProblemsOtherTitle">Z innych urządzeń</h4>
+                        <p class="settings-control-desc">
+                          Zdarzenia, których to urządzenie nie umie odczytać. Aplikacja próbuje ponownie po każdej aktualizacji.
+                        </p>
+                        <ul class="settings-kosz-lista" id="syncProblemsOtherList" aria-labelledby="syncProblemsOtherTitle"></ul>
+                      </div>
+                    </div>
+                  </div>
+
                   <div class="settings-backup-sep" role="separator"></div>
 
                   <!-- ── Podsekcja 2b: Nowe urządzenie / odtwarzanie ── -->
@@ -2465,6 +2492,6 @@
 
   <script defer src="inline_ustawienia_06.js?v=1"></script>
 
-  <script defer src="inline_ustawienia_07.js?v=4"></script>
+  <script defer src="inline_ustawienia_07.js?v=5"></script>
 </body>
 </html>

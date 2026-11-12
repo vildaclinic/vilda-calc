@@ -23,6 +23,7 @@ import { podlaczAtrapeDoKontekstu } from '../support/atrapa-workera-route.mjs';
 // E2-PR5a (P-SYNC-WIDOK-KOLEJKI) — przypadki 8–10 na końcu pliku: widok kolejki w Ustawieniach (licznik, ostatni błąd),
 //    ukryty przełącznik „Wysyłaj zmiany pojedynczo (test)” odblokowywany 5 kliknięciami linii „Wersja aplikacji”
 //    i Ustawienia w ramce powłoki.
+// E2-PR5b (P-SYNC-WIDOK-KOLEJKI) — przypadek 11 na końcu pliku: „Zmiany do wyjaśnienia” („Porzuć” i „Zwolnij”).
 // Własne, fikcyjne konto sejfu w efemerycznym profilu przeglądarki; dane wyłącznie FIKCYJNE.
 test.use({ serviceWorkers: 'block' });
 
@@ -521,5 +522,77 @@ test("E2-PR5a: vilda-event-log-v1 = '1' — Ustawienia w ramce powłoki (ustawie
   await expect(ramka.locator('#syncEventLogTestToggle')).toBeChecked();
   await expect(ramka.locator('#syncEventLogTestStatus')).toHaveText('');
   expect(await page.evaluate(() => window.__healthTop), 'health z okna nadrzędnego').toBeGreaterThan(0);
+  expect(naruszenia(atrapa)).toEqual([]);
+});
+
+// E2-PR5b (P-SYNC-WIDOK-KOLEJKI) — „Zmiany do wyjaśnienia” na prawdziwej stronie Ustawień: serwer odrzuca zmiany karty
+// (wiersze „rejected”), a zdarzenie, którego urządzenie nie umie odszyfrować, leży w kwarantannie (zapis przez API
+// kwarantanny sejfu — jak robi to drenaż). „Porzuć” i „Zwolnij” po potwierdzeniu czyszczą kolejkę i kwarantannę.
+test("E2-PR5b: vilda-event-log-v1 = '1' — Ustawienia: zmiany odrzucone przez serwer i zdarzenie w kwarantannie; „Porzuć” i „Zwolnij” po potwierdzeniu", async ({ page, context }) => {
+  test.setTimeout(120_000);
+  const { atrapa, userId } = await przygotujNadawce(page, context, '1');
+  await page.route(EVENTS_URL, (r) => {
+    const events = (r.request().postDataJSON() || {}).events || [];
+    r.fulfill({ status: 200, contentType: 'application/json',
+      body: JSON.stringify({ accepted: [], rejected: events.map((e) => ({ eid: e.eid, code: 'invalid' })), headSeq: 0, ts: Date.now() }) });
+  });
+  expect(await zapiszKarteNadawcy(page, 'Jan')).toBeGreaterThan(0);
+  const w = await page.evaluate(() => window.VildaSync.flushOutbox());
+  expect(w).toMatchObject({ ok: true, wyslane: 0 });
+  expect(w.odrzucone).toBeGreaterThan(0);
+  const stan = await page.evaluate(async () => {
+    const L = window.VildaVault._eventLog;
+    const m = await window.VildaVault.getSyncMaterial();
+    const kw = await L.quarantinePut({ seq: 7, eid: '00000000-0000-4000-8000-0000000000e7', payload: { iv: 'Rmlrc3lqbmVJVjEy', data: 'AAAA' } },
+      { status: 'unreadable', reason: 'decrypt' }, { slotId: m.slotId, appVersion: 'e2e' });
+    const c = await L.outboxCount();
+    return { kw: kw && kw.ok, rejected: c.rejected, pending: c.pending };
+  });
+  expect(stan).toMatchObject({ kw: true, pending: 0 });
+  expect(stan.rejected).toBeGreaterThan(0);
+
+  await otworzUstawienia(page, userId);
+  // Przegląd kolejki przy odblokowaniu strony Ustawień musi skończyć się przed „Porzuć”: przegląd dopisuje brakujący
+  // wiersz encji zmienionej w jego oknie, także zmiany porzuconej (znane ograniczenie, ALGORITHMS P-SYNC-WIDOK-KOLEJKI,
+  // E2-PR5b) — bez czekania wynik zależałby od tempa maszyny.
+  await page.evaluate(() => window.VildaVault._eventLog.emissionsSettled());
+  const box = page.locator('#syncProblemsBox');
+  await expect(box).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('#syncProblemsTag')).toHaveText(String(stan.rejected + 1));
+  const wlasne = page.locator('#syncProblemsOwnList > li');
+  await expect(wlasne).toHaveCount(stan.rejected);
+  await expect(wlasne.first().locator('.settings-kosz-wpis-karta')).toHaveText(/: Testowy Jan$/);
+  await expect(wlasne.first().locator('.settings-kosz-wpis-meta')).toHaveText(/^serwer odrzucił zmianę · dziś \d\d:\d\d$/);
+  const obce = page.locator('#syncProblemsOtherList > li');
+  await expect(obce).toHaveCount(1);
+  await expect(obce.first().locator('.settings-kosz-wpis-karta')).toHaveText('Zdarzenie nr 7');
+  await expect(obce.first().locator('.settings-kosz-wpis-meta')).toHaveText(/^nie udało się odszyfrować · od dziś \d\d:\d\d$/);
+
+  // „Porzuć” — Anuluj bez skutku, potem potwierdzenie dla każdego wiersza.
+  await wlasne.first().getByRole('button').click();
+  let arkusz = page.getByRole('alertdialog', { name: 'Porzucić tę zmianę?' });
+  await expect(arkusz).toBeVisible();
+  await expect(arkusz.getByRole('button', { name: 'Anuluj' })).toBeFocused();
+  await arkusz.getByRole('button', { name: 'Anuluj' }).click();
+  await expect(wlasne).toHaveCount(stan.rejected);
+  for (let i = stan.rejected; i > 0; i--) {
+    await wlasne.first().getByRole('button').click();
+    await page.getByRole('alertdialog', { name: 'Porzucić tę zmianę?' }).getByRole('button', { name: 'Porzuć' }).click();
+    await expect(wlasne).toHaveCount(i - 1);
+  }
+  await expect(page.locator('#syncProblemsOwn')).toBeHidden();
+
+  // „Zwolnij” — ostrzeżenie o niepełnej karcie, potwierdzenie.
+  await obce.first().getByRole('button', { name: 'Zwolnij: Zdarzenie nr 7' }).click();
+  arkusz = page.getByRole('alertdialog', { name: 'Zwolnić to zdarzenie?' });
+  await expect(arkusz).toContainText('karta pacjenta na tym urządzeniu może być niepełna albo może jej brakować');
+  await arkusz.getByRole('button', { name: 'Zwolnij' }).click();
+  await expect(box).toBeHidden();
+  const po = await page.evaluate(async () => {
+    const L = window.VildaVault._eventLog;
+    return { c: await L.outboxCount(), q: await L.quarantineCount() };
+  });
+  expect(po.c).toMatchObject({ rejected: 0, total: 0 });
+  expect(po.q).toMatchObject({ ok: true, total: 0 });
   expect(naruszenia(atrapa)).toEqual([]);
 });

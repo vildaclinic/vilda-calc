@@ -21562,6 +21562,114 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
+## Zmiany do wyjaśnienia w Ustawieniach: porzucenie zmiany i zwolnienie zdarzenia, uśpione (P-SYNC-WIDOK-KOLEJKI, E2-PR5b, SW 1.1.516, `inline_ustawienia_07.js` 5, 2026-11-12)
+
+**Zmiana kliniczna: nie** — wzory, progi, jednostki, interpretacje i reguły scalania bez zmian. **Działanie aplikacji
+bez zmian (uśpione).** Część „Zmiany do wyjaśnienia” widać tylko przy włączonym dzienniku zdarzeń
+(`VildaSync.isEventLogEnabled()`; dziś zawsze wyłączony) i niepustej liście. Bez dziennika nie ma odczytu kwarantanny,
+kart, notatek ani slotu. Sejf, synchronizacja, serwer, format danych i schemat IndexedDB bez zmian.
+
+Plan: wiersz 9b tabeli „Podział etapu 2” (wymagania z E2-PR2b1 i E2-PR2b2); decyzja 1 z 2026-11-12 (makieta E2-PR5).
+
+### E2-PR5b
+
+**Co było** (`audyt` `d7091f8f`). Wiersze kolejki, których nie da się wysłać pojedynczo (`oversize`, `unreadable`,
+`rejected`), i zdarzenia w kwarantannie leżały bez widoku i bez sposobu na ich usunięcie przez użytkownika.
+
+**Reguła.**
+- **Miejsce:** w sekcji „Synchronizacja między urządzeniami”, zaraz pod „Status synchronizacji”, część „Zmiany do
+  wyjaśnienia” z licznikiem (suma obu list) i dwiema listami. Wiersze na klasach listy Kosza zapisów (wygląd na
+  komputerze i telefonie jak w Koszu); bez nowego CSS i bez stylów wpisanych w elementy.
+- **„Z tego urządzenia”** — wiersze kolejki w stanach `oversize`, `unreadable`, `rejected` (lista wierszy czytana, gdy
+  liczniki pokazują coś do wysłania albo coś z tych stanów; wiersze kolejki nie mają slotu, więc lista obejmuje całą
+  kolejkę konta). Tytuł: rodzaj zmiany i karta:
+
+| Rodzaj | Tytuł |
+|---|---|
+| `pfull`, `snap`, `ptomb`, `stomb` | „Karta”, „Wizyta”, „Usunięcie karty”, „Usunięcie wizyty” + „: nazwa karty” (z kluczem encji `patientId` albo `patientId/snapshotId`) |
+| `pnote`, `pnotetomb` | „Notatka pacjenta”, „Usunięcie notatki pacjenta” + „: nazwa karty” (karta z `getPatientNote`) |
+| `note`, `notetomb`, `plist`, `plisttomb`, `pref`, `pk`, `pktomb`, `cred` | sam rodzaj („Notatka w notatniku”, „Lista pacjentów”, „Ustawienie”, „Klucz logowania”, „Dane logowania konta” i ich usunięcia) |
+| karta, której nie ma na urządzeniu | „Karta usunięta” (karta i jej usunięcie) albo „<rodzaj> (karta usunięta)” |
+| błąd odczytu kart albo notatki | sam rodzaj |
+
+  Nazwy kart z nagłówków (`listPatients` i `listExternalPatients` — także osoby spoza bazy), bez odszyfrowywania wizyt.
+  Opis: „za duża, żeby wysłać ją pojedynczo” (`oversize`), „serwer odrzucił zmianę” (`rejected`), „nie da się odczytać
+  zmiany” (`unreadable`), z chwilą ostatniej próby albo dopisania („dziś 12:41”, „wczoraj 18:02”, data).
+- **„Z innych urządzeń”** — kwarantanna ze wszystkich slotów (`quarantineCount`, a przy niezerowej liczbie
+  `quarantineList`): „Zdarzenie nr N”, przy slocie innym niż bieżący (`getSyncMaterial`, tylko identyfikator) dopisek
+  „(poprzednia tożsamość konta)”; opis powodu: „nie udało się odszyfrować” (`decrypt`), „nieznany format” (`envelope`,
+  `format`), „nieczytelna treść” (`shape`), inny — „nie udało się odczytać”; z chwilą pierwszego wystąpienia („od dziś …”).
+  Wiersz bez poprawnego slotu albo numeru — pominięty.
+- **„Porzuć”** — arkusz „Porzucić tę zmianę?” („Zmiana nie zostanie wysłana pojedynczo. Na inne urządzenia trafi przy
+  najbliższej pełnej synchronizacji.”), po potwierdzeniu `outboxDiscard([eid], { potwierdzone: true })`.
+- **„Zwolnij”** — arkusz „Zwolnić to zdarzenie?” („Do najbliższej pełnej synchronizacji karta pacjenta na tym urządzeniu
+  może być niepełna albo może jej brakować. Aplikacja przestanie próbować odczytać to zdarzenie.”), po potwierdzeniu
+  `quarantineRelease([seq], { slotId })` ze slotem wiersza.
+- Oba arkusze: fokus startuje na „Anuluj”, przycisk akcji w kolorze ostrzegawczym (jak „Usuń” w Koszu); Anuluj, Escape
+  i kliknięcie tła — bez skutku. W trakcie operacji przycisk wiersza jest wyłączony; odmowa (np. zmiana sesji) albo
+  wyjątek — komunikat przy wierszu („Nie udało się porzucić zmiany. Spróbuj ponownie.”, „Nie udało się zwolnić
+  zdarzenia. Spróbuj ponownie.”) i przycisk znowu czynny; sukces — listy od nowa. Operacje kolejki i kwarantanny
+  sprawdzają sesję tak jak zapis karty (P-SESJA-ZAPISU): zmiana sesji w trakcie kończy operację bez zapisu.
+- **Odświeżanie** jak w E2-PR5a (start, sejf, otwarcie sekcji, powrót karty, co 5 s); listy budowane od nowa tylko po
+  zmianie zestawu wierszy albo bieżącego slotu — przyciski i fokus nie znikają co 5 s, nazwy kart czytane tylko przy
+  przebudowie. Nowszy odczyt wygrywa także przy wolnym odczycie kart.
+- **Arkusz wspólny:** odblokowanie przełącznika testowego (E2-PR5a) korzysta z tego samego arkusza (bez zmiany
+  działania).
+
+**Uśpienie.** Bez dziennika część jest ukryta, bez odczytu kwarantanny, kart, notatek i slotu (KZ1 — zielony także na
+bazie).
+
+**Testy.** Dane wyłącznie fikcyjne.
+- `tests/unit/sync-widok-kolejki.test.mjs` — 13 nowych przypadków (KZ1–KZ12, KZ6b) na całym prawdziwym
+  `inline_ustawienia_07.js` w vm: uśpienie; tytuły i opisy wierszy obu list; przebudowa tylko po zmianie (także slotu);
+  „Porzuć” i „Zwolnij” (arkusz, fokus, Anuluj, Escape, argumenty wywołań, odmowa, wyjątek, sukces przy liście bez
+  zmian); błąd odczytu kart; blokada sejfu; nowszy odczyt; odmowa kwarantanny. Strażniki KW22a (z kolejki tylko odczyty
+  i dwie decyzje z dokładnymi argumentami, ze slotu tylko identyfikator) i KW22b (znaczniki nowej części).
+- `tests/unit/sync-dziennik-uspienie.test.mjs` U2(b) — `inline_ustawienia_07.js` zna dodatkowo `quarantineCount`,
+  `quarantineList`, `outboxDiscard` i `quarantineRelease`, nadal tylko w bloku widoku i bez innych nazw API kolejki.
+- `tests/e2e/sync-zdarzenia-wysylka.spec.mjs` — nowy przypadek na prawdziwej stronie Ustawień: serwer odrzuca zmiany
+  karty (wiersze `rejected`), zdarzenie nieczytelne w kwarantannie; widok obu list, „Porzuć” (z Anuluj) dla każdego
+  wiersza i „Zwolnij” — kolejka i kwarantanna puste, część znika. Test czeka na koniec przeglądu kolejki z odblokowania
+  strony Ustawień przed „Porzuć” (ograniczenie niżej).
+
+**Czerwone na bazie** (`origin/audyt` `d7091f8f` z testami tego PR): 12 z 13 przypadków KZ, strażniki KW22a i KW22b,
+strażnik U2(b) bloku widoku i przypadek e2e. Zielony także na bazie: KZ1 (dowód „jak dziś”).
+
+**Mutanty.** 27, wszystkie zabite testami działania: lista wierszy tylko przy oczekujących, wiersz problemu w każdym
+stanie, wiersz kwarantanny bez slotu, lista kwarantanny przy zerze, klucz karty bez podziału, bez osób spoza bazy,
+notatka bez `getPatientNote`, brak karty jak karta bez nazwy, bez dopisku poprzedniej tożsamości, przebudowa przy
+każdym odczycie, podpis listy bez slotu, porzucenie bez potwierdzenia, porzucenie bez `potwierdzone`, zwolnienie ze
+slotem bieżącym, fokus na przycisku akcji, przycisk wyłączony po błędzie, sukces bez przebudowy, „Karta usunięta” zawsze
+z rodzajem, chwila kwarantanny bez „od”, pusta lista nie chowa podsekcji, pusta część nie znika, bez sprawdzenia
+pokolenia po odczycie kart, nieznany powód bez opisu, opis bez chwili, tytuł podsekcji bez liczby, licznik tylko
+wierszy z tego urządzenia, przycisk akcji bez koloru ostrzegawczego.
+
+**Kontrola granic.** Bez zmian: sejf, synchronizacja i integracja nietknięte.
+
+**Ograniczenia.**
+- **Porzucona zmiana wraca przy najbliższym przeglądzie kolejki** (przegląd przy odblokowaniu, raz na dobę, przegląd
+  pilny; P-DZIENNIK-ZDARZEN, E2-PR3a4). Przegląd dopisuje wiersz każdej encji zmienionej w jego oknie, która nie ma
+  wiersza ani pary w pamięci par — a „Porzuć” usuwa wiersz i nie zostawia śladu. Sprawdzone na prawdziwej przeglądarce:
+  po porzuceniu wszystkich wierszy `sweepOutbox()` dopisał z powrotem zmiany wizyty i hasła konta jako oczekujące.
+  Skutek: porzucona zmiana pojawia się znowu na liście (`oversize`, `unreadable`) albo jest wysyłana jeszcze raz
+  (`rejected` — zwykle znowu odrzucona). Danych to nie dotyczy (pełna synchronizacja). Poprawka wymaga zmiany w sejfie
+  (porzucenie zapisuje parę encja–chwila, więc przegląd traktuje zmianę jako pokrytą) — osobny PR, do decyzji
+  właściciela.
+- Przy niepustej liście „Z tego urządzenia” widok czyta nagłówki wszystkich kart (nazwy) przy każdej przebudowie listy.
+- Po „Zwolnij” karta na tym urządzeniu może być niepełna do najbliższej pełnej synchronizacji (ostrzeżenie w arkuszu;
+  test A ≡ B p. 7d).
+- Względem makiety: chwila w opisie wiersza jak w linii błędu („dziś 10:30” zamiast pełnej daty z dzisiaj); w arkuszu
+  „Porzuć” bez „razem z całą kartą” (nie każda zmiana dotyczy karty); w arkuszu „Zwolnij” „Aplikacja przestanie próbować
+  odczytać to zdarzenie.” zamiast „Zdarzenie nie wróci do kolejki.” (kwarantanna nie jest kolejką); wizyta karty
+  usuniętej — „Wizyta (karta usunięta)”.
+
+**Następne PR.** E2-W1 (wdraża właściciel), test właściciela (2 dni, ukryty przełącznik), E2-PR6.
+
+**Wersje.** `inline_ustawienia_07.js?v=4→5`; SW 1.1.515 → **1.1.516**.
+
+**Cofnięcie** = rewert PR (bez migracji; porzucone wiersze i zwolnione zdarzenia nie wracają — dane niesie pełna
+synchronizacja).
+
 ## Widok kolejki zdarzeń w Ustawieniach i ukryty przełącznik testowy, uśpione (P-SYNC-WIDOK-KOLEJKI, E2-PR5a, SW 1.1.515, `inline_ustawienia_07.js` 4, 2026-11-12)
 
 **Zmiana kliniczna: nie** — wzory, progi, jednostki, interpretacje i reguły scalania bez zmian. **Działanie aplikacji
