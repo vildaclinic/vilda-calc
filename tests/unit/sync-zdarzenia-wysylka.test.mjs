@@ -345,13 +345,20 @@ describe('P-SYNC-ZDARZENIA — włącznik dziennika i bramka sejfu', () => {
     expect(s.A.vault._eventLog.gateOpen()).toBe(true);
   });
 
-  it('PE15 [czerwony na bazie]: strażnik — pushEvents i isEventLogEnabled bez wywołań w plikach produktu poza vilda_sync.js (isEventLogEnabled także w bramce sejfu)', () => {
+  it('PE15 [czerwony na bazie]: strażnik — pushEvents i isEventLogEnabled bez wywołań w plikach produktu poza vilda_sync.js (isEventLogEnabled także w bramce sejfu, wpięciach integracji i widoku kolejki w Ustawieniach)', () => {
     const pliki = fs.readdirSync(KORZEN).filter((n) => /\.(js|html)$/.test(n) && n !== 'vilda_sync.js');
     expect(pliki.length).toBeGreaterThan(100);
     const zPush = pliki.filter((n) => /\bpushEvents\b/.test(fs.readFileSync(path.join(KORZEN, n), 'utf8')));
     expect(zPush).toEqual([]);
     const zWl = pliki.filter((n) => /\bisEventLogEnabled\b/.test(fs.readFileSync(path.join(KORZEN, n), 'utf8')));
-    expect(zWl, 'bramka sejfu i wpięcia integracji (E2-PR4e1)').toEqual(['vilda_sync_integration.js', 'vilda_vault.js']);
+    expect(zWl, 'bramka sejfu, wpięcia integracji (E2-PR4e1) i widok kolejki w Ustawieniach (E2-PR5a)')
+      .toEqual(['inline_ustawienia_07.js', 'vilda_sync_integration.js', 'vilda_vault.js']);
+    // E2-PR5a: w Ustawieniach włącznik dziennika czyta tylko blok widoku kolejki (Bkw_dziennik), jednym wywołaniem.
+    const bezKomentarzy = (t) => t.replace(/\/\*[\s\S]*?\*\//g, '');
+    const ust = fs.readFileSync(path.join(KORZEN, 'inline_ustawienia_07.js'), 'utf8');
+    const widok = ust.slice(ust.indexOf('/* P-SYNC-WIDOK-KOLEJKI ('), ust.indexOf('/* /P-SYNC-WIDOK-KOLEJKI */'));
+    expect(bezKomentarzy(ust).match(/\bisEventLogEnabled\(/g), 'jedno wywołanie').toHaveLength(1);
+    expect(bezKomentarzy(widok).match(/\bisEventLogEnabled\(/g)).toHaveLength(1);
     const sync = fs.readFileSync(path.join(KORZEN, 'vilda_sync.js'), 'utf8');
     expect(sync.match(/\bBze_pushEvents\b/g)).toHaveLength(3); // definicja, eksport i partia nadawcy (E2-PR4d)
     expect(sync.match(/\bBze_pushEvents\(/g), 'jedyne wywołanie — partia nadawcy').toHaveLength(2);
