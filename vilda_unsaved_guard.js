@@ -100,15 +100,19 @@ function VildaGuardRunDecision(options, decision) {
     cancel(); VildaGuardUnavailable(decision.ready); return;
   }
   var reason = options.reason || "load", state = decision.state;
-  var clcrPending = (reason === "load" || reason === "clear") && VildaKlirensGuardHasPending();
-  if (S(state) === "proceed" && !clcrPending) { proceed(); return; }
+  // P-KLIRENS-WYCZYSC: clcrOnly to „Wyczyść dane Klirensu” — pacjent zostaje, więc
+  // okno pyta wyłącznie o niezapisane obliczenie, bez zapisu danych pacjenta.
+  var clcrOnly = options.clcrOnly === true;
+  var clcrPending = (clcrOnly || reason === "load" || reason === "clear") && VildaKlirensGuardHasPending();
+  if ((clcrOnly || S(state) === "proceed") && !clcrPending) { proceed(); return; }
   if (decision.legacy) B();
   var doc = p();
   if (!doc || !doc.body) { proceed(); return; }
   if (b) return;
-  var isNew = state === "new_patient", copy = N(reason, isNew), patient = J(options.patientLabel);
-  if (clcrPending) copy = VildaKlirensGuardCopy(reason, k(state), copy);
-  var note = [options.extraNote, clcrPending && k(state) ? VildaKlirensGuardNote(reason) : ""].filter(Boolean).join(" ");
+  var isNew = !clcrOnly && state === "new_patient", copy = N(reason, isNew), patient = J(options.patientLabel);
+  var mainDirty = !clcrOnly && k(state);
+  if (clcrPending) copy = VildaKlirensGuardCopy(reason, mainDirty, copy);
+  var note = [options.extraNote, clcrPending && mainDirty ? VildaKlirensGuardNote(reason) : ""].filter(Boolean).join(" ");
   P(); b = true;
   var error = n("div", { class: "vug-err", role: "alert" });
   var save = n("button", { class: "vug-btn vug-primary", type: "button", text: copy.primary });
@@ -243,7 +247,26 @@ function X(e){e=e||{};var t=typeof e.onProceed=="function"?e.onProceed:function(
   try {
     var button = $(event);
     if (!button) return;
-    if (button.id === "clearBtn" && p()?.getElementById?.("clcrForm")) return;
+    if (button.id === "clearBtn" && p()?.getElementById?.("clcrForm")) {
+      // P-KLIRENS-WYCZYSC (decyzja właściciela 2026-11-12): pełne czyszczenie
+      // pacjenta (znacznik clcrClearPatient) pyta już w menu bocznym. Zwykłe
+      // kliknięcie czyści tylko dane Klirensu i pyta jedynie o niezapisane
+      // obliczenie, gdy można je zapisać (otwarty sejf, nie gość).
+      if (event.clcrClearPatient === true) return;
+      if (button.__vugClearBypass) { button.__vugClearBypass = false; return; }
+      if (event.isTrusted === false || f.VildaGuestMode === true) return;
+      var vault = f.VildaVault;
+      if (!vault || typeof vault.isUnlocked !== "function" || !vault.isUnlocked()) return;
+      if (!VildaKlirensGuardHasPending()) return;
+      if (typeof event.preventDefault === "function") event.preventDefault();
+      if (typeof event.stopImmediatePropagation === "function") event.stopImmediatePropagation();
+      var clcrDecision = VildaGuardCurrentDecision();
+      if (!clcrDecision.ready) { VildaGuardUnavailable(false); return; }
+      VildaGuardRunDecision({ reason: "clear", clcrOnly: true, onProceed: function () {
+        try { button.__vugClearBypass = true; button.click(); } catch (_) {}
+      } }, clcrDecision);
+      return;
+    }
     if (button.__vugClearBypass) { button.__vugClearBypass = false; return; }
     if (event && event.isTrusted === false) return;
     var decision = VildaGuardCurrentDecision();

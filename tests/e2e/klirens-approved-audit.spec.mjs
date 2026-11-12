@@ -247,9 +247,11 @@ test('dorosły cr-cys: roundtrip JSON po przeładowaniu zachowuje jawny fakt, a 
   expect(reloaded).toMatchObject({
     CrCysStandardizationConfirmed: true, CystatinCStandardization: '', CystatinCAssayMethod: '',
   });
-  await page.getByRole('button', { name: 'Wyczyść wszystkie pola', exact: true }).click();
+  await page.getByRole('button', { name: 'Wyczyść dane Klirensu', exact: true }).click();
   await expect(page.locator('#CrCysStandardizationConfirmed')).not.toBeChecked();
-  await expect(page.locator('#age')).toHaveValue('');
+  // P-KLIRENS-WYCZYSC (decyzja właściciela 2026-11-12): przycisk czyści badanie,
+  // a dane pacjenta (tu wiek) zostają; potwierdzenie standaryzacji to fakt pomiaru.
+  await expect(page.locator('#age')).toHaveValue('50');
   await expect(page.locator('#Scr')).toHaveValue('');
   await expect(page.locator('#CystatinC')).toHaveValue('');
   await expect(result(page, 'egfr_cr_cys')).toHaveCount(0);

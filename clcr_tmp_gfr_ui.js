@@ -75,7 +75,7 @@
     const sampleIssue = different(sameUrine) || different(paired);
     layout.fact.hidden = !sampleIssue;
     layout.fact.textContent = sampleIssue
-      ? "Zapisano niezgodność próbek krwi lub moczu. Sprawdź dane; aby wprowadzić nowe oznaczenia, użyj przycisku „Wyczyść wszystkie pola”." : "";
+      ? "Zapisano niezgodność próbek krwi lub moczu. Sprawdź dane; aby wprowadzić nowe oznaczenia, użyj przycisku „Wyczyść dane Klirensu”." : "";
     const knownRenalFacts = [
       input.knownCKD === true ? "przewlekła choroba nerek" : "",
       input.knownAKI === true ? "podejrzenie AKI" : "",

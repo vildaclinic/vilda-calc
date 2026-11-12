@@ -41,8 +41,14 @@ określa [AGENTS.md](../../AGENTS.md), a reguły kliniczne
 - Na telefonie pola wejściowe mają **co najmniej 16 px czcionki i 48 px
   wysokości**. Czcionka 16 px zapobiega typowemu automatycznemu przybliżeniu
   pól w Safari na iOS; sama wysokość pola nie wystarcza.
-- Między dolną krawędzią przycisku **„Wyczyść wszystkie pola”** a sekcją
+- Między dolną krawędzią przycisku **„Wyczyść dane Klirensu”** a sekcją
   wyniku zachowuj na telefonie **co najmniej 20 px odstępu**.
+- Przycisk **„Wyczyść dane Klirensu”** czyści tylko badanie i wynik. Pacjent
+  (pola „Dane pacjenta”) i wybrany wzór zostają. Niezapisane
+  obliczenie na koncie z sejfem wymaga potwierdzenia „Odrzucić obliczenie
+  Klirensu?”. Całego pacjenta czyści „Wyczyść” w menu bocznym, z tym samym
+  pytaniem o zapis co na Starcie i w DocPro (decyzja właściciela 2026-11-12,
+  P-KLIRENS-WYCZYSC).
 - Sekcja **„Zapisz wynik do karty pacjenta”** oraz jej akcje mają wspólne
   wyrównanie, równe odstępy i zrównoważony układ także po zmianie stanu zapisu.
 - Korzystaj z design systemu aplikacji: istniejących tokenów, typografii,

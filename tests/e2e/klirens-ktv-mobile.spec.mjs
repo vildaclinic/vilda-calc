@@ -1,6 +1,6 @@
 import { expect, test } from '../support/test-czas.mjs';
 import { clcrPoint, showClcrResults } from '../support/badania-klirens.mjs';
-import { memory, openShellCalculator, saveVisible, shellFrame } from '../support/klirens-patient-record.mjs';
+import { memory, odrzucObliczenieKlirensu, openShellCalculator, saveVisible, shellFrame } from '../support/klirens-patient-record.mjs';
 import { emulatePhone } from '../support/telefon-poziomo.mjs';
 import { kliknij } from '../support/uklad-czekanie.mjs';
 import { card, chooseVariant, collect, expectBlocked, expectResult, installFictionalPatient, openCalculator, restore } from '../support/klirens-ktv-browser.mjs';
@@ -52,7 +52,12 @@ for (const shell of [false, true]) {
       await page.evaluate(() => window.VildaShell.navigate('klirens', true)); await shellFrame(page, 'Kalkulator klirensu');
       await expectResult(calculator, { variant, raw });
     }
-    await kliknij(calculator.locator('#clearBtn')); await calculator.waitForFunction(() => window.clcrIsResetting !== true);
+    await kliknij(calculator.locator('#clearBtn'));
+    // P-KLIRENS-WYCZYSC: zapis URR nie obejmuje wpisanych pól eKt/V (UF, masa), więc na koncie
+    // z sejfem „Wyczyść dane Klirensu” pyta przed ich odrzuceniem; zapisane eKt/V — nie.
+    if (variant === 'urr') await odrzucObliczenieKlirensu(calculator);
+    else await expect(calculator.getByRole('dialog')).toHaveCount(0);
+    await calculator.waitForFunction(() => window.clcrIsResetting !== true);
     await expectBlocked(calculator); await expect(calculator.locator('#ktvVariant')).toHaveValue(variant);
     await expect(calculator.locator('#ktvRequiredCount')).toHaveText(shell ? '0/2' : '0/8');
     await expect(calculator.locator('#UreaPre')).toHaveValue(''); await expect(calculator.locator('#UreaPost')).toHaveValue('');

@@ -284,6 +284,16 @@ export const configureMemory = (scope, options) => scope.evaluate(options => win
 export const releaseWrites = scope => scope.evaluate(() => window.__clcrRecordFixture.release());
 export const releasePatientReads = scope => scope.evaluate(() => window.__clcrRecordFixture.releasePatientReads());
 
+// P-KLIRENS-WYCZYSC (decyzja właściciela 2026-11-12): „Wyczyść dane Klirensu” przy otwartym
+// sejfie i niezapisanym obliczeniu pyta przed jego odrzuceniem. Test, który świadomie
+// zaczyna nowy pomiar, potwierdza odrzucenie w tym oknie.
+export async function odrzucObliczenieKlirensu(scope) {
+  const dialog = scope.getByRole('dialog', { name: 'Odrzucić obliczenie Klirensu?' });
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole('button', { name: 'Odrzuć obliczenie i wyczyść' }).click();
+  await expect(dialog).toHaveCount(0);
+}
+
 export async function selectPatient(scope, patientId = PATIENT_ID) {
   await scope.evaluate(pid => {
     if (pid) sessionStorage.setItem('vildaCurrentPatientId', pid);
