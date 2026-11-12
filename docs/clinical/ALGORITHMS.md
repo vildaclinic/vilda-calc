@@ -21563,6 +21563,137 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
+## Widok kolejki zdarzeń w Ustawieniach i ukryty przełącznik testowy, uśpione (P-SYNC-WIDOK-KOLEJKI, E2-PR5a, SW 1.1.515, `inline_ustawienia_07.js` 4, 2026-11-12)
+
+**Zmiana kliniczna: nie** — wzory, progi, jednostki, interpretacje i reguły scalania bez zmian. **Działanie aplikacji
+bez zmian (uśpione).** Nowe elementy Ustawień widać tylko przy włączonym dzienniku (`VildaSync.isEventLogEnabled()`,
+P-SYNC-ZDARZENIA: „events” w health, którego serwer dziś nie podaje, i flaga `vilda-event-log-v1` = `'1'`) albo po
+jawnym odblokowaniu przełącznika testowego. Bez tego Ustawienia wyglądają jak dotąd, bez odczytu kolejki i bez pytania
+o health. Sejf, synchronizacja, serwer, format danych i schemat IndexedDB bez zmian.
+
+Plan: wiersz 9a tabeli „Podział etapu 2”; decyzje 1–6 z 2026-11-12 (makieta E2-PR5), decyzja 10 z 2026-10-29 (ukryty
+przełącznik z jawnym odblokowaniem), E2-D9 (miejsce licznika).
+
+### E2-PR5a
+
+**Co było** (`audyt` `4447a927`). Ustawienia nie pokazywały kolejki zdarzeń ani błędów jej wysyłki. Flagę dziennika dało
+się ustawić tylko ręcznie (testy).
+
+**Reguła.**
+- **Miejsce:** sekcja „Synchronizacja między urządzeniami” Ustawień, bez nagłówka aplikacji i ekranu blokady (decyzja 2).
+- **Znaczek** w nagłówku sekcji: „N zmian czeka” (formy: 1 — „zmiana czeka”; 2–4 poza 12–14 — „zmiany czekają”;
+  pozostałe — „zmian czeka”), tylko przy N > 0. N = `pending` + `inflight` z `outboxCount()` sejfu.
+- **Linia w „Status synchronizacji”**: „N zmian czeka na wysłanie.” i „Wysyłają się same, zwykle w ciągu kilku sekund.”
+  (przy 1: „Wysyła się sama…”) albo „Wszystkie zmiany wysłane.”.
+- **Ostatni błąd**, tylko gdy coś czeka: wiersz `pending` albo `inflight` z najpóźniejszym `lastAttemptAtISO` i kodem
+  z tabeli niżej; tekst „Ostatni błąd (kiedy): opis. porada”. Chwila w czasie lokalnym: „dziś 12:41”, „wczoraj 18:02”
+  albo „11.11.2026, 18:02” (zła data — bez nawiasu). Kody spoza tabeli (sesja, blokada, wyłączony dziennik, brak
+  rejestracji, format, wysyłka w toku) nie są błędem dla użytkownika. Lista wierszy jest czytana tylko wtedy, gdy coś
+  czeka; z wiersza tylko stan, kod i chwila, bez treści.
+
+| Kod (`lastError`) | Opis | Porada |
+|---|---|---|
+| `NETWORK` | brak połączenia z serwerem | Aplikacja spróbuje ponownie sama. |
+| `TIMEOUT` | serwer nie odpowiedział na czas | jak wyżej |
+| `RATE_LIMITED` | serwer poprosił o chwilę przerwy | jak wyżej |
+| `AUTH_FAILED` | serwer nie rozpoznał tego urządzenia | Wysyłanie ruszy po ponownym zalogowaniu. |
+| `EVENTS_DISABLED` | serwer nie przyjmuje teraz pojedynczych zmian | Pełna synchronizacja działa dalej. |
+| `LOG_FULL` | dziennik zmian na serwerze jest pełny | Aplikacja spróbuje ponownie sama. |
+| `SERVER`, `HTTP` | błąd serwera | jak wyżej |
+| `INVALID_RESPONSE` | nieczytelna odpowiedź serwera | jak wyżej |
+| `PAYLOAD_TOO_LARGE`, `UNSUPPORTED_MEDIA_TYPE`, `INVALID_EVENTS` | serwer nie przyjął paczki zmian | jak wyżej |
+| `NO_RESULT` | serwer nie potwierdził części zmian | jak wyżej |
+| `ERROR` | nieoczekiwany błąd wysyłania | jak wyżej |
+
+- **Kiedy widać:** dziennik włączony, sejf odblokowany i kolejka odpowiada (`ok: true`); odmowa albo wyjątek kolejki —
+  nic nowego. Odświeżanie: start strony, odblokowanie i blokada sejfu, otwarcie sekcji, powrót karty, zmiana flagi
+  w innej karcie i co 5 s przy widocznej stronie; nowszy odczyt wygrywa.
+- **Ukryty przełącznik „Wysyłaj zmiany pojedynczo (test)”** w „Pokaż opcje zaawansowane”:
+  - odblokowanie: 5 kliknięć (dotknięć) linii „Wersja aplikacji”, każde do 1,5 s po poprzednim, przy odblokowanym
+    sejfie, i „Odblokuj” w arkuszu „Odblokować opcje testowe?”; „Anuluj”, Escape i kliknięcie tła zamykają arkusz bez
+    odblokowania. Po odblokowaniu sekcja i opcje zaawansowane się otwierają, karta przełącznika jest przewinięta do
+    widoku, a fokus trafia na pole wyboru;
+  - odblokowanie tylko w pamięci strony; blokada sejfu je zdejmuje i zamyka otwarty arkusz (decyzja 3);
+  - karta widoczna po odblokowaniu albo przy fladze `'1'`. Bez tego jest ukryta i nie ma pytania o health, także przy
+    „events” (decyzja 10);
+  - pole wyboru tylko przy „events” w health (`VildaSync.detectApi`; w ramce powłoki — okno nadrzędne, jak włącznik
+    dziennika) albo przy włączonej fladze, żeby dało się ją wyłączyć. Bez „events” — notka „Serwer nie obsługuje jeszcze
+    tej opcji.” (decyzja 4). Flaga `'1'` przy nieczynnym dzienniku (synchronizacja wyłączona, tryb chmurowy, logowanie
+    jednorazowe) — notka „Teraz nie działa: …”;
+  - włączenie zapisuje `vilda-event-log-v1` = `'1'`; wyłączenie usuwa klucz (nie `'0'`: po E2-PR6 urządzenie idzie za
+    ustawieniem domyślnym). Nieudany zapis — pole wraca, komunikat. Bez nowego wpisu w pamięci przeglądarki (klucz flagi
+    jest już na liście zmian polityki prywatności przed E2-PR6, decyzja 5 z 2026-11-11).
+- Bez komunikatu przy przejściu na „Komputer w pracy” bez sieci (decyzja 5 z 2026-11-12).
+- **Kod:** blok w istniejącym `inline_ustawienia_07.js` (między kłódką sekcji a linią wersji aplikacji; cały plik ASCII)
+  i ukryte domyślnie znaczniki w `ustawienia.html`. Bez nowego pliku (limit 600 żądań instalacji SW) i bez nowego CSS
+  (istniejące klasy Ustawień i arkusza konta). Tekst wyłącznie przez `textContent`, widoczność wyłącznie atrybutem
+  `hidden` (otoczki znaczka i pola wyboru; bez stylów wpisanych w elementy — P-STYLE). Z kolejki tylko odczyty
+  (`outboxCount`, `outboxList`).
+
+**Uśpienie.** Bez dziennika (dziś zawsze) nic nowego nie widać i nie ma odczytu kolejki. Bez odblokowania i bez flagi
+nie ma pytania o health. Co 5 s zostaje tylko sprawdzenie włącznika dziennika i odczyt flagi z `localStorage`
+(KW1 i KW16 — zielone także na bazie).
+
+**Testy.** Dane wyłącznie fikcyjne.
+- `tests/unit/sync-widok-kolejki.test.mjs` — nowy, 25 przypadków (KW1–KW22b). Cały prawdziwy `inline_ustawienia_07.js`
+  w vm z atrapą okna (elementy strony, sejf z API kolejki, `VildaSync`):
+  - uśpienie, licznik i formy liczebnika, ostatni błąd i porady, chwila, odmowy i wyjątki kolejki, pokolenie,
+    odświeżanie, sejf zablokowany;
+  - gest i arkusz, karta i przełącznik, flaga bez odblokowania, nieudany zapis flagi, health w ramce, blokada sejfu,
+    okno bez `document`;
+  - strażniki źródła (miejsce bloku, ASCII, tylko `textContent`, bez stylów, zapis tylko flagi dziennika, z kolejki
+    tylko odczyty) i znaczników w `ustawienia.html`.
+- Strażniki uśpienia zawężone do bloku widoku (pierwszy użytkownik API kolejki poza sejfem i synchronizacją):
+  `sync-dziennik-uspienie` U2(b) — `inline_ustawienia_07.js` zna tylko `_eventLog` (raz), `outboxCount` i `outboxList`,
+  wszystko w bloku; `sync-zdarzenia-wysylka` PE15 — jedno wywołanie `isEventLogEnabled` w bloku; `sync-dziennik-drenaz`
+  D39 — jedno wywołanie `detectApi`, w karcie przełącznika po warunku „odblokowane albo flaga”.
+- `tests/e2e/sync-zdarzenia-wysylka.spec.mjs` — 3 nowe przypadki na prawdziwej stronie `ustawienia.html` (prawdziwy sejf
+  i `vilda_sync.js`, atrapa workera z „events”):
+  - flaga `'1'` bez sieci — znaczek, linia, ostatni błąd „brak połączenia z serwerem”; po wysyłce „Wszystkie zmiany
+    wysłane.”;
+  - flaga wyłączona — Ustawienia jak dotąd; 5 kliknięć i „Odblokuj”; włączenie i wyłączenie przełącznika; po
+    odświeżeniu strony przełącznik ukryty;
+  - Ustawienia w ramce powłoki — licznik i błąd z kolejki konta, health z okna nadrzędnego.
+
+**Czerwone na bazie** (`origin/audyt` `4447a927` z testami tego PR): 23 z 25 przypadków KW i wszystkie 3 przypadki e2e.
+Zielone także na bazie: KW1 i KW16 (dowód „jak dziś”).
+
+**Mutanty.** 34 mutanty, 31 zabitych testami działania; 3 zniknęły razem z nadmiarowym kodem:
+- licznik: dziennik zawsze włączony, licznik bez `inflight`, formy bez wyjątku 12–14, lista wierszy przy pustej kolejce,
+  bez sprawdzenia pokolenia po liczniku, znaczek zawsze widoczny;
+- ostatni błąd: z każdego stanu, pierwszy zamiast najpóźniejszego, z nieznanym kodem, zawsze zwykła porada, bez
+  „wczoraj”, miesiąc bez +1;
+- odświeżanie: zegar bez sprawdzenia widoczności, `storage` bez filtra klucza, bez nasłuchu otwarcia sekcji;
+- gest i arkusz: 4 kliknięcia, kliknięcia bez limitu przerwy, arkusz przy zablokowanym sejfie, „Anuluj” odblokowuje,
+  Escape nie zamyka, kliknięcie w arkusz zamyka, odblokowanie nie otwiera sekcji;
+- karta: widoczna bez odblokowania i flagi, pytanie o health przed tym warunkiem, pole wyboru tylko przy „events”
+  albo zawsze widoczne, bez notek, health zawsze z tej strony;
+- przełącznik: wyłączenie zapisuje `'0'`, bez cofnięcia pola przy błędzie zapisu.
+
+Usunięte jako nadmiarowe: ukrywanie błędu przy pustej kolejce (błąd i tak powstaje tylko przy N > 0), zdejmowanie
+odblokowania w obsłudze blokady (robi to karta przy zablokowanym sejfie) i warunek tekstu znaczka (przy N = 0 znaczek
+jest ukryty).
+
+**Kontrola granic.** Bez zmian: sejf, synchronizacja i integracja nietknięte.
+
+**Ograniczenia.**
+- Widok odświeża się co 5 s, więc po wysyłce linia zmienia się z opóźnieniem do 5 s.
+- Po przejściu na Ustawienia jako osobną stronę nadawcą zostaje do 90 s poprzednia strona (P-SYNC-NADAWCA); licznik
+  pokazuje kolejkę od razu.
+- Przy wyłączonym dzienniku zostawione wiersze kolejki nie są widoczne (bramka kolejki zamknięta); dane niesie pełna
+  wysyłka.
+- Gest działa tylko przy odblokowanym sejfie (karta jest w sekcji pod kłódką).
+- Na wąskim ekranie istniejący układ chowa wszystkie znaczki w nagłówkach sekcji Ustawień, także ten; licznik widać
+  w linii statusu.
+
+**Następne PR.** E2-PR5b: „Zmiany do wyjaśnienia” (wpisy `oversize`, `unreadable`, `rejected` z „Porzuć”, kwarantanna
+ze „Zwolnij”). Potem E2-W1 (wdraża właściciel), test właściciela i E2-PR6.
+
+**Wersje.** `inline_ustawienia_07.js?v=3→4`; SW 1.1.514 → **1.1.515**.
+
+**Cofnięcie** = rewert PR (bez migracji). Flaga ustawiona przełącznikiem zostaje na urządzeniu; wyłącza ją usunięcie
+klucza `vilda-event-log-v1`.
+
 ## Kolejka zdarzeń a tryb przechowywania i usuwanie konta, uśpione (P-SYNC-NADAWCA-WPIECIA, E2-PR4e2, SW 1.1.514, `vilda_vault.js` 274, `vilda_sync.js` 55, 2026-11-12)
 
 **Zmiana kliniczna: nie** — wzory, progi, jednostki, interpretacje i reguły scalania bez zmian. **Działanie aplikacji

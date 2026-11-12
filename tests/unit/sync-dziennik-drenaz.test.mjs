@@ -72,7 +72,8 @@
 //     bez /changes, wynik health bez pamięci).
 //   Strażniki źródła: D36 (B, Y, Yt, wt i kursor — bt, Kt — bez zmian względem origin/audyt: sha256 całych funkcji), D37
 //     (te same 9 liczników w wt i Bdz_czyZmiana), D38 (blok Bdz_ bez vilda-sync-rl-until-v1, wywołania scalenia bloba i
-//     zapisu sessionStorage), D39 (nowe API bez wywołań w plikach produktu poza vilda_sync.js), D46 (strażniki formatu w
+//     zapisu sessionStorage), D39 (nowe API bez wywołań w plikach produktu poza vilda_sync.js; od E2-PR5a jedno
+//     detectApi w karcie ukrytego przełącznika Ustawień, tylko po odblokowaniu albo przy fladze), D46 (strażniki formatu w
 //     bloku Bdz_ równoległe do wt i Yt: te same operacje, kody CARE_*, przed i po scaleniu, przed każdym Kt), D50 (E2-PR1b:
 //     isPagedActive wołane tylko z integracji, isLive i getLastPongAt tylko z integracji i realtime; isPagedActive bez
 //     żądań i zapisów).
@@ -1999,11 +2000,17 @@ describe('E2-PR1 P-SYNC-STRONY: strażniki źródła vilda_sync.js', () => {
     expect(SHA_WZORCA).toBe('4551678');
   });
 
-  it('D39: nowe API (detectApi, getDrainStatus, getChangesCursor, czekajNaDrenaz) bez wywołań w plikach produktu poza vilda_sync.js — detectApi wysyła GET /v1/health niezależnie od flagi', () => {
+  it('D39: nowe API (detectApi, getDrainStatus, getChangesCursor, czekajNaDrenaz) bez wywołań w plikach produktu poza vilda_sync.js — detectApi wysyła GET /v1/health niezależnie od flagi (wyjątek E2-PR5a: karta ukrytego przełącznika w Ustawieniach, tylko po odblokowaniu albo przy fladze)', () => {
     const pliki = fs.readdirSync(KORZEN).filter((n) => /\.(js|html)$/.test(n) && n !== 'vilda_sync.js');
     expect(pliki.length).toBeGreaterThan(100);
     const zWywolaniem = pliki.filter((n) => /\b(detectApi|getDrainStatus|getChangesCursor)\s*\(|czekajNaDrenaz/.test(fs.readFileSync(path.join(KORZEN, n), 'utf8')));
-    expect(zWywolaniem).toEqual([]);
+    expect(zWywolaniem).toEqual(['inline_ustawienia_07.js']);
+    // E2-PR5a (P-SYNC-WIDOK-KOLEJKI): jedno wywołanie detectApi, w Bkw_karta po warunku „odblokowane albo flaga”
+    // (bez tego karta jest ukryta i nie pyta o health — tests/unit/sync-widok-kolejki.test.mjs KW1, KW16).
+    const ust = fs.readFileSync(path.join(KORZEN, 'inline_ustawienia_07.js'), 'utf8');
+    expect(ust.match(/\b(detectApi|getDrainStatus|getChangesCursor)\s*\(|czekajNaDrenaz/g)).toEqual(['detectApi(']);
+    const karta = ust.slice(ust.indexOf('async function Bkw_karta('), ust.indexOf('function Bkw_przelacz('));
+    expect(karta).toMatch(/if \(!Bkw_sejf\(\) \|\| !\(Bkw_odblokowane \|\| Bkw_flaga\(\)\)\) \{ k\.hidden = true; return null; \}\s*var api, s = Bkw_syncApi\(\);\s*try \{ api = s \? await s\.detectApi\(\) : null; \}/);
   });
 });
 

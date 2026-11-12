@@ -20,6 +20,9 @@ import { podlaczAtrapeDoKontekstu } from '../support/atrapa-workera-route.mjs';
 // 4) Flaga wyłączona: zapis karty, pobranie i chowanie strony bez POST /events i bez klucza bicia serca (bez nowego
 //    API — zielony także na bazie).
 // E2-PR4e1 (P-SYNC-NADAWCA-WPIECIA) — przypadki 5–7 przy końcu pliku: dwa urządzenia i ramka powłoki.
+// E2-PR5a (P-SYNC-WIDOK-KOLEJKI) — przypadki 8–10 na końcu pliku: widok kolejki w Ustawieniach (licznik, ostatni błąd),
+//    ukryty przełącznik „Wysyłaj zmiany pojedynczo (test)” odblokowywany 5 kliknięciami linii „Wersja aplikacji”
+//    i Ustawienia w ramce powłoki.
 // Własne, fikcyjne konto sejfu w efemerycznym profilu przeglądarki; dane wyłącznie FIKCYJNE.
 test.use({ serviceWorkers: 'block' });
 
@@ -381,4 +384,142 @@ test('E2-PR4e1: flaga wyłączona — dwa urządzenia: karta idzie deltą beacon
   } finally {
     await ctxB.close();
   }
+});
+
+// E2-PR5a (P-SYNC-WIDOK-KOLEJKI) — widok kolejki w Ustawieniach na prawdziwej stronie ustawienia.html (ten sam profil,
+// sejf odblokowany na stronie Ustawień). Banery konta i zgody schowane, żeby kliknięcia trafiały w stronę.
+async function otworzUstawienia(page, userId) {
+  await page.goto('/ustawienia.html', { waitUntil: 'load' });
+  await page.waitForFunction(() => Boolean(window.VildaVault && window.VildaSync));
+  await page.evaluate(async ([u, pw]) => { if (!window.VildaVault.isUnlocked()) await window.VildaVault.unlockUser(u, pw); }, [userId, HASLO]);
+  await page.waitForFunction(() => window.VildaVault.isUnlocked());
+  await page.evaluate(() => {
+    // Skrypt startowy tej strony wyłącza synchronizację przy każdym wejściu; stan jak po przygotujNadawce.
+    window.localStorage.setItem('vilda-sync-enabled-v1', 'true');
+    for (const id of ['vilda-auth-ui-root', 'consent-banner']) {
+      const a = document.getElementById(id);
+      if (a) a.style.display = 'none';
+    }
+    document.getElementById('settings-section-sync').open = true;
+  });
+}
+const EVENTS_URL = /\/v1\/slots\/[^/]+\/events$/;
+
+test("E2-PR5a: vilda-event-log-v1 = '1' — Ustawienia: znaczek i linia „N zmian czeka”, ostatni błąd bez sieci, po wysyłce „Wszystkie zmiany wysłane.”", async ({ page, context }) => {
+  test.setTimeout(120_000);
+  const { atrapa, userId } = await przygotujNadawce(page, context, '1');
+  // POST /events bez sieci (trasa strony ma pierwszeństwo przed atrapą kontekstu).
+  await page.route(EVENTS_URL, (r) => r.abort('internetdisconnected'));
+  const n = await zapiszKarteNadawcy(page, 'Jan');
+  expect(n, 'wiersze w kolejce').toBeGreaterThan(0);
+
+  await otworzUstawienia(page, userId);
+  // Nadawcą zostaje strona Ustawień: bicie serca poprzedniego dokumentu (index.html) usunięte, jak po 90 s.
+  await page.evaluate(async (u) => {
+    window.localStorage.removeItem('vilda-outbox-heartbeat-v1:' + u);
+    await window.VildaSync.detectApi();
+  }, userId);
+  await expect.poll(async () => (await page.evaluate(() => window.VildaSync.flushOutbox())).kod, { timeout: 15_000 }).toBe('NETWORK');
+  const znaczek = page.locator('#syncOutboxChip');
+  await expect(znaczek).toBeVisible({ timeout: 15_000 });
+  await expect(znaczek).toHaveText(/^\d+ zmian(a|y)? czek(a|ają)$/);
+  await expect(page.locator('#syncOutboxCount')).toHaveText(/^\d+ zmian(a|y)? czek(a|ają) na wysłanie\.$/);
+  await expect(page.locator('#syncOutboxHint')).toHaveText(/^Wysyła(ją)? się sam(a|e), zwykle w ciągu kilku sekund\.$/);
+  const blad = page.locator('#syncOutboxError');
+  await expect(blad).toBeVisible({ timeout: 15_000 }); // najbliższe odświeżenie widoku (co 5 s)
+  await expect(blad).toHaveText(/^Ostatni błąd \(dziś \d\d:\d\d\): brak połączenia z serwerem\. Aplikacja spróbuje ponownie sama\.$/);
+  // Flaga '1' bez odblokowania — karta przełącznika widoczna (do wyłączenia), zaznaczona.
+  await page.evaluate(() => { document.getElementById('syncSlotCard').open = true; });
+  await expect(page.locator('#syncEventLogTestCard')).toBeVisible();
+  await expect(page.locator('#syncEventLogTestToggle')).toBeChecked();
+  await expect(page.locator('#syncEventLogTestTag')).toHaveText('Włączone');
+
+  await page.unroute(EVENTS_URL);
+  await expect.poll(async () => (await page.evaluate(() => window.VildaSync.flushOutbox())).ok, { timeout: 30_000 }).toBe(true);
+  await expect(page.locator('#syncOutboxCount')).toHaveText('Wszystkie zmiany wysłane.', { timeout: 15_000 });
+  await expect(znaczek).toBeHidden();
+  await expect(blad).toBeHidden();
+  expect(zadaniaEvents(atrapa).every((z) => z.status === 200)).toBe(true);
+  expect(naruszenia(atrapa)).toEqual([]);
+});
+
+test('E2-PR5a: flaga wyłączona — Ustawienia jak dotąd; 5 kliknięć „Wersja aplikacji” i „Odblokuj” — przełącznik zapisuje i usuwa flagę', async ({ page, context }) => {
+  test.setTimeout(120_000);
+  const { atrapa, userId } = await przygotujNadawce(page, context, null);
+  await otworzUstawienia(page, userId);
+  await page.evaluate(() => { document.getElementById('syncSlotCard').open = true; });
+  await page.waitForTimeout(6000); // jeden obrót zegara widoku (5 s)
+  await expect(page.locator('#syncOutboxChip')).toBeHidden();
+  await expect(page.locator('#syncOutboxBox')).toBeHidden();
+  await expect(page.locator('#syncEventLogTestCard')).toBeHidden();
+
+  const wersja = page.locator('#settingsAppVersion');
+  for (let i = 0; i < 4; i++) await wersja.click();
+  await expect(page.getByRole('alertdialog')).toHaveCount(0);
+  await wersja.click();
+  const arkusz = page.getByRole('alertdialog', { name: 'Odblokować opcje testowe?' });
+  await expect(arkusz).toBeVisible();
+  await arkusz.getByRole('button', { name: 'Odblokuj' }).click();
+  await expect(arkusz).toHaveCount(0);
+  const karta = page.locator('#syncEventLogTestCard');
+  await expect(karta).toBeVisible();
+  const pole = page.locator('#syncEventLogTestToggle');
+  await expect(pole).toBeVisible();
+  await expect(pole).not.toBeChecked();
+  await expect(pole).toBeFocused();
+  await expect(page.locator('#syncEventLogTestTag')).toHaveText('Wyłączone');
+  await expect(page.locator('#syncEventLogTestStatus')).toHaveText('');
+
+  await pole.check();
+  expect(await page.evaluate(() => window.localStorage.getItem('vilda-event-log-v1'))).toBe('1');
+  await expect(page.locator('#syncEventLogTestTag')).toHaveText('Włączone');
+  await expect(page.locator('#syncOutboxCount')).toHaveText('Wszystkie zmiany wysłane.');
+  expect(await page.evaluate(() => window.VildaSync.isEventLogEnabled())).toBe(true);
+
+  await pole.uncheck();
+  expect(await page.evaluate(() => window.localStorage.getItem('vilda-event-log-v1'))).toBeNull();
+  await expect(page.locator('#syncEventLogTestTag')).toHaveText('Wyłączone');
+  await expect(page.locator('#syncOutboxBox')).toBeHidden();
+
+  // Po odświeżeniu strony bez flagi przełącznik znowu ukryty (odblokowanie tylko w pamięci strony).
+  await otworzUstawienia(page, userId);
+  await page.evaluate(() => { document.getElementById('syncSlotCard').open = true; });
+  await expect(page.locator('#syncEventLogTestCard')).toBeHidden();
+  expect(zadaniaEvents(atrapa)).toEqual([]);
+  expect(naruszenia(atrapa)).toEqual([]);
+});
+
+test("E2-PR5a: vilda-event-log-v1 = '1' — Ustawienia w ramce powłoki (ustawienia.html?embedded=1): licznik i ostatni błąd z kolejki konta, health z okna nadrzędnego", async ({ page, context }) => {
+  test.setTimeout(120_000);
+  const { atrapa } = await przygotujNadawce(page, context, '1');
+  await page.route(EVENTS_URL, (r) => r.abort('internetdisconnected'));
+  expect(await zapiszKarteNadawcy(page, 'Jan')).toBeGreaterThan(0);
+  await expect.poll(async () => (await page.evaluate(() => window.VildaSync.flushOutbox())).kod, { timeout: 15_000 }).toBe('NETWORK');
+  await page.evaluate(() => {
+    window.__healthTop = 0;
+    const d = window.VildaSync.detectApi;
+    window.VildaSync.detectApi = function () { window.__healthTop += 1; return d.apply(this, arguments); };
+    const f = document.createElement('iframe');
+    f.id = 'ramkaUstawien';
+    f.src = '/ustawienia.html?embedded=1';
+    document.body.appendChild(f);
+  });
+  await expect.poll(() => page.evaluate(() => {
+    const w = document.getElementById('ramkaUstawien').contentWindow;
+    return !!(w && w.VildaVault && w.VildaVault.isUnlocked() && w.document.getElementById('settings-section-sync'));
+  }), { timeout: 30_000 }).toBe(true);
+  // skrypt startowy testu działa też w ramce i wyłącza synchronizację we wspólnym localStorage — włącznik z powrotem
+  await page.evaluate(() => window.localStorage.setItem('vilda-sync-enabled-v1', 'true'));
+  const ramka = page.frameLocator('#ramkaUstawien');
+  await page.evaluate(() => {
+    const d = document.getElementById('ramkaUstawien').contentWindow.document;
+    d.getElementById('settings-section-sync').open = true;
+    d.getElementById('syncSlotCard').open = true;
+  });
+  await expect(ramka.locator('#syncOutboxChip')).toHaveText(/^\d+ zmian(a|y)? czek(a|ają)$/, { timeout: 15_000 });
+  await expect(ramka.locator('#syncOutboxError')).toHaveText(/^Ostatni błąd \(dziś \d\d:\d\d\): brak połączenia z serwerem\. Aplikacja spróbuje ponownie sama\.$/, { timeout: 15_000 });
+  await expect(ramka.locator('#syncEventLogTestToggle')).toBeChecked();
+  await expect(ramka.locator('#syncEventLogTestStatus')).toHaveText('');
+  expect(await page.evaluate(() => window.__healthTop), 'health z okna nadrzędnego').toBeGreaterThan(0);
+  expect(naruszenia(atrapa)).toEqual([]);
 });
