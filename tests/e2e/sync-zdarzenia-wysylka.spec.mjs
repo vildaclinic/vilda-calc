@@ -20,7 +20,8 @@ import { podlaczAtrapeDoKontekstu } from '../support/atrapa-workera-route.mjs';
 // 4) Flaga wyłączona: zapis karty, pobranie i chowanie strony bez POST /events i bez klucza bicia serca (bez nowego
 //    API — zielony także na bazie).
 // E2-PR4e1 (P-SYNC-NADAWCA-WPIECIA) — przypadki 5–7 przy końcu pliku: dwa urządzenia i ramka powłoki.
-// E2-PR5a (P-SYNC-WIDOK-KOLEJKI) — przypadki 8–10 na końcu pliku: widok kolejki w Ustawieniach (licznik, ostatni błąd),
+// E2-PR5a (P-SYNC-WIDOK-KOLEJKI) — przypadki 8–10 na końcu pliku: widok kolejki w Ustawieniach (licznik, ostatni błąd;
+//    od E2-PR5d w przypadku 8 po przeładowaniu strony wysłane i przyjęte zmiany nie wracają do kolejki),
 //    ukryty przełącznik „Wysyłaj zmiany pojedynczo (test)” odblokowywany 5 kliknięciami linii „Wersja aplikacji”
 //    i Ustawienia w ramce powłoki.
 // E2-PR5b (P-SYNC-WIDOK-KOLEJKI) — przypadek 11 na końcu pliku: „Zmiany do wyjaśnienia” („Porzuć” i „Zwolnij”); od
@@ -408,7 +409,7 @@ async function otworzUstawienia(page, userId) {
 }
 const EVENTS_URL = /\/v1\/slots\/[^/]+\/events$/;
 
-test("E2-PR5a: vilda-event-log-v1 = '1' — Ustawienia: znaczek i linia „N zmian czeka”, ostatni błąd bez sieci, po wysyłce „Wszystkie zmiany wysłane.”", async ({ page, context }) => {
+test("E2-PR5a: vilda-event-log-v1 = '1' — Ustawienia: znaczek i linia „N zmian czeka”, ostatni błąd bez sieci, po wysyłce „Wszystkie zmiany wysłane.”, po przeładowaniu wysłane zmiany nie wracają", async ({ page, context }) => {
   test.setTimeout(120_000);
   const { atrapa, userId } = await przygotujNadawce(page, context, '1');
   // POST /events bez sieci (trasa strony ma pierwszeństwo przed atrapą kontekstu).
@@ -437,12 +438,28 @@ test("E2-PR5a: vilda-event-log-v1 = '1' — Ustawienia: znaczek i linia „N zmi
   await expect(page.locator('#syncEventLogTestToggle')).toBeChecked();
   await expect(page.locator('#syncEventLogTestTag')).toHaveText('Włączone');
 
+  const wyslane = await page.evaluate(async () => (await window.VildaVault._eventLog.outboxList()).wiersze
+    .map((w) => w.kind + '|' + w.entityKey));
+  expect(wyslane.length, 'wiersze do wysłania').toBeGreaterThan(0);
   await page.unroute(EVENTS_URL);
   await expect.poll(async () => (await page.evaluate(() => window.VildaSync.flushOutbox())).ok, { timeout: 30_000 }).toBe(true);
   await expect(page.locator('#syncOutboxCount')).toHaveText('Wszystkie zmiany wysłane.', { timeout: 15_000 });
   await expect(znaczek).toBeHidden();
   await expect(blad).toBeHidden();
   expect(zadaniaEvents(atrapa).every((z) => z.status === 200)).toBe(true);
+
+  // E2-PR5d (P-DZIENNIK-ZDARZEN): zmiany przyjęte przez serwer nie wracają do kolejki po przeładowaniu strony
+  // (przegląd przy odblokowaniu i jawny przegląd w nowym dokumencie).
+  await otworzUstawienia(page, userId);
+  const poPrzeladowaniu = await page.evaluate(async () => {
+    const L = window.VildaVault._eventLog;
+    await L.emissionsSettled();
+    const sw = await L.sweepOutbox();
+    await L.emissionsSettled();
+    return { sw, klucze: (await L.outboxList()).wiersze.map((w) => w.kind + '|' + w.entityKey) };
+  });
+  expect(poPrzeladowaniu.sw).toMatchObject({ ok: true });
+  expect(poPrzeladowaniu.klucze.filter((k) => wyslane.includes(k)), 'wysłane zmiany po przeładowaniu').toEqual([]);
   expect(naruszenia(atrapa)).toEqual([]);
 });
 
