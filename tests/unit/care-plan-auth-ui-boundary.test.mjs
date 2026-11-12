@@ -63,7 +63,10 @@ const deferred = () => { let resolve; const promise = new Promise(done => { reso
 describe('native notes and staged evidence respect the same document boundary', () => {
   it('preserves the entire legacy editor body byte for byte behind the new access gate', () => {
     const body = declarations.get('CareOpenLegacyNoteEditor').body;
-    expect(createHash('sha256').update(source.slice(...body.range)).digest('hex')).toBe('2cb64975193826ab5b64332aa12345f2916cdb7a42185a3bbf9e122f44787438');
+    // Odświeżony świadomie 2026-11-12 (P-WYNIKI-BADAN-EDYTOR, prośba właściciela): opis kotwicy „Notatka ogólna”
+    // zależy od kategorii — wynik badania trafia do Badań. Jedyna zmiana w treści edytora: x._wbOpis przy opisie,
+    // odświeżenie opisu w Wt() i nasłuch zmiany kategorii; bramka dostępu i zapis bez zmian.
+    expect(createHash('sha256').update(source.slice(...body.range)).digest('hex')).toBe('26321100044a3ee36ae0fabcbf5118be43819e16340c111261a06623d50cc582');
   });
 
   it('opens a genuinely new note synchronously without a needless patient-plan read', () => {

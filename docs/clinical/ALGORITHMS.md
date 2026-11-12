@@ -20569,7 +20569,8 @@ edycji w sytuacji, w której wcześniej zapis szedł bez sygnału. Punktów zapi
   karty GH/IGF-1 zawiesza dziś stronę niezależnie od tej zmiany: pętla odtwarzania stanu w `docpro_state_persist.js`,
   zmierzone także na `audyt` `39d1109` (SW 1.1.91). Zgłoszone osobno.
 - Odblokowanie `#therProg` przy pustej liście i chowanie formularza po resecie monitora — osobny mały PR po decyzji
-  (pytanie 16 projektu).
+  (pytanie 16 projektu). Odblokowanie rozstrzygnięte 2026-11-12 (prośba właściciela, P-GH-PROGRAM-ODBLOKUJ,
+  `gh_therapy_monitor.js` 63; opis w `docs/ZRODLA_ARTEFAKTOW.md`); chowanie formularza po resecie nadal do decyzji.
 
 **Wersje.** `gh_therapy_monitor.js` 49 → 50 (`docpro.html`); precache (append-only); `SW_VERSION` 1.1.172 → 1.1.173
 (+ pin w `tests/unit/klirens-ui-model.test.mjs`); `tests/fixtures/wersje-zasobow.json` — wszystko z `npm run podbij-wersje`
@@ -21562,7 +21563,7 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
-## Zmiany do wyjaśnienia w Ustawieniach: porzucenie zmiany i zwolnienie zdarzenia, uśpione (P-SYNC-WIDOK-KOLEJKI, E2-PR5b, SW 1.1.516, `inline_ustawienia_07.js` 5, 2026-11-12)
+## Zmiany do wyjaśnienia w Ustawieniach: porzucenie zmiany i zwolnienie zdarzenia, uśpione (P-SYNC-WIDOK-KOLEJKI, E2-PR5b, SW 1.1.517, `inline_ustawienia_07.js` 5, 2026-11-12)
 
 **Zmiana kliniczna: nie** — wzory, progi, jednostki, interpretacje i reguły scalania bez zmian. **Działanie aplikacji
 bez zmian (uśpione).** Część „Zmiany do wyjaśnienia” widać tylko przy włączonym dzienniku zdarzeń
@@ -21665,7 +21666,7 @@ wierszy z tego urządzenia, przycisk akcji bez koloru ostrzegawczego.
 
 **Następne PR.** E2-W1 (wdraża właściciel), test właściciela (2 dni, ukryty przełącznik), E2-PR6.
 
-**Wersje.** `inline_ustawienia_07.js?v=4→5`; SW 1.1.515 → **1.1.516**.
+**Wersje.** `inline_ustawienia_07.js?v=4→5`; SW 1.1.516 → **1.1.517** (SW 1.1.516 wziął vildaclinic/vilda-calc#937, scalony przed tym PR).
 
 **Cofnięcie** = rewert PR (bez migracji; porzucone wiersze i zwolnione zdarzenia nie wracają — dane niesie pełna
 synchronizacja).
