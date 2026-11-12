@@ -32,6 +32,22 @@
 //   KW21 okno bez document i strona bez nowych elementów — bez wyjątku i bez zegara.
 //   KW22 strażniki źródła: blok między kłódką a linią wersji, cały plik ASCII, tylko textContent, zapis tylko flagi
 //        dziennika; znaczniki w ustawienia.html (ukryte domyślnie, w swoich miejscach), bez nowego skryptu.
+// E2-PR5b (wiersz 9b) — „Zmiany do wyjaśnienia”:
+//   KZ1  uśpione: dziennik wyłączony — bez odczytu kwarantanny, kart, notatek i slotu.
+//   KZ2  „Z tego urządzenia”: oversize, rejected, unreadable (pending pominięty); tytuł z kartą (lista kart i osób
+//        spoza bazy, notatka pacjenta przez getPatientNote, karta usunięta, rodzaj bez karty), stan i chwila; licznik.
+//   KZ3  „Z innych urządzeń”: numer, powód, chwila; inny slot — „poprzednia tożsamość konta”; zły wiersz pominięty.
+//   KZ4  lista budowana od nowa tylko po zmianie zestawu wierszy albo bieżącego slotu (te same węzły co 5 s, karty
+//        czytane raz).
+//   KZ5  „Porzuć”: arkusz (fokus na „Anuluj”), Anuluj bez skutku, potwierdzenie — outboxDiscard([eid], potwierdzone).
+//   KZ6  „Porzuć” — odmowa albo wyjątek: komunikat przy wierszu, przycisk znowu czynny; KZ6b udane przy liście bez zmian
+//        — wiersz od nowa, przycisk czynny.
+//   KZ7  „Zwolnij”: ostrzeżenie o niepełnej karcie, potwierdzenie — quarantineRelease([seq], { slotId }).
+//   KZ8  „Zwolnij” — odmowa: komunikat przy wierszu.
+//   KZ9  błąd odczytu kart — tytuły z samym rodzajem zmiany.
+//   KZ10 blokada sejfu chowa część, odblokowanie pokazuje ją znowu.
+//   KZ11 nowszy odczyt wygrywa także przy wolnym odczycie kart.
+//   KZ12 odmowa kwarantanny — zostają wiersze z tego urządzenia.
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
@@ -42,6 +58,8 @@ const KORZEN = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..
 const czytaj = (p) => fs.readFileSync(path.join(KORZEN, p), 'utf8');
 const PLIK = 'inline_ustawienia_07.js';
 const KLUCZ = 'vilda-event-log-v1';
+const SLOT = 'a'.repeat(64);
+const SLOT_STARY = 'b'.repeat(64);
 
 afterEach(() => { vi.useRealTimers(); });
 
@@ -60,6 +78,7 @@ function element(dok, id, tag = 'div', pola = {}) {
     removeChild(c) { e.dzieci = e.dzieci.filter((x) => x !== c); c.parentNode = null; return c; },
     querySelector: () => null,
     focus() { dok.activeElement = e; },
+    get firstChild() { return e.dzieci[0] || null; },
     scrollIntoView: vi.fn(),
   };
   Object.defineProperty(e, 'innerHTML', { get() { throw new Error('innerHTML niedozwolone'); }, set() { throw new Error('innerHTML niedozwolone'); } });
@@ -76,6 +95,14 @@ function strona(o = {}) {
     liczniki: o.liczniki || { ok: true, pending: 0, inflight: 0, oversize: 0, unreadable: 0, rejected: 0, total: 0 },
     lista: o.lista || { ok: true, wiersze: [] },
     health: o.health !== undefined ? o.health : { features: ['changes-paged', 'aad', 'events'] },
+    kwLicz: o.kwLicz || { ok: true, total: 0, sloty: {} },
+    kwLista: o.kwLista || { ok: true, wiersze: [] },
+    karty: o.karty || [],
+    osoby: o.osoby || [],
+    notatki: o.notatki || {},
+    slot: o.slot !== undefined ? o.slot : SLOT,
+    porzuc: o.porzuc || { ok: true, usuniete: [], pominiete: [] },
+    zwolnij: o.zwolnij || { ok: true, usuniete: [], pominiete: [] },
   };
   const dok = { readyState: 'complete', visibilityState: 'visible', activeElement: null };
   const sluchaczeDok = new Map();
@@ -95,6 +122,14 @@ function strona(o = {}) {
     dodaj('syncEventLogTestStatus', 'p');
     dodaj('settings-section-sync', 'details');
     dodaj('syncSlotCard', 'details');
+    dodaj('syncProblemsBox', 'div', { hidden: true });
+    dodaj('syncProblemsTag', 'span', { textContent: '0' });
+    dodaj('syncProblemsOwn', 'div', { hidden: true });
+    dodaj('syncProblemsOwnTitle', 'h4');
+    dodaj('syncProblemsOwnList', 'ul');
+    dodaj('syncProblemsOther', 'div', { hidden: true });
+    dodaj('syncProblemsOtherTitle', 'h4');
+    dodaj('syncProblemsOtherList', 'ul');
   }
   dodaj('settingsAppVersion', 'p');
   const body = element(dok, null, 'body');
@@ -115,12 +150,20 @@ function strona(o = {}) {
   const kolejka = {
     outboxCount: vi.fn(async () => (typeof stan.liczniki === 'function' ? stan.liczniki() : stan.liczniki)),
     outboxList: vi.fn(async () => (typeof stan.lista === 'function' ? stan.lista() : stan.lista)),
+    quarantineCount: vi.fn(async () => (typeof stan.kwLicz === 'function' ? stan.kwLicz() : stan.kwLicz)),
+    quarantineList: vi.fn(async () => (typeof stan.kwLista === 'function' ? stan.kwLista() : stan.kwLista)),
+    outboxDiscard: vi.fn(async () => (typeof stan.porzuc === 'function' ? stan.porzuc() : stan.porzuc)),
+    quarantineRelease: vi.fn(async () => (typeof stan.zwolnij === 'function' ? stan.zwolnij() : stan.zwolnij)),
   };
   const VildaVault = {
     isUnlocked: () => stan.sejf,
     onUnlock: (f) => odblok.push(f),
     onLock: (f) => blok.push(f),
     _eventLog: kolejka,
+    listPatients: vi.fn(async () => (typeof stan.karty === 'function' ? stan.karty() : stan.karty)),
+    listExternalPatients: vi.fn(async () => stan.osoby),
+    getPatientNote: vi.fn(async (id) => stan.notatki[id] || null),
+    getSyncMaterial: vi.fn(async () => (stan.slot ? { slotId: stan.slot, authToken: 'fikcyjny-token' } : null)),
   };
   const VildaSync = {
     isEventLogEnabled: vi.fn(() => stan.dziennik),
@@ -616,6 +659,329 @@ describe('E2-PR5a P-SYNC-WIDOK-KOLEJKI: ukryty przełącznik „Wysyłaj zmiany 
   });
 });
 
+// ── E2-PR5b: „Zmiany do wyjaśnienia” ──
+const teraz = () => new Date().toISOString();
+const godz = (iso) => { const d = new Date(iso); return `dziś ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
+const ileProblemow = (o = {}) => ({ ok: true, pending: o.pending || 0, inflight: 0, oversize: o.oversize || 0, unreadable: o.unreadable || 0, rejected: o.rejected || 0, total: 0 });
+function wierszeListy(s, id) {
+  return s.el(id).dzieci.map((li) => {
+    const opis = li.dzieci[0];
+    return { tytul: opis.dzieci[0].textContent, opis: opis.dzieci[1].textContent, przycisk: li.dzieci[1].textContent, etykieta: li.dzieci[1].atrybuty['aria-label'] };
+  });
+}
+const przyciskWiersza = (s, id, i) => s.el(id).dzieci[i].dzieci[1];
+const bladWiersza = (s, id, i) => s.el(id).dzieci[i].dzieci[0].dzieci[2];
+function swiatProblemow(o = {}) {
+  const at = teraz();
+  const wiersze = [
+    { eid: 'e1', state: 'oversize', kind: 'pfull', entityKey: 'p1', createdAtISO: at, lastAttemptAtISO: at },
+    { eid: 'e2', state: 'rejected', kind: 'pnote', entityKey: 'n1', createdAtISO: at, lastAttemptAtISO: at },
+    { eid: 'e3', state: 'unreadable', kind: 'snap', entityKey: 'p9/s1', createdAtISO: at, lastAttemptAtISO: null },
+    { eid: 'e4', state: 'unreadable', kind: 'pref', entityKey: 'motyw' },
+    { eid: 'e5', state: 'pending', kind: 'pfull', entityKey: 'p1', createdAtISO: at },
+    { eid: 'e6', state: 'rejected', kind: 'snap', entityKey: 'p1/s2', createdAtISO: at, lastAttemptAtISO: at },
+  ];
+  return Object.assign({
+    liczniki: ileProblemow({ pending: 1, oversize: 1, rejected: 2, unreadable: 2 }),
+    lista: { ok: true, wiersze },
+    karty: [{ patientId: 'p1', header: { name: 'Testowa Anna' } }],
+    osoby: [{ patientId: 'x1', header: { name: 'Próbna Ewa' } }],
+    notatki: { n1: { id: 'n1', patientId: 'x1' } },
+  }, o);
+}
+
+describe('E2-PR5b P-SYNC-WIDOK-KOLEJKI: zmiany do wyjaśnienia', () => {
+  it('KZ1: dziennik wyłączony — część ukryta, bez odczytu kwarantanny, kart, notatek i slotu', async () => {
+    const s = strona(swiatProblemow({ dziennik: false, kwLicz: { ok: true, total: 1, sloty: {} } }));
+    await tury();
+    s.tik();
+    await tury();
+    expect(s.el('syncProblemsBox').hidden).toBe(true);
+    for (const f of [s.kolejka.quarantineCount, s.kolejka.quarantineList, s.win.VildaVault.listPatients,
+      s.win.VildaVault.getPatientNote, s.win.VildaVault.getSyncMaterial]) expect(f).not.toHaveBeenCalled();
+  });
+
+  it('KZ2: „Z tego urządzenia” — tytuł z kartą, stan i chwila; pending pominięty; licznik', async () => {
+    const s = strona(swiatProblemow());
+    await tury(30);
+    expect(s.el('syncProblemsBox').hidden).toBe(false);
+    expect(s.el('syncProblemsTag').textContent).toBe('5');
+    expect(s.el('syncProblemsOwn').hidden).toBe(false);
+    expect(s.el('syncProblemsOther').hidden).toBe(true);
+    expect(s.el('syncProblemsOwnTitle').textContent).toBe('Z tego urządzenia (5)');
+    const at = s.stan.lista.wiersze[0].lastAttemptAtISO;
+    expect(wierszeListy(s, 'syncProblemsOwnList')).toEqual([
+      { tytul: 'Karta: Testowa Anna', opis: `za duża, żeby wysłać ją pojedynczo · ${godz(at)}`, przycisk: 'Porzuć', etykieta: 'Porzuć: Karta: Testowa Anna' },
+      { tytul: 'Notatka pacjenta: Próbna Ewa', opis: `serwer odrzucił zmianę · ${godz(at)}`, przycisk: 'Porzuć', etykieta: 'Porzuć: Notatka pacjenta: Próbna Ewa' },
+      { tytul: 'Wizyta (karta usunięta)', opis: `nie da się odczytać zmiany · ${godz(at)}`, przycisk: 'Porzuć', etykieta: 'Porzuć: Wizyta (karta usunięta)' },
+      { tytul: 'Ustawienie', opis: 'nie da się odczytać zmiany', przycisk: 'Porzuć', etykieta: 'Porzuć: Ustawienie' },
+      { tytul: 'Wizyta: Testowa Anna', opis: `serwer odrzucił zmianę · ${godz(at)}`, przycisk: 'Porzuć', etykieta: 'Porzuć: Wizyta: Testowa Anna' },
+    ]);
+    // Kwarantanna pusta — bez odczytu jej wierszy.
+    expect(s.kolejka.quarantineCount).toHaveBeenCalledTimes(1);
+    expect(s.kolejka.quarantineList).not.toHaveBeenCalled();
+    // Linia statusu: jedna zmiana czeka; lista wierszy czytana raz.
+    expect(s.el('syncOutboxCount').textContent).toBe('1 zmiana czeka na wysłanie.');
+    expect(s.kolejka.outboxList).toHaveBeenCalledTimes(1);
+    expect(s.win.VildaVault.getPatientNote).toHaveBeenCalledExactlyOnceWith('n1');
+    expect(s.win.VildaVault.getSyncMaterial).not.toHaveBeenCalled();
+    // Sam stan problemów (nic nie czeka): lista czytana, linia „Wszystkie zmiany wysłane.”, bez błędu.
+    const z = strona(swiatProblemow({ liczniki: ileProblemow({ oversize: 1 }) }));
+    await tury(30);
+    expect(z.kolejka.outboxList).toHaveBeenCalledTimes(1);
+    expect(z.el('syncOutboxCount').textContent).toBe('Wszystkie zmiany wysłane.');
+    expect(z.el('syncOutboxError').hidden).toBe(true);
+    expect(z.el('syncProblemsBox').hidden).toBe(false);
+    // Tytuły bez karty w kluczu i kart usuniętych.
+    expect(s.api.tytulZmiany('ptomb', null)).toBe('Karta usunięta');
+    expect(s.api.tytulZmiany('pfull', '')).toBe('Karta: karta bez nazwy');
+    expect(s.api.tytulZmiany('nieznany', null)).toBe('Zmiana (karta usunięta)');
+  });
+
+  it('KZ3: „Z innych urządzeń” — numer, powód, chwila; inny slot — poprzednia tożsamość; zły wiersz pominięty', async () => {
+    const at = teraz();
+    const s = strona({
+      liczniki: ileProblemow(),
+      kwLicz: { ok: true, total: 3, sloty: { [SLOT]: 1, [SLOT_STARY]: 1 } },
+      kwLista: { ok: true, wiersze: [
+        { slotId: SLOT, seq: 1842, reason: 'decrypt', firstSeenAtISO: at },
+        { slotId: SLOT_STARY, seq: 1857, reason: 'format', firstSeenAtISO: at },
+        { slotId: SLOT, seq: 1900, reason: 'nowy-powod', firstSeenAtISO: 'zła data' },
+        { slotId: 5, seq: 1 },
+      ] },
+    });
+    await tury(30);
+    expect(s.el('syncProblemsBox').hidden).toBe(false);
+    expect(s.el('syncProblemsOwn').hidden).toBe(true);
+    expect(s.el('syncProblemsOther').hidden).toBe(false);
+    expect(s.el('syncProblemsTag').textContent).toBe('3');
+    expect(s.el('syncProblemsOtherTitle').textContent).toBe('Z innych urządzeń (3)');
+    expect(wierszeListy(s, 'syncProblemsOtherList')).toEqual([
+      { tytul: 'Zdarzenie nr 1842', opis: `nie udało się odszyfrować · od ${godz(at)}`, przycisk: 'Zwolnij', etykieta: 'Zwolnij: Zdarzenie nr 1842' },
+      { tytul: 'Zdarzenie nr 1857 (poprzednia tożsamość konta)', opis: `nieznany format · od ${godz(at)}`, przycisk: 'Zwolnij', etykieta: 'Zwolnij: Zdarzenie nr 1857 (poprzednia tożsamość konta)' },
+      { tytul: 'Zdarzenie nr 1900', opis: 'nie udało się odczytać', przycisk: 'Zwolnij', etykieta: 'Zwolnij: Zdarzenie nr 1900' },
+    ]);
+    expect(s.kolejka.outboxList).not.toHaveBeenCalled();
+    expect(s.win.VildaVault.listPatients).not.toHaveBeenCalled();
+    // Bez slotu (niezarejestrowane) — bez dopisku.
+    const b = strona({ liczniki: ileProblemow(), slot: null, kwLicz: { ok: true, total: 1, sloty: {} },
+      kwLista: { ok: true, wiersze: [{ slotId: SLOT_STARY, seq: 3, reason: 'shape', firstSeenAtISO: at }] } });
+    await tury(30);
+    expect(wierszeListy(b, 'syncProblemsOtherList')[0]).toMatchObject({ tytul: 'Zdarzenie nr 3', opis: `nieczytelna treść · od ${godz(at)}` });
+  });
+
+  it('KZ4: lista od nowa tylko po zmianie zestawu wierszy', async () => {
+    const s = strona(swiatProblemow());
+    await tury(30);
+    const li0 = s.el('syncProblemsOwnList').dzieci[0];
+    s.tik(); s.tik();
+    await tury(40);
+    expect(s.el('syncProblemsOwnList').dzieci[0]).toBe(li0);
+    expect(s.win.VildaVault.listPatients).toHaveBeenCalledTimes(1);
+    s.stan.lista = { ok: true, wiersze: s.stan.lista.wiersze.slice(1) };
+    s.stan.liczniki = ileProblemow({ pending: 1, rejected: 2, unreadable: 2 });
+    s.tik();
+    await tury(30);
+    expect(s.el('syncProblemsOwnList').dzieci[0]).not.toBe(li0);
+    expect(wierszeListy(s, 'syncProblemsOwnList').map((w) => w.tytul)).toEqual(['Notatka pacjenta: Próbna Ewa', 'Wizyta (karta usunięta)', 'Ustawienie', 'Wizyta: Testowa Anna']);
+    expect(s.el('syncProblemsTag').textContent).toBe('4');
+    expect(s.win.VildaVault.listPatients).toHaveBeenCalledTimes(2);
+    // Zmiana bieżącego slotu (rotacja tożsamości) przy tych samych wierszach kwarantanny — opis od nowa.
+    const at = teraz();
+    s.stan.kwLicz = { ok: true, total: 1, sloty: {} };
+    s.stan.kwLista = { ok: true, wiersze: [{ slotId: SLOT, seq: 5, reason: 'decrypt', firstSeenAtISO: at }] };
+    s.tik();
+    await tury(30);
+    expect(wierszeListy(s, 'syncProblemsOtherList').map((w) => w.tytul)).toEqual(['Zdarzenie nr 5']);
+    s.stan.slot = SLOT_STARY;
+    s.tik();
+    await tury(30);
+    expect(wierszeListy(s, 'syncProblemsOtherList').map((w) => w.tytul)).toEqual(['Zdarzenie nr 5 (poprzednia tożsamość konta)']);
+  });
+
+  it('KZ5: „Porzuć” — arkusz z fokusem na „Anuluj”; Anuluj bez skutku; potwierdzenie usuwa wiersz', async () => {
+    const s = strona(swiatProblemow());
+    await tury(30);
+    const b = przyciskWiersza(s, 'syncProblemsOwnList', 0);
+    b.focus();
+    b.wyslij('click');
+    const a = s.arkusz();
+    expect(wGlab(a).map((e) => e.textContent).filter(Boolean)).toEqual([
+      'Porzucić tę zmianę?',
+      'Zmiana nie zostanie wysłana pojedynczo. Na inne urządzenia trafi przy najbliższej pełnej synchronizacji.',
+      'Porzuć', 'Anuluj',
+    ]);
+    expect(a.dzieci[0].atrybuty).toMatchObject({ role: 'alertdialog', 'aria-labelledby': 'syncProblemConfirmTitle', 'aria-describedby': 'syncProblemConfirmBody' });
+    expect(s.przycisk('Porzuć').className).toContain('settings-kosz-btn-usun');
+    expect(s.dok.activeElement).toBe(s.przycisk('Anuluj'));
+    s.przycisk('Anuluj').wyslij('click');
+    await tury();
+    expect(s.arkusz()).toBeNull();
+    expect(s.dok.activeElement).toBe(b);
+    expect(s.kolejka.outboxDiscard).not.toHaveBeenCalled();
+
+    b.wyslij('click');
+    s.stan.porzuc = () => {
+      s.stan.lista = { ok: true, wiersze: s.stan.lista.wiersze.filter((w) => w.eid !== 'e1') };
+      s.stan.liczniki = ileProblemow({ pending: 1, rejected: 2, unreadable: 2 });
+      return { ok: true, usuniete: ['e1'], pominiete: [] };
+    };
+    s.przycisk('Porzuć').wyslij('click');
+    await tury(40);
+    expect(s.kolejka.outboxDiscard).toHaveBeenCalledExactlyOnceWith(['e1'], { potwierdzone: true });
+    expect(wierszeListy(s, 'syncProblemsOwnList').map((w) => w.tytul)).toEqual(['Notatka pacjenta: Próbna Ewa', 'Wizyta (karta usunięta)', 'Ustawienie', 'Wizyta: Testowa Anna']);
+    // Ostatni wiersz porzucony — część znika.
+    s.stan.porzuc = () => {
+      s.stan.lista = { ok: true, wiersze: [] };
+      s.stan.liczniki = ileProblemow();
+      return { ok: true, usuniete: [], pominiete: ['e2'] };
+    };
+    przyciskWiersza(s, 'syncProblemsOwnList', 0).wyslij('click');
+    s.przycisk('Porzuć').wyslij('click');
+    await tury(40);
+    expect(s.el('syncProblemsBox').hidden).toBe(true);
+  });
+
+  it('KZ6: „Porzuć” — odmowa albo wyjątek: komunikat przy wierszu, przycisk znowu czynny', async () => {
+    const s = strona(swiatProblemow({ porzuc: { ok: false, powod: 'sesja' } }));
+    await tury(30);
+    const b = przyciskWiersza(s, 'syncProblemsOwnList', 1);
+    b.wyslij('click');
+    s.przycisk('Porzuć').wyslij('click');
+    expect(b.disabled).toBe(true);
+    await tury(20);
+    expect(b.disabled).toBe(false);
+    const blad = bladWiersza(s, 'syncProblemsOwnList', 1);
+    expect(blad.hidden).toBe(false);
+    expect(blad.textContent).toBe('Nie udało się porzucić zmiany. Spróbuj ponownie.');
+    expect(blad.atrybuty.role).toBe('alert');
+    expect(s.kolejka.outboxDiscard).toHaveBeenCalledExactlyOnceWith(['e2'], { potwierdzone: true });
+    s.stan.porzuc = () => { throw new Error('IDB'); };
+    b.wyslij('click');
+    s.przycisk('Porzuć').wyslij('click');
+    await tury(20);
+    expect(b.disabled).toBe(false);
+    expect(blad.hidden).toBe(false);
+  });
+
+  it('KZ6b: „Porzuć” udane, a lista bez zmian (np. wiersz wrócił z innej karty) — wiersz od nowa, przycisk czynny', async () => {
+    const s = strona(swiatProblemow());
+    await tury(30);
+    const b = przyciskWiersza(s, 'syncProblemsOwnList', 0);
+    b.wyslij('click');
+    s.przycisk('Porzuć').wyslij('click');
+    await tury(40);
+    expect(s.kolejka.outboxDiscard).toHaveBeenCalledTimes(1);
+    const nowy = przyciskWiersza(s, 'syncProblemsOwnList', 0);
+    expect(nowy).not.toBe(b);
+    expect(nowy.disabled).toBeFalsy();
+  });
+
+  it('KZ7: „Zwolnij” — ostrzeżenie o niepełnej karcie; potwierdzenie — quarantineRelease([seq], { slotId })', async () => {
+    const at = teraz();
+    const s = strona({
+      liczniki: ileProblemow(),
+      kwLicz: { ok: true, total: 2, sloty: {} },
+      kwLista: { ok: true, wiersze: [{ slotId: SLOT, seq: 11, reason: 'decrypt', firstSeenAtISO: at }, { slotId: SLOT_STARY, seq: 12, reason: 'shape', firstSeenAtISO: at }] },
+    });
+    await tury(30);
+    przyciskWiersza(s, 'syncProblemsOtherList', 1).wyslij('click');
+    const a = s.arkusz();
+    expect(wGlab(a).map((e) => e.textContent).filter(Boolean)).toEqual([
+      'Zwolnić to zdarzenie?',
+      'Do najbliższej pełnej synchronizacji karta pacjenta na tym urządzeniu może być niepełna albo może jej brakować. Aplikacja przestanie próbować odczytać to zdarzenie.',
+      'Zwolnij', 'Anuluj',
+    ]);
+    expect(s.dok.activeElement).toBe(s.przycisk('Anuluj'));
+    a.wyslij('keydown', { key: 'Escape' });
+    expect(s.arkusz()).toBeNull();
+    expect(s.kolejka.quarantineRelease).not.toHaveBeenCalled();
+    przyciskWiersza(s, 'syncProblemsOtherList', 1).wyslij('click');
+    s.stan.zwolnij = () => {
+      s.stan.kwLicz = { ok: true, total: 1, sloty: {} };
+      s.stan.kwLista = { ok: true, wiersze: [{ slotId: SLOT, seq: 11, reason: 'decrypt', firstSeenAtISO: at }] };
+      return { ok: true, usuniete: [12], pominiete: [] };
+    };
+    s.przycisk('Zwolnij').wyslij('click');
+    await tury(40);
+    expect(s.kolejka.quarantineRelease).toHaveBeenCalledExactlyOnceWith([12], { slotId: SLOT_STARY });
+    expect(wierszeListy(s, 'syncProblemsOtherList').map((w) => w.tytul)).toEqual(['Zdarzenie nr 11']);
+    expect(s.el('syncProblemsTag').textContent).toBe('1');
+  });
+
+  it('KZ8: „Zwolnij” — odmowa: komunikat przy wierszu', async () => {
+    const s = strona({
+      liczniki: ileProblemow(), zwolnij: { ok: false, powod: 'zablokowany' },
+      kwLicz: { ok: true, total: 1, sloty: {} },
+      kwLista: { ok: true, wiersze: [{ slotId: SLOT, seq: 7, reason: 'decrypt', firstSeenAtISO: teraz() }] },
+    });
+    await tury(30);
+    const b = przyciskWiersza(s, 'syncProblemsOtherList', 0);
+    b.wyslij('click');
+    s.przycisk('Zwolnij').wyslij('click');
+    await tury(20);
+    expect(b.disabled).toBe(false);
+    expect(bladWiersza(s, 'syncProblemsOtherList', 0).textContent).toBe('Nie udało się zwolnić zdarzenia. Spróbuj ponownie.');
+    expect(bladWiersza(s, 'syncProblemsOtherList', 0).hidden).toBe(false);
+  });
+
+  it('KZ9: błąd odczytu kart — tytuły z samym rodzajem zmiany', async () => {
+    const s = strona(swiatProblemow({ karty: () => { throw new Error('IDB'); } }));
+    await tury(30);
+    expect(wierszeListy(s, 'syncProblemsOwnList').map((w) => w.tytul)).toEqual(['Karta', 'Notatka pacjenta', 'Wizyta', 'Ustawienie', 'Wizyta']);
+    // Błąd odczytu notatki — sam rodzaj tylko dla tej notatki.
+    const n = strona(swiatProblemow());
+    n.win.VildaVault.getPatientNote.mockRejectedValue(new Error('IDB'));
+    n.tik();
+    await tury(30);
+    expect(wierszeListy(n, 'syncProblemsOwnList').map((w) => w.tytul)).toEqual(['Karta: Testowa Anna', 'Notatka pacjenta', 'Wizyta (karta usunięta)', 'Ustawienie', 'Wizyta: Testowa Anna']);
+  });
+
+  it('KZ10: blokada sejfu chowa część, odblokowanie pokazuje ją znowu', async () => {
+    const s = strona(swiatProblemow());
+    await tury(30);
+    expect(s.el('syncProblemsBox').hidden).toBe(false);
+    s.zablokuj();
+    await tury(30);
+    expect(s.el('syncProblemsBox').hidden).toBe(true);
+    s.odblokuj();
+    await tury(30);
+    expect(s.el('syncProblemsBox').hidden).toBe(false);
+    expect(s.el('syncProblemsOwnList').dzieci).toHaveLength(5);
+  });
+
+  it('KZ11: nowszy odczyt wygrywa także przy wolnym odczycie kart', async () => {
+    let pusc;
+    const s = strona(swiatProblemow({ dziennik: false }));
+    await tury();
+    s.stan.dziennik = true;
+    s.stan.karty = () => new Promise((r) => { pusc = () => r([{ patientId: 'p1', header: { name: 'Stara Nazwa' } }]); });
+    const stary = s.api.odswiez();
+    await tury(30);
+    s.stan.karty = [{ patientId: 'p1', header: { name: 'Testowa Anna' } }];
+    s.stan.lista = { ok: true, wiersze: s.stan.lista.wiersze.slice(0, 1) };
+    s.stan.liczniki = ileProblemow({ oversize: 1 });
+    await s.api.odswiez();
+    expect(wierszeListy(s, 'syncProblemsOwnList').map((w) => w.tytul)).toEqual(['Karta: Testowa Anna']);
+    pusc();
+    expect(await stary).toBeNull();
+    await tury(30);
+    expect(wierszeListy(s, 'syncProblemsOwnList').map((w) => w.tytul)).toEqual(['Karta: Testowa Anna']);
+  });
+
+  it('KZ12: odmowa kwarantanny — zostają wiersze z tego urządzenia', async () => {
+    const s = strona(swiatProblemow({ kwLicz: { ok: false, powod: 'bramka' } }));
+    await tury(30);
+    expect(s.el('syncProblemsOwn').hidden).toBe(false);
+    expect(s.el('syncProblemsOther').hidden).toBe(true);
+    expect(s.kolejka.quarantineList).not.toHaveBeenCalled();
+    const t = strona(swiatProblemow({ kwLicz: { ok: true, total: 2, sloty: {} }, kwLista: () => { throw new Error('IDB'); } }));
+    await tury(30);
+    expect(t.el('syncProblemsOther').hidden).toBe(true);
+    expect(t.el('syncProblemsTag').textContent).toBe('5');
+  });
+});
+
 describe('E2-PR5a P-SYNC-WIDOK-KOLEJKI: strażniki źródła', () => {
   const START = '/* P-SYNC-WIDOK-KOLEJKI (';
   const KONIEC = '/* /P-SYNC-WIDOK-KOLEJKI */';
@@ -637,9 +1003,17 @@ describe('E2-PR5a P-SYNC-WIDOK-KOLEJKI: strażniki źródła', () => {
     ]);
     expect(kod).toMatch(/var Bkw_KLUCZ = 'vilda-event-log-v1';/);
     expect(kod).toMatch(/\(window\);\s*$/);
-    // Z kolejki wyłącznie odczyty (bez zmian stanu wierszy i bez wysyłki).
-    expect([...new Set(kod.match(/\bL\.\w+/g))].sort()).toEqual(['L.outboxCount', 'L.outboxList']);
-    expect(kod).not.toMatch(/outbox(Take|Accept|Reject|Fail|Discard|RequeueStale)|quarantine|flushOutbox|scheduleFlush|pushEvents|enqueue/);
+    // Z kolejki odczyty oraz dwie jawne decyzje użytkownika (E2-PR5b): porzucenie wiersza i zwolnienie zdarzenia —
+    // każde jednym wywołaniem z argumentami z wiersza; bez wysyłki i bez innych zmian stanu.
+    expect([...new Set(kod.match(/\bL\.\w+/g))].sort()).toEqual([
+      'L.outboxCount', 'L.outboxDiscard', 'L.outboxList', 'L.quarantineCount', 'L.quarantineList', 'L.quarantineRelease',
+    ]);
+    expect(kod.match(/L\.outboxDiscard\([^)]*\)/g)).toEqual(['L.outboxDiscard([r.eid], { potwierdzone: true })']);
+    expect(kod.match(/L\.quarantineRelease\([^)]*\)/g)).toEqual(['L.quarantineRelease([q.seq], { slotId: q.slotId })']);
+    expect(kod).not.toMatch(/outbox(Take|Accept|Reject|Fail|RequeueStale)|quarantine(Put|MinSeq)|flushOutbox|scheduleFlush|pushEvents|enqueue|deleteDatabase/);
+    // Z materiału synchronizacji tylko identyfikator slotu.
+    expect(kod.match(/getSyncMaterial\(\)[^;]*;/g)).toHaveLength(1);
+    expect(kod).not.toMatch(/authToken|\.token\b/);
   });
 
   it('KW22b: ustawienia.html — znaczniki ukryte domyślnie, w swoich miejscach; bez nowego skryptu', () => {
@@ -661,6 +1035,19 @@ describe('E2-PR5a P-SYNC-WIDOK-KOLEJKI: strażniki źródła', () => {
     expect(zaaw).toMatch(/Wysyłaj zmiany pojedynczo \(test\)\s*<\/label>/);
     for (const id of ['syncOutboxChipWrap', 'syncOutboxChip', 'syncOutboxBox', 'syncOutboxCount', 'syncOutboxHint', 'syncOutboxError',
       'syncEventLogTestCard', 'syncEventLogTestTag', 'syncEventLogTestRow', 'syncEventLogTestToggle', 'syncEventLogTestStatus']) {
+      expect(html.split(`id="${id}"`).length, id).toBe(2);
+    }
+    // E2-PR5b: „Zmiany do wyjaśnienia” między statusem a „Nowe urządzenie”, ukryte; wiersze na klasach listy Kosza.
+    const problemy = sekcja.slice(sekcja.indexOf('<div id="syncProblemsBox" hidden>'), sekcja.indexOf('id="syncNewDeviceCard"'));
+    expect(sekcja.indexOf('<div id="syncProblemsBox" hidden>')).toBeGreaterThan(sekcja.indexOf('id="syncClockSkewWarning"'));
+    expect(problemy).toMatch(/<div class="settings-backup-section" id="syncProblemsCard">/);
+    expect(problemy).toMatch(/<h3 class="settings-control-title">Zmiany do wyjaśnienia<\/h3>\s*<span class="settings-tag" id="syncProblemsTag">0<\/span>/);
+    expect(problemy).toMatch(/<div id="syncProblemsOwn" hidden>\s*<h4 class="settings-control-desc" id="syncProblemsOwnTitle">Z tego urządzenia<\/h4>\s*<ul class="settings-kosz-lista" id="syncProblemsOwnList" aria-labelledby="syncProblemsOwnTitle"><\/ul>/);
+    expect(problemy).toMatch(/<div id="syncProblemsOther" hidden>\s*<h4 class="settings-control-desc" id="syncProblemsOtherTitle">Z innych urządzeń<\/h4>/);
+    expect(problemy).toMatch(/<ul class="settings-kosz-lista" id="syncProblemsOtherList" aria-labelledby="syncProblemsOtherTitle"><\/ul>/);
+    expect(problemy).not.toContain('style=');
+    for (const id of ['syncProblemsBox', 'syncProblemsCard', 'syncProblemsTag', 'syncProblemsOwn', 'syncProblemsOwnTitle',
+      'syncProblemsOwnList', 'syncProblemsOther', 'syncProblemsOtherTitle', 'syncProblemsOtherList']) {
       expect(html.split(`id="${id}"`).length, id).toBe(2);
     }
     const skrypty = [...html.matchAll(/<script\b[^>]*\bsrc="([^"?]+)/g)].map((m) => m[1]);
