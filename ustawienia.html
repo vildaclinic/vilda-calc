@@ -851,6 +851,7 @@
               <div class="settings-accordion-meta">
                 <span class="settings-mini-chip" id="syncEnabledChip">ładowanie…</span>
                 <span class="settings-mini-chip" id="syncLastSyncChip" style="display:none">—</span>
+                <span id="syncOutboxChipWrap" hidden><span class="settings-mini-chip" id="syncOutboxChip"></span></span>
               </div>
               <span class="settings-chevron" aria-hidden="true">⌄</span>
             </summary>
@@ -920,6 +921,12 @@
                     <p class="settings-inline-note settings-backup-note" id="syncStatusNote">
                       Aby zarządzać synchronizacją, zaloguj się.
                     </p>
+                    <!-- P-SYNC-WIDOK-KOLEJKI (E2-PR5a): kolejka zmian wysyłanych pojedynczo; widoczna tylko przy włączonym
+                         dzienniku zdarzeń (inline_ustawienia_07.js). -->
+                    <div id="syncOutboxBox" hidden>
+                      <p class="settings-inline-note settings-backup-note" id="syncOutboxNote" aria-live="polite"><strong id="syncOutboxCount"></strong> <span id="syncOutboxHint"></span></p>
+                      <p class="settings-inline-note settings-backup-note settings-note-warn" id="syncOutboxError" hidden></p>
+                    </div>
                     <p class="settings-inline-note settings-backup-note settings-note-warn" id="syncStaleWarning" role="status" hidden></p>
                     <!-- G17 (D13): ostrzezenie o rozjezdzie zegarow urzadzen. Osobny akapit, bo mowi
                          o czym innym niz nieaktualne urzadzenie i moze wystapic razem z nim. -->
@@ -999,6 +1006,26 @@
                         </button>
                       </div>
                       <p class="settings-inline-note settings-backup-note" id="syncSlotStatus"></p>
+                      <!-- P-SYNC-WIDOK-KOLEJKI (E2-PR5a): ukryty przełącznik testowy; widoczny po odblokowaniu
+                           (5 kliknięć linii „Wersja aplikacji”) albo przy włączonej opcji (inline_ustawienia_07.js). -->
+                      <div id="syncEventLogTestCard" hidden>
+                        <div class="settings-control-header">
+                          <h3 class="settings-control-title">Wysyłaj zmiany pojedynczo (test)</h3>
+                          <span class="settings-tag" id="syncEventLogTestTag">—</span>
+                        </div>
+                        <p class="settings-control-desc">
+                          Opcja testowa, tylko na tym urządzeniu. Każda zmiana idzie od razu na serwer, a pełna synchronizacja działa dalej jak dotąd.
+                        </p>
+                        <div id="syncEventLogTestRow" hidden>
+                          <div class="settings-card-toggle-row settings-backup-btn-row">
+                            <label class="settings-backup-checkbox-label">
+                              <input type="checkbox" id="syncEventLogTestToggle" class="settings-backup-checkbox">
+                              Wysyłaj zmiany pojedynczo (test)
+                            </label>
+                          </div>
+                        </div>
+                        <p class="settings-inline-note settings-backup-note" id="syncEventLogTestStatus"></p>
+                      </div>
                     </div>
                   </details>
 
@@ -2438,6 +2465,6 @@
 
   <script defer src="inline_ustawienia_06.js?v=1"></script>
 
-  <script defer src="inline_ustawienia_07.js?v=3"></script>
+  <script defer src="inline_ustawienia_07.js?v=4"></script>
 </body>
 </html>
