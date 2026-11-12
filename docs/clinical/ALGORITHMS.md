@@ -21597,6 +21597,30 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
+## Serwer przyjmuje pojedyncze zmiany, aplikacja bez zmian (P-SYNC-ZDARZENIA, E2-W1, bez zmiany wersji aplikacji, 2026-11-12)
+
+**Zmiana kliniczna: nie** — wzory, progi, jednostki, interpretacje i reguły scalania bez zmian. **Działanie aplikacji
+bez zmian.** Kod aplikacji bez zmian; zmienia się tylko ustawienie serwera synchronizacji.
+
+Plan: wiersz 10 tabeli „Podział etapu 2”, decyzja 9 z 2026-11-12 (rozdział 6).
+
+**Co się zmieniło.** Od 2026-11-12 worker ma `EVENTS_ENABLED` = `1` (zmienna w ustawieniach workera, bez nowego kodu).
+Health produkcji podaje `features` `events`, `changes-paged` i `aad`; trasa `POST /v1/slots/:s/events` istnieje (bez
+tokenu `401 missing_token`, dotąd `404`).
+
+**Dlaczego aplikacja działa jak dotąd.** Włącznik dziennika (P-SYNC-ZDARZENIA, E2-PR4b) wymaga dwóch rzeczy: „events”
+w health i flagi `vilda-event-log-v1` = `'1'` na urządzeniu. Flagę ustawia tylko ukryty przełącznik w Ustawieniach
+(P-SYNC-WIDOK-KOLEJKI, E2-PR5a: 5 kliknięć linii „Wersja aplikacji” i potwierdzenie, przy odblokowanym sejfie). Bez flagi
+albo z `'0'` klient działa jak dotąd: pokazuje to zapis bazowy (`tests/unit/sync-zadania-bazowe.test.mjs`) w wariantach
+z „events” w health — bez `POST /events`, bramka kolejki zamknięta. Zdania „serwer dziś nie podaje »events«” we wpisach
+E2-PR4b–E2-PR5d opisują stan sprzed tej zmiany.
+
+**Po odblokowaniu przełącznika** widać pole wyboru zamiast notki „Serwer nie obsługuje jeszcze tej opcji.” (decyzja 4
+z 2026-11-12). Włącza je tylko właściciel, na czas testu (plan, wiersz 11).
+
+**Cofnięcie.** Zmienna z powrotem na `0` albo poprzednia wersja workera: health bez „events”, klient wraca na starą
+ścieżkę; nic nie ginie, bo pełna wysyłka zostaje przez cały etap 2 (plan, rozdział 3.8, E2-D4).
+
 ## Zmiana wysłana i przyjęta nie wraca po przejściu na inną stronę, uśpione (P-DZIENNIK-ZDARZEN, E2-PR5d, SW 1.1.520, `vilda_vault.js` 276, 2026-11-12)
 
 **Zmiana kliniczna: nie** — wzory, progi, jednostki, interpretacje i reguły scalania bez zmian. **Działanie aplikacji
