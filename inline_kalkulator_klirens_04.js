@@ -4181,7 +4181,86 @@ const observer = new MutationObserver(syncClcrReportVisibility);
     n && observer.observe(n, { attributes: !0, attributeFilter: ["style"] });
   }),
   syncClcrReportVisibility());
-function resetApp(e = !0) {
+// P-KLIRENS-WYCZYSC (decyzja właściciela 2026-11-12): przycisk na stronie czyści
+// tylko dane Klirensu. Pacjent zostaje: pola tożsamości z zestawu „Dane pacjenta”
+// (#patientSet). Fakty pomiaru (metoda oznaczenia, potwierdzenia, odpowiedzi
+// o próbce) czyszczą się jak dotąd, z regułami zachowania poszczególnych wzorów.
+// Rejestr: docs/ZRODLA_ARTEFAKTOW.md.
+const CLCR_PATIENT_IDENTITY_IDS = [
+  "fullName",
+  "age",
+  "ageMonths",
+  "ageDays",
+  "neonatalTermStatus",
+  "sex",
+  "weight",
+  "height",
+];
+const CLCR_RESET_PATIENT_IDS = [
+  "fullName",
+  "age",
+  "ageMonths",
+  "ageDays",
+  "neonatalTermStatus",
+  "sex",
+  "weight",
+  "height",
+  "ScrAssay",
+  "creatinineState",
+  "suspectedAKI",
+  "CrCysStandardizationConfirmed",
+];
+// P-KLIRENS-WYCZYSC: pełne „Wyczyść” (menu boczne, echo z innej ramki powłoki)
+// kończy pracę z pacjentem. Pola formularza czyści resetApp(false), a te dane
+// poprzedniego pacjenta żyją w pamięci strony i trafiały do zapisu następnego
+// pacjenta (pomiar w intake.history, imię w growthBasic). Te same zerowania co
+// clearAllData() na Starcie i w DocPro, bez wołania clearAllData (P-DIETA-WYCZYSC).
+// Najpierw (przed resetem pól) tylko dane globalne; czyszczenie modułów
+// (modules=true) dopiero po resetApp, bo ich odświeżenie przelicza wzrastanie
+// z bieżących pól — wcześniej byłyby to jeszcze pola poprzedniego pacjenta.
+function clcrResetPatientMemory(modules = !1) {
+  const w = window;
+  try {
+    w.advancedGrowthData = { measurements: [] };
+    w.basicGrowthData = { measurements: [] };
+    w.intakeHistory = [];
+    w.intakeEstimatedKcalPerDay = null;
+  } catch {}
+  try {
+    w.ghTherapyPoints = [];
+    w.obesityTherapyPoints = [];
+    w.bisphosTherapyPoints = [];
+    w.chartCreatorData = {};
+  } catch {}
+  try {
+    w.vildaKowdData = null;
+    w.vildaPubertyData = null;
+    w.vildaBirthData = null;
+    w.VildaPubertyAssessmentState?.clear?.();
+  } catch {}
+  if (modules) {
+    try {
+      w.VildaBoneAge?.clear?.();
+    } catch {}
+    try {
+      w.vildaGhIgfPersistApi?.resetState?.({ hideCards: !0 });
+      w.vildaSgaBirthPersistApi?.resetState?.({ hideCard: !0 });
+    } catch {}
+  }
+  try {
+    w.lastLoadedData = null;
+    w.prevMeasurementInfo = null;
+    w.hasUserModifiedAfterLoad = !1;
+  } catch {}
+  try {
+    typeof w.__vildaPersistInvalidatePendingRoot == "function" &&
+      w.__vildaPersistInvalidatePendingRoot();
+  } catch {}
+}
+function resetApp(e = !0, options = {}) {
+  // keepPatient dotyczy tylko czyszczenia (e=false): zachowuje tożsamość pacjenta,
+  // wybrany wzór, wersję i kartę poprzedniego wyniku.
+  const keepPatient = !e && !!options && options.keepPatient === !0;
   if (!e)
     try {
       typeof window.clcrClearVersionValueVault == "function"
@@ -4191,50 +4270,41 @@ function resetApp(e = !0) {
   const n = document.getElementById("samePatientMode"),
     t = n ? n.checked : !1,
     o = {};
-  [
-    "fullName",
-    "age",
-    "ageMonths",
-    "ageDays",
-    "neonatalTermStatus",
-    "sex",
-    "weight",
-    "height",
-    "ScrAssay",
-    "creatinineState",
-    "suspectedAKI",
-    "CrCysStandardizationConfirmed",
-  ].forEach((c) => {
+  (keepPatient ? CLCR_PATIENT_IDENTITY_IDS : CLCR_RESET_PATIENT_IDS).forEach((c) => {
     const f = document.getElementById(c);
     f && (o[c] = f.type === "checkbox" ? f.checked : f.value);
   });
   const a = document.getElementById("clcrForm"),
     s = document.getElementById("formulaPicker"),
-    p = e && s ? s.value : "";
+    p = (e || keepPatient) && s ? s.value : "";
   if ((a && a.reset(), !e)) {
-    const c = document.getElementById("prevClcrCard");
-    c && c.parentNode && c.parentNode.removeChild(c);
-    const f = document.getElementById("clcrForm");
-    f && f.classList.remove("has-prev-clcr");
-    const F = document.getElementById("prevClcrPlaceholder");
-    (F && (F.style.display = "flex"),
-      typeof window.setupPrevClcrCardHeight == "function" &&
-        window.setupPrevClcrCardHeight());
+    if (!keepPatient) {
+      const c = document.getElementById("prevClcrCard");
+      c && c.parentNode && c.parentNode.removeChild(c);
+      const f = document.getElementById("clcrForm");
+      f && f.classList.remove("has-prev-clcr");
+      const F = document.getElementById("prevClcrPlaceholder");
+      (F && (F.style.display = "flex"),
+        typeof window.setupPrevClcrCardHeight == "function" &&
+          window.setupPrevClcrCardHeight());
+    }
     const g = document.getElementById("formulaNote");
     (g && ((g.textContent = ""), (g.style.display = "none")),
-      s && (s.value = ""));
-    const E = document.querySelector(".version-option.selected");
-    if (E) E.click();
-    else {
-      const te = document.querySelector(".param-row");
-      (te && (te.style.display = "none"), (window.currentVersion = ""));
+      s && !keepPatient && (s.value = ""));
+    if (!keepPatient) {
+      const E = document.querySelector(".version-option.selected");
+      if (E) E.click();
+      else {
+        const te = document.querySelector(".param-row");
+        (te && (te.style.display = "none"), (window.currentVersion = ""));
+      }
+      const O = document.getElementById("ktvCard");
+      O && (O.style.display = "none");
     }
-    const O = document.getElementById("ktvCard");
-    O && (O.style.display = "none");
     const D = document.getElementById("clearContainer");
     D && (D.style.display = "block");
   }
-  e && s && (s.value = p);
+  (e || keepPatient) && s && (s.value = p);
   const h = document.getElementById("U_ACR");
   const pcrOutput = document.getElementById("U_PCR");
   (h && (h.value = ""),
@@ -4275,11 +4345,13 @@ function resetApp(e = !0) {
     x = document.getElementById("ktvFields");
   (d && (d.checked = !1),
     x && (x.style.display = "none"),
-    e &&
+    (e || keepPatient) &&
       Object.keys(o).forEach((c) => {
         const f = document.getElementById(c),
           F = o[c];
-        if (f && F !== "" && F != null)
+        // Przy keepPatient wraca dokładna wartość pacjenta, także pusta: domyślna
+        // opcja formularza nie może zastąpić braku danych.
+        if (f && (keepPatient ? F != null : F !== "" && F != null))
           try {
             ((f.type === "checkbox" ? (f.checked = !!F) : (f.value = F)),
               ["input", "change"].forEach((g) => {
@@ -4473,5 +4545,20 @@ clearBtn &&
       else if (event.clcrClearedFormula === "FEHCO3_spot") event.clcrPreservedFehco3Context = preserved;
       else event.clcrPreservedFeclContext = preserved;
     }
-    resetApp(!1);
+    // P-KLIRENS-WYCZYSC: zwykłe kliknięcie przycisku (także klawiaturą) czyści
+    // tylko dane Klirensu. Pełne czyszczenie pacjenta niesie jawny znacznik
+    // clcrClearPatient z menu bocznego i echa powłoki (vilda_chrome.js); tylko
+    // wtedy działają też moduły sesji, tożsamości i echa do innych ramek.
+    const clearPatient = event.clcrClearPatient === !0;
+    if (clearPatient) clcrResetPatientMemory();
+    resetApp(!1, { keepPatient: !clearPatient });
+    if (clearPatient) clcrResetPatientMemory(!0);
+    // Wskaźnik zapisu celowo pomija programowe zdarzenia pól; przy zachowanym
+    // pacjencie dostaje jawny sygnał, że stan formularza zmienił się poza edycją.
+    if (!clearPatient)
+      setTimeout(() => {
+        try {
+          window.VildaSaveStatusIndicator?.notifyExternalChange?.();
+        } catch {}
+      }, 0);
   });

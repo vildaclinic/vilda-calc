@@ -1566,3 +1566,43 @@ try { const program = document.getElementById('therProg'); program && (program.d
 ```
 
 Wartość programu, preparat, dawki i obliczenia bez zmian; blokada przy istniejących punktach i przy edycji punktu (`O`) bez zmian. Test: e2e `tests/e2e/gh-program-odblokowanie.spec.mjs` (DocPro: punkt SNP → pole zablokowane → „Wyczyść wszystkie pola” albo usunięcie ostatniego punktu → pole odblokowane).
+
+## Łatka P-KLIRENS-WYCZYSC (2026-11-12, decyzja właściciela)
+
+Przycisk Klirensu `#clearBtn` jest wspólnym sygnałem dla kilkudziesięciu modułów obliczeń. Każdy z nich na jego kliknięciu czyści własne pola i przywraca zachowany kontekst wzoru (`event.clcrPreserved*`). Te listenery zostają bez zmian. Zmiana rozdziela dwa tryby tego samego zdarzenia:
+
+- **zwykłe kliknięcie** (myszą lub klawiaturą) to „Wyczyść dane Klirensu”: czyści badanie i wynik, a pacjent i wzór zostają;
+- **pełne czyszczenie pacjenta** niesie znacznik zdarzenia `event.clcrClearPatient === true`. Nadaje go wyłącznie `Cm_clearPatientClick` w `vilda_chrome.js`: menu boczne po decyzji strażnika i echo „clear-all” z innej ramki powłoki. Zdarzenie to syntetyczny `MouseEvent` z realmu ramki.
+
+Czytelne zmiany:
+- `inline_kalkulator_klirens_04.js`: listener `#clearBtn` woła `resetApp(false, { keepPatient: !clearPatient })`. Przy pełnym czyszczeniu `clcrResetPatientMemory()` zeruje dane globalne przed `resetApp`, a `clcrResetPatientMemory(true)` czyści moduły po nim (`VildaBoneAge.clear`, `resetState` GH/IGF i SGA), gdy pola są już puste. Po `keepPatient` jest sygnał `VildaSaveStatusIndicator.notifyExternalChange()`, bo wskaźnik pomija programowe zdarzenia pól. `resetApp(e, options)`: `keepPatient` zachowuje `CLCR_PATIENT_IDENTITY_IDS` (pola `#patientSet`), wzór, wersję i kartę poprzedniego wyniku. Wartości wracają dokładnie, także puste. Pozostałe pola, w tym fakty pomiaru, czyści dotychczasowy reset i reguły poszczególnych wzorów.
+- `clcr_ui_workflow.js`: bez znacznika pełnego czyszczenia listener `#clearBtn` zawsze przywraca wyczyszczony wzór (`selectFormula(..., { guide:false })`); przy pełnym czyszczeniu zostaje dotychczasowa lista wzorów.
+- `vilda_unsaved_guard.js`: `VildaGuardRunDecision` ma opcję `clcrOnly` (pyta tylko o niezapisane obliczenie Klirensu, bez zapisu danych pacjenta, tekst z `VildaKlirensGuardCopy(reason, false)`). Przechwycenie `#clearBtn` w Klirensie: znacznik pełnego czyszczenia lub obejście `__vugClearBypass` → przepuść. Kliknięcie nie z ręki użytkownika (`isTrusted === false`), gość lub zamknięty sejf → przepuść bez okna. Niezapisane obliczenie (`VildaKlirensGuardHasPending`) → okno; po „Odrzuć obliczenie i wyczyść” kliknięcie jest ponawiane z obejściem.
+- `vilda_chrome.js`: `Cm_clearPatientClick(button)`; `Cm_clearContext` wymaga strażnika także w Klirensie; `Cm_clearCurrent` zawsze woła `guard.run({reason:"clear"})`. Echo powłoki (`jt`): odbiorca czyści przez `Cm_clearPatientClick`; nadawca pomija `#clearBtn` bez znacznika.
+- `kalkulator-klirens.html`, `clcr_tmp_gfr_ui.js`, `clcr_uag_ui.js`: etykieta i odwołania w komunikatach „Wyczyść dane Klirensu”.
+
+Łatki w artefaktach zminifikowanych (każda z komentarzem `P-KLIRENS-WYCZYSC`; warunek `e==="clearBtn"&&!(ev&&ev.clcrClearPatient===!0)` dotyczy tylko `#clearBtn`, który istnieje wyłącznie w Klirensie):
+
+```js
+// vilda_persist_runtime.js, fe(e,t) — listener z fazą przechwytywania:
+o.addEventListener("click", function (ev) { if (t === "modules") { …; return }
+  if (e === "clearBtn" && !(ev && ev.clcrClearPatient === true)) return;   // bez clearUserState
+  ht("app.attachClear:" + e) }, true)
+
+// vilda_data_import_export.js, $e(e,t) — czyszczenie sesji głównej:
+a.addEventListener("click", ev => { if (e === "clearBtn" && !(ev && ev.clcrClearPatient === true)) return; re(t) }, true)
+// vilda_data_import_export.js, init — przyciski wczytaj/zapisz po czyszczeniu:
+C.addEventListener("click", function (ev) { if (!(ev && ev.clcrClearPatient === true)) return; … })
+
+// userData.js — czyszczenie pól tożsamości:
+r.addEventListener("click", function (ev) { if (e === "clearBtn" && !(ev && ev.clcrClearPatient === true)) return; U() })
+
+// custom-fixes.js — rozgłoszenie lustra pól z clear:true:
+var k = b && b.closest && b.closest("#clearAllDataBtn, #clearBtn");
+if (!k || k.id === "clearBtn" && o.clcrClearPatient !== true) return; F(true)
+
+// inline_kalkulator_klirens_07.js, listener #clearBtn — wczytany rekord do porównania:
+if (event.clcrClearPatient !== true); else /* resetLoadedComparisonUiResidue() albo lastLoadedData = null */
+```
+
+Start i DocPro (`#clearAllDataBtn`) bez zmian. Testy: e2e `tests/e2e/klirens-wyczysc-zakres.spec.mjs`, `tests/e2e/sidebar-clear.spec.mjs` (test menu Klirensu).

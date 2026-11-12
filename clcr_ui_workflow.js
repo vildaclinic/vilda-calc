@@ -4308,8 +4308,11 @@
     const clear = documentRef.getElementById("clearBtn");
     if (clear) {
       clear.addEventListener("click", (event) => {
-        const resumeCitcr = ["CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "pH24", "KTV", "Prot_mgkg", "Ox_mgkg", "Cit_mgkg", "Ca_Cit", "Na_mmol_d", "K_mmol_d", "KM_Cr", "Ca_Cr", "Mg_Ca", "PO4_Cr", "B_Cr", "K_frac", "AGs"].includes(event.clcrClearedFormula);
         const clearedFormula = event.clcrClearedFormula;
+        // P-KLIRENS-WYCZYSC: „Wyczyść dane Klirensu” (bez znacznika pełnego
+        // czyszczenia pacjenta) zawsze zostawia wybrany wzór. Pełne czyszczenie
+        // z menu i echa powłoki zachowuje dotychczasową listę wzorów.
+        const resumeCitcr = (event.clcrClearPatient !== true && !!clearedFormula) || ["CitCr_spot", "FENa_spot", "FEK_spot", "FECl_spot", "FEHCO3_spot", "AGu_spot", "TMP_GFR", "pH_spot", "pH24", "KTV", "Prot_mgkg", "Ox_mgkg", "Cit_mgkg", "Ca_Cit", "Na_mmol_d", "K_mmol_d", "KM_Cr", "Ca_Cr", "Mg_Ca", "PO4_Cr", "B_Cr", "K_frac", "AGs"].includes(clearedFormula);
         global.setTimeout(() => {
           if (resumeCitcr) {
             selectFormula(clearedFormula, { guide: false });
