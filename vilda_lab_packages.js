@@ -347,6 +347,7 @@
   // ════════════════════════════════════════════════════════════════════════════════════════════════
   var UI = (function (win) {
     var SVG_NS = 'http://www.w3.org/2000/svg';
+    var NBSP = '\u00a0';
     var PATIENT_KEY = 'vildaCurrentPatientId';
     var REFRESH_DELAY_MS = 120;
     var VAULT_WAIT_MS = 5000;
@@ -679,12 +680,17 @@
       function drawSave(ctx, rows) {
         var m = model();
         var filled = rows.filter(function (row) { return row.status === 'ok'; }).length;
-        var invalid = rows.some(function (row) { return row.status === 'invalid'; });
-        var visit = m.formatVisitAge(m.linkedAgeMonths(ctx.sessionPatient));
-        parts.saveCtx.textContent = ctx.name + (visit ? ' · wizyta: ' + visit : '');
-        parts.saveSub.textContent = filled
-          ? filled + ' ' + m.plural(filled, ['wynik trafi', 'wyniki trafią', 'wyników trafi']) + ' do Badań w karcie pacjenta'
-          : 'wpisz wyniki z wydruku — trafią do Badań w karcie pacjenta';
+        var wrong = rows.filter(function (row) { return row.status === 'invalid'; }).map(function (row) { return row.short || row.analyteId; });
+        var invalid = wrong.length > 0;
+        // Wiek wizyty łamie się w całości, nie na pojedynczej literze.
+        var visit = m.formatVisitAge(m.linkedAgeMonths(ctx.sessionPatient)).replace(/ /g, NBSP);
+        parts.saveCtx.textContent = ctx.name + (visit ? ' · wizyta:' + NBSP + visit : '');
+        // Błędne pole wstrzymuje cały zapis — wiersz mówi to zamiast liczby wyników.
+        parts.saveSub.textContent = invalid
+          ? 'popraw wynik: ' + wrong.join(', ') + ' — do tego czasu zapis jest wstrzymany'
+          : filled
+            ? filled + ' ' + m.plural(filled, ['wynik trafi', 'wyniki trafią', 'wyników trafi']) + ' do Badań w karcie pacjenta'
+            : 'wpisz wyniki z wydruku — trafią do Badań w karcie pacjenta';
         parts.saveBtn.textContent = state.busy ? 'Zapisuję…'
           : filled ? 'Zapisz ' + filled + ' ' + m.plural(filled, ['wynik', 'wyniki', 'wyników']) + ' do karty' : 'Zapisz wyniki do karty';
         parts.saveBtn.disabled = state.busy || !filled || invalid;

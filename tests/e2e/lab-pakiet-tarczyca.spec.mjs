@@ -198,8 +198,11 @@ test('błędny wynik i przyszła data wstrzymują zapis; „Wyczyść pakiet” 
   await expect(page.locator('#labPkgError-ft4')).toHaveText('Wartość nie jest liczbą.');
   await expect(page.locator('#labPkgValue-ft4')).toHaveAttribute('aria-invalid', 'true');
   await expect(page.locator('#labPkgSave')).toBeDisabled();
+  // Wiersz zapisu nie obiecuje zapisu, dopóki pole jest błędne.
+  await expect(kartaPakietu(page).locator('.lab-pkg-save-sub')).toHaveText('popraw wynik: fT4 — do tego czasu zapis jest wstrzymany');
   await page.locator('#labPkgValue-ft4').fill('');
   await expect(page.locator('#labPkgError-ft4')).toBeHidden();
+  await expect(kartaPakietu(page).locator('.lab-pkg-save-sub')).toHaveText('1 wynik trafi do Badań w karcie pacjenta');
   await expect(page.locator('#labPkgSave')).toHaveText('Zapisz 1 wynik do karty');
 
   await page.locator('#labPkgDate').fill('2026-06-18');
