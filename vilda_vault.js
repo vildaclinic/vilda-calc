@@ -7530,39 +7530,31 @@ function Bob_samEid(x) {
 function Bob_wynikUsuniecia(k, zmienione, pominiete) {
   k.wynik({ usuniete: zmienione, pominiete: pominiete });
 }
-// outboxAccept(eids): usuwa wiersze pending/inflight (jedyna automatyczna sciezka usuwania wierszy wyslanych).
+// outboxAccept(eids): usuwa wiersze pending/inflight (jedyna automatyczna sciezka usuwania wierszy wyslanych). Ta sama
+// transakcja dopisuje pary usunietych wierszy do utrwalonej pamieci par (Bob_paryDoMeta): encja jest w chmurze w stanie
+// z chwili utworzenia wiersza, wiec przeglad nie dopisze jej ponownie, choc wiersza juz nie ma — ani w tym dokumencie,
+// ani po przeladowaniu strony (E2-PR5d; wczesniej pary tylko w pamieci dokumentu do zakonczonego przegladu).
 async function Bob_przyjmij(eids) {
   try {
     const odm = Bob_wejscie() || (Bob_tablica(eids) ? null : 'argument');
     if (odm) return Bob_odmowa(odm);
-    const uid = b;
     const przyjete = new Map();
     const praca = Bob_pracaPoEid(eids, Bob_samEid, function (w) {
       if (w.state !== 'pending' && w.state !== 'inflight') return null;
       przyjete.set(w.eid, w);
       return 'usun';
-    }, Bob_wynikUsuniecia);
-    const wynik = await Bob_naBazie(uid, Bses_opcje(null), ['outbox'], 'readwrite', { usuniete: [], pominiete: [] }, praca);
-    // Pamiec par z wierszy przyjetych (po zatwierdzonej transakcji): encja jest w chmurze w stanie z chwili utworzenia
-    // wiersza, wiec przeglad nie dopisze jej ponownie, choc wiersza juz nie ma.
-    if (wynik.ok && Array.isArray(wynik.usuniete) && wynik.usuniete.length) {
-      const m = Bob_kryte.get(uid) || new Map();
-      wynik.usuniete.forEach(function (eid) {
-        const w = przyjete.get(eid);
-        if (w) Bob_kryj(m, w.kind + '|' + w.entityKey, w.createdAtISO);
-      });
-      Bob_kryte.set(uid, m);
-    }
-    return wynik;
+    }, function (k, zmienione, pominiete) {
+      Bob_wynikUsuniecia(k, zmienione, pominiete);
+      Bob_paryDoMeta(k, zmienione.map(function (eid) { return przyjete.get(eid); }));
+    });
+    return await Bob_naBazie(b, Bses_opcje(null), ['outbox', 'meta'], 'readwrite', { usuniete: [], pominiete: [] }, praca);
   } catch (x) {
     return Bob_nieprzewidziany(x);
   }
 }
 // outboxDiscard(eids, { potwierdzone: true }): jawna decyzja uzytkownika — usuwa w kazdym stanie. Ta sama transakcja
-// dopisuje pary usunietych wierszy (Bob_paryPorzucenia) do utrwalonej pamieci par (rekord 'pary' sklepu meta, zostaje
-// pozniejsza chwila, najwyzej Bob_PARY_MAKS), wiec przeglad nie dopisze porzuconej zmiany ponownie — ani w tym
-// dokumencie, ani po przeladowaniu; nowsza zmiana tej encji idzie jak zwykle (E2-PR5c). Bez usunietego wiersza meta
-// bez zmian.
+// dopisuje pary usunietych wierszy do utrwalonej pamieci par (Bob_paryDoMeta), wiec przeglad nie dopisze porzuconej
+// zmiany ponownie — ani w tym dokumencie, ani po przeladowaniu; nowsza zmiana tej encji idzie jak zwykle (E2-PR5c).
 async function Bob_porzuc(eids, opcje) {
   try {
     const odm = Bob_wejscie() || (Bob_tablica(eids) && Bev_obiekt(opcje) && opcje.potwierdzone === true ? null : 'argument');
@@ -7573,30 +7565,34 @@ async function Bob_porzuc(eids, opcje) {
       return 'usun';
     }, function (k, zmienione, pominiete) {
       Bob_wynikUsuniecia(k, zmienione, pominiete);
-      if (!zmienione.length) return;
-      const meta = k.sklep('meta');
-      k.req(meta.get(Bob_PARY), function (x) {
-        const m = Bob_paryZRekordu(x, new Map());
-        zmienione.forEach(function (eid) {
-          Bob_paryPorzucenia(usuwane.get(eid)).forEach(function (p) { Bob_kryj(m, p[0], p[1]); });
-        });
-        k.req(meta.put({ k: Bob_PARY, v: Bob_paryObiekt(m, '') }));
-      });
+      Bob_paryDoMeta(k, zmienione.map(function (eid) { return usuwane.get(eid); }));
     });
     return await Bob_naBazie(b, Bses_opcje(null), ['outbox', 'meta'], 'readwrite', { usuniete: [], pominiete: [] }, praca);
   } catch (x) {
     return Bob_nieprzewidziany(x);
   }
 }
-// Pary porzuconego wiersza (E2-PR5c): encja wiersza, a dla wersji takze karta (zdarzenie wersji niesie pola karty,
-// a przeglad sprawdza nosnik pol karty para karty), obie z chwila utworzenia wiersza — zmiana z tej chwili albo
-// wczesniejsza idzie juz tylko pelna synchronizacja. Wiersz bez napisow rodzaju, klucza i chwili — bez par.
-function Bob_paryPorzucenia(w) {
+// Pary usunietego wiersza (porzucenie E2-PR5c, przyjecie E2-PR5d): encja wiersza, a dla wersji takze karta (zdarzenie
+// wersji niesie pola karty, a przeglad sprawdza nosnik pol karty para karty), obie z chwila utworzenia wiersza — zmiana
+// z tej chwili albo wczesniejsza jest juz w chmurze (przyjecie) albo idzie juz tylko pelna synchronizacja (porzucenie).
+// Wiersz bez napisow rodzaju, klucza i chwili — bez par.
+function Bob_paryWiersza(w) {
   if (!Bev_obiekt(w) || typeof w.kind !== 'string' || typeof w.entityKey !== 'string' || typeof w.createdAtISO !== 'string') return [];
   const out = [[w.kind + '|' + w.entityKey, w.createdAtISO]];
   const i = w.kind === 'snap' ? w.entityKey.indexOf('/') : -1;
   if (i > 0) out.push(['karta|' + w.entityKey.slice(0, i), w.createdAtISO]);
   return out;
+}
+// Pary usunietych wierszy (Bob_paryWiersza) dopisane w transakcji k do rekordu 'pary' sklepu meta (zostaje pozniejsza
+// chwila, najwyzej Bob_PARY_MAKS); bez usunietego wiersza meta bez zmian (E2-PR5c, E2-PR5d).
+function Bob_paryDoMeta(k, wiersze) {
+  if (!wiersze.length) return;
+  const meta = k.sklep('meta');
+  k.req(meta.get(Bob_PARY), function (x) {
+    const m = Bob_paryZRekordu(x, new Map());
+    wiersze.forEach(function (w) { Bob_paryWiersza(w).forEach(function (p) { Bob_kryj(m, p[0], p[1]); }); });
+    k.req(meta.put({ k: Bob_PARY, v: Bob_paryObiekt(m, '') }));
+  });
 }
 // outboxReject([{ eid, code }]): pending/inflight → oversize (code 'oversize') albo rejected; kod spoza bialej listy
 // zapisany jako 'invalid'; nigdy nie usuwa; zaden wpis nie zostawia partii w locie.
@@ -8221,9 +8217,10 @@ async function Bob_poTrybie(p) {
 // przegladu: encje z chwila zmiany pozniejsza niz znacznik − Bob_MARGINES_MS. Bez znacznika: pierwszy znacznik z chwili
 // ostatniej udanej wysylki z tego urzadzenia (klucz Bob_KLUCZ_WYSYLKI:<userId>, zapisuje go integracja — tu tylko
 // odczyt), potem z chwili ostatniego scalenia z chmury, potem okno bez progu (kazda encja). Pamiec par: encja ->
-// chwila, do ktorej chmura ma jej stan (pary ze scalania z chmury w tym dokumencie, z wierszy przyjetych i utrwalone
-// w rekordzie 'pary' sklepu meta) albo do ktorej jej zmiana idzie tylko pelna synchronizacja (wiersz porzucony,
-// utrwalona od razu — E2-PR5c); przeglad pomija encje, ktorej para ma chwile nie wczesniejsza niz chwila zmiany.
+// chwila, do ktorej chmura ma jej stan (pary ze scalania z chmury w tym dokumencie, utrwalone w rekordzie 'pary' sklepu
+// meta, i pary wierszy przyjetych — utrwalane od razu, E2-PR5d) albo do ktorej jej zmiana idzie tylko pelna
+// synchronizacja (wiersz porzucony, utrwalona od razu — E2-PR5c); przeglad pomija encje, ktorej para ma chwile nie
+// wczesniejsza niz chwila zmiany.
 // Utrwalone tylko pary z chwila w oknie nastepnego przegladu, najwyzej Bob_PARY_MAKS (najpozniejsze chwile).
 const Bob_PRZEGLAD = 'przeglad';
 const Bob_PARY = 'pary';
@@ -8234,8 +8231,6 @@ const Bob_KLUCZ_WYSYLKI = 'vilda-sync-last-push-ok-v1';
 // Przeglady w tym dokumencie: userId -> { start: znacznik ostatniego zakonczonego przegladu, proba: start ostatniej
 // proby } (doba liczona od pozniejszej chwili, wiec nieudany przeglad nie wraca po kazdym dopisaniu).
 const Bob_przeglady = new Map();
-// Pary z wierszy przyjetych w tym dokumencie: userId -> Map(rodzaj|klucz -> createdAtISO wiersza).
-const Bob_kryte = new Map();
 // Para w mapie: zostaje pozniejsza chwila; zly klucz albo chwila — bez zmiany.
 function Bob_kryj(m, klucz, chwila) {
   if (typeof klucz !== 'string' || !klucz || typeof chwila !== 'string' || !chwila) return;
@@ -8398,8 +8393,6 @@ async function Bob_przeglad(uid, s, pary, rangi, sieroty, wymuszone) {
     const p = Bob_poSesji(s);
     if (p) return Bob_odmowa(p);
     const wszystkie = new Map(st.pary);
-    const kryte = Bob_kryte.get(uid);
-    if (kryte) kryte.forEach(function (c, kl) { Bob_kryj(wszystkie, kl, c); });
     if (pary) pary.forEach(function (c, kl) { Bob_kryj(wszystkie, kl, c); });
     const pokryta = function (x) {
       const w = st.wiersze.get(x.klucz);
@@ -8434,10 +8427,6 @@ async function Bob_przeglad(uid, s, pary, rangi, sieroty, wymuszone) {
     const z = await Bob_przegladZapisz(uid, s, start, wszystkie);
     if (!z.ok) return Object.assign({}, z, { dopisane: dopisane });
     Bob_przeglady.set(uid, { start: start, proba: start });
-    if (kryte) {
-      const prog = Bob_cofnij(start, Bob_MARGINES_MS);
-      Array.from(kryte.keys()).forEach(function (kl) { if (!(kryte.get(kl) > prog)) kryte.delete(kl); });
-    }
     return { ok: true, kandydaci: kandydaci.length, dopisane: dopisane };
   } catch (x) {
     return Bob_nieprzewidziany(x);

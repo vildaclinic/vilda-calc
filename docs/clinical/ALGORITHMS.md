@@ -21597,6 +21597,71 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
+## Zmiana wysłana i przyjęta nie wraca po przejściu na inną stronę, uśpione (P-DZIENNIK-ZDARZEN, E2-PR5d, SW 1.1.520, `vilda_vault.js` 276, 2026-11-12)
+
+**Zmiana kliniczna: nie** — wzory, progi, jednostki, interpretacje i reguły scalania bez zmian. **Działanie aplikacji
+bez zmian (uśpione).** Przyjęcie wierszy (`outboxAccept`) i przegląd kolejki działają tylko przy otwartej bramce
+kolejki (dziennik zdarzeń włączony; dziś zawsze wyłączony). Format danych, schemat IndexedDB i serwer bez zmian.
+
+Plan: wiersz 9d tabeli „Podział etapu 2”; decyzja 8 z 2026-11-12 („Ruszaj z E2-PR5d” — odpowiedź na pytanie
+w vildaclinic/vilda-calc#940).
+
+### E2-PR5d
+
+**Co było** (`audyt` `0232a09c`). Para wiersza przyjętego przez serwer (E2-PR3a4) żyła tylko w pamięci dokumentu
+i trafiała do rekordu `pary` dopiero przy zakończonym przeglądzie w tym dokumencie. Po przejściu na inną stronę przed
+takim przeglądem przegląd przy odblokowaniu nowej strony dokładał wysłaną zmianę jeszcze raz (test: po przyjęciu
+wszystkich 4 wierszy i przeładowaniu wróciły wszystkie 4), a nadawca wysyłał ją drugi raz — w ciągu 10 minut od zmiany
+nawet przy każdym przejściu. Do tego para przyjętej wersji nie pokrywała nośnika pól karty (zmiana karty bez nowej
+wersji), więc przegląd w tym samym dokumencie dokładał wersję najnowszą.
+
+**Reguła.**
+- **Przyjęcie zostawia pary od razu,** tak jak porzucenie (E2-PR5c): w tej samej transakcji co usunięcie wierszy
+  (sklepy `outbox` i `meta`) `outboxAccept` dopisuje do rekordu `pary` parę encji każdego usuniętego wiersza
+  (`rodzaj|klucz`) z chwilą utworzenia wiersza, a dla wersji (`snap`) także parę karty (`karta|patientId`) — zdarzenie
+  wersji niesie pola karty. Zostaje późniejsza chwila, najwyżej 20 000 par; bez usuniętego wiersza (nieznany eid,
+  wiersz w innym stanie niż oczekujący albo w locie) meta bez zmian. Przyjęcie i porzucenie używają tej samej funkcji.
+- **Znaczenie pary bez zmian:** encja jest w chmurze w stanie z chwili utworzenia wiersza; zmianę późniejszą (także
+  zrobioną między utworzeniem wiersza a przyjęciem, bez nowego wiersza) przegląd dokłada jak zwykle.
+- **Bez pamięci w dokumencie:** osobna mapa par wierszy przyjętych w pamięci strony nie jest już potrzebna (pary są
+  w rekordzie od chwili przyjęcia, a zapis przeglądu od E2-PR5c czyta pary utrwalone w swojej transakcji) — usunięta.
+- Wygasanie jak dotąd (zapis przeglądu zostawia tylko pary z chwilą w oknie następnego przeglądu).
+
+**Uśpienie.** Bez zmian: `outboxAccept` i przegląd kończą się na bramce (PG1 i strażniki uśpienia bez zmian).
+
+**Testy.** Dane wyłącznie fikcyjne.
+- `tests/unit/sync-dziennik-outbox.test.mjs` — 3 nowe przypadki na prawdziwym sejfie w oknie uprzęży:
+  - PG34: wiersze przyjęte — pary w meta od razu (encja, karta wersji, chwila utworzenia wiersza); przeładowanie strony
+    bez przeglądu w tym dokumencie, odblokowanie i `sweepOutbox()` — 0 wierszy; przyjęcie bez usuniętego wiersza
+    (nieznany eid, wiersz odrzucony) — meta bez zmian, wiersz odrzucony zostaje;
+  - PG35: gwiazdka starszej wersji — przyjęty wiersz wersji pokrywa nośnik pól karty (przegląd w tym dokumencie nie
+    dokłada wersji najnowszej); zmiana bez wiersza sprzed przyjęcia — dołożona.
+  - Bez zmian zielone: PG18 (przyjęcie i przegląd w tym samym dokumencie, para pokrywa tylko stan z chwili utworzenia
+    wiersza) i PG30–PG33 (porzucenie, ta sama funkcja zapisu par).
+- `tests/e2e/sync-zdarzenia-wysylka.spec.mjs` (przypadek E2-PR5a z wysyłką) — po „Wszystkie zmiany wysłane.”
+  przeładowanie strony Ustawień i `sweepOutbox()`: wysłane zmiany nie wracają do kolejki.
+
+**Czerwone na bazie** (`0232a09c` z testami tego PR): PG34 (przyjęcie), PG35 i przypadek e2e (na bazie po
+przeładowaniu wraca wysłana wizyta). Zielony także na bazie (strażnik): PG34 bez usuniętego wiersza.
+
+**Mutanty.** 4, wszystkie zabite testami: przyjęcie bez zapisu par, transakcja przyjęcia bez sklepu `meta`, zapis meta
+także bez usuniętego wiersza (funkcja wspólna z porzuceniem), przyjęcie bez pary karty dla wersji. Mutanty funkcji
+wspólnych z E2-PR5c (pary utrwalone, limit, późniejsza chwila, chwila utworzenia wiersza, sprawdzenie pól wiersza) dalej
+zabijają PG30–PG33.
+
+**Kontrola granic.** Skróty obrazu sejfu przeliczone (`tools/check_clinical_workspace_boundary.mjs`,
+`runtime/clinical-workspace-v1/manifest.json`); fragment natywny i synchronizacja bez zmian.
+
+**Ograniczenia.** Zmiana, której nigdy nie było w kolejce (np. hasło konta ustawione przy zamkniętej bramce), wraca
+przy przeglądzie jak dotąd — to zmiana do wysłania, nie wysłana.
+
+**Następne PR.** E2-W1 (wdraża właściciel), test właściciela (2 dni, ukryty przełącznik), E2-PR6.
+
+**Wersje.** `vilda_vault.js?v=275→276` (za nim `vilda_chrome.js?v=285`, `vilda_session_bridge.js?v=201`); SW 1.1.519 →
+**1.1.520** (SW 1.1.519 wziął vildaclinic/vilda-calc#939, scalony przed tym PR).
+
+**Cofnięcie** = rewert PR (bez migracji; pary przyjęcia w rekordzie `pary` wygasają same przy kolejnych przeglądach).
+
 ## Porzucona zmiana nie wraca przy przeglądzie kolejki, uśpione (P-DZIENNIK-ZDARZEN, E2-PR5c, SW 1.1.518, `vilda_vault.js` 275, 2026-11-12)
 
 **Zmiana kliniczna: nie** — wzory, progi, jednostki, interpretacje i reguły scalania bez zmian. **Działanie aplikacji
@@ -21671,7 +21736,7 @@ utrwalone nadpisują późniejsze pary przeglądu, limit par zostawia najstarsze
 
 **Ograniczenia.**
 - **Zmiana wysłana i przyjęta przez serwer może wrócić po przejściu na inną stronę** (poza tym PR; do decyzji
-  właściciela). Para wiersza przyjętego (`outboxAccept`, E2-PR3a4) żyje tylko w pamięci dokumentu do najbliższego
+  właściciela; **od E2-PR5d nie wraca** — wpis P-DZIENNIK-ZDARZEN, E2-PR5d). Para wiersza przyjętego (`outboxAccept`, E2-PR3a4) żyje tylko w pamięci dokumentu do najbliższego
   zakończonego przeglądu w tym dokumencie. Po przeładowaniu strony przed takim przeglądem przegląd przy odblokowaniu
   dokłada tę zmianę jeszcze raz (sprawdzone testem: po przyjęciu wszystkich wierszy i przeładowaniu wróciły wszystkie
   4). Danych to nie dotyczy (ta sama treść), ale zmiana wychodzi drugi raz.
@@ -23650,7 +23715,8 @@ starszy niż zmiana jej nie pokrywa — nowy wiersz zastępuje oczekujący na og
 powstają (1) przy każdym scaleniu z chmury poza importem (`mergeSyncPayload`, `applyEncryptedDelta`,
 `applyEncryptedEvent`), z ładunku, przed zapisami scalania — obejmują więc także zapisy faz kosza w trakcie stosowania
 zdarzenia; (2) przy przyjęciu wierszy (`outboxAccept`) — z chwili utworzenia usuniętego wiersza, więc wysłana zmiana
-nie wychodzi drugi raz; (3) od E2-PR5c przy porzuceniu wierszy (`outboxDiscard`) — encja wiersza i karta wersji,
+nie wychodzi drugi raz (od E2-PR5d utrwalane od razu w transakcji przyjęcia, z parą karty dla wersji — wcześniej tylko
+w pamięci strony do zakończonego przeglądu); (3) od E2-PR5c przy porzuceniu wierszy (`outboxDiscard`) — encja wiersza i karta wersji,
 utrwalane od razu w transakcji porzucenia (wpis E2-PR5c). Zwykły zbiór kluczy nie wystarcza: w etapie 2 pobranie z chmury scala pełny ładunek, który
 nazywa każdą encję konta, więc zbiór wyłączyłby z przeglądu cały sejf; para przepuszcza zmianę lokalną nowszą niż stan
 w chmurze. Import z pliku (import karty, scalenie i odtworzenie kopii konta) par nie daje — to zmiana lokalna (partia,
