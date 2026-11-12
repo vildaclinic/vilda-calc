@@ -210,7 +210,10 @@ test('CG na 1,73 m² używa ukończonych lat, ale zachowuje miesiące dla zwykł
   expect(await sourceInputs(page)).toMatchObject({ age: '60', ageMonths: '6' });
   await kliknij(page.locator('#clearBtn'));
   await expect(card(page)).toHaveCount(0);
-  await expect(page.locator('#ageMonths')).toHaveValue('');
+  // P-KLIRENS-WYCZYSC (decyzja właściciela 2026-11-12): „Wyczyść dane Klirensu” zostawia
+  // dane pacjenta, w tym miesiące wieku; czyści badanie i wynik.
+  await expect(page.locator('#ageMonths')).toHaveValue('6');
+  await expect(page.locator('#Scr')).toHaveValue('');
 });
 
 test('CG na 1,73 m² zachowuje granicę 18 lat i blokady znanych sprzeczności bez nowych pytań', async ({ page }) => {

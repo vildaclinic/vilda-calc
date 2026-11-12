@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 import { czekajNaUstabilizowanyUklad, kliknij } from '../support/uklad-czekanie.mjs';
-import { installMemoryVault, memory, OTHER_PATIENT_ID, saveVisible, selectPatient } from '../support/klirens-patient-record.mjs';
+import { installMemoryVault, memory, OTHER_PATIENT_ID, saveVisible, selectPatient, odrzucObliczenieKlirensu } from '../support/klirens-patient-record.mjs';
 import { readVisibleSavedHistory } from '../support/klirens-saved-history.mjs';
 import { applySession, base, card, choose, details, expectBlocked, expectResult, openCalculator, restore } from '../support/klirens-ua-browser.mjs';
 
@@ -261,6 +261,7 @@ test('UA DZM: reset i odtworzenie innego pacjenta nie pożyczają poprzednich da
   await restore(page);
   await expectResult(page, { guest: false });
   await kliknij(page.locator('#clearBtn'));
+  await odrzucObliczenieKlirensu(page);
   await page.waitForFunction(() => window.clcrIsResetting !== true);
   await expectBlocked(page);
   await applySession(page, { version: 2, currentVersion: 'pro', selectedFormula: 'UA_mgkg', preservedInputs: { ...base, UA_inputMode: 'reported', UA_reportedValue: '0.0004', UA_reportedUnit: 'mg/kg/24h' } });

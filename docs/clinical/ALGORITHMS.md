@@ -346,7 +346,8 @@ odrzuceniem; poprawny zapis do wybranego pacjenta oraz wyścigi odczytu karty.
 **Zmiana** (szczegóły łatek: `docs/ZRODLA_ARTEFAKTOW.md`, P-KLIRENS-WYCZYSC):
 1. Przycisk na stronie ma etykietę „Wyczyść dane Klirensu” i czyści tylko badanie i wynik, tą samą ścieżką co dotąd. Reguły poszczególnych wzorów zostają (wariant Kt/V, zgłoszony problem z pobraniem itp.). Zostają: pacjent (PID, rekord wczytany do porównania, poprzedni wynik), pola „Dane pacjenta” (`#patientSet`: imię i nazwisko, wiek w latach, miesiącach i dniach, termin porodu noworodka, płeć, masa, wzrost) i wybrany wzór. Fakty pomiaru (metoda oznaczenia, potwierdzenie standaryzacji, odpowiedzi o próbce) czyszczą się jak dotąd, z regułami zachowania poszczególnych wzorów. Na koncie z otwartym sejfem niezapisane obliczenie wymaga potwierdzenia w istniejącym oknie „Odrzucić obliczenie Klirensu?” (bez zapisu danych pacjenta). Gość nie może zapisać wyniku, więc nie widzi okna.
 2. „Wyczyść” w menu bocznym w Klirensie przechodzi przez tego samego strażnika co na Starcie i w DocPro („Zapisać zmiany przed wyczyszczeniem?”). Potem wysyła jawny znacznik pełnego czyszczenia (`clcrClearPatient`), tak jak echo powłoki. Tylko przy tym znaczniku działają czyszczenie sesji, tożsamości, przycisków zapisu i echo do innych ramek.
-3. Pełne czyszczenie w Klirensie zeruje dane pacjenta w pamięci strony tak jak `clearAllData()`: wzrastanie, historię pomiarów, punkty terapii, dane pokwitania, urodzeniowe i KOWD, wiek kostny, wczytany rekord. Moduły z własnym odświeżeniem czyści dopiero po wyczyszczeniu pól, bo ich odświeżenie przelicza wzrastanie z bieżących pól.
+3. Po „Wyczyść dane Klirensu” pomiar zrobiony przed wyborem innego pacjenta przestaje blokować zapis, bo jego wartości zniknęły (ta sama reguła co przy odświeżeniu stanu zapisu). Lustro czasu sesji URR (`ktvUrrDurationMinutes`) nie liczy się jako osobne niezapisane oznaczenie; liczy się kanoniczny czas sesji.
+4. Pełne czyszczenie w Klirensie zeruje dane pacjenta w pamięci strony tak jak `clearAllData()`: wzrastanie, historię pomiarów, punkty terapii, dane pokwitania, urodzeniowe i KOWD, wiek kostny, wczytany rekord. Moduły z własnym odświeżeniem czyści dopiero po wyczyszczeniu pól, bo ich odświeżenie przelicza wzrastanie z bieżących pól.
 
 **Wpływ kliniczny.** Klasyfikacja: zmiana funkcjonalna dotycząca integralności danych pacjenta (AGENTS.md § 2 i § 3, ostatni punkt). Wzory, współczynniki, progi, jednostki, normy i interpretacje Klirensu bez zmian; zapisane wyniki i rekordy w sejfie bez zmian. Zmienia się:
 - (a) zakres przycisku na stronie: pacjent zostaje;
@@ -359,7 +360,12 @@ Przypadki `wejście → oczekiwany wynik`:
 - powłoka: A wczytany, Klirens otwarty, „Wyczyść” w menu na Starcie → ramka Klirensu bez danych A, po pokazaniu Klirensu i F5 sesja bez danych A; B zapisana na Starcie bez danych A;
 - powłoka: „Wyczyść dane Klirensu” w ramce Klirensu → Start zachowuje A i status „Zapisano”.
 
-**Testy.** E2E `tests/e2e/klirens-wyczysc-zakres.spec.mjs` (rzeczywiste moduły, sejf i powłoka; dane fikcyjne). `sidebar-clear.spec.mjs`: test menu Klirensu oczekuje teraz okna strażnika, jak na Starcie i w DocPro. Testy nie stanowią walidacji klinicznej.
+**Testy.** E2E `tests/e2e/klirens-wyczysc-zakres.spec.mjs` (rzeczywiste moduły, sejf i powłoka; dane fikcyjne). Zmienione oczekiwania istniejących testów:
+- `sidebar-clear`, `clear-current-state`: menu Klirensu oczekuje okna strażnika jak na Starcie i w DocPro, a pacjenta czyści menu;
+- `klirens-approved-audit`, `klirens-cg-normalized`: po przycisku dane pacjenta zostają;
+- testy zapisu wyników Klirensu na sejfie w pamięci (Mg/Ca, Pᵢ/Cr, B/Cr, K/(K+Na), AG, KM/Cr, UA, Kt/V URR): świadomy nowy pomiar potwierdza „Odrzuć obliczenie i wyczyść” (`odrzucObliczenieKlirensu` w `tests/support/klirens-patient-record.mjs`).
+
+Testy nie stanowią walidacji klinicznej.
 
 ### LAB-HISTORIA — model porównania zapisanych wyników (`vilda_lab_history.js` 1.0.0, PR1 planu historii wyników, 2026-10-14)
 
