@@ -21562,6 +21562,125 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
+## Kolejka zdarzeń a tryb przechowywania i usuwanie konta, uśpione (P-SYNC-NADAWCA-WPIECIA, E2-PR4e2, SW 1.1.514, `vilda_vault.js` 274, `vilda_sync.js` 55, 2026-11-12)
+
+**Zmiana kliniczna: nie** — wzory, progi, jednostki, interpretacje i reguły scalania bez zmian. **Działanie aplikacji
+bez zmian (uśpione).** Wysyłka i kasowanie przy zmianie trybu przechowywania ruszają tylko przy włączonym dzienniku
+(`VildaSync.isEventLogEnabled()`, P-SYNC-ZDARZENIA: „events” w health, którego serwer dziś nie podaje, i flaga
+`vilda-event-log-v1` = `'1'`, której nikt nie ustawia). Pozostałe reguły dotyczą kolejki zdarzeń konta, której bez
+dziennika nie ma (nie powstaje baza kolejki ani znacznik ponowienia). Serwer, format danych, schemat IndexedDB i wygląd
+aplikacji bez zmian.
+
+Plan: wiersz 8e2 tabeli „Podział etapu 2” (wymagania z E2-PR3a1 i E2-PR2b1 w wierszu 8); decyzja 4 z 2026-11-11 (przejście
+na „Komputer w pracy” bez sieci — kasowanie kolejki przy najbliższym odblokowaniu, bez nowego komunikatu).
+
+### E2-PR4e2
+
+**Co było** (`audyt` `7c51b574`).
+- `setStorageMode` zmieniał tylko wpis rejestru: kolejka konta zostawała w trybie „Komputer w pracy” bez wysyłki
+  i kasowania (kasował ją dopiero przegląd sierot przy odblokowaniu innego konta).
+- Kasowanie kolejki przy istniejącym wpisie rejestru (ponowienie przy odblokowaniu, przegląd sierot) zostawiało konto
+  oznaczone jako usuwane w tym oknie: po powrocie do „Komputer prywatny” dopisanie kończyło się `SYNC_DB_DELETED` do
+  przeładowania strony.
+- Tryb logowania („Zaloguj jednorazowo” albo trwały) był ujęty raz na konto: dwa `removeUser` tego samego konta w toku
+  w różnych trybach kasowały kolejkę według trybu pierwszego oznaczenia. Zakończone `removeUser` w trybie jednorazowym
+  zostawiało oznaczenie do przeładowania (ponowienie w tym oknie pomijało konto).
+- `applyEncryptedEvent` stosował zdarzenie także w trakcie usuwania konta w tym oknie.
+
+**Reguła.**
+- **Zmiana trybu na inny niż „Komputer prywatny”** (`setStorageMode`, przy włączonym dzienniku, poza trybem
+  „Zaloguj jednorazowo”): przed zmianą wpisu rejestru wysyłka kolejki bieżącego konta przez nadawcę
+  (`VildaSync.sendOutboxBounded(10 000)`; w ramce, np. w Ustawieniach powłoki, przez okno nadrzędne).
+
+| Wynik wysyłki | Po zmianie wpisu rejestru |
+|---|---|
+| `ok: true` (wysłane; zostają najwyżej wiersze, których serwer nie przyjmie) | kasowanie kolejki konta teraz (blokada wyłączna konta, jak przy usunięciu konta) |
+| bez sieci, pauza, odstęp, limit 10 s, inny nadawca, wysyłka niemożliwa | znacznik ponowienia `vilda-sync-delete-v1:<userId>` — kasowanie przy najbliższym odblokowaniu (wpis w innym trybie niż prywatny), bez nowego komunikatu (decyzja 4) |
+| konto inne niż bieżące | znacznik ponowienia (nadawca wysyła tylko kolejkę bieżącego konta) |
+
+  Zmiana na „Komputer prywatny” (także z prywatnego na prywatny) i zmiana w trybie jednorazowym — nic z powyższego.
+  Wiersze dopisane między wysyłką a zmianą wpisu odchodzą z kolejką; pełna wysyłka zostaje przez cały etap 2
+  (decyzja 7), więc dane nie giną.
+- **Koniec usuwania po kasowaniu przy istniejącym wpisie rejestru** (ponowienie przy odblokowaniu, przegląd sierot,
+  zmiana trybu): po kasowaniu konto nie jest już oznaczone jako usuwane w tym oknie, chyba że trwa albo było w nim
+  `removeUser` tego konta. Po powrocie do „Komputer prywatny” kolejka konta działa bez przeładowania.
+- **Tryb wywołania `removeUser`**: oznaczenie konta na początku `removeUser` niesie tryb logowania tej chwili i idzie
+  do kasowania kolejki tego wywołania. Każde z dwóch `removeUser` w toku kasuje według swojego trybu. `removeUser`
+  w trybie jednorazowym (kasowanie pominięte) po zakończeniu zdejmuje swoje oznaczenie. Gdy w oknie nie trwa i nie było
+  innego `removeUser` tego konta, konto trwałe o tym identyfikatorze ma kolejkę po zalogowaniu bez przeładowania.
+  Kasowanie bez oznaczenia wywołania (ponowienie przy odblokowaniu) bierze tryb ujęty dla konta, jak dotąd.
+- **`applyEncryptedEvent` a usuwanie konta**: konto bieżące w trakcie usuwania w tym oknie (albo po nim) — na wejściu
+  i po odszyfrowaniu `{ status: 'session-changed' }` bez zastosowania; drenaż i ramka WebSocket kończą jak przy zmianie
+  sesji (bez kursora).
+- **Kolejność blokad**: sejf nie żąda blokady nadawcy (`vilda-outbox-sender:<userId>`), więc kolejność jest stała —
+  blokada nadawcy, potem współdzielona blokada bazy kolejki konta (strażnik KT9).
+- Operacje kolejki i kwarantanny sprawdzają sesję tak jak zapis karty (P-SESJA-ZAPISU): zmiana sesji w trakcie kończy
+  operację bez zapisu.
+
+**Zmiana reguły z E2-PR3a1.** Dotąd konto usunięte w oknie w trybie jednorazowym było pomijane przy ponowieniu kasowania
+w tym oknie do przeładowania (K9f). Teraz po zakończeniu takiego `removeUser` ponowienie w tym oknie sprawdza wpis
+rejestru jak każde inne. Wpis prywatny zdejmuje znacznik bez kasowania. Brak wpisu albo wpis w innym trybie kasuje
+osieroconą bazę od razu. Bezpieczeństwo bez zmian: ponowienie nie działa w trybie jednorazowym i zawsze czyta
+prawdziwy wpis rejestru.
+
+**Uśpienie.** Bez dziennika `setStorageMode` nie wysyła, nie kasuje i nie stawia znacznika, bez dodatkowego odczytu pola
+bramki (KT4 — zielony także na bazie; zapis bazowy i liczniki odczytów bramki bez zmian). Pozostałe reguły działają na
+kolejce, której bez dziennika nie ma.
+
+**Testy.** Dane wyłącznie fikcyjne.
+- `tests/unit/sync-dziennik-konto.test.mjs` — 12 nowych przypadków (KT1–KT9; prawdziwy sejf na atrapie IndexedDB,
+  atrapa `VildaSync` w oknie):
+  - KT1–KT3 — zmiana trybu: wysyłka przed zmianą wpisu z limitem 10 s, kasowanie po udanej, znacznik bez sieci
+    i kasowanie przy najbliższym odblokowaniu, inne konto, prywatny, chmurowy → chmurowy, tryb jednorazowy, wynik limitu;
+  - KT4 — uśpienie; KT5, KT5b — powrót do trybu prywatnego po kasowaniu przy odblokowaniu i w przeglądzie sierot;
+  - KT6 — `removeUser` konta trwałego w trybie jednorazowym, potem logowanie tego konta; KT7 — dwa `removeUser` w toku
+    w różnych trybach;
+  - KT8 — `applyEncryptedEvent` po odszyfrowaniu i na wejściu w trakcie usuwania konta; KT9 — strażnik kolejności blokad.
+  Zmieniony K9f (nowa reguła).
+- `tests/unit/sync-zdarzenia-wpiecia.test.mjs` — NW12h, NW12i (`sendOutboxBounded`: wysyłka, limit z wywołania do 30 s,
+  ramka przez okno nadrzędne, bez dziennika `null`); NW7 bez wyścigu (każda ścieżka buduje deltę, zanim przyjdzie następna
+  zmiana — dotąd próg „co najmniej 5 z 6” zależał od tempa); oczekiwanie w tym pliku z limitem czasu rzeczywistego (10 s)
+  zamiast liczby obrotów pętli — przy równoległych plikach testów budowa nagrobka karty nie mieściła się w liczbie
+  obrotów; strażnik eksportu.
+- `tests/unit/sync-dziennik-uspienie.test.mjs` — strażniki: miejsca wywołań części dziennika poza blokiem (w `setStorageMode`
+  wynik wysyłki idzie wyłącznie do kroku po zmianie wpisu), dwa sprawdzenia usuwania w `applyEncryptedEvent`, pole
+  `VildaSync` w funkcji zmiany trybu.
+
+**Czerwone na bazie** (`origin/audyt` `7c51b574` z testami tego PR): KT1–KT3, KT5, KT5b, KT6–KT8, NW12h, NW12i i K9f
+(stara reguła). Zielone także na bazie: KT4 (oba warianty) i strażnik KT9.
+
+**Mutanty.** 26 mutantów, 24 zabite testami działania (KT1–KT8, K7, K9f, NW12h), 2 równoważne:
+- zmiana trybu: kasowanie po nieudanej wysyłce, bez wysyłki, bez warunku dziennika, bez warunku trybu starego albo nowego,
+  także w trybie jednorazowym, zamiana kasowania ze znacznikiem, bez znacznika, wysyłka po zmianie wpisu, bez kroku po
+  zmianie wpisu, inny limit wysyłki; `sendOutboxBounded` bez limitu z wywołania albo bez górnej granicy;
+- koniec usuwania: kasowanie przy wpisie bez zdjęcia oznaczenia (w tym w ponowieniu przy odblokowaniu i w przeglądzie
+  sierot), `removeUser` w trybie jednorazowym bez końca oznaczenia;
+- tryb wywołania: kasowanie z trybem konta zamiast wywołania, oznaczenie bez trybu, oznaczenie nieprzekazane do
+  `removeUser` albo do kasowania w żadnej z dwóch gałęzi;
+- `applyEncryptedEvent`: bez sprawdzenia usuwania na wejściu (odszyfrowanie mimo usuwania) albo po odszyfrowaniu.
+
+Równoważne: (1) kasowanie przy wpisie zdejmuje oznaczenie także wtedy, gdy trwa `removeUser` tego konta; (2) koniec
+`removeUser` w trybie jednorazowym zdejmuje oznaczenie mimo innego `removeUser` tego konta. W obu przypadkach trwające
+usuwanie dalej oznacza konto, a po usunięciu wpisu rejestru oznacza je znowu, więc operacje kolejki tego konta odmawiają
+do końca usuwania. Sprawdzenia zostają jako tania ochrona.
+
+**Kontrola granic.** Przeliczone skróty obrazu sejfu (`baseVaultSHA256`, `integratedVaultSHA256`, BASE w
+`tools/check_clinical_workspace_boundary.mjs`) i obrazu `vilda_sync.js` w kontroli granicy synchronizacji. Fragment planów
+opieki, haki sejfu i integracja bez zmian.
+
+**Ograniczenia.**
+- Zmiana trybu czeka na wysyłkę najwyżej 10 s (przełącznik w Ustawieniach).
+- Kasowanie bez oznaczenia wywołania (ponowienie przy odblokowaniu) bierze tryb ujęty dla konta przy ostatnim oznaczeniu,
+  jak dotąd.
+- Wiersze dopisane w innej karcie między wysyłką a zmianą wpisu rejestru odchodzą z kolejką; pełna wysyłka je niesie.
+
+**Następne PR.**
+- E2-PR5 (wygląd): stan wysyłki w Ustawieniach; komunikat przy przejściu na „Komputer w pracy” bez sieci, jeśli będzie
+  potrzebny (decyzja 4).
+- E2-PR6 (polityka prywatności): cztery nowe wpisy w pamięci przeglądarki (decyzja 5).
+
+**Cofnięcie** = rewert PR (bez migracji; rewert cofa też skróty kontroli granic sejfu i synchronizacji).
+
 ## Wpięcia nadawcy kolejki zdarzeń: beacony, ramki WebSocket, powrót sieci, chowanie strony i rotacja, uśpione (P-SYNC-NADAWCA-WPIECIA, E2-PR4e1, SW 1.1.513, `vilda_sync.js` 54, `vilda_sync_integration.js` 59, `vilda_realtime.js` 10, 2026-11-12)
 
 **Zmiana kliniczna: nie** — wzory, progi, jednostki, interpretacje i reguły scalania bez zmian. **Działanie aplikacji
