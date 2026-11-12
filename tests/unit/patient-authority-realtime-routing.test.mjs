@@ -108,7 +108,8 @@ describe('patient authority routing in the real WebSocket client', () => {
   it('retains ordinary legacy inbound delta delivery', async () => {
     const d = device(), socket = await open(d), payload = { fictional: 'encrypted-delta' };
     socket.onmessage({ data: JSON.stringify({ type: 'delta', payload }) });
-    expect(d.integration.applyDelta).toHaveBeenCalledExactlyOnceWith(payload);
+    // E2-PR4e1: realtime przekazuje też całą ramkę (seq, eid) — integracja używa jej tylko przy włączonym dzienniku.
+    expect(d.integration.applyDelta).toHaveBeenCalledExactlyOnceWith(payload, { type: 'delta', payload });
     socket.onmessage({ data: JSON.stringify({ type: 'changed' }) });
     expect(d.integration.pullNow).toHaveBeenCalledTimes(2);
     d.realtime.disconnect();

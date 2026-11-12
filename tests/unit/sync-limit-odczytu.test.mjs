@@ -264,7 +264,8 @@ describe('P-SYNC-LIMIT-ODCZYTU — strażniki źródła', () => {
     expect(nazwy(wt)).toHaveLength(19);
     expect(nazwy(bdz)).toEqual(nazwy(wt));
     for (const n of LICZNIKI) expect(nazwy(wt), n).toContain(n);
-    const ft = ZRODLO_INT.slice(ZRODLO_INT.indexOf('function Ft(t){'), ZRODLO_INT.indexOf('/* P-KONTO-BEZ-SERWERA'));
+    const ft = ZRODLO_INT.slice(ZRODLO_INT.indexOf('function Ft(t,Bwp_r){'), ZRODLO_INT.indexOf('/* P-KONTO-BEZ-SERWERA'));
+    expect(ft.length, 'Ft znalezione (E2-PR4e1: drugi argument — ramka realtime)').toBeGreaterThan(200);
     expect(nazwy(ft)).toEqual(nazwy(wt).filter((n) => n !== 'mergedPatientCount'));
   });
   it('L8: f() z limitem treści — kontroler przy odpowiedzi tylko z czwartym argumentem; Btr_json bez niego to zwykłe json()', () => {

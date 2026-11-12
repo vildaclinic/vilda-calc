@@ -21562,6 +21562,131 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
+## Wpięcia nadawcy kolejki zdarzeń: beacony, ramki WebSocket, powrót sieci, chowanie strony i rotacja, uśpione (P-SYNC-NADAWCA-WPIECIA, E2-PR4e1, SW 1.1.513, `vilda_sync.js` 54, `vilda_sync_integration.js` 59, `vilda_realtime.js` 10, 2026-11-12)
+
+**Zmiana kliniczna: nie** — wzory, progi, jednostki, interpretacje i reguły scalania bez zmian. **Działanie aplikacji
+bez zmian (uśpione).** Każde wpięcie działa tylko przy włączonym dzienniku (`VildaSync.isEventLogEnabled()`,
+P-SYNC-ZDARZENIA: „events” w health, którego serwer dziś nie podaje, i flaga `vilda-event-log-v1` = `'1'`, której nikt
+nie ustawia). Bez dziennika integracja wysyła delty beaconem, stosuje ramki WebSocket i robi pełną wysyłkę jak dotąd.
+Serwer, format danych, schemat IndexedDB, sejf i wygląd aplikacji bez zmian.
+
+Plan: wiersz 8e1 tabeli „Podział etapu 2” (decyzja z 2026-11-11: E2-PR4e w dwóch PR po kolei — E2-PR4e1 wpięcia
+synchronizacji z e2e, E2-PR4e2 część sejfu), rozdział 3.2 („Pętla wysyłki `flushOutbox()`” p. 5, „Chowanie, ubicie,
+zamrożenie”, „Rotacja tożsamości”) i 3.3 („Realtime”); decyzja 7 z 2026-10-29 (pełny PUT z dzisiejszym harmonogramem).
+
+### E2-PR4e1
+
+**Co było** (`audyt` `1d19f71b`).
+- Nadawca (E2-PR4d) wysyłał kolejkę, ale integracja go nie wołała. Sześć ścieżek delty w integracji (karta, nagrobek
+  karty, notatka pacjenta, jej nagrobek, notatka biblioteki, jej nagrobek) budowało deltę i wysyłało ją beaconem.
+- Ramka WebSocket szła do `applyEncryptedDelta` bez kursora; `vilda_realtime.js` podawał tylko `payload`
+  (`seq`, `eid` i `stored` ginęły).
+- Przy chowaniu strony pełna wysyłka z `keepalive` i wysyłka zdarzeń szły niezależnie, a limit przeglądarki
+  (64 KiB ciał `keepalive` w locie na dokument) jest wspólny.
+- Rotacja tożsamości (`revokeAllDevices`) nie wysyłała kolejki przed zmianą slotu; powrót sieci nie skracał odstępu
+  po błędzie.
+
+**Reguła** (wszystko poniżej tylko przy włączonym dzienniku).
+- **Beacony → `scheduleFlush`.** Sześć ścieżek delty integracji zaczyna od sprawdzenia dziennika. Z dziennikiem:
+  `VildaSync.scheduleFlush()` zamiast budowy i wysyłki delty (w ramce ping do okna nadrzędnego, wysyła nadawca). Bez
+  dziennika ścieżki bajt w bajt jak dotąd. Pełna wysyłka (PUT) z dzisiejszym harmonogramem bez zmian (decyzja 7).
+- **Ramka WebSocket → `VildaSync.applyRealtimeFrame(ramka)`.** `vilda_realtime.js` podaje integracji całą ramkę
+  (`applyDelta(payload, ramka)`); integracja z dziennikiem przekazuje ją do `applyRealtimeFrame`, a widok odświeża
+  (`vilda:sync-merged`) tylko przy zmianie. Bez dziennika (albo wołanie bez ramki) — `applyEncryptedDelta` jak dotąd.
+
+| Ramka `{type:'delta', payload, seq, eid, stored}` | Zastosowanie | Kursor i `appliedUpTo` | Wynik |
+|---|---|---|---|
+| `eid` w pierścieniu własnych zdarzeń slotu | — | bez zmian | `status: 'wlasne'` |
+| zastosowana, `seq` liczba całkowita = kursor + 1 | `applyEncryptedEvent` (opakowanie konta, sesja jak drenaż) | kursor + 1 (tylko w górę); `appliedUpTo` + 1, gdy był równy kursorowi (pusta kwarantanna) | `kursor: true`, `zmiana` z liczników scalania |
+| zastosowana, inne `seq` (luka, powtórka, napis) albo bez `seq` (`stored: false`) | jak wyżej | bez zmian — drenaż dojdzie do zdarzenia | `kursor: false` |
+| nieczytelna, zajęta, błąd zastosowania | — | bez zmian, bez kwarantanny (zrobi ją drenaż) | `status` z sejfu |
+| bez `payload`; sejf zablokowany; zmiana sesji w trakcie; bez dziennika | — | bez zmian | `ok: false`, `powod`: `argument`, `zablokowany`, `sesja`, `wylaczone` |
+
+- **Powrót sieci (`online`)** w nadawcy (dokument najwyższego poziomu): odstęp po błędzie zerowany i wysyłka
+  zaplanowana (`scheduleFlush`). `custom-fixes.js` bez zmian (jego pobranie po powrocie sieci i tak wysyła partię w
+  cyklu pobrania).
+- **Chowanie strony.** Pełna wysyłka z `keepalive` (`syncPush({keepalive:true})`, integracja przy ukryciu, zamrożeniu,
+  `pagehide` i `blur`) najpierw oddaje kolejkę do `flushKeepalive()`; PUT z `keepalive` rusza, gdy żądanie zdarzeń już
+  wyszło, najwyżej po 500 ms. Zdarzenia są mniejsze i ważniejsze, więc mają pierwszeństwo we wspólnym limicie.
+- **Rotacja tożsamości** (`revokeAllDevices`): przed `rotateSyncIdentity` wysyłka kolejki na stary slot (w ramce przez
+  `flushOutbox` okna nadrzędnego), najwyżej 30 s; potem rotacja jak dotąd. Wiersze kolejki nie są związane ze slotem,
+  więc to, co nie wyszło, wyjdzie na nowy slot. Zaraz po udanej rotacji nadawca tego dokumentu zapomina materiał
+  starego slotu (`flushKeepalive` czeka na następną zwykłą wysyłkę), zdejmuje zatrzymanie po 401 i zeruje odstęp.
+  Dokument z poprzednią tożsamością (rotacja w innej karcie, znacznik P-SYNC-ROTACJA-KART) oddaje rolę nadawcy: bez
+  wysyłki na stary slot, bez `keepalive` i bez bicia serca; po 90 s rolę przejmuje inny dokument.
+- Operacje kolejki i kwarantanny sprawdzają sesję tak jak zapis karty (P-SESJA-ZAPISU): zmiana sesji w trakcie kończy
+  operację bez zapisu.
+
+`applyRealtimeFrame` nigdy nie rzuca; wynik `{ ok, powod, status, kursor, zmiana }`. Plan nazywał nowe API kursora
+`advanceCursorIfNext`; jest jedno wywołanie, które stosuje zdarzenie i przesuwa kursor razem (bez okna między
+zastosowaniem a kursorem).
+
+**Uśpienie.** Bez dziennika (dziś zawsze) nic z powyższego nie rusza. Dowody: NW7 i NW11b (zielone także na bazie — sześć
+ścieżek beaconem, ramka przez `applyEncryptedDelta` z kursorem bez zmian, PUT z `keepalive` bez `POST /events`), e2e
+„flaga wyłączona” dwóch urządzeń, zapis bazowy i zestawy P-SYNC-NADAWCA, P-SYNC-STRONY bez zmian.
+
+**Testy.** Dane wyłącznie fikcyjne. `tests/unit/sync-zdarzenia-wpiecia.test.mjs` (nowy, 23 przypadki; prawdziwy
+`vilda_sync.js` i sejf na urządzeniach natywnych, atrapa v37a z „events” i ramkami; integracja: prawdziwy
+`vilda_sync_integration.js` w osobnym oknie z sejfem urządzenia):
+- NW1 — ramka drugiego urządzenia: zastosowanie, kursor i `appliedUpTo` o jeden, zmiana; powtórka bez zmiany; następne
+  pobranie od nowego kursora; NW2 — własne zdarzenie; NW3 — luka, bez `seq`, `seq` napisem, drenaż dochodzi do reszty;
+  NW4 — nieczytelna (drenaż daje kwarantannę); NW5 — kwarantanna niepusta; NW6 — argument, blokada, sesja;
+- NW7 — uśpienie integracji; NW8 — z dziennikiem sześć ścieżek woła `scheduleFlush` bez budowy delty, kolejka wychodzi
+  jedną partią; NW9 — ramka do `applyRealtimeFrame`, odświeżenie tylko przy zmianie;
+- NW10 — `online`; NW11, NW11c, NW11d — chowanie: zdarzenia przed PUT, także przy odczycie kolejki wolniejszym niż
+  eksport, a przy zawieszonym odczycie PUT po 500 ms; NW11b — uśpienie chowania;
+- NW12 — rotacja: kolejka pusta i `POST /events` na stary slot przed rotacją; NW12b — w ramce przez okno nadrzędne;
+  NW12c — wysyłka zawieszona: rotacja po 30 s; NW12d, NW12e, NW12f — po rotacji: `flushKeepalive` bez żądania na stary
+  slot, zatrzymanie po 401 zdjęte, odstęp zerowany; NW12g — dokument z poprzednią tożsamością oddaje rolę; NW13,
+  NW13b — strażniki źródła.
+
+Zmienione: `tests/unit/patient-authority-realtime-routing.test.mjs` (ramka w drugim argumencie `applyDelta`),
+`tests/unit/sync-limit-odczytu.test.mjs` (L7: nowa sygnatura `Ft`), `tests/unit/sync-zdarzenia-wysylka.test.mjs`
+(PE15: wysyłkę woła też integracja), `tests/unit/sync-zdarzenia-nadawca.test.mjs` (NA19: `scheduleFlush` i
+`applyRealtimeFrame` woła tylko integracja). `tests/e2e/sync-zdarzenia-wysylka.spec.mjs` — 3 nowe przypadki
+(prawdziwa przeglądarka; drugie urządzenie to drugi kontekst z kopią profilu, ramka WebSocket z atrapy, bo gniazdo jest
+poza jej modelem):
+- flaga `'1'`, dwa urządzenia: notatka idzie kolejką bez `POST /delta`, ramka u B — notatka, kursor o jeden,
+  odświeżenie widoku; u A — własne zdarzenie;
+- flaga `'1'`, ramka powłoki (`notatki.html?embedded=1` w iframe): ramka bez własnych żądań, ping, wysyła okno
+  nadrzędne;
+- flaga wyłączona, dwa urządzenia: delta beaconem jak dotąd, ramka przez `applyEncryptedDelta`, kursor bez zmian.
+
+**Czerwone na bazie** (`origin/audyt` `1d19f71b` z testami tego PR): 21 z 23 przypadków NW (wszystkie poza NW7 i NW11b)
+i oba e2e z flagą `'1'`. Zielone także na bazie: NW7, NW11b i e2e „flaga wyłączona”.
+
+**Mutanty.** 36 mutantów wpięć, wszystkie zabite testami działania (NW1–NW12g, routing realtime):
+- ramka: bez bramki dziennika, bez pominięcia własnych, kursor przy dowolnym `seq`, kursor bez zastosowania,
+  `appliedUpTo` przy niepustej kwarantannie albo bez ruchu, bez kontroli sesji po zastosowaniu, zmiana zawsze, bez
+  kontroli argumentu;
+- `online` bez zerowania odstępu albo bez planu; chowanie bez zdarzeń najpierw, PUT bez czekania, czekanie bez limitu;
+- rotacja bez wysyłki, bez limitu 30 s, w ramce bez okna nadrzędnego; po rotacji bez zerowania stanu nadawcy albo
+  z materiałem starego slotu, zatrzymaniem po 401 lub odstępem; dokument z poprzednią tożsamością dalej nadawcą;
+- integracja: każda z sześciu ścieżek beaconem mimo dziennika, bez `scheduleFlush`, dziennik nigdy albo zawsze widziany,
+  `Ft` bez ścieżki ramki, ramka bez bramki dziennika, odświeżenie zawsze albo nigdy; realtime bez ramki.
+
+**Kontrola granic.** Synchronizacja: przeliczone skróty obrazu bazowego i zintegrowanego `vilda_sync.js`
+i `vilda_sync_integration.js` (`tools/check_clinical_workspace_sync_boundary.mjs`,
+`runtime/clinical-workspace-sync/manifest.json`). Funkcje integracji objęte łatami granicy bez zmian. Sejf i fragment
+planów opieki bez zmian.
+
+**Ograniczenia.**
+- Integracja po pełnej wysyłce czyści wspólną pauzę 429 (`vilda-sync-rl-until-v1`), także pauzę ustawioną przez
+  wysyłkę zdarzeń — zachowanie integracji bez zmian (funkcja objęta łatą granicy).
+- Ramka bez `seq` albo z luką nie przesuwa kursora: zdarzenie stosuje się drugi raz w drenażu (scalanie jest odporne
+  na powtórzenie).
+- Po rotacji w innej karcie zdarzenia czekają w kolejce, aż rolę nadawcy przejmie dokument z bieżącą tożsamością
+  (do 90 s od ostatniego bicia serca karty z poprzednią); pełna wysyłka działa jak dotąd (decyzja 7).
+
+**Następne PR.**
+- E2-PR4e2 (sejf): `setStorageMode` — wysyłka, potem kasowanie kolejki konta, bez sieci kasowanie przy odblokowaniu
+  (decyzja 4); powrót do trybu prywatnego bez przeładowania; `removeUser` w dwóch trybach; znacznik usuwania konta
+  w `applyEncryptedEvent`.
+- E2-PR5 (wygląd): stan wysyłki w Ustawieniach, komunikat zmiany trybu bez sieci, jeśli potrzebny.
+
+**Cofnięcie** = rewert PR (bez migracji; rewert cofa też skróty kontroli granicy synchronizacji). Nowe API i wpięcia
+działają tylko przy włączonym dzienniku.
+
 ## Nadawca kolejki zdarzeń: jedno okno wysyła za wszystkie karty, uśpione (P-SYNC-NADAWCA, E2-PR4d, SW 1.1.511, `vilda_sync.js` 53, 2026-11-11)
 
 **Zmiana kliniczna: nie** — wzory, progi, jednostki, interpretacje i reguły scalania bez zmian. **Działanie aplikacji
