@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
 import { atrapaDokumentu, teksty } from '../support/atrapa-dom-lekka.mjs';
@@ -520,6 +521,34 @@ describe('zakładka Badania: akcje', () => {
     expect(karty[0].click().domyslneZatrzymane).toBe(true);
     naglowek.click();
     expect(navigate.mock.calls).toEqual([['lab', true, 'przelicznik-jednostek.html?badanie=tsh'], ['lab', true]]);
+  });
+
+  it('LAB-PAKIETY PR1: skrót do pakietu „Tarczyca” stoi tylko w karcie pacjenta wczytanego do formularza', async () => {
+    // Karta innej osoby niż wczytana (albo bez wczytanego pacjenta): bez skrótu — pakiet zapisałby wyniki nie temu pacjentowi.
+    for (const pamiec of [[], [['vildaCurrentPatientId', 'fikcyjny-inny-pacjent']]]) {
+      const obcy = srodowisko({ pamiec });
+      otworz(obcy, sejf());
+      await gotowe(obcy);
+      expect(obcy.host.querySelector('a.vilda-lab-hist-package')).toBeNull();
+      expect(obcy.host.querySelector('a.vilda-lab-hist-check')).not.toBeNull();
+    }
+    const env = srodowisko({ pamiec: [['vildaCurrentPatientId', PID]] });
+    otworz(env, sejf());
+    await gotowe(env);
+    const skrot = env.host.querySelector('a.vilda-lab-hist-package');
+    expect([skrot.textContent, skrot.getAttribute('href')]).toEqual(['Wpisz pakiet: Tarczyca →', 'przelicznik-jednostek.html?pakiet=tarczyca']);
+    // Kolejność przycisków nagłówka: dodanie wyniku, pakiet, przelicznik.
+    expect(env.host.querySelector('.vilda-lab-hist-actions').children.map((el) => el.textContent)).toEqual(['+ Dodaj wynik', 'Wpisz pakiet: Tarczyca →', 'Sprawdź nowy wynik →']);
+    // Adres skrótu wskazuje pakiet z pliku danych.
+    const pakiety = createRequire(import.meta.url)('../../vilda_lab_packages.js').data;
+    expect(pakiety.packages.map((p) => p.slug)).toContain(new URLSearchParams(skrot.getAttribute('href').split('?')[1]).get('pakiet'));
+    // Poza powłoką zwykły odnośnik; w ramce powłoki trasa „lab” z adresem pakietu.
+    expect(skrot.click().domyslneZatrzymane).toBe(false);
+    const navigate = vi.fn();
+    env.doc.documentElement.classList.add('vilda-embedded');
+    env.win.parent = { VildaShell: { navigate } };
+    expect(skrot.click().domyslneZatrzymane).toBe(true);
+    expect(navigate.mock.calls).toEqual([['lab', true, 'przelicznik-jednostek.html?pakiet=tarczyca']]);
   });
 });
 

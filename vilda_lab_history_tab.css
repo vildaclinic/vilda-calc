@@ -72,6 +72,13 @@
   flex-wrap: wrap;
 }
 
+/* Skrót do pakietu badań: fiolet modułu lab (jak wiersz przypięcia w przeliczniku). */
+.vilda-auth-root a.vilda-lab-hist-package,
+.vilda-auth-root a.vilda-lab-hist-package:hover {
+  border-color: #5856D6!important;
+  color: #3f37a0!important;
+}
+
 .vilda-lab-hist-toolbar {
   display: grid;
   grid-template-columns: minmax(160px, 1fr) minmax(170px, 240px) 176px;

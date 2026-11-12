@@ -160,6 +160,13 @@ Do tej warstwy należą m.in.:
   `VildaShell.openPatientCardInStart(id, {activeTab: 'lab'})`. Odwrotnie karta badania otwiera
   przelicznik adresem `przelicznik-jednostek.html?badanie=<id>` (`applySubstanceDeepLink`
   w skrypcie strony; w powłoce cel dochodzi zdarzeniem `vilda:shell-navigate-target`);
+- pakiety badań: `vilda_lab_packages.js` (dane pakietu, model i widok w jednym pliku — budżet żądań
+  instalacji PWA; tag tylko na `przelicznik-jednostek.html`). Tryb „Pakiet badań” przelicznika: kilka
+  badań z jednego wydruku (MVP: „Tarczyca”) oceniane tym samym silnikiem co pojedyncze badanie
+  (`LabUnitConverter`, zrzut `VildaLabRangeSnapshot`) i zapisywane zbiorczo jako notatki
+  „wynik-badania” w postaci zapisu przypięcia. Pacjenta do norm podaje
+  `VildaLabConverterRuntime.getPackagePatient()`; pakiet działa tylko dla zalogowanego użytkownika
+  z wybranym pacjentem. Adres `?pakiet=<slug>`; skrót w zakładce „Badania”. Plan: `docs/LAB_PAKIETY_PLAN.md`;
 - terapie: moduły GH/IGF-1, otyłości, antybiotyków, nadciśnienia, bisfosfonianów i grypy;
 - żywienie: `nutrition_norms.js`, `nutrition_micros.js`, moduły planu diety i szacowanego spożycia.
 
