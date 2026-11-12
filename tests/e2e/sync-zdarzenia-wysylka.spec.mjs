@@ -19,6 +19,7 @@ import { podlaczAtrapeDoKontekstu } from '../support/atrapa-workera-route.mjs';
 //    flushKeepalive (fetch z keepalive).
 // 4) Flaga wyłączona: zapis karty, pobranie i chowanie strony bez POST /events i bez klucza bicia serca (bez nowego
 //    API — zielony także na bazie).
+// E2-PR4e1 (P-SYNC-NADAWCA-WPIECIA) — przypadki 5–7 przy końcu pliku: dwa urządzenia i ramka powłoki.
 // Własne, fikcyjne konto sejfu w efemerycznym profilu przeglądarki; dane wyłącznie FIKCYJNE.
 test.use({ serviceWorkers: 'block' });
 
@@ -236,4 +237,148 @@ test('E2-PR4d: flaga wyłączona — zapis karty, pobranie i chowanie strony bez
   expect(zadaniaEvents(atrapa)).toEqual([]);
   expect(await page.evaluate((u) => window.localStorage.getItem('vilda-outbox-heartbeat-v1:' + u), userId)).toBeNull();
   expect(naruszenia(atrapa)).toEqual([]);
+});
+
+// ── E2-PR4e1: wpięcia nadawcy — dwa urządzenia i ramka powłoki ───────────────────────────────────────────────────────
+// 5) Flaga '1', dwa urządzenia jednego konta: B to drugi kontekst przeglądarki z kopią profilu A (localStorage i
+//    IndexedDB z chwili po rejestracji; synchronizacja automatyczna B wyłączona, żeby pobranie w tle nie wyprzedziło
+//    ramki). A zapisuje notatkę — integracja woła scheduleFlush zamiast beaconu, nadawca wysyła POST /events, żadnego
+//    POST /delta; ramka WebSocket tego zdarzenia (z atrapy; gniazdo jest poza modelem) trafia do integracji B — notatka
+//    w sejfie B, kursor B o jeden, odświeżenie widoku; ta sama ramka u A — własne zdarzenie.
+// 6) Flaga '1', ramka powłoki: strona w iframe (notatki.html?embedded=1, ta sama karta) zapisuje notatkę — ramka nie
+//    wysyła sama (bez POST /events, beaconu i POST /delta z ramki), ping vilda-sync-data, wysyła okno nadrzędne.
+// 7) Flaga wyłączona, dwa urządzenia: zapis karty — delta beaconem (POST /delta) jak dotąd, bez POST /events; ramka
+//    u B stosowana jak dotąd (applyEncryptedDelta), kursor B bez zmian (zielony także na bazie).
+async function drugieUrzadzenie(browser, context, atrapa, userId) {
+  const stan = await context.storageState({ indexedDB: true });
+  for (const o of stan.origins) {
+    for (const w of o.localStorage) if (w.name === 'vilda-sync-enabled-v1') w.value = 'false';
+  }
+  const ctxB = await browser.newContext({ storageState: stan, serviceWorkers: 'block' });
+  await podlaczAtrapeDoKontekstu(ctxB, atrapa, { urzadzenie: 'B' });
+  const pageB = await ctxB.newPage();
+  await pageB.goto('/index.html', { waitUntil: 'load' });
+  await pageB.waitForFunction(() => Boolean(window.VildaVault && window.VildaSync && window.VildaSyncIntegration));
+  const b = await pageB.evaluate(async ([u, pw]) => {
+    if (!window.VildaVault.isUnlocked()) await window.VildaVault.unlockUser(u, pw);
+    await window.VildaSync.detectApi();
+    await window.VildaSync.syncPull({ czekajNaDrenaz: true });
+    const m = await window.VildaVault.getSyncMaterial();
+    window.__scalone = 0;
+    document.addEventListener('vilda:sync-merged', () => { window.__scalone += 1; });
+    return { slot: m.slotId, log: window.VildaSync.isEventLogEnabled() };
+  }, [userId, HASLO]);
+  return { ctxB, pageB, ...b };
+}
+const kursorStrony = (page, slot) => page.evaluate((s) => Number(window.localStorage.getItem('vilda-sync-cursor-v1:' + s) || 0), slot);
+const ramkaZAtrapy = (atrapa, eid) => {
+  const r = atrapa.ramki.filter((x) => x.ramka.type === 'delta' && (!eid || x.ramka.eid === eid)).at(-1);
+  return r ? JSON.parse(JSON.stringify(r.ramka)) : null;
+};
+
+test("E2-PR4e1: vilda-event-log-v1 = '1' — dwa urządzenia: notatka idzie kolejką (bez POST /delta), ramka WebSocket u B — zastosowanie i kursor, u A — własne zdarzenie", async ({ page, context, browser }) => {
+  test.setTimeout(120_000);
+  const { atrapa, userId } = await przygotujNadawce(page, context, '1');
+  await zapiszKarteNadawcy(page, 'Jan');
+  await page.evaluate(() => window.VildaSync.flushOutbox());
+  await expect.poll(() => page.evaluate(async () => (await window.VildaVault._eventLog.outboxCount()).total), { timeout: 15_000 }).toBe(0);
+  const { ctxB, pageB, slot, log } = await drugieUrzadzenie(browser, context, atrapa, userId);
+  try {
+    expect(log, 'B: dziennik włączony').toBe(true);
+    const k0 = await kursorStrony(pageB, slot);
+    const przed = zadaniaEvents(atrapa).length;
+    // A: notatka przez sejf strony — integracja (synchronizacja włączona) woła scheduleFlush, nadawca wysyła po 1,5 s
+    const pid = await page.evaluate(async () => {
+      const [p] = await window.VildaVault.listPatients();
+      await window.VildaVault.savePatientNote({ patientId: p.patientId, title: 'Fikcyjna notatka e2e', body: 'Fikcyjna treść.', category: 'inne' });
+      await window.VildaVault._eventLog.emissionsSettled();
+      return p.patientId;
+    });
+    await expect.poll(() => zadaniaEvents(atrapa).length, { timeout: 15_000 }).toBeGreaterThan(przed);
+    await expect.poll(() => page.evaluate(async () => (await window.VildaVault._eventLog.outboxCount()).total), { timeout: 15_000 }).toBe(0);
+    expect(atrapa.zadania.filter((z) => z.trasa === 'delta'), 'bez POST /delta (beaconu)').toEqual([]);
+    const fr = ramkaZAtrapy(atrapa);
+    expect(fr && fr.seq, 'ramka zdarzenia z seq').toBe(k0 + 1);
+    // B: ramka do integracji (tak woła ją vilda_realtime.js)
+    await pageB.evaluate((r) => window.VildaSyncIntegration.applyDelta(r.payload, r), fr);
+    await expect.poll(() => pageB.evaluate(async (p) => (await window.VildaVault.listPatientNotesForPatient(p)).map((n) => n.title), pid), { timeout: 15_000 }).toEqual(['Fikcyjna notatka e2e']);
+    expect(await kursorStrony(pageB, slot), 'kursor B o jeden').toBe(k0 + 1);
+    await expect.poll(() => pageB.evaluate(() => window.__scalone), { timeout: 5_000 }).toBeGreaterThan(0);
+    // A: ta sama ramka — własne zdarzenie, kursor A bez zmian
+    const kA = await kursorStrony(page, slot);
+    expect(await page.evaluate((r) => window.VildaSync.applyRealtimeFrame(r), fr)).toEqual({ ok: true, powod: null, status: 'wlasne', kursor: false, zmiana: false });
+    expect(await kursorStrony(page, slot)).toBe(kA);
+    expect(naruszenia(atrapa)).toEqual([]);
+  } finally {
+    await ctxB.close();
+  }
+});
+
+test("E2-PR4e1: vilda-event-log-v1 = '1' — ramka powłoki: notatka zapisana w iframe wysyła okno nadrzędne, ramka bez własnych żądań", async ({ page, context }) => {
+  test.setTimeout(120_000);
+  const { atrapa } = await przygotujNadawce(page, context, '1');
+  await zapiszKarteNadawcy(page, 'Jan');
+  await page.evaluate(() => window.VildaSync.flushOutbox());
+  await expect.poll(() => page.evaluate(async () => (await window.VildaVault._eventLog.outboxCount()).total), { timeout: 15_000 }).toBe(0);
+  await page.evaluate(() => {
+    const f = document.createElement('iframe');
+    f.id = 'ramkaTestu';
+    f.src = '/notatki.html?embedded=1';
+    document.body.appendChild(f);
+  });
+  const ramka = page.frameLocator('#ramkaTestu');
+  await expect.poll(() => page.evaluate(() => {
+    const w = document.getElementById('ramkaTestu').contentWindow;
+    return !!(w && w.VildaVault && w.VildaVault.isUnlocked() && w.VildaSync && w.VildaSync.isEventLogEnabled() && w.VildaSyncIntegration);
+  }), { timeout: 30_000 }).toBe(true);
+  expect(ramka).toBeTruthy();
+  // skrypt startowy testu działa też w ramce i wyłącza synchronizację we wspólnym localStorage — włącznik z powrotem
+  await page.evaluate(() => window.localStorage.setItem('vilda-sync-enabled-v1', 'true'));
+  const przed = zadaniaEvents(atrapa).length;
+  const zRamki = await page.evaluate(async () => {
+    const w = document.getElementById('ramkaTestu').contentWindow;
+    w.__zadania = [];
+    const f = w.fetch;
+    w.fetch = function (u) { if (/\/(events|delta)$/.test(String(u))) w.__zadania.push('fetch ' + String(u).split('/').pop()); return f.apply(this, arguments); };
+    const b = w.navigator.sendBeacon.bind(w.navigator);
+    w.navigator.sendBeacon = function (u, d) { w.__zadania.push('beacon ' + String(u).split('/').pop()); return b(u, d); };
+    const [p] = await w.VildaVault.listPatients();
+    window.__ping = [];
+    const bc = new BroadcastChannel('vilda-sync-data');
+    bc.onmessage = (e) => { window.__ping.push(e.data && e.data.type); };
+    await w.VildaVault.savePatientNote({ patientId: p.patientId, title: 'Fikcyjna notatka z ramki', body: 'Fikcyjna treść.', category: 'inne' });
+    await w.VildaVault._eventLog.emissionsSettled();
+    return { gora: window.VildaSync.isEventLogEnabled(), ramka: w.VildaSync.isEventLogEnabled(), osadzona: w.document.documentElement.classList.contains('vilda-embedded') };
+  });
+  expect(zRamki).toEqual({ gora: true, ramka: true, osadzona: true });
+  await expect.poll(() => page.evaluate(async () => (await window.VildaVault._eventLog.outboxCount()).total), { timeout: 15_000 }).toBe(0);
+  expect(zadaniaEvents(atrapa).length, 'wysłało okno nadrzędne').toBeGreaterThan(przed);
+  expect(await page.evaluate(() => document.getElementById('ramkaTestu').contentWindow.__zadania), 'ramka bez własnych żądań').toEqual([]);
+  expect(await page.evaluate(() => window.__ping), 'ping ramki na vilda-sync-data').toContain('outbox');
+  expect(atrapa.zadania.filter((z) => z.trasa === 'delta'), 'bez POST /delta').toEqual([]);
+  expect(naruszenia(atrapa)).toEqual([]);
+});
+
+test('E2-PR4e1: flaga wyłączona — dwa urządzenia: karta idzie deltą beaconem jak dotąd (bez POST /events), ramka u B przez applyEncryptedDelta, kursor B bez zmian', async ({ page, context, browser }) => {
+  test.setTimeout(120_000);
+  const { atrapa, userId } = await przygotujNadawce(page, context, null);
+  const { ctxB, pageB, slot, log } = await drugieUrzadzenie(browser, context, atrapa, userId);
+  try {
+    expect(log).toBe(false);
+    const k0 = await kursorStrony(pageB, slot);
+    const pid = await page.evaluate(async () => (await window.VildaVault.savePatient({
+      name: 'Testowa Ewa',
+      user: { lastName: 'Testowa', firstName: 'Ewa', sex: 'F', age: 9, ageMonths: 4, height: 133, weight: 29 },
+    }, { dedup: false })).patientId);
+    await expect.poll(() => atrapa.zadania.filter((z) => z.trasa === 'delta').length, { timeout: 15_000 }).toBeGreaterThan(0);
+    const fr = ramkaZAtrapy(atrapa);
+    expect(fr, 'ramka delty').toBeTruthy();
+    await pageB.evaluate((r) => window.VildaSyncIntegration.applyDelta(r.payload, r), fr);
+    await expect.poll(() => pageB.evaluate(async (p) => !!(await window.VildaVault.getPatient(p).catch(() => null)), pid), { timeout: 15_000 }).toBe(true);
+    expect(await kursorStrony(pageB, slot), 'kursor B bez zmian').toBe(k0);
+    expect(zadaniaEvents(atrapa)).toEqual([]);
+    expect(naruszenia(atrapa)).toEqual([]);
+  } finally {
+    await ctxB.close();
+  }
 });

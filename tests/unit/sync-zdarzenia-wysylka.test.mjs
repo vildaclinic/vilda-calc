@@ -351,7 +351,7 @@ describe('P-SYNC-ZDARZENIA — włącznik dziennika i bramka sejfu', () => {
     const zPush = pliki.filter((n) => /\bpushEvents\b/.test(fs.readFileSync(path.join(KORZEN, n), 'utf8')));
     expect(zPush).toEqual([]);
     const zWl = pliki.filter((n) => /\bisEventLogEnabled\b/.test(fs.readFileSync(path.join(KORZEN, n), 'utf8')));
-    expect(zWl).toEqual(['vilda_vault.js']);
+    expect(zWl, 'bramka sejfu i wpięcia integracji (E2-PR4e1)').toEqual(['vilda_sync_integration.js', 'vilda_vault.js']);
     const sync = fs.readFileSync(path.join(KORZEN, 'vilda_sync.js'), 'utf8');
     expect(sync.match(/\bBze_pushEvents\b/g)).toHaveLength(3); // definicja, eksport i partia nadawcy (E2-PR4d)
     expect(sync.match(/\bBze_pushEvents\(/g), 'jedyne wywołanie — partia nadawcy').toHaveLength(2);

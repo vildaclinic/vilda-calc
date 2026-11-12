@@ -1928,8 +1928,8 @@
   "sha256": "0562ff1730c42302136cba8b6a020135eda9015f99ee008107a6a34c3b22d48a"
  },
  "vilda_realtime.js": {
-  "v": 9,
-  "sha256": "6b0b2f4050511690f9bb077ca3158ed6443ab0fefc56e2fa05bc908717c949d1"
+  "v": 10,
+  "sha256": "70493c61a2ef5ada2279bafc79b1af5d1721e2110bb65e1f6be797ec7d2299c8"
  },
  "vilda_ree_rownania_data.js": {
   "v": 3,
@@ -2020,12 +2020,12 @@
   "sha256": "473bcf6945b4be2b78bbb9ef7c0ee051fb38f9bfc17578fca93bfa1a73d5b6ff"
  },
  "vilda_sync.js": {
-  "v": 53,
-  "sha256": "846c4f5189d0653cc1a0a51fdad3b869b3f3cea7bac1dedddfb2452713224356"
+  "v": 54,
+  "sha256": "d696d90c116aa3ceab3f2c1c54030eaa8e8ee86dedbcd8ae6cd0b4f9212c9bd9"
  },
  "vilda_sync_integration.js": {
-  "v": 58,
-  "sha256": "84c5f531acb3079193de8a61abe8c22f3149aaf9672ab8a12b089066e209b4aa"
+  "v": 59,
+  "sha256": "e77efb22227ee57aaf647e06eb574d588ec8f76b36ceaee6e3bca118a72932cc"
  },
  "vilda_tab_guard.js": {
   "v": 5,

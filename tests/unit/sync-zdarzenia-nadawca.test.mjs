@@ -822,7 +822,8 @@ describe('P-SYNC-NADAWCA — cykl w pobraniu i uśpienie', () => {
 describe('P-SYNC-NADAWCA — strażniki źródła', () => {
   it('NA19 [czerwony na bazie]: eksport, stałe, Web Lock, kanał, słuchacze i keepalive tylko w swoich funkcjach bloku; cykl tylko przy włączonym dzienniku; nowe API bez wywołań w innych plikach produktu', () => {
     const src = czytaj('vilda_sync.js');
-    const blok = src.slice(src.indexOf('/* P-SYNC-NADAWCA (E2-PR4d;'), src.indexOf('/* P-SYNC-STRONY (E2-PR1;'));
+    // Blok nadawcy (do bloku wpięć E2-PR4e1, który ma własne strażniki w sync-zdarzenia-wpiecia.test.mjs).
+    const blok = src.slice(src.indexOf('/* P-SYNC-NADAWCA (E2-PR4d;'), src.indexOf('/* P-SYNC-NADAWCA-WPIECIA (E2-PR4e1;'));
     expect(blok.length).toBeGreaterThan(5000);
     expect(src).toMatch(/,flushOutbox:Bns_flush,scheduleFlush:Bns_planuj,flushKeepalive:Bns_keepalive[,}]/);
     for (const k of [K_BICIE, BLOKADA]) expect(src.split(`'${k}'`).length - 1, k).toBe(1);
@@ -843,7 +844,9 @@ describe('P-SYNC-NADAWCA — strażniki źródła', () => {
     expect(src.match(/Bns_cykl\(/g), 'cykl: deklaracja i jedno wywołanie').toHaveLength(2);
     const pliki = fs.readdirSync(KORZEN).filter((n) => /\.(js|html)$/.test(n) && n !== 'vilda_sync.js');
     expect(pliki.length).toBeGreaterThan(100);
-    const zApi = pliki.filter((n) => /\b(flushOutbox|scheduleFlush|flushKeepalive)\b/.test(czytaj(n)));
-    expect(zApi, 'wpięcia — E2-PR4e').toEqual([]);
+    const zApi = pliki.filter((n) => /\b(flushOutbox|flushKeepalive)\b/.test(czytaj(n)));
+    expect(zApi, 'flushOutbox i flushKeepalive tylko w vilda_sync.js').toEqual([]);
+    const zPlanu = pliki.filter((n) => /\b(scheduleFlush|applyRealtimeFrame)\b/.test(czytaj(n)));
+    expect(zPlanu, 'wpięcia integracji (E2-PR4e1)').toEqual(['vilda_sync_integration.js']);
   });
 });
