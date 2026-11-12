@@ -129,7 +129,11 @@ test('wynik dodany w Notatkach: trwały komunikat, gdzie trafił, bez wiersza na
 
   await notatki.getByRole('button', { name: '+ Dodaj notatkę' }).click();
   const edytor = page.getByRole('dialog', { name: /Nowa notatka/ });
+  const ogolna = edytor.getByRole('radio', { name: /Notatka ogólna/ });
+  // P-WYNIKI-BADAN-EDYTOR: opis kotwicy mówi, gdzie wpis się pokaże — zwykła notatka w Notatkach, wynik w Badaniach.
+  await expect(ogolna).toHaveAccessibleName(/Pojawi się w zakładce Notatki i w Historii/);
   await page.locator('.b3-template-select').selectOption('lab');
+  await expect(ogolna).toHaveAccessibleName(/Wynik badania pojawi się w zakładce Badania i w Historii.*Wpis bez wartości \(np\. zlecenie\) zostaje w Notatkach/);
   await page.locator('.b3-lab-test').fill('TSH (tyreotropina)');
   await page.locator('.b3-lab-value-row input').first().fill('3,4');
   await edytor.getByRole('radio', { name: /Wpisz datę zdarzenia/ }).check();
