@@ -97,8 +97,8 @@
 //         urządzenia, nazwy bazy kolejki (vilda_sync_ poza vilda_sync_integration.js), Bev_, Bob_ ani Bem_ (bez nazw
 //         ogólnych: enqueue, eventBytes, kinds, deleteDatabase — istnieją w innych plikach). Wyjątek: vilda_sync.js zna
 //         API drenażu z kwarantanną (E2-PR4c) i nadawcy kolejki (E2-PR4d) — dokładnie tę listę, _eventLog raz;
-//         inline_ustawienia_07.js (E2-PR5a, widok kolejki w Ustawieniach) — _eventLog raz, outboxCount i outboxList,
-//         tylko w bloku P-SYNC-WIDOK-KOLEJKI.
+//         inline_ustawienia_07.js (E2-PR5a i E2-PR5b, widok kolejki w Ustawieniach) — _eventLog raz, outboxCount,
+//         outboxList, quarantineCount, quarantineList, outboxDiscard i quarantineRelease, tylko w bloku P-SYNC-WIDOK-KOLEJKI.
 //   U2(c) część Bev_: lista zakazana (zapis, emisja, sieć, magazyny przeglądarki, legacy buildery delt, eksport
 //         ładunku, console.), także w komentarzach; część Bob_: własna lista tekstowa i reguła domknięcia na drzewie
 //         składni (acorn + eslint-scope): wolne identyfikatory wyłącznie z listy, pola okna tylko w swoich funkcjach,
@@ -1338,9 +1338,11 @@ describe('U2(b): pliki produktu poza sejfem nie znają nowego API', () => {
     // E2-PR4d (P-SYNC-NADAWCA): nadawca kolejki w vilda_sync.js — partie kolejki, czekanie na emisje, słuchacz partii
     // importu i przegląd kolejki (przez to samo opakowanie konta).
     'outboxTake', 'outboxAccept', 'outboxReject', 'outboxFail', 'outboxRequeueStale', KLUCZ_EMISJI, KLUCZ_PARTII, KLUCZ_PRZEGLADU];
-  // E2-PR5a (P-SYNC-WIDOK-KOLEJKI): widok kolejki w Ustawieniach (inline_ustawienia_07.js) — wyłącznie odczyty liczników
-  // i wierszy kolejki przez eksport sejfu, w bloku widoku.
-  const WIDOK_USTAWIEN = ['_eventLog', 'outboxCount', 'outboxList'];
+  // E2-PR5a (P-SYNC-WIDOK-KOLEJKI): widok kolejki w Ustawieniach (inline_ustawienia_07.js) — odczyty liczników i wierszy
+  // kolejki przez eksport sejfu, w bloku widoku; E2-PR5b: także odczyt kwarantanny oraz dwie jawne decyzje użytkownika
+  // po potwierdzeniu — porzucenie wiersza kolejki i zwolnienie zdarzenia z kwarantanny.
+  const WIDOK_USTAWIEN = ['_eventLog', 'outboxCount', 'outboxList', 'quarantineCount', 'quarantineList', 'outboxDiscard',
+    'quarantineRelease'];
   const WZORCE = [/vilda_sync_(?!integration\.js)/, /(?<![A-Za-z0-9_$])Bev_/, /(?<![A-Za-z0-9_$])Bob_/, /(?<![A-Za-z0-9_$])Bem_/];
   it('żaden plik produktu poza vilda_vault.js nie zawiera _eventLog, nazw API dziennika, magazynu, emisji, partii i przeglądu kolejki (emissionsSettled, onBulkChange, sweepOutbox), VILDA_EVENT_LOG, klucza urządzenia, nazwy bazy kolejki, Bev_, Bob_ ani Bem_', () => {
     const winne = [];
@@ -1361,14 +1363,15 @@ describe('U2(b): pliki produktu poza sejfem nie znają nowego API', () => {
     for (const n of ['enqueue', 'outboxDiscard', 'gateOpen', 'encryptEvent', 'deleteDatabase']) expect(tresc, n).not.toContain(n);
   });
 
-  it('E2-PR5a (P-SYNC-WIDOK-KOLEJKI): inline_ustawienia_07.js zna tylko odczyty kolejki — _eventLog raz, outboxCount i outboxList, wszystko w bloku widoku', () => {
+  it('E2-PR5a i E2-PR5b (P-SYNC-WIDOK-KOLEJKI): inline_ustawienia_07.js zna tylko odczyty kolejki i kwarantanny, porzucenie i zwolnienie — _eventLog raz, wszystko w bloku widoku', () => {
     const tresc = fs.readFileSync(path.join(KORZEN, 'inline_ustawienia_07.js'), 'utf8');
     const blok = tresc.slice(tresc.indexOf('/* P-SYNC-WIDOK-KOLEJKI ('), tresc.indexOf('/* /P-SYNC-WIDOK-KOLEJKI */'));
     expect(blok.length).toBeGreaterThan(1000);
     expect(NAZWY.filter((n) => tresc.includes(n)).sort()).toEqual([...WIDOK_USTAWIEN].sort());
     for (const n of WIDOK_USTAWIEN) expect(tresc.split(n).length, n).toBe(blok.split(n).length);
     expect(blok.split('._eventLog').length - 1, '_eventLog raz').toBe(1);
-    for (const n of ['enqueue', 'outboxDiscard', 'gateOpen', 'deleteDatabase', 'quarantine']) expect(tresc, n).not.toContain(n);
+    for (const n of ['enqueue', 'gateOpen', 'deleteDatabase', 'quarantinePut', 'quarantineMinSeq', 'outboxTake', 'outboxAccept',
+      'outboxReject', 'outboxFail', 'outboxRequeueStale']) expect(tresc, n).not.toContain(n);
   });
 
   it('strażnik nie jest pusty — skan widzi moduły synchronizacji, service worker i strony; wzorzec bazy kolejki przepuszcza tylko vilda_sync_integration.js', () => {
