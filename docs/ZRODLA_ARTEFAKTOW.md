@@ -1555,3 +1555,14 @@ Decyzja właściciela z 2026-11-11 (makieta https://claude.ai/artifact/YRYrYpHeZ
 ```
 
 Bez modułu `VildaLabHistory` (stary zasób w pamięci podręcznej) `WbJestWynikiem` zwraca `false`, więc Notatki, Historia i linki działają jak przed zmianą. Edytor notatki (`CareOpenLegacyNoteEditor`) — od 2026-11-12 (P-WYNIKI-BADAN-EDYTOR) jedna zmiana: opis kotwicy „Notatka ogólna” to `x._wbOpis` (`x` — pole kategorii), odświeżany przez `WbOdswiezOpisOgolnej(x)` na końcu `Wt()` (zmiana szablonu) i w nasłuchu `change` pola kategorii; przy „wynik-badania” tekst `WbOpisOgolnegoWyniku`, inaczej dotychczasowy. Odcisk SHA treści edytora w `care-plan-auth-ui-boundary.test.mjs` odświeżony świadomie. Testy: `tests/unit/lab-result-notes-projection.test.mjs` (prawdziwy sejf, zgodność z widokiem Badań), e2e `tests/e2e/wyniki-badan-karta.spec.mjs`.
+
+## Łatka P-GH-PROGRAM-ODBLOKUJ (`gh_therapy_monitor.js` 62 → 63, 2026-11-12)
+
+Pole „Program terapeutyczny” (`#therProg`) w karcie leczenia GH/IGF-1 jest zablokowane, gdy monitor ma punkty leczenia (program wynika z punktu „Włączenie”). Odblokowanie stało na końcu funkcji rysującej listę punktów (`F` w artefakcie, `renderGHTherapyTable`): `else o.disabled=!1`. Przy pustej liście `F` kończy się wcześniej (wiersz „Brak zapisanych punktów leczenia.”), więc ta gałąź nie wykonywała się nigdy. Po „Wyczyść wszystkie pola” (`clearAllData` → `refreshGHTherapyMonitor()` = `D(); F()`), usunięciu ostatniego punktu albo wczytaniu pacjenta bez punktów GH pole zostawało zablokowane do przeładowania strony. Zmiana wprost w artefakcie, w gałęzi pustej listy przed `return`, z komentarzem `P-GH-PROGRAM-ODBLOKUJ`:
+
+```js
+// F(), gałąź Gpo().length === 0, po odświeżeniu lustra karty zaawansowanej (ue) i przed return:
+try { const program = document.getElementById('therProg'); program && (program.disabled = false); } catch (e) { p('Zignorowany błąd…', e); }
+```
+
+Wartość programu, preparat, dawki i obliczenia bez zmian; blokada przy istniejących punktach i przy edycji punktu (`O`) bez zmian. Test: e2e `tests/e2e/gh-program-odblokowanie.spec.mjs` (DocPro: punkt SNP → pole zablokowane → „Wyczyść wszystkie pola” albo usunięcie ostatniego punktu → pole odblokowane).

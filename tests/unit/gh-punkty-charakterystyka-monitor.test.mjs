@@ -409,7 +409,7 @@ describe('Gmcalc — dawka nowego punktu z wyniku karty i gałąź zapasowa', ()
 });
 
 describe('Reset monitora i odświeżenie z innej ramki', () => {
-  it('vilda:user-state-cleared: lista [], removeModuleKey i BC {clear, tabId}, bez bezpośredniego E; #therProg zostaje zablokowany — stan obecny — do decyzji (pytanie 16)', () => {
+  it('vilda:user-state-cleared: lista [], removeModuleKey i BC {clear, tabId}, bez bezpośredniego E; #therProg odblokowany (pytanie 16, P-GH-PROGRAM-ODBLOKUJ)', () => {
     const atrapa = utworzAtrapeMonitoraGh({ punkty: [WLACZENIE, KONTYNUACJA] });
     atrapa.wyczyscDziennik();
 
@@ -424,8 +424,10 @@ describe('Reset monitora i odświeżenie z innej ramki', () => {
     expect(s.modul).toBeUndefined();
     expect(atrapa.idWierszy()).toEqual([]);
     expect(s.znaczniki.at(-1)).toEqual(['toggleIgfTests', 0]);
-    // #therProg zostaje zablokowany (gałąź odblokowania w F() jest nieosiągalna przy pustej liście).
-    expect(atrapa.pole('therProg').disabled).toBe(true);
+    // Pytanie 16 rozstrzygnięte przez właściciela 2026-11-12 (P-GH-PROGRAM-ODBLOKUJ): przy pustej liście F() odblokowuje
+    // #therProg przed wcześniejszym wyjściem; wcześniej gałąź odblokowania na końcu F() była nieosiągalna i pole zostawało
+    // zablokowane do przeładowania strony.
+    expect(atrapa.pole('therProg').disabled).toBe(false);
   });
 
   it('vilda:module-state-cleared resetuje monitor dla zakresu gh, all, * i bez zakresu; zakres innego modułu nic nie robi', () => {

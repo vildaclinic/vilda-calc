@@ -20569,7 +20569,8 @@ edycji w sytuacji, w której wcześniej zapis szedł bez sygnału. Punktów zapi
   karty GH/IGF-1 zawiesza dziś stronę niezależnie od tej zmiany: pętla odtwarzania stanu w `docpro_state_persist.js`,
   zmierzone także na `audyt` `39d1109` (SW 1.1.91). Zgłoszone osobno.
 - Odblokowanie `#therProg` przy pustej liście i chowanie formularza po resecie monitora — osobny mały PR po decyzji
-  (pytanie 16 projektu).
+  (pytanie 16 projektu). Odblokowanie rozstrzygnięte 2026-11-12 (prośba właściciela, P-GH-PROGRAM-ODBLOKUJ,
+  `gh_therapy_monitor.js` 63; opis w `docs/ZRODLA_ARTEFAKTOW.md`); chowanie formularza po resecie nadal do decyzji.
 
 **Wersje.** `gh_therapy_monitor.js` 49 → 50 (`docpro.html`); precache (append-only); `SW_VERSION` 1.1.172 → 1.1.173
 (+ pin w `tests/unit/klirens-ui-model.test.mjs`); `tests/fixtures/wersje-zasobow.json` — wszystko z `npm run podbij-wersje`
