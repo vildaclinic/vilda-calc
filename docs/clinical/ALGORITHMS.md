@@ -21563,6 +21563,93 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
+## Porzucona zmiana nie wraca przy przeglądzie kolejki, uśpione (P-DZIENNIK-ZDARZEN, E2-PR5c, SW 1.1.518, `vilda_vault.js` 275, 2026-11-12)
+
+**Zmiana kliniczna: nie** — wzory, progi, jednostki, interpretacje i reguły scalania bez zmian. **Działanie aplikacji
+bez zmian (uśpione).** „Porzuć” (`outboxDiscard`) i przegląd kolejki działają tylko przy otwartej bramce kolejki
+(dziennik zdarzeń włączony; dziś zawsze wyłączony). Format danych, schemat IndexedDB i serwer bez zmian; dochodzi tylko
+zapis do istniejącego rekordu `pary` sklepu `meta` bazy kolejki.
+
+Plan: wiersz 9c tabeli „Podział etapu 2”; decyzja z 2026-11-12 (odpowiedź na pytanie w vildaclinic/vilda-calc#938:
+„E2-PR5c tak, ruszaj”).
+
+### E2-PR5c
+
+**Co było** (`audyt` `16955348`). „Porzuć” (E2-PR5b) usuwał wiersz kolejki bez śladu. Przegląd kolejki (E2-PR3a4)
+dopisuje wiersz każdej encji zmienionej w swoim oknie, która nie ma wiersza ani pary w pamięci par — więc przy
+najbliższym przeglądzie (przy odblokowaniu każdej strony, raz na dobę, przegląd pilny) porzucona zmiana wracała jako
+wiersz oczekujący i szła jeszcze raz na serwer (wiersz `rejected` — zwykle znowu odrzucony) albo wracała na listę
+(`oversize`, `unreadable`). Zapis przeglądu zastępował przy tym rekord par parami z odczytu na początku przeglądu, więc
+para zapisana w międzyczasie by ginęła.
+
+**Reguła.**
+- **Porzucenie zostawia pary.** W tej samej transakcji co usunięcie wierszy (sklepy `outbox` i `meta`) `outboxDiscard`
+  dopisuje do rekordu `pary`, dla każdego usuniętego wiersza, parę encji wiersza (`rodzaj|klucz`) z chwilą utworzenia
+  wiersza (`createdAtISO`), a dla wersji (`snap`) także parę karty (`karta|patientId`) z tą samą chwilą: zdarzenie
+  wersji niesie pola karty, a przegląd sprawdza nośnik pól karty (zmiana karty bez nowej wersji — poprawka starszej
+  wersji, gwiazdka, kosz, „Przywróć”) właśnie parą karty. Zostaje późniejsza chwila (para tej encji z chwilą
+  późniejszą, np. ze scalenia z chmury, bez zmian); najwyżej 20 000 par (najpóźniejsze). Bez usuniętego wiersza meta
+  bez zmian; wiersz bez napisów rodzaju, klucza albo chwili jest usuwany bez pary.
+- **Znaczenie pary porzucenia:** zmiana encji z chwili utworzenia wiersza albo wcześniejsza idzie już tylko pełną
+  synchronizacją. Zmianę późniejszą — także zrobioną między utworzeniem wiersza a „Porzuć”, bez nowego wiersza —
+  przegląd dokłada jak zwykle; nowy zapis z emisją daje zwykły wiersz.
+- **Pary utrwalone od razu,** więc porzucona zmiana nie wraca ani przy przeglądzie w tym samym dokumencie, ani po
+  przeładowaniu strony czy przejściu na inną stronę (przegląd przy odblokowaniu czyta rekord `pary`).
+- **Zapis przeglądu czyta pary utrwalone w swojej transakcji** i dokłada je do swoich (zostaje późniejsza chwila), dalej
+  jak dotąd próg okna i limit 20 000. Para porzucenia zapisana w trakcie przeglądu (po odczycie stanu kolejki) zostaje;
+  zostają też pary zakończonego w międzyczasie przeglądu innej karty przeglądarki.
+- **Wygasanie** jak dotąd: zapis przeglądu zostawia tylko pary z chwilą w oknie następnego przeglądu, więc para
+  porzucenia wypada dopiero wtedy, gdy porzucona zmiana i tak jest poza oknem.
+
+**Uśpienie.** Bez zmian: `outboxDiscard` i przegląd kończą się na bramce (PG1 i strażniki uśpienia bez zmian).
+
+**Testy.** Dane wyłącznie fikcyjne.
+- `tests/unit/sync-dziennik-outbox.test.mjs` — 6 nowych przypadków na prawdziwym sejfie w oknie uprzęży (atrapa
+  IndexedDB):
+  - PG30: wiersze odrzucone przez serwer porzucone — pary w meta od razu (encja, karta wersji, chwila utworzenia
+    wiersza); przeładowanie strony bez przeglądu w tym dokumencie, odblokowanie i `sweepOutbox()` — 0 wierszy; zmiana
+    encji bez wiersza po utworzeniu wiersza, przed porzuceniem — przegląd ją dokłada (wiersz oczekujący);
+  - PG31: gwiazdka starszej wersji — porzucony wiersz wersji pokrywa nośnik pól karty: przegląd nie dokłada wersji
+    najnowszej, po przeładowaniu 0;
+  - PG32: porzucenie w trakcie przeglądu (atrapa wstrzymana po odczycie stanu kolejki) — zapis przeglądu zostawia pary
+    porzucenia, po przeładowaniu 0; para przeglądu późniejsza niż para utrwalona tej encji (drugie scalenie zmienionej
+    notatki bliźniaka) zostaje;
+  - PG33: porzucenie bez usuniętego wiersza (także bez rekordu par) — meta bez zmian; wiersze bez chwili albo klucza —
+    usunięte, bez par; pamięć pełna (20 000 par) — pary porzucenia i późniejsza para tej encji zostają, najstarsza
+    wypada.
+- `tests/e2e/sync-zdarzenia-wysylka.spec.mjs` (przypadek E2-PR5b) — bez czekania na koniec przeglądu z odblokowania
+  strony Ustawień przed „Porzuć”; na końcu przeładowanie strony Ustawień i `sweepOutbox()`: encje porzuconych wierszy
+  nie wracają do kolejki.
+
+**Czerwone na bazie** (sejf `b2f4266b` — ta sama treść co `16955348` — z testami tego PR): 5 z 6 przypadków PG
+(PG30 ×2, PG31, PG32 porzucenia w trakcie przeglądu, PG33) i przypadek e2e (porzucona wizyta wraca po przeładowaniu;
+w testach jednostkowych wraca m.in. hasło konta, brak par porzucenia). Zielony także na bazie (strażnik): PG32 drugiego
+scalenia.
+
+**Mutanty.** 13, wszystkie zabite testami: porzucenie bez zapisu par, porzucenie nadpisuje pary utrwalone, porzucenie
+bez limitu par, wcześniejsza chwila porzucenia nadpisuje późniejszą parę, bez pary karty dla wersji, chwila porzucenia
+zamiast chwili utworzenia wiersza, bez sprawdzenia pól wiersza, zapis meta także bez usuniętego wiersza, transakcja
+porzucenia bez sklepu `meta`, zapis przeglądu bez par utrwalonych w międzyczasie, zapis przeglądu bez progu okna, pary
+utrwalone nadpisują późniejsze pary przeglądu, limit par zostawia najstarsze.
+
+**Kontrola granic.** Skróty obrazu sejfu przeliczone (`tools/check_clinical_workspace_boundary.mjs`,
+`runtime/clinical-workspace-v1/manifest.json`); fragment natywny i synchronizacja bez zmian.
+
+**Ograniczenia.**
+- **Zmiana wysłana i przyjęta przez serwer może wrócić po przejściu na inną stronę** (poza tym PR; do decyzji
+  właściciela). Para wiersza przyjętego (`outboxAccept`, E2-PR3a4) żyje tylko w pamięci dokumentu do najbliższego
+  zakończonego przeglądu w tym dokumencie. Po przeładowaniu strony przed takim przeglądem przegląd przy odblokowaniu
+  dokłada tę zmianę jeszcze raz (sprawdzone testem: po przyjęciu wszystkich wierszy i przeładowaniu wróciły wszystkie
+  4). Danych to nie dotyczy (ta sama treść), ale zmiana wychodzi drugi raz.
+- Para karty dla wersji powstaje z klucza wiersza (część przed pierwszym „/”); identyfikatory kart aplikacji to UUID.
+
+**Następne PR.** E2-W1 (wdraża właściciel), test właściciela (2 dni, ukryty przełącznik), E2-PR6.
+
+**Wersje.** `vilda_vault.js?v=274→275` (za nim `vilda_chrome.js?v=283`, `vilda_session_bridge.js?v=200`); SW 1.1.517 →
+**1.1.518**.
+
+**Cofnięcie** = rewert PR (bez migracji; pary porzucenia w rekordzie `pary` wygasają same przy kolejnych przeglądach).
+
 ## Zmiany do wyjaśnienia w Ustawieniach: porzucenie zmiany i zwolnienie zdarzenia, uśpione (P-SYNC-WIDOK-KOLEJKI, E2-PR5b, SW 1.1.517, `inline_ustawienia_07.js` 5, 2026-11-12)
 
 **Zmiana kliniczna: nie** — wzory, progi, jednostki, interpretacje i reguły scalania bez zmian. **Działanie aplikacji
@@ -21631,7 +21718,7 @@ bazie).
 - `tests/e2e/sync-zdarzenia-wysylka.spec.mjs` — nowy przypadek na prawdziwej stronie Ustawień: serwer odrzuca zmiany
   karty (wiersze `rejected`), zdarzenie nieczytelne w kwarantannie; widok obu list, „Porzuć” (z Anuluj) dla każdego
   wiersza i „Zwolnij” — kolejka i kwarantanna puste, część znika. Test czeka na koniec przeglądu kolejki z odblokowania
-  strony Ustawień przed „Porzuć” (ograniczenie niżej).
+  strony Ustawień przed „Porzuć” (ograniczenie niżej; od E2-PR5c bez czekania).
 
 **Czerwone na bazie** (`origin/audyt` `d7091f8f` z testami tego PR): 12 z 13 przypadków KZ, strażniki KW22a i KW22b,
 strażnik U2(b) bloku widoku i przypadek e2e. Zielony także na bazie: KZ1 (dowód „jak dziś”).
@@ -21655,7 +21742,8 @@ wierszy z tego urządzenia, przycisk akcji bez koloru ostrzegawczego.
   Skutek: porzucona zmiana pojawia się znowu na liście (`oversize`, `unreadable`) albo jest wysyłana jeszcze raz
   (`rejected` — zwykle znowu odrzucona). Danych to nie dotyczy (pełna synchronizacja). Poprawka wymaga zmiany w sejfie
   (porzucenie zapisuje parę encja–chwila, więc przegląd traktuje zmianę jako pokrytą) — osobny PR, do decyzji
-  właściciela.
+  właściciela. **Od E2-PR5c** porzucenie zostawia pary w pamięci przeglądu i porzucona zmiana nie wraca (wpis
+  P-DZIENNIK-ZDARZEN, E2-PR5c).
 - Przy niepustej liście „Z tego urządzenia” widok czyta nagłówki wszystkich kart (nazwy) przy każdej przebudowie listy.
 - Po „Zwolnij” karta na tym urządzeniu może być niepełna do najbliższej pełnej synchronizacji (ostrzeżenie w arkuszu;
   test A ≡ B p. 7d).
@@ -23528,7 +23616,8 @@ starszy niż zmiana jej nie pokrywa — nowy wiersz zastępuje oczekujący na og
 powstają (1) przy każdym scaleniu z chmury poza importem (`mergeSyncPayload`, `applyEncryptedDelta`,
 `applyEncryptedEvent`), z ładunku, przed zapisami scalania — obejmują więc także zapisy faz kosza w trakcie stosowania
 zdarzenia; (2) przy przyjęciu wierszy (`outboxAccept`) — z chwili utworzenia usuniętego wiersza, więc wysłana zmiana
-nie wychodzi drugi raz. Zwykły zbiór kluczy nie wystarcza: w etapie 2 pobranie z chmury scala pełny ładunek, który
+nie wychodzi drugi raz; (3) od E2-PR5c przy porzuceniu wierszy (`outboxDiscard`) — encja wiersza i karta wersji,
+utrwalane od razu w transakcji porzucenia (wpis E2-PR5c). Zwykły zbiór kluczy nie wystarcza: w etapie 2 pobranie z chmury scala pełny ładunek, który
 nazywa każdą encję konta, więc zbiór wyłączyłby z przeglądu cały sejf; para przepuszcza zmianę lokalną nowszą niż stan
 w chmurze. Import z pliku (import karty, scalenie i odtworzenie kopii konta) par nie daje — to zmiana lokalna (partia,
 E2-PR3a3). Pamięć jest ograniczona i wygasa: zostają tylko pary z chwilą w oknie następnego przeglądu, najwyżej 20 000

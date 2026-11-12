@@ -1,11 +1,12 @@
-// P-DZIENNIK-ZDARZEN (E2-PR3a4, E2-PR3b) — przegląd kolejki zmian (VildaVault._eventLog.sweepOutbox; uśpione: przy zamkniętej
-// bramce każde wywołanie kończy się na bramce). Przegląd porównuje encje sejfu z wierszami kolejki vilda_sync_<userId>
-// i dokłada zmianę bez wiersza (limit blokady konta, brak miejsca, blokada sejfu, zapis przy zamkniętej bramce): okno od
-// znacznika przeglądu − 10 min (rekord „przeglad” sklepu meta bazy kolejki; pierwszy znacznik — klucz ostatniej wysyłki
-// vilda-sync-last-push-ok-v1:<userId>, potem chwila ostatniego scalenia, potem „wszystko”), pokrycie wierszem
-// o createdAtISO nie wcześniejszym niż chwila zmiany albo parą z pamięci par (scalanie z chmury, wiersze przyjęte, pary
-// utrwalone w rekordzie „pary”). Przegląd jest krokiem łańcucha dopisań konta: rusza na początku odblokowania (z przeglądem
-// sierot), po bezczynności łańcucha (przegląd pilny po limicie blokady konta albo należny po dobie) i z sweepOutbox().
+// P-DZIENNIK-ZDARZEN (E2-PR3a4, E2-PR3b, E2-PR5c) — przegląd kolejki zmian (VildaVault._eventLog.sweepOutbox; uśpione:
+// przy zamkniętej bramce każde wywołanie kończy się na bramce). Przegląd porównuje encje sejfu z wierszami kolejki
+// vilda_sync_<userId> i dokłada zmianę bez wiersza (limit blokady konta, brak miejsca, blokada sejfu, zapis przy zamkniętej
+// bramce): okno od znacznika przeglądu − 10 min (rekord „przeglad” sklepu meta bazy kolejki; pierwszy znacznik — klucz
+// ostatniej wysyłki vilda-sync-last-push-ok-v1:<userId>, potem chwila ostatniego scalenia, potem „wszystko”), pokrycie
+// wierszem o createdAtISO nie wcześniejszym niż chwila zmiany albo parą z pamięci par (scalanie z chmury, wiersze przyjęte,
+// wiersze porzucone, pary utrwalone w rekordzie „pary”). Przegląd jest krokiem łańcucha dopisań konta: rusza na początku
+// odblokowania (z przeglądem sierot), po bezczynności łańcucha (przegląd pilny po limicie blokady konta albo należny po
+// dobie) i z sweepOutbox().
 // Prawdziwy sejf w oknie uprzęży tests/support/okno-magazynu.mjs (emisja: true, przeglad: true, moduły punktu odzyskiwania)
 // na adapterze IndexedDB sejfu nad atrapą tests/support/atrapa-indexeddb.mjs (tryb „Komputer prywatny”, jeśli przypadek
 // nie mówi inaczej), ładowany z kopii źródła z licznikiem (tests/support/sejf-bez-wstawek.mjs: emisje, przeglądy i odczyty
@@ -72,6 +73,17 @@
 //   PG29 pamięć braków: wpis łańcucha bez wiersza (limit blokady konta, blokada sejfu) przegląd dokłada bez względu na
 //        okno i na wiersz tej encji sprzed usunięcia karty (wersje z pliku importu z chwilami sprzed okna); następny
 //        przegląd nic.
+//   PG30 porzucenie (E2-PR5c): wiersze odrzucone przez serwer porzucone — pary w meta od razu (encja wiersza i karta
+//        wersji, chwila utworzenia wiersza); przeładowanie strony bez przeglądu w tym dokumencie, odblokowanie
+//        i sweepOutbox(): 0; zmiana encji bez wiersza po utworzeniu wiersza, przed porzuceniem — przegląd ją dokłada.
+//   PG31 gwiazdka starszej wersji: porzucony wiersz wersji pokrywa też nośnik pól karty (snap najnowszej wersji) —
+//        przegląd nic, po przeładowaniu 0.
+//   PG32 porzucenie w trakcie przeglądu (po odczycie stanu kolejki): zapis przeglądu zostawia pary porzucenia
+//        (czyta pary utrwalone w swojej transakcji); po przeładowaniu 0. Para przeglądu późniejsza niż para utrwalona
+//        tej encji (drugie scalenie zmienionej notatki bliźniaka) zostaje — po przeładowaniu 0.
+//   PG33 porzucenie bez usuniętego wiersza (także bez rekordu par) — meta bez zmian; wiersze bez chwili utworzenia albo
+//        bez klucza — usunięte, bez par; pamięć pełna (20 000 par) — pary porzucenia i późniejsza para tej encji zostają,
+//        najstarsza wypada.
 //
 // Każdy przypadek poza strażnikami PG10 i PG25 zaczyna od sprawdzenia, że sejf ma część przeglądu
 // (VildaVault._eventLog.sweepOutbox).
@@ -82,6 +94,10 @@
 // Czerwone na bazie E2-PR3b (sejf 4994fef9 — bez haków scalania — z tym plikiem i uprzężą tego PR): 1 z 40 — PG23
 // (ratunek: po scaleniu bez wierszy z haków; przegląd dokłada pnote). Zielone z natury (strażniki regresji): pozostałe 39,
 // w tym PG23 planu opieki (zwykłe scalenie planu bez wiersza z haka).
+// Czerwone na bazie E2-PR5c (sejf b2f4266b — porzucenie bez par — z tym plikiem): 5 z 46 — PG30 ×2, PG31, PG32
+// (porzucenie w trakcie przeglądu), PG33 (na bazie porzucona zmiana wraca przy przeglądzie, m.in. hasło konta; brak par
+// porzucenia w meta). Zielony z natury (strażnik regresji): PG32 drugiego scalenia (zapis przeglądu bez par utrwalonych
+// w międzyczasie też zostawia późniejszą parę).
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   PRZEDROSTEK_KASOWANIA, SKRYPTY_PUNKTU, bazaKolejki, drugieOkno, naAtrapie, nazwaBazy, nazwaBlokady, oknoMagazynu,
@@ -1270,5 +1286,215 @@ describe('PG29: pamięć braków', () => {
     expect(po(o, s0), 'przegląd przy odblokowaniu').toEqual(snapy(k));
     tik(MIN);
     expect((await o.ev.sweepOutbox()).dopisane, 'następny przegląd').toBe(0);
+  }, 60_000);
+});
+
+// ── PG30–PG33 ────────────────────────────────────────────────────────────────────────────────────────────────────────
+// Porzucenie (outboxDiscard z potwierdzeniem, decyzja użytkownika w Ustawieniach) zostawia pary w utrwalonej pamięci par:
+// encja wiersza i — dla wersji — karta, z chwilą utworzenia wiersza (E2-PR5c). Wiersze odrzucone przez serwer
+// (outboxReject, kod 'invalid') jak w przeglądarce przed „Porzuć”.
+async function odrzucWszystkie(o) {
+  const w = o.kolejka('A');
+  expect(w.length, 'wiersze do odrzucenia').toBeGreaterThan(0);
+  expect(await o.ev.outboxReject(w.map((x) => ({ eid: x.eid, code: 'invalid' }))), 'odrzucenie').toMatchObject({ ok: true });
+  await o.gotowe();
+  const po = o.kolejka('A');
+  expect(po.map((x) => x.state), 'stany po odrzuceniu').toEqual(w.map(() => 'rejected'));
+  return po;
+}
+async function porzuc(o, wiersze) {
+  const r = await o.ev.outboxDiscard(wiersze.map((x) => x.eid), { potwierdzone: true });
+  expect(r, 'porzucenie').toMatchObject({ ok: true, pominiete: [] });
+  expect(r.usuniete, 'usunięte').toHaveLength(wiersze.length);
+  await o.gotowe();
+}
+// Oczekiwane pary porzuconych wierszy: klucz encji i (wersje) karta — późniejsza chwila utworzenia wiersza.
+function paryPorzucenia(wiersze) {
+  const m = {};
+  const kryj = (k, c) => { if (!m[k] || c > m[k]) m[k] = c; };
+  for (const w of wiersze) {
+    kryj(klucz(w), w.createdAtISO);
+    if (w.kind === 'snap') kryj(`karta|${w.entityKey.split('/')[0]}`, w.createdAtISO);
+  }
+  return m;
+}
+const wybierz = (obiekt, klucze) => Object.fromEntries(klucze.map((k) => [k, obiekt[k]]));
+
+describe('PG30–PG33: porzucenie a pamięć par', () => {
+  it('PG30: wiersze odrzucone porzucone — pary w meta od razu (encja, karta wersji, chwila utworzenia wiersza); przeładowanie strony bez przeglądu w tym dokumencie i odblokowanie: 0, sweepOutbox(): 0', async () => {
+    const o = await okno();
+    await o.zaloguj('A');
+    await o.gotowe();
+    tik(MIN);
+    const k = await karta(o, 1);
+    const n = await notatkaBiblioteki(o);
+    await o.gotowe();
+    const wiersze = await odrzucWszystkie(o);
+    expect(wiersze.map(klucz), 'wiersze karty i notatki').toEqual(expect.arrayContaining([...snapy(k), `note|${n}`]));
+    tik(MIN);
+    await porzuc(o, wiersze);
+    expect(o.kolejka('A'), 'kolejka po porzuceniu').toEqual([]);
+    const oczekiwane = paryPorzucenia(wiersze);
+    expect(Object.keys(oczekiwane), 'para karty').toContain(`karta|${k.P}`);
+    expect(wybierz(metaKonta(o).pary, Object.keys(oczekiwane)), 'pary w meta').toEqual(oczekiwane);
+    tik(MIN);
+    const o2 = await przeladuj(o);
+    await o2.zaloguj('A');
+    await o2.gotowe();
+    expect(o2.l.przeglady).toEqual([{ sieroty: true }]);
+    expect(o2.kolejka('A'), 'po przeładowaniu').toEqual([]);
+    tik(MIN);
+    expect(await o2.ev.sweepOutbox(), 'następny przegląd').toMatchObject({ ok: true, dopisane: 0 });
+    await o2.gotowe();
+    expect(o2.kolejka('A'), 'po przeglądzie').toEqual([]);
+  }, 60_000);
+
+  it('PG30: zmiana encji bez wiersza po utworzeniu wiersza, przed porzuceniem — przegląd ją dokłada jako wiersz oczekujący (para pokrywa tylko stan z chwili utworzenia wiersza, nie z chwili porzucenia)', async () => {
+    const o = await okno();
+    await o.zaloguj('A');
+    await o.gotowe();
+    tik(MIN);
+    const n = await notatkaBiblioteki(o);
+    await o.gotowe();
+    const wiersze = await odrzucWszystkie(o);
+    tik(MIN);
+    await o.bezEmisji(() => o.v.saveNote({ id: n, title: 'Fikcyjny szablon', category: 'badanie', body: 'Fikcyjna treść 2.' }));
+    tik(MIN);
+    await porzuc(o, wiersze);
+    tik(MIN);
+    const sw = await o.ev.sweepOutbox();
+    await o.gotowe();
+    expect([sw.ok, sw.dopisane]).toEqual([true, 1]);
+    expect(o.kolejka('A').map((w) => [klucz(w), w.state])).toEqual([[`note|${n}`, 'pending']]);
+  }, 60_000);
+
+  it('PG31: zmiana karty bez nowej wersji (gwiazdka starszej wersji) — porzucony wiersz wersji pokrywa też nośnik pól karty: przegląd nie dokłada snap najnowszej wersji; po przeładowaniu 0', async () => {
+    const o = await okno();
+    await o.zaloguj('A');
+    const k = await karta(o, 1);
+    await o.gotowe();
+    expect(await o.ev.outboxAccept(o.kolejka('A').map((w) => w.eid)), 'wysłane').toMatchObject({ ok: true });
+    await o.gotowe();
+    tik(MIN);
+    await o.v.setSnapshotPinned(k.P, k.S1, true);
+    tik();
+    await o.gotowe();
+    const wiersze = await odrzucWszystkie(o);
+    expect(wiersze.map(klucz), 'wiersz emisji gwiazdki').toEqual([`snap|${k.P}/${k.S1}`]);
+    await porzuc(o, wiersze);
+    expect(metaKonta(o).pary[`karta|${k.P}`], 'para karty').toBe(wiersze[0].createdAtISO);
+    tik(MIN);
+    expect(await o.ev.sweepOutbox(), 'przegląd').toMatchObject({ ok: true, dopisane: 0 });
+    await o.gotowe();
+    expect(o.kolejka('A'), 'po przeglądzie').toEqual([]);
+    tik(MIN);
+    const o2 = await przeladuj(o);
+    await o2.zaloguj('A');
+    await o2.gotowe();
+    expect(o2.kolejka('A'), 'po przeładowaniu').toEqual([]);
+  }, 60_000);
+
+  it('PG32: porzucenie w trakcie przeglądu (atrapa wstrzymana na odczycie listy kart, po odczycie stanu kolejki) — zapis przeglądu zostawia pary porzucenia; po przeładowaniu i odblokowaniu 0', async () => {
+    const o = await okno();
+    await o.zaloguj('A');
+    await o.gotowe();
+    tik(MIN);
+    await karta(o, 1);
+    await o.gotowe();
+    const wiersze = await odrzucWszystkie(o);
+    tik(MIN);
+    const lista = wstrzymaj(o, { przy: 'success', baza: `vilda_user_${o.uid}`, sklep: 'patients' });
+    const p = o.ev.sweepOutbox();
+    await lista.czeka;
+    // Bez emissionsSettled() przed zwolnieniem: przegląd (krok łańcucha konta) czeka na wstrzymanej atrapie.
+    const d = await o.ev.outboxDiscard(wiersze.map((x) => x.eid), { potwierdzone: true });
+    expect(d.usuniete, 'usunięte w trakcie przeglądu').toHaveLength(wiersze.length);
+    lista.zwolnij();
+    expect(await p, 'przegląd w toku').toMatchObject({ ok: true, dopisane: 0 });
+    await o.gotowe();
+    const oczekiwane = paryPorzucenia(wiersze);
+    expect(wybierz(metaKonta(o).pary, Object.keys(oczekiwane)), 'pary w meta po zapisie przeglądu').toEqual(oczekiwane);
+    tik(MIN);
+    const o2 = await przeladuj(o);
+    await o2.zaloguj('A');
+    await o2.gotowe();
+    expect(o2.kolejka('A'), 'po przeładowaniu').toEqual([]);
+  }, 60_000);
+
+  it('PG32: zapis przeglądu — para przeglądu z chwilą późniejszą niż para utrwalona tej encji zostaje (drugie scalenie zmienionej notatki bliźniaka); po przeładowaniu 0', async () => {
+    const o = await okno();
+    await o.zaloguj('A');
+    await o.gotowe();
+    const B = await blizniak(o);
+    tik();
+    const nb = await notatkaBiblioteki(B, 'Fikcyjny szablon B');
+    await B.cisza();
+    await o.v.mergeSyncPayload(await B.v.exportSyncPayload());
+    tik();
+    await o.gotowe();
+    expect(await o.ev.sweepOutbox(), 'przegląd po pierwszym scaleniu').toMatchObject({ ok: true, dopisane: 0 });
+    await o.gotowe();
+    const t1 = metaKonta(o).pary[`note|${nb}`];
+    expect(typeof t1, 'para utrwalona po pierwszym scaleniu').toBe('string');
+    tik(MIN);
+    await B.v.saveNote({ id: nb, title: 'Fikcyjny szablon B', category: 'badanie', body: 'Fikcyjna treść 2.' });
+    tik();
+    await B.cisza();
+    await o.v.mergeSyncPayload(await B.v.exportSyncPayload());
+    tik();
+    await o.gotowe();
+    expect(await o.ev.sweepOutbox(), 'przegląd po drugim scaleniu').toMatchObject({ ok: true, dopisane: 0 });
+    await o.gotowe();
+    expect(metaKonta(o).pary[`note|${nb}`] > t1, 'para po drugim scaleniu późniejsza').toBe(true);
+    tik(MIN);
+    const o2 = await przeladuj(o);
+    const n0 = ostatni(o2);
+    await o2.zaloguj('A');
+    await o2.gotowe();
+    expect(po(o2, n0), 'po przeładowaniu').toEqual([]);
+  }, 60_000);
+
+  it('PG33: porzucenie bez usuniętego wiersza (nieznany eid, pusta lista, także bez rekordu par) — meta bez zmian; wiersze bez chwili utworzenia albo bez klucza — usunięte, bez par; pamięć pełna (20 000 par) — pary porzucenia zostają, późniejsza para tej encji też, najstarsza wypada', async () => {
+    const o = await okno();
+    await o.zaloguj('A');
+    await o.gotowe();
+    tik(MIN);
+    await notatkaBiblioteki(o);
+    await o.gotowe();
+    const przed = o.meta('A');
+    expect(await o.ev.outboxDiscard(['00000000-0000-4000-8000-0000000000ff'], { potwierdzone: true }), 'nieznany eid')
+      .toEqual({ ok: true, usuniete: [], pominiete: ['00000000-0000-4000-8000-0000000000ff'] });
+    expect(await o.ev.outboxDiscard([], { potwierdzone: true }), 'pusta lista').toEqual({ ok: true, usuniete: [], pominiete: [] });
+    await o.gotowe();
+    expect(o.meta('A'), 'meta bez zmian').toEqual(przed);
+    await naAtrapie(o.idb, nazwaBazy(o.uid), ['meta'], 'readwrite', (tx) => { tx.objectStore('meta').delete('pary'); });
+    const bezPar = o.meta('A');
+    expect(await o.ev.outboxDiscard(['00000000-0000-4000-8000-0000000000ff'], { potwierdzone: true }), 'nieznany eid bez rekordu par')
+      .toMatchObject({ ok: true, usuniete: [] });
+    await o.gotowe();
+    expect(o.meta('A'), 'bez rekordu par — meta bez zmian').toEqual(bezPar);
+    const bez = wierszKolejki(9001, { createdAtISO: null, kind: 'note', entityKey: 'fikcyjna-notatka-bez-chwili' });
+    const bezKlucza = wierszKolejki(9002, { createdAtISO: iso(), kind: 'snap', entityKey: null });
+    await naAtrapie(o.idb, nazwaBazy(o.uid), ['outbox'], 'readwrite', (tx) => { tx.objectStore('outbox').put(bez); tx.objectStore('outbox').put(bezKlucza); });
+    expect((await o.ev.outboxDiscard([bez.eid, bezKlucza.eid], { potwierdzone: true })), 'wiersze bez chwili i bez klucza')
+      .toEqual({ ok: true, usuniete: [bez.eid, bezKlucza.eid], pominiete: [] });
+    await o.gotowe();
+    expect(o.kolejka('A').map((w) => w.eid), 'wiersze usunięte').not.toEqual(expect.arrayContaining([bez.eid]));
+    expect(Object.keys(metaKonta(o).pary || {}), 'bez par tych wierszy').toEqual([]);
+    const pelna = {};
+    for (let i = 0; i < 20000; i += 1) pelna[`note|fikcyjna-para-${i}`] = iso(START - (i + 1) * 1000);
+    const wiersze = await odrzucWszystkie(o);
+    // Para tej samej encji z chwilą późniejszą niż utworzenie wiersza (np. scalenie z chmury) zostaje.
+    const nota = wiersze.find((w) => w.kind === 'note');
+    const pozniej = iso(Date.parse(nota.createdAtISO) + MIN);
+    pelna[klucz(nota)] = pozniej;
+    await naAtrapie(o.idb, nazwaBazy(o.uid), ['meta'], 'readwrite', (tx) => { tx.objectStore('meta').put({ k: 'pary', v: pelna }); });
+    await porzuc(o, wiersze);
+    const pary = metaKonta(o).pary;
+    expect(Object.keys(pary), 'najwyżej 20 000 par').toHaveLength(20000);
+    expect(wybierz(pary, Object.keys(paryPorzucenia(wiersze))), 'pary porzucenia')
+      .toEqual({ ...paryPorzucenia(wiersze), [klucz(nota)]: pozniej });
+    expect(pary['note|fikcyjna-para-19999'], 'najstarsza para').toBeUndefined();
+    expect(pary['note|fikcyjna-para-0'], 'najmłodsza para z pamięci').toBe(iso(START - 1000));
   }, 60_000);
 });
