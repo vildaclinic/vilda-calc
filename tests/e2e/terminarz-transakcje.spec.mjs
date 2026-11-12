@@ -80,6 +80,19 @@ async function czekajNaTerminarz(page) {
     const a = document.getElementById('vilda-auth-ui-root');
     if (a) a.style.display = 'none';
   });
+  // Test odblokowuje sejf programowo, z pominięciem ekranu logowania. W aplikacji zamknięcie tego
+  // ekranu ogłasza `vilda:auth-hidden` i Terminarz odświeża wtedy kalendarz. Bez tego sygnału odczyt
+  // rozpoczęty w trakcie odblokowania bywa porzucany: sejf zmienia token sesji synchronizacji
+  // w tym samym przebiegu powiadomień `onUnlock`, w którym Terminarz zaczyna czytać, a porzuconego
+  // odczytu nic nie ponawia — strona zostaje na ekranie „Zaloguj się, aby zobaczyć terminarz”
+  // (ok. 3% uruchomień pod obciążeniem; scenariusze bez `idzDoTygodnia` czekały wtedy 60 s na
+  // `#tzAddBtn`). Ogłaszamy więc ten sam sygnał co aplikacja i czekamy na narysowany kalendarz.
+  await page.evaluate(() => document.dispatchEvent(new CustomEvent('vilda:auth-hidden')));
+  await page.waitForFunction(
+    () =>
+      !document.querySelector('#terminarzRoot .terminarz-locked') &&
+      Boolean(document.querySelector('#terminarzRoot .tz-vbody')),
+  );
   await page.waitForTimeout(300);
 }
 
