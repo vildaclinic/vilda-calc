@@ -7558,16 +7558,45 @@ async function Bob_przyjmij(eids) {
     return Bob_nieprzewidziany(x);
   }
 }
-// outboxDiscard(eids, { potwierdzone: true }): jawna decyzja uzytkownika — usuwa w kazdym stanie.
+// outboxDiscard(eids, { potwierdzone: true }): jawna decyzja uzytkownika — usuwa w kazdym stanie. Ta sama transakcja
+// dopisuje pary usunietych wierszy (Bob_paryPorzucenia) do utrwalonej pamieci par (rekord 'pary' sklepu meta, zostaje
+// pozniejsza chwila, najwyzej Bob_PARY_MAKS), wiec przeglad nie dopisze porzuconej zmiany ponownie — ani w tym
+// dokumencie, ani po przeladowaniu; nowsza zmiana tej encji idzie jak zwykle (E2-PR5c). Bez usunietego wiersza meta
+// bez zmian.
 async function Bob_porzuc(eids, opcje) {
   try {
     const odm = Bob_wejscie() || (Bob_tablica(eids) && Bev_obiekt(opcje) && opcje.potwierdzone === true ? null : 'argument');
     if (odm) return Bob_odmowa(odm);
-    const praca = Bob_pracaPoEid(eids, Bob_samEid, function () { return 'usun'; }, Bob_wynikUsuniecia);
-    return await Bob_naBazie(b, Bses_opcje(null), ['outbox'], 'readwrite', { usuniete: [], pominiete: [] }, praca);
+    const usuwane = new Map();
+    const praca = Bob_pracaPoEid(eids, Bob_samEid, function (w) {
+      usuwane.set(w.eid, w);
+      return 'usun';
+    }, function (k, zmienione, pominiete) {
+      Bob_wynikUsuniecia(k, zmienione, pominiete);
+      if (!zmienione.length) return;
+      const meta = k.sklep('meta');
+      k.req(meta.get(Bob_PARY), function (x) {
+        const m = Bob_paryZRekordu(x, new Map());
+        zmienione.forEach(function (eid) {
+          Bob_paryPorzucenia(usuwane.get(eid)).forEach(function (p) { Bob_kryj(m, p[0], p[1]); });
+        });
+        k.req(meta.put({ k: Bob_PARY, v: Bob_paryObiekt(m, '') }));
+      });
+    });
+    return await Bob_naBazie(b, Bses_opcje(null), ['outbox', 'meta'], 'readwrite', { usuniete: [], pominiete: [] }, praca);
   } catch (x) {
     return Bob_nieprzewidziany(x);
   }
+}
+// Pary porzuconego wiersza (E2-PR5c): encja wiersza, a dla wersji takze karta (zdarzenie wersji niesie pola karty,
+// a przeglad sprawdza nosnik pol karty para karty), obie z chwila utworzenia wiersza — zmiana z tej chwili albo
+// wczesniejsza idzie juz tylko pelna synchronizacja. Wiersz bez napisow rodzaju, klucza i chwili — bez par.
+function Bob_paryPorzucenia(w) {
+  if (!Bev_obiekt(w) || typeof w.kind !== 'string' || typeof w.entityKey !== 'string' || typeof w.createdAtISO !== 'string') return [];
+  const out = [[w.kind + '|' + w.entityKey, w.createdAtISO]];
+  const i = w.kind === 'snap' ? w.entityKey.indexOf('/') : -1;
+  if (i > 0) out.push(['karta|' + w.entityKey.slice(0, i), w.createdAtISO]);
+  return out;
 }
 // outboxReject([{ eid, code }]): pending/inflight → oversize (code 'oversize') albo rejected; kod spoza bialej listy
 // zapisany jako 'invalid'; nigdy nie usuwa; zaden wpis nie zostawia partii w locie.
@@ -8193,7 +8222,8 @@ async function Bob_poTrybie(p) {
 // ostatniej udanej wysylki z tego urzadzenia (klucz Bob_KLUCZ_WYSYLKI:<userId>, zapisuje go integracja — tu tylko
 // odczyt), potem z chwili ostatniego scalenia z chmury, potem okno bez progu (kazda encja). Pamiec par: encja ->
 // chwila, do ktorej chmura ma jej stan (pary ze scalania z chmury w tym dokumencie, z wierszy przyjetych i utrwalone
-// w rekordzie 'pary' sklepu meta); przeglad pomija encje, ktorej para ma chwile nie wczesniejsza niz chwila zmiany.
+// w rekordzie 'pary' sklepu meta) albo do ktorej jej zmiana idzie tylko pelna synchronizacja (wiersz porzucony,
+// utrwalona od razu — E2-PR5c); przeglad pomija encje, ktorej para ma chwile nie wczesniejsza niz chwila zmiany.
 // Utrwalone tylko pary z chwila w oknie nastepnego przegladu, najwyzej Bob_PARY_MAKS (najpozniejsze chwile).
 const Bob_PRZEGLAD = 'przeglad';
 const Bob_PARY = 'pary';
@@ -8237,7 +8267,7 @@ async function Bob_przegladStan(uid, s) {
       if (Bev_obiekt(x) && typeof x.v === 'string') st.znacznik = x.v;
     });
     k.req(meta.get(Bob_PARY), function (x) {
-      if (Bev_obiekt(x) && Bev_obiekt(x.v)) Object.keys(x.v).forEach(function (kl) { Bob_kryj(st.pary, kl, x.v[kl]); });
+      Bob_paryZRekordu(x, st.pary);
     });
     k.req(k.sklep('outbox').openCursor(), function (c) {
       if (!c) return;
@@ -8249,22 +8279,36 @@ async function Bob_przegladStan(uid, s) {
     });
   });
 }
-// Zapis po zakonczonym przegladzie, jedna transakcja readwrite na meta istniejacej bazy (bez tworzenia): znacznik :=
-// start i pary z chwila w nowym oknie (najwyzej Bob_PARY_MAKS, najpozniejsze); znacznik nowszy niz start (przeglad
-// innej karty przegladarki) zostaje razem ze swoimi parami.
-async function Bob_przegladZapisz(uid, s, start, pary) {
-  const prog = Bob_cofnij(start, Bob_MARGINES_MS);
+// Pary rekordu 'pary' sklepu meta dopisane do mapy m (zostaje pozniejsza chwila); zly ksztalt — bez zmiany. Wynik: m.
+function Bob_paryZRekordu(x, m) {
+  if (Bev_obiekt(x) && Bev_obiekt(x.v)) Object.keys(x.v).forEach(function (kl) { Bob_kryj(m, kl, x.v[kl]); });
+  return m;
+}
+// Tresc rekordu 'pary': pary z mapy z chwila pozniejsza niz prog ('' — kazda), najwyzej Bob_PARY_MAKS (najpozniejsze).
+function Bob_paryObiekt(m, prog) {
   const lista = [];
-  pary.forEach(function (c, kl) { if (c > prog) lista.push([kl, c]); });
+  m.forEach(function (c, kl) { if (c > prog) lista.push([kl, c]); });
   lista.sort(function (x, y) { return x[1] < y[1] ? 1 : x[1] > y[1] ? -1 : 0; });
   const obiekt = {};
   lista.slice(0, Bob_PARY_MAKS).forEach(function (e) { obiekt[e[0]] = e[1]; });
+  return obiekt;
+}
+// Zapis po zakonczonym przegladzie, jedna transakcja readwrite na meta istniejacej bazy (bez tworzenia): znacznik :=
+// start i pary z chwila w nowym oknie (najwyzej Bob_PARY_MAKS, najpozniejsze) — pary przegladu razem z parami
+// utrwalonymi od odczytu stanu (porzucenie wiersza w trakcie przegladu, E2-PR5c, albo zakonczony przeglad innej karty
+// przegladarki), czytanymi w tej samej transakcji; znacznik nowszy niz start (przeglad innej karty przegladarki)
+// zostaje razem ze swoimi parami.
+async function Bob_przegladZapisz(uid, s, start, pary) {
+  const prog = Bob_cofnij(start, Bob_MARGINES_MS);
   return Bob_naBazie(uid, s, ['meta'], 'readwrite', {}, function (k) {
     const meta = k.sklep('meta');
     k.req(meta.get(Bob_PRZEGLAD), function (x) {
       if (Bev_obiekt(x) && typeof x.v === 'string' && x.v > start) return;
-      k.req(meta.put({ k: Bob_PRZEGLAD, v: start }));
-      k.req(meta.put({ k: Bob_PARY, v: obiekt }));
+      k.req(meta.get(Bob_PARY), function (y) {
+        const m = Bob_paryZRekordu(y, new Map(pary));
+        k.req(meta.put({ k: Bob_PRZEGLAD, v: start }));
+        k.req(meta.put({ k: Bob_PARY, v: Bob_paryObiekt(m, prog) }));
+      });
     });
   });
 }
