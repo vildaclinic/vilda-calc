@@ -1026,6 +1026,8 @@ function Bns_cykl(t, e, a, r) {
      w ramce przez okno nadrzedne. Wiersze kolejki nie sa zwiazane ze slotem, wiec reszta wyjdzie na nowy. Zaraz po
      rotacji nadawca zapomina material starego slotu (keepalive) i zatrzymanie po 401, i zeruje odstep. Dokument
      z poprzednia tozsamoscia (rotacja w innej karcie) oddaje role nadawcy (Bns_rola).
+   - sendOutboxBounded(ms) (E2-PR4e2): ta sama wysylka z limitem — sejf przed zmiana trybu przechowywania z „Komputer
+     prywatny” na inny (potem kasowanie kolejki konta albo znacznik ponowienia, P-DZIENNIK-ZDARZEN).
    - Ramka WebSocket {type:'delta', payload, seq, eid, stored} (applyRealtimeFrame, wola integracja): wlasny eid
      (pierscien slotu) — bez scalenia; inaczej applyEncryptedEvent sejfu (opakowanie konta, sesja jak drenaz);
      applied i seq calkowite rowne kursor + 1 — kursor (tylko w gore) i appliedUpTo o jeden, gdy appliedUpTo rownal
@@ -1055,6 +1057,18 @@ function Bns_poRotacji() {
   Bns_odstep = { n: 0, do: 0 };
 }
 function Bns_przedRotacja() {
+  return Bns_flushDo(Bns_ROTACJA_MS);
+}
+// sendOutboxBounded(ms) (E2-PR4e2; wola sejf przy zmianie trybu przechowywania): ta sama wysylka co przed rotacja,
+// z limitem ms (1..30 000; inaczej 30 000). Bez dziennika null.
+function Bns_flushOgraniczony(ms) {
+  var t = Number(ms);
+  if (!(t > 0) || t > Bns_ROTACJA_MS) t = Bns_ROTACJA_MS;
+  return Bns_flushDo(t);
+}
+// Wysylka kolejki z limitem czasu: w dokumencie najwyzszego poziomu Bns_flush, w ramce flushOutbox okna nadrzednego;
+// po limicie { ok: false, powod: 'limit' }; bez dziennika albo bez okna nadrzednego null. Nigdy nie odrzuca.
+function Bns_flushDo(ms) {
   try {
     if (!Bze_isEventLogEnabled()) return Promise.resolve(null);
     var g = Bns_gora() ? null : o.top && o.top.VildaSync;
@@ -1062,7 +1076,7 @@ function Bns_przedRotacja() {
     var p = Bns_gora() ? Bns_flush() : Promise.resolve(g.flushOutbox());
     return new Promise(function (ok) {
       var z = null;
-      try { z = o.setTimeout(function () { ok({ ok: !1, powod: 'limit' }); }, Bns_ROTACJA_MS); } catch (x) { z = null; }
+      try { z = o.setTimeout(function () { ok({ ok: !1, powod: 'limit' }); }, ms); } catch (x) { z = null; }
       p.then(function (w) { try { if (z !== null) o.clearTimeout(z); } catch (x) {} ok(w); }, function () { ok(null); });
     });
   } catch (x) { return Promise.resolve(null); }
@@ -2035,4 +2049,4 @@ function TLibAutomatic() {
 function TLibPullCycle ( options ) {TLibAutomatic(); return WorkspaceSyncDispatch("pull", true, function () { return Bdz_syncPull(options); });}
 function TLibPushCycle ( options ) {TLibAutomatic(); return WorkspaceSyncDispatch("push", false, function () { return ht(options); });}
 function TLibFullCycle ( ) {TLibAutomatic(); return WorkspaceSyncDispatch("full", true, function () { return Ht(); });}
-o.VildaSync={syncPush:TLibPushCycle,syncPull:TLibPullCycle,syncFull:TLibFullCycle,activateTemplateLibrarySync:TLibActivate,deactivateTemplateLibrarySync:TLibDeactivate,syncTemplateLibrary:TLibExplicit,getTemplateLibrarySyncStatus:TLibGetStatus,continueTemplateLibrarySync:TLibAutomatic,inspectTemplateLibraryAuthority:TLibInspectAuthority,resetSessionPullGuard:Ut,getSyncStatus:xt,clearSyncState:Wt,deleteSyncSlot:Jt,onSyncStart:Zt,onSyncComplete:Qt,onSyncError:Rt,probeNewDevice:Xt,restorePrevBlob:qt,revokeAllDevices:$t,uploadToSlot:pt,deleteSlotWithMaterial:_t,_loadSyncState:PatientClinicalLoadState,_saveSyncState:PatientClinicalSaveState,_clearSyncStateForSlot:PatientClinicalClearState,detectApi:Bdz_detectApi,getDrainStatus:Bdz_getDrainStatus,getChangesCursor:Bdz_getChangesCursor,isPagedActive:Bdz_isPagedActive,isEventLogEnabled:Bze_isEventLogEnabled,pushEvents:Bze_pushEvents,flushOutbox:Bns_flush,scheduleFlush:Bns_planuj,flushKeepalive:Bns_keepalive,applyRealtimeFrame:Bpr_ramka}})(typeof window<"u"?window:typeof globalThis<"u"?globalThis:null);
+o.VildaSync={syncPush:TLibPushCycle,syncPull:TLibPullCycle,syncFull:TLibFullCycle,activateTemplateLibrarySync:TLibActivate,deactivateTemplateLibrarySync:TLibDeactivate,syncTemplateLibrary:TLibExplicit,getTemplateLibrarySyncStatus:TLibGetStatus,continueTemplateLibrarySync:TLibAutomatic,inspectTemplateLibraryAuthority:TLibInspectAuthority,resetSessionPullGuard:Ut,getSyncStatus:xt,clearSyncState:Wt,deleteSyncSlot:Jt,onSyncStart:Zt,onSyncComplete:Qt,onSyncError:Rt,probeNewDevice:Xt,restorePrevBlob:qt,revokeAllDevices:$t,uploadToSlot:pt,deleteSlotWithMaterial:_t,_loadSyncState:PatientClinicalLoadState,_saveSyncState:PatientClinicalSaveState,_clearSyncStateForSlot:PatientClinicalClearState,detectApi:Bdz_detectApi,getDrainStatus:Bdz_getDrainStatus,getChangesCursor:Bdz_getChangesCursor,isPagedActive:Bdz_isPagedActive,isEventLogEnabled:Bze_isEventLogEnabled,pushEvents:Bze_pushEvents,flushOutbox:Bns_flush,scheduleFlush:Bns_planuj,flushKeepalive:Bns_keepalive,applyRealtimeFrame:Bpr_ramka,sendOutboxBounded:Bns_flushOgraniczony}})(typeof window<"u"?window:typeof globalThis<"u"?globalThis:null);

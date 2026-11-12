@@ -236,8 +236,11 @@ const ID_BEV_BOB = /(?<![A-Za-z0-9_$])B(?:ev|ob|em)_[A-Za-z0-9_$]*/g;
 // nagrobek (hak H1 — karta zapisana w trakcie scalania) i Bem_ratunek(id, u, opcje) w wyrażeniu funkcyjnym Bnp_ratuj po
 // zapisie uratowanej wersji notatki (hak H2) — 33 wpisy, 48 wywołań Bem_. Hak karty notatki (E2-PR3c4):
 // Bem_wlasciciel(g.id, e) w wyrażeniu funkcyjnym Le (gałąź „ładunek wygrywa”) jako jedyna instrukcja
-// if (Qwp !== g.patientId) tuż po zapisie notatki — 34 wpisy, 49 wywołań Bem_.
+// if (Qwp !== g.patientId) tuż po zapisie notatki — 34 wpisy, 49 wywołań Bem_. Zmiana trybu przechowywania (E2-PR4e2,
+// P-SYNC-NADAWCA-WPIECIA): w Js const Bst_k = await Bob_przedTrybem(…) przed zmianą wpisu rejestru i await Bob_poTrybie(Bst_k)
+// jako element wyrażenia przecinkowego po niej — 35 wpisów.
 const MIEJSCA_POZA_BLOKIEM = Object.freeze({
+  Js: { Bob_przedTrybem: 1, Bob_poTrybie: 1 },
   PatientCheckpointRemoveUser: { Bob_oznacz: 1, Bob_odznacz: 1 },
   Buk_obce: { Bob_poKasowaniuSejfu: 1 },
   xa: { Bob_poRejestrze: 2, Bob_kasujKonto: 2 },
@@ -442,6 +445,19 @@ function miejscaPozaBlokiem(zrodlo) {
     if (!(p.type === 'CallExpression' && p.callee === id)) { bledy.push(`${gdzie}: odwołanie bez wywołania`); continue; }
     const wyzej = rodzic.get(p);
     const nieOstatni = (seq, el) => seq && seq.type === 'SequenceExpression' && seq.expressions.indexOf(el) >= 0 && seq.expressions.indexOf(el) < seq.expressions.length - 1;
+    // E2-PR4e2: w Js wynik Bob_przedTrybem trafia wyłącznie do Bob_poTrybie (sejf bez wstawek: obie — void 0).
+    if (id.name === 'Bob_przedTrybem' && fn === 'Js') {
+      const dekl = rodzic.get(wyzej);
+      if (!(wyzej.type === 'AwaitExpression' && rodzic.get(wyzej).type === 'VariableDeclarator' && rodzic.get(wyzej).id.name === 'Bst_k' && rodzic.get(rodzic.get(wyzej)).kind === 'const')) { bledy.push(`${gdzie}: forma inna niż const Bst_k = await Bob_przedTrybem(…)`); continue; }
+      const uzycia = wezly.filter((x) => x.type === 'Identifier' && x.name === 'Bst_k' && x !== rodzic.get(wyzej).id && funkcja(x) === f);
+      if (uzycia.length !== 1 || !wywolanie(rodzic.get(uzycia[0]), 'Bob_poTrybie') || rodzic.get(uzycia[0]).arguments[0] !== uzycia[0]) bledy.push(`${gdzie}: wynik użyty poza jedynym argumentem Bob_poTrybie (${uzycia.length} użyć)`);
+      void dekl;
+      continue;
+    }
+    if (id.name === 'Bob_poTrybie' && fn === 'Js') {
+      if (!(wyzej.type === 'AwaitExpression' && nieOstatni(rodzic.get(wyzej), wyzej))) bledy.push(`${gdzie}: forma inna niż await jako element wyrażenia przecinkowego`);
+      continue;
+    }
     if (id.name === 'Bob_kasujKonto' && fn === 'xa') {
       if (!(wyzej.type === 'AwaitExpression' && nieOstatni(rodzic.get(wyzej), wyzej))) bledy.push(`${gdzie}: forma inna niż await jako element wyrażenia przecinkowego`);
       continue;
@@ -961,6 +977,7 @@ describe('U2(a): identyfikatory Bev_, Bob_ i Bem_ tylko w bloku; _eventLog dokł
   // późniejszej niż nagrobek, Bnp_ratuj z Bem_ratunek po zapisie uratowanej wersji; E2-PR3c4: Le z Bem_wlasciciel w gałęzi
 // „ładunek wygrywa” po zapisie notatki).
   const DOBRE = [
+    'async function Js(t,e){const n=be(e),Bst_w=await I().getRegistryEntry(t);if(!Bst_w)throw new Error("x");const Bst_k=await Bob_przedTrybem(t,Bst_w,n);return await I().updateRegistryEntry(t,{storageMode:n}),b===t&&(lt=n),await Bob_poTrybie(Bst_k),{userId:t,storageMode:n}}',
     'async function PatientCheckpointRemoveUser(userId, password) { const PatientCheckpointSyncMark=Bob_oznacz(userId); try { await f(); } catch (e) { Bob_odznacz(userId, PatientCheckpointSyncMark); throw e; } finally { g(); } }',
     'async function xa(t,e){ if(!r){ return W(A,(await I().getRegistryEntry(t)&&await I().removeRegistryEntry(W(A,t)),Bob_poRejestrze(t),await Bob_kasujKonto(t),true)); } return W(A,(await I().deleteUserDatabase(W(t,t)),await I().removeRegistryEntry(W(A,t)),Bob_poRejestrze(t),b===t&&kn("user-removed"),await Bob_kasujKonto(t),true)); }',
     'function He(t){ Bem_przeglad(true); Bkr_wyczyscKarte(); $n.forEach(function(n){ n(e); }); try{go()}catch(x){r(x);} Bob_poOdblokowaniu(); Bkr_ponowDziennik(); }',
@@ -1018,6 +1035,12 @@ describe('U2(a): identyfikatory Bev_, Bob_ i Bem_ tylko w bloku; _eventLog dokł
       DOBRE.replace('Bob_poKasowaniuSejfu(uid);', 'const x = Bob_poKasowaniuSejfu(uid);'),
       DOBRE.replace('function Buk_obce(uid) {', 'function Buk_zmiana(uid) {'),
       DOBRE.replace('try { Buk_usuniete.add(uid); Bob_poKasowaniuSejfu(uid); }', 'try { Buk_usuniete.add(uid); [1].forEach(function () { Bob_poKasowaniuSejfu(uid); }); }'),
+      // E2-PR4e2: wynik Bob_przedTrybem poza Bob_poTrybie, bez await, let; Bob_poTrybie bez await albo jako ostatni element.
+      DOBRE.replace('await Bob_poTrybie(Bst_k),{userId:t', 'await Bob_poTrybie(Bst_k),h(Bst_k),{userId:t'),
+      DOBRE.replace('const Bst_k=await Bob_przedTrybem(t,Bst_w,n);', 'const Bst_k=Bob_przedTrybem(t,Bst_w,n);'),
+      DOBRE.replace('const Bst_k=await Bob_przedTrybem(t,Bst_w,n);', 'let Bst_k=await Bob_przedTrybem(t,Bst_w,n);'),
+      DOBRE.replace('await Bob_poTrybie(Bst_k),{userId:t', 'Bob_poTrybie(Bst_k),{userId:t'),
+      DOBRE.replace('b===t&&(lt=n),await Bob_poTrybie(Bst_k),{userId:t,storageMode:n}}', 'b===t&&(lt=n),{userId:t,storageMode:n,w:await Bob_poTrybie(Bst_k)}}'),
     ];
     for (const [i, kod] of zle.entries()) {
       expect(kod, `wariant ${i} różni się od form z literału`).not.toBe(DOBRE);
@@ -1241,7 +1264,11 @@ describe('U2(a): identyfikatory Bev_, Bob_ i Bem_ tylko w bloku; _eventLog dokł
     const start = ZRODLO.indexOf('function Bev_start(');
     const poza = wBev.filter((x) => x.poz < lit.start || x.poz >= lit.koniec);
     const wStart = start >= 0 ? start + wytnijFunkcje(ZRODLO.slice(start), 'Bev_start').length : -1;
-    expect(poza.map((x) => `${x.nazwa}${x.poz > start && x.poz < wStart ? ' w Bev_start' : ''}`), 'Bob_ w części Bev_ poza literałem eksportu').toEqual(['Bob_wKasowaniu w Bev_start']);
+    // E2-PR4e2 (P-SYNC-NADAWCA-WPIECIA): dwa Bob_wKasowaniu w Bev_zastosuj — usuwanie konta na wejściu i po odszyfrowaniu.
+    const zast = ZRODLO.indexOf('async function Bev_zastosuj(');
+    const wZast = zast >= 0 ? zast + wytnijFunkcje(ZRODLO.slice(zast), 'Bev_zastosuj').length : -1;
+    const gdzieBev = (x) => (x.poz > start && x.poz < wStart ? ' w Bev_start' : x.poz > zast && x.poz < wZast ? ' w Bev_zastosuj' : '');
+    expect(poza.map((x) => `${x.nazwa}${gdzieBev(x)}`), 'Bob_ w części Bev_ poza literałem eksportu').toEqual(['Bob_wKasowaniu w Bev_start', 'Bob_wKasowaniu w Bev_zastosuj', 'Bob_wKasowaniu w Bev_zastosuj']);
     expect(KLUCZE_MAGAZYNU).toHaveLength(18);
     expect(wBev.length - poza.length, 'Bob_ w literale eksportu: 18 kluczy magazynu kolejki i kwarantanny (z markSyncCaughtUp)').toBe(KLUCZE_MAGAZYNU.length);
     const pary = [...lit.tekst.matchAll(/(\w+)\s*:\s*(Bob_[A-Za-z0-9_$]*)/g)].map((m) => m[1]);
@@ -1427,7 +1454,7 @@ describe('U2(c): wywołania zakazane i reguła domknięcia części magazynu', (
   // Pola okna i funkcje, w których wolno ich użyć (napis albo wzorzec nazwy funkcji). E2-PR3a4: localStorage także w odczycie
   // chwili ostatniej wysyłki (Bob_wysylka — pierwszy znacznik przeglądu, tylko getItem klucza integracji).
   const POLA_V = {
-    VILDA_EVENT_LOG: ['Bob_bramka'], VildaSync: ['Bob_bramka'], indexedDB: ['Bob_idb'], crypto: ['Bob_urzadzenie'],
+    VILDA_EVENT_LOG: ['Bob_bramka'], VildaSync: ['Bob_bramka', 'Bob_przedTrybem'], indexedDB: ['Bob_idb'], crypto: ['Bob_urzadzenie'],
     localStorage: ['Bob_urzadzenie', 'Bob_urzadzenieZapisz', 'Bob_urzadzenieUsun', /^Bob_znacznik[A-Za-z]*$/, 'Bob_poOdblokowaniu', 'Bob_kasujKonto',
       'Bob_wysylka'],
     setTimeout: ['Bob_limit', 'Bob_podBlokada'], clearTimeout: ['Bob_limit', 'Bob_podBlokada'], navigator: ['Bob_blokady'],
@@ -1495,7 +1522,8 @@ describe('U2(c): wywołania zakazane i reguła domknięcia części magazynu', (
     const policz = (lista) => lista.reduce((m, x) => ({ ...m, [x]: (m[x] || 0) + 1 }), {});
     const bledy = [];
     const p = policz(uzycia.pola);
-    const raz = { 'VILDA_EVENT_LOG@Bob_bramka': 1, 'VildaSync@Bob_bramka': 1, 'indexedDB@Bob_idb': 1, 'crypto@Bob_urzadzenie': 1, 'setTimeout@Bob_limit': 1, 'clearTimeout@Bob_limit': 1 };
+    // E2-PR4e2: VildaSync także raz w Bob_przedTrybem (wysyłka kolejki przed zmianą trybu przechowywania).
+    const raz = { 'VILDA_EVENT_LOG@Bob_bramka': 1, 'VildaSync@Bob_bramka': 1, 'VildaSync@Bob_przedTrybem': 1, 'indexedDB@Bob_idb': 1, 'crypto@Bob_urzadzenie': 1, 'setTimeout@Bob_limit': 1, 'clearTimeout@Bob_limit': 1 };
     for (const [k, n] of Object.entries(raz)) if (p[k] !== n) bledy.push(`${k}: ${p[k] || 0} zamiast ${n}`);
     // Co najmniej raz i tylko tam (E2-PR3a1): navigator w Bob_blokady, AbortController w Bob_podBlokada.
     const conajmniej = ['navigator@Bob_blokady', 'AbortController@Bob_podBlokada'];

@@ -24,8 +24,9 @@
 //     bez Web Locks zostaje do następnego odblokowania; nigdy dla konta trybu „Zaloguj jednorazowo” (także dla jego
 //     identyfikatora poza tym trybem). Ponowienie przy każdym odblokowaniu poza trybem jednorazowym (w testach: hasło,
 //     odtworzenie sesji, klucz odzyskiwania): wpis rejestru w trybie prywatnym — zdjęcie znacznika bez kasowania; wpis
-//     w trybie chmurowym albo brak wpisu — kasowanie, a błąd zostawia znacznik; konto oznaczone w tym oknie w trybie
-//     jednorazowym — pominięte, znacznik zostaje do odblokowania po przeładowaniu; nazwa spoza wzorca identyfikatora —
+//     w trybie chmurowym albo brak wpisu — kasowanie, a błąd zostawia znacznik; konto, którego removeUser w trybie
+//     jednorazowym trwa w tym oknie — pominięte (od E2-PR4e2 zakończone removeUser w trybie jednorazowym nie zostawia
+//     oznaczenia); nazwa spoza wzorca identyfikatora —
 //     pominięta.
 //   - Bez listy baz (databases()) kasowanie nie otwiera bazy kolejki.
 //   - Tryb „Zaloguj jednorazowo” (ujęty przy oznaczeniu): kasowanie kolejki niczego nie rusza — bez listy baz, otwarcia,
@@ -59,8 +60,8 @@
 //            cofa oznaczenie; nieudane removeUser nie zdejmuje oznaczenia drugiego removeUser tego konta w toku.
 //   K8, K8b  dwa konta: usunięcie A nie rusza bazy ani klucza B; usunięcie niebieżącego B przy odblokowanym A.
 //   K9–K9f   ponowienie: wpis prywatny (bez kasowania), wpis chmurowy (kasowanie), tryb jednorazowy (nic), nazwa za długa;
-//            odtworzenie sesji i klucz odzyskiwania; konto usunięte w tym oknie w trybie jednorazowym — pominięte w tym
-//            oknie, kasowanie po przeładowaniu.
+//            odtworzenie sesji i klucz odzyskiwania; konto usunięte w tym oknie w trybie jednorazowym — od E2-PR4e2
+//            kasowanie przy ponowieniu w tym samym oknie (do E2-PR4e2: pominięte do przeładowania).
 //   K10      zapis identyfikatora urządzenia przez drugą kartę w trakcie kasowania — po końcu brak klucza.
 //   K11–K11c to samo okno: operacje w trakcie removeUser → SYNC_DB_DELETED; dopisanie (każdy rodzaj) w trakcie odczytu
 //            sejfu → SYNC_DB_DELETED, po końcu na liście baz tylko rejestr; w chwili kasowania kolejki sejf jest już
@@ -81,6 +82,9 @@
 // Na sejfie bez kasowania kolejki (E2-PR2b2) czerwone są przypadki sprawdzające kasowanie, blokadę, oznaczenie
 // i ponowienie; zielone z natury (strażniki): K3d, K6j (pięć przypadków), K7 (trzy przypadki), K8, K9c, K9d, K17 (dwa
 // przypadki) i samotest uprzęży (dwa przypadki).
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   PRZEDROSTEK_KASOWANIA, PRZEDROSTEK_URZADZENIA, SKRYPTY_PUNKTU, bazaKolejki, czytajRekord, drugieOkno, kluczKasowania,
@@ -88,6 +92,7 @@ import {
 } from '../support/okno-magazynu.mjs';
 import { naglowek, wynik } from './sesja-zapisu-uprzaz.mjs';
 
+const KORZEN_REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const BAZA_SEJFU = (uid) => `vilda_user_${uid}`;
 const SLOT = '1a2b3c4d'.repeat(8);
 const ZMIANA = Object.freeze({ seq: 1, eid: '00000000-0000-4000-8000-000000000001', payload: { iv: 'Rmlrc3lqbmVJVjEy', data: 'AAAA' } });
@@ -891,7 +896,7 @@ describe('znacznik ponowienia i ponowienie przy odblokowaniu', () => {
     expect(stanKonta(o, X)).toEqual(CZYSTO);
   }, 30_000);
 
-  it('K9f: removeUser konta X (znacznik, baza kolejki, bez wpisu rejestru) w trybie jednorazowym, potem blokada i odblokowanie konta trwałego w tym samym oknie — ponowienie X pominięte (tryb ujęty przy oznaczeniu): bez kasowania, znacznik zostaje; odblokowanie po przeładowaniu kasuje bazę X i zdejmuje znacznik', async () => {
+  it('K9f: removeUser konta X (znacznik, baza kolejki, bez wpisu rejestru) w trybie jednorazowym, potem blokada i odblokowanie konta trwałego w tym samym oknie — od E2-PR4e2 usuwanie w trybie jednorazowym kończy oznaczenie konta w oknie (tryb przekazany od oznaczenia do kasowania), więc ponowienie X w tym oknie kasuje osieroconą bazę X (brak wpisu rejestru) i zdejmuje znacznik', async () => {
     const o = await nowe({ konta: 'AB' });
     const X = 'ab12cd34ef56ab78cd90ef12ab34cd56';
     o.zablokuj();
@@ -903,17 +908,14 @@ describe('znacznik ponowienia i ponowienie przy odblokowaniu', () => {
     expect(await wynik(o.v.removeUser(X, 'Fikcyjne#DowolneHaslo!2026kk')), 'removeUser X w trybie jednorazowym').toEqual({ ok: true, w: true });
     await o.cisza();
     const zX = { bazaKolejki: true, kluczUrzadzenia: null, znacznik: '1' };
-    expect(stanKonta(o, X), 'konto X po removeUser w trybie jednorazowym').toEqual(zX);
+    expect(stanKonta(o, X), 'konto X po removeUser w trybie jednorazowym — kasowanie pominięte').toEqual(zX);
     o.zablokuj();
     expect(o.v.isEphemeralMode(), 'tryb jednorazowy po blokadzie').toBe(false);
     const z = o.znacznik();
     await o.zaloguj('A');
     await o.cisza();
-    expect(ileWLogu(o, z, ['deleteDatabase', nazwaBazy(X)]), 'kasowanie bazy kolejki X w tym oknie').toBe(0);
-    expect(stanKonta(o, X), 'konto X po odblokowaniu konta A w tym oknie').toEqual(zX);
-    const o2 = await drugie(o, { zaloguj: 'A' });
-    await o2.cisza();
-    expect(stanKonta(o2, X), 'konto X po odblokowaniu konta A po przeładowaniu').toEqual(CZYSTO);
+    expect(ileWLogu(o, z, ['deleteDatabase', nazwaBazy(X)]), 'kasowanie bazy kolejki X w tym oknie').toBe(1);
+    expect(stanKonta(o, X), 'konto X po odblokowaniu konta A w tym oknie').toEqual(CZYSTO);
   }, 30_000);
 });
 
@@ -1195,4 +1197,239 @@ describe('samotest uprzęży okna magazynu (drugie okno, Web Locks, localStorage
     await expect(oknoMagazynu({ konta: 'A', bramka: false }).then((o3) => { OKNA.push(o3); return drugieOkno(o3, { bramka: false, localStorage: 'osobny' }); }))
       .rejects.toThrow(/wspólny localStorage/);
   }, 30_000);
+});
+
+// ── P-SYNC-NADAWCA-WPIECIA (E2-PR4e2; plan wiersz 8e2; decyzja 4 z 2026-11-11) ──────────────────────────────────────
+// KT1–KT3  zmiana trybu przechowywania z „Komputer prywatny” na „Komputer w pracy” przy włączonym dzienniku
+//          (VildaSync.isEventLogEnabled() === true, atrapa VildaSync w oknie): najpierw wysyłka kolejki
+//          (sendOutboxBounded, limit 10 s, wpis rejestru jeszcze prywatny); po udanej — kasowanie kolejki konta; bez
+//          sieci — znacznik ponowienia i kasowanie przy najbliższym odblokowaniu; inne konto niż bieżące — znacznik;
+//          zmiana na prywatny — nic.
+// KT4      uśpienie [zielony także na bazie]: bez dziennika (bez VildaSync albo isEventLogEnabled() fałsz, przy otwartym
+//          polu bramki) — bez wysyłki, kasowania, znacznika i zapisów vilda-sync-*.
+// KT5      po kasowaniu przy odblokowaniu (wpis chmurowy, znacznik) powrót do trybu prywatnego w tym samym oknie —
+//          kolejka konta działa bez przeładowania; KT5b — to samo po kasowaniu w przeglądzie sierot.
+// KT6      removeUser konta trwałego w trybie jednorazowym, potem blokada i logowanie tego konta w tym samym oknie —
+//          kolejka konta działa.
+// KT7      dwa removeUser tego samego konta w toku w różnych trybach logowania — każde kasuje według trybu swojego
+//          wywołania (removeUser poza trybem jednorazowym kasuje kolejkę).
+// KT8      applyEncryptedEvent w trakcie usuwania bieżącego konta (po odszyfrowaniu; na wejściu, sejf jeszcze
+//          odblokowany) — session-changed, bez zastosowania.
+// KT9      strażnik: kolejność blokad nadawca → baza (sejf nie żąda blokady nadawcy).
+function dziennikSync(o, wynikWysylki) {
+  const s = { limity: [], tryby: [] };
+  o.win.VildaSync = {
+    isEventLogEnabled: () => true,
+    async sendOutboxBounded(ms) {
+      s.limity.push(ms);
+      s.tryby.push(await o.v.getStorageMode(o.A.userId));
+      return typeof wynikWysylki === 'function' ? wynikWysylki() : wynikWysylki;
+    },
+  };
+  return s;
+}
+const WYSLANE = Object.freeze({ ok: true, powod: null, partie: 1, wyslane: 1, odrzucone: 0, kod: null });
+const BEZ_SIECI = Object.freeze({ ok: false, powod: 'odstep', partie: 0, wyslane: 0, odrzucone: 0, kod: 'NETWORK', ponowZaMs: 2000 });
+
+describe('zmiana trybu przechowywania i koniec usuwania w oknie (E2-PR4e2)', () => {
+  it('KT1 [czerwony na bazie]: „Komputer w pracy” przy włączonym dzienniku — najpierw wysyłka kolejki (wpis jeszcze prywatny, limit 10 s); po udanej wysyłce baza kolejki, identyfikator urządzenia i znacznik skasowane', async () => {
+    const o = await nowe();
+    const uid = o.A.userId;
+    await dopisz(o, await karta(o));
+    expect(o.jestBaza(), 'baza kolejki przed zmianą trybu').toBe(true);
+    const s = dziennikSync(o, WYSLANE);
+    expect(await o.v.setStorageMode(uid, 'cloud-only')).toEqual({ userId: uid, storageMode: 'cloud-only' });
+    await o.cisza();
+    expect(s.limity, 'jedna wysyłka z limitem 10 s').toEqual([10000]);
+    expect(s.tryby, 'wysyłka przed zmianą wpisu rejestru').toEqual(['local']);
+    expect(await o.v.getStorageMode(uid)).toBe('cloud-only');
+    expect(stanKonta(o, uid), 'kolejka konta skasowana').toEqual(CZYSTO);
+  }, 30_000);
+
+  it('KT2 [czerwony na bazie]: bez sieci (wysyłka nieudana) — kolejka zostaje ze znacznikiem ponowienia, kasowanie przy najbliższym odblokowaniu (wpis chmurowy); inne konto — znacznik bez wysyłki', async () => {
+    const o = await nowe({ konta: 'AB' });
+    const uid = o.A.userId;
+    await dopisz(o, await karta(o));
+    const kluczPrzed = klucz(o);
+    const s = dziennikSync(o, BEZ_SIECI);
+    await o.v.setStorageMode(uid, 'cloud-only');
+    await o.cisza();
+    expect(s.limity).toEqual([10000]);
+    expect(stanKonta(o, uid), 'kolejka czeka na odblokowanie').toEqual({ bazaKolejki: true, kluczUrzadzenia: kluczPrzed, znacznik: '1' });
+    const z = o.znacznik();
+    await o.zaloguj('A');
+    await o.cisza();
+    expect(ileWLogu(o, z, ['deleteDatabase', nazwaBazy(uid)]), 'kasowanie przy odblokowaniu').toBe(1);
+    expect(stanKonta(o, uid), 'po najbliższym odblokowaniu').toEqual(CZYSTO);
+    // konto B (niebieżące) — bez wysyłki (nadawca wysyła tylko kolejkę bieżącego konta), znacznik
+    const uidB = o.B.userId;
+    await o.v.setStorageMode(uidB, 'cloud-only');
+    expect(s.limity, 'bez drugiej wysyłki').toEqual([10000]);
+    expect(o.win.localStorage.getItem(kluczKasowania(uidB))).toBe('1');
+  }, 30_000);
+
+  it('KT3 [czerwony na bazie]: zmiana na „Komputer prywatny” i z trybu jednorazowego — bez wysyłki i znacznika; wysyłka zawieszona ponad limit nadawcy — wynik limitu daje znacznik', async () => {
+    const o = await nowe();
+    const uid = o.A.userId;
+    await dopisz(o, await karta(o));
+    const s = dziennikSync(o, { ok: false, powod: 'limit' });
+    await o.v.setStorageMode(uid, 'local');
+    expect(s.limity, 'prywatny → prywatny').toEqual([]);
+    await o.v.setStorageMode(uid, 'cloud-only');
+    expect(s.limity, 'prywatny → chmurowy').toEqual([10000]);
+    expect(stanKonta(o, uid).znacznik, 'limit wysyłki — znacznik').toBe('1');
+    o.win.localStorage.removeItem(kluczKasowania(uid));
+    await o.v.setStorageMode(uid, 'cloud-only');
+    expect(s.limity, 'chmurowy → chmurowy').toEqual([10000]);
+    await o.v.setStorageMode(uid, 'local');
+    expect(s.limity, 'chmurowy → prywatny').toEqual([10000]);
+    expect(stanKonta(o, uid).znacznik, 'chmurowy → chmurowy i prywatny bez znacznika').toBe(null);
+    // tryb „Zaloguj jednorazowo”: konto bez kolejki — bez wysyłki i znacznika
+    o.zablokuj();
+    o.v.setEphemeralMode(true);
+    const j = await o.v.createUser('Fikcyjne#Jednorazowe!2026jj', { label: 'Fikcyjne konto jednorazowe', iterations: 1000 });
+    await o.tlo();
+    await o.v.setStorageMode(j.userId, 'cloud-only');
+    expect(s.limity, 'tryb jednorazowy').toEqual([10000]);
+    expect(o.win.localStorage.getItem(kluczKasowania(j.userId))).toBe(null);
+  }, 30_000);
+
+  it.each([['bez VildaSync', false], ['isEventLogEnabled() fałsz', true]])('KT4 [zielony także na bazie]: uśpienie (%s) — zmiana trybu bez wysyłki, kasowania, znacznika i zapisów vilda-sync-*', async (_, zSync) => {
+    const o = await nowe();
+    const uid = o.A.userId;
+    await dopisz(o, await karta(o));
+    const wysylki = [];
+    if (zSync) o.win.VildaSync = { isEventLogEnabled: () => false, sendOutboxBounded: async (ms) => { wysylki.push(ms); return WYSLANE; } };
+    const z = o.znacznik();
+    const zapisy = zapisySync(o).length;
+    await o.v.setStorageMode(uid, 'cloud-only');
+    await o.v.setStorageMode(uid, 'local');
+    await o.cisza();
+    expect(ileWLogu(o, z, ['deleteDatabase']), 'kasowanie baz').toBe(0);
+    expect(o.jestBaza(), 'baza kolejki nietknięta').toBe(true);
+    expect(stanKonta(o, uid).znacznik).toBe(null);
+    expect(zapisySync(o).slice(zapisy), 'zapisy vilda-sync-* w localStorage').toEqual([]);
+    expect(wysylki, 'wysyłka przy wyłączonym dzienniku').toEqual([]);
+  }, 30_000);
+
+  it('KT5 [czerwony na bazie]: kasowanie przy odblokowaniu (wpis chmurowy, znacznik), potem powrót do „Komputer prywatny” w tym samym oknie — kolejka konta działa bez przeładowania', async () => {
+    const o = await nowe();
+    const uid = o.A.userId;
+    await dopisz(o, await karta(o));
+    await o.v.setStorageMode(uid, 'cloud-only'); // bez dziennika: tylko wpis rejestru
+    o.win.localStorage.setItem(kluczKasowania(uid), '1');
+    await o.zaloguj('A');
+    await o.cisza();
+    expect(stanKonta(o, uid), 'kolejka skasowana przy odblokowaniu').toEqual(CZYSTO);
+    await o.v.setStorageMode(uid, 'local');
+    await o.zaloguj('A');
+    await o.cisza();
+    const w = await o.ev.enqueue('snap', await karta(o, 2));
+    expect(w.ok, `dopisanie po powrocie do trybu prywatnego: ${JSON.stringify(w)}`).toBe(true);
+    await o.cisza();
+    expect(o.jestBaza(), 'nowa baza kolejki').toBe(true);
+  }, 30_000);
+
+  it('KT5b [czerwony na bazie]: przegląd sierot przy odblokowaniu A kasuje kolejkę konta B z wpisem chmurowym; potem B w trybie prywatnym w tym samym oknie — kolejka B działa', async () => {
+    const o = await nowe({ konta: 'AB', przeglad: true });
+    const uidB = o.B.userId;
+    await o.zaloguj('B');
+    await dopisz(o, await karta(o, 5));
+    expect(o.jestBaza('B')).toBe(true);
+    await o.v.setStorageMode(uidB, 'cloud-only'); // bez dziennika: tylko wpis rejestru
+    await o.zaloguj('A');
+    await o.cisza();
+    expect(o.jestBaza('B'), 'przegląd sierot skasował kolejkę B').toBe(false);
+    await o.v.setStorageMode(uidB, 'local');
+    await o.zaloguj('B');
+    await o.cisza();
+    const w = await o.ev.enqueue('snap', await karta(o, 6));
+    expect(w.ok, `dopisanie konta B: ${JSON.stringify(w)}`).toBe(true);
+  }, 30_000);
+
+  it('KT6 [czerwony na bazie]: removeUser konta trwałego B w trybie jednorazowym, potem blokada i logowanie B w tym samym oknie — kolejka B działa', async () => {
+    const o = await nowe({ konta: 'AB' });
+    const uidB = o.B.userId;
+    o.zablokuj();
+    o.v.setEphemeralMode(true);
+    await o.v.createUser('Fikcyjne#Jednorazowe!2026jj', { label: 'Fikcyjne konto jednorazowe', iterations: 1000 });
+    await o.tlo();
+    expect(await wynik(o.v.removeUser(uidB, o.B.haslo)), 'removeUser B w trybie jednorazowym').toEqual({ ok: true, w: true });
+    await o.cisza();
+    o.zablokuj();
+    expect(o.v.isEphemeralMode()).toBe(false);
+    await o.zaloguj('B');
+    await o.cisza();
+    const w = await o.ev.enqueue('snap', await karta(o, 3));
+    expect(w.ok, `dopisanie konta B: ${JSON.stringify(w)}`).toBe(true);
+    await o.cisza();
+    expect(o.jestBaza('B'), 'baza kolejki B').toBe(true);
+  }, 30_000);
+
+  it('KT7 [czerwony na bazie]: dwa removeUser konta B w toku — pierwsze w trybie jednorazowym, drugie poza nim — drugie kasuje kolejkę B', async () => {
+    const o = await nowe({ konta: 'AB' });
+    const uidB = o.B.userId;
+    await o.zaloguj('B');
+    await dopisz(o, await karta(o, 4));
+    expect(o.jestBaza('B')).toBe(true);
+    o.zablokuj();
+    // Pierwsze removeUser zatrzymane na blokadzie cyklu życia punktów odzyskiwania — już po oznaczeniu konta (w trybie
+    // jednorazowym); dopiero wtedy zmiana trybu i drugie removeUser.
+    const prawdziwe = o.locks.request.bind(o.locks);
+    let pusc = null;
+    const brama = new Promise((r) => { pusc = r; });
+    let dotarl = null;
+    const przyBlokadzie = new Promise((r) => { dotarl = r; });
+    vi.spyOn(o.locks, 'request').mockImplementation((nazwa, ...a) => {
+      if (dotarl && String(nazwa).startsWith('patient-clinical-checkpoint-lifecycle:')) {
+        const d = dotarl;
+        dotarl = null;
+        d();
+        return brama.then(() => prawdziwe(nazwa, ...a));
+      }
+      return prawdziwe(nazwa, ...a);
+    });
+    o.v.setEphemeralMode(true);
+    const p1 = wynik(o.v.removeUser(uidB, o.B.haslo));
+    await doczekaj(przyBlokadzie, 'pierwsze removeUser oznaczone, przed blokadą cyklu życia');
+    o.v.setEphemeralMode(false);
+    const p2 = wynik(o.v.removeUser(uidB, o.B.haslo));
+    await doczekaj(p2, 'drugie removeUser');
+    pusc();
+    const [w1, w2] = await Promise.all([doczekaj(p1, 'pierwsze removeUser'), doczekaj(p2, 'drugie removeUser')]);
+    await o.cisza();
+    // Pierwsze (oznaczone w trybie jednorazowym) kończy się po zmianie trybu tak albo inaczej; drugie usuwa konto.
+    expect(w1).toBeTruthy();
+    expect(w2).toEqual({ ok: true, w: true });
+    expect(stanKonta(o, uidB).bazaKolejki, 'baza kolejki B po drugim removeUser (poza trybem jednorazowym)').toBe(false);
+  }, 30_000);
+
+  it('KT8 [czerwony na bazie]: applyEncryptedEvent w trakcie removeUser bieżącego konta — na wejściu i po odszyfrowaniu session-changed, bez zastosowania', async () => {
+    const o = await nowe();
+    const uid = o.A.userId;
+    const k = await karta(o);
+    const env = (await o.ev.encryptEvent(await o.ev.buildSnapshotEvent(k.patientId, k.snapshotId, null))).env;
+    expect(await o.ev.applyEncryptedEvent(env), 'kontrola: przed usuwaniem').toMatchObject({ status: 'applied' });
+    // po odszyfrowaniu: removeUser rusza, gdy odszyfrowanie zdarzenia czeka
+    const hd = wstrzymajKrypto(o, 'decrypt');
+    const pE = o.ev.applyEncryptedEvent(env);
+    await doczekaj(hd.osiagnieta, 'odszyfrowanie zdarzenia');
+    const h = wstrzymaj(o, { przy: 'deleteDatabase', baza: BAZA_SEJFU(uid) });
+    const pU = usun(o);
+    await doczekaj(h.czeka, 'kasowanie bazy sejfu w removeUser (konto już oznaczone)');
+    hd.zwolnij();
+    expect(await doczekaj(pE, 'wynik zastosowania'), 'po odszyfrowaniu').toEqual({ status: 'session-changed' });
+    // na wejściu: sejf jeszcze odblokowany (bieżące konto blokuje się po usunięciu wpisu rejestru)
+    expect(o.v.isUnlocked(), 'kontrola: sejf odblokowany w trakcie kasowania bazy sejfu').toBe(true);
+    const odKrypto = o.krypto.log.length;
+    expect(await o.ev.applyEncryptedEvent(env), 'na wejściu').toEqual({ status: 'session-changed' });
+    expect(o.krypto.log.slice(odKrypto).filter((x) => x.metoda === 'decrypt'), 'na wejściu bez odszyfrowania').toEqual([]);
+    h.zwolnij();
+    expect(await pU).toEqual({ ok: true, w: true });
+  }, 30_000);
+
+  it('KT9: strażnik — sejf nie żąda blokady nadawcy (vilda-outbox-sender), więc kolejność blokad jest stała: nadawca, potem blokada bazy kolejki konta', () => {
+    expect(fs.readFileSync(path.join(KORZEN_REPO, 'vilda_vault.js'), 'utf8').includes('vilda-outbox-sender')).toBe(false);
+    expect(fs.readFileSync(path.join(KORZEN_REPO, 'vilda_sync.js'), 'utf8')).toContain("Bns_BLOKADA = 'vilda-outbox-sender:'");
+  });
 });

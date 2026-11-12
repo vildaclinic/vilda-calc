@@ -29,6 +29,8 @@
 // NW12 rotacja (revokeAllDevices): kolejka wychodzi na stary slot przed rotateSyncIdentity; w ramce przez okno
 //     nadrzędne; wysyłka zawieszona — rotacja rusza po 30 s; zaraz po rotacji nadawca zapomina materiał starego slotu
 //     (keepalive), zatrzymanie po 401 i odstęp; dokument z poprzednią tożsamością oddaje rolę nadawcy.
+// NW12h, NW12i (E2-PR4e2) sendOutboxBounded(ms) dla sejfu (zmiana trybu przechowywania): ta sama wysyłka co przed rotacją,
+//     z limitem ms (najwyżej 30 s), w ramce przez okno nadrzędne; bez dziennika null.
 // NW13 strażniki źródła.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -181,8 +183,14 @@ async function swiatNadawcy(o = {}) {
   return s;
 }
 const zEvents = (s, u) => s.atrapa.zadania.filter((z) => z.trasa === 'events' && (!u || z.urzadzenie === u));
-async function czekajAz(f, opis, n = 5000) {
-  for (let i = 0; i < n; i += 1) { if (await f()) return; await new Promise((r) => { setImmediate(r); }); }
+// Oczekiwanie z limitem czasu rzeczywistego (performance.now — Date jest podmieniony), nie liczby obrotów: pod obciążeniem
+// (np. równoległe pliki testów) łańcuch zapisu, haka i budowy delty potrzebuje więcej obrotów pętli.
+async function czekajAz(f, opis, ms = 10000) {
+  const koniec = performance.now() + ms;
+  while (performance.now() < koniec) {
+    if (await f()) return;
+    await new Promise((r) => { setImmediate(r); });
+  }
   throw new Error('czekajAz: ' + opis);
 }
 // _eventLog sejfu jest zamrożony: obiekt pochodny z inną metodą outboxTake w miejscu _eventLog sejfu (vilda_sync.js
@@ -401,16 +409,20 @@ describe('P-SYNC-NADAWCA-WPIECIA — integracja: beacony i ramki (E2-PR4e1)', ()
     const okA = await oknoIntegracji(A);
     const bud = BUDOWNICZOWIE.map((m) => vi.spyOn(A.vault, m));
     krok();
-    await szescZmian(A, s, () => cisza(s.wszystkie()));
-    await czekajAz(() => bud.every((sp) => sp.mock.calls.length > 0), 'każda ścieżka buduje deltę');
+    // Każda ścieżka buduje deltę, zanim przyjdzie następna zmiana (inaczej notatka usunięta przed budową delty jej zapisu
+    // nie ma już delty zapisu — wychodzi tylko jej nagrobek).
+    await szescZmian(A, s, async (co) => {
+      const sp = bud[SCIEZKI.indexOf(co)];
+      await czekajAz(() => sp.mock.calls.length > 0, `delta: ${co}`);
+      await Promise.resolve(sp.mock.results[0].value);
+      await cisza(s.wszystkie());
+    });
     await cisza(s.wszystkie());
     expect(bud.map((sp) => sp.mock.calls.length), 'każda ścieżka buduje deltę raz').toEqual([1, 1, 1, 1, 1, 1]);
-    // Bez dziennika jak dotąd: delta, którą sejf zbudował, idzie beaconem. Notatka usunięta, zanim integracja zbudowała
-    // deltę jej zapisu, nie ma już delty zapisu (null) — idzie jej nagrobek.
-    const zbudowane = (await Promise.all(bud.map((sp) => Promise.resolve(sp.mock.results[0].value)))).filter((x) => x && x.data).length;
-    expect(zbudowane, 'kontrola: sejf zbudował delty').toBeGreaterThanOrEqual(5);
-    await czekajAz(() => okA.delty().length === zbudowane, 'delty beaconem');
-    expect(new Set(okA.delty().map((w) => w.droga))).toEqual(new Set(['beacon']));
+    const zbudowane = await Promise.all(bud.map((sp) => Promise.resolve(sp.mock.results[0].value)));
+    expect(zbudowane.map((x) => !!(x && x.data)), 'sejf zbudował każdą deltę').toEqual([true, true, true, true, true, true]);
+    await czekajAz(() => okA.delty().length === 6, 'sześć delt beaconem');
+    expect(okA.delty().map((w) => w.droga)).toEqual(['beacon', 'beacon', 'beacon', 'beacon', 'beacon', 'beacon']);
     expect(okA.wywolania).toEqual([]);
     // ramka: delta karty A (beacon uprzęży) → integracja B → applyEncryptedDelta
     const okB = await oknoIntegracji(B);
@@ -613,6 +625,44 @@ describe('P-SYNC-NADAWCA-WPIECIA — powrót sieci, chowanie, rotacja (E2-PR4e1)
   });
 });
 
+describe('P-SYNC-NADAWCA-WPIECIA — wysyłka z limitem dla sejfu (E2-PR4e2)', () => {
+  it('NW12h [czerwony na bazie]: sendOutboxBounded(ms) — w górze wysyła kolejkę; zawieszona — { ok: false, powod: limit } po ms, najwyżej 30 s; w ramce przez flushOutbox okna nadrzędnego', async () => {
+    const s = await swiatNadawcy();
+    const { A } = s;
+    krok();
+    await A.notatka(s.P1, 1);
+    expect(await A.sync.sendOutboxBounded(10000)).toMatchObject({ ok: true, powod: null, wyslane: 1 });
+    expect((await A.licz()).total).toBe(0);
+    for (const [ms, limit] of [[10000, 10000], [99999, 30000], [0, 30000]]) {
+      krok();
+      await A.notatka(s.P1, `limit ${ms}`);
+      const brama = s.atrapa.wstrzymaj({ trasa: 'events' });
+      const p = A.sync.sendOutboxBounded(ms);
+      await brama.osiagnieta;
+      await czekajAz(() => A.zegar.oczekujace().includes(limit), `limit ${limit} ms`);
+      A.zegar.odpal(limit);
+      expect(await p, `ms ${ms}`).toEqual({ ok: false, powod: 'limit' });
+      brama.zwolnij();
+      await czekajAz(async () => (await A.licz()).total === 0, `wysyłka po limicie ${ms}`);
+      await cisza(s.wszystkie());
+    }
+    const R = await urz(s, 'R', { ramka: A });
+    const flushGory = vi.spyOn(A.sync, 'flushOutbox');
+    krok();
+    await R.notatka(s.P1, 'ramka');
+    expect(await R.sync.sendOutboxBounded(10000)).toMatchObject({ ok: true });
+    expect(flushGory).toHaveBeenCalledTimes(1);
+    expect((await R.licz()).total).toBe(0);
+  });
+
+  it('NW12i [czerwony na bazie]: bez dziennika sendOutboxBounded → null, bez żądania', async () => {
+    const s = await swiatNadawcy({ flaga: '0' });
+    const { A } = s;
+    expect(await A.sync.sendOutboxBounded(10000)).toBe(null);
+    expect(zEvents(s, 'A')).toEqual([]);
+  });
+});
+
 describe('P-SYNC-NADAWCA-WPIECIA — stan nadawcy po rotacji (E2-PR4e1)', () => {
   it('NW12d [czerwony na bazie]: po rotacji nadawca zapomina materiał starego slotu — flushKeepalive bez żądania na stary slot', async () => {
     const s = await swiatNadawcy();
@@ -696,7 +746,7 @@ describe('P-SYNC-NADAWCA-WPIECIA — strażniki źródła (E2-PR4e1)', () => {
     expect(ramka).toContain('getItem(Bzd_K_APPLIED + slot) === String(kursor)');
     expect(ramka).toContain('Bzd_wlasneCzytaj(slot).has(eid)');
     expect(ramka.indexOf('Bzd_wlasneCzytaj'), 'własne przed zastosowaniem').toBeLessThan(ramka.indexOf('await L.applyEncryptedEvent('));
-    expect(sync).toMatch(/,applyRealtimeFrame:Bpr_ramka\}/);
+    expect(sync).toMatch(/,applyRealtimeFrame:Bpr_ramka,sendOutboxBounded:Bns_flushOgraniczony\}/);
     // chowanie: ht woła zdarzenia przed pełną wysyłką; PUT keepalive czeka na nie
     expect(sync).toContain('t&&t.keepalive&&Bns_najpierwZdarzenia();');
     expect(sync).toContain('mt.keepalive&&await Bns_poZdarzeniach();var z=await f(d+"/v1/slots/"+n+"/blob",mt,Bgz_czas(h));');
