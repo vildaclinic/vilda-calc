@@ -1,10 +1,11 @@
 /* Pakiety badań laboratoryjnych w przeliczniku jednostek (LAB-PAKIETY PR1, decyzje właściciela 2026-11-12).
  *
  * Pakiet to nazwana lista badań z katalogu przelicznika (LabUnitsData), wpisywanych razem z jednego wydruku:
- * wartości i jednostki trafiają zbiorczo do Badań w karcie pacjenta. MVP: pakiet „Tarczyca” (TSH, fT4, fT3).
+ * wartości i jednostki trafiają zbiorczo do Badań w karcie pacjenta. Pakiet wbudowany: „Tarczyca” (TSH, fT4,
+ * fT3); własne pakiety składa lekarz w kreatorze (PR4, niżej).
  * Pakiet jest zakładką karty przelicznika na stronie „Jednostki lab.” („Pojedyncze badanie | Pakiet badań” —
  * jedna karta, jeden tytuł, zakładki pod tytułem; makieta zaakceptowana 2026-11-13), dostępną wyłącznie
- * dla zalogowanego użytkownika z wybranym pacjentem.
+ * dla zalogowanego użytkownika; wpisywanie wyników wymaga wybranego pacjenta.
  *
  * Plik ma trzy rozdzielone części (jeden plik, bo budżet instalacji PWA liczy żądania — sw-precache-stron):
  *   1. DANE  (VildaLabPackagesData) — które badania tworzą pakiet. Bez norm, jednostek i współczynników:
@@ -19,8 +20,9 @@
  *      zapisze się z wynikiem; pacjenta do norm podaje strona (VildaLabConverterRuntime.getPackagePatient —
  *      dane z karty, bez lokalnych nadpisań przelicznika). Zapis: jedna notatka na wypełnione pole, po kolei,
  *      z jedną datą pobrania i jednym komentarzem. Wartości wpisane dla jednego pacjenta nie przechodzą na
- *      innego: zmiana pacjenta, wylogowanie i „Wyczyść” opróżniają pola. Bez logowania i bez pacjenta karta
- *      pokazuje tylko wyjaśnienie i przycisk, bez pól. Geometria paska oceny stoi w atrybutach SVG, kolory
+ *      innego: zmiana pacjenta, wylogowanie i „Wyczyść” opróżniają pola. Bez logowania karta pokazuje tylko
+ *      wyjaśnienie i przycisk; po zalogowaniu bez pacjenta — wybór pakietu i kreator, bez pól wyników.
+ *      Geometria paska oceny stoi w atrybutach SVG, kolory
  *      w klasach (sekcja „Pakiet badań” w inline_przelicznik_jednostek_00.css); skrypt nie ustawia stylów.
  *
  * Jednostki wybrane ostatnio na tym urządzeniu pamięta preferencja labPackageSettings (VildaPersistence,
