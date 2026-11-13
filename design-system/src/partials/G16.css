@@ -2421,13 +2421,17 @@ body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).
     overflow: clip;
   }
   .lab-smart-card > .lab-card-head {
-    grid-area: title;
-    margin: 0;
-    padding: var(--space-1-5) 1.7rem 0;
-  }
+  grid-area:title;
+  display:grid;
+  grid-template-columns:minmax(0, 1fr);
+  grid-template-columns:subgrid;
+  margin:0;
+  padding:var(--space-1-5) 1.7rem 0;
+}
   .lab-smart-card > .lab-card-head > h1 {
-    text-align: left;
-  }
+  grid-column:1 / -1;
+  text-align:left;
+}
   .lab-smart-card > .lab-pane--form {
     grid-area: form;
     padding: var(--space-1-25) 1.7rem var(--space-1-5);
