@@ -1690,15 +1690,15 @@ function Bpk(key, meta) {
 // czyta kopię urządzenia (nic się nie zeruje). Nie dotyczy sesji jednorazowej (D).
 function Bpr(key, meta) {
   const own = Bpk(key, meta);
-  if (!meta || !meta.seed || !own || own === key || D) return own;
+  if (!meta || !meta.seed || !own || own === key) return own;
   const ls = T("local"), uid = Bpu();
   if (ls && uid && ls.getItem(own) == null && !ls.getItem(Bpm + uid)) {
     Bpa();                                        // sejf odblokowany → przejęcie rusza przy pierwszym odczycie
-    if (ls.getItem(key) != null) return key;
+    if (!D && ls.getItem(key) != null) return key;   // sesja jednorazowa nie sięga po kopię urządzenia
   }
   return own;
 }
-// Przejęcie: raz na konto, po odblokowaniu sejfu. Zwraca Promise<boolean>.
+// Przejęcie: raz na konto, po odblokowaniu sejfu. Zwraca Promise<boolean> (wewnętrznie).
 function Bpa() {
   // rejestruje VildaVault.onUnlock(Bpa); bez odblokowanego sejfu albo ze znacznikiem → false
   // n = (await VildaVault.listUsers()).length; konto zmienione w trakcie → false, bez zapisu
@@ -1710,7 +1710,7 @@ function Bpa() {
 // zdarzenia dokumentu vilda:auth-loaded, vilda:session-changed, vilda:auth-state-settled → Bpa
 ```
 
-`Bpr` zastępuje `Bpk` w dwóch odczytach (`readModuleRaw` — `q`, `readModuleJSON` — `te`); zapisy, `applyPreferenceFromCloud`, `removeModuleKey` i `clearModuleState` (`ne`) używają `Bpk`. Publiczne API dostało `adoptAccountPreferences` (= `Bpa`) — dla testów i diagnostyki. Preferencje `local-persistent`, dane formularza i dane pacjenta czytają i piszą jak dotąd. Wersja adaptera (`1.7.2`) bez zmian; `vilda_vault.js` nietknięty — hak `onPreferenceWrite` i `applyPreferenceFromCloud` dalej posługują się nazwą preferencji.
+`Bpr` zastępuje `Bpk` w dwóch odczytach (`readModuleRaw` — `q`, `readModuleJSON` — `te`); zapisy, `applyPreferenceFromCloud`, `removeModuleKey` i `clearModuleState` (`ne`) używają `Bpk`. Publiczne API adaptera jest bez zmian: końcówka pliku od `function le(e){` (czyszczenie danych i eksport API) musi zostać bajt w bajt taka jak w wersji bazowej — pilnuje tego `tests/e2e/header-patient-status-offline.spec.mjs` — więc przejęcie nie ma osobnej funkcji publicznej; rusza samo (`onUnlock` sejfu, zdarzenia sesji, pierwszy odczyt). Preferencje `local-persistent`, dane formularza i dane pacjenta czytają i piszą jak dotąd. Wersja adaptera (`1.7.2`) bez zmian; `vilda_vault.js` nietknięty — hak `onPreferenceWrite` i `applyPreferenceFromCloud` dalej posługują się nazwą preferencji.
 
 Skutki, o których warto pamiętać:
 

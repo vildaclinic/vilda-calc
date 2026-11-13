@@ -32,6 +32,19 @@ const chwila = () => new Promise((r) => { setTimeout(r, 0); });
 const HASLO_A = 'Ustawienia#KontoA!2026', HASLO_B = 'Ustawienia#KontoB!2026';
 const ZNACZNIK = 'vilda-pref-konta-v1::';
 const naKoncie = async (U) => (await U.vault.exportSyncPayload()).userPreferences || {};
+/* Przejęcie ustawień urządzenia przez zalogowane konto. Adapter nie ma do tego publicznej funkcji (końcówka pliku
+ * z API jest pilnowana bajt w bajt przez header-patient-status-offline.spec.mjs): przejęcie rusza przy odblokowaniu
+ * sejfu albo przy pierwszym odczycie ustawienia bez własnej kopii. Zwraca true, gdy konto ma znacznik przejęcia. */
+async function przejete(U) {
+  const konto = U.vault.getCurrentUser() && U.vault.getCurrentUser().userId;
+  if (!konto) return false;
+  U.prefs.readPreferenceRaw('PAL_PDF_LAYOUT', null);
+  for (let i = 0; i < 100; i += 1) {
+    if (U.ls.getItem(ZNACZNIK + konto) === '1') return true;
+    await new Promise((r) => { setTimeout(r, 2); });
+  }
+  return false;
+}
 
 // Ustawienia widoku: gość ma kopię urządzenia, konto przejmuje jej kopię.
 const WIDOK = ['palSmoothPasses', 'palPdfLayout', 'cardVisibility', 'cardCollapseState', 'publicationCharts', 'centileChartLineStyles',
@@ -107,7 +120,7 @@ describe('pierwsze logowanie po aktualizacji: konto przejmuje dotychczasowe usta
     expect(U.prefs.readPreferenceJSON('CARD_VISIBILITY', {})).toEqual({ whrCard: false });
     expect(U.prefs.readNumberPreference('PAL_SMOOTH_PASSES', 12, { min: 0, max: 50 })).toBe(20);
     expect(U.prefs.readPreferenceJSON('ADV_HISTORY_COLLAPSED', null)).toEqual({ 'fikcyjny-pacjent': { z: 1, updatedAtISO: '2026-06-01T10:00:00.000Z' } });
-    expect(await U.prefs.adoptAccountPreferences()).toBe(true);
+    expect(await przejete(U)).toBe(true);
     expect(U.ls.getItem(ZNACZNIK + a)).toBe('1');
     expect(U.prefs.readPreferenceJSON('CARD_VISIBILITY', {})).toEqual({ whrCard: false });
     expect(U.prefs.readNumberPreference('PAL_SMOOTH_PASSES', 12, { min: 0, max: 50 })).toBe(20);
@@ -122,8 +135,11 @@ describe('pierwsze logowanie po aktualizacji: konto przejmuje dotychczasowe usta
     // Przejęcie jest kopią na urządzeniu — niczego nie dopisuje do konta ani do synchronizacji.
     await chwila();
     expect(Object.keys(await naKoncie(U))).toEqual([]);
-    // Drugi raz nie ma czego przejmować.
-    expect(await U.prefs.adoptAccountPreferences()).toBe(false);
+    // Kolejne odczyty niczego już nie przenoszą: kopia urządzenia zmieniona później nie wraca do konta.
+    U.ls.setItem('publicationCharts', 'true');
+    expect(await przejete(U)).toBe(true);
+    expect(U.prefs.readPreferenceRaw('PUBLICATION_CHARTS', null)).toBeNull();
+    expect(U.ls.getItem(`publicationCharts::${a}`)).toBeNull();
   });
 
   it('sam odczyt ustawienia uruchamia przejęcie, gdy sejf jest odblokowany', async () => {
@@ -131,7 +147,7 @@ describe('pierwsze logowanie po aktualizacji: konto przejmuje dotychczasowe usta
     const a = (await U.vault.createUser(HASLO_A, { label: 'Lekarz A', iterations: 10000 })).userId;
     expect(U.ls.getItem(ZNACZNIK + a)).toBeNull();
     U.prefs.readPreferenceRaw('PAL_SMOOTH_PASSES', null);
-    await U.prefs.adoptAccountPreferences();
+    await przejete(U);
     expect(U.ls.getItem(ZNACZNIK + a)).toBe('1');
     expect(U.ls.getItem(`cardVisibility::${a}`)).toBe(JSON.stringify({ whrCard: false }));
   });
@@ -142,7 +158,7 @@ describe('pierwsze logowanie po aktualizacji: konto przejmuje dotychczasowe usta
     const widok = U.prefs.readPreferenceJSON('CARD_VISIBILITY', {});
     widok.bmiCard = false;
     expect(U.prefs.writePreferenceJSON('CARD_VISIBILITY', widok, { force: true })).toBe(true);
-    await U.prefs.adoptAccountPreferences();
+    await przejete(U);
     expect(U.prefs.readPreferenceJSON('CARD_VISIBILITY', {})).toEqual({ whrCard: false, bmiCard: false });
     expect(JSON.parse(U.ls.getItem('cardVisibility'))).toEqual({ whrCard: false });
     expect(U.ls.getItem(ZNACZNIK + a)).toBe('1');
@@ -151,7 +167,7 @@ describe('pierwsze logowanie po aktualizacji: konto przejmuje dotychczasowe usta
   it('po przejęciu konto czyta już tylko swoje: późniejsza zmiana gościa go nie dotyczy', async () => {
     const U = urzadzenieZeWspolnaKopia();
     const a = (await U.vault.createUser(HASLO_A, { label: 'Lekarz A', iterations: 10000 })).userId;
-    await U.prefs.adoptAccountPreferences();
+    await przejete(U);
     await U.vault.lock();
     // Gość zmienia ustawienie urządzenia, którego konto A nie miało.
     expect(U.prefs.writePreferenceRaw('PUBLICATION_CHARTS', 'true')).toBe(true);
@@ -169,7 +185,7 @@ describe('dwa konta na jednym urządzeniu', () => {
     U.ls.setItem('advHistoryCollapsed', JSON.stringify({ 'fikcyjny-pacjent-a': { z: 1 } }));
     U.ls.setItem('remindersLastShownDate', '2026-06-16');
     const a = (await U.vault.createUser(HASLO_A, { label: 'Lekarz A', iterations: 10000 })).userId;
-    await U.prefs.adoptAccountPreferences();
+    await przejete(U);
     return { U, a };
   }
 
@@ -185,7 +201,7 @@ describe('dwa konta na jednym urządzeniu', () => {
     expect(U.prefs.readPreferenceRaw('GH_THERAPY_VIEW_MODE', null)).toBeNull();
     // Lekarz B: zaczyna od ustawień urządzenia, zmian A nie widzi.
     const b = (await U.vault.createUser(HASLO_B, { label: 'Lekarz B', iterations: 10000 })).userId;
-    await U.prefs.adoptAccountPreferences();
+    await przejete(U);
     expect(U.prefs.readPreferenceJSON('CARD_VISIBILITY', {})).toEqual({ whrCard: false });
     expect(U.prefs.readPreferenceRaw('GH_THERAPY_VIEW_MODE', null)).toBeNull();
     expect(U.prefs.writePreferenceJSON('CARD_VISIBILITY', { whrCard: true, planCard: false }, { force: true })).toBe(true);
@@ -209,7 +225,7 @@ describe('dwa konta na jednym urządzeniu', () => {
     expect(U.ls.getItem('remindersLastShownDate')).toBeNull();
     await U.vault.lock();
     await U.vault.createUser(HASLO_B, { label: 'Lekarz B', iterations: 10000 });
-    await U.prefs.adoptAccountPreferences();
+    await przejete(U);
     expect(U.prefs.readPreferenceJSON('ADV_HISTORY_COLLAPSED', null)).toBeNull();
     expect(U.prefs.readModuleRaw('remindersLastShownDate', null)).toBeNull();
     // B zapisuje własne — A ich nie widzi.
@@ -223,23 +239,23 @@ describe('dwa konta na jednym urządzeniu', () => {
   it('urządzenie, na którym są już dwa konta: wspólna kopia kluczy z danymi konta nie przechodzi na nikogo i znika', async () => {
     const U = loadDevice();
     const a = (await U.vault.createUser(HASLO_A, { label: 'Lekarz A', iterations: 10000 })).userId;
-    await U.prefs.adoptAccountPreferences();
+    await przejete(U);
     await U.vault.lock();
     const b = (await U.vault.createUser(HASLO_B, { label: 'Lekarz B', iterations: 10000 })).userId;
-    await U.prefs.adoptAccountPreferences();
+    await przejete(U);
     // Stan sprzed poprawki na urządzeniu współdzielonym: wspólna kopia, znaczników jeszcze nie ma.
     U.ls.removeItem(ZNACZNIK + a);
     U.ls.removeItem(ZNACZNIK + b);
     U.ls.setItem('advHistoryCollapsed', JSON.stringify({ 'pacjent-nie-wiadomo-czyj': { z: 1 } }));
     U.ls.setItem('cardCollapseState', JSON.stringify({ circCard: false }));
-    expect(await U.prefs.adoptAccountPreferences()).toBe(true);
+    expect(await przejete(U)).toBe(true);
     expect(U.prefs.readPreferenceJSON('ADV_HISTORY_COLLAPSED', null)).toBeNull();
     expect(U.ls.getItem('advHistoryCollapsed')).toBeNull();
     // Ustawienie widoku dostają oba konta (oba je dotąd widziały).
     expect(U.prefs.readPreferenceJSON('CARD_COLLAPSE_STATE', {})).toEqual({ circCard: false });
     await U.vault.lock();
     await U.vault.unlockUser(a, HASLO_A);
-    await U.prefs.adoptAccountPreferences();
+    await przejete(U);
     expect(U.prefs.readPreferenceJSON('CARD_COLLAPSE_STATE', {})).toEqual({ circCard: false });
     expect(U.prefs.readPreferenceJSON('ADV_HISTORY_COLLAPSED', null)).toBeNull();
   });
@@ -253,13 +269,17 @@ describe('dwa konta na jednym urządzeniu', () => {
     // Lista kont odpowiada dopiero po przelogowaniu na A.
     const prawdziwa = U.vault.listUsers.bind(U.vault);
     U.okno.VildaVault = { ...U.vault, listUsers: async () => { const lista = await prawdziwa(); await U.vault.lock(); await U.vault.unlockUser(a, HASLO_A); return lista; } };
-    expect(await U.prefs.adoptAccountPreferences()).toBe(false);
+    // Odczyt ustawienia rusza przejęcie dla konta B; zanim lista kont odpowie, zalogowane jest już konto A.
+    U.prefs.readPreferenceRaw('PAL_PDF_LAYOUT', null);
+    for (let i = 0; i < 200 && (U.vault.getCurrentUser() || {}).userId !== a; i += 1) await new Promise((r) => { setTimeout(r, 2); });
+    expect(U.vault.getCurrentUser().userId).toBe(a);
+    for (let i = 0; i < 5; i += 1) await chwila();
     U.okno.VildaVault = U.vault;
     expect(U.ls.getItem(ZNACZNIK + b)).toBeNull();
     expect(U.ls.getItem(`cardVisibility::${b}`)).toBeNull();
     expect(U.ls.getItem(`cardVisibility::${a}`)).toBeNull();
     // Zalogowane konto A przejmuje normalnie przy następnej okazji.
-    expect(await U.prefs.adoptAccountPreferences()).toBe(true);
+    expect(await przejete(U)).toBe(true);
     expect(U.ls.getItem(`cardVisibility::${a}`)).toBe(JSON.stringify({ whrCard: false }));
   });
 });
@@ -275,7 +295,7 @@ describe('logowanie jednorazowe na cudzym urządzeniu', () => {
       // Bez sięgania po kopię urządzenia: lekarz jednorazowy widzi ustawienia domyślne.
       expect(U.prefs.readPreferenceJSON('CARD_VISIBILITY', {})).toEqual({});
       expect(U.prefs.readPreferenceJSON('ADV_HISTORY_COLLAPSED', null)).toBeNull();
-      expect(await U.prefs.adoptAccountPreferences()).toBe(true);
+      expect(await przejete(U)).toBe(true);
       expect(U.ls.getItem(ZNACZNIK + gosc)).toBe('1');
       expect(U.ls.klucze()).toEqual(['advHistoryCollapsed', 'cardVisibility', ZNACZNIK + gosc].sort());
       // Własne ustawienia zapisuje u siebie; kopia gospodarza zostaje.
@@ -289,7 +309,7 @@ describe('logowanie jednorazowe na cudzym urządzeniu', () => {
     // Gospodarz po powrocie przejmuje swoje ustawienia normalnie.
     await U.vault.lock();
     const gospodarz = (await U.vault.createUser(HASLO_A, { label: 'Gospodarz', iterations: 10000 })).userId;
-    await U.prefs.adoptAccountPreferences();
+    await przejete(U);
     expect(U.prefs.readPreferenceJSON('CARD_VISIBILITY', {})).toEqual({ whrCard: false });
     expect(U.ls.getItem(`cardVisibility::${gospodarz}`)).toBe(JSON.stringify({ whrCard: false }));
   });
@@ -322,7 +342,7 @@ describe('pozostałe drogi adaptera', () => {
     const U = loadDevice();
     U.ls.setItem('cardCollapseState', JSON.stringify({ circCard: false }));
     const a = (await U.vault.createUser(HASLO_A, { label: 'Lekarz A', iterations: 10000 })).userId;
-    await U.prefs.adoptAccountPreferences();
+    await przejete(U);
     expect(U.prefs.removeModuleKey('CARD_COLLAPSE_STATE')).toBe(true);
     expect(U.ls.getItem(`cardCollapseState::${a}`)).toBeNull();
     expect(U.ls.getItem('cardCollapseState')).not.toBeNull();
@@ -342,7 +362,7 @@ describe('pozostałe drogi adaptera', () => {
     const U = loadDevice();
     expect(U.prefs.writePreferenceRaw('DARK_BG_LEVEL', '2')).toBe(true);
     await U.vault.createUser(HASLO_A, { label: 'Lekarz A', iterations: 10000 });
-    await U.prefs.adoptAccountPreferences();
+    await przejete(U);
     expect(U.prefs.readPreferenceRaw('DARK_BG_LEVEL', null)).toBe('2');
     expect(U.prefs.writePreferenceRaw('GLASS_LEVEL', '3')).toBe(true);
     expect(U.ls.getItem('glassLevel')).toBe('3');
