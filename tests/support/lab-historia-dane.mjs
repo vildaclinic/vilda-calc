@@ -102,11 +102,24 @@ export async function otworzBadania(page, patientId) {
 }
 
 /**
+ * Baner zgody analitycznej zajmuje dół ekranu telefonu i przechwytuje dotyk — także na pierwszych pozycjach
+ * listy badań, odkąd pasek trybu (LAB-PAKIETY PR1) przesunął formularz przelicznika w dół. Testy przelicznika
+ * dotyczą formularza, paska i pakietu, nie banera, więc zgoda jest rozstrzygnięta, zanim strona wystartuje
+ * (ten sam zapis co w tests/visual/wyglad.spec.mjs).
+ */
+export async function bezBaneraZgody(page) {
+  await page.addInitScript(() => {
+    try { localStorage.setItem('analyticsConsent', 'denied'); } catch (_) { /* brak storage — pomiń */ }
+  });
+}
+
+/**
  * LAB-HISTORIA PR3: przelicznik jednostek z odblokowanym sejfem, fikcyjną historią (zapiszHistorie)
  * i fikcyjną pacjentką w formularzu; wybrane badanie i (opcjonalnie) wartość bieżąca.
  * Zwraca { patientId, ids }.
  */
 export async function otworzPrzelicznik(page, { badanie = 'tsh', szukaj = 'TSH', wartosc = '0,38' } = {}) {
+  await bezBaneraZgody(page);
   const patientId = await otworzSejf(page, '/przelicznik-jednostek.html');
   const ids = await zapiszHistorie(page, patientId);
   await page.evaluate((pid) => {

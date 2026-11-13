@@ -1609,3 +1609,19 @@ if (event.clcrClearPatient !== true); else /* resetLoadedComparisonUiResidue() a
 ```
 
 Start i DocPro (`#clearAllDataBtn`) bez zmian. Testy: e2e `tests/e2e/klirens-wyczysc-zakres.spec.mjs`, `tests/e2e/sidebar-clear.spec.mjs` (test menu Klirensu).
+
+## Łatka LAB-PAKIETY PR1 — preferencja `labPackageSettings` (`vilda_persistence_adapter.js`, 2026-11-12)
+
+Pakiet badań (`vilda_lab_packages.js`, czytelne źródło) pamięta na urządzeniu jednostki wybrane przy ostatnim zapisie. Adapter przyjmuje tylko klucze z własnego rejestru, więc zminifikowany `vilda_persistence_adapter.js` dostał jeden nowy klucz w trzech miejscach rejestru, tuż za `LAB_ASSAY_PROFILES` (ten sam zakres i klasa):
+
+```js
+// MODULE_KEYS (s)
+LAB_ASSAY_PROFILES:"labAssayProfiles",LAB_PACKAGE_SETTINGS:"labPackageSettings"
+// MODULE_KEY_META (I)
+[s.LAB_PACKAGE_SETTINGS]:Object.freeze({scope:"laboratory",kind:"preference",storage:"local-persistent"})
+// aliasy nazw (x)
+LAB_PACKAGE_SETTINGS:s.LAB_PACKAGE_SETTINGS,labPackageSettings:s.LAB_PACKAGE_SETTINGS
+```
+
+Klasa `local-persistent`: preferencja urządzenia, bez synchronizacji z kontem i bez danych pacjenta. Odczyt i zapis, wersja adaptera (`1.7.2`) i pozostałe klucze bez zmian. Test: `tests/unit/lab-pakiety.test.mjs` („klucz jest zarejestrowany w adapterze…”, zapis i odczyt przez prawdziwy adapter).
+

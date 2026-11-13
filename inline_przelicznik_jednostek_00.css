@@ -2258,3 +2258,594 @@
         border-left: var(--lab-pane-divider) !important;
       }
     }
+
+    /* ════════════════════════════════════════════════════════════════
+     *  Pakiet badań (vilda_lab_packages.js, LAB-PAKIETY PR1)
+     *  Tryb pracy „Pojedyncze badanie | Pakiet badań” i karta pakietu.
+     *  Kroki, pola i pigułka oceny używają klas przelicznika (.lab-step,
+     *  .lab-range-status), żeby pakiet wyglądał jak pojedyncze badanie.
+     *  Przyciski z !important, bo skórka .liquid-ios26 nadpisuje wszystkie
+     *  przyciski z !important (ios26-v2.css). Pasek oceny: kolory w klasach
+     *  SVG, geometria w atrybutach. Wiersz zapisu w fiolecie modułu lab —
+     *  jak wiersz przypięcia #labPinRow.
+     * ════════════════════════════════════════════════════════════════ */
+    #labModeBar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: var(--space-8px);
+      min-width: 0;
+    }
+
+    #labModeBar[hidden],
+    #labPackageCard[hidden],
+    #labPackageCard [hidden] {
+      display: none !important;
+    }
+
+    #labModeBar button.lab-mode-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-6px);
+      width: auto;
+      min-height: 44px;
+      margin: 0;
+      padding: 0 var(--space-18px);
+      background: #fff !important;
+      color: var(--primary) !important;
+      border: var(--border-emphasis) solid var(--primary) !important;
+      border-radius: var(--radius-pill) !important;
+      box-shadow: none !important;
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+      font-family: inherit;
+      font-size: .95rem;
+      font-weight: 600;
+      line-height: 1.2;
+      cursor: pointer;
+    }
+
+    #labModeBar button.lab-mode-btn:hover {
+      background: #e9f5f4 !important;
+    }
+
+    /* Przełącznik stoi w miejscu: bez uniesienia z globalnej reguły button:hover (na telefonie
+       :hover zostaje po dotknięciu i przyciski różniłyby się rozmiarem). */
+    #labModeBar button.lab-mode-btn:hover,
+    #labModeBar button.lab-mode-btn:focus-visible {
+      transform: none;
+    }
+
+    #labModeBar button.lab-mode-btn[aria-pressed=true],
+    #labModeBar button.lab-mode-btn[aria-pressed=true]:hover {
+      background: var(--primary) !important;
+      color: #fff !important;
+    }
+
+    .lab-mode-lock {
+      display: none;
+      flex: none;
+    }
+
+    .lab-mode-btn.is-locked .lab-mode-lock {
+      display: block;
+    }
+
+    /* Tryb pakietu: karta pojedynczego badania i lista wskazań znikają, zostaje karta pakietu. */
+    .lab-grid.is-package > #labResultsCard,
+    .lab-grid.is-package > #labSuggestCard {
+      display: none;
+    }
+
+    #labPackageCard {
+      min-width: 0;
+      box-sizing: border-box;
+    }
+
+    /* Tytuł jak w karcie pojedynczego badania (.lab-smart-card h1). */
+    #labPackageCard h1 {
+      margin: 0;
+      font-size: 1.3rem;
+      font-weight: 500;
+      color: var(--primary);
+      text-align: center;
+    }
+
+    #labPackageCard p {
+      margin: 0;
+    }
+
+    /* style.css daje przyciskom width: 100% na telefonie; tu szerokość ustawia układ karty. */
+    #labPackageCard button {
+      width: auto;
+    }
+
+    #labPackageCard button.lab-pkg-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 46px;
+      margin: 0;
+      padding: 0 var(--space-18px);
+      border-radius: var(--radius-12) !important;
+      box-shadow: none !important;
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+      font-family: inherit;
+      font-size: .95rem;
+      font-weight: 600;
+      line-height: 1.2;
+      cursor: pointer;
+    }
+
+    #labPackageCard button.lab-pkg-btn-primary {
+      background: var(--primary) !important;
+      color: #fff !important;
+      border: 0 !important;
+    }
+
+    #labPackageCard button.lab-pkg-btn-ghost {
+      background: transparent !important;
+      color: var(--primary) !important;
+      border: 1.5px solid var(--primary) !important;
+      font-weight: 500;
+    }
+
+    #labPackageCard button.lab-pkg-btn-save {
+      background: #5856D6 !important;
+      color: #fff !important;
+      border: 0 !important;
+      border-radius: var(--radius-10) !important;
+      white-space: nowrap;
+    }
+
+    #labPackageCard button.lab-pkg-btn-save:hover {
+      background: #4a48c9 !important;
+    }
+
+    #labPackageCard button.lab-pkg-btn:disabled {
+      background: var(--disabled-bg) !important;
+      color: #6b7a7c !important;
+      border: var(--border-hairline) solid var(--disabled-border) !important;
+      cursor: not-allowed;
+    }
+
+    /* Bramka: bez logowania albo bez wybranego pacjenta. */
+    .lab-pkg-gate {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-10px);
+      max-width: 560px;
+      margin: var(--space-1) auto 0;
+      padding: var(--space-16px);
+      border: var(--border-hairline) solid var(--line);
+      border-radius: var(--radius-12);
+      background: var(--card);
+    }
+
+    .lab-pkg-gate-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-heading);
+    }
+
+    .lab-pkg-gate-text {
+      font-size: .9rem;
+      line-height: 1.45;
+      color: var(--text-2);
+    }
+
+    #labPackageCard .lab-pkg-gate button.lab-pkg-btn {
+      width: 100%;
+    }
+
+    .lab-pkg-body {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1-25);
+      margin-top: var(--space-1);
+      min-width: 0;
+    }
+
+    .lab-pkg-form,
+    .lab-pkg-results {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .lab-pkg-results {
+      gap: var(--space-12px);
+    }
+
+    .lab-pkg-choice {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space-8px);
+    }
+
+    .lab-pkg-chip {
+      display: inline-flex;
+      align-items: center;
+      min-height: 36px;
+      padding: 0 var(--space-14px);
+      border-radius: var(--radius-8);
+      background: var(--primary);
+      color: #fff;
+      font-size: .95rem;
+      font-weight: 600;
+    }
+
+    .lab-pkg-chip-list {
+      font-size: .9rem;
+      color: var(--text-2);
+    }
+
+    .lab-pkg-rows {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-10px);
+    }
+
+    .lab-pkg-row {
+      display: grid;
+      grid-template-columns: 64px minmax(0, 1fr) 132px;
+      align-items: center;
+      gap: var(--space-6px) var(--space-10px);
+    }
+
+    .lab-pkg-row-label {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-strong);
+    }
+
+    .lab-pkg-row input.lab-pkg-value {
+      min-height: 44px;
+      font-size: 1.25rem;
+      font-weight: 500;
+      color: var(--primary);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .lab-pkg-row input.lab-pkg-value[aria-invalid=true] {
+      border-color: var(--error);
+    }
+
+    .lab-pkg-row select.lab-pkg-unit {
+      min-height: 44px;
+      padding-left: var(--space-10px);
+      padding-right: var(--space-10px);
+    }
+
+    .lab-pkg-row-error {
+      grid-column: 2 / -1;
+      font-size: .82rem;
+      color: var(--error);
+    }
+
+    .lab-pkg-hint {
+      margin-top: var(--space-8px);
+      font-size: .82rem;
+      line-height: 1.4;
+      color: var(--text-muted);
+    }
+
+    .lab-pkg-date-note.is-error {
+      color: var(--error);
+    }
+
+    .lab-pkg-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-10px);
+    }
+
+    .lab-pkg-field {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4px);
+      min-width: 0;
+    }
+
+    .lab-pkg-field-date {
+      flex: 0 1 180px;
+      min-width: 150px;
+    }
+
+    .lab-pkg-field-comment {
+      flex: 1 1 220px;
+    }
+
+    .lab-pkg-field-label {
+      font-size: .82rem;
+      color: var(--text-2);
+    }
+
+    .lab-pkg-field input.lab-pkg-date,
+    .lab-pkg-field input.lab-pkg-comment {
+      width: 100%;
+      min-height: 44px;
+      box-sizing: border-box;
+      padding: var(--space-8px) 11px;
+      border: .5px solid rgba(0,131,141,.25);
+      border-radius: var(--radius-8);
+      background: #fff;
+      color: #2a3a3c;
+      font-family: inherit;
+      font-size: .95rem;
+    }
+
+    .lab-pkg-patient {
+      margin-bottom: 0;
+    }
+
+    #labPackageCard button.lab-pkg-clear {
+      width: 100%;
+      margin-top: var(--space-4px);
+    }
+
+    .lab-pkg-results-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: var(--space-4px) var(--space-8px);
+    }
+
+    .lab-pkg-results-head .lab-pkg-hint {
+      margin-top: 0;
+    }
+
+    .lab-pkg-cards {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-12px);
+    }
+
+    .lab-pkg-card {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-10px);
+      box-sizing: border-box;
+      padding: var(--space-14px) var(--space-16px) var(--space-16px);
+      border: var(--border-hairline) solid var(--line);
+      border-radius: var(--radius-12);
+      background: #fff;
+    }
+
+    .lab-pkg-card.is-empty,
+    .lab-pkg-card.is-invalid {
+      padding: var(--space-10px) var(--space-16px);
+      background: transparent;
+    }
+
+    .lab-pkg-card-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-8px);
+    }
+
+    .lab-pkg-card-main {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: var(--space-4px) var(--space-10px);
+      min-width: 0;
+    }
+
+    .lab-pkg-card-name {
+      font-size: .95rem;
+      font-weight: 600;
+      color: var(--text-strong);
+    }
+
+    .lab-pkg-card-value {
+      font-size: 2rem;
+      font-weight: 500;
+      line-height: 1;
+      letter-spacing: -.02em;
+      color: var(--primary);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .lab-pkg-card-value.is-normal {
+      color: #0f6e56;
+    }
+
+    .lab-pkg-card-value.is-below,
+    .lab-pkg-card-value.is-uwaga-low {
+      color: #8a4a18;
+    }
+
+    .lab-pkg-card-value.is-above,
+    .lab-pkg-card-value.is-uwaga-high {
+      color: var(--error);
+    }
+
+    .lab-pkg-card-unit {
+      font-size: .95rem;
+      color: #5a6a6e;
+    }
+
+    .lab-pkg-card-empty {
+      font-size: .88rem;
+      color: var(--text-muted);
+    }
+
+    .lab-pkg-card.is-invalid .lab-pkg-card-empty {
+      color: var(--error);
+    }
+
+    .lab-pkg-card-converted {
+      font-size: .88rem;
+      color: var(--text-2);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .lab-pkg-card-norm {
+      font-size: .9rem;
+      color: #1a1a1a;
+    }
+
+    .lab-pkg-card-norm strong {
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .lab-pkg-bar {
+      display: block;
+      width: 100%;
+      height: 16px;
+      overflow: visible;
+    }
+
+    .lab-pkg-bar-low {
+      fill: rgba(216, 99, 42, .55);
+    }
+
+    .lab-pkg-bar-ok {
+      fill: rgba(29, 158, 117, .5);
+    }
+
+    .lab-pkg-bar-high {
+      fill: rgba(185, 28, 28, .45);
+    }
+
+    .lab-pkg-bar-marker {
+      fill: #fff;
+      stroke: var(--primary);
+      stroke-width: 3;
+    }
+
+    .lab-pkg-bar-marker.is-normal {
+      stroke: #1D9E75;
+    }
+
+    .lab-pkg-bar-marker.is-below,
+    .lab-pkg-bar-marker.is-uwaga-low {
+      stroke: #d8632a;
+    }
+
+    .lab-pkg-bar-marker.is-above,
+    .lab-pkg-bar-marker.is-uwaga-high {
+      stroke: var(--error);
+    }
+
+    .lab-pkg-sources {
+      margin-top: 0;
+    }
+
+    .lab-pkg-save {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space-12px);
+      box-sizing: border-box;
+      padding: var(--space-12px) var(--space-14px);
+      border-left: var(--border-pro) solid #5856D6;
+      border-radius: 0 var(--radius-10) var(--radius-10) 0;
+      background: #EEEDFE;
+    }
+
+    .lab-pkg-save-info {
+      display: flex;
+      flex: 1 1 200px;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .lab-pkg-save-ctx {
+      font-size: .9rem;
+      font-weight: 600;
+      color: #26215C;
+    }
+
+    .lab-pkg-save-sub {
+      font-size: .82rem;
+      color: #3f37a0;
+    }
+
+    .lab-pkg-error {
+      padding: var(--space-10px) var(--space-12px);
+      border: var(--border-hairline) solid var(--error);
+      border-radius: var(--radius-8);
+      background: var(--danger-bg);
+      color: #8a1818;
+      font-size: .9rem;
+    }
+
+    .lab-pkg-done {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space-6px) var(--space-12px);
+      box-sizing: border-box;
+      padding: var(--space-12px) var(--space-14px);
+      border: var(--border-hairline) solid rgba(29, 158, 117, .45);
+      border-radius: var(--radius-10);
+      background: rgba(29, 158, 117, .1);
+      color: #0f6e56;
+    }
+
+    .lab-pkg-done-title {
+      flex: 1 1 100%;
+      font-size: .95rem;
+      font-weight: 600;
+    }
+
+    .lab-pkg-done-text {
+      flex: 1 1 200px;
+      min-width: 0;
+      font-size: .88rem;
+    }
+
+    @container lab-warsztat (min-width: 1000px) {
+      #labPackageCard h1 {
+        text-align: left;
+      }
+
+      .lab-pkg-body {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        align-items: start;
+        gap: 28px;
+      }
+    }
+
+    @media (max-width: 600px) {
+      #labModeBar {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      #labModeBar button.lab-mode-btn {
+        width: 100%;
+        padding: 0 var(--space-6px);
+        font-size: .84rem;
+      }
+
+      .lab-pkg-row {
+        grid-template-columns: 44px minmax(0, 1fr) 104px;
+        gap: var(--space-6px) var(--space-8px);
+      }
+
+      .lab-pkg-row select.lab-pkg-unit {
+        padding-left: var(--space-6px);
+        padding-right: var(--space-6px);
+      }
+
+      .lab-pkg-card-value {
+        font-size: 1.6rem;
+      }
+
+      #labPackageCard button.lab-pkg-btn-save {
+        width: 100%;
+        white-space: normal;
+      }
+    }

@@ -1234,6 +1234,97 @@ Testy na funkcjach produkcyjnych i prawdziwym sejfie:
 `tests/e2e/wyniki-badan-karta.spec.mjs`. Opis: `docs/LAB_HISTORIA_WYNIKOW_PLAN.md`,
 „Uzupełnienie z wdrożenia 6.32”.
 
+### LAB-PAKIETY PR1 — pakiet badań „Tarczyca” w przeliczniku jednostek (`vilda_lab_packages.js` 1.0.0, 2026-11-12)
+
+**Klasyfikacja: zmiana funkcjonalna, bez zmiany klinicznej.** Pakiet nie wnosi
+żadnej normy, wzoru, progu, jednostki ani współczynnika. Każdy wynik ocenia ten
+sam silnik co pojedyncze badanie (`LabUnitConverter.evaluate`, zakres z
+`LabUnitConverter.selectRange`, dane z `lab_units_data.js`), a zapis ma postać
+zapisu „Przypnij do wizyty”. Decyzje właściciela z 2026-11-12 (makieta
+zaakceptowana): pakiet jest trybem pracy strony „Jednostki lab.” ze skrótem
+w zakładce „Badania”; dostępny **tylko dla zalogowanego użytkownika z wybranym
+pacjentem**; MVP to pakiet „Tarczyca” (TSH, fT4, fT3). Normy z wydruku (PR2)
+i blok „Badania” w Podsumowaniu wyników (PR3) są osobnymi PR-ami. Plan etapów:
+`docs/LAB_PAKIETY_PLAN.md`.
+
+**Jeden plik, trzy części** (`vilda_lab_packages.js`): dane
+(`VildaLabPackagesData` — które badania tworzą pakiet, bez norm), model
+(`VildaLabPackages` — czyste funkcje) i widok (`VildaLabPackagesUI`). Jeden
+plik, bo budżet instalacji PWA liczy żądania (≤ 600, `sw-precache-stron`);
+nowe żądanie równoważy para aliasów `/cukrzyca.js` w
+`FRESH_STATIC_ALIAS_PATHS`. Style: sekcja „Pakiet badań”
+w `inline_przelicznik_jednostek_00.css`.
+
+- **Pacjent do norm.** `VildaLabConverterRuntime.getPackagePatient()`
+  (czytelny skrypt strony) podaje dane z karty (`sharedUserData`: płeć, wiek
+  z miesiącami, stadium) i ten sam etap życia co `getEffectivePatient`, ale
+  bez lokalnych nadpisań przelicznika i bez atrybutów pomiaru (pora, protokół,
+  metoda) — pakiet nie ma tych pól. Bez wieku i płci obowiązuje dotychczasowa
+  reguła przelicznika (zakres dorosłych); karta mówi to wprost: „Brak wieku
+  i płci w danych pacjenta — przyjęto normy dla dorosłych”.
+- **Ocena wiersza** (`evaluateRow`): puste pole → `empty` (wiersz pomijany);
+  wartość nieliczbowa, ujemna albo nieznana jednostka → `invalid` z komunikatem
+  silnika; inaczej `ok` z wynikiem w SI katalogu (`converted`), liczbą
+  (`valueNum` jak w przeliczniku: „1 000” = 1000) i zrzutem normy
+  `VildaLabRangeSnapshot.create` zbudowanym z tych samych pól co
+  `captureLabRange` (zakres, wiersz `when`, źródła, wersje silnika i danych).
+  Tekst i kolor oceny pochodzą z `VildaLabRangeSnapshot.describe` tego zrzutu,
+  więc ekran pokazuje to, co się zapisze. Brzmienie kategorii jak w wyniku
+  pojedynczego badania („w zakresie normy”, „powyżej normy”, „znacznie
+  poniżej normy”…). Zakres ogólny u dziecka (wiersz domyślny, decyzje
+  6.30–6.31): bez kategorii, koloru i znacznika na pasku.
+- **Pasek oceny** jest ilustracją położenia wyniku: dolna granica zakresu
+  w 30%, górna w 70% szerokości, znacznik ograniczony do paska. Nie niesie
+  osobnej oceny.
+- **Zapis** (`planSave` → `buildNote`): jedna notatka `wynik-badania` na
+  wypełnione pole, po kolei, z jedną datą pobrania i jednym komentarzem
+  (≤ 300 znaków); tytuł `<badanie>: <wartość> <jednostka>`, treść
+  `= <wynik w SI>` + komentarz, `labResult { test, value, testKey, valueNum,
+  unit, range }`, `linkedAgeMonths` z wieku wizyty — pola i ich kolejność jak
+  w `lab_pin_result.js`. Zapis wstrzymują: brak pacjenta, błędny wiersz, brak
+  wyników, data błędna albo późniejsza niż dziś. Przy dacie innej niż dziś
+  karta pokazuje tę samą uwagę co okno przypięcia: normy dobrano do danych
+  pacjenta widocznych teraz. Gdy zapis przerwie się w połowie, zapisane
+  wiersze znikają z formularza (ponowienie ich nie zdubluje), a komunikat
+  wymienia, co zapisano.
+- **Granica pacjenta.** Wartości wpisane dla jednego pacjenta nie przechodzą
+  na innego: zmiana pacjenta, wylogowanie i `vilda:user-state-cleared`
+  opróżniają pola. Bez logowania i bez pacjenta formularz nie powstaje (karta
+  z wyjaśnieniem i przyciskiem „Zaloguj się” / „Wybierz pacjenta”). Skrót
+  „Wpisz pakiet: Tarczyca →” w zakładce „Badania” stoi tylko w karcie pacjenta
+  wczytanego do formularza — z karty innej osoby wyniki trafiłyby do
+  niewłaściwego pacjenta.
+- **Jednostki zapamiętane na urządzeniu.** Preferencja `labPackageSettings`
+  (`{ schemaVersion: 1, units: { <badanie>: <symbol> } }`, adapter: zakres
+  „laboratory”, rodzaj „preference”, klasa `local-persistent`, jak
+  `labAssayProfiles`) zapisuje się po udanym zapisie pakietu. To wygoda
+  formularza, nie dane pacjenta; jednostka spoza katalogu badania wraca do SI.
+- **Adres.** `?pakiet=tarczyca` (zapas `#pakiet=`) otwiera pakiet, także przez
+  `vilda:shell-navigate-target` w powłoce; `?badanie=<id>` wraca do
+  pojedynczego badania.
+
+**Przypadek syntetyczny** (fikcyjna dziewczynka 9 lat, dane z karty): TSH
+6,8 mIU/L → „powyżej normy”, norma „Dzieci 6–10 lat” 0,6–4,8 mIU/L; fT4
+1,1 ng/dL → 14,2 pmol/L, „w zakresie normy”, norma 1–1,7 ng/dL
+(12,9–21,9 pmol/L); fT3 puste → bez notatki. Zapis: dwie notatki
+`wynik-badania`, np. tytuł „fT4 (wolna tyroksyna): 1,1 ng/dL”, treść
+„= 14,2 pmol/L”, `labResult.value` „1,1 ng/dL = 14,2 pmol/L”, `valueNum` 1,1,
+`unit` „ng/dL”, `range.classification` „within”. To są wartości silnika
+pojedynczego badania — test porównuje je z `LabUnitConverter.evaluate` i ze
+zrzutem `VildaLabRangeSnapshot.create`, a e2e porównuje notatkę z pakietu
+z notatką zapisaną przez „Przypnij do wizyty” (różni je tylko chwila zapisu).
+
+**Ograniczenia MVP.** Wynik cenzorowany („<0,01”) nie jest liczbą — jak
+w pojedynczym badaniu. Pakiet nie ma pól pory pobrania ani metody. Normy
+laboratorium z wydruku: PR2. Pakiety własne i „Pokwitanie”: kolejne etapy.
+
+Testy: `tests/unit/lab-pakiety.test.mjs` (dane, model, preferencja — na
+prawdziwym przeliczniku, zrzucie normy i adapterze),
+`tests/unit/lab-history-tab.test.mjs` (skrót), e2e
+`tests/e2e/lab-pakiet-tarczyca.spec.mjs`, `lab-pakiet-tarczyca-mobile.spec.mjs`,
+`powloka-pakiet-badan.spec.mjs`, `lab-pakiet-offline.spec.mjs` (zimny start
+offline po instalacji produkcyjnego SW).
+
 ### P-LAB-WARTOSC-BEZ-JEDNOSTKI — liczba ze starszego wpisu wyniku bez jednostki (SW 1.1.279, `vilda_vault.js` 212, 2026-10-14)
 
 **Wpływ kliniczny: tak.** Zmieniają się liczby w historii wyników dla

@@ -78,9 +78,9 @@
   <script src="vilda_logger.js?v=2"></script>
   <script src="vilda_html.js?v=5"></script>
   <script src="vilda_schowek.js?v=5"></script>
-  <script src="vilda_persistence_adapter.js?v=34"></script>
+  <script src="vilda_persistence_adapter.js?v=35"></script>
 <script src="vilda_reminders_privacy.js?v=1"></script>
-  <script src="vilda_session_bridge.js?v=201"></script>
+  <script src="vilda_session_bridge.js?v=202"></script>
   <script src="vilda_init.js?v=4"></script>
   <script src="vilda_deps.js?v=98"></script>
   <script>
@@ -115,9 +115,9 @@
   <link rel="icon" type="image/png" sizes="48x48" href="/pwa-icons/icon-48x48.png">
   <link rel="icon" type="image/png" sizes="96x96" href="/pwa-icons/icon-96x96.png">
 
-  <link href="inline_przelicznik_jednostek_00.css?v=8" rel="stylesheet">
+  <link href="inline_przelicznik_jednostek_00.css?v=9" rel="stylesheet">
 
-  <script src="vilda_chrome.js?v=285"></script>
+  <script src="vilda_chrome.js?v=286"></script>
   <script src="lucide.min.js?v=1" defer></script>
   <script defer src="vilda_frame_sync.js?v=3"></script>
   <link rel="stylesheet" href="vilda_phone_landscape.css?v=2">
@@ -134,6 +134,16 @@
       <div class="container">
         <div class="lab-container">
          <div class="lab-grid">
+
+          <!-- LAB-PAKIETY PR1 (decyzje właściciela 2026-11-12): tryb pracy przelicznika. „Pakiet badań”
+               pokazuje kartę #labPackageCard zamiast karty pojedynczego badania; pakiet jest dostępny
+               tylko dla zalogowanego użytkownika z wybranym pacjentem. Pasek odsłania i kartę wypełnia
+               vilda_lab_packages.js. -->
+          <div class="lab-mode-bar lab-full" id="labModeBar" role="group" aria-label="Tryb pracy" hidden>
+            <button type="button" class="lab-mode-btn" id="labModeSingle" aria-pressed="true">Pojedyncze badanie</button>
+            <button type="button" class="lab-mode-btn" id="labModePackage" aria-pressed="false"><svg class="lab-mode-lock" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Pakiet badań</button>
+          </div>
+          <div class="lab-card lab-full" id="labPackageCard" hidden></div>
 
           <!-- ===== Faza 18 — Smart Form (jedna karta, 5 kroków) ===== -->
           <!-- Warsztat na szerokim ekranie (2026-10-19): karta zostaje jedna, a jej trzy panele
@@ -505,6 +515,7 @@
   <script src="lab_pin_result.js?v=11"></script>
   <script src="vilda_lab_history.js?v=6"></script>
   <script src="lab_history_strip.js?v=4"></script>
+  <script src="vilda_lab_packages.js?v=1"></script>
   <!-- P2 (2026-06-07): 939 KB paneli klinicznych ładowane LENIWIE — strona startuje
        bez parsowania największego pliku w aplikacji. Konsument ma bezpieczny getter
        (global_LabClinicalPanels) z fallbackiem do zwykłego wyszukiwania, więc okno
@@ -2291,6 +2302,41 @@
         }
       }
       return p;
+    }
+
+    /**
+     * LAB-PAKIETY PR1 — pacjent dla pakietu badań: dane z karty (sharedUserData) i ten sam etap życia
+     * co w getEffectivePatient, ale bez lokalnych nadpisań przelicznika i bez atrybutów pomiaru
+     * (pora, protokół, metoda) — pakiet nie ma tych pól. Zwraca pacjenta dla LabUnitConverter
+     * oraz opis do pokazania w karcie pakietu.
+     */
+    function getPackagePatient() {
+      syncPatientIdentity();
+      var shared = readPatientFromShared() || {};
+      var p = {
+        sex: shared.sex || null,
+        age: (typeof shared.age === 'number' && isFinite(shared.age)) ? shared.age : null,
+        tanner: (typeof shared.tanner === 'number' && isFinite(shared.tanner)) ? shared.tanner : null,
+        cycle_phase: null,
+        time_of_day: null,
+        test_protocol: null,
+        method: null
+      };
+      // Ta sama reguła etapu życia co w getEffectivePatient (bez wieku i stadium: dorosły).
+      if (typeof p.age === 'number') {
+        p.life_stage = p.age >= 18 ? 'adult' : 'pediatric';
+      } else if (typeof p.tanner === 'number') {
+        p.life_stage = p.tanner >= 5 ? 'adult' : 'pediatric';
+      } else {
+        p.life_stage = 'adult';
+      }
+      p._has_shared = !!(shared.sex || (typeof shared.age === 'number') || (typeof shared.tanner === 'number'));
+      p._has_override = false;
+      p._shared_tanner = p.tanner;
+      p._shared_tanner_kind = shared.tannerKind || null;
+      p._shared_tanner_current = shared.tannerCurrent == null ? null : shared.tannerCurrent;
+      p._tanner_overridden = false;
+      return { patient: p, description: describePatient(p) };
     }
 
     /**
@@ -4479,7 +4525,9 @@
     // dostaje zdarzeniem (także przy „Wyczyść” i resecie sesji).
     var announcedSubstanceId = null;
     window.VildaLabConverterRuntime = {
-      getSubstanceId: function () { return currentSubstance ? currentSubstance.id : null; }
+      getSubstanceId: function () { return currentSubstance ? currentSubstance.id : null; },
+      // LAB-PAKIETY PR1: pakiet badań ocenia wyniki dla pacjenta z karty (vilda_lab_packages.js).
+      getPackagePatient: function () { return getPackagePatient(); }
     };
     function announceSubstance() {
       var id = currentSubstance ? currentSubstance.id : null;

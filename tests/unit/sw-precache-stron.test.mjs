@@ -314,7 +314,9 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
     '/circumference_module.js', '/wfh_module.js', '/respiratory_module.js',
     '/gh_therapy_segments.js', '/obesity_response_criteria.js',
     '/vilda_down_syndrome.js', '/flu_therapy.js', '/bisphos_therapy.js',
-    '/bisphos_therapy_monitor.js', '/lab_unit_converter.js', '/antibiotic_therapy.js', '/gh_igf_therapy.js', '/gh_therapy_monitor.js', '/hypertension_therapy.js', '/thyroid_cancer_kids.js', '/app.js', '/custom-fixes.js'];
+    '/bisphos_therapy_monitor.js', '/lab_unit_converter.js', '/antibiotic_therapy.js', '/gh_igf_therapy.js', '/gh_therapy_monitor.js', '/hypertension_therapy.js', '/thyroid_cancer_kids.js', '/app.js', '/custom-fixes.js',
+    // LAB-PAKIETY PR1: para aliasów cukrzyca.js równoważy jedno żądanie nowego vilda_lab_packages.js.
+    '/cukrzyca.js'];
   const wspoldzielonePary = ['/style.css', '/vilda_chrome.css', ...dodatkoweWspoldzieloneZasoby];
   const wspoldzieloneZasoby = new Set(['/edu-video-ui.css', ...wspoldzielonePary]);
   const oczekiwanePobraniaSwiezychZasobow = () => {
@@ -416,6 +418,9 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
     for (const plik of ['/vilda_lab_result_presentation.js', '/vilda_lab_result_chart.js']) {
       expect(pobrane.filter(adres => adres.split('?')[0] === plik), plik).toHaveLength(1);
     }
+    // Pakiet badań (LAB-PAKIETY PR1) to jeden nowy plik z własnym świeżym żądaniem; równoważy je para aliasów cukrzyca.js.
+    expect(pobrane.filter(adres => adres.split('?')[0] === '/vilda_lab_packages.js')).toHaveLength(1);
+    expect(pobrane.filter(adres => adres.split('?')[0] === '/cukrzyca.js')).toHaveLength(1);
     expect(pobrane.length, `instalacja wysyła ${pobrane.length} żądań`).toBeLessThanOrEqual(600);
   });
 

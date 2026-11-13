@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.520';
+const SW_VERSION = '1.1.521';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -861,6 +861,7 @@ const CORE_SHELL_URLS = [
   '/vilda_persistence_adapter.js?v=32',
   '/vilda_persistence_adapter.js?v=33',
   '/vilda_persistence_adapter.js?v=34',
+  '/vilda_persistence_adapter.js?v=35',
   '/vilda_panel_pacjent.js?v=1',
   '/vilda_panel_pacjent.js?v=2',
   '/vilda_panel_pacjent.js?v=3',
@@ -999,6 +1000,7 @@ const CORE_SHELL_URLS = [
   '/vilda_lab_history_tab.js?v=32',
   '/vilda_lab_history_tab.js?v=33',
   '/vilda_lab_history_tab.js?v=34',
+  '/vilda_lab_history_tab.js?v=35',
   '/vilda_lab_result_presentation.js?v=1',
   '/vilda_lab_result_presentation.js?v=2',
   '/vilda_lab_result_presentation.js?v=3',
@@ -1014,6 +1016,7 @@ const CORE_SHELL_URLS = [
   '/vilda_lab_history_tab.css?v=6',
   '/vilda_lab_history_tab.css?v=7',
   '/vilda_lab_history_tab.css?v=8',
+  '/vilda_lab_history_tab.css?v=9',
   '/vilda_lab_puberty_ui.js?v=1',
   '/vilda_lab_puberty_ui.js?v=2',
   '/vilda_lab_puberty_ui.js?v=3',
@@ -2067,6 +2070,7 @@ const CORE_SHELL_URLS = [
   '/vilda_chrome.js?v=283',
   '/vilda_chrome.js?v=284',
   '/vilda_chrome.js?v=285',
+  '/vilda_chrome.js?v=286',
   '/vilda_realtime.js?v=1',
   '/vilda_realtime.js?v=2',
   '/vilda_realtime.js?v=3',
@@ -3001,6 +3005,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_session_bridge.js?v=199',
   '/vilda_session_bridge.js?v=200',
   '/vilda_session_bridge.js?v=201',
+  '/vilda_session_bridge.js?v=202',
   '/vilda_sync.js?v=48',
   '/vilda_sync.js?v=49',
   '/vilda_sync.js?v=50',
@@ -3380,6 +3385,7 @@ const OPTIONAL_ASSETS = [
   '/lab_history_strip.js?v=4',
   '/lab_history_strip.css?v=1',
   '/lab_history_strip.css?v=2',
+  '/vilda_lab_packages.js?v=1',
   '/klirens.xlsx',
   '/zscore_przyklad_palczewska.xlsx',
   '/zscore_przyklad_olaf.xlsx',
@@ -4924,6 +4930,7 @@ const OPTIONAL_ASSETS = [
   '/inline_przelicznik_jednostek_00.css?v=6',
   '/inline_przelicznik_jednostek_00.css?v=7',
   '/inline_przelicznik_jednostek_00.css?v=8',
+  '/inline_przelicznik_jednostek_00.css?v=9',
   '/inline_regulamin_00.css?v=1',
   '/inline_steroidy_00.css?v=1',
   '/inline_subskrypcja_00.css?v=1',
@@ -6244,6 +6251,9 @@ const FRESH_STATIC_ALIAS_PATHS = new Set([
   '/gh_therapy_monitor.js',
   '/hypertension_therapy.js',
   '/thyroid_cancer_kids.js',
+  // LAB-PAKIETY PR1: nowy vilda_lab_packages.js dodaje jedno żądanie instalacji; para aliasów
+  // /cukrzyca.js i /cukrzyca.js?v=N dzieli świeżą odpowiedź, więc budżet żądań zostaje bez zmian.
+  '/cukrzyca.js',
 ]);
 
 // The pack is only an installation transport: original module URLs and exact

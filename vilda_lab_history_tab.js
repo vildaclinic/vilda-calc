@@ -49,6 +49,8 @@
   // Daty, które model stawia na osi (decyzja 6.25): data badania, a dla IGF-1 z notatki GH termin odbytej kontroli.
   var SAMPLE_DATES = ['badanie', 'kontrola'];
   var GH_SOURCE = 'z notatki leczenia GH';
+  // LAB-PAKIETY PR1: skrót do pakietu „Tarczyca” w przeliczniku (slug z danych w vilda_lab_packages.js).
+  var PACKAGE_SHORTCUT = { href: 'przelicznik-jednostek.html?pakiet=tarczyca', label: 'Wpisz pakiet: Tarczyca →' };
   var resourceBootstrap = null;
   var moduleURL = win && win.document && win.document.currentScript && win.document.currentScript.src;
 
@@ -521,6 +523,14 @@
         }
       }
 
+      // Pacjent wczytany do formularza (ten, któremu przelicznik przypina wyniki) — identyfikator z sesji.
+      function isLoadedPatient() {
+        var current;
+        try { current = win && (win._vildaCurrentPatientId || (win.sessionStorage && win.sessionStorage.getItem('vildaCurrentPatientId'))); }
+        catch (_) { current = null; }
+        return !!current && String(current) === String(patientId);
+      }
+
       var remindersButton = null;
       function paintReminders() {
         if (!remindersButton) return;
@@ -632,6 +642,15 @@
           button(actions, 'vilda-auth-btn vilda-auth-btn-small vilda-auth-btn-ghost vilda-lab-hist-add', '+ Dodaj wynik', function () {
             openEditor({ note: null, template: 'lab', anchor: 'date' });
           });
+        }
+        // LAB-PAKIETY PR1 (decyzja właściciela 2026-11-12): skrót do pakietu badań w przeliczniku. Pakiet
+        // opisuje vilda_lab_packages.js; zakładka zna tylko adres i nazwę skrótu. Pakiet zapisuje
+        // wyniki pacjentowi wczytanemu do formularza, więc skrót stoi tylko w jego karcie — z karty innej
+        // osoby wyniki trafiłyby do niewłaściwego pacjenta.
+        if (isLoadedPatient()) {
+          var pack = add(actions, 'a', 'vilda-auth-btn vilda-auth-btn-small vilda-auth-btn-ghost vilda-lab-hist-package', PACKAGE_SHORTCUT.label);
+          pack.setAttribute('href', PACKAGE_SHORTCUT.href);
+          pack.addEventListener('click', function (event) { openConverter(event, PACKAGE_SHORTCUT.href); });
         }
         var link = add(actions, 'a', 'vilda-auth-btn vilda-auth-btn-small vilda-auth-btn-primary vilda-lab-hist-check', 'Sprawdź nowy wynik →');
         link.setAttribute('href', 'przelicznik-jednostek.html');
@@ -1103,7 +1122,7 @@
       };
     }
 
-    return Object.freeze({ version: '2.2.0', render: render, _internal: Object.freeze({ plural: plural, commentText: commentText, shortLabel: shortLabel, mergedNote: mergedNote }) });
+    return Object.freeze({ version: '2.3.0', render: render, _internal: Object.freeze({ plural: plural, commentText: commentText, shortLabel: shortLabel, mergedNote: mergedNote }) });
   }
 
   return createApi();
