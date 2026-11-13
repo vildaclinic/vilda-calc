@@ -129,6 +129,22 @@ test('pakiet „Tarczyca” po zimnym starcie offline: zasoby z SW, ocena i zapi
     await page.reload({ waitUntil: 'load' });
     await page.waitForFunction(() => window.VildaVault?.isUnlocked());
     await expect(page.locator('#labPkgUnit-ft4')).toHaveValue('ng/dL');
+    // LAB-PAKIETY PR2 offline: norma z wydruku ocenia wynik, zapisuje się z nim i wraca jako podpowiedź z sejfu.
+    await expect(page.locator('#labPkgNormLow-tsh')).toHaveValue('');
+    await expect(page.locator('#labPkgPrefillHint')).toBeHidden();
+    await page.locator('#labPkgValue-tsh').fill('4,5');
+    await page.locator('#labPkgNormLow-tsh').fill('0,27');
+    await page.locator('#labPkgNormHigh-tsh').fill('4,2');
+    await expect(karta.locator('.lab-pkg-card[data-analyte="tsh"] .lab-range-status')).toHaveText('powyżej normy z wydruku');
+    await page.locator('#labPkgSave').click();
+    await expect(page.locator('#labPkgDone')).toContainText('Zapisano 1 wynik w karcie pacjenta');
+    const withNorm = await page.evaluate(async (pid) => (await window.VildaVault.listPatientNotesForPatient(pid))
+      .filter((note) => note.category === 'wynik-badania' && note.labResult.norm)
+      .map((note) => [note.labResult.testKey, note.labResult.valueNum, note.labResult.norm, 'range' in note.labResult]), patientId);
+    expect(withNorm).toEqual([['tsh', 4.5, '0,27–4,2 mIU/L', false]]);
+    await expect(page.locator('#labPkgNormLow-tsh')).toHaveValue('0,27');
+    await expect(page.locator('#labPkgNormHigh-tsh')).toHaveValue('4,2');
+    await expect(page.locator('#labPkgPrefillHint')).toContainText('Podpowiedź z poprzedniego wyniku pacjenta');
     expect(await noNetwork(), 'źródło nadal niedostępne po zapisie').toBe(true);
   } finally {
     if (context) await context.close();

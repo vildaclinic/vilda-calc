@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { describe, expect, it } from 'vitest';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
@@ -217,6 +218,219 @@ describe('jednostki zapamiętane na urządzeniu', () => {
     expect(Model.rememberUnits(null, { tsh: 'mIU/L' })).toBe(false);
     expect(Model.rememberUnits({ MODULE_KEY_META: {}, writePreferenceJSON: () => true }, { tsh: 'mIU/L' })).toBe(false);
     expect(Model.readSettings(null)).toEqual({ schemaVersion: 1, units: {} });
+  });
+});
+
+// LAB-PAKIETY PR2: norma laboratorium z wydruku. Decyzje właściciela: wpisana norma zastępuje normę aplikacji dla
+// tego wyniku i zapisuje się razem z nim (makieta, 2026-11-12); podpowiedź pochodzi wyłącznie z poprzedniego wyniku
+// tego samego badania u tego samego pacjenta, a bez wcześniejszego wyniku nie ma żadnej (2026-11-13).
+describe('norma z wydruku (LAB-PAKIETY PR2)', () => {
+  const zNorma = (analyteId, raw, unit, normLow, normHigh) => Model.evaluateRow({ ...opcje(dziewczynka9), analyteId, raw, unit, normLow, normHigh });
+  const spacje = (tekst) => tekst.replace(/\u00a0/g, ' ');
+
+  it('TSH 4,5 mIU/L u fikcyjnej dziewczynki 9 lat: w normie aplikacji 0,6–4,8, powyżej normy z wydruku 0,27–4,2', () => {
+    const bez = wiersz(dziewczynka9, 'tsh', '4,5', 'mIU/L'), z = zNorma('tsh', '4,5', 'mIU/L', '0,27', '4,2');
+    expect([bez.view.state, bez.view.text, bez.view.lab]).toEqual(['is-normal', 'w zakresie normy', undefined]);
+    expect([z.view.state, z.view.text, z.view.classification, z.view.lab, z.view.bounds]).toEqual(['is-above', 'powyżej normy z wydruku', 'above', true, '0,27–4,2 mIU/L']);
+    // Norma aplikacji zostaje obok do wglądu, razem ze swoim źródłem; oceny już nie daje.
+    expect({ ...z.view.app, bounds: spacje(z.view.app.bounds) }).toEqual({ bounds: '0,6–4,8 mIU/L', population: 'Dzieci 6–10 lat', general: false });
+    expect(z.view.sources).toEqual(bez.view.sources);
+    expect(z.norm).toEqual({ status: 'ok', low: 0.27, high: 4.2, unit: 'mIU/L', text: '0,27–4,2 mIU/L' });
+    // Wynik, jednostka i przeliczenie nie zależą od normy.
+    expect([z.shown, z.unit, z.converted, z.valueNum]).toEqual([bez.shown, bez.unit, bez.converted, bez.valueNum]);
+  });
+
+  it('granice należą do normy; norma z wydruku ma trzy kategorie — bez „znacznie” silnika aplikacji', () => {
+    const przypadki = [['0,27', 'is-normal', 'w normie z wydruku'], ['4,2', 'is-normal', 'w normie z wydruku'], ['0,26', 'is-below', 'poniżej normy z wydruku'],
+      ['4,21', 'is-above', 'powyżej normy z wydruku'], ['12', 'is-above', 'powyżej normy z wydruku'], ['0,05', 'is-below', 'poniżej normy z wydruku']];
+    for (const [raw, state, text] of przypadki) {
+      const w = zNorma('tsh', raw, 'mIU/L', '0,27', '4,2');
+      expect([w.view.state, w.view.text], raw).toEqual([state, text]);
+      expect(w.view.marker).toBeGreaterThanOrEqual(0.03);
+      expect(w.view.marker).toBeLessThanOrEqual(0.97);
+    }
+    // Pasek jak dla normy aplikacji: granice w 30% i 70%.
+    expect(zNorma('tsh', '0,27', 'mIU/L', '0,27', '4,2').view.marker).toBeCloseTo(0.3, 10);
+    expect(zNorma('tsh', '4,2', 'mIU/L', '0,27', '4,2').view.marker).toBeCloseTo(0.7, 10);
+    // Ten sam wynik silnik aplikacji nazywa „znacznie powyżej normy”.
+    expect(wiersz(dziewczynka9, 'tsh', '12', 'mIU/L').view.text).toBe('znacznie powyżej normy');
+  });
+
+  it('norma jest w jednostce wyniku: fT4 1,65 ng/dL przy normie 0,93–1,7 ng/dL — w normie z wydruku', () => {
+    const w = zNorma('ft4', '1,65', 'ng/dL', '0,93', '1,7');
+    expect([w.view.text, w.view.bounds, w.converted, spacje(w.view.app.bounds)]).toEqual(['w normie z wydruku', '0,93–1,7 ng/dL', '21,2 pmol/L', '1–1,7 ng/dL']);
+  });
+
+  it('zakres ogólny u dziecka (bez oceny aplikacji) zyskuje ocenę, gdy jest norma z wydruku', () => {
+    // Dziecko bez wieku w danych: aplikacja pokazuje zakres ogólny bez kategorii (decyzje 6.30–6.31).
+    const dziecko = { sex: 'F', age: null, tanner: 2, life_stage: 'pediatric' };
+    const bez = Model.evaluateRow({ ...opcje(dziecko), analyteId: 'tsh', raw: '2,5', unit: 'mIU/L' });
+    const z = Model.evaluateRow({ ...opcje(dziecko), analyteId: 'tsh', raw: '2,5', unit: 'mIU/L', normLow: '0,27', normHigh: '4,2' });
+    expect([bez.view.general, bez.view.state, bez.view.marker]).toEqual([true, '', null]);
+    expect([z.view.state, z.view.text, z.view.app.general, spacje(z.view.app.bounds)]).toEqual(['is-normal', 'w normie z wydruku', true, '0,3–4,2 mIU/L']);
+    expect(z.view.marker).toBeGreaterThan(0.3);
+    expect(z.view.marker).toBeLessThan(0.7);
+  });
+
+  it('parseLabNorm: pusta norma, zapis liczb i trzy rodzaje błędów', () => {
+    const norma = (low, high) => Model.parseLabNorm({ converter: Conv, low, high, unit: 'mIU/L' });
+    expect([norma('', ''), norma('  ', undefined), norma(null, null)]).toEqual([{ status: 'empty' }, { status: 'empty' }, { status: 'empty' }]);
+    expect(norma('0.27', ' 4,20 ')).toEqual({ status: 'ok', low: 0.27, high: 4.2, unit: 'mIU/L', text: '0,27–4,2 mIU/L' });
+    expect(norma('0', '4,2').text).toBe('0–4,2 mIU/L');
+    for (const [low, high] of [['0,27', ''], ['', '4,2']]) expect(norma(low, high)).toEqual({ status: 'invalid', error: 'Podaj obie granice normy: od i do.' });
+    for (const [low, high] of [['abc', '4,2'], ['<1', '4'], ['-1', '2'], ['0,0000001', '1']]) {
+      expect(norma(low, high), `${low}–${high}`).toEqual({ status: 'invalid', error: 'Granice normy muszą być liczbami, np. 0,6 i 4,8.' });
+    }
+    for (const [low, high] of [['4,2', '4,2'], ['5', '4']]) expect(norma(low, high)).toEqual({ status: 'invalid', error: 'Górna granica normy musi być większa od dolnej.' });
+    // Tekst normy jest jednym zakresem „od–do jednostka” — taki przyjmuje historia wyników i parser normy z edytora karty.
+    expect(Model.parseLabNorm({ converter: Conv, low: '12', high: '22', unit: 'pmol/L' }).text).toBe('12–22 pmol/L');
+  });
+
+  it('błędna norma: wiersz niesie błąd, ocena zostaje przy normie aplikacji, a zapis jest wstrzymany', () => {
+    const w = zNorma('ft3', '6,1', 'pmol/L', '3,1', '');
+    expect([w.status, w.normError, w.norm, w.view.lab, w.view.text]).toEqual(['ok', 'Podaj obie granice normy: od i do.', undefined, undefined, 'w zakresie normy']);
+    const plan = Model.planSave({ rows: [zNorma('tsh', '4,5', 'mIU/L', '0,27', '4,2'), w], patientId: 'fikcyjny-pacjent', dateISO: '2026-06-15', todayISO: '2026-06-17', snapshot: Snapshot });
+    expect(plan).toMatchObject({ ok: false, error: 'Popraw normę z wydruku: fT3.', notes: [] });
+    // Norma przy pustym wyniku niczego nie wstrzymuje: pusty wiersz nie jest zapisywany.
+    expect(zNorma('ft3', '', 'pmol/L', '3,1', '')).toEqual({ status: 'empty', analyteId: 'ft3', raw: '', unit: 'pmol/L' });
+  });
+
+  it('zapis: wynik z normą z wydruku niesie tę normę zamiast zrzutu normy aplikacji; wynik bez normy — jak dotąd', () => {
+    const rows = Model.evaluatePackage(opcje(dziewczynka9), [
+      { analyteId: 'tsh', raw: '4,5', unit: 'mIU/L', normLow: '0,27', normHigh: '4,2' },
+      { analyteId: 'ft4', raw: '1,65', unit: 'ng/dL', normLow: '0,93', normHigh: '1,7' },
+      { analyteId: 'ft3', raw: '6,1', unit: 'pmol/L' },
+    ]);
+    const plan = Model.planSave({ rows, patientId: 'fikcyjny-pacjent', dateISO: '2026-06-15', todayISO: '2026-06-17', comment: 'kontrola', linkedAgeMonths: 108, snapshot: Snapshot });
+    expect(plan.ok).toBe(true);
+    const [tsh, ft4, ft3] = plan.notes;
+    expect(tsh).toEqual({
+      patientId: 'fikcyjny-pacjent', title: 'TSH (tyreotropina): 4,5 mIU/L (SI)', body: '= 4,5 mIU/L\nkontrola\nNorma: 0,27–4,2 mIU/L',
+      category: 'wynik-badania', clinicalDateISO: '2026-06-15', linkedAgeMonths: 108,
+      labResult: { test: 'TSH (tyreotropina)', value: '4,5 mIU/L (SI) = 4,5 mIU/L', testKey: 'tsh', valueNum: 4.5, unit: 'mIU/L', norm: '0,27–4,2 mIU/L' },
+    });
+    expect([ft4.body, ft4.labResult.norm, Object.keys(ft4.labResult)]).toEqual(
+      ['= 21,2 pmol/L\nkontrola\nNorma: 0,93–1,7 ng/dL', '0,93–1,7 ng/dL', ['test', 'value', 'testKey', 'valueNum', 'unit', 'norm']]);
+    expect([ft3.body, Object.keys(ft3.labResult), ft3.labResult.range.classification]).toEqual(['= 6,1 pmol/L\nkontrola', ['test', 'value', 'testKey', 'valueNum', 'unit', 'range'], 'within']);
+  });
+
+  // Historia wyników i karta wyniku w zakładce „Badania” (prawdziwe moduły) czytają zapis pakietu tak, jak ocenił go formularz.
+  describe('historia wyników czyta zapis pakietu', () => {
+    const authSource = readFileSync(new URL('../../vilda_auth_ui.js', import.meta.url), 'utf8');
+    // Parser normy z edytora wyniku karty pacjenta — ten sam, którego używa historia.
+    const Dl = new Function(`${authSource.slice(authSource.indexOf('function Dl('), authSource.indexOf('function Ol('))};return Dl;`)();
+    const historia = {};
+    for (const plik of ['lab_units_data.js', 'lab_unit_converter.js', 'vilda_lab_range_snapshot.js', 'vilda_lab_history.js', 'vilda_lab_result_presentation.js']) loadBrowserScript(plik, historia);
+    function zapis(inputs, dateISO) {
+      const rows = Model.evaluatePackage(opcje(dziewczynka9), inputs);
+      const plan = Model.planSave({ rows, patientId: 'fikcyjny-pacjent', dateISO, todayISO: '2026-06-17', linkedAgeMonths: 108, snapshot: Snapshot });
+      return { rows, notes: plan.notes.map((n, i) => ({ ...n, id: `fikcyjny-${dateISO}-${i}`, createdAtISO: `${dateISO}T08:00:00.000Z` })) };
+    }
+    // Punkt serii o kształcie z VildaVault.listPatientLabSeries.
+    function wpisy(notes) {
+      const serie = {};
+      for (const n of notes) {
+        const lab = n.labResult;
+        (serie[lab.testKey] ||= { testKey: lab.testKey, test: lab.test, points: [] }).points.push(
+          { noteId: n.id, dateISO: n.clinicalDateISO, valueNum: lab.valueNum, unit: lab.unit, norm: lab.norm || null, ...(lab.range ? { range: lab.range } : {}) });
+      }
+      const opcjeHistorii = { converter: historia.LabUnitConverter, parseNorm: Dl, rangeSnapshot: historia.VildaLabRangeSnapshot };
+      const widok = historia.VildaLabHistory.buildHistoryView(Object.values(serie), { ...opcjeHistorii, notesById: Object.fromEntries(notes.map((n) => [n.id, n])) });
+      return widok.panels.flatMap((panel) => panel.series).flatMap((s) => s.entries.map((entry) => ({ key: s.key, entry, karta: historia.VildaLabResultPresentation.describe(entry, opcjeHistorii) })));
+    }
+    const KIERUNEK = { above: '↑', below: '↓', within: null };
+
+    it('strzałka, zakres i ton w „Badaniach” są oceną z formularza — także gdy norma aplikacji oceniłaby inaczej', () => {
+      const przypadki = [['4,5', 'above'], ['0,2', 'below'], ['2,5', 'within'], ['0,27', 'within'], ['4,2', 'within']];
+      for (const [raw, kategoria] of przypadki) {
+        const { rows, notes } = zapis([{ analyteId: 'tsh', raw, unit: 'mIU/L', normLow: '0,27', normHigh: '4,2' }], '2026-06-15');
+        const [{ entry, karta }] = wpisy(notes);
+        expect(rows[0].view.classification, raw).toBe(kategoria);
+        expect([entry.normAccepted, entry.flag, entry.norm, entry.converted], raw).toEqual([true, KIERUNEK[kategoria], '0,27–4,2 mIU/L', false]);
+        expect([karta.tone, spacje(karta.normText), karta.norms.map((n) => [n.label, spacje(n.text), n.tone])], raw).toEqual(
+          [kategoria, '0,27–4,2 mIU/L', [['Zakres z wpisu', '0,27–4,2 mIU/L', kategoria]]]);
+      }
+      // Parser normy z edytora karty czyta zapisany tekst jako te same granice.
+      expect(Dl('0,27–4,2 mIU/L')).toMatchObject({ lo: 0.27, hi: 4.2 });
+    });
+
+    it('wynik w innej jednostce niż ostatni wynik serii jest przeliczany i zostaje bez oceny — nie dostaje oceny normą aplikacji', () => {
+      const starszy = zapis([{ analyteId: 'ft4', raw: '1,65', unit: 'ng/dL', normLow: '0,93', normHigh: '1,7' }], '2026-06-10');
+      const nowszy = zapis([{ analyteId: 'ft4', raw: '17', unit: 'pmol/L', normLow: '12', normHigh: '22' }], '2026-06-15');
+      const [przeliczony, ostatni] = wpisy([...starszy.notes, ...nowszy.notes]);
+      expect([spacje(przeliczony.entry.display), przeliczony.entry.converted, przeliczony.entry.flag, przeliczony.entry.status, przeliczony.entry.norm]).toEqual(
+        ['21,2 pmol/L', true, null, null, '0,93–1,7 ng/dL']);
+      expect([przeliczony.karta.tone, przeliczony.karta.norms]).toEqual(['neutral', []]);
+      expect([ostatni.entry.normAccepted, ostatni.entry.flag, ostatni.karta.tone, spacje(ostatni.karta.normText)]).toEqual([true, null, 'within', '12–22 pmol/L']);
+      // Sam, w swojej jednostce, starszy wynik jest oceniany normą z wydruku.
+      expect(wpisy(starszy.notes)[0].karta.norms.map((n) => [n.label, spacje(n.text), n.tone])).toEqual([['Zakres z wpisu', '0,93–1,7 ng/dL', 'within']]);
+    });
+
+    it('wynik bez normy z wydruku zachowuje zrzut normy aplikacji i jego ocenę', () => {
+      const { notes } = zapis([{ analyteId: 'tsh', raw: '6,8', unit: 'mIU/L' }], '2026-06-15');
+      const [{ entry, karta }] = wpisy(notes);
+      expect([entry.normAccepted, entry.flag, entry.status.kind, entry.status.classification]).toEqual([false, '↑', 'range', 'above']);
+      expect(karta.norms.map((n) => [n.label, spacje(n.text), n.tone])).toEqual([['Dzieci 6–10 lat', '0,6–4,8 mIU/L', 'above']]);
+    });
+  });
+
+  describe('podpowiedź z poprzedniego wyniku pacjenta', () => {
+    const wynik = (testKey, valueNum, unit, dateISO, extra = {}) => ({
+      id: `fikcyjny-${testKey}-${dateISO}-${extra.createdAtISO || ''}`, patientId: 'fikcyjny-pacjent', category: extra.category || 'wynik-badania',
+      clinicalDateISO: dateISO, createdAtISO: extra.createdAtISO || `${dateISO}T08:00:00.000Z`, ...(extra.updatedAtISO ? { updatedAtISO: extra.updatedAtISO } : {}),
+      labResult: { test: testKey, testKey, valueNum, unit, ...(extra.norm ? { norm: extra.norm } : {}) },
+    });
+    const BADANIA = ['tsh', 'ft4', 'ft3'];
+
+    it('pacjent bez wcześniejszego wyniku nie dostaje żadnej podpowiedzi', () => {
+      expect(Model.previousResults([], BADANIA)).toEqual({});
+      expect(Model.previousResults(null, BADANIA)).toEqual({});
+      // Notatki innego rodzaju, wynik innego badania i wynik bez liczby albo jednostki to nie „poprzedni wynik”.
+      expect(Model.previousResults([
+        wynik('tsh', 2.5, 'mIU/L', '2026-05-01', { category: 'notatka', norm: '0,27–4,2 mIU/L' }),
+        wynik('lh', 2.5, 'IU/L', '2026-05-01', { norm: '1–9 IU/L' }),
+        wynik('ft4', null, 'pmol/L', '2026-05-01', { norm: '12–22 pmol/L' }),
+        wynik('ft3', 5.1, '', '2026-05-01', { norm: '3,1–6,8' }),
+        { id: 'fikcyjny-bez-wyniku', category: 'wynik-badania', clinicalDateISO: '2026-05-01' },
+      ], BADANIA)).toEqual({});
+    });
+
+    it('norma i jednostka pochodzą z ostatniego wyniku tego samego badania (data pobrania, potem chwila zapisu)', () => {
+      const podpowiedz = Model.previousResults([
+        wynik('tsh', 2.5, 'mIU/L', '2026-03-01', { norm: '0,4–4,0 mIU/L' }),
+        wynik('tsh', 3.1, 'μIU/mL', '2026-05-20', { norm: '0,27-4,2 µIU/mL' }),
+        wynik('tsh', 2.9, 'mIU/L', '2026-04-11', { norm: '0,5–5,0 mIU/L' }),
+        wynik('ft4', 14, 'pmol/L', '2026-05-20', { norm: '11–21', createdAtISO: '2026-05-20T08:00:00.000Z' }),
+        wynik('ft4', 1.1, 'ng/dL', '2026-05-20', { norm: '0.93–1.7 ng/dL', createdAtISO: '2026-05-20T07:00:00.000Z', updatedAtISO: '2026-05-21T09:00:00.000Z' }),
+      ], BADANIA);
+      expect(podpowiedz).toEqual({
+        tsh: { unit: 'μIU/mL', dateISO: '2026-05-20', norm: { low: '0,27', high: '4,2', text: '0,27–4,2 μIU/mL' } },
+        // Ten sam dzień pobrania: rozstrzyga późniejsza chwila zapisu albo poprawki.
+        ft4: { unit: 'ng/dL', dateISO: '2026-05-20', norm: { low: '0,93', high: '1,7', text: '0,93–1,7 ng/dL' } },
+      });
+    });
+
+    it('ostatni wynik bez normy, z normą wielozakresową albo w innej jednostce daje jednostkę, bez normy — starsza norma nie wraca', () => {
+      const podpowiedz = Model.previousResults([
+        wynik('tsh', 2.5, 'mIU/L', '2026-03-01', { norm: '0,4–4,0 mIU/L' }),
+        wynik('tsh', 2.9, 'mIU/L', '2026-05-20'),
+        wynik('ft4', 14, 'pmol/L', '2026-05-20', { norm: '0,93–1,7 ng/dL' }),
+        wynik('ft3', 5.1, 'pmol/L', '2026-05-20', { norm: '1–14 lat: 4,6–7,8' }),
+      ], BADANIA);
+      expect(podpowiedz).toEqual({
+        tsh: { unit: 'mIU/L', dateISO: '2026-05-20', norm: null },
+        ft4: { unit: 'pmol/L', dateISO: '2026-05-20', norm: null },
+        ft3: { unit: 'pmol/L', dateISO: '2026-05-20', norm: null },
+      });
+      // Odwrócone granice nie są normą.
+      expect(Model.previousResults([wynik('tsh', 2.5, 'mIU/L', '2026-03-01', { norm: '4,2–0,27 mIU/L' })], BADANIA).tsh.norm).toBeNull();
+    });
+
+    it('podpowiedziana norma wpisana do pól daje tę samą normę i ten sam tekst zapisu', () => {
+      const { ft4 } = Model.previousResults([wynik('ft4', 1.1, 'ng/dL', '2026-05-20', { norm: '0.93–1.7 ng/dL' })], BADANIA);
+      expect(Model.parseLabNorm({ converter: Conv, low: ft4.norm.low, high: ft4.norm.high, unit: ft4.unit })).toEqual(
+        { status: 'ok', low: 0.93, high: 1.7, unit: 'ng/dL', text: ft4.norm.text });
+    });
   });
 });
 

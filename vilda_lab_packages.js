@@ -25,7 +25,14 @@
  * Jednostki wybrane ostatnio na tym urządzeniu pamięta preferencja labPackageSettings (VildaPersistence,
  * klasa local-persistent): to wygoda formularza, nie dane pacjenta.
  *
- * Opis: docs/clinical/ALGORITHMS.md, „LAB-PAKIETY PR1”.
+ * Norma z wydruku (LAB-PAKIETY PR2, decyzje właściciela 2026-11-12 i 2026-11-13): opcjonalne granice od–do
+ * w jednostce wyniku. Wpisana norma laboratorium zastępuje normę aplikacji dla tego wyniku — ocenia go
+ * (parseLabNorm, classifyLabNorm: granice należą do normy) i zapisuje się w labResult.norm, polu edytora
+ * wyniku karty pacjenta; zrzut normy aplikacji nie jest wtedy zapisywany. Podpowiedź jednostki i normy
+ * pochodzi wyłącznie z poprzedniego wyniku tego samego badania u tego samego pacjenta (previousResults);
+ * pacjent bez wcześniejszego wyniku nie dostaje żadnej. Norm nie pamięta ani urządzenie, ani konto.
+ *
+ * Opis: docs/clinical/ALGORITHMS.md, „LAB-PAKIETY PR1” i „LAB-PAKIETY PR2”.
  */
 (function (root) {
   'use strict';
@@ -58,6 +65,14 @@
       far_above: { state: 'is-uwaga-high', text: 'znacznie powyżej normy' }
     };
     var GENERAL_TEXT = 'zakres ogólny — bez oceny dla dziecka';
+    // Norma z wydruku (LAB-PAKIETY PR2): trzy kategorie, bez „znacznie” — jak norma wpisu w historii wyników.
+    var LAB_STATES = {
+      within: { state: 'is-normal', text: 'w normie z wydruku' },
+      below: { state: 'is-below', text: 'poniżej normy z wydruku' },
+      above: { state: 'is-above', text: 'powyżej normy z wydruku' }
+    };
+    // Jedna norma „od–do [jednostka]”: kształt, który przyjmuje historia wyników (normCheck w vilda_lab_history.js).
+    var SINGLE_RANGE = /^\s*(\d+(?:[.,]\d+)?)\s*[-–—]\s*(\d+(?:[.,]\d+)?)\s*(.*?)\s*$/;
     // Znacznik na pasku: dolna granica zakresu w 30%, górna w 70% szerokości (jak pasek wyniku w makiecie).
     var BAR_LOW = 0.3, BAR_HIGH = 0.7, BAR_MIN = 0.03, BAR_MAX = 0.97;
 
@@ -164,6 +179,73 @@
       return Math.min(BAR_MAX, Math.max(BAR_MIN, position));
     }
 
+    // ── Norma z wydruku (LAB-PAKIETY PR2, decyzje właściciela 2026-11-12 i 2026-11-13) ──
+    function normalizeUnit(unit) { return String(unit == null ? '' : unit).trim().replace(/\s+/g, ' ').replace(/µ/g, 'μ'); }
+    // Liczba w zapisie normy: przecinek dziesiętny, bez notacji wykładniczej (inaczej historia nie przyjmie normy).
+    function plainNumber(value) {
+      if (!finite(value) || value < 0) return null;
+      var out = String(value);
+      return /^\d+(\.\d+)?$/.test(out) ? out.replace('.', ',') : null;
+    }
+    /* Norma laboratorium wpisana z wydruku, w jednostce wyniku.
+     * options: { converter, low, high, unit }; status: 'empty' (oba pola puste), 'invalid' (error), 'ok'.
+     * text ma postać pola „Norma” edytora wyniku („0,6–4,8 mIU/L”) i trafia do labResult.norm. */
+    function parseLabNorm(options) {
+      options = options || {};
+      var converter = options.converter;
+      var lowRaw = text(options.low), highRaw = text(options.high), unit = text(options.unit);
+      if (!lowRaw && !highRaw) return { status: 'empty' };
+      if (!lowRaw || !highRaw) return { status: 'invalid', error: 'Podaj obie granice normy: od i do.' };
+      var low = converter.parseNumber(lowRaw), high = converter.parseNumber(highRaw);
+      var lowText = plainNumber(low), highText = plainNumber(high);
+      if (lowText === null || highText === null) return { status: 'invalid', error: 'Granice normy muszą być liczbami, np. 0,6 i 4,8.' };
+      if (!(high > low)) return { status: 'invalid', error: 'Górna granica normy musi być większa od dolnej.' };
+      return { status: 'ok', low: low, high: high, unit: unit, text: lowText + '–' + highText + (unit ? ' ' + unit : '') };
+    }
+    // Ta sama reguła co strzałka normy wpisu w historii: powyżej górnej granicy ↑, poniżej dolnej ↓, granice należą do normy.
+    function classifyLabNorm(value, norm) {
+      return value > norm.high ? 'above' : value < norm.low ? 'below' : 'within';
+    }
+    function describeLabAssessment(row, appView) {
+      var norm = row.norm, kind = classifyLabNorm(row.valueNum, norm);
+      return {
+        state: LAB_STATES[kind].state, text: LAB_STATES[kind].text, classification: kind, lab: true,
+        // Źródła zostają przy normie aplikacji, która nadal jest pokazana obok.
+        bounds: norm.text, population: '', subject: '', sources: appView && appView.sources || [], general: false,
+        marker: markerPosition(row.valueNum, norm.low, norm.high),
+        // Norma aplikacji zostaje do wglądu obok; oceny nie daje.
+        app: appView && appView.bounds ? { bounds: appView.bounds, population: appView.population, general: appView.general } : null
+      };
+    }
+
+    /* Norma i jednostka z ostatniego zapisanego wyniku tego samego badania u tego samego pacjenta.
+     * Decyzja właściciela 2026-11-13: podpowiedź pochodzi wyłącznie stąd; pacjent bez wcześniejszego wyniku
+     * nie dostaje żadnej podpowiedzi. Liczy się tylko najnowszy wynik liczbowy (data badania, potem chwila
+     * zapisu); gdy nie ma on normy z wydruku — podpowiedzi normy nie ma, starszych wyników nie przeszukujemy.
+     * notes: notatki pacjenta z sejfu. Zwraca { <badanie>: { unit, dateISO, norm: { low, high, text } | null } }. */
+    function previousResults(notes, analyteIds) {
+      var wanted = Array.isArray(analyteIds) ? analyteIds : [], latest = {};
+      (Array.isArray(notes) ? notes : []).forEach(function (note) {
+        var lab = note && record(note.labResult) ? note.labResult : null;
+        if (!lab || note.category !== CATEGORY || wanted.indexOf(lab.testKey) === -1 || !finite(lab.valueNum) || !text(lab.unit)) return;
+        var stamp = [text(note.clinicalDateISO).slice(0, 10), text(note.updatedAtISO) || text(note.createdAtISO)];
+        var current = latest[lab.testKey];
+        if (current && !(stamp[0] > current.stamp[0] || stamp[0] === current.stamp[0] && stamp[1] > current.stamp[1])) return;
+        latest[lab.testKey] = { stamp: stamp, lab: lab };
+      });
+      var out = {};
+      Object.keys(latest).forEach(function (id) {
+        var lab = latest[id].lab, unit = text(lab.unit), norm = null;
+        var shape = typeof lab.norm === 'string' ? SINGLE_RANGE.exec(lab.norm) : null;
+        if (shape && (!shape[3] || normalizeUnit(shape[3]) === normalizeUnit(unit))) {
+          var low = shape[1].replace('.', ','), high = shape[2].replace('.', ',');
+          if (parseFloat(high.replace(',', '.')) > parseFloat(low.replace(',', '.'))) norm = { low: low, high: high, text: low + '–' + high + ' ' + unit };
+        }
+        out[id] = { unit: unit, dateISO: latest[id].stamp[0] || null, norm: norm };
+      });
+      return out;
+    }
+
     // Opis oceny dla formularza: tekst i kategoria pochodzą z tego samego zrzutu, który trafi do zapisu.
     function describeAssessment(row, options) {
       var converter = options.converter, snapshot = options.snapshot;
@@ -193,8 +275,9 @@
     }
 
     /* Ocena jednego wiersza pakietu.
-     * options: { converter, snapshot, data, analyteId, raw, unit, patient, capturedAtISO }
-     * status: 'empty' (puste pole — wiersz pomijany), 'invalid' (error), 'ok'. */
+     * options: { converter, snapshot, data, analyteId, raw, unit, patient, capturedAtISO, normLow, normHigh }
+     * status: 'empty' (puste pole — wiersz pomijany), 'invalid' (error), 'ok'.
+     * normLow/normHigh: norma z wydruku w jednostce wyniku (PR2); puste = norma aplikacji. */
     function evaluateRow(options) {
       options = options || {};
       var converter = options.converter, id = options.analyteId;
@@ -226,12 +309,20 @@
         row.valueNum = range.measurement.sourceValue;
       }
       row.view = describeAssessment(row, options);
+      // Norma z wydruku zastępuje normę aplikacji dla tego wyniku; błędna wstrzymuje zapis, a ocena zostaje przy normie aplikacji.
+      var labNorm = parseLabNorm({ converter: converter, low: options.normLow, high: options.normHigh, unit: evaluation.unit });
+      if (labNorm.status === 'invalid') row.normError = labNorm.error;
+      if (labNorm.status === 'ok') {
+        row.norm = labNorm;
+        row.view = describeLabAssessment(row, row.view);
+      }
       return row;
     }
 
     function evaluatePackage(options, inputs) {
       return (Array.isArray(inputs) ? inputs : []).map(function (input) {
-        return evaluateRow(Object.assign({}, options, { analyteId: input.analyteId, raw: input.raw, unit: input.unit }));
+        return evaluateRow(Object.assign({}, options, { analyteId: input.analyteId, raw: input.raw, unit: input.unit,
+          normLow: input.normLow, normHigh: input.normHigh }));
       });
     }
 
@@ -274,11 +365,17 @@
       lab.testKey = row.analyteId;
       if (row.valueNum != null) lab.valueNum = row.valueNum;
       lab.unit = row.unit;
-      if (own(row, 'range') && options.snapshot && typeof options.snapshot.normalize === 'function') lab.range = options.snapshot.normalize(row.range);
+      // Norma z wydruku: to samo pole i ten sam wiersz treści co „Norma” w edytorze wyniku karty pacjenta.
+      // Zastępuje normę aplikacji, więc wynik niesie JEDNĄ normę: zrzut normy aplikacji nie jest wtedy zapisywany.
+      // Z oboma historia oceniałaby wynik przeliczony na inną jednostkę normą aplikacji (vilda_lab_history.js:
+      // norma z wpisu nie obowiązuje po przeliczeniu, zrzut zakresu — tak), czyli inaczej niż formularz.
+      var norm = row.norm && row.norm.status === 'ok' ? row.norm.text : '';
+      if (norm) lab.norm = norm;
+      else if (own(row, 'range') && options.snapshot && typeof options.snapshot.normalize === 'function') lab.range = options.snapshot.normalize(row.range);
       var note = {
         patientId: options.patientId,
         title: row.test + ': ' + entered,
-        body: '= ' + row.converted + (comment ? '\n' + comment : ''),
+        body: '= ' + row.converted + (comment ? '\n' + comment : '') + (norm ? '\nNorma: ' + norm : ''),
         category: CATEGORY,
         clinicalDateISO: options.dateISO,
         labResult: lab
@@ -299,6 +396,10 @@
         return { ok: false, error: 'Popraw wynik: ' + invalid.map(function (row) { return row.short || row.analyteId; }).join(', ') + '.', notes: [], rows: [] };
       }
       if (!filled.length) return { ok: false, error: 'Wpisz co najmniej jeden wynik.', notes: [], rows: [] };
+      var badNorms = filled.filter(function (row) { return !!row.normError; });
+      if (badNorms.length) {
+        return { ok: false, error: 'Popraw normę z wydruku: ' + badNorms.map(function (row) { return row.short; }).join(', ') + '.', notes: [], rows: [] };
+      }
       var dateError = validDate(options.dateISO, options.todayISO);
       if (dateError) return { ok: false, error: dateError, notes: [], rows: [] };
       return {
@@ -318,7 +419,7 @@
     }
 
     return Object.freeze({
-      version: '1.0.0',
+      version: '1.1.0',
       SETTINGS_KEY: SETTINGS_KEY,
       CATEGORY: CATEGORY,
       COMMENT_MAX: COMMENT_MAX,
@@ -330,6 +431,8 @@
       rememberUnits: rememberUnits,
       evaluateRow: evaluateRow,
       evaluatePackage: evaluatePackage,
+      parseLabNorm: parseLabNorm,
+      previousResults: previousResults,
       validDate: validDate,
       linkedAgeMonths: linkedAgeMonths,
       formatVisitAge: formatVisitAge,
@@ -372,9 +475,12 @@
 
     function create(w) {
       var doc = w.document;
-      var state = { mode: 'single', pkg: null, rows: [], pid: null, gate: '', busy: false, built: false, formBuilt: false, done: null, error: '', remembered: false };
+      var state = { mode: 'single', pkg: null, rows: [], pid: null, gate: '', busy: false, built: false, formBuilt: false, done: null, error: '', remembered: false,
+        // PR2: poprzednie wyniki pacjenta (jednostka i norma z wydruku), pola normy wypełnione podpowiedzią,
+        // jednostki zmienione ręcznie i wiersze, w których zmiana jednostki skasowała normę.
+        previous: null, previousFor: null, authAsked: null, loadSeq: 0, prefilled: {}, unitTouched: {}, unitNotice: {}, unitSource: {} };
       var grid = null, card = null, singleBtn = null, packageBtn = null;
-      var parts = { inputs: {}, units: {}, errors: {}, cards: {} };
+      var parts = { inputs: {}, units: {}, errors: {}, cards: {}, normLow: {}, normHigh: {}, normUnit: {}, normErrors: {} };
       var timer = null;
 
       function model() { return MODEL; }
@@ -508,7 +614,7 @@
           error.id = 'labPkgError-' + row.id;
           error.hidden = true;
           input.addEventListener('input', edited);
-          select.addEventListener('change', edited);
+          select.addEventListener('change', function () { unitChanged(row.id); });
           parts.inputs[row.id] = input;
           parts.units[row.id] = select;
           parts.errors[row.id] = error;
@@ -516,7 +622,44 @@
         parts.unitsHint = add(s2.body, 'p', 'lab-pkg-hint', 'Jednostki zapamiętane z poprzedniego wpisu na tym urządzeniu.');
         parts.unitsHint.hidden = true;
 
-        var s3 = step(form, 3, 'Data pobrania i komentarz');
+        // PR2: norma laboratorium z wydruku, w jednostce wyniku. Pusta = ocena normą aplikacji.
+        var sn = step(form, 3, 'Normy z wydruku', '— opcjonalnie');
+        parts.stepNorms = sn.num;
+        var norms = add(sn.body, 'div', 'lab-pkg-norms');
+        state.rows.forEach(function (row) {
+          var line = add(norms, 'div', 'lab-pkg-norm-row');
+          line.setAttribute('data-analyte', row.id);
+          add(line, 'span', 'lab-pkg-norm-label', row.short);
+          [['normLow', 'Low', 'od'], ['normHigh', 'High', 'do']].forEach(function (side, index) {
+            if (index) add(line, 'span', 'lab-pkg-norm-sep', '–').setAttribute('aria-hidden', 'true');
+            var field = add(line, 'input', 'lab-pkg-norm');
+            field.type = 'text';
+            field.id = 'labPkgNorm' + side[1] + '-' + row.id;
+            field.setAttribute('inputmode', 'decimal');
+            field.setAttribute('autocomplete', 'off');
+            field.setAttribute('placeholder', side[2]);
+            field.setAttribute('aria-label', 'Norma ' + row.short + ' z wydruku, ' + side[2]);
+            field.setAttribute('aria-describedby', 'labPkgNormError-' + row.id);
+            field.addEventListener('input', function () { normEdited(row.id); });
+            parts[side[0]][row.id] = field;
+          });
+          parts.normUnit[row.id] = add(line, 'span', 'lab-pkg-norm-unit');
+          var normError = add(line, 'p', 'lab-pkg-norm-error');
+          normError.id = 'labPkgNormError-' + row.id;
+          normError.hidden = true;
+          parts.normErrors[row.id] = normError;
+        });
+        add(sn.body, 'p', 'lab-pkg-hint', 'Puste pola = norma aplikacji dla wieku pacjenta. Wpisana norma zastępuje ją dla tego wyniku i zapisuje się razem z nim.');
+        parts.prefillHint = add(sn.body, 'p', 'lab-pkg-hint lab-pkg-prefill-hint');
+        parts.prefillHint.id = 'labPkgPrefillHint';
+        parts.prefillHint.setAttribute('role', 'status');
+        parts.prefillHint.hidden = true;
+        parts.unitNotice = add(sn.body, 'p', 'lab-pkg-hint lab-pkg-unit-notice');
+        parts.unitNotice.id = 'labPkgUnitNotice';
+        parts.unitNotice.setAttribute('role', 'status');
+        parts.unitNotice.hidden = true;
+
+        var s3 = step(form, 4, 'Data pobrania i komentarz');
         parts.step3 = s3.num;
         var meta = add(s3.body, 'div', 'lab-pkg-meta');
         var dateField = add(meta, 'div', 'lab-pkg-field lab-pkg-field-date');
@@ -540,14 +683,19 @@
         parts.date.addEventListener('input', edited);
         parts.date.addEventListener('change', edited);
 
-        var s4 = step(form, 4, 'Pacjent', '— z karty, wpływa na normę');
+        var s4 = step(form, 5, 'Pacjent', '— z karty, wpływa na normę');
         parts.step4 = s4.num;
         // Ten sam wygląd co kontekst pacjenta pojedynczego badania (klasy przelicznika).
         parts.patientBox = add(s4.body, 'div', 'lab-patient-context lab-pkg-patient');
         parts.patient = add(add(parts.patientBox, 'div', 'lab-patient-summary'), 'span', 'lab-patient-text');
         parts.patient.id = 'labPkgPatient';
 
-        parts.clear = button(form, 'lab-pkg-btn lab-pkg-btn-ghost lab-pkg-clear', 'Wyczyść pakiet', function () { clearValues(true); refresh(); });
+        parts.clear = button(form, 'lab-pkg-btn lab-pkg-btn-ghost lab-pkg-clear', 'Wyczyść pakiet', function () {
+          clearValues(true);
+          applyUnits();
+          applyPreviousAll();
+          refresh();
+        });
         parts.clear.id = 'labPkgClear';
 
         var results = add(parts.body, 'div', 'lab-pkg-results');
@@ -592,13 +740,24 @@
       function applyUnits() {
         var m = model(), settings = m.readSettings(w.VildaPersistence || null);
         state.remembered = false;
+        state.unitSource = {};
         state.rows.forEach(function (row) {
           var preferred = settings.units[row.id];
           var unit = m.pickUnit(row, preferred);
           parts.units[row.id].value = unit;
-          if (preferred && unit === preferred && preferred !== row.canonicalUnit) state.remembered = true;
+          if (preferred && unit === preferred && preferred !== row.canonicalUnit) {
+            state.remembered = true;
+            state.unitSource[row.id] = 'device';
+          }
         });
-        parts.unitsHint.hidden = !state.remembered;
+      }
+      function drawUnitsHint() {
+        var sources = state.rows.map(function (row) { return state.unitSource[row.id]; });
+        var patient = sources.indexOf('patient') !== -1, device = sources.indexOf('device') !== -1;
+        parts.unitsHint.hidden = !patient && !device;
+        parts.unitsHint.textContent = patient
+          ? 'Jednostki jak w poprzednim wyniku pacjenta' + (device ? '; pozostałe zapamiętane z poprzedniego wpisu na tym urządzeniu.' : '.')
+          : 'Jednostki zapamiętane z poprzedniego wpisu na tym urządzeniu.';
       }
       function today() { return model().localISO(new Date()); }
       function resetDate() {
@@ -611,6 +770,8 @@
         state.rows.forEach(function (row) {
           parts.inputs[row.id].disabled = busy;
           parts.units[row.id].disabled = busy;
+          parts.normLow[row.id].disabled = busy;
+          parts.normHigh[row.id].disabled = busy;
         });
         parts.date.disabled = busy;
         parts.comment.disabled = busy;
@@ -618,17 +779,92 @@
       }
       function clearValues(keepDone) {
         if (!state.formBuilt) return;
-        state.rows.forEach(function (row) { parts.inputs[row.id].value = ''; });
+        state.rows.forEach(function (row) {
+          parts.inputs[row.id].value = '';
+          parts.normLow[row.id].value = '';
+          parts.normHigh[row.id].value = '';
+        });
         parts.comment.value = '';
         resetDate();
         state.error = '';
+        state.prefilled = {};
+        state.unitTouched = {};
+        state.unitNotice = {};
         if (!keepDone) state.done = null;
+      }
+
+      // ── Podpowiedź z poprzedniego wyniku tego samego pacjenta (PR2, decyzja właściciela 2026-11-13) ──
+      // Jedyne źródło podpowiedzi normy: ostatni zapisany wynik tego badania u tego pacjenta. Pacjent bez
+      // wcześniejszego wyniku nie dostaje żadnej podpowiedzi — pola normy zostają puste.
+      function loadPrevious() {
+        var pid = state.pid, sequence = ++state.loadSeq, vault = w.VildaVault;
+        state.previous = null;
+        state.previousFor = null;
+        if (!pid) return;
+        var ready;
+        try { ready = !!vault && typeof vault.listPatientNotesForPatient === 'function' && typeof vault.isUnlocked === 'function' && vault.isUnlocked(); } catch (_) { ready = false; }
+        if (!ready) {
+          // Stos konta ładuje most sesji; po „vilda:auth-loaded” odświeżenie ponowi odczyt.
+          if (state.authAsked !== pid) {
+            state.authAsked = pid;
+            try { if (w.VildaSession && typeof w.VildaSession.ensureAuthLoaded === 'function') w.VildaSession.ensureAuthLoaded(); } catch (_) { /* bez podpowiedzi */ }
+          }
+          return;
+        }
+        state.previousFor = pid;
+        Promise.resolve().then(function () { return vault.listPatientNotesForPatient(pid); }).then(function (notes) {
+          if (sequence !== state.loadSeq || pid !== state.pid) return;
+          state.previous = model().previousResults(notes, state.rows.map(function (row) { return row.id; }));
+          applyPreviousAll();
+          refresh();
+        }).catch(function () { if (sequence === state.loadSeq) state.previousFor = null; });
+      }
+      function applyPreviousAll() { state.rows.forEach(function (row) { applyPrevious(row, true); }); }
+      // Jednostka poprzedniego wyniku — gdy wiersz jest nietknięty; norma — gdy jej pola są puste, a jednostka ta sama.
+      function applyPrevious(row, withUnit) {
+        var previous = state.previous && state.previous[row.id];
+        var select = parts.units[row.id], low = parts.normLow[row.id], high = parts.normHigh[row.id];
+        // Podpowiedź z wcześniejszego odczytu, której nikt nie poprawił, ustępuje nowemu odczytowi.
+        if (state.prefilled[row.id]) {
+          low.value = '';
+          high.value = '';
+          delete state.prefilled[row.id];
+        }
+        if (!previous || model().pickUnit(row, previous.unit) !== previous.unit) return;
+        if (withUnit && !state.unitTouched[row.id] && !String(parts.inputs[row.id].value || '').trim() && select.value !== previous.unit) {
+          select.value = previous.unit;
+          state.unitSource[row.id] = 'patient';
+        }
+        if (!previous.norm || String(low.value || '').trim() || String(high.value || '').trim() || select.value !== previous.unit) return;
+        low.value = previous.norm.low;
+        high.value = previous.norm.high;
+        state.prefilled[row.id] = previous.dateISO || true;
+        state.unitNotice[row.id] = false;
+      }
+      // Norma jest w jednostce wyniku: po zmianie jednostki wpisana norma przestaje obowiązywać.
+      function unitChanged(id) {
+        var row = state.rows.filter(function (item) { return item.id === id; })[0];
+        var had = !!(String(parts.normLow[id].value || '').trim() || String(parts.normHigh[id].value || '').trim());
+        state.unitTouched[id] = true;
+        delete state.unitSource[id];
+        parts.normLow[id].value = '';
+        parts.normHigh[id].value = '';
+        delete state.prefilled[id];
+        state.unitNotice[id] = had;
+        if (row) applyPrevious(row, false);
+        edited();
+      }
+      function normEdited(id) {
+        delete state.prefilled[id];
+        state.unitNotice[id] = false;
+        edited();
       }
 
       // ── Ocena na żywo ──
       function inputs() {
         return state.rows.map(function (row) {
-          return { analyteId: row.id, raw: parts.inputs[row.id].value, unit: parts.units[row.id].value };
+          return { analyteId: row.id, raw: parts.inputs[row.id].value, unit: parts.units[row.id].value,
+            normLow: parts.normLow[row.id].value, normHigh: parts.normHigh[row.id].value };
         });
       }
       function evaluate(patient) {
@@ -669,7 +905,18 @@
         add(head, 'span', 'lab-range-status' + (view.state ? ' ' + view.state : ' is-general'), view.text);
         if (row.unit !== definition.canonicalUnit) add(box, 'div', 'lab-pkg-card-converted', '= ' + row.converted);
         drawBar(box, row, view);
-        if (view.bounds) {
+        if (view.lab) {
+          // Ocena normą laboratorium; norma aplikacji zostaje obok do wglądu.
+          var labLine = add(box, 'div', 'lab-pkg-card-norm');
+          labLine.appendChild(doc.createTextNode('Norma z wydruku: '));
+          add(labLine, 'strong', '', view.bounds);
+          labLine.appendChild(doc.createTextNode(' '));
+          add(labLine, 'span', 'lab-pkg-badge', 'laboratorium');
+          if (view.app) {
+            add(box, 'div', 'lab-pkg-card-app', (view.app.general ? (view.app.population || 'Zakres ogólny')
+              : 'Norma aplikacji' + (view.app.population ? ' · ' + view.app.population : '')) + ': ' + view.app.bounds);
+          }
+        } else if (view.bounds) {
           var norm = add(box, 'div', 'lab-pkg-card-norm');
           // Zakres ogólny u dziecka: nazwa populacji z danych mówi to sama („Zakres ogólny dorosły”).
           norm.appendChild(doc.createTextNode((view.general ? (view.population || 'Zakres ogólny') : 'Norma' + (view.population ? ' · ' + view.population : '')) + ': '));
@@ -681,13 +928,16 @@
         var m = model();
         var filled = rows.filter(function (row) { return row.status === 'ok'; }).length;
         var wrong = rows.filter(function (row) { return row.status === 'invalid'; }).map(function (row) { return row.short || row.analyteId; });
-        var invalid = wrong.length > 0;
+        var wrongNorms = rows.filter(function (row) { return row.status === 'ok' && row.normError; }).map(function (row) { return row.short; });
+        var invalid = wrong.length > 0 || wrongNorms.length > 0;
         // Wiek wizyty łamie się w całości, nie na pojedynczej literze.
         var visit = m.formatVisitAge(m.linkedAgeMonths(ctx.sessionPatient)).replace(/ /g, NBSP);
         parts.saveCtx.textContent = ctx.name + (visit ? ' · wizyta:' + NBSP + visit : '');
         // Błędne pole wstrzymuje cały zapis — wiersz mówi to zamiast liczby wyników.
-        parts.saveSub.textContent = invalid
+        parts.saveSub.textContent = wrong.length
           ? 'popraw wynik: ' + wrong.join(', ') + ' — do tego czasu zapis jest wstrzymany'
+          : wrongNorms.length
+            ? 'popraw normę z wydruku: ' + wrongNorms.join(', ') + ' — do tego czasu zapis jest wstrzymany'
           : filled
             ? filled + ' ' + m.plural(filled, ['wynik trafi', 'wyniki trafią', 'wyników trafi']) + ' do Badań w karcie pacjenta'
             : 'wpisz wyniki z wydruku — trafią do Badań w karcie pacjenta';
@@ -707,6 +957,37 @@
         parts.gateAction.hidden = !info.action;
       }
 
+      // Wiersz normy z wydruku: jednostka wyniku, błąd i oznaczenie podpowiedzi.
+      function drawNormRow(row, definition) {
+        var id = definition.id, select = parts.units[id];
+        var option = select.options[select.selectedIndex];
+        parts.normUnit[id].textContent = option ? option.textContent : select.value;
+        var message = row.status === 'ok' && row.normError ? row.normError : '';
+        parts.normErrors[id].hidden = !message;
+        parts.normErrors[id].textContent = message;
+        [parts.normLow[id], parts.normHigh[id]].forEach(function (field) {
+          field.setAttribute('aria-invalid', message ? 'true' : 'false');
+          field.classList.toggle('is-prefilled', !!state.prefilled[id]);
+        });
+      }
+      function drawNormHints() {
+        var m = model();
+        var prefilled = state.rows.filter(function (row) { return !!state.prefilled[row.id]; });
+        var dates = prefilled.map(function (row) { return typeof state.prefilled[row.id] === 'string' ? m.formatDate(state.prefilled[row.id]) : ''; });
+        var oneDate = dates.every(function (date) { return date === dates[0]; });
+        parts.prefillHint.hidden = !prefilled.length;
+        parts.prefillHint.textContent = !prefilled.length ? ''
+          : oneDate
+            ? 'Podpowiedź z poprzedniego wyniku pacjenta' + (dates[0] ? ' (' + dates[0] + ')' : '') + ': '
+              + prefilled.map(function (row) { return row.short; }).join(', ') + '. Sprawdź z wydrukiem.'
+            : 'Podpowiedź z poprzednich wyników pacjenta: '
+              + prefilled.map(function (row, index) { return row.short + (dates[index] ? ' (' + dates[index] + ')' : ''); }).join(', ') + '. Sprawdź z wydrukiem.';
+        var cleared = state.rows.filter(function (row) { return !!state.unitNotice[row.id]; }).map(function (row) { return row.short; });
+        parts.unitNotice.hidden = !cleared.length;
+        parts.unitNotice.textContent = cleared.length
+          ? 'Zmieniono jednostkę: ' + cleared.join(', ') + ' — norma z wydruku została wyczyszczona, bo była podana w poprzedniej jednostce.' : '';
+      }
+
       function refresh() {
         timer = null;
         if (!card || !grid) return;
@@ -719,11 +1000,15 @@
         if (ctx.pid !== state.pid) {
           if (state.pid !== null) clearValues(false);
           state.pid = ctx.pid;
+          state.previous = null;
+          state.previousFor = null;
+          state.authAsked = null;
           if (ctx.pid) applyUnits();
         }
         state.gate = ctx.gate;
         drawGate(ctx.gate);
         if (ctx.gate) return;
+        if (state.previousFor !== state.pid) loadPrevious();
 
         var described = packagePatient();
         var description = described && described.description || null;
@@ -736,6 +1021,7 @@
           error.hidden = row.status !== 'invalid';
           error.textContent = row.status === 'invalid' ? row.error : '';
           parts.inputs[definition.id].setAttribute('aria-invalid', row.status === 'invalid' ? 'true' : 'false');
+          drawNormRow(row, definition);
           if (row.status === 'ok' && row.view) row.view.sources.forEach(function (label) { if (sources.indexOf(label) === -1) sources.push(label); });
         });
         parts.sources.hidden = !sources.length;
@@ -753,10 +1039,16 @@
         parts.dateNote.textContent = dateError || (otherDay ? OTHER_DAY_NOTE : '');
         parts.dateNote.classList.toggle('is-error', !!dateError);
 
+        drawUnitsHint();
+        drawNormHints();
+
         var anyOk = rows.some(function (row) { return row.status === 'ok'; });
         var anyInvalid = rows.some(function (row) { return row.status === 'invalid'; });
+        var anyNorm = rows.some(function (row) { return row.status === 'ok' && !!row.norm; });
+        var anyNormError = rows.some(function (row) { return row.status === 'ok' && !!row.normError; });
         markStep(parts.step1, true, false);
         markStep(parts.step2, anyOk && !anyInvalid, true);
+        markStep(parts.stepNorms, anyNorm && !anyNormError, false);
         markStep(parts.step3, anyOk && !dateError, false);
         markStep(parts.step4, anyOk && !missing, false);
 
@@ -841,6 +1133,7 @@
             text: names + ' · pobranie ' + date
           };
           applyUnits();
+          loadPrevious();
           toast('✓ Zapisano w karcie: ' + names);
         }, function (error) {
           // Zapisane wiersze znikają z formularza, żeby ponowny zapis ich nie zdublował.
@@ -905,7 +1198,10 @@
         packageBtn.classList.toggle('is-locked', !loggedIn());
       }
       function setMode(mode, focus) {
+        var entering = mode === 'package' && state.mode !== 'package';
         state.mode = mode === 'package' ? 'package' : 'single';
+        // Wejście w pakiet czyta wyniki pacjenta od nowa — w trybie pojedynczym mógł dojść przypięty wynik.
+        if (entering) state.previousFor = null;
         refresh();
         if (focus && state.mode === 'package' && !state.gate && state.rows.length) {
           try { parts.inputs[state.rows[0].id].focus(); } catch (_) { /* fokus pomocniczy */ }
@@ -962,7 +1258,7 @@
 
     var instance = null;
     return Object.freeze({
-      version: '1.0.0',
+      version: '1.1.0',
       start: function () {
         if (instance || !win || !win.document) return instance;
         instance = create(win);

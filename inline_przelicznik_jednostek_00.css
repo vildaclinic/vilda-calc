@@ -2526,6 +2526,84 @@
       color: var(--error);
     }
 
+    /* LAB-PAKIETY PR2: norma laboratorium z wydruku — te same kolumny co wiersz wyniku. */
+    .lab-pkg-norms {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-8px);
+    }
+
+    .lab-pkg-norm-row {
+      display: grid;
+      grid-template-columns: 64px minmax(0, 1fr) auto minmax(0, 1fr) 132px;
+      align-items: center;
+      gap: var(--space-6px) var(--space-10px);
+    }
+
+    .lab-pkg-norm-label {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-strong);
+    }
+
+    .lab-pkg-norm-row input.lab-pkg-norm {
+      width: 100%;
+      min-width: 0;
+      min-height: 44px;
+      box-sizing: border-box;
+      padding: var(--space-8px) 11px;
+      border: .5px solid rgba(0,131,141,.25);
+      border-radius: var(--radius-8);
+      background: #fff;
+      color: #2a3a3c;
+      font-family: inherit;
+      font-size: 1rem;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .lab-pkg-norm-row input.lab-pkg-norm.is-prefilled {
+      background: #eef4f3;
+    }
+
+    .lab-pkg-norm-row input.lab-pkg-norm[aria-invalid=true] {
+      border-color: var(--error);
+    }
+
+    .lab-pkg-norm-sep {
+      color: var(--text-muted);
+    }
+
+    .lab-pkg-norm-unit {
+      min-width: 0;
+      padding-left: var(--space-10px);
+      font-size: .9rem;
+      color: var(--text-2);
+      overflow-wrap: anywhere;
+    }
+
+    .lab-pkg-norm-error {
+      grid-column: 2 / -1;
+      margin: 0;
+      font-size: .82rem;
+      color: var(--error);
+    }
+
+    /* „#labPackageCard p” zeruje marginesy akapitów — odstępy podpowiedzi pod normami ustawia ta reguła. */
+    #labPackageCard .lab-pkg-norms + p.lab-pkg-hint,
+    #labPackageCard p.lab-pkg-prefill-hint,
+    #labPackageCard p.lab-pkg-unit-notice {
+      margin-top: var(--space-8px);
+    }
+
+    #labPackageCard p.lab-pkg-prefill-hint {
+      padding-left: var(--space-8px);
+      border-left: var(--border-pro) solid #b9d6d2;
+    }
+
+    #labPackageCard p.lab-pkg-unit-notice {
+      color: #8a4b12;
+    }
+
     .lab-pkg-hint {
       margin-top: var(--space-8px);
       font-size: .82rem;
@@ -2697,6 +2775,24 @@
       font-variant-numeric: tabular-nums;
     }
 
+    .lab-pkg-badge {
+      display: inline-block;
+      margin-left: var(--space-8px);
+      padding: 1px var(--space-8px);
+      border-radius: var(--radius-pill);
+      background: rgba(0,131,141,.1);
+      color: var(--primary);
+      font-size: .72rem;
+      font-weight: 600;
+      vertical-align: 1px;
+    }
+
+    .lab-pkg-card-app {
+      font-size: .82rem;
+      color: var(--text-muted);
+      font-variant-numeric: tabular-nums;
+    }
+
     .lab-pkg-bar {
       display: block;
       width: 100%;
@@ -2838,6 +2934,16 @@
       .lab-pkg-row select.lab-pkg-unit {
         padding-left: var(--space-6px);
         padding-right: var(--space-6px);
+      }
+
+      .lab-pkg-norm-row {
+        grid-template-columns: 44px minmax(0, 1fr) auto minmax(0, 1fr) 56px;
+        gap: var(--space-6px) var(--space-8px);
+      }
+
+      .lab-pkg-norm-unit {
+        padding-left: 0;
+        font-size: .82rem;
       }
 
       .lab-pkg-card-value {
