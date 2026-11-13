@@ -1640,3 +1640,23 @@ LAB_CUSTOM_PACKAGES:s.LAB_CUSTOM_PACKAGES,labCustomPackages:s.LAB_CUSTOM_PACKAGE
 
 Klasa `cloud-synced`: adapter po zapisie zawiadamia sejf (`onPreferenceWrite`), który trzyma wartość w preferencjach konta i wysyła ją w synchronizacji; z drugiej strony sejf wpisuje nowszą wartość przez `applyPreferenceFromCloud`. Żadna z tych dróg nie została zmieniona — klucz korzysta z istniejącego mechanizmu, a `vilda_vault.js` jest nietknięty. Wartość to lista pakietów (nazwa i identyfikatory badań), bez danych pacjenta. Wersja adaptera (`1.7.2`), odczyt, zapis i pozostałe klucze bez zmian. Test: `tests/unit/lab-pakiety-kreator.test.mjs` („klucz jest zarejestrowany w adapterze jako preferencja konta”, zapis i odczyt przez prawdziwy adapter, przejście między dwoma urządzeniami jednego konta przez prawdziwy sejf).
 
+## Łatka LAB-PAKIETY PR5 — osobna kopia preferencji dla każdego konta (`vilda_persistence_adapter.js`, 2026-11-13)
+
+Polecenie właściciela: każde konto widzi tylko swoje pakiety badań. Adapter trzymał kopię tej preferencji pod jednym kluczem dla całego urządzenia. Zminifikowany `vilda_persistence_adapter.js` dostał cechę `perUser` w rejestrze i wybór klucza magazynu dla takiej preferencji:
+
+```js
+// MODULE_KEY_META (I): cecha perUser
+[s.LAB_CUSTOM_PACKAGES]:Object.freeze({scope:"laboratory",kind:"preference",storage:"cloud-synced",perUser:!0})
+
+// przed readModuleRaw (q): konto i klucz magazynu
+function Bpu(){try{const e=i.VildaVault,t=e&&typeof e.getCurrentUser=="function"?e.getCurrentUser():null;
+  if(t&&t.userId)return String(t.userId);
+  const r=i.sessionStorage?i.sessionStorage.getItem("vilda-vault-session-v2"):null,n=r?JSON.parse(r):null;
+  return n&&typeof n.userId=="string"?n.userId:""}catch(e){return""}}
+function Bpk(e,t){if(!t||t.perUser!==!0)return e;const r=Bpu();return r?e+"::"+r:""}
+```
+
+`Bpk(klucz, meta)` zastępuje sam klucz w sześciu wywołaniach magazynu: `readModuleRaw` (`q`), `writeModuleRaw` (`ee`), `readModuleJSON` (`te`), `writeModuleJSON` (`re`), `applyPreferenceFromCloud` (`De`) i `removeModuleKey` (`Be`). Dla preferencji bez `perUser` zwraca klucz bez zmian, więc pozostałe klucze czytają i piszą dokładnie jak dotąd. Pusty wynik (brak zalogowanego konta) trafia w istniejącą obsługę pustego klucza: odczyt daje wartość domyślną, zapis zwraca `false`.
+
+Konto: użytkownik odblokowanego sejfu (`VildaVault.getCurrentUser()`), a w ramce, w której sejf jeszcze się nie załadował — `userId` z zapisu sesji karty `vilda-vault-session-v2` (ten sam zapis, po którym `vilda_session_bridge.js` poznaje zalogowanie; sejf usuwa go przy wylogowaniu). Hak `onPreferenceWrite` i `applyPreferenceFromCloud` dalej posługują się nazwą preferencji — sejf i format synchronizacji są bez zmian, `vilda_vault.js` nietknięty. `clearModuleState` nie usuwa kopii kont. Wersja adaptera (`1.7.2`) bez zmian. Testy: `tests/unit/lab-pakiety-kreator.test.mjs` („każde konto widzi tylko swoje pakiety”).
+

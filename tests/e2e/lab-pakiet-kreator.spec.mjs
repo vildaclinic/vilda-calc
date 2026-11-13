@@ -1,5 +1,5 @@
 import { expect, test } from '../support/test-czas.mjs';
-import { kartaPakietu, otworzPakiet, tekst, wczytajPacjenta, wynikiBadan } from '../support/lab-pakiet-dane.mjs';
+import { kartaPakietu, opcjeListy, otworzPakiet, pakietyKonta, pakietyUrzadzenia, tekst, utworzPakiet, wczytajPacjenta, wynikiBadan } from '../support/lab-pakiet-dane.mjs';
 
 // LAB-PAKIETY PR4 (kreator, decyzje właściciela i makieta z 2026-11-13): lekarz składa własny pakiet z badań
 // przelicznika. Prawdziwy, fikcyjny sejf (tests/support/lab-pakiet-dane.mjs; zegar stron 17.06.2026).
@@ -8,28 +8,9 @@ import { kartaPakietu, otworzPakiet, tekst, wczytajPacjenta, wynikiBadan } from 
 test.use({ serviceWorkers: 'block' });
 
 const bezCzasu = (lab) => JSON.parse(JSON.stringify(lab, (klucz, wartosc) => (klucz === 'capturedAtISO' ? '(chwila zapisu)' : wartosc)));
-const opcjeListy = (page) => page.locator('#labPkgSelect').evaluate((s) => [...s.querySelectorAll('optgroup')].map((g) => [g.label, [...g.querySelectorAll('option')].map((o) => o.textContent)]));
 const wybrane = (page) => page.locator('#labPkgCreatorList li').evaluateAll((wiersze) => wiersze.map((li) => [
   li.querySelector('.lab-pkg-creator-item-num').textContent, li.querySelector('.lab-pkg-creator-item-name').textContent, li.querySelector('.lab-pkg-creator-item-kind').textContent,
 ]));
-// Własne pakiety tak, jak ma je konto w sejfie — to ta wartość idzie do synchronizacji między urządzeniami.
-const pakietyKonta = (page) => page.evaluate(async () => {
-  const wpis = (await window.VildaVault.exportSyncPayload()).userPreferences?.labCustomPackages;
-  return wpis ? JSON.parse(wpis.value).packages.map((p) => [p.name, p.analytes]) : null;
-});
-const pakietyUrzadzenia = (page) => page.evaluate(() => window.VildaLabPackages.readCustom(window.VildaPersistence).packages.map((p) => [p.name, p.analytes]));
-
-async function utworzPakiet(page, nazwa, badania) {
-  await page.locator('#labPkgNew').click();
-  await page.locator('#labPkgCreatorName').fill(nazwa);
-  // Grupy katalogu są zwinięte; test otwiera wszystkie naraz, żeby zaznaczać badania w zadanej kolejności.
-  await page.locator('#labPkgCreatorGroups details').evaluateAll((grupy) => grupy.forEach((g) => { g.open = true; }));
-  for (const id of badania) await page.locator(`#labPkgCreatorOpt-${id}`).check();
-  await page.locator('#labPkgCreatorSave').click();
-  await expect(page.locator('#labPkgCreator')).toBeHidden();
-  await expect(page.locator('#labPkgSelect option:checked')).toHaveText(nazwa);
-}
-
 test('kreator: pakiet „Dojrzewanie” — utworzenie, zapis na koncie, ocena, przejście do pojedynczego badania i zapis do Badań', async ({ page }) => {
   const { patientId } = await otworzPakiet(page);
   const karta = kartaPakietu(page);

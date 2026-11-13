@@ -1607,6 +1607,61 @@ wracają; wygrywa późniejszy zapis); e2e `tests/e2e/lab-pakiet-kreator.spec.mj
 urządzenia, limit 12, zgodność zapisu z „Przypnij do wizyty”)
 i `lab-pakiet-kreator-mobile.spec.mjs`.
 
+### LAB-PAKIETY PR5 — każde konto widzi tylko swoje pakiety (`vilda_lab_packages.js` 1.4.0, 2026-11-13)
+
+**Klasyfikacja: zmiana funkcjonalna, bez zmiany klinicznej.** Nie zmienia
+się żadna ocena, norma, jednostka ani zapis wyniku — zmienia się to, czyje
+pakiety pokazuje lista wyboru.
+
+Polecenie właściciela z 2026-11-13 (po scaleniu PR4): na urządzeniu, na
+którym loguje się więcej niż jedno konto, każdy lekarz ma widzieć tylko
+swoje pakiety. Od PR4 pakiety były zapisane na koncie (sejf, synchronizacja),
+ale ich kopia na urządzeniu była jedna dla całego urządzenia, więc lista
+wyboru pokazywała pakiety konta, które ostatnio je zapisało.
+
+- **Osobna kopia na konto.** Preferencja `labCustomPackages` ma w rejestrze
+  adaptera cechę `perUser`: adapter trzyma ją na urządzeniu pod kluczem
+  `labCustomPackages::<identyfikator konta na urządzeniu>`. Odczyt, zapis
+  i wpis z synchronizacji (`applyPreferenceFromCloud`) dotyczą kopii
+  zalogowanego konta; bez zalogowanego konta nie ma odczytu ani zapisu.
+  Konto to użytkownik odblokowanego sejfu, a zanim sejf się załaduje — zapis
+  sesji karty (sejf usuwa go przy wylogowaniu). Zapis na koncie i format
+  synchronizacji są bez zmian: pakiety dalej przechodzą między urządzeniami
+  tego samego konta.
+- **Stara wspólna kopia** (zapisana przez wersję 1.3.0). Po samym urządzeniu
+  nie da się ustalić, czyja jest, więc rozstrzyga zapis pakietów konta
+  w sejfie (`adoptLegacy`) — jeden raz, gdy konto nie ma jeszcze własnej
+  kopii: konto, które ma pakiety w sejfie, dostaje je jako swoją kopię (stara
+  kopia znika, gdy była tą samą listą); konto bez pakietów dostaje pustą
+  listę, a stara kopia czeka na konto, do którego należy. Pakiety ze starej
+  kopii nigdy nie są pokazane „na próbę”. Rozstrzygnięcie niczego nie zapisuje
+  na koncie ani w synchronizacji.
+- **Do czasu rozstrzygnięcia** „+ Nowy pakiet” i „Edytuj pakiet” są nieczynne
+  („Wczytuję Twoje pakiety z konta…”): zapis z niepełnej listy nadpisałby
+  pakiety konta. Nieudana próba (sejf jeszcze zablokowany, błąd odczytu)
+  wraca przy kolejnym odświeżeniu, najwyżej trzy razy na otwarcie strony;
+  potem komunikat prosi o odświeżenie strony.
+- Moduł pakietów nie używa adaptera bez cechy `perUser` (lista własnych
+  pakietów jest wtedy pusta, zapis odmawia).
+
+**Ograniczenia.** Ostatnio wybrany pakiet i jednostki pamięta urządzenie
+(`labPackageSettings`), nie konto: gdy zapamiętany pakiet nie należy do
+zalogowanego konta, otwiera się „Tarczyca”. Odczyt sejfu przy starej kopii
+jest pełnym odczytem danych konta (`exportSyncPayload`), dlatego dzieje się
+tylko wtedy, gdy stara kopia istnieje.
+
+**Przykład** (fikcyjne konta A i B na jednym urządzeniu): A tworzy
+„Dojrzewanie” i wylogowuje się; B po zalogowaniu widzi tylko „Tarczycę”,
+tworzy „Nadnercza”; A po powrocie widzi „Tarczycę” i „Dojrzewanie”. Konto
+A ma w sejfie tylko „Dojrzewanie”, konto B tylko „Nadnercza”.
+
+Testy: `tests/unit/lab-pakiety-kreator.test.mjs` („każde konto widzi tylko
+swoje pakiety”: dwa konta w prawdziwym sejfie na jednym urządzeniu, zapis
+sesji przed załadowaniem sejfu, wpis z synchronizacji, cztery przypadki
+starej kopii, dwa urządzenia jednego konta), e2e
+`tests/e2e/lab-pakiet-konta.spec.mjs` (dwóch lekarzy w jednej przeglądarce,
+stara kopia, blokada kreatora do rozstrzygnięcia).
+
 ### P-LAB-WARTOSC-BEZ-JEDNOSTKI — liczba ze starszego wpisu wyniku bez jednostki (SW 1.1.279, `vilda_vault.js` 212, 2026-10-14)
 
 **Wpływ kliniczny: tak.** Zmieniają się liczby w historii wyników dla

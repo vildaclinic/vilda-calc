@@ -8,7 +8,8 @@ import { loadBrowserScript } from '../support/load-browser-script.mjs';
 // konta). Test pilnuje trzech rzeczy: (1) pakiet to wyłącznie lista badań katalogu — bez norm i współczynników;
 // (2) badania, które pojedyncze badanie ocenia po swojemu (LH, FSH, inhibina B, testosteron całkowity, AMH), nie
 // dostają w pakiecie zakresu katalogu ani zrzutu normy — dokładnie ten sam warunek co przy przypięciu wyniku;
-// (3) pakiety należą do konta i przechodzą między jego urządzeniami. Dane wyłącznie FIKCYJNE.
+// (3) pakiety należą do konta i przechodzą między jego urządzeniami; (4) na urządzeniu, na którym loguje się
+// kilka kont, każde konto widzi tylko swoje pakiety (LAB-PAKIETY PR5). Dane wyłącznie FIKCYJNE.
 const win = {};
 for (const plik of ['lab_units_data.js', 'lab_unit_converter.js', 'vilda_lab_range_snapshot.js', 'vilda_lab_packages.js']) loadBrowserScript(plik, win);
 const Conv = win.LabUnitConverter, Snapshot = win.VildaLabRangeSnapshot, Dane = win.VildaLabPackagesData, Model = win.VildaLabPackages;
@@ -364,7 +365,7 @@ describe('pakiety należą do konta: prawdziwy adapter i sejf, dwa urządzenia',
     loadBrowserScript('vilda_vault.js', okno);
     const vault = okno.VildaVault;
     vault.setStorageAdapter(vault.createInMemoryAdapter());
-    return { vault, prefs: okno.VildaPersistence };
+    return { vault, prefs: okno.VildaPersistence, okno };
   }
   async function dwaUrzadzenia() {
     const haslo = 'Pakiety#Sync!2026x';
@@ -380,13 +381,17 @@ describe('pakiety należą do konta: prawdziwy adapter i sejf, dwa urządzenia',
   it('klucz jest zarejestrowany w adapterze jako preferencja konta (cloud-synced)', () => {
     const { prefs } = loadDevice();
     expect(prefs.MODULE_KEYS.LAB_CUSTOM_PACKAGES).toBe('labCustomPackages');
-    expect({ ...prefs.MODULE_KEY_META.labCustomPackages }).toEqual({ scope: 'laboratory', kind: 'preference', storage: 'cloud-synced' });
+    // perUser (PR5): kopia na urządzeniu jest osobna dla każdego konta.
+    expect({ ...prefs.MODULE_KEY_META.labCustomPackages }).toEqual({ scope: 'laboratory', kind: 'preference', storage: 'cloud-synced', perUser: true });
     // Jednostki z ostatniego wpisu zostają preferencją urządzenia.
     expect(prefs.MODULE_KEY_META.labPackageSettings.storage).toBe('local-persistent');
   });
 
-  it('zapis i odczyt przez adapter; bez rejestru klucza nic się nie zapisuje', () => {
-    const { prefs } = loadDevice();
+  it('zapis i odczyt przez adapter; bez rejestru klucza nic się nie zapisuje', async () => {
+    const { vault, prefs } = loadDevice();
+    // Bez zalogowanego konta nie ma czyjej kopii czytać ani pisać.
+    expect(Model.writeCustom(prefs, zapis(DOJRZEWANIE))).toBe(false);
+    await vault.createUser('Pakiety#Adapter!2026', { label: 'Fikcyjne konto', iterations: 10000 });
     expect(Model.readCustom(prefs)).toEqual({ schemaVersion: 1, updatedAtISO: null, packages: [] });
     expect(Model.writeCustom(prefs, zapis(DOJRZEWANIE), '2026-06-17T11:00:00.000Z')).toBe(true);
     expect(Model.readCustom(prefs)).toEqual({ schemaVersion: 1, updatedAtISO: '2026-06-17T11:00:00.000Z', packages: [DOJRZEWANIE] });
@@ -394,6 +399,11 @@ describe('pakiety należą do konta: prawdziwy adapter i sejf, dwa urządzenia',
     expect(Model.writeCustom(null, zapis(DOJRZEWANIE))).toBe(false);
     expect(Model.writeCustom({ MODULE_KEY_META: {}, writePreferenceJSON: () => true }, zapis(DOJRZEWANIE))).toBe(false);
     expect(Model.readCustom(null).packages).toEqual([]);
+    // Adapter, który trzymałby jedną kopię dla wszystkich kont urządzenia (bez perUser), nie jest używany.
+    const wspolny = { MODULE_KEY_META: { labCustomPackages: { scope: 'laboratory', kind: 'preference', storage: 'cloud-synced' } },
+      readPreferenceJSON: () => zapis(DOJRZEWANIE), writePreferenceJSON: () => true };
+    expect(Model.readCustom(wspolny).packages).toEqual([]);
+    expect(Model.writeCustom(wspolny, zapis(DOJRZEWANIE))).toBe(false);
   });
 
   it('pakiet utworzony na urządzeniu A jest po synchronizacji na urządzeniu B tego samego konta', async () => {
@@ -433,6 +443,160 @@ describe('pakiety należą do konta: prawdziwy adapter i sejf, dwa urządzenia',
     // Starszy stan z B nie cofa nowszego zapisu A.
     await scal(B, A);
     expect(Model.readCustom(A.prefs).packages.map((p) => p.name)).toEqual(['Nadnercza']);
+  });
+
+  describe('każde konto widzi tylko swoje pakiety (urządzenie współdzielone, LAB-PAKIETY PR5)', () => {
+    const HASLO_A = 'Pakiety#KontoA!2026', HASLO_B = 'Pakiety#KontoB!2026';
+    const PAKIET_A = { id: 'uaaaaaaaaaa', name: 'Dojrzewanie (lekarz A)', analytes: ['lh', 'fsh', 'estradiol'] };
+    const PAKIET_B = { id: 'ubbbbbbbbbb', name: 'Nadnercza (lekarz B)', analytes: ['cortisol', 'acth'] };
+    const naKoncie = async (U) => {
+      const wpis = (await U.vault.exportSyncPayload()).userPreferences?.labCustomPackages;
+      return wpis ? JSON.parse(wpis.value).packages : null;
+    };
+    const klucze = (U) => { const out = []; for (let i = 0; i < U.okno.localStorage.length; i += 1) { const k = U.okno.localStorage.key(i); if (k.startsWith('labCustomPackages')) out.push(k); } return out.sort(); };
+    // Jedno urządzenie, dwa konta: A tworzy pakiet, wylogowuje się, loguje się B.
+    async function dwaKonta() {
+      const U = loadDevice();
+      const a = (await U.vault.createUser(HASLO_A, { label: 'Lekarz A', iterations: 10000 })).userId;
+      expect(Model.writeCustom(U.prefs, zapis(PAKIET_A), '2026-06-17T11:00:00.000Z')).toBe(true);
+      await chwila();
+      await U.vault.lock();
+      const b = (await U.vault.createUser(HASLO_B, { label: 'Lekarz B', iterations: 10000 })).userId;
+      return { U, a, b };
+    }
+
+    it('drugi lekarz na tym samym urządzeniu nie widzi pakietów pierwszego; każdy zapisuje własne', async () => {
+      const { U, a, b } = await dwaKonta();
+      expect(a).not.toBe(b);
+      // B: pusta lista, tylko pakiet wbudowany.
+      expect(Model.readCustom(U.prefs).packages).toEqual([]);
+      expect(Model.listPackages(Dane, Model.readCustom(U.prefs)).map((p) => p.label)).toEqual(['Tarczyca']);
+      expect(await naKoncie(U)).toBeNull();
+      // B tworzy własny pakiet — pakiet A nie trafia ani na listę B, ani na konto B.
+      const nowy = Model.savePackage({ data: Dane, converter: Conv, custom: Model.readCustom(U.prefs), name: PAKIET_B.name, analytes: PAKIET_B.analytes });
+      expect(Model.writeCustom(U.prefs, nowy.custom)).toBe(true);
+      await chwila();
+      expect(Model.readCustom(U.prefs).packages.map((p) => p.name)).toEqual([PAKIET_B.name]);
+      expect((await naKoncie(U)).map((p) => p.name)).toEqual([PAKIET_B.name]);
+      // Wraca A: widzi swój pakiet i tylko swój; konto A jest nietknięte.
+      await U.vault.lock();
+      await U.vault.unlockUser(a, HASLO_A);
+      expect(Model.readCustom(U.prefs).packages).toEqual([PAKIET_A]);
+      expect(await naKoncie(U)).toEqual([PAKIET_A]);
+      // Na urządzeniu są dwie osobne kopie, po jednej na konto; wspólnej nie ma.
+      expect(klucze(U)).toEqual([`labCustomPackages::${a}`, `labCustomPackages::${b}`].sort());
+    });
+
+    it('po wylogowaniu nie ma czyich pakietów czytać ani gdzie pisać', async () => {
+      const { U } = await dwaKonta();
+      await U.vault.lock();
+      expect(Model.readCustom(U.prefs).packages).toEqual([]);
+      expect(Model.writeCustom(U.prefs, zapis(PAKIET_B))).toBe(false);
+      expect(U.prefs.applyPreferenceFromCloud('labCustomPackages', JSON.stringify(zapis(PAKIET_B)))).toBe(false);
+    });
+
+    it('zanim sejf się załaduje, konto wskazuje zapis sesji karty — pakiety są od razu tego samego konta', async () => {
+      const { U, a } = await dwaKonta();
+      await U.vault.lock();
+      await U.vault.unlockUser(a, HASLO_A);
+      // Druga ramka tej samej karty: ten sam magazyn, adapter bez załadowanego sejfu.
+      const ramka = { localStorage: U.okno.localStorage, sessionStorage: U.okno.sessionStorage, addEventListener() {}, removeEventListener() {}, dispatchEvent() {},
+        setTimeout: setTimeout.bind(globalThis), clearTimeout: clearTimeout.bind(globalThis) };
+      ramka.window = ramka; ramka.self = ramka; ramka.top = ramka;
+      loadBrowserScript('vilda_persistence_adapter.js', ramka);
+      expect(ramka.VildaVault).toBeUndefined();
+      expect(Model.readCustom(ramka.VildaPersistence).packages).toEqual([PAKIET_A]);
+      // Po wylogowaniu zapis sesji znika, a z nim dostęp do kopii.
+      await U.vault.lock();
+      expect(Model.readCustom(ramka.VildaPersistence).packages).toEqual([]);
+    });
+
+    it('synchronizacja wpisuje pakiety do kopii zalogowanego konta i tylko jego', async () => {
+      const { U, a } = await dwaKonta();
+      // B jest zalogowany; z chmury przychodzą pakiety konta B (z jego innego urządzenia).
+      expect(U.prefs.applyPreferenceFromCloud('labCustomPackages', JSON.stringify(zapis(PAKIET_B)))).toBe(true);
+      expect(Model.readCustom(U.prefs).packages).toEqual([PAKIET_B]);
+      await U.vault.lock();
+      await U.vault.unlockUser(a, HASLO_A);
+      expect(Model.readCustom(U.prefs).packages).toEqual([PAKIET_A]);
+    });
+
+    describe('stara wspólna kopia urządzenia (wersja 1.3.0) trafia do właściwego konta', () => {
+      // Stan sprzed poprawki: pakiety konta A w sejfie A, a na urządzeniu jedna kopia pod wspólnym kluczem.
+      async function zeStaraKopia() {
+        const stan = await dwaKonta();
+        const { U, a } = stan;
+        const kopiaA = U.okno.localStorage.getItem(`labCustomPackages::${a}`);
+        U.okno.localStorage.removeItem(`labCustomPackages::${a}`);
+        U.okno.localStorage.setItem('labCustomPackages', kopiaA);
+        return { ...stan, kopiaA };
+      }
+
+      it('obce konto: pakiety ze starej kopii nie są pokazane ani przejęte; kopia czeka na właściciela', async () => {
+        const { U, kopiaA } = await zeStaraKopia();
+        // Zalogowany B. Sama stara kopia nie jest niczyimi pakietami.
+        expect(Model.readCustom(U.prefs).packages).toEqual([]);
+        expect(Model.legacyPending(U.prefs)).toBe(true);
+        expect(await Model.adoptLegacy({ persistence: U.prefs, vault: U.vault })).toBe('empty');
+        expect(Model.readCustom(U.prefs).packages).toEqual([]);
+        expect(Model.legacyPending(U.prefs)).toBe(false);
+        expect(U.okno.localStorage.getItem('labCustomPackages')).toBe(kopiaA);
+        // Rozstrzygnięcie niczego nie dopisuje do konta B.
+        await chwila();
+        expect(await naKoncie(U)).toBeNull();
+        // Drugi raz nie ma czego rozstrzygać.
+        expect(await Model.adoptLegacy({ persistence: U.prefs, vault: U.vault })).toBe('own');
+      });
+
+      it('właściciel: dostaje swoje pakiety z konta, stara kopia znika', async () => {
+        const { U, a, b } = await zeStaraKopia();
+        await Model.adoptLegacy({ persistence: U.prefs, vault: U.vault });
+        await U.vault.lock();
+        await U.vault.unlockUser(a, HASLO_A);
+        expect(Model.readCustom(U.prefs).packages).toEqual([]);
+        expect(Model.legacyPending(U.prefs)).toBe(true);
+        expect(await Model.adoptLegacy({ persistence: U.prefs, vault: U.vault })).toBe('account');
+        expect(Model.readCustom(U.prefs).packages).toEqual([PAKIET_A]);
+        expect(klucze(U)).toEqual([`labCustomPackages::${a}`, `labCustomPackages::${b}`].sort());
+        expect(await naKoncie(U)).toEqual([PAKIET_A]);
+      });
+
+      it('konto z własnymi pakietami w sejfie, a stara kopia cudza: dostaje swoje, cudzej nie rusza', async () => {
+        const { U, a, kopiaA } = await zeStaraKopia();
+        // B ma pakiety na koncie (zapis przed poprawką szedł do sejfu), ale na urządzeniu nie ma jego kopii.
+        expect(Model.writeCustom(U.prefs, zapis(PAKIET_B), '2026-06-17T12:00:00.000Z')).toBe(true);
+        await chwila();
+        U.okno.localStorage.removeItem(`labCustomPackages::${U.vault.getCurrentUser().userId}`);
+        expect(Model.readCustom(U.prefs).packages).toEqual([]);
+        expect(await Model.adoptLegacy({ persistence: U.prefs, vault: U.vault })).toBe('account');
+        expect(Model.readCustom(U.prefs).packages).toEqual([PAKIET_B]);
+        expect(U.okno.localStorage.getItem('labCustomPackages')).toBe(kopiaA);
+        await U.vault.lock();
+        await U.vault.unlockUser(a, HASLO_A);
+        expect(await Model.adoptLegacy({ persistence: U.prefs, vault: U.vault })).toBe('account');
+        expect(Model.readCustom(U.prefs).packages).toEqual([PAKIET_A]);
+        expect(U.okno.localStorage.getItem('labCustomPackages')).toBeNull();
+      });
+
+      it('bez starej kopii sejf nie jest czytany; zablokowany sejf i błąd odczytu niczego nie zapisują', async () => {
+        const { U, a } = await dwaKonta();
+        let odczyty = 0;
+        const liczacy = { isUnlocked: () => U.vault.isUnlocked(), getCurrentUser: () => U.vault.getCurrentUser(), exportSyncPayload: () => { odczyty += 1; return U.vault.exportSyncPayload(); } };
+        expect(await Model.adoptLegacy({ persistence: U.prefs, vault: liczacy })).toBe('none');
+        expect(odczyty).toBe(0);
+        U.okno.localStorage.setItem('labCustomPackages', JSON.stringify(zapis(PAKIET_A)));
+        const zepsuty = { ...liczacy, exportSyncPayload: () => Promise.reject(new Error('fikcyjny błąd odczytu')) };
+        expect(await Model.adoptLegacy({ persistence: U.prefs, vault: zepsuty })).toBe('unresolved');
+        expect(Model.legacyPending(U.prefs)).toBe(true);
+        // Konto zmienione w trakcie odczytu sejfu: wynik odczytu nie trafia do kopii innego konta.
+        const zmienny = { ...liczacy, exportSyncPayload: async () => { const ladunek = await U.vault.exportSyncPayload(); await U.vault.lock(); await U.vault.unlockUser(a, HASLO_A); return ladunek; } };
+        expect(await Model.adoptLegacy({ persistence: U.prefs, vault: zmienny })).toBe('unresolved');
+        expect(U.okno.localStorage.getItem(`labCustomPackages::${a}`)).not.toBeNull();
+        expect(Model.readCustom(U.prefs).packages).toEqual([PAKIET_A]);
+        await U.vault.lock();
+        expect(await Model.adoptLegacy({ persistence: U.prefs, vault: U.vault })).toBe('unresolved');
+      });
+    });
   });
 
   it('ostatnio wybrany pakiet i jednostki pamięta urządzenie (labPackageSettings), nie konto', () => {
