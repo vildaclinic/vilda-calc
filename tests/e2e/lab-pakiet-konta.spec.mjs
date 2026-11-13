@@ -1,5 +1,6 @@
 import { expect, test } from '../support/test-czas.mjs';
 import { kartaPakietu, opcjeListy, otworzPakiet, pakietyKonta, pakietyUrzadzenia, tekst, utworzPakiet } from '../support/lab-pakiet-dane.mjs';
+import { otworzZalogowany, wyloguj, zalogujKonto, zalozKonto } from '../support/konta-urzadzenia.mjs';
 
 // LAB-PAKIETY PR5 (polecenie właściciela 2026-11-13): każde konto widzi tylko swoje pakiety. Jedna przeglądarka
 // (jedno urządzenie), dwa fikcyjne konta w prawdziwym sejfie: lekarz A i lekarz B logują się po sobie.
@@ -9,31 +10,17 @@ test.use({ serviceWorkers: 'block' });
 const HASLO_A = 'E2e#Badania!2026'; // konto zakładane przez otworzSejf
 const HASLO_B = 'E2e#DrugiLekarz!2026';
 
-// Wylogowanie na stronie przelicznika przenosi na stronę główną z ekranem logowania.
-async function wyloguj(page) {
-  await Promise.all([
-    page.waitForURL(/\/index\.html(?:[?#]|$)/),
-    page.evaluate(() => { window.VildaVault.lock(); }).catch(() => { /* nawigacja przerwała wywołanie */ }),
-  ]);
-  await page.waitForLoadState('load');
-  await page.evaluate(() => window.VildaSession?.ensureAuthLoaded());
-  await page.waitForFunction(() => Boolean(window.VildaVault) && !window.VildaVault.isUnlocked());
-}
 async function naPakiet(page) {
-  await page.goto('/przelicznik-jednostek.html', { waitUntil: 'load' });
-  await page.waitForFunction(() => window.VildaVault?.isUnlocked() && Boolean(window.VildaAuthUI));
-  await page.waitForFunction(() => !document.documentElement.classList.contains('vilda-auth-locked'));
+  await otworzZalogowany(page, '/przelicznik-jednostek.html');
   await page.locator('#labModePackage').click();
   await expect(page.locator('#labPkgSelect')).toBeVisible();
 }
 const zalogujNowego = async (page) => {
-  await wyloguj(page);
-  await page.evaluate((haslo) => window.VildaVault.createUser(haslo, { label: 'Fikcyjny drugi lekarz', iterations: 10000 }), HASLO_B);
+  await zalozKonto(page, HASLO_B, 'Fikcyjny drugi lekarz');
   await naPakiet(page);
 };
 const zaloguj = async (page, userId, haslo) => {
-  await wyloguj(page);
-  await page.evaluate(({ userId: id, haslo: h }) => window.VildaVault.unlockUser(id, h), { userId, haslo });
+  await zalogujKonto(page, userId, haslo);
   await naPakiet(page);
 };
 const kopie = (page) => page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('labCustomPackages')).sort());

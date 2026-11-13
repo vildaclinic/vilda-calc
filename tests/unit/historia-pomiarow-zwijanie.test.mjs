@@ -188,7 +188,9 @@ describe('preferencja advHistoryCollapsed jedzie między urządzeniami', () => {
   it('klucz jest zarejestrowany jako cloud-synced (local-persistent zostałby na jednym urządzeniu)', () => {
     const P = loadDevice().__prefs;
     expect(P.MODULE_KEYS.ADV_HISTORY_COLLAPSED).toBe('advHistoryCollapsed');
-    expect(P.MODULE_KEY_META.advHistoryCollapsed).toEqual({ scope: 'ui', kind: 'preference', storage: 'cloud-synced' });
+    // perUser + seed (P-USTAWIENIA-KONTA): kopia na urządzeniu osobno dla każdego konta; mapa niesie identyfikatory
+    // pacjentów, więc dawna wspólna kopia przechodzi na konto tylko na urządzeniu z jednym kontem.
+    expect(P.MODULE_KEY_META.advHistoryCollapsed).toEqual({ scope: 'ui', kind: 'preference', storage: 'cloud-synced', perUser: true, seed: 'single' });
     expect(modul().PREF_KEY, 'moduł pisze pod tym samym kluczem').toBe('advHistoryCollapsed');
   });
 
