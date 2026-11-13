@@ -1660,3 +1660,64 @@ function Bpk(e,t){if(!t||t.perUser!==!0)return e;const r=Bpu();return r?e+"::"+r
 
 Konto: użytkownik odblokowanego sejfu (`VildaVault.getCurrentUser()`), a w ramce, w której sejf jeszcze się nie załadował — `userId` z zapisu sesji karty `vilda-vault-session-v2` (ten sam zapis, po którym `vilda_session_bridge.js` poznaje zalogowanie; sejf usuwa go przy wylogowaniu). Hak `onPreferenceWrite` i `applyPreferenceFromCloud` dalej posługują się nazwą preferencji — sejf i format synchronizacji są bez zmian, `vilda_vault.js` nietknięty. `clearModuleState` nie usuwa kopii kont. Wersja adaptera (`1.7.2`) bez zmian. Testy: `tests/unit/lab-pakiety-kreator.test.mjs` („każde konto widzi tylko swoje pakiety”).
 
+
+## Łatka P-USTAWIENIA-KONTA — pozostałe ustawienia konta osobno dla każdego konta (`vilda_persistence_adapter.js`, 2026-11-13)
+
+Polecenie właściciela (po LAB-PAKIETY PR5): pozostałych 15 preferencji synchronizowanych z kontem ma mieć na urządzeniu osobną kopię dla każdego konta, tak jak pakiety badań. Wszystkie czyta i zapisuje wyłącznie adapter (`readPreference*`, `writePreference*`, `readModuleRaw`, `writeModuleRaw`), więc zmiana jest w jednym pliku. Łatka rozszerza łatkę PR5.
+
+**Rejestr (`MODULE_KEY_META`).** Każda preferencja `cloud-synced` ma `perUser:!0`. Dwie dodatkowe cechy:
+
+| Cecha | Znaczenie | Klucze |
+|---|---|---|
+| `guest:!0`, `seed:"copy"` | ustawienie widoku: bez konta czyta i pisze kopię urządzenia (sam klucz, jak dotąd); konto przejmuje kopię dotychczasowej wartości urządzenia | `palSmoothPasses`, `palPdfLayout`, `cardVisibility`, `cardCollapseState`, `publicationCharts`, `centileChartLineStyles`, `centileShowHeightLabel`, `centileShowWeightLabel`, `centileShowBandReference`, `ghTherapyViewMode`, `remindersCollapsedCategories`, `remindersOverdueCollapsed` |
+| `seed:"single"` (bez `guest`) | klucz z danymi konta: bez konta nie ma odczytu ani zapisu; dotychczasowa wspólna kopia przechodzi na konto tylko wtedy, gdy na urządzeniu jest jedno konto, i znika z kopii urządzenia | `advHistoryCollapsed` (mapa po identyfikatorach pacjentów), `remindersLastShownDate`, `dietRecommendationsRecentMythsV1` |
+| sam `perUser` | bez gościa i bez przejęcia w adapterze — starą kopię rozstrzyga sejf (`vilda_lab_packages.js`, `adoptLegacy`) | `labCustomPackages` |
+
+**Kod (czytelny odpowiednik fragmentu przed `readModuleRaw`).**
+
+```js
+const Bpm = "vilda-pref-konta-v1::";            // znacznik: konto przejęło ustawienia urządzenia
+let Bpb = null, Bpo = null;                      // przejęcie w toku; sejf, u którego zapisano onUnlock
+function Bpu() { /* konto: VildaVault.getCurrentUser().userId, a przed załadowaniem sejfu
+                    userId z zapisu sesji karty vilda-vault-session-v2; brak konta → "" */ }
+// Klucz zapisu: konto → "<klucz>::<userId>"; bez konta kopia urządzenia tylko dla guest, inaczej "".
+function Bpk(key, meta) {
+  if (!meta || meta.perUser !== true) return key;
+  const uid = Bpu();
+  return uid ? key + "::" + uid : meta.guest === true ? key : "";
+}
+// Klucz odczytu: jak Bpk, ale konto bez własnej kopii, które jeszcze nie przejęło ustawień urządzenia,
+// czyta kopię urządzenia (nic się nie zeruje). Nie dotyczy sesji jednorazowej (D).
+function Bpr(key, meta) {
+  const own = Bpk(key, meta);
+  if (!meta || !meta.seed || !own || own === key || D) return own;
+  const ls = T("local"), uid = Bpu();
+  if (ls && uid && ls.getItem(own) == null && !ls.getItem(Bpm + uid)) {
+    Bpa();                                        // sejf odblokowany → przejęcie rusza przy pierwszym odczycie
+    if (ls.getItem(key) != null) return key;
+  }
+  return own;
+}
+// Przejęcie: raz na konto, po odblokowaniu sejfu. Zwraca Promise<boolean>.
+function Bpa() {
+  // rejestruje VildaVault.onUnlock(Bpa); bez odblokowanego sejfu albo ze znacznikiem → false
+  // n = (await VildaVault.listUsers()).length; konto zmienione w trakcie → false, bez zapisu
+  // dla każdego klucza perUser z seed, którego kopia urządzenia istnieje (pomijane w sesji jednorazowej):
+  //   seed "copy"  albo n === 1  → gdy konto nie ma własnej kopii: kopia urządzenia → kopia konta
+  //   seed "single"              → kopia urządzenia jest usuwana
+  // na końcu znacznik Bpm + userId = "1"
+}
+// zdarzenia dokumentu vilda:auth-loaded, vilda:session-changed, vilda:auth-state-settled → Bpa
+```
+
+`Bpr` zastępuje `Bpk` w dwóch odczytach (`readModuleRaw` — `q`, `readModuleJSON` — `te`); zapisy, `applyPreferenceFromCloud`, `removeModuleKey` i `clearModuleState` (`ne`) używają `Bpk`. Publiczne API dostało `adoptAccountPreferences` (= `Bpa`) — dla testów i diagnostyki. Preferencje `local-persistent`, dane formularza i dane pacjenta czytają i piszą jak dotąd. Wersja adaptera (`1.7.2`) bez zmian; `vilda_vault.js` nietknięty — hak `onPreferenceWrite` i `applyPreferenceFromCloud` dalej posługują się nazwą preferencji.
+
+Skutki, o których warto pamiętać:
+
+- Przejęcie jest kopią na urządzeniu: niczego nie dopisuje do konta w sejfie ani do synchronizacji.
+- Po przejęciu konto czyta już tylko własne kopie; późniejsza zmiana gościa go nie dotyczy, a zmiana konta nie zmienia kopii urządzenia (gość widzi ustawienia urządzenia z chwili aktualizacji i własne późniejsze zmiany).
+- Nowe konto założone później zaczyna od ustawień urządzenia (gościa), nie od ustawień innego konta.
+- Na urządzeniu, na którym przed aktualizacją logowało się kilka kont, zwinięcia historii pacjentów i data pokazania przypomnień zaczynają od nowa (wspólnej kopii nie da się przypisać).
+- Kopie usuniętego konta zostają w pamięci przeglądarki jako nieużywane klucze.
+
+Testy: `tests/unit/ustawienia-konta-na-urzadzeniu.test.mjs` (prawdziwy adapter i sejf: rejestr, gość, przejęcie, dwa konta, sesja jednorazowa, synchronizacja między urządzeniami), e2e `tests/e2e/ustawienia-konta.spec.mjs` (gość, lekarz A, lekarz B i trzecie konto w jednej przeglądarce: „Widoczność kart” w Ustawieniach i jej skutek na stronie głównej).

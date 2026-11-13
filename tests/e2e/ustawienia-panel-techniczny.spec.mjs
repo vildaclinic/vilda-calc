@@ -105,11 +105,11 @@ async function otworzPanel(page) {
 const pierwszePole = (page) => page.locator(POLE).first().locator('input[type="text"], input[type="number"]');
 const pierwszySuwak = (page) => page.locator(POLE).first().locator('input[type="range"]');
 
+// Zapisane ustawienie tak, jak czyta je aplikacja: przez adapter. Od P-USTAWIENIA-KONTA zalogowane konto ma
+// na urządzeniu własną kopię (`centileChartLineStyles::<konto>`), więc sam klucz w localStorage to kopia gościa.
 const zapisane = (page, klucz) => page.evaluate((k) => {
   try {
-    const surowe = window.localStorage.getItem('centileChartLineStyles');
-    if (!surowe) return null;
-    const parsed = JSON.parse(surowe);
+    const parsed = window.VildaPersistence.readPreferenceJSON('CENTILE_CHART_LINE_STYLES', null);
     return parsed && typeof parsed === 'object' ? parsed[k] : null;
   } catch (_) { return null; }
 }, klucz);
@@ -180,12 +180,7 @@ test.describe('Ustawienia — techniczny panel siatek centylowych', () => {
   test('suwak nadal działa i zapisuje swoją wartość', async ({ page }) => {
     await otworzPanel(page);
     await pierwszySuwak(page).fill('6');
-    await page.waitForFunction(() => {
-      try {
-        const s = JSON.parse(window.localStorage.getItem('centileChartLineStyles') || '{}');
-        return s.majorVerticalGrid === 6;
-      } catch (_) { return false; }
-    });
+    await oczekujZapisu(page, 'majorVerticalGrid', 6, 'suwak zapisuje swoją wartość');
     await expect(pierwszePole(page), 'pole liczbowe podąża za suwakiem').toHaveValue('6');
   });
 
@@ -195,7 +190,8 @@ test.describe('Ustawienia — techniczny panel siatek centylowych', () => {
       window.__zapisy = 0;
       const oryginal = window.localStorage.setItem.bind(window.localStorage);
       window.localStorage.setItem = function (klucz, wartosc) {
-        if (klucz === 'centileChartLineStyles') window.__zapisy += 1;
+        // Kopia konta (`centileChartLineStyles::<konto>`) albo kopia urządzenia.
+        if (klucz === 'centileChartLineStyles' || String(klucz).indexOf('centileChartLineStyles::') === 0) window.__zapisy += 1;
         return oryginal(klucz, wartosc);
       };
     });
@@ -204,14 +200,10 @@ test.describe('Ustawienia — techniczny panel siatek centylowych', () => {
     await suwak.focus();
     for (let i = 0; i < 12; i += 1) await page.keyboard.press('ArrowRight');
 
-    await page.waitForFunction(() => {
-      try {
-        const s = JSON.parse(window.localStorage.getItem('centileChartLineStyles') || '{}');
-        return typeof s.majorVerticalGrid === 'number' && s.majorVerticalGrid > 3.25;
-      } catch (_) { return false; }
-    });
+    await expect.poll(() => zapisane(page, 'majorVerticalGrid'), { message: 'suwak zapisał większą wartość', timeout: 5000 }).toBeGreaterThan(3.25);
 
     const zapisy = await page.evaluate(() => window.__zapisy);
+    expect(zapisy, 'licznik widzi zapis ustawienia').toBeGreaterThanOrEqual(1);
     expect(zapisy, '12 kroków suwaka nie może dać 12 zapisów klucza chmurowego')
       .toBeLessThanOrEqual(3);
   });
