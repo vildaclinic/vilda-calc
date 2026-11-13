@@ -1,5 +1,6 @@
 import { expect } from '@playwright/test';
 import { bezBaneraZgody, otworzSejf } from './lab-historia-dane.mjs';
+import { kliknij, zaznacz } from './uklad-czekanie.mjs';
 
 /**
  * LAB-PAKIETY PR1: przelicznik jednostek z odblokowanym fikcyjnym sejfem i (opcjonalnie) fikcyjną pacjentką
@@ -44,9 +45,12 @@ export async function utworzPakiet(page, nazwa, badania) {
   await page.locator('#labPkgNew').click();
   await page.locator('#labPkgCreatorName').fill(nazwa);
   // Grupy katalogu są zwinięte; test otwiera wszystkie naraz, żeby zaznaczać badania w zadanej kolejności.
+  // Katalog z otwartymi grupami jest dłuższy niż okno, a strona przewija się płynnie (scroll-behavior: smooth):
+  // zaznaczanie i zapis idą przez bramki układu (tests/support/uklad-czekanie.mjs), które ustawiają cel bez
+  // animacji. Bez nich wolniejsza maszyna wpada w pętlę „element is not stable / outside of the viewport”.
   await page.locator('#labPkgCreatorGroups details').evaluateAll((grupy) => grupy.forEach((g) => { g.open = true; }));
-  for (const id of badania) await page.locator(`#labPkgCreatorOpt-${id}`).check();
-  await page.locator('#labPkgCreatorSave').click();
+  for (const id of badania) await zaznacz(page.locator(`#labPkgCreatorOpt-${id}`));
+  await kliknij(page.locator('#labPkgCreatorSave'));
   await expect(page.locator('#labPkgCreator')).toBeHidden();
   await expect(page.locator('#labPkgSelect option:checked')).toHaveText(nazwa);
 }

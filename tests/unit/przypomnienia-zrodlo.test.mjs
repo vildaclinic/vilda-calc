@@ -101,9 +101,10 @@ describe('vilda_auth_ui.js — kształt źródła po audycie karty „Przypomnie
     // zauważył — stąd ten strażnik pilnuje samej KLASY, nie istnienia klucza.
     expect(ADAPTER_SOURCE, 'klucz jest w katalogu')
       .toContain('REMINDERS_COLLAPSED_CATEGORIES:"remindersCollapsedCategories"');
+    // Od P-USTAWIENIA-KONTA wpis niesie też cechy kopii na konto (perUser, guest, seed) — klasa zostaje ta sama.
     expect(ADAPTER_SOURCE, 'z klasą cloud-synced')
       .toContain('[s.REMINDERS_COLLAPSED_CATEGORIES]:Object.freeze({scope:"reminders",'
-        + 'kind:"preference",storage:"cloud-synced"})');
+        + 'kind:"preference",storage:"cloud-synced",perUser:!0,guest:!0,seed:"copy"})');
     expect(ADAPTER_SOURCE, 'i z aliasem, po którym woła go karta')
       .toContain('remindersCollapsedCategories:s.REMINDERS_COLLAPSED_CATEGORIES');
     expect(AUTH_UI_SOURCE, 'karta czyta i pisze dokładnie ten klucz')

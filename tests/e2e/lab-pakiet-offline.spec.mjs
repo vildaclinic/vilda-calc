@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { expect, test } from '@playwright/test';
+import { kliknij, zaznacz } from '../support/uklad-czekanie.mjs';
 
 // LAB-PAKIETY PR1: pakiet badań działa offline po instalacji produkcyjnego SW (AGENTS.md § 6).
 // Pełny precache, osobny profil, zatrzymany serwer i zimny restart przeglądarki; sejf, pacjentka i wyniki
@@ -119,7 +120,7 @@ test('pakiet „Tarczyca” po zimnym starcie offline: zasoby z SW, ocena i zapi
     await expect(karta.locator('.lab-pkg-card[data-analyte="tsh"] .lab-range-status')).toHaveText('powyżej normy');
     await expect(karta.locator('.lab-pkg-card[data-analyte="ft4"] .lab-range-status')).toHaveText('w zakresie normy');
     await expect(karta.locator('.lab-pkg-card[data-analyte="tsh"] .lab-pkg-card-norm')).toContainText('Dorośli');
-    await page.locator('#labPkgSave').click();
+    await kliknij(page.locator('#labPkgSave'));
     await expect(page.locator('#labPkgDone')).toContainText('Zapisano 2 wyniki w karcie pacjenta');
     const saved = await page.evaluate(async (pid) => (await window.VildaVault.listPatientNotesForPatient(pid))
       .filter((note) => note.category === 'wynik-badania')
@@ -136,7 +137,7 @@ test('pakiet „Tarczyca” po zimnym starcie offline: zasoby z SW, ocena i zapi
     await page.locator('#labPkgNormLow-tsh').fill('0,27');
     await page.locator('#labPkgNormHigh-tsh').fill('4,2');
     await expect(karta.locator('.lab-pkg-card[data-analyte="tsh"] .lab-range-status')).toHaveText('powyżej normy z wydruku');
-    await page.locator('#labPkgSave').click();
+    await kliknij(page.locator('#labPkgSave'));
     await expect(page.locator('#labPkgDone')).toContainText('Zapisano 1 wynik w karcie pacjenta');
     const withNorm = await page.evaluate(async (pid) => (await window.VildaVault.listPatientNotesForPatient(pid))
       .filter((note) => note.category === 'wynik-badania' && note.labResult.norm)
@@ -150,10 +151,10 @@ test('pakiet „Tarczyca” po zimnym starcie offline: zasoby z SW, ocena i zapi
     await page.locator('#labPkgNew').click();
     await page.locator('#labPkgCreatorName').fill('Dojrzewanie offline');
     await page.locator('#labPkgCreatorSearch').fill('lh');
-    await page.locator('#labPkgCreatorOpt-lh').check();
+    await zaznacz(page.locator('#labPkgCreatorOpt-lh'));
     await page.locator('#labPkgCreatorSearch').fill('estradiol');
-    await page.locator('#labPkgCreatorOpt-estradiol').check();
-    await page.locator('#labPkgCreatorSave').click();
+    await zaznacz(page.locator('#labPkgCreatorOpt-estradiol'));
+    await kliknij(page.locator('#labPkgCreatorSave'));
     await expect(page.locator('#labPkgSelect option:checked')).toHaveText('Dojrzewanie offline');
     await expect(karta.locator('.lab-pkg-row-label')).toHaveText(['LH', 'Estradiol']);
     await page.locator('#labPkgValue-lh').fill('3');

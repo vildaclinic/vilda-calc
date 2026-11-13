@@ -146,6 +146,12 @@ export async function zaznacz(locator, opcje = {}) {
   await locator.check();
 }
 
+/** `uncheck()` poprzedzone bramką na ustawienie elementu. */
+export async function odznacz(locator, opcje = {}) {
+  await ustawNaMiejscu(locator, opcje);
+  await locator.uncheck();
+}
+
 /** `click()` poprzedzone bramką na ustawienie elementu. */
 export async function kliknij(locator, opcje = {}) {
   await ustawNaMiejscu(locator, opcje);

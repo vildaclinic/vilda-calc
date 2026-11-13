@@ -1,5 +1,6 @@
 import { expect, test } from '../support/test-czas.mjs';
 import { kartaPakietu, opcjeListy, otworzPakiet, pakietyKonta, pakietyUrzadzenia, tekst, utworzPakiet, wczytajPacjenta, wynikiBadan } from '../support/lab-pakiet-dane.mjs';
+import { kliknij, odznacz, zaznacz } from '../support/uklad-czekanie.mjs';
 
 // LAB-PAKIETY PR4 (kreator, decyzje właściciela i makieta z 2026-11-13): lekarz składa własny pakiet z badań
 // przelicznika. Prawdziwy, fikcyjny sejf (tests/support/lab-pakiet-dane.mjs; zegar stron 17.06.2026).
@@ -38,7 +39,7 @@ test('kreator: pakiet „Dojrzewanie” — utworzenie, zapis na koncie, ocena, 
   // Wyszukiwanie odsłania badanie w zwiniętej grupie (bez znaków diakrytycznych).
   await page.locator('#labPkgCreatorSearch').fill('luteinizujacy');
   await expect(page.locator('#labPkgCreatorGroups .lab-pkg-creator-option:visible')).toHaveCount(1);
-  await page.locator('#labPkgCreatorOpt-lh').check();
+  await zaznacz(page.locator('#labPkgCreatorOpt-lh'));
   await page.locator('#labPkgCreatorSearch').fill('nie ma takiego badania');
   await expect(page.locator('#labPkgCreator .lab-pkg-creator-nomatch')).toBeVisible();
   // Po wyczyszczeniu wyszukiwania otwarta zostaje grupa z zaznaczonym badaniem.
@@ -47,9 +48,9 @@ test('kreator: pakiet „Dojrzewanie” — utworzenie, zapis na koncie, ocena, 
   await expect(page.locator('#labPkgCreatorOpt-fsh')).toBeVisible();
   expect(await tekst(page.locator('label.lab-pkg-creator-option', { has: page.locator('#labPkgCreatorOpt-fsh') }))).toBe('FSH (hormon folikulotropowy) · pokwit.');
   expect(await tekst(page.locator('label.lab-pkg-creator-option', { has: page.locator('#labPkgCreatorOpt-amh') }))).toBe('AMH (hormon antymüllerowski) · poj. badanie');
-  await page.locator('#labPkgCreatorOpt-fsh').check();
-  await page.locator('#labPkgCreatorGroups summary', { hasText: 'Estrogeny / progesteron' }).click();
-  await page.locator('#labPkgCreatorOpt-estradiol').check();
+  await zaznacz(page.locator('#labPkgCreatorOpt-fsh'));
+  await kliknij(page.locator('#labPkgCreatorGroups summary', { hasText: 'Estrogeny / progesteron' }));
+  await zaznacz(page.locator('#labPkgCreatorOpt-estradiol'));
 
   await expect(page.locator('#labPkgCreatorCount')).toHaveText('3 z 10');
   expect(await wybrane(page)).toEqual([
@@ -61,7 +62,7 @@ test('kreator: pakiet „Dojrzewanie” — utworzenie, zapis na koncie, ocena, 
   await expect(page.locator('#labPkgCreatorHint')).toBeHidden();
   await expect(page.locator('#labPkgCreatorDelete')).toBeHidden();
   await expect(page.locator('#labPkgCreatorSave')).toHaveText('Zapisz pakiet');
-  await page.locator('#labPkgCreatorSave').click();
+  await kliknij(page.locator('#labPkgCreatorSave'));
 
   // Po zapisie: formularz nowego pakietu, lista z grupą „Twoje pakiety”, pakiet na koncie.
   await expect(page.locator('#labPkgCreator')).toBeHidden();
@@ -112,7 +113,7 @@ test('kreator: pakiet „Dojrzewanie” — utworzenie, zapis na koncie, ocena, 
   await expect(page.locator('#labPkgValue-lh')).toHaveValue('2,1');
 
   await expect(page.locator('#labPkgSave')).toHaveText('Zapisz 3 wyniki do karty');
-  await page.locator('#labPkgSave').click();
+  await kliknij(page.locator('#labPkgSave'));
   await expect(page.locator('#labPkgDone')).toBeVisible();
   const notatki = await wynikiBadan(page, patientId);
   expect(notatki.map((n) => [n.labResult.testKey, n.title, n.body])).toEqual([
@@ -163,7 +164,7 @@ test('pakiet ocenia estradiol, kortyzol, ACTH, wolny testosteron i 17-OHP tak sa
     await page.locator(`#labPkgValue-${id}`).fill(wartosc);
   }
   await page.locator('#labPkgDate').fill('2026-06-16');
-  await page.locator('#labPkgSave').click();
+  await kliknij(page.locator('#labPkgSave'));
   await expect(page.locator('#labPkgDone')).toBeVisible();
 
   const wszystkie = await wynikiBadan(page, patientId);
@@ -200,7 +201,7 @@ test('kreator: walidacja nazwy i składu, kolejność badań, limit 10 badań, �
   await expect(page.locator('#labPkgCreatorHint')).toHaveText('Dodaj co najmniej jedno badanie.');
 
   await page.locator('#labPkgCreatorGroups details').evaluateAll((grupy) => grupy.forEach((g) => { g.open = true; }));
-  for (const id of ['lh', 'fsh', 'estradiol']) await page.locator(`#labPkgCreatorOpt-${id}`).check();
+  for (const id of ['lh', 'fsh', 'estradiol']) await zaznacz(page.locator(`#labPkgCreatorOpt-${id}`));
   await expect(page.locator('#labPkgCreatorSave')).toBeEnabled();
   const kolejnosc = () => page.locator('#labPkgCreatorList li').evaluateAll((w) => w.map((li) => li.getAttribute('data-analyte')));
   const przyciski = (id) => page.locator(`#labPkgCreatorList li[data-analyte="${id}"] button`);
@@ -210,7 +211,7 @@ test('kreator: walidacja nazwy i składu, kolejność badań, limit 10 badań, �
   await expect(przyciski('fsh').nth(0)).toHaveAttribute('aria-label', 'Przesuń FSH w górę');
   await expect(przyciski('fsh').nth(1)).toHaveAttribute('aria-label', 'Przesuń FSH w dół');
   await expect(przyciski('fsh').nth(2)).toHaveAttribute('aria-label', 'Usuń FSH z pakietu');
-  await przyciski('estradiol').nth(0).click();
+  await kliknij(przyciski('estradiol').nth(0));
   expect(await kolejnosc()).toEqual(['lh', 'estradiol', 'fsh']);
   // Fokus zostaje na przycisku przesuniętego badania — kolejne naciśnięcie przesuwa je dalej.
   await expect(przyciski('estradiol').nth(0)).toBeFocused();
@@ -219,30 +220,30 @@ test('kreator: walidacja nazwy i składu, kolejność badań, limit 10 badań, �
   // Na samej górze przycisk „w górę” jest nieczynny, fokus przechodzi na „w dół” tego samego badania.
   await expect(przyciski('estradiol').nth(1)).toBeFocused();
   // Usunięcie z listy odznacza badanie w katalogu.
-  await przyciski('lh').nth(2).click();
+  await kliknij(przyciski('lh').nth(2));
   expect(await kolejnosc()).toEqual(['estradiol', 'fsh']);
   await expect(page.locator('#labPkgCreatorOpt-lh')).not.toBeChecked();
   // Odznaczenie ostatniego badania pokazuje błąd składu.
-  await page.locator('#labPkgCreatorOpt-estradiol').uncheck();
-  await page.locator('#labPkgCreatorOpt-fsh').uncheck();
+  await odznacz(page.locator('#labPkgCreatorOpt-estradiol'));
+  await odznacz(page.locator('#labPkgCreatorOpt-fsh'));
   await expect(page.locator('#labPkgCreatorListError')).toHaveText('Dodaj co najmniej jedno badanie.');
   await expect(page.locator('#labPkgCreatorSave')).toBeDisabled();
 
   // Limit 10 badań: przy dziesięciu pozostałe pola wyboru są nieczynne, zaznaczone da się odznaczyć.
   const dziesiec = ['cortisol', 'acth', 'aldosterone', 'oh17_progesterone', 'dhea_s', 'androstenedione', 'testosterone_total', 'estradiol', 'lh', 'fsh'];
-  for (const id of dziesiec) await page.locator(`#labPkgCreatorOpt-${id}`).check();
+  for (const id of dziesiec) await zaznacz(page.locator(`#labPkgCreatorOpt-${id}`));
   await expect(page.locator('#labPkgCreatorCount')).toHaveText('10 z 10');
   await expect(page.locator('#labPkgCreatorLimit')).toHaveText('Pakiet może mieć najwyżej 10 badań — usuń któreś, żeby dodać inne.');
   await expect(page.locator('#labPkgCreatorGroups input[type="checkbox"]:disabled')).toHaveCount(24);
   await expect(page.locator('#labPkgCreatorGroups input[type="checkbox"]:checked:disabled')).toHaveCount(0);
   await expect(page.locator('#labPkgCreatorOpt-tsh')).toBeDisabled();
-  await page.locator('#labPkgCreatorOpt-aldosterone').uncheck();
+  await odznacz(page.locator('#labPkgCreatorOpt-aldosterone'));
   await expect(page.locator('#labPkgCreatorLimit')).toBeHidden();
   await expect(page.locator('#labPkgCreatorOpt-tsh')).toBeEnabled();
   await expect(page.locator('#labPkgCreatorSave')).toBeEnabled();
 
   // „Anuluj” wraca do formularza: żadnego nowego pakietu na liście, na urządzeniu ani na koncie.
-  await page.locator('#labPkgCreatorCancel').click();
+  await kliknij(page.locator('#labPkgCreatorCancel'));
   await expect(page.locator('#labPkgCreator')).toBeHidden();
   await expect(page.locator('#labPkgSelect')).toBeFocused();
   expect(await opcjeListy(page)).toEqual([['Wbudowane', ['Tarczyca']]]);
@@ -279,10 +280,10 @@ test('edycja i usuwanie pakietu: nazwa i skład zmieniają się w miejscu, wpisa
   await page.locator('#labPkgCreatorName').fill('Tarczyca');
   await expect(page.locator('#labPkgCreatorNameError')).toHaveText('Masz już pakiet o tej nazwie.');
   await page.locator('#labPkgCreatorName').fill('  Pokwitanie   dziewcząt ');
-  await page.locator('#labPkgCreatorList li[data-analyte="fsh"] button').nth(2).click();
-  await page.locator('#labPkgCreatorOpt-inhibin_b').check();
-  await page.locator('#labPkgCreatorList li[data-analyte="estradiol"] button').nth(0).click();
-  await page.locator('#labPkgCreatorSave').click();
+  await kliknij(page.locator('#labPkgCreatorList li[data-analyte="fsh"] button').nth(2));
+  await zaznacz(page.locator('#labPkgCreatorOpt-inhibin_b'));
+  await kliknij(page.locator('#labPkgCreatorList li[data-analyte="estradiol"] button').nth(0));
+  await kliknij(page.locator('#labPkgCreatorSave'));
 
   await expect(page.locator('#labPkgCreator')).toBeHidden();
   await expect(page.locator('#labToast')).toHaveText('✓ Zapisano pakiet: Pokwitanie dziewcząt');
@@ -305,15 +306,15 @@ test('edycja i usuwanie pakietu: nazwa i skład zmieniają się w miejscu, wpisa
   // Usuwanie: najpierw pytanie; „Zostaw” niczego nie zmienia.
   await page.locator('#labPkgEdit').click();
   await expect(page.locator('#labPkgCreatorConfirm')).toBeHidden();
-  await page.locator('#labPkgCreatorDelete').click();
+  await kliknij(page.locator('#labPkgCreatorDelete'));
   expect(await tekst(page.locator('#labPkgCreatorConfirm'))).toBe('Usunąć pakiet „Pokwitanie dziewcząt”? Pakiet zniknie z listy na wszystkich Twoich urządzeniach. Zapisane wyniki badań nie są usuwane. Usuń pakiet Zostaw');
   await expect(page.locator('#labPkgCreatorDeleteCancel')).toBeFocused();
-  await page.locator('#labPkgCreatorDeleteCancel').click();
+  await kliknij(page.locator('#labPkgCreatorDeleteCancel'));
   await expect(page.locator('#labPkgCreatorConfirm')).toBeHidden();
   await expect(page.locator('#labPkgCreatorDelete')).toBeFocused();
   expect(await pakietyUrzadzenia(page)).toHaveLength(1);
-  await page.locator('#labPkgCreatorDelete').click();
-  await page.locator('#labPkgCreatorDeleteConfirm').click();
+  await kliknij(page.locator('#labPkgCreatorDelete'));
+  await kliknij(page.locator('#labPkgCreatorDeleteConfirm'));
 
   await expect(page.locator('#labPkgCreator')).toBeHidden();
   await expect(page.locator('#labToast')).toHaveText('Usunięto pakiet: Pokwitanie dziewcząt');
