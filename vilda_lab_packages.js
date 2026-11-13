@@ -33,7 +33,11 @@
  * pochodzi wyłącznie z poprzedniego wyniku tego samego badania u tego samego pacjenta (previousResults);
  * pacjent bez wcześniejszego wyniku nie dostaje żadnej. Norm nie pamięta ani urządzenie, ani konto.
  *
- * Opis: docs/clinical/ALGORITHMS.md, „LAB-PAKIETY PR1” i „LAB-PAKIETY PR2”.
+ * Kopiowanie (LAB-PAKIETY PR3, propozycja właściciela 2026-11-13): przycisk „Kopiuj wyniki” przy pakiecie kładzie
+ * w schowku tekst „Badania (pobranie …)” z wierszem na każdy wynik — z tą samą oceną i normą, które pokazuje
+ * karta wyniku (buildCopyText). Karta „Podsumowanie wyników” na stronie głównej nie dostaje bloku badań.
+ *
+ * Opis: docs/clinical/ALGORITHMS.md, „LAB-PAKIETY PR1”, „LAB-PAKIETY PR2” i „LAB-PAKIETY PR3”.
  */
 (function (root) {
   'use strict';
@@ -265,6 +269,7 @@
         return view;
       }
       if (info.classification && STATES[info.classification]) {
+        view.classification = info.classification;
         view.state = STATES[info.classification].state;
         view.text = STATES[info.classification].text;
         var display = row.range.display;
@@ -412,6 +417,49 @@
       };
     }
 
+    /* Tekst do schowka (LAB-PAKIETY PR3, propozycja właściciela 2026-11-13): wyniki pakietu kopiuje przycisk przy
+     * formularzu, nie karta „Podsumowanie wyników”. Jeden wiersz na wypełniony wynik, w kolejności pakietu:
+     *   <badanie>: <wartość> <jednostka>[ — <ocena, gdy poza normą>][ (<norma>)]
+     * Ocena i norma to dokładnie te, które pokazuje karta wyniku: norma z wydruku, gdy ją wpisano, inaczej norma
+     * aplikacji. Wynik w normie nie dostaje dopisku. Ocena idzie słowami, bez strzałek: zapis do schowka
+     * (vilda_schowek.js) zamienia „↑” na „wzrost”, a przy wyniku badania czytałoby się to jak zmiana w czasie. */
+    function copyBounds(row, bounds) {
+      var value = text(bounds), unit = text(row.unit);
+      // Norma jest w jednostce wyniku, która stoi tuż przed nią — bez powtarzania jednostki.
+      if (unit && value.slice(-unit.length) === unit) value = value.slice(0, value.length - unit.length);
+      return value.replace(/[\s\u00a0]+$/, '');
+    }
+    function copyLine(row) {
+      var view = record(row.view) ? row.view : {};
+      var line = row.short + ': ' + row.shown + ' ' + row.unit;
+      var verdict = view.classification && view.classification !== 'within' && STATES[view.classification] ? STATES[view.classification].text : '';
+      var norm = '';
+      if (view.lab && row.norm) norm = 'norma z wydruku ' + plainNumber(row.norm.low) + '–' + plainNumber(row.norm.high);
+      else if (view.general && view.bounds) norm = 'zakres ogólny ' + copyBounds(row, view.bounds) + ' — bez oceny dla dziecka';
+      else if (view.bounds) norm = (view.classification ? 'norma ' : 'zakres ') + copyBounds(row, view.bounds) + (view.classification ? '' : ' — bez oceny');
+      return line + (verdict ? ' — ' + verdict : '') + (norm ? ' (' + norm + ')' : '');
+    }
+    /* Zwraca { ok, error, text, names }. Te same warunki co zapis (bez pacjenta): żadnego błędnego wyniku ani
+     * normy, co najmniej jeden wynik, poprawna data pobrania — do dokumentacji nie trafia tekst z błędem. */
+    function buildCopyText(options) {
+      options = options || {};
+      var rows = Array.isArray(options.rows) ? options.rows : [];
+      var invalid = rows.filter(function (row) { return row.status === 'invalid'; });
+      var filled = rows.filter(function (row) { return row.status === 'ok'; });
+      var none = { ok: false, text: '', names: '' };
+      if (invalid.length) return Object.assign(none, { error: 'Popraw wynik: ' + invalid.map(function (row) { return row.short || row.analyteId; }).join(', ') + '.' });
+      if (!filled.length) return Object.assign(none, { error: 'Wpisz co najmniej jeden wynik.' });
+      var badNorms = filled.filter(function (row) { return !!row.normError; });
+      if (badNorms.length) return Object.assign(none, { error: 'Popraw normę z wydruku: ' + badNorms.map(function (row) { return row.short; }).join(', ') + '.' });
+      var dateError = validDate(options.dateISO, options.todayISO);
+      if (dateError) return Object.assign(none, { error: dateError });
+      return {
+        ok: true, error: '',
+        text: ['Badania (pobranie ' + formatDate(options.dateISO) + '):'].concat(filled.map(copyLine)).join('\n'),
+        names: filled.map(function (row) { return row.short; }).join(', ')
+      };
+    }
+
     // Polska odmiana: 1 wynik, 2–4 wyniki, 5+ wyników (12–14 wyników).
     function plural(n, forms) {
       if (n === 1) return forms[0];
@@ -420,7 +468,7 @@
     }
 
     return Object.freeze({
-      version: '1.1.0',
+      version: '1.2.0',
       SETTINGS_KEY: SETTINGS_KEY,
       CATEGORY: CATEGORY,
       COMMENT_MAX: COMMENT_MAX,
@@ -441,6 +489,7 @@
       formatDate: formatDate,
       buildNote: buildNote,
       planSave: planSave,
+      buildCopyText: buildCopyText,
       plural: plural,
       shortLabel: shortLabel
     });
@@ -732,6 +781,11 @@
         parts.doneOpen = button(parts.done, 'lab-pkg-btn lab-pkg-btn-ghost', 'Otwórz Badania', openCard);
         parts.doneOpen.id = 'labPkgOpenCard';
 
+        // PR3 (propozycja właściciela 2026-11-13): kopiowanie do dokumentacji przy samym pakiecie, nie w karcie
+        // „Podsumowanie wyników”. Kopiuje wpisane wyniki, a gdy formularz jest pusty po zapisie — zapisany zestaw.
+        parts.copy = button(results, 'lab-pkg-btn lab-pkg-btn-ghost lab-pkg-copy', 'Kopiuj wyniki', copyResults);
+        parts.copy.id = 'labPkgCopy';
+
         applyUnits();
         resetDate();
       }
@@ -945,6 +999,36 @@
         parts.saveBtn.disabled = state.busy || !filled || invalid;
       }
 
+      // Co skopiuje przycisk: wyniki wpisane w formularzu, a przy pustym formularzu po zapisie — zapisany zestaw.
+      function copySource(rows) {
+        var typed = rows.some(function (row) { return row.status !== 'empty'; });
+        if (!typed && state.done && state.done.copy) {
+          return { ok: true, error: '', text: state.done.copy.text, names: state.done.copy.names, saved: true };
+        }
+        return model().buildCopyText({ rows: rows, dateISO: parts.date.value, todayISO: today() });
+      }
+      function drawCopy(rows) {
+        var source = copySource(rows);
+        parts.copy.textContent = source.saved ? 'Kopiuj zapisane wyniki' : 'Kopiuj wyniki';
+        parts.copy.disabled = state.busy || !source.ok;
+      }
+      function copyResults() {
+        if (state.busy) return;
+        var described = packagePatient();
+        var source = copySource(evaluate(described && described.patient));
+        if (!source.ok) { refresh(); return; }
+        // vilda_schowek.js to jedyne miejsce zapisu do schowka (tekst dla systemu szpitalnego, iOS); zapis musi
+        // ruszyć w geście kliknięcia, dlatego bez żadnego czekania przed nim.
+        var clipboard = w.VildaSchowek, written;
+        try {
+          written = clipboard && typeof clipboard.kopiuj === 'function' ? clipboard.kopiuj(source.text)
+            : w.navigator && w.navigator.clipboard && typeof w.navigator.clipboard.writeText === 'function'
+              ? w.navigator.clipboard.writeText(source.text) : Promise.reject(new Error('Brak schowka'));
+        } catch (error) { written = Promise.reject(error); }
+        Promise.resolve(written).then(function () { toast('✓ Skopiowano wyniki: ' + source.names); },
+          function () { toast('Nie udało się skopiować — skopiuj ręcznie.'); });
+      }
+
       function drawGate(gate) {
         var info = GATES[gate];
         parts.gate.hidden = !info;
@@ -1052,6 +1136,7 @@
         markStep(parts.step4, anyOk && !missing, false);
 
         drawSave(ctx, rows);
+        drawCopy(rows);
         parts.error.hidden = !state.error;
         parts.error.textContent = state.error;
         parts.done.hidden = !state.done;
@@ -1126,10 +1211,13 @@
           var names = saved.map(function (row) { return row.short; }).join(', ');
           var count = saved.length;
           var date = m.formatDate(parts.date.value);
+          // Tekst zapisanego zestawu zostaje do skopiowania po wyczyszczeniu formularza.
+          var copy = m.buildCopyText({ rows: saved, dateISO: parts.date.value, todayISO: today() });
           clearValues(true);
           state.done = {
             title: 'Zapisano ' + count + ' ' + m.plural(count, ['wynik', 'wyniki', 'wyników']) + ' w karcie pacjenta',
-            text: names + ' · pobranie ' + date
+            text: names + ' · pobranie ' + date,
+            copy: copy.ok ? { text: copy.text, names: copy.names } : null
           };
           applyUnits();
           loadPrevious();
@@ -1274,7 +1362,7 @@
 
     var instance = null;
     return Object.freeze({
-      version: '1.1.0',
+      version: '1.2.0',
       start: function () {
         if (instance || !win || !win.document) return instance;
         instance = create(win);

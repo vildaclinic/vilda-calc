@@ -434,6 +434,103 @@ describe('norma z wydruku (LAB-PAKIETY PR2)', () => {
   });
 });
 
+// LAB-PAKIETY PR3 (propozycja właściciela 2026-11-13): wyniki pakietu kopiuje przycisk przy formularzu, nie karta
+// „Podsumowanie wyników”. Tekst niesie ocenę i normę z karty wyniku; do schowka idzie przez vilda_schowek.js.
+describe('kopiowanie wyników pakietu (LAB-PAKIETY PR3)', () => {
+  const kopia = (inputs, zmiany = {}) => Model.buildCopyText({
+    rows: Model.evaluatePackage(opcje(zmiany.patient || dziewczynka9), inputs), dateISO: '2026-06-15', todayISO: '2026-06-17', ...zmiany.opcje,
+  });
+  const schowekWin = {};
+  loadBrowserScript('vilda_schowek.js', schowekWin);
+  const dlaHis = schowekWin.VildaSchowek.dlaSystemuSzpitalnego;
+  // Znaki, które przeżyją stronę kodową Windows-1250 systemu szpitalnego (P-SCHOWEK-HIS).
+  const WIN1250 = new Set([...new TextDecoder('windows-1250').decode(Uint8Array.from({ length: 256 }, (_, i) => i))]);
+
+  it('fikcyjna dziewczynka 9 lat: wiersz na wynik w kolejności pakietu; poza normą — ocena słowami, w normie — bez dopisku', () => {
+    const wynik = kopia([
+      { analyteId: 'tsh', raw: '6,8', unit: 'mIU/L' },
+      { analyteId: 'ft4', raw: '14,2', unit: 'pmol/L', normLow: '12,0', normHigh: '22,0' },
+      { analyteId: 'ft3', raw: '6,1', unit: 'pmol/L' },
+    ]);
+    expect(wynik).toEqual({
+      ok: true, error: '', names: 'TSH, fT4, fT3',
+      text: ['Badania (pobranie 15.06.2026):',
+        'TSH: 6,8 mIU/L — powyżej normy (norma 0,6–4,8)',
+        'fT4: 14,2 pmol/L (norma z wydruku 12–22)',
+        'fT3: 6,1 pmol/L (norma 4,61–7,83)'].join('\n'),
+    });
+  });
+
+  it('ocena i norma w tekście są oceną i normą karty wyniku — także gdy norma z wydruku ocenia inaczej niż aplikacja', () => {
+    const inputs = [
+      { analyteId: 'tsh', raw: '4,5', unit: 'mIU/L', normLow: '0,27', normHigh: '4,2' },
+      { analyteId: 'ft4', raw: '0,5', unit: 'ng/dL', normLow: '0,93', normHigh: '1,7' },
+      { analyteId: 'ft3', raw: '12', unit: 'pmol/L' },
+    ];
+    const rows = Model.evaluatePackage(opcje(dziewczynka9), inputs);
+    expect(rows.map((w) => w.view.text)).toEqual(['powyżej normy z wydruku', 'poniżej normy z wydruku', 'powyżej normy']);
+    expect(kopia(inputs).text.split('\n').slice(1)).toEqual([
+      'TSH: 4,5 mIU/L — powyżej normy (norma z wydruku 0,27–4,2)',
+      'fT4: 0,5 ng/dL — poniżej normy (norma z wydruku 0,93–1,7)',
+      'fT3: 12 pmol/L — powyżej normy (norma 4,61–7,83)',
+    ]);
+    // Bez normy z wydruku ten sam TSH jest w normie aplikacji — bez dopisku.
+    expect(kopia([{ analyteId: 'tsh', raw: '4,5', unit: 'mIU/L' }]).text).toBe('Badania (pobranie 15.06.2026):\nTSH: 4,5 mIU/L (norma 0,6–4,8)');
+    // Każda z pięciu kategorii silnika: dopisek tylko poza normą, brzmienie jak na karcie.
+    for (const raw of ['2,5', '0,4', '6,8', '0,05', '12']) {
+      const [wiersz1] = Model.evaluatePackage(opcje(dziewczynka9), [{ analyteId: 'tsh', raw, unit: 'mIU/L' }]);
+      const linia = kopia([{ analyteId: 'tsh', raw, unit: 'mIU/L' }]).text.split('\n')[1];
+      expect(linia, raw).toBe(wiersz1.view.classification === 'within'
+        ? `TSH: ${raw} mIU/L (norma 0,6–4,8)` : `TSH: ${raw} mIU/L — ${wiersz1.view.text} (norma 0,6–4,8)`);
+    }
+  });
+
+  it('puste pola są pomijane; zakres ogólny u dziecka i wynik bez zakresu nie dostają oceny', () => {
+    expect(kopia([{ analyteId: 'tsh', raw: '', unit: 'mIU/L' }, { analyteId: 'ft4', raw: '1,1', unit: 'ng/dL' }, { analyteId: 'ft3', raw: ' ', unit: 'pmol/L' }])).toMatchObject({
+      ok: true, names: 'fT4', text: 'Badania (pobranie 15.06.2026):\nfT4: 1,1 ng/dL (norma 1–1,7)',
+    });
+    // Dziecko bez wieku w danych: zakres ogólny bez kategorii (decyzje 6.30–6.31).
+    expect(kopia([{ analyteId: 'tsh', raw: '2,5', unit: 'mIU/L' }], { patient: { sex: 'F', age: null, tanner: 2, life_stage: 'pediatric' } }).text)
+      .toBe('Badania (pobranie 15.06.2026):\nTSH: 2,5 mIU/L (zakres ogólny 0,3–4,2 — bez oceny dla dziecka)');
+    // Wiersze bez zakresu albo bez kategorii (inne badania w przyszłych pakietach): sama wartość albo zakres bez oceny.
+    const wiersz0 = (view) => ({ status: 'ok', short: 'Badanie', shown: '1,5', unit: 'U/L', view });
+    expect(Model.buildCopyText({ rows: [wiersz0({ bounds: '', text: 'brak zakresu referencyjnego w aplikacji' }), wiersz0({ bounds: '1–2 U/L', text: 'bez oceny względem zakresu' })],
+      dateISO: '2026-06-17', todayISO: '2026-06-17' }).text).toBe('Badania (pobranie 17.06.2026):\nBadanie: 1,5 U/L\nBadanie: 1,5 U/L (zakres 1–2 — bez oceny)');
+  });
+
+  it('kopiowanie wstrzymują te same błędy co zapis: błędny wynik, błędna norma, brak wyników, zła data', () => {
+    const brak = { ok: false, text: '', names: '' };
+    expect(kopia([{ analyteId: 'tsh', raw: '6,8', unit: 'mIU/L' }, { analyteId: 'ft4', raw: 'abc', unit: 'ng/dL' }])).toEqual({ ...brak, error: 'Popraw wynik: fT4.' });
+    expect(kopia([{ analyteId: 'tsh', raw: '', unit: 'mIU/L' }])).toEqual({ ...brak, error: 'Wpisz co najmniej jeden wynik.' });
+    expect(kopia([])).toEqual({ ...brak, error: 'Wpisz co najmniej jeden wynik.' });
+    expect(kopia([{ analyteId: 'tsh', raw: '2', unit: 'mIU/L', normLow: '1' }])).toEqual({ ...brak, error: 'Popraw normę z wydruku: TSH.' });
+    const jeden = [{ analyteId: 'tsh', raw: '2', unit: 'mIU/L' }];
+    expect(kopia(jeden, { opcje: { dateISO: '2026-06-18' } })).toEqual({ ...brak, error: 'Data pobrania nie może być późniejsza niż dziś.' });
+    expect(kopia(jeden, { opcje: { dateISO: '' } })).toEqual({ ...brak, error: 'Podaj datę pobrania.' });
+    expect(kopia(jeden, { opcje: { dateISO: '2026-06-17' } }).ok).toBe(true);
+    expect(Model.buildCopyText()).toEqual({ ...brak, error: 'Wpisz co najmniej jeden wynik.' });
+  });
+
+  it('tekst przechodzi przez zapis do schowka bez zmiany sensu: bez strzałek, każdy znak mieści się w Windows-1250', () => {
+    const wynik = kopia([
+      { analyteId: 'tsh', raw: '12', unit: 'μIU/mL', normLow: '0,27', normHigh: '4,2' },
+      { analyteId: 'ft4', raw: '0,5', unit: 'ng/dL' },
+      { analyteId: 'ft3', raw: '2', unit: 'pg/mL' },
+    ]);
+    expect(wynik.text).not.toMatch(/[↑↓→≥≤−]/);
+    const wSchowku = dlaHis(wynik.text);
+    // Jedyna zamiana: grecka „μ” jednostki na znak mikro „µ” ze strony kodowej.
+    expect(wSchowku).toBe(wynik.text.replace(/\u03bc/g, '\u00b5'));
+    expect(wSchowku.split('\n')).toEqual([
+      'Badania (pobranie 15.06.2026):',
+      'TSH: 12 µIU/mL — powyżej normy (norma z wydruku 0,27–4,2)',
+      'fT4: 0,5 ng/dL — znacznie poniżej normy (norma 1–1,7)',
+      'fT3: 2 pg/mL — poniżej normy (norma 3–5,1)',
+    ]);
+    expect([...wSchowku].filter((znak) => znak !== '\n' && !WIN1250.has(znak))).toEqual([]);
+  });
+});
+
 describe('plik ładuje się także przez require (CommonJS)', () => {
   it('eksportuje dane, model i widok — te same co globalne', () => {
     const modul = require('../../vilda_lab_packages.js');

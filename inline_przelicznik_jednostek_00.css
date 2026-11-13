@@ -2685,6 +2685,11 @@
       margin-top: var(--space-4px);
     }
 
+    /* „Kopiuj wyniki”: przycisk zamykający kolumnę oceny, jak „Wyczyść pakiet” zamyka kolumnę formularza. */
+    #labPackageCard button.lab-pkg-copy {
+      width: 100%;
+    }
+
     .lab-pkg-results-head {
       display: flex;
       flex-wrap: wrap;

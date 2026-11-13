@@ -8,8 +8,8 @@ nie odtwarzały ich z rozmowy. Opis techniczny wdrożonych etapów: `docs/clinic
 Lekarz dostaje wydruk z kilkoma wynikami naraz (np. TSH, fT4, fT3). Dotąd każdy wynik trzeba było osobno
 wybrać w przeliczniku, wpisać i przypiąć do wizyty. Pakiet pozwala wpisać wartości i jednostki z wydruku
 w jednym miejscu, zobaczyć ocenę względem norm aplikacji i zapisać całość do Badań w karcie pacjenta.
-Docelowo wyniki dodane w czasie wizyty mają też trafiać, z normami, do „Podsumowania wyników” (karta
-i kopiowany tekst).
+Wyniki z oceną i normą można też od razu skopiować do dokumentacji przyciskiem przy pakiecie
+(pierwotny zamiar bloku „Badania” w „Podsumowaniu wyników” został zastąpiony — punkt 8).
 
 ## Decyzje właściciela (2026-11-12)
 
@@ -34,6 +34,13 @@ i kopiowany tekst).
    tytuł „Przelicznik jednostek laboratoryjnych”, zakładki pod tytułem, kłódka w zakładce dla gościa,
    bramki bez przycisku „Wróć do pojedynczego badania”. Makieta zaakceptowana 2026-11-13 z poleceniem
    wdrożenia w PR2.
+8. Po scaleniu PR2 (propozycja właściciela, przyjęta do realizacji; potwierdza ją akceptacja PR3):
+   kopiowanie wyników pakietu ma być **przyciskiem bezpośrednio tam, gdzie wyniki się wpisuje**, a nie
+   blokiem w karcie „Podsumowanie wyników”, która jest już przeładowana informacjami.
+   To **zastępuje decyzję 2**: strona główna i „Podsumowanie wyników” zostają bez zmian. Dodatkowy
+   powód techniczny z rozpoznania PR3: karta podsumowania ma trzy postacie (dziecko, dorosły,
+   porównanie z poprzednim pomiarem), a jej kopiowany tekst zasila też wiersze karty — blok badań
+   wymagałby łatania zminifikowanych plików strony głównej.
 
 ## Zasady, które obowiązują każdy etap
 
@@ -52,9 +59,9 @@ i kopiowany tekst).
 | Etap | Zakres | Stan |
 |---|---|---|
 | PR1 | Tryb „Pakiet badań”, pakiet „Tarczyca” (TSH, fT4, fT3): wartości i jednostki, data pobrania, komentarz, ocena na żywo, zapis zbiorczy do Badań, jednostki zapamiętane na urządzeniu, skrót z zakładki „Badania”, bramki bez logowania i bez pacjenta | scalony 2026-11-13 (PR #943) |
-| PR2 | „Normy z wydruku”: opcjonalne od–do dla każdego badania, w jednostce wyniku; wpisana norma zastępuje normę aplikacji dla tego wyniku, zapisuje się z nim (`labResult.norm`, bez zrzutu normy aplikacji) i jest oznaczona jako norma laboratorium; podpowiedź jednostki i normy z poprzedniego wyniku tego samego badania u pacjenta, z możliwością edycji | ten PR |
-| zakładki | Przełącznik trybu jako zakładki w jednej karcie (decyzja 7) | ten PR (razem z PR2) |
-| PR3 | Blok „Badania” w „Podsumowaniu wyników” (karta i kopiowany tekst): wyniki dodane dziś dla pacjenta, z datą pobrania, normą i oceną z zapisu | do zrobienia |
+| PR2 | „Normy z wydruku”: opcjonalne od–do dla każdego badania, w jednostce wyniku; wpisana norma zastępuje normę aplikacji dla tego wyniku, zapisuje się z nim (`labResult.norm`, bez zrzutu normy aplikacji) i jest oznaczona jako norma laboratorium; podpowiedź jednostki i normy z poprzedniego wyniku tego samego badania u pacjenta, z możliwością edycji | scalony 2026-11-13 (PR #944) |
+| zakładki | Przełącznik trybu jako zakładki w jednej karcie (decyzja 7) | scalone 2026-11-13 (PR #944) |
+| PR3 | „Kopiuj wyniki” przy pakiecie (punkt 8): tekst „Badania (pobranie …)” z wierszem na wynik, oceną poza normą i normą z ekranu; po zapisie kopiuje zapisany zestaw. Bez zmian w „Podsumowaniu wyników” | ten PR |
 | później | Pakiety definiowane przez użytkownika; pakiet „Pokwitanie” (LH, FSH, estradiol u dziewcząt, testosteron u chłopców) — wymaga silników pokwitaniowych przelicznika (osie wieku i stadium), patrz `docs/clinical/LAB_INTERPRETATION_AGENT_GUIDE.md` | pomysł, bez decyzji |
 
 ## Otwarte kwestie do decyzji przy kolejnych etapach
@@ -66,5 +73,8 @@ i kopiowany tekst).
   w pojedynczym badaniu), starsza norma nie wraca. Do zmiany, jeżeli w praktyce okaże się za ostrożne.
 - Norma z wydruku w pojedynczym badaniu (okno „Przypnij do wizyty”) — dziś tylko w pakiecie i w edytorze
   wyniku karty pacjenta.
-- PR3: nowy kod w istniejących plikach podsumowania albo decyzja o budżecie żądań (wyżej).
+- Kopiowanie w pojedynczym badaniu: dziś kopiuje się tam pojedynczą przeliczoną wartość (kliknięcie
+  w tabeli); wiersz „badanie: wynik (norma)” jak w pakiecie — do decyzji, jeżeli będzie potrzebny.
+- Format kopiowanego tekstu: bez komentarza do pakietu i bez przeliczenia na SI — do zmiany, jeżeli
+  dokumentacja tego wymaga.
 - Wynik cenzorowany („<0,01”) w pakiecie — dziś nie jest liczbą, jak w pojedynczym badaniu.
