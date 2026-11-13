@@ -1625,3 +1625,18 @@ LAB_PACKAGE_SETTINGS:s.LAB_PACKAGE_SETTINGS,labPackageSettings:s.LAB_PACKAGE_SET
 
 Klasa `local-persistent`: preferencja urządzenia, bez synchronizacji z kontem i bez danych pacjenta. Odczyt i zapis, wersja adaptera (`1.7.2`) i pozostałe klucze bez zmian. Test: `tests/unit/lab-pakiety.test.mjs` („klucz jest zarejestrowany w adapterze…”, zapis i odczyt przez prawdziwy adapter).
 
+## Łatka LAB-PAKIETY PR4 — preferencja `labCustomPackages` (`vilda_persistence_adapter.js`, 2026-11-13)
+
+Kreator pakietów (`vilda_lab_packages.js`, czytelne źródło) zapisuje własne pakiety lekarza na koncie. Zminifikowany `vilda_persistence_adapter.js` dostał drugi klucz laboratoryjny w tych samych trzech miejscach rejestru, tuż za `LAB_PACKAGE_SETTINGS`:
+
+```js
+// MODULE_KEYS (s)
+LAB_PACKAGE_SETTINGS:"labPackageSettings",LAB_CUSTOM_PACKAGES:"labCustomPackages"
+// MODULE_KEY_META (I)
+[s.LAB_CUSTOM_PACKAGES]:Object.freeze({scope:"laboratory",kind:"preference",storage:"cloud-synced"})
+// aliasy nazw (x)
+LAB_CUSTOM_PACKAGES:s.LAB_CUSTOM_PACKAGES,labCustomPackages:s.LAB_CUSTOM_PACKAGES
+```
+
+Klasa `cloud-synced`: adapter po zapisie zawiadamia sejf (`onPreferenceWrite`), który trzyma wartość w preferencjach konta i wysyła ją w synchronizacji; z drugiej strony sejf wpisuje nowszą wartość przez `applyPreferenceFromCloud`. Żadna z tych dróg nie została zmieniona — klucz korzysta z istniejącego mechanizmu, a `vilda_vault.js` jest nietknięty. Wartość to lista pakietów (nazwa i identyfikatory badań), bez danych pacjenta. Wersja adaptera (`1.7.2`), odczyt, zapis i pozostałe klucze bez zmian. Test: `tests/unit/lab-pakiety-kreator.test.mjs` („klucz jest zarejestrowany w adapterze jako preferencja konta”, zapis i odczyt przez prawdziwy adapter, przejście między dwoma urządzeniami jednego konta przez prawdziwy sejf).
+

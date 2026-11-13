@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.523';
+const SW_VERSION = '1.1.524';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -862,6 +862,7 @@ const CORE_SHELL_URLS = [
   '/vilda_persistence_adapter.js?v=33',
   '/vilda_persistence_adapter.js?v=34',
   '/vilda_persistence_adapter.js?v=35',
+  '/vilda_persistence_adapter.js?v=36',
   '/vilda_panel_pacjent.js?v=1',
   '/vilda_panel_pacjent.js?v=2',
   '/vilda_panel_pacjent.js?v=3',
@@ -3388,6 +3389,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_lab_packages.js?v=1',
   '/vilda_lab_packages.js?v=2',
   '/vilda_lab_packages.js?v=3',
+  '/vilda_lab_packages.js?v=4',
   '/klirens.xlsx',
   '/zscore_przyklad_palczewska.xlsx',
   '/zscore_przyklad_olaf.xlsx',
@@ -4935,6 +4937,7 @@ const OPTIONAL_ASSETS = [
   '/inline_przelicznik_jednostek_00.css?v=9',
   '/inline_przelicznik_jednostek_00.css?v=10',
   '/inline_przelicznik_jednostek_00.css?v=11',
+  '/inline_przelicznik_jednostek_00.css?v=12',
   '/inline_regulamin_00.css?v=1',
   '/inline_steroidy_00.css?v=1',
   '/inline_subskrypcja_00.css?v=1',
