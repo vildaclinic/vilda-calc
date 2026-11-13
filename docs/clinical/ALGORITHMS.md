@@ -1450,6 +1450,62 @@ pod tytułem, kłódka, bramka bez przycisku powrotu, klawiatura, jeden `<h1>`),
 `lab-uklad-warsztat.spec.mjs` (panele zaczynają się pod nagłówkiem karty);
 wzorce „Wygląd” strony przelicznika odświeżone w CI.
 
+### LAB-PAKIETY PR3 — „Kopiuj wyniki” w pakiecie badań (`vilda_lab_packages.js` 1.2.0, 2026-11-13)
+
+**Klasyfikacja: zmiana funkcjonalna, bez zmiany klinicznej.** Przycisk kładzie
+w schowku tekst z wynikami pakietu. Nie ma nowej oceny, normy, progu ani
+jednostki: tekst powtarza ocenę i normę z karty wyniku na ekranie
+(`buildCopyText` czyta te same wiersze `evaluatePackage`, które rysują karty
+i idą do zapisu).
+
+Propozycja właściciela z 2026-11-13 (po scaleniu PR2), przyjęta do realizacji
+i potwierdzana akceptacją tego PR: wyniki pakietu kopiuje się **przy samym
+pakiecie**, tam, gdzie się je wpisuje — a nie z karty „Podsumowanie wyników”
+na stronie głównej, która jest już przeładowana informacjami. To zastępuje
+wcześniejszy zamiar bloku „Badania” w Podsumowaniu (decyzja 2 z 2026-11-12
+i druga plansza makiety); strona główna zostaje bez zmian.
+
+- **Przycisk** `#labPkgCopy` zamyka kolumnę „Ocena wyników” (pod wierszem
+  zapisu i panelem „Zapisano…”), w wyglądzie „Wyczyść pakiet”. „Kopiuj wyniki”
+  kopiuje to, co jest wpisane — także bez zapisu do karty. Po zapisie formularz
+  jest pusty, więc przycisk zmienia się w „Kopiuj zapisane wyniki” i kopiuje
+  właśnie zapisany zestaw (z datą pobrania zapisu); pierwszy nowy wpis albo
+  zmiana pacjenta go zastępuje. Kopiowanie niczego nie zapisuje i nie czyści.
+- **Tekst**: pierwszy wiersz „Badania (pobranie DD.MM.RRRR):”, potem wiersz na
+  każdy wypełniony wynik w kolejności pakietu:
+  `<badanie>: <wartość> <jednostka>[ — <ocena>][ (<norma>)]`.
+  Ocena stoi tylko przy wyniku poza normą, w brzmieniu karty („poniżej normy”,
+  „powyżej normy”, „znacznie poniżej/powyżej normy”); wynik w normie nie ma
+  dopisku. Norma: „norma z wydruku od–do”, gdy ją wpisano, inaczej „norma
+  od–do” aplikacji — bez powtarzania jednostki, bo stoi tuż przed nią. Zakres
+  ogólny u dziecka: „zakres ogólny od–do — bez oceny dla dziecka”; wynik bez
+  zakresu — sama wartość.
+- **Bez strzałek.** Zapis do schowka idzie przez `vilda_schowek.js` (tekst dla
+  systemu szpitalnego, P-SCHOWEK-HIS), który zamienia „↑” na „wzrost”, a „↓”
+  na „spadek”; przy wyniku badania czytałoby się to jak zmiana w czasie.
+  Dlatego ocena jest słowami. Grecka „μ” w jednostce idzie jako „µ” — jedyna
+  zamiana znaków w tym tekście.
+- **Blokady** jak przy zapisie (bez wymogu pacjenta): błędny wynik, błędna
+  norma z wydruku, brak wyników, data pobrania błędna albo późniejsza niż
+  dziś — przycisk jest wtedy nieczynny. Gdy przeglądarka odmówi zapisu do
+  schowka: „Nie udało się skopiować — skopiuj ręcznie.”
+
+**Przykład** (fikcyjna dziewczynka 9 lat, pobranie 15.06.2026; TSH 6,8 mIU/L,
+fT4 14,2 pmol/L z normą z wydruku 12–22, fT3 6,1 pmol/L):
+
+```
+Badania (pobranie 15.06.2026):
+TSH: 6,8 mIU/L — powyżej normy (norma 0,6–4,8)
+fT4: 14,2 pmol/L (norma z wydruku 12–22)
+fT3: 6,1 pmol/L (norma 4,61–7,83)
+```
+
+Testy: `tests/unit/lab-pakiety.test.mjs` (sekcja „kopiowanie wyników
+pakietu”: tekst, zgodność z kartą wyniku dla każdej kategorii, blokady,
+przejście przez prawdziwe `VildaSchowek.dlaSystemuSzpitalnego` i stronę kodową
+Windows-1250), e2e `tests/e2e/lab-pakiet-kopiowanie.spec.mjs`
+i `lab-pakiet-kopiowanie-mobile.spec.mjs`.
+
 ### P-LAB-WARTOSC-BEZ-JEDNOSTKI — liczba ze starszego wpisu wyniku bez jednostki (SW 1.1.279, `vilda_vault.js` 212, 2026-10-14)
 
 **Wpływ kliniczny: tak.** Zmieniają się liczby w historii wyników dla

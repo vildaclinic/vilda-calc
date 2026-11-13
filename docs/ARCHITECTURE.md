@@ -171,6 +171,8 @@ Do tej warstwy należą m.in.:
   (opcjonalna, w jednostce wyniku) zastępuje normę aplikacji dla danego wyniku i zapisuje się w
   `labResult.norm` — polu edytora wyniku; podpowiedź normy i jednostki pochodzi wyłącznie z poprzedniego
   wyniku tego samego badania u pacjenta (`listPatientNotesForPatient`), bez osobnej pamięci norm.
+  „Kopiuj wyniki” przy pakiecie kładzie w schowku (przez `vilda_schowek.js`) tekst z oceną i normą
+  z ekranu; karta „Podsumowanie wyników” na stronie głównej nie zna badań z pakietu.
   Plan: `docs/LAB_PAKIETY_PLAN.md`;
 - terapie: moduły GH/IGF-1, otyłości, antybiotyków, nadciśnienia, bisfosfonianów i grypy;
 - żywienie: `nutrition_norms.js`, `nutrition_micros.js`, moduły planu diety i szacowanego spożycia.
