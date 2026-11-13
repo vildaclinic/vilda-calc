@@ -92,7 +92,7 @@ test('pakiet „Tarczyca” po zimnym starcie offline: zasoby z SW, ocena i zapi
       expect(sha256, `bajty offline = bieżące źródło: ${resource.url}`).toBe(resource.sha256);
     }
     // Adres z pakietem otwiera tryb pakietu; bez logowania tylko bramka, bez pól.
-    await expect(page.locator('#labModePackage')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('#labModePackage')).toHaveAttribute('aria-selected', 'true');
     await expect(page.locator('#labPackageCard .lab-pkg-gate-title')).toHaveText('Pakiety badań są dostępne po zalogowaniu');
     await expect(page.locator('#labPackageCard input')).toHaveCount(0);
 

@@ -33,7 +33,8 @@ test('telefon: normy z wydruku bez przewijania w poziomie, równe kolumny, cele 
     return {
       stronaBezPoziomego: strona.scrollWidth <= strona.clientWidth + 1,
       kartaBezPoziomego: karta.scrollWidth <= karta.clientWidth + 1,
-      najmniejszyCel: Math.min(...[...karta.querySelectorAll('input.lab-pkg-norm')].map((el) => prostokat(el).height)),
+      // Pomiar do 0,01 px (jak w lab-pakiet-tarczyca-mobile: precyzja prostokąta przy ułamkowym położeniu).
+      najmniejszyCel: Math.min(...[...karta.querySelectorAll('input.lab-pkg-norm')].map((el) => Math.round(prostokat(el).height * 100) / 100)),
       // Kolumny „od” i „do” są równe w każdym wierszu i tej samej szerokości.
       kolumnyRowne: rowne(od) && rowne(doGranicy) && Math.abs(od[0][1] - doGranicy[0][1]) <= 1,
       // Pole mieści normę z dwoma miejscami po przecinku.

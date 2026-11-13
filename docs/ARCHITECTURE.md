@@ -161,7 +161,8 @@ Do tej warstwy należą m.in.:
   przelicznik adresem `przelicznik-jednostek.html?badanie=<id>` (`applySubstanceDeepLink`
   w skrypcie strony; w powłoce cel dochodzi zdarzeniem `vilda:shell-navigate-target`);
 - pakiety badań: `vilda_lab_packages.js` (dane pakietu, model i widok w jednym pliku — budżet żądań
-  instalacji PWA; tag tylko na `przelicznik-jednostek.html`). Tryb „Pakiet badań” przelicznika: kilka
+  instalacji PWA; tag tylko na `przelicznik-jednostek.html`). Zakładka „Pakiet badań” karty przelicznika
+  (jedna karta, zakładki `#labModeBar` pod tytułem; pakiet jest panelem `#labPackageCard` tej karty): kilka
   badań z jednego wydruku (MVP: „Tarczyca”) oceniane tym samym silnikiem co pojedyncze badanie
   (`LabUnitConverter`, zrzut `VildaLabRangeSnapshot`) i zapisywane zbiorczo jako notatki
   „wynik-badania” w postaci zapisu przypięcia. Pacjenta do norm podaje

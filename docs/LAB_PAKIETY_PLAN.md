@@ -29,9 +29,11 @@ i kopiowany tekst).
    samego pacjenta** („zwykle to samo laboratorium i zbliżony wiek”). Gdy pacjent nie ma wcześniejszego
    wyniku, aplikacja **nie podpowiada żadnych norm**. To zastępuje „zapamiętywanie” z punktu 3: norm nie
    pamięta ani urządzenie, ani konto — każdy wynik niesie swoją normę w zapisie i stamtąd wraca.
-7. Zgłoszona prośba o makietę: wybór „Pojedyncze badanie / Pakiet badań” jako zakładki w stylu karty
-   GH/IGF-1 („Leczenie / Monitorowanie”) i „Podsumowania wyników”. Makieta przekazana 2026-11-13,
-   czeka na akceptację; wdrożenie jako osobna, mała zmiana po PR2.
+7. Wybór „Pojedyncze badanie / Pakiet badań” ma postać **zakładek** w stylu karty GH/IGF-1
+   („Leczenie / Monitorowanie”) i „Podsumowania wyników”, dla spójności aplikacji: jedna karta, jeden
+   tytuł „Przelicznik jednostek laboratoryjnych”, zakładki pod tytułem, kłódka w zakładce dla gościa,
+   bramki bez przycisku „Wróć do pojedynczego badania”. Makieta zaakceptowana 2026-11-13 z poleceniem
+   wdrożenia w PR2.
 
 ## Zasady, które obowiązują każdy etap
 
@@ -51,7 +53,7 @@ i kopiowany tekst).
 |---|---|---|
 | PR1 | Tryb „Pakiet badań”, pakiet „Tarczyca” (TSH, fT4, fT3): wartości i jednostki, data pobrania, komentarz, ocena na żywo, zapis zbiorczy do Badań, jednostki zapamiętane na urządzeniu, skrót z zakładki „Badania”, bramki bez logowania i bez pacjenta | scalony 2026-11-13 (PR #943) |
 | PR2 | „Normy z wydruku”: opcjonalne od–do dla każdego badania, w jednostce wyniku; wpisana norma zastępuje normę aplikacji dla tego wyniku, zapisuje się z nim (`labResult.norm`, bez zrzutu normy aplikacji) i jest oznaczona jako norma laboratorium; podpowiedź jednostki i normy z poprzedniego wyniku tego samego badania u pacjenta, z możliwością edycji | ten PR |
-| zakładki | Przełącznik trybu jako zakładki w jednej karcie (decyzja 7) | makieta czeka na akceptację |
+| zakładki | Przełącznik trybu jako zakładki w jednej karcie (decyzja 7) | ten PR (razem z PR2) |
 | PR3 | Blok „Badania” w „Podsumowaniu wyników” (karta i kopiowany tekst): wyniki dodane dziś dla pacjenta, z datą pobrania, normą i oceną z zapisu | do zrobienia |
 | później | Pakiety definiowane przez użytkownika; pakiet „Pokwitanie” (LH, FSH, estradiol u dziewcząt, testosteron u chłopców) — wymaga silników pokwitaniowych przelicznika (osie wieku i stadium), patrz `docs/clinical/LAB_INTERPRETATION_AGENT_GUIDE.md` | pomysł, bez decyzji |
 

@@ -1418,6 +1418,38 @@ granice, błędy, zapis, zgodność z prawdziwą historią i kartą wyniku
 `tests/e2e/lab-pakiet-normy.spec.mjs`, `lab-pakiet-normy-mobile.spec.mjs`
 i rozszerzony `lab-pakiet-offline.spec.mjs`.
 
+**Zakładki „Pojedyncze badanie | Pakiet badań” (ten sam PR; zmiana
+funkcjonalna, bez wpływu klinicznego).** Makieta zaakceptowana przez
+właściciela 2026-11-13: zamiast przełącznika nad kartą i osobnej karty
+„Pakiet badań” jest **jedna karta z jednym tytułem** „Przelicznik jednostek
+laboratoryjnych”, a pod tytułem zakładki w wyglądzie zakładek karty GH/IGF-1
+(„Leczenie / Monitorowanie”). Żadna ocena, norma ani zapis się nie zmieniają.
+
+- Znaczniki (`przelicznik-jednostek.html`): nagłówek `.lab-card-head` w
+  `#labResultsCard` trzyma `<h1>` i pasek `#labModeBar` (`role="tablist"`,
+  zakładki `#labModeSingle`, `#labModePackage` z `role="tab"` i
+  `aria-selected`); pakiet jest panelem `#labPackageCard`
+  (`.lab-pane--package`, `role="tabpanel"`) na końcu tej samej karty.
+  Bez `vilda_lab_packages.js` pasek zostaje ukryty i karta wygląda jak dotąd.
+- Zakładka „Pakiet badań” chowa trzy panele pojedynczego badania i kartę
+  „Zaproponuj badania”; stan pojedynczego badania zostaje nietknięty. Na bardzo
+  szerokim ekranie pakiet trzyma zwykłą szerokość obszaru roboczego, także gdy
+  pojedyncze badanie ma otwarty wykres.
+- Gość widzi w zakładce kłódkę; bramki („Pakiety badań są dostępne po
+  zalogowaniu”, „Nie wybrano pacjenta”) nie mają już przycisku „Wróć do
+  pojedynczego badania” — wraca się zakładką.
+- Klawiatura: w kolejności tabulacji jest wybrana zakładka; strzałki ←/→
+  przełączają, Home/End wybierają pierwszą i ostatnią, fokus zostaje na
+  zakładce.
+- Design system (`design-system/src`): reguła tytułu karty w partialu G16
+  i podgląd `ConverterPanel` idą za nowym nagłówkiem; „Dryf stylów” bez zmian.
+
+Testy zakładek: `tests/e2e/lab-pakiet-tarczyca.spec.mjs` (zakładki w karcie
+pod tytułem, kłódka, bramka bez przycisku powrotu, klawiatura, jeden `<h1>`),
+`lab-pakiet-tarczyca-mobile.spec.mjs`, `powloka-pakiet-badan.spec.mjs`,
+`lab-uklad-warsztat.spec.mjs` (panele zaczynają się pod nagłówkiem karty);
+wzorce „Wygląd” strony przelicznika odświeżone w CI.
+
 ### P-LAB-WARTOSC-BEZ-JEDNOSTKI — liczba ze starszego wpisu wyniku bez jednostki (SW 1.1.279, `vilda_vault.js` 212, 2026-10-14)
 
 **Wpływ kliniczny: tak.** Zmieniają się liczby w historii wyników dla

@@ -2,7 +2,8 @@
  *
  * Pakiet to nazwana lista badań z katalogu przelicznika (LabUnitsData), wpisywanych razem z jednego wydruku:
  * wartości i jednostki trafiają zbiorczo do Badań w karcie pacjenta. MVP: pakiet „Tarczyca” (TSH, fT4, fT3).
- * Pakiet jest trybem pracy strony „Jednostki lab.” („Pojedyncze badanie | Pakiet badań”), dostępnym wyłącznie
+ * Pakiet jest zakładką karty przelicznika na stronie „Jednostki lab.” („Pojedyncze badanie | Pakiet badań” —
+ * jedna karta, jeden tytuł, zakładki pod tytułem; makieta zaakceptowana 2026-11-13), dostępną wyłącznie
  * dla zalogowanego użytkownika z wybranym pacjentem.
  *
  * Plik ma trzy rozdzielone części (jeden plik, bo budżet instalacji PWA liczy żądania — sw-precache-stron):
@@ -14,7 +15,7 @@
  *      jak captureLabRange w przelicznik-jednostek.html. Notatka wyniku ma dokładnie postać zapisu „Przypnij
  *      do wizyty” (lab_pin_result.js): ten sam tytuł, treść, kategoria „wynik-badania” i pola labResult, więc
  *      zakładka „Badania”, historia i wykresy czytają wynik z pakietu jak każdy inny.
- *   3. WIDOK (VildaLabPackagesUI) — karta pakietu na stronie. Ocena na ekranie pochodzi ze zrzutu, który
+ *   3. WIDOK (VildaLabPackagesUI) — zakładki trybu i panel pakietu w karcie przelicznika. Ocena na ekranie pochodzi ze zrzutu, który
  *      zapisze się z wynikiem; pacjenta do norm podaje strona (VildaLabConverterRuntime.getPackagePatient —
  *      dane z karty, bez lokalnych nadpisań przelicznika). Zapis: jedna notatka na wypełnione pole, po kolei,
  *      z jedną datą pobrania i jednym komentarzem. Wartości wpisane dla jednego pacjenta nie przechodzą na
@@ -446,7 +447,7 @@
   })();
 
   // ════════════════════════════════════════════════════════════════════════════════════════════════
-  //  3. WIDOK — tryb pracy i karta pakietu na stronie „Jednostki lab.”.
+  //  3. WIDOK — zakładki trybu i panel pakietu w karcie przelicznika na stronie „Jednostki lab.”.
   // ════════════════════════════════════════════════════════════════════════════════════════════════
   var UI = (function (win) {
     var SVG_NS = 'http://www.w3.org/2000/svg';
@@ -559,8 +560,7 @@
       function build() {
         if (state.built || !card) return;
         state.built = true;
-        add(card, 'h1', 'lab-pkg-title', 'Pakiet badań');
-
+        // Tytuł i zakładki trybu stoją w nagłówku karty (przelicznik-jednostek.html); panel nie ma własnego tytułu.
         // Bramka: bez logowania albo bez pacjenta formularz nie powstaje (buildForm dopiero po jej przejściu).
         parts.gate = add(card, 'div', 'lab-pkg-gate');
         parts.gate.setAttribute('role', 'status');
@@ -568,8 +568,7 @@
         parts.gateText = add(parts.gate, 'p', 'lab-pkg-gate-text');
         parts.gateAction = button(parts.gate, 'lab-pkg-btn lab-pkg-btn-primary', '', gateAction);
         parts.gateAction.id = 'labPkgGateAction';
-        parts.gateBack = button(parts.gate, 'lab-pkg-btn lab-pkg-btn-ghost', 'Wróć do pojedynczego badania', function () { setMode('single'); });
-        parts.gateBack.id = 'labPkgGateBack';
+        // Powrót do pojedynczego badania: zakładka nad panelem (bez osobnego przycisku w bramce).
 
         parts.body = add(card, 'div', 'lab-pkg-body');
         parts.body.hidden = true;
@@ -1193,9 +1192,23 @@
         var on = state.mode === 'package';
         grid.classList.toggle('is-package', on);
         card.hidden = !on;
-        singleBtn.setAttribute('aria-pressed', on ? 'false' : 'true');
-        packageBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+        // Zakładki (role="tab"): wybrana jest w kolejności tabulacji, drugą osiągają strzałki.
+        [[singleBtn, !on], [packageBtn, on]].forEach(function (tab) {
+          tab[0].setAttribute('aria-selected', tab[1] ? 'true' : 'false');
+          tab[0].setAttribute('tabindex', tab[1] ? '0' : '-1');
+        });
         packageBtn.classList.toggle('is-locked', !loggedIn());
+      }
+      // Klawiatura zakładek: strzałki przełączają, Home/End — pierwsza i ostatnia; fokus zostaje na zakładce.
+      function tabKey(event) {
+        var key = event && event.key, mode;
+        if (key === 'ArrowLeft' || key === 'ArrowRight') mode = state.mode === 'package' ? 'single' : 'package';
+        else if (key === 'Home') mode = 'single';
+        else if (key === 'End') mode = 'package';
+        else return;
+        event.preventDefault();
+        setMode(mode);
+        try { (mode === 'package' ? packageBtn : singleBtn).focus(); } catch (_) { /* fokus pomocniczy */ }
       }
       function setMode(mode, focus) {
         var entering = mode === 'package' && state.mode !== 'package';
@@ -1246,7 +1259,10 @@
           } catch (_) { /* adres spoza strony */ }
         });
         var bar = byId('labModeBar');
-        if (bar) bar.hidden = false;
+        if (bar) {
+          bar.addEventListener('keydown', tabKey);
+          bar.hidden = false;
+        }
         paintMode();
         applyDeepLink(w.location);
         // Jak wiersz przypięcia: druga próba po załadowaniu stosu konta przez most sesji.

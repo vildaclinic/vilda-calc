@@ -135,23 +135,24 @@
         <div class="lab-container">
          <div class="lab-grid">
 
-          <!-- LAB-PAKIETY PR1 (decyzje właściciela 2026-11-12): tryb pracy przelicznika. „Pakiet badań”
-               pokazuje kartę #labPackageCard zamiast karty pojedynczego badania; pakiet jest dostępny
-               tylko dla zalogowanego użytkownika z wybranym pacjentem. Pasek odsłania i kartę wypełnia
-               vilda_lab_packages.js. -->
-          <div class="lab-mode-bar lab-full" id="labModeBar" role="group" aria-label="Tryb pracy" hidden>
-            <button type="button" class="lab-mode-btn" id="labModeSingle" aria-pressed="true">Pojedyncze badanie</button>
-            <button type="button" class="lab-mode-btn" id="labModePackage" aria-pressed="false"><svg class="lab-mode-lock" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Pakiet badań</button>
-          </div>
-          <div class="lab-card lab-full" id="labPackageCard" hidden></div>
-
           <!-- ===== Faza 18 — Smart Form (jedna karta, 5 kroków) ===== -->
           <!-- Warsztat na szerokim ekranie (2026-10-19): karta zostaje jedna, a jej trzy panele
                (formularz, wynik, wykres) od 1000 px treści stają obok siebie pod wspólnym
                tytułem — reguły @container w inline_przelicznik_jednostek_00.css. Kolejność
                DOM = kolejność czytania i tabulacji na każdej szerokości. -->
           <div class="lab-card lab-full lab-smart-card" id="labResultsCard">
-           <h1>Przelicznik jednostek laboratoryjnych</h1>
+           <!-- Nagłówek karty: tytuł i zakładki trybu pracy (LAB-PAKIETY; decyzje właściciela 2026-11-12
+                i makieta zakładek z 2026-11-13). Jedna karta, jeden tytuł: „Pojedyncze badanie” pokazuje
+                trzy panele poniżej, „Pakiet badań” — panel #labPackageCard na końcu karty. Pakiet jest
+                dostępny tylko dla zalogowanego użytkownika z wybranym pacjentem. Zakładki odsłania,
+                a panel pakietu wypełnia vilda_lab_packages.js; bez niego karta wygląda jak dotąd. -->
+           <div class="lab-card-head">
+            <h1>Przelicznik jednostek laboratoryjnych</h1>
+            <div class="lab-mode-tabs" id="labModeBar" role="tablist" aria-label="Tryb pracy" hidden>
+              <button type="button" class="lab-mode-tab" id="labModeSingle" role="tab" aria-selected="true" aria-controls="labFormPane labResultPane labChartPane">Pojedyncze badanie</button>
+              <button type="button" class="lab-mode-tab" id="labModePackage" role="tab" aria-selected="false" aria-controls="labPackageCard" tabindex="-1"><svg class="lab-mode-lock" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Pakiet badań</button>
+            </div>
+           </div>
            <div class="lab-pane lab-pane--form" id="labFormPane">
 
             <!-- Krok 1: Substancja -->
@@ -378,6 +379,9 @@
             <div id="labE2PhaseSource" hidden></div>
             <div id="labFshSource" hidden></div>
            </div><!-- /.lab-pane--chart -->
+
+           <!-- Panel zakładki „Pakiet badań” (vilda_lab_packages.js). -->
+           <div class="lab-pane lab-pane--package" id="labPackageCard" role="tabpanel" aria-labelledby="labModePackage" hidden></div>
           </div>
 
           <!-- ===== Karta "Zaproponuj badania" (Faza 4d, full-width) =====
