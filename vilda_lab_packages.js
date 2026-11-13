@@ -37,7 +37,17 @@
  * w schowku tekst „Badania (pobranie …)” z wierszem na każdy wynik — z tą samą oceną i normą, które pokazuje
  * karta wyniku (buildCopyText). Karta „Podsumowanie wyników” na stronie głównej nie dostaje bloku badań.
  *
- * Opis: docs/clinical/ALGORITHMS.md, „LAB-PAKIETY PR1”, „LAB-PAKIETY PR2” i „LAB-PAKIETY PR3”.
+ * Własne pakiety (LAB-PAKIETY PR4, kreator — decyzje właściciela 2026-11-13): lekarz składa pakiet z badań
+ * katalogu przelicznika (nazwa do 30 znaków, do 10 badań, do 12 pakietów). Pakiety należą do konta: zapis
+ * w preferencji labCustomPackages (VildaPersistence, klasa cloud-synced — synchronizuje się między urządzeniami
+ * konta jak pozostałe ustawienia; przy zmianach z dwóch urządzeń naraz wygrywa późniejsza). „Tarczyca” zostaje
+ * pakietem wbudowanym, bez edycji. Pakiet wybiera lista rozwijana; kreator otwiera się w zakładce pakietu
+ * i nie wymaga wybranego pacjenta. Badania, które pojedyncze badanie ocenia po swojemu (LH, FSH, inhibina B,
+ * testosteron całkowity — silniki pokwitaniowe; AMH — własne odniesienie), są w pakiecie „bez oceny”: zapisuje
+ * się wartość, ocenę daje norma z wydruku albo pojedyncze badanie (link w karcie wyniku). Które to badania,
+ * mówi strona (VildaLabConverterRuntime.ownAssessmentKind) — ten sam warunek co przy przypięciu wyniku.
+ *
+ * Opis: docs/clinical/ALGORITHMS.md, „LAB-PAKIETY PR1”–„LAB-PAKIETY PR4”.
  */
 (function (root) {
   'use strict';
@@ -58,6 +68,11 @@
   // ════════════════════════════════════════════════════════════════════════════════════════════════
   var MODEL = (function () {
     var SETTINGS_KEY = 'labPackageSettings';
+    // Własne pakiety konta (PR4): preferencja synchronizowana z kontem.
+    var CUSTOM_KEY = 'labCustomPackages';
+    var LIMITS = Object.freeze({ name: 30, analytes: 10, packages: 12 });
+    var PACKAGE_ID = /^u[a-z0-9]{6,20}$/;
+    var ANALYTE_ID = /^[a-z0-9_]{1,40}$/;
     var CATEGORY = 'wynik-badania';
     var COMMENT_MAX = 300;
     var ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -70,6 +85,8 @@
       far_above: { state: 'is-uwaga-high', text: 'znacznie powyżej normy' }
     };
     var GENERAL_TEXT = 'zakres ogólny — bez oceny dla dziecka';
+    // Badanie z własną oceną w pojedynczym badaniu (PR4): pakiet zapisuje wartość, oceny nie daje.
+    var OWN_TEXT = 'bez oceny w pakiecie';
     // Norma z wydruku (LAB-PAKIETY PR2): trzy kategorie, bez „znacznie” — jak norma wpisu w historii wyników.
     var LAB_STATES = {
       within: { state: 'is-normal', text: 'w normie z wydruku' },
@@ -87,9 +104,10 @@
     function text(value) { return typeof value === 'string' ? value.trim() : ''; }
     function shortLabel(label) { return String(label || '').split('(')[0].trim() || String(label || ''); }
 
+    // data: dane pakietów wbudowanych ({ packages }) albo gotowa lista pakietów (listPackages).
     function findPackage(data, key) {
       var wanted = text(String(key == null ? '' : key)).toLowerCase();
-      var list = data && Array.isArray(data.packages) ? data.packages : [];
+      var list = Array.isArray(data) ? data : data && Array.isArray(data.packages) ? data.packages : [];
       for (var i = 0; i < list.length; i++) {
         if (list[i] && (String(list[i].id).toLowerCase() === wanted || String(list[i].slug).toLowerCase() === wanted)) return list[i];
       }
@@ -103,14 +121,16 @@
     }
 
     // Wiersze formularza: badania pakietu obecne w katalogu przelicznika, z jego jednostkami.
-    function describeAnalytes(pkg, converter) {
+    // ownKind(id): 'puberty' | 'single' | '' — czy pojedyncze badanie ocenia to badanie po swojemu (PR4).
+    function describeAnalytes(pkg, converter, ownKind) {
       var rows = [];
       var ids = pkg && Array.isArray(pkg.analytes) ? pkg.analytes : [];
       ids.forEach(function (id) {
         var substance = converter && typeof converter.find === 'function' ? converter.find(id) : null;
-        if (!substance || !Array.isArray(substance.units) || !substance.units.length) return;
+        if (!substance || substance.id !== id || !Array.isArray(substance.units) || !substance.units.length) return;
         rows.push({
           id: substance.id, label: substance.label_pl, short: shortLabel(substance.label_pl),
+          own: typeof ownKind === 'function' ? ownKind(substance.id) || '' : '',
           canonicalUnit: substance.canonical_si, precision: substance.precision || 3,
           units: substance.units.map(function (unit) { return { symbol: unit.symbol, label: unit.label || unit.symbol }; })
         });
@@ -134,6 +154,8 @@
         var unit = value.units[key];
         if (/^[a-z0-9_]{1,40}$/.test(key) && typeof unit === 'string' && unit && unit.length <= 40) out.units[key] = unit;
       });
+      // PR4: pakiet wybrany ostatnio na tym urządzeniu (identyfikator pakietu wbudowanego albo własnego).
+      if (typeof value.lastPackage === 'string' && /^[a-z0-9]{1,24}$/.test(value.lastPackage)) out.lastPackage = value.lastPackage;
       return out;
     }
     function registered(persistence) {
@@ -148,9 +170,144 @@
     function rememberUnits(persistence, units) {
       if (!registered(persistence) || typeof persistence.writePreferenceJSON !== 'function') return false;
       var settings = readSettings(persistence);
-      var next = normalizeSettings({ schemaVersion: 1, units: Object.assign({}, settings.units, record(units) ? units : {}) });
+      var next = normalizeSettings({ schemaVersion: 1, units: Object.assign({}, settings.units, record(units) ? units : {}), lastPackage: settings.lastPackage });
       try { return persistence.writePreferenceJSON(SETTINGS_KEY, next) === true; }
       catch (_) { return false; }
+    }
+    function rememberPackage(persistence, id) {
+      if (!registered(persistence) || typeof persistence.writePreferenceJSON !== 'function') return false;
+      var settings = readSettings(persistence);
+      if (settings.lastPackage === id) return true;
+      var next = normalizeSettings({ schemaVersion: 1, units: settings.units, lastPackage: id });
+      try { return persistence.writePreferenceJSON(SETTINGS_KEY, next) === true; }
+      catch (_) { return false; }
+    }
+
+    // ── Własne pakiety konta (LAB-PAKIETY PR4, kreator) ──
+    function cleanName(value) { return String(value == null ? '' : value).replace(/[\s\u00a0]+/g, ' ').trim(); }
+    function nameKey(value) { return cleanName(value).toLocaleLowerCase('pl'); }
+    function cleanAnalytes(value) {
+      var out = [];
+      (Array.isArray(value) ? value : []).forEach(function (id) {
+        if (typeof id === 'string' && ANALYTE_ID.test(id) && out.indexOf(id) === -1) out.push(id);
+      });
+      return out;
+    }
+    /* Zapis własnych pakietów: { schemaVersion: 1, updatedAtISO, packages: [{ id, name, analytes }] }.
+     * Wpis o złym kształcie, bez nazwy, bez badań, z powtórzonym identyfikatorem albo nazwą jest pomijany;
+     * ponad limit — obcinany. Identyfikatorów badań nie sprawdzamy tu z katalogiem: badanie, którego ta wersja
+     * przelicznika nie zna, pomija dopiero formularz (describeAnalytes). */
+    function normalizeCustom(value) {
+      var out = { schemaVersion: 1, updatedAtISO: null, packages: [] };
+      if (!record(value) || value.schemaVersion !== 1 || !Array.isArray(value.packages)) return out;
+      if (typeof value.updatedAtISO === 'string' && value.updatedAtISO && value.updatedAtISO.length <= 40) out.updatedAtISO = value.updatedAtISO;
+      var ids = {}, names = {};
+      value.packages.forEach(function (item) {
+        if (out.packages.length >= LIMITS.packages || !record(item)) return;
+        var id = typeof item.id === 'string' ? item.id : '', name = cleanName(item.name);
+        var analytes = cleanAnalytes(item.analytes).slice(0, LIMITS.analytes);
+        if (!PACKAGE_ID.test(id) || ids[id] || !name || name.length > LIMITS.name || names[nameKey(name)] || !analytes.length) return;
+        ids[id] = true;
+        names[nameKey(name)] = true;
+        out.packages.push({ id: id, name: name, analytes: analytes });
+      });
+      return out;
+    }
+    function customRegistered(persistence) {
+      var meta = persistence && persistence.MODULE_KEY_META && persistence.MODULE_KEY_META[CUSTOM_KEY];
+      return !!(meta && meta.kind === 'preference' && meta.storage === 'cloud-synced');
+    }
+    function readCustom(persistence) {
+      if (!customRegistered(persistence) || typeof persistence.readPreferenceJSON !== 'function') return normalizeCustom(null);
+      try { return normalizeCustom(persistence.readPreferenceJSON(CUSTOM_KEY, null)); }
+      catch (_) { return normalizeCustom(null); }
+    }
+    // Zapis całej listy (także pustej — po usunięciu ostatniego pakietu). Adapter przekazuje go kontu.
+    function writeCustom(persistence, custom, nowISO) {
+      if (!customRegistered(persistence) || typeof persistence.writePreferenceJSON !== 'function') return false;
+      var next = normalizeCustom(Object.assign({}, record(custom) ? custom : {}, { schemaVersion: 1, updatedAtISO: nowISO || new Date().toISOString() }));
+      try { return persistence.writePreferenceJSON(CUSTOM_KEY, next) === true; }
+      catch (_) { return false; }
+    }
+    // Lista wyboru: pakiety wbudowane, potem własne — w kolejności zapisu. slug własnego pakietu to jego identyfikator.
+    function listPackages(data, custom) {
+      var out = [];
+      (data && Array.isArray(data.packages) ? data.packages : []).forEach(function (pkg) {
+        out.push({ id: pkg.id, slug: pkg.slug, label: pkg.label, analytes: pkg.analytes.slice(), builtin: true });
+      });
+      normalizeCustom(custom).packages.forEach(function (pkg) {
+        out.push({ id: pkg.id, slug: pkg.id, label: pkg.name, analytes: pkg.analytes.slice(), builtin: false });
+      });
+      return out;
+    }
+    /* Sprawdzenie pakietu z kreatora. options: { name, analytes, id (edycja), custom, data, converter }.
+     * Zwraca { ok, errors: { name, analytes, limit }, package: { id, name, analytes } }. Nazwa nie może powtarzać
+     * nazwy innego pakietu, także wbudowanego (bez rozróżniania wielkości liter). */
+    function validatePackage(options) {
+      options = options || {};
+      var custom = normalizeCustom(options.custom), errors = {};
+      var name = cleanName(options.name), analytes = cleanAnalytes(options.analytes), converter = options.converter;
+      var editing = typeof options.id === 'string' && custom.packages.some(function (pkg) { return pkg.id === options.id; });
+      var id = editing ? options.id : null;
+      if (!name) errors.name = 'Podaj nazwę pakietu.';
+      else if (name.length > LIMITS.name) errors.name = 'Nazwa pakietu może mieć najwyżej ' + LIMITS.name + ' znaków.';
+      else if (listPackages(options.data, custom).some(function (pkg) { return pkg.id !== id && nameKey(pkg.label) === nameKey(name); })) errors.name = 'Masz już pakiet o tej nazwie.';
+      var unknown = analytes.filter(function (analyteId) {
+        var substance = converter && typeof converter.find === 'function' ? converter.find(analyteId) : null;
+        return !substance || substance.id !== analyteId;
+      });
+      if (!analytes.length) errors.analytes = 'Dodaj co najmniej jedno badanie.';
+      else if (unknown.length) errors.analytes = 'Pakiet może zawierać tylko badania z przelicznika.';
+      else if (analytes.length > LIMITS.analytes) errors.analytes = 'Pakiet może mieć najwyżej ' + LIMITS.analytes + ' badań.';
+      if (!editing && custom.packages.length >= LIMITS.packages) errors.limit = 'Możesz mieć najwyżej ' + LIMITS.packages + ' własnych pakietów.';
+      return { ok: !Object.keys(errors).length, errors: errors, package: { id: id, name: name, analytes: analytes } };
+    }
+    function newPackageId(custom, random) {
+      var taken = {}, next = typeof random === 'function' ? random : Math.random;
+      normalizeCustom(custom).packages.forEach(function (pkg) { taken[pkg.id] = true; });
+      for (var attempt = 0; attempt < 50; attempt++) {
+        var id = 'u';
+        while (id.length < 11) id += Math.min(35, Math.max(0, Math.floor(next() * 36))).toString(36);
+        if (!taken[id]) return id;
+      }
+      return null;
+    }
+    /* Pakiet z kreatora na liście własnych pakietów: nowy na końcu, edytowany w swoim miejscu.
+     * options jak validatePackage (+ random). Zwraca { ok, errors, custom, id }; custom to lista do zapisu. */
+    function savePackage(options) {
+      options = options || {};
+      var custom = normalizeCustom(options.custom), check = validatePackage(options);
+      if (!check.ok) return { ok: false, errors: check.errors, custom: custom, id: null };
+      var id = check.package.id || newPackageId(custom, options.random);
+      if (!id) return { ok: false, errors: { limit: 'Nie udało się nadać identyfikatora pakietu — spróbuj ponownie.' }, custom: custom, id: null };
+      var entry = { id: id, name: check.package.name, analytes: check.package.analytes };
+      var packages = check.package.id
+        ? custom.packages.map(function (pkg) { return pkg.id === id ? entry : pkg; })
+        : custom.packages.concat([entry]);
+      return { ok: true, errors: {}, custom: { schemaVersion: 1, updatedAtISO: custom.updatedAtISO, packages: packages }, id: id };
+    }
+    function removePackage(custom, id) {
+      var current = normalizeCustom(custom);
+      return { schemaVersion: 1, updatedAtISO: current.updatedAtISO, packages: current.packages.filter(function (pkg) { return pkg.id !== id; }) };
+    }
+    /* Katalog kreatora: badania przelicznika w grupach i kolejności danych (LabUnitsData.list()).
+     * Zwraca [{ label, items: [{ id, label, short, own }] }]. */
+    function catalog(data, ownKind) {
+      var groups = [], byName = {};
+      (data && typeof data.list === 'function' ? data.list() : []).forEach(function (substance) {
+        if (!substance || typeof substance.id !== 'string' || !Array.isArray(substance.units) || !substance.units.length) return;
+        var name = text(substance.group) || 'Inne';
+        if (!byName[name]) { byName[name] = { label: name, items: [] }; groups.push(byName[name]); }
+        byName[name].items.push({ id: substance.id, label: substance.label_pl, short: shortLabel(substance.label_pl),
+          own: typeof ownKind === 'function' ? ownKind(substance.id) || '' : '' });
+      });
+      return groups;
+    }
+    // Tekst do wyszukiwania badania: małe litery, bez znaków diakrytycznych („ł” też).
+    function searchKey(value) {
+      var out = String(value == null ? '' : value).toLowerCase().replace(/ł/g, 'l');
+      try { out = out.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch (_) { /* bez normalizacji */ }
+      return out.replace(/[\s\u00a0]+/g, ' ').trim();
     }
 
     // Zrzut normy jak captureLabRange w przeliczniku: ten sam wybór zakresu, wiersz „when”, źródła i wersje.
@@ -215,6 +372,7 @@
       var norm = row.norm, kind = classifyLabNorm(row.valueNum, norm);
       return {
         state: LAB_STATES[kind].state, text: LAB_STATES[kind].text, classification: kind, lab: true,
+        own: appView && appView.own || '',
         // Źródła zostają przy normie aplikacji, która nadal jest pokazana obok.
         bounds: norm.text, population: '', subject: '', sources: appView && appView.sources || [], general: false,
         marker: markerPosition(row.valueNum, norm.low, norm.high),
@@ -281,9 +439,11 @@
     }
 
     /* Ocena jednego wiersza pakietu.
-     * options: { converter, snapshot, data, analyteId, raw, unit, patient, capturedAtISO, normLow, normHigh }
+     * options: { converter, snapshot, data, analyteId, raw, unit, patient, capturedAtISO, normLow, normHigh, own }
      * status: 'empty' (puste pole — wiersz pomijany), 'invalid' (error), 'ok'.
-     * normLow/normHigh: norma z wydruku w jednostce wyniku (PR2); puste = norma aplikacji. */
+     * normLow/normHigh: norma z wydruku w jednostce wyniku (PR2); puste = norma aplikacji.
+     * own ('puberty' | 'single', PR4): pojedyncze badanie ocenia to badanie po swojemu — pakiet nie dobiera mu
+     * zakresu katalogu i nie zapisuje zrzutu normy (tak samo jak przypięcie wyniku); zostaje wartość i norma z wydruku. */
     function evaluateRow(options) {
       options = options || {};
       var converter = options.converter, id = options.analyteId;
@@ -308,13 +468,19 @@
       row.converted = converter.formatNumber(target && target.factor_to_si ? evaluation.siValue / target.factor_to_si : evaluation.siValue, precision)
         + ' ' + substance.canonical_si;
       row.shown = converter.formatNumber(evaluation.value, precision);
-      var range = captureRange(options, substance, evaluation, raw);
+      row.own = options.own === 'puberty' || options.own === 'single' ? options.own : '';
+      // Silnik nie ocenia bez dodatkowego kontekstu próbki (np. estradiol u dorosłej kobiety bez fazy cyklu);
+      // pakiet nie ma tych pól — karta wyniku odsyła do pojedynczego badania.
+      if (!row.own && evaluation.reference_context_required === true) row.contextRequired = true;
+      var range = row.own ? undefined : captureRange(options, substance, evaluation, raw);
       if (range !== undefined) {
         row.range = range;
         // Liczba jak w przeliczniku („1 000” = 1000) — to samo pole co przy przypięciu pojedynczego wyniku.
         row.valueNum = range.measurement.sourceValue;
       }
-      row.view = describeAssessment(row, options);
+      row.view = row.own
+        ? { state: '', text: OWN_TEXT, bounds: '', population: '', subject: '', sources: [], marker: null, general: false, own: row.own }
+        : describeAssessment(row, options);
       // Norma z wydruku zastępuje normę aplikacji dla tego wyniku; błędna wstrzymuje zapis, a ocena zostaje przy normie aplikacji.
       var labNorm = parseLabNorm({ converter: converter, low: options.normLow, high: options.normHigh, unit: evaluation.unit });
       if (labNorm.status === 'invalid') row.normError = labNorm.error;
@@ -325,10 +491,15 @@
       return row;
     }
 
+    /* options jak evaluateRow oraz (PR4): patientFor(analyteId) — pacjent dla danego badania (strona dokłada
+     * metodę 17-OHP i nośnik wieku estradiolu), ownKind(analyteId) — rodzaj własnej oceny badania. */
     function evaluatePackage(options, inputs) {
+      options = options || {};
       return (Array.isArray(inputs) ? inputs : []).map(function (input) {
-        return evaluateRow(Object.assign({}, options, { analyteId: input.analyteId, raw: input.raw, unit: input.unit,
-          normLow: input.normLow, normHigh: input.normHigh }));
+        var extra = { analyteId: input.analyteId, raw: input.raw, unit: input.unit, normLow: input.normLow, normHigh: input.normHigh };
+        if (typeof options.patientFor === 'function') extra.patient = options.patientFor(input.analyteId) || {};
+        if (typeof options.ownKind === 'function') extra.own = options.ownKind(input.analyteId) || '';
+        return evaluateRow(Object.assign({}, options, extra));
       });
     }
 
@@ -468,11 +639,23 @@
     }
 
     return Object.freeze({
-      version: '1.2.0',
+      version: '1.3.0',
       SETTINGS_KEY: SETTINGS_KEY,
+      CUSTOM_KEY: CUSTOM_KEY,
+      LIMITS: LIMITS,
       CATEGORY: CATEGORY,
       COMMENT_MAX: COMMENT_MAX,
       findPackage: findPackage,
+      listPackages: listPackages,
+      normalizeCustom: normalizeCustom,
+      readCustom: readCustom,
+      writeCustom: writeCustom,
+      validatePackage: validatePackage,
+      savePackage: savePackage,
+      removePackage: removePackage,
+      catalog: catalog,
+      searchKey: searchKey,
+      rememberPackage: rememberPackage,
       describeAnalytes: describeAnalytes,
       pickUnit: pickUnit,
       normalizeSettings: normalizeSettings,
@@ -512,8 +695,14 @@
       },
       'no-patient': {
         title: 'Nie wybrano pacjenta',
-        text: 'Pakiet zapisuje wyniki w karcie pacjenta i dobiera normy do jego wieku i płci. Wybierz pacjenta w Bazie pacjentów albo zapisz nowego na stronie głównej.',
+        text: 'Wpisywanie wyników wymaga pacjenta: pakiet zapisuje je w jego karcie i dobiera normy do wieku i płci. Wybierz pacjenta w Bazie pacjentów albo zapisz nowego na stronie głównej. Pakiety możesz tworzyć i zmieniać bez pacjenta — należą do konta.',
         action: 'Wybierz pacjenta'
+      },
+      // Własny pakiet, z którego ta wersja przelicznika nie zna żadnego badania.
+      empty: {
+        title: 'Tego pakietu nie da się teraz wypełnić',
+        text: 'Żadnego z badań tego pakietu nie ma w przeliczniku. Zmień skład pakietu albo wybierz inny.',
+        action: 'Edytuj pakiet'
       },
       unavailable: {
         title: 'Pakiet badań jest chwilowo niedostępny',
@@ -521,6 +710,14 @@
         action: ''
       }
     };
+    // Badania z własną oceną w pojedynczym badaniu (PR4): opis w kreatorze i w karcie wyniku.
+    var OWN_KINDS = {
+      puberty: { badge: 'ocena pokwitaniowa w pojedynczym badaniu', mark: 'pokwit.', note: 'Ocena pokwitaniowa w pojedynczym badaniu albo z normy z wydruku.' },
+      single: { badge: 'ocena w pojedynczym badaniu', mark: 'poj. badanie', note: 'Pełna ocena w pojedynczym badaniu albo z normy z wydruku.' }
+    };
+    var CONTEXT_NOTE = 'Ocena wymaga kontekstu badania (np. fazy cyklu) — wybierzesz go w pojedynczym badaniu.';
+    // Etykieta do 3 znaków (TSH, fT4, LH) mieści się w kolumnie obok pola; dłuższa staje nad polem.
+    var LABEL_COMPACT_MAX = 3;
     var OTHER_DAY_NOTE = 'Normy dobrano do danych pacjenta widocznych teraz w przeliczniku. Badanie było w innym dniu — sprawdź, czy te przedziały pasują do wieku w dniu badania.';
 
     function create(w) {
@@ -528,7 +725,10 @@
       var state = { mode: 'single', pkg: null, rows: [], pid: null, gate: '', busy: false, built: false, formBuilt: false, done: null, error: '', remembered: false,
         // PR2: poprzednie wyniki pacjenta (jednostka i norma z wydruku), pola normy wypełnione podpowiedzią,
         // jednostki zmienione ręcznie i wiersze, w których zmiana jednostki skasowała normę.
-        previous: null, previousFor: null, authAsked: null, loadSeq: 0, prefilled: {}, unitTouched: {}, unitNotice: {}, unitSource: {} };
+        previous: null, previousFor: null, authAsked: null, loadSeq: 0, prefilled: {}, unitTouched: {}, unitNotice: {}, unitSource: {},
+        // PR4: lista pakietów (wbudowane i własne z konta), wybrany pakiet, kreator.
+        packages: [], custom: null, customSig: null, optionsSig: null, rowsSig: null, pickerBuilt: false, creatorBuilt: false,
+        view: 'form', draft: null, pickerNote: '', saving: false };
       var grid = null, card = null, singleBtn = null, packageBtn = null;
       var parts = { inputs: {}, units: {}, errors: {}, cards: {}, normLow: {}, normHigh: {}, normUnit: {}, normErrors: {} };
       var timer = null;
@@ -568,19 +768,81 @@
       function loggedIn() {
         try { var session = w.VildaSession; return !!(session && typeof session.isLoggedIn === 'function' && session.isLoggedIn()); } catch (_) { return false; }
       }
-      function packagePatient() {
+      function runtime() { try { return w.VildaLabConverterRuntime || null; } catch (_) { return null; } }
+      // Strona mówi, dla kogo liczyć normę i które badania ocenia po swojemu; bez niej pakiet nie ocenia niczego.
+      function runtimeReady() {
+        var page = runtime();
+        return !!(page && typeof page.getPackagePatient === 'function' && typeof page.ownAssessmentKind === 'function');
+      }
+      // analyteId: badanie, dla którego pakiet pyta o pacjenta (metoda 17-OHP, nośnik wieku estradiolu).
+      function packagePatient(analyteId) {
         try {
-          var runtime = w.VildaLabConverterRuntime;
-          return runtime && typeof runtime.getPackagePatient === 'function' ? runtime.getPackagePatient() : null;
+          var page = runtime();
+          return page && typeof page.getPackagePatient === 'function' ? page.getPackagePatient(analyteId) : null;
         } catch (_) { return null; }
+      }
+      // 'puberty' | 'single' | '' — pytane przy każdej ocenie, bo skrypt strony rusza po tym pliku.
+      function ownKind(analyteId) {
+        try {
+          var page = runtime();
+          return page && typeof page.ownAssessmentKind === 'function' ? page.ownAssessmentKind(analyteId) || '' : '';
+        } catch (_) { return ''; }
       }
       function context() {
         var patient = sessionPatient();
         var name = patient && typeof patient.name === 'string' ? patient.name.trim() : '';
         var pid = patientId();
-        var gate = !model() || !converter() || !snapshot() || !state.pkg || !state.rows.length ? 'unavailable'
-          : !loggedIn() ? 'locked' : !(pid && name) ? 'no-patient' : '';
+        var gate = !model() || !converter() || !snapshot() || !runtimeReady() || !state.pkg ? 'unavailable'
+          : !loggedIn() ? 'locked' : !(pid && name) ? 'no-patient' : !state.rows.length ? 'empty' : '';
         return { gate: gate, pid: gate ? null : String(pid), name: name, sessionPatient: patient };
+      }
+
+      // ── Pakiety: wbudowane i własne z konta (PR4) ──
+      function persistence() { return w.VildaPersistence || null; }
+      // Czyta własne pakiety konta; true, gdy lista się zmieniła (zapis kreatora, synchronizacja z innego urządzenia).
+      function loadPackages() {
+        var m = model();
+        if (!m) return false;
+        var custom = m.readCustom(persistence());
+        var signature = JSON.stringify(custom.packages);
+        if (signature === state.customSig) return false;
+        state.customSig = signature;
+        state.custom = custom;
+        state.packages = m.listPackages(DATA, custom);
+        return true;
+      }
+      function preferredPackage() {
+        var m = model(), last = m ? m.readSettings(persistence()).lastPackage : null;
+        return last && m.findPackage(state.packages, last) ? last : state.packages[0] ? state.packages[0].id : null;
+      }
+      /* Ustawia wybrany pakiet i jego wiersze; true, gdy zmienił się pakiet albo jego skład. Pola przebudowują się
+       * wtedy od nowa: wartości wpisane dla innego pakietu znikają, a przy tym samym pakiecie (skład zmieniony
+       * w kreatorze albo na innym urządzeniu konta) zostają przy badaniach, które w nim zostały. */
+      function selectPackage(key) {
+        var m = model();
+        var pkg = m.findPackage(state.packages, key) || state.packages[0] || null;
+        var rows = pkg && converter() ? m.describeAnalytes(pkg, converter()) : [];
+        var signature = pkg ? pkg.id + ':' + rows.map(function (row) { return row.id; }).join(',') : '';
+        var same = !!(pkg && state.pkg && pkg.id === state.pkg.id);
+        state.pkg = pkg;
+        if (signature === state.rowsSig) return false;
+        state.rows = rows;
+        state.rowsSig = signature;
+        if (!same) {
+          state.done = null;
+          state.error = '';
+        }
+        state.previous = null;
+        state.previousFor = null;
+        if (state.formBuilt) buildRows(same);
+        return true;
+      }
+      function choosePackage(id) {
+        if (state.busy) { drawPicker(); return; }
+        state.pickerNote = '';
+        selectPackage(id);
+        if (state.pkg) model().rememberPackage(persistence(), state.pkg.id);
+        refresh();
       }
       // Okno, w którym działa pasek aplikacji: ramka powłoki oddaje logowanie i listę pacjentów powłoce.
       function chromeWindow() {
@@ -598,7 +860,7 @@
         var body = add(box, 'div', 'lab-step-body');
         var title = add(body, 'div', 'lab-step-label', label);
         if (hint) add(title, 'span', 'lab-step-label-opt', hint);
-        return { num: num, body: body };
+        return { box: box, num: num, body: body };
       }
       function markStep(num, done, active) {
         num.classList.toggle('is-done', !!done);
@@ -610,93 +872,93 @@
         if (state.built || !card) return;
         state.built = true;
         // Tytuł i zakładki trybu stoją w nagłówku karty (przelicznik-jednostek.html); panel nie ma własnego tytułu.
-        // Bramka: bez logowania albo bez pacjenta formularz nie powstaje (buildForm dopiero po jej przejściu).
-        parts.gate = add(card, 'div', 'lab-pkg-gate');
+        // Lewa kolumna: wybór pakietu (po zalogowaniu), bramka albo pola wyników; prawa: ocena i zapis.
+        // Pola wyników powstają dopiero po przejściu bramki (buildEntry), kreator — przy pierwszym otwarciu.
+        parts.body = add(card, 'div', 'lab-pkg-body');
+        parts.form = add(parts.body, 'div', 'lab-pkg-form');
+        parts.gate = add(parts.form, 'div', 'lab-pkg-gate');
         parts.gate.setAttribute('role', 'status');
         parts.gateTitle = add(parts.gate, 'strong', 'lab-pkg-gate-title');
         parts.gateText = add(parts.gate, 'p', 'lab-pkg-gate-text');
         parts.gateAction = button(parts.gate, 'lab-pkg-btn lab-pkg-btn-primary', '', gateAction);
         parts.gateAction.id = 'labPkgGateAction';
         // Powrót do pojedynczego badania: zakładka nad panelem (bez osobnego przycisku w bramce).
-
-        parts.body = add(card, 'div', 'lab-pkg-body');
-        parts.body.hidden = true;
+        parts.entry = add(parts.form, 'div', 'lab-pkg-entry');
+        parts.entry.hidden = true;
+        parts.results = add(parts.body, 'div', 'lab-pkg-results');
+        parts.results.hidden = true;
       }
 
-      function buildForm() {
+      // Krok 1: lista rozwijana pakietów (wbudowane i własne), „Nowy pakiet”, skład i „Edytuj pakiet”.
+      function buildPicker() {
+        if (state.pickerBuilt) return;
+        state.pickerBuilt = true;
+        var s1 = step(parts.form, 1, 'Pakiet');
+        // Krok stoi przed bramką, bezpośrednio w kolumnie formularza (jak pozostałe kroki).
+        parts.form.insertBefore(s1.box, parts.gate);
+        parts.pickerStep = s1.box;
+        parts.step1 = s1.num;
+        var choice = add(s1.body, 'div', 'lab-pkg-choice');
+        parts.select = add(choice, 'select', 'lab-pkg-select');
+        parts.select.id = 'labPkgSelect';
+        parts.select.setAttribute('aria-label', 'Wybór pakietu');
+        parts.select.addEventListener('change', function () { choosePackage(parts.select.value); });
+        parts.create = button(choice, 'lab-pkg-btn lab-pkg-btn-dashed', '+ Nowy pakiet', function () { openCreator(null); });
+        parts.create.id = 'labPkgNew';
+        var line = add(s1.body, 'div', 'lab-pkg-contents');
+        parts.contents = add(line, 'span', 'lab-pkg-chip-list');
+        parts.contents.id = 'labPkgContents';
+        parts.edit = button(line, 'lab-pkg-link', 'Edytuj pakiet', function () { openCreator(state.pkg); });
+        parts.edit.id = 'labPkgEdit';
+        parts.pickerNote = add(s1.body, 'p', 'lab-pkg-hint lab-pkg-picker-note');
+        parts.pickerNote.id = 'labPkgPickerNote';
+        parts.pickerNote.setAttribute('role', 'status');
+        parts.pickerNote.hidden = true;
+      }
+      function drawPicker() {
+        var signature = state.packages.map(function (pkg) { return pkg.id + '\u0001' + pkg.label; }).join('\u0002');
+        if (signature !== state.optionsSig) {
+          state.optionsSig = signature;
+          parts.select.textContent = '';
+          [['Wbudowane', true], ['Twoje pakiety', false]].forEach(function (group) {
+            var list = state.packages.filter(function (pkg) { return pkg.builtin === group[1]; });
+            if (!list.length) return;
+            var host = add(parts.select, 'optgroup');
+            host.label = group[0];
+            list.forEach(function (pkg) {
+              var option = add(host, 'option', '', pkg.label);
+              option.value = pkg.id;
+            });
+          });
+        }
+        parts.select.value = state.pkg ? state.pkg.id : '';
+        parts.select.disabled = state.busy;
+        parts.create.disabled = state.busy;
+        parts.contents.textContent = state.rows.length
+          ? state.rows.map(function (row) { return row.short; }).join(' · ') : 'brak badań z przelicznika';
+        parts.edit.hidden = !state.pkg || state.pkg.builtin;
+        parts.edit.disabled = state.busy;
+        parts.pickerNote.hidden = !state.pickerNote;
+        parts.pickerNote.textContent = state.pickerNote;
+      }
+
+      // Kroki 2–5 i kolumna oceny: szkielet stały, wiersze badań przebudowuje buildRows przy zmianie pakietu.
+      function buildEntry() {
         if (state.formBuilt) return;
         state.formBuilt = true;
         var m = model();
-        var form = add(parts.body, 'div', 'lab-pkg-form');
-
-        var s1 = step(form, 1, 'Pakiet');
-        parts.step1 = s1.num;
-        var choice = add(s1.body, 'div', 'lab-pkg-choice');
-        var chip = add(choice, 'span', 'lab-pkg-chip', state.pkg.label);
-        chip.id = 'labPkgName';
-        add(choice, 'span', 'lab-pkg-chip-list', state.rows.map(function (row) { return row.short; }).join(' · '));
+        var form = parts.entry;
 
         var s2 = step(form, 2, 'Wyniki z wydruku', '— puste pole jest pomijane');
         parts.step2 = s2.num;
-        var table = add(s2.body, 'div', 'lab-pkg-rows');
-        state.rows.forEach(function (row) {
-          var line = add(table, 'div', 'lab-pkg-row');
-          line.setAttribute('data-analyte', row.id);
-          var label = add(line, 'label', 'lab-pkg-row-label', row.short);
-          var input = add(line, 'input', 'lab-pkg-value');
-          input.type = 'text';
-          input.id = 'labPkgValue-' + row.id;
-          input.setAttribute('inputmode', 'decimal');
-          input.setAttribute('autocomplete', 'off');
-          input.setAttribute('aria-describedby', 'labPkgError-' + row.id);
-          label.setAttribute('for', input.id);
-          var select = add(line, 'select', 'lab-pkg-unit');
-          select.id = 'labPkgUnit-' + row.id;
-          select.setAttribute('aria-label', 'Jednostka ' + row.short);
-          row.units.forEach(function (unit) {
-            // Sam symbol jednostki: mieści się na telefonie; zapis niesie pełną etykietę katalogu.
-            var option = add(select, 'option', '', unit.symbol);
-            option.value = unit.symbol;
-          });
-          var error = add(line, 'p', 'lab-pkg-row-error');
-          error.id = 'labPkgError-' + row.id;
-          error.hidden = true;
-          input.addEventListener('input', edited);
-          select.addEventListener('change', function () { unitChanged(row.id); });
-          parts.inputs[row.id] = input;
-          parts.units[row.id] = select;
-          parts.errors[row.id] = error;
-        });
+        parts.rowsHost = add(s2.body, 'div', 'lab-pkg-rows');
         parts.unitsHint = add(s2.body, 'p', 'lab-pkg-hint', 'Jednostki zapamiętane z poprzedniego wpisu na tym urządzeniu.');
         parts.unitsHint.hidden = true;
 
         // PR2: norma laboratorium z wydruku, w jednostce wyniku. Pusta = ocena normą aplikacji.
         var sn = step(form, 3, 'Normy z wydruku', '— opcjonalnie');
         parts.stepNorms = sn.num;
-        var norms = add(sn.body, 'div', 'lab-pkg-norms');
-        state.rows.forEach(function (row) {
-          var line = add(norms, 'div', 'lab-pkg-norm-row');
-          line.setAttribute('data-analyte', row.id);
-          add(line, 'span', 'lab-pkg-norm-label', row.short);
-          [['normLow', 'Low', 'od'], ['normHigh', 'High', 'do']].forEach(function (side, index) {
-            if (index) add(line, 'span', 'lab-pkg-norm-sep', '–').setAttribute('aria-hidden', 'true');
-            var field = add(line, 'input', 'lab-pkg-norm');
-            field.type = 'text';
-            field.id = 'labPkgNorm' + side[1] + '-' + row.id;
-            field.setAttribute('inputmode', 'decimal');
-            field.setAttribute('autocomplete', 'off');
-            field.setAttribute('placeholder', side[2]);
-            field.setAttribute('aria-label', 'Norma ' + row.short + ' z wydruku, ' + side[2]);
-            field.setAttribute('aria-describedby', 'labPkgNormError-' + row.id);
-            field.addEventListener('input', function () { normEdited(row.id); });
-            parts[side[0]][row.id] = field;
-          });
-          parts.normUnit[row.id] = add(line, 'span', 'lab-pkg-norm-unit');
-          var normError = add(line, 'p', 'lab-pkg-norm-error');
-          normError.id = 'labPkgNormError-' + row.id;
-          normError.hidden = true;
-          parts.normErrors[row.id] = normError;
-        });
+        parts.normsHost = add(sn.body, 'div', 'lab-pkg-norms');
         add(sn.body, 'p', 'lab-pkg-hint', 'Puste pola = norma aplikacji dla wieku pacjenta. Wpisana norma zastępuje ją dla tego wyniku i zapisuje się razem z nim.');
         parts.prefillHint = add(sn.body, 'p', 'lab-pkg-hint lab-pkg-prefill-hint');
         parts.prefillHint.id = 'labPkgPrefillHint';
@@ -746,17 +1008,12 @@
         });
         parts.clear.id = 'labPkgClear';
 
-        var results = add(parts.body, 'div', 'lab-pkg-results');
+        var results = parts.results;
         var head = add(results, 'div', 'lab-pkg-results-head');
         add(head, 'div', 'lab-step-label', 'Ocena wyników');
         add(head, 'div', 'lab-pkg-hint', 'na żywo, dla danych pacjenta z karty');
         parts.cardsHost = add(results, 'div', 'lab-pkg-cards');
         parts.cardsHost.id = 'labPkgCards';
-        state.rows.forEach(function (row) {
-          var box = add(parts.cardsHost, 'div', 'lab-pkg-card');
-          box.setAttribute('data-analyte', row.id);
-          parts.cards[row.id] = box;
-        });
         parts.sources = add(results, 'p', 'lab-pkg-hint lab-pkg-sources');
         parts.sources.id = 'labPkgSources';
         parts.sources.hidden = true;
@@ -786,8 +1043,100 @@
         parts.copy = button(results, 'lab-pkg-btn lab-pkg-btn-ghost lab-pkg-copy', 'Kopiuj wyniki', copyResults);
         parts.copy.id = 'labPkgCopy';
 
-        applyUnits();
+        buildRows(false);
         resetDate();
+      }
+
+      /* Wiersze badań wybranego pakietu: pola wyników, norm z wydruku i karty oceny. Wołane przy budowie
+       * formularza i przy każdej zmianie pakietu albo jego składu. keep: ten sam pakiet w zmienionym składzie —
+       * wpisane wartości, jednostki i normy zostają przy badaniach, które w nim zostały. */
+      function buildRows(keep) {
+        var old = {};
+        if (keep) {
+          Object.keys(parts.inputs).forEach(function (id) {
+            old[id] = { value: parts.inputs[id].value, unit: parts.units[id].value, low: parts.normLow[id].value, high: parts.normHigh[id].value,
+              prefilled: state.prefilled[id], touched: state.unitTouched[id], notice: state.unitNotice[id] };
+          });
+        }
+        ['inputs', 'units', 'errors', 'cards', 'normLow', 'normHigh', 'normUnit', 'normErrors'].forEach(function (key) { parts[key] = {}; });
+        parts.rowsHost.textContent = '';
+        parts.normsHost.textContent = '';
+        parts.cardsHost.textContent = '';
+        state.prefilled = {};
+        state.unitTouched = {};
+        state.unitNotice = {};
+        var stacked = state.rows.some(function (row) { return row.short.length > LABEL_COMPACT_MAX; });
+        parts.rowsHost.classList.toggle('is-stacked', stacked);
+        parts.normsHost.classList.toggle('is-stacked', stacked);
+
+        state.rows.forEach(function (row) {
+          var line = add(parts.rowsHost, 'div', 'lab-pkg-row');
+          line.setAttribute('data-analyte', row.id);
+          var label = add(line, 'label', 'lab-pkg-row-label', row.short);
+          var input = add(line, 'input', 'lab-pkg-value');
+          input.type = 'text';
+          input.id = 'labPkgValue-' + row.id;
+          input.setAttribute('inputmode', 'decimal');
+          input.setAttribute('autocomplete', 'off');
+          input.setAttribute('aria-describedby', 'labPkgError-' + row.id);
+          label.setAttribute('for', input.id);
+          var select = add(line, 'select', 'lab-pkg-unit');
+          select.id = 'labPkgUnit-' + row.id;
+          select.setAttribute('aria-label', 'Jednostka ' + row.short);
+          row.units.forEach(function (unit) {
+            // Sam symbol jednostki: mieści się na telefonie; zapis niesie pełną etykietę katalogu.
+            var option = add(select, 'option', '', unit.symbol);
+            option.value = unit.symbol;
+          });
+          var error = add(line, 'p', 'lab-pkg-row-error');
+          error.id = 'labPkgError-' + row.id;
+          error.hidden = true;
+          input.addEventListener('input', edited);
+          select.addEventListener('change', function () { unitChanged(row.id); });
+          parts.inputs[row.id] = input;
+          parts.units[row.id] = select;
+          parts.errors[row.id] = error;
+
+          var normLine = add(parts.normsHost, 'div', 'lab-pkg-norm-row');
+          normLine.setAttribute('data-analyte', row.id);
+          add(normLine, 'span', 'lab-pkg-norm-label', row.short);
+          [['normLow', 'Low', 'od'], ['normHigh', 'High', 'do']].forEach(function (side, index) {
+            if (index) add(normLine, 'span', 'lab-pkg-norm-sep', '–').setAttribute('aria-hidden', 'true');
+            var field = add(normLine, 'input', 'lab-pkg-norm');
+            field.type = 'text';
+            field.id = 'labPkgNorm' + side[1] + '-' + row.id;
+            field.setAttribute('inputmode', 'decimal');
+            field.setAttribute('autocomplete', 'off');
+            field.setAttribute('placeholder', side[2]);
+            field.setAttribute('aria-label', 'Norma ' + row.short + ' z wydruku, ' + side[2]);
+            field.setAttribute('aria-describedby', 'labPkgNormError-' + row.id);
+            field.addEventListener('input', function () { normEdited(row.id); });
+            parts[side[0]][row.id] = field;
+          });
+          parts.normUnit[row.id] = add(normLine, 'span', 'lab-pkg-norm-unit');
+          var normError = add(normLine, 'p', 'lab-pkg-norm-error');
+          normError.id = 'labPkgNormError-' + row.id;
+          normError.hidden = true;
+          parts.normErrors[row.id] = normError;
+
+          var box = add(parts.cardsHost, 'div', 'lab-pkg-card');
+          box.setAttribute('data-analyte', row.id);
+          parts.cards[row.id] = box;
+        });
+
+        applyUnits();
+        state.rows.forEach(function (row) {
+          var kept = old[row.id];
+          if (!kept) return;
+          parts.inputs[row.id].value = kept.value;
+          if (model().pickUnit(row, kept.unit) === kept.unit) parts.units[row.id].value = kept.unit;
+          parts.normLow[row.id].value = kept.low;
+          parts.normHigh[row.id].value = kept.high;
+          if (kept.prefilled) state.prefilled[row.id] = kept.prefilled;
+          if (kept.touched) state.unitTouched[row.id] = kept.touched;
+          if (kept.notice) state.unitNotice[row.id] = kept.notice;
+        });
+        if (state.busy) setBusy(true);
       }
 
       function applyUnits() {
@@ -920,10 +1269,12 @@
             normLow: parts.normLow[row.id].value, normHigh: parts.normHigh[row.id].value };
         });
       }
-      function evaluate(patient) {
+      function evaluate() {
         return model().evaluatePackage({
           converter: converter(), snapshot: snapshot(), data: w.LabUnitsData || null,
-          patient: patient || {}, capturedAtISO: new Date().toISOString()
+          // Pacjent z karty dla danego badania i rodzaj jego własnej oceny — oba od strony (PR4).
+          patientFor: function (analyteId) { var described = packagePatient(analyteId); return described && described.patient || {}; },
+          ownKind: ownKind, capturedAtISO: new Date().toISOString()
         }, inputs());
       }
 
@@ -939,6 +1290,10 @@
 
       function drawCard(row, definition) {
         var box = parts.cards[definition.id];
+        // Karta z tą samą treścią zostaje w miejscu: jej łącze nie znika spod kliknięcia przy kolejnym odświeżeniu.
+        var signature = JSON.stringify([row.status, row.error || '', row.shown || '', row.unit || '', row.converted || '', row.view || null, !!row.contextRequired]);
+        if (box.getAttribute('data-drawn') === signature) return;
+        box.setAttribute('data-drawn', signature);
         box.textContent = '';
         box.className = 'lab-pkg-card' + (row.status === 'empty' ? ' is-empty' : row.status === 'invalid' ? ' is-invalid' : '');
         var head = add(box, 'div', 'lab-pkg-card-head');
@@ -975,6 +1330,21 @@
           norm.appendChild(doc.createTextNode((view.general ? (view.population || 'Zakres ogólny') : 'Norma' + (view.population ? ' · ' + view.population : '')) + ': '));
           add(norm, 'strong', '', view.bounds);
         }
+        // PR4: badanie oceniane po swojemu w pojedynczym badaniu — tu wartość (i norma z wydruku), tam ocena.
+        // To samo łącze dostaje wynik, którego silnik nie ocenia bez kontekstu próbki (pakiet nie ma jego pól).
+        var note = view.own && OWN_KINDS[view.own] ? OWN_KINDS[view.own].note : row.contextRequired ? CONTEXT_NOTE : '';
+        if (note) {
+          if (!view.lab) add(box, 'div', 'lab-pkg-card-note', note);
+          button(box, 'lab-pkg-link lab-pkg-card-link', 'Oceń ' + definition.short + ' w pojedynczym badaniu →', function () { openSingle(definition.id); });
+        }
+      }
+      // Pojedyncze badanie z wybranym badaniem; wartość wpisuje tam lekarz (ta sama droga co ?badanie=<id>).
+      function openSingle(analyteId) {
+        setMode('single');
+        try {
+          var page = runtime();
+          if (page && typeof page.openSingle === 'function') page.openSingle(analyteId);
+        } catch (_) { /* wybór badania zostaje po stronie przelicznika */ }
       }
 
       function drawSave(ctx, rows) {
@@ -1014,8 +1384,7 @@
       }
       function copyResults() {
         if (state.busy) return;
-        var described = packagePatient();
-        var source = copySource(evaluate(described && described.patient));
+        var source = copySource(evaluate());
         if (!source.ok) { refresh(); return; }
         // vilda_schowek.js to jedyne miejsce zapisu do schowka (tekst dla systemu szpitalnego, iOS); zapis musi
         // ruszyć w geście kliknięcia, dlatego bez żadnego czekania przed nim.
@@ -1029,10 +1398,16 @@
           function () { toast('Nie udało się skopiować — skopiuj ręcznie.'); });
       }
 
-      function drawGate(gate) {
+      // Co widać: kreator zamiast formularza; wybór pakietu po zalogowaniu; bramka zamiast pól wyników i oceny.
+      function drawGate(gate, account) {
+        var creator = state.view === 'creator';
         var info = GATES[gate];
+        parts.body.hidden = creator;
+        if (parts.creator) parts.creator.hidden = !creator;
+        if (parts.pickerStep) parts.pickerStep.hidden = !account;
         parts.gate.hidden = !info;
-        parts.body.hidden = !!info;
+        parts.entry.hidden = !!gate;
+        parts.results.hidden = !!gate;
         if (!info) return;
         parts.gateTitle.textContent = info.title;
         parts.gateText.textContent = info.text;
@@ -1077,9 +1452,15 @@
         paintMode();
         if (state.mode !== 'package') return;
         build();
+        // Własne pakiety mogły się zmienić: zapis kreatora, synchronizacja konta z innego urządzenia.
+        if (loadPackages() || !state.pkg) selectPackage(state.pkg ? state.pkg.id : preferredPackage());
         var ctx = context();
+        // Wybór pakietu i kreator należą do konta: działają po zalogowaniu, także bez wybranego pacjenta.
+        var account = ctx.gate === '' || ctx.gate === 'no-patient' || ctx.gate === 'empty';
+        if (account) buildPicker();
+        else if (state.view === 'creator') closeCreator();
         // Wyniki wpisane dla jednego pacjenta nie przechodzą na innego ani poza sesję.
-        if (!ctx.gate) buildForm();
+        if (!ctx.gate) buildEntry();
         if (ctx.pid !== state.pid) {
           if (state.pid !== null) clearValues(false);
           state.pid = ctx.pid;
@@ -1089,13 +1470,15 @@
           if (ctx.pid) applyUnits();
         }
         state.gate = ctx.gate;
-        drawGate(ctx.gate);
+        drawGate(ctx.gate, account);
+        if (account) drawPicker();
+        if (state.view === 'creator') { drawCreator(); return; }
         if (ctx.gate) return;
         if (state.previousFor !== state.pid) loadPrevious();
 
         var described = packagePatient();
         var description = described && described.description || null;
-        var rows = evaluate(described && described.patient);
+        var rows = evaluate();
         var sources = [];
         rows.forEach(function (row, index) {
           var definition = state.rows[index];
@@ -1181,8 +1564,7 @@
         if (state.busy) return;
         var m = model(), ctx = context();
         if (ctx.gate) { refresh(); return; }
-        var described = packagePatient();
-        var rows = evaluate(described && described.patient);
+        var rows = evaluate();
         var plan = m.planSave({
           rows: rows, patientId: ctx.pid, dateISO: parts.date.value, todayISO: today(), comment: parts.comment.value,
           linkedAgeMonths: m.linkedAgeMonths(ctx.sessionPatient), snapshot: snapshot()
@@ -1251,6 +1633,7 @@
           }).catch(function () { /* ekran logowania niedostępny */ });
           return;
         }
+        if (state.gate === 'empty') { openCreator(state.pkg); return; }
         if (state.gate === 'no-patient') {
           // Ta sama droga co pozycja „Baza pacjentów” w menu aplikacji (w powłoce otwiera listę na stronie Start).
           var entry;
@@ -1273,6 +1656,406 @@
           var ui = w.VildaAuthUI;
           if (ui && typeof ui.showPatientCard === 'function') ui.showPatientCard(pid, null, null, { activeTab: 'lab' });
         }).catch(function () { /* karta niedostępna */ });
+      }
+
+      // ── Kreator własnego pakietu (LAB-PAKIETY PR4, makieta zaakceptowana 2026-11-13) ──
+      // Otwiera się w zakładce pakietu zamiast formularza; nie wymaga pacjenta. Zapis idzie na konto.
+      function buildCreator() {
+        if (state.creatorBuilt) return;
+        state.creatorBuilt = true;
+        var m = model();
+        var host = parts.creator = add(card, 'div', 'lab-pkg-creator');
+        host.id = 'labPkgCreator';
+        host.hidden = true;
+        var head = add(host, 'div', 'lab-pkg-creator-head');
+        parts.creatorTitle = add(head, 'h2', 'lab-pkg-creator-title');
+        parts.creatorTitle.id = 'labPkgCreatorTitle';
+        add(head, 'p', 'lab-pkg-hint', 'Pakiety są zapisane na Twoim koncie — widzisz je na każdym urządzeniu.');
+
+        var body = add(host, 'div', 'lab-pkg-creator-body');
+        var main = add(body, 'div', 'lab-pkg-creator-main');
+
+        var nameField = add(main, 'div', 'lab-pkg-field lab-pkg-creator-field');
+        var nameLabel = add(nameField, 'label', 'lab-pkg-field-label', 'Nazwa pakietu');
+        parts.creatorName = add(nameField, 'input', 'lab-pkg-creator-name');
+        parts.creatorName.type = 'text';
+        parts.creatorName.id = 'labPkgCreatorName';
+        parts.creatorName.maxLength = m.LIMITS.name;
+        parts.creatorName.setAttribute('autocomplete', 'off');
+        parts.creatorName.setAttribute('aria-describedby', 'labPkgCreatorNameError');
+        nameLabel.setAttribute('for', parts.creatorName.id);
+        add(nameField, 'p', 'lab-pkg-hint', 'Do ' + m.LIMITS.name + ' znaków. Nazwa pojawi się na liście pakietów obok „Tarczyca”.');
+        parts.creatorNameError = add(nameField, 'p', 'lab-pkg-creator-error');
+        parts.creatorNameError.id = 'labPkgCreatorNameError';
+        parts.creatorNameError.setAttribute('role', 'alert');
+        parts.creatorNameError.hidden = true;
+        parts.creatorName.addEventListener('input', function () {
+          if (!state.draft) return;
+          state.draft.name = parts.creatorName.value;
+          state.draft.error = '';
+          refresh();
+        });
+        parts.creatorName.addEventListener('blur', function () {
+          if (!state.draft || state.draft.touched.name) return;
+          state.draft.touched.name = true;
+          refresh();
+        });
+
+        var picked = add(main, 'div', 'lab-pkg-creator-picked');
+        var pickedHead = add(picked, 'div', 'lab-pkg-creator-picked-head');
+        var pickedTitle = add(pickedHead, 'div', 'lab-step-label', 'Badania w pakiecie');
+        add(pickedTitle, 'span', 'lab-step-label-opt', '— w tej kolejności będą w formularzu');
+        parts.creatorCount = add(pickedHead, 'span', 'lab-pkg-creator-count');
+        parts.creatorCount.id = 'labPkgCreatorCount';
+        parts.creatorList = add(picked, 'ol', 'lab-pkg-creator-list');
+        parts.creatorList.id = 'labPkgCreatorList';
+        parts.creatorEmpty = add(picked, 'p', 'lab-pkg-hint lab-pkg-creator-empty', 'Zaznacz badania na liście „Dodaj badania”.');
+        parts.creatorLimit = add(picked, 'p', 'lab-pkg-hint lab-pkg-creator-limit', 'Pakiet może mieć najwyżej ' + m.LIMITS.analytes + ' badań — usuń któreś, żeby dodać inne.');
+        parts.creatorLimit.id = 'labPkgCreatorLimit';
+        parts.creatorLimit.setAttribute('role', 'status');
+        parts.creatorLimit.hidden = true;
+        parts.creatorListError = add(picked, 'p', 'lab-pkg-creator-error');
+        parts.creatorListError.id = 'labPkgCreatorListError';
+        parts.creatorListError.setAttribute('role', 'alert');
+        parts.creatorListError.hidden = true;
+        parts.creatorOwnNote = add(picked, 'p', 'lab-pkg-creator-own-note');
+        parts.creatorOwnNote.id = 'labPkgCreatorOwnNote';
+        parts.creatorOwnNote.hidden = true;
+
+        parts.creatorEditNote = add(main, 'p', 'lab-pkg-hint lab-pkg-creator-edit-note',
+          'Zmiana nazwy lub składu dotyczy następnych wpisów. Wyniki zapisane wcześniej zostają w karcie pacjenta bez zmian.');
+        parts.creatorEditNote.hidden = true;
+
+        var actions = add(main, 'div', 'lab-pkg-creator-actions');
+        parts.creatorSave = button(actions, 'lab-pkg-btn lab-pkg-btn-primary', 'Zapisz pakiet', saveDraft);
+        parts.creatorSave.id = 'labPkgCreatorSave';
+        parts.creatorCancel = button(actions, 'lab-pkg-btn lab-pkg-btn-ghost', 'Anuluj', function () { closeCreator(true); refresh(); });
+        parts.creatorCancel.id = 'labPkgCreatorCancel';
+        parts.creatorDelete = button(actions, 'lab-pkg-btn lab-pkg-btn-danger-ghost', 'Usuń pakiet', function () {
+          if (!state.draft || state.saving) return;
+          state.draft.confirm = true;
+          refresh();
+          try { parts.creatorDeleteCancel.focus(); } catch (_) { /* fokus pomocniczy */ }
+        });
+        parts.creatorDelete.id = 'labPkgCreatorDelete';
+        parts.creatorHint = add(main, 'p', 'lab-pkg-hint lab-pkg-creator-hint');
+        parts.creatorHint.id = 'labPkgCreatorHint';
+        parts.creatorHint.hidden = true;
+        parts.creatorError = add(main, 'p', 'lab-pkg-error');
+        parts.creatorError.id = 'labPkgCreatorError';
+        parts.creatorError.setAttribute('role', 'alert');
+        parts.creatorError.hidden = true;
+
+        parts.creatorConfirm = add(main, 'div', 'lab-pkg-creator-confirm');
+        parts.creatorConfirm.id = 'labPkgCreatorConfirm';
+        parts.creatorConfirm.setAttribute('role', 'group');
+        parts.creatorConfirm.setAttribute('aria-labelledby', 'labPkgCreatorConfirmTitle');
+        parts.creatorConfirm.hidden = true;
+        parts.creatorConfirmTitle = add(parts.creatorConfirm, 'strong', 'lab-pkg-creator-confirm-title');
+        parts.creatorConfirmTitle.id = 'labPkgCreatorConfirmTitle';
+        add(parts.creatorConfirm, 'p', 'lab-pkg-creator-confirm-text', 'Pakiet zniknie z listy na wszystkich Twoich urządzeniach. Zapisane wyniki badań nie są usuwane.');
+        var confirmActions = add(parts.creatorConfirm, 'div', 'lab-pkg-creator-actions');
+        parts.creatorDeleteConfirm = button(confirmActions, 'lab-pkg-btn lab-pkg-btn-danger', 'Usuń pakiet', deleteDraft);
+        parts.creatorDeleteConfirm.id = 'labPkgCreatorDeleteConfirm';
+        parts.creatorDeleteCancel = button(confirmActions, 'lab-pkg-btn lab-pkg-btn-ghost', 'Zostaw', function () {
+          if (!state.draft) return;
+          state.draft.confirm = false;
+          refresh();
+          try { parts.creatorDelete.focus(); } catch (_) { /* fokus pomocniczy */ }
+        });
+        parts.creatorDeleteCancel.id = 'labPkgCreatorDeleteCancel';
+
+        // Katalog: badania przelicznika w jego grupach; zaznaczenie dodaje badanie na koniec pakietu.
+        var catalogBox = add(body, 'div', 'lab-pkg-creator-catalog');
+        var catalogHead = add(catalogBox, 'div', 'lab-pkg-creator-picked-head');
+        add(catalogHead, 'div', 'lab-step-label', 'Dodaj badania');
+        var groups = m.catalog(w.LabUnitsData || null, ownKind);
+        var total = groups.reduce(function (sum, group) { return sum + group.items.length; }, 0);
+        add(catalogHead, 'span', 'lab-pkg-creator-count', total + ' ' + m.plural(total, ['badanie', 'badania', 'badań']) + ' z „Jednostek lab.”');
+        parts.creatorSearch = add(catalogBox, 'input', 'lab-pkg-creator-search');
+        parts.creatorSearch.type = 'search';
+        parts.creatorSearch.id = 'labPkgCreatorSearch';
+        parts.creatorSearch.setAttribute('aria-label', 'Szukaj badania');
+        parts.creatorSearch.setAttribute('placeholder', 'Szukaj badania, np. LH, testosteron…');
+        parts.creatorSearch.setAttribute('autocomplete', 'off');
+        parts.creatorSearch.addEventListener('input', function () {
+          if (!m.searchKey(parts.creatorSearch.value)) openGroups();
+          filterCatalog();
+        });
+        var groupsHost = add(catalogBox, 'div', 'lab-pkg-creator-groups');
+        groupsHost.id = 'labPkgCreatorGroups';
+        parts.creatorOptions = {};
+        parts.creatorGroups = [];
+        var marks = {};
+        groups.forEach(function (group) {
+          var box = add(groupsHost, 'details', 'lab-pkg-creator-group');
+          var summary = add(box, 'summary', 'lab-pkg-creator-group-title');
+          add(summary, 'span', 'lab-pkg-creator-group-name', group.label);
+          add(summary, 'span', 'lab-pkg-creator-group-count', '· ' + group.items.length);
+          var list = add(box, 'div', 'lab-pkg-creator-group-items');
+          var entry = { box: box, items: [] };
+          group.items.forEach(function (item) {
+            var label = add(list, 'label', 'lab-pkg-creator-option');
+            var check = add(label, 'input', 'lab-pkg-creator-check');
+            check.type = 'checkbox';
+            check.value = item.id;
+            check.id = 'labPkgCreatorOpt-' + item.id;
+            var caption = add(label, 'span', 'lab-pkg-creator-option-text', item.label);
+            if (item.own && OWN_KINDS[item.own]) {
+              add(caption, 'span', 'lab-pkg-creator-mark', ' · ' + OWN_KINDS[item.own].mark);
+              marks[item.own] = true;
+            }
+            check.addEventListener('change', function () { toggleAnalyte(item.id, check.checked); });
+            parts.creatorOptions[item.id] = { check: check, label: label, item: item, key: m.searchKey(item.label + ' ' + item.id) };
+            entry.items.push(item.id);
+          });
+          parts.creatorGroups.push(entry);
+        });
+        parts.creatorNoMatch = add(catalogBox, 'p', 'lab-pkg-hint lab-pkg-creator-nomatch', 'Nie ma badania o takiej nazwie.');
+        parts.creatorNoMatch.setAttribute('role', 'status');
+        parts.creatorNoMatch.hidden = true;
+        var legend = add(catalogBox, 'p', 'lab-pkg-hint lab-pkg-creator-legend');
+        if (marks.puberty) {
+          add(legend, 'strong', '', OWN_KINDS.puberty.mark);
+          legend.appendChild(doc.createTextNode(' — ocena pokwitaniowa tylko w pojedynczym badaniu. '));
+        }
+        if (marks.single) {
+          add(legend, 'strong', '', OWN_KINDS.single.mark);
+          legend.appendChild(doc.createTextNode(' — pełna ocena tylko w pojedynczym badaniu. '));
+        }
+        legend.appendChild(doc.createTextNode((marks.puberty || marks.single ? 'Pozostałe badania pakiet' : 'Badania pakiet')
+          + ' ocenia normą dla wieku, płci i stadium z karty pacjenta.'));
+      }
+
+      // Otwarte są grupy z zaznaczonymi badaniami; przy pustym pakiecie — pierwsza.
+      function openGroups() {
+        var draft = state.draft, any = false;
+        parts.creatorGroups.forEach(function (group) {
+          var selected = !!draft && group.items.some(function (id) { return draft.analytes.indexOf(id) !== -1; });
+          group.box.open = selected;
+          any = any || selected;
+        });
+        if (!any && parts.creatorGroups[0]) parts.creatorGroups[0].box.open = true;
+      }
+      function filterCatalog() {
+        var query = model().searchKey(parts.creatorSearch.value), any = false;
+        parts.creatorGroups.forEach(function (group) {
+          var visible = 0;
+          group.items.forEach(function (id) {
+            var option = parts.creatorOptions[id];
+            var match = !query || option.key.indexOf(query) !== -1;
+            option.label.hidden = !match;
+            if (match) visible++;
+          });
+          group.box.hidden = !visible;
+          if (query && visible) group.box.open = true;
+          any = any || visible > 0;
+        });
+        parts.creatorNoMatch.hidden = any;
+      }
+
+      // pkg: własny pakiet do edycji; bez niego — nowy pakiet.
+      function openCreator(pkg) {
+        var m = model();
+        if (state.busy || state.saving || !m || !state.custom) return;
+        var editing = !!pkg && !pkg.builtin;
+        if (!editing && state.custom.packages.length >= m.LIMITS.packages) {
+          state.pickerNote = 'Możesz mieć najwyżej ' + m.LIMITS.packages + ' własnych pakietów. Usuń któryś, żeby dodać nowy.';
+          refresh();
+          return;
+        }
+        state.pickerNote = '';
+        buildCreator();
+        state.view = 'creator';
+        state.draft = {
+          id: editing ? pkg.id : null, original: editing ? pkg.label : '', name: editing ? pkg.label : '',
+          // Do kreatora trafiają badania, które zna przelicznik — w kolejności pakietu.
+          analytes: editing ? pkg.analytes.filter(function (id) { return !!parts.creatorOptions[id]; }) : [],
+          touched: {}, confirm: false, error: ''
+        };
+        parts.creatorName.value = state.draft.name;
+        parts.creatorListSig = null;
+        parts.creatorSearch.value = '';
+        openGroups();
+        filterCatalog();
+        refresh();
+        try { parts.creatorName.focus(); } catch (_) { /* fokus pomocniczy */ }
+      }
+      function closeCreator(focus) {
+        state.view = 'form';
+        state.draft = null;
+        state.saving = false;
+        if (focus) w.setTimeout(function () { try { parts.select.focus(); } catch (_) { /* fokus pomocniczy */ } }, 0);
+      }
+      function creatorCheck() {
+        var draft = state.draft;
+        return model().validatePackage({ name: draft.name, analytes: draft.analytes, id: draft.id, custom: state.custom, data: DATA, converter: converter() });
+      }
+      function toggleAnalyte(id, on) {
+        var draft = state.draft;
+        if (!draft || state.saving) { refresh(); return; }
+        var at = draft.analytes.indexOf(id);
+        if (on && at === -1 && draft.analytes.length < model().LIMITS.analytes) draft.analytes.push(id);
+        if (!on && at !== -1) draft.analytes.splice(at, 1);
+        draft.touched.analytes = true;
+        draft.error = '';
+        refresh();
+      }
+      function moveAnalyte(id, direction) {
+        var draft = state.draft;
+        if (!draft || state.saving) return;
+        var at = draft.analytes.indexOf(id), target = at + direction;
+        if (at === -1 || target < 0 || target >= draft.analytes.length) return;
+        draft.analytes.splice(target, 0, draft.analytes.splice(at, 1)[0]);
+        draft.error = '';
+        refresh();
+        // Lista powstaje od nowa: fokus wraca na przycisk przesuniętego badania (albo sąsiedni, gdy ten jest już nieczynny).
+        try {
+          var line = parts.creatorList.querySelector('[data-analyte="' + id + '"]');
+          var buttons = line ? line.querySelectorAll('button') : [];
+          var wanted = buttons[direction < 0 ? 0 : 1], other = buttons[direction < 0 ? 1 : 0];
+          (wanted && !wanted.disabled ? wanted : other).focus();
+        } catch (_) { /* fokus pomocniczy */ }
+      }
+      function drawCreator() {
+        var m = model(), draft = state.draft;
+        if (!draft) return;
+        var check = creatorCheck();
+        parts.creatorTitle.textContent = draft.id ? 'Edytuj pakiet: ' + draft.original : 'Nowy pakiet';
+        // „Podaj nazwę” dopiero po wyjściu z pola albo próbie zapisu; powtórzona nazwa — od razu.
+        var nameError = check.errors.name && (draft.touched.name || m.searchKey(draft.name)) ? check.errors.name : '';
+        parts.creatorNameError.hidden = !nameError;
+        parts.creatorNameError.textContent = nameError;
+        parts.creatorName.setAttribute('aria-invalid', nameError ? 'true' : 'false');
+        parts.creatorName.disabled = state.saving;
+
+        // Lista powstaje od nowa tylko po zmianie składu albo kolejności: przebudowa przy każdym odświeżeniu
+        // (np. po wyjściu z pola nazwy) zabierałaby przycisk spod kliknięcia.
+        var listSignature = draft.analytes.join(',');
+        var rebuild = listSignature !== parts.creatorListSig;
+        parts.creatorListSig = listSignature;
+        if (rebuild) parts.creatorList.textContent = '';
+        var own = [];
+        draft.analytes.forEach(function (id, index) {
+          var option = parts.creatorOptions[id];
+          if (!option) return;
+          var item = option.item;
+          if (item.own) own.push(item.short);
+          if (!rebuild) return;
+          var line = add(parts.creatorList, 'li', 'lab-pkg-creator-item');
+          line.setAttribute('data-analyte', id);
+          add(line, 'span', 'lab-pkg-creator-item-num', (index + 1) + '.');
+          var caption = add(line, 'div', 'lab-pkg-creator-item-text');
+          add(caption, 'span', 'lab-pkg-creator-item-name', item.label);
+          add(caption, 'span', 'lab-pkg-creator-item-kind' + (item.own ? ' is-own' : ''), item.own && OWN_KINDS[item.own] ? OWN_KINDS[item.own].badge : 'ocena w pakiecie');
+          var actions = add(line, 'div', 'lab-pkg-creator-item-actions');
+          var up = button(actions, 'lab-pkg-icon-btn', '↑', function () { moveAnalyte(id, -1); });
+          up.setAttribute('aria-label', 'Przesuń ' + item.short + ' w górę');
+          var down = button(actions, 'lab-pkg-icon-btn', '↓', function () { moveAnalyte(id, 1); });
+          down.setAttribute('aria-label', 'Przesuń ' + item.short + ' w dół');
+          var remove = button(actions, 'lab-pkg-icon-btn', '×', function () { toggleAnalyte(id, false); });
+          remove.setAttribute('aria-label', 'Usuń ' + item.short + ' z pakietu');
+        });
+        // Pierwsze badanie nie idzie wyżej, ostatnie — niżej; w trakcie zapisu lista jest nieczynna.
+        Array.prototype.forEach.call(parts.creatorList.children, function (line, index, lines) {
+          var buttons = line.querySelectorAll('button');
+          buttons[0].disabled = state.saving || index === 0;
+          buttons[1].disabled = state.saving || index === lines.length - 1;
+          buttons[2].disabled = state.saving;
+        });
+        var count = draft.analytes.length, full = count >= m.LIMITS.analytes;
+        parts.creatorCount.textContent = count + ' z ' + m.LIMITS.analytes;
+        parts.creatorEmpty.hidden = count > 0;
+        parts.creatorLimit.hidden = !full;
+        var listError = check.errors.analytes && draft.touched.analytes ? check.errors.analytes : '';
+        parts.creatorListError.hidden = !listError;
+        parts.creatorListError.textContent = listError;
+        parts.creatorOwnNote.hidden = !own.length;
+        parts.creatorOwnNote.textContent = own.length
+          ? own.join(', ') + ' — w pakiecie bez oceny aplikacji. Zapiszesz wartość i, jeśli chcesz, normę z wydruku; ocenę z wiekiem, stadium pokwitania i leczeniem otworzysz jednym kliknięciem w pojedynczym badaniu.'
+          : '';
+        Object.keys(parts.creatorOptions).forEach(function (id) {
+          var option = parts.creatorOptions[id], checked = draft.analytes.indexOf(id) !== -1;
+          option.check.checked = checked;
+          option.check.disabled = state.saving || (!checked && full);
+        });
+
+        parts.creatorEditNote.hidden = !draft.id;
+        parts.creatorSave.textContent = state.saving ? 'Zapisuję…' : draft.id ? 'Zapisz zmiany' : 'Zapisz pakiet';
+        parts.creatorSave.disabled = state.saving || !check.ok;
+        parts.creatorCancel.disabled = state.saving;
+        parts.creatorDelete.hidden = !draft.id || draft.confirm;
+        parts.creatorDelete.disabled = state.saving;
+        // Czego brakuje do zapisu — bez powtarzania komunikatów widocznych już przy polach.
+        var missing = [nameError ? '' : check.errors.name, listError ? '' : check.errors.analytes, check.errors.limit].filter(Boolean);
+        parts.creatorHint.hidden = !missing.length;
+        parts.creatorHint.textContent = missing.join(' ');
+        parts.creatorError.hidden = !draft.error;
+        parts.creatorError.textContent = draft.error;
+        parts.creatorConfirm.hidden = !draft.confirm;
+        parts.creatorConfirmTitle.textContent = 'Usunąć pakiet „' + draft.original + '”?';
+        parts.creatorDeleteConfirm.disabled = state.saving;
+        parts.creatorDeleteCancel.disabled = state.saving;
+      }
+      /* Zapis listy własnych pakietów na koncie. Preferencja trafia do konta przez sejf, więc najpierw musi być
+       * załadowany i odblokowany stos konta (jak przy zapisie wyników); bez niego nic się nie zapisuje. */
+      function persistCustom(custom) {
+        try { if (w.VildaSession && typeof w.VildaSession.ensureAuthLoaded === 'function') w.VildaSession.ensureAuthLoaded(); } catch (_) { /* zapis sprawdzi sejf */ }
+        return waitForVault(VAULT_WAIT_MS).then(function (vault) {
+          var unlocked;
+          try { unlocked = !!vault && typeof vault.isUnlocked === 'function' && vault.isUnlocked(); } catch (_) { unlocked = false; }
+          return unlocked && loggedIn() && model().writeCustom(persistence(), custom) === true;
+        }).catch(function () { return false; });
+      }
+      function saveDraft() {
+        var m = model(), draft = state.draft;
+        if (!draft || state.saving) return;
+        draft.touched = { name: true, analytes: true };
+        var result = m.savePackage({ name: draft.name, analytes: draft.analytes, id: draft.id, custom: state.custom, data: DATA, converter: converter() });
+        if (!result.ok) { refresh(); return; }
+        var name = result.custom.packages.filter(function (pkg) { return pkg.id === result.id; })[0].name;
+        state.saving = true;
+        draft.error = '';
+        refresh();
+        persistCustom(result.custom).then(function (written) {
+          if (state.draft !== draft) return;
+          state.saving = false;
+          if (!written) {
+            draft.error = 'Nie udało się zapisać pakietu na koncie — sprawdź, czy jesteś zalogowany, i spróbuj ponownie.';
+            refresh();
+            return;
+          }
+          closeCreator(true);
+          loadPackages();
+          selectPackage(result.id);
+          m.rememberPackage(persistence(), result.id);
+          refresh();
+          toast('✓ Zapisano pakiet: ' + name);
+        });
+      }
+      function deleteDraft() {
+        var m = model(), draft = state.draft;
+        if (!draft || !draft.id || state.saving) return;
+        var name = draft.original;
+        state.saving = true;
+        draft.error = '';
+        refresh();
+        persistCustom(m.removePackage(state.custom, draft.id)).then(function (written) {
+          if (state.draft !== draft) return;
+          state.saving = false;
+          if (!written) {
+            draft.confirm = false;
+            draft.error = 'Nie udało się usunąć pakietu z konta — sprawdź, czy jesteś zalogowany, i spróbuj ponownie.';
+            refresh();
+            return;
+          }
+          closeCreator(true);
+          loadPackages();
+          selectPackage(state.packages[0] ? state.packages[0].id : null);
+          if (state.pkg) m.rememberPackage(persistence(), state.pkg.id);
+          refresh();
+          toast('Usunięto pakiet: ' + name);
+        });
       }
 
       // ── Tryb pracy i adres ──
@@ -1304,11 +2087,12 @@
         // Wejście w pakiet czyta wyniki pacjenta od nowa — w trybie pojedynczym mógł dojść przypięty wynik.
         if (entering) state.previousFor = null;
         refresh();
-        if (focus && state.mode === 'package' && !state.gate && state.rows.length) {
+        if (focus && state.mode === 'package' && !state.gate && state.view !== 'creator' && state.rows.length) {
           try { parts.inputs[state.rows[0].id].focus(); } catch (_) { /* fokus pomocniczy */ }
         }
       }
-      // ?pakiet=<slug> otwiera pakiet (np. ze skrótu w zakładce „Badania”); ?badanie=<id> wraca do pojedynczego badania.
+      // ?pakiet=<slug> otwiera pakiet (np. ze skrótu w zakładce „Badania”; własny pakiet — po identyfikatorze);
+      // ?badanie=<id> wraca do pojedynczego badania.
       function applyDeepLink(target) {
         var m = model(), wanted, single;
         try {
@@ -1317,7 +2101,16 @@
           wanted = search.get('pakiet') || hash.get('pakiet');
           single = search.get('badanie') || hash.get('badanie');
         } catch (_) { wanted = null; single = null; }
-        if (wanted && m && state.pkg && m.findPackage(DATA, wanted) === state.pkg) { setMode('package', true); return; }
+        if (wanted && m) {
+          loadPackages();
+          var pkg = m.findPackage(state.packages, wanted);
+          if (pkg) {
+            if (state.view === 'creator') closeCreator();
+            selectPackage(pkg.id);
+            setMode('package', true);
+            return;
+          }
+        }
         if (single && state.mode === 'package') setMode('single');
       }
 
@@ -1326,10 +2119,11 @@
         card = byId('labPackageCard');
         singleBtn = byId('labModeSingle');
         packageBtn = byId('labModePackage');
-        var m = model(), data = DATA;
         if (!grid || !card || !singleBtn || !packageBtn) return;
-        state.pkg = m && data && Array.isArray(data.packages) ? data.packages[0] || null : null;
-        state.rows = state.pkg && converter() ? m.describeAnalytes(state.pkg, converter()) : [];
+        if (model()) {
+          loadPackages();
+          selectPackage(preferredPackage());
+        }
         singleBtn.addEventListener('click', function () { setMode('single'); });
         packageBtn.addEventListener('click', function () { setMode('package', true); });
         ['vilda:session-changed', 'vilda:auth-loaded', 'vilda:patient-loaded', 'vilda:zrodlo-pacjenta-zmienione'].forEach(function (type) {
@@ -1362,7 +2156,7 @@
 
     var instance = null;
     return Object.freeze({
-      version: '1.2.0',
+      version: '1.3.0',
       start: function () {
         if (instance || !win || !win.document) return instance;
         instance = create(win);

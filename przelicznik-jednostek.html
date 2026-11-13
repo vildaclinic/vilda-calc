@@ -78,7 +78,7 @@
   <script src="vilda_logger.js?v=2"></script>
   <script src="vilda_html.js?v=5"></script>
   <script src="vilda_schowek.js?v=5"></script>
-  <script src="vilda_persistence_adapter.js?v=35"></script>
+  <script src="vilda_persistence_adapter.js?v=36"></script>
 <script src="vilda_reminders_privacy.js?v=1"></script>
   <script src="vilda_session_bridge.js?v=202"></script>
   <script src="vilda_init.js?v=4"></script>
@@ -115,7 +115,7 @@
   <link rel="icon" type="image/png" sizes="48x48" href="/pwa-icons/icon-48x48.png">
   <link rel="icon" type="image/png" sizes="96x96" href="/pwa-icons/icon-96x96.png">
 
-  <link href="inline_przelicznik_jednostek_00.css?v=11" rel="stylesheet">
+  <link href="inline_przelicznik_jednostek_00.css?v=12" rel="stylesheet">
 
   <script src="vilda_chrome.js?v=286"></script>
   <script src="lucide.min.js?v=1" defer></script>
@@ -519,7 +519,7 @@
   <script src="lab_pin_result.js?v=11"></script>
   <script src="vilda_lab_history.js?v=6"></script>
   <script src="lab_history_strip.js?v=4"></script>
-  <script src="vilda_lab_packages.js?v=3"></script>
+  <script src="vilda_lab_packages.js?v=4"></script>
   <!-- P2 (2026-06-07): 939 KB paneli klinicznych ładowane LENIWIE — strona startuje
        bez parsowania największego pliku w aplikacji. Konsument ma bezpieczny getter
        (global_LabClinicalPanels) z fallbackiem do zwykłego wyszukiwania, więc okno
@@ -655,6 +655,14 @@
     }
     function isPubertyReferenceSubstance(substance) {
       return isPubertySubstance(substance);
+    }
+    // LAB-PAKIETY PR4: badania, które pojedyncze badanie ocenia po swojemu — LH, FSH, inhibina B i testosteron
+    // całkowity silnikami pokwitaniowymi ('puberty'), AMH własnym odniesieniem ('single'). Te same dwa warunki
+    // co w captureLabRange: przypięcie nie zapisuje dla nich zakresu katalogu, a pakiet badań nie daje im
+    // oceny (vilda_lab_packages.js) — zapisuje wartość i prowadzi do pojedynczego badania.
+    function ownAssessmentKind(substance) {
+      if (isPubertySubstance(substance)) return 'puberty';
+      return substance && substance.id === 'amh' ? 'single' : '';
     }
     function readPubertyPatientContext() {
       var shared = null, patient = null, puberty = null, pubertyState = null, source = null;
@@ -1185,7 +1193,11 @@
       return null;
     }
     function lifespanLegacyAge(source) {
-      var local = localOverride.age != null;
+      return lifespanAgeFor(source, localOverride.age != null);
+    }
+    // local: wiek z lokalnego nadpisania przelicznika. Pakiet badań (getPackagePatient) pyta z local = false —
+    // liczy się dla niego wyłącznie wiek z danych pacjenta.
+    function lifespanAgeFor(source, local) {
       var rawYears = local ? overrideAgeEl.value : source.ageYears;
       var rawMonths = local ? overrideAgeMonthsEl && overrideAgeMonthsEl.value : source.ageMonths;
       var years = rawYears == null || rawYears === '' ? null : Number(rawYears);
@@ -1754,6 +1766,7 @@
     // Decyzja 6.3 (LAB-HISTORIA): przypięcie zapisuje zakres, którego ta strona właśnie użyła dla wyniku —
     // te same selectRange i evaluate z tym samym kontekstem pacjenta co pasek normy i status wyniku.
     // LH, FSH, inhibina B i testosteron mają zapis oceny, AMH — odniesienia; dla nich nic się tu nie dokłada.
+    // Ten sam warunek nazywa ownAssessmentKind (pakiet badań pyta o niego przez VildaLabConverterRuntime).
     function captureLabRange(result) {
       var snapshot = window.VildaLabRangeSnapshot;
       if (!result || !currentSubstance || result.testKey !== currentSubstance.id) return undefined;
@@ -2311,10 +2324,25 @@
     /**
      * LAB-PAKIETY PR1 — pacjent dla pakietu badań: dane z karty (sharedUserData) i ten sam etap życia
      * co w getEffectivePatient, ale bez lokalnych nadpisań przelicznika i bez atrybutów pomiaru
-     * (pora, protokół, metoda) — pakiet nie ma tych pól. Zwraca pacjenta dla LabUnitConverter
+     * (pora, protokół) — pakiet nie ma tych pól. Zwraca pacjenta dla LabUnitConverter
      * oraz opis do pokazania w karcie pakietu.
+     * LAB-PAKIETY PR4 — analyteId: badanie, dla którego pakiet pyta o pacjenta. Dwa badania mają w pojedynczym
+     * badaniu własne wejście i pakiet bierze je stąd, żeby oceniać tak samo jak stan domyślny pojedynczego badania:
+     * metoda oznaczenia (17-OHP: domyślna z DEFAULT_METHOD) oraz estradiol — wiek jako przedział z danych
+     * pacjenta, dokładnie jak w getEffectivePatient, tylko bez lokalnego nadpisania wieku i płci.
      */
-    function getPackagePatient() {
+    function packageMethod(analyteId) {
+      var options = analyteId ? METHOD_OPTIONS[analyteId] : null;
+      return options ? (DEFAULT_METHOD[analyteId] || (options[0] && options[0].value) || null) : null;
+    }
+    // Kontekst pokwitaniowy czytany tak, jakby w pojedynczym badaniu wybrano dane badanie (od wyboru zależy
+    // zakres wieku noworodkowego); wybór pojedynczego badania zostaje nietknięty.
+    function readPubertyPatientContextFor(substance) {
+      var selected = currentSubstance;
+      currentSubstance = substance;
+      try { return readPubertyPatientContext(); } finally { currentSubstance = selected; }
+    }
+    function getPackagePatient(analyteId) {
       syncPatientIdentity();
       var shared = readPatientFromShared() || {};
       var p = {
@@ -2324,7 +2352,7 @@
         cycle_phase: null,
         time_of_day: null,
         test_protocol: null,
-        method: null
+        method: packageMethod(analyteId)
       };
       // Ta sama reguła etapu życia co w getEffectivePatient (bez wieku i stadium: dorosły).
       if (typeof p.age === 'number') {
@@ -2340,7 +2368,19 @@
       p._shared_tanner_kind = shared.tannerKind || null;
       p._shared_tanner_current = shared.tannerCurrent == null ? null : shared.tannerCurrent;
       p._tanner_overridden = false;
-      return { patient: p, description: describePatient(p) };
+      var description = describePatient(p);
+      if (analyteId === 'estradiol') {
+        // Ten sam nośnik wieku co blok estradiolu w getEffectivePatient (rok lub miesiąc nie staje się dniem).
+        var e2Source = readPubertyPatientContextFor(Conv.find('estradiol'));
+        var e2Age = e2Source.sourceStatus === 'ready' && lifespanAgeFor(e2Source, false).resolved;
+        p.age = e2Age && e2Age.status === 'known' ? e2Age.lowerYears : null;
+        p.sex = e2Source.sex || null;
+        if (e2Age && e2Age.status === 'known') {
+          p.ageUpperYears = e2Age.upperYears;
+          p.ageUpperInclusive = e2Age.upperInclusive === true;
+        }
+      }
+      return { patient: p, description: description };
     }
 
     /**
@@ -4531,7 +4571,13 @@
     window.VildaLabConverterRuntime = {
       getSubstanceId: function () { return currentSubstance ? currentSubstance.id : null; },
       // LAB-PAKIETY PR1: pakiet badań ocenia wyniki dla pacjenta z karty (vilda_lab_packages.js).
-      getPackagePatient: function () { return getPackagePatient(); }
+      // PR4: analyteId — badanie, którego dotyczy pytanie (metoda 17-OHP, nośnik wieku estradiolu).
+      getPackagePatient: function (analyteId) { return getPackagePatient(analyteId); },
+      // LAB-PAKIETY PR4: 'puberty' | 'single' | '' — czy pojedyncze badanie ocenia to badanie po swojemu.
+      ownAssessmentKind: function (analyteId) { return ownAssessmentKind(analyteId ? { id: String(analyteId) } : null); },
+      // LAB-PAKIETY PR4: link „Oceń … w pojedynczym badaniu” — ta sama droga co ?badanie=<id>
+      // (wpisanej już wartości innego badania nie zmienia po cichu).
+      openSingle: function (analyteId) { applySubstanceDeepLink({ search: '?badanie=' + encodeURIComponent(String(analyteId || '')), hash: '' }); }
     };
     function announceSubstance() {
       var id = currentSubstance ? currentSubstance.id : null;

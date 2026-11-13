@@ -2469,6 +2469,7 @@
     }
 
     .lab-pkg-form,
+    .lab-pkg-entry,
     .lab-pkg-results {
       display: flex;
       flex-direction: column;
@@ -2486,21 +2487,72 @@
       gap: var(--space-8px);
     }
 
-    .lab-pkg-chip {
-      display: inline-flex;
-      align-items: center;
-      min-height: 36px;
-      padding: 0 var(--space-14px);
-      border-radius: var(--radius-8);
-      background: var(--primary);
-      color: #fff;
-      font-size: .95rem;
+    /* LAB-PAKIETY PR4: wybór pakietu — lista rozwijana (strzałka 14 px od krawędzi, reguła
+       „#labResultsCard select” wyżej), „Nowy pakiet”, pod spodem skład i „Edytuj pakiet”. */
+    .lab-pkg-choice select.lab-pkg-select {
+      flex: 1 1 180px;
+      width: auto;
+      min-width: 0;
+      min-height: 44px;
+      border: 1.5px solid var(--primary);
+      color: var(--text-strong);
+      font-size: 1rem;
       font-weight: 600;
+    }
+
+    #labPackageCard button.lab-pkg-btn-dashed {
+      min-height: 44px;
+      padding: 0 var(--space-14px);
+      background: #fff !important;
+      color: var(--primary) !important;
+      border: 1.5px dashed #7fb9bd !important;
+      border-radius: var(--radius-8) !important;
+      font-weight: 500;
+    }
+
+    .lab-pkg-contents {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0 var(--space-14px);
+      margin-top: var(--space-4px);
     }
 
     .lab-pkg-chip-list {
       font-size: .9rem;
       color: var(--text-2);
+    }
+
+    /* Przycisk o wyglądzie łącza: „Edytuj pakiet”, „Oceń … w pojedynczym badaniu”. */
+    #labPackageCard button.lab-pkg-link {
+      min-height: 44px;
+      margin: 0;
+      padding: 0;
+      background: none !important;
+      color: #006b73 !important;
+      border: 0 !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+      font-family: inherit;
+      font-size: .88rem;
+      font-weight: 500;
+      line-height: 1.3;
+      text-align: left;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      cursor: pointer;
+    }
+
+    #labPackageCard button.lab-pkg-link:disabled {
+      color: #6b7a7c !important;
+      cursor: not-allowed;
+    }
+
+    #labPackageCard p.lab-pkg-picker-note {
+      color: #8a4b12;
     }
 
     .lab-pkg-rows {
@@ -2544,6 +2596,23 @@
       grid-column: 2 / -1;
       font-size: .82rem;
       color: var(--error);
+    }
+
+    /* LAB-PAKIETY PR4: pakiet z dłuższą nazwą badania („Estradiol”, „Testosteron całkowity”) — nazwa stoi
+       nad polem, w całej szerokości wiersza; pola i jednostki zostają w równych kolumnach. */
+    .lab-pkg-rows.is-stacked .lab-pkg-row {
+      grid-template-columns: minmax(0, 1fr) 132px;
+    }
+
+    .lab-pkg-rows.is-stacked .lab-pkg-row-label,
+    .lab-pkg-rows.is-stacked .lab-pkg-row-error,
+    .lab-pkg-norms.is-stacked .lab-pkg-norm-label,
+    .lab-pkg-norms.is-stacked .lab-pkg-norm-error {
+      grid-column: 1 / -1;
+    }
+
+    .lab-pkg-norms.is-stacked .lab-pkg-norm-row {
+      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) 132px;
     }
 
     /* LAB-PAKIETY PR2: norma laboratorium z wydruku — te same kolumny co wiersz wyniku. */
@@ -2926,6 +2995,323 @@
       font-size: .88rem;
     }
 
+    /* LAB-PAKIETY PR4: badanie bez oceny w pakiecie — wyjaśnienie i łącze do pojedynczego badania. */
+    .lab-pkg-card-note {
+      font-size: .84rem;
+      line-height: 1.45;
+      color: var(--text-2);
+    }
+
+    #labPackageCard button.lab-pkg-card-link {
+      align-self: flex-start;
+    }
+
+    /* LAB-PAKIETY PR4: kreator własnego pakietu — otwiera się w panelu pakietu zamiast formularza. */
+    .lab-pkg-creator {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-16px);
+      min-width: 0;
+    }
+
+    .lab-pkg-creator-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: var(--space-4px) var(--space-14px);
+      padding-bottom: var(--space-12px);
+      border-bottom: .5px solid rgba(0,131,141,.1);
+    }
+
+    #labPackageCard h2.lab-pkg-creator-title {
+      margin: 0;
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--text-heading);
+      overflow-wrap: anywhere;
+    }
+
+    #labPackageCard .lab-pkg-creator-head p.lab-pkg-hint,
+    #labPackageCard .lab-pkg-creator-field p.lab-pkg-hint,
+    #labPackageCard .lab-pkg-creator-picked p.lab-pkg-hint,
+    #labPackageCard .lab-pkg-creator-main > p.lab-pkg-hint,
+    #labPackageCard .lab-pkg-creator-catalog p.lab-pkg-hint {
+      margin-top: 0;
+    }
+
+    .lab-pkg-creator-body {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1-25);
+      min-width: 0;
+    }
+
+    .lab-pkg-creator-main,
+    .lab-pkg-creator-catalog {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-12px);
+      min-width: 0;
+    }
+
+    .lab-pkg-creator-field input.lab-pkg-creator-name,
+    .lab-pkg-creator-catalog input.lab-pkg-creator-search {
+      width: 100%;
+      min-height: 44px;
+      box-sizing: border-box;
+      padding: var(--space-8px) 13px;
+      border: .5px solid rgba(0,131,141,.25);
+      border-radius: var(--radius-8);
+      background: #fff;
+      color: var(--text-strong);
+      font-family: inherit;
+      font-size: 1rem;
+    }
+
+    .lab-pkg-creator-field input.lab-pkg-creator-name {
+      font-weight: 500;
+    }
+
+    .lab-pkg-creator-field input.lab-pkg-creator-name[aria-invalid=true] {
+      border-color: var(--error);
+    }
+
+    .lab-pkg-creator-error {
+      font-size: .84rem;
+      color: var(--error);
+    }
+
+    .lab-pkg-creator-picked {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-8px);
+      min-width: 0;
+    }
+
+    .lab-pkg-creator-picked-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: var(--space-4px) var(--space-10px);
+    }
+
+    .lab-pkg-creator-count {
+      font-size: .8rem;
+      color: var(--text-muted);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .lab-pkg-creator-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-6px);
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .lab-pkg-creator-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-10px);
+      min-width: 0;
+      padding: var(--space-6px) var(--space-8px) var(--space-6px) var(--space-12px);
+      border: var(--border-hairline) solid var(--line);
+      border-radius: var(--radius-10);
+      background: #fff;
+    }
+
+    .lab-pkg-creator-item-num {
+      flex: none;
+      min-width: 1.4em;
+      font-size: .9rem;
+      color: var(--text-muted);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .lab-pkg-creator-item-text {
+      display: flex;
+      flex: 1 1 auto;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .lab-pkg-creator-item-name {
+      font-size: .98rem;
+      font-weight: 600;
+      color: var(--text-strong);
+      overflow-wrap: anywhere;
+    }
+
+    .lab-pkg-creator-item-kind {
+      font-size: .78rem;
+      color: #0f6e56;
+    }
+
+    .lab-pkg-creator-item-kind.is-own {
+      color: var(--text-2);
+    }
+
+    .lab-pkg-creator-item-actions {
+      display: flex;
+      flex: none;
+      gap: var(--space-4px);
+    }
+
+    #labPackageCard button.lab-pkg-icon-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 44px;
+      min-width: 44px;
+      height: 44px;
+      margin: 0;
+      padding: 0;
+      background: #fff !important;
+      color: var(--primary) !important;
+      border: var(--border-hairline) solid var(--line) !important;
+      border-radius: var(--radius-8) !important;
+      box-shadow: none !important;
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+      font-family: inherit;
+      font-size: 1.1rem;
+      line-height: 1;
+      cursor: pointer;
+    }
+
+    #labPackageCard button.lab-pkg-icon-btn:disabled {
+      background: var(--disabled-bg) !important;
+      color: #6b7a7c !important;
+      cursor: not-allowed;
+    }
+
+    .lab-pkg-creator-own-note {
+      padding: var(--space-10px) var(--space-12px);
+      border-radius: var(--radius-8);
+      background: #eef4f3;
+      font-size: .84rem;
+      line-height: 1.45;
+      color: var(--text-2);
+    }
+
+    .lab-pkg-creator-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-8px);
+    }
+
+    #labPackageCard .lab-pkg-creator-actions button.lab-pkg-btn-primary,
+    #labPackageCard .lab-pkg-creator-actions button.lab-pkg-btn-danger {
+      flex: 1 1 160px;
+    }
+
+    #labPackageCard button.lab-pkg-btn-danger-ghost {
+      background: transparent !important;
+      color: #a12626 !important;
+      border: 1.5px solid #c98a8a !important;
+      font-weight: 500;
+    }
+
+    #labPackageCard button.lab-pkg-btn-danger {
+      background: #a12626 !important;
+      color: #fff !important;
+      border: 0 !important;
+    }
+
+    .lab-pkg-creator-confirm {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-10px);
+      padding: var(--space-12px) var(--space-14px);
+      border: var(--border-hairline) solid #e4c9c9;
+      border-radius: var(--radius-10);
+      background: #fdf6f6;
+    }
+
+    .lab-pkg-creator-confirm-title {
+      font-size: .9rem;
+      font-weight: 600;
+      color: #7a2222;
+    }
+
+    .lab-pkg-creator-confirm-text {
+      font-size: .84rem;
+      line-height: 1.45;
+      color: #5c3a3a;
+    }
+
+    .lab-pkg-creator-groups {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-6px);
+    }
+
+    .lab-pkg-creator-group {
+      border: var(--border-hairline) solid var(--line);
+      border-radius: var(--radius-8);
+      background: #fff;
+    }
+
+    .lab-pkg-creator-group-title {
+      min-height: 44px;
+      box-sizing: border-box;
+      padding: var(--space-12px);
+      font-size: .86rem;
+      font-weight: 600;
+      line-height: 1.4;
+      color: var(--text-heading);
+      cursor: pointer;
+    }
+
+    .lab-pkg-creator-group-count {
+      margin-left: var(--space-6px);
+      font-weight: 400;
+      color: var(--text-muted);
+    }
+
+    .lab-pkg-creator-group-items {
+      display: flex;
+      flex-direction: column;
+      padding: 0 var(--space-12px) var(--space-8px);
+    }
+
+    .lab-pkg-creator-option {
+      display: flex;
+      align-items: center;
+      gap: var(--space-10px);
+      min-height: 44px;
+      font-size: .95rem;
+      color: var(--text-strong);
+      cursor: pointer;
+    }
+
+    .lab-pkg-creator-option input.lab-pkg-creator-check {
+      flex: none;
+      width: 20px;
+      height: 20px;
+      margin: 0;
+      padding: 0;
+      accent-color: var(--primary);
+    }
+
+    .lab-pkg-creator-option-text {
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+
+    .lab-pkg-creator-mark {
+      font-size: .82rem;
+      color: var(--text-muted);
+    }
+
+    .lab-pkg-creator-legend strong {
+      font-weight: 600;
+      color: var(--text-2);
+    }
+
     @container lab-warsztat (min-width: 1000px) {
       /* Zakładki stoją w pierwszej kolumnie nagłówka: prawa krawędź równo z polami formularza
          (wcięcie panelu 1.7rem), najwyżej 560 px. Bramka pakietu ma tę samą szerokość. */
@@ -2958,6 +3344,14 @@
       /* Odstęp kolumn = dwa wcięcia panelu: lewa kolumna pakietu ma szerokość formularza pojedynczego
          badania i zakładek nad nią, prawa zaczyna się tam, gdzie treść panelu wyniku. */
       .lab-pkg-body {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        align-items: start;
+        gap: 3.4rem;
+      }
+
+      /* Kreator w tych samych dwóch kolumnach: po lewej pakiet, po prawej katalog badań. */
+      .lab-pkg-creator-body {
         display: grid;
         grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
         align-items: start;
@@ -3001,6 +3395,28 @@
       .lab-pkg-norm-unit {
         padding-left: 0;
         font-size: .82rem;
+      }
+
+      .lab-pkg-rows.is-stacked .lab-pkg-row {
+        grid-template-columns: minmax(0, 1fr) 104px;
+      }
+
+      .lab-pkg-norms.is-stacked .lab-pkg-norm-row {
+        grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) 56px;
+      }
+
+      /* Kreator na telefonie: nazwa badania w całej szerokości, przyciski kolejności pod nią. */
+      .lab-pkg-creator-item {
+        flex-wrap: wrap;
+      }
+
+      .lab-pkg-creator-item-text {
+        flex: 1 1 calc(100% - 3em);
+      }
+
+      .lab-pkg-creator-item-actions {
+        flex: 1 1 100%;
+        justify-content: flex-end;
       }
 
       .lab-pkg-card-value {

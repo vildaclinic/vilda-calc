@@ -928,8 +928,8 @@
   "sha256": "22c5b3ec86177c574023351c8d5a0576a49652efbc28df0df99288778cfc526d"
  },
  "inline_przelicznik_jednostek_00.css": {
-  "v": 11,
-  "sha256": "6fb87102e80daf84ac48b4abde567a3ac45ea726c8475559d1b600beca42f1e3"
+  "v": 12,
+  "sha256": "d163d3cb8255ac5f0affdc97469dbbb1824677870d6f5d82b6e81f635430c1a2"
  },
  "inline_regulamin_00.css": {
   "v": 1,
@@ -1652,8 +1652,8 @@
   "sha256": "5cc7f23b6c4e6f9f25331aeeded8fd5d58d64148bf8d9ab09177d7785963088c"
  },
  "vilda_lab_packages.js": {
-  "v": 3,
-  "sha256": "af8b8117472afc9a9bcdb5877f735db57beb9fb5a60be5f55b926cf8068b1e7e"
+  "v": 4,
+  "sha256": "3ce4d206540d40b92ff7491310dd4a42b3ac2097676de66b9ba18a95c3e8c3c6"
  },
  "vilda_lab_profile_preferences.js": {
   "v": 1,
@@ -1824,8 +1824,8 @@
   "sha256": "980b1484052e005a1af0ded9f28e9180fc733f70d2cc8def9f3cab1299b157cf"
  },
  "vilda_persistence_adapter.js": {
-  "v": 35,
-  "sha256": "cd2ca2681882619759a9fee093bf46ea10d51d140104a41bd40916a29e5a2ec0"
+  "v": 36,
+  "sha256": "a05292966e7525da53693d0677a4df5c49eaa536a02918316d6fe0d065ba86a1"
  },
  "vilda_phone_landscape.css": {
   "v": 2,

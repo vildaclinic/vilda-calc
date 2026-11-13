@@ -23,7 +23,11 @@ test('ocena na żywo jak w pojedynczym badaniu i zapis wypełnionych wyników do
   await expect(page.locator('#labResultsCard h1')).toHaveText('Przelicznik jednostek laboratoryjnych');
   await expect(page.locator('#labResultsCard h1')).toBeVisible();
   await expect(page.locator('h1')).toHaveCount(1);
-  await expect(page.locator('#labPkgName')).toHaveText('Tarczyca');
+  // Pakiet wybiera lista rozwijana (PR4); „Tarczyca” to pakiet wbudowany — bez „Edytuj pakiet”.
+  await expect(page.locator('#labPkgSelect')).toHaveValue('thyroid');
+  await expect(page.locator('#labPkgSelect option:checked')).toHaveText('Tarczyca');
+  await expect(page.locator('#labPkgContents')).toHaveText('TSH · fT4 · fT3');
+  await expect(page.locator('#labPkgEdit')).toBeHidden();
   await expect(karta.locator('.lab-pkg-row-label')).toHaveText(['TSH', 'fT4', 'fT3']);
   await expect(page.locator('#labPkgPatient')).toHaveText('Kobieta · 12.3 lat · wiek dziecięcy/młodzieńczy');
   // Jednostki domyślne to SI katalogu; data pobrania — dziś; bez wyników zapis jest nieczynny.
@@ -194,7 +198,11 @@ test('zalogowany bez pacjenta: bramka i lista pacjentów; wyniki nie przechodzą
   const karta = kartaPakietu(page);
   await expect(page.locator('#labModePackage')).not.toHaveClass(/is-locked/);
   await expect(karta.locator('.lab-pkg-gate-title')).toHaveText('Nie wybrano pacjenta');
-  await expect(karta.locator('input, select')).toHaveCount(0);
+  // Bez pacjenta nie ma pól wyników; zostaje wybór pakietu, bo pakiety należą do konta (PR4).
+  await expect(karta.locator('input')).toHaveCount(0);
+  await expect(karta.locator('select')).toHaveCount(1);
+  await expect(page.locator('#labPkgSelect')).toHaveValue('thyroid');
+  await expect(page.locator('#labPkgNew')).toBeVisible();
   // „Wybierz pacjenta” to ta sama droga co „Baza pacjentów” w menu.
   await page.locator('#labPkgGateAction').click();
   await expect(page.locator('.vilda-auth-title', { hasText: 'Baza pacjentów' })).toBeVisible();
