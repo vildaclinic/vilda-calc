@@ -1526,6 +1526,107 @@ przejście przez prawdziwe `VildaSchowek.dlaSystemuSzpitalnego` i stronę kodow�
 Windows-1250), e2e `tests/e2e/lab-pakiet-kopiowanie.spec.mjs`
 i `lab-pakiet-kopiowanie-mobile.spec.mjs`.
 
+### LAB-PAKIETY PR4 — kreator własnych pakietów badań (`vilda_lab_packages.js` 1.3.0, 2026-11-13)
+
+**Klasyfikacja: zmiana funkcjonalna z wpływem klinicznym na to, gdzie i w jakim
+kontekście aplikacja ocenia wynik — bez nowych norm.** Nie ma nowego zakresu,
+progu, współczynnika, jednostki ani zaokrąglenia: pakiet nadal ocenia wynik
+wyłącznie silnikiem pojedynczego badania (`LabUnitConverter`, dane
+`lab_units_data.js`) i zapisuje ten sam zrzut normy. Zmienia się zakres:
+dotąd pakiet oceniał trzy badania („Tarczyca”), teraz lekarz może złożyć
+pakiet z dowolnych badań przelicznika, więc ocena „pakietowa” obejmuje
+kolejne badania — w kontekście opisanym niżej. Wymaga akceptacji klinicznej
+właściciela (decyzje i makieta zaakceptowane 2026-11-13; potwierdza je
+akceptacja tego PR).
+
+**Co robi.** W zakładce „Pakiet badań” pakiet wybiera lista rozwijana
+(„Wbudowane” / „Twoje pakiety”), obok „+ Nowy pakiet”; pod listą skład pakietu
+i „Edytuj pakiet”. Kreator otwiera się w tym samym panelu: nazwa (do 30
+znaków, bez powtórzeń — także z nazwą pakietu wbudowanego), lista badań
+w kolejności formularza (przesuwanie, usuwanie), katalog 34 badań przelicznika
+w jego 12 grupach z wyszukiwaniem. Limity: 1–10 badań w pakiecie, do 12
+własnych pakietów. „Tarczyca” jest pakietem wbudowanym, bez edycji
+i usuwania. Kreator nie wymaga wybranego pacjenta (wymaga zalogowania);
+wpisywanie wyników — jak dotąd — wymaga pacjenta.
+
+**Źródło medyczne i populacja:** bez zmian — wiersze norm i ich źródła są
+w `lab_units_data.js`; pakiet niczego do nich nie dokłada (AGENTS.md § 3:
+normy zawsze jako dane). Pakiet to wyłącznie lista identyfikatorów badań.
+
+**Kontekst oceny w pakiecie** (decyzja właściciela 2026-11-13, pkt 5).
+Pakiet nie ma pól pory pobrania, protokołu testu, metody ani fazy cyklu.
+Ocenia więc każdy wynik tak, jak pojedyncze badanie w stanie domyślnym — bez
+ruszania tych pól:
+
+| Badanie | Co przyjmuje pakiet | Skąd |
+|---|---|---|
+| kortyzol, ACTH, kortykosteron | zakres poranny — wiersz „domyślnie poranne” katalogu | pora pobrania niewybrana (`time_of_day: null`), jak w pojedynczym badaniu |
+| testosteron wolny i pozostałe | wiersz dla wieku, płci i stadium z karty | jak w pojedynczym badaniu |
+| 17-OH-progesteron | norma dla metody immunochemicznej (`immunoassay_pl`) | domyślna metoda pojedynczego badania (`DEFAULT_METHOD` strony) |
+| estradiol | wiek jako przedział z danych pacjenta (rok albo miesiąc nie staje się dniem), płeć z danych pacjenta | ten sam nośnik wieku co `getEffectivePatient` strony, bez lokalnego nadpisania wieku i płci |
+
+Nazwa populacji w karcie wyniku pochodzi z danych i nazywa to założenie
+(„Młodzież 11–15 lat (domyślnie poranne)”, „Immunoassay PL — …”). Wynik
+pobrany o innej porze, w teście czynnościowym albo oznaczony inną metodą
+lekarz ocenia w pojedynczym badaniu albo normą z wydruku. Pacjenta dla
+każdego badania podaje strona: `VildaLabConverterRuntime.getPackagePatient(analyteId)`.
+
+**Badania bez oceny w pakiecie.** LH, FSH, inhibinę B i testosteron całkowity
+pojedyncze badanie ocenia silnikami pokwitaniowymi (wiek, stadium, leczenie,
+kontekst próbki), a AMH — własnym odniesieniem; katalog ma dla części z nich
+stare wiersze ogólne, których pojedyncze badanie nie używa. Pakiet nie może
+dać im innej oceny niż pojedyncze badanie, więc **nie daje żadnej**: zapisuje
+wartość (bez zrzutu zakresu katalogu i bez koperty oceny — dokładnie jak
+przypięcie pomija zakres katalogu), karta wyniku mówi „bez oceny w pakiecie”
+i ma łącze „Oceń … w pojedynczym badaniu →”. Norma z wydruku działa także
+dla nich (PR2) i wtedy to ona ocenia wynik. Które to badania, mówi strona:
+`ownAssessmentKind` w `przelicznik-jednostek.html` stoi na tych samych dwóch
+warunkach co `captureLabRange` (`isPubertySubstance` oraz AMH), a pakiet pyta
+o nie przez `VildaLabConverterRuntime.ownAssessmentKind(id)`. Bez tej funkcji
+strony pakiet nie ocenia niczego (bramka „chwilowo niedostępny”). Podłączenie
+silników pokwitaniowych do pakietu to osobny, późniejszy etap.
+
+**Zapis pakietów na koncie.** Preferencja `labCustomPackages`
+(`VildaPersistence`, klasa `cloud-synced`):
+`{ schemaVersion: 1, updatedAtISO, packages: [{ id, name, analytes }] }`.
+Zapis przechodzi przez sejf do konta i synchronizuje się między urządzeniami
+tego konta jak pozostałe ustawienia; jest w pliku `.wiw`. Rozstrzyganie
+konfliktu jest na poziomie całej listy: przy zmianach z dwóch urządzeń
+offline wygrywa późniejszy zapis. Usunięcie pakietu jest zapisem krótszej
+(także pustej) listy. Pakiet nie zawiera danych pacjenta. Zmiana nazwy lub
+składu dotyczy następnych wpisów — wyniki zapisane wcześniej są zwykłymi
+notatkami „wynik-badania” i nie zależą od pakietu. Ostatnio wybrany pakiet
+pamięta urządzenie (`labPackageSettings.lastPackage`, jak jednostki).
+
+**Ograniczenia.**
+- Pakiet z badaniem, którego dana wersja przelicznika nie zna, pokazuje
+  pozostałe badania; kreator zapisuje to, co lekarz widzi na liście.
+- Formularz pakietu ma jedną datę pobrania i jeden komentarz dla wszystkich
+  badań (bez zmian od PR1).
+
+**Przykład** (fikcyjna dziewczynka 12 lat 3 mies., bez wpisanego stadium;
+pakiet „Dojrzewanie” = LH, FSH, estradiol; pobranie 17.06.2026):
+
+| Wejście | Wynik w pakiecie | Zapis `labResult` |
+|---|---|---|
+| LH 2,1 IU/L | „bez oceny w pakiecie”, łącze do pojedynczego badania | wartość i jednostka; bez `range`, `norm`, `assessment` |
+| FSH 4,5 IU/L, norma z wydruku 0,3–4 | „powyżej normy z wydruku” | `norm: "0,3–4 IU/L"`; bez `range` |
+| estradiol 60 pmol/L | „w zakresie normy”, norma 0–312 pmol/L (wiersz dla wieku przy nieznanym stadium) | zrzut normy aplikacji (`range`), identyczny z przypięciem |
+
+Drugi przykład kontrolny: estradiol 60 pmol/L, kortyzol 300 nmol/L, ACTH
+5 pmol/L, testosteron wolny 10 pmol/L i 17-OHP 3 nmol/L zapisane z pakietu
+dają notatki identyczne (tytuł, treść, `labResult` ze zrzutem normy) z tymi
+samymi wynikami przypiętymi w pojedynczym badaniu w stanie domyślnym.
+
+Testy: `tests/unit/lab-pakiety-kreator.test.mjs` — prawdziwy przelicznik,
+prawdziwe funkcje strony (`ownAssessmentKind`, `getPackagePatient`,
+`lifespanAgeFor` z silnikiem `VildaLabPuberty`), prawdziwy adapter i sejf na
+dwóch urządzeniach jednego konta (pakiet z A jest na B; zmiana i usunięcie
+wracają; wygrywa późniejszy zapis); e2e `tests/e2e/lab-pakiet-kreator.spec.mjs`
+(utworzenie, walidacja, edycja, usuwanie, praca bez pacjenta, zmiany z innego
+urządzenia, limit 12, zgodność zapisu z „Przypnij do wizyty”)
+i `lab-pakiet-kreator-mobile.spec.mjs`.
+
 ### P-LAB-WARTOSC-BEZ-JEDNOSTKI — liczba ze starszego wpisu wyniku bez jednostki (SW 1.1.279, `vilda_vault.js` 212, 2026-10-14)
 
 **Wpływ kliniczny: tak.** Zmieniają się liczby w historii wyników dla

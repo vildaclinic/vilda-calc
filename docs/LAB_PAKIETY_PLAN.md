@@ -42,6 +42,19 @@ Wyniki z oceną i normą można też od razu skopiować do dokumentacji przycisk
    porównanie z poprzednim pomiarem), a jej kopiowany tekst zasila też wiersze karty — blok badań
    wymagałby łatania zminifikowanych plików strony głównej.
 
+9. Kreator własnych pakietów (makieta desktop i telefon zaakceptowana 2026-11-13, z listą rozwijaną zamiast
+   przycisków pakietów i z poleceniem kodowania etapami):
+   - lekarz składa pakiet z badań przelicznika; nazwa do 30 znaków, do 10 badań, do 12 własnych pakietów;
+   - pakiety są **zapisane na koncie** i widoczne na urządzeniach lekarza (przy zmianach z dwóch urządzeń
+     offline wygrywa późniejsza); „Tarczyca” zostaje pakietem wbudowanym, bez edycji i usuwania;
+   - wybór pakietu to **lista rozwijana** („Wbudowane” / „Twoje pakiety”) z osobnym „+ Nowy pakiet”;
+     strzałka listy ma odstęp od prawej krawędzi pola; kreator otwiera się w zakładce (bez okna
+     modalnego) i nie wymaga wybranego pacjenta;
+   - LH, FSH, inhibina B, testosteron całkowity i AMH są w pakiecie **bez oceny**: zapisuje się wartość,
+     ocenę daje norma z wydruku albo pojedyncze badanie (łącze w karcie wyniku);
+   - kortyzol, ACTH i wolny testosteron pakiet ocenia jak dla pobrania rano, 17-OHP jak dla metody
+     immunochemicznej — czyli tak, jak pojedyncze badanie w stanie domyślnym.
+
 ## Zasady, które obowiązują każdy etap
 
 - Pakiet nie ma własnych norm, wzorów ani współczynników. Ocena i zakres pochodzą z silnika pojedynczego
@@ -61,8 +74,9 @@ Wyniki z oceną i normą można też od razu skopiować do dokumentacji przycisk
 | PR1 | Tryb „Pakiet badań”, pakiet „Tarczyca” (TSH, fT4, fT3): wartości i jednostki, data pobrania, komentarz, ocena na żywo, zapis zbiorczy do Badań, jednostki zapamiętane na urządzeniu, skrót z zakładki „Badania”, bramki bez logowania i bez pacjenta | scalony 2026-11-13 (PR #943) |
 | PR2 | „Normy z wydruku”: opcjonalne od–do dla każdego badania, w jednostce wyniku; wpisana norma zastępuje normę aplikacji dla tego wyniku, zapisuje się z nim (`labResult.norm`, bez zrzutu normy aplikacji) i jest oznaczona jako norma laboratorium; podpowiedź jednostki i normy z poprzedniego wyniku tego samego badania u pacjenta, z możliwością edycji | scalony 2026-11-13 (PR #944) |
 | zakładki | Przełącznik trybu jako zakładki w jednej karcie (decyzja 7) | scalone 2026-11-13 (PR #944) |
-| PR3 | „Kopiuj wyniki” przy pakiecie (punkt 8): tekst „Badania (pobranie …)” z wierszem na wynik, oceną poza normą i normą z ekranu; po zapisie kopiuje zapisany zestaw. Bez zmian w „Podsumowaniu wyników” | ten PR |
-| później | Pakiety definiowane przez użytkownika; pakiet „Pokwitanie” (LH, FSH, estradiol u dziewcząt, testosteron u chłopców) — wymaga silników pokwitaniowych przelicznika (osie wieku i stadium), patrz `docs/clinical/LAB_INTERPRETATION_AGENT_GUIDE.md` | pomysł, bez decyzji |
+| PR3 | „Kopiuj wyniki” przy pakiecie (punkt 8): tekst „Badania (pobranie …)” z wierszem na wynik, oceną poza normą i normą z ekranu; po zapisie kopiuje zapisany zestaw. Bez zmian w „Podsumowaniu wyników” | scalony 2026-11-13 (PR #945) |
+| PR4 | Kreator własnych pakietów, etap 1 (punkt 9): lista rozwijana pakietów, kreator w zakładce, zapis na koncie, badania „bez oceny w pakiecie” z łączem do pojedynczego badania, ocena pozostałych jak w domyślnym pojedynczym badaniu | ten PR |
+| później | Kreator, etap 2: ocena pokwitaniowa LH, FSH, inhibiny B i testosteronu w pakiecie — wymaga podłączenia silników pokwitaniowych przelicznika (osie wieku i stadium, kontekst próbki) i zapisu tej samej koperty oceny co pojedyncze badanie, patrz `docs/clinical/LAB_INTERPRETATION_AGENT_GUIDE.md` | uzgodniony kierunek, bez terminu |
 
 ## Otwarte kwestie do decyzji przy kolejnych etapach
 
@@ -78,3 +92,9 @@ Wyniki z oceną i normą można też od razu skopiować do dokumentacji przycisk
 - Format kopiowanego tekstu: bez komentarza do pakietu i bez przeliczenia na SI — do zmiany, jeżeli
   dokumentacja tego wymaga.
 - Wynik cenzorowany („<0,01”) w pakiecie — dziś nie jest liczbą, jak w pojedynczym badaniu.
+- PR4: pora pobrania, protokół testu i metoda w pakiecie — dziś pakiet przyjmuje stan domyślny pojedynczego
+  badania (rano, bez testu, 17-OHP immunochemicznie) i nazywa go w opisie normy; pola wyboru przy pakiecie
+  — do decyzji, jeżeli w praktyce będą potrzebne.
+- PR4: zmiany listy pakietów z dwóch urządzeń offline — wygrywa późniejszy zapis całej listy. Scalanie
+  wpis po wpisie wymagałoby zmiany w sejfie (jak dla list oczekujących) — osobna decyzja.
+- PR4: wbudowane pakiety poza „Tarczycą” (np. gotowe „Dojrzewanie”) — do decyzji; dziś lekarz składa je sam.

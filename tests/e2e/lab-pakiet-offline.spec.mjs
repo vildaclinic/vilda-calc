@@ -145,6 +145,29 @@ test('pakiet „Tarczyca” po zimnym starcie offline: zasoby z SW, ocena i zapi
     await expect(page.locator('#labPkgNormLow-tsh')).toHaveValue('0,27');
     await expect(page.locator('#labPkgNormHigh-tsh')).toHaveValue('4,2');
     await expect(page.locator('#labPkgPrefillHint')).toContainText('Podpowiedź z poprzedniego wyniku pacjenta');
+    // LAB-PAKIETY PR4 offline: własny pakiet powstaje bez sieci, zapisuje się na koncie (pójdzie w synchronizacji,
+    // gdy wróci sieć) i jest na liście po ponownym otwarciu strony.
+    await page.locator('#labPkgNew').click();
+    await page.locator('#labPkgCreatorName').fill('Dojrzewanie offline');
+    await page.locator('#labPkgCreatorSearch').fill('lh');
+    await page.locator('#labPkgCreatorOpt-lh').check();
+    await page.locator('#labPkgCreatorSearch').fill('estradiol');
+    await page.locator('#labPkgCreatorOpt-estradiol').check();
+    await page.locator('#labPkgCreatorSave').click();
+    await expect(page.locator('#labPkgSelect option:checked')).toHaveText('Dojrzewanie offline');
+    await expect(karta.locator('.lab-pkg-row-label')).toHaveText(['LH', 'Estradiol']);
+    await page.locator('#labPkgValue-lh').fill('3');
+    await expect(karta.locator('.lab-pkg-card[data-analyte="lh"] .lab-range-status')).toHaveText('bez oceny w pakiecie');
+    await expect.poll(() => page.evaluate(async () => {
+      const wpis = (await window.VildaVault.exportSyncPayload()).userPreferences?.labCustomPackages;
+      return wpis ? JSON.parse(wpis.value).packages.map((pakiet) => [pakiet.name, pakiet.analytes]) : null;
+    })).toEqual([['Dojrzewanie offline', ['lh', 'estradiol']]]);
+    await page.reload({ waitUntil: 'load' });
+    await page.waitForFunction(() => window.VildaVault?.isUnlocked());
+    // Adres strony niesie ?pakiet=tarczyca, więc otwiera się „Tarczyca”; własny pakiet jest na liście.
+    await expect(page.locator('#labPkgSelect')).toHaveValue('thyroid');
+    await page.locator('#labPkgSelect').selectOption({ label: 'Dojrzewanie offline' });
+    await expect(karta.locator('.lab-pkg-row-label')).toHaveText(['LH', 'Estradiol']);
     expect(await noNetwork(), 'źródło nadal niedostępne po zapisie').toBe(true);
   } finally {
     if (context) await context.close();

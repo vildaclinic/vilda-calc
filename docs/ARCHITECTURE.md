@@ -163,11 +163,18 @@ Do tej warstwy należą m.in.:
 - pakiety badań: `vilda_lab_packages.js` (dane pakietu, model i widok w jednym pliku — budżet żądań
   instalacji PWA; tag tylko na `przelicznik-jednostek.html`). Zakładka „Pakiet badań” karty przelicznika
   (jedna karta, zakładki `#labModeBar` pod tytułem; pakiet jest panelem `#labPackageCard` tej karty): kilka
-  badań z jednego wydruku (MVP: „Tarczyca”) oceniane tym samym silnikiem co pojedyncze badanie
-  (`LabUnitConverter`, zrzut `VildaLabRangeSnapshot`) i zapisywane zbiorczo jako notatki
-  „wynik-badania” w postaci zapisu przypięcia. Pacjenta do norm podaje
-  `VildaLabConverterRuntime.getPackagePatient()`; pakiet działa tylko dla zalogowanego użytkownika
-  z wybranym pacjentem. Adres `?pakiet=<slug>`; skrót w zakładce „Badania”. Norma laboratorium z wydruku
+  badań z jednego wydruku (wbudowany pakiet „Tarczyca” i własne pakiety lekarza) oceniane tym samym
+  silnikiem co pojedyncze badanie (`LabUnitConverter`, zrzut `VildaLabRangeSnapshot`) i zapisywane
+  zbiorczo jako notatki „wynik-badania” w postaci zapisu przypięcia. Pacjenta do norm podaje strona,
+  osobno dla każdego badania: `VildaLabConverterRuntime.getPackagePatient(analyteId)` (metoda 17-OHP,
+  nośnik wieku estradiolu); wpisywanie wyników działa tylko dla zalogowanego użytkownika z wybranym
+  pacjentem. Własne pakiety składa kreator w tej samej zakładce (po zalogowaniu, także bez pacjenta);
+  zapis: preferencja konta `labCustomPackages` (`VildaPersistence`, klasa `cloud-synced` — przez sejf
+  do synchronizacji między urządzeniami konta), wybór ostatniego pakietu pamięta urządzenie
+  (`labPackageSettings`). Badania, które pojedyncze badanie ocenia po swojemu (LH, FSH, inhibina B,
+  testosteron całkowity, AMH — `VildaLabConverterRuntime.ownAssessmentKind`), pakiet zapisuje bez oceny
+  i prowadzi do pojedynczego badania (`openSingle`). Adres `?pakiet=<slug albo identyfikator własnego
+  pakietu>`; skrót w zakładce „Badania”. Norma laboratorium z wydruku
   (opcjonalna, w jednostce wyniku) zastępuje normę aplikacji dla danego wyniku i zapisuje się w
   `labResult.norm` — polu edytora wyniku; podpowiedź normy i jednostki pochodzi wyłącznie z poprzedniego
   wyniku tego samego badania u pacjenta (`listPatientNotesForPatient`), bez osobnej pamięci norm.
