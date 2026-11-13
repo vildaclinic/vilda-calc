@@ -977,3 +977,87 @@
     break-inside: avoid;
   }
 }
+
+/* M1: only the saved label, value and unit. Native popover escapes modal/SVG
+   clipping; SVG x/y attributes position it without inline presentation styles. */
+.vilda-lab-point-preview {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  pointer-events: none;
+  overflow: visible;
+  z-index: 2147483600;
+}
+
+.vilda-lab-point-preview::backdrop {
+  background: transparent;
+  pointer-events: none;
+}
+
+.vilda-lab-point-preview-canvas,
+.vilda-lab-point-preview-target {
+  overflow: visible;
+  pointer-events: none;
+}
+
+.vilda-lab-point-preview-bubble {
+  pointer-events: auto;
+  position: static;
+  display: inline-flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 9px;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 9px 13px;
+  border: var(--border-hairline) solid #c6d9df;
+  border-radius: var(--radius-8);
+  background: #fff;
+  box-shadow: 0 4px 15px #244a5524;
+  color: #263f49;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 16px;
+  line-height: 1.25;
+}
+
+.vilda-lab-point-preview-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-weight: 550;
+}
+
+.vilda-lab-point-preview-reading {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.vilda-lab-point-preview-value {
+  font-size: 20px;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.2px;
+}
+
+.vilda-lab-point-preview-unit {
+  color: #56717c;
+  font-size: 15px;
+  font-weight: 400;
+}
+
+.vilda-lab-point-preview-value[data-tone="within"] {
+  color: #087f5b;
+}
+
+.vilda-lab-point-preview-value[data-tone="below"],
+.vilda-lab-point-preview-value[data-tone="above"] {
+  color: #cf222e;
+}
