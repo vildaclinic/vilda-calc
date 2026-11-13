@@ -161,12 +161,17 @@ Do tej warstwy należą m.in.:
   przelicznik adresem `przelicznik-jednostek.html?badanie=<id>` (`applySubstanceDeepLink`
   w skrypcie strony; w powłoce cel dochodzi zdarzeniem `vilda:shell-navigate-target`);
 - pakiety badań: `vilda_lab_packages.js` (dane pakietu, model i widok w jednym pliku — budżet żądań
-  instalacji PWA; tag tylko na `przelicznik-jednostek.html`). Tryb „Pakiet badań” przelicznika: kilka
+  instalacji PWA; tag tylko na `przelicznik-jednostek.html`). Zakładka „Pakiet badań” karty przelicznika
+  (jedna karta, zakładki `#labModeBar` pod tytułem; pakiet jest panelem `#labPackageCard` tej karty): kilka
   badań z jednego wydruku (MVP: „Tarczyca”) oceniane tym samym silnikiem co pojedyncze badanie
   (`LabUnitConverter`, zrzut `VildaLabRangeSnapshot`) i zapisywane zbiorczo jako notatki
   „wynik-badania” w postaci zapisu przypięcia. Pacjenta do norm podaje
   `VildaLabConverterRuntime.getPackagePatient()`; pakiet działa tylko dla zalogowanego użytkownika
-  z wybranym pacjentem. Adres `?pakiet=<slug>`; skrót w zakładce „Badania”. Plan: `docs/LAB_PAKIETY_PLAN.md`;
+  z wybranym pacjentem. Adres `?pakiet=<slug>`; skrót w zakładce „Badania”. Norma laboratorium z wydruku
+  (opcjonalna, w jednostce wyniku) zastępuje normę aplikacji dla danego wyniku i zapisuje się w
+  `labResult.norm` — polu edytora wyniku; podpowiedź normy i jednostki pochodzi wyłącznie z poprzedniego
+  wyniku tego samego badania u pacjenta (`listPatientNotesForPatient`), bez osobnej pamięci norm.
+  Plan: `docs/LAB_PAKIETY_PLAN.md`;
 - terapie: moduły GH/IGF-1, otyłości, antybiotyków, nadciśnienia, bisfosfonianów i grypy;
 - żywienie: `nutrition_norms.js`, `nutrition_micros.js`, moduły planu diety i szacowanego spożycia.
 

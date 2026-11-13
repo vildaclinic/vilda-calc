@@ -15,8 +15,14 @@ test('ocena na żywo jak w pojedynczym badaniu i zapis wypełnionych wyników do
   const { patientId } = await otworzPakiet(page);
   const karta = kartaPakietu(page);
   await expect(karta).toBeVisible();
-  await expect(page.locator('#labResultsCard')).toBeHidden();
-  await expect(page.locator('#labModePackage')).toHaveAttribute('aria-pressed', 'true');
+  // Jedna karta z zakładkami: w „Pakiecie badań” panele pojedynczego badania są schowane, karta i tytuł zostają.
+  await expect(page.locator('#labFormPane')).toBeHidden();
+  await expect(page.locator('#labResultPane')).toBeHidden();
+  await expect(page.locator('#labModePackage')).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('#labModeSingle')).toHaveAttribute('aria-selected', 'false');
+  await expect(page.locator('#labResultsCard h1')).toHaveText('Przelicznik jednostek laboratoryjnych');
+  await expect(page.locator('#labResultsCard h1')).toBeVisible();
+  await expect(page.locator('h1')).toHaveCount(1);
   await expect(page.locator('#labPkgName')).toHaveText('Tarczyca');
   await expect(karta.locator('.lab-pkg-row-label')).toHaveText(['TSH', 'fT4', 'fT3']);
   await expect(page.locator('#labPkgPatient')).toHaveText('Kobieta · 12.3 lat · wiek dziecięcy/młodzieńczy');
@@ -96,7 +102,7 @@ test('zapis z pakietu jest tym samym zapisem co „Przypnij do wizyty” pojedyn
   const { patientId } = await otworzPakiet(page);
   // Pojedyncze badanie: TSH 6,8 μIU/mL przypięte do wizyty istniejącą ścieżką.
   await page.locator('#labModeSingle').click();
-  await expect(page.locator('#labResultsCard')).toBeVisible();
+  await expect(page.locator('#labFormPane')).toBeVisible();
   await page.locator('#labSubstance').fill('TSH');
   await page.locator('#labSubstanceDropdown .lab-substance-option[data-id="tsh"]').click();
   await page.locator('#labUnit').selectOption('μIU/mL');
@@ -124,7 +130,7 @@ test('zapis z pakietu jest tym samym zapisem co „Przypnij do wizyty” pojedyn
   expect(notatki[0].title).toBe('TSH (tyreotropina): 6,8 μIU/mL');
 });
 
-test('bez logowania: karta pakietu bez pól, „Zaloguj się” otwiera logowanie, powrót do pojedynczego badania', async ({ page }) => {
+test('bez logowania: zakładka pakietu z kłódką i bez pól, „Zaloguj się” otwiera logowanie, powrót zakładką do pojedynczego badania', async ({ page }) => {
   await page.route('**/*', (route) => (route.request().url().startsWith('http://127.0.0.1:') ? route.continue() : route.abort()));
   await page.addInitScript(() => {
     localStorage.setItem('vilda-terms-accepted-v1', JSON.stringify({ version: 1, acceptedAtISO: new Date().toISOString() }));
@@ -133,20 +139,49 @@ test('bez logowania: karta pakietu bez pól, „Zaloguj się” otwiera logowani
   await page.goto('/przelicznik-jednostek.html', { waitUntil: 'load' });
   // Pojedyncze badanie działa jak dotąd, bez logowania.
   await expect(page.locator('#labModeBar')).toBeVisible();
-  await expect(page.locator('#labModeSingle')).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.locator('#labResultsCard')).toBeVisible();
+  await expect(page.locator('#labModeBar')).toHaveAttribute('role', 'tablist');
+  await expect(page.locator('#labModeBar [role="tab"]')).toHaveText(['Pojedyncze badanie', 'Pakiet badań']);
+  await expect(page.locator('#labModeSingle')).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('#labFormPane')).toBeVisible();
   await expect(page.locator('#labPackageCard')).toBeHidden();
   await expect(page.locator('#labModePackage')).toHaveClass(/is-locked/);
+  // Kłódka w zakładce mówi gościowi, że pakiet wymaga konta.
+  await expect(page.locator('#labModePackage .lab-mode-lock')).toBeVisible();
+  // Zakładki stoją w karcie przelicznika, pod jej tytułem.
+  expect(await page.evaluate(() => {
+    const karta = document.getElementById('labResultsCard'), tytul = karta.querySelector('h1'), pasek = document.getElementById('labModeBar');
+    return karta.contains(pasek) && tytul.getBoundingClientRect().bottom <= pasek.getBoundingClientRect().top
+      && pasek.getBoundingClientRect().bottom <= document.getElementById('labFormPane').getBoundingClientRect().top;
+  })).toBe(true);
 
   await page.locator('#labModePackage').click();
   const karta = kartaPakietu(page);
-  expect(await tekst(karta)).toBe('Pakiet badań Pakiety badań są dostępne po zalogowaniu Pakiet zapisuje wyniki w karcie pacjenta, dlatego wymaga konta. Pojedyncze badanie przeliczysz i ocenisz jak dotąd, bez logowania. Zaloguj się Wróć do pojedynczego badania');
+  expect(await tekst(karta)).toBe('Pakiety badań są dostępne po zalogowaniu Pakiet zapisuje wyniki w karcie pacjenta, dlatego wymaga konta. Pojedyncze badanie przeliczysz i ocenisz jak dotąd, bez logowania. Zaloguj się');
+  await expect(page.locator('#labModePackage')).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('#labFormPane')).toBeHidden();
+  await expect(page.locator('#labSuggestCard')).toBeHidden();
   // Bez logowania formularz w ogóle nie powstaje: żadnych pól ani przycisku zapisu.
   await expect(karta.locator('input, select')).toHaveCount(0);
   await expect(page.locator('#labPkgSave')).toHaveCount(0);
 
-  await page.locator('#labPkgGateBack').click();
-  await expect(page.locator('#labResultsCard')).toBeVisible();
+  // Powrót do pojedynczego badania: zakładka (bramka nie ma już osobnego przycisku).
+  await expect(karta.locator('button')).toHaveCount(1);
+  await page.locator('#labModeSingle').click();
+  await expect(page.locator('#labFormPane')).toBeVisible();
+  await expect(page.locator('#labPackageCard')).toBeHidden();
+  await expect(page.locator('#labModeSingle')).toHaveAttribute('aria-selected', 'true');
+  // Klawiatura zakładek: strzałka przełącza i zostawia fokus na wybranej zakładce; w tabulacji jest tylko wybrana.
+  await page.locator('#labModeSingle').focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(page.locator('#labModePackage')).toBeFocused();
+  await expect(page.locator('#labModePackage')).toHaveAttribute('aria-selected', 'true');
+  expect(await page.evaluate(() => ['labModeSingle', 'labModePackage'].map((id) => document.getElementById(id).getAttribute('tabindex')))).toEqual(['-1', '0']);
+  await page.keyboard.press('Home');
+  await expect(page.locator('#labModeSingle')).toBeFocused();
+  await expect(page.locator('#labFormPane')).toBeVisible();
+  await page.keyboard.press('End');
+  await expect(karta.locator('.lab-pkg-gate-title')).toBeVisible();
+  await page.keyboard.press('ArrowLeft');
   await expect(page.locator('#labPackageCard')).toBeHidden();
 
   await page.locator('#labModePackage').click();
@@ -217,9 +252,52 @@ test('błędny wynik i przyszła data wstrzymują zapis; „Wyczyść pakiet” 
   await expect(page.locator('#labPkgError')).toBeHidden();
   // Pojedyncze badanie zachowuje swój stan niezależnie od pakietu.
   await page.locator('#labModeSingle').click();
-  await expect(page.locator('#labResultsCard')).toBeVisible();
+  await expect(page.locator('#labFormPane')).toBeVisible();
   await expect(page.locator('#labSuggestCard')).toBeVisible();
 });
+
+// Makieta zakładek (zaakceptowana 2026-11-13): jedna karta, zakładki pod tytułem. Zakładki trzymają szerokość
+// lewej kolumny w obu trybach, więc przełączenie niczego nie przesuwa; prawa kolumna pakietu zaczyna się tam,
+// gdzie treść panelu wyniku pojedynczego badania.
+for (const [opis, szerokosc] of [['warsztat 1440 px', 1440], ['warsztat 1920 px', 1920], ['jedna kolumna 1100 px', 1100]]) {
+  test(`zakładki mają szerokość kolumny formularza w obu trybach — ${opis}`, async ({ page }) => {
+    await page.setViewportSize({ width: szerokosc, height: 900 });
+    await otworzPakiet(page);
+    await expect(page.locator('#labPkgValue-tsh')).toBeVisible();
+    const miary = () => page.evaluate(() => {
+      const r = (el) => { const b = el.getBoundingClientRect(); return { l: Math.round(b.left), p: Math.round(b.right), g: Math.round(b.top), d: Math.round(b.bottom) }; };
+      const widoczny = (el) => (el && el.offsetParent !== null ? r(el) : null);
+      const q = (selektor) => document.querySelector(selektor);
+      return { karta: r(q('#labResultsCard')), tytul: r(q('#labResultsCard h1')), pasek: r(q('#labModeBar')),
+        krok: widoczny(q('#labStep1')), wynik: widoczny(q('#labResultSection')), pakiet: widoczny(q('.lab-pkg-form')), ocena: widoczny(q('.lab-pkg-results')),
+        kolumny: getComputedStyle(q('#labResultsCard')).gridTemplateColumns.split(' ').length };
+    });
+    const pakiet = await miary();
+    await page.locator('#labModeSingle').click();
+    await expect(page.locator('#labFormPane')).toBeVisible();
+    const pojedyncze = await miary();
+    // Karta, tytuł i zakładki stoją w tym samym miejscu w obu trybach.
+    expect([pakiet.karta.l, pakiet.karta.p, pakiet.tytul, pakiet.pasek]).toEqual([pojedyncze.karta.l, pojedyncze.karta.p, pojedyncze.tytul, pojedyncze.pasek]);
+    // Zakładki pod tytułem, nad treścią; lewa i prawa krawędź równo z formularzem pojedynczego badania i pakietu.
+    expect(pakiet.pasek.g).toBeGreaterThanOrEqual(pakiet.tytul.d);
+    expect(pakiet.pakiet.g).toBeGreaterThanOrEqual(pakiet.pasek.d);
+    expect(pojedyncze.krok.g).toBeGreaterThanOrEqual(pojedyncze.pasek.d);
+    expect([pakiet.pakiet.l, pakiet.pakiet.p]).toEqual([pakiet.pasek.l, pakiet.pasek.p]);
+    expect([pojedyncze.krok.l, pojedyncze.krok.p]).toEqual([pojedyncze.pasek.l, pojedyncze.pasek.p]);
+    if (szerokosc >= 1440) {
+      // Warsztat: dwie kolumny w obu trybach; ocena pakietu zaczyna się na prawo od zakładek, w kolumnie wyniku.
+      expect([pakiet.kolumny, pojedyncze.kolumny]).toEqual([2, 2]);
+      expect(pakiet.ocena.l).toBeGreaterThan(pakiet.pasek.p);
+      expect(pakiet.ocena.g).toBe(pakiet.pakiet.g);
+      expect(pakiet.ocena.p).toBeLessThanOrEqual(pakiet.karta.p);
+    } else {
+      // Jedna kolumna: ocena pod formularzem, na jego szerokość.
+      expect([pakiet.ocena.l, pakiet.ocena.p]).toEqual([pakiet.pakiet.l, pakiet.pakiet.p]);
+      expect(pakiet.ocena.g).toBeGreaterThanOrEqual(pakiet.pakiet.d);
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  });
+}
 
 test('skrót „Wpisz pakiet: Tarczyca” z zakładki Badania otwiera pakiet dla wczytanego pacjenta', async ({ page }) => {
   const patientId = await otworzSejf(page);
@@ -237,11 +315,12 @@ test('skrót „Wpisz pakiet: Tarczyca” z zakładki Badania otwiera pakiet dla
   await expect(skrot).toHaveText('Wpisz pakiet: Tarczyca →');
   await skrot.click();
   await expect(page).toHaveURL(/\/przelicznik-jednostek\.html\?pakiet=tarczyca$/);
-  await expect(page.locator('#labModePackage')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#labModePackage')).toHaveAttribute('aria-selected', 'true');
   await expect(page.locator('#labPkgValue-tsh')).toBeVisible();
   await expect(kartaPakietu(page).locator('.lab-pkg-save-ctx')).toHaveText(`${PACJENTKA.name} · wizyta: 12 l 3 m`);
   // Odnośnik z badaniem (?badanie=) wraca do pojedynczego badania.
   await page.goto('/przelicznik-jednostek.html?badanie=tsh', { waitUntil: 'load' });
-  await expect(page.locator('#labModeSingle')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#labModeSingle')).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('#labFormPane')).toBeVisible();
   await expect(page.locator('#labSubstance')).toHaveValue('TSH (tyreotropina)');
 });

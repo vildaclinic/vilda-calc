@@ -1215,6 +1215,12 @@ html.vrc-overdue-collapsed .vild-rem-sec-over > *:not(.vild-rem-sec-head){
   margin:0 0 1.3rem 0;
   text-align:center;
 }
+.lab-smart-card > .lab-card-head {
+  margin:0 0 1.3rem;
+}
+.lab-smart-card > .lab-card-head > h1 {
+  margin:0;
+}
 .lab-step {
   display:flex;
   align-items:flex-start;
@@ -2414,12 +2420,18 @@ body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).
     padding: 0;
     overflow: clip;
   }
-  .lab-smart-card > h1 {
-    grid-area: title;
-    text-align: left;
-    margin: 0;
-    padding: var(--space-1-5) 1.7rem 0;
-  }
+  .lab-smart-card > .lab-card-head {
+  grid-area:title;
+  display:grid;
+  grid-template-columns:minmax(0, 1fr);
+  grid-template-columns:subgrid;
+  margin:0;
+  padding:var(--space-1-5) 1.7rem 0;
+}
+  .lab-smart-card > .lab-card-head > h1 {
+  grid-column:1 / -1;
+  text-align:left;
+}
   .lab-smart-card > .lab-pane--form {
     grid-area: form;
     padding: var(--space-1-25) 1.7rem var(--space-1-5);

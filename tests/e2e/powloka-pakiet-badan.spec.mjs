@@ -34,9 +34,9 @@ test('Badania → pakiet w przeliczniku → zapis → powrót do Badań, wszystk
   await skrot.click();
   await expect(page).toHaveURL(/\/app\.html#\/lab/);
   const lab = await ramka(page, 'Jednostki laboratoryjne');
-  await expect(lab.locator('#labModePackage')).toHaveAttribute('aria-pressed', 'true');
+  await expect(lab.locator('#labModePackage')).toHaveAttribute('aria-selected', 'true');
   await expect(lab.locator('#labPkgValue-tsh')).toBeVisible();
-  await expect(lab.locator('#labResultsCard')).toBeHidden();
+  await expect(lab.locator('#labFormPane')).toBeHidden();
   await expect(kartaPakietu(lab).locator('.lab-pkg-save-ctx')).toHaveText('Fikcyjna Badaniowa · wizyta: 12 l 3 m');
 
   await lab.locator('#labPkgValue-tsh').fill('2,5');
@@ -58,7 +58,8 @@ test('Badania → pakiet w przeliczniku → zapis → powrót do Badań, wszystk
   await sekcjaBadan(start).getByRole('button', { name: 'Wykresy', exact: true }).click();
   await sekcjaBadan(start).locator('.vilda-lab-hist-card[data-series="tsh"] a.vilda-lab-hist-card-check').click();
   await expect(page).toHaveURL(/\/app\.html#\/lab/);
-  await expect(lab.locator('#labModeSingle')).toHaveAttribute('aria-pressed', 'true');
-  await expect(lab.locator('#labResultsCard')).toBeVisible();
+  await expect(lab.locator('#labModeSingle')).toHaveAttribute('aria-selected', 'true');
+  await expect(lab.locator('#labFormPane')).toBeVisible();
+  await expect(lab.locator('#labPackageCard')).toBeHidden();
   await expect(lab.locator('#labSubstance')).toHaveValue('TSH (tyreotropina)');
 });

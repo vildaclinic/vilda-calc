@@ -1,6 +1,6 @@
 # Pakiety badań laboratoryjnych — plan i decyzje
 
-Stan na 2026-11-12. Dokument utrwala ustalenia właściciela i etapy pracy, żeby kolejne PR-y i inne wątki
+Stan na 2026-11-13. Dokument utrwala ustalenia właściciela i etapy pracy, żeby kolejne PR-y i inne wątki
 nie odtwarzały ich z rozmowy. Opis techniczny wdrożonych etapów: `docs/clinical/ALGORITHMS.md`, wpisy „LAB-PAKIETY”.
 
 ## Po co
@@ -23,6 +23,18 @@ i kopiowany tekst).
    i bez ręcznego wpisywania wieku i płci).
 5. Makieta (desktop, telefon, stany bez logowania i bez pacjenta) zaakceptowana 2026-11-12.
 
+## Decyzje właściciela (2026-11-13)
+
+6. Podpowiedź normy z wydruku pochodzi **wyłącznie z poprzedniego wyniku tego samego badania u tego
+   samego pacjenta** („zwykle to samo laboratorium i zbliżony wiek”). Gdy pacjent nie ma wcześniejszego
+   wyniku, aplikacja **nie podpowiada żadnych norm**. To zastępuje „zapamiętywanie” z punktu 3: norm nie
+   pamięta ani urządzenie, ani konto — każdy wynik niesie swoją normę w zapisie i stamtąd wraca.
+7. Wybór „Pojedyncze badanie / Pakiet badań” ma postać **zakładek** w stylu karty GH/IGF-1
+   („Leczenie / Monitorowanie”) i „Podsumowania wyników”, dla spójności aplikacji: jedna karta, jeden
+   tytuł „Przelicznik jednostek laboratoryjnych”, zakładki pod tytułem, kłódka w zakładce dla gościa,
+   bramki bez przycisku „Wróć do pojedynczego badania”. Makieta zaakceptowana 2026-11-13 z poleceniem
+   wdrożenia w PR2.
+
 ## Zasady, które obowiązują każdy etap
 
 - Pakiet nie ma własnych norm, wzorów ani współczynników. Ocena i zakres pochodzą z silnika pojedynczego
@@ -39,16 +51,20 @@ i kopiowany tekst).
 
 | Etap | Zakres | Stan |
 |---|---|---|
-| PR1 | Tryb „Pakiet badań”, pakiet „Tarczyca” (TSH, fT4, fT3): wartości i jednostki, data pobrania, komentarz, ocena na żywo, zapis zbiorczy do Badań, jednostki zapamiętane na urządzeniu, skrót z zakładki „Badania”, bramki bez logowania i bez pacjenta | ten PR |
-| PR2 | „Normy z wydruku”: opcjonalne od–do dla każdego badania; wpisana norma zastępuje normę aplikacji dla tego wyniku, zapisuje się z nim i jest oznaczona jako norma laboratorium; raz wpisane normy są zapamiętywane i podpowiadane, z możliwością edycji | do zrobienia |
+| PR1 | Tryb „Pakiet badań”, pakiet „Tarczyca” (TSH, fT4, fT3): wartości i jednostki, data pobrania, komentarz, ocena na żywo, zapis zbiorczy do Badań, jednostki zapamiętane na urządzeniu, skrót z zakładki „Badania”, bramki bez logowania i bez pacjenta | scalony 2026-11-13 (PR #943) |
+| PR2 | „Normy z wydruku”: opcjonalne od–do dla każdego badania, w jednostce wyniku; wpisana norma zastępuje normę aplikacji dla tego wyniku, zapisuje się z nim (`labResult.norm`, bez zrzutu normy aplikacji) i jest oznaczona jako norma laboratorium; podpowiedź jednostki i normy z poprzedniego wyniku tego samego badania u pacjenta, z możliwością edycji | ten PR |
+| zakładki | Przełącznik trybu jako zakładki w jednej karcie (decyzja 7) | ten PR (razem z PR2) |
 | PR3 | Blok „Badania” w „Podsumowaniu wyników” (karta i kopiowany tekst): wyniki dodane dziś dla pacjenta, z datą pobrania, normą i oceną z zapisu | do zrobienia |
 | później | Pakiety definiowane przez użytkownika; pakiet „Pokwitanie” (LH, FSH, estradiol u dziewcząt, testosteron u chłopców) — wymaga silników pokwitaniowych przelicznika (osie wieku i stadium), patrz `docs/clinical/LAB_INTERPRETATION_AGENT_GUIDE.md` | pomysł, bez decyzji |
 
 ## Otwarte kwestie do decyzji przy kolejnych etapach
 
-- PR2: gdzie pamiętać normy z wydruku — na urządzeniu (jak jednostki) czy na koncie (dostępne na każdym
-  urządzeniu lekarza). Dotyczy tylko wygody podpowiadania; sam wynik zawsze niesie swoją normę w zapisie.
-- PR2: zapis normy laboratorium w rekordzie wyniku (osobne pole obok zrzutu normy aplikacji albo zrzut
-  z oznaczeniem źródła) — zmiana kształtu zapisu, wymaga osobnej analizy zgodności z historią.
+- PR2 (do potwierdzenia przy akceptacji klinicznej): wynik z normą z wydruku nie zapisuje zrzutu normy
+  aplikacji — niesie jedną normę. Uzasadnienie i skutek dla wyników przeliczanych w historii:
+  `docs/clinical/ALGORITHMS.md`, „LAB-PAKIETY PR2”.
+- PR2: podpowiedź bierze normę tylko z **ostatniego** wyniku; gdy ostatni wynik jej nie ma (np. przypięty
+  w pojedynczym badaniu), starsza norma nie wraca. Do zmiany, jeżeli w praktyce okaże się za ostrożne.
+- Norma z wydruku w pojedynczym badaniu (okno „Przypnij do wizyty”) — dziś tylko w pakiecie i w edytorze
+  wyniku karty pacjenta.
 - PR3: nowy kod w istniejących plikach podsumowania albo decyzja o budżecie żądań (wyżej).
 - Wynik cenzorowany („<0,01”) w pakiecie — dziś nie jest liczbą, jak w pojedynczym badaniu.

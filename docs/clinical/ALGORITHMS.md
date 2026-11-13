@@ -1325,6 +1325,131 @@ prawdziwym przeliczniku, zrzucie normy i adapterze),
 `powloka-pakiet-badan.spec.mjs`, `lab-pakiet-offline.spec.mjs` (zimny start
 offline po instalacji produkcyjnego SW).
 
+### LAB-PAKIETY PR2 — norma z wydruku w pakiecie badań (`vilda_lab_packages.js` 1.1.0, 2026-11-13)
+
+**Wpływ kliniczny: tak — zmienia się interpretacja wyniku, gdy lekarz wpisze
+normę laboratorium.** Aplikacja nie dostaje żadnej nowej normy, progu,
+współczynnika ani jednostki: norma jest daną wpisaną przez użytkownika
+z wydruku (źródło medyczne: laboratorium, które wydało wynik; aplikacja jej
+nie weryfikuje). Zmienia się to, **która norma ocenia wynik** w pakiecie i co
+trafia do zapisu. Bez wpisanej normy wszystko działa jak w PR1. Wymaga
+akceptacji klinicznej właściciela (AGENTS.md § 3).
+
+Decyzje właściciela: (1) makieta z 2026-11-12 — krok „Normy z wydruku —
+opcjonalnie”, „Puste pola = norma aplikacji dla wieku pacjenta. Wpisana norma
+zastępuje ją dla tego wyniku i zapisuje się razem z nim”, na karcie oceny
+„Norma z wydruku” z oznaczeniem „laboratorium” i norma aplikacji obok;
+(2) 2026-11-13 — podpowiedź normy pochodzi **wyłącznie z poprzedniego wyniku
+tego samego badania u tego samego pacjenta**; pacjent bez wcześniejszego
+wyniku nie dostaje żadnej podpowiedzi. Normy nie są pamiętane na urządzeniu
+ani na koncie.
+
+- **Populacja i jednostki.** Norma dotyczy jednego wyniku jednego pacjenta
+  i jest podana **w jednostce tego wyniku** (jednostka wybrana w wierszu
+  wyniku; napis przy polach normy idzie za nią). Aplikacja nie przelicza normy
+  między jednostkami: zmiana jednostki wyniku czyści wpisaną normę i mówi
+  o tym pod polami.
+- **Poprawna norma** (`parseLabNorm`): dwie granice „od” i „do”, obie liczbami
+  nieujemnymi (przecinek albo kropka, czytane tym samym `parseNumber` co
+  wynik), górna większa od dolnej. Jedna granica, wartość nieliczbowa albo
+  granice odwrócone/równe to błąd przy wierszu; **błędna norma wstrzymuje
+  zapis całego pakietu** („popraw normę z wydruku: …”), a ocena do czasu
+  poprawy zostaje przy normie aplikacji. Norma przy pustym wyniku niczego nie
+  wstrzymuje — pusty wiersz nie jest zapisywany.
+- **Ocena** (`classifyLabNorm`): wynik > górna granica → „powyżej normy
+  z wydruku”; wynik < dolna granica → „poniżej normy z wydruku”; inaczej
+  „w normie z wydruku”. **Granice należą do normy.** Trzy kategorie — bez
+  „znacznie powyżej/poniżej”, które są regułą silnika aplikacji dla jej
+  własnych zakresów. To ta sama reguła, którą historia wyników stosuje do
+  normy wpisanej ręcznie we wpisie (`normCheck` w `vilda_lab_history.js`:
+  strzałka ↑ powyżej górnej, ↓ poniżej dolnej), więc formularz i „Badania”
+  oceniają wynik tak samo. Zakres ogólny u dziecka (bez kategorii aplikacji,
+  decyzje 6.30–6.31) z normą z wydruku dostaje ocenę z tej normy.
+- **Karta oceny.** Kategoria i pasek (granice normy w 30% i 70%) według normy
+  z wydruku; pod spodem „Norma z wydruku: od–do jednostka” z oznaczeniem
+  „laboratorium” oraz, drobniej, „Norma aplikacji · <populacja>: …” do wglądu.
+  Źródła norm aplikacji zostają w wierszu „Źródła norm”.
+- **Zapis** (`buildNote`). Wynik z normą z wydruku dostaje `labResult.norm`
+  = „od–do jednostka” (np. „0,27–4,2 mIU/L”) i wiersz treści „Norma: …” —
+  to samo pole i ten sam wiersz co „Norma (opcjonalnie)” w edytorze wyniku
+  karty pacjenta, żaden nowy kształt zapisu. **Zrzut normy aplikacji
+  (`labResult.range`) nie jest wtedy zapisywany**: wynik niesie jedną normę,
+  tę, która go oceniła. Powód: historia nie stosuje normy z wpisu do wyniku
+  przeliczonego na inną jednostkę, a zrzut zakresu — tak; z oboma polami
+  starszy wynik w ng/dL, pokazany po przeliczeniu w pmol/L, dostałby ocenę
+  normą aplikacji, inną niż w formularzu. Z samą normą z wpisu taki wynik
+  zostaje bez oceny (tekst normy zostaje w zapisie). Wynik bez normy z wydruku
+  zapisuje się jak w PR1 (zrzut normy aplikacji, bez `norm`).
+- **Podpowiedź** (`previousResults`). Dla każdego badania pakietu brany jest
+  **ostatni** zapisany wynik liczbowy tego badania u tego pacjenta (data
+  pobrania, przy tej samej — późniejsza chwila zapisu lub poprawki), z każdego
+  źródła: pakiet, przypięcie, edytor karty. Z niego pochodzi jednostka wiersza
+  (ma pierwszeństwo przed jednostką zapamiętaną na urządzeniu) i — jeżeli ten
+  wynik miał normę zapisaną jednym zakresem, bez jednostki albo w jednostce
+  wyniku — granice normy. Ostatni wynik bez normy, z normą wielozakresową albo
+  w innej jednostce nie daje podpowiedzi normy; **starsza norma nie wraca**.
+  Podpowiedziane pola są przyciemnione, a pod nimi stoi „Podpowiedź
+  z poprzedniego wyniku pacjenta (data): … Sprawdź z wydrukiem.”; poprawienie
+  pola zdejmuje oznaczenie. Podpowiedź czyta sejf przy wczytaniu lub zmianie
+  pacjenta, przy wejściu w tryb pakietu, po zapisie i po „Wyczyść pakiet”;
+  nietknięta podpowiedź ustępuje nowszemu odczytowi, wpisane wartości nie są
+  nadpisywane. Podpowiedziana norma bez wpisanego wyniku niczego nie zapisuje.
+
+**Przypadek syntetyczny** (fikcyjna dziewczynka 9 lat): TSH 4,5 mIU/L — norma
+aplikacji „Dzieci 6–10 lat” 0,6–4,8 mIU/L daje „w zakresie normy”; z normą
+z wydruku 0,27–4,2 mIU/L wynik jest „powyżej normy z wydruku”, zapis:
+treść „= 4,5 mIU/L\nNorma: 0,27–4,2 mIU/L”, `labResult { …, valueNum: 4.5,
+unit: 'mIU/L', norm: '0,27–4,2 mIU/L' }` bez `range`; w „Badaniach” strzałka ↑
+i „Zakres z wpisu 0,27–4,2 mIU/L”. Granice: 0,27 i 4,2 → w normie; 0,26 →
+poniżej; 4,21 → powyżej. fT4 1,65 ng/dL przy normie 0,93–1,7 ng/dL → „w normie
+z wydruku” (= 21,2 pmol/L).
+
+**Ograniczenia.** Norma jednostronna („< 4,2”) i wielozakresowa nie mieszczą
+się w polach od–do. Aplikacja nie sprawdza, czy podpowiedziana norma nadal
+dotyczy pacjenta (inne laboratorium, inna metoda, przejście do innego
+przedziału wieku) — dlatego podpowiedź jest oznaczona i każe sprawdzić wydruk.
+Wynik z normą z wydruku, pokazany w historii po przeliczeniu na inną jednostkę,
+nie ma oceny. Norma z wydruku jest dostępna w pakiecie; pojedyncze badanie
+(przypięcie) zapisuje nadal normę aplikacji.
+
+Testy: `tests/unit/lab-pakiety.test.mjs` (sekcja „norma z wydruku”: ocena,
+granice, błędy, zapis, zgodność z prawdziwą historią i kartą wyniku
+`VildaLabHistory` / `VildaLabResultPresentation`, podpowiedź), e2e
+`tests/e2e/lab-pakiet-normy.spec.mjs`, `lab-pakiet-normy-mobile.spec.mjs`
+i rozszerzony `lab-pakiet-offline.spec.mjs`.
+
+**Zakładki „Pojedyncze badanie | Pakiet badań” (ten sam PR; zmiana
+funkcjonalna, bez wpływu klinicznego).** Makieta zaakceptowana przez
+właściciela 2026-11-13: zamiast przełącznika nad kartą i osobnej karty
+„Pakiet badań” jest **jedna karta z jednym tytułem** „Przelicznik jednostek
+laboratoryjnych”, a pod tytułem zakładki w wyglądzie zakładek karty GH/IGF-1
+(„Leczenie / Monitorowanie”). Żadna ocena, norma ani zapis się nie zmieniają.
+
+- Znaczniki (`przelicznik-jednostek.html`): nagłówek `.lab-card-head` w
+  `#labResultsCard` trzyma `<h1>` i pasek `#labModeBar` (`role="tablist"`,
+  zakładki `#labModeSingle`, `#labModePackage` z `role="tab"` i
+  `aria-selected`); pakiet jest panelem `#labPackageCard`
+  (`.lab-pane--package`, `role="tabpanel"`) na końcu tej samej karty.
+  Bez `vilda_lab_packages.js` pasek zostaje ukryty i karta wygląda jak dotąd.
+- Zakładka „Pakiet badań” chowa trzy panele pojedynczego badania i kartę
+  „Zaproponuj badania”; stan pojedynczego badania zostaje nietknięty. Na bardzo
+  szerokim ekranie pakiet trzyma zwykłą szerokość obszaru roboczego, także gdy
+  pojedyncze badanie ma otwarty wykres.
+- Gość widzi w zakładce kłódkę; bramki („Pakiety badań są dostępne po
+  zalogowaniu”, „Nie wybrano pacjenta”) nie mają już przycisku „Wróć do
+  pojedynczego badania” — wraca się zakładką.
+- Klawiatura: w kolejności tabulacji jest wybrana zakładka; strzałki ←/→
+  przełączają, Home/End wybierają pierwszą i ostatnią, fokus zostaje na
+  zakładce.
+- Design system (`design-system/src`): reguła tytułu karty w partialu G16
+  i podgląd `ConverterPanel` idą za nowym nagłówkiem; „Dryf stylów” bez zmian.
+
+Testy zakładek: `tests/e2e/lab-pakiet-tarczyca.spec.mjs` (zakładki w karcie
+pod tytułem, kłódka, bramka bez przycisku powrotu, klawiatura, jeden `<h1>`),
+`lab-pakiet-tarczyca-mobile.spec.mjs`, `powloka-pakiet-badan.spec.mjs`,
+`lab-uklad-warsztat.spec.mjs` (panele zaczynają się pod nagłówkiem karty);
+wzorce „Wygląd” strony przelicznika odświeżone w CI.
+
 ### P-LAB-WARTOSC-BEZ-JEDNOSTKI — liczba ze starszego wpisu wyniku bez jednostki (SW 1.1.279, `vilda_vault.js` 212, 2026-10-14)
 
 **Wpływ kliniczny: tak.** Zmieniają się liczby w historii wyników dla

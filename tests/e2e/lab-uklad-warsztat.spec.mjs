@@ -57,7 +57,7 @@ const uklad = (page) => page.evaluate(() => {
   const id = (x) => r(document.getElementById(x));
   const wykres = document.querySelector('#labHormoneLifespan > .vilda-hormone-lifespan');
   return {
-    karta: id('labResultsCard'), tytul: r(document.querySelector('#labResultsCard > h1')),
+    karta: id('labResultsCard'), tytul: r(document.querySelector('#labResultsCard > .lab-card-head')),
     formularz: id('labFormPane'), wynik: id('labResultPane'), sekcjaWyniku: id('labResultSection'),
     panelWykresu: id('labChartPane'), zakresy: id('labInfoCard'), wyczysc: id('labClearBtn'), badania: id('labSuggestCard'),
     zakresyWPanelu: document.getElementById('labResultPane').contains(document.getElementById('labInfoCard')),
@@ -126,7 +126,7 @@ test('1440 px: tytuł nad równymi kolumnami formularza i wyniku, wykres na cał
   // Kolejność czytania i tabulacji: tytuł → formularz → wynik → wykres; „Wyczyść” w formularzu.
   expect(await page.evaluate(() => {
     const ids = ['labFormPane', 'labClearBtn', 'labResultPane', 'labResultSection', 'labChartPane', 'labHormoneLifespan'].map((id) => document.getElementById(id));
-    const tytul = document.querySelector('#labResultsCard > h1');
+    const tytul = document.querySelector('#labResultsCard > .lab-card-head > h1');
     return Boolean(tytul.compareDocumentPosition(ids[0]) & Node.DOCUMENT_POSITION_FOLLOWING)
       && ids.every((el, i) => i === 0 || (ids[i - 1].compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING))
       && document.getElementById('labFormPane').contains(document.getElementById('labClearBtn'));

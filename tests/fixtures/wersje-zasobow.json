@@ -928,8 +928,8 @@
   "sha256": "22c5b3ec86177c574023351c8d5a0576a49652efbc28df0df99288778cfc526d"
  },
  "inline_przelicznik_jednostek_00.css": {
-  "v": 9,
-  "sha256": "78d8ab79c15703fede2b637422b3694cac5475a03f2f31bbd7122c17c080249b"
+  "v": 10,
+  "sha256": "e21bf0501477870af8ea4e277451dbe5c8f584ab767896376522b766df16f092"
  },
  "inline_regulamin_00.css": {
   "v": 1,
@@ -1652,8 +1652,8 @@
   "sha256": "5cc7f23b6c4e6f9f25331aeeded8fd5d58d64148bf8d9ab09177d7785963088c"
  },
  "vilda_lab_packages.js": {
-  "v": 1,
-  "sha256": "6a83a4bf856a676165cb8b00039143a91d10362db1225574cb43fc8f3bc53341"
+  "v": 2,
+  "sha256": "217af0199d27bff0d78abe565fbc1d4217127adabc16df413c14925d360d2088"
  },
  "vilda_lab_profile_preferences.js": {
   "v": 1,
