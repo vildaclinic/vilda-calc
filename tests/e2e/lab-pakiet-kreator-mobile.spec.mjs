@@ -1,5 +1,6 @@
 import { expect, test } from '../support/test-czas.mjs';
 import { kartaPakietu, otworzPakiet, tekst, wynikiBadan } from '../support/lab-pakiet-dane.mjs';
+import { kliknij, zaznacz } from '../support/uklad-czekanie.mjs';
 
 // LAB-PAKIETY PR4 na telefonie: kreator własnego pakietu i formularz pakietu z dłuższymi nazwami badań mieszczą
 // się w szerokości ekranu, cele dotyku mają co najmniej 44 px, a zapis działa jak na komputerze.
@@ -27,21 +28,27 @@ test('telefon: kreator pakietu i pakiet z dłuższymi nazwami — bez przewijani
   // Lista wyboru zajmuje całą szerokość kroku; strzałka ma odstęp od prawej krawędzi (własna, 14 px od brzegu).
   const lista = await page.locator('#labPkgSelect').evaluate((el) => {
     const styl = getComputedStyle(el);
-    return { strzalka: styl.backgroundPositionX, natywna: styl.appearance, odstep: parseFloat(styl.paddingRight), wysokosc: el.getBoundingClientRect().height };
+    // Wysokość do 0,01 px — jak pozostałe pomiary celów dotyku: przy ułamkowym położeniu pole 44 px ma 43,99997 px.
+    return { strzalka: styl.backgroundPositionX, natywna: styl.appearance, odstep: parseFloat(styl.paddingRight),
+      wysokosc: Math.round(el.getBoundingClientRect().height * 100) / 100 };
   });
   expect(lista.natywna).toBe('none');
   expect(lista.strzalka).toBe('calc(100% - 14px)');
   expect(lista.odstep).toBeGreaterThanOrEqual(36);
   expect(lista.wysokosc).toBeGreaterThanOrEqual(44);
 
+  // Katalog z otwartymi grupami ma na telefonie kilka ekranów, a strona przewija się płynnie
+  // (scroll-behavior: smooth). `zaznacz` i `kliknij` ustawiają cel bez animacji i czekają na stały prostokąt;
+  // samo `check()` na wolniejszej maszynie wpadało w pętlę „element is not stable / outside of the viewport”
+  // (CI 2026-11-13; odtworzone lokalnie przy spowolnionym procesorze: 3 z 14 prób, z bramką 0 z 14).
   await page.locator('#labPkgNew').click();
   await page.locator('#labPkgCreatorName').fill('Dojrzewanie i nadnercza');
   await page.locator('#labPkgCreatorSearch').fill('lh');
-  await page.locator('#labPkgCreatorOpt-lh').check();
+  await zaznacz(page.locator('#labPkgCreatorOpt-lh'));
   await page.locator('#labPkgCreatorSearch').fill('');
-  await page.locator('#labPkgCreatorOpt-fsh').check();
+  await zaznacz(page.locator('#labPkgCreatorOpt-fsh'));
   await page.locator('#labPkgCreatorGroups details').evaluateAll((grupy) => grupy.forEach((g) => { g.open = true; }));
-  for (const id of ['estradiol', 'testosterone_total', 'oh17_progesterone']) await page.locator(`#labPkgCreatorOpt-${id}`).check();
+  for (const id of ['estradiol', 'testosterone_total', 'oh17_progesterone']) await zaznacz(page.locator(`#labPkgCreatorOpt-${id}`));
   await expect(page.locator('#labPkgCreatorCount')).toHaveText('5 z 10');
 
   // Kreator: pola, przyciski kolejności, nagłówki grup i wiersze wyboru badania to cele dotyku ≥ 44 px.
@@ -62,7 +69,7 @@ test('telefon: kreator pakietu i pakiet z dłuższymi nazwami — bez przewijani
     };
   });
   expect(pozycja).toEqual({ nazwa: 'Testosteron całkowity', jednaLinia: true, akcjePodNazwa: true, przyPrawej: true, wPozycji: true });
-  await page.locator('#labPkgCreatorSave').click();
+  await kliknij(page.locator('#labPkgCreatorSave'));
   await expect(page.locator('#labPkgCreator')).toBeHidden();
 
   // Formularz: przy dłuższych nazwach etykieta stoi nad polem; pole i jednostka w jednym wierszu, bez ucinania.
@@ -102,7 +109,7 @@ test('telefon: kreator pakietu i pakiet z dłuższymi nazwami — bez przewijani
   expect(await tekst(karta.locator('.lab-pkg-card[data-analyte="lh"]'))).toBe('LH 2,1 IU/L w normie z wydruku Norma z wydruku: 0,3–4 IU/L laboratorium Oceń LH w pojedynczym badaniu →');
   await expect(karta.locator('.lab-pkg-card[data-analyte="oh17_progesterone"] .lab-range-status')).toHaveClass(/is-(normal|below|above|uwaga-low|uwaga-high)/);
 
-  await page.locator('#labPkgSave').click();
+  await kliknij(page.locator('#labPkgSave'));
   await expect(page.locator('#labPkgDone')).toBeVisible();
   expect((await wynikiBadan(page, patientId)).map((n) => [n.labResult.testKey, n.labResult.valueNum, n.labResult.unit, Object.keys(n.labResult).filter((k) => ['range', 'norm', 'assessment'].includes(k))])).toEqual([
     ['estradiol', 60, 'pmol/L', ['range']], ['lh', 2.1, 'IU/L', ['norm']], ['oh17_progesterone', 3, 'nmol/L', ['range']], ['testosterone_total', 25, 'ng/dL', []],
