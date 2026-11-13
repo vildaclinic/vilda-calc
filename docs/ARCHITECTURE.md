@@ -170,7 +170,8 @@ Do tej warstwy należą m.in.:
   nośnik wieku estradiolu); wpisywanie wyników działa tylko dla zalogowanego użytkownika z wybranym
   pacjentem. Własne pakiety składa kreator w tej samej zakładce (po zalogowaniu, także bez pacjenta);
   zapis: preferencja konta `labCustomPackages` (`VildaPersistence`, klasa `cloud-synced` — przez sejf
-  do synchronizacji między urządzeniami konta), wybór ostatniego pakietu pamięta urządzenie
+  do synchronizacji między urządzeniami konta; cecha `perUser`: kopia na urządzeniu osobno dla każdego
+  konta, więc lekarz widzi tylko swoje pakiety), wybór ostatniego pakietu pamięta urządzenie
   (`labPackageSettings`). Badania, które pojedyncze badanie ocenia po swojemu (LH, FSH, inhibina B,
   testosteron całkowity, AMH — `VildaLabConverterRuntime.ownAssessmentKind`), pakiet zapisuje bez oceny
   i prowadzi do pojedynczego badania (`openSingle`). Adres `?pakiet=<slug albo identyfikator własnego

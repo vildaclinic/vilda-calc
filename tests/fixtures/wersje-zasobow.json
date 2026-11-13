@@ -1652,8 +1652,8 @@
   "sha256": "5cc7f23b6c4e6f9f25331aeeded8fd5d58d64148bf8d9ab09177d7785963088c"
  },
  "vilda_lab_packages.js": {
-  "v": 4,
-  "sha256": "198d9098c916a70c06cd842e8fa5797a9102fc070c77921cee31f00ccebe9b23"
+  "v": 5,
+  "sha256": "d44b8b4a690ec3d34785ce9dce0a7233def811f5b4bd52688bf0660d74ee405c"
  },
  "vilda_lab_profile_preferences.js": {
   "v": 1,
@@ -1824,8 +1824,8 @@
   "sha256": "980b1484052e005a1af0ded9f28e9180fc733f70d2cc8def9f3cab1299b157cf"
  },
  "vilda_persistence_adapter.js": {
-  "v": 36,
-  "sha256": "a05292966e7525da53693d0677a4df5c49eaa536a02918316d6fe0d065ba86a1"
+  "v": 37,
+  "sha256": "aeaccd71afdde3ef0bed3dac534714cbdcc48e8971c1fd30caa14604f77d7e06"
  },
  "vilda_phone_landscape.css": {
   "v": 2,

@@ -49,7 +49,13 @@
  * się wartość, ocenę daje norma z wydruku albo pojedyncze badanie (link w karcie wyniku). Które to badania,
  * mówi strona (VildaLabConverterRuntime.ownAssessmentKind) — ten sam warunek co przy przypięciu wyniku.
  *
- * Opis: docs/clinical/ALGORITHMS.md, „LAB-PAKIETY PR1”–„LAB-PAKIETY PR4”.
+ * Każde konto widzi tylko swoje pakiety (LAB-PAKIETY PR5, polecenie właściciela 2026-11-13): na urządzeniu, na
+ * którym loguje się kilka kont, kopia pakietów jest osobna dla każdego konta (adapter: preferencja z perUser,
+ * klucz magazynu z identyfikatorem konta). Wersja 1.3.0 trzymała jedną kopię dla całego urządzenia; taką starą
+ * kopię przypisuje właściwemu kontu adoptLegacy — rozstrzyga zapis pakietów konta w sejfie, jeden raz na konto.
+ * Do czasu rozstrzygnięcia nie można tworzyć ani zmieniać pakietów (zapis nadpisałby listę konta).
+ *
+ * Opis: docs/clinical/ALGORITHMS.md, „LAB-PAKIETY PR1”–„LAB-PAKIETY PR5”.
  */
 (function (root) {
   'use strict';
@@ -215,9 +221,11 @@
       });
       return out;
     }
+    // Preferencja konta z osobną kopią na urządzeniu dla każdego konta (perUser, PR5). Adapter bez tej cechy
+    // trzymałby jedną kopię dla wszystkich kont urządzenia — wtedy własnych pakietów nie czytamy ani nie piszemy.
     function customRegistered(persistence) {
       var meta = persistence && persistence.MODULE_KEY_META && persistence.MODULE_KEY_META[CUSTOM_KEY];
-      return !!(meta && meta.kind === 'preference' && meta.storage === 'cloud-synced');
+      return !!(meta && meta.kind === 'preference' && meta.storage === 'cloud-synced' && meta.perUser === true);
     }
     function readCustom(persistence) {
       if (!customRegistered(persistence) || typeof persistence.readPreferenceJSON !== 'function') return normalizeCustom(null);
@@ -230,6 +238,59 @@
       var next = normalizeCustom(Object.assign({}, record(custom) ? custom : {}, { schemaVersion: 1, updatedAtISO: nowISO || new Date().toISOString() }));
       try { return persistence.writePreferenceJSON(CUSTOM_KEY, next) === true; }
       catch (_) { return false; }
+    }
+    /* Stara kopia urządzenia (LAB-PAKIETY PR5). Wersja 1.3.0 trzymała pakiety pod jednym kluczem dla wszystkich
+     * kont urządzenia; od 1.4.0 każde konto ma własną kopię. Po samym urządzeniu nie da się ustalić, czyja jest
+     * stara kopia, więc rozstrzyga zapis pakietów konta w sejfie — jeden raz, gdy konto nie ma własnej kopii:
+     *   - konto ma pakiety w sejfie → stają się jego kopią na urządzeniu; stara kopia znika, gdy była tą samą listą;
+     *   - konto nie ma pakietów → dostaje pustą listę, a stara kopia czeka na konto, do którego należy.
+     * Odczyt sejfu (exportSyncPayload) jest kosztowny, dlatego tylko przy starej kopii. Nic nie trafia przy tym
+     * do konta ani do synchronizacji (applyPreferenceFromCloud zapisuje samą kopię urządzenia). */
+    function ownCopy(persistence) {
+      try { return typeof persistence.readPreferenceRaw === 'function' ? persistence.readPreferenceRaw(CUSTOM_KEY, null) : null; }
+      catch (_) { return null; }
+    }
+    function legacyCopy(persistence) {
+      try { return typeof persistence.readRaw === 'function' ? persistence.readRaw('cloud-synced', CUSTOM_KEY) : null; }
+      catch (_) { return null; }
+    }
+    // Czy konto czeka na rozstrzygnięcie starej kopii: nie ma własnej kopii, a urządzenie ma starą.
+    function legacyPending(persistence) {
+      return customRegistered(persistence) && ownCopy(persistence) == null && legacyCopy(persistence) != null;
+    }
+    function vaultUser(vault) {
+      try {
+        var user = vault && typeof vault.isUnlocked === 'function' && vault.isUnlocked() && typeof vault.getCurrentUser === 'function' ? vault.getCurrentUser() : null;
+        return user && user.userId ? String(user.userId) : '';
+      } catch (_) { return ''; }
+    }
+    /* options: { persistence, vault }. Zwraca Promise z wynikiem: 'none' (nie ma starej kopii), 'own' (konto ma
+     * już własną), 'account' (przyjęto pakiety konta z sejfu), 'empty' (konto nie ma pakietów),
+     * 'unresolved' (sejf zablokowany, błąd odczytu albo zmiana konta w trakcie — nic nie zapisano). */
+    function adoptLegacy(options) {
+      options = options || {};
+      var persistence = options.persistence, vault = options.vault;
+      return Promise.resolve().then(function () {
+        if (!customRegistered(persistence)) return 'none';
+        if (ownCopy(persistence) != null) return 'own';
+        var legacy = legacyCopy(persistence);
+        if (legacy == null) return 'none';
+        var user = vaultUser(vault);
+        if (!user || typeof vault.exportSyncPayload !== 'function' || typeof persistence.applyPreferenceFromCloud !== 'function') return 'unresolved';
+        return Promise.resolve(vault.exportSyncPayload()).then(function (payload) {
+          // Odczyt sejfu trwa: w tym czasie mogło zmienić się konto albo przyjść własna kopia z synchronizacji.
+          if (vaultUser(vault) !== user) return 'unresolved';
+          if (ownCopy(persistence) != null) return 'own';
+          var entry = payload && record(payload.userPreferences) ? payload.userPreferences[CUSTOM_KEY] : null;
+          var value = entry && typeof entry.value === 'string' ? entry.value : null;
+          if (value == null) {
+            return persistence.applyPreferenceFromCloud(CUSTOM_KEY, JSON.stringify(normalizeCustom(null))) === true ? 'empty' : 'unresolved';
+          }
+          if (persistence.applyPreferenceFromCloud(CUSTOM_KEY, value) !== true) return 'unresolved';
+          if (value === legacy && typeof persistence.removeKey === 'function') persistence.removeKey('cloud-synced', CUSTOM_KEY);
+          return 'account';
+        });
+      }).catch(function () { return 'unresolved'; });
     }
     // Lista wyboru: pakiety wbudowane, potem własne — w kolejności zapisu. slug własnego pakietu to jego identyfikator.
     function listPackages(data, custom) {
@@ -641,7 +702,7 @@
     }
 
     return Object.freeze({
-      version: '1.3.0',
+      version: '1.4.0',
       SETTINGS_KEY: SETTINGS_KEY,
       CUSTOM_KEY: CUSTOM_KEY,
       LIMITS: LIMITS,
@@ -652,6 +713,8 @@
       normalizeCustom: normalizeCustom,
       readCustom: readCustom,
       writeCustom: writeCustom,
+      legacyPending: legacyPending,
+      adoptLegacy: adoptLegacy,
       validatePackage: validatePackage,
       savePackage: savePackage,
       removePackage: removePackage,
@@ -730,7 +793,11 @@
         previous: null, previousFor: null, authAsked: null, loadSeq: 0, prefilled: {}, unitTouched: {}, unitNotice: {}, unitSource: {},
         // PR4: lista pakietów (wbudowane i własne z konta), wybrany pakiet, kreator.
         packages: [], custom: null, customSig: null, optionsSig: null, rowsSig: null, pickerBuilt: false, creatorBuilt: false,
-        view: 'form', draft: null, pickerNote: '', saving: false };
+        view: 'form', draft: null, pickerNote: '', saving: false,
+        // PR5: stara, wspólna kopia pakietów czeka na rozstrzygnięcie w sejfie, czyje to pakiety.
+        adopting: false, adoptTries: 0,
+        // Lekarz sam wybrał pakiet (lista, kreator, adres) — wczytanie pakietów z konta nie zmienia już wyboru.
+        picked: false };
       var grid = null, card = null, singleBtn = null, packageBtn = null;
       var parts = { inputs: {}, units: {}, errors: {}, cards: {}, normLow: {}, normHigh: {}, normUnit: {}, normErrors: {} };
       var timer = null;
@@ -813,6 +880,29 @@
         state.packages = m.listPackages(DATA, custom);
         return true;
       }
+      /* Stara wspólna kopia pakietów (sprzed 1.4.0): sejf rozstrzyga, czy należy do zalogowanego konta. Trwa to
+       * chwilę i dzieje się raz; do tego czasu kreator jest nieczynny, bo zapis nadpisałby listę konta.
+       * Nieudana próba (sejf jeszcze zablokowany, błąd odczytu) wraca przy kolejnym odświeżeniu, najwyżej 3 razy. */
+      function legacyBlocked() {
+        var m = model();
+        return state.adopting || !!(m && m.legacyPending(persistence()));
+      }
+      function adoptLegacy() {
+        var m = model(), store = persistence();
+        if (state.adopting || state.adoptTries >= 3 || !m || !m.legacyPending(store)) return;
+        state.adopting = true;
+        state.adoptTries++;
+        try { if (w.VildaSession && typeof w.VildaSession.ensureAuthLoaded === 'function') w.VildaSession.ensureAuthLoaded(); } catch (_) { /* sejf sprawdzi rozstrzygnięcie */ }
+        waitForUnlocked(VAULT_WAIT_MS).then(function (vault) {
+          return m.adoptLegacy({ persistence: store, vault: vault });
+        }).catch(function () { return 'unresolved'; }).then(function (result) {
+          state.adopting = false;
+          if (result !== 'unresolved') state.adoptTries = 0;
+          // Pakiety właśnie przyszły z konta: wraca pakiet używany ostatnio na tym urządzeniu.
+          if (result === 'account' && !state.picked && loadPackages()) selectPackage(preferredPackage());
+          schedule();
+        });
+      }
       function preferredPackage() {
         var m = model(), last = m ? m.readSettings(persistence()).lastPackage : null;
         return last && m.findPackage(state.packages, last) ? last : state.packages[0] ? state.packages[0].id : null;
@@ -842,6 +932,7 @@
       function choosePackage(id) {
         if (state.busy) { drawPicker(); return; }
         state.pickerNote = '';
+        state.picked = true;
         selectPackage(id);
         if (state.pkg) model().rememberPackage(persistence(), state.pkg.id);
         refresh();
@@ -933,15 +1024,19 @@
             });
           });
         }
+        var blocked = legacyBlocked();
         parts.select.value = state.pkg ? state.pkg.id : '';
         parts.select.disabled = state.busy;
-        parts.create.disabled = state.busy;
+        parts.create.disabled = state.busy || blocked;
         parts.contents.textContent = state.rows.length
           ? state.rows.map(function (row) { return row.short; }).join(' · ') : 'brak badań z przelicznika';
         parts.edit.hidden = !state.pkg || state.pkg.builtin;
-        parts.edit.disabled = state.busy;
-        parts.pickerNote.hidden = !state.pickerNote;
-        parts.pickerNote.textContent = state.pickerNote;
+        parts.edit.disabled = state.busy || blocked;
+        var note = !blocked ? state.pickerNote
+          : state.adopting || state.adoptTries < 3 ? 'Wczytuję Twoje pakiety z konta…'
+            : 'Nie udało się wczytać Twoich pakietów z konta — odśwież stronę. Do tego czasu nie można tworzyć ani zmieniać pakietów.';
+        parts.pickerNote.hidden = !note;
+        parts.pickerNote.textContent = note;
       }
 
       // Kroki 2–5 i kolumna oceny: szkielet stały, wiersze badań przebudowuje buildRows przy zmianie pakietu.
@@ -1459,8 +1554,10 @@
         var ctx = context();
         // Wybór pakietu i kreator należą do konta: działają po zalogowaniu, także bez wybranego pacjenta.
         var account = ctx.gate === '' || ctx.gate === 'no-patient' || ctx.gate === 'empty';
-        if (account) buildPicker();
-        else if (state.view === 'creator') closeCreator();
+        if (account) {
+          buildPicker();
+          adoptLegacy();
+        } else if (state.view === 'creator') closeCreator();
         // Wyniki wpisane dla jednego pacjenta nie przechodzą na innego ani poza sesję.
         if (!ctx.gate) buildEntry();
         if (ctx.pid !== state.pid) {
@@ -1548,6 +1645,19 @@
           (function poll() {
             var vault = w.VildaVault;
             if (vault && typeof vault.savePatientNote === 'function') { resolve(vault); return; }
+            if (Date.now() - started > timeout) { resolve(null); return; }
+            w.setTimeout(poll, 120);
+          })();
+        });
+      }
+      // Sejf załadowany i odblokowany: zaraz po otwarciu strony skrypt sejfu już jest, a sesja jeszcze wraca.
+      function waitForUnlocked(timeout) {
+        return new Promise(function (resolve) {
+          var started = Date.now();
+          (function poll() {
+            var vault = w.VildaVault, unlocked;
+            try { unlocked = !!vault && typeof vault.isUnlocked === 'function' && vault.isUnlocked(); } catch (_) { unlocked = false; }
+            if (unlocked) { resolve(vault); return; }
             if (Date.now() - started > timeout) { resolve(null); return; }
             w.setTimeout(poll, 120);
           })();
@@ -1859,7 +1969,7 @@
       // pkg: własny pakiet do edycji; bez niego — nowy pakiet.
       function openCreator(pkg) {
         var m = model();
-        if (state.busy || state.saving || !m || !state.custom) return;
+        if (state.busy || state.saving || !m || !state.custom || legacyBlocked()) return;
         var editing = !!pkg && !pkg.builtin;
         if (!editing && state.custom.packages.length >= m.LIMITS.packages) {
           state.pickerNote = 'Możesz mieć najwyżej ' + m.LIMITS.packages + ' własnych pakietów. Usuń któryś, żeby dodać nowy.';
@@ -2003,10 +2113,9 @@
        * załadowany i odblokowany stos konta (jak przy zapisie wyników); bez niego nic się nie zapisuje. */
       function persistCustom(custom) {
         try { if (w.VildaSession && typeof w.VildaSession.ensureAuthLoaded === 'function') w.VildaSession.ensureAuthLoaded(); } catch (_) { /* zapis sprawdzi sejf */ }
-        return waitForVault(VAULT_WAIT_MS).then(function (vault) {
-          var unlocked;
-          try { unlocked = !!vault && typeof vault.isUnlocked === 'function' && vault.isUnlocked(); } catch (_) { unlocked = false; }
-          return unlocked && loggedIn() && model().writeCustom(persistence(), custom) === true;
+        return waitForUnlocked(VAULT_WAIT_MS).then(function (vault) {
+          // Bez rozstrzygniętej starej kopii zapis nadpisałby listę konta pakietami z ekranu.
+          return !!vault && loggedIn() && !legacyBlocked() && model().writeCustom(persistence(), custom) === true;
         }).catch(function () { return false; });
       }
       function saveDraft() {
@@ -2028,6 +2137,7 @@
             return;
           }
           closeCreator(true);
+          state.picked = true;
           loadPackages();
           selectPackage(result.id);
           m.rememberPackage(persistence(), result.id);
@@ -2052,6 +2162,7 @@
             return;
           }
           closeCreator(true);
+          state.picked = true;
           loadPackages();
           selectPackage(state.packages[0] ? state.packages[0].id : null);
           if (state.pkg) m.rememberPackage(persistence(), state.pkg.id);
@@ -2108,6 +2219,7 @@
           var pkg = m.findPackage(state.packages, wanted);
           if (pkg) {
             if (state.view === 'creator') closeCreator();
+            state.picked = true;
             selectPackage(pkg.id);
             setMode('package', true);
             return;
@@ -2158,7 +2270,7 @@
 
     var instance = null;
     return Object.freeze({
-      version: '1.3.0',
+      version: '1.4.0',
       start: function () {
         if (instance || !win || !win.document) return instance;
         instance = create(win);

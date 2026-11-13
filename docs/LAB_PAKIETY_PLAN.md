@@ -55,6 +55,9 @@ Wyniki z oceną i normą można też od razu skopiować do dokumentacji przycisk
    - kortyzol, ACTH i wolny testosteron pakiet ocenia jak dla pobrania rano, 17-OHP jak dla metody
      immunochemicznej — czyli tak, jak pojedyncze badanie w stanie domyślnym.
 
+10. Po scaleniu PR4 (polecenie właściciela): **każde konto widzi tylko swoje pakiety**, także na urządzeniu,
+    na którym loguje się kilka kont. Kopia pakietów na urządzeniu jest osobna dla każdego konta.
+
 ## Zasady, które obowiązują każdy etap
 
 - Pakiet nie ma własnych norm, wzorów ani współczynników. Ocena i zakres pochodzą z silnika pojedynczego
@@ -75,7 +78,8 @@ Wyniki z oceną i normą można też od razu skopiować do dokumentacji przycisk
 | PR2 | „Normy z wydruku”: opcjonalne od–do dla każdego badania, w jednostce wyniku; wpisana norma zastępuje normę aplikacji dla tego wyniku, zapisuje się z nim (`labResult.norm`, bez zrzutu normy aplikacji) i jest oznaczona jako norma laboratorium; podpowiedź jednostki i normy z poprzedniego wyniku tego samego badania u pacjenta, z możliwością edycji | scalony 2026-11-13 (PR #944) |
 | zakładki | Przełącznik trybu jako zakładki w jednej karcie (decyzja 7) | scalone 2026-11-13 (PR #944) |
 | PR3 | „Kopiuj wyniki” przy pakiecie (punkt 8): tekst „Badania (pobranie …)” z wierszem na wynik, oceną poza normą i normą z ekranu; po zapisie kopiuje zapisany zestaw. Bez zmian w „Podsumowaniu wyników” | scalony 2026-11-13 (PR #945) |
-| PR4 | Kreator własnych pakietów, etap 1 (punkt 9): lista rozwijana pakietów, kreator w zakładce, zapis na koncie, badania „bez oceny w pakiecie” z łączem do pojedynczego badania, ocena pozostałych jak w domyślnym pojedynczym badaniu | ten PR |
+| PR4 | Kreator własnych pakietów, etap 1 (punkt 9): lista rozwijana pakietów, kreator w zakładce, zapis na koncie, badania „bez oceny w pakiecie” z łączem do pojedynczego badania, ocena pozostałych jak w domyślnym pojedynczym badaniu | scalony 2026-11-13 (PR #946) |
+| PR5 | Każde konto widzi tylko swoje pakiety (punkt 10): osobna kopia pakietów na urządzeniu dla każdego konta, jednorazowe przypisanie starej wspólnej kopii właściwemu kontu | ten PR |
 | później | Kreator, etap 2: ocena pokwitaniowa LH, FSH, inhibiny B i testosteronu w pakiecie — wymaga podłączenia silników pokwitaniowych przelicznika (osie wieku i stadium, kontekst próbki) i zapisu tej samej koperty oceny co pojedyncze badanie, patrz `docs/clinical/LAB_INTERPRETATION_AGENT_GUIDE.md` | uzgodniony kierunek, bez terminu |
 
 ## Otwarte kwestie do decyzji przy kolejnych etapach
