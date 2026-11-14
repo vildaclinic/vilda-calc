@@ -20,7 +20,7 @@ async function prepare(page, profile) {
     return url.hostname === '127.0.0.1' || /^(data|blob):$/.test(url.protocol)
       ? route.continue() : route.abort();
   });
-  await createFictionalVault(page, { shell: true });
+  await createFictionalVault(page, { shell: true, waitForAccountReadyBeforeReload: true });
   const consent = page.locator('#consent-decline');
   if (await consent.isVisible()) await consent.click();
   await expect(page.locator(TRIGGER)).toBeVisible();

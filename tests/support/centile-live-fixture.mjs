@@ -120,7 +120,7 @@ export async function readyForPatient(frame) {
     && !window.VildaDobAge.restorePending());
 }
 
-export async function createFictionalVault(page, { shell = false } = {}) {
+export async function createFictionalVault(page, { shell = false, waitForAccountReadyBeforeReload = false } = {}) {
   await fixturePreferences(page);
   await page.goto(shell ? '/app.html#/start' : '/index.html', { waitUntil: 'load' });
   let frame = shell ? await shellFrame(page) : page;
@@ -128,30 +128,34 @@ export async function createFictionalVault(page, { shell = false } = {}) {
   const created = await frame.evaluate(password => window.VildaVault.createUser(password, {
     label: 'Fikcyjny sejf testu panelu siatek', iterations: 10000,
   }), PASSWORD);
-  // Creating the account in Start also notifies the shell and preloaded panes.
-  // Wait for the host and current Start before our one deliberate reload.
-  // Read Start through the host on every poll: auth may replace either document.
-  await page.waitForFunction(({ shell, userId }) => {
-    const authReady = target => Boolean(target?.document.readyState === 'complete'
-      && target.VildaVault?.isUnlocked()
-      && target.VildaVault.getCurrentUser()?.userId === userId
-      && target.VildaAuthUI?.isBootReady()
-      && !target.document.documentElement.classList.contains('vilda-auth-locked'));
-    const current = shell
-      ? document.querySelector('iframe.app-pane[title="Start"]')?.contentWindow : window;
-    return authReady(window) && authReady(current)
-      && current.VildaPersistRuntime?.getSnapshot().initialized
-      && ['app:main-session-restore-init', 'app:estimated-intake-init', 'app:intake-live-wiring']
-        .every(name => current.VildaInit?.isInitialized(name))
-      && typeof current.collectUserData === 'function'
-      && typeof current.applyLoadedData === 'function' && typeof current.clearAllData === 'function'
-      && !current.__vildaPersistRestoring && !current.__vildaLustroWpis
-      && !current.__vildaSuspendIntakeUserReset
-      && current.VildaDataImportExport && !current.VildaDataImportExport.isMainSessionRestorePending()
-      && !current.VildaDataImportExport.isMainSessionAutosavePaused()
-      && current.VildaPersistence && !current.VildaPersistence.isAutosaveSuppressed()
-      && current.VildaDobAge && !current.VildaDobAge.restorePending();
-  }, { shell, userId: created.userId });
+  // Fixed-date fixtures use the reload to reset temporary clear/autosave guards.
+  // Waiting for those timestamp guards before reloading is opt-in.
+  if (waitForAccountReadyBeforeReload) {
+    // Creating the account in Start also notifies the shell and preloaded panes.
+    // Wait for the host and current Start before our one deliberate reload.
+    // Read Start through the host on every poll: auth may replace either document.
+    await page.waitForFunction(({ shell, userId }) => {
+      const authReady = target => Boolean(target?.document.readyState === 'complete'
+        && target.VildaVault?.isUnlocked()
+        && target.VildaVault.getCurrentUser()?.userId === userId
+        && target.VildaAuthUI?.isBootReady()
+        && !target.document.documentElement.classList.contains('vilda-auth-locked'));
+      const current = shell
+        ? document.querySelector('iframe.app-pane[title="Start"]')?.contentWindow : window;
+      return authReady(window) && authReady(current)
+        && current.VildaPersistRuntime?.getSnapshot().initialized
+        && ['app:main-session-restore-init', 'app:estimated-intake-init', 'app:intake-live-wiring']
+          .every(name => current.VildaInit?.isInitialized(name))
+        && typeof current.collectUserData === 'function'
+        && typeof current.applyLoadedData === 'function' && typeof current.clearAllData === 'function'
+        && !current.__vildaPersistRestoring && !current.__vildaLustroWpis
+        && !current.__vildaSuspendIntakeUserReset
+        && current.VildaDataImportExport && !current.VildaDataImportExport.isMainSessionRestorePending()
+        && !current.VildaDataImportExport.isMainSessionAutosavePaused()
+        && current.VildaPersistence && !current.VildaPersistence.isAutosaveSuppressed()
+        && current.VildaDobAge && !current.VildaDobAge.restorePending();
+    }, { shell, userId: created.userId });
+  }
   await page.reload({ waitUntil: 'load' });
   frame = shell ? await shellFrame(page) : page;
   await readyForPatient(frame);
