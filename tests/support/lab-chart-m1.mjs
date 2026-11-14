@@ -2,7 +2,7 @@ import { expect } from '@playwright/test';
 import { otworzBadania, otworzSejf, sekcjaBadan, bezBaneraZgody } from './lab-historia-dane.mjs';
 import { createKlirensSearchEnvironment } from './klirens-search-all-formulas.mjs';
 
-export async function verifyM1(page, width) {
+export async function prepareM1(page, width) {
   await page.setViewportSize({ width, height: 1000 });
   await bezBaneraZgody(page);
   const patientId = await otworzSejf(page);
@@ -30,6 +30,30 @@ export async function verifyM1(page, width) {
   await otworzBadania(page, patientId);
   const section = sekcjaBadan(page);
   await section.locator('[data-view="charts"]').click();
+  return { patientId, ids, notes, before, section };
+}
+
+// A selection must not replace the plotted DOM, move an ancestor scroller or
+// move the page. The same snapshot also verifies returning from explicit Details.
+export async function pointViewport(control) {
+  return control.evaluate(point => {
+    const bounds = point.closest('.vilda-lab-hist-card').getBoundingClientRect();
+    const scrolls = [];
+    for (let parent = point; parent; parent = parent.parentElement) scrolls.push([parent.scrollTop, parent.scrollLeft]);
+    return { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height,
+      pageX: window.scrollX, pageY: window.scrollY, scrolls };
+  });
+}
+
+export function expectSameViewport(before, after) {
+  for (const coordinate of ['x', 'y', 'width', 'height']) expect(Math.abs(before[coordinate] - after[coordinate]), coordinate).toBeLessThanOrEqual(0.5);
+  expect(after.pageX).toBe(before.pageX);
+  expect(after.pageY).toBe(before.pageY);
+  expect(after.scrolls).toEqual(before.scrolls);
+}
+
+export async function verifyM1(page, width) {
+  const { ids, notes, before, section } = await prepareM1(page, width);
   const bubble = page.locator('.vilda-lab-point-preview-bubble');
   for (const [key, value, color] of [
     ['above', '5,6', 'rgb(207, 34, 46)'], ['below', '0,3', 'rgb(207, 34, 46)'],
@@ -65,18 +89,42 @@ export async function verifyM1(page, width) {
     await expect(bubble).toBeVisible();
     await page.keyboard.press('Escape');
   } else {
+    const position = await pointViewport(above);
+    await above.tap();
+    await expect(bubble).toBeVisible();
+    await expect(above).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('dialog.vilda-result-details-dialog[open]')).toHaveCount(0);
+    await expect(page.locator('.vilda-lab-result-chart-chooser:not([hidden])')).toHaveCount(0);
+    expectSameViewport(position, await pointViewport(above));
+    // Keep the deliberate hold path too: native short tap and the previous
+    // long-hold contract both provide the same saved-value-only M1.
     await above.dispatchEvent('pointerdown', { pointerType: 'touch', clientX: 50, clientY: 50 });
     await page.waitForTimeout(450);
     await above.dispatchEvent('pointerup', { pointerType: 'touch' });
     await above.dispatchEvent('click');
     await expect(bubble).toBeVisible();
-    await expect(section.locator('.vilda-lab-hist-result-details')).toHaveCount(0);
+    await expect(page.locator('dialog.vilda-result-details-dialog[open]')).toHaveCount(0);
+    expectSameViewport(position, await pointViewport(above));
     await page.keyboard.press('Escape');
   }
-  await above.click();
-  await expect(section.locator(`.vilda-lab-hist-result-details[data-note-id="${ids.above}"]`)).toBeVisible();
+  const position = await pointViewport(above);
+  if (width > 600) await above.click();
+  else await section.locator('.vilda-lab-hist-card[data-series="tsh"] .vilda-lab-hist-chart-details').tap();
+  const details = page.locator('#labResultDetailsDialog');
+  await expect(details).toHaveClass(/vilda-result-details-dialog/);
+  await expect(details.locator(`.vilda-lab-hist-result-details[data-note-id="${ids.above}"]`)).toBeVisible();
+  expectSameViewport(position, await pointViewport(above));
+  if (width <= 600) {
+    const bounds = await details.boundingBox();
+    expect(Math.abs(bounds.x)).toBeLessThanOrEqual(1);
+    expect(Math.abs(bounds.y)).toBeLessThanOrEqual(1);
+    expect(Math.abs(bounds.width - width)).toBeLessThanOrEqual(1);
+    expect(Math.abs(bounds.height - 1000)).toBeLessThanOrEqual(1);
+  }
   await expect(bubble).toHaveCount(0);
-  await section.getByRole('button', { name: 'Zamknij szczegóły wyniku', exact: true }).click();
+  await details.getByRole('button', { name: 'Zamknij szczegóły wyniku', exact: true }).click();
+  await expect(details).toBeHidden();
+  expectSameViewport(position, await pointViewport(above));
   const zero = section.locator(`[data-note-id="${ids.zero}"].vilda-lab-result-chart-point`);
   await zero.scrollIntoViewIfNeeded(); await zero.focus();
   await expect(bubble).toBeVisible();

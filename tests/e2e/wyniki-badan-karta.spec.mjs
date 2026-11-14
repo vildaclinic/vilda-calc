@@ -83,7 +83,7 @@ test('Historia: krótki wpis z wierszem na wynik; klik otwiera Badania ze szczeg
   await czekajNaBadania(page);
   await expect(page.locator('.vilda-patient-tab[data-tab="lab"]')).toHaveClass(/vilda-patient-tab--active/);
   const badania = sekcjaBadan(page);
-  const szczegoly = badania.locator(`.vilda-lab-hist-result-details[data-note-id="${ids.ft4}"]`);
+  const szczegoly = page.locator(`.vilda-lab-hist-result-details[data-note-id="${ids.ft4}"]`);
   await expect(szczegoly).toBeVisible();
   await expect(szczegoly).toContainText('15,1');
   await expect(szczegoly.getByRole('button', { name: 'Edytuj wpis', exact: true })).toBeVisible();
@@ -101,8 +101,8 @@ test('Historia: krótki wpis z wierszem na wynik; klik otwiera Badania ze szczeg
   // Odmowa w potwierdzeniu niczego nie usuwa.
   await badania.locator(`.vilda-lab-hist-result-row[data-note-id="${ids.tsh}"]`).click();
   page.once('dialog', (dialog) => dialog.dismiss());
-  await badania.locator(`.vilda-lab-hist-result-details[data-note-id="${ids.tsh}"]`).getByRole('button', { name: 'Usuń wpis', exact: true }).click();
-  await expect(badania.locator(`.vilda-lab-hist-result-details[data-note-id="${ids.tsh}"]`)).toBeVisible();
+  await page.locator(`.vilda-lab-hist-result-details[data-note-id="${ids.tsh}"]`).getByRole('button', { name: 'Usuń wpis', exact: true }).click();
+  await expect(page.locator(`.vilda-lab-hist-result-details[data-note-id="${ids.tsh}"]`)).toBeVisible();
   await expect(badania.locator('.vilda-lab-hist-result-row')).toHaveCount(4);
 });
 
@@ -112,7 +112,7 @@ test('link do wyniku z innego miejsca (focusNoteId) otwiera Badania, a link do z
   await page.evaluate(({ pid, id }) => window.VildaAuthUI.showPatientCard(pid, null, null, { activeTab: 'notes', focusNoteId: id }), { pid: patientId, id: ids.tshOld });
   await czekajNaBadania(page);
   await expect(page.locator('.vilda-patient-tab[data-tab="lab"]')).toHaveClass(/vilda-patient-tab--active/);
-  await expect(sekcjaBadan(page).locator(`.vilda-lab-hist-result-details[data-note-id="${ids.tshOld}"]`)).toContainText('Fikcyjny starszy wynik TSH');
+  await expect(page.locator(`.vilda-lab-hist-result-details[data-note-id="${ids.tshOld}"]`)).toContainText('Fikcyjny starszy wynik TSH');
 
   await page.evaluate(({ pid, id }) => window.VildaAuthUI.showPatientCard(pid, null, null, { activeTab: 'notes', focusNoteId: id }), { pid: patientId, id: ids.zlecenie });
   await expect(page.locator('.vilda-patient-tab[data-tab="notes"]')).toHaveClass(/vilda-patient-tab--active/);
@@ -165,7 +165,7 @@ test('telefon 390 px: wiersze Historii co najmniej 44 px, akcje wyniku w Badania
 
   await sekcjaHistorii(page).locator(`.vilda-wb-hist-result[data-note-id="${ids.tsh}"]`).click();
   await czekajNaBadania(page);
-  const szczegoly = sekcjaBadan(page).locator(`.vilda-lab-hist-result-details[data-note-id="${ids.tsh}"]`);
+  const szczegoly = page.locator(`.vilda-lab-hist-result-details[data-note-id="${ids.tsh}"]`);
   await expect(szczegoly).toBeVisible();
   for (const name of ['Edytuj wpis', 'Usuń wpis']) {
     const height = await szczegoly.getByRole('button', { name, exact: true }).evaluate((button) => button.getBoundingClientRect().height);
@@ -173,6 +173,7 @@ test('telefon 390 px: wiersze Historii co najmniej 44 px, akcje wyniku w Badania
   }
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1)).toBe(true);
 
+  await page.locator('#labResultDetailsDialog .vilda-lab-hist-details-close').click();
   await page.locator('.vilda-patient-tab[data-tab="notes"]').click();
   await expect(sekcjaNotatek(page).getByRole('button', { name: 'Wyniki badań (5) są w zakładce Badania →' })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1)).toBe(true);

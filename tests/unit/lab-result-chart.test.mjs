@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
 import { atrapaDokumentu } from '../support/atrapa-dom-lekka.mjs';
 
@@ -10,6 +10,21 @@ const entry = (id, date, value, extra = {}) => ({ noteId: `fictional-${id}`, dat
 
 function fixture(entries, options = {}) {
   const doc = atrapaDokumentu(), win = {}, openNote = vi.fn();
+  if (options.previewWindow) {
+    Object.assign(win, { innerWidth: 1024, innerHeight: 900, setTimeout, clearTimeout,
+      addEventListener: vi.fn(), removeEventListener: vi.fn(),
+      getComputedStyle: () => ({ visibility: 'visible', display: 'block', opacity: '1', filter: 'none' }) });
+    doc.defaultView = win;
+    doc.removeEventListener = vi.fn();
+    const create = doc.createElement;
+    doc.createElement = (tag) => {
+      const element = create(tag);
+      element.getClientRects = () => [{}];
+      element.getBoundingClientRect = () => ({ left: 100, top: 100, width: tag === 'button' ? 44 : 190, height: 44, bottom: 144 });
+      return element;
+    };
+    doc.createElementNS = (_ns, tag) => doc.createElement(tag);
+  }
   loadBrowserScript('vilda_lab_result_chart.js', win);
   const view = {
     key: 'fictional-tsh', label: 'Fikcyjne TSH', unit: 'mIU/L', entries,
@@ -22,7 +37,9 @@ function fixture(entries, options = {}) {
   const descriptions = options.descriptions || {};
   const describeEntry = vi.fn((row) => descriptions[row.noteId] || { value: row.exactValue, unit: row.unit, tone: 'within', normText: '1–4 mIU/L', norms: [range()], ...options.description });
   const before = JSON.stringify(view);
-  const host = win.VildaLabResultChart.render(doc, view, { describe: describeEntry, openNote, joinLines: options.joinLines });
+  const host = win.VildaLabResultChart.render(doc, view, { describe: describeEntry, openNote, joinLines: options.joinLines,
+    selectEntries: options.selectEntries, openEntries: options.openEntries });
+  if (host && options.previewWindow) doc.body.appendChild(host);
   expect(JSON.stringify(view)).toBe(before);
   return { host, view, openNote, describeEntry, doc, win };
 }
@@ -344,5 +361,165 @@ describe('saved laboratory history chart', () => {
     expect(heights.every((height) => height >= 8 && height <= 92)).toBe(true);
     expect(guides[1].getAttribute('data-note-id')).toBe(rows[1].noteId);
     expect(host.querySelector('.vilda-lab-result-chart-point[data-note-id="fictional-zero"]').getAttribute('data-value')).toBe('0');
+  });
+});
+
+function emit(element, type, properties = {}) {
+  let stopped = false;
+  const event = { type, target: element, defaultPrevented: false,
+    preventDefault() { this.defaultPrevented = true; }, stopImmediatePropagation() { stopped = true; }, ...properties };
+  for (const handler of element.sluchacze.get(type) || []) { handler(event); if (stopped) break; }
+  return event;
+}
+function interactive(entries, extra = {}) {
+  const selectEntries = vi.fn(), openEntries = vi.fn();
+  const result = fixture(entries, { previewWindow: true, selectEntries, openEntries, ...extra });
+  return { ...result, selectEntries, openEntries, control: result.host.querySelector('.vilda-lab-result-chart-point') };
+}
+
+describe('explicit chart detail interaction', () => {
+  afterEach(() => vi.useRealTimers());
+
+  it.each(['touch', 'pen'])('a short %s tap at tablet width selects only M1 and retains the exact note for Details', (pointerType) => {
+    const row = entry('tap', '2026-01-01', 2);
+    const { doc, win, host, control, selectEntries, openEntries, openNote } = interactive([row]);
+    const children = host.children.length;
+    const geometry = [control.parentNode.getAttribute('x'), control.parentNode.getAttribute('y')];
+    emit(control, 'pointerdown', { pointerType, clientX: 110, clientY: 110 });
+    emit(control, 'pointerup', { pointerType });
+    const click = emit(control, 'click', { pointerType });
+    expect(win.innerWidth).toBe(1024); // Input type, not a narrow-width shortcut.
+    expect(selectEntries).toHaveBeenCalledExactlyOnceWith([row], control);
+    expect(openEntries).not.toHaveBeenCalled();
+    expect(openNote).not.toHaveBeenCalled();
+    expect(click.defaultPrevented).toBe(true);
+    expect(control.getAttribute('aria-pressed')).toBe('true');
+    expect(control.classList.contains('is-selected')).toBe(true);
+    expect(doc.body.querySelector('.vilda-lab-point-preview-bubble').textContent).toBe('Fikcyjne TSH2mIU/L');
+    expect(host.children).toHaveLength(children);
+    expect([control.parentNode.getAttribute('x'), control.parentNode.getAttribute('y')]).toEqual(geometry);
+  });
+
+  it('opens on a later mouse click or keyboard activation rather than treating a previous touch as mouse input', () => {
+    const row = entry('mixed-input', '2026-01-01', 2);
+    const { control, openEntries, selectEntries } = interactive([row]);
+    emit(control, 'pointerdown', { pointerType: 'touch', clientX: 100, clientY: 100 });
+    emit(control, 'pointerup', { pointerType: 'touch' });
+    emit(control, 'click', { pointerType: 'touch' });
+    expect(openEntries).not.toHaveBeenCalled();
+    emit(control, 'pointerdown', { pointerType: 'mouse' });
+    emit(control, 'pointerup', { pointerType: 'mouse' });
+    emit(control, 'click', { pointerType: 'mouse' });
+    expect(openEntries).toHaveBeenCalledExactlyOnceWith([row], control);
+    emit(control, 'pointerdown', { pointerType: 'touch', clientX: 100, clientY: 100 });
+    emit(control, 'pointercancel', { pointerType: 'touch' });
+    emit(control, 'keydown', { key: 'Enter' });
+    emit(control, 'click', { detail: 0 });
+    expect(openEntries).toHaveBeenCalledTimes(2);
+    expect(selectEntries).toHaveBeenCalledTimes(3);
+  });
+
+  it.each(['move', 'cancel'])('a touch %s cannot select a point or open details through a compatibility click', (action) => {
+    vi.useFakeTimers();
+    const { doc, control, selectEntries, openEntries } = interactive([entry('pan', '2026-01-01', 2)]);
+    emit(control, 'pointerdown', { pointerType: 'touch', clientX: 100, clientY: 100 });
+    if (action === 'move') emit(control, 'pointermove', { pointerType: 'touch', clientX: 106, clientY: 106 });
+    else emit(control, 'pointercancel', { pointerType: 'touch' });
+    vi.advanceTimersByTime(500);
+    emit(control, 'pointerup', { pointerType: 'touch' });
+    emit(control, 'click', { pointerType: 'touch' });
+    expect(selectEntries).not.toHaveBeenCalled();
+    expect(openEntries).not.toHaveBeenCalled();
+    expect(doc.body.querySelector('.vilda-lab-point-preview')).toBeNull();
+    expect(control.getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('shows a hold preview at 420 ms and selects once on release without opening or adding a chooser', () => {
+    vi.useFakeTimers();
+    const row = entry('hold', '2026-01-01', 2);
+    const { doc, control, selectEntries, openEntries, win, host } = interactive([row]);
+    emit(control, 'pointerdown', { pointerType: 'touch', clientX: 100, clientY: 100 });
+    vi.advanceTimersByTime(419);
+    expect(doc.body.querySelector('.vilda-lab-point-preview')).toBeNull();
+    vi.advanceTimersByTime(1);
+    expect(doc.body.querySelector('.vilda-lab-point-preview')).not.toBeNull();
+    expect(selectEntries).not.toHaveBeenCalled();
+    emit(control, 'pointerup', { pointerType: 'touch' });
+    emit(control, 'click', { pointerType: 'touch' });
+    emit(control, 'pointerleave', { pointerType: 'touch' });
+    vi.advanceTimersByTime(200);
+    expect(doc.body.querySelector('.vilda-lab-point-preview')).not.toBeNull();
+    expect(selectEntries).toHaveBeenCalledExactlyOnceWith([row], control);
+    expect(openEntries).not.toHaveBeenCalled();
+    expect(host.querySelector('.vilda-lab-result-chart-chooser')).toBeNull();
+    win.VildaLabResultChart.hidePreview(doc);
+    expect(doc.body.querySelector('.vilda-lab-point-preview')).toBeNull();
+    expect(control.getAttribute('aria-pressed')).toBe('true');
+    win.VildaLabResultChart.clearSelection(doc);
+    expect(control.getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('cancels a completed hold when panning starts before release, without committing a selection', () => {
+    vi.useFakeTimers();
+    const { doc, control, selectEntries, openEntries } = interactive([entry('hold-pan', '2026-01-01', 2)]);
+    emit(control, 'pointerdown', { pointerType: 'touch', clientX: 100, clientY: 100 });
+    vi.advanceTimersByTime(420);
+    emit(control, 'pointermove', { pointerType: 'touch', clientX: 100, clientY: 112 });
+    emit(control, 'pointerup', { pointerType: 'touch' });
+    emit(control, 'click', { pointerType: 'touch' });
+    expect(selectEntries).not.toHaveBeenCalled();
+    expect(openEntries).not.toHaveBeenCalled();
+    expect(doc.body.querySelector('.vilda-lab-point-preview')).toBeNull();
+  });
+
+  it('keeps coincident notes in one neutral point and passes both exact entries to the modal without an in-flow chooser', () => {
+    const a = entry('dup-a', '2026-01-01', 2), b = entry('dup-b', '2026-01-01', 2);
+    const descriptions = { [b.noteId]: { value: 2, unit: 'mIU/L', tone: 'below', norms: [range(3, 6)] } };
+    const { doc, host, control, selectEntries, openEntries } = interactive([a, b], { descriptions });
+    expect(host.querySelectorAll('.vilda-lab-result-chart-point')).toHaveLength(1);
+    expect(host.querySelector('.vilda-lab-result-chart-chooser')).toBeNull();
+    expect(control.getAttribute('data-count')).toBe('2');
+    expect(control.getAttribute('data-tone')).toBe('neutral');
+    emit(control, 'pointerdown', { pointerType: 'touch', clientX: 100, clientY: 100 });
+    emit(control, 'pointerup', { pointerType: 'touch' });
+    emit(control, 'click', { pointerType: 'touch' });
+    expect(selectEntries).toHaveBeenCalledExactlyOnceWith([a, b], control);
+    expect(openEntries).not.toHaveBeenCalled();
+    expect(doc.body.querySelector('.vilda-lab-point-preview-value').getAttribute('data-tone')).toBe('neutral');
+    emit(control, 'keydown', { key: ' ' });
+    emit(control, 'click', { detail: 0 });
+    expect(openEntries).toHaveBeenCalledExactlyOnceWith([a, b], control);
+    expect(host.querySelector('.vilda-lab-result-chart-chooser')).toBeNull();
+  });
+
+  it('clears the transient point selection and preview on a session transition', () => {
+    const { doc, control } = interactive([entry('session', '2026-01-01', 2)]);
+    emit(control, 'pointerdown', { pointerType: 'touch', clientX: 100, clientY: 100 });
+    emit(control, 'pointerup', { pointerType: 'touch' });
+    emit(control, 'click', { pointerType: 'touch' });
+    doc.dispatchEvent({ type: 'vilda:session-changed' });
+    expect(control.getAttribute('aria-pressed')).toBe('false');
+    expect(control.classList.contains('is-selected')).toBe(false);
+    expect(doc.body.querySelector('.vilda-lab-point-preview')).toBeNull();
+  });
+
+  it('does not select or open a control removed while a touch was in progress', () => {
+    const { host, control, selectEntries, openEntries } = interactive([entry('detached', '2026-01-01', 2)]);
+    emit(control, 'pointerdown', { pointerType: 'touch', clientX: 100, clientY: 100 });
+    host.remove();
+    emit(control, 'pointerup', { pointerType: 'touch' });
+    emit(control, 'click', { pointerType: 'touch' });
+    expect(selectEntries).not.toHaveBeenCalled();
+    expect(openEntries).not.toHaveBeenCalled();
+    expect(control.getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('keeps deliberate unplottable record links opening details for their exact saved entry', () => {
+    const numeric = entry('numeric', '2026-01-01', 2), censored = entry('limit', '2026-01-02', null, { kind: 'censored', display: '<0,1 mIU/L' });
+    const { host, openEntries, openNote } = interactive([numeric, censored]);
+    const link = host.querySelector('.vilda-lab-result-chart-record');
+    link.click();
+    expect(openEntries).toHaveBeenCalledExactlyOnceWith([censored], link);
+    expect(openNote).not.toHaveBeenCalled();
   });
 });

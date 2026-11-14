@@ -17,6 +17,7 @@ const MODULES = [
   ['VildaLabHistory', 'vilda_lab_history.js', 'buildHistoryView'],
   ['VildaLabResultPresentation', 'vilda_lab_result_presentation.js', 'describe'],
   ['VildaLabResultChart', 'vilda_lab_result_chart.js', 'render'],
+  ['VildaResultDetailsDialog', 'vilda_lab_result_chart.js', 'attach'],
   ['VildaLabHistoryTab', 'vilda_lab_history_tab.js', 'render'],
 ];
 const LAB = ['vilda_lab_history.js', 'vilda_lab_history_tab.css', 'vilda_lab_result_presentation.js', 'vilda_lab_result_chart.js', 'vilda_lab_history_tab.js'];
@@ -43,6 +44,7 @@ describe('stosy auth: moduły zakładki Badania', () => {
       expect(at('vilda_lab_history.js')).toBeLessThan(at('vilda_lab_history_tab.js'));
       expect(at('vilda_lab_result_presentation.js')).toBeLessThan(at('vilda_lab_result_chart.js'));
       expect(at('vilda_lab_result_chart.js')).toBeLessThan(at('vilda_lab_history_tab.js'));
+      expect(at('vilda_lab_history_tab.css')).toBeLessThan(at('vilda_lab_history_tab.js'));
       expect(at('vilda_lab_history_tab.js')).toBeLessThan(at('vilda_vault.js'));
       expect(at('vilda_lab_history_tab.js')).toBeLessThan(at('vilda_auth_ui.js'));
       expect(at('vilda_puberty_assessment.js')).toBeGreaterThan(-1);
@@ -61,7 +63,7 @@ describe('stosy auth: moduły zakładki Badania', () => {
     expect(versions(chromeLoader)).toEqual(index);
   });
 
-  it('każda strona z zakładką ładuje prezentację i wykres przed widokiem, a oba nowe pliki są w precache', () => {
+  it('każda strona ładuje prezentację i wykres ze wspólnym oknem przed widokiem, ma arkusz w nagłówku i zasoby w precache', () => {
     for (const page of ['index.html', 'app.html', 'docpro.html', 'kalkulator-klirens.html', 'notatki.html', 'subskrypcja.html', 'terminarz.html', 'ustawienia.html']) {
       const source = read(page);
       const presentation = source.indexOf('vilda_lab_result_presentation.js?');
@@ -70,9 +72,13 @@ describe('stosy auth: moduły zakładki Badania', () => {
       expect(presentation, page).toBeGreaterThan(-1);
       expect(chart, page).toBeGreaterThan(presentation);
       expect(tab, page).toBeGreaterThan(chart);
+      const stylesheet = source.indexOf('vilda_lab_history_tab.css?');
+      expect(stylesheet, page).toBeGreaterThan(-1);
+      expect(stylesheet, page).toBeLessThan(source.indexOf('</head>'));
+      expect(source, page).toMatch(/<script defer src="vilda_lab_history_tab\.js\?v=\d+"><\/script>/);
     }
     const worker = read('service-worker-kalorii.js');
-    for (const [, file] of MODULES.slice(1, 3)) expect(worker).toContain(`'/${assetUrl(file)}'`);
+    for (const file of LAB) expect(worker).toContain(`'/${assetUrl(file)}'`);
   });
 });
 
@@ -83,7 +89,7 @@ function environment(missing) {
     VildaPatientIdentityProtocol: {}, VildaPatientIdentityTransport: {},
     // SGA readiness has its own missing-dependency cases in patient-sga-loading.test.mjs.
     VildaBirthAssessment: {}, VildaPatientSgaModel: {}, VildaPatientSgaUI: {},
-    VildaHormoneReferenceSnapshot: {}, VildaHormoneReferenceUI: {}, VildaLabRangeSnapshot: {}, VildaLabHistory: {}, VildaLabResultPresentation: {}, VildaLabResultChart: {}, VildaLabHistoryTab: {}, VildaPubertyAssessment: {}, VildaLabTestosteroneUnits: {},
+    VildaHormoneReferenceSnapshot: {}, VildaHormoneReferenceUI: {}, VildaLabRangeSnapshot: {}, VildaLabHistory: {}, VildaLabResultPresentation: {}, VildaLabResultChart: {}, VildaResultDetailsDialog: {}, VildaLabHistoryTab: {}, VildaPubertyAssessment: {}, VildaLabTestosteroneUnits: {},
     // Independent care-plan model/UI readiness is tested in care-plans-loader.test.mjs.
     VildaCarePlanModel: {}, VildaCarePlans: {},
     // Independent search/privacy readiness is covered by the same loader suite.
@@ -124,20 +130,31 @@ for (const loader of ['session', 'chrome']) {
       return new Function('r', 'o', `${chromeLoader}; return u;`)(env.win, env.win.document);
     }
 
-    it('brak modułów: dociąga model, arkusz, prezentację norm, wykres i widok w tej kolejności', async () => {
+    it('brak modułów: dociąga model, arkusze, prezentację norm, wykres, wspólne okno i widok z poprawną kolejnością zależności', async () => {
       const env = environment(MODULES.map(([global]) => global));
       await start(env)();
-      expect(env.appended.filter((url) => /vilda_lab_(history|result)/.test(url)).map((url) => url.split('?')[0])).toEqual(LAB);
+      const loaded = env.appended.filter((url) => LAB.includes(url.split('?')[0])).map((url) => url.split('?')[0]);
+      expect([...loaded].sort()).toEqual([...LAB].sort());
+      expect(loaded.indexOf('vilda_lab_history.js')).toBeLessThan(loaded.indexOf('vilda_lab_history_tab.js'));
+      expect(loaded.indexOf('vilda_lab_result_presentation.js')).toBeLessThan(loaded.indexOf('vilda_lab_result_chart.js'));
+      expect(loaded.indexOf('vilda_lab_result_chart.js')).toBeLessThan(loaded.indexOf('vilda_lab_history_tab.js'));
+      expect(loaded.indexOf('vilda_lab_history_tab.css')).toBeLessThan(loaded.indexOf('vilda_lab_history_tab.js'));
       expect(typeof env.win.VildaLabHistory.buildHistoryView).toBe('function');
+      expect(typeof env.win.VildaLabResultChart.render).toBe('function');
+      expect(typeof env.win.VildaResultDetailsDialog.attach).toBe('function');
       expect(typeof env.win.VildaLabHistoryTab.render).toBe('function');
     });
 
-    for (const [global, file, method] of MODULES.slice(1, 3)) {
+    for (const [global, file, method] of MODULES.slice(1, 4)) {
       it(`brak ${global}: uzupełnia zależność nawet przy już załadowanej zakładce`, async () => {
         const env = environment([global]);
         await start(env)();
         expect(env.appended.filter((url) => MODULES.some(([, candidate]) => url.split('?')[0] === candidate))).toEqual([assetUrl(file)]);
         expect(typeof env.win[global][method]).toBe('function');
+        if (file === 'vilda_lab_result_chart.js') {
+          expect(typeof env.win.VildaLabResultChart.render).toBe('function');
+          expect(typeof env.win.VildaResultDetailsDialog.attach).toBe('function');
+        }
         expect(env.appended.some((url) => url.startsWith('vilda_lab_history_tab.js?'))).toBe(false);
       });
     }

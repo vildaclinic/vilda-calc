@@ -1,3 +1,173 @@
+/* Shared result UI transport: the dialog lifecycle is its own IIFE below.
+ * Keeping both presentation APIs in this existing resource avoids additional
+ * fresh-install requests; the saved-result chart implementation follows intact.
+ */
+/* Shared presentation lifecycle for saved lab and Klirens details.
+ * This module never reads, recalculates or writes a patient/result record.
+ * The caller owns the contents, transactions, cancellation policy and DOM.
+ */
+(function (root) {
+  'use strict';
+
+  function attach(dialog, options) {
+    options = options || {};
+    if (!dialog || !dialog.ownerDocument) throw new TypeError('A result dialog is required.');
+    var doc = dialog.ownerDocument, win = doc.defaultView || root;
+    var context = options.context || null;
+    var destroyed = false, opened = false, closing = false, saved = null, restoreFrame = null, generation = 0;
+    dialog.classList.add('vilda-result-details-dialog');
+
+    function connected(element) { return !!element && element.isConnected !== false; }
+    function isOpen() { return dialog.open === true || dialog.hasAttribute('open'); }
+    function validContext() {
+      return connected(dialog) && (!context || connected(context))
+        && (typeof options.isCurrent !== 'function' || options.isCurrent());
+    }
+    function capture(anchor) {
+      var elements = [], windows = [];
+      function remember(element) {
+        if (!element || elements.some(function (position) { return position.element === element; })) return;
+        if (typeof element.scrollTop === 'number') elements.push({ element: element, top: element.scrollTop, left: element.scrollLeft || 0 });
+      }
+      function ancestry(element) {
+        for (var cursor = element; cursor; cursor = cursor.parentElement || cursor.parentNode) remember(cursor);
+      }
+      ancestry(anchor); ancestry(context);
+      // A Details button can sit outside its chart's horizontal scroller.
+      // Preserve that sibling's existing position as well as the button's ancestors.
+      function descendants(parent) {
+        Array.from(parent && parent.children || []).forEach(function (element) {
+          if (element.scrollTop || element.scrollLeft) remember(element);
+          descendants(element);
+        });
+      }
+      descendants(context);
+      var owner = win;
+      while (owner) {
+        try {
+          windows.push({ window: owner, x: owner.scrollX || owner.pageXOffset || 0, y: owner.scrollY || owner.pageYOffset || 0 });
+          remember(owner.document && owner.document.scrollingElement);
+          var frame = owner.frameElement;
+          if (!frame) break;
+          ancestry(frame);
+          owner = frame.ownerDocument && frame.ownerDocument.defaultView;
+          if (windows.some(function (position) { return position.window === owner; })) break;
+        } catch (_) { break; /* an embedded cross-origin boundary owns its own viewport */ }
+      }
+      return { anchor: anchor, elements: elements, windows: windows };
+    }
+    function restore(position, focus) {
+      if (!position || !validContext()) return;
+      if (focus && connected(position.anchor) && typeof position.anchor.focus === 'function') {
+        try { position.anchor.focus({ preventScroll: true }); } catch (_) { /* removed/inert origin */ }
+      }
+      position.elements.forEach(function (item) {
+        if (!connected(item.element)) return;
+        item.element.scrollTop = item.top;
+        item.element.scrollLeft = item.left;
+      });
+      position.windows.forEach(function (item) {
+        try { if (typeof item.window.scrollTo === 'function') item.window.scrollTo(item.x, item.y); } catch (_) { /* detached ancestor frame */ }
+      });
+    }
+    function cancelRestore() {
+      if (restoreFrame !== null && win && typeof win.cancelAnimationFrame === 'function') win.cancelAnimationFrame(restoreFrame);
+      restoreFrame = null;
+    }
+    function finish(restoreFocus) {
+      if (!opened && !saved) return;
+      var position = saved;
+      opened = false; saved = null; generation++;
+      cancelRestore();
+      // Clear state before invoking a caller that may destroy the controller.
+      // Native `close` can arrive later, after this callback or even a new show.
+      if (restoreFocus) restore(position, true);
+      if (typeof options.onClose === 'function') options.onClose();
+    }
+    function closed() { if (!destroyed && !closing && !isOpen()) finish(true); }
+    function show(anchor) {
+      if (destroyed || !validContext()) return false;
+      if (isOpen()) return true;
+      cancelRestore(); generation++;
+      var candidate = connected(anchor) ? anchor : doc.activeElement;
+      if (!connected(candidate) || dialog.contains(candidate)) candidate = null;
+      saved = capture(candidate); opened = true;
+      try {
+        if (typeof dialog.showModal === 'function') dialog.showModal();
+        else dialog.setAttribute('open', '');
+      } catch (error) {
+        opened = false; saved = null;
+        throw error;
+      }
+      var heading = dialog.querySelector('.vilda-result-details-heading');
+      var closeButton = dialog.querySelector('[data-result-details-close]') || heading && heading.querySelector('button');
+      if (closeButton && typeof closeButton.focus === 'function') closeButton.focus({ preventScroll: true });
+      restore(saved, false);
+      var current = generation, position = saved;
+      if (win && typeof win.requestAnimationFrame === 'function') {
+        restoreFrame = win.requestAnimationFrame(function () {
+          restoreFrame = null;
+          if (!destroyed && opened && generation === current) restore(position, false);
+        });
+      }
+      return true;
+    }
+    function close(settings) {
+      if (destroyed || !opened && !isOpen()) return;
+      var restoreFocus = !settings || settings.restoreFocus !== false;
+      // The native close event is asynchronous in browsers and synchronous in
+      // some adapters. Suppress that notification until the requested focus
+      // policy has been applied and the caller can safely destroy the shell.
+      closing = true;
+      try {
+        if (isOpen()) {
+          if (typeof dialog.close === 'function') dialog.close();
+          else dialog.removeAttribute('open');
+        }
+      } finally { closing = false; }
+      finish(restoreFocus);
+    }
+    function destroy(settings) {
+      if (destroyed) return;
+      close(settings);
+      destroyed = true; generation++;
+      cancelRestore();
+      if (typeof dialog.removeEventListener === 'function') {
+        dialog.removeEventListener('close', closed);
+        dialog.removeEventListener('wheel', backdrop);
+        dialog.removeEventListener('touchmove', backdrop);
+        dialog.removeEventListener('keydown', navigate);
+      }
+    }
+    function backdrop(event) {
+      if (!destroyed && opened && (event.target === dialog || !dialog.contains(event.target))) event.preventDefault();
+    }
+    function navigate(event) {
+      if (destroyed || !opened || event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+      var target = event.target;
+      // Native input/radio/select keyboard contracts belong to the editor.
+      if (target && (/^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName) || target.isContentEditable)) return;
+      var direction = { ArrowDown: 40, ArrowUp: -40, PageDown: 1, PageUp: -1, Home: 0, End: 0 };
+      if (!Object.prototype.hasOwnProperty.call(direction, event.key)) return;
+      var body = dialog.querySelector('.vilda-result-details-body');
+      if (!body) return;
+      event.preventDefault();
+      if (event.key === 'Home') body.scrollTop = 0;
+      else if (event.key === 'End') body.scrollTop = body.scrollHeight;
+      else body.scrollTop += /^Page/.test(event.key) ? direction[event.key] * Math.max(40, body.clientHeight * 0.85) : direction[event.key];
+    }
+
+    dialog.addEventListener('close', closed);
+    dialog.addEventListener('wheel', backdrop, { passive: false });
+    dialog.addEventListener('touchmove', backdrop, { passive: false });
+    dialog.addEventListener('keydown', navigate);
+    return Object.freeze({ dialog: dialog, show: show, close: close, destroy: destroy });
+  }
+
+  var api = Object.freeze({ attach: attach });
+  if (root) root.VildaResultDetailsDialog = api;
+})(typeof window !== 'undefined' ? window : globalThis);
+
 /* Historia badań: wykres wyłącznie zapisanych wyników i zapisanych zakresów.
  * Nie dobiera norm, nie ocenia pacjenta i nie zmienia danych modelu historii.
  * Każdy odcinek odniesienia należy do daty konkretnego zapisu; nie interpoluje
@@ -69,7 +239,30 @@
 
   // One transient, non-interactive tooltip per document. SVG attributes carry
   // viewport geometry; presentation stays in CSS (no generated inline styles).
-  var tooltips = new WeakMap(), previewGeneration = 0;
+  var tooltips = new WeakMap(), selections = new WeakMap(), selectionContexts = new WeakSet(), previewGeneration = 0;
+  function hidePreview(doc) {
+    previewGeneration++;
+    var close = tooltips.get(doc);
+    if (close) close();
+  }
+  function clearSelection(doc) {
+    var selected = selections.get(doc);
+    if (!selected) return;
+    selected.classList.remove('is-selected');
+    selected.setAttribute('aria-pressed', 'false');
+    selections.delete(doc);
+  }
+  function selectControl(doc, control) {
+    clearSelection(doc);
+    control.classList.add('is-selected');
+    control.setAttribute('aria-pressed', 'true');
+    selections.set(doc, control);
+    if (selectionContexts.has(doc)) return;
+    selectionContexts.add(doc);
+    ['visibilitychange', 'vilda:session-changed', 'vilda:patient-loaded', 'vilda:user-state-cleared'].forEach(function (name) {
+      doc.addEventListener(name, function () { clearSelection(doc); });
+    });
+  }
   function preview(doc, host, control, label, value, displayUnit, tone) {
     var win = doc.defaultView;
     if (!win || typeof control.getBoundingClientRect !== 'function') return;
@@ -154,16 +347,17 @@
     bubble.addEventListener('pointerleave', close);
     tooltips.set(doc, close);
   }
-  function bindPreview(doc, host, control, label, value, displayUnit, tone) {
+  function bindPreview(doc, host, control, label, value, displayUnit, tone, interaction) {
     var win = doc.defaultView, hold = null, held = false, origin, leave = null;
-    function hide() { previewGeneration++; if (win && leave !== null) win.clearTimeout(leave); leave = null; var close = tooltips.get(doc); if (close && close.control === control) close(); }
+    var touchPending = false, moved = false, selectedByPointer = false, pinned = false;
+    function hide() { pinned = false; previewGeneration++; if (win && leave !== null) win.clearTimeout(leave); leave = null; var close = tooltips.get(doc); if (close && close.control === control) close(); }
     function show() { if (win && leave !== null) win.clearTimeout(leave); leave = null; preview(doc, host, control, label, value, displayUnit, tone); }
     function cancel() { if (win && hold !== null) win.clearTimeout(hold); hold = null; }
     control.addEventListener('pointerenter', function (event) { if (event.pointerType === 'mouse') show(); });
     control.addEventListener('pointerleave', function () {
       cancel();
       var leaving = tooltips.get(doc);
-      if (!held && win) leave = win.setTimeout(function () {
+      if (!held && !pinned && win) leave = win.setTimeout(function () {
         leave = null; var close = tooltips.get(doc);
         if (close && close === leaving && !(close.bubble && close.bubble.matches(':hover'))) close();
       }, 180);
@@ -176,20 +370,57 @@
       else show();
     });
     control.addEventListener('blur', hide);
+    control.addEventListener('keydown', function (event) {
+      if (!interaction || ['Enter', ' ', 'Spacebar'].indexOf(event.key) === -1) return;
+      touchPending = false; moved = false; selectedByPointer = false; held = false; origin = null; cancel();
+    });
+    function select() {
+      if (!host.isConnected || !control.isConnected) return;
+      selectedByPointer = true;
+      selectControl(doc, control);
+      interaction.select();
+      pinned = true;
+      show();
+    }
     control.addEventListener('pointerdown', function (event) {
-      held = false; cancel();
-      if (!win || event.pointerType !== 'touch') return;
+      held = false; cancel(); moved = false; selectedByPointer = false; origin = null;
+      touchPending = event.pointerType === 'touch' || event.pointerType === 'pen';
+      if (!win || !touchPending) return;
       origin = { x: event.clientX, y: event.clientY };
       hold = win.setTimeout(function () { hold = null; held = true; show(); }, 420);
     });
     control.addEventListener('pointermove', function (event) {
-      if (hold !== null && origin && Math.abs(event.clientX - origin.x) + Math.abs(event.clientY - origin.y) > 10) cancel();
+      if (origin && Math.abs(event.clientX - origin.x) + Math.abs(event.clientY - origin.y) > 10) {
+        moved = true; cancel();
+        if (interaction) hide();
+      }
     });
-    control.addEventListener('pointerup', cancel);
-    control.addEventListener('pointercancel', function () { cancel(); held = false; hide(); });
+    control.addEventListener('pointerup', function () {
+      cancel();
+      if (interaction && touchPending && !moved) select();
+      origin = null;
+    });
+    control.addEventListener('pointercancel', function () { cancel(); held = false; moved = true; origin = null; hide(); });
     control.addEventListener('contextmenu', function (event) { if (held || hold !== null) event.preventDefault(); });
     control.addEventListener('click', function (event) {
       cancel();
+      if (interaction) {
+        if (!host.isConnected || !control.isConnected) return;
+        var touchClick = touchPending || event.pointerType === 'touch' || event.pointerType === 'pen';
+        touchPending = false;
+        if (touchClick || moved || held) {
+          if (touchClick && !moved && !selectedByPointer) select();
+          event.preventDefault();
+          if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
+          held = false;
+          return;
+        }
+        selectControl(doc, control);
+        interaction.select();
+        hide();
+        interaction.open();
+        return;
+      }
       if (held) { held = false; event.preventDefault(); event.stopImmediatePropagation(); return; }
       hide();
     }, true);
@@ -198,6 +429,8 @@
   function render(doc, view, options) {
     options = options || {};
     if (!doc || typeof doc.createElementNS !== 'function' || !view || !view.chart || typeof options.describe !== 'function') return null;
+    var previousSelection = selections.get(doc);
+    if (previousSelection && !previousSelection.isConnected) clearSelection(doc);
     var displayUnit = unit(view.unit || view.chart.unit);
     if (!displayUnit) return null;
     var formatNumber = typeof options.formatNumber === 'function' ? options.formatNumber : defaultNumber;
@@ -365,7 +598,7 @@
     // CSS pixels for each 44 px target. It never scales button text or hit areas
     // with the data viewBox and needs no generated inline CSS.
     var pointLayer = plot.appendChild(node(doc, 'svg', 'vilda-lab-result-chart-point-layer', null, true));
-    attr(pointLayer, { width: '100%', height: '100%', role: 'group', 'aria-label': 'Otwórz zapisany wynik' });
+    attr(pointLayer, { width: '100%', height: '100%', role: 'group', 'aria-label': typeof options.openEntries === 'function' ? 'Wybierz zapisany wynik' : 'Otwórz zapisany wynik' });
     groups.forEach(function (group) {
       var point = group[0], entry = point.saved.entry;
       var tone = pointTone(point);
@@ -381,6 +614,22 @@
       if (!view.clcr) label = label.split('(')[0].trim() || label;
       var shown = String(shownValue(point)).replace(/\s+/g, ' ').trim();
       if (shown.charAt(shown.length - displayUnit.length - 1) === ' ' && unit(shown.slice(-displayUnit.length)) === displayUnit) shown = shown.slice(0, -displayUnit.length - 1);
+      if (typeof options.openEntries === 'function') {
+        var selectedEntries = group.map(function (item) { return item.saved.entry; });
+        control.setAttribute('aria-pressed', 'false');
+        control.setAttribute('aria-label', title + '. Wybierz punkt. Pełne dane są dostępne przyciskiem Szczegóły lub po aktywacji klawiaturą.');
+        if (group.length === 1) control.setAttribute('data-note-id', entry.noteId || '');
+        else {
+          control.setAttribute('data-count', group.length);
+          control.setAttribute('aria-label', title + '. Wyniki w tym punkcie: ' + group.length + '. Wybierz punkt, a następnie Szczegóły.');
+          control.appendChild(node(doc, 'span', 'vilda-lab-result-chart-count', group.length)).setAttribute('aria-hidden', 'true');
+        }
+        bindPreview(doc, host, control, label, shown, displayUnit, tone, {
+          select: function () { if (typeof options.selectEntries === 'function') options.selectEntries(selectedEntries, control); },
+          open: function () { options.openEntries(selectedEntries, control); }
+        });
+        return;
+      }
       bindPreview(doc, host, control, label, shown, displayUnit, tone);
       if (group.length === 1) {
         control.setAttribute('data-note-id', entry.noteId || '');
@@ -451,11 +700,12 @@
         link.appendChild(node(doc, 'span', 'vilda-lab-result-chart-record-value', value));
         var recordedDate = link.appendChild(node(doc, 'time', 'vilda-lab-result-chart-record-date', when));
         if (item.stamp != null) recordedDate.setAttribute('datetime', row.dateISO);
-        if (typeof options.openNote === 'function') link.addEventListener('click', function () { options.openNote(row.noteId); });
+        if (typeof options.openEntries === 'function') link.addEventListener('click', function () { hidePreview(doc); options.openEntries([row], link); });
+        else if (typeof options.openNote === 'function') link.addEventListener('click', function () { options.openNote(row.noteId); });
       });
     }
     return host;
   }
 
-  root.VildaLabResultChart = Object.freeze({ version: '1.2.0', render: render });
+  root.VildaLabResultChart = Object.freeze({ version: '1.3.0', render: render, hidePreview: hidePreview, clearSelection: clearSelection });
 })(typeof window !== 'undefined' ? window : globalThis);

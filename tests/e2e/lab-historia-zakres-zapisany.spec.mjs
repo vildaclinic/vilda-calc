@@ -55,13 +55,13 @@ test('przypięcie TSH zapisuje zakres przelicznika; pasek i zakładka „Badania
   await expect(row.locator('.vilda-lab-hist-cell-value.tone-above')).toHaveText('5,1');
   expect(await tekst(row.locator('.vilda-lab-hist-result-norm'))).toContain('0,5–4,3 mIU/L');
   await row.click();
-  const details = badania.locator('.vilda-lab-hist-result-details');
+  const details = page.locator('.vilda-lab-hist-result-details');
   await details.locator('.vilda-lab-hist-result-sources > summary').click();
   expect(await tekst(details.locator('.vilda-lab-hist-status.is-range .vilda-lab-hist-status-text'))).toBe('↑ powyżej zapisanego zakresu · 0,5–4,3 mIU/L');
   await expect(details.locator('.vilda-lab-hist-status.is-range .vilda-lab-hist-status-context')).toHaveText('Młodzież 11–19 lat · dziewczynka, 12 l 3 m · Mayo Test 8939 — TSH');
 
   // Telefon: norma w zwiniętym wierszu mieści się bez poziomego przewijania.
-  await details.locator('.vilda-lab-hist-details-close').click();
+  await page.locator('#labResultDetailsDialog .vilda-lab-hist-details-close').click();
   const rozmiar = page.viewportSize();
   await page.setViewportSize({ width: 390, height: 844 });
   const norm = row.locator('.vilda-lab-hist-result-norm');
@@ -132,11 +132,11 @@ test('prolaktyna u dziecka z zakresem ogólnym: okno i historia bez oceny, zapis
   await expect(row.locator('.vilda-lab-hist-result-norm')).toContainText('2–29');
   await expect(row.locator('.vilda-lab-hist-flag')).toHaveCount(0);
   await row.click();
-  const details = badania.locator('.vilda-lab-hist-result-details');
+  const details = page.locator('.vilda-lab-hist-result-details');
   await details.locator('.vilda-lab-hist-result-sources > summary').click();
   await expect(details.locator('.vilda-lab-hist-status.is-range-general.tone-muted .vilda-lab-hist-status-context')).toHaveText('Dorośli, zakres ogólny · dziewczynka, 12 l 3 m · Mayo Test 85670 — Prolaktyna');
   expect(await tekst(details.locator('.vilda-lab-hist-status.is-range-general .vilda-lab-hist-status-text'))).toBe('zakres ogólny — bez oceny dla dziecka · 2–29 ng/mL');
-  await details.locator('.vilda-lab-hist-details-close').click();
+  await page.locator('#labResultDetailsDialog .vilda-lab-hist-details-close').click();
 
   const rozmiar = page.viewportSize();
   await page.setViewportSize({ width: 390, height: 844 });

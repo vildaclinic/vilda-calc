@@ -118,7 +118,8 @@
     ["clcr_measured_clearance_reference.js?v=1", "ClcrMeasuredClearanceReference"],
     ["clcr_result_presentation.js?v=8", "ClcrResultPresentation"],
     ["clcr_saved_legacy_calculator.js?v=23", "ClcrSavedLegacyCalculator"],
-    ["clcr_result_details.js?v=18", "ClcrResultDetails"],
+    ["vilda_lab_result_chart.js?v=4", "VildaResultDetailsDialog"],
+    ["clcr_result_details.js?v=19", "ClcrResultDetails"],
   ];
   function load(path, name, style = false) {
     if (name && root[name]) return Promise.resolve();
@@ -169,7 +170,7 @@
   }
   function ensureEditor() {
     if (!editorPromise) {
-      editorPromise = ensureReader().then(() => Promise.all([load("clcr_result_details.css?v=1", null, true), ordered(editor)]))
+      editorPromise = ensureReader().then(() => Promise.all([load("clcr_result_details.css?v=2", null, true), load("vilda_lab_history_tab.css?v=11", null, true), ordered(editor)]))
         .then(() => root.ClcrResultDetails);
       editorPromise.catch(() => { editorPromise = null; });
     }
