@@ -241,7 +241,9 @@ describe('strona: pakiet pyta o ocenę ten sam formularz co pojedyncze badanie',
     expect(kontroler).toContain("var hidden = document.implementation.createHTMLDocument('');");
     expect(kontroler).toContain('packagePubertyUI = window.VildaLabPubertyUI.mount({');
     expect(kontroler).toContain('document: hidden, persistence: persistence, sharedEditor: false,');
-    expect(kontroler).toContain('return readPubertyPatientContextFor(packagePubertyAnalyte ? Conv.find(packagePubertyAnalyte) : null);');
+    // PR7: ten sam odczyt pacjenta co w pojedynczym badaniu, a przy dawnej próbce — w wieku z dnia pobrania
+    // (packageSampleAdjust; tests/unit/lab-pakiety-dzien-pobrania.test.mjs).
+    expect(kontroler).toContain('return packageSampleAdjust(readPubertyPatientContextFor(packagePubertyAnalyte ? Conv.find(packagePubertyAnalyte) : null));');
     expect(kontroler).toContain('readMeasurementContext: function () { return {}; },');
     expect(kontroler).toContain("onPatientChange: function () { packagePubertyCycle = 'unknown'; },");
     // Ocena to wynik getAssessment tej instancji — tej samej metody, której używa przypięcie pojedynczego wyniku.
@@ -268,6 +270,6 @@ describe('strona: pakiet pyta o ocenę ten sam formularz co pojedyncze badanie',
       'editObservation: function (axis, stage)', 'setCycle: function (value)', 'subscribe: function (listener)']) expect(runtime, metoda).toContain(metoda);
     expect(formularzZrodlo).toContain('if (enabled && !sharedEditor && opts.sharedEditor !== false) sharedEditor = ui.mountEditor(sharedEditorHost, {');
     expect(formularzZrodlo).toContain('getAssessmentView: assessmentView, editObservation: editSharedObservation, setReproductiveContext: setReproductiveContext, getPresentation: getPresentation };');
-    expect(Model.version).toBe('1.5.0');
+    expect(Model.version).toBe('1.6.0');
   });
 });
