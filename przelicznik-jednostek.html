@@ -115,7 +115,7 @@
   <link rel="icon" type="image/png" sizes="48x48" href="/pwa-icons/icon-48x48.png">
   <link rel="icon" type="image/png" sizes="96x96" href="/pwa-icons/icon-96x96.png">
 
-  <link href="inline_przelicznik_jednostek_00.css?v=12" rel="stylesheet">
+  <link href="inline_przelicznik_jednostek_00.css?v=13" rel="stylesheet">
 
   <script src="vilda_chrome.js?v=287"></script>
   <script src="lucide.min.js?v=1" defer></script>
@@ -487,7 +487,7 @@
   <script src="vilda_puberty_assessment_context.js?v=1"></script>
   <link rel="stylesheet" href="vilda_puberty_assessment_ui.css?v=1">
   <script src="vilda_puberty_assessment_ui.js?v=1"></script>
-  <script src="vilda_lab_puberty_ui.js?v=22"></script>
+  <script src="vilda_lab_puberty_ui.js?v=23"></script>
   <script src="vilda_zrodla_pacjenta.js?v=1"></script>
   <script src="vilda_puberty_source.js?v=13"></script>
   <script src="vilda_lab_neonatal_context.js?v=5"></script>
@@ -519,7 +519,7 @@
   <script src="lab_pin_result.js?v=11"></script>
   <script src="vilda_lab_history.js?v=6"></script>
   <script src="lab_history_strip.js?v=4"></script>
-  <script src="vilda_lab_packages.js?v=5"></script>
+  <script src="vilda_lab_packages.js?v=6"></script>
   <!-- P2 (2026-06-07): 939 KB paneli klinicznych ładowane LENIWIE — strona startuje
        bez parsowania największego pliku w aplikacji. Konsument ma bezpieczny getter
        (global_LabClinicalPanels) z fallbackiem do zwykłego wyszukiwania, więc okno
@@ -2342,6 +2342,113 @@
       currentSubstance = substance;
       try { return readPubertyPatientContext(); } finally { currentSubstance = selected; }
     }
+    /**
+     * LAB-PAKIETY PR6 — ocena pokwitaniowa w pakiecie badań (makieta i decyzje właściciela z 2026-11-13).
+     * LH, FSH, inhibinę B i testosteron całkowity pakiet ocenia tym samym formularzem co pojedyncze badanie:
+     * druga instancja VildaLabPubertyUI stoi poza widokiem — w osobnym, niewyświetlanym dokumencie, żeby jej
+     * identyfikatory nie dublowały pojedynczego badania — dostaje kontekst pacjenta tak, jakby w pojedynczym
+     * badaniu wybrano dane badanie, i oddaje ocenę w stanie domyślnym: bez atrybutów próbki pojedynczego badania
+     * (pora, metoda, protokół). Stadium i wybór „Cykl / menopauza” są jedne dla całego pakietu. Pakiet nie ma
+     * własnych reguł doboru zakresu ani własnych norm. Lokalna korekta stadium żyje w tej instancji: nie zmienia
+     * karty pacjenta ani pojedynczego badania.
+     */
+    var packagePubertyUI = null, packagePubertyAnalyte = null, packagePubertyCycle = 'unknown', packagePubertySex = null;
+    var packagePubertyListeners = [], packagePubertyActive = false, packagePubertyStageAnalyte = null;
+    function packagePubertyRuntime() {
+      if (packagePubertyUI || !window.VildaLabPubertyUI) return packagePubertyUI;
+      try {
+        var hidden = document.implementation.createHTMLDocument('');
+        ['labResultSection', 'labStep5', 'labStep4'].forEach(function (id) {
+          var node = hidden.createElement(id === 'labResultSection' ? 'section' : 'div');
+          node.id = id;
+          if (id !== 'labResultSection') {
+            var body = hidden.createElement('div');
+            body.className = 'lab-step-body';
+            if (id === 'labStep5') {
+              var label = hidden.createElement('div');
+              label.className = 'lab-step-label';
+              label.textContent = 'Pacjent';
+              body.appendChild(label);
+            }
+            node.appendChild(body);
+          }
+          hidden.body.appendChild(node);
+        });
+        packagePubertyUI = window.VildaLabPubertyUI.mount({
+          document: hidden, persistence: persistence, sharedEditor: false,
+          readPatientContext: function () {
+            return readPubertyPatientContextFor(packagePubertyAnalyte ? Conv.find(packagePubertyAnalyte) : null);
+          },
+          // Stan domyślny pojedynczego badania: bez danych próbki. Leczenie GnRHa z karty niesie kontekst pacjenta.
+          readMeasurementContext: function () { return {}; },
+          onPatientChange: function () { packagePubertyCycle = 'unknown'; },
+          onChange: function () {
+            packagePubertyListeners.forEach(function (listener) { try { listener(); } catch (_) { /* odbiorca pakietu */ } });
+          }
+        });
+      } catch (_) { packagePubertyUI = null; }
+      return packagePubertyUI;
+    }
+    // Ustawia instancję na dane badanie i oddaje to, co pojedyncze badanie pokazałoby w kroku „Pacjent”.
+    function packagePubertySelect(analyteId) {
+      var ui = packagePubertyRuntime();
+      if (!ui || !isPubertySubstance({ id: String(analyteId || '') })) return null;
+      packagePubertyAnalyte = String(analyteId);
+      ui.setAnalyte(packagePubertyAnalyte);
+      var view = ui.getPresentation();
+      // Wybór fazy jest jeden dla pakietu; formularz zeruje go przy zmianie osoby lub płci.
+      if (ui.setReproductiveContext(packagePubertyCycle, true)) view = ui.getPresentation();
+      return { ui: ui, view: view };
+    }
+    function packagePubertyAssess(analyteId, raw, unit) {
+      var selected = packagePubertySelect(analyteId);
+      if (!selected) return undefined;
+      return selected.ui.getAssessment({ testKey: packagePubertyAnalyte, raw: String(raw == null ? '' : raw), unit: String(unit || '') });
+    }
+    // Krok „Pacjent” pakietu: stadium bierze się z pierwszego badania pakietu, które z niego korzysta,
+    // wybór fazy — z pierwszego, które go pokazuje (dorosła kobieta).
+    function packagePubertyPresentation(analyteIds) {
+      var ids = (Array.isArray(analyteIds) ? analyteIds : []).filter(function (id) { return isPubertySubstance({ id: String(id || '') }); });
+      packagePubertyActive = ids.length > 0;
+      packagePubertyStageAnalyte = null;
+      var out = { available: false, ready: false, sourceStatus: 'unavailable', sex: '', stage: null, cycle: null, contextLine: '' };
+      ids.forEach(function (id, index) {
+        var selected = packagePubertySelect(id);
+        if (!selected) return;
+        var view = selected.view;
+        out.available = true;
+        // Wybór fazy nie przechodzi na inną płeć (zmianę osoby zgłasza sam formularz).
+        if (packagePubertySex !== null && view.sex !== packagePubertySex && packagePubertyCycle !== 'unknown') {
+          packagePubertyCycle = 'unknown';
+          selected = packagePubertySelect(id);
+          view = selected.view;
+        }
+        packagePubertySex = view.sex;
+        if (!index || !out.ready) { out.ready = view.ready; out.sourceStatus = view.sourceStatus; out.sex = view.sex; }
+        if (!out.contextLine && view.contextLine) out.contextLine = view.contextLine;
+        if (!out.stage && !view.stage.hidden) {
+          packagePubertyStageAnalyte = String(id);
+          out.stage = { summary: view.stage.summary, action: view.stage.action, disabled: view.stage.disabled,
+            hint: view.stage.hint, editor: view.stage.editor, local: view.stage.local };
+        }
+        if (!out.cycle && !view.cycle.hidden) out.cycle = { value: view.cycle.value, choices: view.cycle.choices };
+      });
+      return out;
+    }
+    // Edytor stadium pakietu (VildaPubertyAssessmentUI.mountEditor) czyta i zapisuje przez tę samą instancję.
+    function packagePubertyStageRuntime() {
+      var selected = packagePubertyStageAnalyte ? packagePubertySelect(packagePubertyStageAnalyte) : null;
+      return selected ? selected.ui : null;
+    }
+    // Lokalna korekta stadium obowiązuje cały pakiet — także normy katalogu dobierane według Tannera.
+    function packagePubertyLocalStage() {
+      if (!packagePubertyActive) return null;
+      var id = packagePubertyStageAnalyte || packagePubertyAnalyte;
+      var selected = id ? packagePubertySelect(id) : null;
+      var stage = selected && selected.view.stage;
+      if (!stage || !stage.local) return null;
+      return { tanner: ['G', 'Th'].indexOf(stage.kind) !== -1 && typeof stage.value === 'number' && stage.current ? stage.value : null };
+    }
     function getPackagePatient(analyteId) {
       syncPatientIdentity();
       var shared = readPatientFromShared() || {};
@@ -2368,6 +2475,14 @@
       p._shared_tanner_kind = shared.tannerKind || null;
       p._shared_tanner_current = shared.tannerCurrent == null ? null : shared.tannerCurrent;
       p._tanner_overridden = false;
+      // PR6: stadium poprawione w pakiecie („Zmień ocenę”) zastępuje stadium z karty dla całego pakietu —
+      // tak jak lokalne nadpisanie Tannera w pojedynczym badaniu; karta pacjenta zostaje bez zmian.
+      var localStage = packagePubertyLocalStage();
+      if (localStage && localStage.tanner !== p.tanner) {
+        p.tanner = localStage.tanner;
+        p._tanner_overridden = true;
+        if (typeof p.age !== 'number') p.life_stage = typeof p.tanner === 'number' ? (p.tanner >= 5 ? 'adult' : 'pediatric') : 'adult';
+      }
       var description = describePatient(p);
       if (analyteId === 'estradiol') {
         // Ten sam nośnik wieku co blok estradiolu w getEffectivePatient (rok lub miesiąc nie staje się dniem).
@@ -4577,7 +4692,27 @@
       ownAssessmentKind: function (analyteId) { return ownAssessmentKind(analyteId ? { id: String(analyteId) } : null); },
       // LAB-PAKIETY PR4: link „Oceń … w pojedynczym badaniu” — ta sama droga co ?badanie=<id>
       // (wpisanej już wartości innego badania nie zmienia po cichu).
-      openSingle: function (analyteId) { applySubstanceDeepLink({ search: '?badanie=' + encodeURIComponent(String(analyteId || '')), hash: '' }); }
+      openSingle: function (analyteId) { applySubstanceDeepLink({ search: '?badanie=' + encodeURIComponent(String(analyteId || '')), hash: '' }); },
+      // LAB-PAKIETY PR6: ocena pokwitaniowa LH, FSH, inhibiny B i testosteronu całkowitego w pakiecie — ta sama
+      // koperta oceny co przy przypięciu pojedynczego wyniku (VildaLabSnapshot), jedno stadium i jeden wybór
+      // „Cykl / menopauza” dla całego pakietu.
+      packagePuberty: {
+        assess: function (analyteId, raw, unit) { return packagePubertyAssess(analyteId, raw, unit); },
+        presentation: function (analyteIds) { return packagePubertyPresentation(analyteIds); },
+        assessmentView: function () {
+          var ui = packagePubertyStageRuntime();
+          return ui ? ui.getAssessmentView() : { status: 'absent', assessment: null, legacy: null };
+        },
+        editObservation: function (axis, stage) {
+          var ui = packagePubertyStageRuntime();
+          return ui ? ui.editObservation(axis, stage) : { ok: false, reason: 'unavailable' };
+        },
+        setCycle: function (value) {
+          packagePubertyCycle = String(value || 'unknown');
+          packagePubertyListeners.forEach(function (listener) { try { listener(); } catch (_) { /* odbiorca pakietu */ } });
+        },
+        subscribe: function (listener) { if (typeof listener === 'function' && packagePubertyListeners.indexOf(listener) === -1) packagePubertyListeners.push(listener); }
+      }
     };
     function announceSubstance() {
       var id = currentSubstance ? currentSubstance.id : null;

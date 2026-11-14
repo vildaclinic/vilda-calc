@@ -95,6 +95,10 @@
     var GENERAL_TEXT = 'zakres ogólny — bez oceny dla dziecka';
     // Badanie z własną oceną w pojedynczym badaniu (PR4): pakiet zapisuje wartość, oceny nie daje.
     var OWN_TEXT = 'bez oceny w pakiecie';
+    // PR6: operator wyniku z koperty oceny („<0,1”) w zapisie dla lekarza i stany wyróżnienia wspólnego widoku oceny.
+    var OPERATOR_TEXT = { '<': '<', '<=': '≤', '>': '>', '>=': '≥', '=': '' };
+    var VISUAL_STATES = ['is-normal', 'is-below', 'is-above', 'is-uwaga-low', 'is-uwaga-high'];
+    var CENSORED_LAB_TEXT = 'norma z wydruku — wynik z operatorem, bez oceny';
     // Norma z wydruku (LAB-PAKIETY PR2): trzy kategorie, bez „znacznie” — jak norma wpisu w historii wyników.
     var LAB_STATES = {
       within: { state: 'is-normal', text: 'w normie z wydruku' },
@@ -501,8 +505,72 @@
       return view;
     }
 
+    /* ── Ocena pokwitaniowa w pakiecie (LAB-PAKIETY PR6, makieta i decyzje właściciela 2026-11-13) ──
+     * LH, FSH, inhibinę B i testosteron całkowity ocenia silnik pojedynczego badania: strona oddaje gotową kopertę
+     * oceny (VildaLabSnapshot) dla stanu domyślnego pojedynczego badania i bieżących danych pacjenta. Pakiet jej
+     * nie przelicza i nie ma własnych norm: zapisuje ją z wynikiem (jak przypięcie pojedynczego wyniku) i opisuje
+     * słowami to, co pokazuje wspólny widok oceny (VildaLabAssessmentUI.buildView). */
+    function recordedMeasurement(envelope, analyteId, raw, unit) {
+      var evaluation = record(envelope) && envelope.status === 'recorded' && record(envelope.evaluation) ? envelope.evaluation : null;
+      var m = evaluation && evaluation.analyte === analyteId && record(evaluation.measurement) ? evaluation.measurement : null;
+      return m && m.status === 'valid' && text(m.raw) === raw && m.sourceUnit === unit ? m : null;
+    }
+    function lowerFirst(value) { var out = text(value); return out ? out.charAt(0).toLocaleLowerCase('pl') + out.slice(1) : ''; }
+    // Zakres porównania w tekście do skopiowania: sama granica — bez jednostki wyniku i bez opisu granicy oznaczalności.
+    function compactRange(rangeText, unit) {
+      var out = text(rangeText).replace(/^Zakres:\s*/, '').replace(/^Górna granica:\s*/, '≤');
+      if (unit && out.slice(-unit.length) === unit) out = out.slice(0, out.length - unit.length).replace(/[\s\u00a0]+$/, '');
+      var segments = out.split(/;\s*/);
+      out = segments[segments.length - 1];
+      var both = /^≥\s*(\S+)\s+i\s+≤\s*(\S+)$/.exec(out);
+      return both ? both[1] + '–' + both[2] : out;
+    }
+    function femaleTtFixed(evaluation) {
+      var input = record(evaluation.input) ? evaluation.input : {};
+      return evaluation.analyte === 'testosterone_total' && input.sex === 'F' && input.contextBasis === 'current-patient' && !input.sampleDateISO;
+    }
+    function describePuberty(row, envelope, options) {
+      var ui = options.assessmentUI, evaluation = envelope.evaluation;
+      var view = { state: '', text: '', bounds: '', population: '', subject: '', sources: [], marker: null, general: false,
+        puberty: true, comparisons: [], alert: null };
+      var built = null;
+      try {
+        built = ui && typeof ui.buildView === 'function'
+          ? ui.buildView(evaluation, { live: true, displayUnit: row.unit, femaleTtFixedDecimals: femaleTtFixed(evaluation) }) : null;
+      } catch (_) { built = null; }
+      if (!built || built.valid !== true || !record(built.result)) return view;
+      if (VISUAL_STATES.indexOf(built.result.visualState) !== -1) view.state = built.result.visualState;
+      var alert = built.result.visualAlert;
+      if (record(alert)) {
+        view.alert = { label: text(alert.label), scope: text(alert.scope) + (alert.automatic ? ' · orientacyjnie' : alert.conditional ? ' · warunkowo' : '') };
+      }
+      // Te same porównania, które rysuje wspólny widok: bez wariantów do wyboru (cykl) i bez osi stadium tam,
+      // gdzie profil jej nie używa.
+      (Array.isArray(built.comparisons) ? built.comparisons : []).forEach(function (comparison) {
+        if (!record(comparison) || comparison.key === 'variant' || comparison.key === 'local') return;
+        if ((built.pretermProfile || built.adultProfile) && comparison.key === 'stage') return;
+        if (['within', 'above', 'below', 'indeterminate'].indexOf(comparison.status) === -1) return;
+        view.comparisons.push({ key: text(comparison.key), title: text(comparison.shortTitle), label: text(comparison.visualLabel),
+          range: compactRange(comparison.rangeText, row.unit), status: comparison.status });
+      });
+      return view;
+    }
+    // Wynik z operatorem względem normy z wydruku: ocena tylko wtedy, gdy operator ją przesądza.
+    function describeCensoredLab(row, appView, measured) {
+      var norm = row.norm, operator = measured.operator, bound = measured.sourceValue;
+      var kind = (operator === '<' && bound <= norm.low) || (operator === '<=' && bound < norm.low) ? 'below'
+        : (operator === '>' && bound >= norm.high) || (operator === '>=' && bound > norm.high) ? 'above' : '';
+      var view = describeLabAssessment(row, appView);
+      view.marker = null;
+      if (kind) { view.state = LAB_STATES[kind].state; view.text = LAB_STATES[kind].text; view.classification = kind; }
+      else { view.state = ''; view.text = CENSORED_LAB_TEXT; delete view.classification; }
+      return view;
+    }
+
     /* Ocena jednego wiersza pakietu.
      * options: { converter, snapshot, data, analyteId, raw, unit, patient, capturedAtISO, normLow, normHigh, own }
+     * PR6: assess(analyteId, raw, unit) — koperta oceny pokwitaniowej od strony (albo undefined, gdy niedostępna);
+     * assessmentUI — wspólny widok oceny. Wynik z kopertą dostaje ocenę w pakiecie i może mieć zapis z operatorem.
      * status: 'empty' (puste pole — wiersz pomijany), 'invalid' (error), 'ok'.
      * normLow/normHigh: norma z wydruku w jednostce wyniku (PR2); puste = norma aplikacji.
      * own ('puberty' | 'single', PR4): pojedyncze badanie ocenia to badanie po swojemu — pakiet nie dobiera mu
@@ -519,18 +587,30 @@
       row.test = substance.label_pl;
       row.short = shortLabel(substance.label_pl);
       var evaluation = converter.evaluate(id, { value: raw, unit: options.unit, patient: options.patient || {} });
+      // PR6: silnik pokwitaniowy przyjmuje też zapis z operatorem („<0,1”), którego katalog nie zna. Liczba za
+      // operatorem przechodzi wtedy przez katalog tylko po to, żeby dostać jednostkę i przeliczenie.
+      var envelope = null;
+      if (options.own === 'puberty' && typeof options.assess === 'function') {
+        try { envelope = options.assess(id, raw, text(options.unit)); } catch (_) { envelope = null; }
+      }
+      var measured = envelope ? recordedMeasurement(envelope, id, raw, text(options.unit)) : null;
+      var censored = measured && measured.isExact !== true && finite(measured.sourceValue) && own(OPERATOR_TEXT, measured.operator) ? measured : null;
+      if (measured && measured.isExact !== true && !censored) measured = null;
+      if (censored) evaluation = converter.evaluate(id, { value: String(censored.sourceValue).replace('.', ','), unit: options.unit, patient: options.patient || {} });
       if (!evaluation || evaluation.ok !== true) { row.error = evaluation && evaluation.error || 'Nie udało się ocenić wyniku.'; return row; }
       var unitDef = unitOf(substance, evaluation.unit), target = unitOf(substance, substance.canonical_si);
       var precision = substance.precision || 3;
+      var operator = censored ? OPERATOR_TEXT[censored.operator] : '';
       row.status = 'ok';
       row.unit = evaluation.unit;
       row.unitLabel = unitDef && unitDef.label || evaluation.unit;
       row.precision = precision;
-      row.valueNum = evaluation.value;
+      row.valueNum = censored ? null : evaluation.value;
+      if (censored) row.censored = true;
       // Wynik w jednostce SI katalogu — jak domyślna jednostka docelowa pojedynczego badania.
-      row.converted = converter.formatNumber(target && target.factor_to_si ? evaluation.siValue / target.factor_to_si : evaluation.siValue, precision)
+      row.converted = operator + converter.formatNumber(target && target.factor_to_si ? evaluation.siValue / target.factor_to_si : evaluation.siValue, precision)
         + ' ' + substance.canonical_si;
-      row.shown = converter.formatNumber(evaluation.value, precision);
+      row.shown = operator + converter.formatNumber(evaluation.value, precision);
       row.own = options.own === 'puberty' || options.own === 'single' ? options.own : '';
       // Silnik nie ocenia bez dodatkowego kontekstu próbki (np. estradiol u dorosłej kobiety bez fazy cyklu);
       // pakiet nie ma tych pól — karta wyniku odsyła do pojedynczego badania.
@@ -544,12 +624,26 @@
       row.view = row.own
         ? { state: '', text: OWN_TEXT, bounds: '', population: '', subject: '', sources: [], marker: null, general: false, own: row.own }
         : describeAssessment(row, options);
+      if (measured && row.unit === measured.sourceUnit) {
+        // PR6: ocena silnika pokwitaniowego — ta sama koperta, którą zapisuje przypięcie pojedynczego wyniku.
+        row.assessment = envelope;
+        if (!censored) row.valueNum = measured.sourceValue;
+        row.view = describePuberty(row, envelope, options);
+      }
       // Norma z wydruku zastępuje normę aplikacji dla tego wyniku; błędna wstrzymuje zapis, a ocena zostaje przy normie aplikacji.
       var labNorm = parseLabNorm({ converter: converter, low: options.normLow, high: options.normHigh, unit: evaluation.unit });
       if (labNorm.status === 'invalid') row.normError = labNorm.error;
       if (labNorm.status === 'ok') {
         row.norm = labNorm;
-        row.view = describeLabAssessment(row, row.view);
+        var appView = row.view;
+        row.view = censored ? describeCensoredLab(row, appView, censored) : describeLabAssessment(row, appView);
+        if (row.assessment) {
+          // Decyzja właściciela 2026-11-13: wynik niesie jedną normę — wpisana norma z wydruku zastępuje ocenę
+          // pokwitaniową aplikacji na ekranie i w zapisie; łącze do pojedynczego badania zostaje.
+          delete row.assessment;
+          row.view.own = row.own;
+          row.view.replaced = true;
+        }
       }
       return row;
     }
@@ -610,8 +704,16 @@
       // Z oboma historia oceniałaby wynik przeliczony na inną jednostkę normą aplikacji (vilda_lab_history.js:
       // norma z wpisu nie obowiązuje po przeliczeniu, zrzut zakresu — tak), czyli inaczej niż formularz.
       var norm = row.norm && row.norm.status === 'ok' ? row.norm.text : '';
+      var assessments = options.assessmentSnapshot;
       if (norm) lab.norm = norm;
-      else if (own(row, 'range') && options.snapshot && typeof options.snapshot.normalize === 'function') lab.range = options.snapshot.normalize(row.range);
+      else if (own(row, 'assessment') && assessments && typeof assessments.normalize === 'function' && typeof assessments.reconcile === 'function') {
+        // PR6: ta sama postać co przypięcie pojedynczego wyniku z oceną (lab_pin_result.js): pole wartości niesie
+        // sam zapis wyniku, a koperta oceny jest wiązana z wynikiem i datą badania. Ocena dotyczy danych pacjenta
+        // z dnia wpisu; inna data pobrania unieważnia ją dokładnie tak, jak zmiana daty w oknie przypięcia.
+        lab.value = row.raw;
+        lab.assessment = assessments.normalize(row.assessment);
+        lab = assessments.reconcile(lab, lab, options.todayISO || options.dateISO, options.dateISO);
+      } else if (own(row, 'range') && options.snapshot && typeof options.snapshot.normalize === 'function') lab.range = options.snapshot.normalize(row.range);
       var note = {
         patientId: options.patientId,
         title: row.test + ': ' + entered,
@@ -646,7 +748,8 @@
         ok: true, error: '', rows: filled,
         notes: filled.map(function (row) {
           return buildNote({ row: row, patientId: options.patientId, dateISO: options.dateISO, comment: options.comment,
-            linkedAgeMonths: options.linkedAgeMonths, snapshot: options.snapshot });
+            linkedAgeMonths: options.linkedAgeMonths, snapshot: options.snapshot,
+            assessmentSnapshot: options.assessmentSnapshot, todayISO: options.todayISO });
         })
       };
     }
@@ -666,6 +769,13 @@
     function copyLine(row) {
       var view = record(row.view) ? row.view : {};
       var line = row.short + ': ' + row.shown + ' ' + row.unit;
+      // PR6: ocena pokwitaniowa — każde porównanie osobno, z granicą w nawiasie (bez wspólnego werdyktu).
+      if (view.puberty) {
+        var compared = (Array.isArray(view.comparisons) ? view.comparisons : []).map(function (comparison) {
+          return lowerFirst(comparison.title) + ': ' + lowerFirst(comparison.label) + (comparison.range ? ' (' + comparison.range + ')' : '');
+        });
+        return line + (compared.length ? ' — ' + compared.join('; ') : '');
+      }
       var verdict = view.classification && view.classification !== 'within' && STATES[view.classification] ? STATES[view.classification].text : '';
       var norm = '';
       if (view.lab && row.norm) norm = 'norma z wydruku ' + plainNumber(row.norm.low) + '–' + plainNumber(row.norm.high);
@@ -702,7 +812,7 @@
     }
 
     return Object.freeze({
-      version: '1.4.0',
+      version: '1.5.0',
       SETTINGS_KEY: SETTINGS_KEY,
       CUSTOM_KEY: CUSTOM_KEY,
       LIMITS: LIMITS,
@@ -728,6 +838,7 @@
       rememberUnits: rememberUnits,
       evaluateRow: evaluateRow,
       evaluatePackage: evaluatePackage,
+      compactRange: compactRange,
       parseLabNorm: parseLabNorm,
       previousResults: previousResults,
       validDate: validDate,
@@ -776,10 +887,16 @@
       }
     };
     // Badania z własną oceną w pojedynczym badaniu (PR4): opis w kreatorze i w karcie wyniku.
+    // PR6: 'puberty' (LH, FSH, inhibina B, testosteron całkowity) pakiet ocenia silnikiem pojedynczego badania;
+    // „note” zostaje na wypadek, gdy ocena jest niedostępna (wynik zapisuje się wtedy jak w PR4, bez oceny).
     var OWN_KINDS = {
-      puberty: { badge: 'ocena pokwitaniowa w pojedynczym badaniu', mark: 'pokwit.', note: 'Ocena pokwitaniowa w pojedynczym badaniu albo z normy z wydruku.' },
+      puberty: { badge: 'ocena według wieku i pokwitania', mark: 'pokwit.', note: 'Ocena pokwitaniowa jest teraz niedostępna — oceń w pojedynczym badaniu albo wpisz normę z wydruku.' },
       single: { badge: 'ocena w pojedynczym badaniu', mark: 'poj. badanie', note: 'Pełna ocena w pojedynczym badaniu albo z normy z wydruku.' }
     };
+    var REPLACED_NOTE = 'Ocena aplikacji dla wieku i stadium wraca po usunięciu normy z wydruku.';
+    var OTHER_DAY_PUBERTY = ' dotyczy dzisiejszego wieku i stadium: z inną datą pobrania zapisze się w karcie jako wymagająca ponownej oceny — tak jak przypięcie pojedynczego wyniku ze zmienioną datą.';
+    var OTHER_DAY_CARD = 'Inna data pobrania: w karcie ta ocena zapisze się jako wymagająca ponownej oceny.';
+    var STAGE_NOTE = 'Stadium obowiązuje dla całego pakietu — także dla badań z normą według Tannera.';
     var CONTEXT_NOTE = 'Ocena wymaga kontekstu badania (np. fazy cyklu) — wybierzesz go w pojedynczym badaniu.';
     // Etykieta do 3 znaków (TSH, fT4, LH) mieści się w kolumnie obok pola; dłuższa staje nad polem.
     var LABEL_COMPACT_MAX = 3;
@@ -797,7 +914,9 @@
         // PR5: stara, wspólna kopia pakietów czeka na rozstrzygnięcie w sejfie, czyje to pakiety.
         adopting: false, adoptTries: 0,
         // Lekarz sam wybrał pakiet (lista, kreator, adres) — wczytanie pakietów z konta nie zmienia już wyboru.
-        picked: false };
+        picked: false,
+        // PR6: ocena pokwitania dla pakietu (opis od strony), otwarty edytor stadium, opcje wyboru fazy.
+        puberty: null, stageOpen: false, cycleSig: null, pubertySubscribed: false };
       var grid = null, card = null, singleBtn = null, packageBtn = null;
       var parts = { inputs: {}, units: {}, errors: {}, cards: {}, normLow: {}, normHigh: {}, normUnit: {}, normErrors: {} };
       var timer = null;
@@ -849,6 +968,15 @@
           var page = runtime();
           return page && typeof page.getPackagePatient === 'function' ? page.getPackagePatient(analyteId) : null;
         } catch (_) { return null; }
+      }
+      // PR6: ocena pokwitaniowa — strona oddaje kopertę oceny i opis kroku „Pacjent”; zapis i widok jak w pojedynczym badaniu.
+      function puberty() { try { var page = runtime(); return page && page.packagePuberty || null; } catch (_) { return null; } }
+      function assessmentSnapshot() { return w.VildaLabSnapshot || null; }
+      function assessmentUI() { return w.VildaLabAssessmentUI || null; }
+      function stageEditorUI() { var ui = w.VildaPubertyAssessmentUI; return ui && typeof ui.mountEditor === 'function' ? ui : null; }
+      function assess(analyteId, raw, unit) {
+        var source = puberty();
+        try { return source && typeof source.assess === 'function' ? source.assess(analyteId, raw, unit) : undefined; } catch (_) { return undefined; }
       }
       // 'puberty' | 'single' | '' — pytane przy każdej ocenie, bo skrypt strony rusza po tym pliku.
       function ownKind(analyteId) {
@@ -1096,6 +1224,38 @@
         parts.patientBox = add(s4.body, 'div', 'lab-patient-context lab-pkg-patient');
         parts.patient = add(add(parts.patientBox, 'div', 'lab-patient-summary'), 'span', 'lab-patient-text');
         parts.patient.id = 'labPkgPatient';
+        // PR6: ocena pokwitania i „Cykl / menopauza” — jedne dla całego pakietu; te same klasy i ten sam edytor
+        // co krok „Pacjent” pojedynczego badania.
+        parts.pubertyBox = add(s4.body, 'section', 'lab-puberty-panel lab-pkg-puberty');
+        parts.pubertyBox.id = 'labPkgPuberty';
+        parts.pubertyBox.setAttribute('aria-label', 'Pokwitanie i cykl — dla całego pakietu');
+        parts.pubertyBox.hidden = true;
+        parts.stageRow = add(parts.pubertyBox, 'div', 'lab-puberty-summary-row lab-puberty-stage-row lab-pkg-stage-row');
+        var stageText = add(parts.stageRow, 'span', 'lab-pkg-stage-text');
+        add(stageText, 'span', 'lab-pkg-stage-label', 'Pokwitanie');
+        parts.stageSummary = add(stageText, 'strong', 'lab-pkg-stage-summary');
+        parts.stageSummary.id = 'labPkgStageSummary';
+        parts.stageBtn = button(parts.stageRow, 'lab-puberty-context-button', 'Zmień ocenę', toggleStageEditor);
+        parts.stageBtn.id = 'labPkgStageEdit';
+        parts.stageBtn.setAttribute('aria-controls', 'labPkgStageEditor');
+        parts.stageEditorBox = add(parts.pubertyBox, 'section', 'lab-puberty-detail-section lab-pkg-stage-editor');
+        parts.stageEditorBox.id = 'labPkgStageEditor';
+        parts.stageEditorBox.hidden = true;
+        add(parts.stageEditorBox, 'h3', '', 'Ocena pokwitania');
+        parts.stageHint = add(parts.stageEditorBox, 'p', 'lab-puberty-hint');
+        parts.stageEditorHost = add(parts.stageEditorBox, 'div', 'lab-pkg-stage-editor-host');
+        parts.cycleField = add(parts.pubertyBox, 'label', 'lab-puberty-field lab-puberty-cycle-field lab-pkg-cycle-field');
+        add(parts.cycleField, 'span', '', 'Cykl / menopauza');
+        parts.cycle = add(parts.cycleField, 'select', 'lab-pkg-cycle');
+        parts.cycle.id = 'labPkgCycle';
+        parts.cycleField.setAttribute('for', parts.cycle.id);
+        parts.cycle.addEventListener('change', function () {
+          var source = puberty();
+          try { if (source && typeof source.setCycle === 'function') source.setCycle(parts.cycle.value); } catch (_) { /* wybór zostaje w polu */ }
+          edited();
+        });
+        parts.pubertyNote = add(parts.pubertyBox, 'p', 'lab-puberty-hint lab-pkg-puberty-note');
+        parts.pubertyNote.id = 'labPkgPubertyNote';
 
         parts.clear = button(form, 'lab-pkg-btn lab-pkg-btn-ghost lab-pkg-clear', 'Wyczyść pakiet', function () {
           clearValues(true);
@@ -1109,6 +1269,11 @@
         var head = add(results, 'div', 'lab-pkg-results-head');
         add(head, 'div', 'lab-step-label', 'Ocena wyników');
         add(head, 'div', 'lab-pkg-hint', 'na żywo, dla danych pacjenta z karty');
+        // PR6: komunikat kliniczny wspólny dla kilku badań (np. „Rozwój płciowy” dla LH i FSH) — raz, nad kartami.
+        parts.clinicalHost = add(results, 'section', 'vilda-lab-assessment is-compact lab-pkg-clinical');
+        parts.clinicalHost.id = 'labPkgClinical';
+        parts.clinicalHost.setAttribute('aria-label', 'Komunikat wspólny dla badań pakietu');
+        parts.clinicalHost.hidden = true;
         parts.cardsHost = add(results, 'div', 'lab-pkg-cards');
         parts.cardsHost.id = 'labPkgCards';
         parts.sources = add(results, 'p', 'lab-pkg-hint lab-pkg-sources');
@@ -1173,7 +1338,8 @@
           var input = add(line, 'input', 'lab-pkg-value');
           input.type = 'text';
           input.id = 'labPkgValue-' + row.id;
-          input.setAttribute('inputmode', 'decimal');
+          // PR6: LH, FSH, inhibina B i testosteron przyjmują zapis z wydruku z operatorem („<0,1”).
+          input.setAttribute('inputmode', ownKind(row.id) === 'puberty' ? 'text' : 'decimal');
           input.setAttribute('autocomplete', 'off');
           input.setAttribute('aria-describedby', 'labPkgError-' + row.id);
           label.setAttribute('for', input.id);
@@ -1275,6 +1441,8 @@
         parts.date.disabled = busy;
         parts.comment.disabled = busy;
         parts.clear.disabled = busy;
+        parts.stageBtn.disabled = busy;
+        parts.cycle.disabled = busy;
       }
       function clearValues(keepDone) {
         if (!state.formBuilt) return;
@@ -1371,8 +1539,105 @@
           converter: converter(), snapshot: snapshot(), data: w.LabUnitsData || null,
           // Pacjent z karty dla danego badania i rodzaj jego własnej oceny — oba od strony (PR4).
           patientFor: function (analyteId) { var described = packagePatient(analyteId); return described && described.patient || {}; },
-          ownKind: ownKind, capturedAtISO: new Date().toISOString()
+          ownKind: ownKind, capturedAtISO: new Date().toISOString(),
+          // PR6: koperta oceny pokwitaniowej od strony i wspólny widok oceny.
+          assess: assess, assessmentUI: assessmentUI()
         }, inputs());
+      }
+
+      // ── PR6: pokwitanie i faza cyklu dla całego pakietu ──
+      function toggleStageEditor() {
+        if (state.busy) return;
+        state.stageOpen = !state.stageOpen;
+        refresh();
+      }
+      function drawPuberty() {
+        var source = puberty(), view;
+        try {
+          view = source && typeof source.presentation === 'function'
+            ? source.presentation(state.rows.map(function (row) { return row.id; })) : null;
+        } catch (_) { view = null; }
+        state.puberty = view;
+        if (source && !state.pubertySubscribed && typeof source.subscribe === 'function') {
+          // Zmiana oceny pokwitania (edytor, formularz główny tej wizyty) odświeża ocenę całego pakietu.
+          state.pubertySubscribed = true;
+          try { source.subscribe(schedule); } catch (_) { /* odświeży kolejna edycja */ }
+        }
+        var stage = view && view.available && view.stage || null, cycle = view && view.available && view.cycle || null;
+        parts.pubertyBox.hidden = !stage && !cycle;
+        parts.stageRow.hidden = !stage;
+        var canEdit = !!stage && stage.editor && !stage.disabled && !!stageEditorUI();
+        if (!canEdit) state.stageOpen = false;
+        if (stage) {
+          parts.stageSummary.textContent = stage.summary;
+          parts.stageBtn.hidden = !canEdit;
+          parts.stageBtn.textContent = state.stageOpen ? 'Gotowe' : stage.action;
+          parts.stageBtn.setAttribute('aria-expanded', String(!!state.stageOpen));
+          parts.stageBtn.disabled = state.busy;
+          parts.stageHint.textContent = stage.hint;
+        }
+        parts.stageEditorBox.hidden = !state.stageOpen;
+        if (state.stageOpen) {
+          if (!parts.stageEditor) {
+            parts.stageEditor = stageEditorUI().mountEditor(parts.stageEditorHost, {
+              read: function () {
+                var current = puberty();
+                return current && typeof current.assessmentView === 'function' ? current.assessmentView() : { status: 'absent', assessment: null, legacy: null };
+              },
+              sex: function () { return state.puberty && state.puberty.sex || null; },
+              onEdit: function (axis, stageValue) {
+                var current = puberty();
+                return current && typeof current.editObservation === 'function' ? current.editObservation(axis, stageValue) : { ok: false, reason: 'unavailable' };
+              },
+              idPrefix: 'labPkgPuberty'
+            });
+          }
+          if (parts.stageEditor && typeof parts.stageEditor.render === 'function') parts.stageEditor.render();
+        }
+        parts.cycleField.hidden = !cycle;
+        if (cycle) {
+          var signature = JSON.stringify(cycle.choices);
+          if (signature !== state.cycleSig) {
+            state.cycleSig = signature;
+            parts.cycle.textContent = '';
+            cycle.choices.forEach(function (choice) {
+              var option = add(parts.cycle, 'option', '', choice[1]);
+              option.value = choice[0];
+            });
+          }
+          parts.cycle.value = cycle.value;
+          parts.cycle.disabled = state.busy;
+        }
+        var notes = [];
+        if (stage) notes.push(STAGE_NOTE);
+        if (view && view.contextLine) notes.push(view.contextLine);
+        parts.pubertyNote.hidden = !notes.length;
+        parts.pubertyNote.textContent = notes.join(' ');
+      }
+      // Ten sam komunikat kliniczny w kilku kartach pokazujemy raz, nad kartami, z listą badań, których dotyczy.
+      function hoistClinical() {
+        var groups = {}, order = [];
+        state.rows.forEach(function (definition) {
+          var node = parts.cards[definition.id].querySelector('.lab-pkg-card-assessment .vilda-lab-clinical');
+          if (!node) return;
+          node.hidden = false;
+          var key = (node.getAttribute('data-clinical-code') || '') + '\u0001' + node.textContent;
+          if (!groups[key]) { groups[key] = []; order.push(key); }
+          groups[key].push({ node: node, short: definition.short });
+        });
+        var shared = order.filter(function (key) { return groups[key].length > 1; });
+        var signature = shared.map(function (key) { return key + '\u0002' + groups[key].map(function (item) { return item.short; }).join(','); }).join('\u0003');
+        shared.forEach(function (key) { groups[key].forEach(function (item) { item.node.hidden = true; }); });
+        parts.clinicalHost.hidden = !shared.length;
+        if (parts.clinicalHost.getAttribute('data-drawn') === signature) return;
+        parts.clinicalHost.setAttribute('data-drawn', signature);
+        parts.clinicalHost.textContent = '';
+        shared.forEach(function (key) {
+          var copy = groups[key][0].node.cloneNode(true);
+          copy.hidden = false;
+          add(copy, 'p', 'lab-pkg-clinical-scope', 'Dotyczy: ' + groups[key].map(function (item) { return item.short; }).join(', '));
+          parts.clinicalHost.appendChild(copy);
+        });
       }
 
       function drawBar(box, row, view) {
@@ -1388,7 +1653,10 @@
       function drawCard(row, definition) {
         var box = parts.cards[definition.id];
         // Karta z tą samą treścią zostaje w miejscu: jej łącze nie znika spod kliknięcia przy kolejnym odświeżeniu.
-        var signature = JSON.stringify([row.status, row.error || '', row.shown || '', row.unit || '', row.converted || '', row.view || null, !!row.contextRequired]);
+        var assessed = row.status === 'ok' && !!row.assessment && !!row.view && row.view.puberty === true && !!assessmentUI();
+        var otherDay = assessed && state.otherDay === true;
+        var signature = JSON.stringify([row.status, row.error || '', row.shown || '', row.unit || '', row.converted || '', row.view || null, !!row.contextRequired,
+          assessed ? row.assessment.evaluation : null, otherDay]);
         if (box.getAttribute('data-drawn') === signature) return;
         box.setAttribute('data-drawn', signature);
         box.textContent = '';
@@ -1407,6 +1675,27 @@
         var view = row.view;
         add(main, 'span', 'lab-pkg-card-value' + (view.state ? ' ' + view.state : ''), row.shown);
         add(main, 'span', 'lab-pkg-card-unit', row.unit);
+        if (assessed) {
+          // PR6: ocena silnika pokwitaniowego — wspólny widok oceny (osie „Dla wieku” i „Dla stadium”), ten sam
+          // co w pojedynczym badaniu i w zapisanym wyniku. Bez jednej etykiety: każde porównanie ma własną.
+          box.classList.add('is-assessed');
+          if (row.unit !== definition.canonicalUnit) add(box, 'div', 'lab-pkg-card-converted', '= ' + row.converted);
+          var host = add(box, 'div', 'lab-pkg-card-assessment');
+          var evaluation = row.assessment.evaluation, input = evaluation.input || {};
+          assessmentUI().renderEvaluation(host, evaluation, { compact: true, hideMeasurement: true, live: true, displayUnit: row.unit,
+            femaleTtFixedDecimals: evaluation.analyte === 'testosterone_total' && input.sex === 'F' && input.contextBasis === 'current-patient' && !input.sampleDateISO });
+          var section = host.querySelector('.vilda-lab-assessment');
+          if (section && view.alert) {
+            var alert = doc.createElement('div');
+            alert.className = 'vilda-lab-severity-summary' + (view.state ? ' ' + view.state : '');
+            add(alert, 'strong', 'vilda-lab-severity-summary-title', view.alert.label);
+            add(alert, 'span', 'vilda-lab-severity-summary-scope', view.alert.scope);
+            section.insertBefore(alert, section.firstChild);
+          }
+          if (otherDay) add(box, 'p', 'lab-pkg-card-note lab-pkg-card-day', OTHER_DAY_CARD);
+          button(box, 'lab-pkg-link lab-pkg-card-link', 'Wykres w pojedynczym badaniu →', function () { openSingle(definition.id); });
+          return;
+        }
         add(head, 'span', 'lab-range-status' + (view.state ? ' ' + view.state : ' is-general'), view.text);
         if (row.unit !== definition.canonicalUnit) add(box, 'div', 'lab-pkg-card-converted', '= ' + row.converted);
         drawBar(box, row, view);
@@ -1432,6 +1721,8 @@
         var note = view.own && OWN_KINDS[view.own] ? OWN_KINDS[view.own].note : row.contextRequired ? CONTEXT_NOTE : '';
         if (note) {
           if (!view.lab) add(box, 'div', 'lab-pkg-card-note', note);
+          // PR6: norma z wydruku zastąpiła ocenę pokwitaniową aplikacji.
+          else if (view.replaced) add(box, 'div', 'lab-pkg-card-note', REPLACED_NOTE);
           button(box, 'lab-pkg-link lab-pkg-card-link', 'Oceń ' + definition.short + ' w pojedynczym badaniu →', function () { openSingle(definition.id); });
         }
       }
@@ -1563,6 +1854,7 @@
         if (ctx.pid !== state.pid) {
           if (state.pid !== null) clearValues(false);
           state.pid = ctx.pid;
+          state.stageOpen = false;
           state.previous = null;
           state.previousFor = null;
           state.authAsked = null;
@@ -1575,6 +1867,12 @@
         if (ctx.gate) return;
         if (state.previousFor !== state.pid) loadPrevious();
 
+        // PR6: opis pokwitania najpierw — od niego zależy stadium, którym strona ocenia cały pakiet.
+        drawPuberty();
+        var m = model();
+        var dateError = m.validDate(parts.date.value, today());
+        var otherDay = !dateError && parts.date.value !== today();
+        state.otherDay = otherDay;
         var described = packagePatient();
         var description = described && described.description || null;
         var rows = evaluate();
@@ -1589,6 +1887,7 @@
           drawNormRow(row, definition);
           if (row.status === 'ok' && row.view) row.view.sources.forEach(function (label) { if (sources.indexOf(label) === -1) sources.push(label); });
         });
+        hoistClinical();
         parts.sources.hidden = !sources.length;
         parts.sources.textContent = sources.length ? 'Źródła norm: ' + sources.join(' · ') : '';
 
@@ -1597,11 +1896,11 @@
         parts.patient.classList.toggle('is-missing', !!missing);
         parts.patientBox.classList.toggle('is-pediatric', !missing && !!described && described.patient.life_stage === 'pediatric');
 
-        var m = model();
-        var dateError = m.validDate(parts.date.value, today());
-        var otherDay = !dateError && parts.date.value !== today();
+        // PR6: ocena pokwitaniowa dotyczy danych pacjenta z dnia wpisu — przy innej dacie pobrania zapis ją unieważnia.
+        var assessedNames = rows.filter(function (row) { return row.status === 'ok' && !!row.assessment; }).map(function (row) { return row.short; });
         parts.dateNote.hidden = !dateError && !otherDay;
-        parts.dateNote.textContent = dateError || (otherDay ? OTHER_DAY_NOTE : '');
+        parts.dateNote.textContent = dateError || (otherDay
+          ? OTHER_DAY_NOTE + (assessedNames.length ? ' Ocena pokwitaniowa (' + assessedNames.join(', ') + ')' + OTHER_DAY_PUBERTY : '') : '');
         parts.dateNote.classList.toggle('is-error', !!dateError);
 
         drawUnitsHint();
@@ -1679,7 +1978,7 @@
         var rows = evaluate();
         var plan = m.planSave({
           rows: rows, patientId: ctx.pid, dateISO: parts.date.value, todayISO: today(), comment: parts.comment.value,
-          linkedAgeMonths: m.linkedAgeMonths(ctx.sessionPatient), snapshot: snapshot()
+          linkedAgeMonths: m.linkedAgeMonths(ctx.sessionPatient), snapshot: snapshot(), assessmentSnapshot: assessmentSnapshot()
         });
         state.done = null;
         if (!plan.ok) { state.error = plan.error; refresh(); return; }
@@ -1929,7 +2228,7 @@
         var legend = add(catalogBox, 'p', 'lab-pkg-hint lab-pkg-creator-legend');
         if (marks.puberty) {
           add(legend, 'strong', '', OWN_KINDS.puberty.mark);
-          legend.appendChild(doc.createTextNode(' — ocena pokwitaniowa tylko w pojedynczym badaniu. '));
+          legend.appendChild(doc.createTextNode(' — ocena według wieku i stadium pokwitania, jak w pojedynczym badaniu. '));
         }
         if (marks.single) {
           add(legend, 'strong', '', OWN_KINDS.single.mark);
@@ -2047,19 +2346,20 @@
         var rebuild = listSignature !== parts.creatorListSig;
         parts.creatorListSig = listSignature;
         if (rebuild) parts.creatorList.textContent = '';
-        var own = [];
+        var own = [], assessedOwn = [];
         draft.analytes.forEach(function (id, index) {
           var option = parts.creatorOptions[id];
           if (!option) return;
           var item = option.item;
-          if (item.own) own.push(item.short);
+          if (item.own === 'puberty') assessedOwn.push(item.short);
+          else if (item.own) own.push(item.short);
           if (!rebuild) return;
           var line = add(parts.creatorList, 'li', 'lab-pkg-creator-item');
           line.setAttribute('data-analyte', id);
           add(line, 'span', 'lab-pkg-creator-item-num', (index + 1) + '.');
           var caption = add(line, 'div', 'lab-pkg-creator-item-text');
           add(caption, 'span', 'lab-pkg-creator-item-name', item.label);
-          add(caption, 'span', 'lab-pkg-creator-item-kind' + (item.own ? ' is-own' : ''), item.own && OWN_KINDS[item.own] ? OWN_KINDS[item.own].badge : 'ocena w pakiecie');
+          add(caption, 'span', 'lab-pkg-creator-item-kind' + (item.own && item.own !== 'puberty' ? ' is-own' : ''), item.own && OWN_KINDS[item.own] ? OWN_KINDS[item.own].badge : 'ocena w pakiecie');
           var actions = add(line, 'div', 'lab-pkg-creator-item-actions');
           var up = button(actions, 'lab-pkg-icon-btn', '↑', function () { moveAnalyte(id, -1); });
           up.setAttribute('aria-label', 'Przesuń ' + item.short + ' w górę');
@@ -2082,10 +2382,12 @@
         var listError = check.errors.analytes && draft.touched.analytes ? check.errors.analytes : '';
         parts.creatorListError.hidden = !listError;
         parts.creatorListError.textContent = listError;
-        parts.creatorOwnNote.hidden = !own.length;
-        parts.creatorOwnNote.textContent = own.length
-          ? own.join(', ') + ' — w pakiecie bez oceny aplikacji. Zapiszesz wartość i, jeśli chcesz, normę z wydruku; ocenę z wiekiem, stadium pokwitania i leczeniem otworzysz jednym kliknięciem w pojedynczym badaniu.'
-          : '';
+        // PR6: LH, FSH, inhibina B i testosteron całkowity mają ocenę w pakiecie; bez oceny zostaje AMH.
+        var ownNotes = [];
+        if (assessedOwn.length) ownNotes.push(assessedOwn.join(', ') + ' — pakiet ocenia jak pojedyncze badanie: według wieku i stadium pokwitania z karty pacjenta.');
+        if (own.length) ownNotes.push(own.join(', ') + ' — w pakiecie bez oceny aplikacji. Zapiszesz wartość i, jeśli chcesz, normę z wydruku; pełną ocenę otworzysz jednym kliknięciem w pojedynczym badaniu.');
+        parts.creatorOwnNote.hidden = !ownNotes.length;
+        parts.creatorOwnNote.textContent = ownNotes.join(' ');
         Object.keys(parts.creatorOptions).forEach(function (id) {
           var option = parts.creatorOptions[id], checked = draft.analytes.indexOf(id) !== -1;
           option.check.checked = checked;
@@ -2270,7 +2572,7 @@
 
     var instance = null;
     return Object.freeze({
-      version: '1.4.0',
+      version: '1.5.0',
       start: function () {
         if (instance || !win || !win.document) return instance;
         instance = create(win);

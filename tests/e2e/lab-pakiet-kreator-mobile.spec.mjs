@@ -103,15 +103,29 @@ test('telefon: kreator pakietu i pakiet z dłuższymi nazwami — bez przewijani
   });
   expect(wiersze).toEqual({ wiersze: Array(5).fill(true), normy: Array(5).fill(true), rowneKolumny: true, wKarcie: true });
 
-  // Karty oceny: testosteron bez oceny w pakiecie z łączem (cel dotyku), 17-OHP oceniony normą dla metody immunochemicznej.
+  // Karty oceny (LAB-PAKIETY PR6): testosteron ocenia silnik pokwitaniowy — u dziewczynki oś wieku w jednostce
+  // wyniku, z łączem do wykresu (cel dotyku); LH ma normę z wydruku zamiast oceny aplikacji; 17-OHP oceniony
+  // normą dla metody immunochemicznej.
   const testosteron = karta.locator('.lab-pkg-card[data-analyte="testosterone_total"]');
-  expect(await tekst(testosteron)).toBe('Testosteron całkowity 25 ng/dL bez oceny w pakiecie = 0,867 nmol/L Ocena pokwitaniowa w pojedynczym badaniu albo z normy z wydruku. Oceń Testosteron całkowity w pojedynczym badaniu →');
-  expect(await tekst(karta.locator('.lab-pkg-card[data-analyte="lh"]'))).toBe('LH 2,1 IU/L w normie z wydruku Norma z wydruku: 0,3–4 IU/L laboratorium Oceń LH w pojedynczym badaniu →');
+  await expect(testosteron).toHaveClass(/is-assessed/);
+  expect(await tekst(testosteron)).toMatch(/^Testosteron całkowity 25 ng\/dL = 0,867 nmol\/L .*Dla wieku .* ng\/dL .*Szczegóły i źródła Wykres w pojedynczym badaniu →$/);
+  await expect(testosteron.locator('.vilda-lab-assessment [data-comparison="age"]')).toHaveCount(1);
+  await expect(testosteron.locator('.vilda-lab-assessment [data-comparison="stage"]')).toHaveCount(0);
+  expect(await tekst(karta.locator('.lab-pkg-card[data-analyte="lh"]'))).toBe('LH 2,1 IU/L w normie z wydruku Norma z wydruku: 0,3–4 IU/L laboratorium Ocena aplikacji dla wieku i stadium wraca po usunięciu normy z wydruku. Oceń LH w pojedynczym badaniu →');
+  // Wspólny widok oceny w karcie mieści się w szerokości ekranu; łącze karty jest celem dotyku.
+  const ocenaWKarcie = await testosteron.evaluate((box) => {
+    const p = (el) => el.getBoundingClientRect(), widok = box.querySelector('.vilda-lab-assessment'), lacze = box.querySelector('button.lab-pkg-card-link');
+    return { wKarcie: p(widok).left >= p(box).left - 1 && p(widok).right <= p(box).right + 1, bezPoziomego: widok.scrollWidth <= widok.clientWidth + 1,
+      lacze: Math.round(p(lacze).height * 100) / 100 };
+  });
+  expect(ocenaWKarcie.wKarcie).toBe(true);
+  expect(ocenaWKarcie.bezPoziomego).toBe(true);
+  expect(ocenaWKarcie.lacze).toBeGreaterThanOrEqual(44);
   await expect(karta.locator('.lab-pkg-card[data-analyte="oh17_progesterone"] .lab-range-status')).toHaveClass(/is-(normal|below|above|uwaga-low|uwaga-high)/);
 
   await kliknij(page.locator('#labPkgSave'));
   await expect(page.locator('#labPkgDone')).toBeVisible();
   expect((await wynikiBadan(page, patientId)).map((n) => [n.labResult.testKey, n.labResult.valueNum, n.labResult.unit, Object.keys(n.labResult).filter((k) => ['range', 'norm', 'assessment'].includes(k))])).toEqual([
-    ['estradiol', 60, 'pmol/L', ['range']], ['lh', 2.1, 'IU/L', ['norm']], ['oh17_progesterone', 3, 'nmol/L', ['range']], ['testosterone_total', 25, 'ng/dL', []],
+    ['estradiol', 60, 'pmol/L', ['range']], ['lh', 2.1, 'IU/L', ['norm']], ['oh17_progesterone', 3, 'nmol/L', ['range']], ['testosterone_total', 25, 'ng/dL', ['assessment']],
   ]);
 });

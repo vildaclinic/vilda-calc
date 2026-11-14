@@ -928,8 +928,8 @@
   "sha256": "22c5b3ec86177c574023351c8d5a0576a49652efbc28df0df99288778cfc526d"
  },
  "inline_przelicznik_jednostek_00.css": {
-  "v": 12,
-  "sha256": "d163d3cb8255ac5f0affdc97469dbbb1824677870d6f5d82b6e81f635430c1a2"
+  "v": 13,
+  "sha256": "e20613e371608a3c28e8b1b7e1bc331c6c9415df964e8f1199e108bfbdf76418"
  },
  "inline_regulamin_00.css": {
   "v": 1,
@@ -1652,8 +1652,8 @@
   "sha256": "5cc7f23b6c4e6f9f25331aeeded8fd5d58d64148bf8d9ab09177d7785963088c"
  },
  "vilda_lab_packages.js": {
-  "v": 5,
-  "sha256": "d44b8b4a690ec3d34785ce9dce0a7233def811f5b4bd52688bf0660d74ee405c"
+  "v": 6,
+  "sha256": "a7cefd61cc3fd5b997c395627c00097b9745b857281b9126830222d6d238ee7f"
  },
  "vilda_lab_profile_preferences.js": {
   "v": 1,
@@ -1672,8 +1672,8 @@
   "sha256": "2715ed96d8e1c4f7ccc667fdbee02664fa7bec08908d127cebe9905b508e9d7c"
  },
  "vilda_lab_puberty_ui.js": {
-  "v": 22,
-  "sha256": "504bdc9abcc5d13afed0115f117b52e2e0308d15fa85d0365cc2d84db249d234"
+  "v": 23,
+  "sha256": "3a1a79d9c10e6c98680aa2b34cd5a8c632cbb25ff11f1ea43e07498a527ff204"
  },
  "vilda_lab_range_snapshot.js": {
   "v": 2,
