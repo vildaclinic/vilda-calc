@@ -22307,7 +22307,7 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
-## Pojedyncze zmiany włączone dla wszystkich w trybie „Komputer prywatny” (P-SYNC-ZDARZENIA, E2-PR6, SW 1.1.529, `vilda_sync.js` 56, `inline_ustawienia_07.js` 6, 2026-11-14)
+## Pojedyncze zmiany włączone dla wszystkich w trybie „Komputer prywatny” (P-SYNC-ZDARZENIA, E2-PR6, SW 1.1.530, `vilda_sync.js` 56, `inline_ustawienia_07.js` 6, 2026-11-14)
 
 **Zmiana kliniczna: nie** — wzory, progi, jednostki, interpretacje i reguły scalania bez zmian. **Zmienia się działanie
 synchronizacji (PR włączający):** każde urządzenie w trybie „Komputer prywatny” z włączoną synchronizacją wysyła
@@ -22399,7 +22399,7 @@ Przypadki `wejście → oczekiwany wynik`:
   wysyłka zostaje), ryzyko starszej aplikacji przy klasach R2 i R3 niezmierzone (plan, wiersz 12).
 
 **Nota wydania.** Po scaleniu właściciel aktualizuje tego samego dnia wszystkie swoje urządzenia (otwarcie aplikacji
-i przyjęcie aktualizacji; linia „Wersja aplikacji” — 1.1.529). Na urządzeniach z testu flaga `'1'` znaczy „włączone”
+i przyjęcie aktualizacji; linia „Wersja aplikacji” — 1.1.530). Na urządzeniach z testu flaga `'1'` znaczy „włączone”
 i może zostać.
 
 **Cofnięcie.** Dla wszystkich od razu: `EVENTS_ENABLED` = `0` w ustawieniach workera albo poprzednia wersja workera
