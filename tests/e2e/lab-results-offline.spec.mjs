@@ -22,6 +22,7 @@ function resources() {
   return [{ url: '/index.html', sha256: hash(html) }, ...[
     'vilda_lab_result_presentation.js', 'vilda_lab_result_chart.js',
     'vilda_lab_history.js', 'vilda_lab_history_tab.js', 'vilda_lab_history_tab.css',
+    'vilda_result_details_dialog.js', 'vilda_result_details_dialog.css',
   ].map(file => {
     const url = urls.find(value => value.split('?')[0] === file);
     if (!url) throw new Error(`Production index does not load ${file}`);
@@ -163,9 +164,9 @@ test('Badania: zapisane wyniki, normy i kolory po zimnym uruchomieniu produkcyjn
     // neither a fake x-offset nor a later invisible button hides the first one.
     for (const id of [ids.tsh4, duplicate]) {
       await tsh.locator('.vilda-lab-result-chart-point[data-count="2"]').click();
-      await tsh.locator(`.vilda-lab-result-chart-choice[data-note-id="${id}"]`).click();
-      await expect(lab.locator('.vilda-lab-hist-result-details')).toHaveAttribute('data-note-id', id);
-      await lab.getByRole('button', { name: 'Zamknij szczegóły wyniku', exact: true }).click();
+      await page.locator(`.vilda-lab-result-chart-choice[data-note-id="${id}"]`).click();
+      await expect(page.locator('.vilda-lab-hist-result-details')).toHaveAttribute('data-note-id', id);
+      await page.getByRole('button', { name: 'Zamknij szczegóły wyniku', exact: true }).click();
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
     expect(await notes(page, patientId)).toEqual(before);

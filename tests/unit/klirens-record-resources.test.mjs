@@ -86,7 +86,7 @@ describe('lazy resources zapisanych obliczeń', () => {
     expect(scripts.filter((name) => /_ui\.js$/.test(name))).toHaveLength(0);
     expect(env.doc.body.children).toHaveLength(0);
     expect(env.requests.filter((request) => request.tag === 'LINK').map((request) => request.filename))
-      .toEqual(['clcr_saved_results_view.css', 'clcr_result_details.css']);
+      .toEqual(['clcr_saved_results_view.css', 'clcr_result_details.css', 'vilda_result_details_dialog.css']);
   });
 
   it('błąd zasobu nie staje się gotowością; ponowienie wczytuje brakujący plik bez duplikowania poprzednich', async () => {

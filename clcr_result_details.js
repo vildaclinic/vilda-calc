@@ -75,35 +75,40 @@
   async function open(options = {}) {
     const doc = options.document || root.document;
     if (!doc?.body) return null;
-    if (active) active.destroy();
+    if (active) active.destroy({ restoreFocus: false });
     const vault = options.vault || root.VildaVault;
     const patientId = text(options.patientId);
     const noteId = text(options.noteId || options.record?.noteId || options.record?.id);
     const token = {};
     let destroyed = false, pending = false, currentNote = null, currentRecord = null, draft = null;
+    const origin = options.anchor || doc.activeElement;
     const host = doc.createElement("div");
     host.className = "clcr-result-dialogs";
-    host.innerHTML = '<dialog class="clcr-record-dialog" id="detailsDialog" aria-labelledby="clcrDetailsTitle"><div class="clcr-record-inner"><div class="clcr-record-heading"><h2 id="clcrDetailsTitle">Szczegóły obliczenia</h2><button type="button" class="clcr-record-button secondary" data-clcr-close="detailsDialog">Zamknij</button></div><div id="calculationDetails"></div><p id="detailActionNotice" class="clcr-record-notice" role="status" hidden></p><p id="legacyEditNotice" class="clcr-record-context" hidden></p><div class="clcr-record-actions" id="detailActions" hidden><button type="button" class="clcr-record-button primary" id="editMeasurement">Edytuj pomiar</button><button type="button" class="clcr-record-button danger-outline" id="deleteMeasurement">Usuń pomiar</button></div></div></dialog><dialog class="clcr-record-dialog" id="editDialog" aria-labelledby="clcrEditTitle"><div class="clcr-record-inner"><div class="clcr-record-heading"><h2 id="clcrEditTitle">Edytuj pomiar</h2><button type="button" class="clcr-record-button secondary" data-clcr-close="editDialog">Anuluj</button></div><div id="editSummary" class="clcr-record-context"></div><form id="editForm"><label for="editDate">Data badania</label><input id="editDate" type="date" required><section class="clcr-record-context"><span class="clcr-record-label">Dane z dnia badania</span><strong id="editHistoricalSummary"></strong><p id="editDateContext"></p><button type="button" class="clcr-record-link" id="changeHistoricalContext" aria-expanded="false">Zmień dane z dnia badania</button><div id="historicalFields" hidden><label for="editAge">Wiek w dniu badania · lata</label><input id="editAge" type="text" inputmode="decimal"><div id="editSexField"><label for="editSex">Płeć uwzględniona we wzorze</label><select id="editSex"><option value="">Nie podano</option><option value="F">Kobieta</option><option value="M">Mężczyzna</option></select></div></div></section><fieldset class="clcr-record-inputs"><legend>Oryginalne dane obliczenia</legend><div id="editInputFields"></div></fieldset><p id="editError" class="clcr-record-error" role="alert" hidden></p><div class="clcr-record-actions editor"><button type="button" class="clcr-record-button secondary" data-clcr-close="editDialog">Anuluj</button><button type="submit" class="clcr-record-button primary" id="saveEditedMeasurement">Przelicz i zapisz zmiany</button></div></form></div></dialog><dialog class="clcr-record-dialog clcr-record-delete" id="deleteDialog" aria-labelledby="clcrDeleteTitle"><div class="clcr-record-inner"><span class="clcr-record-delete-icon" aria-hidden="true">×</span><h2 id="clcrDeleteTitle">Usunąć ten pomiar?</h2><p>Pomiar zniknie z Badań pacjenta, historii Klirensu i wykresu.</p><div id="deleteSummary" class="clcr-record-context"></div><p>Pozostałe pomiary pozostaną bez zmian.</p><p id="deleteError" class="clcr-record-error" role="alert" hidden></p><div class="clcr-record-actions"><button type="button" class="clcr-record-button secondary" data-clcr-close="deleteDialog">Anuluj</button><button type="button" class="clcr-record-button danger" id="confirmDeleteMeasurement">Usuń pomiar</button></div></div></dialog>';
+    host.innerHTML = '<dialog class="clcr-record-dialog vilda-result-details-dialog" id="detailsDialog" aria-labelledby="clcrDetailsTitle"><div class="vilda-result-details-layout"><header class="vilda-result-details-heading"><div><p class="clcr-record-eyebrow">Klirens</p><h2 id="clcrDetailsTitle">Szczegóły wyniku</h2></div><button type="button" class="clcr-record-button secondary" data-clcr-close="detailsDialog" aria-label="Zamknij">×</button></header><div class="vilda-result-details-body"><div id="calculationDetails"></div><p id="detailActionNotice" class="clcr-record-notice" role="status" hidden></p><p id="legacyEditNotice" class="clcr-record-context" hidden></p></div><footer class="vilda-result-details-actions" id="detailActions" hidden><button type="button" class="clcr-record-button primary" id="editMeasurement">Edytuj pomiar</button><button type="button" class="clcr-record-button danger-outline" id="deleteMeasurement">Usuń pomiar</button></footer></div></dialog><dialog class="clcr-record-dialog" id="editDialog" aria-labelledby="clcrEditTitle"><div class="clcr-record-inner"><div class="clcr-record-heading"><h2 id="clcrEditTitle">Edytuj pomiar</h2><button type="button" class="clcr-record-button secondary" data-clcr-close="editDialog">Anuluj</button></div><div id="editSummary" class="clcr-record-context"></div><form id="editForm"><label for="editDate">Data badania</label><input id="editDate" type="date" required><section class="clcr-record-context"><span class="clcr-record-label">Dane z dnia badania</span><strong id="editHistoricalSummary"></strong><p id="editDateContext"></p><button type="button" class="clcr-record-link" id="changeHistoricalContext" aria-expanded="false">Zmień dane z dnia badania</button><div id="historicalFields" hidden><label for="editAge">Wiek w dniu badania · lata</label><input id="editAge" type="text" inputmode="decimal"><div id="editSexField"><label for="editSex">Płeć uwzględniona we wzorze</label><select id="editSex"><option value="">Nie podano</option><option value="F">Kobieta</option><option value="M">Mężczyzna</option></select></div></div></section><fieldset class="clcr-record-inputs"><legend>Oryginalne dane obliczenia</legend><div id="editInputFields"></div></fieldset><p id="editError" class="clcr-record-error" role="alert" hidden></p><div class="clcr-record-actions editor"><button type="button" class="clcr-record-button secondary" data-clcr-close="editDialog">Anuluj</button><button type="submit" class="clcr-record-button primary" id="saveEditedMeasurement">Przelicz i zapisz zmiany</button></div></form></div></dialog><dialog class="clcr-record-dialog clcr-record-delete" id="deleteDialog" aria-labelledby="clcrDeleteTitle"><div class="clcr-record-inner"><span class="clcr-record-delete-icon" aria-hidden="true">×</span><h2 id="clcrDeleteTitle">Usunąć ten pomiar?</h2><p>Pomiar zniknie z Badań pacjenta, historii Klirensu i wykresu.</p><div id="deleteSummary" class="clcr-record-context"></div><p>Pozostałe pomiary pozostaną bez zmian.</p><p id="deleteError" class="clcr-record-error" role="alert" hidden></p><div class="clcr-record-actions"><button type="button" class="clcr-record-button secondary" data-clcr-close="deleteDialog">Anuluj</button><button type="button" class="clcr-record-button danger" id="confirmDeleteMeasurement">Usuń pomiar</button></div></div></dialog>';
     doc.body.appendChild(host);
     const $ = id => host.querySelector("#" + id);
-    function show(id) { const dialog = $(id); if (!dialog.open) { if (typeof dialog.showModal === "function") dialog.showModal(); else dialog.setAttribute("open", ""); } }
+    const sharedDialog = typeof root.VildaResultDetailsDialog?.attach === "function"
+      ? root.VildaResultDetailsDialog.attach($("detailsDialog"), { context: options.context, isCurrent: options.isCurrent, onClose: () => { if (!destroyed) destroy(); } }) : null;
+    function show(id) { const dialog = $(id); if (id === "detailsDialog" && sharedDialog) { sharedDialog.show(origin); return; } if (!dialog.open) { if (typeof dialog.showModal === "function") dialog.showModal(); else dialog.setAttribute("open", ""); } }
     function close(id) { const dialog = $(id); if (dialog.open && typeof dialog.close === "function") dialog.close(); else dialog.removeAttribute("open"); }
     function lock(value) { pending = value; host.querySelectorAll("button,input,select").forEach(control => { control.disabled = value; }); if (!value && currentNote) $("editMeasurement").disabled = !root.ClcrSavedCalculation?.describe(currentNote).editable; }
     function error(id, message) { $(id).textContent = message; $(id).hidden = false; }
     function ensureAlive() { return !destroyed && active?.token === token; }
     function focusParent() {
-      const target = options.anchor?.isConnected ? options.anchor : doc.querySelector(".vilda-clcr-history button, .vilda-lab-hist button, #cpcNew");
-      try { target?.focus(); } catch (_) { /* detached origin */ }
+      const target = origin?.isConnected ? origin : null;
+      try { target?.focus({ preventScroll: true }); } catch (_) { /* detached origin */ }
     }
-    function destroy() {
+    function destroy(closeOptions = {}) {
       if (destroyed) return;
       destroyed = true;
-      for (const id of ["deleteDialog", "editDialog", "detailsDialog"]) close(id);
+      for (const id of ["deleteDialog", "editDialog"]) close(id);
+      if (sharedDialog) sharedDialog.destroy({ restoreFocus: closeOptions.restoreFocus !== false });
+      else close("detailsDialog");
       host.remove();
       if (active?.token === token) active = null;
-      focusParent();
+      if (!sharedDialog && closeOptions.restoreFocus !== false) focusParent();
     }
-    active = { token, destroy, cancelForFormulaChange(nextFormula) {
+    active = { token, patientId, destroy, cancelForFormulaChange(nextFormula) {
       const owner = root.ClcrSavedCalculation?.readSaved(currentNote)?.snapshot?.formulaId || currentRecord?.sourceFormulaId;
       if (!["Ca_Cr", "CaCr_spot", "Mg_Ca", "PO4_Cr", "B_Cr", "K_frac", "AGs", "Ox_mgkg"].includes(owner) || owner === nextFormula) return true;
       // A committed transaction keeps its original ID and material. While a
@@ -137,11 +142,14 @@
       const fields = allFields.filter(field => editableInput(field, snapshot.formulaId, new Set()) || /Assay|Standardization/i.test(field.id) && values[field.id] !== "" && values[field.id] !== false);
       const inputRows = fields.map(field => `<div><dt>${escape(field.label)}</dt><dd>${escape(fieldText(field, values))}${field.unitFieldId ? " " + escape(unitText(field, values, allFields)) : ""}</dd></div>`).join("");
       const record = currentRecord;
+      const comment = record.comment || humanComment(currentNote);
       const categoryText = record.sourceFormulaId === "Ca_Cit" ? ({ within: "Nie przekracza górnej granicy", above: "Powyżej górnej granicy" })[record.category] || "" : record.category;
       const referenceLabel = record.sourceFormulaId === "KTV" ? record.reference?.target === null ? "Minimum przy zapisie" : typeof record.reference?.target === "number" ? "Cel przy zapisie" : "Odniesienie przy zapisie" : "Norma przy zapisie";
       $("calculationDetails").dataset.noteId = noteId;
       $("calculationDetails").dataset.recordId = noteId;
-      $("calculationDetails").innerHTML = `<p class="clcr-record-eyebrow">KLIRENS · ${escape(dateLabel(currentNote.clinicalDateISO))}</p><h3>${escape(record.label || record.method)}</h3><p class="clcr-record-value ${escape(record.tone || "neutral")}">${escape(decimal(valueLabel(record)))} <span>${escape(record.unit)}</span></p>${record.boundary ? `<p>Przed zaokrągleniem: ${escape(record.boundary)}</p>` : ""}<dl class="clcr-record-grid"><div><dt>Dane z dnia badania</dt><dd>${escape(context)}${historicalSex ? " · " + (["F", "female"].includes(historicalSex) ? "kobieta" : "mężczyzna") : ""}</dd></div><div><dt>Zapisana ocena</dt><dd>${categoryText ? escape(categoryText) + " · " : ""}${escape(record.interpretation || record.description || record.assessmentText || "Brak zapisanej oceny")}</dd></div>${inputRows}<div><dt>${escape(referenceLabel)}</dt><dd>${escape(record.norm || saved?.snapshot?.assessment?.potassiumIndexSnapshot?.referenceLabel || (record.sourceFormulaId === "KTV" ? "Brak zapisanego celu" : "Brak zapisanej normy"))}</dd></div><div><dt>Metoda</dt><dd>${escape(record.label || record.method)}</dd></div></dl>${record.comment ? `<p class="clcr-record-context">${escape(record.comment)}</p>` : ""}${record.assumptions ? `<p class="clcr-record-source">${escape(record.assumptions)}</p>` : ""}${record.source?.label ? `<p class="clcr-record-source">${escape(record.source.label)} · interpretacja zachowana z dnia zapisu.</p>` : ""}`;
+      $("clcrDetailsTitle").textContent = record.label || record.method || "Szczegóły wyniku";
+      const reference = record.norm || saved?.snapshot?.assessment?.potassiumIndexSnapshot?.referenceLabel || (record.sourceFormulaId === "KTV" ? "Brak zapisanego celu" : "Brak zapisanej normy");
+      $("calculationDetails").innerHTML = `<p class="clcr-record-date">${escape(dateLabel(currentNote.clinicalDateISO))}</p><p class="clcr-record-value ${escape(record.tone || "neutral")}">${escape(decimal(valueLabel(record)))} <span>${escape(record.unit)}</span></p><p class="clcr-record-reference"><span>${escape(referenceLabel)}:</span> <strong>${escape(reference)}</strong></p>${record.boundary ? `<p>Przed zaokrągleniem: ${escape(record.boundary)}</p>` : ""}<dl class="clcr-record-grid"><div><dt>Dane z dnia badania</dt><dd>${escape(context)}${historicalSex ? " · " + (["F", "female"].includes(historicalSex) ? "kobieta" : "mężczyzna") : ""}</dd></div></dl>${inputRows ? `<details class="clcr-record-detail-section" open><summary>Dane obliczenia</summary><dl class="clcr-record-grid">${inputRows}</dl></details>` : ""}<details class="clcr-record-detail-section"><summary>Zapisana ocena</summary><p>${categoryText ? escape(categoryText) + " · " : ""}${escape(record.interpretation || record.description || record.assessmentText || "Brak zapisanej oceny")}</p></details>${comment ? `<p class="clcr-record-context">${escape(comment)}</p>` : ""}<details class="clcr-record-detail-section"><summary>Szczegóły i źródła</summary><dl class="clcr-record-grid"><div><dt>Metoda</dt><dd>${escape(record.label || record.method)}</dd></div></dl>${record.assumptions ? `<p class="clcr-record-source">${escape(record.assumptions)}</p>` : ""}${record.source?.label ? `<p class="clcr-record-source">${escape(record.source.label)} · interpretacja zachowana z dnia zapisu.</p>` : ""}</details>`;
       $("detailActions").hidden = false;
       $("editMeasurement").disabled = !description.editable;
       $("legacyEditNotice").hidden = description.editable;
@@ -338,5 +346,13 @@
     } catch (cause) { if (ensureAlive()) $("calculationDetails").textContent = cause?.message || "Nie udało się odczytać pomiaru."; }
     return api;
   }
-  return Object.freeze({ open, cancelForFormulaChange: nextFormula => active?.cancelForFormulaChange(nextFormula) ?? true });
+  return Object.freeze({
+    open,
+    close(options = {}) {
+      if (!active || options.patientId && text(options.patientId) !== active.patientId) return false;
+      active.destroy(options);
+      return true;
+    },
+    cancelForFormulaChange: nextFormula => active?.cancelForFormulaChange(nextFormula) ?? true
+  });
 });

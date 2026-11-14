@@ -17,12 +17,12 @@ const CSS = 'vilda_patient_sga_ui.css';
 const readyGlobals = [
   'VildaCrypto', 'VildaLabSnapshot', 'VildaLabAssessmentUI', 'VildaVaultProtocol', 'VildaVault', 'VildaAuthUI', 'VildaProAccess',
   'VildaClinicalCrypto', 'VildaPatientCheckpointStore', 'VildaPatientCheckpoint', 'VildaPatientIdentityProtocol', 'VildaPatientIdentityTransport',
-  'VildaHormoneReferenceSnapshot', 'VildaHormoneReferenceUI', 'VildaLabRangeSnapshot', 'VildaLabHistory', 'VildaLabResultPresentation', 'VildaLabResultChart', 'VildaLabHistoryTab',
+  'VildaHormoneReferenceSnapshot', 'VildaHormoneReferenceUI', 'VildaLabRangeSnapshot', 'VildaLabHistory', 'VildaLabResultPresentation', 'VildaLabResultChart', 'VildaResultDetailsDialog', 'VildaLabHistoryTab',
   'VildaPubertyAssessment', 'VildaLabTestosteroneUnits', 'VildaCarePlanModel', 'VildaCarePlans', 'VildaRemindersPrivacy',
   'VildaGlobalSearch', 'VildaGlobalSearchView', 'VildaSearchNavigation', 'VildaPatientsList', 'VildaSaveStatusIndicator'
 ];
 const existingCss = [
-  'vilda_auth_ui.css', 'vilda_patients_list.css', 'vilda_lab_assessment_ui.css', 'vilda_lab_history_tab.css',
+  'vilda_auth_ui.css', 'vilda_patients_list.css', 'vilda_lab_assessment_ui.css', 'vilda_lab_history_tab.css', 'vilda_result_details_dialog.css',
   'vilda_care_plans.css', 'vilda_global_search.css', 'vilda_reminders.css'
 ];
 

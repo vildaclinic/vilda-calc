@@ -9,7 +9,7 @@ const DEPENDENCIES = [
   'VildaBirthAssessment', 'VildaPatientSgaModel', 'VildaPatientSgaUI',
   'VildaCrypto', 'VildaCarePlanModel', 'VildaLabSnapshot', 'VildaLabTestosteroneUnits', 'VildaLabAssessmentUI',
   'VildaHormoneReferenceSnapshot', 'VildaLabRangeSnapshot', 'VildaHormoneReferenceUI',
-  'VildaLabHistory', 'VildaLabResultPresentation', 'VildaLabResultChart', 'VildaLabHistoryTab', 'VildaPubertyAssessment', 'VildaProAccess',
+  'VildaLabHistory', 'VildaLabResultPresentation', 'VildaLabResultChart', 'VildaResultDetailsDialog', 'VildaLabHistoryTab', 'VildaPubertyAssessment', 'VildaProAccess',
   'VildaRemindersPrivacy', 'VildaGlobalSearch', 'VildaGlobalSearchView', 'VildaSearchNavigation', 'VildaPatientsList',
 ];
 
@@ -28,6 +28,7 @@ function environment(careReady = false, missingReminderModule = null) {
     { href: 'vilda_patient_sga_ui.css?v=existing' },
     { href: 'vilda_lab_assessment_ui.css?v=existing' },
     { href: 'vilda_lab_history_tab.css?v=existing' },
+    { href: 'vilda_result_details_dialog.css?v=existing' },
     { href: 'vilda_global_search.css?v=existing' },
     { href: 'vilda_reminders.css?v=existing' },
   ];

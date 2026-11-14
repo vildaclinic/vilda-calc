@@ -304,6 +304,86 @@
   border-color: #be272e !important;
 }
 
+/* The common result viewer owns the outer dialog dimensions and scrolling.
+   These rules only present the original saved Klirens content inside it. */
+.clcr-result-dialogs .vilda-result-details-heading .clcr-record-eyebrow {
+  font-size: 15px;
+  letter-spacing: normal;
+  font-weight: 600;
+  margin: 0 0 var(--space-4px);
+}
+
+.clcr-result-dialogs .vilda-result-details-heading .clcr-record-button {
+  flex: 0 0 44px;
+  width: 44px;
+  min-height: 44px;
+  padding: var(--space-8px);
+  font-size: 26px;
+  line-height: 1;
+}
+
+.clcr-result-dialogs .vilda-result-details-body .clcr-record-date {
+  margin: 0 0 var(--space-8px);
+  color: var(--clcr-record-muted);
+  font-size: 15px;
+}
+
+.clcr-result-dialogs .vilda-result-details-body .clcr-record-value {
+  margin: var(--space-8px) 0 var(--space-10px);
+  font-size: 34px;
+}
+
+.clcr-result-dialogs .vilda-result-details-body .clcr-record-value span {
+  font-size: 16px;
+  font-weight: 400;
+}
+
+.clcr-result-dialogs .vilda-result-details-body .clcr-record-reference {
+  margin: 0 0 var(--space-24px);
+  font-size: 16px;
+  color: var(--clcr-record-muted);
+}
+
+.clcr-result-dialogs .vilda-result-details-body .clcr-record-reference strong {
+  font-weight: 500;
+}
+
+.clcr-result-dialogs .vilda-result-details-body .clcr-record-grid dt {
+  font-size: 15px;
+}
+
+.clcr-result-dialogs .vilda-result-details-body .clcr-record-grid dd,
+.clcr-result-dialogs .vilda-result-details-body .clcr-record-detail-section p {
+  font-size: 16px;
+}
+
+.clcr-result-dialogs .clcr-record-detail-section {
+  border-top: var(--border-hairline) solid var(--clcr-record-border);
+  margin-top: var(--space-16px);
+}
+
+.clcr-result-dialogs .clcr-record-detail-section summary {
+  min-height: 44px;
+  padding: var(--space-12px) 0;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.clcr-result-dialogs .clcr-record-detail-section summary:focus-visible {
+  outline: var(--border-pro) solid #55abb5;
+  outline-offset: 3px;
+}
+
+.clcr-result-dialogs .vilda-result-details-body .clcr-record-source {
+  font-size: 15px;
+}
+
+.clcr-result-dialogs .vilda-result-details-actions .clcr-record-button {
+  min-height: 48px;
+  font-size: 16px;
+}
+
 @media(max-width:600px) {
   .clcr-record-dialog {
     width: calc(100% - 24px);

@@ -13,6 +13,11 @@ export const clcrValue = (scope, id) => clcrResult(scope, id).locator('.vilda-la
 export const clcrNorm = (scope, id) => clcrResult(scope, id).locator('.vilda-lab-hist-result-norm');
 
 export async function showBadaniaView(scope, view) {
+  // The common details viewer is outside the chart/table and modal. Return to
+  // the list before operating its view switch, just as a clinician does.
+  if (await scope.locator('#detailsDialog[open]').count()) await closeClcrDetails(scope);
+  const labDetails = scope.locator('#labResultDetailsDialog[open]');
+  if (await labDetails.count()) await labDetails.locator('.vilda-lab-hist-details-close').click();
   const label = view === 'charts' ? 'Wykresy' : 'Tabela';
   const control = badania(scope).getByRole('button', { name: label, exact: true });
   await control.click();
@@ -21,6 +26,9 @@ export async function showBadaniaView(scope, view) {
 }
 
 export async function showClcrResults(scope, view = 'table') {
+  if (await scope.locator('#detailsDialog[open]').count()) await closeClcrDetails(scope);
+  const labDetails = scope.locator('#labResultDetailsDialog[open]');
+  if (await labDetails.count()) await labDetails.locator('.vilda-lab-hist-details-close').click();
   await expect(badania(scope)).toHaveAttribute('aria-busy', 'false');
   await badania(scope).locator('.vilda-lab-hist-panel-select').selectOption('renal');
   return showBadaniaView(scope, view);
@@ -36,9 +44,9 @@ export async function openClcrDetails(scope, id, { keyboard = false, chart = fal
     let selected = false;
     for (const group of groups) {
       await group.click();
-      const choice = clcrCards(scope).locator(`.vilda-lab-result-chart-choice[data-note-id="${id}"]`);
+      const choice = scope.locator(`#labResultDetailsDialog .vilda-lab-result-chart-choice[data-note-id="${id}"]`);
       if (await choice.isVisible()) { await choice.click(); selected = true; break; }
-      await group.click();
+      await scope.locator('#labResultDetailsDialog .vilda-lab-hist-details-close').click();
     }
     expect(selected, 'coincident chart chooser contains the requested canonical record').toBe(true);
   } else if (keyboard) {
@@ -49,6 +57,6 @@ export async function openClcrDetails(scope, id, { keyboard = false, chart = fal
 }
 
 export async function closeClcrDetails(scope) {
-  await scope.locator('#detailsDialog').getByRole('button', { name: 'Zamknij', exact: true }).click();
+  await scope.locator('#detailsDialog [data-clcr-close="detailsDialog"]').first().click();
   await expect(scope.locator('#detailsDialog')).toBeHidden();
 }

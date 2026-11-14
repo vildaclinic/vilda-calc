@@ -53,11 +53,11 @@ test('IGF-1 z notatki GH na wykresie z datą kontroli i dopiskiem źródła; wpi
   await expect(igf.locator('.vilda-lab-result-chart-band')).toHaveCount(0);
   await expect(igf.locator('.vilda-lab-hist-comments')).toHaveCount(0);
   await igf.locator('.vilda-lab-hist-latest').click();
-  const details = badania.locator(`.vilda-lab-hist-result-details[data-note-id="${ids.gh}"]`);
+  const details = page.locator(`.vilda-lab-hist-result-details[data-note-id="${ids.gh}"]`);
   await expect(details).toContainText('z notatki leczenia GH');
   expect(bezTwardejSpacji(await details.innerText())).toContain('Zmiana: +35 ng/mL · po 89 dniach');
   await expect(details).not.toContainText('Dawka: 0,030');
-  await details.locator('.vilda-lab-hist-details-close').click();
+  await page.locator('#labResultDetailsDialog .vilda-lab-hist-details-close').click();
   await badania.locator('.vilda-lab-hist-footer > summary').click();
   await expect(badania.locator('.vilda-lab-hist-footer')).toContainText('IGF-1 z notatek leczenia GH: data badania, a gdy jej brak — termin odbytej kontroli');
 

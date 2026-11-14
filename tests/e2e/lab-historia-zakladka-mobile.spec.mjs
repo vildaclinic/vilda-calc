@@ -58,11 +58,11 @@ async function sprawdzUklad(page) {
   })).toBe(true);
   await badania.locator('.vilda-lab-hist-segment-btn', { hasText: 'Tabela' }).click();
   await badania.locator(`.vilda-lab-hist-result-row[data-note-id="${ids.tsh4}"]`).click();
-  const details = badania.locator(`.vilda-lab-hist-result-details[data-note-id="${ids.tsh4}"]`);
+  const details = page.locator(`.vilda-lab-hist-result-details[data-note-id="${ids.tsh4}"]`);
   await expect(details).toBeVisible();
   await expect(details).toContainText(/0,27.*4,2/);
   await expect(details.getByRole('button', { name: 'Edytuj wpis', exact: true })).toBeVisible();
-  await details.locator('.vilda-lab-hist-details-close').click();
+  await page.locator('#labResultDetailsDialog .vilda-lab-hist-details-close').click();
   await expect(details).toHaveCount(0);
 }
 
