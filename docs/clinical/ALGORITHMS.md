@@ -39661,3 +39661,54 @@ Nowy test „spóźnione przywrócenie fokusu po powrocie nie nadpisuje zaznacze
 | obie poprawki, cały plik `--repeat-each=25 --workers=8` | 3 × 225/225 |
 
 Wersje: `vilda_patients_list.js` 5, `vilda_chrome.js` 289, `vilda_session_bridge.js` 205; SW 1.1.532 (`npm run podbij-wersje` po scaleniu `audyt` z #951 i #953, które zajęły SW 1.1.530 i 1.1.531 oraz `vilda_chrome.js` 288 i `vilda_session_bridge.js` 204).
+
+## E2E pod `page.clock`: sonda „Wyczyść”, start wskaźnika zapisu i wybór w oknie wczytania (P-E2E-ZEGAR-WYSCIGI, 2026-11-14)
+
+**Zakres: bez zmiany klinicznej i bez zmiany kodu wykonawczego.** Zmienione są wyłącznie pomocnicze pliki testów `tests/support/clear-current-state-fixture.mjs` i `tests/support/centile-live-fixture.mjs`. Wzory, PAL domyślny, odczyt i zapis rekordu, synchronizacja, wersje zasobów i SW pozostają bez zmian, więc `npm run podbij-wersje` nie dotyczy.
+
+**Skąd.** Dwa testy padały na niezmienionym `audyt` przy obciążonym CPU (4 rdzenie, `desktop-chromium`, `--repeat-each=8 --workers=2`). W CI (8 shardów, `retries: 1`) przechodziły przy ponowieniu. W obu przypadkach przyczyną jest `page.clock` z `tests/support/test-czas.mjs`. Zegar Playwrighta po `resume()` wykonuje należne fałszywe timery (także `requestAnimationFrame`) po jednym i po każdym oddaje prawdziwe zadanie `setTimeout`. Pod obciążeniem kolejka zegara strony zostaje więc dziesiątki do setek ms za wywołaniami CDP testu i za prawdziwym renderowaniem.
+
+### 1. `clear-current-state.spec.mjs` — „Clear protects live P-only input … (/index.html, 1440px)”
+
+**1a. Sonda `release()` (test).** Asercja `journal.some(row => row.executed && row.owner === 'puberty300')` (fixture, wiersz 353) dostawała `false` po `waitForFunction(() => __clearDebounceProbe.pending() === 0)`. Na bazie padło 5/16 (zgłoszenie: 7/16), wyłącznie w wariancie P, jedynym z `catchUpDebounce`. `release()` usuwał wstrzymany wpis z mapy `entries` od razu, a callback planował na `setTimeout(…, 0)`, czyli na fałszywy timer. `pending()` liczy tylko wpisy z `entries`, więc zwracał 0 przed wykonaniem. Zapis z 8 przebiegów z odczytem kolejki zegara strony (`__pwClock.controller`):
+
+| chwila | `pending()` | `status400` / `puberty300` | należne fałszywe timery |
+|---|---|---|---|
+| przed `release()` | 2 | wstrzymany / wstrzymany | 0–3 |
+| tuż po `release()` i po `pending() === 0` | 0 | wstrzymany / wstrzymany (niewykonane) | 0–5 |
+| 30–65 ms zegara strony później | 0 | wykonany / wykonany | 0 |
+
+W 4 z 8 przebiegów dziennik był czytany przed wykonaniem callbacków. Produkcyjne odroczenia działają normalnie; po wykonaniu reszta asercji przechodzi. Użytkownika to nie dotyczy, bo sonda istnieje tylko w teście.
+
+Poprawka: zwolniony wpis zostaje w `entries` do faktycznego wykonania albo anulowania przez `clearTimeout`, a znacznik `released` blokuje ponowne zaplanowanie przy drugim `release()`. `pending() === 0` znaczy teraz „wykonane lub anulowane”. Końcowe `release()` po „Odrzuć …” również czeka na wykonanie przed `expectPubertyCleared`; wcześniej sprawdzenie mogło przejść przed nim.
+
+**1b. Start wskaźnika zapisu (kolejność kroków testu).** Po usunięciu 1a ten sam test padał rzadziej (około 2/16, także wariant G) wcześniej, w `proveStaleDebounceWindow`. Asercja `cachedState === 'hidden'` dostawała `new_patient`, choć `status400` i `puberty300` były wstrzymane. Stos przejścia `hidden → new_patient` (zapis `console.debug('[vilda-save-status] …')`) wskazuje `reconcileFromSharedReference` z 200-ms timera `scheduleSharedStatusReconcile` w `vilda_save_status_indicator.js`. Ten timer zaplanowano przed `arm()`, w zdarzeniu `vilda:intake-restore-readiness`. Wysłało je startowe przeliczenie odtworzenia „Szacowanego spożycia” (`vildaRunIntakeCalculationJob` → `vildaCancelIntakeRestoreCalculation`, app.js) około 200 ms przed kliknięciem stadium. Zadziałał zaraz po kliknięciu i opublikował bieżącą, prawdziwą decyzję. Produkt działa tu poprawnie. Test zakładał jednak, że po `openPuberty` żaden inny producent stanu zapisu nie czeka, a `readyClearPage` nie obejmuje tego startowego przeliczenia.
+
+Poprawka: sonda obserwuje, ale nie wstrzymuje, pozostałe timery wskaźnika (200 ms reconcile, 150 ms publikacja, ponowne sprawdzenie pauzy). Nowe `quiet()` = brak oczekujących odroczeń sondy, brak timerów wskaźnika i `vildaGetIntakeRestoreReadiness().pending === false`. Zdarzenie gotowości planuje reconcile synchronicznie, więc jego timer jest już policzony, gdy gotowość gaśnie. `openPuberty`, ostatni krok przed `arm()` we wszystkich wywołaniach, czeka na `quiet()` zamiast samego `pending() === 0`.
+
+### 2. `automatic-pal-producer-order.spec.mjs` — „native Restore and later inputs preserve manually selected plan PAL 1.6/1.8”
+
+Objaw: `#palFactor` = „1.4” przez 5 s po `loadPatient(…, 'restore')`. Na bazie padło 5/16 oraz 6/12, w obu wariantach. Zapis każdego przypisania `#palFactor.value` ze stosem pokazuje mechanizm. Opcje selecta PAL planu zależą od wieku (poniżej 1 r. brak, 1–3 l. 1,4, 4–9 l. 1,4–1,8, 10–18 l. do 2,0, dorośli od 1,2). Buduje je `energyPopulatePlanPalSelect` (`vilda_diet_plan_ui.js`) w każdym `update()` przez `vildaUpdatePrepRefreshPalControl`. Przed wczytaniem pusty formularz ma jedną opcję „nie dotyczy” (`""`). „Wczytaj tego pacjenta” → `applyLoadedData` planuje dwa przeliczenia: `vilda_dob_age.js` po `vilda:patient-loaded` (`setTimeout(przyjmijIOglos, 0)` → `vilda:dob-restored` → `update()` z wiekiem z daty urodzenia) oraz `debouncedUpdate` (rAF). Dopiero one budują opcje dla 13 lat. „Odtwórz” (`restoreLoadedStateImmediately`) zapisuje PAL przez `k()` i `vildaPalPoWczytaniu` (`__vildaPlanPalTouched = true`). Jeśli te przeliczenia jeszcze nie przeszły, przypisanie „1.6” do selecta z samą opcją `""` daje `""`. Wtedy `vildaUpdatePrepResolvePlanPalValue` przy `touched` zwraca `cur || "1.4"`, czyli 1,4.
+
+| przebiegi bazy (12) | przebudowa opcji dla wieku przed „Odtwórz” | zapis PAL przy „Odtwórz” | wynik |
+|---|---|---|---|
+| 6 udanych | tak (aktualizacja z timera zegara strony) | `1.6`/`1.8` → `1.6`/`1.8` | zgodnie z zapisem |
+| 6 nieudanych | nie (w 1 z nich tylko przeliczenie bez wieku → „nie dotyczy”) | `1.6`/`1.8` → `""` | 1,4 |
+
+**Czy trafia użytkownik.** Na tej ścieżce praktycznie nie. Oba przeliczenia są zaplanowane w zadaniu wczytania, zanim okno wyboru zostanie pokazane. Przeglądarka wykonuje callbacki rAF przed namalowaniem klatki, a `setTimeout(0)` zwykle wcześniej, więc człowiek widzi „Odtwórz” dopiero po przebudowie opcji. Domyślny fokus okna ma „Nowy pomiar” (`#vildaLcmNew`), więc nawet podwójny Enter nie wybiera „Odtwórz”. Pod `page.clock` oba kroki są fałszywymi timerami odklejonymi od renderowania. Playwright widzi i klika okno według prawdziwych klatek, zanim kolejka zegara strony je wykona. Próba z prawdziwym zegarem: ręcznie wybrany PAL 1,8 przetrwał też F5.
+
+Poprawka (test): `loadPatient` w `centile-live-fixture.mjs` przed kliknięciem wyboru czeka na `!VildaDobAge.restorePending()` i dwie klatki strony, czyli na stan, który człowiek ma zawsze przed kliknięciem. Fałszywe timery wykonują się w kolejności `callAt` i utworzenia, więc wcześniej zaplanowane przeliczenie idzie pierwsze. Z tą zmianą zapis z 16 przebiegów pokazuje przy „Odtwórz” zawsze opcje `1.4,1.6,1.8,2.0` i przypisanie, które się utrzymuje. Pomocnik jest wspólny, także dla `clear-current-state-fixture.mjs`.
+
+**Ryzyko produktu do decyzji właściciela (niezmienione).** Odtworzenie zapisuje PAL do opcji zbudowanych przez wcześniejsze, niezależne przeliczenie. Gdy te opcje nie zawierają zapisanego PAL, ręczny wybór jest zastępowany przez 1,4 przy zachowanym `palWybrany: true`, bez komunikatu. Dotyczy to opcji zbudowanych dla innego wieku albo „nie dotyczy”. Na ścieżce okna wczytania nie znaleziono drogi dla człowieka. Ochrona na wzór P-DIET-PENDING-RESTORE (pamiętanie odtworzonego PAL do pierwszej przebudowy opcji) zmieniłaby jednak, który PAL widzi lekarz, więc według § 3 AGENTS.md wymaga osobnej decyzji i akceptacji.
+
+### Walidacja
+
+Lokalnie, 4 rdzenie, `desktop-chromium`, Chromium z `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` (lokalna rewizja różni się od przypiętej):
+
+| przebieg | baza `audyt` d876023 | z poprawkami |
+|---|---|---|
+| `clear-current-state.spec.mjs -g "index.html, 1440px" --repeat-each=8 --workers=2` | 5/16 i 4/16 błędów (przyczyna 1a); po samej 1a: 2/16 (1b) w 4 rundach | 3 × 16/16 |
+| ten sam, `--repeat-each=24 --workers=6` | — | 48/48 |
+| `automatic-pal-producer-order.spec.mjs -g "native Restore" --repeat-each=8 --workers=2` | 5/16 i 6/16 błędów | 3 × 16/16 |
+
+Żadna asercja nie została usunięta ani osłabiona; testy nie są pomijane.

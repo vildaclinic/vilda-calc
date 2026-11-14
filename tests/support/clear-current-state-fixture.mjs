@@ -10,6 +10,10 @@ function installDebounceObserver() {
   const originalSet = window.setTimeout.bind(window);
   const originalClear = window.clearTimeout.bind(window);
   const entries = new Map(), journal = [];
+  // Observed, never delayed: every other save-status timer (shared-reference
+  // reconcile 200 ms, publication 150 ms, pause re-check). Each one publishes the
+  // live decision, so one left over from startup would end the stale window early.
+  const statusTimers = new Set();
   let armed = false;
   window.__clearInputActivity = [];
   window.__clearTrustedClicks = [];
@@ -32,7 +36,13 @@ function installDebounceObserver() {
     return null;
   }
   window.setTimeout = function (callback, delay, ...args) {
-    const owner = typeof callback === 'function' && source(Number(delay), new Error().stack || '');
+    const stack = new Error().stack || '';
+    const owner = typeof callback === 'function' && source(Number(delay), stack);
+    if (!owner && typeof callback === 'function' && /\/vilda_save_status_indicator\.js(?:\?|:)/.test(stack)) {
+      const id = originalSet(function () { statusTimers.delete(id); return callback.apply(window, arguments); }, delay, ...args);
+      statusTimers.add(id);
+      return id;
+    }
     if (!owner) return originalSet(callback, delay, ...args);
     const entry = { owner, delay: Number(delay), callback, args, armed, held: false, cancelled: false, executed: false };
     const id = originalSet(function () {
@@ -45,6 +55,7 @@ function installDebounceObserver() {
     return id;
   };
   window.clearTimeout = function (id) {
+    statusTimers.delete(id);
     const entry = entries.get(id);
     if (entry) { entry.cancelled = true; entries.delete(id); }
     return originalClear(id);
@@ -58,14 +69,27 @@ function installDebounceObserver() {
       armed = true; journal.length = 0;
     },
     pending() { return [...entries.values()].filter(entry => !entry.cancelled).length; },
+    // Nothing left that could publish a save status before the armed edit: no
+    // probed debounce, no other status timer, and the startup intake-restore
+    // calculation finished (its readiness event schedules the 200 ms reconcile
+    // synchronously, so the timer is already counted once this turns false).
+    quiet() {
+      const intake = typeof window.vildaGetIntakeRestoreReadiness === 'function' ? window.vildaGetIntakeRestoreReadiness() : null;
+      return this.pending() === 0 && statusTimers.size === 0 && !intake?.pending;
+    },
     snapshot() { return journal.map(({ owner, delay, armed, held, cancelled, executed }) => ({ owner, delay, armed, held, cancelled, executed })); },
     release() {
       armed = false;
       for (const [id, entry] of entries) {
-        if (!entry.held || entry.cancelled) continue;
-        entries.delete(id);
+        if (!entry.held || entry.cancelled || entry.released) continue;
+        // Stay in `entries` until the catch-up callback has really run, so
+        // pending() === 0 means "executed or cancelled". Under page.clock the
+        // 0 ms catch-up is a fake timer that can run tens of ms after this
+        // returns; removing the entry here let callers read executed: false.
+        entry.released = true;
         originalSet(() => {
           if (entry.cancelled) return;
+          entries.delete(id);
           entry.executed = true; entry.callback.apply(window, entry.args);
         }, 0);
       }
@@ -210,7 +234,11 @@ export async function openPuberty(page, sex = 'M', optional = false) {
   if (optional && !await page.locator('#pubertyOptionalDetails').evaluate(el => el.open)) {
     await page.locator('#pubertyOptionalDetails > summary').click();
   }
-  await page.waitForFunction(() => window.__clearDebounceProbe.pending() === 0);
+  // The callers arm the probe next and prove a stale cached status. Under load the
+  // startup intake-restore calculation (app.js) can still be running here; when it
+  // finishes, the indicator's 200 ms shared reconcile publishes the live decision
+  // right after the armed edit, bypassing the held status400 debounce.
+  await page.waitForFunction(() => window.__clearDebounceProbe.quiet());
 }
 
 export const stage = (page, axis, value) => page.locator(`.vpa-segments [data-puberty-axis="${axis}"][data-puberty-stage="${value}"]`);
