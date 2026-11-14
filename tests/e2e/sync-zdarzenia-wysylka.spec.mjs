@@ -412,6 +412,10 @@ const EVENTS_URL = /\/v1\/slots\/[^/]+\/events$/;
 test("E2-PR5a: vilda-event-log-v1 = '1' — Ustawienia: znaczek i linia „N zmian czeka”, ostatni błąd bez sieci, po wysyłce „Wszystkie zmiany wysłane.”, po przeładowaniu wysłane zmiany nie wracają", async ({ page, context }) => {
   test.setTimeout(120_000);
   const { atrapa, userId } = await przygotujNadawce(page, context, '1');
+  // Kolejkę ma wysłać dokument Ustawień. W poprzednim dokumencie wyłącz wysyłkę przed zapisem:
+  // pagehide/keepalive mógł zabrać wiersze do inflight przy nawigacji, zanim test wymusi błąd w Ustawieniach.
+  // Takie wiersze prawidłowo czekają 60 s, czyli dłużej niż 15 s tej asercji. otworzUstawienia włącza wysyłkę ponownie.
+  await page.evaluate(() => window.localStorage.setItem('vilda-sync-enabled-v1', 'false'));
   // POST /events bez sieci (trasa strony ma pierwszeństwo przed atrapą kontekstu).
   await page.route(EVENTS_URL, (r) => r.abort('internetdisconnected'));
   const n = await zapiszKarteNadawcy(page, 'Jan');
