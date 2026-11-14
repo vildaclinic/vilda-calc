@@ -79,7 +79,7 @@ function srodowisko(opcje = {}) {
   doc.removeEventListener = () => {};
   win.addEventListener = () => {};
   win.removeEventListener = () => {};
-  for (const plik of ['lab_units_data.js', 'lab_unit_converter.js', 'vilda_lab_snapshot.js', 'vilda_lab_assessment_ui.js', 'vilda_lab_range_snapshot.js', 'vilda_lab_history.js', 'vilda_lab_result_presentation.js', 'vilda_lab_result_chart.js', 'vilda_result_details_dialog.js', 'vilda_lab_history_tab.js']) loadBrowserScript(plik, win);
+  for (const plik of ['lab_units_data.js', 'lab_unit_converter.js', 'vilda_lab_snapshot.js', 'vilda_lab_assessment_ui.js', 'vilda_lab_range_snapshot.js', 'vilda_lab_history.js', 'vilda_lab_result_presentation.js', 'vilda_lab_result_chart.js', 'vilda_lab_history_tab.js']) loadBrowserScript(plik, win);
   if (opcje.bezEksportu) delete win.VildaLabResultChart;
   const trend = opcje.bezEksportu ? null : {
     assessments: vi.fn(), parseNorm: Dl, formatAge: eo, loadConverter: (cb) => setTimeout(() => cb(true), 0),

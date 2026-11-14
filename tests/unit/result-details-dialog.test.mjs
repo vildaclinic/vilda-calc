@@ -58,7 +58,7 @@ function harness({ native = true, parentFrame = false } = {}) {
     win.frameElement = frameContainer.appendChild(parentDoc.createElement('iframe'));
     outer.container = frameContainer;
   }
-  loadBrowserScript('vilda_result_details_dialog.js', win);
+  loadBrowserScript('vilda_lab_result_chart.js', win);
   const api = win.VildaResultDetailsDialog;
   return { doc, win, api, dialog, context, anchor, closeButton, scroller, body, outer, emit,
     flushFrames() { const jobs = [...frames.values()]; frames.clear(); jobs.forEach(fn => fn()); },

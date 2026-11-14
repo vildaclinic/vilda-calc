@@ -22,7 +22,6 @@ function resources() {
   return [{ url: '/index.html', sha256: hash(html) }, ...[
     'vilda_lab_result_presentation.js', 'vilda_lab_result_chart.js',
     'vilda_lab_history.js', 'vilda_lab_history_tab.js', 'vilda_lab_history_tab.css',
-    'vilda_result_details_dialog.js', 'vilda_result_details_dialog.css',
   ].map(file => {
     const url = urls.find(value => value.split('?')[0] === file);
     if (!url) throw new Error(`Production index does not load ${file}`);
