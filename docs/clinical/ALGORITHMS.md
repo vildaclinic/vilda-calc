@@ -1662,6 +1662,124 @@ starej kopii, dwa urządzenia jednego konta), e2e
 `tests/e2e/lab-pakiet-konta.spec.mjs` (dwóch lekarzy w jednej przeglądarce,
 stara kopia, blokada kreatora do rozstrzygnięcia).
 
+### LAB-PAKIETY PR6 — ocena pokwitaniowa LH, FSH, inhibiny B i testosteronu całkowitego w pakiecie (`vilda_lab_packages.js` 1.5.0, `vilda_lab_puberty_ui.js` 1.17.0, 2026-11-13)
+
+**Klasyfikacja: zmiana kliniczna.** Cztery badania, które pakiet dotąd
+zapisywał bez oceny („bez oceny w pakiecie”, PR4), dostają w pakiecie ocenę
+i zapisują ją w karcie. **Nie ma nowych norm, progów, współczynników,
+jednostek ani reguł doboru zakresu**: ocenę daje ten sam silnik, te same
+dane i ten sam formularz co pojedyncze badanie (`VildaLabPuberty`,
+`VildaLabInhibinB`, `VildaLabTestosterone`; źródła, populacje, metody
+i ograniczenia: `docs/clinical/LH_FSH.md`, `INHIBIN_B.md`,
+`LH_CHILDHOOD_REFERENCE.md` i wpisy testosteronu całkowitego w tym
+rejestrze). Zmienia się miejsce, w którym lekarz tę ocenę widzi i zapisuje.
+Makieta (komputer, telefon, stany) i sześć rekomendacji zaakceptowane przez
+właściciela 2026-11-13 („akceptuję makietę i twoje rekomendacje, koduj”).
+Akceptacja kliniczna wdrożenia: właściciel, przy przeglądzie PR.
+
+**Jak pakiet liczy.** Strona przelicznika montuje drugą instancję formularza
+`VildaLabPubertyUI` poza widokiem (w osobnym, niewyświetlanym dokumencie —
+żeby jej identyfikatory nie dublowały pojedynczego badania; opcja
+`sharedEditor: false`). Dla każdego z czterech badań instancja dostaje
+kontekst pacjenta tak, jakby w pojedynczym badaniu wybrano to badanie
+(`readPubertyPatientContextFor`), i oddaje wynik `getAssessment` — tej
+samej metody, z której korzysta „Przypnij do wizyty”. Stan jest domyślny:
+bez atrybutów próbki pojedynczego badania (pora pobrania, metoda, protokół;
+`readMeasurementContext` oddaje pusty obiekt), z leczeniem GnRHa z karty,
+tak jak w pojedynczym badaniu. Model pakietu (`evaluateRow`) przyjmuje
+gotową kopertę `VildaLabSnapshot` przez `options.assess`; nie przelicza jej
+i nie dobiera badaniu zakresu katalogu. Karta wyniku rysuje ją wspólnym
+widokiem `VildaLabAssessmentUI.renderEvaluation` (osie „Dla wieku” i „Dla
+stadium”, odniesienie przedpokwitaniowe LH, lista zakresów faz cyklu,
+wyróżnienie znacznego odchylenia, „Szczegóły i źródła”).
+
+**Decyzje właściciela (rekomendacje z makiety, 2026-11-13):**
+
+1. **Jedno stadium dla całego pakietu.** Krok „Pacjent” pakietu pokazuje
+   ocenę pokwitania i przycisk „Zmień ocenę” z tym samym edytorem co
+   pojedyncze badanie (`VildaPubertyAssessmentUI.mountEditor`). Korekta
+   dotyczy tylko tego sprawdzenia: nie zmienia karty pacjenta ani
+   pojedynczego badania i znika przy zmianie pacjenta. Obowiązuje LH, FSH
+   i testosteron oraz — przez `getPackagePatient` (`tanner`,
+   `_tanner_overridden`) — badania katalogu z normą według Tannera
+   (np. estradiol), tak jak lokalne nadpisanie Tannera w pojedynczym badaniu.
+   Gdy formularz główny prowadzi ocenę bieżącej wizyty, edytor zmienia tę
+   wspólną ocenę — dokładnie jak w pojedynczym badaniu (opis w edytorze).
+2. **Komunikat kliniczny raz.** Ten sam komunikat („Rozwój płciowy”)
+   w kartach kilku badań stoi raz nad kartami z dopiskiem „Dotyczy: LH,
+   FSH”; koperta każdego wyniku niesie go nadal osobno.
+3. **Norma z wydruku zastępuje ocenę aplikacji** dla tego wyniku, na
+   ekranie i w zapisie (wynik niesie jedną normę, jak w PR2); łącze do
+   pojedynczego badania zostaje.
+4. **Zapis z operatorem** („<0,1”) w polach tych czterech badań: przyjmuje
+   go silnik pokwitaniowy; wynik zapisuje się bez `valueNum`, z zapisem
+   w polu wartości i w kopercie oceny, a na osi nie dostaje punktu.
+   Pozostałe badania pakietu przyjmują liczbę, jak dotąd.
+5. **Dorosła kobieta:** jeden wybór „Cykl / menopauza” dla LH, FSH
+   i inhibiny B; bez wyboru — lista zakresów bez wspólnej oceny. Estradiol
+   u dorosłej kobiety bez zmian (ocena w pojedynczym badaniu).
+6. **„Kopiuj wyniki”:** każde porównanie osobno, z granicą w nawiasie, bez
+   wspólnego werdyktu.
+
+AMH zostaje w pakiecie bez oceny (poza zakresem).
+
+**Zapis.** Notatka `wynik-badania` ma postać przypięcia pojedynczego wyniku
+z oceną (`lab_pin_result.js`): `labResult.value` to sam zapis wyniku,
+`labResult.assessment` to koperta związana z wynikiem i datą badania
+(`VildaLabSnapshot.reconcile`), bez `range` i bez `norm`. Zakładka
+„Badania”, historia i wykresy czytają ją jak każdy przypięty wynik z oceną.
+
+**Data pobrania inna niż dziś.** Ocena pokwitaniowa dotyczy danych pacjenta
+z dnia wpisu (wiek i stadium „teraz”, `contextBasis: 'current-patient'`).
+Pojedyncze badanie unieważnia ją przy zmianie daty w oknie przypięcia
+(`result_or_clinical_date_changed`, „Zmiana daty unieważnia tę ocenę…”).
+Pakiet robi dokładnie to samo: przy dacie pobrania innej niż dziś ocena
+zostaje na ekranie z opisem skutku (przy dacie i w karcie wyniku),
+a w karcie pacjenta zapisuje się jako wymagająca ponownej oceny; wynik
+i jego wartość zapisują się bez zmian. Nie przypisujemy dzisiejszego wieku
+ani stadium dawnej próbce (`LAB_INTERPRETATION_AGENT_GUIDE.md` § 4).
+
+**Gdy ocena jest niedostępna** (brak modułu, błąd, koperta innego wyniku)
+pakiet zachowuje się jak w PR4: zapisuje wartość, pokazuje „bez oceny
+w pakiecie” i łącze do pojedynczego badania.
+
+**Przypadki `wejście → oczekiwany wynik`** (fikcyjni pacjenci; wartości
+z silników, te same co w pojedynczym badaniu):
+
+| Pacjent i stadium | Wynik | Ocena w pakiecie |
+|---|---|---|
+| dziewczynka 7 l 2 m, bez oceny Th | LH 0,6 IU/L | odniesienie przedpokwitaniowe: powyżej górnej granicy (0,3 IU/L) |
+| dziewczynka 7 l 2 m, Th2 (korekta w pakiecie) | LH 0,6 IU/L | dla wieku: powyżej zakresu (≤0,3); dla stadium Th2: nie przekracza górnej granicy (≤4,1) |
+| jw. | FSH 3,2 IU/L | dla wieku: w zakresie (0,5–6); dla stadium Th2: w zakresie (0,3–5,8) |
+| jw. | inhibina B 60 pg/mL | dla wieku: nie przekracza górnej granicy (<129) |
+| jw. | estradiol 60 pmol/L | norma katalogu „Dziewczynki Tanner II” 0–88,2 pmol/L (bez korekty: 0–73,5) |
+| chłopiec 12 l 3 m, G2 | LH 14 IU/L | znacznie powyżej zakresu dla wieku (0,1–5,7) i stadium G2 (0,03–3,7) |
+| jw. | testosteron 25 ng/dL | dla wieku: nie przekracza górnej granicy (≤800 ng/dL); dla stadium G2: w zakresie (8–66 ng/dL) |
+| jw. | inhibina B 60 pg/mL | dla wieku: poniżej zakresu (74–470) |
+| dziewczynka 9 l 4 m, Th2 | LH <0,1 IU/L | dla wieku i stadium: nie przekracza górnej granicy; bez punktu na osi; zapis bez `valueNum` |
+| kobieta 30 lat, cykl nieustalony | LH 6 IU/L | lista zakresów czterech faz, bez wspólnej oceny |
+| jw., faza folikularna | LH 6 IU/L | jedna oś: zakres fazy folikularnej (1,9–14,6 IU/L) |
+
+**Ograniczenia.** Pakiet ocenia w stanie domyślnym pojedynczego badania:
+bez pory pobrania, metody i protokołu próbki; doprecyzowanie (np. wiek
+ciążowy i dni życia u noworodka, pora pobrania testosteronu) i wykres
+hormonów są w pojedynczym badaniu (łącze w karcie wyniku). Wynik z pakietu
+nie niesie odniesienia z wykresu hormonów. Ocena jest orientacyjnym
+porównaniem ze źródłem, tak jak w pojedynczym badaniu; zielone testy nie
+nadają jej statusu walidacji klinicznej.
+
+Testy: `tests/unit/lab-pakiety-pokwitanie.test.mjs` (model na prawdziwych
+silnikach, wejściu formularza, kopercie i widoku oceny: wiersz, wynik
+z operatorem, norma z wydruku, zapis i unieważnienie datą, kopiowanie,
+kontrakt strony), e2e `tests/e2e/lab-pakiet-pokwitanie.spec.mjs` (zgodność
+ocena pakietu = ocena pojedynczego badania dla dziewczynki, chłopca,
+dorosłej kobiety i wyniku z operatorem; korekta stadium; zapis; inna data;
+zmiana pacjenta), `lab-pakiet-pokwitanie-mobile.spec.mjs` (telefon),
+`lab-pakiet-pokwitanie-powloka.spec.mjs` (powłoka `app.html`: stadium
+z oceny bieżącej wizyty formularza głównego i jej wspólna edycja),
+`lab-pakiet-kreator*.spec.mjs` (zapis LH/testosteronu z kopertą oceny),
+`lab-pakiet-offline.spec.mjs` (ocena bez sieci).
+
 ### P-LAB-WARTOSC-BEZ-JEDNOSTKI — liczba ze starszego wpisu wyniku bez jednostki (SW 1.1.279, `vilda_vault.js` 212, 2026-10-14)
 
 **Wpływ kliniczny: tak.** Zmieniają się liczby w historii wyników dla

@@ -51,12 +51,26 @@ Wyniki z oceną i normą można też od razu skopiować do dokumentacji przycisk
      strzałka listy ma odstęp od prawej krawędzi pola; kreator otwiera się w zakładce (bez okna
      modalnego) i nie wymaga wybranego pacjenta;
    - LH, FSH, inhibina B, testosteron całkowity i AMH są w pakiecie **bez oceny**: zapisuje się wartość,
-     ocenę daje norma z wydruku albo pojedyncze badanie (łącze w karcie wyniku);
+     ocenę daje norma z wydruku albo pojedyncze badanie (łącze w karcie wyniku) — dla czterech pierwszych
+     zmienione w punkcie 11;
    - kortyzol, ACTH i wolny testosteron pakiet ocenia jak dla pobrania rano, 17-OHP jak dla metody
      immunochemicznej — czyli tak, jak pojedyncze badanie w stanie domyślnym.
 
 10. Po scaleniu PR4 (polecenie właściciela): **każde konto widzi tylko swoje pakiety**, także na urządzeniu,
     na którym loguje się kilka kont. Kopia pakietów na urządzeniu jest osobna dla każdego konta.
+
+11. Kreator, etap 2 — ocena pokwitaniowa w pakiecie (makieta desktop, telefon i stany zaakceptowana
+    2026-11-13 razem z sześcioma rekomendacjami, z poleceniem kodowania):
+    - LH, FSH, inhibinę B i testosteron całkowity pakiet ocenia tak samo jak pojedyncze badanie (te same
+      silniki, osie wieku i stadium, ta sama koperta oceny w zapisie); AMH zostaje bez oceny;
+    - **jedno stadium dla całego pakietu**: „Zmień ocenę” w kroku „Pacjent” działa na LH, FSH, testosteron
+      oraz na estradiol i inne badania z normą według Tannera; korekta dotyczy tylko tego sprawdzenia;
+    - komunikat „Rozwój płciowy” wspólny dla LH i FSH stoi **raz, nad kartami**;
+    - wpisana **norma z wydruku zastępuje ocenę aplikacji** dla tego wyniku;
+    - pola tych czterech badań przyjmują zapis **„<0,1”**;
+    - dorosła kobieta: jeden wybór **„Cykl / menopauza”** dla LH, FSH i inhibiny B; estradiol u dorosłej
+      kobiety bez zmian (pojedyncze badanie);
+    - „Kopiuj wyniki”: każde porównanie osobno, z granicą w nawiasie.
 
 ## Zasady, które obowiązują każdy etap
 
@@ -79,8 +93,8 @@ Wyniki z oceną i normą można też od razu skopiować do dokumentacji przycisk
 | zakładki | Przełącznik trybu jako zakładki w jednej karcie (decyzja 7) | scalone 2026-11-13 (PR #944) |
 | PR3 | „Kopiuj wyniki” przy pakiecie (punkt 8): tekst „Badania (pobranie …)” z wierszem na wynik, oceną poza normą i normą z ekranu; po zapisie kopiuje zapisany zestaw. Bez zmian w „Podsumowaniu wyników” | scalony 2026-11-13 (PR #945) |
 | PR4 | Kreator własnych pakietów, etap 1 (punkt 9): lista rozwijana pakietów, kreator w zakładce, zapis na koncie, badania „bez oceny w pakiecie” z łączem do pojedynczego badania, ocena pozostałych jak w domyślnym pojedynczym badaniu | scalony 2026-11-13 (PR #946) |
-| PR5 | Każde konto widzi tylko swoje pakiety (punkt 10): osobna kopia pakietów na urządzeniu dla każdego konta, jednorazowe przypisanie starej wspólnej kopii właściwemu kontu | ten PR |
-| później | Kreator, etap 2: ocena pokwitaniowa LH, FSH, inhibiny B i testosteronu w pakiecie — wymaga podłączenia silników pokwitaniowych przelicznika (osie wieku i stadium, kontekst próbki) i zapisu tej samej koperty oceny co pojedyncze badanie, patrz `docs/clinical/LAB_INTERPRETATION_AGENT_GUIDE.md` | uzgodniony kierunek, bez terminu |
+| PR5 | Każde konto widzi tylko swoje pakiety (punkt 10): osobna kopia pakietów na urządzeniu dla każdego konta, jednorazowe przypisanie starej wspólnej kopii właściwemu kontu | scalony 2026-11-13 (PR #948) |
+| PR6 | Kreator, etap 2 (punkt 11): ocena pokwitaniowa LH, FSH, inhibiny B i testosteronu całkowitego w pakiecie — druga, niewidoczna instancja formularza pojedynczego badania, osie wieku i stadium w karcie wyniku, jedno stadium i jeden wybór „Cykl / menopauza” dla pakietu, zapis tej samej koperty oceny co „Przypnij do wizyty”, zapis z operatorem, norma z wydruku zamiast oceny | ten PR |
 
 ## Otwarte kwestie do decyzji przy kolejnych etapach
 
@@ -102,3 +116,12 @@ Wyniki z oceną i normą można też od razu skopiować do dokumentacji przycisk
 - PR4: zmiany listy pakietów z dwóch urządzeń offline — wygrywa późniejszy zapis całej listy. Scalanie
   wpis po wpisie wymagałoby zmiany w sejfie (jak dla list oczekujących) — osobna decyzja.
 - PR4: wbudowane pakiety poza „Tarczycą” (np. gotowe „Dojrzewanie”) — do decyzji; dziś lekarz składa je sam.
+- PR6: **data pobrania inna niż dziś.** Ocena pokwitaniowa dotyczy wieku i stadium z dnia wpisu, więc przy innej
+  dacie pobrania zapisuje się w karcie jako wymagająca ponownej oceny — dokładnie tak, jak pojedyncze badanie
+  po zmianie daty w oknie przypięcia. Pakiet mówi o tym przy dacie i w karcie wyniku. Ocena „dla wieku w dniu
+  pobrania” wymagałaby osobnej decyzji klinicznej (data oceny stadium, wiek z daty urodzenia).
+- PR6: stadium w pakiecie pojawia się tylko wtedy, gdy pakiet zawiera LH, FSH lub testosteron u pacjenta,
+  u którego źródło ma zakresy dla stadium; pakiet z samym estradiolem bierze stadium z karty, jak dotąd.
+- PR6: estradiol u dorosłej kobiety nadal wymaga pojedynczego badania; wspólny wybór „Cykl / menopauza” także
+  dla estradiolu — do decyzji.
+- PR6: wynik z pakietu nie niesie odniesienia z wykresu hormonów (wykres jest w pojedynczym badaniu).

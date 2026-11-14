@@ -172,9 +172,17 @@ Do tej warstwy należą m.in.:
   zapis: preferencja konta `labCustomPackages` (`VildaPersistence`, klasa `cloud-synced` — przez sejf
   do synchronizacji między urządzeniami konta; cecha `perUser`: kopia na urządzeniu osobno dla każdego
   konta, więc lekarz widzi tylko swoje pakiety), wybór ostatniego pakietu pamięta urządzenie
-  (`labPackageSettings`). Badania, które pojedyncze badanie ocenia po swojemu (LH, FSH, inhibina B,
-  testosteron całkowity, AMH — `VildaLabConverterRuntime.ownAssessmentKind`), pakiet zapisuje bez oceny
-  i prowadzi do pojedynczego badania (`openSingle`). Adres `?pakiet=<slug albo identyfikator własnego
+  (`labPackageSettings`). Badania, które pojedyncze badanie ocenia po swojemu
+  (`VildaLabConverterRuntime.ownAssessmentKind`): AMH pakiet zapisuje bez oceny i prowadzi do pojedynczego
+  badania (`openSingle`); LH, FSH, inhibinę B i testosteron całkowity ocenia silnikiem pojedynczego badania
+  (LAB-PAKIETY PR6): strona montuje drugą instancję `VildaLabPubertyUI` poza widokiem, w osobnym
+  niewyświetlanym dokumencie (`packagePubertyRuntime`, opcja `sharedEditor: false`), i oddaje pakietowi
+  przez `VildaLabConverterRuntime.packagePuberty` kopertę oceny `VildaLabSnapshot` (`assess`), opis kroku
+  „Pacjent” (`presentation`) oraz edycję stadium i fazy cyklu — jedne dla całego pakietu, bez zmiany karty
+  pacjenta i pojedynczego badania. Pakiet zapisuje tę kopertę w postaci przypięcia pojedynczego wyniku
+  (`labResult.assessment`, związana z datą badania) i rysuje ją wspólnym widokiem `VildaLabAssessmentUI`;
+  nie ma własnych norm ani reguł doboru zakresu. Zmiana w `VildaLabPubertyUI.mount` dotyczy więc obu
+  instancji. Adres `?pakiet=<slug albo identyfikator własnego
   pakietu>`; skrót w zakładce „Badania”. Norma laboratorium z wydruku
   (opcjonalna, w jednostce wyniku) zastępuje normę aplikacji dla danego wyniku i zapisuje się w
   `labResult.norm` — polu edytora wyniku; podpowiedź normy i jednostki pochodzi wyłącznie z poprzedniego
