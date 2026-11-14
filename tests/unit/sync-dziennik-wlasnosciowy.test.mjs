@@ -1860,9 +1860,32 @@ async function przebiegKat(nazwa, kol, tryb, ziarno) {
 const wzgledne = (v, t0) => {
   if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(v)) return `t0${Date.parse(v) - t0 >= 0 ? '+' : ''}${Date.parse(v) - t0}ms`;
   if (Array.isArray(v)) return v.map((x) => wzgledne(x, t0));
-  if (v && typeof v === 'object') return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, wzgledne(x, t0)]));
+  if (v && typeof v === 'object') {
+    // Legacy visit creation is derived from a calendar day (midnight), not
+    // from the scenario clock. Both worlds have the exact same metadata;
+    // subtracting their different t0 values manufactured a false difference.
+    // Keep this value in the comparison, while operation timestamps and
+    // explicit encounter creation still use the relative scenario clock.
+    const legacyVisit = v.version === 1 && v.origin === 'legacy-inferred' && typeof v.visitId === 'string';
+    return Object.fromEntries(Object.entries(v).map(([k, x]) => [k,
+      legacyVisit && k === 'createdAtISO' ? x : wzgledne(x, t0)]));
+  }
   return v;
 };
+describe('porównanie metadanych wizyty w niezależnych zegarach scenariuszy', () => {
+  it('porównuje bezwzględną datę legacy dokładnie, zachowując względny czas wizyty jawnej', () => {
+    const start = Date.parse('2026-10-21T09:00:00.000Z'), later = start + 360000;
+    const visit = { version: 1, visitId: '00112233-4455-8677-8899-aabbccddeeff', origin: 'legacy-inferred',
+      clinicalDateISO: '2026-10-21', createdAtISO: '2026-10-21T00:00:00.000Z', dateSource: 'savedAt' };
+    expect(wzgledne({ visit }, start)).toEqual(wzgledne({ visit }, later));
+    for (const change of [{ createdAtISO: '2026-10-20T00:00:00.000Z' }, { clinicalDateISO: '2026-10-20' },
+      { visitId: '00112233-4455-8677-8899-aabbccddee00' }]) {
+      expect(wzgledne({ visit }, start)).not.toEqual(wzgledne({ visit: { ...visit, ...change } }, later));
+    }
+    const explicit = { ...visit, origin: 'explicit', createdAtISO: new Date(start).toISOString() };
+    expect(wzgledne({ visit: explicit }, start)).toEqual(wzgledne({ visit: { ...explicit, createdAtISO: new Date(later).toISOString() } }, later));
+  });
+});
 // Wyjątek Q8-obca-2 (specyfikacja 2a, 3.6, akapit „Wyjątek Q8-obca-2” pod E1-katalog; rozstrzygnięte
 // 2026-11-03): „ZNANA RÓŻNICA (zdarzenia)”, do decyzji właściciela: którą wizytę zostawić. Po W4 K (w kolejności
 // K←C,P←K także C) zostaje z inną wersją karty Y niż przy samych blobach: m1 (głowa „Scal pacjentów”, zapis t0+1 min)

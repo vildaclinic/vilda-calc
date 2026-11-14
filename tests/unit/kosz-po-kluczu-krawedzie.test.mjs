@@ -27,8 +27,8 @@
 // 8 kolejności tylko tam, gdzie wynik albo stan na 8240e0df zależał od kolejności; gdzie indziej jedna albo dwie.
 //
 // Scenariusze — wynik teraz / na kodzie sprzed zmiany 8240e0df (te same kroki) / mutanty kodu E3, które test zabija.
-//   M01 X (x1, x) i Z; K: X → Z, K→C, kosz x (pod Z); P (bez wiedzy) przypina x w X; C poprawia x na 74, C→K, retencja
-//       C przycina Z, C→K (K: wpis retencji x pod Z z cieniem 74); K←P → K X[x:74*] Z[m], po rundach to samo na trzech,
+//   M01 X (x1, x, x2 — późniejsza rewizja tej samej wizyty) i Z; K: X → Z, K→C, kosz x (pod Z); P przypina x w X;
+//       C poprawia x na 74, C→K, retencja C przycina Z, C→K (wpis x z cieniem 74); K←P → X[x:74*] Z[m,x2], zbieżnie,
 //       0 zapisów / dotąd K X[] Z[m,x:74*] (pusta karta X, x przeniesiony z cienia pod Z) / Bgw_wskrzes przed
 //       Bkz_gdzieIndziej, przypięta pod inną kartą nieoszczędzana przy retencji (Bkz_obceKarty).
 //   M05/M06 X (x1, x) i Y; P: kosz x w X; K (bez wiedzy): X → Y, kosz y, x1 i głowy (x ostatnią wersją Y, X nie ma) → K
@@ -79,8 +79,8 @@
 //   E4b-po K: X → Y → Z, kosz x; P (bez wiedzy) poprawia potem x w X na 74 → urządzenie z poprawką po koszu K: x 74 w X,
 //       bez wpisu; po rundach X[x:74] Z[…] | nagr Y na trzech / dotąd ten sam stan końcowy, ale P po P←K z x i z wpisem
 //       kosza / wersja późniejsza niż usunięcie traktowana jak pokonana (x w koszu na trzech), wpis niezdjęty.
-//   M40 przeglądu E4b z retencją K pod Z, poprawka x na P nieczytelna → P: X z samą x (rekord pod X), x1 i x3 usunięte /
-//       dotąd X[x1,x,x3] (bez A1) / nieczytelna przy retencji usuwana.
+//   M40 przeglądu E4b z retencją K pod Z, poprawka x na P nieczytelna → P: X[x,x1], Z[m2,m1,x3]; nieczytelna x zostaje,
+//       x1 jest ostatnią czytelną rewizją wizyty w X, a m2/m1/x3 zachowują trzy pierwotne UUID wizyt po scaleniu do Z.
 //   P2 w drugą stronę K: X → Y → Z (i poprawka K pod Z na 74 albo gwiazdka K pod Z); P (bez wiedzy) retencja X (x1, x)
 //       → Z bez x1 i x na trzech (poprawka K znika), przypięta x zostaje (Z[…,x:23*]), wpis retencji x pod X, 8/8;
 //       kontrola tej samej karty — jak dotąd / dotąd K (i C w 2/8) z x1 i x pod Z / przypięta pod inną kartą
@@ -133,15 +133,22 @@ afterEach(() => { vi.useRealTimers(); });
 // Urządzenia P, K, C (i D, gdy jest we flocie) z sejfem z repozytorium albo 221. Na K „Testowy Jan” X (x1 120 cm / 20 kg,
 // x 125 cm / 23 kg, x3 130 cm / 25 kg), „Testowa Ola” Y (y 110 cm / 18 kg) i Z (z 111 cm / 19 kg); z dwie = 'Y' albo 'Z'
 // tylko X (x1, x) i ta jedna karta Oli. Komplet na pozostałych urządzeniach.
-async function przygotuj({ dwie = null, flota = {} } = {}) {
+async function przygotuj({ dwie = null, flota = {}, wspolnaWizytaX = false } = {}) {
+  // These cases exercise revisions within one day, not the retention rule that
+  // independently keeps one technical revision from every historical day.
+  if (wspolnaWizytaX) zegar.t = Date.parse('2026-10-20T09:00:00Z');
   sztucznyZegar();
   const u = {};
   for (const n of ['P', 'K', 'C', ...Object.keys(flota).filter((n) => !['P', 'K', 'C'].includes(n))]) u[n] = await urzadzenie(n, flota[n] || 'N');
   const x1 = await zapisz(u.K, jan(120, 20)); u.X = x1.patientId;
-  const x = await zapisz(u.K, jan(125, 23), { patientId: u.X }); u.sid = x.snapshotId;
+  // In scenarios about technical revisions, carry identity explicitly: the shared
+  // synthetic clock may cross midnight between saves or between test cases.
+  const visit = wspolnaWizytaX ? (await u.K.getPatient(u.X)).snapshots[0].payload.visit : null;
+  const daneX = (cm, kg) => ({ ...jan(cm, kg), ...(visit ? { visit: { ...visit } } : {}) });
+  const x = await zapisz(u.K, daneX(125, 23), { patientId: u.X }); u.sid = x.snapshotId;
   u.wersje = { [x1.snapshotId]: 'x1', [x.snapshotId]: 'x' };
   u.x1 = x1.snapshotId;
-  if (!dwie) { const x3 = await zapisz(u.K, jan(130, 25), { patientId: u.X }); u.wersje[x3.snapshotId] = 'x3'; u.x3 = x3.snapshotId; }
+  if (!dwie) { const x3 = await zapisz(u.K, daneX(130, 25), { patientId: u.X }); u.wersje[x3.snapshotId] = 'x3'; u.x3 = x3.snapshotId; }
   for (const [k, kg] of [['Y', 18], ['Z', 19]]) {
     if (dwie && dwie !== k) continue;
     const r = await zapisz(u.K, ola(110 + kg - 18, kg));
@@ -207,22 +214,30 @@ const rel = (u, iso) => (iso ? (Date.parse(iso) - u.t0) / M : null);
 // --- 1. A1 przed cieniem (M01) -----------------------------------------------------------------------------------------
 describe('P-KOSZ-PO-KLUCZU — krawędzie A1: odczyt po kluczu przed Bgw_wskrzes, wyjątek ostatniej wersji pod inną kartą', () => {
   it('M01: przypięta x pod starą X przychodzi na K, którego wpis retencji x (karta Z) ma cień 74 — x 74* zostaje pod X, bez pustej karty, na trzech', async () => {
-    const u = await przygotuj({ dwie: 'Z' });
+    const u = await przygotuj({ dwie: 'Z', wspolnaWizytaX: true });
+    const visit = (await gdzie(u.K, u.sid)).s.payload.visit;
+    const later = await zapisz(u.K, { ...jan(130, 25), visit: { ...visit } }, { patientId: u.X });
+    u.wersje[later.snapshotId] = 'x2';
+    await sync(u.K, u.P); await sync(u.K, u.C);
     const m = await krok(() => u.K.mergePatients(u.X, u.Z)); u.wersje[m.snapshotId] = 'm';
     await krok(() => sync(u.K, u.C));
     await krok(() => doKosza(u.K, u.sid));
     await krok(() => u.P.setSnapshotPinned(u.X, u.sid, true));
     await krok(() => poprawMase(u.C, u.sid, 74));
     await krok(() => sync(u.C, u.K));
+    const revisions = (await u.C.getPatient(u.Z)).snapshots.filter(s => s.payload.visit.visitId === visit.visitId);
+    expect(revisions.map(s => s.snapshotId), 'x2 is the later saved revision of the same visit; x is genuinely prunable').toEqual(expect.arrayContaining([later.snapshotId, u.sid]));
+    expect(revisions[0].snapshotId).toBe(later.snapshotId);
+    expect((await u.C.getPatientVisits(u.Z)).find(row => row.visitId === visit.visitId).snapshotId).toBe(later.snapshotId);
     await krok(async () => { const r = await u.C.pruneSnapshotsForPatient(u.Z, { recentHours: 0 }); expect(r.prunedIds, 'C: retencja przycina x pod Z').toContain(u.sid); });
     await krok(() => sync(u.C, u.K));
     const nK = ((await u.K.exportSyncPayload()).snapshotTombstones || []).find((e) => e.snapshotId === u.sid);
     expect({ widok: widok(await pelnyStan(u, u.K)), powod: nK && nK.powod, karta: nK && u.karty[nK.patientId] }, 'kontrola: K bez x, wpis retencji x pod Z')
-      .toEqual({ widok: 'Z[m] | nagr X', powod: 'retencja', karta: 'Z' });
+      .toEqual({ widok: 'Z[m,x2] | nagr X', powod: 'retencja', karta: 'Z' });
     await krok(() => sync(u.P, u.K));
-    expect(widok(await pelnyStan(u, u.K)), 'K←P: x 74* pod X (treść z cienia, gwiazdka P), Z bez x').toBe('X[x:74*] Z[m]');
+    expect(widok(await pelnyStan(u, u.K)), 'K←P: x 74* pod X (treść z cienia, gwiazdka P), Z bez x').toBe('X[x:74*] Z[m,x2]');
     const r = await przebieg(u, 'P←K');
-    const w = 'X[x:74*] Z[m]';
+    const w = 'X[x:74*] Z[m,x2]';
     expect(r.widoki, 'po rundach').toEqual({ P: w, K: w, C: w });
     expect(r.zbiezny, 'ten sam pełny stan').toBe(true);
     expect(r.stabilny).toBe(true);
@@ -557,8 +572,11 @@ describe('P-KOSZ-PO-KLUCZU — wersja pod inną kartą: późniejsza zmiana wygr
       expect(r.zapisy, 'runda kontrolna bez zapisów').toEqual(ZERO3);
     }, 30000);
   }
-  it('M40 przeglądu: E4b-ret z nieczytelną poprawką x pod X na P — P←K: x zostaje w X (nieczytelnej nie przycinamy), x1 i x3 znikają', async () => {
-    const u = await przygotuj();
+  it('M40 przeglądu: E4b-ret z nieczytelną poprawką x pod X na P — x zostaje, a czytelne głowy wizyt przeżywają retencję', async () => {
+    const u = await przygotuj({ wspolnaWizytaX: true });
+    const visitIds = {};
+    for (const key of ['X', 'Y', 'Z']) visitIds[key] = (await u.K.getPatient(u[key])).snapshots[0].payload.visit.visitId;
+    expect(new Set(Object.values(visitIds)).size, 'three original visits before patient merge').toBe(3);
     await XYZ(u);
     await krok(() => poprawMase(u.P, u.sid, 74));
     await zepsuj(u.P, u.sid);
@@ -567,7 +585,11 @@ describe('P-KOSZ-PO-KLUCZU — wersja pod inną kartą: późniejsza zmiana wygr
     const karty = {};
     for (const p of await u.P.listPatients()) karty[u.karty[p.patientId]] = (await u.P.getPatient(p.patientId)).snapshots.map((s) => u.wersje[s.snapshotId] || 'm');
     const rekord = await u.P.__px.getSnapshotForUser(u.P.__uid, u.sid);
-    expect({ karty, x: rekord && u.karty[rekord.patientId], tresc: await gdzieX(u, u.P) }).toEqual({ karty: { X: ['x'], Z: ['m2'] }, x: 'X', tresc: 'X nieczytelna r1' });
+    expect({ karty, x: rekord && u.karty[rekord.patientId], tresc: await gdzieX(u, u.P) }).toEqual({ karty: { X: ['x', 'x1'], Z: ['m2', 'm1', 'x3'] }, x: 'X', tresc: 'X nieczytelna r1' });
+    const readableX = (await u.P.getPatient(u.X)).snapshots.filter(s => s.payload);
+    expect(readableX.map(s => [u.wersje[s.snapshotId], s.payload.visit.visitId]), 'x1 is the last readable revision of the original X visit').toEqual([['x1', visitIds.X]]);
+    const readableZ = (await u.P.getPatient(u.Z)).snapshots;
+    expect(readableZ.map(s => [u.wersje[s.snapshotId], s.payload.visit.visitId]), 'one canonical revision of each original visit survives under Z').toEqual([['m2', visitIds.Z], ['m1', visitIds.Y], ['x3', visitIds.X]]);
   }, 30000);
 });
 
@@ -585,8 +607,11 @@ describe('P-KOSZ-PO-KLUCZU — P2 w drugą stronę: retencja starej X na urządz
     const kols = nazwa.startsWith('poprawka') || nazwa.startsWith('gwiazdka') ? KOLEJNOSCI_8 : [KOLEJNOSCI_8[0]];
     for (const kol of kols) {
       it(`${nazwa} (${kol}): ${w} na trzech`, async () => {
-        const u = await przygotuj();
+        const u = await przygotuj({ wspolnaWizytaX: true });
         await kroki(u);
+        const revisions = (await u.P.getPatient(u.X)).snapshots;
+        expect(new Set(revisions.map(s => s.payload.visit.visitId)).size, 'x1, x and x3 are technical revisions of one visit, even across midnight').toBe(1);
+        expect(revisions[0].snapshotId, 'x3 is the protected latest saved revision').toBe(u.x3);
         const p = await krok(() => u.P.pruneSnapshotsForPatient(u.X, { recentHours: 0 }));
         expect(p.prunedIds.map((id) => u.wersje[id]).sort(), 'P: retencja X przycina x1 i x').toEqual(['x', 'x1']);
         const r = await przebieg(u, kol);

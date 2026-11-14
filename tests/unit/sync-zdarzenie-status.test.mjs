@@ -156,6 +156,65 @@ describe('S1/S7: applied', () => {
   });
 });
 
+describe('S8: ścisła tożsamość wizyty w nagrobku zdarzenia', () => {
+  d1();
+
+  it('S8: builder, szyfrowanie i scalenie zachowują dokładną tożsamość usuniętej wizyty', async () => {
+    const { A, B } = await trojka();
+    krok(); const first = await A.zapiszKarte(1);
+    krok(); await A.zapiszKarte(1, { wzrost: 121, zapis: { patientId: first.patientId, forceNewSnapshot: true } });
+    const saved = (await A.vault.exportSyncPayload()).patients
+      .find((patient) => patient.patientId === first.patientId).snapshots
+      .find((snapshot) => snapshot.snapshotId === first.snapshotId).payload.visit;
+    expect(saved.visitId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+    const identity = { version: 1, visitId: saved.visitId };
+    krok(); await A.vault.moveSnapshotToTrash(first.patientId, first.snapshotId);
+    for (const event of await A.ev.buildPatientFullEvents(first.patientId, null, { setId: 'fikcyjna-wizyta' })) {
+      expect((await B.ev.applyEncryptedEvent((await A.ev.encryptEvent(event)).env)).status).toBe('applied');
+    }
+    const event = await A.ev.buildSnapshotTombstoneEvent(first.snapshotId, null);
+    expect(event.snapshotTombstones).toHaveLength(1);
+    expect(event.snapshotTombstones[0].visitIdentity).toEqual(identity);
+    expect(event.snapshotTombstones[0].payload.visit).toEqual(saved);
+    const { env } = await A.ev.encryptEvent(event);
+    expect(JSON.stringify(env), 'UUID nie znajduje się w jawnej kopercie transportowej').not.toContain(saved.visitId);
+    expect((await B.ev.applyEncryptedEvent(env)).status).toBe('applied');
+    const transferred = (await B.vault.exportSyncPayload()).snapshotTombstones
+      .find((snapshot) => snapshot.snapshotId === first.snapshotId);
+    expect(transferred.visitIdentity).toEqual(identity);
+    expect(transferred.payload.visit).toEqual(saved);
+  });
+
+  it.each([
+    ['nieobsługiwana wersja', { version: 2, visitId: '65f635da-35e3-4695-a878-125c1f840a21' }],
+    ['nieprawidłowy UUID', { version: 1, visitId: 'nie-jest-uuid' }],
+    ['dodatkowe dane pacjenta', { version: 1, visitId: '65f635da-35e3-4695-a878-125c1f840a21', patientName: 'Fikcyjny Pacjent Testowy' }],
+  ])('S8: %s — odmowa szyfrowania zdarzenia oraz zero zapisów po odebraniu koperty', async (_name, identity) => {
+    const { A, B } = await trojka();
+    const snapshotId = globalThis.crypto.randomUUID();
+    const event = {
+      schemaVersion: 2,
+      event: { kind: 'stomb', key: snapshotId, atISO: iso(), dev: null, full: null },
+      snapshotTombstones: [{ patientId: globalThis.crypto.randomUUID(), snapshotId,
+        deletedAtISO: iso(), savedAtISO: iso(), rev: 0, updatedAtISO: iso(), visitIdentity: identity }],
+    };
+    const cryptoBefore = A.krypto.log.length;
+    const writesBefore = A.magazyn.wyw.length;
+    await expect(A.ev.encryptEvent(event)).rejects.toMatchObject({ code: 'EVENT_ENVELOPE_INVALID' });
+    expect(A.krypto.log.slice(cryptoBefore), 'walidacja przed szyfrowaniem').toEqual([]);
+    expect(zapisyOd(A, writesBefore), 'odrzucona koperta nie zapisuje niczego u nadawcy').toEqual([]);
+
+    // Surowe szyfrowanie omija walidator nadawcy: odbiorca musi niezależnie odmówić scalenia.
+    const raw = await A.vault.encryptPayloadForCurrentUser(event);
+    const before = await B.eksportKanoniczny();
+    const receiverWrites = B.magazyn.wyw.length, notifications = B.powiadomienia.length;
+    expect(await B.ev.applyEncryptedEvent(raw)).toEqual({ status: 'apply-error', code: 'INVALID_VISIT_IDENTITY' });
+    expect(zapisyOd(B, receiverWrites), 'odmowa przed mutacją odbiorcy').toEqual([]);
+    expect(B.powiadomienia.slice(notifications)).toEqual([]);
+    expect(await B.eksportKanoniczny()).toBe(before);
+  });
+});
+
 describe('S2: unreadable (zero zapisów, bez wyjątku)', () => {
   d1();
   it('S2: każdy rodzaj nieczytelności z właściwym reason; aad 0 → applied', async () => {

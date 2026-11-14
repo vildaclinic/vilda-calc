@@ -259,7 +259,7 @@ describe('P-SESJA-ZAPISU: strażnik źródła sejfu (vilda_vault.js)', () => {
     expect(blad).toMatch(/Zapis przerwany/);
   });
 
-  it('S2: rdzeń Bpz_zapisWSesji — Bpz_pilnuj(Bpz_s) przy każdym await I().put…, po Bz1 z catch, na początku Bpz_sekcja i przed Bcommit_remember → Bzu_zapamietaj; 11 wstawek', () => {
+  it('S2: rdzeń Bpz_zapisWSesji — Bpz_pilnuj(Bpz_s) przy każdym await I().put…, po Bz1 i nadaniu tożsamości wizyty, na początku Bpz_sekcja i przed Bcommit_remember → Bzu_zapamietaj; 12 wstawek', () => {
     expect(src.includes('async function Bpz_zapisWSesji('), 'rdzeń zapisu Bpz_zapisWSesji w vilda_vault.js').toBe(true);
     const rdzen = wytnijFunkcje(src, 'Bpz_zapisWSesji');
 
@@ -293,6 +293,8 @@ describe('P-SESJA-ZAPISU: strażnik źródła sejfu (vilda_vault.js)', () => {
     expect(vn, 'powiadomienie Vn po Bzu_zapamietaj').toBeGreaterThan(pamiec);
     expect(rdzen.slice(pochodzenie, vn), 'od ostatniego sprawdzenia przez publikację pochodzenia i pamięć wersji do Vn bez await').not.toMatch(/\bawait\b/);
 
-    expect(wszystkie(rdzen, /Bpz_pilnuj\(\s*Bpz_s\s*\)\s*;/).length, 'liczba sprawdzeń sesji w rdzeniu').toBe(11);
+    expect(rdzen, 'po asynchronicznym ustaleniu tożsamości wizyty ponownie sprawdzamy sesję przed szyfrowaniem i zapisem')
+      .toContain('t=await Bvisit_save(t,s,Bc0,new Date().toISOString());Bpz_pilnuj(Bpz_s);');
+    expect(wszystkie(rdzen, /Bpz_pilnuj\(\s*Bpz_s\s*\)\s*;/).length, 'liczba sprawdzeń sesji w rdzeniu').toBe(12);
   });
 });

@@ -85,12 +85,12 @@ describe('clinical workspace immutable precache transport', () => {
     expect(digest(PACK_BYTES)).toBe(MANIFEST.precachePack.sha256);
     expect(PACK_BYTES.length).toBe(MANIFEST.precachePack.byteLength);
     expect(MANIFEST.files).toHaveLength(51);
-    expect(HISTORICAL_FILES).toHaveLength(100);
-    expect(MODULE_URLS).toHaveLength(151);
+    expect(HISTORICAL_FILES).toHaveLength(151);
+    expect(MODULE_URLS).toHaveLength(202);
     const retainedTrees = HISTORICAL_FILES.reduce((counts, file) => {
       const prefix = file.path.split('/')[2]; counts[prefix] = (counts[prefix] || 0) + 1; return counts;
     }, {});
-    expect(retainedTrees).toEqual({ '37562593af68': 49, '4002da88b355': 51 });
+    expect(retainedTrees).toEqual({ '37562593af68': 49, '4002da88b355': 51, 'e410c8725541': 51 });
     for (const url of MODULE_URLS) expect(sw.INSTALL_CORE_URLS).toContain(url);
     expect(sw.INSTALL_CORE_URLS).not.toContain(PACK_URL);
   });
