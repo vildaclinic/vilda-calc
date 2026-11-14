@@ -52,7 +52,6 @@ async function prepare(page, profile) {
       for (const animation of event.target.getAnimations()) {
         if (animation.animationName !== event.animationName) continue;
         animation.pause();
-        animation.currentTime = run.heldForClose ? animation.effect.getTiming().duration / 2 : 0;
       }
     });
     let wasOpen = false;
@@ -63,9 +62,20 @@ async function prepare(page, profile) {
           controlled: trace.runs.length === 0, heldForClose: trace.holdNextEntry, stage: 'start' };
         trace.holdNextEntry = false;
         trace.runs.push(run);
-        afterFrame(() => {
+        afterFrame(async () => {
           const panelAnimations = panel.getAnimations();
           const backdropAnimations = backdrop.getAnimations();
+          if (run.controlled || run.heldForClose) {
+            const animations = [...panelAnimations, ...backdropAnimations];
+            for (const animation of animations) animation.pause();
+            // pause() can remain pending until the compositor acknowledges it.
+            // Seek only after that handoff; animationstart may arrive later and
+            // must not reset a subsequent seek to the beginning.
+            await Promise.all(animations.map(animation => animation.ready));
+            for (const animation of animations) {
+              animation.currentTime = run.heldForClose ? animation.effect.getTiming().duration / 2 : 0;
+            }
+          }
           run.panelAnimations = panelAnimations.map(animationInfo);
           run.backdropAnimations = backdropAnimations.map(animationInfo);
           let settled = false;
@@ -173,14 +183,15 @@ for (const profile of profiles) {
       const started = await page.evaluate(() => window.__menuMotionTrace.runs.at(-1));
       expect(started.panelAnimations).toHaveLength(1);
       expect(started.backdropAnimations).toHaveLength(1);
-      await page.evaluate(() => {
+      await page.evaluate(async () => {
         const run = window.__menuMotionTrace.runs.at(-1);
-        run.stage = 'midpoint';
-        for (const el of document.querySelectorAll('.chrome-drawer-panel,.chrome-drawer-backdrop')) {
-          for (const animation of el.getAnimations()) {
-            animation.currentTime = animation.effect.getTiming().duration / 2;
-          }
+        const animations = [...document.querySelectorAll('.chrome-drawer-panel,.chrome-drawer-backdrop')]
+          .flatMap(el => el.getAnimations());
+        await Promise.all(animations.map(animation => animation.ready));
+        for (const animation of animations) {
+          animation.currentTime = animation.effect.getTiming().duration / 2;
         }
+        run.stage = 'midpoint';
       });
       await page.waitForFunction(() => window.__menuMotionTrace.runs.at(-1).frames.some(frame => frame.stage === 'midpoint'));
       await page.evaluate(() => {
