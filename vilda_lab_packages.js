@@ -712,7 +712,9 @@
         // z dnia wpisu; inna data pobrania unieważnia ją dokładnie tak, jak zmiana daty w oknie przypięcia.
         lab.value = row.raw;
         lab.assessment = assessments.normalize(row.assessment);
-        lab = assessments.reconcile(lab, lab, options.todayISO || options.dateISO, options.dateISO);
+        // PR7: assessedForISO — dzień, dla którego strona policzyła ocenę (wiek w dniu pobrania). Gdy to dzień
+        // pobrania, ocena zapisuje się jako aktualna; ocena dla dzisiejszego wieku przy innej dacie — jak dotąd.
+        lab = assessments.reconcile(lab, lab, options.assessedForISO || options.todayISO || options.dateISO, options.dateISO);
       } else if (own(row, 'range') && options.snapshot && typeof options.snapshot.normalize === 'function') lab.range = options.snapshot.normalize(row.range);
       var note = {
         patientId: options.patientId,
@@ -742,14 +744,14 @@
       if (badNorms.length) {
         return { ok: false, error: 'Popraw normę z wydruku: ' + badNorms.map(function (row) { return row.short; }).join(', ') + '.', notes: [], rows: [] };
       }
-      var dateError = validDate(options.dateISO, options.todayISO);
+      var dateError = text(options.dateError) || validDate(options.dateISO, options.todayISO);
       if (dateError) return { ok: false, error: dateError, notes: [], rows: [] };
       return {
         ok: true, error: '', rows: filled,
         notes: filled.map(function (row) {
           return buildNote({ row: row, patientId: options.patientId, dateISO: options.dateISO, comment: options.comment,
             linkedAgeMonths: options.linkedAgeMonths, snapshot: options.snapshot,
-            assessmentSnapshot: options.assessmentSnapshot, todayISO: options.todayISO });
+            assessmentSnapshot: options.assessmentSnapshot, todayISO: options.todayISO, assessedForISO: options.assessedForISO });
         })
       };
     }
@@ -795,13 +797,35 @@
       if (!filled.length) return Object.assign(none, { error: 'Wpisz co najmniej jeden wynik.' });
       var badNorms = filled.filter(function (row) { return !!row.normError; });
       if (badNorms.length) return Object.assign(none, { error: 'Popraw normę z wydruku: ' + badNorms.map(function (row) { return row.short; }).join(', ') + '.' });
-      var dateError = validDate(options.dateISO, options.todayISO);
+      var dateError = text(options.dateError) || validDate(options.dateISO, options.todayISO);
       if (dateError) return Object.assign(none, { error: dateError });
       return {
         ok: true, error: '',
         text: ['Badania (pobranie ' + formatDate(options.dateISO) + '):'].concat(filled.map(copyLine)).join('\n'),
         names: filled.map(function (row) { return row.short; }).join(', ')
       };
+    }
+
+    /* LAB-PAKIETY PR7 — ocena w dniu pobrania. Wiek pacjenta słowami („7 lat i 1 mies.”) i opis daty pobrania
+     * wcześniejszej niż dziś. sample: { mode, dateISO, daysAgo, age, today } od strony (wiek liczy strona
+     * z daty urodzenia; pakiet go tylko opisuje). Zwraca { before, age, after } — wiek stoi w tekście wyróżniony. */
+    function ageWords(age) {
+      if (!record(age) || !Number.isInteger(age.years) || !Number.isInteger(age.months) || age.years < 0 || age.months < 0) return '';
+      var years = age.years ? age.years + ' ' + plural(age.years, ['rok', 'lata', 'lat']) : '';
+      var months = age.months ? age.months + ' mies.' : '';
+      return years && months ? years + ' i ' + months : years || months || 'poniżej 1 mies.';
+    }
+    function describeSample(sample) {
+      if (!record(sample) || sample.mode !== 'dated') return null;
+      var age = ageWords(sample.age);
+      if (!age) return null;
+      var days = sample.daysAgo;
+      var when = days === 1 ? 'Pobranie wczoraj.' : Number.isInteger(days) && days > 1 && days <= 31
+        ? 'Pobranie ' + days + ' dni temu.' : 'Pobranie ' + formatDate(sample.dateISO) + '.';
+      var now = ageWords(sample.today);
+      // Wiek kończący się skrótem („2 mies.”) zamyka zdanie własną kropką.
+      var after = now && now !== age ? ' (dziś ' + now + ').' : /\.$/.test(age) ? '' : '.';
+      return { before: when + ' Aplikacja ocenia wyniki dla wieku w dniu pobrania: ', age: age, after: after };
     }
 
     // Polska odmiana: 1 wynik, 2–4 wyniki, 5+ wyników (12–14 wyników).
@@ -812,7 +836,7 @@
     }
 
     return Object.freeze({
-      version: '1.5.0',
+      version: '1.6.0',
       SETTINGS_KEY: SETTINGS_KEY,
       CUSTOM_KEY: CUSTOM_KEY,
       LIMITS: LIMITS,
@@ -849,6 +873,8 @@
       buildNote: buildNote,
       planSave: planSave,
       buildCopyText: buildCopyText,
+      ageWords: ageWords,
+      describeSample: describeSample,
       plural: plural,
       shortLabel: shortLabel
     });
@@ -897,6 +923,12 @@
     var OTHER_DAY_PUBERTY = ' dotyczy dzisiejszego wieku i stadium: z inną datą pobrania zapisze się w karcie jako wymagająca ponownej oceny — tak jak przypięcie pojedynczego wyniku ze zmienioną datą.';
     var OTHER_DAY_CARD = 'Inna data pobrania: w karcie ta ocena zapisze się jako wymagająca ponownej oceny.';
     var STAGE_NOTE = 'Stadium obowiązuje dla całego pakietu — także dla badań z normą według Tannera.';
+    // PR7: ocena w dniu pobrania — pytanie o stadium z karty i stany, w których ocena według stadium czeka.
+    var STAGE_ASK_NOTE = 'Bez odpowiedzi aplikacja oceni wyniki tylko według wieku.';
+    var STAGE_PENDING = ' — po potwierdzeniu stadium w dniu pobrania';
+    var NO_BIRTH_NOTE = ' W danych pacjenta nie ma daty urodzenia — uzupełnij ją, aby ocenić wyniki dla wieku w dniu pobrania.';
+    var BEFORE_BIRTH_ERROR = 'Data pobrania jest wcześniejsza niż data urodzenia pacjenta.';
+    var TANNER_ROMAN = ['I', 'II', 'III', 'IV', 'V'];
     var CONTEXT_NOTE = 'Ocena wymaga kontekstu badania (np. fazy cyklu) — wybierzesz go w pojedynczym badaniu.';
     // Etykieta do 3 znaków (TSH, fT4, LH) mieści się w kolumnie obok pola; dłuższa staje nad polem.
     var LABEL_COMPACT_MAX = 3;
@@ -916,7 +948,9 @@
         // Lekarz sam wybrał pakiet (lista, kreator, adres) — wczytanie pakietów z konta nie zmienia już wyboru.
         picked: false,
         // PR6: ocena pokwitania dla pakietu (opis od strony), otwarty edytor stadium, opcje wyboru fazy.
-        puberty: null, stageOpen: false, cycleSig: null, pubertySubscribed: false };
+        puberty: null, stageOpen: false, cycleSig: null, pubertySubscribed: false,
+        // PR7: dzień pobrania pakietu od strony ({ mode, dateISO, daysAgo, age, today }).
+        sample: { mode: 'today', dateISO: null } };
       var grid = null, card = null, singleBtn = null, packageBtn = null;
       var parts = { inputs: {}, units: {}, errors: {}, cards: {}, normLow: {}, normHigh: {}, normUnit: {}, normErrors: {} };
       var timer = null;
@@ -978,6 +1012,23 @@
         var source = puberty();
         try { return source && typeof source.assess === 'function' ? source.assess(analyteId, raw, unit) : undefined; } catch (_) { return undefined; }
       }
+      // PR7: dzień pobrania pakietu — strona liczy wiek pacjenta na ten dzień i mówi, czy stadium z karty wymaga
+      // potwierdzenia. Bez tej funkcji po stronie (starsza kopia strony) pakiet działa jak dotąd.
+      function syncSample() {
+        var source = puberty(), view;
+        try {
+          view = source && typeof source.setSampleDate === 'function' && parts.date ? source.setSampleDate(parts.date.value, today()) : null;
+        } catch (_) { view = null; }
+        state.sample = view && typeof view === 'object' && typeof view.mode === 'string' ? view : { mode: 'today', dateISO: null };
+        return state.sample;
+      }
+      function dated() { return state.sample.mode === 'dated'; }
+      function stageSample() {
+        var view = state.puberty;
+        return dated() && view && view.available && view.stage && view.stage.sample || null;
+      }
+      function stagePending() { var sample = stageSample(); return !!sample && sample.status === 'pending'; }
+      function sampleDateError() { return state.sample.mode === 'before-birth' ? BEFORE_BIRTH_ERROR : ''; }
       // 'puberty' | 'single' | '' — pytane przy każdej ocenie, bo skrypt strony rusza po tym pliku.
       function ownKind(analyteId) {
         try {
@@ -1232,12 +1283,36 @@
         parts.pubertyBox.hidden = true;
         parts.stageRow = add(parts.pubertyBox, 'div', 'lab-puberty-summary-row lab-puberty-stage-row lab-pkg-stage-row');
         var stageText = add(parts.stageRow, 'span', 'lab-pkg-stage-text');
-        add(stageText, 'span', 'lab-pkg-stage-label', 'Pokwitanie');
-        parts.stageSummary = add(stageText, 'strong', 'lab-pkg-stage-summary');
+        parts.stageLabel = add(stageText, 'span', 'lab-pkg-stage-label', 'Pokwitanie');
+        parts.stageLabel.id = 'labPkgStageLabel';
+        var stageValue = add(stageText, 'span', 'lab-pkg-stage-value');
+        parts.stageSummary = add(stageValue, 'strong', 'lab-pkg-stage-summary');
         parts.stageSummary.id = 'labPkgStageSummary';
+        // PR7: skąd stadium („ocena z 14.11.2026 (dziś)”) i czy dotyczy dnia pobrania.
+        parts.stageMeta = add(stageValue, 'span', 'lab-pkg-stage-meta');
+        parts.stageMeta.id = 'labPkgStageMeta';
+        parts.stageMeta.hidden = true;
+        parts.stageChip = add(stageValue, 'span', 'lab-pkg-stage-chip');
+        parts.stageChip.id = 'labPkgStageChip';
+        parts.stageChip.hidden = true;
         parts.stageBtn = button(parts.stageRow, 'lab-puberty-context-button', 'Zmień ocenę', toggleStageEditor);
         parts.stageBtn.id = 'labPkgStageEdit';
         parts.stageBtn.setAttribute('aria-controls', 'labPkgStageEditor');
+        // PR7: jedno pytanie przy dacie pobrania innej niż dziś — czy stadium z karty obowiązywało w dniu pobrania.
+        parts.stageAsk = add(parts.pubertyBox, 'div', 'lab-pkg-stage-ask');
+        parts.stageAsk.id = 'labPkgStageAsk';
+        parts.stageAsk.setAttribute('role', 'group');
+        parts.stageAsk.setAttribute('aria-labelledby', 'labPkgStageAskText');
+        parts.stageAsk.hidden = true;
+        parts.stageAskText = add(parts.stageAsk, 'p', 'lab-pkg-stage-ask-text');
+        parts.stageAskText.id = 'labPkgStageAskText';
+        var askActions = add(parts.stageAsk, 'div', 'lab-pkg-stage-ask-actions');
+        parts.stageYes = button(askActions, 'lab-pkg-btn lab-pkg-btn-primary lab-pkg-stage-yes', 'Tak', confirmStage);
+        parts.stageYes.id = 'labPkgStageYes';
+        parts.stageAskEdit = button(askActions, 'lab-pkg-btn lab-pkg-btn-ghost lab-pkg-stage-ask-edit', 'Zmień ocenę', toggleStageEditor);
+        parts.stageAskEdit.id = 'labPkgStageAskEdit';
+        parts.stageAskEdit.setAttribute('aria-controls', 'labPkgStageEditor');
+        add(parts.stageAsk, 'p', 'lab-pkg-stage-ask-note', STAGE_ASK_NOTE);
         parts.stageEditorBox = add(parts.pubertyBox, 'section', 'lab-puberty-detail-section lab-pkg-stage-editor');
         parts.stageEditorBox.id = 'labPkgStageEditor';
         parts.stageEditorBox.hidden = true;
@@ -1268,7 +1343,8 @@
         var results = parts.results;
         var head = add(results, 'div', 'lab-pkg-results-head');
         add(head, 'div', 'lab-step-label', 'Ocena wyników');
-        add(head, 'div', 'lab-pkg-hint', 'na żywo, dla danych pacjenta z karty');
+        parts.resultsHint = add(head, 'div', 'lab-pkg-hint', 'na żywo, dla danych pacjenta z karty');
+        parts.resultsHint.id = 'labPkgResultsHint';
         // PR6: komunikat kliniczny wspólny dla kilku badań (np. „Rozwój płciowy” dla LH i FSH) — raz, nad kartami.
         parts.clinicalHost = add(results, 'section', 'vilda-lab-assessment is-compact lab-pkg-clinical');
         parts.clinicalHost.id = 'labPkgClinical';
@@ -1442,6 +1518,8 @@
         parts.comment.disabled = busy;
         parts.clear.disabled = busy;
         parts.stageBtn.disabled = busy;
+        parts.stageYes.disabled = busy;
+        parts.stageAskEdit.disabled = busy;
         parts.cycle.disabled = busy;
       }
       function clearValues(keepDone) {
@@ -1551,6 +1629,20 @@
         state.stageOpen = !state.stageOpen;
         refresh();
       }
+      // PR7: „Tak, Th2” — stadium z karty obowiązywało w dniu pobrania.
+      function confirmStage() {
+        if (state.busy) return;
+        var source = puberty();
+        try { if (source && typeof source.confirmStage === 'function') source.confirmStage(); } catch (_) { /* pytanie zostaje */ }
+        state.stageOpen = false;
+        edited();
+      }
+      // „Potwierdź” w karcie wyniku prowadzi do pytania w kroku „Pacjent” (odpowiedź pada w jednym miejscu).
+      function focusStageAsk() {
+        if (!parts.stageAsk || parts.stageAsk.hidden) return;
+        try { parts.stageAsk.scrollIntoView({ block: 'center' }); } catch (_) { /* bez przewinięcia */ }
+        try { parts.stageYes.focus({ preventScroll: true }); } catch (_) { parts.stageYes.focus(); }
+      }
       function drawPuberty() {
         var source = puberty(), view;
         try {
@@ -1568,13 +1660,38 @@
         parts.stageRow.hidden = !stage;
         var canEdit = !!stage && stage.editor && !stage.disabled && !!stageEditorUI();
         if (!canEdit) state.stageOpen = false;
+        // PR7: przy dawnej próbce stadium z karty czeka na jedno potwierdzenie; stadium ocenione w dniu pobrania,
+        // potwierdzone albo wpisane w pakiecie obowiązuje bez pytania.
+        var ask = stage && dated() && stage.sample || null, pending = !!ask && ask.status === 'pending';
+        var m = model();
         if (stage) {
-          parts.stageSummary.textContent = stage.summary;
-          parts.stageBtn.hidden = !canEdit;
+          var observed = ask && ask.observedAtISO ? 'ocena z ' + m.formatDate(ask.observedAtISO) + (ask.observedToday ? ' (dziś)' : '') : '';
+          var meta = pending ? observed || 'ocena z innego dnia' : ask && ask.status === 'same-day' ? observed : '';
+          var chip = ask && ask.status === 'confirmed' ? 'potwierdzone dla ' + m.formatDate(state.sample.dateISO)
+            : ask && ask.status === 'entered' ? 'wpisane dla dnia pobrania' : '';
+          parts.stageLabel.textContent = pending ? 'Pokwitanie — z karty pacjenta' : ask && ask.status !== 'none' ? 'Pokwitanie w dniu pobrania' : 'Pokwitanie';
+          parts.stageSummary.textContent = pending ? ask.label : stage.summary;
+          parts.stageMeta.textContent = meta;
+          parts.stageMeta.hidden = !meta;
+          parts.stageChip.textContent = chip;
+          parts.stageChip.hidden = !chip;
+          parts.stageChip.classList.toggle('is-confirmed', !!ask && ask.status === 'confirmed');
+          // Przy pytaniu „Zmień ocenę” stoi obok odpowiedzi „Tak”.
+          parts.stageBtn.hidden = !canEdit || pending;
           parts.stageBtn.textContent = state.stageOpen ? 'Gotowe' : stage.action;
           parts.stageBtn.setAttribute('aria-expanded', String(!!state.stageOpen));
           parts.stageBtn.disabled = state.busy;
           parts.stageHint.textContent = stage.hint;
+        }
+        parts.stageAsk.hidden = !pending;
+        if (pending) {
+          parts.stageAskText.textContent = 'Czy w dniu pobrania, ' + m.formatDate(state.sample.dateISO) + ', stadium też było ' + ask.label + '?';
+          parts.stageYes.textContent = 'Tak, ' + ask.label;
+          parts.stageYes.disabled = state.busy;
+          parts.stageAskEdit.hidden = !canEdit;
+          parts.stageAskEdit.textContent = state.stageOpen ? 'Gotowe' : 'Zmień ocenę';
+          parts.stageAskEdit.setAttribute('aria-expanded', String(!!state.stageOpen));
+          parts.stageAskEdit.disabled = state.busy;
         }
         parts.stageEditorBox.hidden = !state.stageOpen;
         if (state.stageOpen) {
@@ -1621,6 +1738,9 @@
           var node = parts.cards[definition.id].querySelector('.lab-pkg-card-assessment .vilda-lab-clinical');
           if (!node) return;
           node.hidden = false;
+          // PR7: gdy stadium z karty czeka na potwierdzenie, komunikat silnika „potrzebna jest ocena Th/M lub G”
+          // wprowadzałby w błąd — ocena jest, a o jej potwierdzenie pyta krok „Pacjent”.
+          if (stagePending() && node.getAttribute('data-clinical-code') === 'missing_puberty_assessment') { node.hidden = true; return; }
           var key = (node.getAttribute('data-clinical-code') || '') + '\u0001' + node.textContent;
           if (!groups[key]) { groups[key] = []; order.push(key); }
           groups[key].push({ node: node, short: definition.short });
@@ -1656,7 +1776,7 @@
         var assessed = row.status === 'ok' && !!row.assessment && !!row.view && row.view.puberty === true && !!assessmentUI();
         var otherDay = assessed && state.otherDay === true;
         var signature = JSON.stringify([row.status, row.error || '', row.shown || '', row.unit || '', row.converted || '', row.view || null, !!row.contextRequired,
-          assessed ? row.assessment.evaluation : null, otherDay]);
+          assessed ? row.assessment.evaluation : null, otherDay, row.pendingStage || '']);
         if (box.getAttribute('data-drawn') === signature) return;
         box.setAttribute('data-drawn', signature);
         box.textContent = '';
@@ -1692,6 +1812,7 @@
             add(alert, 'span', 'vilda-lab-severity-summary-scope', view.alert.scope);
             section.insertBefore(alert, section.firstChild);
           }
+          if (row.pendingStage) drawPendingStage(box, row.pendingStage);
           if (otherDay) add(box, 'p', 'lab-pkg-card-note lab-pkg-card-day', OTHER_DAY_CARD);
           button(box, 'lab-pkg-link lab-pkg-card-link', 'Wykres w pojedynczym badaniu →', function () { openSingle(definition.id); });
           return;
@@ -1716,6 +1837,7 @@
           norm.appendChild(doc.createTextNode((view.general ? (view.population || 'Zakres ogólny') : 'Norma' + (view.population ? ' · ' + view.population : '')) + ': '));
           add(norm, 'strong', '', view.bounds);
         }
+        if (row.pendingStage) drawPendingStage(box, row.pendingStage);
         // PR4: badanie oceniane po swojemu w pojedynczym badaniu — tu wartość (i norma z wydruku), tam ocena.
         // To samo łącze dostaje wynik, którego silnik nie ocenia bez kontekstu próbki (pakiet nie ma jego pól).
         var note = view.own && OWN_KINDS[view.own] ? OWN_KINDS[view.own].note : row.contextRequired ? CONTEXT_NOTE : '';
@@ -1725,6 +1847,41 @@
           else if (view.replaced) add(box, 'div', 'lab-pkg-card-note', REPLACED_NOTE);
           button(box, 'lab-pkg-link lab-pkg-card-link', 'Oceń ' + definition.short + ' w pojedynczym badaniu →', function () { openSingle(definition.id); });
         }
+      }
+      // PR7: ocena według stadium (albo norma według Tannera) czeka na potwierdzenie stadium dla dnia pobrania.
+      function drawPendingStage(box, title) {
+        box.classList.add('is-stage-pending');
+        var slot = add(box, 'div', 'lab-pkg-card-pending');
+        var line = add(slot, 'span', 'lab-pkg-card-pending-text');
+        add(line, 'strong', '', title);
+        line.appendChild(doc.createTextNode(STAGE_PENDING));
+        button(slot, 'lab-pkg-link lab-pkg-card-pending-link', 'Potwierdź', focusStageAsk);
+      }
+      // Które wyniki czekają na stadium: badania z osią stadium i badania katalogu, którym stadium z karty
+      // dobrałoby inną normę niż sam wiek.
+      function markPendingStage(rows) {
+        var ask = stageSample(), view = state.puberty;
+        var value = ask && ask.status === 'pending' && Number.isInteger(ask.value) ? ask.value : null;
+        var staged = view && Array.isArray(view.stageAnalytes) ? view.stageAnalytes : [];
+        var m = model(), entered = inputs();
+        rows.forEach(function (row, index) {
+          var definition = state.rows[index];
+          row.pendingStage = '';
+          if (value == null || row.status !== 'ok') return;
+          if (row.assessment) {
+            if (staged.indexOf(definition.id) !== -1) row.pendingStage = 'Dla stadium ' + ask.label;
+            return;
+          }
+          if (row.own || row.norm || !row.range || !row.range.range) return;
+          var described = packagePatient(definition.id);
+          if (!described || !described.patient) return;
+          var other = m.evaluateRow({ converter: converter(), snapshot: snapshot(), data: w.LabUnitsData || null, analyteId: definition.id,
+            raw: entered[index].raw, unit: entered[index].unit, patient: Object.assign({}, described.patient, { tanner: value }),
+            capturedAtISO: new Date().toISOString(), own: '' });
+          if (other.status === 'ok' && other.range && other.range.range && other.range.range.id !== row.range.range.id) {
+            row.pendingStage = 'Norma dla Tanner ' + TANNER_ROMAN[value - 1];
+          }
+        });
       }
       // Pojedyncze badanie z wybranym badaniem; wartość wpisuje tam lekarz (ta sama droga co ?badanie=<id>).
       function openSingle(analyteId) {
@@ -1743,12 +1900,19 @@
         var invalid = wrong.length > 0 || wrongNorms.length > 0;
         // Wiek wizyty łamie się w całości, nie na pojedynczej literze.
         var visit = m.formatVisitAge(m.linkedAgeMonths(ctx.sessionPatient)).replace(/ /g, NBSP);
-        parts.saveCtx.textContent = ctx.name + (visit ? ' · wizyta:' + NBSP + visit : '');
+        // PR7: przy dawnej próbce pasek nazywa dzień pobrania i wiek, dla którego liczona jest ocena.
+        var sampleAge = dated() && state.sample.age ? m.formatVisitAge(state.sample.age.years * 12 + state.sample.age.months).replace(/ /g, NBSP) : '';
+        parts.saveCtx.textContent = ctx.name + (dated()
+          ? ' · pobranie' + NBSP + m.formatDate(state.sample.dateISO) + (sampleAge ? ' · ' + sampleAge : '')
+          : visit ? ' · wizyta:' + NBSP + visit : '');
+        var waiting = rows.filter(function (row) { return row.status === 'ok' && !!row.pendingStage; }).length;
         // Błędne pole wstrzymuje cały zapis — wiersz mówi to zamiast liczby wyników.
         parts.saveSub.textContent = wrong.length
           ? 'popraw wynik: ' + wrong.join(', ') + ' — do tego czasu zapis jest wstrzymany'
           : wrongNorms.length
             ? 'popraw normę z wydruku: ' + wrongNorms.join(', ') + ' — do tego czasu zapis jest wstrzymany'
+          : filled && waiting
+            ? 'Stadium niepotwierdzone — ' + filled + ' ' + m.plural(filled, ['wynik zapisze', 'wyniki zapiszą', 'wyników zapisze']) + ' się z oceną według wieku'
           : filled
             ? filled + ' ' + m.plural(filled, ['wynik trafi', 'wyniki trafią', 'wyników trafi']) + ' do Badań w karcie pacjenta'
             : 'wpisz wyniki z wydruku — trafią do Badań w karcie pacjenta';
@@ -1763,7 +1927,7 @@
         if (!typed && state.done && state.done.copy) {
           return { ok: true, error: '', text: state.done.copy.text, names: state.done.copy.names, saved: true };
         }
-        return model().buildCopyText({ rows: rows, dateISO: parts.date.value, todayISO: today() });
+        return model().buildCopyText({ rows: rows, dateISO: parts.date.value, todayISO: today(), dateError: sampleDateError() });
       }
       function drawCopy(rows) {
         var source = copySource(rows);
@@ -1772,6 +1936,8 @@
       }
       function copyResults() {
         if (state.busy) return;
+        syncSample();
+        drawPuberty();
         var source = copySource(evaluate());
         if (!source.ok) { refresh(); return; }
         // vilda_schowek.js to jedyne miejsce zapisu do schowka (tekst dla systemu szpitalnego, iOS); zapis musi
@@ -1867,15 +2033,19 @@
         if (ctx.gate) return;
         if (state.previousFor !== state.pid) loadPrevious();
 
-        // PR6: opis pokwitania najpierw — od niego zależy stadium, którym strona ocenia cały pakiet.
+        // PR7: dzień pobrania najpierw — od niego zależy wiek pacjenta dla całego pakietu.
+        var sample = syncSample();
+        // PR6: opis pokwitania przed oceną — od niego zależy stadium, którym strona ocenia cały pakiet.
         drawPuberty();
         var m = model();
-        var dateError = m.validDate(parts.date.value, today());
-        var otherDay = !dateError && parts.date.value !== today();
+        var dateError = m.validDate(parts.date.value, today()) || sampleDateError();
+        // Ocena dla dzisiejszego wieku przy innej dacie pobrania (brak daty urodzenia) — dotychczasowa zasada.
+        var otherDay = !dateError && parts.date.value !== today() && !dated();
         state.otherDay = otherDay;
         var described = packagePatient();
         var description = described && described.description || null;
         var rows = evaluate();
+        markPendingStage(rows);
         var sources = [];
         rows.forEach(function (row, index) {
           var definition = state.rows[index];
@@ -1898,10 +2068,24 @@
 
         // PR6: ocena pokwitaniowa dotyczy danych pacjenta z dnia wpisu — przy innej dacie pobrania zapis ją unieważnia.
         var assessedNames = rows.filter(function (row) { return row.status === 'ok' && !!row.assessment; }).map(function (row) { return row.short; });
-        parts.dateNote.hidden = !dateError && !otherDay;
+        var sampleText = !dateError && dated() ? m.describeSample(sample) : null;
+        parts.dateNote.hidden = !dateError && !otherDay && !sampleText;
         parts.dateNote.textContent = dateError || (otherDay
-          ? OTHER_DAY_NOTE + (assessedNames.length ? ' Ocena pokwitaniowa (' + assessedNames.join(', ') + ')' + OTHER_DAY_PUBERTY : '') : '');
+          ? OTHER_DAY_NOTE + (assessedNames.length ? ' Ocena pokwitaniowa (' + assessedNames.join(', ') + ')' + OTHER_DAY_PUBERTY : '')
+            + (sample.mode === 'no-birth-date' ? NO_BIRTH_NOTE : '') : '');
+        if (sampleText) {
+          // PR7: wiek, dla którego pakiet ocenia wyniki, stoi w zdaniu wyróżniony.
+          parts.dateNote.appendChild(doc.createTextNode(sampleText.before));
+          add(parts.dateNote, 'strong', 'lab-pkg-date-age', sampleText.age);
+          parts.dateNote.appendChild(doc.createTextNode(sampleText.after));
+        }
         parts.dateNote.classList.toggle('is-error', !!dateError);
+        parts.dateNote.classList.toggle('is-sample', !!sampleText);
+        var askState = stageSample();
+        parts.resultsHint.textContent = dated()
+          ? 'na żywo, dla wieku' + (askState && ['confirmed', 'entered', 'same-day'].indexOf(askState.status) !== -1 ? ' i stadium' : '')
+            + ' w dniu pobrania · ' + m.formatDate(sample.dateISO)
+          : 'na żywo, dla danych pacjenta z karty';
 
         drawUnitsHint();
         drawNormHints();
@@ -1914,7 +2098,8 @@
         markStep(parts.step2, anyOk && !anyInvalid, true);
         markStep(parts.stepNorms, anyNorm && !anyNormError, false);
         markStep(parts.step3, anyOk && !dateError, false);
-        markStep(parts.step4, anyOk && !missing, false);
+        markStep(parts.step4, anyOk && !missing && !stagePending(), false);
+        parts.step4.classList.toggle('is-ask', stagePending());
 
         drawSave(ctx, rows);
         drawCopy(rows);
@@ -1975,10 +2160,14 @@
         if (state.busy) return;
         var m = model(), ctx = context();
         if (ctx.gate) { refresh(); return; }
+        // PR7: ocena policzona dla dnia pobrania zapisuje się jako aktualna dla tego dnia.
+        var sample = syncSample();
+        drawPuberty();
         var rows = evaluate();
         var plan = m.planSave({
           rows: rows, patientId: ctx.pid, dateISO: parts.date.value, todayISO: today(), comment: parts.comment.value,
-          linkedAgeMonths: m.linkedAgeMonths(ctx.sessionPatient), snapshot: snapshot(), assessmentSnapshot: assessmentSnapshot()
+          linkedAgeMonths: m.linkedAgeMonths(ctx.sessionPatient), snapshot: snapshot(), assessmentSnapshot: assessmentSnapshot(),
+          assessedForISO: sample.mode === 'dated' ? sample.dateISO : today(), dateError: sampleDateError()
         });
         state.done = null;
         if (!plan.ok) { state.error = plan.error; refresh(); return; }
@@ -2005,7 +2194,7 @@
           var count = saved.length;
           var date = m.formatDate(parts.date.value);
           // Tekst zapisanego zestawu zostaje do skopiowania po wyczyszczeniu formularza.
-          var copy = m.buildCopyText({ rows: saved, dateISO: parts.date.value, todayISO: today() });
+          var copy = m.buildCopyText({ rows: saved, dateISO: parts.date.value, todayISO: today(), dateError: sampleDateError() });
           clearValues(true);
           state.done = {
             title: 'Zapisano ' + count + ' ' + m.plural(count, ['wynik', 'wyniki', 'wyników']) + ' w karcie pacjenta',
@@ -2572,7 +2761,7 @@
 
     var instance = null;
     return Object.freeze({
-      version: '1.5.0',
+      version: '1.6.0',
       start: function () {
         if (instance || !win || !win.document) return instance;
         instance = create(win);

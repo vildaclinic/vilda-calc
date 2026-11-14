@@ -934,7 +934,9 @@
         stage: { hidden: stageRow.hidden, summary: stageSummary.textContent, action: refineStage.textContent,
           disabled: refineStage.disabled, hint: stageHint.textContent, editor: !sharedEditorHost.hidden,
           local: !!localAssessment, kind: observation.kind, value: observation.stage,
-          current: observation.appliesToCurrentContext === true },
+          current: observation.appliesToCurrentContext === true,
+          // PR7: czy źródło tego badania ma zakresy dla stadium (inhibina B — tylko dla wieku).
+          references: stageReferencesAvailable() },
         cycle: { hidden: wrappers.reproductiveContext.hidden, value: fields.reproductiveContext.value,
           choices: Array.prototype.map.call(fields.reproductiveContext.options, function (option) { return [option.value, option.textContent]; }) },
         contextLine: contextLine.hidden ? '' : contextLine.textContent
@@ -949,7 +951,7 @@
       getAssessmentView: assessmentView, editObservation: editSharedObservation, setReproductiveContext: setReproductiveContext, getPresentation: getPresentation };
   }
 
-  var api = { version: '1.17.0', buildInput: buildInput, sharedObservationFields: sharedObservationFields,
+  var api = { version: '1.18.0', buildInput: buildInput, sharedObservationFields: sharedObservationFields,
     parseGestationalAge: parseGestationalAge, parsePostnatalDays: parsePostnatalDays, mount: mount };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.VildaLabPubertyUI = api;

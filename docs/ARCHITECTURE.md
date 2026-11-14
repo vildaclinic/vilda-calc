@@ -182,7 +182,13 @@ Do tej warstwy należą m.in.:
   pacjenta i pojedynczego badania. Pakiet zapisuje tę kopertę w postaci przypięcia pojedynczego wyniku
   (`labResult.assessment`, związana z datą badania) i rysuje ją wspólnym widokiem `VildaLabAssessmentUI`;
   nie ma własnych norm ani reguł doboru zakresu. Zmiana w `VildaLabPubertyUI.mount` dotyczy więc obu
-  instancji. Adres `?pakiet=<slug albo identyfikator własnego
+  instancji. Przy dacie pobrania wcześniejszej niż dziś (LAB-PAKIETY PR7) pakiet zgłasza ją stronie
+  (`packagePuberty.setSampleDate`), a strona podaje niewidocznej instancji pacjenta „w dniu pobrania”
+  (`packageSampleAdjust`: wiek z daty urodzenia na ten dzień, stadium dzisiejszej wizyty jako obserwacja
+  z innego dnia) i ten sam wiek normom katalogu (`getPackagePatient`); stadium z karty lekarz potwierdza
+  jednym kliknięciem (`confirmStage` — lokalna korekta formularza). Silniki nie dostają daty próbki: ocena
+  jest tą, którą dałyby pacjentowi w tym wieku. Pojedyncze badanie nie zna daty pobrania. Adres
+  `?pakiet=<slug albo identyfikator własnego
   pakietu>`; skrót w zakładce „Badania”. Norma laboratorium z wydruku
   (opcjonalna, w jednostce wyniku) zastępuje normę aplikacji dla danego wyniku i zapisuje się w
   `labResult.norm` — polu edytora wyniku; podpowiedź normy i jednostki pochodzi wyłącznie z poprzedniego

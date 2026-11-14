@@ -115,7 +115,7 @@
   <link rel="icon" type="image/png" sizes="48x48" href="/pwa-icons/icon-48x48.png">
   <link rel="icon" type="image/png" sizes="96x96" href="/pwa-icons/icon-96x96.png">
 
-  <link href="inline_przelicznik_jednostek_00.css?v=13" rel="stylesheet">
+  <link href="inline_przelicznik_jednostek_00.css?v=14" rel="stylesheet">
 
   <script src="vilda_chrome.js?v=287"></script>
   <script src="lucide.min.js?v=1" defer></script>
@@ -487,7 +487,7 @@
   <script src="vilda_puberty_assessment_context.js?v=1"></script>
   <link rel="stylesheet" href="vilda_puberty_assessment_ui.css?v=1">
   <script src="vilda_puberty_assessment_ui.js?v=1"></script>
-  <script src="vilda_lab_puberty_ui.js?v=23"></script>
+  <script src="vilda_lab_puberty_ui.js?v=24"></script>
   <script src="vilda_zrodla_pacjenta.js?v=1"></script>
   <script src="vilda_puberty_source.js?v=13"></script>
   <script src="vilda_lab_neonatal_context.js?v=5"></script>
@@ -519,7 +519,7 @@
   <script src="lab_pin_result.js?v=11"></script>
   <script src="vilda_lab_history.js?v=6"></script>
   <script src="lab_history_strip.js?v=4"></script>
-  <script src="vilda_lab_packages.js?v=6"></script>
+  <script src="vilda_lab_packages.js?v=7"></script>
   <!-- P2 (2026-06-07): 939 KB paneli klinicznych ładowane LENIWIE — strona startuje
        bez parsowania największego pliku w aplikacji. Konsument ma bezpieczny getter
        (global_LabClinicalPanels) z fallbackiem do zwykłego wyszukiwania, więc okno
@@ -2354,6 +2354,139 @@
      */
     var packagePubertyUI = null, packagePubertyAnalyte = null, packagePubertyCycle = 'unknown', packagePubertySex = null;
     var packagePubertyListeners = [], packagePubertyActive = false, packagePubertyStageAnalyte = null;
+    /**
+     * LAB-PAKIETY PR7 — ocena w dniu pobrania (makieta i decyzje właściciela z 2026-11-14).
+     * Gdy data pobrania pakietu jest wcześniejsza niż dziś, a dane pacjenta mają datę urodzenia, pakiet ocenia
+     * wyniki tak, jak oceniłby je w dniu pobrania: niewidoczna instancja formularza dostaje pacjenta w wieku
+     * z tego dnia (ukończone lata i miesiące z daty urodzenia), a stadium z karty liczy się tylko wtedy, gdy
+     * oceniono je w dniu pobrania; w pozostałych przypadkach lekarz potwierdza je jednym kliknięciem albo wpisuje
+     * („Zmień ocenę”) — obie drogi to lokalna korekta tego sprawdzenia, jak w PR6. Silniki, normy i ich polityki
+     * zostają bez zmian. Bez daty urodzenia obowiązuje dotychczasowa zasada (ocena dla dzisiejszego wieku,
+     * zapis jako „wymaga ponownej oceny”).
+     */
+    var packageSampleRequestISO = null, packageSampleTodayISO = null, packageSampleEffectiveISO = null;
+    var packageSampleCurrent = { mode: 'today', dateISO: null }, packageSampleConfirmed = null;
+    var packageSampleStageStatus = 'none', packageSampleCard = null, packageSampleAutoTried = null;
+    function packageISODate(value) {
+      var match = typeof value === 'string' && /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
+      if (!match) return null;
+      var year = Number(match[1]), month = Number(match[2]), day = Number(match[3]);
+      var time = Date.UTC(year, month - 1, day), date = new Date(time);
+      return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day
+        ? { year: year, month: month - 1, day: day, time: time, iso: match[0] } : null;
+    }
+    // Ukończone lata i miesiące kalendarzowe. Miesięcznica w krótszym miesiącu przypada w jego ostatnim dniu —
+    // ta sama zasada co wiek z dat w silniku LH/FSH (anniversaryPolicy: clamp-to-last-calendar-day).
+    function packageAgeAt(birthISO, dateISO) {
+      var birth = packageISODate(birthISO), date = packageISODate(dateISO);
+      if (!birth || !date || date.time < birth.time) return null;
+      var anniversary = function (count) {
+        var year = birth.year + Math.floor((birth.month + count) / 12), month = (birth.month + count) % 12;
+        return Date.UTC(year, month, Math.min(birth.day, new Date(Date.UTC(year, month + 1, 0)).getUTCDate()));
+      };
+      var months = (date.year - birth.year) * 12 + date.month - birth.month;
+      if (anniversary(months) > date.time) months -= 1;
+      return { years: Math.floor(months / 12), months: months % 12, totalMonths: months };
+    }
+    function packageAgeParts(years, months) {
+      var y = years === '' || years == null ? null : Number(years), m = months === '' || months == null ? 0 : Number(months);
+      return Number.isInteger(y) && y >= 0 && Number.isInteger(m) && m >= 0 && m <= 11 ? { years: y, months: m, totalMonths: y * 12 + m } : null;
+    }
+    // mode: 'today' (pobranie dziś albo data niepoprawna), 'dated' (ocena w dniu pobrania),
+    // 'no-birth-date' (brak daty urodzenia — dotychczasowa zasada), 'before-birth' (data sprzed urodzenia).
+    function packageSampleState(context) {
+      var today = packageISODate(packageSampleTodayISO), date = packageISODate(packageSampleRequestISO);
+      if (!today || !date || date.time >= today.time) return { mode: 'today', dateISO: null };
+      var state = { mode: 'no-birth-date', dateISO: date.iso, daysAgo: Math.round((today.time - date.time) / 86400000),
+        today: context && context.sourceStatus === 'ready' ? packageAgeParts(context.ageYears, context.ageMonths) : null };
+      var birth = context && context.sourceStatus === 'ready' ? packageISODate(context.birthDateISO) : null;
+      if (!birth) return state;
+      if (date.time < birth.time) { state.mode = 'before-birth'; return state; }
+      state.mode = 'dated';
+      state.age = packageAgeAt(birth.iso, date.iso);
+      return state;
+    }
+    // Stadium z karty (G u chłopca, Th u dziewczynki), o które pakiet pyta przy dawnej próbce: bieżące stadium
+    // dzisiejszej wizyty (live) albo wcześniejsza obserwacja z karty.
+    function packageCardStage(context) {
+      var active = context && context.pubertyAssessmentContext;
+      var axis = context && context.sex === 'M' ? 'G' : context && context.sex === 'F' ? 'Th' : null;
+      if (!active || !axis) return null;
+      var day = function (value) { var date = packageISODate(value); return date ? date.iso : null; };
+      var live = context.gonadalObservation;
+      if (active.available && live && live.kind === axis && live.current === true && Number.isInteger(live.stage)) {
+        return { kind: axis, stage: live.stage, observedAtISO: day(live.observedAtISO), live: true };
+      }
+      var read = active.assessmentContext, assessment = read && read.status === 'ready' ? read.assessment : null;
+      var observation = assessment && assessment.sex === context.sex && assessment.observations ? assessment.observations[axis] : null;
+      return observation && Number.isInteger(observation.stage) && observation.stage >= 1 && observation.stage <= 5
+        ? { kind: axis, stage: observation.stage, observedAtISO: day(observation.observedAtISO), live: false } : null;
+    }
+    // Pacjent „w dniu pobrania” dla niewidocznej instancji formularza. Nie zmienia danych pacjenta ani
+    // pojedynczego badania: to kopia kontekstu z wiekiem z dnia pobrania.
+    function packageSampleAdjust(context) {
+      var state = packageSampleState(context);
+      if (state.mode !== 'dated' || !state.age) return context;
+      var next = Object.assign({}, context);
+      next.ageYears = state.age.years;
+      next.ageMonths = state.age.months;
+      // Wiek w dniach (noworodek, minipokwitanie) cofa się o liczbę dni od pobrania. Wiek kalendarzowy „na dziś”
+      // i ogony wykresowe nie mają odpowiednika dla dawnej próbki — silnik pracuje wtedy na latach i miesiącach.
+      delete next.infantLhChronologicalAge;
+      delete next.infantTtChronologicalAge;
+      if (context.neonatalAge) {
+        var days = context.neonatalAge.postnatalDays, neonatal = { postnatalDays: null, gestationalDays: context.neonatalAge.gestationalDays || null };
+        // Przedział dni zachowuje szerokość (daty kalendarzowe dają [d−1, d]); dolna granica nie schodzi poniżej dnia urodzenia.
+        if (days && Number.isInteger(days.lower) && Number.isInteger(days.upper) && days.upper - state.daysAgo >= 0) {
+          neonatal.postnatalDays = Object.assign({}, days, { lower: Math.max(0, days.lower - state.daysAgo), upper: days.upper - state.daysAgo });
+        }
+        if (neonatal.postnatalDays || neonatal.gestationalDays) next.neonatalAge = neonatal;
+        else delete next.neonatalAge;
+      }
+      // Stadium dzisiejszej wizyty nie jest stadium dawnej próbki. Zostaje widoczne jako obserwacja z innego dnia
+      // (tak jak wcześniejsza ocena z karty), a edycja w pakiecie jest lokalna — nie zmienia oceny tej wizyty.
+      var active = context.pubertyAssessmentContext, card = packageCardStage(context);
+      if (active && active.available && !(card && card.live && card.observedAtISO === state.dateISO)) {
+        var states = {};
+        ['G', 'Th', 'P'].forEach(function (axis) { states[axis] = { current: false, eligible: false, reason: 'earlier-observation' }; });
+        next.pubertyAssessmentContext = Object.assign({}, active, { available: false, scope: 'local', canEditVisit: false,
+          gonadal: null, growth: null, axisStates: states });
+        next.gonadalObservation = null;
+      }
+      return next;
+    }
+    // Wołane przez pakiet przy każdym odświeżeniu: ustala dzień pobrania dla całego pakietu.
+    function packageSampleSet(dateISO, todayISO) {
+      packageSampleRequestISO = typeof dateISO === 'string' ? dateISO : null;
+      packageSampleTodayISO = typeof todayISO === 'string' ? todayISO : null;
+      var state = packageSampleState(readPubertyPatientContextFor(null));
+      var effective = state.mode === 'dated' ? state.dateISO : null;
+      if (effective !== packageSampleEffectiveISO) {
+        packageSampleEffectiveISO = effective;
+        packageSampleConfirmed = null;
+        packageSampleAutoTried = null;
+        // Potwierdzenie i korekta stadium dotyczą konkretnego dnia. Przy innym dniu pobrania pacjent ma inny
+        // wiek, więc lokalne poprawki formularza nie przechodzą dalej i pytanie o stadium wraca.
+        if (packagePubertyUI) { try { packagePubertyUI.reset(); } catch (_) { /* kontekst wczyta się od nowa */ } }
+      }
+      packageSampleCurrent = state;
+      return state;
+    }
+    function packageSampleView(state) {
+      var age = function (parts) { return parts ? { years: parts.years, months: parts.months } : null; };
+      return { mode: state.mode, dateISO: state.dateISO || null, daysAgo: state.daysAgo == null ? null : state.daysAgo,
+        age: age(state.age), today: age(state.today) };
+    }
+    // „Tak, Th2”: stadium z karty obowiązuje dla dnia pobrania — ta sama lokalna korekta co „Zmień ocenę”.
+    function packagePubertyConfirmStage(auto) {
+      var card = packageSampleCard, ui = packagePubertyStageRuntime();
+      if (!card || !ui || !packageSampleEffectiveISO) return { ok: false, reason: 'unavailable' };
+      var result = ui.editObservation(card.kind, card.stage);
+      if (result === true || result && result.ok) {
+        packageSampleConfirmed = { identity: card.identity, dateISO: packageSampleEffectiveISO, kind: card.kind, stage: card.stage, auto: auto === true };
+      }
+      return result;
+    }
     function packagePubertyRuntime() {
       if (packagePubertyUI || !window.VildaLabPubertyUI) return packagePubertyUI;
       try {
@@ -2377,7 +2510,8 @@
         packagePubertyUI = window.VildaLabPubertyUI.mount({
           document: hidden, persistence: persistence, sharedEditor: false,
           readPatientContext: function () {
-            return readPubertyPatientContextFor(packagePubertyAnalyte ? Conv.find(packagePubertyAnalyte) : null);
+            // PR7: przy dawnej próbce — pacjent w wieku z dnia pobrania (packageSampleAdjust).
+            return packageSampleAdjust(readPubertyPatientContextFor(packagePubertyAnalyte ? Conv.find(packagePubertyAnalyte) : null));
           },
           // Stan domyślny pojedynczego badania: bez danych próbki. Leczenie GnRHa z karty niesie kontekst pacjenta.
           readMeasurementContext: function () { return {}; },
@@ -2411,7 +2545,9 @@
       var ids = (Array.isArray(analyteIds) ? analyteIds : []).filter(function (id) { return isPubertySubstance({ id: String(id || '') }); });
       packagePubertyActive = ids.length > 0;
       packagePubertyStageAnalyte = null;
-      var out = { available: false, ready: false, sourceStatus: 'unavailable', sex: '', stage: null, cycle: null, contextLine: '' };
+      var out = { available: false, ready: false, sourceStatus: 'unavailable', sex: '', stage: null, cycle: null, contextLine: '',
+        sample: packageSampleView(packageSampleCurrent), stageAnalytes: [] };
+      var stageView = null;
       ids.forEach(function (id, index) {
         var selected = packagePubertySelect(id);
         if (!selected) return;
@@ -2426,13 +2562,45 @@
         packagePubertySex = view.sex;
         if (!index || !out.ready) { out.ready = view.ready; out.sourceStatus = view.sourceStatus; out.sex = view.sex; }
         if (!out.contextLine && view.contextLine) out.contextLine = view.contextLine;
+        // Badania, których ocena korzysta ze stadium (inhibina B ma zakresy tylko dla wieku).
+        if (!view.stage.hidden && view.stage.references !== false) out.stageAnalytes.push(String(id));
         if (!out.stage && !view.stage.hidden) {
           packagePubertyStageAnalyte = String(id);
+          stageView = view.stage;
           out.stage = { summary: view.stage.summary, action: view.stage.action, disabled: view.stage.disabled,
             hint: view.stage.hint, editor: view.stage.editor, local: view.stage.local };
         }
         if (!out.cycle && !view.cycle.hidden) out.cycle = { value: view.cycle.value, choices: view.cycle.choices };
       });
+      // PR7: przy dawnej próbce stadium z karty czeka na potwierdzenie, chyba że oceniono je w dniu pobrania
+      // albo lekarz wpisał je w pakiecie.
+      packageSampleCard = null;
+      packageSampleStageStatus = 'none';
+      if (out.stage && stageView && packageSampleCurrent.mode === 'dated') {
+        var cardContext = readPubertyPatientContextFor(Conv.find(packagePubertyStageAnalyte));
+        var card = packageCardStage(cardContext), identity = String(cardContext && cardContext.identityKey || '');
+        var applied = stageView.current === true && Number.isInteger(stageView.value);
+        // Potwierdzenie należy do tej osoby, tego dnia i tego stadium.
+        var confirmed = packageSampleConfirmed && packageSampleConfirmed.identity === identity ? packageSampleConfirmed : null;
+        var status = applied && stageView.local
+          ? confirmed && confirmed.dateISO === packageSampleCurrent.dateISO && confirmed.kind === stageView.kind && confirmed.stage === stageView.value
+            ? confirmed.auto ? 'same-day' : 'confirmed' : 'entered'
+          : applied ? 'same-day' : card ? 'pending' : 'none';
+        packageSampleCard = card ? Object.assign({ identity: identity }, card) : null;
+        var sameDayKey = card ? [identity, packageSampleCurrent.dateISO, card.kind, card.stage].join('|') : null;
+        if (status === 'pending' && !card.live && card.observedAtISO === packageSampleCurrent.dateISO && packageSampleAutoTried !== sameDayKey) {
+          // Wcześniejsza obserwacja z karty pochodzi z dnia pobrania: obowiązuje bez pytania.
+          packageSampleAutoTried = sameDayKey;
+          var auto = packagePubertyConfirmStage(true);
+          if (auto === true || auto && auto.ok) return packagePubertyPresentation(analyteIds);
+        }
+        packageSampleStageStatus = status;
+        out.stage.sample = { status: status, label: card ? card.kind + card.stage : '',
+          kind: card ? card.kind : '', value: card ? card.stage : null,
+          applied: applied ? String(stageView.kind) + stageView.value : '',
+          observedAtISO: card ? card.observedAtISO : null,
+          observedToday: !!(card && card.observedAtISO && card.observedAtISO === packageSampleTodayISO) };
+      }
       return out;
     }
     // Edytor stadium pakietu (VildaPubertyAssessmentUI.mountEditor) czyta i zapisuje przez tę samą instancję.
@@ -2475,6 +2643,16 @@
       p._shared_tanner_kind = shared.tannerKind || null;
       p._shared_tanner_current = shared.tannerCurrent == null ? null : shared.tannerCurrent;
       p._tanner_overridden = false;
+      // PR7: przy dawnej próbce cały pakiet liczy wiek z daty urodzenia na dzień pobrania (ukończone lata
+      // i miesiące — ta sama dokładność co wiek z karty). Stadium, które czeka na potwierdzenie dla dnia
+      // pobrania, nie dobiera normy według Tannera.
+      var sample = packageSampleCurrent;
+      if (sample.mode === 'dated' && sample.age) {
+        p.age = sample.age.years + sample.age.months / 12;
+        p.life_stage = p.age >= 18 ? 'adult' : 'pediatric';
+        p._age_at_sample = true;
+        if (packagePubertyActive && packageSampleStageStatus === 'pending') p.tanner = null;
+      }
       // PR6: stadium poprawione w pakiecie („Zmień ocenę”) zastępuje stadium z karty dla całego pakietu —
       // tak jak lokalne nadpisanie Tannera w pojedynczym badaniu; karta pacjenta zostaje bez zmian.
       var localStage = packagePubertyLocalStage();
@@ -2486,7 +2664,7 @@
       var description = describePatient(p);
       if (analyteId === 'estradiol') {
         // Ten sam nośnik wieku co blok estradiolu w getEffectivePatient (rok lub miesiąc nie staje się dniem).
-        var e2Source = readPubertyPatientContextFor(Conv.find('estradiol'));
+        var e2Source = packageSampleAdjust(readPubertyPatientContextFor(Conv.find('estradiol')));
         var e2Age = e2Source.sourceStatus === 'ready' && lifespanAgeFor(e2Source, false).resolved;
         p.age = e2Age && e2Age.status === 'known' ? e2Age.lowerYears : null;
         p.sex = e2Source.sex || null;
@@ -2541,7 +2719,7 @@
       if (p.sex) bits.push(p.sex === 'M' ? 'Mężczyzna' : 'Kobieta');
       if (p.age != null) {
         var rounded = (p.age < 18) ? p.age.toFixed(1).replace(/\.0$/, '') : Math.round(p.age);
-        bits.push(rounded + ' ' + (p.age < 1 ? 'r.ż.' : 'lat'));
+        bits.push(rounded + ' ' + (p.age < 1 ? 'r.ż.' : 'lat') + (p._age_at_sample ? ' w dniu pobrania' : ''));
       }
       if (p.life_stage === 'pediatric') bits.push('wiek dziecięcy/młodzieńczy');
       if (typeof p.tanner === 'number') {
@@ -4705,8 +4883,15 @@
         },
         editObservation: function (axis, stage) {
           var ui = packagePubertyStageRuntime();
-          return ui ? ui.editObservation(axis, stage) : { ok: false, reason: 'unavailable' };
+          var result = ui ? ui.editObservation(axis, stage) : { ok: false, reason: 'unavailable' };
+          // PR7: ręczna zmiana stadium zastępuje wcześniejsze potwierdzenie stadium z karty.
+          if (result === true || result && result.ok) packageSampleConfirmed = null;
+          return result;
         },
+        // LAB-PAKIETY PR7: dzień pobrania pakietu (od niego zależy wiek pacjenta i pytanie o stadium)
+        // oraz potwierdzenie, że stadium z karty obowiązywało w dniu pobrania.
+        setSampleDate: function (dateISO, todayISO) { return packageSampleView(packageSampleSet(dateISO, todayISO)); },
+        confirmStage: function () { return packagePubertyConfirmStage(false); },
         setCycle: function (value) {
           packagePubertyCycle = String(value || 'unknown');
           packagePubertyListeners.forEach(function (listener) { try { listener(); } catch (_) { /* odbiorca pakietu */ } });

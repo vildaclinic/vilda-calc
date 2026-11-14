@@ -72,6 +72,26 @@ Wyniki z oceną i normą można też od razu skopiować do dokumentacji przycisk
       kobiety bez zmian (pojedyncze badanie);
     - „Kopiuj wyniki”: każde porównanie osobno, z granicą w nawiasie.
 
+## Decyzje właściciela (2026-11-14)
+
+12. Ocena w dniu pobrania (makieta desktop, telefon i stany zaakceptowana 2026-11-14 razem z sześcioma
+    rekomendacjami, z poleceniem kodowania; wcześniej tego dnia: „wiek liczymy z daty urodzenia na dzień
+    pobrania”, stadium trzeba potwierdzać, ale „jak jest wpisane stadium przez użytkownika to tylko pytamy
+    czy potwierdza i koniec bez innych zbędnych pytań”):
+    - przy dacie pobrania wcześniejszej niż dziś pakiet ocenia wyniki dla **wieku z dnia pobrania**,
+      liczonego z daty urodzenia — LH, FSH, inhibinę B i testosteron oraz **normy katalogu** (cały pakiet);
+    - stadium z karty wymaga **jednego potwierdzenia** („Tak, Th2” albo „Zmień ocenę”); stadium ocenione
+      w dniu pobrania albo wpisane w pakiecie obowiązuje bez pytania;
+    - **odniesienie przedpokwitaniowe LH** działa dla dnia pobrania tak samo jak dla pobrania dziś.
+      Rekomendacja mówiła o nowej wersji polityki w danych; wdrożenie osiąga ten sam wynik **bez zmiany
+      polityki i silnika** — pakiet podaje silnikowi pacjenta w wieku z dnia pobrania (`ALGORITHMS.md`,
+      „LAB-PAKIETY PR7”);
+    - bez daty urodzenia w danych pacjenta zostaje zasada z PR6 i podpowiedź, żeby ją uzupełnić;
+    - zapis bez odpowiedzi na pytanie nie jest wstrzymany: wyniki zapisują się z oceną według wieku;
+    - potwierdzenie dotyczy konkretnego dnia: po zmianie daty pytanie wraca;
+    - pojedyncze badanie zostaje bez daty pobrania (wcześniejsza decyzja o usunięciu „Wcześniejszego
+      badania” obowiązuje).
+
 ## Zasady, które obowiązują każdy etap
 
 - Pakiet nie ma własnych norm, wzorów ani współczynników. Ocena i zakres pochodzą z silnika pojedynczego
@@ -94,7 +114,8 @@ Wyniki z oceną i normą można też od razu skopiować do dokumentacji przycisk
 | PR3 | „Kopiuj wyniki” przy pakiecie (punkt 8): tekst „Badania (pobranie …)” z wierszem na wynik, oceną poza normą i normą z ekranu; po zapisie kopiuje zapisany zestaw. Bez zmian w „Podsumowaniu wyników” | scalony 2026-11-13 (PR #945) |
 | PR4 | Kreator własnych pakietów, etap 1 (punkt 9): lista rozwijana pakietów, kreator w zakładce, zapis na koncie, badania „bez oceny w pakiecie” z łączem do pojedynczego badania, ocena pozostałych jak w domyślnym pojedynczym badaniu | scalony 2026-11-13 (PR #946) |
 | PR5 | Każde konto widzi tylko swoje pakiety (punkt 10): osobna kopia pakietów na urządzeniu dla każdego konta, jednorazowe przypisanie starej wspólnej kopii właściwemu kontu | scalony 2026-11-13 (PR #948) |
-| PR6 | Kreator, etap 2 (punkt 11): ocena pokwitaniowa LH, FSH, inhibiny B i testosteronu całkowitego w pakiecie — druga, niewidoczna instancja formularza pojedynczego badania, osie wieku i stadium w karcie wyniku, jedno stadium i jeden wybór „Cykl / menopauza” dla pakietu, zapis tej samej koperty oceny co „Przypnij do wizyty”, zapis z operatorem, norma z wydruku zamiast oceny | ten PR |
+| PR6 | Kreator, etap 2 (punkt 11): ocena pokwitaniowa LH, FSH, inhibiny B i testosteronu całkowitego w pakiecie — druga, niewidoczna instancja formularza pojedynczego badania, osie wieku i stadium w karcie wyniku, jedno stadium i jeden wybór „Cykl / menopauza” dla pakietu, zapis tej samej koperty oceny co „Przypnij do wizyty”, zapis z operatorem, norma z wydruku zamiast oceny | scalony 2026-11-14 (PR #950) |
+| PR7 | Ocena w dniu pobrania (punkt 12): wiek z daty urodzenia na dzień pobrania dla całego pakietu, jedno pytanie o stadium z karty, stan oczekiwania w kartach wyników, zapis oceny jako aktualnej dla dnia pobrania; silniki, normy i polityki bez zmian | ten PR |
 
 ## Otwarte kwestie do decyzji przy kolejnych etapach
 
@@ -116,12 +137,19 @@ Wyniki z oceną i normą można też od razu skopiować do dokumentacji przycisk
 - PR4: zmiany listy pakietów z dwóch urządzeń offline — wygrywa późniejszy zapis całej listy. Scalanie
   wpis po wpisie wymagałoby zmiany w sejfie (jak dla list oczekujących) — osobna decyzja.
 - PR4: wbudowane pakiety poza „Tarczycą” (np. gotowe „Dojrzewanie”) — do decyzji; dziś lekarz składa je sam.
-- PR6: **data pobrania inna niż dziś.** Ocena pokwitaniowa dotyczy wieku i stadium z dnia wpisu, więc przy innej
-  dacie pobrania zapisuje się w karcie jako wymagająca ponownej oceny — dokładnie tak, jak pojedyncze badanie
-  po zmianie daty w oknie przypięcia. Pakiet mówi o tym przy dacie i w karcie wyniku. Ocena „dla wieku w dniu
-  pobrania” wymagałaby osobnej decyzji klinicznej (data oceny stadium, wiek z daty urodzenia).
+- PR6: **data pobrania inna niż dziś** — rozstrzygnięte w PR7 (punkt 12): ocena dla wieku w dniu pobrania,
+  stadium po potwierdzeniu. Zasada z PR6 (zapis jako „wymaga ponownej oceny”) zostaje tylko dla pacjenta
+  bez daty urodzenia.
 - PR6: stadium w pakiecie pojawia się tylko wtedy, gdy pakiet zawiera LH, FSH lub testosteron u pacjenta,
   u którego źródło ma zakresy dla stadium; pakiet z samym estradiolem bierze stadium z karty, jak dotąd.
 - PR6: estradiol u dorosłej kobiety nadal wymaga pojedynczego badania; wspólny wybór „Cykl / menopauza” także
   dla estradiolu — do decyzji.
 - PR6: wynik z pakietu nie niesie odniesienia z wykresu hormonów (wykres jest w pojedynczym badaniu).
+- PR7: **pakiet bez LH, FSH i testosteronu** nie ma wiersza stadium, więc przy dawnej próbce nie pyta o nie —
+  norma katalogu według Tannera (np. sam estradiol) bierze stadium z karty jak dotąd. Wiersz stadium
+  i pytanie także w takim pakiecie — do decyzji.
+- PR7: **leczenie GnRHa i wywiad pokwitania** pochodzą z karty w stanie na dziś; pakiet nie pyta o ich stan
+  w dniu pobrania.
+- PR7: **wiek w dniach u noworodka** dla norm katalogu — pakiet liczy ukończone miesiące, jak karta pacjenta;
+  przedziały dobowe wymagałyby osobnej decyzji (i tej samej dokładności przy pobraniu dziś).
+- PR7: łącze „uzupełnij datę urodzenia” prowadzące wprost do danych pacjenta — dziś jest sama podpowiedź.

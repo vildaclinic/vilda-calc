@@ -122,6 +122,12 @@ Nie odtwarzaj usuniętych elementów jako domyślnej części nowego modułu:
 - „Wcześniejsze badanie”, „Wynik z innej daty” i dodatkową datę pobrania;
 - „Zakres z wydruku” i przepisywanie norm laboratoryjnych.
 
+Wyjątek zatwierdzony przez właściciela 2026-11-14 dotyczy wyłącznie **pakietu badań**, który od początku
+ma pole „Data pobrania” (LAB-PAKIETY PR7): przy dacie wcześniejszej niż dziś pakiet ocenia wyniki dla
+wieku z dnia pobrania i zadaje jedno pytanie, czy stadium z karty obowiązywało tego dnia. Pojedyncze
+badanie zostaje bez daty pobrania i bez takiego potwierdzenia. Nie przenoś tego pytania do pojedynczego
+badania i nie dodawaj w pakiecie kolejnych pytań o dzień pobrania (leczenie, wywiad) bez osobnej decyzji.
+
 Nową potrzebę kliniczną rozwiąż najpierw odczytem istniejących danych lub
 ograniczeniem zakresu działania. Jeśli dodatkowa informacja jest konieczna,
 przedstaw jej rzeczywisty wpływ i najprostszy wariant obsługi. Nie dodawaj
@@ -230,6 +236,7 @@ Punkty wejścia obecnej implementacji, do sprawdzenia przed zmianą:
 | Formularz i dane pacjenta | `vilda_lab_puberty_ui.js`, `vilda_puberty_source.js`, `vilda_lab_neonatal_context.js` |
 | Integracja i jednostki | `przelicznik-jednostek.html` (m.in. `VildaLabPubertyRuntime` w skrypcie strony), `lab_unit_converter.js` |
 | Pakiet badań (LAB-PAKIETY PR6) | `vilda_lab_packages.js` i `packagePubertyRuntime` w skrypcie strony: druga, niewidoczna instancja tego samego formularza ocenia LH, FSH, inhibinę B i testosteron w pakiecie w stanie domyślnym pojedynczego badania. Zmiana formularza, silnika lub koperty oceny działa w obu miejscach; zgodności pilnuje `tests/e2e/lab-pakiet-pokwitanie.spec.mjs` |
+| Pakiet badań — ocena w dniu pobrania (LAB-PAKIETY PR7) | `packageSampleAdjust`, `packageSampleSet` i `getPackagePatient` w skrypcie strony: przy dawnej próbce formularz pakietu dostaje pacjenta w wieku z dnia pobrania, a stadium dzisiejszej wizyty jako obserwację z innego dnia. Zmiana tego, jak kontekst pacjenta niesie wiek, wiek w dniach albo ocenę pokwitania (`readPubertyPatientContext`), wymaga sprawdzenia tej kopii; zgodności z oceną pacjenta w tym samym wieku „na dziś” pilnuje `tests/e2e/lab-pakiet-dzien-pobrania.spec.mjs` |
 | Osie i zapis oceny | `vilda_lab_assessment_ui.js`, `vilda_lab_assessment_ui.css`, `vilda_lab_snapshot.js` |
 | Uzasadnienia kliniczne | [LH_FSH.md](LH_FSH.md), [ALGORITHMS.md](ALGORITHMS.md) |
 

@@ -3083,6 +3083,126 @@
       color: #8a3b0d;
     }
 
+    /* LAB-PAKIETY PR7: ocena w dniu pobrania. Krok „Pacjent” zadaje jedno pytanie o stadium z karty,
+       a ocena według stadium (albo norma według Tannera) czeka w karcie wyniku na odpowiedź. */
+    .lab-pkg-stage-value {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 2px var(--space-8px);
+      min-width: 0;
+    }
+
+    .lab-pkg-stage-meta {
+      font-size: .86rem;
+      line-height: 1.3;
+      color: var(--text-2);
+    }
+
+    .lab-pkg-stage-chip {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px var(--space-10px);
+      border-radius: var(--radius-pill);
+      background: #eef1f2;
+      color: #33464e;
+      font-size: .78rem;
+      font-weight: 600;
+      line-height: 1.4;
+    }
+
+    .lab-pkg-stage-chip.is-confirmed {
+      background: rgba(29,158,117,0.12);
+      color: #0f6e56;
+    }
+
+    .lab-pkg-stage-meta[hidden],
+    .lab-pkg-stage-chip[hidden],
+    .lab-pkg-stage-ask[hidden] {
+      display: none;
+    }
+
+    .lab-pkg-stage-ask {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-10px);
+      padding: var(--space-12px);
+      border: 1.5px solid #e0a468;
+      border-radius: var(--radius-12);
+      background: #fff7ee;
+    }
+
+    .lab-pkg-stage-ask p.lab-pkg-stage-ask-text {
+      margin: 0;
+      font-size: .96rem;
+      font-weight: 600;
+      line-height: 1.4;
+      color: #4a2508;
+    }
+
+    .lab-pkg-stage-ask-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-8px);
+    }
+
+    #labPackageCard button.lab-pkg-stage-yes {
+      flex: 1 1 180px;
+      border-radius: var(--radius-10) !important;
+    }
+
+    #labPackageCard button.lab-pkg-stage-ask-edit {
+      flex: 0 1 150px;
+      background: #fff !important;
+      border-radius: var(--radius-10) !important;
+    }
+
+    .lab-pkg-stage-ask p.lab-pkg-stage-ask-note {
+      margin: 0;
+      font-size: .8rem;
+      line-height: 1.4;
+      color: #5c3410;
+    }
+
+    .lab-step-num.is-ask {
+      background: #fdeee0;
+      color: #8a3b0d;
+      box-shadow: inset 0 0 0 1.5px #c8742f;
+    }
+
+    .lab-pkg-date-note.is-sample {
+      color: var(--text-2);
+    }
+
+    .lab-pkg-date-note .lab-pkg-date-age {
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .lab-pkg-card-pending {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 2px var(--space-12px);
+      padding: var(--space-4px) var(--space-12px);
+      border: var(--border-hairline) dashed #d9a877;
+      border-radius: var(--radius-10);
+      background: #fffaf4;
+      font-size: .88rem;
+      line-height: 1.4;
+      color: #4a2508;
+    }
+
+    .lab-pkg-card-pending-text {
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+
+    #labPackageCard button.lab-pkg-card-pending-link {
+      font-weight: 600;
+    }
+
     /* LAB-PAKIETY PR4: kreator własnego pakietu — otwiera się w panelu pakietu zamiast formularza. */
     .lab-pkg-creator {
       display: flex;
