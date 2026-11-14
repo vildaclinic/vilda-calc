@@ -22223,6 +22223,9 @@ Przypadki `wejście → oczekiwany wynik`:
   przepisane na `'0'` i serwer bez „events” (także bez klucza).
 - `tests/unit/sync-widok-kolejki.test.mjs`: KW11 (teksty arkusza), KW13–KW17, KW15b (zegar karty przy `'0'`), KW18
   (odznaczenie rzuca), KW19 (`'0'` w ramce), KW22a/b (zapisy `removeItem` i `setItem(…, '0')`, etykieta bez „(test)”).
+- `tests/unit/sync-dziennik-uspienie.test.mjs` U2(b): wąski wyjątek — polityka prywatności może zawierać wyłącznie opis
+  nazwy bazy kolejki (`vilda_sync_&lt;userId&gt;` w tabeli przechowywania, dokładnie raz); poza nim żaden wzorzec ani
+  nazwa z listy.
 - `tests/unit/sync-zadania-bazowe.test.mjs`: wariant „events” bez klucza zastąpiony wariantem cofnięcia (worker bez
   „events”, flaga `'1'`) — zapis bazowy jak dotąd; wariant „events” z `'0'` bez zmian.
 - `tests/e2e/sync-zdarzenia-wysylka.spec.mjs`: dwa urządzenia bez klucza flagi — PUT /blob urządzenia A zablokowany
