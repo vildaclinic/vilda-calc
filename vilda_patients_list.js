@@ -930,7 +930,12 @@
       }
       render();
       if (desktop && initial.focused !== false && !initial.rowFocus) focusTimer = win.setTimeout(() => {
-        if (!alive() || picker) return;
+        focusTimer = null;
+        // The deferred restore only fills the gap after mounting. A busy page can
+        // run it late: once focus is already in this view (the user has selected
+        // the query, placed the caret or chosen a row), the caret saved by the
+        // previous view must not replace that selection or take the focus away.
+        if (!alive() || picker || root.contains(doc.activeElement)) return;
         search.focus();
         if (typeof search.setSelectionRange === 'function' && initial.selectionStart != null) {
           try { search.setSelectionRange(initial.selectionStart, initial.selectionEnd); } catch { /* search input differs across engines */ }

@@ -45,6 +45,30 @@ async function firstVisible(page) {
   });
 }
 
+// page.clock turns requestAnimationFrame into a timer, so two such frames do not
+// prove that the browser has dispatched the scroll or resize event on which the
+// virtual window redraws. Wait for that event; the view's own listener runs
+// first and queues its frame before these two.
+async function scrollListTo(page, top) {
+  await page.locator('.pt-scroll').evaluate((node, value) => new Promise(resolve => {
+    const settle = () => requestAnimationFrame(() => requestAnimationFrame(resolve));
+    const previous = node.scrollTop;
+    node.addEventListener('scroll', settle, { once: true });
+    node.scrollTop = value;
+    if (node.scrollTop === previous) { node.removeEventListener('scroll', settle); settle(); }
+  }), top);
+}
+
+async function resizeViewport(page, size) {
+  await page.evaluate(() => {
+    window.viewportHandled = new Promise(resolve => {
+      window.addEventListener('resize', () => requestAnimationFrame(() => requestAnimationFrame(resolve)), { once: true });
+    });
+  });
+  await page.setViewportSize(size);
+  await page.evaluate(() => window.viewportHandled);
+}
+
 test('870 osób: pojedynczy montaż, mały DOM, wyszukiwanie i sort obejmują całą bazę', async ({ page }) => {
   await openRenderer(page);
   expect(await page.evaluate(() => window.beforeMountDescriptions)).toBe(0);
@@ -81,10 +105,10 @@ test('wirtualne wiersze zachowują kotwicę powrotu i pełną nawigację klawiat
   await page.keyboard.press('Home');
   await expect(page.locator('.pt-row[data-patient-id="fictional-0"] .pt-row-open')).toBeFocused();
   await page.locator('.pt-search input').focus();
-  await page.locator('.pt-scroll').evaluate(node => { node.scrollTop = 30000; });
+  await scrollListTo(page, 30000);
   await expect.poll(async () => (await firstVisible(page)).scrollTop).toBeGreaterThan(20000);
-  await page.evaluate(() => new Promise(resolve => { requestAnimationFrame(() => requestAnimationFrame(resolve)); }));
   const before = await firstVisible(page);
+  expect(before.id).toBeTruthy();
   await page.locator(`.pt-row[data-patient-id="${before.id}"] .pt-row-open`).evaluate(node => node.focus({ preventScroll: true }));
   await page.evaluate(() => {
     const { view, opts } = window.harness;
@@ -114,13 +138,14 @@ test('kotwica nie przenosi się na inną listę; mały wynik i zmiana szerokośc
   await page.locator('.pt-search input').fill('');
   await expect(page.locator('.pt-count')).toHaveText('Wyświetlono: 870');
   await page.locator('.pt-search input').focus();
-  await page.locator('.pt-scroll').evaluate(node => { node.scrollTop = 20000; });
-  await page.evaluate(() => new Promise(resolve => { requestAnimationFrame(() => requestAnimationFrame(resolve)); }));
-  let before = await firstVisible(page);
+  await scrollListTo(page, 20000);
+  // One person stays first at every width. Reading it again after each width
+  // could catch a frame in which the window is still catching up.
+  const before = await firstVisible(page);
+  expect(before.id).toBeTruthy();
   for (const width of [390, 700, 1440]) {
-    await page.setViewportSize({ width, height: 844 });
+    await resizeViewport(page, { width, height: 844 });
     await expect.poll(async () => (await firstVisible(page)).id).toBe(before.id);
-    before = await firstVisible(page);
     expect(await page.locator('.pt-row').count()).toBeLessThan(60);
   }
   // Returning with an initial anchor must consume it exactly once. A subsequent
@@ -137,6 +162,52 @@ test('kotwica nie przenosi się na inną listę; mały wynik i zmiana szerokośc
   await expect(page.locator('.pt-row')).toHaveCount(1);
   await expect.poll(() => page.locator('.pt-scroll').evaluate(node => node.scrollTop)).toBe(0);
   expect(errors).toEqual([]);
+});
+
+test('spóźnione przywrócenie fokusu po powrocie nie nadpisuje zaznaczenia ani wybranego wiersza', async ({ page }) => {
+  await openRenderer(page);
+  await page.locator('.pt-search input').fill('0869');
+  await expect(page.locator('.pt-row')).toHaveCount(1);
+  // On a busy page the view's deferred mount focus can run after the user has
+  // already acted. Hold the timers scheduled by mount() and run them on demand.
+  const remount = () => page.evaluate(() => {
+    const { view, opts } = window.harness;
+    const initialState = view.read(); view.destroy(); view.root.remove();
+    const original = window.setTimeout, held = [];
+    window.setTimeout = callback => { held.push(callback); return -held.length; };
+    try {
+      window.harness.view = window.VildaPatientsList.create({ ...opts, initialState });
+      document.getElementById('host').appendChild(window.harness.view.root); window.harness.view.mount();
+    } finally { window.setTimeout = original; }
+    window.runHeldMountTimers = () => held.splice(0).forEach(callback => callback());
+    return held.length;
+  });
+  const search = page.locator('.pt-search input');
+  const selection = () => search.evaluate(node => [node.selectionStart, node.selectionEnd]);
+
+  // Nobody has acted yet: the returning view focuses its search with the caret.
+  expect(await remount()).toBeGreaterThan(0);
+  await page.evaluate(() => window.runHeldMountTimers());
+  await expect(search).toBeFocused();
+  expect(await selection()).toEqual([4, 4]);
+
+  // A row chosen before the late timer keeps the focus.
+  expect(await remount()).toBeGreaterThan(0);
+  await page.locator('.pt-row-open').focus();
+  await page.evaluate(() => window.runHeldMountTimers());
+  await expect(page.locator('.pt-row-open')).toBeFocused();
+
+  // The whole query selected before the late timer stays selected, so deleting
+  // it shows the whole database again instead of leaving the old result.
+  await search.focus();
+  await search.evaluate(node => node.setSelectionRange(4, 4));
+  expect(await remount()).toBeGreaterThan(0);
+  await search.selectText();
+  await page.evaluate(() => window.runHeldMountTimers());
+  expect(await selection()).toEqual([0, 4]);
+  await page.keyboard.press('Delete');
+  await expect(search).toHaveValue('');
+  await expect(page.locator('.pt-count')).toHaveText('Wyświetlono: 870');
 });
 
 test('mobile: pełne dane, długie nazwiska i koniec bazy bez ucinania; powrót po obu stronach 700 px', async ({ page }) => {
