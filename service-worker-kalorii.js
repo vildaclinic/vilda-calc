@@ -795,6 +795,7 @@ const CORE_SHELL_URLS = [
   '/inline_ustawienia_07.js?v=3',
   '/inline_ustawienia_07.js?v=4',
   '/inline_ustawienia_07.js?v=5',
+  '/inline_ustawienia_07.js?v=6',
 
   '/sidebar.css',
   '/vilda_chrome.css',
@@ -3032,6 +3033,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_sync.js?v=53',
   '/vilda_sync.js?v=54',
   '/vilda_sync.js?v=55',
+  '/vilda_sync.js?v=56',
   '/vilda_patient_documents.js?v=1',
   '/vilda_patient_documents.js?v=2',
   '/vilda_patient_documents.js?v=3',

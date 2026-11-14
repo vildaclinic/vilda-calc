@@ -1,7 +1,8 @@
 // E2-PR5a (P-SYNC-WIDOK-KOLEJKI; plan docs/SYNC_PRZYROSTOWA_PLAN.md wiersz 9a, decyzje właściciela 1–6 z 2026-11-12) —
 // widok kolejki zdarzeń w Ustawieniach: znaczek „N zmian czeka” w nagłówku sekcji synchronizacji, linia w „Status
-// synchronizacji”, ostatni błąd wysyłki i ukryty przełącznik „Wysyłaj zmiany pojedynczo (test)” odblokowywany
-// 5 kliknięciami linii „Wersja aplikacji”. Kod jest blokiem w istniejącym inline_ustawienia_07.js (limit 600 żądań
+// synchronizacji”, ostatni błąd wysyłki i ukryty przełącznik „Wysyłaj zmiany pojedynczo” odblokowywany 5 kliknięciami
+// linii „Wersja aplikacji” (do E2-PR6 „… (test)” i włączenie flagą '1'; od E2-PR6, decyzja 3 z 2026-11-14, wyłącznik
+// na jednym urządzeniu: pole zaznaczone, gdy flaga inna niż '0', odznaczenie zapisuje '0', zaznaczenie usuwa klucz). Kod jest blokiem w istniejącym inline_ustawienia_07.js (limit 600 żądań
 // instalacji SW). Test wykonuje CAŁY prawdziwy plik w vm (kontekst = atrapa okna z elementami strony, sejfem z API
 // kolejki i VildaSync). Dane fikcyjne.
 //
@@ -21,11 +22,14 @@
 //        przy zablokowanym sejfie bez arkusza.
 //   KW12 arkusz: Anuluj, Escape i kliknięcie tła zamykają bez odblokowania (fokus wraca); Tab zostaje w arkuszu;
 //        Odblokuj — karta widoczna, sekcja i opcje zaawansowane otwarte, przewinięcie i fokus na polu wyboru.
-//   KW13 karta po odblokowaniu: serwer bez „events” — notka, bez pola wyboru; z „events” — pole wyboru, „Wyłączone”.
-//   KW14 przełącznik: włączenie zapisuje '1', wyłączenie usuwa klucz (nigdy '0'); widok kolejki rusza od razu.
-//   KW15 flaga '1' bez odblokowania — karta widoczna (da się wyłączyć), także bez „events” (notka + pole wyboru).
-//   KW16 bez odblokowania i bez flagi, health z „events” — karta ukryta, bez pytania o health (decyzja 10).
-//   KW17 flaga '1' i „events”, dziennik nieczynny (np. tryb chmurowy) — notka „Teraz nie działa…”.
+//   KW13 karta po odblokowaniu: serwer bez „events” — notka, bez pola wyboru; z „events” — pole wyboru zaznaczone,
+//        „Włączone” (bez klucza flagi — domyślnie od E2-PR6).
+//   KW14 przełącznik: odznaczenie zapisuje '0', zaznaczenie usuwa klucz (nigdy '1'); widok kolejki rusza od razu.
+//   KW15 flaga '0' bez odblokowania — karta widoczna (da się włączyć z powrotem), także bez „events” (notka + pole).
+//   KW15b flaga '0' bez odblokowania — karta odświeżana co 5 s (zmiana health).
+//   KW16 bez odblokowania, bez flagi albo z '1' z testu właściciela, health z „events” — karta ukryta, bez pytania
+//        o health (decyzja 10).
+//   KW17 bez flagi i „events”, dziennik nieczynny (np. tryb chmurowy) — notka „Teraz nie działa…”.
 //   KW18 zapis flagi rzuca — pole wyboru wraca, komunikat.
 //   KW19 ramka powłoki — health okna nadrzędnego, nie własny.
 //   KW20 blokada sejfu zdejmuje odblokowanie i zamyka otwarty arkusz.
@@ -412,7 +416,7 @@ describe('E2-PR5a P-SYNC-WIDOK-KOLEJKI: licznik, znaczek i ostatni błąd', () =
   });
 });
 
-describe('E2-PR5a P-SYNC-WIDOK-KOLEJKI: ukryty przełącznik „Wysyłaj zmiany pojedynczo (test)”', () => {
+describe('E2-PR5a P-SYNC-WIDOK-KOLEJKI: ukryty przełącznik „Wysyłaj zmiany pojedynczo” (od E2-PR6 wyłącznik)', () => {
   it('KW11: gest — 4 kliknięcia nic; 5 w odstępach do 1,5 s — arkusz; dłuższa przerwa od nowa; zablokowany sejf bez arkusza', async () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     const s = strona({ dziennik: false });
@@ -429,8 +433,8 @@ describe('E2-PR5a P-SYNC-WIDOK-KOLEJKI: ukryty przełącznik „Wysyłaj zmiany 
     const ark = a.dzieci[0];
     expect(ark.atrybuty).toMatchObject({ role: 'alertdialog', 'aria-modal': 'true', 'aria-labelledby': 'syncEventLogUnlockTitle' });
     expect(wGlab(a).map((e) => e.textContent).filter(Boolean)).toEqual([
-      'Odblokować opcje testowe?',
-      'Na tym urządzeniu pokaże się przełącznik „Wysyłaj zmiany pojedynczo (test)” w opcjach zaawansowanych synchronizacji. Nikt inny go nie zobaczy.',
+      'Odblokować ukrytą opcję?',
+      'Na tym urządzeniu pokaże się przełącznik „Wysyłaj zmiany pojedynczo” w opcjach zaawansowanych synchronizacji. Nikt inny go nie zobaczy.',
       'Odblokuj', 'Anuluj',
     ]);
     expect(s.body.classList.contains('vilda-modal-alert-open')).toBe(true);
@@ -499,7 +503,7 @@ describe('E2-PR5a P-SYNC-WIDOK-KOLEJKI: ukryty przełącznik „Wysyłaj zmiany 
     expect(s.el('syncEventLogTestCard').scrollIntoView).toHaveBeenCalledTimes(2);
   });
 
-  it('KW13: karta po odblokowaniu — bez „events” notka bez pola wyboru; z „events” pole wyboru „Wyłączone”', async () => {
+  it('KW13 [E2-PR6: czerwony na bazie]: karta po odblokowaniu — bez „events” notka bez pola wyboru; z „events” pole wyboru zaznaczone, „Włączone” (bez klucza flagi)', async () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     const s = strona({ dziennik: false, health: { features: ['changes-paged', 'aad'] } });
     await tury();
@@ -509,14 +513,17 @@ describe('E2-PR5a P-SYNC-WIDOK-KOLEJKI: ukryty przełącznik „Wysyłaj zmiany 
     expect(widoczny(s).karta).toBe(true);
     expect(s.el('syncEventLogTestRow').hidden).toBe(true);
     expect(s.el('syncEventLogTestStatus').textContent).toBe('Serwer nie obsługuje jeszcze tej opcji.');
-    expect(s.el('syncEventLogTestTag').textContent).toBe('Wyłączone');
+    expect(s.el('syncEventLogTestTag').textContent).toBe('Włączone');
     expect(s.dok.activeElement).not.toBe(s.el('syncEventLogTestToggle'));
 
     s.stan.health = { features: ['changes-paged', 'aad', 'events'] };
+    s.stan.dziennik = true;
     await s.api.karta();
     expect(s.el('syncEventLogTestRow').hidden).toBe(false);
-    expect(s.el('syncEventLogTestToggle').checked).toBe(false);
+    expect(s.el('syncEventLogTestToggle').checked).toBe(true);
+    expect(s.el('syncEventLogTestTag').textContent).toBe('Włączone');
     expect(s.el('syncEventLogTestStatus').textContent).toBe('');
+    expect(s.magazyn.has(KLUCZ), 'sam widok niczego nie zapisuje').toBe(false);
     s.stan.health = null;
     await s.api.karta();
     expect(s.el('syncEventLogTestStatus').textContent).toBe('Serwer nie obsługuje jeszcze tej opcji.');
@@ -525,51 +532,65 @@ describe('E2-PR5a P-SYNC-WIDOK-KOLEJKI: ukryty przełącznik „Wysyłaj zmiany 
     expect(s.el('syncEventLogTestStatus').textContent).toBe('Serwer nie obsługuje jeszcze tej opcji.');
   });
 
-  it("KW14: przełącznik — włączenie zapisuje '1', wyłączenie usuwa klucz (nigdy '0'); widok kolejki rusza od razu", async () => {
+  it("KW14 [E2-PR6: czerwony na bazie]: przełącznik — odznaczenie zapisuje '0', zaznaczenie usuwa klucz (nigdy '1'); widok kolejki rusza od razu", async () => {
     vi.useFakeTimers({ toFake: ['Date'] });
-    const s = strona({ dziennik: false, liczniki: ile(0) });
+    const s = strona({ dziennik: true, liczniki: ile(0) });
     await tury();
     kliknij(s, 5);
     s.przycisk('Odblokuj').wyslij('click');
     await tury();
     const pole = s.el('syncEventLogTestToggle');
-    pole.checked = true;
-    s.stan.dziennik = true;
-    pole.wyslij('change');
-    await tury();
-    expect(s.localStorage.setItem).toHaveBeenCalledExactlyOnceWith(KLUCZ, '1');
-    expect(s.magazyn.get(KLUCZ)).toBe('1');
-    expect(s.el('syncEventLogTestTag').textContent).toBe('Włączone');
+    expect(pole.checked, 'bez klucza — zaznaczone').toBe(true);
     expect(widoczny(s).linia).toBe('Wszystkie zmiany wysłane.|');
     pole.checked = false;
     s.stan.dziennik = false;
     pole.wyslij('change');
     await tury();
+    expect(s.localStorage.setItem).toHaveBeenCalledExactlyOnceWith(KLUCZ, '0');
+    expect(s.magazyn.get(KLUCZ)).toBe('0');
+    expect(s.el('syncEventLogTestTag').textContent).toBe('Wyłączone');
+    expect(widoczny(s)).toMatchObject({ linia: null, karta: true });
+    pole.checked = true;
+    s.stan.dziennik = true;
+    pole.wyslij('change');
+    await tury();
     expect(s.localStorage.removeItem).toHaveBeenCalledExactlyOnceWith(KLUCZ);
     expect(s.magazyn.has(KLUCZ)).toBe(false);
     expect(s.localStorage.setItem).toHaveBeenCalledTimes(1);
-    expect(s.el('syncEventLogTestTag').textContent).toBe('Wyłączone');
-    expect(widoczny(s)).toMatchObject({ linia: null, karta: true });
+    expect(s.el('syncEventLogTestTag').textContent).toBe('Włączone');
+    expect(widoczny(s).linia).toBe('Wszystkie zmiany wysłane.|');
   });
 
-  it("KW15: flaga '1' bez odblokowania — karta widoczna, także bez „events” (pole wyboru do wyłączenia i notka)", async () => {
-    const s = strona({ flaga: '1', dziennik: false, health: { features: ['changes-paged'] } });
+  it("KW15 [E2-PR6: czerwony na bazie]: flaga '0' bez odblokowania — karta widoczna, także bez „events” (pole wyboru do włączenia z powrotem i notka)", async () => {
+    const s = strona({ flaga: '0', dziennik: false, health: { features: ['changes-paged'] } });
     await tury();
     expect(widoczny(s).karta).toBe(true);
     expect(s.el('syncEventLogTestRow').hidden).toBe(false);
-    expect(s.el('syncEventLogTestToggle').checked).toBe(true);
-    expect(s.el('syncEventLogTestTag').textContent).toBe('Włączone');
+    expect(s.el('syncEventLogTestToggle').checked).toBe(false);
+    expect(s.el('syncEventLogTestTag').textContent).toBe('Wyłączone');
     expect(s.el('syncEventLogTestStatus').textContent).toBe('Serwer nie obsługuje jeszcze tej opcji.');
     const pole = s.el('syncEventLogTestToggle');
-    pole.checked = false;
+    pole.checked = true;
     pole.wyslij('change');
     await tury();
-    // Po wyłączeniu bez odblokowania karta znika (decyzja 3).
+    // Po włączeniu z powrotem bez odblokowania karta znika (urządzenie idzie za domyślnym).
     expect(s.magazyn.has(KLUCZ)).toBe(false);
     expect(widoczny(s).karta).toBe(false);
   });
 
-  it('KW16: bez odblokowania i bez flagi, health z „events” — karta ukryta, bez pytania o health', async () => {
+  it("KW15b [E2-PR6: czerwony na bazie]: flaga '0' bez odblokowania — karta odświeżana co 5 s (serwer zaczyna podawać „events” — notka znika)", async () => {
+    const s = strona({ flaga: '0', dziennik: false, health: { features: ['changes-paged'] } });
+    await tury();
+    expect(widoczny(s).karta).toBe(true);
+    expect(s.el('syncEventLogTestStatus').textContent).toBe('Serwer nie obsługuje jeszcze tej opcji.');
+    s.stan.health = { features: ['changes-paged', 'events'] };
+    s.tik();
+    await tury();
+    expect(s.el('syncEventLogTestStatus').textContent).toBe('');
+    expect(s.el('syncEventLogTestToggle').checked).toBe(false);
+  });
+
+  it("KW16 [E2-PR6: czerwony na bazie]: bez odblokowania, bez flagi albo z '1' z testu właściciela, health z „events” — karta ukryta, bez pytania o health", async () => {
     const s = strona({ dziennik: false });
     await tury();
     s.tik(); s.tik();
@@ -578,16 +599,21 @@ describe('E2-PR5a P-SYNC-WIDOK-KOLEJKI: ukryty przełącznik „Wysyłaj zmiany 
     await tury();
     expect(widoczny(s).karta).toBe(false);
     expect(s.VildaSync.detectApi).not.toHaveBeenCalled();
-    s.magazyn.set(KLUCZ, '0');
+    s.magazyn.set(KLUCZ, '1');
     s.tik();
     await tury();
     expect(widoczny(s).karta).toBe(false);
     expect(s.VildaSync.detectApi).not.toHaveBeenCalled();
   });
 
-  it("KW17: flaga '1' i „events”, dziennik nieczynny — notka „Teraz nie działa…”", async () => {
-    const s = strona({ flaga: '1', dziennik: false });
+  it("KW17 [E2-PR6: czerwony na bazie]: bez flagi i „events”, dziennik nieczynny — notka „Teraz nie działa…” (karta po odblokowaniu)", async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    const s = strona({ dziennik: false });
     await tury();
+    kliknij(s, 5);
+    s.przycisk('Odblokuj').wyslij('click');
+    await tury();
+    expect(s.el('syncEventLogTestToggle').checked).toBe(true);
     expect(s.el('syncEventLogTestStatus').textContent).toBe('Teraz nie działa: potrzebna jest włączona synchronizacja, bez trybu chmurowego i bez logowania jednorazowego.');
     s.stan.dziennik = true;
     s.tik();
@@ -604,17 +630,17 @@ describe('E2-PR5a P-SYNC-WIDOK-KOLEJKI: ukryty przełącznik „Wysyłaj zmiany 
     s.przycisk('Odblokuj').wyslij('click');
     await tury();
     const pole = s.el('syncEventLogTestToggle');
-    pole.checked = true;
+    pole.checked = false;
     pole.wyslij('change');
     await tury();
-    expect(pole.checked).toBe(false);
+    expect(pole.checked).toBe(true);
     expect(s.magazyn.has(KLUCZ)).toBe(false);
     expect(s.el('syncEventLogTestStatus').textContent).toBe('Nie udało się zapisać tego ustawienia na tym urządzeniu.');
   });
 
   it('KW19: ramka powłoki — health okna nadrzędnego, nie własny', async () => {
     const top = { VildaSync: { detectApi: vi.fn(async () => ({ features: ['events'] })) } };
-    const s = strona({ flaga: '1', top, health: { features: [] } });
+    const s = strona({ flaga: '0', top, health: { features: [] } });
     await tury();
     expect(top.VildaSync.detectApi).toHaveBeenCalled();
     expect(s.VildaSync.detectApi).not.toHaveBeenCalled();
@@ -999,7 +1025,7 @@ describe('E2-PR5a P-SYNC-WIDOK-KOLEJKI: strażniki źródła', () => {
     expect(kod).not.toMatch(/innerHTML|outerHTML|insertAdjacentHTML|document\.write|\bfetch\(|sessionStorage|caches\b|\.style\b|cssText|setProperty/);
     expect(kod).not.toMatch(/(^|[^.\w])(document|navigator)\b/);
     expect(kod.match(/localStorage\.(setItem|removeItem)\([^)]*\)/g)).toEqual([
-      "localStorage.setItem(Bkw_KLUCZ, '1')", 'localStorage.removeItem(Bkw_KLUCZ)',
+      'localStorage.removeItem(Bkw_KLUCZ)', "localStorage.setItem(Bkw_KLUCZ, '0')",
     ]);
     expect(kod).toMatch(/var Bkw_KLUCZ = 'vilda-event-log-v1';/);
     expect(kod).toMatch(/\(window\);\s*$/);
@@ -1032,7 +1058,9 @@ describe('E2-PR5a P-SYNC-WIDOK-KOLEJKI: strażniki źródła', () => {
     expect(zaaw.slice(zaaw.indexOf('id="syncEventLogTestCard"'))).not.toContain('style=');
     expect(meta.slice(meta.indexOf('syncOutboxChipWrap'))).not.toContain('style=');
     expect(zaaw).toContain('<input type="checkbox" id="syncEventLogTestToggle" class="settings-backup-checkbox">');
-    expect(zaaw).toMatch(/Wysyłaj zmiany pojedynczo \(test\)\s*<\/label>/);
+    expect(zaaw).toMatch(/<h3 class="settings-control-title">Wysyłaj zmiany pojedynczo<\/h3>/);
+    expect(zaaw).toMatch(/Wysyłaj zmiany pojedynczo\s*<\/label>/);
+    expect(zaaw, 'od E2-PR6 bez „(test)”').not.toContain('(test)');
     for (const id of ['syncOutboxChipWrap', 'syncOutboxChip', 'syncOutboxBox', 'syncOutboxCount', 'syncOutboxHint', 'syncOutboxError',
       'syncEventLogTestCard', 'syncEventLogTestTag', 'syncEventLogTestRow', 'syncEventLogTestToggle', 'syncEventLogTestStatus']) {
       expect(html.split(`id="${id}"`).length, id).toBe(2);

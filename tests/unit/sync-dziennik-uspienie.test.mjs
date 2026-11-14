@@ -98,7 +98,9 @@
 //         ogólnych: enqueue, eventBytes, kinds, deleteDatabase — istnieją w innych plikach). Wyjątek: vilda_sync.js zna
 //         API drenażu z kwarantanną (E2-PR4c) i nadawcy kolejki (E2-PR4d) — dokładnie tę listę, _eventLog raz;
 //         inline_ustawienia_07.js (E2-PR5a i E2-PR5b, widok kolejki w Ustawieniach) — _eventLog raz, outboxCount,
-//         outboxList, quarantineCount, quarantineList, outboxDiscard i quarantineRelease, tylko w bloku P-SYNC-WIDOK-KOLEJKI.
+//         outboxList, quarantineCount, quarantineList, outboxDiscard i quarantineRelease, tylko w bloku P-SYNC-WIDOK-KOLEJKI;
+//         polityka-prywatnosci.html (E2-PR6, warunek wejścia PR włączającego) — wyłącznie opis nazwy bazy kolejki
+//         `vilda_sync_&lt;userId&gt;` w tabeli przechowywania, dokładnie raz; poza nim żaden wzorzec ani nazwa z listy.
 //   U2(c) część Bev_: lista zakazana (zapis, emisja, sieć, magazyny przeglądarki, legacy buildery delt, eksport
 //         ładunku, console.), także w komentarzach; część Bob_: własna lista tekstowa i reguła domknięcia na drzewie
 //         składni (acorn + eslint-scope): wolne identyfikatory wyłącznie z listy, pola okna tylko w swoich funkcjach,
@@ -1347,7 +1349,13 @@ describe('U2(b): pliki produktu poza sejfem nie znają nowego API', () => {
   it('żaden plik produktu poza vilda_vault.js nie zawiera _eventLog, nazw API dziennika, magazynu, emisji, partii i przeglądu kolejki (emissionsSettled, onBulkChange, sweepOutbox), VILDA_EVENT_LOG, klucza urządzenia, nazwy bazy kolejki, Bev_, Bob_ ani Bem_', () => {
     const winne = [];
     for (const plik of plikiProdukcyjne()) {
-      const tresc = fs.readFileSync(path.join(KORZEN, plik), 'utf8');
+      let tresc = fs.readFileSync(path.join(KORZEN, plik), 'utf8');
+      // E2-PR6: polityka prywatności opisuje bazę kolejki (nazwa w tekście, dokładnie raz) — wycięta przed sprawdzeniem.
+      if (plik === 'polityka-prywatnosci.html') {
+        const OPIS_BAZY = '<code>vilda_sync_&lt;userId&gt;</code>';
+        expect(tresc.split(OPIS_BAZY).length - 1, 'polityka: opis bazy kolejki dokładnie raz').toBe(1);
+        tresc = tresc.replace(OPIS_BAZY, '');
+      }
       const wolno = plik === 'vilda_sync.js' ? DRENAZ_SYNC : plik === 'inline_ustawienia_07.js' ? WIDOK_USTAWIEN : [];
       for (const n of NAZWY) if (tresc.includes(n) && !wolno.includes(n)) winne.push(`${plik}: ${n}`);
       for (const re of WZORCE) if (re.test(tresc)) winne.push(`${plik}: ${re}`);

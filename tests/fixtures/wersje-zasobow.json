@@ -992,8 +992,8 @@
   "sha256": "e059ba2a629ece3c7f715cc7b09289ec9f8bc5ea2579872dabc34db3e271ffc0"
  },
  "inline_ustawienia_07.js": {
-  "v": 5,
-  "sha256": "9729987677c7ec8ca3093daac6b655f7be91ceb4f8b981bb470e23b9407e25c7"
+  "v": 6,
+  "sha256": "dc0927136f9be6aa28b74a6cc9e321e5ef27e0cec7329c5784c3a61ea9c84cb7"
  },
  "ios26-ui.js": {
   "v": 47,
@@ -2024,8 +2024,8 @@
   "sha256": "473bcf6945b4be2b78bbb9ef7c0ee051fb38f9bfc17578fca93bfa1a73d5b6ff"
  },
  "vilda_sync.js": {
-  "v": 55,
-  "sha256": "3f6897bcb34bea0f894d8388ad92a8e2ae0d7b0feb7c7c1d041ee61de85dd181"
+  "v": 56,
+  "sha256": "3bcbaf07d67d265983c683eeec063703c08efaa42a7dd5e21f6df37dafc7e711"
  },
  "vilda_sync_integration.js": {
   "v": 59,

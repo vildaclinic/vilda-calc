@@ -116,7 +116,7 @@
 <script defer src="vilda_patient_identity_transport.js?v=1"></script>
 <script defer src="vilda_vault.js?v=276"></script>
 <script defer src="vilda_frame_sync.js?v=3"></script>
-<script defer src="vilda_sync.js?v=55"></script>
+<script defer src="vilda_sync.js?v=56"></script>
 <script defer src="vilda_sync_integration.js?v=59"></script>
 <script defer src="vilda_realtime.js?v=10"></script>
 <script defer src="vilda_nowe_urzadzenie.js?v=2"></script>
@@ -1033,21 +1033,22 @@
                         </button>
                       </div>
                       <p class="settings-inline-note settings-backup-note" id="syncSlotStatus"></p>
-                      <!-- P-SYNC-WIDOK-KOLEJKI (E2-PR5a): ukryty przełącznik testowy; widoczny po odblokowaniu
-                           (5 kliknięć linii „Wersja aplikacji”) albo przy włączonej opcji (inline_ustawienia_07.js). -->
+                      <!-- P-SYNC-WIDOK-KOLEJKI (E2-PR5a; od E2-PR6 wyłącznik na jednym urządzeniu): ukryty przełącznik;
+                           widoczny po odblokowaniu (5 kliknięć linii „Wersja aplikacji”) albo przy wyłączonej opcji
+                           (inline_ustawienia_07.js). -->
                       <div id="syncEventLogTestCard" hidden>
                         <div class="settings-control-header">
-                          <h3 class="settings-control-title">Wysyłaj zmiany pojedynczo (test)</h3>
+                          <h3 class="settings-control-title">Wysyłaj zmiany pojedynczo</h3>
                           <span class="settings-tag" id="syncEventLogTestTag">—</span>
                         </div>
                         <p class="settings-control-desc">
-                          Opcja testowa, tylko na tym urządzeniu. Każda zmiana idzie od razu na serwer, a pełna synchronizacja działa dalej jak dotąd.
+                          Tylko na tym urządzeniu. Każda zmiana idzie od razu na serwer, a pełna synchronizacja działa dalej jak dotąd. Odznacz tylko wtedy, gdy wysyłanie pojedynczych zmian sprawia kłopot.
                         </p>
                         <div id="syncEventLogTestRow" hidden>
                           <div class="settings-card-toggle-row settings-backup-btn-row">
                             <label class="settings-backup-checkbox-label">
                               <input type="checkbox" id="syncEventLogTestToggle" class="settings-backup-checkbox">
-                              Wysyłaj zmiany pojedynczo (test)
+                              Wysyłaj zmiany pojedynczo
                             </label>
                           </div>
                         </div>
@@ -2492,6 +2493,6 @@
 
   <script defer src="inline_ustawienia_06.js?v=1"></script>
 
-  <script defer src="inline_ustawienia_07.js?v=5"></script>
+  <script defer src="inline_ustawienia_07.js?v=6"></script>
 </body>
 </html>
