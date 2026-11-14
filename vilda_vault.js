@@ -3438,6 +3438,7 @@ function Bgw_zPlanu(s, z) {
   return st.pin || st.at ? { gwiazdka: { pin: st.pin, at: st.at } } : null;
 }
 async function Bkz_przytnij(patientId, opcje) {
+  const Bvisit_session = Bses_opcje(null);
   const nic = { prunedCount: 0, prunedIds: [] };
   if (!T()) return nic;
   if (typeof patientId !== 'string' || !patientId) return nic;
@@ -3492,7 +3493,18 @@ async function Bkz_przytnij(patientId, opcje) {
       }, Bm1(s), Bgw_zPlanu(s, wPlanie.get(id))));
     });
     if (!nagrobki.length) return nic;
+    // Retention and manual deletion carry the same encrypted UUID evidence.
+    // The already decoded plan supplies it without keeping clinical trash.
+    for (const entry of nagrobki) {
+      Bses_pilnuj(Bvisit_session);
+      const planned = wPlanie.get(entry.snapshotId);
+      if (planned && Bvisit_valid(planned.payload && planned.payload.visit)) {
+        entry.visitCipher = await V({ version: 1, visitId: planned.payload.visit.visitId });
+        Bses_pilnuj(Bvisit_session);
+      }
+    }
     try {
+      Bses_pilnuj(Bvisit_session);
       const lista = await Bkz_zmienListe(nagrobki, []);
       const zapisane = new Set(lista.map(function (e) { return e.snapshotId; }));
       if (!nagrobki.every(function (e) { return zapisane.has(e.snapshotId); })) throw new Error('nagrobki niepotwierdzone');
@@ -4010,9 +4022,11 @@ async function Bsl_scalPacjenta(F, wersjeZdalne, naglowek, szyfry, ctx, teraz, o
       // The native merge ignores an identical revision without decrypting it.
       // Its stored identity cannot be overwritten on this path either.
       if (Bvisit_existing && Bkz_wersjaZgodna(Bvisit_snapshot, Bvisit_existing) && !Bgw_zlozony(Bvisit_snapshot.payload)) continue;
+      const Bvisit_bound = await Bvisit_bindTombstone(Bvisit_snapshot.payload, F.patientId, Bvisit_snapshot, ctx);
+      Bses_pilnuj(opcje);
       const Bvisit_payload = Bvisit_existing
-        ? await Bvisit_sync(Bvisit_snapshot.payload, Bvisit_existing, F.patientId)
-        : await Bvisit_read(Bvisit_snapshot.payload, F.patientId, Bvisit_snapshot);
+        ? await Bvisit_sync(Bvisit_bound, Bvisit_existing, F.patientId)
+        : await Bvisit_read(Bvisit_bound, F.patientId, Bvisit_snapshot);
       wersjeZdalne[Bvisit_index] = Object.assign({}, Bvisit_snapshot, { payload: Bvisit_payload, BvisitMissing: !Bvisit_valid(Bvisit_snapshot.payload && Bvisit_snapshot.payload.visit) });
       if (JSON.stringify(Bvisit_payload) !== JSON.stringify(Bvisit_snapshot.payload)) szyfry[Bvisit_index] = await V(Bvisit_payload || {});
     }
@@ -5996,6 +6010,47 @@ async function Bvisit_sync(payload, record, patientId) {
   if (known && !Bvisit_valid(payload && payload.visit)) return Bvisit_withMetadata(payload, Object.assign({}, original.visit, { patientId: patientId }));
   return Bvisit_read(payload, patientId, record);
 }
+// An old writer can move an unmigrated snapshot after another device has
+// already deleted/migrated it. Its known same-snapshot UUID wins over inference
+// from the new owner; a conflicting supplied UUID is still an error.
+async function Bvisit_bindTombstone(payload, patientId, snapshot, context) {
+  const entry = context && context.mapa && context.mapa.get(snapshot.snapshotId);
+  if (!entry) return payload;
+  const session = Bses_opcje(null);
+  const known = await Bvisit_deletedIdentity(entry);
+  Bses_pilnuj(session);
+  if (!known) return payload;
+  if (payload && payload.visit != null) {
+    if (!Bvisit_valid(payload.visit)) {
+      const error = new Error('Nieprawidłowa tożsamość wizyty.'); error.code = 'INVALID_VISIT_IDENTITY'; throw error;
+    }
+    if (payload.visit.visitId !== known.visitId) {
+      const error = new Error('Sprzeczne identyfikatory zapisanej i usuniętej wizyty.'); error.code = 'VISIT_IDENTITY_CONFLICT'; throw error;
+    }
+    return payload;
+  }
+  let retained = entry.payload || null;
+  if (!retained && entry.payloadCipher) {
+    try { retained = await G(entry.payloadCipher.iv, entry.payloadCipher.data); }
+    catch (error) {
+      Bses_pilnuj(session); PatientClinicalRethrow(error);
+      if (!error || ['OperationError', 'InvalidCharacterError', 'SyntaxError'].indexOf(error.name) < 0) throw error;
+    }
+    Bses_pilnuj(session);
+  }
+  if (retained && retained.visit != null) {
+    if (!Bvisit_valid(retained.visit)) {
+      const error = new Error('Nieprawidłowa tożsamość zapisanej wizyty.'); error.code = 'INVALID_VISIT_IDENTITY'; throw error;
+    }
+    if (retained.visit.visitId !== known.visitId) {
+      const error = new Error('Sprzeczne identyfikatory zapisanej i usuniętej wizyty.'); error.code = 'VISIT_IDENTITY_CONFLICT'; throw error;
+    }
+    return Bvisit_withMetadata(payload, Object.assign({}, retained.visit, { patientId: patientId }));
+  }
+  const normalized = await Bvisit_read(payload, patientId, snapshot);
+  Bses_pilnuj(session);
+  return normalized && normalized.visit ? Bvisit_withMetadata(normalized, Object.assign({}, normalized.visit, { visitId: known.visitId })) : normalized;
+}
 async function Bvisit_moved(record, patientId) {
   const session = Bses_opcje(null);
   let original;
@@ -6080,7 +6135,9 @@ async function Bvisit_incomingDeletion(incoming, context) {
   const liveVisit = local && local.payload && local.payload.visit;
   if (Bvisit_valid(liveVisit)) payload = Bvisit_withMetadata(incoming.payload, Object.assign({}, liveVisit, { patientId: incoming.patientId }));
   else {
-    payload = await Bvisit_read(incoming.payload, incoming.patientId, incoming);
+    const bound = await Bvisit_bindTombstone(incoming.payload, incoming.patientId, incoming, context);
+    Bses_pilnuj(session);
+    payload = await Bvisit_read(bound, incoming.patientId, incoming);
     if (known || marker) payload = Bvisit_withMetadata(payload, Object.assign({}, payload.visit, { visitId: known ? known.visitId : marker.visitId }));
   }
   Bses_pilnuj(session);
@@ -6130,23 +6187,68 @@ async function Bvisit_applyDeletedHeads(groups, protectedIds, context) {
   }
 }
 async function Bvisit_protected(patientId, records, remote, context) {
+  const session = Bses_opcje(null);
   if (context && context.mapa && !Array.from(context.mapa.values()).some(function (entry) { return !!Bkz_chwilaRetencji(entry); })) return new Set();
   const rows = new Map();
   for (const record of records || []) {
     try {
-      const payload = await Bvisit_read(await G(record.payloadCipher.iv, record.payloadCipher.data), patientId, record);
+      const plain = await G(record.payloadCipher.iv, record.payloadCipher.data);
+      Bses_pilnuj(session);
+      const payload = await Bvisit_read(plain, patientId, record);
+      Bses_pilnuj(session);
       rows.set(record.snapshotId, Object.assign({}, record, { payload: payload }));
-    } catch (error) { PatientClinicalRethrow(error); rows.set(record.snapshotId, record); }
+    } catch (error) { Bses_pilnuj(session); PatientClinicalRethrow(error); rows.set(record.snapshotId, record); }
   }
   for (const record of remote || []) {
     const old = rows.get(record.snapshotId);
-    if (!old || Bvisit_compare(record, old) < 0) rows.set(record.snapshotId, Object.assign({}, record, {
-      payload: await Bvisit_read(record.payload, patientId, record) }));
+    if (!old || Bvisit_compare(record, old) < 0) {
+      const payload = await Bvisit_read(record.payload, patientId, record);
+      Bses_pilnuj(session);
+      rows.set(record.snapshotId, Object.assign({}, record, { payload: payload }));
+    }
   }
   const values = Array.from(rows.values());
   const groups = Bvisit_groups(values, patientId);
   const protectedIds = new Set(groups.map(function (group) { return group.snapshotId; }));
   await Bvisit_applyDeletedHeads(groups, protectedIds, context);
+  Bses_pilnuj(session);
+  // A merge can leave an older correction under the former patient while the
+  // newer revision of the same visit already belongs to the tombstone's owner.
+  // Protect that actual visit head, not a second apparent head caused by partial
+  // event delivery. Inspect only the owner explicitly named by the tombstone.
+  const ownerRows = new Map();
+  for (const group of groups) {
+    const entry = context && context.mapa && context.mapa.get(group.snapshotId);
+    if (!protectedIds.has(group.snapshotId) || !entry || !Bkz_chwilaRetencji(entry)
+      || !entry.patientId || entry.patientId === patientId) continue;
+    if (!ownerRows.has(entry.patientId)) {
+      Bses_pilnuj(session);
+      const owner = await I().getPatientForUser(b, entry.patientId);
+      Bses_pilnuj(session);
+      if (!owner || context.Bsw_N && context.Bsw_N.has(entry.patientId)) {
+        ownerRows.set(entry.patientId, []); continue;
+      }
+      const records = await I().listSnapshotsForUser(b, entry.patientId);
+      Bses_pilnuj(session);
+      const decoded = [];
+      for (const record of records) {
+        try {
+          const payload = await G(record.payloadCipher.iv, record.payloadCipher.data);
+          Bses_pilnuj(session);
+          decoded.push(Object.assign({}, record, { payload: await Bvisit_read(payload, entry.patientId, record) }));
+          Bses_pilnuj(session);
+        } catch (error) {
+          Bses_pilnuj(session); PatientClinicalRethrow(error);
+          if (!error || ['OperationError', 'InvalidCharacterError', 'SyntaxError'].indexOf(error.name) < 0) throw error;
+        }
+      }
+      ownerRows.set(entry.patientId, decoded);
+    }
+    const newer = ownerRows.get(entry.patientId).some(function (row) {
+      return row.payload && row.payload.visit && row.payload.visit.visitId === group.visitId && yr(row, group) < 0;
+    });
+    if (newer) protectedIds.delete(group.snapshotId);
+  }
   values.forEach(function (row) { if (!row.payload) protectedIds.add(row.snapshotId); });
   return protectedIds;
 }

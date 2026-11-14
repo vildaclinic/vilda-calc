@@ -1798,3 +1798,37 @@ zasobów. Testy `visits-workspace-codec.test.mjs` sprawdzają rzeczywiste
 szyfrowanie, serializację źródła odzyskiwania i ponowne szyfrowanie tożsamości,
 starsze dane, izolację sesji, odrzucenie dodatkowych pól i odtworzenie drzewa.
 Test precache obejmuje wszystkie 202 adresy modułów, w tym 151 historycznych.
+
+### Transport trzech zasobów interfejsu wizyt w PWA
+
+`vilda_visit_context.js`, `vilda_visit_history_ui.js` i
+`vilda_visit_history_ui.css` pozostają niezależnymi plikami źródłowymi oraz
+trzema oddzielnymi adresami offline z `?v=`. Instalacja pobiera ich dokładne
+treści w jednym archiwum JSON. `tools/build-visit-ui-precache.mjs` odczytuje
+bajty źródeł i bieżące wersje precache, zapisuje archiwum pod adresem z hashem,
+manifest `runtime/visit-ui-precache/manifest.json` oraz konfigurację
+`VISIT_UI_PRECACHE_PACK` w SW. Nie łączy wykonywanego kodu ani arkuszy stylów.
+
+Worker najpierw sprawdza hash całego archiwum, pełną listę członków i hash
+każdej treści. Dopiero wtedy zapisuje odpowiedzi pod trzema oryginalnymi
+kluczami. CSS ma typ `text/css`, skrypty `text/javascript`; archiwum nie może
+zmienić tych typów. Wspólny mechanizm weryfikacji transportu ma dwie oddzielne
+listy dozwolonych zasobów: dotychczasowe moduły przestrzeni klinicznej oraz
+dokładnie trzy zasoby wizyt. Nie rozszerza listy akceptowanych adresów
+przestrzeni klinicznej. Nieudana weryfikacja przerywa wymaganą instalację.
+
+Po zmianie treści lub numeru `?v=` tych plików, **po** `npm run podbij-wersje`:
+
+```bash
+node tools/build-visit-ui-precache.mjs --write
+node tools/build-visit-ui-precache.mjs
+```
+
+Poprzednie archiwa pozostają niezmienne i trafiają do `historicalPacks`.
+Trzy żądania zastępuje jedno. Dodatkowo jawna para bieżących adresów
+`obesity_therapy.js` współdzieli świeżą odpowiedź zgodnie z istniejącym
+mechanizmem aliasów. Budżety 600 żądań, 40 MB i model pięciu minut instalacji
+pozostają bez zmian. Testy `visit-ui-precache-pack.test.mjs` sprawdzają
+oryginalne treści, MIME, zakres `/vilda-calc/`, odrzucenie uszkodzeń i błędy
+zapisu; `sw-precache-stron.test.mjs` nadal wykonuje rzeczywisty worker,
+sprawdza wszystkie wymagane klucze oraz niezmienione budżety.

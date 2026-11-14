@@ -38,8 +38,8 @@
 //      urządzenia, wszystkie kroki), nie zostaje w karcie; tak samo po ostatniej retencji bez przypięcia; i w samym
 //      stanie: wersja w karcie obok tutejszego nagrobka kosza nie wcześniejszego niż jej chwila zmiany — za każdym
 //      razem poza jedyną wersją karty (wyjątek ostatniej wersji karty: E1, Q8).
-//      Trwałe wizyty: w ziarnie 197 rozdzielenie właścicieli J1a/J1b pozostawia J1a jako kanoniczny zapis wizyty
-//      pod J1. Tylko ten przypadek Z4r ma osobny dowód z surowych zapisów i pierwotnego UUID; kosz nadal wygrywa.
+//      Trwałe wizyty: w ziarnie 197 nowsza J1b zachowuje UUID pod wskazaną kartą J3, a dawna J1a pod J1 nie dostaje
+//      pozornej ochrony po podziale właścicieli. Osobny dowód z surowych zapisów; żadnego wyjątku od Z4r.
 //   Z5 bez starej treści — wersja w karcie i w koszu naraz nie ma w karcie starszej treści (chwila treści) niż w koszu.
 //   Z6 zbieżność kart — te same karty i wersje (treść, gwiazdka) na P, K i C poza wersjami, które leżą w koszu z
 //      treścią na każdym urządzeniu (kosz-po-2), i wersjami, które każde urządzenie, które je ma, trzyma jako jedyną
@@ -435,34 +435,33 @@ async function program(seed) {
 
 // --- prawa ----------------------------------------------------------------------------------------------------------
 const max = (a) => a.reduce((m, x) => (x && x > m ? x : m), '');
-function kanonicznyPoRozdzieleniu197(w) {
-  if (w.seed !== 197) return null;
+function sprawdzPrzeniesionaWizyte197(w) {
+  if (w.seed !== 197) return;
   const { u } = w;
   const initial = w.poczatkoweWizyty.find((row) => L(u, row.snapshotId) === 'J1a');
   expect(initial.visit.version).toBe(1);
   expect(initial.visit.visitId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
   expect(initial.visit.patientId).toBe(u.pid.J1);
+  const originalHead = w.poczatkoweWizyty.filter(row => row.visit?.visitId === initial.visit.visitId)
+    .sort((a, b) => b.savedAtISO.localeCompare(a.savedAtISO))[0];
+  expect(L(u, originalHead.snapshotId), 'latest original revision of this visit').toBe('J1b');
   for (const n of DEV) {
     const rows = w.suroweWizyty[n];
-    const sameVisit = rows.filter((row) => row.patientId === u.pid.J1 && row.visit?.visitId === initial.visit.visitId)
-      .sort((a, b) => b.savedAtISO.localeCompare(a.savedAtISO));
-    // Dokładnie jedna rewizja tej wizyty pod J1: jest zarazem najnowsza, niezależnie od rozstrzygania remisów.
-    expect(sameVisit.map((row) => row.snapshotId), `${n}: kanoniczny zapis z pierwotnym UUID pod J1`).toEqual([initial.snapshotId]);
-    expect(sameVisit[0].visit).toEqual(initial.visit);
-    expect(sameVisit[0].savedAtISO).toBe(initial.savedAtISO);
-    const moved = rows.find((row) => L(u, row.snapshotId) === 'J1b');
+    const sameVisit = rows.filter((row) => row.visit?.visitId === initial.visit.visitId);
+    expect(sameVisit.map(row => row.snapshotId), `${n}: only the actual original visit head survives`).toEqual([originalHead.snapshotId]);
+    const moved = sameVisit[0];
     expect(moved.patientId).toBe(u.pid.J3);
-    expect(moved.visit).toMatchObject({ version: 1, visitId: initial.visit.visitId, patientId: u.pid.J3 });
-    expect(moved.savedAtISO > sameVisit[0].savedAtISO, `${n}: nowsza rewizja zmieniła właściciela`).toBe(true);
-    expect(w.st[n].kosz.some((entry) => entry.s === 'J1a' || entry.s === 'J1b'), `${n}: wyjątek nie obejmuje jawnego kosza`).toBe(false);
+    expect(moved.visit).toEqual({ ...originalHead.visit, patientId: u.pid.J3 });
+    expect(moved.savedAtISO).toBe(originalHead.savedAtISO);
+    expect(moved.savedAtISO > initial.savedAtISO, `${n}: newer revision moved to the retention entry's owner`).toBe(true);
+    expect(w.st[n].kosz.some((entry) => entry.s === 'J1a' || entry.s === 'J1b'), `${n}: neither revision was explicitly trashed`).toBe(false);
   }
   expect(u.kosze.some((entry) => entry.sid === initial.snapshotId), 'J1a nigdy nie usunięto jawnie').toBe(false);
   expect(u.przyciecia.some((entry) => entry.sid === initial.snapshotId), 'J1a faktycznie podlegał retencji pod inną kartą').toBe(true);
-  return { patientId: u.pid.J1, snapshotId: initial.snapshotId };
 }
 function prawa(w) {
   const { u, st, st2, zapisy } = w;
-  const chronionaWizyta = kanonicznyPoRozdzieleniu197(w);
+  sprawdzPrzeniesionaWizyte197(w);
   const nar = [];
   const j = JSON.stringify;
   // Z1 stabilność
@@ -535,10 +534,7 @@ function prawa(w) {
       // nie zostaje w karcie, chyba że jest ostatnią wersją tej karty.
       if (inf && ile > 1) {
         if (inf.kosz && inf.kosz >= inf.zm) nar.push({ p: 'Z4', n, s: lab, o: `w karcie ${k} po koszu ${inf.kosz} (ostatnia zmiana ${inf.zm})` });
-        else if (inf.przyc && inf.przyc >= inf.zm && !inf.pinRej && !x.pin
-          && !(chronionaWizyta && chronionaWizyta.snapshotId === inf.sid && K(u, chronionaWizyta.patientId) === k)) {
-          nar.push({ p: 'Z4r', n, s: lab, o: `w karcie ${k} po retencji ${inf.przyc} (ostatnia zmiana ${inf.zm})` });
-        }
+        else if (inf.przyc && inf.przyc >= inf.zm && !inf.pinRej && !x.pin) nar.push({ p: 'Z4r', n, s: lab, o: `w karcie ${k} po retencji ${inf.przyc} (ostatnia zmiana ${inf.zm})` });
       }
       const e = nagr.get(lab);
       if (e && ile > 1) {

@@ -130,6 +130,77 @@ describe('durable encrypted visit identity', () => {
     expect((await b.vault.getPatient(first.patientId)).snapshots.some(row => row.snapshotId === first.snapshotId)).toBe(false);
     expect((await b.vault.listTrashedSnapshots()).some(row => row.snapshotId === first.snapshotId)).toBe(true);
   });
+  it('retention does not resurrect the former patient when the same visit has a newer head under the merged owner', async () => {
+    clock(); const source = await device(), receiver = await device(), metadata = visit();
+    const first = await save(source.vault, metadata, undefined, 120);
+    next('2026-01-01T11:00:00Z'); const older = await save(source.vault, metadata, first.patientId, 125);
+    next('2026-01-01T12:00:00Z'); const head = await save(source.vault, metadata, first.patientId, 130);
+    const stalePatient = copy((await source.vault.exportSyncPayload()).patients.find(row => row.patientId === first.patientId));
+    next('2026-01-02T10:00:00Z'); const targetData = payload(visit('2026-01-02'));
+    targetData.name = 'Drugi Fikcyjny'; targetData.user.firstName = 'Drugi'; targetData.user.lastName = 'Fikcyjny';
+    const target = await source.vault.savePatient(targetData, { dedup: false });
+    next('2026-01-03T10:00:00Z'); await source.vault.mergePatients(first.patientId, target.patientId);
+    next('2026-01-04T10:00:00Z'); await source.vault.pruneSnapshotsForPatient(target.patientId, { cap: 1, recentHours: 0, minCount: 0 });
+    const exported = await source.vault.exportSyncPayload();
+    expect(exported.snapshotTombstones.find(row => row.snapshotId === older.snapshotId).visitIdentity).toEqual({ version: 1, visitId: metadata.visitId });
+    const meta = await source.adapter.getUserMeta(source.vault.getCurrentUser().userId);
+    const marker = meta.snapshotTombstones.find(row => row.snapshotId === older.snapshotId);
+    expect(marker.payloadCipher).toBeUndefined(); expect(marker.visitIdentity).toBeUndefined();
+    expect(await source.vault.decryptPayloadForCurrentUser(marker.visitCipher.iv, marker.visitCipher.data)).toEqual({ version: 1, visitId: metadata.visitId });
+    await receiver.vault.mergeSyncPayload(exported);
+    const canonicalBefore = (await receiver.vault.getPatientVisits(target.patientId)).find(row => row.visitId === metadata.visitId);
+    expect(canonicalBefore.snapshotId).toBe(head.snapshotId);
+    expect(canonicalBefore.payload.user.height).toBe(130);
+    const oldRevision = stalePatient.snapshots.find(row => row.snapshotId === older.snapshotId);
+    oldRevision.payload.user.height = 129; oldRevision.rev += 1; oldRevision.updatedAtISO = '2026-01-03T12:00:00.000Z';
+    stalePatient.snapshots = [oldRevision]; stalePatient.snapshotCount = 1; stalePatient.lastSavedAtISO = oldRevision.updatedAtISO;
+    // A delayed single-card event has no target snapshots; the retention entry
+    // names that existing owner and supplies the only scoped lookup needed.
+    await receiver.vault.mergeSyncPayload({ patients: [stalePatient] });
+    expect(await receiver.vault.getPatient(first.patientId)).toBeNull();
+    const canonicalAfter = (await receiver.vault.getPatientVisits(target.patientId)).find(row => row.visitId === metadata.visitId);
+    expect(canonicalAfter).toEqual(canonicalBefore);
+    for (let round = 0; round < 2; round += 1) {
+      await source.vault.mergeSyncPayload(await receiver.vault.exportSyncPayload());
+      await receiver.vault.mergeSyncPayload(await source.vault.exportSyncPayload());
+    }
+    expect(await receiver.vault.getPatient(first.patientId)).toBeNull();
+    expect((await receiver.vault.getPatientVisits(target.patientId)).find(row => row.visitId === metadata.visitId)).toEqual(canonicalBefore);
+  });
+  it('binds an old writer moved snapshot to its known deletion UUID before legacy inference', async () => {
+    clock(); const a = await device(), b = await device(), metadata = visit();
+    const first = await save(a.vault, metadata); next('2026-01-01T11:00:00Z');
+    await save(a.vault, metadata, first.patientId, 132);
+    const old = copy((await a.vault.exportSyncPayload()).patients[0].snapshots.find(row => row.snapshotId === first.snapshotId));
+    delete old.payload.visit;
+    next('2026-01-02T10:00:00Z'); await a.vault.moveSnapshotToTrash(first.patientId, first.snapshotId);
+    const targetData = payload(visit('2026-01-02')); targetData.name = 'Drugi Fikcyjny';
+    targetData.user.firstName = 'Drugi'; targetData.user.lastName = 'Fikcyjny';
+    const target = await a.vault.savePatient(targetData, { dedup: false });
+    const incoming = copy(await a.vault.exportSyncPayload());
+    incoming.patients = incoming.patients.filter(row => row.patientId === target.patientId);
+    old.rev += 1; incoming.patients[0].snapshots.push(old); incoming.patients[0].snapshotCount += 1;
+    incoming.snapshotTombstones = [];
+    await a.vault.mergeSyncPayload(incoming);
+    const exported = await a.vault.exportSyncPayload();
+    const tombstone = exported.snapshotTombstones.find(row => row.snapshotId === first.snapshotId);
+    expect(tombstone.visitIdentity).toEqual({ version: 1, visitId: metadata.visitId });
+    expect(tombstone.payload.visit).toEqual({ ...metadata, patientId: first.patientId });
+    expect(tombstone.payload.user.height).toBe(130);
+    await b.vault.mergeSyncPayload(exported);
+    expect((await b.vault.exportSyncPayload()).snapshotTombstones.find(row => row.snapshotId === first.snapshotId).visitIdentity).toEqual(tombstone.visitIdentity);
+    const conflict = copy(incoming); conflict.patients[0].snapshots.find(row => row.snapshotId === first.snapshotId).payload.visit = visit();
+    const before = await a.vault.exportSyncPayload();
+    await expect(a.vault.mergeSyncPayload(conflict)).rejects.toMatchObject({ code: 'VISIT_IDENTITY_CONFLICT' });
+    expect(await a.vault.exportSyncPayload()).toEqual(before);
+    const oldDeletion = copy(tombstone); delete oldDeletion.payload.visit;
+    oldDeletion.payload.user.height = 131; oldDeletion.rev += 1;
+    oldDeletion.updatedAtISO = '2026-01-01T12:00:00.000Z';
+    await a.vault.mergeSyncPayload({ patients: [], snapshotTombstones: [oldDeletion] });
+    const updatedDeletion = (await a.vault.exportSyncPayload()).snapshotTombstones.find(row => row.snapshotId === first.snapshotId);
+    expect(updatedDeletion.payload.visit).toEqual({ ...metadata, patientId: first.patientId });
+    expect(updatedDeletion.payload.user.height).toBe(131);
+  });
   it('pinning an older revision never changes the canonical clinical payload', async () => {
     clock(); const { vault } = await device(), metadata = visit();
     const first = await save(vault, metadata, undefined, 120); next('2026-01-01T11:00:00Z');

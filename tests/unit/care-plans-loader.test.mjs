@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
 
 const DEPENDENCIES = [
-  'VildaVaultProtocol',
+  'VildaVaultProtocol', 'VildaVisitContext', 'VildaVisitHistory',
   'VildaClinicalCrypto', 'VildaPatientCheckpointStore', 'VildaPatientCheckpoint',
   'VildaPatientIdentityProtocol', 'VildaPatientIdentityTransport',
   'VildaBirthAssessment', 'VildaPatientSgaModel', 'VildaPatientSgaUI',
@@ -24,6 +24,7 @@ const REMINDER_MODULES = [
 function environment(careReady = false, missingReminderModule = null) {
   const documentListeners = new Map(), appended = [], existing = [
     { href: 'vilda_auth_ui.css?v=existing' },
+    { href: 'vilda_visit_history_ui.css?v=existing' },
     { href: 'vilda_patients_list.css?v=existing' },
     { href: 'vilda_patient_sga_ui.css?v=existing' },
     { href: 'vilda_lab_assessment_ui.css?v=existing' },

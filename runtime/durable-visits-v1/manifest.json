@@ -3,8 +3,8 @@
   "version": 1,
   "sourceRef": "40d742d38f4d2924d3ba85a50d746790d0de6644",
   "baseVaultSHA256": "4a545ca00de1a48d7c59036a1433be3513d52815dec3a3a78b7f6b5828c2e7a6",
-  "integratedVaultSHA256": "f02644c2d05e1af9f99c4f351408e025c8017a3eaaa6196c7c08f47ab3659a3a",
-  "fragmentSHA256": "b2ab9a38eebb53366b1b176dd9b4bb0773d699e2b8ef4287ac452d6b1d450f99",
+  "integratedVaultSHA256": "de032ceea852f6977460a2c96dccbe9578a0621e6cea773c811be8f0dd738183",
+  "fragmentSHA256": "5b7d345724247d971d1a18129d101bf27fbaf01db5c91d1383606302fd31f88d",
   "hooks": [
     {
       "name": "01-Bvisit_moved",
@@ -140,140 +140,154 @@
       "afterSHA256": "18a638d286424c93bc2087301d5cf005fbce7a44e6fe2ad5813975730603ca8b"
     },
     {
-      "name": "20-Bvisit_groupsForPlan",
+      "name": "20-Bvisit_session",
+      "before": ";\n  return st.pin || st.at ? { gwiazdka: { pin: st.pin, at: st.at } } : null;\n}\nasync function Bkz_przytnij(patientId, opcje) {\n  const nic = { prunedCount: 0, prunedIds: [] };\n  if (!T()) return nic;\n  if (typeof patientId !== 'string' || !patientId) retu",
+      "after": ";\n  return st.pin || st.at ? { gwiazdka: { pin: st.pin, at: st.at } } : null;\n}\nasync function Bkz_przytnij(patientId, opcje) {\n  const Bvisit_session = Bses_opcje(null);\n  const nic = { prunedCount: 0, prunedIds: [] };\n  if (!T()) return nic;\n  if (typeof patientId !== 'string' || !patientId) retu",
+      "beforeSHA256": "8a350316cbbb9e3a4043dd044819852069a0f6ff384fe748b60d0996e15c49dd",
+      "afterSHA256": "9fcdbbf104e99c64bf8457d71213f3f1bc9ac48dd72813b55ffb8664a6b12e5d"
+    },
+    {
+      "name": "21-Bvisit_groupsForPlan",
       "before": "patientId);\n  if (!karta || !Array.isArray(karta.snapshots) || karta.snapshots.length <= 1) return nic;\n  let plan;\n  try {\n    plan = v.VildaRetention.computeRetention(karta.snapshots, new Date().toISOString(), opcje || {});\n  } catch (er) {PatientClinicalRethrow(er);\n    try { console.warn('[vault] retention compute', er); } catch(PatientClinicalC",
       "after": "patientId);\n  if (!karta || !Array.isArray(karta.snapshots) || karta.snapshots.length <= 1) return nic;\n  let plan;\n  try {\n    const Bvisit_groupsForPlan = Bvisit_groups(karta.snapshots, patientId);\n    const Bvisit_protectedForPlan = new Set(Bvisit_groupsForPlan.map(function (group) { return group.snapshotId; }));\n    await Bvisit_applyDeletedHeads(Bvisit_groupsForPlan, Bvisit_protectedForPlan,\n      { mapa: new Map((await Bkz_czytaj()).map(function (entry) { return [entry.snapshotId, entry]; })) });\n    plan = v.VildaRetention.computeRetention(karta.snapshots, new Date().toISOString(),\n      Object.assign({}, opcje || {}, { protectedVisitSnapshotIds: Array.from(Bvisit_protectedForPlan) }));\n  } catch (er) {PatientClinicalRethrow(er);\n    try { console.warn('[vault] retention compute', er); } catch(PatientClinicalC",
       "beforeSHA256": "a3763346438c5b72bb605aac66b7315714271bd78590330075ded6e1b30a41ac",
       "afterSHA256": "dc07255497d5e1b90e978a764c0bca824221588604ed734d51584b3d551016f1"
     },
     {
-      "name": "21-Bvisit_session",
+      "name": "22-Bvisit_session",
+      "before": "ll,\n        powod: 'retencja',\n      }, Bm1(s), Bgw_zPlanu(s, wPlanie.get(id))));\n    });\n    if (!nagrobki.length) return nic;\n    try {\n      const lista = await Bkz_zmienListe(nagrobki, []);\n      const zapisane = new Set(lista.map(function (e) { return e.snapsho",
+      "after": "ll,\n        powod: 'retencja',\n      }, Bm1(s), Bgw_zPlanu(s, wPlanie.get(id))));\n    });\n    if (!nagrobki.length) return nic;\n    // Retention and manual deletion carry the same encrypted UUID evidence.\n    // The already decoded plan supplies it without keeping clinical trash.\n    for (const entry of nagrobki) {\n      Bses_pilnuj(Bvisit_session);\n      const planned = wPlanie.get(entry.snapshotId);\n      if (planned && Bvisit_valid(planned.payload && planned.payload.visit)) {\n        entry.visitCipher = await V({ version: 1, visitId: planned.payload.visit.visitId });\n        Bses_pilnuj(Bvisit_session);\n      }\n    }\n    try {\n      Bses_pilnuj(Bvisit_session);\n      const lista = await Bkz_zmienListe(nagrobki, []);\n      const zapisane = new Set(lista.map(function (e) { return e.snapsho",
+      "beforeSHA256": "5897c2ecafda141cd71546bdcfc6a8b69ef57da9a6b9629110e2b16a2c177a39",
+      "afterSHA256": "4db7c22730219acca16ac51d3b6059f4e7beb8ac04ccbfa210b196423b74cbb2"
+    },
+    {
+      "name": "23-Bvisit_session",
       "before": "ekord zlozony). Bez porownania W3 — Bsw_rekord jak dotad.\nasync function Bsw_rekordW3(cel, S, szyfr, teraz, g, tutejszaKarta) {\n  const w = g ? await Bsw_w3(S, g) : null;\n  if (!w) return Bsw_rekord(cel, S, szyfr, teraz, g, tutejszaKarta);\n  const r = Bsl_",
       "after": "ekord zlozony). Bez porownania W3 — Bsw_rekord jak dotad.\nasync function Bsw_rekordW3(cel, S, szyfr, teraz, g, tutejszaKarta) {\n  const Bvisit_session = Bses_opcje(null);\n  if (g) {\n    const Bvisit_sourcePayload = Object.assign({}, S.payload);\n    if (S.BvisitMissing) delete Bvisit_sourcePayload.visit;\n    const Bvisit_payload = Bvisit_owner(await Bvisit_sync(Bvisit_sourcePayload, g, g.patientId), cel.patientId);\n    Bses_pilnuj(Bvisit_session);\n    S = Object.assign({}, S, { payload: Bvisit_payload });\n    szyfr = await V(Bvisit_payload);\n    Bses_pilnuj(Bvisit_session);\n    g = await Bvisit_moved(g, cel.patientId);\n    Bses_pilnuj(Bvisit_session);\n  }\n  const w = g ? await Bsw_w3(S, g) : null;\n  if (!w) return Bsw_rekord(cel, S, szyfr, teraz, g, tutejszaKarta);\n  const r = Bsl_",
       "beforeSHA256": "189aa1b4dda2072b7a57fda19ae39cce999a621816cfcefdccda5416525df2c4",
       "afterSHA256": "a9696bd5c91321793c998b6a307d1dfd1253aa15c48b6fad44467e51ec037a17"
     },
     {
-      "name": "22-visit-metadata",
+      "name": "24-visit-metadata",
       "before": "ie dwoch wersji bez pol W3 (Bgw_scal).\nfunction Bgw_bezGwiazdki(t) { const o = JSON.parse(JSON.stringify(t)); delete o._pinned; return Bgw_kanon(o); }\nasync function Bgw_scal(S, g, patientId, teraz) {\n  if (!S.payload || typeof S.payload !== 'object') retu",
       "after": "ie dwoch wersji bez pol W3 (Bgw_scal).\nfunction Bgw_bezGwiazdki(t) { const o = JSON.parse(JSON.stringify(t)); delete o._pinned; delete o.visit; return Bgw_kanon(o); }\nasync function Bgw_scal(S, g, patientId, teraz) {\n  if (!S.payload || typeof S.payload !== 'object') retu",
       "beforeSHA256": "d224de4b9e42273b153d0380e3bd4c16573fb8f1df78a307d11ecdad25aa5330",
       "afterSHA256": "8fe889f3b0f1c7e808a2855535afca59cbcb3d1fde65692f9e12443a7cdfdd55"
     },
     {
-      "name": "23-Bvisit_local",
+      "name": "25-Bvisit_local",
       "before": "pu_ost) {\n        w.usuniety = true;\n        return PatientClinicalWriteValue(PatientClinicalOperationAccount,w);\n      }\n    }\n    if (Bpu_rek) {\n      const lokalne = await I().listSnapshotsForUser(b, F.patientId);\n      const ids = new Set(lokalne.map(function (s) { return PatientClinicalWriteValue(PatientClinicalOperationAccount,s.snapsh",
-      "after": "pu_ost) {\n        w.usuniety = true;\n        return PatientClinicalWriteValue(PatientClinicalOperationAccount,w);\n      }\n    }\n    const Bvisit_local = Bpu_rek ? await I().listSnapshotsForUser(b, F.patientId) : [];\n    for (let Bvisit_index = 0; Bvisit_index < wersjeZdalne.length; Bvisit_index += 1) {\n      const Bvisit_snapshot = wersjeZdalne[Bvisit_index];\n      const Bvisit_existing = Bvisit_local.find(function (row) { return row.snapshotId === Bvisit_snapshot.snapshotId; });\n      // The native merge ignores an identical revision without decrypting it.\n      // Its stored identity cannot be overwritten on this path either.\n      if (Bvisit_existing && Bkz_wersjaZgodna(Bvisit_snapshot, Bvisit_existing) && !Bgw_zlozony(Bvisit_snapshot.payload)) continue;\n      const Bvisit_payload = Bvisit_existing\n        ? await Bvisit_sync(Bvisit_snapshot.payload, Bvisit_existing, F.patientId)\n        : await Bvisit_read(Bvisit_snapshot.payload, F.patientId, Bvisit_snapshot);\n      wersjeZdalne[Bvisit_index] = Object.assign({}, Bvisit_snapshot, { payload: Bvisit_payload, BvisitMissing: !Bvisit_valid(Bvisit_snapshot.payload && Bvisit_snapshot.payload.visit) });\n      if (JSON.stringify(Bvisit_payload) !== JSON.stringify(Bvisit_snapshot.payload)) szyfry[Bvisit_index] = await V(Bvisit_payload || {});\n    }\n    const Bvisit_ids = await Bvisit_protected(F.patientId, Bvisit_local, wersjeZdalne, ctx);\n    Bses_pilnuj(opcje);\n    if (!ctx.BvisitProtected) ctx.BvisitProtected = new Set();\n    Bvisit_local.concat(wersjeZdalne).forEach(function (row) { ctx.BvisitProtected.delete(row.snapshotId); });\n    Bvisit_ids.forEach(function (id) { ctx.BvisitProtected.add(id); });\n    if (Bpu_rek) {\n      const lokalne = Bvisit_local;\n      const ids = new Set(lokalne.map(function (s) { return PatientClinicalWriteValue(PatientClinicalOperationAccount,s.snapsh",
+      "after": "pu_ost) {\n        w.usuniety = true;\n        return PatientClinicalWriteValue(PatientClinicalOperationAccount,w);\n      }\n    }\n    const Bvisit_local = Bpu_rek ? await I().listSnapshotsForUser(b, F.patientId) : [];\n    for (let Bvisit_index = 0; Bvisit_index < wersjeZdalne.length; Bvisit_index += 1) {\n      const Bvisit_snapshot = wersjeZdalne[Bvisit_index];\n      const Bvisit_existing = Bvisit_local.find(function (row) { return row.snapshotId === Bvisit_snapshot.snapshotId; });\n      // The native merge ignores an identical revision without decrypting it.\n      // Its stored identity cannot be overwritten on this path either.\n      if (Bvisit_existing && Bkz_wersjaZgodna(Bvisit_snapshot, Bvisit_existing) && !Bgw_zlozony(Bvisit_snapshot.payload)) continue;\n      const Bvisit_bound = await Bvisit_bindTombstone(Bvisit_snapshot.payload, F.patientId, Bvisit_snapshot, ctx);\n      Bses_pilnuj(opcje);\n      const Bvisit_payload = Bvisit_existing\n        ? await Bvisit_sync(Bvisit_bound, Bvisit_existing, F.patientId)\n        : await Bvisit_read(Bvisit_bound, F.patientId, Bvisit_snapshot);\n      wersjeZdalne[Bvisit_index] = Object.assign({}, Bvisit_snapshot, { payload: Bvisit_payload, BvisitMissing: !Bvisit_valid(Bvisit_snapshot.payload && Bvisit_snapshot.payload.visit) });\n      if (JSON.stringify(Bvisit_payload) !== JSON.stringify(Bvisit_snapshot.payload)) szyfry[Bvisit_index] = await V(Bvisit_payload || {});\n    }\n    const Bvisit_ids = await Bvisit_protected(F.patientId, Bvisit_local, wersjeZdalne, ctx);\n    Bses_pilnuj(opcje);\n    if (!ctx.BvisitProtected) ctx.BvisitProtected = new Set();\n    Bvisit_local.concat(wersjeZdalne).forEach(function (row) { ctx.BvisitProtected.delete(row.snapshotId); });\n    Bvisit_ids.forEach(function (id) { ctx.BvisitProtected.add(id); });\n    if (Bpu_rek) {\n      const lokalne = Bvisit_local;\n      const ids = new Set(lokalne.map(function (s) { return PatientClinicalWriteValue(PatientClinicalOperationAccount,s.snapsh",
       "beforeSHA256": "3e507a5628a8a783050236126776a5fe7218f38a06bee04443106ea3a53434c8",
-      "afterSHA256": "c39793aa7e5d7abcfef3b369ad42c2d73e4c2924728ae686422c17e4b0e2d646"
+      "afterSHA256": "915569fdebc21c236a23079a24c666bcec5dad1267e655d17d20039881ee9432"
     },
     {
-      "name": "24-visit-metadata",
+      "name": "26-visit-metadata",
       "before": " 'savedAtISO', 'rev', 'updatedAtISO', 'seq',\n  'powod', 'koszISO', 'przycietoISO', 'revPary', 'zmianaISO', 'gwiazdka', 'payload']);\n// Identyfikator urzadzenia w kopercie: 8 znakow bez mylacych (l, o, 0, 1) albo null.\nconst Bev_DEV = /^[a-km-np-z2-9]{8}$/;",
       "after": " 'savedAtISO', 'rev', 'updatedAtISO', 'seq',\n  'powod', 'koszISO', 'przycietoISO', 'revPary', 'zmianaISO', 'gwiazdka', 'payload', 'visitIdentity']);\n// Identyfikator urzadzenia w kopercie: 8 znakow bez mylacych (l, o, 0, 1) albo null.\nconst Bev_DEV = /^[a-km-np-z2-9]{8}$/;",
       "beforeSHA256": "25c4b80125da56d4b1d10faf34055ef78e0619183728ba93edb85345174e72c2",
       "afterSHA256": "6a588a248277ba4650ed6f68fc4cc341e488a52044956aa2d74ee2ec052280fb"
     },
     {
-      "name": "25-Bvisit_identityValid",
+      "name": "27-Bvisit_identityValid",
       "before": "tId;\n  }\n  if (kind === 'stomb') {\n    if (!s.every(function (x) { return Bev_kluczeW(x, Bev_POLA_KOSZA) && x.snapshotId === key; })) return false;\n    if (!Bev_ma(k, 'patients')) return true;\n    const p = k.patients;\n    return Array.isArray(p) && p.leng",
       "after": "tId;\n  }\n  if (kind === 'stomb') {\n    if (!s.every(function (x) { return Bev_kluczeW(x, Bev_POLA_KOSZA) && x.snapshotId === key && (!Bev_ma(x, 'visitIdentity') || (Bvisit_identityValid(x.visitIdentity) && Bev_kluczeW(x.visitIdentity, ['version', 'visitId']) && Object.keys(x.visitIdentity).length === 2)); })) return false;\n    if (!Bev_ma(k, 'patients')) return true;\n    const p = k.patients;\n    return Array.isArray(p) && p.leng",
       "beforeSHA256": "07f3b10ebd1f3faecfced493eb82b6289eff5ffd17ab3e9da6e42bd436c2a2e1",
       "afterSHA256": "780526fbd5d632c31bc2b44919a00a6e50ad5530d7b67cec2aa62f10d02e0482"
     },
     {
-      "name": "26-Bvisit_identity",
+      "name": "28-Bvisit_identity",
       "before": "== 'string' && e.zmianaISO) w.zmianaISO = e.zmianaISO;\n  const gwiazdka = Bgw_zWpisu(e);\n  if (gwiazdka) w.gwiazdka = gwiazdka;\n  if (e.payloadCipher) {\n    const t = await Bev_moze(c, e.payloadCipher);\n    if (t !== undefined) w.payload = t;\n  }\n  return w;\n}\n// 4. stomb — wszystkie wpisy kosza tej wersji (takze duplikaty z innym patientId) oraz karta bez wersji dla",
       "after": "== 'string' && e.zmianaISO) w.zmianaISO = e.zmianaISO;\n  const gwiazdka = Bgw_zWpisu(e);\n  if (gwiazdka) w.gwiazdka = gwiazdka;\n  const Bvisit_identity = await Bvisit_deletedIdentity(e);\n  c.strzez(); Bses_pilnuj(c.s);\n  if (Bvisit_identity) w.visitIdentity = Bvisit_identity;\n  if (e.payloadCipher) {\n    const t = await Bev_moze(c, e.payloadCipher);\n    if (t !== undefined) w.payload = Bvisit_owner(t, e.patientId);\n  }\n  return w;\n}\n// 4. stomb — wszystkie wpisy kosza tej wersji (takze duplikaty z innym patientId) oraz karta bez wersji dla",
       "beforeSHA256": "9e1251e884c9aef91f95d1fc7255eae5430c7805f963134c0ed93185353b6e99",
       "afterSHA256": "e921c78efce390da250833e55eddf74b8107f761aaf21c2c5653e2e8d34b0e7a"
     },
     {
-      "name": "27-Bvisit_read",
+      "name": "29-Bvisit_read",
       "before": "),o=[];for(let a=0;a<r.length;a+=1){const s=r[a];let i=null;try{i=await G(s.payloadCipher.iv,s.payloadCipher.data)}catch{i=null}o.push(Object.assign({snapshotId:s.snapshotId,savedAtISO:s.savedAtISO,updatedAtISO:s.updatedAtISO||s.savedAtISO||null,rev:typeof",
       "after": "),o=[];for(let a=0;a<r.length;a+=1){const s=r[a];let i=null;try{i=await G(s.payloadCipher.iv,s.payloadCipher.data)}catch{i=null}i=await Bvisit_read(i,t,s);o.push(Object.assign({snapshotId:s.snapshotId,savedAtISO:s.savedAtISO,updatedAtISO:s.updatedAtISO||s.savedAtISO||null,rev:typeof",
       "beforeSHA256": "44b5eded592d07d38e6fa974e87959cf3482bba850c8e95bfb08bd0b5fd382d8",
       "afterSHA256": "3277f39d227f1019c2c78d00fbc636cf0409fb1ae536c1ba116a606f012c04f4"
     },
     {
-      "name": "28-Bvisit_inplace",
+      "name": "30-Bvisit_inplace",
       "before": "Bzu_odmowa(t,[e],null);if(Bzu_e)throw Bzu_e}throw new Error(\"updateSnapshotPayload: snapshot \"+e+\" nie istnieje dla pacjenta.\")}const s=Nn(n);if(!s.name)throw new Error(\"updateSnapshotPayload: brak imienia pacjenta w payloadzie.\");const l=new Date().toISOS",
       "after": "Bzu_odmowa(t,[e],null);if(Bzu_e)throw Bzu_e}throw new Error(\"updateSnapshotPayload: snapshot \"+e+\" nie istnieje dla pacjenta.\")}n=await Bvisit_inplace(n,a,t);const s=Nn(n);if(!s.name)throw new Error(\"updateSnapshotPayload: brak imienia pacjenta w payloadzie.\");const l=new Date().toISOS",
       "beforeSHA256": "7989c68d729f99d9279bdb74d4379cf0d8941fd10edf11b75f536a3569d995a4",
       "afterSHA256": "b5c9f1ba5886d2bb5266114c738b9c0d82e67b2d3d62cc826c9fa5c774975dcc"
     },
     {
-      "name": "29-Bvisit_read",
+      "name": "31-Bvisit_read",
       "before": "stSnapshotsForUser(b,t),a=await G(r.headerCipher.iv,r.headerCipher.data),s=[];for(let p=0;p<o.length;p+=1){const w=o[p],h=await G(w.payloadCipher.iv,w.payloadCipher.data);s.push({snapshotId:w.snapshotId,savedAtISO:w.savedAtISO,rev:mt(w),updatedAtISO:typeof w.updatedAtISO==\"string\"&&w.updatedAtISO",
       "after": "stSnapshotsForUser(b,t),a=await G(r.headerCipher.iv,r.headerCipher.data),s=[];for(let p=0;p<o.length;p+=1){const w=o[p],h=await Bvisit_read(await G(w.payloadCipher.iv,w.payloadCipher.data),t,w);s.push({snapshotId:w.snapshotId,savedAtISO:w.savedAtISO,rev:mt(w),updatedAtISO:typeof w.updatedAtISO==\"string\"&&w.updatedAtISO",
       "beforeSHA256": "96dd32d3375a56ed35ddfc7d71ec42fdac4e808a669f23e6a24d59f1a5b8b73b",
       "afterSHA256": "778dd4d32b9b0efb694f4dba9063fae5f624c523cf75703f2e84c556bb2d0131"
     },
     {
-      "name": "30-Bvisit_read",
+      "name": "32-Bvisit_read",
       "before": "let A=0;A<p.length;A+=1){const N=p[A];if(!N||!N.snapshotId){h+=1;continue}if(d.has(N.snapshotId)){h+=1;continue}const C=await V(N.payload||{});Bpz_pilnuj(Bpi_s);O.push(Object.assign({snapshotId:N.snapshotId,patientId:i,savedAtISO:N.savedAtISO||new Date().toISOString(),",
       "after": "let A=0;A<p.length;A+=1){const N=p[A];if(!N||!N.snapshotId){h+=1;continue}if(d.has(N.snapshotId)){h+=1;continue}const C=await V(await Bvisit_read(await Bvisit_read(N.payload||{},s.patientId||i,N),i,N));Bpz_pilnuj(Bpi_s);O.push(Object.assign({snapshotId:N.snapshotId,patientId:i,savedAtISO:N.savedAtISO||new Date().toISOString(),",
       "beforeSHA256": "6f8d76a3f5431fc86e9391fc106b9dfe434720c287a0010f19415e3381094680",
       "afterSHA256": "9a7094a61187046892dd8722928ca34736591953371e4f94c55056847299461c"
     },
     {
-      "name": "31-Bvisit_read",
+      "name": "33-Bvisit_read",
       "before": ".iv,f.headerCipher.data),E=await I().listSnapshotsForUser(b,f.patientId),_=[];for(let A=0;A<E.length;A+=1){const N=E[A],C=await G(N.payloadCipher.iv,N.payloadCipher.data);_.push({snapshotId:N.snapshotId,savedAtISO:N.savedAtISO,rev:mt(N),updatedAtISO:typeof N.updatedAtISO==\"string\"&&N.updatedAtISO",
       "after": ".iv,f.headerCipher.data),E=await I().listSnapshotsForUser(b,f.patientId),_=[];for(let A=0;A<E.length;A+=1){const N=E[A],C=await Bvisit_read(await G(N.payloadCipher.iv,N.payloadCipher.data),f.patientId,N);_.push({snapshotId:N.snapshotId,savedAtISO:N.savedAtISO,rev:mt(N),updatedAtISO:typeof N.updatedAtISO==\"string\"&&N.updatedAtISO",
       "beforeSHA256": "76a40e9a5294296c77903295222f7108efdfa5c9f40f8fdc45dc91b7ac3ce33f",
       "afterSHA256": "ac6f8cd65e52955aa7e7538be35ca98b122330951c1afb31111be44aac60244a"
     },
     {
-      "name": "32-Bvisit_read",
+      "name": "34-Bvisit_read",
       "before": "wait V(Bng_zJawnych(J,O)||C.header);for(let $=0;$<J.length;$+=1){const tt=J[$];if(!tt||!tt.snapshotId)continue;const wt=await V(tt.payload||{});await I().putSnapshotForUser(w,PatientClinicalWriteValue(PatientClinicalOperationAccount,PatientClinicalWriteValue(w,{snapshot",
       "after": "wait V(Bng_zJawnych(J,O)||C.header);for(let $=0;$<J.length;$+=1){const tt=J[$];if(!tt||!tt.snapshotId)continue;const wt=await V(await Bvisit_read(tt.payload||{},C.patientId,tt));await I().putSnapshotForUser(w,PatientClinicalWriteValue(PatientClinicalOperationAccount,PatientClinicalWriteValue(w,{snapshot",
       "beforeSHA256": "fe439e2d058dd35554c5227558a634fc49b0b79df817a2dc3029cd1ca1897b29",
       "afterSHA256": "adc4ecd99444c60a8768ea3c5467e044ae329a1fb2f480670835cb1a734628a2"
     },
     {
-      "name": "33-Bvisit_read",
+      "name": "35-Bvisit_read",
       "before": "{w++;continue}if(Bks_obca(await Bks_k.mapa(),u.patientId,C.snapshotId)){Bks_k.obceId.add(C.snapshotId);continue}const Q=await V(C.payload||{});await I().putSnapshotForUser(b,PatientClinicalWriteValue(b,Bng_dopisz(Bng_zs,null,Object.assign({snapshotId:C.snapshotId,patie",
       "after": "{w++;continue}if(Bks_obca(await Bks_k.mapa(),u.patientId,C.snapshotId)){Bks_k.obceId.add(C.snapshotId);continue}const Q=await V(await Bvisit_read(C.payload||{},u.patientId,C));await I().putSnapshotForUser(b,PatientClinicalWriteValue(b,Bng_dopisz(Bng_zs,null,Object.assign({snapshotId:C.snapshotId,patie",
       "beforeSHA256": "079a88d18372b208e163ecf0f9d4f82298e903b13a35447e93e6a064bc4062a1",
       "afterSHA256": "c61413d29dd771801fbf0b6e8adb2d7ae3089bebc8c0a8afc94e47dfccb4cd8f"
     },
     {
-      "name": "34-Bvisit_read",
+      "name": "36-Bvisit_read",
       "before": "nst Bks_f=Bks_r.wersje,Bng_zn=[];for(let E=0;E<Bks_f.length;E++){const _=Bks_f[E];if(!_||!_.snapshotId)continue;const A=await V(_.payload||{});await I().putSnapshotForUser(b,PatientClinicalWriteValue(b,Bng_dopisz(Bng_zn,null,Object.assign({snapshotId:_.snapshotId,patie",
       "after": "nst Bks_f=Bks_r.wersje,Bng_zn=[];for(let E=0;E<Bks_f.length;E++){const _=Bks_f[E];if(!_||!_.snapshotId)continue;const A=await V(await Bvisit_read(_.payload||{},u.patientId,_));await I().putSnapshotForUser(b,PatientClinicalWriteValue(b,Bng_dopisz(Bng_zn,null,Object.assign({snapshotId:_.snapshotId,patie",
       "beforeSHA256": "52448d7b898aea227378ce4233558a484a7495e3d78100563feb2c5ddb898d5c",
       "afterSHA256": "698549e7d4cdf2d883493ccac30b7ce1386727fa6211ec30947071b1f37c3cc3"
     },
     {
-      "name": "35-Bvisit_read",
+      "name": "37-Bvisit_read",
       "before": ".iv,w.headerCipher.data),O=await I().listSnapshotsForUser(b,w.patientId),u=[];for(let f=0;f<O.length;f+=1){const m=O[f],E=await G(m.payloadCipher.iv,m.payloadCipher.data);u.push({snapshotId:m.snapshotId,savedAtISO:m.savedAtISO,rev:mt(m),updatedAtISO:typeof m.updatedAtISO==\"string\"&&m.updatedAtISO",
       "after": ".iv,w.headerCipher.data),O=await I().listSnapshotsForUser(b,w.patientId),u=[];for(let f=0;f<O.length;f+=1){const m=O[f],E=await Bvisit_read(await G(m.payloadCipher.iv,m.payloadCipher.data),w.patientId,m);u.push({snapshotId:m.snapshotId,savedAtISO:m.savedAtISO,rev:mt(m),updatedAtISO:typeof m.updatedAtISO==\"string\"&&m.updatedAtISO",
       "beforeSHA256": "edaed3ad2b9a083195b05a194273b81e97fd643801d01a6f55c835c6a99406f3",
       "afterSHA256": "ced58e3b33e6abfbb4738d138eab2a45b4c9a79e1614ed9b2b97c9abd5e08ea7"
     },
     {
-      "name": "36-Bvisit_read",
+      "name": "38-Bvisit_read",
       "before": "aderCipher.iv,n.headerCipher.data),o=await I().listSnapshotsForUser(b,t),a=[];for(let i=0;i<o.length;i+=1){const c=o[i],l=await G(c.payloadCipher.iv,c.payloadCipher.data);a.push({snapshotId:c.snapshotId,savedAtISO:c.savedAtISO,rev:mt(c),updatedAtISO:typeof c.updatedAtISO==\"string\"&&c.updatedAtISO",
       "after": "aderCipher.iv,n.headerCipher.data),o=await I().listSnapshotsForUser(b,t),a=[];for(let i=0;i<o.length;i+=1){const c=o[i],l=await Bvisit_read(await G(c.payloadCipher.iv,c.payloadCipher.data),t,c);a.push({snapshotId:c.snapshotId,savedAtISO:c.savedAtISO,rev:mt(c),updatedAtISO:typeof c.updatedAtISO==\"string\"&&c.updatedAtISO",
       "beforeSHA256": "132fd80d9e15db3bcba14534be565a7c9280f7d60563d1fcb5fa0914e20a92fd",
       "afterSHA256": "298749afbcd505dc33323196aca466f7c6c1f283c244542d0be998ac0b91a4c5"
     },
     {
-      "name": "37-visit-metadata",
+      "name": "39-visit-metadata",
       "before": "kz_scalKoniec(Bkz_S,e)}catch(Bkz_e){PatientClinicalRethrow(Bkz_e);if(Bkz_e&&(Bkz_e.vildaMergeBusy||Bkz_e.code===\"SESSION_CHANGED\"))throw Bkz_e;try{console.warn(\"[vault] kosz zapisow: scalanie nagrobkow\",Bkz_e)}catch(PatientClinicalCaught){PatientClinicalRe",
       "after": "kz_scalKoniec(Bkz_S,e)}catch(Bkz_e){PatientClinicalRethrow(Bkz_e);if(Bkz_e&&(Bkz_e.vildaMergeBusy||Bkz_e.code===\"SESSION_CHANGED\"||Bkz_e.code===\"VISIT_IDENTITY_CONFLICT\"||Bkz_e.code===\"INVALID_VISIT_IDENTITY\"))throw Bkz_e;try{console.warn(\"[vault] kosz zapisow: scalanie nagrobkow\",Bkz_e)}catch(PatientClinicalCaught){PatientClinicalRe",
       "beforeSHA256": "976ab050b5fd5687113e3f0af1dd8002263b6478a24a50d8b65c6a267c92f7d6",
       "afterSHA256": "38be51d93d1878d85bc8c7eb13ff9cbf7d839dd55fb4a4c09e99b32cb2fd7fbc"
     },
     {
-      "name": "38-visit-metadata",
+      "name": "40-visit-metadata",
       "before": "r('UNSUPPORTED');\n  if (!PatientWorkspaceModule) {\n    PatientWorkspaceModule = import(new v.URL('runtime/clinical-workspace-v1/e410c8725541/client/patient-clinical-workspace-native/index.mjs', PatientWorkspaceScriptURL).href)\n      .catch(function (error) { PatientWo",
       "after": "r('UNSUPPORTED');\n  if (!PatientWorkspaceModule) {\n    PatientWorkspaceModule = import(new v.URL('runtime/clinical-workspace-v1/67818dc1656f/client/patient-clinical-workspace-native/index.mjs', PatientWorkspaceScriptURL).href)\n      .catch(function (error) { PatientWo",
       "beforeSHA256": "d35d052ef1ef0ad6eb11b254e680d353ac5029db77d06dbb63cac9ac3d6ba0be",
       "afterSHA256": "c473aa65cde3d40eeddb66ae0f92a72cd595fa4b817491427fd79445b140cae3"
     },
     {
-      "name": "39-Bvisit_list",
+      "name": "41-Bvisit_list",
       "before": ",savePatient:_e,getCommittedSavePayload:Bcommit_get,setSaveConflictResolver:Bb8,setPatientIdentityResolver:Bz2,getPatient:ct,getLatestSnapshot:hr,restoreSnapshotAsNew:ro,setSnapshotPinned:ao,pruneSnapshotsForPatient:wr,updateSnapshotPayload:$e,deleteSnapsh",
       "after": ",savePatient:_e,getCommittedSavePayload:Bcommit_get,setSaveConflictResolver:Bb8,setPatientIdentityResolver:Bz2,getPatient:ct,getPatientVisits:Bvisit_list,getLatestSnapshot:hr,restoreSnapshotAsNew:ro,setSnapshotPinned:ao,pruneSnapshotsForPatient:wr,updateSnapshotPayload:$e,deleteSnapsh",
       "beforeSHA256": "e72656944c4b8757715e8330653d9a90e43b253e0f50e71a95dbf9ce4b84c799",

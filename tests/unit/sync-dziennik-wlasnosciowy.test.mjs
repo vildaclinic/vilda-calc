@@ -2022,23 +2022,25 @@ const KAT_LITERALY = {
     blob: { stan: '74a2f084cfbf', widok: 'Z[m2,m1,z,y,x3,x1] | kosz x@X:74 | nagr X,Y' },
     w4: { stan: '74a2f084cfbf', widok: 'Z[m2,m1,z,y,x3,x1] | kosz x@X:74 | nagr X,Y' },
   },
+  // Durable visits keep one canonical snapshot for each original visit after
+  // merging cards: x3 (X), m1 (Y), m2 (Z), with their existing clinical data.
   'E4b-ret K←C,P←K': {
-    zdarzenia: { stan: '814a97e28149', widok: {
-      P: 'Z[m2] | nagr Y',
-      K: 'Z[m2] | nagr X,Y',
-      C: 'Z[m2] | nagr X,Y',
+    zdarzenia: { stan: '2a8f046fea5a', widok: {
+      P: 'Z[m2,m1,x3] | nagr Y',
+      K: 'Z[m2,m1,x3] | nagr X,Y',
+      C: 'Z[m2,m1,x3] | nagr X,Y',
     } },
-    blob: { stan: '0b8b03e77f8d', widok: 'Z[m2] | nagr X,Y' },
-    w4: { stan: '0b8b03e77f8d', widok: 'Z[m2] | nagr X,Y' },
+    blob: { stan: '46f6f9a818ac', widok: 'Z[m2,m1,x3] | nagr X,Y' },
+    w4: { stan: '46f6f9a818ac', widok: 'Z[m2,m1,x3] | nagr X,Y' },
   },
   'E4b-ret C←P,C←K': {
-    zdarzenia: { stan: '8ccdd100337b', widok: {
-      P: 'Z[m2] | nagr Y',
-      K: 'Z[m2] | nagr X,Y',
-      C: 'Z[m2] | nagr Y',
+    zdarzenia: { stan: '08cb70e2ca6b', widok: {
+      P: 'Z[m2,m1,x3] | nagr Y',
+      K: 'Z[m2,m1,x3] | nagr X,Y',
+      C: 'Z[m2,m1,x3] | nagr Y',
     } },
-    blob: { stan: '0b8b03e77f8d', widok: 'Z[m2] | nagr X,Y' },
-    w4: { stan: '0b8b03e77f8d', widok: 'Z[m2] | nagr X,Y' },
+    blob: { stan: '46f6f9a818ac', widok: 'Z[m2,m1,x3] | nagr X,Y' },
+    w4: { stan: '46f6f9a818ac', widok: 'Z[m2,m1,x3] | nagr X,Y' },
   },
   // npret-pin, npret-K (od E2-PR3c1: koperta nagrobka X niesie kartę docelową Y): po zdarzeniach przypięta x:23* jest
   // pod Y na P (w C←P,C←K także na C), K dostaje ją przy pełnej wymianie; po W4 stan = stan samych blobów.
@@ -2058,23 +2060,24 @@ const KAT_LITERALY = {
     blob: { stan: '3e3ec48f354a', widok: 'Y[m3,y,x3,x:23*] Z[z] | nagr X' },
     w4: { stan: '3e3ec48f354a', widok: 'Y[m3,y,x3,x:23*] Z[z] | nagr X' },
   },
+  // x3 remains the canonical source visit; m2 belongs to the target visit.
   'npret-K K←C,P←K': {
-    zdarzenia: { stan: '192b90928d12', widok: {
-      P: 'Y[m2,x:23*] Z[z] | nagr X',
-      K: 'Y[m2] Z[z] | nagr X',
-      C: 'Y[m2] Z[z] | nagr X',
+    zdarzenia: { stan: 'ae685324abea', widok: {
+      P: 'Y[m2,x3,x:23*] Z[z] | nagr X',
+      K: 'Y[m2,x3] Z[z] | nagr X',
+      C: 'Y[m2,x3] Z[z] | nagr X',
     } },
-    blob: { stan: '30174011f115', widok: 'Y[m2,x:23*] Z[z] | nagr X' },
-    w4: { stan: '30174011f115', widok: 'Y[m2,x:23*] Z[z] | nagr X' },
+    blob: { stan: '39e4b7ca1a8d', widok: 'Y[m2,x3,x:23*] Z[z] | nagr X' },
+    w4: { stan: '39e4b7ca1a8d', widok: 'Y[m2,x3,x:23*] Z[z] | nagr X' },
   },
   'npret-K C←P,C←K': {
-    zdarzenia: { stan: '31a62f7b743c', widok: {
-      P: 'Y[m2,x:23*] Z[z] | nagr X',
-      K: 'Y[m2] Z[z] | nagr X',
-      C: 'Y[m2,x:23*] Z[z] | nagr X',
+    zdarzenia: { stan: 'b7dd020320e6', widok: {
+      P: 'Y[m2,x3,x:23*] Z[z] | nagr X',
+      K: 'Y[m2,x3] Z[z] | nagr X',
+      C: 'Y[m2,x3,x:23*] Z[z] | nagr X',
     } },
-    blob: { stan: '30174011f115', widok: 'Y[m2,x:23*] Z[z] | nagr X' },
-    w4: { stan: '30174011f115', widok: 'Y[m2,x:23*] Z[z] | nagr X' },
+    blob: { stan: '39e4b7ca1a8d', widok: 'Y[m2,x3,x:23*] Z[z] | nagr X' },
+    w4: { stan: '39e4b7ca1a8d', widok: 'Y[m2,x3,x:23*] Z[z] | nagr X' },
   },
   'PRZ0-bez K←C,P←K': {
     zdarzenia: { stan: '2e54886e8b35', widok: {
@@ -2546,6 +2549,10 @@ async function skutekNotatki(U, u) {
   return `${gdzieN} | notatki w kartach: ${listy.join('; ')}`;
 }
 // Literały p. 6 (zmierzone; specyfikacja 2a, 3.4 i 3.6).
+// Rebinding moved visit payloads and retaining encrypted deletion identity add
+// AES IVs before the merge-head snapshot, advancing this fixture's shared
+// IV/UUID RNG. Only those exact generated prefixes changed below;
+// original snapshot IDs, clinical contents and convergence assertions remain.
 const P6_LITERALY = {
   'R2-0': {
     zdarzenia: ['wersja P/v: rev [R2]'],
@@ -2618,8 +2625,8 @@ const P6_LITERALY = {
   'R2-E3': {
     zdarzenia: [],
     w4: {
-      A: 'karty K10[#c9c6:30] K11[#87d2:31] K12[#7181:32] K13[#a36c:33] K14[#a0ce:34] K2[#5f94:22] K3[#9ef4:23] K4[#ab9c:24] K5[#8c85:25] K6[#4d00:26] K7[#020f:27] K9[#ba07:29] Q[v:30* #e5ee:28 #1acb:28] | Kosz - | notatki -',
-      B: 'karty K10[#c9c6:30] K11[#87d2:31] K12[#7181:32] K13[#a36c:33] K14[#a0ce:34] K2[#5f94:22] K3[#9ef4:23] K4[#ab9c:24] K5[#8c85:25] K6[#4d00:26] K7[#020f:27] K9[#ba07:29] Q[v:30* #e5ee:28 #1acb:28] | Kosz - | notatki -',
+      A: 'karty K10[#c9c6:30] K11[#87d2:31] K12[#7181:32] K13[#a36c:33] K14[#a0ce:34] K2[#5f94:22] K3[#9ef4:23] K4[#ab9c:24] K5[#8c85:25] K6[#4d00:26] K7[#020f:27] K9[#ba07:29] Q[v:30* #e5ee:28 #ead4:28] | Kosz - | notatki -',
+      B: 'karty K10[#c9c6:30] K11[#87d2:31] K12[#7181:32] K13[#a36c:33] K14[#a0ce:34] K2[#5f94:22] K3[#9ef4:23] K4[#ab9c:24] K5[#8c85:25] K6[#4d00:26] K7[#020f:27] K9[#ba07:29] Q[v:30* #e5ee:28 #ead4:28] | Kosz - | notatki -',
       r4n: 0,
       w4p: [],
     },
@@ -2671,8 +2678,8 @@ const P6_LITERALY = {
   'Scal pacjentów P → Q na A, edycja notatki karty P na B (bez wiedzy o scaleniu)': {
     zdarzenia: [],
     w4: {
-      A: 'karty Q[#41a7:22 #71c4:22 #102a:22] | Kosz - | notatki n: edycja B',
-      B: 'karty Q[#41a7:22 #71c4:22 #102a:22] | Kosz - | notatki n: edycja B',
+      A: 'karty Q[#41a7:22 #71c4:22 #5da9:22] | Kosz - | notatki n: edycja B',
+      B: 'karty Q[#41a7:22 #71c4:22 #5da9:22] | Kosz - | notatki n: edycja B',
       skutekA: 'n „edycja B” pod Q — widoczna w karcie Q | notatki w kartach: karta P (usunięta): -; karta Q: n „edycja B”',
       skutekB: 'n „edycja B” pod Q — widoczna w karcie Q | notatki w kartach: karta P (usunięta): -; karta Q: n „edycja B”',
       r4n: 0,
@@ -2689,8 +2696,8 @@ const P6_LITERALY = {
   'skrzyżowane Scal pacjentów (A: P → Q, B: Q → P), notatka karty P': {
     zdarzenia: [],
     w4: {
-      A: 'karty P[#ce45:22 #f06d:22 #b0cd:22] | Kosz - | notatki n: Fikcyjna treść',
-      B: 'karty P[#ce45:22 #f06d:22 #b0cd:22] | Kosz - | notatki n: Fikcyjna treść',
+      A: 'karty P[#ce45:22 #f06d:22 #92f6:22] | Kosz - | notatki n: Fikcyjna treść',
+      B: 'karty P[#ce45:22 #f06d:22 #92f6:22] | Kosz - | notatki n: Fikcyjna treść',
       skutekA: 'n „Fikcyjna treść” pod P — widoczna w karcie P | notatki w kartach: karta P: n „Fikcyjna treść”; karta Q (usunięta): -',
       skutekB: 'n „Fikcyjna treść” pod P — widoczna w karcie P | notatki w kartach: karta P: n „Fikcyjna treść”; karta Q (usunięta): -',
       r4n: 0,
@@ -2708,15 +2715,15 @@ const P6_LITERALY = {
   'K6': {
     zdarzenia: [],
     w4: {
-      A: 'karty Q[v:27 q:30 #5e09:30] | Kosz - | notatki -',
-      B: 'karty Q[v:27 q:30 #5e09:30] | Kosz - | notatki -',
+      A: 'karty Q[v:27 q:30 #a349:30] | Kosz - | notatki -',
+      B: 'karty Q[v:27 q:30 #a349:30] | Kosz - | notatki -',
       r4n: 0,
       w4p: [],
     },
     bloby: [],
     blobyKlinicznie: {
-      A: 'karty Q[v:27 q:30 #5e09:30] | Kosz - | notatki -',
-      B: 'karty Q[v:27 q:30 #5e09:30] | Kosz - | notatki -',
+      A: 'karty Q[v:27 q:30 #a349:30] | Kosz - | notatki -',
+      B: 'karty Q[v:27 q:30 #a349:30] | Kosz - | notatki -',
     },
   },
   // E2-PR3c5 (decyzja 7): po zdarzeniach wpis v na obu bez treści (nagrobek przycięcia), różni się tylko opis (D7,
@@ -2726,8 +2733,8 @@ const P6_LITERALY = {
   'Kosz i Przywróć na B, porządkowanie i Scal pacjentów P → Q na A': {
     zdarzenia: ['kosz v|P: koszISO, rev, updatedAtISO, zmianaISO [D7]'],
     w4: {
-      A: 'karty Q[w:21 #5377:30 #c19c:30] | Kosz - | notatki -',
-      B: 'karty Q[w:21 #5377:30 #c19c:30] | Kosz - | notatki -',
+      A: 'karty Q[w:21 #5377:30 #6c82:30] | Kosz - | notatki -',
+      B: 'karty Q[w:21 #5377:30 #6c82:30] | Kosz - | notatki -',
       r4n: 0,
       w4p: [],
     },

@@ -6471,7 +6471,29 @@ const CLINICAL_WORKSPACE_PRECACHE_PACK = Object.freeze({
 });
 // END CLINICAL WORKSPACE PACK CONFIG
 
+// BEGIN VISIT UI PACK CONFIG
+const VISIT_UI_PRECACHE_PACK = Object.freeze({
+  "url": "/runtime/visit-ui-precache/precache-f8becd2f7467.json",
+  "sha256": "f8becd2f746786cfcfee0c3b70ee2991072b54633de16cb6d9dae95cfe37df35",
+  "files": [
+    {
+      "url": "/vilda_visit_context.js?v=1",
+      "sha256": "6e40276d866ddc571404e5d3ed5acc2e5499391d4dc565c0cb23dd914c600edb"
+    },
+    {
+      "url": "/vilda_visit_history_ui.js?v=1",
+      "sha256": "83d37a9d85482a6f538ae0a1d9f1f4990b0c300fd33e470963efdc9138f31de0"
+    },
+    {
+      "url": "/vilda_visit_history_ui.css?v=1",
+      "sha256": "97ee23baf0a0f1e35ab2aa2cdbce998a7633a916e08b09d96e6fa5810e67d3f8"
+    }
+  ]
+});
+// END VISIT UI PACK CONFIG
+
 const FRESH_STATIC_ALIAS_PATHS = new Set([
+  '/obesity_therapy.js',
   '/obesity_therapy_monitor.js',
   '/edu-video-ui.css',
   '/style.css',
@@ -6577,6 +6599,35 @@ function createClinicalWorkspacePrecacheState(config = CLINICAL_WORKSPACE_PRECAC
       || !/^[a-f0-9]{64}$/.test(file.sha256))) {
     throw new Error('Invalid clinical workspace precache configuration');
   }
+  return createVerifiedPrecachePackState(config, expected, () => 'text/javascript; charset=utf-8');
+}
+
+function createVisitUIPrecacheState(config = VISIT_UI_PRECACHE_PACK) {
+  const types = new Map([
+    ['/vilda_visit_context.js', 'text/javascript; charset=utf-8'],
+    ['/vilda_visit_history_ui.js', 'text/javascript; charset=utf-8'],
+    ['/vilda_visit_history_ui.css', 'text/css; charset=utf-8'],
+  ]);
+  if (!config || !Array.isArray(config.files) || config.files.length !== types.size
+    || !/^[a-f0-9]{64}$/.test(config.sha256)
+    || config.url !== '/runtime/visit-ui-precache/precache-' + config.sha256.slice(0, 12) + '.json') {
+    throw new Error('Invalid visit UI precache configuration');
+  }
+  const expected = new Map(), seen = new Set();
+  for (const file of config.files) {
+    const match = /^([^?]+)\?v=([1-9][0-9]*)$/.exec(file.url);
+    if (Object.keys(file).length !== 2 || !match || !types.has(match[1]) || seen.has(match[1])
+      || !INSTALL_CORE_URLS.includes(file.url) || !/^[a-f0-9]{64}$/.test(file.sha256)) {
+      throw new Error('Unexpected visit UI precache resource');
+    }
+    seen.add(match[1]); expected.set(file.url, file.sha256);
+  }
+  return createVerifiedPrecachePackState(config, expected, url => types.get(url.split('?')[0]));
+}
+
+// Both callers validate their own fixed resource allowlist before using this
+// shared transport. An archive cannot add paths, change MIME or bypass hashes.
+function createVerifiedPrecachePackState(config, expected, contentTypeFor) {
   const digest = async bytes => Array.from(new Uint8Array(await self.crypto.subtle.digest('SHA-256', bytes)))
     .map(byte => byte.toString(16).padStart(2, '0')).join('');
   const exactKeys = (value, keys) => value !== null && typeof value === 'object' && !Array.isArray(value)
@@ -6585,23 +6636,23 @@ function createClinicalWorkspacePrecacheState(config = CLINICAL_WORKSPACE_PRECAC
   const load = async () => {
     const response = await fetch(new Request(scopeHref(config.url), { cache: 'reload', redirect: 'error' }));
     if (response.status !== 200 || response.type === 'opaque' || response.redirected) {
-      throw new Error('Clinical workspace precache pack unavailable');
+      throw new Error('Verified precache pack unavailable');
     }
     const bytes = await response.arrayBuffer();
-    if (await digest(bytes) !== config.sha256) throw new Error('Clinical workspace precache pack digest mismatch');
+    if (await digest(bytes) !== config.sha256) throw new Error('Verified precache pack digest mismatch');
     const pack = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
     if (!exactKeys(pack, ['schemaVersion', 'files']) || pack.schemaVersion !== 1
       || !Array.isArray(pack.files) || pack.files.length !== expected.size) {
-      throw new Error('Invalid clinical workspace precache pack');
+      throw new Error('Invalid verified precache pack');
     }
     const files = await Promise.all(pack.files.map(async (file, index) => {
       const pinned = config.files[index];
       if (!exactKeys(file, ['path', 'sha256', 'source']) || file.path !== pinned.url.slice(1)
         || file.sha256 !== pinned.sha256 || typeof file.source !== 'string') {
-        throw new Error('Unexpected clinical workspace precache member');
+        throw new Error('Unexpected verified precache member');
       }
       const source = new TextEncoder().encode(file.source);
-      if (await digest(source) !== pinned.sha256) throw new Error('Clinical workspace module digest mismatch');
+      if (await digest(source) !== pinned.sha256) throw new Error('Verified precache resource digest mismatch');
       return [pinned.url, source];
     }));
     return new Map(files);
@@ -6609,13 +6660,13 @@ function createClinicalWorkspacePrecacheState(config = CLINICAL_WORKSPACE_PRECAC
   return {
     has: url => expected.has(url),
     async responseFor(url) {
-      if (!expected.has(url)) throw new Error('Unknown clinical workspace module');
+      if (!expected.has(url)) throw new Error('Unknown verified precache resource');
       // This promise belongs to one install, including failure. A retry starts
       // a fresh install and fetch; no failed pack falls back to unchecked files.
       if (!verifiedFiles) verifiedFiles = load();
       const source = (await verifiedFiles).get(url);
       return new Response(source, { status: 200, headers: {
-        'Content-Type': 'text/javascript; charset=utf-8',
+        'Content-Type': contentTypeFor(url),
         'Content-Length': String(source.byteLength),
         'X-Content-Type-Options': 'nosniff',
       } });
@@ -6623,16 +6674,18 @@ function createClinicalWorkspacePrecacheState(config = CLINICAL_WORKSPACE_PRECAC
   };
 }
 
-async function fetchAndStorePrecacheUrl(url, { required = false, previousShellCaches = [], freshResponses = null, clinicalWorkspacePack = null } = {}) {
+async function fetchAndStorePrecacheUrl(url, { required = false, previousShellCaches = [], freshResponses = null, clinicalWorkspacePack = null, visitUIPack = null } = {}) {
   const cache = await caches.open(SHELL_CACHE);
   const pathname = getPathname(url);
   const cacheKey = DOCUMENT_PATHS.has(pathname)
     ? normalizeNavigationPath(pathname)
     : getShellCacheKeyFromStaticUrl(url);
 
-  if (clinicalWorkspacePack?.has(url)) {
-    if (!cacheKey) throw new Error(`Missing clinical workspace precache key: ${url}`);
-    await cache.put(cacheKey, await clinicalWorkspacePack.responseFor(url));
+  const verifiedPack = clinicalWorkspacePack?.has(url) ? clinicalWorkspacePack
+    : visitUIPack?.has(url) ? visitUIPack : null;
+  if (verifiedPack) {
+    if (!cacheKey) throw new Error(`Missing verified precache key: ${url}`);
+    await cache.put(cacheKey, await verifiedPack.responseFor(url));
     return;
   }
 
@@ -6683,11 +6736,12 @@ async function installShell() {
   const previousShellCaches = await openReusablePreviousShellCaches();
   const freshResponses = new Map();
   const clinicalWorkspacePack = createClinicalWorkspacePrecacheState();
+  const visitUIPack = createVisitUIPrecacheState();
 
   // Najpierw minimalny shell – jeśli to się nie uda, nowa wersja SW nie powinna wejść.
   // P-SW-PRECACHE: tylko wpisy bieżące rdzenia (INSTALL_CORE_URLS).
   for (const url of INSTALL_CORE_URLS) {
-    await fetchAndStorePrecacheUrl(url, { required: true, previousShellCaches, freshResponses, clinicalWorkspacePack });
+    await fetchAndStorePrecacheUrl(url, { required: true, previousShellCaches, freshResponses, clinicalWorkspacePack, visitUIPack });
   }
 
   // Następnie dodatkowe strony i zasoby pobieramy spokojnie, jeden po drugim,
@@ -6695,7 +6749,7 @@ async function installShell() {
   // P-SW-DOCPRO: najpierw dokumenty i wersje bieżące (patrz orderOptionalPrecacheUrls); P-SW-PRECACHE: bez historii.
   for (const url of INSTALL_OPTIONAL_URLS) {
     try {
-      await fetchAndStorePrecacheUrl(url, { required: false, previousShellCaches, freshResponses, clinicalWorkspacePack });
+      await fetchAndStorePrecacheUrl(url, { required: false, previousShellCaches, freshResponses, clinicalWorkspacePack, visitUIPack });
     } catch (_) {
     void _;
   }

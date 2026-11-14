@@ -321,7 +321,7 @@
       "set vilda-note-changed-ping-v1"
      ],
      "sessionStorage": [],
-     "krypto": 5,
+     "krypto": 6,
      "powiadomienia": {
       "onPatientSaved": 1
      },
@@ -714,7 +714,7 @@
      ],
      "localStorage": [],
      "sessionStorage": [],
-     "krypto": 29,
+     "krypto": 32,
      "powiadomienia": {},
      "magazyn": [
       "listPatientsForUser(<uid>)",
@@ -1782,7 +1782,7 @@
       "set vilda-note-changed-ping-v1"
      ],
      "sessionStorage": [],
-     "krypto": 5,
+     "krypto": 6,
      "powiadomienia": {
       "onPatientSaved": 1
      }
@@ -2190,7 +2190,7 @@
      ],
      "localStorage": [],
      "sessionStorage": [],
-     "krypto": 29,
+     "krypto": 32,
      "powiadomienia": {}
     },
     {
@@ -3104,7 +3104,7 @@
      "sessionStorage": [
       "set veph:cloud-only:per-user-v1"
      ],
-     "krypto": 5,
+     "krypto": 6,
      "powiadomienia": {
       "onPatientSaved": 1
      }
@@ -3421,7 +3421,7 @@
      "sessionStorage": [
       "set veph:cloud-only:per-user-v1"
      ],
-     "krypto": 15,
+     "krypto": 18,
      "powiadomienia": {}
     },
     {
@@ -4188,7 +4188,7 @@
      "sessionStorage": [
       "set veph:vault:adapter-v1"
      ],
-     "krypto": 5,
+     "krypto": 6,
      "powiadomienia": {
       "onPatientSaved": 1
      }
@@ -4487,7 +4487,7 @@
      "sessionStorage": [
       "set veph:vault:adapter-v1"
      ],
-     "krypto": 29,
+     "krypto": 32,
      "powiadomienia": {}
     },
     {

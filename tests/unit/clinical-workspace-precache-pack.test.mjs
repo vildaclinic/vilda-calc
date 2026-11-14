@@ -9,6 +9,7 @@ const SW_SOURCE = fs.readFileSync(path.join(ROOT, 'service-worker-kalorii.js'), 
 const MANIFEST = JSON.parse(fs.readFileSync(path.join(ROOT, 'runtime/clinical-workspace-v1/manifest.json'), 'utf8'));
 const PACK_BYTES = fs.readFileSync(path.join(ROOT, MANIFEST.precachePack.path));
 const PACK_URL = '/' + MANIFEST.precachePack.path;
+const VISIT_PACK = JSON.parse(fs.readFileSync(path.join(ROOT, 'runtime/visit-ui-precache/manifest.json'), 'utf8')).pack;
 const HISTORICAL_FILES = MANIFEST.historicalFiles || [];
 const PACK_FILES = MANIFEST.files.concat(HISTORICAL_FILES);
 // The source list remains append-only: historical addresses precede the new graph.
@@ -56,6 +57,7 @@ function worker({ scope = '/', packResponse, failPut = () => false } = {}) {
     const url = new URL(request.url);
     const relative = '/' + url.pathname.slice(base.pathname.length);
     if (relative === PACK_URL) return packResponse ? packResponse(request) : new Response(PACK_BYTES);
+    if (relative === '/' + VISIT_PACK.path) return new Response(fs.readFileSync(path.join(ROOT, VISIT_PACK.path)));
     if (MODULES.has(relative)) throw new Error('unexpected individual module fetch');
     return new Response('/* independent static resource */');
   };

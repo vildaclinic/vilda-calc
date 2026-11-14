@@ -209,16 +209,22 @@ describe('persistent working encounter context', () => {
   });
 
   it.each([{ version: 2 }, { visitId: 'invalid-fictional-id' }])('rejects malformed or future file visit metadata before touching clinical state: %j', override => {
-    const h = environment({ importer: true }), data = source(), native = h.win.VildaDataImportExport, onError = vi.fn();
-    data.visit = { ...h.api.create({ patientId }), ...override };
-    const before = native.collectUserData();
-    const sequence = native.getApplyLoadedDataSequence();
-    importFile(h, data, { onError });
-    expect(onError).toHaveBeenCalledOnce();
-    expect(onError.mock.calls[0][0].code).toBe('INVALID_VISIT_IDENTITY');
-    expect(native.getApplyLoadedDataSequence()).toBe(sequence);
-    expect(native.collectUserData()).toEqual(before);
-    expect(h.win.lastLoadedData).toBeUndefined();
+    // Capture timestamps are part of the full payload assertion. Hold only the
+    // clock so a millisecond between captures cannot mimic a state mutation.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-21T09:00:00.000Z'));
+    try {
+      const h = environment({ importer: true }), data = source(), native = h.win.VildaDataImportExport, onError = vi.fn();
+      data.visit = { ...h.api.create({ patientId }), ...override };
+      const before = native.collectUserData();
+      const sequence = native.getApplyLoadedDataSequence();
+      importFile(h, data, { onError });
+      expect(onError).toHaveBeenCalledOnce();
+      expect(onError.mock.calls[0][0].code).toBe('INVALID_VISIT_IDENTITY');
+      expect(native.getApplyLoadedDataSequence()).toBe(sequence);
+      expect(native.collectUserData()).toEqual(before);
+      expect(h.win.lastLoadedData).toBeUndefined();
+    } finally { vi.useRealTimers(); }
   });
 
   it('native blank form with default zero months does not allocate a phantom visit', () => {

@@ -27,6 +27,9 @@ const korzen = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..
 const ZRODLO_SW = fs.readFileSync(path.join(korzen, 'service-worker-kalorii.js'), 'utf8');
 const MANIFEST_WORKSPACE = JSON.parse(fs.readFileSync(path.join(korzen, 'runtime/clinical-workspace-v1/manifest.json'), 'utf8'));
 const PAKIET_WORKSPACE = '/' + MANIFEST_WORKSPACE.precachePack.path;
+const MANIFEST_WIZYT = JSON.parse(fs.readFileSync(path.join(korzen, 'runtime/visit-ui-precache/manifest.json'), 'utf8'));
+const PAKIET_WIZYT = '/' + MANIFEST_WIZYT.pack.path;
+const ZASOBY_WIZYT = new Set(MANIFEST_WIZYT.files.map(file => '/' + file.path));
 const HISTORYCZNE_MODULY_WORKSPACE = MANIFEST_WORKSPACE.historicalFiles || [];
 const MODULY_WORKSPACE = new Set(MANIFEST_WORKSPACE.files.concat(HISTORYCZNE_MODULY_WORKSPACE).map(file => '/' + file.path));
 const POCHODZENIE = 'https://vilda.test';
@@ -79,7 +82,7 @@ async function siec(request) {
   const rozmiar = rozmiarPliku(pathname);
   return rozmiar === null
     ? new Response('', { status: 404 })
-    : new Response(pathname === PAKIET_WORKSPACE ? fs.readFileSync(path.join(korzen, pathname)) : '',
+    : new Response([PAKIET_WORKSPACE, PAKIET_WIZYT].includes(pathname) ? fs.readFileSync(path.join(korzen, pathname)) : '',
       { status: 200, headers: { 'x-rozmiar': String(rozmiar) } });
 }
 
@@ -289,7 +292,7 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
   const arkuszEdu = (adres) => adres.split('?')[0] === '/edu-video-ui.css';
   const aliasyEdu = () => doInstalacji().filter(arkuszEdu);
   const cssEdu = fs.readFileSync(path.join(korzen, 'edu-video-ui.css'), 'utf8');
-  const dodatkoweWspoldzieloneZasoby = ['/obesity_therapy_monitor.js', '/vilda_auth_ui.css', '/ios26-v2.css', '/vilda_shell.css', '/vilda_vault.js', '/vilda_chrome.js',
+  const dodatkoweWspoldzieloneZasoby = ['/obesity_therapy.js', '/obesity_therapy_monitor.js', '/vilda_auth_ui.css', '/ios26-v2.css', '/vilda_shell.css', '/vilda_vault.js', '/vilda_chrome.js',
     '/vilda_logger.js', '/vilda_html.js', '/vilda_init.js', '/vilda_app_helpers.js', '/vilda_frame_sync.js',
     '/vilda_crypto.js', '/vilda_persistence_adapter.js', '/vilda_crypto_strength_explainer.js',
     '/vilda_deps.js', '/vilda_update_hooks.js', '/ios26-ui.js',
@@ -328,6 +331,10 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
         if (widziane.has(PAKIET_WORKSPACE)) return [];
         widziane.add(PAKIET_WORKSPACE); return [PAKIET_WORKSPACE];
       }
+      if (ZASOBY_WIZYT.has(adres)) {
+        if (widziane.has(PAKIET_WIZYT)) return [];
+        widziane.add(PAKIET_WIZYT); return [PAKIET_WIZYT];
+      }
       const sciezka = adres.split('?')[0];
       if (!wspoldzieloneZasoby.has(sciezka)) return [adres];
       if (widziane.has(sciezka)) return [];
@@ -347,11 +354,14 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
     expect(pobrane.filter(historyczny), 'żaden adres historyczny nie jest pobierany').toEqual([]);
     expect(pobrane.filter(adres => adres === PAKIET_WORKSPACE)).toHaveLength(1);
     expect(pobrane.filter(adres => MODULY_WORKSPACE.has(adres))).toEqual([]);
+    expect(pobrane.filter(adres => adres === PAKIET_WIZYT)).toHaveLength(1);
+    expect(pobrane.filter(adres => ZASOBY_WIZYT.has(adres))).toEqual([]);
+    expect(ZASOBY_WIZYT.size).toBe(3);
     expect(MANIFEST_WORKSPACE.files).toHaveLength(51);
-    // The new publication guard has a new immutable module tree. Both earlier
-    // trees remain available to clients holding their historical URLs.
-    expect(HISTORYCZNE_MODULY_WORKSPACE).toHaveLength(100);
-    expect(MODULY_WORKSPACE.size).toBe(151);
+    // The visit-identity codec adds one immutable family. All previous module
+    // URLs remain available to clients holding their historical resources.
+    expect(HISTORYCZNE_MODULY_WORKSPACE).toHaveLength(151);
+    expect(MODULY_WORKSPACE.size).toBe(202);
     // Budżet: dziś ok. 390 adresów i 24 MB. Chromium przerywa zdarzenie install po 5 minutach — przy 8 Mb/s i 80 ms
     // opóźnienia na żądanie 24 MB zajęło 64 s, a 474 MB (historia) nie mieściło się nawet przy 20 Mb/s.
     const bajty = pobrane.reduce((suma, adres) => suma + (rozmiarPliku(adres) || 0), 0);
@@ -627,13 +637,18 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
   });
 
   it('skrypt spoza jawnej listy nadal pobiera każdy bieżący alias osobno', async () => {
-    const sciezka = '/obesity_therapy.js', magazyn = pamiec(Infinity, { zuzywajOdpowiedzi: true }), pobrane = [];
-    const aliasy = doInstalacji().filter(adres => adres.split('?')[0] === sciezka);
+    // The last real duplicate pair is now explicitly shared. Exercise the
+    // production fetch function with two keys of an existing unlisted script;
+    // sharing must not silently expand to all scripts with the same pathname.
+    const sciezka = '/vilda_retention.js', magazyn = pamiec(Infinity, { zuzywajOdpowiedzi: true }), pobrane = [];
+    const aliasy = [sciezka, sciezka + '?v=synthetic'];
     const fetch = async request => {
       const u = new URL(request.url); if (u.pathname !== sciezka) return siec(request);
       pobrane.push(`${u.pathname}${u.search}`); return new Response(`/* osobne pobranie ${pobrane.length} */`);
     };
-    const sluzba = uruchomSW({ caches: magazyn.caches, fetch }); await sluzba.installShell();
+    const sluzba = uruchomSW({ caches: magazyn.caches, fetch });
+    const freshResponses = new Map();
+    for (const url of aliasy) await sluzba.fetchAndStorePrecacheUrl(url, { required: true, freshResponses });
     expect(aliasy).toHaveLength(2); expect(pobrane).toEqual(aliasy);
     for (let i = 0; i < aliasy.length; i++) expect(await (await sluzba.readFromShellCache(new Request(`${POCHODZENIE}${aliasy[i]}`))).text(), aliasy[i]).toBe(`/* osobne pobranie ${i + 1} */`);
   });
@@ -679,7 +694,8 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
     await uruchomSW({ caches: magazyn.caches, fetch }).installShell();
 
     const zSieci = new Set(pobrane);
-    expect(wersjonowane.filter((adres) => !wspoldzieloneZasoby.has(adres.split('?')[0]) && !zSieci.has(adres)), 'każdy inny wpis ?v= z sieci').toEqual([]);
+    expect(wersjonowane.filter((adres) => !wspoldzieloneZasoby.has(adres.split('?')[0])
+      && !zSieci.has(ZASOBY_WIZYT.has(adres) ? PAKIET_WIZYT : adres)), 'każdy inny wpis ?v= ze świeżej sieci lub swojego zweryfikowanego pakietu').toEqual([]);
     expect([...zSieci].sort(), 'stara pamięć nie zastępuje świeżych odpowiedzi jawnej listy zasobów').toEqual(oczekiwanePobraniaSwiezychZasobow().sort());
     expect(pobrane.filter(arkuszEdu), 'arkusz edu pochodzi ze świeżego pobrania, nie ze starej pamięci').toEqual([aliasyEdu()[0]]);
     expect(doInstalacji().filter((adres) => rozmiarPliku(adres) !== null && !magazyn.wpisy.has(adres)), 'komplet wpisów bieżących').toEqual([]);

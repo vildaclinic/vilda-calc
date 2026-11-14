@@ -83,13 +83,17 @@ const HASLO_B = 'Druga#Lekarka!2026bb';
 afterEach(() => { vi.useRealTimers(); });
 
 // --- przygotowanie i przebieg (jak w kosz-po-kluczu-krawedzie.test.mjs) -------------------------------------------------
-async function przygotuj({ dwie = null, P = null } = {}) {
+async function przygotuj({ dwie = null, P = null, wspolnaWizytaX = false } = {}) {
+  // F-R4 tests technical revisions within one day, independently of how far
+  // earlier scenarios advanced the shared synthetic clock.
+  if (wspolnaWizytaX) zegar.t = Date.parse('2026-10-20T09:00:00Z');
   sztucznyZegar();
   const u = {};
   u.P = P ? await P() : await urzadzenie('P', 'N');
   for (const n of ['K', 'C']) u[n] = await urzadzenie(n, 'N');
   const x1 = await zapisz(u.K, jan(120, 20)); u.X = x1.patientId;
-  const x = await zapisz(u.K, jan(125, 23), { patientId: u.X }); u.sid = x.snapshotId;
+  const visit = wspolnaWizytaX ? (await u.K.getPatient(u.X)).snapshots[0].payload.visit : null;
+  const x = await zapisz(u.K, { ...jan(125, 23), ...(visit ? { visit: { ...visit } } : {}) }, { patientId: u.X }); u.sid = x.snapshotId;
   u.wersje = { [x1.snapshotId]: 'x1', [x.snapshotId]: 'x' };
   u.x1 = x1.snapshotId;
   if (!dwie) { const x3 = await zapisz(u.K, jan(130, 25), { patientId: u.X }); u.wersje[x3.snapshotId] = 'x3'; u.x3 = x3.snapshotId; }
@@ -406,19 +410,27 @@ describe('P-KOSZ-PO-KLUCZU — F-R5: miejsce wersji sprawdzane pod blokadami (wy
 });
 
 // --- 4. F-R4: Bgw_wskrzes w delcie ---------------------------------------------------------------------------------------
-// Stan M01 (kosz-po-kluczu-krawedzie.test.mjs): X (x1, x) i Z; K: X → Z, K→C, kosz x (pod Z); P (bez wiedzy) przypina x
-// w X; C poprawia x na 74, C→K; retencja C przycina Z, C→K (K: wpis retencji x pod Z z cieniem 74); K←P → K X[x:74*] Z[m].
+// Stan M01 (kosz-po-kluczu-krawedzie.test.mjs): X (x1, x, x2 — nowsza rewizja tej samej wizyty) i Z; K: X → Z, K→C,
+// kosz x; P przypina x w X; C poprawia x na 74, C→K; retencja C przycina x i zachowuje x2. K←P → X[x:74*] Z[m,x2].
 async function M01(u) {
+  const visit = (await gdzie(u.K, u.sid)).s.payload.visit;
+  const later = await zapisz(u.K, { ...jan(130, 25), visit: { ...visit } }, { patientId: u.X });
+  u.wersje[later.snapshotId] = 'x2';
+  await sync(u.K, u.P); await sync(u.K, u.C);
   const m = await krok(() => u.K.mergePatients(u.X, u.Z)); u.wersje[m.snapshotId] = 'm';
   await krok(() => sync(u.K, u.C));
   await krok(() => doKosza(u.K, u.sid));
   await krok(() => u.P.setSnapshotPinned(u.X, u.sid, true));
   await krok(() => poprawMase(u.C, u.sid, 74));
   await krok(() => sync(u.C, u.K));
+  const revisions = (await u.C.getPatient(u.Z)).snapshots.filter(s => s.payload.visit.visitId === visit.visitId);
+  expect(revisions.map(s => s.snapshotId), 'x2 and x retain their original shared visit UUID after merge').toEqual(expect.arrayContaining([later.snapshotId, u.sid]));
+  expect(revisions[0].snapshotId, 'x2 is newer by savedAt, so x remains genuinely prunable').toBe(later.snapshotId);
+  expect((await u.C.getPatientVisits(u.Z)).find(row => row.visitId === visit.visitId).snapshotId).toBe(later.snapshotId);
   await krok(async () => { const r = await u.C.pruneSnapshotsForPatient(u.Z, { recentHours: 0 }); expect(r.prunedIds, 'C: retencja przycina x pod Z').toContain(u.sid); });
   await krok(() => sync(u.C, u.K));
   await krok(() => sync(u.P, u.K));
-  expect(widok(await pelnyStan(u, u.K)), 'kontrola: stan M01 na K').toBe('X[x:74*] Z[m]');
+  expect(widok(await pelnyStan(u, u.K)), 'kontrola: stan M01 na K').toBe('X[x:74*] Z[m,x2]');
 }
 // Delta karty Z z C (nowa wizyta nz): buildPatientDelta odszyfrowana kluczem C, scalana jak ładunek jawny (bez listy kosza).
 async function deltaZ(u) {
@@ -431,13 +443,13 @@ async function deltaZ(u) {
 }
 describe('P-KOSZ-PO-KLUCZU — F-R4: delta nie odtwarza z cienia wersji, która leży tu pod inną kartą', () => {
   it('M01, potem delta karty Z (nowa wizyta C) na K — x 74* zostaje pod X, bez pustej karty; po rundach ten sam stan na trzech', async () => {
-    const u = await przygotuj({ dwie: 'Z' });
+    const u = await przygotuj({ dwie: 'Z', wspolnaWizytaX: true });
     await M01(u);
     await deltaZ(u);
     const s = await pelnyStan(u, u.K);
-    expect({ widok: widok(s), puste: puste(s) }, 'K po delcie').toEqual({ widok: 'X[x:74*] Z[nz,m]', puste: [] });
+    expect({ widok: widok(s), puste: puste(s) }, 'K po delcie').toEqual({ widok: 'X[x:74*] Z[nz,m,x2]', puste: [] });
     const r = await przebieg(u, null);
-    const w = 'X[x:74*] Z[nz,m]';
+    const w = 'X[x:74*] Z[nz,m,x2]';
     expect(r.widoki, 'po rundach').toEqual({ P: w, K: w, C: w });
     for (const n of ['P', 'K', 'C']) expect(puste(r.st[n]), `${n}: bez pustej karty`).toEqual([]);
     expect(r.zbiezny, 'ten sam pełny stan').toBe(true);
@@ -445,15 +457,15 @@ describe('P-KOSZ-PO-KLUCZU — F-R4: delta nie odtwarza z cienia wersji, która 
     expect(r.zapisy, 'runda kontrolna bez zapisów').toEqual(ZERO3);
   }, 30000);
   it('kontrola: wersji nie ma tu w żadnej karcie (K usuwa kartę X ze stanu M01) — delta odtwarza x 74* z cienia pod Z, jak dotąd', async () => {
-    const u = await przygotuj({ dwie: 'Z' });
+    const u = await przygotuj({ dwie: 'Z', wspolnaWizytaX: true });
     await M01(u);
     await krok(() => u.K.removePatient(u.X));
-    expect(widok(await pelnyStan(u, u.K)), 'kontrola: K bez X i bez x').toBe('Z[m] | nagr X');
+    expect(widok(await pelnyStan(u, u.K)), 'kontrola: K bez X i bez x').toBe('Z[m,x2] | nagr X');
     await deltaZ(u);
-    expect(widok(await pelnyStan(u, u.K)), 'K po delcie: x 74* z cienia pod Z').toBe('Z[nz,m,x:74*] | nagr X');
+    expect(widok(await pelnyStan(u, u.K)), 'K po delcie: x 74* z cienia pod Z').toBe('Z[nz,m,x2,x:74*] | nagr X');
   }, 30000);
   it('sesja: konto B z kopią kart A, przełączenie na B zaraz po odczycie wersji karty Z w delcie (przed Bgw_wskrzes) → SESSION_CHANGED, po przełączeniu ani odczytu po kluczu, ani zapisu; ta sama delta w A — x 74* pod X', async () => {
-    const u = await przygotuj({ dwie: 'Z' });
+    const u = await przygotuj({ dwie: 'Z', wspolnaWizytaX: true });
     await M01(u);
     const B = await kontoBzKopia(u, u.K);
     const nz = await krok(() => u.C.savePatient(ola(112, 20), { dedup: false, patientId: u.Z })); u.wersje[nz.snapshotId] = 'nz';
@@ -470,7 +482,7 @@ describe('P-KOSZ-PO-KLUCZU — F-R4: delta nie odtwarza z cienia wersji, która 
     u.K.lock('manual'); await u.K.unlockUser(u.K.__uid, u.K.__haslo);
     await u.K.mergeSyncPayload(JSON.parse(JSON.stringify(delta)));
     const s = await pelnyStan(u, u.K);
-    expect({ widok: widok(s), puste: puste(s) }, 'konto A po tej samej delcie').toEqual({ widok: 'X[x:74*] Z[nz,m]', puste: [] });
+    expect({ widok: widok(s), puste: puste(s) }, 'konto A po tej samej delcie').toEqual({ widok: 'X[x:74*] Z[nz,m,x2]', puste: [] });
   }, 30000);
 });
 
