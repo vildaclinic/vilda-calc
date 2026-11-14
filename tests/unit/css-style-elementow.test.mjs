@@ -12,6 +12,8 @@ import { atrybutyStyle, doFixture, inwentarzStyliElementow, korzen, miejscaJs, p
 // ustawia zmierzoną wysokość przerwy po niewyrenderowanych wierszach. To geometria przewijania zależna
 // od liczby i wysokości wierszy w runtime, nie statyczny wygląd możliwy do przeniesienia do klasy.
 // Pozostałe miejsca nadal podlegają temu samemu inwentarzowi i asercjom.
+// Historia badań ma analogicznie jedno mierzone pole rezerwy przewijania za stopką;
+// dozwolona własność i brak innych zapisów są sprawdzane osobno poniżej.
 
 const FIXTURE = path.join(korzen, 'tests/fixtures/style-elementow.json');
 
@@ -28,6 +30,12 @@ describe('P-STYLE krok 5b: stylów ustawianych wprost na elementach nie przybywa
     for (const s of ['index.html', 'docpro.html', 'kalkulator-klirens.html']) expect(strony[s], s).toBeGreaterThan(10);
     for (const f of ['app.js', 'vilda_chrome.js']) expect(js[f], f).toBeGreaterThan(10);
     expect(Object.keys(js).some((f) => f.endsWith('.min.js'))).toBe(false);
+  });
+
+  it('rezerwa historii badań ustawia wyłącznie jeden parametr mierzonej geometrii', () => {
+    const js = fs.readFileSync(path.join(korzen, 'vilda_lab_history_tab.js'), 'utf8');
+    expect(miejscaJs(js)).toEqual({ wlasnosc: 0, cssText: 0, setProperty: 1, atrybut: 0, lancuch: 0, razem: 1 });
+    expect([...js.matchAll(/\.style\.setProperty\(\s*['"]([^'"]+)['"]/g)].map((m) => m[1])).toEqual(['--vilda-lab-hist-scroll-reserve']);
   });
 });
 
