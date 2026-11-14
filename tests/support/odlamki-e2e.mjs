@@ -204,7 +204,15 @@ export function podziel(pliki, { odlamki, workery = WORKERY_NA_ODLAMEK, maksKrok
   const prefiksy = new WeakMap();
   const wez = (wolny, sekundy) => {
     let i = 0;
-    for (let k = 1; k < wolny.length; k += 1) if (wolny[k] < wolny[i]) i = k;
+    if (wolny.length === 4) {
+      // CI ma cztery workery. Trzy porównania bez pętli zachowują
+      // rozstrzyganie remisów na rzecz niższego numeru workera.
+      i = wolny[1] < wolny[0] ? 1 : 0;
+      const j = wolny[3] < wolny[2] ? 3 : 2;
+      if (wolny[j] < wolny[i]) i = j;
+    } else {
+      for (let k = 1; k < wolny.length; k += 1) if (wolny[k] < wolny[i]) i = k;
+    }
     wolny[i] += sekundy;
   };
   const liczCzas = (lista, pomin = null, dodaj = null) => {
@@ -253,19 +261,25 @@ export function podziel(pliki, { odlamki, workery = WORKERY_NA_ODLAMEK, maksKrok
     for (let k = 1; k < odlamki; k += 1) if (czasy[k] > czasy[zrodlo] + EPS) zrodlo = k;
     let zmiana = null;
     szukaj: for (const a of grupy[zrodlo]) {
+      const bezA = odlamki > 1 && grupy[zrodlo].length > 1 ? liczCzas(grupy[zrodlo], a) : null;
       for (let cel = 0; cel < odlamki; cel += 1) {
         if (cel === zrodlo) continue;
         // Przeniesienie nie zabiera odłamkowi ostatniego pliku — pusty odłamek to pusta lista
         // dla --test-list, a skrypt CI odmawia takiej listy.
         if (grupy[zrodlo].length > 1) {
           const proba = [...czasy];
-          proba[zrodlo] = liczCzas(grupy[zrodlo], a);
+          proba[zrodlo] = bezA;
           proba[cel] = liczCzas(grupy[cel], null, a);
           if (lepszy(klucz(proba), obecny)) { zmiana = { a, b: null, cel, proba }; break szukaj; }
         }
         for (const b of grupy[cel]) {
+          const czasZrodla = liczCzas(grupy[zrodlo], a, b);
+          // Sama grupa źródłowa przekracza obecne maksimum, więc żaden
+          // wynik celu nie poprawi klucza. Remisy nadal trzeba sprawdzić:
+          // przy tym samym maksimum mogą skrócić kolejne odłamki.
+          if (czasZrodla > obecny[0] + EPS) continue;
           const zamiana = [...czasy];
-          zamiana[zrodlo] = liczCzas(grupy[zrodlo], a, b);
+          zamiana[zrodlo] = czasZrodla;
           zamiana[cel] = liczCzas(grupy[cel], b, a);
           if (lepszy(klucz(zamiana), obecny)) { zmiana = { a, b, cel, proba: zamiana }; break szukaj; }
         }
