@@ -1,9 +1,9 @@
 import { defineConfig, devices } from '@playwright/test';
 import shared from './playwright.config.mjs';
 
-// Only the chart-geometry and M1 regressions run in WebKit. The regular suite
-// keeps its Chromium projects and shard count. A local Chromium executable
-// override must not be inherited by this separate browser.
+// Chart geometry, M1 and the mobile results/dock regressions run in WebKit.
+// The regular suite keeps its Chromium projects and shard count. A local
+// Chromium executable override must not be inherited by this separate browser.
 const use = { ...shared.use };
 delete use.launchOptions;
 
@@ -22,7 +22,10 @@ export default defineConfig({
     },
     {
       name: 'lab-chart-webkit-mobile',
-      testMatch: /lab-chart-(?:geometry|m1)-mobile\.spec\.mjs/,
+      testMatch: [
+        /lab-chart-(?:geometry|m1)-mobile\.spec\.mjs/,
+        /mobile-lab-layout-mobile\.spec\.mjs/,
+      ],
       use: { ...devices['iPhone 13'], browserName: 'webkit' },
     },
   ],
