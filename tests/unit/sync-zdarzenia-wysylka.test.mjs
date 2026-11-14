@@ -1,7 +1,8 @@
 // P-SYNC-ZDARZENIA (E2-PR4b, plan docs/SYNC_PRZYROSTOWA_PLAN.md 3.2 „Pętla wysyłki”, wiersz 8b): wysyłka zdarzeń
 // dziennika (VildaSync.pushEvents → POST /v1/slots/<slot>/events) i włącznik dziennika (VildaSync.isEventLogEnabled,
-// czytany przez bramkę kolejki sejfu). USPIONE: kod produkcyjny nie woła pushEvents (nadawca w E2-PR4d), a włącznik jest
-// otwarty tylko przy „events” w health i fladze vilda-event-log-v1 = '1'.
+// czytany przez bramkę kolejki sejfu). Od E2-PR6 (PR włączający, wiersz 12 planu) włącznik jest domyślnie otwarty przy
+// „events” w health: flaga vilda-event-log-v1 = '0' wyłącza dziennik na urządzeniu, brak klucza i każda inna wartość —
+// włączony, błąd odczytu — wyłączony (PE13, PE14). Do E2-PR6 tylko przy fladze '1'.
 //
 // Prawdziwy vilda_sync.js i sejf (uprząż urządzeń), atrapa workera v37a z eventsEnabled (kontrakt events.js wzorca).
 // Zegar atrapy = Date.now() urządzenia (+ przesunięcie w teście różnicy zegara). Dane wyłącznie FIKCYJNE.
@@ -10,7 +11,8 @@
 // PE4 401 → AUTH_FAILED i stan slotu wyczyszczony; PE5 404 → włącznik zamknięty do następnego health; PE6 pozostałe
 // statusy i sieć; PE7 treść wisi → TIMEOUT po 30 s; PE8 różnica zegara; PE9 jedno w locie; PE10 niezarejestrowany;
 // PE11 złe wejście; PE12 sesja; PE13 tabela włącznika (bez „events” — bez odczytu magazynu); PE14 bramka sejfu;
-// PE15 strażnik: nikt w produkcie nie woła pushEvents; PE16 trasa formatu klinicznego inna niż legacy → format.
+// PE15 strażnik: nikt w produkcie nie woła pushEvents; PE16 trasa formatu klinicznego inna niż legacy → format;
+// PE17 (E2-PR6, warunek wejścia z wiersza 12 planu) polityka prywatności opisuje bazę kolejki i wpisy localStorage.
 import fs from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -290,17 +292,27 @@ describe('P-SYNC-ZDARZENIA — format kliniczny', () => {
 });
 
 describe('P-SYNC-ZDARZENIA — włącznik dziennika i bramka sejfu', () => {
-  it('PE13 [czerwony na bazie]: włącznik tylko przy „events” w health, fladze dokładnie „1” i pobieraniu stronami; bez „events” bez odczytu magazynu', async () => {
+  it('PE13 [E2-PR6: czerwony na bazie]: włącznik przy „events” w health, fladze innej niż „0” (także bez klucza) i pobieraniu stronami; błąd odczytu flagi = wyłączony; bez „events” bez odczytu magazynu', async () => {
     const tab = [
-      [{ events: false, flaga: '1' }, false], [{ events: true, flaga: null }, false], [{ events: true, flaga: '0' }, false],
-      [{ events: true, flaga: 'true' }, false], [{ events: true, flaga: '1' }, true],
+      [{ events: false, flaga: '1' }, false], [{ events: false, flaga: null }, false], [{ events: true, flaga: null }, true],
+      [{ events: true, flaga: '0' }, false], [{ events: true, flaga: 'true' }, true], [{ events: true, flaga: '1' }, true],
+      [{ events: true, flaga: '' }, true], [{ events: true, flaga: ' 0' }, true],
     ];
     for (const [o, ma] of tab) {
       const s = await swiat(o);
       expect(s.A.sync.isEventLogEnabled(), JSON.stringify(o)).toBe(ma);
       await sprzatnijUrzadzenia();
     }
-    const s = await swiat({ flaga: '1' });
+    // Błąd odczytu flagi (np. zablokowany magazyn) — wyłączony, bez wyjątku na zewnątrz.
+    const e = await swiat({ flaga: null });
+    const ls = e.A.win.localStorage;
+    const czytaj = ls.getItem.bind(ls);
+    const szpieg = vi.spyOn(ls, 'getItem').mockImplementation((k) => { if (k === FLAGA) throw new Error('SecurityError'); return czytaj(k); });
+    expect(e.A.sync.isEventLogEnabled(), 'wyjątek przy odczycie flagi').toBe(false);
+    szpieg.mockRestore();
+    expect(e.A.sync.isEventLogEnabled(), 'po odczycie bez błędu — znowu włączony').toBe(true);
+    await sprzatnijUrzadzenia();
+    const s = await swiat({ flaga: null });
     s.A.win.localStorage.setItem('vilda-sync-paged-v1', '0');
     expect(s.A.sync.isEventLogEnabled(), "pobieranie stronami wyłączone ('0')").toBe(false);
     s.A.win.localStorage.removeItem('vilda-sync-paged-v1');
@@ -323,8 +335,10 @@ describe('P-SYNC-ZDARZENIA — włącznik dziennika i bramka sejfu', () => {
     expect(odczyty).toEqual([]);
   });
 
-  it('PE14 [czerwony na bazie]: bramka sejfu (gateOpen) idzie za włącznikiem synchronizacji tego okna; VILDA_EVENT_LOG === true otwiera jak dotąd; wyjątek we włączniku = zamknięta', async () => {
+  it('PE14 [E2-PR6: czerwony na bazie]: bramka sejfu (gateOpen) idzie za włącznikiem synchronizacji tego okna (bez klucza — otwarta, „0” — zamknięta); VILDA_EVENT_LOG === true otwiera jak dotąd; wyjątek we włączniku = zamknięta', async () => {
     const s = await swiat({ flaga: null });
+    expect(s.A.vault._eventLog.gateOpen(), 'bez klucza flagi').toBe(true);
+    s.A.win.localStorage.setItem(FLAGA, '0');
     expect(s.A.vault._eventLog.gateOpen()).toBe(false);
     s.A.win.localStorage.setItem(FLAGA, '1');
     expect(s.A.vault._eventLog.gateOpen()).toBe(true);
@@ -343,6 +357,24 @@ describe('P-SYNC-ZDARZENIA — włącznik dziennika i bramka sejfu', () => {
     expect(s.A.vault._eventLog.gateOpen()).toBe(false);
     s.A.win.VildaSync = prawdziwy;
     expect(s.A.vault._eventLog.gateOpen()).toBe(true);
+  });
+
+  it('PE17 [E2-PR6: czerwony na bazie]: polityka prywatności opisuje bazę vilda_sync_<userId> (kasowaną przy usunięciu konta) i wpisy localStorage synchronizacji (warunek wejścia PR włączającego)', () => {
+    const html = fs.readFileSync(path.join(KORZEN, 'polityka-prywatnosci.html'), 'utf8');
+    const tabela = html.slice(html.indexOf('<h2>3. Dane przechowywane lokalnie w przeglądarce</h2>'), html.indexOf('<h2>4.'));
+    const wiersze = tabela.split('<tr>').slice(1).map((w) => w.replace(/\s+/g, ' '));
+    const baza = wiersze.find((w) => w.includes('<code>vilda_sync_&lt;userId&gt;</code>'));
+    expect(baza, 'wiersz bazy kolejki').toBeTruthy();
+    expect(baza).toContain('„Komputer prywatny”');
+    expect(baza).toContain('zaszyfrowana');
+    expect(baza).toContain('po usunięciu konta');
+    const ls = wiersze.find((w) => w.includes('<strong>localStorage</strong> (synchronizacja)'));
+    expect(ls, 'wiersz localStorage synchronizacji').toBeTruthy();
+    for (const fraza of ['identyfikator tego urządzenia', 'osobny dla każdego konta', 'znacznik dokończenia usuwania konta',
+      '„Wysyłaj zmiany pojedynczo”', 'znacznik karty przeglądarki, która wysyła zmiany', 'ostatnich 500 zmian',
+      'numer ostatniej zmiany zastosowanej', 'bez danych pacjentów']) {
+      expect(ls, fraza).toContain(fraza);
+    }
   });
 
   it('PE15 [czerwony na bazie]: strażnik — pushEvents i isEventLogEnabled bez wywołań w plikach produktu poza vilda_sync.js (isEventLogEnabled także w bramce sejfu, wpięciach integracji i widoku kolejki w Ustawieniach)', () => {

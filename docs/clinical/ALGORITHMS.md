@@ -22163,6 +22163,106 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
+## Pojedyncze zmiany włączone dla wszystkich w trybie „Komputer prywatny” (P-SYNC-ZDARZENIA, E2-PR6, SW 1.1.529, `vilda_sync.js` 56, `inline_ustawienia_07.js` 6, 2026-11-14)
+
+**Zmiana kliniczna: nie** — wzory, progi, jednostki, interpretacje i reguły scalania bez zmian. **Zmienia się działanie
+synchronizacji (PR włączający):** każde urządzenie w trybie „Komputer prywatny” z włączoną synchronizacją wysyła
+zmiany pojedynczo i pobiera zdarzenia innych urządzeń, gdy serwer podaje „events” w health (od E2-W1 podaje). Pełna
+wysyłka sejfu działa dalej jak dotąd (decyzja 7 z 2026-10-29), więc nic nie ginie. „Komputer w pracy” i „Zaloguj
+jednorazowo” bez zmian. Format danych, schemat IndexedDB, sejf i serwer bez zmian.
+
+Plan: wiersz 12 tabeli „Podział etapu 2”; decyzje 1–3 z 2026-11-14 (rozdział 6); decyzja 10 z 2026-10-29 (kolejność
+włączania: E2-W1, test właściciela, PR włączający). Test właściciela (wiersz 11): 2026-11-12 do 2026-11-14 na komputerze
+i telefonie, bez uwag („test idzie dobrze”).
+
+**Co było** (`audyt` `d370f0b9`). Włącznik dziennika (`VildaSync.isEventLogEnabled`, E2-PR4b) otwierał się tylko przy
+fladze `vilda-event-log-v1` = `'1'`, którą ustawiał wyłącznie ukryty przełącznik testowy (E2-PR5a). Bez flagi aplikacja
+działała jak przed etapem 2.
+
+**Reguła.**
+- **Włącznik** (`vilda_sync.js`): „events” w ostatnim health tej strony (bez „events” — koniec bez odczytu magazynu,
+  jak dotąd), potem flaga: `'0'` — wyłączony na tym urządzeniu; brak klucza i każda inna wartość (także `'1'` z testu
+  właściciela) — włączony; błąd odczytu magazynu — wyłączony (jak pobieranie stronami, E2-PR1b); potem pobieranie
+  stronami, tryb „Komputer prywatny”, nie chmurowy, nie jednorazowy (bez zmian). Sejf, wpięcia integracji i widok
+  kolejki czytają ten sam włącznik, więc idą za nim bez zmian w swoim kodzie.
+- **Przełącznik w Ustawieniach** (decyzja 3 z 2026-11-14): „Wysyłaj zmiany pojedynczo” (bez „(test)”) zostaje ukryty —
+  awaryjny wyłącznik na jednym urządzeniu, odblokowanie jak dotąd (5 kliknięć linii „Wersja aplikacji” i „Odblokuj”;
+  w arkuszu „Odblokować ukrytą opcję?”). Pole zaznaczone, gdy flaga jest inna niż `'0'`; odznaczenie zapisuje `'0'`,
+  zaznaczenie usuwa klucz (urządzenie idzie za domyślnym). Karta widoczna po odblokowaniu albo przy `'0'` (żeby dało się
+  włączyć z powrotem, także co 5 s odświeżana); pole wyboru przy „events” albo przy `'0'`. Nieudany zapis — pole wraca,
+  komunikat (jak dotąd).
+- **Licznik „N zmian czeka”** tylko w Ustawieniach (decyzja 2 z 2026-11-14, potwierdzenie E2-D9): znaczek w nagłówku
+  sekcji i linia w statusie, bez nagłówka aplikacji i ekranu blokady.
+- **Zmiany zachowania wobec wymiany samymi blobami** (wpis P-DZIENNIK-ZDARZEN, E2-PR3a1, „Zmiany zachowania…”) —
+  zaakceptowane (decyzja 1 z 2026-11-14): P1e, R4-a, R4-a′, katalog kosza `kosz-po-2` i „ZNANA RÓŻNICA (zdarzenia)”
+  `Q8-obca-2` (decyzja „którą wizytę zostawić” dalej odłożona, decyzja 8 z 2026-11-10). W teście A ≡ B 0 scenariuszy
+  „ZNANA UTRATA”.
+- **Polityka prywatności** (warunek wejścia z wiersza 12): w tabeli „Dane przechowywane lokalnie” dwa nowe wiersze —
+  baza `vilda_sync_<userId>` (kolejka i kwarantanna; treść zaszyfrowana, jawne losowe identyfikatory rekordów, rodzaj
+  zmiany i chwila; razem z nią znacznik przeglądu i pamięć par) i wpisy `localStorage` synchronizacji (identyfikator
+  urządzenia osobny dla każdego konta, znacznik dokończenia usuwania konta, flaga przełącznika, bicie serca nadawcy,
+  numery ostatnich 500 własnych zdarzeń, numer ostatniego zastosowanego zdarzenia), z tym, kiedy są kasowane. Data
+  aktualizacji: listopad 2026.
+
+Zdania „uśpione”, „serwer dziś nie podaje »events«” i „flagi nikt nie ustawia” we wpisach od E2-PR2a do E2-W1 opisują
+stan sprzed E2-PR6.
+
+Przypadki `wejście → oczekiwany wynik`:
+- urządzenie bez klucza flagi, „Komputer prywatny”, serwer z „events” → zapis karty idzie POST /events w kilka sekund;
+  drugie urządzenie pobiera zdarzenie stronami; pełna wysyłka jak dotąd;
+- to samo przy pełnej wysyłce, której serwer odmawia → zmiana i tak dociera do drugiego urządzenia (zdarzeniem);
+- flaga `'0'` → jak przed etapem 2 (delta beaconem, bez POST /events, bez bazy kolejki);
+- serwer bez „events” (np. po cofnięciu do `EVENTS_ENABLED = "0"`) → jak przed etapem 2, także przy fladze `'1'`;
+- „Komputer w pracy”, „Zaloguj jednorazowo” → bez zmian.
+
+*Strażnicy:*
+- `tests/unit/sync-zdarzenia-wysylka.test.mjs`: PE13 (tabela włącznika: brak klucza, `'0'`, `'1'`, `'true'`, `''`,
+  `' 0'`, błąd odczytu), PE14 (bramka sejfu bez klucza otwarta, `'0'` zamknięta), PE17 (polityka prywatności).
+- `tests/unit/sync-zdarzenia-drenaz.test.mjs`: DZ12b (drenaż z dziennikiem bez klucza flagi); DZ12 przepisany na `'0'`.
+- `tests/unit/sync-zdarzenia-nadawca.test.mjs`: NA12b (nadawca bez klucza flagi, odbiorca dostaje zmiany); NA12 i NA13
+  przepisane na `'0'` i serwer bez „events” (także bez klucza).
+- `tests/unit/sync-widok-kolejki.test.mjs`: KW11 (teksty arkusza), KW13–KW17, KW15b (zegar karty przy `'0'`), KW18
+  (odznaczenie rzuca), KW19 (`'0'` w ramce), KW22a/b (zapisy `removeItem` i `setItem(…, '0')`, etykieta bez „(test)”).
+- `tests/unit/sync-dziennik-uspienie.test.mjs` U2(b): wąski wyjątek — polityka prywatności może zawierać wyłącznie opis
+  nazwy bazy kolejki (`vilda_sync_&lt;userId&gt;` w tabeli przechowywania, dokładnie raz); poza nim żaden wzorzec ani
+  nazwa z listy.
+- `tests/unit/sync-zadania-bazowe.test.mjs`: wariant „events” bez klucza zastąpiony wariantem cofnięcia (worker bez
+  „events”, flaga `'1'`) — zapis bazowy jak dotąd; wariant „events” z `'0'` bez zmian.
+- `tests/e2e/sync-zdarzenia-wysylka.spec.mjs`: dwa urządzenia bez klucza flagi — PUT /blob urządzenia A zablokowany
+  (`r2_error`): karta i notatka docierają do B samymi zdarzeniami; PUT /blob liczony: po zdarzeniach i pełnej wysyłce B ma
+  te same karty i notatki co A; Ustawienia bez klucza (widok kolejki, przełącznik ukryty, odznaczenie `'0'`, po
+  przeładowaniu karta widoczna, zaznaczenie usuwa klucz). Przypadki „flaga wyłączona” przepisane na `'0'` (także
+  w `sync-zdarzenia-drenaz.spec.mjs`). Pomocnik Ustawień pyta o health strony (jak pobieranie przy starcie strony
+  z włączoną synchronizacją); dotąd robiła to karta przełącznika widoczna przy `'1'`.
+- **Czerwone na bazie (`d370f0b9`), zielone tu:** jednostkowe 15 (PE13, PE14, PE17, DZ12b, NA12b, KW11, KW13–KW17, KW15b,
+  KW19, KW22a, KW22b); e2e 5 (trzy przypadki E2-PR6 i dwa przepisane przypadki Ustawień z `'1'`). **Zielone także na
+  bazie (strażnicy wyłącznika):** DZ12, NA12, NA13, KW18, zapis bazowy (124), e2e „flaga '0'” (4).
+- **Mutanty:** 11, wszystkie zabite — włącznik (stara reguła „tylko '1'”, `'0'` nie wyłącza, błąd odczytu = włączony),
+  przełącznik (karta przy `'1'` zamiast `'0'`, pole odwrócone, zaznaczenie zapisuje `'1'`, odznaczenie usuwa klucz, pole
+  tylko przy „events”, notka „Teraz nie działa” przy `'0'`, znaczek odwrócony, zegar bez karty przy `'0'` — ten ostatni
+  dopiero po dopisaniu KW15b).
+
+**Ograniczenia.**
+- Komentarz bramki w `vilda_vault.js` (`Bob_bramka`) dalej opisuje flagę `'1'`; sam kod czyta włącznik synchronizacji,
+  więc działa poprawnie. Komentarz do poprawy przy najbliższej zmianie sejfu (bez zmiany sejfu tutaj: bez przepinania
+  fragmentu sejfu).
+- Bicie serca nadawcy, pierścień własnych zdarzeń i `appliedUpTo` nie są kasowane przy „Usuń konto” (identyfikatory
+  i numery, bez treści); polityka prywatności mówi o tym wprost („po ręcznym wyczyszczeniu danych witryny”).
+- Strona otwarta samodzielnie (poza powłoką) zna „events” dopiero po health tej strony — przy pobieraniu na starcie
+  z włączoną synchronizacją. Wcześniejsze zmiany z tej strony idą jak dotąd deltą, a przegląd kolejki dokłada je później
+  (P-DZIENNIK-ZDARZEN, E2-PR3a4).
+- Urządzenia innych użytkowników aktualizują się przy najbliższym otwarciu aplikacji; starsza wersja dalej działa (pełna
+  wysyłka zostaje), ryzyko starszej aplikacji przy klasach R2 i R3 niezmierzone (plan, wiersz 12).
+
+**Nota wydania.** Po scaleniu właściciel aktualizuje tego samego dnia wszystkie swoje urządzenia (otwarcie aplikacji
+i przyjęcie aktualizacji; linia „Wersja aplikacji” — 1.1.529). Na urządzeniach z testu flaga `'1'` znaczy „włączone”
+i może zostać.
+
+**Cofnięcie.** Dla wszystkich od razu: `EVENTS_ENABLED` = `0` w ustawieniach workera albo poprzednia wersja workera
+(plan, rozdział 3.8, E2-D4) — health bez „events”, klient wraca na starą ścieżkę, kolejka zostaje na urządzeniu. Na
+jednym urządzeniu: przełącznik (`'0'`). W kodzie: rewert PR (bez migracji; rewert cofa też skróty kontroli granicy
+synchronizacji).
+
 ## Serwer przyjmuje pojedyncze zmiany, aplikacja bez zmian (P-SYNC-ZDARZENIA, E2-W1, bez zmiany wersji aplikacji, 2026-11-12)
 
 **Zmiana kliniczna: nie** — wzory, progi, jednostki, interpretacje i reguły scalania bez zmian. **Działanie aplikacji

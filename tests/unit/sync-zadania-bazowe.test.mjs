@@ -59,6 +59,11 @@
 // zmian (oś, zapisy kluczy, kursory, getDrainStatus); w każdym wariancie dodatkowo: żadne POST /events i zamknięta bramka
 // kolejki sejfu. Klient z E2-PR4 bez flagi nie reaguje na „events” (warunek wstępny E2-W1). Zielone przed i po zmianie
 // (sprawdzone na bazie 175cdc27).
+//
+// E2-PR6 (PR włączający, wiersz 12 planu): bez klucza vilda-event-log-v1 dziennik jest włączony przy „events” w health,
+// więc wariant „events” bez klucza przestaje być zapisem bazowym (zachowanie z dziennikiem: PE13, NA12b, DZ12b).
+// Na jego miejscu wariant cofnięcia: worker bez „events” (EVENTS_ENABLED=0 po E2-PR6) i klient z flagą '1' z testu
+// właściciela — jak dotąd. Wariant „events” z '0' (wyłącznik na urządzeniu) bez zmian. Zielone przed i po zmianie.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { utworzAtrapeWorkera, zegarSterowany } from '../support/atrapa-workera-sync.mjs';
 import { cisza, sprzatnijUrzadzenia, utworzUrzadzenie } from '../support/urzadzenie-sync.mjs';
@@ -81,7 +86,7 @@ const WARIANTY_DOMYSLNE = [
   { nazwa: 'v37a (produkcja, EVENTS_ENABLED=0), brak klucza', atrapa: { tryb: 'v37a', eventsEnabled: false }, domyslnie: true },
   { nazwa: 'v36, brak klucza', atrapa: { tryb: 'v36' }, domyslnie: true },
   { nazwa: "v37a, vilda-sync-paged-v1 = '1'", atrapa: { tryb: 'v37a', eventsEnabled: false }, flaga: '1', domyslnie: true },
-  { nazwa: 'v37a z „events” w health (EVENTS_ENABLED=1), brak klucza vilda-event-log-v1', atrapa: { tryb: 'v37a', eventsEnabled: true }, domyslnie: true },
+  { nazwa: "v37a bez „events” (EVENTS_ENABLED=0, cofnięcie po E2-PR6), vilda-event-log-v1 = '1'", atrapa: { tryb: 'v37a', eventsEnabled: false }, dziennik: '1', domyslnie: true },
   { nazwa: "v37a z „events” w health (EVENTS_ENABLED=1), vilda-event-log-v1 = '0'", atrapa: { tryb: 'v37a', eventsEnabled: true }, dziennik: '0', domyslnie: true },
 ];
 // Flaga klienta (poza pokrętłami atrapy) na każdym urządzeniu zaraz po utworzeniu — przed znacznikMagazynu(), więc poza
