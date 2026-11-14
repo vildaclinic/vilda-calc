@@ -48,8 +48,11 @@ function laboratoryRecords() {
 function renalRecords(patientId) {
   const root = createKlirensSearchEnvironment();
   const parameter = root.ClcrSavedResults.getParam('AGu_spot');
-  return DATES.map((date, index) => {
-    const result = root.VildaClcrUag.evaluate({ urineSodium: '40', urinePotassium: '30', urineChloride: String([62, 74, 82][index]) }, root.VildaClcrUagReferenceData.DEFAULT_POLICY);
+  // Four real dated rows give this short panel enough natural scroll range to
+  // place its toolbar at 24px. Its single chart is shorter, so switching views
+  // must preserve that anchor without a permanent blank area before the footer.
+  return DATES.concat('2026-07-14').map((date, index) => {
+    const result = root.VildaClcrUag.evaluate({ urineSodium: '40', urinePotassium: '30', urineChloride: String([62, 74, 82, 88][index]) }, root.VildaClcrUagReferenceData.DEFAULT_POLICY);
     const point = { ...parameter, parameterKey: parameter.id, valueNum: result.rawValue };
     root.ClcrUagPersistence.augmentDatapoint({ getAttribute: key => key === 'data-clcr-uag-snapshot' ? JSON.stringify(result) : null }, point);
     const note = root.ClcrSavedResults.buildPatientNotePayload(point, { patientId, clinicalDateISO: date });
@@ -203,7 +206,7 @@ export async function verifyPresentationControls(page, width, height) {
   await expect(source.locator('option[value="lab"]')).toHaveText('Wyniki lab.');
   await expect(source.locator('option[value="renal"]')).toHaveText('Klirens');
   await source.selectOption('all');
-  await expect(section.locator('.vilda-lab-hist-result-row')).toHaveCount(13);
+  await expect(section.locator('.vilda-lab-hist-result-row')).toHaveCount(14);
   await arrowGeometry(section);
   await source.selectOption('lab');
   await expect(section.locator('.vilda-lab-hist-result-row')).toHaveCount(10);
@@ -227,7 +230,7 @@ export async function verifyPresentationControls(page, width, height) {
   await expect(clinical.locator('.vilda-lab-hist-result-notice[data-warning-kind="clinical"]')).not.toBeEmpty();
   await expect(clinical.locator('.vilda-lab-hist-flag').filter({ hasText: '!' })).toHaveCount(0);
   await source.selectOption('renal');
-  await expect(section.locator('.vilda-lab-hist-result-row')).toHaveCount(3);
+  await expect(section.locator('.vilda-lab-hist-result-row')).toHaveCount(4);
   await arrowGeometry(section);
   await source.selectOption('all');
   const positions = [await toggleWithoutJump(page, section, 'charts')];
@@ -236,13 +239,13 @@ export async function verifyPresentationControls(page, width, height) {
   await chartGeometry(section, ids);
   const uag = section.locator('.vilda-lab-hist-card').filter({ has: page.locator(`.vilda-lab-result-chart-point[data-note-id="${ids['uag-2']}"]`) });
   const tsh = section.locator('.vilda-lab-hist-card[data-series="tsh"]');
-  await expect(uag.locator('.vilda-lab-result-chart-line')).toHaveCount(2);
+  await expect(uag.locator('.vilda-lab-result-chart-line')).toHaveCount(3);
   await expect(tsh.locator('.vilda-lab-result-chart-line')).toHaveCount(2);
   await connect.uncheck();
   await expect(uag.locator('.vilda-lab-result-chart-line')).toHaveCount(0);
   await expect(tsh.locator('.vilda-lab-result-chart-line')).toHaveCount(0);
   await connect.check();
-  await expect(uag.locator('.vilda-lab-result-chart-line')).toHaveCount(2);
+  await expect(uag.locator('.vilda-lab-result-chart-line')).toHaveCount(3);
   await expect(tsh.locator('.vilda-lab-result-chart-line')).toHaveCount(2);
   for (const panel of ['all', 'lab', 'renal', 'thyroid']) {
     await source.selectOption(panel);
