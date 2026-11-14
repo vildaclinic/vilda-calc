@@ -1758,6 +1758,9 @@ zostaje na ekranie z opisem skutku (przy dacie i w karcie wyniku),
 a w karcie pacjenta zapisuje się jako wymagająca ponownej oceny; wynik
 i jego wartość zapisują się bez zmian. Nie przypisujemy dzisiejszego wieku
 ani stadium dawnej próbce (`LAB_INTERPRETATION_AGENT_GUIDE.md` § 4).
+*Zmienione w PR7 (wpis niżej): gdy dane pacjenta mają datę urodzenia,
+pakiet ocenia wynik dla wieku w dniu pobrania i zapisuje ocenę jako aktualną
+dla tego dnia. Opisana tu zasada zostaje dla pacjenta bez daty urodzenia.*
 
 **Gdy ocena jest niedostępna** (brak modułu, błąd, koperta innego wyniku)
 pakiet zachowuje się jak w PR4: zapisuje wartość, pokazuje „bez oceny
@@ -1799,6 +1802,147 @@ zmiana pacjenta), `lab-pakiet-pokwitanie-mobile.spec.mjs` (telefon),
 z oceny bieżącej wizyty formularza głównego i jej wspólna edycja),
 `lab-pakiet-kreator*.spec.mjs` (zapis LH/testosteronu z kopertą oceny),
 `lab-pakiet-offline.spec.mjs` (ocena bez sieci).
+
+### LAB-PAKIETY PR7 — ocena w dniu pobrania: wiek z daty urodzenia na dzień pobrania, stadium po potwierdzeniu (`vilda_lab_packages.js` 1.6.0, `vilda_lab_puberty_ui.js` 1.18.0, 2026-11-14)
+
+**Klasyfikacja: zmiana kliniczna.** Przy dacie pobrania wcześniejszej niż
+dziś pakiet ocenia wyniki dla wieku pacjenta **z dnia pobrania**, a nie
+z dnia wpisu, i zapisuje ocenę jako aktualną dla tego dnia. **Nie ma nowych
+norm, progów, współczynników, jednostek ani reguł doboru zakresu; silniki,
+ich dane i polityki zostają bez zmian** (w tym polityka odniesienia
+przedpokwitaniowego LH `prepubertal-lh-clinical-orienting` 2026-10-25.1).
+Zmienia się to, dla jakiego wieku i stadium pakiet prosi silnik o ocenę.
+Makieta (komputer, telefon, stany) i sześć rekomendacji zaakceptowane przez
+właściciela 2026-11-14 („akceptuję makietę i twoje rekomendacje, koduj”);
+wcześniej tego dnia: „wiek liczymy z daty urodzenia na dzień pobrania
+a stadium … trzeba potwierdzać ale jak jest wpisane stadium przez
+użytkownika to tylko pytamy czy potwierdza i koniec bez innych zbędnych
+pytań”. Akceptacja kliniczna wdrożenia: właściciel, przy przeglądzie PR.
+
+**Po co.** Wyniki wpisuje się zwykle po dniu pobrania (wydruk przyniesiony
+na wizytę). W PR6 każda taka ocena LH, FSH, inhibiny B i testosteronu
+zapisywała się jako „wymaga ponownej oceny”, a normy katalogu pakiet
+dobierał do dzisiejszego wieku.
+
+**Jak pakiet liczy.** Pakiet nie ma osobnych reguł dla dawnej próbki. Strona
+przelicznika podaje niewidocznej instancji formularza (PR6) **pacjenta
+takiego, jakim był w dniu pobrania** (`packageSampleAdjust`), więc ocena jest
+tą, którą pojedyncze badanie dałoby pacjentowi w tym wieku:
+
+- **Wiek:** ukończone lata i miesiące kalendarzowe między datą urodzenia
+  (`birthDateISO` kontekstu pacjenta, czyli `dobISO` z danych pacjenta)
+  a datą pobrania — ta sama dokładność co wiek z karty. Miesięcznica
+  w krótszym miesiącu przypada w jego ostatnim dniu (ta sama zasada co wiek
+  z dat w silniku LH/FSH, `clamp-to-last-calendar-day`): urodzony 29 lutego
+  kończy rok 28 lutego roku nieprzestępnego.
+- **Wiek w dniach** (noworodek, minipokwitanie), gdy kontekst pacjenta go
+  niesie, cofa się o liczbę dni od pobrania z zachowaniem szerokości
+  przedziału (daty kalendarzowe dają `[d−1, d]`; dolna granica nie schodzi
+  poniżej dnia urodzenia). Wiek kalendarzowy „na dziś”
+  testosteronu niemowląt płci żeńskiej i ogony wykresowe nie mają
+  odpowiednika dla dawnej próbki — silnik pracuje wtedy na latach
+  i miesiącach, jak u pacjenta bez tych danych.
+- **Stadium z karty** (G u chłopca, Th u dziewczynki) liczy się bez pytania
+  tylko wtedy, gdy oceniono je **w dniu pobrania**. Stadium dzisiejszej
+  wizyty formularz dostaje jako obserwację z innego dnia — tak samo jak
+  wcześniejszą ocenę z karty — więc silnik go nie stosuje (wejście:
+  stadium podane, `appliesToCurrentContext: false`).
+- **Jedno pytanie.** Gdy karta ma stadium z innego dnia, krok „Pacjent”
+  pyta: „Czy w dniu pobrania, DD.MM.RRRR, stadium też było Th2?” —
+  „Tak, Th2” albo „Zmień ocenę”. Obie odpowiedzi to lokalna korekta
+  formularza z PR6 (`editObservation`, źródło `lab-local`): nie zmieniają
+  karty pacjenta ani oceny dzisiejszej wizyty w formularzu głównym, także
+  w powłoce `app.html`. Bez odpowiedzi pakiet ocenia tylko według wieku;
+  zapis nie jest wstrzymany.
+- **Potwierdzenie i korekta dotyczą konkretnego dnia.** Zmiana daty
+  pobrania (także na dziś) czyści lokalne poprawki formularza — pacjent ma
+  wtedy inny wiek — i pytanie wraca.
+- **Normy katalogu** (TSH, fT4 i pozostałe z zakresem według wieku;
+  `getPackagePatient`): ten sam wiek w dniu pobrania dla całego pakietu.
+  Stadium, które czeka na potwierdzenie, nie dobiera normy według Tannera;
+  po potwierdzeniu albo wpisaniu działa jak lokalna korekta stadium z PR6.
+- **Wejście silnika i koperta** mają tę samą postać co ocena wpisana w dniu
+  pobrania: `contextBasis: 'current-patient'`, wiek z dnia pobrania
+  w `input.age`, bez `sampleDateISO` i bez daty urodzenia w zapisie.
+  `buildNote` wiąże kopertę z dniem pobrania (`assessedForISO`,
+  `VildaLabSnapshot.reconcile(lab, lab, dataPobrania, dataPobrania)`), więc
+  zapisuje się ze stanem `recorded`. „Badania” opisują ją jak każdą ocenę:
+  „oceniono jako: dziewczynka · 7 l 1 m w dniu pobrania · Th2”.
+
+**Odniesienie przedpokwitaniowe LH.** Polityka wymaga bieżącego kontekstu
+pacjenta. Pakiet jej nie zmienia: podaje silnikowi pacjenta w wieku z dnia
+pobrania, ze stadium potwierdzonym dla tego dnia albo bez stadium, więc
+polityka działa tak samo jak przy pobraniu dziś (decyzja właściciela
+2026-11-14: wynik nie może zależeć od tego, czy pobranie było dziś).
+Stadium z karty, które czeka na potwierdzenie, jest dla silnika „podane,
+lecz nieaktualne” — odniesienie przedpokwitaniowe nie wchodzi wtedy w jego
+miejsce (`prepubertal_lh_stage_incompatible_or_unconfirmed`), zgodnie
+z ograniczeniem polityki.
+
+**Stany.**
+
+| Stan | Co robi pakiet |
+|---|---|
+| pobranie dziś | bez zmian (PR6): dane pacjenta z karty, stadium bieżącej wizyty, w powłoce wspólna edycja oceny wizyty |
+| dawna próbka, stadium z innego dnia | jedno pytanie; do odpowiedzi ocena według wieku, ocena według stadium i norma według Tannera czekają („Potwierdź” w karcie wyniku prowadzi do pytania) |
+| dawna próbka, stadium ocenione w dniu pobrania | bez pytania („ocena z DD.MM.RRRR”) |
+| dawna próbka, brak stadium w karcie | bez pytania; ocena według wieku, stadium można wpisać |
+| stadium wpisane w pakiecie | obowiązuje dla dnia pobrania („wpisane dla dnia pobrania”) |
+| brak daty urodzenia w danych pacjenta | zasada z PR6: ocena dla dzisiejszego wieku, zapis jako „wymaga ponownej oceny”, normy katalogu dla dzisiejszego wieku — z podpowiedzią, żeby uzupełnić datę urodzenia |
+| data pobrania sprzed urodzenia | błąd przy dacie; zapis i kopiowanie wstrzymane |
+
+**Przypadki `wejście → oczekiwany wynik`** (fikcyjni pacjenci; zegar testów
+17.06.2026; wartości z silników i katalogu):
+
+| Pacjent | Pobranie | Wynik | Ocena w pakiecie |
+|---|---|---|---|
+| dziewczynka ur. 10.04.2019 (dziś 7 l 2 m), Th2 z dzisiejszej wizyty | 06.06.2026 → 7 l 1 m, przed odpowiedzią | LH 0,6 IU/L | dla wieku: powyżej zakresu (≤0,3); ocena dla stadium czeka |
+| jw., po „Tak, Th2” | jw. | LH 0,6 IU/L | dla wieku: powyżej zakresu (≤0,3); dla stadium Th2: nie przekracza górnej granicy (≤4,1) — ta sama ocena co u pacjentki 7 l 1 m „na dziś” z Th2 |
+| jw. | jw. | estradiol 60 pmol/L | przed odpowiedzią norma „Dziewczynki prepubertalne…” 0–73,5; po potwierdzeniu „Dziewczynki Tanner II” 0–88,2 |
+| chłopiec ur. 10.04.2020 (dziś 6 l 2 m), bez oceny G | 06.06.2026 → 6 l 1 m | LH 0,4 IU/L | odniesienie przedpokwitaniowe: powyżej górnej granicy (0,3 IU/L) — jak przy pobraniu dziś |
+| dziewczynka ur. 10.06.2020 (dziś 6 lat) | 20.05.2026 → 5 l 11 m | TSH 5,5 mIU/L | w zakresie normy „Dzieci 1–5 lat” 0,7–6 (dla dzisiejszego wieku: powyżej normy „Dzieci 6–10 lat” 0,6–4,8) |
+| kobieta ur. 15.01.1996 | 06.06.2026 → 30 l 4 m, faza folikularna | LH 6 IU/L | ten sam zakres fazy folikularnej co przy pobraniu dziś; bez pytania o stadium |
+| ur. 29.02.2020 | 27.02.2026 / 28.02.2026 | — | wiek 5 l 11 m / 6 l 0 m |
+
+**Ograniczenia i punkty do akceptacji klinicznej.**
+
+1. **Leczenie GnRHa i pozostałe dane kontekstu** (początek pokwitania,
+   wywiad) pochodzą z karty w stanie na dziś; pakiet nie pyta o ich stan
+   w dniu pobrania.
+2. **Dokładność wieku to ukończone miesiące**, jak w karcie pacjenta: normy
+   katalogu z przedziałami dobowymi u noworodka nie są rozróżniane
+   dokładniej niż przy pobraniu dziś.
+3. **Pakiet bez LH, FSH i testosteronu** nie ma wiersza stadium (PR6), więc
+   nie ma też pytania: norma katalogu według Tannera bierze stadium z karty
+   jak dotąd, także przy dawnej próbce.
+4. **Stadium bez osi G/Th** (stary, nietypowany numer Tannera) nie jest
+   przedmiotem pytania; do oceny wyniku nie wchodzi, jak dotąd.
+5. **Komunikat silnika „potrzebna jest ocena Th/M lub G”** nie jest
+   pokazywany w kartach, gdy stadium z karty czeka na potwierdzenie
+   (koperta niesie go nadal) — o potwierdzenie pyta krok „Pacjent”.
+6. Pojedyncze badanie zostaje bez zmian: bez daty pobrania i bez
+   „Wcześniejszego badania” (decyzja właściciela opisana wyżej w tym
+   rejestrze; formularz dostał tylko pole `stage.references` w opisie dla
+   pakietu).
+
+Ocena jest orientacyjnym porównaniem ze źródłem, tak jak w pojedynczym
+badaniu; zielone testy nie nadają jej statusu walidacji klinicznej.
+
+Testy: `tests/unit/lab-pakiety-dzien-pobrania.test.mjs` (model na
+prawdziwych silnikach i kopercie: ocena dla wieku z dnia pobrania, stadium
+czekające na potwierdzenie, odniesienie przedpokwitaniowe bez zmiany
+polityki, zapis `recorded` dla dnia pobrania i `invalidated` dla oceny „na
+dziś” przy innej dacie, data sprzed urodzenia, opis daty i wieku, kontrakt
+strony), e2e `tests/e2e/lab-pakiet-dzien-pobrania.spec.mjs` (pytanie i stan
+oczekiwania; **zgodność: ocena pakietu dla dawnej próbki = ocena pacjentki
+w tym samym wieku „na dziś”**; zapis; powrót pytania po zmianie daty;
+stany bez pytania; norma katalogu dla wieku z dnia pobrania; dorosła
+kobieta; niemowlę z wiekiem w dniach — ta sama ocena co u niemowlęcia
+w tym wieku dziś; liczenie wieku z dat),
+`lab-pakiet-dzien-pobrania-mobile.spec.mjs`
+(telefon), `lab-pakiet-dzien-pobrania-powloka.spec.mjs` (powłoka `app.html`:
+potwierdzenie i zmiana stadium nie zmieniają oceny dzisiejszej wizyty),
+`lab-pakiet-pokwitanie.spec.mjs` (pacjent bez daty urodzenia — zasada z PR6).
 
 ### P-LAB-WARTOSC-BEZ-JEDNOSTKI — liczba ze starszego wpisu wyniku bez jednostki (SW 1.1.279, `vilda_vault.js` 212, 2026-10-14)
 
