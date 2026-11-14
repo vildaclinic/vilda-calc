@@ -278,7 +278,9 @@ test('wynik z operatorem „<0,1”: pola LH przyjmują zapis z wydruku, ocena i
   expect(zLh.labResult.assessment.evaluation).toEqual(pakiet.evaluation);
 });
 
-test('inna data pobrania: ocena pokwitaniowa dotyczy dzisiejszych danych pacjenta — pakiet mówi o tym i zapisuje ją jako wymagającą ponownej oceny; norma z wydruku zastępuje ocenę', async ({ page }) => {
+// PR7: pacjent z datą urodzenia jest oceniany dla wieku w dniu pobrania (lab-pakiet-dzien-pobrania.spec.mjs).
+// Ten pacjent jej nie ma (wiek wpisany ręcznie), więc zostaje zasada z PR6 — z podpowiedzią, czego brakuje.
+test('inna data pobrania u pacjenta bez daty urodzenia: ocena pokwitaniowa dotyczy dzisiejszych danych pacjenta — pakiet mówi o tym i zapisuje ją jako wymagającą ponownej oceny; norma z wydruku zastępuje ocenę', async ({ page }) => {
   const { patientId } = await otworzPakiet(page);
   await wczytajPacjenta(page, patientId, CHLOPIEC_12);
   await utworzPakiet(page, 'Dojrzewanie chłopców', ['lh', 'fsh', 'inhibin_b']);
@@ -295,9 +297,9 @@ test('inna data pobrania: ocena pokwitaniowa dotyczy dzisiejszych danych pacjent
   await page.locator('#labPkgNormHigh-fsh').fill('3');
   expect(await tekst(fsh)).toBe('FSH 2 IU/L w normie z wydruku Norma z wydruku: 0,5–3 IU/L laboratorium Ocena aplikacji dla wieku i stadium wraca po usunięciu normy z wydruku. Oceń FSH w pojedynczym badaniu →');
 
-  // Data pobrania sprzed tygodnia: ocena na ekranie zostaje (dotyczy dzisiejszego wieku i stadium), z jasnym opisem skutku.
+  // Data pobrania sprzed tygodnia, bez daty urodzenia: ocena na ekranie zostaje (dotyczy dzisiejszego wieku i stadium), z jasnym opisem skutku.
   await page.locator('#labPkgDate').fill('2026-06-10');
-  await expect(page.locator('#labPkgDateNote')).toHaveText('Normy dobrano do danych pacjenta widocznych teraz w przeliczniku. Badanie było w innym dniu — sprawdź, czy te przedziały pasują do wieku w dniu badania. Ocena pokwitaniowa (LH, Inhibina B) dotyczy dzisiejszego wieku i stadium: z inną datą pobrania zapisze się w karcie jako wymagająca ponownej oceny — tak jak przypięcie pojedynczego wyniku ze zmienioną datą.');
+  await expect(page.locator('#labPkgDateNote')).toHaveText('Normy dobrano do danych pacjenta widocznych teraz w przeliczniku. Badanie było w innym dniu — sprawdź, czy te przedziały pasują do wieku w dniu badania. Ocena pokwitaniowa (LH, Inhibina B) dotyczy dzisiejszego wieku i stadium: z inną datą pobrania zapisze się w karcie jako wymagająca ponownej oceny — tak jak przypięcie pojedynczego wyniku ze zmienioną datą. W danych pacjenta nie ma daty urodzenia — uzupełnij ją, aby ocenić wyniki dla wieku w dniu pobrania.');
   await expect(lh.locator('.lab-pkg-card-day')).toHaveText('Inna data pobrania: w karcie ta ocena zapisze się jako wymagająca ponownej oceny.');
   expect(await porownania(page, 'lh')).toEqual([['age', 'within', 'Dla wieku'], ['stage', 'within', 'Dla stadium G2']]);
   await expect(fsh.locator('.lab-pkg-card-day')).toHaveCount(0);
