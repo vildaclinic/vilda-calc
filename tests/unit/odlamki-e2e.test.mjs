@@ -130,6 +130,23 @@ describe('podziel — każdy plik w dokładnie jednym odłamku', () => {
 });
 
 describe('podziel — równowaga czasu', () => {
+  const remisy = [5, 8, 11, 15, 2, 8, 16, 12, 1, 13, 6, 9]
+    .map((sekundy, i) => plik(`r${i}.spec.mjs`, sekundy, i));
+
+  it('przy niezmiennym maksimum nadal skraca kolejne odłamki', () => {
+    const przed = podziel(remisy, { odlamki: 3, maksKrokow: 0 }).map((o) => o.czas).sort((a, b) => b - a);
+    const odlamki = podziel(remisy, { odlamki: 3 });
+    sprawdzPodzial(remisy, odlamki);
+    expect(przed).toEqual([16, 15, 13]);
+    expect(odlamki.map((o) => o.czas).sort((a, b) => b - a)).toEqual([16, 11, 8]);
+  });
+
+  it.each([1, 3, 4, 5])('%i workerów: poprawiony podział zgadza się z niezależną symulacją kolejki', (workery) => {
+    const odlamki = podziel(remisy, { odlamki: 3, workery });
+    expect(odlamki.flatMap((o) => o.pliki.map((p) => p.plik)).sort()).toEqual(remisy.map((p) => p.plik).sort());
+    for (const o of odlamki) expect(o.czas).toBeCloseTo(symulujOdlamek(o.pliki, workery), 1);
+  });
+
   it('układ jak w CI przed zmianą: drogie pliki na końcu alfabetu — podział po czasie wyrównuje odłamki', () => {
     // 90 plików po 4 testy; ostatnia trzecia alfabetu (jak koniec desktopu + projekt mobilny)
     // jest dwa razy droższa. --shard daje trzeciemu odłamkowi całą drogą część: 30 plików po

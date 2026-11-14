@@ -59,6 +59,13 @@ async function otworzTerminarz(page) {
     const a = document.getElementById('vilda-auth-ui-root');
     if (a) a.style.display = 'none';
   });
+  // Programowe utworzenie konta pomija zamknięcie ekranu logowania.
+  // Jak w terminarz-transakcje: wyślij sygnał aplikacji i czekaj na kalendarz.
+  await page.evaluate(() => document.dispatchEvent(new CustomEvent('vilda:auth-hidden')));
+  await page.waitForFunction(() =>
+    !document.querySelector('#terminarzRoot .terminarz-locked') &&
+    Boolean(document.querySelector('#terminarzRoot .tz-vbody')),
+  );
   await page.waitForTimeout(300);
   const today = await page.evaluate(() => {
     const d = new Date();

@@ -1190,6 +1190,26 @@ oraz starszy ujemny pomiar zachowują wartość i położenie; `<18` nie staje s
 dokładnym punktem; ta sama data i różne ID pozostają osobno dostępne.
 Testy wykonują produkcyjne moduły i istniejące adaptery zapisu.
 
+### LAB-HISTORIA — minimalny podgląd punktu M1 (2026-11-13)
+
+Zaakceptowana makieta M1 pokazuje wyłącznie nazwę badania, zapisaną wartość
+(pogrubioną) i jednostkę. Kolor wartości pochodzi z istniejącego opisu zapisu:
+zieleń dla zakresu, wspólna czerwień dla obu kierunków odchylenia, neutralny
+kolor dla odniesień warunkowych, braku oceny lub sprzecznych ocen wspólnego punktu.
+Nie zmienia norm, zaokrąglenia, jednostki modelu, współrzędnych ani danych pacjenta.
+
+Natywny tytuł punktu zastępuje podgląd dostępny na hover i fokus. Zwykłe
+kliknięcie/dotknięcie nadal otwiera oryginalny zapis lub wybór nakładających się
+wpisów. Na telefonie przytrzymanie pokazuje tylko M1. Escape, przewinięcie,
+zamknięcie lub ukrycie karty usuwa podgląd wraz z obserwatorem i słuchaczami.
+Warstwa popover wyświetla HTML poza przycinanym SVG; atrybuty SVG x/y niosą
+geometrię, a CSS opisuje wygląd. Pełny opis daty i normy pozostaje w etykiecie
+przycisku oraz w szczegółach; zwięzłe okienko nie zastępuje zapisanej oceny.
+
+Regresje używają fikcyjnego sejfu i natywnego adaptera UAG. Sprawdzają oba
+kierunki odchylenia, wynik w zakresie, dokładne zero, ujemną liczbę, niezmienność
+notatek, klawiaturę, mysz, dotyk, krawędzie ekranu i ukrywanie danych.
+
 ### LAB-HISTORIA — położenie punktów w Safari/WebKit (2026-11-05)
 
 **Klasyfikacja: naprawa prezentacji zapisanych wyników.** Bez zmian wartości,

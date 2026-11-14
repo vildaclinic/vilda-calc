@@ -67,6 +67,134 @@
       && unit(before.unit) === unit(after.unit);
   }
 
+  // One transient, non-interactive tooltip per document. SVG attributes carry
+  // viewport geometry; presentation stays in CSS (no generated inline styles).
+  var tooltips = new WeakMap(), previewGeneration = 0;
+  function preview(doc, host, control, label, value, displayUnit, tone) {
+    var win = doc.defaultView;
+    if (!win || typeof control.getBoundingClientRect !== 'function') return;
+    var previous = tooltips.get(doc);
+    if (previous) previous();
+    if (!control.isConnected || !host.isConnected) return;
+    var layer = node(doc, 'div', 'vilda-lab-point-preview');
+    layer.setAttribute('popover', 'manual');
+    var canvas = layer.appendChild(node(doc, 'svg', 'vilda-lab-point-preview-canvas', null, true));
+    attr(canvas, { width: '100%', height: '100%' });
+    var target = canvas.appendChild(node(doc, 'foreignObject', 'vilda-lab-point-preview-target', null, true));
+    attr(target, { x: 0, y: 0, width: Math.max(1, Math.min(360, win.innerWidth - 24)), height: 160 });
+    var bubble = target.appendChild(node(doc, 'div', 'vilda-lab-point-preview-bubble'));
+    var id = 'vilda-lab-point-preview-' + (++chooserId);
+    attr(bubble, { id: id, role: 'tooltip' });
+    bubble.appendChild(node(doc, 'span', 'vilda-lab-point-preview-name', label));
+    var reading = bubble.appendChild(node(doc, 'span', 'vilda-lab-point-preview-reading'));
+    var number = reading.appendChild(node(doc, 'strong', 'vilda-lab-point-preview-value', value));
+    number.setAttribute('data-tone', tone);
+    reading.appendChild(node(doc, 'span', 'vilda-lab-point-preview-unit', displayUnit));
+    var oldDescription = control.getAttribute('aria-describedby');
+    control.setAttribute('aria-describedby', (oldDescription ? oldDescription + ' ' : '') + id);
+    doc.body.appendChild(layer);
+    if (typeof layer.showPopover === 'function') layer.showPopover();
+    var observer, closed = false;
+    var contextEvents = ['visibilitychange', 'vilda:session-changed', 'vilda:patient-loaded', 'vilda:user-state-cleared'];
+    function close() {
+      if (closed) return;
+      closed = true; previewGeneration++;
+      if (observer) observer.disconnect();
+      contextEvents.forEach(function (name) { doc.removeEventListener(name, close); });
+      doc.removeEventListener('pointerdown', outside, true);
+      doc.removeEventListener('keydown', key, true);
+      doc.removeEventListener('scroll', scrolled, true);
+      win.removeEventListener('resize', close);
+      win.removeEventListener('blur', close);
+      win.removeEventListener('pagehide', close);
+      if (oldDescription) control.setAttribute('aria-describedby', oldDescription);
+      else control.removeAttribute('aria-describedby');
+      if (layer.parentNode) layer.parentNode.removeChild(layer);
+      if (tooltips.get(doc) === close) tooltips.delete(doc);
+    }
+    function scrolled() {
+      var next = control.getBoundingClientRect();
+      if (Math.abs(next.left - bounds.left) > 0.5 || Math.abs(next.top - bounds.top) > 0.5) close();
+    }
+    function outside(event) { if (!control.contains(event.target)) close(); }
+    function key(event) { if (event.key === 'Escape') { event.stopPropagation(); close(); } }
+    function visible() {
+      if (!host.isConnected || !control.isConnected || !control.getClientRects().length) return false;
+      for (var parent = control; parent; parent = parent.parentElement) {
+        if (parent.hidden || parent.inert || parent.getAttribute('aria-hidden') === 'true'
+          || parent.classList.contains('vb22-private-content')) return false;
+        var css = win.getComputedStyle(parent);
+        if (css.visibility === 'hidden' || css.display === 'none' || Number(css.opacity) === 0
+          || css.filter.indexOf('blur(') !== -1) return false;
+      }
+      return true;
+    }
+    function check() { if (!visible()) close(); }
+    if (!visible()) { close(); return; }
+    var bounds = control.getBoundingClientRect(), size = bubble.getBoundingClientRect();
+    var left = Math.max(12, Math.min(win.innerWidth - size.width - 12, bounds.left + bounds.width / 2 - size.width / 2));
+    var top = bounds.top - size.height - 8;
+    if (top < 12) top = bounds.bottom + 8;
+    top = Math.max(12, Math.min(win.innerHeight - size.height - 12, top));
+    attr(target, { x: left, y: top });
+    contextEvents.forEach(function (name) { doc.addEventListener(name, close); });
+    doc.addEventListener('pointerdown', outside, true);
+    doc.addEventListener('keydown', key, true);
+    doc.addEventListener('scroll', scrolled, true);
+    win.addEventListener('resize', close);
+    win.addEventListener('blur', close);
+    win.addEventListener('pagehide', close);
+    if (typeof win.MutationObserver === 'function') {
+      observer = new win.MutationObserver(check);
+      observer.observe(doc.documentElement, { childList: true, subtree: true, attributes: true,
+        attributeFilter: ['hidden', 'inert', 'aria-hidden', 'class', 'style', 'open'] });
+    }
+    close.control = control;
+    close.bubble = bubble;
+    bubble.addEventListener('pointerleave', close);
+    tooltips.set(doc, close);
+  }
+  function bindPreview(doc, host, control, label, value, displayUnit, tone) {
+    var win = doc.defaultView, hold = null, held = false, origin, leave = null;
+    function hide() { previewGeneration++; if (win && leave !== null) win.clearTimeout(leave); leave = null; var close = tooltips.get(doc); if (close && close.control === control) close(); }
+    function show() { if (win && leave !== null) win.clearTimeout(leave); leave = null; preview(doc, host, control, label, value, displayUnit, tone); }
+    function cancel() { if (win && hold !== null) win.clearTimeout(hold); hold = null; }
+    control.addEventListener('pointerenter', function (event) { if (event.pointerType === 'mouse') show(); });
+    control.addEventListener('pointerleave', function () {
+      cancel();
+      var leaving = tooltips.get(doc);
+      if (!held && win) leave = win.setTimeout(function () {
+        leave = null; var close = tooltips.get(doc);
+        if (close && close === leaving && !(close.bubble && close.bubble.matches(':hover'))) close();
+      }, 180);
+    });
+    control.addEventListener('focus', function () {
+      var generation = previewGeneration;
+      if (win && win.requestAnimationFrame) win.requestAnimationFrame(function () {
+        if (generation === previewGeneration && doc.activeElement === control) show();
+      });
+      else show();
+    });
+    control.addEventListener('blur', hide);
+    control.addEventListener('pointerdown', function (event) {
+      held = false; cancel();
+      if (!win || event.pointerType !== 'touch') return;
+      origin = { x: event.clientX, y: event.clientY };
+      hold = win.setTimeout(function () { hold = null; held = true; show(); }, 420);
+    });
+    control.addEventListener('pointermove', function (event) {
+      if (hold !== null && origin && Math.abs(event.clientX - origin.x) + Math.abs(event.clientY - origin.y) > 10) cancel();
+    });
+    control.addEventListener('pointerup', cancel);
+    control.addEventListener('pointercancel', function () { cancel(); held = false; hide(); });
+    control.addEventListener('contextmenu', function (event) { if (held || hold !== null) event.preventDefault(); });
+    control.addEventListener('click', function (event) {
+      cancel();
+      if (held) { held = false; event.preventDefault(); event.stopImmediatePropagation(); return; }
+      hide();
+    }, true);
+  }
+
   function render(doc, view, options) {
     options = options || {};
     if (!doc || typeof doc.createElementNS !== 'function' || !view || !view.chart || typeof options.describe !== 'function') return null;
@@ -247,8 +375,13 @@
       attr(target, { x: coordinate(x(point.stamp)) + '%', y: coordinate(y(point.point.v)) + '%', width: 44, height: 44, transform: 'translate(-22 -22)' });
       var control = target.appendChild(node(doc, 'button', 'vilda-lab-result-chart-point'));
       attr(control, { type: 'button', 'data-value': point.point.v, 'data-tone': tone, 'data-date': entry.dateISO,
-        'aria-label': title + '. Otwórz wynik', title: title });
+        'aria-label': title + '. Otwórz wynik' });
       control.appendChild(node(doc, 'span', 'vilda-lab-result-chart-dot'));
+      var label = String(view.label || view.test || '').trim();
+      if (!view.clcr) label = label.split('(')[0].trim() || label;
+      var shown = String(shownValue(point)).replace(/\s+/g, ' ').trim();
+      if (shown.charAt(shown.length - displayUnit.length - 1) === ' ' && unit(shown.slice(-displayUnit.length)) === displayUnit) shown = shown.slice(0, -displayUnit.length - 1);
+      bindPreview(doc, host, control, label, shown, displayUnit, tone);
       if (group.length === 1) {
         control.setAttribute('data-note-id', entry.noteId || '');
         if (typeof options.openNote === 'function' && entry.noteId) control.addEventListener('click', function () { options.openNote(entry.noteId); });
@@ -258,8 +391,7 @@
       chooser.hidden = true;
       attr(chooser, { id: 'vilda-lab-chart-choice-' + (++chooserId), role: 'group', 'aria-label': 'Wybierz wynik z tego punktu' });
       attr(control, { 'data-count': group.length, 'aria-expanded': 'false', 'aria-controls': chooser.id,
-        'aria-label': (view.label || view.test || '') + ': ' + shownValue(point) + ' · ' + formatDate(entry.dateISO) + '. Wyniki w tym punkcie: ' + group.length + '. Wybierz wynik.',
-        title: 'Wyniki w tym punkcie: ' + group.length + ' · ' + formatDate(entry.dateISO) });
+        'aria-label': (view.label || view.test || '') + ': ' + shownValue(point) + ' · ' + formatDate(entry.dateISO) + '. Wyniki w tym punkcie: ' + group.length + '. Wybierz wynik.' });
       control.appendChild(node(doc, 'span', 'vilda-lab-result-chart-count', group.length)).setAttribute('aria-hidden', 'true');
       chooser.appendChild(node(doc, 'p', 'vilda-lab-result-chart-chooser-title', 'Wyniki z ' + formatDate(entry.dateISO)));
       var choices = group.map(function (item) {
@@ -325,5 +457,5 @@
     return host;
   }
 
-  root.VildaLabResultChart = Object.freeze({ version: '1.1.0', render: render });
+  root.VildaLabResultChart = Object.freeze({ version: '1.2.0', render: render });
 })(typeof window !== 'undefined' ? window : globalThis);

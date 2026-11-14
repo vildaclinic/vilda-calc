@@ -276,7 +276,7 @@ test(`${route}: Podsumowanie B: rzeczywiste SDS tempa i prognoza dla 18 lat zmie
   ] }));
   await expect(sds).toHaveAttribute('data-tone', 'danger');
   await expect(sds.locator('.professional-summary-value')).toContainText('−2,4');
-  expect(await sds.evaluate(el => getComputedStyle(el).backgroundColor)).toBe('rgb(255, 243, 244)');
+  await expect(sds).toHaveCSS('background-color', 'rgb(255, 243, 244)');
 
   // A subsequent one-measurement patient must not inherit the preceding SDS,
   // bone-age consensus, color, or descriptive tooltip.

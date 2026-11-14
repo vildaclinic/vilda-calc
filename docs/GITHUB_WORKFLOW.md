@@ -68,7 +68,7 @@ z `tests/fixtures/czasy-e2e.json`. Skrypt sprawdza listę przez rzeczywiste
 Wymagany status `Testy przeglądarkowe i PWA` przechodzi dopiero po wszystkich częściach.
 
 Geometria punktów wyników ma dodatkowy, krótki job Safari/WebKit. Instaluje WebKit
-raz i uruchamia wyłącznie trzy scenariusze geometrii z
+raz i uruchamia wyłącznie sześć scenariuszy geometrii i podglądu M1 z
 `playwright.lab-chart-webkit.config.mjs`: komputer oraz ekrany 390 i 320 px.
 Sprawdzają również piksele zrzutu ekranu, ponieważ WebKit potrafił rysować punkt
 w innym miejscu niż wskazywały jego współrzędne DOM. Wynik tego joba należy do
