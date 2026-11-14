@@ -4,8 +4,10 @@ import { kliknij, odznacz, zaznacz } from '../support/uklad-czekanie.mjs';
 
 // LAB-PAKIETY PR4 (kreator, decyzje właściciela i makieta z 2026-11-13): lekarz składa własny pakiet z badań
 // przelicznika. Prawdziwy, fikcyjny sejf (tests/support/lab-pakiet-dane.mjs; zegar stron 17.06.2026).
-// Pakiety należą do konta; LH i FSH (oraz inhibina B, testosteron całkowity, AMH) są w pakiecie bez oceny —
-// zapisuje się wartość, ocenę daje norma z wydruku albo pojedyncze badanie. Dane wyłącznie fikcyjne.
+// Pakiety należą do konta. LAB-PAKIETY PR6 (2026-11-13): LH, FSH, inhibinę B i testosteron całkowity pakiet
+// ocenia silnikiem pojedynczego badania (osie wieku i stadium, ta sama koperta oceny w zapisie); AMH zostaje
+// w pakiecie bez oceny — zapisuje się wartość, ocenę daje norma z wydruku albo pojedyncze badanie.
+// Dane wyłącznie fikcyjne.
 test.use({ serviceWorkers: 'block' });
 
 const bezCzasu = (lab) => JSON.parse(JSON.stringify(lab, (klucz, wartosc) => (klucz === 'capturedAtISO' ? '(chwila zapisu)' : wartosc)));
@@ -33,7 +35,7 @@ test('kreator: pakiet „Dojrzewanie” — utworzenie, zapis na koncie, ocena, 
   await expect(page.locator('#labPkgCreatorGroups details')).toHaveCount(12);
   await expect(page.locator('#labPkgCreatorGroups input[type="checkbox"]')).toHaveCount(34);
   expect(await page.locator('#labPkgCreatorGroups details').evaluateAll((g) => g.map((el) => el.open))).toEqual([true, ...Array(11).fill(false)]);
-  expect(await tekst(page.locator('#labPkgCreator .lab-pkg-creator-legend'))).toBe('pokwit. — ocena pokwitaniowa tylko w pojedynczym badaniu. poj. badanie — pełna ocena tylko w pojedynczym badaniu. Pozostałe badania pakiet ocenia normą dla wieku, płci i stadium z karty pacjenta.');
+  expect(await tekst(page.locator('#labPkgCreator .lab-pkg-creator-legend'))).toBe('pokwit. — ocena według wieku i stadium pokwitania, jak w pojedynczym badaniu. poj. badanie — pełna ocena tylko w pojedynczym badaniu. Pozostałe badania pakiet ocenia normą dla wieku, płci i stadium z karty pacjenta.');
 
   await page.locator('#labPkgCreatorName').fill('Dojrzewanie');
   // Wyszukiwanie odsłania badanie w zwiniętej grupie (bez znaków diakrytycznych).
@@ -54,11 +56,11 @@ test('kreator: pakiet „Dojrzewanie” — utworzenie, zapis na koncie, ocena, 
 
   await expect(page.locator('#labPkgCreatorCount')).toHaveText('3 z 10');
   expect(await wybrane(page)).toEqual([
-    ['1.', 'LH (hormon luteinizujący)', 'ocena pokwitaniowa w pojedynczym badaniu'],
-    ['2.', 'FSH (hormon folikulotropowy)', 'ocena pokwitaniowa w pojedynczym badaniu'],
+    ['1.', 'LH (hormon luteinizujący)', 'ocena według wieku i pokwitania'],
+    ['2.', 'FSH (hormon folikulotropowy)', 'ocena według wieku i pokwitania'],
     ['3.', 'Estradiol (E2)', 'ocena w pakiecie'],
   ]);
-  await expect(page.locator('#labPkgCreatorOwnNote')).toHaveText('LH, FSH — w pakiecie bez oceny aplikacji. Zapiszesz wartość i, jeśli chcesz, normę z wydruku; ocenę z wiekiem, stadium pokwitania i leczeniem otworzysz jednym kliknięciem w pojedynczym badaniu.');
+  await expect(page.locator('#labPkgCreatorOwnNote')).toHaveText('LH, FSH — pakiet ocenia jak pojedyncze badanie: według wieku i stadium pokwitania z karty pacjenta.');
   await expect(page.locator('#labPkgCreatorHint')).toBeHidden();
   await expect(page.locator('#labPkgCreatorDelete')).toBeHidden();
   await expect(page.locator('#labPkgCreatorSave')).toHaveText('Zapisz pakiet');
@@ -76,14 +78,22 @@ test('kreator: pakiet „Dojrzewanie” — utworzenie, zapis na koncie, ocena, 
   await expect.poll(() => pakietyKonta(page)).toEqual([['Dojrzewanie', ['lh', 'fsh', 'estradiol']]]);
   expect(await pakietyUrzadzenia(page)).toEqual([['Dojrzewanie', ['lh', 'fsh', 'estradiol']]]);
 
-  // Wyniki: LH i FSH bez oceny w pakiecie, estradiol oceniony jak w pojedynczym badaniu.
+  // Wyniki: LH i FSH ocenia silnik pokwitaniowy (PR6), estradiol — katalog, jak w pojedynczym badaniu.
   await page.locator('#labPkgValue-lh').fill('2,1');
   await page.locator('#labPkgValue-fsh').fill('4,5');
   await page.locator('#labPkgValue-estradiol').fill('60');
   const lh = karta.locator('.lab-pkg-card[data-analyte="lh"]'), fsh = karta.locator('.lab-pkg-card[data-analyte="fsh"]'), e2 = karta.locator('.lab-pkg-card[data-analyte="estradiol"]');
-  expect(await tekst(lh)).toBe('LH 2,1 IU/L bez oceny w pakiecie Ocena pokwitaniowa w pojedynczym badaniu albo z normy z wydruku. Oceń LH w pojedynczym badaniu →');
-  await expect(lh.locator('.lab-range-status')).toHaveClass(/is-general/);
+  // Pacjentka 12 l 3 m bez oceny Th: LH i FSH mają oś wieku ze wspólnego widoku oceny, bez jednej etykiety w nagłówku.
+  await expect(lh).toHaveClass(/is-assessed/);
+  await expect(lh.locator('.lab-range-status')).toHaveCount(0);
   await expect(lh.locator('svg.lab-pkg-bar')).toHaveCount(0);
+  await expect(lh.locator('.vilda-lab-assessment [data-comparison="age"]')).toHaveCount(1);
+  await expect(lh.locator('.vilda-lab-assessment [data-comparison="stage"]')).toHaveCount(0);
+  expect(await tekst(lh)).toMatch(/^LH 2,1 IU\/L .*Dla wieku .* IU\/L .*Szczegóły i źródła Wykres w pojedynczym badaniu →$/);
+  const ocenaLhPakietu = await page.evaluate(() => window.VildaLabConverterRuntime.packagePuberty.assess('lh', '2,1', 'IU/L'));
+  expect(ocenaLhPakietu.status).toBe('recorded');
+  expect(ocenaLhPakietu.evaluation.input).toMatchObject({ analyte: 'lh', sex: 'F', contextBasis: 'current-patient', sampleDateISO: null,
+    age: { years: 12, months: 3 }, referenceSelection: 'automatic', puberty: { kind: 'unspecified', stage: null } });
   const silnik = await page.evaluate(() => {
     const patient = window.VildaLabConverterRuntime.getPackagePatient('estradiol').patient;
     const ocena = window.LabUnitConverter.evaluate('estradiol', { value: '60', unit: 'pmol/L', patient });
@@ -95,19 +105,28 @@ test('kreator: pakiet „Dojrzewanie” — utworzenie, zapis na koncie, ocena, 
   expect(silnik.wiek[1]).toBeGreaterThan(silnik.wiek[0]);
   expect(await tekst(e2)).toMatch(/^Estradiol 60 pmol\/L w zakresie normy Norma · .+: 0–312 pmol\/L$/);
   await expect(e2.locator('.lab-range-status')).toHaveClass(/is-normal/);
-  // Norma z wydruku daje ocenę także badaniu bez oceny aplikacji.
+  // Norma z wydruku zastępuje ocenę aplikacji dla tego wyniku (decyzja właściciela 2026-11-13): karta jak dla
+  // każdego badania z normą laboratorium, bez osi silnika pokwitaniowego.
+  await expect(fsh).toHaveClass(/is-assessed/);
   await page.locator('#labPkgNormLow-fsh').fill('0,3');
   await page.locator('#labPkgNormHigh-fsh').fill('4');
-  expect(await tekst(fsh)).toBe('FSH 4,5 IU/L powyżej normy z wydruku Norma z wydruku: 0,3–4 IU/L laboratorium Oceń FSH w pojedynczym badaniu →');
+  expect(await tekst(fsh)).toBe('FSH 4,5 IU/L powyżej normy z wydruku Norma z wydruku: 0,3–4 IU/L laboratorium Ocena aplikacji dla wieku i stadium wraca po usunięciu normy z wydruku. Oceń FSH w pojedynczym badaniu →');
   await expect(fsh.locator('.lab-range-status')).toHaveClass(/is-above/);
+  await expect(fsh).not.toHaveClass(/is-assessed/);
+  await expect(fsh.locator('.vilda-lab-assessment')).toHaveCount(0);
   // Źródła norm dotyczą tylko badania ocenianego przez pakiet.
   await expect(page.locator('#labPkgSources')).toHaveText(/^Źródła norm: .*Estradiol/);
 
-  // „Oceń LH w pojedynczym badaniu” otwiera pojedyncze badanie z wybranym LH; pakiet zachowuje wpisane wartości.
-  await lh.getByRole('button', { name: 'Oceń LH w pojedynczym badaniu →' }).click();
+  // „Wykres w pojedynczym badaniu” otwiera pojedyncze badanie z wybranym LH; pakiet zachowuje wpisane wartości.
+  await lh.getByRole('button', { name: 'Wykres w pojedynczym badaniu →' }).click();
   await expect(page.locator('#labFormPane')).toBeVisible();
   await expect(page.locator('#labModeSingle')).toHaveAttribute('aria-selected', 'true');
   expect(await page.evaluate(() => window.VildaLabConverterRuntime.getSubstanceId())).toBe('lh');
+  // Ta sama wartość w pojedynczym badaniu daje TĘ SAMĄ ocenę (wejście silnika i wynik), którą pakiet zapisze.
+  await page.locator('#labUnit').selectOption('IU/L');
+  await page.locator('#labValue').fill('2,1');
+  const ocenaLhPojedyncza = await page.evaluate(() => window.VildaLabPubertyRuntime.getAssessment());
+  expect(ocenaLhPojedyncza.evaluation).toEqual(ocenaLhPakietu.evaluation);
   await page.locator('#labModePackage').click();
   await expect(page.locator('#labPkgSelect option:checked')).toHaveText('Dojrzewanie');
   await expect(page.locator('#labPkgValue-lh')).toHaveValue('2,1');
@@ -122,8 +141,15 @@ test('kreator: pakiet „Dojrzewanie” — utworzenie, zapis na koncie, ocena, 
     ['lh', 'LH (hormon luteinizujący): 2,1 IU/L (SI)', '= 2,1 IU/L'],
   ]);
   const [zE2, zFsh, zLh] = notatki.map((n) => n.labResult);
-  // LH: sama wartość — bez zakresu katalogu, bez oceny i bez normy; FSH: norma z wydruku; estradiol: zrzut normy aplikacji.
-  expect(zLh).toEqual({ test: 'LH (hormon luteinizujący)', value: '2,1 IU/L (SI) = 2,1 IU/L', testKey: 'lh', valueNum: 2.1, unit: 'IU/L' });
+  // LH: koperta oceny pokwitaniowej w postaci „Przypnij do wizyty” (pole wartości = sam zapis wyniku, ocena
+  // związana z wynikiem i datą badania) — bez zakresu katalogu i bez normy; FSH: norma z wydruku zamiast oceny;
+  // estradiol: zrzut normy aplikacji.
+  expect(Object.keys(zLh).sort()).toEqual(['assessment', 'test', 'testKey', 'unit', 'value', 'valueNum']);
+  expect(zLh).toMatchObject({ test: 'LH (hormon luteinizujący)', value: '2,1', testKey: 'lh', valueNum: 2.1, unit: 'IU/L' });
+  expect(zLh.assessment.status).toBe('recorded');
+  expect(zLh.assessment.reasonCodes).toEqual([]);
+  expect(zLh.assessment.evaluation).toEqual(ocenaLhPakietu.evaluation);
+  expect(zLh.assessment.binding).toMatchObject({ testKey: 'lh', value: '2,1', valueNum: 2.1, unit: 'IU/L', clinicalDateISO: '2026-06-17' });
   expect(zFsh).toEqual({ test: 'FSH (hormon folikulotropowy)', value: '4,5 IU/L (SI) = 4,5 IU/L', testKey: 'fsh', valueNum: 4.5, unit: 'IU/L', norm: '0,3–4 IU/L' });
   expect(zE2.range).toMatchObject({ status: 'recorded', classification: 'within' });
   expect(zE2.range.range.id).toBe(silnik.zakres);

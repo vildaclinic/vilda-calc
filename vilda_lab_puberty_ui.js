@@ -398,7 +398,7 @@
       sharedEditorHost.hidden = !enabled;
       wrappers.kind.hidden = enabled;
       wrappers.stage.hidden = enabled || fields.kind.value === 'Ax';
-      if (enabled && !sharedEditor) sharedEditor = ui.mountEditor(sharedEditorHost, {
+      if (enabled && !sharedEditor && opts.sharedEditor !== false) sharedEditor = ui.mountEditor(sharedEditorHost, {
         read: assessmentView, sex: function () { return fields.sex.value; },
         onEdit: editSharedObservation, idPrefix: 'labSharedPuberty'
       });
@@ -912,15 +912,44 @@
       if (!current || !snapshots || typeof snapshots.create !== 'function') return { schemaVersion: 1, status: 'unavailable', reasonCodes: ['snapshot_helper_unavailable'], evaluation: null };
       return snapshots.create(current);
     }
+    // LAB-PAKIETY PR6 — pakiet badań (vilda_lab_packages.js) ocenia LH, FSH, inhibinę B i testosteron tym samym
+    // formularzem: strona montuje jego drugą instancję poza widokiem (opts.sharedEditor === false) i pyta ją
+    // o ocenę badanie po badaniu. Poniższe metody oddają pakietowi to, co pojedyncze badanie pokazuje w kroku
+    // „Pacjent”; niczego nie liczą po swojemu i nie zmieniają zachowania pojedynczego badania.
+    function setReproductiveContext(value, silent) {
+      var next = Array.prototype.some.call(fields.reproductiveContext.options, function (option) { return option.value === value; }) ? value : 'unknown';
+      if (fields.reproductiveContext.value === next) return false;
+      fields.reproductiveContext.value = next; delete imported.reproductiveContext; dirty.reproductiveContext = true; evaluation = null;
+      updateView();
+      if (!silent) notify();
+      return true;
+    }
+    function getPresentation() {
+      refreshContext(); updateView();
+      var observation = buildInput(readFields(), { analyte: analyte, raw: lastMeasurement.raw, unit: lastMeasurement.unit }).puberty;
+      return {
+        ready: ready(), sourceStatus: context && context.sourceStatus || 'unavailable', sex: fields.sex.value,
+        patientSummary: patientSummary.textContent,
+        // local: lekarz poprawił ocenę tylko dla tego sprawdzenia; kind/value/current — obserwacja, która idzie do silnika.
+        stage: { hidden: stageRow.hidden, summary: stageSummary.textContent, action: refineStage.textContent,
+          disabled: refineStage.disabled, hint: stageHint.textContent, editor: !sharedEditorHost.hidden,
+          local: !!localAssessment, kind: observation.kind, value: observation.stage,
+          current: observation.appliesToCurrentContext === true },
+        cycle: { hidden: wrappers.reproductiveContext.hidden, value: fields.reproductiveContext.value,
+          choices: Array.prototype.map.call(fields.reproductiveContext.options, function (option) { return [option.value, option.textContent]; }) },
+        contextLine: contextLine.hidden ? '' : contextLine.textContent
+      };
+    }
     syncSexFields();
     var runtime = sharedRuntime();
     if (runtime && typeof runtime.subscribe === 'function') runtime.subscribe(function () {
       if (analyte && refreshContext()) { updateView(); notify(); }
     });
-    return { setAnalyte: setAnalyte, setPatientContext: setPatientContext, render: render, getAssessment: getAssessment, getEffectiveContext: getEffectiveContext, getLegacyPatient: getLegacyPatient, isLegacyFemale: isLegacyFemale, reset: reset };
+    return { setAnalyte: setAnalyte, setPatientContext: setPatientContext, render: render, getAssessment: getAssessment, getEffectiveContext: getEffectiveContext, getLegacyPatient: getLegacyPatient, isLegacyFemale: isLegacyFemale, reset: reset,
+      getAssessmentView: assessmentView, editObservation: editSharedObservation, setReproductiveContext: setReproductiveContext, getPresentation: getPresentation };
   }
 
-  var api = { version: '1.16.0', buildInput: buildInput, sharedObservationFields: sharedObservationFields,
+  var api = { version: '1.17.0', buildInput: buildInput, sharedObservationFields: sharedObservationFields,
     parseGestationalAge: parseGestationalAge, parsePostnatalDays: parsePostnatalDays, mount: mount };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.VildaLabPubertyUI = api;

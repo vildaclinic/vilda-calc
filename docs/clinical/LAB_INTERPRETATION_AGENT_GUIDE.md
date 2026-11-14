@@ -229,6 +229,7 @@ Punkty wejścia obecnej implementacji, do sprawdzenia przed zmianą:
 | Dane i silnik LH/FSH | `vilda_lab_puberty_data.js`, `vilda_lab_puberty.js` |
 | Formularz i dane pacjenta | `vilda_lab_puberty_ui.js`, `vilda_puberty_source.js`, `vilda_lab_neonatal_context.js` |
 | Integracja i jednostki | `przelicznik-jednostek.html` (m.in. `VildaLabPubertyRuntime` w skrypcie strony), `lab_unit_converter.js` |
+| Pakiet badań (LAB-PAKIETY PR6) | `vilda_lab_packages.js` i `packagePubertyRuntime` w skrypcie strony: druga, niewidoczna instancja tego samego formularza ocenia LH, FSH, inhibinę B i testosteron w pakiecie w stanie domyślnym pojedynczego badania. Zmiana formularza, silnika lub koperty oceny działa w obu miejscach; zgodności pilnuje `tests/e2e/lab-pakiet-pokwitanie.spec.mjs` |
 | Osie i zapis oceny | `vilda_lab_assessment_ui.js`, `vilda_lab_assessment_ui.css`, `vilda_lab_snapshot.js` |
 | Uzasadnienia kliniczne | [LH_FSH.md](LH_FSH.md), [ALGORITHMS.md](ALGORITHMS.md) |
 

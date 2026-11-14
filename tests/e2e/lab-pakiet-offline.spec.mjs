@@ -158,7 +158,15 @@ test('pakiet „Tarczyca” po zimnym starcie offline: zasoby z SW, ocena i zapi
     await expect(page.locator('#labPkgSelect option:checked')).toHaveText('Dojrzewanie offline');
     await expect(karta.locator('.lab-pkg-row-label')).toHaveText(['LH', 'Estradiol']);
     await page.locator('#labPkgValue-lh').fill('3');
-    await expect(karta.locator('.lab-pkg-card[data-analyte="lh"] .lab-range-status')).toHaveText('bez oceny w pakiecie');
+    // LAB-PAKIETY PR6 offline: ocenę pokwitaniową LH daje ten sam silnik co w pojedynczym badaniu — bez sieci,
+    // z plików z pamięci podręcznej; wynik ma kopertę oceny do zapisu, a nie etykietę „bez oceny w pakiecie”.
+    const lhOffline = karta.locator('.lab-pkg-card[data-analyte="lh"]');
+    await expect(lhOffline).toHaveClass(/is-assessed/);
+    await expect(lhOffline.locator('.vilda-lab-assessment')).toHaveCount(1);
+    await expect(lhOffline.locator('.lab-range-status')).toHaveCount(0);
+    const ocenaOffline = await page.evaluate(() => window.VildaLabConverterRuntime.packagePuberty.assess('lh', '3', 'IU/L'));
+    expect(ocenaOffline.status).toBe('recorded');
+    expect(ocenaOffline.evaluation.measurement).toMatchObject({ status: 'valid', raw: '3', sourceUnit: 'IU/L' });
     await expect.poll(() => page.evaluate(async () => {
       const wpis = (await window.VildaVault.exportSyncPayload()).userPreferences?.labCustomPackages;
       return wpis ? JSON.parse(wpis.value).packages.map((pakiet) => [pakiet.name, pakiet.analytes]) : null;
