@@ -10,7 +10,7 @@ import { podlaczAtrapeDoKontekstu } from '../support/atrapa-workera-route.mjs';
 // koperta z polem z (format nieznany tej wersji).
 // 1) Flaga '1': rozruch (kursor 0 → jedno pobranie legacy), potem drenaż stronami — zdarzenie zastosowane przez
 //    applyEncryptedEvent, nieczytelne w kwarantannie (IndexedDB), appliedUpTo = numer przed nim, markSyncCaughtUp.
-// 2) Flaga wyłączona: ten sam dziennik — drenaż jak dotąd: applyEncryptedDelta nie zna pola z, więc oba wiersze są
+// 2) Flaga '0' (wyłącznik na urządzeniu; do E2-PR6 — brak klucza): ten sam dziennik — drenaż jak dotąd: applyEncryptedDelta nie zna pola z, więc oba wiersze są
 //    zastosowane; bez pól dziennika i nowych kluczy.
 // Własne, fikcyjne konto sejfu w efemerycznym profilu przeglądarki; dane wyłącznie FIKCYJNE.
 test.use({ serviceWorkers: 'block' });
@@ -90,9 +90,9 @@ test("E2-PR4c: vilda-event-log-v1 = '1' — drenaż stronami: zdarzenie zastosow
   expect(naruszenia(atrapa)).toEqual([]);
 });
 
-test('E2-PR4c: flaga wyłączona — ten sam dziennik: drenaż jak dotąd (applyEncryptedDelta bez pola z: oba wiersze zastosowane, bez pól dziennika), bez nowych kluczy', async ({ page, context }) => {
+test("E2-PR4c: flaga '0' — ten sam dziennik: drenaż jak dotąd (applyEncryptedDelta bez pola z: oba wiersze zastosowane, bez pól dziennika), bez nowych kluczy", async ({ page, context }) => {
   test.setTimeout(120_000);
-  const { atrapa, zly } = await przygotuj(page, context, null);
+  const { atrapa, zly } = await przygotuj(page, context, '0');
   const w = await page.evaluate(async () => {
     const r = await window.VildaSync.syncPull({ czekajNaDrenaz: true });
     const slot = (await window.VildaVault.getSyncMaterial()).slotId;

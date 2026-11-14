@@ -1,9 +1,9 @@
 (function(){"use strict";var f=["settings-section-backup","settings-section-sync","settings-section-login","settings-section-account"],v='<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>',g="Zaloguj si\u0119, aby uzyska\u0107 dost\u0119p",a={};function k(){var e=window.VildaVault;if(e&&typeof e.isUnlocked=="function")return e.isUnlocked();var n=window.VildaSession;return n&&typeof n.isLoggedIn=="function"?n.isLoggedIn():!1}function d(e){e.preventDefault();var n=e.currentTarget.querySelector(".settings-lock-tip");n&&(n.classList.add("is-visible"),clearTimeout(n._t),n._t=setTimeout(function(){n.classList.remove("is-visible")},2200))}function t(){var e=k(),n=document.querySelector(".settings-danger-zone");n&&(n.style.display=e?"":"none"),f.forEach(function(r){var i=document.getElementById(r);if(i){var o=i.querySelector("summary"),s=i.querySelector(".settings-chevron");if(e)i.classList.remove("settings-accordion--locked"),o&&o.removeEventListener("click",d),s&&a[r]!==void 0&&(s.innerHTML=a[r]);else if(i.classList.contains("settings-accordion--locked")||s&&(a[r]=s.innerHTML),i.classList.add("settings-accordion--locked"),i.open=!1,s&&(s.innerHTML=v),o){if(!o.querySelector(".settings-lock-tip")){var l=document.createElement("span");l.className="settings-lock-tip",l.textContent=g,o.appendChild(l)}o.removeEventListener("click",d),o.addEventListener("click",d)}var u=document.querySelector('.settings-subnav-link[data-target="'+r+'"]');u&&(u.style.opacity=e?"":"0.4",u.style.pointerEvents=e?"":"none")}})}if(document.addEventListener("DOMContentLoaded",function(){t();var e=window.VildaVault;e&&(typeof e.onUnlock=="function"&&e.onUnlock(t),typeof e.onLock=="function"&&e.onLock(t)),document.addEventListener("vilda:session-changed",t),document.addEventListener("vilda:auth-loaded",t),document.addEventListener("vilda:guest-mode-changed",t)},{once:!0}),document.readyState!=="loading"){t();var c=window.VildaVault;c&&(typeof c.onUnlock=="function"&&c.onUnlock(t),typeof c.onLock=="function"&&c.onLock(t))}})();
 /* P-SYNC-WIDOK-KOLEJKI (E2-PR5a; plan docs/SYNC_PRZYROSTOWA_PLAN.md wiersz 9a; decyzje wlasciciela 1-6 z 2026-11-12):
    widok kolejki zdarzen w sekcji "Synchronizacja miedzy urzadzeniami" Ustawien. Kod w tym pliku, a nie w nowym: kazdy
-   nowy plik w pamieci offline to dodatkowe zadanie instalacji SW ponad limit 600. USPIONE: bez wlaczonego dziennika
+   nowy plik w pamieci offline to dodatkowe zadanie instalacji SW ponad limit 600. Bez wlaczonego dziennika
    (VildaSync.isEventLogEnabled() !== true) nic nowego nie widac i nie ma odczytu kolejki; bez odblokowania i bez flagi
-   nie ma tez pytania o health.
+   "0" nie ma tez pytania o health. Od E2-PR6 (wiersz 12 planu) dziennik jest domyslnie wlaczony przy "events" w health.
    - Licznik: outboxCount() sejfu (pending + inflight). Znaczek w naglowku sekcji (#syncOutboxChip) tylko przy N > 0;
      linia w "Status synchronizacji" (#syncOutboxBox) przy wlaczonym dzienniku: N zmian czeka albo wszystko wyslane.
    - Ostatni blad (#syncOutboxError): tylko gdy cos czeka; wiersz pending albo inflight z najpozniejszym
@@ -11,13 +11,14 @@
      Lista wierszy czytana tylko wtedy, gdy cos czeka; z wiersza tylko stan, kod i chwila (bez tresci).
    - Odswiezanie: start, odblokowanie i blokada sejfu, otwarcie sekcji, powrot karty, zmiana flagi w innej karcie
      i co 5 s przy widocznej stronie; nowszy odczyt wygrywa (pokolenie).
-   - Ukryty przelacznik "Wysylaj zmiany pojedynczo (test)" (#syncEventLogTestCard w opcjach zaawansowanych):
-     odblokowanie 5 kliknieciami linii "Wersja aplikacji" (przerwa do 1,5 s) i potwierdzeniem w arkuszu, tylko przy
-     odblokowanym sejfie; odblokowanie tylko w pamieci strony (blokada sejfu je zdejmuje). Karta widoczna po
-     odblokowaniu albo przy fladze vilda-event-log-v1 = "1". Pole wyboru przy "events" w health (detectApi okna
-     nadrzednego w ramce powloki, inaczej tej strony) albo przy wlaczonej fladze (zeby dalo sie wylaczyc); bez "events"
-     notka. Wlaczenie: flaga "1"; wylaczenie: usuniecie klucza (bez "0": po wlaczeniu dla wszystkich urzadzenie idzie
-     za domyslnym).
+   - Ukryty przelacznik "Wysylaj zmiany pojedynczo" (#syncEventLogTestCard w opcjach zaawansowanych; od E2-PR6
+     wylacznik na jednym urzadzeniu, decyzja 3 z 2026-11-14): odblokowanie 5 kliknieciami linii "Wersja aplikacji"
+     (przerwa do 1,5 s) i potwierdzeniem w arkuszu, tylko przy odblokowanym sejfie; odblokowanie tylko w pamieci strony
+     (blokada sejfu je zdejmuje). Karta widoczna po odblokowaniu albo przy fladze vilda-event-log-v1 = "0" (urzadzenie
+     wylaczone). Pole wyboru przy "events" w health (detectApi okna nadrzednego w ramce powloki, inaczej tej strony)
+     albo przy fladze "0" (zeby dalo sie wlaczyc z powrotem); bez "events" notka. Pole zaznaczone, gdy flaga jest inna
+     niz "0". Zaznaczenie: usuniecie klucza (urzadzenie idzie za domyslnym); odznaczenie: flaga "0". Do E2-PR6:
+     wlaczenie "1", wylaczenie usuniecie klucza; flaga "1" z testu wlasciciela znaczy dalej "wlaczone".
    - Zmiany do wyjasnienia (#syncProblemsBox, E2-PR5b; wiersz 9b): wiersze kolejki oversize, unreadable i rejected
      (outboxList) i kwarantanna ze wszystkich slotow (quarantineCount, quarantineList), tylko gdy ktoras lista nie jest
      pusta. Wiersz: rodzaj zmiany i karta (naglowki z listPatients i listExternalPatients; notatka pacjenta przez
@@ -96,8 +97,9 @@
       return !!s && typeof s.isEventLogEnabled == 'function' && s.isEventLogEnabled() === true;
     } catch (x) { return false; }
   }
+  // Urzadzenie wylaczone przelacznikiem (flaga "0"); blad odczytu = nie (karta ukryta bez odblokowania).
   function Bkw_flaga() {
-    try { return !!w.localStorage && w.localStorage.getItem(Bkw_KLUCZ) === '1'; } catch (x) { return false; }
+    try { return !!w.localStorage && w.localStorage.getItem(Bkw_KLUCZ) === '0'; } catch (x) { return false; }
   }
   // detectApi okna nadrzednego w ramce powloki (ta sama domena; jak wlacznik dziennika), inaczej tej strony.
   function Bkw_syncApi() {
@@ -366,7 +368,7 @@
     });
   }
 
-  // Karta ukrytego przelacznika: { serwer, flaga } albo null (ukryta).
+  // Karta ukrytego przelacznika: { serwer, flaga } albo null (ukryta); flaga = urzadzenie wylaczone ("0").
   async function Bkw_karta() {
     var k = Bkw_el('syncEventLogTestCard');
     if (!k) return null;
@@ -381,10 +383,10 @@
     var serwer = !!api && Array.isArray(api.features) && api.features.indexOf('events') !== -1;
     var wiersz = Bkw_el('syncEventLogTestRow'), pole = Bkw_el('syncEventLogTestToggle');
     if (wiersz) wiersz.hidden = !(serwer || flaga);
-    if (pole) pole.checked = flaga;
-    Bkw_tekst(Bkw_el('syncEventLogTestTag'), flaga ? 'W\u0142\u0105czone' : 'Wy\u0142\u0105czone');
+    if (pole) pole.checked = !flaga;
+    Bkw_tekst(Bkw_el('syncEventLogTestTag'), !flaga ? 'W\u0142\u0105czone' : 'Wy\u0142\u0105czone');
     Bkw_tekst(Bkw_el('syncEventLogTestStatus'), !serwer ? 'Serwer nie obs\u0142uguje jeszcze tej opcji.'
-      : (flaga && !Bkw_dziennik() ? 'Teraz nie dzia\u0142a: potrzebna jest w\u0142\u0105czona synchronizacja, bez trybu chmurowego i bez logowania jednorazowego.' : ''));
+      : (!flaga && !Bkw_dziennik() ? 'Teraz nie dzia\u0142a: potrzebna jest w\u0142\u0105czona synchronizacja, bez trybu chmurowego i bez logowania jednorazowego.' : ''));
     k.hidden = false;
     return { serwer: serwer, flaga: flaga };
   }
@@ -393,8 +395,8 @@
     if (!pole) return Promise.resolve(null);
     var wlacz = pole.checked === true;
     try {
-      if (wlacz) w.localStorage.setItem(Bkw_KLUCZ, '1');
-      else w.localStorage.removeItem(Bkw_KLUCZ);
+      if (wlacz) w.localStorage.removeItem(Bkw_KLUCZ);
+      else w.localStorage.setItem(Bkw_KLUCZ, '0');
     } catch (x) {
       pole.checked = !wlacz;
       Bkw_tekst(Bkw_el('syncEventLogTestStatus'), 'Nie uda\u0142o si\u0119 zapisa\u0107 tego ustawienia na tym urz\u0105dzeniu.');
@@ -467,8 +469,8 @@
   }
   function Bkw_pytaj() {
     Bkw_pytanie({
-      id: 'syncEventLogUnlock', tytul: 'Odblokowa\u0107 opcje testowe?', tak: 'Odblokuj',
-      tresc: 'Na tym urz\u0105dzeniu poka\u017ce si\u0119 prze\u0142\u0105cznik \u201eWysy\u0142aj zmiany pojedynczo (test)\u201d w opcjach zaawansowanych synchronizacji. Nikt inny go nie zobaczy.',
+      id: 'syncEventLogUnlock', tytul: 'Odblokowa\u0107 ukryt\u0105 opcj\u0119?', tak: 'Odblokuj',
+      tresc: 'Na tym urz\u0105dzeniu poka\u017ce si\u0119 prze\u0142\u0105cznik \u201eWysy\u0142aj zmiany pojedynczo\u201d w opcjach zaawansowanych synchronizacji. Nikt inny go nie zobaczy.',
       naTak: function () {
         Bkw_odblokowane = true;
         Bkw_pokazKarte();

@@ -7,8 +7,8 @@ import { podlaczAtrapeDoKontekstu } from '../support/atrapa-workera-route.mjs';
 // (tests/support/atrapa-workera-sync.mjs) przez adapter route Playwright (tests/support/atrapa-workera-route.mjs), z
 // „events” w health (EVENTS_ENABLED=1) i originem strony e2e na liście dozwolonych. Synchronizacja automatyczna wyłączona
 // (test woła VildaSync wprost): rejestracja pełną wysyłką, potem GET /v1/health (detectApi).
-// 1) Flaga wyłączona (brak klucza vilda-event-log-v1): włącznik i bramka kolejki zamknięte, zapis karty nie tworzy bazy
-//    kolejki, żadne POST /events (to samo przy uśpieniu w produkcji, gdzie health nie ma „events”).
+// 1) Flaga '0' (wyłącznik na urządzeniu; do E2-PR6 — brak klucza vilda-event-log-v1): włącznik i bramka kolejki
+//    zamknięte, zapis karty nie tworzy bazy kolejki, żadne POST /events (to samo, gdy health nie ma „events”).
 // 2) Flaga '1': bramka otwarta, zapis karty dopisuje zdarzenia do kolejki w IndexedDB, outboxTake → pushEvents →
 //    accepted (seq od 1) → outboxAccept; powtórka tej samej partii — dup z tymi samymi numerami.
 // E2-PR4d (P-SYNC-NADAWCA) — nadawca kolejki, dwie karty jednego profilu (wspólne IndexedDB, localStorage i Web Locks).
@@ -17,16 +17,20 @@ import { podlaczAtrapeDoKontekstu } from '../support/atrapa-workera-route.mjs';
 // 3) Flaga '1': zapis karty → flushOutbox wysyła wiersze kolejki (POST /events), druga karta tego profilu nie wysyła
 //    (inny nadawca), jej wiersze wysyła nadawca (także keepalive przy utracie fokusu); chowanie strony —
 //    flushKeepalive (fetch z keepalive).
-// 4) Flaga wyłączona: zapis karty, pobranie i chowanie strony bez POST /events i bez klucza bicia serca (bez nowego
+// 4) Flaga '0': zapis karty, pobranie i chowanie strony bez POST /events i bez klucza bicia serca (bez nowego
 //    API — zielony także na bazie).
 // E2-PR4e1 (P-SYNC-NADAWCA-WPIECIA) — przypadki 5–7 przy końcu pliku: dwa urządzenia i ramka powłoki.
 // E2-PR5a (P-SYNC-WIDOK-KOLEJKI) — przypadki 8–10 na końcu pliku: widok kolejki w Ustawieniach (licznik, ostatni błąd;
 //    od E2-PR5d w przypadku 8 po przeładowaniu strony wysłane i przyjęte zmiany nie wracają do kolejki),
-//    ukryty przełącznik „Wysyłaj zmiany pojedynczo (test)” odblokowywany 5 kliknięciami linii „Wersja aplikacji”
-//    i Ustawienia w ramce powłoki.
+//    ukryty przełącznik „Wysyłaj zmiany pojedynczo” odblokowywany 5 kliknięciami linii „Wersja aplikacji” (od E2-PR6
+//    wyłącznik na urządzeniu) i Ustawienia w ramce powłoki.
 // E2-PR5b (P-SYNC-WIDOK-KOLEJKI) — przypadek 11 na końcu pliku: „Zmiany do wyjaśnienia” („Porzuć” i „Zwolnij”); od
 //    E2-PR5c (P-DZIENNIK-ZDARZEN) porzucone zmiany nie wracają przy przeglądzie kolejki (także w trakcie przeglądu
 //    z odblokowania strony) ani po przeładowaniu strony.
+// E2-PR6 (PR włączający, wiersz 12 planu) — przypadki 12–13 na końcu pliku: dwa urządzenia bez klucza flagi (dziennik
+//    domyślnie włączony; A to kontekst strony, w atrapie urządzenie 'strona'). 12) PUT /blob urządzenia A zablokowany (r2_error): nowa karta i notatka z A docierają do B
+//    samymi zdarzeniami (POST /events, drenaż stronami u B), bez POST /delta i bez udanej pełnej wysyłki A.
+//    13) PUT /blob liczony: po zdarzeniach i pełnej wysyłce A, B po pobraniu ma te same karty i notatki co A.
 // Własne, fikcyjne konto sejfu w efemerycznym profilu przeglądarki; dane wyłącznie FIKCYJNE.
 test.use({ serviceWorkers: 'block' });
 
@@ -73,9 +77,9 @@ function naruszenia(atrapa) {
   return atrapa.naruszenia;
 }
 
-test('E2-PR4b: flaga wyłączona — przy „events” w health włącznik i bramka kolejki zamknięte, zapis karty bez bazy kolejki, bez POST /events', async ({ page, context }) => {
+test("E2-PR4b: flaga '0' (wyłączona na urządzeniu) — przy „events” w health włącznik i bramka kolejki zamknięte, zapis karty bez bazy kolejki, bez POST /events", async ({ page, context }) => {
   test.setTimeout(120_000);
-  const atrapa = await przygotuj(page, context, null);
+  const atrapa = await przygotuj(page, context, '0');
   const w = await page.evaluate(async () => {
     const L = window.VildaVault._eventLog;
     await window.VildaVault.savePatient({
@@ -227,9 +231,9 @@ test("E2-PR4d: vilda-event-log-v1 = '1' — flushOutbox wysyła kolejkę, druga 
   expect(naruszenia(atrapa)).toEqual([]);
 });
 
-test('E2-PR4d: flaga wyłączona — zapis karty, pobranie i chowanie strony bez POST /events i bez klucza bicia serca (jak dotąd)', async ({ page, context }) => {
+test("E2-PR4d: flaga '0' — zapis karty, pobranie i chowanie strony bez POST /events i bez klucza bicia serca (jak dotąd)", async ({ page, context }) => {
   test.setTimeout(120_000);
-  const { atrapa, userId } = await przygotujNadawce(page, context, null);
+  const { atrapa, userId } = await przygotujNadawce(page, context, '0');
   await page.evaluate(async () => {
     await window.VildaVault.savePatient({
       name: 'Testowy Jan',
@@ -254,7 +258,7 @@ test('E2-PR4d: flaga wyłączona — zapis karty, pobranie i chowanie strony bez
 //    w sejfie B, kursor B o jeden, odświeżenie widoku; ta sama ramka u A — własne zdarzenie.
 // 6) Flaga '1', ramka powłoki: strona w iframe (notatki.html?embedded=1, ta sama karta) zapisuje notatkę — ramka nie
 //    wysyła sama (bez POST /events, beaconu i POST /delta z ramki), ping vilda-sync-data, wysyła okno nadrzędne.
-// 7) Flaga wyłączona, dwa urządzenia: zapis karty — delta beaconem (POST /delta) jak dotąd, bez POST /events; ramka
+// 7) Flaga '0', dwa urządzenia: zapis karty — delta beaconem (POST /delta) jak dotąd, bez POST /events; ramka
 //    u B stosowana jak dotąd (applyEncryptedDelta), kursor B bez zmian (zielony także na bazie).
 async function drugieUrzadzenie(browser, context, atrapa, userId) {
   const stan = await context.storageState({ indexedDB: true });
@@ -366,9 +370,9 @@ test("E2-PR4e1: vilda-event-log-v1 = '1' — ramka powłoki: notatka zapisana w 
   expect(naruszenia(atrapa)).toEqual([]);
 });
 
-test('E2-PR4e1: flaga wyłączona — dwa urządzenia: karta idzie deltą beaconem jak dotąd (bez POST /events), ramka u B przez applyEncryptedDelta, kursor B bez zmian', async ({ page, context, browser }) => {
+test("E2-PR4e1: flaga '0' — dwa urządzenia: karta idzie deltą beaconem jak dotąd (bez POST /events), ramka u B przez applyEncryptedDelta, kursor B bez zmian", async ({ page, context, browser }) => {
   test.setTimeout(120_000);
-  const { atrapa, userId } = await przygotujNadawce(page, context, null);
+  const { atrapa, userId } = await przygotujNadawce(page, context, '0');
   const { ctxB, pageB, slot, log } = await drugieUrzadzenie(browser, context, atrapa, userId);
   try {
     expect(log).toBe(false);
@@ -397,6 +401,9 @@ async function otworzUstawienia(page, userId) {
   await page.waitForFunction(() => Boolean(window.VildaVault && window.VildaSync));
   await page.evaluate(async ([u, pw]) => { if (!window.VildaVault.isUnlocked()) await window.VildaVault.unlockUser(u, pw); }, [userId, HASLO]);
   await page.waitForFunction(() => window.VildaVault.isUnlocked());
+  // GET /v1/health tej strony — jak pobieranie przy starcie strony z włączoną synchronizacją (skrypt startowy testu ją
+  // wyłącza). Do E2-PR6 pytała o to także karta przełącznika, widoczna przy fladze '1'.
+  await page.evaluate(() => window.VildaSync.detectApi());
   await page.evaluate(() => {
     // Skrypt startowy tej strony wyłącza synchronizację przy każdym wejściu; stan jak po przygotujNadawce.
     window.localStorage.setItem('vilda-sync-enabled-v1', 'true');
@@ -436,11 +443,9 @@ test("E2-PR5a: vilda-event-log-v1 = '1' — Ustawienia: znaczek i linia „N zmi
   const blad = page.locator('#syncOutboxError');
   await expect(blad).toBeVisible({ timeout: 15_000 }); // najbliższe odświeżenie widoku (co 5 s)
   await expect(blad).toHaveText(/^Ostatni błąd \(dziś \d\d:\d\d\): brak połączenia z serwerem\. Aplikacja spróbuje ponownie sama\.$/);
-  // Flaga '1' bez odblokowania — karta przełącznika widoczna (do wyłączenia), zaznaczona.
+  // Flaga '1' (z testu właściciela) bez odblokowania — od E2-PR6 to ustawienie domyślne, więc karta przełącznika ukryta.
   await page.evaluate(() => { document.getElementById('syncSlotCard').open = true; });
-  await expect(page.locator('#syncEventLogTestCard')).toBeVisible();
-  await expect(page.locator('#syncEventLogTestToggle')).toBeChecked();
-  await expect(page.locator('#syncEventLogTestTag')).toHaveText('Włączone');
+  await expect(page.locator('#syncEventLogTestCard')).toBeHidden();
 
   const wyslane = await page.evaluate(async () => (await window.VildaVault._eventLog.outboxList()).wiersze
     .map((w) => w.kind + '|' + w.entityKey));
@@ -467,49 +472,49 @@ test("E2-PR5a: vilda-event-log-v1 = '1' — Ustawienia: znaczek i linia „N zmi
   expect(naruszenia(atrapa)).toEqual([]);
 });
 
-test('E2-PR5a: flaga wyłączona — Ustawienia jak dotąd; 5 kliknięć „Wersja aplikacji” i „Odblokuj” — przełącznik zapisuje i usuwa flagę', async ({ page, context }) => {
+test("E2-PR6: bez klucza flagi — Ustawienia z widokiem kolejki, przełącznik ukryty; 5 kliknięć „Wersja aplikacji” i „Odblokuj” — pole zaznaczone, odznaczenie zapisuje '0', po przeładowaniu karta widoczna, zaznaczenie usuwa klucz", async ({ page, context }) => {
   test.setTimeout(120_000);
   const { atrapa, userId } = await przygotujNadawce(page, context, null);
   await otworzUstawienia(page, userId);
   await page.evaluate(() => { document.getElementById('syncSlotCard').open = true; });
-  await page.waitForTimeout(6000); // jeden obrót zegara widoku (5 s)
-  await expect(page.locator('#syncOutboxChip')).toBeHidden();
-  await expect(page.locator('#syncOutboxBox')).toBeHidden();
+  await expect(page.locator('#syncOutboxCount')).toHaveText('Wszystkie zmiany wysłane.', { timeout: 15_000 });
   await expect(page.locator('#syncEventLogTestCard')).toBeHidden();
+  expect(await page.evaluate(() => [window.localStorage.getItem('vilda-event-log-v1'), window.VildaSync.isEventLogEnabled()])).toEqual([null, true]);
 
   const wersja = page.locator('#settingsAppVersion');
   for (let i = 0; i < 4; i++) await wersja.click();
   await expect(page.getByRole('alertdialog')).toHaveCount(0);
   await wersja.click();
-  const arkusz = page.getByRole('alertdialog', { name: 'Odblokować opcje testowe?' });
+  const arkusz = page.getByRole('alertdialog', { name: 'Odblokować ukrytą opcję?' });
   await expect(arkusz).toBeVisible();
   await arkusz.getByRole('button', { name: 'Odblokuj' }).click();
   await expect(arkusz).toHaveCount(0);
-  const karta = page.locator('#syncEventLogTestCard');
-  await expect(karta).toBeVisible();
+  await expect(page.locator('#syncEventLogTestCard')).toBeVisible();
   const pole = page.locator('#syncEventLogTestToggle');
   await expect(pole).toBeVisible();
-  await expect(pole).not.toBeChecked();
+  await expect(pole).toBeChecked();
   await expect(pole).toBeFocused();
-  await expect(page.locator('#syncEventLogTestTag')).toHaveText('Wyłączone');
+  await expect(page.locator('#syncEventLogTestTag')).toHaveText('Włączone');
   await expect(page.locator('#syncEventLogTestStatus')).toHaveText('');
 
-  await pole.check();
-  expect(await page.evaluate(() => window.localStorage.getItem('vilda-event-log-v1'))).toBe('1');
-  await expect(page.locator('#syncEventLogTestTag')).toHaveText('Włączone');
-  await expect(page.locator('#syncOutboxCount')).toHaveText('Wszystkie zmiany wysłane.');
-  expect(await page.evaluate(() => window.VildaSync.isEventLogEnabled())).toBe(true);
-
   await pole.uncheck();
-  expect(await page.evaluate(() => window.localStorage.getItem('vilda-event-log-v1'))).toBeNull();
+  expect(await page.evaluate(() => window.localStorage.getItem('vilda-event-log-v1'))).toBe('0');
   await expect(page.locator('#syncEventLogTestTag')).toHaveText('Wyłączone');
   await expect(page.locator('#syncOutboxBox')).toBeHidden();
+  expect(await page.evaluate(() => window.VildaSync.isEventLogEnabled())).toBe(false);
 
-  // Po odświeżeniu strony bez flagi przełącznik znowu ukryty (odblokowanie tylko w pamięci strony).
+  // Po odświeżeniu strony z '0' przełącznik widoczny bez odblokowania (da się włączyć z powrotem).
   await otworzUstawienia(page, userId);
   await page.evaluate(() => { document.getElementById('syncSlotCard').open = true; });
+  await expect(page.locator('#syncEventLogTestCard')).toBeVisible();
+  const pole2 = page.locator('#syncEventLogTestToggle');
+  await expect(pole2).toBeVisible();
+  await expect(pole2).not.toBeChecked();
+  await pole2.check();
+  expect(await page.evaluate(() => window.localStorage.getItem('vilda-event-log-v1'))).toBeNull();
   await expect(page.locator('#syncEventLogTestCard')).toBeHidden();
-  expect(zadaniaEvents(atrapa)).toEqual([]);
+  await expect(page.locator('#syncOutboxCount')).toHaveText('Wszystkie zmiany wysłane.', { timeout: 15_000 });
+  expect(await page.evaluate(() => window.VildaSync.isEventLogEnabled())).toBe(true);
   expect(naruszenia(atrapa)).toEqual([]);
 });
 
@@ -542,6 +547,22 @@ test("E2-PR5a: vilda-event-log-v1 = '1' — Ustawienia w ramce powłoki (ustawie
   });
   await expect(ramka.locator('#syncOutboxChip')).toHaveText(/^\d+ zmian(a|y)? czek(a|ają)$/, { timeout: 15_000 });
   await expect(ramka.locator('#syncOutboxError')).toHaveText(/^Ostatni błąd \(dziś \d\d:\d\d\): brak połączenia z serwerem\. Aplikacja spróbuje ponownie sama\.$/, { timeout: 15_000 });
+  // Od E2-PR6 karta przełącznika przy fladze '1' ukryta: odblokowanie w ramce (5 kliknięć „Wersja aplikacji”), health
+  // karty z okna nadrzędnego.
+  await expect(ramka.locator('#syncEventLogTestCard')).toBeHidden();
+  await page.evaluate(() => {
+    const ramkaDok = document.getElementById('ramkaUstawien').contentWindow.document;
+    for (const d of [document, ramkaDok]) {
+      for (const id of ['vilda-auth-ui-root', 'consent-banner']) {
+        const a = d.getElementById(id);
+        if (a) a.style.display = 'none';
+      }
+    }
+  });
+  const wersja = ramka.locator('#settingsAppVersion');
+  for (let i = 0; i < 5; i++) await wersja.click();
+  await ramka.getByRole('alertdialog', { name: 'Odblokować ukrytą opcję?' }).getByRole('button', { name: 'Odblokuj' }).click();
+  await expect(ramka.locator('#syncEventLogTestCard')).toBeVisible();
   await expect(ramka.locator('#syncEventLogTestToggle')).toBeChecked();
   await expect(ramka.locator('#syncEventLogTestStatus')).toHaveText('');
   expect(await page.evaluate(() => window.__healthTop), 'health z okna nadrzędnego').toBeGreaterThan(0);
@@ -634,4 +655,78 @@ test("E2-PR5b: vilda-event-log-v1 = '1' — Ustawienia: zmiany odrzucone przez s
   expect(poPrzeladowaniu.sw).toMatchObject({ ok: true });
   expect(poPrzeladowaniu.klucze.filter((k) => porzucane.includes(k)), 'porzucone zmiany po przeładowaniu').toEqual([]);
   expect(naruszenia(atrapa)).toEqual([]);
+});
+
+const pelneWysylki = (atrapa, u) => atrapa.zadania.filter((z) => z.trasa === 'blob-put' && z.urzadzenie === u && z.status === 200).length;
+const zapiszKarteINotatke = (page, imie) => page.evaluate(async (n) => {
+  const p = await window.VildaVault.savePatient({
+    name: `Testowa ${n}`,
+    user: { lastName: 'Testowa', firstName: n, sex: 'F', age: 9, ageMonths: 4, height: 133, weight: 29 },
+  }, { dedup: false });
+  await window.VildaVault.savePatientNote({ patientId: p.patientId, title: `Fikcyjna notatka ${n}`, body: 'Fikcyjna treść.', category: 'inne' });
+  await window.VildaVault._eventLog.emissionsSettled();
+  return p.patientId;
+}, imie);
+const stanKart = (page) => page.evaluate(async () => {
+  const karty = (await window.VildaVault.listPatients()).map((p) => p.patientId).sort();
+  const notatki = [];
+  for (const id of karty) {
+    for (const n of await window.VildaVault.listPatientNotesForPatient(id)) notatki.push([id, n.title, n.body].join('|'));
+  }
+  return { karty, notatki: notatki.sort() };
+});
+
+test('E2-PR6: bez klucza flagi — dwa urządzenia, PUT /blob urządzenia A zablokowany: nowa karta i notatka z A docierają do B samymi zdarzeniami', async ({ page, context, browser }) => {
+  test.setTimeout(150_000);
+  const { atrapa, userId } = await przygotujNadawce(page, context, null);
+  expect(await page.evaluate(() => [window.localStorage.getItem('vilda-event-log-v1'), window.VildaSync.isEventLogEnabled()])).toEqual([null, true]);
+  const { ctxB, pageB, log } = await drugieUrzadzenie(browser, context, atrapa, userId);
+  try {
+    expect(log, 'B bez klucza flagi: dziennik włączony').toBe(true);
+    atrapa.usterka({ gdy: { trasa: 'blob-put', urzadzenie: 'strona', ile: 100 }, kod: 'r2_error' });
+    const pelnePrzed = pelneWysylki(atrapa, 'strona');
+    const przed = zadaniaEvents(atrapa).length;
+    const pid = await zapiszKarteINotatke(page, 'Ewa');
+    await expect.poll(() => zadaniaEvents(atrapa).length, { timeout: 15_000 }).toBeGreaterThan(przed);
+    await expect.poll(() => page.evaluate(async () => (await window.VildaVault._eventLog.outboxCount()).total), { timeout: 15_000 }).toBe(0);
+    // Pełna wysyłka A idzie jak dotąd (tu wywołana wprost) i dostaje błąd serwera.
+    await page.evaluate(() => window.VildaSync.syncPush().catch(() => null));
+    expect(atrapa.zadania.filter((z) => z.trasa === 'blob-put' && z.urzadzenie === 'strona').length, 'pełna wysyłka A próbowała').toBeGreaterThan(0);
+    expect(pelneWysylki(atrapa, 'strona'), 'bez udanej pełnej wysyłki A').toBe(pelnePrzed);
+    expect(atrapa.zadania.filter((z) => z.trasa === 'delta'), 'bez POST /delta').toEqual([]);
+    await pageB.evaluate(() => window.VildaSync.syncPull({ czekajNaDrenaz: true }));
+    const b = await pageB.evaluate(async (p) => ({
+      karta: Boolean(await window.VildaVault.getPatient(p)),
+      notatki: (await window.VildaVault.listPatientNotesForPatient(p)).map((n) => n.title),
+    }), pid);
+    expect(b).toEqual({ karta: true, notatki: ['Fikcyjna notatka Ewa'] });
+    expect(naruszenia(atrapa)).toEqual([]);
+  } finally {
+    await ctxB.close();
+  }
+});
+
+test('E2-PR6: bez klucza flagi — dwa urządzenia, PUT /blob liczony: po zdarzeniach i pełnej wysyłce A urządzenie B ma te same karty i notatki co A', async ({ page, context, browser }) => {
+  test.setTimeout(150_000);
+  const { atrapa, userId } = await przygotujNadawce(page, context, null);
+  const { ctxB, pageB, log } = await drugieUrzadzenie(browser, context, atrapa, userId);
+  try {
+    expect(log, 'B bez klucza flagi: dziennik włączony').toBe(true);
+    const pelnePrzed = pelneWysylki(atrapa, 'strona');
+    const przed = zadaniaEvents(atrapa).length;
+    await zapiszKarteINotatke(page, 'Ewa');
+    await zapiszKarteINotatke(page, 'Ola');
+    await expect.poll(() => zadaniaEvents(atrapa).length, { timeout: 15_000 }).toBeGreaterThan(przed);
+    await expect.poll(() => page.evaluate(async () => (await window.VildaVault._eventLog.outboxCount()).total), { timeout: 15_000 }).toBe(0);
+    expect((await page.evaluate(() => window.VildaSync.syncPush())).action, 'pełna wysyłka A').toBeTruthy();
+    expect(pelneWysylki(atrapa, 'strona'), 'pełna wysyłka A liczona').toBeGreaterThan(pelnePrzed);
+    await pageB.evaluate(() => window.VildaSync.syncPull({ czekajNaDrenaz: true }));
+    const [sa, sb] = [await stanKart(page), await stanKart(pageB)];
+    expect(sa.karty).toHaveLength(2);
+    expect(sa.notatki).toHaveLength(2);
+    expect(sb, 'zbieżność A i B').toEqual(sa);
+    expect(naruszenia(atrapa)).toEqual([]);
+  } finally {
+    await ctxB.close();
+  }
 });

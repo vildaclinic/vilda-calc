@@ -31,8 +31,9 @@
 //     przy wznowieniu (pageshow, visible) po 60 s, serwer odrzuca powtórkę po eid; sendBeacon odrzucony — wiersze
 //     z powrotem; warunki pominięcia; NA10d odpowiedź bez rozstrzygnięcia i zmiana sesji przed odpowiedzią.
 // NA11 cykl w pobraniu: trwająca wysyłka nie wstrzymuje drenażu; drenaż, który coś scalił — przegląd i scheduleFlush.
-// NA12 uśpienie [zielony także na bazie]: bez flagi i przy serwerze bez „events” — pobranie, zapis karty i zdarzenia
-//     strony bez POST /events, kanału, zegarów nadawcy, blokady nadawcy i klucza bicia serca.
+// NA12 wyłączony [zielony także na bazie]: flaga '0' (wyłącznik na urządzeniu) i serwer bez „events” — pobranie, zapis
+//     karty i zdarzenia strony bez POST /events, kanału, zegarów nadawcy, blokady nadawcy i klucza bicia serca (do E2-PR6
+//     także bez flagi). NA12b od E2-PR6 (PR włączający): bez klucza flagi nadawca działa jak przy '1'.
 // NA13 eksport bez dziennika: flushOutbox, scheduleFlush, flushKeepalive → { ok: false, powod: 'wylaczone' }.
 // NA14 warunki: synchronizacja wyłączona, tryb konta z wpisu rejestru inny niż lokalny, sejf zablokowany (także
 //     w trakcie odczytu trybu).
@@ -142,14 +143,14 @@ async function swiat(o = {}) {
   await A.sync.detectApi();
   if (o.odbiorca) {
     s.B = await urz(s, 'B', { zBlizniaka: A });
-    s.B.win.localStorage.setItem(FLAGA, flaga === null ? '0' : flaga);
+    if (flaga !== null) s.B.win.localStorage.setItem(FLAGA, flaga);
     await s.B.sync.detectApi();
     expect((await s.B.sync.syncPull({ pierwszePobranie: true })).action).toBe('merged');
     await cisza(s.wszystkie());
   }
   krok(1000);
   await A.pobierz();
-  if (flaga === '1' && o.events !== false) {
+  if (flaga !== '0' && o.events !== false) {
     expect(A.sync.isEventLogEnabled(), 'świat: dziennik włączony').toBe(true);
     expect((await A.licz()).total, 'świat: kolejka pusta').toBe(0);
   }
@@ -653,8 +654,8 @@ describe('P-SYNC-NADAWCA — cykl w pobraniu i uśpienie', () => {
     expect(A.zegar.oczekujace(), 'po scaleniu — scheduleFlush').toContain(1500);
   });
 
-  it('NA12 [zielony także na bazie]: uśpienie — bez flagi i przy serwerze bez „events”: pobranie, zapis karty i zdarzenia strony bez POST /events, kanału, zegarów nadawcy, blokady nadawcy i klucza bicia serca', async () => {
-    for (const o of [{ flaga: null }, { events: false }]) {
+  it('NA12 [zielony także na bazie]: wyłączony — flaga „0” i serwer bez „events”: pobranie, zapis karty i zdarzenia strony bez POST /events, kanału, zegarów nadawcy, blokady nadawcy i klucza bicia serca', async () => {
+    for (const o of [{ flaga: '0' }, { events: false }, { events: false, flaga: null }]) {
       const s = await swiat(o);
       const { A } = s;
       krok();
@@ -681,8 +682,26 @@ describe('P-SYNC-NADAWCA — cykl w pobraniu i uśpienie', () => {
     }
   });
 
+  it('NA12b [E2-PR6: czerwony na bazie]: bez klucza flagi (domyślnie od PR włączającego) — zapis karty i notatki idzie POST /events z Bearer, kolejka pusta, odbiorca bez klucza flagi dostaje zmiany', async () => {
+    const s = await swiat({ flaga: null, odbiorca: true });
+    const { A } = s;
+    expect(A.win.localStorage.getItem(FLAGA), 'bez klucza flagi').toBe(null);
+    expect(A.sync.isEventLogEnabled()).toBe(true);
+    krok();
+    const k2 = await A.zapiszKarte(2);
+    await A.notatka(1);
+    const przed = await A.wiersze();
+    expect(przed.length).toBeGreaterThan(0);
+    expect(await A.sync.flushOutbox()).toMatchObject({ ok: true, powod: null, partie: 1, wyslane: przed.length, odrzucone: 0 });
+    expect(zEvents(s, 'A').map((x) => `${x.metoda} ${x.status} ${x.naglowki.autoryzacja}`)).toEqual(['POST 200 bearer']);
+    expect((await A.licz()).total, 'kolejka pusta').toBe(0);
+    await s.B.pobierz();
+    expect(s.B.sync.isEventLogEnabled(), 'odbiorca bez klucza flagi — dziennik włączony').toBe(true);
+    expect((await s.B.vault.getPatient(k2.patientId)).patientId).toBe(k2.patientId);
+  });
+
   it('NA13 [czerwony na bazie]: eksport bez dziennika — flushOutbox, scheduleFlush, flushKeepalive → { ok: false, powod: "wylaczone" } bez aktywacji', async () => {
-    for (const o of [{ flaga: null }, { flaga: '0' }, { events: false }]) {
+    for (const o of [{ flaga: '0' }, { events: false }, { events: false, flaga: null }]) {
       const s = await swiat(o);
       const { A } = s;
       const opis = JSON.stringify(o);
