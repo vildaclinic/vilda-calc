@@ -6,11 +6,11 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-// Base images follow the latest transport change outside the clinical fragment: 2026-11-11, event-log drain with
-// quarantine (P-SYNC-DRENAZ-ZDARZEN, E2-PR4c; before it P-SYNC-ZDARZENIA, E2-PR4b, and P-SYNC-LIMIT-ODCZYTU, E2-PR4a;
-// docs/clinical/ALGORITHMS.md).
+// Base images follow the latest transport change outside the clinical fragment: 2026-11-14, event log on by default
+// (P-SYNC-ZDARZENIA, E2-PR6; before it the event-log drain with quarantine, P-SYNC-DRENAZ-ZDARZEN, E2-PR4c, and earlier
+// changes listed in docs/clinical/ALGORITHMS.md).
 const bases = {
-  'vilda_sync.js': { sha256: '8fb093a46d612b72081bb791b3d31c3f04686155796911e9fbc17287c7d12dfe',
+  'vilda_sync.js': { sha256: 'be2988f5636ac99c79bee3183eab3bf2d2d15aa4c6303e5b9f4a1f15c6ea9f58',
     names: ['TLibPullCycle', 'TLibPushCycle', 'TLibFullCycle', 'xt'] },
   'vilda_sync_integration.js': { sha256: '13dfa756259f4d3205c646ad94f27bc94823b278ced201b016a3965d942794ca',
     names: ['I', 'V', 'M', 'J', 'U', 'S', 'ot', 'K', 'G', 'PatientClinicalLegacyAllowed', 'ct', 'mt', 'j'] }

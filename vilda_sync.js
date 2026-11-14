@@ -243,10 +243,12 @@ function Bpw_przerwane(){return u("VildaSync: pobieranie przerwane \u2014 w trak
 function Bpw_sejfKonta(t,kto){if(!t||typeof t.applyEncryptedDelta!="function")return t;return{isUnlocked:function(){return!(typeof t.isUnlocked=="function"&&!t.isUnlocked())&&!Bpw_inneKonto(t,kto)},applyEncryptedDelta:function(x){return t.applyEncryptedDelta(x)},zdarzenia:t._eventLog||null}}
 function Bpw_dren(a,r,i,t,kto,Bdz_w){if(Bpw_inneKonto(t,kto))return;var Bdz_s=Bpw_sejfKonta(t,kto),Bdz_p=Bdz_wlaczone()?Bze_isEventLogEnabled()?Bns_cykl(a,r,i,Bdz_s):Bdz_B(a,r,i,Bdz_s):B(a,r,i,Bdz_s).catch(function(){});Bdz_w&&typeof Bdz_w=="object"&&Bdz_wyniki.set(Bdz_w,Bdz_p)}
 /* P-SYNC-ZDARZENIA (E2-PR4b; plan docs/SYNC_PRZYROSTOWA_PLAN.md 3.2 "Petla wysylki", wiersz 8b): wysylka zdarzen
-   dziennika (POST /v1/slots/<slot>/events) i wlacznik dziennika. USPIONE: kod produkcyjny nie wola pushEvents (nadawca
-   dochodzi w E2-PR4d), a wlacznik jest otwarty tylko przy "events" w health i fladze vilda-event-log-v1 = "1".
+   dziennika (POST /v1/slots/<slot>/events) i wlacznik dziennika. Od E2-PR6 (wiersz 12, PR wlaczajacy) wlacznik jest
+   domyslnie otwarty przy "events" w health; flaga vilda-event-log-v1 = "0" wylacza dziennik na tym urzadzeniu (ukryty
+   przelacznik w Ustawieniach), brak klucza i kazda inna wartosc = wlaczone, blad odczytu = wylaczone (jak pobieranie
+   stronami, E2-PR1b). Do E2-PR6: tylko przy fladze dokladnie "1".
    isEventLogEnabled(): najpierw ostatni wynik GET /v1/health tej strony w pamieci (Bdz_api, bez magazynu): bez "events"
-   koniec bez zadnego odczytu; dopiero potem flaga (dokladnie "1") i Bdz_wlaczone() (pobieranie stronami, "Komputer
+   koniec bez zadnego odczytu; dopiero potem flaga (inna niz "0") i Bdz_wlaczone() (pobieranie stronami, "Komputer
    prywatny", nie chmurowy, nie jednorazowy; korzysta z Bdz_ nizej). Sejf czyta ten wlacznik w bramce kolejki.
    pushEvents(events): partia 1-200 zdarzen {eid (UUID v4 malymi literami), iv, data}, cialo do 1 MiB; na serwer idzie
    dokladnie {eid, iv, data} (bez z i aad, plan 3.1). Nigdy nie rzuca: wynik {ok:true, accepted, rejected, headSeq, ts}
@@ -274,7 +276,7 @@ function Bze_isEventLogEnabled() {
       return !!g && g !== o.VildaSync && typeof g.isEventLogEnabled == 'function' && g.isEventLogEnabled() === true;
     }
     if (!Bdz_ma(Bdz_api[j()], 'events')) return false;
-    if (!(o.localStorage && o.localStorage.getItem(Bze_KLUCZ) === '1')) return false;
+    if (!o.localStorage || o.localStorage.getItem(Bze_KLUCZ) === '0') return false;
     return Bdz_wlaczone();
   } catch (x) { return false; }
 }
