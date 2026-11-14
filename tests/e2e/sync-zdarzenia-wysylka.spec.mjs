@@ -689,8 +689,12 @@ test('E2-PR6: bez klucza flagi — dwa urządzenia, PUT /blob urządzenia A zabl
     const pid = await zapiszKarteINotatke(page, 'Ewa');
     await expect.poll(() => zadaniaEvents(atrapa).length, { timeout: 15_000 }).toBeGreaterThan(przed);
     await expect.poll(() => page.evaluate(async () => (await window.VildaVault._eventLog.outboxCount()).total), { timeout: 15_000 }).toBe(0);
-    // Pełna wysyłka A idzie jak dotąd (tu wywołana wprost) i dostaje błąd serwera.
-    await page.evaluate(() => window.VildaSync.syncPush().catch(() => null));
+    // Pełna wysyłka A idzie jak dotąd (tu wywołana wprost) i dostaje błąd serwera. Przed nią pobranie na A: strażnik
+    // nieaktualnego urządzenia wstrzymuje wysyłkę strony, która w tej sesji jeszcze nic nie pobrała (STALE_DEVICE_GUARD);
+    // w aplikacji pobiera najpierw integracja, w teście kolejność nie może zależeć od jej zegara.
+    await page.evaluate(() => window.VildaSync.syncPull({ czekajNaDrenaz: true }));
+    const push = await page.evaluate(() => window.VildaSync.syncPush().then((r) => ({ ok: true, a: r && r.action }), (e) => ({ ok: false, kod: e && e.code })));
+    expect(push, 'pełna wysyłka A odrzucona przez serwer').toEqual({ ok: false, kod: 'UPLOAD_FAILED' });
     expect(atrapa.zadania.filter((z) => z.trasa === 'blob-put' && z.urzadzenie === 'strona').length, 'pełna wysyłka A próbowała').toBeGreaterThan(0);
     expect(pelneWysylki(atrapa, 'strona'), 'bez udanej pełnej wysyłki A').toBe(pelnePrzed);
     expect(atrapa.zadania.filter((z) => z.trasa === 'delta'), 'bez POST /delta').toEqual([]);
@@ -718,6 +722,8 @@ test('E2-PR6: bez klucza flagi — dwa urządzenia, PUT /blob liczony: po zdarze
     await zapiszKarteINotatke(page, 'Ola');
     await expect.poll(() => zadaniaEvents(atrapa).length, { timeout: 15_000 }).toBeGreaterThan(przed);
     await expect.poll(() => page.evaluate(async () => (await window.VildaVault._eventLog.outboxCount()).total), { timeout: 15_000 }).toBe(0);
+    // Przed pełną wysyłką pobranie na A (strażnik nieaktualnego urządzenia — jak w przypadku wyżej).
+    await page.evaluate(() => window.VildaSync.syncPull({ czekajNaDrenaz: true }));
     expect((await page.evaluate(() => window.VildaSync.syncPush())).action, 'pełna wysyłka A').toBeTruthy();
     expect(pelneWysylki(atrapa, 'strona'), 'pełna wysyłka A liczona').toBeGreaterThan(pelnePrzed);
     await pageB.evaluate(() => window.VildaSync.syncPull({ czekajNaDrenaz: true }));
