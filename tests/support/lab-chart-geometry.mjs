@@ -29,6 +29,8 @@ function records(patientId) {
     expect(projection.measurements[0]?.status).toBe('recorded');
     notes.push({ key: 'uag-' + index, source: 'clcr', value, display: projection.measurements[0].displayValue, payload });
   });
+  const renal = notes.find(note => note.key === 'uag-1');
+  notes.push({ ...renal, key: 'uag-duplicate', payload: { ...renal.payload, title: 'Fikcyjny drugi zapis UAG z tego samego dnia' } });
   return notes;
 }
 
@@ -69,8 +71,9 @@ async function measure(section) {
 }
 
 function verifyCoordinates(rows, observations) {
-  expect(rows).toHaveLength(observations.length - 1); // two original LH notes share one coordinate
+  expect(rows).toHaveLength(observations.length - 2); // original LH and UAG pairs each share one coordinate
   expect(rows.find(row => row.count === 2)).toMatchObject({ series: 'lh', value: 0, count: 2 });
+  expect(rows.find(row => row.source === 'clcr' && row.count === 2)).toMatchObject({ value: 0, count: 2 });
   for (const row of rows) {
     const context = JSON.stringify(row);
     expect(row.targetWidth, context).toBeGreaterThanOrEqual(44);
@@ -163,20 +166,32 @@ export async function verifyLabChartGeometry(page, width, height) {
   const activate = locator => width <= 600 ? locator.tap() : locator.click();
   for (const observation of observations) {
     const id = ids[observation.key];
-    if (observation.key === 'lh-0' || observation.key === 'lh-duplicate') {
-      const group = section.locator('.vilda-lab-hist-card[data-series="lh"] .vilda-lab-result-chart-point[data-count="2"]');
-      await activate(group);
-      await activate(section.locator(`.vilda-lab-result-chart-choice[data-note-id="${id}"]`));
-    } else await activate(section.locator(`.vilda-lab-result-chart-point[data-note-id="${id}"]`));
+    const duplicate = ['lh-0', 'lh-duplicate', 'uag-1', 'uag-duplicate'].includes(observation.key);
+    const point = duplicate
+      ? section.locator(observation.source === 'lab'
+        ? '.vilda-lab-hist-card[data-series="lh"] .vilda-lab-result-chart-point[data-count="2"]'
+        : '.vilda-lab-hist-card[data-source="clcr"] .vilda-lab-result-chart-point[data-count="2"][data-value="0"]')
+      : section.locator(`.vilda-lab-result-chart-point[data-note-id="${id}"]`);
+    await activate(point);
+    if (width <= 600) {
+      await expect(page.locator('.vilda-lab-point-preview-bubble')).toBeVisible();
+      await expect(page.locator('dialog.vilda-result-details-dialog[open]')).toHaveCount(0);
+      await expect(page.locator('.vilda-lab-result-chart-chooser:not([hidden])')).toHaveCount(0);
+      await activate(point.locator('xpath=ancestor::article[1]').locator('.vilda-lab-hist-chart-details'));
+    }
+    if (duplicate) await activate(page.locator(`dialog[open] .vilda-lab-result-chart-choice[data-note-id="${id}"]`));
     if (observation.source === 'lab') {
-      const details = section.locator(`.vilda-lab-hist-result-details[data-note-id="${id}"]`);
-      await expect(details).toBeVisible();
+      const details = page.locator('#labResultDetailsDialog');
+      await expect(details).toHaveClass(/vilda-result-details-dialog/);
+      await expect(details.locator(`.vilda-lab-hist-result-details[data-note-id="${id}"]`)).toBeVisible();
       await activate(details.getByRole('button', { name: 'Zamknij szczegóły wyniku', exact: true }));
     } else {
       const details = page.locator('#detailsDialog');
       await expect(details).toBeVisible();
+      await expect(details).toHaveClass(/vilda-result-details-dialog/);
       await expect(details.locator('.clcr-record-value')).toHaveText(`${observation.display} mmol/L`);
-      await expect(details.locator('.clcr-record-eyebrow')).toHaveText('KLIRENS · ' + observation.payload.clinicalDateISO.split('-').reverse().join('.'));
+      await expect(details.locator('.clcr-record-eyebrow')).toHaveText('Klirens');
+      await expect(details.locator('.clcr-record-date')).toHaveText(observation.payload.clinicalDateISO.split('-').reverse().join('.'));
       await activate(details.getByRole('button', { name: 'Zamknij', exact: true }));
     }
   }

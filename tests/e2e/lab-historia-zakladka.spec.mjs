@@ -7,7 +7,7 @@ import { czekajNaHistorie, sekcjaHistorii } from '../support/karta-czekanie.mjs'
 test.use({ serviceWorkers: 'block' });
 
 const wynik = (badania, id) => badania.locator(`.vilda-lab-hist-result-row[data-note-id="${id}"]`);
-const szczegoly = (badania, id) => badania.locator(`.vilda-lab-hist-result-details[data-note-id="${id}"]`);
+const szczegoly = (scope, id) => scope.locator(`.vilda-lab-hist-result-details[data-note-id="${id}"]`);
 
 test('Badania: domyślnie wyniki według dat, zapisane normy i kolory bez rozbudowanych ocen', async ({ page }) => {
   const patientId = await otworzSejf(page);
@@ -136,28 +136,28 @@ test('wyniki tego samego dnia i nakładające się zera zachowują normy, kolory
   await expect(high.locator('.vilda-lab-hist-result-norm')).toHaveText(/0,6.*4,5/);
   await expect(high.locator('.vilda-lab-hist-cell-value.tone-above')).toHaveCSS('color', 'rgb(207, 34, 46)');
   await high.click();
-  await expect(szczegoly(badania, ids.high)).toContainText(/0,6.*4,5/);
+  await expect(szczegoly(page, ids.high)).toContainText(/0,6.*4,5/);
   await page.keyboard.press('Escape');
-  await expect(szczegoly(badania, ids.high)).toHaveCount(0);
+  await expect(szczegoly(page, ids.high)).toHaveCount(0);
   await badania.locator('.vilda-lab-hist-segment-btn', { hasText: 'Wykresy' }).click();
   const chart = badania.locator('.vilda-lab-hist-card[data-series="tsh"] .vilda-lab-result-chart');
   await expect(chart.locator(`.vilda-lab-result-chart-point[data-note-id="${ids.high}"]`)).toHaveCount(1);
   const shared = chart.locator('.vilda-lab-result-chart-point[data-count="2"]');
   await expect(shared).toHaveCount(1);
   await shared.click();
-  const chooser = chart.locator('.vilda-lab-result-chart-chooser');
+  const chooser = page.locator('#labResultDetailsDialog .vilda-lab-result-chart-chooser');
   await expect(chooser).toBeVisible();
   await expect(chooser.locator('.vilda-lab-result-chart-choice')).toHaveCount(2);
   expect(await chooser.locator('.vilda-lab-result-chart-choice').evaluateAll((choices) => choices.every((choice) => choice.getBoundingClientRect().height >= 44))).toBe(true);
   await chooser.locator(`.vilda-lab-result-chart-choice[data-note-id="${ids.zero}"]`).click();
-  await expect(szczegoly(badania, ids.zero)).toContainText(/0,27.*4,2/);
-  await expect(szczegoly(badania, ids.high)).toHaveCount(0);
+  await expect(szczegoly(page, ids.zero)).toContainText(/0,27.*4,2/);
+  await expect(szczegoly(page, ids.high)).toHaveCount(0);
   await page.keyboard.press('Escape');
   await shared.click();
   await expect(chooser).toBeVisible();
   await chooser.locator(`.vilda-lab-result-chart-choice[data-note-id="${ids.zeroTwin}"]`).click();
-  await expect(szczegoly(badania, ids.zeroTwin)).toContainText(/0,6.*4,5/);
-  await expect(szczegoly(badania, ids.zero)).toHaveCount(0);
+  await expect(szczegoly(page, ids.zeroTwin)).toContainText(/0,6.*4,5/);
+  await expect(szczegoly(page, ids.zero)).toHaveCount(0);
   await page.evaluate(() => window.VildaVault.lock('manual'));
   await expect(page.locator('.vilda-lab-hist-result-details, .vilda-lab-hist-result-row')).toHaveCount(0);
 });
@@ -170,7 +170,7 @@ test('akcje: szczegóły wyniku prowadzą do edycji, „+ Dodaj wynik” i „Wp
   const edytor = page.locator('.b3-template-select');
 
   await wynik(badania, ids.tsh4).click();
-  const podglad = szczegoly(badania, ids.tsh4);
+  const podglad = szczegoly(page, ids.tsh4);
   await expect(podglad).toBeVisible();
   await expect(podglad).toContainText('0,12');
   await expect(podglad).toContainText(/0,27.*4,2/);

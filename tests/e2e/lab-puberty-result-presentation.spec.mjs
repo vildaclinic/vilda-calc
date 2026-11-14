@@ -1,5 +1,5 @@
 import { expect, test } from '../support/test-czas.mjs';
-import { openSavedAssessment } from '../support/lab-saved-assessment.mjs';
+import { closeSavedAssessment, openSavedAssessment } from '../support/lab-saved-assessment.mjs';
 import { quickSelect as select, quickFill as fill, expectAutomaticReference, closePatientEditor } from '../support/lab-puberty-quick.mjs';
 import { kliknij } from '../support/uklad-czekanie.mjs';
 
@@ -365,6 +365,7 @@ test('a pinned comparison keeps its stored axes after current input changes and 
     getComputedStyle(node).animationName === 'none'))).toBe(true);
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   expect(await animation(history.locator('[data-comparison="age"] .vilda-lab-axis-marker'))).toMatch(/lab-marker-shake/);
+  await closeSavedAssessment(page);
   await page.evaluate(async (id) => {
     const note = await window.VildaVault.getPatientNote(id);
     window.VildaAuthUI.showPatientNoteEditor({ patientId: note.patientId, note });

@@ -130,6 +130,7 @@
       var state = { gen: 0, destroyed: false, panel: 'all', joinLines: true, query: '', selected: null, view: null, data: null, timer: 0, retried: false, reminders: [], notice: null };
       var resultsHost = null;
       var viewButtons = [], joinLabel = null, joinInput = null;
+      var labDetails = null, clcrDetails = null, detailsObserver = null, detailsRequest = 0;
       var initialPending = true;
       var pendingFocus = text(options.focusNoteId) || null;
 
@@ -179,6 +180,7 @@
           schedule();
         },
         locked: function () {
+          closeAllDetails(false);
           state.gen++; state.data = null; state.selected = null; state.query = '';
           message('vilda-lab-hist-locked', 'Sejf jest zablokowany. Odblokuj go, aby zobaczyć wyniki badań.');
         }
@@ -221,7 +223,7 @@
             }
             script.addEventListener('load', function () { finish(win.ClcrRecordResources ? null : new Error('Moduł zapisanych obliczeń jest niedostępny.')); });
             script.addEventListener('error', function () { finish(new Error('Nie udało się wczytać zapisanych obliczeń.')); });
-            script.setAttribute('src', new URL('clcr_record_resources.js?v=24', moduleURL || win.location.href).href);
+            script.setAttribute('src', new URL('clcr_record_resources.js?v=25', moduleURL || win.location.href).href);
             timer = win.setTimeout(function () { finish(new Error('Upłynął czas wczytywania zapisanych obliczeń.')); }, 15000);
             doc.head.appendChild(script);
           });
@@ -255,6 +257,7 @@
       function load() {
         if (state.destroyed || host.isConnected === false) return Promise.resolve();
         initialPending = false;
+        closeLabDetails(false);
         var gen = ++state.gen;
         section.setAttribute('aria-busy', 'true');
         if (!state.data) {
@@ -378,20 +381,20 @@
         if (!noteId || !vault || typeof vault.getPatientNote !== 'function') return;
         var gen = state.gen;
         Promise.resolve(vault.getPatientNote(noteId)).then(function (note) {
-          if (note && current(gen) && !(typeof vault.isUnlocked === 'function' && !vault.isUnlocked())) openEditor({ note: note });
+          if (note && (!note.patientId || note.patientId === patientId) && current(gen) && !(typeof vault.isUnlocked === 'function' && !vault.isUnlocked())) openEditor({ note: note });
         }).catch(function () { /* wpis zniknął — odświeżenie pokaże stan sejfu */ });
       }
       // „Usuń wpis” (decyzja właściciela 2026-11-11): wynik ma jedno miejsce pełnej treści, więc usuwa się go
       // w Badaniach, a nie w Notatkach. Potwierdzenie, kontrola dostępu do wpisu i samo usunięcie należą do karty
       // (options.deleteNote — ta sama funkcja co „Usuń” w Notatkach); zakładka czyta wpis świeżo z sejfu.
-      function removeNote(noteId) {
+      function removeNote(noteId, onCancelled) {
         if (!noteId || !vault || typeof vault.getPatientNote !== 'function' || typeof options.deleteNote !== 'function') return;
         var gen = state.gen;
         Promise.resolve(vault.getPatientNote(noteId)).then(function (note) {
-          if (!note || !current(gen) || (typeof vault.isUnlocked === 'function' && !vault.isUnlocked())) return false;
+          if (!note || (note.patientId && note.patientId !== patientId) || !current(gen) || (typeof vault.isUnlocked === 'function' && !vault.isUnlocked())) return false;
           return options.deleteNote({ note: note });
         }).then(function (deleted) {
-          if (deleted !== true || !instance.alive()) return;
+          if (deleted !== true || !instance.alive()) { if (deleted !== true && typeof onCancelled === 'function' && instance.alive()) onCancelled(); return; }
           if (state.selected && state.selected.noteId === noteId) state.selected = null;
           schedule();
           if (typeof options.onChanged === 'function') options.onChanged();
@@ -491,7 +494,8 @@
           undone: 'Cofnięto — zlecenie' + name + ' znów jest w Przypomnieniach.',
           'undo-error': 'Nie udało się cofnąć oznaczenia — zrób to w Przypomnieniach.',
           'undo-stale': 'Nie cofnięto: zlecenie' + name + ' zmieniło się w międzyczasie — sprawdź je w Przypomnieniach.',
-          'clcr-resource-error': notice.text
+          'clcr-resource-error': notice.text,
+          'details-resource-error': notice.text
         }[notice.kind];
         add(box, 'span', 'vilda-lab-hist-notice-text', message);
         if (notice.kind === 'completed' && typeof vault.uncompletePatientNote === 'function') {
@@ -590,6 +594,10 @@
       }
       function drawResults() {
         if (!resultsHost || !state.data) return;
+        if (win && win.VildaLabResultChart) {
+          if (win.VildaLabResultChart.hidePreview) win.VildaLabResultChart.hidePreview(doc);
+          if (win.VildaLabResultChart.clearSelection) win.VildaLabResultChart.clearSelection(doc);
+        }
         clear(resultsHost);
         var view = state.data.view;
         if (!view.panels.length && !(view.clcr && view.clcr.measurements.length)) return;
@@ -609,7 +617,6 @@
         }
         var visible = panels.slice();
         if (renal.length) visible.push({ id: 'renal', label: 'Klirens', series: renal, rows: [], treatmentRows: [] });
-        drawSelectedResult(resultsHost);
         if (mode === 'table') drawDateTable(resultsHost, visible);
         else {
           var grid = add(resultsHost, 'div', 'vilda-lab-hist-grid');
@@ -711,27 +718,33 @@
         });
       }
 
-      function openClcrResult(record) {
+      function openClcrResult(record, anchor) {
+        closeLabDetails(false);
+        var request = ++detailsRequest;
         if (!instance.alive() || (record.patientId && record.patientId !== patientId) || (typeof vault.isUnlocked === 'function' && !vault.isUnlocked())) return;
         var gen = state.gen;
         function open() {
-          if (!current(gen) || (typeof vault.isUnlocked === 'function' && !vault.isUnlocked())) return;
+          if (!current(gen) || request !== detailsRequest || detailsHidden() || (typeof vault.isUnlocked === 'function' && !vault.isUnlocked())) return;
           var details = win && win.ClcrResultDetails;
           var callback = typeof options.openClcrResult === 'function' ? options.openClcrResult
             : details && typeof details.open === 'function' ? details.open.bind(details) : null;
           if (!callback) throw new Error('Szczegóły zapisanych obliczeń są niedostępne.');
           if (state.notice && state.notice.kind === 'clcr-resource-error') { state.notice = null; draw(); }
-          return callback({ patientId: patientId, noteId: record.noteId, record: record, vault: vault, onChanged: function () {
+          watchDetails();
+          return Promise.resolve(callback({ patientId: patientId, noteId: record.noteId, record: record, vault: vault, anchor: anchor, context: section, isCurrent: function () { return !detailsHidden(); }, onChanged: function () {
             if (!instance.alive()) return;
             schedule();
             if (typeof options.onChanged === 'function') options.onChanged();
-          } });
+          } })).then(function (controller) {
+            if (!current(gen) || request !== detailsRequest || detailsHidden()) { if (controller && controller.destroy) controller.destroy({ restoreFocus: false }); return; }
+            clcrDetails = controller || null;
+          });
         }
         // Wstrzyknięty callback pozostaje synchroniczny; produkcyjna ścieżka
         // dociąga silniki dopiero przy otwieraniu szczegółów/edycji.
         if (typeof options.openClcrResult === 'function') { open(); return; }
         ensureRecordResources(true).then(open).catch(function (error) {
-          if (!current(gen)) return;
+          if (!current(gen) || request !== detailsRequest || detailsHidden()) return;
           state.notice = { kind: 'clcr-resource-error', record: record, text: error && error.message || 'Nie udało się otworzyć szczegółów obliczenia.' };
           draw();
         });
@@ -817,25 +830,121 @@
         }
         return null;
       }
-      function selectResult(entry, view) {
-        if (entry.clcrRecord) { openClcrResult(entry.clcrRecord); return; }
+      // Full details live outside the chart flow. Selecting a touch point is
+      // handled by the renderer and only changes a stable header action target.
+      function detailsHidden() {
+        if (!instance.alive() || section.isConnected === false || (typeof vault.isUnlocked === 'function' && !vault.isUnlocked())) return true;
+        for (var element = section; element && element.nodeType !== 9; element = element.parentNode) {
+          if (element.hidden || element.inert || (element.getAttribute && element.getAttribute('aria-hidden') === 'true')
+              || (element.classList && element.classList.contains('vb22-private-content'))) return true;
+          if (win && typeof win.getComputedStyle === 'function' && element.nodeType === 1) {
+            var style = win.getComputedStyle(element);
+            if (style.display === 'none' || style.visibility === 'hidden' || (style.filter && style.filter.indexOf('blur(') !== -1)) return true;
+          }
+        }
+        return false;
+      }
+      function watchDetails() {
+        if (detailsObserver || !win || typeof win.MutationObserver !== 'function') return;
+        detailsObserver = new win.MutationObserver(function () { if (detailsHidden()) closeAllDetails(false); });
+        detailsObserver.observe(doc.documentElement || doc.body, { childList: true, subtree: true, attributes: true,
+          attributeFilter: ['hidden', 'inert', 'aria-hidden', 'class', 'style'] });
+      }
+      function closeLabDetails(restoreFocus) {
+        var previous = labDetails;
+        labDetails = null; state.selected = null;
+        if (previous) { previous.shell.destroy({ restoreFocus: restoreFocus !== false }); if (previous.host.parentNode) previous.host.parentNode.removeChild(previous.host); }
+      }
+      function closeAllDetails(restoreFocus) {
+        detailsRequest++;
+        if (detailsObserver) { detailsObserver.disconnect(); detailsObserver = null; }
+        closeLabDetails(restoreFocus);
+        if (clcrDetails && clcrDetails.destroy) clcrDetails.destroy({ restoreFocus: restoreFocus !== false });
+        clcrDetails = null;
+        if (win && win.ClcrResultDetails && typeof win.ClcrResultDetails.close === 'function') win.ClcrResultDetails.close({ patientId: patientId, restoreFocus: restoreFocus !== false });
+        if (win && win.VildaLabResultChart) {
+          if (win.VildaLabResultChart.hidePreview) win.VildaLabResultChart.hidePreview(doc);
+          if (win.VildaLabResultChart.clearSelection) win.VildaLabResultChart.clearSelection(doc);
+        }
+      }
+      function ensureLabDetails() {
+        if (labDetails) return labDetails;
+        var helper = win && win.VildaResultDetailsDialog;
+        if (!helper || typeof helper.attach !== 'function') {
+          state.notice = { kind: 'details-resource-error', text: 'Nie udało się wczytać szczegółów wyniku. Odśwież stronę.' }; draw(); return null;
+        }
+        var overlay = node('div', 'vilda-result-details-host');
+        var dialog = add(overlay, 'dialog', 'vilda-lab-hist');
+        dialog.setAttribute('id', 'labResultDetailsDialog');
+        dialog.setAttribute('aria-labelledby', 'labResultDetailsTitle');
+        var layout = add(dialog, 'div', 'vilda-result-details-layout vilda-lab-hist-result-details');
+        var heading = add(layout, 'header', 'vilda-result-details-heading');
+        var titles = add(heading, 'div', 'vilda-result-details-titles');
+        var kicker = add(titles, 'p', 'vilda-lab-hist-muted', 'Wyniki lab.');
+        var title = add(titles, 'h2', '', 'Szczegóły wyniku'); title.setAttribute('id', 'labResultDetailsTitle');
+        var close = button(heading, 'vilda-lab-hist-details-close', '×', closeResult);
+        close.setAttribute('aria-label', 'Zamknij szczegóły wyniku');
+        var body = add(layout, 'div', 'vilda-result-details-body');
+        var actions = add(layout, 'footer', 'vilda-result-details-actions vilda-lab-hist-detail-actions');
+        doc.body.appendChild(overlay);
+        var shell = helper.attach(dialog, { context: section, onClose: function () {
+          if (labDetails && labDetails.host === overlay) { labDetails = null; state.selected = null; }
+          if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+        } });
+        dialog.addEventListener('cancel', function (event) { event.preventDefault(); closeResult(); });
+        labDetails = { host: overlay, dialog: dialog, shell: shell, body: body, actions: actions, layout: layout, title: title, kicker: kicker, close: close, anchor: null };
+        return labDetails;
+      }
+      function selectResult(entry, view, anchor) {
+        if (!entry || detailsHidden()) return;
+        if (entry.clcrRecord) { openClcrResult(entry.clcrRecord, anchor); return; }
+        var modal = ensureLabDetails();
+        if (!modal) return;
+        detailsRequest++;
+        if (clcrDetails && clcrDetails.destroy) clcrDetails.destroy({ restoreFocus: false });
+        clcrDetails = null;
+        if (win && win.ClcrResultDetails && typeof win.ClcrResultDetails.close === 'function') win.ClcrResultDetails.close({ patientId: patientId, restoreFocus: false });
         state.selected = { noteId: entry.noteId, key: view.key };
-        drawResults();
-        var details = resultsHost.querySelector('.vilda-lab-hist-result-details');
-        if (details) {
-          if (typeof details.focus === 'function') details.focus();
-          if (typeof details.scrollIntoView === 'function') details.scrollIntoView({ block: 'nearest' });
-        }
+        modal.title.textContent = seriesLabel(view); modal.kicker.textContent = 'Wyniki lab.';
+        clear(modal.body); clear(modal.actions); modal.actions.hidden = false; drawSelectedResult(modal.body);
+        if (!state.selected) { closeLabDetails(false); return; }
+        if (win && win.VildaLabResultChart && win.VildaLabResultChart.hidePreview) win.VildaLabResultChart.hidePreview(doc);
+        watchDetails();
+        if (!modal.dialog.open) { modal.anchor = anchor || doc.activeElement; modal.shell.show(modal.anchor); }
+        else if (typeof modal.close.focus === 'function') modal.close.focus({ preventScroll: true });
       }
-      function closeResult() {
-        var noteId = state.selected && state.selected.noteId;
-        state.selected = null;
-        drawResults();
-        var buttons = resultsHost.querySelectorAll('button[data-note-id]');
-        for (var i = 0; i < buttons.length; i++) {
-          if (buttons[i].getAttribute('data-note-id') === noteId && typeof buttons[i].focus === 'function') { buttons[i].focus(); break; }
-        }
+      function openResultGroup(entries, view, anchor) {
+        if (!entries || !entries.length || detailsHidden()) return;
+        if (entries.length === 1) { selectResult(entries[0], view, anchor); return; }
+        var modal = ensureLabDetails();
+        if (!modal) return;
+        detailsRequest++;
+        if (clcrDetails && clcrDetails.destroy) clcrDetails.destroy({ restoreFocus: false });
+        clcrDetails = null; state.selected = null;
+        if (win && win.ClcrResultDetails && typeof win.ClcrResultDetails.close === 'function') win.ClcrResultDetails.close({ patientId: patientId, restoreFocus: false });
+        modal.title.textContent = 'Wybierz zapis'; modal.kicker.textContent = seriesLabel(view);
+        clear(modal.body); clear(modal.actions); modal.actions.hidden = true;
+        var chooser = add(modal.body, 'div', 'vilda-lab-result-chart-chooser');
+        chooser.setAttribute('role', 'group'); chooser.setAttribute('aria-label', 'Wybierz wynik z tego punktu');
+        add(chooser, 'p', 'vilda-lab-result-chart-chooser-title', 'Wyniki z ' + resultDate(entries[0]));
+        entries.forEach(function (entry) {
+          var choice = button(chooser, 'vilda-lab-result-chart-choice', '', function () {
+            if (entry.clcrRecord) { var from = modal.anchor; closeLabDetails(false); openClcrResult(entry.clcrRecord, from); }
+            else selectResult(entry, view, modal.anchor);
+          });
+          choice.setAttribute('data-note-id', entry.noteId || '');
+          var info = describeResult(entry); choice.setAttribute('data-tone', info.tone);
+          add(choice, 'span', '', resultDate(entry));
+          drawValue(choice, entry, view, info, 'vilda-lab-hist-cell-value');
+          drawNorms(choice, info, 'vilda-lab-hist-result-norm');
+          drawResultNotice(choice, info);
+          var comment = commentText(entry.comment); if (comment) add(choice, 'span', 'vilda-lab-hist-muted', comment);
+        });
+        modal.anchor = anchor || doc.activeElement;
+        if (win && win.VildaLabResultChart && win.VildaLabResultChart.hidePreview) win.VildaLabResultChart.hidePreview(doc);
+        watchDetails(); modal.shell.show(modal.anchor);
       }
+      function closeResult() { closeLabDetails(true); }
       function resultDate(entry) {
         var label = entry.dateISO ? formatDate(entry.dateISO) : 'Bez daty badania';
         return label + (entry.dateISO && entry.dateSource !== 'badanie' && DATE_SOURCE[entry.dateSource] ? ' · ' + DATE_SOURCE[entry.dateSource] : '');
@@ -879,15 +988,11 @@
         }); });
         if (!found) { state.selected = null; return; }
         var info = describeResult(found);
-        var box = add(parent, 'section', 'vilda-lab-hist-result-details');
-        box.setAttribute('data-note-id', found.noteId || '');
-        box.setAttribute('role', 'region');
-        box.setAttribute('aria-label', 'Szczegóły wyniku ' + seriesLabel(view));
-        box.setAttribute('tabindex', '-1');
-        var top = add(box, 'div', 'vilda-lab-hist-details-head');
-        add(top, 'h3', '', seriesLabel(view));
-        var close = button(top, 'vilda-lab-hist-details-close', '×', closeResult);
-        close.setAttribute('aria-label', 'Zamknij szczegóły wyniku');
+        var box = parent;
+        var region = labDetails.layout;
+        region.setAttribute('data-note-id', found.noteId || '');
+        region.setAttribute('role', 'region');
+        region.setAttribute('aria-label', 'Szczegóły wyniku ' + seriesLabel(view));
         add(box, 'p', 'vilda-lab-hist-date', resultDate(found));
         drawValue(box, found, view, info, 'vilda-lab-hist-detail-value');
         var norms = add(box, 'div', 'vilda-lab-hist-detail-norms');
@@ -904,10 +1009,16 @@
         // IGF-1 z notatki leczenia GH jest częścią notatki leczenia — tę usuwa się przy leczeniu, nie tutaj.
         var canDelete = typeof options.deleteNote === 'function' && !!found.noteId && found.source !== 'gh-note';
         if (canEdit || canDelete) {
-          var actions = add(box, 'div', 'vilda-lab-hist-detail-actions');
-          if (canEdit) button(actions, 'vilda-lab-hist-link vilda-lab-hist-edit-result', 'Edytuj wpis', function () { openNote(found.noteId); });
-          if (canDelete) button(actions, 'vilda-lab-hist-link vilda-lab-hist-delete-result', 'Usuń wpis', function () { removeNote(found.noteId); });
+          var actions = labDetails.actions;
+          if (canEdit) button(actions, 'vilda-lab-hist-link vilda-lab-hist-edit-result', 'Edytuj wpis', function () {
+            closeLabDetails(false); openNote(found.noteId);
+          });
+          if (canDelete) button(actions, 'vilda-lab-hist-link vilda-lab-hist-delete-result', 'Usuń wpis', function () {
+            var from = labDetails && labDetails.anchor; closeLabDetails(false);
+            removeNote(found.noteId, function () { if (instance.alive()) selectResult(found, view, from); });
+          });
         }
+        button(labDetails.actions, 'vilda-auth-btn vilda-auth-btn-small vilda-auth-btn-ghost', 'Zamknij', closeResult);
         if (view.entries.length > 1) {
           var history = add(box, 'details', 'vilda-lab-hist-result-history');
           add(history, 'summary', '', 'Pozostałe wyniki (' + (view.entries.length - 1) + ')');
@@ -957,9 +1068,21 @@
         add(title, 'h3', 'vilda-lab-hist-card-name', seriesLabel(view));
         seriesContext(title, view);
         var shown = view.last || view.entries[view.entries.length - 1];
+        var selectedEntries = shown ? [shown] : [];
+        var detailsButton = button(head, 'vilda-lab-hist-chart-details', 'Szczegóły →', function () { openResultGroup(selectedEntries, view, detailsButton); });
+        detailsButton.disabled = !shown;
+        if (shown) detailsButton.setAttribute('data-note-id', shown.noteId || '');
+        detailsButton.setAttribute('aria-label', 'Szczegóły wyniku ' + seriesLabel(view));
+        function pointSelected(entries) {
+          selectedEntries = entries;
+          detailsButton.disabled = !entries.length;
+          detailsButton.setAttribute('data-note-id', entries[0] && entries[0].noteId || '');
+          detailsButton.setAttribute('data-count', entries.length > 1 ? String(entries.length) : '');
+          detailsButton.setAttribute('aria-label', 'Szczegóły ' + (entries.length > 1 ? entries.length + ' zapisów: ' : 'wyniku ') + seriesLabel(view));
+        }
         if (shown) {
           var info = describeResult(shown);
-          var latest = button(head, 'vilda-lab-hist-latest', '', function () { selectResult(shown, view); });
+          var latest = button(card, 'vilda-lab-hist-latest', '', function () { selectResult(shown, view, latest); });
           latest.setAttribute('data-note-id', shown.noteId || '');
           latest.setAttribute('aria-label', 'Szczegóły wyniku ' + seriesLabel(view) + ' ' + shown.display);
           drawValue(latest, shown, view, info, 'vilda-lab-hist-value');
@@ -969,7 +1092,7 @@
           drawNorms(norms, info, 'vilda-lab-hist-result-norm');
           drawResultNotice(card, info);
         }
-        drawChart(add(card, 'div', 'vilda-lab-hist-card-chart'), view);
+        drawChart(add(card, 'div', 'vilda-lab-hist-card-chart'), view, pointSelected);
         if (view.testKey) {
           var href = 'przelicznik-jednostek.html?badanie=' + encodeURIComponent(view.testKey);
           var check = add(card, 'a', 'vilda-lab-hist-card-check', 'Nowy wynik ' + seriesLabel(view) + ' →');
@@ -977,7 +1100,7 @@
           check.addEventListener('click', function (event) { openConverter(event, href); });
         }
       }
-      function drawChart(box, view) {
+      function drawChart(box, view, pointSelected) {
         var host = add(box, 'div', 'vilda-lab-hist-chart');
         var renderer = win && win.VildaLabResultChart;
         if (!renderer || typeof renderer.render !== 'function') {
@@ -986,6 +1109,8 @@
         }
         var chart = renderer.render(doc, view, {
           describe: describeResult,
+          selectEntries: pointSelected,
+          openEntries: function (entries, anchor) { openResultGroup(entries, view, anchor); },
           openNote: function (noteId) {
             var entry = view.entries.filter(function (item) { return item.noteId === noteId; })[0];
             if (entry) selectResult(entry, view);
@@ -1004,7 +1129,7 @@
           }).forEach(function (entry) {
             var when = resultDate(entry);
             var value = entry.display || entry.raw || '—';
-            var link = button(records, 'vilda-lab-result-chart-record', '', function () { selectResult(entry, view); });
+            var link = button(records, 'vilda-lab-result-chart-record', '', function () { selectResult(entry, view, link); });
             link.setAttribute('data-note-id', entry.noteId || '');
             link.setAttribute('aria-label', seriesLabel(view) + ': ' + value + ' · ' + when + '. Otwórz wynik');
             add(link, 'span', 'vilda-lab-result-chart-record-value', value);
@@ -1072,7 +1197,7 @@
           add(box, 'h3', 'vilda-lab-hist-date-heading', label);
           group.entries.forEach(function (item) {
             var entry = item.entry, view = item.view, info = describeResult(entry);
-            var row = button(box, 'vilda-lab-hist-result-row vilda-lab-hist-cell', '', function () { selectResult(entry, view); });
+            var row = button(box, 'vilda-lab-hist-result-row vilda-lab-hist-cell', '', function () { selectResult(entry, view, row); });
             row.setAttribute('data-note-id', entry.noteId || '');
             row.setAttribute('data-series', view.key);
             row.setAttribute('data-source', view.clcr ? 'clcr' : 'lab');
@@ -1112,6 +1237,7 @@
       return {
         refresh: function () { return load(); },
         destroy: function () {
+          closeAllDetails(false);
           state.destroyed = true;
           state.gen++;
           if (state.timer && win) win.clearTimeout(state.timer);
@@ -1122,7 +1248,7 @@
       };
     }
 
-    return Object.freeze({ version: '2.3.0', render: render, _internal: Object.freeze({ plural: plural, commentText: commentText, shortLabel: shortLabel, mergedNote: mergedNote }) });
+    return Object.freeze({ version: '2.4.0', render: render, _internal: Object.freeze({ plural: plural, commentText: commentText, shortLabel: shortLabel, mergedNote: mergedNote }) });
   }
 
   return createApi();

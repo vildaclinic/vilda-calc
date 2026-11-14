@@ -50,7 +50,7 @@ function environment(input = {}) {
   note.body += '\n\n' + root.ClcrSavedCalculation.serializeSnapshot(captured, note);
   const update = vi.fn(async payload => { note = { ...payload, rev: note.rev + 1 }; return { updated: true }; });
   const vault = { getPatientNote: vi.fn(async () => note), updateExistingPatientNote: update, isUnlocked: () => true };
-  const open = () => root.ClcrResultDetails.open({ document: doc, vault, patientId: note.patientId, noteId: note.id });
+  const open = (options = {}) => root.ClcrResultDetails.open({ document: doc, vault, patientId: note.patientId, noteId: note.id, ...options });
   const field = id => doc.getElementById('editField-' + id);
   const inputValue = (id, value) => { field(id).value = value; field(id).dispatch('input'); };
   const submit = async () => { const form = doc.getElementById('editForm'); for (const listener of form.sluchacze.get('submit')) await listener({ preventDefault() {} }); };
@@ -58,6 +58,54 @@ function environment(input = {}) {
 }
 
 describe('Mg/Ca saved details use the actual persistence and transaction', () => {
+  it('presents the recorded value, inputs, assessment and source without a clinical write', async () => {
+    const env = environment({ mode: 'direct', reportedValue: '0.5', reportedUnit: 'g/g' });
+    const before = JSON.stringify(env.note());
+    await env.open();
+    const details = env.doc.getElementById('calculationDetails');
+    expect(env.doc.getElementById('clcrDetailsTitle').textContent).toBe('Magnez/wapń (DZM)');
+    expect(details.querySelector('.clcr-record-value').textContent).toContain('0,5');
+    expect(details.querySelector('.clcr-record-reference').textContent).toContain('Norma przy zapisie:');
+    const sections = details.querySelectorAll('.clcr-record-detail-section');
+    expect(sections.map(section => section.querySelector('summary').textContent)).toEqual(['Dane obliczenia', 'Zapisana ocena', 'Szczegóły i źródła']);
+    expect(sections[0].hasAttribute('open')).toBe(true);
+    expect(sections[1].hasAttribute('open')).toBe(false);
+    expect(details.textContent).toContain('Zachowany komentarz.');
+    expect(details.textContent).toContain('Metoda');
+    expect(JSON.stringify(env.note())).toBe(before);
+    expect(env.update).not.toHaveBeenCalled();
+  });
+
+  it('hands the exact originating control to the common shell and allows a silent privacy teardown', async () => {
+    const env = environment();
+    const anchor = env.doc.body.appendChild(env.doc.createElement('button'));
+    const show = vi.fn(), destroy = vi.fn();
+    env.root.VildaResultDetailsDialog = { attach: vi.fn(() => ({ show, destroy })) };
+    const api = await env.open({ anchor });
+    expect(env.root.VildaResultDetailsDialog.attach.mock.calls[0][0]).toBe(env.doc.getElementById('detailsDialog'));
+    expect(show).toHaveBeenCalledWith(anchor);
+    api.destroy({ restoreFocus: false });
+    expect(destroy).toHaveBeenCalledWith({ restoreFocus: false });
+    expect(env.doc.getElementById('detailsDialog')).toBeNull();
+    expect(env.update).not.toHaveBeenCalled();
+  });
+
+  it('closes a matching pending read before it can expose an old patient and ignores another patient', async () => {
+    const env = environment();
+    let release;
+    env.vault.getPatientNote.mockImplementationOnce(() => new Promise(resolve => { release = resolve; }));
+    const opening = env.open();
+    expect(env.doc.getElementById('detailsDialog')).not.toBeNull();
+    expect(env.root.ClcrResultDetails.close({ patientId: 'fictional-other-patient', restoreFocus: false })).toBe(false);
+    expect(env.doc.getElementById('detailsDialog')).not.toBeNull();
+    expect(env.root.ClcrResultDetails.close({ patientId: env.note().patientId, restoreFocus: false })).toBe(true);
+    expect(env.doc.getElementById('detailsDialog')).toBeNull();
+    release(env.note());
+    await opening;
+    expect(env.doc.getElementById('detailsDialog')).toBeNull();
+    expect(env.update).not.toHaveBeenCalled();
+  });
+
   it('shows only the active own fields and rebuilds the form and focus in both directions', async () => {
     const env = environment();
     await env.open();
