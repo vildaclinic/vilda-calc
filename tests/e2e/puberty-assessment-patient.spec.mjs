@@ -31,6 +31,10 @@ async function ready(page) {
     && !document.documentElement.classList.contains('vilda-auth-locked'));
   await czekajNaOdtworzenieSesji(page);
   // Initialization + two frames can precede the actual restore finalizer.
+  await waitSaveReady(page);
+}
+
+async function waitSaveReady(page) {
   await page.waitForFunction(() => window.VildaDataImportExport?.getSaveReadiness?.().ready === true);
 }
 
@@ -44,6 +48,7 @@ async function loadPatient(page, id, choice) {
   await page.locator(choice === 'restore' ? '#vildaLcmRestore' : '#vildaLcmNew').click();
   await expect(page.locator('#vildaLoadChoiceModal')).toHaveCount(0);
   await expect.poll(() => page.evaluate(pid => window.VildaPubertySource.kontekstPacjenta(pid).status, id)).toBe('ready');
+  await waitSaveReady(page);
 }
 
 const carried = page => page.evaluate(() => window.VildaPubertyAssessmentState.capture());
@@ -84,6 +89,9 @@ test('typowana ocena: wczytanie pacjenta, zapis, Start → DocPro oraz nowa wizy
 
   // Rzeczywisty kolektor i ścieżka Zapisz; sprawdzamy payload odczytany z szyfrowanego rekordu.
   await page.locator('#height').fill('151');
+  // Puberty source readiness does not complete the form's restore producers.
+  // The last edit can also replace their pending calculation; Save stays single-shot.
+  await waitSaveReady(page);
   expect(await page.evaluate(async () => Boolean(await window.saveUserData()))).toBe(true);
   await expect.poll(async () => Number((await savedUser(page, ids.a)).height)).toBe(151);
   expect((await savedUser(page, ids.a)).pubertyAssessment).toEqual(RAW);
@@ -112,6 +120,7 @@ test('typowana ocena: wczytanie pacjenta, zapis, Start → DocPro oraz nowa wizy
   await page.locator('#ageMonths').fill('0');
   await page.locator('#height').fill('141');
   await page.locator('#weight').fill('35');
+  await waitSaveReady(page);
   expect(await page.evaluate(async () => Boolean(await window.saveUserData()))).toBe(true);
   await expect.poll(async () => Number((await savedUser(page, ids.b)).height)).toBe(141);
   expect(await savedUser(page, ids.b)).not.toHaveProperty('pubertyAssessment');
