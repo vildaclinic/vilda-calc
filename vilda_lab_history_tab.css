@@ -6,6 +6,7 @@
   gap: var(--space-16px);
   min-width: 0;
   margin-bottom: var(--space-16px);
+  padding-bottom: var(--vilda-lab-hist-scroll-reserve, 0px);
   color: var(--text-strong, #263f49);
   font-size: 16px;
   line-height: 1.5;
@@ -130,7 +131,7 @@
 
 .vilda-lab-hist input.vilda-lab-hist-search-input {
   width: 100%;
-  padding: var(--space-8px) 44px var(--space-8px) var(--space-12px);
+  padding: var(--space-8px) 56px var(--space-8px) var(--space-12px);
 }
 
 .vilda-lab-hist input.vilda-lab-hist-search-input::-webkit-search-cancel-button {
@@ -199,14 +200,21 @@
 }
 
 .vilda-lab-hist button.vilda-lab-hist-search-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   position: absolute;
-  right: 0;
+  right: var(--space-4px);
   top: 0;
-  width: 44px;
+  z-index: var(--z-raised);
+  /* The patient card otherwise forces every button to width:auto!important. */
+  width: 44px!important;
+  min-width: 44px;
   height: 44px;
   min-height: 44px;
   padding: 0;
   font-size: 24px;
+  line-height: 1;
 }
 
 .vilda-lab-hist button.vilda-lab-hist-link,
@@ -233,9 +241,6 @@
   flex-direction: column;
   gap: var(--space-14px);
   min-width: 0;
-  /* A short view still fills the space below its controls. Otherwise the
-     patient card clamps its scroll position when the old view was taller. */
-  min-block-size: calc(100dvh - 96px);
 }
 
 .vilda-lab-hist-legend {
@@ -917,8 +922,13 @@
     padding: 1px;
   }
   .vilda-lab-hist button.vilda-lab-hist-search-clear {
+    width: 48px!important;
+    min-width: 48px;
     height: 48px;
     min-height: 48px;
+  }
+  .vilda-lab-hist input.vilda-lab-hist-search-input {
+    padding-right: 60px;
   }
   .vilda-lab-hist-head {
     align-items: flex-start;

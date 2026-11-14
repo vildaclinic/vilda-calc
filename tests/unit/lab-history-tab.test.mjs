@@ -413,6 +413,27 @@ describe('zakładka Badania: widok z zapisanych wyników', () => {
 });
 
 describe('zakładka Badania: przełączniki i preferencje', () => {
+  async function clampedViewport() {
+    const env = srodowisko(), styles = new Map(), frames = [];
+    const scroll = env.doc.body.appendChild(env.doc.createElement('div'));
+    scroll.appendChild(env.host);
+    let top = 0;
+    Object.defineProperty(scroll, 'clientHeight', { value: 500 });
+    Object.defineProperty(scroll, 'scrollHeight', { get: () => (
+      env.host.querySelector('.vilda-lab-hist-card') ? 1000 : 550
+    ) + (parseFloat(styles.get('--vilda-lab-hist-scroll-reserve')) || 0) });
+    Object.defineProperty(scroll, 'scrollTop', {
+      get: () => Math.min(top, scroll.scrollHeight - scroll.clientHeight),
+      set: value => { top = Math.max(0, Math.min(value, scroll.scrollHeight - scroll.clientHeight)); },
+    });
+    env.win.requestAnimationFrame = callback => { frames.push(callback); };
+    const { widok } = otworz(env, sejf());
+    await gotowe(env);
+    const section = env.host.querySelector('.vilda-lab-hist');
+    section.style = { setProperty: (name, value) => styles.set(name, value), removeProperty: name => styles.delete(name) };
+    return { ...env, styles, scroll, section, widok, flush: () => frames.splice(0).forEach(callback => callback()) };
+  }
+
   it('segment Tabela | Wykresy z aria-pressed; domyślnie tabela, wybór zapamiętany per pacjent', async () => {
     const env = srodowisko();
     otworz(env, sejf());
@@ -471,6 +492,53 @@ describe('zakładka Badania: przełączniki i preferencje', () => {
     charts.click();
     expect(join.checked).toBe(false);
     expect(env.host.querySelectorAll('.vilda-lab-result-chart-line')).toHaveLength(0);
+  });
+
+  it('krótsza tabela dostaje tylko brakującą rezerwę po stopce, a dłuższy wykres nie zachowuje pustego ogona', async () => {
+    const env = await clampedViewport();
+    const toolbar = env.host.querySelector('.vilda-lab-hist-toolbar');
+    expect(env.styles.has('--vilda-lab-hist-scroll-reserve')).toBe(false);
+    przycisk(env, 'Wykresy').click(); env.flush();
+    env.scroll.scrollTop = 240;
+    przycisk(env, 'Tabela').focus(); przycisk(env, 'Tabela').click();
+    expect(env.styles.get('--vilda-lab-hist-scroll-reserve')).toBe('190px');
+    expect(env.scroll.scrollTop).toBe(240);
+    env.flush();
+    expect(env.styles.get('--vilda-lab-hist-scroll-reserve')).toBe('190px');
+    expect(env.host.querySelector('.vilda-lab-hist-toolbar')).toBe(toolbar);
+    const children = env.section.children;
+    expect(children.indexOf(env.host.querySelector('.vilda-lab-hist-footer')))
+      .toBe(children.indexOf(env.host.querySelector('.vilda-lab-hist-results')) + 1);
+    przycisk(env, 'Wykresy').click(); env.flush();
+    expect(env.styles.has('--vilda-lab-hist-scroll-reserve')).toBe(false);
+    expect(env.scroll.scrollTop).toBe(240);
+  });
+
+  it('zapytanie, filtr i odświeżenie usuwają rezerwę; spóźniona klatka przełącznika nie przywraca starego przewinięcia', async () => {
+    const env = await clampedViewport();
+    const shortView = () => {
+      przycisk(env, 'Wykresy').click(); env.flush();
+      env.scroll.scrollTop = 240;
+      przycisk(env, 'Tabela').click();
+      expect(env.styles.get('--vilda-lab-hist-scroll-reserve')).toBe('190px');
+    };
+    shortView();
+    const search = env.host.querySelector('.vilda-lab-hist-search-input');
+    search.value = 'TSH'; search.dispatch('input');
+    expect(env.styles.has('--vilda-lab-hist-scroll-reserve')).toBe(false);
+    env.flush();
+    expect(env.styles.has('--vilda-lab-hist-scroll-reserve')).toBe(false);
+    expect(env.scroll.scrollTop).toBe(50);
+    shortView();
+    const filter = env.host.querySelector('.vilda-lab-hist-panel-select');
+    filter.value = 'thyroid'; filter.dispatch('change');
+    env.flush();
+    expect(env.styles.has('--vilda-lab-hist-scroll-reserve')).toBe(false);
+    expect(env.scroll.scrollTop).toBe(50);
+    shortView();
+    await env.widok.refresh(); env.flush();
+    expect(env.styles.has('--vilda-lab-hist-scroll-reserve')).toBe(false);
+    expect(env.scroll.scrollTop).toBe(50);
   });
 
   it('telefon (≤480 px) bez zapisanej preferencji: domyślnie Tabela (decyzja 6.17)', async () => {

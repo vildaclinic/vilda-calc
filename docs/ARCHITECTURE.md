@@ -861,6 +861,17 @@ Workflow `.github/workflows/wyglad.yml` („Wygląd”, P-STYLE rata 1, decyzja 
 
 **Wyjątek dla dynamicznej geometrii osi LH/FSH (2026-10-04).** Zatwierdzona prezentacja wymaga ciągłego położenia granic i wyniku, zależnego od utrwalonych liczb. `vilda_lab_assessment_ui.js` ma jedno jawne miejsce ustawienia stylu: wyłącznie liczbowe zmienne `--low`, `--high`, `--value` i `--label-edge`. Kolory, typografia, układ i animacje pozostają w arkuszu komponentu. Skończone wartości i dozwolony zestaw zmiennych sprawdza test produkcyjnego renderera `lab-assessment-axes.test.mjs`; nie używamy klas zaokrąglających wynik do dyskretnych pozycji. Inwentarz świadomie odświeżono o ten jeden wpis skryptem `style-elementow.mjs --zapisz`; strażnik pozostałych miejsc pozostaje bez zmian.
 
+**Mierzona rezerwa przewijania historii badań (2026-11-14).**
+`vilda_lab_history_tab.js` przekazuje w jednym miejscu wyłącznie liczbę pikseli
+`--vilda-lab-hist-scroll-reserve`. To brakujący zakres przewijania po przełączeniu
+na krótszy widok, mierzony z `scrollTop`, `scrollHeight` i `clientHeight`.
+Arkusz komponentu stosuje go za stopką; lista wyników zachowuje naturalną wysokość.
+Zmiana filtra, danych lub zamknięcie widoku usuwa rezerwę. Stała klasa wymuszałaby
+pustą przestrzeń również wtedy, gdy zakresu nie brakuje. Inwentarz obejmuje ten
+jeden zapis; osobny test pilnuje jedynej dozwolonej zmiennej i braku innych zapisów
+stylu, a testy produkcyjnego renderera sprawdzają wysokość, reset i spóźnione klatki.
+Kolory, odstępy stałe i typografia pozostają w CSS.
+
 **Dynamiczna geometria powiadomienia C/C1 (2026-10-24, zatwierdzona makieta).**
 `vilda_save_feedback.js` ma cztery jawne zapisy stylu: `maxWidth`, `maxHeight`,
 `left` i `top`, wyłącznie skończone liczby pikseli obliczone z widocznego viewportu,

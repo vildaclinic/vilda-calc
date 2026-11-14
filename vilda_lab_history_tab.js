@@ -130,6 +130,7 @@
       var state = { gen: 0, destroyed: false, panel: 'all', joinLines: true, query: '', selected: null, view: null, data: null, timer: 0, retried: false, reminders: [], notice: null };
       var resultsHost = null;
       var viewButtons = [], joinLabel = null, joinInput = null;
+      var viewportReserve = 0, viewportRevision = 0;
       var labDetails = null, clcrDetails = null, detailsObserver = null, detailsRequest = 0;
       var initialPending = true;
       var pendingFocus = text(options.focusNoteId) || null;
@@ -223,7 +224,7 @@
             }
             script.addEventListener('load', function () { finish(win.ClcrRecordResources ? null : new Error('Moduł zapisanych obliczeń jest niedostępny.')); });
             script.addEventListener('error', function () { finish(new Error('Nie udało się wczytać zapisanych obliczeń.')); });
-            script.setAttribute('src', new URL('clcr_record_resources.js?v=25', moduleURL || win.location.href).href);
+            script.setAttribute('src', new URL('clcr_record_resources.js?v=26', moduleURL || win.location.href).href);
             timer = win.setTimeout(function () { finish(new Error('Upłynął czas wczytywania zapisanych obliczeń.')); }, 15000);
             doc.head.appendChild(script);
           });
@@ -246,6 +247,7 @@
       }
 
       function message(className, content, retry) {
+        resetViewportReserve();
         clear(section);
         var box = add(section, 'div', 'vilda-lab-hist-state ' + className);
         add(box, 'p', '', content);
@@ -256,6 +258,7 @@
 
       function load() {
         if (state.destroyed || host.isConnected === false) return Promise.resolve();
+        resetViewportReserve();
         initialPending = false;
         closeLabDetails(false);
         var gen = ++state.gen;
@@ -339,6 +342,18 @@
         if (state.data && !state.data.view.panels.length && state.data.view.clcr && state.data.view.clcr.measurements.length) return 'charts';
         return 'table';
       }
+      function setViewportReserve(pixels) {
+        var value = Math.max(0, Math.ceil(pixels || 0));
+        if (value === viewportReserve) return;
+        viewportReserve = value;
+        if (!section.style || typeof section.style.setProperty !== 'function') return;
+        if (value) section.style.setProperty('--vilda-lab-hist-scroll-reserve', value + 'px');
+        else section.style.removeProperty('--vilda-lab-hist-scroll-reserve');
+      }
+      function resetViewportReserve() {
+        viewportRevision++;
+        setViewportReserve(0);
+      }
       function preserveViewport(update) {
         var positions = [], element = host;
         while (element) {
@@ -347,9 +362,20 @@
         }
         var scrollX = win && (win.scrollX || win.pageXOffset) || 0;
         var scrollY = win && (win.scrollY || win.pageYOffset) || 0;
-        var gen = state.gen;
+        var gen = state.gen, revision;
         function restore() {
-          if (!current(gen)) return;
+          if (!current(gen) || revision !== viewportRevision) return;
+          // A shorter view can clamp a scroll container before restoration.
+          // Reserve only that missing range, after the footer, rather than
+          // stretching every short list away from its explanatory disclosure.
+          var missing = 0;
+          positions.forEach(function (position) {
+            var owner = position.element;
+            if (position.top > 0 && typeof owner.scrollHeight === 'number' && owner.clientHeight > 0) {
+              missing = Math.max(missing, position.top - Math.max(0, owner.scrollHeight - owner.clientHeight));
+            }
+          });
+          if (missing > 0) setViewportReserve(viewportReserve + missing);
           positions.forEach(function (position) {
             position.element.scrollTop = position.top;
             position.element.scrollLeft = position.left;
@@ -357,6 +383,7 @@
           if (win && typeof win.scrollTo === 'function') win.scrollTo(scrollX, scrollY);
         }
         update();
+        revision = viewportRevision;
         restore();
         // A real browser may apply scroll anchoring during its next layout.
         // The controls themselves stay connected, so their native focus stays too.
@@ -543,6 +570,7 @@
 
       function draw() {
         if (!state.data) return;
+        resetViewportReserve();
         var view = state.data.view;
         clear(section);
         remindersButton = null; viewButtons = []; joinLabel = null; joinInput = null;
@@ -593,6 +621,7 @@
         syncViewControls();
       }
       function drawResults() {
+        resetViewportReserve();
         if (!resultsHost || !state.data) return;
         if (win && win.VildaLabResultChart) {
           if (win.VildaLabResultChart.hidePreview) win.VildaLabResultChart.hidePreview(doc);
@@ -1238,6 +1267,7 @@
         refresh: function () { return load(); },
         destroy: function () {
           closeAllDetails(false);
+          resetViewportReserve();
           state.destroyed = true;
           state.gen++;
           if (state.timer && win) win.clearTimeout(state.timer);
