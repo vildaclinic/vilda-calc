@@ -17,6 +17,28 @@ export async function wczytajPacjenta(scope, patientId, dane = PACJENTKA) {
   }, { pid: patientId, dane });
 }
 
+/**
+ * LAB-PAKIETY PR8: pacjent z datą urodzenia i (opcjonalnie) stadium zapisanym w ocenie pokwitania wizyty —
+ * tak, jak zostawia je formularz główny. ocena: { os: 'Th' | 'G', stadium, data, wiekMies, biezace };
+ * biezace = stadium tej wizyty (dzisiejsze badanie), inaczej wcześniejsza obserwacja z karty.
+ */
+export async function wczytajPacjentaZOcena(scope, patientId, dane, ocena = null, dzis = '2026-06-17') {
+  await scope.evaluate(({ pid, dane, ocena, dzis }) => {
+    sessionStorage.setItem('vildaCurrentPatientId', pid);
+    window.VildaPersistence.writeShared(dane, { force: true });
+    const user = { ...dane, measuredAtISO: dzis };
+    if (ocena) {
+      const observations = { G: null, Th: null, P: null };
+      observations[ocena.os] = { stage: ocena.stadium, sex: dane.sex, observedAtISO: ocena.data, ageMonths: ocena.wiekMies, source: 'clinician-entry' };
+      user.pubertyAssessment = { version: 1, sex: dane.sex, observations };
+      user.pubertyAssessmentVisit = { version: 1, visitId: 'e2e-wizyta', ownerPatientId: pid, currentAxes: ocena.biezace ? [ocena.os] : [],
+        reference: { sex: dane.sex, ageMonths: dane.age * 12 + dane.ageMonths, measuredAtISO: dzis } };
+    }
+    window.VildaPersistence.writeMainSession({ version: 1, user });
+    document.dispatchEvent(new CustomEvent('vilda:patient-loaded', { detail: { patientId: pid } }));
+  }, { pid: patientId, dane, ocena, dzis });
+}
+
 export async function otworzPakiet(page, { pacjent = true } = {}) {
   await bezBaneraZgody(page);
   const patientId = await otworzSejf(page, '/przelicznik-jednostek.html');
