@@ -39620,3 +39620,44 @@ Jeden kanoniczny pomiar `K_mmol_d` / `clcr:K_mmol_d`; migawka `clcr-potassium-dz
 Populacja: dzieci oceniane do programu leczenia GH z powodu niskorosłości po SGA/IUGR w Polsce. Jest to lista postępowania (3 etapy, 10 kroków), nie algorytm kwalifikacji, dawkowania ani kalkulator SDS. Normy urodzeniowe wymagają wskazanego źródła i wieku ciążowego; historia IUGR nie zastępuje kryterium SGA. Rozbieżności dokumentów dotyczące oceny GH i granicy wieku oceny psychologicznej rozstrzyga ośrodek. Brak automatycznych terminów, dawek lub decyzji kwalifikacyjnej.
 
 Przypadek syntetyczny: import pliku do biblioteki fikcyjnego lekarza → 3 etapy/10 kroków i zachowane źródła/prawa → niezależne lokalne identyfikatory. Import i utworzenie planu nie oznaczają wykonania badań ani zakwalifikowania dziecka. Grupowane badania wymagają świadomej decyzji po ocenie kompletu, nie samego odebrania jednego wyniku. Test używa produkcyjnego kodeka i modelu. Nie zmieniono żadnych wzorów ani dotychczasowych interpretacji aplikacji.
+
+## Baza pacjentów: spóźniony fokus po montażu i próbka kotwicy przed przerysowaniem (P-BAZA-FOKUS, SW 1.1.532, 2026-11-14)
+
+**Zakres: bez zmiany klinicznej.** Dotyczy wyłącznie fokusu i zaznaczenia w polu wyszukiwania widoku `vilda_patients_list.js` oraz kolejności kroków w `tests/e2e/baza-pacjentow-window.spec.mjs`. Dane, sortowanie, filtry, listy, zapis i synchronizacja bez zmian.
+
+**Skąd.** Niestabilny test „kotwica nie przenosi się na inną listę; mały wynik i zmiana szerokości nie psują dużej bazy”: po `fill('0869')`, ponownym montażu z `initialState` z `view.read()` i `fill('')` licznik przez pełne 5 s pokazywał „Wyświetlono: 1” (także przy ponowieniu w CI, w PR niedotykającym plików tego testu). Odtworzenie: `--repeat-each=60 --workers=6` na 4 rdzeniach — 6 z 60 i 4 z 60 błędów; jeden worker przechodzi.
+
+### Przyczyna 1 — widok (realna także dla użytkownika)
+
+`fill('')` w Playwright 1.61.1 to dwa kroki: w stronie `input.select(); input.focus()`, potem osobne naciśnięcie `Delete`. `mount()` na desktopie planuje po 60 ms bezwarunkowe `search.focus()` i `setSelectionRange(selectionStart, selectionEnd)` z poprzedniego widoku. Zapis zdarzeń z dwóch nieudanych przebiegów jest za każdym razem taki sam:
+
+| zdarzenie | skąd | stan pola |
+|---|---|---|
+| `focusin INPUT` | `fill('')`: `select()` + `focus()` | zaznaczone `0869` |
+| `setSelectionRange(4,4)` | spóźniony timer montażu | kursor na końcu |
+| `keydown Delete` | `fill('')` | `sel=4,4`, nic do usunięcia → brak `input` |
+
+Użytkownik trafia w to samo, gdy obciążona strona uruchomi timer później niż jego pierwszy ruch: zaznaczone zapytanie zostaje zwinięte do starego kursora (Delete/wpisanie nie zastępuje tekstu), a fokus zostaje zabrany z wybranego wiersza.
+
+**Poprawka.** Timer montażu pomija przywrócenie, gdy fokus jest już w widoku (`root.contains(document.activeElement)`): ktoś — użytkownik albo test — wybrał już miejsce pracy po montażu. Gdy nikt nie działał, zachowanie bez zmian: pole dostaje fokus i zapamiętany kursor. Fokus przekazany przez powłokę (np. przycisk otwierający bazę) leży poza widokiem, więc nadal jest przenoszony do wyszukiwania.
+
+### Przyczyna 2 — kolejność kroków testu
+
+`page.clock` (fikstura `tests/support/test-czas.mjs`) zamienia `requestAnimationFrame` na timer, a okno wirtualnych wierszy przerysowuje się na zdarzenie `scroll`, które Chromium wysyła w kroku renderowania. Pod obciążeniem dwie „klatki” testu kończą się przed tym zdarzeniem; `firstVisible()` widzi wtedy dolny odstęp zamiast wiersza. Zapis z nieudanego przebiegu: `scrollTop 20000`, w DOM wiersze `fictional-0`…`fictional-15` (dół ostatniego −18667 px), `id: undefined`. W produkcji tego okna nie ma — `requestAnimationFrame` zamówione w obsłudze `scroll` wykonuje się w tej samej klatce przed malowaniem. Ten sam wzorzec wywrócił przy 8 workerach sąsiedni test „wirtualne wiersze zachowują kotwicę…” (1 z 225; lokalizator `data-patient-id="undefined"`).
+
+**Poprawka.** Pomocnicze `scrollListTo` i `resizeViewport` czekają na zdarzenie `scroll`/`resize`, a dopiero potem na dwie klatki; obsługa widoku jest zarejestrowana wcześniej, więc jej klatka idzie pierwsza. Kotwica jest odczytywana raz i ma być tą samą osobą przy każdej szerokości (wcześniej odczytywana ponownie po każdej zmianie szerokości, co mogło trafić w niedokończoną klatkę). Dodane `expect(before.id).toBeTruthy()`. Żadna asercja nie została usunięta ani osłabiona.
+
+### Regresja i walidacja
+
+Nowy test „spóźnione przywrócenie fokusu po powrocie nie nadpisuje zaznaczenia ani wybranego wiersza” wstrzymuje timery `mount()` i uruchamia je na żądanie: (a) bez działania użytkownika pole dostaje fokus i kursor `[4,4]`; (b) wiersz wybrany wcześniej zachowuje fokus; (c) zapytanie zaznaczone wcześniej pozostaje zaznaczone `[0,4]`, a `Delete` pokazuje całą bazę („Wyświetlono: 870”). Na kodzie sprzed poprawki (b) i (c) nie przechodzą deterministycznie.
+
+| wariant (`desktop-chromium`, 4 rdzenie) | wynik |
+|---|---|
+| baza, test docelowy, `--repeat-each=60 --workers=6` | 54/60; kopia z zapisem zdarzeń 56/60 |
+| tylko poprawka widoku | 5 rund: 60, 60, 60, 60, 57; potem 59/60, 60/60 (przyczyna 2) |
+| tylko zmiany testu | 59/60 (przyczyna 1, „Wyświetlono: 1”) |
+| obie poprawki, test docelowy, 6 workerów | 6 × 60/60 |
+| obie poprawki, test docelowy, 8 workerów | 60/60 |
+| obie poprawki, cały plik `--repeat-each=25 --workers=8` | 3 × 225/225 |
+
+Wersje: `vilda_patients_list.js` 5, `vilda_chrome.js` 289, `vilda_session_bridge.js` 205; SW 1.1.532 (`npm run podbij-wersje` po scaleniu `audyt` z #951 i #953, które zajęły SW 1.1.530 i 1.1.531 oraz `vilda_chrome.js` 288 i `vilda_session_bridge.js` 204).
