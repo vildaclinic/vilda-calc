@@ -106,7 +106,7 @@
 
         <div class="privacy-card">
           <h1>Polityka prywatności</h1>
-          <p class="privacy-subtitle">Ostatnia aktualizacja: październik 2026 &nbsp;·&nbsp; wagaiwzrost.pl</p>
+          <p class="privacy-subtitle">Ostatnia aktualizacja: listopad 2026 &nbsp;·&nbsp; wagaiwzrost.pl</p>
 
           <h2>1. Administrator danych osobowych</h2>
           <p>
@@ -196,6 +196,30 @@
                 <td>Zaszyfrowane dane pacjentów (baza <code>vilda_user_&lt;userId&gt;</code>)
                   — wyłącznie dla zalogowanych użytkowników (w trybie chmurowym zob. niżej)</td>
                 <td>Po usunięciu konta lub ręcznym wyczyszczeniu danych witryny</td>
+              </tr>
+              <tr>
+                <td><strong>IndexedDB</strong> (synchronizacja)</td>
+                <td>Kolejka zmian czekających na wysłanie do Twoich innych urządzeń oraz zmiany z innych
+                urządzeń, których to urządzenie nie umie jeszcze odczytać (baza
+                <code>vilda_sync_&lt;userId&gt;</code>) — tylko w trybie „Komputer prywatny” z włączoną
+                synchronizacją. Treść zmian jest zaszyfrowana tak jak dane pacjentów; jawne są tylko losowe
+                identyfikatory rekordów, rodzaj zmiany i jej chwila, potrzebne do porządkowania kolejki</td>
+                <td>Wysłana zmiana znika z kolejki zaraz po przyjęciu przez serwer; cała baza — po usunięciu
+                konta (poza trybem „Zaloguj jednorazowo”, w którym jej nie ma) lub ręcznym wyczyszczeniu danych
+                witryny</td>
+              </tr>
+              <tr>
+                <td><strong>localStorage</strong> (synchronizacja)</td>
+                <td>Dane techniczne synchronizacji, bez danych pacjentów: losowy identyfikator tego urządzenia
+                (osobny dla każdego konta), znacznik dokończenia usuwania konta (sam identyfikator konta, gdy
+                usuwanie nie skończyło się za pierwszym razem), ustawienie „Wysyłaj zmiany pojedynczo” (gdy
+                zostało zmienione na tym urządzeniu), znacznik karty przeglądarki, która wysyła zmiany, numery
+                ostatnich 500 zmian wysłanych z tego urządzenia i numer ostatniej zmiany zastosowanej z innych
+                urządzeń</td>
+                <td>Identyfikator urządzenia — przy usunięciu konta (poza trybem „Zaloguj jednorazowo”);
+                znacznik usuwania — po dokończeniu usuwania przy następnym odblokowaniu (gdy usunięte konto było
+                ostatnie na urządzeniu, może zostać do najbliższego logowania albo założenia konta); pozostałe —
+                po ręcznym wyczyszczeniu danych witryny</td>
               </tr>
             </tbody>
           </table>

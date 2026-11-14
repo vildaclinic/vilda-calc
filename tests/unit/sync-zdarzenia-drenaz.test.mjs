@@ -21,8 +21,9 @@
 //     oldestSeq − 1, drenaż dalej, wymuszone pełne pobranie raz; DZ9 cursorAhead → headSeq, wymuszone pobranie raz;
 //     DZ10 dziura → wymuszone pobranie przy pierwszym wykryciu, ślad sync.gap, przeskok przy trzecim jak dotąd;
 //     DZ11 jeden drenaż po trwającym (czekajNaDrenaz sięga headSeq z chwili wywołania; kolejne prośby dołączają);
-//     DZ12 uśpienie: przy „events” bez flagi wszystko jak dotąd (bez bazy kolejki, nowych kluczy, wymuszenia, drenażu
-//     po trwającym, pierścienia); DZ13 sesja: blokada w trakcie zapisu kwarantanny → bez zapisu i bez kursora;
+//     DZ12 wyłączony na urządzeniu: przy „events” i fladze '0' wszystko jak dotąd (bez bazy kolejki, nowych kluczy,
+//     wymuszenia, drenażu po trwającym, pierścienia; do E2-PR6 — bez flagi); DZ12b od E2-PR6: bez klucza flagi drenaż
+//     z dziennikiem jak przy '1' (PR włączający, wiersz 12 planu); DZ13 sesja: blokada w trakcie zapisu kwarantanny → bez zapisu i bez kursora;
 //     DZ14 markSyncCaughtUp (bramka, blokada, co najwyżej raz na godzinę); DZ15 strażniki źródła.
 // DZ16 A ≡ B na prawdziwym drenażu (wzorzec: blok p. 7d tests/unit/sync-dziennik-wlasnosciowy.test.mjs, świat N1):
 //     FIFO, kwarantanna bez aktualizacji, po aktualizacji (ponowienie + sufiks) — literał różnic wobec nadawcy.
@@ -99,7 +100,7 @@ async function wyslij(d) {
   return t.wiersze.map((r, i) => ({ kind: r.kind, eid: r.eid, env: r.env, seq: p.accepted[i].seq }));
 }
 // Świat: A (natywny, nowe konto, karta 1, rejestracja pełną wysyłką przy zamkniętej bramce), B — bliźniak A (klon atrapy
-// IndexedDB). Potem flaga '1' na obu (o.flaga), detectApi i rozruch: karta 2 na A jako zdarzenie (seq 1…), pierwsze
+// IndexedDB). Potem flaga '1' na obu (o.flaga; null — bez klucza, od E2-PR6 też włączony), detectApi i rozruch: karta 2 na A jako zdarzenie (seq 1…), pierwsze
 // pobranie B (pełne + kursor 0 → legacy) i pobranie A — oba kursory = headSeq, dalej drenaż stronami.
 async function swiat(o = {}) {
   vi.useFakeTimers({ toFake: ['Date'] });
@@ -122,7 +123,7 @@ async function swiat(o = {}) {
   krok();
   const k2 = await A.zapiszKarte(2);
   s.P2 = k2.patientId;
-  if (flaga === '1') await wyslij(A);
+  if (flaga !== '0' && o.events !== false) await wyslij(A);
   else expect(await A.wyslijDelteKarty(k2.patientId)).toBeTruthy();
   await cisza(s.wszystkie());
   expect((await B.sync.syncPull({ pierwszePobranie: true })).action).toBe('merged');
@@ -513,8 +514,8 @@ describe('P-SYNC-DRENAZ-ZDARZEN — drenaż zdarzeń z dziennikiem (E2-PR4c)', (
     expect(B.kursor()).toBe(head);
   });
 
-  it('DZ12 [zielony także na bazie]: uśpienie — „events” w health bez flagi: drenaż jak dotąd (applyEncryptedDelta, bez kwarantanny, bez bazy kolejki, bez nowych kluczy, bez wymuszenia, bez drenażu po trwającym, bez pierścienia)', async () => {
-    const s = await swiat({ flaga: null });
+  it('DZ12 [zielony także na bazie]: wyłączony na urządzeniu — „events” w health i flaga „0”: drenaż jak dotąd (applyEncryptedDelta, bez kwarantanny, bez bazy kolejki, bez nowych kluczy, bez wymuszenia, bez drenażu po trwającym, bez pierścienia)', async () => {
+    const s = await swiat({ flaga: '0' });
     const { A, B } = s;
     expect(B.sync.isEventLogEnabled ? B.sync.isEventLogEnabled() : false).toBe(false);
     let delty = 0;
@@ -560,6 +561,27 @@ describe('P-SYNC-DRENAZ-ZDARZEN — drenaż zdarzeń z dziennikiem (E2-PR4c)', (
     expect(A.wlasne()).toBe(null);
   });
 
+
+  it('DZ12b [E2-PR6: czerwony na bazie]: bez klucza flagi (domyślnie od PR włączającego) — drenaż z dziennikiem jak przy „1”: applyEncryptedEvent, kursor do headSeq, appliedUpTo, nieczytelne do kwarantanny', async () => {
+    const s = await swiat({ flaga: null });
+    const { A, B } = s;
+    expect(A.win.localStorage.getItem(FLAGA), 'bez klucza flagi').toBe(null);
+    expect(B.sync.isEventLogEnabled()).toBe(true);
+    krok();
+    const k3 = await A.zapiszKarte(3);
+    const ev = await wyslij(A);
+    expect(ev.length).toBeGreaterThan(0);
+    s.atrapa.dopisz({ src: 'ev', payload: { iv: b64(Buffer.alloc(12, 3)), data: b64(Buffer.from('fikcyjny')) } });
+    let delty = 0;
+    const f = B.vault.applyEncryptedDelta;
+    B.vault.applyEncryptedDelta = function (...a) { delty += 1; return f.apply(this, a); };
+    const w = await B.pobierz();
+    expect(w.drain).toMatchObject({ tryb: 'strony', stop: 'head', dziennik: true, zastosowane: ev.length, nieczytelne: 1, kwarantanna: 1 });
+    expect(delty, 'drenaż z dziennikiem nie woła applyEncryptedDelta').toBe(0);
+    expect(B.kursor()).toBe(s.atrapa.slot().dz.head);
+    expect(await B.vault.getPatient(k3.patientId), 'karta 3 z dziennika').toBeTruthy();
+    expect((await B.indexedDB.databases()).map((x) => x.name).filter((n) => /^vilda_sync_/.test(n)).length, 'baza kolejki z kwarantanną').toBe(1);
+  });
   it('DZ13 [czerwony na bazie]: blokada sejfu w trakcie zapisu do kwarantanny → bez wpisu, bez zapisu kursora z tej strony', async () => {
     const s = await swiat();
     const { B } = s;
