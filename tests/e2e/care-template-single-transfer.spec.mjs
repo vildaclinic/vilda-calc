@@ -58,6 +58,14 @@ async function account(page, label) {
   await page.reload({ waitUntil: 'load' });
   await readyForPatient(page);
   await page.evaluate(() => window.VildaSyncIntegration.setSyncEnabled(false));
+  // Patient saves schedule an independent account-backup download after 2s.
+  // Keep that feature off in this fixture so the first download after the
+  // explicit template action must itself pass every filename/payload check.
+  const backup = await page.evaluate(async () => {
+    await window.VildaFileExport.setAutoBackupEnabled(false);
+    return window.VildaFileExport.getAutoBackupStatus();
+  });
+  expect(backup).toMatchObject({ enabled: false, effectivelyEnabled: false });
   const patientId = await page.evaluate(async payload => {
     await window.VildaCarePlans.ensureTemplateLibrary({ ui: false });
     return (await window.VildaVault.savePatient(payload, { dedup: false })).patientId;

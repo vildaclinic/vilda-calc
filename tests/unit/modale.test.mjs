@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { zwartyCss } from '../support/css-zwarty.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
-import { korzen, zrodlo } from '../support/silnik-bmi.mjs';
+import { funkcjaZ, korzen, zrodlo } from '../support/silnik-bmi.mjs';
 
 // P-MODALE — zgłoszenie właściciela (2026-09-17): modale (epikryza, „Jak chronimy dane?", „Siła
 // szyfrowania"…) wchodziły w konflikt z dockiem i strzałką w trybie mobilnym. Pomiar pokazał, że
@@ -20,6 +20,48 @@ import { korzen, zrodlo } from '../support/silnik-bmi.mjs';
 const shellJs = zrodlo('vilda_shell.js');
 // arkusz jest sformatowany (P-STYLE rata 1); wzorzec niżej jest w postaci zwartej
 const shellCss = zwartyCss(zrodlo('vilda_shell.css'));
+
+// Real shell projection, with only viewport/DOM measurements supplied by the
+// fixture. The non-modal M1 canvas deliberately has full viewport dimensions.
+function projectDock(nodes, initiallyHidden = false) {
+  const classes = new Set(initiallyHidden ? ['vilda-pane-modal-open'] : []);
+  const host = {
+    getElementById: id => id === 'mobileBottomDock' ? { getBoundingClientRect: () => ({ height: 84, top: 760 }) } : null,
+    documentElement: { classList: { toggle(name, value) { if (value) classes.add(name); else classes.delete(name); } } },
+  };
+  const doc = { body: {}, querySelectorAll: () => nodes };
+  const win = { innerWidth: 390, innerHeight: 844, getComputedStyle: node => node.css };
+  const frame = { contentDocument: doc, contentWindow: win, getBoundingClientRect: () => ({ top: 0, bottom: 844 }) };
+  new Function('c', 'l', 'o', `${funkcjaZ(shellJs, 'Mw')}; Mw();`)('start', { start: { frame } }, host);
+  return classes.has('vilda-pane-modal-open');
+}
+
+function overlay({ preview = false, parent = null, bottom = 844, css = {} } = {}) {
+  return {
+    css: { position: 'fixed', display: 'block', visibility: 'visible', opacity: '1', ...css },
+    getBoundingClientRect: () => ({ width: 390, height: bottom, bottom }),
+    closest: selector => selector === '.vilda-lab-point-preview' && (preview || parent?.closest(selector)) ? {} : null,
+  };
+}
+
+describe('P-MODALE: readonly result preview keeps shell navigation available', () => {
+  it('does not mistake the full-viewport transparent M1 layer for a modal, and clears an old hidden state', () => {
+    expect(projectDock([overlay({ preview: true })], true)).toBe(false);
+  });
+  it('ignores the presentation canvas inside that same M1 layer', () => {
+    const preview = overlay({ preview: true });
+    expect(projectDock([overlay({ parent: preview })])).toBe(false);
+  });
+  it('still hides the dock for a real full-screen detail dialog alongside the preview', () => {
+    expect(projectDock([overlay({ preview: true }), overlay()])).toBe(true);
+  });
+  it('does not exempt other transparent fixed overlays or arbitrary popovers', () => {
+    expect(projectDock([overlay({ css: { pointerEvents: 'none', backgroundColor: 'transparent' } })])).toBe(true);
+  });
+  it('keeps the dock for an overlay that ends at the dock boundary', () => {
+    expect(projectDock([overlay({ bottom: 760 })])).toBe(false);
+  });
+});
 
 describe('P-MODALE: powłoka chowa dock, gdy modal z iframe\'a sięga pod dock', () => {
   it('vilda_shell.js obserwuje aktywny panel (childList + subtree + class/style/hidden) i przełącza vilda-pane-modal-open', () => {
