@@ -1,8 +1,21 @@
 import { expect, test } from '../support/test-czas.mjs';
 import { openCalculator, applyAcr, applyU25, saveVisible, memory, selectPatient } from '../support/klirens-patient-record.mjs';
 import { showClcrResults, showBadaniaView } from '../support/badania-klirens.mjs';
+import { pointViewport, expectSameViewport } from '../support/lab-chart-m1.mjs';
 
 test.use({ chwila: '2026-10-25T12:00:00Z' });
+
+async function openSelectedChartResult(page, point) {
+  await point.scrollIntoViewIfNeeded();
+  const position = await pointViewport(point);
+  await point.tap();
+  await expect(point).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('.vilda-lab-point-preview-bubble')).toBeVisible();
+  await expect(page.locator('dialog.vilda-result-details-dialog[open]')).toHaveCount(0);
+  expectSameViewport(position, await pointViewport(point));
+  await point.locator('xpath=ancestor::article[1]').locator('.vilda-lab-hist-chart-details').tap();
+  await expect(page.locator('#detailsDialog')).toBeVisible();
+}
 
 async function expectGeometry(page, { editor = false } = {}) {
   const measured = await page.evaluate(withEditor => ({
@@ -40,7 +53,7 @@ for (const width of [390, 320]) {
     expect(chartScroll, 'three accepted demo points fit the phone without chart panning').toBeLessThanOrEqual(1);
     await expectGeometry(page);
     const middle = notes[1].id;
-    await history.locator(`.vilda-lab-hist-card[data-source="clcr"] .vilda-lab-result-chart-point[data-note-id="${middle}"]`).tap();
+    await openSelectedChartResult(page, history.locator(`.vilda-lab-hist-card[data-source="clcr"] .vilda-lab-result-chart-point[data-note-id="${middle}"]`));
     await expect(page.locator('#calculationDetails')).toHaveAttribute('data-note-id', middle);
     await page.locator('#editMeasurement').tap();
     await expectGeometry(page, { editor: true });
@@ -79,7 +92,7 @@ test('390px: U25 serum fields and historical age/sex keep16px/48px dimensions', 
   const [note] = await saveVisible(page);
   await page.locator('#clcrOpenBadaniaBtn').tap();
   await showClcrResults(page, 'charts');
-  await page.locator(`.vilda-lab-hist-card[data-source="clcr"] .vilda-lab-result-chart-point[data-note-id="${note.id}"]`).tap();
+  await openSelectedChartResult(page, page.locator(`.vilda-lab-hist-card[data-source="clcr"] .vilda-lab-result-chart-point[data-note-id="${note.id}"]`));
   await page.locator('#editMeasurement').tap();
   await page.locator('#changeHistoricalContext').tap();
   const geometry = await expectGeometry(page, { editor: true });
