@@ -39621,7 +39621,7 @@ Populacja: dzieci oceniane do programu leczenia GH z powodu niskorosłości po S
 
 Przypadek syntetyczny: import pliku do biblioteki fikcyjnego lekarza → 3 etapy/10 kroków i zachowane źródła/prawa → niezależne lokalne identyfikatory. Import i utworzenie planu nie oznaczają wykonania badań ani zakwalifikowania dziecka. Grupowane badania wymagają świadomej decyzji po ocenie kompletu, nie samego odebrania jednego wyniku. Test używa produkcyjnego kodeka i modelu. Nie zmieniono żadnych wzorów ani dotychczasowych interpretacji aplikacji.
 
-## Baza pacjentów: spóźniony fokus po montażu i próbka kotwicy przed przerysowaniem (P-BAZA-FOKUS, SW 1.1.530, 2026-11-14)
+## Baza pacjentów: spóźniony fokus po montażu i próbka kotwicy przed przerysowaniem (P-BAZA-FOKUS, SW 1.1.531, 2026-11-14)
 
 **Zakres: bez zmiany klinicznej.** Dotyczy wyłącznie fokusu i zaznaczenia w polu wyszukiwania widoku `vilda_patients_list.js` oraz kolejności kroków w `tests/e2e/baza-pacjentow-window.spec.mjs`. Dane, sortowanie, filtry, listy, zapis i synchronizacja bez zmian.
 
@@ -39660,4 +39660,4 @@ Nowy test „spóźnione przywrócenie fokusu po powrocie nie nadpisuje zaznacze
 | obie poprawki, test docelowy, 8 workerów | 60/60 |
 | obie poprawki, cały plik `--repeat-each=25 --workers=8` | 3 × 225/225 |
 
-Wersje: `vilda_patients_list.js` 5, `vilda_chrome.js` 288, `vilda_session_bridge.js` 204; SW 1.1.529 → 1.1.530 (`npm run podbij-wersje`).
+Wersje: `vilda_patients_list.js` 5, `vilda_chrome.js` 288, `vilda_session_bridge.js` 204; SW 1.1.531 (`npm run podbij-wersje` po scaleniu `audyt` z E2-PR6, które zajęło 1.1.530).
