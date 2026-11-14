@@ -29,6 +29,11 @@ function installDebounceObserver() {
     if (button) window.__clearTrustedClicks.push({ id: button.id, trusted: event.isTrusted });
   }
   window.addEventListener('click', observeClearClick, true);
+  // Shell only: count each pane's load. The capture listener runs in the same
+  // dispatch as vilda_shell.js's own load handler (Pt → Ss_refresh + next preload).
+  document.addEventListener('load', event => {
+    if (event.target?.matches?.('iframe.app-pane')) event.target.__clearPaneLoads = (event.target.__clearPaneLoads || 0) + 1;
+  }, true);
   function source(delay, stack) {
     if (delay === 300 && /\/vilda_data_import_export\.js(?:\?|:)/.test(stack)) return 'main300';
     if (delay === 300 && /\/vilda_puberty_assessment_state\.js(?:\?|:)/.test(stack)) return 'puberty300';
@@ -134,6 +139,7 @@ export async function openFictionalClearAccount(page, context, { path = '/index.
   // the first edit. Their startup callbacks can write the same shared session.
   await readyClearPage(owner);
   if (shell) {
+    await waitForShellPanePreload(page);
     const panes = page.locator('iframe.app-pane[title="Start"],iframe.app-pane[title="DocPro"],iframe.app-pane[title="Kalkulator klirensu"]');
     for (const pane of await panes.elementHandles()) {
       const sibling = await pane.contentFrame();
@@ -143,6 +149,29 @@ export async function openFictionalClearAccount(page, context, { path = '/index.
   await expect.poll(() => owner.evaluate(() => window.VildaSaveStatusIndicator.getState())).toBe('hidden');
   await owner.waitForFunction(() => window.__clearDebounceProbe.pending() === 0);
   return { network, owner };
+}
+
+// The shell keeps preloading background panes: after each pane's load it takes
+// the next slot with requestIdleCallback (a fake timer under page.clock), and
+// every pane load reconciles the active owner's save status from the shared
+// reference (vilda_shell.js Pt → Ss_refresh → reconcileFromSharedReference).
+// A pane finishing after the armed edit published the live decision and ended
+// the stale-status window, so let the preloader run out before the edit.
+async function waitForShellPanePreload(page) {
+  for (let settled = null; ;) {
+    // One snapshot: every pane has loaded, and how many there are.
+    const loaded = await page.waitForFunction(() => {
+      const panes = [...document.querySelectorAll('iframe.app-pane')];
+      return panes.every(pane => pane.__clearPaneLoads > 0 && pane.contentDocument?.readyState === 'complete')
+        && panes.length;
+    });
+    const count = await loaded.jsonValue();
+    await loaded.dispose();
+    if (count === settled) return;
+    settled = count;
+    // Our idle callbacks are queued after the shell's slot, so it runs first.
+    await page.evaluate(() => new Promise(resolve => { requestIdleCallback(() => { requestIdleCallback(resolve); }); }));
+  }
 }
 
 async function loadPatient(frame, patientId, choice = 'new', options = {}) {
