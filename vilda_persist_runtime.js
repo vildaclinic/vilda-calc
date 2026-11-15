@@ -190,6 +190,16 @@ function Pp_rdzen(a){
     });
   }catch{}
 }
+function Pp_flushOwnedClcr(){
+  if(!document.getElementById("clcrForm"))return;
+  try{
+    // This is an explicit writer boundary, never a presence/status read.
+    const runtime=window.VildaClcrSessionRuntime,options={force:true,reason:"shared-state-flush"};
+    if(runtime&&typeof runtime.saveNow==="function")return runtime.saveNow(options);
+    if(typeof window.clcrSaveSessionNow==="function")return window.clcrSaveSessionNow(options);
+    if(typeof window.saveClcrSession==="function")return window.saveClcrSession(options);
+  }catch(error){E("app:persistence","Nie udało się zapisać bieżącej sesji Klirensu",error)}
+}
 function x(e){
   const force=!!(e&&e.force),owner=Pp_captureWriter();
   if(!owner||B||Re()||Pp_obcy()){Ke();return}
@@ -203,6 +213,8 @@ function x(e){
     if(queued){Gq5r(state);Pp_nazwa(state);Pp_rdzen(state)}
     _e(state);re(state);const persisted=state[b];
     st(persisted);_e(state);re(state);
+    if(!Pp_writerCurrent(owner))return;
+    Pp_flushOwnedClcr();
     if(!Pp_writerCurrent(owner))return;
     const meaningful=ze(state);
     // Even read-only module hooks can re-enter and complete another visit.

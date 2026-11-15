@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import vm from 'node:vm';
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { powloka } from '../support/powloka-harness.mjs';
 
@@ -65,10 +66,112 @@ function attachNativeCollector(h) {
   return { api, collect, capture, uuid: h.win.crypto.randomUUID, renalSave: h.win.VildaClcrSessionRuntime.saveNow };
 }
 
+function attachNativeRenalWriter(h) {
+  const native = attachNativeCollector(h);
+  Object.values(h.fields).forEach(field => { field.addEventListener = () => {}; });
+  for (const [id, value] of Object.entries({ formulaPicker: 'ckid_u25', Scr: '', CA_collectionHours: '24', CA_collectionSource: 'assumed-24h' })) {
+    h.fields[id] = { ...h.fields.weight, id, type: 'text', value, style: {}, addEventListener() {} };
+  }
+  const form = { id: 'clcrForm', tagName: 'FORM', addEventListener() {},
+    querySelectorAll: () => Object.values(h.fields).filter(field => field !== form) };
+  h.fields.clcrForm = form;
+  h.document.querySelector = () => null;
+  h.win.currentVersion = 'advanced';
+  const context = vm.createContext({ window: h.win, document: h.document, setTimeout, clearTimeout, Date });
+  for (const file of ['clcr_collection_duration.js', 'inline_kalkulator_klirens_07.js']) {
+    vm.runInContext(source(file), context, { filename: file });
+  }
+  const adapter = h.win.VildaPersistence;
+  const write = vi.fn(value => adapter.writeClcrSession(value));
+  h.win.VildaPersistence = { ...adapter, writeClcrSession: write };
+  return { ...native, write };
+}
+
 beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(new Date('2026-11-06T12:00:00Z')); });
 afterEach(() => { vi.clearAllTimers(); vi.useRealTimers(); vi.restoreAllMocks(); });
 
 describe('queued shared state retains its document and visit authority', () => {
+  it.each(['runtime', 'clcrSaveSessionNow', 'saveClcrSession'])('the shared writer explicitly saves owned renal defaults through %s without allocating a visit', route => {
+    const h = harness(), native = attachNativeRenalWriter(h);
+    if (route !== 'runtime') delete h.win.VildaClcrSessionRuntime;
+    if (route === 'saveClcrSession') delete h.win.clcrSaveSessionNow;
+    expect(h.win.VildaPersistence.readClcrSession()).toBeNull();
+    h.win.vildaPersistFlushNow({ force: true });
+    expect(native.write).toHaveBeenCalledTimes(1);
+    expect(h.win.VildaPersistence.readClcrSession().inputs).toMatchObject({ CA_collectionHours: '24', Scr: '' });
+    expect(native.collect).not.toHaveBeenCalled();
+    expect(native.uuid).not.toHaveBeenCalled();
+    expect(h.read().weight).toBe('48');
+  });
+
+  it('reading the current renal projection does not save defaults or allocate a visit', () => {
+    const h = harness(), native = attachNativeRenalWriter(h);
+    const first = native.api.captureCurrentUserDataReadOnly();
+    const second = native.api.captureCurrentUserDataReadOnly();
+    expect(first.clcr.inputs.CA_collectionHours).toBe('24');
+    expect(second).toEqual(first);
+    expect(native.write).not.toHaveBeenCalled();
+    expect(h.win.VildaPersistence.readClcrSession()).toBeNull();
+    expect(native.collect).not.toHaveBeenCalled();
+    expect(native.uuid).not.toHaveBeenCalled();
+  });
+
+  it.each(['visit', 'account'])('a reentrant renal collector cannot publish old shared or renal data after a new %s', change => {
+    const h = harness(), native = attachNativeRenalWriter(h);
+    const freshRenal = { version: 2, inputs: { Scr: '0.9' } };
+    let current, entered = false;
+    Object.defineProperty(h.fields.CA_collectionHours, 'value', { get() {
+      if (!entered) {
+        entered = true;
+        if (change === 'visit') h.nextVisit();
+        else h.win.VildaVault.getCurrentUser = () => ({ userId: 'fictional-next-owner' });
+        current = h.seed({ ...h.base, weight: '50' });
+        h.win.VildaPersistence.writeClcrSession(freshRenal);
+      }
+      return '24';
+    } });
+    h.win.vildaPersistFlushNow({ force: true });
+    expect(entered).toBe(true);
+    expect(native.write).toHaveBeenCalledTimes(1); // Only the new owner's explicit seed.
+    expect(h.win.VildaPersistence.readClcrSession()).toEqual(freshRenal);
+    expect(h.read()).toEqual(current);
+    expect(native.capture).not.toHaveBeenCalled();
+    expect(native.collect).not.toHaveBeenCalled();
+    expect(native.uuid).not.toHaveBeenCalled();
+  });
+
+  it.each(['locked', 'foreign-patient', 'inactive'])('a queued shared writer cannot save renal defaults after becoming %s', change => {
+    const h = harness(), native = attachNativeRenalWriter(h);
+    h.edit('47');
+    if (change === 'locked') h.win.VildaVault.isUnlocked = () => false;
+    if (change === 'foreign-patient') h.win.sessionStorage.setItem('vildaCurrentPatientId', 'fictional-other-patient');
+    if (change === 'inactive') {
+      h.shell.navigate('docpro'); // The valid outgoing flush precedes deactivation.
+      native.write.mockClear();
+    }
+    const current = h.read(), renal = h.win.VildaPersistence.readClcrSession();
+    vi.advanceTimersByTime(500);
+    expect(native.write).not.toHaveBeenCalled();
+    expect(h.win.VildaPersistence.readClcrSession()).toEqual(renal);
+    expect(h.read()).toEqual(current);
+    expect(native.collect).not.toHaveBeenCalled();
+    expect(native.uuid).not.toHaveBeenCalled();
+  });
+
+  it('a normal shared flush respects restore pause before saving the owned renal form', () => {
+    const h = harness(), native = attachNativeRenalWriter(h);
+    h.win.VildaPersistence.pauseAutosave(900);
+    h.win.vildaPersistFlushNow();
+    expect(native.write).not.toHaveBeenCalled();
+    expect(h.win.VildaPersistence.readClcrSession()).toBeNull();
+    vi.advanceTimersByTime(901);
+    h.win.vildaPersistFlushNow();
+    expect(native.write).toHaveBeenCalledTimes(1);
+    expect(h.win.VildaPersistence.readClcrSession().inputs.CA_collectionHours).toBe('24');
+    expect(native.collect).not.toHaveBeenCalled();
+    expect(native.uuid).not.toHaveBeenCalled();
+  });
+
   it('the delayed meaningful-data check cannot create a visit or change the captured form', () => {
     const h = harness();
     const native = attachNativeCollector(h);
@@ -186,11 +289,12 @@ describe('queued shared state retains its document and visit authority', () => {
     h.fields.clcrForm = { id: 'clcrForm' };
     h.win.VildaClcrSessionRuntime.captureCurrentSessionReadOnly = vi.fn(() => ({ version: 2, inputs: {} }));
     expect(native.api.hasMeaningfulMainSessionData(native.api.captureCurrentUserDataReadOnly())).toBe(false);
+    expect(native.renalSave).not.toHaveBeenCalled();
     h.win.vildaPersistFlushNow({ force: true });
     expect(h.win.VildaPersistence.readMainSession()).toBeNull();
     expect(h.win.sessionStorage.getItem('sharedUserData')).toBeNull();
     expect(native.collect).not.toHaveBeenCalled();
-    expect(native.renalSave).not.toHaveBeenCalled();
+    expect(native.renalSave).toHaveBeenCalledExactlyOnceWith({ force: true, reason: 'shared-state-flush' });
   });
 
   it.each(['null', 'throw'])('an independent renal-session %s read distinguishes absence from unavailability', mode => {
