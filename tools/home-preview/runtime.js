@@ -163,6 +163,9 @@
   function bootScreen() {
     const screen = document.createElement('div');
     screen.id = 'vildaHomePreviewBoot';
+    // Native locked-account CSS hides body children with !important. Only this
+    // explanatory screen is visible; the vault and clinical UI remain locked.
+    screen.style.setProperty('visibility', 'visible', 'important');
     screen.setAttribute('role', 'status');
     const panel = document.createElement('div');
     const title = document.createElement('strong'); title.textContent = 'Podgląd nowej strony głównej';

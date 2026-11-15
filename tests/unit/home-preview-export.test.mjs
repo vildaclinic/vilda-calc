@@ -101,6 +101,13 @@ describe('separate homepage preview export', () => {
     expect(() => demoAccessDocument('<html><body>No main</body></html>')).toThrow(/subscription document/);
   });
 
+  test('omitting subscription handlers cannot join surrounding fragments into a new script element', () => {
+    const malformed = '<html><head></head><body><main>Original</main><scr<script src="inline_subskrypcja_00.js"></script>ipt src="unexpected.js"></script></body></html>';
+    const transformed = demoAccessDocument(malformed);
+    expect(transformed).not.toContain('<script');
+    expect(transformed).toContain('<scr\nipt src="unexpected.js">');
+  });
+
   test('build identity changes with source bytes and rebuild safely updates its own output', async () => {
     const fixture = await repository();
     const first = await exportPreview(fixture);
@@ -197,7 +204,8 @@ function fictionalNativeVault(patients = []) {
 function bootPreview({ storage, vault, locks, pathname = '/index.html', hash = '', opened = true, hasAuth = true, authReady = () => true, hostedFrame = false, sameOriginWrapper = false }) {
   const nodes = [], listeners = new Map(), classes = new Set(['vilda-pro-inactive']);
   const calls = { reload: 0, timers: 0 };
-  const node = () => ({ append() {}, remove() {}, setAttribute() {}, addEventListener() {} });
+  const node = () => ({ append() {}, remove() {}, setAttribute() {}, addEventListener() {},
+    style: { properties: new Map(), setProperty(name, value, priority) { this.properties.set(name, { value, priority }); } } });
   const document = {
     readyState: 'complete',
     addEventListener(type, callback) { const entries = listeners.get(type) || []; entries.push(callback); listeners.set(type, entries); },
@@ -329,6 +337,17 @@ describe('standalone demo access', () => {
     expect(vault.calls.unlock).toHaveLength(0); expect(vault.calls.listPatients).toHaveLength(0);
     expect(frame.calls.reload).toBe(0);
     expect(frame.classes.has('vilda-pro-inactive')).toBe(true);
+  });
+
+  test('the refusal explanation overrides native locked-child visibility only on its own screen', async () => {
+    const vault = fictionalNativeVault(); vault.isUnlocked = () => false;
+    const frame = bootPreview({ storage: previewStorage(), vault, pathname: '/subskrypcja.html', opened: false });
+    expect((await previewFinished(frame.window)).status).toBe('error');
+    const screen = frame.nodes.find(node => node.id === 'vildaHomePreviewBoot');
+    expect(screen.style.properties.get('visibility')).toEqual({ value: 'visible', priority: 'important' });
+    expect(frame.nodes.filter(node => node !== screen).every(node => !node.style.properties.has('visibility'))).toBe(true);
+    expect(vault.isUnlocked()).toBe(false);
+    expect(vault.calls.unlock).toHaveLength(0); expect(vault.calls.listPatients).toHaveLength(0);
   });
 
   test('legal information without auth remains readable without waiting, creating an account or scheduling polling', async () => {

@@ -83,7 +83,8 @@ export function demoAccessDocument(source) {
   </main>`)
     .replace(/<title>[\s\S]*?<\/title>/i, '<title>Vilda — dostęp demonstracyjny</title>')
     .replace(/<meta\b[^>]*\bname=["']description["'][^>]*>/i, '<meta name="description" content="Podgląd funkcji lekarskich na fikcyjnym koncie, bez aktywacji subskrypcji.">')
-    .replace(/<script\b[^>]*\bsrc=["']inline_subskrypcja_0[01]\.js(?:\?[^"']*)?["'][^>]*>\s*<\/script>/gi, '')
+    // Keep a separator so removing a handler cannot concatenate HTML tokens.
+    .replace(/<script\b[^>]*\bsrc=["']inline_subskrypcja_0[01]\.js(?:\?[^"']*)?["'][^>]*>\s*<\/script>/gi, '\n')
     .replace(/(<a\b[^>]*\bhref=["']subskrypcja\.html["'][^>]*>)Vilda PRO(<\/a>)/gi, '$1Dostęp demonstracyjny$2');
 }
 
