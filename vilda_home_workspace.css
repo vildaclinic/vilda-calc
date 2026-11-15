@@ -38,6 +38,10 @@
   white-space: nowrap;
 }
 .vilda-home-workspace .vhome-visit-date { font-variant-numeric: tabular-nums; }
+@media (min-width: 601px) {
+  .vilda-home-workspace .vhome-visit-date { font-size: 15px; line-height: 22px; }
+  .vilda-home-workspace .vhome-visit-kicker { font-size: 13px; line-height: 18px; }
+}
 .vilda-home-workspace .vhome-visit-full { display: inline; }
 .vilda-home-workspace .vhome-visit-short { display: none; }
 .vilda-home-workspace .vhome-history-button {
