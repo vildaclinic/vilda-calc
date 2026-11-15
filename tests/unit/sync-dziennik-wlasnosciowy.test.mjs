@@ -165,6 +165,18 @@
 //   wizyt jak od starszej aplikacji (na końcu listy P6).
 // - Profil „dłuższa praca bez połączenia” (ręczny, E2_AB_PROFIL=bez-polaczenia; PROFIL_BEZ_POLACZENIA niżej).
 //
+// E3-PR0b (flota ze starszą aplikacją i liczniki odsyłania; P-ZBIEZNOSC-ZDARZEN; tylko testy, bez zmiany sejfu):
+// - LICZNIK ODSYŁANIA (tests/support/licznik-odsylania.mjs; blok na końcu pliku): echo każdego scalenia w profilach
+//   podstawowym, koalescencji i pełnym — zdarzenie po zdarzeniu każdej strony dostawy i pół wymiany w pierwszym obiegu
+//   wymiany W4; włączony domyślnie (E2_AB_ODSYL=0 wyłącza). Izolowany jak kr_cicho (cichoLicznik), więc program ziaren
+//   i wszystkie dotychczasowe literały są te same; przebieg „determinizm” (ziarno 1, 20 mutacji) z licznikiem i bez daje
+//   ten sam dziennik operacji, eksporty i wynik. Asercje w każdym ziarnie (pola zawsze obecne, warstwa wykonalna = po2a
+//   między bieżącymi, budżet minuty slotu, powtórka partii — 0, odcisk testu = h) i literał ZNANE_ODSYL ziaren
+//   domyślnych.
+// - Urządzenie starszej aplikacji (urzadzenie(..., { app: 'S221' | 'S276' })): sejf i retencja v1 z fikstur
+//   (tests/support/starsza-aplikacja.mjs), klon dziedziczy app; mutacja na sejfie 221 bez emisji (mutacjaBezDziennika);
+//   para z urządzeniem starszej aplikacji w W4 — tabela 'flota' (kontPary).
+//
 // KOLEJNOŚĆ W KROKU (E2-PR3a2, sprawdzana na emiterach): snap (także wersje przeniesione pod kartę celu „Scal pacjentów”
 // i głowy scalenia), potem stomb, potem ptomb, potem pnote, pnotetomb, note, notetomb, plist, plisttomb, pref, pk, pktomb,
 // cred. Pola karty zmienione bez snap tej karty w kroku niesie stomb z kartą (11.2), inaczej snap(karta, najnowsza
@@ -256,6 +268,8 @@ import { AtrapaIDBKeyRange, utworzIndexedDB } from '../support/atrapa-indexeddb.
 import { D, encje, naj, sciezkiEncji, sortuj } from '../support/encje-ladunku.mjs';
 import { ZRODLO_SEJFU, zRejestremLancucha, zaladujZrodlo } from '../support/sejf-bez-wstawek.mjs';
 import * as WYR from '../support/ostatnia-zmiana.mjs';
+import * as LO from '../support/licznik-odsylania.mjs';
+import { zrodlaStarszej } from '../support/starsza-aplikacja.mjs';
 import { parse } from 'acorn';
 import path from 'node:path';
 
@@ -531,6 +545,10 @@ function dozwolona(kl, r, kont) {
   if (kl === E1 && !(kont.tabela === 'W4:p5' && E1_KATALOG.has(kont.przebieg))) return false;
   return w || false;
 }
+// E3-PR0b: para z urządzeniem starszej aplikacji (app ≠ 'N') bierze w W4 (w4, w4Trzy) tabelę 'flota'; bez jej wpisu
+// w DOZWOLONE każda różnica takiej pary czerwieni. Para dwóch bieżących urządzeń — tabela wołającego, jak dotąd.
+const starszaAplikacja = (U) => !!U && typeof U.app === 'string' && U.app !== 'N';
+const kontPary = (X, Y, kont) => (starszaAplikacja(X) || starszaAplikacja(Y) ? { ...kont, tabela: 'flota' } : kont);
 // Klasyfikacja listy D: [{ ...r, klasa, dozwolona }] (kosz czytany tylko, gdy jest różnica postaci gwiazdki).
 async function sklasyfikuj(d, X, Y, kont, czytajKosz) {
   const trzebaKosza = d.some((r) => r.rodzaj === 'kosz' && r.a && r.b && r.sciezki.every((s) => wPolach(s, POSTAC_GWIAZDKI)));
@@ -553,15 +571,21 @@ function swiat(ziarno = 1) {
   };
 }
 // Urządzenie z kopią sejfu z rejestrem łańcucha (U.lancuch — rejestr okna; EMISJA). dodatki — dodatkowe pola okna.
-async function urzadzenie(S, nazwa, zBlizniaka = null, { dodatki = {} } = {}) {
+// E3-PR0b: app — 'N' (bieżący sejf, domyślnie), 'S221' albo 'S276' (sejf starszej aplikacji z fikstury;
+// tests/support/starsza-aplikacja.mjs), retencja starszej aplikacji — 'v1' (fikstura, domyślnie) albo 'biezaca'
+// (kontrola). Klon dziedziczy app i retencję bliźniaka. Sejf 221 nie ma dziennika zdarzeń ani rejestru łańcucha (U.ev
+// i U.lancuch puste), sejf 276 — ma.
+async function urzadzenie(S, nazwa, zBlizniaka = null, { dodatki = {}, app = null, retencja = null } = {}) {
   S.nrUrz += 1;
+  const sejf = app || (zBlizniaka && zBlizniaka.app) || 'N';
+  const ret = sejf === 'N' ? null : retencja || (zBlizniaka && zBlizniaka.retencja) || 'v1';
   let lancuch = null;
   const d = await utworzUrzadzenie({
     atrapa: S.atrapa, nazwa: `${nazwa}-${S.nrUrz}`, zBlizniaka: zBlizniaka ? zBlizniaka.d : undefined, sync: false,
     rejestrMagazynu: false, haslo: HASLO_POCZATKOWE, dodatki: { crypto: kryptoZiarna(S.ziarno * 7919 + S.nrUrz), ...dodatki },
-    zrodla: { 'vilda_vault.js': (win) => { lancuch = zRejestrem(win); } },
+    zrodla: sejf === 'N' ? { 'vilda_vault.js': (win) => { lancuch = zRejestrem(win); } } : zrodlaStarszej(sejf, { retencja: ret, lancuch: (l) => { lancuch = l; } }),
   });
-  const U = { d, v: d.vault, ev: d.vault._eventLog, nazwa, Q: [], setIds: new Set(), stan: null, usuniete: new Set(), znaneNotatki: new Map(), lancuch };
+  const U = { d, v: d.vault, ev: d.vault._eventLog, app: sejf, retencja: ret, nazwa, Q: [], setIds: new Set(), stan: null, usuniete: new Set(), znaneNotatki: new Map(), lancuch };
   ustawStan(U, await eksport(U));
   if (!zBlizniaka) S.hasla.set(idHasla(U.stan), HASLO_POCZATKOWE);
   return U;
@@ -727,6 +751,7 @@ function porownaj(S, U, opis, model, emitery, wpisy) {
 }
 // Karta notatki w kopercie pnote (model haków: hak karty notatki od E2-PR3c4); dla pozostałych kopert undefined.
 const kartaKoperty = (k) => (k.event.kind === 'pnote' && Array.isArray(k.patientNotes) && k.patientNotes[0] ? k.patientNotes[0].patientId : undefined);
+// Przy liczniku odsyłania (S.odsyl, E3-PR0b) wpis Q ma też jawną kopię koperty (jaw) — ładunek echa u odbiorcy.
 async function doKolejki(S, U, k) {
   if (U.jawnie) { // katalog p. 5: osobne konta, koperta jawna (bez szyfrowania — szyfrowanie pokrywa W3)
     U.Q.push(Object.freeze({ kind: k.event.kind, key: k.event.key, atISO: k.event.atISO, pid: kartaKoperty(k), k: Object.freeze(json(k)) }));
@@ -735,7 +760,7 @@ async function doKolejki(S, U, k) {
   }
   if (S.koalescencja === 'ogon') { await doKolejkiOgon(S, U, Array.isArray(k) ? k : [k]); return; }
   const { env } = await U.ev.encryptEvent(k);
-  U.Q.push(Object.freeze({ kind: k.event.kind, key: k.event.key, atISO: k.event.atISO, pid: kartaKoperty(k), env: Object.freeze(env) }));
+  U.Q.push(Object.freeze({ kind: k.event.kind, key: k.event.key, atISO: k.event.atISO, pid: kartaKoperty(k), env: Object.freeze(env), ...(S.odsyl ? { jaw: Object.freeze(json(k)) } : {}) }));
   S.stat.zdarzen += 1;
 }
 // Kolejka z łączeniem wpisów (S.koalescencja === 'ogon', E2-PR2b): wpisy nigdy niedostarczone (indeks ≥ U.wyslane) są
@@ -754,7 +779,7 @@ async function doKolejkiOgon(S, U, koperty) {
   const nowe = [];
   for (const k of koperty) {
     const { env } = await U.ev.encryptEvent(k);
-    nowe.push(Object.freeze({ kind: k.event.kind, key: k.event.key, atISO: k.event.atISO, pid: kartaKoperty(k), env: Object.freeze(env), setId: k.event.full ? k.event.full.setId : null }));
+    nowe.push(Object.freeze({ kind: k.event.kind, key: k.event.key, atISO: k.event.atISO, pid: kartaKoperty(k), env: Object.freeze(env), setId: k.event.full ? k.event.full.setId : null, ...(S.odsyl ? { jaw: Object.freeze(json(k)) } : {}) }));
     S.stat.zdarzen += 1;
   }
   S.kolejkaLog.push([U.nazwa, nowe[0].kind, nowe[0].key, nowe.length, nowe[0].setId]);
@@ -768,7 +793,10 @@ async function doKolejkiOgon(S, U, koperty) {
 // Wyrocznia (E3-PR0a): na czas operacji U.v to pośrednik, który zapisuje wywołania API sejfu z listy WYR.OPERACJE
 // (z argumentami — „Przywróć” wyrocznia rozpoznaje po snapshotId wywołania); operacja — wywołanie podane wprost (katalog
 // p. 5 woła metodę sejfu z pominięciem U.v). Po mutacji historia (S.wyr) dostaje zapis: eksport przed i po, chwila.
+// E3-PR0b: na urządzeniu z sejfem 221 (bez dziennika zdarzeń) — mutacjaBezDziennika: historia bez emisji. Przy liczniku
+// odsyłania koperty mutacji trafiają na oś czasu własnych wysyłek (druk).
 async function mutacja(S, U, opis, fn, { zrodlo = 'emitery', operacja = null } = {}) {
+  if (U.app === 'S221') return mutacjaBezDziennika(S, U, opis, fn, { operacja });
   if (zrodlo !== 'emitery' && !(zrodlo === 'model' && MUTACJE_Z_MODELU.includes(opis))) throw new Error(`mutacja „${opis}”: źródło zdarzeń „${zrodlo}” spoza MUTACJE_Z_MODELU`);
   if (!Array.isArray(U.lancuch)) throw new Error(`mutacja „${opis}”: urządzenie ${U.nazwa} bez rejestru łańcucha`);
   const przed = U.stan;
@@ -799,6 +827,7 @@ async function mutacja(S, U, opis, fn, { zrodlo = 'emitery', operacja = null } =
     EMITERY_PLIK[w === 'rowne' ? 'zgodnych' : 'wRandze'] += 1;
     for (const x of k) await doKolejki(S, U, x);
   }
+  if (S.odsyl && k.length) wyslijOs(S, U, 'wlasne', k.map((x) => bajtyKoperty(U, x)));
   ustawStan(U, po);
   S.dziennik.push(`#${S.nrKroku || 0} ${new Date(teraz).toISOString().slice(11, 23)} ${U.nazwa}: ${opis}${blad ? ` → wyjątek ${blad.code || blad.message}` : ''} → [${k.map((x) => x.event.kind).join(',')}]`);
   if (blad) throw blad;
@@ -971,7 +1000,10 @@ async function dostawa(S, X, Y, { k = Infinity, cofnij = 0, haki: zHakami = true
   Y.lancuch.length = 0; // rejestr odbiorcy: od tej chwili wpisy haków scalania tej partii (E2-PR3b)
   // Model haka H2 zdarzenie po zdarzeniu (E2-PR3c1): przy hakach i partii z więcej niż jednym zdarzeniem eksport odbiorcy
   // po każdym zdarzeniu (te same zastosowania, w tej samej kolejności; eksport nie zmienia stanu ani losowań).
-  const stany = zHakami && partia.length > 1 ? [przed] : null;
+  // E3-PR0b: licznik odsyłania liczy echo zdarzenie po zdarzeniu, więc przy S.odsyl stany są zawsze; model haków dostaje
+  // je jak dotąd (tylko przy hakach i partii z więcej niż jednym zdarzeniem).
+  const stanyH = zHakami && partia.length > 1;
+  const stany = stanyH || S.odsyl ? [przed] : null;
   if (stany) for (const e of partia) { await zastosuj(Y, [e]); stany.push(await eksport(Y)); }
   else await zastosuj(Y, partia);
   S.kursor.set(nazwa, c + partia.length);
@@ -980,9 +1012,10 @@ async function dostawa(S, X, Y, { k = Infinity, cofnij = 0, haki: zHakami = true
   X.wyslane = wyslane;
   const po = stany ? stany[stany.length - 1] : await eksport(Y);
   let dodane = [];
-  if (zHakami) dodane = await haki(S, Y, partia, przed, po, stany);
+  if (zHakami) dodane = await haki(S, Y, partia, przed, po, stanyH ? stany : null);
   else Y.lancuch.length = 0; // bez haków: wpisy haków tej partii pominięte
   ustawStan(Y, po);
+  if (S.odsyl) await poPartiiOdsyl(S, X, Y, partia, stany, dodane);
   S.dziennik.push(`#${S.nrKroku || 0} ${new Date(teraz).toISOString().slice(11, 23)} dostawa ${nazwa}: ${partia.length}${cofnij ? ` (powtórka ${Math.min(cofnij, c + cofnij)})` : ''}${pelna ? ' pełna' : ''} [${partia.map((e) => e.kind).join(',')}]${dodane.length ? ` → haki [${dodane.map((x) => x.event.kind).join(',')}]` : ''}`);
   return { partia, dodane };
 }
@@ -1215,6 +1248,8 @@ async function scisleW1(S, A, B, d) {
 // dozwolone w W4 danego kontekstu; (b) punkt stały — druga runda (ta sama kolejność) na TYCH SAMYCH klonach nie zmienia
 // eksportu żadnego z nich; (c) każda encja R4n z (a) przechodzi W4p. Wynik: { ok, warianty: [...], r4n, w4p }.
 // Opcje dla testów negatywnych samego W4 (klasy 3.6, negatywy): runda (domyślnie rundaPO) i dowodR4n (domyślnie w4p).
+// E3-PR0b: opcja runda dostaje też numer obiegu wymiany (1, 2) — licznik odsyłania liczy pół wymiany w pierwszym obiegu
+// (wymianaPOLicz); para z urządzeniem starszej aplikacji dostaje tabelę 'flota' (kontPary).
 async function rundaPO(X, Y) {
   await Y.v.mergeSyncPayload(json(await X.v.exportSyncPayload()));
   await X.v.mergeSyncPayload(json(await Y.v.exportSyncPayload()));
@@ -1231,7 +1266,7 @@ async function w4(S, A, B, kont, { warianty = ['PO-A', 'PO-B'], opisz = null, ru
         const [a, b] = [kanon(A1.stan), kanon(B1.stan)];
         await runda(X, Y, 2);
         const punktStaly = JSON.stringify(kanon(A1.stan)) === JSON.stringify(a) && JSON.stringify(kanon(B1.stan)) === JSON.stringify(b);
-        const d = await sklasyfikuj(D(a, b), a, b, kont, async () => ({ x: await A1.v.listTrashedSnapshots(), y: await B1.v.listTrashedSnapshots() }));
+        const d = await sklasyfikuj(D(a, b), a, b, kontPary(A, B, kont), async () => ({ x: await A1.v.listTrashedSnapshots(), y: await B1.v.listTrashedSnapshots() }));
         const w = { wariant, punktStaly, roznice: d.map(skrotRoznicy), w4p: [] };
         for (const r of d.filter((q) => q.klasa === 'R4n')) {
           const [sid, pid] = r.klucz.split('|');
@@ -1367,7 +1402,8 @@ async function spoczynekBlobow(...urz) {
   return null;
 }
 // W4 dla trzech urządzeń (p. 6): świeże klony; rundy PO-A kolejno na parach (A, B), (B, C), (C, A), aż żaden eksport
-// się nie zmienia (≤ 3 rundy ze zmianą); warunek: D każdej pary puste albo z klasami dozwolonymi w p. 6 (R4n z W4p).
+// się nie zmienia (≤ 3 rundy ze zmianą); warunek: D każdej pary puste albo z klasami dozwolonymi w p. 6 (R4n z W4p);
+// para z urządzeniem starszej aplikacji — w tabeli 'flota' (kontPary, E3-PR0b).
 async function w4Trzy(S, urz, n, { dowodR4n = w4p } = {}) {
   return kr_cicho(S, async () => {
     const K = [];
@@ -1384,7 +1420,7 @@ async function w4Trzy(S, urz, n, { dowodR4n = w4p } = {}) {
       let ok = stabilny && rund <= 4;
       for (const [i, j] of [[0, 1], [1, 2], [2, 0]]) {
         const [a, b] = [kanon(K[i].stan), kanon(K[j].stan)];
-        const d = await sklasyfikuj(D(a, b), a, b, { tabela: 'p6' }, async () => ({ x: await K[i].v.listTrashedSnapshots(), y: await K[j].v.listTrashedSnapshots() }));
+        const d = await sklasyfikuj(D(a, b), a, b, kontPary(urz[i], urz[j], { tabela: 'p6' }), async () => ({ x: await K[i].v.listTrashedSnapshots(), y: await K[j].v.listTrashedSnapshots() }));
         const w4pp = [];
         for (const r of d.filter((q) => q.klasa === 'R4n')) { const [sid, pid] = r.klucz.split('|'); w4pp.push(await dowodR4n(S, K[i], K[j], sid, pid)); }
         if (!d.every((r) => r.dozwolona) || !w4pp.every((x) => x.ok)) ok = false;
@@ -3788,7 +3824,7 @@ const START_ZIAREN = Number(process.env.E2_AB_START) || 1;
 const ZIARNA = Array.from({ length: ILE_ZIAREN }, (_, i) => START_ZIAREN + i);
 const KROKI = Number(process.env.E2_AB_KROKI) || 0;
 // E2_AB_WYNIKI=plik — wynik każdego ziarna (liczniki, różnice, dziennik operacji) dopisywany jako JSONL (pomiar).
-const WYNIKI = { podstawowy: [], pelny: [], 'podstawowy:ogon': [], 'pelny:ogon': [], 'bez-polaczenia': [] };
+const WYNIKI = { podstawowy: [], pelny: [], 'podstawowy:ogon': [], 'pelny:ogon': [], 'bez-polaczenia': [], determinizm: [] };
 const wybierz = (los, lista) => lista[Math.floor(los() * lista.length)];
 const masa = (los) => 15 + Math.floor(los() * 300) / 10;
 // Mutacje profilu podstawowego (projekt.md 7.4): zapis karty i nowej wersji, poprawka w miejscu (preserveSavedAt),
@@ -4001,7 +4037,8 @@ async function punktSpoczynku(S, A, B, { ostatni = false } = {}) {
   const opisz = async (A1, B1) => ({ wyr: await wyrWidokiKlonow({ A: A1, B: B1 }) });
   // W4 (3.2): w każdym punkcie spoczynku obie pary; przy przekroczeniu celu czasu (3.3) PO-B tylko w ostatnim punkcie.
   const warianty = S.tylkoPOA && !ostatni ? ['PO-A'] : ['PO-A', 'PO-B'];
-  const w = await w4(S, A, B, { tabela: S.profil === 'pelny' ? 'pelny:W4' : 'W4', wskrzeszone: S.wskrzeszone }, { warianty, opisz });
+  // Licznik odsyłania (E3-PR0b): pół wymiany w pierwszym obiegu wymiany każdej pary (źródło 'w4'; wymianaPOLicz).
+  const w = await w4(S, A, B, { tabela: S.profil === 'pelny' ? 'pelny:W4' : 'W4', wskrzeszone: S.wskrzeszone }, { warianty, opisz, ...(S.odsyl ? { runda: (X, Y, nr) => wymianaPOLicz(S, X, Y, nr === 1) } : {}) });
   const wyrW4 = [];
   for (const x of w.warianty) { wyrW4.push(...wyrOcena(S, 'W4', `W4 ${x.wariant}`, x.opis.wyr)); delete x.opis; }
   if (SCISLE) {
@@ -4024,10 +4061,14 @@ async function punktSpoczynku(S, A, B, { ostatni = false } = {}) {
 // pełnej dostawy (inny program ziarna: klon W2s w kolejności losowej zużywa losowania).
 // E3-PR0a: dostawa i spoczynek — prawdopodobieństwa dostawy losowej w kroku i punktu spoczynku po mutacji (domyślnie
 // 0,3 i 1/25; profil „dłuższa praca bez połączenia” — PROFIL_BEZ_POLACZENIA niżej).
-async function przebiegZiarna(ziarno, profil, { koalescencja = null, w2s = true, dostawa: pDostawy = 0.3, spoczynek: pSpoczynku = 1 / 25, nazwa = null } = {}) {
+// E3-PR0b: odsyl — licznik odsyłania (domyślnie ODSYL: włączony, E2_AB_ODSYL=0 wyłącza); kroki — liczba mutacji zamiast
+// liczby z ziarna (losowanie liczby z ziarna i tak się wykonuje, więc to początek tego samego programu); slad — zwrócony
+// wynik ma też dziennik operacji i eksporty końcowe (przebieg „determinizm”; ślad nie trafia do WYNIKI ani do JSONL).
+async function przebiegZiarna(ziarno, profil, { koalescencja = null, w2s = true, dostawa: pDostawy = 0.3, spoczynek: pSpoczynku = 1 / 25, nazwa = null, odsyl = ODSYL, kroki = 0, slad = false } = {}) {
   const t0 = performance.now();
   const S = swiat(ziarno + (profil === 'pelny' ? 100000 : 0));
   S.profil = profil;
+  if (odsyl) S.odsyl = nowyLicznik();
   if (koalescencja) zKoalescencja(S);
   if (!w2s) S.w2s = false;
   S.wyrSwiat = `${nazwa || profil}${koalescencja ? ':' + koalescencja : ''}`;
@@ -4047,8 +4088,10 @@ async function przebiegZiarna(ziarno, profil, { koalescencja = null, w2s = true,
   krok(); await mutacja(S, A, 'nowa karta 1', async () => { const r = await A.d.zapiszKarte(1); S.indeks.set(r.patientId, 1); return r; });
   S.nrKarty = 1;
   A.Q.length = 0;
+  if (S.odsyl) S.odsyl.os.length = 0;
   const B = await urzadzenie(S, 'B', A);
-  const ile = KROKI || 60 + Math.floor(S.los() * 61);
+  const zZiarna = KROKI || 60 + Math.floor(S.los() * 61);
+  const ile = kroki || zZiarna;
   let mutacji = 0;
   while (mutacji < ile) {
     S.nrKroku += 1;
@@ -4065,10 +4108,13 @@ async function przebiegZiarna(ziarno, profil, { koalescencja = null, w2s = true,
   const naruszenia = S.wyrNaruszenia || [];
   const wynik = { ziarno, profil, ...(koalescencja ? { koalescencja, w2s } : {}), ...(nazwa ? { nazwa } : {}), mutacji, ms: Math.round(performance.now() - t0), ...S.stat, braki: S.braki, dziennikZostaw: S.dziennik.filter((l) => / zostaw notatkę /.test(l)).length,
     wyr: { punkty: S.wyrPunkty || 0, naruszen: naruszenia.length, czerwone: wyrCzerwone(naruszenia), klasy: WYR.podsumuj(naruszenia), zbior: zbiorWyr(naruszenia), liczby: licznikWyr(naruszenia) } };
-  WYNIKI[nazwa || (koalescencja ? `${profil}:${koalescencja}` : profil)].push(wynik);
-  if (process.env.E2_AB_WYNIKI) appendFileSync(process.env.E2_AB_WYNIKI, JSON.stringify({ ...wynik, dziennik: S.dziennik, ...(S.kolejkaLog ? { kolejka: S.kolejkaLog } : {}) }) + '\n');
+  const klucz = nazwa || (koalescencja ? `${profil}:${koalescencja}` : profil);
+  const odsylWynik = S.odsyl ? { ziarno, profil, nazwa, koalescencja, ...S.odsyl.podsumuj(), powtorka: S.odsylPowtorka || { partii: 0, zdarzen: 0 }, odcisk: odciskiWersji([A.stan, B.stan]) } : null;
+  if (odsylWynik) ODSYL_WYNIKI[klucz].push(odsylWynik);
+  WYNIKI[klucz].push(wynik);
+  if (process.env.E2_AB_WYNIKI) appendFileSync(process.env.E2_AB_WYNIKI, JSON.stringify({ ...wynik, ...(odsylWynik ? { odsyl: odsylWynik } : {}), dziennik: S.dziennik, ...(S.kolejkaLog ? { kolejka: S.kolejkaLog } : {}) }) + '\n');
   if (WYR_PLIK) appendFileSync(WYR_PLIK, JSON.stringify({ typ: 'ziarno', swiat: S.wyrSwiat, ziarno, mutacji, spoczynki: S.stat.spoczynki, ...wynik.wyr, scisle: S.stat.scisle }) + '\n');
-  return wynik;
+  return slad ? { ...wynik, slad: { dziennik: S.dziennik.slice(), eksport: { A: await eksport(A), B: await eksport(B) } } } : wynik;
 }
 // Listy literałów (3.6): [ziarno, krok, [klasy]] punktów W1 z niepustym D, [ziarno, krok, strona, [klasy]] punktów W2r.
 const listaW1 = (w) => w.w1Bledy.map((b) => [w.ziarno, b.krok, b.klasy]);
@@ -4295,4 +4341,357 @@ afterAll(() => {
   console.log('E2-AB emitery (plik)', JSON.stringify(EMITERY_PLIK)); console.log('E2-AB haki (plik)', JSON.stringify(HAKI_PLIK));
   console.log('E2-AB wyrocznia, czas (ms)', JSON.stringify(Object.fromEntries(Object.entries(WYR_CZAS).map(([k, v]) => [k, Math.round(v)]))));
   if (WYR_PLIK) appendFileSync(WYR_PLIK, JSON.stringify({ typ: 'czas', ...WYR_CZAS }) + '\n');
+});
+
+// ══ Licznik odsyłania w profilach i urządzenie starszej aplikacji (E3-PR0b, P-ZBIEZNOSC-ZDARZEN; tylko testy) ════════
+// Licznik (tests/support/licznik-odsylania.mjs; definicje warstw, wierszy, bajtów i budżetu w nagłówku modułu) tylko czyta
+// eksporty: echo każdego scalenia u odbiorcy — zdarzenie po zdarzeniu każdej strony dostawy (źródło 'zdarzenie') i obie
+// połowy pierwszego obiegu wymiany każdej pary PO-A/PO-B w W4 na klonach (pół wymiany, źródło 'w4') — w warstwach
+// surowe, po2a, wyk (reguła T; E2_AB_ODSYL_REGULA=A|B — diagnostyka), nowe. Koperty nośników wierszy (bajty, żądania)
+// budują buildery odbiorcy w cichoLicznik: własny Math.random i własne numery klonów, bez S.nrPomiaru, więc istniejące
+// kr_cicho dostają te same ziarna, a program ziarna jest ten sam co bez licznika (strażnik: przebieg „determinizm” niżej;
+// zrzuty E2_AB_WYNIKI ziaren CI bez pól ms i odsyl są równe z licznikiem i bez). Bajty koperty = eventBytes sejfu
+// (rozmiar szyfrogramu {iv, data} z długości jawnego JSON) z dev 'abcdefgh' zamiast null. Powtórka partii: raz na ziarno
+// pierwsza partia dostawy z co najmniej dwoma zdarzeniami jeszcze raz na świeżym klonie odbiorcy (źródło 'powtórka').
+// Asercje (describe „licznik odsyłania w profilach”, na wynikach ziaren tego przebiegu), w każdym ziarnie:
+// - pola zawsze obecne: w ładunkach od bieżącej wersji każda wersja i każdy wpis Kosza z rodzicem pola z POLA_ZAWSZE ma to
+//   pole (warunek reguły T);
+// - między bieżącymi urządzeniami warstwa wykonalna = po2a w każdym źródle (reguła T niczego nie tłumi);
+// - budżet minuty slotu (warstwa wyk, bajty realne przy górnej granicy przeliczenia): ≤ 600 wierszy, ≤ 4 MiB, ≤ 20 żądań
+//   na urządzenie; budżet naiwny (po2a) i okna przesuwne 60 s zegara uprzęży — tylko druk;
+// - powtórka partii: jedna na ziarno, 0 wierszy surowych;
+// - odcisk testu (LO.odcisk, kopia Bgw_odcisk) = _pinnedState.h każdej wersji eksportów końcowych (bieżący sejf zapisuje h
+//   przy każdym zapisie treści i gwiazdki — Bgw_ustaw — i przelicza świeży h przy przeniesieniu wizyty);
+// - buildery nośników bez wyjątku;
+// oraz literał ZNANE_ODSYL[profil] dla ziaren domyślnych: klucz źródło|rodzaj|w ładunku/spoza|klasa → { wyk, nowe } (bez
+// ścieżek pól i bez bajtów). E2_AB_ODSYL=0 — licznik wyłączony (przypadki licznika pominięte); E2_AB_WYNIKI — pole odsyl
+// w JSONL ziarna.
+const ODSYL = process.env.E2_AB_ODSYL !== '0';
+const ODSYL_REGULA = process.env.E2_AB_ODSYL_REGULA || 'T';
+const WYK = 'wyk' + ODSYL_REGULA;
+const DEV_FIKCYJNY = 'abcdefgh';
+const ODSYL_WYNIKI = { podstawowy: [], pelny: [], 'podstawowy:ogon': [], 'pelny:ogon': [], 'bez-polaczenia': [], determinizm: [] };
+const nowyLicznik = () => LO.nowyLicznikOdsylania({ regula: ODSYL_REGULA, rekordZlozony });
+// Izolacja pomiaru licznika (wzór kr_cicho, ale bez S.nrPomiaru): własny Math.random (S.losAlt) i numery klonów od
+// 5 000 000 na czas fn; licznik urządzeń przywracany.
+async function cichoLicznik(S, fn) {
+  const nr = S.nrUrz, pop = S.losAlt;
+  S.nrCicho = (S.nrCicho || 0) + 1;
+  S.losAlt = rng(0xBADA55 + S.nrCicho * 977);
+  S.nrUrz = 5000000 + S.nrCicho * 100;
+  try { return await fn(); } finally { S.nrUrz = nr; S.losAlt = pop; }
+}
+const BUDOWNICZE_ECHA = Object.freeze({ ptomb: 'buildPatientTombstoneEvent', pnote: 'buildPatientNoteEvent', pnotetomb: 'buildPatientNoteTombstoneEvent', note: 'buildNoteEvent', notetomb: 'buildNoteTombstoneEvent', plist: 'buildPatientListEvent', plisttomb: 'buildPatientListTombstoneEvent', pref: 'buildPreferenceEvent', pk: 'buildPasskeyEvent', pktomb: 'buildPasskeyTombstoneEvent' });
+// Koperta nośnika wiersza echa z builderów Y po scaleniu: wersja — snap; karta — snap najnowszej wersji (reguła emituj);
+// null — brak nośnika; { blad } — wyjątek buildera.
+async function kopertaEcha(Y, r, poE) {
+  const ev = Y.ev;
+  try {
+    if (r.kind === 'snap') return await ev.buildSnapshotEvent(r.pid, String(r.key).split('/')[1], DEV_FIKCYJNY);
+    if (r.kind === 'karta') { const e = poE.get('karta:' + r.key); return e && e.najnowsza ? await ev.buildSnapshotEvent(r.key, e.najnowsza, DEV_FIKCYJNY) : null; }
+    if (r.kind === 'stomb') return await ev.buildSnapshotTombstoneEvent(r.key, DEV_FIKCYJNY);
+    if (r.kind === 'cred') return await ev.buildCredentialEvent(DEV_FIKCYJNY);
+    if (BUDOWNICZE_ECHA[r.kind]) return await ev[BUDOWNICZE_ECHA[r.kind]](r.key, DEV_FIKCYJNY);
+  } catch (e) { return { blad: String(e && (e.code || e.message)) }; }
+  return null;
+}
+const bajtyKoperty = (U, k) => U.ev.eventBytes(k.event && k.event.dev === null ? { ...k, event: { ...k.event, dev: DEV_FIKCYJNY } } : k);
+const urzOs = (U) => U.nazwa.replace(/-.*$/, '');
+const wyslijOs = (S, U, zrodlo, bajty) => S.odsyl.wyslij(urzOs(U), teraz, zrodlo, bajty);
+// Klucze encji wpisów rejestru łańcucha (haki scalania pełnej kopii na klonach; warstwa nowe).
+const kluczeWpisow = (wpisy) => new Set(wpisy.filter((z) => !z.znacznik).map((z) => (z.kind === 'pfull' ? 'pfull:' + z.klucze.patientId
+  : z.kind === 'snap' ? `snap:${z.klucze.patientId}/${z.klucze.snapshotId}` : `${z.kind}:${z.klucze}`)));
+
+// Echo jednej strony dostawy (albo jednego pół wymiany) na Y: każdy odcinek { przed, po, ladunek } to jedno scalenie
+// (warstwy, usunięcia przez scalanie; dla ładunku od bieżącej wersji — strażnik pól zawsze obecnych); wiersze strony to
+// unia encji odcinków w warstwie wyk i po2a, nośniki z builderów Y (cichoLicznik), bajty z eventBytes. Strona i oś czasu
+// — poza pół wymiany (W4 liczy się na klonach). Wynik: koperty warstwy wyk.
+async function liczEcho(S, Y, zrodlo, odcinki, haki, opis, { natychmiast = false, odBiezacej = false } = {}) {
+  const t0 = performance.now();
+  const L = S.odsyl;
+  const unia = new Map(), unia2a = new Map();
+  for (const { przed, po, ladunek, z221 = false } of odcinki) {
+    const lista = L.echo(przed, po, ladunek, { z221 });
+    L.zapiszScalenie(zrodlo, lista, haki, { natychmiast, opis });
+    L.zapiszUsuniecia(zrodlo, LO.usunieciaScalenia(przed, po, ladunek), opis);
+    if (odBiezacej) L.sprawdzPolaZawsze(ladunek, opis);
+    for (const r of LO.wierszeEcha(lista.filter((q) => q[WYK]))) unia.set(r.k, r);
+    for (const r of LO.wierszeEcha(lista.filter((q) => q.po2a))) unia2a.set(r.k, r);
+  }
+  const poE = encje(odcinki[odcinki.length - 1].po);
+  const nosniki = async (mapa, zBrakiem) => {
+    const wiersze = [], koperty = [];
+    for (const r of mapa.values()) {
+      const k = await kopertaEcha(Y, r, poE);
+      if (!k) { if (zBrakiem) L.zapiszBrakNosnika(zrodlo, r); continue; }
+      if (k.blad) { L.bladBuildera += 1; continue; }
+      wiersze.push({ tresci: r.tresci, bajty: bajtyKoperty(Y, k) });
+      koperty.push(k);
+    }
+    return { wiersze, koperty };
+  };
+  const [w, w2a] = await cichoLicznik(S, async () => [await nosniki(unia, true), await nosniki(unia2a, false)]);
+  if (zrodlo !== 'w4') {
+    L.zapiszStrone(zrodlo, w.wiersze, w2a.wiersze, { t: teraz, dev: urzOs(Y), opis });
+    wyslijOs(S, Y, 'echo', w.wiersze.map((x) => x.bajty));
+    wyslijOs(S, Y, 'echo2a', w2a.wiersze.map((x) => x.bajty));
+  }
+  L.ms += performance.now() - t0;
+  return w.koperty;
+}
+// Licznik partii dostawy X→Y (wołany z dostawa po ustawStan): strony ≤ 200 zdarzeń (strona scalana naraz; minuta slotu
+// = krok zegara uprzęży), w stronie odcinki zdarzenie po zdarzeniu (stany dostawy), haki partii (wpisy dopisane do Q_Y)
+// i przegląd natychmiast (drenaż zdarzeń, który scalił). Raz na ziarno — powtórka partii.
+async function poPartiiOdsyl(S, X, Y, partia, stany, dodane) {
+  const L = S.odsyl;
+  if (partia.some((e) => !e.jaw)) throw new Error(`licznik odsyłania: wpis Q_${X.nazwa} bez jawnej kopii koperty (licznik włączony po dopisaniu)`);
+  const opis = `#${S.nrKroku || 0} ${X.nazwa}>${Y.nazwa}`;
+  const haki = LO.kluczeKopert(dodane);
+  if (dodane.length) wyslijOs(S, Y, 'haki', dodane.map((k) => bajtyKoperty(Y, k)));
+  L.zapiszPartie(partia.length, opis);
+  const zrodlo = X.app === 'S276' ? 'zdarzenie276' : 'zdarzenie';
+  for (const [od, d] of LO.strony(partia.length)) {
+    const odcinki = partia.slice(od, d).map((e, i) => ({ przed: stany[od + i], po: stany[od + i + 1], ladunek: e.jaw }));
+    await liczEcho(S, Y, zrodlo, odcinki, haki, `${opis} [${partia.length} zd., strona ${od / LO.LIMITY.stronaDostawy + 1}]`, { natychmiast: true, odBiezacej: !starszaAplikacja(X) });
+  }
+  if (!S.odsylPowtorka && partia.length >= 2) { S.odsylPowtorka = { partii: 1, zdarzen: partia.length, opis }; await powtorkaPartii(S, Y, partia, `${opis} (powtórka)`); }
+}
+// Powtórka partii (kursor cofnięty o całą partię): te same szyfrogramy z Q nadawcy jeszcze raz, zdarzenie po zdarzeniu,
+// na świeżym klonie odbiorcy po tej partii, w cichoLicznik (klon, jego identyfikatory i IV poza programem). Echo każdego
+// zdarzenia — źródło 'powtórka'; oczekiwane 0 wierszy surowych (scalanie nic nie zapisuje).
+async function powtorkaPartii(S, Y, partia, opis) {
+  const L = S.odsyl;
+  await cichoLicznik(S, async () => {
+    const K = await klonBiezacy(S, Y, 'powt');
+    try {
+      for (const e of partia) {
+        const przed = await eksport(K);
+        await zastosuj(K, [e]);
+        L.zapiszScalenie('powtórka', L.echo(przed, await eksport(K), e.jaw), new Set(), { opis });
+      }
+    } finally { await zamknij(K); }
+  });
+}
+// Wymiana PO-A na klonach W4 z licznikiem (pół wymiany): Y scala pełny stan X, potem X scala stan Y po scaleniu — jak
+// rundaPO; licz — echo obu połówek (pierwszy obieg wymiany; źródło 'w4'). Wpisy haków ze scalenia (rejestr łańcucha
+// klonu) — haki warstwy nowe. Dodatkowe eksporty przed scaleniem nie zmieniają stanu ani losowań.
+async function wymianaPOLicz(S, X, Y, licz) {
+  const bx = json(await X.v.exportSyncPayload());
+  const y0 = await eksport(Y);
+  if (Y.lancuch) Y.lancuch.length = 0;
+  await Y.v.mergeSyncPayload(json(bx));
+  const by = json(await Y.v.exportSyncPayload());
+  const hY = Y.lancuch ? kluczeWpisow(Y.lancuch.splice(0)) : new Set();
+  const x0 = await eksport(X);
+  if (X.lancuch) X.lancuch.length = 0;
+  await X.v.mergeSyncPayload(json(by));
+  const x1 = await eksport(X);
+  const hX = X.lancuch ? kluczeWpisow(X.lancuch.splice(0)) : new Set();
+  ustawStan(X, x1); ustawStan(Y, by);
+  if (!licz || !S.odsyl) return;
+  if (!starszaAplikacja(Y)) await liczEcho(S, Y, 'w4', [{ przed: y0, po: by, ladunek: bx }], hY, `W4 ${X.nazwa}→${Y.nazwa}`, { odBiezacej: !starszaAplikacja(X) });
+  if (!starszaAplikacja(X)) await liczEcho(S, X, 'w4', [{ przed: x0, po: x1, ladunek: by }], hX, `W4 ${Y.nazwa}→${X.nazwa}`, { odBiezacej: !starszaAplikacja(Y) });
+}
+// Odcisk testu wobec _pinnedState.h każdej wersji podanych eksportów.
+function odciskiWersji(stany) {
+  const o = { wersji: 0, zgodnych: 0, niezgodne: [] };
+  for (const lad of stany) {
+    for (const p of lad.patients || []) {
+      for (const s of p.snapshots || []) {
+        const h = s.payload && s.payload._pinnedState ? s.payload._pinnedState.h : undefined;
+        if (typeof h !== 'string') continue;
+        o.wersji += 1;
+        if (LO.odcisk(s.payload) === h) o.zgodnych += 1;
+        else if (o.niezgodne.length < 6) o.niezgodne.push(`${String(p.patientId).slice(0, 8)}/${String(s.snapshotId).slice(0, 8)}`);
+      }
+    }
+  }
+  return o;
+}
+// Mutacja na urządzeniu z sejfem 221 (bez dziennika zdarzeń): operacja, eksport po niej i zapis historii wyroczni
+// (wywołania API sejfu jak w mutacja), bez emisji i bez porównania z modelem. Wyjątek operacji (starszy sejf nie każdą
+// operację profilu przyjmuje) — odmowa w S.stat.odmowyStarszej i w dzienniku, bez przerwania przebiegu.
+async function mutacjaBezDziennika(S, U, opis, fn, { operacja = null } = {}) {
+  const przed = U.stan;
+  const operacje = operacja ? [operacja] : [];
+  const v0 = U.v;
+  U.v = new Proxy(v0, { get(cel, k) {
+    const f = cel[k];
+    if (typeof f !== 'function') return f;
+    if (!WYR.OPERACJE.includes(k)) return f.bind(cel);
+    return (...args) => { operacje.push({ nazwa: k, args }); return f.apply(cel, args); };
+  } });
+  const chwila = Date.now();
+  let wynik, blad = null;
+  try { wynik = await fn(); } catch (e) { blad = e; } finally { U.v = v0; }
+  const po = await eksport(U);
+  { const t0 = performance.now(); WYR.zapisz(S.wyr = S.wyr || WYR.nowyModel(), { dev: U.nazwa, opis, przed, po, t: chwila, operacje }); WYR_CZAS.zapis += performance.now() - t0; }
+  ustawStan(U, po);
+  if (blad) S.stat.odmowyStarszej = (S.stat.odmowyStarszej || 0) + 1;
+  S.dziennik.push(`#${S.nrKroku || 0} ${new Date(teraz).toISOString().slice(11, 23)} ${U.nazwa} (${U.app}): ${opis}${blad ? ` → odmowa ${blad.code || blad.message}` : ''}`);
+  return { wynik, koperty: [], model: [] };
+}
+
+describe('A ≡ B, urządzenie starszej aplikacji w uprzęży (E3-PR0b): app, mutacja bez dziennika, tabela pary', () => {
+  d1();
+  it('bliźniaki A z sejfem 221 i 276 (klon dziedziczy app i retencję v1); mutacja na 221 bez emisji z zapisem historii, na 276 z emiterami porównanymi z modelem; para z urządzeniem app ≠ N — tabela „flota” (bez wpisu — czerwień), para bieżących — tabela wołającego', async () => {
+    const S = swiat(960);
+    const A = await urzadzenie(S, 'A');
+    krok(); await mutacja(S, A, 'nowa karta 1', () => A.d.zapiszKarte(1));
+    const pid = A.stan.patients[0].patientId;
+    const B = await urzadzenie(S, 'B', A);
+    const C = await urzadzenie(S, 'C', A, { app: 'S221' });
+    const D = await urzadzenie(S, 'D', A, { app: 'S276' });
+    const C2 = await klon(S, C, 'k');
+    expect({ A: [A.app, A.retencja], C: [C.app, C.retencja, typeof C.ev, C.lancuch], D: [D.app, D.retencja, typeof D.ev, Array.isArray(D.lancuch)], C2: [C2.app, C2.retencja, typeof C2.ev] })
+      .toEqual({ A: ['N', null], C: ['S221', 'v1', 'undefined', null], D: ['S276', 'v1', 'object', true], C2: ['S221', 'v1', 'undefined'] });
+    const mutacjiPrzed = S.wyr.mutacji, porownanPrzed = S.stat.emitery.porownan;
+    krok(); await mutacja(S, C, 'nowa wersja 1 na 221', () => C.d.zapiszKarte(1, { wzrost: 120, zapis: { patientId: pid, forceNewSnapshot: true } }));
+    expect({ Q: C.Q.length, mutacji: S.wyr.mutacji - mutacjiPrzed, porownan: S.stat.emitery.porownan - porownanPrzed, wersji: C.stan.patients[0].snapshots.length, odmowy: S.stat.odmowyStarszej || 0 })
+      .toEqual({ Q: 0, mutacji: 1, porownan: 0, wersji: 2, odmowy: 0 });
+    krok(); const { koperty } = await mutacja(S, D, 'nowa wersja 1 na 276', () => D.d.zapiszKarte(1, { wzrost: 121, zapis: { patientId: pid, forceNewSnapshot: true } }));
+    expect({ porownan: S.stat.emitery.porownan - porownanPrzed, mutacji: S.wyr.mutacji - mutacjiPrzed, Q: D.Q.map((e) => e.kind) })
+      .toEqual({ porownan: 1, mutacji: 2, Q: koperty.map((k) => k.event.kind) });
+    expect(D.Q.map((e) => e.kind)).toContain('snap');
+    expect([kontPary(A, C, { tabela: 'p6' }).tabela, kontPary(D, A, { tabela: 'W4', wskrzeszone: null }).tabela, kontPary(A, B, { tabela: 'p6' }).tabela, kontPary(C2, B, { tabela: 'W4' }).tabela])
+      .toEqual(['flota', 'flota', 'p6', 'flota']);
+    expect([dozwolona('R2', {}, { tabela: 'flota' }), dozwolona('R4n', {}, { tabela: 'flota' }), dozwolona('R2', {}, { tabela: 'p6' })]).toEqual([false, false, 'tak']);
+    await zamknij(C2);
+  }, 30_000);
+});
+
+// Literał licznika odsyłania dla ziaren domyślnych (warstwa wyk reguły T i nowe; suma po ziarnach domyślnych profilu):
+// klucz źródło|rodzaj|w ładunku/spoza|klasa → { wyk, nowe }. Klucza bez wierszy nie ma (np. źródło 'w4' — 0 w każdym
+// profilu). Przydział (druk): profil podstawowy E3-PR0c 20, E3-PR0d 4, bez przydziału 12; notatki pacjenta spoza
+// ładunku pokrywają haki H2 i hak karty notatki (nowe 0). Zmiana zbieżności (E3-PR0c–f) przepisuje ten literał.
+const ZNANE_ODSYL = {
+  podstawowy: {
+    'zdarzenie|pnote|spoza|inne': { wyk: 10, nowe: 0 },
+    'zdarzenie|snap|spoza|gwiazdka': { wyk: 2, nowe: 2 },
+    'zdarzenie|snap|w ładunku|gwiazdka': { wyk: 11, nowe: 11 },
+    'zdarzenie|snap|w ładunku|inne': { wyk: 8, nowe: 8 },
+    'zdarzenie|snap|w ładunku|rekord złożony': { wyk: 1, nowe: 1 },
+    'zdarzenie|stomb|spoza|R4a': { wyk: 1, nowe: 1 },
+    'zdarzenie|stomb|spoza|R4a′': { wyk: 1, nowe: 1 },
+    'zdarzenie|stomb|w ładunku|R4a': { wyk: 1, nowe: 1 },
+    'zdarzenie|stomb|w ładunku|R4a′': { wyk: 1, nowe: 1 },
+  },
+  'podstawowy:ogon': {
+    'zdarzenie|pnote|spoza|inne': { wyk: 6, nowe: 0 },
+    'zdarzenie|snap|w ładunku|gwiazdka': { wyk: 4, nowe: 4 },
+    'zdarzenie|snap|w ładunku|inne': { wyk: 1, nowe: 1 },
+    'zdarzenie|snap|w ładunku|rekord złożony': { wyk: 1, nowe: 1 },
+    'zdarzenie|stomb|spoza|R4a′': { wyk: 2, nowe: 2 },
+    'zdarzenie|stomb|w ładunku|R4a′': { wyk: 2, nowe: 2 },
+  },
+  pelny: {
+    'zdarzenie|karta|w ładunku|nagłówek karty': { wyk: 2, nowe: 2 },
+    'zdarzenie|snap|w ładunku|gwiazdka': { wyk: 1, nowe: 1 },
+    'zdarzenie|snap|w ładunku|inne': { wyk: 1, nowe: 1 },
+  },
+};
+function literalOdsyl(lista) {
+  const o = {};
+  for (const w of lista) {
+    for (const [k, n] of Object.entries(w.literal)) (o[k] = o[k] || { wyk: 0, nowe: 0 }).wyk += n;
+    for (const [k, n] of Object.entries(w.literalNowe)) (o[k] = o[k] || { wyk: 0, nowe: 0 }).nowe += n;
+  }
+  return sortuj(o);
+}
+const dodajDo = (o, z) => { for (const [k, v] of Object.entries(z || {})) o[k] = (o[k] || 0) + v; return o; };
+// Podsumowanie licznika profilu (druk do opisu PR): scalenia i wiersze według źródła i warstwy, literał, przydział,
+// koszt reguł, usunięcia, strażniki, największe minuty slotu (warstwa wyk i naiwna), partie, okna przesuwne, czas.
+function sumaOdsyl(lista) {
+  const s = { ziaren: lista.length, scalen: {}, zEchem: {}, wiersze: {}, przydzial: {}, tlumi: { A: {}, B: {}, T: {} }, usuniecia: {}, utrata: {}, polaZawsze: { encji: 0, bezPola: 0 }, kandydaci: {}, odcisk: { wersji: 0, zgodnych: 0 }, brakNosnika: 0, brakNosnikaKlasy: {}, bladBuildera: 0, oversize: 0, slotow: 0, maksSlotu: null, maksNaiwny: null, partieMaks: 0, partiePonad200: 0, okno: { wykonalne: null, echo: null, naiwne: null }, ms: 0 };
+  const wiekszy = (a, b, pole) => (!a || (b && b[pole] > a[pole]) ? b : a);
+  for (const w of lista) {
+    for (const k of ['scalen', 'zEchem', 'wiersze', 'usuniecia', 'utrata', 'brakNosnikaKlasy']) dodajDo(s[k], w[k]);
+    dodajDo(s.przydzial, w.rodzajePrzydzial);
+    for (const r of Object.keys(s.tlumi)) dodajDo(s.tlumi[r], w.tlumi[r]);
+    s.polaZawsze.encji += w.polaZawsze.encji; s.polaZawsze.bezPola += w.polaZawsze.bezPola;
+    for (const [k, v] of Object.entries(w.polaZawsze.kandydaci)) { const x = s.kandydaci[k] || (s.kandydaci[k] = { encji: 0, bezPola: 0 }); x.encji += v.encji; x.bezPola += v.bezPola; }
+    s.odcisk.wersji += w.odcisk.wersji; s.odcisk.zgodnych += w.odcisk.zgodnych;
+    s.brakNosnika += w.brakNosnika; s.bladBuildera += w.bladBuildera; s.oversize += w.oversize; s.slotow += w.budzet.slotow; s.ms += w.ms;
+    const slot = (b) => (b ? { ziarno: w.ziarno, wierszy: b.wierszy, bajty: b.bajty, realneDo: b.realneDo, zadanMaks: b.zadanMaks } : null);
+    s.maksSlotu = wiekszy(s.maksSlotu, slot(w.budzet.maksRealne), 'realneDo');
+    s.maksNaiwny = wiekszy(s.maksNaiwny, slot(w.budzetNaiwny.maksRealne), 'realneDo');
+    s.partieMaks = Math.max(s.partieMaks, w.partieDostaw.maks); s.partiePonad200 += w.partieDostaw.ponad200;
+    for (const k of Object.keys(s.okno)) s.okno[k] = wiekszy(s.okno[k], { ziarno: w.ziarno, ...w.okno[k] }, 'slotBajtow');
+  }
+  return s;
+}
+// Zieleń licznika ziarna (lista pusta albo zero — zieleń).
+const ZRODLA_BIEZACE = ['zdarzenie', 'w4'];
+function zielenOdsyl(w) {
+  const zrodla = Object.keys(w.scalen).filter((z) => z !== 'powtórka').sort();
+  return {
+    'pola zawsze obecne: encje od bieżącej wersji bez pola z POLA_ZAWSZE': w.polaZawsze.bezPola,
+    'źródła spoza bieżących urządzeń': zrodla.filter((z) => !ZRODLA_BIEZACE.includes(z)),
+    'warstwa wykonalna ≠ po2a między bieżącymi (źródło: wyk / po2a)': zrodla.filter((z) => (w.wiersze[`${z}:wyk`] || 0) !== (w.wiersze[`${z}:po2a`] || 0)).map((z) => `${z}: ${w.wiersze[`${z}:wyk`] || 0} / ${w.wiersze[`${z}:po2a`] || 0}`),
+    'budżet minuty slotu przekroczony (≤ 600 wierszy, ≤ 4 MiB realnie, ≤ 20 żądań na urządzenie)': w.budzet.przekroczone.map((x) => `t ${x.t}: ${x.wierszy} wierszy, ${x.realneDo} B, ${x.zadanMaks} żądań`),
+    'powtórka partii: partii / wierszy surowych': [w.powtorka.partii, w.wiersze['powtórka:surowe'] || 0],
+    'odcisk testu ≠ h wersji': w.odcisk.wersji - w.odcisk.zgodnych,
+    'wyjątki builderów nośników': w.bladBuildera,
+  };
+}
+const ZIELEN_ODSYL = {
+  'pola zawsze obecne: encje od bieżącej wersji bez pola z POLA_ZAWSZE': 0,
+  'źródła spoza bieżących urządzeń': [],
+  'warstwa wykonalna ≠ po2a między bieżącymi (źródło: wyk / po2a)': [],
+  'budżet minuty slotu przekroczony (≤ 600 wierszy, ≤ 4 MiB realnie, ≤ 20 żądań na urządzenie)': [],
+  'powtórka partii: partii / wierszy surowych': [1, 0],
+  'odcisk testu ≠ h wersji': 0,
+  'wyjątki builderów nośników': 0,
+};
+const opisOdsyl = (w) => JSON.stringify({ ziarno: w.ziarno, przyklady: w.przyklady, polaZawsze: w.polaZawsze.przyklady, odcisk: w.odcisk.niezgodne, budzet: w.budzet.przekroczone.slice(0, 4) }, null, 1);
+// [klucz WYNIKI, opis, ziarna przebiegu, czy ziarno wchodzi do literału, ziarna literału]
+const PROFILE_ODSYL = [
+  ['podstawowy', 'profil podstawowy', () => ZIARNA, (z) => domyslne(z), DOMYSLNE_ZIARNA],
+  ['podstawowy:ogon', 'koalescencja kolejki', () => ZIARNA_KOAL, (z) => !KROKI && DOMYSLNE_ZIARNA_KOAL.includes(z), DOMYSLNE_ZIARNA_KOAL],
+  [KOAL_PELNY ? 'pelny:ogon' : 'pelny', 'profil pełny', () => ZIARNA_PELNY, (z) => !KROKI && !KOAL_PELNY && DOMYSLNE_ZIARNA_PELNY.includes(z), DOMYSLNE_ZIARNA_PELNY],
+  ...(process.env.E2_AB_PROFIL === 'bez-polaczenia' ? [['bez-polaczenia', 'profil „dłuższa praca bez połączenia”', () => ZIARNA, () => false, []]] : []),
+];
+describe.skipIf(!ODSYL)('A ≡ B, licznik odsyłania w profilach (E3-PR0b; wyniki ziaren profili wyżej)', () => {
+  d1();
+  for (const [klucz, opis, ziarna, zLiteralem, ziarnaLiteralu] of PROFILE_ODSYL) {
+    it(`${opis}: pola zawsze obecne, warstwa wykonalna = po2a, budżet minuty slotu, powtórka partii — 0, odcisk = h; literał ZNANE_ODSYL (druk: podsumowanie licznika)`, () => {
+      const lista = ODSYL_WYNIKI[klucz];
+      expect(lista.map((w) => w.ziarno), `ziarna ${opis} z licznikiem (przypadki ziaren wyżej w tym przebiegu)`).toEqual(ziarna());
+      for (const w of lista) {
+        expect.soft(zielenOdsyl(w), `licznik odsyłania, ${opis}, ziarno ${w.ziarno}\n${opisOdsyl(w)}`).toEqual(ZIELEN_ODSYL);
+        expect.soft({ encjiZPolem: w.polaZawsze.encji > 0, wersjiZOdciskiem: w.odcisk.wersji > 0 }, `strażniki niepuste (${opis}, ziarno ${w.ziarno})`).toEqual({ encjiZPolem: true, wersjiZOdciskiem: true });
+      }
+      const s = sumaOdsyl(lista);
+      console.log(`E3-AB licznik ${klucz}`, JSON.stringify(s));
+      const dom = lista.filter((w) => zLiteralem(w.ziarno));
+      if (ziarnaLiteralu.length && dom.length === ziarnaLiteralu.length) expect(literalOdsyl(dom), `ZNANE_ODSYL['${klucz}'] (warstwa ${WYK})`).toEqual(ZNANE_ODSYL[klucz]);
+    });
+  }
+});
+
+// Determinizm: ziarno 1 profilu podstawowego, 20 mutacji (początek programu ziarna 1), raz z licznikiem i powtórką
+// partii, raz bez — ten sam dziennik operacji, te same eksporty końcowe obu urządzeń i ten sam wynik (bez czasu). Ten
+// przebieg (nazwa 'determinizm') nie wchodzi do podsumowań AB2/AB7, ZNANE_WYR ani ZNANE_ODSYL.
+describe.skipIf(!ODSYL)('A ≡ B, licznik odsyłania: determinizm (ziarno z licznikiem i bez — ten sam program)', () => {
+  d1();
+  it('ziarno 1, 20 mutacji: dziennik operacji, eksporty końcowe A i B i wynik bez czasu równe z licznikiem i bez; powtórka partii — 0 wierszy surowych', async () => {
+    const z = await przebiegZiarna(1, 'podstawowy', { nazwa: 'determinizm', kroki: 20, odsyl: true, slad: true });
+    const o = ODSYL_WYNIKI.determinizm[ODSYL_WYNIKI.determinizm.length - 1];
+    await sprzatnijUrzadzenia();
+    vi.restoreAllMocks();
+    ustaw(START);
+    const b = await przebiegZiarna(1, 'podstawowy', { nazwa: 'determinizm', kroki: 20, odsyl: false, slad: true });
+    const bezCzasu = ({ ms: _ms, slad: _slad, ...r }) => r;
+    // Klucz główny konta pochodzi z prawdziwego źródła losowości (kryptoZiarna: z ziarna tylko identyfikatory i IV), więc
+    // jego szyfrogram w poświadczeniu różni się między przebiegami niezależnie od licznika — poza porównaniem.
+    const bezKlucza = (lad) => (lad.credential && lad.credential.encryptedMasterByPassword
+      ? { ...lad, credential: { ...lad.credential, encryptedMasterByPassword: { ...lad.credential.encryptedMasterByPassword, data: '(klucz losowy)' } } } : lad);
+    const eksporty = (x) => ({ A: bezKlucza(x.slad.eksport.A), B: bezKlucza(x.slad.eksport.B) });
+    expect(z.mutacji).toBe(20);
+    expect(o.scalen.zdarzenie, 'scalenia zdarzeń z licznikiem').toBeGreaterThan(0);
+    expect(z.slad.dziennik, 'dziennik operacji').toEqual(b.slad.dziennik);
+    expect(eksporty(z), 'eksporty końcowe A i B').toEqual(eksporty(b));
+    expect(bezCzasu(z), 'wynik ziarna bez czasu').toEqual(bezCzasu(b));
+    expect([o.powtorka.partii, o.scalen['powtórka'] === o.powtorka.zdarzen, o.wiersze['powtórka:surowe'] || 0], 'powtórka partii: partii, scalenie na zdarzenie, wierszy surowych').toEqual([1, true, 0]);
+  }, 60_000);
 });
