@@ -21,6 +21,10 @@ flowchart TD
 
 Powłoka nie zamienia stron w jeden bundle. Poszczególne strony zachowują własne punkty wejścia i mogą działać samodzielnie, a `app.html` osadza je w ramach wspólnej nawigacji.
 
+## Trwała tożsamość wizyt (2026-11-14)
+
+Baza tej zmiany: `40d742d38f4d2924d3ba85a50d746790d0de6644`. Szyfrowane `payload.visit` rozdziela wizytę od jej technicznych wersji. `vilda_visit_context.js` prowadzi kontekst formularza, `vilda_vault.js` utrwala tożsamość i udostępnia `getPatientVisits`, a retencja chroni pełny zapis każdej wizyty. `vilda_visit_history_ui.js` i arkusz o tej samej nazwie dodają podgląd do Karty pacjenta. Szczegóły cyklu, danych dawnych i ograniczeń: [PATIENT_VISITS.md](PATIENT_VISITS.md).
+
 ## Punkty wejścia
 
 | Plik | Rola |

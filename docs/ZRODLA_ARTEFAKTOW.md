@@ -1721,3 +1721,114 @@ Skutki, o których warto pamiętać:
 - Kopie usuniętego konta zostają w pamięci przeglądarki jako nieużywane klucze.
 
 Testy: `tests/unit/ustawienia-konta-na-urzadzeniu.test.mjs` (prawdziwy adapter i sejf: rejestr, gość, przejęcie, dwa konta, sesja jednorazowa, synchronizacja między urządzeniami), e2e `tests/e2e/ustawienia-konta.spec.mjs` (gość, lekarz A, lekarz B i trzecie konto w jednej przeglądarce: „Widoczność kart” w Ustawieniach i jej skutek na stronie głównej).
+
+## Trwała tożsamość wizyt — źródło i granica artefaktu sejfu
+
+Zmiana funkcjonalna `P-TRWALE-WIZYTY` ma bazę `audyt` z commita
+`40d742d38f4d2924d3ba85a50d746790d0de6644`. Bazowy `vilda_vault.js` ma SHA-256
+`4a545ca00de1a48d7c59036a1433be3513d52815dec3a3a78b7f6b5828c2e7a6`.
+Reguły tożsamości i zachowania pełnego stanu wizyty opisuje [PATIENT_VISITS.md](PATIENT_VISITS.md).
+
+Czytelny blok funkcji sejfu znajduje się w
+`runtime/durable-visits-v1/vault-fragment.js`. Jest włączony do `vilda_vault.js`
+między jednoznacznymi znacznikami `BEGIN/END VILDA DURABLE VISITS V1`.
+`runtime/durable-visits-v1/manifest.json` zawiera dokładne, nazwane podmiany
+punktów wpięcia, skróty ich treści, skrót czytelnego źródła i całego wyniku.
+To źródło odtworzenia artefaktu; nie wymaga dodawania skryptu ani biblioteki
+do przeglądarki. Moduły kontekstu wizyty i jej widoku są osobnymi czytelnymi
+plikami `vilda_visit_context.js` i `vilda_visit_history_ui.js`.
+
+Odtworzenie sejfu z przypiętej bazy:
+
+```bash
+git show 40d742d38f4d2924d3ba85a50d746790d0de6644:vilda_vault.js > /tmp/vilda-vault-visits-base.js
+node tools/visits-vault-delta.mjs --rebuild /tmp/vilda-vault-visits-base.js /tmp/vilda-vault-visits-built.js
+cmp vilda_vault.js /tmp/vilda-vault-visits-built.js
+node tools/visits-vault-delta.mjs
+```
+
+Każdy punkt wpięcia musi występować dokładnie raz. Narzędzie odrzuca inne
+bajty bazy, zmianę źródła bez zgodnego manifestu, niejednoznaczny punkt wpięcia
+i wynik różniący się od zapisanego skrótu. Odwrócenie delty musi odtworzyć
+pełny plik bazowy bajt w bajt. Oryginalne skróty dowodu granicy natywnej
+przestrzeni klinicznej pozostają bez zmian: `check_clinical_workspace_boundary.mjs`
+najpierw odwraca dokładną deltę wizyt, następnie dotychczasową deltę Kt/V,
+po czym wykonuje wcześniejszy dowód granicy natywnej przestrzeni klinicznej.
+Nie usuwa dowolnych funkcji ani nie ignoruje zmian poza znanym blokiem.
+
+Testy `visits-vault-boundary.test.mjs` sprawdzają pełne odtworzenie, zachowanie
+starych skrótów oraz odrzucenie zmian w każdym punkcie wpięcia, w źródle
+i poza deltą. Dotychczasowe asercje Kt/V nadal sprawdzają niezmienione
+jednostki, nazwę badania, tożsamość i warunek podpisanej wartości URR.
+
+### Szyfrowana tożsamość usuniętej wizyty w przestrzeni klinicznej
+
+`snapshotTombstones[].visitCipher` mieści wyłącznie zaszyfrowany obiekt
+`{version: 1, visitId}`. Nie przechowuje pomiarów, daty wizyty ani notatek.
+Pozwala zachować identyfikację usuniętego zapisu po wygaśnięciu jego pełnej
+treści klinicznej. Ten konkretny adres szyfru musi przechodzić przez kodek
+przestrzeni klinicznej przy przechwyceniu, kopii i odtworzeniu.
+
+Czytelne źródło rozszerzonego kodeka:
+`runtime/durable-visits-v1/workspace-source-codec.mjs`. Jest kopią aktualnego
+kodeka z rodziny `e410c8725541`, z ograniczoną zmianą: obsługą nowej ścieżki,
+przechwyceniem jej szyfru i kontrolą minimalnego obiektu po odszyfrowaniu.
+Inne nowe pola szyfrowane nadal są odrzucane. `visitCipher` nie może wskazywać
+na cień pełnej dokumentacji medycznej ani przenosić dodatkowych pól.
+
+`tools/build-visits-workspace-family.mjs` sprawdza pełny skrót bazowego drzewa
+`e410c87255418a499356b314d4e2da79abbba5677fadbe5649e352eac0c5a34e`, kopiuje
+51 modułów i zastępuje tylko wspomniany kodek. Używa dotychczasowego sposobu
+obliczania adresu rodziny oraz formatu archiwum precache. Wynikiem jest rodzina
+`67818dc1656f` z 51 modułami; 151 modułów z trzech wcześniejszych rodzin i ich
+archiwa pozostają niezmiennymi zasobami historycznymi. Manifest wskazuje nowe
+bieżące drzewo. Jego skróty pierwotnego fragmentu natywnego nadal opisują bazę
+dowodu; dokładną zmianę adresu importu w sejfie obejmuje delta wizyt.
+
+```bash
+node tools/build-visits-workspace-family.mjs --write
+node tools/build-visits-workspace-family.mjs
+node tools/visits-vault-delta.mjs
+```
+
+Generator aktualizuje listę modułów i archiwum w manifeście, dopisuje adresy
+nowej rodziny przed `END CLINICAL WORKSPACE PRECACHE V1` oraz odtwarza blok
+`CLINICAL_WORKSPACE_PRECACHE_PACK`. Nie zmienia numeru SW ani wersji innych
+zasobów. Testy `visits-workspace-codec.test.mjs` sprawdzają rzeczywiste
+szyfrowanie, serializację źródła odzyskiwania i ponowne szyfrowanie tożsamości,
+starsze dane, izolację sesji, odrzucenie dodatkowych pól i odtworzenie drzewa.
+Test precache obejmuje wszystkie 202 adresy modułów, w tym 151 historycznych.
+
+### Transport trzech zasobów interfejsu wizyt w PWA
+
+`vilda_visit_context.js`, `vilda_visit_history_ui.js` i
+`vilda_visit_history_ui.css` pozostają niezależnymi plikami źródłowymi oraz
+trzema oddzielnymi adresami offline z `?v=`. Instalacja pobiera ich dokładne
+treści w jednym archiwum JSON. `tools/build-visit-ui-precache.mjs` odczytuje
+bajty źródeł i bieżące wersje precache, zapisuje archiwum pod adresem z hashem,
+manifest `runtime/visit-ui-precache/manifest.json` oraz konfigurację
+`VISIT_UI_PRECACHE_PACK` w SW. Nie łączy wykonywanego kodu ani arkuszy stylów.
+
+Worker najpierw sprawdza hash całego archiwum, pełną listę członków i hash
+każdej treści. Dopiero wtedy zapisuje odpowiedzi pod trzema oryginalnymi
+kluczami. CSS ma typ `text/css`, skrypty `text/javascript`; archiwum nie może
+zmienić tych typów. Wspólny mechanizm weryfikacji transportu ma dwie oddzielne
+listy dozwolonych zasobów: dotychczasowe moduły przestrzeni klinicznej oraz
+dokładnie trzy zasoby wizyt. Nie rozszerza listy akceptowanych adresów
+przestrzeni klinicznej. Nieudana weryfikacja przerywa wymaganą instalację.
+
+Po zmianie treści lub numeru `?v=` tych plików, **po** `npm run podbij-wersje`:
+
+```bash
+node tools/build-visit-ui-precache.mjs --write
+node tools/build-visit-ui-precache.mjs
+```
+
+Poprzednie archiwa pozostają niezmienne i trafiają do `historicalPacks`.
+Trzy żądania zastępuje jedno. Dodatkowo jawna para bieżących adresów
+`obesity_therapy.js` współdzieli świeżą odpowiedź zgodnie z istniejącym
+mechanizmem aliasów. Budżety 600 żądań, 40 MB i model pięciu minut instalacji
+pozostają bez zmian. Testy `visit-ui-precache-pack.test.mjs` sprawdzają
+oryginalne treści, MIME, zakres `/vilda-calc/`, odrzucenie uszkodzeń i błędy
+zapisu; `sw-precache-stron.test.mjs` nadal wykonuje rzeczywisty worker,
+sprawdza wszystkie wymagane klucze oraz niezmienione budżety.

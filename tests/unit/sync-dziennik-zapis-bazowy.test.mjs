@@ -108,6 +108,14 @@
 // (E2-PR3a1c) — na sejfie, który przy usuwaniu konta kasuje też dziennik dostępu i ustawienia kopii konta, z tymi
 // samymi przeniesionymi polami opis i bazaVault. PR, który zmienia ślad sejfu w krokach scenariusza, nagrywa fiksturę
 // ponownie i wymienia w opisie zmienione kroki. Dane wyłącznie fikcyjne.
+//
+// Trwałe wizyty (14.11.2026): ponowne nagranie oficjalnym trybem, z zachowaniem pierwotnych opis/bazaVault.
+// W każdym wariancie zmieniają się wyłącznie liczniki crypto w 14 krokach: nowa/druga/trzecia karta, poprawka,
+// gwiazdka/odpięcie, kosz, retencja, scalenie pacjentów, eksport ze scaleniem, delta, koperta, import starego formatu
+// i osoba spoza bazy. Przyczyną jest walidacja/migracja tożsamości wizyty i osobny szyfr UUID w koszu oraz retencji.
+// Retencja dodatkowo czyta metadane znanych usuniętych głów wizyt: jeden getUserMeta w Ze i jedna transakcja meta
+// readonly w prywatnym/chmurze. Wszystkie zapisy, wyniki operacji, powiadomienia, bramka, bazy i ustawienia są
+// identyczne z poprzednią fiksturą; pełny audyt różnic obejmuje 56 liczników crypto i 3 ślady tego samego odczytu.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';

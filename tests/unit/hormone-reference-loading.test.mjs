@@ -12,6 +12,7 @@ const chromeLoader = chrome.slice(chromeStart, chromeEnd);
 function environment(missing = [], restoredSession = false) {
   const events = new Map(), appended = [];
   const win = { VildaCrypto: {}, VildaLabSnapshot: {}, VildaLabAssessmentUI: {}, VildaVaultProtocol: {}, VildaVault: {},
+    VildaVisitContext: {}, VildaVisitHistory: {},
     VildaClinicalCrypto: {}, VildaPatientCheckpointStore: {}, VildaPatientCheckpoint: {},
     VildaPatientIdentityProtocol: {}, VildaPatientIdentityTransport: {},
     // SGA readiness has its own missing-dependency cases in patient-sga-loading.test.mjs.
@@ -32,7 +33,7 @@ function environment(missing = [], restoredSession = false) {
   };
   for (const key of missing) delete win[key];
   const doc = {
-    readyState: 'loading', querySelector: selector => selector.includes('vilda_patient_sga_ui.css') ? { href: 'vilda_patient_sga_ui.css?v=existing' } : null, getElementById: () => null,
+    readyState: 'loading', querySelector(selector) { const file = ['vilda_patient_sga_ui.css', 'vilda_visit_history_ui.css'].find(name => selector.includes(name)); return file ? { href: file + '?v=existing' } : null; }, getElementById: () => null,
     addEventListener(type, fn) { events.set(type, fn); }, dispatchEvent() {},
     createElement(tag) {
       const handlers = new Map();

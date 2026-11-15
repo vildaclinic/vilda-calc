@@ -43,7 +43,8 @@ function Pp_hasRestorableMainSession(){
       advanced.name,view.growthBasic&&view.growthBasic.name,plan.customGoalKg].some(Pp_mainValuePresent)||
       user.age===0||user.age==="0"||plan.dietaWybrana===true||plan.palWybrany===true||
       contexts.some(context=>context&&(Pp_mainValuePresent(context.current)||Pp_mainValuePresent(context.last))))return true;
-    const known=["version","timestampISO","timestamp","savedAtISO","source","name","user","advanced",
+    // Visit identity is metadata; by itself it must not restore a blank clinical form.
+    const known=["visit","version","timestampISO","timestamp","savedAtISO","source","name","user","advanced",
       "growthBasic","intake","foods","plan","clcr","bp","adultVitals","respiratory","circumference",
       "bisphos","ghTherapyPoints","obesityTherapyPoints","bisphosTherapyPoints","birth","perinatal",
       "puberty","chartCreator","steroid"];

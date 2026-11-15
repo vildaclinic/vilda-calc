@@ -47,9 +47,9 @@ afterEach(async () => {
 });
 
 const kolejnaTura = () => new Promise((r) => { setImmediate(r); });
-async function para(opcjeB = {}) {
+async function para(opcjeB = {}, opcjeA = {}) {
   const atrapa = utworzAtrapeWorkera();
-  const A = await utworzUrzadzenie({ atrapa, nazwa: 'A' });
+  const A = await utworzUrzadzenie({ atrapa, nazwa: 'A', ...opcjeA });
   const B = await utworzUrzadzenie({ atrapa, nazwa: 'B', zBlizniaka: A, ...opcjeB });
   return { atrapa, A, B };
 }
@@ -64,8 +64,8 @@ async function zsynchronizuj({ atrapa, A, B }) {
   expect(atrapa.naruszenia).toEqual([]);
 }
 // Scenariusz U3 (także dla U9): delta karty beaconem i drenaż na B.
-async function scenariuszDelty() {
-  const s = await para();
+async function scenariuszDelty(krypto = null) {
+  const s = await para(krypto ? { dodatki: { crypto: krypto(2) } } : {}, krypto ? { dodatki: { crypto: krypto(1) } } : {});
   await zsynchronizuj(s);
   const { atrapa, A, B } = s;
   const zA = A.znacznik();
@@ -76,6 +76,29 @@ async function scenariuszDelty() {
   const r = await B.sync.syncPull();
   await cisza([A, B]);
   return { ...s, k, r, zA, bPrzed, slot: atrapa.slot(A.slotId) };
+}
+
+// Only the determinism self-test fixes synthetic UUIDs/IVs. Real subtle crypto
+// and key generation remain in use. Visit IDs now participate in a variable-
+// length clinical-content hash, so equal encrypted byte counts need equal IDs.
+function deterministicTestCrypto(seed) {
+  let state = seed >>> 0;
+  const random = () => {
+    state = (state + 0x6D2B79F5) >>> 0;
+    let value = state;
+    value = Math.imul(value ^ (value >>> 15), value | 1);
+    value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
+    return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
+  };
+  return {
+    subtle: globalThis.crypto.subtle,
+    getRandomValues(values) {
+      if (!(values instanceof Uint8Array) || ![12, 16].includes(values.length)) return globalThis.crypto.getRandomValues(values);
+      for (let index = 0; index < values.length; index += 1) values[index] = Math.floor(random() * 256);
+      return values;
+    },
+    randomUUID: () => 'xxxxxxxx-xxxx-4xxx-8xxx-xxxxxxxxxxxx'.replace(/x/g, () => Math.floor(random() * 16).toString(16)),
+  };
 }
 
 describe('E2-PR0: uprząż urządzeń synchronizacji', () => {
@@ -315,14 +338,22 @@ describe('E2-PR0: uprząż urządzeń synchronizacji', () => {
   });
 
   it('U9: samokontrola determinizmu — scenariusz U3 dwa razy na świeżych atrapach daje identyczne rzuty osi i żądań', async () => {
-    const pierwszy = await scenariuszDelty();
-    const r1 = { os: pierwszy.atrapa.rzutOsi(), zadania: pierwszy.atrapa.rzutZadan(), ramki: pierwszy.atrapa.ramki.map((x) => x.ramka.type) };
-    await sprzatnijUrzadzenia();
-    const drugi = await scenariuszDelty();
-    const r2 = { os: drugi.atrapa.rzutOsi(), zadania: drugi.atrapa.rzutZadan(), ramki: drugi.atrapa.ramki.map((x) => x.ramka.type) };
-    expect(pierwszy.atrapa.id).not.toBe(drugi.atrapa.id);
-    expect(r2).toEqual(r1);
-    expect(r1.zadania.length).toBeGreaterThan(5);
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-21T09:00:00.000Z'));
+    try {
+      const pierwszy = await scenariuszDelty(deterministicTestCrypto);
+      const r1 = { os: pierwszy.atrapa.rzutOsi(), zadania: pierwszy.atrapa.rzutZadan(), ramki: pierwszy.atrapa.ramki.map((x) => x.ramka.type) };
+      const payload1 = (await pierwszy.A.vault.getPatient(pierwszy.k.patientId)).snapshots[0].payload;
+      await sprzatnijUrzadzenia();
+      const drugi = await scenariuszDelty(deterministicTestCrypto);
+      const r2 = { os: drugi.atrapa.rzutOsi(), zadania: drugi.atrapa.rzutZadan(), ramki: drugi.atrapa.ramki.map((x) => x.ramka.type) };
+      const payload2 = (await drugi.A.vault.getPatient(drugi.k.patientId)).snapshots[0].payload;
+      expect(pierwszy.atrapa.id).not.toBe(drugi.atrapa.id);
+      expect(r2).toEqual(r1);
+      expect(payload2, 'te same dane kliniczne i dokładnie ta sama tożsamość wizyty w deterministycznych przebiegach').toEqual(payload1);
+      expect(payload2.visit.visitId).toBe(payload1.visit.visitId);
+      expect(r1.zadania.length).toBeGreaterThan(5);
+    } finally { vi.useRealTimers(); }
   });
 
   it('U10: cisza czeka na prawdziwy drenaż w locie (opóźniona odpowiedź /changes) — kursor i scalenie po ciszy', async () => {

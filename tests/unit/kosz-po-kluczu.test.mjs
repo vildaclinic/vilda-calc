@@ -39,10 +39,10 @@
 //             w 16/16, C X[nowa,x:23] w 8/16 i X[nowa,x:74] w 4/16)
 //   kosz-przed P: kosz x w X; K (bez wiedzy): X → Y → kosz x@X:23, x w żadnej karcie (dotąd K i w 4/16 C: Y[…,x:23,…])
 //   kosz-po   K: X → Y; P (bez wiedzy): kosz x w X → to samo (dotąd K i w 4/16 C: Y[…,x:23,…])
-//   E4b-ret   retencja K przycina Z (zamiast kosza) → Z[m2], nagrobki X i Y, x w żadnej karcie (dotąd P X[x3,x:74,x1]
+//   E4b-ret   retencja K przycina Z (zamiast kosza) → Z[m2,m1,x3], nagrobki X i Y, x w żadnej karcie (dotąd P X[x3,x:74,x1]
 //             w 16/16, C X[x3,x:74,x1] w 4/16 i X[x3,x:23,x1] w 3/16)
 //   E4b-ret-pin P przypina x w X, retencja K przycina Z → X[x:23*] na trzech (przypięta przeżywa retencję; dotąd P
-//             i w 12/16 C X[x3,x:23*,x1], K X[x:23*])
+//             i w 12/16 C X[x3,x:23*,x1], K X[x:23*]); w Z pozostają m2/m1/x3 — głowy trzech pierwotnych wizyt.
 //   kontrole bez zmian (zielone także na 8240e0df): E4b-bez-kosza, PRZ0 i PRZ (s4d7-wspolne.mjs).
 //   np-ret-A1 (fuzz wielu kart, ziarna 168 i 198; Bsw_przezyteRetencji) — wersja starej karty, która wygrywa ze swoim
 //   wpisem retencji, przechodzi pod kartę docelową, zamiast zginąć z kartą od nagrobka „Scal pacjentów”:
@@ -50,7 +50,7 @@
 //             nagrobek X (bez tej reguły: x w żadnej karcie na trzech w 4 z 8 kolejności — A1 przycinał na K kopię x pod Y,
 //             a przypięta x ginęła na P z X; 8240e0df: rozjazd 16/16, w 6/16 K ze starą x:23 bez gwiazdki, a P i C bez x)
 //   npret-popr C przycina X; P poprawia x na 74 (później); K: X → Y → Y[m3,y,x3,x:74] (bez tej reguły: 4 z 8 bez x)
-//   npret-K    P przypina x w X; K: X → Y, retencja K przycina Y → Y[m2,x:23*] (bez tej reguły i na 8240e0df: x w żadnej karcie
+//   npret-K    P przypina x w X; K: X → Y, retencja K przycina Y → Y[m2,x3,x:23*] (bez tej reguły i na 8240e0df: x w żadnej karcie
 //             w 8 z 8 — E4a-ret-pin z jednym scaleniem)
 //   npret-kosz3-K jak npret-pin, a K daje do kosza x3 pod Y — w tej fazie z X nie przechodzi żadna wersja; karta
 //             docelowa z wpisu kosza x3 (karta Y) → Y[m3,y,x:23*], kosz x3@Y (bez tej reguły: x w żadnej karcie w 4 z 8,
@@ -113,11 +113,11 @@ const ZBIEZNE = {
   'E4b-2w': ['X[nowa] Z[m2,m1,z,y,x3,x1] | kosz x@Z:74 | nagr Y', { powod: 'kosz', rev: 2, masa: 74 }],
   'kosz-przed': ['Y[m2,y,x3,x1] Z[z] | kosz x@X:23 | nagr X', { powod: 'kosz', rev: 1, masa: 23 }],
   'kosz-po': ['Y[m1,y,x3,x1] Z[z] | kosz x@X:23 | nagr X', { powod: 'kosz', rev: 1, masa: 23 }],
-  'E4b-ret': ['Z[m2] | nagr X,Y', { powod: 'retencja', rev: 2, masa: null }],
-  'E4b-ret-pin': ['X[x:23*] Z[m2] | nagr Y', { powod: 'retencja', rev: 2, masa: null }],
+  'E4b-ret': ['Z[m2,m1,x3] | nagr X,Y', { powod: 'retencja', rev: 2, masa: null }],
+  'E4b-ret-pin': ['X[x:23*] Z[m2,m1,x3] | nagr Y', { powod: 'retencja', rev: 2, masa: null }],
   'npret-pin': ['Y[m3,y,x3,x:23*] Z[z] | nagr X', { powod: 'retencja', rev: 0, masa: null }],
   'npret-popr': ['Y[m3,y,x3,x:74] Z[z] | nagr X', null],
-  'npret-K': ['Y[m2,x:23*] Z[z] | nagr X', { powod: 'retencja', rev: 1, masa: null }],
+  'npret-K': ['Y[m2,x3,x:23*] Z[z] | nagr X', { powod: 'retencja', rev: 1, masa: null }],
   'npret-kosz3-K': ['Y[m3,y,x:23*] Z[z] | kosz x3@Y:25 | nagr X', { powod: 'retencja', rev: 0, masa: null }],
   'npret-nowaW': ['W[m4,w,x3,x:23*] Y[y] Z[z] | nagr X', { powod: 'retencja', rev: 0, masa: null }],
   // kontrole
@@ -126,12 +126,47 @@ const ZBIEZNE = {
   PRZ: ['X[x:78] | kosz s1@X:20', null],
 };
 
+// Retention now preserves the latest revision of each original visit after a
+// patient merge. Only these three expected states change. Capture UUIDs before
+// any mutation and verify exact source clinical values/owner bindings afterwards;
+// the full-state convergence and zero-write assertions below remain unchanged.
+const CHRONIONE_WIZYTY = {
+  'E4b-ret': { Z: ['Z', 'Y', 'X'] },
+  'E4b-ret-pin': { Z: ['Z', 'Y', 'X'] },
+  'npret-K': { Y: ['Y', 'X', 'X'], Z: ['Z'] },
+};
+async function sprawdzChronioneWizyty(r, expected, before) {
+  expect(new Set(Object.values(before).map(s => s.payload.visit.visitId)).size, 'three distinct original visits before merge').toBe(3);
+  for (const device of ['P', 'K', 'C']) {
+    for (const [owner, sources] of Object.entries(expected)) {
+      const rows = (await r.u[device].getPatient(r.u[owner])).snapshots;
+      expect(rows.map(s => s.payload.visit.visitId), `${device}/${owner}: exact retained visit UUIDs`).toEqual(sources.map(source => before[source].payload.visit.visitId));
+      for (let index = 0; index < sources.length; index += 1) {
+        const source = sources[index], row = rows[index], initial = before[source];
+        expect(row.payload.visit).toEqual({ ...initial.payload.visit, patientId: r.u[owner] });
+        if (row.snapshotId === r.u.sid) {
+          expect(row.pinned, 'only the separately asserted pinned technical revision is retained additionally').toBe(true);
+        } else {
+          expect({ height: row.payload.user.height, weight: row.payload.user.weight }).toEqual({ height: initial.payload.user.height, weight: initial.payload.user.weight });
+          if (source === 'X') expect(row.snapshotId, 'the original latest X revision survives the move').toBe(initial.snapshotId);
+        }
+      }
+    }
+  }
+}
+
 describe('P-KOSZ-PO-KLUCZU — rodzina E4b (wpis kosza po kluczu) i kontrole: ten sam pełny stan na trzech', () => {
   for (const [nazwa, [widok, nagrobek]] of Object.entries(ZBIEZNE)) {
     for (const runda of RUNDY) {
       for (const kol of KOLEJNOSCI_8) {
         it(`${nazwa} (${kol}, rundy ${runda}): ${widok}`, async () => {
-          const r = await przebiegE3(SCEN[nazwa], kol, runda);
+          const protectedVisits = CHRONIONE_WIZYTY[nazwa], before = {};
+          const scenario = protectedVisits ? { ...SCEN[nazwa], kroki: async u => {
+            for (const source of ['X', 'Y', 'Z']) before[source] = (await u.K.getPatient(u[source])).snapshots[0];
+            await SCEN[nazwa].kroki(u);
+          } } : SCEN[nazwa];
+          const r = await przebiegE3(scenario, kol, runda);
+          if (protectedVisits) await sprawdzChronioneWizyty(r, protectedVisits, before);
           expect(r.u.warunkiBledne, `warunki scenariusza: ${r.u.warunki.join('; ')}`).toBe(false);
           if (nazwa === 'PRZ0' || nazwa === 'PRZ') expect(r.u.przywroc, '„Przywróć” na P').toBe('przywrócono');
           expect(r.widoki, 'widok na trzech').toEqual({ P: widok, K: widok, C: widok });

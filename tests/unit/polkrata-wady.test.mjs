@@ -219,10 +219,12 @@ describe('stempel zmiany po przycięciu, które przypięta wersja przeżyła (A3
 // — zaszyfrowana, niewidoczna w koszu, najwyżej 30 dni od usunięcia, które ją zabrało, nigdy w ładunku synchronizacji.
 describe('D4: cień treści — lokalnie, zaszyfrowany, niewidoczny, ≤ 30 dni, nie wysyłany', () => {
   const POLA_NAGROBKA = ['patientId', 'snapshotId', 'deletedAtISO', 'savedAtISO', 'rev', 'updatedAtISO', 'seq', 'powod',
-    'przycietoISO', 'zmianaISO', 'koszISO', 'revPary', 'payload'];
+    'przycietoISO', 'zmianaISO', 'koszISO', 'revPary', 'payload', 'visitIdentity'];
   it('X5 na P: P 77, 78, kosz P; C (bez wiedzy) 74 i przycina; P←C — cień 78 tylko lokalnie; po 31 dniach kosz K bierze własną treść', async () => {
     sztucznyZegar();
     const { u, sid } = await urzadzenia(['P', 'K', 'C']);
+    const initialExport = await u.P.exportSyncPayload();
+    const originalVisits = new Map(initialExport.patients.flatMap(patient => patient.snapshots.map(row => [row.snapshotId, row.payload.visit.visitId])));
     przesunZegar(M); await poprawMase(u.P, sid, 77);
     przesunZegar(M); await poprawMase(u.P, sid, 78);
     przesunZegar(M); await doKosza(u.P, sid);
@@ -245,6 +247,8 @@ describe('D4: cień treści — lokalnie, zaszyfrowany, niewidoczny, ≤ 30 dni,
     const l = await u.P.exportSyncPayload();
     for (const e of l.snapshotTombstones) {
       expect(Object.keys(e).filter((k) => !POLA_NAGROBKA.includes(k)), 'w ładunku tylko pola nagrobka (bez Bpk i szyfrów)').toEqual([]);
+      expect(originalVisits.has(e.snapshotId), 'marker refers to an original known snapshot').toBe(true);
+      expect(e.visitIdentity, 'only version and original visit UUID may outlive clinical shadow data').toEqual({ version: 1, visitId: originalVisits.get(e.snapshotId) });
       if (e.powod === 'retencja') expect(e.payload, 'nagrobek retencji bez treści (F5)').toBeUndefined();
     }
     przesunZegar(31 * DZIEN);

@@ -74,21 +74,34 @@ function committedStatusFingerprint(value){
   delete core.clcr;b(core);
   return JSON.stringify(te({core:core,clcr:clcr?X(P(decisionClone(clcr))):null}));
 }
+// A confirmed first save may bind the already allocated clinical encounter to
+// its patient. Compare detached values only; no other visit field is an alias.
+function decisionClinicalVisit(value){
+  var visit=value&&value.visit;
+  return visit&&visit.version===1&&typeof visit.visitId==="string"&&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(visit.visitId)&&
+    typeof visit.clinicalDateISO==="string"&&/^\d{4}-\d{2}-\d{2}$/.test(visit.clinicalDateISO)&&
+    typeof visit.createdAtISO==="string"&&Number.isFinite(Date.parse(visit.createdAtISO))&&
+    (visit.origin==="explicit"||visit.origin==="legacy-inferred")?visit:null;
+}
+function decisionBindOwnVisitOwners(before,live,patientId){
+  var changed=false,a=decisionClinicalVisit(before),b=decisionClinicalVisit(live);
+  if(a&&b&&a.visitId===b.visitId&&a.patientId==null&&b.patientId===patientId){a.patientId=patientId;changed=true}
+  a=before&&before.user&&before.user.pubertyAssessmentVisit;b=live&&live.user&&live.user.pubertyAssessmentVisit;
+  if(a&&b&&a.version===1&&b.version===1&&typeof a.visitId==="string"&&a.visitId&&
+    a.visitId===b.visitId&&a.ownerPatientId==null&&b.ownerPatientId===patientId){a.ownerPatientId=patientId;changed=true}
+  return changed;
+}
 function decisionCommittedReference(value,owner,reference,api){
   try{
     if(!committedStatusSelector||!reference||!api||typeof api.getCommittedSaveWitness!=="function")return reference;
     var witness=api.getCommittedSaveWitness(committedStatusSelector);
     if(!witness||witness.patientId!==owner.patientId||witness.sourcePatientId!==null||
       committedStatusFingerprint(witness.payload)!==reference)return reference;
-    var copy=JSON.parse(reference),before=copy&&copy.core&&copy.core.user&&copy.core.user.pubertyAssessmentVisit;
-    var live=value&&value.user&&value.user.pubertyAssessmentVisit;
+    var copy=JSON.parse(reference);
     // Creating a patient binds the already existing examination to its new PID.
     // It does not acknowledge a different examination or any clinical edit.
-    if(before&&live&&before.version===1&&live.version===1&&typeof before.visitId==="string"&&before.visitId&&
-      before.visitId===live.visitId&&before.ownerPatientId==null&&live.ownerPatientId===owner.patientId){
-      before.ownerPatientId=owner.patientId;
-      return JSON.stringify(te(copy));
-    }
+    if(decisionBindOwnVisitOwners(copy.core,value,owner.patientId))return JSON.stringify(te(copy));
   }catch{}
   return reference;
 }
@@ -104,14 +117,8 @@ function decisionOwnSaveReference(value,owner,reference,api){
       // The existing new-patient save handoff may bind this exact examination
       // in the normal session publisher before this detached age comparison.
       if(witness.sourcePatientId!==null)return reference;
-      var saved=JSON.parse(savedFingerprint),raw=JSON.parse(reference);
-      var beforeVisit=saved&&saved.core&&saved.core.user&&saved.core.user.pubertyAssessmentVisit;
-      var referenceVisit=raw&&raw.core&&raw.core.user&&raw.core.user.pubertyAssessmentVisit;
-      var liveVisit=value.user.pubertyAssessmentVisit;
-      if(!beforeVisit||!referenceVisit||!liveVisit||beforeVisit.version!==1||referenceVisit.version!==1||liveVisit.version!==1||
-        typeof beforeVisit.visitId!=="string"||!beforeVisit.visitId||beforeVisit.visitId!==referenceVisit.visitId||beforeVisit.visitId!==liveVisit.visitId||
-        beforeVisit.ownerPatientId!=null||referenceVisit.ownerPatientId!==owner.patientId||liveVisit.ownerPatientId!==owner.patientId)return reference;
-      beforeVisit.ownerPatientId=owner.patientId;
+      var saved=JSON.parse(savedFingerprint);
+      if(!decisionBindOwnVisitOwners(saved.core,value,owner.patientId))return reference;
       if(JSON.stringify(te(saved))!==reference)return reference;
     }
     var copy=JSON.parse(reference),user=copy&&copy.core&&copy.core.user;
@@ -183,13 +190,25 @@ function decisionContentAfterSave(original,current,receipt){
   if(!receipt||receipt.saved!==true||original.owner.patientId!==null||original.state!==i.NEW_PATIENT)return false;
   try{
     var before=JSON.parse(original.fingerprint),after=JSON.parse(current.fingerprint),reference=JSON.parse(current.reference);
-    function visit(value){return value&&value.core&&value.core.user&&value.core.user.pubertyAssessmentVisit}
-    var a=visit(before),b=visit(after),r=visit(reference),patientId=receipt.patientId;
-    if(!a||!b||!r||a.version!==1||b.version!==1||r.version!==1||
-      typeof a.visitId!=="string"||!a.visitId||a.visitId!==b.visitId||a.visitId!==r.visitId||
-      a.ownerPatientId!=null||b.ownerPatientId!==patientId||r.ownerPatientId!=null&&r.ownerPatientId!==patientId)return false;
-    a.ownerPatientId=patientId;r.ownerPatientId=patientId;
-    return JSON.stringify(te(before))===current.fingerprint&&JSON.stringify(te(reference))===current.fingerprint;
+    var patientId=receipt.patientId;
+    decisionBindOwnVisitOwners(before.core,after.core,patientId);
+    decisionBindOwnVisitOwners(reference.core,after.core,patientId);
+    // The read-only preflight never allocates an encounter. If the native save
+    // allocated the first one, only its exact committed witness can account for
+    // that addition. Existing visits, dates, provenance and clinical edits are
+    // still compared in full; this never blesses another visit's payload.
+    if(before.core&&!Object.prototype.hasOwnProperty.call(before.core,"visit")){
+      var liveVisit=decisionClinicalVisit(after.core),referenceVisit=decisionClinicalVisit(reference.core);
+      var api=n.VildaDataImportExport,witness=api&&typeof api.getCommittedSaveWitness==="function"&&committedStatusSelector?
+        api.getCommittedSaveWitness(committedStatusSelector):null;
+      var committedVisit=decisionClinicalVisit(witness&&witness.payload);
+      if(liveVisit&&referenceVisit&&committedVisit&&liveVisit.origin==="explicit"&&liveVisit.patientId===patientId&&
+        witness.sourcePatientId===null&&witness.patientId===patientId&&witness.snapshotId===receipt.snapshotId&&
+        JSON.stringify(te(liveVisit))===JSON.stringify(te(referenceVisit))&&
+        JSON.stringify(te(liveVisit))===JSON.stringify(te(committedVisit))){delete after.core.visit;delete reference.core.visit}
+    }
+    var fingerprint=JSON.stringify(te(after));
+    return JSON.stringify(te(before))===fingerprint&&JSON.stringify(te(reference))===fingerprint;
   }catch{return false}
 }
 function isCurrentDecisionAfterSave(scope,receipt){

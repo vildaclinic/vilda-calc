@@ -488,18 +488,27 @@ describe('strażniki źródła', () => {
 describe('opis retencji w historii wersji', () => {
   it('zgadza się z regułami vilda_retention.js i progiem sejfu (już nie „dojdzie w kolejnym etapie”)', () => {
     const ui = readFileSync(path.join(repoRoot, 'vilda_version_history_ui.js'), 'utf8');
-    const m = ui.match(/text:"(Gdy karta[^"]*)"/);
+    const m = ui.match(/text:"(Automatyczne porządkowanie[^"]*)"/);
     expect(m, 'opis retencji pod listą wersji').not.toBeNull();
     const opis = JSON.parse(`"${m[1]}"`);
-    expect(opis).toBe('Gdy karta ma co najmniej 10 wersji, zapis przerzedza starsze na wszystkich urządzeniach: '
-      + 'z ostatnich 24 h zostają wszystkie, do 30 dni — ostatnia z każdego dnia, starsze — ostatnia z miesiąca '
-      + '(najwyżej 40). Przypięte zostają zawsze.');
+    expect(opis).toContain('najnowszy zapis każdej wizyty');
+    expect(opis).toContain('wszystkie wersje przypięte');
+    expect(opis).toContain('limit 40 wersji nie usuwa chronionych wizyt ani przypiętych zapisów');
     expect(ui).not.toContain('dojdzie w kolejnym etapie');
 
-    const retencja = readFileSync(path.join(repoRoot, 'vilda_retention.js'), 'utf8');
-    expect(retencja, 'limit 40').toContain('r.cap>0?Math.floor(r.cap):40');
-    expect(retencja, '24 h').toContain('r.recentHours:24');
-    expect(retencja, '30 dni').toContain('r.dailyDays:30');
+    const win = {}; loadBrowserScript('vilda_retention.js', win);
+    const now = Date.parse('2026-11-14T14:00:00Z');
+    const rows = (hours) => hours.map((hour, index) => ({ snapshotId: String(index),
+      savedAtISO: new Date(now - hour * GODZINA).toISOString(), payload: { visit: { visitId: 'same-visit' } } }));
+    const recent = rows(Array.from({ length: 50 }, (_, index) => index / 60));
+    expect(win.VildaRetention.computeRetention(recent, new Date(now).toISOString()).keptCount, 'domyślny limit dodatkowych rewizji').toBe(40);
+    expect(win.VildaRetention.computeRetention(recent, new Date(now).toISOString(), { cap: 100 }).keptCount).toBe(50);
+    const daily = rows([23, 24, 25, 26]);
+    expect(win.VildaRetention.computeRetention(daily, new Date(now).toISOString()).keep).toEqual(['0', '1', '2']);
+    expect(win.VildaRetention.computeRetention(daily, new Date(now).toISOString(), { recentHours: 0 }).keep).toEqual(['0']);
+    const older = rows([29 * 24, 30 * 24, 31 * 24, 32 * 24]);
+    expect(win.VildaRetention.computeRetention(older, new Date(now).toISOString()).keep).toEqual(['0', '1', '2']);
+    expect(win.VildaRetention.computeRetention(older, new Date(now).toISOString(), { dailyDays: 60 }).keep).toHaveLength(4);
     const vault = readFileSync(path.join(repoRoot, 'vilda_vault.js'), 'utf8');
     expect(vault, 'próg 10 wersji').toContain('typeof e=="number"&&e>=10');
   });

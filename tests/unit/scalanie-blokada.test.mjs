@@ -471,7 +471,7 @@ describe('strażniki źródła', () => {
     // przed podmianą (Bses_imp); zmiana sesji (SESSION_CHANGED) kończy scalanie jak zajęta blokada. P-SESJA-ZAPISU
     // (przegląd 4): import karty (ns) podaje znacznik w opcjach z sesją importu ({ Bpb_imp: Bpb_IMPORT, Bses_s }).
     expect(le).toContain('const Bses_imp=e===Bpb_IMPORT||!!(e&&e.Bpb_imp===Bpb_IMPORT),Bses_zew=Bses_imp&&e!==Bpb_IMPORT?e.Bses_s:null;e=Bses_opcje(Bses_imp?null:e);if(Bses_zew)e.Bses_s=Bses_zew;');
-    expect(le).toContain('Bkz_n=Bses_imp?0:await Bkz_scalKoniec(Bkz_S,e)}catch(Bkz_e){PatientClinicalRethrow(Bkz_e);if(Bkz_e&&(Bkz_e.vildaMergeBusy||Bkz_e.code==="SESSION_CHANGED"))throw Bkz_e;');
+    expect(le).toContain('Bkz_n=Bses_imp?0:await Bkz_scalKoniec(Bkz_S,e)}catch(Bkz_e){PatientClinicalRethrow(Bkz_e);if(Bkz_e&&(Bkz_e.vildaMergeBusy||Bkz_e.code==="SESSION_CHANGED"||Bkz_e.code==="VISIT_IDENTITY_CONFLICT"||Bkz_e.code==="INVALID_VISIT_IDENTITY"))throw Bkz_e;');
     for (const f of ['Bsl_scalPacjenta', 'Bsl_usunPacjenta']) {
       const poczatek = src.indexOf(`async function ${f}(`);
       const koniecNaglowka = src.indexOf('\n', poczatek);

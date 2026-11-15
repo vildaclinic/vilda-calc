@@ -38,6 +38,8 @@
 //      urządzenia, wszystkie kroki), nie zostaje w karcie; tak samo po ostatniej retencji bez przypięcia; i w samym
 //      stanie: wersja w karcie obok tutejszego nagrobka kosza nie wcześniejszego niż jej chwila zmiany — za każdym
 //      razem poza jedyną wersją karty (wyjątek ostatniej wersji karty: E1, Q8).
+//      Trwałe wizyty: w ziarnie 197 nowsza J1b zachowuje UUID pod wskazaną kartą J3, a dawna J1a pod J1 nie dostaje
+//      pozornej ochrony po podziale właścicieli. Osobny dowód z surowych zapisów; żadnego wyjątku od Z4r.
 //   Z5 bez starej treści — wersja w karcie i w koszu naraz nie ma w karcie starszej treści (chwila treści) niż w koszu.
 //   Z6 zbieżność kart — te same karty i wersje (treść, gwiazdka) na P, K i C poza wersjami, które leżą w koszu z
 //      treścią na każdym urządzeniu (kosz-po-2), i wersjami, które każde urządzenie, które je ma, trzyma jako jedyną
@@ -180,6 +182,18 @@ async function urzadzenie(nazwa, ziarno) {
   const [uz] = await v.listUsers();
   // Nagrobki pacjentów prosto z magazynu (bez odszyfrowania) — do historii nagrobków w obserwacji.
   v.__nagrobkiPacjentow = () => baza.listTombstonesForUser(uz.userId);
+  // Niezależny dowód tożsamości: odczyt rzeczywistych szyfrogramów, bez getPatient/getPatientVisits i ich grupowania.
+  v.__suroweWizyty = async () => {
+    const rows = [];
+    for (const patient of await baza.listPatientsForUser(uz.userId)) {
+      for (const record of await baza.listSnapshotsForUser(uz.userId, patient.patientId)) {
+        const payload = await v.decryptPayloadForCurrentUser(record.payloadCipher.iv, record.payloadCipher.data);
+        rows.push({ patientId: patient.patientId, snapshotId: record.snapshotId, savedAtISO: record.savedAtISO,
+          visit: payload.visit });
+      }
+    }
+    return rows;
+  };
   v.__nazwa = nazwa; v.__licz = licz;
   return v;
 }
@@ -386,6 +400,7 @@ async function program(seed) {
   const u = { lab: new Map(), karta: new Map(), pid: {}, zrodlowe: new Set(), hist: new Map(), kosze: [], przyciecia: [], nr: 0, log: [], chron: new Set(), nagrobkiP: new Map() };
   for (let i = 0; i < 3; i += 1) u[DEV[i]] = await urzadzenie(DEV[i], seed * 8 + i + 1);
   await przygotuj(u);
+  const poczatkoweWizyty = seed === 197 ? await u.K.__suroweWizyty() : null;
   // Dwa niezależne łańcuchy „Scal pacjentów” na dwóch różnych urządzeniach: J1 → J2 → J3 i O1 → O2.
   const dA = Math.floor(r() * 3); const dB = (dA + 1 + Math.floor(r() * 2)) % 3;
   const poz = [0, 1, 2].map(() => Math.floor(r() * KROKI)).sort((a, b) => a - b);
@@ -412,13 +427,41 @@ async function program(seed) {
   const zapisy = {};
   for (const n of DEV) { const l = u[n].__licz; l.aktywny = false; zapisy[n] = [l.lista, l.wersje, l.karty]; }
   const st2 = {}; for (const n of DEV) st2[n] = await stan(u, n);
-  return { u, st, st2, zapisy, pierwsze: pierwsze.map(([z, na]) => `${na}←${z}`), pary: pary.map(([z, na]) => `${na}←${z}`) };
+  const suroweWizyty = {};
+  if (seed === 197) for (const n of DEV) suroweWizyty[n] = await u[n].__suroweWizyty();
+  return { seed, u, st, st2, zapisy, poczatkoweWizyty, suroweWizyty,
+    pierwsze: pierwsze.map(([z, na]) => `${na}←${z}`), pary: pary.map(([z, na]) => `${na}←${z}`) };
 }
 
 // --- prawa ----------------------------------------------------------------------------------------------------------
 const max = (a) => a.reduce((m, x) => (x && x > m ? x : m), '');
+function sprawdzPrzeniesionaWizyte197(w) {
+  if (w.seed !== 197) return;
+  const { u } = w;
+  const initial = w.poczatkoweWizyty.find((row) => L(u, row.snapshotId) === 'J1a');
+  expect(initial.visit.version).toBe(1);
+  expect(initial.visit.visitId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+  expect(initial.visit.patientId).toBe(u.pid.J1);
+  const originalHead = w.poczatkoweWizyty.filter(row => row.visit?.visitId === initial.visit.visitId)
+    .sort((a, b) => b.savedAtISO.localeCompare(a.savedAtISO))[0];
+  expect(L(u, originalHead.snapshotId), 'latest original revision of this visit').toBe('J1b');
+  for (const n of DEV) {
+    const rows = w.suroweWizyty[n];
+    const sameVisit = rows.filter((row) => row.visit?.visitId === initial.visit.visitId);
+    expect(sameVisit.map(row => row.snapshotId), `${n}: only the actual original visit head survives`).toEqual([originalHead.snapshotId]);
+    const moved = sameVisit[0];
+    expect(moved.patientId).toBe(u.pid.J3);
+    expect(moved.visit).toEqual({ ...originalHead.visit, patientId: u.pid.J3 });
+    expect(moved.savedAtISO).toBe(originalHead.savedAtISO);
+    expect(moved.savedAtISO > initial.savedAtISO, `${n}: newer revision moved to the retention entry's owner`).toBe(true);
+    expect(w.st[n].kosz.some((entry) => entry.s === 'J1a' || entry.s === 'J1b'), `${n}: neither revision was explicitly trashed`).toBe(false);
+  }
+  expect(u.kosze.some((entry) => entry.sid === initial.snapshotId), 'J1a nigdy nie usunięto jawnie').toBe(false);
+  expect(u.przyciecia.some((entry) => entry.sid === initial.snapshotId), 'J1a faktycznie podlegał retencji pod inną kartą').toBe(true);
+}
 function prawa(w) {
   const { u, st, st2, zapisy } = w;
+  sprawdzPrzeniesionaWizyte197(w);
   const nar = [];
   const j = JSON.stringify;
   // Z1 stabilność

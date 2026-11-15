@@ -206,10 +206,18 @@ describe('P-KOSZ-PO-KLUCZU — koszt odczytów wyszukania po kluczu', () => {
       zegarOd();
       const A = await urzadzenie('A'), B = await urzadzenie('B');
       const ids = await konto(A, B, 40, 12, { zegar: true });
-      // „Scal pacjentów” starsze niż każdy wpis: duplikat D_i (jedna wizyta) → karta i (i < 5); nagrobki D_i na obu.
+      // „Scal pacjentów” starsze niż każdy wpis: duplikat D_i (jedna wizyta, dwie rewizje) → karta i (i < 5).
+      // Zachowujemy 450 rzeczywiście zbędnych rewizji do badania kosztu, bez przycinania głowy wizyty D_i.
+      const movedHeads = [];
       for (let i = 0; i < 5; i += 1) {
         krok();
         const d = await A.v.savePatient(jan(i, 30), { dedup: false });
+        const visit = A.v.getCommittedSavePayload(d).visit;
+        krok();
+        const newer = await A.v.savePatient({ ...jan(i, 31), visit: { ...visit } }, { dedup: false, patientId: d.patientId });
+        expect(A.v.getCommittedSavePayload(newer).visit, 'same original visit, later technical revision').toEqual(visit);
+        expect(newer.savedAtISO > d.savedAtISO).toBe(true);
+        movedHeads.push({ patientId: ids[i][0], snapshotId: newer.snapshotId, visitId: visit.visitId, oldSnapshotId: d.snapshotId });
         krok(); await A.v.mergePatients(d.patientId, ids[i][0]);
       }
       const extra = await konto(A, B, jednowizytowe, 1, { zegar: true });
@@ -217,9 +225,18 @@ describe('P-KOSZ-PO-KLUCZU — koszt odczytów wyszukania po kluczu', () => {
       krok();
       const przyciete = await retencja(A, B, ids);
       const lista = (await A.v.exportSyncPayload()).snapshotTombstones;
-      // 35 kart × 11 wizyt i 5 kart × 13 (12 wizyt i wizyta duplikatu; zostaje głowa scalenia — ostatnia wersja dnia)
+      // 35 kart × 11 rewizji i 5 kart × 13 (12 rewizji celu i starsza rewizja duplikatu; dwie głowy wizyt zostają).
       expect({ przyciete, lista: lista.length }, 'kontrola: każda przycięta wizyta we wpisie retencji').toEqual({ przyciete: 450, lista: 450 });
       expect(lista.every((e) => e.powod === 'retencja')).toBe(true);
+      for (const head of movedHeads) {
+        expect(lista.some(row => row.snapshotId === head.oldSnapshotId), 'older same-visit revision is genuinely prunable').toBe(true);
+        expect(lista.some(row => row.snapshotId === head.snapshotId), 'canonical source visit never enters retention tombstones').toBe(false);
+        for (const device of [A.v, B.v]) {
+          const rows = (await device.getPatient(head.patientId)).snapshots.filter(row => row.payload.visit.visitId === head.visitId);
+          expect(rows.map(row => row.snapshotId)).toEqual([head.snapshotId]);
+          expect({ height: rows[0].payload.user.height, weight: rows[0].payload.user.weight }).toEqual({ height: 151, weight: 51 });
+        }
+      }
       expect((await B.v.exportSyncPayload()).tombstones.length, 'kontrola: nagrobki pacjenta D_i znane na B').toBe(5);
       for (let k = 0; k < 2; k += 1) {
         krok();

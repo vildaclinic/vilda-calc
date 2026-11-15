@@ -105,7 +105,8 @@
 //        zbieżnie.
 //   F-S2b M01 (krawędzie) na K: wpis retencji x pod Z z przypiętym rejestrem — odczyt po kluczu jeszcze w pętli kart
 //        (od niego zależy Bgw_wskrzes); przełączenie na B zaraz po odczycie wersji Z — żadnego wywołania magazynu
-//        w koncie B; po zalogowaniu A to samo scalenie: K X[x:74*] Z[m].
+//        w koncie B; po zalogowaniu A to samo scalenie: K X[x:74*], Z bez x. Późniejsza wersja tej samej wizyty
+//        pozostaje w Z, więc retencja przycina tylko dawną wersję x, zachowując całą wizytę.
 //   F-S2c E4b, przełączenie na B zaraz po liście kart w wyszukaniu po pętli (Bkz_gdzieIndziejRazem, F-C1) — żadnego
 //        dalszego odczytu w koncie B; po zalogowaniu A zbieżnie.
 //   Strażniki źródła: Bkz_obceKarty — pierwszy odczyt pod blokadą to listSnapshotsForUser (przed getPatientForUser),
@@ -562,7 +563,16 @@ describe('P-KOSZ-PO-KLUCZU — S1: zmiana sesji między odczytem wersji karty a 
     expect(JSON.stringify(await u.P.__baza.getUserMeta(u.P.__uid)).includes(ivB), 'metadane konta A bez szyfru konta B').toBe(false);
     expect(await u.P.__baza.getSnapshotShadowForUser(u.P.__uid, ivB), 'cień konta A bez szyfru konta B').toBeFalsy();
     await zalogujA(u.P);
-    expect(await obceSzyfryA(u.P), 'lista kosza konta A: każdy szyfr (i rekord cienia) czytelny dla konta A').toEqual({ ile: 2, zle: [] });
+    expect(await obceSzyfryA(u.P), 'lista kosza konta A: dwa szyfry treści i dwa szyfry tożsamości wizyty czytelne dla konta A').toEqual({ ile: 4, zle: [] });
+    const tombstonesA = (await u.P.__baza.getUserMeta(u.P.__uid)).snapshotTombstones;
+    const sourceTombstones = (await u.K.exportSyncPayload()).snapshotTombstones;
+    expect(tombstonesA).toHaveLength(2);
+    for (const row of tombstonesA) {
+      const source = sourceTombstones.find(item => item.snapshotId === row.snapshotId);
+      expect(source.visitIdentity.visitId).toBe(source.payload.visit.visitId);
+      const identity = await u.P.decryptPayloadForCurrentUser(row.visitCipher.iv, row.visitCipher.data);
+      expect(identity, 'exact source visit UUID encrypted by account A; no patient data in the durable marker').toEqual({ version: 1, visitId: source.payload.visit.visitId });
+    }
     await rundyIKontrola(u, KOSZ_74);
   });
 
@@ -892,11 +902,17 @@ describe('P-KOSZ-PO-KLUCZU — F-S2: odczyty wyszukania po kluczu tylko w sesji 
     await rundyIKontrola(u, KOSZ_74);
   });
 
-  it('F-S2b: M01 na K — wpis retencji x pod Z z przypiętym rejestrem (odczyt po kluczu w pętli kart); przełączenie na B zaraz po odczycie wersji Z — żadnego wywołania magazynu w koncie B; po zalogowaniu A K X[x:74*] Z[m]', async () => {
+  it('F-S2b: M01 na K — wpis retencji starej wersji x pod Z z przypiętym rejestrem; przełączenie na B zaraz po odczycie wersji Z — żadnego wywołania magazynu w koncie B; po zalogowaniu A K X[x:74*], Z bez x', async () => {
     sztucznyZegar();
     const K = await urzadzenieH('K'), P = await urzadzenie('P'), C = await urzadzenie('C');
     const X = (await zapisz(K, jan(120, 20))).patientId;
     const sid = (await zapisz(K, jan(125, 23), { patientId: X })).snapshotId;
+    // Retention now preserves each visit's latest revision after patient merge.
+    // Keep this technical revision prunable without bypassing that protection:
+    // the same encounter has an explicitly newer saved revision before moving.
+    const originalVisit = (await K.getPatient(X)).snapshots.find(row => row.snapshotId === sid).payload.visit;
+    const later = await zapisz(K, { ...jan(130, 25), visit: { ...originalVisit } }, { patientId: X });
+    expect((await K.getPatient(X)).snapshots.find(row => row.snapshotId === later.snapshotId).payload.visit.visitId).toBe(originalVisit.visitId);
     const Z = (await zapisz(K, ola(111, 19))).patientId;
     await sync(K, P); await sync(K, C);
     przesunZegar(M); await K.mergePatients(X, Z);
@@ -905,6 +921,8 @@ describe('P-KOSZ-PO-KLUCZU — F-S2: odczyty wyszukania po kluczu tylko w sesji 
     przesunZegar(M); await P.setSnapshotPinned(X, sid, true);
     przesunZegar(M); await poprawMase(C, sid, 74);
     przesunZegar(M); await sync(C, K);
+    const canonical = (await C.getPatientVisits(Z)).find(row => row.visitId === originalVisit.visitId);
+    expect(canonical.snapshotId, 'kontrola: x jest dawną wersją tej samej wizyty, nie jej chronioną głową').toBe(later.snapshotId);
     przesunZegar(M); expect((await C.pruneSnapshotsForPatient(Z, { recentHours: 0 })).prunedIds, 'kontrola: C przycina x pod Z').toContain(sid);
     przesunZegar(M); await sync(C, K);
     expect(await gdzie(K, sid), 'kontrola: K bez x (wpis retencji x pod Z)').toBe(null);
