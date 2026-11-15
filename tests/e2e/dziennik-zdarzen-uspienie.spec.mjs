@@ -48,10 +48,13 @@ const TRYBY = ['prywatny', 'chmura', 'jednorazowo'];
 const KROKI = ['konto', 'karta', 'wersja', 'kosz', 'przywróć', 'notatka', 'szablon', 'lista', 'druga karta', 'scal pacjentów',
   'trzecia karta', 'usuń pacjenta', 'zmiana hasła', 'blokada', 'odblokowanie', 'usunięcie konta'];
 // SubtleCrypto.prototype.encrypt na krok (bez szyfrowania zdarzeń) — pomiar w Chromium.
+// Trwałe wizyty: „kosz” szyfruje dodatkowo sam {version: 1, visitId}; „scal pacjentów”
+// ponownie szyfruje jeden przenoszony zapis po zmianie visit.patientId (UUID i dane kliniczne
+// zostają, odcisk treści jest aktualizowany). To operacje sejfu, bez uruchamiania kolejki.
 const ENCRYPT = {
-  prywatny: [3, 2, 2, 1, 2, 1, 1, 1, 2, 2, 2, 0, 1, 0, 0, 0],
-  chmura: [3, 2, 2, 1, 2, 1, 1, 1, 2, 2, 2, 0, 1, 0, 0, 0],
-  jednorazowo: [2, 2, 2, 1, 2, 1, 1, 1, 2, 2, 2, 0, 1, 0, 0, 0],
+  prywatny: [3, 2, 2, 2, 2, 1, 1, 1, 2, 3, 2, 0, 1, 0, 0, 0],
+  chmura: [3, 2, 2, 2, 2, 1, 1, 1, 2, 3, 2, 0, 1, 0, 0, 0],
+  jednorazowo: [2, 2, 2, 2, 2, 1, 1, 1, 2, 3, 2, 0, 1, 0, 0, 0],
 };
 // Każdy chroniony zapis sprawdza rzeczywisty marker routingu; tworzenie karty także odczytuje listę.
 // IDBFactory.prototype.databases na krok: w kroku usunięcia konta sprawdzenie biblioteki szablonów i — poza trybem

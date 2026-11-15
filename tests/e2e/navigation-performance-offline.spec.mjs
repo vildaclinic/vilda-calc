@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { expect, test } from '@playwright/test';
 import { createFictionalVault, fixturePreferences, loadPatient, readyForPatient, shellFrame } from '../support/centile-live-fixture.mjs';
 import { czekajNaOdtworzenieSesji } from '../support/sesja-czekanie.mjs';
+import { captureColdUpgradeRecords, assertLegacyVisitUpgrade } from '../support/cold-upgrade-record-proof.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const BASE = 'f21c4c470d180a54f0c2e39cf3cdbfcf01316176';
@@ -163,7 +164,7 @@ test('navigation updates real cached assets and preserves the patient through a 
     await czekajNaOdtworzenieSesji(installer);
     await expect(installer.locator('#currentSummaryContent .professional-summary-main')).toBeVisible();
     const ids = Object.values(fixture.ids);
-    const fingerprint = await recordFingerprint(installer, ids);
+    const beforeUpgrade = await captureColdUpgradeRecords(installer, ids);
     const expected = await clinicalView(installer);
     const userId = await installer.evaluate(() => window.VildaVault.getCurrentUser().userId);
     await installer.evaluate(() => { window.vildaPersistFlushNow({ force: true }); window.VildaVault.lock('manual'); });
@@ -226,6 +227,9 @@ test('navigation updates real cached assets and preserves the patient through a 
     owner = await navigate(page, 'start', 'Start');
     await readyForPatient(owner);
     await expect.poll(() => clinicalView(owner)).toEqual(expected);
+    const afterUpgrade = await captureColdUpgradeRecords(owner, ids);
+    assertLegacyVisitUpgrade(beforeUpgrade, afterUpgrade);
+    const fingerprint = afterUpgrade.fingerprint;
     expect(await recordFingerprint(owner, ids)).toBe(fingerprint);
 
     for (const asset of site.newResources) {
@@ -254,6 +258,8 @@ test('navigation updates real cached assets and preserves the patient through a 
     const proof = info.outputPath('navigation-cold-offline-proof.json');
     fs.writeFileSync(proof, JSON.stringify({ base: BASE, previousVersion: site.previousVersion,
       currentVersion: site.currentVersion, realProductionUpgrade: true, coldRestart: true, originStopped: true,
+      legacyFullRecordFingerprint: beforeUpgrade.fingerprint, beforeRawVaultFingerprint: beforeUpgrade.rawClinicalFingerprint, upgradedRawVaultFingerprint: afterUpgrade.rawClinicalFingerprint,
+        allowedRawMigration: 'meta/singleton.clinicalScrubDoneV1: absent → true',
       unchangedFullRecordFingerprint: fingerprint, userId, expectedClinicalView: expected, resources: site.newResources,
     }, null, 2));
     await info.attach('navigation-cold-offline-proof', { path: proof, contentType: 'application/json' });

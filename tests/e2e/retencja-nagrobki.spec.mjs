@@ -8,9 +8,9 @@ import { expect, test } from '../support/test-czas.mjs';
 test.use({ serviceWorkers: 'block' });
 
 const HASLO = 'E2e#RetencjaNagrobki!26a';
-const OPIS = 'Gdy karta ma co najmniej 10 wersji, zapis przerzedza starsze na wszystkich urządzeniach: z ostatnich 24 h '
-  + 'zostają wszystkie, do 30 dni — ostatnia z każdego dnia, starsze — ostatnia z miesiąca (najwyżej 40). '
-  + 'Przypięte zostają zawsze.';
+const OPIS = 'Automatyczne porządkowanie działa od 10 wersji. Zachowuje najnowszy zapis każdej wizyty i wszystkie wersje przypięte. '
+  + 'Pozostałe wersje są przerzedzane według czasu: ostatnie 24 h, ostatni zapis dnia do 30 dni i ostatni zapis starszego miesiąca. '
+  + 'Łączny limit 40 wersji nie usuwa chronionych wizyt ani przypiętych zapisów.';
 
 async function otworzHistorie(page) {
   page.on('dialog', (d) => d.accept());
@@ -33,7 +33,7 @@ async function otworzHistorie(page) {
     return a.patientId;
   });
   await page.evaluate((id) => window.VildaVersionHistory.open(id, { patientName: 'Testowa Zofia' }), pid);
-  const opis = page.locator('.vvh-ret').filter({ hasText: 'Gdy karta ma co najmniej 10 wersji' });
+  const opis = page.locator('.vvh-ret').filter({ hasText: 'Automatyczne porządkowanie działa od 10 wersji' });
   await expect(opis).toBeVisible();
   return opis;
 }

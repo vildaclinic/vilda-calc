@@ -264,16 +264,36 @@ describe('P-KOSZ-NOWSZA-TRESC: w koszu nowsza z dwóch treści zapisu', () => {
 // (późniejszy, bez treści, stara wersja) nie może zdjąć wpisu kosza z nowszą treścią: na 27055774 wpis kosza znikał
 // (albo zostawał tylko na części urządzeń), a przypięty zapis wracał do karty na wszystkich trzech.
 async function trzyUrzadzenia() {
+  // Dwanaście technicznych rewizji jednej wizyty w jednym dniu. Zegar poprzedniego testu nie może rozdzielić
+  // ich o północy na dwie wizyty ani uruchomić niezależnej ochrony ostatniego zapisu poprzedniego dnia.
+  zegar = Date.parse('2026-10-20T09:00:00Z'); vi.setSystemTime(zegar);
   const P = await urzadzenie();
   const K = await urzadzenie();
   const C = await urzadzenie();
   let pid = null;
+  let visit = null;
   const ids = [];
   for (let i = 0; i < 12; i += 1) {
-    const r = await zapisz(K, jan(100 + i, 20 + i), pid ? { patientId: pid } : {});
+    const payload = { ...jan(100 + i, 20 + i), ...(visit ? { visit } : {}) };
+    const r = await zapisz(K, payload, pid ? { patientId: pid } : {});
     pid = r.patientId;
+    if (!visit) visit = K.getCommittedSavePayload(r).visit;
     ids.push(r.snapshotId);
   }
+  // Dowód z odszyfrowanych rekordów magazynu, niezależny od getPatientVisits i reguły grupowania w produkcji.
+  const records = (await adaptery.get(K).listSnapshotsForUser(K.getCurrentUser().userId, pid))
+    .sort((a, b) => a.savedAtISO.localeCompare(b.savedAtISO));
+  expect(records).toHaveLength(12);
+  expect(visit.visitId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+  for (const record of records) {
+    const payload = await K.decryptPayloadForCurrentUser(record.payloadCipher.iv, record.payloadCipher.data);
+    expect(payload.visit).toEqual(visit);
+    expect(payload.visit.patientId).toBe(pid);
+    expect(new Date(record.savedAtISO).toDateString()).toBe(new Date(records[0].savedAtISO).toDateString());
+  }
+  expect(records.at(-1).snapshotId, 'kanoniczna jest późniejsza rewizja tej samej wizyty').toBe(ids[11]);
+  expect(records[3].snapshotId).toBe(ids[3]);
+  expect(records[3].savedAtISO < records.at(-1).savedAtISO, 'cel retencji nie jest kanoniczny').toBe(true);
   await P.mergeSyncPayload(await K.exportSyncPayload());
   await C.mergeSyncPayload(await K.exportSyncPayload());
   return { P, K, C, pid, sid: ids[3] };

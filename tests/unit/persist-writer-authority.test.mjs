@@ -265,11 +265,13 @@ describe('queued shared state retains its document and visit authority', () => {
     expect(h.win.VildaPersistence.readMainSession()).toBeNull();
   });
 
-  it('an actually empty shared and main session still removes automatic residue', () => {
+  it.each([false, true])('an empty main session still removes residue with visit metadata=%s', withVisit => {
     const h = harness();
     delete h.win.VildaDataImportExport;
     new Function('window', 'globalThis', 'document', source('vilda_data_import_export.js'))(h.win, h.win, h.document);
     const empty = { version: 1, name: '', user: {}, clcr: null };
+    if (withVisit) empty.visit = { version: 1, visitId: 'fictional-visit', patientId: null,
+      clinicalDateISO: '2026-11-14', createdAtISO: '2026-11-14T10:00:00.000Z', origin: 'explicit' };
     expect(h.win.VildaDataImportExport.hasMeaningfulMainSessionData(empty)).toBe(false);
     h.win.VildaPersistence.writeMainSession(empty);
     h.win.sessionStorage.removeItem('sharedUserData');

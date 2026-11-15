@@ -650,8 +650,9 @@ describe('P-SYNC-WLASCICIEL — kontrole zwykłej synchronizacji i zwykłego sca
   }, CZAS);
 
   // [CZERWONY na audyt] „Scal pacjentów” przepina wersję jako nową rewizję rekordu (dotąd rev 0 → 0, więc rekordy
-  // „x1 pod X” i „x1 pod Y” były nierozróżnialne). Treść, chwila zmiany i chwila zapisu bez zmian.
-  it('„Scal pacjentów” podbija rev przeniesionej wersji, bez zmiany chwil i treści', async () => {
+  // „x1 pod X” i „x1 pod Y” były nierozróżnialne). Treść kliniczna i chwile bez zmian; zaszyfrowany właściciel
+  // trwałej wizyty oraz odcisk tej samej treści z nowym właścicielem wymagają ponownego szyfrowania.
+  it('„Scal pacjentów” podbija rev, zachowuje całą treść kliniczną i chwile, wiąże tę samą wizytę z celem', async () => {
     const A = await urzadzenie('A');
     const X = await karta(A.v);
     await chwila(4);
@@ -665,7 +666,14 @@ describe('P-SYNC-WLASCICIEL — kontrole zwykłej synchronizacji i zwykłego sca
       expect(nowy.rev).toBe((w.rev || 0) + 1);
       expect(nowy.updatedAtISO ?? null).toBe(w.updatedAtISO ?? null);
       expect(nowy.savedAtISO).toBe(w.savedAtISO);
-      expect(nowy.payloadCipher).toEqual(w.payloadCipher);
+      const przedPayload = await A.v.decryptPayloadForCurrentUser(w.payloadCipher.iv, w.payloadCipher.data);
+      const poPayload = await A.v.decryptPayloadForCurrentUser(nowy.payloadCipher.iv, nowy.payloadCipher.data);
+      expect(poPayload.visit).toEqual({ ...przedPayload.visit, patientId: Y });
+      expect(poPayload._pinnedState.h).toEqual(expect.any(String));
+      expect(poPayload._pinnedState.h).not.toBe(przedPayload._pinnedState.h);
+      expect(poPayload).toEqual({ ...przedPayload, visit: { ...przedPayload.visit, patientId: Y },
+        _pinnedState: { ...przedPayload._pinnedState, h: poPayload._pinnedState.h } });
+      expect(nowy.payloadCipher).not.toEqual(w.payloadCipher);
     }
   });
 });
@@ -2616,16 +2624,14 @@ describe('P-SYNC-WLASCICIEL — rev wyniku bez nadmuchania i pętla scaleń', ()
   }, CZAS);
 });
 
-/* Znane ograniczenie (przegląd końcowy 2, napraw2/30 uwaga 1; nie regresja względem audyt): retencja (domyślnie
-   włączona) a poprawka przeniesiona do dawnej wersji karty scalonej. Po „Scal pacjentów” X → Y → Z poprawka bieżącego
+/* Regresja dawnej utraty poprawki (przegląd końcowy 2, napraw2/30 uwaga 1): po „Scal pacjentów” X → Y → Z poprawka bieżącego
    pomiaru X z urządzenia, które o scaleniach nie wiedziało (okno „Edytuj pomiar”, nowa chwila zapisu), trafia pod Z
    do dawnej wersji x2 — z jej chwilą zapisu sprzed scaleń (reguła P-SYNC-WLASCICIEL: bieżącą wersją Z zostaje głowa
-   scalenia). Karta Z ma ≥ 10 wersji, więc przy następnym zapisie Z retencja przycina marzec do ostatniej wersji
-   miesiąca: x2 dostaje nagrobek „retencja” (bez kosza) i poprawki nie ma już nigdzie, na obu urządzeniach. Na audyt
-   2df41a8 poprawka ginęła już przy synchronizacji; na 69e41d1 zostawała jako błędna głowa Z. Test przypina obecne
-   zachowanie — zmiana (np. poprawiony wiersz w bieżącej wersji albo ochrona niedawno zmienionych wersji w retencji)
-   to decyzja właściciela i zmiana tego testu. Prawdziwy vilda_retention.js, zegar Date podmieniony (vi.useFakeTimers). */
-describe('P-SYNC-WLASCICIEL — retencja a poprawka przeniesiona do dawnej wersji karty scalonej (znane ograniczenie)', () => {
+   scalenia). Dawna retencja przycinała x2 do ostatniej wersji miesiąca i usuwała poprawkę z obu urządzeń.
+   Trwałe wizyty chronią ostatnią wersję KAŻDEJ wizyty, także po przeniesieniu między kartami: x2 pozostaje
+   kanonicznym stanem swojej wizyty, a bieżąca głowa Z nie zostaje nadpisana. Prawdziwy vilda_retention.js,
+   zegar Date podmieniony (vi.useFakeTimers). */
+describe('P-SYNC-WLASCICIEL — retencja zachowuje poprawkę przeniesionej wizyty po scaleniu kart', () => {
   async function gdziePoprawka(d) {
     const wynik = [];
     for (const k of await d.baza.listPatientsForUser(d.uid)) {
@@ -2635,7 +2641,7 @@ describe('P-SYNC-WLASCICIEL — retencja a poprawka przeniesiona do dawnej wersj
     for (const e of await d.v.listTrashedSnapshots()) wynik.push(`kosz:${e.snapshotId}`);
     return wynik;
   }
-  it('łańcuch X → Y → Z (Z ma 10 wersji), poprawka bieżącego pomiaru X na B, potem nowa wizyta w Z na A: retencja przycina x2 z poprawką', async () => {
+  it('łańcuch X → Y → Z (Z ma 10 wersji), poprawka pomiaru X na B i nowa wizyta w Z na A: retencja zachowuje x2 z poprawką na obu urządzeniach', async () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     let t = 0;
     const ustaw = (iso) => { t = Date.parse(iso); vi.setSystemTime(new Date(t)); };
@@ -2645,6 +2651,7 @@ describe('P-SYNC-WLASCICIEL — retencja a poprawka przeniesiona do dawnej wersj
       const A = await urzadzenie('A', { retencja: true }), B = await urzadzenie('B', { retencja: true });
       const zap = async (wieki, pid) => { const r = await A.v.savePatient(zapis(wieki), pid ? { patientId: pid, dedup: false } : { dedup: false }); krok(); return r; };
       const X = (await zap([60])).patientId; krok(300000); const x2 = (await zap([60, 66], X)).snapshotId;
+      const originalVisitId = (await A.v.getLatestSnapshot(X)).payload.visit.visitId;
       ustaw('2026-03-20T10:00:00.000Z'); const Y = (await zap([72])).patientId; await zap([72, 78], Y);
       ustaw('2026-03-25T10:00:00.000Z'); const Z = (await zap([84])).patientId; await zap([84, 90], Z);
       ustaw('2026-03-26T10:00:00.000Z'); await zap([84, 90], Z);
@@ -2670,14 +2677,20 @@ describe('P-SYNC-WLASCICIEL — retencja a poprawka przeniesiona do dawnej wersj
       ustaw('2026-06-01T12:00:00.000Z');
       const wizyta = JSON.parse(JSON.stringify(glowaZ.payload));
       wizyta.advanced.data.measurements.push(pomiar(96));
+      wizyta.visit = { version: 1, visitId: globalThis.crypto.randomUUID(), patientId: Z,
+        clinicalDateISO: '2026-06-01', createdAtISO: new Date().toISOString(), origin: 'explicit' };
       await A.v.savePatient(wizyta, { patientId: Z, dedup: false }); krok();
       await chwila(100); // retencja po zapisie (asynchronicznie)
       for (let i = 0; i < 4; i += 1) { await sync(A); krok(); await sync(B); krok(); }
       await chwila(50);
-      // ZNANE OGRANICZENIE (do decyzji właściciela): poprawki 66:124 nie ma nigdzie — ani w kartach, ani w koszu.
-      for (const d of [A, B]) expect(await gdziePoprawka(d), `poprawka po retencji na ${d.nazwa}`).toEqual([]);
+      for (const d of [A, B]) {
+        expect(await gdziePoprawka(d), `poprawka po retencji na ${d.nazwa}`).toEqual([`${Z}/${x2}`]);
+        const canonical = (await d.v.getPatientVisits(Z)).find(row => row.visitId === originalVisitId);
+        expect(canonical, `ta sama przeniesiona wizyta na ${d.nazwa}`).toMatchObject({ patientId: Z, snapshotId: x2 });
+        expect(pomiaryZ(canonical.payload), `zachowana poprawka w kanonicznym stanie na ${d.nazwa}`).toBe('60:120,66:124');
+      }
       const nagrobki = ((await A.baza.getUserMeta(A.uid)).snapshotTombstones || []).filter((e) => e.snapshotId === x2);
-      expect(nagrobki.map((e) => e.powod), 'x2 przycięta przez retencję').toEqual(['retencja']);
+      expect(nagrobki, 'ostatni stan wizyty x2 nie dostaje nagrobka retencji').toEqual([]);
       expect(pomiaryZ((await A.v.getLatestSnapshot(Z)).payload)).toBe('60:120,66:123,72:126,78:129,84:132,90:135,96:138');
     } finally { vi.useRealTimers(); }
   }, 120_000);
@@ -3017,7 +3030,7 @@ describe('strażniki źródła (P-SYNC-WLASCICIEL)', () => {
   });
 
   it('„Scal pacjentów” zapisuje przeniesioną wersję przez Bsw_poScaleniu; adaptery mają odczyt wersji po kluczu', () => {
-    expect(src).toContain('await I().putSnapshotForUser(b,PatientClinicalWriteValue(b,Object.assign({},o[d],Bsw_poScaleniu(o[d],e),Bm1(o[d]))))');
+    expect(src).toContain('await I().putSnapshotForUser(b,PatientClinicalWriteValue(b,Object.assign({},await Bvisit_moved(o[d],e),Bsw_poScaleniu(o[d],e),Bm1(o[d]))))');
     // cel scalenia zapamiętany przed usunięciem karty źródłowej (zdarzenie onPatientDeleted -> delta nagrobka); przed
     // nimi sprawdzenie sesji „Scal pacjentów” (P-SESJA-ZAPISU); usunięcie karty źródłowej w tej sesji i sprawdzenie po nim
     // (przegląd 3)

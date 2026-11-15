@@ -39795,3 +39795,13 @@ Lokalnie, 4 rdzenie, `desktop-chromium`, Chromium z `PLAYWRIGHT_CHROMIUM_EXECUTA
 | `npm run test:unit` | — | 30396/30405; 8 błędów w `care-plans-lineage-legacy` i `care-plans-omit-link-legacy` to `git show b4613640…`, czyli commit spoza płytkiego klonu kontenera; w CI zielone |
 
 Żadna asercja nie została usunięta ani osłabiona; testy nie są pomijane.
+
+## Trwała tożsamość wizyty (P-TRWALE-WIZYTY, 2026-11-14)
+
+Baza: `audyt` `40d742d38f4d2924d3ba85a50d746790d0de6644`. Klasyfikacja: zmiana cyklu przechowywania i prezentacji danych klinicznych; bez zmiany wzorów, progów, jednostek, populacji i zaokrągleń.
+
+Dotąd każdy zapis otrzymywał `snapshotId`, lecz nie było trwałej tożsamości wizyty. Retencja mogła usunąć wszystkie zapisy dawnych dni. Szyfrowane `payload.visit` identyfikuje teraz wizytę niezależnie od daty i technicznego zapisu, a retencja zachowuje co najmniej jeden pełny stan każdej wizyty. „Nowy pomiar” rozpoczyna nową tożsamość; poprawka i odtworzenie zachowują istniejącą. Dwa spotkania tego samego dnia mogą mieć różne identyfikatory.
+
+Przykłady kontraktu: zapis → poprawka masy = ten sam `visitId`, nowy `snapshotId`; nowy pomiar tego samego dnia = inny `visitId`; korekta daty wizyty = ten sam `visitId`; 50 wizyt → przycięcie technicznych rewizji = zachowane wszystkie 50 pełnych stanów. Dawne grupy są oznaczone jako odtworzone z historii; nie odzyskują wcześniej usuniętych danych.
+
+Podgląd pokazuje zapisane dane, bez nowego obliczenia BMI, SDS ani kwalifikacji klinicznej. Data badania laboratoryjnego, notatka ogólna i znacznik oceny pokwitania nie stają się automatycznie identyfikatorem wizyty. Kontrakt i ograniczenia: [PATIENT_VISITS.md](../PATIENT_VISITS.md). Testy korzystają wyłącznie z syntetycznych pacjentów i wykonują produkcyjne API sejfu, retencji oraz rzeczywistą ścieżkę formularza.

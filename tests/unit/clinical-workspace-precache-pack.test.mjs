@@ -9,6 +9,7 @@ const SW_SOURCE = fs.readFileSync(path.join(ROOT, 'service-worker-kalorii.js'), 
 const MANIFEST = JSON.parse(fs.readFileSync(path.join(ROOT, 'runtime/clinical-workspace-v1/manifest.json'), 'utf8'));
 const PACK_BYTES = fs.readFileSync(path.join(ROOT, MANIFEST.precachePack.path));
 const PACK_URL = '/' + MANIFEST.precachePack.path;
+const VISIT_PACK = JSON.parse(fs.readFileSync(path.join(ROOT, 'runtime/visit-ui-precache/manifest.json'), 'utf8')).pack;
 const HISTORICAL_FILES = MANIFEST.historicalFiles || [];
 const PACK_FILES = MANIFEST.files.concat(HISTORICAL_FILES);
 // The source list remains append-only: historical addresses precede the new graph.
@@ -56,6 +57,7 @@ function worker({ scope = '/', packResponse, failPut = () => false } = {}) {
     const url = new URL(request.url);
     const relative = '/' + url.pathname.slice(base.pathname.length);
     if (relative === PACK_URL) return packResponse ? packResponse(request) : new Response(PACK_BYTES);
+    if (relative === '/' + VISIT_PACK.path) return new Response(fs.readFileSync(path.join(ROOT, VISIT_PACK.path)));
     if (MODULES.has(relative)) throw new Error('unexpected individual module fetch');
     return new Response('/* independent static resource */');
   };
@@ -85,12 +87,12 @@ describe('clinical workspace immutable precache transport', () => {
     expect(digest(PACK_BYTES)).toBe(MANIFEST.precachePack.sha256);
     expect(PACK_BYTES.length).toBe(MANIFEST.precachePack.byteLength);
     expect(MANIFEST.files).toHaveLength(51);
-    expect(HISTORICAL_FILES).toHaveLength(100);
-    expect(MODULE_URLS).toHaveLength(151);
+    expect(HISTORICAL_FILES).toHaveLength(151);
+    expect(MODULE_URLS).toHaveLength(202);
     const retainedTrees = HISTORICAL_FILES.reduce((counts, file) => {
       const prefix = file.path.split('/')[2]; counts[prefix] = (counts[prefix] || 0) + 1; return counts;
     }, {});
-    expect(retainedTrees).toEqual({ '37562593af68': 49, '4002da88b355': 51 });
+    expect(retainedTrees).toEqual({ '37562593af68': 49, '4002da88b355': 51, 'e410c8725541': 51 });
     for (const url of MODULE_URLS) expect(sw.INSTALL_CORE_URLS).toContain(url);
     expect(sw.INSTALL_CORE_URLS).not.toContain(PACK_URL);
   });

@@ -254,4 +254,53 @@ describe('current destructive-action save decision is synchronous and read-only'
     expect(h.api.isCurrentDecisionAfterSave(captured.scope,receipt)).toBe(false);
     expect(h.form()).toEqual(before);expect(h.api.getReferenceFingerprint()).toBe(reference);
   });
+
+  const clinicalVisit = () => ({ version: 1, visitId: '6830e5e9-17e5-4d1b-84dd-4b39ded3c5e6', patientId: null,
+    clinicalDateISO: '2026-10-31', createdAtISO: '2026-10-31T12:00:00.000Z', origin: 'explicit' });
+  it.each([false, true])('accepts only owner binding after first clinical-visit save (puberty=%s)', async puberty => {
+    const h=environment(),value=patient();value.visit=clinicalVisit();
+    if(puberty)value.user.pubertyAssessmentVisit={version:1,visitId:'fictional-separate-puberty-visit',ownerPatientId:null,currentAxes:['G']};
+    h.setForm(value);const captured=h.api.getCurrentDecision();
+    h.win.VildaVault.savePatient=async incoming=>{
+      const committed=clone(incoming);committed.visit.patientId='fictional-own-created';
+      const result=h.commit(committed,{patientId:'fictional-own-created'});
+      committed.user.pubertyAssessmentVisit&&(committed.user.pubertyAssessmentVisit.ownerPatientId='fictional-own-created');
+      h.setForm(committed);return result;
+    };
+    const receipt=await h.saved('fictional-own-created');expect(receipt.saved).toBe(true);
+    expect(h.api.isCurrentDecisionAfterSave(captured.scope,receipt)).toBe(true);
+    vi.advanceTimersByTime(150);expect(h.api.getCurrentDecision()).toMatchObject({ready:true,state:'saved'});
+    const unchanged=h.form(),reference=h.api.getReferenceFingerprint();
+    expect(h.api.isCurrentDecisionAfterSave(captured.scope,receipt)).toBe(true);
+    expect(h.form()).toEqual(unchanged);expect(h.api.getReferenceFingerprint()).toBe(reference);
+  });
+  it.each(['unchanged','different-visit','different-date','different-provenance','foreign-owner','clinical-edit','unconfirmed','account-change'])('checks the complete clinical visit after first save: %s', async boundary => {
+    const h=environment(),value=patient();value.visit=clinicalVisit();h.setForm(value);
+    const captured=h.api.getCurrentDecision(),receipt=await h.saved('fictional-own-created');
+    value.visit.patientId='fictional-own-created';
+    if(boundary==='different-visit')value.visit.visitId='b4456525-c7fb-43d3-8bd2-dd263b00d3ee';
+    if(boundary==='different-date')value.visit.clinicalDateISO='2026-10-30';
+    if(boundary==='different-provenance')value.visit.origin='legacy-inferred';
+    if(boundary==='foreign-owner')value.visit.patientId='fictional-other-patient';
+    if(boundary==='clinical-edit')value.user.weight=41;
+    h.setForm(value);
+    if(boundary==='account-change')h.account();
+    const checked={...receipt,saved:boundary!=='unconfirmed'};
+    expect(h.api.isCurrentDecisionAfterSave(captured.scope,checked)).toBe(boundary==='unchanged');
+  });
+  it.each(['unchanged','different-visit','different-date','clinical-edit','wrong-snapshot','unconfirmed'])('proves first visit allocated by native save from its committed witness: %s', async boundary => {
+    const h=environment();h.setForm(patient());const captured=h.api.getCurrentDecision();
+    h.win.VildaVault.savePatient=async incoming=>{
+      const committed=clone(incoming);committed.visit={...clinicalVisit(),patientId:'fictional-own-created'};
+      const result=h.commit(committed,{patientId:'fictional-own-created'});h.setForm(committed);return result;
+    };
+    const receipt=await h.saved('fictional-own-created');expect(receipt.saved).toBe(true);
+    const live=h.form();
+    if(boundary==='different-visit')live.visit.visitId='b4456525-c7fb-43d3-8bd2-dd263b00d3ee';
+    if(boundary==='different-date')live.visit.clinicalDateISO='2026-10-30';
+    if(boundary==='clinical-edit')live.user.weight=41;
+    h.setForm(live);
+    const checked={...receipt,saved:boundary!=='unconfirmed',snapshotId:boundary==='wrong-snapshot'?'fictional-other-snapshot':receipt.snapshotId};
+    expect(h.api.isCurrentDecisionAfterSave(captured.scope,checked)).toBe(boundary==='unchanged');
+  });
 });

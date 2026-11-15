@@ -13,6 +13,7 @@ import { GLOBAL_QUERY, SEARCH_WORKSPACE, queryGlobal, resultFor } from '../suppo
 import { expectBell, expectDesktopSearchControl } from '../support/header-layout-fixture.mjs';
 import { RETURN_TO_SEARCH } from '../support/search-return-browser-fixture.mjs';
 import { czekajNaOdtworzenieSesji } from '../support/sesja-czekanie.mjs';
+import { captureColdUpgradeRecords, assertLegacyVisitUpgrade } from '../support/cold-upgrade-record-proof.mjs';
 import { changedResources as resourceInventory, upgradeResourceInventories } from '../support/pwa-changed-resource-inventory.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -418,8 +419,7 @@ for (const shell of [true, false]) {
         patientId, title, body: 'Wyłącznie fikcyjny opis organizacyjny testu PWA, bez zaleceń medycznych.', category: 'observation',
       })).id, { patientId: fixture.ids.a, title: NOTE });
       const ids = Object.values(fixture.ids);
-      let fingerprint = await recordFingerprint(installer, ids);
-      const originalFingerprint = fingerprint;
+      const beforeUpgrade = await captureColdUpgradeRecords(installer, ids, { includeNotes: true });
       const expected = await clinicalView(installer);
       const userId = await installer.evaluate(() => window.VildaVault.getCurrentUser().userId);
       await installer.evaluate(() => { window.vildaPersistFlushNow({ force: true }); window.VildaVault.lock('manual'); });
@@ -464,6 +464,10 @@ for (const shell of [true, false]) {
       await settled(owner);
       await projectedState(page, owner, 'saved');
       await expect.poll(() => clinicalView(owner)).toEqual(expected);
+      const afterUpgrade = await captureColdUpgradeRecords(owner, ids, { includeNotes: true });
+      assertLegacyVisitUpgrade(beforeUpgrade, afterUpgrade, { includeNotes: true });
+      let fingerprint = afterUpgrade.fingerprint;
+      const originalFingerprint = fingerprint;
       expect(await recordFingerprint(owner, ids)).toBe(fingerprint);
       await headerAtWidths(page, owner, 'saved', info, shell ? 'shell' : 'standalone');
       await searchRoundTrip(page, noteId);
@@ -591,6 +595,8 @@ for (const shell of [true, false]) {
         sourceCommit: site.sourceCommit,
         previousVersion: site.previousVersion, currentVersion: site.currentVersion,
         workerSha256: site.workerSha256, unmodifiedProductionUpgrade: true, coldBrowserRestarts: 1, originStopped: true,
+        legacyFullRecordFingerprint: beforeUpgrade.fingerprint, beforeRawVaultFingerprint: beforeUpgrade.rawClinicalFingerprint, upgradedRawVaultFingerprint: afterUpgrade.rawClinicalFingerprint,
+        allowedRawMigration: 'meta/singleton.clinicalScrubDoneV1: absent → true',
         originalFullRecordFingerprint: originalFingerprint, unchangedFullRecordFingerprintAfterExplicitSave: fingerprint,
         userId, expectedClinicalView: expected,
         savedAfterRestore: true, dirtyAfterOfflineReload: true, searchPatientReturn: true,
