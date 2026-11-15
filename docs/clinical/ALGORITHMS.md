@@ -1297,8 +1297,8 @@ formularza — czyli w wizycie nowej albo odtworzonej.
 - Ręczny wpis nowego wyniku jest usunięty: nie ma „+ Dodaj wynik”
   w „Badaniach” ani szablonu „Wynik badania” w nowej notatce (edytor karty,
   formularz Terminarza). Szablon zostaje tam, gdzie wpis już niesie wynik
-  (edycja zapisanego wyniku) i przy „Wpisz wynik” zlecenia w „Badaniach”
-  (decyzja 6.11) — to osobna, otwarta decyzja właściciela.
+  (edycja zapisanego wyniku). „Wpisz wynik” zlecenia w „Badaniach”
+  (decyzja 6.11) zastąpiła decyzja 6.35 niżej.
 
 **Przypadki `wejście → wynik`** (fikcyjne dane):
 
@@ -1396,6 +1396,106 @@ Testy na kodzie produkcyjnym: `tests/unit/wiek-po-nowym-pomiarze.test.mjs`
 `tests/e2e/wiek-po-nowym-pomiarze-mobile.spec.mjs` (prawdziwe wczytanie,
 natywny zegar). Opis łatki: `docs/ZRODLA_ARTEFAKTOW.md`,
 „Łatka P-WIEK-NOWY-POMIAR”.
+
+### LAB-HISTORIA 6.35 — oczekujący wynik: Jednostki lab. albo opis słowny (P-OCZEKUJACE-WYNIKI, `vilda_lab_history_tab.js` 2.6.0, `lab_pin_result.js`, 2026-11-15)
+
+**Klasyfikacja: zmiana funkcjonalna z wpływem klinicznym.** Żadna norma, wzór,
+próg, jednostka ani reguła oceny się nie zmienia. Zmienia się to, którędy wynik
+oczekującego badania trafia do karty: dotąd ręcznie, bez oceny; teraz przez
+Jednostki lab., z oceną tego samego silnika co każdy przypięty wynik. Decyzje
+właściciela z 2026-11-15 po makiecie (cztery odpowiedzi): dwie akcje przy
+każdym wpisie; wynik jako osobny wpis, a oczekujący wynik oznaczony jako
+wykonany; lista oczekujących w oknie przypięcia i wybór badania z listy
+w Terminarzu — osobne, późniejsze etapy.
+
+**Pojęcie.** „Oczekujący wynik” (wcześniej w dokumentach: „zlecenie”) to wpis
+kategorii „Badanie” założony w Terminarzu — termin pacjenta w kategorii
+„Badanie” (także z „Czekam na wynik — przypominaj o sprawdzeniu”) albo
+„Załóż też oczekujący wynik” przy umawianiu procedury — bez wartości,
+niewykonany, bez niestawienia (`isPending` w `vilda_lab_history.js`). Jest
+w ramce „Oczekujące wyniki” zakładki „Badania” i wraca w Przypomnieniach.
+Nazwa jest wpisana odręcznie; aplikacja wie, którego badania dotyczy, tylko
+przy `labResult.testKey` albo tytule „Wynik: ” + dokładna nazwa badania
+z listy przelicznika (`pendingMatch`, bez zgadywania — K14).
+
+**Problem.** „Wpisz wynik” przy takim wpisie otwierał edytor notatki
+z szablonem „Wynik badania” (decyzja 6.11): wartość i jednostka wpisane
+ręcznie, bez wieku, pokwitania i zakresu — wynik bez oceny. Było to ostatnie
+miejsce ręcznego wpisu wyniku po LAB-HISTORIA 6.34.
+
+**Reguła.** Przy każdym oczekującym wyniku są dwie akcje (aplikacja nie
+rozstrzyga, czy wynik będzie liczbowy, czy opisowy):
+
+- **„Wpisz wynik →”** otwiera Jednostki lab. z tym wpisem
+  (`przelicznik-jednostek.html?oczekujacy=<id notatki>`, a przy wpisie
+  z badaniem z listy także `&badanie=<id>` — przelicznik otwiera to badanie).
+  Wejście jak w 6.34: pacjent wczytany — odnośnik; niewczytany — przycisk
+  „Wczytaj pacjenta i wpisz wynik →”, który najpierw wczytuje go drogą karty.
+  Przelicznik sprawdza wpis w sejfie (`VildaLabHistory.pendingItem`: istnieje,
+  czeka, należy do wczytanego pacjenta) i pokazuje pod tytułem karty pasek
+  „Oczekujący wynik: … · termin …” z „Odłącz”. Wpis niepasujący nie podpina
+  się (komunikat).
+- Okno „Przypnij wynik” i zapis pakietu badań mają znacznik **„Zamknij
+  oczekujący wynik: …”**, domyślnie zaznaczony. Po zapisaniu wyniku —
+  zwykłą drogą, z tą samą oceną i zakresem co każdy przypięty wynik —
+  zaznaczony znacznik oznacza wpis jako wykonany (`vault.completePatientNote`,
+  ta sama funkcja co w 6.11). Wynik jest osobnym wpisem; wpis oczekujący nie
+  dostaje wartości. Odznaczony znacznik zostawia wpis otwarty.
+- Znacznik jest domyślnie **odznaczony** tylko wtedy, gdy aplikacja wie, że
+  zapisywany wynik jest innym badaniem: wpis ma badanie z listy, a wśród
+  zapisywanych wyników go nie ma (`defaultChoice`). Wyjaśnienie stoi pod
+  znacznikiem; lekarz może go zaznaczyć.
+- Po zamknięciu pasek staje się komunikatem „Oczekujący wynik „…” oznaczony
+  jako wykonany.” z „Cofnij zamknięcie” (`uncompletePatientNote` — tylko gdy
+  wpis jest w stanie z tego zamknięcia; po cofnięciu jest znów podpięty,
+  wynik zostaje) i „Otwórz Badania →”. Wpis zmieniony gdzie indziej przed
+  zamknięciem nie jest nadpisywany; błąd zamknięcia nie cofa zapisanego
+  wyniku — komunikat odsyła do Przypomnień.
+- **„Opisz wynik”** — wynik opisowy (biopsja, USG): okno z opisem i datą
+  otrzymania, bez pól wartości i jednostki. Zapis robi sejf jedną operacją
+  `saveReminderOutcome` (action „result”), tą samą co „Dodaj wynik do
+  kartoteki” w Przypomnieniach: opis jest osobnym wpisem — wynikiem opisowym
+  („Wynik opisowy — pełna treść w notatce”), a wpis oczekujący zostaje
+  wykonany. Aplikacja opisu nie ocenia i nie rysuje. Nie wymaga wczytania
+  pacjenta. Bez „Cofnij” (jak w Przypomnieniach).
+- Ręcznego „Wpisz wynik” do edytora już nie ma; szablon „Wynik badania”
+  zostaje tylko przy edycji zapisanego wyniku.
+
+**Ograniczenia.** Zamknięcie nie przekłada wpisu z „kontrolą co N dni” na
+kolejny termin (jak w 6.11). Data w oknie „Opisz wynik” jest datą otrzymania
+wyniku, nie pobrania — wynik opisowy stoi w Badaniach pod datą wpisu (tak
+zapisuje go sejf). Wynik wpisany w Jednostkach lab. bez wejścia z wpisu nie
+proponuje zamknięcia (etap 2). W Przypomnieniach „Dodaj wynik do kartoteki”
+działa jak dotąd.
+
+**Przypadki `wejście → wynik`** (fikcyjna dziewczynka 12 l, wpis „Kontrola
+TSH”, termin 01.12.2026):
+
+| Wejście | Wynik |
+|---|---|
+| „Wpisz wynik →”, TSH 2,5 mIU/L, „Przypnij do wizyty”, znacznik zaznaczony | nowy wpis wyniku z `testKey: tsh`, `valueNum: 2.5` i zapisanym zakresem (0,5–4,3 mIU/L); wpis oczekujący `completedAtISO`, bez wartości; komunikat w pasku |
+| jak wyżej, „Cofnij zamknięcie” | wpis znów czeka i jest podpięty; wynik zostaje |
+| jak wyżej, znacznik odznaczony | wynik zapisany; wpis dalej czeka i jest podpięty |
+| „Odłącz” | pasek znika, okno przypięcia bez znacznika; adres strony nie podpina wpisu po odświeżeniu |
+| pakiet „Tarczyca”: TSH 2,5 i fT4 14,2, znacznik zaznaczony | dwa wyniki zapisane; wpis wykonany po zapisaniu obu |
+| wpis „Wynik: TSH (tyreotropina)”: przelicznik otwiera TSH; przypinany fT4 | znacznik odznaczony, „Oczekujący wynik dotyczy TSH, a przypinany wynik to fT4…”; po zapisie wpis dalej czeka |
+| adres z wpisem innego pacjenta albo już wykonanym | komunikat, bez paska |
+| „Opisz wynik” przy „Wynik: Biopsja tarczycy (BACC)”, opis, zapis | wpis wykonany; nowy wynik opisowy „Wynik: Biopsja tarczycy (BACC)” z opisem w treści; bez liczby |
+| „Opisz wynik” bez opisu | komunikat w oknie, nic się nie zapisuje |
+| pacjent niewczytany: „Wczytaj pacjenta i wpisz wynik →”, „Nowy pomiar” | przelicznik z tą pacjentką, jej wiekiem i podpiętym wpisem |
+
+Testy na kodzie produkcyjnym: `tests/unit/lab-pending-result.test.mjs`
+(`pendingItem` wobec listy widoku, adres, domyślny stan znacznika, pasek,
+zamknięcie, cofnięcie, zmiana wpisu gdzie indziej, błąd, kontrakt wołań w oknie
+przypięcia i pakiecie), `tests/unit/lab-history-tab.test.mjs` (akcje w trzech
+stanach karty, okno opisu, odmowa i błąd sejfu), e2e na fikcyjnym sejfie:
+`tests/e2e/oczekujacy-wynik.spec.mjs` (powłoka i strona samodzielna, znacznik,
+„Odłącz”, pakiet, wpis z badaniem z listy, wpis cudzy i zamknięty),
+`tests/e2e/oczekujacy-wynik-badania.spec.mjs` („Opisz wynik”, pacjent
+niewczytany, „Otwórz Badania →”), `tests/e2e/oczekujacy-wynik-mobile.spec.mjs`
+(telefon), `tests/e2e/lab-historia-zlecenie-wykonane.spec.mjs` (opis zdejmuje
+wpis z przypomnień). Opis: `docs/LAB_HISTORIA_WYNIKOW_PLAN.md`, decyzja 6.35;
+`docs/ZRODLA_ARTEFAKTOW.md`, „Łatka P-OCZEKUJACE-WYNIKI”.
 
 ### LAB-PAKIETY PR1 — pakiet badań „Tarczyca” w przeliczniku jednostek (`vilda_lab_packages.js` 1.0.0, 2026-11-12)
 

@@ -1792,6 +1792,29 @@ function readLoadedPatientAge() { /* tylko dla wczytanego pacjenta: wiek wizyty 
 
 **Poza łatką (zgłoszone osobno).** Na stronie samodzielnej pakiet badań nie zna daty urodzenia pacjenta bez znacznika oceny pokwitania (`readPubertyPatientContext` czyta ją z kontekstu oceny albo z `shared.dobISO`, a jest w sesji formularza), więc przy dacie pobrania wstecz zostaje w trybie „bez daty urodzenia”. W powłoce działa.
 
+## Łatka P-OCZEKUJACE-WYNIKI — oczekujący wynik przez Jednostki lab. (`lab_pin_result.js`, 2026-11-15, decyzje właściciela)
+
+Opis działania i przypadki: `docs/clinical/ALGORITHMS.md`, „LAB-HISTORIA 6.35”. Zmiany w czytelnych źródłach (`vilda_lab_history.js` 1.5.0 — `pendingItem`; `vilda_lab_history_tab.js` 2.6.0; `vilda_lab_packages.js` — `drawPending`, `closePending`; pasek `#labPendingStrip` w `przelicznik-jednostek.html`; style w `inline_przelicznik_jednostek_00.css` i `vilda_lab_history_tab.css`) nie wymagają opisu łatki. Łatką jest tylko zminifikowana część `lab_pin_result.js` — trzy podmiany dokładnych ciągów, bez ponownej minifikacji:
+
+```js
+// 1. budowa okna (funkcja V): znacznik po podglądach oceny i zakresu
+//    było:  RrPinRange(t,o),s.addEventListener("click",…),…,u("labPinSave").addEventListener("click",function(){A(t,e,i)})}}
+//    jest:  RrPinRange(t,o);var OwChoice=OwPinChoice(t,o);s.addEventListener("click",…),…,…function(){A(t,e,i,OwChoice)})}}
+// 2. nagłówek funkcji zapisu:  function A(t,e,n){…  →  function A(t,e,n,OwChoice){…
+// 3. po zapisaniu wyniku:  await r.savePatientNote(p),g();  +
+//    if(OwChoice&&a.VildaLabPendingResult&&typeof a.VildaLabPendingResult.commit=="function")try{await a.VildaLabPendingResult.commit(OwChoice,r)}catch{}
+```
+
+Czytelne dodatki w tym samym pliku: `OwPinChoice(result, host)` (przed blokiem „PR3: modal shows…”) rysuje znacznik nad datą badania przez `VildaLabPendingResult.choice`; na końcu pliku drugi moduł (własne IIFE) `window.VildaLabPendingResult` — podpięty wpis, pasek, znacznik, zamknięcie i cofnięcie.
+
+**Dlaczego moduł jest w pliku okna przypięcia, a nie w osobnym pliku.** Nowy plik to dodatkowe żądanie przy instalacji aplikacji (budżet żądań service workera, `FRESH_STATIC_ALIAS_PATHS`); ten sam wzorzec co `VildaResultDetailsDialog` w `vilda_lab_result_chart.js` i pakiet badań w jednym pliku.
+
+**Dlaczego wywołanie zamknięcia jest wewnątrz funkcji zapisu `A`.** Testy `search-note-producers`, `lab-snapshot-ui` i `lab-testosterone-snapshot-vault` uruchamiają wycinek `async function A(` … `function I(){` z wolnymi zmiennymi `a, u, T, D, g, h`. Funkcja musi więc zostać samodzielna: bez znacznika (`OwChoice` niezdefiniowane) działa dokładnie jak dotąd, a zapisywana notatka wyniku nie zmienia postaci.
+
+**Granice.** Sejf bez zmian: zamknięcie to istniejące `completePatientNote` / `uncompletePatientNote`, opis słowny — istniejące `saveReminderOutcome` (action „result”), odczyt — `getPatientNote`. Edytor karty (`vilda_auth_ui.js`) i Terminarz bez zmian; zakładka przestała otwierać edytor z szablonem „Wynik badania” przy oczekującym wyniku, więc szablon jest osiągalny tylko przez edycję zapisanego wyniku. W ramce powłoki cel przychodzi zdarzeniem `vilda:shell-navigate-target` (jak `?badanie=` i `?pakiet=`); adres strony samodzielnej traci `oczekujacy` po odpięciu albo zamknięciu (`history.replaceState`), żeby odświeżenie nie podpinało wpisu ponownie.
+
+**Znalezione przy okazji, bez zmiany.** „Dodaj wynik do kartoteki” w Przypomnieniach nie podaje sejfowi nazwy badania, więc dla wpisu „Wynik: Biopsja…” (Terminarz po procedurze) wynik opisowy dostaje tytuł „Wynik: Wynik: Biopsja…”. „Opisz wynik” w zakładce „Badania” podaje nazwę bez prefiksu. Do decyzji właściciela, czy wyrównać Przypomnienia.
+
 ## Trwała tożsamość wizyt — źródło i granica artefaktu sejfu
 
 Zmiana funkcjonalna `P-TRWALE-WIZYTY` ma bazę `audyt` z commita

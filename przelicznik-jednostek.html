@@ -80,7 +80,7 @@
   <script src="vilda_schowek.js?v=5"></script>
   <script src="vilda_persistence_adapter.js?v=38"></script>
 <script src="vilda_reminders_privacy.js?v=1"></script>
-  <script src="vilda_session_bridge.js?v=209"></script>
+  <script src="vilda_session_bridge.js?v=210"></script>
   <script src="vilda_init.js?v=4"></script>
   <script src="vilda_deps.js?v=98"></script>
   <script>
@@ -115,9 +115,9 @@
   <link rel="icon" type="image/png" sizes="48x48" href="/pwa-icons/icon-48x48.png">
   <link rel="icon" type="image/png" sizes="96x96" href="/pwa-icons/icon-96x96.png">
 
-  <link href="inline_przelicznik_jednostek_00.css?v=14" rel="stylesheet">
+  <link href="inline_przelicznik_jednostek_00.css?v=15" rel="stylesheet">
 
-  <script src="vilda_chrome.js?v=293"></script>
+  <script src="vilda_chrome.js?v=294"></script>
   <script src="lucide.min.js?v=1" defer></script>
   <script defer src="vilda_frame_sync.js?v=3"></script>
   <link rel="stylesheet" href="vilda_phone_landscape.css?v=2">
@@ -152,6 +152,11 @@
               <button type="button" class="lab-mode-tab" id="labModeSingle" role="tab" aria-selected="true" aria-controls="labFormPane labResultPane labChartPane">Pojedyncze badanie</button>
               <button type="button" class="lab-mode-tab" id="labModePackage" role="tab" aria-selected="false" aria-controls="labPackageCard" tabindex="-1"><svg class="lab-mode-lock" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Pakiet badań</button>
             </div>
+            <!-- P-OCZEKUJACE-WYNIKI (decyzje właściciela 2026-11-15): pasek wpisu „oczekujący wynik”, z którego
+                 zakładka „Badania” otworzyła Jednostki lab., a po zapisie — komunikat o jego zamknięciu.
+                 W nagłówku karty, żeby był widoczny w pojedynczym badaniu i w pakiecie. Wypełnia
+                 VildaLabPendingResult (lab_pin_result.js); bez podpiętego wpisu pasek jest ukryty. -->
+            <div class="lab-pending-strip" id="labPendingStrip" hidden></div>
            </div>
            <div class="lab-pane lab-pane--form" id="labFormPane">
 
@@ -516,10 +521,10 @@
   <script src="vilda_female_tt_infant_upper_ui.js?v=1"></script>
   <script src="vilda_male_e2_age.js?v=2"></script>
   <script src="vilda_male_e2_age_ui.js?v=2"></script>
-  <script src="lab_pin_result.js?v=11"></script>
-  <script src="vilda_lab_history.js?v=6"></script>
+  <script src="lab_pin_result.js?v=12"></script>
+  <script src="vilda_lab_history.js?v=7"></script>
   <script src="lab_history_strip.js?v=4"></script>
-  <script src="vilda_lab_packages.js?v=8"></script>
+  <script src="vilda_lab_packages.js?v=9"></script>
   <!-- P2 (2026-06-07): 939 KB paneli klinicznych ładowane LENIWIE — strona startuje
        bez parsowania największego pliku w aplikacji. Konsument ma bezpieczny getter
        (global_LabClinicalPanels) z fallbackiem do zwykłego wyszukiwania, więc okno

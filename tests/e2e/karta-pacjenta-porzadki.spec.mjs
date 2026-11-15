@@ -134,8 +134,8 @@ test.describe('P6 + P7 + P8 — edytor notatki mówi ludzkim głosem', () => {
     await otworzZKontem(page);
     const patientId = await zalozPacjenta(page);
     // P-BADANIA-WEJSCIE (decyzja właściciela 2026-11-15): nowa notatka nie ma szablonu „Wynik badania” — nowego
-    // wyniku nie wpisuje się ręcznie. Szablon zostaje tam, gdzie edytor otwiera się z nim: „Wpisz wynik” przy
-    // zleceniu w zakładce „Badania” (i edycja zapisanego wyniku); tak otwieramy go tutaj.
+    // wyniku nie wpisuje się ręcznie. Szablon zostaje tam, gdzie edytor otwiera się z nim: przy edycji zapisanego
+    // wyniku (od P-OCZEKUJACE-WYNIKI także oczekujący wynik nie ma ręcznego wpisu); tu otwieramy edytor wprost.
     await otworzEdytor(page, patientId);
     expect(await page.locator('.b3-template-select option').evaluateAll((opcje) => opcje.map((o) => o.value)),
       'nowa notatka: bez szablonu wyniku').toEqual(['none', 'med-start', 'med-change', 'med-stop']);
