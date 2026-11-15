@@ -23,16 +23,33 @@
 
   function enableFictionalPlan() {
     const access = window.VildaProAccess;
-    const account = window.VildaVault?.getCurrentUser();
+    const vault = window.VildaVault;
+    const account = vault?.getCurrentUser();
     let marker;
     try { marker = JSON.parse(window.localStorage.getItem(ACCOUNT_KEY) || 'null'); } catch (_) { return; }
-    if (!access || !account || !marker || account.userId !== marker.userId || account.label !== ACCOUNT_LABEL) return;
+    if (!access || !vault?.isUnlocked() || !account || !marker || account.userId !== marker.userId || account.label !== ACCOUNT_LABEL) return;
+    const hadAccess = access.hasAccess();
     access.__setTokenModeForTest(false);
-    access.setPlan('pro', '2099-12-31T23:59:59.000Z');
+    if (!hadAccess || !access.hasAccess()) access.setPlan('pro', '2099-12-31T23:59:59.000Z');
     window.VildaProUi?.refresh?.();
   }
-  document.addEventListener('DOMContentLoaded', enableFictionalPlan, { once: true });
-  document.addEventListener('vilda:session-changed', enableFictionalPlan);
+  let boundVault = null;
+  function bindFictionalPlan() {
+    const vault = window.VildaVault;
+    if (vault && vault !== boundVault && typeof vault.onUnlock === 'function') {
+      boundVault = vault;
+      vault.onUnlock(enableFictionalPlan);
+    }
+    enableFictionalPlan();
+  }
+  // Embedded documents finish parsing before native async session restoration.
+  // Native vault unlock does not emit vilda:session-changed, so DCL alone misses
+  // these frames. Subscribe once and honor the real auth finalizer as well.
+  document.addEventListener('vilda:auth-boot-settled', bindFictionalPlan);
+  document.addEventListener('vilda:auth-loaded', bindFictionalPlan);
+  document.addEventListener('vilda:session-changed', bindFictionalPlan);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bindFictionalPlan, { once: true });
+  else bindFictionalPlan();
 
   if (window !== window.top) return;
 
@@ -146,9 +163,6 @@
       if (!marker) return;
       enableFictionalPlan();
       let owner = await waitFor(() => { const target = ownerWindow(); return ready(target) && target; }, 'Nie ukończono uruchamiania formularza.');
-      owner.VildaProAccess.__setTokenModeForTest(false);
-      owner.VildaProAccess.setPlan('pro', '2099-12-31T23:59:59.000Z');
-      owner.VildaProUi?.refresh?.();
       await waitFor(() => owner.VildaProAccess?.hasAccess() && ready(owner), 'Nie można uruchomić widoku lekarskiego.');
       const seed = async () => {
         const current = JSON.parse(window.localStorage.getItem(ACCOUNT_KEY) || 'null');

@@ -152,10 +152,12 @@ describe('separate homepage preview export', () => {
 const ACCOUNT_KEY = 'vilda-home-preview-fictional-account-v1';
 const ACCOUNT_LABEL = 'Podgląd — wyłącznie fikcyjni pacjenci';
 const RUNTIME_SOURCE = await readFile(new URL('../../tools/home-preview/runtime.js', import.meta.url), 'utf8');
+const NATIVE_PRO_ACCESS_SOURCE = await readFile(new URL('../../vilda_pro_access.js', import.meta.url), 'utf8');
 
 function previewStorage(entries = {}) {
   const values = new Map(Object.entries(entries));
-  return { getItem: key => values.get(key) ?? null, setItem(key, value) { values.set(key, String(value)); }, values };
+  return { getItem: key => values.get(key) ?? null, setItem(key, value) { values.set(key, String(value)); },
+    removeItem(key) { values.delete(key); }, values };
 }
 
 function fictionalNativeVault(patients = []) {
@@ -248,5 +250,100 @@ describe('fictional preview patient selection remains inside the native vault', 
     expect(vault.calls.listPatients).toHaveLength(0);
     expect(vault.calls.savePatient).toHaveLength(0);
     expect(vault.calls.unlock).toHaveLength(0);
+  });
+});
+
+function embeddedPreview({ foreign = false, alreadyUnlocked = false, lazy = false } = {}) {
+  const listeners = new Map(), unlockListeners = [];
+  const account = { userId: foreign ? 'fictional-foreign-account' : 'fictional-preview-account', label: ACCOUNT_LABEL };
+  let unlocked = alreadyUnlocked;
+  const storage = previewStorage({ [ACCOUNT_KEY]: JSON.stringify({ userId: 'fictional-preview-account' }) });
+  const document = {
+    readyState: 'loading',
+    addEventListener(type, callback, options) {
+      const callbacks = listeners.get(type) || [];
+      callbacks.push({ callback, once: options?.once === true }); listeners.set(type, callbacks);
+    },
+    dispatchEvent(event) {
+      for (const entry of [...(listeners.get(event.type) || [])]) {
+        entry.callback(event);
+        if (entry.once) listeners.set(event.type, listeners.get(event.type).filter(item => item !== entry));
+      }
+    },
+  };
+  const window = {
+    document, top: {}, location: { hostname: 'preview.example.invalid', pathname: '/docpro.html' },
+    localStorage: storage, sessionStorage: previewStorage(),
+    addEventListener() {}, setTimeout: () => 1, clearTimeout() {}, setInterval: () => 1,
+    atob, btoa,
+  };
+  class CustomEvent { constructor(type) { this.type = type; } }
+  const context = vm.createContext({ window, CustomEvent, TextEncoder, TextDecoder, Uint8Array, Promise });
+  // Export bootstrap is the first script. Native deferred modules appear later.
+  vm.runInContext(RUNTIME_SOURCE, context);
+  const attachVault = () => {
+    window.VildaVault = {
+      isUnlocked: () => unlocked, getCurrentUser: () => unlocked ? { ...account } : null,
+      onUnlock(callback) { unlockListeners.push(callback); },
+    };
+  };
+  const loadAccess = () => vm.runInContext(NATIVE_PRO_ACCESS_SOURCE, context);
+  if (!lazy) { attachVault(); loadAccess(); }
+  const fire = type => document.dispatchEvent(new CustomEvent(type));
+  return {
+    window, storage, unlockListeners, fire, attachVault, loadAccess,
+    unlock() { unlocked = true; for (const listener of [...unlockListeners]) listener(); },
+    lock() { unlocked = false; },
+  };
+}
+
+describe('fictional access follows actual native auth completion in each frame', () => {
+  test('DCL before asynchronous unlock activates native access and auth completion handles a late cache reset', async () => {
+    const frame = embeddedPreview();
+    const access = frame.window.VildaProAccess;
+    frame.fire('DOMContentLoaded');
+    expect(access.__isTokenModeOn()).toBe(true);
+    expect(access.hasAccess()).toBe(false);
+    frame.unlock();
+    await Promise.resolve(); await Promise.resolve();
+    expect(access.__isTokenModeOn()).toBe(false);
+    expect(access.hasAccess()).toBe(true);
+    const subscriptions = frame.unlockListeners.length;
+    access.invalidateCache();
+    expect(access.hasAccess()).toBe(false);
+    frame.fire('vilda:auth-boot-settled');
+    frame.fire('vilda:auth-boot-settled');
+    expect(access.hasAccess()).toBe(true);
+    expect(frame.unlockListeners).toHaveLength(subscriptions);
+  });
+
+  test('an already restored owned frame activates immediately when parsing completes', () => {
+    const frame = embeddedPreview({ alreadyUnlocked: true });
+    frame.fire('DOMContentLoaded');
+    expect(frame.window.VildaProAccess.__isTokenModeOn()).toBe(false);
+    expect(frame.window.VildaProAccess.hasAccess()).toBe(true);
+  });
+
+  test('lazy auth loader binds and activates access even when auth settles before the access module loads', () => {
+    const frame = embeddedPreview({ alreadyUnlocked: true, lazy: true });
+    frame.fire('DOMContentLoaded');
+    frame.attachVault();
+    frame.fire('vilda:auth-boot-settled');
+    frame.loadAccess();
+    expect(frame.window.VildaProAccess.__isTokenModeOn()).toBe(true);
+    frame.fire('vilda:auth-loaded');
+    expect(frame.window.VildaProAccess.__isTokenModeOn()).toBe(false);
+    expect(frame.window.VildaProAccess.hasAccess()).toBe(true);
+  });
+
+  test('foreign and locked accounts never receive the fictional plan from auth events', () => {
+    const foreign = embeddedPreview({ foreign: true });
+    foreign.fire('DOMContentLoaded'); foreign.unlock(); foreign.fire('vilda:auth-boot-settled');
+    expect(foreign.window.VildaProAccess.__isTokenModeOn()).toBe(true);
+    expect(foreign.window.VildaProAccess.getSnapshot()).toBeNull();
+    const locked = embeddedPreview();
+    locked.fire('DOMContentLoaded'); locked.fire('vilda:auth-boot-settled');
+    expect(locked.window.VildaProAccess.__isTokenModeOn()).toBe(true);
+    expect(locked.window.VildaProAccess.getSnapshot()).toBeNull();
   });
 });
