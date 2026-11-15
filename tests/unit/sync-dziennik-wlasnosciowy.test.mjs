@@ -792,7 +792,8 @@ async function doKolejkiOgon(S, U, koperty) {
 // koperty modelu, bez porównania).
 // Wyrocznia (E3-PR0a): na czas operacji U.v to pośrednik, który zapisuje wywołania API sejfu z listy WYR.OPERACJE
 // (z argumentami — „Przywróć” wyrocznia rozpoznaje po snapshotId wywołania); operacja — wywołanie podane wprost (katalog
-// p. 5 woła metodę sejfu z pominięciem U.v). Po mutacji historia (S.wyr) dostaje zapis: eksport przed i po, chwila.
+// p. 5 woła metodę sejfu z pominięciem U.v). Po mutacji historia (S.wyr) dostaje zapis: eksport przed i po, chwila
+// i app urządzenia (E3-PR0b: klasy floty wyroczni).
 // E3-PR0b: na urządzeniu z sejfem 221 (bez dziennika zdarzeń) — mutacjaBezDziennika: historia bez emisji. Przy liczniku
 // odsyłania koperty mutacji trafiają na oś czasu własnych wysyłek (druk).
 async function mutacja(S, U, opis, fn, { zrodlo = 'emitery', operacja = null } = {}) {
@@ -814,7 +815,7 @@ async function mutacja(S, U, opis, fn, { zrodlo = 'emitery', operacja = null } =
   const chwila = Date.now();
   try { wynik = await fn(); } catch (e) { blad = e; } finally { U.v = v0; }
   const po = await eksport(U);
-  { const t0 = performance.now(); WYR.zapisz(S.wyr = S.wyr || WYR.nowyModel(), { dev: U.nazwa, opis, przed, po, t: chwila, operacje }); WYR_CZAS.zapis += performance.now() - t0; }
+  { const t0 = performance.now(); WYR.zapisz(S.wyr = S.wyr || WYR.nowyModel(), { dev: U.nazwa, app: U.app, opis, przed, po, t: chwila, operacje }); WYR_CZAS.zapis += performance.now() - t0; }
   if (idHasla(po) !== idHasla(przed) && U.noweHaslo) { S.hasla.set(idHasla(po), U.noweHaslo); }
   U.noweHaslo = null;
   const wpisy = U.lancuch.splice(0);
@@ -4525,7 +4526,7 @@ async function mutacjaBezDziennika(S, U, opis, fn, { operacja = null } = {}) {
   let wynik, blad = null;
   try { wynik = await fn(); } catch (e) { blad = e; } finally { U.v = v0; }
   const po = await eksport(U);
-  { const t0 = performance.now(); WYR.zapisz(S.wyr = S.wyr || WYR.nowyModel(), { dev: U.nazwa, opis, przed, po, t: chwila, operacje }); WYR_CZAS.zapis += performance.now() - t0; }
+  { const t0 = performance.now(); WYR.zapisz(S.wyr = S.wyr || WYR.nowyModel(), { dev: U.nazwa, app: U.app, opis, przed, po, t: chwila, operacje }); WYR_CZAS.zapis += performance.now() - t0; }
   ustawStan(U, po);
   if (blad) S.stat.odmowyStarszej = (S.stat.odmowyStarszej || 0) + 1;
   S.dziennik.push(`#${S.nrKroku || 0} ${new Date(teraz).toISOString().slice(11, 23)} ${U.nazwa} (${U.app}): ${opis}${blad ? ` → odmowa ${blad.code || blad.message}` : ''}`);

@@ -50,6 +50,17 @@
 // których ostatnia treść jest widoczna. Każde naruszenie dostaje klasę z jawnej tabeli wyjątków WYJATKI albo null
 // (klasa null = czerwień w CI). Klasa wymaga mechanizmu z historii (np. alias „Scal pacjentów” karty, zapis w starej
 // karcie po scaleniu, kosz bez wiedzy o ostatniej gwiazdce albo treści), nie samego objawu w widoku.
+//
+// FLOTA ZE STARSZĄ APLIKACJĄ (E3-PR0b). Zapis historii niesie app urządzenia mutującego ('N' — bieżący sejf, domyślnie;
+// 'S221', 'S276' — sejf starszej aplikacji z fikstury, tests/support/starsza-aplikacja.mjs). Ocena bierze stare — nazwy
+// widoków urządzeń starszej aplikacji (dochodzą do nich urządzenia z app ≠ 'N' z historii). Klasy floty (WYJATKI z polem
+// cechy) działają tylko wtedy, gdy mechanizm z historii leży na urządzeniu starszej aplikacji, które ma daną cechę
+// (CECHY_STARSZYCH); ten sam objaw z mechanizmem na bieżącym urządzeniu zostaje bez klasy floty. Klasy floty są dozwolone
+// tylko w światach floty ('W1 floty', 'W4 floty' — losowe floty; 'p6f W1', 'p6f W4' — scenariusze deterministyczne);
+// klasa samych bieżących urządzeń obowiązuje w świecie floty tak jak w jego odpowiedniku bez floty (SWIATY_FLOTY).
+// Starsza aplikacja nie pisze tożsamości wizyty (payload.visit), a bieżąca dopisuje ją przy odczycie i scalaniu: gdy
+// oczekiwany zapis treści nie ma payload.visit, treść faktu porównuje się bez niej (rownaTresc; gdy ma — ściśle).
+// Przypadki z przyczyną po stronie bieżącej aplikacji klasy floty nie dostają.
 
 export function sortuj(x) {
   if (Array.isArray(x)) return x.map(sortuj);
@@ -67,6 +78,20 @@ const bezPodkr = (p) => {
 export const tresc = (p) => JSON.stringify(sortuj(bezPodkr(p)));
 // Treść bez tożsamości wizyty (porównanie głowy scalenia z wersją, z której ją zbudowano).
 const trescBezWizyty = (t) => { try { const p = JSON.parse(t); if (p && typeof p === 'object') delete p.visit; return JSON.stringify(p); } catch { return t; } };
+// Normalizacja tożsamości wizyty (E3-PR0b) według OCZEKIWANEGO zapisu, nie według urządzenia: gdy ostatni zapis treści
+// nie ma payload.visit (starsza aplikacja jej nie pisze; bieżąca wyznacza ją przy odczycie — Bvisit_legacy, vilda_vault.js
+// :5908–5918, docs/PATIENT_VISITS.md:45), treść faktu porównuje się bez visit; gdy ma — porównanie jest ścisłe.
+// E2_AB_NORM_VISIT=0 wyłącza normalizację (pomiar fałszywych naruszeń „treść”); NORM_VISIT.uzyta — liczba porównań
+// rozstrzygniętych normalizacją.
+const maWizyte = (t) => { try { const p = JSON.parse(t); return !!p && typeof p === 'object' && 'visit' in p; } catch { return false; } };
+export const NORM_VISIT = { wlaczona: process.env.E2_AB_NORM_VISIT !== '0', uzyta: 0 };
+export function rownaTresc(fakt, ocz) {
+  if (fakt === ocz) return true;
+  if (!NORM_VISIT.wlaczona || fakt == null || ocz == null || maWizyte(ocz)) return false;
+  const r = trescBezWizyty(fakt) === ocz;
+  if (r) NORM_VISIT.uzyta += 1;
+  return r;
+}
 const wizytaId = (p) => (p && p.visit && typeof p.visit === 'object' ? p.visit.visitId || null : null);
 const krotkoTresc = (t) => {
   try { const p = JSON.parse(t); return p && p.user ? `${p.user.height}cm/${p.user.weight}kg` : String(t).slice(0, 40); } catch { return String(t).slice(0, 40); }
@@ -77,6 +102,31 @@ const tekstNotatki = (n) => JSON.stringify([n.title ?? null, n.body ?? null, n.c
 const B0 = Object.freeze({ t: -1, s: 0 });
 export function cmp(a, b) { if (a.t !== b.t) return a.t < b.t ? -1 : 1; return a.s - b.s; }
 const maks = (a, b) => (cmp(a, b) >= 0 ? a : b);
+
+// ── Starsza aplikacja we flocie (E3-PR0b) ──────────────────────────────────────────────────────────────────────────
+// Cechy sejfu starszej aplikacji, na których stoją mechanizmy klas floty (fikstury tests/fixtures/vilda_vault-221.js.txt
+// i vilda_vault-276.js.txt, retencja tests/fixtures/vilda_retention-v1.js.txt; tests/support/starsza-aplikacja.mjs):
+// - retencja v1 — przycina bez ochrony wizyt (computeRetention bez protectedVisitSnapshotIds); obie wersje;
+// - bez składników W3 — nie zna rejestru gwiazdki (_pinnedState), chwili treści (_contentAtISO) ani pola gwiazdka wpisu
+//   Kosza; „Odepnij i usuń” wkłada do Kosza treść z _pinned (fikstura 221:757–787); rekord tej samej wersji bierze w całości
+//   (Bkz_nowszaWersja, fikstura 221:454–462); tylko 221 (276 ma Bgw_);
+// - najpierw rev — wersję tej samej karty wybiera po rev, a nie po chwili zmiany (docs/clinical/ALGORITHMS.md, „Flota
+//   mieszana”, ok. 29173–29176); tylko 221;
+// - bez haka H1 — nie ma haków dziennika zdarzeń (Bem_): karta, która wraca jej zmianą, nie niesie pełnej karty; tylko 221;
+// - bez ratunku notatek — nie ma ratunku notatki D-21 (Bnp_) ani pola deletedWithPatient nagrobka notatki
+//   (vilda_vault.js:4901); tylko 221.
+export const BIEZACA = 'N';
+const RETENCJA_V1 = 'retencja v1', BEZ_W3 = 'bez składników W3', NAJPIERW_REV = 'najpierw rev', BEZ_H1 = 'bez haka H1', BEZ_RATUNKU = 'bez ratunku notatek';
+export const CECHY_STARSZYCH = Object.freeze({
+  S221: Object.freeze([RETENCJA_V1, BEZ_W3, NAJPIERW_REV, BEZ_H1, BEZ_RATUNKU]),
+  S276: Object.freeze([RETENCJA_V1]),
+});
+// Urządzenie dev (z historii) ma cechę starszej aplikacji?
+const maCeche = (M, dev, cecha) => { const c = CECHY_STARSZYCH[M.app.get(dev)]; return !!c && c.includes(cecha); };
+// Wersja przed „Usuń pacjenta”: ostatni stan jej wizyty usunęła retencja v1 urządzenia starszej aplikacji.
+const retencjaStarszej = (M, m) => !!(m.retOstatni && maCeche(M, m.retOstatni.dev, RETENCJA_V1));
+// Nowy zapis treści wersji zdejmuje znaczniki mechanizmów, które dotyczyły poprzedniej treści.
+const zapisTresci = (m) => { m.trescNadpisana = null; m.gwiazdkaJakTresc = null; m.przywrocenieStarszej = null; };
 
 // ── Operacje mutacji (wywołania API sejfu z argumentami) ────────────────────────────────────────────────────────────
 // Nazwy metod sejfu, których wywołania mutacja() zapisuje; zapisz() czyta z nich rodzaj operacji.
@@ -97,7 +147,7 @@ export function projekcja(lad) {
   for (const p of lad.patients || []) {
     P.karty.add(p.patientId);
     const sn = p.snapshots || [];
-    for (const s of sn) P.w.set(s.snapshotId, { loc: 'karta', pid: p.patientId, tresc: tresc(s.payload), pin: !!(s.payload && s.payload._pinned), ile: sn.length, vid: wizytaId(s.payload), raw: `${s.updatedAtISO || ''}|${s.rev || 0}` });
+    for (const s of sn) P.w.set(s.snapshotId, { loc: 'karta', pid: p.patientId, tresc: tresc(s.payload), pin: !!(s.payload && s.payload._pinned), ile: sn.length, vid: wizytaId(s.payload), raw: `${s.updatedAtISO || ''}|${s.rev || 0}`, rev: s.rev || 0 });
   }
   for (const t of lad.tombstones || []) P.nagrP.add(t.patientId);
   for (const e of lad.snapshotTombstones || []) {
@@ -122,7 +172,7 @@ export function widokZ(st, kosz) {
   for (const p of st.patients || []) {
     V.karty.add(p.patientId);
     const sn = p.snapshots || [];
-    for (const s of sn) V.w.set(s.snapshotId, { loc: 'karta', pid: p.patientId, tresc: tresc(s.payload), pin: !!(s.payload && s.payload._pinned), ile: sn.length, vid: wizytaId(s.payload) });
+    for (const s of sn) V.w.set(s.snapshotId, { loc: 'karta', pid: p.patientId, tresc: tresc(s.payload), pin: !!(s.payload && s.payload._pinned), ile: sn.length, vid: wizytaId(s.payload), rev: s.rev || 0 });
   }
   for (const e of kosz || []) {
     const x = { loc: 'kosz', pid: e.patientId, tresc: tresc(e.payload), pin: !!e.pinned, ile: 0, vid: wizytaId(e.payload) };
@@ -153,7 +203,7 @@ export function widokNapis(V) {
 
 // ── Model ────────────────────────────────────────────────────────────────────────────────────────────────────────────
 export function nowyModel() {
-  return { w: new Map(), n: new Map(), l: new Map(), li: new Map(), karty: new Map(), alias: new Map(), seq: 0, mutacji: 0, baza: false };
+  return { w: new Map(), n: new Map(), l: new Map(), li: new Map(), karty: new Map(), alias: new Map(), app: new Map(), seq: 0, mutacji: 0, baza: false };
 }
 function karta(M, pid) { let k = M.karty.get(pid); if (!k) { k = { tObec: null, tUsun: null, przyczyna: null }; M.karty.set(pid, k); } return k; }
 function obecna(M, pid, czas) { const k = karta(M, pid); if (!k.tObec || cmp(czas, k.tObec) > 0) k.tObec = czas; }
@@ -182,14 +232,17 @@ function wizyta(M, sid) {
   let m = M.w.get(sid);
   if (!m) {
     m = { sid, loc: 'brak', pid: null, tLoc: B0, tresc: null, tTresc: B0, pin: null, tPin: B0, przyczyna: null, przyc: null, kosz: null, utrataE1: null, glowa: false,
-      bezOperacji: null, retOstatni: null, zapisPoScaleniu: null, koszWStarej: null, koszIle: null, koszBezGwiazdki: false, koszBezTresci: false, znane: new Set(), hist: [] };
+      bezOperacji: null, retOstatni: null, zapisPoScaleniu: null, koszWStarej: null, koszIle: null, koszBezGwiazdki: false, koszBezTresci: false, znane: new Set(), hist: [],
+      // flota ze starszą aplikacją (E3-PR0b): autor ostatniego zapisu gwiazdki i urządzenie, które wersję utworzyło;
+      // znaczniki mechanizmów klas floty (zapisz) i najwyższy rev widziany przy każdej treści tej wersji
+      devPin: null, utworzona: null, gwStarszej: null, trescNadpisana: null, gwiazdkaNadpisana: null, gwiazdkaJakTresc: null, przywrocenieStarszej: null, koszStarszej: null, revTresci: new Map() };
     M.w.set(sid, m);
   }
   return m;
 }
 function notatka(M, id) {
   let m = M.n.get(id);
-  if (!m) { m = { id, obecna: false, tekst: null, pid: null, tPid: B0, tTekst: B0, tObec: B0, przyczyna: null, zapisPoScaleniu: null, nieznanaScalajacemu: null, hist: [] }; M.n.set(id, m); }
+  if (!m) { m = { id, obecna: false, tekst: null, pid: null, tPid: B0, tTekst: B0, tObec: B0, przyczyna: null, zapisPoScaleniu: null, nieznanaScalajacemu: null, devUsun: null, wracaPrzez: null, hist: [] }; M.n.set(id, m); }
   return m;
 }
 // Stan bazowy (wspólny wszystkim urządzeniom na początku świata): zapis z chwilą B0.
@@ -209,10 +262,14 @@ export function baza(M, lad) {
 }
 
 // Mutacja lokalna na urządzeniu dev: przed/po — eksporty urządzenia; t — Date.now() urządzenia w chwili mutacji;
-// operacje — [{ nazwa, args }] wywołań API sejfu w tej mutacji (OPERACJE).
-export function zapisz(M, { dev, opis = '', przed, po, t, operacje = [] }) {
+// operacje — [{ nazwa, args }] wywołań API sejfu w tej mutacji (OPERACJE); app — aplikacja urządzenia (E3-PR0b: 'N'
+// — bieżąca, domyślnie; 'S221', 'S276' — starsza, CECHY_STARSZYCH).
+export function zapisz(M, { dev, app = BIEZACA, opis = '', przed, po, t, operacje = [] }) {
   if (!M.baza) baza(M, przed);
   M.mutacji += 1;
+  M.app.set(dev, app);
+  const ma = (d, c) => maCeche(M, d, c);
+  const bezW3 = ma(dev, BEZ_W3);
   const czas = { t, s: ++M.seq };
   const a = projekcja(przed), b = projekcja(po);
   const op = rozbierz(operacje);
@@ -241,8 +298,12 @@ export function zapisz(M, { dev, opis = '', przed, po, t, operacje = [] }) {
     const przepis = x && y && x.loc === 'karta' && y.loc === 'karta' && x.raw !== y.raw && op.poprawka.has(sid);
     const przywr = op.przywroc.has(sid) && y && y.loc === 'karta';
     if (x && y && x.loc === y.loc && x.pid === y.pid && x.tresc === y.tresc && (x.loc !== 'karta' || x.pin === y.pin) && !przepis && !przywr) continue;
+    const nowa = !M.w.has(sid);
     const m = wizyta(M, sid);
     m.znane.add(dev);
+    // E3-PR0b: urządzenie, które wersję utworzyło, i najwyższy rev widziany przy każdej treści tej wersji („najpierw rev”)
+    if (nowa && y && y.loc === 'karta') m.utworzona = dev;
+    for (const q of [x, y]) if (q && q.loc === 'karta' && !(m.revTresci.get(q.tresc) >= q.rev)) m.revTresci.set(q.tresc, q.rev);
     if (x && !y && !(b.ret.has(sid) && !a.ret.has(sid)) && noweNagr.includes(x.pid) && !cele.get(x.pid)) continue; // „Usuń pacjenta”: pętla kartowa
     dotkniete.add(sid);
     const h = { czas, dev, op: opis };
@@ -283,8 +344,29 @@ export function zapisz(M, { dev, opis = '', przed, po, t, operacje = [] }) {
       const znaKosz = przywr && m.kosz && ((x && x.loc === 'kosz') || a.stomb.has(sid));
       const cT = przywr ? czasZ(maks(x && x.tresc === m.tresc ? m.tTresc : B0, znaKosz ? m.kosz : B0), true) : czasZ(m.tTresc, x && x.tresc === m.tresc);
       const cP = czasZ(m.tPin, x && x.loc === 'karta' && x.pin === m.pin), cL = czasZ(m.tLoc, x && znaLoc(x));
-      if (zTresc && cmp(cT, m.tTresc) > 0) { m.tresc = y.tresc; m.tTresc = cT; m.devTresc = dev; h.tresc = y.tresc; }
-      if (zPin && cmp(cP, m.tPin) > 0) { m.pin = y.pin; m.tPin = cP; h.pin = y.pin; }
+      const przedT = { tresc: m.tresc, dev: m.devTresc }, przedP = { pin: m.pin, dev: m.devPin };
+      const trescZapisana = zTresc && cmp(cT, m.tTresc) > 0, pinZapisany = zPin && cmp(cP, m.tPin) > 0;
+      if (trescZapisana) { m.tresc = y.tresc; m.tTresc = cT; m.devTresc = dev; h.tresc = y.tresc; h.rev = y.rev; zapisTresci(m); }
+      if (pinZapisany) { m.pin = y.pin; m.tPin = cP; m.devPin = dev; h.pin = y.pin; m.gwiazdkaNadpisana = null; }
+      // Flota ze starszą aplikacją (E3-PR0b) — znaczniki mechanizmów klas floty:
+      // - gwiazdka bez rejestru W3: „Przywróć” albo zmiana gwiazdki istniejącej wersji na urządzeniu bez składników W3
+      //   (bieżąca aplikacja zachowuje wtedy gwiazdkę sprzed — pinN; starsza pokazuje swoją — pinStarszej); zapis gwiazdki
+      //   bieżącej aplikacji zdejmuje znacznik;
+      if (bezW3 && ((pinZapisany && x) || przywr)) m.gwStarszej = { czas, dev, rodzaj: przywr ? 'przywróć' : 'gwiazdka', pinN: m.gwStarszej ? m.gwStarszej.pinN : (przedP.pin ?? y.pin), pinStarszej: y.pin };
+      else if (!bezW3 && pinZapisany) m.gwStarszej = null;
+      // - „Przywróć” bez chwili treści: przywrócenie na urządzeniu bez składników W3, gdy ostatni zapis treści przed nim
+      //   (poprawka) zrobiła bieżąca aplikacja — w porządku LWW jest on późniejszy od przywracanej treści, a Bgw_stan czyta
+      //   przywrócenie jak zmianę samej gwiazdki: zostaje poprawka;
+      if (bezW3 && przywr && trescZapisana && przedT.dev && !ma(przedT.dev, BEZ_W3) && przedT.tresc !== y.tresc) m.przywrocenieStarszej = { czas, dev, poprawka: przedT.tresc };
+      // - zmiana starszej aplikacji nadpisana przed wysłaniem: ostatni zapis treści (gwiazdki) zrobiło urządzenie bez
+      //   składników W3, a ten zapis bieżącej aplikacji go nie znał i go nie zastąpił — starsza bierze cały nowszy rekord;
+      if (!bezW3 && x && x.loc === 'karta') {
+        if (przedT.dev && ma(przedT.dev, BEZ_W3) && x.tresc !== przedT.tresc && m.devTresc === przedT.dev) m.trescNadpisana = { czas, dev, tresc: y.tresc };
+        if (przedP.dev && ma(przedP.dev, BEZ_W3) && x.pin !== przedP.pin && m.devPin === przedP.dev) m.gwiazdkaNadpisana = { czas, dev, pin: y.pin };
+      }
+      // - gwiazdka starszej aplikacji na wersji, którą sama utworzyła (bez pól W3), bez wiedzy o poprawce z bieżącej
+      //   aplikacji: bieżąca czyta ją jak zmianę treści (PD-12) i bierze starą treść urządzenia starszej aplikacji.
+      if (bezW3 && pinZapisany && !trescZapisana && m.utworzona && ma(m.utworzona, BEZ_W3) && m.devTresc && !ma(m.devTresc, BEZ_W3) && x && x.tresc !== m.tresc) m.gwiazdkaJakTresc = { czas, dev, tresc: y.tresc };
       if (zTresc || zPin) { const k = M.karty.get(y.pid); if (k && k.tUsun && cmp(k.tUsun, czas) < 0) { obecna(M, y.pid, czas); zapisane.add(y.pid); } }
       if (cmp(cL, m.tLoc) > 0) {
         const pid = docelowa(y.pid);
@@ -299,13 +381,19 @@ export function zapisz(M, { dev, opis = '', przed, po, t, operacje = [] }) {
       // urządzeniu bez wiedzy o późniejszej gwiazdce albo poprawce z innego urządzenia)
       const pinZnany = !x || x.loc !== 'karta' || m.pin === null || x.pin === m.pin;
       const trescZnana = !x || x.loc !== 'karta' || x.tresc === m.tresc;
-      if (x && x.loc === 'karta' && x.pin && cmp(cP, m.tPin) > 0) { m.pin = false; m.tPin = cP; h.pin = false; }
-      if (!x && cmp(czas, m.tTresc) > 0) { m.tresc = y.tresc; m.tTresc = czas; h.tresc = y.tresc; }
+      const przedT = { dev: m.devTresc }, przedP = { pin: m.pin, dev: m.devPin };
+      if (x && x.loc === 'karta' && x.pin && cmp(cP, m.tPin) > 0) { m.pin = false; m.tPin = cP; h.pin = false; m.devPin = dev; m.gwiazdkaNadpisana = null; }
+      if (!x && cmp(czas, m.tTresc) > 0) { m.tresc = y.tresc; m.tTresc = czas; m.devTresc = dev; h.tresc = y.tresc; zapisTresci(m); }
       if (cmp(cL, m.tLoc) > 0) {
         const pid = docelowa(y.pid);
         m.loc = 'kosz'; m.pid = pid; m.tLoc = cL; m.przyczyna = null; m.kosz = cL; nowePolozenie(m);
         m.koszIle = x && x.loc === 'karta' ? x.ile : null;
         m.koszBezGwiazdki = !pinZnany; m.koszBezTresci = !trescZnana;
+        // E3-PR0b: kosz bieżącej aplikacji bez wiedzy o ostatniej treści (gwiazdce) zapisanej na urządzeniu bez składników
+        // W3 — starsza trzyma ją tylko w karcie i traci po nagrobku (R4a i R4a′ także po pełnej wymianie); kosz na
+        // urządzeniu bez składników W3 — wpis bez pola gwiazdka (W20: decyduje gwiazdka wersji sprzed kosza).
+        m.koszStarszej = bezW3 ? null : { tresc: !trescZnana && !!przedT.dev && ma(przedT.dev, BEZ_W3), pin: !pinZnany && !!przedP.dev && ma(przedP.dev, BEZ_W3) };
+        m.gwStarszej = bezW3 && x && x.loc === 'karta' ? { czas, dev, rodzaj: 'kosz', pinN: m.gwStarszej ? m.gwStarszej.pinN : (przedP.pin ?? x.pin), pinStarszej: x.pin } : null;
         m.koszWStarej = wStarej ? { czas, pid: y.pid } : null; // kosz w starej karcie X po scaleniu (kosz-po-2)
         h.loc = 'kosz'; h.pid = pid;
         obecna(M, pid, czas); zapisane.add(pid); // kosz to zmiana w karcie: wygrywa z wcześniejszym „Usuń pacjenta” (R4-a: karta wraca)
@@ -322,10 +410,10 @@ export function zapisz(M, { dev, opis = '', przed, po, t, operacje = [] }) {
       // porządkowanie (retencja) nie zdejmuje wizyty, która wg modelu leży w Koszu (wpis Kosza wygrywa — E2-PR3c5)
       if (pr === 'retencja' && efektywny(M, m).loc === 'kosz') { h.przyciecie = 'pominięte (w Koszu)'; m.przyc = cL; }
       else if (pr === 'inne') { m.bezOperacji = { czas, dev, opis: 'zniknięcie bez operacji' }; h.bezOperacji = m.bezOperacji.opis; }
-      else if (ostatniStan) { m.retOstatni = { czas, dev }; h.przyciecie = 'bez zmiany modelu (ostatni stan wizyty)'; }
+      else if (ostatniStan) { m.retOstatni = { czas, dev, vid: x.vid }; h.przyciecie = 'bez zmiany modelu (ostatni stan wizyty)'; }
       else if (cmp(cL, m.tLoc) > 0) {
         const ef = efektywny(M, m);
-        if (pr === 'usuń pacjenta') { m.przedUsun = { loc: ef.loc, pid: ef.pid, tLoc: ef.tLoc, karta: x.pid, czas: cL, wraca: false }; (m.usunieteNa = m.usunieteNa || new Set()).add(dev); }
+        if (pr === 'usuń pacjenta') { m.przedUsun = { loc: ef.loc, pid: ef.pid, tLoc: ef.tLoc, karta: x.pid, czas: cL, wraca: false, retStarszej: retencjaStarszej(M, m) }; (m.usunieteNa = m.usunieteNa || new Set()).add(dev); }
         if (pr === 'retencja') { m.przedRet = { loc: ef.loc, pid: ef.pid, tLoc: ef.tLoc }; m.przyc = cL; }
         m.loc = 'brak'; m.tLoc = cL; m.przyczyna = pr; nowePolozenie(m);
         h.loc = 'brak'; h.przyczyna = pr;
@@ -342,8 +430,9 @@ export function zapisz(M, { dev, opis = '', przed, po, t, operacje = [] }) {
   for (const p of zapisane) {
     const k = M.karty.get(p);
     if (!k || !k.tUsun || cmp(k.tUsun, czas) >= 0) continue;
-    for (const [sid, m] of M.w) if (m.loc === 'brak' && m.przyczyna === 'usuń pacjenta' && m.przedUsun && m.przedUsun.karta === p && wraca(m, a.w.has(sid) && a.w.get(sid).pid === p)) m.przedUsun.wraca = true;
-    for (const [id, m] of M.n) if (!m.obecna && m.przyczyna === 'usuń pacjenta' && m.kartaUsun === p && wraca(m, a.n.has(id) && a.n.get(id).pid === p)) m.wraca = true;
+    // E3-PR0b: przez — urządzenie, którego zmiana pierwsza przywróciła kartę (hak H1 albo jego brak w starszej aplikacji)
+    for (const [sid, m] of M.w) if (m.loc === 'brak' && m.przyczyna === 'usuń pacjenta' && m.przedUsun && m.przedUsun.karta === p && wraca(m, a.w.has(sid) && a.w.get(sid).pid === p)) { if (!m.przedUsun.wraca) m.przedUsun.przez = dev; m.przedUsun.wraca = true; }
+    for (const [id, m] of M.n) if (!m.obecna && m.przyczyna === 'usuń pacjenta' && m.kartaUsun === p && wraca(m, a.n.has(id) && a.n.get(id).pid === p)) { if (!m.wraca) m.wracaPrzez = dev; m.wraca = true; }
   }
   // Operacje kartowe: wizyty modelu w tej karcie, których mutacja nie dotknęła (nieznane urządzeniu).
   for (const p of noweNagr) {
@@ -358,7 +447,7 @@ export function zapisz(M, { dev, opis = '', przed, po, t, operacje = [] }) {
       // „Scal pacjentów” na urządzeniu, które tej wizyty nie znało (albo znało ją tylko z Kosza): nagrobek scalenia usuwa
       // ją razem z kartą (utrata wersji E1/E1b, P-SYNC-WLASCICIEL „Ograniczenia”).
       if (cel) { m.utrataE1 = { czas, dev, z: p, na: cel }; m.hist.push({ czas, dev, op: opis, kartowa: 'scal (wizyta nieznana urządzeniu scalającemu)' }); }
-      else { m.przedUsun = { loc: ef.loc, pid: ef.pid, tLoc: ef.tLoc, karta: p, czas, wraca: false }; (m.usunieteNa = m.usunieteNa || new Set()).add(dev); m.loc = 'brak'; m.tLoc = czas; m.przyczyna = 'usuń pacjenta'; m.bezOperacji = null; m.retOstatni = null; m.hist.push({ czas, dev, op: opis, kartowa: 'usuń pacjenta', loc: 'brak' }); }
+      else { m.przedUsun = { loc: ef.loc, pid: ef.pid, tLoc: ef.tLoc, karta: p, czas, wraca: false, retStarszej: retencjaStarszej(M, m) }; (m.usunieteNa = m.usunieteNa || new Set()).add(dev); m.loc = 'brak'; m.tLoc = czas; m.przyczyna = 'usuń pacjenta'; m.bezOperacji = null; m.retOstatni = null; m.hist.push({ czas, dev, op: opis, kartowa: 'usuń pacjenta', loc: 'brak' }); }
     }
     k.tUsun = czas; k.przyczyna = cel ? 'scal' : 'usuń pacjenta';
     if (cel) {
@@ -382,7 +471,7 @@ export function zapisz(M, { dev, opis = '', przed, po, t, operacje = [] }) {
     if (y && y.pid && M.alias.has(y.pid) && cmp(M.alias.get(y.pid).czas, czas) < 0 && !op.scal) m.zapisPoScaleniu = { czas, pid: y.pid };
     if (y && (!x || x.tekst !== y.tekst || (x.raw !== y.raw && x.pid === y.pid))) { Object.assign(m, { obecna: true, tekst: y.tekst, pid: y.pid, tPid: czas, tTekst: czas, tObec: czas, przyczyna: null }); h.tekst = y.tekst; h.pid = y.pid; }
     else if (y) { m.pid = y.pid; m.tPid = czas; h.pid = y.pid; }
-    else { m.obecna = false; m.tObec = czas; m.przyczyna = kartowe ? 'usuń pacjenta' : b.nTomb.has(id) ? 'usuń notatkę' : 'inne'; m.kartaUsun = m.przyczyna === 'usuń pacjenta' ? x.pid : null; m.wraca = false; (m.usunieteNa = m.usunieteNa || new Set()).add(dev); h.usun = m.przyczyna; }
+    else { m.obecna = false; m.tObec = czas; m.przyczyna = kartowe ? 'usuń pacjenta' : b.nTomb.has(id) ? 'usuń notatkę' : 'inne'; m.kartaUsun = m.przyczyna === 'usuń pacjenta' ? x.pid : null; m.wraca = false; m.devUsun = dev; m.wracaPrzez = null; (m.usunieteNa = m.usunieteNa || new Set()).add(dev); h.usun = m.przyczyna; }
     m.hist.push(h);
   }
   // Notatki biblioteki i listy
@@ -416,12 +505,16 @@ export function oczekWizyty(M, m) {
 
 // ── Ocena widoków jednego punktu ─────────────────────────────────────────────────────────────────────────────────────
 // widoki: { nazwa: V }. Wynik: lista naruszeń { encja, id, et, urz, rodzaj, oczek, fakt, gdzieIndziej, klasa, hist }.
-export function ocen(M, widoki, { etykieta = (id) => String(id).slice(0, 6) } = {}) {
+// stare (E3-PR0b) — nazwy widoków urządzeń starszej aplikacji; dochodzą do nich urządzenia z app ≠ 'N' z historii.
+// Klasy floty sprawdza się tylko przy niepustym zbiorze stare, przed klasami samych bieżących urządzeń.
+export function ocen(M, widoki, { etykieta = (id) => String(id).slice(0, 6), stare = null } = {}) {
   const out = [];
   const nazwy = Object.keys(widoki);
+  const stareW = new Set([...(stare || []), ...[...M.app].filter(([, a]) => a !== BIEZACA).map(([d]) => d)]);
+  const flota = stareW.size > 0;
   for (const [sid, m] of M.w) {
     const e = oczekWizyty(M, m);
-    const gdzie = nazwy.filter((n) => { const v = widoki[n].w.get(sid); const d = widoki[n].podwojne.get(sid); return (v && v.tresc === m.tresc) || (d && d.tresc === m.tresc); });
+    const gdzie = nazwy.filter((n) => { const v = widoki[n].w.get(sid); const d = widoki[n].podwojne.get(sid); return (v && rownaTresc(v.tresc, m.tresc)) || (d && rownaTresc(d.tresc, m.tresc)); });
     for (const n of nazwy) {
       const V = widoki[n];
       const v = V.w.get(sid) || { loc: 'brak' };
@@ -429,7 +522,7 @@ export function ocen(M, widoki, { etykieta = (id) => String(id).slice(0, 6) } = 
       if (e.loc !== 'brak' && v.loc === 'brak') r.push(m.bezOperacji ? 'zniknięcie bez operacji' : m.retOstatni ? 'retencja usunęła ostatni stan wizyty' : 'utrata');
       else if (e.loc === 'brak' && v.loc !== 'brak') r.push('wskrzeszenie');
       else if (e.loc !== 'brak') {
-        if (v.tresc !== m.tresc) r.push('treść');
+        if (!rownaTresc(v.tresc, m.tresc)) r.push('treść');
         if (e.loc !== v.loc) r.push('obecność');
         if (m.pin !== null && v.loc === e.loc && v.pin !== m.pin) r.push(v.loc === 'karta' ? 'gwiazdka' : 'gwiazdka Kosza');
         // Ostatnia wersja karty, która została w karcie zamiast w Koszu (E1, Q8), bierze najpóźniejszy rejestr gwiazdki
@@ -454,7 +547,8 @@ export function ocen(M, widoki, { etykieta = (id) => String(id).slice(0, 6) } = 
           oczek: { loc: e.loc, pid: e.pid ? etykieta(e.pid) : null, tresc: krotkoTresc(m.tresc), pin: m.pin, przyczyna: m.przyczyna, ukryta: !!e.ukryta },
           fakt: { loc: v.loc, pid: v.pid ? etykieta(v.pid) : null, tresc: v.tresc ? krotkoTresc(v.tresc) : null, pin: v.pin ?? null, ile: v.ile ?? null, wKoszuTez: V.podwojne.has(sid) },
           gdzieIndziej: gdzie };
-        nar.klasa = klasaWizyty(M, m, e, v, rodzaj, V, sid);
+        const kf = flota ? klasaFlotyWizyty(M, m, e, v, rodzaj, V, sid, n, stareW) : undefined;
+        nar.klasa = kf !== undefined ? kf : klasaWizyty(M, m, e, v, rodzaj, V, sid);
         nar.hist = m.hist.slice(-6).map((h) => ({ t: h.czas ? h.czas.t : null, s: h.czas ? h.czas.s : null, dev: h.dev, op: h.op, ...(h.tresc ? { tresc: krotkoTresc(h.tresc) } : {}), ...(h.pin !== undefined ? { pin: h.pin } : {}), ...(h.loc ? { loc: h.loc, pid: h.pid ? etykieta(h.pid) : undefined } : {}), ...(h.przyczyna ? { przyczyna: h.przyczyna } : {}), ...(h.kartowa ? { kartowa: h.kartowa } : {}), ...(h.bezOperacji ? { bezOperacji: h.bezOperacji } : {}), ...(h.przyciecie ? { przyciecie: h.przyciecie } : {}) }));
         out.push(nar);
       }
@@ -478,7 +572,7 @@ export function ocen(M, widoki, { etykieta = (id) => String(id).slice(0, 6) } = 
       for (const rodzaj of r) {
         out.push({ encja: 'notatka', id, et: etykieta(id), urz: n, rodzaj, oczek: { obecna: m.obecna, pid: pid ? etykieta(pid) : null, zywa: !!(pid && zywa(M, pid)), tekst: m.tekst, przyczyna: m.przyczyna },
           fakt: v ? { pid: etykieta(v.pid), tekst: v.tekst } : (V.nUkryte.has(id) ? { ukryta: etykieta(V.nUkryte.get(id).pid), tekst: V.nUkryte.get(id).tekst } : null), gdzieIndziej: gdzie,
-          klasa: klasaNotatki(M, m, rodzaj, V, id, v), hist: m.hist.slice(-6).map((h) => ({ t: h.czas.t, s: h.czas.s, dev: h.dev, op: h.op, ...(h.tekst ? { tekst: h.tekst } : {}), ...(h.usun ? { usun: h.usun } : {}) })) });
+          klasa: (flota && klasaFlotyNotatki(M, m, rodzaj)) || klasaNotatki(M, m, rodzaj, V, id, v), hist: m.hist.slice(-6).map((h) => ({ t: h.czas.t, s: h.czas.s, dev: h.dev, op: h.op, ...(h.tekst ? { tekst: h.tekst } : {}), ...(h.usun ? { usun: h.usun } : {}) })) });
       }
     }
   }
@@ -503,6 +597,25 @@ export function ocen(M, widoki, { etykieta = (id) => String(id).slice(0, 6) } = 
 // mechanizm z opisu (pole mechanizm), nie za sam objaw w widoku. Odwołania do ALGORITHMS — nazwa wpisu i przybliżony
 // wiersz (docs/clinical/ALGORITHMS.md); plan — docs/SYNC_PRZYROSTOWA_PLAN.md. Decyzje właściciela z 2026-11-15 (2a, 3a,
 // 4a, 9a) — plan, rozdział 6, „Decyzje z 2026-11-15”.
+//
+// Klasy floty ze starszą aplikacją (E3-PR0b; pole cechy — cechy starszej aplikacji, na których stoi mechanizm,
+// CECHY_STARSZYCH): dozwolone tylko w światach floty; skutki starszej wersji czekają na decyzję właściciela (opis).
+// Światy floty i ich odpowiedniki bez floty: klasa samych bieżących urządzeń (bez pola cechy) jest w świecie floty
+// dozwolona tak jak w odpowiedniku (dozwolonaW).
+export const SWIATY_FLOTY = Object.freeze({ 'W1 floty': 'W1', 'W4 floty': 'W4', 'p6f W1': 'W1', 'p6f W4': 'W4' });
+export const SWIATY = Object.freeze(['W1', 'W4', 'bloby', ...Object.keys(SWIATY_FLOTY)]);
+export const DO_DECYZJI = 'do decyzji właściciela (znane ograniczenie starszej wersji)';
+const W_FLOCIE = Object.freeze(Object.keys(SWIATY_FLOTY));
+const KL_RET_PRZYCINAJACE = 'retencja starszej aplikacji (urządzenie przycinające)';
+const KL_RET_GLOWA = 'retencja starszej aplikacji (odbiorca zachował głowę wizyty)';
+const KL_GWIAZDKA = 'gwiazdka ze starszej aplikacji';
+const KL_PRZYWROC = '„Przywróć” na starszej aplikacji bez chwili treści';
+const KL_NADPISANA = 'zmiana starszej aplikacji nadpisana przed wysłaniem (bez W3)';
+const KL_NAJPIERW_REV = 'najpierw rev (starsza aplikacja)';
+const KL_NOTATKA = 'notatka bez ratunku D-21 (starsza aplikacja)';
+const KL_KARTA_CZESCIOWA = 'karta częściowa (starsza aplikacja)';
+const KL_R4A = 'R4a (starsza aplikacja)';
+const KL_R4A_PRIM = 'R4a′ (starsza aplikacja)';
 export const WYJATKI = Object.freeze({
   'E1 (obecność)': Object.freeze({
     opis: 'wizyta, którą ostatni kosz kładzie w Koszu, zostaje na części urządzeń jedyną wersją karty z najnowszą treścią — wyjątek ostatniej wersji karty (Q8); treść jest widoczna, różni się obecność. Tak też Q8-obca-2 (decyzja właściciela 3a z 2026-11-15: miarą jest wynik taki sam jak po pełnej synchronizacji, wybór wizyty odłożony)',
@@ -597,6 +710,76 @@ export const WYJATKI = Object.freeze({
     naprawa: 'naprawa: E3-PR0',
     swiaty: Object.freeze(['W1', 'W4', 'bloby']),
   }),
+  [KL_RET_PRZYCINAJACE]: Object.freeze({
+    opis: `retencja v1 starszej aplikacji (bez ochrony wizyt) usuwa u siebie ostatni stan wizyty; bieżące urządzenia go zachowują (P-TRWALE-WIZYTY); naruszenie tylko w widoku urządzenia przycinającego — ${DO_DECYZJI}`,
+    mechanizm: 'przycięcie retencją na urządzeniu z retencją v1, po którym w jego karcie nie zostaje żadna wersja tej wizyty (visitId); „retencja usunęła ostatni stan wizyty” tylko w widoku tego urządzenia',
+    zrodlo: 'docs/PATIENT_VISITS.md:41, :43, :47; tests/fixtures/vilda_retention-v1.js.txt; tests/unit/starsza-aplikacja-fikstury.test.mjs, „retencja na starszej aplikacji: v1 przycina, bieżąca nie” (z 8 wersji z 8 dni sprzed 40–54 dni retencja v1 zostawia 1, bieżąca 8)',
+    cechy: Object.freeze([RETENCJA_V1]),
+    swiaty: W_FLOCIE,
+  }),
+  [KL_RET_GLOWA]: Object.freeze({
+    opis: `bieżący odbiorca nagrobka retencji ze starszej aplikacji zachowuje najnowszy stan wizyty, a jej starsze wersje usuwa (reguła wizyty, nie wersji): przycięta wersja znika, w karcie zostaje inna wersja tej samej wizyty — ${DO_DECYZJI}`,
+    mechanizm: 'jak „retencja starszej aplikacji (urządzenie przycinające)”, a w widoku bieżącego urządzenia jest w karcie inna wersja tej samej wizyty (visitId)',
+    zrodlo: 'vilda_vault.js Bvisit_protected (:6189) i Bvisit_keepRetention (:6272); docs/PATIENT_VISITS.md:41, :43',
+    cechy: Object.freeze([RETENCJA_V1]),
+    swiaty: W_FLOCIE,
+  }),
+  [KL_GWIAZDKA]: Object.freeze({
+    opis: `„Odepnij i usuń” starszej aplikacji wkłada do Kosza treść z gwiazdką i bez pola gwiazdka, a jej „Przywróć” i przypięcie nie zapisują rejestru gwiazdki: wizyta leży w Koszu i wraca do karty z gwiazdką sprzed. Dozwolony jest tylko jeden fakt: w widoku bieżącej aplikacji wynik reguły W20 (brak pola gwiazdka — decyduje gwiazdka wersji sprzed kosza), w widoku starszej aplikacji jej własna gwiazdka (_pinned treści); każdy inny fakt to czerwień — ${DO_DECYZJI}`,
+    mechanizm: 'ostatni zapis gwiazdki tej wersji (kosz, „Przywróć” albo przypięcie) na urządzeniu bez składników W3, bez późniejszego zapisu gwiazdki ani kosza na urządzeniu bieżącej aplikacji; „gwiazdka” w karcie albo „gwiazdka Kosza” z faktem równym dozwolonemu',
+    zrodlo: 'vilda_vault.js:2766–2771 (W20); docs/clinical/ALGORITHMS.md „Flota mieszana”, W20 (ok. 29392–29396); tests/fixtures/vilda_vault-221.js.txt:757–787 (Bkz_doKosza: treść Kosza z _pinned) i :833 (gwiazdka okna Kosza z treści)',
+    cechy: Object.freeze([BEZ_W3]),
+    swiaty: W_FLOCIE,
+  }),
+  [KL_PRZYWROC]: Object.freeze({
+    opis: `„Przywróć” starszej aplikacji oddaje treść z Kosza ze starą chwilą treści i tym samym odciskiem; bieżąca aplikacja czyta to jak zmianę samej gwiazdki, więc zostaje wcześniejsza poprawka z bieżącej aplikacji, a nie treść z Kosza (nic nie ginie) — ${DO_DECYZJI}`,
+    mechanizm: '„Przywróć” na urządzeniu bez składników W3 jako ostatni zapis treści, po poprawce z bieżącej aplikacji późniejszej niż przywracana treść; „treść” z faktem równym tej poprawce',
+    zrodlo: 'vilda_vault.js Bgw_stan (:1558, gałąź :1570); tests/fixtures/vilda_vault-221.js.txt (bez _contentAtISO i _pinnedState)',
+    cechy: Object.freeze([BEZ_W3]),
+    swiaty: W_FLOCIE,
+  }),
+  [KL_NADPISANA]: Object.freeze({
+    opis: `starsza aplikacja nie zna składników W3 i bierze cały nowszy rekord wersji: (a) jej poprawka albo gwiazdka ginie, gdy przed jej wysłaniem dochodzi do niej zapis tej wersji z bieżącej aplikacji, który jej nie znał; (b) jej gwiazdkę na wersji, którą sama utworzyła (bez pól W3), bieżąca aplikacja czyta jak zmianę treści (PD-12) i bierze jej starą treść zamiast poprawki — ${DO_DECYZJI}`,
+    mechanizm: '(a) ostatni zapis treści (gwiazdki) na urządzeniu bez składników W3, potem zapis tej wersji na urządzeniu bieżącej aplikacji bez wiedzy o nim, który go nie zastąpił — fakt równy treści (gwiazdce) tego zapisu; (b) przypięcie na urządzeniu bez składników W3 wersji przez nie utworzonej, bez wiedzy o poprawce z bieżącej aplikacji — fakt równy treści urządzenia starszej aplikacji',
+    zrodlo: 'docs/clinical/ALGORITHMS.md „Flota mieszana” (ok. 29173–29176: „nie zna rejestru gwiazdki ani składników”); tests/fixtures/vilda_vault-221.js.txt:454–462 (Bkz_nowszaWersja); vilda_vault.js:1526–1527 (wersja bez pól W3)',
+    cechy: Object.freeze([BEZ_W3]),
+    swiaty: W_FLOCIE,
+  }),
+  [KL_NAJPIERW_REV]: Object.freeze({
+    opis: `starsza aplikacja wybiera treść tej samej wersji najpierw po rev: wcześniejsza treść z wyższym rev wygrywa u niej z późniejszą, a gdy karta wraca z niej, ta treść trafia na wszystkie urządzenia — ${DO_DECYZJI}`,
+    mechanizm: 'dwie treści tej wersji z odwrotną kolejnością rev i chwili (fakt — wcześniejsza z wyższym rev, oczekiwana — późniejsza), a jedną z nich zapisało urządzenie, które wybiera wersję najpierw po rev',
+    zrodlo: 'docs/clinical/ALGORITHMS.md „Flota mieszana” (ok. 29174–29178: „Wersję tej samej karty 221 i 218 wybierają „najpierw rev””; rekord złożony dostaje rev + 1); vilda_vault.js:1543',
+    cechy: Object.freeze([NAJPIERW_REV]),
+    swiaty: W_FLOCIE,
+  }),
+  [KL_NOTATKA]: Object.freeze({
+    opis: `starsza aplikacja nie ma ratunku notatki D-21: (a) po „Usuń pacjenta” na bieżącym urządzeniu, gdy nagrobek dojdzie do niej przed jej pełną kopią, a potem ona zmieni kartę, karta wraca bez notatek; (b) jej „Usuń pacjenta” zapisuje nagrobki notatek bez deletedWithPatient, więc powrót karty zmianą na bieżącym urządzeniu notatek nie przywraca — ${DO_DECYZJI}`,
+    mechanizm: 'notatka usunięta „Usuń pacjenta”, karta wraca późniejszą zmianą, a usunięcie albo zmiana, która przywróciła kartę, było na urządzeniu bez ratunku notatek; „utrata” notatki',
+    zrodlo: 'plan D-21 (docs/SYNC_PRZYROSTOWA_PLAN.md); docs/clinical/ALGORITHMS.md „Hak H2: ratunek notatki zawsze do kolejki” (ok. 24483–24485); vilda_vault.js:4901 (deletedWithPatient); tests/fixtures/vilda_vault-221.js.txt:2515 (Bpu_usun)',
+    cechy: Object.freeze([BEZ_RATUNKU]),
+    swiaty: W_FLOCIE,
+  }),
+  [KL_KARTA_CZESCIOWA]: Object.freeze({
+    opis: `karta usunięta „Usuń pacjenta” wraca bez części wersji także po pełnej wymianie: (a) wraca zmianą starszej aplikacji, która nie ma haka H1 i nie wysyła pełnej karty; (b) przed usunięciem retencja v1 starszej aplikacji usunęła u niej ostatni stan wizyty — ${DO_DECYZJI}`,
+    mechanizm: 'wizyta usunięta „Usuń pacjenta”, która wraca z kartą (karta jest w widoku, wizyty nie ma), a kartę przywróciła zmiana na urządzeniu bez haka H1 albo przed usunięciem ostatni stan wizyty usunęła retencja v1 urządzenia starszej aplikacji',
+    zrodlo: 'docs/clinical/ALGORITHMS.md tabela klas E3-PR0a, „karta częściowa” (ok. 39979) i „Świadomie bez haka H1” (ok. 24477); tests/fixtures/vilda_vault-221.js.txt (bez haków Bem_)',
+    cechy: Object.freeze([BEZ_H1, RETENCJA_V1]),
+    swiaty: W_FLOCIE,
+  }),
+  [KL_R4A]: Object.freeze({
+    opis: `kosz na bieżącym urządzeniu bez wiedzy o gwiazdce ze starszej aplikacji: starsza trzyma ją tylko w karcie i traci po nagrobku, więc gwiazdka wpisu Kosza różni się także po pełnej wymianie (między bieżącymi urządzeniami leczy to pełna wymiana) — ${DO_DECYZJI}`,
+    mechanizm: 'kosz na urządzeniu bieżącej aplikacji, które nie znało ostatniego zapisu gwiazdki, a ten zapis zrobiło urządzenie bez składników W3; „gwiazdka Kosza”',
+    zrodlo: 'klasa R4a (wyżej); docs/clinical/ALGORITHMS.md „Flota mieszana” (ok. 29173–29176); tests/fixtures/vilda_vault-221.js.txt:454–462 (Bkz_nowszaWersja)',
+    cechy: Object.freeze([BEZ_W3]),
+    swiaty: W_FLOCIE,
+  }),
+  [KL_R4A_PRIM]: Object.freeze({
+    opis: `kosz na bieżącym urządzeniu bez wiedzy o poprawce ze starszej aplikacji: starsza trzyma nowszą treść tylko w karcie i traci ją po nagrobku, więc wpis Kosza ma starszą treść także po pełnej wymianie (między bieżącymi urządzeniami leczy to scalenie treści Kosza, P-KOSZ-NOWSZA-TRESC) — ${DO_DECYZJI}`,
+    mechanizm: 'kosz na urządzeniu bieżącej aplikacji, które nie znało ostatniego zapisu treści, a ten zapis zrobiło urządzenie bez składników W3; „treść” wpisu Kosza',
+    zrodlo: 'klasa R4a′ (wyżej); docs/clinical/ALGORITHMS.md P-KOSZ-NOWSZA-TRESC (ok. 31063) i „Flota mieszana” (ok. 29173–29176)',
+    cechy: Object.freeze([BEZ_W3]),
+    swiaty: W_FLOCIE,
+  }),
 });
 const zKlasa = (k) => { if (!WYJATKI[k]) throw new Error(`wyrocznia: klasa spoza tabeli wyjątków: ${k}`); return k; };
 
@@ -644,8 +827,62 @@ function klasaNotatki(M, m, rodzaj, V, id, v) {
   return null;
 }
 
-// Naruszenia, które czerwienią: bez klasy albo z klasą w świecie spoza listy klasy (swiat: 'W1' | 'W4' | 'bloby').
-export const bezWyjatku = (lista, swiat) => lista.filter((x) => !x.klasa || !WYJATKI[x.klasa].swiaty.includes(swiat));
+// ── Klasy floty ze starszą aplikacją (E3-PR0b; mechanizm z historii na urządzeniu z cechą starszej aplikacji) ────────
+// Wynik: klasa; undefined — brak mechanizmu floty (dalej klasy samych bieżących urządzeń); null — mechanizm gwiazdki
+// starszej aplikacji jest, a fakt nie jest dozwolony (czerwień bez dalszej klasyfikacji: każdy inny fakt to czerwień).
+function klasaFlotyWizyty(M, m, e, v, rodzaj, V, sid, n, stareW) {
+  const ma = (d, c) => !!d && maCeche(M, d, c);
+  if (rodzaj === 'retencja usunęła ostatni stan wizyty') {
+    const r = m.retOstatni;
+    if (!r || !ma(r.dev, RETENCJA_V1)) return undefined;
+    if (n === r.dev) return zKlasa(KL_RET_PRZYCINAJACE);
+    if (!stareW.has(n) && r.vid && [...V.w.entries()].some(([q, w]) => q !== sid && w.loc === 'karta' && w.vid === r.vid)) return zKlasa(KL_RET_GLOWA);
+    return undefined;
+  }
+  if (rodzaj === 'gwiazdka' || rodzaj === 'gwiazdka Kosza') {
+    if (rodzaj === 'gwiazdka' && m.gwiazdkaNadpisana && v.pin === m.gwiazdkaNadpisana.pin) return zKlasa(KL_NADPISANA);
+    if (rodzaj === 'gwiazdka Kosza' && e.loc === 'kosz' && v.loc === 'kosz' && m.koszBezGwiazdki && m.koszStarszej && m.koszStarszej.pin) return zKlasa(KL_R4A);
+    // Warunek faktu: w widoku bieżącej aplikacji tylko wynik W20 (gwiazdka sprzed), w widoku starszej — jej gwiazdka.
+    if (m.gwStarszej) return v.pin === (stareW.has(n) ? m.gwStarszej.pinStarszej : m.gwStarszej.pinN) ? zKlasa(KL_GWIAZDKA) : null;
+    return undefined;
+  }
+  if (rodzaj === 'treść') {
+    if (e.loc === 'kosz' && v.loc === 'kosz' && m.koszBezTresci && m.koszStarszej && m.koszStarszej.tresc) return zKlasa(KL_R4A_PRIM);
+    if (m.przywrocenieStarszej && rownaTresc(v.tresc, m.przywrocenieStarszej.poprawka)) return zKlasa(KL_PRZYWROC);
+    if (m.trescNadpisana && rownaTresc(v.tresc, m.trescNadpisana.tresc)) return zKlasa(KL_NADPISANA);
+    if (m.gwiazdkaJakTresc && rownaTresc(v.tresc, m.gwiazdkaJakTresc.tresc)) return zKlasa(KL_NADPISANA);
+    if (najpierwRev(M, m, v)) return zKlasa(KL_NAJPIERW_REV);
+    return undefined;
+  }
+  if (rodzaj === 'utrata' && e.h1 && V.karty.has(e.pid) && m.przedUsun && (ma(m.przedUsun.przez, BEZ_H1) || m.przedUsun.retStarszej)) return zKlasa(KL_KARTA_CZESCIOWA);
+  return undefined;
+}
+// „Najpierw rev”: fakt to wcześniejsza treść tej wersji z wyższym rev (najwyższy widziany przy tej treści) niż oczekiwana,
+// późniejsza treść, a jedną z nich zapisało urządzenie, które wybiera wersję najpierw po rev.
+function najpierwRev(M, m, v) {
+  if (v.loc !== 'karta' || v.tresc == null) return false;
+  let ocz = null;
+  for (let i = m.hist.length - 1; i >= 0 && !ocz; i -= 1) if (m.hist[i].dev && m.hist[i].czas && m.hist[i].tresc === m.tresc) ocz = m.hist[i];
+  if (!ocz) return false;
+  const revOcz = m.revTresci.get(m.tresc) ?? 0;
+  return m.hist.some((h) => h !== ocz && h.dev && h.czas && h.tresc != null && cmp(h.czas, ocz.czas) < 0 && rownaTresc(v.tresc, h.tresc)
+    && (m.revTresci.get(h.tresc) ?? 0) > revOcz && (maCeche(M, h.dev, NAJPIERW_REV) || maCeche(M, ocz.dev, NAJPIERW_REV)));
+}
+function klasaFlotyNotatki(M, m, rodzaj) {
+  if (rodzaj === 'utrata' && !m.obecna && m.przyczyna === 'usuń pacjenta' && m.wraca && (maCeche(M, m.devUsun, BEZ_RATUNKU) || maCeche(M, m.wracaPrzez, BEZ_RATUNKU))) return zKlasa(KL_NOTATKA);
+  return null;
+}
+
+// Klasa dozwolona w świecie: z listy klasy; klasa samych bieżących urządzeń (bez pola cechy) w świecie floty — tak jak
+// w jego odpowiedniku bez floty (SWIATY_FLOTY); klasa floty tylko w światach floty.
+export function dozwolonaW(klasa, swiat) {
+  const w = WYJATKI[klasa];
+  if (!w) return false;
+  if (w.swiaty.includes(swiat)) return true;
+  return !w.cechy && !!SWIATY_FLOTY[swiat] && w.swiaty.includes(SWIATY_FLOTY[swiat]);
+}
+// Naruszenia, które czerwienią: bez klasy albo z klasą w świecie spoza listy klasy (swiat: SWIATY).
+export const bezWyjatku = (lista, swiat) => lista.filter((x) => !x.klasa || !dozwolonaW(x.klasa, swiat));
 // Skrót naruszeń punktu (encja:rodzaj:klasa → liczba).
 export function podsumuj(lista) {
   const o = {};
