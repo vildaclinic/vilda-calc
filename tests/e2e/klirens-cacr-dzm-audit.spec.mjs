@@ -1,4 +1,4 @@
-import { showClcrResults, clcrPoints } from '../support/badania-klirens.mjs';
+import { showClcrResults, clcrPoints, expectClcrOutsideNotes, clcrPoint } from '../support/badania-klirens.mjs';
 import fs from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 import { czekajNaUstabilizowanyUklad } from '../support/uklad-czekanie.mjs';
@@ -336,12 +336,9 @@ test('Ca/Cr DZM: Badania, Notatki i historia zachowują źródło i liczbę bez 
   await page.locator('#clcrOpenBadaniaBtn').click();
   await showClcrResults(page, 'charts');
   await expect(clcrPoints(page)).toHaveCount(3);
-  await page.locator('button[data-tab="notes"]').click();
-  const notes = page.locator('.vilda-clcr-note[data-clcr-note-state="ready"]');
-  await expect(notes).toHaveCount(3);
-  const unknownNote = notes.filter({ hasText: '02.11.2026' });
-  await expect(unknownNote).toHaveCount(1);
-  await expect(unknownNote).not.toContainText('W zakresie');
+  // P-KLIRENS-NOTATKI: zapis bez oceny nie dostaje jej w Badaniach (ton bez oceny), a w Notatkach wyniki nie mają kart.
+  await expect(clcrPoint(page, unassessed.id)).toHaveAttribute('data-tone', 'neutral');
+  await expectClcrOutsideNotes(page, 3);
   expect((await memory(page)).originalsLocked).toBe(true);
 });
 

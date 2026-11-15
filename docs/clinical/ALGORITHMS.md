@@ -1242,7 +1242,8 @@ do niego linki: kategoria „wynik-badania” i ta sama droga do widoku co
 w `buildHistoryView`. Przypadek syntetyczny: przypięte TSH 2,1 mIU/L
 (kategoria „wynik-badania”, `valueNum`, klucz `tsh`) → `true`, wpis jest
 w widoku Badań; zlecenie „Wynik: TSH” z terminem i bez wartości → `false`,
-zostaje w Notatkach; wynik Klirensu („wynik-klirens”) → `false`.
+zostaje w Notatkach; wynik Klirensu („wynik-klirens”) → `false` (od 6.37 chowa
+go w Notatkach osobny warunek `isClcrResultNote`).
 `recordedWarning(envelope)` zwraca ostrzeżenie kliniczne zapisanej oceny tylko
 dla koperty „recorded” — ten sam tekst co pigułka 6.20 w Badaniach (LH 3 IU/L,
 dziewczynka 6 lat, Th3 → „Cechy dojrzewania zbyt wcześnie — wymagają oceny”;
@@ -1590,6 +1591,75 @@ jeden wpis, dokładna nazwa badania, ponad trzy wpisy, pakiet, wpis podpięty),
 `tests/e2e/oczekujacy-wynik-mobile.spec.mjs` (telefon: lista w oknie
 i w pakiecie). Opis: `docs/LAB_HISTORIA_WYNIKOW_PLAN.md`, decyzja 6.36;
 `docs/ZRODLA_ARTEFAKTOW.md`, „Łatka P-OCZEKUJACE-WYNIKI”.
+
+### LAB-HISTORIA 6.37 — wynik Klirensu poza Notatkami (P-KLIRENS-NOTATKI; `vilda_auth_ui.js`, `vilda_lab_history.js` 1.6.0, `vilda_lab_history_tab.js` 2.7.0, 2026-11-15)
+
+**Klasyfikacja: zmiana prezentacji, bez wpływu klinicznego.** Ten sam zapis
+Klirensu, te same wartości, jednostki, zapisane normy i oceny; historia nie
+jest przeliczana. Zmienia się tylko to, w których zakładkach karty pacjenta
+wynik jest widoczny. Decyzja właściciela z 2026-11-15: „Notatki to nie jest
+miejsce na wyniki z Klirensu”. Zastępuje w tej części decyzję z 2026-10-28
+(P-KLIRENS-DZM-CZAS-NOTATKI-WYBOR: zwarta karta wyniku Klirensu w Notatkach)
+i dopowiada 6.32, która zostawiła Klirens w Notatkach.
+
+**Stan przed zmianą (nie regres).** Zapis ze strony Klirens był widoczny
+w trzech zakładkach: Badania (panel „Klirens”), Historia i Notatki (zwarta
+karta z wartością, normą, komentarzem, „Szczegóły obliczenia →” i „Zobacz
+w Badaniach →”). Tak było od 2026-10-28 i tak zostawiła to decyzja 6.32.
+
+**Reguła.**
+
+- **Notatki** nie pokazują wyniku Klirensu. Liczy się on w linii „Wyniki
+  badań (N) są w zakładce Badania →” razem z wynikami badań.
+- **Badania** bez zmian: panel „Klirens” z wartością, zapisaną normą, wykresem
+  i szczegółami obliczenia (edycja, usunięcie, komentarz lekarza).
+- **Historia** bez zmian: wpis „Klirens” na osi czasu.
+- **Link do wyniku Klirensu** (klik wpisu w Historii, wyszukiwarka,
+  Przypomnienia) otwiera Badania ze szczegółami tego obliczenia — jak link
+  do wyniku badania od 6.32. Zakładka „Badania” szuka wskazanego wpisu także
+  wśród zapisów Klirensu.
+- **Warunek:** `VildaLabHistory.isClcrResultNote(note)` — kategoria
+  „wynik-klirens” i obiekt `labResult`. To ten sam warunek, którym projekcja
+  Klirensu (`ClcrSavedResults.buildSeriesFromNotes`) przyjmuje zapis do
+  Badań, więc nic nie znika: każdy wpis schowany w Notatkach jest w Badaniach,
+  także z nieczytelnym zapisem oceny (Badania pokazują go wtedy bez oceny).
+- Zapis kategorii „wynik-klirens” **bez** pola wyniku (dawna notatka z samym
+  opisem) zostaje w Notatkach z dotychczasową kartą.
+
+To tylko widok: sejf, synchronizacja, eksport, wyszukiwarka i strona Klirens
+czytają pełne rekordy; nic nie jest usuwane ani przenoszone.
+
+**Ograniczenia.** Komentarz lekarza do wyniku Klirensu jest widoczny
+w szczegółach obliczenia, nie na liście. Gdy moduł zapisanych obliczeń nie
+załaduje się (stary zasób w pamięci podręcznej), Badania pokazują komunikat
+z prośbą o odświeżenie, a Notatki wyniku nie pokazują. Zwarta karta
+(`clcr_notes_view.js`, `ClcrNotesCard`) zostaje w kodzie dla zapisów bez pola
+wyniku; jej model nadal służy wyszukiwarce i tytułom w Historii.
+
+**Przypadki `wejście → wynik`** (fikcyjna pacjentka; zapisy: wapń DZM
+28.10.2026 z komentarzem lekarza, ACR 27.10.2026, zwykła obserwacja):
+
+| Wejście | Wynik |
+|---|---|
+| karta → Notatki | linia „Wyniki badań (2) są w zakładce Badania →”; tylko zwykła obserwacja z „Edytuj”; brak kart Klirensu, komentarza i zapisu technicznego |
+| klik linii | Badania; oba zapisy w panelu „Klirens” |
+| Badania → wiersz wapnia DZM → szczegóły | wartość, norma i komentarz lekarza; edycja zmienia ten sam zapis; Notatki dalej liczą 2 wyniki |
+| usunięcie zapisu w szczegółach | wiersz znika z Badań; Notatki liczą 1 wynik |
+| Historia → klik wpisu „eGFR” | zakładka Badania i szczegóły tego obliczenia |
+| karta otwarta ze wskazaniem zapisu ACR (`focusNoteId`) | Badania i szczegóły ACR; wskazanie zwykłej obserwacji — Notatki |
+| zapis „wynik-klirens” bez pola wyniku | zostaje w Notatkach |
+
+Testy na kodzie produkcyjnym: `tests/unit/lab-result-notes-projection.test.mjs`
+(prawdziwy sejf: `isClcrResultNote` ⇔ `handledNoteIds` projekcji Klirensu
+i lista Badań; zapis z uszkodzoną oceną, bez daty, bez pola wyniku), e2e na
+fikcyjnych danych: `tests/e2e/klirens-notes-view.spec.mjs` (1440/390/320 px:
+Notatki bez wyników, zwykła notatka, linia do Badań; edycja i usunięcie
+z Badań; link do wyniku), `tests/e2e/karta-pacjenta-porzadki.spec.mjs`
+(klik w Historii), specyfikacje `tests/e2e/klirens-*.spec.mjs` poszczególnych
+obliczeń (wartość, norma i ton w Badaniach; Notatki tylko liczą wyniki).
+Opis: `docs/LAB_HISTORIA_WYNIKOW_PLAN.md`, decyzja 6.37;
+`docs/clinical/KLIRENS_NOTES.md`; `docs/ZRODLA_ARTEFAKTOW.md`, „Łatka
+P-KLIRENS-NOTATKI”.
 
 ### LAB-PAKIETY PR1 — pakiet badań „Tarczyca” w przeliczniku jednostek (`vilda_lab_packages.js` 1.0.0, 2026-11-12)
 
@@ -10350,7 +10420,7 @@ Decyzja właściciela: nowe DZM mają rzeczywiście wpisane domyślne24h; puste 
 
 Wsteczny odczyt nie zmienia liczb ani norm. Stare lokalne daty nie są reparsowane do czasu na innym urządzeniu; edycja wymaga utrwalonego lub jawnie podanego czasu. W nowym formularzu gotowy wynik dobowy nie potrzebuje dodatkowej objętości ani czasu.
 
-Notatki Klirensu przedstawiają ten sam kanoniczny pomiar co Badania: zapisaną prezentację, normę i interpretację, bez technicznego drzewa/JSON i nadmiarowych cyfr surowych. Dane techniczne pozostają w magazynie do odtworzenia/edycji; brak migracji lub ponownego oceniania historii. Komentarze lekarza zachowane; Szczegóły/edycja/usunięcie operują na tym samymID. Zwykłe notatki i przypomnienia zachowują swoje zachowanie. [KLIRENS_NOTES.md](KLIRENS_NOTES.md).
+Notatki Klirensu przedstawiają ten sam kanoniczny pomiar co Badania: zapisaną prezentację, normę i interpretację, bez technicznego drzewa/JSON i nadmiarowych cyfr surowych. Dane techniczne pozostają w magazynie do odtworzenia/edycji; brak migracji lub ponownego oceniania historii. Komentarze lekarza zachowane; Szczegóły/edycja/usunięcie operują na tym samymID. Zwykłe notatki i przypomnienia zachowują swoje zachowanie. [KLIRENS_NOTES.md](KLIRENS_NOTES.md). Od 2026-11-15 (LAB-HISTORIA 6.37, decyzja właściciela) wynik Klirensu nie jest pokazywany w Notatkach: ma jedno miejsce — panel „Klirens” w Badaniach; zwarta karta zostaje tylko dla zapisów bez pola wyniku.
 
 Lista formuł ma równe odstępy, zamyka się po kliknięciu poza nią, Escape, opuszczeniu i wyborze, także w powłoce. Powrót zachowuje frazę i formułę, ale nie stan rozwinięcia. Dopasowanie/kolejność bez zmian. Po świadomym wyborze jeden mechanizm wskazuje widoczne brakujące pola bieżącego trybu i przewija do pierwszego lub do wyniku, zachowując wpisane wartości. Nie przewija przy pisaniu/odtwarzaniu sesji. Dotyczy także mobile, gdzie globalny wrapper scrollIntoView jest wyłączony; osobna obsługa używa aktualnej geometrii i respektuje ograniczony ruch. [KLIRENS_SELECTION.md](KLIRENS_SELECTION.md).
 

@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { expect, test } from '@playwright/test';
 import { expectResult, restore, applySession } from '../support/klirens-po4-dzm-browser.mjs';
 import { enterGuest, prepareBrowser, installMemoryVault, saveVisible, memory } from '../support/klirens-patient-record.mjs';
+import { showClcrResults, clcrPoint, clcrValue, clcrNorm, expectClcrOutsideNotes, openClcrDetails } from '../support/badania-klirens.mjs';
 
 test.use({ serviceWorkers: 'allow', actionTimeout: 15_000 });
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -199,20 +200,26 @@ async function fictionalPo4SharedAndNotes(page) {
   const [note] = await saveVisible(page, '2026-10-28');
   expect(note.labResult.valueNum).toBe(150);
   expect(note.labResult.value).toBe('150');
+  // P-KLIRENS-NOTATKI: zapis Klirensu bez pola wyniku (dawna notatka z samym opisem) zostaje w Notatkach ze zwartą
+  // kartą — to ona ładuje teraz clcr_notes_view.js i clcr_notes_view.css z produkcyjnego SW.
+  await page.evaluate(value => window.__clcrRecordFixture.seed([value]), { id: 'fictional-klirens-note-without-result', patientId: note.patientId,
+    category: 'wynik-klirens', title: 'Fikcyjna dawna notatka Klirensu', body: 'Fikcyjny opis bez pola wyniku.', clinicalDateISO: '2026-10-20', rev: 1 });
   const before = await memory(page);
   expect(await page.evaluate(() => Boolean(window.ClcrNotesView))).toBe(false);
   await page.locator('#clcrOpenBadaniaBtn').click();
   await expect(page.locator('.vilda-auth-patient-card')).toBeVisible();
-  await page.locator('button[data-tab="notes"]').click();
-  const compact = page.locator('.vilda-clcr-note[data-clcr-note-state="ready"]');
-  await expect(compact).toHaveCount(1);
-  await expect(compact.locator('.clcr-note-value')).toHaveText('150');
-  await expect(compact.locator('.clcr-note-reference')).toHaveText('130–941');
-  await expect(compact.locator('.clcr-note-main')).toHaveAttribute('data-tone', 'success');
-  for (const key of ['VILDA_CLCR', 'engineVersion', 'exactMain', '[tekst]']) await expect(compact).not.toContainText(key);
-  expect(await compact.evaluate(node => node.scrollWidth <= node.clientWidth + 1)).toBe(true);
+  // P-KLIRENS-NOTATKI: wynik Klirensu nie ma karty w Notatkach (tylko linia z liczbą wyników); wartość, norma i szczegóły są w Badaniach.
+  const notesSection = await expectClcrOutsideNotes(page, 1, { legacyCards: 1 });
+  const legacyCard = notesSection.locator('.vilda-clcr-note[data-clcr-note-state="ready"][data-note-id="fictional-klirens-note-without-result"]');
+  await expect(legacyCard).toContainText('Fikcyjna dawna notatka Klirensu');
+  await expect(legacyCard).toContainText('Fikcyjny opis bez pola wyniku.');
+  expect(await legacyCard.evaluate(node => node.scrollWidth <= node.clientWidth + 1)).toBe(true);
+  await page.locator('button[data-tab="lab"]').click(); await showClcrResults(page, 'table');
+  await expect(clcrValue(page, note.id)).toContainText('150');
+  await expect(clcrNorm(page, note.id)).toContainText('130–941');
+  await showClcrResults(page, 'charts'); await expect(clcrPoint(page, note.id)).toHaveAttribute('data-tone', 'within');
   expect((await memory(page)).notes).toEqual(before.notes);
-  await compact.getByRole('button', { name: 'Szczegóły obliczenia →', exact: true }).click();
+  await openClcrDetails(page, note.id);
   await expect(page.locator('#detailsDialog')).toBeVisible();
   await expect(page.locator('#calculationDetails')).toHaveAttribute('data-note-id', note.id);
   await expect(page.locator('#calculationDetails')).toContainText('150');
@@ -224,7 +231,7 @@ async function fictionalPo4SharedAndNotes(page) {
   expect(edited.labResult.valueNum).toBe(300);
   expect(edited.id).toBe(note.id);
   await page.locator('#detailsDialog').getByRole('button', { name: 'Zamknij', exact: true }).click();
-  await expect(compact.locator('.clcr-note-value')).toHaveText('300');
+  await expect(clcrValue(page, note.id)).toContainText('300');
   const reread = await page.evaluate(note => window.ClcrSavedResults.projectPatientNotes([note]).measurements[0], edited);
   expect(reread.valueNum).toBe(300);
   await page.evaluate(() => window.VildaAuthUI.hide());

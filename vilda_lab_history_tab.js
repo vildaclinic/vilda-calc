@@ -20,7 +20,9 @@
  *   options.onChanged()                                      zapis z zakładki zmienił notatki
  *   options.openClcrResult({patientId,noteId,record,vault,onChanged}) — szczegóły obliczenia, nigdy edytor lab
  *   options.focusNoteId                                      po pierwszym odczycie otwiera szczegóły tego wyniku
- *     (link do wyniku z Historii, wyszukiwarki, Przypomnień lub planu opieki; decyzja właściciela 2026-11-11)
+ *     (link do wyniku z Historii, wyszukiwarki, Przypomnień lub planu opieki; decyzja właściciela 2026-11-11);
+ *     od 2.7.0 także wyniku Klirensu — otwiera szczegóły obliczenia (P-KLIRENS-NOTATKI, decyzja 2026-11-15:
+ *     wynik Klirensu nie ma już karty w Notatkach)
  *   options.deleteNote({ note }) → Promise<boolean>         „Usuń wpis” w szczegółach wyniku: potwierdzenie
  *     i usunięcie robi karta (ta sama funkcja co „Usuń” w Notatkach); true = wpis usunięty
  *   options.vault, options.model, options.trend, options.storage, options.now — do testów
@@ -465,6 +467,12 @@
         state.data.view.panels.forEach(function (panel) { panel.series.forEach(function (series) {
           series.entries.forEach(function (entry) { if (!found && entry.noteId === noteId) found = { entry: entry, view: series }; });
         }); });
+        // P-KLIRENS-NOTATKI: link do wyniku Klirensu (Historia, wyszukiwarka) otwiera szczegóły tego obliczenia.
+        if (!found && state.data.view.clcr) {
+          (clcrSeries() || []).forEach(function (series) {
+            series.entries.forEach(function (entry) { if (!found && entry.noteId === noteId) found = { entry: entry, view: series }; });
+          });
+        }
         if (found) selectResult(found.entry, found.view);
       }
       function openEditor(request) {
@@ -1405,7 +1413,7 @@
       };
     }
 
-    return Object.freeze({ version: '2.6.0', render: render, _internal: Object.freeze({ plural: plural, commentText: commentText, shortLabel: shortLabel, mergedNote: mergedNote }) });
+    return Object.freeze({ version: '2.7.0', render: render, _internal: Object.freeze({ plural: plural, commentText: commentText, shortLabel: shortLabel, mergedNote: mergedNote }) });
   }
 
   return createApi();
