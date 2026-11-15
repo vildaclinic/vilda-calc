@@ -134,7 +134,7 @@
 // z treścią na A, nagrobek porządkowania na B — różnica bez klasy; W4 PO-B bez punktu stałego).
 //
 // E3-PR0a (przygotowanie pomiaru E3-PR0: same zdarzenia mają dawać to, co pełna wymiana; decyzje właściciela
-// z 2026-11-15, numerowane 1–9 w opisie PR tego etapu). Tylko testy, bez zmiany sejfu:
+// z 2026-11-15, numerowane 1–9 w planie, rozdział 6). Tylko testy, bez zmiany sejfu:
 // - Model haka H1 zdarzenie po zdarzeniu (HAKI wyżej, hakiModelu): dotąd fałszywy alarm AB7, gdy stary nagrobek karty
 //   u odbiorcy niczego nie przegrał, a karta wracała późniejszymi zdarzeniami tej samej partii; przypadek
 //   deterministyczny w bloku AB7 (czerwony ze starym modelem, zielony z nowym).
@@ -156,7 +156,7 @@
 //   (wiersz okna Kosza równy, „Przywróć” na klonach obu urządzeń daje ten sam widoczny wynik; wpis poza oknem Kosza —
 //   osobno); p. 5 — widok po zdarzeniach = widok po W4 w każdym przebiegu (także Q8-obca-2, decyzja 3a; różnica samej
 //   listy nagrobków pacjentów — osobna przyczyna); wyrocznia — w W1 żadnego naruszenia, którego nie ma też po W4 albo
-//   przy samych blobach tego punktu. Dziś tryb jest czerwony (pomiar w opisie PR).
+//   przy samych blobach tego punktu. Dziś tryb jest czerwony (pomiar: ALGORITHMS, P-ZBIEZNOSC-ZDARZEN, „Wynik”).
 // - Dowód niewidoczności także poza trybem ścisłym: D7 i R5 w profilu podstawowym — 'dowód' w tabeli DOZWOLONE.
 // - Klasy z diagnozy różnic bez klasy (3.6): D7 z revPary, R4a′ ze zmianaISO, R5 (opis), „miejsce wizyty po „Scal
 //   pacjentów””, „nagrobek karty opróżnionej”, „rekord złożony po jednej stronie”; kategoria W2s „ratunek D-21
@@ -389,7 +389,7 @@ function sciezki(a, b, limit = 8) {
 // samych blobów tej pary (tylko W4 p. 5).
 const R4A_POLA = ['rev', 'updatedAtISO', 'gwiazdka', 'payload._pinned', 'payload._pinnedState'];
 const POSTAC_GWIAZDKI = ['payload._pinned', 'payload._pinnedState'];
-// D7 (ALGORITHMS, „rev, opis i część pól nagrobka zależne od kolejności (D7, Z5)”, ok. 22622–22627): „opis nagrobka po
+// D7 (ALGORITHMS, „rev, opis i część pól nagrobka zależne od kolejności (D7, Z5)”, P-KOSZ-POLKRATA, ok. 29311–29317): „opis nagrobka po
 // plotce (rev, updatedAtISO, zmianaISO), koszISO (składnik k ginie razem z koszem, który przegrał z późniejszą wersją bez
 // przycięcia […]) […] — od kolejności scaleń” — przy samych blobach. Od E3-PR0a także revPary (pary chwila usunięcia,
 // rev wpisu z ładunku, Bpk_revPary — zależne od kolejności scaleń; PD-17: nie kolejkować ponownie z powodu revPary).
@@ -4261,7 +4261,7 @@ describe('A ≡ B, właściwość: profil pełny (charakterystyka; W3 i W4 z kla
 // (zamiast 1/25): długie serie zmian na obu urządzeniach bez wymiany. Ziarna jak w profilu podstawowym (E2_AB_ZIARNA od
 // E2_AB_START; ziarno świata = ziarno, jak w profilu podstawowym). Zieleń jak w profilu podstawowym (bez literałów
 // ziaren domyślnych), wyrocznia „nie zginęła ostatnia zmiana”, AB2 i AB7 w podsumowaniu. Pomiar 2026-11-15 (40 ziaren
-// od 101) — opis PR; dawniej AB7 w ziarnie 104 (fałszywy alarm modelu H1, przypadek deterministyczny w bloku AB7).
+// od 101) — ALGORITHMS, P-ZBIEZNOSC-ZDARZEN, „Wynik”; dawniej AB7 w ziarnie 104 (fałszywy alarm modelu H1, przypadek deterministyczny w bloku AB7).
 const PROFIL_BEZ_POLACZENIA = Object.freeze({ dostawa: 0.04, spoczynek: 0.015, nazwa: 'bez-polaczenia' });
 if (process.env.E2_AB_PROFIL === 'bez-polaczenia') {
   describe('A ≡ B, właściwość: profil „dłuższa praca bez połączenia” (ręczny; zieleń jak w profilu podstawowym)', () => {

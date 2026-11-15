@@ -39883,7 +39883,10 @@ Rodzaje naruszeń: „utrata”, „zniknięcie bez operacji”, „retencja usu
 „gwiazdka Kosza”, „obecność” (karta zamiast Kosza albo odwrotnie), „wskrzeszenie”, „także w Koszu”, „inna karta”.
 Zniknięcie wizyty bez operacji, która je tłumaczy (bez Kosza, retencji i „Usuń pacjenta”; także wersja karty źródłowej
 „Scal pacjentów”, której nie ma pod kartą docelową), nie zmienia modelu i jest zawsze naruszeniem bez klasy. Widoki są
-czytane z własnym `Math.random`, więc program ziarna i wszystkie dotychczasowe literały testu zostają bez zmian.
+czytane z własnym `Math.random`, więc program ziarna i literały, które od niego zależą (`ZNANE_W1`, `ZNANE_W2R`,
+`KAT_LITERALY`, dotychczasowe wpisy `P6_LITERALY`), zostają bez zmian; zmieniają się tylko asercje klas opisane niżej
+(tabela 3.6, „notatka pod inną kartą”, `createdAtISO` notatki, D7 z `revPary`, literał P1e (b) z klasą „miejsce
+wizyty”).
 
 **Jawne wyjątki (`WYJATKI`, 15 klas).** Naruszenie dostaje klasę tylko wtedy, gdy historia ma jej mechanizm (pole
 `mechanizm`), nie z samego objawu w widoku. Każda klasa ma opis, mechanizm, źródło (wpis ALGORITHMS albo planu, test) i
@@ -39996,7 +39999,8 @@ decyzja 3 z 2026-11-03). Sama wyrocznia: zapis historii 262 ms, widoki 1821 ms, 
   (kosz-przed ×2, kosz-po ×2, kosz-po-2 ×2; w kosz-po-2 K←C,P←K przy blobach także kosz-po-2); npret w W1 (npret-pin
   K←C,P←K, npret-K ×2); E1 (obecność) w W1, W4 i blobach (PRZ0-bez ×2, E1-popr-C ×2, E1-C ×2); Q8-obca-2 ×2 —
   E1 (obecność) i P5 w W1, W4 i blobach.
-- p. 6 (`P6_WYR`): 17 scenariuszy (16 dotychczasowych i nowy), naruszenia w 4 (R4-a, R4-a′, R5-E1, „R5-E1, C wysyła
+- p. 6 (`P6_WYR`): 17 scenariuszy (14 dotychczasowych, dwa warianty „C wysyła tylko zdarzenia” i nowy scenariusz
+  retencji), naruszenia w 4 (R4-a, R4-a′, R5-E1, „R5-E1, C wysyła
   tylko zdarzenia”), 13 bez naruszeń.
 
 **Profil pełny, 20 ziaren — klasy wyroczni** (198 ocen, 434 naruszenia, 0 bez klasy):
@@ -40037,18 +40041,19 @@ przetrwałej karty” 18, R2 14, D7 8, R5 6, K1k 4, „inne” 9 (wszystkie wpis
 porównań, 336 zgodnych, 2 „inna kolejność”. Wyrocznia: 222 oceny, 5 naruszeń R4a′ w W1 (5 ziaren), 0 bez klasy. Dowody:
 D7 16 (przechodzą), R5 „poza oknem” 14. Z trybem ścisłym (158,7 s): czerwone 7 z 40 (ziarna 104, 113, 114, 123, 128,
 132, 137) — W1 R4a′ 5, W1 R5 4 (ziarna 104, 113, 114), wyrocznia „W1 poza W4” R4a′ 5; D7 w trybie ścisłym 4
-(przechodzą).
+(przechodzą). Różnica nagrobka notatki z obserwacji E2-PR2b1 (plan, „Zakres” E3-PR0) w tych 40 ziarnach nie wystąpiła:
+W1 ma tylko R2, R5, R4a′ i D7.
 
 **Mutanty** (kopie sejfu, jedna zmiana na przebieg; cały plik A ≡ B i testy wyroczni):
-- retencja lokalna bez ochrony ostatniego stanu wizyty (plan przycięcia bez chronionych wersji wizyt): 7 czerwonych (w
-  pierwszej wersji tych testów 5; doszły ziarna 1 i 2 profilu pełnego); wyrocznia zgłasza „retencja usunęła ostatni stan
+- retencja lokalna bez ochrony ostatniego stanu wizyty (plan przycięcia bez chronionych wersji wizyt): 7 czerwonych (we
+  wcześniejszej wersji tej zmiany 5; doszły ziarna 1 i 2 profilu pełnego); wyrocznia zgłasza „retencja usunęła ostatni stan
   wizyty” — 34 w W1, 27 w W4, 42 w blobach;
-- nagrobek retencji z ładunku wygrywa zawsze, także z ostatnim stanem wizyty: 1 czerwony — nowy scenariusz p. 6 (w
-  pierwszej wersji tych testów cały plik przechodził);
+- nagrobek retencji z ładunku wygrywa zawsze, także z ostatnim stanem wizyty: 1 czerwony — nowy scenariusz p. 6 (we
+  wcześniejszej wersji tej zmiany cały plik przechodził);
 - „Scal pacjentów” gubi pierwszą wersję karty źródłowej (przenoszenie wersji od drugiej): 36 czerwonych; „zniknięcie bez
   operacji” — 42 w W1, 50 w W4, 34 w blobach.
 
-W pierwszej wersji tych testów (145 przypadków) czerwieniły też: odwrócona chwila treści przy scalaniu tej samej wersji
+We wcześniejszej wersji tej zmiany (145 przypadków; na wersji końcowej nie powtarzano) czerwieniły też: odwrócona chwila treści przy scalaniu tej samej wersji
 (36), odwrócona reguła późniejszej poprawki (11), urządzenie scalające nie przyjmuje późniejszej poprawki ani gwiazdki
 ze starej karty (7), „Przywróć” nie zdejmuje wpisu Kosza (11), „Przywróć” z dawną chwilą treści z wpisu Kosza (18) i ze
 stemplem wcześniejszym niż usunięcie przy spóźnionym zegarze (2), hak H1 bez pełnej karty (32), hak H1 także dla karty,
@@ -40073,9 +40078,9 @@ której nagrobek wygrał (1).
 **Ograniczenia i sprawy otwarte.**
 - **Profil pełny, ziarno 5, krok 165: W4 bez punktu stałego.** Różnica ma klasę „nagrobek karty opróżnionej” (nagrobek
   karty tylko na B), ale warunek punktu stałego W4 dalej czerwieni. Według diagnozy to dawna wada (odtworzona też na
-  `40d742d3`), nie skutek vildaclinic/vilda-calc#958; na tej bazie nie sprawdzano tego ponownie. Do wyboru: zmiana
-  aplikacji (karta, która w fazie przeniesień traci ostatnią wersję, `vilda_vault.js:3662–3663`, przyjmuje nagrobek z
-  ładunku tego scalania) albo decyzja właściciela (druga wymiana W4 dozwolona, gdy zmienia wyłącznie nagrobki kart
+  `40d742d3` oraz na `28ee1c3e` z testem sprzed E3-PR0a: W4, krok 165), więc nie jest skutkiem tego PR ani
+  vildaclinic/vilda-calc#958. Do wyboru: zmiana aplikacji (karta, która w fazie przeniesień traci ostatnią wersję,
+  `vilda_vault.js:3662–3663`, przyjmuje nagrobek z ładunku tego scalania) albo decyzja właściciela (druga wymiana W4 dozwolona, gdy zmienia wyłącznie nagrobki kart
   nieobecnych na obu urządzeniach). Ziarno jest poza CI.
 - **R4a′ w profilu „dłuższa praca bez połączenia”** (ziarna 104, 123, 128, 132, 137): różnica widoczna — Kosz ma starszą
   treść niż późniejsza poprawka; profil ręczny zostaje czerwony. Naprawa w E3-PR0 (odsyłanie wpisów Kosza: pochodny wpis

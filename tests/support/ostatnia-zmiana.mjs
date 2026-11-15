@@ -502,7 +502,7 @@ export function ocen(M, widoki, { etykieta = (id) => String(id).slice(0, 6) } = 
 // nich pełna wymiana, bloby — świat samych blobów) = czerwień w CI. Klasę nadaje się tylko wtedy, gdy w historii jest
 // mechanizm z opisu (pole mechanizm), nie za sam objaw w widoku. Odwołania do ALGORITHMS — nazwa wpisu i przybliżony
 // wiersz (docs/clinical/ALGORITHMS.md); plan — docs/SYNC_PRZYROSTOWA_PLAN.md. Decyzje właściciela z 2026-11-15 (2a, 3a,
-// 4a, 9a) — w opisie PR tego etapu; w repozytorium utrwali je krok dokumentów.
+// 4a, 9a) — plan, rozdział 6, „Decyzje z 2026-11-15”.
 export const WYJATKI = Object.freeze({
   'E1 (obecność)': Object.freeze({
     opis: 'wizyta, którą ostatni kosz kładzie w Koszu, zostaje na części urządzeń jedyną wersją karty z najnowszą treścią — wyjątek ostatniej wersji karty (Q8); treść jest widoczna, różni się obecność. Tak też Q8-obca-2 (decyzja właściciela 3a z 2026-11-15: miarą jest wynik taki sam jak po pełnej synchronizacji, wybór wizyty odłożony)',
@@ -533,7 +533,7 @@ export const WYJATKI = Object.freeze({
   'D-4 A (stara karta wraca po zapisie bez wiedzy o scaleniu)': Object.freeze({
     opis: 'zmiana w starej karcie X (wizyta, gwiazdka, notatka) na urządzeniu, które o „Scal pacjentów” X → Y nie wiedziało, jest późniejsza niż scalenie: X wraca na wszystkich urządzeniach jako duplikat karty i trzyma tę wizytę albo notatkę (treść widoczna, w innej karcie tego samego pacjenta); także po pełnej wymianie',
     mechanizm: 'ta wizyta albo notatka (nie inna z tej karty) zapisana w starej karcie X po scaleniu; w widoku pod X',
-    zrodlo: 'plan D-4 (wariant A: „duplikat karty po „Scal pacjentów” na innym urządzeniu zaakceptowany (do ponownego scalenia)”, docs/SYNC_PRZYROSTOWA_PLAN.md:855); ALGORITHMS P-KOSZ-PO-KLUCZU (ok. 28100–28103: „stara karta — zapisana teraz później niż „Scal pacjentów” — wraca na wszystkich urządzeniach (D-4 A)”)',
+    zrodlo: 'plan D-4 (wariant A: „duplikat karty po „Scal pacjentów” na innym urządzeniu zaakceptowany (do ponownego scalenia)”, docs/SYNC_PRZYROSTOWA_PLAN.md, rozdział 6, tabela decyzji, wiersz D-4); ALGORITHMS P-KOSZ-PO-KLUCZU (ok. 28100–28103: „stara karta — zapisana teraz później niż „Scal pacjentów” — wraca na wszystkich urządzeniach (D-4 A)”)',
     swiaty: Object.freeze(['W1', 'W4', 'bloby']),
   }),
   'P5 (Kosz pod kartą usuniętą po scaleniu)': Object.freeze({
