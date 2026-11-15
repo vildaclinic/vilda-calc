@@ -122,56 +122,34 @@ describe('P-BADANIA-WEJSCIE: przejście do przelicznika po wczytaniu pacjenta z 
     expect(z.navigate.mock.calls).toEqual([['lab', true, 'przelicznik-jednostek.html?badanie=ft4']]);
   });
 
-  it('„Nowy pomiar”: sesja wspólna bez wieku — czeka na zapis aplikacji; gdy przyjdzie, otwiera od razu, bez własnego zdarzenia', async () => {
+  it('sesja wspólna jeszcze bez wieku: czeka na zapis aplikacji i otwiera przelicznik, gdy tylko przyjdzie — sama niczego nie wysyła', async () => {
     const z = srodowisko();
     z.stan.sesja = {}; z.stan.wybor = 'new';
     expect(z.api.zgodna()).toBe(false);
     z.api.przejdz(PID, null);
     await vi.advanceTimersByTimeAsync(2000);
     expect(z.navigate).not.toHaveBeenCalled();
-    expect(z.stan.zdarzenia, 'przed czasem lustra pól nic nie wysyłamy').toEqual([]);
     expect(z.stan.dymki).toEqual([['Za chwilę otworzą się Jednostki lab.', 'info']]);
-    z.stan.sesja = { age: '12', ageMonths: '4' };   // lustro pól z custom-fixes.js (3,2 s po wczytaniu)
+    z.stan.sesja = { age: '12', ageMonths: '4' };
     await vi.advanceTimersByTimeAsync(150);
     expect(z.navigate.mock.calls).toEqual([['lab', true]]);
     expect(z.stan.zdarzenia).toEqual([]);
   });
 
-  it('zapis aplikacji nie przyszedł (drugi pacjent w powłoce): po 3,4 s od wczytania jedno zdarzenie change na polu wieku i przejście', async () => {
+  // P-WIEK-NOWY-POMIAR: przyczyna naprawiona u źródła („Nowy pomiar” zapisuje wiek do sesji od razu), więc dawne
+  // obejście — ponowienie zdarzenia change na polu wieku — zostało usunięte. Zostaje sam strażnik z limitem.
+  it('zapis nie przyszedł: żadnego zdarzenia na polach formularza; po 3 s przelicznik otwiera się z tym, co jest', async () => {
     const z = srodowisko();
     z.stan.sesja = {}; z.stan.wybor = 'new';
     z.api.przejdz(PID, 'przelicznik-jednostek.html?badanie=tsh');
-    await vi.advanceTimersByTimeAsync(3300);
-    expect(z.stan.zdarzenia).toEqual([]);
+    await vi.advanceTimersByTimeAsync(2900);
     expect(z.navigate).not.toHaveBeenCalled();
-    await vi.advanceTimersByTimeAsync(300);
-    expect(z.stan.zdarzenia).toEqual([['age', 'change', true]]);
-    expect(z.stan.sesja).toEqual({ age: '12', ageMonths: '4' });
+    await vi.advanceTimersByTimeAsync(400);
     expect(z.navigate.mock.calls).toEqual([['lab', true, 'przelicznik-jednostek.html?badanie=tsh']]);
-    expect(z.stan.dymki).toHaveLength(1);
-  });
-
-  it('podczas pauzy autozapisu zdarzenia nie wysyłamy; po pauzie jedno; bez skutku — przelicznik po 6 s z tym, co jest', async () => {
-    const z = srodowisko();
-    z.stan.sesja = {}; z.stan.wybor = 'new'; z.stan.wstrzymany = true;
-    z.api.przejdz(PID, null);
-    await vi.advanceTimersByTimeAsync(4500);
-    expect(z.stan.zdarzenia, 'pauza: userData.js i tak by nie zapisał').toEqual([]);
-    expect(z.navigate).not.toHaveBeenCalled();
-    await vi.advanceTimersByTimeAsync(1800);
-    expect(z.navigate.mock.calls).toEqual([['lab', true]]);
     expect(z.stan.zdarzenia).toEqual([]);
-
-    // Zdarzenie wysłane, ale sesja nadal bez wieku (np. brak modułu zapisu): jedno zdarzenie, potem limit.
-    const bez = srodowisko();
-    bez.stan.sesja = {}; bez.stan.wybor = 'new';
-    bez.stan.formularz = { age: '12', ageMonths: '4' };
-    const zapis = bez.stan;
-    Object.defineProperty(zapis, 'sesja', { get: () => ({}), set() {} });
-    bez.api.przejdz(PID, null);
-    await vi.advanceTimersByTimeAsync(6400);
-    expect(bez.stan.zdarzenia).toEqual([['age', 'change', true]]);
-    expect(bez.navigate.mock.calls).toEqual([['lab', true]]);
+    expect(z.stan.sesja).toEqual({});
+    expect(z.stan.dymki).toHaveLength(1);
+    expect(blok).not.toContain('dispatchEvent');
   });
 
   it('BdSesjaZgodna: puste pola i brak kluczy są równe; strona bez pól wieku albo bez modułu sesji nie wstrzymuje przejścia', () => {
