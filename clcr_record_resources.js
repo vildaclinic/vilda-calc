@@ -170,7 +170,7 @@
   }
   function ensureEditor() {
     if (!editorPromise) {
-      editorPromise = ensureReader().then(() => Promise.all([load("clcr_result_details.css?v=2", null, true), load("vilda_lab_history_tab.css?v=12", null, true), ordered(editor)]))
+      editorPromise = ensureReader().then(() => Promise.all([load("clcr_result_details.css?v=2", null, true), load("vilda_lab_history_tab.css?v=13", null, true), ordered(editor)]))
         .then(() => root.ClcrResultDetails);
       editorPromise.catch(() => { editorPromise = null; });
     }

@@ -7,8 +7,13 @@
  * norm i bez ponownej oceny (LAB_INTERPRETATION_AGENT_GUIDE.md § 7).
  *
  * window.VildaLabHistoryTab.render(host, patientId, options) → { refresh, destroy }
- *   options.openEditor({ note, template, anchor, onSaved })  edytor notatki karty (ga); po „Wpisz wynik”
- *     z zapisaną wartością zakładka zamyka zlecenie (vault.completePatientNote, decyzja 6.11) i daje „Cofnij”
+ *   options.openEditor({ note, template, anchor, onSaved })  edytor notatki karty (ga): edycja zapisanego wyniku
+ *     i „Wpisz wynik” przy zleceniu; po „Wpisz wynik” z zapisaną wartością zakładka zamyka zlecenie
+ *     (vault.completePatientNote, decyzja 6.11) i daje „Cofnij”. Nowego wyniku zakładka nie wpisuje ręcznie.
+ *   options.loadPatient({ href })                            wczytanie pacjenta tej karty do formularza drogą
+ *     karty („Wczytaj tego pacjenta”: strażnik niezapisanych zmian, wybór „Nowy pomiar” / „Odtwórz zapisany
+ *     stan”), a po nim przejście do przelicznika pod href (bez href: sam przelicznik). Bez tej opcji zakładka
+ *     pacjenta niewczytanego pokazuje tylko podpowiedź (P-BADANIA-WEJSCIE, decyzja właściciela 2026-11-15).
  *   options.openReminders(list)                              arkusz przypomnień (Mr)
  *   options.onChanged()                                      zapis z zakładki zmienił notatki
  *   options.openClcrResult({patientId,noteId,record,vault,onChanged}) — szczegóły obliczenia, nigdy edytor lab
@@ -51,6 +56,17 @@
   var GH_SOURCE = 'z notatki leczenia GH';
   // LAB-PAKIETY PR1: skrót do pakietu „Tarczyca” w przeliczniku (slug z danych w vilda_lab_packages.js).
   var PACKAGE_SHORTCUT = { href: 'przelicznik-jednostek.html?pakiet=tarczyca', label: 'Wpisz pakiet: Tarczyca →' };
+  // P-BADANIA-WEJSCIE (decyzja właściciela 2026-11-15): wyniki dodaje się tylko w Jednostkach lab., pacjentowi
+  // wczytanemu do formularza — tam aplikacja zna wizytę (nową albo odtworzoną), wiek i ocenę pokwitania.
+  // Karta pacjenta niewczytanego najpierw go wczytuje; nigdy nie przenosi do przelicznika „na ślepo”.
+  var ENTRY = {
+    href: 'przelicznik-jednostek.html',
+    loaded: 'Dodaj wyniki →',
+    load: 'Wczytaj pacjenta i dodaj wyniki →',
+    hint: 'Wyniki dodasz w Jednostkach lab. po wczytaniu tego pacjenta z Bazy pacjentów.',
+    emptyLoaded: 'Wyniki dodasz w Jednostkach lab. — pojedynczo albo pakietem badań.',
+    emptyLoad: 'Wyniki dodasz w Jednostkach lab. po wczytaniu tego pacjenta.'
+  };
   var resourceBootstrap = null;
   var moduleURL = win && win.document && win.document.currentScript && win.document.currentScript.src;
 
@@ -224,7 +240,7 @@
             }
             script.addEventListener('load', function () { finish(win.ClcrRecordResources ? null : new Error('Moduł zapisanych obliczeń jest niedostępny.')); });
             script.addEventListener('error', function () { finish(new Error('Nie udało się wczytać zapisanych obliczeń.')); });
-            script.setAttribute('src', new URL('clcr_record_resources.js?v=26', moduleURL || win.location.href).href);
+            script.setAttribute('src', new URL('clcr_record_resources.js?v=27', moduleURL || win.location.href).href);
             timer = win.setTimeout(function () { finish(new Error('Upłynął czas wczytywania zapisanych obliczeń.')); }, 15000);
             doc.head.appendChild(script);
           });
@@ -561,6 +577,16 @@
         catch (_) { current = null; }
         return !!current && String(current) === String(patientId);
       }
+      function canLoad() { return typeof options.loadPatient === 'function'; }
+      // Przejście do przelicznika. Pacjent tej karty wczytany do formularza: od razu (jak dotąd). Inny albo
+      // żaden: wczytanie drogą karty, a przelicznik otwiera się po nim. Stan sprawdzany także przy kliknięciu
+      // (poza powłoką; w jej ramce odnośniki <a> obsługuje vilda_chrome.js, dlatego akcje pacjenta
+      // niewczytanego są przyciskami).
+      function goConverter(event, href) {
+        if (isLoadedPatient()) { openConverter(event, href); return; }
+        if (event && typeof event.preventDefault === 'function') event.preventDefault();
+        if (canLoad()) options.loadPatient({ href: href || null });
+      }
 
       var remindersButton = null;
       function paintReminders() {
@@ -580,7 +606,7 @@
         if (!view.panels.length && !view.pending.length && !renal) {
           var empty = add(section, 'div', 'vilda-lab-hist-state vilda-lab-hist-empty');
           add(empty, 'p', '', 'Brak zapisanych wyników badań.');
-          add(empty, 'p', 'vilda-lab-hist-muted', 'Wynik dodasz przyciskiem „+ Dodaj wynik” albo przypniesz w przeliczniku jednostek.');
+          add(empty, 'p', 'vilda-lab-hist-muted', isLoadedPatient() ? ENTRY.emptyLoaded : canLoad() ? ENTRY.emptyLoad : ENTRY.hint);
           drawFooter(view);
           return;
         }
@@ -674,23 +700,26 @@
           add(titles, 'p', 'vilda-lab-hist-muted', count(view.summary.missingNotes, ['wynik zmienił', 'wyniki zmieniły', 'wyników zmieniło']) + ' się w trakcie odczytu — odśwież zakładkę.');
         }
         var actions = add(head, 'div', 'vilda-lab-hist-actions');
-        if (typeof options.openEditor === 'function') {
-          button(actions, 'vilda-auth-btn vilda-auth-btn-small vilda-auth-btn-ghost vilda-lab-hist-add', '+ Dodaj wynik', function () {
-            openEditor({ note: null, template: 'lab', anchor: 'date' });
-          });
-        }
+        var loaded = isLoadedPatient();
         // LAB-PAKIETY PR1 (decyzja właściciela 2026-11-12): skrót do pakietu badań w przeliczniku. Pakiet
         // opisuje vilda_lab_packages.js; zakładka zna tylko adres i nazwę skrótu. Pakiet zapisuje
         // wyniki pacjentowi wczytanemu do formularza, więc skrót stoi tylko w jego karcie — z karty innej
         // osoby wyniki trafiłyby do niewłaściwego pacjenta.
-        if (isLoadedPatient()) {
+        if (loaded) {
           var pack = add(actions, 'a', 'vilda-auth-btn vilda-auth-btn-small vilda-auth-btn-ghost vilda-lab-hist-package', PACKAGE_SHORTCUT.label);
           pack.setAttribute('href', PACKAGE_SHORTCUT.href);
-          pack.addEventListener('click', function (event) { openConverter(event, PACKAGE_SHORTCUT.href); });
+          pack.addEventListener('click', function (event) { goConverter(event, PACKAGE_SHORTCUT.href); });
         }
-        var link = add(actions, 'a', 'vilda-auth-btn vilda-auth-btn-small vilda-auth-btn-primary vilda-lab-hist-check', 'Sprawdź nowy wynik →');
-        link.setAttribute('href', 'przelicznik-jednostek.html');
-        link.addEventListener('click', function (event) { openConverter(event); });
+        // P-BADANIA-WEJSCIE: jedna akcja dodania wyników. Ręcznego „+ Dodaj wynik” (wpis bez oceny) już nie ma.
+        if (loaded) {
+          var link = add(actions, 'a', 'vilda-auth-btn vilda-auth-btn-small vilda-auth-btn-primary vilda-lab-hist-check', ENTRY.loaded);
+          link.setAttribute('href', ENTRY.href);
+          link.addEventListener('click', function (event) { goConverter(event); });
+        } else if (canLoad()) {
+          button(actions, 'vilda-auth-btn vilda-auth-btn-small vilda-auth-btn-primary vilda-lab-hist-check vilda-lab-hist-load', ENTRY.load, function (event) { goConverter(event); });
+        } else {
+          add(actions, 'p', 'vilda-lab-hist-muted vilda-lab-hist-entry-hint', ENTRY.hint);
+        }
       }
 
       function drawToolbar(view) {
@@ -1122,11 +1151,21 @@
           drawResultNotice(card, info);
         }
         drawChart(add(card, 'div', 'vilda-lab-hist-card-chart'), view, pointSelected);
-        if (view.testKey) {
+        // P-BADANIA-WEJSCIE: ta sama reguła co w nagłówku. Pacjent wczytany: odnośnik do przelicznika z badaniem
+        // (jak dotąd). Niewczytany: przycisk, który najpierw go wczytuje i mówi to w nazwie; bez drogi wczytania
+        // akcji nie ma. Przycisk, nie <a>: w ramce powłoki kliknięcie odnośnika do strony aplikacji przechwytuje
+        // vilda_chrome.js (faza capture) i od razu przełącza trasę — wczytanie by się nie odbyło.
+        var cardLoaded = isLoadedPatient();
+        if (view.testKey && (cardLoaded || canLoad())) {
           var href = 'przelicznik-jednostek.html?badanie=' + encodeURIComponent(view.testKey);
-          var check = add(card, 'a', 'vilda-lab-hist-card-check', 'Nowy wynik ' + seriesLabel(view) + ' →');
-          check.setAttribute('href', href);
-          check.addEventListener('click', function (event) { openConverter(event, href); });
+          if (cardLoaded) {
+            var check = add(card, 'a', 'vilda-lab-hist-card-check', 'Nowy wynik ' + seriesLabel(view) + ' →');
+            check.setAttribute('href', href);
+            check.addEventListener('click', function (event) { goConverter(event, href); });
+          } else {
+            button(card, 'vilda-lab-hist-link vilda-lab-hist-card-check vilda-lab-hist-card-load', 'Wczytaj i dodaj ' + seriesLabel(view) + ' →',
+              function (event) { goConverter(event, href); });
+          }
         }
       }
       function drawChart(box, view, pointSelected) {
@@ -1278,7 +1317,7 @@
       };
     }
 
-    return Object.freeze({ version: '2.4.0', render: render, _internal: Object.freeze({ plural: plural, commentText: commentText, shortLabel: shortLabel, mergedNote: mergedNote }) });
+    return Object.freeze({ version: '2.5.0', render: render, _internal: Object.freeze({ plural: plural, commentText: commentText, shortLabel: shortLabel, mergedNote: mergedNote }) });
   }
 
   return createApi();
