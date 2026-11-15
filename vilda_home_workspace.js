@@ -105,7 +105,10 @@
     historyButton.title = available ? 'Otwórz zapisane wizyty pacjenta' : 'Wczytaj zapisanego pacjenta, aby zobaczyć jego wizyty';
     refreshActions();
     if (referenceSection && referenceToggle) {
-      var hidden = referenceToggle.hidden || w.getComputedStyle(referenceToggle).display === 'none';
+      // Native source eligibility writes inline display/hidden. WebKit can
+      // report computed display:none under our hidden wrapper even after the
+      // native control switches to flex, which would keep the wrapper closed.
+      var hidden = referenceToggle.hidden || referenceToggle.style.display === 'none';
       if (referenceSection.hidden !== hidden) referenceSection.hidden = hidden;
     }
   }

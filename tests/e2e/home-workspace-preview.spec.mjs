@@ -30,8 +30,8 @@ async function installWorkspace(page, { enabled = true } = {}) {
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: {
       writeText(text) { window.__homeCopiedSummaries.push(text); return Promise.resolve(); }
     } });
-    // Registered before deferred scripts: capture actual native nodes before
-    // workspace.start() moves them, rather than testing only a second start.
+    // Retain references to the native controls at document readiness, then
+    // check that refreshes keep their identities and never duplicate their IDs.
     document.addEventListener('DOMContentLoaded', () => {
       window.__homeNativeNodes = ids.map(id => document.getElementById(id));
     }, { once: true });
@@ -104,7 +104,7 @@ async function geometry(page) {
       matched: card.classList.contains('vilda-summary-height-matched'),
       cardConstraint: card.style.getPropertyValue('--vilda-summary-card-height'),
       contentConstraint: node('currentSummaryContent').style.getPropertyValue('--vilda-summary-content-height'),
-      formHeight: form.height, cardHeight: summary.height,
+      formHeight: form.height, formWidth: form.width, cardHeight: summary.height,
       overflow: document.documentElement.scrollWidth > innerWidth + 1,
     };
   });
@@ -133,13 +133,26 @@ test('preview workspace: equal fields, centered actions and native summary geome
   for (const width of [320, 390, 820, 850, 851, 1440, 1920]) {
     await page.setViewportSize({ width, height: 1000 });
     await page.mouse.move(0, 0);
+    await page.evaluate(() => document.fonts.ready);
+    // Measure the visible form before comparing tabs. Subsequent assertions
+    // do not scroll or alter its layout between Summary and Chart.
+    await page.locator('#userSection fieldset.user-card').scrollIntoViewIfNeeded();
+    // A resize can produce an aligned intermediate frame before native layout
+    // observers finish. Compare tab heights against the settled viewport, not
+    // the first matching frame; keep the same one-pixel geometry tolerances.
+    let previousLayout = '', stableSamples = 0;
+    const samples = [];
     await expect.poll(async () => {
       const result = await geometry(page);
       const valid = result.pairs.every(delta => delta <= 1) && !result.overflow
         && (width <= 850 ? result.columns === 1 && result.stacked && !result.matched
           : result.columns === 2 && result.topGap <= 1 && result.bottomGap <= 1);
-      return valid ? null : result;
-    }, { message: `native workspace geometry at ${width}px` }).toBeNull();
+      const layout = JSON.stringify([result.formHeight, result.formWidth, result.cardHeight, result.columns]);
+      stableSamples = valid && layout === previousLayout ? stableSamples + 1 : valid ? 1 : 0;
+      previousLayout = layout;
+      samples.push({ phase: 'resize', ...result, stableSamples });
+      return valid && stableSamples >= 3 ? null : { ...result, stableSamples };
+    }, { message: `native workspace geometry at ${width}px`, intervals: [100, 100, 250] }).toBeNull();
     const results = await geometry(page);
     if (width <= 850) {
       expect(results.cardConstraint).toBe('');
@@ -171,12 +184,21 @@ test('preview workspace: equal fields, centered actions and native summary geome
     await page.getByRole('tab', { name: 'Siatka centylowa', exact: true }).click();
     await expect(page.locator('#vildaSummaryChartPanel svg.vilda-centile-live-preview')).toBeVisible();
     const chart = await geometry(page);
-    expect(Math.abs(chart.formHeight - results.formHeight), `${width}px form does not grow with its chart tab`).toBeLessThanOrEqual(1);
-    if (width > 850) expect(Math.abs(chart.cardHeight - results.cardHeight)).toBeLessThanOrEqual(1);
-    await page.getByRole('tab', { name: 'Podsumowanie', exact: true }).click();
-    await page.mouse.move(0, 0);
-    await expect(page.locator('#currentSummaryContent')).toBeVisible();
-    await expect.poll(async () => Math.abs((await geometry(page)).cardHeight - results.cardHeight)).toBeLessThanOrEqual(1);
+    let returned = null;
+    try {
+      expect(Math.abs(chart.formHeight - results.formHeight), `${width}px form does not grow with its chart tab`).toBeLessThanOrEqual(1);
+      if (width > 850) expect(Math.abs(chart.cardHeight - results.cardHeight)).toBeLessThanOrEqual(1);
+      await page.getByRole('tab', { name: 'Podsumowanie', exact: true }).click();
+      await page.mouse.move(0, 0);
+      await expect(page.locator('#currentSummaryContent')).toBeVisible();
+      await expect.poll(async () => Math.abs((await geometry(page)).cardHeight - results.cardHeight)).toBeLessThanOrEqual(1);
+      returned = await geometry(page);
+    } finally {
+      if (width === 851) await test.info().attach('geometry-851-lifecycle.json', {
+        body: JSON.stringify({ resizeSamples: samples, before: results, chart, returned }, null, 2),
+        contentType: 'application/json',
+      });
+    }
     await page.screenshot({ path: test.info().outputPath(`workspace-${width}.png`), fullPage: false });
   }
   expect(await collect(page)).toEqual(before);
@@ -228,7 +250,25 @@ test('preview workspace: native nodes, calculations, history, clipboard and guar
 });
 
 test('preview workspace: original reference radios retain manual choice through restore and native comparison gates', async ({ page }) => {
-  const fixture = await openWorkspace(page);
+  await installWorkspace(page);
+  const fixture = await createFictionalVault(page);
+  await settledRestore(page);
+  // Begin with the real empty form. Its native update hides the source group;
+  // no fixture edits either this control's styles or the workspace parent.
+  await expect(page.locator('#height')).toHaveValue('');
+  await expect(page.locator('#weight')).toHaveValue('');
+  await expect.poll(() => page.locator('#dataToggleContainer').evaluate(toggle =>
+    toggle.hidden || toggle.style.display === 'none')).toBe(true);
+  await expect(page.locator('.vhome-reference')).toBeHidden();
+  await loadPatient(page, fixture.ids.a, 'restore');
+  await settledRestore(page);
+  await expect(page.locator('#height')).toHaveValue('158');
+  await expect(page.locator('#weight')).toHaveValue('46');
+  await expect.poll(() => page.locator('#dataToggleContainer').evaluate(toggle => toggle.style.display)).toBe('flex');
+  // Safari used to read computed display:none from this hidden parent and
+  // leave it hidden forever, despite the native child returning to inline flex.
+  await expect(page.locator('.vhome-reference')).toBeVisible();
+  await expect(page.locator('#dataToggleContainer')).toBeVisible();
   await expect(page.locator('.vhome-reference > #dataToggleContainer')).toHaveCount(1);
   await expect(page.locator('.vhome-reference input[name=dataSource]')).toHaveCount(3);
   expect(await page.evaluate(() => window.__homeNativeNodes.filter(node => /^(dataToggleContainer|source)/.test(node.id))

@@ -260,6 +260,9 @@
 }
 @media (min-width: 851px) {
   .vilda-home-workspace #vildaStatusForm { display: none !important; }
+  /* Both actions reserve two title lines, the subtitle and padding. Safari
+   * can defer growing an auto-height button after resizing to two columns. */
+  .vilda-home-workspace .vhome-form-actions :is(#clearAllDataBtn, #metabolicSummaryBtn) { min-height: 84px; }
 }
 @media (max-width: 600px) {
   .vilda-home-workspace .vhome-visit-heading {
