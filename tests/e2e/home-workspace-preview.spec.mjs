@@ -79,6 +79,20 @@ async function collect(page) {
   return withoutCaptureTime(await page.evaluate(() => window.collectUserData()));
 }
 
+async function referenceMirror(page) {
+  await expect.poll(() => page.evaluate(() => {
+    const select = document.querySelector('.vhome-reference-select');
+    const radios = [...document.querySelectorAll('#dataToggleContainer input[name=dataSource]')];
+    const checked = radios.find(radio => radio.checked);
+    return !!(select && select.value === (checked ? checked.value : '')
+      && select.options.length === radios.length
+      && radios.every(radio => {
+        const option = [...select.options].find(item => item.value === radio.value);
+        return option && option.disabled === radio.disabled;
+      }));
+  })).toBe(true);
+}
+
 async function geometry(page) {
   return page.evaluate(() => {
     const node = id => document.getElementById(id), bounds = id => node(id).getBoundingClientRect();
@@ -171,6 +185,9 @@ test('preview workspace: equal fields, centered actions and native summary geome
     }
     await expect(page.locator('#clearAllDataBtn')).toHaveAccessibleName('Wyczyść formularz');
     await expect(page.locator('#metabolicSummaryBtn')).toHaveAccessibleName('Podsumowanie wyników');
+    await expect(page.locator('.vhome-reference-select')).toBeVisible();
+    expect(await page.locator('.vhome-reference-select').evaluate(select => select.getBoundingClientRect().height))
+      .toBeGreaterThanOrEqual(44);
     const centered = await page.locator('.vhome-form-actions > button').evaluateAll(buttons => buttons.map(button => {
       const rect = button.getBoundingClientRect(), label = button.querySelector('.vhome-action-label').getBoundingClientRect();
       return { x: Math.abs(rect.x + rect.width / 2 - label.x - label.width / 2),
@@ -214,6 +231,17 @@ test('preview workspace: native nodes, calculations, history, clipboard and guar
     && document.getElementById(node.id) === node && document.querySelectorAll('#' + node.id).length === 1))).toBe(true);
   expect(await page.evaluate(() => document.getElementById('height').ownerDocument === document
     && document.getElementById('height').form === document.getElementById('calcForm'))).toBe(true);
+  const reference = page.locator('.vhome-reference-select');
+  const clinicalBeforeSource = await collect(page);
+  await reference.selectOption('PALCZEWSKA');
+  await expect(page.locator('#sourcePalczewska')).toBeChecked();
+  await referenceMirror(page);
+  await reference.selectOption('OLAF');
+  await expect(page.locator('#sourceOlaf')).toBeChecked();
+  await referenceMirror(page);
+  const clinicalAfterSource = await collect(page);
+  expect(clinicalAfterSource.user).toEqual(clinicalBeforeSource.user);
+  expect(clinicalAfterSource.advanced.data.measurements).toEqual(clinicalBeforeSource.advanced.data.measurements);
   const before = await collect(page);
   await page.evaluate(() => { window.VildaHomeWorkspace.start(); window.VildaHomeWorkspace.refresh(); });
   expect(await collect(page)).toEqual(before);
@@ -246,10 +274,12 @@ test('preview workspace: native nodes, calculations, history, clipboard and guar
   await expect(page.locator('#weight')).toHaveValue('');
   await expect(page.locator('.vhome-history-button')).toBeDisabled();
   await expect(page.locator('#metabolicSummaryBtn')).toBeDisabled();
+  await expect(page.locator('.vhome-reference')).toBeHidden();
+  await referenceMirror(page);
   expect(await page.evaluate(id => window.VildaVault.getPatient(id), fixture.ids.a)).toEqual(saved);
 });
 
-test('preview workspace: original reference radios retain manual choice through restore and native comparison gates', async ({ page }) => {
+test('preview workspace: reference select mirrors native radios, restore, fallback and comparison without extra persisted state', async ({ page }) => {
   await installWorkspace(page);
   const fixture = await createFictionalVault(page);
   await settledRestore(page);
@@ -268,30 +298,90 @@ test('preview workspace: original reference radios retain manual choice through 
   // Safari used to read computed display:none from this hidden parent and
   // leave it hidden forever, despite the native child returning to inline flex.
   await expect(page.locator('.vhome-reference')).toBeVisible();
-  await expect(page.locator('#dataToggleContainer')).toBeVisible();
-  await expect(page.locator('.vhome-reference > #dataToggleContainer')).toHaveCount(1);
+  const reference = page.locator('.vhome-reference-select');
+  await expect(reference).toBeVisible();
+  await expect(reference).toHaveAccessibleName(/Siatki referencyjne/);
+  expect(await reference.evaluate(select => ({ id: select.hasAttribute('id'), name: select.hasAttribute('name'),
+    labeled: select.parentElement.tagName === 'LABEL' && select.parentElement.classList.contains('vhome-reference-label') })))
+    .toEqual({ id: false, name: false, labeled: true });
+  await expect(page.locator('.vhome-reference-native #dataToggleContainer')).toHaveCount(1);
+  await expect(page.locator('.vhome-reference-native')).toBeHidden();
+  await expect(page.locator('#dataToggleContainer')).toBeHidden();
   await expect(page.locator('.vhome-reference input[name=dataSource]')).toHaveCount(3);
   expect(await page.evaluate(() => window.__homeNativeNodes.filter(node => /^(dataToggleContainer|source)/.test(node.id))
     .every(node => document.getElementById(node.id) === node))).toBe(true);
-  await page.locator('#dataToggleContainer label:has(#sourcePalczewska)').click();
+  await referenceMirror(page);
+  await page.evaluate(() => {
+    window.__homeReferenceClicks = [];
+    window.__homeReferenceEvents = { proxyInput: 0, proxyChange: 0, nativeChanges: [] };
+    document.addEventListener('click', event => {
+      if (event.target.matches('#dataToggleContainer input[name=dataSource]')) window.__homeReferenceClicks.push(event.target.id);
+    }, true);
+    document.addEventListener('input', event => {
+      if (event.target.matches('.vhome-reference-select')) window.__homeReferenceEvents.proxyInput++;
+    }, true);
+    document.addEventListener('change', event => {
+      if (event.target.matches('.vhome-reference-select')) window.__homeReferenceEvents.proxyChange++;
+      if (event.target.matches('#dataToggleContainer input[name=dataSource]')) window.__homeReferenceEvents.nativeChanges.push(event.target.value);
+    }, true);
+  });
+  await reference.selectOption('PALCZEWSKA');
   await expect(page.locator('#sourcePalczewska')).toBeChecked();
+  await referenceMirror(page);
+  expect(await page.evaluate(() => window.__homeReferenceClicks.at(-1))).toBe('sourcePalczewska');
+  expect(await page.evaluate(() => window.__homeReferenceEvents))
+    .toEqual({ proxyInput: 0, proxyChange: 0, nativeChanges: ['PALCZEWSKA'] });
   await expect.poll(() => page.evaluate(() => window.collectUserData().zscore.dataSource)).toBe('PALCZEWSKA');
   await expect(page.locator('#dataToggleContainer')).toHaveAttribute('data-manual', '1');
   await expect(page.locator('#dataToggleContainer')).toHaveAttribute('data-preferred-source', 'PALCZEWSKA');
   const payload = await collect(page);
+  expect(Object.keys(payload.zscore).sort()).toEqual(['dataSource', 'resultsMode']);
+  expect(await page.evaluate(() => [...new FormData(document.getElementById('calcForm'))]
+    .filter(([name]) => name === 'dataSource'))).toEqual([['dataSource', 'PALCZEWSKA']]);
+  await page.evaluate(() => window.VildaHomeWorkspace.refresh());
+  expect(await collect(page)).toEqual(payload);
   const manualId = await page.evaluate(async record => (await window.VildaVault.savePatient(record, { dedup: false })).patientId, payload);
   await loadPatient(page, fixture.ids.b, 'restore');
   await settledRestore(page);
   await loadPatient(page, manualId, 'restore');
   await settledRestore(page);
   await expect(page.locator('#sourcePalczewska')).toBeChecked();
+  await expect(reference).toHaveValue('PALCZEWSKA');
+  await referenceMirror(page);
   expect((await collect(page)).zscore.dataSource).toBe(payload.zscore.dataSource);
+  const beforeReload = await collect(page);
+  await page.evaluate(() => window.vildaPersistFlushNow({ force: true }));
+  await page.reload({ waitUntil: 'load' });
+  await settledRestore(page);
+  await expect(reference).toHaveValue('PALCZEWSKA');
+  await expect(page.locator('#sourcePalczewska')).toBeChecked();
+  await referenceMirror(page);
+  expect(await collect(page)).toEqual(beforeReload);
   await page.getByRole('tab', { name: 'Siatka centylowa', exact: true }).click();
   await expect(page.locator('#vildaSummaryChartPanel svg.vilda-centile-live-preview')).toBeVisible();
   expect(await page.evaluate(async () => {
     const snapshot = await window.VildaCentileLiveData.getSnapshot({ mode: 'summary' });
     return { requested: snapshot.requestedSource, source: snapshot.source, population: snapshot.population };
   })).toEqual({ requested: 'PALCZEWSKA', source: 'PALCZEWSKA', population: 'OGOLNA' });
+
+  // A saved OLAF preference cannot bypass its native minimum age. The select
+  // mirrors the real fallback and disabled states after applying a younger patient.
+  const young = fictionalPatient({ firstName: 'Celina', sex: 'F', age: 2, height: 86, weight: 12,
+    note: 'E2E-LIVE-REFERENCE-FALLBACK' });
+  young.advanced.data.measurements = [];
+  young.chartCreator.growth.free = { height: [], weight: [] };
+  const youngId = await page.evaluate(async record => (await window.VildaVault.savePatient(record, { dedup: false })).patientId, young);
+  await loadPatient(page, youngId, 'restore');
+  await settledRestore(page);
+  await expect(page.locator('#sourceOlaf')).toBeDisabled();
+  await expect(page.locator('#sourcePalczewska')).toBeChecked();
+  await expect(reference).toHaveValue('PALCZEWSKA');
+  await expect(reference.locator('option[value=OLAF]')).toHaveJSProperty('disabled', true);
+  await referenceMirror(page);
+  await reference.selectOption('WHO');
+  await expect(page.locator('#sourceWho')).toBeChecked();
+  await referenceMirror(page);
+  expect((await collect(page)).zscore.dataSource).toBe('WHO');
   // The real New measurement lifecycle must still hide standalone Summary.
   await loadPatient(page, fixture.ids.a, 'new');
   await settledRestore(page);

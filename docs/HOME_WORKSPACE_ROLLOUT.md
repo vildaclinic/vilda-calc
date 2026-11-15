@@ -13,6 +13,9 @@ Produkcja nadal pochodzi z `audyt`. Pierwsza baza: `28ee1c3e`.
   dane i miniaturę SVG. Docelowo wyniki profesjonalne bez przełącznika trybu.
 - Formularz zawiera imię i nazwisko oraz równe przyciski czyszczenia i
   kopiowania podsumowania. Kontekst zespołu Downa pochodzi z karty pacjenta.
+- Wybór siatek referencyjnych jest listą rozwijalną jak w zatwierdzonej
+  makiecie. Świadome odstępstwa wizualne i interakcyjne wymagają wcześniejszego
+  uzgodnienia z właścicielem; nie zastępujemy samodzielnie rodzaju kontrolki.
 - Dodatkowe dane w oknach o wspólnych zasadach rozmiaru i animacji 300 ms,
   z obsługą ograniczenia ruchu. Formularze pozostają w dokumencie właściciela.
 - Cztery główne karty na desktopie mają jednakowy rozmiar; ich zakładki nie
@@ -64,9 +67,14 @@ wysokości. Telefon do 600 px ma zwartą górę, równe pola i przyciski „Wycz
 oraz „Skopiuj wyniki”. Daty urodzenia, tygodnie niemowląt, komunikaty błędów
 i zasady edycji tożsamości pozostają natywne.
 
-Oryginalny `dataToggleContainer` z radiami Palczewska/OLAF/WHO przechodzi do
-formularza. Nie powstaje drugi selektor; ten sam węzeł zachowuje słuchacze,
-wybór ręczny i natywne reguły dostępności referencji. Po potwierdzeniu
+Lista rozwijalna OLAF / OLA, Palczewska, WHO odwzorowuje makietę. Oryginalny
+`dataToggleContainer` z radiami pozostaje niewidocznym nośnikiem stanu w tym
+samym formularzu: zachowuje słuchacze, wybór ręczny i natywne reguły dostępności.
+Lista wyłącznie odczytuje `checked`/`disabled`, a wybór użytkownika wywołuje
+kliknięcie oryginalnego radia. Nie ma własnych progów wieku ani stanu do zapisu.
+Nie posiada ID ani nazwy; jej własne zdarzenia są zatrzymywane przed
+dokumentowym autosave, zaś natywne zdarzenia radia przechodzą zwykłą drogą.
+Po potwierdzeniu
 rzeczywistego dostępu lekarskiego oraz zakończeniu odtwarzania widok używa
 natywnego przełącznika do ustawienia wyników profesjonalnych i dopiero wtedy
 ukrywa kontrolkę trybu oraz etykiety PRO. To zmiana preferencji prezentacji,

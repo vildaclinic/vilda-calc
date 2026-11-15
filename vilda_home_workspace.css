@@ -120,67 +120,39 @@
   line-height: 24px;
 }
 .vilda-home-workspace .vhome-reference { min-width: 0; }
-.vilda-home-workspace .vhome-reference #dataToggleContainer {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  align-items: stretch;
-  gap: var(--space-6px);
-  width: 100%;
-  max-width: none;
-  margin: 0;
-}
-.vilda-home-workspace .vhome-reference #dataToggleContainer label {
-  position: relative;
+.vilda-home-workspace .vhome-reference-label {
   display: block;
   min-width: 0;
   width: auto;
-  min-height: 44px;
   margin: 0;
-}
-.vilda-home-workspace .vhome-reference #dataToggleContainer label > input[type="radio"] {
-  position: absolute;
-  display: block;
-  width: 1px;
-  height: 1px;
-  min-width: 0;
-  min-height: 0;
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-.vilda-home-workspace .vhome-reference #dataToggleContainer label > span {
-  box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-4px);
-  min-height: 44px;
-  height: 100%;
-  padding: var(--space-8px) var(--space-4px);
-  border: var(--border-hairline) solid var(--line) !important;
-  border-radius: var(--radius-8);
-  color: var(--text) !important;
-  background: var(--card) !important;
+  color: var(--text-muted);
   font-size: 14px;
   font-weight: 500;
-  line-height: 20px;
-  text-align: center;
+  line-height: 21px;
+  text-align: left;
 }
-.vilda-home-workspace .vhome-reference #dataToggleContainer label > input:checked + span {
-  border-color: var(--primary) !important;
-  color: #fff !important;
-  background: var(--primary) !important;
+.vilda-home-workspace .vhome-reference-full { display: inline; }
+.vilda-home-workspace .vhome-reference-compact { display: none; }
+.vilda-home-workspace .vhome-reference-select {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  min-width: 0;
+  height: 48px;
+  min-height: 48px;
+  margin: 7px 0 0;
+  padding: 9px 11px;
+  border: var(--border-hairline) solid var(--line);
+  border-radius: var(--radius-8);
+  background: var(--card);
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 24px;
 }
-.vilda-home-workspace .vhome-reference #dataToggleContainer label > input:focus-visible + span {
-  outline: var(--border-emphasis) solid var(--primary);
-  outline-offset: var(--space-4px);
-}
-.vilda-home-workspace .vhome-reference #dataToggleContainer label > input:disabled + span {
-  border-color: var(--line-neutral) !important;
-  color: var(--placeholder) !important;
-  background: var(--disabled-bg) !important;
+.vilda-home-workspace .vhome-reference-select:disabled {
+  color: var(--placeholder);
+  background: var(--disabled-bg);
   cursor: not-allowed;
 }
 .vilda-home-workspace .vhome-extra-data {
@@ -216,7 +188,8 @@
 }
 .vilda-home-workspace .vhome-form-actions :is(#clearAllDataBtn, #metabolicSummaryBtn)[hidden],
 .vilda-home-workspace .vhome-reference[hidden],
-.vilda-home-workspace .vhome-reference #dataToggleContainer[hidden] { display: none !important; }
+.vilda-home-workspace .vhome-reference-native[hidden],
+.vilda-home-workspace .vhome-reference-select[hidden] { display: none !important; }
 .vilda-home-workspace .vhome-form-actions #metabolicSummaryBtn {
   background: var(--primary) !important;
   color: #fff !important;
@@ -316,6 +289,22 @@
   .vilda-home-workspace .vhome-fields label { font-size: 13px; line-height: 19px; }
   .vilda-home-workspace #userSection .vhome-fields :is(input, select) { margin-top: var(--space-4px); padding-inline: var(--space-10px); }
   .vilda-home-workspace .vhome-reference { margin-top: var(--space-10px); }
+  .vilda-home-workspace .vhome-reference-label {
+    display: grid;
+    grid-template-columns: 55px minmax(0, 1fr);
+    align-items: center;
+    gap: var(--space-10px);
+    font-size: 13px;
+    line-height: 19px;
+  }
+  .vilda-home-workspace .vhome-reference-full { display: none; }
+  .vilda-home-workspace .vhome-reference-compact { display: inline; }
+  .vilda-home-workspace .vhome-reference-select {
+    height: 46px;
+    min-height: 46px;
+    margin-top: 0;
+    padding: var(--space-8px) var(--space-10px);
+  }
   .vilda-home-workspace .vhome-extra-data { margin-top: var(--space-12px); padding-top: var(--space-10px); }
   .vilda-home-workspace .vhome-form-actions { margin-top: var(--space-12px); padding-top: var(--space-12px); }
   .vilda-home-workspace .vhome-form-actions :is(#clearAllDataBtn, #metabolicSummaryBtn) {
@@ -327,9 +316,6 @@
   .vilda-home-workspace .vhome-action-full,
   .vilda-home-workspace .vhome-action-label small { display: none; }
   .vilda-home-workspace .vhome-action-compact { display: inline; }
-}
-@media (max-width: 360px) {
-  .vilda-home-workspace .vhome-reference #dataToggleContainer label > span { font-size: 13px; }
 }
 @media (max-width: 354px) {
   .vilda-home-workspace .vhome-visit-heading { padding-inline: var(--space-4px); }

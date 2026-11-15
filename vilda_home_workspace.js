@@ -6,6 +6,7 @@
   if (!w || w.__VILDA_HOME_WORKSPACE_PREVIEW__ !== true || w.VildaHomeWorkspace) return;
   var d = w.document, started = false, frame = 0;
   var dateLabel, historyButton, copyButton, copySource, actions, referenceSection, referenceToggle;
+  var referenceSelect, referenceChoices = [];
 
   function element(tag, className, text) {
     var node = d.createElement(tag);
@@ -78,6 +79,32 @@
       || w.getComputedStyle(copySource).display === 'none';
     if (copyButton.disabled !== disabled) copyButton.disabled = disabled;
   }
+  function refreshReference() {
+    if (!referenceSection || !referenceToggle) return;
+    // Native eligibility owns inline display and disabled. Reading computed
+    // display below our hidden carrier would keep the visible selector closed.
+    var hidden = referenceToggle.hidden || referenceToggle.style.display === 'none';
+    if (referenceSection.hidden !== hidden) referenceSection.hidden = hidden;
+    var selected = '', available = false;
+    referenceChoices.forEach(function (choice) {
+      choice.option.disabled = choice.radio.disabled;
+      if (!choice.radio.disabled) available = true;
+      if (choice.radio.checked) selected = choice.radio.value;
+    });
+    referenceSelect.disabled = hidden || !available;
+    if (referenceSelect.value !== selected) referenceSelect.value = selected;
+  }
+  function referenceInput(event) {
+    if (event.target !== referenceSelect) return;
+    // Document-level autosave captures input/change. This nameless projection
+    // must not schedule a second save: intercept only its events at Window,
+    // then let the original radio's native events reach all existing owners.
+    event.stopImmediatePropagation();
+    if (event.type !== 'change') return;
+    var choice = referenceChoices.find(function (item) { return item.radio.value === referenceSelect.value; });
+    if (choice && !referenceSelect.disabled && !referenceSection.hidden && !choice.radio.disabled) choice.radio.click();
+    refreshReference();
+  }
   function civilDate() {
     var value = null;
     try {
@@ -104,13 +131,7 @@
     historyButton.disabled = !available;
     historyButton.title = available ? 'Otwórz zapisane wizyty pacjenta' : 'Wczytaj zapisanego pacjenta, aby zobaczyć jego wizyty';
     refreshActions();
-    if (referenceSection && referenceToggle) {
-      // Native source eligibility writes inline display/hidden. WebKit can
-      // report computed display:none under our hidden wrapper even after the
-      // native control switches to flex, which would keep the wrapper closed.
-      var hidden = referenceToggle.hidden || referenceToggle.style.display === 'none';
-      if (referenceSection.hidden !== hidden) referenceSection.hidden = hidden;
-    }
+    refreshReference();
   }
   function schedule() {
     if (frame) return;
@@ -168,14 +189,33 @@
     referenceToggle = byId('dataToggleContainer');
     if (referenceToggle) {
       referenceSection = element('div', 'vhome-reference');
-      var referenceTitle = element('h3', 'vhome-section-title', 'Siatki referencyjne');
-      referenceTitle.id = 'vhomeReferenceTitle';
-      referenceSection.appendChild(referenceTitle);
-      referenceToggle.setAttribute('role', 'radiogroup');
-      referenceToggle.setAttribute('aria-labelledby', referenceTitle.id);
-      referenceSection.appendChild(referenceToggle);
+      var referenceLabel = element('label', 'vhome-reference-label');
+      referenceLabel.appendChild(element('span', 'vhome-reference-full', 'Siatki referencyjne'));
+      referenceLabel.appendChild(element('span', 'vhome-reference-compact', 'Siatki'));
+      // No id/name: the persisted source remains the original radio group.
+      referenceSelect = element('select', 'vhome-reference-select');
+      referenceSelect.setAttribute('aria-label', 'Siatki referencyjne');
+      [['sourceOlaf', 'OLAF / OLA'], ['sourcePalczewska', 'Palczewska'], ['sourceWho', 'WHO']].forEach(function (entry) {
+        var radio = byId(entry[0]);
+        if (!radio) return;
+        var option = element('option', '', entry[1]);
+        option.value = radio.value;
+        referenceSelect.appendChild(option);
+        referenceChoices.push({ radio: radio, option: option });
+      });
+      referenceLabel.appendChild(referenceSelect);
+      referenceSection.appendChild(referenceLabel);
+      var nativeReference = element('div', 'vhome-reference-native');
+      nativeReference.hidden = true;
+      nativeReference.appendChild(referenceToggle);
+      referenceSection.appendChild(nativeReference);
       content.appendChild(referenceSection);
-      new w.MutationObserver(schedule).observe(referenceToggle, { attributes: true, attributeFilter: ['style', 'hidden', 'class'] });
+      new w.MutationObserver(schedule).observe(referenceToggle, {
+        attributes: true, subtree: true,
+        attributeFilter: ['style', 'hidden', 'disabled', 'checked', 'class', 'data-manual', 'data-preferred-source']
+      });
+      w.addEventListener('input', referenceInput, true);
+      w.addEventListener('change', referenceInput, true);
     }
     var extras = element('div', 'vhome-extra-data');
     appendExisting(extras, ['tannerToggleBtn', 'pubertyAssessmentSummary', 'tannerStageWrap']);
