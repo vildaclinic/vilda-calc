@@ -19,7 +19,7 @@ name: Wygląd
 
 on:
   pull_request:
-    branches: [audyt]
+    branches: [audyt, agent/nowa-strona-glowna]
     paths:
       - '*.css'
       - '*.html'
@@ -28,6 +28,7 @@ on:
       - 'vilda_shell.js'
       - 'vilda_chrome.js'
       - 'vilda_auth_ui.js'
+      - 'vilda_home_workspace.js'
       - 'design-system/**'
       - 'tests/visual/**'
       - 'tests/support/**'
@@ -40,6 +41,13 @@ on:
         description: 'Odśwież wzorce zrzutów w CI i wypchnij je na tę gałąź'
         type: boolean
         default: false
+      baza_pr:
+        description: 'Gałąź docelowa PR-a; przekazywana do kontroli wersji po odświeżeniu wzorców'
+        type: choice
+        options:
+          - audyt
+          - agent/nowa-strona-glowna
+        default: audyt
 
 permissions:
   contents: read
@@ -130,7 +138,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GALAZ: ${{ github.head_ref || github.ref_name }}
+          BAZA_PR: ${{ github.base_ref || inputs.baza_pr || 'audyt' }}
         run: |
+          case "$BAZA_PR" in
+            'audyt'|'agent/nowa-strona-glowna') ;;
+            *) echo 'Nieobsługiwana gałąź docelowa PR-a'; exit 2 ;;
+          esac
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A tests/visual/wzorce
@@ -141,9 +154,9 @@ jobs:
           git commit -m "Wzorce zrzutów wyglądu odświeżone w CI (ubuntu-latest, Chromium Playwrighta)"
           git push origin "HEAD:${GALAZ}"
           # commit z GITHUB_TOKEN nie uruchamia workflow'ów; workflow_dispatch jest wyjątkiem
-          gh workflow run ci.yml --ref "$GALAZ"
+          gh workflow run ci.yml --ref "$GALAZ" -f baza_pr="$BAZA_PR"
           gh workflow run codeql.yml --ref "$GALAZ"
-          gh workflow run wyglad.yml --ref "$GALAZ" || echo 'Wygląd nie jest jeszcze na gałęzi domyślnej: porównanie pójdzie przy następnym pushu'
+          gh workflow run wyglad.yml --ref "$GALAZ" -f baza_pr="$BAZA_PR" || echo 'Wygląd nie jest jeszcze na gałęzi domyślnej: porównanie pójdzie przy następnym pushu'
       - name: Zachowaj różnice po niepowodzeniu
         if: failure()
         uses: actions/upload-artifact@v4

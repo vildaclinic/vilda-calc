@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.535';
+const SW_VERSION = '1.1.536';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -1869,6 +1869,8 @@ const CORE_SHELL_URLS = [
   '/vilda_visit_context.js?v=1',
   '/vilda_visit_history_ui.js?v=1',
   '/vilda_visit_history_ui.css?v=1',
+  '/vilda_home_workspace.js?v=1',
+  '/vilda_home_workspace.css?v=1',
   '/qrcode.min.js?v=1',
   '/vilda_chrome.js?v=8',
   '/vilda_chrome.js?v=11',
@@ -6474,8 +6476,8 @@ const CLINICAL_WORKSPACE_PRECACHE_PACK = Object.freeze({
 
 // BEGIN VISIT UI PACK CONFIG
 const VISIT_UI_PRECACHE_PACK = Object.freeze({
-  "url": "/runtime/visit-ui-precache/precache-f8becd2f7467.json",
-  "sha256": "f8becd2f746786cfcfee0c3b70ee2991072b54633de16cb6d9dae95cfe37df35",
+  "url": "/runtime/visit-ui-precache/precache-e0d8952bddbc.json",
+  "sha256": "e0d8952bddbc4e8c64fc9031b828473a188cf4fb04a0503042b3f5af13a35d23",
   "files": [
     {
       "url": "/vilda_visit_context.js?v=1",
@@ -6488,6 +6490,14 @@ const VISIT_UI_PRECACHE_PACK = Object.freeze({
     {
       "url": "/vilda_visit_history_ui.css?v=1",
       "sha256": "97ee23baf0a0f1e35ab2aa2cdbce998a7633a916e08b09d96e6fa5810e67d3f8"
+    },
+    {
+      "url": "/vilda_home_workspace.js?v=1",
+      "sha256": "bd2a7434495a73fffa1ae66b44c2281dac20d57722ecd03dd4a6e03a293bf63c"
+    },
+    {
+      "url": "/vilda_home_workspace.css?v=1",
+      "sha256": "00e0110bd6787aad86c2384db0dd568328be79f8c36e68f78ba15de0282853d7"
     }
   ]
 });
@@ -6608,6 +6618,8 @@ function createVisitUIPrecacheState(config = VISIT_UI_PRECACHE_PACK) {
     ['/vilda_visit_context.js', 'text/javascript; charset=utf-8'],
     ['/vilda_visit_history_ui.js', 'text/javascript; charset=utf-8'],
     ['/vilda_visit_history_ui.css', 'text/css; charset=utf-8'],
+    ['/vilda_home_workspace.js', 'text/javascript; charset=utf-8'],
+    ['/vilda_home_workspace.css', 'text/css; charset=utf-8'],
   ]);
   if (!config || !Array.isArray(config.files) || config.files.length !== types.size
     || !/^[a-f0-9]{64}$/.test(config.sha256)

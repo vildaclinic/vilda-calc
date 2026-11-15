@@ -34,10 +34,13 @@ function worker({ scope = '/', response, failPut = () => false } = {}) {
   return { api, cache, requests, writes, installUI };
 }
 
-describe('three independent visit UI resources in one verified transport', () => {
+describe('five independent visit and home UI resources in one verified transport', () => {
   it.each(['/', '/vilda-calc/'])('caches every original body and MIME under its own offline URL in %s', async scope => {
     const w = worker({ scope }); await w.installUI();
     expect(w.api.VISIT_UI_PRECACHE_PACK).toEqual(config);
+    expect(urls).toHaveLength(5);
+    expect(urls).toContain('/vilda_home_workspace.js?v=1');
+    expect(urls).toContain('/vilda_home_workspace.css?v=1');
     expect(w.requests).toHaveLength(1);
     expect(w.requests[0].url).toBe('https://vilda.test' + scope + config.url.slice(1));
     expect(w.requests[0].cache).toBe('reload'); expect(w.requests[0].redirect).toBe('error');
@@ -79,9 +82,11 @@ describe('three independent visit UI resources in one verified transport', () =>
     ['duplicate member', value => { value.files[2] = value.files[0]; }],
     ['extra member', value => value.files.push(value.files[0])],
     ['wrong body', value => { value.files[2].source += '/* changed */'; }],
+    ['wrong home UI body', value => { value.files[3].source += '/* changed */'; }],
     ['wrong member digest', value => { value.files[0].sha256 = '0'.repeat(64); }],
     ['wrong URL', value => { value.files[1].path = 'style.css?v=1'; }],
     ['member MIME override', value => { value.files[2].mime = 'text/javascript'; }],
+    ['home UI MIME override', value => { value.files[4].mime = 'text/javascript'; }],
     ['schema change', value => { value.schemaVersion = 2; }],
   ])('rejects %s even with the matching archive hash', async (_name, mutate) => {
     const value = JSON.parse(bytes); mutate(value);

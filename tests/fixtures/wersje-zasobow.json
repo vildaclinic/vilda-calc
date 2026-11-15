@@ -1559,6 +1559,14 @@
   "v": 3,
   "sha256": "3cc184cdcc8237c79f70c19c70862649de1ffe2acf680bb877629ca2f8c1483b"
  },
+ "vilda_home_workspace.css": {
+  "v": 1,
+  "sha256": "00e0110bd6787aad86c2384db0dd568328be79f8c36e68f78ba15de0282853d7"
+ },
+ "vilda_home_workspace.js": {
+  "v": 1,
+  "sha256": "bd2a7434495a73fffa1ae66b44c2281dac20d57722ecd03dd4a6e03a293bf63c"
+ },
  "vilda_hormone_lifespan.css": {
   "v": 7,
   "sha256": "f6f3784ff8844dd8a70ea557ecc12e3fcadc8d432f0f1ccb46beb37338111af5"

@@ -38,13 +38,21 @@ function createE2eServiceWorker(source, wersja) {
   // Keep that exact block while trimming unrelated shell assets for these tests.
   const clinicalWorkspace = source.match(/  \/\/ BEGIN CLINICAL WORKSPACE PRECACHE V1[\s\S]*?  \/\/ END CLINICAL WORKSPACE PRECACHE V1/);
   if (!clinicalWorkspace) throw new Error('Test service worker requires the complete clinical workspace precache block.');
-  // The visit UI pack has the same production requirement: its three pinned
+  // The visit/home UI pack has the same production requirement: its five pinned
   // URLs must stay in CORE even when this fixture trims unrelated assets.
   const visitPack = source.match(/const VISIT_UI_PRECACHE_PACK = Object\.freeze\((\{[\s\S]*?\})\);/);
   if (!visitPack) throw new Error('Test service worker requires the visit UI precache configuration.');
-  const visitUrls = JSON.parse(visitPack[1]).files.map(file => file.url);
-  if (visitUrls.length !== 3 || new Set(visitUrls).size !== 3)
-    throw new Error('Test service worker requires all three visit UI resources.');
+  const expectedVisitPaths = new Set([
+    '/vilda_visit_context.js', '/vilda_visit_history_ui.js', '/vilda_visit_history_ui.css',
+    '/vilda_home_workspace.js', '/vilda_home_workspace.css',
+  ]);
+  const visitFiles = JSON.parse(visitPack[1]).files;
+  const visitUrls = Array.isArray(visitFiles) ? visitFiles.map(file => file?.url) : [];
+  const visitPaths = visitUrls.map(url => typeof url === 'string' && /^\/[A-Za-z0-9_]+\.(?:js|css)\?v=[1-9][0-9]*$/.test(url)
+    ? url.split('?')[0] : null);
+  if (visitUrls.length !== expectedVisitPaths.size || new Set(visitPaths).size !== expectedVisitPaths.size
+    || visitPaths.some(resource => !expectedVisitPaths.has(resource)))
+    throw new Error('Test service worker requires exactly the five versioned visit/home UI resources.');
   const visitCore = visitUrls.map(url => '  ' + JSON.stringify(url) + ',').join('\n');
   const zWersja = wersja && /^[0-9A-Za-z.-]{1,32}$/.test(wersja)
     ? source.replace(/const SW_VERSION = '[^']*';/, `const SW_VERSION = '${wersja}';`)
@@ -104,12 +112,22 @@ const server = http.createServer((request, response) => {
         return;
       }
 
+      let fixture;
+      try {
+        fixture = createE2eServiceWorker(source, requestUrl.searchParams.get('wersja'));
+      } catch (error) {
+        // A fixture contract failure must fail this request, not terminate the
+        // shared E2E server and turn unrelated tests into connection failures.
+        response.writeHead(500, { 'Cache-Control': 'no-store', 'Content-Type': 'text/plain; charset=utf-8' });
+        response.end('Invalid service worker fixture: ' + error.message);
+        return;
+      }
       response.writeHead(200, {
         'Cache-Control': 'no-store',
         'Content-Type': 'text/javascript; charset=utf-8',
         'Service-Worker-Allowed': '/'
       });
-      response.end(createE2eServiceWorker(source, requestUrl.searchParams.get('wersja')));
+      response.end(fixture);
     });
     return;
   }
