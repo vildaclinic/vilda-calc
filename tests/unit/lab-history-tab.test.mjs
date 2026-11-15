@@ -578,15 +578,20 @@ describe('zakładka Badania: przełączniki i preferencje', () => {
 });
 
 describe('zakładka Badania: akcje', () => {
-  it('„+ Dodaj wynik” otwiera edytor z szablonem wyniku i datą badania; zapis odświeża zakładkę i kartę', async () => {
+  // P-BADANIA-WEJSCIE (decyzja właściciela 2026-11-15): nowego wyniku zakładka nie wpisuje ręcznie — taki wpis
+  // zapisywał się bez oceny. Edytor zostaje dla zapisanych wpisów; jego zapis odświeża zakładkę i kartę jak dotąd.
+  it('nagłówek nie ma ręcznego „+ Dodaj wynik”; zapis w edytorze (edycja wpisu) odświeża zakładkę i kartę', async () => {
     vi.useFakeTimers();
     const env = srodowisko();
     const vault = sejf();
     const { wywolania } = otworz(env, vault);
     await gotowe(env);
-    przycisk(env, '+ Dodaj wynik').click();
-    expect(wywolania.edytor).toHaveLength(1);
-    expect(wywolania.edytor[0]).toMatchObject({ note: null, template: 'lab', anchor: 'date' });
+    expect(przycisk(env, '+ Dodaj wynik')).toBeUndefined();
+    expect(env.host.querySelector('.vilda-lab-hist-add')).toBeNull();
+    env.host.querySelector('.vilda-lab-hist-result-row[data-note-id="tsh-2"]').click();
+    przycisk(env, 'Edytuj wpis').click();
+    await vi.waitFor(() => expect(wywolania.edytor).toHaveLength(1));
+    expect(wywolania.edytor[0].note.id).toBe('tsh-2');
     const przed = vault.odczyty;
     wywolania.edytor[0].onSaved();
     expect(wywolania.zmiany).toBe(1);
@@ -639,8 +644,8 @@ describe('zakładka Badania: akcje', () => {
     expect(env.doc.body.querySelector('.vilda-lab-hist-result-details')).toBeNull();
   });
 
-  it('karta badania prowadzi do przelicznika z tym badaniem (6.23); nagłówek bez badania; w powłoce przez jej trasę', async () => {
-    const env = srodowisko({ pamiec: [[`vilda-lab-hist-view-${PID}`, 'charts']] });
+  it('pacjent wczytany: karta badania prowadzi do przelicznika z tym badaniem (6.23); nagłówek bez badania; w powłoce przez jej trasę', async () => {
+    const env = srodowisko({ pamiec: [[`vilda-lab-hist-view-${PID}`, 'charts'], ['vildaCurrentPatientId', PID]] });
     otworz(env, sejf());
     await gotowe(env);
     const karty = env.host.querySelectorAll('a.vilda-lab-hist-card-check');
@@ -649,7 +654,7 @@ describe('zakładka Badania: akcje', () => {
       ['Nowy wynik fT4 →', 'przelicznik-jednostek.html?badanie=ft4'],
     ]);
     const naglowek = env.host.querySelector('a.vilda-lab-hist-check');
-    expect(naglowek.getAttribute('href')).toBe('przelicznik-jednostek.html');
+    expect([naglowek.textContent, naglowek.getAttribute('href')]).toEqual(['Dodaj wyniki →', 'przelicznik-jednostek.html']);
     // Poza powłoką zwykły odnośnik (bez przechwycenia kliknięcia).
     expect(karty[0].click().domyslneZatrzymane).toBe(false);
     // W ramce powłoki: trasa „lab” z adresem badania; nagłówek — sama trasa.
@@ -661,6 +666,62 @@ describe('zakładka Badania: akcje', () => {
     expect(navigate.mock.calls).toEqual([['lab', true, 'przelicznik-jednostek.html?badanie=tsh'], ['lab', true]]);
   });
 
+  it('P-BADANIA-WEJSCIE: karta pacjenta niewczytanego — jeden przycisk wczytuje pacjenta drogą karty i dopiero potem otwiera przelicznik', async () => {
+    // Nikt nie jest wczytany albo wczytany jest ktoś inny: wynik z przelicznika trafiłby do niewłaściwej osoby albo donikąd.
+    for (const pamiec of [[], [['vildaCurrentPatientId', 'fikcyjny-inny-pacjent']]]) {
+      const wczytania = [];
+      const env = srodowisko({ pamiec: [[`vilda-lab-hist-view-${PID}`, 'charts'], ...pamiec] });
+      otworz(env, sejf(), { loadPatient: (cel) => wczytania.push(cel) });
+      await gotowe(env);
+      const akcje = env.host.querySelector('.vilda-lab-hist-actions').children;
+      expect(akcje.map((el) => [el.tagName, el.textContent])).toEqual([['BUTTON', 'Wczytaj pacjenta i dodaj wyniki →']]);
+      expect(env.host.querySelector('a.vilda-lab-hist-check')).toBeNull();
+      expect(env.host.querySelector('.vilda-lab-hist-entry-hint')).toBeNull();
+      // W ramce powłoki też bez nawigacji: najpierw wczytanie, przejście robi karta po nim.
+      const navigate = vi.fn();
+      env.doc.documentElement.classList.add('vilda-embedded');
+      env.win.parent = { VildaShell: { navigate } };
+      przycisk(env, 'Wczytaj pacjenta i dodaj wyniki →').click();
+      expect(wczytania).toEqual([{ href: null }]);
+      // Akcja przy wykresie mówi, że wczyta pacjenta, i niesie badanie do przelicznika. To przycisk, nie <a>:
+      // w ramce powłoki odnośnik do strony aplikacji przechwytuje vilda_chrome.js i od razu przełącza trasę.
+      expect(env.host.querySelectorAll('a.vilda-lab-hist-card-check')).toHaveLength(0);
+      const karty = env.host.querySelectorAll('button.vilda-lab-hist-card-check');
+      expect(karty.map((b) => [b.textContent, b.getAttribute('href'), b.type])).toEqual([
+        ['Wczytaj i dodaj TSH →', null, 'button'],
+        ['Wczytaj i dodaj fT4 →', null, 'button'],
+      ]);
+      karty[1].click();
+      expect(wczytania).toEqual([{ href: null }, { href: 'przelicznik-jednostek.html?badanie=ft4' }]);
+      expect(navigate).not.toHaveBeenCalled();
+    }
+  });
+
+  it('P-BADANIA-WEJSCIE: bez drogi wczytania (strona bez formularza) zakładka pacjenta niewczytanego pokazuje tylko podpowiedź', async () => {
+    const env = srodowisko({ pamiec: [[`vilda-lab-hist-view-${PID}`, 'charts']] });
+    otworz(env, sejf());
+    await gotowe(env);
+    const akcje = env.host.querySelector('.vilda-lab-hist-actions').children;
+    expect(akcje.map((el) => [el.tagName, el.textContent])).toEqual([['P', 'Wyniki dodasz w Jednostkach lab. po wczytaniu tego pacjenta z Bazy pacjentów.']]);
+    expect(env.host.querySelectorAll('.vilda-lab-hist-card-check')).toHaveLength(0);
+    expect(env.host.querySelectorAll('.vilda-lab-hist-card')).toHaveLength(2);
+  });
+
+  it('P-BADANIA-WEJSCIE: poza powłoką stan pacjenta sprawdzany także przy kliknięciu — odnośnik narysowany dla wczytanego nie przenosi, gdy formularz ma już kogoś innego', async () => {
+    const wczytania = [];
+    const env = srodowisko({ pamiec: [[`vilda-lab-hist-view-${PID}`, 'charts'], ['vildaCurrentPatientId', PID]] });
+    otworz(env, sejf(), { loadPatient: (cel) => wczytania.push(cel) });
+    await gotowe(env);
+    const naglowek = env.host.querySelector('a.vilda-lab-hist-check');
+    const skrot = env.host.querySelector('a.vilda-lab-hist-package');
+    // Formularz zmienił pacjenta, gdy karta była otwarta: zwykła nawigacja odnośnika jest zatrzymana.
+    env.pamiec.set('vildaCurrentPatientId', 'fikcyjny-inny-pacjent');
+    expect(naglowek.click().domyslneZatrzymane).toBe(true);
+    expect(skrot.click().domyslneZatrzymane).toBe(true);
+    expect(env.host.querySelector('a.vilda-lab-hist-card-check').click().domyslneZatrzymane).toBe(true);
+    expect(wczytania).toEqual([{ href: null }, { href: 'przelicznik-jednostek.html?pakiet=tarczyca' }, { href: 'przelicznik-jednostek.html?badanie=tsh' }]);
+  });
+
   it('LAB-PAKIETY PR1: skrót do pakietu „Tarczyca” stoi tylko w karcie pacjenta wczytanego do formularza', async () => {
     // Karta innej osoby niż wczytana (albo bez wczytanego pacjenta): bez skrótu — pakiet zapisałby wyniki nie temu pacjentowi.
     for (const pamiec of [[], [['vildaCurrentPatientId', 'fikcyjny-inny-pacjent']]]) {
@@ -668,15 +729,16 @@ describe('zakładka Badania: akcje', () => {
       otworz(obcy, sejf());
       await gotowe(obcy);
       expect(obcy.host.querySelector('a.vilda-lab-hist-package')).toBeNull();
-      expect(obcy.host.querySelector('a.vilda-lab-hist-check')).not.toBeNull();
+      // P-BADANIA-WEJSCIE: bez wczytanego pacjenta nie ma też odnośnika, który przenosiłby do przelicznika „na ślepo”.
+      expect(obcy.host.querySelector('a.vilda-lab-hist-check')).toBeNull();
     }
     const env = srodowisko({ pamiec: [['vildaCurrentPatientId', PID]] });
     otworz(env, sejf());
     await gotowe(env);
     const skrot = env.host.querySelector('a.vilda-lab-hist-package');
     expect([skrot.textContent, skrot.getAttribute('href')]).toEqual(['Wpisz pakiet: Tarczyca →', 'przelicznik-jednostek.html?pakiet=tarczyca']);
-    // Kolejność przycisków nagłówka: dodanie wyniku, pakiet, przelicznik.
-    expect(env.host.querySelector('.vilda-lab-hist-actions').children.map((el) => el.textContent)).toEqual(['+ Dodaj wynik', 'Wpisz pakiet: Tarczyca →', 'Sprawdź nowy wynik →']);
+    // Kolejność przycisków nagłówka: pakiet, potem jedna akcja dodania wyników (przelicznik).
+    expect(env.host.querySelector('.vilda-lab-hist-actions').children.map((el) => el.textContent)).toEqual(['Wpisz pakiet: Tarczyca →', 'Dodaj wyniki →']);
     // Adres skrótu wskazuje pakiet z pliku danych.
     const pakiety = createRequire(import.meta.url)('../../vilda_lab_packages.js').data;
     expect(pakiety.packages.map((p) => p.slug)).toContain(new URLSearchParams(skrot.getAttribute('href').split('?')[1]).get('pakiet'));
@@ -833,6 +895,18 @@ describe('zakładka Badania: stany i odświeżanie', () => {
     otworz(pusty, sejf({ dane: { series: [], notes: [], treatment: [] } }));
     await gotowe(pusty);
     expect(pusty.host.querySelector('.vilda-lab-hist-empty p').textContent).toBe('Brak zapisanych wyników badań.');
+    // P-BADANIA-WEJSCIE: pusty stan mówi, gdzie dodaje się wyniki — zależnie od tego, czy pacjent jest wczytany.
+    expect(teksty(pusty.host, '.vilda-lab-hist-empty p')[1]).toBe('Wyniki dodasz w Jednostkach lab. po wczytaniu tego pacjenta z Bazy pacjentów.');
+    const pustyZDroga = srodowisko();
+    otworz(pustyZDroga, sejf({ dane: { series: [], notes: [], treatment: [] } }), { loadPatient: () => {} });
+    await gotowe(pustyZDroga);
+    expect(teksty(pustyZDroga.host, '.vilda-lab-hist-empty p')[1]).toBe('Wyniki dodasz w Jednostkach lab. po wczytaniu tego pacjenta.');
+    expect(przycisk(pustyZDroga, 'Wczytaj pacjenta i dodaj wyniki →')).toBeDefined();
+    const pustyWczytany = srodowisko({ pamiec: [['vildaCurrentPatientId', PID]] });
+    otworz(pustyWczytany, sejf({ dane: { series: [], notes: [], treatment: [] } }));
+    await gotowe(pustyWczytany);
+    expect(teksty(pustyWczytany.host, '.vilda-lab-hist-empty p')[1]).toBe('Wyniki dodasz w Jednostkach lab. — pojedynczo albo pakietem badań.');
+    expect(pustyWczytany.host.querySelector('a.vilda-lab-hist-check').textContent).toBe('Dodaj wyniki →');
     expect(teksty(pusty.host, '.vilda-lab-hist-footer-main')).toEqual(['Wyniki pokazane tak, jak je zapisano. Historia nie jest oceniana dzisiejszymi normami.']);
   });
 
@@ -1101,18 +1175,17 @@ describe('zakładka Badania: zlecenie zamyka się po wpisaniu wyniku', () => {
     expect(przycisk(env, 'Cofnij')).toBeUndefined();
   });
 
-  it('inne zapisy z zakładki (wartość w karcie, „+ Dodaj wynik”) nie zamykają zleceń', async () => {
+  it('inne zapisy z zakładki (edycja zapisanego wpisu) nie zamykają zleceń', async () => {
     const env = srodowisko();
     const vault = sejf();
     const { wywolania } = otworz(env, vault);
     await gotowe(env);
     env.host.querySelector('.vilda-lab-hist-result-row[data-note-id="tsh-2"]').click();
     przycisk(env, 'Edytuj wpis').click();
-    przycisk(env, '+ Dodaj wynik').click();
-    await vi.waitFor(() => expect(wywolania.edytor).toHaveLength(2));
+    await vi.waitFor(() => expect(wywolania.edytor).toHaveLength(1));
     vault.zmienNotatke('zlecenie-1', { labResult: { testKey: 'tsh', value: '0,4', valueNum: 0.4, unit: 'mIU/L' } });
     wywolania.edytor.forEach((o) => o.onSaved());
-    await vi.waitFor(() => expect(wywolania.zmiany).toBe(2));
+    await vi.waitFor(() => expect(wywolania.zmiany).toBe(1));
     expect(vault.completePatientNote).not.toHaveBeenCalled();
   });
 });

@@ -157,7 +157,10 @@ Do tej warstwy należą m.in.:
   pacjenta i pasek „Poprzednie wyniki” w przeliczniku (`docs/LAB_HISTORIA_WYNIKOW_PLAN.md`). Zakładkę
   rysuje `vilda_lab_history_tab.js` (+ `.css`): tylko widok, dane z sejfu, porównanie z modelu, wykres
   rendererem karty (`window.__vildaLabTrend`, eksport z `vilda_auth_ui.js`); oba pliki ładują strony
-  z kartą tagami statycznymi i leniwe stosy auth (most sesji, `vilda_chrome.js`). Pasek w przeliczniku
+  z kartą tagami statycznymi i leniwe stosy auth (most sesji, `vilda_chrome.js`). Nowych wyników zakładka
+  nie wpisuje (P-BADANIA-WEJSCIE, 2026-11-15): dodaje się je w Jednostkach lab. pacjentowi wczytanemu do
+  formularza; karta pacjenta niewczytanego najpierw go wczytuje (`options.loadPatient`, droga
+  „Wczytaj tego pacjenta” z wyborem wizyty) i dopiero potem otwiera przelicznik. Pasek w przeliczniku
   rysuje `lab_history_strip.js` (+ `.css`, tagi tylko na `przelicznik-jednostek.html`): tylko do odczytu,
   widoczny przy odblokowanym sejfie, wybrane badanie bierze z `VildaLabConverterRuntime.getSubstanceId()`
   (czytelny skrypt strony), wykres rysuje własnym lekkim rendererem SVG, kartę otwiera przez

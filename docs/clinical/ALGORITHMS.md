@@ -520,7 +520,8 @@ LH/FSH/inhibiny B.
 
 - Nagłówek: liczba wyników i badań, data ostatniego badania; „+ Dodaj wynik”
   i „Sprawdź nowy wynik →” (przelicznik jednostek, w powłoce przez
-  `VildaShell.navigate('lab', true)`). Chipy paneli z `aria-pressed`
+  `VildaShell.navigate('lab', true)`) — od 2026-11-15 zastąpione jedną akcją
+  dodania wyników, zob. „LAB-HISTORIA 6.34” niżej. Chipy paneli z `aria-pressed`
   filtrują widok; segment „Wykresy | Tabela” (`role="group"`, `aria-pressed`)
   ma domyślnie „Tabela” do 480 px i „Wykresy” wyżej (6.17), a wybór jest
   zapamiętany per pacjent w `sessionStorage` (`vilda-lab-hist-view-<id>`).
@@ -1253,6 +1254,73 @@ Testy na funkcjach produkcyjnych i prawdziwym sejfie:
 `tests/unit/lab-result-notes-projection.test.mjs`; e2e
 `tests/e2e/wyniki-badan-karta.spec.mjs`. Opis: `docs/LAB_HISTORIA_WYNIKOW_PLAN.md`,
 „Uzupełnienie z wdrożenia 6.32”.
+
+### LAB-HISTORIA 6.34 — jedna droga dodawania wyników: Jednostki lab. z wczytanym pacjentem (P-BADANIA-WEJSCIE, `vilda_lab_history_tab.js` 2.5.0, 2026-11-15)
+
+**Klasyfikacja: zmiana funkcjonalna, bez zmiany wyników i interpretacji.** Żadna
+norma, wzór, próg, jednostka ani reguła oceny się nie zmienia; wynik zapisany
+z Jednostek lab. („Przypnij do wizyty”, pakiet badań) ma tę samą postać co
+dotąd. Zmienia się to, którędy nowy wynik trafia do karty (decyzja właściciela
+z 2026-11-15, bez makiety).
+
+**Problem.** Zakładka „Badania” miała dwa wejścia. „Sprawdź nowy wynik →”
+(i odnośnik „Nowy wynik TSH →” przy wykresie) otwierały przelicznik bez
+sprawdzenia, czy pacjent z karty jest wczytany do formularza: bez wczytanego
+pacjenta wyniku nie dało się zapisać, a przy wczytanym innym pacjencie
+przelicznik dobierał normy do tamtej osoby i przypinał wynik do jej karty.
+„+ Dodaj wynik” otwierał edytor notatki z szablonem „Wynik badania” — taki
+wpis zapisywał się bez oceny (bez wizyty edytor nie zna wieku ani oceny
+pokwitania; strzałka powstawała tylko względem normy wpisanej ręcznie).
+
+**Reguła.** Wyniki dodaje się w Jednostkach lab. pacjentowi wczytanemu do
+formularza — czyli w wizycie nowej albo odtworzonej.
+
+- Karta pacjenta wczytanego (identyfikator z sesji, `isLoadedPatient`):
+  „Wpisz pakiet: Tarczyca →” i jedna akcja „Dodaj wyniki →” (przelicznik);
+  odnośniki „Nowy wynik X →” przy wykresach — bez zmian.
+- Karta pacjenta niewczytanego (nikt albo ktoś inny w formularzu): jeden
+  przycisk „Wczytaj pacjenta i dodaj wyniki →”, przy wykresach przyciski
+  „Wczytaj i dodaj X →”, bez skrótu pakietu. Kliknięcie wczytuje pacjenta
+  tą samą drogą co „Wczytaj tego pacjenta” w karcie (strażnik niezapisanych
+  zmian, najnowszy zapis, okno „Nowy pomiar” / „Odtwórz zapisany stan”),
+  a po wyborze wizyty otwiera przelicznik — z badaniem, gdy kliknięto przy
+  wykresie. Okno wyboru zamknięte bez wyboru kończy zamiar: przelicznik się
+  nie otwiera.
+- Przelicznik otwiera się dopiero, gdy sesja wspólna niesie wiek z formularza
+  (`BdSesjaZgodna` w `vilda_auth_ui.js`): stamtąd przelicznik czyta pacjenta
+  i bez wieku nie dobiera norm według wieku. Po „Nowy pomiar” wiek trafia do
+  sesji z opóźnieniem (do ok. 3,4 s od wczytania; opis mechanizmu i znanego
+  błędu aplikacji: `docs/ZRODLA_ARTEFAKTOW.md`, „Łatka P-BADANIA-WEJSCIE”).
+- Strona bez formularza (bez `applyLoadedData`): zakładka pacjenta
+  niewczytanego pokazuje samą podpowiedź „Wyniki dodasz w Jednostkach lab.
+  po wczytaniu tego pacjenta z Bazy pacjentów.”
+- Ręczny wpis nowego wyniku jest usunięty: nie ma „+ Dodaj wynik”
+  w „Badaniach” ani szablonu „Wynik badania” w nowej notatce (edytor karty,
+  formularz Terminarza). Szablon zostaje tam, gdzie wpis już niesie wynik
+  (edycja zapisanego wyniku) i przy „Wpisz wynik” zlecenia w „Badaniach”
+  (decyzja 6.11) — to osobna, otwarta decyzja właściciela.
+
+**Przypadki `wejście → wynik`** (fikcyjne dane):
+
+| Wejście | Wynik |
+|---|---|
+| karta pacjentki B, w formularzu pacjent A, zapis A bez zmian; „Wczytaj pacjenta i dodaj wyniki →”, „Odtwórz zapisany stan” | przelicznik z pacjentką B, wiek z odtworzonej wizyty (12 l 0 m), `vildaLoadChoiceV1 = restore`; wskaźnik zapisu „zapisane” |
+| jak wyżej, „Nowy pomiar” | przelicznik z pacjentką B, wiek z daty urodzenia na dziś; `vildaLoadChoiceV1 = new`; wskaźnik zapisu „zapisane” |
+| karta B z wynikiem TSH, widok „Wykresy”, „Wczytaj i dodaj TSH →” | po wyborze wizyty przelicznik z B i wybranym TSH |
+| okno wyboru wizyty zamknięte klawiszem Esc | pacjentka wczytana, aplikacja zostaje na formularzu, przelicznik się nie otwiera — także po późniejszym ręcznym „Odtwórz zapisany stan” |
+| w formularzu A z niezapisaną zmianą; przycisk, w strażniku „Anuluj” | nic się nie wczytuje, karta B otwarta, formularz A bez zmian |
+| nowa notatka w karcie albo nowy wpis Terminarza | lista szablonów: bez szablonu i trzy szablony leku — bez „Wynik badania” |
+
+Testy na kodzie produkcyjnym: `tests/unit/lab-history-tab.test.mjs` (trzy
+stany nagłówka, akcje przy wykresach, pusty stan, kliknięcie poza powłoką),
+`tests/unit/badania-przejscie-po-wczytaniu.test.mjs` (wybór wizyty, rezygnacja,
+inny pacjent, wiek w sesji), `tests/unit/auth-patient-load-authority.test.mjs`
+(wspólna funkcja wczytania i krok po nim), e2e `tests/e2e/badania-wczytaj-i-dodaj.spec.mjs` (powłoka i strona
+samodzielna, oba wybory wizyty, akcja przy wykresie, rezygnacja, strażnik)
+i `tests/e2e/badania-wczytaj-i-dodaj-mobile.spec.mjs` (telefon), szablony:
+`tests/e2e/wyniki-badan-karta.spec.mjs`, `tests/e2e/karta-pacjenta-porzadki.spec.mjs`,
+`tests/e2e/lab-snapshot.spec.mjs`. Opis: `docs/LAB_HISTORIA_WYNIKOW_PLAN.md`,
+decyzja 6.34.
 
 ### LAB-PAKIETY PR1 — pakiet badań „Tarczyca” w przeliczniku jednostek (`vilda_lab_packages.js` 1.0.0, 2026-11-12)
 

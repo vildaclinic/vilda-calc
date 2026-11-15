@@ -133,9 +133,21 @@ test.describe('P6 + P7 + P8 — edytor notatki mówi ludzkim głosem', () => {
   test('P8 — wynik nieliczbowy zapowiada się jako tekst', async ({ page }) => {
     await otworzZKontem(page);
     const patientId = await zalozPacjenta(page);
+    // P-BADANIA-WEJSCIE (decyzja właściciela 2026-11-15): nowa notatka nie ma szablonu „Wynik badania” — nowego
+    // wyniku nie wpisuje się ręcznie. Szablon zostaje tam, gdzie edytor otwiera się z nim: „Wpisz wynik” przy
+    // zleceniu w zakładce „Badania” (i edycja zapisanego wyniku); tak otwieramy go tutaj.
     await otworzEdytor(page, patientId);
+    expect(await page.locator('.b3-template-select option').evaluateAll((opcje) => opcje.map((o) => o.value)),
+      'nowa notatka: bez szablonu wyniku').toEqual(['none', 'med-start', 'med-change', 'med-stop']);
+    await page.keyboard.press('Escape');
+    await expect(page.locator('.b3-template-select')).toHaveCount(0);
+    await page.evaluate(async (id) => {
+      const zlecenie = await window.VildaVault.savePatientNote({ patientId: id, category: 'wynik-badania', title: 'Kontrola TSH',
+        body: 'Fikcyjne zlecenie', dueDateISO: '2026-06-16', labResult: { test: 'TSH (tyreotropina)', testKey: 'tsh' } });
+      window.VildaAuthUI.showPatientNoteEditor({ patientId: id, note: await window.VildaVault.getPatientNote(zlecenie.id), template: 'lab', anchor: 'date' });
+    }, patientId);
+    await expect(page.locator('.b3-template-select')).toHaveValue('lab');
 
-    await page.locator('.b3-template-select').selectOption('lab');
     const wartosc = page.locator('.b3-lab-value');
     await expect(wartosc).toBeVisible();
     await wartosc.fill('12,5');
