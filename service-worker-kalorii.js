@@ -2594,6 +2594,7 @@ const CORE_SHELL_URLS = [
   '/vilda_persist_runtime.js?v=28',
   '/vilda_persist_runtime.js?v=29',
   '/vilda_persist_runtime.js?v=30',
+  '/vilda_persist_runtime.js?v=31',
   '/vilda_summary_cards.js',
   '/vilda_summary_cards.js?v=2',
   '/vilda_summary_cards.js?v=3',

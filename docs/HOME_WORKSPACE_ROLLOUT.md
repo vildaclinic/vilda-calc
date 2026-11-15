@@ -16,8 +16,9 @@ Produkcja nadal pochodzi z `audyt`. Pierwsza baza: `28ee1c3e`.
 - Wybór siatek referencyjnych jest listą rozwijalną jak w zatwierdzonej
   makiecie. Świadome odstępstwa wizualne i interakcyjne wymagają wcześniejszego
   uzgodnienia z właścicielem; nie zastępujemy samodzielnie rodzaju kontrolki.
-- Dodatkowe dane w oknach o wspólnych zasadach rozmiaru i animacji 300 ms,
-  z obsługą ograniczenia ruchu. Formularze pozostają w dokumencie właściciela.
+- Dodatkowe dane w jednakowych oknach z animacją otwierania 180 ms, zgodnie
+  z makietą. Wybrane 300 ms dotyczy nawigatora historii wizyt. Obie animacje
+  respektują ograniczenie ruchu. Formularze pozostają w dokumencie właściciela.
 - Cztery główne karty na desktopie mają jednakowy rozmiar; ich zakładki nie
   zmieniają wysokości. Rozszerzenie następuje wyłącznie przez jawną akcję.
 - Dokumenty to jeden punkt wyboru generatorów, dostępny z istniejącego menu.

@@ -50,10 +50,198 @@ function harness() {
   };
 }
 
+function attachNativeCollector(h) {
+  const getSequence = h.win.VildaDataImportExport.getApplyLoadedDataSequence;
+  h.win.VildaVault.getCurrentUser = () => ({ userId: 'fictional-persist-owner' });
+  h.win.crypto = { randomUUID: vi.fn(() => '00000000-0000-4000-8000-000000000001') };
+  h.win.VildaClcrSessionRuntime = { saveNow: vi.fn() };
+  delete h.win.VildaDataImportExport;
+  for (const file of ['vilda_visit_context.js', 'vilda_data_import_export.js']) {
+    new Function('window', 'globalThis', 'document', source(file))(h.win, h.win, h.document);
+  }
+  const api = h.win.VildaDataImportExport = { ...h.win.VildaDataImportExport, getApplyLoadedDataSequence: getSequence };
+  const collect = vi.spyOn(api, 'collectUserData');
+  const capture = vi.spyOn(api, 'captureCurrentUserDataReadOnly');
+  return { api, collect, capture, uuid: h.win.crypto.randomUUID, renalSave: h.win.VildaClcrSessionRuntime.saveNow };
+}
+
 beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(new Date('2026-11-06T12:00:00Z')); });
 afterEach(() => { vi.clearAllTimers(); vi.useRealTimers(); vi.restoreAllMocks(); });
 
 describe('queued shared state retains its document and visit authority', () => {
+  it('the delayed meaningful-data check cannot create a visit or change the captured form', () => {
+    const h = harness();
+    const native = attachNativeCollector(h);
+    h.win.VildaPersistence.pauseAutosave(900);
+    h.edit('48');
+    const before = native.api.captureCurrentUserDataReadOnly();
+    expect(before.visit).toBeUndefined();
+    native.capture.mockClear();
+    vi.advanceTimersByTime(1200);
+    expect(native.capture).toHaveBeenCalledWith();
+    expect(native.collect).not.toHaveBeenCalled();
+    expect(native.renalSave).not.toHaveBeenCalled();
+    expect(native.uuid).not.toHaveBeenCalled();
+    expect(h.read().weight).toBe('48');
+    expect(h.read().unrelatedHistory).toEqual(h.base.unrelatedHistory);
+    const after = native.api.captureCurrentUserDataReadOnly();
+    delete before.timestampISO; delete after.timestampISO;
+    expect(after).toEqual(before);
+
+    // Identity allocation remains the responsibility of the normal collector.
+    const saved = native.api.collectUserData();
+    expect(native.uuid).toHaveBeenCalledTimes(1);
+    expect(saved.visit).toMatchObject({ patientId: null, origin: 'explicit' });
+    native.collect.mockClear(); native.renalSave.mockClear();
+    h.win.vildaPersistFlushNow({ force: true });
+    expect(native.api.captureCurrentUserDataReadOnly().visit).toEqual(saved.visit);
+    expect(native.uuid).toHaveBeenCalledTimes(1);
+    expect(native.collect).not.toHaveBeenCalled();
+    expect(native.renalSave).not.toHaveBeenCalled();
+  });
+
+  it('the read-only native predicate preserves a draft containing only obesity therapy history', () => {
+    const h = harness();
+    const native = attachNativeCollector(h);
+    Object.values(h.fields).forEach(field => { field.value = ''; });
+    h.seed({});
+    h.win.obesityTherapyPoints = [{ ageMonths: 156, weight: 48, note: 'Fikcyjna obserwacja' }];
+    const main = native.api.captureCurrentUserDataReadOnly();
+    expect(main.obesityTherapyPoints).toEqual(h.win.obesityTherapyPoints);
+    expect(native.api.hasMeaningfulMainSessionData(main)).toBe(true);
+    h.win.VildaPersistence.writeMainSession(main);
+    h.win.sessionStorage.setItem('vildaLoadChoiceV1', 'new');
+    native.capture.mockClear();
+    h.win.vildaPersistFlushNow({ force: true });
+    expect(native.capture).toHaveBeenCalledWith();
+    expect(native.collect).not.toHaveBeenCalled();
+    expect(h.win.VildaPersistence.readMainSession()).toEqual(main);
+    expect(h.win.sessionStorage.getItem('vildaLoadChoiceV1')).toBe('new');
+  });
+
+  it('an unavailable bone-age reader preserves the sole-module draft and queued own edit until the form can be read', () => {
+    const h = harness();
+    const native = attachNativeCollector(h);
+    Object.values(h.fields).forEach(field => { field.value = ''; });
+    h.seed({});
+    h.win.obesityTherapyPoints = [{ ageMonths: 156, weight: 48, note: 'Fikcyjna obserwacja' }];
+    const main = native.api.captureCurrentUserDataReadOnly();
+    expect(native.api.hasMeaningfulMainSessionData(main)).toBe(true);
+    h.win.VildaPersistence.writeMainSession(main);
+    h.win.sessionStorage.setItem('vildaLoadChoiceV1', 'new');
+    // The field can mount before its delegated read-only API is available.
+    h.fields.advBoneAge = { id: 'advBoneAge', value: '' };
+    h.fields.customGoalKg = { ...h.fields.weight, id: 'customGoalKg', value: '' };
+    h.edit('40', 'customGoalKg');
+    expect(() => native.api.captureCurrentUserDataReadOnly()).toThrow('CURRENT_DATA_CAPTURE_UNAVAILABLE: bone-age');
+    vi.advanceTimersByTime(500);
+    expect(h.read()._vildaPersist.byId.customGoalKg).toBe('40');
+    expect(h.win.VildaPersistence.readMainSession()).toEqual(main);
+    expect(h.win.sessionStorage.getItem('vildaLoadChoiceV1')).toBe('new');
+    expect(native.collect).not.toHaveBeenCalled();
+
+    delete h.fields.advBoneAge;
+    h.win.obesityTherapyPoints = [];
+    h.edit('', 'customGoalKg');
+    expect(native.api.hasMeaningfulMainSessionData(native.api.captureCurrentUserDataReadOnly())).toBe(false);
+    vi.advanceTimersByTime(500);
+    expect(h.win.sessionStorage.getItem('sharedUserData')).toBeNull();
+    expect(h.win.VildaPersistence.readMainSession()).toBeNull();
+    expect(h.win.sessionStorage.getItem('vildaLoadChoiceV1')).toBeNull();
+    expect(native.collect).not.toHaveBeenCalled();
+  });
+
+  it('a shared flush without a renal form preserves an independent renal-only session', () => {
+    const h = harness();
+    const native = attachNativeCollector(h);
+    Object.values(h.fields).forEach(field => { field.value = ''; });
+    h.seed({});
+    const renal = { version: 2, inputs: { U_Alb: '45', Ucr_spot: '100' },
+      preservedInputs: { U_Alb: '45', Ucr_spot: '100' } };
+    h.win.VildaPersistence.writeClcrSession(renal);
+    expect(h.win.VildaPersistence.readClcrSession()).toEqual(renal);
+    const main = native.api.collectUserData();
+    expect(main.clcr).toEqual(renal);
+    expect(native.api.hasMeaningfulMainSessionData(main)).toBe(true);
+    expect(native.api.captureCurrentUserDataReadOnly().clcr).toBeNull();
+    h.win.VildaPersistence.writeMainSession(main);
+    h.win.sessionStorage.setItem('vildaLoadChoiceV1', 'new');
+    native.collect.mockClear(); native.renalSave.mockClear();
+    h.win.vildaPersistFlushNow({ force: true });
+    expect(h.win.VildaPersistence.readMainSession()).toEqual(main);
+    expect(h.win.VildaPersistence.readClcrSession()).toEqual(renal);
+    expect(h.win.sessionStorage.getItem('vildaLoadChoiceV1')).toBe('new');
+    expect(native.collect).not.toHaveBeenCalled();
+    expect(native.renalSave).not.toHaveBeenCalled();
+  });
+
+  it('an owned empty renal form does not borrow a cached renal session to avoid cleanup', () => {
+    const h = harness();
+    const native = attachNativeCollector(h);
+    Object.values(h.fields).forEach(field => { field.value = ''; });
+    h.seed({});
+    const renal = { version: 2, inputs: { U_Alb: '45', Ucr_spot: '100' } };
+    h.win.VildaPersistence.writeClcrSession(renal);
+    h.win.VildaPersistence.writeMainSession({ version: 1, user: {}, clcr: renal });
+    h.fields.clcrForm = { id: 'clcrForm' };
+    h.win.VildaClcrSessionRuntime.captureCurrentSessionReadOnly = vi.fn(() => ({ version: 2, inputs: {} }));
+    expect(native.api.hasMeaningfulMainSessionData(native.api.captureCurrentUserDataReadOnly())).toBe(false);
+    h.win.vildaPersistFlushNow({ force: true });
+    expect(h.win.VildaPersistence.readMainSession()).toBeNull();
+    expect(h.win.sessionStorage.getItem('sharedUserData')).toBeNull();
+    expect(native.collect).not.toHaveBeenCalled();
+    expect(native.renalSave).not.toHaveBeenCalled();
+  });
+
+  it.each(['null', 'throw'])('an independent renal-session %s read distinguishes absence from unavailability', mode => {
+    const h = harness();
+    const native = attachNativeCollector(h);
+    Object.values(h.fields).forEach(field => { field.value = ''; });
+    h.seed({});
+    const main = { version: 1, user: {}, clcr: { version: 2, inputs: { U_Alb: '45' } } };
+    h.win.VildaPersistence.writeMainSession(main);
+    const readClcrSession = vi.fn(() => {
+      if (mode === 'throw') throw new Error('fictional unavailable renal session');
+      return null;
+    });
+    h.win.VildaPersistence = { ...h.win.VildaPersistence, readClcrSession };
+    h.win.vildaPersistFlushNow({ force: true });
+    expect(readClcrSession).toHaveBeenCalled();
+    expect(h.win.VildaPersistence.readMainSession()).toEqual(mode === 'throw' ? main : null);
+    expect(native.collect).not.toHaveBeenCalled();
+    expect(native.renalSave).not.toHaveBeenCalled();
+  });
+
+  it.each(['missing', 'null', 'throw'])('a %s read-only capture retains the legacy shared-state fallback without a mutating read', mode => {
+    const h = harness();
+    const native = attachNativeCollector(h);
+    if (mode === 'missing') delete native.api.captureCurrentUserDataReadOnly;
+    else native.capture.mockImplementation(() => {
+      if (mode === 'throw') throw new Error('fictional unavailable module capture');
+      return null;
+    });
+    h.win.vildaPersistFlushNow({ force: true });
+    expect(h.read().weight).toBe('48');
+    expect(h.read().unrelatedHistory).toEqual(h.base.unrelatedHistory);
+    expect(native.collect).not.toHaveBeenCalled();
+    expect(native.uuid).not.toHaveBeenCalled();
+    expect(native.renalSave).not.toHaveBeenCalled();
+
+    Object.values(h.fields).forEach(field => { field.value = ''; });
+    h.seed({});
+    const empty = { version: 1, user: {} };
+    h.win.VildaPersistence.writeMainSession(empty);
+    h.win.vildaPersistFlushNow({ force: true });
+    if (mode !== 'missing') {
+      expect(h.win.VildaPersistence.readMainSession()).toEqual(empty);
+      native.capture.mockRestore();
+      h.win.vildaPersistFlushNow({ force: true });
+    }
+    expect(h.win.sessionStorage.getItem('sharedUserData')).toBeNull();
+    expect(h.win.VildaPersistence.readMainSession()).toBeNull();
+    expect(native.collect).not.toHaveBeenCalled();
+  });
+
   it.each(['timer', 'force'])('%s cannot publish a queued root from an earlier visit of the same patient', method => {
     const h = harness(); h.edit('47');
     h.nextVisit();
@@ -125,7 +313,7 @@ describe('queued shared state retains its document and visit authority', () => {
     expect(h.read()).toEqual(current);
   });
 
-  it.each(['meaningful', 'empty'])('a real main-session collector cannot %s-flush after replacing the visit', kind => {
+  it.each(['meaningful', 'empty'])('a real read-only collector cannot %s-flush after replacing the visit', kind => {
     const h = harness();
     const getSequence = h.win.VildaDataImportExport.getApplyLoadedDataSequence;
     delete h.win.VildaDataImportExport;
@@ -137,10 +325,10 @@ describe('queued shared state retains its document and visit authority', () => {
     }
     const main = { version: 1, name: 'Fikcyjny Pacjent Następnej Wizyty', user: { weight: 50, height: 160 } };
     let current;
-    // The real collector delegates to clinical module capture hooks. Model a
+    // The real collector delegates to clinical module read-only hooks. Model a
     // completed visit replacement inside that callback, without copying the
     // collector or meaningful-data rules into the fixture.
-    const captureState = vi.fn(() => {
+    const captureStateReadOnly = vi.fn(() => {
       h.nextVisit();
       current = h.seed({ ...h.base, weight: '50' });
       h.win.VildaPersistence.writeMainSession(main);
@@ -149,9 +337,11 @@ describe('queued shared state retains its document and visit authority', () => {
       h.win.sessionStorage.setItem('vildaPrevSummaryAnchor', 'fictional-next-anchor');
       return null;
     });
-    h.win.vildaSgaBirthPersistApi = { captureState };
+    const captureState = vi.fn();
+    h.win.vildaSgaBirthPersistApi = { captureState, captureStateReadOnly };
     h.win.vildaPersistFlushNow({ force: true });
-    expect(captureState).toHaveBeenCalledTimes(1);
+    expect(captureStateReadOnly).toHaveBeenCalledTimes(1);
+    expect(captureState).not.toHaveBeenCalled();
     expect(h.read()).toEqual(current);
     expect(h.win.VildaPersistence.readMainSession()).toEqual(main);
     expect(h.win.sessionStorage.getItem('vildaLoadChoiceV1')).toBe('new');
