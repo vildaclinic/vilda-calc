@@ -193,6 +193,18 @@ export async function loadPatient(frame, patientId, choice = 'new', { clear = fa
     await expect(guard).toHaveCount(0);
   }
   await expect(choices).toBeVisible();
+  // A person can pick a choice only after the modal has been painted. By then the
+  // page has run what the apply queued before showing it: vilda_dob_age.js accepts
+  // the record's age (setTimeout 0, then `vilda:dob-restored` runs a main update)
+  // and the rAF-debounced main update runs. Those updates rebuild the age-dependent
+  // plan PAL <option>s that Restore writes the saved PAL into. Under page.clock
+  // (tests/support/test-czas.mjs) both are fake timers decoupled from rendering, so
+  // Playwright could see and click the modal while they were still queued; Restore
+  // then wrote into the "nie dotyczy"-only select and the PAL fell back to 1.4.
+  // Wait for the age acceptance, then two page frames (fake timers run in
+  // callAt/creation order, so the earlier-queued update runs first).
+  await frame.waitForFunction(() => !window.VildaDobAge?.restorePending?.());
+  await frame.evaluate(() => new Promise(resolve => { requestAnimationFrame(() => { requestAnimationFrame(resolve); }); }));
   await frame.locator(choice === 'new' ? '#vildaLcmNew' : '#vildaLcmRestore').click();
   await expect(choices).toHaveCount(0);
   await expect.poll(() => frame.evaluate(() => sessionStorage.getItem('vildaCurrentPatientId'))).toBe(patientId);

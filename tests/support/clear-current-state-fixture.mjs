@@ -10,6 +10,10 @@ function installDebounceObserver() {
   const originalSet = window.setTimeout.bind(window);
   const originalClear = window.clearTimeout.bind(window);
   const entries = new Map(), journal = [];
+  // Observed, never delayed: every other save-status timer (shared-reference
+  // reconcile 200 ms, publication 150 ms, pause re-check). Each one publishes the
+  // live decision, so one left over from startup would end the stale window early.
+  const statusTimers = new Set();
   let armed = false;
   window.__clearInputActivity = [];
   window.__clearTrustedClicks = [];
@@ -25,6 +29,11 @@ function installDebounceObserver() {
     if (button) window.__clearTrustedClicks.push({ id: button.id, trusted: event.isTrusted });
   }
   window.addEventListener('click', observeClearClick, true);
+  // Shell only: count each pane's load. The capture listener runs in the same
+  // dispatch as vilda_shell.js's own load handler (Pt → Ss_refresh + next preload).
+  document.addEventListener('load', event => {
+    if (event.target?.matches?.('iframe.app-pane')) event.target.__clearPaneLoads = (event.target.__clearPaneLoads || 0) + 1;
+  }, true);
   function source(delay, stack) {
     if (delay === 300 && /\/vilda_data_import_export\.js(?:\?|:)/.test(stack)) return 'main300';
     if (delay === 300 && /\/vilda_puberty_assessment_state\.js(?:\?|:)/.test(stack)) return 'puberty300';
@@ -32,7 +41,13 @@ function installDebounceObserver() {
     return null;
   }
   window.setTimeout = function (callback, delay, ...args) {
-    const owner = typeof callback === 'function' && source(Number(delay), new Error().stack || '');
+    const stack = new Error().stack || '';
+    const owner = typeof callback === 'function' && source(Number(delay), stack);
+    if (!owner && typeof callback === 'function' && /\/vilda_save_status_indicator\.js(?:\?|:)/.test(stack)) {
+      const id = originalSet(function () { statusTimers.delete(id); return callback.apply(window, arguments); }, delay, ...args);
+      statusTimers.add(id);
+      return id;
+    }
     if (!owner) return originalSet(callback, delay, ...args);
     const entry = { owner, delay: Number(delay), callback, args, armed, held: false, cancelled: false, executed: false };
     const id = originalSet(function () {
@@ -45,6 +60,7 @@ function installDebounceObserver() {
     return id;
   };
   window.clearTimeout = function (id) {
+    statusTimers.delete(id);
     const entry = entries.get(id);
     if (entry) { entry.cancelled = true; entries.delete(id); }
     return originalClear(id);
@@ -58,14 +74,27 @@ function installDebounceObserver() {
       armed = true; journal.length = 0;
     },
     pending() { return [...entries.values()].filter(entry => !entry.cancelled).length; },
+    // Nothing left that could publish a save status before the armed edit: no
+    // probed debounce, no other status timer, and the startup intake-restore
+    // calculation finished (its readiness event schedules the 200 ms reconcile
+    // synchronously, so the timer is already counted once this turns false).
+    quiet() {
+      const intake = typeof window.vildaGetIntakeRestoreReadiness === 'function' ? window.vildaGetIntakeRestoreReadiness() : null;
+      return this.pending() === 0 && statusTimers.size === 0 && !intake?.pending;
+    },
     snapshot() { return journal.map(({ owner, delay, armed, held, cancelled, executed }) => ({ owner, delay, armed, held, cancelled, executed })); },
     release() {
       armed = false;
       for (const [id, entry] of entries) {
-        if (!entry.held || entry.cancelled) continue;
-        entries.delete(id);
+        if (!entry.held || entry.cancelled || entry.released) continue;
+        // Stay in `entries` until the catch-up callback has really run, so
+        // pending() === 0 means "executed or cancelled". Under page.clock the
+        // 0 ms catch-up is a fake timer that can run tens of ms after this
+        // returns; removing the entry here let callers read executed: false.
+        entry.released = true;
         originalSet(() => {
           if (entry.cancelled) return;
+          entries.delete(id);
           entry.executed = true; entry.callback.apply(window, entry.args);
         }, 0);
       }
@@ -110,6 +139,7 @@ export async function openFictionalClearAccount(page, context, { path = '/index.
   // the first edit. Their startup callbacks can write the same shared session.
   await readyClearPage(owner);
   if (shell) {
+    await waitForShellPanePreload(page);
     const panes = page.locator('iframe.app-pane[title="Start"],iframe.app-pane[title="DocPro"],iframe.app-pane[title="Kalkulator klirensu"]');
     for (const pane of await panes.elementHandles()) {
       const sibling = await pane.contentFrame();
@@ -119,6 +149,29 @@ export async function openFictionalClearAccount(page, context, { path = '/index.
   await expect.poll(() => owner.evaluate(() => window.VildaSaveStatusIndicator.getState())).toBe('hidden');
   await owner.waitForFunction(() => window.__clearDebounceProbe.pending() === 0);
   return { network, owner };
+}
+
+// The shell keeps preloading background panes: after each pane's load it takes
+// the next slot with requestIdleCallback (a fake timer under page.clock), and
+// every pane load reconciles the active owner's save status from the shared
+// reference (vilda_shell.js Pt → Ss_refresh → reconcileFromSharedReference).
+// A pane finishing after the armed edit published the live decision and ended
+// the stale-status window, so let the preloader run out before the edit.
+async function waitForShellPanePreload(page) {
+  for (let settled = null; ;) {
+    // One snapshot: every pane has loaded, and how many there are.
+    const loaded = await page.waitForFunction(() => {
+      const panes = [...document.querySelectorAll('iframe.app-pane')];
+      return panes.every(pane => pane.__clearPaneLoads > 0 && pane.contentDocument?.readyState === 'complete')
+        && panes.length;
+    });
+    const count = await loaded.jsonValue();
+    await loaded.dispose();
+    if (count === settled) return;
+    settled = count;
+    // Our idle callbacks are queued after the shell's slot, so it runs first.
+    await page.evaluate(() => new Promise(resolve => { requestIdleCallback(() => { requestIdleCallback(resolve); }); }));
+  }
 }
 
 async function loadPatient(frame, patientId, choice = 'new', options = {}) {
@@ -210,7 +263,11 @@ export async function openPuberty(page, sex = 'M', optional = false) {
   if (optional && !await page.locator('#pubertyOptionalDetails').evaluate(el => el.open)) {
     await page.locator('#pubertyOptionalDetails > summary').click();
   }
-  await page.waitForFunction(() => window.__clearDebounceProbe.pending() === 0);
+  // The callers arm the probe next and prove a stale cached status. Under load the
+  // startup intake-restore calculation (app.js) can still be running here; when it
+  // finishes, the indicator's 200 ms shared reconcile publishes the live decision
+  // right after the armed edit, bypassing the held status400 debounce.
+  await page.waitForFunction(() => window.__clearDebounceProbe.quiet());
 }
 
 export const stage = (page, axis, value) => page.locator(`.vpa-segments [data-puberty-axis="${axis}"][data-puberty-stage="${value}"]`);
