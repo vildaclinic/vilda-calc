@@ -1758,9 +1758,39 @@ S = [none, med-start, med-change, med-stop];  w === 'lab' && S.push({ value: 'la
 
 **Dlaczego przejście czeka na sesję wspólną.** Przelicznik czyta pacjenta z sesji wspólnej (`VildaSession.getPatient()`, klucze `age` i `ageMonths` najwyższego poziomu). Dopisuje je `userData.js` przy zdarzeniu `input`/`change` pól pacjenta, ale nie podczas pauzy autozapisu — a na nią przypadają zdarzenia z wczytania i z „Nowy pomiar”. Zapis następuje, gdy lustro pól w `custom-fixes.js` (`F`) 3,2 s po `vilda:patient-loaded` ponowi `change`. Przejście wcześniej otwierało przelicznik bez wieku. Odtworzenie zapisu („Odtwórz zapisany stan”) wpisuje wiek od razu, więc tam czekania nie ma.
 
-**Znany błąd aplikacji, poza tą łatką** (potwierdzony sondą na `audyt` `28ee1c3e` i na `743dba9a`): w powłoce przy drugim i kolejnym pacjencie wczytanym w tej samej karcie przeglądarki lustro nie ponawia `change` po „Nowy pomiar”, więc wiek nie trafia do sesji wspólnej, dopóki lekarz nie zmieni pola pacjenta; ręczne przejście do Jednostek lab. w ciągu ok. 3,2 s po „Nowy pomiar” ma ten sam skutek także przy pierwszym pacjencie. Droga z zakładki „Badania” obchodzi to jednym zdarzeniem `change` na `#age` (`BdSesjaOdswiez`) — tym samym, które wysyła lustro, w tej samej chwili (po 3,4 s od wczytania); wysłane wcześniej (ok. 1 s po wyborze) w jednym z trzech przebiegów sondy oznaczało pacjenta jako zmienionego, po 3,4 s w sześciu z sześciu nie. Po naprawie przyczyny obejście można usunąć; samo czekanie (`BdSesjaZgodna`) może zostać.
+**Znany błąd aplikacji, poza tą łatką — naprawiony 2026-11-15 przez P-WIEK-NOWY-POMIAR (niżej); obejście `BdSesjaOdswiez` usunięte, opis zostaje jako historia** (potwierdzony sondą na `audyt` `28ee1c3e` i na `743dba9a`): w powłoce przy drugim i kolejnym pacjencie wczytanym w tej samej karcie przeglądarki lustro nie ponawia `change` po „Nowy pomiar”, więc wiek nie trafia do sesji wspólnej, dopóki lekarz nie zmieni pola pacjenta; ręczne przejście do Jednostek lab. w ciągu ok. 3,2 s po „Nowy pomiar” ma ten sam skutek także przy pierwszym pacjencie. Droga z zakładki „Badania” obchodzi to jednym zdarzeniem `change` na `#age` (`BdSesjaOdswiez`) — tym samym, które wysyła lustro, w tej samej chwili (po 3,4 s od wczytania); wysłane wcześniej (ok. 1 s po wyborze) w jednym z trzech przebiegów sondy oznaczało pacjenta jako zmienionego, po 3,4 s w sześciu z sześciu nie. Po naprawie przyczyny obejście można usunąć; samo czekanie (`BdSesjaZgodna`) może zostać.
 
 **Granice.** Przycisk „Wczytaj tego pacjenta” działa bez zmian (to samo ciało funkcji, `BdPo = null`). Karta otwarta bez funkcji listy (chip, wyszukiwarka, Terminarz) nadal nie ma tego przycisku; zakładka „Badania” wczytuje wtedy przez `applyLoadedData` — tak jak listy pacjentów w `vilda_chrome.js` i `custom-fixes.js`. Na stronie bez `applyLoadedData` zakładka dostaje `loadPatient: null`. Nic poza zdarzeniem `change` nie zapisuje danych; sejf, synchronizacja i eksport bez zmian. Testy: `tests/unit/lab-history-tab.test.mjs`, `tests/unit/badania-przejscie-po-wczytaniu.test.mjs` (wycinek produkcyjnego bloku przejścia), `tests/unit/auth-patient-load-authority.test.mjs` (wycinek `BdWczytajPacjenta`), `tests/unit/care-plan-auth-ui-boundary.test.mjs` (odcisk treści edytora odświeżony świadomie), e2e `tests/e2e/badania-wczytaj-i-dodaj.spec.mjs`, `tests/e2e/badania-wczytaj-i-dodaj-mobile.spec.mjs`, `tests/e2e/wyniki-badan-karta.spec.mjs`, `tests/e2e/karta-pacjenta-porzadki.spec.mjs`, `tests/e2e/lab-snapshot.spec.mjs`.
+
+## Łatka P-WIEK-NOWY-POMIAR — „Nowy pomiar” zapisuje pola wizyty do sesji od razu (`custom-fixes.js`, `vilda_auth_ui.js`, `przelicznik-jednostek.html`, 2026-11-15, decyzja właściciela)
+
+Opis działania i przypadki: `docs/clinical/ALGORITHMS.md`, „P-WIEK-NOWY-POMIAR”. Czytelne bloki, bez ponownej minifikacji.
+
+```js
+// custom-fixes.js — przed finishLoadChoicePresentation
+function publishNewVisitFields() {
+  // VildaPersistence.updateShared((shared, persisted) => { dla age, ageMonths, weight, height:
+  //   shared[id] = String(pole.value); gdy persisted.byId ma już ten klucz — także byId[id] }, { force: true })
+}
+// obsługa #vildaLcmNew:  …; L(), p();  publishNewVisitFields();  …; dispatch vilda:load-choice-applied
+
+// vilda_auth_ui.js — blok przejścia po wczytaniu (P-BADANIA-WEJSCIE): usunięte BdSesjaOdswiez i BD_PRZEJSCIE_LUSTRO_MS;
+// BD_PRZEJSCIE_SESJA_MS 6 s → 3 s; BdSesjaZgodna zostaje jako strażnik.
+
+// przelicznik-jednostek.html — przed readPatientFromShared
+function readLoadedPatientAge() { /* tylko dla wczytanego pacjenta: wiek wizyty (VildaPubertyAssessmentContext albo
+  sesja formularza z visit.patientId tego pacjenta), inaczej wiek z daty urodzenia na dziś (packageAgeAt) */ }
+// readPatientFromShared: wiek z sesji wspólnej ma pierwszeństwo; bez niego readLoadedPatientAge(); wynik niesie ageSource
+// getEffectivePatient / getPackagePatient: p._age_missing; describePatient: „brak wieku”; buildClinicalHint: AGE_MISSING_HINT
+```
+
+**Przyczyna, ustalona sondami na kodzie produkcyjnym.** Pola pacjenta w sesji wspólnej (`age`, `ageMonths`, `weight`, `height` na najwyższym poziomie) zapisuje `userData.js` przy zdarzeniu `input`/`change` tych pól — ale nie podczas pauzy autozapisu. Po wczytaniu z listy sesja wspólna dostaje nazwisko i płeć; pola wizyty dopisuje dopiero wybór: „Odtwórz zapisany stan” synchronicznie (odtworzenie zapisuje sesję), a „Nowy pomiar” nie zapisywał nic — jego zdarzenia (`L`) przypadają na pauzę. Zapis następował, gdy lustro pól (`F`) 3,2 s po `vilda:patient-loaded` ponawiało `change`.
+
+**Dlaczego przy drugim pacjencie w powłoce lustro nie startuje.** `F` jest wołane na `vilda:patient-loaded`, zanim inny nasłuch `custom-fixes.js` wpisze nowy identyfikator do `vildaCurrentPatientId`. W tej chwili sesja wskazuje jeszcze poprzedniego pacjenta, więc `VildaPanelPacjent.nieaktualny()` jest prawdą, `captureMirrorWriter()` zwraca `null`, a `F` kasuje timery i kończy — bez paczek 180/1000/2600 ms i bez ponowienia po 3,2 s. Przy pierwszym pacjencie w karcie identyfikatora jeszcze nie ma, panel nie jest „nieaktualny” i lustro działa. Lustra **nie zmieniono**: po tej łatce nie ma znanego skutku jego braku (pola wizyty zapisuje wybór, a DocPro i Klirens przejmują pacjenta z sesji formularza — sprawdzone sondą dla obu wyborów), a włączenie paczek dla kolejnych pacjentów zmieniłoby zachowanie między ramkami, na którym opierają się testy przejęcia pacjenta. To osobna decyzja.
+
+**Skutki uboczne sprawdzone.** Zapis do sesji w „Nowy pomiar” nie zmienia stanu wskaźnika zapisu („zapisane” w sondzie i w `tests/e2e/wiek-po-nowym-pomiarze.spec.mjs`; `tests/e2e/patient-chip-navigation.spec.mjs` bez zmian). `force: true` jak w `syncSharedUserDataFromLoadedData`: zapis jest częścią wczytania. Przelicznik niczego nie zapisuje — tylko czyta wiek z dodatkowych źródeł.
+
+**Poza łatką (zgłoszone osobno).** Na stronie samodzielnej pakiet badań nie zna daty urodzenia pacjenta bez znacznika oceny pokwitania (`readPubertyPatientContext` czyta ją z kontekstu oceny albo z `shared.dobISO`, a jest w sesji formularza), więc przy dacie pobrania wstecz zostaje w trybie „bez daty urodzenia”. W powłoce działa.
 
 ## Trwała tożsamość wizyt — źródło i granica artefaktu sejfu
 

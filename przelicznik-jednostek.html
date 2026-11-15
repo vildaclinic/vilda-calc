@@ -80,7 +80,7 @@
   <script src="vilda_schowek.js?v=5"></script>
   <script src="vilda_persistence_adapter.js?v=38"></script>
 <script src="vilda_reminders_privacy.js?v=1"></script>
-  <script src="vilda_session_bridge.js?v=208"></script>
+  <script src="vilda_session_bridge.js?v=209"></script>
   <script src="vilda_init.js?v=4"></script>
   <script src="vilda_deps.js?v=98"></script>
   <script>
@@ -117,7 +117,7 @@
 
   <link href="inline_przelicznik_jednostek_00.css?v=14" rel="stylesheet">
 
-  <script src="vilda_chrome.js?v=292"></script>
+  <script src="vilda_chrome.js?v=293"></script>
   <script src="lucide.min.js?v=1" defer></script>
   <script defer src="vilda_frame_sync.js?v=3"></script>
   <link rel="stylesheet" href="vilda_phone_landscape.css?v=2">
@@ -2181,6 +2181,61 @@
       return current === false && (kind === 'G' || kind === 'Th') ? base + ' — wcześniejsza ocena' : base;
     }
 
+    // P-WIEK-NOWY-POMIAR (2026-11-15, decyzja właściciela): wiek wczytanego pacjenta, gdy sesja wspólna go nie
+    // niesie. Bez wieku przelicznik przyjmuje etap życia „dorosły” (getEffectivePatient niżej) — u wczytanego
+    // dziecka dobierałby więc zakresy dla dorosłych. Sesja wspólna dostaje wiek od formularza (userData.js;
+    // „Nowy pomiar” i „Odtwórz zapisany stan” zapisują go od razu), ale wczytanie inną drogą albo przejście
+    // tuż po nim może ją wyprzedzić. Wtedy, tylko dla pacjenta wczytanego do formularza:
+    //   1) wiek bieżącej wizyty — z żywego formularza albo z jego sesji (ten sam nośnik, z którego wiek biorą
+    //      silniki LH/FSH: VildaPubertyAssessmentContext), a bez niego z sesji formularza, jeśli jej wizyta
+    //      należy do tego pacjenta (payload.visit.patientId, docs/PATIENT_VISITS.md);
+    //   2) inaczej wiek z daty urodzenia na dziś — ukończone lata i miesiące (packageAgeAt, jak wiek w dniu
+    //      pobrania w pakiecie).
+    // Zwraca { age, source: 'visit' | 'birth-date' } albo null. Niczego nie zapisuje.
+    function readLoadedPatientAge() {
+      var identity = currentPatientIdentity();
+      if (!identity) return null;
+      var years = null, months = null, birth = null;
+      var asNumber = function (value) {
+        if (value == null || value === '') return null;
+        var number = Number(value);
+        return isFinite(number) ? number : null;
+      };
+      try {
+        var runtime = window.VildaPubertyAssessmentContext;
+        var active = runtime && typeof runtime.readActiveContext === 'function'
+          ? runtime.readActiveContext({ patientId: identity }) : null;
+        if (active && active.available && active.demographics) {
+          years = asNumber(active.demographics.ageYears);
+          months = asNumber(active.demographics.ageMonths);
+          birth = active.demographics.birthDateISO || null;
+        }
+      } catch (_) { /* kolejne źródło */ }
+      if (years == null && !birth) {
+        try {
+          var main = persistence && typeof persistence.readMainSession === 'function' ? persistence.readMainSession() : null;
+          if (main && main.visit && main.visit.patientId === identity && main.user && typeof main.user === 'object') {
+            years = asNumber(main.user.age);
+            months = asNumber(main.user.ageMonths);
+            birth = main.user.dobISO || null;
+          }
+        } catch (_) { /* kolejne źródło */ }
+      }
+      if (years != null && years >= 0) {
+        return { age: years + (months != null && months > 0 ? months / 12 : 0), source: 'visit' };
+      }
+      if (!birth) {
+        try {
+          var stored = persistence && typeof persistence.readShared === 'function' ? persistence.readShared(null) : null;
+          birth = stored && stored.dobISO || null;
+        } catch (_) { birth = null; }
+      }
+      var now = new Date();
+      var today = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+      var at = birth ? packageAgeAt(String(birth), today) : null;
+      return at ? { age: at.years + at.months / 12, source: 'birth-date' } : null;
+    }
+
     function readPatientFromShared() {
       var shared = null;
 
@@ -2215,6 +2270,13 @@
         ageNum = ageNum + monthsNum / 12;
       }
 
+      // P-WIEK-NOWY-POMIAR: wczytany pacjent bez wieku w sesji wspólnej — wiek wizyty albo z daty urodzenia.
+      var ageSource = (ageNum != null && isFinite(ageNum)) ? 'shared' : null;
+      if (!ageSource) {
+        var loadedAge = readLoadedPatientAge();
+        if (loadedAge) { ageNum = loadedAge.age; ageSource = loadedAge.source; }
+      }
+
       // Wyciąganie płci
       var sex = (shared.sex === 'M' || shared.sex === 'F') ? shared.sex : null;
 
@@ -2246,6 +2308,7 @@
         tanner: tannerVal,
         tannerKind: typed ? typed.kind : null,
         tannerCurrent: typed ? typed.current : null,
+        ageSource: ageSource,
         source: 'shared'
       };
     }
@@ -2294,6 +2357,8 @@
       p._shared_tanner_kind = shared.tannerKind || null;
       p._shared_tanner_current = shared.tannerCurrent == null ? null : shared.tannerCurrent;
       p._tanner_overridden = (typeof localOverride.tanner === 'number' && isFinite(localOverride.tanner));
+      // P-WIEK-NOWY-POMIAR: wczytany pacjent bez wieku z żadnego źródła — opis i podpowiedź mówią to wprost.
+      p._age_missing = typeof p.age !== 'number' && !!currentPatientIdentity();
       if (typeof currentSubstance !== 'undefined' && currentSubstance && currentSubstance.id === 'estradiol') {
         var e2Source = readPubertyPatientContext();
         var e2Age = e2Source.sourceStatus === 'ready' && lifespanLegacyAge(e2Source).resolved;
@@ -2695,6 +2760,7 @@
         p._tanner_overridden = true;
         if (typeof p.age !== 'number') p.life_stage = typeof p.tanner === 'number' ? (p.tanner >= 5 ? 'adult' : 'pediatric') : 'adult';
       }
+      p._age_missing = typeof p.age !== 'number' && !!currentPatientIdentity();
       var description = describePatient(p);
       if (analyteId === 'estradiol') {
         // Ten sam nośnik wieku co blok estradiolu w getEffectivePatient (rok lub miesiąc nie staje się dniem).
@@ -2751,6 +2817,7 @@
       }
       var bits = [];
       if (p.sex) bits.push(p.sex === 'M' ? 'Mężczyzna' : 'Kobieta');
+      if (p.age == null && p._age_missing) bits.push('brak wieku');
       if (p.age != null) {
         var rounded = (p.age < 18) ? p.age.toFixed(1).replace(/\.0$/, '') : Math.round(p.age);
         bits.push(rounded + ' ' + (p.age < 1 ? 'r.ż.' : 'lat') + (p._age_at_sample ? ' w dniu pobrania' : ''));
@@ -2809,11 +2876,16 @@
      * pola (Tanner, faza cyklu) zaowocuje precyzyjniejszym zakresem normy.
      * Zwraca pusty string, gdy nic nie warto sugerować.
      */
+    var AGE_MISSING_HINT = 'Brak wieku pacjenta — zakres nie jest dobrany do wieku. Uzupełnij wiek albo datę urodzenia na stronie głównej albo wpisz wiek w „Zmień ▼".';
     function buildClinicalHint(patient) {
       if (!currentSubstance || !patient) return '';
       var hints = [];
       var tannerAware = !!TANNER_AWARE[currentSubstance.id];
       var cycleAware  = !!CYCLE_AWARE[currentSubstance.id];
+
+      // P-WIEK-NOWY-POMIAR: wczytany pacjent bez wieku (ani w sesji, ani w wizycie, ani z daty urodzenia).
+      // Zakres jest wtedy dobrany bez wieku — przelicznik mówi to wprost, zamiast milczeć.
+      if (patient._age_missing) hints.push(AGE_MISSING_HINT);
 
       // Hint Tannera pokazuj TYLKO gdy WSZYSTKIE 4 warunki spełnione:
       //   1) Substancja jest TANNER_AWARE

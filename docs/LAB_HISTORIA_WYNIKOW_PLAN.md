@@ -246,6 +246,7 @@ Każdy etap to osobny draft PR do `audyt` z gałęzi od świeżego `origin/audyt
   - Szablon „Wynik badania”: edytor karty dodaje go do listy tylko, gdy otwarto go z nim (edycja wyniku, „Wpisz wynik”); formularz Terminarza usuwa opcję, gdy wpis nie niesie wyniku. Komunikat Notatek „Wynik … zapisany w zakładce Badania” (6.32) nie ma już drogi z edytora Notatek; kod zostaje, linia z liczbą wyników działa jak dotąd.
   - Znane ograniczenia: (1) po „Nowy pomiar” przelicznik otwiera się do ok. 3 s po wyborze — tyle aplikacja potrzebuje, żeby wiek trafił do sesji wspólnej; (2) błąd istniejący przed tą zmianą: przy ręcznym przejściu do Jednostek lab. zaraz po „Nowy pomiar”, a w powłoce przy drugim i kolejnym pacjencie zawsze, sesja wspólna nie dostaje wieku — zgłoszony osobno, droga z zakładki ma na to obejście; (3) zlecenia: „Wpisz wynik” w „Badaniach” i „Dodaj wynik do kartoteki” w Przypomnieniach nadal zapisują wynik bez oceny.
   - Bez zmian: zapis „Przypnij do wizyty”, pakiet badań, sejf, synchronizacja, eksport, Klirens. Testy: `lab-history-tab.test.mjs`, e2e `badania-wczytaj-i-dodaj.spec.mjs` i `-mobile`.
+  - Uzupełnienie 2026-11-15 (P-WIEK-NOWY-POMIAR, `docs/clinical/ALGORITHMS.md`): ograniczenia (1) i (2) usunięte — „Nowy pomiar” zapisuje wiek do sesji od razu, przelicznik ma zabezpieczenie (wiek wizyty albo z daty urodzenia) i komunikat „brak wieku”; obejście w drodze z zakładki usunięte, przelicznik otwiera się od razu. Zostaje (3): zlecenia.
 
 ### Poza tym wątkiem
 

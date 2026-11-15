@@ -1288,9 +1288,9 @@ formularza — czyli w wizycie nowej albo odtworzonej.
   nie otwiera.
 - Przelicznik otwiera się dopiero, gdy sesja wspólna niesie wiek z formularza
   (`BdSesjaZgodna` w `vilda_auth_ui.js`): stamtąd przelicznik czyta pacjenta
-  i bez wieku nie dobiera norm według wieku. Po „Nowy pomiar” wiek trafia do
-  sesji z opóźnieniem (do ok. 3,4 s od wczytania; opis mechanizmu i znanego
-  błędu aplikacji: `docs/ZRODLA_ARTEFAKTOW.md`, „Łatka P-BADANIA-WEJSCIE”).
+  i bez wieku nie dobiera norm według wieku. Do 2026-11-15 po „Nowy pomiar”
+  wiek trafiał do sesji z opóźnieniem i droga miała na to obejście; przyczynę
+  usunął „P-WIEK-NOWY-POMIAR” niżej — przelicznik otwiera się od razu.
 - Strona bez formularza (bez `applyLoadedData`): zakładka pacjenta
   niewczytanego pokazuje samą podpowiedź „Wyniki dodasz w Jednostkach lab.
   po wczytaniu tego pacjenta z Bazy pacjentów.”
@@ -1321,6 +1321,76 @@ i `tests/e2e/badania-wczytaj-i-dodaj-mobile.spec.mjs` (telefon), szablony:
 `tests/e2e/wyniki-badan-karta.spec.mjs`, `tests/e2e/karta-pacjenta-porzadki.spec.mjs`,
 `tests/e2e/lab-snapshot.spec.mjs`. Opis: `docs/LAB_HISTORIA_WYNIKOW_PLAN.md`,
 decyzja 6.34.
+
+### P-WIEK-NOWY-POMIAR — wiek wczytanego pacjenta w Jednostkach lab. (`custom-fixes.js`, `przelicznik-jednostek.html`, 2026-11-15)
+
+**Klasyfikacja: poprawka błędu z wpływem klinicznym.** Żadna norma, wzór, próg
+ani reguła doboru zakresu się nie zmienia. Zmienia się to, skąd przelicznik
+bierze wiek wczytanego pacjenta — a więc który zakres dobierze w stanie, w
+którym dotąd wieku nie miał. Decyzja właściciela z 2026-11-15 (punkty 1–4).
+
+**Błąd.** Jednostki lab. czytają pacjenta z sesji wspólnej. Po wczytaniu
+pacjenta i wyborze „Nowy pomiar” wiek trafiał do niej dopiero po ok. 3,2 s
+(spóźnione zdarzenie pól formularza), a w powłoce przy drugim i kolejnym
+pacjencie w tej samej karcie przeglądarki — wcale, dopóki lekarz nie zmienił
+pola pacjenta. Przelicznik bez wieku i stadium przyjmuje etap życia „dorosły”
+(`getEffectivePatient`), więc wczytane dziecko dostawało zakresy dla dorosłych,
+bez żadnego sygnału. „Odtwórz zapisany stan” zapisywał wiek od razu i błędu nie
+miał. DocPro i Klirens czytają pacjenta z sesji formularza i tego błędu nie
+miały (sprawdzone sondą: po „Nowy pomiar” u drugiego pacjenta pokazują jego
+wiek, masę i wzrost).
+
+**Naprawa.**
+
+1. „Nowy pomiar” zapisuje pola nowej wizyty (wiek, miesiące, masa, wzrost) do
+   sesji wspólnej od razu, w tej samej chwili co wybór
+   (`publishNewVisitFields` w `custom-fixes.js`) — te same klucze i postać,
+   które zapisuje `userData.js`.
+2. Zabezpieczenie w przeliczniku (`readLoadedPatientAge`): gdy pacjent jest
+   wczytany, a sesja wspólna nie niesie wieku, przelicznik bierze (a) wiek
+   bieżącej wizyty — z żywego formularza albo z sesji formularza tego samego
+   pacjenta — a bez niego (b) wiek z daty urodzenia na dziś, w ukończonych
+   latach i miesiącach (`packageAgeAt`, ta sama zasada co wiek w dniu pobrania
+   w pakiecie). Wiek z sesji wspólnej ma pierwszeństwo; zabezpieczenie działa
+   tylko przy jego braku i tylko dla pacjenta wczytanego do formularza.
+3. Gdy wieku nie ma w żadnym źródle, opis pacjenta mówi „brak wieku”,
+   a podpowiedź: „Brak wieku pacjenta — zakres nie jest dobrany do wieku.
+   Uzupełnij wiek albo datę urodzenia na stronie głównej albo wpisz wiek
+   w „Zmień ▼".” Etap życia zostaje wtedy jak dotąd („dorosły” albo według
+   stadium) — nowy jest tylko komunikat. Bez wczytanego pacjenta nic się nie
+   zmienia.
+4. Obejście z drogi „Wczytaj pacjenta i dodaj wyniki” (LAB-HISTORIA 6.34) —
+   ponowienie zdarzenia na polu wieku — usunięte; przelicznik otwiera się po
+   „Nowy pomiar” od razu.
+
+Dotyczy pojedynczego badania i pakietu badań (oba biorą pacjenta z
+`readPatientFromShared`). Silniki LH/FSH/inhibiny B/testosteronu biorą wiek
+z kontekstu wizyty jak dotąd.
+
+**Populacja i ograniczenia.** Wiek „na dziś” z daty urodzenia jest wiekiem
+nowej wizyty; wiek odtworzonej, dawnej wizyty niesie sesja (zapisuje go
+„Odtwórz zapisany stan”) i zabezpieczenie go nie zastępuje. Wiek z daty
+urodzenia ma dokładność ukończonych miesięcy.
+
+**Przypadki `wejście → wynik`** (fikcyjna dziewczynka ur. 17.06.2014; TSH
+0,4 mIU/L — zakres katalogu dla 11–19 lat: 0,5–4,3, dla dorosłych: 0,3–4,2):
+
+| Wejście | Przed | Po |
+|---|---|---|
+| „Nowy pomiar”, natychmiastowe przejście do Jednostek lab. (powłoka i strona samodzielna, pierwszy i drugi pacjent) | „Kobieta”, zakres dla dorosłych: „w zakresie normy” | „Kobieta · 12… lat · wiek dziecięcy/młodzieńczy”, „poniżej normy” |
+| sesja wspólna bez wieku, pacjentka wczytana (powłoka: żywy formularz; strona samodzielna: sesja formularza tej pacjentki) | jak wyżej | wiek wizyty 12 lat, „poniżej normy” |
+| formularz bez wieku, data urodzenia 10.03.2014, dziś 17.06.2026 | — | wiek 12 l 3 m (źródło: data urodzenia) |
+| sesja formularza innego pacjenta albo bez tożsamości wizyty | — | nie jest źródłem wieku |
+| wczytana pacjentka bez wieku i bez daty urodzenia w żadnym źródle | „Kobieta”, „w zakresie normy”, bez komunikatu | „Kobieta · brak wieku”, komunikat; zakres bez wieku jak dotąd („w zakresie normy”) |
+| bez wczytanego pacjenta | opis jak dotąd | bez zmian, bez komunikatu |
+
+Testy na kodzie produkcyjnym: `tests/unit/wiek-po-nowym-pomiarze.test.mjs`
+(wycinki `publishNewVisitFields` i `readLoadedPatientAge`),
+`tests/unit/badania-przejscie-po-wczytaniu.test.mjs`; e2e
+`tests/e2e/wiek-po-nowym-pomiarze.spec.mjs` i
+`tests/e2e/wiek-po-nowym-pomiarze-mobile.spec.mjs` (prawdziwe wczytanie,
+natywny zegar). Opis łatki: `docs/ZRODLA_ARTEFAKTOW.md`,
+„Łatka P-WIEK-NOWY-POMIAR”.
 
 ### LAB-PAKIETY PR1 — pakiet badań „Tarczyca” w przeliczniku jednostek (`vilda_lab_packages.js` 1.0.0, 2026-11-12)
 
