@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { readFile, writeFile, mkdir, readdir, lstat, realpath, unlink } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, readdir, lstat, realpath, unlink, open } from 'node:fs/promises';
+import { constants as fileConstants } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -25,6 +26,17 @@ const ASSET_EXTENSIONS = new Set(['.html', '.js', '.css', '.json', '.png', '.jpg
 const EXCLUDED_ROOT = /(?:^package(?:-lock)?\.json$|^eslint(?:[.-])|^playwright[.-]|^vitest[.-]|_regression_test\.js$)/;
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
 const isInside = (parent, candidate) => candidate === parent || candidate.startsWith(parent + path.sep);
+
+export async function readRegularAsset(local) {
+  // Check and read the same opened object. A path check followed by readFile
+  // would let a concurrent path replacement turn a regular file into a link.
+  if (typeof fileConstants.O_NOFOLLOW !== 'number') throw new Error('Preview export requires O_NOFOLLOW support.');
+  const handle = await open(local, fileConstants.O_RDONLY | fileConstants.O_NOFOLLOW);
+  try {
+    if (!(await handle.stat()).isFile()) throw new Error('Preview asset must be a regular file: ' + local);
+    return await handle.readFile();
+  } finally { await handle.close(); }
+}
 
 export function isPreviewAsset(relative) {
   if (typeof relative !== 'string' || relative.startsWith('/') || relative.split('/').some(part => part === '..' || part.startsWith('.'))) return false;
@@ -95,8 +107,7 @@ export async function exportPreview({ source = DEFAULT_SOURCE, output }) {
   const input = new Map();
   for (const relative of selected) {
     const local = path.join(source, relative);
-    if (!(await lstat(local)).isFile()) throw new Error('Preview asset must be a regular file: ' + relative);
-    input.set(relative, await readFile(local));
+    input.set(relative, await readRegularAsset(local));
   }
   const bootstrap = await readFile(path.join(TOOL_DIRECTORY, 'runtime.js'));
   const stylesheet = await readFile(path.join(TOOL_DIRECTORY, 'preview.css'));

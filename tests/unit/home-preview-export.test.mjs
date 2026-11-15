@@ -6,7 +6,7 @@ import path from 'node:path';
 import vm from 'node:vm';
 import { createHash } from 'node:crypto';
 import {
-  exportPreview, isPreviewAsset, isolateDocument, isolateText, isolateWorker,
+  exportPreview, isPreviewAsset, isolateDocument, isolateText, isolateWorker, readRegularAsset,
   PREVIEW_WORKER_NETWORK_GUARD,
 } from '../../tools/home-preview/export.mjs';
 
@@ -108,6 +108,17 @@ describe('separate homepage preview export', () => {
     await expect(exportPreview({ ...fixture, output: link })).rejects.toThrow(/symlink/);
   });
 
+  test('source assets are read from a regular descriptor and source symlinks are never followed', async () => {
+    const fixture = await repository();
+    const regular = path.join(fixture.source, 'vilda_home_workspace.js');
+    expect((await readRegularAsset(regular)).toString()).toBe(fixture.fixture['vilda_home_workspace.js']);
+    await expect(readRegularAsset(fixture.source)).rejects.toThrow(/regular file/);
+    await rm(regular);
+    await symlink(path.join(fixture.source, '.env'), regular);
+    await expect(readRegularAsset(regular)).rejects.toMatchObject({ code: 'ELOOP' });
+    await expect(exportPreview(fixture)).rejects.toMatchObject({ code: 'ELOOP' });
+  });
+
   test('fails closed if a future immutable package embeds a production endpoint', async () => {
     const fixture = await repository();
     await writeFile(path.join(fixture.source, 'runtime/clinical-workspace-v1/family/client/model.mjs'), "export const origin = 'https://vilda-sync.maciej-4b9.workers.dev';");
@@ -135,5 +146,107 @@ describe('separate homepage preview export', () => {
     await expect(scope.fetch('/index.html')).resolves.toBe('local response');
     await expect(scope.fetch(new URL('https://preview.example.invalid/app.js?v=1'))).resolves.toBe('local response');
     expect(calls).toHaveLength(2);
+  });
+});
+
+const ACCOUNT_KEY = 'vilda-home-preview-fictional-account-v1';
+const ACCOUNT_LABEL = 'Podgląd — wyłącznie fikcyjni pacjenci';
+const RUNTIME_SOURCE = await readFile(new URL('../../tools/home-preview/runtime.js', import.meta.url), 'utf8');
+
+function previewStorage(entries = {}) {
+  const values = new Map(Object.entries(entries));
+  return { getItem: key => values.get(key) ?? null, setItem(key, value) { values.set(key, String(value)); }, values };
+}
+
+function fictionalNativeVault(patients = []) {
+  const account = { userId: 'fictional-preview-account', label: ACCOUNT_LABEL };
+  const calls = { listPatients: [], savePatient: [], unlock: [] };
+  return {
+    account, calls, patients,
+    isUnlocked: () => true, getCurrentUser: () => ({ ...account }), listUsers: async () => [{ ...account }],
+    listPatients: async options => { calls.listPatients.push(options); return patients.map(patient => ({ ...patient })); },
+    savePatient: async payload => {
+      calls.savePatient.push(payload);
+      const record = { patientId: 'fictional-preview-patient', createdAtISO: '2026-11-03T12:00:00Z' };
+      patients.push(record); return { ...record };
+    },
+    unlockUser: async (...args) => { calls.unlock.push(args); },
+  };
+}
+
+function bootPreview({ storage, vault, locks }) {
+  const nodes = [];
+  const node = () => ({ append() {}, remove() {}, setAttribute() {}, addEventListener() {} });
+  const document = {
+    readyState: 'complete', addEventListener() {}, createElement: node,
+    getElementById: id => id === 'userSection' ? {} : null,
+    body: { append(element) { nodes.push(element); } },
+  };
+  const window = {
+    document, location: { hostname: 'preview.example.invalid', pathname: '/index.html' },
+    localStorage: storage, sessionStorage: previewStorage({ 'vilda-home-preview-opened-v1': '1' }),
+    navigator: { locks }, setTimeout,
+    VildaVault: vault, VildaAuthUI: { isBootReady: () => true },
+    VildaPersistRuntime: { getSnapshot: () => ({ initialized: true }) },
+    VildaDataImportExport: { isMainSessionRestorePending: () => false, isMainSessionAutosavePaused: () => false },
+    VildaPersistence: { isAutosaveSuppressed: () => false }, VildaDobAge: { restorePending: () => false },
+    VildaProAccess: { __setTokenModeForTest() {}, setPlan() {}, hasAccess: () => true },
+    applyLoadedData() { throw new Error('Existing session must not be replaced.'); }, collectUserData() {},
+  };
+  window.top = window;
+  vm.runInNewContext(RUNTIME_SOURCE, { window, Promise, Date, JSON, Object, String, Error });
+  return { window, nodes };
+}
+
+async function previewFinished(window) {
+  for (let attempt = 0; attempt < 100; attempt++) {
+    const state = window.VildaHomePreview.getState();
+    if (state.status === 'ready' || state.status === 'error') return state;
+    await new Promise(resolve => { setTimeout(resolve, 0); });
+  }
+  throw new Error('Preview fixture did not finish.');
+}
+
+describe('fictional preview patient selection remains inside the native vault', () => {
+  test('legacy patient ID is removed only for the verified fictional account without replacing the session', async () => {
+    const vault = fictionalNativeVault([{ patientId: 'fictional-original-patient', createdAtISO: '2026-11-03T12:00:00Z' }]);
+    const storage = previewStorage({ [ACCOUNT_KEY]: JSON.stringify({ userId: vault.account.userId, patientId: 'fictional-original-patient' }) });
+    const { window } = bootPreview({ storage, vault });
+    expect((await previewFinished(window)).status).toBe('ready');
+    expect(JSON.parse(storage.getItem(ACCOUNT_KEY))).toEqual({ userId: vault.account.userId });
+    expect(vault.calls.listPatients).toHaveLength(1);
+    expect(vault.calls.listPatients[0].strict).toBe(true);
+    expect(vault.calls.listPatients[0].isCurrent()).toBe(true);
+    expect(vault.calls.savePatient).toHaveLength(0);
+    expect(vault.calls.unlock).toHaveLength(0);
+  });
+
+  test('concurrent first tabs share the native read-and-seed lock without persisting a patient ID', async () => {
+    const vault = fictionalNativeVault();
+    const storage = previewStorage({ [ACCOUNT_KEY]: JSON.stringify({ userId: vault.account.userId }) });
+    let pending = Promise.resolve();
+    const locks = { request(_name, callback) { const result = pending.then(callback); pending = result.catch(() => {}); return result; } };
+    const first = bootPreview({ storage, vault, locks });
+    const second = bootPreview({ storage, vault, locks });
+    expect((await previewFinished(first.window)).status).toBe('ready');
+    expect((await previewFinished(second.window)).status).toBe('ready');
+    expect(vault.calls.savePatient).toHaveLength(1);
+    expect(vault.calls.savePatient[0].user.lastName).toBe('Przykładowy');
+    expect(vault.patients).toHaveLength(1);
+    expect(JSON.parse(storage.getItem(ACCOUNT_KEY))).toEqual({ userId: vault.account.userId });
+    expect([...storage.values.values()].join(' ')).not.toContain(vault.patients[0].patientId);
+  });
+
+  test('a foreign account neither migrates the marker nor reads or creates patients', async () => {
+    const vault = fictionalNativeVault();
+    vault.account.label = 'Fictional unrelated account';
+    const priorMarker = JSON.stringify({ userId: vault.account.userId, patientId: 'fictional-unrelated-patient' });
+    const storage = previewStorage({ [ACCOUNT_KEY]: priorMarker });
+    const { window } = bootPreview({ storage, vault });
+    expect((await previewFinished(window)).status).toBe('error');
+    expect(storage.getItem(ACCOUNT_KEY)).toBe(priorMarker);
+    expect(vault.calls.listPatients).toHaveLength(0);
+    expect(vault.calls.savePatient).toHaveLength(0);
+    expect(vault.calls.unlock).toHaveLength(0);
   });
 });

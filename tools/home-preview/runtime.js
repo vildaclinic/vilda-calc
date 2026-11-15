@@ -99,7 +99,7 @@
       // A foreign account is never adopted, unlocked, deleted or inspected.
       if (accounts.length || vault.isUnlocked()) throw new Error('Ten adres zawiera inne konto. Otwórz podgląd w osobnym profilu przeglądarki.');
       const created = await vault.createUser(PASSWORD, { label: ACCOUNT_LABEL, deferServerContact: true });
-      marker = { userId: created.userId, patientId: null };
+      marker = { userId: created.userId };
       window.localStorage.setItem(ACCOUNT_KEY, JSON.stringify(marker));
       window.location.reload();
       return null;
@@ -109,10 +109,16 @@
     if (vault.isUnlocked() && vault.getCurrentUser()?.userId !== marker.userId) throw new Error('Otwarte jest inne konto. Otwórz podgląd w osobnym profilu przeglądarki.');
     if (!vault.isUnlocked()) {
       await vault.unlockUser(marker.userId, PASSWORD);
+      // Upgrade only this verified fictional account's old bootstrap marker.
+      // Patient selection now comes from the encrypted vault, never this key.
+      window.localStorage.setItem(ACCOUNT_KEY, JSON.stringify({ userId: marker.userId }));
       window.location.reload();
       return null;
     }
-    return marker;
+    if (Object.keys(marker).some(key => key !== 'userId')) {
+      window.localStorage.setItem(ACCOUNT_KEY, JSON.stringify({ userId: marker.userId }));
+    }
+    return { userId: marker.userId };
   }
 
   async function selectPatient(owner, patientId) {
@@ -147,17 +153,26 @@
       const seed = async () => {
         const current = JSON.parse(window.localStorage.getItem(ACCOUNT_KEY) || 'null');
         if (!current || current.userId !== marker.userId) throw new Error('Konto podglądu zmieniło się podczas uruchamiania.');
-        if (!current.patientId) {
-          const saved = await owner.VildaVault.savePatient(fictionalPayload(), { dedup: false });
-          current.patientId = saved.patientId;
-          window.localStorage.setItem(ACCOUNT_KEY, JSON.stringify(current));
-        }
-        marker.patientId = current.patientId;
+        const vault = owner.VildaVault;
+        const isCurrent = () => {
+          const account = vault.getCurrentUser();
+          return account?.userId === marker.userId && account.label === ACCOUNT_LABEL;
+        };
+        if (!isCurrent()) throw new Error('Konto podglądu zmieniło się podczas uruchamiania.');
+        // The first fictional patient remains the example after renaming or
+        // editing it. A strict native read cannot mistake a read error for an
+        // empty vault and create a duplicate. The lock covers read and seed.
+        const patients = await vault.listPatients({ strict: true, isCurrent });
+        if (!isCurrent()) throw new Error('Konto podglądu zmieniło się podczas uruchamiania.');
+        patients.sort((left, right) => String(left.createdAtISO || '').localeCompare(String(right.createdAtISO || ''))
+          || left.patientId.localeCompare(right.patientId));
+        if (patients.length) return patients[0].patientId;
+        return (await vault.savePatient(fictionalPayload(), { dedup: false })).patientId;
       };
-      if (window.navigator.locks?.request) await window.navigator.locks.request('vilda-home-preview-bootstrap', seed);
-      else await seed();
+      const patientId = window.navigator.locks?.request
+        ? await window.navigator.locks.request('vilda-home-preview-bootstrap', seed) : await seed();
       if (!window.sessionStorage.getItem(VISIT_KEY)) {
-        if (!owner.VildaDataImportExport.hasMeaningfulMainSessionData()) await selectPatient(owner, marker.patientId);
+        if (!owner.VildaDataImportExport.hasMeaningfulMainSessionData()) await selectPatient(owner, patientId);
         window.sessionStorage.setItem(VISIT_KEY, '1');
       }
       owner = ownerWindow();
