@@ -26,7 +26,9 @@ jobs:
   unit:
     name: Lint, składnia i testy jednostkowe
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # Pełne npm test obejmuje ponad 900 plików unit. W PR #963 limit 15 min
+    # dwukrotnie przerwał aktywny przebieg bez zgłoszonych błędów testów.
+    timeout-minutes: 20
     steps:
       - name: Pobierz repozytorium
         uses: actions/checkout@v4
