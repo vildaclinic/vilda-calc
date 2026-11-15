@@ -132,14 +132,16 @@ test('odznaczony znacznik zostawia oczekujący wynik otwarty; „Odłącz” zde
   await expect(pasek).not.toHaveAttribute('role', 'status');
   await expect(pasek.locator('.lab-pending-title')).toHaveText('Oczekujący wynik: Kontrola TSH · termin 01.12.26');
 
-  // „Odłącz”: pasek znika, okno przypięcia jest jak dotąd, a adres nie podpina wpisu ponownie po odświeżeniu.
+  // „Odłącz”: pasek znika, a adres nie podpina wpisu ponownie po odświeżeniu. Wpis dalej czeka, więc okno
+  // przypięcia proponuje go jak każdy oczekujący wynik pacjenta (etap 2) — odznaczonego, nic się samo nie zamyka.
   await pasek.getByRole('button', { name: 'Odłącz' }).click();
   await expect(pasek).toBeHidden();
   await expect(page).toHaveURL(/\/przelicznik-jednostek\.html$/);
   await page.locator('#labValue').fill('2,7');
   await page.locator('#labPinResultBtn').click();
   await expect(page.locator('#labPinOverlay #labPinDate')).toBeVisible();
-  await expect(page.locator('#labPinOverlay .lab-pending-choice')).toHaveCount(0);
+  await expect(page.locator('#labPinOverlay input#labPinPendingClose')).not.toBeChecked();
+  await expect(page.locator('#labPinOverlay .lab-pending-choice-help')).toHaveText('Pacjentka ma oczekujący wynik. Zaznacz, jeśli ten wynik go dotyczy.');
   await page.locator('#labPinCancel').click();
   await page.reload({ waitUntil: 'load' });
   await expect(page.locator('#labPendingStrip')).toBeHidden();

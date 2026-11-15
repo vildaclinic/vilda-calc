@@ -171,8 +171,11 @@ Do tej warstwy należą m.in.:
   `lab_pin_result.js` (bez osobnego pliku — budżet żądań instalacji PWA). Zakładka „Badania” otwiera
   przelicznik adresem `przelicznik-jednostek.html?oczekujacy=<id notatki>`; moduł sprawdza wpis w sejfie
   (`VildaLabHistory.pendingItem`), rysuje pasek `#labPendingStrip` w nagłówku karty i daje oknu przypięcia
-  oraz pakietowi znacznik „Zamknij oczekujący wynik” (`choice`, `commit` → `completePatientNote`). Zmianę
-  stanu ogłasza zdarzenie dokumentu `vilda:lab-pending-result-changed`;
+  oraz pakietowi znacznik „Zamknij oczekujący wynik” (`choice`, `commit` → `completePatientNote`). Bez
+  podpiętego wpisu (etap 2, LAB-HISTORIA 6.36) to samo `choice` daje wybór z listy oczekujących wyników
+  wczytanego pacjenta (`VildaLabHistory.pendingItems` z `listPatientNotesForPatient`; domyślnie nic się nie
+  zamyka), odświeżany po zapisie notatki pacjenta w sejfie (`onPatientNoteChanged`). Zmianę stanu ogłasza
+  zdarzenie dokumentu `vilda:lab-pending-result-changed`;
 - pakiety badań: `vilda_lab_packages.js` (dane pakietu, model i widok w jednym pliku — budżet żądań
   instalacji PWA; tag tylko na `przelicznik-jednostek.html`). Zakładka „Pakiet badań” karty przelicznika
   (jedna karta, zakładki `#labModeBar` pod tytułem; pakiet jest panelem `#labPackageCard` tej karty): kilka

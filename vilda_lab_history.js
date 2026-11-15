@@ -15,6 +15,8 @@
  * recordedWarning — ostrzeżenie kliniczne zapisanej oceny dla krótkiego wpisu Historii.
  * Od 1.5.0 (P-OCZEKUJACE-WYNIKI, decyzje właściciela 2026-11-15): pendingItem — pojedynczy wpis jako oczekujący
  * wynik (te same warunki co lista pending widoku), dla Jednostek lab. otwartych z takiego wpisu.
+ * Od 1.6.0 (P-OCZEKUJACE-WYNIKI, etap 2): pendingItems — oczekujące wyniki pacjenta w kolejności listy widoku
+ * (od najbliższego terminu), dla okna przypięcia i pakietu, gdy wynik wpisano bez wejścia z „Badań”.
  * Projekt: docs/LAB_HISTORIA_WYNIKOW_PLAN.md, 3.1; opis: docs/clinical/ALGORITHMS.md,
  * „LAB-HISTORIA — model porównania”.
  */
@@ -519,6 +521,23 @@
     if (!record(note) || noteCategory(note) !== 'wynik-badania' || !isPending(note)) return null;
     return { kind: 'pending', noteId: note.id, title: text(note.title), dueDateISO: isoDate(note.dueDateISO), seriesKey: pendingMatch(note, converterLabels(converter)) };
   }
+  // Kolejność oczekujących wyników: od najbliższego terminu, wpisy bez terminu na końcu (jak w „Badaniach”).
+  function pendingOrder(a, b) {
+    return a.dueDateISO === b.dueDateISO ? 0 : !a.dueDateISO ? 1 : !b.dueDateISO ? -1 : a.dueDateISO < b.dueDateISO ? -1 : 1;
+  }
+  // Oczekujące wyniki pacjenta z jego notatek: te same pozycje i ta sama kolejność co lista pending widoku.
+  // Dla Jednostek lab. (P-OCZEKUJACE-WYNIKI, etap 2): wynik wpisany bez wejścia z „Badań” może zamknąć jeden z nich.
+  function pendingItems(notes, converter, options) {
+    var patientId = options && text(options.patientId), seen = {}, items = [];
+    (Array.isArray(notes) ? notes : []).forEach(function (note) {
+      if (!record(note) || !text(note.id) || own(seen, note.id) || patientId && note.patientId !== patientId) return;
+      var item = pendingItem(note, converter);
+      if (!item) return;
+      seen[note.id] = true;
+      items.push(item);
+    });
+    return stableSort(items, pendingOrder);
+  }
 
   function previewView(current, seriesView, options) {
     if (!record(current)) return null;
@@ -640,7 +659,7 @@
       if (series.entries.some(function (other) { return other.source !== 'gh-note' && sameResult(other, entry); })) { ghDuplicates++; return; }
       series.entries.push(entry);
     });
-    pending = stableSort(pending, function (a, b) { return a.dueDateISO === b.dueDateISO ? 0 : !a.dueDateISO ? 1 : !b.dueDateISO ? -1 : a.dueDateISO < b.dueDateISO ? -1 : 1; });
+    pending = stableSort(pending, pendingOrder);
 
     var views = order.map(function (key) { return buildSeries(byKey[key], ctx); });
     var viewByKey = {};
@@ -713,8 +732,8 @@
   }
 
   return Object.freeze({
-    version: '1.5.0', HISTORY_PANELS: HISTORY_PANELS, buildHistoryView: buildHistoryView,
+    version: '1.6.0', HISTORY_PANELS: HISTORY_PANELS, buildHistoryView: buildHistoryView,
     formatDelta: formatDelta, formatDate: formatDate, normalizeUnit: normalizeUnit, isResultNote: isResultNote,
-    recordedWarning: recordedWarning, pendingItem: pendingItem
+    recordedWarning: recordedWarning, pendingItem: pendingItem, pendingItems: pendingItems
   });
 });

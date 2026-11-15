@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.538';
+const SW_VERSION = '1.1.539';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -977,6 +977,7 @@ const CORE_SHELL_URLS = [
   '/vilda_lab_history.js?v=5',
   '/vilda_lab_history.js?v=6',
   '/vilda_lab_history.js?v=7',
+  '/vilda_lab_history.js?v=8',
   '/vilda_lab_history_tab.js?v=1',
   '/vilda_lab_history_tab.js?v=2',
   '/vilda_lab_history_tab.js?v=3',
@@ -2159,6 +2160,7 @@ const CORE_SHELL_URLS = [
   '/vilda_chrome.js?v=292',
   '/vilda_chrome.js?v=293',
   '/vilda_chrome.js?v=294',
+  '/vilda_chrome.js?v=295',
   '/vilda_realtime.js?v=1',
   '/vilda_realtime.js?v=2',
   '/vilda_realtime.js?v=3',
@@ -3113,6 +3115,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_session_bridge.js?v=208',
   '/vilda_session_bridge.js?v=209',
   '/vilda_session_bridge.js?v=210',
+  '/vilda_session_bridge.js?v=211',
   '/vilda_sync.js?v=48',
   '/vilda_sync.js?v=49',
   '/vilda_sync.js?v=50',
@@ -3488,6 +3491,7 @@ const OPTIONAL_ASSETS = [
   '/lab_pin_result.js?v=10',
   '/lab_pin_result.js?v=11',
   '/lab_pin_result.js?v=12',
+  '/lab_pin_result.js?v=13',
   '/lab_history_strip.js?v=1',
   '/lab_history_strip.js?v=2',
   '/lab_history_strip.js?v=3',
@@ -3503,6 +3507,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_lab_packages.js?v=7',
   '/vilda_lab_packages.js?v=8',
   '/vilda_lab_packages.js?v=9',
+  '/vilda_lab_packages.js?v=10',
   '/klirens.xlsx',
   '/zscore_przyklad_palczewska.xlsx',
   '/zscore_przyklad_olaf.xlsx',
@@ -5058,6 +5063,7 @@ const OPTIONAL_ASSETS = [
   '/inline_przelicznik_jednostek_00.css?v=13',
   '/inline_przelicznik_jednostek_00.css?v=14',
   '/inline_przelicznik_jednostek_00.css?v=15',
+  '/inline_przelicznik_jednostek_00.css?v=16',
   '/inline_regulamin_00.css?v=1',
   '/inline_steroidy_00.css?v=1',
   '/inline_subskrypcja_00.css?v=1',

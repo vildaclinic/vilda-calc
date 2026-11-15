@@ -1936,22 +1936,20 @@
       // P-OCZEKUJACE-WYNIKI (decyzje właściciela 2026-11-15): Jednostki lab. otwarte z oczekującego wyniku w zakładce
       // „Badania”. Przy zapisie pakietu stoi ten sam znacznik co w oknie przypięcia; wpis, znacznik i zamknięcie
       // należą do VildaLabPendingResult. Domyślny stan liczy się z badań, które mają wpisany wynik.
+      // Etap 2: bez podpiętego wpisu ten sam moduł pokazuje oczekujące wyniki wczytanego pacjenta (lista albo
+      // jeden znacznik, domyślnie nic się nie zamyka); wybór jest zakładany na nowo po zmianie pacjenta albo wpisu.
       function drawPending(rows) {
         var pendingApi = w.VildaLabPendingResult;
         var pending = pendingApi && typeof pendingApi.current === 'function' ? pendingApi.current() : null;
-        if (!pending) {
-          if (state.pendingChoice) { parts.pendingSlot.textContent = ''; state.pendingChoice = null; }
-          parts.pendingSlot.hidden = true;
-          return;
-        }
-        if (!state.pendingChoice || state.pendingChoice.pending !== pending) {
+        var pid = patientId(), current = state.pendingChoice;
+        var keys = rows.filter(function (row) { return row.status === 'ok'; }).map(function (row) { return row.analyteId; });
+        if (!current || current.pending !== pending || !pending && current.patientId !== pid) {
           parts.pendingSlot.textContent = '';
-          state.pendingChoice = pendingApi.choice(parts.pendingSlot, null, { id: 'labPkgPendingClose' });
+          state.pendingChoice = pendingApi && typeof pendingApi.choice === 'function' && (pending || pid)
+            ? pendingApi.choice(parts.pendingSlot, null, { id: 'labPkgPendingClose', scope: 'package', testKeys: keys }) : null;
         }
         parts.pendingSlot.hidden = !state.pendingChoice;
-        if (state.pendingChoice) {
-          state.pendingChoice.update(rows.filter(function (row) { return row.status === 'ok'; }).map(function (row) { return row.analyteId; }));
-        }
+        if (state.pendingChoice) state.pendingChoice.update(keys);
       }
       // Po zapisaniu wyników: zaznaczony znacznik oznacza podpięty wpis jako wykonany. Nigdy nie odrzuca —
       // wyniki są już zapisane, a stan wpisu pokazuje pasek pod tytułem karty.
@@ -2806,7 +2804,7 @@
 
     var instance = null;
     return Object.freeze({
-      version: '1.8.0',
+      version: '1.9.0',
       start: function () {
         if (instance || !win || !win.document) return instance;
         instance = create(win);
