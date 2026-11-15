@@ -31729,7 +31729,7 @@ otwarciu pacjenta i podstawa następnego zapisu — zostaje głową scalenia.
   Tak samo poprawka starej karty wchłonięta do karty scalonej, którą wcześniej usunięto na innym urządzeniu: w części
   kolejek ginie, bo chwila zapisu karty scalonej nie rośnie. Przyczyna: nagrobek scalenia nie niesie celu. Kierunki
   (do decyzji): cel scalenia w nagrobku (zmiana formatu), wnioskowanie w scalaniu, chwila zapisu karty przy przyjęciu
-  późniejszej treści. *(Aktualizacja 2026-10-20, P-ZMIANA-W-KARCIE: zmiana w karcie podnosi teraz jej chwilę zapisu (decyzja D-4 A), a odbiorca zawsze bierze późniejszą z dwóch; cel scalenia w nagrobku — bez zmian.)* Zegar urządzenia decyduje też o treści wersji pod dwiema kartami (chwila zmiany).
+  późniejszej treści. *(Aktualizacja 2026-10-20, P-ZMIANA-W-KARCIE: zmiana w karcie podnosi teraz jej chwilę zapisu (decyzja D-4 A), a odbiorca zawsze bierze późniejszą z dwóch; cel scalenia w nagrobku — bez zmian.)* Zegar urządzenia decyduje też o treści wersji pod dwiema kartami (chwila zmiany). *(Aktualizacja 2026-11-15, E3-PR0a: decyzja właściciela 9a — naprawa w osobnym PR etapu E3-PR0 (w planie E3-PR0f): wersja nieznana urządzeniu scalającemu trafia do karty scalonej i jest odsyłana, z koperty `ptomb` z kartą docelową (E2-PR3c1); zmiana reguły synchronizacji z akceptacją przy PR. Do tego czasu zasada: „Scal pacjentów” dopiero wtedy, gdy każde urządzenie było w sieci po ostatnich zmianach. W teście A ≡ B jawny wyjątek wyroczni „E1/E1b (utrata wersji nieznanej scalającemu)” — wpis P-ZBIEZNOSC-ZDARZEN, E3-PR0a, niżej.)*
 - **Poprawka bieżącego pomiaru starej karty po łańcuchu scaleń** zostaje w dawnej wersji w historii karty scalonej;
   bieżąca wersja (głowa scalenia) pokazuje wartość sprzed poprawki (123 zamiast 124 cm), a następny zapis buduje się na
   niej. Po jednym scaleniu X wraca z poprawką jako duplikat. Domknięcie (do decyzji): poprawiony wiersz w bieżącej
@@ -39873,3 +39873,293 @@ Dotąd każdy zapis otrzymywał `snapshotId`, lecz nie było trwałej tożsamoś
 Przykłady kontraktu: zapis → poprawka masy = ten sam `visitId`, nowy `snapshotId`; nowy pomiar tego samego dnia = inny `visitId`; korekta daty wizyty = ten sam `visitId`; 50 wizyt → przycięcie technicznych rewizji = zachowane wszystkie 50 pełnych stanów. Dawne grupy są oznaczone jako odtworzone z historii; nie odzyskują wcześniej usuniętych danych.
 
 Podgląd pokazuje zapisane dane, bez nowego obliczenia BMI, SDS ani kwalifikacji klinicznej. Data badania laboratoryjnego, notatka ogólna i znacznik oceny pokwitania nie stają się automatycznie identyfikatorem wizyty. Kontrakt i ograniczenia: [PATIENT_VISITS.md](../PATIENT_VISITS.md). Testy korzystają wyłącznie z syntetycznych pacjentów i wykonują produkcyjne API sejfu, retencji oraz rzeczywistą ścieżkę formularza.
+
+## Wyrocznia „nie zginęła ostatnia zmiana” i tryb ścisły w teście A ≡ B — tylko testy (P-ZBIEZNOSC-ZDARZEN, E3-PR0a, bez zmiany wersji aplikacji, 2026-11-15)
+
+**Zmiana kliniczna: NIE** — wzory, progi, jednostki, interpretacje, zapis danych pacjentów, reguły scalania, format
+kopii i synchronizacja bez zmian. Kod aplikacji, service worker i wersje plików bez zmian (SW 1.1.535); zmieniają się
+tylko testy i dokumenty. Wpływ kliniczny: brak.
+
+**Skąd.** Plan `docs/SYNC_PRZYROSTOWA_PLAN.md`, rozdział 5, „Etap 3”: E3-PR0 „zbieżność zdarzeń bez pełnej wysyłki”
+(P-ZBIEZNOSC-ZDARZEN, decyzja 11.1 z 2026-11-03) i tabela „Podział E3-PR0”. E3-PR0a to pierwszy z tych PR: przygotowuje
+pomiar celu E3-PR0 — same pojedyncze zmiany (W1) mają dawać to samo co pełna wymiana (W4). Decyzje właściciela z
+2026-11-15 (pytania 1–9, rozdział 6 planu); testy i tabela wyjątków odsyłają do nich numerem (np. „decyzja 9a”). Baza
+`28ee1c3e`, po vildaclinic/vilda-calc#958 (P-TRWALE-WIZYTY, wpis wyżej): pomiary z rozpoznania na `40d742d3` powtórzone
+na tej bazie.
+
+**Pliki** (dane wyłącznie fikcyjne, bez PESEL):
+- `tests/support/ostatnia-zmiana.mjs` (nowy) — wyrocznia: historia zapisów, model ostatniej zmiany, ocena widoku
+  urządzenia i tabela jawnych wyjątków `WYJATKI`; importują ją tylko test A ≡ B i jej własne testy;
+- `tests/unit/ostatnia-zmiana.test.mjs` (nowy) — 21 przypadków na małych syntetycznych historiach, bez sejfu: wykrycie
+  utraty treści, „Przywróć” jako zapis treści, głowa „Scal pacjentów”, retencja ostatniego stanu wizyty, zniknięcie bez
+  operacji oraz pozytyw i negatyw każdej klasy (ten sam objaw bez mechanizmu — bez klasy);
+- `tests/unit/sync-dziennik-wlasnosciowy.test.mjs` (140 przypadków) — wpięcie wyroczni, tryb ścisły, profil „dłuższa
+  praca bez połączenia”, model haka H1, dowód niewidoczności wpisu Kosza, tabela dozwolonych klas i klasy z diagnozy
+  różnic bez klasy.
+
+### Wyrocznia „nie zginęła ostatnia zmiana”
+
+**Co mierzy.** W1 i W4 porównują urządzenia między sobą, więc nie wykrywają straty symetrycznej: gdy ta sama zmiana
+zginie na obu urządzeniach, są one zgodne (wpis P-DZIENNIK-ZDARZEN, E2-PR2a). Wyrocznia porównuje każde urządzenie z
+historią zapisów lekarza: czy w karcie i w oknie Kosza widać ostatnią zmianę każdego pola.
+
+**Historia.** Każda mutacja testu dopisuje zapis: urządzenie, eksport przed i po, chwilę zegara urządzenia i wywołania
+API sejfu z argumentami (`restoreTrashedSnapshot`, `mergePatients`, `removePatient`, `moveSnapshotToTrash`,
+`pruneSnapshotsForPatient`, `updateSnapshotPayload`, `setSnapshotPinned`). W świecie samych blobów p. 5 te same
+wywołania zbiera pośrednik na metodach kroku. Z różnicy eksportu urządzenia, które zmieniało, powstają zapisy pól:
+- wizyta (`snapshotId`): treść (`payload` bez pól `_…` i bez `visit.patientId` — kartę wizyty opisuje położenie),
+  gwiazdka, położenie (karta, Kosz albo brak z przyczyną: „Usuń pacjenta”, retencja);
+- karta (`patientId`): obecność i usunięcie („Usuń pacjenta” albo źródło „Scal pacjentów” — wtedy alias karta → karta
+  docelowa z chwilą scalenia);
+- notatka pacjenta: tekst (tytuł, treść, kategoria), karta i obecność; notatka biblioteki i lista: wartość i obecność.
+
+Bez `rev`, chwil, opisu nagrobków i hasła — pól, których lekarz nie widzi.
+
+**Ostatnia zmiana.** Ostatni zapis pola według chwili logicznej (zegar urządzenia, przy remisie numer mutacji). Zapis
+urządzenia, które znało bieżącą wartość pola, jest późniejszy od niej także przy spóźnionym zegarze (chwila = późniejsza
+z dwóch: zegar albo chwila znanej wartości, jak `Bpp_chwilaZmiany` sejfu). Reguły:
+- **„Przywróć” jest zapisem treści z chwilą przywrócenia** (R4, PD-9: wpis P-PRZYWROC-Z-KARTY, „„Przywróć” =
+  najpóźniejsza zmiana (R4, PD-9)”, i P-POZNIEJSZA-POPRAWKA). Wygrywa z poprawką z innego urządzenia zrobioną po koszu,
+  której urządzenie przywracające nie znało. Wyrocznia rozpoznaje „Przywróć” po operacji (argument `snapshotId`
+  wywołania `restoreTrashedSnapshot`), nie po różnicy eksportu — inaczej przeszedłby błąd, w którym „Przywróć” nie
+  zdejmuje wpisu Kosza.
+- Kosz to zmiana w karcie: wygrywa z wcześniejszym „Usuń pacjenta” (karta wraca). „Odepnij i usuń” to zapis gwiazdki.
+- „Usuń pacjenta” jest operacją na całej karcie, także na wizytach nieznanych temu urządzeniu. Późniejsza zmiana w
+  karcie na urządzeniu, które o usunięciu nie wiedziało, wygrywa z nagrobkiem: karta wraca z tym, co to urządzenie w
+  niej ma, gdy dostaje nagrobek (hak H1 — pełna karta, ratunek notatki D-21), i z tym, co urządzenie usuwające wysłało
+  przed nagrobkiem; bez wersji i notatek, które to urządzenie samo wcześniej usunęło.
+- „Scal pacjentów” X → Y przenosi wizyty i notatki do Y; przeniesienie nie jest zmianą wizyty (nie wygrywa z koszem ani
+  z przycięciem). Wersja dopisana pod Y przez scalenie (głowa scalenia) nie jest zapisem lekarza: jej zniknięcie przy
+  tej samej treści widocznej w karcie nie jest utratą (porównanie treści, nie samego `snapshotId`; tak bywa po
+  skrzyżowanych scaleniach).
+- **Retencja (P-TRWALE-WIZYTY, `docs/PATIENT_VISITS.md`).** Retencja nie zdejmuje wizyty z przypiętym ostatnim rejestrem
+  gwiazdki ani wpisu Kosza i nie usuwa ostatniego stanu wizyty (`visitId`). Przycięcie, po którym w karcie nie zostaje
+  żadna wersja tej wizyty, jest dozwolone tylko wtedy, gdy wersja tej wizyty leży w Koszu (ręczne usunięcie zdejmuje
+  ochronę starszych wersji); inaczej urządzenie dostaje naruszenie „retencja usunęła ostatni stan wizyty” bez klasy.
+  Wersja przycięta na innym urządzeniu, która jest tu jedyną wersją swojej wizyty w karcie, zostaje i nie jest
+  wskrzeszeniem.
+- Notatka idzie za kartą, która istnieje (P-NOTATKI-ZA-KARTA).
+
+**Ocena.** Widok urządzenia: karty z eksportu, Kosz z `listTrashedSnapshots` tylko z `patientExists` (wiersze okna
+Kosza), notatki pod kartą, która istnieje. Miejsca oceny:
+- W1 — w punktach spoczynku na żywych urządzeniach, w p. 5 po samych zdarzeniach, w p. 6 po spoczynku;
+- W4 — na klonach po pełnej wymianie (punkt spoczynku, p. 6 dla dwóch i trzech urządzeń) i w p. 5 po pełnej wymianie par
+  urządzeń;
+- bloby — świat samych pełnych kopii w p. 5 i p. 6.
+
+Rodzaje naruszeń: „utrata”, „zniknięcie bez operacji”, „retencja usunęła ostatni stan wizyty”, „treść”, „gwiazdka”,
+„gwiazdka Kosza”, „obecność” (karta zamiast Kosza albo odwrotnie), „wskrzeszenie”, „także w Koszu”, „inna karta”.
+Zniknięcie wizyty bez operacji, która je tłumaczy (bez Kosza, retencji i „Usuń pacjenta”; także wersja karty źródłowej
+„Scal pacjentów”, której nie ma pod kartą docelową), nie zmienia modelu i jest zawsze naruszeniem bez klasy. Widoki są
+czytane z własnym `Math.random`, więc program ziarna i literały, które od niego zależą (`ZNANE_W1`, `ZNANE_W2R`,
+`KAT_LITERALY`, dotychczasowe wpisy `P6_LITERALY`), zostają bez zmian; zmieniają się tylko asercje klas opisane niżej
+(tabela 3.6, „notatka pod inną kartą”, `createdAtISO` notatki, D7 z `revPary`, literał P1e (b) z klasą „miejsce
+wizyty”).
+
+**Jawne wyjątki (`WYJATKI`, 15 klas).** Naruszenie dostaje klasę tylko wtedy, gdy historia ma jej mechanizm (pole
+`mechanizm`), nie z samego objawu w widoku. Każda klasa ma opis, mechanizm, źródło (wpis ALGORITHMS albo planu, test) i
+światy, w których jest dozwolona; część ma pozycję naprawy. Naruszenie bez klasy albo z klasą poza jej światem czerwieni
+test w CI (ziarna domyślne trzech profili, p. 5, p. 6).
+
+| Klasa | Mechanizm z historii | Dozwolona | Źródło; naprawa |
+|---|---|---|---|
+| E1 (obecność) | wizyta dana do Kosza na urządzeniu, które miało w karcie więcej wersji; w widoku jest jedyną wersją żywej karty | W1, W4, bloby | E1 „obecność wizyty przy dwóch koszach offline” (P-KOSZ-PO-KLUCZU); tak też Q8-obca-2 — miarą jest wynik jak po pełnej synchronizacji (decyzja 3a) |
+| E1/E1b (utrata wersji nieznanej scalającemu) | nagrobek „Scal pacjentów” na urządzeniu, w którego eksporcie przed scaleniem nie było tej wersji w karcie X | W1, W4, bloby | P-SYNC-WLASCICIEL, „Ograniczenia”, „Utrata wersji (E1/E1b)”; do naprawy w E3-PR0 (decyzja 9a; plan: E3-PR0f) |
+| E4b (stara karta po „Scal pacjentów”) | karta wizyty albo notatki w widoku ma alias scalenia | tylko W1 | P-KOSZ-PO-KLUCZU, rodzina E4b; do naprawy w E3-PR0 (decyzja 4a; plan: E3-PR0e) |
+| kosz-po-2 (stara karta z ostatnią wersją przy samych blobach) | zapis wizyty w starej karcie po scaleniu, potem jej kosz w tej karcie na urządzeniu bez wiedzy o scaleniu | bloby | P-KOSZ-PO-KLUCZU, „kosz-po-2” (domknięcie wymaga celu scalenia w nagrobku, P5) |
+| D-4 A (stara karta wraca po zapisie bez wiedzy o scaleniu) | ta wizyta albo notatka zapisana w starej karcie X po scaleniu; w widoku pod X | W1, W4, bloby | plan, D-4 (wariant A: duplikat karty do ponownego scalenia); P-KOSZ-PO-KLUCZU |
+| P5 (Kosz pod kartą usuniętą po scaleniu) | ukryty wpis Kosza (jego karta nie istnieje) wskazuje kartę z aliasem scalenia | W1, W4, bloby | P-KOSZ-PO-KLUCZU (P5: „Domknięcie wymaga celu scalenia w nagrobku”; „Wpływ kliniczny”: wizyty dane do kosza w duplikacie, który zniknął, są w Koszu, ale bez karty) |
+| P6 (notatka przy starej karcie) | notatka pod kartą z aliasem, zapisana w niej po scaleniu albo nieznana urządzeniu scalającemu | W1, W4, bloby | P-KOSZ-PO-KLUCZU („Notatki dopisane do starej karty”, P6); `tests/unit/kosz-po-kluczu-krawedzie.test.mjs` (F1) |
+| D21-9 (notatka przepięta przy równoległym „Usuń pacjenta”) | „Scal pacjentów” X → Y równolegle z „Usuń pacjenta” X na drugim urządzeniu: notatki przepięte pod Y giną | W1, W4, bloby | P-NOTATKI-ZA-KARTA, „Poza zakresem (D21-9)” |
+| notatki od nowa po „Scal pacjentów” | zapis notatki przez scalenie późniejszy niż jej edycja albo usunięcie na innym urządzeniu (wskrzeszenie albo starsza treść, nie utrata) | W1, W4, bloby | P-DZIENNIK-ZDARZEN (E2-PR2a), „Osobna sprawa: „Scal pacjentów” zapisuje notatki źródła od nowa” |
+| retencja (przycięcie bez treści) | przycięcie późniejsze niż ostatni zapis treści wizyty (nagrobek retencji nie niesie treści) | tylko W1 | P-KOSZ-PO-KLUCZU („Retencja przez duplikat w obie strony”, P2; E4b-ret) |
+| npret (przypięta wizyta przeżywa przycięcie) | przycięcie wizyty z przypiętym ostatnim rejestrem gwiazdki | tylko W1 | p. 5: npret-pin, npret-K |
+| R4a | kosz na urządzeniu, które nie znało ostatniej gwiazdki wizyty | W1, bloby | klasa R4a; p. 6 R4-a |
+| R4a′ | kosz na urządzeniu, które nie znało ostatniej treści wizyty | W1, bloby | klasa R4a′; p. 6 R4-a′ |
+| karta częściowa (nagrobek przegrał lokalnie, bez haka H1) | „Usuń pacjenta”; karta wraca zmianą urządzenia, które o usunięciu nie wiedziało i wysłało tylko swoją zmianę (u odbiorców bez haka H1) | tylko W1 | P-DZIENNIK-ZDARZEN (E2-PR3b), „Świadomie bez haka H1”; p. 6 „R5-E1, C wysyła tylko zdarzenia” |
+| R5-E1 | „Przywróć” tej wizyty przed „Usuń pacjenta”; karta wraca późniejszą zmianą trzeciego urządzenia | W1, W4, bloby | p. 6 R5-E1; naprawa w E3-PR0 |
+
+Klasa nie zależy od nazwy przebiegu: przebieg Q8-obca-2 dostaje E1 (obecność) i P5 z mechanizmu. Zawsze bez klasy:
+„zniknięcie bez operacji” i „retencja usunęła ostatni stan wizyty”.
+
+**Literały (charakterystyka dzisiejszego stanu).** `ZNANE_WYR` — liczba naruszeń na klasę i świat w ziarnach domyślnych;
+`KAT_WYR` — zbiór (klasa, świat) każdego przebiegu p. 5; `P6_WYR` — to samo dla p. 6. Nowe albo znikające naruszenie
+czerwieni test; PR naprawy przepisuje literał z uzasadnieniem. Asercje wyroczni są miękkie i idą przed literałami, więc
+komunikat CI ma oba werdykty.
+
+**Granice wyroczni.** Nie sprawdza haseł ani pól nagłówka karty. Notatki biblioteki i listy porównuje bez wyjątków.
+„Zniknięcie bez operacji” dotyczy tylko wizyt: notatka, która znika bez operacji, liczy się w modelu jako usunięta
+(przyczyna „inne”), bez naruszenia. Mechanizm E1 jest przybliżony: liczba wersji karty na urządzeniu, które dało wizytę
+do Kosza.
+
+### Dowód niewidoczności, tryb ścisły i profil „dłuższa praca bez połączenia”
+
+**Dowód niewidoczności wpisu Kosza (`dowodWpisu`).** Na świeżych klonach obu urządzeń (stały `Math.random`) wiersz okna
+Kosza tej wersji jest równy, a „Przywróć” na obu daje ten sam widoczny wynik tej wizyty (karta i Kosz w widoku
+wyroczni). Wpis karty, której nie ma, nie ma wiersza w oknie Kosza, a „Przywróć” nie jest dostępne: dowód z wynikiem
+„poza oknem”, liczony osobno. Wiersz jest w oknie, a „Przywróć” rzuca na którymkolwiek urządzeniu — brak dowodu.
+
+**Wartość `'dowód'` w tabeli dozwolonych klas** (`DOZWOLONE`; obok `'tak'` — zieleń — i `'raport'` — druk bez
+czerwieni): zieleń tylko z dowodem niewidoczności tej różnicy, bez dowodu — czerwień. W profilu podstawowym `'dowód'`
+mają D7 (dotąd niedozwolone) i R5 (dotąd `'tak'`). Tej tabeli używa też profil „dłuższa praca bez połączenia” i to w nim
+obie klasy występują (`revPary` i opis wpisu Kosza karty usuniętej na obu urządzeniach). W4 z różnicą `'dowód'` nie
+przechodzi.
+
+**Tryb ścisły** (ręczny, `E2_AB_SCISLE=1`; domyślnie wyłączony; dziś czerwony — to cel E3-PR0, nie warunek CI):
+- W1 = ∅ z jedynym wyjątkiem klas niewidocznych R2 (sam `rev` wersji), R4n (postać gwiazdki w treści wpisu Kosza) i D7
+  (opis, `koszISO`, `revPary` i `rev` nagrobka), i tylko z dowodem: widok i okno Kosza równe na obu urządzeniach, a
+  każdy różniący się wpis Kosza przechodzi `dowodWpisu` (decyzja 2a; reguła PD-17 — wpis P-KOSZ-POLKRATA: „Manifest
+  (PD-17) nie może kolejkować ponownie wersji tylko z powodu `rev`, a nagrobka — z powodu opisu, `revPary`, `koszISO`
+  ani treści”, i plan, rozdział 3.3, „Manifest”);
+- p. 5 — widok po samych zdarzeniach = widok po W4 w każdym przebiegu, także Q8-obca-2 (decyzja 3a); różnica samej listy
+  nagrobków pacjentów to osobna przyczyna („tylko nagrobki pacjentów”);
+- wyrocznia — w W1 żadnego naruszenia, którego nie ma także po W4 albo przy samych blobach tego punktu.
+
+**Profil „dłuższa praca bez połączenia”** (ręczny, `E2_AB_PROFIL=bez-polaczenia`; w planie „pomiar profilu z dłuższą
+pracą bez połączenia”). Mutacje profilu podstawowego, ale dostawa losowa w kroku z prawdopodobieństwem 0,04 zamiast 0,3,
+a punkt spoczynku po mutacji z prawdopodobieństwem 0,015 zamiast 1/25: długie serie zmian na obu urządzeniach bez
+wymiany. Zieleń jak w profilu podstawowym (bez literałów ziaren domyślnych), do tego wyrocznia, AB2 i AB7.
+
+### Model haka H1 w teście — fałszywy alarm, sejf bez zmian
+
+W profilu „dłuższa praca bez połączenia” (ziarno 104) AB7 zgłaszał niezgodność haka H1 z modelem: model oczekiwał pełnej
+karty (`pfull`), a emitery jej nie wysyłały. Winny był model testu, nie sejf. Model liczył H1 dla całej partii naraz:
+gdy stary nagrobek karty u odbiorcy niczego nie przegrał, a karta wracała późniejszymi zdarzeniami tej samej partii,
+model widział przegrany nagrobek, którego sejf słusznie nie zgłasza. Teraz model (`hakiModelu`) liczy H1 zdarzenie po
+zdarzeniu, jak H2: `setId` trafia do urządzenia, gdy karta jest u odbiorcy zaraz po zdarzeniu `ptomb`, a `pfull` jest
+oczekiwany tylko dla karty obecnej po całej partii. Nowy przypadek deterministyczny w bloku AB7 (nagrobek karty przed
+powrotem karty w tej samej partii) jest czerwony ze starym modelem i zielony z nowym. Sejf i hak H1 bez zmian; osobna
+poprawka haka nie jest potrzebna.
+
+### Tabela klas (3.6), tabela dozwolonych klas i p. 6
+
+- R3, `createdAtISO` notatki i „notatka pod inną kartą” — zero wystąpień w W1, W2r, W4 i w kolejności losowej w 40
+  ziarnach profilu podstawowego, 20 pełnego i w p. 6 (w W2s profilu pełnego „notatka pod inną kartą” raz, pod kategorią
+  „ratunek D-21”, sprawdzaną przed klasą). Te klasy nie są już dozwolone w żadnej tabeli: każde wystąpienie czerwieni
+  tam, gdzie tabela czerwieni (W1, W2r i W2s profilu pełnego tylko drukują). Predykaty klas i ich testy zostają.
+- D7 i R5 w profilu podstawowym — `'dowód'` (wyżej).
+- Klasy z diagnozy różnic bez klasy w profilu pełnym (W1 bez klasy: 0, przed diagnozą 5):
+  - „miejsce wizyty po „Scal pacjentów”” (widoczna; P1e (b)): ta sama wizyta po dwóch stronach pod różnymi kartami z tą
+    samą masą i gwiazdką — o wersji z ładunku pod inną istniejącą kartą decyduje nowszy rekord („najpierw rev”,
+    P-SYNC-WLASCICIEL); `'raport'` w W1, W2r i W2s profilu pełnego;
+  - „nagrobek karty opróżnionej” (niewidoczna): nagrobek karty tylko po jednej stronie, a karty nie ma po żadnej — karta
+    opróżniona przeniesieniem ostatniej wersji pod inną kartę znika bez nagrobka (`vilda_vault.js:3662–3663`);
+    `'raport'` w profilu pełnym i w W4 profilu pełnego (W4 bez punktu stałego zostaje czerwone);
+  - „rekord złożony po jednej stronie” (widoczna): wersja na obu stronach z tą samą chwilą zmiany i inną treścią; strona
+    z późniejszą chwilą treści ma rekord złożony (treść z jednego rekordu, gwiazdka z drugiego) i wyższą `rev`;
+    `'raport'` w profilu pełnym;
+  - predykat D7 obejmuje też `revPary`, R4a′ — różnicę `zmianaISO`, R5 — opis wpisu.
+- W2s: kategoria „ratunek D-21 przetrwałej karty” — partia niesie `pnote`, `ptomb` i `pnotetomb` z kartą; u odbiorcy
+  karta przeżywa (nowsza wersja), więc notatka idzie za kartą, która zostaje, a blob nadawcy niesie tylko nagrobek bez
+  treści. Tylko W2s; po spoczynku notatkę dowozi hak H2.
+- p. 6: warianty R5-E1 i R3-E2, w których trzecie urządzenie wysyła tylko zdarzenia (warianty z blobem zostają), i nowy
+  scenariusz na końcu listy: nagrobek retencji bez ochrony wizyt (jak od starszej aplikacji, `docs/PATIENT_VISITS.md`,
+  „Zgodność i wycofanie”) dla jedynego stanu wizyty przychodzi pełnym ładunkiem; ochrona odbiorcy zostawia wizytę, po
+  spoczynku jest na obu urządzeniach. Pozostałe scenariusze i ich ziarna bez zmian.
+
+### Wynik (dane fikcyjne; baza `28ee1c3e`; przebiegi po 3–4 naraz na 4 rdzeniach)
+
+**Domyślnie (CI).** Cały plik A ≡ B z testami wyroczni: 161/161 (140 + 21), 110,24 s i 111,49 s (cel pliku: około 180 s,
+decyzja 3 z 2026-11-03). Sama wyrocznia: zapis historii 262 ms, widoki 1821 ms, ocena 36 ms, 283 oceny.
+- Profil podstawowy (ziarna 1–8) i koalescencja (ziarna 1, 7, 8): 0 naruszeń.
+- Profil pełny: ziarno 1 — 12 naruszeń, ziarno 2 — 20 (na klasę i świat w `ZNANE_WYR`), 0 bez klasy.
+- p. 5 (`KAT_WYR`): naruszenia w 19 z 32 przebiegów, wszystkie z klasą — E4b w W1 (E4b-1 ×2); P5 w W1, W4 i blobach
+  (kosz-przed ×2, kosz-po ×2, kosz-po-2 ×2; w kosz-po-2 K←C,P←K przy blobach także kosz-po-2); npret w W1 (npret-pin
+  K←C,P←K, npret-K ×2); E1 (obecność) w W1, W4 i blobach (PRZ0-bez ×2, E1-popr-C ×2, E1-C ×2); Q8-obca-2 ×2 —
+  E1 (obecność) i P5 w W1, W4 i blobach.
+- p. 6 (`P6_WYR`): 17 scenariuszy (14 dotychczasowych, dwa warianty „C wysyła tylko zdarzenia” i nowy scenariusz
+  retencji), naruszenia w 4 (R4-a, R4-a′, R5-E1, „R5-E1, C wysyła
+  tylko zdarzenia”), 13 bez naruszeń.
+
+**Profil pełny, 20 ziaren — klasy wyroczni** (198 ocen, 434 naruszenia, 0 bez klasy):
+
+| Klasa | Ziarna (W1 / W4) | Naruszenia W1 | Naruszenia W4 |
+|---|---|---|---|
+| P5 | 11 / 11 | 86 | 124 |
+| E1/E1b | 7 / 7 | 44 | 64 |
+| D-4 A | 4 / 4 | 21 | 32 |
+| notatki od nowa po „Scal pacjentów” | 3 / 3 | 12 | 20 |
+| P6 | 2 / 2 | 14 | 16 |
+| retencja (przycięcie bez treści) | 1 / — | 1 | — |
+
+**Tryb ścisły** (ręcznie):
+- Profil podstawowy, 40 ziaren (237,6 s): czerwone 3 z 40 (ziarna 19, 22, 31) — przyczyny: W1 R4a 4 (ziarna 19, 22),
+  wyrocznia „W1 poza W4” z klasą R4a 4 (ziarna 19, 22), W1 R5 2 (ziarno 31). Bez trybu ścisłego 0 z 40. 185 punktów
+  spoczynku; W1 w 11 (R2 4, R4a 4, R4n 1, R5 2); W2r: R2 4, R4a 4, R5 2; W2s: K1 67, R2 21, ratunek D-21 18, R4a 14,
+  K1k 10, R5 8, R4n 1; W4: R4n 1. Wyrocznia: 410 ocen, 4 naruszenia (R4a w W1). Dowody: R5 „poza oknem” 12, R4n w trybie
+  ścisłym 1 (przechodzi).
+- Profil pełny, 20 ziaren (140,9 s): czerwone 4 z 20 (ziarna 3, 5, 8, 16); bez trybu ścisłego czerwone tylko ziarno 5
+  (W4, krok 165 — „Ograniczenia”, niżej). Przyczyny: W1 R5 7 (ziarna 3, 16), W1 „miejsce wizyty” 4 (ziarno 5), W1 D7 bez
+  dowodu 1 (ziarno 5; widok różny przez „miejsce wizyty”), W1 „rekord złożony” 1 (ziarno 8), wyrocznia „W1 poza W4”:
+  D-4 A 1 (ziarno 5), retencja 1 (ziarno 8). 89 punktów spoczynku; W1 w 13 (R5 5, D7 6, D7 z „miejscem wizyty” 1,
+  „rekord złożony” 1); W2r: R5 5, D7 7, „miejsce wizyty” 1, „rekord złożony” 1; W2s: R5 20, D7 15, K1 8, ratunek 5,
+  „rekord złożony” 2, „inne” 0; W4: „nagrobek karty opróżnionej” 1. AB7: 799 porównań, 799 zgodnych.
+- p. 5 (36,8 s): czerwone 14 z 32 przebiegów — tylko nagrobki pacjentów 5 (E4b ×2, E4b-ret ×2, kosz-po-2 K←C,P←K); widok
+  różny bez klasy 5 (E4b-1 ×2, npret-K ×2, npret-pin K←C,P←K); E1-katalog 4 (PRZ0-bez ×2, E1-popr-C C←P,C←K, E1-C
+  C←P,C←K); wyrocznia „W1 poza W4 i blobami”: npret 5 (w 3 przebiegach), E4b 3 (w 2).
+- p. 6: czerwone 6 z 17 — R4-a (R4a), R4-a′ (R4a′), R5-0 (R5), R5-E1 (W1 bez klasy 2: Kosz i wersja), „R5-E1, C wysyła
+  tylko zdarzenia” (W1 bez klasy 1 i „karta częściowa” ×3), nowy scenariusz retencji (W1 bez klasy 1: nagrobek bez
+  treści tylko na B). Dowód przechodzi R2-0, R4n (R4-b; „Przywróć” daje to samo) i „Kosz i Przywróć na B, porządkowanie
+  i Scal pacjentów P → Q na A” (D7, poza oknem).
+
+**Profil „dłuższa praca bez połączenia”** (40 ziaren od 101, 157,9 s): czerwone 5 z 40 (ziarna 104, 123, 128, 132, 137),
+wszystkie przez R4a′ (W1 i W2r: wpis Kosza [R4a′]; W2s „inne”: wpis Kosza [R4a′]). 91 punktów spoczynku; W1 w 19 (R2 7,
+R2 z R5 1, R5 2, R4a′ 4, R4a′ z R5 1, D7 4); W2r: R2 8, R4a′ 5, R5 4, D7 4; W2s: K1 84, ratunek D-21 14, „ratunek D-21
+przetrwałej karty” 18, R2 14, D7 8, R5 6, K1k 4, „inne” 9 (wszystkie wpis Kosza [R4a′]); W4 bez różnic. AB7: 338
+porównań, 336 zgodnych, 2 „inna kolejność”. Wyrocznia: 222 oceny, 5 naruszeń R4a′ w W1 (5 ziaren), 0 bez klasy. Dowody:
+D7 16 (przechodzą), R5 „poza oknem” 14. Z trybem ścisłym (158,7 s): czerwone 7 z 40 (ziarna 104, 113, 114, 123, 128,
+132, 137) — W1 R4a′ 5, W1 R5 4 (ziarna 104, 113, 114), wyrocznia „W1 poza W4” R4a′ 5; D7 w trybie ścisłym 4
+(przechodzą). Różnica nagrobka notatki z obserwacji E2-PR2b1 (plan, „Zakres” E3-PR0) w tych 40 ziarnach nie wystąpiła:
+W1 ma tylko R2, R5, R4a′ i D7.
+
+**Mutanty** (kopie sejfu, jedna zmiana na przebieg; cały plik A ≡ B i testy wyroczni):
+- retencja lokalna bez ochrony ostatniego stanu wizyty (plan przycięcia bez chronionych wersji wizyt): 7 czerwonych (we
+  wcześniejszej wersji tej zmiany 5; doszły ziarna 1 i 2 profilu pełnego); wyrocznia zgłasza „retencja usunęła ostatni stan
+  wizyty” — 34 w W1, 27 w W4, 42 w blobach;
+- nagrobek retencji z ładunku wygrywa zawsze, także z ostatnim stanem wizyty: 1 czerwony — nowy scenariusz p. 6 (we
+  wcześniejszej wersji tej zmiany cały plik przechodził);
+- „Scal pacjentów” gubi pierwszą wersję karty źródłowej (przenoszenie wersji od drugiej): 36 czerwonych; „zniknięcie bez
+  operacji” — 42 w W1, 50 w W4, 34 w blobach.
+
+We wcześniejszej wersji tej zmiany (145 przypadków; na wersji końcowej nie powtarzano) czerwieniły też: odwrócona chwila treści przy scalaniu tej samej wersji
+(36), odwrócona reguła późniejszej poprawki (11), urządzenie scalające nie przyjmuje późniejszej poprawki ani gwiazdki
+ze starej karty (7), „Przywróć” nie zdejmuje wpisu Kosza (11), „Przywróć” z dawną chwilą treści z wpisu Kosza (18) i ze
+stemplem wcześniejszym niż usunięcie przy spóźnionym zegarze (2), hak H1 bez pełnej karty (32), hak H1 także dla karty,
+której nagrobek wygrał (1).
+
+### Jak uruchomić
+
+- CI: `npx vitest run tests/unit/sync-dziennik-wlasnosciowy.test.mjs tests/unit/ostatnia-zmiana.test.mjs` — ziarna
+  domyślne: profil podstawowy 8, pełny 2, koalescencja 1, 7 i 8.
+- Długie przebiegi (decyzja 7a: ręcznie przy PR odbioru, wynik w opisie PR): `E2_AB_ZIARNA=40` z filtrem
+  `-t 'właściwość: profil podstawowy'` i `E2_AB_ZIARNA=20` z filtrem `-t 'właściwość: profil pełny'` (ta sama zmienna
+  liczy ziarna obu profili); `E2_AB_START` — pierwsze ziarno (domyślnie 1), `E2_AB_KROKI` — liczba mutacji na ziarno
+  (domyślnie 60–120 z ziarna), `E2_AB_ZIARNA_KOAL` — ziarna koalescencji, `E2_AB_KOAL=ogon` — profil pełny z
+  koalescencją.
+- Tryb ścisły: `E2_AB_SCISLE=1`.
+- Profil „dłuższa praca bez połączenia”: `E2_AB_PROFIL=bez-polaczenia` (pomiar wyżej:
+  `E2_AB_ZIARNA=40 E2_AB_START=101`).
+- Pliki JSONL: `E2_AB_WYROCZNIA` — naruszenia wyroczni (punkty z naruszeniami, podsumowania ziaren i czas);
+  `E2_AB_WYNIKI` — wynik ziarna; `E2_AB_P5`, `E2_AB_P6` — wyniki bloków p. 5 i p. 6. Czas wyroczni drukuje `afterAll`
+  („E2-AB wyrocznia, czas (ms)”).
+
+**Ograniczenia i sprawy otwarte.**
+- **Profil pełny, ziarno 5, krok 165: W4 bez punktu stałego.** Różnica ma klasę „nagrobek karty opróżnionej” (nagrobek
+  karty tylko na B), ale warunek punktu stałego W4 dalej czerwieni. Według diagnozy to dawna wada (odtworzona też na
+  `40d742d3` oraz na `28ee1c3e` z testem sprzed E3-PR0a: W4, krok 165), więc nie jest skutkiem tego PR ani
+  vildaclinic/vilda-calc#958. Do wyboru: zmiana aplikacji (karta, która w fazie przeniesień traci ostatnią wersję,
+  `vilda_vault.js:3662–3663`, przyjmuje nagrobek z ładunku tego scalania) albo decyzja właściciela (druga wymiana W4 dozwolona, gdy zmienia wyłącznie nagrobki kart
+  nieobecnych na obu urządzeniach). Ziarno jest poza CI.
+- **R4a′ w profilu „dłuższa praca bez połączenia”** (ziarna 104, 123, 128, 132, 137): różnica widoczna — Kosz ma starszą
+  treść niż późniejsza poprawka; profil ręczny zostaje czerwony. Naprawa w E3-PR0 (odsyłanie wpisów Kosza: pochodny wpis
+  Kosza do kolejki albo pełna karta z haka H1 razem z wpisami Kosza).
+- **Do decyzji właściciela przy kolejnych PR E3-PR0:** czy różnicę „tylko nagrobki pacjentów” (p. 5, 5 przebiegów w
+  trybie ścisłym) dopuścić jak R2, R4n i D7; czy R5 ma należeć do klas niewidocznych trybu ścisłego (dziś R5 czerwieni
+  W1 w trybie ścisłym: profil podstawowy ziarno 31, pełny 3 i 16, „dłuższa praca bez połączenia” 104, 113 i 114; dowód
+  „poza oknem” przechodzi); nowy scenariusz retencji p. 6 zostawia po samych zdarzeniach nagrobek retencji bez treści
+  tylko na B (przyszedł pełnym ładunkiem, nie z dziennika) — niewidoczny, ale w trybie ścisłym W1 jest bez klasy.
+- E1/E1b (utrata wersji nieznanej urządzeniu scalającemu) — jawny wyjątek do naprawy w E3-PR0 (decyzja 9a, wpis
+  P-SYNC-WLASCICIEL, „Ograniczenia”); do tego czasu zasada: „Scal pacjentów” dopiero wtedy, gdy każde urządzenie było w
+  sieci po ostatnich zmianach.
+
+**Cofnięcie.** Rewert PR (tylko testy i dokumenty; bez migracji i bez wpływu na aplikację).
