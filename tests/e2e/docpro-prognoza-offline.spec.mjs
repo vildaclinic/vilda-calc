@@ -7,6 +7,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { expect, test } from '@playwright/test';
 import { createFictionalVault, fictionalPatient, fixturePreferences, loadPatient, readyForPatient } from '../support/centile-live-fixture.mjs';
+import { captureColdUpgradeRecords, assertLegacyVisitUpgrade } from '../support/cold-upgrade-record-proof.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const BASE = 'e6d91d2e7401f6ca16c29971d6aebb99ac331aa2';
@@ -112,7 +113,7 @@ test('DocPro keeps Start forecast after a real PWA upgrade, cold offline restart
     expect(before.row).toContain('183,7');
     proof.observations.push({ label: 'base Start', ...before });
     const ids = [...Object.values(fixture.ids), id];
-    const beforeRecords = await records(page, ids);
+    const beforeUpgrade = await captureColdUpgradeRecords(page, ids);
     await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller), null, { timeout: 120_000 });
     await expect.poll(() => page.evaluate(() => caches.keys())).toContain('pwa-kalorii-shell-v' + site.previousVersion);
     site.promote();
@@ -123,6 +124,14 @@ test('DocPro keeps Start forecast after a real PWA upgrade, cold offline restart
     await settled(page);
     await expect.poll(() => page.evaluate(() => caches.keys())).toContain('pwa-kalorii-shell-v' + site.currentVersion);
     await expect.poll(() => page.evaluate(() => caches.keys())).not.toContain('pwa-kalorii-shell-v' + site.previousVersion);
+    const afterUpgrade = await captureColdUpgradeRecords(page, ids);
+    assertLegacyVisitUpgrade(beforeUpgrade, afterUpgrade);
+    const beforeRecords = afterUpgrade.records;
+    proof.legacyFullRecordFingerprint = beforeUpgrade.fingerprint;
+    proof.beforeRawVaultFingerprint = beforeUpgrade.rawClinicalFingerprint;
+    proof.upgradedRawVaultFingerprint = afterUpgrade.rawClinicalFingerprint;
+    proof.allowedRawMigration = 'meta/singleton.clinicalScrubDoneV1: absent → true';
+    proof.upgradedFullRecordFingerprint = afterUpgrade.fingerprint;
     expect(await records(page, ids)).toEqual(beforeRecords);
     await page.evaluate(() => window.VildaVault.lock('manual'));
     await context.close(); context = null;
@@ -174,6 +183,10 @@ test('DocPro keeps Start forecast after a real PWA upgrade, cold offline restart
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
     await expect(page.locator('#currentSummaryContent .professional-summary-main [data-summary-key="prediction"]')).toContainText('183,7');
     expect(await records(page, ids)).toEqual(beforeRecords);
+    const afterColdRestart = await captureColdUpgradeRecords(page, ids);
+    expect(afterColdRestart.rawClinicalStorage, 'cold offline reload preserves every encrypted record and primary key')
+      .toEqual(afterUpgrade.rawClinicalStorage);
+    expect(afterColdRestart.fingerprint).toBe(afterUpgrade.fingerprint);
     proof.coldRestart = true; proof.originStopped = true; proof.recordsUnchanged = true;
   } finally {
     await info.attach('docpro-forecast-pwa-proof', { body: JSON.stringify(proof, null, 2), contentType: 'application/json' });
