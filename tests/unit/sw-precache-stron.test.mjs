@@ -356,7 +356,13 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
     expect(pobrane.filter(adres => MODULY_WORKSPACE.has(adres))).toEqual([]);
     expect(pobrane.filter(adres => adres === PAKIET_WIZYT)).toHaveLength(1);
     expect(pobrane.filter(adres => ZASOBY_WIZYT.has(adres))).toEqual([]);
-    expect(ZASOBY_WIZYT.size).toBe(3);
+    // Two new home UI files join the existing verified transport. Their own
+    // cache keys remain required; the single archive keeps the 600-request cap.
+    expect(ZASOBY_WIZYT.size).toBe(5);
+    for (const resource of ['/vilda_home_workspace.js?v=1', '/vilda_home_workspace.css?v=1']) {
+      expect(ZASOBY_WIZYT.has(resource)).toBe(true);
+      expect(wpisy.has(resource)).toBe(true);
+    }
     expect(MANIFEST_WORKSPACE.files).toHaveLength(51);
     // The visit-identity codec adds one immutable family. All previous module
     // URLs remain available to clients holding their historical resources.

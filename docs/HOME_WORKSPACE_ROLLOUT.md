@@ -76,3 +76,9 @@ Końcowy PR musi także jawnie włączyć docelowy interfejs w zwykłym wejściu
 aplikacji i sprawdzić ten wariant bez demonstracyjnego bootstrapu. Samo
 scalenie modułu opt-in nie zmienia domyślnego widoku. Eksporter, fikcyjne
 konto i blokada usług są wyłącznie narzędziami podglądu.
+
+Nowy JS i CSS strony głównej korzystają z istniejącego, sprawdzanego po SHA
+pakietu transportowego UI wizyt. Pakiet zawiera pięć zasobów zamiast trzech;
+każdy nadal ma własny wersjonowany adres i niezmienioną treść w pamięci offline.
+Historyczny pakiet pozostaje dostępny. Pozwala to zachować dotychczasowy limit
+600 żądań podczas instalacji PWA, bez usuwania zasobów ani rozluźniania testów.
