@@ -1915,6 +1915,7 @@ z ograniczeniem polityki.
 3. **Pakiet bez LH, FSH i testosteronu** nie ma wiersza stadium (PR6), więc
    nie ma też pytania: norma katalogu według Tannera bierze stadium z karty
    jak dotąd, także przy dawnej próbce.
+   *Zmienione w PR8 (wpis niżej): taki pakiet ma wiersz stadium i pytanie.*
 4. **Stadium bez osi G/Th** (stary, nietypowany numer Tannera) nie jest
    przedmiotem pytania; do oceny wyniku nie wchodzi, jak dotąd.
 5. **Komunikat silnika „potrzebna jest ocena Th/M lub G”** nie jest
@@ -1943,6 +1944,76 @@ w tym wieku dziś; liczenie wieku z dat),
 (telefon), `lab-pakiet-dzien-pobrania-powloka.spec.mjs` (powłoka `app.html`:
 potwierdzenie i zmiana stadium nie zmieniają oceny dzisiejszej wizyty),
 `lab-pakiet-pokwitanie.spec.mjs` (pacjent bez daty urodzenia — zasada z PR6).
+
+### LAB-PAKIETY PR8 — stadium w pakiecie, w którym dobiera ono tylko normy katalogu (`vilda_lab_packages.js` 1.7.0, 2026-11-14)
+
+**Klasyfikacja: zmiana kliniczna.** Zmienia się to, które stadium dobiera
+normę katalogu w pakiecie bez LH, FSH i testosteronu całkowitego: lekarz
+może je poprawić dla danego sprawdzenia, a przy dawnej próbce stadium
+z karty wymaga potwierdzenia zamiast wchodzić po cichu. **Nie ma nowych
+norm, progów, współczynników, jednostek ani reguł doboru zakresu** — zakres
+dobiera ten sam katalog (`LabUnitConverter.selectRange`). Decyzja właściciela
+2026-11-14 („ok, zgadzam się, koduj” na propozycję: wiersz stadium i pytanie
+w każdym pakiecie, który ma badanie z normą według Tannera; bez osobnej
+makiety — wygląd z PR6 i PR7). Akceptacja kliniczna wdrożenia: właściciel,
+przy przeglądzie PR.
+
+**Po co.** Jedenaście badań katalogu ma zakresy według Tannera:
+17-OH-pregnenolon, pregnenolon, DHEA-S, androstendion, wolny testosteron,
+DHT, estradiol, estron, IGF-1, IGFBP-3 i SHBG (LH i FSH pakiet ocenia
+silnikiem pokwitaniowym). Wiersz stadium pojawiał się tylko w pakiecie
+z LH, FSH albo testosteronem całkowitym (PR6). Pakiet typu „Wzrost” (IGF-1,
+IGFBP-3, TSH) albo „Androgeny” brał stadium z karty bez możliwości korekty,
+a przy dacie pobrania wcześniejszej niż dziś — dzisiejsze stadium bez
+pytania (ograniczenie 3 z PR7).
+
+**Jak to działa.** Gdy żadne badanie pokwitaniowe pakietu nie daje wiersza
+stadium, strona sprawdza, czy któremuś badaniu z normą katalogu stadium
+dobrałoby temu pacjentowi inny zakres niż sam wiek (`packageTannerAnalytes`:
+istniejące `tannerMattersForPatient`, pytane dla pacjenta bez stadium).
+Jeżeli tak, wiersz stadium, jego edytor i pytanie o dzień pobrania niesie ta
+sama niewidoczna instancja formularza ustawiona na LH
+(`PACKAGE_STAGE_CARRIER`) — **wyłącznie jako nośnik oceny pokwitania**: LH
+nie jest w takim pakiecie oceniane, pokazywane ani zapisywane, a wyniki nie
+dostają koperty oceny pokwitaniowej. Dalej obowiązują te same reguły co
+w pakiecie z LH:
+
+- **pobranie dziś:** stadium z karty dobiera normę jak dotąd; „Zmień ocenę”
+  to lokalna korekta dla tego sprawdzenia (w powłoce z otwartą wizytą —
+  wspólna ocena wizyty, jak w PR6);
+- **dawna próbka:** stadium z innego dnia wymaga jednego potwierdzenia
+  („Tak, Th2”); do odpowiedzi badanie dostaje normę bez stadium, a „Norma
+  dla Tanner II” czeka w karcie wyniku; stadium ocenione w dniu pobrania
+  albo wpisane w pakiecie obowiązuje bez pytania (PR7);
+- **notka** w kroku „Pacjent” nazywa badania, którym stadium dobiera normę
+  („Stadium dobiera normę według Tannera: IGF-1, IGFBP-3.”).
+
+Wiersza stadium nie ma, gdy stadium niczego nie zmienia (pakiet
+„Tarczyca”) albo gdy formularz go nie pokazuje (dorosły, noworodek).
+
+**Przypadki `wejście → oczekiwany wynik`** (fikcyjni pacjenci; wartości
+z katalogu, bez zmian):
+
+| Pacjent | Wynik | Bez stadium | Tanner II | Tanner III |
+|---|---|---|---|---|
+| dziewczynka 10 l 1 m | IGF-1 65 nmol/L | w zakresie normy „Dziewczynki pubertalne (9–14 lat…)” 15,5–76,8 | powyżej normy 15,5–59,1 | w zakresie normy 33,8–69,3 |
+| jw. | IGFBP-3 4 mg/L | zakres ogólny dorosłych 2,6–8,6 — bez oceny dla dziecka | w zakresie normy 2–5,8 | w zakresie normy 2,5–7,5 |
+| chłopiec 12 l 3 m | androstendion 2 nmol/L | w zakresie normy „Chłopcy pubertalni (9–14 lat…)” 1,08–4,89 | w zakresie normy 1,08–2,27 | w zakresie normy 1,74–3,49 |
+| dziewczynka 10 l 1 m | TSH 2,1 mIU/L | „Dzieci 6–10 lat” 0,6–4,8 — stadium nie zmienia normy | jw. | jw. |
+
+**Ograniczenia.** (1) Przy pobraniu dziś norma katalogu bierze z karty także
+wcześniejszą ocenę stadium (reguła katalogu sprzed pakietów, „Th II —
+wcześniejsza ocena”), a wiersz stadium nazywa ją wcześniejszą; pytanie
+o potwierdzenie dotyczy tylko dawnej próbki. (2) U dorosłego formularz nie
+pokazuje stadium, więc wiersza nie ma — także gdy katalog użyłby wpisanego
+stadium. (3) Estradiol u dorosłej kobiety nadal wymaga pojedynczego badania.
+
+Testy: `tests/unit/lab-pakiety-stadium-katalog.test.mjs` (przypadki
+z katalogu, lista badań z normą według Tannera, kontrakt strony),
+e2e `tests/e2e/lab-pakiet-stadium-katalog.spec.mjs` (wiersz i notka; korekta
+stadium zmienia normę; dawna próbka: pytanie, stan oczekiwania, zapis normy;
+bez stadium w karcie; pakiety bez wiersza; LH — nośnik — nie jest oceniane
+ani zapisywane), `lab-pakiet-stadium-katalog-mobile.spec.mjs` (telefon).
 
 ### P-LAB-WARTOSC-BEZ-JEDNOSTKI — liczba ze starszego wpisu wyniku bez jednostki (SW 1.1.279, `vilda_vault.js` 212, 2026-10-14)
 
