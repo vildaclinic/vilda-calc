@@ -117,7 +117,10 @@ test('zablokowane pole tożsamości nie otwiera podpowiedzi pacjenta; wolne pole
 
   // Kontrola pozytywna: po wyczyszczeniu pola są wolne i podpowiedź działa — także w karcie.
   await page.evaluate(() => window.clearAllData());
-  await page.waitForTimeout(800);
+  // Pomiar wpisujemy po natywnej pauzie Clear/restore. Wpisy podczas tej pauzy
+  // mogą dostać visitId dopiero przy wyborze podpowiedzi i unieważnić otwarty strażnik.
+  await expect.poll(() => page.evaluate(() => window.VildaPersistence.isAutosaveSuppressed()),
+    { message: 'zakończyła się pauza autosave po wyczyszczeniu' }).toBe(false);
   expect((await stan(page)).lastNameRo).toBe(false);
   // Bez danych wizyty sekcja wyników (a z nią karta zaawansowana) jest zwinięta — dajemy same liczby, bez nazwiska.
   await wpisz(page, { sex: 'F', age: '9', ageMonths: '2', weight: '30', height: '134' });
@@ -180,7 +183,8 @@ test('docpro.html: to samo zachowanie na drugiej stronie, z kontrolą pozytywną
 
   // Kontrola pozytywna na tej stronie: po wyczyszczeniu podpowiedź działa.
   await page.evaluate(() => window.clearAllData());
-  await page.waitForTimeout(800);
+  await expect.poll(() => page.evaluate(() => window.VildaPersistence.isAutosaveSuppressed()),
+    { message: 'zakończyła się pauza autosave po wyczyszczeniu' }).toBe(false);
   expect((await stan(page)).lastNameRo).toBe(false);
   await page.locator('#lastName').click();
   await page.keyboard.type('Fik');
