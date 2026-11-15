@@ -152,8 +152,9 @@ function RrPinRange(result, host) {
  * „Badania”. Okno przypięcia dostaje znacznik „Zamknij oczekujący wynik” (nad datą badania), a po zapisaniu
  * wyniku zaznaczony znacznik oznacza wpis jako wykonany (wywołanie commit w funkcji zapisu A, zaraz po
  * savePatientNote; błąd zamknięcia nie cofa zapisanego wyniku). Wpis, znacznik i zamknięcie należą do
- * VildaLabPendingResult (drugi moduł tego pliku); bez podpiętego wpisu okno jest jak dotąd.
- * Zapis samego wyniku się nie zmienia. */
+ * VildaLabPendingResult (drugi moduł tego pliku). Etap 2: bez podpiętego wpisu ten sam moduł pokazuje w tym miejscu
+ * oczekujące wyniki pacjenta (znacznik przy jednym, lista przy kilku; domyślnie nic się nie zamyka), a pacjent
+ * bez oczekujących wyników widzi okno jak dotąd. Zapis samego wyniku się nie zmienia. */
 function OwPinChoice(result, host) {
   var pending = a.VildaLabPendingResult;
   if (!pending || typeof pending.choice !== 'function') return null;
@@ -231,9 +232,18 @@ var s=null;function g(){s&&(s.remove(),s=null)}function Lh2SampleDate(t){var e=t
  *   start()                           wiąże pasek i zdarzenia strony (samo, po załadowaniu skryptu)
  *   current()                         podpięty wpis albo null
  *   attach(noteId) → Promise          podpina wpis po sprawdzeniu w sejfie; detach() odpina
- *   choice(host, before, options)     rysuje znacznik; zwraca { pending, element, checked(), update(keys) } albo null
- *   commit(choice, vault) → Promise   po zapisie wyniku: zaznaczony znacznik zamyka wpis; nigdy nie odrzuca
+ *   choice(host, before, options)     rysuje znacznik podpiętego wpisu: { pending, element, checked(), update(keys) };
+ *                                     bez podpiętego wpisu (etap 2) — wybór z listy oczekujących wyników pacjenta:
+ *                                     { list: true, patientId, element, checked(), selected(), update(keys) }; albo null
+ *   listDefault(items, testKeys)      wpis, który lista zaznacza sama (dokładnie jeden z badaniem z zapisywanych), albo null
+ *   listVisible(items, selected)      wpisy widoczne od razu: trzy z najbliższym terminem, zaznaczony zawsze wśród nich
+ *   commit(choice, vault) → Promise   po zapisie wyniku: zaznaczony znacznik albo wybrany wpis listy zamyka wpis; nigdy nie odrzuca
  * Zmianę stanu ogłasza zdarzenie dokumentu „vilda:lab-pending-result-changed”.
+ *
+ * Etap 2 (decyzja właściciela 2026-11-15, makieta https://claude.ai/artifact/DSmqMe6YuCyj2VuJoBHraQ): wynik wpisany
+ * bez wejścia z „Badań” też może zamknąć oczekujący wynik. Okno przypięcia i pakiet pokazują wtedy oczekujące wyniki
+ * pacjenta; domyślnie nic się nie zamyka. Jeden wpis to znacznik (odznaczony), kilka — lista z „Nie zamykaj żadnego”.
+ * Aplikacja zaznacza wpis sama tylko wtedy, gdy dokładnie jeden ma badanie z listy przelicznika równe zapisywanemu.
  *
  * Opis: docs/clinical/ALGORITHMS.md, „P-OCZEKUJACE-WYNIKI”; docs/LAB_HISTORIA_WYNIKOW_PLAN.md, decyzja 6.35.
  */
@@ -243,12 +253,16 @@ var s=null;function g(){s&&(s.remove(),s=null)}function Lh2SampleDate(t){var e=t
   var PARAM = 'oczekujacy';
   var EVENT = 'vilda:lab-pending-result-changed';
   var VAULT_WAIT_MS = 5000;
+  var LIST_VISIBLE = 3;
   var TEXT = {
     attached: 'Po przypięciu wyniku ten wpis zostanie oznaczony jako wykonany: zniknie z oczekujących i przestanie wracać w Przypomnieniach.',
     detach: 'Odłącz',
     choice: 'Zamknij oczekujący wynik: ',
     choiceOn: 'Wynik zapisze się w Badaniach jak każdy przypięty wynik, a oczekujący wynik zostanie oznaczony jako wykonany: zniknie z oczekujących i przestanie wracać w Przypomnieniach. Odznacz, żeby dalej czekał.',
     choiceOff: 'Oczekujący wynik zostanie otwarty i dalej będzie wracać w Przypomnieniach.',
+    none: 'Nie zamykaj żadnego',
+    listDefault: 'Domyślnie nic się nie zamyka: nazwy wpisów są wpisane odręcznie, więc aplikacja nie zgaduje, którego badania dotyczą.',
+    more: 'Pokaż pozostałe',
     unavailable: 'Ten oczekujący wynik jest już zamknięty albo nie należy do wczytanego pacjenta.',
     undo: 'Cofnij zamknięcie',
     open: 'Otwórz Badania →',
@@ -277,9 +291,32 @@ var s=null;function g(){s&&(s.remove(),s=null)}function Lh2SampleDate(t){var e=t
     return { checked: !mismatch, mismatch: mismatch };
   }
 
+  // Etap 2: wpis, który lista zaznacza sama. Tylko wtedy, gdy dokładnie jeden oczekujący wynik ma badanie z listy
+  // przelicznika (seriesKey) i jest ono wśród zapisywanych wyników. Nazwy wpisanej odręcznie aplikacja nie
+  // dopasowuje, a przy dwóch pasujących wpisach nie rozstrzyga, który zamknąć.
+  function listDefault(items, testKeys) {
+    var keys = (Array.isArray(testKeys) ? testKeys : []).filter(Boolean);
+    var matches = (Array.isArray(items) ? items : []).filter(function (item) {
+      return !!item && !!item.seriesKey && keys.indexOf(item.seriesKey) !== -1;
+    });
+    return matches.length === 1 ? matches[0] : null;
+  }
+  // Etap 2: wpisy widoczne od razu. Lista przychodzi od najbliższego terminu; ponad trzy wpisy chowają się za
+  // „Pokaż pozostałe”, ale wpis zaznaczony jest widoczny zawsze (zajmuje wtedy trzecie miejsce).
+  function listVisible(items, selected) {
+    var list = Array.isArray(items) ? items : [];
+    if (list.length <= LIST_VISIBLE) return list.slice();
+    var visible = list.slice(0, LIST_VISIBLE);
+    if (selected && list.indexOf(selected) !== -1 && visible.indexOf(selected) === -1) visible[LIST_VISIBLE - 1] = selected;
+    return list.filter(function (item) { return visible.indexOf(item) !== -1; });
+  }
+
   function create(win) {
     var doc = win.document;
     var state = { pending: null, notice: null, request: 0, wanted: null };
+    // Etap 2: numer stanu listy oczekujących wyników. Rośnie, gdy lista mogła się zmienić (zapis notatki w sejfie,
+    // zmiana pacjenta, zamknięcie albo cofnięcie tutaj); wybór z listy czyta ją wtedy ponownie.
+    var revision = 0, watched = [];
     var strip = null, started = false;
 
     function node(tag, className, content) {
@@ -333,6 +370,41 @@ var s=null;function g(){s&&(s.remove(),s=null)}function Lh2SampleDate(t){var e=t
     }
     function announce() {
       try { doc.dispatchEvent(new win.CustomEvent(EVENT, { detail: { attached: !!state.pending } })); } catch (_) { /* brak CustomEvent */ }
+    }
+    // „Pacjentka” tylko przy płci żeńskiej z formularza; bez płci zostaje forma ogólna, jak w reszcie aplikacji.
+    function patientNoun() {
+      try {
+        var session = win.VildaSession, patient = session && typeof session.getPatient === 'function' ? session.getPatient() : null;
+        return patient && String(patient.sex || '').toUpperCase() === 'F' ? 'Pacjentka' : 'Pacjent';
+      } catch (_) { return 'Pacjent'; }
+    }
+    // Zapis notatki pacjenta (tu, w innej karcie, po synchronizacji) może zmienić listę oczekujących wyników.
+    // Sejf nie ma wypisania z nasłuchu: jeden nasłuch na sejf.
+    function watch(vault) {
+      if (!vault || watched.indexOf(vault) !== -1 || typeof vault.onPatientNoteChanged !== 'function') return;
+      watched.push(vault);
+      try {
+        vault.onPatientNoteChanged(function (event) {
+          if (event && event.patientId && event.patientId !== patientId()) return;
+          revision++;
+          announce();
+        });
+      } catch (_) { /* bez nasłuchu lista odświeża się przy otwarciu okna i po zdarzeniach strony */ }
+    }
+    // Oczekujące wyniki pacjenta w kolejności „Badań” (od najbliższego terminu). Bez odblokowanego sejfu, bez
+    // modelu albo przy błędzie odczytu lista jest pusta — okno i pakiet wyglądają wtedy jak bez oczekujących.
+    function listPending(pid) {
+      var vault = win.VildaVault, history = model(), ready;
+      try {
+        ready = !!vault && typeof vault.listPatientNotesForPatient === 'function' && typeof vault.isUnlocked === 'function' && vault.isUnlocked();
+      } catch (_) { ready = false; }
+      if (!ready || !history || typeof history.pendingItems !== 'function') return Promise.resolve([]);
+      watch(vault);
+      return Promise.resolve().then(function () { return vault.listPatientNotesForPatient(pid); }).then(function (notes) {
+        return history.pendingItems(notes, converter(), { patientId: pid }).map(function (item) {
+          return { noteId: item.noteId, title: item.title, dueDateISO: item.dueDateISO, seriesKey: item.seriesKey, patientId: pid };
+        });
+      }).catch(function () { return []; });
     }
 
     // Sejf załadowany i odblokowany: zaraz po otwarciu strony skrypt sejfu już bywa, a sesja jeszcze wraca.
@@ -458,6 +530,7 @@ var s=null;function g(){s&&(s.remove(),s=null)}function Lh2SampleDate(t){var e=t
     // Wpis i komunikat należą do pacjenta, dla którego powstały: po zmianie pacjenta znikają.
     function patientChanged() {
       var pid = patientId(), stale = false;
+      revision++;
       if (state.pending && state.pending.patientId !== pid) { state.request++; state.pending = null; stale = true; }
       if (state.notice && (!state.notice.pending || state.notice.pending.patientId !== pid)) { state.notice = null; stale = true; }
       if (stale) changed();
@@ -465,9 +538,11 @@ var s=null;function g(){s&&(s.remove(),s=null)}function Lh2SampleDate(t){var e=t
     }
 
     function choice(host, before, options) {
+      if (!host) return null;
+      return state.pending ? attachedChoice(host, before, options || {}) : listChoice(host, before, options || {});
+    }
+    function attachedChoice(host, before, options) {
       var pending = state.pending;
-      if (!pending || !host) return null;
-      options = options || {};
       var box = node('div', 'lab-pending-choice');
       var label = add(box, 'label', 'lab-pending-choice-label');
       var input = add(label, 'input', 'lab-pending-choice-input');
@@ -501,11 +576,149 @@ var s=null;function g(){s&&(s.remove(),s=null)}function Lh2SampleDate(t){var e=t
       return { pending: pending, element: box, checked: function () { return !!input.checked; }, update: update };
     }
 
+    // Etap 2: wynik wpisany bez wejścia z „Badań”. Lista jest czytana z sejfu przy otwarciu (w pakiecie także po
+    // zmianie notatek), więc wybór zwraca się od razu, a blok pojawia się, gdy pacjent ma oczekujące wyniki.
+    // Własny wybór lekarza zostaje przy ponownym odczycie, dopóki wybrany wpis nadal czeka.
+    function listChoice(host, before, options) {
+      var pid = patientId();
+      if (!pid) return null;
+      var id = options.id || 'labPendingClose', inPackage = options.scope === 'package';
+      var keys = options.testKeys, items = [], selected = null, auto = null, touched = false, expanded = false;
+      var box = null, help = null, loaded = -1, ticket = 0;
+
+      function name(item) { return item.title || 'Zlecone badanie'; }
+      function caption(parent, lead, item) {
+        var span = add(parent, 'span', 'lab-pending-choice-text', lead + name(item));
+        if (item.dueDateISO) add(span, 'span', 'lab-pending-muted', ' · termin ' + formatDate(item.dueDateISO));
+      }
+      function helpText() {
+        var single = items.length === 1;
+        if (!selected) {
+          return single ? patientNoun() + ' ma oczekujący wynik. Zaznacz, jeśli ' + (inPackage ? 'te wyniki go dotyczą.' : 'ten wynik go dotyczy.')
+            : TEXT.listDefault;
+        }
+        if (selected === auto && !touched) {
+          return 'Zaznaczono, bo ten wpis dotyczy ' + (testName(selected.seriesKey) || 'zapisywanego badania') + '. '
+            + (single ? 'Odznacz' : 'Zmień') + ', jeśli to inny wynik.';
+        }
+        var quote = '„' + name(selected) + '”';
+        if (inPackage) return 'Po zapisaniu wyników ' + quote + ' zostanie oznaczony jako wykonany. Zamyka się dopiero, gdy zapiszą się wszystkie wpisane wyniki.';
+        return 'Po zapisie ' + quote + ' zostanie oznaczony jako wykonany: zniknie z oczekujących i przestanie wracać w Przypomnieniach.'
+          + (single ? '' : ' Pozostałe wpisy dalej czekają.');
+      }
+      function paint() {
+        if (!box) return;
+        Array.prototype.forEach.call(box.querySelectorAll('.lab-pending-list-option'), function (label) {
+          var input = label.querySelector('input');
+          label.classList.toggle('is-selected', !!input && input.checked);
+        });
+        if (help) help.textContent = helpText();
+      }
+      function option(item) {
+        var label = add(box, 'label', 'lab-pending-choice-label lab-pending-list-option');
+        var input = add(label, 'input', 'lab-pending-choice-input');
+        input.type = 'radio';
+        input.name = id + 'Option';
+        input.value = item ? item.noteId : '';
+        input.checked = selected === item;
+        if (item) caption(label, '', item); else add(label, 'span', 'lab-pending-choice-text', TEXT.none);
+        input.addEventListener('change', function () {
+          if (!input.checked) return;
+          touched = true;
+          selected = item;
+          paint();
+        });
+      }
+      function render(focusNoteId) {
+        if (box && box.parentNode) box.parentNode.removeChild(box);
+        box = help = controller.element = null;
+        if (!items.length || host.isConnected === false) return;
+        if (items.length === 1) {
+          box = node('div', 'lab-pending-choice lab-pending-offer');
+          var label = add(box, 'label', 'lab-pending-choice-label');
+          var input = add(label, 'input', 'lab-pending-choice-input');
+          input.type = 'checkbox';
+          input.id = id;
+          input.checked = !!selected;
+          input.setAttribute('aria-describedby', id + 'Help');
+          caption(label, TEXT.choice, items[0]);
+          input.addEventListener('change', function () {
+            touched = true;
+            selected = input.checked ? items[0] : null;
+            paint();
+          });
+        } else {
+          // Grupa opcji bez <fieldset>: style strony nadają mu wygląd karty, a <legend> nachodzi na pierwszą opcję.
+          box = node('div', 'lab-pending-choice lab-pending-list');
+          box.id = id;
+          box.setAttribute('role', 'radiogroup');
+          box.setAttribute('aria-labelledby', id + 'Legend');
+          box.setAttribute('aria-describedby', id + 'Help');
+          add(box, 'span', 'lab-pending-list-legend', patientNoun() + ' ma oczekujące wyniki. Zamknąć któryś '
+            + (inPackage ? 'tym pakietem?' : 'tym wynikiem?')).id = id + 'Legend';
+          var shown = expanded ? items : listVisible(items, selected);
+          option(null);
+          shown.forEach(option);
+          if (shown.length < items.length) {
+            var hidden = items.filter(function (item) { return shown.indexOf(item) === -1; });
+            button(box, 'lab-pending-list-more', TEXT.more + ' (' + hidden.length + ')', function () {
+              expanded = true;
+              render(hidden[0].noteId);
+            });
+          }
+        }
+        help = add(box, 'span', 'lab-pending-choice-help');
+        help.id = id + 'Help';
+        host.insertBefore(box, before && before.parentNode === host ? before : null);
+        controller.element = box;
+        paint();
+        if (focusNoteId) {
+          Array.prototype.forEach.call(box.querySelectorAll('.lab-pending-choice-input'), function (input) {
+            if (input.value === focusNoteId) { try { input.focus(); } catch (_) { /* fokus pomocniczy */ } }
+          });
+        }
+      }
+      function load() {
+        var request = ++ticket;
+        loaded = revision;
+        listPending(pid).then(function (list) {
+          if (request !== ticket || patientId() !== pid) return;
+          var kept = selected ? list.filter(function (item) { return item.noteId === selected.noteId; })[0] || null : null;
+          items = list;
+          if (touched && selected && !kept) touched = false;
+          if (touched) selected = kept;
+          else selected = auto = listDefault(items, keys);
+          render();
+        });
+      }
+      var controller = {
+        list: true, pending: null, patientId: pid, element: null,
+        checked: function () { return !!selected; },
+        selected: function () { return selected; },
+        // Zapisywane badania zmieniają tylko to, co lista zaznacza sama; po zmianie stanu listy czyta ją ponownie.
+        update: function (testKeys) {
+          keys = testKeys;
+          if (loaded !== revision) { load(); return; }
+          if (touched) return;
+          var next = listDefault(items, keys);
+          if (next === selected) return;
+          selected = auto = next;
+          render();
+        }
+      };
+      load();
+      return controller;
+    }
+
     // Po zapisie wyniku. Zaznaczony znacznik: wpis czytany świeżo z sejfu i — jeśli nadal czeka — oznaczany jako
     // wykonany. Błąd zamknięcia nie cofa zapisanego wyniku: komunikat odsyła do Przypomnień. Nigdy nie odrzuca.
     function commit(chosen, vault) {
-      var pending = chosen && chosen.pending;
-      if (!pending || state.pending !== pending || typeof chosen.checked !== 'function' || !chosen.checked()) return Promise.resolve({ closed: false });
+      // Etap 2: wpis wybrany z listy nie jest podpięty do strony — po zamknięciu nie ma czego odpinać.
+      var fromList = !!(chosen && chosen.list);
+      var pending = fromList ? (typeof chosen.selected === 'function' ? chosen.selected() : null) : chosen && chosen.pending;
+      if (!pending) return Promise.resolve({ closed: false });
+      if (fromList ? !!state.pending || patientId() !== pending.patientId
+        : state.pending !== pending || typeof chosen.checked !== 'function' || !chosen.checked()) return Promise.resolve({ closed: false });
       state.request++;
       state.wanted = null;
       return Promise.resolve().then(function () {
@@ -513,28 +726,29 @@ var s=null;function g(){s&&(s.remove(),s=null)}function Lh2SampleDate(t){var e=t
         return vault.getPatientNote(pending.noteId);
       }).then(function (note) {
         if (!note || note.patientId !== pending.patientId || !pendingOf(note)) {
-          state.notice = { kind: 'close-stale', pending: pending };
+          state.notice = { kind: 'close-stale', pending: pending, fromList: fromList };
           return { closed: false, stale: true };
         }
         return Promise.resolve(vault.completePatientNote(pending.noteId)).then(function () {
           return vault.getPatientNote(pending.noteId);
         }).then(function (saved) {
           // Znacznik tego zamknięcia: „Cofnij” działa tylko, dopóki wpis jest w tym samym stanie.
-          state.notice = { kind: 'closed', pending: pending, completedAtISO: saved && saved.completedAtISO || null };
+          state.notice = { kind: 'closed', pending: pending, completedAtISO: saved && saved.completedAtISO || null, fromList: fromList };
           return { closed: true };
         });
       }).catch(function () {
-        state.notice = { kind: 'close-error', pending: pending };
+        state.notice = { kind: 'close-error', pending: pending, fromList: fromList };
         return { closed: false, error: true };
       }).then(function (result) {
-        state.pending = null;
-        forgetTarget();
+        if (!fromList) { state.pending = null; forgetTarget(); }
+        revision++;
         changed();
         return result;
       });
     }
     // uncompletePatientNote czyści też niestawienie, więc cofamy tylko zamknięcie zrobione tutaj i tylko wtedy,
-    // gdy nikt go potem nie zmienił (inna karta, synchronizacja). Po cofnięciu wpis jest znów podpięty.
+    // gdy nikt go potem nie zmienił (inna karta, synchronizacja). Po cofnięciu wpis jest znów podpięty;
+    // wpis wybrany z listy (etap 2) nie był podpięty, więc po cofnięciu po prostu wraca na listę.
     function undo(notice) {
       var pending = notice.pending, vault = win.VildaVault;
       Promise.resolve().then(function () {
@@ -542,17 +756,17 @@ var s=null;function g(){s&&(s.remove(),s=null)}function Lh2SampleDate(t){var e=t
         return vault.getPatientNote(pending.noteId);
       }).then(function (note) {
         if (!note || !notice.completedAtISO || note.completedAtISO !== notice.completedAtISO || note.noShowAtISO) {
-          state.notice = { kind: 'undo-stale', pending: pending };
+          state.notice = { kind: 'undo-stale', pending: pending, fromList: notice.fromList };
           return;
         }
         return Promise.resolve(vault.uncompletePatientNote(pending.noteId)).then(function () {
           state.notice = null;
-          if (patientId() === pending.patientId) state.pending = pending;
+          if (!notice.fromList && patientId() === pending.patientId) state.pending = pending;
           toast('Cofnięto — oczekujący wynik' + quoted(pending) + ' znów czeka.');
         });
       }).catch(function () {
-        state.notice = { kind: 'undo-error', pending: pending };
-      }).then(changed);
+        state.notice = { kind: 'undo-error', pending: pending, fromList: notice.fromList };
+      }).then(function () { revision++; changed(); });
     }
 
     function apply(target) {
@@ -588,10 +802,12 @@ var s=null;function g(){s&&(s.remove(),s=null)}function Lh2SampleDate(t){var e=t
     return instance;
   }
   var api = Object.freeze({
-    version: '1.0.0',
+    version: '1.1.0',
     PARAM: PARAM,
     targetNoteId: targetNoteId,
     defaultChoice: defaultChoice,
+    listDefault: listDefault,
+    listVisible: listVisible,
     start: function () { var r = runtime(); if (r) r.start(); },
     current: function () { var r = runtime(); return r ? r.current() : null; },
     attach: function (noteId) { var r = runtime(); return r ? r.attach(noteId) : Promise.resolve(null); },

@@ -21,6 +21,14 @@ function sejf(notes, opcje = {}) {
       Object.assign(notes.find((n) => n.id === id), { completedAtISO: '2026-06-17T10:00:00.000Z', noShowAtISO: null });
     }),
     uncompletePatientNote: vi.fn(async (id) => { Object.assign(notes.find((n) => n.id === id), { completedAtISO: null, noShowAtISO: null }); }),
+    // Etap 2: lista notatek pacjenta i nasłuch zmian notatek (sejf nie ma wypisania z nasłuchu).
+    listPatientNotesForPatient: vi.fn(async (pid) => {
+      if (opcje.bladListy) throw new Error('fikcyjny błąd odczytu');
+      return structuredClone(notes.filter((n) => n.patientId === pid));
+    }),
+    sluchacze: [],
+    onPatientNoteChanged: vi.fn((fn) => { vault.sluchacze.push(fn); }),
+    oglos: (zmiana) => vault.sluchacze.forEach((fn) => fn(zmiana)),
     zmien: (id, zmiany) => Object.assign(notes.find((n) => n.id === id), zmiany),
   };
   return vault;
@@ -48,6 +56,7 @@ function strona(opcje = {}) {
     addEventListener: (typ, fn) => { if (!sluchacze.has(typ)) sluchacze.set(typ, []); sluchacze.get(typ).push(fn); },
     zdarzenie: (typ, detail) => (sluchacze.get(typ) || []).forEach((fn) => fn({ type: typ, detail })),
     VildaVault: opcje.vault,
+    VildaSession: { getPatient: () => ({ name: 'Fikcyjny Pacjent', sex: opcje.plec || '' }) },
   };
   doc.defaultView = win;
   doc.addEventListener('vilda:lab-pending-result-changed', (event) => zmiany.push(event.detail));
@@ -91,7 +100,7 @@ describe('VildaLabHistory.pendingItem: pojedynczy wpis jako oczekujący wynik', 
     expect(history.pendingItem(null, converter)).toBeNull();
     expect(history.pendingItem('tekst', converter)).toBeNull();
     expect(history.pendingItem(czekajacy('c', 'Kontrola TSH'), null)).toMatchObject({ noteId: 'c', seriesKey: null });
-    expect(history.version).toBe('1.5.0');
+    expect(history.version).toBe('1.6.0');
   });
 });
 
@@ -217,9 +226,10 @@ describe('VildaLabPendingResult: znacznik „Zamknij oczekujący wynik” i zamk
   }
   const zaznacz = (pole, wartosc) => { pole.checked = wartosc; pole.dispatch('change'); };
 
-  it('bez podpiętego wpisu znacznika nie ma', () => {
-    const env = strona({ vault: sejf([]) });
+  it('bez podpiętego wpisu i bez wczytanego pacjenta znacznika nie ma', () => {
+    const env = strona({ vault: sejf([]), pacjent: null });
     expect(env.api.choice(env.doc.body, null, {})).toBeNull();
+    expect(env.api.choice(null, null, {})).toBeNull();
   });
 
   it('nazwa wpisana odręcznie: zaznaczony, nad datą badania; opis zmienia się po odznaczeniu', async () => {
@@ -377,5 +387,319 @@ describe('okno przypięcia i pakiet: wołania modułu oczekującego wyniku (kont
     expect(strona_).not.toContain('vilda_lab_pending_result');
     expect(strona_.indexOf('lab_pin_result.js?v=')).toBeGreaterThan(-1);
     expect(strona_.indexOf('lab_pin_result.js?v=')).toBeLessThan(strona_.indexOf('vilda_lab_packages.js?v='));
+  });
+});
+
+// Etap 2 (decyzja właściciela 2026-11-15): wynik wpisany bez wejścia z „Badań”. Okno przypięcia i pakiet pokazują
+// oczekujące wyniki wczytanego pacjenta; domyślnie nic się nie zamyka.
+describe('VildaLabHistory.pendingItems: oczekujące wyniki pacjenta w kolejności „Badań”', () => {
+  const win = {};
+  for (const plik of ['lab_units_data.js', 'lab_unit_converter.js', 'vilda_lab_history.js']) loadBrowserScript(plik, win);
+  const { VildaLabHistory: history, LabUnitConverter: converter } = win;
+
+  it('od najbliższego terminu, wpisy bez terminu na końcu; te same pozycje i kolejność co lista pending widoku', () => {
+    const notes = [
+      czekajacy('pozny', 'Kontrola IGF-1', { dueDateISO: '2026-06-20' }),
+      czekajacy('bez-terminu', 'Czekam na wynik', { dueDateISO: null, recheckDays: 7 }),
+      czekajacy('wczesny', 'Kontrola TSH', { dueDateISO: '2026-06-16' }),
+      czekajacy('ten-sam-dzien', 'Wynik: TSH (tyreotropina)', { dueDateISO: '2026-06-16' }),
+      czekajacy('wykonany', 'Kontrola LH', { completedAtISO: '2026-06-10T08:00:00.000Z' }),
+      czekajacy('z-wynikiem', 'Kontrola FSH', { labResult: { testKey: 'fsh', value: '2,1', valueNum: 2.1, unit: 'IU/L' } }),
+      czekajacy('notatka', 'Kontrola', { category: 'followup' }),
+    ];
+    const lista = history.pendingItems(notes, converter, { patientId: PID });
+    expect(lista.map((p) => p.noteId)).toEqual(['wczesny', 'ten-sam-dzien', 'pozny', 'bez-terminu']);
+    expect(lista.map((p) => p.seriesKey)).toEqual([null, 'tsh', null, null]);
+    const zWidoku = history.buildHistoryView([], { converter, notesById: Object.fromEntries(notes.map((n) => [n.id, n])), treatment: [], nowISO: '2026-06-17' }).pending;
+    expect(lista).toEqual(zWidoku);
+  });
+
+  it('tylko wpisy wskazanego pacjenta, każdy raz; błędne dane dają pustą listę', () => {
+    const notes = [
+      czekajacy('a', 'Kontrola TSH'), czekajacy('a', 'Kontrola TSH — powtórzony odczyt'),
+      czekajacy('cudzy', 'Kontrola TSH', { patientId: 'inny-fikcyjny' }), null, 'tekst', { patientId: PID, title: 'bez id', category: 'wynik-badania', dueDateISO: '2026-06-16' },
+    ];
+    expect(history.pendingItems(notes, converter, { patientId: PID }).map((p) => p.noteId)).toEqual(['a']);
+    expect(history.pendingItems(notes, converter).map((p) => p.noteId)).toEqual(['a', 'cudzy']);
+    expect(history.pendingItems(null, converter, { patientId: PID })).toEqual([]);
+    expect(history.pendingItems([czekajacy('a', 'Kontrola TSH')], null)).toMatchObject([{ noteId: 'a', seriesKey: null }]);
+  });
+});
+
+describe('VildaLabPendingResult: lista oczekujących wyników pacjenta (etap 2)', () => {
+  const TRZY = () => [
+    czekajacy('igf', 'Kontrola IGF-1', { dueDateISO: '2026-06-20' }),
+    czekajacy('bacc', 'Wynik: Biopsja tarczycy (BACC)', { dueDateISO: '2026-07-02' }),
+    czekajacy('tsh', 'Kontrola TSH', { dueDateISO: '2026-06-16' }),
+  ];
+  async function zLista(notes, opcje = {}) {
+    const vault = sejf(notes, opcje.sejf);
+    const env = strona({ vault, plec: opcje.plec, pacjent: opcje.pacjent });
+    const okno = env.doc.body.appendChild(env.doc.createElement('div'));
+    const data = okno.appendChild(env.doc.createElement('div'));
+    const wybor = env.api.choice(okno, data, Object.assign({ id: 'labPinPendingClose', testKeys: ['tsh'], names: ['TSH'] }, opcje.wybor));
+    await vi.waitFor(() => expect(vault.listPatientNotesForPatient.mock.results.length).toBeGreaterThan(0));
+    await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
+    return { env, vault, okno, data, wybor };
+  }
+  const opcje = (okno) => teksty(okno, '.lab-pending-list-option');
+  const pola = (okno) => okno.querySelectorAll('.lab-pending-choice-input');
+  // Atrapa DOM nie ma semantyki grupy radio: wybór jednej opcji odznacza pozostałe tutaj.
+  const wybierz = (okno, n) => { pola(okno).forEach((pole, i) => { pole.checked = i === n; }); pola(okno)[n].dispatch('change'); };
+  const pomoc = (okno) => teksty(okno, '.lab-pending-choice-help');
+  const DOMYSLNIE = 'Domyślnie nic się nie zamyka: nazwy wpisów są wpisane odręcznie, więc aplikacja nie zgaduje, którego badania dotyczą.';
+
+  it('listDefault: zaznacza tylko wtedy, gdy dokładnie jeden wpis ma badanie z listy równe zapisywanemu', () => {
+    const { api } = strona({ vault: sejf([]) });
+    const odreczny = { noteId: 'a', seriesKey: null }, tsh = { noteId: 'b', seriesKey: 'tsh' }, tsh2 = { noteId: 'c', seriesKey: 'tsh' }, ft4 = { noteId: 'd', seriesKey: 'ft4' };
+    expect(api.listDefault([odreczny, tsh, ft4], ['tsh'])).toBe(tsh);
+    expect(api.listDefault([odreczny, tsh, ft4], ['ft3'])).toBeNull();
+    expect(api.listDefault([odreczny], ['tsh'])).toBeNull();
+    // Dwa pasujące wpisy (ten sam klucz albo dwa badania pakietu): aplikacja nie rozstrzyga.
+    expect(api.listDefault([tsh, tsh2], ['tsh'])).toBeNull();
+    expect(api.listDefault([tsh, ft4], ['tsh', 'ft4'])).toBeNull();
+    expect(api.listDefault([tsh, ft4], ['tsh', 'ft3'])).toBe(tsh);
+    expect(api.listDefault([tsh], [])).toBeNull();
+    expect(api.listDefault([tsh], [null])).toBeNull();
+    expect(api.listDefault(null, ['tsh'])).toBeNull();
+    expect(api.listDefault([null, tsh], null)).toBeNull();
+  });
+
+  it('listVisible: do trzech wszystkie; ponad trzy — trzy pierwsze, a zaznaczony zawsze wśród nich, w kolejności listy', () => {
+    const { api } = strona({ vault: sejf([]) });
+    const [a, b, c, d, e] = ['a', 'b', 'c', 'd', 'e'].map((noteId) => ({ noteId }));
+    expect(api.listVisible([a, b, c], null)).toEqual([a, b, c]);
+    expect(api.listVisible([a, b, c, d, e], null)).toEqual([a, b, c]);
+    expect(api.listVisible([a, b, c, d, e], b)).toEqual([a, b, c]);
+    expect(api.listVisible([a, b, c, d, e], e)).toEqual([a, b, e]);
+    expect(api.listVisible([a, b, c, d, e], { noteId: 'spoza' })).toEqual([a, b, c]);
+    expect(api.listVisible(null, null)).toEqual([]);
+  });
+
+  it('pacjent bez oczekujących wyników: okno jak dotąd, zapis niczego nie zamyka', async () => {
+    const { env, vault, okno, data, wybor } = await zLista([czekajacy('cudzy', 'Kontrola TSH', { patientId: 'inny-fikcyjny' })]);
+    expect(wybor).toMatchObject({ list: true, pending: null, patientId: PID, element: null });
+    expect(okno.children).toEqual([data]);
+    expect(wybor.checked()).toBe(false);
+    await expect(env.api.commit(wybor, vault)).resolves.toEqual({ closed: false });
+    expect(vault.completePatientNote).not.toHaveBeenCalled();
+    expect(env.strip.hidden).toBe(true);
+  });
+
+  it.each([
+    ['sejf zablokowany', { zablokowany: true }],
+    ['błąd odczytu notatek', { bladListy: true }],
+  ])('%s: bloku nie ma i nic się nie zamyka', async (_, opcjeSejfu) => {
+    const vault = sejf(TRZY(), opcjeSejfu);
+    const env = strona({ vault });
+    const okno = env.doc.body.appendChild(env.doc.createElement('div'));
+    const wybor = env.api.choice(okno, null, { id: 'labPinPendingClose', testKeys: ['tsh'] });
+    await new Promise((resolve) => { setTimeout(resolve, 0); });
+    expect(okno.children).toEqual([]);
+    expect(wybor.checked()).toBe(false);
+    await expect(env.api.commit(wybor, vault)).resolves.toEqual({ closed: false });
+  });
+
+  it('jeden wpis: odznaczony znacznik nad datą badania; zaznaczony zamyka wpis; „Cofnij zamknięcie” nie podpina wpisu', async () => {
+    const { env, vault, okno, data, wybor } = await zLista([czekajacy('zl-1', 'Kontrola TSH')]);
+    expect(okno.children).toEqual([wybor.element, data]);
+    expect(wybor.element.classList.contains('lab-pending-list')).toBe(false);
+    const pole = okno.querySelector('#labPinPendingClose');
+    expect(pole.type).toBe('checkbox');
+    expect(pole.checked).toBe(false);
+    expect(pole.getAttribute('aria-describedby')).toBe('labPinPendingCloseHelp');
+    expect(teksty(okno, '.lab-pending-choice-text')).toEqual(['Zamknij oczekujący wynik: Kontrola TSH · termin 16.06.26']);
+    expect(pomoc(okno)).toEqual(['Pacjent ma oczekujący wynik. Zaznacz, jeśli ten wynik go dotyczy.']);
+    // Odznaczony: zapis niczego nie zamyka.
+    await expect(env.api.commit(wybor, vault)).resolves.toEqual({ closed: false });
+    expect(vault.completePatientNote).not.toHaveBeenCalled();
+
+    pole.checked = true; pole.dispatch('change');
+    expect(wybor.checked()).toBe(true);
+    expect(pomoc(okno)).toEqual(['Po zapisie „Kontrola TSH” zostanie oznaczony jako wykonany: zniknie z oczekujących i przestanie wracać w Przypomnieniach.']);
+    await expect(env.api.commit(wybor, vault)).resolves.toEqual({ closed: true });
+    expect(vault.completePatientNote).toHaveBeenCalledExactlyOnceWith('zl-1');
+    expect(env.api.current()).toBeNull();
+    expect(env.strip.getAttribute('role')).toBe('status');
+    expect(teksty(env.strip, '.lab-pending-text')).toEqual(['Oczekujący wynik „Kontrola TSH” oznaczony jako wykonany.']);
+    expect(przyciski(env.strip)).toEqual(['Cofnij zamknięcie', 'Otwórz Badania →', '×']);
+    // Wpis z listy nie pochodził z adresu strony: adres zostaje, jak był.
+    expect(env.win.history.replaceState).not.toHaveBeenCalled();
+
+    przycisk(env.strip, 'Cofnij zamknięcie').click();
+    await vi.waitFor(() => expect(env.toast.textContent).toBe('Cofnięto — oczekujący wynik „Kontrola TSH” znów czeka.'));
+    expect(vault.uncompletePatientNote).toHaveBeenCalledExactlyOnceWith('zl-1');
+    expect(env.api.current()).toBeNull();
+    expect(env.strip.hidden).toBe(true);
+  });
+
+  it('płeć żeńska z sesji: „Pacjentka”; pakiet: „te wyniki”', async () => {
+    const { okno } = await zLista([czekajacy('zl-1', 'Kontrola TSH')], { plec: 'F', wybor: { scope: 'package', id: 'labPkgPendingClose' } });
+    expect(pomoc(okno)).toEqual(['Pacjentka ma oczekujący wynik. Zaznacz, jeśli te wyniki go dotyczą.']);
+  });
+
+  it('kilka wpisów: grupa opcji od najbliższego terminu, „Nie zamykaj żadnego” zaznaczone; wybrany wpis zamyka się sam jeden', async () => {
+    const { env, vault, okno, data, wybor } = await zLista(TRZY(), { plec: 'F' });
+    expect(okno.children).toEqual([wybor.element, data]);
+    const grupa = okno.querySelector('#labPinPendingClose');
+    expect(grupa).toBe(wybor.element);
+    expect(grupa.getAttribute('role')).toBe('radiogroup');
+    expect(grupa.getAttribute('aria-labelledby')).toBe('labPinPendingCloseLegend');
+    expect(grupa.getAttribute('aria-describedby')).toBe('labPinPendingCloseHelp');
+    expect(okno.querySelector('#labPinPendingCloseLegend').textContent).toBe('Pacjentka ma oczekujące wyniki. Zamknąć któryś tym wynikiem?');
+    expect(opcje(okno)).toEqual(['Nie zamykaj żadnego', 'Kontrola TSH · termin 16.06.26', 'Kontrola IGF-1 · termin 20.06.26', 'Wynik: Biopsja tarczycy (BACC) · termin 02.07.26']);
+    expect(pola(okno).map((pole) => [pole.type, pole.name, pole.value, pole.checked])).toEqual([
+      ['radio', 'labPinPendingCloseOption', '', true], ['radio', 'labPinPendingCloseOption', 'tsh', false],
+      ['radio', 'labPinPendingCloseOption', 'igf', false], ['radio', 'labPinPendingCloseOption', 'bacc', false],
+    ]);
+    expect(pomoc(okno)).toEqual([DOMYSLNIE]);
+    expect(przyciski(okno)).toEqual([]);
+    expect(wybor.checked()).toBe(false);
+    expect(wybor.selected()).toBeNull();
+
+    wybierz(okno, 1);
+    expect(wybor.checked()).toBe(true);
+    expect(wybor.selected()).toEqual({ noteId: 'tsh', title: 'Kontrola TSH', dueDateISO: '2026-06-16', seriesKey: null, patientId: PID });
+    expect(teksty(okno, '.is-selected')).toEqual(['Kontrola TSH · termin 16.06.26']);
+    expect(pomoc(okno)).toEqual(['Po zapisie „Kontrola TSH” zostanie oznaczony jako wykonany: zniknie z oczekujących i przestanie wracać w Przypomnieniach. Pozostałe wpisy dalej czekają.']);
+    // Powrót do „Nie zamykaj żadnego”.
+    wybierz(okno, 0);
+    expect(wybor.checked()).toBe(false);
+    expect(pomoc(okno)).toEqual([DOMYSLNIE]);
+    await expect(env.api.commit(wybor, vault)).resolves.toEqual({ closed: false });
+
+    wybierz(okno, 2);
+    await expect(env.api.commit(wybor, vault)).resolves.toEqual({ closed: true });
+    expect(vault.completePatientNote).toHaveBeenCalledExactlyOnceWith('igf');
+    expect(teksty(env.strip, '.lab-pending-text')).toEqual(['Oczekujący wynik „Kontrola IGF-1” oznaczony jako wykonany.']);
+    expect(vault.notes.filter((n) => n.completedAtISO).map((n) => n.id)).toEqual(['igf']);
+  });
+
+  it('aplikacja zaznacza wpis sama tylko przy badaniu z listy przelicznika; update zmienia to zaznaczenie, wyboru lekarza nie', async () => {
+    const notes = [czekajacy('odreczny', 'Kontrola TSH', { dueDateISO: '2026-06-10' }), czekajacy('z-listy', 'Wynik: TSH (tyreotropina)')];
+    const { okno, wybor } = await zLista(notes);
+    expect(wybor.selected()).toMatchObject({ noteId: 'z-listy', seriesKey: 'tsh' });
+    expect(pola(okno).map((pole) => pole.checked)).toEqual([false, false, true]);
+    expect(pomoc(okno)).toEqual(['Zaznaczono, bo ten wpis dotyczy TSH. Zmień, jeśli to inny wynik.']);
+    // Pakiet: inne wpisane badania — zaznaczenie aplikacji znika i wraca.
+    wybor.update(['ft4']);
+    expect(wybor.selected()).toBeNull();
+    expect(pola(okno).map((pole) => pole.checked)).toEqual([true, false, false]);
+    expect(pomoc(okno)).toEqual([DOMYSLNIE]);
+    wybor.update(['ft4', 'tsh']);
+    expect(wybor.selected()).toMatchObject({ noteId: 'z-listy' });
+    // Wybór lekarza zostaje przy kolejnych zmianach wpisanych badań.
+    wybierz(okno, 1);
+    wybor.update(['ft4']);
+    wybor.update(['tsh']);
+    expect(wybor.selected()).toMatchObject({ noteId: 'odreczny' });
+    wybierz(okno, 0);
+    wybor.update(['tsh']);
+    expect(wybor.selected()).toBeNull();
+  });
+
+  it('jeden wpis z badaniem z listy równym przypinanemu: znacznik zaznaczony z wyjaśnieniem', async () => {
+    const { okno, wybor } = await zLista([czekajacy('z-listy', 'Wynik: TSH (tyreotropina)')]);
+    expect(okno.querySelector('#labPinPendingClose').checked).toBe(true);
+    expect(wybor.checked()).toBe(true);
+    expect(pomoc(okno)).toEqual(['Zaznaczono, bo ten wpis dotyczy TSH. Odznacz, jeśli to inny wynik.']);
+  });
+
+  it('więcej niż trzy wpisy: trzy z najbliższym terminem i „Pokaż pozostałe”; po kliknięciu wszystkie, fokus na pierwszym odsłoniętym', async () => {
+    const notes = ['a', 'b', 'c', 'd', 'e'].map((id, n) => czekajacy(id, 'Kontrola ' + id.toUpperCase(), { dueDateISO: '2026-06-1' + n }));
+    const { env, okno, wybor } = await zLista(notes);
+    expect(opcje(okno)).toEqual(['Nie zamykaj żadnego', 'Kontrola A · termin 10.06.26', 'Kontrola B · termin 11.06.26', 'Kontrola C · termin 12.06.26']);
+    expect(przyciski(okno)).toEqual(['Pokaż pozostałe (2)']);
+    // Wybór sprzed rozwinięcia zostaje.
+    wybierz(okno, 2);
+    przycisk(okno, 'Pokaż pozostałe (2)').click();
+    expect(opcje(okno)).toHaveLength(6);
+    expect(przyciski(okno)).toEqual([]);
+    expect(pola(okno).map((pole) => pole.checked)).toEqual([false, false, true, false, false, false]);
+    expect(env.doc.activeElement).toBe(pola(okno)[4]);
+    expect(wybor.selected()).toMatchObject({ noteId: 'b' });
+  });
+
+  it('wpis zaznaczony przez aplikację jest widoczny od razu, także z najdalszym terminem', async () => {
+    const notes = ['a', 'b', 'c', 'd'].map((id, n) => czekajacy(id, 'Kontrola ' + id.toUpperCase(), { dueDateISO: '2026-06-1' + n }))
+      .concat(czekajacy('z-listy', 'Wynik: TSH (tyreotropina)', { dueDateISO: '2026-06-30' }));
+    const { okno } = await zLista(notes);
+    expect(opcje(okno)).toEqual(['Nie zamykaj żadnego', 'Kontrola A · termin 10.06.26', 'Kontrola B · termin 11.06.26', 'Wynik: TSH (tyreotropina) · termin 30.06.26']);
+    expect(pola(okno).map((pole) => pole.checked)).toEqual([false, false, false, true]);
+    expect(przyciski(okno)).toEqual(['Pokaż pozostałe (2)']);
+  });
+
+  it('pakiet: pytanie o pakiet; wybrany wpis zamyka się po zapisaniu wszystkich wyników', async () => {
+    const { okno } = await zLista(TRZY(), { wybor: { scope: 'package', id: 'labPkgPendingClose', testKeys: [] } });
+    expect(okno.querySelector('#labPkgPendingCloseLegend').textContent).toBe('Pacjent ma oczekujące wyniki. Zamknąć któryś tym pakietem?');
+    wybierz(okno, 1);
+    expect(pomoc(okno)).toEqual(['Po zapisaniu wyników „Kontrola TSH” zostanie oznaczony jako wykonany. Zamyka się dopiero, gdy zapiszą się wszystkie wpisane wyniki.']);
+  });
+
+  it('zapis notatki pacjenta w sejfie: zdarzenie zmiany, a update czyta listę ponownie — wybór lekarza zostaje, dopóki wpis czeka', async () => {
+    const { env, vault, okno, wybor } = await zLista(TRZY());
+    expect(vault.onPatientNoteChanged).toHaveBeenCalledTimes(1);
+    wybierz(okno, 1);
+    // Zmiana notatki innego pacjenta nie dotyczy listy.
+    vault.oglos({ patientId: 'inny-fikcyjny' });
+    expect(env.zmiany).toEqual([]);
+    wybor.update(['tsh']);
+    expect(vault.listPatientNotesForPatient).toHaveBeenCalledTimes(1);
+
+    vault.notes.push(czekajacy('nowy', 'Kontrola kortyzolu', { dueDateISO: '2026-06-01' }));
+    vault.oglos({ patientId: PID });
+    expect(env.zmiany).toEqual([{ attached: false }]);
+    wybor.update(['tsh']);
+    await vi.waitFor(() => expect(opcje(okno)).toContain('Kontrola kortyzolu · termin 01.06.26'));
+    expect(przyciski(okno)).toEqual(['Pokaż pozostałe (1)']);
+    // Cztery wpisy: trzy widoczne, a wybrany przez lekarza wśród nich.
+    expect(opcje(okno)).toEqual(['Nie zamykaj żadnego', 'Kontrola kortyzolu · termin 01.06.26', 'Kontrola TSH · termin 16.06.26', 'Kontrola IGF-1 · termin 20.06.26']);
+    expect(wybor.selected()).toMatchObject({ noteId: 'tsh' });
+    expect(vault.onPatientNoteChanged).toHaveBeenCalledTimes(1);
+
+    // Wybrany wpis zamknięto gdzie indziej: znika z listy, a wybór wraca do domyślnego.
+    vault.zmien('tsh', { completedAtISO: '2026-06-17T09:00:00.000Z' });
+    vault.oglos({ patientId: PID });
+    wybor.update(['tsh']);
+    await vi.waitFor(() => expect(opcje(okno)).not.toContain('Kontrola TSH · termin 16.06.26'));
+    expect(wybor.selected()).toBeNull();
+    expect(pola(okno)[0].checked).toBe(true);
+  });
+
+  it('wpis zmieniony przed zamknięciem albo zmiana pacjenta: niczego nie zamyka', async () => {
+    const stary = await zLista(TRZY());
+    wybierz(stary.okno, 1);
+    stary.vault.zmien('tsh', { completedAtISO: '2026-06-17T09:00:00.000Z' });
+    await expect(stary.env.api.commit(stary.wybor, stary.vault)).resolves.toEqual({ closed: false, stale: true });
+    expect(stary.vault.completePatientNote).not.toHaveBeenCalled();
+    expect(teksty(stary.env.strip, '.lab-pending-text')).toEqual(['Wynik zapisany. Oczekujący wynik „Kontrola TSH” został już zamknięty albo zmieniony gdzie indziej — sprawdź go w Przypomnieniach.']);
+
+    const inny = await zLista(TRZY());
+    wybierz(inny.okno, 1);
+    inny.env.win.pacjent = 'inny-fikcyjny';
+    await expect(inny.env.api.commit(inny.wybor, inny.vault)).resolves.toEqual({ closed: false });
+    expect(inny.vault.completePatientNote).not.toHaveBeenCalled();
+    expect(inny.env.strip.hidden).toBe(true);
+  });
+
+  it('błąd zamknięcia nie odrzuca: komunikat bez „Cofnij zamknięcie”', async () => {
+    const { env, vault, okno, wybor } = await zLista(TRZY(), { sejf: { bladZamkniecia: true } });
+    wybierz(okno, 1);
+    await expect(env.api.commit(wybor, vault)).resolves.toEqual({ closed: false, error: true });
+    expect(teksty(env.strip, '.lab-pending-text')).toEqual(['Wynik zapisany, ale nie udało się oznaczyć oczekującego wyniku „Kontrola TSH” jako wykonanego — zrób to w Przypomnieniach.']);
+    expect(przyciski(env.strip)).toEqual(['Otwórz Badania →', '×']);
+  });
+
+  it('wpis podpięty z „Badań” (etap 1) ma pierwszeństwo: znacznik tego wpisu, bez listy', async () => {
+    const vault = sejf(TRZY());
+    const env = strona({ vault, cel: 'tsh' });
+    await podpiety(env);
+    const okno = env.doc.body.appendChild(env.doc.createElement('div'));
+    const znacznik = env.api.choice(okno, null, { id: 'labPinPendingClose', testKeys: ['tsh'], names: ['TSH'] });
+    expect(znacznik.list).toBeUndefined();
+    expect(znacznik.pending).toBe(env.api.current());
+    expect(okno.querySelector('#labPinPendingClose').checked).toBe(true);
+    expect(vault.listPatientNotesForPatient).not.toHaveBeenCalled();
+    expect(env.api.version).toBe('1.1.0');
   });
 });

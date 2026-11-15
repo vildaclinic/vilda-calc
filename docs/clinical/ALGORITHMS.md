@@ -1464,9 +1464,9 @@ rozstrzyga, czy wynik będzie liczbowy, czy opisowy):
 **Ograniczenia.** Zamknięcie nie przekłada wpisu z „kontrolą co N dni” na
 kolejny termin (jak w 6.11). Data w oknie „Opisz wynik” jest datą otrzymania
 wyniku, nie pobrania — wynik opisowy stoi w Badaniach pod datą wpisu (tak
-zapisuje go sejf). Wynik wpisany w Jednostkach lab. bez wejścia z wpisu nie
-proponuje zamknięcia (etap 2). W Przypomnieniach „Dodaj wynik do kartoteki”
-działa jak dotąd.
+zapisuje go sejf). Wynik wpisany w Jednostkach lab. bez wejścia z wpisu
+proponuje zamknięcie od LAB-HISTORIA 6.36 (etap 2, niżej). W Przypomnieniach
+„Dodaj wynik do kartoteki” działa jak dotąd.
 
 **Przypadki `wejście → wynik`** (fikcyjna dziewczynka 12 l, wpis „Kontrola
 TSH”, termin 01.12.2026):
@@ -1476,7 +1476,7 @@ TSH”, termin 01.12.2026):
 | „Wpisz wynik →”, TSH 2,5 mIU/L, „Przypnij do wizyty”, znacznik zaznaczony | nowy wpis wyniku z `testKey: tsh`, `valueNum: 2.5` i zapisanym zakresem (0,5–4,3 mIU/L); wpis oczekujący `completedAtISO`, bez wartości; komunikat w pasku |
 | jak wyżej, „Cofnij zamknięcie” | wpis znów czeka i jest podpięty; wynik zostaje |
 | jak wyżej, znacznik odznaczony | wynik zapisany; wpis dalej czeka i jest podpięty |
-| „Odłącz” | pasek znika, okno przypięcia bez znacznika; adres strony nie podpina wpisu po odświeżeniu |
+| „Odłącz” | pasek znika; adres strony nie podpina wpisu po odświeżeniu; okno przypięcia proponuje wpis jak każdy oczekujący wynik pacjenta — odznaczony (6.36) |
 | pakiet „Tarczyca”: TSH 2,5 i fT4 14,2, znacznik zaznaczony | dwa wyniki zapisane; wpis wykonany po zapisaniu obu |
 | wpis „Wynik: TSH (tyreotropina)”: przelicznik otwiera TSH; przypinany fT4 | znacznik odznaczony, „Oczekujący wynik dotyczy TSH, a przypinany wynik to fT4…”; po zapisie wpis dalej czeka |
 | adres z wpisem innego pacjenta albo już wykonanym | komunikat, bez paska |
@@ -1495,6 +1495,100 @@ stanach karty, okno opisu, odmowa i błąd sejfu), e2e na fikcyjnym sejfie:
 niewczytany, „Otwórz Badania →”), `tests/e2e/oczekujacy-wynik-mobile.spec.mjs`
 (telefon), `tests/e2e/lab-historia-zlecenie-wykonane.spec.mjs` (opis zdejmuje
 wpis z przypomnień). Opis: `docs/LAB_HISTORIA_WYNIKOW_PLAN.md`, decyzja 6.35;
+`docs/ZRODLA_ARTEFAKTOW.md`, „Łatka P-OCZEKUJACE-WYNIKI”.
+
+### LAB-HISTORIA 6.36 — lista oczekujących wyników przy zapisie wyniku (P-OCZEKUJACE-WYNIKI, etap 2; `lab_pin_result.js`, `vilda_lab_history.js` 1.6.0, `vilda_lab_packages.js` 1.9.0, 2026-11-15)
+
+**Klasyfikacja: zmiana funkcjonalna, bez zmiany wyników i interpretacji.**
+Żadna norma, wzór, próg, jednostka ani reguła oceny się nie zmienia; wynik
+zapisuje się tak samo. Zmienia się tylko to, że wynik wpisany w Jednostkach
+lab. **bez** wejścia z „Badań” też może oznaczyć oczekujący wynik jako
+wykonany. Decyzja właściciela z 2026-11-15 po makiecie etapu 2
+(https://claude.ai/artifact/DSmqMe6YuCyj2VuJoBHraQ): domyślnie nic się nie
+zamyka.
+
+**Problem.** Po 6.35 oczekujący wynik zamykał się tylko wtedy, gdy lekarz
+wszedł do Jednostek lab. przez „Wpisz wynik →” przy tym wpisie. Wynik wpisany
+zwykłą drogą (pacjent wczytany, „Przypnij do wizyty” albo pakiet) zostawiał
+wpis otwarty: dalej wracał w Przypomnieniach, choć wynik był już w karcie.
+
+**Reguła.** Gdy do strony nie jest podpięty żaden wpis (6.35), a wczytany
+pacjent ma oczekujące wyniki, okno „Przypnij wynik” (nad datą badania)
+i pakiet badań (nad paskiem zapisu) pokazują je — te same pozycje i ta sama
+kolejność co ramka „Oczekujące wyniki” w „Badaniach”
+(`VildaLabHistory.pendingItems`: od najbliższego terminu, wpisy bez terminu
+na końcu):
+
+- **Kilka wpisów:** grupa opcji „Pacjent(ka) ma oczekujące wyniki. Zamknąć
+  któryś tym wynikiem?” (w pakiecie: „…tym pakietem?”) z pierwszą opcją
+  **„Nie zamykaj żadnego”**, zaznaczoną domyślnie. Wybrać można jeden wpis.
+- **Jeden wpis:** znacznik „Zamknij oczekujący wynik: …” jak w 6.35, ale
+  **odznaczony**.
+- **Aplikacja zaznacza wpis sama tylko w jednym przypadku:** dokładnie jeden
+  oczekujący wynik ma badanie z listy przelicznika (`seriesKey` —
+  `labResult.testKey` albo tytuł „Wynik: ” + dokładna nazwa badania) i jest
+  ono wśród zapisywanych wyników (`listDefault`). Pod listą stoi wtedy
+  „Zaznaczono, bo ten wpis dotyczy TSH. Zmień, jeśli to inny wynik.” Nazwy
+  wpisanej odręcznie („Kontrola TSH”) aplikacja nie dopasowuje (K14), a przy
+  dwóch pasujących wpisach nie rozstrzyga, który zamknąć.
+- **Ponad trzy wpisy:** widać trzy z najbliższym terminem i „Pokaż pozostałe
+  (N)”; wpis zaznaczony jest widoczny zawsze (`listVisible`). Okno przewija
+  się w środku, nie rośnie ponad ekran.
+- Wybór lekarza ma pierwszeństwo przed zaznaczeniem aplikacji: w pakiecie
+  wpisywanie kolejnych wyników go nie zmienia.
+- **Zamknięcie** przebiega jak w 6.35: po zapisaniu wyniku (w pakiecie — po
+  zapisaniu wszystkich wpisanych wyników) wpis jest czytany świeżo z sejfu
+  i, jeśli nadal czeka i należy do wczytanego pacjenta, oznaczany jako
+  wykonany (`completePatientNote`). Wynik jest osobnym wpisem; wpis oczekujący
+  nie dostaje wartości. Pod tytułem karty pojawia się komunikat „Oczekujący
+  wynik „…” oznaczony jako wykonany.” z „Cofnij zamknięcie” i „Otwórz Badania
+  →”. Po cofnięciu wpis znów czeka, ale **nie** jest podpięty do strony —
+  wraca na listę.
+- **Wpis podpięty z „Badań” ma pierwszeństwo:** okno i pakiet pokazują wtedy
+  tylko jego, zaznaczonego, jak w 6.35 — bez listy.
+- Pacjent bez oczekujących wyników, brak wczytanego pacjenta, zablokowany sejf
+  albo błąd odczytu notatek: okno i pakiet wyglądają jak dotąd i nic się nie
+  zamyka.
+
+Lista jest czytana z sejfu przy otwarciu okna przypięcia; pakiet czyta ją
+ponownie po zapisie notatki pacjenta w sejfie (także w innej karcie), po
+zmianie pacjenta i po zamknięciu albo cofnięciu. Własny wybór lekarza zostaje,
+dopóki wybrany wpis nadal czeka.
+
+**Ograniczenia.** Jednym zapisem można zamknąć jeden wpis. Zamknięcie nie
+przekłada wpisu z „kontrolą co N dni” na kolejny termin (jak w 6.11 i 6.35).
+Kroki planów opieki w stanie „czeka na wynik” nie są na liście — nie są
+osobnymi wpisami kategorii „Badanie” (tak samo jak w ramce „Oczekujące wyniki”
+w „Badaniach”). Słowo „Pacjentka” pojawia się tylko przy płci żeńskiej
+z formularza; bez niej zostaje forma ogólna „Pacjent”.
+
+**Przypadki `wejście → wynik`** (fikcyjna dziewczynka 12 l; wpisy: „Kontrola
+TSH” 01.12.2026, „Kontrola IGF-1” 05.12.2026, „Wynik: Biopsja tarczycy (BACC)”
+17.12.2026; Jednostki lab. otwarte zwykłą drogą):
+
+| Wejście | Wynik |
+|---|---|
+| TSH 2,5 mIU/L, „Przypnij do wizyty” | lista: „Nie zamykaj żadnego” (zaznaczone), „Kontrola TSH”, „Kontrola IGF-1”, „Wynik: Biopsja tarczycy (BACC)”; zapis → wynik zapisany, trzy wpisy dalej czekają, bez komunikatu |
+| jak wyżej, wybrane „Kontrola TSH”, zapis | wynik zapisany; „Kontrola TSH” `completedAtISO`, bez wartości; pozostałe dwa czekają; komunikat w pasku |
+| „Cofnij zamknięcie” | „Kontrola TSH” znów czeka; pasek znika (wpis nie jest podpięty); wynik zostaje |
+| pacjent bez oczekujących wyników | okno przypięcia bez bloku |
+| jeden wpis „Kontrola TSH” | znacznik „Zamknij oczekujący wynik: Kontrola TSH · termin 01.12.26”, odznaczony; zapis bez zaznaczenia → wpis czeka |
+| wpisy „Kontrola TSH” i „Wynik: TSH (tyreotropina)”, przypinany TSH | zaznaczony „Wynik: TSH (tyreotropina)” z „Zaznaczono, bo ten wpis dotyczy TSH…”; przypinany fT4 → „Nie zamykaj żadnego” |
+| dwa wpisy „Wynik: TSH (tyreotropina)”, przypinany TSH | „Nie zamykaj żadnego” — aplikacja nie rozstrzyga |
+| pięć wpisów | trzy z najbliższym terminem i „Pokaż pozostałe (2)”; po kliknięciu wszystkie, fokus na pierwszym odsłoniętym |
+| pakiet „Tarczyca”: wybrane „Kontrola tarczycy”, TSH 2,5 i fT4 14,2, zapis | dwa wyniki zapisane; „Kontrola tarczycy” wykonana po zapisaniu obu; pakiet pokazuje pozostały wpis |
+| wejście przez „Wpisz wynik →” przy „Kontrola TSH” (6.35) | okno pokazuje tylko ten wpis, zaznaczony; bez listy |
+
+Testy na kodzie produkcyjnym: `tests/unit/lab-pending-result.test.mjs`
+(`pendingItems` wobec listy widoku — pozycje i kolejność; `listDefault`,
+`listVisible`; lista, znacznik, zaznaczenie aplikacji i wybór lekarza, „Pokaż
+pozostałe”, ponowny odczyt po zapisie notatki, zamknięcie, cofnięcie bez
+podpięcia, wpis zmieniony gdzie indziej, zmiana pacjenta, błąd sejfu,
+pierwszeństwo wpisu podpiętego), e2e na fikcyjnym sejfie:
+`tests/e2e/oczekujacy-wynik-lista.spec.mjs` (powłoka i strona samodzielna,
+jeden wpis, dokładna nazwa badania, ponad trzy wpisy, pakiet, wpis podpięty),
+`tests/e2e/oczekujacy-wynik-mobile.spec.mjs` (telefon: lista w oknie
+i w pakiecie). Opis: `docs/LAB_HISTORIA_WYNIKOW_PLAN.md`, decyzja 6.36;
 `docs/ZRODLA_ARTEFAKTOW.md`, „Łatka P-OCZEKUJACE-WYNIKI”.
 
 ### LAB-PAKIETY PR1 — pakiet badań „Tarczyca” w przeliczniku jednostek (`vilda_lab_packages.js` 1.0.0, 2026-11-12)
