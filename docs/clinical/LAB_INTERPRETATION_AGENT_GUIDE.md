@@ -144,6 +144,13 @@ Brak stadium nie blokuje dostępnej oceny według wieku. Brak wiarygodnego
 wieku może natomiast uniemożliwić kwalifikację do zakresu dla stadium.
 Każde porównanie zachowuje własne warunki dostępności.
 
+Wiek wczytanego pacjenta przelicznik bierze z sesji wspólnej, a gdy go tam nie
+ma — z bieżącej wizyty albo z daty urodzenia na dziś (P-WIEK-NOWY-POMIAR,
+2026-11-15). Gdy wieku nie ma w żadnym źródle, mówi „brak wieku” i wyjaśnia,
+że zakres nie jest dobrany do wieku. Nowy moduł nie może po cichu traktować
+wczytanego pacjenta bez wieku jak dorosłego: albo korzysta z tego samego
+odczytu (`readPatientFromShared`), albo jawnie zgłasza brak wieku.
+
 ## 5. Pokwitanie, płeć i kontekst dorosłych
 
 Oferuj cechy zgodne z wybraną płcią dla kryteriów: Th/M u dziewcząt i G

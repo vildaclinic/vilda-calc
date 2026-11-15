@@ -120,9 +120,9 @@ test('link do wyniku z innego miejsca (focusNoteId) otwiera Badania, a link do z
 });
 
 // P-BADANIA-WEJSCIE (decyzja właściciela 2026-11-15): nowego wyniku nie wpisuje się ręcznie — w Notatkach nie ma już
-// szablonu „Wynik badania”. Wynik zlecenia wpisuje się w zakładce „Badania” („Wpisz wynik”); Notatki pokazują potem
-// tylko linię z liczbą wyników.
-test('Notatki: nowa notatka bez szablonu „Wynik badania”; wynik zlecenia wpisany w Badaniach nie ma wiersza na liście Notatek', async ({ page }) => {
+// szablonu „Wynik badania”. P-OCZEKUJACE-WYNIKI (2026-11-15): także przy oczekującym wyniku nie ma ręcznego wpisu;
+// wynik opisowy zapisuje „Opisz wynik” w zakładce „Badania”. Notatki pokazują potem tylko linię z liczbą wyników.
+test('Notatki: nowa notatka bez szablonu „Wynik badania”; wynik oczekującego wpisu opisany w Badaniach nie ma wiersza na liście Notatek', async ({ page }) => {
   const patientId = await otworzSejf(page);
   await page.evaluate(async (pid) => {
     await window.VildaVault.savePatientNote({ patientId: pid, category: 'observation', title: 'Fikcyjna obserwacja', body: 'Bez zmian.' });
@@ -143,23 +143,33 @@ test('Notatki: nowa notatka bez szablonu „Wynik badania”; wynik zlecenia wpi
   await page.keyboard.press('Escape');
   await expect(page.locator('.b3-template-select')).toHaveCount(0);
 
-  // Zlecenie: „Wpisz wynik” w Badaniach otwiera edytor z szablonem wyniku; opis kotwicy mówi, że wynik trafi do Badań.
+  // Oczekujący wynik: w Badaniach nie ma ręcznego „Wpisz wynik” do edytora; „Opisz wynik” zapisuje wynik opisowy.
   await page.locator('.vilda-patient-tab[data-tab="lab"]').click();
   await czekajNaBadania(page);
-  await sekcjaBadan(page).getByRole('button', { name: 'Wpisz wynik' }).click();
+  await expect(sekcjaBadan(page).getByRole('button', { name: 'Wpisz wynik', exact: true })).toHaveCount(0);
+  await sekcjaBadan(page).getByRole('button', { name: 'Opisz wynik' }).click();
+  const opis = page.locator('#labPendingDescribeDialog');
+  await opis.locator('#labPendingDescribeText').fill('Fikcyjny opis wyniku.');
+  await opis.getByRole('button', { name: 'Zapisz opis' }).click();
+  await expect(opis).toHaveCount(0);
+  await expect(sekcjaBadan(page).locator('.vilda-lab-hist-pending')).toHaveCount(0);
+  await expect(sekcjaBadan(page).locator('.vilda-lab-hist-result-row')).toHaveCount(1);
+
+  // Edycja zapisanego wyniku otwiera edytor z szablonem wyniku; opis kotwicy mówi, że wynik jest w Badaniach.
+  await sekcjaBadan(page).locator('.vilda-lab-hist-result-row').click();
+  await page.locator('#labResultDetailsDialog').getByRole('button', { name: 'Edytuj wpis', exact: true }).click();
   const wpis = page.getByRole('dialog', { name: /Edytuj notatkę/ });
   await expect(page.locator('.b3-template-select')).toHaveValue('lab');
   await expect(wpis.getByRole('radio', { name: /Notatka ogólna/ }))
     .toHaveAccessibleName(/Wynik badania pojawi się w zakładce Badania i w Historii.*Wpis bez wartości \(np\. zlecenie\) zostaje w Notatkach/);
-  await page.locator('.b3-lab-value-row input').first().fill('3,4');
-  await page.locator('.b3-clinical-date').fill('2026-06-10');
-  await wpis.getByRole('button', { name: 'Zapisz zmiany' }).click();
+  await page.keyboard.press('Escape');
   await expect(page.locator('.b3-template-select')).toHaveCount(0);
-  await expect(sekcjaBadan(page).locator('.vilda-lab-hist-result-row')).toHaveCount(1);
 
+  // Notatki: wynik opisowy jest policzony w linii do Badań, a nie ma własnego wiersza. Zostają obserwacja
+  // i wykonany wpis oczekujący (wpis bez wartości jest notatką, nie wynikiem).
   await page.locator('.vilda-patient-tab[data-tab="notes"]').click();
   await expect(notatki.getByRole('button', { name: 'Wyniki badań (1) są w zakładce Badania →' })).toBeVisible();
-  await expect(notatki.locator('.vilda-patient-note-card')).toHaveCount(1);
+  await expect(notatki.locator('.vilda-patient-note-card')).toHaveCount(2);
   await notatki.getByRole('button', { name: 'Wyniki badań (1) są w zakładce Badania →' }).click();
   await czekajNaBadania(page);
   await expect(sekcjaBadan(page).locator('.vilda-lab-hist-result-row')).toHaveCount(1);

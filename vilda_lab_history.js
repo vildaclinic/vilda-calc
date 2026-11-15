@@ -13,6 +13,10 @@
  * Od 1.4.0 (decyzja właściciela 2026-11-11, wynik ma jedno miejsce pełnej treści): isResultNote — warunek,
  * którym karta chowa wynik w Notatkach i kieruje do niego linki, ten sam co droga notatki do widoku Badań;
  * recordedWarning — ostrzeżenie kliniczne zapisanej oceny dla krótkiego wpisu Historii.
+ * Od 1.5.0 (P-OCZEKUJACE-WYNIKI, decyzje właściciela 2026-11-15): pendingItem — pojedynczy wpis jako oczekujący
+ * wynik (te same warunki co lista pending widoku), dla Jednostek lab. otwartych z takiego wpisu.
+ * Od 1.6.0 (P-OCZEKUJACE-WYNIKI, etap 2): pendingItems — oczekujące wyniki pacjenta w kolejności listy widoku
+ * (od najbliższego terminu), dla okna przypięcia i pakietu, gdy wynik wpisano bez wejścia z „Badań”.
  * Projekt: docs/LAB_HISTORIA_WYNIKOW_PLAN.md, 3.1; opis: docs/clinical/ALGORITHMS.md,
  * „LAB-HISTORIA — model porównania”.
  */
@@ -505,6 +509,36 @@
     return ordered && (!lab || !text(lab.value) && !finite(lab.valueNum)) && !note.completedAtISO && !note.noShowAtISO;
   }
 
+  // Etykiety badań z listy przelicznika — do dopasowania wpisu po dokładnej nazwie.
+  function converterLabels(converter) {
+    if (!converter || typeof converter.list !== 'function') return [];
+    try { return (converter.list() || []).map(function (item) { return { id: item.id, label: text(item.label) }; }); } catch (_) { return []; }
+  }
+  // Oczekujący wynik jako pozycja — ta sama postać i te same warunki co lista pending w buildHistoryView —
+  // albo null, gdy wpis nie czeka na wynik. Dla Jednostek lab. (P-OCZEKUJACE-WYNIKI): tam wpis jest czytany
+  // pojedynczo, a warunek ma być jeden. seriesKey: badanie z listy przelicznika albo null (bez zgadywania).
+  function pendingItem(note, converter) {
+    if (!record(note) || noteCategory(note) !== 'wynik-badania' || !isPending(note)) return null;
+    return { kind: 'pending', noteId: note.id, title: text(note.title), dueDateISO: isoDate(note.dueDateISO), seriesKey: pendingMatch(note, converterLabels(converter)) };
+  }
+  // Kolejność oczekujących wyników: od najbliższego terminu, wpisy bez terminu na końcu (jak w „Badaniach”).
+  function pendingOrder(a, b) {
+    return a.dueDateISO === b.dueDateISO ? 0 : !a.dueDateISO ? 1 : !b.dueDateISO ? -1 : a.dueDateISO < b.dueDateISO ? -1 : 1;
+  }
+  // Oczekujące wyniki pacjenta z jego notatek: te same pozycje i ta sama kolejność co lista pending widoku.
+  // Dla Jednostek lab. (P-OCZEKUJACE-WYNIKI, etap 2): wynik wpisany bez wejścia z „Badań” może zamknąć jeden z nich.
+  function pendingItems(notes, converter, options) {
+    var patientId = options && text(options.patientId), seen = {}, items = [];
+    (Array.isArray(notes) ? notes : []).forEach(function (note) {
+      if (!record(note) || !text(note.id) || own(seen, note.id) || patientId && note.patientId !== patientId) return;
+      var item = pendingItem(note, converter);
+      if (!item) return;
+      seen[note.id] = true;
+      items.push(item);
+    });
+    return stableSort(items, pendingOrder);
+  }
+
   function previewView(current, seriesView, options) {
     if (!record(current)) return null;
     var key = text(current.testKey) || null, converter = options.converter, sub = substance(converter, key);
@@ -572,10 +606,7 @@
       if (!own(series.mergedFrom, fromKey)) series.mergedFrom[fromKey] = { key: fromKey, test: text(test), count: 0 };
       series.mergedFrom[fromKey].count++;
     }
-    var labels = [];
-    if (converter && typeof converter.list === 'function') {
-      try { labels = (converter.list() || []).map(function (item) { return { id: item.id, label: text(item.label) }; }); } catch (_) { labels = []; }
-    }
+    var labels = converterLabels(converter);
     // Decyzja 6.14: wpis bez klucza przelicznika (sejf dał mu skrót nazwy) z nazwą równą dokładnie etykiecie
     // badania z listy przelicznika dołącza przy odczycie do serii tego badania — tylko z jednostką, którą
     // przelicznik zna dla tego badania (inaczej zostaje w dawnej serii, żeby nie zniknął z wykresu).
@@ -628,7 +659,7 @@
       if (series.entries.some(function (other) { return other.source !== 'gh-note' && sameResult(other, entry); })) { ghDuplicates++; return; }
       series.entries.push(entry);
     });
-    pending = stableSort(pending, function (a, b) { return a.dueDateISO === b.dueDateISO ? 0 : !a.dueDateISO ? 1 : !b.dueDateISO ? -1 : a.dueDateISO < b.dueDateISO ? -1 : 1; });
+    pending = stableSort(pending, pendingOrder);
 
     var views = order.map(function (key) { return buildSeries(byKey[key], ctx); });
     var viewByKey = {};
@@ -701,8 +732,8 @@
   }
 
   return Object.freeze({
-    version: '1.4.0', HISTORY_PANELS: HISTORY_PANELS, buildHistoryView: buildHistoryView,
+    version: '1.6.0', HISTORY_PANELS: HISTORY_PANELS, buildHistoryView: buildHistoryView,
     formatDelta: formatDelta, formatDate: formatDate, normalizeUnit: normalizeUnit, isResultNote: isResultNote,
-    recordedWarning: recordedWarning
+    recordedWarning: recordedWarning, pendingItem: pendingItem, pendingItems: pendingItems
   });
 });

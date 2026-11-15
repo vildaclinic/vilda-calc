@@ -1358,6 +1358,11 @@
         parts.sources.id = 'labPkgSources';
         parts.sources.hidden = true;
 
+        // P-OCZEKUJACE-WYNIKI: miejsce na znacznik „Zamknij oczekujący wynik” (drawPending).
+        parts.pendingSlot = add(results, 'div', 'lab-pkg-pending');
+        parts.pendingSlot.id = 'labPkgPending';
+        parts.pendingSlot.hidden = true;
+
         parts.save = add(results, 'div', 'lab-pkg-save');
         var info = add(parts.save, 'div', 'lab-pkg-save-info');
         parts.saveCtx = add(info, 'span', 'lab-pkg-save-ctx');
@@ -1928,6 +1933,32 @@
         parts.saveBtn.disabled = state.busy || !filled || invalid;
       }
 
+      // P-OCZEKUJACE-WYNIKI (decyzje właściciela 2026-11-15): Jednostki lab. otwarte z oczekującego wyniku w zakładce
+      // „Badania”. Przy zapisie pakietu stoi ten sam znacznik co w oknie przypięcia; wpis, znacznik i zamknięcie
+      // należą do VildaLabPendingResult. Domyślny stan liczy się z badań, które mają wpisany wynik.
+      // Etap 2: bez podpiętego wpisu ten sam moduł pokazuje oczekujące wyniki wczytanego pacjenta (lista albo
+      // jeden znacznik, domyślnie nic się nie zamyka); wybór jest zakładany na nowo po zmianie pacjenta albo wpisu.
+      function drawPending(rows) {
+        var pendingApi = w.VildaLabPendingResult;
+        var pending = pendingApi && typeof pendingApi.current === 'function' ? pendingApi.current() : null;
+        var pid = patientId(), current = state.pendingChoice;
+        var keys = rows.filter(function (row) { return row.status === 'ok'; }).map(function (row) { return row.analyteId; });
+        if (!current || current.pending !== pending || !pending && current.patientId !== pid) {
+          parts.pendingSlot.textContent = '';
+          state.pendingChoice = pendingApi && typeof pendingApi.choice === 'function' && (pending || pid)
+            ? pendingApi.choice(parts.pendingSlot, null, { id: 'labPkgPendingClose', scope: 'package', testKeys: keys }) : null;
+        }
+        parts.pendingSlot.hidden = !state.pendingChoice;
+        if (state.pendingChoice) state.pendingChoice.update(keys);
+      }
+      // Po zapisaniu wyników: zaznaczony znacznik oznacza podpięty wpis jako wykonany. Nigdy nie odrzuca —
+      // wyniki są już zapisane, a stan wpisu pokazuje pasek pod tytułem karty.
+      function closePending(vault) {
+        var pendingApi = w.VildaLabPendingResult, chosen = state.pendingChoice;
+        if (!chosen || !pendingApi || typeof pendingApi.commit !== 'function') return Promise.resolve();
+        return Promise.resolve(pendingApi.commit(chosen, vault)).catch(function () { /* wyniki są zapisane */ });
+      }
+
       // Co skopiuje przycisk: wyniki wpisane w formularzu, a przy pustym formularzu po zapisie — zapisany zestaw.
       function copySource(rows) {
         var typed = rows.some(function (row) { return row.status !== 'empty'; });
@@ -2109,6 +2140,7 @@
         parts.step4.classList.toggle('is-ask', stagePending());
 
         drawSave(ctx, rows);
+        drawPending(rows);
         drawCopy(rows);
         parts.error.hidden = !state.error;
         parts.error.textContent = state.error;
@@ -2182,9 +2214,10 @@
         setBusy(true);
         refresh();
         try { if (w.VildaSession && typeof w.VildaSession.ensureAuthLoaded === 'function') w.VildaSession.ensureAuthLoaded(); } catch (_) { /* zapis sprawdzi sejf */ }
-        var saved = [];
+        var saved = [], usedVault = null;
         waitForVault(VAULT_WAIT_MS).then(function (vault) {
           if (!vault) throw fail('Moduł danych nie załadował się — odśwież stronę.');
+          usedVault = vault;
           if (typeof vault.isUnlocked !== 'function' || !vault.isUnlocked()) throw fail('Zaloguj się, aby zapisać wyniki w karcie pacjenta.');
           return Promise.resolve().then(function () { return vault.getPatient(ctx.pid); }).catch(function () { return null; }).then(function (patient) {
             if (!patient) throw fail('Nie znalazłem pacjenta w bazie — wczytaj go ponownie z Bazy pacjentów.');
@@ -2193,6 +2226,9 @@
               return chain.then(function () { return vault.savePatientNote(note); }).then(function () { saved.push(plan.rows[index]); });
             }, Promise.resolve());
           });
+        }).then(function () {
+          // Wszystkie wyniki zapisane: dopiero teraz zamyka się oczekujący wynik (przy błędzie zapisu zostaje).
+          return closePending(usedVault);
         }).then(function () {
           var units = {};
           saved.forEach(function (row) { units[row.analyteId] = row.unit; });
@@ -2738,7 +2774,7 @@
         }
         singleBtn.addEventListener('click', function () { setMode('single'); });
         packageBtn.addEventListener('click', function () { setMode('package', true); });
-        ['vilda:session-changed', 'vilda:auth-loaded', 'vilda:patient-loaded', 'vilda:zrodlo-pacjenta-zmienione'].forEach(function (type) {
+        ['vilda:session-changed', 'vilda:auth-loaded', 'vilda:patient-loaded', 'vilda:zrodlo-pacjenta-zmienione', 'vilda:lab-pending-result-changed'].forEach(function (type) {
           doc.addEventListener(type, schedule);
         });
         w.addEventListener('vilda:user-state-cleared', function () { clearValues(false); schedule(); });
@@ -2768,7 +2804,7 @@
 
     var instance = null;
     return Object.freeze({
-      version: '1.7.0',
+      version: '1.9.0',
       start: function () {
         if (instance || !win || !win.document) return instance;
         instance = create(win);

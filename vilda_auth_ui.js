@@ -487,7 +487,7 @@ function ClcrNotesResources() {
   if (ClcrNotesBootstrapPromise) return ClcrNotesBootstrapPromise;
   ClcrNotesBootstrapPromise = new Promise(function (resolve, reject) {
     var doc = i.document, finished = false, timer = null;
-    var url = new URL("clcr_record_resources.js?v=27", i.location.href);
+    var url = new URL("clcr_record_resources.js?v=28", i.location.href);
     var script = Array.from(doc.querySelectorAll("script[src]")).find(function (node) {
       try { return new URL(node.getAttribute("src"), i.location.href).href === url.href; } catch (_) { return false; }
     });
@@ -3638,19 +3638,15 @@ function uo(t,a){const n=jt();if(!n||!n.isUnlocked())return;let Bks_pg=null;cons
      odtworzonej; zamkniecie okna bez wyboru konczy zamiar i przelicznik sie nie otwiera;
    - VildaDataImportExport.getPatientLoadPresentation() nie zglasza juz wczytywania (ten sam sygnal, na ktory
      czeka pasek boczny);
-   - sesja wspolna niesie wiek z formularza (BdSesjaZgodna). Przelicznik czyta pacjenta z sesji wspolnej, a pola
-     pacjenta (wiek, masa, wzrost) dopisuje do niej userData.js przy zdarzeniu input/change tych pol. Zdarzenia
-     z wczytania i z „Nowy pomiar” przypadaja na pauze autozapisu, wiec userData.js ich nie zapisuje; zapis
-     nastepuje, gdy custom-fixes.js (lustro pol) 3,2 s po wczytaniu ponawia zdarzenie change pol pacjenta.
-     Przejscie przed tym zapisem otwieralo przelicznik bez wieku - a wiec bez norm wedlug wieku. Czekamy wiec
-     na zapis aplikacji. W powloce lustro nie ponawia zdarzen przy drugim i kolejnym pacjencie wczytanym w tej
-     samej karcie przegladarki (blad istniejacy przed ta zmiana, zgloszony osobno); dlatego po
-     BD_PRZEJSCIE_LUSTRO_MS od wczytania BdSesjaOdswiez raz wysyla na polu wieku to samo zdarzenie change,
-     w tej samej chwili co lustro: zapis robi userData.js, wartosci pol sie nie zmieniaja. Po
-     BD_PRZEJSCIE_SESJA_MS od wyboru przelicznik otwiera sie z tym, co jest.
+   - sesja wspolna niesie wiek z formularza (BdSesjaZgodna). Przelicznik czyta pacjenta z sesji wspolnej.
+     „Odtworz zapisany stan” i - od P-WIEK-NOWY-POMIAR (custom-fixes.js, publishNewVisitFields) - takze
+     „Nowy pomiar” zapisuja tam wiek od razu, wiec ten warunek jest zwykle spelniony przy pierwszym
+     sprawdzeniu. Zostaje jako straznik na wypadek innej drogi wczytania: po BD_PRZEJSCIE_SESJA_MS od wyboru
+     przelicznik otwiera sie z tym, co jest (sam ma zabezpieczenie: wiek z biezacej wizyty albo z daty
+     urodzenia). Dawne obejscie (ponowienie zdarzenia change na polu wieku) zostalo usuniete razem z przyczyna.
    Zamiar wygasa, gdy w formularzu jest inny pacjent albo nikt (zmiana konta, wyczyszczenie, kolejne wczytanie).
-   Poza tym jednym zdarzeniem nic tu nie zapisuje danych: to tylko przejscie do innej strony. */
-var BD_PRZEJSCIE_PIERWSZE_MS=80,BD_PRZEJSCIE_KROK_MS=150,BD_PRZEJSCIE_LIMIT_MS=15e3,BD_PRZEJSCIE_SESJA_MS=6e3,BD_PRZEJSCIE_LUSTRO_MS=3400,BD_PRZEJSCIE_ZAPOWIEDZ_MS=700,BdPrzejscie=null;
+   Nic tu nie zapisuje danych: to tylko przejscie do innej strony. */
+var BD_PRZEJSCIE_PIERWSZE_MS=80,BD_PRZEJSCIE_KROK_MS=150,BD_PRZEJSCIE_LIMIT_MS=15e3,BD_PRZEJSCIE_SESJA_MS=3e3,BD_PRZEJSCIE_ZAPOWIEDZ_MS=700,BdPrzejscie=null;
 function BdSesjaZgodna(){
   try{
     var BdTrwale=i.VildaPersistence;
@@ -3663,16 +3659,6 @@ function BdSesjaZgodna(){
       return BdFormularz===BdSesja;
     });
   }catch{return!0}
-}
-function BdSesjaOdswiez(){
-  try{
-    var BdTrwale=i.VildaPersistence;
-    if(BdTrwale&&typeof BdTrwale.isAutosaveSuppressed=="function"&&BdTrwale.isAutosaveSuppressed())return!1;
-    var BdWiek=i.document.getElementById("age");
-    if(!BdWiek||typeof i.Event!="function")return!1;
-    BdWiek.dispatchEvent(new i.Event("change",{bubbles:!0}));
-    return!0;
-  }catch{return!1}
 }
 function BdOtworzPrzelicznik(href){
   var BdPowloka;
@@ -3700,7 +3686,6 @@ function BdPrzejscieSprawdz(bilet){
   var wybor;try{wybor=i.sessionStorage.getItem("vildaLoadChoiceV1")}catch{wybor=null}
   if(bilet.okno&&wybor!=="new"&&wybor!=="restore"){BdPrzejscieKoniec(bilet);return}
   if(!BdSesjaZgodna()&&Date.now()-bilet.od<=BD_PRZEJSCIE_SESJA_MS){
-    if(!bilet.odswiezone&&Date.now()-bilet.wczytano>=BD_PRZEJSCIE_LUSTRO_MS&&BdSesjaOdswiez()){bilet.odswiezone=!0;if(BdSesjaZgodna()){BdPrzejscieKoniec(bilet);BdOtworzPrzelicznik(bilet.href);return}}
     if(!bilet.zapowiedz&&Date.now()-bilet.od>BD_PRZEJSCIE_ZAPOWIEDZ_MS){bilet.zapowiedz=!0;try{i.VildaDymek&&typeof i.VildaDymek.pokaz=="function"&&i.VildaDymek.pokaz("Za chwil\u0119 otworz\u0105 si\u0119 Jednostki lab.",{ton:"info"})}catch{}}
     czekaj();return;
   }
@@ -3709,7 +3694,7 @@ function BdPrzejscieSprawdz(bilet){
 }
 function BdPrzejdzPoWczytaniu(patientId,href){
   if(BdPrzejscie)BdPrzejscieKoniec(BdPrzejscie);
-  var bilet={patientId:patientId,href:href||null,okno:!1,zapowiedz:!1,odswiezone:!1,wczytano:Date.now(),od:Date.now(),timer:0};
+  var bilet={patientId:patientId,href:href||null,okno:!1,zapowiedz:!1,od:Date.now(),timer:0};
   BdPrzejscie=bilet;
   bilet.timer=i.setTimeout(function(){BdPrzejscieSprawdz(bilet)},BD_PRZEJSCIE_PIERWSZE_MS);
 }
