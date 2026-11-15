@@ -11,9 +11,14 @@ import { createFictionalVault, loadPatient, shellFrame } from '../support/centil
 test.use({ serviceWorkers: 'block', reducedMotion: 'reduce' });
 test.setTimeout(150_000);
 
+// Wiek: brak klucza to błąd (null nie równa się wartości z formularza). Masa i wzrost: w korzeniu sesji „” i brak
+// klucza znaczą to samo — czytelnicy (userData.js, przelicznik) traktują je jednakowo — a który z nich zostaje,
+// zależy od chwili: zapis z kolejki autozapisu (vilda_persist_runtime.js, P-PERSIST-CURRENT-AGE) pustych wartości
+// nie przenosi. Ustalone na wolniejszej maszynie CI (2026-11-15), gdzie kolejka zapisywała po wyborze wizyty.
+// Wartość poprzedniej wizyty albo poprzedniego pacjenta w tych polach nadal nie przechodzi.
 const sesjaWspolna = (owner) => owner.evaluate(() => {
   const s = window.VildaPersistence.readShared();
-  return { age: s.age ?? null, ageMonths: s.ageMonths ?? null, weight: s.weight ?? null, height: s.height ?? null };
+  return { age: s.age ?? null, ageMonths: s.ageMonths ?? null, weight: s.weight ?? '', height: s.height ?? '' };
 });
 const pola = (owner) => owner.evaluate(() => Object.fromEntries(['age', 'ageMonths', 'weight', 'height'].map((id) => [id, document.getElementById(id).value])));
 
@@ -45,6 +50,10 @@ for (const shell of [true, false]) {
       // Zaraz po wyborze — bez czekania na lustro pól — sesja wspólna niesie pola nowej wizyty z formularza.
       const formularz = await pola(start);
       expect(formularz).toMatchObject({ age: '12', weight: '', height: '' });
+      expect(await sesjaWspolna(start)).toEqual(formularz);
+      // Zapis z kolejki autozapisu po wyborze (na wolnej maszynie trafia tuż po nim) nie usuwa wieku z sesji
+      // i nie dopisuje masy ani wzrostu poprzedniej wizyty.
+      await start.evaluate(() => window.vildaPersistFlushNow({ force: true }));
       expect(await sesjaWspolna(start)).toEqual(formularz);
 
       const lab = await przelicznik(page, shell);

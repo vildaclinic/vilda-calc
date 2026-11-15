@@ -1345,7 +1345,12 @@ wiek, masę i wzrost).
 1. „Nowy pomiar” zapisuje pola nowej wizyty (wiek, miesiące, masa, wzrost) do
    sesji wspólnej od razu, w tej samej chwili co wybór
    (`publishNewVisitFields` w `custom-fixes.js`) — te same klucze i postać,
-   które zapisuje `userData.js`.
+   które zapisuje `userData.js`. Późniejszy zapis z kolejki autozapisu
+   (`vilda_persist_runtime.js`, P-PERSIST-CURRENT-AGE) wieku nie usuwa;
+   pustych wartości nie przenosi, więc pusta masa i wzrost zostają w korzeniu
+   sesji jako „” albo jako brak klucza — zależnie od chwili zapisu kolejki.
+   Czytelnicy traktują oba jednakowo. Ustalone na CI 2026-11-15; test e2e
+   sprawdza wiek ściśle, a po wymuszonym zapisie kolejki jeszcze raz.
 2. Zabezpieczenie w przeliczniku (`readLoadedPatientAge`): gdy pacjent jest
    wczytany, a sesja wspólna nie niesie wieku, przelicznik bierze (a) wiek
    bieżącej wizyty — z żywego formularza albo z sesji formularza tego samego
