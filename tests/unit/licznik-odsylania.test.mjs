@@ -233,7 +233,17 @@ describe('licznik odsyłania: żądania, strony, bajty realne i budżet minuty s
     const wiersze = budzet([[MIN, 'A', Array(601).fill({ tresci: 0, bajty: 200 })]]);
     expect(wiersze.przekroczone.map((s) => s.ok)).toEqual([{ wierszy: false, bajtow: true, zadan: true }]);
     // żądania na urządzenie z bajtów realnych: 22 treści na żądanie (13 + 22 × 46 125 + 21 ≤ 1 MiB), 47 → 3
-    expect(czerwony.przekroczone[0].urz.A).toEqual({ wierszy: 47, zadan: 3, zadanUprzaz: 1 });
+    expect(czerwony.przekroczone[0].urz.A).toEqual({ wierszy: 47, zadan: 3, oversize: 0, zadanUprzaz: 1 });
+  });
+  it('budżet minuty slotu: wiersz, którego górna granica przekracza limit zdarzenia (stomb z 6 treściami: 6 × 46 080 B > 262 144 B), to osobne żądanie i oversize w wyniku; 5 treści — w partii', () => {
+    const budzet = (lista) => LO.budzetSlotow(lista.map(([t, dev, w]) => ({ t, dev, wiersze: w })));
+    expect(6 * 46080).toBeGreaterThan(262144);
+    expect(5 * 46080).toBeLessThanOrEqual(262144);
+    const sam = budzet([[MIN, 'A', [{ tresci: 6, bajty: 9000 }]]]);
+    expect([sam.maksZadan.zadanMaks, sam.oversize, sam.maksZadan.urz.A]).toEqual([1, 1, { wierszy: 1, zadan: 1, oversize: 1, zadanUprzaz: 1 }]);
+    // 5 × 250 KiB (2 żądania) i jeden wiersz ponad limit → 3 żądania
+    const z = budzet([[MIN, 'A', [...Array(5).fill({ tresci: 0, bajty: 250 * 1024 }), { tresci: 6, bajty: 9000 }]], [MIN, 'B', [{ tresci: 5, bajty: 9000 }]]]);
+    expect([z.maksZadan.urz.A, z.maksZadan.urz.B, z.oversize]).toEqual([{ wierszy: 6, zadan: 3, oversize: 1, zadanUprzaz: 2 }, { wierszy: 1, zadan: 1, oversize: 0, zadanUprzaz: 1 }, 1]);
   });
   it('licznik zbiera strony z chwilą i urządzeniem: budżet warstwy wyk i naiwnej (po2a) osobno', () => {
     const L = LO.nowyLicznikOdsylania();

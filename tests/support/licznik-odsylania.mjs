@@ -52,7 +52,8 @@
 // STRONA DOSTAWY = MINUTA: strona pobrania (≤ 200 zdarzeń) jest scalana naraz, pełna kopia liczy się jak jedna strona.
 //   MINUTA SLOTU = wszystkie strony i pełne kopie scalone w jednym kroku zegara uprzęży (t) na wszystkich urządzeniach
 //   slotu. Budżet slotu (budzetSlotow) na bajtach realnych warstwy wyk: ≤ 600 wierszy i ≤ 4 MiB przy górnej granicy
-//   przeliczenia na slot, ≤ 20 żądań na urządzenie. Przeliczenie (docs/SYNC_PRZYROSTOWA_PLAN.md, rozdz. 3.6: zdarzenie zapisu
+//   przeliczenia na slot, ≤ 20 żądań na urządzenie (wiersz ponad limit zdarzenia przy górnej granicy — osobne żądanie,
+//   oversize w wyniku). Przeliczenie (docs/SYNC_PRZYROSTOWA_PLAN.md, rozdz. 3.6: zdarzenie zapisu
 //   24–34 tys. znaków, nagrobek, notatka, preferencja 0,4–3 KB): wiersz z treścią wizyty (snap, karta, stomb z payload)
 //   — 32 768–46 080 B na treść, pozostałe — 3 072 B; nigdy mniej niż bajty uprzęży. Okna przesuwne 60 s
 //   (oknaPrzesuwne) — tylko druk.
@@ -368,6 +369,8 @@ export const realny = ({ tresci, bajty }) => ({
 export const realne = (wiersze) => wiersze.reduce((s, w) => { const r = realny(w); return { od: s.od + r.od, do: s.do + r.do }; }, { od: 0, do: 0 });
 // Budżet minut slotu. strony: [{ t, dev, wiersze: [{ tresci, bajty }] }] (warstwa wyk). Minuta slotu = ten sam t na
 // wszystkich urządzeniach. Żądania na urządzenie liczone z bajtów realnych przy górnej granicy (i w uprzęży — druk).
+// Wiersz, którego górna granica przekracza limit zdarzenia (oversize: nie wejdzie do żadnej partii zdarzeń, np. stomb
+// z sześcioma treściami), liczy się jako osobne żądanie; oversize na urządzenie i w slocie — w wyniku.
 export function budzetSlotow(stronyLista) {
   const sloty = new Map();
   for (const s of stronyLista) {
@@ -380,13 +383,17 @@ export function budzetSlotow(stronyLista) {
   }
   const lista = [...sloty.values()].sort((a, b) => a.t - b.t).map((x) => {
     const urz = {};
-    for (const [dev, w] of x.naUrz) urz[dev] = { wierszy: w.length, zadan: partie(w.map((q) => realny(q).do)).zadan, zadanUprzaz: partie(w.map((q) => q.bajty)).zadan };
+    for (const [dev, w] of x.naUrz) {
+      const p = partie(w.map((q) => realny(q).do));
+      urz[dev] = { wierszy: w.length, zadan: p.zadan + p.oversize, oversize: p.oversize, zadanUprzaz: partie(w.map((q) => q.bajty)).zadan };
+    }
     const zadanMaks = Math.max(0, ...Object.values(urz).map((u) => u.zadan));
+    const oversize = Object.values(urz).reduce((n, u) => n + u.oversize, 0);
     const ok = { wierszy: x.wierszy <= LIMITY.wierszySlotMin, bajtow: x.realneDo <= LIMITY.bajtowSlotMin, zadan: zadanMaks <= LIMITY.zadanUrzMin };
-    return { t: x.t, wierszy: x.wierszy, bajty: x.bajty, realneOd: x.realneOd, realneDo: x.realneDo, zadanMaks, urz, ok, zgodny: ok.wierszy && ok.bajtow && ok.zadan };
+    return { t: x.t, wierszy: x.wierszy, bajty: x.bajty, realneOd: x.realneOd, realneDo: x.realneDo, zadanMaks, oversize, urz, ok, zgodny: ok.wierszy && ok.bajtow && ok.zadan };
   });
   const maks = (pole) => lista.reduce((m, s) => (m && m[pole] >= s[pole] ? m : s), null);
-  return { slotow: lista.length, zgodne: lista.every((s) => s.zgodny), przekroczone: lista.filter((s) => !s.zgodny), maksWierszy: maks('wierszy'), maksRealne: maks('realneDo'), maksZadan: maks('zadanMaks') };
+  return { slotow: lista.length, zgodne: lista.every((s) => s.zgodny), przekroczone: lista.filter((s) => !s.zgodny), maksWierszy: maks('wierszy'), maksRealne: maks('realneDo'), maksZadan: maks('zadanMaks'), oversize: lista.reduce((n, s) => n + s.oversize, 0) };
 }
 // Okna przesuwne 60 s zegara uprzęży (tylko druk): os — [{ t, dev, wiersze, bajty, zad }].
 export function oknaPrzesuwne(os, filtr = () => true) {
@@ -412,6 +419,9 @@ export function nowyLicznikOdsylania({ regula = 'T', rekordZlozony = null } = {}
     tlumi: { A: {}, B: {}, T: {} }, usuniecia: {}, utrata: {}, przykladyUtraty: [], przyklady: [],
     polaZawsze: { encji: 0, bezPola: 0, przyklady: [], kandydaci: {} },
     strony: [], partieDostaw: { n: 0, maks: 0, ponad200: 0, opisMaks: '' }, os: [], brakNosnika: 0, brakNosnikaKlasy: {}, bladBuildera: 0, ms: 0,
+    // czas pracy uprzęży tylko dla licznika poza echem stron (ms; druk): eksporty po każdym zdarzeniu dostawy, eksporty
+    // przed scaleniem w pół wymiany, powtórka partii — wypełnia uprząż
+    msDodatkowe: { eksportyDostawy: 0, eksportyWymiany: 0, powtorka: 0 },
     // echo na klonach — wypełnia uprząż: drugi rząd na klonach bieżących urządzeń, przez starszą aplikację (do nadawcy
     // i do drugiego bieżącego), obiegi wymiany (1…MAKS_OBIEGOW) i pętle ponad limit
     klony: { prob: 0, urzadzen: 0, drugiRzad: 0, drugiRzad2a: 0, przezStarsza: { prob: 0, doNadawcy: 0, doInnych: 0, po2a: 0 }, obiegi: Array(MAKS_OBIEGOW).fill(0), ponadObiegi: 0, przyklady: [], ms: 0 },
@@ -481,7 +491,7 @@ export function nowyLicznikOdsylania({ regula = 'T', rekordZlozony = null } = {}
       stron: L.strony.length, partieDostaw: L.partieDostaw, oversize, brakNosnika: L.brakNosnika, brakNosnikaKlasy: L.brakNosnikaKlasy, bladBuildera: L.bladBuildera,
       budzet: budzetSlotow(L.strony), budzetNaiwny: budzetSlotow(wyk2a),
       okno: { wykonalne: oknaPrzesuwne(L.os, (x) => x.zrodlo !== 'echo2a'), echo: oknaPrzesuwne(L.os, (x) => x.zrodlo === 'echo'), naiwne: oknaPrzesuwne(L.os, (x) => x.zrodlo !== 'echo') },
-      przyklady: L.przyklady, klony: L.klony, ms: Math.round(L.ms),
+      przyklady: L.przyklady, klony: L.klony, ms: Math.round(L.ms), msDodatkowe: Object.fromEntries(Object.entries(L.msDodatkowe).map(([k, v]) => [k, Math.round(v)])),
     };
   };
   return L;

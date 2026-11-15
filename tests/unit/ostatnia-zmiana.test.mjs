@@ -395,6 +395,36 @@ describe('wyrocznia: klasy tabeli wyjątków wymagają mechanizmu (pozytyw; nega
     expect(tylko(WYR.ocen(M2, { A: widok(baza) }), 'n'), 'bez scalenia').toEqual(['A n wskrzeszenie [null]']);
   });
 
+  it('D-4 A (Kosz w zwróconej starej karcie): A scala P → Q; B bez wiedzy zapisuje nową wersję u w P (P wraca), potem daje v do Kosza w P; A usuwa Q — wpis Kosza zostaje przy żywej P (pozytyw, wszystkie światy); kosz w P, która przed nim nie wróciła (także gdy wraca dopiero zapisem po koszu) — bez klasy', () => {
+    const KL = 'D-4 A (Kosz w zwróconej starej karcie)';
+    const baza = bazaPQ();
+    const zU = stan({ karty: [karta('P', [...baza.patients[0].snapshots, wersja('u', 22, { vid: 'wiz-u' })]), baza.patients[1]] });
+    const koszWP = (przed) => ({ ...przed, patients: [karta('P', przed.patients[0].snapshots.filter((s) => s.snapshotId !== 'v')), ...przed.patients.slice(1)], snapshotTombstones: [wpisKosza('v', 'P', 20, { vid: 'wiz-v' })] });
+    const swiaty = ['W1', 'W4', 'bloby', 'W1 floty', 'W4 floty', 'p6f W1', 'p6f W4'];
+    const historia = (kolejnosc) => {
+      const M = WYR.nowyModel();
+      WYR.zapisz(M, { dev: 'A', opis: 'Scal pacjentów', przed: baza, po: scalonePQ(), t: T(1), operacje: [op('mergePatients', 'P', 'Q')] });
+      let t = 2;
+      for (const krok of kolejnosc) {
+        if (krok === 'u') WYR.zapisz(M, { dev: 'B', opis: 'nowa wersja u w P', przed: baza, po: zU, t: T(t++) });
+        else WYR.zapisz(M, { dev: 'B', opis: 'kosz v w P', przed: krok === 'kosz po u' ? zU : baza, po: koszWP(krok === 'kosz po u' ? zU : baza), t: T(t++), operacje: [op('moveSnapshotToTrash', 'P', 'v')] });
+      }
+      WYR.zapisz(M, { dev: 'A', opis: 'usuń pacjenta Q', przed: scalonePQ(), po: stan({ nagrobki: ['P', 'Q'] }), t: T(t), operacje: [op('removePatient', 'Q')] });
+      return M;
+    };
+    // widok po powrocie P: u w karcie P, v w Koszu P
+    const wrocona = stan({ karty: [karta('P', [wersja('u', 22, { vid: 'wiz-u' })])], nagrobki: ['Q'], kosz: [wpisKosza('v', 'P', 20, { vid: 'wiz-v' })] });
+    const l = WYR.ocen(historia(['u', 'kosz po u']), { A: widok(wrocona) }).filter((x) => x.id === 'v');
+    expect(skrot(l), 'P wróciła przed koszem').toEqual([`A v wskrzeszenie [${KL}]`]);
+    expect(swiaty.map((s) => WYR.bezWyjatku(l, s).length), 'dozwolona we wszystkich światach').toEqual([0, 0, 0, 0, 0, 0, 0]);
+    // negatyw: kosz w P, która nie wróciła (widok B bez wiedzy o scaleniu i o usunięciu Q)
+    const bezPowrotu = WYR.ocen(historia(['kosz']), { B: widok(koszWP(baza)) }).filter((x) => x.id === 'v');
+    expect(skrot(bezPowrotu), 'P bez powrotu przed koszem').toEqual(['B v wskrzeszenie [null]']);
+    expect(swiaty.map((s) => WYR.bezWyjatku(bezPowrotu, s).length)).toEqual([1, 1, 1, 1, 1, 1, 1]);
+    // negatyw: P wraca dopiero zapisem po koszu
+    expect(tylko(WYR.ocen(historia(['kosz', 'u']), { A: widok(wrocona) }), 'v'), 'zapis w P po koszu').toEqual(['A v wskrzeszenie [null]']);
+  });
+
   it('klasa nie zależy od nazwy przebiegu (bez klasy Q8-obca-2): ocena nie ma parametru przebiegu', () => {
     const baza = stan({ karty: [karta('P', [wersja('v', 20), wersja('w', 21)])] });
     const M = WYR.nowyModel();
@@ -406,8 +436,9 @@ describe('wyrocznia: klasy tabeli wyjątków wymagają mechanizmu (pozytyw; nega
   });
 
   it('tabela wyjątków: każda klasa z opisem, mechanizmem, źródłem i światami; E1/E1b — do naprawy w E3-PR0 (9a), E4b — tylko W1 (4a); klasa null zawsze czerwieni', () => {
-    // klasy samych bieżących urządzeń (bez pola cechy); klasy floty ze starszą aplikacją — osobny przypadek niżej
-    expect(Object.values(WYR.WYJATKI).filter((w) => !w.cechy).length, 'liczba klas').toBe(15);
+    // klasy samych bieżących urządzeń (bez pola cechy; E3-PR0b dopisało „D-4 A (Kosz w zwróconej starej karcie)”); klasy
+    // floty ze starszą aplikacją — osobny przypadek niżej
+    expect(Object.values(WYR.WYJATKI).filter((w) => !w.cechy).length, 'liczba klas').toBe(16);
     for (const [k, w] of Object.entries(WYR.WYJATKI)) {
       expect(typeof w.opis === 'string' && w.opis.length > 20 && typeof w.zrodlo === 'string' && w.zrodlo.length > 10, `opis i źródło: ${k}`).toBe(true);
       expect(typeof w.mechanizm === 'string' && w.mechanizm.length > 20, `mechanizm: ${k}`).toBe(true);
@@ -476,6 +507,15 @@ describe('wyrocznia: flota ze starszą aplikacją (E3-PR0b) — normalizacja to�
     expect(tylko(WYR.ocen(M, { B: widok(innaWizyta), C: widok(bezVisit) }, { stare: ['C'] }), 'v')).toEqual(['B v treść [null]', 'C v treść [null]']);
   });
 
+  it('normalizacja tożsamości wizyty — negatyw karty wizyty: w widoku bieżącego urządzenia visit.patientId innej karty niż karta wersji (oczekiwany zapis z 221) — porównanie ścisłe, „treść” bez klasy; ten sam fakt w widoku starszej aplikacji — z normalizacją', () => {
+    const baza = stan({ karty: [karta('P', [wersja('v', 20), wersja('w', 21)])] });
+    const M = WYR.nowyModel();
+    zap(M, 'C', 'S221', 'poprawka', baza, stan({ karty: [karta('P', [wersja221('v', 30, { rev: 2 }), wersja('w', 21)])] }), 1, op('updateSnapshotPayload', 'P', 'v'));
+    const obcaKarta = stan({ karty: [karta('P', [wersja('v', 30, { rev: 2, pid: 'Q', vid: 'wiz-P' }), wersja('w', 21)])] });
+    expect(tylko(WYR.ocen(M, { A: widok(obcaKarta) }), 'v'), 'A: visit.patientId = Q pod kartą P').toEqual(['A v treść [null]']);
+    expect(tylko(WYR.ocen(M, { C: widok(obcaKarta) }), 'v'), 'C (starsza aplikacja)').toEqual([]);
+  });
+
   it('retencja starszej aplikacji (urządzenie przycinające): retencja v1 na 221 i na 276 usuwa u siebie ostatni stan wizyty — klasa tylko w widoku przycinającego i tylko w światach floty', () => {
     for (const [dev, app] of [['C', 'S221'], ['D', 'S276']]) {
       const baza = dwieWizyty();
@@ -525,6 +565,9 @@ describe('wyrocznia: flota ze starszą aplikacją (E3-PR0b) — normalizacja to�
     zap(na221, 'A', 'N', 'nowa wersja wizyty wiz-1', baza, zU, 1);
     zap(na221, 'C', 'S221', 'retencja', baza, przyciete, 2, op('pruneSnapshotsForPatient', 'P'));
     expect(skrot(WYR.ocen(na221, { D: widok(poWymianie) }, { stare: ['D'] })), 'widok D (276)').toEqual(['D v retencja usunęła ostatni stan wizyty [null]']);
+    // bieżące A bez nagrobka retencji tej wersji (nagrobek do A nie doszedł, a v i tak zniknęło) — bez klasy
+    const bezNagrobka = stan({ karty: [karta('P', [wersja('w', 21, { vid: 'wiz-2' }), wersja('u', 25, { vid: 'wiz-1' })])] });
+    expect(skrot(WYR.ocen(na221, { A: widok(bezNagrobka) })), 'widok A bez nagrobka retencji').toEqual(['A v retencja usunęła ostatni stan wizyty [null]']);
   });
 
   it('gwiazdka ze starszej aplikacji: „Odepnij i usuń” na 221 (treść Kosza z gwiazdką, bez pola gwiazdka) — Kosz z gwiazdką w widoku A (W20) i C (semantyka 221); „Przywróć” na A — karta z gwiazdką sprzed', () => {
@@ -550,7 +593,7 @@ describe('wyrocznia: flota ze starszą aplikacją (E3-PR0b) — normalizacja to�
     }
   });
 
-  it('gwiazdka ze starszej aplikacji — negatyw warunku faktu: ten sam kosz na 221 (bez wiedzy o gwiazdce z A), a bieżące B pokazuje gwiazdkę inną niż wynik W20 — czerwień (bez klasy, nie R4a); widok C zgodny z 221 — klasa; widok urządzenia starszej aplikacji z listy stare', () => {
+  it('gwiazdka ze starszej aplikacji — warunek faktu: kosz na 221 bez wiedzy o gwiazdce z A, a bieżące B ze swoją gwiazdką sprzed kosza (W20 na B, do którego gwiazdka A nie doszła) — R4a, tylko po samych zdarzeniach (czerwień w W4 floty); kosz na 221, które gwiazdkę znało, a B z gwiazdką inną niż wynik W20 — czerwień bez klasy; widok C zgodny z 221 — klasa; widok urządzenia starszej aplikacji z listy stare', () => {
     const baza = stan({ karty: [karta('P', [wersja('v', 20), wersja('w', 21)])] });
     const przypieta = stan({ karty: [karta('P', [wersja('v', 20, { pinned: true, rev: 2 }), wersja('w', 21)])] });
     const kosz = stan({ karty: [karta('P', [wersja('w', 21)])], kosz: [wpisKosza('v', 'P', 20)] });
@@ -562,10 +605,19 @@ describe('wyrocznia: flota ze starszą aplikacją (E3-PR0b) — normalizacja to�
       return M;
     };
     const M = historia('C', 'S221');
-    expect(tylko(WYR.ocen(M, { B: widok(kosz), C: widok(kosz) }), 'v'), 'B bez gwiazdki (W20: z gwiazdką), C bez gwiazdki (221)').toEqual(['B v gwiazdka Kosza [null]', `C v gwiazdka Kosza [${KL.gwiazdka}]`]);
-    expect(tylko(WYR.ocen(M, { B: widok(koszZGwiazdka) }), 'v'), 'B zgodne z W20').toEqual([]);
-    expect(tylko(WYR.ocen(M, { E: widok(kosz) }), 'v'), 'E spoza stare — widok bieżącej aplikacji').toEqual(['E v gwiazdka Kosza [null]']);
+    const l = WYR.ocen(M, { B: widok(kosz), C: widok(kosz) }).filter((x) => x.id === 'v');
+    expect(skrot(l), 'B bez gwiazdki (W20 na B), C bez gwiazdki (221)').toEqual(['B v gwiazdka Kosza [R4a]', `C v gwiazdka Kosza [${KL.gwiazdka}]`]);
+    expect(czerwoneWSwiatach(l.filter((x) => x.urz === 'B')), 'R4a: W1 i W1 floty — tak, W4 floty — czerwień').toEqual([0, 1, 0, 0, 1, 0, 1]);
+    expect(tylko(WYR.ocen(M, { B: widok(koszZGwiazdka) }), 'v'), 'B zgodne z W20 z modelu').toEqual([]);
+    expect(tylko(WYR.ocen(M, { E: widok(kosz) }), 'v'), 'E spoza stare — widok bieżącej aplikacji').toEqual(['E v gwiazdka Kosza [R4a]']);
     expect(tylko(WYR.ocen(M, { E: widok(kosz) }, { stare: ['E'] }), 'v'), 'E w stare — semantyka 221').toEqual([`E v gwiazdka Kosza [${KL.gwiazdka}]`]);
+    // kosz na 221, które znało ostatnią gwiazdkę (wersja bez gwiazdki u wszystkich): W20 daje „bez gwiazdki” na każdym
+    // bieżącym urządzeniu, więc Kosz z gwiazdką w widoku B to czerwień w każdym świecie (bez R4a)
+    const znana = WYR.nowyModel();
+    zap(znana, 'C', 'S221', 'usuń', baza, kosz, 1, op('moveSnapshotToTrash', 'P', 'v'));
+    const twardy = WYR.ocen(znana, { B: widok(koszZGwiazdka) }).filter((x) => x.id === 'v');
+    expect(skrot(twardy), 'B z gwiazdką inną niż W20').toEqual(['B v gwiazdka Kosza [null]']);
+    expect(czerwoneWSwiatach(twardy)).toEqual([1, 1, 1, 1, 1, 1, 1]);
     // ten sam kosz na bieżącym urządzeniu bez wiedzy o gwiazdce: R4a (dozwolona w W1 i w W1 floty, nie w W4 floty)
     const naN = WYR.ocen(historia('C', 'N'), { B: widok(kosz) }, { stare: ['D'] }).filter((x) => x.id === 'v');
     expect(skrot(naN)).toEqual(['B v gwiazdka Kosza [R4a]']);
@@ -661,6 +713,42 @@ describe('wyrocznia: flota ze starszą aplikacją (E3-PR0b) — normalizacja to�
     }
   });
 
+  it('zmiana starszej aplikacji nadpisana przed wysłaniem — negatyw: zmiana opuściła 221 (oczekiwana treść albo gwiazdka jest w innym widoku punktu), więc jej brak w widoku bieżącego D leży po stronie wymiany bieżących urządzeń — bez klasy', () => {
+    const baza = stan({ karty: [karta('P', [wersja('v', 20), wersja('w', 21)])] });
+    {
+      // (a) treść: poprawka 23 kg na 221, gwiazdka A bez wiedzy o niej; B ma poprawkę z gwiazdką, D — samą gwiazdkę A
+      const M = WYR.nowyModel();
+      zap(M, 'C', 'S221', 'poprawka', baza, stan({ karty: [karta('P', [wersja221('v', 23, { rev: 2 }), wersja('w', 21)])] }), 1, op('updateSnapshotPayload', 'P', 'v'));
+      const gwiazdkaA = stan({ karty: [karta('P', [wersja('v', 20, { pinned: true, rev: 2 }), wersja('w', 21)])] });
+      zap(M, 'A', 'N', 'gwiazdka', baza, gwiazdkaA, 2, op('setSnapshotPinned', 'P', 'v', true));
+      const zPoprawka = stan({ karty: [karta('P', [wersja('v', 23, { pinned: true, rev: 3 }), wersja('w', 21)])] });
+      const l = WYR.ocen(M, { B: widok(zPoprawka), D: widok(gwiazdkaA) });
+      expect(tylko(l, 'v'), '(a) treść').toEqual(['D v treść [null]']);
+      expect(l.find((x) => x.id === 'v').gdzieIndziej).toEqual(['B']);
+    }
+    {
+      // (a) gwiazdka: gwiazdka na 221, poprawka A bez wiedzy o niej; B ma poprawkę z gwiazdką, D — samą poprawkę A
+      const M = WYR.nowyModel();
+      zap(M, 'C', 'S221', 'gwiazdka', baza, stan({ karty: [karta('P', [wersja('v', 20, { pinned: true, rev: 2 }), wersja('w', 21)])] }), 1, op('setSnapshotPinned', 'P', 'v', true));
+      const poprawkaA = stan({ karty: [karta('P', [wersja('v', 26, { rev: 2 }), wersja('w', 21)])] });
+      zap(M, 'A', 'N', 'poprawka', baza, poprawkaA, 2, op('updateSnapshotPayload', 'P', 'v'));
+      const zGwiazdka = stan({ karty: [karta('P', [wersja('v', 26, { pinned: true, rev: 3 }), wersja('w', 21)])] });
+      expect(tylko(WYR.ocen(M, { B: widok(zGwiazdka), D: widok(poprawkaA) }), 'v'), '(a) gwiazdka').toEqual(['D v gwiazdka [null]']);
+    }
+    {
+      // (b): poprawka A (25 kg) wersji utworzonej na 221 i gwiazdka 221 bez wiedzy o niej; B ma poprawkę A z gwiazdką
+      const bez = stan({ karty: [karta('P', [wersja('w', 21)])] });
+      const nowaC = stan({ karty: [karta('P', [wersja('w', 21), wersja221('v', 20)])] });
+      const M = WYR.nowyModel();
+      zap(M, 'C', 'S221', 'nowa wersja', bez, nowaC, 1);
+      zap(M, 'A', 'N', 'poprawka', nowaC, stan({ karty: [karta('P', [wersja('w', 21), wersja('v', 25, { rev: 2 })])] }), 2, op('updateSnapshotPayload', 'P', 'v'));
+      zap(M, 'C', 'S221', 'gwiazdka', nowaC, stan({ karty: [karta('P', [wersja('w', 21), wersja221('v', 20, { pinned: true, rev: 2 })])] }), 3, op('setSnapshotPinned', 'P', 'v', true));
+      const naA = stan({ karty: [karta('P', [wersja('w', 21), wersja('v', 20, { pinned: true, rev: 2 })])] });
+      const naB = stan({ karty: [karta('P', [wersja('w', 21), wersja('v', 25, { pinned: true, rev: 3 })])] });
+      expect(tylko(WYR.ocen(M, { A: widok(naA), B: widok(naB) }), 'v'), '(b)').toEqual(['A v treść [null]']);
+    }
+  });
+
   it('najpierw rev (starsza aplikacja): poprawka na 221 (rev 3), później poprawka B (rev 2) bez wiedzy o niej; karta wraca z 221 — wszędzie wcześniejsza treść z wyższym rev', () => {
     const baza = stan({ karty: [karta('P', [wersja('v', 20), wersja('w', 21)])] });
     const na221 = stan({ karty: [karta('P', [wersja221('v', 23, { rev: 3 }), wersja('w', 21)])] });
@@ -684,6 +772,25 @@ describe('wyrocznia: flota ze starszą aplikacją (E3-PR0b) — normalizacja to�
     const fakt = stan({ karty: [karta('P', [wersja221('v', 23, { rev: 3 }), wersja('w', 21)])] });
     expect(tylko(WYR.ocen(historia('D', 'N', 3, 2), { A: widok(fakt) }, { stare: ['C'] }), 'v'), 'poprawka na D').toEqual(['A v treść [null]']);
     expect(tylko(WYR.ocen(historia('C', 'S221', 2, 3), { A: widok(fakt) }), 'v'), 'rev 2 < rev 3').toEqual(['A v treść [null]']);
+  });
+
+  it('najpierw rev — przyczyna po stronie bieżącej aplikacji: B samo zapisało późniejszą treść (rev 2), a pokazuje wcześniejszą z 221 (rev 3) — bieżąca aplikacja wybiera po chwili (rekord 221 bez pól W3 ma chwilę treści updatedAtISO), więc bez klasy, także gdy A ma oczekiwaną; karta wraca zmianą 221 po „Usuń pacjenta” — klasa także w widoku B', () => {
+    const baza = stan({ karty: [karta('P', [wersja('v', 20), wersja('w', 21)])] });
+    const na221 = stan({ karty: [karta('P', [wersja221('v', 23, { rev: 3 }), wersja('w', 21)])] });
+    const poB = stan({ karty: [karta('P', [wersja('v', 26, { rev: 2 }), wersja('w', 21)])] });
+    const naB = stan({ karty: [karta('P', [wersja('v', 23, { rev: 3 }), wersja('w', 21)])] }); // B wyznaczyło tożsamość wizyty
+    const M = WYR.nowyModel();
+    zap(M, 'C', 'S221', 'poprawka', baza, na221, 1, op('updateSnapshotPayload', 'P', 'v'));
+    zap(M, 'B', 'N', 'poprawka', baza, poB, 2, op('updateSnapshotPayload', 'P', 'v'));
+    expect(tylko(WYR.ocen(M, { A: widok(poB), B: widok(naB) }), 'v'), 'A z oczekiwaną treścią').toEqual(['B v treść [null]']);
+    expect(tylko(WYR.ocen(M, { B: widok(naB) }), 'v'), 'sam widok B').toEqual(['B v treść [null]']);
+    // „Usuń pacjenta” na A (zna poprawkę B), potem 221 bez wiedzy o usunięciu zmienia kartę: jedynym źródłem wersji v
+    // po powrocie karty jest 221
+    zap(M, 'A', 'N', 'usuń pacjenta', poB, stan({ nagrobki: ['P'] }), 3, op('removePatient', 'P'));
+    const zU = stan({ karty: [karta('P', [...na221.patients[0].snapshots, wersja221('u', 25)])] });
+    zap(M, 'C', 'S221', 'nowa wersja', na221, zU, 4);
+    const wrocona = stan({ karty: [karta('P', [wersja('v', 23, { rev: 3 }), wersja('w', 21), wersja('u', 25)])] });
+    expect(tylko(WYR.ocen(M, { A: widok(wrocona), B: widok(wrocona) }), 'v'), 'karta wróciła zmianą 221').toEqual([`A v treść [${KL.rev}]`, `B v treść [${KL.rev}]`]);
   });
 
   it('notatka bez ratunku D-21 (starsza aplikacja): (a) „Usuń pacjenta” na A, nagrobek notatki doszedł do 221, potem zmiana karty na 221; (b) „Usuń pacjenta” na 221, potem zmiana karty na A — karta wraca bez notatki', () => {
@@ -717,6 +824,16 @@ describe('wyrocznia: flota ze starszą aplikacją (E3-PR0b) — normalizacja to�
       zap(M, 'A', 'N', 'nowa wersja', baza, poA, 2);
       expect(tylko(WYR.ocen(M, { A: widok(stan({ karty: poA.patients })) }, { stare: ['C'] }), 'n'), app).toEqual(['A n utrata [null]']);
     }
+  });
+
+  it('notatka bez ratunku D-21 — negatyw (a): „Usuń pacjenta” na A, a 221 zmienia kartę, mając jeszcze notatkę (nagrobek do niego nie doszedł) — jego pełna kopia niesie rekord notatki, ratunek D-21 bieżącej aplikacji ją przywraca; utrata bez klasy', () => {
+    const baza = stan({ karty: [karta('P', [wersja('v', 20)])], notatki: [notatka('n', 'P', 'Fikcyjna treść')] });
+    const M = WYR.nowyModel();
+    zap(M, 'A', 'N', 'usuń pacjenta', baza, stan({ nagrobki: ['P'], nagrNotatek: [{ id: 'n' }] }), 1, op('removePatient', 'P'));
+    const poC = stan({ karty: [karta('P', [wersja('v', 20), wersja221('u', 25)])], notatki: [notatka('n', 'P', 'Fikcyjna treść')] });
+    zap(M, 'C', 'S221', 'nowa wersja', baza, poC, 2);
+    const bezN = stan({ karty: poC.patients });
+    expect(tylko(WYR.ocen(M, { A: widok(bezN), B: widok(bezN) }), 'n')).toEqual(['A n utrata [null]', 'B n utrata [null]']);
   });
 
   it('karta częściowa (starsza aplikacja): (a) „Usuń pacjenta” na A, karta wraca zmianą 221 (bez haka H1); (b) retencja v1 na 276 usunęła ostatni stan wizyty, potem „Usuń pacjenta” i powrót karty z B — dozwolona także w W4 floty', () => {
@@ -759,6 +876,26 @@ describe('wyrocznia: flota ze starszą aplikacją (E3-PR0b) — normalizacja to�
       const bezV = stan({ karty: [karta('P', [wersja('w', 21, { vid: 'wiz-2' }), wersja('u', 25, { vid: 'wiz-3' })])], kosz: [nagrobekRetencji] });
       expect(tylko(WYR.ocen(M, { E: widok(bezV) }, { stare: ['C'] }), 'v')).toEqual(['E v utrata [karta częściowa (nagrobek przegrał lokalnie, bez haka H1)]']);
     }
+  });
+
+  it('karta częściowa (starsza aplikacja), wariant (b) — przycięcie związane z urządzeniem: retencja v1 na 276 (D), „Usuń pacjenta” na A, kartę zwraca bieżące B, które miało v (pełna karta z hakiem H1) — w widokach A i B klasa samych bieżących urządzeń (czerwień w W4 floty); kartę zwraca samo D — klasa floty także w widoku A', () => {
+    const baza = dwieWizyty();
+    const przyciete = stan({ karty: [karta('P', [wersja('w', 21, { vid: 'wiz-2' })])], kosz: [nagrobekRetencji] });
+    const bezV = stan({ karty: [karta('P', [wersja('w', 21, { vid: 'wiz-2' }), wersja('u', 25, { vid: 'wiz-3' })])] });
+    const historia = (zwraca) => {
+      const M = WYR.nowyModel();
+      zap(M, 'D', 'S276', 'retencja', baza, przyciete, 1, op('pruneSnapshotsForPatient', 'P'));
+      zap(M, 'A', 'N', 'usuń pacjenta', baza, stan({ nagrobki: ['P'] }), 2, op('removePatient', 'P'));
+      const przed = zwraca === 'D' ? przyciete : baza;
+      zap(M, zwraca, zwraca === 'D' ? 'S276' : 'N', 'nowa wersja', przed, { ...przed, patients: [karta('P', [...przed.patients[0].snapshots, wersja('u', 25, { vid: 'wiz-3' })])] }, 3);
+      return M;
+    };
+    const l = WYR.ocen(historia('B'), { A: widok(bezV), B: widok(bezV) }).filter((x) => x.id === 'v');
+    expect(skrot(l), 'kartę zwraca B').toEqual(['A v utrata [karta częściowa (nagrobek przegrał lokalnie, bez haka H1)]', 'B v utrata [karta częściowa (nagrobek przegrał lokalnie, bez haka H1)]']);
+    expect(czerwoneWSwiatach(l)).toEqual([0, 2, 2, 0, 2, 0, 2]);
+    const zD = WYR.ocen(historia('D'), { A: widok(bezV) }).filter((x) => x.id === 'v');
+    expect(skrot(zD), 'kartę zwraca D').toEqual([`A v utrata [${KL.czesciowa}]`]);
+    expect(czerwoneWSwiatach(zD)).toEqual([1, 1, 1, 0, 0, 0, 0]);
   });
 
   it('R4a i R4a′ (starsza aplikacja): kosz na A bez wiedzy o gwiazdce albo poprawce zapisanej na 221 — 221 traci je po nagrobku, więc różnica zostaje także po pełnej wymianie (W4 floty)', () => {
@@ -815,6 +952,7 @@ describe('wyrocznia: flota ze starszą aplikacją (E3-PR0b) — normalizacja to�
     expect(W_FLOCIE.map((s) => WYR.dozwolonaW('E1 (obecność)', s)), 'E1: W1, W4, bloby').toEqual([true, true, true, true]);
     expect(W_FLOCIE.map((s) => WYR.dozwolonaW('E4b (stara karta po „Scal pacjentów”)', s)), 'E4b: tylko W1').toEqual([true, false, true, false]);
     expect(W_FLOCIE.map((s) => WYR.dozwolonaW('kosz-po-2 (stara karta z ostatnią wersją przy samych blobach)', s)), 'kosz-po-2: tylko bloby').toEqual([false, false, false, false]);
+    expect(W_FLOCIE.map((s) => WYR.dozwolonaW('D-4 A (Kosz w zwróconej starej karcie)', s)), 'Kosz w zwróconej starej karcie: W1, W4, bloby').toEqual([true, true, true, true]);
     expect(WYR.dozwolonaW('klasa spoza tabeli', 'W1')).toBe(false);
     const M = WYR.nowyModel();
     const baza = stan({ karty: [karta('P', [wersja('v', 20)])] });

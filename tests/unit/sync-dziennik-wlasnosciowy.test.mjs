@@ -174,8 +174,10 @@
 //   między bieżącymi, budżet minuty slotu, powtórka partii — 0, odcisk testu = h) i literał ZNANE_ODSYL ziaren
 //   domyślnych.
 // - Urządzenie starszej aplikacji (urzadzenie(..., { app: 'S221' | 'S276' })): sejf i retencja v1 z fikstur
-//   (tests/support/starsza-aplikacja.mjs), klon dziedziczy app; mutacja na sejfie 221 bez emisji (mutacjaBezDziennika);
-//   para z urządzeniem starszej aplikacji w W4 — tabela 'flota' (kontPary).
+//   (tests/support/starsza-aplikacja.mjs), klon dziedziczy app; mutacja na sejfie 221 bez emisji (mutacjaBezDziennika:
+//   odmowa sejfu z kodem z ODMOWY_STARSZEJ liczona, każdy inny wyjątek rzucany dalej); para z urządzeniem starszej
+//   aplikacji w W4 — tabela 'flota' (kontPary).
+// - Wyrocznia: w punktach bez urządzenia starszej aplikacji normalizacja tożsamości wizyty nieużyta (NORM_BEZ_FLOTY).
 //
 // KOLEJNOŚĆ W KROKU (E2-PR3a2, sprawdzana na emiterach): snap (także wersje przeniesione pod kartę celu „Scal pacjentów”
 // i głowy scalenia), potem stomb, potem ptomb, potem pnote, pnotetomb, note, notetomb, plist, plisttomb, pref, pk, pktomb,
@@ -312,10 +314,17 @@ async function wyrWidokiKlonow(urz) {
 }
 // Ocena jednego punktu: swiat — 'W1' (po samych zdarzeniach), 'W4' (zdarzenia, a po nich pełna wymiana), 'bloby' (świat
 // samych blobów); punkt — opis do raportu. Naruszenia trafiają do S.wyrNaruszenia (z punktem, krokiem i światem).
+// E3-PR0b: w punkcie bez urządzenia starszej aplikacji (historia i kont.stare) normalizacja tożsamości wizyty wyroczni
+// (WYR.NORM_VISIT) nie może rozstrzygnąć żadnego porównania — bieżąca aplikacja zawsze zapisuje payload.visit; inaczej
+// punkt trafia do NORM_BEZ_FLOTY (afterEach niżej: pusta lista).
+const NORM_BEZ_FLOTY = [];
 function wyrOcena(S, swiat, punkt, widoki, kont = {}) {
   if (!S.wyr) return [];
   const t0 = performance.now();
+  const zeStarsza = (kont.stare && kont.stare.length > 0) || [...S.wyr.app.values()].some((a) => a !== WYR.BIEZACA);
+  const norm0 = WYR.NORM_VISIT.uzyta;
   const lista = WYR.ocen(S.wyr, widoki, { etykieta: S.wyrEtyk, ...kont }).map((x) => ({ ...x, swiat, punkt, krok: S.nrKroku || 0 }));
+  if (!zeStarsza && WYR.NORM_VISIT.uzyta !== norm0) NORM_BEZ_FLOTY.push(`${swiat} ${punkt}#${S.nrKroku || 0}: ${WYR.NORM_VISIT.uzyta - norm0} porównań`);
   (S.wyrNaruszenia = S.wyrNaruszenia || []).push(...lista);
   S.wyrPunkty = (S.wyrPunkty || 0) + 1;
   if (WYR_PLIK && lista.length) appendFileSync(WYR_PLIK, JSON.stringify({ typ: 'punkt', swiat: S.wyrSwiat || null, ziarno: S.ziarno ?? null, krok: S.nrKroku || 0, punkt, mutacji: S.wyr.mutacji, naruszenia: lista, dziennik: (S.dziennik || []).slice(-14) }) + '\n');
@@ -1005,7 +1014,8 @@ async function dostawa(S, X, Y, { k = Infinity, cofnij = 0, haki: zHakami = true
   // je jak dotąd (tylko przy hakach i partii z więcej niż jednym zdarzeniem).
   const stanyH = zHakami && partia.length > 1;
   const stany = stanyH || S.odsyl ? [przed] : null;
-  if (stany) for (const e of partia) { await zastosuj(Y, [e]); stany.push(await eksport(Y)); }
+  // czas eksportów robionych tylko dla licznika (bez modelu haków) — S.odsyl.msDodatkowe (druk)
+  if (stany) for (const e of partia) { await zastosuj(Y, [e]); const t0 = performance.now(); stany.push(await eksport(Y)); if (!stanyH) S.odsyl.msDodatkowe.eksportyDostawy += performance.now() - t0; }
   else await zastosuj(Y, partia);
   S.kursor.set(nazwa, c + partia.length);
   const wyslane = Math.max(X.wyslane || 0, c + partia.length);
@@ -4338,6 +4348,7 @@ afterEach(async () => { await sprzatnijUrzadzenia(); vi.useRealTimers(); vi.rest
 afterEach(() => { const n = EMITERY_NIEZGODNE.splice(0); expect(n, 'AB1: emitery ≡ model w każdej mutacji przypadku').toEqual([]); });
 // AB7: niezgodność haków scalania z modelem czerwieni przypadek także wtedy, gdy wyjątek dostawy złapał krok katalogu p. 5.
 afterEach(() => { const n = HAKI_NIEZGODNE.splice(0); expect(n, 'AB7: haki z emiterów ≡ model w każdej partii przypadku').toEqual([]); });
+afterEach(() => { expect(NORM_BEZ_FLOTY.splice(0), 'wyrocznia: normalizacja tożsamości wizyty nieużyta w punktach z samymi bieżącymi urządzeniami').toEqual([]); });
 afterAll(() => {
   console.log('E2-AB emitery (plik)', JSON.stringify(EMITERY_PLIK)); console.log('E2-AB haki (plik)', JSON.stringify(HAKI_PLIK));
   console.log('E2-AB wyrocznia, czas (ms)', JSON.stringify(Object.fromEntries(Object.entries(WYR_CZAS).map(([k, v]) => [k, Math.round(v)]))));
@@ -4462,6 +4473,7 @@ async function poPartiiOdsyl(S, X, Y, partia, stany, dodane) {
 // zdarzenia — źródło 'powtórka'; oczekiwane 0 wierszy surowych (scalanie nic nie zapisuje).
 async function powtorkaPartii(S, Y, partia, opis) {
   const L = S.odsyl;
+  const t0 = performance.now();
   await cichoLicznik(S, async () => {
     const K = await klonBiezacy(S, Y, 'powt');
     try {
@@ -4472,24 +4484,28 @@ async function powtorkaPartii(S, Y, partia, opis) {
       }
     } finally { await zamknij(K); }
   });
+  L.msDodatkowe.powtorka += performance.now() - t0;
 }
 // Wymiana PO-A na klonach W4 z licznikiem (pół wymiany): Y scala pełny stan X, potem X scala stan Y po scaleniu — jak
 // rundaPO; licz — echo obu połówek (pierwszy obieg wymiany; źródło 'w4'). Wpisy haków ze scalenia (rejestr łańcucha
-// klonu) — haki warstwy nowe. Dodatkowe eksporty przed scaleniem nie zmieniają stanu ani losowań.
+// klonu) — haki warstwy nowe. Dodatkowe eksporty przed scaleniem (tylko w obiegu, który licznik liczy) nie zmieniają
+// stanu ani losowań.
 async function wymianaPOLicz(S, X, Y, licz) {
+  const liczy = !!licz && !!S.odsyl;
+  const eksportLicznika = async (U) => { const t0 = performance.now(); const e = await eksport(U); S.odsyl.msDodatkowe.eksportyWymiany += performance.now() - t0; return e; };
   const bx = json(await X.v.exportSyncPayload());
-  const y0 = await eksport(Y);
+  const y0 = liczy ? await eksportLicznika(Y) : null;
   if (Y.lancuch) Y.lancuch.length = 0;
   await Y.v.mergeSyncPayload(json(bx));
   const by = json(await Y.v.exportSyncPayload());
   const hY = Y.lancuch ? kluczeWpisow(Y.lancuch.splice(0)) : new Set();
-  const x0 = await eksport(X);
+  const x0 = liczy ? await eksportLicznika(X) : null;
   if (X.lancuch) X.lancuch.length = 0;
   await X.v.mergeSyncPayload(json(by));
   const x1 = await eksport(X);
   const hX = X.lancuch ? kluczeWpisow(X.lancuch.splice(0)) : new Set();
   ustawStan(X, x1); ustawStan(Y, by);
-  if (!licz || !S.odsyl) return;
+  if (!liczy) return;
   if (!starszaAplikacja(Y)) await liczEcho(S, Y, 'w4', [{ przed: y0, po: by, ladunek: bx }], hY, `W4 ${X.nazwa}→${Y.nazwa}`, { odBiezacej: !starszaAplikacja(X) });
   if (!starszaAplikacja(X)) await liczEcho(S, X, 'w4', [{ przed: x0, po: x1, ladunek: by }], hX, `W4 ${Y.nazwa}→${X.nazwa}`, { odBiezacej: !starszaAplikacja(Y) });
 }
@@ -4510,8 +4526,11 @@ function odciskiWersji(stany) {
   return o;
 }
 // Mutacja na urządzeniu z sejfem 221 (bez dziennika zdarzeń): operacja, eksport po niej i zapis historii wyroczni
-// (wywołania API sejfu jak w mutacja), bez emisji i bez porównania z modelem. Wyjątek operacji (starszy sejf nie każdą
-// operację profilu przyjmuje) — odmowa w S.stat.odmowyStarszej i w dzienniku, bez przerwania przebiegu.
+// (wywołania API sejfu jak w mutacja), bez emisji i bez porównania z modelem. Odmowa sejfu 221 — wyjątek z kodem
+// z ODMOWY_STARSZEJ (operacja na karcie z lokalnym nagrobkiem, zajęta blokada scalania; tests/fixtures/vilda_vault-221.js.txt
+// :1906, :1270) — trafia do S.stat.odmowyStarszej (liczba i według kodu) i do dziennika, bez przerwania przebiegu. Każdy
+// inny wyjątek (błąd uprzęży, TypeError, kod spoza listy) rzuca się dalej po zapisie historii — jak w mutacja.
+const ODMOWY_STARSZEJ = Object.freeze(['PATIENT_DELETED', 'MERGE_BUSY']);
 async function mutacjaBezDziennika(S, U, opis, fn, { operacja = null } = {}) {
   const przed = U.stan;
   const operacje = operacja ? [operacja] : [];
@@ -4528,8 +4547,14 @@ async function mutacjaBezDziennika(S, U, opis, fn, { operacja = null } = {}) {
   const po = await eksport(U);
   { const t0 = performance.now(); WYR.zapisz(S.wyr = S.wyr || WYR.nowyModel(), { dev: U.nazwa, app: U.app, opis, przed, po, t: chwila, operacje }); WYR_CZAS.zapis += performance.now() - t0; }
   ustawStan(U, po);
-  if (blad) S.stat.odmowyStarszej = (S.stat.odmowyStarszej || 0) + 1;
-  S.dziennik.push(`#${S.nrKroku || 0} ${new Date(teraz).toISOString().slice(11, 23)} ${U.nazwa} (${U.app}): ${opis}${blad ? ` → odmowa ${blad.code || blad.message}` : ''}`);
+  const odmowa = !!blad && ODMOWY_STARSZEJ.includes(blad.code);
+  if (odmowa) {
+    S.stat.odmowyStarszej = (S.stat.odmowyStarszej || 0) + 1;
+    const k = S.stat.odmowyStarszejKody = S.stat.odmowyStarszejKody || {};
+    k[blad.code] = (k[blad.code] || 0) + 1;
+  }
+  S.dziennik.push(`#${S.nrKroku || 0} ${new Date(teraz).toISOString().slice(11, 23)} ${U.nazwa} (${U.app}): ${opis}${blad ? ` → ${odmowa ? 'odmowa' : 'wyjątek'} ${blad.code || blad.message}` : ''}`);
+  if (blad && !odmowa) throw blad;
   return { wynik, koperty: [], model: [] };
 }
 
@@ -4557,6 +4582,14 @@ describe('A ≡ B, urządzenie starszej aplikacji w uprzęży (E3-PR0b): app, mu
     expect([kontPary(A, C, { tabela: 'p6' }).tabela, kontPary(D, A, { tabela: 'W4', wskrzeszone: null }).tabela, kontPary(A, B, { tabela: 'p6' }).tabela, kontPary(C2, B, { tabela: 'W4' }).tabela])
       .toEqual(['flota', 'flota', 'p6', 'flota']);
     expect([dozwolona('R2', {}, { tabela: 'flota' }), dozwolona('R4n', {}, { tabela: 'flota' }), dozwolona('R2', {}, { tabela: 'p6' })]).toEqual([false, false, 'tak']);
+    // Wyjątek w mutacji na 221: odmowa sejfu z kodem z listy — liczona, przebieg trwa; każdy inny — rzucany dalej
+    // (błąd uprzęży nie zmienia programu świata po cichu); historia wyroczni dostaje zapis w obu przypadkach.
+    const odmowa = (kod) => () => { const e = new Error('odmowa sejfu (syntetyczna)'); e.code = kod; throw e; };
+    krok(); await mutacja(S, C, 'odmowa na 221', odmowa('PATIENT_DELETED'));
+    krok(); await expect(mutacja(S, C, 'błąd uprzęży na 221', () => { throw new TypeError('brak metody (syntetyczny)'); })).rejects.toThrow(TypeError);
+    krok(); await expect(mutacja(S, C, 'kod spoza listy na 221', odmowa('BAD_JSON'))).rejects.toMatchObject({ code: 'BAD_JSON' });
+    expect({ odmowy: S.stat.odmowyStarszej, kody: S.stat.odmowyStarszejKody, mutacji: S.wyr.mutacji - mutacjiPrzed, dziennik: S.dziennik.slice(-3).map((w) => w.replace(/^.*\): /, '')) })
+      .toEqual({ odmowy: 1, kody: { PATIENT_DELETED: 1 }, mutacji: 5, dziennik: ['odmowa na 221 → odmowa PATIENT_DELETED', 'błąd uprzęży na 221 → wyjątek brak metody (syntetyczny)', 'kod spoza listy na 221 → wyjątek BAD_JSON'] });
     await zamknij(C2);
   }, 30_000);
 });
@@ -4603,7 +4636,7 @@ const dodajDo = (o, z) => { for (const [k, v] of Object.entries(z || {})) o[k] =
 // Podsumowanie licznika profilu (druk do opisu PR): scalenia i wiersze według źródła i warstwy, literał, przydział,
 // koszt reguł, usunięcia, strażniki, największe minuty slotu (warstwa wyk i naiwna), partie, okna przesuwne, czas.
 function sumaOdsyl(lista) {
-  const s = { ziaren: lista.length, scalen: {}, zEchem: {}, wiersze: {}, przydzial: {}, tlumi: { A: {}, B: {}, T: {} }, usuniecia: {}, utrata: {}, polaZawsze: { encji: 0, bezPola: 0 }, kandydaci: {}, odcisk: { wersji: 0, zgodnych: 0 }, brakNosnika: 0, brakNosnikaKlasy: {}, bladBuildera: 0, oversize: 0, slotow: 0, maksSlotu: null, maksNaiwny: null, partieMaks: 0, partiePonad200: 0, okno: { wykonalne: null, echo: null, naiwne: null }, ms: 0 };
+  const s = { ziaren: lista.length, scalen: {}, zEchem: {}, wiersze: {}, przydzial: {}, tlumi: { A: {}, B: {}, T: {} }, usuniecia: {}, utrata: {}, polaZawsze: { encji: 0, bezPola: 0 }, kandydaci: {}, odcisk: { wersji: 0, zgodnych: 0 }, brakNosnika: 0, brakNosnikaKlasy: {}, bladBuildera: 0, oversize: 0, oversizeRealne: 0, slotow: 0, maksSlotu: null, maksNaiwny: null, partieMaks: 0, partiePonad200: 0, okno: { wykonalne: null, echo: null, naiwne: null }, ms: 0, msDodatkowe: {} };
   const wiekszy = (a, b, pole) => (!a || (b && b[pole] > a[pole]) ? b : a);
   for (const w of lista) {
     for (const k of ['scalen', 'zEchem', 'wiersze', 'usuniecia', 'utrata', 'brakNosnikaKlasy']) dodajDo(s[k], w[k]);
@@ -4612,7 +4645,8 @@ function sumaOdsyl(lista) {
     s.polaZawsze.encji += w.polaZawsze.encji; s.polaZawsze.bezPola += w.polaZawsze.bezPola;
     for (const [k, v] of Object.entries(w.polaZawsze.kandydaci)) { const x = s.kandydaci[k] || (s.kandydaci[k] = { encji: 0, bezPola: 0 }); x.encji += v.encji; x.bezPola += v.bezPola; }
     s.odcisk.wersji += w.odcisk.wersji; s.odcisk.zgodnych += w.odcisk.zgodnych;
-    s.brakNosnika += w.brakNosnika; s.bladBuildera += w.bladBuildera; s.oversize += w.oversize; s.slotow += w.budzet.slotow; s.ms += w.ms;
+    s.brakNosnika += w.brakNosnika; s.bladBuildera += w.bladBuildera; s.oversize += w.oversize; s.oversizeRealne += w.budzet.oversize; s.slotow += w.budzet.slotow; s.ms += w.ms;
+    dodajDo(s.msDodatkowe, w.msDodatkowe);
     const slot = (b) => (b ? { ziarno: w.ziarno, wierszy: b.wierszy, bajty: b.bajty, realneDo: b.realneDo, zadanMaks: b.zadanMaks } : null);
     s.maksSlotu = wiekszy(s.maksSlotu, slot(w.budzet.maksRealne), 'realneDo');
     s.maksNaiwny = wiekszy(s.maksNaiwny, slot(w.budzetNaiwny.maksRealne), 'realneDo');
@@ -4666,7 +4700,7 @@ describe.skipIf(!ODSYL)('A ≡ B, licznik odsyłania w profilach (E3-PR0b; wynik
       console.log(`E3-AB licznik ${klucz}`, JSON.stringify(s));
       const dom = lista.filter((w) => zLiteralem(w.ziarno));
       if (ziarnaLiteralu.length && dom.length === ziarnaLiteralu.length) expect(literalOdsyl(dom), `ZNANE_ODSYL['${klucz}'] (warstwa ${WYK})`).toEqual(ZNANE_ODSYL[klucz]);
-    });
+    }, 10_000);
   }
 });
 
