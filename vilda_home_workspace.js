@@ -5,7 +5,7 @@
   'use strict';
   if (!w || w.__VILDA_HOME_WORKSPACE_PREVIEW__ !== true || w.VildaHomeWorkspace) return;
   var d = w.document, started = false, frame = 0;
-  var dateLabel, historyButton, copyButton, copySource;
+  var dateLabel, historyButton, copyButton, copySource, actions, referenceSection, referenceToggle;
 
   function element(tag, className, text) {
     var node = d.createElement(tag);
@@ -34,10 +34,49 @@
     host.appendChild(section);
     return section;
   }
-  function buttonLabel(button, title, subtitle) {
-    var label = element('span', 'vhome-action-label', title);
+  function buttonLabel(button, title, subtitle, compact) {
+    var label = element('span', 'vhome-action-label');
+    label.appendChild(element('span', 'vhome-action-full', title));
+    label.appendChild(element('span', 'vhome-action-compact', compact));
     label.appendChild(element('small', '', subtitle));
     button.replaceChildren(label);
+    button.setAttribute('aria-label', title);
+  }
+  function doctorResults() {
+    var available;
+    try { available = !!(w.VildaVault && w.VildaVault.isUnlocked() && w.VildaProAccess && w.VildaProAccess.hasAccess()); }
+    catch (_) { available = false; }
+    var toggle = byId('resultsModeToggle');
+    // Keep the native control and its listener: it owns the local and window
+    // mode, persisted preference, source eligibility and recalculation. A CSS
+    // class or a write to window.professionalMode alone would leave them apart.
+    var restoring = w.__vildaPersistRestoring || w.__vildaSuspendIntakeUserReset
+      || w.VildaDataImportExport && w.VildaDataImportExport.isMainSessionRestorePending()
+      || w.VildaDobAge && w.VildaDobAge.restorePending();
+    // Main-session restore also restores the mode, but can leave an earlier
+    // access notification's checkbox checked. Reconcile both native states.
+    if (available && toggle && (!toggle.checked || w.professionalMode !== true) && !toggle.disabled && !restoring
+      && w.VildaAuthUI && w.VildaAuthUI.isBootReady()) {
+      toggle.checked = true;
+      toggle.dispatchEvent(new w.Event('change', { bubbles: true }));
+    }
+    d.documentElement.classList.toggle('vhome-doctor-results', !!(available && toggle && toggle.checked && w.professionalMode));
+  }
+  function refreshActions() {
+    if (!copyButton || !copySource) return;
+    var allowed = true;
+    try {
+      var preferences = w.VildaPersistence && w.VildaPersistence.readPreferenceJSON('CARD_VISIBILITY', {});
+      allowed = !preferences || preferences.metabolicSummaryBtn !== false;
+    } catch (_) { /* The native preference default keeps the action available. */ }
+    if (copyButton.hidden === allowed) copyButton.hidden = !allowed;
+    actions.classList.toggle('vhome-single-action', !allowed);
+    // The native button can be unavailable while the shared section remains
+    // visible for dietary advice. Its original inline visibility is therefore
+    // part of eligibility even though the empty form shows a disabled action.
+    var disabled = !allowed || copyButton.style.display === 'none' || copySource.hidden
+      || w.getComputedStyle(copySource).display === 'none';
+    if (copyButton.disabled !== disabled) copyButton.disabled = disabled;
   }
   function civilDate() {
     var value = null;
@@ -54,6 +93,7 @@
   }
   function refresh() {
     if (!started) return;
+    doctorResults();
     var date = civilDate();
     dateLabel.textContent = date ? date.slice(8, 10) + '.' + date.slice(5, 7) + '.' + date.slice(0, 4) : 'Data nieznana';
     if (date) dateLabel.setAttribute('datetime', date);
@@ -63,10 +103,10 @@
     catch (_) { available = false; }
     historyButton.disabled = !available;
     historyButton.title = available ? 'Otwórz zapisane wizyty pacjenta' : 'Wczytaj zapisanego pacjenta, aby zobaczyć jego wizyty';
-    // Eligibility remains controlled by the original summary section. Moving
-    // only its action must not make an unavailable summary look ready to copy.
-    if (copyButton && copySource) {
-      copyButton.disabled = copySource.hidden || w.getComputedStyle(copySource).display === 'none';
+    refreshActions();
+    if (referenceSection && referenceToggle) {
+      var hidden = referenceToggle.hidden || w.getComputedStyle(referenceToggle).display === 'none';
+      if (referenceSection.hidden !== hidden) referenceSection.hidden = hidden;
     }
   }
   function schedule() {
@@ -93,7 +133,12 @@
     var identity = element('div', 'vhome-visit-identity');
     identity.appendChild(element('h1', 'vhome-visit-title', 'Ocena pacjenta'));
     var meta = element('div', 'vhome-visit-meta');
-    meta.appendChild(element('span', '', 'Bieżąca wizyta'));
+    var kicker = element('span', 'vhome-visit-kicker');
+    kicker.appendChild(element('span', 'vhome-visit-full', 'Bieżąca wizyta'));
+    var shortKicker = element('span', 'vhome-visit-short', 'Wizyta');
+    shortKicker.setAttribute('aria-hidden', 'true');
+    kicker.appendChild(shortKicker);
+    meta.appendChild(kicker);
     dateLabel = element('time', 'vhome-visit-date');
     meta.appendChild(dateLabel);
     identity.appendChild(meta);
@@ -117,20 +162,33 @@
     if (age) { age.classList.add('vhome-fields'); content.appendChild(age); }
     appendExisting(content, ['ageWeeksRow']);
     fieldGroup(content, 'Pomiary z wizyty', ['weight', 'height']);
+    referenceToggle = byId('dataToggleContainer');
+    if (referenceToggle) {
+      referenceSection = element('div', 'vhome-reference');
+      var referenceTitle = element('h3', 'vhome-section-title', 'Siatki referencyjne');
+      referenceTitle.id = 'vhomeReferenceTitle';
+      referenceSection.appendChild(referenceTitle);
+      referenceToggle.setAttribute('role', 'radiogroup');
+      referenceToggle.setAttribute('aria-labelledby', referenceTitle.id);
+      referenceSection.appendChild(referenceToggle);
+      content.appendChild(referenceSection);
+      new w.MutationObserver(schedule).observe(referenceToggle, { attributes: true, attributeFilter: ['style', 'hidden', 'class'] });
+    }
     var extras = element('div', 'vhome-extra-data');
     appendExisting(extras, ['tannerToggleBtn', 'pubertyAssessmentSummary', 'tannerStageWrap']);
     content.appendChild(extras);
     appendExisting(content, ['loadDataMessage']);
-    var actions = element('div', 'vhome-form-actions');
+    actions = element('div', 'vhome-form-actions');
     var clear = byId('clearAllDataBtn'), oldActions = clear.parentElement;
-    buttonLabel(clear, 'Wyczyść formularz', 'Rozpocznij nowy pomiar');
+    buttonLabel(clear, 'Wyczyść formularz', 'Rozpocznij nowy pomiar', 'Wyczyść');
     actions.appendChild(clear);
     copyButton = byId('metabolicSummaryBtn');
     copySource = byId('metabolicSummarySection');
     if (copyButton && copySource) {
-      buttonLabel(copyButton, 'Podsumowanie wyników', 'Kliknij i skopiuj');
+      buttonLabel(copyButton, 'Podsumowanie wyników', 'Kliknij i skopiuj', 'Skopiuj wyniki');
       actions.appendChild(copyButton);
       new w.MutationObserver(schedule).observe(copySource, { attributes: true, attributeFilter: ['style', 'hidden', 'class'] });
+      new w.MutationObserver(schedule).observe(copyButton, { attributes: true, attributeFilter: ['style'] });
     }
     content.appendChild(actions);
     appendExisting(content, ['restoreStateBtn']);
@@ -140,7 +198,9 @@
     card.appendChild(content);
 
     ['input', 'change', 'vilda:data-applied', 'vilda:dob-restored', 'vilda:user-state-cleared',
-      'vilda:session-changed', 'vilda:professional-summary-updated'].forEach(function (name) {
+      'vilda:session-changed', 'vilda:professional-summary-updated', 'vilda:state-restored',
+      'vilda:main-session-restored', 'vilda:initial-main-session-restore-settled',
+      'vilda:auth-boot-settled', 'vildaProAccessChanged', 'vildaResultsModeChanged'].forEach(function (name) {
       d.addEventListener(name, schedule);
     });
     w.addEventListener('pageshow', schedule);

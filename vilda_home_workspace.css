@@ -1,41 +1,63 @@
-/* Isolated, opt-in presentation. The native result/centile card is deliberately
- * not restyled. All form controls remain in their original document. */
+/* Isolated, opt-in presentation. The native result renderer and centile preview
+ * keep their styles and ownership; only workspace geometry changes here. */
 .vilda-home-workspace .vhome-visit-heading {
-  display: flex;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  justify-content: space-between;
   gap: var(--space-20px);
   min-height: 60px;
-  margin: 0 0 var(--space-8px);
-  padding: var(--space-6px) var(--space-20px);
+  margin: 0 0 var(--space-12px);
+  padding: var(--space-6px) var(--space-14px);
   border: var(--border-hairline) solid var(--line);
-  border-radius: var(--radius-14);
-  background: var(--card, #fff);
+  border-radius: var(--radius-11);
+  background: var(--card);
 }
+.vilda-home-workspace .vhome-visit-identity { display: contents; }
 .vilda-home-workspace .vhome-visit-title {
-  margin: 0 0 2px;
+  grid-column: 1;
+  grid-row: 1;
+  min-width: 0;
+  margin: 0;
   color: var(--text);
-  font-size: 20px;
-  font-weight: 650;
+  font-size: 22px;
+  font-weight: 600;
   line-height: 1.3;
   text-align: left;
 }
 .vilda-home-workspace .vhome-visit-meta {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: center;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: var(--space-12px);
-  font-size: 14px;
-  line-height: 1.4;
+  gap: 0;
+  font-size: 13px;
+  line-height: 20px;
+  white-space: nowrap;
 }
 .vilda-home-workspace .vhome-visit-date { font-variant-numeric: tabular-nums; }
+.vilda-home-workspace .vhome-visit-full { display: inline; }
+.vilda-home-workspace .vhome-visit-short { display: none; }
 .vilda-home-workspace .vhome-history-button {
+  grid-column: 3;
+  grid-row: 1;
+  justify-self: end;
+  box-sizing: border-box;
   width: auto;
   min-width: 150px;
   min-height: 44px;
   margin: 0;
-  padding: var(--space-10px) var(--space-16px);
-  font-size: 15px;
-  font-weight: 600;
+  padding: var(--space-10px) var(--space-14px);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  white-space: nowrap;
+}
+.vilda-home-workspace #calcForm {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-16px);
 }
 .vilda-home-workspace #userSection fieldset.user-card {
   min-width: 0;
@@ -55,7 +77,7 @@
   margin: 0;
   font-size: 20px;
   line-height: 1.4;
-  font-weight: 650;
+  font-weight: 600;
   color: var(--text);
 }
 .vilda-home-workspace .vhome-card-heading > span { font-size: 14px; }
@@ -81,6 +103,7 @@
   font-size: 14px;
   font-weight: 500;
   line-height: 21px;
+  text-align: left;
 }
 .vilda-home-workspace .vhome-fields label > span { display: none; }
 .vilda-home-workspace #userSection .vhome-fields :is(input, select) {
@@ -91,10 +114,74 @@
   min-height: 46px;
   height: 46px;
   margin: var(--space-6px) 0 0;
-  padding: 9px var(--space-12px);
-  border-radius: var(--radius-9);
+  padding: var(--space-8px) var(--space-12px);
+  border-radius: var(--radius-8);
   font-size: 16px;
   line-height: 24px;
+}
+.vilda-home-workspace .vhome-reference { min-width: 0; }
+.vilda-home-workspace .vhome-reference #dataToggleContainer {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: stretch;
+  gap: var(--space-6px);
+  width: 100%;
+  max-width: none;
+  margin: 0;
+}
+.vilda-home-workspace .vhome-reference #dataToggleContainer label {
+  position: relative;
+  display: block;
+  min-width: 0;
+  width: auto;
+  min-height: 44px;
+  margin: 0;
+}
+.vilda-home-workspace .vhome-reference #dataToggleContainer label > input[type="radio"] {
+  position: absolute;
+  display: block;
+  width: 1px;
+  height: 1px;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.vilda-home-workspace .vhome-reference #dataToggleContainer label > span {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4px);
+  min-height: 44px;
+  height: 100%;
+  padding: var(--space-8px) var(--space-4px);
+  border: var(--border-hairline) solid var(--line) !important;
+  border-radius: var(--radius-8);
+  color: var(--text) !important;
+  background: var(--card) !important;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  text-align: center;
+}
+.vilda-home-workspace .vhome-reference #dataToggleContainer label > input:checked + span {
+  border-color: var(--primary) !important;
+  color: #fff !important;
+  background: var(--primary) !important;
+}
+.vilda-home-workspace .vhome-reference #dataToggleContainer label > input:focus-visible + span {
+  outline: var(--border-emphasis) solid var(--primary);
+  outline-offset: var(--space-4px);
+}
+.vilda-home-workspace .vhome-reference #dataToggleContainer label > input:disabled + span {
+  border-color: var(--line-neutral) !important;
+  color: var(--placeholder) !important;
+  background: var(--disabled-bg) !important;
+  cursor: not-allowed;
 }
 .vilda-home-workspace .vhome-extra-data {
   margin-top: var(--space-16px);
@@ -110,7 +197,9 @@
   padding-top: var(--space-16px);
   border-top: var(--border-hairline) solid var(--line);
 }
+.vilda-home-workspace .vhome-form-actions.vhome-single-action { grid-template-columns: minmax(0, 1fr); }
 .vilda-home-workspace .vhome-form-actions :is(#clearAllDataBtn, #metabolicSummaryBtn) {
+  box-sizing: border-box;
   display: flex !important;
   justify-content: center;
   align-items: center;
@@ -125,12 +214,17 @@
   line-height: 1.4;
   text-align: center;
 }
+.vilda-home-workspace .vhome-form-actions :is(#clearAllDataBtn, #metabolicSummaryBtn)[hidden],
+.vilda-home-workspace .vhome-reference[hidden],
+.vilda-home-workspace .vhome-reference #dataToggleContainer[hidden] { display: none !important; }
 .vilda-home-workspace .vhome-form-actions #metabolicSummaryBtn {
   background: var(--primary) !important;
   color: #fff !important;
 }
 .vilda-home-workspace .vhome-form-actions button:disabled { opacity: var(--opacity-disabled-label); cursor: not-allowed; }
 .vilda-home-workspace .vhome-action-label { display: block; width: 100%; text-align: center; }
+.vilda-home-workspace .vhome-action-full { display: inline; }
+.vilda-home-workspace .vhome-action-compact { display: none; }
 .vilda-home-workspace .vhome-action-label small {
   display: block;
   margin-top: 3px;
@@ -140,8 +234,38 @@
   text-align: center;
 }
 .vilda-home-workspace #vildaStatusForm { margin: var(--space-12px) var(--space-14px) 0; }
-@media (max-width: 699px) {
+.vilda-home-workspace.vhome-doctor-results .main-content #resultsModeToggleContainer,
+.vilda-home-workspace.vhome-doctor-results .main-content :is(.pro-tag, .pro-superscript, .pro-summary-label, .circ-pro-pill) { display: none !important; }
+@media (max-width: 850px) {
+  .vilda-home-workspace #calcForm { grid-template-columns: minmax(0, 1fr); }
+  .vilda-home-workspace #userSection > fieldset.user-card { min-height: 0 !important; }
+  .vilda-home-workspace #calcForm > :is(#userSection, #doctorSection, #prevSummaryWrap) {
+    grid-column: 1;
+    grid-row: auto;
+    width: 100%;
+    min-width: 0;
+  }
+  .vilda-home-workspace #doctorSection #currentSummaryCard.vilda-summary-height-matched {
+    height: auto;
+    min-height: 0;
+    max-height: none;
+    overflow: visible;
+  }
+  .vilda-home-workspace #currentSummaryCard.vilda-summary-height-matched > #currentSummaryContent {
+    max-height: none;
+    overflow: visible;
+  }
+  .vilda-home-workspace #vildaStatusSide { display: none !important; }
+  .vilda-home-workspace #vildaStatusForm:not([hidden]) { display: flex !important; }
+}
+@media (min-width: 851px) {
+  .vilda-home-workspace #vildaStatusForm { display: none !important; }
+}
+@media (max-width: 600px) {
   .vilda-home-workspace .vhome-visit-heading {
+    grid-template-columns: minmax(0, 1fr) 130px;
+    grid-template-rows: 44px;
+    height: 58px;
     min-height: 58px;
     gap: var(--space-8px);
     margin-bottom: var(--space-12px);
@@ -149,29 +273,74 @@
   }
   .vilda-home-workspace .vhome-visit-title,
   .vilda-home-workspace .vhome-card-heading > span { display: none; }
-  .vilda-home-workspace .vhome-visit-meta { gap: var(--space-6px); font-size: 13px; white-space: nowrap; }
+  .vilda-home-workspace .vhome-visit-meta {
+    grid-column: 1;
+    justify-self: start;
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-6px);
+    min-width: 0;
+    font-size: 13px;
+    line-height: 20px;
+  }
+  .vilda-home-workspace .vhome-visit-kicker::after { content: '·'; margin-inline-start: var(--space-6px); }
   .vilda-home-workspace .vhome-history-button {
-    min-width: 112px;
+    grid-column: 2;
+    width: 130px;
+    min-width: 130px;
+    height: 44px;
+    min-height: 44px;
     padding: var(--space-8px);
     font-size: 13px;
   }
   .vilda-home-workspace .vhome-form-content { padding: var(--space-14px); }
   .vilda-home-workspace .vhome-card-heading { margin-bottom: var(--space-12px); }
-  .vilda-home-workspace .vhome-card-heading h2 { font-size: 18px; }
-  .vilda-home-workspace .vhome-section-title { margin-top: var(--space-12px); }
+  .vilda-home-workspace .vhome-card-heading h2 { font-size: 16px; line-height: 22px; }
+  .vilda-home-workspace .vhome-section-title {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
   .vilda-home-workspace .vhome-fields,
   .vilda-home-workspace .vhome-form-actions { gap: var(--space-10px); }
-  .vilda-home-workspace .vhome-fields label { font-size: 13px; }
-  .vilda-home-workspace .vhome-form-actions { margin-top: var(--space-14px); padding-top: var(--space-14px); }
+  .vilda-home-workspace .vhome-fields { margin-bottom: var(--space-10px); }
+  .vilda-home-workspace .vhome-fields label { font-size: 13px; line-height: 19px; }
+  .vilda-home-workspace #userSection .vhome-fields :is(input, select) { margin-top: var(--space-4px); padding-inline: var(--space-10px); }
+  .vilda-home-workspace .vhome-reference { margin-top: var(--space-10px); }
+  .vilda-home-workspace .vhome-extra-data { margin-top: var(--space-12px); padding-top: var(--space-10px); }
+  .vilda-home-workspace .vhome-form-actions { margin-top: var(--space-12px); padding-top: var(--space-12px); }
   .vilda-home-workspace .vhome-form-actions :is(#clearAllDataBtn, #metabolicSummaryBtn) {
-    min-height: 58px;
+    min-height: 48px;
+    height: 48px;
     font-size: 14px !important;
     padding: var(--space-8px) !important;
   }
+  .vilda-home-workspace .vhome-action-full,
   .vilda-home-workspace .vhome-action-label small { display: none; }
+  .vilda-home-workspace .vhome-action-compact { display: inline; }
 }
 @media (max-width: 360px) {
-  .vilda-home-workspace .vhome-visit-heading { padding-inline: var(--space-6px); gap: 5px; }
-  .vilda-home-workspace .vhome-visit-meta { font-size: 13px; gap: var(--space-4px); }
-  .vilda-home-workspace .vhome-history-button { min-width: 100px; font-size: 12px; padding-inline: 5px; }
+  .vilda-home-workspace .vhome-reference #dataToggleContainer label > span { font-size: 13px; }
+}
+@media (max-width: 354px) {
+  .vilda-home-workspace .vhome-visit-heading { padding-inline: var(--space-4px); }
+  .vilda-home-workspace .vhome-visit-meta { gap: var(--space-4px); }
+  .vilda-home-workspace .vhome-visit-full {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+  .vilda-home-workspace .vhome-visit-short { display: inline; }
 }

@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.536';
+const SW_VERSION = '1.1.537';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -1870,7 +1870,9 @@ const CORE_SHELL_URLS = [
   '/vilda_visit_history_ui.js?v=1',
   '/vilda_visit_history_ui.css?v=1',
   '/vilda_home_workspace.js?v=1',
+  '/vilda_home_workspace.js?v=2',
   '/vilda_home_workspace.css?v=1',
+  '/vilda_home_workspace.css?v=2',
   '/qrcode.min.js?v=1',
   '/vilda_chrome.js?v=8',
   '/vilda_chrome.js?v=11',
@@ -6476,8 +6478,8 @@ const CLINICAL_WORKSPACE_PRECACHE_PACK = Object.freeze({
 
 // BEGIN VISIT UI PACK CONFIG
 const VISIT_UI_PRECACHE_PACK = Object.freeze({
-  "url": "/runtime/visit-ui-precache/precache-e0d8952bddbc.json",
-  "sha256": "e0d8952bddbc4e8c64fc9031b828473a188cf4fb04a0503042b3f5af13a35d23",
+  "url": "/runtime/visit-ui-precache/precache-6b513e7b2e47.json",
+  "sha256": "6b513e7b2e471aa219b109a906d5828f0f893752a80bf85ffbf27137e0ced779",
   "files": [
     {
       "url": "/vilda_visit_context.js?v=1",
@@ -6492,12 +6494,12 @@ const VISIT_UI_PRECACHE_PACK = Object.freeze({
       "sha256": "97ee23baf0a0f1e35ab2aa2cdbce998a7633a916e08b09d96e6fa5810e67d3f8"
     },
     {
-      "url": "/vilda_home_workspace.js?v=1",
-      "sha256": "bd2a7434495a73fffa1ae66b44c2281dac20d57722ecd03dd4a6e03a293bf63c"
+      "url": "/vilda_home_workspace.js?v=2",
+      "sha256": "a3def50b2e9d613f82357e40b90742c2988c75869dcc1dbc263d29dcd611f3f0"
     },
     {
-      "url": "/vilda_home_workspace.css?v=1",
-      "sha256": "00e0110bd6787aad86c2384db0dd568328be79f8c36e68f78ba15de0282853d7"
+      "url": "/vilda_home_workspace.css?v=2",
+      "sha256": "361b5757fb930f39ac411662d387d96ba54007fbb02e6e48f81269691063a2eb"
     }
   ]
 });
