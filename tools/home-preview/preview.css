@@ -11,8 +11,26 @@
   color: #185f60;
   box-shadow: 0 2px 9px rgb(18 74 73 / 8%);
   font: 500 13px/1.4 system-ui, sans-serif;
-  pointer-events: none;
+  text-decoration: none;
 }
+
+#vildaHomePreviewBadge:focus-visible { outline: 3px solid #087f82; outline-offset: 3px; }
+
+.vilda-preview-access {
+  width: min(820px, 100%);
+  margin-inline: auto;
+  padding: clamp(24px, 4vw, 44px);
+  font-size: 17px;
+  line-height: 1.65;
+}
+.vilda-preview-access h1 { margin: 4px 0 20px; font-size: clamp(26px, 4vw, 36px); }
+.vilda-preview-access__eyebrow { margin: 0; color: #526b70; font-size: 15px; }
+.vilda-preview-access__status { padding: 16px 20px; border: 1px solid #b5d9d7; border-radius: 12px; background: #f4fbfa; color: #185f60; font-weight: 600; }
+.vilda-preview-access__actions { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-block: 28px; }
+.vilda-preview-access__actions a { display: flex; align-items: center; justify-content: center; min-height: 54px; padding: 12px 18px; border: 1px solid #087f82; border-radius: 10px; background: #087f82; color: white; text-align: center; text-decoration: none; font-weight: 600; }
+.vilda-preview-access__actions a + a { background: white; color: #087f82; }
+.vilda-preview-access__actions a:focus-visible { outline: 3px solid #087f82; outline-offset: 3px; }
+.vilda-preview-access__note { color: #526b70; font-size: 15px; }
 
 #vildaHomePreviewBoot {
   position: fixed;
@@ -39,4 +57,5 @@
 #vildaHomePreviewBoot button { margin-top: 18px; padding: 10px 16px; border: 0; border-radius: 8px; background: #087f82; color: white; font: inherit; cursor: pointer; }
 @media (max-width: 600px) {
   #vildaHomePreviewBadge { bottom: max(74px, calc(env(safe-area-inset-bottom) + 66px)); font-size: 11px; padding: 5px 9px; }
+  .vilda-preview-access__actions { grid-template-columns: 1fr; }
 }

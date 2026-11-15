@@ -6,7 +6,7 @@ import path from 'node:path';
 import vm from 'node:vm';
 import { createHash } from 'node:crypto';
 import {
-  exportPreview, isPreviewAsset, isolateDocument, isolateText, isolateWorker, readRegularAsset,
+  exportPreview, isPreviewAsset, isolateDocument, isolateText, isolateWorker, readRegularAsset, demoAccessDocument,
   PREVIEW_WORKER_NETWORK_GUARD,
 } from '../../tools/home-preview/export.mjs';
 
@@ -23,6 +23,7 @@ async function repository() {
     'index.html': '<!doctype html><html><head><script>window.original = true;</script></head><body>Native form</body></html>',
     'app.html': '<!doctype html><html><head></head><body><iframe src="index.html"></iframe></body></html>',
     'docpro.html': '<!doctype html><html><head></head><body>DocPro</body></html>',
+    'subskrypcja.html': '<!doctype html><html><head><title>Paid subscription</title></head><body><header>Native header</header><main class="main-content"><button id="subTrialBtn">Trial</button><button id="subBuyBtn">Checkout</button></main><footer>Native footer</footer><script defer src="inline_subskrypcja_00.js?v=2"></script><script defer src="inline_subskrypcja_01.js?v=1"></script></body></html>',
     'vilda_home_workspace.js': 'window.VildaHomeWorkspace = {};',
     'vilda_home_workspace.css': '.vilda-home-workspace { display: grid; }',
     'vilda_vault.js': "const nativeOrigin = 'https://vilda-sync.maciej-4b9.workers.dev'; const formula = 46 / (1.58 * 1.58);",
@@ -73,7 +74,7 @@ describe('separate homepage preview export', () => {
   test('every HTML document installs network policy and bootstrap before any native script', async () => {
     const fixture = await repository();
     await exportPreview(fixture);
-    for (const name of ['index.html', 'app.html', 'docpro.html']) {
+    for (const name of ['index.html', 'app.html', 'docpro.html', 'subskrypcja.html']) {
       const html = await readFile(path.join(fixture.output, name), 'utf8');
       expect(html.indexOf("connect-src 'self'")).toBeLessThan(html.indexOf('<script'));
       expect(html.match(/<script[^>]+src="([^"]+)"/)[1]).toMatch(/^vilda_home_preview\.js\?v=[0-9a-f]+$/);
@@ -81,6 +82,30 @@ describe('separate homepage preview export', () => {
       expect(html).toContain("form-action 'self'");
     }
     expect(await readFile(path.join(fixture.output, '_headers'), 'utf8')).toContain("connect-src 'self'");
+  });
+
+  test('exported subscription is an honest demo screen with no purchase or trial handlers', async () => {
+    const fixture = await repository();
+    await exportPreview(fixture);
+    const exported = await readFile(path.join(fixture.output, 'subskrypcja.html'), 'utf8');
+    expect(exported).toContain('Dostęp demonstracyjny');
+    expect(exported).toContain('app.html#/start');
+    expect(exported).toContain('app.html#/docpro');
+    expect(exported).toContain('Native header'); expect(exported).toContain('Native footer');
+    expect(exported).not.toMatch(/subTrialBtn|subBuyBtn|inline_subskrypcja_0[01]\.js/);
+    const native = await readFile(new URL('../../subskrypcja.html', import.meta.url), 'utf8');
+    const transformed = demoAccessDocument(native);
+    expect(transformed).not.toMatch(/subTrialBtn|subBuyBtn|inline_subskrypcja_0[01]\.js|49&nbsp;zł|2099|2100/);
+    expect(transformed).toContain('vilda_auth_ui.js');
+    expect(transformed).toContain('vilda_pro_access.js');
+    expect(() => demoAccessDocument('<html><body>No main</body></html>')).toThrow(/subscription document/);
+  });
+
+  test('omitting subscription handlers cannot join surrounding fragments into a new script element', () => {
+    const malformed = '<html><head></head><body><main>Original</main><scr<script src="inline_subskrypcja_00.js"></script>ipt src="unexpected.js"></script></body></html>';
+    const transformed = demoAccessDocument(malformed);
+    expect(transformed).not.toContain('<script');
+    expect(transformed).toContain('<scr\nipt src="unexpected.js">');
   });
 
   test('build identity changes with source bytes and rebuild safely updates its own output', async () => {
@@ -162,10 +187,10 @@ function previewStorage(entries = {}) {
 
 function fictionalNativeVault(patients = []) {
   const account = { userId: 'fictional-preview-account', label: ACCOUNT_LABEL };
-  const calls = { listPatients: [], savePatient: [], unlock: [] };
+  const calls = { listUsers: 0, listPatients: [], savePatient: [], unlock: [] };
   return {
     account, calls, patients,
-    isUnlocked: () => true, getCurrentUser: () => ({ ...account }), listUsers: async () => [{ ...account }],
+    isUnlocked: () => true, getCurrentUser: () => ({ ...account }), listUsers: async () => { calls.listUsers++; return [{ ...account }]; },
     listPatients: async options => { calls.listPatients.push(options); return patients.map(patient => ({ ...patient })); },
     savePatient: async payload => {
       calls.savePatient.push(payload);
@@ -176,28 +201,44 @@ function fictionalNativeVault(patients = []) {
   };
 }
 
-function bootPreview({ storage, vault, locks }) {
-  const nodes = [];
-  const node = () => ({ append() {}, remove() {}, setAttribute() {}, addEventListener() {} });
+function bootPreview({ storage, vault, locks, pathname = '/index.html', hash = '', opened = true, hasAuth = true, authReady = () => true, hostedFrame = false, sameOriginWrapper = false }) {
+  const nodes = [], listeners = new Map(), classes = new Set(['vilda-pro-inactive']);
+  const calls = { reload: 0, timers: 0 };
+  const node = () => ({ append() {}, remove() {}, setAttribute() {}, addEventListener() {},
+    style: { properties: new Map(), setProperty(name, value, priority) { this.properties.set(name, { value, priority }); } } });
   const document = {
-    readyState: 'complete', addEventListener() {}, createElement: node,
-    getElementById: id => id === 'userSection' ? {} : null,
+    readyState: 'complete',
+    addEventListener(type, callback) { const entries = listeners.get(type) || []; entries.push(callback); listeners.set(type, entries); },
+    removeEventListener(type, callback) { listeners.set(type, (listeners.get(type) || []).filter(entry => entry !== callback)); },
+    createElement: node,
+    documentElement: { classList: { toggle(name, value) { if (value) classes.add(name); else classes.delete(name); } } },
+    getElementById: id => nodes.find(element => element.id === id) || (id === 'userSection' ? {} : null),
     body: { append(element) { nodes.push(element); } },
   };
   const window = {
-    document, location: { hostname: 'preview.example.invalid', pathname: '/index.html' },
-    localStorage: storage, sessionStorage: previewStorage({ 'vilda-home-preview-opened-v1': '1' }),
-    navigator: { locks }, setTimeout,
-    VildaVault: vault, VildaAuthUI: { isBootReady: () => true },
+    document, location: { hostname: 'preview.example.invalid', origin: 'https://preview.example.invalid', pathname, hash, reload() { calls.reload++; } },
+    localStorage: storage, sessionStorage: previewStorage(opened ? { 'vilda-home-preview-opened-v1': '1' } : {}),
+    navigator: { locks }, setTimeout(...args) { calls.timers++; return setTimeout(...args); }, clearTimeout,
+    VildaVault: hasAuth ? vault : undefined, VildaAuthUI: hasAuth ? { isBootReady: authReady } : undefined,
     VildaPersistRuntime: { getSnapshot: () => ({ initialized: true }) },
     VildaDataImportExport: { isMainSessionRestorePending: () => false, isMainSessionAutosavePaused: () => false },
     VildaPersistence: { isAutosaveSuppressed: () => false }, VildaDobAge: { restorePending: () => false },
     VildaProAccess: { __setTokenModeForTest() {}, setPlan() {}, hasAccess: () => true },
     applyLoadedData() { throw new Error('Existing session must not be replaced.'); }, collectUserData() {},
   };
-  window.top = window;
+  window.top = hostedFrame ? {} : window;
+  if (hostedFrame) {
+    window.frameElement = null;
+    window.parent = {};
+    Object.defineProperty(window.parent, 'location', { get() { throw new Error('Cross-origin host is inaccessible.'); } });
+  }
+  if (sameOriginWrapper) {
+    window.top = {};
+    window.parent = { location: { origin: window.location.origin, pathname: '/app.html' } };
+    window.frameElement = { classList: { contains: value => value === 'app-pane' }, contentWindow: window };
+  }
   vm.runInNewContext(RUNTIME_SOURCE, { window, Promise, Date, JSON, Object, String, Error });
-  return { window, nodes };
+  return { window, nodes, calls, classes, fire(type) { for (const callback of [...(listeners.get(type) || [])]) callback(); } };
 }
 
 async function previewFinished(window) {
@@ -253,6 +294,128 @@ describe('fictional preview patient selection remains inside the native vault', 
   });
 });
 
+describe('standalone demo access', () => {
+  test.each([
+    ['/subskrypcja.html', ''], ['/docpro.html', ''], ['/ustawienia.html', ''], ['/app.html', '#/docpro'],
+  ])('%s%s prepares owned access without reading, selecting or creating a patient', async (pathname, hash) => {
+    const vault = fictionalNativeVault();
+    const storage = previewStorage({ [ACCOUNT_KEY]: JSON.stringify({ userId: vault.account.userId }) });
+    const frame = bootPreview({ storage, vault, pathname, hash, opened: false });
+    expect(await previewFinished(frame.window)).toMatchObject({ status: 'ready', doctorAccess: true });
+    expect(vault.calls.listPatients).toHaveLength(0); expect(vault.calls.savePatient).toHaveLength(0);
+    expect(frame.window.sessionStorage.getItem('vilda-home-preview-opened-v1')).toBeNull();
+    expect(frame.classes.has('vilda-pro-active')).toBe(true);
+    expect(frame.classes.has('vilda-pro-inactive')).toBe(false);
+    expect(frame.nodes.find(node => node.id === 'vildaHomePreviewBadge').textContent).toContain('lekarski aktywny');
+    expect(storage.getItem('professionalConfirmedDate')).toBeNull();
+  });
+
+  test('a new standalone tab unlocks only the known fictional account then reloads the same page', async () => {
+    const vault = fictionalNativeVault();
+    let unlocked = false;
+    vault.isUnlocked = () => unlocked; vault.getCurrentUser = () => unlocked ? { ...vault.account } : null;
+    vault.unlockUser = async (...args) => { vault.calls.unlock.push(args); unlocked = true; };
+    const storage = previewStorage({ [ACCOUNT_KEY]: JSON.stringify({ userId: vault.account.userId }) });
+    const first = bootPreview({ storage, vault, pathname: '/subskrypcja.html', opened: false });
+    for (let attempt = 0; attempt < 100 && !first.calls.reload; attempt++) await new Promise(resolve => { setTimeout(resolve, 0); });
+    expect(first.calls.reload).toBe(1);
+    expect(vault.calls.unlock).toHaveLength(1); expect(vault.calls.unlock[0][0]).toBe(vault.account.userId);
+    const reopened = bootPreview({ storage, vault, pathname: '/subskrypcja.html', opened: false });
+    expect(await previewFinished(reopened.window)).toMatchObject({ status: 'ready', doctorAccess: true });
+    expect(vault.calls.listPatients).toHaveLength(0); expect(vault.calls.savePatient).toHaveLength(0);
+  });
+
+  test('standalone pages refuse a foreign account without unlocking or reading its patients', async () => {
+    const vault = fictionalNativeVault(); vault.account.label = 'Unrelated fictional account';
+    const storage = previewStorage({ [ACCOUNT_KEY]: JSON.stringify({ userId: vault.account.userId }), pwzNumber: 'fictional-foreign-pwz' });
+    const frame = bootPreview({ storage, vault, pathname: '/subskrypcja.html', opened: false });
+    const result = await previewFinished(frame.window);
+    expect(result.status).toBe('error');
+    expect(result.error).toContain('w nowym oknie prywatnym');
+    expect(result.error).toContain('Nie zakładaj konta w aplikacji');
+    expect(storage.getItem('pwzNumber')).toBe('fictional-foreign-pwz');
+    expect(vault.calls.unlock).toHaveLength(0); expect(vault.calls.listPatients).toHaveLength(0);
+    expect(frame.calls.reload).toBe(0);
+    expect(frame.classes.has('vilda-pro-inactive')).toBe(true);
+  });
+
+  test('the refusal explanation overrides native locked-child visibility only on its own screen', async () => {
+    const vault = fictionalNativeVault(); vault.isUnlocked = () => false;
+    const frame = bootPreview({ storage: previewStorage(), vault, pathname: '/subskrypcja.html', opened: false });
+    expect((await previewFinished(frame.window)).status).toBe('error');
+    const screen = frame.nodes.find(node => node.id === 'vildaHomePreviewBoot');
+    expect(screen.style.properties.get('visibility')).toEqual({ value: 'visible', priority: 'important' });
+    expect(frame.nodes.filter(node => node !== screen).every(node => !node.style.properties.has('visibility'))).toBe(true);
+    expect(vault.isUnlocked()).toBe(false);
+    expect(vault.calls.unlock).toHaveLength(0); expect(vault.calls.listPatients).toHaveLength(0);
+  });
+
+  test('legal information without auth remains readable without waiting, creating an account or scheduling polling', async () => {
+    const vault = fictionalNativeVault(), storage = previewStorage();
+    const frame = bootPreview({ storage, vault, pathname: '/regulamin.html', hasAuth: false });
+    expect(await previewFinished(frame.window)).toMatchObject({ status: 'ready', doctorAccess: false });
+    expect(frame.calls.timers).toBe(0); expect(vault.calls.listUsers).toBe(0);
+    expect(storage.getItem(ACCOUNT_KEY)).toBeNull();
+  });
+
+  test('an auth-bearing standalone page waits for the real auth finalizer and then proceeds once', async () => {
+    const vault = fictionalNativeVault();
+    const storage = previewStorage({ [ACCOUNT_KEY]: JSON.stringify({ userId: vault.account.userId }) });
+    let authReady = false;
+    const frame = bootPreview({ storage, vault, pathname: '/subskrypcja.html', authReady: () => authReady });
+    await Promise.resolve();
+    expect(frame.window.VildaHomePreview.getState().status).toBe('starting');
+    expect(vault.calls.listUsers).toBe(0);
+    authReady = true; frame.fire('vilda:auth-boot-settled');
+    expect((await previewFinished(frame.window)).status).toBe('ready');
+    frame.fire('vilda:auth-boot-settled');
+    expect(vault.calls.listUsers).toBe(1);
+    expect(frame.calls.timers).toBe(1);
+  });
+
+  test('a Site embedded by an inaccessible cross-origin host still owns bootstrap and creates its example', async () => {
+    const vault = fictionalNativeVault();
+    const storage = previewStorage({ [ACCOUNT_KEY]: JSON.stringify({ userId: vault.account.userId }) });
+    const frame = bootPreview({ storage, vault, hostedFrame: true });
+    expect(await previewFinished(frame.window)).toMatchObject({ status: 'ready', doctorAccess: true });
+    expect(vault.calls.listUsers).toBe(1);
+    expect(vault.calls.savePatient).toHaveLength(1);
+    expect(frame.nodes.find(node => node.id === 'vildaHomePreviewBadge')).toBeTruthy();
+  });
+
+  test('a provider wrapper with a coincidental native-looking frame does not own bootstrap without the preview parent marker', async () => {
+    const vault = fictionalNativeVault();
+    const storage = previewStorage({ [ACCOUNT_KEY]: JSON.stringify({ userId: vault.account.userId }) });
+    const frame = bootPreview({ storage, vault, sameOriginWrapper: true });
+    expect((await previewFinished(frame.window)).status).toBe('ready');
+    expect(vault.calls.savePatient).toHaveLength(1);
+  });
+
+  test('a freshly created verified fictional account receives only a missing demo PWZ before reload', async () => {
+    const vault = fictionalNativeVault();
+    let unlocked = false;
+    vault.isUnlocked = () => unlocked; vault.getCurrentUser = () => unlocked ? { ...vault.account } : null;
+    vault.listUsers = async () => [];
+    vault.createUser = async () => { unlocked = true; return { userId: vault.account.userId }; };
+    const storage = previewStorage();
+    const frame = bootPreview({ storage, vault, pathname: '/subskrypcja.html', opened: false });
+    for (let attempt = 0; attempt < 100 && !frame.calls.reload; attempt++) await new Promise(resolve => { setTimeout(resolve, 0); });
+    expect(frame.calls.reload).toBe(1);
+    expect(storage.getItem('pwzNumber')).toBe('0000000');
+    expect(storage.getItem('professionalConfirmedDate')).toBeNull();
+    expect(JSON.parse(storage.getItem(ACCOUNT_KEY))).toEqual({ userId: vault.account.userId });
+  });
+
+  test('an existing PWZ preference is preserved even on the verified fictional account', async () => {
+    const vault = fictionalNativeVault();
+    const storage = previewStorage({ [ACCOUNT_KEY]: JSON.stringify({ userId: vault.account.userId }), pwzNumber: 'fictional-existing-pwz' });
+    const frame = bootPreview({ storage, vault, pathname: '/subskrypcja.html' });
+    expect((await previewFinished(frame.window)).status).toBe('ready');
+    expect(storage.getItem('pwzNumber')).toBe('fictional-existing-pwz');
+    expect(storage.getItem('professionalConfirmedDate')).toBeNull();
+  });
+});
+
 function embeddedPreview({ foreign = false, alreadyUnlocked = false, lazy = false } = {}) {
   const listeners = new Map(), unlockListeners = [];
   const account = { userId: foreign ? 'fictional-foreign-account' : 'fictional-preview-account', label: ACCOUNT_LABEL };
@@ -272,11 +435,13 @@ function embeddedPreview({ foreign = false, alreadyUnlocked = false, lazy = fals
     },
   };
   const window = {
-    document, top: {}, location: { hostname: 'preview.example.invalid', pathname: '/docpro.html' },
+    document, top: {}, location: { hostname: 'preview.example.invalid', origin: 'https://preview.example.invalid', pathname: '/docpro.html' },
     localStorage: storage, sessionStorage: previewStorage(),
     addEventListener() {}, setTimeout: () => 1, clearTimeout() {}, setInterval: () => 1,
     atob, btoa,
   };
+  window.parent = { location: { origin: window.location.origin, pathname: '/app.html' }, __VILDA_HOME_WORKSPACE_PREVIEW__: true };
+  window.frameElement = { classList: { contains: value => value === 'app-pane' }, contentWindow: window };
   class CustomEvent { constructor(type) { this.type = type; } }
   const context = vm.createContext({ window, CustomEvent, TextEncoder, TextDecoder, Uint8Array, Promise });
   // Export bootstrap is the first script. Native deferred modules appear later.
@@ -310,7 +475,7 @@ describe('fictional access follows actual native auth completion in each frame',
     expect(access.hasAccess()).toBe(true);
     const subscriptions = frame.unlockListeners.length;
     access.invalidateCache();
-    expect(access.hasAccess()).toBe(false);
+    expect(access.hasAccess()).toBe(true);
     frame.fire('vilda:auth-boot-settled');
     frame.fire('vilda:auth-boot-settled');
     expect(access.hasAccess()).toBe(true);
@@ -330,7 +495,10 @@ describe('fictional access follows actual native auth completion in each frame',
     frame.attachVault();
     frame.fire('vilda:auth-boot-settled');
     frame.loadAccess();
-    expect(frame.window.VildaProAccess.__isTokenModeOn()).toBe(true);
+    // The native module's first access-state event can now reconcile the
+    // already owned account before the lazy loader emits auth-loaded.
+    expect(frame.window.VildaProAccess.__isTokenModeOn()).toBe(false);
+    expect(frame.window.VildaProAccess.hasAccess()).toBe(true);
     frame.fire('vilda:auth-loaded');
     expect(frame.window.VildaProAccess.__isTokenModeOn()).toBe(false);
     expect(frame.window.VildaProAccess.hasAccess()).toBe(true);
@@ -345,5 +513,24 @@ describe('fictional access follows actual native auth completion in each frame',
     locked.fire('DOMContentLoaded'); locked.fire('vilda:auth-boot-settled');
     expect(locked.window.VildaProAccess.__isTokenModeOn()).toBe(true);
     expect(locked.window.VildaProAccess.getSnapshot()).toBeNull();
+  });
+
+  test('a late native pro gate is reconciled after its result-mode listeners, without a timer or recursive loop', async () => {
+    const frame = embeddedPreview({ alreadyUnlocked: true });
+    const access = frame.window.VildaProAccess;
+    frame.fire('DOMContentLoaded');
+    let professionalResults = true, notifications = 0;
+    frame.window.document.addEventListener('vilda:pro-gate-active', () => { professionalResults = false; });
+    frame.window.document.addEventListener('vildaProAccessChanged', () => { notifications++; professionalResults = access.hasAccess(); });
+    frame.fire('vilda:pro-gate-active');
+    expect(professionalResults).toBe(false);
+    await Promise.resolve();
+    expect(access.hasAccess()).toBe(true);
+    expect(professionalResults).toBe(true);
+    expect(notifications).toBe(1);
+    frame.lock(); access.invalidateCache(); frame.fire('vilda:pro-gate-active');
+    await Promise.resolve();
+    expect(access.hasAccess()).toBe(false);
+    expect(access.getSnapshot()).toBeNull();
   });
 });

@@ -64,6 +64,30 @@ export function isolateText(source) {
     .replaceAll('wss://vilda-sync.maciej-4b9.workers.dev', 'wss://vilda-preview-disabled.invalid');
 }
 
+export function demoAccessDocument(source) {
+  const main = /<main\b[^>]*>[\s\S]*?<\/main>/gi;
+  if ([...source.matchAll(main)].length !== 1) throw new Error('Unknown subscription document contract.');
+  return source.replace(main, `<main class="main-content">
+    <section class="container vilda-preview-access" aria-labelledby="vildaPreviewAccessTitle">
+      <p class="vilda-preview-access__eyebrow">Podgląd aplikacji</p>
+      <h1 id="vildaPreviewAccessTitle">Dostęp demonstracyjny</h1>
+      <p id="vildaHomePreviewAccessStatus" class="vilda-preview-access__status" role="status">Przygotowywanie dostępu do funkcji lekarskich…</p>
+      <p>Funkcje lekarskie są dostępne na koncie demonstracyjnym. Nie trzeba aktywować okresu próbnego, kupować abonamentu ani podawać danych płatniczych.</p>
+      <div class="vilda-preview-access__actions">
+        <a href="app.html#/start">Otwórz stronę główną</a>
+        <a href="app.html#/docpro">Otwórz DocPro</a>
+      </div>
+      <p class="vilda-preview-access__note">Używaj wyłącznie fikcyjnych danych. Zapisy pozostają w podglądzie, bez synchronizacji z kontem używanym w gabinecie.</p>
+      <p class="vilda-preview-access__note">DocPro może poprosić o potwierdzenie otwarcia treści przeznaczonych dla lekarzy. Dostęp demonstracyjny nie potwierdza uprawnień zawodowych.</p>
+    </section>
+  </main>`)
+    .replace(/<title>[\s\S]*?<\/title>/i, '<title>Vilda — dostęp demonstracyjny</title>')
+    .replace(/<meta\b[^>]*\bname=["']description["'][^>]*>/i, '<meta name="description" content="Podgląd funkcji lekarskich na fikcyjnym koncie, bez aktywacji subskrypcji.">')
+    // Keep a separator so removing a handler cannot concatenate HTML tokens.
+    .replace(/<script\b[^>]*\bsrc=["']inline_subskrypcja_0[01]\.js(?:\?[^"']*)?["'][^>]*>\s*<\/script>/gi, '\n')
+    .replace(/(<a\b[^>]*\bhref=["']subskrypcja\.html["'][^>]*>)Vilda PRO(<\/a>)/gi, '$1Dostęp demonstracyjny$2');
+}
+
 export function isolateWorker(source, buildId) {
   const output = source.replace(/const SW_VERSION = '([^']+)';/, (_, version) => "const SW_VERSION = '" + version + '-preview-' + buildId + "';")
     .replace("const CACHE_PREFIX = 'pwa-kalorii';", "const CACHE_PREFIX = 'vilda-home-preview';")
@@ -122,6 +146,7 @@ export async function exportPreview({ source = DEFAULT_SOURCE, output }) {
     let result = bytes;
     if (!relative.startsWith('runtime/') && ['.js', '.html'].includes(path.extname(relative))) {
       let text = isolateText(bytes.toString('utf8'));
+      if (relative === 'subskrypcja.html') text = demoAccessDocument(text);
       if (relative.endsWith('.html')) text = isolateDocument(text, buildId);
       if (relative === 'service-worker-kalorii.js') text = isolateWorker(text, buildId);
       result = Buffer.from(text);
