@@ -1,0 +1,178 @@
+/* Isolated, opt-in presentation. The native result/centile card is deliberately
+ * not restyled. All form controls remain in their original document. */
+.vilda-home-workspace .vhome-visit-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  min-height: 60px;
+  margin: 0 0 8px;
+  padding: 6px 20px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--card, #fff);
+}
+.vilda-home-workspace .vhome-visit-title {
+  margin: 0 0 2px;
+  color: var(--text);
+  font-size: 20px;
+  font-weight: 650;
+  line-height: 1.3;
+  text-align: left;
+}
+.vilda-home-workspace .vhome-visit-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+  line-height: 1.4;
+}
+.vilda-home-workspace .vhome-visit-date { font-variant-numeric: tabular-nums; }
+.vilda-home-workspace .vhome-history-button {
+  width: auto;
+  min-width: 150px;
+  min-height: 44px;
+  margin: 0;
+  padding: 10px 16px;
+  font-size: 15px;
+  font-weight: 600;
+}
+.vilda-home-workspace #userSection fieldset.user-card {
+  min-width: 0;
+  padding: 0;
+  border-radius: 14px;
+}
+.vilda-home-workspace #userSection fieldset.user-card > div:empty { display: none; }
+.vilda-home-workspace .vhome-empty-action-home { display: none; }
+.vilda-home-workspace .vhome-form-content { padding: 20px; }
+.vilda-home-workspace .vhome-card-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin: 0 0 20px;
+}
+.vilda-home-workspace .vhome-card-heading h2 {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.4;
+  font-weight: 650;
+  color: var(--text);
+}
+.vilda-home-workspace .vhome-card-heading > span { font-size: 14px; }
+.vilda-home-workspace .vhome-section-title {
+  margin: 16px 0 10px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  text-align: left;
+}
+.vilda-home-workspace .vhome-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 12px;
+  margin: 0 0 12px;
+}
+.vilda-home-workspace .vhome-fields label {
+  display: block;
+  min-width: 0;
+  width: auto;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 21px;
+}
+.vilda-home-workspace .vhome-fields label > span { display: none; }
+.vilda-home-workspace #userSection .vhome-fields :is(input, select) {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 46px;
+  height: 46px;
+  margin: 6px 0 0;
+  padding: 9px 12px;
+  border-radius: 9px;
+  font-size: 16px;
+  line-height: 24px;
+}
+.vilda-home-workspace .vhome-extra-data {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.vilda-home-workspace .vhome-form-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 12px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+.vilda-home-workspace .vhome-form-actions :is(#clearAllDataBtn, #metabolicSummaryBtn) {
+  display: flex !important;
+  justify-content: center;
+  align-items: center;
+  width: 100% !important;
+  min-width: 0;
+  min-height: 70px;
+  margin: 0 !important;
+  padding: 10px !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 10px !important;
+  font-size: 15px !important;
+  line-height: 1.4;
+  text-align: center;
+}
+.vilda-home-workspace .vhome-form-actions #metabolicSummaryBtn {
+  background: var(--primary) !important;
+  color: #fff !important;
+}
+.vilda-home-workspace .vhome-form-actions button:disabled { opacity: .55; cursor: not-allowed; }
+.vilda-home-workspace .vhome-action-label { display: block; width: 100%; text-align: center; }
+.vilda-home-workspace .vhome-action-label small {
+  display: block;
+  margin-top: 3px;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.4;
+  text-align: center;
+}
+.vilda-home-workspace #vildaStatusForm { margin: 12px 14px 0; }
+@media (max-width: 699px) {
+  .vilda-home-workspace .vhome-visit-heading {
+    min-height: 58px;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding: 6px 8px;
+  }
+  .vilda-home-workspace .vhome-visit-title,
+  .vilda-home-workspace .vhome-card-heading > span { display: none; }
+  .vilda-home-workspace .vhome-visit-meta { gap: 6px; font-size: 13px; white-space: nowrap; }
+  .vilda-home-workspace .vhome-history-button {
+    min-width: 112px;
+    padding: 8px;
+    font-size: 13px;
+  }
+  .vilda-home-workspace .vhome-form-content { padding: 14px; }
+  .vilda-home-workspace .vhome-card-heading { margin-bottom: 12px; }
+  .vilda-home-workspace .vhome-card-heading h2 { font-size: 18px; }
+  .vilda-home-workspace .vhome-section-title { margin-top: 12px; }
+  .vilda-home-workspace .vhome-fields,
+  .vilda-home-workspace .vhome-form-actions { gap: 10px; }
+  .vilda-home-workspace .vhome-fields label { font-size: 13px; }
+  .vilda-home-workspace .vhome-form-actions { margin-top: 14px; padding-top: 14px; }
+  .vilda-home-workspace .vhome-form-actions :is(#clearAllDataBtn, #metabolicSummaryBtn) {
+    min-height: 58px;
+    font-size: 14px !important;
+    padding: 8px !important;
+  }
+  .vilda-home-workspace .vhome-action-label small { display: none; }
+}
+@media (max-width: 360px) {
+  .vilda-home-workspace .vhome-visit-heading { padding-inline: 6px; gap: 5px; }
+  .vilda-home-workspace .vhome-visit-meta { font-size: 13px; gap: 4px; }
+  .vilda-home-workspace .vhome-history-button { min-width: 100px; font-size: 12px; padding-inline: 5px; }
+}

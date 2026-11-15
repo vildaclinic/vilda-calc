@@ -14,6 +14,17 @@ Ten plik obowiązuje w całym repozytorium. Vilda jest aplikacją medyczną; bł
 - Przed rozpoczęciem odśwież `origin/audyt` i porównaj bazowy SHA z `refs/remotes/origin/audyt`. Jeżeli fetch jest niedostępny, sprawdź zdalny `refs/heads/audyt` przez `git ls-remote`. Po stwierdzeniu rozbieżności najpierw odśwież checkout.
 - Zachowuj niepowiązane zmiany użytkownika. Nie używaj destrukcyjnych poleceń do czyszczenia repozytorium.
 
+### Wyjątek: wdrożenie nowej strony głównej
+
+Decyzja właściciela z 2026-11-15: zatwierdzoną makietę wdrażamy etapami na
+`agent/nowa-strona-glowna`, utworzonej z aktualnego `audyt`. Gałęzie kolejnych rat
+wychodzą z aktualnej integracji, a ich draft PR-y celują w nią. Wersje liczymy
+względem `origin/agent/nowa-strona-glowna`. Zlecenie obejmuje scalanie tych rat do
+integracji po zielonych kontrolach oraz publikację osobnego podglądu z fikcyjnymi
+danymi i odłączoną synchronizacją produkcyjną. Nie obejmuje scalenia do `audyt`
+ani publikacji nowego interfejsu w produkcji; to wymaga końcowego odbioru
+właściciela. Szczegóły: `docs/GITHUB_WORKFLOW.md`, „Nowa strona główna”.
+
 ## 2. Granica źródło–artefakt
 
 - Publiczne repozytorium zawiera głównie artefakty wdrożeniowe; wiele plików JS jest zminifikowanych.

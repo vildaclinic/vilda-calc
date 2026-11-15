@@ -48,6 +48,60 @@ flowchart LR
 6. Po akceptacji PR przechodzi przez `Squash and merge`.
 7. Sprawdź wynik GitHub Pages. W obecnej konfiguracji commit na `audyt` może uruchomić deployment, dlatego scalenie należy traktować jako potencjalną publikację. Docelowo produkcja powinna wymagać osobnego, ręcznego zatwierdzenia.
 
+## Nowa strona główna
+
+Właściciel zatwierdził 2026-11-15 osobny tor wdrożenia uzgodnionej makiety:
+
+```text
+audyt → agent/nowa-strona-glowna → gałąź raty → PR do agent/nowa-strona-glowna
+                                      ↓ po testach i scaleniu
+                              osobny adres podglądu
+```
+
+`agent/nowa-strona-glowna` powstaje z najnowszego zdalnego `audyt`. Kolejne raty
+wychodzą z najnowszej integracji. Zgoda obejmuje ich scalanie do integracji po
+zielonych kontrolach i aktualizowanie osobnego podglądu. Zwykłe prace nad
+aplikacją nadal celują w `audyt`. Nie zmieniamy gałęzi publikowanej przez GitHub
+Pages. Dopiero końcowy PR z integracji do `audyt`, po odbiorze właściciela,
+może opublikować nowy interfejs w aplikacji.
+
+CI, Wygląd i CodeQL obsługują PR-y do obu gałęzi. Nazwy wymaganych kontroli,
+pełny zestaw Chromium, Safari/WebKit i kontrola design systemu pozostają takie
+same. Docelowa ochrona integracji powinna obejmować te same wymagane kontrole,
+aktualną gałąź przed scaleniem, zakaz force push i usuwania. Sam plik workflow
+nie ustanawia ochrony — jej stan w ustawieniach GitHuba trzeba sprawdzić osobno.
+
+W kolejnej racie nowego interfejsu ostatni krok wersjonowania wygląda tak:
+
+```bash
+git fetch origin agent/nowa-strona-glowna
+git merge origin/agent/nowa-strona-glowna
+npm run podbij-wersje -- --baza=origin/agent/nowa-strona-glowna
+npm test
+```
+
+Kontrola PR-a używa `HEAD^1`, czyli dokładnej gałęzi docelowej w commicie
+scalenia przygotowanym przez GitHub. Przy ręcznym uruchomieniu **Kontroli
+jakości** lub **Wyglądu** na gałęzi raty wybierz `baza_pr` równą
+`agent/nowa-strona-glowna`. Wygląd przenosi tę wartość także do CI uruchamianego
+po commicie bota z nowymi wzorcami. Domyślna wartość pozostaje `audyt`, więc
+dotychczasowy proces nie wymaga zmiany. Ręczne porównanie gałęzi integracyjnej
+z nią samą jest odrzucane; nie dawałoby dowodu poprawności wersji.
+
+Zmiany z `audyt` regularnie włączamy do integracji bez rebase i force push,
+zachowując treść obu gałęzi. Przed końcowym PR-em do produkcji pobieramy
+najnowszy `audyt`, scalamy go i przeliczamy **całą integrację** zwykłym
+`npm run podbij-wersje` względem `origin/audyt`. Następnie wykonujemy pełną
+walidację aktualnego SHA. Końcowy PR oraz jego ręczne przebiegi CI także
+używają bazy `audyt`; nazwa gałęzi integracyjnej nie zwalnia z kontroli wersji.
+
+Podgląd ma inny **origin**, a nie tylko inny katalog `vildaclinic.github.io`.
+Nie współdzieli lokalnego sejfu ani cache z aplikacją. Używa wyłącznie danych
+fikcyjnych i nie łączy się z produkcyjną synchronizacją ani obszarem klinicznym.
+Publikujemy sprawdzony etap podglądu i podajemy odpowiadający mu commit.
+Automatyczna publikacja z GitHuba wymaga osobnego skonfigurowanego workflow;
+samo utworzenie gałęzi ani zielone CI nie aktualizuje adresu podglądu.
+
 ## Jak czytać wynik PR
 
 | Stan | Znaczenie | Działanie |
@@ -111,7 +165,7 @@ Dwa wątki biorą ten sam „następny numer”. Po scaleniu pierwszego PR drugi
 ### Zasady dla właściciela
 
 1. **Jeden obszar — jeden wątek.** Równolegle idą prace w różnych modułach. Dwie raty tego samego tematu (np. P-DIETA w `vilda_diet_recommendations.js`) prowadź po kolei.
-2. **Scalaj jeden PR naraz.** Po każdym scaleniu pozostałe otwarte PR-y trzeba zaktualizować — także te bez konfliktu. Przycisk „Update branch” na GitHubie scala `audyt`, ale wersji nie przelicza. Jeżeli po nim krok CI „Sprawdź wersje względem audyt” jest czerwony, wklej wątkowi polecenie niżej.
+2. **Scalaj jeden PR naraz.** Po każdym scaleniu pozostałe otwarte PR-y trzeba zaktualizować — także te bez konfliktu. Przycisk „Update branch” na GitHubie scala `audyt`, ale wersji nie przelicza. Jeżeli po nim krok CI „Sprawdź wersje względem gałęzi docelowej” jest czerwony, wklej wątkowi polecenie niżej.
 3. **Wersje na końcu.** Wątek nadaje numery skryptem `npm run podbij-wersje` jako ostatni krok, po scaleniu najnowszego `audyt`.
 
 Wątek, który obserwuje swój PR, dostaje powiadomienie o konflikcie i aktualizuje się sam. W pozostałych przypadkach wklej mu:
@@ -132,7 +186,7 @@ git commit                      # kończy też scalanie, jeżeli było w toku
 git push
 ```
 
-Bez `git add` i `git commit` poprawki skryptu zostają tylko na dysku, a PR na GitHubie dalej ma zderzone numery. `npm test` przechodzi wtedy na zielono, bo wypchnięte drzewo jest wewnętrznie spójne. Zderzenie wykrywa dopiero krok CI „Sprawdź wersje względem audyt” (niżej). Testy przeglądarkowe po scaleniu uruchamia CI (wymagany status „Testy przeglądarkowe i PWA”).
+Bez `git add` i `git commit` poprawki skryptu zostają tylko na dysku, a PR na GitHubie dalej ma zderzone numery. `npm test` przechodzi wtedy na zielono, bo wypchnięte drzewo jest wewnętrznie spójne. Zderzenie wykrywa dopiero krok CI „Sprawdź wersje względem gałęzi docelowej” (niżej). Testy przeglądarkowe po scaleniu uruchamia CI (wymagany status „Testy przeglądarkowe i PWA”).
 
 | Konflikt w | Jak rozwiązać |
 |---|---|
@@ -159,7 +213,7 @@ Symulacja na kodzie z 2026-09-30 (`audyt` `567597c`, otwarte #503 i #504):
 
 ### Strażnik w CI
 
-Wymagany job „Lint, składnia i testy jednostkowe” ma krok **„Sprawdź wersje względem audyt”**:
+Wymagany job „Lint, składnia i testy jednostkowe” ma krok **„Sprawdź wersje względem gałęzi docelowej”**:
 
 ```bash
 node tests/scripts/podbij-wersje.mjs --sprawdz --bez-sieci --baza="$BAZA"
@@ -167,10 +221,10 @@ node tests/scripts/podbij-wersje.mjs --sprawdz --bez-sieci --baza="$BAZA"
 
 Krok działa w dwóch sytuacjach:
 
-- **Pull request.** `BAZA=HEAD^1`. `actions/checkout` pobiera commit scalenia PR-a z `audyt` z rodzicami (`fetch-depth: 2`), więc `HEAD^1` jest dokładnie tym `audyt`, do którego PR wejdzie. Zestaw reguł wymaga aktualnej gałęzi przed scaleniem („Require branches to be up to date”, `strict_required_status_checks_policy`). Krok liczy więc względem najnowszego `audyt`, także po „Update branch”.
-- **`workflow_dispatch` na gałęzi innej niż `audyt`.** `BAZA=origin/audyt`, checkout z pełną historią (`fetch-depth: 0`). Tak „Wygląd” uruchamia CI dla commita bota z odświeżonymi wzorcami. Commit z `GITHUB_TOKEN` nie wywołuje zdarzenia `pull_request`, a status z tego przebiegu też liczy się jako wymagany. Gałąź musi zawierać najnowszy `audyt`, inaczej krok jest czerwony („gałąź nie zawiera origin/audyt”).
+- **Pull request.** `BAZA=HEAD^1`. `actions/checkout` pobiera commit scalenia PR-a z gałęzią docelową i rodzicami (`fetch-depth: 2`), więc `HEAD^1` jest dokładnie tą bazą, do której PR wejdzie: `audyt` lub integracją nowego interfejsu. Zestaw reguł wymaga aktualnej gałęzi przed scaleniem („Require branches to be up to date”, `strict_required_status_checks_policy`). Krok liczy więc względem aktualnej bazy, także po „Update branch”.
+- **`workflow_dispatch` na gałęzi innej niż `audyt`.** `BAZA=origin/<baza_pr>`, domyślnie `origin/audyt`, checkout z pełną historią (`fetch-depth: 0`). Tak „Wygląd” uruchamia CI dla commita bota z odświeżonymi wzorcami i przekazuje bazę PR-a. Commit z `GITHUB_TOKEN` nie wywołuje zdarzenia `pull_request`, a status z tego przebiegu też liczy się jako wymagany. Gałąź musi zawierać najnowszą wybraną bazę, inaczej krok jest czerwony. Dozwolone bazy: `audyt` oraz `agent/nowa-strona-glowna`; porównanie gałęzi z nią samą jest odrzucane.
 
-Na push do `audyt` krok jest pomijany.
+Na push do `audyt` i gałęzi integracyjnej krok jest pomijany; PR-y kontrolują wersje przed scaleniem.
 
 Wynik kroku:
 
@@ -210,7 +264,7 @@ Opcje: `-- --sprawdz` (tylko raport; kod 1, gdy coś trzeba zmienić, jest błą
 ### Otwarte decyzje właściciela
 
 - **SW podbijany przy wydaniu, a nie w każdym PR.** Usunąłby ostatnią linię wspólną dla wszystkich PR-ów. Dziś jednak każdy commit na `audyt` może trafić na GitHub Pages, więc to zmiana modelu wdrożenia.
-- **Merge queue na GitHubie.** Sama nie rozwiązuje konfliktów w tych samych liniach — PR z konfliktem wypada z kolejki. Razem z krokiem „Sprawdź wersje względem audyt” dawałaby automatyczne „po kolei”. Wymaga wtedy wyzwalacza `merge_group` w `ci.yml` i rozszerzenia warunku kroku.
+- **Merge queue na GitHubie.** Sama nie rozwiązuje konfliktów w tych samych liniach — PR z konfliktem wypada z kolejki. Razem z krokiem „Sprawdź wersje względem gałęzi docelowej” dawałaby automatyczne „po kolei”. Wymaga wtedy wyzwalacza `merge_group` w `ci.yml` i rozszerzenia warunku kroku.
 
 Kontrola `npm run podbij-wersje -- --sprawdz` w CI, wcześniej na tej liście, działa od #626 (wyżej, „Strażnik w CI”).
 

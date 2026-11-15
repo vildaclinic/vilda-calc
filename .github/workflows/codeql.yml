@@ -2,9 +2,9 @@ name: Analiza bezpieczeństwa CodeQL
 
 on:
   push:
-    branches: [audyt]
+    branches: [audyt, agent/nowa-strona-glowna]
   pull_request:
-    branches: [audyt]
+    branches: [audyt, agent/nowa-strona-glowna]
   # Harmonogram i ręczny dispatch będą dostępne po ustawieniu audyt jako
   # gałęzi domyślnej. Do tego czasu skany uruchamiają push i pull_request.
   schedule:

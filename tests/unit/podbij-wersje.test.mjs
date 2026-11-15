@@ -459,12 +459,12 @@ describe('P-WATKI: podbij-wersje liczy wersje z bazy i treści', () => {
   });
 });
 
-// P-WERSJE-CI: krok „Sprawdź wersje względem audyt” w ci.yml. Na PR-ze checkout daje commit scalenia
-// z audyt (fetch-depth 2), więc HEAD^1 jest bazą; przy workflow_dispatch na gałęzi PR-a (commit bota
-// z „Wygląd”) — pełna historia i baza origin/audyt. Test wycina polecenia kroku z joba unit prawdziwego
+// P-WERSJE-CI: krok wersji w ci.yml. Na PR-ze checkout daje commit scalenia z gałęzią docelową
+// (fetch-depth 2), więc HEAD^1 jest bazą; przy workflow_dispatch na gałęzi PR-a (commit bota
+// z „Wygląd”) — pełna historia i wybrana baza origin/. Test wycina polecenia kroku z joba unit prawdziwego
 // ci.yml i uruchamia je w klonie jak na runnerze — z prawdziwymi skryptami podbij-wersje.
 const CI = fs.readFileSync(path.join(korzen, '.github/workflows/ci.yml'), 'utf8');
-const NAZWA_KROKU = 'Sprawdź wersje względem audyt';
+const NAZWA_KROKU = 'Sprawdź wersje względem gałęzi docelowej';
 const wciecie = (l) => l.search(/\S/);
 
 /** Linie kroku `- name: <nazwa>` (do następnego kroku albo końca joba), z wcięciem kreski. */
@@ -525,9 +525,9 @@ function dolozSkrypty(klon) {
  * Commit scalenia PR-a jak na GitHubie (pierwszy rodzic: audyt, drugi: głowa PR-a), sklonowany płytko
  * (--depth=… jak actions/checkout z fetch-depth).
  */
-function klonScaleniaPR(r, galaz, glebokosc = 2) {
+function klonScaleniaPR(r, galaz, glebokosc = 2, baza = 'audyt') {
   const powrot = r.git('rev-parse', '--abbrev-ref', 'HEAD').trim();
-  r.git('checkout', '-q', '-B', 'pr/scalenie', 'audyt');
+  r.git('checkout', '-q', '-B', 'pr/scalenie', baza);
   r.git('merge', '-q', '--no-ff', '--no-edit', galaz);
   r.git('checkout', '-q', powrot);
   const klon = fs.mkdtempSync(path.join(os.tmpdir(), 'podbij-wersje-ci-'));
@@ -548,11 +548,11 @@ function klonGaleziPR(r, galaz) {
 // runner wziąłby je za prawdziwe adnotacje joba `npm test` — stąd neutralizacja.
 const bezPolecen = (wynik) => `${wynik.stdout}${wynik.stderr}`.replace(/^::/gm, '› ::');
 
-function uruchomKrokCI(klon, baza = 'HEAD^1') {
+function uruchomKrokCI(klon, baza = 'HEAD^1', refName = '') {
   const polecenia = poleceniaKroku(jobUnit(CI), NAZWA_KROKU);
   // Domyślna powłoka kroku w Actions (bez `shell:`) to `bash -e {0}` — widać ją w logu joba;
   // BAZA ustawia `env:` kroku z wyrażenia na event (sprawdzane w teście statycznym).
-  return spawnSync('bash', ['-e', '-c', polecenia], { cwd: klon, encoding: 'utf8', env: { ...SRODOWISKO, BAZA: baza } });
+  return spawnSync('bash', ['-e', '-c', polecenia], { cwd: klon, encoding: 'utf8', env: { ...SRODOWISKO, BAZA: baza, GITHUB_REF_NAME: refName } });
 }
 
 /** Scenariusz #592 + #594: dwa wątki z tym samym SW_VERSION, drugi dostaje audyt czystym scaleniem. */
@@ -576,7 +576,7 @@ function kolizjaPoCzystymScaleniu() {
   return r;
 }
 
-describe('P-WERSJE-CI: CI sprawdza wersje PR-a względem audyt', () => {
+describe('P-WERSJE-CI: CI sprawdza wersje PR-a względem gałęzi docelowej', () => {
   it('ci.yml: krok w wymaganym jobie unit, na pull_request i workflow_dispatch poza audyt, bez furtek', () => {
     const unit = jobUnit(CI);
     // Job bez własnego `if:` ani `continue-on-error` — inaczej wymagany status mógłby przejść bez kroku.
@@ -597,7 +597,7 @@ describe('P-WERSJE-CI: CI sprawdza wersje PR-a względem audyt', () => {
     expect(wartosc(krok.linie, 'if'))
       .toBe("github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/audyt')");
     expect(kluczeNaWcieciu(krok.linie, krok.d + 4)).toEqual(['BAZA']);
-    expect(wartosc(krok.linie, 'BAZA')).toBe("${{ github.event_name == 'pull_request' && 'HEAD^1' || 'origin/audyt' }}");
+    expect(wartosc(krok.linie, 'BAZA')).toBe("${{ github.event_name == 'pull_request' && 'HEAD^1' || format('origin/{0}', inputs.baza_pr || 'audyt') }}");
     expect(poleceniaKroku(unit, NAZWA_KROKU)).toContain('node tests/scripts/podbij-wersje.mjs --sprawdz --bez-sieci --baza="$BAZA"');
   });
 
@@ -614,7 +614,7 @@ describe('P-WERSJE-CI: CI sprawdza wersje PR-a względem audyt', () => {
     const krok = uruchomKrokCI(klon);
     expect(krok.status, bezPolecen(krok)).toBe(1);
     expect(krok.stdout).toContain('SW_VERSION: 1.1.11 → 1.1.12');
-    expect(krok.stdout).toContain('::error title=Wersje niespójne z audyt::');
+    expect(krok.stdout).toContain('::error title=Wersje niespójne z bazą::');
     expect(krok.stdout).not.toContain('::error title=Błąd wersji do ręcznej poprawki::');
 
     // Po npm run podbij-wersje na gałęzi PR-a ten sam krok przechodzi.
@@ -630,7 +630,7 @@ describe('P-WERSJE-CI: CI sprawdza wersje PR-a względem audyt', () => {
     const krok = uruchomKrokCI(klonGaleziPR(r, 'agent/watek'), 'origin/audyt');
     expect(krok.status, bezPolecen(krok)).toBe(1);
     expect(krok.stdout).toContain('SW_VERSION: 1.1.11 → 1.1.12');
-    expect(krok.stdout).toContain('::error title=Wersje niespójne z audyt::');
+    expect(krok.stdout).toContain('::error title=Wersje niespójne z bazą::');
 
     expect(r.podbij().sw.cel).toBe('1.1.12');
     r.git('commit', '-q', '-am', 'podbij-wersje po scaleniu audyt');
@@ -647,6 +647,76 @@ describe('P-WERSJE-CI: CI sprawdza wersje PR-a względem audyt', () => {
     expect(zaGalezia.stdout).toContain('UWAGA: gałąź nie zawiera origin/audyt');
   });
 
+  it('PR do gałęzi integracyjnej i dispatch używają jej wersji; finalny PR nadal sprawdza audyt', () => {
+    const r = repo();
+    const integracja = 'agent/nowa-strona-glowna';
+    const galaz = 'agent/kolejna-rata';
+    // Pierwsza rata jest już w integracji, audyt nadal ma SW 1.1.10.
+    r.git('checkout', '-q', '-b', integracja, 'audyt');
+    r.zapisz('silnik.js', r.czytaj('silnik.js').replace('silnikA = 1', 'silnikA = 2'));
+    r.podbij();
+    r.git('commit', '-q', '-am', 'pierwsza rata integracji');
+    r.git('checkout', '-q', '-b', galaz);
+    r.zapisz('index.html', r.czytaj('index.html').replace('<p>Strona główna</p>', '<p>Druga rata</p>'));
+    r.podbij(); // Błąd operatora: domyślna baza audyt zamiast integracji.
+    r.git('commit', '-q', '-am', 'druga rata z niewłaściwą bazą wersji');
+
+    const niepoprawny = uruchomKrokCI(klonScaleniaPR(r, galaz, 2, integracja));
+    expect(niepoprawny.status, bezPolecen(niepoprawny)).toBe(1);
+    expect(niepoprawny.stdout).toContain('SW_VERSION: 1.1.11 → 1.1.12');
+
+    const plan = zaplanuj({ katalog: r.katalog, baza: integracja });
+    zastosuj(plan, { katalog: r.katalog });
+    r.git('commit', '-q', '-am', 'wersje względem gałęzi integracyjnej');
+    const pr = uruchomKrokCI(klonScaleniaPR(r, galaz, 2, integracja));
+    expect(pr.status, bezPolecen(pr)).toBe(0);
+    const dispatch = uruchomKrokCI(klonGaleziPR(r, galaz), `origin/${integracja}`, galaz);
+    expect(dispatch.status, bezPolecen(dispatch)).toBe(0);
+
+    // Końcowe przeniesienie całej integracji do audyt nie omija kontroli wersji.
+    const finalny = uruchomKrokCI(klonScaleniaPR(r, galaz));
+    expect(finalny.status, bezPolecen(finalny)).toBe(1);
+    expect(finalny.stdout).toContain('SW_VERSION: 1.1.12 → 1.1.11');
+
+    r.git('checkout', '-q', integracja);
+    r.zapisz('docs/notatka.md', 'nowsza gałąź integracyjna\n');
+    r.git('commit', '-q', '-am', 'integracja poszła dalej');
+    r.git('checkout', '-q', galaz);
+    const nieaktualny = uruchomKrokCI(klonGaleziPR(r, galaz), `origin/${integracja}`, galaz);
+    expect(nieaktualny.status, bezPolecen(nieaktualny)).toBe(1);
+    expect(nieaktualny.stdout).toContain(`UWAGA: gałąź nie zawiera origin/${integracja}`);
+  });
+
+  it('ręczne CI odrzuca nieobsługiwaną bazę oraz porównanie integracji z samą sobą', () => {
+    const r = repo();
+    const klon = klonGaleziPR(r, 'agent/watek');
+    const obca = uruchomKrokCI(klon, 'HEAD');
+    expect(obca.status, bezPolecen(obca)).toBe(2);
+    expect(obca.stdout).toContain('::error title=Nieobsługiwana baza::');
+    const taSama = uruchomKrokCI(klon, 'origin/agent/nowa-strona-glowna', 'agent/nowa-strona-glowna');
+    expect(taSama.status, bezPolecen(taSama)).toBe(2);
+    expect(taSama.stdout).toContain('::error title=Baza jest gałęzią badaną::');
+  });
+
+  it('kontrole obejmują oba cele PR-ów, a Wygląd przekazuje wybraną bazę do kontroli nowego commita', () => {
+    const wyglad = fs.readFileSync(path.join(korzen, '.github/workflows/wyglad.yml'), 'utf8');
+    const codeql = fs.readFileSync(path.join(korzen, '.github/workflows/codeql.yml'), 'utf8');
+    for (const workflow of [CI, wyglad, codeql]) {
+      expect(workflow).toMatch(/pull_request:\n\s+branches: \[audyt, agent\/nowa-strona-glowna\]/);
+    }
+    for (const workflow of [CI, codeql]) {
+      expect(workflow).toMatch(/push:\n\s+branches: \[audyt, agent\/nowa-strona-glowna\]/);
+    }
+    for (const workflow of [CI, wyglad]) {
+      expect(workflow).toMatch(/baza_pr:\n\s+description: [^\n]+\n\s+type: choice\n\s+options:\n\s+- audyt\n\s+- agent\/nowa-strona-glowna\n\s+default: audyt/);
+    }
+    const bot = blokKroku(wyglad, 'Wypchnij wzorce na gałąź i uruchom kontrole dla nowego commita');
+    expect(wartosc(bot.linie, 'BAZA_PR')).toBe("${{ github.base_ref || inputs.baza_pr || 'audyt' }}");
+    const polecenia = poleceniaKroku(wyglad, 'Wypchnij wzorce na gałąź i uruchom kontrole dla nowego commita');
+    expect(polecenia).toContain('gh workflow run ci.yml --ref "$GALAZ" -f baza_pr="$BAZA_PR"');
+    expect(polecenia).toContain('gh workflow run wyglad.yml --ref "$GALAZ" -f baza_pr="$BAZA_PR"');
+  });
+
   it('BŁĄD planu (usunięty historyczny wpis precache) dostaje osobną adnotację do ręcznej poprawki', () => {
     const r = repo();
     r.zapisz('service-worker-kalorii.js', r.czytaj('service-worker-kalorii.js').replace("  '/silnik.js?v=2',\n", ''));
@@ -654,7 +724,7 @@ describe('P-WERSJE-CI: CI sprawdza wersje PR-a względem audyt', () => {
     const krok = uruchomKrokCI(klonScaleniaPR(r, 'agent/watek'));
     expect(krok.status, bezPolecen(krok)).toBe(1);
     expect(krok.stdout).toMatch(/^::error title=Błąd wersji do ręcznej poprawki::usunięto historyczny wpis precache '\/silnik\.js\?v=2'/m);
-    expect(krok.stdout).toContain('::error title=Wersje niespójne z audyt::');
+    expect(krok.stdout).toContain('::error title=Wersje niespójne z bazą::');
   });
 
   it('„Do decyzji” (nieliczbowe ?v= ze zmienioną treścią) daje ostrzeżenie w podsumowaniu, lista pinów w testach — nie', () => {
