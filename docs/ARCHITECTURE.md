@@ -167,6 +167,12 @@ Do tej warstwy należą m.in.:
   `VildaShell.openPatientCardInStart(id, {activeTab: 'lab'})`. Odwrotnie karta badania otwiera
   przelicznik adresem `przelicznik-jednostek.html?badanie=<id>` (`applySubstanceDeepLink`
   w skrypcie strony; w powłoce cel dochodzi zdarzeniem `vilda:shell-navigate-target`);
+- oczekujący wynik (P-OCZEKUJACE-WYNIKI): `window.VildaLabPendingResult`, drugi moduł pliku
+  `lab_pin_result.js` (bez osobnego pliku — budżet żądań instalacji PWA). Zakładka „Badania” otwiera
+  przelicznik adresem `przelicznik-jednostek.html?oczekujacy=<id notatki>`; moduł sprawdza wpis w sejfie
+  (`VildaLabHistory.pendingItem`), rysuje pasek `#labPendingStrip` w nagłówku karty i daje oknu przypięcia
+  oraz pakietowi znacznik „Zamknij oczekujący wynik” (`choice`, `commit` → `completePatientNote`). Zmianę
+  stanu ogłasza zdarzenie dokumentu `vilda:lab-pending-result-changed`;
 - pakiety badań: `vilda_lab_packages.js` (dane pakietu, model i widok w jednym pliku — budżet żądań
   instalacji PWA; tag tylko na `przelicznik-jednostek.html`). Zakładka „Pakiet badań” karty przelicznika
   (jedna karta, zakładki `#labModeBar` pod tytułem; pakiet jest panelem `#labPackageCard` tej karty): kilka

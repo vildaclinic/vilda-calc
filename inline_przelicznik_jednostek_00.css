@@ -384,6 +384,132 @@
        Odstęp pod tytułem przechodzi z h1 na nagłówek, żeby zakładki stały między tytułem a treścią. */
     .lab-smart-card > .lab-card-head { margin: 0 0 1.3rem; }
     .lab-smart-card > .lab-card-head > h1 { margin: 0; }
+
+    /* P-OCZEKUJACE-WYNIKI (decyzje właściciela 2026-11-15): pasek wpisu „oczekujący wynik” pod tytułem karty
+       (VildaLabPendingResult w lab_pin_result.js) — podpięty wpis albo komunikat po jego zamknięciu — oraz znacznik
+       „Zamknij oczekujący wynik” w oknie przypięcia i przy zapisie pakietu. */
+    .lab-pending-strip {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space-6px) var(--space-12px);
+      box-sizing: border-box;
+      margin: var(--space-12px) 0 0;
+      padding: var(--space-10px) var(--space-14px);
+      border: var(--border-hairline) solid rgba(0, 131, 141, .28);
+      border-radius: var(--radius-10);
+      background: rgba(0, 131, 141, .06);
+      color: var(--text);
+      font-size: .92rem;
+      line-height: 1.4;
+      text-align: left;
+    }
+    .lab-pending-strip[hidden] { display: none; }
+    .lab-pending-strip.is-notice {
+      border-color: rgba(29, 158, 117, .45);
+      background: rgba(29, 158, 117, .1);
+    }
+    .lab-pending-strip.is-close-error,
+    .lab-pending-strip.is-close-stale,
+    .lab-pending-strip.is-undo-error,
+    .lab-pending-strip.is-undo-stale {
+      border-color: var(--error);
+      background: var(--danger-bg);
+    }
+    .lab-pending-info {
+      display: flex;
+      flex: 1 1 260px;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+    .lab-pending-title { font-weight: 500; }
+    .lab-pending-title strong { font-weight: 600; }
+    .lab-pending-muted { font-weight: 400; color: var(--text-muted, #56717c); }
+    .lab-pending-sub { font-size: .82rem; color: var(--text-muted, #56717c); }
+    .lab-pending-text { flex: 1 1 260px; min-width: 0; }
+    .lab-pending-actions {
+      display: inline-flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space-6px);
+    }
+    /* style.css daje przyciskom width: 100% na telefonie; tu szerokość ustawia pasek. */
+    .lab-pending-strip button { width: auto; }
+    .lab-pending-strip button.lab-pending-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+      margin: 0;
+      padding: 0 var(--space-14px);
+      border: 1.5px solid var(--primary) !important;
+      border-radius: var(--radius-10) !important;
+      background: transparent !important;
+      color: var(--primary) !important;
+      box-shadow: none !important;
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+      font-family: inherit;
+      font-size: .88rem;
+      font-weight: 600;
+      line-height: 1.2;
+      cursor: pointer;
+    }
+    .lab-pending-strip button.lab-pending-dismiss {
+      min-width: 44px;
+      min-height: 44px;
+      margin: 0;
+      padding: 0;
+      border: 0 !important;
+      background: transparent !important;
+      color: var(--text-muted, #56717c) !important;
+      box-shadow: none !important;
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+      font-size: 1.25rem;
+      line-height: 1;
+      cursor: pointer;
+    }
+    .lab-pending-choice {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4px, 4px);
+      box-sizing: border-box;
+      margin: 0 0 var(--space-10px);
+      padding: var(--space-10px) var(--space-12px);
+      border: var(--border-hairline) solid rgba(0, 131, 141, .28);
+      border-radius: var(--radius-10);
+      background: rgba(0, 131, 141, .06);
+      text-align: left;
+    }
+    .lab-pending-choice.is-mismatch {
+      border-color: #f0d9ad;
+      background: #fff8ec;
+    }
+    .lab-pending-choice-label {
+      display: flex;
+      align-items: center;
+      gap: var(--space-10px);
+      min-height: 44px;
+      margin: 0;
+      color: var(--text);
+      font-size: .95rem;
+      font-weight: 600;
+      line-height: 1.35;
+      cursor: pointer;
+    }
+    .lab-pending-choice-label input.lab-pending-choice-input {
+      flex: none;
+      width: 22px;
+      height: 22px;
+      min-height: 0;
+      margin: 0;
+      accent-color: var(--primary);
+    }
+    .lab-pending-choice-help { font-size: .8rem; color: var(--text-muted, #56717c); }
+    .lab-pkg-pending[hidden] { display: none; }
+    .lab-pkg-pending .lab-pending-choice { margin: 0; }
     .lab-step {
       display: flex;
       align-items: flex-start;
@@ -2147,6 +2273,8 @@
         grid-column: 1 / -1;
         text-align: left;
       }
+      /* Pasek oczekującego wyniku na całą szerokość karty, pod tytułem i zakładkami trybu. */
+      .lab-smart-card > .lab-card-head > .lab-pending-strip { grid-column: 1 / -1; }
       .lab-smart-card > .lab-pane--form {
         grid-area: form;
         padding: var(--space-1-25) 1.7rem var(--space-1-5);
