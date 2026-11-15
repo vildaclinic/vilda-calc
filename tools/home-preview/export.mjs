@@ -89,13 +89,35 @@ export function demoAccessDocument(source) {
 }
 
 export function isolateWorker(source, buildId) {
-  const output = source.replace(/const SW_VERSION = '([^']+)';/, (_, version) => "const SW_VERSION = '" + version + '-preview-' + buildId + "';")
-    .replace("const CACHE_PREFIX = 'pwa-kalorii';", "const CACHE_PREFIX = 'vilda-home-preview';")
-    .replace('const CORE_SHELL_URLS = [', 'const CORE_SHELL_URLS = [\n'
+  if (typeof buildId !== 'string' || !/^[0-9a-f]{20}$/.test(buildId)) throw new Error('Preview build identity must contain exactly 20 lowercase hexadecimal characters.');
+  // Native numeric versions can stay unchanged while this private PR preview
+  // changes. Isolate both shell reuse and runtime migration by export identity.
+  const transforms = [
+    [/const SW_VERSION = '(\d+\.\d+\.\d+)';/g, (_, version) => "const SW_VERSION = '" + version + '-preview-' + buildId + "';"],
+    ["const CACHE_PREFIX = 'pwa-kalorii';", "const CACHE_PREFIX = 'vilda-home-preview-" + buildId + "';"],
+    ['const CORE_SHELL_URLS = [', 'const CORE_SHELL_URLS = [\n'
       + "  '/vilda_home_preview.js?v=" + buildId + "',\n"
-      + "  '/vilda_home_preview.css?v=" + buildId + "',");
-  if (output === source || !output.includes('-preview-' + buildId)) throw new Error('Unknown service-worker version contract.');
-  return PREVIEW_WORKER_NETWORK_GUARD + output;
+      + "  '/vilda_home_preview.css?v=" + buildId + "',"],
+    ['.filter((key) => key.startsWith(CACHE_PREFIX) && !ACTIVE_CACHE_NAMES.has(key))',
+      '.filter(isObsoleteHomePreviewCache)'],
+  ];
+  let output = source;
+  for (const [pattern, replacement] of transforms) {
+    const matches = typeof pattern === 'string' ? output.split(pattern).length - 1 : [...output.matchAll(pattern)].length;
+    if (matches !== 1) throw new Error('Unknown service-worker isolation contract.');
+    output = output.replace(pattern, replacement);
+  }
+  // Run at the existing activation cleanup boundary, never during installation.
+  // Exact names cover previously published previews without touching production,
+  // foreign caches, or patient storage. A new shell must repeat its build ID.
+  const cleanup = String.raw`
+function isObsoleteHomePreviewCache(name) {
+  if (ACTIVE_CACHE_NAMES.has(name)) return false;
+  return /^vilda-home-preview-(?:shell-v\d+\.\d+\.\d+-preview-[0-9a-f]{20}|runtime)$/.test(name)
+    || /^vilda-home-preview-([0-9a-f]{20})-(?:shell-v\d+\.\d+\.\d+-preview-\1|runtime)$/.test(name);
+}
+`;
+  return PREVIEW_WORKER_NETWORK_GUARD + cleanup + output;
 }
 
 async function safeOutputDirectory(source, output) {

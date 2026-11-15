@@ -55,9 +55,15 @@ Sam przełącznik synchronizacji i `deferServerContact` nie stanowią izolacji:
 aktywacja planu może zdejmować ten znacznik w natywnej aplikacji.
 
 Haszowane pakiety `runtime/` pozostają identyczne bajtowo. Service worker
-podglądu zachowuje ich weryfikację, ma osobny prefiks cache i wersję wyprowadzoną
-z całej treści eksportu. Bootstrap podglądu trafia do obowiązkowego precache.
-Nie zmienia się numeracja produkcyjnych zasobów.
+podglądu zachowuje ich weryfikację. Zarówno prefiks pamięci shell i runtime,
+jak i wersja workera zawierają identyfikator całej treści eksportu. Kolejne
+publikacje tej samej raty mogą mieć różne bajty pod tym samym liczbowym `?v=`;
+dlatego podgląd nie kopiuje odpowiedzi z poprzedniego eksportu. Stara pamięć
+pozostaje dostępna podczas instalacji. Dopiero aktywacja nowego workera usuwa
+ściśle rozpoznane poprzednie pamięci podglądu, bez dotykania sejfu, IndexedDB,
+localStorage ani pamięci innych aplikacji. Bootstrap podglądu trafia do
+obowiązkowego precache. Nie zmienia się numeracja produkcyjnych zasobów ani
+produkcyjna strategia cache.
 
 Bootstrap tworzy wyłącznie własne fikcyjne konto lokalne i przykładowego
 pacjenta przez natywne API. Zapisane ID i etykieta konta muszą być zgodne przy
@@ -115,4 +121,10 @@ zmiana pomiaru, odświeżenie, wyczyszczenie i ponowne odświeżenie, uruchomien
 offline, przejście do DocPro oraz mały ekran. Obserwacja sieci musi potwierdzić
 brak żądania docierającego do produkcyjnego Workera. Osobno sprawdza się, że
 adres produkcyjny i obcy endpoint są blokowane również wewnątrz service workera.
+Aktualizację sprawdza się z ostatniego opublikowanego eksportu przez natywne
+„Aktualizuj”, także gdy numer `?v=` zmienionego pliku pozostaje taki sam.
+Po aktualizacji i zimnym starcie offline hash rzeczywistej odpowiedzi workera
+oraz wpisu jego bieżącej pamięci musi odpowiadać nowemu eksportowi. Samo
+sprawdzenie nazwy workera lub globalne `caches.match()` nie wystarcza.
+Test zachowuje konto, pacjenta, identyfikator wizyty i wpisane pomiary.
 Wyniki testów i ograniczenia danego etapu należy podać przy publikacji podglądu.
