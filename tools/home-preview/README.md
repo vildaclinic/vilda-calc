@@ -14,10 +14,20 @@ nieujętych w indeksie Git; przed lokalnym podglądem nowych plików można uży
 `git add -N` dla konkretnych plików implementacji. Odtwarzalna publikacja wymaga
 zatwierdzonego źródła i `sourceDirty: false` w wyniku eksportu.
 
-Punkt wejścia podglądu to `app.html#/start`. Oryginalna makieta pozostaje osobną
+Główny punkt wejścia podglądu to `app.html#/start`. Samodzielne strony zawierające
+natywny moduł konta, w tym `subskrypcja.html`, również przygotowują albo odblokowują
+wyłącznie własne fikcyjne konto. Nowa karta przeglądarki nie wymaga wpisywania
+hasła demonstracyjnego. Strony informacyjne bez modułu konta nie oczekują na
+jego załadowanie. Oryginalna makieta pozostaje osobną
 stroną referencyjną. Kopię uruchamia się na innym originie niż
 `https://vildaclinic.github.io`; sam inny katalog na tym samym hoście nie izoluje
 IndexedDB, localStorage ani pamięci service workera.
+
+Strona podglądu może być sama osadzona w ramce interfejsu Sites. Taka ramka
+nadal przygotowuje własne konto demonstracyjne. Bootstrap pomijają wyłącznie
+wewnętrzne ramki `app-pane` aplikacji, których rodzicem jest `app.html` z tego
+samego originu. Nie zakładamy, że każde `window !== window.top` oznacza panel
+aplikacji; podgląd nie odczytuje danych obcego dokumentu nadrzędnego.
 
 ## Co zawiera eksport
 
@@ -56,11 +66,33 @@ i go nie usuwa. Publiczne hasło w tym pliku służy tylko temu fikcyjnemu kontu
 Widok lekarski wykorzystuje istniejący tryb testowy uprawnień na tym koncie.
 Żadne hasło użytkownika ani token produkcyjny nie jest potrzebny.
 
-Pierwsze wejście w karcie wczytuje przykład przez natywną Kartę pacjenta i
+W eksportowanej `subskrypcja.html` formularz zakupu i aktywacji jest zastępowany
+ekranem „Dostęp demonstracyjny”. Skrypty aktywacji okresu próbnego i płatności
+nie są dołączane do tego dokumentu. Oznaczenie podglądu odzwierciedla rzeczywisty
+stan natywnego dostępu na fikcyjnym koncie, także w powłoce bez `VildaProUi`.
+Nie przedstawia go jako opłaconej subskrypcji ani weryfikacji PWZ. Natywne
+potwierdzenie otwarcia treści lekarskich w DocPro pozostaje do decyzji użytkownika.
+
+Dostęp demonstracyjny jest uzgadniany przez natywne zdarzenia odblokowania,
+gotowości autoryzacji i zmiany planu. Ponowna aktywacja używa istniejącego API
+planu dopiero po sprawdzeniu odblokowanego fikcyjnego konta, bez zapętlania
+zdarzeń. Późne zdarzenie blokady widoku jest kończone przed powiadomieniem
+natywnych odbiorców, aby przywrócić spójność trybu wyników. Zablokowanie lub
+zmiana konta nie nadaje dostępu innemu użytkownikowi. Klasy widoku i opis
+podglądu wynikają z rzeczywistego `hasAccess()`, nie ukrywają braku uprawnień.
+
+Pierwsze wejście na stronę główną w karcie wczytuje przykład przez natywną Kartę pacjenta i
 wybór odtworzenia wizyty. Kolejne odświeżenia zachowują sesję formularza, także
 po rozpoczęciu nowego pomiaru. Zakładanie konta i dodanie przykładu są
 serializowane między kartami przez Web Locks. Zmiany i zapisy w podglądzie są
 lokalne; nie wolno wprowadzać rzeczywistych danych pacjentów.
+
+Wejście bezpośrednio do DocPro, ustawień lub ekranu dostępu nie tworzy pacjenta
+i nie wybiera wizyty. Tę czynność wykonuje wyłącznie strona główna. Podgląd
+zachowuje bieżące ograniczenie importu XLSX: zewnętrzna biblioteka SheetJS
+jest blokowana przez izolację sieci, a przykładowe pliki XLSX nie są jeszcze
+pakowane. Nie należy przedstawiać tego eksportu jako pełnej kopii wszystkich
+operacji plikowych aplikacji.
 
 ## Sprawdzenie przed publikacją
 

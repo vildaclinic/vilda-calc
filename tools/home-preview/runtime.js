@@ -10,28 +10,55 @@
   const VISIT_KEY = 'vilda-home-preview-opened-v1';
   const PASSWORD = 'FictionalOnly#VildaPreview2026!';
   const ACCOUNT_LABEL = 'Podgląd — wyłącznie fikcyjni pacjenci';
+  const ACCOUNT_GUIDANCE = 'Podgląd nie może użyć tego konta. Otwórz adres podglądu w nowym oknie prywatnym przeglądarki. Nie zakładaj konta w aplikacji — konto demonstracyjne uruchomi się automatycznie. Nie usuwaj dotychczasowego konta ani jego danych.';
   Object.defineProperty(window, '__VILDA_HOME_WORKSPACE_PREVIEW__', { value: true, writable: false });
   Object.defineProperty(window, 'VILDA_SYNC_WORKER_URL', { value: 'https://vilda-preview-disabled.invalid', writable: false });
-  const state = { status: 'starting', fictional: true, error: null };
+  const state = { status: 'starting', fictional: true, doctorAccess: false, error: null };
   window.VildaHomePreview = Object.freeze({ getState: () => ({ ...state }) });
   try {
     window.localStorage.setItem('analyticsConsent', 'denied');
     window.localStorage.setItem('vilda-sync-enabled-v1', '0');
     window.localStorage.setItem('vilda-terms-accepted-v1', JSON.stringify({ version: 1, acceptedAtISO: new Date().toISOString() }));
-    window.localStorage.setItem('pwzNumber', '0000000');
   } catch (_) { /* Normal native storage error is surfaced by the bootstrap. */ }
 
-  function enableFictionalPlan() {
-    const access = window.VildaProAccess;
+  function ownedFictionalAccount() {
     const vault = window.VildaVault;
     const account = vault?.getCurrentUser();
     let marker;
-    try { marker = JSON.parse(window.localStorage.getItem(ACCOUNT_KEY) || 'null'); } catch (_) { return; }
-    if (!access || !vault?.isUnlocked() || !account || !marker || account.userId !== marker.userId || account.label !== ACCOUNT_LABEL) return;
-    const hadAccess = access.hasAccess();
-    access.__setTokenModeForTest(false);
-    if (!hadAccess || !access.hasAccess()) access.setPlan('pro', '2099-12-31T23:59:59.000Z');
-    window.VildaProUi?.refresh?.();
+    try { marker = JSON.parse(window.localStorage.getItem(ACCOUNT_KEY) || 'null'); } catch (_) { return false; }
+    return Boolean(vault?.isUnlocked() && account && marker && account.userId === marker.userId && account.label === ACCOUNT_LABEL);
+  }
+  let presentedDoctorAccess = false;
+  function refreshAccessPresentation() {
+    const active = Boolean(ownedFictionalAccount() && window.VildaProAccess?.hasAccess());
+    state.doctorAccess = active;
+    // app.html does not load VildaProUi. Mirror the verified native access there
+    // too, otherwise its initial inactive class outlives the restored account.
+    const classes = document.documentElement?.classList;
+    if (classes && (active || presentedDoctorAccess)) {
+      classes.toggle('vilda-pro-active', active);
+      classes.toggle('vilda-pro-inactive', !active);
+    }
+    presentedDoctorAccess = active;
+    const badge = document.getElementById?.('vildaHomePreviewBadge');
+    if (badge) badge.textContent = active ? 'Podgląd lekarski aktywny · fikcyjne dane' : 'Podgląd · fikcyjne dane';
+    const status = document.getElementById?.('vildaHomePreviewAccessStatus');
+    if (status) status.textContent = active ? 'Funkcje lekarskie są aktywne w podglądzie.'
+      : state.status === 'error' ? 'Nie można potwierdzić konta demonstracyjnego.' : 'Przygotowywanie dostępu do funkcji lekarskich…';
+  }
+  let applyingFictionalPlan = false;
+  function enableFictionalPlan(notifyAgain = false) {
+    if (applyingFictionalPlan) return;
+    const access = window.VildaProAccess;
+    if (!access || !ownedFictionalAccount()) { refreshAccessPresentation(); return; }
+    applyingFictionalPlan = true;
+    try {
+      const hadAccess = access.hasAccess();
+      access.__setTokenModeForTest(false);
+      if (!hadAccess || !access.hasAccess() || notifyAgain === true) access.setPlan('pro', '2099-12-31T23:59:59.000Z');
+      window.VildaProUi?.refresh?.();
+      refreshAccessPresentation();
+    } finally { applyingFictionalPlan = false; }
   }
   let boundVault = null;
   function bindFictionalPlan() {
@@ -39,6 +66,7 @@
     if (vault && vault !== boundVault && typeof vault.onUnlock === 'function') {
       boundVault = vault;
       vault.onUnlock(enableFictionalPlan);
+      if (typeof vault.onLock === 'function') vault.onLock(refreshAccessPresentation);
     }
     enableFictionalPlan();
   }
@@ -48,10 +76,62 @@
   document.addEventListener('vilda:auth-boot-settled', bindFictionalPlan);
   document.addEventListener('vilda:auth-loaded', bindFictionalPlan);
   document.addEventListener('vilda:session-changed', bindFictionalPlan);
+  document.addEventListener('vildaProAccessChanged', enableFictionalPlan);
+  let accessRefreshQueued = false;
+  document.addEventListener('vilda:pro-gate-active', () => {
+    if (accessRefreshQueued || !ownedFictionalAccount()) return;
+    accessRefreshQueued = true;
+    // Native gate listeners can switch result mode off later in this same
+    // event. Reconcile after they finish, using the native plan notification.
+    Promise.resolve().then(() => { accessRefreshQueued = false; enableFictionalPlan(true); });
+  });
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bindFictionalPlan, { once: true });
   else bindFictionalPlan();
 
-  if (window !== window.top) return;
+  function nativeAppPane() {
+    try {
+      const frame = window.frameElement;
+      return Boolean(frame?.classList.contains('app-pane') && frame.contentWindow === window
+        && window.parent !== window && window.parent.location.origin === window.location.origin
+        && window.parent.__VILDA_HOME_WORKSPACE_PREVIEW__ === true
+        && /\/app\.html$/.test(window.parent.location.pathname));
+    } catch (_) { return false; }
+  }
+  // Sites can itself be hosted inside a cross-origin preview frame. Only the
+  // application's own same-origin app-pane delegates account setup to a parent.
+  if (nativeAppPane()) return;
+
+  function waitForAuthReady(requireAccess = false) {
+    const available = () => Boolean(window.VildaVault && window.VildaAuthUI?.isBootReady()
+      && (!requireAccess || ownedFictionalAccount() && window.VildaProAccess?.hasAccess()));
+    if (available()) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+      const events = ['vilda:auth-boot-settled', 'vilda:auth-loaded', 'vildaProAccessChanged', 'DOMContentLoaded'];
+      const finish = error => {
+        window.clearTimeout(timeout);
+        for (const type of events) document.removeEventListener(type, check);
+        if (error) reject(error); else resolve();
+      };
+      const check = () => { if (available()) finish(); };
+      const timeout = window.setTimeout(() => finish(new Error('Nie ukończono uruchamiania konta podglądu.')), 45000);
+      for (const type of events) document.addEventListener(type, check);
+      check();
+    });
+  }
+
+  function homeEntry() {
+    if (/(?:\/|\/index\.html)$/.test(window.location.pathname)) return true;
+    return /\/app\.html$/.test(window.location.pathname) && /^(?:|#\/?|#\/start)$/.test(window.location.hash || '');
+  }
+
+  function showBadge() {
+    if (!document.getElementById('vildaHomePreviewBadge')) {
+      const badge = document.createElement('a'); badge.id = 'vildaHomePreviewBadge';
+      badge.href = 'subskrypcja.html'; badge.setAttribute('aria-label', 'Sprawdź dostęp demonstracyjny');
+      document.body.append(badge);
+    }
+    refreshAccessPresentation();
+  }
 
   function waitFor(read, label, timeout = 45000) {
     const deadline = Date.now() + timeout;
@@ -86,7 +166,7 @@
     screen.setAttribute('role', 'status');
     const panel = document.createElement('div');
     const title = document.createElement('strong'); title.textContent = 'Podgląd nowej strony głównej';
-    const message = document.createElement('p'); message.textContent = 'Przygotowuję fikcyjnego pacjenta. Dane podglądu pozostają w tej przeglądarce.';
+    const message = document.createElement('p'); message.textContent = 'Przygotowuję konto demonstracyjne. Dane podglądu pozostają w tej przeglądarce.';
     panel.append(title, message); screen.append(panel); document.body.append(screen);
     return { screen, panel, message };
   }
@@ -108,34 +188,42 @@
   }
 
   async function ensureAccount() {
-    await waitFor(() => window.VildaVault && window.VildaAuthUI?.isBootReady(), 'Nie ukończono uruchamiania konta podglądu.');
+    await waitForAuthReady();
     const vault = window.VildaVault;
     let marker = JSON.parse(window.localStorage.getItem(ACCOUNT_KEY) || 'null');
     const accounts = await vault.listUsers();
     if (!marker) {
       // A foreign account is never adopted, unlocked, deleted or inspected.
-      if (accounts.length || vault.isUnlocked()) throw new Error('Ten adres zawiera inne konto. Otwórz podgląd w osobnym profilu przeglądarki.');
+      if (accounts.length || vault.isUnlocked()) throw new Error(ACCOUNT_GUIDANCE);
       const created = await vault.createUser(PASSWORD, { label: ACCOUNT_LABEL, deferServerContact: true });
       marker = { userId: created.userId };
       window.localStorage.setItem(ACCOUNT_KEY, JSON.stringify(marker));
+      prepareFictionalPreferences();
       window.location.reload();
       return null;
     }
     const account = accounts.find(item => item.userId === marker.userId);
-    if (!account || account.label !== ACCOUNT_LABEL) throw new Error('Nie można potwierdzić fikcyjnego konta podglądu.');
-    if (vault.isUnlocked() && vault.getCurrentUser()?.userId !== marker.userId) throw new Error('Otwarte jest inne konto. Otwórz podgląd w osobnym profilu przeglądarki.');
+    if (!account || account.label !== ACCOUNT_LABEL) throw new Error(ACCOUNT_GUIDANCE);
+    if (vault.isUnlocked() && vault.getCurrentUser()?.userId !== marker.userId) throw new Error(ACCOUNT_GUIDANCE);
     if (!vault.isUnlocked()) {
       await vault.unlockUser(marker.userId, PASSWORD);
       // Upgrade only this verified fictional account's old bootstrap marker.
       // Patient selection now comes from the encrypted vault, never this key.
       window.localStorage.setItem(ACCOUNT_KEY, JSON.stringify({ userId: marker.userId }));
+      prepareFictionalPreferences();
       window.location.reload();
       return null;
     }
     if (Object.keys(marker).some(key => key !== 'userId')) {
       window.localStorage.setItem(ACCOUNT_KEY, JSON.stringify({ userId: marker.userId }));
     }
+    prepareFictionalPreferences();
     return { userId: marker.userId };
+  }
+
+  function prepareFictionalPreferences() {
+    if (!ownedFictionalAccount()) throw new Error(ACCOUNT_GUIDANCE);
+    if (window.localStorage.getItem('pwzNumber') === null) window.localStorage.setItem('pwzNumber', '0000000');
   }
 
   async function selectPatient(owner, patientId) {
@@ -152,9 +240,7 @@
   }
 
   async function start() {
-    // Supporting standalone documents still get isolation and the fictional
-    // plan, but only the main entry points create or load the demo patient.
-    if (!/(?:\/|\/index\.html|\/app\.html)$/.test(window.location.pathname)) { state.status = 'ready'; return; }
+    state.status = 'starting';
     const boot = bootScreen();
     try {
       const task = () => ensureAccount();
@@ -162,6 +248,13 @@
         ? await window.navigator.locks.request('vilda-home-preview-bootstrap', task) : await task();
       if (!marker) return;
       enableFictionalPlan();
+      // A standalone subscription, settings or clinical document needs the
+      // same owned-account bootstrap, but never a forced patient selection.
+      if (!homeEntry()) {
+        if (!ownedFictionalAccount()) throw new Error('Nie można potwierdzić fikcyjnego konta podglądu.');
+        await waitForAuthReady(true);
+        state.status = 'ready'; showBadge(); boot.screen.remove(); return;
+      }
       let owner = await waitFor(() => { const target = ownerWindow(); return ready(target) && target; }, 'Nie ukończono uruchamiania formularza.');
       await waitFor(() => owner.VildaProAccess?.hasAccess() && ready(owner), 'Nie można uruchomić widoku lekarskiego.');
       const seed = async () => {
@@ -191,17 +284,29 @@
       }
       owner = ownerWindow();
       owner?.VildaHomeWorkspace?.start?.();
-      const badge = document.createElement('div'); badge.id = 'vildaHomePreviewBadge';
-      badge.textContent = 'Podgląd · wyłącznie fikcyjne dane';
-      document.body.append(badge);
-      state.status = 'ready'; boot.screen.remove();
+      state.status = 'ready'; showBadge(); boot.screen.remove();
     } catch (error) {
       state.status = 'error'; state.error = String(error?.message || 'Nie można przygotować podglądu.');
+      refreshAccessPresentation();
       boot.message.textContent = state.error;
       const retry = document.createElement('button'); retry.textContent = 'Spróbuj ponownie';
       retry.addEventListener('click', () => window.location.reload()); boot.panel.append(retry);
     }
   }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
-  else start();
+  let started = false;
+  function startWhenRelevant() {
+    if (started) return;
+    const hasAuth = window.VildaVault && window.VildaAuthUI;
+    const declaresAuth = document.querySelector?.('script[src*="vilda_auth_ui.js"]');
+    if (!homeEntry() && !hasAuth && !declaresAuth) {
+      // Information/legal pages can remain readable without loading any vault.
+      // If their native menu later loads auth, its real event starts bootstrap.
+      state.status = 'ready'; showBadge(); return;
+    }
+    started = true; start();
+  }
+  document.addEventListener('vilda:auth-loaded', startWhenRelevant);
+  document.addEventListener('vilda:auth-boot-settled', startWhenRelevant);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startWhenRelevant, { once: true });
+  else startWhenRelevant();
 })(window);
