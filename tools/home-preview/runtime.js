@@ -7,13 +7,12 @@
   if (window.location.hostname === 'vildaclinic.github.io' || /(?:^|\.)wagaiwzrost\.pl$/i.test(window.location.hostname)) return;
   const document = window.document;
   const ACCOUNT_KEY = 'vilda-home-preview-fictional-account-v1';
-  const VISIT_KEY = 'vilda-home-preview-opened-v1';
   const PASSWORD = 'FictionalOnly#VildaPreview2026!';
   const ACCOUNT_LABEL = 'Podgląd — wyłącznie fikcyjni pacjenci';
   const ACCOUNT_GUIDANCE = 'Podgląd nie może użyć tego konta. Otwórz adres podglądu w nowym oknie prywatnym przeglądarki. Nie zakładaj konta w aplikacji — konto demonstracyjne uruchomi się automatycznie. Nie usuwaj dotychczasowego konta ani jego danych.';
   Object.defineProperty(window, '__VILDA_HOME_WORKSPACE_PREVIEW__', { value: true, writable: false });
   Object.defineProperty(window, 'VILDA_SYNC_WORKER_URL', { value: 'https://vilda-preview-disabled.invalid', writable: false });
-  const state = { status: 'starting', fictional: true, doctorAccess: false, error: null };
+  const state = { status: 'starting', phase: 'account', fictional: true, doctorAccess: false, error: null };
   window.VildaHomePreview = Object.freeze({ getState: () => ({ ...state }) });
   try {
     window.localStorage.setItem('analyticsConsent', 'denied');
@@ -229,17 +228,37 @@
     if (window.localStorage.getItem('pwzNumber') === null) window.localStorage.setItem('pwzNumber', '0000000');
   }
 
-  async function selectPatient(owner, patientId) {
-    owner.VildaAuthUI.showPatientCard(patientId, payload => { if (payload) owner.applyLoadedData(payload); }, null);
-    const load = await waitFor(() => {
-      if (!owner.VildaSaveStatusIndicator?.getCurrentDecision().ready) return null;
-      return [...owner.document.querySelectorAll('button')].find(button => button.textContent.trim() === 'Wczytaj tego pacjenta');
-    }, 'Nie można otworzyć przykładowej wizyty.');
-    load.click();
-    const restore = await waitFor(() => !owner.VildaDobAge?.restorePending() && owner.document.getElementById('vildaLcmRestore'), 'Nie można wybrać przykładowej wizyty.');
-    await new Promise(resolve => { owner.requestAnimationFrame(() => owner.requestAnimationFrame(resolve)); });
-    restore.click();
-    await waitFor(() => owner.sessionStorage.getItem('vildaCurrentPatientId') === patientId && ready(owner), 'Nie ukończono wczytywania przykładowej wizyty.');
+  function offerExample(owner, patientId, userId) {
+    const target = owner.document;
+    if (target.getElementById('vildaHomePreviewExample')) return;
+    const anchor = target.querySelector('.vhome-visit-heading') || target.getElementById('calcForm');
+    if (!anchor) throw new Error('Nie można przygotować wejścia do przykładowego pacjenta.');
+    const panel = target.createElement('section'); panel.id = 'vildaHomePreviewExample';
+    panel.setAttribute('aria-label', 'Przykładowy pacjent');
+    const copy = target.createElement('div');
+    const title = target.createElement('strong'); title.textContent = 'Przykładowy pacjent';
+    const description = target.createElement('p');
+    description.textContent = 'Aby zobaczyć gotowe wyniki, otwórz kartę przykładu, wybierz „Wczytaj tego pacjenta”, a następnie odtworzenie zapisanej wizyty. Możesz też wypełnić formularz samodzielnie.';
+    const status = target.createElement('p'); status.setAttribute('role', 'status');
+    const button = target.createElement('button'); button.type = 'button'; button.id = 'vildaHomePreviewOpenExample';
+    button.textContent = 'Otwórz kartę przykładu';
+    button.addEventListener('click', async () => {
+      // The example is optional. Never drive native load/restore buttons or
+      // confirm unsaved changes behind the startup screen. Native patient-card
+      // authority and guards own the eventual load after a real user choice.
+      if (!ownedFictionalAccount() || ownerWindow() !== owner || !ready(owner)
+        || owner.VildaVault.getCurrentUser()?.userId !== userId || !owner.VildaProAccess?.hasAccess()) {
+        status.textContent = 'Poczekaj na zakończenie bieżącej operacji i odblokowanie konta podglądu.';
+        return;
+      }
+      button.disabled = true; status.textContent = '';
+      try {
+        await owner.VildaAuthUI.showPatientCard(patientId, payload => { if (payload) owner.applyLoadedData(payload); }, null);
+      } catch (_) {
+        status.textContent = 'Nie można otworzyć karty przykładu. Spróbuj ponownie. Formularz pozostaje dostępny.';
+      } finally { button.disabled = false; }
+    });
+    copy.append(title, description, status); panel.append(copy, button); anchor.before(panel);
   }
 
   async function start() {
@@ -256,10 +275,12 @@
       if (!homeEntry()) {
         if (!ownedFictionalAccount()) throw new Error('Nie można potwierdzić fikcyjnego konta podglądu.');
         await waitForAuthReady(true);
-        state.status = 'ready'; showBadge(); boot.screen.remove(); return;
+        state.status = 'ready'; state.phase = 'ready'; showBadge(); boot.screen.remove(); return;
       }
-      let owner = await waitFor(() => { const target = ownerWindow(); return ready(target) && target; }, 'Nie ukończono uruchamiania formularza.');
+      state.phase = 'form'; boot.message.textContent = 'Konto demonstracyjne jest gotowe. Uruchamiam formularz i funkcje lekarskie.';
+      const owner = await waitFor(() => { const target = ownerWindow(); return ready(target) && target; }, 'Nie ukończono uruchamiania formularza.');
       await waitFor(() => owner.VildaProAccess?.hasAccess() && ready(owner), 'Nie można uruchomić widoku lekarskiego.');
+      state.phase = 'example'; boot.message.textContent = 'Przygotowuję kartę fikcyjnego pacjenta. Twoja bieżąca sesja formularza pozostaje zachowana.';
       const seed = async () => {
         const current = JSON.parse(window.localStorage.getItem(ACCOUNT_KEY) || 'null');
         if (!current || current.userId !== marker.userId) throw new Error('Konto podglądu zmieniło się podczas uruchamiania.');
@@ -281,13 +302,10 @@
       };
       const patientId = window.navigator.locks?.request
         ? await window.navigator.locks.request('vilda-home-preview-bootstrap', seed) : await seed();
-      if (!window.sessionStorage.getItem(VISIT_KEY)) {
-        if (!owner.VildaDataImportExport.hasMeaningfulMainSessionData()) await selectPatient(owner, patientId);
-        window.sessionStorage.setItem(VISIT_KEY, '1');
-      }
-      owner = ownerWindow();
-      owner?.VildaHomeWorkspace?.start?.();
-      state.status = 'ready'; showBadge(); boot.screen.remove();
+      if (ownerWindow() !== owner || !ownedFictionalAccount()) throw new Error('Widok podglądu zmienił się podczas uruchamiania. Odśwież stronę.');
+      owner.VildaHomeWorkspace?.start?.();
+      offerExample(owner, patientId, marker.userId);
+      state.status = 'ready'; state.phase = 'ready'; showBadge(); boot.screen.remove();
     } catch (error) {
       state.status = 'error'; state.error = String(error?.message || 'Nie można przygotować podglądu.');
       refreshAccessPresentation();
@@ -304,7 +322,7 @@
     if (!homeEntry() && !hasAuth && !declaresAuth) {
       // Information/legal pages can remain readable without loading any vault.
       // If their native menu later loads auth, its real event starts bootstrap.
-      state.status = 'ready'; showBadge(); return;
+      state.status = 'ready'; state.phase = 'ready'; showBadge(); return;
     }
     started = true; start();
   }

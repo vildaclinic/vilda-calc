@@ -81,9 +81,17 @@ natywnych odbiorców, aby przywrócić spójność trybu wyników. Zablokowanie 
 zmiana konta nie nadaje dostępu innemu użytkownikowi. Klasy widoku i opis
 podglądu wynikają z rzeczywistego `hasAccess()`, nie ukrywają braku uprawnień.
 
-Pierwsze wejście na stronę główną w karcie wczytuje przykład przez natywną Kartę pacjenta i
-wybór odtworzenia wizyty. Kolejne odświeżenia zachowują sesję formularza, także
-po rozpoczęciu nowego pomiaru. Zakładanie konta i dodanie przykładu są
+Po przygotowaniu konta i funkcji lekarskich strona główna udostępnia formularz
+bez automatycznego wczytywania pacjenta. Pasek „Przykładowy pacjent” otwiera
+natywną Kartę pacjenta dopiero po kliknięciu. Następnie użytkownik sam wybiera
+„Wczytaj tego pacjenta” i odtworzenie zapisanej wizyty. Natywne pytania o
+niezapisane zmiany pozostają widoczne i wymagają jego decyzji. Bootstrap nie
+klika przycisków wczytania ani odtworzenia i nie czeka na warunkowo wyświetlany
+modal; brak takiego modala nie blokuje całego podglądu. Nie ma też oczekującego
+automatycznego wczytania, które mogłoby później zastąpić wpisane dane.
+Kolejne odświeżenia zachowują sesję formularza, także po rozpoczęciu nowego
+pomiaru. Dawny znacznik `vilda-home-preview-opened-v1` jest ignorowany.
+Zakładanie konta i dodanie przykładu są
 serializowane między kartami przez Web Locks. Zmiany i zapisy w podglądzie są
 lokalne; nie wolno wprowadzać rzeczywistych danych pacjentów.
 
@@ -101,7 +109,9 @@ npx vitest run tests/unit/home-preview-export.test.mjs
 ```
 
 Sprawdzenie przeglądarkowe używa nowego profilu i rzeczywistych modułów aplikacji:
-pierwsze otwarcie, wynik przykładu, zmiana pomiaru, odświeżenie, uruchomienie
+pierwsze otwarcie bez blokady i bez automatycznego wyboru pacjenta, jawne
+wczytanie i odtworzenie przykładu, anulowanie zmiany niezapisanej sesji,
+zmiana pomiaru, odświeżenie, wyczyszczenie i ponowne odświeżenie, uruchomienie
 offline, przejście do DocPro oraz mały ekran. Obserwacja sieci musi potwierdzić
 brak żądania docierającego do produkcyjnego Workera. Osobno sprawdza się, że
 adres produkcyjny i obcy endpoint są blokowane również wewnątrz service workera.

@@ -201,30 +201,60 @@ function fictionalNativeVault(patients = []) {
   };
 }
 
-function bootPreview({ storage, vault, locks, pathname = '/index.html', hash = '', opened = true, hasAuth = true, authReady = () => true, hostedFrame = false, sameOriginWrapper = false }) {
-  const nodes = [], listeners = new Map(), classes = new Set(['vilda-pro-inactive']);
-  const calls = { reload: 0, timers: 0 };
-  const node = () => ({ append() {}, remove() {}, setAttribute() {}, addEventListener() {},
-    style: { properties: new Map(), setProperty(name, value, priority) { this.properties.set(name, { value, priority }); } } });
+function bootPreview({ storage, vault, locks, pathname = '/index.html', hash = '', opened = true, hasAuth = true, authReady = () => true, hostedFrame = false, sameOriginWrapper = false,
+  hasPatientCard = true, heading = true, clinicalData = {}, sessionEntries = {} }) {
+  const listeners = new Map(), classes = new Set(['vilda-pro-inactive']);
+  const calls = { reload: 0, timers: 0, animationFrames: 0, syntheticClicks: 0, patientCards: [], applied: [], collected: 0 };
+  const node = (tagName = 'div') => {
+    const events = new Map(), attributes = new Map();
+    return {
+      tagName: tagName.toUpperCase(), children: [], parentNode: null, textContent: '',
+      append(...elements) { for (const element of elements) { element.remove(); element.parentNode = this; this.children.push(element); } },
+      before(element) { const parent = this.parentNode; element.remove(); element.parentNode = parent; parent.children.splice(parent.children.indexOf(this), 0, element); },
+      remove() { if (this.parentNode) { const siblings = this.parentNode.children; siblings.splice(siblings.indexOf(this), 1); this.parentNode = null; } },
+      setAttribute(name, value) { attributes.set(name, String(value)); },
+      getAttribute: name => attributes.get(name) ?? null,
+      addEventListener(type, callback) { const entries = events.get(type) || []; entries.push(callback); events.set(type, entries); },
+      dispatch(type) { return Promise.all((events.get(type) || []).map(callback => callback({ type, target: this }))); },
+      click() { calls.syntheticClicks++; return this.dispatch('click'); },
+      querySelector(selector) {
+        const matches = element => selector.startsWith('#') ? element.id === selector.slice(1)
+          : selector.startsWith('.') ? (element.className || '').split(/\s+/).includes(selector.slice(1))
+            : selector === '[role="status"]' ? element.getAttribute('role') === 'status' : false;
+        for (const child of this.children) { if (matches(child)) return child; const found = child.querySelector(selector); if (found) return found; }
+        return null;
+      },
+      style: { properties: new Map(), setProperty(name, value, priority) { this.properties.set(name, { value, priority }); } },
+    };
+  };
+  const body = node('body'), nodes = body.children;
+  const userSection = node('section'); userSection.id = 'userSection'; body.append(userSection);
+  const visitHeading = node('header'); visitHeading.className = 'vhome-visit-heading';
+  if (heading) userSection.append(visitHeading);
+  const form = node('form'); form.id = 'calcForm'; userSection.append(form);
+  for (const [id, value] of Object.entries({ name: clinicalData.name || '', height: clinicalData.user?.height ?? '', weight: clinicalData.user?.weight ?? '' })) {
+    const field = node('input'); field.id = id; field.value = String(value); form.append(field);
+  }
   const document = {
     readyState: 'complete',
     addEventListener(type, callback) { const entries = listeners.get(type) || []; entries.push(callback); listeners.set(type, entries); },
     removeEventListener(type, callback) { listeners.set(type, (listeners.get(type) || []).filter(entry => entry !== callback)); },
     createElement: node,
     documentElement: { classList: { toggle(name, value) { if (value) classes.add(name); else classes.delete(name); } } },
-    getElementById: id => nodes.find(element => element.id === id) || (id === 'userSection' ? {} : null),
-    body: { append(element) { nodes.push(element); } },
+    getElementById: id => body.querySelector(`#${id}`), querySelector: selector => body.querySelector(selector), body,
   };
   const window = {
     document, location: { hostname: 'preview.example.invalid', origin: 'https://preview.example.invalid', pathname, hash, reload() { calls.reload++; } },
-    localStorage: storage, sessionStorage: previewStorage(opened ? { 'vilda-home-preview-opened-v1': '1' } : {}),
+    localStorage: storage, sessionStorage: previewStorage({ ...(opened ? { 'vilda-home-preview-opened-v1': '1' } : {}), ...sessionEntries }),
     navigator: { locks }, setTimeout(...args) { calls.timers++; return setTimeout(...args); }, clearTimeout,
-    VildaVault: hasAuth ? vault : undefined, VildaAuthUI: hasAuth ? { isBootReady: authReady } : undefined,
+    requestAnimationFrame() { calls.animationFrames++; throw new Error('Preview startup must not depend on animation frames.'); },
+    VildaVault: hasAuth ? vault : undefined, VildaAuthUI: hasAuth ? { isBootReady: authReady,
+      ...(hasPatientCard ? { async showPatientCard(...args) { calls.patientCards.push(args); } } : {}) } : undefined,
     VildaPersistRuntime: { getSnapshot: () => ({ initialized: true }) },
     VildaDataImportExport: { isMainSessionRestorePending: () => false, isMainSessionAutosavePaused: () => false },
     VildaPersistence: { isAutosaveSuppressed: () => false }, VildaDobAge: { restorePending: () => false },
     VildaProAccess: { __setTokenModeForTest() {}, setPlan() {}, hasAccess: () => true },
-    applyLoadedData() { throw new Error('Existing session must not be replaced.'); }, collectUserData() {},
+    applyLoadedData(payload) { calls.applied.push(payload); }, collectUserData() { calls.collected++; return clinicalData; },
   };
   window.top = hostedFrame ? {} : window;
   if (hostedFrame) {
@@ -238,7 +268,9 @@ function bootPreview({ storage, vault, locks, pathname = '/index.html', hash = '
     window.frameElement = { classList: { contains: value => value === 'app-pane' }, contentWindow: window };
   }
   vm.runInNewContext(RUNTIME_SOURCE, { window, Promise, Date, JSON, Object, String, Error });
-  return { window, nodes, calls, classes, fire(type) { for (const callback of [...(listeners.get(type) || [])]) callback(); } };
+  return { window, nodes, calls, classes, form, userSection, visitHeading,
+    userClick(id) { const target = document.getElementById(id); if (!target) throw new Error(`Missing fixture control: ${id}`); return target.dispatch('click'); },
+    fire(type) { for (const callback of [...(listeners.get(type) || [])]) callback(); } };
 }
 
 async function previewFinished(window) {
@@ -291,6 +323,123 @@ describe('fictional preview patient selection remains inside the native vault', 
     expect(vault.calls.listPatients).toHaveLength(0);
     expect(vault.calls.savePatient).toHaveLength(0);
     expect(vault.calls.unlock).toHaveLength(0);
+  });
+});
+
+describe('optional fictional patient card never replaces startup or the current visit', () => {
+  test.each([true, false])('an empty session is ready without a native patient modal or animation frames (heading: %s)', async heading => {
+    const vault = fictionalNativeVault();
+    const storage = previewStorage({ [ACCOUNT_KEY]: JSON.stringify({ userId: vault.account.userId }) });
+    const frame = bootPreview({ storage, vault, opened: false, hasPatientCard: false, heading });
+    expect(await previewFinished(frame.window)).toMatchObject({ status: 'ready', phase: 'ready', doctorAccess: true });
+    const document = frame.window.document, panel = document.getElementById('vildaHomePreviewExample');
+    const anchor = heading ? frame.visitHeading : frame.form;
+    expect(panel).toBeTruthy();
+    expect(anchor.parentNode.children.indexOf(panel)).toBe(anchor.parentNode.children.indexOf(anchor) - 1);
+    expect(panel.querySelector('#vildaHomePreviewOpenExample').textContent).toBe('Otwórz kartę przykładu');
+    expect(document.getElementById('vildaHomePreviewBoot')).toBeNull();
+    expect(document.getElementById('weight').value).toBe('');
+    expect(vault.calls.savePatient).toHaveLength(1);
+    expect(frame.calls).toMatchObject({ patientCards: [], applied: [], animationFrames: 0, syntheticClicks: 0, collected: 0, timers: 0 });
+    expect([...frame.window.sessionStorage.values]).toEqual([]);
+  });
+
+  test.each([false, true])('returning meaningful data and patient identity survive regardless of the obsolete opened marker (%s)', async opened => {
+    const clinicalData = { name: 'Fikcyjna Pacjentka Własnej Wizyty', user: { height: 149, weight: 43 },
+      visit: { visitId: 'fictional-current-visit' }, notes: 'Fikcyjna notatka niezapisanej wizyty' };
+    const sessionEntries = { vildaMainSessionV1: JSON.stringify(clinicalData), vildaCurrentPatientId: 'fictional-current-patient' };
+    const vault = fictionalNativeVault([{ patientId: 'fictional-example-patient', createdAtISO: '2026-11-03T12:00:00Z' }]);
+    const storage = previewStorage({ [ACCOUNT_KEY]: JSON.stringify({ userId: vault.account.userId }) });
+    const frame = bootPreview({ storage, vault, opened, clinicalData, sessionEntries });
+    const sessionBefore = [...frame.window.sessionStorage.values];
+    expect((await previewFinished(frame.window)).status).toBe('ready');
+    expect([...frame.window.sessionStorage.values]).toEqual(sessionBefore);
+    expect(frame.window.document.getElementById('name').value).toBe(clinicalData.name);
+    expect(frame.window.document.getElementById('height').value).toBe('149');
+    expect(frame.window.document.getElementById('weight').value).toBe('43');
+    expect(vault.calls.savePatient).toHaveLength(0);
+    expect(frame.calls).toMatchObject({ patientCards: [], applied: [], collected: 0, animationFrames: 0, syntheticClicks: 0 });
+  });
+
+  test('an explicit click opens only the native card and leaves applying data to its native callback', async () => {
+    const vault = fictionalNativeVault([
+      { patientId: 'fictional-later-patient', createdAtISO: '2026-11-04T12:00:00Z' },
+      { patientId: 'fictional-original-patient', createdAtISO: '2026-11-03T12:00:00Z' },
+    ]);
+    const storage = previewStorage({ [ACCOUNT_KEY]: JSON.stringify({ userId: vault.account.userId }) });
+    const frame = bootPreview({ storage, vault, opened: false });
+    expect((await previewFinished(frame.window)).status).toBe('ready');
+    expect(frame.calls.patientCards).toHaveLength(0);
+    await frame.userClick('vildaHomePreviewOpenExample');
+    expect(frame.calls.patientCards).toHaveLength(1);
+    const [patientId, nativeLoadCallback, thirdArgument] = frame.calls.patientCards[0];
+    expect(patientId).toBe('fictional-original-patient');
+    expect(nativeLoadCallback).toBeTypeOf('function');
+    expect(thirdArgument).toBeNull();
+    expect(frame.calls).toMatchObject({ applied: [], animationFrames: 0, syntheticClicks: 0 });
+    expect(vault.calls.listPatients).toHaveLength(1);
+    expect(vault.calls.savePatient).toHaveLength(0);
+    nativeLoadCallback(null);
+    expect(frame.calls.applied).toHaveLength(0);
+    const nativePayload = { name: 'Fikcyjny przykład zatwierdzony w karcie', user: { height: 158, weight: 46 } };
+    nativeLoadCallback(nativePayload);
+    expect(frame.calls.applied).toEqual([nativePayload]);
+  });
+
+  test.each([
+    ['changed account', ({ vault }) => { vault.account.userId = 'fictional-other-account'; }],
+    ['removed account marker', ({ storage }) => { storage.removeItem(ACCOUNT_KEY); }],
+    ['locked vault', ({ vault }) => { vault.isUnlocked = () => false; }],
+    ['replaced form owner', ({ frame }) => { frame.userSection.remove(); }],
+    ['pending session restore', ({ frame }) => { frame.window.VildaDataImportExport.isMainSessionRestorePending = () => true; }],
+    ['paused autosave', ({ frame }) => { frame.window.VildaPersistence.isAutosaveSuppressed = () => true; }],
+    ['pending birth-date restore', ({ frame }) => { frame.window.VildaDobAge.restorePending = () => true; }],
+    ['lost doctor access', ({ frame }) => { frame.window.VildaProAccess.hasAccess = () => false; }],
+  ])('an explicit click with %s refuses locally without reading or writing patients', async (_label, change) => {
+    const vault = fictionalNativeVault();
+    const storage = previewStorage({ [ACCOUNT_KEY]: JSON.stringify({ userId: vault.account.userId }) });
+    const frame = bootPreview({ storage, vault, opened: false });
+    expect((await previewFinished(frame.window)).status).toBe('ready');
+    const panel = frame.window.document.getElementById('vildaHomePreviewExample');
+    const button = panel.querySelector('#vildaHomePreviewOpenExample');
+    const reads = vault.calls.listPatients.length, writes = vault.calls.savePatient.length;
+    change({ frame, vault, storage });
+    // Dispatch on the original element also covers a stale, detached owner.
+    await button.dispatch('click');
+    expect(panel.querySelector('[role="status"]').textContent).toContain('Poczekaj');
+    expect(button.disabled).not.toBe(true);
+    expect(frame.calls).toMatchObject({ patientCards: [], applied: [], animationFrames: 0, syntheticClicks: 0 });
+    expect(vault.calls.listPatients).toHaveLength(reads);
+    expect(vault.calls.savePatient).toHaveLength(writes);
+  });
+
+  test.each(['listPatients', 'savePatient'])('a native %s failure remains a startup error with no example offered', async method => {
+    const vault = fictionalNativeVault();
+    vault[method] = async value => { vault.calls[method].push(value); throw new Error('Fictional native vault failure'); };
+    const storage = previewStorage({ [ACCOUNT_KEY]: JSON.stringify({ userId: vault.account.userId }) });
+    const frame = bootPreview({ storage, vault, opened: false });
+    expect(await previewFinished(frame.window)).toMatchObject({ status: 'error', phase: 'example', error: 'Fictional native vault failure' });
+    expect(frame.window.document.getElementById('vildaHomePreviewExample')).toBeNull();
+    expect(frame.window.document.getElementById('vildaHomePreviewBoot')).toBeTruthy();
+    expect(vault.calls.listPatients[0].strict).toBe(true);
+    expect(vault.calls.savePatient).toHaveLength(method === 'listPatients' ? 0 : 1);
+    expect(frame.calls).toMatchObject({ patientCards: [], applied: [], animationFrames: 0, syntheticClicks: 0 });
+  });
+
+  test('a native card opening failure is local and leaves the form usable and the button available', async () => {
+    const vault = fictionalNativeVault();
+    const storage = previewStorage({ [ACCOUNT_KEY]: JSON.stringify({ userId: vault.account.userId }) });
+    const frame = bootPreview({ storage, vault, opened: false, clinicalData: { user: { weight: 43 } } });
+    expect((await previewFinished(frame.window)).status).toBe('ready');
+    frame.window.VildaAuthUI.showPatientCard = async (...args) => { frame.calls.patientCards.push(args); throw new Error('Fictional card failure'); };
+    await frame.userClick('vildaHomePreviewOpenExample');
+    const panel = frame.window.document.getElementById('vildaHomePreviewExample');
+    expect(panel.querySelector('[role="status"]').textContent).toContain('Formularz pozostaje dostępny');
+    expect(panel.querySelector('#vildaHomePreviewOpenExample').disabled).toBe(false);
+    expect(frame.window.document.getElementById('weight').value).toBe('43');
+    expect(frame.window.VildaHomePreview.getState().status).toBe('ready');
+    expect(frame.calls.patientCards).toHaveLength(1);
+    expect(frame.calls).toMatchObject({ applied: [], syntheticClicks: 0 });
   });
 });
 
