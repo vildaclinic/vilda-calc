@@ -312,7 +312,9 @@ test('skrót „Wpisz pakiet: Tarczyca” z zakładki Badania otwiera pakiet dla
   // Karta pacjenta, który nie jest wczytany do formularza: bez skrótu.
   await page.evaluate((pid) => window.VildaAuthUI.showPatientCard(pid, null, null, { activeTab: 'lab' }), patientId);
   await czekajNaBadania(page);
-  await expect(sekcjaBadan(page).locator('a.vilda-lab-hist-check')).toBeVisible();
+  // P-BADANIA-WEJSCIE: zamiast odnośnika do przelicznika jeden przycisk, który najpierw wczytuje pacjenta.
+  await expect(sekcjaBadan(page).locator('button.vilda-lab-hist-load')).toHaveText('Wczytaj pacjenta i dodaj wyniki →');
+  await expect(sekcjaBadan(page).locator('a.vilda-lab-hist-check')).toHaveCount(0);
   await expect(sekcjaBadan(page).locator('a.vilda-lab-hist-package')).toHaveCount(0);
   await page.evaluate(() => window.VildaAuthUI.hide());
 

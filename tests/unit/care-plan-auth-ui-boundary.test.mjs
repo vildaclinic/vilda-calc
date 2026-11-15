@@ -66,7 +66,10 @@ describe('native notes and staged evidence respect the same document boundary', 
     // Odświeżony świadomie 2026-11-12 (P-WYNIKI-BADAN-EDYTOR, prośba właściciela): opis kotwicy „Notatka ogólna”
     // zależy od kategorii — wynik badania trafia do Badań. Jedyna zmiana w treści edytora: x._wbOpis przy opisie,
     // odświeżenie opisu w Wt() i nasłuch zmiany kategorii; bramka dostępu i zapis bez zmian.
-    expect(createHash('sha256').update(source.slice(...body.range)).digest('hex')).toBe('26321100044a3ee36ae0fabcbf5118be43819e16340c111261a06623d50cc582');
+    // Odświeżony świadomie 2026-11-15 (P-BADANIA-WEJSCIE, decyzja właściciela): nowa notatka nie ma szablonu
+    // „Wynik badania” — nowego wyniku nie wpisuje się ręcznie. Jedyna zmiana w treści edytora: lista szablonów S
+    // dostaje pozycję „lab” tylko, gdy edytor otwarto z tym szablonem (w === "lab"); bramka dostępu i zapis bez zmian.
+    expect(createHash('sha256').update(source.slice(...body.range)).digest('hex')).toBe('bda89399c6b4821ff6e687a394617578effbc2b70286e8471802f5ea7d9e9481');
   });
 
   it('opens a genuinely new note synchronously without a needless patient-plan read', () => {

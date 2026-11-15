@@ -162,7 +162,7 @@ test('wyniki tego samego dnia i nakładające się zera zachowują normy, kolory
   await expect(page.locator('.vilda-lab-hist-result-details, .vilda-lab-hist-result-row')).toHaveCount(0);
 });
 
-test('akcje: szczegóły wyniku prowadzą do edycji, „+ Dodaj wynik” i „Wpisz wynik” zachowują formularze i zamknięcie zlecenia', async ({ page }) => {
+test('akcje: szczegóły wyniku prowadzą do edycji, „Wpisz wynik” zachowuje formularz i zamknięcie zlecenia; ręcznego „+ Dodaj wynik” nie ma', async ({ page }) => {
   const patientId = await otworzSejf(page);
   const ids = await zapiszHistorie(page, patientId);
   await otworzBadania(page, patientId);
@@ -181,12 +181,11 @@ test('akcje: szczegóły wyniku prowadzą do edycji, „+ Dodaj wynik” i „Wp
   await page.keyboard.press('Escape');
   await expect(edytor).toHaveCount(0);
 
-  await badania.getByRole('button', { name: '+ Dodaj wynik' }).click();
-  await expect(edytor).toHaveValue('lab');
-  await expect(page.locator('input[name="b3-anchor"][value="date"]')).toBeChecked();
-  await expect(page.locator('.b3-clinical-date')).toBeFocused();
-  await page.keyboard.press('Escape');
-  await expect(edytor).toHaveCount(0);
+  // P-BADANIA-WEJSCIE (decyzja właściciela 2026-11-15): nowego wyniku zakładka nie wpisuje ręcznie (wpis bez oceny).
+  // Karta pacjenta niewczytanego ma jedną akcję: wczytanie i przejście do Jednostek lab.
+  await expect(badania.getByRole('button', { name: '+ Dodaj wynik' })).toHaveCount(0);
+  await expect(badania.locator('.vilda-lab-hist-actions > *')).toHaveText(['Wczytaj pacjenta i dodaj wyniki →']);
+  await expect(badania.locator('a.vilda-lab-hist-check')).toHaveCount(0);
 
   await badania.getByRole('button', { name: 'Wpisz wynik' }).click();
   await expect(edytor).toHaveValue('lab');

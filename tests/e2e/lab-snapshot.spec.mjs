@@ -195,6 +195,8 @@ test('calendar editor preserves assessment on comment edit and invalidates a cha
     await expect(page.locator('#tzNewTermOverlay')).toBeVisible();
   };
   await edit();
+  // P-BADANIA-WEJSCIE: wpis, który już niesie wynik, zachowuje szablon „Wynik badania” w formularzu Terminarza.
+  await expect(page.locator('#tzNtTpl')).toHaveValue('lab');
   await page.locator('#tzNtBody').fill('Komentarz terminarza');
   await page.locator('#tzNtSave').evaluate((el) => el.click());
   await expect(page.locator('#tzNewTermOverlay')).toHaveCount(0);
@@ -212,6 +214,13 @@ test('calendar editor preserves assessment on comment edit and invalidates a cha
   await page.locator('#tzNtSave').evaluate((el) => el.click());
   await expect(page.locator('#tzNewTermOverlay')).toHaveCount(0);
   expect((await readNote(page, legacy.id)).labResult).toEqual(legacy.labResult);
+
+  // P-BADANIA-WEJSCIE (decyzja właściciela 2026-11-15): nowy wpis Terminarza nie ma szablonu „Wynik badania” —
+  // nowego wyniku nie wpisuje się ręcznie (bez oceny); wyniki dodaje się w Jednostkach lab.
+  await page.locator('#tzAddBtn').evaluate((el) => el.click());
+  await expect(page.locator('#tzNewTermOverlay')).toBeVisible();
+  expect(await page.locator('#tzNtTpl option').evaluateAll((opcje) => opcje.map((o) => o.value)))
+    .toEqual(['none', 'med-start', 'med-change', 'med-stop']);
 });
 
 test('history retains censored and unavailable assessments without inventing numeric trend points or legacy context', async ({ page }) => {

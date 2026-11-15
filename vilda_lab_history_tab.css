@@ -79,6 +79,12 @@
   color: #3f37a0!important;
 }
 
+/* P-BADANIA-WEJSCIE: karta pacjenta niewczytanego na stronie bez formularza — sama podpowiedź zamiast akcji. */
+.vilda-lab-hist-actions .vilda-lab-hist-entry-hint {
+  margin: 0;
+  max-width: 340px;
+}
+
 .vilda-lab-hist-toolbar {
   display: grid;
   grid-template-columns: minmax(160px, 1fr) minmax(170px, 240px) 176px;

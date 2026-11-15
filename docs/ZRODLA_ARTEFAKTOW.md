@@ -998,7 +998,7 @@ function GdLabRender() {
   var modul = window.VildaLabHistoryTab;
   if (!modul) { /* „Zakładka Badania nie jest dostępna — odśwież stronę.” */ return; }
   modul.render(GdLabHost, t, {
-    openEditor(o) {                         // + Dodaj wynik, Wpisz wynik, klik w wartość
+    openEditor(o) {                         // + Dodaj wynik (do 2026-11-15, P-BADANIA-WEJSCIE), Wpisz wynik, klik w wartość
       ga({ patientId: t, note: o.note || null, template: o.template, anchor: o.anchor, onSaved: o.onSaved });
       if (o.anchor === 'date') document.querySelector('.b3-clinical-date')?.focus();   // tylko widoczne pole
     },
@@ -1721,6 +1721,46 @@ Skutki, o których warto pamiętać:
 - Kopie usuniętego konta zostają w pamięci przeglądarki jako nieużywane klucze.
 
 Testy: `tests/unit/ustawienia-konta-na-urzadzeniu.test.mjs` (prawdziwy adapter i sejf: rejestr, gość, przejęcie, dwa konta, sesja jednorazowa, synchronizacja między urządzeniami), e2e `tests/e2e/ustawienia-konta.spec.mjs` (gość, lekarz A, lekarz B i trzecie konto w jednej przeglądarce: „Widoczność kart” w Ustawieniach i jej skutek na stronie głównej).
+
+## Łatka P-BADANIA-WEJSCIE — jedna droga dodawania wyników (`vilda_auth_ui.js`, `vilda_terminarz.js`, 2026-11-15, decyzja właściciela)
+
+Opis działania: `docs/LAB_HISTORIA_WYNIKOW_PLAN.md`, decyzja 6.34 i „Uzupełnienie z wdrożenia 6.34”; `docs/clinical/ALGORITHMS.md`, „LAB-HISTORIA 6.34”. Czytelny moduł: `vilda_lab_history_tab.js` 2.5.0. Poniżej czytelne bloki wstawione do artefaktów, bez ponownej minifikacji.
+
+```js
+// vilda_auth_ui.js, w se() przed GdLabHost — jedna droga wczytania pacjenta z karty
+var BdWczytajPacjenta = function (BdZastosuj, BdPo) { /* dotychczasowa obsługa „Wczytaj tego pacjenta”, 1:1:
+  patientLoadCapture(t) → wo(t, nazwa, Lt) → o.getPatient(t) → patientLoadRun(…, apply, publish);
+  apply = BdZastosuj(value, t); publish: vilda:patient-loaded, $t(), a na końcu BdPo() */ };
+var BdZastosujNaStronie = function (dane) { applyLoadedData(dane); /* + odświeżenie chipa w ramce i w powłoce */ };
+var BdLabWczytaj = typeof i.applyLoadedData == 'function'
+  ? function (cel) { BdWczytajPacjenta(typeof a == 'function' ? a : BdZastosujNaStronie,
+      function () { BdPrzejdzPoWczytaniu(t, cel && cel.href || null); }); }
+  : null;
+// przycisk karty:  onclick: function () { BdWczytajPacjenta(a, null) }
+// GdLabRender:     render(…, { …, loadPatient: BdLabWczytaj })
+
+// vilda_auth_ui.js, przed patientLoadCapture — przejście do przelicznika po wczytaniu
+BdPrzejdzPoWczytaniu(patientId, href)   // bilet {patientId, href, okno, wczytano, od}; pierwsze sprawdzenie po 80 ms
+BdPrzejscieSprawdz(bilet)               // co 150 ms: inny pacjent → koniec; #vildaLoadChoiceModal → czekaj;
+                                        // getPatientLoadPresentation() loading → czekaj (limit 15 s);
+                                        // okno było i vildaLoadChoiceV1 ∉ {new, restore} → koniec (rezygnacja);
+                                        // BdSesjaZgodna() → BdOtworzPrzelicznik(href); inaczej czekaj (limit 6 s)
+BdSesjaZgodna()                         // readShared().age/ageMonths === wartości pól #age/#ageMonths
+BdSesjaOdswiez()                        // raz, po 3,4 s od wczytania i po pauzie autozapisu: change na #age
+BdOtworzPrzelicznik(href)               // powłoka: VildaShell.navigate('lab', true[, href]); inaczej location.assign
+
+// vilda_auth_ui.js, w ga(): szablon „Wynik badania” tylko tam, gdzie edytor otwarto z nim
+S = [none, med-start, med-change, med-stop];  w === 'lab' && S.push({ value: 'lab', label: 'Wynik badania' });
+
+// vilda_terminarz.js, za wyborem szablonu z zapisanego wpisu (de = #tzNtTpl)
+(function () { if (!de || de.value === 'lab') return; /* usuń option[value="lab"] */ })();
+```
+
+**Dlaczego przejście czeka na sesję wspólną.** Przelicznik czyta pacjenta z sesji wspólnej (`VildaSession.getPatient()`, klucze `age` i `ageMonths` najwyższego poziomu). Dopisuje je `userData.js` przy zdarzeniu `input`/`change` pól pacjenta, ale nie podczas pauzy autozapisu — a na nią przypadają zdarzenia z wczytania i z „Nowy pomiar”. Zapis następuje, gdy lustro pól w `custom-fixes.js` (`F`) 3,2 s po `vilda:patient-loaded` ponowi `change`. Przejście wcześniej otwierało przelicznik bez wieku. Odtworzenie zapisu („Odtwórz zapisany stan”) wpisuje wiek od razu, więc tam czekania nie ma.
+
+**Znany błąd aplikacji, poza tą łatką** (potwierdzony sondą na `audyt` `28ee1c3e` i na `743dba9a`): w powłoce przy drugim i kolejnym pacjencie wczytanym w tej samej karcie przeglądarki lustro nie ponawia `change` po „Nowy pomiar”, więc wiek nie trafia do sesji wspólnej, dopóki lekarz nie zmieni pola pacjenta; ręczne przejście do Jednostek lab. w ciągu ok. 3,2 s po „Nowy pomiar” ma ten sam skutek także przy pierwszym pacjencie. Droga z zakładki „Badania” obchodzi to jednym zdarzeniem `change` na `#age` (`BdSesjaOdswiez`) — tym samym, które wysyła lustro, w tej samej chwili (po 3,4 s od wczytania); wysłane wcześniej (ok. 1 s po wyborze) w jednym z trzech przebiegów sondy oznaczało pacjenta jako zmienionego, po 3,4 s w sześciu z sześciu nie. Po naprawie przyczyny obejście można usunąć; samo czekanie (`BdSesjaZgodna`) może zostać.
+
+**Granice.** Przycisk „Wczytaj tego pacjenta” działa bez zmian (to samo ciało funkcji, `BdPo = null`). Karta otwarta bez funkcji listy (chip, wyszukiwarka, Terminarz) nadal nie ma tego przycisku; zakładka „Badania” wczytuje wtedy przez `applyLoadedData` — tak jak listy pacjentów w `vilda_chrome.js` i `custom-fixes.js`. Na stronie bez `applyLoadedData` zakładka dostaje `loadPatient: null`. Nic poza zdarzeniem `change` nie zapisuje danych; sejf, synchronizacja i eksport bez zmian. Testy: `tests/unit/lab-history-tab.test.mjs`, `tests/unit/badania-przejscie-po-wczytaniu.test.mjs` (wycinek produkcyjnego bloku przejścia), `tests/unit/auth-patient-load-authority.test.mjs` (wycinek `BdWczytajPacjenta`), `tests/unit/care-plan-auth-ui-boundary.test.mjs` (odcisk treści edytora odświeżony świadomie), e2e `tests/e2e/badania-wczytaj-i-dodaj.spec.mjs`, `tests/e2e/badania-wczytaj-i-dodaj-mobile.spec.mjs`, `tests/e2e/wyniki-badan-karta.spec.mjs`, `tests/e2e/karta-pacjenta-porzadki.spec.mjs`, `tests/e2e/lab-snapshot.spec.mjs`.
 
 ## Trwała tożsamość wizyt — źródło i granica artefaktu sejfu
 

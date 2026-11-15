@@ -1,5 +1,6 @@
 import { expect, test } from '../support/test-czas.mjs';
 import { czekajNaBadania, otworzSejf, sekcjaBadan, wybierzBadanie, zapiszHistorie } from '../support/lab-historia-dane.mjs';
+import { wczytajPacjenta } from '../support/lab-pakiet-dane.mjs';
 
 // LAB-HISTORIA PR4: nawigacja karta ↔ przelicznik w prawdziwej powłoce (app.html) na prawdziwym sejfie.
 // Karta badania w zakładce „Badania” otwiera przelicznik z tym badaniem (?badanie=, decyzje 6.15 i 6.23);
@@ -28,6 +29,9 @@ async function powlokaZKarta(page) {
     const consent = scope.locator('#consent-decline');
     if (await consent.isVisible()) await consent.click();
   }
+  // P-BADANIA-WEJSCIE: odnośniki zakładki przenoszą do przelicznika od razu tylko w karcie pacjentki wczytanej
+  // do formularza; drogę z wczytaniem pacjenta sprawdza badania-wczytaj-i-dodaj.spec.mjs.
+  await wczytajPacjenta(start, patientId);
   // Karta od razu na zakładce „Badania” (P-POWLOKA-KARTA-ZAKLADKA, PR3).
   await page.evaluate((pid) => window.VildaShell.openPatientCardInStart(pid, { activeTab: 'lab' }), patientId);
   await expect(start.locator('.vilda-patient-tab[data-tab="lab"]')).toHaveClass(/active/);
