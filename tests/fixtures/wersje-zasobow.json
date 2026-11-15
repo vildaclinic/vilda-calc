@@ -1652,8 +1652,8 @@
   "sha256": "5cc7f23b6c4e6f9f25331aeeded8fd5d58d64148bf8d9ab09177d7785963088c"
  },
  "vilda_lab_packages.js": {
-  "v": 7,
-  "sha256": "a17642722f1ad1170a5d1f56be9c07b242b608e96c5b9146affe56e86b317d9e"
+  "v": 8,
+  "sha256": "668269da35c5af3bf18aaf57c13db19dc871726711c8f580553d60e2fdc32f1b"
  },
  "vilda_lab_profile_preferences.js": {
   "v": 1,

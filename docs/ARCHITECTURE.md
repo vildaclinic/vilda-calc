@@ -191,7 +191,10 @@ Do tej warstwy należą m.in.:
   (`packageSampleAdjust`: wiek z daty urodzenia na ten dzień, stadium dzisiejszej wizyty jako obserwacja
   z innego dnia) i ten sam wiek normom katalogu (`getPackagePatient`); stadium z karty lekarz potwierdza
   jednym kliknięciem (`confirmStage` — lokalna korekta formularza). Silniki nie dostają daty próbki: ocena
-  jest tą, którą dałyby pacjentowi w tym wieku. Pojedyncze badanie nie zna daty pobrania. Adres
+  jest tą, którą dałyby pacjentowi w tym wieku. Pojedyncze badanie nie zna daty pobrania. W pakiecie bez LH,
+  FSH i testosteronu, w którym stadium dobiera normę katalogu (LAB-PAKIETY PR8, `packageTannerAnalytes`),
+  wiersz stadium niesie ta sama instancja ustawiona na LH jako nośnik oceny pokwitania
+  (`PACKAGE_STAGE_CARRIER`); LH nie jest wtedy oceniane ani zapisywane. Adres
   `?pakiet=<slug albo identyfikator własnego
   pakietu>`; skrót w zakładce „Badania”. Norma laboratorium z wydruku
   (opcjonalna, w jednostce wyniku) zastępuje normę aplikacji dla danego wyniku i zapisuje się w

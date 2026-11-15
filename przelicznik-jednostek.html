@@ -519,7 +519,7 @@
   <script src="lab_pin_result.js?v=11"></script>
   <script src="vilda_lab_history.js?v=6"></script>
   <script src="lab_history_strip.js?v=4"></script>
-  <script src="vilda_lab_packages.js?v=7"></script>
+  <script src="vilda_lab_packages.js?v=8"></script>
   <!-- P2 (2026-06-07): 939 KB paneli klinicznych ładowane LENIWIE — strona startuje
        bez parsowania największego pliku w aplikacji. Konsument ma bezpieczny getter
        (global_LabClinicalPanels) z fallbackiem do zwykłego wyszukiwania, więc okno
@@ -2539,6 +2539,25 @@
       if (!selected) return undefined;
       return selected.ui.getAssessment({ testKey: packagePubertyAnalyte, raw: String(raw == null ? '' : raw), unit: String(unit || '') });
     }
+    /**
+     * LAB-PAKIETY PR8 — stadium w pakiecie, w którym dobiera ono tylko normy katalogu (decyzja właściciela
+     * z 2026-11-14). Badania katalogu z zakresem według Tannera (IGF-1, IGFBP-3, DHEA-S, estradiol…) biorą
+     * stadium z karty pacjenta. Gdy pakiet nie ma LH, FSH ani testosteronu całkowitego, nie miał dotąd wiersza
+     * stadium: stadium nie dało się poprawić, a przy dawnej próbce pakiet brał dzisiejsze bez pytania.
+     * Wiersz stadium, jego edytor i pytanie o dzień pobrania (PR7) niesie wtedy ten sam formularz ustawiony na
+     * LH — wyłącznie jako nośnik oceny pokwitania: LH nie jest w takim pakiecie oceniane ani zapisywane.
+     */
+    var PACKAGE_STAGE_CARRIER = 'lh';
+    // Badania pakietu, którym stadium dobrałoby temu pacjentowi inną normę katalogu niż sam wiek.
+    function packageTannerAnalytes(analyteIds) {
+      return (Array.isArray(analyteIds) ? analyteIds : []).map(String).filter(function (id) {
+        var substance = Conv.find(id);
+        // Badania oceniane po swojemu (silnik pokwitaniowy, AMH) nie biorą w pakiecie normy katalogu.
+        if (!substance || ownAssessmentKind({ id: id })) return false;
+        var described = getPackagePatient(id);
+        return !!described && tannerMattersForPatient(substance, Object.assign({}, described.patient, { tanner: null }));
+      });
+    }
     // Krok „Pacjent” pakietu: stadium bierze się z pierwszego badania pakietu, które z niego korzysta,
     // wybór fazy — z pierwszego, które go pokazuje (dorosła kobieta).
     function packagePubertyPresentation(analyteIds) {
@@ -2572,6 +2591,21 @@
         }
         if (!out.cycle && !view.cycle.hidden) out.cycle = { value: view.cycle.value, choices: view.cycle.choices };
       });
+      // PR8: żadne badanie pokwitaniowe nie dało wiersza stadium, a stadium dobiera normę katalogu —
+      // wiersz stadium niesie formularz ustawiony na nośnik (LH).
+      if (!out.stage) {
+        var tannerIds = packageTannerAnalytes(analyteIds);
+        var carrier = tannerIds.length ? packagePubertySelect(PACKAGE_STAGE_CARRIER) : null;
+        if (carrier && !carrier.view.stage.hidden) {
+          packagePubertyActive = true;
+          packagePubertyStageAnalyte = PACKAGE_STAGE_CARRIER;
+          stageView = carrier.view.stage;
+          out.available = true;
+          if (!out.ready) { out.ready = carrier.view.ready; out.sourceStatus = carrier.view.sourceStatus; out.sex = carrier.view.sex; }
+          out.stage = { summary: stageView.summary, action: stageView.action, disabled: stageView.disabled,
+            hint: stageView.hint, editor: stageView.editor, local: stageView.local, catalog: tannerIds };
+        }
+      }
       // PR7: przy dawnej próbce stadium z karty czeka na potwierdzenie, chyba że oceniono je w dniu pobrania
       // albo lekarz wpisał je w pakiecie.
       packageSampleCard = null;

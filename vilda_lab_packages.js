@@ -836,7 +836,7 @@
     }
 
     return Object.freeze({
-      version: '1.6.0',
+      version: '1.7.0',
       SETTINGS_KEY: SETTINGS_KEY,
       CUSTOM_KEY: CUSTOM_KEY,
       LIMITS: LIMITS,
@@ -923,6 +923,8 @@
     var OTHER_DAY_PUBERTY = ' dotyczy dzisiejszego wieku i stadium: z inną datą pobrania zapisze się w karcie jako wymagająca ponownej oceny — tak jak przypięcie pojedynczego wyniku ze zmienioną datą.';
     var OTHER_DAY_CARD = 'Inna data pobrania: w karcie ta ocena zapisze się jako wymagająca ponownej oceny.';
     var STAGE_NOTE = 'Stadium obowiązuje dla całego pakietu — także dla badań z normą według Tannera.';
+    // PR8: w pakiecie bez LH, FSH i testosteronu stadium dobiera tylko normy katalogu.
+    var STAGE_CATALOG_NOTE = 'Stadium dobiera normę według Tannera: ';
     // PR7: ocena w dniu pobrania — pytanie o stadium z karty i stany, w których ocena według stadium czeka.
     var STAGE_ASK_NOTE = 'Bez odpowiedzi aplikacja oceni wyniki tylko według wieku.';
     var STAGE_PENDING = ' — po potwierdzeniu stadium w dniu pobrania';
@@ -1726,7 +1728,12 @@
           parts.cycle.disabled = state.busy;
         }
         var notes = [];
-        if (stage) notes.push(STAGE_NOTE);
+        // PR8: pakiet bez LH, FSH i testosteronu — stadium dobiera tylko normy katalogu; notka nazywa te badania.
+        var catalog = stage && Array.isArray(stage.catalog) ? stage.catalog.map(function (id) {
+          var row = state.rows.filter(function (candidate) { return candidate.id === id; })[0];
+          return row ? row.short : '';
+        }).filter(Boolean) : [];
+        if (stage) notes.push(catalog.length ? STAGE_CATALOG_NOTE + catalog.join(', ') + '.' : STAGE_NOTE);
         if (view && view.contextLine) notes.push(view.contextLine);
         parts.pubertyNote.hidden = !notes.length;
         parts.pubertyNote.textContent = notes.join(' ');
@@ -2761,7 +2768,7 @@
 
     var instance = null;
     return Object.freeze({
-      version: '1.6.0',
+      version: '1.7.0',
       start: function () {
         if (instance || !win || !win.document) return instance;
         instance = create(win);

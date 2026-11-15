@@ -3483,6 +3483,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_lab_packages.js?v=5',
   '/vilda_lab_packages.js?v=6',
   '/vilda_lab_packages.js?v=7',
+  '/vilda_lab_packages.js?v=8',
   '/klirens.xlsx',
   '/zscore_przyklad_palczewska.xlsx',
   '/zscore_przyklad_olaf.xlsx',

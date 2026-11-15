@@ -270,6 +270,6 @@ describe('strona: pakiet pyta o ocenę ten sam formularz co pojedyncze badanie',
       'editObservation: function (axis, stage)', 'setCycle: function (value)', 'subscribe: function (listener)']) expect(runtime, metoda).toContain(metoda);
     expect(formularzZrodlo).toContain('if (enabled && !sharedEditor && opts.sharedEditor !== false) sharedEditor = ui.mountEditor(sharedEditorHost, {');
     expect(formularzZrodlo).toContain('getAssessmentView: assessmentView, editObservation: editSharedObservation, setReproductiveContext: setReproductiveContext, getPresentation: getPresentation };');
-    expect(Model.version).toBe('1.6.0');
+    expect(Model.version).toBe('1.7.0');
   });
 });
