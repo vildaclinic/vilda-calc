@@ -134,7 +134,7 @@
 // z treścią na A, nagrobek porządkowania na B — różnica bez klasy; W4 PO-B bez punktu stałego).
 //
 // E3-PR0a (przygotowanie pomiaru E3-PR0: same zdarzenia mają dawać to, co pełna wymiana; decyzje właściciela
-// z 2026-11-15). Tylko testy, bez zmiany sejfu:
+// z 2026-11-15, numerowane 1–9 w opisie PR tego etapu). Tylko testy, bez zmiany sejfu:
 // - Model haka H1 zdarzenie po zdarzeniu (HAKI wyżej, hakiModelu): dotąd fałszywy alarm AB7, gdy stary nagrobek karty
 //   u odbiorcy niczego nie przegrał, a karta wracała późniejszymi zdarzeniami tej samej partii; przypadek
 //   deterministyczny w bloku AB7 (czerwony ze starym modelem, zielony z nowym).
@@ -143,18 +143,26 @@
 //   API sejfu z argumentami); w świecie samych blobów p. 5 — pośrednik na metodach kroku. Ocena (widok karty i okna
 //   Kosza każdego urządzenia wobec ostatniej zmiany każdego pola): W1 — w punktach spoczynku na żywych urządzeniach,
 //   w p. 5 po zdarzeniach, w p. 6 po spoczynku; W4 — na klonach po pełnej wymianie (punkt spoczynku, p. 6 dla dwóch
-//   i trzech urządzeń) i w p. 5 po pełnej wymianie PO-A par urządzeń; bloby — świat samych blobów p. 5 i p. 6. Widoki z własnym Math.random
-//   (cichoLos, kr_cicho): program ziarna i wszystkie dotychczasowe literały bez zmian. Asercje w CI: każde naruszenie
-//   ma klasę z jawnej tabeli wyjątków WYJATKI (klasa → uzasadnienie, wpis ALGORITHMS albo planu, światy, w których jest
-//   dozwolona; E1/E1b — do naprawy w E3-PR0, decyzja 9a; E4b — do naprawy w E3-PR0e, 4a, nie po W4), naruszenie bez
-//   klasy = czerwień (ziarna domyślne trzech profili, p. 5, p. 6); w p. 5 i p. 6 dodatkowo literał zbioru (klasa, świat)
-//   każdego przebiegu: KAT_WYR, P6_WYR (charakterystyka dzisiejszego stanu). E2_AB_WYROCZNIA=plik — naruszenia (JSONL).
+//   i trzech urządzeń) i w p. 5 po pełnej wymianie PO-A par urządzeń; bloby — świat samych blobów p. 5 i p. 6.
+//   Widoki z własnym Math.random (cichoLos, kr_cicho): program ziarna i wszystkie dotychczasowe literały bez zmian.
+//   Asercje w CI (miękkie, przed literałami — komunikat ma oba werdykty): każde naruszenie ma klasę z jawnej tabeli
+//   wyjątków WYJATKI (klasa → uzasadnienie, mechanizm z historii, wpis ALGORITHMS albo planu, światy, w których jest
+//   dozwolona; E1/E1b — do naprawy w E3-PR0, decyzja 9a; E4b — tylko W1, do naprawy w osobnym PR etapu E3-PR0, decyzja
+//   4a), naruszenie bez klasy = czerwień (ziarna domyślne trzech profili, p. 5, p. 6); literał zbioru (klasa, świat)
+//   każdego przebiegu p. 5 i p. 6 (KAT_WYR, P6_WYR) i liczba naruszeń na klasę i świat w ziarnach domyślnych
+//   (ZNANE_WYR) — charakterystyka dzisiejszego stanu. E2_AB_WYROCZNIA=plik — naruszenia (JSONL).
 // - TRYB ŚCISŁY (ręczny, E2_AB_SCISLE=1; domyślnie wyłączony): W1 = ∅ poza klasami niewidocznymi R2, R4n i D7 (decyzja
-//   2a) z dowodem — widok i okno Kosza równe na obu urządzeniach, a „Przywróć” każdego różniącego się wpisu Kosza na
-//   klonach obu urządzeń daje ten sam widoczny wynik; p. 5 — widok po zdarzeniach = widok po W4 w każdym przebiegu
-//   (także Q8-obca-2, decyzja 3a); wyrocznia — w W1 żadnego naruszenia, którego nie ma też po W4 albo przy samych
-//   blobach tego punktu. Dziś tryb jest czerwony (pomiar w opisie PR).
-// - p. 6: warianty R5-E1 i R3-E2, w których trzecie urządzenie wysyła tylko zdarzenia (na końcu listy P6).
+//   2a) z dowodem — widok i okno Kosza równe na obu urządzeniach, a każdy różniący się wpis Kosza przechodzi dowodWpisu
+//   (wiersz okna Kosza równy, „Przywróć” na klonach obu urządzeń daje ten sam widoczny wynik; wpis poza oknem Kosza —
+//   osobno); p. 5 — widok po zdarzeniach = widok po W4 w każdym przebiegu (także Q8-obca-2, decyzja 3a; różnica samej
+//   listy nagrobków pacjentów — osobna przyczyna); wyrocznia — w W1 żadnego naruszenia, którego nie ma też po W4 albo
+//   przy samych blobach tego punktu. Dziś tryb jest czerwony (pomiar w opisie PR).
+// - Dowód niewidoczności także poza trybem ścisłym: D7 i R5 w profilu podstawowym — 'dowód' w tabeli DOZWOLONE.
+// - Klasy z diagnozy różnic bez klasy (3.6): D7 z revPary, R4a′ ze zmianaISO, R5 (opis), „miejsce wizyty po „Scal
+//   pacjentów””, „nagrobek karty opróżnionej”, „rekord złożony po jednej stronie”; kategoria W2s „ratunek D-21
+//   przetrwałej karty”.
+// - p. 6: warianty R5-E1 i R3-E2, w których trzecie urządzenie wysyła tylko zdarzenia, i nagrobek retencji bez ochrony
+//   wizyt jak od starszej aplikacji (na końcu listy P6).
 // - Profil „dłuższa praca bez połączenia” (ręczny, E2_AB_PROFIL=bez-polaczenia; PROFIL_BEZ_POLACZENIA niżej).
 //
 // KOLEJNOŚĆ W KROKU (E2-PR3a2, sprawdzana na emiterach): snap (także wersje przeniesione pod kartę celu „Scal pacjentów”
@@ -239,7 +247,7 @@ import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vites
 import { utworzAtrapeWorkera, zegarSterowany } from '../support/atrapa-workera-sync.mjs';
 import { sprzatnijUrzadzenia, utworzUrzadzenie, eksportKanoniczny } from '../support/urzadzenie-sync.mjs';
 import { appendFileSync, readFileSync } from 'node:fs';
-import { okno } from './sesja-zapisu-uprzaz.mjs';
+import { naglowek, okno } from './sesja-zapisu-uprzaz.mjs';
 import { createHash } from 'node:crypto';
 import { PRZYGOTOWANIA, repoRoot, sztucznyZegar, przesunZegar, zaladowanieSejfu, zegar } from './s4d7-wspolne.mjs';
 import { SCEN as KATALOG, RUNDY, pelnyStan, widok } from './kosz-po-kluczu-wspolne.mjs';
@@ -375,15 +383,20 @@ function sciezki(a, b, limit = 8) {
 
 // ── Znane klasy (specyfikacja 2a, 3.6) ───────────────────────────────────────────────────────────────────────────────
 // Klasa = predykat na jednej różnicy z D(X, Y) porównywanej pary (A, B w W1 i W4; A′, A″ / B′, B″ w W2r; Y1, Y2 w W2s);
-// pierwszy pasujący wygrywa (R2, R3, R4a, R4a′, R4n, R5, createdAtISO-notatki, D7, E1-katalog, notatka pod inną kartą).
+// pierwszy pasujący wygrywa (R2, R3, R4a, R4a′, R4n, R5, createdAtISO-notatki, D7, R5 (opis), miejsce wizyty po „Scal
+// pacjentów”, nagrobek karty opróżnionej, rekord złożony po jednej stronie, E1-katalog, notatka pod inną kartą).
 // kont.kosz = { x, y } — listTrashedSnapshots() obu stron (dla R4n; pomiar izolowany); kont.e1Bloby — klucze D ścieżki
 // samych blobów tej pary (tylko W4 p. 5).
 const R4A_POLA = ['rev', 'updatedAtISO', 'gwiazdka', 'payload._pinned', 'payload._pinnedState'];
 const POSTAC_GWIAZDKI = ['payload._pinned', 'payload._pinnedState'];
 // D7 (ALGORITHMS, „rev, opis i część pól nagrobka zależne od kolejności (D7, Z5)”, ok. 22622–22627): „opis nagrobka po
 // plotce (rev, updatedAtISO, zmianaISO), koszISO (składnik k ginie razem z koszem, który przegrał z późniejszą wersją bez
-// przycięcia […]) […] — od kolejności scaleń” — przy samych blobach.
-const D7_POLA = ['rev', 'updatedAtISO', 'zmianaISO', 'koszISO'];
+// przycięcia […]) […] — od kolejności scaleń” — przy samych blobach. Od E3-PR0a także revPary (pary chwila usunięcia,
+// rev wpisu z ładunku, Bpk_revPary — zależne od kolejności scaleń; PD-17: nie kolejkować ponownie z powodu revPary).
+const D7_POLA = ['rev', 'updatedAtISO', 'zmianaISO', 'koszISO', 'revPary'];
+// R5 (opis): wpis Kosza karty, której nie ma na żadnej stronie, a jej nagrobek jest na obu, różni się tylko opisem
+// (chwila usunięcia, rev, gwiazdka, koszISO, revPary, przycietoISO) — okno Kosza go nie pokazuje (od E3-PR0a).
+const R5_POLA = ['deletedAtISO', 'rev', 'updatedAtISO', 'zmianaISO', 'gwiazdka', 'koszISO', 'revPary', 'przycietoISO'];
 const wPolach = (s, pola) => pola.some((d) => s === d || s.startsWith(d + '.') || s.startsWith(d + '['));
 const kartaW = (k, pid) => (k.patients || []).some((p) => p.patientId === pid);
 const nagrobekW = (k, pid) => (k.tombstones || []).some((t) => t.patientId === pid);
@@ -408,7 +421,7 @@ function klasa(r, X, Y, kont = {}) {
     const zywa = kartaW(X, pid) && kartaW(Y, pid) && !nagrobekW(X, pid) && !nagrobekW(Y, pid);
     const spozaPayload = r.sciezki.some((s) => !wPolach(s, ['payload']));
     if (obie && zywa && spozaPayload && tylkoPola(R4A_POLA)) return 'R4a';
-    if (obie && zywa && spozaPayload && tylkoPola([...R4A_POLA, 'payload']) && r.sciezki.some((s) => wPolach(s, ['payload']) && !wPolach(s, POSTAC_GWIAZDKI))) return 'R4a′';
+    if (obie && zywa && spozaPayload && tylkoPola([...R4A_POLA, 'zmianaISO', 'payload']) && r.sciezki.some((s) => wPolach(s, ['payload']) && !wPolach(s, POSTAC_GWIAZDKI))) return 'R4a′';
     if (obie && tylkoPola(POSTAC_GWIAZDKI) && kont.kosz) {
       const wx = widokKosza((kont.kosz.x || []).filter((e) => e.snapshotId === sid)), wy = widokKosza((kont.kosz.y || []).filter((e) => e.snapshotId === sid));
       if (JSON.stringify(wx) === JSON.stringify(wy)) return 'R4n';
@@ -417,6 +430,13 @@ function klasa(r, X, Y, kont = {}) {
   }
   if (r.rodzaj === 'pnote' && obie && tylkoPola(['createdAtISO'])) return 'createdAtISO-notatki';
   if (r.rodzaj === 'kosz' && obie && tylkoPola(D7_POLA)) return 'D7';
+  if (r.rodzaj === 'kosz' && obie && tylkoPola(R5_POLA)) {
+    const pid = r.klucz.replace(/#\d+$/, '').split('|')[1];
+    if (!kartaW(X, pid) && !kartaW(Y, pid) && nagrobekW(X, pid) && nagrobekW(Y, pid)) return 'R5';
+  }
+  if (miejsceWizyty(r, X, Y)) return MIEJSCE_WIZYTY;
+  if (nagrobekKartyPustej(r, X, Y)) return NAGROBEK_OPROZNIONEJ;
+  if (rekordZlozony(r)) return REKORD_ZLOZONY;
   if (kont.e1Bloby && kont.e1Bloby.has(kluczD(r))) return E1;
   if (r.rodzaj === 'pnote' && obie && tylkoPola(['patientId']) && r.a.patientId !== r.b.patientId
     && [r.a.patientId, r.b.patientId].some((p) => nagrobekW(X, p) && nagrobekW(Y, p))) return NPIK;
@@ -439,24 +459,70 @@ function klasa(r, X, Y, kont = {}) {
 //   niezależny od dziennika zdarzeń (do zgłoszenia właścicielowi jako osobna poprawka reguły, decyzja 9).
 const E1 = 'E1-katalog';
 const NPIK = 'notatka pod inną kartą';
+// Klasy dopisane w E3-PR0a (diagnoza różnic bez klasy; widoczne — bez dopuszczenia poza raportem profilu pełnego):
+// - „miejsce wizyty po „Scal pacjentów”” (P1e (b), profil pełny): ta sama wizyta (snapshotId) leży po dwóch stronach
+//   pod różnymi kartami z tą samą masą i gwiazdką; karta (albo nagrobek karty) tylko po jednej stronie, gdy każda wizyta
+//   tej karty leży po drugiej stronie pod inną kartą. O wersji z ładunku pod inną istniejącą kartą decyduje nowszy
+//   rekord („najpierw rev”, P-SYNC-WLASCICIEL), więc wersja z wyższą rev zostaje w starej karcie;
+// - „nagrobek karty opróżnionej” (niewidoczna): nagrobek karty P tylko po jednej stronie, karty P nie ma po żadnej —
+//   karta opróżniona przeniesieniem ostatniej wersji pod inną kartę znika bez nagrobka (vilda_vault.js:3662–3663);
+// - „rekord złożony po jednej stronie”: wersja na obu, ta sama chwila zmiany, inna treść; strona z późniejszą chwilą
+//   treści ma rekord złożony (treść z jednego rekordu, gwiazdka z drugiego: _pinnedState.zl, Bgw_zlozony) i wyższą rev.
+const MIEJSCE_WIZYTY = 'miejsce wizyty po „Scal pacjentów”';
+const NAGROBEK_OPROZNIONEJ = 'nagrobek karty opróżnionej';
+const REKORD_ZLOZONY = 'rekord złożony po jednej stronie';
+const wersjeKart = (k) => { const m = new Map(); for (const p of k.patients || []) for (const q of p.snapshots || []) m.set(q.snapshotId, { pid: p.patientId, q }); return m; };
+const widokWersji = (q) => JSON.stringify([q && q.payload && q.payload.user ? q.payload.user.weight : null, !!(q && q.payload && q.payload._pinned)]);
+const wszystkieGdzieIndziej = (p, k) => { const w = wersjeKart(k); return (p.snapshots || []).length > 0 && p.snapshots.every((q) => { const t = w.get(q.snapshotId); return t && t.pid !== p.patientId; }); };
+function miejsceWizyty(r, X, Y) {
+  if (!r.tylko) return false;
+  const [U, V] = r.tylko === 'x' ? [X, Y] : [Y, X]; // U ma encję, V — nie
+  if (r.rodzaj === 'wersja') {
+    const [pid, sid] = r.klucz.split('/');
+    const t = wersjeKart(V).get(sid);
+    return !!t && t.pid !== pid && widokWersji(t.q) === widokWersji(r.a || r.b);
+  }
+  if (r.rodzaj === 'karta') {
+    const p = (U.patients || []).find((q) => q.patientId === r.klucz);
+    return !!p && wszystkieGdzieIndziej(p, V);
+  }
+  if (r.rodzaj === 'ptomb') {
+    const p = (V.patients || []).find((q) => q.patientId === r.klucz);
+    return !!p && wszystkieGdzieIndziej(p, U);
+  }
+  return false;
+}
+const nagrobekKartyPustej = (r, X, Y) => r.rodzaj === 'ptomb' && !!r.tylko && !kartaW(X, r.klucz) && !kartaW(Y, r.klucz);
+function rekordZlozony(r) {
+  if (r.rodzaj !== 'wersja' || !r.a || !r.b || r.a.updatedAtISO !== r.b.updatedAtISO) return false;
+  const pa = r.a.payload || {}, pb = r.b.payload || {};
+  if ((pa._contentAtISO || '') === (pb._contentAtISO || '')) return false;
+  const [n, s] = (pa._contentAtISO || '') > (pb._contentAtISO || '') ? [r.a, r.b] : [r.b, r.a];
+  return !!(n.payload._pinnedState && n.payload._pinnedState.zl === true) && (Number(n.rev) || 0) > (Number(s.rev) || 0);
+}
 const kluczD = (r) => `${r.rodzaj} ${r.klucz}`;
 // Jawna lista przebiegów katalogu (obie kolejności), w których W4 p. 5 dopuszcza klasę E1-katalog (3.6).
 const E1_KATALOG = new Set(['PRZ0-bez', 'E1-popr-C', 'E1-C', 'Q8-obca-2']);
-// Gdzie klasa jest dozwolona (3.6): 'tak' — zieleń, 'raport' — drukowana, nie czerwieni; brak wpisu — czerwień.
+// Gdzie klasa jest dozwolona (3.6): 'tak' — zieleń, 'raport' — drukowana, nie czerwieni; 'dowód' — zieleń tylko z dowodem
+// niewidoczności tej różnicy (dowodWpisu: wiersz okna Kosza równy, „Przywróć” daje ten sam widoczny wynik; decyzja
+// właściciela 2a z 2026-11-15, reguła PD-17), bez dowodu — czerwień; brak wpisu — czerwień.
 // Tabele: 'podstawowy' (W1, W2r, W2s profilu podstawowego), 'W4' (W4: profil podstawowy, p. 1–4, P1e), 'W4:p5' (W4 p. 5;
 // E1-katalog tylko w przebiegach z listy E1_KATALOG), 'pelny' (W1, W2r, W2s profilu pełnego), 'pelny:W4' (W4 profilu
 // pełnego), 'p6' (p. 6). R4n w każdej tabeli W4 wymaga W4p
 // (w4 i w4Trzy liczą W4p); W4 p. 5 (klasyW4Kat, urządzenia katalogu bez klonów) W4p nie liczy, więc R4n w 'W4:p5' NIE
 // jest dozwolone — R4n w p. 5 = czerwień do analizy (P4 weryfikacji; dziś p. 5 nie ma R4n).
 // E3-PR0a (pomiar 2026-11-15 na bazie z P-TRWALE-WIZYTY: profil podstawowy 40 ziaren, pełny 20, p. 6): R3,
-// createdAtISO-notatki i „notatka pod inną kartą” — zero wystąpień (W1, W2r, W2s, W4, losowa kolejność), więc bez wpisu
-// w żadnej tabeli (każde wystąpienie = czerwień; predykaty klas i ich testy zostają).
+// createdAtISO-notatki i „notatka pod inną kartą” — zero wystąpień w W1, W2r, W4 i w kolejności losowej; w W2s profilu
+// pełnego „notatka pod inną kartą” raz (ziarno 6, krok 118), pod kategorią „ratunek D-21” (sprawdzaną przed klasą).
+// Bez wpisu w żadnej tabeli: każde wystąpienie czerwieni tam, gdzie tabela czerwieni (profil podstawowy, W4, W4:p5,
+// pelny:W4, p6; W1, W2r i W2s profilu pełnego tylko drukują). Predykaty klas i ich testy zostają. D7 i R5 w profilu
+// podstawowym — 'dowód' (profil „dłuższa praca bez połączenia”: revPary i opis wpisu Kosza karty usuniętej na obu).
 const DOZWOLONE = Object.freeze({
-  podstawowy: { R2: 'tak', R4a: 'tak', R5: 'tak', R4n: 'tak' },
+  podstawowy: { R2: 'tak', R4a: 'tak', R5: 'dowód', R4n: 'tak', D7: 'dowód' },
   W4: { R4n: 'tak' },
   'W4:p5': { [E1]: 'tak' },
-  pelny: { R2: 'raport', R4a: 'raport', R5: 'raport', 'R4a′': 'raport', R4n: 'raport', D7: 'raport' },
-  'pelny:W4': { R4n: 'tak', D7: 'raport' },
+  pelny: { R2: 'raport', R4a: 'raport', R5: 'raport', 'R4a′': 'raport', R4n: 'raport', D7: 'raport', [MIEJSCE_WIZYTY]: 'raport', [NAGROBEK_OPROZNIONEJ]: 'raport', [REKORD_ZLOZONY]: 'raport' },
+  'pelny:W4': { R4n: 'tak', D7: 'raport', [NAGROBEK_OPROZNIONEJ]: 'raport' },
   p6: { R2: 'tak', R4a: 'tak', R5: 'tak', 'R4a′': 'tak', R4n: 'tak' },
 });
 function dozwolona(kl, r, kont) {
@@ -472,7 +538,7 @@ async function sklasyfikuj(d, X, Y, kont, czytajKosz) {
   return d.map((r) => { const kl = klasa(r, X, Y, k); return { ...r, klasa: kl, dozwolona: dozwolona(kl, r, kont) }; });
 }
 const klasyPunktu = (lista) => [...new Set(lista.map((r) => r.klasa || 'null'))].sort();
-const skrotRoznicy = (r) => ({ klucz: r.klucz, rodzaj: r.rodzaj, klasa: r.klasa, dozwolona: r.dozwolona, tylko: r.tylko, sciezki: r.sciezki.slice(0, 6) });
+const skrotRoznicy = (r) => ({ klucz: r.klucz, rodzaj: r.rodzaj, klasa: r.klasa, dozwolona: r.dozwolona, tylko: r.tylko, sciezki: r.sciezki.slice(0, 6), ...(r.dowod ? { dowod: r.dowod } : {}) });
 
 // ── Uprząż A ≡ B ─────────────────────────────────────────────────────────────────────────────────────────────────────
 // Świat S: atrapa workera (uprząż E2-PR0 jej wymaga, sync: false — bez ruchu), urządzenia (bliźniaki jednego konta),
@@ -482,7 +548,7 @@ function swiat(ziarno = 1) {
   return {
     ziarno, nrUrz: 0, atrapa: utworzAtrapeWorkera({ tryb: 'v37a', eventsEnabled: false, zegar: zegarSterowany() }),
     kursor: new Map(), hasla: new Map(), dziennik: [], braki: [], nrHasla: 0,
-    stat: { zdarzen: 0, dostaw: 0, pelnych: 0, h1: 0, h2: 0, w2s: { zgodne: 0, niezgodne: 0, kategorie: {}, roznice: {} }, w2sLista: [], w3: 0, w3Bledy: [], losowa: { zgodne: 0, niezgodne: 0 }, losowaLista: [], spoczynki: 0, w1Bledy: [], w2rBledy: [], w2r: 0, brakSpoczynku: [], w4: 0, w4Bledy: [], w4Klasy: [], w4R4n: 0, w4p: [], emitery: statEmiterow(), haki: statHakow(), hakiKolejnosc: [], scisle: [] },
+    stat: { zdarzen: 0, dostaw: 0, pelnych: 0, h1: 0, h2: 0, w2s: { zgodne: 0, niezgodne: 0, kategorie: {}, roznice: {} }, w2sLista: [], w3: 0, w3Bledy: [], losowa: { zgodne: 0, niezgodne: 0 }, losowaLista: [], spoczynki: 0, w1Bledy: [], w2rBledy: [], w2r: 0, brakSpoczynku: [], w4: 0, w4Bledy: [], w4Klasy: [], w4R4n: 0, w4p: [], emitery: statEmiterow(), haki: statHakow(), hakiKolejnosc: [], scisle: [], dowody: [] },
     nrPomiaru: 0, losAlt: null, wskrzeszone: new Set(), profil: 'podstawowy',
   };
 }
@@ -939,7 +1005,7 @@ async function sprawdzW2s(S, X, Y, partia) {
       S.stat.w2s.niezgodne += 1;
       // Kategorie różnica po różnicy (3.2): K1 (tylko karta i jej wersje), K2, klasy 3.6 na parze (Y1, Y2), „inne”.
       const lista = await kr_cicho(S, async () => kategorieW2s(Y, X, partia, e1, e2, k1, k2, S.profil,
-        async () => ({ x: await Y1.v.listTrashedSnapshots(), y: await Y2.v.listTrashedSnapshots() })));
+        async () => ({ x: await Y1.v.listTrashedSnapshots(), y: await Y2.v.listTrashedSnapshots() }), (d) => potwierdz(S, Y1, Y2, d)));
       const kat = [...new Set(lista.map((r) => r.kategoria))].sort().join(' + ');
       S.stat.w2s.kategorie[kat] = (S.stat.w2s.kategorie[kat] || 0) + 1;
       for (const r of lista) S.stat.w2s.roznice[r.kategoria] = (S.stat.w2s.roznice[r.kategoria] || 0) + 1;
@@ -969,14 +1035,19 @@ async function sprawdzW2s(S, X, Y, partia) {
 //    wpis kosza s|p tylko po jednej stronie, a karta p w wyścigu „Usuń pacjenta” jak w K1. Blob niesie całą listę kosza
 //    (suma list, Bkz_scalStart), więc wpis zdjęty u odbiorcy przez „Przywróć” wraca z blobem nadawcy, który o
 //    przywróceniu nie wie; zdarzenia niosą tylko zmiany. Tylko W2s (stan po jednej dostawie; W1 po spoczynku i W4 zielone);
+//    E3-PR0a: „ratunek D-21 przetrwałej karty” — partia X niesie pnote(n), ptomb(P) i pnotetomb(n, deletedWithPatient);
+//    u odbiorcy karta P przeżywa (nowsza wersja), więc notatka idzie za kartą, która zostaje (P-NOTATKI-ZA-KARTA, ratunek
+//    D-21), a blob X niesie tylko nagrobek bez treści; karta P po obu stronach, notatka (albo jej nagrobek) po jednej.
+//    Tylko W2s (W1, W2r i W4 zgodne; po spoczynku notatkę dowozi hak H2);
 // 4. „inne”.
 const K1K = 'K1k wpis kosza karty w wyścigu';
+const RATUNEK_KARTY = 'ratunek D-21 przetrwałej karty';
 const K1K_ODTWORZENIE = [ // literał minimalnego odtworzenia K1k (blok p. 4)
   'K1k wpis kosza karty w wyścigu: kosz x|X tylko blob',
   'karta częściowa do pfull: wersja X/x1 tylko blob',
   'karta częściowa do pfull: wersja X/x3 tylko blob',
 ];
-async function kategorieW2s(Y, X, partia, e1, e2, k1, k2, profil, czytajKosz) {
+async function kategorieW2s(Y, X, partia, e1, e2, k1, k2, profil, czytajKosz, dowod = null) {
   const b = encje(e2), y = encje(Y.stan), x = encje(X.stan);
   const nagrobekX = (p) => {
     const t = x.get('ptomb:' + p);
@@ -990,11 +1061,20 @@ async function kategorieW2s(Y, X, partia, e1, e2, k1, k2, profil, czytajKosz) {
   };
   const ratunek = (id) => b.has('pnote:' + id) && x.has('pnote:' + id) && !x.has('pnotetomb:' + id) && !partia.some((e) => e.kind === 'pnote' && e.key === id);
   const d = await sklasyfikuj(D(k1, k2), k1, k2, { tabela: profil }, czytajKosz);
+  if (dowod) await dowod(d);
+  const z1 = encje(e1);
+  const ratunekKarty = (id) => {
+    const t = [z1.get('pnotetomb:' + id), b.get('pnotetomb:' + id), x.get('pnotetomb:' + id), y.get('pnotetomb:' + id)].find((q) => q && JSON.parse(q.val).deletedWithPatient);
+    if (!t) return false;
+    const pid = JSON.parse(t.val).deletedWithPatient.patientId;
+    return partia.some((e) => e.kind === 'pnote' && e.key === id) && kartaW(k1, pid) && kartaW(k2, pid) && (z1.has('pnote:' + id) || b.has('pnote:' + id));
+  };
   return d.map((r) => {
     let kategoria = 'inne';
     if ((r.rodzaj === 'karta' || r.rodzaj === 'wersja' || r.rodzaj === 'ptomb') && wyscig(r.klucz.split('/')[0])) kategoria = 'karta częściowa do pfull';
     else if ((r.rodzaj === 'pnote' || r.rodzaj === 'pnotetomb') && ratunek(r.klucz)) kategoria = 'ratunek D-21';
-    else if (r.klasa && r.dozwolona) kategoria = r.klasa;
+    else if ((r.rodzaj === 'pnote' || r.rodzaj === 'pnotetomb') && ratunekKarty(r.klucz)) kategoria = RATUNEK_KARTY;
+    else if (r.klasa && r.dozwolona && r.dozwolona !== 'dowód') kategoria = r.klasa;
     else if (r.rodzaj === 'kosz' && r.tylko && wyscig(r.klucz.split('|')[1])) kategoria = K1K;
     return { ...r, kategoria };
   });
@@ -1025,6 +1105,7 @@ async function w2r(S, X, Y) {
     const wynik = sciezki(b, a);
     wynik.roznice = await kr_cicho(S, async () => sklasyfikuj(D(b, a), b, a, { tabela: S.profil },
       async () => ({ x: await X2.v.listTrashedSnapshots(), y: await X1.v.listTrashedSnapshots() })));
+    await potwierdz(S, X2, X1, wynik.roznice);
     return wynik;
   } finally { await zamknij(X1, X2); }
 }
@@ -1055,27 +1136,64 @@ async function w1Klasy(S, A, B, kont) {
   return kr_cicho(S, async () => sklasyfikuj(D(a, b), a, b, kont,
     async () => ({ x: await A.v.listTrashedSnapshots(), y: await B.v.listTrashedSnapshots() })));
 }
+// ── Dowód niewidoczności różnicy wpisu Kosza (decyzja właściciela 2a z 2026-11-15; reguła PD-17) ─────────────────
+// Klasy niewidoczne (decyzja 2a: R2 — sam rev wersji, R4n — postać gwiazdki w treści wpisu Kosza, D7 — opis, koszISO,
+// revPary i rev nagrobka; też R5 — wpis Kosza karty, której nie ma) są dopuszczone bez odsyłania tylko z dowodem: na
+// świeżych klonach obu stron (stały Math.random) wiersz okna Kosza tej wersji jest równy, a „Przywróć” daje na obu ten
+// sam widoczny wynik tej wizyty (karta i Kosz w widoku wyroczni). Wiersza nie ma w oknie Kosza żadnej strony (karta wpisu nie istnieje) —
+// „Przywróć” nie jest dostępne: dowód z wynikiem 'poza oknem' (raportowany osobno). Wiersz w oknie, a „Przywróć” rzuca na
+// którejkolwiek stronie (także dwa jednakowe wyjątki) — brak dowodu. Klucz różnicy bez sufiksu #n (duplikat encji w D).
+// Klon z hasłem bieżącego poświadczenia urządzenia (klony W2s i W2r po scaleniu bloba mogą mieć nowsze poświadczenie
+// niż ich ostatni zapisany stan).
+async function klonBiezacy(S, U, nazwa) {
+  U.d.konto.haslo = haslo(S, { stan: await eksport(U), nazwa: U.nazwa });
+  return urzadzenie(S, `${U.nazwa}-${nazwa}`, U);
+}
+async function dowodWpisu(S, X, Y, klucz) {
+  const [sid, pid] = String(klucz).replace(/#\d+$/, '').split('|');
+  const X2 = await klonBiezacy(S, X, 'dn'), Y2 = await klonBiezacy(S, Y, 'dn');
+  try {
+    const wiersz = (l) => widokKosza(l.filter((e) => e.snapshotId === sid && e.patientExists));
+    const [ox, oy] = [wiersz(await X2.v.listTrashedSnapshots()), wiersz(await Y2.v.listTrashedSnapshots())];
+    if (JSON.stringify(ox) !== JSON.stringify(oy)) return { ok: false, przywroc: null, powod: `wiersz okna Kosza ${sid.slice(0, 8)} różny` };
+    if (!ox.length) return { ok: true, przywroc: 'poza oknem' };
+    const przywroc = async (U) => { try { await U.v.restoreTrashedSnapshot(pid, sid); return 'ok'; } catch (e) { return `wyjątek ${e && (e.code || e.message)}`; } };
+    let px = null, py = null;
+    await stalyLos(async () => { px = await przywroc(X2); py = await przywroc(Y2); });
+    if (px !== 'ok' || py !== 'ok') return { ok: false, przywroc: `${px} / ${py}`, powod: `„Przywróć” ${sid.slice(0, 8)}: ${px} / ${py}` };
+    const tej = async (U) => { const V = await WYR.widokUrz(U); return JSON.stringify([V.w.get(sid) || null, V.podwojne.get(sid) || null]); };
+    if (await tej(X2) !== await tej(Y2)) return { ok: false, przywroc: 'ok', powod: `„Przywróć” ${sid.slice(0, 8)}: inny widoczny wynik` };
+    return { ok: true, przywroc: 'ok' };
+  } finally { await zamknij(X2, Y2); }
+}
+// 'dowód' w tabeli DOZWOLONE (profil podstawowy: D7, R5): różnice wpisu Kosza z tą wartością dostają dowód na klonach
+// pary (X, Y) — dozwolona 'tak' z dowodem, false bez niego (r.dowod — wynik). Pomiar izolowany (kr_cicho).
+async function potwierdz(S, X, Y, d) {
+  const doDowodu = d.filter((r) => r.dozwolona === 'dowód');
+  if (!doDowodu.length) return d;
+  await kr_cicho(S, async () => {
+    for (const r of doDowodu) {
+      r.dowod = r.rodzaj === 'kosz' ? await dowodWpisu(S, X, Y, r.klucz) : { ok: false, przywroc: null, powod: 'dowód tylko dla wpisu Kosza' };
+      r.dozwolona = r.dowod.ok ? 'tak' : false;
+      (S.stat.dowody = S.stat.dowody || []).push({ krok: S.nrKroku || 0, klasa: r.klasa, klucz: String(r.klucz).slice(0, 13), ...r.dowod });
+    }
+  });
+  return d;
+}
 // ── Tryb ścisły (E2_AB_SCISLE=1; ręczny, domyślnie wyłączony; TRYB ŚCISŁY w nagłówku) ───────────────────────────────
-// W1 = ∅ z jedynym wyjątkiem klas niewidocznych (decyzja 2a z 2026-11-15: R2 — sam rev wersji, R4n — postać gwiazdki
-// w treści wpisu Kosza, D7 — opis, koszISO i rev nagrobka; reguła PD-17: nie kolejkować ponownie z powodu samego rev ani
-// opisu, ALGORITHMS ok. 29316–29317, plan:262) i tylko z dowodem: widok kliniczny i okno Kosza równe na obu urządzeniach,
-// a „Przywróć” każdego różniącego się wpisu Kosza na klonach obu urządzeń (stały Math.random) daje ten sam widoczny
-// wynik. Wynik: lista przyczyn { przyczyna, klasa, klucz } (pusta — zieleń).
+// W1 = ∅ z jedynym wyjątkiem klas niewidocznych z decyzji właściciela 2a z 2026-11-15 (R2, R4n, D7; reguła PD-17: nie
+// kolejkować ponownie z powodu samego rev ani opisu, ALGORITHMS ok. 29316–29317, plan:262) i tylko z dowodem: widok
+// kliniczny i okno Kosza równe na obu urządzeniach, a każdy różniący się wpis Kosza przechodzi dowodWpisu. Wynik: lista
+// przyczyn { przyczyna, klasa, klucz } (pusta — zieleń); dowody 'poza oknem' — osobno w S.stat.dowody.
 const NIEWIDOCZNE = Object.freeze(['R2', 'R4n', 'D7']);
 async function dowodNiewidoczny(S, A, B, roznice) {
   const w = await wyrWidoki(S, { A, B });
   if (WYR.widokNapis(w.A) !== WYR.widokNapis(w.B)) return { ok: false, powod: 'widok albo Kosz różny' };
   return kr_cicho(S, async () => {
     for (const r of roznice.filter((q) => q.rodzaj === 'kosz')) {
-      const [sid, pid] = r.klucz.split('|');
-      const A2 = await klon(S, A, 'scp'), B2 = await klon(S, B, 'scp');
-      try {
-        const przywroc = async (U) => { try { await U.v.restoreTrashedSnapshot(pid, sid); return 'ok'; } catch (e) { return `wyjątek ${e && (e.code || e.message)}`; } };
-        let ra = null, rb = null;
-        await stalyLos(async () => { ra = await przywroc(A2); rb = await przywroc(B2); });
-        const [va, vb] = [await WYR.widokUrz(A2), await WYR.widokUrz(B2)];
-        if (ra !== rb || WYR.widokNapis(va) !== WYR.widokNapis(vb)) return { ok: false, powod: `„Przywróć” ${String(sid).slice(0, 8)}: ${ra} / ${rb}${ra === rb ? ', inny widok' : ''}` };
-      } finally { await zamknij(A2, B2); }
+      const dowod = await dowodWpisu(S, A, B, r.klucz);
+      (S.stat.dowody = S.stat.dowody || []).push({ krok: S.nrKroku || 0, scisle: true, klasa: r.klasa, klucz: String(r.klucz).slice(0, 13), ...dowod });
+      if (!dowod.ok) return { ok: false, powod: dowod.powod };
     }
     return { ok: true };
   });
@@ -1122,7 +1240,7 @@ async function w4(S, A, B, kont, { warianty = ['PO-A', 'PO-B'], opisz = null, ru
           wynik.w4p.push({ wariant, klucz: r.klucz, ...p });
           wynik.r4n += 1;
         }
-        w.ok = punktStaly && d.every((r) => r.dozwolona) && w.w4p.every((p) => p.ok);
+        w.ok = punktStaly && d.every((r) => r.dozwolona && r.dozwolona !== 'dowód') && w.w4p.every((p) => p.ok);
         if (opisz) w.opis = await opisz(A1, B1);
         if (!w.ok) wynik.ok = false;
         wynik.warianty.push(w);
@@ -1717,10 +1835,10 @@ describe('A ≡ B, blok deterministyczny p. 2: scenariusze stomb', () => {
     // (b) po spoczynku: D(A, B)
     expect(await spoczynek(S, u.A, u.B), 'spoczynek w ≤ 4 rundach').not.toBe(null);
     const [a, b] = [kanon(await eksport(u.A)), kanon(await eksport(u.B))];
-    expect(opisD(await sklasyfikuj(D(a, b), a, b, { tabela: 'p6' }), u.n, 'A', 'B'), '(b) D(A, B) po spoczynku zdarzeń: karta X (z x) tylko na A, x pod Z tylko na B').toEqual([
-      'karta X: tylko A',
-      'wersja X/x: tylko A',
-      'wersja Z/x: tylko B',
+    expect(opisD(await sklasyfikuj(D(a, b), a, b, { tabela: 'p6' }), u.n, 'A', 'B'), '(b) D(A, B) po spoczynku zdarzeń: karta X (z x) tylko na A, x pod Z tylko na B — klasa „miejsce wizyty po „Scal pacjentów”” (E3-PR0a)').toEqual([
+      'karta X: tylko A [miejsce wizyty po „Scal pacjentów”]',
+      'wersja X/x: tylko A [miejsce wizyty po „Scal pacjentów”]',
+      'wersja Z/x: tylko B [miejsce wizyty po „Scal pacjentów”]',
     ]);
     // (c) W4 (PO-A i PO-B): na obu Z zawiera x (55 kg, rev 2), karty X nie ma
     const gdzieX = async (U) => { const k = kanon(await eksport(U)); const z = (k.patients || []).find((p) => p.patientId === u.Z); const sx = z && z.snapshots.find((q) => q.snapshotId === u.x); return { X: kartaW(k, u.X), Zx: sx ? { kg: sx.payload.user.weight, rev: sx.rev } : null }; };
@@ -2007,7 +2125,7 @@ async function przebiegKat(nazwa, kol, tryb, ziarno) {
   const wynik = { widok: widoki(st), stan: skrot(st), pelny: st, oczekujace: oczekujace(), zdarzen: S.stat.zdarzen, h1: S.stat.h1, h2: S.stat.h2, braki: S.braki.length, warunkiBledne: u.warunkiBledne };
   // Wyrocznia: po samych zdarzeniach (W1) albo w świecie samych blobów (bloby), na trzech urządzeniach.
   const swiatWyr = tryb === 'blob' ? 'bloby' : 'W1';
-  wynik.wyr = wyrOcena(S, swiatWyr, `p5 ${swiatWyr}`, await wyrWidoki(S, U), { przebieg: nazwa });
+  wynik.wyr = wyrOcena(S, swiatWyr, `p5 ${swiatWyr}`, await wyrWidoki(S, U));
   // Etykiety encji (karty i wersje katalogu; głowy „Scal pacjentów” — „m” z chwilą zapisu, jak widok) do literałów E1.
   const etyk = (r) => {
     const [x, y] = r.klucz.split(/[/|]/);
@@ -2045,7 +2163,7 @@ async function przebiegKat(nazwa, kol, tryb, ziarno) {
     }
     const st4 = await stan();
     wynik.w4 = { widok: widoki(st4), stan: skrot(st4), pelny: st4, rund, stabilny, pary };
-    wynik.wyrW4 = wyrOcena(S, 'W4', 'p5 W4', await wyrWidoki(S, U), { przebieg: nazwa });
+    wynik.wyrW4 = wyrOcena(S, 'W4', 'p5 W4', await wyrWidoki(S, U));
   }
   return wynik;
 }
@@ -2491,7 +2609,9 @@ const KAT_ZNANE = {
 };
 // Wyrocznia „nie zginęła ostatnia zmiana” w p. 5 (zmierzone; charakterystyka dzisiejszego stanu): [przebieg] = zbiór
 // „klasa | świat” naruszeń po samych zdarzeniach (W1), po W4 i w świecie samych blobów; przebieg spoza listy — bez
-// naruszeń. Naprawa (E3-PR0, E3-PR0e) przepisuje ten literał.
+// naruszeń. Naprawa (E3-PR0 i osobny PR etapu E3-PR0 dla starej karty po „Scal pacjentów”) przepisuje ten literał.
+// Q8-obca-2 (decyzja właściciela 3a z 2026-11-15) — klasy z mechanizmu: P5 (wpisy Kosza pod starą kartą X) i E1
+// (obecność) (ostatnia wersja karty Y), bez osobnej klasy przebiegu.
 const KAT_WYR = {
   'E4b-1 K←C,P←K': ['E4b (stara karta po „Scal pacjentów”) | W1'],
   'E4b-1 C←P,C←K': ['E4b (stara karta po „Scal pacjentów”) | W1'],
@@ -2499,7 +2619,7 @@ const KAT_WYR = {
   'kosz-przed C←P,C←K': ['P5 (Kosz pod kartą usuniętą po scaleniu) | W1', 'P5 (Kosz pod kartą usuniętą po scaleniu) | W4', 'P5 (Kosz pod kartą usuniętą po scaleniu) | bloby'],
   'kosz-po K←C,P←K': ['P5 (Kosz pod kartą usuniętą po scaleniu) | W1', 'P5 (Kosz pod kartą usuniętą po scaleniu) | W4', 'P5 (Kosz pod kartą usuniętą po scaleniu) | bloby'],
   'kosz-po C←P,C←K': ['P5 (Kosz pod kartą usuniętą po scaleniu) | W1', 'P5 (Kosz pod kartą usuniętą po scaleniu) | W4', 'P5 (Kosz pod kartą usuniętą po scaleniu) | bloby'],
-  'kosz-po-2 K←C,P←K': ['E4b (stara karta po „Scal pacjentów”) | bloby', 'P5 (Kosz pod kartą usuniętą po scaleniu) | W1', 'P5 (Kosz pod kartą usuniętą po scaleniu) | W4', 'P5 (Kosz pod kartą usuniętą po scaleniu) | bloby'],
+  'kosz-po-2 K←C,P←K': ['P5 (Kosz pod kartą usuniętą po scaleniu) | W1', 'P5 (Kosz pod kartą usuniętą po scaleniu) | W4', 'P5 (Kosz pod kartą usuniętą po scaleniu) | bloby', 'kosz-po-2 (stara karta z ostatnią wersją przy samych blobach) | bloby'],
   'kosz-po-2 C←P,C←K': ['P5 (Kosz pod kartą usuniętą po scaleniu) | W1', 'P5 (Kosz pod kartą usuniętą po scaleniu) | W4', 'P5 (Kosz pod kartą usuniętą po scaleniu) | bloby'],
   'npret-pin K←C,P←K': ['npret (przypięta wizyta przeżywa przycięcie) | W1'],
   'npret-K K←C,P←K': ['npret (przypięta wizyta przeżywa przycięcie) | W1'],
@@ -2510,8 +2630,8 @@ const KAT_WYR = {
   'E1-popr-C C←P,C←K': ['E1 (obecność) | W1', 'E1 (obecność) | W4', 'E1 (obecność) | bloby'],
   'E1-C K←C,P←K': ['E1 (obecność) | W1', 'E1 (obecność) | W4', 'E1 (obecność) | bloby'],
   'E1-C C←P,C←K': ['E1 (obecność) | W1', 'E1 (obecność) | W4', 'E1 (obecność) | bloby'],
-  'Q8-obca-2 K←C,P←K': ['Q8-obca-2 | W1', 'Q8-obca-2 | W4', 'Q8-obca-2 | bloby'],
-  'Q8-obca-2 C←P,C←K': ['Q8-obca-2 | W1', 'Q8-obca-2 | W4', 'Q8-obca-2 | bloby'],
+  'Q8-obca-2 K←C,P←K': ['E1 (obecność) | W1', 'E1 (obecność) | W4', 'E1 (obecność) | bloby', 'P5 (Kosz pod kartą usuniętą po scaleniu) | W1', 'P5 (Kosz pod kartą usuniętą po scaleniu) | W4', 'P5 (Kosz pod kartą usuniętą po scaleniu) | bloby'],
+  'Q8-obca-2 C←P,C←K': ['E1 (obecność) | W1', 'E1 (obecność) | W4', 'E1 (obecność) | bloby', 'P5 (Kosz pod kartą usuniętą po scaleniu) | W1', 'P5 (Kosz pod kartą usuniętą po scaleniu) | W4', 'P5 (Kosz pod kartą usuniętą po scaleniu) | bloby'],
 };
 const KAT_WYNIKI = {};
 describe('A ≡ B, blok deterministyczny p. 5: katalog kosza (zdarzenia wobec blobu, W4)', () => {
@@ -2531,21 +2651,28 @@ describe('A ≡ B, blok deterministyczny p. 5: katalog kosza (zdarzenia wobec bl
         KAT_WYNIKI[klucz] = { ...wynik, zmiana, e1: w4.e1, zd: w4.zd };
         if (process.env.E2_AB_P5) appendFileSync(process.env.E2_AB_P5, JSON.stringify({ klucz, ...wynik, zmiana, e1: w4.e1, zdZnane: w4.zd, w4ok: w4.ok, w4pary: w4.pary, blobPary: Object.fromEntries(Object.entries(bl.pary).map(([k, d]) => [k, d.map(skrotRoznicy)])), zd: { ...zd, pelny: undefined, wyr: undefined, wyrW4: undefined, w4: { ...zd.w4, pelny: undefined, pary: undefined } }, pelny: { zdarzenia: zd.pelny, blob: bl.pelny, w4: zd.w4.pelny }, wyrocznia: zbiorWyr([...zd.wyr, ...zd.wyrW4, ...bl.wyr]) }) + '\n');
         expect({ warunki: [zd.warunkiBledne, bl.warunkiBledne], oczekujace: zd.oczekujace, braki: zd.braki }, 'warunki kroków katalogu, kolejki dostarczone, nośnik').toEqual({ warunki: [false, false], oczekujace: false, braki: 0 });
-        expect(wynik, `literał p. 5: ${klucz}`).toEqual(KAT_LITERALY[klucz]);
+        // Wyrocznia „nie zginęła ostatnia zmiana”: po zdarzeniach (W1), po W4 i w świecie samych blobów — każde naruszenie
+        // z klasą z tabeli wyjątków (w świecie z listy klasy), a zbiór (klasa, świat) = literał KAT_WYR. Asercje miękkie
+        // (expect.soft) przed literałami: komunikat CI ma i literał, i werdykt wyroczni.
+        const wyrP5 = [...zd.wyr, ...zd.wyrW4, ...bl.wyr];
+        expect.soft(wyrCzerwone(wyrP5), `wyrocznia p. 5 (${klucz}): naruszenia bez klasy z tabeli wyjątków`).toEqual([]);
+        expect.soft(zbiorWyr(wyrP5), `wyrocznia p. 5 (${klucz}): zbiór (klasa, świat)`).toEqual(KAT_WYR[klucz] || []);
+        expect.soft(wynik, `literał p. 5: ${klucz}`).toEqual(KAT_LITERALY[klucz]);
         expect(w4.e1, `E1-katalog po W4 (${klucz})`).toEqual(KAT_E1[klucz] || []);
         expect(w4.zd, `ZNANA RÓŻNICA (zdarzenia) po W4 (${klucz}): dokładnie klucze Q8_ZDARZENIA`).toEqual(Q8_ZDARZENIA[klucz] || []);
         expect(w4.ok, `W4 (${klucz}): różnice po pełnej wymianie\n${JSON.stringify(w4.pary, null, 1)}`).toBe(true);
-        // Wyrocznia „nie zginęła ostatnia zmiana”: po zdarzeniach (W1), po W4 i w świecie samych blobów — każde naruszenie
-        // z klasą z tabeli wyjątków (w świecie z listy klasy), a zbiór (klasa, świat) = literał KAT_WYR.
-        const wyrP5 = [...zd.wyr, ...zd.wyrW4, ...bl.wyr];
-        expect(wyrCzerwone(wyrP5), `wyrocznia p. 5 (${klucz}): naruszenia bez klasy z tabeli wyjątków`).toEqual([]);
-        expect(zbiorWyr(wyrP5), `wyrocznia p. 5 (${klucz}): zbiór (klasa, świat)`).toEqual(KAT_WYR[klucz] || []);
         if (SCISLE) {
           // Tryb ścisły (decyzja 3a): widok po samych zdarzeniach = widok po W4; wyrocznia — w W1 żadnego naruszenia,
           // którego nie ma też po W4 albo w świecie samych blobów.
+          // Widok p. 5 zawiera też listę nagrobków pacjentów („| nagr …”): różnica tylko w niej (karty i Kosz równe) to
+          // osobna przyczyna „tylko nagrobki pacjentów” (czy ją dopuścić jak R2, R4n i D7 — decyzja właściciela).
           const poza = new Set([...zd.wyrW4, ...bl.wyr].map(WYR.kluczNaruszenia));
+          // widok: napis (ten sam na trzech urządzeniach) albo { P, K, C } — porównanie po urządzeniach
+          const bezNagr = (w) => JSON.stringify(KAT_URZ.map((n) => (typeof w === 'string' ? w : w[n]).replace(/ \| nagr .*$/, '')));
+          const rownyWidok = JSON.stringify(zd.widok) === JSON.stringify(zd.w4.widok);
           const scisle = [
-            ...(JSON.stringify(zd.widok) === JSON.stringify(zd.w4.widok) ? [] : [{ przyczyna: 'widok po zdarzeniach ≠ widok po W4', klasa: KAT_E1[klucz] ? E1 : Q8_ZDARZENIA[klucz] ? ZR_ZD : null }]),
+            ...(rownyWidok ? [] : bezNagr(zd.widok) === bezNagr(zd.w4.widok) ? [{ przyczyna: 'tylko nagrobki pacjentów: widok po zdarzeniach ≠ widok po W4', klasa: null }]
+              : [{ przyczyna: 'widok po zdarzeniach ≠ widok po W4', klasa: KAT_E1[klucz] ? E1 : Q8_ZDARZENIA[klucz] ? ZR_ZD : null }]),
             ...zd.wyr.filter((x) => !poza.has(WYR.kluczNaruszenia(x))).map((x) => ({ przyczyna: 'wyrocznia: W1 poza W4 i blobami', klasa: x.klasa, et: `${x.urz} ${x.encja} ${x.et} ${x.rodzaj}` })),
           ];
           if (WYR_PLIK && scisle.length) appendFileSync(WYR_PLIK, JSON.stringify({ typ: 'scisle', swiat: `p5 ${klucz}`, scisle }) + '\n');
@@ -2686,6 +2813,16 @@ async function p6r4(S, { zC = false } = {}) {
   const C = zC ? await urzadzenie(S, 'C', A) : null; // C: kopia sprzed kosza (R5-E1)
   return { S, A, B, C, P: r1.patientId, Q, v: r1.snapshotId, w: r2.snapshotId, n: new Map([[r1.patientId, 'P'], [Q, 'Q'], [r1.snapshotId, 'v'], [r2.snapshotId, 'w']]) };
 }
+// Karta P z dwiema wizytami o jawnych identyfikatorach (fikcyjne): v — jedyny stan wizyty V1, w — wizyty V2.
+async function p6wizyty(S) {
+  const A = await urzadzenie(S, 'A');
+  const wiz = (id) => ({ version: 1, visitId: id, patientId: null, clinicalDateISO: '2026-03-02', createdAtISO: new Date(Date.now()).toISOString(), origin: 'explicit' });
+  krok(); const r1 = await A.v.savePatient({ ...naglowek(1, { masa: 20 }), visit: wiz('fac0a000-0000-4000-8000-00000000a0e1') }, { dedup: false });
+  krok(); const r2 = await A.v.savePatient({ ...naglowek(1, { wzrost: 125, masa: 21 }), visit: wiz('fac0a000-0000-4000-8000-00000000a0e2') }, { dedup: false, patientId: r1.patientId, forceNewSnapshot: true });
+  krok(); ustawStan(A, await eksport(A));
+  const B = await urzadzenie(S, 'B', A);
+  return { S, A, B, P: r1.patientId, v: r1.snapshotId, w: r2.snapshotId, n: new Map([[r1.patientId, 'P'], [r1.snapshotId, 'v'], [r2.snapshotId, 'w']]) };
+}
 async function p6gwiazdka(u, U, sid, tak) { krok(60e3); await mutacja(u.S, U, tak ? 'gwiazdka' : 'odpięcie', () => U.v.setSnapshotPinned(gdzie(U, sid).patientId, sid, tak)); }
 async function p6usunPacjenta(u, U, pid) { krok(60e3); await mutacja(u.S, U, 'usuń pacjenta', () => U.v.removePatient(pid)); }
 async function p6przywroc(u, U, sid) {
@@ -2786,6 +2923,22 @@ const P6 = {
     await p6usunNotatke(u, u.B); await p6spoczynek(u, t);
     await p6notatka(u, u.B, 'wskrzeszona na B'); await p6spoczynek(u, t);
     krok(60e3); await p6dostawa(u, u.B, u.C, t); await p6dostawa(u, u.A, u.C, t); await p6dostawa(u, u.C, u.A, t); await p6dostawa(u, u.C, u.B, t);
+  } },
+  // E3-PR0a: nagrobek retencji bez ochrony wizyt (bez visitIdentity i visitCipher — jak od starszej aplikacji, która
+  // wykonuje własną retencję; docs/PATIENT_VISITS.md, „Zgodność i wycofanie”) dla v, jedynego stanu swojej wizyty,
+  // przychodzi do B pełnym ładunkiem (mergeSyncPayload, poza dziennikiem zdarzeń). Ochrona odbiorcy (P-TRWALE-WIZYTY:
+  // retencja nie usuwa ostatniego stanu wizyty) zostawia v na B; po spoczynku v na obu. Wyrocznia: v nie znika (w historii
+  // nie ma operacji, która by ją zdejmowała).
+  'nagrobek retencji bez ochrony wizyt dla jedynego stanu wizyty v na B': { baza: p6wizyty, kroki: async (u, t) => {
+    await popraw(u, u.A, u.w, 23); await p6spoczynek(u, t);
+    krok(60e3);
+    const sn = (await u.B.v.getPatient(u.P)).snapshots;
+    expect(new Set(sn.map((q) => q.payload.visit && q.payload.visit.visitId)).size, 'v i w — różne wizyty karty P').toBe(2);
+    const v = sn.find((q) => q.snapshotId === u.v);
+    const nagrobek = { patientId: u.P, snapshotId: u.v, deletedAtISO: new Date(Date.now()).toISOString(), savedAtISO: v.savedAtISO, updatedAtISO: v.savedAtISO, rev: 0, powod: 'retencja' };
+    await u.B.v.mergeSyncPayload({ patients: [], snapshotTombstones: [nagrobek] });
+    ustawStan(u.B, await eksport(u.B));
+    await p6spoczynek(u, t);
   } },
 };
 // Skutek kliniczny notatki n (scenariusze „notatka pod inną kartą”): pod którą kartą leży, jaka treść, czy karta jest
@@ -3028,6 +3181,19 @@ const P6_LITERALY = {
       CA: [],
     },
   },
+  // E3-PR0a: nagrobek retencji bez ochrony wizyt (jak od starszej aplikacji) dla v, jedynego stanu swojej wizyty, na B:
+  // v zostaje na obu (ochrona odbiorcy, P-TRWALE-WIZYTY). Po samych zdarzeniach nagrobek bez treści jest tylko na B
+  // (przyszedł pełnym ładunkiem, poza dziennikiem; okno Kosza go nie pokazuje), po W4 i przy samych blobach bez różnicy.
+  'nagrobek retencji bez ochrony wizyt dla jedynego stanu wizyty v na B': {
+    zdarzenia: ['kosz v|P: tylko B'],
+    w4: {
+      A: 'karty P[v:20 w:23] | Kosz - | notatki -',
+      B: 'karty P[v:20 w:23] | Kosz - | notatki -',
+      r4n: 0,
+      w4p: [],
+    },
+    bloby: [],
+  },
 };
 async function p6swiat(nr, sc, tryb) {
   ustaw(START);
@@ -3073,14 +3239,14 @@ describe('A ≡ B, blok deterministyczny p. 6: znane klasy i dalsze ciągi (lite
         const w = await w4Trzy(u.S, [u.A, u.B, u.C], u.n);
         wyrOcena(u.S, 'W4', 'p6 W4 (trzy)', w.wyr);
         delete w.wyr;
-        expect(w.ok, 'W4 (trzy urządzenia)\n' + JSON.stringify(w, null, 1)).toBe(true);
+        expect.soft(w.ok, 'W4 (trzy urządzenia)\n' + JSON.stringify(w, null, 1)).toBe(true);
         wynik.w4 = { rund: w.rund, ...w.opis };
       } else {
         const opisz = async (A1, B1) => ({ A: await kliniczny(A1, u.n), B: await kliniczny(B1, u.n), ...(sc.notatki ? { skutekA: await skutekNotatki(A1, u), skutekB: await skutekNotatki(B1, u) } : {}), wyr: await wyrWidokiKlonow({ A: A1, B: B1 }) });
         const w = await w4(u.S, u.A, u.B, { tabela: 'p6' }, { opisz });
         for (const x of w.warianty) { wyrOcena(u.S, 'W4', `p6 W4 ${x.wariant}`, x.opis.wyr); delete x.opis.wyr; }
-        expect(w.ok, 'W4\n' + JSON.stringify(w.warianty, null, 1)).toBe(true);
-        expect(w.warianty[1].opis, 'W4: PO-B ≡ PO-A').toEqual(w.warianty[0].opis);
+        expect.soft(w.ok, 'W4\n' + JSON.stringify(w.warianty, null, 1)).toBe(true);
+        expect.soft(w.warianty[1].opis, 'W4: PO-B ≡ PO-A').toEqual(w.warianty[0].opis);
         wynik.w4 = { ...w.warianty[0].opis, r4n: w.r4n, w4p: w.w4p.map((x) => x.ok) };
       }
       // Do E2-PR3c4 scenariusze „notatka pod inną kartą” sprawdzały tu negatyw tabel (3.6) na prawdziwej różnicy; od
@@ -3097,18 +3263,19 @@ describe('A ≡ B, blok deterministyczny p. 6: znane klasy i dalsze ciągi (lite
       wyrOcena(ub.S, 'bloby', 'p6 bloby', await wyrWidoki(ub.S, urzWyr(ub)));
       const wyrP6 = [...wyrZd, ...(ub.S.wyrNaruszenia || [])];
       // K6 (od E2-PR3c1): po pełnej wymianie stan kliniczny jak w świecie samych blobów (bez utraty poprawki).
-      if (sc.klinicznieBloby) expect({ A: wynik.w4.A, B: wynik.w4.B }, `W4 = stan kliniczny samych blobów: ${nazwa}`).toEqual(wynik.blobyKlinicznie);
+      if (sc.klinicznieBloby) expect.soft({ A: wynik.w4.A, B: wynik.w4.B }, `W4 = stan kliniczny samych blobów: ${nazwa}`).toEqual(wynik.blobyKlinicznie);
       P6_WYNIKI[nazwa] = wynik;
       if (process.env.E2_AB_P6) appendFileSync(process.env.E2_AB_P6, JSON.stringify({ nazwa, ...wynik, wyrocznia: zbiorWyr(wyrP6) }) + '\n');
-      expect(wynik, `literał p. 6: ${nazwa}`).toEqual(P6_LITERALY[nazwa]);
-      expect(wyrCzerwone(wyrP6), `wyrocznia p. 6 (${nazwa}): naruszenia bez klasy z tabeli wyjątków`).toEqual([]);
-      expect(zbiorWyr(wyrP6), `wyrocznia p. 6 (${nazwa}): zbiór (klasa, świat)`).toEqual(P6_WYR[nazwa] || []);
+      // Asercje miękkie (expect.soft): komunikat CI ma i werdykt wyroczni, i literał.
+      expect.soft(wyrCzerwone(wyrP6), `wyrocznia p. 6 (${nazwa}): naruszenia bez klasy z tabeli wyjątków`).toEqual([]);
+      expect.soft(zbiorWyr(wyrP6), `wyrocznia p. 6 (${nazwa}): zbiór (klasa, świat)`).toEqual(P6_WYR[nazwa] || []);
+      expect.soft(wynik, `literał p. 6: ${nazwa}`).toEqual(P6_LITERALY[nazwa]);
       if (SCISLE) {
         // Tryb ścisły: W1 = ∅ poza klasami niewidocznymi z dowodem; wyrocznia — w W1 żadnego naruszenia, którego nie ma
         // też po W4 albo w świecie samych blobów.
         const poza = new Set(wyrP6.filter((x) => x.swiat !== 'W1').map(WYR.kluczNaruszenia));
         scisle.push(...wyrZd.filter((x) => x.swiat === 'W1' && !poza.has(WYR.kluczNaruszenia(x))).map((x) => ({ przyczyna: 'wyrocznia: W1 poza W4 i blobami', klasa: x.klasa, klucz: `${x.urz} ${x.encja} ${x.et} ${x.rodzaj}` })));
-        if (WYR_PLIK && scisle.length) appendFileSync(WYR_PLIK, JSON.stringify({ typ: 'scisle', swiat: `p6 ${nazwa}`, scisle }) + '\n');
+        if (WYR_PLIK && (scisle.length || (u.S.stat.dowody || []).length)) appendFileSync(WYR_PLIK, JSON.stringify({ typ: 'scisle', swiat: `p6 ${nazwa}`, scisle, dowody: u.S.stat.dowody || [] }) + '\n');
         expect(scisle, `tryb ścisły p. 6 (${nazwa})`).toEqual([]);
       }
     }, 120_000);
@@ -3406,20 +3573,23 @@ const syntStan = ({ karty = ['P'], nagrobki = [], wersje = [], kosz = [], notatk
 // Klasy różnic jednego rodzaju encji w D(X, Y).
 const klasyRodzaju = (X, Y, rodzaj, kont = {}) => D(X, Y).filter((r) => r.rodzaj === rodzaj).map((r) => klasa(r, X, Y, kont));
 // Tabela 3.6 jako literał (wiersz = klasa; kolumny: W1/W2r/W2s profilu podstawowego, W4 profilu podstawowego i p. 1–4 i P1e,
-// W4 p. 5, W1/W2r/W2s profilu pełnego, W4 profilu pełnego, p. 6). '—' = czerwień. R4n w W4 p. 5: '—' (W4p nie jest tam
-// liczony — P4); E1-katalog w W4 p. 5 dodatkowo tylko dla listy E1_KATALOG, createdAtISO-notatki w W4 pełnym tylko przy
-// notatce z „Zostaw notatkę” (dozwolona()).
+// W4 p. 5, W1/W2r/W2s profilu pełnego, W4 profilu pełnego, p. 6). '—' = czerwień, 'dowód' — zieleń tylko z dowodem
+// (dowodWpisu). R4n w W4 p. 5: '—' (W4p nie jest tam liczony — P4); E1-katalog w W4 p. 5 dodatkowo tylko dla listy
+// E1_KATALOG, createdAtISO-notatki w W4 pełnym tylko przy notatce z „Zostaw notatkę” (dozwolona()).
 const TABELA_3_6 = {
   R2: ['tak', '—', '—', 'raport', '—', 'tak'],
   R3: ['—', '—', '—', '—', '—', '—'], // E3-PR0a: zero wystąpień
   R4a: ['tak', '—', '—', 'raport', '—', 'tak'],
-  R5: ['tak', '—', '—', 'raport', '—', 'tak'],
+  R5: ['dowód', '—', '—', 'raport', '—', 'tak'], // E3-PR0a: w profilu podstawowym z dowodem (dowodWpisu)
   'R4a′': ['—', '—', '—', 'raport', '—', 'tak'],
   R4n: ['tak', 'tak', '—', 'raport', 'tak', 'tak'],
   'createdAtISO-notatki': ['—', '—', '—', '—', '—', '—'], // E3-PR0a: zero wystąpień
-  D7: ['—', '—', '—', 'raport', 'raport', '—'],
+  D7: ['dowód', '—', '—', 'raport', 'raport', '—'], // E3-PR0a: w profilu podstawowym z dowodem (dowodWpisu)
   [E1]: ['—', '—', 'tak', '—', '—', '—'],
   [NPIK]: ['—', '—', '—', '—', '—', '—'], // E3-PR0a: zero wystąpień
+  [MIEJSCE_WIZYTY]: ['—', '—', '—', 'raport', '—', '—'], // E3-PR0a (widoczna)
+  [NAGROBEK_OPROZNIONEJ]: ['—', '—', '—', 'raport', 'raport', '—'], // E3-PR0a (niewidoczna; W4 bez punktu stałego zostaje czerwone)
+  [REKORD_ZLOZONY]: ['—', '—', '—', 'raport', '—', '—'], // E3-PR0a (widoczna)
 };
 const TABELE_3_6 = ['podstawowy', 'W4', 'W4:p5', 'pelny', 'pelny:W4', 'p6'];
 describe('A ≡ B, klasy 3.6: predykaty (pozytywy i negatywy), tabela DOZWOLONE, negatywy W4 i W4p', () => {
@@ -3474,7 +3644,7 @@ describe('A ≡ B, klasy 3.6: predykaty (pozytywy i negatywy), tabela DOZWOLONE,
     expect(klasyRodzaju(syntStan({ karty: [], kosz: [syntKosz()] }), syntStan({ karty: [], nagrobki: ['P'] }), 'kosz'), 'nagrobek tylko po stronie Y').toEqual([null]);
     expect(klasyRodzaju(X, syntStan({ karty: ['P'], nagrobki: ['P'] }), 'kosz'), 'karta po stronie Y').toEqual([null]);
   });
-  it('createdAtISO-notatki i D7 — tylko pola z definicji; pole spoza listy (także revPary) → brak klasy', () => {
+  it('createdAtISO-notatki i D7 — tylko pola z definicji (od E3-PR0a D7 także z revPary); pole spoza listy → brak klasy', () => {
     const n = (o) => klasyRodzaju(syntStan({ notatki: [syntNotatka()] }), syntStan({ notatki: [syntNotatka(o)] }), 'pnote');
     expect(n({ createdAtISO: T1 })).toEqual(['createdAtISO-notatki']);
     expect(n({ createdAtISO: T1, body: 'Fikcyjna treść 2' }), 'createdAtISO i treść').toEqual([null]);
@@ -3484,7 +3654,36 @@ describe('A ≡ B, klasy 3.6: predykaty (pozytywy i negatywy), tabela DOZWOLONE,
     expect(k({ rev: 2, updatedAtISO: T1 }, { karty: ['P'], nagrobki: ['P'] }), 'rev, updatedAtISO (karta z nagrobkiem)').toEqual(['D7']);
     expect(k({ koszISO: T1, payload: syntPl({ user: { weight: 21 } }) }), 'koszISO i masa').toEqual([null]);
     expect(k({ koszISO: T1, deletedAtISO: T1 }), 'koszISO i deletedAtISO').toEqual([null]);
-    expect(k({ revPary: 2 }), 'revPary').toEqual([null]);
+    expect(k({ revPary: [[T1, 2]] }), 'revPary (żywa karta)').toEqual(['D7']);
+    expect(k({ revPary: [[T1, 2]], deletedAtISO: T1 }), 'revPary i deletedAtISO (żywa karta)').toEqual([null]);
+  });
+  it('E3-PR0a: R4a′ ze zmianaISO, R5 (opis wpisu Kosza karty usuniętej na obu), miejsce wizyty po „Scal pacjentów”, nagrobek karty opróżnionej, rekord złożony po jednej stronie — pozytywy i negatywy', () => {
+    const zywa = { karty: ['P'] }, martwa = { karty: [], nagrobki: ['P'] };
+    const ko = (o, s) => klasyRodzaju(syntStan({ ...s, kosz: [syntKosz()] }), syntStan({ ...s, kosz: [syntKosz(o)] }), 'kosz');
+    expect(ko({ rev: 2, zmianaISO: T1, payload: syntPl({ user: { weight: 40 } }) }, zywa), 'R4a′ z zmianaISO').toEqual(['R4a′']);
+    expect(ko({ deletedAtISO: T1, rev: 2, gwiazdka: true, zmianaISO: T1 }, martwa), 'R5 (opis), karta nieobecna i nagrobek na obu').toEqual(['R5']);
+    expect(ko({ deletedAtISO: T1, payload: syntPl({ user: { weight: 40 } }) }, martwa), 'R5 (opis) z inną treścią').toEqual([null]);
+    expect(ko({ deletedAtISO: T1 }, zywa), 'opis wpisu żywej karty (deletedAtISO)').toEqual([null]);
+    expect(klasyRodzaju(syntStan({ ...martwa, kosz: [syntKosz()] }), syntStan({ karty: [], kosz: [syntKosz({ deletedAtISO: T1 })] }), 'kosz'), 'R5 (opis), nagrobek po jednej stronie').toEqual([null]);
+    // miejsce wizyty: x pod P tylko po stronie X, pod Q tylko po stronie Y, ta sama masa i gwiazdka
+    const karty = (k) => ({ patients: Object.entries(k).map(([pid, w]) => ({ patientId: pid, snapshots: w })), tombstones: [] });
+    const x = syntWersja({ snapshotId: 'x' }), y = syntWersja({ snapshotId: 'y' });
+    const X = karty({ P: [x], Q: [y] }), Y = karty({ Q: [y, x] });
+    expect(D(X, Y).map((r) => `${r.rodzaj} ${r.klucz} ${klasa(r, X, Y)}`).sort(), 'karta i wersje').toEqual([`karta P ${MIEJSCE_WIZYTY}`, `wersja P/x ${MIEJSCE_WIZYTY}`, `wersja Q/x ${MIEJSCE_WIZYTY}`]);
+    const Y2 = karty({ Q: [y, syntWersja({ snapshotId: 'x', payload: syntPl({ user: { weight: 40 } }) })] });
+    expect(D(X, Y2).filter((r) => r.rodzaj === 'wersja').map((r) => klasa(r, X, Y2)), 'inna masa pod Q — wersje bez klasy').toEqual([null, null]);
+    // nagrobek karty opróżnionej: nagrobek P tylko po jednej stronie, karty P nie ma po żadnej
+    const N = { patients: [], tombstones: [{ patientId: 'P', deletedAtISO: T0 }] }, bez = { patients: [], tombstones: [] };
+    expect(D(N, bez).map((r) => klasa(r, N, bez)), 'nagrobek tylko po jednej stronie').toEqual([NAGROBEK_OPROZNIONEJ]);
+    const zKarta = karty({ P: [y] });
+    expect(D(N, zKarta).filter((r) => r.rodzaj === 'ptomb').map((r) => klasa(r, N, zKarta)), 'karta P po drugiej stronie').toEqual([null]);
+    // rekord złożony: ta sama chwila zmiany, późniejsza chwila treści z rejestrem złożonym i wyższą rev
+    const zl = (o) => syntWersja({ updatedAtISO: T1, ...o });
+    const RA = syntStan({ wersje: [zl({ rev: 3, payload: syntPl({ user: { weight: 17 }, _contentAtISO: T1, _pinnedState: { zl: true } }) })] });
+    const RB = syntStan({ wersje: [zl({ rev: 1, payload: syntPl({ _contentAtISO: T0 }) })] });
+    expect(klasyRodzaju(RA, RB, 'wersja'), 'rekord złożony').toEqual([REKORD_ZLOZONY]);
+    const RA2 = syntStan({ wersje: [zl({ rev: 3, payload: syntPl({ user: { weight: 17 }, _contentAtISO: T1 }) })] });
+    expect(klasyRodzaju(RA2, RB, 'wersja'), 'bez rejestru złożonego').toEqual([null]);
   });
   it('D: ścieżki zawsze niepuste — różnica bez wskazanej ścieżki (duplikat tożsamości w tablicy) daje (wartość) i brak klasy (P7)', () => {
     const nagr = (arr) => ({ patientNoteTombstones: [{ id: 't', rev: 1, deletedAtISO: T0, x: arr }] });
@@ -3518,6 +3717,25 @@ describe('A ≡ B, klasy 3.6: predykaty (pozytywy i negatywy), tabela DOZWOLONE,
       'R4-a′': { ok: false, widokRowny: false, rowne: false, zniknal: true },
       'R4n (R4-b)': { ok: true, widokRowny: true, rowne: true, zniknal: true },
     });
+  }, 120_000);
+  it('dowód niewidoczności wpisu Kosza (dowodWpisu, E3-PR0a): R4n (R4-b) — „Przywróć” na obu, ten sam wynik; R4-a — wiersz okna Kosza różny; R5-0 — wpis karty, której nie ma, poza oknem; klucz z sufiksem #n; różnica spoza Kosza i nierozstrzygnięty dowód — czerwień', async () => {
+    const wynik = {};
+    for (const nazwa of ['R4n (R4-b)', 'R4-a', 'R5-0']) {
+      const u = await p6swiat(nrP6(nazwa), P6[nazwa], 'zdarzenia');
+      const d = await kr_cicho(u.S, async () => dowodWpisu(u.S, u.A, u.B, `${u.v}|${u.P}#2`));
+      wynik[nazwa] = { ok: d.ok, przywroc: d.przywroc };
+      await sprzatnijUrzadzenia(); vi.restoreAllMocks();
+    }
+    expect(wynik).toEqual({
+      'R4n (R4-b)': { ok: true, przywroc: 'ok' },
+      'R4-a': { ok: false, przywroc: null },
+      'R5-0': { ok: true, przywroc: 'poza oknem' },
+    });
+    const d = await potwierdz({ stat: {} }, null, null, [{ rodzaj: 'wersja', klucz: 'P/v', klasa: 'D7', dozwolona: 'dowód' }, { rodzaj: 'wersja', klucz: 'P/w', klasa: 'R2', dozwolona: 'tak' }]);
+    expect(d.map((r) => [r.klasa, r.dozwolona]), 'dowód tylko dla wpisu Kosza; reszta bez zmian').toEqual([['D7', false], ['R2', 'tak']]);
+    expect(dozwolona('D7', { rodzaj: 'kosz', klucz: 'v|P' }, { tabela: 'podstawowy' }), 'D7 w profilu podstawowym — tylko z dowodem').toBe('dowód');
+    const bezDowodu = { w3Bledy: [], w4Bledy: [], w4p: [], brakSpoczynku: [], w2sLista: [], w1Bledy: [{ krok: 1, roznice: [{ klucz: 'v|P', klasa: 'D7', dozwolona: 'dowód' }] }], w2rBledy: [] };
+    expect(zielenProfilu(bezDowodu).W1BezKlasy.length, 'D7 bez rozstrzygniętego dowodu — czerwień').toBe(1);
   }, 120_000);
   it('W4 i W4 trzech urządzeń — R4n bez udanego W4p jest czerwone (wynik W4p nie jest pomijany)', async () => {
     const u = await p6swiat(nrP6('R4n (R4-b)'), P6['R4n (R4-b)'], 'zdarzenia');
@@ -3775,7 +3993,7 @@ async function punktSpoczynku(S, A, B, { ostatni = false } = {}) {
   }
   let d1 = null;
   if (wpis) {
-    d1 = await w1Klasy(S, A, B, { tabela: S.profil });
+    d1 = await potwierdz(S, A, B, await w1Klasy(S, A, B, { tabela: S.profil }));
     Object.assign(wpis, { klasy: klasyPunktu(d1), roznice: d1.map(skrotRoznicy) });
   }
   // Wyrocznia „nie zginęła ostatnia zmiana” (E3-PR0a): W1 na żywych urządzeniach, W4 na klonach (opisz w4).
@@ -3846,7 +4064,7 @@ async function przebiegZiarna(ziarno, profil, { koalescencja = null, w2s = true,
   await punktSpoczynku(S, A, B, { ostatni: true });
   const naruszenia = S.wyrNaruszenia || [];
   const wynik = { ziarno, profil, ...(koalescencja ? { koalescencja, w2s } : {}), ...(nazwa ? { nazwa } : {}), mutacji, ms: Math.round(performance.now() - t0), ...S.stat, braki: S.braki, dziennikZostaw: S.dziennik.filter((l) => / zostaw notatkę /.test(l)).length,
-    wyr: { punkty: S.wyrPunkty || 0, naruszen: naruszenia.length, czerwone: wyrCzerwone(naruszenia), klasy: WYR.podsumuj(naruszenia), zbior: zbiorWyr(naruszenia) } };
+    wyr: { punkty: S.wyrPunkty || 0, naruszen: naruszenia.length, czerwone: wyrCzerwone(naruszenia), klasy: WYR.podsumuj(naruszenia), zbior: zbiorWyr(naruszenia), liczby: licznikWyr(naruszenia) } };
   WYNIKI[nazwa || (koalescencja ? `${profil}:${koalescencja}` : profil)].push(wynik);
   if (process.env.E2_AB_WYNIKI) appendFileSync(process.env.E2_AB_WYNIKI, JSON.stringify({ ...wynik, dziennik: S.dziennik, ...(S.kolejkaLog ? { kolejka: S.kolejkaLog } : {}) }) + '\n');
   if (WYR_PLIK) appendFileSync(WYR_PLIK, JSON.stringify({ typ: 'ziarno', swiat: S.wyrSwiat, ziarno, mutacji, spoczynki: S.stat.spoczynki, ...wynik.wyr, scisle: S.stat.scisle }) + '\n');
@@ -3905,6 +4123,25 @@ const ZNANE_W2R = [[1, 26, 'A', ['R2']], [1, 43, 'A', ['R2']], [1, 47, 'A', ['R2
 const ZNANE_W4_R4N = 0; // normalizacje R4n w W4 w ziarnach domyślnych
 const DOMYSLNE_ZIARNA = [1, 2, 3, 4, 5, 6, 7, 8];
 const domyslne = (z) => !KROKI && DOMYSLNE_ZIARNA.includes(z);
+// Wyrocznia „nie zginęła ostatnia zmiana” w ziarnach domyślnych (E3-PR0a; zmierzone — charakterystyka dzisiejszego
+// stanu): [profil][ziarno] = liczba naruszeń na parę „klasa | świat” (profil podstawowy i koalescencja — bez naruszeń;
+// ziarno spoza listy — bez naruszeń). Nowe naruszenie także klasy dozwolonej (np. P5 albo E1/E1b w profilu bez „Scal
+// pacjentów”) albo zniknięcie znanego czerwieni test; naprawa (E3-PR0) przepisuje ten literał.
+const ZNANE_WYR = {
+  podstawowy: {},
+  'podstawowy:ogon': {},
+  pelny: {
+    1: { 'P5 (Kosz pod kartą usuniętą po scaleniu) | W1': 2, 'P5 (Kosz pod kartą usuniętą po scaleniu) | W4': 4, 'E1/E1b (utrata wersji nieznanej scalającemu) | W1': 2, 'E1/E1b (utrata wersji nieznanej scalającemu) | W4': 4 },
+    2: { 'E1/E1b (utrata wersji nieznanej scalającemu) | W1': 8, 'E1/E1b (utrata wersji nieznanej scalającemu) | W4': 12 },
+  },
+};
+const licznikWyr = (lista) => { const o = {}; for (const x of lista) { const k = `${x.klasa || 'bez klasy'} | ${x.swiat}`; o[k] = (o[k] || 0) + 1; } return o; };
+// Asercje wyroczni ziarna (miękkie — przed zielenią profilu, żeby komunikat CI miał oba werdykty): naruszenia bez klasy
+// z tabeli wyjątków; dla ziaren domyślnych — literał ZNANE_WYR (liczba naruszeń na klasę i świat).
+function wyrocznieZiarna(w, profil, zLiteralem) {
+  expect.soft(w.wyr.czerwone, `wyrocznia „nie zginęła ostatnia zmiana” (ziarno ${w.ziarno}): naruszenia bez klasy z tabeli wyjątków`).toEqual([]);
+  if (zLiteralem) expect.soft(w.wyr.liczby, `wyrocznia: ZNANE_WYR (${profil}, ziarno ${w.ziarno})`).toEqual((ZNANE_WYR[profil] || {})[w.ziarno] || {});
+}
 // Zieleń profilu (3.3): W3, W4, W4p, W2s „inne” = ∅, spoczynek w ≤ 4 rundach, klasyfikator W1/W2r bez klasy
 // niedozwolonej, W2r ⊆ W1.
 function zielenProfilu(w) {
@@ -3923,9 +4160,9 @@ describe('A ≡ B, właściwość: profil podstawowy (W3, W4, W4p — zieleń; W
     it(`ziarno ${z}`, async () => {
       const w = await przebiegZiarna(z, 'podstawowy');
       expect(w.spoczynki, 'co najmniej jeden punkt spoczynku').toBeGreaterThan(0);
-      expect(zielenProfilu(w), opisBledow(w)).toEqual(ZIELEN);
-      expect(w.wyr.czerwone, `wyrocznia „nie zginęła ostatnia zmiana” (ziarno ${z}): naruszenia bez klasy z tabeli wyjątków`).toEqual([]);
-      if (SCISLE) expect(w.scisle, `tryb ścisły (ziarno ${z})`).toEqual([]);
+      wyrocznieZiarna(w, 'podstawowy', domyslne(z));
+      expect.soft(zielenProfilu(w), opisBledow(w)).toEqual(ZIELEN);
+      if (SCISLE) expect.soft(w.scisle, `tryb ścisły (ziarno ${z})`).toEqual([]);
       if (domyslne(z)) {
         expect(listaW1(w), `ZNANE_W1 (ziarno ${z})\n${opisBledow(w)}`).toEqual(ZNANE_W1.filter((x) => x[0] === z));
         expect(listaW2r(w), `ZNANE_W2R (ziarno ${z})`).toEqual(ZNANE_W2R.filter((x) => x[0] === z));
@@ -3962,9 +4199,9 @@ describe('A ≡ B, koalescencja kolejki (reguła ogona) — profil podstawowy be
     it(`ziarno ${z}`, async () => {
       const w = await przebiegZiarna(z, 'podstawowy', { koalescencja: 'ogon', w2s: false });
       expect(w.spoczynki, 'co najmniej jeden punkt spoczynku').toBeGreaterThan(0);
-      expect(zielenProfilu(w), opisBledow(w)).toEqual(ZIELEN);
-      expect(w.wyr.czerwone, `wyrocznia „nie zginęła ostatnia zmiana” (ziarno ${z}): naruszenia bez klasy z tabeli wyjątków`).toEqual([]);
-      if (SCISLE) expect(w.scisle, `tryb ścisły (ziarno ${z})`).toEqual([]);
+      wyrocznieZiarna(w, 'podstawowy:ogon', !KROKI && DOMYSLNE_ZIARNA_KOAL.includes(z));
+      expect.soft(zielenProfilu(w), opisBledow(w)).toEqual(ZIELEN);
+      if (SCISLE) expect.soft(w.scisle, `tryb ścisły (ziarno ${z})`).toEqual([]);
       if (!KROKI && DOMYSLNE_ZIARNA_KOAL.includes(z)) expect(listaW1(w), `ZNANE_W1_KOAL (ziarno ${z})\n${opisBledow(w)}`).toEqual(ZNANE_W1_KOAL.filter((x) => x[0] === z));
     }, 180_000);
   }
@@ -3987,6 +4224,7 @@ describe('A ≡ B, koalescencja kolejki (reguła ogona) — profil podstawowy be
 // (reguła ogona), W2s jak bez łączenia.
 const KOAL_PELNY = process.env.E2_AB_KOAL === 'ogon' ? 'ogon' : null;
 const ZIARNA_PELNY = Array.from({ length: Number(process.env.E2_AB_ZIARNA) || 2 }, (_, i) => START_ZIAREN + i);
+const DOMYSLNE_ZIARNA_PELNY = [1, 2]; // ziarna CI (literał ZNANE_WYR.pelny)
 function raportPelny(lista) {
   const s = suma(lista);
   const bezKlasy = [];
@@ -4002,10 +4240,10 @@ describe('A ≡ B, właściwość: profil pełny (charakterystyka; W3 i W4 z kla
     it(`ziarno ${z}`, async () => {
       const w = await przebiegZiarna(z, 'pelny', { koalescencja: KOAL_PELNY });
       expect(w.spoczynki, 'co najmniej jeden punkt spoczynku').toBeGreaterThan(0);
-      expect({ W3: w.w3Bledy, W4: w.w4Bledy.map((b) => b.krok), W4p: w.w4p.filter((p) => !p.ok), brakSpoczynku: w.brakSpoczynku }, opisBledow(w))
+      wyrocznieZiarna(w, 'pelny', !KROKI && !KOAL_PELNY && DOMYSLNE_ZIARNA_PELNY.includes(z));
+      expect.soft({ W3: w.w3Bledy, W4: w.w4Bledy.map((b) => b.krok), W4p: w.w4p.filter((p) => !p.ok), brakSpoczynku: w.brakSpoczynku }, opisBledow(w))
         .toEqual({ W3: [], W4: [], W4p: [], brakSpoczynku: [] });
-      expect(w.wyr.czerwone, `wyrocznia „nie zginęła ostatnia zmiana” (ziarno ${z}): naruszenia bez klasy z tabeli wyjątków`).toEqual([]);
-      if (SCISLE) expect(w.scisle, `tryb ścisły (ziarno ${z})`).toEqual([]);
+      if (SCISLE) expect.soft(w.scisle, `tryb ścisły (ziarno ${z})`).toEqual([]);
     }, 600_000);
   }
   it('podsumowanie profilu pełnego (druk do opisu PR; AB2; AB7)', () => {
@@ -4032,9 +4270,9 @@ if (process.env.E2_AB_PROFIL === 'bez-polaczenia') {
       it(`ziarno ${z}`, async () => {
         const w = await przebiegZiarna(z, 'podstawowy', PROFIL_BEZ_POLACZENIA);
         expect(w.spoczynki, 'co najmniej jeden punkt spoczynku').toBeGreaterThan(0);
-        expect(zielenProfilu(w), opisBledow(w)).toEqual(ZIELEN);
-        expect(w.wyr.czerwone, `wyrocznia „nie zginęła ostatnia zmiana” (ziarno ${z}): naruszenia bez klasy z tabeli wyjątków`).toEqual([]);
-        if (SCISLE) expect(w.scisle, `tryb ścisły (ziarno ${z})`).toEqual([]);
+        wyrocznieZiarna(w, 'bez-polaczenia', false);
+        expect.soft(zielenProfilu(w), opisBledow(w)).toEqual(ZIELEN);
+        if (SCISLE) expect.soft(w.scisle, `tryb ścisły (ziarno ${z})`).toEqual([]);
       }, 600_000);
     }
     it('podsumowanie (druk; AB2; AB7)', () => {
