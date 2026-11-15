@@ -92,6 +92,11 @@ Wyniki z oceną i normą można też od razu skopiować do dokumentacji przycisk
     - pojedyncze badanie zostaje bez daty pobrania (wcześniejsza decyzja o usunięciu „Wcześniejszego
       badania” obowiązuje).
 
+13. Stadium w pakiecie, w którym dobiera ono tylko normy katalogu (propozycja po scaleniu PR7, przyjęta
+    2026-11-14: „ok, zgadzam się, koduj”; bez osobnej makiety — wygląd z punktów 11 i 12): każdy pakiet,
+    który ma badanie z normą według Tannera (IGF-1, IGFBP-3, DHEA-S, androstendion, estradiol i inne), dostaje
+    ten sam wiersz stadium, ten sam edytor i to samo jedno pytanie o dzień pobrania co pakiet z LH.
+
 ## Zasady, które obowiązują każdy etap
 
 - Pakiet nie ma własnych norm, wzorów ani współczynników. Ocena i zakres pochodzą z silnika pojedynczego
@@ -115,7 +120,8 @@ Wyniki z oceną i normą można też od razu skopiować do dokumentacji przycisk
 | PR4 | Kreator własnych pakietów, etap 1 (punkt 9): lista rozwijana pakietów, kreator w zakładce, zapis na koncie, badania „bez oceny w pakiecie” z łączem do pojedynczego badania, ocena pozostałych jak w domyślnym pojedynczym badaniu | scalony 2026-11-13 (PR #946) |
 | PR5 | Każde konto widzi tylko swoje pakiety (punkt 10): osobna kopia pakietów na urządzeniu dla każdego konta, jednorazowe przypisanie starej wspólnej kopii właściwemu kontu | scalony 2026-11-13 (PR #948) |
 | PR6 | Kreator, etap 2 (punkt 11): ocena pokwitaniowa LH, FSH, inhibiny B i testosteronu całkowitego w pakiecie — druga, niewidoczna instancja formularza pojedynczego badania, osie wieku i stadium w karcie wyniku, jedno stadium i jeden wybór „Cykl / menopauza” dla pakietu, zapis tej samej koperty oceny co „Przypnij do wizyty”, zapis z operatorem, norma z wydruku zamiast oceny | scalony 2026-11-14 (PR #950) |
-| PR7 | Ocena w dniu pobrania (punkt 12): wiek z daty urodzenia na dzień pobrania dla całego pakietu, jedno pytanie o stadium z karty, stan oczekiwania w kartach wyników, zapis oceny jako aktualnej dla dnia pobrania; silniki, normy i polityki bez zmian | ten PR |
+| PR7 | Ocena w dniu pobrania (punkt 12): wiek z daty urodzenia na dzień pobrania dla całego pakietu, jedno pytanie o stadium z karty, stan oczekiwania w kartach wyników, zapis oceny jako aktualnej dla dnia pobrania; silniki, normy i polityki bez zmian | scalony 2026-11-14 (PR #952) |
+| PR8 | Stadium w pakiecie bez LH, FSH i testosteronu (punkt 13): wiersz stadium z notką, korekta stadium i pytanie o dzień pobrania także tam, gdzie stadium dobiera tylko normy katalogu; formularz ustawiony na LH jest nośnikiem oceny pokwitania, LH nie jest oceniane | ten PR |
 
 ## Otwarte kwestie do decyzji przy kolejnych etapach
 
@@ -145,11 +151,13 @@ Wyniki z oceną i normą można też od razu skopiować do dokumentacji przycisk
 - PR6: estradiol u dorosłej kobiety nadal wymaga pojedynczego badania; wspólny wybór „Cykl / menopauza” także
   dla estradiolu — do decyzji.
 - PR6: wynik z pakietu nie niesie odniesienia z wykresu hormonów (wykres jest w pojedynczym badaniu).
-- PR7: **pakiet bez LH, FSH i testosteronu** nie ma wiersza stadium, więc przy dawnej próbce nie pyta o nie —
-  norma katalogu według Tannera (np. sam estradiol) bierze stadium z karty jak dotąd. Wiersz stadium
-  i pytanie także w takim pakiecie — do decyzji.
+- PR7: **pakiet bez LH, FSH i testosteronu** — rozstrzygnięte w PR8 (punkt 13): taki pakiet ma wiersz
+  stadium i pytanie.
 - PR7: **leczenie GnRHa i wywiad pokwitania** pochodzą z karty w stanie na dziś; pakiet nie pyta o ich stan
   w dniu pobrania.
 - PR7: **wiek w dniach u noworodka** dla norm katalogu — pakiet liczy ukończone miesiące, jak karta pacjenta;
   przedziały dobowe wymagałyby osobnej decyzji (i tej samej dokładności przy pobraniu dziś).
 - PR7: łącze „uzupełnij datę urodzenia” prowadzące wprost do danych pacjenta — dziś jest sama podpowiedź.
+- PR8: przy pobraniu dziś norma katalogu bierze z karty także **wcześniejszą ocenę stadium** (reguła katalogu
+  sprzed pakietów), a silnik pokwitaniowy LH/FSH — tylko bieżącą; pytanie o potwierdzenie także dla
+  wcześniejszej oceny przy pobraniu dziś — do decyzji.
