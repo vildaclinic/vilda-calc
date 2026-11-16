@@ -93,6 +93,20 @@ const inneUrzadzenie = (page, patientId, noteId, body) => page.evaluate((d) => w
     category: 'observation',
   }), { patientId, noteId, body });
 
+// E3-PR0b2a: zapis z innego urządzenia, który dociera scaleniem PRZY TYM SAMYM numerze wersji.
+// Ładunek niesie nową treść i późniejszą chwilę zapisu, rev zostaje ten sam; scalanie przyjmuje
+// późniejszą wersję. Sam baseRev tego nie widział — arkusz zapisywał bez konfliktu.
+const inneUrzadzenieTenSamNumer = (page, noteId, body) => page.evaluate(async (d) => {
+  const v = window.VildaVault;
+  const ladunek = JSON.parse(JSON.stringify(await v.exportSyncPayload()));
+  const n = ladunek.patientNotes.find((x) => x.id === d.noteId);
+  n.body = d.body;
+  n.updatedAtISO = new Date(Math.max(Date.parse(n.updatedAtISO) + 1, Date.now())).toISOString();
+  await v.mergeSyncPayload(ladunek);
+  const po = await v.getPatientNote(d.noteId);
+  return { rev: po.rev, body: po.body };
+}, { noteId, body });
+
 test.describe('G14b — równoległa edycja tej samej notatki', () => {
   test('zapis zatrzymuje się i pokazuje wybór, a sejf zostaje nietknięty', async ({ page }) => {
     await otworzZKontem(page);
@@ -149,6 +163,30 @@ test.describe('G14b — równoległa edycja tej samej notatki', () => {
       'jedna nakładka, nie dwie').toHaveCount(1);
     const wSejfie = await notatki(page, patientId);
     expect(wSejfie[0].body, 'nic nie zapisano po drodze').toBe('Wersja z innego urządzenia.');
+  });
+
+  test('inne urządzenie zapisuje później przy tym samym numerze wersji: zapis zatrzymuje się, „Nadpisz moją wersją” zapisuje mój tekst', async ({ page }) => {
+    await otworzZKontem(page);
+    const patientId = await zalozPacjenta(page);
+    const { noteId, rev } = await otworzIstniejaca(page, patientId);
+
+    await tresc(page).fill('Moja wersja z tego urządzenia.');
+    const po = await inneUrzadzenieTenSamNumer(page, noteId, 'Wersja z innego urządzenia przy tym samym numerze.');
+    expect(po.rev, 'scalenie nie zmienia numeru wersji').toBe(rev);
+    expect(po.body, 'scalenie przyjęło późniejszą wersję').toBe('Wersja z innego urządzenia przy tym samym numerze.');
+
+    await page.getByRole('button', { name: 'Zapisz zmiany' }).click();
+    await expect(page.getByText('Nowsza wersja tej notatki jest już w sejfie.'),
+      'arkusz zna chwilę zapisu wersji, z którą się otworzył').toBeVisible();
+    expect((await notatki(page, patientId))[0].body, 'późniejsza wersja nietknięta')
+      .toBe('Wersja z innego urządzenia przy tym samym numerze.');
+
+    await page.getByRole('button', { name: 'Nadpisz moją wersją' }).click();
+    await expect(page.getByRole('button', { name: 'Zapisz zmiany' }),
+      '„Nadpisz” podnosi też chwilę zapisu — drugi zapis nie wraca konfliktem').toHaveCount(0);
+    const wSejfie = await notatki(page, patientId);
+    expect(wSejfie.length).toBe(1);
+    expect(wSejfie[0].body).toBe('Moja wersja z tego urządzenia.');
   });
 
   test('zwykła edycja bez kolizji zapisuje się bez pytania', async ({ page }) => {

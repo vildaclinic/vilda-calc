@@ -24,7 +24,7 @@ function dane() {
     { body: 'kontrola po redukcji' });
   const ft41 = nota('ft4-1', '2026-04-08', { test: 'fT4 (wolna tyroksyna)', testKey: 'ft4', value: '1,2 ng/dL', valueNum: 1.2, unit: 'ng/dL', norm: '0,8–1,8 ng/dL' });
   const ft42 = nota('ft4-2', '2026-06-02', { test: 'fT4 (wolna tyroksyna)', testKey: 'ft4', value: '17', valueNum: 17, unit: 'pmol/L' });
-  const zlecenie = { id: 'zlecenie-1', patientId: PID, title: 'Kontrola TSH', body: '', category: 'wynik-badania', dueDateISO: '2026-06-16', labResult: { testKey: 'tsh' } };
+  const zlecenie = { id: 'zlecenie-1', patientId: PID, title: 'Kontrola TSH', body: '', category: 'wynik-badania', dueDateISO: '2026-06-16', labResult: { testKey: 'tsh' }, updatedAtISO: '2026-06-10T09:00:00.000Z' };
   const lek = { id: 'lek-1', patientId: PID, title: 'Fikcyjny tiamazol', category: 'treatment', clinicalDateISO: '2026-05-01', medication: { name: 'Tiamazol', action: 'change', dose: '10 mg' } };
   return {
     series: [
@@ -1203,7 +1203,9 @@ describe('zakładka Badania: „Opisz wynik” przy oczekującym wyniku', () => 
     await vi.waitFor(() => expect(komunikat(env)).not.toBeNull());
     expect(vault.saveReminderOutcome).toHaveBeenCalledOnce();
     const prosba = vault.saveReminderOutcome.mock.calls[0][0];
-    expect(prosba).toMatchObject({ id: 'zlecenie-1', patientId: PID, baseRev: 0, action: 'result', dateISO: '2026-06-16',
+    // E3-PR0b2a: obok baseRev idzie chwila zapisu wpisu odczytanego tuż przed prośbą — sejf przy niej
+    // porównuje chwilę, nie sam numer wersji.
+    expect(prosba).toMatchObject({ id: 'zlecenie-1', patientId: PID, baseRev: 0, baseUpdatedAtISO: '2026-06-10T09:00:00.000Z', action: 'result', dateISO: '2026-06-16',
       text: 'Fikcyjny opis: obraz prawidłowy.', test: 'Kontrola TSH' });
     expect(prosba.operationId).toMatch(/^[A-Za-z0-9_-]{1,64}$/);
     // Zamknięcie robi sejf w tej samej operacji — zakładka nie woła osobno completePatientNote.
