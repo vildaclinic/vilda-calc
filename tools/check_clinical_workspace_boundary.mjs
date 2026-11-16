@@ -17,9 +17,11 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 // patient merge), E2-PR3c5 (a version changed after a valid trash entry and pruned later invalidates that entry)
 // E2-PR4b (the event-log gate also opens with the synchronization switch), E2-PR4c (the last merge time is
 // recorded when the event drain reaches the head), E2-PR4e2 (the event-log outbox and the storage mode or account
-// removal), E2-PR5c (a discarded outbox row leaves a pair in the sweep memory) and E2-PR5d (an accepted outbox row
-// leaves its pair at once; docs/clinical/ALGORITHMS.md).
-const BASE = '55dddd3c950f056d2dda769f09e2781d1212f40230ac14e74231bdb4f671ccf6';
+// removal), E2-PR5c (a discarded outbox row leaves a pair in the sweep memory), E2-PR5d (an accepted outbox row
+// leaves its pair at once) and E3-PR0b2a (a patient note editor, reminder outcome or Klirens result change compares
+// the save time of the version shown to the doctor; status buttons read the note under its lock;
+// docs/clinical/ALGORITHMS.md).
+const BASE = '08d15da49d87d7db290c592d5351946d93d96787f7d56e2fdf1ff3bb0d35ef49';
 const START = '/* BEGIN VILDA CLINICAL WORKSPACE NATIVE V1 */\n';
 const END = '/* END VILDA CLINICAL WORKSPACE NATIVE V1 */\n';
 const digest = value => createHash('sha256').update(value).digest('hex');
