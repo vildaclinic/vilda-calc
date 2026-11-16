@@ -70,6 +70,9 @@
 .vilda-home-workspace #userSection fieldset.user-card > div:empty { display: none; }
 .vilda-home-workspace .vhome-empty-action-home { display: none; }
 .vilda-home-workspace .vhome-form-content { padding: var(--space-20px); }
+/* Keep registry provenance in the native model without repeating it in the
+ * compact home form. Validation errors remain visible. */
+.vilda-home-workspace #userSection :is(#tozsamoscNote, #dobNote) { display: none !important; }
 .vilda-home-workspace .vhome-card-heading {
   display: flex;
   justify-content: space-between;
@@ -167,6 +170,13 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-12px);
 }
+/* Shared finish for both data shortcuts and both form actions. This also
+ * overrides the native Tanner button's explicit removal of its shadow. */
+html.vilda-home-workspace #userSection :is(#tannerToggleBtn, #vhomePerinatalButton, #clearAllDataBtn, #metabolicSummaryBtn) {
+  border: var(--border-hairline) solid #dbe7e9 !important;
+  border-radius: var(--radius-10) !important;
+  box-shadow: var(--shadow-button-glass) !important;
+}
 .vilda-home-workspace :is(#tannerToggleBtn, #vhomePerinatalButton).vhome-input-shortcut {
   position: relative;
   box-sizing: border-box;
@@ -181,8 +191,6 @@
   min-height: 104px !important;
   margin: 0 !important;
   padding: var(--space-12px) 30px var(--space-12px) var(--space-14px) !important;
-  border: var(--border-hairline) solid #dbe7e9 !important;
-  border-radius: var(--radius-10) !important;
   background: #fbfdfd !important;
   color: var(--text) !important;
   font-size: 15px !important;
@@ -250,8 +258,6 @@
   min-height: 70px;
   margin: 0 !important;
   padding: var(--space-10px) !important;
-  border: var(--border-hairline) solid var(--line) !important;
-  border-radius: var(--radius-10) !important;
   font-size: 15px !important;
   line-height: 1.4;
   text-align: center;
@@ -382,7 +388,6 @@
     min-height: 64px !important;
     padding: 9px var(--space-24px) 9px var(--space-10px) !important;
     gap: 3px;
-    border-radius: var(--radius-9) !important;
     font-size: 14px !important;
     line-height: 20px !important;
   }
