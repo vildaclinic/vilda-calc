@@ -12,10 +12,14 @@ const FIRST_STEP = 'Fikcyjne otrzymanie dokumentu';
 
 async function openNativePage(page) {
   const requests = [];
-  await page.route('https://sync.vildasync.com/**', async route => {
-    requests.push(new URL(route.request().url()).pathname);
-    await route.abort();
-  });
+  // P-SYNC-DOMENA: synchronizacja V1 idzie na sync.vildasync.com, a rejestracja konta V2 (/account-root/v1/) na
+  // związany adres workers.dev (PatientWorkspaceServiceOrigin) — przechwytujemy oba.
+  for (const host of ['https://sync.vildasync.com', 'https://vilda-sync.maciej-4b9.workers.dev']) {
+    await page.route(`${host}/**`, async route => {
+      requests.push(new URL(route.request().url()).pathname);
+      await route.abort();
+    });
+  }
   await page.addInitScript(() => {
     localStorage.setItem('vilda-terms-accepted-v1', JSON.stringify({ version: 1, acceptedAtISO: new Date().toISOString() }));
     localStorage.setItem('analyticsConsent', 'denied');
