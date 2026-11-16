@@ -4510,6 +4510,7 @@ async function liczEcho(S, Y, zrodlo, odcinki, haki, opis, { natychmiast = false
     wyslijOs(S, Y, 'echo2a', w2a.wiersze.map((x) => x.bajty));
   }
   L.ms += performance.now() - t0;
+  if (S.echoKlony && zrodlo !== 'w4' && (w.koperty.length || w2a.koperty.length)) await echoNaKlonach(S, Y, w.koperty, w2a.koperty);
   return w.koperty;
 }
 // Licznik partii dostawy X→Y (wołany z dostawa po ustawStan): strony ≤ 200 zdarzeń (strona scalana naraz; minuta slotu
@@ -4841,8 +4842,9 @@ describe.skipIf(!ODSYL)('A ≡ B, licznik odsyłania: determinizm (ziarno z licz
 // Zmienne: E2_AB_FLOTA=221,276|0|N (domyślnie 221,276), E2_AB_ZIARNA_FLOTA221 (1,2,3), E2_AB_ZIARNA_FLOTA276 (2; też
 //   kontrola N), E2_AB_FLOTA_PROFIL=pelny, E2_AB_SWIAT_FLOTA, E2_AB_PROG_D221, E2_AB_D221=0, E2_AB_RET_C=biezaca,
 //   E2_AB_BLOB_C=publikuje, E2_AB_SLAD=<prefiks identyfikatora>[,…] (stan wersji i wpisu Kosza na A, B, C po każdym
-//   wierszu dziennika), E2_AB_WYNIKI (wiersze typ 'flota221' | 'flota276' | 'flotaN'). Literały tylko dla przebiegu
-//   domyślnego (FLOTA_DOMYSLNA) i ziaren CI.
+//   wierszu dziennika), E2_AB_WYNIKI (wiersze typ 'flota221' | 'flota276' | 'flotaN'), E2_AB_ECHO_KLONY=wszystkie (echo
+//   na klonach każdego scalenia z echem; poza programem świata — echoNaKlonach w bloku scenariuszy floty niżej). Literały
+//   tylko dla przebiegu domyślnego (FLOTA_DOMYSLNA) i ziaren CI.
 const FLOTA_ENV = (process.env.E2_AB_FLOTA || '221,276').trim();
 const FLOTY = FLOTA_ENV === '0' ? [] : FLOTA_ENV.split(',').map((s) => s.trim()).filter(Boolean);
 const listaZiaren = (zmienna, dom) => (process.env[zmienna] ? process.env[zmienna].split(',').map(Number).filter(Number.isFinite) : dom);
@@ -5280,6 +5282,7 @@ async function przebiegFloty(flota, ziarno, { profil = FLOTA_PROFIL, blobC = BLO
   S.losD = rng((S.ziarno ^ 0x0D2210) >>> 0);
   S.losB = rng((S.ziarno ^ 0x0B10B5) >>> 0);
   podepnijSlad(S, [A, B, C]);
+  S.flotaUrz = [A, B, C]; S.echoKlony = ECHO_KLONY && !!S.odsyl; // echo na klonach (ręcznie; blok scenariuszy floty niżej)
   // Strażnik pól zawsze obecnych we flocie: nagrobek retencji bez treści, który urządzenie starszej aplikacji ma bez
   // visitIdentity (wersja zapisana i przycięta retencją v1 na nim — bieżąca aplikacja nie ma z czego wyznaczyć tożsamości
   // i przechowuje wpis bez zmian), nie jest zapisem bieżącej wersji — poza strażnikiem, liczony osobno (druk).
@@ -5520,4 +5523,853 @@ describe.skipIf(!FLOTY.length)('A ≡ B, flota ze starszą aplikacją: strażnik
     await dostawa(S, A, B, { w2s: false });
     expect({ porownan: S.stat.haki.porownan - haki0, noweB: B.Q.slice(q2).map((e) => e.kind) }, 'ptomb po pełnej kopii — bez drugiego haka').toEqual({ porownan: 1, noweB: [] });
   }, 30_000);
+});
+
+// ── Echo na klonach (scenariusze deterministyczne floty z polem echo; E2_AB_ECHO_KLONY=wszystkie — losowe floty) ─────
+// Koperty echa jednego scalenia na Y (warstwa wyk i naiwna po2a; liczEcho) stosowane na świeżych klonach pozostałych
+// urządzeń floty (S.flotaUrz), w cichoLicznik (klony, szyfrowanie i identyfikatory poza programem świata). Drugi rząd
+// i dalsze obiegi liczone tylko na kluczach encji tych kopert (LO.kluczeKopert):
+// - bieżące urządzenie U: każda koperta osobno przez applyEncryptedEvent na klonie U′, echo U′ → klony.drugiRzad (wyk)
+//   i klony.drugiRzad2a (po2a); przykłady (druk): do 8 z warstwy po2a, wyk — do 16;
+// - urządzenie starszej aplikacji U: koperty na klonie U′ (221 — applyEncryptedDelta, jak /changes bez dziennika; 276 —
+//   applyEncryptedEvent; przezStarsza.zapisow — ile razy eksport U′ się przy tym zmienił), potem pełna kopia U′ do
+//   świeżych klonów bieżących urządzeń: wiersze wyk → przezStarsza.doNadawcy (klon Y) albo przezStarsza.doInnych,
+//   wiersze po2a → przezStarsza.po2a; obiegi (tylko wyk): echo Y′ po pełnej kopii U′ wraca do U′ i dalej, wiersze
+//   obiegu i → obiegi[i − 1], dłużej niż LO.MAKS_OBIEGOW → ponadObiegi.
+const ECHO_KLONY = process.env.E2_AB_ECHO_KLONY === 'wszystkie';
+async function kopertaNaKlonie(U2, E, k) {
+  const { env } = await E.ev.encryptEvent(k);
+  if (U2.app === 'S221') return U2.v.applyEncryptedDelta(env);
+  return U2.ev.applyEncryptedEvent(env);
+}
+async function echoNaKlonach(S, Y, koperty, koperty2a) {
+  const t0 = performance.now();
+  const K = S.odsyl.klony;
+  K.prob += 1;
+  const opis = (lista) => lista.map((r) => `${r.kind}${r.wLadunku ? '' : '(spoza)'} ${r.klasa} [${r.sc.join(',')}]`).join('; ');
+  await cichoLicznik(S, async () => {
+    for (const U of S.flotaUrz.filter((V) => V !== Y)) {
+      K.urzadzen += 1;
+      if (!starszaAplikacja(U)) {
+        for (const [warstwa, lista0] of [[WYK, koperty], ['po2a', koperty2a]]) {
+          if (!lista0.length) continue;
+          const U2 = await klonBiezacy(S, U, 'ek');
+          try {
+            for (const k of lista0) {
+              const przed = await eksport(U2);
+              await kopertaNaKlonie(U2, U2, k);
+              const lista = LO.wierszeEcha(S.odsyl.echo(przed, await eksport(U2), k, { klucze: LO.kluczeKopert([k]) }).filter((r) => r[warstwa]));
+              K[warstwa === 'po2a' ? 'drugiRzad2a' : 'drugiRzad'] += lista.length;
+              if (lista.length && K.przyklady.length < (warstwa === 'po2a' ? 8 : 16)) K.przyklady.push(`[${warstwa}] ${urzOs(Y)}→${urzOs(U)}′ ${k.event.kind}: ${opis(lista)}`);
+            }
+          } finally { await zamknij(U2); }
+        }
+        continue;
+      }
+      const z221 = U.app === 'S221';
+      for (const [warstwa, lista0] of [[WYK, koperty], ['po2a', koperty2a]]) {
+        if (!lista0.length) continue;
+        K.przezStarsza.prob += 1;
+        const U2 = await klon(S, U, 'ek'), E = await klonBiezacy(S, Y, 'ek');
+        try {
+          const u0 = JSON.stringify(kanon(await eksport(U2)));
+          for (const k of lista0) await kopertaNaKlonie(U2, E, k);
+          const blob = json(await U2.v.exportSyncPayload());
+          if (JSON.stringify(kanon(blob)) !== u0) K.przezStarsza.zapisow = (K.przezStarsza.zapisow || 0) + 1;
+          const klucze = LO.kluczeKopert(lista0);
+          for (const N of S.flotaUrz.filter((V) => !starszaAplikacja(V))) {
+            const N2 = await klonBiezacy(S, N, 'ek');
+            try {
+              const przed = await eksport(N2);
+              await N2.v.mergeSyncPayload(json(blob));
+              const lista = LO.wierszeEcha(S.odsyl.echo(przed, await eksport(N2), blob, { z221, klucze }).filter((r) => r[warstwa]));
+              if (warstwa === 'po2a') K.przezStarsza.po2a += lista.length;
+              else K.przezStarsza[N === Y ? 'doNadawcy' : 'doInnych'] += lista.length;
+              if (lista.length && K.przyklady.length < (warstwa === 'po2a' ? 8 : 16)) K.przyklady.push(`[${warstwa}] ${urzOs(Y)}→${urzOs(U)}′ (${lista0.length}) → pełna kopia → ${urzOs(N)}′: ${opis(lista)}`);
+            } finally { await zamknij(N2); }
+          }
+        } finally { await zamknij(U2, E); }
+      }
+      if (!koperty.length) continue;
+      const U3 = await klon(S, U, 'eo'), Y3 = await klonBiezacy(S, Y, 'eo');
+      try {
+        let lista0 = koperty;
+        for (let i = 0; i < LO.MAKS_OBIEGOW && lista0.length; i += 1) {
+          for (const k of lista0) await kopertaNaKlonie(U3, Y3, k);
+          const blob = json(await U3.v.exportSyncPayload());
+          const przed = await eksport(Y3);
+          await Y3.v.mergeSyncPayload(json(blob));
+          const po = await eksport(Y3);
+          const lista = LO.wierszeEcha(S.odsyl.echo(przed, po, blob, { z221, klucze: LO.kluczeKopert(lista0) }).filter((r) => r[WYK]));
+          K.obiegi[i] += lista.length;
+          const poE = encje(po), nast = [];
+          for (const r of lista) { const k = await kopertaEcha(Y3, r, poE); if (k && !k.blad) nast.push(k); }
+          lista0 = nast;
+        }
+        if (lista0.length) K.ponadObiegi += 1;
+      } finally { await zamknij(U3, Y3); }
+    }
+  });
+  K.ms += performance.now() - t0;
+}
+
+// ══ Flota ze starszą aplikacją: scenariusze deterministyczne (E3-PR0b) ══════════════════════════════════════════════
+// Jeden świat na scenariusz: swiat(800 + nr) i Math.random z rng(0x6800 + nr), nr — pozycja w P6F (nowy scenariusz
+// tylko na końcu listy — inaczej przesuwa światy istniejących; asercja nr < 80, światy 880–899 ma blok do decyzji niżej).
+// A i B — bieżący sejf (bliźniaki); C — bliźniak A z sejfem starszej aplikacji (221 bez dziennika zdarzeń, 276
+// z dziennikiem; retencja v1) albo bieżący (kontrola C = N). Transport opisuje scenariusz: zdarzenia (dostawa, haki do Q odbiorcy), kolejka do 221
+// (dostawaDoStarszej — applyEncryptedDelta), pełna kopia (scalBlob, licznik: źródło blob221, blob276, blobN). Ocena
+// (p6fOcen): D par (A, B), (B, C), (C, A) na żywych urządzeniach (tabela 'p6', para z C starszej aplikacji — 'flota')
+// i wyrocznia 'p6f W1'; W4 trzech urządzeń na świeżych klonach (w4Trzy: obiegi wymiany PO-A par, D par w tabeli 'p6'
+// albo 'flota') i wyrocznia 'p6f W4' z widokiem C jako widokiem starszej aplikacji (stare). Warunki CI: W4 stabilne
+// i każda różnica par dozwolona, wyrocznia bez naruszeń bez klasy; literały P6F_LITERALY (D par po scenariuszu, stan
+// kliniczny po scenariuszu i po W4, D par W4, fakty scenariusza), P6F_WYR (naruszenia wyroczni: świat, urządzenie,
+// encja, rodzaj, klasa) i P6F_ODSYL (licznik: klucz → { wyk, nowe }; w scenariuszach z echem także echo na klonach).
+// Scenariusze ręczne (E2_AB_P6_FLOTA=wszystkie): bloki p. 6 R2-0, R5-E1 i R3-E2 z jednym urządzeniem na 221 oraz
+// kontrole C = N scenariuszy CI — druk, bez literału. Zmiana zbieżności albo wyroczni przepisuje literały.
+const P6F_WSZYSTKIE = process.env.E2_AB_P6_FLOTA === 'wszystkie';
+const P6F_DOMYSLNE = WYR.NORM_VISIT.wlaczona && ODSYL && ODSYL_REGULA === 'T';
+async function p6fUrzadzenia(S, A, app) {
+  const B = await urzadzenie(S, 'B', A);
+  const C = await urzadzenie(S, 'C', A, app === 'N' ? {} : { app });
+  return { B, C };
+}
+// Baza: A — karta P z wizytami v (20 kg) i w (21 kg), z notatką n albo bez; B — bliźniak A; C — bliźniak A z sejfem app.
+async function p6fBaza(S, app, { notatka = false } = {}) {
+  const A = await urzadzenie(S, 'A');
+  krok(); const r1 = await A.d.zapiszKarte(1, { wzrost: 120, masa: 20 });
+  krok(); const r2 = await A.d.zapiszKarte(1, { wzrost: 125, masa: 21, zapis: { patientId: r1.patientId, forceNewSnapshot: true } });
+  let nId = null;
+  if (notatka) { krok(); nId = (await A.v.savePatientNote({ patientId: r1.patientId, title: 'Fikcyjna', body: 'Fikcyjna treść', category: 'inne' })).id; }
+  krok(); ustawStan(A, await eksport(A)); A.Q.length = 0;
+  const { B, C } = await p6fUrzadzenia(S, A, app);
+  return { A, B, C, P: r1.patientId, v: r1.snapshotId, w: r2.snapshotId, nId, n: new Map([[r1.patientId, 'P'], [r1.snapshotId, 'v'], [r2.snapshotId, 'w'], ...(nId ? [[nId, 'n']] : [])]) };
+}
+// Baza retencji: karta P z 8 wizytami z 8 dni (co 2 dni), zegar 54 dni po pierwszej (retencja z parametrami aplikacji
+// zostawia z nich jedną; jak strażnik retencji w starsza-aplikacja-fikstury.test.mjs).
+async function p6fOsiemDni(S, app) {
+  const A = await urzadzenie(S, 'A');
+  const DZIEN = 864e5, t0 = teraz;
+  krok(); const r0 = await A.d.zapiszKarte(1, { wzrost: 100, masa: 20 });
+  const n = new Map([[r0.patientId, 'P'], [r0.snapshotId, 'dz0']]);
+  for (let i = 1; i < 8; i += 1) { ustaw(t0 + i * 2 * DZIEN); n.set((await A.d.zapiszKarte(1, { wzrost: 100 + i, masa: 20 + i, zapis: { patientId: r0.patientId, forceNewSnapshot: true } })).snapshotId, 'dz' + i); }
+  krok(); ustawStan(A, await eksport(A)); A.Q.length = 0;
+  const { B, C } = await p6fUrzadzenia(S, A, app);
+  ustaw(t0 + 54 * DZIEN);
+  return { A, B, C, P: r0.patientId, n };
+}
+// Baza „Scal pacjentów” z wizytami o jawnych identyfikatorach (fikcyjne): karta P z wizytą v (jedyny stan wizyty), karta
+// Q z wizytą w.
+async function p6fDwieKarty(S, app) {
+  const A = await urzadzenie(S, 'A');
+  const wiz = (id) => ({ version: 1, visitId: id, patientId: null, clinicalDateISO: '2026-03-02', createdAtISO: new Date(Date.now()).toISOString(), origin: 'explicit' });
+  krok(); const r1 = await A.v.savePatient({ ...naglowek(1, { masa: 20 }), visit: wiz('fac0a000-0000-4000-8000-00000000f1e1') }, { dedup: false });
+  krok(); const r2 = await A.v.savePatient({ ...naglowek(2, { wzrost: 125, masa: 21 }), visit: wiz('fac0a000-0000-4000-8000-00000000f1e2') }, { dedup: false });
+  krok(); ustawStan(A, await eksport(A)); A.Q.length = 0;
+  const { B, C } = await p6fUrzadzenia(S, A, app);
+  return { A, B, C, P: r1.patientId, Q: r2.patientId, v: r1.snapshotId, w: r2.snapshotId, n: new Map([[r1.patientId, 'P'], [r2.patientId, 'Q'], [r1.snapshotId, 'v'], [r2.snapshotId, 'w']]) };
+}
+// Baza „Scal 5 → 4 → 3”: karta X (3) z dwiema wersjami na A; B, C — bliźniaki.
+async function p6fTrzyKarty(S, app) {
+  const A = await urzadzenie(S, 'A');
+  krok(); const r = await A.d.zapiszKarte(3);
+  krok(); const r2 = await A.d.zapiszKarte(3, { wzrost: 125, zapis: { patientId: r.patientId, forceNewSnapshot: true } });
+  krok(); ustawStan(A, await eksport(A)); A.Q.length = 0;
+  const { B, C } = await p6fUrzadzenia(S, A, app);
+  return { A, B, C, X: r.patientId, n: new Map([[r.patientId, 'X'], [r.snapshotId, 'a'], [r2.snapshotId, 'b']]) };
+}
+const p6fDoC = (u, X) => (u.C.app === 'S221' ? dostawaDoStarszej(u.S, X, u.C) : dostawa(u.S, X, u.C, { w2s: false }));
+const p6fOdC = (u, Y) => (u.C.app === 'S221' ? scalBlob(u.S, u.C, Y) : dostawa(u.S, u.C, Y, { w2s: false }));
+const p6fAB = (u) => spoczynek(u.S, u.A, u.B, { w2s: false });
+// Nowa wersja karty pid na U (etykieta et w mapie u.n); wynik — snapshotId.
+async function p6fNowaWersja(u, U, pid, et, { nr = 1, wzrost = 130, masa: kg = 25, opis = 'nowa wersja' } = {}) {
+  krok(60e3);
+  const r = (await mutacja(u.S, U, `${opis} ${et}`, () => U.d.zapiszKarte(nr, { wzrost, masa: kg, zapis: { patientId: pid, forceNewSnapshot: true } }))).wynik;
+  u.n.set(r.snapshotId, et);
+  return r.snapshotId;
+}
+const p6fUrz = (u) => [u.A, u.B, u.C];
+// Echo na klonach tylko dla scaleń w fn (scenariusz z polem echo; przy wyłączonym liczniku — bez echa).
+async function p6fZEchem(u, fn) {
+  u.S.echoKlony = !!u.S.odsyl;
+  try { return await fn(); } finally { u.S.echoKlony = false; }
+}
+// Fakty: karta P, notatka n, nagrobek notatki (z kartą — deletedWithPatient) na każdym urządzeniu.
+const faktyNotatki = (u) => Object.fromEntries(p6fUrz(u).map((U) => {
+  const t = (U.stan.patientNoteTombstones || []).find((x) => x.id === u.nId);
+  return [U.nazwa, `karta ${kartaW(U.stan, u.P) ? 'jest' : 'brak'}, notatka ${notatkaW(U.stan, u.nId) ? 'jest' : 'brak'}, nagrobek notatki ${t ? (t.deletedWithPatient ? 'z kartą' : 'bez karty') : '-'}`];
+}));
+// Fakty: liczba wersji karty pid na każdym urządzeniu i wpisy retencji.
+const faktyRetencji = (u, pid) => Object.fromEntries(p6fUrz(u).map((U) => [U.nazwa, `wersji ${wersjeKarty(U, pid).length}, wpisów retencji ${(U.stan.snapshotTombstones || []).filter((e) => e.powod === 'retencja').length}`]));
+// Fakty wersji sid: rev, gwiazdka w treści, rejestr gwiazdki, chwila treści — na każdym urządzeniu.
+const faktyWersji = (u, sid) => Object.fromEntries(p6fUrz(u).map((U) => {
+  const p = gdzie(U, sid);
+  const s = p && p.snapshots.find((q) => q.snapshotId === sid);
+  if (!s) return [U.nazwa, 'brak'];
+  const pl = s.payload || {};
+  return [U.nazwa, `karta ${etykieta(u.n, p.patientId)}, rev ${s.rev}, _pinned ${pl._pinned ? 1 : 0}, _pinnedState ${pl._pinnedState ? 'jest' : 'brak'}, _contentAtISO ${pl._contentAtISO ? 'jest' : 'brak'}`];
+}));
+const P6F = {
+  '„Usuń pacjenta” na 221, potem zmiana karty na A: notatka bez ratunku D-21': {
+    ci: true, app: 'S221', baza: (S, app) => p6fBaza(S, app, { notatka: true }),
+    kroki: async (u) => {
+      await p6usunPacjenta(u, u.C, u.P);
+      await p6fNowaWersja(u, u.A, u.P, 'x', { opis: 'nowa wersja (bez wiedzy o usunięciu)' });
+      krok(60e3); await p6fOdC(u, u.A); await p6fOdC(u, u.B); await p6fAB(u); await p6fDoC(u, u.A); await p6fDoC(u, u.B);
+    },
+    fakty: faktyNotatki,
+  },
+  '„Usuń pacjenta” na C, potem zmiana karty na A — C = N (notatka zostaje)': {
+    ci: true, app: 'N', baza: (S, app) => p6fBaza(S, app, { notatka: true }),
+    kroki: async (u) => {
+      await p6usunPacjenta(u, u.C, u.P);
+      await p6fNowaWersja(u, u.A, u.P, 'x', { opis: 'nowa wersja (bez wiedzy o usunięciu)' });
+      krok(60e3); await p6fOdC(u, u.A); await p6fOdC(u, u.B); await p6fAB(u); await p6fDoC(u, u.A); await p6fDoC(u, u.B);
+    },
+    fakty: faktyNotatki,
+  },
+  '„Usuń pacjenta” na A, zmiana karty na 221 — najpierw zdarzenia do C: notatka bez ratunku D-21': {
+    ci: true, app: 'S221', baza: (S, app) => p6fBaza(S, app, { notatka: true }),
+    kroki: async (u) => {
+      await p6usunPacjenta(u, u.A, u.P);
+      await p6fNowaWersja(u, u.C, u.P, 'x', { opis: 'nowa wersja (bez wiedzy o usunięciu)', wzrost: 131, masa: 26 });
+      krok(60e3); await p6fDoC(u, u.A); await p6fDoC(u, u.B);
+      krok(60e3); await p6fOdC(u, u.A); await p6fOdC(u, u.B); await p6fAB(u);
+    },
+    fakty: faktyNotatki,
+  },
+  '„Usuń pacjenta” na A, zmiana karty na 221 — najpierw pełna kopia C (notatka zostaje)': {
+    ci: true, app: 'S221', baza: (S, app) => p6fBaza(S, app, { notatka: true }),
+    kroki: async (u) => {
+      await p6usunPacjenta(u, u.A, u.P);
+      await p6fNowaWersja(u, u.C, u.P, 'x', { opis: 'nowa wersja (bez wiedzy o usunięciu)', wzrost: 131, masa: 26 });
+      krok(60e3); await p6fOdC(u, u.A); await p6fOdC(u, u.B); await p6fAB(u); await p6fDoC(u, u.A); await p6fDoC(u, u.B);
+    },
+    fakty: faktyNotatki,
+  },
+  '„Usuń pacjenta” na A, zmiana karty na C — C = N, najpierw zdarzenia do C (notatka zostaje)': {
+    ci: true, app: 'N', baza: (S, app) => p6fBaza(S, app, { notatka: true }),
+    kroki: async (u) => {
+      await p6usunPacjenta(u, u.A, u.P);
+      await p6fNowaWersja(u, u.C, u.P, 'x', { opis: 'nowa wersja (bez wiedzy o usunięciu)', wzrost: 131, masa: 26 });
+      krok(60e3); await p6fDoC(u, u.A); await p6fDoC(u, u.B);
+      krok(60e3); await p6fOdC(u, u.A); await p6fOdC(u, u.B); await p6fAB(u);
+    },
+    fakty: faktyNotatki,
+  },
+  'Kosz na 221: echo tożsamości wizyty u odbiorcy pełnej kopii i echo na klonach': {
+    ci: true, kontrolaN: true, app: 'S221', echo: true, baza: (S, app) => p6fBaza(S, app),
+    kroki: async (u) => {
+      await doKosza(u, u.C, u.v);
+      krok(60e3); await p6fZEchem(u, () => p6fOdC(u, u.A)); await p6fOdC(u, u.B); await p6fAB(u);
+    },
+  },
+  // Echo wpisu Kosza z gwiazdką (A po koszu B bez wiedzy o gwiazdce; B po gwiazdce A) idzie do C, który ma niewysłaną
+  // nowszą poprawkę tej wizyty; pełna kopia C′ wraca do nadawcy z tą treścią (drugi rząd: 1 wiersz na echo), a echo
+  // tego wiersza przez C już nic nie daje (trzeci rząd 0).
+  'Drugi rząd przez 221: wpis Kosza z gwiazdką z A do C (C z niewysłaną poprawką), pełna kopia C′ do A′': {
+    ci: true, kontrolaN: true, app: 'S221', echo: true, baza: (S, app) => p6fBaza(S, app),
+    kroki: async (u) => {
+      await p6gwiazdka(u, u.A, u.v, true); await p6fDoC(u, u.A);
+      await popraw(u, u.C, u.v, 33);
+      await doKosza(u, u.B, u.v);
+      krok(60e3); await p6fZEchem(u, () => dostawa(u.S, u.B, u.A, { w2s: false }));
+      await p6fAB(u); await p6fDoC(u, u.A); await p6fDoC(u, u.B);
+      krok(60e3); await p6fOdC(u, u.A); await p6fOdC(u, u.B); await p6fAB(u);
+    },
+  },
+  'Retencja na 221 po „Scal pacjentów”: jedyny stan wizyty przeniesionej (recentHours 0)': {
+    ci: true, app: 'S221', baza: p6fDwieKarty,
+    kroki: async (u) => {
+      await scal(u, u.A, u.P, u.Q); await p6fAB(u); await p6fDoC(u, u.A); await p6fDoC(u, u.B);
+      krok(60e3); await mutacja(u.S, u.C, 'retencja Q', () => u.C.v.pruneSnapshotsForPatient(u.Q, { recentHours: 0 }));
+      krok(60e3); await p6fOdC(u, u.A); await p6fOdC(u, u.B); await p6fAB(u);
+    },
+    fakty: (u) => ({ ...faktyRetencji(u, u.Q), v: Object.fromEntries(p6fUrz(u).map((U) => [U.nazwa, gdzie(U, u.v) ? etykieta(u.n, gdzie(U, u.v).patientId) : 'brak'])) }),
+  },
+  'Retencja po „Scal pacjentów” — C = N (bez strat)': {
+    ci: true, app: 'N', baza: p6fDwieKarty,
+    kroki: async (u) => {
+      await scal(u, u.A, u.P, u.Q); await p6fAB(u); await p6fDoC(u, u.A); await p6fDoC(u, u.B);
+      krok(60e3); await mutacja(u.S, u.C, 'retencja Q', () => u.C.v.pruneSnapshotsForPatient(u.Q, { recentHours: 0 }));
+      krok(60e3); await p6fOdC(u, u.A); await p6fOdC(u, u.B); await p6fAB(u);
+    },
+    fakty: (u) => ({ ...faktyRetencji(u, u.Q), v: Object.fromEntries(p6fUrz(u).map((U) => [U.nazwa, gdzie(U, u.v) ? etykieta(u.n, gdzie(U, u.v).patientId) : 'brak'])) }),
+  },
+  'Retencja na 221 z parametrami aplikacji: 8 wizyt z 8 dni sprzed 40–54 dni': {
+    ci: true, kontrolaN: true, app: 'S221', baza: p6fOsiemDni,
+    kroki: async (u) => {
+      await mutacja(u.S, u.C, 'retencja P (24 h)', () => u.C.v.pruneSnapshotsForPatient(u.P, { recentHours: 24 }));
+      krok(60e3); await p6fOdC(u, u.A); await p6fOdC(u, u.B); await p6fAB(u);
+    },
+    fakty: (u) => faktyRetencji(u, u.P),
+  },
+  'Retencja na 276 z parametrami aplikacji: nagrobek retencji idzie zdarzeniem': {
+    ci: true, kontrolaN: true, app: 'S276', baza: p6fOsiemDni,
+    kroki: async (u) => {
+      await mutacja(u.S, u.C, 'retencja P (24 h)', () => u.C.v.pruneSnapshotsForPatient(u.P, { recentHours: 24 }));
+      krok(60e3); await p6fOdC(u, u.A); await p6fOdC(u, u.B); await p6fAB(u);
+    },
+    fakty: (u) => faktyRetencji(u, u.P),
+  },
+  'Retencja na 276 po „Scal 5 → 4 → 3” na A': {
+    ci: true, kontrolaN: true, app: 'S276', baza: p6fTrzyKarty,
+    kroki: async (u) => {
+      const { S, A, B, C } = u;
+      krok(); const Y = (await mutacja(S, C, 'nowa karta 4', () => C.d.zapiszKarte(4))).wynik.patientId;
+      u.n.set(Y, 'Y');
+      await p6fOdC(u, A); await p6fOdC(u, B);
+      krok(); const Z = (await mutacja(S, A, 'nowa karta 5', () => A.d.zapiszKarte(5))).wynik.patientId;
+      u.n.set(Z, 'Z');
+      await scal(u, A, Z, Y);
+      await p6fNowaWersja(u, A, Y, 'c', { nr: 4, wzrost: 134 });
+      await scal(u, A, Y, u.X);
+      await p6fDoC(u, A); await dostawa(S, A, B, { w2s: false });
+      u.wizytyPrzed = Object.fromEntries(p6fUrz(u).map((U) => [U.nazwa, wizytyKarty(U, u.X)]));
+      krok(60e3); await mutacja(S, C, 'retencja karty 3', () => C.v.pruneSnapshotsForPatient(u.X, { recentHours: 0 }));
+      await p6fOdC(u, A);
+      krok(); await scalBlob(S, C, B);
+      await p6fAB(u);
+    },
+    fakty: (u) => ({ przed: u.wizytyPrzed, po: Object.fromEntries(p6fUrz(u).map((U) => [U.nazwa, wizytyKarty(U, u.X)])) }),
+  },
+  'Gwiazdka na 221: „Odepnij i usuń”, potem „Przywróć”': {
+    ci: true, kontrolaN: true, app: 'S221', baza: (S, app) => p6fBaza(S, app),
+    kroki: async (u) => {
+      await p6gwiazdka(u, u.A, u.v, true); await p6fAB(u); await p6fDoC(u, u.A); await p6fDoC(u, u.B);
+      await doKosza(u, u.C, u.v);
+      krok(60e3); await p6fOdC(u, u.A); await p6fOdC(u, u.B); await p6fAB(u);
+      await p6przywroc(u, u.C, u.v);
+      krok(60e3); await p6fOdC(u, u.A); await p6fOdC(u, u.B); await p6fAB(u);
+    },
+    fakty: (u) => faktyWersji(u, u.v),
+  },
+  // Wersja x powstaje na 221 (bez pól W3), A i B dostają ją z gwiazdką z pełnej kopii C, potem C ją odpina: obie kopie
+  // bez W3 i ta sama treść poza _pinned — odbiorca bierze całą nowszą wersję (Bgw_scal, vilda_vault.js:3951–3956), bez
+  // rekordu złożonego. Bez tej gałęzi odczyt bez pól daje starej kopii z gwiazdką późniejszy rejestr i rekord złożony
+  // z gwiazdką (zmiana gałęzi przeżywa resztę pliku A ≡ B i losowe floty; łapie ją też przypieta-w3-flota.test.mjs).
+  'Gwiazdka i odpięcie na 221 na wersji zapisanej na 221 (obie kopie bez W3): odbiorca bierze całą nowszą wersję': {
+    ci: true, kontrolaN: true, app: 'S221', baza: (S, app) => p6fBaza(S, app),
+    kroki: async (u) => {
+      u.x = await p6fNowaWersja(u, u.C, u.P, 'x', { opis: 'nowa wersja na 221', wzrost: 131, masa: 26 });
+      krok(60e3); await p6fOdC(u, u.A); await p6fOdC(u, u.B); await p6fAB(u);
+      await p6gwiazdka(u, u.C, u.x, true);
+      krok(60e3); await p6fOdC(u, u.A); await p6fOdC(u, u.B); await p6fAB(u);
+      await p6gwiazdka(u, u.C, u.x, false);
+      krok(60e3); await p6fOdC(u, u.A); await p6fOdC(u, u.B); await p6fAB(u);
+    },
+    fakty: (u) => faktyWersji(u, u.x),
+  },
+  '276: nowa wersja na C, A dopisuje tożsamość wizyty; echo na klonach': {
+    ci: true, kontrolaN: true, app: 'S276', echo: true, baza: (S, app) => p6fBaza(S, app),
+    kroki: async (u) => {
+      u.x = await p6fNowaWersja(u, u.C, u.P, 'x', { opis: 'nowa wersja na 276', wzrost: 131, masa: 26 });
+      krok(60e3); u.haki = (await p6fZEchem(u, () => dostawa(u.S, u.C, u.A, { w2s: false }))).dodane.length;
+      await dostawa(u.S, u.C, u.B, { w2s: false }); await p6fAB(u); await p6fDoC(u, u.A); await p6fDoC(u, u.B);
+    },
+    fakty: (u) => ({ hakiA: u.haki, ...faktyWersji(u, u.x) }),
+  },
+  'Same bieżące urządzenia: Kosz w zwróconej starej karcie, potem „Usuń pacjenta” karty scalonej': {
+    ci: true, app: 'N',
+    baza: async (S, app) => {
+      const A = await urzadzenie(S, 'A');
+      krok(); const r1 = await A.d.zapiszKarte(1, { masa: 20 });
+      krok(); const r3 = await A.d.zapiszKarte(3, { masa: 30 });
+      krok(); ustawStan(A, await eksport(A)); A.Q.length = 0;
+      const { B, C } = await p6fUrzadzenia(S, A, app);
+      return { A, B, C, Y: r1.patientId, X: r3.patientId, x: r3.snapshotId, n: new Map([[r1.patientId, 'Y'], [r3.patientId, 'X'], [r1.snapshotId, 'a'], [r3.snapshotId, 'x']]) };
+    },
+    kroki: async (u) => {
+      await scal(u, u.A, u.X, u.Y);
+      await p6fNowaWersja(u, u.B, u.X, 'y', { nr: 3, opis: 'nowa wersja (bez wiedzy o scaleniu)', wzrost: 133, masa: 31 });
+      await doKosza(u, u.B, u.x);
+      krok(60e3); await p6fAB(u);
+      await p6usunPacjenta(u, u.A, u.Y);
+      krok(60e3); await spoczynekWszystkich(u.S, p6fUrz(u));
+    },
+    fakty: async (u) => {
+      const o = {};
+      for (const U of p6fUrz(u)) {
+        const e = (await kr_cicho(u.S, () => U.v.listTrashedSnapshots())).find((q) => q.snapshotId === u.x);
+        o[U.nazwa] = e ? `Kosz pod ${etykieta(u.n, e.patientId)}${e.patientExists ? '' : ' (ukryty)'}` : 'brak w Koszu';
+      }
+      return o;
+    },
+  },
+  // ── ręcznie (E2_AB_P6_FLOTA=wszystkie): bloki p. 6 z urządzeniem 221 i kontrole C = N ──
+  'R2-0, C na 221: gwiazdka i poprawka na 221, poprawka na A': {
+    app: 'S221', baza: (S, app) => p6fBaza(S, app),
+    kroki: async (u) => {
+      await p6gwiazdka(u, u.C, u.v, true); await popraw(u, u.C, u.v, 27); await popraw(u, u.A, u.v, 30);
+      krok(60e3); await p6fOdC(u, u.A); await p6fOdC(u, u.B); await p6fAB(u); await p6fDoC(u, u.A); await p6fDoC(u, u.B);
+    },
+    fakty: (u) => faktyWersji(u, u.v),
+  },
+  'R5-E1, C na 221: kartę po „Przywróć” i „Usuń pacjenta” przywraca nowa wizyta na 221': {
+    app: 'S221', baza: (S, app) => p6fBaza(S, app),
+    kroki: async (u) => {
+      await doKosza(u, u.B, u.v); krok(); await dostawa(u.S, u.B, u.A, { w2s: false });
+      await p6przywroc(u, u.B, u.v); await p6usunPacjenta(u, u.A, u.P); await p6fAB(u);
+      await p6fNowaWersja(u, u.C, u.P, 'x', { opis: 'C: nowa wizyta' });
+      await scalBlob(u.S, u.C, u.A); await scalBlob(u.S, u.C, u.B); await p6fAB(u); await p6fDoC(u, u.A); await p6fDoC(u, u.B);
+    },
+    fakty: (u) => faktyWersji(u, u.v),
+  },
+  'R3-E2, C na 221: kopia z notatką poza siecią wraca po usunięciu i „Zostaw notatkę”': {
+    app: 'S221', baza: (S, app) => p6fBaza(S, app, { notatka: true }),
+    kroki: async (u) => {
+      const not = async (U, t) => { krok(60e3); await mutacja(u.S, U, `notatka „${t}”`, () => U.v.savePatientNote({ id: u.nId, patientId: u.P, title: 'Fikcyjna', body: t, category: 'inne' })); };
+      await not(u.A, 'A2'); await not(u.A, 'A3'); await p6fDoC(u, u.A);
+      krok(60e3); await mutacja(u.S, u.B, 'usuń notatkę', () => u.B.v.removePatientNote(u.nId)); await p6fAB(u);
+      await not(u.B, 'wskrzeszona na B'); await p6fAB(u);
+      krok(60e3); await scalBlob(u.S, u.B, u.C); await scalBlob(u.S, u.A, u.C); await scalBlob(u.S, u.C, u.A); await scalBlob(u.S, u.C, u.B); await p6fAB(u);
+    },
+    fakty: (u) => Object.fromEntries(p6fUrz(u).map((U) => { const x = (U.stan.patientNotes || []).find((q) => q.id === u.nId); return [U.nazwa, x ? x.body : 'brak']; })),
+  },
+};
+// Kontrole C = N scenariuszy CI z urządzeniem starszej aplikacji (ręcznie; ten sam program kroków).
+for (const [nazwa, sc] of Object.entries({ ...P6F })) if (sc.kontrolaN) P6F[`${nazwa} — kontrola C = N`] = { ...sc, ci: false, app: 'N' };
+const wizytyKarty = (U, pid) => {
+  const m = {};
+  for (const s of ((U.stan.patients || []).find((p) => p.patientId === pid) || { snapshots: [] }).snapshots) { const v = s.payload && s.payload.visit ? String(s.payload.visit.visitId).slice(0, 4) : '-'; m[v] = (m[v] || 0) + 1; }
+  return sortuj(m);
+};
+async function p6fSwiat(nr, sc) {
+  if (!(nr < 80)) throw new Error(`scenariusz floty ${nr}: poza światami 800–879`);
+  ustaw(START);
+  const S = swiat(800 + nr);
+  const los = rng(0x6800 + nr);
+  vi.spyOn(Math, 'random').mockImplementation(() => (S.losAlt || los)());
+  S.w2s = false; S.nrKroku = 0; S.wyrSwiat = 'p6f';
+  S.stat.obiegiPonadLimit = [];
+  if (ODSYL) S.odsyl = nowyLicznik();
+  const u = await sc.baza(S, sc.app);
+  u.S = S;
+  S.flotaUrz = p6fUrz(u);
+  await sc.kroki(u);
+  for (const U of p6fUrz(u)) ustawStan(U, await eksport(U));
+  p6fEtykiety(u);
+  return u;
+}
+// Wersje bez etykiety (głowa „Scal pacjentów”, wersje zapisane przez scalanie) — g1, g2, … w kolejności urządzeń,
+// kart i chwili zapisu, potem wizyty historii wyroczni, których na końcu nie ma (np. przycięte) — w kolejności historii
+// (literał bez skrótów identyfikatorów).
+function p6fEtykiety(u) {
+  let i = 0;
+  const dodaj = (id) => { if (!u.n.has(id)) u.n.set(id, 'g' + (i += 1)); };
+  for (const U of p6fUrz(u)) for (const p of U.stan.patients || []) {
+    for (const q of (p.snapshots || []).slice().sort((x, y) => ((x.savedAtISO || '') + x.snapshotId < (y.savedAtISO || '') + y.snapshotId ? -1 : 1))) dodaj(q.snapshotId);
+  }
+  if (u.S.wyr) for (const sid of u.S.wyr.w.keys()) dodaj(sid);
+}
+async function p6fOcen(u, nazwa) {
+  const { S, A, B, C, n } = u;
+  const urz = p6fUrz(u);
+  const stare = urz.filter(starszaAplikacja).map((U) => U.nazwa);
+  S.wyrEtyk = (id) => etykieta(n, id);
+  const W1 = {};
+  for (const [X, Y] of [[A, B], [B, C], [C, A]]) W1[X.nazwa + Y.nazwa] = opisD(await w1Klasy(S, X, Y, kontPary(X, Y, { tabela: 'p6' })), n, X.nazwa, Y.nazwa);
+  const kl = {};
+  for (const U of urz) kl[U.nazwa] = await kr_cicho(S, () => kliniczny(U, n));
+  const wyrW1 = wyrOcena(S, 'p6f W1', nazwa, await wyrWidoki(S, { A, B, C }), { stare });
+  const w = await w4Trzy(S, urz, n);
+  const wyrW4 = wyrOcena(S, 'p6f W4', nazwa, w.wyr, { stare });
+  delete w.wyr;
+  const nar = [...wyrW1, ...wyrW4];
+  return {
+    literal: { W1, kliniczny: kl, W4: { ok: w.ok, rund: w.rund, pary: Object.fromEntries(w.pary.map((p) => [p.para, p.roznice])), kliniczny: w.opis } },
+    wyr: nar.map((x) => `${x.swiat}: ${x.urz} ${x.encja} ${x.et} ${x.rodzaj} [${x.klasa || 'bez klasy'}]`).sort(),
+    czerwone: wyrCzerwone(nar),
+    w4ok: w.ok,
+  };
+}
+// Licznik scenariusza: klucz → { wyk, nowe }, wiersze według źródła i warstwy (surowe, po2a, wyk; bez zer); przy echu na
+// klonach — drugi rząd, przez starszą aplikację, obiegi.
+function p6fOdsyl(S, zEchem) {
+  if (!S.odsyl) return null;
+  const o = S.odsyl.podsumuj();
+  const K = o.klony;
+  const wiersze = Object.fromEntries(Object.entries(o.wiersze).filter(([k, v]) => v && /:(surowe|po2a|wyk)$/.test(k)));
+  return sortuj({
+    literal: literalOdsyl([o]), wiersze,
+    ...(zEchem ? { klony: { prob: K.prob, drugiRzad: K.drugiRzad, drugiRzad2a: K.drugiRzad2a, przezStarsza: K.przezStarsza, obiegi: K.obiegi, ponadObiegi: K.ponadObiegi } } : {}),
+  });
+}
+// Literały scenariuszy CI (zmierzone; charakterystyka dzisiejszego stanu). P6F_LITERALY: W1 — D par po scenariuszu
+// (opisD: rodzaj, klucz z etykietami, ścieżki albo strona, klasa), kliniczny — stan kliniczny urządzeń po scenariuszu,
+// W4 — obiegi wymiany, punkt stały z różnicami dozwolonymi (ok), D par i stan kliniczny klonów po pełnej wymianie,
+// fakty — fakty scenariusza. P6F_WYR — naruszenia wyroczni („świat: urządzenie encja etykieta rodzaj [klasa]”;
+// scenariusz spoza listy — bez naruszeń). P6F_ODSYL — licznik (klucz → { wyk, nowe }, wiersze według źródła i warstwy;
+// echo na klonach). Skutki starszej aplikacji w tych literałach (utrata notatki, retencja, gwiazdka) to ograniczenie
+// starszej wersji do decyzji właściciela (pytanie z 2026-11-15; WYR.DO_DECYZJI w opisach klas).
+const P6F_LITERALY = {
+  '„Usuń pacjenta” na 221, potem zmiana karty na A: notatka bez ratunku D-21': {
+    W1: { AB: [], BC: [], CA: [] },
+    W4: { kliniczny: { A: 'karty P[v:20 w:21 x:25] | Kosz - | notatki -', B: 'karty P[v:20 w:21 x:25] | Kosz - | notatki -', C: 'karty P[v:20 w:21 x:25] | Kosz - | notatki -' }, ok: true, pary: { AB: [], BC: [], CA: [] }, rund: 1 },
+    fakty: { A: 'karta jest, notatka brak, nagrobek notatki bez karty', B: 'karta jest, notatka brak, nagrobek notatki bez karty', C: 'karta jest, notatka brak, nagrobek notatki bez karty' },
+    kliniczny: { A: 'karty P[v:20 w:21 x:25] | Kosz - | notatki -', B: 'karty P[v:20 w:21 x:25] | Kosz - | notatki -', C: 'karty P[v:20 w:21 x:25] | Kosz - | notatki -' },
+  },
+  '„Usuń pacjenta” na C, potem zmiana karty na A — C = N (notatka zostaje)': {
+    W1: { AB: [], BC: [], CA: [] },
+    W4: { kliniczny: { A: 'karty P[v:20 w:21 x:25] | Kosz - | notatki n: Fikcyjna treść', B: 'karty P[v:20 w:21 x:25] | Kosz - | notatki n: Fikcyjna treść', C: 'karty P[v:20 w:21 x:25] | Kosz - | notatki n: Fikcyjna treść' }, ok: true, pary: { AB: [], BC: [], CA: [] }, rund: 1 },
+    fakty: { A: 'karta jest, notatka jest, nagrobek notatki -', B: 'karta jest, notatka jest, nagrobek notatki -', C: 'karta jest, notatka jest, nagrobek notatki -' },
+    kliniczny: { A: 'karty P[v:20 w:21 x:25] | Kosz - | notatki n: Fikcyjna treść', B: 'karty P[v:20 w:21 x:25] | Kosz - | notatki n: Fikcyjna treść', C: 'karty P[v:20 w:21 x:25] | Kosz - | notatki n: Fikcyjna treść' },
+  },
+  '„Usuń pacjenta” na A, zmiana karty na 221 — najpierw zdarzenia do C: notatka bez ratunku D-21': {
+    W1: { AB: [], BC: ['pnotetomb n: deletedWithPatient [pole nieznane starszej aplikacji (221)]', 'wersja P/x: payload.visit [tożsamość wizyty nieznana starszej aplikacji]'], CA: ['pnotetomb n: deletedWithPatient [pole nieznane starszej aplikacji (221)]', 'wersja P/x: payload.visit [tożsamość wizyty nieznana starszej aplikacji]'] },
+    W4: { kliniczny: { A: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -', B: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -', C: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -' }, ok: true, pary: { AB: [], BC: ['pnotetomb n: deletedWithPatient [pole nieznane starszej aplikacji (221)]', 'wersja P/x: payload.visit [tożsamość wizyty nieznana starszej aplikacji]'], CA: ['pnotetomb n: deletedWithPatient [pole nieznane starszej aplikacji (221)]', 'wersja P/x: payload.visit [tożsamość wizyty nieznana starszej aplikacji]'] }, rund: 1 },
+    fakty: { A: 'karta jest, notatka brak, nagrobek notatki z kartą', B: 'karta jest, notatka brak, nagrobek notatki z kartą', C: 'karta jest, notatka brak, nagrobek notatki bez karty' },
+    kliniczny: { A: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -', B: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -', C: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -' },
+  },
+  '„Usuń pacjenta” na A, zmiana karty na 221 — najpierw pełna kopia C (notatka zostaje)': {
+    W1: { AB: [], BC: ['wersja P/x: payload.visit [tożsamość wizyty nieznana starszej aplikacji]'], CA: ['wersja P/x: payload.visit [tożsamość wizyty nieznana starszej aplikacji]'] },
+    W4: { kliniczny: { A: 'karty P[v:20 w:21 x:26] | Kosz - | notatki n: Fikcyjna treść', B: 'karty P[v:20 w:21 x:26] | Kosz - | notatki n: Fikcyjna treść', C: 'karty P[v:20 w:21 x:26] | Kosz - | notatki n: Fikcyjna treść' }, ok: true, pary: { AB: [], BC: ['wersja P/x: payload.visit [tożsamość wizyty nieznana starszej aplikacji]'], CA: ['wersja P/x: payload.visit [tożsamość wizyty nieznana starszej aplikacji]'] }, rund: 1 },
+    fakty: { A: 'karta jest, notatka jest, nagrobek notatki -', B: 'karta jest, notatka jest, nagrobek notatki -', C: 'karta jest, notatka jest, nagrobek notatki -' },
+    kliniczny: { A: 'karty P[v:20 w:21 x:26] | Kosz - | notatki n: Fikcyjna treść', B: 'karty P[v:20 w:21 x:26] | Kosz - | notatki n: Fikcyjna treść', C: 'karty P[v:20 w:21 x:26] | Kosz - | notatki n: Fikcyjna treść' },
+  },
+  '„Usuń pacjenta” na A, zmiana karty na C — C = N, najpierw zdarzenia do C (notatka zostaje)': {
+    W1: { AB: [], BC: [], CA: [] },
+    W4: { kliniczny: { A: 'karty P[v:20 w:21 x:26] | Kosz - | notatki n: Fikcyjna treść', B: 'karty P[v:20 w:21 x:26] | Kosz - | notatki n: Fikcyjna treść', C: 'karty P[v:20 w:21 x:26] | Kosz - | notatki n: Fikcyjna treść' }, ok: true, pary: { AB: [], BC: [], CA: [] }, rund: 1 },
+    fakty: { A: 'karta jest, notatka jest, nagrobek notatki -', B: 'karta jest, notatka jest, nagrobek notatki -', C: 'karta jest, notatka jest, nagrobek notatki -' },
+    kliniczny: { A: 'karty P[v:20 w:21 x:26] | Kosz - | notatki n: Fikcyjna treść', B: 'karty P[v:20 w:21 x:26] | Kosz - | notatki n: Fikcyjna treść', C: 'karty P[v:20 w:21 x:26] | Kosz - | notatki n: Fikcyjna treść' },
+  },
+  'Kosz na 221: echo tożsamości wizyty u odbiorcy pełnej kopii i echo na klonach': {
+    W1: { AB: [], BC: ['kosz v|P: visitIdentity [tożsamość wizyty nieznana starszej aplikacji]'], CA: ['kosz v|P: visitIdentity [tożsamość wizyty nieznana starszej aplikacji]'] },
+    W4: { kliniczny: { A: 'karty P[w:21] | Kosz v@P:20 | notatki -', B: 'karty P[w:21] | Kosz v@P:20 | notatki -', C: 'karty P[w:21] | Kosz v@P:20 | notatki -' }, ok: true, pary: { AB: [], BC: ['kosz v|P: visitIdentity [tożsamość wizyty nieznana starszej aplikacji]'], CA: ['kosz v|P: visitIdentity [tożsamość wizyty nieznana starszej aplikacji]'] }, rund: 1 },
+    kliniczny: { A: 'karty P[w:21] | Kosz v@P:20 | notatki -', B: 'karty P[w:21] | Kosz v@P:20 | notatki -', C: 'karty P[w:21] | Kosz v@P:20 | notatki -' },
+  },
+  'Drugi rząd przez 221: wpis Kosza z gwiazdką z A do C (C z niewysłaną poprawką), pełna kopia C′ do A′': {
+    W1: { AB: [], BC: ['kosz v|P: gwiazdka, visitIdentity [pole nieznane starszej aplikacji (221)]'], CA: ['kosz v|P: gwiazdka, visitIdentity [pole nieznane starszej aplikacji (221)]'] },
+    W4: { kliniczny: { A: 'karty P[w:21] | Kosz v@P:33* | notatki -', B: 'karty P[w:21] | Kosz v@P:33* | notatki -', C: 'karty P[w:21] | Kosz v@P:33* | notatki -' }, ok: true, pary: { AB: [], BC: ['kosz v|P: gwiazdka, visitIdentity [pole nieznane starszej aplikacji (221)]'], CA: ['kosz v|P: gwiazdka, visitIdentity [pole nieznane starszej aplikacji (221)]'] }, rund: 1 },
+    kliniczny: { A: 'karty P[w:21] | Kosz v@P:33* | notatki -', B: 'karty P[w:21] | Kosz v@P:33* | notatki -', C: 'karty P[w:21] | Kosz v@P:33* | notatki -' },
+  },
+  'Retencja na 221 po „Scal pacjentów”: jedyny stan wizyty przeniesionej (recentHours 0)': {
+    W1: { AB: [], BC: ['wersja Q/v: tylko B [retencja starszej aplikacji — obecność wersji]'], CA: ['wersja Q/v: tylko A [retencja starszej aplikacji — obecność wersji]'] },
+    W4: { kliniczny: { A: 'karty Q[v:20 g1:21] | Kosz - | notatki -', B: 'karty Q[v:20 g1:21] | Kosz - | notatki -', C: 'karty Q[g1:21] | Kosz - | notatki -' }, ok: true, pary: { AB: [], BC: ['wersja Q/v: tylko B [retencja starszej aplikacji — obecność wersji]'], CA: ['wersja Q/v: tylko A [retencja starszej aplikacji — obecność wersji]'] }, rund: 1 },
+    fakty: { A: 'wersji 2, wpisów retencji 2', B: 'wersji 2, wpisów retencji 2', C: 'wersji 1, wpisów retencji 2', v: { A: 'Q', B: 'Q', C: 'brak' } },
+    kliniczny: { A: 'karty Q[v:20 g1:21] | Kosz - | notatki -', B: 'karty Q[v:20 g1:21] | Kosz - | notatki -', C: 'karty Q[g1:21] | Kosz - | notatki -' },
+  },
+  'Retencja po „Scal pacjentów” — C = N (bez strat)': {
+    W1: { AB: [], BC: [], CA: [] },
+    W4: { kliniczny: { A: 'karty Q[v:20 g1:21] | Kosz - | notatki -', B: 'karty Q[v:20 g1:21] | Kosz - | notatki -', C: 'karty Q[v:20 g1:21] | Kosz - | notatki -' }, ok: true, pary: { AB: [], BC: [], CA: [] }, rund: 1 },
+    fakty: { A: 'wersji 2, wpisów retencji 1', B: 'wersji 2, wpisów retencji 1', C: 'wersji 2, wpisów retencji 1', v: { A: 'Q', B: 'Q', C: 'Q' } },
+    kliniczny: { A: 'karty Q[v:20 g1:21] | Kosz - | notatki -', B: 'karty Q[v:20 g1:21] | Kosz - | notatki -', C: 'karty Q[v:20 g1:21] | Kosz - | notatki -' },
+  },
+  'Retencja na 221 z parametrami aplikacji: 8 wizyt z 8 dni sprzed 40–54 dni': {
+    W1: { AB: [], BC: ['wersja P/dz0: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz1: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz2: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz3: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz4: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz5: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz6: tylko B [retencja starszej aplikacji — obecność wersji]'], CA: ['wersja P/dz0: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz1: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz2: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz3: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz4: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz5: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz6: tylko A [retencja starszej aplikacji — obecność wersji]'] },
+    W4: { kliniczny: { A: 'karty P[dz0:20 dz1:21 dz2:22 dz3:23 dz4:24 dz5:25 dz6:26 dz7:27] | Kosz - | notatki -', B: 'karty P[dz0:20 dz1:21 dz2:22 dz3:23 dz4:24 dz5:25 dz6:26 dz7:27] | Kosz - | notatki -', C: 'karty P[dz7:27] | Kosz - | notatki -' }, ok: true, pary: { AB: [], BC: ['wersja P/dz0: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz1: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz2: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz3: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz4: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz5: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz6: tylko B [retencja starszej aplikacji — obecność wersji]'], CA: ['wersja P/dz0: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz1: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz2: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz3: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz4: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz5: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz6: tylko A [retencja starszej aplikacji — obecność wersji]'] }, rund: 1 },
+    fakty: { A: 'wersji 8, wpisów retencji 7', B: 'wersji 8, wpisów retencji 7', C: 'wersji 1, wpisów retencji 7' },
+    kliniczny: { A: 'karty P[dz0:20 dz1:21 dz2:22 dz3:23 dz4:24 dz5:25 dz6:26 dz7:27] | Kosz - | notatki -', B: 'karty P[dz0:20 dz1:21 dz2:22 dz3:23 dz4:24 dz5:25 dz6:26 dz7:27] | Kosz - | notatki -', C: 'karty P[dz7:27] | Kosz - | notatki -' },
+  },
+  'Retencja na 276 z parametrami aplikacji: nagrobek retencji idzie zdarzeniem': {
+    W1: { AB: [], BC: ['wersja P/dz0: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz1: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz2: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz3: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz4: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz5: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz6: tylko B [retencja starszej aplikacji — obecność wersji]'], CA: ['wersja P/dz0: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz1: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz2: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz3: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz4: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz5: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz6: tylko A [retencja starszej aplikacji — obecność wersji]'] },
+    W4: { kliniczny: { A: 'karty P[dz0:20 dz1:21 dz2:22 dz3:23 dz4:24 dz5:25 dz6:26 dz7:27] | Kosz - | notatki -', B: 'karty P[dz0:20 dz1:21 dz2:22 dz3:23 dz4:24 dz5:25 dz6:26 dz7:27] | Kosz - | notatki -', C: 'karty P[dz7:27] | Kosz - | notatki -' }, ok: true, pary: { AB: [], BC: ['wersja P/dz0: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz1: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz2: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz3: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz4: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz5: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz6: tylko B [retencja starszej aplikacji — obecność wersji]'], CA: ['wersja P/dz0: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz1: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz2: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz3: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz4: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz5: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz6: tylko A [retencja starszej aplikacji — obecność wersji]'] }, rund: 1 },
+    fakty: { A: 'wersji 8, wpisów retencji 7', B: 'wersji 8, wpisów retencji 7', C: 'wersji 1, wpisów retencji 7' },
+    kliniczny: { A: 'karty P[dz0:20 dz1:21 dz2:22 dz3:23 dz4:24 dz5:25 dz6:26 dz7:27] | Kosz - | notatki -', B: 'karty P[dz0:20 dz1:21 dz2:22 dz3:23 dz4:24 dz5:25 dz6:26 dz7:27] | Kosz - | notatki -', C: 'karty P[dz7:27] | Kosz - | notatki -' },
+  },
+  'Retencja na 276 po „Scal 5 → 4 → 3” na A': {
+    W1: { AB: [], BC: ['wersja X/c: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja X/g1: tylko B [retencja starszej aplikacji — obecność wersji]'], CA: ['wersja X/c: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja X/g1: tylko A [retencja starszej aplikacji — obecność wersji]'] },
+    W4: { kliniczny: { A: 'karty X[g1:22 c:25 g2:22] | Kosz - | notatki -', B: 'karty X[g1:22 c:25 g2:22] | Kosz - | notatki -', C: 'karty X[g2:22] | Kosz - | notatki -' }, ok: true, pary: { AB: [], BC: ['wersja X/c: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja X/g1: tylko B [retencja starszej aplikacji — obecność wersji]'], CA: ['wersja X/c: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja X/g1: tylko A [retencja starszej aplikacji — obecność wersji]'] }, rund: 1 },
+    fakty: { po: { A: { '0ad8': 1, '2ba5': 1, '2dd5': 1 }, B: { '0ad8': 1, '2ba5': 1, '2dd5': 1 }, C: { '0ad8': 1 } }, przed: { A: { '0ad8': 3, '2ba5': 3, '2dd5': 1 }, B: { '0ad8': 3, '2ba5': 3, '2dd5': 1 }, C: { '0ad8': 3, '2ba5': 3, '2dd5': 1 } } },
+    kliniczny: { A: 'karty X[g1:22 c:25 g2:22] | Kosz - | notatki -', B: 'karty X[g1:22 c:25 g2:22] | Kosz - | notatki -', C: 'karty X[g2:22] | Kosz - | notatki -' },
+  },
+  'Gwiazdka na 221: „Odepnij i usuń”, potem „Przywróć”': {
+    W1: { AB: [], BC: [], CA: [] },
+    W4: { kliniczny: { A: 'karty P[v:20* w:21] | Kosz - | notatki -', B: 'karty P[v:20* w:21] | Kosz - | notatki -', C: 'karty P[v:20* w:21] | Kosz - | notatki -' }, ok: true, pary: { AB: [], BC: [], CA: [] }, rund: 1 },
+    fakty: { A: 'karta P, rev 2, _pinned 1, _pinnedState jest, _contentAtISO jest', B: 'karta P, rev 2, _pinned 1, _pinnedState jest, _contentAtISO jest', C: 'karta P, rev 2, _pinned 1, _pinnedState jest, _contentAtISO jest' },
+    kliniczny: { A: 'karty P[v:20* w:21] | Kosz - | notatki -', B: 'karty P[v:20* w:21] | Kosz - | notatki -', C: 'karty P[v:20* w:21] | Kosz - | notatki -' },
+  },
+  'Gwiazdka i odpięcie na 221 na wersji zapisanej na 221 (obie kopie bez W3): odbiorca bierze całą nowszą wersję': {
+    W1: { AB: [], BC: ['wersja P/x: payload.visit [tożsamość wizyty nieznana starszej aplikacji]'], CA: ['wersja P/x: payload.visit [tożsamość wizyty nieznana starszej aplikacji]'] },
+    W4: { kliniczny: { A: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -', B: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -', C: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -' }, ok: true, pary: { AB: [], BC: ['wersja P/x: payload.visit [tożsamość wizyty nieznana starszej aplikacji]'], CA: ['wersja P/x: payload.visit [tożsamość wizyty nieznana starszej aplikacji]'] }, rund: 1 },
+    fakty: { A: 'karta P, rev 2, _pinned 0, _pinnedState brak, _contentAtISO brak', B: 'karta P, rev 2, _pinned 0, _pinnedState brak, _contentAtISO brak', C: 'karta P, rev 2, _pinned 0, _pinnedState brak, _contentAtISO brak' },
+    kliniczny: { A: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -', B: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -', C: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -' },
+  },
+  '276: nowa wersja na C, A dopisuje tożsamość wizyty; echo na klonach': {
+    W1: { AB: [], BC: ['wersja P/x: payload._pinnedState.h, payload.visit [tożsamość wizyty nieznana starszej aplikacji]'], CA: ['wersja P/x: payload._pinnedState.h, payload.visit [tożsamość wizyty nieznana starszej aplikacji]'] },
+    W4: { kliniczny: { A: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -', B: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -', C: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -' }, ok: true, pary: { AB: [], BC: ['wersja P/x: payload._pinnedState.h, payload.visit [tożsamość wizyty nieznana starszej aplikacji]'], CA: ['wersja P/x: payload._pinnedState.h, payload.visit [tożsamość wizyty nieznana starszej aplikacji]'] }, rund: 1 },
+    fakty: { A: 'karta P, rev 0, _pinned 0, _pinnedState jest, _contentAtISO jest', B: 'karta P, rev 0, _pinned 0, _pinnedState jest, _contentAtISO jest', C: 'karta P, rev 0, _pinned 0, _pinnedState jest, _contentAtISO jest', hakiA: 0 },
+    kliniczny: { A: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -', B: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -', C: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -' },
+  },
+  'Same bieżące urządzenia: Kosz w zwróconej starej karcie, potem „Usuń pacjenta” karty scalonej': {
+    W1: { AB: [], BC: ['kosz x|X: rev [R4a]'], CA: ['kosz x|X: rev [R4a]'] },
+    W4: { kliniczny: { A: 'karty X[y:31] | Kosz x@X:30 | notatki -', B: 'karty X[y:31] | Kosz x@X:30 | notatki -', C: 'karty X[y:31] | Kosz x@X:30 | notatki -' }, ok: true, pary: { AB: [], BC: [], CA: [] }, rund: 2 },
+    fakty: { A: 'Kosz pod X', B: 'Kosz pod X', C: 'Kosz pod X' },
+    kliniczny: { A: 'karty X[y:31] | Kosz x@X:30 | notatki -', B: 'karty X[y:31] | Kosz x@X:30 | notatki -', C: 'karty X[y:31] | Kosz x@X:30 | notatki -' },
+  },
+};
+const P6F_WYR = {
+  '„Usuń pacjenta” na 221, potem zmiana karty na A: notatka bez ratunku D-21': [
+    'p6f W1: A notatka n utrata [notatka bez ratunku D-21 (starsza aplikacja)]',
+    'p6f W1: B notatka n utrata [notatka bez ratunku D-21 (starsza aplikacja)]',
+    'p6f W1: C notatka n utrata [notatka bez ratunku D-21 (starsza aplikacja)]',
+    'p6f W4: A notatka n utrata [notatka bez ratunku D-21 (starsza aplikacja)]',
+    'p6f W4: B notatka n utrata [notatka bez ratunku D-21 (starsza aplikacja)]',
+    'p6f W4: C notatka n utrata [notatka bez ratunku D-21 (starsza aplikacja)]',
+  ],
+  '„Usuń pacjenta” na A, zmiana karty na 221 — najpierw zdarzenia do C: notatka bez ratunku D-21': [
+    'p6f W1: A notatka n utrata [notatka bez ratunku D-21 (starsza aplikacja)]',
+    'p6f W1: B notatka n utrata [notatka bez ratunku D-21 (starsza aplikacja)]',
+    'p6f W1: C notatka n utrata [notatka bez ratunku D-21 (starsza aplikacja)]',
+    'p6f W4: A notatka n utrata [notatka bez ratunku D-21 (starsza aplikacja)]',
+    'p6f W4: B notatka n utrata [notatka bez ratunku D-21 (starsza aplikacja)]',
+    'p6f W4: C notatka n utrata [notatka bez ratunku D-21 (starsza aplikacja)]',
+  ],
+  'Retencja na 221 po „Scal pacjentów”: jedyny stan wizyty przeniesionej (recentHours 0)': [
+    'p6f W1: C wizyta v retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W4: C wizyta v retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+  ],
+  'Retencja na 221 z parametrami aplikacji: 8 wizyt z 8 dni sprzed 40–54 dni': [
+    'p6f W1: C wizyta dz0 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W1: C wizyta dz1 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W1: C wizyta dz2 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W1: C wizyta dz3 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W1: C wizyta dz4 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W1: C wizyta dz5 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W1: C wizyta dz6 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W4: C wizyta dz0 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W4: C wizyta dz1 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W4: C wizyta dz2 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W4: C wizyta dz3 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W4: C wizyta dz4 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W4: C wizyta dz5 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W4: C wizyta dz6 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+  ],
+  'Retencja na 276 z parametrami aplikacji: nagrobek retencji idzie zdarzeniem': [
+    'p6f W1: C wizyta dz0 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W1: C wizyta dz1 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W1: C wizyta dz2 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W1: C wizyta dz3 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W1: C wizyta dz4 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W1: C wizyta dz5 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W1: C wizyta dz6 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W4: C wizyta dz0 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W4: C wizyta dz1 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W4: C wizyta dz2 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W4: C wizyta dz3 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W4: C wizyta dz4 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W4: C wizyta dz5 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W4: C wizyta dz6 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+  ],
+  'Retencja na 276 po „Scal 5 → 4 → 3” na A': [
+    'p6f W1: A wizyta g3 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (odbiorca zachował głowę wizyty)]',
+    'p6f W1: A wizyta g4 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (odbiorca zachował głowę wizyty)]',
+    'p6f W1: B wizyta g3 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (odbiorca zachował głowę wizyty)]',
+    'p6f W1: B wizyta g4 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (odbiorca zachował głowę wizyty)]',
+    'p6f W1: C wizyta c retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W1: C wizyta g1 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W1: C wizyta g3 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W1: C wizyta g4 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W4: A wizyta g3 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (odbiorca zachował głowę wizyty)]',
+    'p6f W4: A wizyta g4 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (odbiorca zachował głowę wizyty)]',
+    'p6f W4: B wizyta g3 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (odbiorca zachował głowę wizyty)]',
+    'p6f W4: B wizyta g4 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (odbiorca zachował głowę wizyty)]',
+    'p6f W4: C wizyta c retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W4: C wizyta g1 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W4: C wizyta g3 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W4: C wizyta g4 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+  ],
+  'Gwiazdka na 221: „Odepnij i usuń”, potem „Przywróć”': [
+    'p6f W1: A wizyta v gwiazdka [gwiazdka ze starszej aplikacji]',
+    'p6f W1: B wizyta v gwiazdka [gwiazdka ze starszej aplikacji]',
+    'p6f W1: C wizyta v gwiazdka [gwiazdka ze starszej aplikacji]',
+    'p6f W4: A wizyta v gwiazdka [gwiazdka ze starszej aplikacji]',
+    'p6f W4: B wizyta v gwiazdka [gwiazdka ze starszej aplikacji]',
+    'p6f W4: C wizyta v gwiazdka [gwiazdka ze starszej aplikacji]',
+  ],
+  'Same bieżące urządzenia: Kosz w zwróconej starej karcie, potem „Usuń pacjenta” karty scalonej': [
+    'p6f W1: A wizyta x wskrzeszenie [D-4 A (Kosz w zwróconej starej karcie)]',
+    'p6f W1: B wizyta x wskrzeszenie [D-4 A (Kosz w zwróconej starej karcie)]',
+    'p6f W1: C wizyta x wskrzeszenie [D-4 A (Kosz w zwróconej starej karcie)]',
+    'p6f W4: A wizyta x wskrzeszenie [D-4 A (Kosz w zwróconej starej karcie)]',
+    'p6f W4: B wizyta x wskrzeszenie [D-4 A (Kosz w zwróconej starej karcie)]',
+    'p6f W4: C wizyta x wskrzeszenie [D-4 A (Kosz w zwróconej starej karcie)]',
+  ],
+};
+const P6F_ODSYL = {
+  '„Usuń pacjenta” na 221, potem zmiana karty na A: notatka bez ratunku D-21': { literal: {}, wiersze: {} },
+  '„Usuń pacjenta” na C, potem zmiana karty na A — C = N (notatka zostaje)': { literal: { 'zdarzenie|pnote|spoza|inne': { nowe: 0, wyk: 1 } }, wiersze: { 'zdarzenie:po2a': 1, 'zdarzenie:surowe': 1, 'zdarzenie:wyk': 1 } },
+  '„Usuń pacjenta” na A, zmiana karty na 221 — najpierw zdarzenia do C: notatka bez ratunku D-21': { literal: {}, wiersze: { 'blob221:po2a': 2, 'blob221:surowe': 2 } },
+  '„Usuń pacjenta” na A, zmiana karty na 221 — najpierw pełna kopia C (notatka zostaje)': { literal: { 'blob221|pnote|w ładunku|inne': { nowe: 0, wyk: 1 }, 'zdarzenie|pnote|spoza|inne': { nowe: 0, wyk: 1 } }, wiersze: { 'blob221:po2a': 3, 'blob221:surowe': 3, 'blob221:wyk': 1, 'zdarzenie:po2a': 1, 'zdarzenie:surowe': 1, 'zdarzenie:wyk': 1 } },
+  '„Usuń pacjenta” na A, zmiana karty na C — C = N, najpierw zdarzenia do C (notatka zostaje)': { literal: { 'zdarzenie|pnote|spoza|inne': { nowe: 0, wyk: 1 } }, wiersze: { 'zdarzenie:po2a': 1, 'zdarzenie:surowe': 1, 'zdarzenie:wyk': 1 } },
+  'Kosz na 221: echo tożsamości wizyty u odbiorcy pełnej kopii i echo na klonach': { klony: { drugiRzad: 0, drugiRzad2a: 0, obiegi: [0, 0, 0, 0], ponadObiegi: 0, prob: 1, przezStarsza: { doInnych: 0, doNadawcy: 0, po2a: 1, prob: 1 } }, literal: {}, wiersze: { 'blob221:po2a': 2, 'blob221:surowe': 2 } },
+  'Drugi rząd przez 221: wpis Kosza z gwiazdką z A do C (C z niewysłaną poprawką), pełna kopia C′ do A′': { klony: { drugiRzad: 0, drugiRzad2a: 0, obiegi: [1, 0, 0, 0], ponadObiegi: 0, prob: 1, przezStarsza: { doInnych: 0, doNadawcy: 1, po2a: 2, prob: 2, zapisow: 2 } }, literal: { 'blob221|stomb|w ładunku|inne': { nowe: 2, wyk: 2 }, 'zdarzenie|stomb|spoza|R4a': { nowe: 1, wyk: 1 }, 'zdarzenie|stomb|w ładunku|R4a': { nowe: 1, wyk: 1 } }, wiersze: { 'blob221:po2a': 2, 'blob221:surowe': 2, 'blob221:wyk': 2, 'zdarzenie:po2a': 2, 'zdarzenie:surowe': 2, 'zdarzenie:wyk': 2 } },
+  'Retencja na 221 po „Scal pacjentów”: jedyny stan wizyty przeniesionej (recentHours 0)': { literal: {}, wiersze: {} },
+  'Retencja po „Scal pacjentów” — C = N (bez strat)': { literal: {}, wiersze: {} },
+  'Retencja na 221 z parametrami aplikacji: 8 wizyt z 8 dni sprzed 40–54 dni': { literal: {}, wiersze: {} },
+  'Retencja na 276 z parametrami aplikacji: nagrobek retencji idzie zdarzeniem': { literal: {}, wiersze: {} },
+  'Retencja na 276 po „Scal 5 → 4 → 3” na A': { literal: { 'zdarzenie|karta|w ładunku|nagłówek karty': { nowe: 4, wyk: 4 } }, wiersze: { 'zdarzenie276:po2a': 2, 'zdarzenie276:surowe': 2, 'zdarzenie:po2a': 4, 'zdarzenie:surowe': 4, 'zdarzenie:wyk': 4 } },
+  'Gwiazdka na 221: „Odepnij i usuń”, potem „Przywróć”': { literal: { 'blob221|stomb|w ładunku|inne': { nowe: 2, wyk: 2 } }, wiersze: { 'blob221:po2a': 2, 'blob221:surowe': 2, 'blob221:wyk': 2 } },
+  'Gwiazdka i odpięcie na 221 na wersji zapisanej na 221 (obie kopie bez W3): odbiorca bierze całą nowszą wersję': { literal: {}, wiersze: { 'blob221:po2a': 6, 'blob221:surowe': 6 } },
+  '276: nowa wersja na C, A dopisuje tożsamość wizyty; echo na klonach': { klony: { drugiRzad: 0, drugiRzad2a: 0, obiegi: [0, 0, 0, 0], ponadObiegi: 0, prob: 1, przezStarsza: { doInnych: 0, doNadawcy: 0, po2a: 1, prob: 1 } }, literal: {}, wiersze: { 'zdarzenie276:po2a': 2, 'zdarzenie276:surowe': 2 } },
+  'Same bieżące urządzenia: Kosz w zwróconej starej karcie, potem „Usuń pacjenta” karty scalonej': { literal: { 'zdarzenie|karta|w ładunku|nagłówek karty': { nowe: 1, wyk: 1 } }, wiersze: { 'zdarzenie:po2a': 1, 'zdarzenie:surowe': 3, 'zdarzenie:wyk': 1 } },
+};
+describe('A ≡ B, flota ze starszą aplikacją: scenariusze deterministyczne (literały: D par, stan kliniczny, W4, wyrocznia, licznik)', () => {
+  d1();
+  for (const [nr, [nazwa, sc]] of Object.entries(P6F).entries()) {
+    it.skipIf(!sc.ci && !P6F_WSZYSTKIE)(`${sc.ci ? '' : '(ręcznie) '}${nazwa}`, async () => {
+      const u = await p6fSwiat(nr, sc);
+      const w = await p6fOcen(u, nazwa);
+      const fakty = sc.fakty ? await sc.fakty(u) : {};
+      const literal = sortuj({ ...w.literal, ...(sc.fakty ? { fakty } : {}) });
+      const odsyl = p6fOdsyl(u.S, !!sc.echo);
+      console.log(`E3-AB scenariusz floty ${nr} „${nazwa}”`, JSON.stringify({ literal, wyr: w.wyr, odsyl, przyklady: u.S.odsyl ? u.S.odsyl.podsumuj().klony.przyklady : null, dziennik: u.S.dziennik }));
+      if (process.env.E2_AB_WYNIKI) appendFileSync(process.env.E2_AB_WYNIKI, JSON.stringify({ typ: 'p6f', nr, nazwa, app: sc.app, literal, wyr: w.wyr, odsyl, dziennik: u.S.dziennik }) + '\n');
+      if (!sc.ci) return;
+      expect.soft({ w4ok: w.w4ok, czerwone: w.czerwone }, `${nazwa}: W4 stabilne z różnicami dozwolonymi; wyrocznia bez naruszeń bez klasy`).toEqual({ w4ok: true, czerwone: [] });
+      expect.soft(literal, `P6F_LITERALY[„${nazwa}”]`).toEqual(P6F_LITERALY[nazwa]);
+      expect.soft(w.wyr, `P6F_WYR[„${nazwa}”]`).toEqual(P6F_WYR[nazwa] || []);
+      if (P6F_DOMYSLNE) expect.soft(odsyl, `P6F_ODSYL[„${nazwa}”]`).toEqual(P6F_ODSYL[nazwa]);
+    }, 30_000);
+  }
+});
+
+
+// ══ Do decyzji właściciela: przyczyna po stronie bieżącej aplikacji (E3-PR0b; ręcznie, E2_AB_DO_DECYZJI=1) ══════════
+// Naruszenia wyroczni bez klasy, których mechanizm leży w bieżącej aplikacji (odtwarzają się na samych bieżących
+// urządzeniach): bez klasy w tabeli wyjątków i bez literału; scenariusz deterministyczny jest dziś czerwony
+// (oczekiwanie: w każdym świecie wyrocznia bez naruszeń bez klasy). Każdy przypadek w trzech światach z tymi samymi
+// operacjami, każdy świat osobną asercją: 'W1' — po samych zdarzeniach (żywe urządzenia), 'W4' — te same zdarzenia,
+// a po nich pełna wymiana na świeżych klonach (w4Trzy), 'bloby' — transport tylko pełną kopią (Y scala eksport X).
+// Fakty (położenie i treść encji) — w komunikacie asercji i w druku. Światy swiat(880 + nr), Math.random z
+// rng(0x6880 + nr), nr — pozycja w DO_DECYZJI. Pytania do właściciela z 2026-11-15: która treść notatki pacjenta ma
+// zostać po edycji na dwóch urządzeniach; „Usuń pacjenta” duplikatu karty po „Scal pacjentów” (plan D-4, decyzja 4a;
+// poprawka — E3-PR0e).
+const DO_DECYZJI_RECZNIE = process.env.E2_AB_DO_DECYZJI === '1';
+// Transport świata: zdarzenia (dostawa z hakami; do i od 221 — kolejka przez applyEncryptedDelta i pełna kopia) albo
+// same pełne kopie.
+async function ddDo(u, X, Y) {
+  if (u.tryb === 'bloby') return p6blob(X, Y);
+  if (Y.app === 'S221') return dostawaDoStarszej(u.S, X, Y);
+  if (X.app === 'S221') return scalBlob(u.S, X, Y);
+  return dostawa(u.S, X, Y, { w2s: false });
+}
+async function ddSpoczynek(u) {
+  if (u.tryb === 'bloby') return spoczynekBlobow(...p6fUrz(u));
+  if (u.C.app === 'S221') return spoczynekFloty221(u.S, u.A, u.B, u.C);
+  return spoczynekWszystkich(u.S, p6fUrz(u));
+}
+const ddNotatka = (u, U, tresc, krokMs = 60e3) => { krok(krokMs); return mutacja(u.S, U, `notatka „${tresc}”`, () => U.v.savePatientNote({ id: u.nId, patientId: u.P, title: 'Fikcyjna', body: tresc, category: 'inne' })); };
+const ddTrescNotatki = (u) => Object.fromEntries(p6fUrz(u).map((U) => { const x = (U.stan.patientNotes || []).find((q) => q.id === u.nId); return [U.nazwa, x ? `${x.body} (rev ${x.rev})` : 'brak']; }));
+const ddPolozenie = (u, sid) => Object.fromEntries(p6fUrz(u).map((U) => {
+  const p = gdzie(U, sid);
+  if (p) { const s = p.snapshots.find((q) => q.snapshotId === sid); return [U.nazwa, `karta ${etykieta(u.n, p.patientId)}, ${s.payload && s.payload.user ? s.payload.user.weight : '?'} kg`]; }
+  return [U.nazwa, (U.stan.snapshotTombstones || []).some((e) => e.snapshotId === sid) ? 'wpis Kosza' : `brak${kartaW(U.stan, u.X) ? '' : ' (karta X usunięta)'}`];
+}));
+// „Usuń pacjenta” zwróconej starej karty po „Scal pacjentów”: A — karta Y (3; wizyta a) i karta X (5; wizyta v,
+// 33,6 kg), B i C — bliźniaki. B scala X → Y; A bez wiedzy o scaleniu poprawia v w X na 41 kg — zwykła poprawka podnosi
+// chwilę zapisu karty, więc X wraca (D-4 A: duplikat karty); C, który ma X z v od A, usuwa X („Usuń pacjenta”) razem
+// z v. Mechanizm po stronie bieżącej aplikacji: „Usuń pacjenta” usuwa kartę razem ze wszystkimi jej wersjami (Bpu_usun,
+// vilda_vault.js:9441), także duplikat zwrócony poprawką, której nie ma w karcie scalonej; wersja z ładunku pod kartą,
+// gdy tutaj leży pod inną kartą, idzie według Bsw_decyzja (:3806). Wyrocznia: v (przez alias „Scal pacjentów” X → Y)
+// ma żyć w Y z 41 kg — „Usuń pacjenta” X nie jest dla niej operacją na v (tests/support/ostatnia-zmiana.mjs:493,
+// rozwiaz(alias) karty wizyty ≠ X). Wynik zależy od tego, co wie każde urządzenie, gdy dochodzi do niego nagrobek X
+// (kolejnosc):
+// - 'wszyscy' — A, B i C znają powrót X (v w X z 41 kg) przed usunięciem: v nie ma na żadnym urządzeniu w żadnym
+//   świecie (W1, W4, bloby — „utrata”);
+// - 'B bez powrotu' — B ma tylko swoje scalenie (v w Y z 33,6 kg), nagrobek X dochodzi do niego przed powrotem X od A:
+//   W1 — „utrata” na A i C, B ma v w Y z 41 kg (nagrobek X wygrywa z powrotem X od A, a poprawka v przechodzi do Y,
+//   gdzie B ma v — Bsw_decyzja); W4 — bez naruszeń (pełna wymiana roznosi v z B); bloby — v w Y z 33,6 kg na wszystkich
+//   („treść”: poprawka zginęła);
+// - 'C bez scalenia' — C dostaje scalenie od B dopiero po usunięciu: W1 — „utrata” na A i B, C ma v w Y z 33,6 kg
+//   („treść”); W4 — v w Y z 33,6 kg na wszystkich („treść”); bloby — „utrata” na wszystkich.
+// W losowej flocie 221 (profil pełny, ziarno 4, świat 300 004, bez delt; tam X — karta 5, Y — karta 3, C — sejf 221):
+// W1 floty, krok 133 — „utrata” na A i C, v ma tylko B (w X, 41 kg; nagrobek C dochodzi do B dopiero pełną kopią);
+// W4 floty, krok 133 — „utrata” na A, B i C; krok 142 — W1 jak w kroku 133, a W4 bez naruszeń v, bo B zapisał w kroku
+// 138 nową wersję X (później niż nagrobek C), więc X wraca z v na wszystkich urządzeniach (znów D-4 A).
+async function ddDwieKarty(S, app = 'N') {
+  const A = await urzadzenie(S, 'A');
+  krok(); const r3 = await A.d.zapiszKarte(3, { masa: 30 });
+  krok(); const r5 = await A.d.zapiszKarte(5, { masa: 33.6 });
+  krok(); ustawStan(A, await eksport(A)); A.Q.length = 0;
+  const { B, C } = await p6fUrzadzenia(S, A, app);
+  S.stat.obiegiPonadLimit = [];
+  return { A, B, C, Y: r3.patientId, X: r5.patientId, v: r5.snapshotId, n: new Map([[r3.patientId, 'Y'], [r5.patientId, 'X'], [r3.snapshotId, 'a'], [r5.snapshotId, 'v']]) };
+}
+function ddUsunZwrocona(kolejnosc, app = 'N') {
+  return {
+    baza: (S) => ddDwieKarty(S, app),
+    kroki: async (u) => {
+      const { S, A, B, C } = u;
+      krok(60e3); await mutacja(S, B, 'Scal pacjentów 5 → 3', () => B.v.mergePatients(u.X, u.Y));
+      krok(60e3);
+      const s = (await A.v.getPatient(u.X)).snapshots.find((q) => q.snapshotId === u.v);
+      await mutacja(S, A, 'poprawka 5/v 41 kg (bez wiedzy o scaleniu)', () => A.v.updateSnapshotPayload(u.X, u.v, { ...s.payload, user: { ...s.payload.user, weight: 41 } }, { preserveSavedAt: true }));
+      krok(60e3);
+      if (kolejnosc !== 'C bez scalenia') await ddDo(u, B, C);
+      await ddDo(u, B, A); await ddDo(u, A, C);
+      if (kolejnosc === 'wszyscy') await ddDo(u, A, B);
+      u.przedUsun = ddPolozenie(u, u.v);
+      krok(60e3); await mutacja(S, C, 'usuń pacjenta 5', () => C.v.removePatient(u.X));
+      krok(60e3);
+      if (kolejnosc === 'C bez scalenia') { await ddDo(u, A, B); await ddDo(u, C, A); await ddDo(u, B, C); await ddDo(u, C, B); } else { await ddDo(u, C, A); await ddDo(u, C, B); }
+      await ddSpoczynek(u);
+    },
+    fakty: (u) => ({ przedUsun: u.przedUsun, koniec: ddPolozenie(u, u.v) }),
+  };
+}
+const DO_DECYZJI = {
+  // Notatka pacjenta: A edytuje dwa razy (rev 3), B raz, 5 s później (rev 2); reguła notatek „wyższy rev, przy równym
+  // nowsza data” (vilda_vault.js:5434–5438, Bks_wygrywaRev; docs/clinical/ALGORITHMS.md P-SYNC-WLASCICIEL, ok. 31803;
+  // plan — notatki pacjenta LWW z rev na pierwszym miejscu) zostawia tekst A we wszystkich trzech światach na A, B i C,
+  // a wyrocznia oczekuje późniejszej edycji B („treść” bez klasy). Wersje wizyt mają od D-7 zasadę odwrotną (wygrywa
+  // późniejsza zmiana).
+  'notatka pacjenta: wyższy rev wygrywa z późniejszą edycją na innym urządzeniu': {
+    baza: async (S) => {
+      const A = await urzadzenie(S, 'A');
+      krok(); const r = await A.d.zapiszKarte(1);
+      krok(); const nId = (await A.v.savePatientNote({ patientId: r.patientId, title: 'Fikcyjna', body: 'Fikcyjna treść', category: 'inne' })).id;
+      krok(); ustawStan(A, await eksport(A)); A.Q.length = 0;
+      const { B, C } = await p6fUrzadzenia(S, A, 'N');
+      return { A, B, C, P: r.patientId, nId, n: new Map([[r.patientId, 'P'], [nId, 'n']]) };
+    },
+    kroki: async (u) => {
+      await ddNotatka(u, u.A, 'Fikcyjna treść A1'); await ddNotatka(u, u.A, 'Fikcyjna treść A2');
+      await ddNotatka(u, u.B, 'Fikcyjna treść B1 (później)', 5e3);
+      krok(); await ddDo(u, u.A, u.B); await ddDo(u, u.B, u.A); await ddSpoczynek(u);
+    },
+    fakty: ddTrescNotatki,
+  },
+  '„Usuń pacjenta” zwróconej starej karty po „Scal pacjentów” — wszyscy znają powrót karty przed usunięciem': ddUsunZwrocona('wszyscy'),
+  '„Usuń pacjenta” zwróconej starej karty po „Scal pacjentów” — B zna tylko scalenie, nagrobek dochodzi do niego przed powrotem karty': ddUsunZwrocona('B bez powrotu'),
+  '„Usuń pacjenta” zwróconej starej karty po „Scal pacjentów” — C dostaje scalenie dopiero po usunięciu': ddUsunZwrocona('C bez scalenia'),
+  '„Usuń pacjenta” zwróconej starej karty po „Scal pacjentów” — B zna tylko scalenie; kontrola: C na 221 (ten sam wynik)': ddUsunZwrocona('B bez powrotu', 'S221'),
+};
+async function ddSwiat(nr, sc, tryb) {
+  if (!(nr < 20)) throw new Error(`przypadek do decyzji ${nr}: poza światami 880–899`);
+  ustaw(START);
+  const S = swiat(880 + nr);
+  const los = rng(0x6880 + nr);
+  vi.spyOn(Math, 'random').mockImplementation(() => (S.losAlt || los)());
+  S.w2s = false; S.nrKroku = 0; S.wyrSwiat = 'do decyzji';
+  const u = await sc.baza(S);
+  u.S = S; u.tryb = tryb;
+  await sc.kroki(u);
+  for (const U of p6fUrz(u)) ustawStan(U, await eksport(U));
+  S.wyrEtyk = (id) => etykieta(u.n, id);
+  return u;
+}
+const ddNar = (lista) => lista.map((x) => `${x.swiat}: ${x.urz} ${x.encja} ${x.et} ${x.rodzaj} [${x.klasa || 'bez klasy'}] oczekiwane ${JSON.stringify(x.oczek)} fakt ${JSON.stringify(x.fakt)}`);
+describe.skipIf(!DO_DECYZJI_RECZNIE)('A ≡ B, do decyzji właściciela (ręcznie): przyczyna po stronie bieżącej aplikacji — dziś czerwone, bez klasy i bez literału', () => {
+  d1();
+  for (const [nr, [nazwa, sc]] of Object.entries(DO_DECYZJI).entries()) {
+    it(`${nazwa}: wyrocznia bez naruszeń bez klasy po samych zdarzeniach (W1), po pełnej wymianie (W4) i przy samych pełnych kopiach (bloby)`, async () => {
+      const u = await ddSwiat(nr, sc, 'zdarzenia');
+      const stare = p6fUrz(u).filter(starszaAplikacja).map((U) => U.nazwa);
+      const W1 = wyrOcena(u.S, 'W1', nazwa, await wyrWidoki(u.S, { A: u.A, B: u.B, C: u.C }), { stare });
+      const faktyW1 = await sc.fakty(u);
+      const w = await w4Trzy(u.S, p6fUrz(u), u.n);
+      const W4 = wyrOcena(u.S, 'W4', nazwa, w.wyr, { stare });
+      delete w.wyr;
+      await sprzatnijUrzadzenia(); vi.restoreAllMocks();
+      const ub = await ddSwiat(nr, sc, 'bloby');
+      const bloby = wyrOcena(ub.S, 'bloby', nazwa, await wyrWidoki(ub.S, { A: ub.A, B: ub.B, C: ub.C }), { stare });
+      const faktyBlobow = await sc.fakty(ub);
+      const wynik = { W1: ddNar(W1), W4: ddNar(W4), bloby: ddNar(bloby), faktyW1, W4kliniczny: w.opis, faktyBlobow };
+      console.log(`E3-AB do decyzji „${nazwa}”`, JSON.stringify({ ...wynik, dziennik: u.S.dziennik }));
+      if (process.env.E2_AB_WYNIKI) appendFileSync(process.env.E2_AB_WYNIKI, JSON.stringify({ typ: 'do decyzji', nr, nazwa, ...wynik, dziennik: u.S.dziennik, dziennikBlobow: ub.S.dziennik }) + '\n');
+      const opis = JSON.stringify({ faktyW1, W4kliniczny: w.opis, faktyBlobow }, null, 1);
+      for (const [swiatN, lista] of [['W1', W1], ['W4', W4], ['bloby', bloby]]) expect.soft(ddNar(WYR.bezWyjatku(lista, swiatN)), `${nazwa} — świat ${swiatN}\n${opis}`).toEqual([]);
+    }, 60_000);
+  }
 });
