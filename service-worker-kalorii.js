@@ -799,6 +799,7 @@ const CORE_SHELL_URLS = [
   '/inline_ustawienia_07.js?v=4',
   '/inline_ustawienia_07.js?v=5',
   '/inline_ustawienia_07.js?v=6',
+  '/vilda_sync_connection_test.js?v=1',
 
   '/sidebar.css',
   '/vilda_chrome.css',
