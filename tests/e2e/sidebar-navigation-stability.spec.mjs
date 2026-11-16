@@ -637,10 +637,10 @@ test('a real in-flight Save retains its status through native navigation and rea
 // transitions; a real PRO gate is allowed to disable its unavailable form.
 async function emptyMenuFixture(page, context, { coldDestination = false } = {}) {
   await fixturePreferences(page);
-  await context.route(/https?:\/\/[^/]+\.workers\.dev(?:\/|$)/u, route => route.fulfill({
+  await context.route(/https?:\/\/(?:[^/]+\.workers\.dev|sync\.vildasync\.com)(?:\/|$)/u, route => route.fulfill({
     status: 404, headers: { 'access-control-allow-origin': '*' }, body: '{}',
   }));
-  await context.routeWebSocket(/wss?:\/\/[^/]+\.workers\.dev(?:\/|$)/u, socket => socket.close());
+  await context.routeWebSocket(/wss?:\/\/(?:[^/]+\.workers\.dev|sync\.vildasync\.com)(?:\/|$)/u, socket => socket.close());
   await page.goto('/app.html#/start', { waitUntil: 'load' });
   let start = await shellFrame(page, 'Start');
   await start.waitForFunction(() => typeof window.VildaVault?.createUser === 'function');
