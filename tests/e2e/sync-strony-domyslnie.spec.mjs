@@ -11,7 +11,7 @@ import { expect, test } from '@playwright/test';
 test.use({ serviceWorkers: 'block' });
 
 const HASLO = 'E2e#SyncStrony!26bb';
-const WORKER = 'https://vilda-sync.maciej-4b9.workers.dev';
+const WORKER = 'https://sync.vildasync.com';
 const HEAD = 251;
 
 async function przygotuj(page, flaga) {
@@ -99,7 +99,7 @@ test('E2-PR1b: bez klucza vilda-sync-paged-v1 — GET /v1/health bez tokenu, dwi
   test.setTimeout(120_000);
   const srv = atrapaSerwera();
   await context.route(`${WORKER}/**`, srv.obsluz);
-  await context.routeWebSocket(/vilda-sync\.maciej-4b9\.workers\.dev/, (ws) => { ws.close(); });
+  await context.routeWebSocket(/vilda-sync\.maciej-4b9\.workers\.dev|sync\.vildasync\.com/, (ws) => { ws.close(); });
   await przygotuj(page, null);
   const w = await pobierzZKursorem1(page);
   expect(w.akcja).toBe('up-to-date');
@@ -120,7 +120,7 @@ test("E2-PR1b: vilda-sync-paged-v1 = '0' — jedno żądanie legacy bez limit= i
   test.setTimeout(120_000);
   const srv = atrapaSerwera();
   await context.route(`${WORKER}/**`, srv.obsluz);
-  await context.routeWebSocket(/vilda-sync\.maciej-4b9\.workers\.dev/, (ws) => { ws.close(); });
+  await context.routeWebSocket(/vilda-sync\.maciej-4b9\.workers\.dev|sync\.vildasync\.com/, (ws) => { ws.close(); });
   await przygotuj(page, '0');
   const w = await pobierzZKursorem1(page);
   expect(w.akcja).toBe('up-to-date');

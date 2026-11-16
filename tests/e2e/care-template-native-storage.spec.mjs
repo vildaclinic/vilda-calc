@@ -12,7 +12,7 @@ const FIRST_STEP = 'Fikcyjne otrzymanie dokumentu';
 
 async function openNativePage(page) {
   const requests = [];
-  await page.route('https://vilda-sync.maciej-4b9.workers.dev/**', async route => {
+  await page.route('https://sync.vildasync.com/**', async route => {
     requests.push(new URL(route.request().url()).pathname);
     await route.abort();
   });
