@@ -69,7 +69,11 @@ describe('native notes and staged evidence respect the same document boundary', 
     // Odświeżony świadomie 2026-11-15 (P-BADANIA-WEJSCIE, decyzja właściciela): nowa notatka nie ma szablonu
     // „Wynik badania” — nowego wyniku nie wpisuje się ręcznie. Jedyna zmiana w treści edytora: lista szablonów S
     // dostaje pozycję „lab” tylko, gdy edytor otwarto z tym szablonem (w === "lab"); bramka dostępu i zapis bez zmian.
-    expect(createHash('sha256').update(source.slice(...body.range)).digest('hex')).toBe('bda89399c6b4821ff6e687a394617578effbc2b70286e8471802f5ea7d9e9481');
+    // Odświeżony świadomie 2026-11-16 (E3-PR0b2a, P-KONFLIKT-ZAPISU-NOTATKI): edytor pamięta chwilę zapisu otwartej
+    // wersji (QbaseU) i wysyła ją jako baseUpdatedAtISO, a „Nadpisz moją wersją” podnosi ją z wersji w sejfie
+    // (current konfliktu). Jedyna zmiana w treści edytora: te trzy instrukcje i dwa komentarze; bramka dostępu
+    // i zapis bez zmian. Działanie: tests/unit/konflikt-edycji-notatki-chwila.test.mjs, tests/e2e/edytor-notatki-rata3.spec.mjs.
+    expect(createHash('sha256').update(source.slice(...body.range)).digest('hex')).toBe('d08016347153638a9a09077de765db16789300f0db3bdb0fc687afa4eef7c6d1');
   });
 
   it('opens a genuinely new note synchronously without a needless patient-plan read', () => {
