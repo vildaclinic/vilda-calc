@@ -138,6 +138,16 @@
       ? w.VildaGrowthPredictionLines.podziel(all) : { widoczne: all, pozostale: [] };
     var available = divided.widoczne.slice();
     var extra = divided.pozostale.slice();
+    var homeGrowth = w.__VILDA_HOME_WORKSPACE_PREVIEW__ === true
+      && (!w.location || /(?:\/|\/index\.html)$/.test(w.location.pathname || ''));
+    if (homeGrowth && context.isChild) {
+      // Ask the native splitter for the actual consensus lines: with a single
+      // method the label can be that method's name, not the word "consensus".
+      var consensus = w.VildaGrowthPredictionLines && w.VildaGrowthPredictionLines.linieKonsensusu
+        ? w.VildaGrowthPredictionLines.linieKonsensusu().map(matchLine) : [];
+      available = available.filter(function (line) { return key(line) !== 'prediction' || consensus.indexOf(matchLine(line)) >= 0; });
+      extra = extra.filter(function (line) { return key(line) !== 'prediction'; });
+    }
     var main = [];
     var contextRows = [];
     if (context.isChild) {
@@ -171,7 +181,7 @@
         }
       });
     }
-    return { main: main, extra: contextRows.concat(extra.map(function (line) { return row(line, context); })), predictionNote: divided.pozostale.length > 0 };
+    return { main: main, extra: contextRows.concat(extra.map(function (line) { return row(line, context); })), predictionNote: !homeGrowth && divided.pozostale.length > 0 };
   }
 
   function create(doc, tag, className) {

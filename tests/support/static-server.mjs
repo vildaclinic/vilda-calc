@@ -38,7 +38,7 @@ function createE2eServiceWorker(source, wersja) {
   // Keep that exact block while trimming unrelated shell assets for these tests.
   const clinicalWorkspace = source.match(/  \/\/ BEGIN CLINICAL WORKSPACE PRECACHE V1[\s\S]*?  \/\/ END CLINICAL WORKSPACE PRECACHE V1/);
   if (!clinicalWorkspace) throw new Error('Test service worker requires the complete clinical workspace precache block.');
-  // The visit/home UI pack has the same production requirement: its seven pinned
+  // The visit/home UI pack has the same production requirement: its eight pinned
   // URLs must stay in CORE even when this fixture trims unrelated assets.
   const visitPack = source.match(/const VISIT_UI_PRECACHE_PACK = Object\.freeze\((\{[\s\S]*?\})\);/);
   if (!visitPack) throw new Error('Test service worker requires the visit UI precache configuration.');
@@ -46,6 +46,7 @@ function createE2eServiceWorker(source, wersja) {
     '/vilda_visit_context.js', '/vilda_visit_history_ui.js', '/vilda_visit_history_ui.css',
     '/vilda_home_workspace.js', '/vilda_home_workspace.css',
     '/vilda_home_perinatal.js', '/vilda_sga_birth_results.css',
+    '/vilda_home_growth.js',
   ]);
   const visitFiles = JSON.parse(visitPack[1]).files;
   const visitUrls = Array.isArray(visitFiles) ? visitFiles.map(file => file?.url) : [];
@@ -53,7 +54,7 @@ function createE2eServiceWorker(source, wersja) {
     ? url.split('?')[0] : null);
   if (visitUrls.length !== expectedVisitPaths.size || new Set(visitPaths).size !== expectedVisitPaths.size
     || visitPaths.some(resource => !expectedVisitPaths.has(resource)))
-    throw new Error('Test service worker requires exactly the seven versioned visit/home UI resources.');
+    throw new Error('Test service worker requires exactly the eight versioned visit/home UI resources.');
   const visitCore = visitUrls.map(url => '  ' + JSON.stringify(url) + ',').join('\n');
   const zWersja = wersja && /^[0-9A-Za-z.-]{1,32}$/.test(wersja)
     ? source.replace(/const SW_VERSION = '[^']*';/, `const SW_VERSION = '${wersja}';`)

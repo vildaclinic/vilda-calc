@@ -1818,24 +1818,24 @@ Test `sga-shared-presentation.test.mjs` wywołuje ten sam kod produkcyjny przez
 DocPro oraz nowy czysty punkt wejścia. `vilda_sga_birth_results.css` pochodzi
 wyłącznie z odpowiadających wynikowi reguł `inline_docpro_00.css`.
 
-### Transport siedmiu zasobów interfejsu wizyt i strony głównej w PWA
+### Transport ośmiu zasobów interfejsu wizyt i strony głównej w PWA
 
 `vilda_visit_context.js`, `vilda_visit_history_ui.js`,
 `vilda_visit_history_ui.css`, `vilda_home_workspace.js`,
-`vilda_home_workspace.css`, `vilda_home_perinatal.js` i
-`vilda_sga_birth_results.css` pozostają niezależnymi plikami źródłowymi oraz
-siedmioma oddzielnymi adresami offline z `?v=`. Instalacja pobiera ich dokładne
+`vilda_home_workspace.css`, `vilda_home_perinatal.js`,
+`vilda_sga_birth_results.css` i `vilda_home_growth.js` pozostają niezależnymi plikami źródłowymi oraz
+ośmioma oddzielnymi adresami offline z `?v=`. Instalacja pobiera ich dokładne
 treści w jednym archiwum JSON. `tools/build-visit-ui-precache.mjs` odczytuje
 bajty źródeł i bieżące wersje precache, zapisuje archiwum pod adresem z hashem,
 manifest `runtime/visit-ui-precache/manifest.json` oraz konfigurację
 `VISIT_UI_PRECACHE_PACK` w SW. Nie łączy wykonywanego kodu ani arkuszy stylów.
 
 Worker najpierw sprawdza hash całego archiwum, pełną listę członków i hash
-każdej treści. Dopiero wtedy zapisuje odpowiedzi pod siedmioma oryginalnymi
+każdej treści. Dopiero wtedy zapisuje odpowiedzi pod ośmioma oryginalnymi
 kluczami. CSS ma typ `text/css`, skrypty `text/javascript`; archiwum nie może
 zmienić tych typów. Wspólny mechanizm weryfikacji transportu ma dwie oddzielne
 listy dozwolonych zasobów: dotychczasowe moduły przestrzeni klinicznej oraz
-dokładnie siedem zasobów wizyt i strony głównej. Nie rozszerza listy akceptowanych adresów
+dokładnie osiem zasobów wizyt i strony głównej. Nie rozszerza listy akceptowanych adresów
 przestrzeni klinicznej. Nieudana weryfikacja przerywa wymaganą instalację.
 
 Po zmianie treści lub numeru `?v=` tych plików, **po** `npm run podbij-wersje`:
@@ -1853,3 +1853,16 @@ pozostają bez zmian. Testy `visit-ui-precache-pack.test.mjs` sprawdzają
 oryginalne treści, MIME, zakres `/vilda-calc/`, odrzucenie uszkodzeń i błędy
 zapisu; `sw-precache-stron.test.mjs` nadal wykonuje rzeczywisty worker,
 sprawdza wszystkie wymagane klucze oraz niezmienione budżety.
+
+### Nowe okno zaawansowanych obliczeń wzrostowych
+
+`vilda_home_growth.js` jest czytelnym źródłem wykonywanym bez generowania.
+Warstwa prezentacji i szkicu korzysta z kanonicznych pól, natywnych akcji
+dodawania/usuwania pomiarów oraz `calculateGrowthAdvanced()`. Wyniki są
+kopiami już wyrenderowanego `advResults`; nie odtwarza wzorów ani kwalifikacji
+metod. `vilda_advanced_growth.js`, `vilda_growth_card_c.js` i
+`vilda_trajectory_analysis.js` pozostają bajtowo niezmienione.
+
+Regresje rzeczywistego zapisu i anulowania, tożsamości węzłów, metadanych,
+blokad GH, zmiany pacjenta oraz F5 sprawdza `home-workspace-growth.spec.mjs`.
+Odrębność formularza G/Th/P sprawdza `home-workspace-puberty.spec.mjs`.

@@ -1559,17 +1559,21 @@
   "v": 3,
   "sha256": "3cc184cdcc8237c79f70c19c70862649de1ffe2acf680bb877629ca2f8c1483b"
  },
+ "vilda_home_growth.js": {
+  "v": 1,
+  "sha256": "0f97c4d60d4bc1d88050f56cd04e8e99c8db9afd473b43d59a8a6e5fef34dc7b"
+ },
  "vilda_home_perinatal.js": {
   "v": 1,
   "sha256": "981190bbca652d74e71acd083940d3fcb2c7071ca87a9d6ca56a0a59a004633f"
  },
  "vilda_home_workspace.css": {
-  "v": 5,
-  "sha256": "c038c6a69e1bc1314a026cb2a083a4195abd071d473ab78e9d6b6b2bec338042"
+  "v": 6,
+  "sha256": "21d3118c9db4479691c3379fc56a3cefac6ee1be8c872e5bc1e535171e00857c"
  },
  "vilda_home_workspace.js": {
-  "v": 4,
-  "sha256": "db4e485a1f8a8c277712fff9b2d25ea39badbaf71f9071bc89605b76ca47299d"
+  "v": 5,
+  "sha256": "5586389404523c39b70c4455d95de7ae969a710521ee9b95250db80b562db3e5"
  },
  "vilda_hormone_lifespan.css": {
   "v": 7,
@@ -1892,8 +1896,8 @@
   "sha256": "4c422e67804eed369977f7a1a72a86a79625335e7813f503d12546b0cae1fc95"
  },
  "vilda_professional_summary.js": {
-  "v": 2,
-  "sha256": "800b41ab116d099efaefabc5d3785046f6bd3256e51e91a8a9defb636b71d708"
+  "v": 3,
+  "sha256": "f807b58a56347a4ef2c1f9bdde4c69ca5b3a5c2e8139b799a79795e2d6863032"
  },
  "vilda_professional_summary_rules.js": {
   "v": 1,
