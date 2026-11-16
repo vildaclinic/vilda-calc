@@ -22785,6 +22785,54 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
+## Test połączenia z synchronizacją i historia połączeń na żywo (P-SYNC-TEST-POLACZENIA, SW 1.1.541, `vilda_realtime.js` 11, `inline_ustawienia_06.js` 2, 2026-11-16)
+
+**Zmiana kliniczna: NIE** — wzory, progi, jednostki, interpretacje, dane pacjentów, zapis, scalanie, kursor, kolejka,
+odpytywanie, ping i odstępy ponownego łączenia bez zmian. Dochodzi narzędzie diagnostyczne tylko do odczytu. Wpływ
+kliniczny: brak.
+
+**Skąd.** Zgłoszenie właściciela z 2026-11-16: na komputerach szpitalnych synchronizacja „okresowo się pojawia, działa
+prawidłowo, a potem się rozłącza”; szpital ogranicza dostęp do wybranych stron. Polecenie: przycisk „Test połączenia
+z synchronizacją” i odpowiedź, czy da się coś z tym zrobić.
+
+**Co było.** Ustawienia pokazywały tylko bieżący stan „Łączności na żywo” (połączono / rozłączono, liczba prób,
+ostatni kod błędu). Nie było jak sprawdzić, czy serwer jest osiągalny z danej sieci, ani jak długo żyją kolejne
+połączenia — a to odróżnia limit czasu połączenia w zaporze lub proxy od zwykłych przerw.
+
+**Co jest.**
+1. *Historia połączeń na żywo* (`vilda_realtime.js`, nowa funkcja tylko do odczytu `VildaRealtime.getHistory()`).
+   Każde utworzone gniazdo dostaje wpis w pamięci strony: `startedAt`, `openedAt` (`null` = nie otwarto), `closedAt`,
+   `code` (kod zamknięcia; `"disconnect"` przy rozłączeniu przez aplikację, np. blokadzie sejfu) i `pongs` (liczba
+   odpowiedzi na bicie serca). Najwyżej 30 ostatnich wpisów, bez magazynu i bez sieci; wynik jest kopią. Pola `info()`
+   bez zmian.
+2. *Test połączenia* (blok `BEGIN/END P-SYNC-TEST-POLACZENIA` w `inline_ustawienia_06.js`, `window.VildaSyncConnectionTest`;
+   nie osobny plik, bo budżet 600 żądań instalacji service workera jest w pełni wykorzystany; bez stylów inline), przycisk w Ustawieniach →
+   Synchronizacja → „Łączność na żywo”:
+   - `navigator.onLine`;
+   - 5 × `GET /v1/health` (bez logowania i nagłówka `Authorization`, `credentials: 'omit'`, limit 8 s, przerwa 0,8 s),
+     klasyfikacja: odpowiedź, brak odpowiedzi lub zablokowana (`TypeError`), limit czasu, błąd HTTP, nieoczekiwana
+     treść (np. strona blokady); mediana i maksimum czasu, mediana > 1500 ms = „wolno”;
+   - połączenie na żywo przy włączonej synchronizacji i odblokowanym sejfie: `isLive()` → aktywne; inaczej przy
+     zamkniętym gnieździe `connect()` (to samo, co powrót do karty) i czekanie do 35 s (bicie serca co 25 s) →
+     „nawiązane w trakcie testu”, „otwarte bez odpowiedzi” albo „nie nawiązało się”;
+   - analiza historii: zerwania (bez `"disconnect"`), nieudane otwarcia, kody, typowy czas życia; „regularnie”, gdy co
+     najmniej 3 z ostatnich 5 czasów życia mieszczą się w rozrzucie ≤ max(10 s, 20% mediany) — ślad limitu czasu
+     połączenia w zaporze lub proxy;
+   - werdykt (działa / niestabilne / serwer nieosiągalny / brak internetu) z radami i raport tekstowy dla IT
+     (host, wyniki, kody zamknięcia, przeglądarka). Raport nie zawiera ID konta, tokenu ani danych pacjentów.
+3. Test nie wysyła ani nie pobiera danych, niczego nie zapisuje i nie zmienia stanu synchronizacji. Gdy połączenie na
+   żywo nie działa, synchronizacja i tak pobiera zmiany co ok. 20 s (P-SYNC-ODPYTYWANIE-WS) — werdykt to mówi.
+
+**Przypadki syntetyczne (wejście → wynik).**
+- 5/5 odpowiedzi po 50 ms, gniazdo z `pong` sprzed 4 s, brak zerwań → „Połączenie z synchronizacją działa prawidłowo”.
+- 5/5 `TypeError` → „Serwer synchronizacji jest nieosiągalny z tej sieci” + rada dla IT z hostem.
+- Serwer zamyka gniazdo po 60 s (kod 1006), 4 zerwania → „…niestabilne”, „zrywane regularnie, za każdym razem po ok.
+  1 min”, rada: zapora lub proxy, porównanie z hotspotem, raport dla IT.
+
+**Testy.** `tests/unit/sync-test-polaczenia.test.mjs` (M1–M5 model wycięty z produkcyjnego pliku, przebiegi z atrapami; R1–R2 prawdziwy
+`vilda_realtime.js` z atrapą gniazda: wpisy, regularność, `disconnect`, limit 30, pola `info()`),
+`tests/e2e/sync-test-polaczenia.spec.mjs` (E1 sieć przepuszcza, E2 sieć blokuje, E3 telefon bez poziomego przewijania).
+
 ## Pojedyncze zmiany włączone dla wszystkich w trybie „Komputer prywatny” (P-SYNC-ZDARZENIA, E2-PR6, SW 1.1.530, `vilda_sync.js` 56, `inline_ustawienia_07.js` 6, 2026-11-14)
 
 **Zmiana kliniczna: nie** — wzory, progi, jednostki, interpretacje i reguły scalania bez zmian. **Zmienia się działanie
