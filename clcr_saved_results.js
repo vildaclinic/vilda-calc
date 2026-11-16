@@ -1264,7 +1264,7 @@
     const point = {
       ...base,
       id: note.id || null, noteId: note.id || null, patientId: note.patientId || null,
-      baseRev: Number.isFinite(note.rev) ? note.rev : null, note,
+      baseRev: Number.isFinite(note.rev) ? note.rev : null, baseUpdatedAtISO: text(note.updatedAtISO) || null, note,
       dateISO: normalizeDateISO(note.clinicalDateISO) || "", dateSource: normalizeDateISO(note.clinicalDateISO) ? "badanie" : "unknown",
       createdAtISO: text(note.createdAtISO) || null, updatedAtISO: text(note.updatedAtISO) || null,
       rawText: measured.rawText, rawValue: measured.rawValue,

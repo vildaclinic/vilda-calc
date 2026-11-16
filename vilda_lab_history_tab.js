@@ -254,7 +254,7 @@
             }
             script.addEventListener('load', function () { finish(win.ClcrRecordResources ? null : new Error('Moduł zapisanych obliczeń jest niedostępny.')); });
             script.addEventListener('error', function () { finish(new Error('Nie udało się wczytać zapisanych obliczeń.')); });
-            script.setAttribute('src', new URL('clcr_record_resources.js?v=28', moduleURL || win.location.href).href);
+            script.setAttribute('src', new URL('clcr_record_resources.js?v=29', moduleURL || win.location.href).href);
             timer = win.setTimeout(function () { finish(new Error('Upłynął czas wczytywania zapisanych obliczeń.')); }, 15000);
             doc.head.appendChild(script);
           });
@@ -587,7 +587,8 @@
           var opened = describeDialog;
           Promise.resolve(vault.getPatientNote(item.noteId)).then(function (note) {
             if (!stillPending(note)) throw userError('Ten oczekujący wynik zmienił się albo został już zamknięty. Zamknij okno i sprawdź go w Przypomnieniach.');
-            var request = { id: note.id, patientId: note.patientId, baseRev: note.rev || 0, action: 'result', dateISO: day, text: value };
+            // E3-PR0b2a: chwila zapisu obok rev - sejf porównuje ją z wersją pod blokadą notatki.
+            var request = { id: note.id, patientId: note.patientId, baseRev: note.rev || 0, baseUpdatedAtISO: note.updatedAtISO || null, action: 'result', dateISO: day, text: value };
             var name = pendingTestName(note);
             if (name) request.test = name;
             // Ponowienie tej samej prośby (np. po błędzie sieci) niesie ten sam identyfikator operacji.

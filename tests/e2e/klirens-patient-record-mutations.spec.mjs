@@ -66,7 +66,9 @@ test('ACR editing replaces the same note and full assessment, respects historica
   expect(after.notes).toHaveLength(5);
   expect(after.notes.map(note => note.id).sort()).toEqual(before.notes.map(note => note.id).sort());
   expect(after.updates).toHaveLength(1);
-  expect(after.updates[0]).toMatchObject({ id: ids.acr, patientId: before.notes.find(note => note.id === ids.acr).patientId, baseRev: 1 });
+  // E3-PR0b2a: obok rev idzie chwila zapisu wersji pokazanej w szczegółach.
+  const shown = before.notes.find(note => note.id === ids.acr);
+  expect(after.updates[0]).toMatchObject({ id: ids.acr, patientId: shown.patientId, baseRev: 1, baseUpdatedAtISO: shown.updatedAtISO });
   await expect(page.locator('#calculationDetails')).toContainText('13,6');
   await expect(page.locator('#calculationDetails')).not.toContainText('Podwyższony wynik');
   await edit(page);
@@ -138,6 +140,8 @@ test('delete targets one ID, cancel preserves same-day siblings and the last not
   await page.locator('#confirmDeleteMeasurement').focus();
   await page.locator('#confirmDeleteMeasurement').press('Space');
   await expect(page.locator('#detailsDialog')).toBeHidden();
+  // E3-PR0b2a: usunięcie podaje rev i chwilę zapisu wersji pokazanej w szczegółach.
+  expect((await memory(page)).deletes[0]).toMatchObject({ id: first.id, patientId: first.patientId, baseRev: first.rev, baseUpdatedAtISO: first.updatedAtISO });
   await expect(renal(page).locator(`.vilda-lab-hist-result-row[data-source="clcr"][data-note-id="${first.id}"]`)).toHaveCount(0);
   await showBadaniaView(page, 'charts');
   await expect(point(page, first.id)).toHaveCount(0);

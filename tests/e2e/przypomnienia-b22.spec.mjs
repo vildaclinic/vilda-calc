@@ -119,6 +119,40 @@ test('refresh does not overwrite an open editor and stale edits cannot replace a
   expect((await page.evaluate(id => window.VildaVault.getPatientNote(id), notes[0])).body).toBe('Nowszy zapis z drugiej karty.');
 });
 
+// E3-PR0b2a: zmiana z innego urządzenia dociera scaleniem przy tym samym numerze wersji (nowa treść,
+// późniejsza chwila zapisu, ten sam rev). Formularz wykonania podaje chwilę zapisu wiersza, więc zapis się zatrzymuje.
+test('scalenie przy tym samym numerze wersji w czasie otwartego formularza zatrzymuje zapis i zostawia wpisany opis', async ({ page }) => {
+  const { notes } = await setup(page); await open(page); await select(page, notes[0]);
+  await page.locator(DIALOG).getByRole('button', { name: 'Oznacz jako wykonane', exact: true }).click(); await outcomeField(page, 'Co zostało zrobione? (opcjonalnie)', 'Mój niezapisany fikcyjny opis.');
+  const merged = await page.evaluate(async id => {
+    const vault = window.VildaVault, before = await vault.getPatientNote(id);
+    const payload = JSON.parse(JSON.stringify(await vault.exportSyncPayload())), note = payload.patientNotes.find(item => item.id === id);
+    note.body = 'Fikcyjna nowsza treść z innego urządzenia.'; note.updatedAtISO = new Date(Math.max(Date.parse(note.updatedAtISO) + 1, Date.now())).toISOString();
+    await vault.mergeSyncPayload(payload);
+    const after = await vault.getPatientNote(id); return { before: before.rev, after: after.rev, body: after.body };
+  }, notes[0]);
+  expect(merged.after, 'scalenie nie zmienia numeru wersji').toBe(merged.before); expect(merged.body).toBe('Fikcyjna nowsza treść z innego urządzenia.');
+  await page.locator(OUTCOME).getByRole('button', { name: 'Zapisz wykonanie', exact: true }).click(); await expect(page.locator(OUTCOME).getByRole('alert')).toContainText('zmieniła się');
+  await expect(page.locator(OUTCOME).getByLabel('Co zostało zrobione? (opcjonalnie)', { exact: true })).toHaveValue('Mój niezapisany fikcyjny opis.');
+  const stored = await page.evaluate(id => window.VildaVault.getPatientNote(id), notes[0]);
+  expect(stored.body).toBe('Fikcyjna nowsza treść z innego urządzenia.'); expect(stored.completedAtISO).toBeNull();
+});
+
+// E3-PR0b2a: formularz podaje chwilę ZAPISU wiersza (updatedAtISO), nie chwilę utworzenia. Wpis poprawiany
+// przed otwarciem Przypomnień ma te chwile różne — pomylenie ich dawałoby fałszywy konflikt przy każdym takim wpisie.
+test('wpis poprawiony przed otwarciem Przypomnień zapisuje wykonanie bez fałszywego konfliktu', async ({ page }) => {
+  const { notes, ids } = await setup(page);
+  await page.evaluate(async ({ id, patientId }) => { await new Promise((r) => { setTimeout(r, 20); }); await window.VildaVault.savePatientNote({ id, patientId, body: 'Fikcyjna treść poprawiona wcześniej.' }); }, { id: notes[0], patientId: ids.a });
+  const before = await page.evaluate(id => window.VildaVault.getPatientNote(id), notes[0]);
+  expect(before.updatedAtISO, 'wpis był poprawiany po utworzeniu').not.toBe(before.createdAtISO);
+  await open(page); await select(page, notes[0]);
+  await page.locator(DIALOG).getByRole('button', { name: 'Oznacz jako wykonane', exact: true }).click();
+  await outcomeField(page, 'Co zostało zrobione? (opcjonalnie)', 'Fikcyjny opis wykonania.');
+  await page.locator(OUTCOME).getByRole('button', { name: 'Zapisz wykonanie', exact: true }).click();
+  await expect(page.locator(`${DIALOG} .vb22-notice`)).toContainText('Zapisano w Karcie pacjenta');
+  expect((await page.evaluate(id => window.VildaVault.getPatientNote(id), notes[0])).completedAtISO).toBeTruthy();
+});
+
 test('the bell opens an empty workspace so the first reminder can be created', async ({ page }) => {
   await createFictionalVault(page); await open(page); await expect(page.locator(DIALOG)).toContainText('Brak przypomnień na dziś');
   await page.locator(DIALOG).getByRole('button', { name: 'Dodaj przypomnienie', exact: true }).click(); await expect(page.locator(DIALOG).getByLabel('Treść przypomnienia')).toBeVisible();
