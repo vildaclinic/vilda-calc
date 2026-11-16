@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { fictionalCareCloud } from './care-plans-sync-fixture.mjs';
 
-const WORKER = 'https://vilda-sync.maciej-4b9.workers.dev';
+const WORKER = 'https://sync.vildasync.com';
 const NAMESPACE = 'care-template-library';
 const PROTOCOL = 1;
 const LIMITS = Object.freeze({ maxEventBytes: 1048576, maxBodyBytes: 1048576, maxBatchEvents: 200,

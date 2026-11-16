@@ -22785,6 +22785,37 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
+## Serwer synchronizacji pod własną domeną sync.vildasync.com (P-SYNC-DOMENA, SW 1.1.543, `vilda_init.js` 5, `inline_subskrypcja_00.js` 3, 2026-11-16)
+
+**Zmiana kliniczna: NIE** — wzory, progi, jednostki, interpretacje, dane, szyfrowanie, format, scalanie i kursor bez
+zmian. Zmienia się wyłącznie adres, pod który aplikacja wysyła zaszyfrowane dane synchronizacji. Wpływ kliniczny: brak.
+
+**Skąd.** Test połączenia (P-SYNC-TEST-POLACZENIA) na komputerze szpitalnym z zaporą FortiGate: 0 z 5 odpowiedzi
+`GET /v1/health`, 5 nieudanych otwarć WebSocket (1006), przy działającym internecie i GitHubie. Domena `workers.dev`
+bywa blokowana przez filtry w całości. Właściciel kupił w Cloudflare domenę `vildasync.com` i podpiął
+`sync.vildasync.com` jako Custom Domain tego samego Workera (2026-11-16). Sprawdzone przed zmianą: `GET /v1/health`
+pod nowym adresem → `{"status":"ok","api":37,…}`, CORS dla `https://vildaclinic.github.io`.
+
+**Co jest.**
+1. `vilda_init.js` (ładowany na każdej stronie przed modułami synchronizacji) ustawia
+   `window.VILDA_SYNC_WORKER_URL = 'https://sync.vildasync.com'`, chyba że wartość ustawiono wcześniej (testy). Moduły
+   synchronizacji V1 (`vilda_sync.js`, `vilda_sync_integration.js`), połączenia na żywo (`vilda_realtime.js`), PRO
+   (`vilda_pro_access.js`, `vilda_auth_ui.js`), kluczy dostępu i biblioteki szablonów (`vilda_vault.js`) oraz test
+   połączenia czytają to ustawienie w chwili zapytania — ich kod i sumy kontrolne granic bez zmian.
+2. `inline_subskrypcja_00.js` czytał stały adres; teraz czyta to samo ustawienie (stary adres jako zapas).
+3. CSP `connect-src` 9 stron z synchronizacją: dochodzi `https://sync.vildasync.com` i `wss://sync.vildasync.com`;
+   stary host zostaje (starsze wersje aplikacji i cache PWA działają dalej, ten sam serwer i te same dane).
+4. Bez zmian, celowo: chroniona domena danych pacjentów V2 (`vilda_patient_identity_transport.js`,
+   `PatientWorkspaceServiceOrigin` w `vilda_vault.js`) — jest wyłączona, a jej adres wchodzi do materiału
+   odzyskiwania i powiązań kryptograficznych; zmiana wymaga osobnej decyzji przed jej uruchomieniem.
+
+**Przypadki syntetyczne.** Okno bez ustawienia → po `vilda_init.js` adres `https://sync.vildasync.com`; okno z
+`VILDA_SYNC_WORKER_URL='https://atrapa.invalid'` → bez zmian; połączenie na żywo →
+`wss://sync.vildasync.com/v1/slots/<slot>/socket`.
+
+**Testy.** `tests/unit/sync-domena.test.mjs` (D1–D4); testy e2e z atrapą serwera przechwytują nowy host
+(`tests/support/atrapa-workera-route.mjs`, `atrapa-synchronizacji.mjs`, fikstury planów i szablonów, spece sync).
+
 ## Test połączenia z synchronizacją i historia połączeń na żywo (P-SYNC-TEST-POLACZENIA, SW 1.1.541, `vilda_realtime.js` 11, `inline_ustawienia_06.js` 2, 2026-11-16)
 
 **Zmiana kliniczna: NIE** — wzory, progi, jednostki, interpretacje, dane pacjentów, zapis, scalanie, kursor, kolejka,

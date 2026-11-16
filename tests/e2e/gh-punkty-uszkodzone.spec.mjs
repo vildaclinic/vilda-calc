@@ -79,7 +79,7 @@ for (const [opis, rozmiar] of [['desktop', { width: 1280, height: 860 }], ['tele
     await page.setViewportSize(rozmiar);
     const bledy = [];
     page.on('pageerror', (e) => bledy.push(String(e && e.message)));
-    await page.route(/^https:\/\/vilda-sync\./, (route) => route.abort());
+    await page.route(/^https:\/\/(?:vilda-sync\.|sync\.vildasync\.com\/)/, (route) => route.abort());
     await zaloguj(page);
     await page.goto('/docpro.html', { waitUntil: 'load' });
     await docproGotowy(page);

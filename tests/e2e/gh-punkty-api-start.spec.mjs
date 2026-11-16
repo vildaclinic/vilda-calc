@@ -46,7 +46,7 @@ const SZUM_KONSOLI = [
   // a treść błędu zależy od środowiska — brak sieci, CORS z adresu testowego (zmierzone w CI) albo CSP ramki
   // przelicznik-jednostek.html, która ładuje vilda_pro_access.js (przez vilda_chrome.js) i nie dopuszcza tego serwera
   // („Refused to connect”, w CI „Connecting to … violates”). Stan sprzed tej zmiany, poza zakresem punktów GH.
-  { powod: 'serwer synchronizacji', pasuje: (tekst) => /https:\/\/vilda-sync\./.test(tekst) },
+  { powod: 'serwer synchronizacji', pasuje: (tekst) => /https:\/\/(?:vilda-sync\.|sync\.vildasync\.com\/)/.test(tekst) },
   // DocPro: odtworzenie stanu wysyła programowe „change” do pola trybu profesjonalnego, którego słuchacz woła
   // navigator.vibrate (vilda_professional_module.js); Chrome blokuje to przed pierwszym dotknięciem. Zależy od
   // chwili odtworzenia (zmierzone: 1 na 3 przebiegi), stan sprzed tej zmiany.
@@ -55,7 +55,7 @@ const SZUM_KONSOLI = [
 
 // Zapytania do serwera synchronizacji (także z ramek powłoki) kończą się błędem sieci w każdym środowisku: test nie
 // zależy od sieci CI i nie odpytuje prawdziwego serwera fikcyjnym kontem.
-const odetnijSerwerSynchronizacji = (page) => page.route(/^https:\/\/vilda-sync\./, (route) => route.abort());
+const odetnijSerwerSynchronizacji = (page) => page.route(/^https:\/\/(?:vilda-sync\.|sync\.vildasync\.com\/)/, (route) => route.abort());
 
 // Błędy konsoli i pageerror z adnotacją strony (także z ramek powłoki), bez SZUM_KONSOLI.
 function zbierajBledy(page) {
