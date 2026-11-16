@@ -11,10 +11,10 @@ async function ready(frame) {
 }
 
 async function emptyAccount(page, context) {
-  await context.route(/https?:\/\/[^/]+\.workers\.dev(?:\/|$)/u, route => route.fulfill({
+  await context.route(/https?:\/\/(?:[^/]+\.workers\.dev|sync\.vildasync\.com)(?:\/|$)/u, route => route.fulfill({
     status: 404, headers: { 'access-control-allow-origin': '*' }, body: '{}',
   }));
-  await context.routeWebSocket(/wss?:\/\/[^/]+\.workers\.dev(?:\/|$)/u, socket => socket.close());
+  await context.routeWebSocket(/wss?:\/\/(?:[^/]+\.workers\.dev|sync\.vildasync\.com)(?:\/|$)/u, socket => socket.close());
   await page.addInitScript(() => {
     localStorage.setItem('vilda-terms-accepted-v1', JSON.stringify({
       version: 1, acceptedAtISO: new Date().toISOString(),

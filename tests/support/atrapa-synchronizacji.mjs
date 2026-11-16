@@ -8,7 +8,7 @@
 // Opcje są czytane przy każdym żądaniu, więc test może je zmieniać w trakcie (np. najpierw błąd bloba, potem
 // prawdziwy blob).
 
-export const ADRES_SERWERA = 'https://vilda-sync.maciej-4b9.workers.dev';
+export const ADRES_SERWERA = 'https://sync.vildasync.com';
 export const DATA_W_CHMURZE = '2026-10-11T08:00:00.000Z';
 
 const CORS = {
@@ -67,7 +67,7 @@ export async function atrapaSynchronizacji(context, opcje = {}) {
     if (/\/changes$/.test(sciezka)) return json(200, { deltas: [], headSeq: 0 });
     return json(404, {});
   });
-  await context.routeWebSocket(/vilda-sync\.maciej-4b9\.workers\.dev/, (ws) => { ws.close(); });
+  await context.routeWebSocket(/vilda-sync\.maciej-4b9\.workers\.dev|sync\.vildasync\.com/, (ws) => { ws.close(); });
   return zadania;
 }
 

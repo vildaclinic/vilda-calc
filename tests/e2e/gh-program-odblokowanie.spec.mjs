@@ -16,7 +16,7 @@ async function docproZPunktem(page) {
   await page.addInitScript(() => {
     try { window.localStorage.setItem('vilda-terms-accepted-v1', JSON.stringify({ version: 1, acceptedAtISO: new Date().toISOString() })); } catch (_) { /* pomiń */ }
   });
-  await page.route(/^https:\/\/vilda-sync\./, (route) => route.abort());
+  await page.route(/^https:\/\/(?:vilda-sync\.|sync\.vildasync\.com\/)/, (route) => route.abort());
   await page.goto('/index.html', { waitUntil: 'load' });
   await page.waitForFunction(() => Boolean(window.VildaVault));
   await page.evaluate(async (pw) => window.VildaVault.createUser(pw, { label: 'e2e', iterations: 10000 }), HASLO);

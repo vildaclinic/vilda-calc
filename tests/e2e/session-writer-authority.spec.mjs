@@ -94,10 +94,10 @@ const readModel = frame => frame.evaluate(() => {
 
 for (const driver of ['forced flush', 'delayed input/change']) {
 test(`${driver}: hidden same-patient DocPro cannot replace a newer Start visit or its archived measurement`, async ({ page, context }) => {
-  await context.route(/https?:\/\/[^/]+\.workers\.dev(?:\/|$)/, route => route.fulfill({
+  await context.route(/https?:\/\/(?:[^/]+\.workers\.dev|sync\.vildasync\.com)(?:\/|$)/, route => route.fulfill({
     status: 404, headers: { 'access-control-allow-origin': '*' }, body: '{}',
   }));
-  await context.routeWebSocket(/wss?:\/\/[^/]+\.workers\.dev(?:\/|$)/, socket => socket.close());
+  await context.routeWebSocket(/wss?:\/\/(?:[^/]+\.workers\.dev|sync\.vildasync\.com)(?:\/|$)/, socket => socket.close());
   const fixture = await createFictionalVault(page, { shell: true });
   await page.evaluate(() => window.VildaShell.navigate('docpro'));
   const docpro = await shellFrame(page, 'DocPro');

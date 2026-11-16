@@ -12,7 +12,7 @@ import { expect, test } from '@playwright/test';
 test.use({ serviceWorkers: 'block' });
 
 const HASLO = 'E2e#SyncMost!26aa';
-const WORKER = 'https://vilda-sync.maciej-4b9.workers.dev';
+const WORKER = 'https://sync.vildasync.com';
 
 async function regulamin(page) {
   await page.addInitScript(() => {

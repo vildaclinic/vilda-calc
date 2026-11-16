@@ -10,7 +10,7 @@ import { expect, test } from '../support/test-czas.mjs';
 test.describe.configure({ timeout: 120_000 });
 
 const HASLO = 'E2e#TestPolaczenia!2026';
-const WORKER = 'https://vilda-sync.maciej-4b9.workers.dev';
+const WORKER = 'https://sync.vildasync.com';
 
 async function otworz(page, { blokuj = false } = {}) {
   const zapytania = [];
@@ -28,7 +28,7 @@ async function otworz(page, { blokuj = false } = {}) {
     }
     await route.abort('failed');
   });
-  await page.routeWebSocket(/vilda-sync\.maciej-4b9\.workers\.dev/, (ws) => { ws.close(); });
+  await page.routeWebSocket(/vilda-sync\.maciej-4b9\.workers\.dev|sync\.vildasync\.com/, (ws) => { ws.close(); });
   await page.goto('/ustawienia.html', { waitUntil: 'load' });
   await page.waitForFunction(() => Boolean(window.VildaVault && window.VildaSyncConnectionTest));
   await page.evaluate(async (pw) => window.VildaVault.createUser(pw, { label: 'e2e', iterations: 10000 }), HASLO);
@@ -58,7 +58,7 @@ test('E1 sieć przepuszcza: werdykt „działa prawidłowo” i raport bez ID ko
   for (const z of health) expect(z.naglowki.authorization).toBeUndefined();
 
   const raport = await page.locator('#syncConnTestReport').textContent();
-  expect(raport).toContain('vilda-sync.maciej-4b9.workers.dev');
+  expect(raport).toContain('sync.vildasync.com');
   const material = await page.evaluate(async () => window.VildaVault.getSyncMaterial());
   if (material && material.slotId) expect(raport).not.toContain(material.slotId);
   if (material && material.authToken) expect(raport).not.toContain(material.authToken);
@@ -70,7 +70,7 @@ test('E2 sieć blokuje serwer: werdykt „nieosiągalny” z radą dla IT', asyn
   const wynik = page.locator('#syncConnTestResult');
   await expect(wynik.locator('p[data-level="error"]')).toHaveText(/Serwer synchronizacji jest nieosiągalny z tej sieci/, { timeout: 60_000 });
   await expect(wynik).toContainText('0 z 5 odpowiedzi');
-  await expect(wynik).toContainText('dopuszczenie hosta vilda-sync.maciej-4b9.workers.dev');
+  await expect(wynik).toContainText('dopuszczenie hosta sync.vildasync.com');
 });
 
 test('E3 telefon: wynik testu bez poziomego przewijania', async ({ page }) => {
