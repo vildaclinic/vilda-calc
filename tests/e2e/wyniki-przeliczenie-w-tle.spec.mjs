@@ -103,7 +103,8 @@ async function odtworzWczytanyPomiar(start) {
 
 // Rejestrator w ramce Start. Wszystko, co zapisuje, powstaje w obserwatorach mutacji albo w zdarzeniach animacji,
 // więc wynik nie zależy od tego, ile klatek zdążyła narysować obciążona maszyna.
-const wlaczRejestrator = (fr) => fr.evaluate(async (pulsy) => {
+const wlaczRejestrator = async (fr) => {
+  await expect.poll(() => fr.evaluate(async (pulsy) => {
   if (window.__rej) { window.__rej.mo.forEach((m) => m.disconnect()); document.removeEventListener('animationstart', window.__rej.naStart, true); }
   const R = { mo: [], starty: [], schowania: 0, wstawienia: [], liczby: [], polozenie: null, obrys: null, naStart: null, pulsy: [], pulsyTeraz: null };
   const identyfikatoryPulsow = new WeakMap();
@@ -134,6 +135,26 @@ const wlaczRejestrator = (fr) => fr.evaluate(async (pulsy) => {
     });
   };
   R.pulsy = await R.pulsyTeraz();
+  // Animation.ready settles the browser's pending play task before the queued
+  // animationstart handler necessarily normalizes its phase. Capture and accept
+  // the baseline atomically, after that native lifecycle has finished; the test
+  // never calls the application helper or changes an animation's time.
+  const oczekiwane = [
+    'pulseOrange #bmiResult > .pro-overlay',
+    'pulseOrange #bmiResult > .pro-overlay::after',
+    'pulseRed #coleInfo',
+    'pulseRed #coleInfo::after',
+  ];
+  const obecne = new Set(R.pulsy.map((p) => p.klucz));
+  const brakujace = oczekiwane.filter((klucz) => !obecne.has(klucz));
+  const aktualne = document.getAnimations().filter((a) => pulsy.includes(a.animationName)
+    && a.playState === 'running' && a.effect.getComputedTiming().iterations === Infinity);
+  const gotowe = R.pulsy.length > 0 && brakujace.length === 0 && R.pulsy.length === aktualne.length
+    && R.pulsy.every((p) => aktualne.includes(p.a) && p.surowe.startTime === 0
+      && !p.surowe.pending && p.surowe.wspolnaOsCzasu
+      && p.a.startTime === 0 && !p.a.pending && p.a.timeline === document.timeline);
+  if (!gotowe) return { gotowe: false, brakujace,
+    pulsy: R.pulsy.map((p) => ({ klucz: p.klucz, ...p.surowe })), liczbaAktualnych: aktualne.length };
   const wyniki = document.getElementById('results');
   const gora = (id) => { const e = document.getElementById(id); return e ? Math.round(e.getBoundingClientRect().top + window.scrollY) : null; };
   R.polozenie = { przyciski: gora('metabolicSummarySection'), karta: gora('bmiCard') };
@@ -171,7 +192,19 @@ const wlaczRejestrator = (fr) => fr.evaluate(async (pulsy) => {
   moDrzewo.observe(wyniki, { childList: true, subtree: true, characterData: true });
   R.mo.push(moStyl, moDrzewo);
   window.__rej = R;
-}, PULSY);
+  return { gotowe: true };
+  }, PULSY), { timeout: 15000,
+    message: 'Początkowe pulsowania zakończyły natywną synchronizację fazy przed pomiarem' }).toEqual({ gotowe: true });
+  // Assert the retained sample, not a fresh read in another RPC that could
+  // silently replace an unsettled baseline with a later normalized animation.
+  const baseline = await fr.evaluate(() => window.__rej.pulsy.map((p) => ({ klucz: p.klucz, ...p.surowe })));
+  expect(baseline.length, 'rejestrator zachował początkowe pulsowania').toBeGreaterThan(0);
+  for (const p of baseline) {
+    expect(p.startTime, `${p.klucz}: zachowany początek biegnie od wspólnego zera`).toBe(0);
+    expect(p.pending, `${p.klucz}: zachowany początek zakończył oczekiwanie`).toBe(false);
+    expect(p.wspolnaOsCzasu, `${p.klucz}: zachowany początek ma zegar dokumentu`).toBe(true);
+  }
+};
 
 const odczytajRejestrator = (fr) => fr.evaluate(async () => {
   const R = window.__rej;

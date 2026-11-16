@@ -1,7 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
 import shared from './playwright.config.mjs';
 
-// Chart geometry, M1 and the mobile results/dock regressions run in WebKit.
+// Chart geometry, M1, mobile results/dock and the opted-in home workspace run
+// in WebKit. The workspace covers Safari's hidden-parent computed-style case.
 // The regular suite keeps its Chromium projects and shard count. A local
 // Chromium executable override must not be inherited by this separate browser.
 const use = { ...shared.use };
@@ -27,6 +28,11 @@ export default defineConfig({
         /mobile-lab-layout-mobile\.spec\.mjs/,
       ],
       use: { ...devices['iPhone 13'], browserName: 'webkit' },
+    },
+    {
+      name: 'home-workspace-webkit',
+      testMatch: /home-workspace-preview\.spec\.mjs/,
+      use: { ...devices['Desktop Safari'], browserName: 'webkit', viewport: { width: 1440, height: 1000 } },
     },
   ],
 });

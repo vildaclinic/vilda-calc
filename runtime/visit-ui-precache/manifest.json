@@ -15,18 +15,18 @@
       "sha256": "97ee23baf0a0f1e35ab2aa2cdbce998a7633a916e08b09d96e6fa5810e67d3f8"
     },
     {
-      "path": "vilda_home_workspace.js?v=1",
-      "sha256": "bd2a7434495a73fffa1ae66b44c2281dac20d57722ecd03dd4a6e03a293bf63c"
+      "path": "vilda_home_workspace.js?v=2",
+      "sha256": "a517f9b48cb5c48988614034d279b1ebdbcee1cf52fbcac8512b503b904bded2"
     },
     {
-      "path": "vilda_home_workspace.css?v=1",
-      "sha256": "00e0110bd6787aad86c2384db0dd568328be79f8c36e68f78ba15de0282853d7"
+      "path": "vilda_home_workspace.css?v=2",
+      "sha256": "6080246a445a41c01120075d22c6234fa4d75622659c1c9611f1642ee23e344d"
     }
   ],
   "pack": {
-    "path": "runtime/visit-ui-precache/precache-e0d8952bddbc.json",
-    "sha256": "e0d8952bddbc4e8c64fc9031b828473a188cf4fb04a0503042b3f5af13a35d23",
-    "byteLength": 44018
+    "path": "runtime/visit-ui-precache/precache-0bca46949683.json",
+    "sha256": "0bca469496832c28a1c557cb9ac565a16fa78d3cd9a1f46a327266ccca8a7a62",
+    "byteLength": 55937
   },
   "historicalPacks": [
     {
@@ -38,6 +38,26 @@
       "path": "runtime/visit-ui-precache/precache-c978883f9936.json",
       "sha256": "c978883f9936e7d70ab36e7b3cb5da87de481a0821570be602f8828b9d28f812",
       "byteLength": 43397
+    },
+    {
+      "path": "runtime/visit-ui-precache/precache-e0d8952bddbc.json",
+      "sha256": "e0d8952bddbc4e8c64fc9031b828473a188cf4fb04a0503042b3f5af13a35d23",
+      "byteLength": 44018
+    },
+    {
+      "path": "runtime/visit-ui-precache/precache-6b513e7b2e47.json",
+      "sha256": "6b513e7b2e471aa219b109a906d5828f0f893752a80bf85ffbf27137e0ced779",
+      "byteLength": 53654
+    },
+    {
+      "path": "runtime/visit-ui-precache/precache-669e6ca49fa1.json",
+      "sha256": "669e6ca49fa1eb4def829822a74df1d877ef6192dbce04edefa21151d3a619f3",
+      "byteLength": 54144
+    },
+    {
+      "path": "runtime/visit-ui-precache/precache-fde21b094fb8.json",
+      "sha256": "fde21b094fb8bbace9fc0334d88d0b799f7b5fd10b3417e5994e0a7f39c2dcc3",
+      "byteLength": 55737
     }
   ]
 }

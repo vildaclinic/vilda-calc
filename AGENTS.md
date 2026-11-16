@@ -25,6 +25,11 @@ danymi i odłączoną synchronizacją produkcyjną. Nie obejmuje scalenia do `au
 ani publikacji nowego interfejsu w produkcji; to wymaga końcowego odbioru
 właściciela. Szczegóły: `docs/GITHUB_WORKFLOW.md`, „Nowa strona główna”.
 
+Decyzja właściciela z 2026-11-15: wdrożenie ma trzymać się zatwierdzonej makiety.
+Świadome odstępstwa wizualne lub w sposobie interakcji wymagają wcześniejszego
+uzgodnienia z właścicielem. Dotyczy to także rodzaju kontrolek: wybór siatek
+referencyjnych jest listą rozwijalną, nie grupą widocznych przycisków.
+
 ## 2. Granica źródło–artefakt
 
 - Publiczne repozytorium zawiera głównie artefakty wdrożeniowe; wiele plików JS jest zminifikowanych.

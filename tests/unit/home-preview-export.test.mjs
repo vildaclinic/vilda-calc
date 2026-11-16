@@ -3,6 +3,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdtemp, mkdir, readFile, writeFile, rm, symlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import vm from 'node:vm';
 import { createHash } from 'node:crypto';
 import {
@@ -13,6 +14,12 @@ import {
 const directories = [];
 afterEach(async () => { for (const directory of directories.splice(0)) await rm(directory, { recursive: true, force: true }); });
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
+const WORKER_FIXTURE = `const SW_VERSION = '1.1.536';
+const CACHE_PREFIX = 'pwa-kalorii';
+const CORE_SHELL_URLS = ['/index.html'];
+self.addEventListener('activate', event => event.waitUntil(caches.keys().then(keys => Promise.all(keys
+  .filter((key) => key.startsWith(CACHE_PREFIX) && !ACTIVE_CACHE_NAMES.has(key))
+  .map(key => caches.delete(key))))));`;
 
 async function repository() {
   const directory = await mkdtemp(path.join(tmpdir(), 'vilda-home-preview-'));
@@ -29,7 +36,7 @@ async function repository() {
     'vilda_vault.js': "const nativeOrigin = 'https://vilda-sync.maciej-4b9.workers.dev'; const formula = 46 / (1.58 * 1.58);",
     'vilda_realtime.js': "const source = 'wss://vilda-sync.maciej-4b9.workers.dev';",
     'manifest.json': JSON.stringify({ name: 'Native app', short_name: 'Native', start_url: 'app.html#/start', scope: './' }),
-    'service-worker-kalorii.js': "const SW_VERSION = '1.1.536';\nconst CACHE_PREFIX = 'pwa-kalorii';\nconst CORE_SHELL_URLS = [\n'/index.html'\n];",
+    'service-worker-kalorii.js': WORKER_FIXTURE,
     'runtime/clinical-workspace-v1/family/client/model.mjs': 'export const VERSION = 1;\n',
     'runtime/clinical-workspace-v1/family/precache.json': '{"schemaVersion":1,"files":[]}',
     'tests/fixtures/secret.json': '{"fixture":"not a deployable asset"}',
@@ -117,10 +124,32 @@ describe('separate homepage preview export', () => {
     expect(second.buildId).not.toBe(first.buildId);
     expect(second.sourceDirty).toBe(true);
     const worker = await readFile(path.join(fixture.output, 'service-worker-kalorii.js'), 'utf8');
-    expect(worker).toContain('vilda-home-preview');
+    expect(worker).toContain("const CACHE_PREFIX = 'vilda-home-preview-" + second.buildId + "';");
     expect(worker).toContain('-preview-' + second.buildId);
     expect(worker).toContain('/vilda_home_preview.js?v=' + second.buildId);
     expect(worker).not.toContain(first.buildId);
+  });
+
+  test('changing exporter semantics changes build identity even with identical native assets and bootstrap', async () => {
+    const fixture = await repository();
+    const first = await exportPreview(fixture);
+    const tool = path.join(fixture.directory, 'revised-tool');
+    await mkdir(tool);
+    for (const name of ['runtime.js', 'preview.css']) {
+      await writeFile(path.join(tool, name), await readFile(new URL('../../tools/home-preview/' + name, import.meta.url)));
+    }
+    const original = await readFile(new URL('../../tools/home-preview/export.mjs', import.meta.url), 'utf8');
+    await writeFile(path.join(tool, 'export.mjs'), original.replace("const BLOCKED_ORIGIN = 'https://vilda-preview-disabled.invalid';",
+      "const BLOCKED_ORIGIN = 'https://revised-preview-disabled.invalid';"));
+    const script = 'import { exportPreview } from ' + JSON.stringify(pathToFileURL(path.join(tool, 'export.mjs')).href)
+      + '; console.log(JSON.stringify(await exportPreview(' + JSON.stringify({ source: fixture.source, output: fixture.output }) + ')));';
+    const revised = JSON.parse(execFileSync(process.execPath, ['--input-type=module', '-e', script], { encoding: 'utf8' }));
+    expect(revised.sourceCommit).toBe(first.sourceCommit);
+    expect(revised.sourceDirty).toBe(false);
+    expect(revised.buildId).not.toBe(first.buildId);
+    expect(await readFile(path.join(fixture.output, 'vilda_vault.js'), 'utf8')).toContain('https://revised-preview-disabled.invalid');
+    expect(await readFile(path.join(fixture.output, 'service-worker-kalorii.js'), 'utf8'))
+      .toContain("const CACHE_PREFIX = 'vilda-home-preview-" + revised.buildId + "';");
   });
 
   test('refuses source overwrite, unknown output and symlink destinations', async () => {
@@ -152,10 +181,22 @@ describe('separate homepage preview export', () => {
 
   test('rejects unsupported document and worker contracts instead of publishing partially isolated output', () => {
     expect(() => isolateDocument('<script>oldStartup()</script>', 'abc')).toThrow(/explicit head/);
-    expect(() => isolateWorker('unknown worker format', 'abc')).toThrow(/Unknown service-worker/);
+    expect(() => isolateWorker('unknown worker format', '0123456789abcdefabcd')).toThrow(/Unknown service-worker/);
     expect(isolateText("'https://vilda-sync.maciej-4b9.workers.dev' 'wss://vilda-sync.maciej-4b9.workers.dev'"))
       .toBe("'https://vilda-preview-disabled.invalid' 'wss://vilda-preview-disabled.invalid'");
     for (const privatePath of ['.git/config', '/index.html', '../index.html', 'tests/data.json', 'node_modules/index.js', '.env', 'package-lock.json']) expect(isPreviewAsset(privatePath)).toBe(false);
+  });
+
+  test('worker isolation fails closed for malformed build identities and missing or duplicated source contracts', () => {
+    for (const id of ['abc', '', 'A'.repeat(20), 'a'.repeat(19), 'a'.repeat(21), 'a'.repeat(19) + "'", null, 1e19]) {
+      expect(() => isolateWorker(WORKER_FIXTURE, id)).toThrow(/build identity/);
+    }
+    const anchors = ["const SW_VERSION = '1.1.536';", "const CACHE_PREFIX = 'pwa-kalorii';", 'const CORE_SHELL_URLS = [',
+      '.filter((key) => key.startsWith(CACHE_PREFIX) && !ACTIVE_CACHE_NAMES.has(key))'];
+    for (const anchor of anchors) {
+      expect(() => isolateWorker(WORKER_FIXTURE.replace(anchor, ''), '0123456789abcdefabcd')).toThrow(/isolation contract/);
+      expect(() => isolateWorker(WORKER_FIXTURE + '\n' + anchor, '0123456789abcdefabcd')).toThrow(/isolation contract/);
+    }
   });
 
   test('actual generated service-worker network guard rejects external requests without reaching fetch', async () => {
