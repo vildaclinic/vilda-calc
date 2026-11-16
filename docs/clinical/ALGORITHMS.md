@@ -40554,7 +40554,9 @@ niżej są z gałęzi PR po scaleniu `audyt` (`a6861547`: vildaclinic/vilda-calc
   deterministyczne floty, ręczny blok znanych usterek bieżącej aplikacji i stres. Bloki floty stoją na końcu pliku.
   Program ziaren i dotychczasowe literały (`ZNANE_W1`, `ZNANE_W2R`, `ZNANE_WYR`, `KAT_*`, `P6_*`) bez zmian: zrzuty
   `E2_AB_WYNIKI` 13 ziaren CI i obu przebiegów determinizmu są równe z licznikiem i bez, a zrzut wyroczni istniejących
-  światów (78 punktów) — równy zrzutowi z bazy.
+  światów (78 punktów) — równy zrzutowi z bazy. Literał tabeli 3.6 (`TABELA_3_6`, `TABELE_3_6`) ma dotychczasowe
+  kolumny i wiersze bez zmian; doszła kolumna 'flota' i trzy wiersze klas par floty (tożsamość wizyty, pole nieznane
+  221, retencja starszej aplikacji). Poza nim dopisano tylko klucz 'flota' w `DOZWOLONE` i 'determinizm' w `WYNIKI`.
 
 ### Definicje licznika
 
@@ -40603,8 +40605,9 @@ i JSONL). Źródło to etykieta testu, nie wejście reguły: `zdarzenie`, `zdarz
 wysłaniu jej przez inne urządzenie), `powtórka`.
 
 **Usunięcia przez scalanie** (encja była przed scaleniem albo w ładunku, a po scaleniu jej nie ma) mają ślad (nagrobek,
-Kosz, wersja pod inną kartą, przywrócenie, nagrobek notatki) albo są „utratą bez nośnika”: karta opróżniona
-(`Bsw_poOddaniu`) i wygaśnięcie wpisu Kosza (`Bkz_czysc`).
+Kosz, wersja pod inną kartą, przywrócenie, nagrobek notatki, powrót encji po nagrobku) albo są „utratą bez nośnika” —
+każde usunięcie bez śladu, m.in. karta opróżniona (`Bsw_poOddaniu`), wygaśnięcie wpisu Kosza (`Bkz_czysc`) i nagrobek
+karty (`ptomb`) z ładunku, którego po scaleniu nie ma ani jako nagrobka, ani jako żywej karty.
 
 **Bajty i żądania.** Bajty zdarzenia = rozmiar szyfrogramu (`Bev_bajty`, z długości jawnego JSON, `dev` 'abcdefgh');
 element ciała = bajty + 45 B; ciało = 13 + Σ elementów + (n − 1) (`Bob_cialo`); partia ≤ 200 zdarzeń i ≤ 1 MiB, pierwsze
@@ -40788,7 +40791,7 @@ zgodność przed pełną kopią nie jest celem); różnice par W1 floty wszystki
 naiwny i okna przesuwne; echo na klonach w losowych flotach; częstości klas wariantu `publikuje`. Powód: literały CI
 pilnują mechanizmów i warunków zieleni, a częstość zależy od modelu transportu, który jest przybliżeniem (niżej).
 
-### Wynik (dane fikcyjne; gałąź PR na `a6861547`)
+### Wynik (dane fikcyjne; gałąź PR na `a6861547`, po scaleniu `95fca107` liczby bez zmian)
 
 **Licznik w CI** (warstwy surowe/po2a/wyk/nowe; reguła B daje to samo co T): profil podstawowy, 8 ziaren —
 38/36/36/26, koalescencja — 16/16/16/10, pełny — 5/4/4/4; pół wymiany 0 we wszystkich. Literał profilu
@@ -40800,7 +40803,7 @@ Odcisk = `h`: 234/234, 100/100, 44/44 wersji. Największa minuta slotu: 2 wiersz
 
 **Licznik, przebiegi ręczne z końcowym modułem** (2026-11-16; linia bazowa dla E3-PR0h; surowe/po2a/wykA/wyk/nowe):
 
-| Profil | Ziarna | Scaleń zdarzeń | Wiersze | Pola zawsze obecne | Odcisk = h | Największa minuta slotu | Czas |
+| Profil | Ziarna | Scaleń zdarzeń | Wiersze | Pola zawsze obecne | Odcisk = h | Największa minuta slotu (bajty realne) | Czas (trzy profile naraz, 4 rdzenie) |
 |---|---|---|---|---|---|---|---|
 | podstawowy | 40 (1–40) | 4253 | 140/133/127/133/104 | 0 z 8457 bez pola | 1154/1154 | 4 wiersze, 141 312 B, 1 żądanie | 252,8 s |
 | pełny | 20 (1–20) | 2574 | 141/116/111/116/100 | 0 z 5536 | 476/476 | 4 wiersze, 141 312 B, 1 żądanie | 176,8 s |
@@ -40808,20 +40811,24 @@ Odcisk = `h`: 234/234, 100/100, 44/44 wersji. Największa minuta slotu: 2 wiersz
 
 Reguła B = T w każdym profilu; pół wymiany i powtórka partii — 0 wierszy; wyjątki builderów, oversize i partie ponad
 200 zdarzeń — 0; `visitCipher` nieobecny w każdym wpisie Kosza (1089, 1771, 959). Utrata bez nośnika tylko w profilu
-pełnym: 30 kart opróżnionych po samych zdarzeniach i 1 w pół wymiany. Strażniki licznika zielone w każdym ziarnie;
+pełnym: 30 kart opróżnionych po samych zdarzeniach, a w pół wymiany 1 karta opróżniona i nagrobek tej samej karty z
+ładunku (`ptomb`) bez śladu (ziarno 5, znany przypadek W4 niżej). Strażniki licznika zielone w każdym ziarnie;
 czerwone są tylko znane przypadki sprzed E3-PR0b (profil pełny, ziarno 5, W4, krok 165; „bez połączenia”, ziarna
-104, 123, 128, 132, 137 — R4a′; wpis E3-PR0a). Warstwa wyk według rodzaju (podstawowy / pełny / „bez połączenia”):
-`snap` w ładunku 67 / 34 / 91 (gwiazdka 35 / 18 / 43, inne 21 / 14 / 33, rekord złożony 11 / 2 / 15); `stomb` w
-ładunku 13 / 15 / 24 i spoza ładunku 19 / 15 / 37 (R4a, R4a′, R5); nagłówek karty w ładunku 0 / 34 / 0; `pnote` spoza
-ładunku 27 / 4 / 32 (nowe 0); `pnotetomb` w ładunku 4 / 2 / 0.
+104, 123, 128, 132, 137 — R4a′; wpis E3-PR0a). Warstwa wyk według rodzaju (podstawowy / pełny / „bez połączenia”;
+razem 133 / 116 / 188): `snap` w ładunku 67 / 34 / 91 (gwiazdka 35 / 18 / 43, inne 21 / 14 / 33, rekord złożony
+11 / 2 / 15); `snap` spoza ładunku 3 / 8 / 4 (gwiazdka 3 / 5 / 4, inne 0 / 3 / 0); `stomb` w ładunku 13 / 15 / 24 i
+spoza ładunku 19 / 15 / 37 (R4a, R4a′, R5, inne); nagłówek karty w ładunku 0 / 34 / 0 i spoza ładunku 0 / 1 / 0;
+`pnote` spoza ładunku 27 / 4 / 32 (nowe 0); `pnote` w ładunku 0 / 3 / 0 (karta notatki po „Scal pacjentów” albo treść;
+nowe 1 — haki pokrywają je tylko częściowo); `pnotetomb` w ładunku 4 / 2 / 0.
 
 **Flota w CI** (świat, mutacje A, B / C, czas):
 - 221, ziarno 1 (200 001; 113 / 36; 3,7 s): obiegi W4 [1, 2, 2, 2]; W4 floty — tożsamość wizyty 12 + 12 (BC, CA),
   tożsamość wpisu Kosza 4 + 4, pola Kosza 221 2 + 2; A, B po samych zdarzeniach — 13 różnic bez klasy pary i 2 rekordy
   złożone; delty: 10 kart, 15 odpadło progiem; licznik wyk: pełna kopia 221 — 2, pełna kopia bieżącej — 1; wyrocznia
   W4 floty bez naruszeń;
-- 221, ziarno 2 (200 002; 85 / 31; 2,5 s): obiegi [2, 2]; W4 floty — tożsamość wizyty 12 + 12, wpisu Kosza 2 + 2 i
-  1 + 1; A, B — 4 bez klasy, R2 1, R5 1; delty 11 kart, 12 odpadło; wyk 3 (pełna kopia 221, delta 221, zdarzenie);
+- 221, ziarno 2 (200 002; 85 / 31; 2,5 s): obiegi [2, 2]; W4 floty — tożsamość wizyty 12 + 12, wpis Kosza:
+  tożsamość wpisu 2 + 2, tożsamość wizyty 1 + 1; A, B — 4 bez klasy, R2 1, R5 1; delty 11 kart, 12 odpadło; wyk 3
+  (pełna kopia 221, delta 221, zdarzenie);
 - 221, ziarno 3 (200 003; 109 / 35; 3,2 s): obiegi [2, 2]; W4 floty — tożsamość wizyty 12 + 12, wpisu Kosza 5 + 5,
   pola Kosza 221 4 + 4, nagrobek notatki usuniętej z kartą 4 + 4; A, B — 14 bez klasy, R4a 2, R5 1; delty 13 kart, 14
   odpadło; wyk 8; wyrocznia W4 floty: „gwiazdka ze starszej aplikacji” 6 i „notatka bez ratunku D-21 (starsza
@@ -40842,7 +40849,7 @@ R3-E2 z jednym urządzeniem na 221 — ręcznie, bez naruszeń bez klasy.
 | 221 podstawowy, `los` | 1–10 | 0 | notatka D-21 51, nadpisana 12, gwiazdka 6, „Przywróć” 3, treść wpisu Kosza 3 |
 | 221 podstawowy, `publikuje` | 1–10 | 0 | gwiazdka 27 |
 | 221 pełny, `los` | 1–4 | 6 (ziarno 4 — sprawa „Usuń pacjenta” duplikatu, niżej) | usunięta z kartą 39, nadpisana 12, gwiazdka 9; D-4 A (Kosz w zwróconej) 3 |
-| 221 pełny, `publikuje` | 1–4 | 0 | nadpisana 3, gwiazdka 3; D-4 A 18 |
+| 221 pełny, `publikuje` | 1–4 | 0 | nadpisana 3, gwiazdka 3; D-4 A (stara karta wraca po zapisie bez wiedzy o scaleniu) 18 |
 | 221 podstawowy, próg 60 000 | 1–10 | 0 | notatka D-21 39, gwiazdka 15, treść wpisu Kosza 3 |
 | 221 podstawowy, bez delt | 1–10 | 3 (ziarno 7 — sprawa notatki, niżej) | nadpisana 39, notatka D-21 36, gwiazdka 30, usunięta z kartą 24, najpierw rev 3 |
 | 221 pełny, bez delt | 1–4 | 3 (ziarno 4) | nadpisana 6, gwiazdka 3, retencja (przycinające) 1; klasy samych bieżących 54 |
@@ -40858,6 +40865,11 @@ kartą przed wysłaniem” 39 → 0, karta częściowa 0 i 0. Koszt `publikuje`:
 10 ziaren (bloby 119 → 884), pełny 14,7 → 21,2 s; wariant zostaje ręczny (warunek wejścia do CI: ≤ +1 s na ziarno przy
 zapasie czasu ≥ 5 s — niespełniony). Obiegi W4 ponad 4, brak spoczynku i przekroczenia budżetu — 0 we wszystkich
 seriach.
+
+**Licznik pół wymiany we flotach** (źródło `w4`): flota 221 w CI — surowe i po2a 2 / 4 / 8 (ziarna 1–3), wyk 0; flota
+276 — 0. W seriach ręcznych z tabeli wyżej warstwa wyk pół wymiany floty 221 ma 2 wiersze (pełny, `los`), 4
+(podstawowy, `los`; próg 60 000), 6 (pełny bez delt; pełny z bieżącą retencją na C) i 8 (podstawowy bez delt), nowe
+tyle samo; wariant `publikuje`, floty 276 i kontrola N — 0. Między bieżącymi urządzeniami pół wymiany daje 0 wierszy.
 
 **Scenariusze floty** (świat 800 + nr; 19 w CI, 3 ręczne z jednym urządzeniem na 221 i 9 ręcznych kontroli C = N):
 - „Usuń pacjenta” na 221, potem zmiana karty na A — notatka ginie (3 + 3 utraty z klasą notatki D-21); kontrola C = N
@@ -40900,8 +40912,10 @@ obieg kontrolny 0): „C→A i C→B” wprost — strona B = strona A (208 284 
 B i 5 żądań na urządzenie (≈ 41,8 KB na wiersz, w przedziale przeliczenia), slot 10 022 528–11 059 200 B, wszystkie
 flagi „> 4 MiB” — tak; 23–29 s na wariant.
 
-**Budżety.** W profilach i flotach CI warstwa wyk mieści się w budżecie minuty slotu z dużym zapasem (największa minuta
-4–5 wierszy, ≤ 230 400 B realnie, 1 żądanie). Budżet przekracza dopiero reguła naiwna w stresie: przy warstwie wyk
+**Budżety.** W profilach i flotach warstwa wyk mieści się w budżecie minuty slotu z dużym zapasem: w CI największa
+minuta (według bajtów realnych) ma 2 wiersze i 92 160 B, w przebiegach ręcznych licznika 4–5 wierszy i ≤ 230 400 B
+(najwięcej wierszy w jednej minucie: 4 w CI, 7 ręcznie, przy mniejszych bajtach); zawsze 1 żądanie na urządzenie.
+Budżet przekracza dopiero reguła naiwna w stresie: przy warstwie wyk
 równej po2a minuta slotu ma 240 wierszy, 11 059 200 B i 6 żądań na urządzenie — budżet czerwienieje (mutant niżej), więc
 nie jest tautologią.
 
@@ -40914,30 +40928,40 @@ wraca (pętli nie ma); czy wymaga osobnego odsyłania, pokaże pomiar z odsyłan
 klonach w losowej flocie: +3,8–7,6 s na ziarno.
 
 **Czas** (kryterium: sam plik A ≡ B, 2 przebiegi bez innego obciążenia, mediana ≤ 150 s lokalnie; cel 180 s, decyzja 3
-z 2026-11-03): na treści końcowej 137,6 s i 152,4 s, mediana 145,0 s (dwa kolejne przebiegi informacyjne 143,4 s i
-146,2 s; wcześniej tego samego dnia 128,0 s i 134,0 s, mediana 131,0 s). Bloki E3-PR0b kosztują: floty 12,3–14,7 s,
-scenariusze 6,6–7,9 s, licznik w profilach z determinizmem 2,6–3,6 s, stres 1,8–2,3 s; reszta pliku 104–122 s
-(rozrzut maszyny między sesjami ok. 10–15 %). Lista cięć na wypadek przekroczenia (w tej kolejności: ziarno 2 floty
-221, stres na 20 kart, scenariusz retencji na 276 z parametrami aplikacji i scenariusz nowej wersji na 276 do przebiegów
-ręcznych; asercji się nie wycina) nie była potrzebna. W pełnym `npm test` (2026-11-16:
-zielony, 905 plików, 30 825 testów, `test:unit` 975 s) plik trwał 161,9 s, w poprzednim pełnym przebiegu 162,7 s, na
-bazie `4355e325` 127,5 s.
+z 2026-11-03). Kod testów od `d8b96cd6` zmienił się tylko o wymóg „A i B mają 8 wersji” w jednym scenariuszu, nazwy
+i opisy (blok znanych usterek, status klas floty) i komentarze; ten sam pomiar w kolejnych sesjach 2026-11-16 dał
+128,0 / 134,0 s (mediana 131,0 s), 137,6 / 152,4 s (145,0 s), po scaleniu `95fca107` 144,8 / 147,7 s (146,3 s), a na
+treści końcowej 160,9 / 154,4 s (157,7 s). Plik sprzed E3-PR0b (`4355e325`, 140 przypadków) trwał 110,0 / 114,4 s
+przy pomiarze bazowym, a zaraz po pomiarze treści końcowej 162,5 / 130,7 s. Bloki E3-PR0b kosztują we wszystkich
+pomiarach podobnie, razem 22,7–29,0 s (floty 11,5–15,0 s, scenariusze 6,3–7,9 s, determinizm licznika 2,5–3,6 s,
+stres 1,6–2,8 s, urządzenie starszej aplikacji 0,5–0,8 s); rozrzut między sesjami leży w blokach sprzed E3-PR0b
+(z licznikiem w ich ziarnach) i daje go maszyna — na pliku sprzed E3-PR0b do ok. 48 %. Lista cięć (w tej kolejności:
+ziarno 2 floty 221, stres na 20 kart, scenariusz retencji na 276 z parametrami aplikacji i scenariusz nowej wersji na
+276 do przebiegów ręcznych; asercji się nie wycina; razem ok. 6 s) nie jest zastosowana: przy ostatnim pomiarze nie
+sprowadziłaby mediany poniżej 150 s, a plik sprzed E3-PR0b miał wtedy medianę 146,6 s; rozstrzyga czas pliku w CI
+przy odbiorze PR. Pełny `npm test` po scaleniu `95fca107` (raz, 2026-11-16): zielony — `test:repo`, lint,
+`test:syntax`, `test:unit` (905 plików, 30 827 testów, 22 pominięte, 1003 s) i `test:pro`, 1184 s ściany; plik A ≡ B
+trwał w nim 200,8 s (przed scaleniem 161,9 s i 162,7 s, na bazie `4355e325` 127,5 s).
 
 ### Wejście do kolejnych PR (E3-PR0b2, E3-PR0c–E3-PR0h)
 
 - **E3-PR0b2** (następny PR, decyzja właściciela z 2026-11-16): przy notatce pacjenta zmienionej na dwóch urządzeniach
-  wygrywa późniejsza zmiana, a nie wyższy `rev` (`Bks_wygrywaRev`). Zmiana reguły synchronizacji z wpisem w tym pliku,
-  testami czerwonymi na bazie i odbiorem właściciela; test wejściowy — przypadek notatki z bloku znanych usterek
-  (niżej).
+  wygrywa późniejsza zmiana, a nie wyższy `rev`. Reguła siedzi w scalaniu synchronizacji (`Le`,
+  `vilda_vault.js:11986`: wyższy `rev`, przy równym nowsza data; tą samą drogą idzie wynik „Scal kopię konta”), a jej
+  odpowiednik w podglądzie „Scal kopię konta” to `Bks_wygrywaRev` (:5435–5438, wspólny z listami pacjentów) — zmiana
+  samego `Bks_wygrywaRev` zostawi test wejściowy czerwony. Zmiana reguły synchronizacji z wpisem w tym pliku, testami
+  czerwonymi na bazie i odbiorem właściciela; test wejściowy — przypadek notatki z bloku znanych usterek (niżej).
 - **Reguła echa** (E3-PR0c, E3-PR0d): odsyłać rekord, który scalanie zapisało inaczej, niż przyszedł; warunek „scalanie
   zapisało” porównuje rekord przed i po scaleniu (bez niego powtórka partii daje wiersze surowe, a odsyłanie na samym
   fakcie zapisu dałoby echo bez końca przez urządzenie 221). Reguła jest niezależna od źródła: nie odsyłać różnicy
   samych pól z `POLA_ZAWSZE`, których nie ma w encji ładunku, ani `h` przeliczonego z nich; `POLA_ZAWSZE` rośnie z każdą
   wersją, która zaczyna jakieś pole zapisywać zawsze (strażnik: pola zawsze obecne). Kanon 2a: bez R2, R4n i D7.
 - **Rozbicie zakresu**: `snap` w ładunku → E3-PR0c (CI: 20 wierszy w profilu podstawowym; ręcznie 67 / 34 / 91), w
-  tym rekord złożony i gwiazdka; `stomb` w ładunku i spoza ładunku (R4a, R4a′, R5) → E3-PR0d (CI 4; ręcznie 32 / 30 /
-  61); nagłówek karty w ładunku (34 w profilu pełnym) i `snap` spoza ładunku z gwiazdką → propozycja E3-PR0c;
-  `pnotetomb` w ładunku → E3-PR0c albo E3-PR0d; R5 → E3-PR0d (plan, dopisek w „Zakresie”).
+  tym rekord złożony i gwiazdka; `stomb` w ładunku i spoza ładunku (R4a, R4a′, R5, inne) → E3-PR0d (CI 4; ręcznie
+  32 / 30 / 61); nagłówek karty w ładunku i spoza ładunku (34 i 1 w profilu pełnym) i `snap` spoza ładunku (z gwiazdką
+  i bez; ręcznie 3 / 8 / 4) → propozycja E3-PR0c; `pnotetomb` w ładunku → E3-PR0c albo E3-PR0d; `pnote` w ładunku
+  (ręcznie 0 / 3 / 0, nowe 1) → propozycja E3-PR0c albo E3-PR0d, jak `pnotetomb`, z pomiarem po E3-PR0b2 (reguła treści
+  notatki); R5 → E3-PR0d (plan, dopisek w „Zakresie”).
 - **Bez podwójnego wysyłania**: warstwa „nowe” odejmuje to, co dziś wychodzi samo — haki H1/H2/H3 i przegląd kolejki
   po drenażu, który coś scalił. Notatki pacjenta spoza ładunku pokrywają haki (wyk 10, nowe 0 w CI; ręcznie 27 / 4 /
   32, nowe 0), więc nie wymagają pracy. Przegląd nie pokrywa echa zdarzeń (nowe = noweOst we wszystkich profilach),
@@ -40947,9 +40971,10 @@ bazie `4355e325` 127,5 s.
   (scenariusz „drugi rząd przez 221”: 1 wiersz do nadawcy, trzeci rząd 0; losowa flota 221, ziarno 3: drugi rząd 2) —
   opisać, nie ukrywać (E3-PR0d). Stres: bez reguły pola jedna pełna kopia 221 dałaby minutę slotu ponad 4 MiB.
 - **E3-PR0e**: „Usuń pacjenta” duplikatu karty po „Scal pacjentów” (decyzja 4a; sprawa niżej, scenariusz w bloku znanych
-  usterek jako test wejściowy), luka mutantów po przegranym nagrobku karty (scenariusz), utrata bez nośnika (30 kart
-  opróżnionych w 20 ziarnach profilu pełnego), „miejsce wizyty po „Scal pacjentów””, wersja nieznana scalającemu w
-  zwróconej starej karcie.
+  usterek jako test wejściowy), propozycja: scenariusz dla luki mutantów po przegranym nagrobku karty, utrata bez
+  nośnika (w 20 ziarnach profilu pełnego 30 kart opróżnionych po samych zdarzeniach, w pół wymiany 1 karta opróżniona
+  i nagrobek tej karty bez śladu), „miejsce wizyty po „Scal pacjentów””, wersja nieznana scalającemu w zwróconej starej
+  karcie.
 - **E3-PR0h**: floty z odsyłaniem (221, 276, C = N), trzy bieżące urządzenia w CI, stres z wypełniaczem, echo na
   klonach z prawdziwą kolejką, wariant `publikuje`, rozmiary ech; linia bazowa — przebiegi ręczne licznika wyżej.
 
@@ -41022,8 +41047,9 @@ i `E2_AB_SLAD`); warunki zieleni — zawsze.
 
 **Ograniczenia i sprawy otwarte.**
 - **Notatka pacjenta zmieniona na dwóch urządzeniach — do naprawy w E3-PR0b2 (decyzja właściciela z 2026-11-16: wygrywa
-  późniejsza zmiana).** Dziś zostaje treść poprawiana więcej razy, a nie zmieniona później: `Bks_wygrywaRev`
-  (`vilda_vault.js:5435–5438`; „wyższy `rev`, przy równym nowsza data” — P-KOPIA-DANE-KONTA, plan 3.4). Odtwarza się na
+  późniejsza zmiana).** Dziś zostaje treść poprawiana więcej razy, a nie zmieniona później: reguła scalania notatek
+  pacjenta w synchronizacji (`Le`, `vilda_vault.js:11986`: wyższy `rev`, przy równym nowsza data — P-KOPIA-DANE-KONTA,
+  plan 3.4) i jej odpowiednik w podglądzie „Scal kopię konta” (`Bks_wygrywaRev`, :5435–5438). Odtwarza się na
   samych bieżących urządzeniach (blok `E2_AB_ZNANE_USTERKI=1`: A edytuje notatkę dwa razy, B raz, 5 s później; we
   wszystkich trzech światach zostaje treść A z `rev` 3). W losowej flocie: 221 bez delt, ziarno 7 (świat 200 007), W4
   floty, krok 132. Bez klasy i bez literału; wersje wizyt mają od D-7 wariant 2 regułę odwrotną (wygrywa późniejsza).
@@ -41040,15 +41066,16 @@ i `E2_AB_SLAD`); warunki zieleni — zawsze.
   | (b) B zna tylko scalenie (nagrobek X dochodzi do B przed powrotem X) | znika na A i C; B ma v w Y z 41 kg | v w Y z 41 kg wszędzie | v w Y z 33,6 kg wszędzie (ginie poprawka) |
   | (c) C dostaje scalenie dopiero po usunięciu | znika na A i B; C ma v w Y z 33,6 kg | v w Y z 33,6 kg wszędzie (ginie poprawka) | znika wszędzie |
 
-  Dotyczy samych bieżących urządzeń (kontrola z C na 221 daje to samo co (b)). Pełna wymiana nie zawsze przywraca
-  poprawkę: w (b) przywraca, w (a) i (c) nie. W losowej flocie 221 (profil pełny, ziarno 4, świat 300 004, bez delt):
-  krok 133 — W1 floty: utrata na A i C, v ma tylko B (w X, 41 kg); W4 floty: utrata na A, B i C; krok 142 — W1 jak w
-  kroku 133; W4 floty: v w X (41 kg) na A, B i C — „inna karta” z klasą D-4 A (dozwolona), bez utraty, bo B zapisał w
-  kroku 138 nową wersję X (późniejszą niż nagrobek C). Wyrocznia oczekuje v w Y z 41 kg (przez alias scalenia „Usuń
-  pacjenta” X nie jest dla niej operacją na v); zmiana aliasu uciszyłaby tę sprawę, więc jej nie wprowadzono. Bez klasy
-  i bez literału; scenariusz w bloku `E2_AB_ZNANE_USTERKI=1` jest testem wejściowym E3-PR0e. Do czasu naprawy zalecenie
-  jak przy decyzji 9a: duplikat karty po „Scal pacjentów” scalać ponownie („Scal pacjentów”), nie usuwać
-  („Usuń pacjenta”).
+  Występuje także we flocie samych bieżących urządzeń — przyczyna leży w bieżącej aplikacji (kontrola z C na 221 daje
+  to samo co (b)). Pełna wymiana nie zawsze przywraca poprawkę: w (b) przywraca, w (a) i (c) nie. W losowej flocie 221
+  (profil pełny, ziarno 4, świat 300 004) bez delt: krok 133 — W1 floty: utrata na A i C, v ma tylko B (w X, 41 kg);
+  W4 floty: utrata na A, B i C; krok 142 — W1 jak w kroku 133; W4 floty: v w X (41 kg) na A, B i C — „inna karta” z
+  klasą D-4 A (dozwolona), bez utraty, bo B zapisał w kroku 138 nową wersję X (późniejszą niż nagrobek C). Z deltami
+  (wariant `los`, także z bieżącą retencją na C): utrata w W4 floty na A, B i C w krokach 133 i 142 (6 naruszeń bez
+  klasy w tabeli serii ręcznych). Wyrocznia oczekuje v w Y z 41 kg (przez alias scalenia „Usuń pacjenta” X nie jest
+  dla niej operacją na v); zmiana aliasu uciszyłaby tę sprawę, więc jej nie wprowadzono. Bez klasy i bez literału;
+  scenariusz w bloku `E2_AB_ZNANE_USTERKI=1` jest testem wejściowym E3-PR0e. Do czasu naprawy zalecenie jak przy
+  decyzji 9a: duplikat karty po „Scal pacjentów” scalać ponownie („Scal pacjentów”), nie usuwać („Usuń pacjenta”).
 - **Przypadki do rozpoznania, wywoływane danymi starszej wersji** (bez klasy i bez literału, tylko w seriach ręcznych):
   - *nieświeży odcisk `h` po scaleniu wersji z 276* — flota 276, profil pełny, `E2_AB_SWIAT_FLOTA=300000`, ziarno 2
     (świat 400 002), krok 88: różnica par BC i CA w W4 floty bez klasy (`payload._pinnedState.h`, `payload.visit`).
@@ -41069,7 +41096,7 @@ i `E2_AB_SLAD`); warunki zieleni — zawsze.
   Wszystkie urządzenia właściciela mają dziś aktualną wersję; flota ze starszą aplikacją zostaje w testach jako
   zabezpieczenie (np. stara karta przeglądarki albo urządzenie otwarte po długiej przerwie).
 - **Luka mutantów:** usunięcie wersji poprawionych przed chwilą usunięcia karty po przegranym nagrobku łapie tylko
-  strażnik źródła — brakuje scenariusza; mutant przeżywa (luka, scenariusz do E3-PR0e).
+  strażnik źródła — brakuje scenariusza; mutant przeżywa (luka; propozycja: scenariusz w E3-PR0e).
 - **Przybliżenia modelu:** moduły okna C (tabela wyżej); retencja wołana jawnie (w aplikacji po zapisie przy ≥ 10
   zapisach, z ochroną 24 h); C startuje jako bliźniak A (z magazynu bieżącej aplikacji); transport 221 bez utraty
   beaconu 64 KiB, bez 429 i AUTH, bez wyścigu delty z retencją; 276 bez `/delta` przy wyłączonym dzienniku; pełna kopia
@@ -41079,9 +41106,12 @@ i `E2_AB_SLAD`); warunki zieleni — zawsze.
   kart odpadają” dotyczy kart z ≥ 3 wersjami), operacje na A i C wołane wprost na sejfie (bez historii wyroczni), bajty
   uprzęży zależą od świata (literał obejmuje tylko świat CI). `tests/unit/polkrata-uprzaz.mjs:37` ładuje do floty
   bieżącą retencję (osobne zadanie z tą samą fiksturą retencji v1).
-- **Czas:** zapas do 150 s to ok. 5 s; przy przekroczeniu — lista cięć z „Wyniku” w podanej kolejności. Test pakietu
-  precache (`clinical-workspace-precache-pack`, sprzed E3-PR0b) bywał pod obciążeniem pełnego `test:unit` ponad
-  limitem 10 s (raz 10,32 s); sam i w ostatnim pełnym `npm test` przechodzi.
+- **Czas:** lokalne kryterium (mediana ≤ 150 s) jest na granicy i zależy od maszyny: ten sam kod testów dał w
+  kolejnych sesjach mediany 131,0–157,7 s, a plik sprzed E3-PR0b przebiegi 110,0–162,5 s (liczby w „Wyniku”). Lista
+  cięć z „Wyniku” nie jest zastosowana; o niej i o czasie pliku rozstrzyga pomiar w CI przy odbiorze PR (cel 180 s).
+  Test pakietu precache (`clinical-workspace-precache-pack`, sprzed E3-PR0b) bywał pod obciążeniem pełnego
+  `test:unit` ponad limitem 10 s (raz 10,32 s); sam i w pełnym `npm test` po scaleniu `95fca107` przechodzi (cały plik
+  18,6 s).
 - Po scaleniu `audyt` (#964, #965, #968: +269 wierszy w tym pliku) przesunięto o +269 także 22 odwołania „ok. N” do tego
   pliku sprzed E3-PR0b (opisy klas wyroczni E3-PR0a i dwa komentarze testu A ≡ B), bo wskazywały już inne wiersze — to
   naprawa nieaktualnych odwołań, bez zmiany treści. Dopiski z 2026-11-16 we wpisach P-SYNC-ZDARZENIA (E2-PR6),

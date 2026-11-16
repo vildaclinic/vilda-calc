@@ -3645,9 +3645,10 @@ const syntStan = ({ karty = ['P'], nagrobki = [], wersje = [], kosz = [], notatk
 // Klasy różnic jednego rodzaju encji w D(X, Y).
 const klasyRodzaju = (X, Y, rodzaj, kont = {}) => D(X, Y).filter((r) => r.rodzaj === rodzaj).map((r) => klasa(r, X, Y, kont));
 // Tabela 3.6 jako literał (wiersz = klasa; kolumny: W1/W2r/W2s profilu podstawowego, W4 profilu podstawowego i p. 1–4 i P1e,
-// W4 p. 5, W1/W2r/W2s profilu pełnego, W4 profilu pełnego, p. 6; od E3-PR0b także 'flota' — pary z urządzeniem starszej aplikacji). '—' = czerwień, 'dowód' — zieleń tylko z dowodem
+// W4 p. 5, W1/W2r/W2s profilu pełnego, W4 profilu pełnego, p. 6). '—' = czerwień, 'dowód' — zieleń tylko z dowodem
 // (dowodWpisu). R4n w W4 p. 5: '—' (W4p nie jest tam liczony — P4); E1-katalog w W4 p. 5 dodatkowo tylko dla listy
 // E1_KATALOG, createdAtISO-notatki w W4 pełnym tylko przy notatce z „Zostaw notatkę” (dozwolona()).
+// Od E3-PR0b także kolumna 'flota' — pary z urządzeniem starszej aplikacji; dotychczasowe kolumny i wiersze bez zmian.
 const TABELA_3_6 = {
   R2: ['tak', '—', '—', 'raport', '—', 'tak', '—'],
   R3: ['—', '—', '—', '—', '—', '—', '—'], // E3-PR0a: zero wystąpień
@@ -6434,10 +6435,10 @@ function ddUsunZwrocona(kolejnosc, app = 'N') {
 }
 const ZNANE_USTERKI = {
   // Notatka pacjenta: A edytuje dwa razy (rev 3), B raz, 5 s później (rev 2); reguła notatek „wyższy rev, przy równym
-  // nowsza data” (vilda_vault.js:5434–5438, Bks_wygrywaRev; docs/clinical/ALGORITHMS.md P-KOPIA-DANE-KONTA, ok. 32144;
-  // plan — notatki pacjenta LWW z rev na pierwszym miejscu) zostawia tekst A we wszystkich trzech światach na A, B i C,
-  // a wyrocznia oczekuje późniejszej edycji B („treść” bez klasy). Wersje wizyt mają od D-7 zasadę odwrotną (wygrywa
-  // późniejsza zmiana).
+  // nowsza data” w scalaniu synchronizacji (Le, vilda_vault.js:11986; odpowiednik w podglądzie „Scal kopię konta”:
+  // Bks_wygrywaRev, :5435–5438; docs/clinical/ALGORITHMS.md P-KOPIA-DANE-KONTA, ok. 32144; plan — notatki pacjenta LWW
+  // z rev na pierwszym miejscu) zostawia tekst A we wszystkich trzech światach na A, B i C, a wyrocznia oczekuje
+  // późniejszej edycji B („treść” bez klasy). Wersje wizyt mają od D-7 zasadę odwrotną (wygrywa późniejsza zmiana).
   'notatka pacjenta: wyższy rev wygrywa z późniejszą edycją na innym urządzeniu': {
     baza: async (S) => {
       const A = await urzadzenie(S, 'A');
