@@ -5,7 +5,7 @@
 (function (w) {
   'use strict';
   if (!w || w.__VILDA_HOME_WORKSPACE_PREVIEW__ !== true || w.VildaHomeGrowth) return;
-  var d = w.document, started = false, card, dialog, draft = null, renderFrame = 0, sequence = 0, clearRefreshTimer;
+  var d = w.document, started = false, card, dialog, draft = null, renderFrame = 0, sequence = 0, readinessTimer;
   var rowKeys = new WeakMap(), inputChanges = new WeakMap(), inputInitials = new WeakMap(), historyTemplate;
   var fields = [
     ['advMotherHeight', 'Wzrost matki · cm'], ['advFatherHeight', 'Wzrost ojca · cm'],
@@ -337,9 +337,25 @@
     byId('vhomeGrowthTab-' + draft.tab).focus({ preventScroll: true });
     return true;
   }
+  function refreshReadiness() {
+    w.clearTimeout(readinessTimer); readinessTimer = null;
+    if (!started) return;
+    var ready = canEdit();
+    [byId('vhomeGrowthExpand')].concat(Array.from(card.querySelectorAll('[data-growth-open]'))).forEach(function (button) {
+      if (button.disabled !== !ready) button.disabled = !ready;
+    });
+    // Restore/upgrade can release its final native guard after the last event.
+    // Recheck only readiness, never calculations or persistence. Stop as soon
+    // as ready, hidden, locked or owned by a different patient.
+    var panel = w.VildaPanelPacjent;
+    if (!ready && !card.hidden && w.VildaVault?.isUnlocked()
+      && (!panel || typeof panel.wlasciciel !== 'function' || (panel.wlasciciel() || null) === patientId())) {
+      var until = Number(w.__vildaPersistClearUntil || 0);
+      readinessTimer = w.setTimeout(refreshReadiness, until > Date.now() ? until - Date.now() + 1 : 250);
+    }
+  }
   function renderCard() {
     renderFrame = 0; if (!started) return;
-    w.clearTimeout(clearRefreshTimer); clearRefreshTimer = null;
     if (!historyTemplate && rows()[0]) historyTemplate = rows()[0].cloneNode(true);
     var native = byId('advancedGrowthSection'); card.hidden = native.hidden || w.getComputedStyle(native).display === 'none';
     var grid = byId('vhomeMainCards'), heading = byId('vhomeAnalysisHeading');
@@ -347,15 +363,13 @@
     var valid = fresh(), data = valid ? w.advancedGrowthData : null;
     [['velocity', data?.growthVelocity, 'cm/rok'], ['mph', data?.targetHeight, 'cm'],
       ['bone', data?.boneAgeMonths == null ? null : data.boneAgeMonths / 12, 'lat']].forEach(function (entry) {
-      var strong = byId('vhomeGrowth-' + entry[0]); strong.replaceChildren(d.createTextNode(format(entry[1])));
-      if (number(entry[1])) strong.appendChild(el('small', '', ' ' + entry[2]));
+      var strong = byId('vhomeGrowth-' + entry[0]), text = format(entry[1]) + (number(entry[1]) ? ' ' + entry[2] : '');
+      if (strong.textContent !== text) {
+        strong.replaceChildren(d.createTextNode(format(entry[1])));
+        if (number(entry[1])) strong.appendChild(el('small', '', ' ' + entry[2]));
+      }
     });
-    byId('vhomeGrowthExpand').disabled = !canEdit();
-    card.querySelectorAll('[data-growth-open]').forEach(function (button) { button.disabled = !canEdit(); });
-    // Like the adjacent data shortcuts, recover at the real native Clear
-    // boundary even when an untouched blank form emits no further event.
-    var until = Number(w.__vildaPersistClearUntil || 0);
-    if (!canEdit() && until > Date.now()) clearRefreshTimer = w.setTimeout(schedule, until - Date.now() + 1);
+    refreshReadiness();
   }
   function schedule() { if (!renderFrame) renderFrame = w.requestAnimationFrame(renderCard); }
   function start() {
@@ -408,7 +422,11 @@
       }, true);
     });
     ['input', 'change', 'vilda:data-applied', 'vilda:professional-summary-updated', 'vilda:main-session-restored',
-      'vilda:initial-main-session-restore-settled', 'vilda:auth-boot-settled', 'vildaProAccessChanged'].forEach(function (name) { d.addEventListener(name, schedule); });
+      'vilda:initial-main-session-restore-settled', 'vilda:state-restored', 'vilda:persist-restored',
+      'vilda:session-changed', 'vilda:auth-boot-settled', 'vildaProAccessChanged'].forEach(function (name) { d.addEventListener(name, schedule); });
+    // During a PWA upgrade the host can finish restoring after this document's
+    // first render. Re-read the native readiness gates on the settled lifecycle.
+    w.addEventListener('pageshow', schedule);
     ['vilda:user-state-cleared', 'vilda:patient-loaded', 'vilda:auth-loaded'].forEach(function (name) {
       d.addEventListener(name, function () { close(true); schedule(); });
     });

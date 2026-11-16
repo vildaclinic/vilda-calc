@@ -180,6 +180,9 @@ Na stronie głównej pokazuje zwartą kartę z tempem wzrastania, MPH i wiekiem
 kostnym. Desktop zachowuje wysokość 352 px z makiety; tablet i telefon używają
 naturalnej wysokości. Edycja i analiza otwierają wspólne okno o dotychczasowej
 geometrii i animacji, z zakładkami **Analiza / Dane i pomiary / Prognozy**.
+Po aktualizacji PWA i odtworzeniu sesji gotowość przycisków jest ponownie
+sprawdzana również wtedy, gdy ostatnia natywna blokada znika bez zdarzenia.
+To odświeżenie dotyczy wyłącznie dostępności UI, bez obliczeń i zapisu danych.
 
 Decyzja właściciela z 2026-11-16: pytanie o objętość jąder jest wyłącznie
 w danych zaawansowanych. Opis wyjaśnia zastosowanie w profilu KOWD/CDGP

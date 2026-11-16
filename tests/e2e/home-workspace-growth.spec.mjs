@@ -36,6 +36,11 @@ async function snapshot(frame) {
 
 test('home growth: volume belongs only to advanced data; drafts and tabs cancel without changing clinical data', async ({ page }) => {
   const { frame } = await setup(page);
+  // Native startup can release its last guard without another UI event.
+  await frame.evaluate(() => { window.__vildaPersistRestoring = true; VildaHomeGrowth.refresh(); });
+  await expect(frame.locator('[data-growth-open="data"]')).toBeDisabled();
+  await frame.evaluate(() => { window.__vildaPersistRestoring = false; });
+  await expect(frame.locator('[data-growth-open="data"]')).toBeEnabled();
   const before = await snapshot(frame), card = await frame.locator('#vhomeGrowthCard').boundingBox();
   await frame.locator('#tannerToggleBtn').click();
   const puberty = frame.getByRole('dialog', { name: 'Dane pokwitaniowe', exact: true });
@@ -100,6 +105,13 @@ test('home growth: history edits keep original nodes, metadata, annotations and 
     rows[1].setAttribute('data-gh-id', 'fictional-protected'); rows[1].setAttribute('data-gh-sync', 'true');
   });
   await expect(frame.locator('#advMeasurements .measure-row').nth(1).locator('.adv-height')).toBeDisabled();
+  // The native GH observer decorates the synthetic protected row on its next
+  // frame. Capture its fully rendered baseline, rather than racing that label.
+  await expect(frame.locator('#advMeasurements .measure-row').nth(1).locator('.gh-z-wiersza-etykieta')).toContainText('Punkt leczenia GH');
+  const protectedValues = await frame.locator('#advMeasurements .measure-row').nth(1).evaluate(row => {
+    window.__growthProtectedRow = row;
+    return Array.from(row.querySelectorAll('input, select, textarea'), input => ({ value: input.value, disabled: input.disabled }));
+  });
   const protectedBefore = await frame.locator('#advMeasurements .measure-row').nth(1).evaluate(row => row.outerHTML);
   const dialog = await show(frame), locked = dialog.locator('[data-growth-row]').nth(1);
   await expect(locked.locator('input')).toHaveCount(5);
@@ -116,6 +128,9 @@ test('home growth: history edits keep original nodes, metadata, annotations and 
   await expect(frame.locator('#advMeasurements .measure-row').first()).toHaveAttribute('data-fictional-retained', 'keep');
   await expect(frame.locator('#advMeasurements .measure-row').first().locator('.adv-arrow-comment')).toHaveValue('Fikcyjna adnotacja');
   expect(await frame.locator('#advMeasurements .measure-row').nth(1).evaluate(row => row.outerHTML)).toBe(protectedBefore);
+  expect(await frame.locator('#advMeasurements .measure-row').nth(1).evaluate(row => row === window.__growthProtectedRow)).toBe(true);
+  expect(await frame.locator('#advMeasurements .measure-row').nth(1).evaluate(row =>
+    Array.from(row.querySelectorAll('input, select, textarea'), input => ({ value: input.value, disabled: input.disabled })))).toEqual(protectedValues);
   await expect.poll(() => frame.evaluate(() => advancedGrowthData.measurements.some(row => row.ageMonths === 126 && row.height === 145 && row.weight === 35))).toBe(true);
   await expect(frame.locator('#advFatherHeight')).toHaveValue('183');
   await expect(frame.locator('#advBoneAge')).toHaveValue('11.5');
