@@ -48,7 +48,9 @@ function environment(input = {}) {
   let note = { id: 'fictional-picr-details', rev: 3, ...root.ClcrSavedResults.buildPatientNotePayload(point, { patientId: 'fictional-picr-patient', clinicalDateISO: '2026-11-03', comment: 'Zachowany komentarz.' }) };
   const captured = root.ClcrSavedCalculation.createSnapshot(point, { capture: { values: {}, fields: [] } });
   note.body += '\n\n' + root.ClcrSavedCalculation.serializeSnapshot(captured, note);
-  const update = vi.fn(async payload => { note = { ...payload, rev: note.rev + 1 }; return { updated: true }; });
+  // E3-PR0b2a: notatka z sejfu niesie chwilę zapisu; po zmianie sejf nadaje nową.
+  note.updatedAtISO = '2026-11-03T10:00:00.000Z';
+  const update = vi.fn(async payload => { note = { ...payload, rev: note.rev + 1, updatedAtISO: '2026-11-03T10:05:00.000Z' }; return { updated: true }; });
   const vault = { getPatientNote: vi.fn(async () => note), updateExistingPatientNote: update, isUnlocked: () => true };
   const open = () => root.ClcrResultDetails.open({ document: doc, vault, patientId: note.patientId, noteId: note.id });
   const field = id => doc.getElementById('editField-' + id);
@@ -89,7 +91,7 @@ describe('Pᵢ/Cr saved details use the actual persistence and transaction', () 
     env.inputValue('PICR_reportedValue', '0.6');
     await env.submit();
     expect(env.update).toHaveBeenCalledOnce();
-    expect(env.update.mock.calls[0][0]).toMatchObject({ id: 'fictional-picr-details', patientId: 'fictional-picr-patient', baseRev: 3 });
+    expect(env.update.mock.calls[0][0]).toMatchObject({ id: 'fictional-picr-details', patientId: 'fictional-picr-patient', baseRev: 3, baseUpdatedAtISO: '2026-11-03T10:00:00.000Z' });
     const saved = env.root.ClcrSavedCalculation.readSaved(env.note());
     expect(saved).toMatchObject({ valid: true, rawValue: 0.6, norm: '0,142–1,321 mg/mg', outOfRange: false });
     expect(saved.snapshot.assessment.phosphorusCreatinineSnapshot.input.reportedUnit).toBe('g/g');

@@ -36,6 +36,16 @@ describe('G14b — edytor rozmawia z sejfem numerem wersji', () => {
     expect(ui, 'nie ma trwałej flagi „ignoruj konflikty"').not.toContain('Qforce');
   });
 
+  it('E3-PR0b2a: pamięta też chwilę zapisu otwartej wersji i wysyła ją jako baseUpdatedAtISO; „Nadpisz moją wersją” podnosi ją z wersji w sejfie', () => {
+    // Scalanie przy równym rev podmienia treść i chwilę zapisu, a numer zostaje — sam baseRev
+    // tego nie widzi. Działanie mierzą tests/unit/konflikt-edycji-notatki-chwila.test.mjs
+    // (sejf) i tests/e2e/edytor-notatki-rata3.spec.mjs (arkusz).
+    expect(ui).toContain('var QbaseU=n&&r&&typeof r.updatedAtISO=="string"&&r.updatedAtISO?r.updatedAtISO:null');
+    expect(ui).toContain('QbaseU!=null&&(Vt.baseUpdatedAtISO=QbaseU)');
+    expect(ui, '„Nadpisz moją wersją” podnosi obie wartości — bez current wraca do samego rev')
+      .toContain('(Qbase=Qw0.rev);QbaseU=Qw0&&Qw0.current&&typeof Qw0.current.updatedAtISO=="string"&&Qw0.current.updatedAtISO?Qw0.current.updatedAtISO:null;');
+  });
+
   it('baner z raty 2 nie obiecuje już cichego nadpisania', () => {
     expect(ui).not.toContain('Zapis nadpisze tamt\\u0105 wersj\\u0119');
     expect(ui).toContain('Zapis zatrzyma si\\u0119 i pozwoli wybra\\u0107');

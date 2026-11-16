@@ -10,6 +10,9 @@ export const existingNoteUpdateSource = `
 /* KLIRENS-ISTNIEJACY-WYNIK: conditional mutations never create/resurrect an ID.
  * Default savePatientNote/removePatientNote retain their existing behaviour.
  * Every note writer/remover/merge uses Ac(id), including this guard and write.
+ * E3-PR0b2a (P-KONFLIKT-ZAPISU-NOTATKI): opcjonalne baseUpdatedAtISO - chwila zapisu
+ * wersji pokazanej lekarzowi - decyduje o konflikcie zamiast baseRev (scalanie przy
+ * rownym rev podmienia tresc i chwile, a rev zostaje); bez niego - jak dotad, po rev.
  */
 const VildaExistingNoteUpdateToken = {};
 async function VildaChangeExistingPatientNote(payload, remove) {
@@ -47,7 +50,7 @@ async function VildaChangeExistingPatientNote(payload, remove) {
       return Object.assign(result, { reason: "patient-mismatch" });
     }
     const revision = Number.isSafeInteger(stored.rev) && stored.rev >= 0 ? stored.rev : 0;
-    if (revision !== next.baseRev) {
+    if (typeof next.baseUpdatedAtISO === "string" && next.baseUpdatedAtISO ? (stored.updatedAtISO || "") !== next.baseUpdatedAtISO : revision !== next.baseRev) {
       const current = await Ft(stored);
       assertSession();
       return Object.assign(result, { reason: "conflict", conflict: true, rev: revision, current });
