@@ -14,6 +14,8 @@ import { atrybutyStyle, doFixture, inwentarzStyliElementow, korzen, miejscaJs, p
 // Pozostałe miejsca nadal podlegają temu samemu inwentarzowi i asercjom.
 // Historia badań ma analogicznie jedno mierzone pole rezerwy przewijania za stopką;
 // dozwolona własność i brak innych zapisów są sprawdzane osobno poniżej.
+// Okno strony głównej analogicznie przekazuje wyłącznie zmierzoną wysokość
+// widocznego obszaru ramki; wymiary, kolory i animacje pozostają w arkuszu.
 
 const FIXTURE = path.join(korzen, 'tests/fixtures/style-elementow.json');
 
@@ -30,6 +32,12 @@ describe('P-STYLE krok 5b: stylów ustawianych wprost na elementach nie przybywa
     for (const s of ['index.html', 'docpro.html', 'kalkulator-klirens.html']) expect(strony[s], s).toBeGreaterThan(10);
     for (const f of ['app.js', 'vilda_chrome.js']) expect(js[f], f).toBeGreaterThan(10);
     expect(Object.keys(js).some((f) => f.endsWith('.min.js'))).toBe(false);
+  });
+
+  it('okno strony głównej ustawia wyłącznie zmierzoną wysokość widocznego obszaru ramki', () => {
+    const js = fs.readFileSync(path.join(korzen, 'vilda_home_workspace.js'), 'utf8');
+    expect(miejscaJs(js)).toEqual({ wlasnosc: 0, cssText: 0, setProperty: 1, atrybut: 0, lancuch: 0, razem: 1 });
+    expect([...js.matchAll(/\.style\.setProperty\(\s*['"]([^'"]+)['"]/g)].map((match) => match[1])).toEqual(['--vhome-dialog-viewport-height']);
   });
 
   it('rezerwa historii badań ustawia wyłącznie jeden parametr mierzonej geometrii', () => {

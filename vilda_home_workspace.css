@@ -337,3 +337,94 @@
   }
   .vilda-home-workspace .vhome-visit-short { display: inline; }
 }
+
+/* Shared expanded-window geometry from the accepted mockup. */
+.vilda-home-workspace .vhome-detail-dialog {
+  position: fixed;
+  box-sizing: border-box;
+  width: min(1000px, calc(100vw - 32px));
+  height: min(820px, calc(var(--vhome-dialog-viewport-height, 100dvh) * .9));
+  max-width: none;
+  max-height: none;
+  inset: calc(var(--vhome-dialog-viewport-height, 100dvh) / 2) auto auto 50vw;
+  margin: 0;
+  transform: translate(-50%, -50%);
+  padding: 0;
+  overflow: hidden;
+  border: var(--border-hairline) solid var(--line);
+  border-radius: var(--radius-14);
+  background: var(--card);
+  color: var(--text);
+  box-shadow: 0 25px 100px #123a4a26;
+}
+.vilda-home-workspace .vhome-detail-dialog:not([open]) { display: none; }
+.vilda-home-workspace .vhome-detail-dialog[open] {
+  display: flex;
+  flex-direction: column;
+  animation: vhome-window-open 180ms ease-out both;
+}
+.vilda-home-workspace .vhome-detail-dialog::backdrop { background: #163b4b66; }
+.vilda-home-workspace .vhome-detail-dialog[open]::backdrop { animation: vhome-backdrop-open 150ms ease-out both; }
+@keyframes vhome-window-open {
+  from { opacity: 0; transform: translate(-50%, calc(-50% + 6px)) scale(.99); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+@keyframes vhome-backdrop-open {
+  from { background: #163b4b00; }
+  to { background: #163b4b66; }
+}
+.vilda-home-workspace .vhome-dialog-heading {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-18px);
+  padding: 21px 25px;
+  border-bottom: var(--border-hairline) solid var(--line);
+}
+.vilda-home-workspace .vhome-dialog-heading h2 { margin: 0; font-size: 21px; line-height: 1.4; font-weight: 600; text-align: left; }
+html.vilda-home-workspace .vhome-detail-dialog .vhome-dialog-close { flex: 0 0 40px; width: 40px; height: 40px; min-height: 40px; padding: 0; margin: 0; font-size: 26px; line-height: 1; border: var(--border-hairline) solid var(--line) !important; border-radius: var(--radius-8) !important; background: var(--bg) !important; color: var(--muted) !important;  box-shadow: none !important; }
+.vilda-home-workspace .vhome-dialog-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 22px 25px; font-size: 16px; line-height: 1.65; }
+.vilda-home-workspace .vhome-dialog-context { margin: 0 0 var(--space-18px); color: var(--muted); }
+.vilda-home-workspace .vhome-dialog-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4px); padding: var(--space-4px); margin-bottom: 22px; border: var(--border-hairline) solid var(--line); border-radius: var(--radius-9); background: var(--bg); }
+html.vilda-home-workspace .vhome-detail-dialog .vhome-dialog-tabs button { min-width: 0; min-height: 44px; margin: 0; padding: var(--space-8px); font-size: 16px; line-height: 1.4; border: 0 !important; border-radius: 7px !important; background: transparent !important; color: var(--muted) !important;  box-shadow: none !important;}
+html.vilda-home-workspace .vhome-detail-dialog .vhome-dialog-tabs [aria-selected="true"] { background: var(--card) !important; color: var(--primary) !important; box-shadow: 0 1px 4px #123a4a12 !important; }
+.vilda-home-workspace .vhome-dialog-section[hidden],
+.vilda-home-workspace .vhome-dialog-fields label[hidden] { display: none; }
+.vilda-home-workspace .vhome-dialog-section h3 { margin: var(--space-20px) 0 var(--space-12px); font-size: 17px; line-height: 1.45; text-align: left; }
+.vilda-home-workspace .vhome-dialog-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-18px); }
+.vilda-home-workspace .vhome-dialog-fields label { display: flex; flex-direction: column; gap: var(--space-6px); align-self: start; min-width: 0; margin: 0; font-size: 16px; line-height: 1.45; }
+.vilda-home-workspace .vhome-dialog-fields input,
+.vilda-home-workspace .vhome-dialog-fields select { box-sizing: border-box; width: 100%; min-width: 0; min-height: 46px; margin: 0; font-size: 16px; }
+.vilda-home-workspace .vhome-dialog-note { margin: var(--space-18px) 0; font-size: 14px; line-height: 1.65; color: var(--muted); }
+.vilda-home-workspace .vhome-dialog-error { color: var(--danger, #b3261e); }
+.vilda-home-workspace .vhome-dialog-error:empty { display: none; }
+.vilda-home-workspace .vhome-dialog-footer { display: grid; grid-template-columns: minmax(120px, 1fr) minmax(0, 2fr); flex: 0 0 auto; gap: var(--space-12px); padding: var(--space-16px) 25px; border-top: var(--border-hairline) solid var(--line); background: var(--bg); }
+html.vilda-home-workspace .vhome-detail-dialog .vhome-dialog-footer button { min-width: 0; min-height: 46px; margin: 0; padding: var(--space-10px) var(--space-14px); font-size: 16px; line-height: 1.45; border-radius: var(--radius-8) !important;  box-shadow: none !important;}
+html.vilda-home-workspace .vhome-detail-dialog .vhome-dialog-cancel { border: var(--border-hairline) solid var(--line) !important; color: var(--text) !important; background: var(--card) !important; }
+html.vilda-home-workspace .vhome-detail-dialog .vhome-dialog-apply { background: var(--primary) !important; color: #fff !important; }
+@media (max-width: 600px) {
+  .vilda-home-workspace .vhome-detail-dialog { width: calc(100vw - 20px); height: calc(var(--vhome-dialog-viewport-height, 100dvh) - 24px); }
+  .vilda-home-workspace .vhome-dialog-heading { gap: var(--space-12px); padding: var(--space-14px) var(--space-16px); }
+  .vilda-home-workspace .vhome-dialog-heading h2 { font-size: 19px; }
+  .vilda-home-workspace .vhome-dialog-body { padding: var(--space-16px); }
+  .vilda-home-workspace .vhome-dialog-footer { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); padding: var(--space-12px) var(--space-16px); gap: var(--space-8px); }
+  .vilda-home-workspace .vhome-dialog-fields { gap: var(--space-14px) var(--space-12px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vilda-home-workspace .vhome-detail-dialog[open],
+  .vilda-home-workspace .vhome-detail-dialog[open]::backdrop { animation: none; }
+}
+.vilda-home-workspace .vhome-puberty-assessment { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-12px); }
+.vilda-home-workspace .vhome-puberty-assessment > p { grid-column: 1 / -1; }
+.vilda-home-workspace .vhome-puberty-assessment .vpa-row { min-width: 0; margin: 0; }
+.vilda-home-workspace .vhome-puberty-assessment select { box-sizing: border-box; width: 100%; min-width: 0; min-height: 46px; margin: 0; font-size: 16px; }
+
+.vilda-home-workspace .vhome-detail-dialog .vpa-row legend { font-size: 16px; }
+.vilda-home-workspace .vhome-detail-dialog .vpa-intro,
+.vilda-home-workspace .vhome-detail-dialog .vpa-definition,
+.vilda-home-workspace .vhome-detail-dialog .vpa-provenance { font-size: 14px; }
+.vilda-home-workspace .vhome-detail-dialog .vpa-guide-toggle { font-size: 14px !important; }
+
+.vilda-home-workspace .vhome-puberty-date { display: flex; flex-direction: column; gap: var(--space-6px); margin: 0; font-size: 16px; }
+.vilda-home-workspace .vhome-puberty-date input { box-sizing: border-box; width: 100%; min-height: 46px; margin: 0; font-size: 16px; }

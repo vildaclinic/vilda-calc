@@ -164,12 +164,19 @@
     window.updateTannerVisibility();
   };
 
+  function openWorkspaceDialog() {
+    var home = window.VildaHomeWorkspace;
+    return !!(home && typeof home.openPuberty === 'function' && home.openPuberty());
+  }
+
   window.vildaOtworzDanePokwitaniowe = function () {
+    if (openWorkspaceDialog()) return true;
     otwarty = true;
     window.updateTannerVisibility();
   };
 
   btn.addEventListener('click', function () {
+    if (openWorkspaceDialog()) return;
     otwarty = !otwarty;
     window.updateTannerVisibility();
     if (otwarty) {

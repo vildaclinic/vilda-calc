@@ -94,6 +94,28 @@ docelowa polityka samego konsensusu oraz współistnienia bieżącego podsumowan
 i porównania należy do etapu 4. Okna pokwitania i danych okołoporodowych
 należą do etapu 3.
 
+## Trzeci przyrost A — robocze dane pokwitaniowe
+
+Przycisk danych pokwitaniowych otwiera w podglądzie okno z zakładkami
+„Ocena pokwitania” i „Wywiad i leczenie”. G/Th i P są oddzielnymi listami
+rozwijalnymi. Wspólny renderer zachowuje dotychczasowe opisy i ściągi;
+pozostałe miejsca korzystające z niego zachowują swoje obecne kontrolki.
+
+Pola okna są szkicem bez identyfikatorów i nazw kanonicznych pól. Zdarzenia
+szkicu kończą się przed dokumentowymi słuchaczami autosave. Otwarcie i
+anulowanie nie zapisują sesji, nie przydzielają wizyty i nie zmieniają
+pochodzenia oceny. „Zastosuj dane pokwitaniowe” przekazuje kompletny zestaw
+ocen do natywnego stanu w jednej operacji; fakty trafiają do oryginalnych pól
+formularza przed powiadomieniem ich dotychczasowych odbiorców.
+
+Krzyżyk, Escape, kliknięcie tła i Wstecz wymagają potwierdzenia odrzucenia
+zmienionego szkicu. Zmiana konta, pacjenta, wizyty lub bazowych danych
+unieważnia szkic. Okno ma rozmiar i animację 180 ms z makiety; ustawienie
+ograniczonego ruchu wyłącza animację. Powłoka wykrywa otwarte okno w ramce
+i chowa zasłaniający je dock. Po zwykłym zamknięciu wraca fokus przycisku.
+
+Dane okołoporodowe i integracja SGA stanowią osobny przyrost 3B.
+
 ## Podgląd i odbiór
 
 Podgląd jest osobnym eksportem z gałęzi roboczej, z własnym pochodzeniem

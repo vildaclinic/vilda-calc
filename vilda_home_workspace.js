@@ -145,6 +145,297 @@
       isCurrent: function () { return currentPatientId() === id; }
     });
   }
+  var pubertyDialog = null, pubertyDraft = null;
+  var pubertyFields = [
+    ['advTesticularVolume', 'Objętość jąder', 'M'],
+    ['pubertyOnsetAge', 'Wiek początku pokwitania · lata'],
+    ['pubertyMenarcheAge', 'Wiek menarche · lata', 'F'],
+    ['pubertyMenarcheHeight', 'Wzrost przy menarche · cm', 'F'],
+    ['pubertyMenarcheBoneAge', 'Wiek kostny przy menarche · lata', 'F'],
+    ['pubertyGnrhaStatus', 'Leczenie analogiem GnRH'],
+    ['pubertyCdgp', 'Ocena lekarza · KOWD'],
+    ['pubertyGnrhaStartAge', 'Wiek rozpoczęcia leczenia · lata'],
+    ['pubertyGnrhaStopAge', 'Wiek zakończenia leczenia · lata']
+  ];
+  function pubertySnapshot() {
+    var state = w.VildaPubertyAssessmentState, vault = w.VildaVault;
+    if (!state || typeof state.readReadOnly !== 'function' || !state.canEdit() || !vault || !vault.isUnlocked()
+      || !w.VildaAuthUI || !w.VildaAuthUI.isBootReady() || w.__vildaPersistRestoring || w.__vildaLustroWpis
+      || w.VildaDataImportExport && w.VildaDataImportExport.isMainSessionRestorePending()) return null;
+    if (w.VildaPanelPacjent && w.VildaPanelPacjent.nieaktualny()) return null;
+    var context = state.readReadOnly();
+    if (context.status === 'unavailable') return null;
+    var fields = {};
+    pubertyFields.forEach(function (entry) { fields[entry[0]] = byId(entry[0]).value; });
+    var user = vault.getCurrentUser();
+    var measured = w.VildaDobAge ? w.VildaDobAge.readMeasuredAtISO() : null;
+    return { account: user && user.userId, patientId: currentPatientId(), context: context, fields: fields,
+      demographic: ['sex', 'age', 'ageMonths', 'ageWeeks', 'dobInput', 'height', 'weight'].map(function (id) {
+        return byId(id) ? byId(id).value : null;
+      }), visit: w.VildaVisitContext ? w.VildaVisitContext.capture({ user: { measuredAtISO: measured } },
+        { patientId: currentPatientId(), readOnly: true }) : null };
+  }
+  function pubertyCommitOwner(snapshot) {
+    return snapshot && JSON.stringify([snapshot.account, snapshot.patientId, snapshot.demographic, snapshot.visit]);
+  }
+  function samePubertyOwner() {
+    if (!pubertyDraft) return false;
+    try { return JSON.stringify(pubertySnapshot()) === pubertyDraft.fingerprint; }
+    catch (_) { return false; }
+  }
+  function closePuberty(force, restoreFocus, fromHistory) {
+    if (!pubertyDialog || !pubertyDialog.open) return;
+    if (!force && pubertyDraft && pubertyDraft.dirty && !w.confirm('Odrzucić niezapisane zmiany danych pokwitaniowych?')) return false;
+    var draft = pubertyDraft;
+    pubertyDraft = null;
+    if (draft) {
+      w.clearInterval(draft.timer);
+      if (draft.editor) draft.editor.destroy();
+    }
+    pubertyDialog.close();
+    pubertyDialog.removeAttribute('aria-modal');
+    if (!fromHistory && draft && draft.historyToken && w.history.state && w.history.state.vildaHomeDialog === draft.historyToken) w.history.back();
+    pubertyDialog.querySelector('.vhome-dialog-body').replaceChildren();
+    var button = byId('tannerToggleBtn');
+    if (button) { button.setAttribute('aria-expanded', 'false'); if (!force || restoreFocus) button.focus({ preventScroll: true }); }
+    return true;
+  }
+  function pubertyDraftEvent(event) {
+    if (!pubertyDialog || !pubertyDialog.open || !pubertyDialog.contains(event.target)) return;
+    // Temporary controls never reach document-level autosave/activity listeners.
+    // Handle their input here before stopping the event's native propagation.
+    event.stopImmediatePropagation();
+    if (!pubertyDraft) return;
+    if (event.target.hasAttribute('data-puberty-select-axis')) {
+      if (event.type === 'change') pubertyDraft.editor.handleSelect(event);
+      return;
+    }
+    if (!event.target.hasAttribute('data-puberty-draft-field')) return;
+    if (!samePubertyOwner()) { closePuberty(true); return; }
+    var id = event.target.getAttribute('data-puberty-draft-field');
+    pubertyDraft.fields[id] = event.target.value;
+    pubertyDraft.changedFields[id] = true;
+    pubertyDraft.dirty = true;
+    if (id === 'pubertyGnrhaStatus') {
+      var status = event.target.value;
+      if (status !== 'zakonczone') setPubertyDraftValue('pubertyGnrhaStopAge', '');
+      if (status !== 'zakonczone' && status !== 'w-trakcie') setPubertyDraftValue('pubertyGnrhaStartAge', '');
+      showPubertyDraftFields();
+    }
+  }
+  function setPubertyDraftValue(id, value) {
+    pubertyDraft.fields[id] = value;
+    pubertyDraft.changedFields[id] = true;
+    var control = pubertyDialog.querySelector('[data-puberty-draft-field="' + id + '"]');
+    if (control) control.value = value;
+  }
+  function showPubertyDraftFields() {
+    var status = pubertyDraft.fields.pubertyGnrhaStatus;
+    ['pubertyGnrhaStartAge', 'pubertyGnrhaStopAge'].forEach(function (id) {
+      var control = pubertyDialog.querySelector('[data-puberty-draft-field="' + id + '"]');
+      if (control) control.closest('label').hidden = id === 'pubertyGnrhaStopAge'
+        ? status !== 'zakonczone' : status !== 'zakonczone' && status !== 'w-trakcie';
+    });
+  }
+  function pubertyDraftControl(entry, host) {
+    if (entry[2] && entry[2] !== pubertyDraft.sex) return;
+    var original = byId(entry[0]), label = element('label', '', entry[1]);
+    var control = d.createElement(original.tagName.toLowerCase());
+    // Copy constraints and choices, never canonical identity, listeners or state.
+    ['type', 'min', 'max', 'step', 'inputmode'].forEach(function (attribute) {
+      if (original.hasAttribute(attribute)) control.setAttribute(attribute, original.getAttribute(attribute));
+    });
+    if (original.tagName === 'SELECT') Array.from(original.options).forEach(function (choice) {
+      var option = element('option', '', choice.textContent);
+      option.value = choice.value; control.appendChild(option);
+    });
+    control.setAttribute('data-puberty-draft-field', entry[0]);
+    control.autocomplete = 'off';
+    control.value = pubertyDraft.fields[entry[0]];
+    label.appendChild(control); host.appendChild(label);
+  }
+  function selectPubertyTab(key, focus) {
+    pubertyDialog.querySelectorAll('[data-puberty-dialog-tab]').forEach(function (button) {
+      var active = button.dataset.pubertyDialogTab === key;
+      button.setAttribute('aria-selected', String(active)); button.tabIndex = active ? 0 : -1;
+      if (active && focus) button.focus();
+    });
+    pubertyDialog.querySelectorAll('[data-puberty-dialog-panel]').forEach(function (panel) {
+      panel.hidden = panel.dataset.pubertyDialogPanel !== key;
+    });
+  }
+  function applyPuberty() {
+    if (!pubertyDraft || !samePubertyOwner()) { closePuberty(true); return; }
+    var draft = pubertyDraft;
+    var owner = pubertyCommitOwner(pubertySnapshot());
+    var stillOwned = function () {
+      try { return pubertyDraft === draft && pubertyCommitOwner(pubertySnapshot()) === owner; }
+      catch (_) { return false; }
+    };
+    var controls = Array.from(pubertyDialog.querySelectorAll('[data-puberty-draft-field]'));
+    if (controls.some(function (control) { return pubertyDraft.changedFields[control.getAttribute('data-puberty-draft-field')] && !control.closest('label').hidden && !control.reportValidity(); })) return;
+    var changes = Object.keys(pubertyDraft.axes).map(function (axis) { return { axis: axis, stage: pubertyDraft.axes[axis] }; });
+    // Validate the complete batch before the state module changes any axis.
+    var result = changes.length ? w.VildaPubertyAssessmentState.editObservations(changes) : { ok: true };
+    if (!stillOwned()) { if (pubertyDraft === draft) closePuberty(true); return; }
+    if (!result || !result.ok) {
+      pubertyDialog.querySelector('[data-puberty-dialog-error]').textContent = 'Nie można zastosować danych. Sprawdź aktywnego pacjenta i odtworzenie wizyty.';
+      return;
+    }
+    var edited = Object.keys(pubertyDraft.changedFields).map(function (id) {
+      var control = byId(id); control.value = pubertyDraft.fields[id]; return control;
+    });
+    // All canonical values are assigned before notifying existing consumers.
+    if (edited.length && !changes.length) w.VildaPubertyAssessmentState.markFactsEdited();
+    for (var index = 0; index < edited.length && stillOwned(); index += 1) edited[index].dispatchEvent(new w.Event('change', { bubbles: true }));
+    if (!stillOwned()) { if (pubertyDraft === draft) closePuberty(true); return; }
+    var dirty = draft.dirty;
+    closePuberty(true, true);
+    if (dirty) {
+      if (w.VildaPubertyAssessmentUI) w.VildaPubertyAssessmentUI.render();
+      if (typeof w.debouncedUpdate === 'function') w.debouncedUpdate();
+      if (typeof w.vildaPersistFlushNow === 'function') w.vildaPersistFlushNow({ force: true });
+    }
+  }
+  function fitPubertyDialog() {
+    if (!pubertyDialog) return;
+    var height = w.innerHeight;
+    try {
+      if (w.parent !== w && w.frameElement) {
+        var parentViewport = w.parent.visualViewport;
+        var bottom = parentViewport ? Math.min(w.parent.innerHeight, parentViewport.offsetTop + parentViewport.height) : w.parent.innerHeight;
+        height = Math.min(height, bottom - Math.max(0, w.frameElement.getBoundingClientRect().top));
+      } else if (w.visualViewport) height = Math.min(height, w.visualViewport.height);
+    } catch (_) { /* A foreign embed cannot expose its viewport. */ }
+    if (height > 0) pubertyDialog.style.setProperty('--vhome-dialog-viewport-height', height + 'px');
+  }
+  function createPubertyDialog() {
+    var dialog = element('dialog', 'vhome-detail-dialog');
+    dialog.id = 'vhomePubertyDialog';
+    dialog.setAttribute('role', 'dialog');
+    dialog.setAttribute('aria-labelledby', 'vhomePubertyTitle');
+    var heading = element('div', 'vhome-dialog-heading');
+    var title = element('h2', '', 'Dane pokwitaniowe'); title.id = 'vhomePubertyTitle';
+    var close = element('button', 'vhome-dialog-close', '×'); close.type = 'button';
+    close.setAttribute('aria-label', 'Zamknij dane pokwitaniowe'); close.addEventListener('click', function () { closePuberty(false); });
+    heading.append(title, close);
+    var body = element('div', 'vhome-dialog-body');
+    var footer = element('div', 'vhome-dialog-footer');
+    var cancel = element('button', 'vhome-dialog-cancel', 'Anuluj'); cancel.type = 'button';
+    cancel.addEventListener('click', function () { closePuberty(false); });
+    var apply = element('button', 'vhome-dialog-apply', 'Zastosuj dane pokwitaniowe'); apply.type = 'button';
+    apply.addEventListener('click', applyPuberty);
+    footer.append(cancel, apply); dialog.append(heading, body, footer);
+    dialog.addEventListener('cancel', function (event) { event.preventDefault(); closePuberty(false); });
+    dialog.addEventListener('click', function (event) {
+      if (event.target !== dialog) return;
+      var rect = dialog.getBoundingClientRect();
+      if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) closePuberty(false);
+    });
+    d.body.appendChild(dialog);
+    w.addEventListener('resize', fitPubertyDialog);
+    if (w.visualViewport) w.visualViewport.addEventListener('resize', fitPubertyDialog);
+    try {
+      if (w.parent !== w) {
+        w.parent.addEventListener('resize', fitPubertyDialog);
+        if (w.parent.visualViewport) w.parent.visualViewport.addEventListener('resize', fitPubertyDialog);
+      }
+    } catch (_) { /* Own-document resize remains available in a foreign embed. */ }
+    w.addEventListener('popstate', function () {
+      if (!pubertyDraft || !pubertyDialog.open) return;
+      if (w.history.state && w.history.state.vildaHomeDialog === pubertyDraft.historyToken) return;
+      if (closePuberty(false, true, true) === false) {
+        w.history.pushState(Object.assign({}, w.history.state, { vildaHomeDialog: pubertyDraft.historyToken }), '', w.location.href);
+      }
+    });
+    w.addEventListener('input', pubertyDraftEvent, true);
+    w.addEventListener('change', pubertyDraftEvent, true);
+    ['vilda:user-state-cleared', 'vilda:patient-loaded', 'vilda:auth-loaded'].forEach(function (name) {
+      d.addEventListener(name, function () { closePuberty(true); });
+    });
+    if (w.VildaVault && typeof w.VildaVault.onLock === 'function') w.VildaVault.onLock(function () { closePuberty(true); });
+    return dialog;
+  }
+  function openPuberty() {
+    if (!started) return false;
+    if (pubertyDialog && pubertyDialog.open) return true;
+    var snapshot;
+    try { snapshot = pubertySnapshot(); } catch (_) { snapshot = null; }
+    // A handled but not-ready request must not fall through to the live editor.
+    if (!snapshot || !w.VildaPubertyAssessmentUI) return true;
+    if (!pubertyDialog) pubertyDialog = createPubertyDialog();
+    pubertyDraft = { fingerprint: JSON.stringify(snapshot), context: snapshot.context, fields: Object.assign({}, snapshot.fields),
+      axes: {}, changedFields: {}, sex: byId('sex').value, dirty: false, editor: null, timer: null };
+    var body = pubertyDialog.querySelector('.vhome-dialog-body');
+    var name = [byId('firstName').value, byId('lastName').value].filter(Boolean).join(' ');
+    body.appendChild(element('p', 'vhome-dialog-context', name + (name ? ' · ' : '') + (pubertyDraft.sex === 'F' ? 'Dziewczynka' : 'Chłopiec')));
+    var tabs = element('div', 'vhome-dialog-tabs'); tabs.setAttribute('role', 'tablist'); tabs.setAttribute('aria-label', 'Dane pokwitaniowe');
+    [['assessment', 'Ocena pokwitania'], ['history', 'Wywiad i leczenie']].forEach(function (entry) {
+      var button = element('button', '', entry[1]); button.type = 'button'; button.dataset.pubertyDialogTab = entry[0];
+      button.id = 'vhomePubertyTab-' + entry[0]; button.setAttribute('role', 'tab');
+      button.setAttribute('aria-controls', 'vhomePubertyPanel-' + entry[0]);
+      button.addEventListener('click', function () { selectPubertyTab(entry[0]); });
+      button.addEventListener('keydown', function (event) {
+        if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].indexOf(event.key) < 0) return;
+        event.preventDefault(); selectPubertyTab(event.key === 'Home' ? 'assessment' : event.key === 'End' ? 'history' : entry[0] === 'assessment' ? 'history' : 'assessment', true);
+      });
+      tabs.appendChild(button);
+    });
+    body.appendChild(tabs);
+    var assessment = element('section', 'vhome-dialog-section'), history = element('section', 'vhome-dialog-section');
+    [assessment, history].forEach(function (panel, i) {
+      var key = i ? 'history' : 'assessment'; panel.dataset.pubertyDialogPanel = key;
+      panel.id = 'vhomePubertyPanel-' + key; panel.setAttribute('role', 'tabpanel'); panel.setAttribute('aria-labelledby', 'vhomePubertyTab-' + key);
+    });
+    var editor = element('div', 'vhome-puberty-assessment'); assessment.appendChild(editor);
+    var context = snapshot.context.visitContext;
+    assessment.appendChild(element('p', 'vhome-dialog-note', 'Każdą cechę ocenia się niezależnie. Brak wpisu pozostaje brakiem oceny.'));
+    assessment.appendChild(element('h3', '', 'Pomiary i początek dojrzewania'));
+    var measurements = element('div', 'vhome-dialog-fields'), treatments = element('div', 'vhome-dialog-fields');
+    pubertyFields.forEach(function (entry, index) { pubertyDraftControl(entry, index < 5 ? measurements : treatments); });
+    assessment.appendChild(measurements);
+    history.appendChild(element('h3', '', 'Leczenie i ocena lekarza')); history.appendChild(treatments);
+    history.appendChild(element('p', 'vhome-dialog-note', 'KOWD: konstytucjonalne opóźnienie wzrastania i dojrzewania. Dane są wspólne z zaawansowanymi obliczeniami wzrostowymi.'));
+    var error = element('p', 'vhome-dialog-error'); error.setAttribute('data-puberty-dialog-error', ''); error.setAttribute('role', 'alert');
+    body.append(assessment, history, error);
+    pubertyDraft.editor = w.VildaPubertyAssessmentUI.mountEditor(editor, {
+      idPrefix: 'vhomePubertyDraft', controlType: 'select', sex: function () { return pubertyDraft.sex; },
+      read: function () { return pubertyDraft.context; },
+      onEdit: function (axis, stage) {
+        if (!samePubertyOwner() || ['ready', 'absent'].indexOf(pubertyDraft.context.status) < 0) return { ok: false };
+        var model = w.VildaPubertyAssessment;
+        var raw = pubertyDraft.context.assessment ? model.clone(pubertyDraft.context.assessment)
+          : { version: 1, sex: pubertyDraft.sex, observations: { G: null, Th: null, P: null } };
+        if (raw.sex !== pubertyDraft.sex) {
+          Object.keys(raw.observations).forEach(function (key) {
+            if (raw.observations[key] && !Object.prototype.hasOwnProperty.call(raw.observations[key], 'sex')) raw.observations[key].sex = raw.sex;
+          }); raw.sex = pubertyDraft.sex;
+        }
+        raw.observations[axis] = stage === null ? null : { stage: stage, sex: pubertyDraft.sex,
+          observedAtISO: context.measuredAtISO, ageMonths: context.ageMonths, source: 'clinician-entry' };
+        var view = model.readUser({ pubertyAssessment: raw });
+        if (view.status !== 'ready') return { ok: false };
+        pubertyDraft.context = view; pubertyDraft.axes[axis] = stage; pubertyDraft.dirty = true;
+        return { ok: true };
+      }
+    });
+    var dateLabel = element('label', 'vhome-puberty-date', 'Data oceny · bieżąca wizyta');
+    var dateInput = d.createElement('input'); dateInput.type = 'text'; dateInput.readOnly = true;
+    dateInput.setAttribute('aria-label', 'Data oceny — data bieżącej wizyty');
+    dateInput.value = context.measuredAtISO ? context.measuredAtISO.slice(8, 10) + '.' + context.measuredAtISO.slice(5, 7) + '.' + context.measuredAtISO.slice(0, 4) : ''; dateLabel.appendChild(dateInput); editor.appendChild(dateLabel);
+    showPubertyDraftFields(); selectPubertyTab('assessment');
+    fitPubertyDialog();
+    pubertyDialog.setAttribute('aria-modal', 'true');
+    pubertyDialog.showModal();
+    pubertyDraft.historyToken = 'puberty-' + Date.now();
+    w.history.pushState(Object.assign({}, w.history.state, { vildaHomeDialog: pubertyDraft.historyToken }), '', w.location.href);
+    byId('tannerToggleBtn').setAttribute('aria-expanded', 'true');
+    pubertyDraft.timer = w.setInterval(function () { if (!samePubertyOwner()) closePuberty(true); }, 250);
+    var first = editor.querySelector('[data-puberty-select-axis]');
+    if (first) first.focus({ preventScroll: true });
+    return true;
+  }
+
   function start() {
     if (started) return;
     var form = byId('calcForm'), card = d.querySelector('#userSection fieldset.user-card');
@@ -251,7 +542,7 @@
     refresh();
     if (w.VildaSummaryLayout) w.VildaSummaryLayout.refresh();
   }
-  w.VildaHomeWorkspace = Object.freeze({ start: start, refresh: refresh });
+  w.VildaHomeWorkspace = Object.freeze({ start: start, refresh: refresh, openPuberty: openPuberty });
   if (d.readyState === 'loading') d.addEventListener('DOMContentLoaded', start, { once: true });
   else start();
 })(typeof window !== 'undefined' ? window : globalThis);
