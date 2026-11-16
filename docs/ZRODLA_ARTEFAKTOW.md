@@ -757,6 +757,8 @@ pozostają bez zmian. Adaptery IndexedDB, pamięciowy i hybrydowy udostępniają
 `tools/patch-vault-existing-note.mjs` uwzględnia wspólny punkt przygotowania rekordu,
 porównanie terminu nowych przypomnień i położenie istniejącego bloku przed B2.2;
 test odtworzenia nadal wymaga identycznych bajtów artefaktu i idempotencji łatki.
+Od E3-PR0b2a (P-KONFLIKT-ZAPISU-NOTATKI) blok niesie też warunek konfliktu po chwili
+zapisu (`baseUpdatedAtISO`); łatka i sejf zmieniają się razem, bajt w bajt.
 
 Test `reminders-outcome-vault.test.mjs` uruchamia rzeczywisty sejf i kryptografię;
 testy `przypomnienia-b22*` sprawdzają natywną aplikację desktop/mobile, awarię
@@ -1860,6 +1862,20 @@ git show 40d742d38f4d2924d3ba85a50d746790d0de6644:vilda_vault.js > /tmp/vilda-va
 node tools/visits-vault-delta.mjs --rebuild /tmp/vilda-vault-visits-base.js /tmp/vilda-vault-visits-built.js
 cmp vilda_vault.js /tmp/vilda-vault-visits-built.js
 node tools/visits-vault-delta.mjs
+```
+
+Od E3-PR0b2a (P-KONFLIKT-ZAPISU-NOTATKI, pierwsza zmiana sejfu po tej integracji)
+bazą delty jest obraz sejfu po tej zmianie bez bloku trwałych wizyt: SHA-256
+`5d77d03694150d19957de8d42a35083d59dae24391f8b575d679c29bf754f49b`
+(`tools/visits-vault-delta.mjs`, manifest). Przepis wyżej z `40d742d3` odtwarza stan
+sprzed E3-PR0b2a narzędziem z tamtego stanu (`audyt` `214a44c7`); bieżące narzędzie
+odrzuca tamtą bazę („unexpected input artifact”). Bieżącą bazę daje odwrócenie delty
+z `vilda_vault.js`:
+
+```bash
+node --input-type=module -e "import { readFileSync, writeFileSync } from 'node:fs'; import { restoreDurableVisitsBaseline } from './tools/visits-vault-delta.mjs'; writeFileSync('/tmp/vilda-vault-visits-base.js', restoreDurableVisitsBaseline(readFileSync('vilda_vault.js', 'utf8')));"
+node tools/visits-vault-delta.mjs --rebuild /tmp/vilda-vault-visits-base.js /tmp/vilda-vault-visits-built.js
+cmp vilda_vault.js /tmp/vilda-vault-visits-built.js
 ```
 
 Każdy punkt wpięcia musi występować dokładnie raz. Narzędzie odrzuca inne

@@ -12241,7 +12241,7 @@ Pierwsza część raty 3 audytu „Dodaj notatkę do wizyty": pozycje, które ni
 
 Druga część raty 3: zachowanie edytora notatki i kontrakt sejfu. Rozdzielona od raty 3a świadomie — `baseRev` zmienia umowę `savePatientNote`, a to nie powinno jechać w jednym PR z cudzysłowami i `spellcheck`.
 
-**G14b — wybór wersji zamiast cichego nadpisania (D10).** Rata 2 dała baner „Ta notatka zmieniła się na innym urządzeniu", ale sam zapis szedł dalej: sejf znał dokładnie jedną kolizję — zapis notatki skasowanej gdzie indziej (ścieżka P5, „Zostaw notatkę / Usuń ponownie") — a zwykła równoległa edycja przechodziła bez słowa i wygrywał ten, kto zapisał później. `savePatientNote` przyjmuje teraz opcjonalne **`baseRev`**: przy zapisie istniejącej notatki (podane `id`, gałąź bez wskrzeszenia), gdy `baseRev` jest mniejsze od `rev` w sejfie, zapis **nie dochodzi do skutku** — funkcja zwraca `{id, isNew:false, conflict:true, rev, current}`, czyli numer wersji z sejfu i całą jej treść. Wywołanie **bez** `baseRev` zachowuje się dokładnie jak dotąd, więc synchronizacja, import karty `.wiw`, scalanie duplikatów, Terminarz i Przypomnienia nic nie tracą; nowe zachowanie dotyczy wyłącznie tego, kto o nie poprosi. Arkusz notatki zapamiętuje przy otwarciu `rev` wczytanej notatki (`listPatientNotesForPatient` i `getPatientNote` podają go od raty 1), przekazuje jako `baseRev`, a przy `conflict:true` pokazuje „Nowsza wersja tej notatki jest już w sejfie" i dwa wyjścia: **„Wczytaj nowszą (porzuci Twój tekst)"** — arkusz zamyka się i otwiera ponownie na wersji z sejfu, oraz **„Nadpisz moją wersją"** — podnosi `baseRev` do wersji z sejfu i ponawia ten jeden zapis, bez trwałej flagi „ignoruj konflikty" (kolejna zmiana z drugiego urządzenia znów zatrzyma zapis). Baner z raty 2 mówi teraz, co zrobi zapis: „Zapis zatrzyma się i pozwoli wybrać, którą wersję zostawić."
+**G14b — wybór wersji zamiast cichego nadpisania (D10).** Rata 2 dała baner „Ta notatka zmieniła się na innym urządzeniu", ale sam zapis szedł dalej: sejf znał dokładnie jedną kolizję — zapis notatki skasowanej gdzie indziej (ścieżka P5, „Zostaw notatkę / Usuń ponownie") — a zwykła równoległa edycja przechodziła bez słowa i wygrywał ten, kto zapisał później. `savePatientNote` przyjmuje teraz opcjonalne **`baseRev`**: przy zapisie istniejącej notatki (podane `id`, gałąź bez wskrzeszenia), gdy `baseRev` jest mniejsze od `rev` w sejfie, zapis **nie dochodzi do skutku** — funkcja zwraca `{id, isNew:false, conflict:true, rev, current}`, czyli numer wersji z sejfu i całą jej treść. Wywołanie **bez** `baseRev` zachowuje się dokładnie jak dotąd, więc synchronizacja, import karty `.wiw`, scalanie duplikatów, Terminarz i Przypomnienia nic nie tracą; nowe zachowanie dotyczy wyłącznie tego, kto o nie poprosi. Arkusz notatki zapamiętuje przy otwarciu `rev` wczytanej notatki (`listPatientNotesForPatient` i `getPatientNote` podają go od raty 1), przekazuje jako `baseRev`, a przy `conflict:true` pokazuje „Nowsza wersja tej notatki jest już w sejfie" i dwa wyjścia: **„Wczytaj nowszą (porzuci Twój tekst)"** — arkusz zamyka się i otwiera ponownie na wersji z sejfu, oraz **„Nadpisz moją wersją"** — podnosi `baseRev` do wersji z sejfu i ponawia ten jeden zapis, bez trwałej flagi „ignoruj konflikty" (kolejna zmiana z drugiego urządzenia znów zatrzyma zapis). Baner z raty 2 mówi teraz, co zrobi zapis: „Zapis zatrzyma się i pozwoli wybrać, którą wersję zostawić." *(2026-11-16, E3-PR0b2a, P-KONFLIKT-ZAPISU-NOTATKI: arkusz wysyła też `baseUpdatedAtISO` — chwilę zapisu otwartej wersji — a „Nadpisz moją wersją" podnosi ją razem z `baseRev` z wersji w sejfie. Przy podanym `baseUpdatedAtISO` sejf porównuje chwilę zapisu zamiast `rev`, bo scalanie przy równym `rev` podmienia treść bez zmiany numeru wersji; wywołanie bez pola działa jak opisano tutaj.)*
 
 **G21 — arkusz pyta, zanim wyrzuci niezapisany tekst (D12).** Reszta aplikacji o pola formularza nie pyta i to się nie zmienia — długi tekst kliniczny to jednak inny koszt niż wpisane „172" we wzroście. Arkusz notatki zna teraz znacznik „brudny" (ustawiany na pierwszym `input` w tytule albo treści) i pyta na **czterech** wyjściach: „Anuluj", `Escape` (ścieżka z G22), kolejne wywołanie `showPatientNoteEditor` — które usuwa poprzednią nakładkę — oraz zamknięcie/odświeżenie karty (`beforeunload`). Znacznik siedzi także na samej nakładce jako `data-pne-dirty`, bo kolejne wywołanie edytora nie widzi zmiennych poprzedniego. **Jeden wyjątek jest świadomy:** blokada sejfu (G7 z raty 1) usuwa nakładki wprost i omija wszystkie pytania — na wspólnym komputerze szkic poprzedniego lekarza nie może zostać na ekranie, a to ma pierwszeństwo przed D12. Nasłuch `beforeunload` sprząta się razem z nasłuchem klawiatury, w tym samym `MutationObserver`, który pilnuje powrotu fokusu.
 
@@ -40999,6 +40999,9 @@ trwał w nim 200,8 s (przed scaleniem 161,9 s i 162,7 s, na bazie `4355e325` 127
   odpowiednik w podglądzie „Scal kopię konta” to `Bks_wygrywaRev` (:5435–5438, wspólny z listami pacjentów) — zmiana
   samego `Bks_wygrywaRev` zostawi test wejściowy czerwony. Zmiana reguły synchronizacji z wpisem w tym pliku, testami
   czerwonymi na bazie i odbiorem właściciela; test wejściowy — przypadek notatki z bloku znanych usterek (niżej).
+  *(2026-11-16: E3-PR0b2 podzielony na E3-PR0b2a — przygotowanie bez zmiany reguły scalania: konflikt zapisu po
+  chwili zapisu i przyciski stanu bez treści sprzed blokady, wpis P-KONFLIKT-ZAPISU-NOTATKI niżej — i E3-PR0b2b, samą
+  regułę; plan, tabela „Podział E3-PR0”, wiersze 2a i 2b.)*
 - **Reguła echa** (E3-PR0c, E3-PR0d): odsyłać rekord, który scalanie zapisało inaczej, niż przyszedł; warunek „scalanie
   zapisało” porównuje rekord przed i po scaleniu (bez niego powtórka partii daje wiersze surowe, a odsyłanie na samym
   fakcie zapisu dałoby echo bez końca przez urządzenie 221). Reguła jest niezależna od źródła: nie odsyłać różnicy
@@ -41170,3 +41173,229 @@ i `E2_AB_SLAD`); warunki zieleni — zawsze.
   z 2026-11-16 przy regule notatek w P-KOPIA-DANE-KONTA przesunął o 2 jedno dalsze.
 
 **Cofnięcie.** Rewert PR (tylko testy, fikstury i dokumenty; bez migracji i bez wpływu na aplikację).
+
+## Notatka pacjenta: zapis zatrzymuje się, gdy w sejfie jest inna wersja niż na ekranie, także przy tym samym numerze wersji; przyciski stanu nie cofają treści (P-KONFLIKT-ZAPISU-NOTATKI, E3-PR0b2a, SW 1.1.542, `vilda_vault.js` 278, `vilda_auth_ui.js` 564, 2026-11-16)
+
+**Zmiana kliniczna: NIE** w zakresie wzorów, progów, jednostek i interpretacji. Zmienia się zapis notatki pacjenta w
+dwóch miejscach: (1) edytor notatki, wykonanie przypomnienia („wykonane”, „nie zgłosił się”, „przełóż”, „Opisz wynik”
+w zakładce Badania) oraz zmiana i usunięcie wyniku Klirensu porównują chwilę zapisu wersji pokazanej lekarzowi z
+wersją w sejfie, a nie sam numer wersji; (2) przyciski „wykonane”, „nie zgłosił się”, „cofnij wykonanie” i „przełóż”
+nie przepisują treści notatki z odczytu sprzed blokady notatki. Reguła scalania synchronizacji (`Le`: wyższy `rev`,
+przy równym nowsza data), wyniki scalania, podgląd „Scal kopię konta”, schemat IndexedDB, format rekordu, ładunku,
+nagrobków i zdarzeń, serwer i `vilda_sync.js` bez zmian. **Wpływ kliniczny pośredni:** zapis z ekranu otwartego na
+starszej wersji nie nadpisuje już po cichu późniejszej zmiany z innego urządzenia (dawki, zalecenia, terminu
+kontroli, komentarza do wyniku Klirensu); w zamian rzadki fałszywy konflikt (niżej, „Ograniczenia”).
+
+**Skąd.** Projekt E3-PR0b2 (reguła notatek „wygrywa późniejsza zmiana”, decyzja 1 z 2026-11-16; plan
+`docs/SYNC_PRZYROSTOWA_PLAN.md`, rozdział 6) pokazał, że po zmianie reguły numer wersji przestanie mówić, czy zmieniła
+się treść, więc miejsca, które wykrywają konflikt po `rev`, muszą porównywać chwilę zapisu (`updatedAtISO`). Ta część
+ma wartość już dziś: przy równym `rev` scalanie przyjmuje późniejszą wersję z innego urządzenia — zmieniają się treść
+i `updatedAtISO`, `rev` zostaje — a sprawdzenie po `rev` tego nie widzi. E3-PR0b2 podzielono na E3-PR0b2a (ten wpis:
+przygotowanie bez zmiany reguły scalania) i E3-PR0b2b (sama reguła); plan, tabela „Podział E3-PR0”, wiersze 2a i 2b.
+
+**Co było** (`audyt` `214a44c7`; prawdziwy sejf, magazyny w pamięci, dane fikcyjne). A i B mają tę samą notatkę
+(`rev` 1). A zapisuje swoją wersję (`rev` 2), B 5 s później swoją: „Dawka 75 od jutra (drugie urządzenie).” (`rev`
+2). Scalenie B → A: przy równym `rev` wygrywa nowsza data, więc na A jest treść B z `rev` 2 i chwilą zapisu B.
+- Edytor na A otwarty na wersji A (`baseRev` 2) zapisywał bez pytania i treść B ginęła (`Ad`: konflikt tylko przy
+  `baseRev < rev`).
+- Wykonanie przypomnienia z widoku sprzed scalenia (`RemB22SaveOutcome`: konflikt tylko przy `rev !== baseRev`):
+  „przełóż” na 2026-11-25 nadpisywało termin 2026-12-10 ustawiony na B; „wykonane” z kolejnym krokiem zamykało sprawę
+  i dodawało kolejny krok, choć lekarz nie widział zmiany z B.
+- Wynik Klirensu (`VildaChangeExistingPatientNote`, zmiana i usunięcie: konflikt tylko przy `rev !== baseRev`):
+  zmiana nadpisywała późniejszy komentarz z B, a usunięcie kasowało wersję B.
+- W drugą stronę: gdy zmienił się sam numer wersji (ta sama treść i chwila zapisu, `rev` o 1 wyższy), te trzy miejsca
+  zgłaszały fałszywy konflikt.
+- Przyciski stanu (`completePatientNote`, `noShowPatientNote`, `uncompletePatientNote`, `snoozePatientNote`) czytały
+  notatkę, a potem zapisywały ją pod blokadą notatki z tytułem, treścią, kategorią, terminem i wiekiem wizyty z tego
+  wcześniejszego odczytu. Gdy w tym oknie scalenie zapisało nową treść z innego urządzenia — przycisk ją cofał; gdy
+  notatkę w tym oknie usunięto — przycisk ją wskrzeszał starą treścią i zdejmował nagrobek; przy nieczytelnym
+  szyfrogramie zapisywał tytuł zastępczy „(błąd odczytu)” z pustą treścią w miejsce oryginału (szyfrogram tracony).
+
+**Reguła.**
+- `savePatientNote` (`Ad`), `saveReminderOutcome` (`RemB22SaveOutcome`) oraz `updateExistingPatientNote` i
+  `removeExistingPatientNote` (`VildaChangeExistingPatientNote`) przyjmują opcjonalne `baseUpdatedAtISO` — chwilę
+  zapisu wersji, którą lekarz ma na ekranie. **Przy podanym `baseUpdatedAtISO` (niepusty napis) decyduje tylko chwila
+  zapisu:** konflikt, gdy wersja w sejfie, odczytana pod blokadą notatki, ma inną `updatedAtISO` — późniejszą albo
+  wcześniejszą (scalanie może przyjąć wersję z wcześniejszą chwilą i wyższym `rev`); `baseRev` nie ma wtedy znaczenia.
+  Bez pola (także `null`, pusty napis albo liczba) — jak dotąd: edytor po `baseRev < rev`, wykonanie przypomnienia i
+  wynik Klirensu po `rev !== baseRev`.
+- Odpowiedzi konfliktu bez zmian (z `current` — wersją z sejfu razem z jej `updatedAtISO`). Nowa notatka i
+  wskrzeszenie nie są konfliktem, a w `Ad` sprawdzenie stoi po bramce „tytuł albo treść” — jak dotąd.
+- Wykonanie przypomnienia: transakcja (`commitReminderForUser`, a dla terminu z historii planu opieki
+  `commitCarePlanForUser`) dostaje `rev` świeżo odczytany pod blokadą notatki zamiast `rev` z prośby — zmiana w czasie
+  szyfrowania nadal daje konflikt, a sam numer wersji podbity przez inne urządzenie przed prośbą już nie.
+- Wołający, którzy znają wersję pokazaną lekarzowi, podają pole: edytor notatki (`CareOpenLegacyNoteEditor` w
+  `vilda_auth_ui.js` pamięta obok `rev` chwilę zapisu otwartej wersji; „Nadpisz moją wersją” podnosi obie wartości z
+  `current` konfliktu, a bez `current` wraca do samego `rev`), formularz wykonania przypomnienia (`vilda_auth_ui.js`)
+  i „Opisz wynik” (`vilda_lab_history_tab.js`) — `updatedAtISO` wiersza; zmiana i usunięcie wyniku Klirensu
+  (`clcr_result_details.js`) — chwilę wersji pokazanej w szczegółach. Punkt serii Klirensu (`clcr_saved_results.js`)
+  niesie `baseUpdatedAtISO` obok `baseRev` jako tożsamość dla akcji edycji i usunięcia (dziś bez czytelnika w kodzie).
+  Pozostałe zapisy (Terminarz, moduły terapii, „Scal pacjentów”, nowe notatki, plany opieki) pola nie podają — bez
+  zmian.
+- **Przyciski stanu bez treści.** „Wykonane”, „nie zgłosił się” i „cofnij wykonanie” wysyłają tylko identyfikator,
+  kartę pacjenta i stan; „przełóż” — także nowy termin. Tytuł, treść, kategorię, termin (poza „przełóż”) i wiek
+  wizyty `Ad` bierze z wersji zapisanej, odczytanej pod blokadą notatki, jak przy każdym zapisie częściowym.
+- Zapis samego stanu albo terminu (bez tytułu i bez treści) na nieczytelnym szyfrogramie kończy się odmową „Nie można
+  odczytać zapisanej treści tej notatki — nic nie zapisano, notatka zostaje bez zmian.” — także dla wpisu Terminarza
+  bez pacjenta, którego nie zatrzymuje bramka „tytuł albo treść”. Zapis z tytułem i treścią (edytor) na nieczytelnym
+  szyfrogramie działa jak dotąd — lekarz świadomie wpisuje treść od nowa.
+- Zapis bez tytułu i bez treści notatki, której pod blokadą już nie ma (usuniętej między odczytem przycisku albo
+  Terminarza a blokadą), kończy się odmową „Ta notatka już nie istnieje — została w międzyczasie usunięta (w innej
+  karcie albo na innym urządzeniu). Nic nie zapisano; odśwież listę.” (dotąd „savePatientNote: notatka nie istnieje
+  (usunięta na innym urządzeniu?).”).
+
+**Przypadki** (dane fikcyjne; A — to urządzenie, B — drugie; „równy `rev`” — scalenie B → A przyjęło późniejszą wersję
+B przy tym samym numerze):
+
+| Wejście | Dotąd | Teraz |
+|---|---|---|
+| edytor A otwarty na wersji A; równy `rev`, w sejfie „Dawka 75 od jutra (drugie urządzenie).”; zapis „Moja treść na starej wersji.” | zapisane, treść B ginie | konflikt, `current` = treść B, sejf bez zmian |
+| B dwa razy bez sieci (`rev` 3), A raz później (`rev` 2); scalenie przyjmuje B z wcześniejszą chwilą; zapis z edytora A | konflikt (po `rev`) | konflikt (inna chwila) |
+| w sejfie ta sama treść i chwila zapisu, `rev` o 1 wyższy; zapis z edytora | fałszywy konflikt | zapis |
+| po konflikcie „Nadpisz moją wersją” z `rev` z `current` i starą chwilą | — (pierwszego konfliktu nie było) | znowu konflikt |
+| … z `rev` i chwilą z `current` | — | zapis tekstu lekarza |
+| przypomnienie z terminem 2026-11-20; B przekłada na 2026-12-10 i zmienia treść (równy `rev`); A z widoku sprzed scalenia „przełóż” na 2026-11-25 | zapisane, termin 2026-11-25 | `saved: false, reason: 'conflict'`, termin 2026-12-10, treść B |
+| „wykonane” z kolejnym krokiem z widoku sprzed scalenia (równy `rev`) | zamknięte, kolejny krok | konflikt, sprawa otwarta, bez kolejnego kroku |
+| wynik Klirensu (fikcyjny ACR 45 mg/g), B dopisuje późniejszy komentarz (równy `rev`); A zmienia wynik na 13,6 mg/g | zmienione, komentarz B ginie | `updated: false, reason: 'conflict'`, zostaje 45 mg/g i komentarz B |
+| … A usuwa pomiar | usunięty, nagrobek | `removed: false, reason: 'conflict'`, pomiar zostaje, bez nagrobka |
+| przycisk stanu; w oknie przed blokadą scalenie zapisuje z B tytuł „Fikcyjna kontrola dawki”, treść „Drugie urządzenie: dawka 75 od jutra.”, termin 2026-12-10, wiek wizyty 110 mies. | tytuł, treść, termin i wiek z odczytu przycisku | tytuł, treść, kategoria, termin (poza „przełóż”) i wiek z B, stan z przycisku, `rev` + 1 |
+| przycisk stanu; notatkę usunięto w oknie przed blokadą | notatka wskrzeszona starą treścią | odmowa, notatka i nagrobek zostają |
+| przycisk stanu na nieczytelnym szyfrogramie (notatka pacjenta albo wpis Terminarza bez pacjenta) | tytuł „(błąd odczytu)”, pusta treść, oryginał stracony | odmowa, rekord bez zmian |
+| przycisk stanu bez wyścigu | stan ustawiony, treść bez zmian, `rev` + 1 | to samo |
+
+**Co widzi lekarz** (z kodu; teksty bez zmian poza dwoma zdaniami odmowy wyżej):
+- konflikt w edytorze — „Nowsza wersja tej notatki jest już w sejfie.” z „Wczytaj nowszą (porzuci Twój tekst)” i
+  „Nadpisz moją wersją”, jak dotąd przy wyższym `rev`; baner po scaleniu „Zapis zatrzyma się i pozwoli wybrać…” jest
+  teraz prawdziwy także przy równym `rev`;
+- konflikt wykonania przypomnienia — „Ta sprawa zmieniła się w innej karcie lub na innym urządzeniu. Zachowaj wpisany
+  opis i otwórz aktualny zapis.”, opis zostaje w formularzu; konflikt wyniku Klirensu — „Ten pomiar został zmieniony
+  w innym oknie. Otwórz jego aktualne szczegóły i spróbuj ponownie.”;
+- odmowa przycisku — w Przypomnieniach okno „Nie udało się wykonać akcji: <zdanie>” (menu wiersza i karta szczegółów),
+  przy „przełóż” — „Nie udało się przełożyć: <zdanie>”; w Terminarzu — „Nie udało się oznaczyć jako wykonane:
+  <zdanie>”. Zamknięcie oczekującego wyniku po przypięciu wyniku (`lab_pin_result.js`) pokazuje dawny komunikat
+  „Wynik zapisany, ale nie udało się oznaczyć oczekującego wyniku „…” jako wykonanego — zrób to w Przypomnieniach.”
+  (okno wąskie: moduł sprawdza wpis tuż przed zamknięciem).
+
+**Testy.** Dane wyłącznie fikcyjne, bez PESEL; prawdziwy `vilda_crypto.js` i `vilda_vault.js` na adapterze
+pamięciowym, podstawiony zegar `Date`:
+- `tests/unit/konflikt-edycji-notatki-chwila.test.mjs` (nowy, 30 przypadków): edytor — równy `rev`, inna wersja z
+  wcześniejszą chwilą i wyższym `rev`, sam numer wersji, „Nadpisz moją wersją” (sam `rev` nie wystarcza, `rev` i
+  chwila z `current` zapisują), dawna umowa bez pola, pusty napis, `null` i liczba jak brak pola, nowa notatka i
+  wskrzeszenie; wykonanie przypomnienia — „przełóż” przy równym `rev` i przy wcześniejszej chwili, pusty napis,
+  `null` i liczba, „wykonane” z kolejnym krokiem, sam numer wersji (transakcja ze świeżym `rev`), `rev` podbity w
+  trakcie transakcji, termin z historii planu opieki (`commitCarePlanForUser`); wynik Klirensu — zmiana i usunięcie
+  przy równym `rev`, przy samym numerze wersji i przy wcześniejszej chwili, pusty napis, `null` i liczba, bez pola
+  przy `baseRev` 0 i 2; ratunek D-21 (edytor i wykonanie przypomnienia zatrzymują się, ponowienie na wersji z sejfu
+  zapisuje);
+- `tests/unit/przyciski-stanu-notatki.test.mjs` (nowy, 21): każdy z czterech przycisków — scalenie w oknie przed
+  blokadą, notatka usunięta w tym oknie (dokładne zdanie, nagrobek zostaje), nieczytelny szyfrogram notatki pacjenta
+  i wpisu Terminarza bez pacjenta, kliknięcie bez wyścigu; kontrola: zapis z tytułem i treścią na nieczytelnym
+  szyfrogramie zapisuje. Okno między odczytem przycisku a blokadą odtwarza wstrzymanie operacji magazynu pod blokadą
+  notatki;
+- zmienione: `edytor-notatki-rata3.test.mjs` i `przypomnienia-zrodlo.test.mjs` (strażniki źródła: pamięć i wysyłka
+  chwili, podniesienie z `current`), `lab-history-tab.test.mjs`, `klirens-magnesium-calcium-details.test.mjs` (także
+  nowy przypadek usunięcia), `klirens-phosphorus-creatinine-details.test.mjs`, `klirens-saved-results.test.mjs`,
+  `care-plan-auth-ui-boundary.test.mjs` (świadomie odświeżony skrót ciała `CareOpenLegacyNoteEditor` z opisem
+  zmiany), `visits-vault-boundary.test.mjs` (skrót bazy);
+- e2e: `tests/e2e/edytor-notatki-rata3.spec.mjs` — 3 nowe (inne urządzenie zapisuje później przy tym samym numerze:
+  zapis się zatrzymuje, „Nadpisz moją wersją” zapisuje tekst lekarza; druga taka zmiana między konfliktem a „Nadpisz
+  moją wersją” znowu zatrzymuje zapis; notatka poprawiona przed otwarciem arkusza zapisuje się bez pytania);
+  `przypomnienia-b22.spec.mjs` — 2 nowe (scalenie przy tym samym numerze w czasie otwartego formularza zatrzymuje
+  zapis i zostawia opis; wpis poprawiony przed otwarciem zapisuje wykonanie bez fałszywego konfliktu);
+  `klirens-patient-record-mutations.spec.mjs` — ładunek zmiany i usunięcia z `baseUpdatedAtISO`.
+
+Bez zmian: `konflikt-edycji-notatki.test.mjs` (dawna umowa po `rev`), `reminders-outcome-vault.test.mjs` (także
+ponowne sprawdzenie `rev` w transakcji po szyfrowaniu), literał miejsc poza blokiem P-DZIENNIK-ZDARZEN. Przypadek
+notatki w ręcznym bloku znanych usterek testu A ≡ B dotyczy reguły scalania, więc należy do E3-PR0b2b (blok nie był
+uruchamiany). Pełny `npm test` i e2e — wyniki w opisie PR.
+
+**Czerwone na bazie** (kod `origin/audyt` `214a44c7` z testami tego PR): jednostkowe 36 —
+`konflikt-edycji-notatki-chwila` 12 (edytor: równy `rev`, sam numer wersji, „Nadpisz moją wersją”; przypomnienie:
+„przełóż” i „wykonane” przy równym `rev`, sam numer wersji, termin z historii planu; Klirens: zmiana i usunięcie przy
+równym `rev` i przy samym numerze wersji; ratunek D-21), `przyciski-stanu-notatki` 16 (scalenie w oknie ×4, notatka
+usunięta ×4, nieczytelny szyfrogram ×8), `lab-history-tab` 1, `klirens-magnesium-calcium-details` 2,
+`klirens-phosphorus-creatinine-details` 1, `klirens-saved-results` 1, strażniki źródła `edytor-notatki-rata3` 1 i
+`przypomnienia-zrodlo` 1, skrót edytora `care-plan-auth-ui-boundary` 1. Zielone z natury: inna wersja z wcześniejszą
+chwilą i wyższym `rev` (×4 — sprawdzenie po `rev` też ją łapie), dawna umowa bez pola i wartości jak brak pola, nowa
+notatka i wskrzeszenie, `rev` podbity w trakcie transakcji, przyciski bez wyścigu, zapis z treścią na nieczytelnym
+szyfrogramie. e2e (desktop Chromium, 3 pliki, 29 przypadków): 5 czerwonych — dwa nowe edytora o tym samym numerze
+wersji, nowy przypomnienia o scaleniu w czasie otwartego formularza i dwa zmienione Klirensu; zielone z natury oba
+przypadki „poprawiona przed otwarciem” (pilnują, że nie ma fałszywego konfliktu).
+
+**Mutanty** (kopia, jedna zmiana tekstu, testy jednostkowe i e2e): 55, wszystkie zabite — 54 testem działania, jeden
+swoim pinem. W `Ad`: pole pomijane; przy polu porównanie `rev`; konflikt przy innej chwili albo niższym `baseRev`
+(„albo”); pusty napis albo liczba jako podane pole; konflikt tylko przy chwili późniejszej zamiast innej; bez odczytu
+chwili zapisanej wersji; porównanie z chwilą utworzenia; sprawdzenie także przy nowej notatce i wskrzeszeniu. W
+`RemB22SaveOutcome`: pole pomijane; przy polu porównanie `rev`; „albo”; pusty napis jako pole; „późniejsza” zamiast
+„inna”; transakcja z `rev` z prośby (osobno dla przypomnienia i terminu z historii planu); transakcja bez porównania
+`rev`. W `VildaChangeExistingPatientNote`: pole pomijane; „albo”; przy polu porównanie `rev`; pusty napis jako pole;
+„późniejsza” zamiast „inna”; dawny warunek w `tools/patch-vault-existing-note.mjs` (zabija go pin odtworzenia bajtów,
+do tego przeznaczony). Pole pomijane w wyniku Klirensu przeżywa zmianę przy równym `rev` (ten sam konflikt daje `Ad`
+pod tą samą blokadą) — zabijają go usunięcie i „sam numer wersji”. Przyciski: każdy z czterech znowu wysyła pełną
+treść sprzed blokady albo samą treść; „wykonane” osobno sam tytuł, kategorię, termin albo wiek wizyty; „przełóż” samą
+kategorię; `Ad` nie bierze brakującego tytułu, treści, kategorii, terminu albo wieku wizyty z zapisanej wersji (5).
+Odmowy: brak odmowy zapisu samego stanu na nieczytelnym szyfrogramie; odmowa tylko dla notatki pacjenta; odmowa także
+przy zapisie z treścią; dawny techniczny komunikat przy notatce usuniętej. Interfejs: edytor bez pola; edytor z
+chwilą utworzenia zamiast chwili zapisu; „Nadpisz moją wersją” bez podniesienia chwili albo z jej wyzerowaniem;
+formularz przypomnienia bez pola albo z chwilą utworzenia; „Opisz wynik”, zmiana i usunięcie wyniku Klirensu oraz
+punkt serii bez pola. Sześć mutantów edytora i formularza przypomnienia zabija tylko e2e (jednostkowo widzą je
+strażniki źródła i skrót edytora). Kilka mutantów przycisków („wykonane” z samą kategorią, samym terminem albo samym
+wiekiem wizyty, „przełóż” z samą kategorią) zabija tylko jeden test.
+
+**Kontrola granicy obrazu sejfu.** Pierwsza zmiana sejfu od P-TRWALE-WIZYTY. Zmiana stoi poza fragmentem natywnym,
+blokiem trwałych wizyt i blokiem P-DZIENNIK-ZDARZEN, bez nowych wywołań `Bem_` i `Bob_` (literał miejsc poza blokiem
+bez zmian). Przeliczone skróty: baza trwałych wizyt (`runtime/durable-visits-v1/manifest.json`,
+`tools/visits-vault-delta.mjs`, `tests/unit/visits-vault-boundary.test.mjs`) oraz `baseVaultSHA256`,
+`integratedVaultSHA256` i `BASE` natywnej przestrzeni klinicznej (`runtime/clinical-workspace-v1/manifest.json`,
+`tools/check_clinical_workspace_boundary.mjs`); fragment natywny, haki, moduły i paczka bez zmian. Blok
+KLIRENS-ISTNIEJACY-WYNIK w `tools/patch-vault-existing-note.mjs` niesie ten sam warunek i komentarz bajt w bajt.
+Moduł Klirens: `tools/klirens-ktv-vault-delta.mjs` nie przypina skrótu sejfu, a `klirens-ktv-vault-boundary` czyta
+przeliczony manifest; pliki `clcr_*` mają przypięte tylko wersje `?v=` (`podbij-wersje`). Przepis odtworzenia
+trwałych wizyt z `40d742d3` odtwarza stan sprzed tej zmiany — `docs/ZRODLA_ARTEFAKTOW.md`.
+
+**Ograniczenia.**
+- **Fałszywy konflikt po ratunku D-21 i imporcie karty — kierunek bezpieczny.** Ratunek notatek po „Usuń pacjenta”
+  (D-21) przesuwa `updatedAtISO` notatki bez zmiany treści i `rev`; edytor albo formularz wykonania otwarty przed
+  ratunkiem zatrzymuje zapis, choć w sejfie jest ta sama treść (test: edytor i przypomnienie; wynik Klirensu — ten
+  sam warunek, z kodu); tak samo na innym urządzeniu, do którego dojdzie uratowana wersja (z kodu). Import karty po
+  usunięciu (P-IMPORT-NAGROBEK) nadaje notatkom z pliku bieżącą chwilę, więc na innym urządzeniu z tą notatką przy
+  tym samym `rev` wygra wersja z importu i otwarty edytor też się zatrzyma (z kodu). Nic się wtedy nie zapisuje ani
+  nie kasuje: edytor daje wybór (lekarz może wybrać „Wczytaj nowszą (porzuci Twój tekst)” dla tej samej treści),
+  przypomnienie zostawia opis w formularzu, a Klirens każe otworzyć szczegóły i wpisać zmianę ponownie (najbardziej
+  uciążliwe). Wymiana: rzadki fałszywy alarm zamiast cichego nadpisania późniejszej zmiany.
+- **Reguła scalania bez zmian.** Przy notatce zmienionej na dwóch urządzeniach, zanim się zsynchronizowały, zostaje
+  dalej wersja z wyższym `rev` (przy równym — nowsza data); „wygrywa późniejsza zmiana” to E3-PR0b2b. Gdy scalanie
+  zacznie podnosić `rev` bez zmiany treści, wołający bez `baseUpdatedAtISO` dostaną fałszywe konflikty — wejście do
+  E3-PR0b2b.
+- **Plany opieki na `rev`.** Wpisy planu (krok, termin w bieżącej relacji) zapisują się dalej po `rev`
+  (`CareMvpLegacyWrite`, `CareMvpReminderOutcome`, `updateLinked`); edytor wysyła `baseUpdatedAtISO` także dla wpisu
+  planu, ale decyduje tam `rev` — równoległa zmiana treści wpisu planu przy równym `rev` nie zatrzymuje zapisu (jak
+  dotąd). Dowód kroku planu z etapami porównuje tylko `rev` (ścisły format modelu planu) — do E3-PR0b2b i projektu
+  modułu planów.
+- **Karta pacjenta przycisku z odczytu sprzed blokady.** Przycisk stanu wysyła `patientId` z odczytu przed blokadą;
+  zmianę samej karty notatki przez scalanie w tym oknie zapis by cofnął (jak dotąd; z kodu).
+- **Inne zapisy z treścią sprzed blokady.** „Scal pacjentów” przenosi notatki z tytułem i treścią z odczytu sprzed
+  blokady notatki (tak samo przypisanie pacjenta do wpisu Terminarza spoza bazy) — ten sam rodzaj okna co przyciski,
+  poza zakresem; przebieg na kopii daje ten sam wynik przed zmianą i po niej.
+- **„Opisz wynik”** czyta wpis tuż przed prośbą, więc chwila zapisu chroni tylko okno do blokady, nie czas pisania
+  opisu (jak dotąd `baseRev`); zapis dopisuje opis do treści czytanej pod blokadą, więc nic nie ginie.
+- **Teksty.** Notatka usunięta przed kliknięciem (nieaktualna lista) — dalej techniczne „completePatientNote:
+  notatka nie istnieje.”; po przypięciu wyniku rada „zrób to w Przypomnieniach” wskazuje wpis, którego już nie ma.
+
+**Wdrożenie.** Od razu przy wydaniu, bez przełącznika i bez uśpienia: reguła synchronizacji się nie zmienia, a nowe
+pole działa tylko przy zapisie na tym urządzeniu (nie trafia do rekordu, ładunku ani zdarzeń). Starsza wersja
+aplikacji na innym urządzeniu niczego nie zauważa.
+
+**Cofnięcie** = rewert PR (bez migracji; rewert cofa też skróty kontroli granicy).
+
+**Gdzie w kodzie.** `vilda_vault.js`: `Ad` (chwila zapisu wersji odczytanej pod blokadą, warunek konfliktu, odmowa
+zapisu samego stanu na nieczytelnym szyfrogramie, zdanie przy notatce usuniętej), `RemB22SaveOutcome` (warunek i
+`expectedRev` ze świeżego odczytu), `VildaChangeExistingPatientNote` (blok KLIRENS-ISTNIEJACY-WYNIK), przyciski `ko`,
+`Eo`, `No`, `To`; `tools/patch-vault-existing-note.mjs`; `vilda_auth_ui.js` (`CareOpenLegacyNoteEditor`, formularz
+wykonania przypomnienia); `vilda_lab_history_tab.js` („Opisz wynik”); `clcr_result_details.js` (zmiana i usunięcie
+pomiaru); `clcr_saved_results.js` (punkt serii).
+
+**Wersje.** `vilda_vault.js` 277 → 278, `vilda_auth_ui.js` 563 → 564, `vilda_lab_history_tab.js` 40 → 41,
+`clcr_result_details.js` 19 → 20, `clcr_saved_results.js` 23 → 24; wstrzykujące: `vilda_chrome.js` 296 → 297,
+`vilda_session_bridge.js` 212 → 213, `clcr_record_resources.js` 28 → 29; SW 1.1.541 → 1.1.542; baza `origin/audyt`
+`214a44c7` (po vildaclinic/vilda-calc#971). Bez nowego pliku w pamięci offline.

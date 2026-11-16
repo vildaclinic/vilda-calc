@@ -425,6 +425,10 @@ ani jawnych rekordów. Przygotowanie szyfrogramów nie zapisuje danych. Adapter
 zapisuje komplet atomowo (jedna transakcja IndexedDB lub wymiana mapy adaptera
 pamięciowego). Identyfikator operacji z odciskiem treści daje bezpieczne ponowienie.
 Konflikt zachowuje wpisany formularz zamiast nadpisywać nowszą notatkę.
+Wołający podaje obok `baseRev` chwilę zapisu wiersza (`baseUpdatedAtISO`); przy niej
+konflikt wykrywa inna chwila zapisu notatki w sejfie (scalanie przy równym `rev`
+podmienia treść bez zmiany numeru), a transakcja sprawdza `rev` świeżo odczytany
+pod blokadą notatki (E3-PR0b2a, P-KONFLIKT-ZAPISU-NOTATKI).
 
 Ustalony termin badania/wizyty jest osobną informacją w treści notatki, niezależną
 od `dueDateISO` przypomnienia. Data otrzymania opisu wyniku nie jest datą pobrania
