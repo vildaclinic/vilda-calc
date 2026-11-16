@@ -34,15 +34,16 @@ function worker({ scope = '/', response, failPut = () => false } = {}) {
   return { api, cache, requests, writes, installUI };
 }
 
-describe('seven independent visit and home UI resources in one verified transport', () => {
+describe('eight independent visit and home UI resources in one verified transport', () => {
   it.each(['/', '/vilda-calc/'])('caches every original body and MIME under its own offline URL in %s', async scope => {
     const w = worker({ scope }); await w.installUI();
     expect(w.api.VISIT_UI_PRECACHE_PACK).toEqual(config);
-    expect(urls).toHaveLength(7);
+    expect(urls).toHaveLength(8);
     expect(urls).toContain('/vilda_home_perinatal.js?v=1');
+    expect(urls).toContain('/vilda_home_growth.js?v=1');
     expect(urls).toContain('/vilda_sga_birth_results.css?v=1');
-    expect(urls).toContain('/vilda_home_workspace.js?v=4');
-    expect(urls).toContain('/vilda_home_workspace.css?v=5');
+    expect(urls).toContain('/vilda_home_workspace.js?v=5');
+    expect(urls).toContain('/vilda_home_workspace.css?v=6');
     expect(w.requests).toHaveLength(1);
     expect(w.requests[0].url).toBe('https://vilda.test' + scope + config.url.slice(1));
     expect(w.requests[0].cache).toBe('reload'); expect(w.requests[0].redirect).toBe('error');

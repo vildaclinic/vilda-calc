@@ -35,6 +35,34 @@ function setup({ weight = 44, height = 155, source = 'PALCZEWSKA', weightCentile
 }
 
 describe('Professional summary presentation uses existing results without changing the copy lines', () => {
+  it.each(['konsensus metod', 'metoda Khamis-Roche'])('home workspace keeps the native consensus including its single-method label: %s', label => {
+    const { win, build, lines } = setup();
+    win.__VILDA_HOME_WORKSPACE_PREVIEW__ = true;
+    const consensus = `Prognoza wzrostu ostatecznego (${label}): 165,0 cm ±4,3 cm`;
+    win.advancedGrowthData = { finalHeightPrediction: {} };
+    win.VildaAdvancedGrowth = { advGrowthBuildConsensusSummaryLines: () => [consensus] };
+    const original = [...lines, consensus];
+    const model = build(original);
+    expect(model.main.find(row => row.key === 'prediction').original).toBe(consensus);
+    expect(model.extra.some(row => row.key === 'prediction')).toBe(false);
+    expect(model.predictionNote).toBe(false);
+    expect(original).toEqual([...lines, consensus]);
+  });
+
+  it('home workspace does not relabel an individual method as a missing consensus', () => {
+    const { win, build } = setup();
+    win.__VILDA_HOME_WORKSPACE_PREVIEW__ = true;
+    const model = build();
+    expect(model.main.find(row => row.key === 'prediction').availability).toBe('missing');
+    expect(model.extra.some(row => row.key === 'prediction')).toBe(false);
+  });
+
+  it('the shared preview bootstrap does not change DocPro presentation', () => {
+    const { win, build } = setup();
+    win.__VILDA_HOME_WORKSPACE_PREVIEW__ = true;
+    win.location = { pathname: '/docpro.html' };
+    expect(build().main.find(row => row.key === 'prediction').original).toContain('Khamis-Roche');
+  });
   it('orders all ten main rows and retains all other conditional content', () => {
     const { build, lines } = setup();
     const extra = ['RR skurczowe: 110 mmHg, 54 centyl', 'Tętno: 80/min, 50 centyl', 'Normy żywieniowe: przykładowa linia', 'Obwód głowy: 50 cm, 40 centyl'];

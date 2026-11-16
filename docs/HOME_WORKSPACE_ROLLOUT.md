@@ -98,8 +98,9 @@ należą do etapu 3.
 
 Przycisk danych pokwitaniowych otwiera w podglądzie krótkie okno oceny
 bieżącej wizyty, bez zakładek i wywiadu. G/Th i P są oddzielnymi listami
-rozwijalnymi. Data pozostaje datą otwartej wizyty; u chłopców dostępna jest
-objętość jąder jako niezależny, opcjonalny pomiar dodatkowy. Wspólny renderer zachowuje dotychczasowe opisy i ściągi;
+rozwijalnymi. Data pozostaje datą otwartej wizyty. Objętość jąder udostępnia
+obecnie etap 4 w danych zaawansowanych (decyzja właściciela 2026-11-16).
+Wspólny renderer zachowuje dotychczasowe opisy i ściągi;
 pozostałe miejsca korzystające z niego zachowują swoje obecne kontrolki.
 
 Wejście do okna jest kafelkiem z zatwierdzonej makiety: dwuwierszowa nazwa,
@@ -113,8 +114,8 @@ Pola okna są szkicem bez identyfikatorów i nazw kanonicznych pól. Zdarzenia
 szkicu kończą się przed dokumentowymi słuchaczami autosave. Otwarcie i
 anulowanie nie zapisują sesji, nie przydzielają wizyty i nie zmieniają
 pochodzenia oceny. „Zastosuj dane pokwitaniowe” przekazuje kompletny zestaw
-ocen do natywnego stanu w jednej operacji; objętość trafia do oryginalnego pola
-przed powiadomieniem jego dotychczasowych odbiorców. Wiek początku pokwitania,
+ocen do natywnego stanu w jednej operacji. Objętość pozostaje w dotychczasowym
+zapisie zaawansowanym; to okno jej nie edytuje. Wiek początku pokwitania,
 dane menarche, KOWD i GnRHa pozostają w dotychczasowym zapisie, poza edytorem
 bieżącego badania. Ich udostępnienie w nowych miejscach jest osobnym etapem;
 zmiana okna ich nie usuwa ani nie przepisuje.
@@ -172,6 +173,52 @@ tym całego starego formularza ani nie tworzy wizyty. Osobne testy sprawdzają
 odmowę po zmianie danych, właściciela lub sesji. Po czyszczeniu przycisk wraca
 do aktywności po rzeczywistym końcu natywnej blokady; jej czas pozostaje ten sam.
 
+## Czwarty przyrost — zaawansowane obliczenia wzrostowe
+
+`vilda_home_growth.js` jest czytelnym, wykonywanym bez kompilacji modułem opt-in.
+Na stronie głównej pokazuje zwartą kartę z tempem wzrastania, MPH i wiekiem
+kostnym. Desktop zachowuje wysokość 352 px z makiety; tablet i telefon używają
+naturalnej wysokości. Edycja i analiza otwierają wspólne okno o dotychczasowej
+geometrii i animacji, z zakładkami **Analiza / Dane i pomiary / Prognozy**.
+Po aktualizacji PWA i odtworzeniu sesji gotowość przycisków jest ponownie
+sprawdzana również wtedy, gdy ostatnia natywna blokada znika bez zdarzenia.
+To odświeżenie dotyczy wyłącznie dostępności UI, bez obliczeń i zapisu danych.
+
+Decyzja właściciela z 2026-11-16: pytanie o objętość jąder jest wyłącznie
+w danych zaawansowanych. Opis wyjaśnia zastosowanie w profilu KOWD/CDGP
+i interpretacji prognoz oraz odrębność od G Tannera. Kanoniczny węzeł
+`advTesticularVolume`, opcje i zapis `advanced.testicularVolume` pozostają
+te same. Nie ma migracji ani zerowania wcześniej zapisanych wartości.
+Kafelek pokwitania opisuje samą ocenę G/Th/P, a nie wywiad z innego okna.
+
+Pola, dane rodzinne, wywiad i historyczne pomiary są szkicem bez kanonicznych
+ID i nazw. Zdarzenia szkicu nie docierają do dokumentowego autosave. Otwarcie,
+zakładki i anulowanie nie liczą ani nie zapisują danych klinicznych. Zastosowanie
+najpierw sprawdza ważność konta, klucza vaulta, pacjenta, wizyty, generacji
+wczytania i całego bazowego zestawu wejść. Zmiana właściciela unieważnia szkic;
+zapis faktów ma również kontrolę po synchronicznym powiadomieniu odbiorców.
+
+Zatwierdzenie uzupełnia dotychczasowe pola i powiadamia natywne słuchacze.
+Istniejące wiersze pomiarów zachowują węzły, metadane, adnotacje i tożsamość
+synchronizacji. Dodawanie i usuwanie przechodzi przez dotychczasowe akcje,
+łącznie z powiązaniem ze Szacowanym spożyciem. Wiersze terapii GH są tylko
+do odczytu. Zapis w vault pozostaje osobną akcją lekarza; zamknięcie okna
+zatwierdza sesję, a nie tworzy automatycznie wersji pacjenta.
+
+Widoki analityczne kopiują wyłącznie już wyrenderowane wyniki natywnego
+`advResults`: trajektorię i tę samą kartę metod z uzasadnieniem, przedziałami
+oraz ograniczeniami. ID kopii są odrębne od kanonicznych. Nie ma drugiej ścieżki
+obliczeń, nowych norm, progów, współczynników ani danych demonstracyjnych
+udających wynik. Niezastosowany szkic zasłania wyniki i wyłącza eksport.
+Raport korzysta z istniejącego generatora; skrót siatek otwiera istniejące
+Dokumenty pacjenta.
+
+Podsumowanie strony głównej zachowuje tylko linie konsensusu rozpoznane
+przez natywne `linieKonsensusu()`, również przy nazwie pojedynczej metody.
+Pozostałe metody są dostępne w oknie zaawansowanym. Nie zmienia to źródłowych
+linii kopiowania ani prezentacji DocPro; brak konsensusu nie jest zastępowany
+samodzielnie wybraną metodą. Pełny opis źródeł: `ZRODLA_ARTEFAKTOW.md`.
+
 ## Podgląd i odbiór
 
 Podgląd jest osobnym eksportem z gałęzi roboczej, z własnym pochodzeniem
@@ -195,7 +242,7 @@ scalenie modułu opt-in nie zmienia domyślnego widoku. Eksporter, fikcyjne
 konto i blokada usług są wyłącznie narzędziami podglądu.
 
 Nowy JS i CSS strony głównej korzystają z istniejącego, sprawdzanego po SHA
-pakietu transportowego UI wizyt. Pakiet zawiera siedem zasobów zamiast trzech;
+pakietu transportowego UI wizyt. Pakiet zawiera osiem zasobów zamiast trzech;
 każdy nadal ma własny wersjonowany adres i niezmienioną treść w pamięci offline.
 Historyczny pakiet pozostaje dostępny. Pozwala to zachować dotychczasowy limit
 600 żądań podczas instalacji PWA, bez usuwania zasobów ani rozluźniania testów.

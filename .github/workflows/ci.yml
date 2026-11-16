@@ -170,9 +170,9 @@ jobs:
     name: Geometria wykresów — Safari/WebKit
     runs-on: ubuntu-latest
     if: github.event_name != 'push'
-    # Includes six additional real-vault perinatal editor scenarios. Keep all
-    # chart, M1, mobile and puberty cases and their existing per-case budgets.
-    timeout-minutes: 15
+    # Includes seven additional real-vault advanced-growth scenarios. Keep all
+    # chart, M1, mobile, puberty and perinatal cases and their per-case budgets.
+    timeout-minutes: 20
     steps:
       - name: Pobierz repozytorium
         uses: actions/checkout@v4

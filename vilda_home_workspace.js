@@ -145,7 +145,7 @@
       isCurrent: function () { return currentPatientId() === id; }
     });
   }
-  var pubertyDialog = null, pubertyDraft = null, pubertyShortcutHasData = false;
+  var pubertyDialog = null, pubertyDraft = null;
   function decorateShortcut(button, secondLine, statusId) {
     var title = element('span', 'vhome-shortcut-title', 'Dane');
     title.appendChild(element('br')); title.appendChild(d.createTextNode(secondLine));
@@ -159,11 +159,10 @@
     button.setAttribute('aria-haspopup', 'dialog');
     return status;
   }
-  function refreshPubertyShortcut(hasData) {
+  function refreshPubertyShortcut() {
     if (!started) return false;
     var button = byId('tannerToggleBtn');
     if (!button) return false;
-    if (typeof hasData === 'boolean') pubertyShortcutHasData = hasData;
     var status = button.querySelector('.vhome-shortcut-status');
     if (!status) {
       status = decorateShortcut(button, 'pokwitaniowe', 'vhomePubertyShortcutStatus');
@@ -174,7 +173,7 @@
     var nativeSummary = byId('pubertyAssessmentSummary');
     var summary = nativeSummary ? nativeSummary.textContent : '';
     status.textContent = summary && summary !== 'Nie oceniono stadium'
-      ? summary : pubertyShortcutHasData ? 'Uzupełniono wywiad' : 'Nie uzupełniono';
+      ? summary : 'Nie uzupełniono';
     button.setAttribute('aria-expanded', String(!!(pubertyDialog && pubertyDialog.open)));
     return true;
   }
@@ -248,27 +247,6 @@
     pubertyDraft.fields[id] = event.target.value;
     pubertyDraft.changedFields[id] = true;
     pubertyDraft.dirty = true;
-  }
-  function pubertyDraftControl(entry, host) {
-    if (entry[2] && entry[2] !== pubertyDraft.sex) return;
-    var original = byId(entry[0]), label = element('label', 'vhome-puberty-volume', entry[1]);
-    var control = d.createElement(original.tagName.toLowerCase());
-    // Copy constraints and choices, never canonical identity, listeners or state.
-    ['type', 'min', 'max', 'step', 'inputmode'].forEach(function (attribute) {
-      if (original.hasAttribute(attribute)) control.setAttribute(attribute, original.getAttribute(attribute));
-    });
-    if (original.tagName === 'SELECT') Array.from(original.options).forEach(function (choice) {
-      var option = element('option', '', choice.textContent);
-      option.value = choice.value; control.appendChild(option);
-    });
-    control.setAttribute('data-puberty-draft-field', entry[0]);
-    control.autocomplete = 'off';
-    control.value = pubertyDraft.fields[entry[0]];
-    label.appendChild(control);
-    var note = element('small', 'vhome-volume-note', 'Pomiar dodatkowy; nie zastępuje oceny G.');
-    note.id = 'vhomePubertyVolumeNote'; control.setAttribute('aria-describedby', note.id);
-    control.setAttribute('aria-label', entry[1]);
-    label.appendChild(note); host.appendChild(label);
   }
   function applyPuberty() {
     if (!pubertyDraft || !samePubertyOwner()) { closePuberty(true); return; }
@@ -408,7 +386,6 @@
         return { ok: true };
       }
     });
-    pubertyDraftControl(['advTesticularVolume', 'Objętość jąder · opcjonalnie', 'M'], editor);
     var dateLabel = element('label', 'vhome-puberty-date', 'Data oceny · bieżąca wizyta');
     var dateInput = d.createElement('input'); dateInput.type = 'text'; dateInput.readOnly = true;
     dateInput.setAttribute('aria-label', 'Data oceny — data bieżącej wizyty');

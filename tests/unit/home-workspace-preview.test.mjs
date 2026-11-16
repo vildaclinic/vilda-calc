@@ -7,8 +7,10 @@ describe('home workspace isolation boundary', () => {
     Object.defineProperty(window, 'document', { get() { throw new Error('Normal app document must not be touched'); } });
     loadBrowserScript('vilda_home_workspace.js', window);
     loadBrowserScript('vilda_home_perinatal.js', window);
+    loadBrowserScript('vilda_home_growth.js', window);
     expect(window.VildaHomeWorkspace).toBeUndefined();
     expect(window.VildaHomePerinatal).toBeUndefined();
+    expect(window.VildaHomeGrowth).toBeUndefined();
   });
 
   it('waits for the actual document and remains harmless outside the main form', () => {
