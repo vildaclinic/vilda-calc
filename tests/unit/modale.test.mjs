@@ -36,10 +36,11 @@ function projectDock(nodes, initiallyHidden = false) {
   return classes.has('vilda-pane-modal-open');
 }
 
-function overlay({ preview = false, parent = null, bottom = 844, css = {} } = {}) {
+function overlay({ preview = false, parent = null, bottom = 844, height = bottom, tagName, open, css = {} } = {}) {
   return {
+    tagName, open,
     css: { position: 'fixed', display: 'block', visibility: 'visible', opacity: '1', ...css },
-    getBoundingClientRect: () => ({ width: 390, height: bottom, bottom }),
+    getBoundingClientRect: () => ({ width: 390, height, bottom }),
     closest: selector => selector === '.vilda-lab-point-preview' && (preview || parent?.closest(selector)) ? {} : null,
   };
 }
@@ -64,11 +65,19 @@ describe('P-MODALE: readonly result preview keeps shell navigation available', (
 });
 
 describe('P-MODALE: powłoka chowa dock, gdy modal z iframe\'a sięga pod dock', () => {
-  it('vilda_shell.js obserwuje aktywny panel (childList + subtree + class/style/hidden) i przełącza vilda-pane-modal-open', () => {
+  it('hides the dock for an open native dialog in a clipped iframe, also during its first transparent animation frame', () => {
+    expect(projectDock([overlay({ height: 220, tagName: 'DIALOG', open: true, css: { opacity: '0' } })])).toBe(true);
+  });
+  it('keeps the dock for a closed native dialog or a small non-modal panel', () => {
+    expect(projectDock([overlay({ height: 220, tagName: 'DIALOG', open: false })])).toBe(false);
+    expect(projectDock([overlay({ height: 220 })])).toBe(false);
+  });
+
+  it('vilda_shell.js obserwuje aktywny panel (childList + subtree + class/style/hidden/open) i przełącza vilda-pane-modal-open', () => {
     expect(shellJs).toContain('classList.toggle("vilda-pane-modal-open",n)');
-    expect(shellJs).toMatch(/observe\(e\.body,\{childList:!0,subtree:!0,attributes:!0,attributeFilter:\["class","style","hidden"\]\}\)/);
+    expect(shellJs).toMatch(/observe\(e\.body,\{childList:!0,subtree:!0,attributes:!0,attributeFilter:\["class","style","hidden","open"\]\}\)/);
     // warunek geometryczny: nakładka ≥90% szerokości, ≥60% wysokości okna ramki i sięga POD górną krawędź docka
-    expect(shellJs).toMatch(/r\.width>=W\*\.9&&r\.height>=H\*\.6&&fr\.top\+r\.bottom>dr\.top\+1/);
+    expect(shellJs).toMatch(/r\.width>=W\*\.9&&\(r\.height>=H\*\.6\|\|el\.tagName==="DIALOG"&&el\.open\)&&fr\.top\+r\.bottom>dr\.top\+1/);
     // dławik: jeden pomiar na klatkę, nie na każdą mutację
     expect(shellJs).toMatch(/Mr\|\|\(Mr=a\.requestAnimationFrame\(/);
     // pomiar także po zmianie rozmiaru okna (obrót telefonu)

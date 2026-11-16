@@ -56,7 +56,7 @@
     return '<details class="vpa-sources"><summary>Źródła opisów' + (axis === 'G' ? ' i objętości' : '') + '</summary><p>' + links + '</p><p>Opisy wspierają ocenę w badaniu; wybór stadium należy do lekarza.</p></details>';
   }
 
-  function rowMarkup(axis, sex, prefix) {
+  function rowMarkup(axis, sex, prefix, controlType) {
     var guideId = prefix + 'Guide' + axis;
     var intro = axis === 'G'
       ? 'Objętość pojedynczego jądra oceniana orchidometrem Pradera. Wartości orientacyjne — oceniaj razem z wyglądem narządów. To nie są granice stadiów ani zakresy referencyjne; nie dotyczą USG.'
@@ -69,10 +69,14 @@
     var buttons = [1, 2, 3, 4, 5, null].map(function (stage) {
       return '<button type="button" data-puberty-axis="' + axis + '" data-puberty-stage="' + (stage || '') + '" aria-pressed="false" aria-label="' + esc(titles[axis]) + ', ' + (stage ? 'stadium ' + stage : 'nie oceniono') + '">' + (stage || 'Nie oceniono') + '</button>';
     }).join('');
+    var choices = controlType === 'select'
+      ? '<select data-puberty-select-axis="' + axis + '" aria-label="' + esc(titles[axis]) + '"><option value="">Nie oceniono</option>'
+        + [1, 2, 3, 4, 5].map(function (stage) { return '<option value="' + stage + '">' + ['I', 'II', 'III', 'IV', 'V'][stage - 1] + '</option>'; }).join('') + '</select>'
+      : '<div class="vpa-segments" role="group" aria-label="' + esc(titles[axis]) + '">' + buttons + '</div>';
     var guideChoices = descriptions(axis, sex, true).map(function (description, index) {
       return '<button type="button" class="vpa-guide-choice" data-puberty-axis="' + axis + '" data-puberty-stage="' + (index + 1) + '" data-puberty-guide-choice aria-pressed="false"><strong>' + axis + (index + 1) + '</strong><span>' + esc(description) + (axis === 'G' ? '<small class="vpa-volume">Orientacyjna objętość jądra: ' + volumes[index] + '</small>' : '') + '</span></button>';
     }).join('');
-    return '<fieldset id="' + prefix + axis + '" class="vpa-row" data-puberty-row="' + axis + '"><legend><span>' + titles[axis] + '</span><button type="button" class="vpa-guide-toggle" data-puberty-guide-toggle="' + axis + '" aria-expanded="false" aria-controls="' + guideId + '" aria-label="Ściąga: ' + esc(titles[axis]) + '">Ściąga</button></legend><div class="vpa-segments" role="group" aria-label="' + esc(titles[axis]) + '">' + buttons + '</div><p class="vpa-definition" data-puberty-definition="' + axis + '" hidden></p><p class="vpa-provenance" data-puberty-provenance="' + axis + '" hidden></p><div id="' + guideId + '" class="vpa-guide" hidden><p>' + intro + '</p><div class="vpa-guide-choices">' + guideChoices + '</div><p>' + note + '</p>' + (axis !== 'P' ? '<p>Stadium tej cechy nie określa stadium owłosienia łonowego.</p>' : '') + guideSources(axis, sex) + '</div></fieldset>';
+    return '<fieldset id="' + prefix + axis + '" class="vpa-row" data-puberty-row="' + axis + '"><legend><span>' + titles[axis] + '</span><button type="button" class="vpa-guide-toggle" data-puberty-guide-toggle="' + axis + '" aria-expanded="false" aria-controls="' + guideId + '" aria-label="Ściąga: ' + esc(titles[axis]) + '">Ściąga</button></legend>' + choices + '<p class="vpa-definition" data-puberty-definition="' + axis + '" hidden></p><p class="vpa-provenance" data-puberty-provenance="' + axis + '" hidden></p><div id="' + guideId + '" class="vpa-guide" hidden><p>' + intro + '</p><div class="vpa-guide-choices">' + guideChoices + '</div><p>' + note + '</p>' + (axis !== 'P' ? '<p>Stadium tej cechy nie określa stadium owłosienia łonowego.</p>' : '') + guideSources(axis, sex) + '</div></fieldset>';
   }
 
   function sexFromForm() {
@@ -153,7 +157,7 @@
       }
       if (renderedSex !== sex) {
         renderedSex = sex;
-        host.innerHTML = '<p class="vpa-intro">Oceń cechy oddzielnie. Wpisz tylko te, które oceniono podczas tej wizyty.</p><p class="vpa-context-note" data-puberty-context-note hidden></p>' + rowMarkup(sex === 'F' ? 'Th' : 'G', sex, prefix) + rowMarkup('P', sex, prefix) + '<p class="vpa-edit-status" data-puberty-edit-status role="status" aria-live="polite" hidden></p>';
+        host.innerHTML = '<p class="vpa-intro">Oceń cechy oddzielnie. Wpisz tylko te, które oceniono podczas tej wizyty.</p><p class="vpa-context-note" data-puberty-context-note hidden></p>' + rowMarkup(sex === 'F' ? 'Th' : 'G', sex, prefix, options.controlType) + rowMarkup('P', sex, prefix, options.controlType) + '<p class="vpa-edit-status" data-puberty-edit-status role="status" aria-live="polite" hidden></p>';
       }
       host.querySelector('.vpa-intro').textContent = context.scope === 'local'
         ? 'Oceń cechy oddzielnie. Wpis dotyczy tylko tego sprawdzenia.'
@@ -181,6 +185,8 @@
           button.setAttribute('aria-pressed', String((buttonStage ? Number(buttonStage) : null) === stage));
           button.disabled = blocked;
         });
+        var select = row.querySelector('[data-puberty-select-axis]');
+        if (select) { select.value = stage === null ? '' : String(stage); select.disabled = blocked; }
         var definition = row.querySelector('[data-puberty-definition]');
         definition.textContent = stage ? axis + stage + ' — ' + descriptions(axis, sex, false)[stage - 1] : '';
         definition.hidden = !stage;
@@ -217,19 +223,30 @@
         var toggle = host.querySelector('[data-puberty-guide-toggle="' + axis + '"]');
         if (toggle) toggle.setAttribute('aria-expanded', 'false');
         var selected = host.querySelector('.vpa-segments [data-puberty-axis="' + axis + '"][data-puberty-stage="' + rawStage + '"]');
+        if (!selected) selected = host.querySelector('[data-puberty-select-axis="' + axis + '"]');
         if (selected) selected.focus();
       }
     }
+    function handleSelect(event) {
+      var select = event.target;
+      if (!select || !select.hasAttribute('data-puberty-select-axis') || select.disabled) return;
+      var result = typeof options.onEdit === 'function' ? options.onEdit(select.getAttribute('data-puberty-select-axis'),
+        select.value ? Number(select.value) : null) : { ok: false };
+      if (result && result.ok) renderEditor();
+      return result;
+    }
     host.addEventListener('click', handleClick);
+    host.addEventListener('change', handleSelect);
     var unsubscribe = typeof options.subscribe === 'function' ? options.subscribe(renderEditor) : null;
     function destroy() {
       disposed = true;
       host.removeEventListener('click', handleClick);
+      host.removeEventListener('change', handleSelect);
       if (waitingTimer !== null && typeof w.clearTimeout === 'function') w.clearTimeout(waitingTimer);
       if (typeof unsubscribe === 'function') unsubscribe();
     }
     renderEditor();
-    return { render: renderEditor, update: renderEditor, destroy: destroy, dispose: destroy,
+    return { render: renderEditor, update: renderEditor, destroy: destroy, dispose: destroy, handleSelect: handleSelect,
       open: function () { host.hidden = false; var first = host.querySelector('.vpa-segments button'); if (first) first.focus(); } };
   }
 
@@ -238,7 +255,7 @@
   }
 
   function open() {
-    if (typeof w.vildaOtworzDanePokwitaniowe === 'function') w.vildaOtworzDanePokwitaniowe();
+    if (typeof w.vildaOtworzDanePokwitaniowe === 'function' && w.vildaOtworzDanePokwitaniowe() === true) return;
     var host = doc && doc.getElementById('pubertyAssessmentEditor');
     if (host) {
       if (typeof host.scrollIntoView === 'function') host.scrollIntoView({ block: 'center', behavior: 'smooth' });

@@ -160,9 +160,75 @@
   cursor: not-allowed;
 }
 .vilda-home-workspace .vhome-extra-data {
-  margin-top: var(--space-16px);
-  padding-top: var(--space-12px);
-  border-top: var(--border-hairline) solid var(--line);
+  margin-top: var(--space-18px);
+}
+.vilda-home-workspace .vhome-data-shortcuts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-12px);
+}
+.vilda-home-workspace #tannerToggleBtn.vhome-input-shortcut {
+  position: relative;
+  box-sizing: border-box;
+  display: flex !important;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 5px;
+  width: 100% !important;
+  min-width: 0;
+  height: 104px !important;
+  min-height: 104px !important;
+  margin: 0 !important;
+  padding: var(--space-12px) 30px var(--space-12px) var(--space-14px) !important;
+  border: var(--border-hairline) solid #dbe7e9 !important;
+  border-radius: var(--radius-10) !important;
+  background: #fbfdfd !important;
+  color: var(--text) !important;
+  font-size: 15px !important;
+  font-weight: 550 !important;
+  line-height: 1.4 !important;
+  text-align: left !important;
+}
+.vilda-home-workspace #tannerToggleBtn.vhome-input-shortcut:hover {
+  border-color: #accfd2 !important;
+  background: #f3f9f9 !important;
+}
+.vilda-home-workspace .vhome-shortcut-title { display: block; min-height: 42px; }
+.vilda-home-workspace .vhome-shortcut-status {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 18px;
+  overflow-wrap: anywhere;
+}
+.vilda-home-workspace .vhome-input-shortcut > svg {
+  position: absolute;
+  top: 15px;
+  right: 11px;
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: var(--primary);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+/* The native renderer retains this live region; its same date-aware summary
+ * is visible inside the shortcut rather than duplicated below the tile. */
+.vilda-home-workspace #pubertyAssessmentSummary {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+@media (min-width: 601px) and (max-width: 850px) {
+  .vilda-home-workspace #tannerToggleBtn.vhome-input-shortcut { height: 100px !important; min-height: 100px !important; }
 }
 .vilda-home-workspace .vhome-form-actions {
   display: grid;
@@ -309,7 +375,20 @@
     margin-top: 0;
     padding: var(--space-8px) var(--space-10px);
   }
-  .vilda-home-workspace .vhome-extra-data { margin-top: var(--space-12px); padding-top: var(--space-10px); }
+  .vilda-home-workspace .vhome-extra-data { margin-top: var(--space-12px); }
+  .vilda-home-workspace .vhome-data-shortcuts { gap: var(--space-10px); }
+  .vilda-home-workspace #tannerToggleBtn.vhome-input-shortcut {
+    height: auto !important;
+    min-height: 64px !important;
+    padding: 9px var(--space-24px) 9px var(--space-10px) !important;
+    gap: 3px;
+    border-radius: var(--radius-9) !important;
+    font-size: 14px !important;
+    line-height: 20px !important;
+  }
+  .vilda-home-workspace .vhome-shortcut-title { min-height: 0; }
+  .vilda-home-workspace .vhome-shortcut-status { font-size: 13px; }
+  .vilda-home-workspace .vhome-input-shortcut > svg { width: 14px; height: 14px; right: 8px; top: 11px; }
   .vilda-home-workspace .vhome-form-actions { margin-top: var(--space-12px); padding-top: var(--space-12px); }
   .vilda-home-workspace .vhome-form-actions :is(#clearAllDataBtn, #metabolicSummaryBtn) {
     min-height: 48px;
@@ -320,6 +399,10 @@
   .vilda-home-workspace .vhome-action-full,
   .vilda-home-workspace .vhome-action-label small { display: none; }
   .vilda-home-workspace .vhome-action-compact { display: inline; }
+}
+@media (max-width: 360px) {
+  .vilda-home-workspace #tannerToggleBtn.vhome-input-shortcut { padding-right: var(--space-10px) !important; font-size: 13px !important; line-height: 19px !important; }
+  .vilda-home-workspace .vhome-input-shortcut > svg { display: none; }
 }
 @media (max-width: 354px) {
   .vilda-home-workspace .vhome-visit-heading { padding-inline: var(--space-4px); }
@@ -337,3 +420,87 @@
   }
   .vilda-home-workspace .vhome-visit-short { display: inline; }
 }
+
+/* Shared expanded-window geometry from the accepted mockup. */
+.vilda-home-workspace .vhome-detail-dialog {
+  position: fixed;
+  box-sizing: border-box;
+  width: min(1000px, calc(100vw - 32px));
+  height: min(820px, calc(var(--vhome-dialog-viewport-height, 100dvh) * .9));
+  max-width: none;
+  max-height: none;
+  inset: calc(var(--vhome-dialog-viewport-height, 100dvh) / 2) auto auto 50vw;
+  margin: 0;
+  transform: translate(-50%, -50%);
+  padding: 0;
+  overflow: hidden;
+  border: var(--border-hairline) solid var(--line);
+  border-radius: var(--radius-14);
+  background: var(--card);
+  color: var(--text);
+  box-shadow: 0 25px 100px #123a4a26;
+}
+.vilda-home-workspace .vhome-detail-dialog:not([open]) { display: none; }
+.vilda-home-workspace .vhome-detail-dialog[open] {
+  display: flex;
+  flex-direction: column;
+  animation: vhome-window-open 180ms ease-out both;
+}
+.vilda-home-workspace .vhome-detail-dialog::backdrop { background: #163b4b66; }
+.vilda-home-workspace .vhome-detail-dialog[open]::backdrop { animation: vhome-backdrop-open 150ms ease-out both; }
+@keyframes vhome-window-open {
+  from { opacity: 0; transform: translate(-50%, calc(-50% + 6px)) scale(.99); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+@keyframes vhome-backdrop-open {
+  from { background: #163b4b00; }
+  to { background: #163b4b66; }
+}
+.vilda-home-workspace .vhome-dialog-heading {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-18px);
+  padding: 21px 25px;
+  border-bottom: var(--border-hairline) solid var(--line);
+}
+.vilda-home-workspace .vhome-dialog-heading h2 { margin: 0; font-size: 21px; line-height: 1.4; font-weight: 600; text-align: left; }
+html.vilda-home-workspace .vhome-detail-dialog .vhome-dialog-close { flex: 0 0 40px; width: 40px; height: 40px; min-height: 40px; padding: 0; margin: 0; font-size: 26px; line-height: 1; border: var(--border-hairline) solid var(--line) !important; border-radius: var(--radius-8) !important; background: var(--bg) !important; color: var(--muted) !important;  box-shadow: none !important; }
+.vilda-home-workspace .vhome-dialog-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 22px 25px; font-size: 16px; line-height: 1.65; }
+.vilda-home-workspace .vhome-dialog-context { margin: 0 0 var(--space-18px); color: var(--muted); }
+.vilda-home-workspace .vhome-dialog-section[hidden] { display: none; }
+.vilda-home-workspace .vhome-dialog-section h3 { margin: var(--space-20px) 0 var(--space-12px); font-size: 17px; line-height: 1.45; text-align: left; }
+.vilda-home-workspace .vhome-dialog-section .vhome-assessment-heading { margin-top: 0; }
+.vilda-home-workspace .vhome-dialog-error { color: var(--danger, #b3261e); }
+.vilda-home-workspace .vhome-dialog-error:empty { display: none; }
+.vilda-home-workspace .vhome-dialog-footer { display: grid; grid-template-columns: minmax(120px, 1fr) minmax(0, 2fr); flex: 0 0 auto; gap: var(--space-12px); padding: var(--space-16px) 25px; border-top: var(--border-hairline) solid var(--line); background: var(--bg); }
+html.vilda-home-workspace .vhome-detail-dialog .vhome-dialog-footer button { min-width: 0; min-height: 46px; margin: 0; padding: var(--space-10px) var(--space-14px); font-size: 16px; line-height: 1.45; border-radius: var(--radius-8) !important;  box-shadow: none !important;}
+html.vilda-home-workspace .vhome-detail-dialog .vhome-dialog-cancel { border: var(--border-hairline) solid var(--line) !important; color: var(--text) !important; background: var(--card) !important; }
+html.vilda-home-workspace .vhome-detail-dialog .vhome-dialog-apply { background: var(--primary) !important; color: #fff !important; }
+@media (max-width: 600px) {
+  .vilda-home-workspace .vhome-detail-dialog { width: calc(100vw - 20px); height: calc(var(--vhome-dialog-viewport-height, 100dvh) - 24px); }
+  .vilda-home-workspace .vhome-dialog-heading { gap: var(--space-12px); padding: var(--space-14px) var(--space-16px); }
+  .vilda-home-workspace .vhome-dialog-heading h2 { font-size: 19px; }
+  .vilda-home-workspace .vhome-dialog-body { padding: var(--space-16px); }
+  .vilda-home-workspace .vhome-dialog-footer { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); padding: var(--space-12px) var(--space-16px); gap: var(--space-8px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vilda-home-workspace .vhome-detail-dialog[open],
+  .vilda-home-workspace .vhome-detail-dialog[open]::backdrop { animation: none; }
+}
+.vilda-home-workspace .vhome-puberty-assessment { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-12px); }
+.vilda-home-workspace .vhome-puberty-assessment > p { grid-column: 1 / -1; }
+.vilda-home-workspace .vhome-puberty-assessment .vpa-row { min-width: 0; margin: 0; }
+.vilda-home-workspace .vhome-puberty-assessment select { box-sizing: border-box; width: 100%; min-width: 0; min-height: 46px; margin: 0; font-size: 16px; }
+
+.vilda-home-workspace .vhome-detail-dialog .vpa-row legend { font-size: 16px; }
+.vilda-home-workspace .vhome-detail-dialog .vpa-intro,
+.vilda-home-workspace .vhome-detail-dialog .vpa-definition,
+.vilda-home-workspace .vhome-detail-dialog .vpa-provenance { font-size: 14px; }
+.vilda-home-workspace .vhome-detail-dialog .vpa-guide-toggle { font-size: 14px !important; }
+
+.vilda-home-workspace .vhome-puberty-date { display: flex; flex-direction: column; gap: var(--space-6px); margin: 0; font-size: 16px; }
+.vilda-home-workspace .vhome-puberty-date input { box-sizing: border-box; width: 100%; min-height: 46px; margin: 0; font-size: 16px; }
+.vilda-home-workspace .vhome-puberty-volume { display: flex; flex-direction: column; gap: var(--space-6px); align-self: start; min-width: 0; margin: 0; font-size: 16px; }
+.vilda-home-workspace .vhome-volume-note { color: var(--muted); font-size: 14px; line-height: 1.5; }

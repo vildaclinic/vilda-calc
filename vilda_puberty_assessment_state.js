@@ -420,9 +420,11 @@
     if (typeof w.setTimeout === 'function') saveTimer = w.setTimeout(save, 300);
   }
 
-  function editObservation(axis, stage, options) {
-    if (['G', 'Th', 'P'].indexOf(axis) < 0 || stage !== null &&
-        !(typeof stage === 'number' && Number.isInteger(stage) && stage >= 1 && stage <= 5)) {
+  function editObservations(changes, options) {
+    if (!Array.isArray(changes) || !changes.length || changes.some(function (change) {
+      return !change || ['G', 'Th', 'P'].indexOf(change.axis) < 0 || change.stage !== null &&
+        !(typeof change.stage === 'number' && Number.isInteger(change.stage) && change.stage >= 1 && change.stage <= 5);
+    }) || new Set(changes.map(function (change) { return change.axis; })).size !== changes.length) {
       return { ok: false, reason: 'invalid-observation' };
     }
     if (editBlocked()) return { ok: false, reason: 'blocked' };
@@ -431,7 +433,7 @@
     if (current.status !== 'ready' && current.status !== 'absent') return { ok: false, reason: current.status };
     var context = Object.assign(visitContext(), options || {});
     var sourceSex = sex(context.sex);
-    if (axis === 'G' && sourceSex !== 'M' || axis === 'Th' && sourceSex !== 'F') {
+    if (changes.some(function (change) { return change.axis === 'G' && sourceSex !== 'M' || change.axis === 'Th' && sourceSex !== 'F'; })) {
       return { ok: false, reason: 'sex-mismatch' };
     }
     var raw = current.status === 'ready' ? clone(state.raw) :
@@ -443,13 +445,14 @@
       });
       raw.sex = sourceSex;
     }
-    raw.observations[axis] = stage === null ? null : {
-      stage: stage,
-      sex: sourceSex,
-      observedAtISO: owns(context, 'observedAtISO') ? context.observedAtISO : context.measuredAtISO,
-      ageMonths: context.ageMonths,
-      source: owns(context, 'source') ? context.source : 'clinician-entry'
-    };
+    changes.forEach(function (change) {
+      raw.observations[change.axis] = change.stage === null ? null : {
+        stage: change.stage, sex: sourceSex,
+        observedAtISO: owns(context, 'observedAtISO') ? context.observedAtISO : context.measuredAtISO,
+        ageMonths: context.ageMonths,
+        source: owns(context, 'source') ? context.source : 'clinician-entry'
+      };
+    });
     if (w.VildaPubertyAssessment.readUser({ pubertyAssessment: raw }).status !== 'ready') {
       return { ok: false, reason: 'invalid-context' };
     }
@@ -463,12 +466,19 @@
       var observation = raw.observations[key];
       return observation && (owns(observation, 'sex') ? observation.sex : raw.sex) === sourceSex;
     });
-    if (stage !== null && state.visit.currentAxes.indexOf(axis) < 0) state.visit.currentAxes.push(axis);
-    if (stage === null) state.visit.currentAxes = state.visit.currentAxes.filter(function (key) { return key !== axis; });
+    changes.forEach(function (change) {
+      if (change.stage !== null && state.visit.currentAxes.indexOf(change.axis) < 0) state.visit.currentAxes.push(change.axis);
+      if (change.stage === null) state.visit.currentAxes = state.visit.currentAxes.filter(function (key) { return key !== change.axis; });
+    });
     state.visitPresent = true;
     state.visitRaw = clone(state.visit);
     state.mode = 'edited';
     state.pendingIdentity = false;
+    publishExplicitEdit();
+    return { ok: true };
+  }
+
+  function publishExplicitEdit() {
     bumpActivityRevision();
     try { w.hasUserModifiedAfterLoad = true; } catch (_) { /* Optional existing flag. */ }
     try {
@@ -476,7 +486,36 @@
     } catch (_) { /* Persistence does not depend on the sidebar button. */ }
     notify('edit');
     scheduleSave();
+  }
+
+  // Applying history-only fields is still an explicit clinician action, even
+  // though synthetic canonical change events are correctly not "isTrusted".
+  function canEdit() { return !editBlocked() && (!state || eligible(true)); }
+
+  function markFactsEdited() {
+    if (editBlocked()) return { ok: false, reason: 'blocked' };
+    if (state && !eligible()) return { ok: false, reason: 'owner-changed' };
+    publishExplicitEdit();
     return { ok: true };
+  }
+
+  function editObservation(axis, stage, options) {
+    return editObservations([{ axis: axis, stage: stage }], options);
+  }
+
+  // A presentation-only draft must not anchor observations, initialize state,
+  // bind a vault listener or allocate an encounter simply by opening a window.
+  function readReadOnly() {
+    if (state && !eligible(true)) return { status: 'unavailable', assessment: null, legacy: null };
+    var user = {};
+    if (state && state.present) user.pubertyAssessment = clone(state.raw);
+    else user.tannerStage = state ? clone(state.legacy) : !initialized && field('tannerStage') ? field('tannerStage').value : null;
+    var result = w.VildaPubertyAssessment.readUser(user);
+    result.visit = state && state.visit ? clone(state.visit) : null;
+    result.visitContext = visitContext();
+    result.activityRevision = activityRevision;
+    result.patientId = state ? state.patientId : identity();
+    return result;
   }
 
   function subscribe(listener) {
@@ -629,7 +668,7 @@
 
   w.VildaPubertyAssessmentState = Object.freeze({ VERSION: '3', load: load,
     capture: capture, captureForUserReadOnly: captureForUserReadOnly, applyToUser: applyToUser, clear: clear, mergeSession: mergeSession,
-    read: read, subscribe: subscribe, editObservation: editObservation, visitContext: visitContext,
+    read: read, readReadOnly: readReadOnly, subscribe: subscribe, editObservation: editObservation, editObservations: editObservations, markFactsEdited: markFactsEdited, canEdit: canEdit, visitContext: visitContext,
     getActivityRevision: getActivityRevision,
     restoreSessionIfUninitialized: restoreSessionIfUninitialized });
 })(typeof window !== 'undefined' ? window : globalThis);

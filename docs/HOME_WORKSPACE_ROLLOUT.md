@@ -94,6 +94,39 @@ docelowa polityka samego konsensusu oraz współistnienia bieżącego podsumowan
 i porównania należy do etapu 4. Okna pokwitania i danych okołoporodowych
 należą do etapu 3.
 
+## Trzeci przyrost A — robocze dane pokwitaniowe
+
+Przycisk danych pokwitaniowych otwiera w podglądzie krótkie okno oceny
+bieżącej wizyty, bez zakładek i wywiadu. G/Th i P są oddzielnymi listami
+rozwijalnymi. Data pozostaje datą otwartej wizyty; u chłopców dostępna jest
+objętość jąder jako niezależny, opcjonalny pomiar dodatkowy. Wspólny renderer zachowuje dotychczasowe opisy i ściągi;
+pozostałe miejsca korzystające z niego zachowują swoje obecne kontrolki.
+
+Wejście do okna jest kafelkiem z zatwierdzonej makiety: dwuwierszowa nazwa,
+ikona powiększenia i stan uzupełnienia, w połowie szerokości pary skrótów.
+Na telefonie kafelek ma zwartą wysokość zależną od treści. Natywne odświeżenie
+etykiety korzysta z tej prezentacji wyłącznie w podglądzie; zwykły formularz
+i DocPro zachowują dotychczasowy przycisk. Opis ocen wcześniejszych lub
+wymagających sprawdzenia pochodzi z istniejącego renderera, bez zmiany oceny.
+
+Pola okna są szkicem bez identyfikatorów i nazw kanonicznych pól. Zdarzenia
+szkicu kończą się przed dokumentowymi słuchaczami autosave. Otwarcie i
+anulowanie nie zapisują sesji, nie przydzielają wizyty i nie zmieniają
+pochodzenia oceny. „Zastosuj dane pokwitaniowe” przekazuje kompletny zestaw
+ocen do natywnego stanu w jednej operacji; objętość trafia do oryginalnego pola
+przed powiadomieniem jego dotychczasowych odbiorców. Wiek początku pokwitania,
+dane menarche, KOWD i GnRHa pozostają w dotychczasowym zapisie, poza edytorem
+bieżącego badania. Ich udostępnienie w nowych miejscach jest osobnym etapem;
+zmiana okna ich nie usuwa ani nie przepisuje.
+
+Krzyżyk, Escape, kliknięcie tła i Wstecz wymagają potwierdzenia odrzucenia
+zmienionego szkicu. Zmiana konta, pacjenta, wizyty lub bazowych danych
+unieważnia szkic. Okno ma rozmiar i animację 180 ms z makiety; ustawienie
+ograniczonego ruchu wyłącza animację. Powłoka wykrywa otwarte okno w ramce
+i chowa zasłaniający je dock. Po zwykłym zamknięciu wraca fokus przycisku.
+
+Dane okołoporodowe i integracja SGA stanowią osobny przyrost 3B.
+
 ## Podgląd i odbiór
 
 Podgląd jest osobnym eksportem z gałęzi roboczej, z własnym pochodzeniem

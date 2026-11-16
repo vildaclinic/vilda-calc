@@ -93,3 +93,6 @@
   #vildaHomePreviewBadge { bottom: max(74px, calc(env(safe-area-inset-bottom) + 66px)); font-size: 11px; padding: 5px 9px; }
   .vilda-preview-access__actions { grid-template-columns: 1fr; }
 }
+
+/* The parent preview label must not cover an embedded clinical dialog footer. */
+html.vilda-pane-modal-open #vildaHomePreviewBadge { visibility: hidden; pointer-events: none; }

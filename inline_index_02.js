@@ -133,6 +133,9 @@
      bo pokazWiekGnrha() CZYŚCI wiek GnRHa, a to należy do zmiany statusu, nie do przepisania
      napisu. Patrz komentarz przy nasłuchach niżej. */
   function odswiezNapisPrzycisku() {
+    var home = window.VildaHomeWorkspace;
+    if (home && typeof home.refreshPubertyShortcut === 'function'
+      && home.refreshPubertyShortcut(cokolwiekWpisane())) return;
     btn.textContent = otwarty
       ? '− Dane pokwitaniowe'
       : (cokolwiekWpisane() ? '+ Dane pokwitaniowe (wpisane)' : '+ Dane pokwitaniowe');
@@ -164,12 +167,19 @@
     window.updateTannerVisibility();
   };
 
+  function openWorkspaceDialog() {
+    var home = window.VildaHomeWorkspace;
+    return !!(home && typeof home.openPuberty === 'function' && home.openPuberty());
+  }
+
   window.vildaOtworzDanePokwitaniowe = function () {
+    if (openWorkspaceDialog()) return true;
     otwarty = true;
     window.updateTannerVisibility();
   };
 
   btn.addEventListener('click', function () {
+    if (openWorkspaceDialog()) return;
     otwarty = !otwarty;
     window.updateTannerVisibility();
     if (otwarty) {
@@ -202,6 +212,7 @@
   }());
   select.addEventListener('change', poZmianiePola);
   document.addEventListener('vilda:puberty-assessment-changed', poZmianiePola);
+  document.addEventListener('vilda:home-workspace-ready', odswiezNapisPrzycisku);
   (function () {
     var plec = document.getElementById('sex');
     if (plec) plec.addEventListener('change', function () { pokazJadraWgPlci(); pokazSprzecznosci(); });

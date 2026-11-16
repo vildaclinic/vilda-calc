@@ -901,3 +901,89 @@ describe('typed puberty — in-memory activity priority across same-tab forms', 
     expect(blockedTop).not.toHaveProperty('__vildaPubertyAssessmentRevision');
   });
 });
+
+describe('homepage examination draft commit boundary', () => {
+  it('reads a detached view without anchoring or creating a visit, saving or notifying', () => {
+    const env = environment(); restore(env, payload());
+    const before = env.state.capture();
+    const session = env.session();
+    const changed = [];
+    env.state.subscribe(reason => changed.push(reason));
+    env.fields.get('age').value = '14';
+    const view = env.state.readReadOnly();
+    expect(view.assessment).toEqual(examination());
+    view.assessment.observations.G.stage = 1;
+    expect(env.state.readReadOnly().assessment).toEqual(examination());
+    expect(env.state.readReadOnly().visit).toEqual(before.visitRaw ?? null);
+    expect(env.session()).toEqual(session);
+    expect(changed).toEqual([]);
+    expect(env.state.getActivityRevision()).toBe(before.activityRevision);
+  });
+
+  it('commits two independent axes in one notification with native visit provenance', () => {
+    const env = environment(); restore(env, payload());
+    const notifications = [];
+    env.state.subscribe(reason => { if (reason === 'edit') notifications.push(env.state.readReadOnly()); });
+    expect(env.state.editObservations([{ axis: 'G', stage: 4 }, { axis: 'P', stage: 3 }])).toEqual({ ok: true });
+    expect(notifications).toHaveLength(1);
+    const result = notifications[0];
+    expect(result.assessment.observations.G.stage).toBe(4);
+    expect(result.assessment.observations.P.stage).toBe(3);
+    expect(result.visit.currentAxes).toEqual(['G', 'P']);
+    expect(result.assessment.observations.G.source).toBe('clinician-entry');
+    expect(result.assessment.observations.G.ageMonths).toBe(144);
+  });
+
+  it.each([
+    [{ axis: 'G', stage: 4 }, { axis: 'P', stage: 9 }],
+    [{ axis: 'G', stage: 4 }, { axis: 'Th', stage: 3 }],
+    [{ axis: 'G', stage: 4 }, { axis: 'G', stage: null }],
+  ])('rejects an invalid complete batch without a partial edit %#', changes => {
+    const env = environment(); restore(env, payload());
+    const before = env.state.readReadOnly();
+    expect(env.state.editObservations(changes).ok).toBe(false);
+    expect(env.state.readReadOnly()).toEqual(before);
+  });
+
+  it('does not expose the previous patient or permit a batch after owner change', () => {
+    const env = environment(); restore(env, payload());
+    env.win.sessionStorage.setItem('vildaCurrentPatientId', 'synthetic-b');
+    expect(env.state.readReadOnly().status).toBe('unavailable');
+    expect(env.state.editObservations([{ axis: 'G', stage: 4 }]).ok).toBe(false);
+  });
+});
+
+
+describe('explicit facts-only homepage Apply', () => {
+  it('raises native source priority without inventing or renewing an examination', () => {
+    const env = environment(); restore(env, payload());
+    const before = env.state.readReadOnly();
+    expect(env.state.markFactsEdited()).toEqual({ ok: true });
+    const after = env.state.readReadOnly();
+    expect(after.activityRevision).toBeGreaterThan(before.activityRevision);
+    expect(after.assessment).toEqual(before.assessment);
+    expect(after.visit).toEqual(before.visit);
+    expect(env.win.hasUserModifiedAfterLoad).toBe(true);
+  });
+
+  it('cannot mark facts on behalf of a changed patient', () => {
+    const env = environment(); restore(env, payload());
+    const revision = env.state.getActivityRevision();
+    env.win.sessionStorage.setItem('vildaCurrentPatientId', 'synthetic-b');
+    expect(env.state.markFactsEdited().ok).toBe(false);
+    expect(env.state.getActivityRevision()).toBe(revision);
+  });
+});
+
+
+it('the draft readiness check obeys the native clear/owner gates without changing the carrier', () => {
+  const env = environment(); restore(env, payload());
+  const before = env.state.readReadOnly();
+  expect(env.state.canEdit()).toBe(true);
+  env.win.__vildaPersistClearUntil = Date.now() + 10000;
+  expect(env.state.canEdit()).toBe(false);
+  expect(env.state.readReadOnly()).toEqual(before);
+  env.win.__vildaPersistClearUntil = 0;
+  env.win.sessionStorage.setItem('vildaCurrentPatientId', 'synthetic-b');
+  expect(env.state.canEdit()).toBe(false);
+});
