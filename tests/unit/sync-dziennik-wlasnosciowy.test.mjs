@@ -549,6 +549,9 @@ const E1_KATALOG = new Set(['PRZ0-bez', 'E1-popr-C', 'E1-C', 'Q8-obca-2']);
 const D_TOZSAMOSC = 'tożsamość wizyty nieznana starszej aplikacji';
 const D_POLE_221 = 'pole nieznane starszej aplikacji (221)';
 const D_RETENCJA = 'retencja starszej aplikacji — obecność wersji';
+// E3-PR0b2b (P-NOTATKA-POZNIEJSZA): pola chwili treści i oznaczenia notatki, których starsza aplikacja nie zna.
+const D_CHWILE_NOTATKI = 'chwile notatki nieznane starszej aplikacji';
+const POLA_CHWIL_NOTATKI = Object.freeze(['contentAtISO', 'contentForISO', 'stateAtISO', 'stateForISO']);
 const DOZWOLONE = Object.freeze({
   podstawowy: { R2: 'tak', R4a: 'tak', R5: 'dowód', R4n: 'tak', D7: 'dowód' },
   W4: { R4n: 'tak' },
@@ -556,7 +559,7 @@ const DOZWOLONE = Object.freeze({
   pelny: { R2: 'raport', R4a: 'raport', R5: 'raport', 'R4a′': 'raport', R4n: 'raport', D7: 'raport', [MIEJSCE_WIZYTY]: 'raport', [NAGROBEK_OPROZNIONEJ]: 'raport', [REKORD_ZLOZONY]: 'raport' },
   'pelny:W4': { R4n: 'tak', D7: 'raport', [NAGROBEK_OPROZNIONEJ]: 'raport' },
   p6: { R2: 'tak', R4a: 'tak', R5: 'tak', 'R4a′': 'tak', R4n: 'tak' },
-  flota: { R4n: 'tak', [D_TOZSAMOSC]: 'tak', [D_POLE_221]: 'tak', [D_RETENCJA]: 'tak' },
+  flota: { R4n: 'tak', [D_TOZSAMOSC]: 'tak', [D_POLE_221]: 'tak', [D_RETENCJA]: 'tak', [D_CHWILE_NOTATKI]: 'tak' },
 });
 function dozwolona(kl, r, kont) {
   const w = kl ? (DOZWOLONE[kont.tabela] || {})[kl] : undefined;
@@ -3667,6 +3670,8 @@ const TABELA_3_6 = {
   [D_TOZSAMOSC]: ['—', '—', '—', '—', '—', '—', 'tak'],
   [D_POLE_221]: ['—', '—', '—', '—', '—', '—', 'tak'],
   [D_RETENCJA]: ['—', '—', '—', '—', '—', '—', 'tak'],
+  // E3-PR0b2b (P-NOTATKA-POZNIEJSZA): pola chwili treści i oznaczenia notatki ucięte przez starszą aplikację.
+  [D_CHWILE_NOTATKI]: ['—', '—', '—', '—', '—', '—', 'tak'],
 };
 const TABELE_3_6 = ['podstawowy', 'W4', 'W4:p5', 'pelny', 'pelny:W4', 'p6', 'flota'];
 describe('A ≡ B, klasy 3.6: predykaty (pozytywy i negatywy), tabela DOZWOLONE, negatywy W4 i W4p', () => {
@@ -5099,6 +5104,11 @@ async function spoczynekFloty221(S, A, B, C) {
 //   różnica koszISO w kontroli N tych światów: urządzenie, do którego nie doszło „Przywróć”, zachowuje chwilę dawnego
 //   kosza w koszISO nagrobka retencji, vilda_vault.js:1849–1879). Klasa D7, dozwolona według tabeli wołającego
 //   (tabelaBiezacych z kontPary), nie tabeli 'flota'.
+// - D_CHWILE_NOTATKI „chwile notatki nieznane starszej aplikacji” (E3-PR0b2b, P-NOTATKA-POZNIEJSZA): notatka różni się
+//   tylko polami chwili treści i oznaczenia (contentAtISO, contentForISO, stateAtISO, stateForISO), po stronie starszej
+//   aplikacji ich nie ma (ucina je przy zapisie), reszta rekordu równa — ta sama wersja, różnica niewidoczna dla
+//   lekarza (zmierzone: scenariusz floty 221 „Usuń pacjenta” na A, najpierw pełna kopia C — ratunek D-21 na bieżącym
+//   urządzeniu zapisuje pola, 221 je ucina).
 const POLA_TOZSAMOSCI = Object.freeze({ wersja: Object.freeze(['payload.visit']), kosz: Object.freeze(['visitIdentity', 'visitCipher', 'payload.visit']) });
 const POLA_221_KOSZA = Object.freeze(['koszISO', 'revPary', 'deletedWithPatient']);
 function bezTozsamosci(p) {
@@ -5129,6 +5139,11 @@ function klasaParyFloty(r, X, Y, kont) {
   const [es, en] = st === 'x' ? [r.a, r.b] : [r.b, r.a];
   const z221 = kont.appStarszej === 'S221';
   if (r.rodzaj === 'pnotetomb') return z221 && r.sciezki.every((s) => wPolach(s, ['deletedWithPatient'])) ? { klasa: D_POLE_221, wariant: 'nagrobek notatki usuniętej z kartą' } : null;
+  if (r.rodzaj === 'pnote') {
+    if (!r.sciezki.every((s) => wPolach(s, POLA_CHWIL_NOTATKI)) || POLA_CHWIL_NOTATKI.some((k) => es[k] !== undefined)) return null;
+    const bezChwil = (e) => { const o = json(e); for (const k of POLA_CHWIL_NOTATKI) delete o[k]; return o; };
+    return JSON.stringify(sortuj(bezChwil(es))) === JSON.stringify(sortuj(bezChwil(en))) ? { klasa: D_CHWILE_NOTATKI, wariant: 'pola chwili notatki ucięte przez starszą aplikację' } : null;
+  }
   if (r.rodzaj !== 'wersja' && r.rodzaj !== 'kosz') return null;
   if (r.rodzaj === 'kosz' && !z221 && r.sciezki.some((s) => wPolach(s, ['visitIdentity'])) && r.sciezki.some((s) => wPolach(s, D7_POLA)) && r.sciezki.every((s) => wPolach(s, ['visitIdentity', ...D7_POLA]))) {
     const bez = (e) => { const o = json(e); delete o.visitIdentity; return o; };
@@ -5741,6 +5756,23 @@ const faktyWersji = (u, sid) => Object.fromEntries(p6fUrz(u).map((U) => {
   const pl = s.payload || {};
   return [U.nazwa, `karta ${etykieta(u.n, p.patientId)}, rev ${s.rev}, _pinned ${pl._pinned ? 1 : 0}, _pinnedState ${pl._pinnedState ? 'jest' : 'brak'}, _contentAtISO ${pl._contentAtISO ? 'jest' : 'brak'}`];
 }));
+// E3-PR0b2b: oznaczenie notatki n na każdym urządzeniu (wykonana / otwarta, rev).
+const faktyOznaczenia = (u) => Object.fromEntries(p6fUrz(u).map((U) => {
+  const n = (U.stan.patientNotes || []).find((x) => x.id === u.nId);
+  return [U.nazwa, n ? `${n.completedAtISO ? 'wykonana' : 'otwarta'} (rev ${n.rev})` : 'brak'];
+}));
+function p6fCofniecieStarszej(app) {
+  return {
+    ci: true, app, baza: (S, a) => p6fBaza(S, a, { notatka: true }),
+    kroki: async (u) => {
+      krok(60e3); await mutacja(u.S, u.B, 'wykonane n', () => u.B.v.completePatientNote(u.nId));
+      krok(60e3); await p6fDoC(u, u.B);
+      krok(60e3); await mutacja(u.S, u.C, 'cofnij wykonanie n (starsza aplikacja)', () => u.C.v.uncompletePatientNote(u.nId));
+      krok(60e3); await p6fOdC(u, u.A); await p6fOdC(u, u.B); await p6fAB(u); await p6fDoC(u, u.A); await p6fDoC(u, u.B);
+    },
+    fakty: faktyOznaczenia,
+  };
+}
 const P6F = {
   '„Usuń pacjenta” na 221, potem zmiana karty na A: notatka bez ratunku D-21': {
     ci: true, app: 'S221', baza: (S, app) => p6fBaza(S, app, { notatka: true }),
@@ -6007,6 +6039,10 @@ const P6F = {
     },
     fakty: (u) => faktyWersji(u, u.v),
   },
+  // E3-PR0b2b (P-NOTATKA-POZNIEJSZA), skutek do odbioru — znane ograniczenie starszej wersji: „wykonane” na bieżącym B,
+  // później cofnięcie na starszej aplikacji C, która nie zna chwili oznaczenia (stateAtISO) i wybiera wersję najpierw po rev.
+  '„Wykonane” na B, potem cofnięcie na 276 (starsza aplikacja bez chwili oznaczenia)': p6fCofniecieStarszej('S276'),
+  '„Wykonane” na B, potem cofnięcie na 221 (starsza aplikacja bez chwili oznaczenia)': p6fCofniecieStarszej('S221'),
 };
 // Kontrole C = N scenariuszy CI z urządzeniem starszej aplikacji (ręcznie; ten sam program kroków; świat 840 + pozycja
 // scenariusza bazowego).
@@ -6106,9 +6142,13 @@ const P6F_LITERALY = {
     fakty: { A: 'karta jest, notatka brak, nagrobek notatki z kartą', B: 'karta jest, notatka brak, nagrobek notatki z kartą', C: 'karta jest, notatka brak, nagrobek notatki bez karty' },
     kliniczny: { A: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -', B: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -', C: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -' },
   },
+  // E3-PR0b2b (P-NOTATKA-POZNIEJSZA): ratunek D-21 na bieżących urządzeniach zapisuje chwilę treści notatki
+  // (contentAtISO z kotwicą), a 221 jej nie zna i ucina — W1 BC i CA mają tę niewidoczną różnicę pary z klasą floty
+  // „chwile notatki nieznane starszej aplikacji”; pełna wymiana wyrównuje ją w drugim obiegu (obiegi 2, dotąd 1), widok
+  // kliniczny bez zmian.
   '„Usuń pacjenta” na A, zmiana karty na 221 — najpierw pełna kopia C (notatka zostaje)': {
-    W1: { AB: [], BC: ['wersja P/x: payload.visit [tożsamość wizyty nieznana starszej aplikacji]'], CA: ['wersja P/x: payload.visit [tożsamość wizyty nieznana starszej aplikacji]'] },
-    W4: { kliniczny: { A: 'karty P[v:20 w:21 x:26] | Kosz - | notatki n: Fikcyjna treść', B: 'karty P[v:20 w:21 x:26] | Kosz - | notatki n: Fikcyjna treść', C: 'karty P[v:20 w:21 x:26] | Kosz - | notatki n: Fikcyjna treść' }, obiegi: 1, ok: true, pary: { AB: [], BC: ['wersja P/x: payload.visit [tożsamość wizyty nieznana starszej aplikacji]'], CA: ['wersja P/x: payload.visit [tożsamość wizyty nieznana starszej aplikacji]'] } },
+    W1: { AB: [], BC: ['pnote n: contentAtISO, contentForISO [chwile notatki nieznane starszej aplikacji]', 'wersja P/x: payload.visit [tożsamość wizyty nieznana starszej aplikacji]'], CA: ['pnote n: contentAtISO, contentForISO [chwile notatki nieznane starszej aplikacji]', 'wersja P/x: payload.visit [tożsamość wizyty nieznana starszej aplikacji]'] },
+    W4: { kliniczny: { A: 'karty P[v:20 w:21 x:26] | Kosz - | notatki n: Fikcyjna treść', B: 'karty P[v:20 w:21 x:26] | Kosz - | notatki n: Fikcyjna treść', C: 'karty P[v:20 w:21 x:26] | Kosz - | notatki n: Fikcyjna treść' }, obiegi: 2, ok: true, pary: { AB: [], BC: ['wersja P/x: payload.visit [tożsamość wizyty nieznana starszej aplikacji]'], CA: ['wersja P/x: payload.visit [tożsamość wizyty nieznana starszej aplikacji]'] } },
     fakty: { A: 'karta jest, notatka jest, nagrobek notatki -', B: 'karta jest, notatka jest, nagrobek notatki -', C: 'karta jest, notatka jest, nagrobek notatki -' },
     kliniczny: { A: 'karty P[v:20 w:21 x:26] | Kosz - | notatki n: Fikcyjna treść', B: 'karty P[v:20 w:21 x:26] | Kosz - | notatki n: Fikcyjna treść', C: 'karty P[v:20 w:21 x:26] | Kosz - | notatki n: Fikcyjna treść' },
   },
@@ -6200,6 +6240,14 @@ const P6F_LITERALY = {
     fakty: { A: 'karta P, rev 1, _pinned 0, _pinnedState jest, _contentAtISO jest', B: 'karta P, rev 1, _pinned 0, _pinnedState jest, _contentAtISO jest', C: 'brak' },
     kliniczny: { A: 'karty P[v:33 w:21 x:25] | Kosz - | notatki -', B: 'karty P[v:33 w:21 x:25] | Kosz - | notatki -', C: 'karty P[x:25] | Kosz - | notatki -' },
   },
+  // E3-PR0b2b: po E3-PR0b2b (zmierzone) — W1: C (starsza) zostaje przy cofnięciu, A i B mają „wykonane” (chwila
+  // oznaczenia); pełna wymiana: „wykonane” wszędzie (C bierze rekord z późniejszą chwilą zapisu), różnica pary tylko w polach
+  // chwili oznaczenia, których starsza aplikacja nie zna. Dotąd cofnięcie wygrywało wszędzie (najpierw rev, potem data).
+  "„Wykonane” na B, potem cofnięcie na 276 (starsza aplikacja bez chwili oznaczenia)": {"W1": {"AB": [], "BC": ["pnote n: completedAtISO, contentAtISO, contentForISO, stateAtISO, stateForISO, updatedAtISO"], "CA": ["pnote n: completedAtISO, updatedAtISO, contentAtISO, contentForISO, stateAtISO, stateForISO"]}, "W4": {"kliniczny": {"A": "karty P[v:20 w:21] | Kosz - | notatki n: Fikcyjna treść", "B": "karty P[v:20 w:21] | Kosz - | notatki n: Fikcyjna treść", "C": "karty P[v:20 w:21] | Kosz - | notatki n: Fikcyjna treść"}, "obiegi": 2, "ok": true, "pary": {"AB": [], "BC": ["pnote n: stateAtISO, stateForISO [chwile notatki nieznane starszej aplikacji]"], "CA": ["pnote n: stateAtISO, stateForISO [chwile notatki nieznane starszej aplikacji]"]}}, "fakty": {"A": "wykonana (rev 3)", "B": "wykonana (rev 3)", "C": "otwarta (rev 3)"}, "kliniczny": {"A": "karty P[v:20 w:21] | Kosz - | notatki n: Fikcyjna treść", "B": "karty P[v:20 w:21] | Kosz - | notatki n: Fikcyjna treść", "C": "karty P[v:20 w:21] | Kosz - | notatki n: Fikcyjna treść"}},
+  // E3-PR0b2b: po E3-PR0b2b (zmierzone) — W1: C (starsza) zostaje przy cofnięciu, A i B mają „wykonane” (chwila
+  // oznaczenia); pełna wymiana: „wykonane” wszędzie (C bierze rekord z późniejszą chwilą zapisu), różnica pary tylko w polach
+  // chwili oznaczenia, których starsza aplikacja nie zna. Dotąd cofnięcie wygrywało wszędzie (najpierw rev, potem data).
+  "„Wykonane” na B, potem cofnięcie na 221 (starsza aplikacja bez chwili oznaczenia)": {"W1": {"AB": [], "BC": ["pnote n: completedAtISO, contentAtISO, contentForISO, stateAtISO, stateForISO, updatedAtISO"], "CA": ["pnote n: completedAtISO, updatedAtISO, contentAtISO, contentForISO, stateAtISO, stateForISO"]}, "W4": {"kliniczny": {"A": "karty P[v:20 w:21] | Kosz - | notatki n: Fikcyjna treść", "B": "karty P[v:20 w:21] | Kosz - | notatki n: Fikcyjna treść", "C": "karty P[v:20 w:21] | Kosz - | notatki n: Fikcyjna treść"}, "obiegi": 2, "ok": true, "pary": {"AB": [], "BC": ["pnote n: stateAtISO, stateForISO [chwile notatki nieznane starszej aplikacji]"], "CA": ["pnote n: stateAtISO, stateForISO [chwile notatki nieznane starszej aplikacji]"]}}, "fakty": {"A": "wykonana (rev 3)", "B": "wykonana (rev 3)", "C": "otwarta (rev 3)"}, "kliniczny": {"A": "karty P[v:20 w:21] | Kosz - | notatki n: Fikcyjna treść", "B": "karty P[v:20 w:21] | Kosz - | notatki n: Fikcyjna treść", "C": "karty P[v:20 w:21] | Kosz - | notatki n: Fikcyjna treść"}},
 };
 const P6F_WYR = {
   '„Usuń pacjenta” na 221, potem zmiana karty na A: notatka bez ratunku D-21': [
@@ -6322,6 +6370,8 @@ const P6F_ODSYL = {
   'Przypięcie i odpięcie na 221 wersji z bieżącej aplikacji (odcisk zgodny z treścią): bieżąca aplikacja widzi odpięcie': { literal: {}, wiersze: {} },
   'Poprawka na 221 bez wysłania, „Usuń pacjenta” na A, B zwraca kartę: poprawka usunięta z kartą przed wysłaniem': { literal: {}, wiersze: {} },
   'Poprawka na C bez wysłania, „Usuń pacjenta” na A, B zwraca kartę — C = N (poprawka zostaje)': { literal: {}, wiersze: {} },
+  "„Wykonane” na B, potem cofnięcie na 276 (starsza aplikacja bez chwili oznaczenia)": {"literal": {"zdarzenie276|pnote|w ładunku|inne": {"nowe": 0, "wyk": 1}, "zdarzenie|pnote|w ładunku|inne": {"nowe": 0, "wyk": 1}}, "wiersze": {"zdarzenie276:po2a": 1, "zdarzenie276:surowe": 1, "zdarzenie276:wyk": 1, "zdarzenie:po2a": 1, "zdarzenie:surowe": 1, "zdarzenie:wyk": 1}},
+  "„Wykonane” na B, potem cofnięcie na 221 (starsza aplikacja bez chwili oznaczenia)": {"literal": {"blob221|pnote|w ładunku|inne": {"nowe": 1, "wyk": 1}, "zdarzenie|pnote|w ładunku|inne": {"nowe": 0, "wyk": 1}}, "wiersze": {"blob221:po2a": 1, "blob221:surowe": 1, "blob221:wyk": 1, "zdarzenie:po2a": 1, "zdarzenie:surowe": 1, "zdarzenie:wyk": 1}},
 };
 describe('A ≡ B, flota ze starszą aplikacją: scenariusze deterministyczne (literały: D par, stan kliniczny, W4, wyrocznia, licznik)', () => {
   d1();
@@ -6353,10 +6403,11 @@ describe('A ≡ B, flota ze starszą aplikacją: scenariusze deterministyczne (l
 // operacjami, każdy świat osobną asercją: 'W1' — po samych zdarzeniach (żywe urządzenia), 'W4' — te same zdarzenia,
 // a po nich pełna wymiana na świeżych klonach (w4Trzy), 'bloby' — transport tylko pełną kopią (Y scala eksport X).
 // Fakty (położenie i treść encji) — w komunikacie asercji i w druku. Światy swiat(880 + nr), Math.random z
-// rng(0x6880 + nr), nr — pozycja w ZNANE_USTERKI (nowy przypadek tylko na końcu). Każdy przypadek ma pole naprawa
-// (PR, który go naprawi; po naprawie przypadek staje się testem wejściowym tego PR): notatka pacjenta zmieniona na
-// dwóch urządzeniach — E3-PR0b2 (decyzja właściciela z 2026-11-16: wygrywa późniejsza zmiana); „Usuń pacjenta”
-// duplikatu karty po „Scal pacjentów” — E3-PR0e (plan D-4, decyzja 4a; do tego czasu duplikat scalać ponownie).
+// rng(0x6880 + nr), nr — jawne pole przypadku (sc.nr; numer świata się nie zmienia, gdy przypadek przechodzi do CI).
+// Każdy przypadek ma pole naprawa (PR, który go naprawi; po naprawie przypadek staje się testem wejściowym tego PR):
+// „Usuń pacjenta” duplikatu karty po „Scal pacjentów” — E3-PR0e (plan D-4, decyzja 4a; do tego czasu duplikat scalać
+// ponownie). Notatka pacjenta zmieniona na dwóch urządzeniach (świat 880) — naprawiona w E3-PR0b2b
+// (P-NOTATKA-POZNIEJSZA), przeniesiona do CI jako test wejściowy (blok niżej, NOTATKA_POZNIEJSZA).
 const ZNANE_USTERKI_RECZNIE = process.env.E2_AB_ZNANE_USTERKI === '1';
 // Transport świata: zdarzenia (dostawa z hakami; do i od 221 — kolejka przez applyEncryptedDelta i pełna kopia) albo
 // same pełne kopie.
@@ -6433,41 +6484,32 @@ function ddUsunZwrocona(kolejnosc, app = 'N') {
     naprawa: 'do naprawy w E3-PR0e (decyzja właściciela 4a)',
   };
 }
-const ZNANE_USTERKI = {
-  // Notatka pacjenta: A edytuje dwa razy (rev 3), B raz, 5 s później (rev 2); reguła notatek „wyższy rev, przy równym
-  // nowsza data” w scalaniu synchronizacji (Le, vilda_vault.js:11986; odpowiednik w podglądzie „Scal kopię konta”:
-  // Bks_wygrywaRev, :5435–5438; docs/clinical/ALGORITHMS.md P-KOPIA-DANE-KONTA, ok. 32144; plan — notatki pacjenta LWW
-  // z rev na pierwszym miejscu) zostawia tekst A we wszystkich trzech światach na A, B i C, a wyrocznia oczekuje
-  // późniejszej edycji B („treść” bez klasy). Wersje wizyt mają od D-7 zasadę odwrotną (wygrywa późniejsza zmiana).
-  'notatka pacjenta: wyższy rev wygrywa z późniejszą edycją na innym urządzeniu': {
-    baza: async (S) => {
-      const A = await urzadzenie(S, 'A');
-      krok(); const r = await A.d.zapiszKarte(1);
-      krok(); const nId = (await A.v.savePatientNote({ patientId: r.patientId, title: 'Fikcyjna', body: 'Fikcyjna treść', category: 'inne' })).id;
-      krok(); ustawStan(A, await eksport(A)); A.Q.length = 0;
-      const { B, C } = await p6fUrzadzenia(S, A, 'N');
-      return { A, B, C, P: r.patientId, nId, n: new Map([[r.patientId, 'P'], [nId, 'n']]) };
-    },
-    kroki: async (u) => {
-      await ddNotatka(u, u.A, 'Fikcyjna treść A1'); await ddNotatka(u, u.A, 'Fikcyjna treść A2');
-      await ddNotatka(u, u.B, 'Fikcyjna treść B1 (później)', 5e3);
-      krok(); await ddDo(u, u.A, u.B); await ddDo(u, u.B, u.A); await ddSpoczynek(u);
-    },
-    fakty: ddTrescNotatki,
-    naprawa: 'do naprawy w E3-PR0b2 (decyzja właściciela z 2026-11-16: wygrywa późniejsza zmiana)',
-  },
-  '„Usuń pacjenta” zwróconej starej karty po „Scal pacjentów” — wszyscy znają powrót karty przed usunięciem': ddUsunZwrocona('wszyscy'),
-  '„Usuń pacjenta” zwróconej starej karty po „Scal pacjentów” — B zna tylko scalenie, nagrobek dochodzi do niego przed powrotem karty': ddUsunZwrocona('B bez powrotu'),
-  '„Usuń pacjenta” zwróconej starej karty po „Scal pacjentów” — C dostaje scalenie dopiero po usunięciu': ddUsunZwrocona('C bez scalenia'),
-  '„Usuń pacjenta” zwróconej starej karty po „Scal pacjentów” — B zna tylko scalenie; kontrola: C na 221 (ten sam wynik)': ddUsunZwrocona('B bez powrotu', 'S221'),
+// Notatka pacjenta zmieniona na dwóch urządzeniach (świat 880, nr 0) — od E3-PR0b2b test wejściowy w CI
+// (NOTATKA_POZNIEJSZA niżej). Numery światów pozostałych przypadków bez zmian (881–884).
+const ddNotatkaBaza = async (S) => {
+  const A = await urzadzenie(S, 'A');
+  krok(); const r = await A.d.zapiszKarte(1);
+  krok(); const nId = (await A.v.savePatientNote({ patientId: r.patientId, title: 'Fikcyjna', body: 'Fikcyjna treść', category: 'inne' })).id;
+  krok(); ustawStan(A, await eksport(A)); A.Q.length = 0;
+  const { B, C } = await p6fUrzadzenia(S, A, 'N');
+  return { A, B, C, P: r.patientId, nId, n: new Map([[r.patientId, 'P'], [nId, 'n']]) };
 };
-async function ddSwiat(nr, sc, tryb) {
-  if (!(nr < 20)) throw new Error(`znana usterka ${nr}: poza światami 880–899`);
+const ZNANE_USTERKI = {
+  '„Usuń pacjenta” zwróconej starej karty po „Scal pacjentów” — wszyscy znają powrót karty przed usunięciem': { ...ddUsunZwrocona('wszyscy'), nr: 1 },
+  '„Usuń pacjenta” zwróconej starej karty po „Scal pacjentów” — B zna tylko scalenie, nagrobek dochodzi do niego przed powrotem karty': { ...ddUsunZwrocona('B bez powrotu'), nr: 2 },
+  '„Usuń pacjenta” zwróconej starej karty po „Scal pacjentów” — C dostaje scalenie dopiero po usunięciu': { ...ddUsunZwrocona('C bez scalenia'), nr: 3 },
+  '„Usuń pacjenta” zwróconej starej karty po „Scal pacjentów” — B zna tylko scalenie; kontrola: C na 221 (ten sam wynik)': { ...ddUsunZwrocona('B bez powrotu', 'S221'), nr: 4 },
+};
+async function ddSwiat(sc, tryb) {
+  const nr = sc.nr;
+  if (!(Number.isInteger(nr) && nr >= 0 && nr < 20)) throw new Error(`znana usterka ${nr}: poza światami 880–899`);
   ustaw(START);
   const S = swiat(880 + nr);
   const los = rng(0x6880 + nr);
   vi.spyOn(Math, 'random').mockImplementation(() => (S.losAlt || los)());
-  S.w2s = false; S.nrKroku = 0; S.wyrSwiat = 'znane usterki';
+  S.w2s = false; S.nrKroku = 0; S.wyrSwiat = sc.wyrSwiat || 'znane usterki';
+  // E3-PR0b2b: licznik odsyłania w świecie przypadku (sc.odsyl), np. zapis samego rev notatki.
+  if (sc.odsyl && ODSYL) S.odsyl = nowyLicznik();
   const u = await sc.baza(S);
   u.S = S; u.tryb = tryb;
   await sc.kroki(u);
@@ -6478,9 +6520,9 @@ async function ddSwiat(nr, sc, tryb) {
 const ddNar = (lista) => lista.map((x) => `${x.swiat}: ${x.urz} ${x.encja} ${x.et} ${x.rodzaj} [${x.klasa || 'bez klasy'}] oczekiwane ${JSON.stringify(x.oczek)} fakt ${JSON.stringify(x.fakt)}`);
 describe.skipIf(!ZNANE_USTERKI_RECZNIE)('A ≡ B, znane usterki bieżącej aplikacji (ręcznie; dziś czerwone): przyczyna po stronie bieżącej aplikacji, bez klasy i bez literału — do naprawy w kolejnych PR', () => {
   d1();
-  for (const [nr, [nazwa, sc]] of Object.entries(ZNANE_USTERKI).entries()) {
+  for (const [nazwa, sc] of Object.entries(ZNANE_USTERKI)) {
     it(`${nazwa} — ${sc.naprawa}: wyrocznia bez naruszeń bez klasy po samych zdarzeniach (W1), po pełnej wymianie (W4) i przy samych pełnych kopiach (bloby)`, async () => {
-      const u = await ddSwiat(nr, sc, 'zdarzenia');
+      const u = await ddSwiat(sc, 'zdarzenia');
       const stare = p6fUrz(u).filter(starszaAplikacja).map((U) => U.nazwa);
       const W1 = wyrOcena(u.S, 'W1', nazwa, await wyrWidoki(u.S, { A: u.A, B: u.B, C: u.C }), { stare });
       const faktyW1 = await sc.fakty(u);
@@ -6488,14 +6530,87 @@ describe.skipIf(!ZNANE_USTERKI_RECZNIE)('A ≡ B, znane usterki bieżącej aplik
       const W4 = wyrOcena(u.S, 'W4', nazwa, w.wyr, { stare });
       delete w.wyr;
       await sprzatnijUrzadzenia(); vi.restoreAllMocks();
-      const ub = await ddSwiat(nr, sc, 'bloby');
+      const ub = await ddSwiat(sc, 'bloby');
       const bloby = wyrOcena(ub.S, 'bloby', nazwa, await wyrWidoki(ub.S, { A: ub.A, B: ub.B, C: ub.C }), { stare });
       const faktyBlobow = await sc.fakty(ub);
       const wynik = { W1: ddNar(W1), W4: ddNar(W4), bloby: ddNar(bloby), faktyW1, W4kliniczny: w.opis, faktyBlobow };
       console.log(`E3-AB znana usterka „${nazwa}” — ${sc.naprawa}`, JSON.stringify({ ...wynik, dziennik: u.S.dziennik }));
-      if (process.env.E2_AB_WYNIKI) appendFileSync(process.env.E2_AB_WYNIKI, JSON.stringify({ typ: 'znana usterka', nr, nazwa, naprawa: sc.naprawa, ...wynik, dziennik: u.S.dziennik, dziennikBlobow: ub.S.dziennik }) + '\n');
+      if (process.env.E2_AB_WYNIKI) appendFileSync(process.env.E2_AB_WYNIKI, JSON.stringify({ typ: 'znana usterka', nr: sc.nr, nazwa, naprawa: sc.naprawa, ...wynik, dziennik: u.S.dziennik, dziennikBlobow: ub.S.dziennik }) + '\n');
       const opis = JSON.stringify({ faktyW1, W4kliniczny: w.opis, faktyBlobow }, null, 1);
       for (const [swiatN, lista] of [['W1', W1], ['W4', W4], ['bloby', bloby]]) expect.soft(ddNar(WYR.bezWyjatku(lista, swiatN)), `${nazwa} — ${sc.naprawa}, świat ${swiatN}\n${opis}`).toEqual([]);
+    }, 60_000);
+  }
+});
+
+// ══ Notatka pacjenta zmieniona na dwóch urządzeniach: zostaje zmiana późniejsza (E3-PR0b2b, P-NOTATKA-POZNIEJSZA) ════
+// Test wejściowy E3-PR0b2b (dawniej ręczny blok znanych usterek, świat 880): A edytuje notatkę dwa razy (rev 3), B raz,
+// 5 s później (rev 2). Dotąd reguła „najpierw rev” (Le, podgląd „Scal kopię konta”) zostawiała tekst A we wszystkich
+// trzech światach; decyzja właściciela z 2026-11-16 (plan synchronizacji, rozdział 6): zostaje zmiana późniejsza (B),
+// a rev po scaleniu to najwyższy z obu wersji (literał „rev 3” na B łapie brak zapisu samego rev). Te same trzy światy
+// co w bloku znanych usterek (W1, W4, bloby) i ta sama wyrocznia; do tego literał faktów. Dwie kontrole (wynik ten sam
+// przed zmianą i po niej): kolejność, w której obie reguły się zgadzają (B raz, A dwa razy później — wszędzie A, rev 3),
+// i remis chwili (ta sama milisekunda zapisu na A i B — wyższy rev, A). Remis chwili sprawdza tylko literał faktów:
+// wyrocznia porządkuje zmiany z tą samą chwilą kolejnością operacji w teście (B po A), a sejf — wyższym rev (dwie
+// zmiany w tej samej milisekundzie to znane ograniczenie, jak w D-7). Licznik odsyłania w tych światach: zapis samego
+// rev notatki (B zostawia swoją treść, a podnosi rev) nie jest echem warstwy po2a — 0 wierszy notatek (klasa „sam rev
+// notatki”).
+const ddFaktyNotatki = (u) => ({ fakty: ddTrescNotatki(u) });
+const ddWszedzie = (v) => ({ A: v, B: v, C: v });
+const NOTATKA_POZNIEJSZA = {
+  'A dwa razy, B raz pięć sekund później: wszędzie zmiana B, rev 3': {
+    nr: 0, odsyl: true, wyrSwiat: 'notatka później', baza: ddNotatkaBaza,
+    kroki: async (u) => {
+      await ddNotatka(u, u.A, 'Fikcyjna treść A1'); await ddNotatka(u, u.A, 'Fikcyjna treść A2');
+      await ddNotatka(u, u.B, 'Fikcyjna treść B1 (później)', 5e3);
+      krok(); await ddDo(u, u.A, u.B); await ddDo(u, u.B, u.A); await ddSpoczynek(u);
+    },
+    fakty: ddTrescNotatki,
+    oczekiwane: { faktyW1: ddWszedzie('Fikcyjna treść B1 (później) (rev 3)'), W4kliniczny: ddWszedzie('karty P[#c2b9:22] | Kosz - | notatki n: Fikcyjna treść B1 (później)'), faktyBlobow: ddWszedzie('Fikcyjna treść B1 (później) (rev 3)') },
+  },
+  '[kontrola] B raz, A dwa razy później (obie reguły zgodne): wszędzie zmiana A, rev 3': {
+    nr: 5, odsyl: true, wyrSwiat: 'notatka później', baza: ddNotatkaBaza,
+    kroki: async (u) => {
+      await ddNotatka(u, u.B, 'Fikcyjna treść B1');
+      await ddNotatka(u, u.A, 'Fikcyjna treść A1 (później)', 5e3); await ddNotatka(u, u.A, 'Fikcyjna treść A2 (później)');
+      krok(); await ddDo(u, u.A, u.B); await ddDo(u, u.B, u.A); await ddSpoczynek(u);
+    },
+    fakty: ddTrescNotatki,
+    oczekiwane: null,
+  },
+  '[kontrola] remis chwili: A dwa razy, B raz w tej samej milisekundzie co druga zmiana A — wyższy rev (A)': {
+    nr: 6, odsyl: true, wyrSwiat: 'notatka później', baza: ddNotatkaBaza,
+    kroki: async (u) => {
+      await ddNotatka(u, u.A, 'Fikcyjna treść A1'); await ddNotatka(u, u.A, 'Fikcyjna treść A2 (remis)');
+      await ddNotatka(u, u.B, 'Fikcyjna treść B1 (remis)', 0);
+      krok(); await ddDo(u, u.A, u.B); await ddDo(u, u.B, u.A); await ddSpoczynek(u);
+    },
+    fakty: ddTrescNotatki,
+    bezWyroczni: true,
+    oczekiwane: { faktyW1: ddWszedzie('Fikcyjna treść A2 (remis) (rev 3)'), W4kliniczny: ddWszedzie('karty P[#5788:22] | Kosz - | notatki n: Fikcyjna treść A2 (remis)'), faktyBlobow: ddWszedzie('Fikcyjna treść A2 (remis) (rev 3)') },
+  },
+};
+describe('A ≡ B, notatka pacjenta zmieniona na dwóch urządzeniach — zostaje zmiana późniejsza (E3-PR0b2b, P-NOTATKA-POZNIEJSZA)', () => {
+  d1();
+  for (const [nazwa, sc] of Object.entries(NOTATKA_POZNIEJSZA)) {
+    it(`${nazwa}: ${sc.bezWyroczni ? 'literał faktów (W1, W4, bloby)' : 'wyrocznia bez naruszeń bez klasy (W1, W4, bloby) i literał faktów'}`, async () => {
+      const u = await ddSwiat(sc, 'zdarzenia');
+      const W1 = wyrOcena(u.S, 'W1', nazwa, await wyrWidoki(u.S, { A: u.A, B: u.B, C: u.C }), { stare: [] });
+      const faktyW1 = await sc.fakty(u);
+      const odsyl2a = u.S.odsyl ? Object.keys(u.S.odsyl.podsumuj().literal2a).filter((k) => k.split('|')[1] === 'pnote') : null;
+      const w = await w4Trzy(u.S, p6fUrz(u), u.n);
+      const W4 = wyrOcena(u.S, 'W4', nazwa, w.wyr, { stare: [] });
+      delete w.wyr;
+      await sprzatnijUrzadzenia(); vi.restoreAllMocks();
+      const ub = await ddSwiat(sc, 'bloby');
+      const bloby = wyrOcena(ub.S, 'bloby', nazwa, await wyrWidoki(ub.S, { A: ub.A, B: ub.B, C: ub.C }), { stare: [] });
+      const faktyBlobow = await sc.fakty(ub);
+      const fakty = { faktyW1, W4kliniczny: w.opis, faktyBlobow };
+      console.log(`E3-AB notatka później „${nazwa}”`, JSON.stringify({ W1: ddNar(W1), W4: ddNar(W4), bloby: ddNar(bloby), ...fakty, odsyl2a }));
+      const opis = JSON.stringify(fakty, null, 1);
+      if (!sc.bezWyroczni) for (const [swiatN, lista] of [['W1', W1], ['W4', W4], ['bloby', bloby]]) expect.soft(ddNar(WYR.bezWyjatku(lista, swiatN)), `${nazwa}, świat ${swiatN}\n${opis}`).toEqual([]);
+      if (sc.oczekiwane) expect.soft(fakty, `${nazwa}: fakty`).toEqual(sc.oczekiwane);
+      for (const k of ['A', 'B', 'C']) expect.soft(faktyW1[k], `${nazwa}: ta sama wersja na wszystkich urządzeniach (W1)`).toBe(faktyW1.A);
+      if (odsyl2a) expect.soft(odsyl2a, `${nazwa}: licznik odsyłania — wiersze notatek w warstwie po2a`).toEqual([]);
     }, 60_000);
   }
 });

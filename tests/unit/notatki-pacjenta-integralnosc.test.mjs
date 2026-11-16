@@ -248,17 +248,23 @@ describe('G6b–G6g — „Zostaw notatkę” na dwóch urządzeniach (E2-PR3c3,
     expect(src).toContain('j.forEach(function(S){S&&Qrv(S.id,S.rev)});');
     expect(src).toContain('createdAtISO:Bnp_utworzona(M&&M.createdAtISO,g.createdAtISO)||g.updatedAtISO');
     // E2-PR3c4: przed zapisem chwili utworzenia — reguła karty notatki (zapis samej karty, Bnp_zmienKarte).
-    expect(src).toContain('Qdn.add(g.id)}await Bnp_wczesniejUtworzona(P,g,Ej,e);continue}');
-    const a = src.indexOf('async function Bnp_wczesniejUtworzona(');
-    const fn = src.slice(a, src.indexOf('\n}\n', a));
+    // E3-PR0b2b (P-NOTATKA-POZNIEJSZA): gałąź „wygrywa tutejsza” w filtrze wstępnym woła Bnp_tutejszaWygrywa — pod
+    // blokadą notatki, na świeżym odczycie, jednym zapisem: chwila utworzenia (najwcześniejsza), rev = najwyższy
+    // i oznaczenie z ładunku, gdy jest ściśle późniejsze; przy zmianie widocznej — zdarzenie „merge” i licznik.
+    // Dawna Bnp_wczesniejUtworzona może zostać jako część tej funkcji, więc sprawdzamy oba ciała razem.
+    expect(src).toMatch(/Qdn\.add\(g\.id\)\}if\(await Bnp_tutejszaWygrywa\(P,g,Ej,e\)\)\{Qch\.push\(\{[^}]*action:"merge"\}\);Qdn\.has\(g\.id\)\|\|\(Nt\+\+,Qdn\.add\(g\.id\)\)\}continue\}/);
+    expect(src, 'dawne wywołanie samej chwili utworzenia w filtrze wstępnym zastąpione').not.toContain('Qdn.add(g.id)}await Bnp_wczesniejUtworzona(P,g,Ej,e);continue}');
+    const cialo = (nazwa) => { const a = src.indexOf(`async function ${nazwa}(`); return a < 0 ? '' : src.slice(a, src.indexOf('\n}\n', a)); };
+    const fn = cialo('Bnp_tutejszaWygrywa');
+    expect(fn, 'Bnp_tutejszaWygrywa').not.toBe('');
     expect(fn).toContain('await Ac(g.id,');
     expect(fn).toContain('getPatientNoteForUser(b, g.id)');
-    expect(fn).toContain('n.createdAtISO > c');
-    expect(fn, 'bez dodatkowego odczytu, gdy tutejszy rekord nie ma późniejszej chwili utworzenia').toContain("!(typeof e.createdAtISO === 'string' && e.createdAtISO > c)");
-    expect(fn.lastIndexOf('Bses_pilnuj(opcje)')).toBeLessThan(fn.indexOf('putPatientNoteForUser('));
-    const odczyt = fn.indexOf('getPatientNoteForUser(b, g.id)'), zapis = fn.indexOf('putPatientNoteForUser(');
-    expect(fn.slice(odczyt, zapis), 'sprawdzenie sesji między odczytem a zapisem chwili utworzenia').toContain('Bses_pilnuj(opcje)');
-    expect(fn.indexOf('Bses_pilnuj(opcje)')).toBeLessThan(fn.indexOf('getPatientNoteForUser('));
+    const zapisy = fn + cialo('Bnp_tutejszaZapis') + cialo('Bnp_wczesniejUtworzona');
+    expect(zapisy, 'chwila utworzenia najwcześniejsza').toMatch(/createdAtISO/);
+    expect(zapisy).toContain('putPatientNoteForUser(');
+    const odczyt = fn.indexOf('getPatientNoteForUser(b, g.id)');
+    expect(fn.indexOf('Bses_pilnuj(opcje)'), 'sprawdzenie sesji przed świeżym odczytem').toBeLessThan(odczyt);
+    expect(zapisy.lastIndexOf('Bses_pilnuj(opcje)'), 'sprawdzenie sesji przed zapisem').toBeLessThan(zapisy.lastIndexOf('putPatientNoteForUser('));
   });
 });
 

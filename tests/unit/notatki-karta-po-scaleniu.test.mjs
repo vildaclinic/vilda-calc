@@ -97,7 +97,11 @@ describe('E2-PR3c4 — karta notatki po „Scal pacjentów”: obie karty istnie
     expect([await tytul(A, n.id), await tytul(B, n.id)]).toEqual(['n (fikcja, poprawka B)', 'n (fikcja, poprawka B)']);
   });
 
-  it('[kontrola] B poprawia n pod P PRZED „Scal pacjentów” na A, potem dopisuje wizytę P: n pod Q na obu (wersja ze scalenia zapisana później)', async () => {
+  // E3-PR0b2b (P-NOTATKA-POZNIEJSZA): przeniesienie przy „Scal pacjentów” nie jest zmianą treści, więc poprawka B
+  // (późniejsza zmiana treści) wygrywa z wersją przeniesioną, a jej karta P wraca dopisaną wizytą (D-4 A, skutek do
+  // odbioru przez właściciela): dotąd n trafiała pod Q z treścią sprzed poprawki (poprawka B ginęła), teraz zostaje pod
+  // P z poprawką B.
+  it('[kontrola] B poprawia n pod P PRZED „Scal pacjentów” na A, potem dopisuje wizytę P: n pod P na obu, z poprawką B (przeniesienie nie jest zmianą treści, D-4 A)', async () => {
     const { A, B, ids, n } = await poczatek();
     await chwila(5);
     await B.v.savePatientNote({ id: n.id, patientId: ids.P, title: 'n (fikcja, poprawka B wcześniej)', body: 'fikcyjna treść B', category: 'followup' });
@@ -107,7 +111,8 @@ describe('E2-PR3c4 — karta notatki po „Scal pacjentów”: obie karty istnie
     await B.v.savePatient(zapis('Fikcyjna', 'Ola', 133), { patientId: ids.P, dedup: false });
     for (let r = 0; r < 2; r += 1) { await pelny(A, B); await pelny(B, A); }
     expect([await kartaJest(A, ids.P), await kartaJest(B, ids.P)]).toEqual([true, true]);
-    expect([await gdzie(A, n.id, ids), await gdzie(B, n.id, ids)]).toEqual(['Q', 'Q']);
+    expect([await gdzie(A, n.id, ids), await gdzie(B, n.id, ids)]).toEqual(['P', 'P']);
+    expect([await tytul(A, n.id), await tytul(B, n.id)], 'poprawka B nie ginie').toEqual(['n (fikcja, poprawka B wcześniej)', 'n (fikcja, poprawka B wcześniej)']);
   });
 });
 
