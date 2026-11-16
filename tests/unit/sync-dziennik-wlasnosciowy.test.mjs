@@ -3778,6 +3778,11 @@ describe('A ≡ B, klasy 3.6: predykaty (pozytywy i negatywy), tabela DOZWOLONE,
     expect(await klasy(biezaca, starsza, flota('y', 'S221')), 'strona starszej jako y').toEqual([['wersja', D_TOZSAMOSC, 'tak', 'tożsamość wizyty, odcisk przeliczony']]);
     expect(await klasy(starsza, nieswiezy, flota('x')), 'nieświeży odcisk po stronie bieżącej').toEqual([['wersja', null, false, null]]);
     expect(await klasy(starsza, biezaca, { tabela: 'W4' }), 'para dwóch bieżących').toEqual([['wersja', null, false, null]]);
+    // tożsamość po stronie bieżącej z kartą wizyty innej niż karta rekordu albo bez visitId — bez klasy
+    for (const [opis, v] of [['karta wizyty Q zamiast P', { ...wiz, patientId: 'Q' }], ['bez visitId', { ...wiz, visitId: '' }]]) {
+      const zle = { ...tresc, visit: v };
+      expect(await klasy(starsza, syntStan({ wersje: [syntWersja({ payload: rej(zle, LO.odcisk(zle)) })] }), flota('x')), opis).toEqual([['wersja', null, false, null]]);
+    }
     // wpis Kosza: pola tożsamości i pola nieznane 221
     const koszS = syntStan({ kosz: [syntKosz()] });
     const koszN = syntStan({ kosz: [syntKosz({ visitIdentity: { version: 1, visitId: wiz.visitId }, koszISO: T1, revPary: 2 })] });
@@ -3799,7 +3804,7 @@ describe('A ≡ B, klasy 3.6: predykaty (pozytywy i negatywy), tabela DOZWOLONE,
     expect(await klasy(syntStan(), biezaca, flota('x')), 'bez nagrobka retencji').toEqual([['wersja', null, false, null]]);
     const nowsza = syntStan({ wersje: [syntWersja({ payload: rej(zW, LO.odcisk(zW)) }), syntWersja({ snapshotId: 'w', savedAtISO: T1, payload: rej(zW, LO.odcisk(zW)) })] });
     expect((await klasy(ret, nowsza, flota('x'))).filter(([r]) => r === 'wersja'), 'nowsza wersja tej samej wizyty — v nie jest głową').toEqual([['wersja', null, false, null], ['wersja', null, false, null]]);
-  });
+  }, 10_000);
   it('tabela DOZWOLONE = tabela 3.6 (literał) i reguły dozwolona(); klasa null nigdzie', () => {
     const oczek = Object.fromEntries(TABELE_3_6.map((t) => [t, {}]));
     for (const [kl, wiersz] of Object.entries(TABELA_3_6)) wiersz.forEach((w, i) => { if (w !== '—') oczek[TABELE_3_6[i]][kl] = w; });
@@ -4941,6 +4946,7 @@ async function dostawaDelt(S, C, Y, { k = Infinity } = {}) {
     st.statusy[s] = (st.statusy[s] || 0) + 1;
     if (s !== 'applied') throw new Error(`${Y.nazwa}: delta ${e.opis} ${e.key} → status ${s} ${r && (r.reason || r.code || '')}`);
     stany.push(await eksport(Y));
+    if (S.wyr) WYR.naBiezacym(S.wyr, { lad: e.jaw, po: stany[stany.length - 1] });
   }
   S.kursor.set(nazwa, c + partia.length);
   const po = stany[stany.length - 1];
@@ -5002,6 +5008,8 @@ async function scalBlob(S, Z, Y) {
   if (Array.isArray(Y.lancuch)) Y.lancuch.length = 0;
   await Y.v.mergeSyncPayload(json(blob));
   const po = await eksport(Y);
+  // wyrocznia floty: zmiany starszej aplikacji, które doszły pełną kopią do żywej karty bieżącego urządzenia
+  if (S.wyr && starszaAplikacja(Z) && !starszaAplikacja(Y)) WYR.naBiezacym(S.wyr, { lad: blob, po });
   const dodane = await hakiScalenia(S, Y, po);
   ustawStan(Y, po);
   S.stat.blobow = (S.stat.blobow || 0) + 1;
@@ -5064,7 +5072,8 @@ async function spoczynekFloty221(S, A, B, C) {
 // dwóch bieżących urządzeń nie dostaje tych klas.
 // - D_TOZSAMOSC „tożsamość wizyty nieznana starszej aplikacji”: wersja różni się tylko payload.visit (bieżąca aplikacja
 //   wyznacza tożsamość przy odczycie i scalaniu — Bvisit_read, Bvisit_legacy :5908–5918 — i ją utrwala; starsza jej nie
-//   pisze), a payload._pinnedState.h tylko z dowodem odcisku: treść strony bieżącej bez visit z odciskiem przeliczonym tak
+//   pisze; po stronie bieżącej tożsamość z visitId i kartą wizyty równą karcie rekordu — Bvisit_owner :5897), a
+//   payload._pinnedState.h tylko z dowodem odcisku: treść strony bieżącej bez visit z odciskiem przeliczonym tak
 //   jak Bvisit_withMetadata (:5889–5895; przelicza tylko świeży h) jest równa stronie starszej; wpis Kosza — także
 //   visitIdentity i visitCipher (Bev_wpisKosza bieżącej wersji). Wariant karty wizyty: obie strony mają tę samą
 //   wizytę (visitId) z inną kartą, po stronie bieżącej karta wizyty jest kartą rekordu (Bvisit_owner :5897), reszta
@@ -5127,14 +5136,16 @@ function klasaParyFloty(r, X, Y, kont) {
   const rowne = () => JSON.stringify(sortuj(xs)) === JSON.stringify(sortuj(xn));
   const pola = r.sciezki.some((s) => wPolach(s, pola221)) ? D_POLE_221 : D_TOZSAMOSC;
   const vs = xs.payload && xs.payload.visit, vn = xn.payload && xn.payload.visit;
+  const karta = r.rodzaj === 'kosz' ? en.patientId : r.klucz.split('/')[0];
   if (vn && !vs) {
+    // tożsamość wyznaczona przez bieżącą aplikację: kształt tożsamości i karta wizyty = karta rekordu (Bvisit_owner)
+    if (typeof vn !== 'object' || typeof vn.visitId !== 'string' || !vn.visitId || vn.patientId !== karta) return null;
     const swiezy = !!(xn.payload._pinnedState && xn.payload._pinnedState.h === LO.odcisk(xn.payload));
     xn.payload = bezTozsamosci(xn.payload);
     if (rowne()) return { klasa: pola, wariant: swiezy ? 'tożsamość wizyty, odcisk przeliczony' : 'tożsamość wizyty' };
     return null;
   }
   if (vn && vs && vn.visitId === vs.visitId && vn.patientId !== vs.patientId) {
-    const karta = r.rodzaj === 'kosz' ? en.patientId : r.klucz.split('/')[0];
     if (vn.patientId !== karta) return null;
     for (const o of [xs, xn]) { delete o.payload.visit.patientId; if (o.payload._pinnedState) delete o.payload._pinnedState.h; }
     return rowne() ? { klasa: pola, wariant: 'karta wizyty po „Scal pacjentów”' } : null;
@@ -5151,13 +5162,13 @@ async function w4Floty(S, urz, kontN) {
     const K = [];
     for (const U of urz) K.push(await klon(S, U, 'w4f'));
     try {
-      let rund = 0, stabilny = false;
+      let obiegi = 0, stabilny = false;
       const echo = [];
-      while (!stabilny && rund < LO.MAKS_OBIEGOW) {
-        rund += 1;
+      while (!stabilny && obiegi < LO.MAKS_OBIEGOW) {
+        obiegi += 1;
         const przed = K.map((k) => JSON.stringify(kanon(k.stan)));
         const w0 = S.odsyl ? S.odsyl.wiersze[`w4:${'wyk'}`] || 0 : 0;
-        for (const [i, j] of [[0, 1], [1, 2], [2, 0]]) await wymianaPOLicz(S, K[i], K[j], rund === 1);
+        for (const [i, j] of [[0, 1], [1, 2], [2, 0]]) await wymianaPOLicz(S, K[i], K[j], obiegi === 1);
         echo.push(S.odsyl ? (S.odsyl.wiersze['w4:wyk'] || 0) - w0 : 0);
         stabilny = K.every((k, i) => JSON.stringify(kanon(k.stan)) === przed[i]);
       }
@@ -5172,7 +5183,7 @@ async function w4Floty(S, urz, kontN) {
         pary.push({ para: urz[i].nazwa + urz[j].nazwa, roznice: d.map((r) => ({ ...skrotRoznicy(r), ...(r.wariantFloty ? { wariant: r.wariantFloty } : {}), ...(r.dozwolona ? {} : { a: r.a, b: r.b }) })), w4p: w4pp });
       }
       const wyr = await wyrWidokiKlonow(Object.fromEntries(urz.map((U, i) => [U.nazwa, K[i]])));
-      return { ok, rund, stabilny, echo, pary, wyr };
+      return { ok, obiegi, stabilny, echo, pary, wyr };
     } finally { await zamknij(...K); }
   });
 }
@@ -5192,7 +5203,7 @@ async function punktFloty(S, A, B, C) {
   delete w.wyr;
   pkt.w4 = w;
   S.stat.punktyFloty.push(pkt);
-  if (!w.ok) S.stat.w4Bledy.push({ krok: S.nrKroku, rund: w.rund, stabilny: w.stabilny, pary: w.pary.map((p) => ({ para: p.para, roznice: p.roznice.filter((r) => !r.dozwolona || r.dozwolona === 'dowód') })).filter((p) => p.roznice.length) });
+  if (!w.ok) S.stat.w4Bledy.push({ krok: S.nrKroku, obiegi: w.obiegi, stabilny: w.stabilny, pary: w.pary.map((p) => ({ para: p.para, roznice: p.roznice.filter((r) => !r.dozwolona || r.dozwolona === 'dowód') })).filter((p) => p.roznice.length) });
 }
 // Strażnik chwil (pomiar): chwile wersji i wpisów Kosza spoza chwil operacji (S.chwile).
 function chwileSpoza(S, stany) {
@@ -5343,7 +5354,7 @@ async function przebiegFloty(flota, ziarno, { profil = FLOTA_PROFIL, blobC = BLO
     zdarzen: S.stat.zdarzen, dostaw: S.stat.dostaw, dostawDoStarszej: S.stat.dostawDoStarszej || 0, blobow: S.stat.blobow || 0, pobranStanuC: S.stat.pobranStanuC || 0, h1: S.stat.h1, h2: S.stat.h2, hakiScalenia: S.stat.hakiScalenia || 0,
     emitery: S.stat.emitery, haki: S.stat.haki, odmowy: S.stat.odmowyStarszejKody || {}, polaRetencjiStarszej: S.stat.polaRetencjiStarszej || 0, delty: S.stat.delty ? { ...S.stat.delty, ms: Math.round(S.stat.delty.ms), kolejka: C.delty.Q.length } : null,
     spoczynki: S.stat.spoczynki, brakSpoczynku: S.stat.brakSpoczynku, obiegiPonadLimit: S.stat.obiegiPonadLimit, w4Bledy: S.stat.w4Bledy,
-    punkty: S.stat.punktyFloty.map((p) => ({ krok: p.krok, obiegi: p.obiegi, rund: p.w4.rund, echo: p.w4.echo, ok: p.w4.ok, wyrW1: p.wyrW1, wyrW4: p.wyrW4, W1: p.W1, W4: p.w4.pary })),
+    punkty: S.stat.punktyFloty.map((p) => ({ krok: p.krok, obiegi: p.obiegi, obiegiW4: p.w4.obiegi, echo: p.w4.echo, ok: p.w4.ok, wyrW1: p.wyrW1, wyrW4: p.wyrW4, W1: p.W1, W4: p.w4.pary })),
     chwile: chwileSpoza(S, { A: A.stan, B: B.stan, C: C.stan }),
     odcisk: odciskFloty([A.stan, B.stan], starszaAplikacja(C) ? C.stan : null),
     wyr: { punkty: S.wyrPunkty || 0, naruszen: naruszenia.length, liczby: licznikWyr(naruszenia), czerwoneW1: wyrCzerwone(wgSwiata('W1 floty')), czerwoneW4: wyrCzerwone(wgSwiata('W4 floty')),
@@ -5378,19 +5389,19 @@ function odciskFloty(biezace, starsza) {
 }
 
 // ── Literały floty (ziarna CI, przebieg domyślny — FLOTA_DOMYSLNA) ───────────────────────────────────────────────────
-// [flota][ziarno] = { rundy (obiegi wymiany W4 floty w kolejnych punktach), W4 (różnice par W4 floty: para|rodzaj|klasa|
+// [flota][ziarno] = { obiegiW4 (obiegi wymiany W4 floty w kolejnych punktach), W4 (różnice par W4 floty: para|rodzaj|klasa|
 // wariant → liczba, suma po punktach), W1AB (różnice A, B po samych zdarzeniach według klasy — linia bazowa echa po
 // scaleniu pełnej kopii), odsyl (licznik: klucz źródło|rodzaj|w ładunku/spoza|klasa → { wyk, nowe }), delty (flota 221:
 // zbudowane według rodzaju, odpadłe progiem, puste), odmowy (sejf 221 według kodu) }. Klucze bez ścieżek pól i bez bajtów.
 // Zmiana zbieżności (E3-PR0c–f) albo wyroczni przepisuje te literały.
 const ZNANE_FLOTA = {
   221: {
-    1: { W1AB: { 'bez klasy': 13, 'rekord złożony po jednej stronie': 2 }, W4: { 'BC|kosz|pole nieznane starszej aplikacji (221)|pola Kosza 221': 2, 'BC|kosz|tożsamość wizyty nieznana starszej aplikacji|tożsamość wpisu Kosza': 4, 'BC|wersja|tożsamość wizyty nieznana starszej aplikacji|tożsamość wizyty': 12, 'CA|kosz|pole nieznane starszej aplikacji (221)|pola Kosza 221': 2, 'CA|kosz|tożsamość wizyty nieznana starszej aplikacji|tożsamość wpisu Kosza': 4, 'CA|wersja|tożsamość wizyty nieznana starszej aplikacji|tożsamość wizyty': 12 }, delty: { prog: { karta: 15 }, puste: { 'pnote:merge': 1, 'pnote:merge-delete': 4 }, zbudowane: { karta: 10, note: 2, notetomb: 1, pnote: 4, 'pnote:merge': 4, pnotetomb: 2 } }, odmowy: {}, odsyl: { 'blob221|snap|w ładunku|inne': { nowe: 1, wyk: 1 }, 'blob221|stomb|w ładunku|inne': { nowe: 1, wyk: 1 }, 'blobN|stomb|w ładunku|R4a′': { nowe: 1, wyk: 1 } }, rundy: [1, 2, 2, 2] },
-    2: { W1AB: { R2: 1, R5: 1, 'bez klasy': 4 }, W4: { 'BC|kosz|tożsamość wizyty nieznana starszej aplikacji|tożsamość wizyty': 1, 'BC|kosz|tożsamość wizyty nieznana starszej aplikacji|tożsamość wpisu Kosza': 2, 'BC|wersja|tożsamość wizyty nieznana starszej aplikacji|tożsamość wizyty': 12, 'CA|kosz|tożsamość wizyty nieznana starszej aplikacji|tożsamość wizyty': 1, 'CA|kosz|tożsamość wizyty nieznana starszej aplikacji|tożsamość wpisu Kosza': 2, 'CA|wersja|tożsamość wizyty nieznana starszej aplikacji|tożsamość wizyty': 12 }, delty: { prog: { karta: 12 }, puste: { 'pnote:merge-delete': 2 }, zbudowane: { karta: 11, note: 2, pnote: 1, 'pnote:merge': 6, pnotetomb: 1, ptomb: 3 } }, odmowy: {}, odsyl: { 'blob221|snap|w ładunku|rekord złożony': { nowe: 1, wyk: 1 }, 'delta221|snap|w ładunku|inne': { nowe: 1, wyk: 1 }, 'zdarzenie|snap|w ładunku|gwiazdka': { nowe: 1, wyk: 1 } }, rundy: [2, 2] },
-    3: { W1AB: { R4a: 2, R5: 1, 'bez klasy': 14 }, W4: { 'BC|kosz|pole nieznane starszej aplikacji (221)|pola Kosza 221': 4, 'BC|kosz|tożsamość wizyty nieznana starszej aplikacji|tożsamość wpisu Kosza': 5, 'BC|pnotetomb|pole nieznane starszej aplikacji (221)|nagrobek notatki: deletedWithPatient': 4, 'BC|wersja|tożsamość wizyty nieznana starszej aplikacji|tożsamość wizyty': 12, 'CA|kosz|pole nieznane starszej aplikacji (221)|pola Kosza 221': 4, 'CA|kosz|tożsamość wizyty nieznana starszej aplikacji|tożsamość wpisu Kosza': 5, 'CA|pnotetomb|pole nieznane starszej aplikacji (221)|nagrobek notatki: deletedWithPatient': 4, 'CA|wersja|tożsamość wizyty nieznana starszej aplikacji|tożsamość wizyty': 12 }, delty: { prog: { karta: 14 }, puste: { 'pnote:merge-delete': 4 }, zbudowane: { karta: 13, note: 2, pnote: 3, 'pnote:merge': 8, pnotetomb: 1 } }, odmowy: {}, odsyl: { 'blob221|stomb|w ładunku|inne': { nowe: 3, wyk: 3 }, 'delta221|snap|w ładunku|rekord złożony': { nowe: 4, wyk: 4 }, 'zdarzenie|snap|w ładunku|gwiazdka': { nowe: 1, wyk: 1 } }, rundy: [2, 2] },
+    1: { W1AB: { 'bez klasy': 13, 'rekord złożony po jednej stronie': 2 }, W4: { 'BC|kosz|pole nieznane starszej aplikacji (221)|pola Kosza 221': 2, 'BC|kosz|tożsamość wizyty nieznana starszej aplikacji|tożsamość wpisu Kosza': 4, 'BC|wersja|tożsamość wizyty nieznana starszej aplikacji|tożsamość wizyty': 12, 'CA|kosz|pole nieznane starszej aplikacji (221)|pola Kosza 221': 2, 'CA|kosz|tożsamość wizyty nieznana starszej aplikacji|tożsamość wpisu Kosza': 4, 'CA|wersja|tożsamość wizyty nieznana starszej aplikacji|tożsamość wizyty': 12 }, delty: { prog: { karta: 15 }, puste: { 'pnote:merge': 1, 'pnote:merge-delete': 4 }, zbudowane: { karta: 10, note: 2, notetomb: 1, pnote: 4, 'pnote:merge': 4, pnotetomb: 2 } }, odmowy: {}, odsyl: { 'blob221|snap|w ładunku|inne': { nowe: 1, wyk: 1 }, 'blob221|stomb|w ładunku|inne': { nowe: 1, wyk: 1 }, 'blobN|stomb|w ładunku|R4a′': { nowe: 1, wyk: 1 } }, obiegiW4: [1, 2, 2, 2] },
+    2: { W1AB: { R2: 1, R5: 1, 'bez klasy': 4 }, W4: { 'BC|kosz|tożsamość wizyty nieznana starszej aplikacji|tożsamość wizyty': 1, 'BC|kosz|tożsamość wizyty nieznana starszej aplikacji|tożsamość wpisu Kosza': 2, 'BC|wersja|tożsamość wizyty nieznana starszej aplikacji|tożsamość wizyty': 12, 'CA|kosz|tożsamość wizyty nieznana starszej aplikacji|tożsamość wizyty': 1, 'CA|kosz|tożsamość wizyty nieznana starszej aplikacji|tożsamość wpisu Kosza': 2, 'CA|wersja|tożsamość wizyty nieznana starszej aplikacji|tożsamość wizyty': 12 }, delty: { prog: { karta: 12 }, puste: { 'pnote:merge-delete': 2 }, zbudowane: { karta: 11, note: 2, pnote: 1, 'pnote:merge': 6, pnotetomb: 1, ptomb: 3 } }, odmowy: {}, odsyl: { 'blob221|snap|w ładunku|rekord złożony': { nowe: 1, wyk: 1 }, 'delta221|snap|w ładunku|inne': { nowe: 1, wyk: 1 }, 'zdarzenie|snap|w ładunku|gwiazdka': { nowe: 1, wyk: 1 } }, obiegiW4: [2, 2] },
+    3: { W1AB: { R4a: 2, R5: 1, 'bez klasy': 14 }, W4: { 'BC|kosz|pole nieznane starszej aplikacji (221)|pola Kosza 221': 4, 'BC|kosz|tożsamość wizyty nieznana starszej aplikacji|tożsamość wpisu Kosza': 5, 'BC|pnotetomb|pole nieznane starszej aplikacji (221)|nagrobek notatki: deletedWithPatient': 4, 'BC|wersja|tożsamość wizyty nieznana starszej aplikacji|tożsamość wizyty': 12, 'CA|kosz|pole nieznane starszej aplikacji (221)|pola Kosza 221': 4, 'CA|kosz|tożsamość wizyty nieznana starszej aplikacji|tożsamość wpisu Kosza': 5, 'CA|pnotetomb|pole nieznane starszej aplikacji (221)|nagrobek notatki: deletedWithPatient': 4, 'CA|wersja|tożsamość wizyty nieznana starszej aplikacji|tożsamość wizyty': 12 }, delty: { prog: { karta: 14 }, puste: { 'pnote:merge-delete': 4 }, zbudowane: { karta: 13, note: 2, pnote: 3, 'pnote:merge': 8, pnotetomb: 1 } }, odmowy: {}, odsyl: { 'blob221|stomb|w ładunku|inne': { nowe: 3, wyk: 3 }, 'delta221|snap|w ładunku|rekord złożony': { nowe: 4, wyk: 4 }, 'zdarzenie|snap|w ładunku|gwiazdka': { nowe: 1, wyk: 1 } }, obiegiW4: [2, 2] },
   },
   276: {
-    2: { W1AB: {}, W4: { 'BC|kosz|tożsamość wizyty nieznana starszej aplikacji|tożsamość wpisu Kosza': 3, 'BC|wersja|tożsamość wizyty nieznana starszej aplikacji|tożsamość wizyty, odcisk przeliczony': 6, 'CA|kosz|tożsamość wizyty nieznana starszej aplikacji|tożsamość wpisu Kosza': 3, 'CA|wersja|tożsamość wizyty nieznana starszej aplikacji|tożsamość wizyty, odcisk przeliczony': 6 }, odmowy: {}, odsyl: { 'zdarzenie|snap|w ładunku|gwiazdka': { nowe: 1, wyk: 1 } }, rundy: [1, 1, 1] },
+    2: { W1AB: {}, W4: { 'BC|kosz|tożsamość wizyty nieznana starszej aplikacji|tożsamość wpisu Kosza': 3, 'BC|wersja|tożsamość wizyty nieznana starszej aplikacji|tożsamość wizyty, odcisk przeliczony': 6, 'CA|kosz|tożsamość wizyty nieznana starszej aplikacji|tożsamość wpisu Kosza': 3, 'CA|wersja|tożsamość wizyty nieznana starszej aplikacji|tożsamość wizyty, odcisk przeliczony': 6 }, odmowy: {}, odsyl: { 'zdarzenie|snap|w ładunku|gwiazdka': { nowe: 1, wyk: 1 } }, obiegiW4: [1, 1, 1] },
   },
 };
 // Wyrocznia floty (ziarna CI): naruszenia według „klasa | świat” — flota 221 tylko W4 floty (W1 floty — druk), flota 276
@@ -5410,7 +5421,7 @@ function literalFloty(w, o) {
   }
   const odsyl = o ? literalOdsyl([o]) : {};
   return sortuj({
-    rundy: w.punkty.map((p) => p.rund), W4, W1AB, odsyl,
+    obiegiW4: w.punkty.map((p) => p.obiegiW4), W4, W1AB, odsyl,
     ...(w.delty ? { delty: { zbudowane: w.delty.zbudowane, prog: w.delty.prog, puste: w.delty.puste } } : {}),
     odmowy: w.odmowy,
   });
@@ -5467,7 +5478,7 @@ for (const flota of ['221', '276', 'N']) {
         }
       }, 120_000);
     }
-    it('podsumowanie (druk do opisu PR i ALGORITHMS): ziarna, punkty, rundy W4, klasy par i wyroczni, licznik, delty, czas', () => {
+    it('podsumowanie (druk do opisu PR i ALGORITHMS): ziarna, punkty, obiegi wymiany W4, klasy par i wyroczni, licznik, delty, czas', () => {
       const lista = WYNIKI_FLOTY[flota];
       const s = { ziaren: lista.length, mutacji: 0, ms: 0, punktow: 0, wyr: {}, W4: {}, delty: {}, prog: {}, blobow: 0, pobranStanuC: 0, odcisk: { wersji: 0, zeStarszej: 0 }, chwil: 0, polaRetencjiStarszej: 0 };
       for (const w of lista) {
@@ -5615,7 +5626,9 @@ async function echoNaKlonach(S, Y, koperty, koperty2a) {
 
 // ══ Flota ze starszą aplikacją: scenariusze deterministyczne (E3-PR0b) ══════════════════════════════════════════════
 // Jeden świat na scenariusz: swiat(800 + nr) i Math.random z rng(0x6800 + nr), nr — pozycja w P6F (nowy scenariusz
-// tylko na końcu listy — inaczej przesuwa światy istniejących; asercja nr < 80, światy 880–899 ma blok do decyzji niżej).
+// tylko na końcu literału — inaczej przesuwa światy istniejących; asercja nr < 40); ręczne kontrole C = N mają stały
+// świat 840 + pozycja scenariusza bazowego (niezależny od długości listy; asercja < 80, światy 880–899 ma blok do decyzji
+// niżej).
 // A i B — bieżący sejf (bliźniaki); C — bliźniak A z sejfem starszej aplikacji (221 bez dziennika zdarzeń, 276
 // z dziennikiem; retencja v1) albo bieżący (kontrola C = N). Transport opisuje scenariusz: zdarzenia (dostawa, haki do Q odbiorcy), kolejka do 221
 // (dostawaDoStarszej — applyEncryptedDelta), pełna kopia (scalBlob, licznik: źródło blob221, blob276, blobN). Ocena
@@ -5624,7 +5637,9 @@ async function echoNaKlonach(S, Y, koperty, koperty2a) {
 // albo 'flota') i wyrocznia 'p6f W4' z widokiem C jako widokiem starszej aplikacji (stare). Warunki CI: W4 stabilne
 // i każda różnica par dozwolona, wyrocznia bez naruszeń bez klasy; literały P6F_LITERALY (D par po scenariuszu, stan
 // kliniczny po scenariuszu i po W4, D par W4, fakty scenariusza), P6F_WYR (naruszenia wyroczni: świat, urządzenie,
-// encja, rodzaj, klasa) i P6F_ODSYL (licznik: klucz → { wyk, nowe }; w scenariuszach z echem także echo na klonach).
+// encja, rodzaj, klasa) i P6F_ODSYL (licznik: klucz → { wyk, nowe }; w scenariuszach z echem także echo na klonach);
+// literały tylko w przebiegu domyślnym (P6F_DOMYSLNE: normalizacja tożsamości wizyty, licznik, reguła T), warunki CI
+// zawsze; wymog — jawny fakt scenariusza (asercja niezależna od literału).
 // Scenariusze ręczne (E2_AB_P6_FLOTA=wszystkie): bloki p. 6 R2-0, R5-E1 i R3-E2 z jednym urządzeniem na 221 oraz
 // kontrole C = N scenariuszy CI — druk, bez literału. Zmiana zbieżności albo wyroczni przepisuje literały.
 const P6F_WSZYSTKIE = process.env.E2_AB_P6_FLOTA === 'wszystkie';
@@ -5746,6 +5761,9 @@ const P6F = {
       krok(60e3); await p6fOdC(u, u.A); await p6fOdC(u, u.B); await p6fAB(u); await p6fDoC(u, u.A); await p6fDoC(u, u.B);
     },
     fakty: faktyNotatki,
+    // pełna kopia 221 z notatką dochodzi do bieżących urządzeń po usunięciu: ratunek D-21 bieżącej aplikacji ją przywraca
+    // (bez niego klasa notatki floty mogłaby uznać jej brak za skutek starszej aplikacji)
+    wymog: { opis: 'notatka n jest na A, B i C', fakt: (u) => p6fUrz(u).map((U) => `${U.nazwa}: ${notatkaW(U.stan, u.nId) ? 'jest' : 'brak'}`), oczekiwane: ['A: jest', 'B: jest', 'C: jest'] },
   },
   '„Usuń pacjenta” na A, zmiana karty na C — C = N, najpierw zdarzenia do C (notatka zostaje)': {
     ci: true, app: 'N', baza: (S, app) => p6fBaza(S, app, { notatka: true }),
@@ -5926,16 +5944,60 @@ const P6F = {
     },
     fakty: (u) => Object.fromEntries(p6fUrz(u).map((U) => { const x = (U.stan.patientNotes || []).find((q) => q.id === u.nId); return [U.nazwa, x ? x.body : 'brak']; })),
   },
+  // ── CI, dopisane na końcu (warunki klas floty: przyczyna po stronie bieżącej aplikacji nie dostaje klasy floty) ──
+  // Przypięcie i odpięcie na 221 wersji z bieżącej aplikacji (rejestr „nieprzypięta”, chwila treści i odcisk h zgodny
+  // z treścią): bieżąca aplikacja czyta przypięcie w chwili zmiany rekordu i odpięcie też (Bgw_stan, vilda_vault.js
+  // :1568–1570; odcisk zgodny — starsza aplikacja wróciła do stanu rejestru), więc A, B i C kończą bez gwiazdki.
+  // Gwiazdka w widoku bieżącym (rekord złożony z przypięciem) byłaby błędem bieżącej aplikacji bez klasy floty.
+  'Przypięcie i odpięcie na 221 wersji z bieżącej aplikacji (odcisk zgodny z treścią): bieżąca aplikacja widzi odpięcie': {
+    ci: true, kontrolaN: true, app: 'S221', baza: (S, app) => p6fBaza(S, app),
+    kroki: async (u) => {
+      await p6gwiazdka(u, u.C, u.v, true);
+      krok(60e3); await p6fOdC(u, u.A); await p6fOdC(u, u.B); await p6fAB(u);
+      await p6gwiazdka(u, u.C, u.v, false);
+      krok(60e3); await p6fOdC(u, u.A); await p6fOdC(u, u.B); await p6fAB(u);
+    },
+    fakty: (u) => faktyWersji(u, u.v),
+    wymog: { opis: 'v bez gwiazdki na A, B i C', fakt: (u) => p6fUrz(u).map((U) => `${U.nazwa}: ${(gdzie(U, u.v) || { snapshots: [] }).snapshots.find((q) => q.snapshotId === u.v)?.payload?._pinned ? 'z gwiazdką' : 'bez gwiazdki'}`), oczekiwane: ['A: bez gwiazdki', 'B: bez gwiazdki', 'C: bez gwiazdki'] },
+  },
+  // Poprawka v na 221 bez wysłania (C bez delt), „Usuń pacjenta” na A, B bez wiedzy o usunięciu zwraca kartę nową wersją;
+  // nagrobek dochodzi do C przed jego pełną kopią — sejf 221 (bez dziennika zdarzeń) usuwa kartę razem z niewysłaną
+  // poprawką, a karta zwrócona przez B jej nie ma: klasa „zmiana starszej aplikacji usunięta z kartą przed wysłaniem”.
+  // Kontrola C = N (też CI): kolejka zdarzeń C niesie poprawkę i po pełnej wymianie v ma 33 kg wszędzie.
+  'Poprawka na 221 bez wysłania, „Usuń pacjenta” na A, B zwraca kartę: poprawka usunięta z kartą przed wysłaniem': {
+    ci: true, app: 'S221', baza: (S, app) => p6fBaza(S, app),
+    kroki: async (u) => {
+      await popraw(u, u.C, u.v, 33);
+      await p6usunPacjenta(u, u.A, u.P);
+      await p6fNowaWersja(u, u.B, u.P, 'x', { opis: 'nowa wersja (bez wiedzy o usunięciu)' });
+      krok(60e3); await p6fDoC(u, u.A); await p6fDoC(u, u.B);
+      krok(60e3); await p6fOdC(u, u.A); await p6fOdC(u, u.B); await p6fAB(u);
+    },
+    fakty: (u) => faktyWersji(u, u.v),
+  },
+  'Poprawka na C bez wysłania, „Usuń pacjenta” na A, B zwraca kartę — C = N (poprawka zostaje)': {
+    ci: true, app: 'N', baza: (S, app) => p6fBaza(S, app),
+    kroki: async (u) => {
+      await popraw(u, u.C, u.v, 33);
+      await p6usunPacjenta(u, u.A, u.P);
+      await p6fNowaWersja(u, u.B, u.P, 'x', { opis: 'nowa wersja (bez wiedzy o usunięciu)' });
+      krok(60e3); await p6fDoC(u, u.A); await p6fDoC(u, u.B);
+      krok(60e3); await p6fOdC(u, u.A); await p6fOdC(u, u.B); await p6fAB(u);
+    },
+    fakty: (u) => faktyWersji(u, u.v),
+  },
 };
-// Kontrole C = N scenariuszy CI z urządzeniem starszej aplikacji (ręcznie; ten sam program kroków).
-for (const [nazwa, sc] of Object.entries({ ...P6F })) if (sc.kontrolaN) P6F[`${nazwa} — kontrola C = N`] = { ...sc, ci: false, app: 'N' };
+// Kontrole C = N scenariuszy CI z urządzeniem starszej aplikacji (ręcznie; ten sam program kroków; świat 840 + pozycja
+// scenariusza bazowego).
+for (const [nr, [nazwa, sc]] of Object.entries({ ...P6F }).entries()) if (sc.kontrolaN) P6F[`${nazwa} — kontrola C = N`] = { ...sc, ci: false, app: 'N', nrSwiata: 40 + nr };
 const wizytyKarty = (U, pid) => {
   const m = {};
   for (const s of ((U.stan.patients || []).find((p) => p.patientId === pid) || { snapshots: [] }).snapshots) { const v = s.payload && s.payload.visit ? String(s.payload.visit.visitId).slice(0, 4) : '-'; m[v] = (m[v] || 0) + 1; }
   return sortuj(m);
 };
-async function p6fSwiat(nr, sc) {
-  if (!(nr < 80)) throw new Error(`scenariusz floty ${nr}: poza światami 800–879`);
+async function p6fSwiat(nr0, sc) {
+  const nr = sc.nrSwiata ?? nr0;
+  if (!(sc.nrSwiata != null ? nr >= 40 && nr < 80 : nr < 40)) throw new Error(`scenariusz floty ${nr}: poza światami 800–839 (kontrole C = N — 840–879)`);
   ustaw(START);
   const S = swiat(800 + nr);
   const los = rng(0x6800 + nr);
@@ -5977,7 +6039,7 @@ async function p6fOcen(u, nazwa) {
   delete w.wyr;
   const nar = [...wyrW1, ...wyrW4];
   return {
-    literal: { W1, kliniczny: kl, W4: { ok: w.ok, rund: w.rund, pary: Object.fromEntries(w.pary.map((p) => [p.para, p.roznice])), kliniczny: w.opis } },
+    literal: { W1, kliniczny: kl, W4: { ok: w.ok, obiegi: w.rund, pary: Object.fromEntries(w.pary.map((p) => [p.para, p.roznice])), kliniczny: w.opis } },
     wyr: nar.map((x) => `${x.swiat}: ${x.urz} ${x.encja} ${x.et} ${x.rodzaj} [${x.klasa || 'bez klasy'}]`).sort(),
     czerwone: wyrCzerwone(nar),
     w4ok: w.ok,
@@ -6005,97 +6067,115 @@ function p6fOdsyl(S, zEchem) {
 const P6F_LITERALY = {
   '„Usuń pacjenta” na 221, potem zmiana karty na A: notatka bez ratunku D-21': {
     W1: { AB: [], BC: [], CA: [] },
-    W4: { kliniczny: { A: 'karty P[v:20 w:21 x:25] | Kosz - | notatki -', B: 'karty P[v:20 w:21 x:25] | Kosz - | notatki -', C: 'karty P[v:20 w:21 x:25] | Kosz - | notatki -' }, ok: true, pary: { AB: [], BC: [], CA: [] }, rund: 1 },
+    W4: { kliniczny: { A: 'karty P[v:20 w:21 x:25] | Kosz - | notatki -', B: 'karty P[v:20 w:21 x:25] | Kosz - | notatki -', C: 'karty P[v:20 w:21 x:25] | Kosz - | notatki -' }, obiegi: 1, ok: true, pary: { AB: [], BC: [], CA: [] } },
     fakty: { A: 'karta jest, notatka brak, nagrobek notatki bez karty', B: 'karta jest, notatka brak, nagrobek notatki bez karty', C: 'karta jest, notatka brak, nagrobek notatki bez karty' },
     kliniczny: { A: 'karty P[v:20 w:21 x:25] | Kosz - | notatki -', B: 'karty P[v:20 w:21 x:25] | Kosz - | notatki -', C: 'karty P[v:20 w:21 x:25] | Kosz - | notatki -' },
   },
   '„Usuń pacjenta” na C, potem zmiana karty na A — C = N (notatka zostaje)': {
     W1: { AB: [], BC: [], CA: [] },
-    W4: { kliniczny: { A: 'karty P[v:20 w:21 x:25] | Kosz - | notatki n: Fikcyjna treść', B: 'karty P[v:20 w:21 x:25] | Kosz - | notatki n: Fikcyjna treść', C: 'karty P[v:20 w:21 x:25] | Kosz - | notatki n: Fikcyjna treść' }, ok: true, pary: { AB: [], BC: [], CA: [] }, rund: 1 },
+    W4: { kliniczny: { A: 'karty P[v:20 w:21 x:25] | Kosz - | notatki n: Fikcyjna treść', B: 'karty P[v:20 w:21 x:25] | Kosz - | notatki n: Fikcyjna treść', C: 'karty P[v:20 w:21 x:25] | Kosz - | notatki n: Fikcyjna treść' }, obiegi: 1, ok: true, pary: { AB: [], BC: [], CA: [] } },
     fakty: { A: 'karta jest, notatka jest, nagrobek notatki -', B: 'karta jest, notatka jest, nagrobek notatki -', C: 'karta jest, notatka jest, nagrobek notatki -' },
     kliniczny: { A: 'karty P[v:20 w:21 x:25] | Kosz - | notatki n: Fikcyjna treść', B: 'karty P[v:20 w:21 x:25] | Kosz - | notatki n: Fikcyjna treść', C: 'karty P[v:20 w:21 x:25] | Kosz - | notatki n: Fikcyjna treść' },
   },
   '„Usuń pacjenta” na A, zmiana karty na 221 — najpierw zdarzenia do C: notatka bez ratunku D-21': {
     W1: { AB: [], BC: ['pnotetomb n: deletedWithPatient [pole nieznane starszej aplikacji (221)]', 'wersja P/x: payload.visit [tożsamość wizyty nieznana starszej aplikacji]'], CA: ['pnotetomb n: deletedWithPatient [pole nieznane starszej aplikacji (221)]', 'wersja P/x: payload.visit [tożsamość wizyty nieznana starszej aplikacji]'] },
-    W4: { kliniczny: { A: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -', B: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -', C: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -' }, ok: true, pary: { AB: [], BC: ['pnotetomb n: deletedWithPatient [pole nieznane starszej aplikacji (221)]', 'wersja P/x: payload.visit [tożsamość wizyty nieznana starszej aplikacji]'], CA: ['pnotetomb n: deletedWithPatient [pole nieznane starszej aplikacji (221)]', 'wersja P/x: payload.visit [tożsamość wizyty nieznana starszej aplikacji]'] }, rund: 1 },
+    W4: { kliniczny: { A: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -', B: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -', C: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -' }, obiegi: 1, ok: true, pary: { AB: [], BC: ['pnotetomb n: deletedWithPatient [pole nieznane starszej aplikacji (221)]', 'wersja P/x: payload.visit [tożsamość wizyty nieznana starszej aplikacji]'], CA: ['pnotetomb n: deletedWithPatient [pole nieznane starszej aplikacji (221)]', 'wersja P/x: payload.visit [tożsamość wizyty nieznana starszej aplikacji]'] } },
     fakty: { A: 'karta jest, notatka brak, nagrobek notatki z kartą', B: 'karta jest, notatka brak, nagrobek notatki z kartą', C: 'karta jest, notatka brak, nagrobek notatki bez karty' },
     kliniczny: { A: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -', B: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -', C: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -' },
   },
   '„Usuń pacjenta” na A, zmiana karty na 221 — najpierw pełna kopia C (notatka zostaje)': {
     W1: { AB: [], BC: ['wersja P/x: payload.visit [tożsamość wizyty nieznana starszej aplikacji]'], CA: ['wersja P/x: payload.visit [tożsamość wizyty nieznana starszej aplikacji]'] },
-    W4: { kliniczny: { A: 'karty P[v:20 w:21 x:26] | Kosz - | notatki n: Fikcyjna treść', B: 'karty P[v:20 w:21 x:26] | Kosz - | notatki n: Fikcyjna treść', C: 'karty P[v:20 w:21 x:26] | Kosz - | notatki n: Fikcyjna treść' }, ok: true, pary: { AB: [], BC: ['wersja P/x: payload.visit [tożsamość wizyty nieznana starszej aplikacji]'], CA: ['wersja P/x: payload.visit [tożsamość wizyty nieznana starszej aplikacji]'] }, rund: 1 },
+    W4: { kliniczny: { A: 'karty P[v:20 w:21 x:26] | Kosz - | notatki n: Fikcyjna treść', B: 'karty P[v:20 w:21 x:26] | Kosz - | notatki n: Fikcyjna treść', C: 'karty P[v:20 w:21 x:26] | Kosz - | notatki n: Fikcyjna treść' }, obiegi: 1, ok: true, pary: { AB: [], BC: ['wersja P/x: payload.visit [tożsamość wizyty nieznana starszej aplikacji]'], CA: ['wersja P/x: payload.visit [tożsamość wizyty nieznana starszej aplikacji]'] } },
     fakty: { A: 'karta jest, notatka jest, nagrobek notatki -', B: 'karta jest, notatka jest, nagrobek notatki -', C: 'karta jest, notatka jest, nagrobek notatki -' },
     kliniczny: { A: 'karty P[v:20 w:21 x:26] | Kosz - | notatki n: Fikcyjna treść', B: 'karty P[v:20 w:21 x:26] | Kosz - | notatki n: Fikcyjna treść', C: 'karty P[v:20 w:21 x:26] | Kosz - | notatki n: Fikcyjna treść' },
   },
   '„Usuń pacjenta” na A, zmiana karty na C — C = N, najpierw zdarzenia do C (notatka zostaje)': {
     W1: { AB: [], BC: [], CA: [] },
-    W4: { kliniczny: { A: 'karty P[v:20 w:21 x:26] | Kosz - | notatki n: Fikcyjna treść', B: 'karty P[v:20 w:21 x:26] | Kosz - | notatki n: Fikcyjna treść', C: 'karty P[v:20 w:21 x:26] | Kosz - | notatki n: Fikcyjna treść' }, ok: true, pary: { AB: [], BC: [], CA: [] }, rund: 1 },
+    W4: { kliniczny: { A: 'karty P[v:20 w:21 x:26] | Kosz - | notatki n: Fikcyjna treść', B: 'karty P[v:20 w:21 x:26] | Kosz - | notatki n: Fikcyjna treść', C: 'karty P[v:20 w:21 x:26] | Kosz - | notatki n: Fikcyjna treść' }, obiegi: 1, ok: true, pary: { AB: [], BC: [], CA: [] } },
     fakty: { A: 'karta jest, notatka jest, nagrobek notatki -', B: 'karta jest, notatka jest, nagrobek notatki -', C: 'karta jest, notatka jest, nagrobek notatki -' },
     kliniczny: { A: 'karty P[v:20 w:21 x:26] | Kosz - | notatki n: Fikcyjna treść', B: 'karty P[v:20 w:21 x:26] | Kosz - | notatki n: Fikcyjna treść', C: 'karty P[v:20 w:21 x:26] | Kosz - | notatki n: Fikcyjna treść' },
   },
   'Kosz na 221: echo tożsamości wizyty u odbiorcy pełnej kopii i echo na klonach': {
     W1: { AB: [], BC: ['kosz v|P: visitIdentity [tożsamość wizyty nieznana starszej aplikacji]'], CA: ['kosz v|P: visitIdentity [tożsamość wizyty nieznana starszej aplikacji]'] },
-    W4: { kliniczny: { A: 'karty P[w:21] | Kosz v@P:20 | notatki -', B: 'karty P[w:21] | Kosz v@P:20 | notatki -', C: 'karty P[w:21] | Kosz v@P:20 | notatki -' }, ok: true, pary: { AB: [], BC: ['kosz v|P: visitIdentity [tożsamość wizyty nieznana starszej aplikacji]'], CA: ['kosz v|P: visitIdentity [tożsamość wizyty nieznana starszej aplikacji]'] }, rund: 1 },
+    W4: { kliniczny: { A: 'karty P[w:21] | Kosz v@P:20 | notatki -', B: 'karty P[w:21] | Kosz v@P:20 | notatki -', C: 'karty P[w:21] | Kosz v@P:20 | notatki -' }, obiegi: 1, ok: true, pary: { AB: [], BC: ['kosz v|P: visitIdentity [tożsamość wizyty nieznana starszej aplikacji]'], CA: ['kosz v|P: visitIdentity [tożsamość wizyty nieznana starszej aplikacji]'] } },
     kliniczny: { A: 'karty P[w:21] | Kosz v@P:20 | notatki -', B: 'karty P[w:21] | Kosz v@P:20 | notatki -', C: 'karty P[w:21] | Kosz v@P:20 | notatki -' },
   },
   'Drugi rząd przez 221: wpis Kosza z gwiazdką z A do C (C z niewysłaną poprawką), pełna kopia C′ do A′': {
     W1: { AB: [], BC: ['kosz v|P: gwiazdka, visitIdentity [pole nieznane starszej aplikacji (221)]'], CA: ['kosz v|P: gwiazdka, visitIdentity [pole nieznane starszej aplikacji (221)]'] },
-    W4: { kliniczny: { A: 'karty P[w:21] | Kosz v@P:33* | notatki -', B: 'karty P[w:21] | Kosz v@P:33* | notatki -', C: 'karty P[w:21] | Kosz v@P:33* | notatki -' }, ok: true, pary: { AB: [], BC: ['kosz v|P: gwiazdka, visitIdentity [pole nieznane starszej aplikacji (221)]'], CA: ['kosz v|P: gwiazdka, visitIdentity [pole nieznane starszej aplikacji (221)]'] }, rund: 1 },
+    W4: { kliniczny: { A: 'karty P[w:21] | Kosz v@P:33* | notatki -', B: 'karty P[w:21] | Kosz v@P:33* | notatki -', C: 'karty P[w:21] | Kosz v@P:33* | notatki -' }, obiegi: 1, ok: true, pary: { AB: [], BC: ['kosz v|P: gwiazdka, visitIdentity [pole nieznane starszej aplikacji (221)]'], CA: ['kosz v|P: gwiazdka, visitIdentity [pole nieznane starszej aplikacji (221)]'] } },
     kliniczny: { A: 'karty P[w:21] | Kosz v@P:33* | notatki -', B: 'karty P[w:21] | Kosz v@P:33* | notatki -', C: 'karty P[w:21] | Kosz v@P:33* | notatki -' },
   },
   'Retencja na 221 po „Scal pacjentów”: jedyny stan wizyty przeniesionej (recentHours 0)': {
     W1: { AB: [], BC: ['wersja Q/v: tylko B [retencja starszej aplikacji — obecność wersji]'], CA: ['wersja Q/v: tylko A [retencja starszej aplikacji — obecność wersji]'] },
-    W4: { kliniczny: { A: 'karty Q[v:20 g1:21] | Kosz - | notatki -', B: 'karty Q[v:20 g1:21] | Kosz - | notatki -', C: 'karty Q[g1:21] | Kosz - | notatki -' }, ok: true, pary: { AB: [], BC: ['wersja Q/v: tylko B [retencja starszej aplikacji — obecność wersji]'], CA: ['wersja Q/v: tylko A [retencja starszej aplikacji — obecność wersji]'] }, rund: 1 },
+    W4: { kliniczny: { A: 'karty Q[v:20 g1:21] | Kosz - | notatki -', B: 'karty Q[v:20 g1:21] | Kosz - | notatki -', C: 'karty Q[g1:21] | Kosz - | notatki -' }, obiegi: 1, ok: true, pary: { AB: [], BC: ['wersja Q/v: tylko B [retencja starszej aplikacji — obecność wersji]'], CA: ['wersja Q/v: tylko A [retencja starszej aplikacji — obecność wersji]'] } },
     fakty: { A: 'wersji 2, wpisów retencji 2', B: 'wersji 2, wpisów retencji 2', C: 'wersji 1, wpisów retencji 2', v: { A: 'Q', B: 'Q', C: 'brak' } },
     kliniczny: { A: 'karty Q[v:20 g1:21] | Kosz - | notatki -', B: 'karty Q[v:20 g1:21] | Kosz - | notatki -', C: 'karty Q[g1:21] | Kosz - | notatki -' },
   },
   'Retencja po „Scal pacjentów” — C = N (bez strat)': {
     W1: { AB: [], BC: [], CA: [] },
-    W4: { kliniczny: { A: 'karty Q[v:20 g1:21] | Kosz - | notatki -', B: 'karty Q[v:20 g1:21] | Kosz - | notatki -', C: 'karty Q[v:20 g1:21] | Kosz - | notatki -' }, ok: true, pary: { AB: [], BC: [], CA: [] }, rund: 1 },
+    W4: { kliniczny: { A: 'karty Q[v:20 g1:21] | Kosz - | notatki -', B: 'karty Q[v:20 g1:21] | Kosz - | notatki -', C: 'karty Q[v:20 g1:21] | Kosz - | notatki -' }, obiegi: 1, ok: true, pary: { AB: [], BC: [], CA: [] } },
     fakty: { A: 'wersji 2, wpisów retencji 1', B: 'wersji 2, wpisów retencji 1', C: 'wersji 2, wpisów retencji 1', v: { A: 'Q', B: 'Q', C: 'Q' } },
     kliniczny: { A: 'karty Q[v:20 g1:21] | Kosz - | notatki -', B: 'karty Q[v:20 g1:21] | Kosz - | notatki -', C: 'karty Q[v:20 g1:21] | Kosz - | notatki -' },
   },
   'Retencja na 221 z parametrami aplikacji: 8 wizyt z 8 dni sprzed 40–54 dni': {
     W1: { AB: [], BC: ['wersja P/dz0: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz1: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz2: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz3: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz4: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz5: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz6: tylko B [retencja starszej aplikacji — obecność wersji]'], CA: ['wersja P/dz0: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz1: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz2: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz3: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz4: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz5: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz6: tylko A [retencja starszej aplikacji — obecność wersji]'] },
-    W4: { kliniczny: { A: 'karty P[dz0:20 dz1:21 dz2:22 dz3:23 dz4:24 dz5:25 dz6:26 dz7:27] | Kosz - | notatki -', B: 'karty P[dz0:20 dz1:21 dz2:22 dz3:23 dz4:24 dz5:25 dz6:26 dz7:27] | Kosz - | notatki -', C: 'karty P[dz7:27] | Kosz - | notatki -' }, ok: true, pary: { AB: [], BC: ['wersja P/dz0: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz1: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz2: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz3: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz4: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz5: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz6: tylko B [retencja starszej aplikacji — obecność wersji]'], CA: ['wersja P/dz0: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz1: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz2: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz3: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz4: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz5: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz6: tylko A [retencja starszej aplikacji — obecność wersji]'] }, rund: 1 },
+    W4: { kliniczny: { A: 'karty P[dz0:20 dz1:21 dz2:22 dz3:23 dz4:24 dz5:25 dz6:26 dz7:27] | Kosz - | notatki -', B: 'karty P[dz0:20 dz1:21 dz2:22 dz3:23 dz4:24 dz5:25 dz6:26 dz7:27] | Kosz - | notatki -', C: 'karty P[dz7:27] | Kosz - | notatki -' }, obiegi: 1, ok: true, pary: { AB: [], BC: ['wersja P/dz0: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz1: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz2: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz3: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz4: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz5: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz6: tylko B [retencja starszej aplikacji — obecność wersji]'], CA: ['wersja P/dz0: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz1: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz2: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz3: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz4: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz5: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz6: tylko A [retencja starszej aplikacji — obecność wersji]'] } },
     fakty: { A: 'wersji 8, wpisów retencji 7', B: 'wersji 8, wpisów retencji 7', C: 'wersji 1, wpisów retencji 7' },
     kliniczny: { A: 'karty P[dz0:20 dz1:21 dz2:22 dz3:23 dz4:24 dz5:25 dz6:26 dz7:27] | Kosz - | notatki -', B: 'karty P[dz0:20 dz1:21 dz2:22 dz3:23 dz4:24 dz5:25 dz6:26 dz7:27] | Kosz - | notatki -', C: 'karty P[dz7:27] | Kosz - | notatki -' },
   },
   'Retencja na 276 z parametrami aplikacji: nagrobek retencji idzie zdarzeniem': {
     W1: { AB: [], BC: ['wersja P/dz0: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz1: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz2: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz3: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz4: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz5: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz6: tylko B [retencja starszej aplikacji — obecność wersji]'], CA: ['wersja P/dz0: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz1: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz2: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz3: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz4: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz5: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz6: tylko A [retencja starszej aplikacji — obecność wersji]'] },
-    W4: { kliniczny: { A: 'karty P[dz0:20 dz1:21 dz2:22 dz3:23 dz4:24 dz5:25 dz6:26 dz7:27] | Kosz - | notatki -', B: 'karty P[dz0:20 dz1:21 dz2:22 dz3:23 dz4:24 dz5:25 dz6:26 dz7:27] | Kosz - | notatki -', C: 'karty P[dz7:27] | Kosz - | notatki -' }, ok: true, pary: { AB: [], BC: ['wersja P/dz0: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz1: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz2: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz3: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz4: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz5: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz6: tylko B [retencja starszej aplikacji — obecność wersji]'], CA: ['wersja P/dz0: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz1: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz2: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz3: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz4: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz5: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz6: tylko A [retencja starszej aplikacji — obecność wersji]'] }, rund: 1 },
+    W4: { kliniczny: { A: 'karty P[dz0:20 dz1:21 dz2:22 dz3:23 dz4:24 dz5:25 dz6:26 dz7:27] | Kosz - | notatki -', B: 'karty P[dz0:20 dz1:21 dz2:22 dz3:23 dz4:24 dz5:25 dz6:26 dz7:27] | Kosz - | notatki -', C: 'karty P[dz7:27] | Kosz - | notatki -' }, obiegi: 1, ok: true, pary: { AB: [], BC: ['wersja P/dz0: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz1: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz2: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz3: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz4: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz5: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz6: tylko B [retencja starszej aplikacji — obecność wersji]'], CA: ['wersja P/dz0: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz1: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz2: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz3: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz4: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz5: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz6: tylko A [retencja starszej aplikacji — obecność wersji]'] } },
     fakty: { A: 'wersji 8, wpisów retencji 7', B: 'wersji 8, wpisów retencji 7', C: 'wersji 1, wpisów retencji 7' },
     kliniczny: { A: 'karty P[dz0:20 dz1:21 dz2:22 dz3:23 dz4:24 dz5:25 dz6:26 dz7:27] | Kosz - | notatki -', B: 'karty P[dz0:20 dz1:21 dz2:22 dz3:23 dz4:24 dz5:25 dz6:26 dz7:27] | Kosz - | notatki -', C: 'karty P[dz7:27] | Kosz - | notatki -' },
   },
   'Retencja na 276 po „Scal 5 → 4 → 3” na A': {
     W1: { AB: [], BC: ['wersja X/c: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja X/g1: tylko B [retencja starszej aplikacji — obecność wersji]'], CA: ['wersja X/c: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja X/g1: tylko A [retencja starszej aplikacji — obecność wersji]'] },
-    W4: { kliniczny: { A: 'karty X[g1:22 c:25 g2:22] | Kosz - | notatki -', B: 'karty X[g1:22 c:25 g2:22] | Kosz - | notatki -', C: 'karty X[g2:22] | Kosz - | notatki -' }, ok: true, pary: { AB: [], BC: ['wersja X/c: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja X/g1: tylko B [retencja starszej aplikacji — obecność wersji]'], CA: ['wersja X/c: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja X/g1: tylko A [retencja starszej aplikacji — obecność wersji]'] }, rund: 1 },
+    W4: { kliniczny: { A: 'karty X[g1:22 c:25 g2:22] | Kosz - | notatki -', B: 'karty X[g1:22 c:25 g2:22] | Kosz - | notatki -', C: 'karty X[g2:22] | Kosz - | notatki -' }, obiegi: 1, ok: true, pary: { AB: [], BC: ['wersja X/c: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja X/g1: tylko B [retencja starszej aplikacji — obecność wersji]'], CA: ['wersja X/c: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja X/g1: tylko A [retencja starszej aplikacji — obecność wersji]'] } },
     fakty: { po: { A: { '0ad8': 1, '2ba5': 1, '2dd5': 1 }, B: { '0ad8': 1, '2ba5': 1, '2dd5': 1 }, C: { '0ad8': 1 } }, przed: { A: { '0ad8': 3, '2ba5': 3, '2dd5': 1 }, B: { '0ad8': 3, '2ba5': 3, '2dd5': 1 }, C: { '0ad8': 3, '2ba5': 3, '2dd5': 1 } } },
     kliniczny: { A: 'karty X[g1:22 c:25 g2:22] | Kosz - | notatki -', B: 'karty X[g1:22 c:25 g2:22] | Kosz - | notatki -', C: 'karty X[g2:22] | Kosz - | notatki -' },
   },
   'Gwiazdka na 221: „Odepnij i usuń”, potem „Przywróć”': {
     W1: { AB: [], BC: [], CA: [] },
-    W4: { kliniczny: { A: 'karty P[v:20* w:21] | Kosz - | notatki -', B: 'karty P[v:20* w:21] | Kosz - | notatki -', C: 'karty P[v:20* w:21] | Kosz - | notatki -' }, ok: true, pary: { AB: [], BC: [], CA: [] }, rund: 1 },
+    W4: { kliniczny: { A: 'karty P[v:20* w:21] | Kosz - | notatki -', B: 'karty P[v:20* w:21] | Kosz - | notatki -', C: 'karty P[v:20* w:21] | Kosz - | notatki -' }, obiegi: 1, ok: true, pary: { AB: [], BC: [], CA: [] } },
     fakty: { A: 'karta P, rev 2, _pinned 1, _pinnedState jest, _contentAtISO jest', B: 'karta P, rev 2, _pinned 1, _pinnedState jest, _contentAtISO jest', C: 'karta P, rev 2, _pinned 1, _pinnedState jest, _contentAtISO jest' },
     kliniczny: { A: 'karty P[v:20* w:21] | Kosz - | notatki -', B: 'karty P[v:20* w:21] | Kosz - | notatki -', C: 'karty P[v:20* w:21] | Kosz - | notatki -' },
   },
   'Gwiazdka i odpięcie na 221 na wersji zapisanej na 221 (obie kopie bez W3): odbiorca bierze całą nowszą wersję': {
     W1: { AB: [], BC: ['wersja P/x: payload.visit [tożsamość wizyty nieznana starszej aplikacji]'], CA: ['wersja P/x: payload.visit [tożsamość wizyty nieznana starszej aplikacji]'] },
-    W4: { kliniczny: { A: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -', B: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -', C: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -' }, ok: true, pary: { AB: [], BC: ['wersja P/x: payload.visit [tożsamość wizyty nieznana starszej aplikacji]'], CA: ['wersja P/x: payload.visit [tożsamość wizyty nieznana starszej aplikacji]'] }, rund: 1 },
+    W4: { kliniczny: { A: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -', B: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -', C: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -' }, obiegi: 1, ok: true, pary: { AB: [], BC: ['wersja P/x: payload.visit [tożsamość wizyty nieznana starszej aplikacji]'], CA: ['wersja P/x: payload.visit [tożsamość wizyty nieznana starszej aplikacji]'] } },
     fakty: { A: 'karta P, rev 2, _pinned 0, _pinnedState brak, _contentAtISO brak', B: 'karta P, rev 2, _pinned 0, _pinnedState brak, _contentAtISO brak', C: 'karta P, rev 2, _pinned 0, _pinnedState brak, _contentAtISO brak' },
     kliniczny: { A: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -', B: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -', C: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -' },
   },
   '276: nowa wersja na C, A dopisuje tożsamość wizyty; echo na klonach': {
     W1: { AB: [], BC: ['wersja P/x: payload._pinnedState.h, payload.visit [tożsamość wizyty nieznana starszej aplikacji]'], CA: ['wersja P/x: payload._pinnedState.h, payload.visit [tożsamość wizyty nieznana starszej aplikacji]'] },
-    W4: { kliniczny: { A: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -', B: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -', C: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -' }, ok: true, pary: { AB: [], BC: ['wersja P/x: payload._pinnedState.h, payload.visit [tożsamość wizyty nieznana starszej aplikacji]'], CA: ['wersja P/x: payload._pinnedState.h, payload.visit [tożsamość wizyty nieznana starszej aplikacji]'] }, rund: 1 },
+    W4: { kliniczny: { A: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -', B: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -', C: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -' }, obiegi: 1, ok: true, pary: { AB: [], BC: ['wersja P/x: payload._pinnedState.h, payload.visit [tożsamość wizyty nieznana starszej aplikacji]'], CA: ['wersja P/x: payload._pinnedState.h, payload.visit [tożsamość wizyty nieznana starszej aplikacji]'] } },
     fakty: { A: 'karta P, rev 0, _pinned 0, _pinnedState jest, _contentAtISO jest', B: 'karta P, rev 0, _pinned 0, _pinnedState jest, _contentAtISO jest', C: 'karta P, rev 0, _pinned 0, _pinnedState jest, _contentAtISO jest', hakiA: 0 },
     kliniczny: { A: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -', B: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -', C: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -' },
   },
   'Same bieżące urządzenia: Kosz w zwróconej starej karcie, potem „Usuń pacjenta” karty scalonej': {
     W1: { AB: [], BC: ['kosz x|X: rev [R4a]'], CA: ['kosz x|X: rev [R4a]'] },
-    W4: { kliniczny: { A: 'karty X[y:31] | Kosz x@X:30 | notatki -', B: 'karty X[y:31] | Kosz x@X:30 | notatki -', C: 'karty X[y:31] | Kosz x@X:30 | notatki -' }, ok: true, pary: { AB: [], BC: [], CA: [] }, rund: 2 },
+    W4: { kliniczny: { A: 'karty X[y:31] | Kosz x@X:30 | notatki -', B: 'karty X[y:31] | Kosz x@X:30 | notatki -', C: 'karty X[y:31] | Kosz x@X:30 | notatki -' }, obiegi: 2, ok: true, pary: { AB: [], BC: [], CA: [] } },
     fakty: { A: 'Kosz pod X', B: 'Kosz pod X', C: 'Kosz pod X' },
     kliniczny: { A: 'karty X[y:31] | Kosz x@X:30 | notatki -', B: 'karty X[y:31] | Kosz x@X:30 | notatki -', C: 'karty X[y:31] | Kosz x@X:30 | notatki -' },
+  },
+  'Przypięcie i odpięcie na 221 wersji z bieżącej aplikacji (odcisk zgodny z treścią): bieżąca aplikacja widzi odpięcie': {
+    W1: { AB: [], BC: [], CA: [] },
+    W4: { kliniczny: { A: 'karty P[v:20 w:21] | Kosz - | notatki -', B: 'karty P[v:20 w:21] | Kosz - | notatki -', C: 'karty P[v:20 w:21] | Kosz - | notatki -' }, obiegi: 1, ok: true, pary: { AB: [], BC: [], CA: [] } },
+    fakty: { A: 'karta P, rev 2, _pinned 0, _pinnedState jest, _contentAtISO jest', B: 'karta P, rev 2, _pinned 0, _pinnedState jest, _contentAtISO jest', C: 'karta P, rev 2, _pinned 0, _pinnedState jest, _contentAtISO jest' },
+    kliniczny: { A: 'karty P[v:20 w:21] | Kosz - | notatki -', B: 'karty P[v:20 w:21] | Kosz - | notatki -', C: 'karty P[v:20 w:21] | Kosz - | notatki -' },
+  },
+  'Poprawka na 221 bez wysłania, „Usuń pacjenta” na A, B zwraca kartę: poprawka usunięta z kartą przed wysłaniem': {
+    W1: { AB: [], BC: ['wersja P/v: tylko B', 'wersja P/w: tylko B'], CA: ['wersja P/v: tylko A', 'wersja P/w: tylko A'] },
+    W4: { kliniczny: { A: 'karty P[v:20 w:21 x:25] | Kosz - | notatki -', B: 'karty P[v:20 w:21 x:25] | Kosz - | notatki -', C: 'karty P[v:20 w:21 x:25] | Kosz - | notatki -' }, obiegi: 2, ok: true, pary: { AB: [], BC: [], CA: [] } },
+    fakty: { A: 'karta P, rev 0, _pinned 0, _pinnedState jest, _contentAtISO jest', B: 'karta P, rev 0, _pinned 0, _pinnedState jest, _contentAtISO jest', C: 'brak' },
+    kliniczny: { A: 'karty P[v:20 w:21 x:25] | Kosz - | notatki -', B: 'karty P[v:20 w:21 x:25] | Kosz - | notatki -', C: 'karty P[x:25] | Kosz - | notatki -' },
+  },
+  'Poprawka na C bez wysłania, „Usuń pacjenta” na A, B zwraca kartę — C = N (poprawka zostaje)': {
+    W1: { AB: [], BC: ['wersja P/v: tylko B', 'wersja P/w: tylko B'], CA: ['wersja P/v: tylko A', 'wersja P/w: tylko A'] },
+    W4: { kliniczny: { A: 'karty P[v:33 w:21 x:25] | Kosz - | notatki -', B: 'karty P[v:33 w:21 x:25] | Kosz - | notatki -', C: 'karty P[v:33 w:21 x:25] | Kosz - | notatki -' }, obiegi: 2, ok: true, pary: { AB: [], BC: [], CA: [] } },
+    fakty: { A: 'karta P, rev 1, _pinned 0, _pinnedState jest, _contentAtISO jest', B: 'karta P, rev 1, _pinned 0, _pinnedState jest, _contentAtISO jest', C: 'brak' },
+    kliniczny: { A: 'karty P[v:33 w:21 x:25] | Kosz - | notatki -', B: 'karty P[v:33 w:21 x:25] | Kosz - | notatki -', C: 'karty P[x:25] | Kosz - | notatki -' },
   },
 };
 const P6F_WYR = {
@@ -6185,6 +6265,19 @@ const P6F_WYR = {
     'p6f W4: B wizyta x wskrzeszenie [D-4 A (Kosz w zwróconej starej karcie)]',
     'p6f W4: C wizyta x wskrzeszenie [D-4 A (Kosz w zwróconej starej karcie)]',
   ],
+  'Poprawka na 221 bez wysłania, „Usuń pacjenta” na A, B zwraca kartę: poprawka usunięta z kartą przed wysłaniem': [
+    'p6f W1: A wizyta v treść [zmiana starszej aplikacji usunięta z kartą przed wysłaniem]',
+    'p6f W1: B wizyta v treść [zmiana starszej aplikacji usunięta z kartą przed wysłaniem]',
+    'p6f W1: C wizyta v utrata [karta częściowa (nagrobek przegrał lokalnie, bez haka H1)]',
+    'p6f W1: C wizyta w utrata [karta częściowa (nagrobek przegrał lokalnie, bez haka H1)]',
+    'p6f W4: A wizyta v treść [zmiana starszej aplikacji usunięta z kartą przed wysłaniem]',
+    'p6f W4: B wizyta v treść [zmiana starszej aplikacji usunięta z kartą przed wysłaniem]',
+    'p6f W4: C wizyta v treść [zmiana starszej aplikacji usunięta z kartą przed wysłaniem]',
+  ],
+  'Poprawka na C bez wysłania, „Usuń pacjenta” na A, B zwraca kartę — C = N (poprawka zostaje)': [
+    'p6f W1: C wizyta v utrata [karta częściowa (nagrobek przegrał lokalnie, bez haka H1)]',
+    'p6f W1: C wizyta w utrata [karta częściowa (nagrobek przegrał lokalnie, bez haka H1)]',
+  ],
 };
 const P6F_ODSYL = {
   '„Usuń pacjenta” na 221, potem zmiana karty na A: notatka bez ratunku D-21': { literal: {}, wiersze: {} },
@@ -6203,6 +6296,9 @@ const P6F_ODSYL = {
   'Gwiazdka i odpięcie na 221 na wersji zapisanej na 221 (obie kopie bez W3): odbiorca bierze całą nowszą wersję': { literal: {}, wiersze: { 'blob221:po2a': 6, 'blob221:surowe': 6 } },
   '276: nowa wersja na C, A dopisuje tożsamość wizyty; echo na klonach': { klony: { drugiRzad: 0, drugiRzad2a: 0, obiegi: [0, 0, 0, 0], ponadObiegi: 0, prob: 1, przezStarsza: { doInnych: 0, doNadawcy: 0, po2a: 1, prob: 1 } }, literal: {}, wiersze: { 'zdarzenie276:po2a': 2, 'zdarzenie276:surowe': 2 } },
   'Same bieżące urządzenia: Kosz w zwróconej starej karcie, potem „Usuń pacjenta” karty scalonej': { literal: { 'zdarzenie|karta|w ładunku|nagłówek karty': { nowe: 1, wyk: 1 } }, wiersze: { 'zdarzenie:po2a': 1, 'zdarzenie:surowe': 3, 'zdarzenie:wyk': 1 } },
+  'Przypięcie i odpięcie na 221 wersji z bieżącej aplikacji (odcisk zgodny z treścią): bieżąca aplikacja widzi odpięcie': { literal: {}, wiersze: {} },
+  'Poprawka na 221 bez wysłania, „Usuń pacjenta” na A, B zwraca kartę: poprawka usunięta z kartą przed wysłaniem': { literal: {}, wiersze: {} },
+  'Poprawka na C bez wysłania, „Usuń pacjenta” na A, B zwraca kartę — C = N (poprawka zostaje)': { literal: {}, wiersze: {} },
 };
 describe('A ≡ B, flota ze starszą aplikacją: scenariusze deterministyczne (literały: D par, stan kliniczny, W4, wyrocznia, licznik)', () => {
   d1();
@@ -6217,9 +6313,11 @@ describe('A ≡ B, flota ze starszą aplikacją: scenariusze deterministyczne (l
       if (process.env.E2_AB_WYNIKI) appendFileSync(process.env.E2_AB_WYNIKI, JSON.stringify({ typ: 'p6f', nr, nazwa, app: sc.app, literal, wyr: w.wyr, odsyl, dziennik: u.S.dziennik }) + '\n');
       if (!sc.ci) return;
       expect.soft({ w4ok: w.w4ok, czerwone: w.czerwone }, `${nazwa}: W4 stabilne z różnicami dozwolonymi; wyrocznia bez naruszeń bez klasy`).toEqual({ w4ok: true, czerwone: [] });
+      if (sc.wymog) expect.soft(await sc.wymog.fakt(u), `${nazwa}: ${sc.wymog.opis}`).toEqual(sc.wymog.oczekiwane);
+      if (!P6F_DOMYSLNE) return;
       expect.soft(literal, `P6F_LITERALY[„${nazwa}”]`).toEqual(P6F_LITERALY[nazwa]);
       expect.soft(w.wyr, `P6F_WYR[„${nazwa}”]`).toEqual(P6F_WYR[nazwa] || []);
-      if (P6F_DOMYSLNE) expect.soft(odsyl, `P6F_ODSYL[„${nazwa}”]`).toEqual(P6F_ODSYL[nazwa]);
+      expect.soft(odsyl, `P6F_ODSYL[„${nazwa}”]`).toEqual(P6F_ODSYL[nazwa]);
     }, 30_000);
   }
 });
@@ -6273,10 +6371,12 @@ const ddPolozenie = (u, sid) => Object.fromEntries(p6fUrz(u).map((U) => {
 //   („treść”: poprawka zginęła);
 // - 'C bez scalenia' — C dostaje scalenie od B dopiero po usunięciu: W1 — „utrata” na A i B, C ma v w Y z 33,6 kg
 //   („treść”); W4 — v w Y z 33,6 kg na wszystkich („treść”); bloby — „utrata” na wszystkich.
+// Zależnie od kolejności ginie więc wizyta (utrata) albo sama poprawka (wizyta zostaje w Y z 33,6 kg — „treść”).
 // W losowej flocie 221 (profil pełny, ziarno 4, świat 300 004, bez delt; tam X — karta 5, Y — karta 3, C — sejf 221):
-// W1 floty, krok 133 — „utrata” na A i C, v ma tylko B (w X, 41 kg; nagrobek C dochodzi do B dopiero pełną kopią);
-// W4 floty, krok 133 — „utrata” na A, B i C; krok 142 — W1 jak w kroku 133, a W4 bez naruszeń v, bo B zapisał w kroku
-// 138 nową wersję X (później niż nagrobek C), więc X wraca z v na wszystkich urządzeniach (znów D-4 A).
+// W1 floty, krok 133 — „utrata” na A i C, a B ma v w X z 41 kg („inna karta” z klasą D-4 A, dozwolona; nagrobek C
+// dochodzi do B dopiero pełną kopią); W4 floty, krok 133 — „utrata” na A, B i C; krok 142 — W1 jak w kroku 133, a W4:
+// v w X (41 kg) na A, B i C — „inna karta” z klasą D-4 A (dozwolona), bez utraty, bo B zapisał w kroku 138 nową wersję
+// X (później niż nagrobek C), więc X wraca z v na wszystkich urządzeniach (znów D-4 A).
 async function ddDwieKarty(S, app = 'N') {
   const A = await urzadzenie(S, 'A');
   krok(); const r3 = await A.d.zapiszKarte(3, { masa: 30 });
