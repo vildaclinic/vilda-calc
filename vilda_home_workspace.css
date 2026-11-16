@@ -160,7 +160,7 @@
   cursor: not-allowed;
 }
 .vilda-home-workspace .vhome-extra-data {
-  margin-top: 18px;
+  margin-top: var(--space-18px);
 }
 .vilda-home-workspace .vhome-data-shortcuts {
   display: grid;
@@ -180,7 +180,7 @@
   height: 104px !important;
   min-height: 104px !important;
   margin: 0 !important;
-  padding: 12px 30px 12px 14px !important;
+  padding: var(--space-12px) 30px var(--space-12px) var(--space-14px) !important;
   border: var(--border-hairline) solid #dbe7e9 !important;
   border-radius: var(--radius-10) !important;
   background: #fbfdfd !important;
@@ -380,7 +380,7 @@
   .vilda-home-workspace #tannerToggleBtn.vhome-input-shortcut {
     height: auto !important;
     min-height: 64px !important;
-    padding: 9px 24px 9px 10px !important;
+    padding: 9px var(--space-24px) 9px var(--space-10px) !important;
     gap: 3px;
     border-radius: var(--radius-9) !important;
     font-size: 14px !important;
@@ -401,7 +401,7 @@
   .vilda-home-workspace .vhome-action-compact { display: inline; }
 }
 @media (max-width: 360px) {
-  .vilda-home-workspace #tannerToggleBtn.vhome-input-shortcut { padding-right: 10px !important; font-size: 13px !important; line-height: 19px !important; }
+  .vilda-home-workspace #tannerToggleBtn.vhome-input-shortcut { padding-right: var(--space-10px) !important; font-size: 13px !important; line-height: 19px !important; }
   .vilda-home-workspace .vhome-input-shortcut > svg { display: none; }
 }
 @media (max-width: 354px) {
