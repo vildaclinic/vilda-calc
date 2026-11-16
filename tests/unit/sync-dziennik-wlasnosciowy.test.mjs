@@ -178,6 +178,9 @@
 //   odmowa sejfu z kodem z ODMOWY_STARSZEJ liczona, każdy inny wyjątek rzucany dalej); para z urządzeniem starszej
 //   aplikacji w W4 — tabela 'flota' (kontPary).
 // - Wyrocznia: w punktach bez urządzenia starszej aplikacji normalizacja tożsamości wizyty nieużyta (NORM_BEZ_FLOTY).
+// - Bloki floty na końcu pliku: flota 221 i 276 (ziarna CI), strażniki transportu, scenariusze deterministyczne floty,
+//   ręczny blok do decyzji właściciela i stres (echo jednego scalenia pełnej kopii ze starszej aplikacji w dużym
+//   świecie: budżet minuty slotu na bajtach realnych, literał STRES_ODSYL) — opis przy każdym bloku.
 //
 // KOLEJNOŚĆ W KROKU (E2-PR3a2, sprawdzana na emiterach): snap (także wersje przeniesione pod kartę celu „Scal pacjentów”
 // i głowy scalenia), potem stomb, potem ptomb, potem pnote, pnotetomb, note, notetomb, plist, plisttomb, pref, pk, pktomb,
@@ -3796,7 +3799,7 @@ describe('A ≡ B, klasy 3.6: predykaty (pozytywy i negatywy), tabela DOZWOLONE,
     expect(await klasy(koszS, koszTylkoTozs, flota('x', 'S276')), 'Kosz 276: tylko visitIdentity').toEqual([['kosz', D_TOZSAMOSC, 'tak', 'tożsamość wpisu Kosza']]);
     // nagrobek notatki: deletedWithPatient tylko u bieżącej (221)
     const nN = syntStan({ nagrNotatek: [syntNagrN({ deletedWithPatient: true })] }), nS = syntStan({ nagrNotatek: [syntNagrN()] });
-    expect(await klasy(nS, nN, flota('x', 'S221')), 'nagrobek notatki 221').toEqual([['pnotetomb', D_POLE_221, 'tak', 'nagrobek notatki: deletedWithPatient']]);
+    expect(await klasy(nS, nN, flota('x', 'S221')), 'nagrobek notatki 221').toEqual([['pnotetomb', D_POLE_221, 'tak', 'nagrobek notatki usuniętej z kartą']]);
     expect(await klasy(nS, nN, flota('x', 'S276')), 'nagrobek notatki 276').toEqual([['pnotetomb', null, false, null]]);
     // retencja starszej aplikacji: wersja tylko u bieżącej, u starszej nagrobek retencji, u bieżącej głowa wizyty
     const ret = syntStan({ kosz: [{ snapshotId: 'v', patientId: 'P', deletedAtISO: T1, powod: 'retencja', rev: 1 }] });
@@ -4664,8 +4667,13 @@ describe('A ≡ B, urządzenie starszej aplikacji w uprzęży (E3-PR0b): app, mu
   }, 30_000);
 });
 
-// Literał licznika odsyłania dla ziaren domyślnych (warstwa wyk reguły T i nowe; suma po ziarnach domyślnych profilu):
-// klucz źródło|rodzaj|w ładunku/spoza|klasa → { wyk, nowe }. Klucza bez wierszy nie ma (np. źródło 'w4' — 0 w każdym
+// Literał licznika odsyłania dla ziaren domyślnych — linia bazowa echa między bieżącymi urządzeniami, zanim bieżąca
+// aplikacja zacznie odsyłać rekordy pochodne scalenia (E3-PR0h). Pierwszy poziom — profil (podstawowy: ziarna
+// DOMYSLNE_ZIARNA; 'podstawowy:ogon' — koalescencja kolejki, DOMYSLNE_ZIARNA_KOAL; pelny — DOMYSLNE_ZIARNA_PELNY),
+// liczby to sumy po tych ziarnach. Drugi poziom: klucz źródło|rodzaj|w ładunku/spoza|klasa (bez ścieżek pól i bez
+// bajtów) → { wyk — wiersze warstwy wykonalnej reguły T: rekordy, które scalanie zapisało inaczej, niż przyszły, i które
+// bieżąca aplikacja musiałaby odesłać; nowe — wyk bez tego, co wychodzi już dziś (wpisy haków H1/H2/H3 tego scalenia,
+// przegląd kolejki po drenażu zdarzeń, który coś scalił) }. Klucza bez wierszy nie ma (np. źródło 'w4' — 0 w każdym
 // profilu). Przydział (druk): profil podstawowy E3-PR0c 20, E3-PR0d 4, bez przydziału 12; notatki pacjenta spoza
 // ładunku pokrywają haki H2 i hak karty notatki (nowe 0). Zmiana zbieżności (E3-PR0c–f) przepisuje ten literał.
 const ZNANE_ODSYL = {
@@ -5119,7 +5127,7 @@ function klasaParyFloty(r, X, Y, kont) {
   if (!r.a || !r.b) return null;
   const [es, en] = st === 'x' ? [r.a, r.b] : [r.b, r.a];
   const z221 = kont.appStarszej === 'S221';
-  if (r.rodzaj === 'pnotetomb') return z221 && r.sciezki.every((s) => wPolach(s, ['deletedWithPatient'])) ? { klasa: D_POLE_221, wariant: 'nagrobek notatki: deletedWithPatient' } : null;
+  if (r.rodzaj === 'pnotetomb') return z221 && r.sciezki.every((s) => wPolach(s, ['deletedWithPatient'])) ? { klasa: D_POLE_221, wariant: 'nagrobek notatki usuniętej z kartą' } : null;
   if (r.rodzaj !== 'wersja' && r.rodzaj !== 'kosz') return null;
   if (r.rodzaj === 'kosz' && !z221 && r.sciezki.some((s) => wPolach(s, ['visitIdentity'])) && r.sciezki.some((s) => wPolach(s, D7_POLA)) && r.sciezki.every((s) => wPolach(s, ['visitIdentity', ...D7_POLA]))) {
     const bez = (e) => { const o = json(e); delete o.visitIdentity; return o; };
@@ -5393,19 +5401,27 @@ function odciskFloty(biezace, starsza) {
 // wariant → liczba, suma po punktach), W1AB (różnice A, B po samych zdarzeniach według klasy — linia bazowa echa po
 // scaleniu pełnej kopii), odsyl (licznik: klucz źródło|rodzaj|w ładunku/spoza|klasa → { wyk, nowe }), delty (flota 221:
 // zbudowane według rodzaju, odpadłe progiem, puste), odmowy (sejf 221 według kodu) }. Klucze bez ścieżek pól i bez bajtów.
-// Zmiana zbieżności (E3-PR0c–f) albo wyroczni przepisuje te literały.
+// Znaczenie: W4 — różnice, które zostają między urządzeniem starszej aplikacji a bieżącym po pełnej wymianie, każda
+// z klasą pary floty (dozwolona tylko w parze z C; ta sama różnica w parze A, B — czerwień); W1AB — różnice A, B
+// w punkcie spoczynku przed pełną wymianą („bez klasy” — różnica bez klasy pary, np. zmiana C, która doszła pełną kopią
+// tylko do jednego z nich, bo bieżąca aplikacja nie odsyła scalonego; W1 floty 221 nie jest warunkiem zieleni, literał
+// pilnuje liczby); odsyl — echo, które bieżące urządzenia musiałyby odesłać (jak ZNANE_ODSYL, także ze źródeł blob221,
+// blob276 i delta221); delty — ile delt zbudowała integracja 221 i ile odpadło progiem PROG_DELT_221. Zmiana zbieżności
+// (E3-PR0c–f) albo wyroczni przepisuje te literały.
 const ZNANE_FLOTA = {
   221: {
     1: { W1AB: { 'bez klasy': 13, 'rekord złożony po jednej stronie': 2 }, W4: { 'BC|kosz|pole nieznane starszej aplikacji (221)|pola Kosza 221': 2, 'BC|kosz|tożsamość wizyty nieznana starszej aplikacji|tożsamość wpisu Kosza': 4, 'BC|wersja|tożsamość wizyty nieznana starszej aplikacji|tożsamość wizyty': 12, 'CA|kosz|pole nieznane starszej aplikacji (221)|pola Kosza 221': 2, 'CA|kosz|tożsamość wizyty nieznana starszej aplikacji|tożsamość wpisu Kosza': 4, 'CA|wersja|tożsamość wizyty nieznana starszej aplikacji|tożsamość wizyty': 12 }, delty: { prog: { karta: 15 }, puste: { 'pnote:merge': 1, 'pnote:merge-delete': 4 }, zbudowane: { karta: 10, note: 2, notetomb: 1, pnote: 4, 'pnote:merge': 4, pnotetomb: 2 } }, odmowy: {}, odsyl: { 'blob221|snap|w ładunku|inne': { nowe: 1, wyk: 1 }, 'blob221|stomb|w ładunku|inne': { nowe: 1, wyk: 1 }, 'blobN|stomb|w ładunku|R4a′': { nowe: 1, wyk: 1 } }, obiegiW4: [1, 2, 2, 2] },
     2: { W1AB: { R2: 1, R5: 1, 'bez klasy': 4 }, W4: { 'BC|kosz|tożsamość wizyty nieznana starszej aplikacji|tożsamość wizyty': 1, 'BC|kosz|tożsamość wizyty nieznana starszej aplikacji|tożsamość wpisu Kosza': 2, 'BC|wersja|tożsamość wizyty nieznana starszej aplikacji|tożsamość wizyty': 12, 'CA|kosz|tożsamość wizyty nieznana starszej aplikacji|tożsamość wizyty': 1, 'CA|kosz|tożsamość wizyty nieznana starszej aplikacji|tożsamość wpisu Kosza': 2, 'CA|wersja|tożsamość wizyty nieznana starszej aplikacji|tożsamość wizyty': 12 }, delty: { prog: { karta: 12 }, puste: { 'pnote:merge-delete': 2 }, zbudowane: { karta: 11, note: 2, pnote: 1, 'pnote:merge': 6, pnotetomb: 1, ptomb: 3 } }, odmowy: {}, odsyl: { 'blob221|snap|w ładunku|rekord złożony': { nowe: 1, wyk: 1 }, 'delta221|snap|w ładunku|inne': { nowe: 1, wyk: 1 }, 'zdarzenie|snap|w ładunku|gwiazdka': { nowe: 1, wyk: 1 } }, obiegiW4: [2, 2] },
-    3: { W1AB: { R4a: 2, R5: 1, 'bez klasy': 14 }, W4: { 'BC|kosz|pole nieznane starszej aplikacji (221)|pola Kosza 221': 4, 'BC|kosz|tożsamość wizyty nieznana starszej aplikacji|tożsamość wpisu Kosza': 5, 'BC|pnotetomb|pole nieznane starszej aplikacji (221)|nagrobek notatki: deletedWithPatient': 4, 'BC|wersja|tożsamość wizyty nieznana starszej aplikacji|tożsamość wizyty': 12, 'CA|kosz|pole nieznane starszej aplikacji (221)|pola Kosza 221': 4, 'CA|kosz|tożsamość wizyty nieznana starszej aplikacji|tożsamość wpisu Kosza': 5, 'CA|pnotetomb|pole nieznane starszej aplikacji (221)|nagrobek notatki: deletedWithPatient': 4, 'CA|wersja|tożsamość wizyty nieznana starszej aplikacji|tożsamość wizyty': 12 }, delty: { prog: { karta: 14 }, puste: { 'pnote:merge-delete': 4 }, zbudowane: { karta: 13, note: 2, pnote: 3, 'pnote:merge': 8, pnotetomb: 1 } }, odmowy: {}, odsyl: { 'blob221|stomb|w ładunku|inne': { nowe: 3, wyk: 3 }, 'delta221|snap|w ładunku|rekord złożony': { nowe: 4, wyk: 4 }, 'zdarzenie|snap|w ładunku|gwiazdka': { nowe: 1, wyk: 1 } }, obiegiW4: [2, 2] },
+    3: { W1AB: { R4a: 2, R5: 1, 'bez klasy': 14 }, W4: { 'BC|kosz|pole nieznane starszej aplikacji (221)|pola Kosza 221': 4, 'BC|kosz|tożsamość wizyty nieznana starszej aplikacji|tożsamość wpisu Kosza': 5, 'BC|pnotetomb|pole nieznane starszej aplikacji (221)|nagrobek notatki usuniętej z kartą': 4, 'BC|wersja|tożsamość wizyty nieznana starszej aplikacji|tożsamość wizyty': 12, 'CA|kosz|pole nieznane starszej aplikacji (221)|pola Kosza 221': 4, 'CA|kosz|tożsamość wizyty nieznana starszej aplikacji|tożsamość wpisu Kosza': 5, 'CA|pnotetomb|pole nieznane starszej aplikacji (221)|nagrobek notatki usuniętej z kartą': 4, 'CA|wersja|tożsamość wizyty nieznana starszej aplikacji|tożsamość wizyty': 12 }, delty: { prog: { karta: 14 }, puste: { 'pnote:merge-delete': 4 }, zbudowane: { karta: 13, note: 2, pnote: 3, 'pnote:merge': 8, pnotetomb: 1 } }, odmowy: {}, odsyl: { 'blob221|stomb|w ładunku|inne': { nowe: 3, wyk: 3 }, 'delta221|snap|w ładunku|rekord złożony': { nowe: 4, wyk: 4 }, 'zdarzenie|snap|w ładunku|gwiazdka': { nowe: 1, wyk: 1 } }, obiegiW4: [2, 2] },
   },
   276: {
     2: { W1AB: {}, W4: { 'BC|kosz|tożsamość wizyty nieznana starszej aplikacji|tożsamość wpisu Kosza': 3, 'BC|wersja|tożsamość wizyty nieznana starszej aplikacji|tożsamość wizyty, odcisk przeliczony': 6, 'CA|kosz|tożsamość wizyty nieznana starszej aplikacji|tożsamość wpisu Kosza': 3, 'CA|wersja|tożsamość wizyty nieznana starszej aplikacji|tożsamość wizyty, odcisk przeliczony': 6 }, odmowy: {}, odsyl: { 'zdarzenie|snap|w ładunku|gwiazdka': { nowe: 1, wyk: 1 } }, obiegiW4: [1, 1, 1] },
   },
 };
 // Wyrocznia floty (ziarna CI): naruszenia według „klasa | świat” — flota 221 tylko W4 floty (W1 floty — druk), flota 276
-// W1 floty i W4 floty.
+// W1 floty i W4 floty. Liczby to naruszenia Z KLASĄ floty — skutki samej starszej wersji (WYR.DO_DECYZJI: znane
+// ograniczenie starszej wersji do decyzji właściciela, pytanie z 2026-11-15); naruszenie bez klasy to czerwień zieleni
+// floty, nie wpis tego literału. Ziarno bez wpisu — bez naruszeń.
 const ZNANE_WYR_FLOTY = {
   221: {
     3: { 'gwiazdka ze starszej aplikacji | W4 floty': 6, 'notatka bez ratunku D-21 (starsza aplikacja) | W4 floty': 12 },
@@ -6062,7 +6078,8 @@ function p6fOdsyl(S, zEchem) {
 // W4 — obiegi wymiany, punkt stały z różnicami dozwolonymi (ok), D par i stan kliniczny klonów po pełnej wymianie,
 // fakty — fakty scenariusza. P6F_WYR — naruszenia wyroczni („świat: urządzenie encja etykieta rodzaj [klasa]”;
 // scenariusz spoza listy — bez naruszeń). P6F_ODSYL — licznik (klucz → { wyk, nowe }, wiersze według źródła i warstwy;
-// echo na klonach). Skutki starszej aplikacji w tych literałach (utrata notatki, retencja, gwiazdka) to ograniczenie
+// echo na klonach). Klucze bez ścieżek pól; ścieżki występują tylko w opisach różnic D (wartości W1 i W4.pary, jak
+// w P6_LITERALY). Skutki starszej aplikacji w tych literałach (utrata notatki, retencja, gwiazdka) to ograniczenie
 // starszej wersji do decyzji właściciela (pytanie z 2026-11-15; WYR.DO_DECYZJI w opisach klas).
 const P6F_LITERALY = {
   '„Usuń pacjenta” na 221, potem zmiana karty na A: notatka bez ratunku D-21': {
@@ -6470,6 +6487,192 @@ describe.skipIf(!DO_DECYZJI_RECZNIE)('A ≡ B, do decyzji właściciela (ręczni
       if (process.env.E2_AB_WYNIKI) appendFileSync(process.env.E2_AB_WYNIKI, JSON.stringify({ typ: 'do decyzji', nr, nazwa, ...wynik, dziennik: u.S.dziennik, dziennikBlobow: ub.S.dziennik }) + '\n');
       const opis = JSON.stringify({ faktyW1, W4kliniczny: w.opis, faktyBlobow }, null, 1);
       for (const [swiatN, lista] of [['W1', W1], ['W4', W4], ['bloby', bloby]]) expect.soft(ddNar(WYR.bezWyjatku(lista, swiatN)), `${nazwa} — świat ${swiatN}\n${opis}`).toEqual([]);
+    }, 60_000);
+  }
+});
+
+// ══ Stres: echo jednego scalenia pełnej kopii w dużym świecie (E3-PR0b, P-ZBIEZNOSC-ZDARZEN; deterministyczny) ════════
+// Najgorsze echo jednego scalenia: cała praca urządzenia starszej aplikacji dochodzi do bieżącego jedną pełną kopią, bez
+// wcześniejszych delt i zdarzeń. Świat swiat(970 + nr), Math.random z rng(0x6970 + nr), nr — pozycja wariantu
+// w STRES_WARIANTY_ZNANE.
+// PRZYGOTOWANIE: C — bliźniak PUSTEGO A (wariant CI: sejf 221 z retencją v1); na A STRES_KART kart × 4 wersje (treść
+//   uprzęży, co trzecia karta z gwiazdką na jednej wersji); B — bliźniak A z tymi kartami; dane do C pełną kopią A → C
+//   (scalBlob, przed włączeniem licznika). Na C w każdej karcie: dwie najstarsze wersje do Kosza („Odepnij i usuń”),
+//   poprawka najnowszej (33 kg, bez zmiany chwili zapisu) i nowa wersja — razem 2 × STRES_KART koszy, STRES_KART poprawek
+//   i STRES_KART nowych wersji. Operacje na C i A wołane wprost na sejfie (stres nie ocenia wyroczni). Delt z C nie ma:
+//   delta karty z ≥ 3 wersjami odpada progiem (PROG_DELT_221), a każda wcześniejsza dostawa zmniejszyłaby echo.
+// SCALENIE: C → A (scalBlob; licznik — źródło blob221, blob276 albo blobN). Echo C → B: B jest bliźniakiem A, a eksporty
+//   A i B przed scaleniem są równe (asercja), więc scalenie tego samego ładunku daje na B tę samą stronę. W wariancie CI
+//   strona B to kopia strony A; ręcznie („C→A i C→B”) scalenie C → B idzie wprost (asercja: strona B = strona A).
+//   Warianty z konfliktem (A zmienia później te same wizyty: gwiazdka najstarszej wersji, w co drugiej karcie poprawka
+//   najnowszej) — scalenie C → B zawsze wprost, bez asercji równości.
+// LICZNIK (jedna minuta slotu: strony A i B w tym samym kroku zegara): na urządzenie wiersze surowe, po2a (reguła
+//   naiwna: kanon 2a bez reguły pola), wyk i nowe; klucze literału warstwy po2a i wyk; bajty i żądania reguły naiwnej
+//   w uprzęży; bajty realne reguły naiwnej (LO.realne: 32–45 KiB na treść wizyty, 3 KiB bez treści) na urządzenie i na
+//   slot, żądania na urządzenie przy górnej granicy; flagi „> 4 MiB” (LO.LIMITY.bajtowSlotMin).
+// ASERCJE (każdy wariant): eksport A = eksport B przed scaleniem (bez konfliktu); budżet minuty slotu warstwy wyk
+//   (LO.budzetSlotow: ≤ 600 wierszy, ≤ 4 MiB przy górnej granicy, ≤ 20 żądań na urządzenie) bez przekroczeń — przy
+//   warstwie wyk równej po2a (bez reguły pola) minuta slotu ma 240 wierszy i 11 059 200 B, więc budżet czerwienieje;
+//   obieg kontrolny (A → C, potem C → A) — 0 wierszy surowych; wyjątki builderów nośników 0; pola zawsze obecne
+//   w ładunku od bieżącej wersji. Literał STRES_ODSYL — wariant CI przy 40 kartach, treści uprzęży i regule T
+//   (STRES_DOMYSLNY).
+// Ręcznie: E2_AB_STRES_WARIANTY=<lista po przecinku> (klucze STRES_WARIANTY_ZNANE), E2_AB_STRES_KART=<n>,
+//   E2_AB_STRES_TRESC=<n> (wypełniacz: n pseudolosowych liter w treści każdej wersji, z osobnego generatora — bajty
+//   uprzęży bliższe realnym), E2_AB_STRES=0 — bez bloku; E2_AB_WYNIKI — wiersz typ 'stres'.
+const STRES = process.env.E2_AB_STRES !== '0';
+const STRES_KART = Number(process.env.E2_AB_STRES_KART) || 40;
+const STRES_TRESC = Number(process.env.E2_AB_STRES_TRESC) || 0;
+const STRES_WARIANTY = (process.env.E2_AB_STRES_WARIANTY || 'C→A').split(',').map((s) => s.trim()).filter(Boolean);
+const STRES_DOMYSLNY = STRES_KART === 40 && !STRES_TRESC && ODSYL_REGULA === 'T';
+// app — sejf C; wprost — scalenie C → B wykonane (inaczej strona B z równości eksportów bliźniaków); konflikt — zmiany A.
+const STRES_WARIANTY_ZNANE = Object.freeze({
+  'C→A': Object.freeze({ app: 'S221', wprost: false, konflikt: false }),
+  'C→A i C→B': Object.freeze({ app: 'S221', wprost: true, konflikt: false }),
+  'C→A+konflikt': Object.freeze({ app: 'S221', wprost: true, konflikt: true }),
+  '276→A': Object.freeze({ app: 'S276', wprost: false, konflikt: false }),
+  'N→A': Object.freeze({ app: 'N', wprost: false, konflikt: false }),
+  'N→A+konflikt': Object.freeze({ app: 'N', wprost: true, konflikt: true }),
+});
+const ZRODLO_PELNEJ = Object.freeze({ S221: 'blob221', S276: 'blob276', N: 'blobN' });
+const literyFikcyjne = (los, n) => { let s = ''; for (let i = 0; i < n; i += 1) s += String.fromCharCode(97 + Math.floor(los() * 26)); return s; };
+const wersjeOdNajstarszej = async (U, pid) => (await U.v.getPatient(pid)).snapshots.slice().sort((x, y) => ((x.savedAtISO || '') < (y.savedAtISO || '') ? -1 : 1));
+// Literał stresu (wariant CI „C→A”: 40 kart, treść uprzęży, reguła T; zmierzony). naUrzadzenie — wiersze echa scalenia
+// C → A na A według warstwy (surowe — każda różnica; po2a — reguła naiwna; wyk — warstwa wykonalna, czyli to, co bieżąca
+// aplikacja musiałaby odesłać; nowe — wyk bez haków i przeglądu); klasyPo2a, klasyWyk — klucz źródło|rodzaj|w ładunku
+// albo spoza|klasa → liczba wierszy tej warstwy (bez ścieżek pól i bez bajtów; 40 wersji nowych na C i 80 wpisów Kosza
+// z C dostaje na A tożsamość wizyty, której 221 nie zapisuje — warstwa wyk tę różnicę tłumi); naiwnaUprzaz — wiersze,
+// bajty kopert (eventBytes) i żądania reguły naiwnej na A w uprzęży; naiwnaRealne — bajty realne reguły naiwnej [dolna,
+// górna] na urządzenie i na minutę slotu (A + B) oraz żądania na urządzenie przy górnej granicy; flagi — przekroczenie
+// 4 MiB; wykSlot — minuta slotu warstwy wyk (wiersze, bajty realne przy górnej granicy, zgodność z budżetem);
+// kontrolna — wiersze surowe obiegu kontrolnego. Zmiana reguły odsyłania (E3-PR0c, E3-PR0d) albo modelu stresu
+// przepisuje ten literał.
+const STRES_ODSYL = {
+  'C→A': {
+    naUrzadzenie: { surowe: 120, po2a: 120, wyk: 0, nowe: 0 },
+    klasyPo2a: { 'snap|w ładunku|tożsamość wizyty': 40, 'stomb|w ładunku|tożsamość wizyty': 80 },
+    klasyWyk: {},
+    naiwnaUprzaz: { wierszy: 120, bajty: 208260, zadan: 1 },
+    naiwnaRealne: { urzadzenie: [3932160, 5529600], slot: [7864320, 11059200], zadanNaUrzadzenieGorna: 6 },
+    flagi: { 'urządzenie, dolna > 4 MiB': false, 'urządzenie, górna > 4 MiB': true, 'slot, dolna > 4 MiB': true },
+    wykSlot: { wierszy: 0, realneDo: 0, zgodny: true },
+    kontrolna: 0,
+  },
+};
+const rozWierszy = (po, przed, zr) => Object.fromEntries(Object.entries(po).filter(([k]) => k.startsWith(zr + '|') || k.startsWith(zr + ':')).map(([k, v]) => [k, v - (przed[k] || 0)]).filter(([, v]) => v));
+const warstwyStresu = (r, zr) => ({ surowe: r[`${zr}:surowe`] || 0, po2a: r[`${zr}:po2a`] || 0, wyk: r[`${zr}:wyk`] || 0, nowe: r[`${zr}:nowe`] || 0 });
+const kluczeBezZrodla = (r, zr) => sortuj(Object.fromEntries(Object.entries(r).map(([k, v]) => [k.slice(zr.length + 1), v])));
+const opisStrony = (s) => JSON.stringify([s.wiersze.map((w) => [w.tresci, w.bajty]).sort(), s.wiersze2a.map((w) => [w.tresci, w.bajty]).sort()]);
+async function stres(wariant) {
+  const wr = STRES_WARIANTY_ZNANE[wariant];
+  if (!wr) throw new Error(`stres: nieznany wariant „${wariant}” (${Object.keys(STRES_WARIANTY_ZNANE).join(', ')})`);
+  const nr = Object.keys(STRES_WARIANTY_ZNANE).indexOf(wariant);
+  const t0 = performance.now();
+  ustaw(START);
+  const S = swiat(970 + nr);
+  const los = rng(0x6970 + nr);
+  vi.spyOn(Math, 'random').mockImplementation(() => (S.losAlt || los)());
+  S.w2s = false; S.nrKroku = 0;
+  const losTresci = rng(0x57E5 + nr);
+  const glowa = (i, o) => (STRES_TRESC ? { ...naglowek(i, o), opisFikcyjny: literyFikcyjne(losTresci, STRES_TRESC) } : naglowek(i, o));
+  const zapisz = (U, i, o, zapis = {}) => U.v.savePatient(glowa(i, o), { dedup: false, ...zapis });
+  const A = await urzadzenie(S, 'A');
+  const C = await urzadzenie(S, 'C', A, wr.app === 'N' ? {} : { app: wr.app });
+  const karty = [];
+  for (let i = 1; i <= STRES_KART; i += 1) {
+    krok(); const r = await zapisz(A, i, { masa: 20 + i / 10 }); karty.push(r.patientId);
+    for (let j = 1; j <= 3; j += 1) { krok(); await zapisz(A, i, { wzrost: 100 + j, masa: 20 + j }, { patientId: r.patientId, forceNewSnapshot: true }); }
+    if (i % 3 === 0) { const p = await A.v.getPatient(r.patientId); krok(); await A.v.setSnapshotPinned(r.patientId, p.snapshots[1].snapshotId, true); }
+  }
+  ustawStan(A, await eksport(A)); A.Q.length = 0;
+  const B = await urzadzenie(S, 'B', A);
+  await scalBlob(S, A, C);
+  const tBudowy = performance.now() - t0;
+  S.odsyl = nowyLicznik();
+  for (const [i, pid] of karty.entries()) {
+    const sn = await wersjeOdNajstarszej(C, pid);
+    for (const s of sn.slice(0, 2)) { krok(); await C.v.moveSnapshotToTrash(pid, s.snapshotId, { odepnij: true }); }
+    const s = sn[sn.length - 1];
+    krok(); await C.v.updateSnapshotPayload(pid, s.snapshotId, { ...s.payload, user: { ...s.payload.user, weight: 33 } }, { preserveSavedAt: true });
+    krok(); await zapisz(C, i + 1, { wzrost: 140, masa: 30 }, { patientId: pid, forceNewSnapshot: true });
+  }
+  ustawStan(C, await eksport(C));
+  if (wr.konflikt) {
+    for (const [i, pid] of karty.entries()) {
+      const sn = await wersjeOdNajstarszej(A, pid);
+      krok(); await A.v.setSnapshotPinned(pid, sn[0].snapshotId, true);
+      if (i % 2 === 0) { const s = sn[sn.length - 1]; krok(); await A.v.updateSnapshotPayload(pid, s.snapshotId, { ...s.payload, user: { ...s.payload.user, weight: 35 } }, { preserveSavedAt: true }); }
+    }
+    ustawStan(A, await eksport(A));
+  }
+  const rowneAB = JSON.stringify(kanon(A.stan)) === JSON.stringify(kanon(B.stan));
+  krok(60e3);
+  const L = S.odsyl, zr = ZRODLO_PELNEJ[wr.app];
+  const stanL = () => ({ wiersze: { ...L.wiersze }, literal: { ...L.literal }, literal2a: { ...L.literal2a }, literalNowe: { ...L.literalNowe } });
+  const p0 = stanL(), s0 = L.strony.length;
+  const t1 = performance.now();
+  await scalBlob(S, C, A);
+  const pA = stanL();
+  if (wr.wprost) await scalBlob(S, C, B);
+  const tScalenia = performance.now() - t1;
+  const pB = stanL();
+  const naA = { wiersze: rozWierszy(pA.wiersze, p0.wiersze, zr), po2a: rozWierszy(pA.literal2a, p0.literal2a, zr), wyk: rozWierszy(pA.literal, p0.literal, zr), nowe: rozWierszy(pA.literalNowe, p0.literalNowe, zr) };
+  const naB = wr.wprost ? { wiersze: rozWierszy(pB.wiersze, pA.wiersze, zr) } : null;
+  const stronaA = L.strony[s0];
+  const stronaB = wr.wprost ? L.strony[s0 + 1] : { ...stronaA, dev: 'B', opis: `${stronaA.opis} (strona B z równości eksportów A i B)` };
+  if (!stronaA || !stronaB || stronaA.t !== stronaB.t) throw new Error('stres: brak stron scalenia C → A i C → B w jednej minucie slotu');
+  const naiwna = (s) => ({ t: s.t, dev: s.dev, wiersze: s.wiersze2a });
+  const budzet = LO.budzetSlotow([stronaA, stronaB]);
+  const budzetNaiwny = LO.budzetSlotow([naiwna(stronaA), naiwna(stronaB)]);
+  const reA = LO.realne(stronaA.wiersze2a);
+  const slotN = budzetNaiwny.maksRealne, slotW = budzet.maksRealne;
+  const MIB4 = LO.LIMITY.bajtowSlotMin;
+  const bajtyA = stronaA.wiersze2a.map((w) => w.bajty);
+  // obieg kontrolny: C scala pełną kopię A, potem A znów pełną kopię C — echo 0
+  krok(60e3);
+  const w1 = { ...L.wiersze };
+  await scalBlob(S, A, C);
+  await scalBlob(S, C, A);
+  const kontrolna = Object.entries(L.wiersze).filter(([k]) => k.endsWith(':surowe')).reduce((n, [k, v]) => n + v - (w1[k] || 0), 0);
+  const calosc = LO.budzetSlotow([...L.strony, ...(wr.wprost ? [] : [stronaB])]);
+  const literal = sortuj({
+    naUrzadzenie: warstwyStresu(naA.wiersze, zr),
+    klasyPo2a: kluczeBezZrodla(naA.po2a, zr), klasyWyk: kluczeBezZrodla(naA.wyk, zr),
+    naiwnaUprzaz: { wierszy: bajtyA.length, bajty: bajtyA.reduce((a, b) => a + b, 0), zadan: LO.partie(bajtyA).zadan },
+    naiwnaRealne: { urzadzenie: [reA.od, reA.do], slot: [slotN.realneOd, slotN.realneDo], zadanNaUrzadzenieGorna: slotN.zadanMaks },
+    flagi: { 'urządzenie, dolna > 4 MiB': reA.od > MIB4, 'urządzenie, górna > 4 MiB': reA.do > MIB4, 'slot, dolna > 4 MiB': slotN.realneOd > MIB4 },
+    wykSlot: { wierszy: slotW.wierszy, realneDo: slotW.realneDo, zgodny: slotW.zgodny },
+    kontrolna,
+  });
+  const zielen = {
+    'eksport A = eksport B przed scaleniem (bliźniaki, bez konfliktu)': wr.konflikt || rowneAB,
+    'budżet minuty slotu warstwy wyk przekroczony (≤ 600 wierszy, ≤ 4 MiB realnie, ≤ 20 żądań na urządzenie)': calosc.przekroczone.map((x) => `t ${x.t}: ${x.wierszy} wierszy, ${x.realneDo} B, ${x.zadanMaks} żądań`),
+    'obieg kontrolny: wiersze surowe': kontrolna,
+    'wyjątki builderów nośników': L.bladBuildera,
+    'pola zawsze obecne: encje od bieżącej wersji bez pola': L.polaZawsze.bezPola,
+    ...(wr.wprost && !wr.konflikt ? { 'strona C → B wprost = strona C → A': opisStrony(stronaB) === opisStrony(stronaA) } : {}),
+  };
+  const o = L.podsumuj();
+  return { wariant, kart: STRES_KART, tresc: STRES_TRESC, literal, zielen, naB: naB && warstwyStresu(naB.wiersze, zr), koszC: (C.stan.snapshotTombstones || []).length,
+    blobBajty: JSON.stringify(await C.v.exportSyncPayload()).length, tlumi: o.tlumi, przyklady: o.przyklady.slice(0, 6), budzetNaiwny: { slot: slotN, urz: slotN.urz },
+    ms: { budowa: Math.round(tBudowy), scalenie: Math.round(tScalenia), licznik: o.ms, razem: Math.round(performance.now() - t0) } };
+}
+const ZIELEN_STRESU = (wr) => ({
+  'eksport A = eksport B przed scaleniem (bliźniaki, bez konfliktu)': true,
+  'budżet minuty slotu warstwy wyk przekroczony (≤ 600 wierszy, ≤ 4 MiB realnie, ≤ 20 żądań na urządzenie)': [],
+  'obieg kontrolny: wiersze surowe': 0,
+  'wyjątki builderów nośników': 0,
+  'pola zawsze obecne: encje od bieżącej wersji bez pola': 0,
+  ...(wr.wprost && !wr.konflikt ? { 'strona C → B wprost = strona C → A': true } : {}),
+});
+describe.skipIf(!STRES || !ODSYL)('A ≡ B, flota ze starszą aplikacją: stres — echo jednego scalenia pełnej kopii w dużym świecie (budżet minuty slotu, literał STRES_ODSYL)', () => {
+  d1();
+  for (const wariant of STRES_WARIANTY) {
+    it(`${wariant}, ${STRES_KART} kart${STRES_TRESC ? `, wypełniacz ${STRES_TRESC} liter` : ''}: eksport A = eksport B, budżet minuty slotu warstwy wyk, obieg kontrolny 0${STRES_DOMYSLNY && STRES_ODSYL[wariant] ? '; literał STRES_ODSYL' : ''}`, async () => {
+      const w = await stres(wariant);
+      console.log(`E3-AB stres ${wariant}`, JSON.stringify(w));
+      if (process.env.E2_AB_WYNIKI) appendFileSync(process.env.E2_AB_WYNIKI, JSON.stringify({ typ: 'stres', regula: ODSYL_REGULA, ...w }) + '\n');
+      expect.soft(w.zielen, `stres ${wariant}\n${JSON.stringify({ przyklady: w.przyklady, literal: w.literal }, null, 1)}`).toEqual(ZIELEN_STRESU(STRES_WARIANTY_ZNANE[wariant]));
+      if (STRES_DOMYSLNY && STRES_ODSYL[wariant]) expect.soft(w.literal, `STRES_ODSYL[„${wariant}”]`).toEqual(STRES_ODSYL[wariant]);
     }, 60_000);
   }
 });
