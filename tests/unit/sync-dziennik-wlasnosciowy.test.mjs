@@ -6434,7 +6434,7 @@ function ddUsunZwrocona(kolejnosc, app = 'N') {
 }
 const ZNANE_USTERKI = {
   // Notatka pacjenta: A edytuje dwa razy (rev 3), B raz, 5 s później (rev 2); reguła notatek „wyższy rev, przy równym
-  // nowsza data” (vilda_vault.js:5434–5438, Bks_wygrywaRev; docs/clinical/ALGORITHMS.md P-SYNC-WLASCICIEL, ok. 32144;
+  // nowsza data” (vilda_vault.js:5434–5438, Bks_wygrywaRev; docs/clinical/ALGORITHMS.md P-KOPIA-DANE-KONTA, ok. 32144;
   // plan — notatki pacjenta LWW z rev na pierwszym miejscu) zostawia tekst A we wszystkich trzech światach na A, B i C,
   // a wyrocznia oczekuje późniejszej edycji B („treść” bez klasy). Wersje wizyt mają od D-7 zasadę odwrotną (wygrywa
   // późniejsza zmiana).

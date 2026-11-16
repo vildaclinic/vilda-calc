@@ -895,7 +895,7 @@ export const WYJATKI = Object.freeze({
   [KL_KARTA_CZESCIOWA]: Object.freeze({
     opis: `karta usunięta „Usuń pacjenta” wraca bez części wersji także po pełnej wymianie: (a) wraca zmianą starszej aplikacji, która nie ma haka H1 i nie wysyła pełnej karty; (b) przed usunięciem retencja v1 starszej aplikacji usunęła u niej ostatni stan wizyty — ${OGRANICZENIE_STARSZEJ}`,
     mechanizm: 'wizyta usunięta „Usuń pacjenta”, która wraca z kartą (karta jest w widoku, wizyty nie ma), a kartę przywróciła zmiana na urządzeniu bez haka H1 albo przed usunięciem ostatni stan wizyty usunęła retencja v1 urządzenia starszej aplikacji, które potem kartę przywróciło (albo to jego widok)',
-    zrodlo: 'docs/clinical/ALGORITHMS.md tabela klas E3-PR0a, „karta częściowa” (ok. 40320) i „Świadomie bez haka H1” (ok. 24817); tests/fixtures/vilda_vault-221.js.txt (bez haków Bem_)',
+    zrodlo: 'docs/clinical/ALGORITHMS.md tabela klas E3-PR0a, „karta częściowa” (ok. 40322) i „Świadomie bez haka H1” (ok. 24817); tests/fixtures/vilda_vault-221.js.txt (bez haków Bem_)',
     cechy: Object.freeze([BEZ_H1, RETENCJA_V1]),
     swiaty: W_FLOCIE,
   }),

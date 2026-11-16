@@ -32147,6 +32147,8 @@ późniejsze usunięcie w kopii usuwa tutaj; nagłówek karty — niżej, „Ogr
 mówią o tym jawnie, a przycisk jest dostępny. **Wpływ kliniczny pośredni:** notatki pacjentów niosą treści kliniczne
 (wyniki badań, leki, IGF-1, terminy kontroli), a listy oczekujących — organizację zabiegów; dotąd bywały nieosiągalne
 z ekranu albo usuwane po cichu. Wada „Scal teraz” z przeglądu „trzy wady”, wariant (a) z raportu krytyka.
+*(2026-11-16: decyzja właściciela — przy notatce pacjenta zmienionej na dwóch urządzeniach ma wygrywać późniejsza
+zmiana; zmiana reguły w E3-PR0b2. Opis wyżej to stan kodu.)*
 
 **Co było** (`audyt` `2df41a8`, prawdziwy sejf, magazyn w pamięci, dane fikcyjne; A robi kopię konta, C ją scala, C
 zsynchronizowany wcześniej z A). „Scal teraz” było widoczne tylko przy `totalNewSnapshots>0 || addPatients.length>0`;
@@ -40510,17 +40512,19 @@ której nagrobek wygrał (1).
 ## Flota ze starszą aplikacją i liczniki odsyłania w teście A ≡ B — tylko testy (P-ZBIEZNOSC-ZDARZEN, E3-PR0b, bez zmiany wersji aplikacji, 2026-11-16)
 
 **Zmiana kliniczna: NIE** — wzory, progi, jednostki, interpretacje, zapis danych pacjentów, reguły scalania, format
-kopii i synchronizacja bez zmian. Kod aplikacji, service worker i wersje plików bez zmian (SW 1.1.539 z bazy
-`a6861547`); zmieniają się tylko testy i dokumenty. Wpływ kliniczny: brak. Testy opisują skutki, które może dziś dawać
+kopii i synchronizacja bez zmian. Kod aplikacji, service worker i wersje plików bez zmian (SW 1.1.540 z bazy
+`95fca107`); zmieniają się tylko testy i dokumenty. Wpływ kliniczny: brak. Testy opisują skutki, które może dziś dawać
 urządzenie ze starszą wersją aplikacji, i niczego w nich nie zmieniają.
 
 **Skąd.** Plan `docs/SYNC_PRZYROSTOWA_PLAN.md`, rozdział 5, „Etap 3”, tabela „Podział E3-PR0”, wiersz 2 (E3-PR0b), po
-E3-PR0a (vildaclinic/vilda-calc#961, wpis wyżej). Decyzja 5 z 2026-11-15 jest nierozstrzygnięta („nie wiem”): plan
-przyjmuje, że urządzenie ze starszą wersją może istnieć, więc flotę mieszaną trzeba zmierzyć, zanim odsyłanie
-(E3-PR0c–E3-PR0i) zacznie zmieniać scalanie. Liczniki odsyłania dają linię bazową dla E3-PR0c, E3-PR0d i E3-PR0h.
-Przydział pozycji „do przydziału” z „Zakresu” E3-PR0 — plan, dopisek z 2026-11-16. Pomiary przygotowawcze (retencja i
-delty sejfu 221, sejf 276, licznik) powstały na bazie `4355e325`; liczby niżej są z gałęzi PR po scaleniu `audyt`
-(`a6861547`: vildaclinic/vilda-calc#962, #964, #965, #968).
+E3-PR0a (vildaclinic/vilda-calc#961, wpis wyżej). Decyzja 5 z 2026-11-15 („nie wiem”) przyjmowała, że urządzenie ze
+starszą wersją może istnieć, więc flotę mieszaną trzeba było zmierzyć, zanim odsyłanie (E3-PR0c–E3-PR0i) zacznie
+zmieniać scalanie; 2026-11-16 właściciel ją uzupełnił: wszystkie jego urządzenia mają aktualną wersję, a flota ze
+starszą aplikacją zostaje w testach jako zabezpieczenie (plan, rozdział 6, „Decyzje z 2026-11-16”). Liczniki odsyłania
+dają linię bazową dla E3-PR0c, E3-PR0d i E3-PR0h. Przydział pozycji „do przydziału” z „Zakresu” E3-PR0 — plan, dopisek z
+2026-11-16. Pomiary przygotowawcze (retencja i delty sejfu 221, sejf 276, licznik) powstały na bazie `4355e325`; liczby
+niżej są z gałęzi PR po scaleniu `audyt` (`a6861547`: vildaclinic/vilda-calc#962, #964, #965, #968); potem scalono
+`95fca107` (vildaclinic/vilda-calc#969; sejf i testy tego wpisu bez zmian).
 
 **Pliki** (dane wyłącznie fikcyjne, bez PESEL; `dev` 'abcdefgh', wypełniacz treści z samych liter):
 - `tests/fixtures/vilda_vault-276.js.txt` (nowy) — bajt w bajt `vilda_vault.js` z `743dba9a`
@@ -40545,12 +40549,12 @@ delty sejfu 221, sejf 276, licznik) powstały na bazie `4355e325`; liczby niżej
   floty, 11 klas floty (skutki starszej wersji) i 2 klasy samych bieżących urządzeń;
 - `tests/unit/ostatnia-zmiana.test.mjs` — 62 przypadki (dotąd 21): pozytyw i negatyw każdej nowej klasy, normalizacji
   i warunków faktu;
-- `tests/unit/sync-dziennik-wlasnosciowy.test.mjs` — 182 przypadki w CI (dotąd 140) i 21 ręcznych: licznik w
-  profilach, determinizm, urządzenie starszej aplikacji w uprzęży, floty 221 i 276, strażniki transportu, scenariusze
-  deterministyczne floty, ręczny blok do decyzji właściciela i stres. Bloki floty stoją na końcu pliku. Program ziaren i
-  dotychczasowe literały (`ZNANE_W1`, `ZNANE_W2R`, `ZNANE_WYR`, `KAT_*`, `P6_*`) bez zmian: zrzuty `E2_AB_WYNIKI` 13
-  ziaren CI i obu przebiegów determinizmu są równe z licznikiem i bez, a zrzut wyroczni istniejących światów (78
-  punktów) — równy zrzutowi z bazy.
+- `tests/unit/sync-dziennik-wlasnosciowy.test.mjs` — 182 przypadki w CI (dotąd 140) i 21 ręcznych: licznik w profilach,
+  determinizm, urządzenie starszej aplikacji w uprzęży, floty 221 i 276, strażniki transportu, scenariusze
+  deterministyczne floty, ręczny blok znanych usterek bieżącej aplikacji i stres. Bloki floty stoją na końcu pliku.
+  Program ziaren i dotychczasowe literały (`ZNANE_W1`, `ZNANE_W2R`, `ZNANE_WYR`, `KAT_*`, `P6_*`) bez zmian: zrzuty
+  `E2_AB_WYNIKI` 13 ziaren CI i obu przebiegów determinizmu są równe z licznikiem i bez, a zrzut wyroczni istniejących
+  światów (78 punktów) — równy zrzutowi z bazy.
 
 ### Definicje licznika
 
@@ -40695,7 +40699,7 @@ literale, każdy inny wyjątek przerywa przebieg. Flota 276: wagi profilu, zwyk�
 
 **Światy.** Ziarno + 200 000 (flota 221) albo + 400 000 (flota 276 i kontrola N), profil pełny + 100 000;
 `E2_AB_SWIAT_FLOTA` zastępuje 200 000 / 400 000 (odtwarzanie światów pomiarów przygotowawczych). Scenariusze floty:
-`swiat(800 + nr)` (kontrole C = N 840 + nr), blok do decyzji 880 + nr, stres 970 + nr, strażnik urządzenia 960.
+`swiat(800 + nr)` (kontrole C = N 840 + nr), blok znanych usterek 880 + nr, stres 970 + nr, strażnik urządzenia 960.
 
 **Strażnik chwil** (CI, 0 wyjątków w każdej serii): każda `updatedAtISO`, `_contentAtISO` i `_pinnedState.at` wersji i
 wpisów Kosza w eksportach końcowych jest chwilą jakiejś operacji z historii. **Odcisk** we flocie dopuszcza `h`
@@ -40721,24 +40725,24 @@ Złożenia w W1 floty (R4a z polem, D7 z polem) tylko drukują; po W4 floty znik
 W4). Klasa floty działa tylko wtedy, gdy historia ma jej mechanizm na urządzeniu z `app` ≠ N (zbiór `stare`; cechy
 sejfu: retencja v1, bez składników W3, bez kolejki zdarzeń, najpierw `rev`, bez ratunku notatek, bez haka H1 — 221 ma
 wszystkie, 276 tylko retencję v1), jest dozwolona tylko w światach floty i ma w opisie dopisek „znane ograniczenie
-starszej wersji — do decyzji właściciela (pytanie z 2026-11-15)”. Nowe klasy są sprawdzane przed `BEZ_KLASY` albo w
-miejscu, w którym nie przejmują żadnego dotychczasowego naruszenia: klasyfikacja istniejących światów się nie zmienia.
-Każda klasa ma pozytyw i negatyw w `tests/unit/ostatnia-zmiana.test.mjs` — ten sam objaw z mechanizmem na bieżącym
-urządzeniu (albo bez warunku faktu) daje czerwień.
+starszej wersji — naprawa: aktualizacja urządzeń (decyzja właściciela z 2026-11-16)”. Nowe klasy są sprawdzane przed
+`BEZ_KLASY` albo w miejscu, w którym nie przejmują żadnego dotychczasowego naruszenia: klasyfikacja istniejących światów
+się nie zmienia. Każda klasa ma pozytyw i negatyw w `tests/unit/ostatnia-zmiana.test.mjs` — ten sam objaw z mechanizmem
+na bieżącym urządzeniu (albo bez warunku faktu) daje czerwień.
 
 | Klasa | Mechanizm w historii | Gdzie dozwolona | Źródło | Status |
 |---|---|---|---|---|
-| retencja starszej aplikacji (urządzenie przycinające) | retencja v1 usunęła u siebie ostatni stan wizyty | tylko widok tego urządzenia | `PATIENT_VISITS.md`, „Zgodność i wycofanie”; fikstura retencji v1; strażnik retencji | do decyzji właściciela |
-| retencja starszej aplikacji (odbiorca zachował głowę wizyty) | jak wyżej, a w widoku bieżącym jest nagrobek retencji tej wersji i inna wersja tej samej wizyty; także „utrata” po „Usuń pacjenta” i powrocie karty, gdy przycięcie było przed usunięciem | widoki bieżące | `Bvisit_protected`, `Bvisit_keepRetention` | do decyzji właściciela |
-| gwiazdka ze starszej aplikacji | ostatni zapis gwiazdki („Odepnij i usuń”, „Przywróć”, zmiana gwiazdki) na urządzeniu bez W3, bez późniejszego zapisu gwiazdki ani kosza na bieżącym. Dozwolony jest jeden fakt: w widoku bieżącym gwiazdka, którą `Bgw_stan` (:1558–1571) czyta z rekordu 221 (odpięcie przy rejestrze „przypięta” albo odcisku zgodnym z treścią i przy wersji, której kopie bieżących też nie mają pól W3 — `Bgw_scal` bierze całą nowszą wersję, :3956; inaczej gwiazdka sprzed, reguła W20), w widoku starszej aplikacji jej własna gwiazdka (gwiazdka bieżącej tylko wtedy, gdy ma ją któryś widok bieżący) | karta i Kosz, światy floty | W20 (`vilda_vault.js:2766–2771`; P-PRZYPIETA-POLKRATA); fikstura 221:757–787 | do decyzji właściciela |
-| „Przywróć” na starszej aplikacji bez chwili treści | „Przywróć” na urządzeniu bez W3 jako ostatni zapis treści, z polami W3 bieżącej aplikacji i zgodnym odciskiem; wygrywa wcześniejsza, późniejsza od przywracanej treści poprawka z dowolnego urządzenia (nic nie ginie). Ten sam fakt daje bieżące urządzenie, które przywrócenia nie przyjęło — nie do odróżnienia z widoku | światy floty | `Bgw_stan` (:1569–1570); fikstura 221:854–877 | do decyzji właściciela |
-| zmiana starszej aplikacji nadpisana przed wysłaniem (bez W3) | (a) poprawka albo gwiazdka na 221, potem zapis tej wersji na bieżącym bez wiedzy o niej, który doszedł do 221 przed wysłaniem; (b) gwiazdka na 221 na wersji przez nie utworzonej, czytana przez bieżącą jak zmiana treści (PD-12). Bez klasy, gdy oczekiwany stan jest w którymś widoku albo zmiana 221 doszła do bieżącego urządzenia | światy floty | P-PRZYPIETA-POLKRATA, „Flota mieszana”; fikstura 221:454–462 (`Bkz_nowszaWersja`); `vilda_vault.js:1526–1527` | do decyzji właściciela |
-| zmiana starszej aplikacji usunięta z kartą przed wysłaniem | zmiana (poprawka, gwiazdka, nowa wersja) na urządzeniu bez kolejki zdarzeń wcześniejsza niż „Usuń pacjenta” tej karty, które doszło do niego albo zrobiło się na nim, zanim ją wysłało; karta wraca zmianą innego urządzenia. Bez klasy, gdy zmiana doszła do bieżącego urządzenia albo urządzenie zwracające kartę ją miało | światy floty | fikstura 221 (bez `_eventLog`; :2481–2496); `PROG_DELT_221` | do decyzji właściciela |
-| najpierw rev (starsza aplikacja) | dwie treści tej wersji z odwrotną kolejnością `rev` i chwili, jedna zapisana na urządzeniu „najpierw `rev`”; w widoku bieżącym tylko, gdy oczekiwanej treści nie ma w żadnym widoku i widok nie należy do urządzenia, które ją zapisało (albo kartę zwróciła zmiana takiego urządzenia) | światy floty | P-PRZYPIETA-POLKRATA, „Flota mieszana”; `vilda_vault.js:1543` | do decyzji właściciela |
-| notatka bez ratunku D-21 (starsza aplikacja) | (a) „Usuń pacjenta” na bieżącym doszło do 221 przed jego pełną kopią, potem 221 zmienia kartę; (b) „Usuń pacjenta” na 221 (nagrobki notatek bez `deletedWithPatient`), potem powrót karty. Bez klasy, gdy pełna kopia 221 z notatką doszła do bieżącego urządzenia z żywą kartą (dostawy liczy się tylko w świecie zdarzeń, nie w pełnej wymianie na klonach) | światy floty | plan D-21; P-NOTATKI-ZA-KARTA; fikstura 221:2515 | do decyzji właściciela |
-| karta częściowa (starsza aplikacja) | karta wraca bez części wersji: (a) zmianą urządzenia bez haka H1; (b) wcześniej retencja v1 usunęła ostatni stan wizyty na urządzeniu, które potem kartę zwróciło | światy floty | klasa „karta częściowa” E3-PR0a; fikstura 221 (bez haków) | do decyzji właściciela |
-| gwiazdka wpisu Kosza po koszu bez wiedzy o gwiazdce ze starszej aplikacji | kosz na bieżącym, które nie znało ostatniej gwiazdki zapisanej na urządzeniu bez W3 (między bieżącymi leczy to pełna wymiana) | Kosz, światy floty | klasa R4a; fikstura 221:454–462 | do decyzji właściciela |
-| treść wpisu Kosza po koszu bez wiedzy o poprawce ze starszej aplikacji | jak wyżej dla treści (między bieżącymi leczy to P-KOSZ-NOWSZA-TRESC) | Kosz, światy floty | klasa R4a′; P-KOSZ-NOWSZA-TRESC | do decyzji właściciela |
+| retencja starszej aplikacji (urządzenie przycinające) | retencja v1 usunęła u siebie ostatni stan wizyty | tylko widok tego urządzenia | `PATIENT_VISITS.md`, „Zgodność i wycofanie”; fikstura retencji v1; strażnik retencji | znane ograniczenie; naprawa: aktualizacja urządzeń |
+| retencja starszej aplikacji (odbiorca zachował głowę wizyty) | jak wyżej, a w widoku bieżącym jest nagrobek retencji tej wersji i inna wersja tej samej wizyty; także „utrata” po „Usuń pacjenta” i powrocie karty, gdy przycięcie było przed usunięciem | widoki bieżące | `Bvisit_protected`, `Bvisit_keepRetention` | znane ograniczenie; naprawa: aktualizacja urządzeń |
+| gwiazdka ze starszej aplikacji | ostatni zapis gwiazdki („Odepnij i usuń”, „Przywróć”, zmiana gwiazdki) na urządzeniu bez W3, bez późniejszego zapisu gwiazdki ani kosza na bieżącym. Dozwolony jest jeden fakt: w widoku bieżącym gwiazdka, którą `Bgw_stan` (:1558–1571) czyta z rekordu 221 (odpięcie przy rejestrze „przypięta” albo odcisku zgodnym z treścią i przy wersji, której kopie bieżących też nie mają pól W3 — `Bgw_scal` bierze całą nowszą wersję, :3956; inaczej gwiazdka sprzed, reguła W20), w widoku starszej aplikacji jej własna gwiazdka (gwiazdka bieżącej tylko wtedy, gdy ma ją któryś widok bieżący) | karta i Kosz, światy floty | W20 (`vilda_vault.js:2766–2771`; P-PRZYPIETA-POLKRATA); fikstura 221:757–787 | znane ograniczenie; naprawa: aktualizacja urządzeń |
+| „Przywróć” na starszej aplikacji bez chwili treści | „Przywróć” na urządzeniu bez W3 jako ostatni zapis treści, z polami W3 bieżącej aplikacji i zgodnym odciskiem; wygrywa wcześniejsza, późniejsza od przywracanej treści poprawka z dowolnego urządzenia (nic nie ginie). Ten sam fakt daje bieżące urządzenie, które przywrócenia nie przyjęło — nie do odróżnienia z widoku | światy floty | `Bgw_stan` (:1569–1570); fikstura 221:854–877 | znane ograniczenie; naprawa: aktualizacja urządzeń |
+| zmiana starszej aplikacji nadpisana przed wysłaniem (bez W3) | (a) poprawka albo gwiazdka na 221, potem zapis tej wersji na bieżącym bez wiedzy o niej, który doszedł do 221 przed wysłaniem; (b) gwiazdka na 221 na wersji przez nie utworzonej, czytana przez bieżącą jak zmiana treści (PD-12). Bez klasy, gdy oczekiwany stan jest w którymś widoku albo zmiana 221 doszła do bieżącego urządzenia | światy floty | P-PRZYPIETA-POLKRATA, „Flota mieszana”; fikstura 221:454–462 (`Bkz_nowszaWersja`); `vilda_vault.js:1526–1527` | znane ograniczenie; naprawa: aktualizacja urządzeń |
+| zmiana starszej aplikacji usunięta z kartą przed wysłaniem | zmiana (poprawka, gwiazdka, nowa wersja) na urządzeniu bez kolejki zdarzeń wcześniejsza niż „Usuń pacjenta” tej karty, które doszło do niego albo zrobiło się na nim, zanim ją wysłało; karta wraca zmianą innego urządzenia. Bez klasy, gdy zmiana doszła do bieżącego urządzenia albo urządzenie zwracające kartę ją miało | światy floty | fikstura 221 (bez `_eventLog`; :2481–2496); `PROG_DELT_221` | znane ograniczenie; naprawa: aktualizacja urządzeń |
+| najpierw rev (starsza aplikacja) | dwie treści tej wersji z odwrotną kolejnością `rev` i chwili, jedna zapisana na urządzeniu „najpierw `rev`”; w widoku bieżącym tylko, gdy oczekiwanej treści nie ma w żadnym widoku i widok nie należy do urządzenia, które ją zapisało (albo kartę zwróciła zmiana takiego urządzenia) | światy floty | P-PRZYPIETA-POLKRATA, „Flota mieszana”; `vilda_vault.js:1543` | znane ograniczenie; naprawa: aktualizacja urządzeń |
+| notatka bez ratunku D-21 (starsza aplikacja) | (a) „Usuń pacjenta” na bieżącym doszło do 221 przed jego pełną kopią, potem 221 zmienia kartę; (b) „Usuń pacjenta” na 221 (nagrobki notatek bez `deletedWithPatient`), potem powrót karty. Bez klasy, gdy pełna kopia 221 z notatką doszła do bieżącego urządzenia z żywą kartą (dostawy liczy się tylko w świecie zdarzeń, nie w pełnej wymianie na klonach) | światy floty | plan D-21; P-NOTATKI-ZA-KARTA; fikstura 221:2515 | znane ograniczenie; naprawa: aktualizacja urządzeń |
+| karta częściowa (starsza aplikacja) | karta wraca bez części wersji: (a) zmianą urządzenia bez haka H1; (b) wcześniej retencja v1 usunęła ostatni stan wizyty na urządzeniu, które potem kartę zwróciło | światy floty | klasa „karta częściowa” E3-PR0a; fikstura 221 (bez haków) | znane ograniczenie; naprawa: aktualizacja urządzeń |
+| gwiazdka wpisu Kosza po koszu bez wiedzy o gwiazdce ze starszej aplikacji | kosz na bieżącym, które nie znało ostatniej gwiazdki zapisanej na urządzeniu bez W3 (między bieżącymi leczy to pełna wymiana) | Kosz, światy floty | klasa R4a; fikstura 221:454–462 | znane ograniczenie; naprawa: aktualizacja urządzeń |
+| treść wpisu Kosza po koszu bez wiedzy o poprawce ze starszej aplikacji | jak wyżej dla treści (między bieżącymi leczy to P-KOSZ-NOWSZA-TRESC) | Kosz, światy floty | klasa R4a′; P-KOSZ-NOWSZA-TRESC | znane ograniczenie; naprawa: aktualizacja urządzeń |
 | D-4 A (Kosz w zwróconej starej karcie) — samych bieżących | kosz wizyty w starej karcie X po „Scal pacjentów”, gdy X wróciła już wcześniej zapisem w niej (D-4 A), potem „Usuń pacjenta” karty docelowej: wpis zostaje przy żywej X (nic nie ginie). Kosz w karcie, która przed nim nie wróciła — bez klasy | W1, W4, bloby | plan D-4 (wariant A); P-KOSZ-PO-KLUCZU, „kosz-po-2” | przyjęte D-4 |
 | D-4 A (wersja nieznana scalającemu w zwróconej starej karcie) — samych bieżących | utrata E1/E1b wersji z kartą źródłową X, a X wróciła zapisem innej wizyty albo notatki (D-4 A) i urządzenie z tą wersją oddało ją do żywej X: wersja jest w duplikacie X, nie w karcie scalonej (nic nie ginie, także po W4) | W1, W4, bloby | plan D-4; P-SYNC-WLASCICIEL, „Utrata wersji (E1/E1b)”; kontrola N | przyjęte D-4; naprawa E3-PR0e/E3-PR0f |
 
@@ -40919,8 +40923,12 @@ ręcznych; asercji się nie wycina) nie była potrzebna. W pełnym `npm test` (2
 zielony, 905 plików, 30 825 testów, `test:unit` 975 s) plik trwał 161,9 s, w poprzednim pełnym przebiegu 162,7 s, na
 bazie `4355e325` 127,5 s.
 
-### Wejście do E3-PR0c–E3-PR0h
+### Wejście do kolejnych PR (E3-PR0b2, E3-PR0c–E3-PR0h)
 
+- **E3-PR0b2** (następny PR, decyzja właściciela z 2026-11-16): przy notatce pacjenta zmienionej na dwóch urządzeniach
+  wygrywa późniejsza zmiana, a nie wyższy `rev` (`Bks_wygrywaRev`). Zmiana reguły synchronizacji z wpisem w tym pliku,
+  testami czerwonymi na bazie i odbiorem właściciela; test wejściowy — przypadek notatki z bloku znanych usterek
+  (niżej).
 - **Reguła echa** (E3-PR0c, E3-PR0d): odsyłać rekord, który scalanie zapisało inaczej, niż przyszedł; warunek „scalanie
   zapisało” porównuje rekord przed i po scaleniu (bez niego powtórka partii daje wiersze surowe, a odsyłanie na samym
   fakcie zapisu dałoby echo bez końca przez urządzenie 221). Reguła jest niezależna od źródła: nie odsyłać różnicy
@@ -40938,9 +40946,10 @@ bazie `4355e325` 127,5 s.
   kopert wersji jako „nie nowsze”), a R4a i R4a′ przez 221 dają jeden dodatkowy obieg echa do starszego urządzenia
   (scenariusz „drugi rząd przez 221”: 1 wiersz do nadawcy, trzeci rząd 0; losowa flota 221, ziarno 3: drugi rząd 2) —
   opisać, nie ukrywać (E3-PR0d). Stres: bez reguły pola jedna pełna kopia 221 dałaby minutę slotu ponad 4 MiB.
-- **E3-PR0e**: „Usuń pacjenta” duplikatu karty po „Scal pacjentów” (sprawa niżej, scenariusz w bloku do decyzji jako
-  test wejściowy), utrata bez nośnika (30 kart opróżnionych w 20 ziarnach profilu pełnego), „miejsce wizyty po „Scal
-  pacjentów””, wersja nieznana scalającemu w zwróconej starej karcie.
+- **E3-PR0e**: „Usuń pacjenta” duplikatu karty po „Scal pacjentów” (decyzja 4a; sprawa niżej, scenariusz w bloku znanych
+  usterek jako test wejściowy), luka mutantów po przegranym nagrobku karty (scenariusz), utrata bez nośnika (30 kart
+  opróżnionych w 20 ziarnach profilu pełnego), „miejsce wizyty po „Scal pacjentów””, wersja nieznana scalającemu w
+  zwróconej starej karcie.
 - **E3-PR0h**: floty z odsyłaniem (221, 276, C = N), trzy bieżące urządzenia w CI, stres z wypełniaczem, echo na
   klonach z prawdziwą kolejką, wariant `publikuje`, rozmiary ech; linia bazowa — przebiegi ręczne licznika wyżej.
 
@@ -40958,7 +40967,7 @@ licznika, wyroczni, fikstur i builderów (123) / przebiegi ręczne.
 | scalenie rekordu złożonego stempluje poprawkę chwilą scalania | tak, 33 | 16 / 0 | literał klas licznika („rekord złożony” → „inne”) i strażnik chwil we flocie |
 | brak pola gwiazdki we wpisie Kosza czytany jako „bez gwiazdki” | tak, 532 | 59 / 0 | odstępstwo: wyrocznia W4 floty w ziarnie 3 nie czerwienieje; czerwienieją zbieżność W4 floty, strażnik chwil i literały; scenariusz „Odepnij i usuń”, potem „Przywróć” zielony (ten sam wynik co W20) |
 | wyłączona gałąź „obie wersje bez pól gwiazdki” przy scalaniu tej samej wersji | tak, 4 (przypięta W3 we flocie) | 1 / 0 | scenariusz „gwiazdka i odpięcie na wersji zapisanej na 221” — wyrocznia bez klasy |
-| klucz tożsamości wizyty bez dnia | tak, 2 | 4 / 0; flota 221 ziarna 1–10: 0/10 | tylko literały scenariuszy retencji i stresu; wyrocznia milczy (A i B tracą 7 z 8 wersji, a tożsamość wyrocznia bierze z eksportu sejfu) |
+| klucz tożsamości wizyty bez dnia | tak, 2 | 4 / 0; flota 221 ziarna 1–10: 0/10 | literały scenariuszy retencji i stresu oraz jawny wymóg „A i B mają 8 wersji” w scenariuszu retencji 221 z parametrami aplikacji (dopisany po pomiarze; na kopii: A i B mają 1 wersję); wyrocznia milczy (A i B tracą 7 z 8 wersji, a tożsamość wyrocznia bierze z eksportu sejfu) |
 | klucz tożsamości wizyty z identyfikatorem wersji zamiast dnia | tak, 5 | 4 / 0; flota 221: 0/10 | jak wyżej |
 | rejestr gwiazdki przy zgodnym odcisku nie odróżnia samej gwiazdki od zmiany treści | tak, 7 | 2 / 0 | scenariusz przypięcia i odpięcia wersji z bieżącej aplikacji — wyrocznia bez klasy |
 | ratunek notatki po „Usuń pacjenta” zamieniony na usunięcie | tak, 169 | 18 / 0 | 3 scenariusze floty „notatka zostaje” — wyrocznia bez klasy i jawny wymóg |
@@ -40970,10 +40979,12 @@ licznika, wyroczni, fikstur i builderów (123) / przebiegi ręczne.
 | urządzenie starszej aplikacji ładuje bieżącą retencję | nie dotyczy | 4 / 2 | strażnik retencji 221 i 276 (8 z 8 zostaje) i literały scenariuszy retencji |
 
 Oba mutanty kodu zgodności (gałąź „obie wersje bez pól gwiazdki” i klucz tożsamości wizyty bez dnia) łapią już testy
-sprzed E3-PR0b; E3-PR0b dodaje wykrycie w uprzęży A ≡ B: pierwszy — wyrocznią w scenariuszu floty, drugi — tylko
-literałami scenariuszy retencji i stresu. Mutant licznika „warstwa wyk = po2a” zmienia flagę wiersza w echu scalenia;
-wariant, który zmienia tylko zapis warstwy w podsumowaniu, czerwieni sam literał stresu (budżet liczy się z flagi).
-Kontrola bierności licznika: flota 221, ziarna 1 i 3, z licznikiem i bez (`E2_AB_ODSYL=0`) — ten sam dziennik i wynik.
+sprzed E3-PR0b; E3-PR0b dodaje wykrycie w uprzęży A ≡ B: pierwszy — wyrocznią w scenariuszu floty, drugi — jawnym
+wymogiem faktu w scenariuszu retencji 221 z parametrami aplikacji (oba warianty klucza: wymóg czerwony, bez zmiany
+zielony) i literałami scenariuszy retencji i stresu. Mutant licznika „warstwa wyk = po2a” zmienia flagę wiersza w echu
+scalenia; wariant, który zmienia tylko zapis warstwy w podsumowaniu, czerwieni sam literał stresu (budżet liczy się z
+flagi). Kontrola bierności licznika: flota 221, ziarna 1 i 3, z licznikiem i bez (`E2_AB_ODSYL=0`) — ten sam dziennik i
+wynik.
 
 ### Jak uruchomić
 
@@ -41001,26 +41012,27 @@ Kontrola bierności licznika: flota 221, ziarna 1 i 3, z licznikiem i bez (`E2_A
 | `E2_AB_ECHO_KLONY=wszystkie` | echo na klonach każdego scalenia z echem w losowych flotach |
 | `E2_AB_NORM_VISIT=0` | wyrocznia bez normalizacji tożsamości wizyty (czerwienieje także literały scenariuszy) |
 | `E2_AB_P6_FLOTA=wszystkie` | scenariusze ręczne floty i kontrole C = N |
-| `E2_AB_DO_DECYZJI=1` | blok spraw do decyzji właściciela (dziś czerwony) |
+| `E2_AB_ZNANE_USTERKI=1` | blok znanych usterek bieżącej aplikacji (dziś czerwony): notatka pacjenta — do naprawy w E3-PR0b2, „Usuń pacjenta” duplikatu karty — w E3-PR0e |
 | `E2_AB_STRES=0`, `E2_AB_STRES_WARIANTY=<lista>`, `E2_AB_STRES_KART=<n>`, `E2_AB_STRES_TRESC=<n>` | stres: wyłączenie, warianty („C→A”, „C→A i C→B”, „C→A+konflikt”, „276→A”, „N→A”, „N→A+konflikt”), liczba kart, wypełniacz w treści każdej wersji |
 | `E2_AB_SLAD=<prefiks>[,…]` | stan wersji i wpisu Kosza na A, B, C po każdym wierszu dziennika floty |
-| `E2_AB_WYNIKI=<plik>` | JSONL: pole `odsyl` ziaren, wiersze `typ` 'flota221', 'flota276', 'flotaN', 'p6f', 'stres' |
+| `E2_AB_WYNIKI=<plik>` | JSONL: pole `odsyl` ziaren, wiersze `typ` 'flota221', 'flota276', 'flotaN', 'p6f', 'stres', 'znana usterka' |
 
 Literały floty, scenariuszy i stresu obowiązują tylko w przebiegu domyślnym (bez zmiennych z tabeli poza `E2_AB_WYNIKI`
 i `E2_AB_SLAD`); warunki zieleni — zawsze.
 
 **Ograniczenia i sprawy otwarte.**
-- **Sprawa wstrzymana do decyzji właściciela: notatka pacjenta zmieniona na dwóch urządzeniach** (pytanie z
-  2026-11-15, bez odpowiedzi). Zostaje treść poprawiana więcej razy, a nie zmieniona później: `Bks_wygrywaRev`
-  (`vilda_vault.js:5435–5438`; „wyższy `rev`, przy równym nowsza data” — P-KOPIA-DANE-KONTA, plan 3.4). Odtwarza
-  się na samych bieżących urządzeniach (blok `E2_AB_DO_DECYZJI=1`: A edytuje notatkę dwa razy, B raz, 5 s później; we
+- **Notatka pacjenta zmieniona na dwóch urządzeniach — do naprawy w E3-PR0b2 (decyzja właściciela z 2026-11-16: wygrywa
+  późniejsza zmiana).** Dziś zostaje treść poprawiana więcej razy, a nie zmieniona później: `Bks_wygrywaRev`
+  (`vilda_vault.js:5435–5438`; „wyższy `rev`, przy równym nowsza data” — P-KOPIA-DANE-KONTA, plan 3.4). Odtwarza się na
+  samych bieżących urządzeniach (blok `E2_AB_ZNANE_USTERKI=1`: A edytuje notatkę dwa razy, B raz, 5 s później; we
   wszystkich trzech światach zostaje treść A z `rev` 3). W losowej flocie: 221 bez delt, ziarno 7 (świat 200 007), W4
   floty, krok 132. Bez klasy i bez literału; wersje wizyt mają od D-7 wariant 2 regułę odwrotną (wygrywa późniejsza).
-- **Sprawa wstrzymana do decyzji właściciela: „Usuń pacjenta” duplikatu karty po „Scal pacjentów”** (pytanie z
-  2026-11-15, bez odpowiedzi; E3-PR0e, decyzja 4a). B scala X → Y; A bez wiedzy o scaleniu poprawia wizytę v w X
-  (33,6 → 41 kg), więc X wraca (D-4 A); C usuwa X razem z v (`Bpu_usun`, `vilda_vault.js:9441`; poprawka trafia do
-  karty, w której wersja leży lokalnie — `Bsw_decyzja`, :3806). Wynik zależy od kolejności, w jakiej urządzenia dostają
-  zmiany:
+  Przypadek z bloku jest testem wejściowym E3-PR0b2; E3-PR0b sejfu nie zmienia, a opis reguły w P-KOPIA-DANE-KONTA (stan
+  kodu) dostał dopisek z 2026-11-16.
+- **„Usuń pacjenta” duplikatu karty po „Scal pacjentów” — do naprawy w E3-PR0e (decyzja 4a).** B scala X → Y; A bez
+  wiedzy o scaleniu poprawia wizytę v w X (33,6 → 41 kg), więc X wraca (D-4 A); C usuwa X razem z v (`Bpu_usun`,
+  `vilda_vault.js:9441`; poprawka trafia do karty, w której wersja leży lokalnie — `Bsw_decyzja`, :3806). Wynik zależy
+  od kolejności, w jakiej urządzenia dostają zmiany:
 
   | Kolejność | Po samych zdarzeniach (W1) | Zdarzenia, potem pełna wymiana (W4) | Same pełne kopie |
   |---|---|---|---|
@@ -41032,9 +41044,11 @@ i `E2_AB_SLAD`); warunki zieleni — zawsze.
   poprawkę: w (b) przywraca, w (a) i (c) nie. W losowej flocie 221 (profil pełny, ziarno 4, świat 300 004, bez delt):
   krok 133 — W1 floty: utrata na A i C, v ma tylko B (w X, 41 kg); W4 floty: utrata na A, B i C; krok 142 — W1 jak w
   kroku 133; W4 floty: v w X (41 kg) na A, B i C — „inna karta” z klasą D-4 A (dozwolona), bez utraty, bo B zapisał w
-  kroku 138 nową wersję X (późniejszą niż nagrobek C). Wyrocznia oczekuje v w Y z 41 kg (przez alias scalenia
-  „Usuń pacjenta” X nie jest dla niej operacją na v); zmiana aliasu uciszyłaby tę sprawę, więc jej nie wprowadzono. Bez
-  klasy i bez literału; scenariusz w bloku `E2_AB_DO_DECYZJI=1` jest testem wejściowym E3-PR0e.
+  kroku 138 nową wersję X (późniejszą niż nagrobek C). Wyrocznia oczekuje v w Y z 41 kg (przez alias scalenia „Usuń
+  pacjenta” X nie jest dla niej operacją na v); zmiana aliasu uciszyłaby tę sprawę, więc jej nie wprowadzono. Bez klasy
+  i bez literału; scenariusz w bloku `E2_AB_ZNANE_USTERKI=1` jest testem wejściowym E3-PR0e. Do czasu naprawy zalecenie
+  jak przy decyzji 9a: duplikat karty po „Scal pacjentów” scalać ponownie („Scal pacjentów”), nie usuwać
+  („Usuń pacjenta”).
 - **Przypadki do rozpoznania, wywoływane danymi starszej wersji** (bez klasy i bez literału, tylko w seriach ręcznych):
   - *nieświeży odcisk `h` po scaleniu wersji z 276* — flota 276, profil pełny, `E2_AB_SWIAT_FLOTA=300000`, ziarno 2
     (świat 400 002), krok 88: różnica par BC i CA w W4 floty bez klasy (`payload._pinnedState.h`, `payload.visit`).
@@ -41050,11 +41064,12 @@ i `E2_AB_SLAD`); warunki zieleni — zawsze.
     Nieustalone: mechanizm z miejscem w kodzie; 6 prostych odtworzeń (także z nagrobkiem retencji 276) daje wynik
     poprawny; kontrola N w tym świecie jest czysta, ale świat rozchodzi się wcześniej (inna retencja), więc udziału 276
     to nie dowodzi.
-- **Skutki samej starszej wersji** (klasy floty wyżej) mają status „znane ograniczenie starszej wersji — do decyzji
-  właściciela (pytanie z 2026-11-15)”. Testy ich nie naprawiają; zmienić je może tylko aktualizacja urządzeń albo osobna
-  osłona w bieżącej aplikacji.
+- **Skutki samej starszej wersji** (klasy floty wyżej) mają status „znane ograniczenie starszej wersji — naprawa:
+  aktualizacja urządzeń (decyzja właściciela z 2026-11-16)”: bez zmiany kodu aplikacji i bez osłon w bieżącej aplikacji.
+  Wszystkie urządzenia właściciela mają dziś aktualną wersję; flota ze starszą aplikacją zostaje w testach jako
+  zabezpieczenie (np. stara karta przeglądarki albo urządzenie otwarte po długiej przerwie).
 - **Luka mutantów:** usunięcie wersji poprawionych przed chwilą usunięcia karty po przegranym nagrobku łapie tylko
-  strażnik źródła — brakuje scenariusza (kandydat do kolejnego PR).
+  strażnik źródła — brakuje scenariusza; mutant przeżywa (luka, scenariusz do E3-PR0e).
 - **Przybliżenia modelu:** moduły okna C (tabela wyżej); retencja wołana jawnie (w aplikacji po zapisie przy ≥ 10
   zapisach, z ochroną 24 h); C startuje jako bliźniak A (z magazynu bieżącej aplikacji); transport 221 bez utraty
   beaconu 64 KiB, bez 429 i AUTH, bez wyścigu delty z retencją; 276 bez `/delta` przy wyłączonym dzienniku; pełna kopia
@@ -41071,6 +41086,9 @@ i `E2_AB_SLAD`); warunki zieleni — zawsze.
   pliku sprzed E3-PR0b (opisy klas wyroczni E3-PR0a i dwa komentarze testu A ≡ B), bo wskazywały już inne wiersze — to
   naprawa nieaktualnych odwołań, bez zmiany treści. Dopiski z 2026-11-16 we wpisach P-SYNC-ZDARZENIA (E2-PR6),
   P-DZIENNIK-ZDARZEN (E2-PR2a) i E3-PR0a dodały 1–2 wiersze przed częścią odwołań, więc 35 odwołań „ok. N” w
-  `tests/support/ostatnia-zmiana.mjs` i w teście A ≡ B przesunięto o tyle samo (treść wskazanych wierszy sprawdzona).
+  `tests/support/ostatnia-zmiana.mjs` i w teście A ≡ B przesunięto o tyle samo (treść wskazanych wierszy sprawdzona). Po
+  scaleniu `audyt` `95fca107` (#969: +70 wierszy przed wskazanymi miejscami) te same 35 odwołań przesunięto o +70
+  (jedno — do reguły notatek — wskazywało inny wiersz już przed scaleniem i zostało poprawione według treści), a dopisek
+  z 2026-11-16 przy regule notatek w P-KOPIA-DANE-KONTA przesunął o 2 jedno dalsze.
 
 **Cofnięcie.** Rewert PR (tylko testy, fikstury i dokumenty; bez migracji i bez wpływu na aplikację).
