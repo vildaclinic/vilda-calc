@@ -146,6 +146,19 @@
     });
   }
   var pubertyDialog = null, pubertyDraft = null, pubertyShortcutHasData = false;
+  function decorateShortcut(button, secondLine, statusId) {
+    var title = element('span', 'vhome-shortcut-title', 'Dane');
+    title.appendChild(element('br')); title.appendChild(d.createTextNode(secondLine));
+    var icon = d.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    icon.setAttribute('viewBox', '0 0 24 24'); icon.setAttribute('aria-hidden', 'true'); icon.setAttribute('focusable', 'false');
+    var path = d.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', 'M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5'); icon.appendChild(path);
+    var status = element('small', 'vhome-shortcut-status'); status.id = statusId;
+    button.replaceChildren(title, icon, status); button.classList.add('vhome-input-shortcut');
+    button.setAttribute('aria-label', 'Dane ' + secondLine); button.setAttribute('aria-describedby', status.id);
+    button.setAttribute('aria-haspopup', 'dialog');
+    return status;
+  }
   function refreshPubertyShortcut(hasData) {
     if (!started) return false;
     var button = byId('tannerToggleBtn');
@@ -153,22 +166,7 @@
     if (typeof hasData === 'boolean') pubertyShortcutHasData = hasData;
     var status = button.querySelector('.vhome-shortcut-status');
     if (!status) {
-      var title = element('span', 'vhome-shortcut-title', 'Dane');
-      title.appendChild(element('br'));
-      title.appendChild(d.createTextNode('pokwitaniowe'));
-      var icon = d.createElementNS('http://www.w3.org/2000/svg', 'svg');
-      icon.setAttribute('viewBox', '0 0 24 24');
-      icon.setAttribute('aria-hidden', 'true');
-      icon.setAttribute('focusable', 'false');
-      var path = d.createElementNS('http://www.w3.org/2000/svg', 'path');
-      path.setAttribute('d', 'M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5');
-      icon.appendChild(path);
-      status = element('small', 'vhome-shortcut-status'); status.id = 'vhomePubertyShortcutStatus';
-      button.replaceChildren(title, icon, status);
-      button.classList.add('vhome-input-shortcut');
-      button.setAttribute('aria-label', 'Dane pokwitaniowe');
-      button.setAttribute('aria-describedby', status.id);
-      button.setAttribute('aria-haspopup', 'dialog');
+      status = decorateShortcut(button, 'pokwitaniowe', 'vhomePubertyShortcutStatus');
       button.setAttribute('aria-controls', 'vhomePubertyDialog');
     }
     // Reuse the native, date-aware wording: an earlier or incompatible exam
@@ -305,8 +303,8 @@
       if (typeof w.vildaPersistFlushNow === 'function') w.vildaPersistFlushNow({ force: true });
     }
   }
-  function fitPubertyDialog() {
-    if (!pubertyDialog) return;
+  function fitDetailDialog(dialog) {
+    if (!dialog) return;
     var height = w.innerHeight;
     try {
       if (w.parent !== w && w.frameElement) {
@@ -315,40 +313,46 @@
         height = Math.min(height, bottom - Math.max(0, w.frameElement.getBoundingClientRect().top));
       } else if (w.visualViewport) height = Math.min(height, w.visualViewport.height);
     } catch (_) { /* A foreign embed cannot expose its viewport. */ }
-    if (height > 0) pubertyDialog.style.setProperty('--vhome-dialog-viewport-height', height + 'px');
+    if (height > 0) dialog.style.setProperty('--vhome-dialog-viewport-height', height + 'px');
   }
-  function createPubertyDialog() {
+  function createDetailDialog(options) {
     var dialog = element('dialog', 'vhome-detail-dialog');
-    dialog.id = 'vhomePubertyDialog';
+    dialog.id = options.id;
     dialog.setAttribute('role', 'dialog');
-    dialog.setAttribute('aria-labelledby', 'vhomePubertyTitle');
+    dialog.setAttribute('aria-labelledby', options.titleId);
     var heading = element('div', 'vhome-dialog-heading');
-    var title = element('h2', '', 'Dane pokwitaniowe'); title.id = 'vhomePubertyTitle';
+    var title = element('h2', '', options.title); title.id = options.titleId;
     var close = element('button', 'vhome-dialog-close', '×'); close.type = 'button';
-    close.setAttribute('aria-label', 'Zamknij dane pokwitaniowe'); close.addEventListener('click', function () { closePuberty(false); });
+    close.setAttribute('aria-label', 'Zamknij ' + options.title.toLowerCase()); close.addEventListener('click', options.onClose);
     heading.append(title, close);
     var body = element('div', 'vhome-dialog-body');
     var footer = element('div', 'vhome-dialog-footer');
     var cancel = element('button', 'vhome-dialog-cancel', 'Anuluj'); cancel.type = 'button';
-    cancel.addEventListener('click', function () { closePuberty(false); });
-    var apply = element('button', 'vhome-dialog-apply', 'Zastosuj dane pokwitaniowe'); apply.type = 'button';
-    apply.addEventListener('click', applyPuberty);
+    cancel.addEventListener('click', options.onClose);
+    var apply = element('button', 'vhome-dialog-apply', options.applyLabel); apply.type = 'button';
+    apply.addEventListener('click', options.onApply);
     footer.append(cancel, apply); dialog.append(heading, body, footer);
-    dialog.addEventListener('cancel', function (event) { event.preventDefault(); closePuberty(false); });
+    dialog.addEventListener('cancel', function (event) { event.preventDefault(); options.onClose(); });
     dialog.addEventListener('click', function (event) {
       if (event.target !== dialog) return;
       var rect = dialog.getBoundingClientRect();
-      if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) closePuberty(false);
+      if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) options.onClose();
     });
     d.body.appendChild(dialog);
-    w.addEventListener('resize', fitPubertyDialog);
-    if (w.visualViewport) w.visualViewport.addEventListener('resize', fitPubertyDialog);
+    var fit = function () { fitDetailDialog(dialog); };
+    w.addEventListener('resize', fit);
+    if (w.visualViewport) w.visualViewport.addEventListener('resize', fit);
     try {
       if (w.parent !== w) {
-        w.parent.addEventListener('resize', fitPubertyDialog);
-        if (w.parent.visualViewport) w.parent.visualViewport.addEventListener('resize', fitPubertyDialog);
+        w.parent.addEventListener('resize', fit);
+        if (w.parent.visualViewport) w.parent.visualViewport.addEventListener('resize', fit);
       }
     } catch (_) { /* Own-document resize remains available in a foreign embed. */ }
+    return dialog;
+  }
+  function createPubertyDialog() {
+    var dialog = createDetailDialog({ id: 'vhomePubertyDialog', titleId: 'vhomePubertyTitle', title: 'Dane pokwitaniowe',
+      applyLabel: 'Zastosuj dane pokwitaniowe', onApply: applyPuberty, onClose: function () { closePuberty(false); } });
     w.addEventListener('popstate', function () {
       if (!pubertyDraft || !pubertyDialog.open) return;
       if (w.history.state && w.history.state.vildaHomeDialog === pubertyDraft.historyToken) return;
@@ -409,7 +413,7 @@
     var dateInput = d.createElement('input'); dateInput.type = 'text'; dateInput.readOnly = true;
     dateInput.setAttribute('aria-label', 'Data oceny — data bieżącej wizyty');
     dateInput.value = context.measuredAtISO ? context.measuredAtISO.slice(8, 10) + '.' + context.measuredAtISO.slice(5, 7) + '.' + context.measuredAtISO.slice(0, 4) : ''; dateLabel.appendChild(dateInput); editor.appendChild(dateLabel);
-    fitPubertyDialog();
+    fitDetailDialog(pubertyDialog);
     pubertyDialog.setAttribute('aria-modal', 'true');
     pubertyDialog.showModal();
     pubertyDraft.historyToken = 'puberty-' + Date.now();
@@ -535,7 +539,8 @@
     if (w.VildaSummaryLayout) w.VildaSummaryLayout.refresh();
   }
   w.VildaHomeWorkspace = Object.freeze({ start: start, refresh: refresh, openPuberty: openPuberty,
-    refreshPubertyShortcut: refreshPubertyShortcut });
+    refreshPubertyShortcut: refreshPubertyShortcut, createDialog: createDetailDialog, fitDialog: fitDetailDialog,
+    decorateShortcut: decorateShortcut });
   if (d.readyState === 'loading') d.addEventListener('DOMContentLoaded', start, { once: true });
   else start();
 })(typeof window !== 'undefined' ? window : globalThis);

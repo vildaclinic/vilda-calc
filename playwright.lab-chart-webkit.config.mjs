@@ -31,7 +31,7 @@ export default defineConfig({
     },
     {
       name: 'home-workspace-webkit',
-      testMatch: /home-workspace-(?:preview|puberty)\.spec\.mjs/,
+      testMatch: /home-workspace-(?:preview|puberty|perinatal)\.spec\.mjs/,
       use: { ...devices['Desktop Safari'], browserName: 'webkit', viewport: { width: 1440, height: 1000 } },
     },
   ],

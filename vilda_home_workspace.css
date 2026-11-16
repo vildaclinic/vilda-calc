@@ -167,7 +167,7 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-12px);
 }
-.vilda-home-workspace #tannerToggleBtn.vhome-input-shortcut {
+.vilda-home-workspace :is(#tannerToggleBtn, #vhomePerinatalButton).vhome-input-shortcut {
   position: relative;
   box-sizing: border-box;
   display: flex !important;
@@ -190,7 +190,7 @@
   line-height: 1.4 !important;
   text-align: left !important;
 }
-.vilda-home-workspace #tannerToggleBtn.vhome-input-shortcut:hover {
+.vilda-home-workspace :is(#tannerToggleBtn, #vhomePerinatalButton).vhome-input-shortcut:hover {
   border-color: #accfd2 !important;
   background: #f3f9f9 !important;
 }
@@ -228,7 +228,7 @@
   border: 0;
 }
 @media (min-width: 601px) and (max-width: 850px) {
-  .vilda-home-workspace #tannerToggleBtn.vhome-input-shortcut { height: 100px !important; min-height: 100px !important; }
+  .vilda-home-workspace :is(#tannerToggleBtn, #vhomePerinatalButton).vhome-input-shortcut { height: 100px !important; min-height: 100px !important; }
 }
 .vilda-home-workspace .vhome-form-actions {
   display: grid;
@@ -377,7 +377,7 @@
   }
   .vilda-home-workspace .vhome-extra-data { margin-top: var(--space-12px); }
   .vilda-home-workspace .vhome-data-shortcuts { gap: var(--space-10px); }
-  .vilda-home-workspace #tannerToggleBtn.vhome-input-shortcut {
+  .vilda-home-workspace :is(#tannerToggleBtn, #vhomePerinatalButton).vhome-input-shortcut {
     height: auto !important;
     min-height: 64px !important;
     padding: 9px var(--space-24px) 9px var(--space-10px) !important;
@@ -401,7 +401,7 @@
   .vilda-home-workspace .vhome-action-compact { display: inline; }
 }
 @media (max-width: 360px) {
-  .vilda-home-workspace #tannerToggleBtn.vhome-input-shortcut { padding-right: var(--space-10px) !important; font-size: 13px !important; line-height: 19px !important; }
+  .vilda-home-workspace :is(#tannerToggleBtn, #vhomePerinatalButton).vhome-input-shortcut { padding-right: var(--space-10px) !important; font-size: 13px !important; line-height: 19px !important; }
   .vilda-home-workspace .vhome-input-shortcut > svg { display: none; }
 }
 @media (max-width: 354px) {
@@ -504,3 +504,20 @@ html.vilda-home-workspace .vhome-detail-dialog .vhome-dialog-apply { background:
 .vilda-home-workspace .vhome-puberty-date input { box-sizing: border-box; width: 100%; min-height: 46px; margin: 0; font-size: 16px; }
 .vilda-home-workspace .vhome-puberty-volume { display: flex; flex-direction: column; gap: var(--space-6px); align-self: start; min-width: 0; margin: 0; font-size: 16px; }
 .vilda-home-workspace .vhome-volume-note { color: var(--muted); font-size: 14px; line-height: 1.5; }
+.vilda-home-workspace .vhome-perinatal-intro { margin: 0 0 var(--space-18px); }
+.vilda-home-workspace .vhome-perinatal-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-18px); }
+.vilda-home-workspace .vhome-perinatal-fields label { display: flex; flex-direction: column; align-self: stretch; gap: var(--space-6px); min-width: 0; margin: 0; font-size: 16px; line-height: 1.5; }
+.vilda-home-workspace .vhome-perinatal-fields :is(input, select) { box-sizing: border-box; width: 100%; min-width: 0; min-height: 46px; height: 46px; margin: auto 0 0; font-size: 16px; }
+.vilda-home-workspace .vhome-perinatal-note { margin: var(--space-18px) 0; color: var(--muted); font-size: 14px; line-height: 1.65; }
+.vilda-home-workspace .vhome-perinatal-heading { margin: var(--space-20px) 0 var(--space-12px); font-size: 17px; text-align: left; }
+.vilda-home-workspace .vhome-perinatal-sources { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-12px); }
+.vilda-home-workspace .vhome-perinatal-sources label { display: flex; align-items: center; gap: var(--space-8px); min-width: 0; margin: 0; padding: var(--space-10px); border: var(--border-hairline) solid var(--line); border-radius: var(--radius-8); font-size: 14px; line-height: 1.5; }
+.vilda-home-workspace .vhome-perinatal-sources input { flex: 0 0 18px; width: 18px; height: 18px; margin: 0; accent-color: var(--primary); }
+.vilda-home-workspace .vhome-perinatal-status { margin: var(--space-18px) 0; font-size: 14px; color: var(--text-muted); }
+.vilda-home-workspace .vhome-perinatal-status[data-birth-status="partial"] { color: #8c5b00; }
+.vilda-home-workspace .vhome-perinatal-results[hidden] { display: none; }
+html.vilda-home-workspace .vhome-perinatal-clear { width: auto; margin: var(--space-18px) 0 0; padding: var(--space-10px) 0; background: transparent !important; color: var(--text-muted) !important; border: 0 !important; box-shadow: none !important; font-size: 14px; text-decoration: underline; }
+@media (max-width: 600px) {
+  .vilda-home-workspace .vhome-perinatal-fields { gap: var(--space-14px) var(--space-12px); }
+  .vilda-home-workspace .vhome-perinatal-sources { grid-template-columns: 1fr; gap: var(--space-8px); }
+}

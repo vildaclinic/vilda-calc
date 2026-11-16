@@ -1799,23 +1799,43 @@ szyfrowanie, serializację źródła odzyskiwania i ponowne szyfrowanie tożsamo
 starsze dane, izolację sesji, odrzucenie dodatkowych pól i odtworzenie drzewa.
 Test precache obejmuje wszystkie 202 adresy modułów, w tym 151 historycznych.
 
-### Transport pięciu zasobów interfejsu wizyt i strony głównej w PWA
+### Wspólna prezentacja SGA w DocPro i nowym oknie danych
+
+`sga_birth_module.js` zachowuje natywny silnik i dane norm. Narzędzie
+`tools/extract-sga-presentation.mjs` mechanicznie wydziela istniejące funkcje
+prezentacji, bez odtwarzania wzorów. Odtworzenie dokładnych bajtów:
+
+```bash
+git show 7f1f1ae052f9d22316a2a4fcffaef28978d8172e:sga_birth_module.js > /tmp/vilda-sga-original.js
+node tools/extract-sga-presentation.mjs --input=/tmp/vilda-sga-original.js --output=/tmp/vilda-sga-extracted.js
+cmp sga_birth_module.js /tmp/vilda-sga-extracted.js
+node tools/build-sga-result-styles.mjs --check
+```
+
+Kompletne wyniki, komunikaty i HTML czternastu fikcyjnych przypadków
+z oryginalnego kontrolera utrwala `tests/fixtures/sga-native-presentation.json`.
+Test `sga-shared-presentation.test.mjs` wywołuje ten sam kod produkcyjny przez
+DocPro oraz nowy czysty punkt wejścia. `vilda_sga_birth_results.css` pochodzi
+wyłącznie z odpowiadających wynikowi reguł `inline_docpro_00.css`.
+
+### Transport siedmiu zasobów interfejsu wizyt i strony głównej w PWA
 
 `vilda_visit_context.js`, `vilda_visit_history_ui.js`,
-`vilda_visit_history_ui.css`, `vilda_home_workspace.js` i
-`vilda_home_workspace.css` pozostają niezależnymi plikami źródłowymi oraz
-pięcioma oddzielnymi adresami offline z `?v=`. Instalacja pobiera ich dokładne
+`vilda_visit_history_ui.css`, `vilda_home_workspace.js`,
+`vilda_home_workspace.css`, `vilda_home_perinatal.js` i
+`vilda_sga_birth_results.css` pozostają niezależnymi plikami źródłowymi oraz
+siedmioma oddzielnymi adresami offline z `?v=`. Instalacja pobiera ich dokładne
 treści w jednym archiwum JSON. `tools/build-visit-ui-precache.mjs` odczytuje
 bajty źródeł i bieżące wersje precache, zapisuje archiwum pod adresem z hashem,
 manifest `runtime/visit-ui-precache/manifest.json` oraz konfigurację
 `VISIT_UI_PRECACHE_PACK` w SW. Nie łączy wykonywanego kodu ani arkuszy stylów.
 
 Worker najpierw sprawdza hash całego archiwum, pełną listę członków i hash
-każdej treści. Dopiero wtedy zapisuje odpowiedzi pod pięcioma oryginalnymi
+każdej treści. Dopiero wtedy zapisuje odpowiedzi pod siedmioma oryginalnymi
 kluczami. CSS ma typ `text/css`, skrypty `text/javascript`; archiwum nie może
 zmienić tych typów. Wspólny mechanizm weryfikacji transportu ma dwie oddzielne
 listy dozwolonych zasobów: dotychczasowe moduły przestrzeni klinicznej oraz
-dokładnie pięć zasobów wizyt i strony głównej. Nie rozszerza listy akceptowanych adresów
+dokładnie siedem zasobów wizyt i strony głównej. Nie rozszerza listy akceptowanych adresów
 przestrzeni klinicznej. Nieudana weryfikacja przerywa wymaganą instalację.
 
 Po zmianie treści lub numeru `?v=` tych plików, **po** `npm run podbij-wersje`:
@@ -1826,7 +1846,7 @@ node tools/build-visit-ui-precache.mjs
 ```
 
 Poprzednie archiwa pozostają niezmienne i trafiają do `historicalPacks`.
-Pięć żądań zastępuje jedno. Dodatkowo jawna para bieżących adresów
+Siedem żądań zastępuje jedno. Dodatkowo jawna para bieżących adresów
 `obesity_therapy.js` współdzieli świeżą odpowiedź zgodnie z istniejącym
 mechanizmem aliasów. Budżety 600 żądań, 40 MB i model pięciu minut instalacji
 pozostają bez zmian. Testy `visit-ui-precache-pack.test.mjs` sprawdzają

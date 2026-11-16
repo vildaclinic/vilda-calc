@@ -127,6 +127,48 @@ i chowa zasłaniający je dock. Po zwykłym zamknięciu wraca fokus przycisku.
 
 Dane okołoporodowe i integracja SGA stanowią osobny przyrost 3B.
 
+## Trzeci przyrost B — dane okołoporodowe i SGA
+
+Drugi równy kafelek formularza otwiera okno danych okołoporodowych. Oba
+edytory korzystają z tego samego szkieletu okna, geometrii, animacji i stopki.
+Okno zawiera wiek ciążowy w tygodniach i dniach oraz masę, długość i obwód
+głowy przy urodzeniu. Płeć pochodzi z formularza pacjenta. Stan kafelka
+rozróżnia brak danych, dane częściowe i dane pozwalające obliczyć SGA.
+
+Wynik aktualizuje się w szkicu bez tworzenia zapisu. Wybór Niklasson,
+INTERGROWTH-21st i Malewski oraz ich porównanie wykorzystują dokładnie
+natywną prezentację DocPro. Mechanicznie wydzielone funkcje pozostają w
+`sga_birth_module.js`; nie zmieniono wzorów, norm, progów, jednostek ani
+zaokrągleń. Czternaście przypadków sprzed wydzielenia utrwala kompletny HTML,
+komunikaty i ocenę. Arkusz wyników jest odtwarzalnym podzbiorem oryginalnego
+arkusza DocPro (`node tools/build-sga-result-styles.mjs --check`). Zmniejszenie
+inwentarza stylów JS z 20 do 11 wynika z usunięcia dziewięciu powtórzeń
+ukrywania wyniku z gałęzi walidacji, obsługiwanych teraz w jednym miejscu.
+
+Zapis zatwierdza wyłącznie kanoniczne `birth`, wspólne z kartą SGA w DocPro.
+Osobne `perinatal` Karty pacjenta i jego dodatkowy wywiad pozostają nietknięte;
+zachowujemy dotychczasowe ostrzeżenie o rozbieżności. Gdy `birth` jest
+nieobecne, okno może wyświetlić pomiary z `perinatal` jako szkic. Jawnie
+zapisane puste `birth` nie jest ponownie wypełniane przy otwarciu.
+
+Zapis korzysta z istniejących zabezpieczeń kolektora i sesji. Tylko jawnie
+zatwierdzona wartość uzyskuje prawo edycji `birth`, powiązane z kontem,
+pacjentem, wizytą, generacją wczytania i sesją vaulta. Późniejsza obca zmiana
+globalnej zmiennej nie dziedziczy tego prawa. Nie powstaje automatycznie
+wersja pacjenta w vault; tworzy ją dotychczasowy zapis pacjenta. Anulowanie,
+odrzucenie szkicu i odczyt pozostają bez skutków zapisu. Dane częściowe można
+zachować, ale bez fikcyjnej oceny SGA. Niezmieniony wynik zachowuje oryginalną
+datę obliczenia. Wszystkie zmiany interfejsu pozostają opt-in.
+
+Nowy pomiar przed pierwszym zapisem pacjenta zachowuje dane SGA po F5.
+Gdy natywny start pozostawia pola odtworzone przez `sharedUserData`, importer
+odzyskuje tylko niezainicjalizowane `birth`: jednorazowo, przed edycją,
+z niezmienionej sesji i z kontrolą konta, klucza, panelu, ramki oraz zgodności
+imienia/nazwiska, płci, daty urodzenia i dostępnych pomiarów. Nie wczytuje przy
+tym całego starego formularza ani nie tworzy wizyty. Osobne testy sprawdzają
+odmowę po zmianie danych, właściciela lub sesji. Po czyszczeniu przycisk wraca
+do aktywności po rzeczywistym końcu natywnej blokady; jej czas pozostaje ten sam.
+
 ## Podgląd i odbiór
 
 Podgląd jest osobnym eksportem z gałęzi roboczej, z własnym pochodzeniem
@@ -150,7 +192,7 @@ scalenie modułu opt-in nie zmienia domyślnego widoku. Eksporter, fikcyjne
 konto i blokada usług są wyłącznie narzędziami podglądu.
 
 Nowy JS i CSS strony głównej korzystają z istniejącego, sprawdzanego po SHA
-pakietu transportowego UI wizyt. Pakiet zawiera pięć zasobów zamiast trzech;
+pakietu transportowego UI wizyt. Pakiet zawiera siedem zasobów zamiast trzech;
 każdy nadal ma własny wersjonowany adres i niezmienioną treść w pamięci offline.
 Historyczny pakiet pozostaje dostępny. Pozwala to zachować dotychczasowy limit
 600 żądań podczas instalacji PWA, bez usuwania zasobów ani rozluźniania testów.
