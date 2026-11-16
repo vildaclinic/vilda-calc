@@ -110,7 +110,9 @@ test('home perinatal: mobile uses shared modal geometry and stale owners cannot 
   const size = await dialog.boundingBox(); expect(Math.round(size.width)).toBe(370);
   const weeks = await field(dialog, 'weeks').boundingBox(), days = await field(dialog, 'days').boundingBox();
   const weight = await field(dialog, 'weight').boundingBox(), length = await field(dialog, 'length').boundingBox();
-  expect(weeks.y).toBe(days.y); expect(weight.y).toBe(length.y);
+  expect(days.y).toBeGreaterThan(weeks.y + weeks.height);
+  expect(length.y).toBeGreaterThan(weight.y + weight.height);
+  expect(weeks.width).toBe(days.width); expect(weight.width).toBe(length.width);
   await field(dialog, 'weight').fill('1800');
   await frame.evaluate(next => sessionStorage.setItem('vildaCurrentPatientId', next), ids.b);
   await expect(dialog).toBeHidden();

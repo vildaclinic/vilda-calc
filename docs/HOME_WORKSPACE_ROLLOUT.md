@@ -134,6 +134,8 @@ edytory korzystają z tego samego szkieletu okna, geometrii, animacji i stopki.
 Okno zawiera wiek ciążowy w tygodniach i dniach oraz masę, długość i obwód
 głowy przy urodzeniu. Płeć pochodzi z formularza pacjenta. Stan kafelka
 rozróżnia brak danych, dane częściowe i dane pozwalające obliczyć SGA.
+Pola tego okna układają się na telefonie w jednej kolumnie, zgodnie z makietą;
+główny formularz zachowuje swój osobny układ „Równe pola”.
 
 Wynik aktualizuje się w szkicu bez tworzenia zapisu. Wybór Niklasson,
 INTERGROWTH-21st i Malewski oraz ich porównanie wykorzystują dokładnie

@@ -518,6 +518,8 @@ html.vilda-home-workspace .vhome-detail-dialog .vhome-dialog-apply { background:
 .vilda-home-workspace .vhome-perinatal-results[hidden] { display: none; }
 html.vilda-home-workspace .vhome-perinatal-clear { width: auto; margin: var(--space-18px) 0 0; padding: var(--space-10px) 0; background: transparent !important; color: var(--text-muted) !important; border: 0 !important; box-shadow: none !important; font-size: 14px; text-decoration: underline; }
 @media (max-width: 600px) {
-  .vilda-home-workspace .vhome-perinatal-fields { gap: var(--space-14px) var(--space-12px); }
   .vilda-home-workspace .vhome-perinatal-sources { grid-template-columns: 1fr; gap: var(--space-8px); }
+}
+@media (max-width: 680px) {
+  .vilda-home-workspace .vhome-perinatal-fields { grid-template-columns: 1fr; gap: var(--space-14px); }
 }
