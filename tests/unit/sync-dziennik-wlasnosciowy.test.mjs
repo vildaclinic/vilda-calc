@@ -415,7 +415,7 @@ function sciezki(a, b, limit = 8) {
 // samych blobów tej pary (tylko W4 p. 5).
 const R4A_POLA = ['rev', 'updatedAtISO', 'gwiazdka', 'payload._pinned', 'payload._pinnedState'];
 const POSTAC_GWIAZDKI = ['payload._pinned', 'payload._pinnedState'];
-// D7 (ALGORITHMS, „rev, opis i część pól nagrobka zależne od kolejności (D7, Z5)”, P-KOSZ-POLKRATA, ok. 29650–29656): „opis nagrobka po
+// D7 (ALGORITHMS, „rev, opis i część pól nagrobka zależne od kolejności (D7, Z5)”, P-KOSZ-POLKRATA, ok. 29720–29726): „opis nagrobka po
 // plotce (rev, updatedAtISO, zmianaISO), koszISO (składnik k ginie razem z koszem, który przegrał z późniejszą wersją bez
 // przycięcia […]) […] — od kolejności scaleń” — przy samych blobach. Od E3-PR0a także revPary (pary chwila usunięcia,
 // rev wpisu z ładunku, Bpk_revPary — zależne od kolejności scaleń; PD-17: nie kolejkować ponownie z powodu revPary).
@@ -1251,7 +1251,7 @@ async function potwierdz(S, X, Y, d) {
 }
 // ── Tryb ścisły (E2_AB_SCISLE=1; ręczny, domyślnie wyłączony; TRYB ŚCISŁY w nagłówku) ───────────────────────────────
 // W1 = ∅ z jedynym wyjątkiem klas niewidocznych z decyzji właściciela 2a z 2026-11-15 (R2, R4n, D7; reguła PD-17: nie
-// kolejkować ponownie z powodu samego rev ani opisu, ALGORITHMS ok. 29655–29656, plan:262) i tylko z dowodem: widok
+// kolejkować ponownie z powodu samego rev ani opisu, ALGORITHMS ok. 29725–29726, plan:262) i tylko z dowodem: widok
 // kliniczny i okno Kosza równe na obu urządzeniach, a każdy różniący się wpis Kosza przechodzi dowodWpisu. Wynik: lista
 // przyczyn { przyczyna, klasa, klucz } (pusta — zieleń); dowody 'poza oknem' — osobno w S.stat.dowody.
 const NIEWIDOCZNE = Object.freeze(['R2', 'R4n', 'D7']);
@@ -6427,7 +6427,7 @@ function ddUsunZwrocona(kolejnosc, app = 'N') {
 }
 const DO_DECYZJI = {
   // Notatka pacjenta: A edytuje dwa razy (rev 3), B raz, 5 s później (rev 2); reguła notatek „wyższy rev, przy równym
-  // nowsza data” (vilda_vault.js:5434–5438, Bks_wygrywaRev; docs/clinical/ALGORITHMS.md P-SYNC-WLASCICIEL, ok. 31805;
+  // nowsza data” (vilda_vault.js:5434–5438, Bks_wygrywaRev; docs/clinical/ALGORITHMS.md P-SYNC-WLASCICIEL, ok. 32144;
   // plan — notatki pacjenta LWW z rev na pierwszym miejscu) zostawia tekst A we wszystkich trzech światach na A, B i C,
   // a wyrocznia oczekuje późniejszej edycji B („treść” bez klasy). Wersje wizyt mają od D-7 zasadę odwrotną (wygrywa
   // późniejsza zmiana).
