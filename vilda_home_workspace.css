@@ -469,15 +469,9 @@
 html.vilda-home-workspace .vhome-detail-dialog .vhome-dialog-close { flex: 0 0 40px; width: 40px; height: 40px; min-height: 40px; padding: 0; margin: 0; font-size: 26px; line-height: 1; border: var(--border-hairline) solid var(--line) !important; border-radius: var(--radius-8) !important; background: var(--bg) !important; color: var(--muted) !important;  box-shadow: none !important; }
 .vilda-home-workspace .vhome-dialog-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 22px 25px; font-size: 16px; line-height: 1.65; }
 .vilda-home-workspace .vhome-dialog-context { margin: 0 0 var(--space-18px); color: var(--muted); }
-.vilda-home-workspace .vhome-dialog-section[hidden],
-.vilda-home-workspace .vhome-dialog-fields label[hidden] { display: none; }
+.vilda-home-workspace .vhome-dialog-section[hidden] { display: none; }
 .vilda-home-workspace .vhome-dialog-section h3 { margin: var(--space-20px) 0 var(--space-12px); font-size: 17px; line-height: 1.45; text-align: left; }
 .vilda-home-workspace .vhome-dialog-section .vhome-assessment-heading { margin-top: 0; }
-.vilda-home-workspace .vhome-dialog-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-18px); }
-.vilda-home-workspace .vhome-dialog-fields label { display: flex; flex-direction: column; gap: var(--space-6px); align-self: start; min-width: 0; margin: 0; font-size: 16px; line-height: 1.45; }
-.vilda-home-workspace .vhome-dialog-fields input,
-.vilda-home-workspace .vhome-dialog-fields select { box-sizing: border-box; width: 100%; min-width: 0; min-height: 46px; margin: 0; font-size: 16px; }
-.vilda-home-workspace .vhome-dialog-note { margin: var(--space-18px) 0; font-size: 14px; line-height: 1.65; color: var(--muted); }
 .vilda-home-workspace .vhome-dialog-error { color: var(--danger, #b3261e); }
 .vilda-home-workspace .vhome-dialog-error:empty { display: none; }
 .vilda-home-workspace .vhome-dialog-footer { display: grid; grid-template-columns: minmax(120px, 1fr) minmax(0, 2fr); flex: 0 0 auto; gap: var(--space-12px); padding: var(--space-16px) 25px; border-top: var(--border-hairline) solid var(--line); background: var(--bg); }
@@ -490,7 +484,6 @@ html.vilda-home-workspace .vhome-detail-dialog .vhome-dialog-apply { background:
   .vilda-home-workspace .vhome-dialog-heading h2 { font-size: 19px; }
   .vilda-home-workspace .vhome-dialog-body { padding: var(--space-16px); }
   .vilda-home-workspace .vhome-dialog-footer { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); padding: var(--space-12px) var(--space-16px); gap: var(--space-8px); }
-  .vilda-home-workspace .vhome-dialog-fields { gap: var(--space-14px) var(--space-12px); }
 }
 @media (prefers-reduced-motion: reduce) {
   .vilda-home-workspace .vhome-detail-dialog[open],
