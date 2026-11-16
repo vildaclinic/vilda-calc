@@ -165,6 +165,23 @@
 //   wizyt jak od starszej aplikacji (na końcu listy P6).
 // - Profil „dłuższa praca bez połączenia” (ręczny, E2_AB_PROFIL=bez-polaczenia; PROFIL_BEZ_POLACZENIA niżej).
 //
+// E3-PR0b (flota ze starszą aplikacją i liczniki odsyłania; P-ZBIEZNOSC-ZDARZEN; tylko testy, bez zmiany sejfu):
+// - LICZNIK ODSYŁANIA (tests/support/licznik-odsylania.mjs; blok na końcu pliku): echo każdego scalenia w profilach
+//   podstawowym, koalescencji i pełnym — zdarzenie po zdarzeniu każdej strony dostawy i pół wymiany w pierwszym obiegu
+//   wymiany W4; włączony domyślnie (E2_AB_ODSYL=0 wyłącza). Izolowany jak kr_cicho (cichoLicznik), więc program ziaren
+//   i wszystkie dotychczasowe literały są te same; przebieg „determinizm” (ziarno 1, 20 mutacji) z licznikiem i bez daje
+//   ten sam dziennik operacji, eksporty i wynik. Asercje w każdym ziarnie (pola zawsze obecne, warstwa wykonalna = po2a
+//   między bieżącymi, budżet minuty slotu, powtórka partii — 0, odcisk testu = h) i literał ZNANE_ODSYL ziaren
+//   domyślnych.
+// - Urządzenie starszej aplikacji (urzadzenie(..., { app: 'S221' | 'S276' })): sejf i retencja v1 z fikstur
+//   (tests/support/starsza-aplikacja.mjs), klon dziedziczy app; mutacja na sejfie 221 bez emisji (mutacjaBezDziennika:
+//   odmowa sejfu z kodem z ODMOWY_STARSZEJ liczona, każdy inny wyjątek rzucany dalej); para z urządzeniem starszej
+//   aplikacji w W4 — tabela 'flota' (kontPary).
+// - Wyrocznia: w punktach bez urządzenia starszej aplikacji normalizacja tożsamości wizyty nieużyta (NORM_BEZ_FLOTY).
+// - Bloki floty na końcu pliku: flota 221 i 276 (ziarna CI), strażniki transportu, scenariusze deterministyczne floty,
+//   ręczny blok znanych usterek bieżącej aplikacji i stres (echo jednego scalenia pełnej kopii ze starszej aplikacji
+//   w dużym świecie: budżet minuty slotu na bajtach realnych, literał STRES_ODSYL) — opis przy każdym bloku.
+//
 // KOLEJNOŚĆ W KROKU (E2-PR3a2, sprawdzana na emiterach): snap (także wersje przeniesione pod kartę celu „Scal pacjentów”
 // i głowy scalenia), potem stomb, potem ptomb, potem pnote, pnotetomb, note, notetomb, plist, plisttomb, pref, pk, pktomb,
 // cred. Pola karty zmienione bez snap tej karty w kroku niesie stomb z kartą (11.2), inaczej snap(karta, najnowsza
@@ -256,6 +273,8 @@ import { AtrapaIDBKeyRange, utworzIndexedDB } from '../support/atrapa-indexeddb.
 import { D, encje, naj, sciezkiEncji, sortuj } from '../support/encje-ladunku.mjs';
 import { ZRODLO_SEJFU, zRejestremLancucha, zaladujZrodlo } from '../support/sejf-bez-wstawek.mjs';
 import * as WYR from '../support/ostatnia-zmiana.mjs';
+import * as LO from '../support/licznik-odsylania.mjs';
+import { PROG_DELT_221, zrodlaStarszej } from '../support/starsza-aplikacja.mjs';
 import { parse } from 'acorn';
 import path from 'node:path';
 
@@ -298,10 +317,17 @@ async function wyrWidokiKlonow(urz) {
 }
 // Ocena jednego punktu: swiat — 'W1' (po samych zdarzeniach), 'W4' (zdarzenia, a po nich pełna wymiana), 'bloby' (świat
 // samych blobów); punkt — opis do raportu. Naruszenia trafiają do S.wyrNaruszenia (z punktem, krokiem i światem).
+// E3-PR0b: w punkcie bez urządzenia starszej aplikacji (historia i kont.stare) normalizacja tożsamości wizyty wyroczni
+// (WYR.NORM_VISIT) nie może rozstrzygnąć żadnego porównania — bieżąca aplikacja zawsze zapisuje payload.visit; inaczej
+// punkt trafia do NORM_BEZ_FLOTY (afterEach niżej: pusta lista).
+const NORM_BEZ_FLOTY = [];
 function wyrOcena(S, swiat, punkt, widoki, kont = {}) {
   if (!S.wyr) return [];
   const t0 = performance.now();
+  const zeStarsza = (kont.stare && kont.stare.length > 0) || [...S.wyr.app.values()].some((a) => a !== WYR.BIEZACA);
+  const norm0 = WYR.NORM_VISIT.uzyta;
   const lista = WYR.ocen(S.wyr, widoki, { etykieta: S.wyrEtyk, ...kont }).map((x) => ({ ...x, swiat, punkt, krok: S.nrKroku || 0 }));
+  if (!zeStarsza && WYR.NORM_VISIT.uzyta !== norm0) NORM_BEZ_FLOTY.push(`${swiat} ${punkt}#${S.nrKroku || 0}: ${WYR.NORM_VISIT.uzyta - norm0} porównań`);
   (S.wyrNaruszenia = S.wyrNaruszenia || []).push(...lista);
   S.wyrPunkty = (S.wyrPunkty || 0) + 1;
   if (WYR_PLIK && lista.length) appendFileSync(WYR_PLIK, JSON.stringify({ typ: 'punkt', swiat: S.wyrSwiat || null, ziarno: S.ziarno ?? null, krok: S.nrKroku || 0, punkt, mutacji: S.wyr.mutacji, naruszenia: lista, dziennik: (S.dziennik || []).slice(-14) }) + '\n');
@@ -389,7 +415,7 @@ function sciezki(a, b, limit = 8) {
 // samych blobów tej pary (tylko W4 p. 5).
 const R4A_POLA = ['rev', 'updatedAtISO', 'gwiazdka', 'payload._pinned', 'payload._pinnedState'];
 const POSTAC_GWIAZDKI = ['payload._pinned', 'payload._pinnedState'];
-// D7 (ALGORITHMS, „rev, opis i część pól nagrobka zależne od kolejności (D7, Z5)”, P-KOSZ-POLKRATA, ok. 29379–29385): „opis nagrobka po
+// D7 (ALGORITHMS, „rev, opis i część pól nagrobka zależne od kolejności (D7, Z5)”, P-KOSZ-POLKRATA, ok. 29720–29726): „opis nagrobka po
 // plotce (rev, updatedAtISO, zmianaISO), koszISO (składnik k ginie razem z koszem, który przegrał z późniejszą wersją bez
 // przycięcia […]) […] — od kolejności scaleń” — przy samych blobach. Od E3-PR0a także revPary (pary chwila usunięcia,
 // rev wpisu z ładunku, Bpk_revPary — zależne od kolejności scaleń; PD-17: nie kolejkować ponownie z powodu revPary).
@@ -517,6 +543,12 @@ const E1_KATALOG = new Set(['PRZ0-bez', 'E1-popr-C', 'E1-C', 'Q8-obca-2']);
 // Bez wpisu w żadnej tabeli: każde wystąpienie czerwieni tam, gdzie tabela czerwieni (profil podstawowy, W4, W4:p5,
 // pelny:W4, p6; W1, W2r i W2s profilu pełnego tylko drukują). Predykaty klas i ich testy zostają. D7 i R5 w profilu
 // podstawowym — 'dowód' (profil „dłuższa praca bez połączenia”: revPary i opis wpisu Kosza karty usuniętej na obu).
+// E3-PR0b — tabela 'flota' (pary z urządzeniem starszej aplikacji w W4 floty i w scenariuszach floty): tylko klasy par
+// floty (klasaParyFloty w bloku floty niżej) i R4n; ta sama różnica w parze dwóch bieżących urządzeń — tabela
+// wołającego, bez tych klas (czerwień).
+const D_TOZSAMOSC = 'tożsamość wizyty nieznana starszej aplikacji';
+const D_POLE_221 = 'pole nieznane starszej aplikacji (221)';
+const D_RETENCJA = 'retencja starszej aplikacji — obecność wersji';
 const DOZWOLONE = Object.freeze({
   podstawowy: { R2: 'tak', R4a: 'tak', R5: 'dowód', R4n: 'tak', D7: 'dowód' },
   W4: { R4n: 'tak' },
@@ -524,6 +556,7 @@ const DOZWOLONE = Object.freeze({
   pelny: { R2: 'raport', R4a: 'raport', R5: 'raport', 'R4a′': 'raport', R4n: 'raport', D7: 'raport', [MIEJSCE_WIZYTY]: 'raport', [NAGROBEK_OPROZNIONEJ]: 'raport', [REKORD_ZLOZONY]: 'raport' },
   'pelny:W4': { R4n: 'tak', D7: 'raport', [NAGROBEK_OPROZNIONEJ]: 'raport' },
   p6: { R2: 'tak', R4a: 'tak', R5: 'tak', 'R4a′': 'tak', R4n: 'tak' },
+  flota: { R4n: 'tak', [D_TOZSAMOSC]: 'tak', [D_POLE_221]: 'tak', [D_RETENCJA]: 'tak' },
 });
 function dozwolona(kl, r, kont) {
   const w = kl ? (DOZWOLONE[kont.tabela] || {})[kl] : undefined;
@@ -531,11 +564,29 @@ function dozwolona(kl, r, kont) {
   if (kl === E1 && !(kont.tabela === 'W4:p5' && E1_KATALOG.has(kont.przebieg))) return false;
   return w || false;
 }
-// Klasyfikacja listy D: [{ ...r, klasa, dozwolona }] (kosz czytany tylko, gdy jest różnica postaci gwiazdki).
+// E3-PR0b: para z urządzeniem starszej aplikacji (app ≠ 'N') bierze w W4 (w4, w4Trzy) tabelę 'flota'; bez jej wpisu
+// w DOZWOLONE każda różnica takiej pary czerwieni. Para dwóch bieżących urządzeń — tabela wołającego, jak dotąd.
+const starszaAplikacja = (U) => !!U && typeof U.app === 'string' && U.app !== 'N';
+// Kontekst tabeli 'flota' niesie też stronę urządzenia starszej aplikacji w parze ('x' — pierwsze, 'y' — drugie) i jego
+// app (klasy par floty, klasaParyFloty w bloku floty niżej), a tabelaBiezacych — tabelę wołającego (klasa bieżących
+// urządzeń w różnicy z polami, których starsza aplikacja nie zna: D7 przy tożsamości wpisu Kosza).
+const kontPary = (X, Y, kont) => (starszaAplikacja(X) || starszaAplikacja(Y)
+  ? { ...kont, tabela: 'flota', tabelaBiezacych: kont.tabela, starsza: starszaAplikacja(X) ? 'x' : 'y', appStarszej: (starszaAplikacja(X) ? X : Y).app } : kont);
+// Klasyfikacja listy D: [{ ...r, klasa, dozwolona }] (kosz czytany tylko, gdy jest różnica postaci gwiazdki; w tabeli
+// 'flota' także przy różnicy pola gwiazdka wpisu Kosza). W tabeli 'flota' różnica bez klasy dozwolonej w tej tabeli
+// dostaje klasę pary floty (klasaParyFloty), jeśli ją spełnia (wariant w polu wariantFloty).
 async function sklasyfikuj(d, X, Y, kont, czytajKosz) {
-  const trzebaKosza = d.some((r) => r.rodzaj === 'kosz' && r.a && r.b && r.sciezki.every((s) => wPolach(s, POSTAC_GWIAZDKI)));
+  const flota = kont.tabela === 'flota';
+  const trzebaKosza = d.some((r) => r.rodzaj === 'kosz' && r.a && r.b && (r.sciezki.every((s) => wPolach(s, POSTAC_GWIAZDKI)) || (flota && r.sciezki.some((s) => wPolach(s, ['gwiazdka'])))));
   const k = { ...kont, kosz: trzebaKosza && czytajKosz ? await czytajKosz() : null };
-  return d.map((r) => { const kl = klasa(r, X, Y, k); return { ...r, klasa: kl, dozwolona: dozwolona(kl, r, kont) }; });
+  return d.map((r) => {
+    const kl = klasa(r, X, Y, k);
+    if (flota && !dozwolona(kl, r, kont)) {
+      const kf = klasaParyFloty(r, X, Y, k);
+      if (kf) return { ...r, klasa: kf.klasa, wariantFloty: kf.wariant, klasaPrzed: kl, dozwolona: dozwolona(kf.klasa, r, 'tabela' in kf ? { ...kont, tabela: kf.tabela } : kont) };
+    }
+    return { ...r, klasa: kl, dozwolona: dozwolona(kl, r, kont) };
+  });
 }
 const klasyPunktu = (lista) => [...new Set(lista.map((r) => r.klasa || 'null'))].sort();
 const skrotRoznicy = (r) => ({ klucz: r.klucz, rodzaj: r.rodzaj, klasa: r.klasa, dozwolona: r.dozwolona, tylko: r.tylko, sciezki: r.sciezki.slice(0, 6), ...(r.dowod ? { dowod: r.dowod } : {}) });
@@ -553,15 +604,21 @@ function swiat(ziarno = 1) {
   };
 }
 // Urządzenie z kopią sejfu z rejestrem łańcucha (U.lancuch — rejestr okna; EMISJA). dodatki — dodatkowe pola okna.
-async function urzadzenie(S, nazwa, zBlizniaka = null, { dodatki = {} } = {}) {
+// E3-PR0b: app — 'N' (bieżący sejf, domyślnie), 'S221' albo 'S276' (sejf starszej aplikacji z fikstury;
+// tests/support/starsza-aplikacja.mjs), retencja starszej aplikacji — 'v1' (fikstura, domyślnie) albo 'biezaca'
+// (kontrola). Klon dziedziczy app i retencję bliźniaka. Sejf 221 nie ma dziennika zdarzeń ani rejestru łańcucha (U.ev
+// i U.lancuch puste), sejf 276 — ma.
+async function urzadzenie(S, nazwa, zBlizniaka = null, { dodatki = {}, app = null, retencja = null } = {}) {
   S.nrUrz += 1;
+  const sejf = app || (zBlizniaka && zBlizniaka.app) || 'N';
+  const ret = sejf === 'N' ? null : retencja || (zBlizniaka && zBlizniaka.retencja) || 'v1';
   let lancuch = null;
   const d = await utworzUrzadzenie({
     atrapa: S.atrapa, nazwa: `${nazwa}-${S.nrUrz}`, zBlizniaka: zBlizniaka ? zBlizniaka.d : undefined, sync: false,
     rejestrMagazynu: false, haslo: HASLO_POCZATKOWE, dodatki: { crypto: kryptoZiarna(S.ziarno * 7919 + S.nrUrz), ...dodatki },
-    zrodla: { 'vilda_vault.js': (win) => { lancuch = zRejestrem(win); } },
+    zrodla: sejf === 'N' ? { 'vilda_vault.js': (win) => { lancuch = zRejestrem(win); } } : zrodlaStarszej(sejf, { retencja: ret, lancuch: (l) => { lancuch = l; } }),
   });
-  const U = { d, v: d.vault, ev: d.vault._eventLog, nazwa, Q: [], setIds: new Set(), stan: null, usuniete: new Set(), znaneNotatki: new Map(), lancuch };
+  const U = { d, v: d.vault, ev: d.vault._eventLog, app: sejf, retencja: ret, nazwa, Q: [], setIds: new Set(), stan: null, usuniete: new Set(), znaneNotatki: new Map(), lancuch };
   ustawStan(U, await eksport(U));
   if (!zBlizniaka) S.hasla.set(idHasla(U.stan), HASLO_POCZATKOWE);
   return U;
@@ -727,6 +784,7 @@ function porownaj(S, U, opis, model, emitery, wpisy) {
 }
 // Karta notatki w kopercie pnote (model haków: hak karty notatki od E2-PR3c4); dla pozostałych kopert undefined.
 const kartaKoperty = (k) => (k.event.kind === 'pnote' && Array.isArray(k.patientNotes) && k.patientNotes[0] ? k.patientNotes[0].patientId : undefined);
+// Przy liczniku odsyłania (S.odsyl, E3-PR0b) wpis Q ma też jawną kopię koperty (jaw) — ładunek echa u odbiorcy.
 async function doKolejki(S, U, k) {
   if (U.jawnie) { // katalog p. 5: osobne konta, koperta jawna (bez szyfrowania — szyfrowanie pokrywa W3)
     U.Q.push(Object.freeze({ kind: k.event.kind, key: k.event.key, atISO: k.event.atISO, pid: kartaKoperty(k), k: Object.freeze(json(k)) }));
@@ -735,7 +793,7 @@ async function doKolejki(S, U, k) {
   }
   if (S.koalescencja === 'ogon') { await doKolejkiOgon(S, U, Array.isArray(k) ? k : [k]); return; }
   const { env } = await U.ev.encryptEvent(k);
-  U.Q.push(Object.freeze({ kind: k.event.kind, key: k.event.key, atISO: k.event.atISO, pid: kartaKoperty(k), env: Object.freeze(env) }));
+  U.Q.push(Object.freeze({ kind: k.event.kind, key: k.event.key, atISO: k.event.atISO, pid: kartaKoperty(k), env: Object.freeze(env), ...(S.odsyl ? { jaw: Object.freeze(json(k)) } : {}) }));
   S.stat.zdarzen += 1;
 }
 // Kolejka z łączeniem wpisów (S.koalescencja === 'ogon', E2-PR2b): wpisy nigdy niedostarczone (indeks ≥ U.wyslane) są
@@ -754,7 +812,7 @@ async function doKolejkiOgon(S, U, koperty) {
   const nowe = [];
   for (const k of koperty) {
     const { env } = await U.ev.encryptEvent(k);
-    nowe.push(Object.freeze({ kind: k.event.kind, key: k.event.key, atISO: k.event.atISO, pid: kartaKoperty(k), env: Object.freeze(env), setId: k.event.full ? k.event.full.setId : null }));
+    nowe.push(Object.freeze({ kind: k.event.kind, key: k.event.key, atISO: k.event.atISO, pid: kartaKoperty(k), env: Object.freeze(env), setId: k.event.full ? k.event.full.setId : null, ...(S.odsyl ? { jaw: Object.freeze(json(k)) } : {}) }));
     S.stat.zdarzen += 1;
   }
   S.kolejkaLog.push([U.nazwa, nowe[0].kind, nowe[0].key, nowe.length, nowe[0].setId]);
@@ -767,8 +825,12 @@ async function doKolejkiOgon(S, U, koperty) {
 // koperty modelu, bez porównania).
 // Wyrocznia (E3-PR0a): na czas operacji U.v to pośrednik, który zapisuje wywołania API sejfu z listy WYR.OPERACJE
 // (z argumentami — „Przywróć” wyrocznia rozpoznaje po snapshotId wywołania); operacja — wywołanie podane wprost (katalog
-// p. 5 woła metodę sejfu z pominięciem U.v). Po mutacji historia (S.wyr) dostaje zapis: eksport przed i po, chwila.
+// p. 5 woła metodę sejfu z pominięciem U.v). Po mutacji historia (S.wyr) dostaje zapis: eksport przed i po, chwila
+// i app urządzenia (E3-PR0b: klasy floty wyroczni).
+// E3-PR0b: na urządzeniu z sejfem 221 (bez dziennika zdarzeń) — mutacjaBezDziennika: historia bez emisji. Przy liczniku
+// odsyłania koperty mutacji trafiają na oś czasu własnych wysyłek (druk).
 async function mutacja(S, U, opis, fn, { zrodlo = 'emitery', operacja = null } = {}) {
+  if (U.app === 'S221') return mutacjaBezDziennika(S, U, opis, fn, { operacja });
   if (zrodlo !== 'emitery' && !(zrodlo === 'model' && MUTACJE_Z_MODELU.includes(opis))) throw new Error(`mutacja „${opis}”: źródło zdarzeń „${zrodlo}” spoza MUTACJE_Z_MODELU`);
   if (!Array.isArray(U.lancuch)) throw new Error(`mutacja „${opis}”: urządzenie ${U.nazwa} bez rejestru łańcucha`);
   const przed = U.stan;
@@ -784,9 +846,10 @@ async function mutacja(S, U, opis, fn, { zrodlo = 'emitery', operacja = null } =
     return (...args) => { operacje.push({ nazwa: k, args }); return f.apply(cel, args); };
   } });
   const chwila = Date.now();
+  if (S.chwile) S.chwile.add(chwila); // strażnik chwil floty (E3-PR0b): chwile operacji
   try { wynik = await fn(); } catch (e) { blad = e; } finally { U.v = v0; }
   const po = await eksport(U);
-  { const t0 = performance.now(); WYR.zapisz(S.wyr = S.wyr || WYR.nowyModel(), { dev: U.nazwa, opis, przed, po, t: chwila, operacje }); WYR_CZAS.zapis += performance.now() - t0; }
+  { const t0 = performance.now(); WYR.zapisz(S.wyr = S.wyr || WYR.nowyModel(), { dev: U.nazwa, app: U.app, opis, przed, po, t: chwila, operacje }); WYR_CZAS.zapis += performance.now() - t0; }
   if (idHasla(po) !== idHasla(przed) && U.noweHaslo) { S.hasla.set(idHasla(po), U.noweHaslo); }
   U.noweHaslo = null;
   const wpisy = U.lancuch.splice(0);
@@ -799,6 +862,7 @@ async function mutacja(S, U, opis, fn, { zrodlo = 'emitery', operacja = null } =
     EMITERY_PLIK[w === 'rowne' ? 'zgodnych' : 'wRandze'] += 1;
     for (const x of k) await doKolejki(S, U, x);
   }
+  if (S.odsyl && k.length) wyslijOs(S, U, 'wlasne', k.map((x) => bajtyKoperty(U, x)));
   ustawStan(U, po);
   S.dziennik.push(`#${S.nrKroku || 0} ${new Date(teraz).toISOString().slice(11, 23)} ${U.nazwa}: ${opis}${blad ? ` → wyjątek ${blad.code || blad.message}` : ''} → [${k.map((x) => x.event.kind).join(',')}]`);
   if (blad) throw blad;
@@ -971,8 +1035,12 @@ async function dostawa(S, X, Y, { k = Infinity, cofnij = 0, haki: zHakami = true
   Y.lancuch.length = 0; // rejestr odbiorcy: od tej chwili wpisy haków scalania tej partii (E2-PR3b)
   // Model haka H2 zdarzenie po zdarzeniu (E2-PR3c1): przy hakach i partii z więcej niż jednym zdarzeniem eksport odbiorcy
   // po każdym zdarzeniu (te same zastosowania, w tej samej kolejności; eksport nie zmienia stanu ani losowań).
-  const stany = zHakami && partia.length > 1 ? [przed] : null;
-  if (stany) for (const e of partia) { await zastosuj(Y, [e]); stany.push(await eksport(Y)); }
+  // E3-PR0b: licznik odsyłania liczy echo zdarzenie po zdarzeniu, więc przy S.odsyl stany są zawsze; model haków dostaje
+  // je jak dotąd (tylko przy hakach i partii z więcej niż jednym zdarzeniem).
+  const stanyH = zHakami && partia.length > 1;
+  const stany = stanyH || S.odsyl ? [przed] : null;
+  // czas eksportów robionych tylko dla licznika (bez modelu haków) — S.odsyl.msDodatkowe (druk)
+  if (stany) for (const e of partia) { await zastosuj(Y, [e]); const t0 = performance.now(); stany.push(await eksport(Y)); if (!stanyH) S.odsyl.msDodatkowe.eksportyDostawy += performance.now() - t0; }
   else await zastosuj(Y, partia);
   S.kursor.set(nazwa, c + partia.length);
   const wyslane = Math.max(X.wyslane || 0, c + partia.length);
@@ -980,9 +1048,10 @@ async function dostawa(S, X, Y, { k = Infinity, cofnij = 0, haki: zHakami = true
   X.wyslane = wyslane;
   const po = stany ? stany[stany.length - 1] : await eksport(Y);
   let dodane = [];
-  if (zHakami) dodane = await haki(S, Y, partia, przed, po, stany);
+  if (zHakami) dodane = await haki(S, Y, partia, przed, po, stanyH ? stany : null);
   else Y.lancuch.length = 0; // bez haków: wpisy haków tej partii pominięte
   ustawStan(Y, po);
+  if (S.odsyl) await poPartiiOdsyl(S, X, Y, partia, stany, dodane);
   S.dziennik.push(`#${S.nrKroku || 0} ${new Date(teraz).toISOString().slice(11, 23)} dostawa ${nazwa}: ${partia.length}${cofnij ? ` (powtórka ${Math.min(cofnij, c + cofnij)})` : ''}${pelna ? ' pełna' : ''} [${partia.map((e) => e.kind).join(',')}]${dodane.length ? ` → haki [${dodane.map((x) => x.event.kind).join(',')}]` : ''}`);
   return { partia, dodane };
 }
@@ -1182,7 +1251,7 @@ async function potwierdz(S, X, Y, d) {
 }
 // ── Tryb ścisły (E2_AB_SCISLE=1; ręczny, domyślnie wyłączony; TRYB ŚCISŁY w nagłówku) ───────────────────────────────
 // W1 = ∅ z jedynym wyjątkiem klas niewidocznych z decyzji właściciela 2a z 2026-11-15 (R2, R4n, D7; reguła PD-17: nie
-// kolejkować ponownie z powodu samego rev ani opisu, ALGORITHMS ok. 29384–29385, plan:262) i tylko z dowodem: widok
+// kolejkować ponownie z powodu samego rev ani opisu, ALGORITHMS ok. 29725–29726, plan:262) i tylko z dowodem: widok
 // kliniczny i okno Kosza równe na obu urządzeniach, a każdy różniący się wpis Kosza przechodzi dowodWpisu. Wynik: lista
 // przyczyn { przyczyna, klasa, klucz } (pusta — zieleń); dowody 'poza oknem' — osobno w S.stat.dowody.
 const NIEWIDOCZNE = Object.freeze(['R2', 'R4n', 'D7']);
@@ -1215,6 +1284,8 @@ async function scisleW1(S, A, B, d) {
 // dozwolone w W4 danego kontekstu; (b) punkt stały — druga runda (ta sama kolejność) na TYCH SAMYCH klonach nie zmienia
 // eksportu żadnego z nich; (c) każda encja R4n z (a) przechodzi W4p. Wynik: { ok, warianty: [...], r4n, w4p }.
 // Opcje dla testów negatywnych samego W4 (klasy 3.6, negatywy): runda (domyślnie rundaPO) i dowodR4n (domyślnie w4p).
+// E3-PR0b: opcja runda dostaje też numer obiegu wymiany (1, 2) — licznik odsyłania liczy pół wymiany w pierwszym obiegu
+// (wymianaPOLicz); para z urządzeniem starszej aplikacji dostaje tabelę 'flota' (kontPary).
 async function rundaPO(X, Y) {
   await Y.v.mergeSyncPayload(json(await X.v.exportSyncPayload()));
   await X.v.mergeSyncPayload(json(await Y.v.exportSyncPayload()));
@@ -1231,7 +1302,7 @@ async function w4(S, A, B, kont, { warianty = ['PO-A', 'PO-B'], opisz = null, ru
         const [a, b] = [kanon(A1.stan), kanon(B1.stan)];
         await runda(X, Y, 2);
         const punktStaly = JSON.stringify(kanon(A1.stan)) === JSON.stringify(a) && JSON.stringify(kanon(B1.stan)) === JSON.stringify(b);
-        const d = await sklasyfikuj(D(a, b), a, b, kont, async () => ({ x: await A1.v.listTrashedSnapshots(), y: await B1.v.listTrashedSnapshots() }));
+        const d = await sklasyfikuj(D(a, b), a, b, kontPary(A, B, kont), async () => ({ x: await A1.v.listTrashedSnapshots(), y: await B1.v.listTrashedSnapshots() }));
         const w = { wariant, punktStaly, roznice: d.map(skrotRoznicy), w4p: [] };
         for (const r of d.filter((q) => q.klasa === 'R4n')) {
           const [sid, pid] = r.klucz.split('|');
@@ -1367,7 +1438,8 @@ async function spoczynekBlobow(...urz) {
   return null;
 }
 // W4 dla trzech urządzeń (p. 6): świeże klony; rundy PO-A kolejno na parach (A, B), (B, C), (C, A), aż żaden eksport
-// się nie zmienia (≤ 3 rundy ze zmianą); warunek: D każdej pary puste albo z klasami dozwolonymi w p. 6 (R4n z W4p).
+// się nie zmienia (≤ 3 rundy ze zmianą); warunek: D każdej pary puste albo z klasami dozwolonymi w p. 6 (R4n z W4p);
+// para z urządzeniem starszej aplikacji — w tabeli 'flota' (kontPary, E3-PR0b).
 async function w4Trzy(S, urz, n, { dowodR4n = w4p } = {}) {
   return kr_cicho(S, async () => {
     const K = [];
@@ -1384,7 +1456,7 @@ async function w4Trzy(S, urz, n, { dowodR4n = w4p } = {}) {
       let ok = stabilny && rund <= 4;
       for (const [i, j] of [[0, 1], [1, 2], [2, 0]]) {
         const [a, b] = [kanon(K[i].stan), kanon(K[j].stan)];
-        const d = await sklasyfikuj(D(a, b), a, b, { tabela: 'p6' }, async () => ({ x: await K[i].v.listTrashedSnapshots(), y: await K[j].v.listTrashedSnapshots() }));
+        const d = await sklasyfikuj(D(a, b), a, b, kontPary(urz[i], urz[j], { tabela: 'p6' }), async () => ({ x: await K[i].v.listTrashedSnapshots(), y: await K[j].v.listTrashedSnapshots() }));
         const w4pp = [];
         for (const r of d.filter((q) => q.klasa === 'R4n')) { const [sid, pid] = r.klucz.split('|'); w4pp.push(await dowodR4n(S, K[i], K[j], sid, pid)); }
         if (!d.every((r) => r.dozwolona) || !w4pp.every((x) => x.ok)) ok = false;
@@ -3576,22 +3648,27 @@ const klasyRodzaju = (X, Y, rodzaj, kont = {}) => D(X, Y).filter((r) => r.rodzaj
 // W4 p. 5, W1/W2r/W2s profilu pełnego, W4 profilu pełnego, p. 6). '—' = czerwień, 'dowód' — zieleń tylko z dowodem
 // (dowodWpisu). R4n w W4 p. 5: '—' (W4p nie jest tam liczony — P4); E1-katalog w W4 p. 5 dodatkowo tylko dla listy
 // E1_KATALOG, createdAtISO-notatki w W4 pełnym tylko przy notatce z „Zostaw notatkę” (dozwolona()).
+// Od E3-PR0b także kolumna 'flota' — pary z urządzeniem starszej aplikacji; dotychczasowe kolumny i wiersze bez zmian.
 const TABELA_3_6 = {
-  R2: ['tak', '—', '—', 'raport', '—', 'tak'],
-  R3: ['—', '—', '—', '—', '—', '—'], // E3-PR0a: zero wystąpień
-  R4a: ['tak', '—', '—', 'raport', '—', 'tak'],
-  R5: ['dowód', '—', '—', 'raport', '—', 'tak'], // E3-PR0a: w profilu podstawowym z dowodem (dowodWpisu)
-  'R4a′': ['—', '—', '—', 'raport', '—', 'tak'],
-  R4n: ['tak', 'tak', '—', 'raport', 'tak', 'tak'],
-  'createdAtISO-notatki': ['—', '—', '—', '—', '—', '—'], // E3-PR0a: zero wystąpień
-  D7: ['dowód', '—', '—', 'raport', 'raport', '—'], // E3-PR0a: w profilu podstawowym z dowodem (dowodWpisu)
-  [E1]: ['—', '—', 'tak', '—', '—', '—'],
-  [NPIK]: ['—', '—', '—', '—', '—', '—'], // E3-PR0a: zero wystąpień
-  [MIEJSCE_WIZYTY]: ['—', '—', '—', 'raport', '—', '—'], // E3-PR0a (widoczna)
-  [NAGROBEK_OPROZNIONEJ]: ['—', '—', '—', 'raport', 'raport', '—'], // E3-PR0a (niewidoczna; W4 bez punktu stałego zostaje czerwone)
-  [REKORD_ZLOZONY]: ['—', '—', '—', 'raport', '—', '—'], // E3-PR0a (widoczna)
+  R2: ['tak', '—', '—', 'raport', '—', 'tak', '—'],
+  R3: ['—', '—', '—', '—', '—', '—', '—'], // E3-PR0a: zero wystąpień
+  R4a: ['tak', '—', '—', 'raport', '—', 'tak', '—'],
+  R5: ['dowód', '—', '—', 'raport', '—', 'tak', '—'], // E3-PR0a: w profilu podstawowym z dowodem (dowodWpisu)
+  'R4a′': ['—', '—', '—', 'raport', '—', 'tak', '—'],
+  R4n: ['tak', 'tak', '—', 'raport', 'tak', 'tak', 'tak'],
+  'createdAtISO-notatki': ['—', '—', '—', '—', '—', '—', '—'], // E3-PR0a: zero wystąpień
+  D7: ['dowód', '—', '—', 'raport', 'raport', '—', '—'], // E3-PR0a: w profilu podstawowym z dowodem (dowodWpisu)
+  [E1]: ['—', '—', 'tak', '—', '—', '—', '—'],
+  [NPIK]: ['—', '—', '—', '—', '—', '—', '—'], // E3-PR0a: zero wystąpień
+  [MIEJSCE_WIZYTY]: ['—', '—', '—', 'raport', '—', '—', '—'], // E3-PR0a (widoczna)
+  [NAGROBEK_OPROZNIONEJ]: ['—', '—', '—', 'raport', 'raport', '—', '—'], // E3-PR0a (niewidoczna; W4 bez punktu stałego zostaje czerwone)
+  [REKORD_ZLOZONY]: ['—', '—', '—', 'raport', '—', '—', '—'], // E3-PR0a (widoczna)
+  // E3-PR0b: klasy par floty — tylko tabela 'flota' (para z urządzeniem starszej aplikacji, klasaParyFloty)
+  [D_TOZSAMOSC]: ['—', '—', '—', '—', '—', '—', 'tak'],
+  [D_POLE_221]: ['—', '—', '—', '—', '—', '—', 'tak'],
+  [D_RETENCJA]: ['—', '—', '—', '—', '—', '—', 'tak'],
 };
-const TABELE_3_6 = ['podstawowy', 'W4', 'W4:p5', 'pelny', 'pelny:W4', 'p6'];
+const TABELE_3_6 = ['podstawowy', 'W4', 'W4:p5', 'pelny', 'pelny:W4', 'p6', 'flota'];
 describe('A ≡ B, klasy 3.6: predykaty (pozytywy i negatywy), tabela DOZWOLONE, negatywy W4 i W4p', () => {
   d1();
   it('R2 — wersja na obu, równa poza rev, |Δrev| = 1; Δrev 2 albo inne pole → brak klasy', () => {
@@ -3692,6 +3769,46 @@ describe('A ≡ B, klasy 3.6: predykaty (pozytywy i negatywy), tabela DOZWOLONE,
     expect(d.map((r) => [r.rodzaj, r.klucz, r.sciezki])).toEqual([['pnotetomb', 't', ['(wartość)']]]);
     expect(d.map((r) => klasa(r, a, b, {})), 'pusta lista ścieżek nie spełnia predykatu').toEqual([null]);
   });
+  it('E3-PR0b: klasy par floty (tabela „flota”) — tożsamość wizyty (z dowodem odcisku), pole nieznane 221, retencja starszej aplikacji (obecność wersji); ta sama różnica w parze dwóch bieżących urządzeń i warunki bez dowodu — bez klasy', async () => {
+    const wiz = { version: 1, visitId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', patientId: 'P', clinicalDateISO: '2026-03-02', createdAtISO: '2026-03-02T00:00:00.000Z', origin: 'legacy-inferred' };
+    const tresc = syntPl(), zW = { ...tresc, visit: wiz };
+    const rej = (t, h) => ({ ...t, _pinnedState: { pin: false, at: null, h }, _contentAtISO: T0 });
+    const starsza = syntStan({ wersje: [syntWersja({ payload: rej(tresc, LO.odcisk(tresc)) })] });
+    const biezaca = syntStan({ wersje: [syntWersja({ payload: rej(zW, LO.odcisk(zW)) })] });
+    const nieswiezy = syntStan({ wersje: [syntWersja({ payload: rej(zW, LO.odcisk({ ...zW, visit: { ...wiz, visitId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb' } })) })] });
+    const klasy = async (X, Y, kont) => (await sklasyfikuj(D(X, Y), X, Y, kont, null)).map((r) => [r.rodzaj, r.klasa, r.dozwolona, r.wariantFloty || null]);
+    const flota = (st, app = 'S276') => ({ tabela: 'flota', starsza: st, appStarszej: app });
+    expect(await klasy(starsza, biezaca, flota('x')), 'tożsamość wizyty, odcisk przeliczony').toEqual([['wersja', D_TOZSAMOSC, 'tak', 'tożsamość wizyty, odcisk przeliczony']]);
+    expect(await klasy(biezaca, starsza, flota('y', 'S221')), 'strona starszej jako y').toEqual([['wersja', D_TOZSAMOSC, 'tak', 'tożsamość wizyty, odcisk przeliczony']]);
+    expect(await klasy(starsza, nieswiezy, flota('x')), 'nieświeży odcisk po stronie bieżącej').toEqual([['wersja', null, false, null]]);
+    expect(await klasy(starsza, biezaca, { tabela: 'W4' }), 'para dwóch bieżących').toEqual([['wersja', null, false, null]]);
+    // tożsamość po stronie bieżącej z kartą wizyty innej niż karta rekordu albo bez visitId — bez klasy
+    for (const [opis, v] of [['karta wizyty Q zamiast P', { ...wiz, patientId: 'Q' }], ['bez visitId', { ...wiz, visitId: '' }]]) {
+      const zle = { ...tresc, visit: v };
+      expect(await klasy(starsza, syntStan({ wersje: [syntWersja({ payload: rej(zle, LO.odcisk(zle)) })] }), flota('x')), opis).toEqual([['wersja', null, false, null]]);
+    }
+    // wpis Kosza: pola tożsamości i pola nieznane 221
+    const koszS = syntStan({ kosz: [syntKosz()] });
+    const koszN = syntStan({ kosz: [syntKosz({ visitIdentity: { version: 1, visitId: wiz.visitId }, koszISO: T1, revPary: 2 })] });
+    expect(await klasy(koszS, koszN, flota('x', 'S221')), 'Kosz 221').toEqual([['kosz', D_POLE_221, 'tak', 'pola Kosza 221']]);
+    expect(await klasy(koszS, koszN, flota('x', 'S276')), 'Kosz 276 (koszISO i revPary zna): D7 przy tożsamości, bez tabeli wołającego — niedozwolona').toEqual([['kosz', 'D7', false, 'D7 przy tożsamości wpisu Kosza nieznanej starszej aplikacji']]);
+    expect(await klasy(koszS, koszN, { ...flota('x', 'S276'), tabelaBiezacych: 'pelny' }), 'Kosz 276: D7 przy tożsamości, tabela wołającego pelny').toEqual([['kosz', 'D7', 'raport', 'D7 przy tożsamości wpisu Kosza nieznanej starszej aplikacji']]);
+    expect(await klasy(koszS, koszN, { ...flota('x', 'S276'), tabelaBiezacych: 'W4' }), 'Kosz 276: D7 przy tożsamości, tabela wołającego W4').toEqual([['kosz', 'D7', false, 'D7 przy tożsamości wpisu Kosza nieznanej starszej aplikacji']]);
+    const koszNChwila = syntStan({ kosz: [syntKosz({ visitIdentity: { version: 1, visitId: wiz.visitId }, koszISO: T1, deletedAtISO: T1 })] });
+    expect(await klasy(koszS, koszNChwila, { ...flota('x', 'S276'), tabelaBiezacych: 'pelny' }), 'Kosz 276: tożsamość, koszISO i chwila usunięcia — bez klasy').toEqual([['kosz', null, false, null]]);
+    const koszTylkoTozs = syntStan({ kosz: [syntKosz({ visitIdentity: { version: 1, visitId: wiz.visitId } })] });
+    expect(await klasy(koszS, koszTylkoTozs, flota('x', 'S276')), 'Kosz 276: tylko visitIdentity').toEqual([['kosz', D_TOZSAMOSC, 'tak', 'tożsamość wpisu Kosza']]);
+    // nagrobek notatki: deletedWithPatient tylko u bieżącej (221)
+    const nN = syntStan({ nagrNotatek: [syntNagrN({ deletedWithPatient: true })] }), nS = syntStan({ nagrNotatek: [syntNagrN()] });
+    expect(await klasy(nS, nN, flota('x', 'S221')), 'nagrobek notatki 221').toEqual([['pnotetomb', D_POLE_221, 'tak', 'nagrobek notatki usuniętej z kartą']]);
+    expect(await klasy(nS, nN, flota('x', 'S276')), 'nagrobek notatki 276').toEqual([['pnotetomb', null, false, null]]);
+    // retencja starszej aplikacji: wersja tylko u bieżącej, u starszej nagrobek retencji, u bieżącej głowa wizyty
+    const ret = syntStan({ kosz: [{ snapshotId: 'v', patientId: 'P', deletedAtISO: T1, powod: 'retencja', rev: 1 }] });
+    expect(await klasy(ret, biezaca, flota('x')), 'retencja v1').toEqual([['kosz', null, false, null], ['wersja', D_RETENCJA, 'tak', 'wersja tylko u bieżącej, wpis retencji u starszej']]);
+    expect(await klasy(syntStan(), biezaca, flota('x')), 'bez nagrobka retencji').toEqual([['wersja', null, false, null]]);
+    const nowsza = syntStan({ wersje: [syntWersja({ payload: rej(zW, LO.odcisk(zW)) }), syntWersja({ snapshotId: 'w', savedAtISO: T1, payload: rej(zW, LO.odcisk(zW)) })] });
+    expect((await klasy(ret, nowsza, flota('x'))).filter(([r]) => r === 'wersja'), 'nowsza wersja tej samej wizyty — v nie jest głową').toEqual([['wersja', null, false, null], ['wersja', null, false, null]]);
+  }, 10_000);
   it('tabela DOZWOLONE = tabela 3.6 (literał) i reguły dozwolona(); klasa null nigdzie', () => {
     const oczek = Object.fromEntries(TABELE_3_6.map((t) => [t, {}]));
     for (const [kl, wiersz] of Object.entries(TABELA_3_6)) wiersz.forEach((w, i) => { if (w !== '—') oczek[TABELE_3_6[i]][kl] = w; });
@@ -3788,7 +3905,7 @@ const START_ZIAREN = Number(process.env.E2_AB_START) || 1;
 const ZIARNA = Array.from({ length: ILE_ZIAREN }, (_, i) => START_ZIAREN + i);
 const KROKI = Number(process.env.E2_AB_KROKI) || 0;
 // E2_AB_WYNIKI=plik — wynik każdego ziarna (liczniki, różnice, dziennik operacji) dopisywany jako JSONL (pomiar).
-const WYNIKI = { podstawowy: [], pelny: [], 'podstawowy:ogon': [], 'pelny:ogon': [], 'bez-polaczenia': [] };
+const WYNIKI = { podstawowy: [], pelny: [], 'podstawowy:ogon': [], 'pelny:ogon': [], 'bez-polaczenia': [], determinizm: [] };
 const wybierz = (los, lista) => lista[Math.floor(los() * lista.length)];
 const masa = (los) => 15 + Math.floor(los() * 300) / 10;
 // Mutacje profilu podstawowego (projekt.md 7.4): zapis karty i nowej wersji, poprawka w miejscu (preserveSavedAt),
@@ -4001,7 +4118,8 @@ async function punktSpoczynku(S, A, B, { ostatni = false } = {}) {
   const opisz = async (A1, B1) => ({ wyr: await wyrWidokiKlonow({ A: A1, B: B1 }) });
   // W4 (3.2): w każdym punkcie spoczynku obie pary; przy przekroczeniu celu czasu (3.3) PO-B tylko w ostatnim punkcie.
   const warianty = S.tylkoPOA && !ostatni ? ['PO-A'] : ['PO-A', 'PO-B'];
-  const w = await w4(S, A, B, { tabela: S.profil === 'pelny' ? 'pelny:W4' : 'W4', wskrzeszone: S.wskrzeszone }, { warianty, opisz });
+  // Licznik odsyłania (E3-PR0b): pół wymiany w pierwszym obiegu wymiany każdej pary (źródło 'w4'; wymianaPOLicz).
+  const w = await w4(S, A, B, { tabela: S.profil === 'pelny' ? 'pelny:W4' : 'W4', wskrzeszone: S.wskrzeszone }, { warianty, opisz, ...(S.odsyl ? { runda: (X, Y, nr) => wymianaPOLicz(S, X, Y, nr === 1) } : {}) });
   const wyrW4 = [];
   for (const x of w.warianty) { wyrW4.push(...wyrOcena(S, 'W4', `W4 ${x.wariant}`, x.opis.wyr)); delete x.opis; }
   if (SCISLE) {
@@ -4024,10 +4142,14 @@ async function punktSpoczynku(S, A, B, { ostatni = false } = {}) {
 // pełnej dostawy (inny program ziarna: klon W2s w kolejności losowej zużywa losowania).
 // E3-PR0a: dostawa i spoczynek — prawdopodobieństwa dostawy losowej w kroku i punktu spoczynku po mutacji (domyślnie
 // 0,3 i 1/25; profil „dłuższa praca bez połączenia” — PROFIL_BEZ_POLACZENIA niżej).
-async function przebiegZiarna(ziarno, profil, { koalescencja = null, w2s = true, dostawa: pDostawy = 0.3, spoczynek: pSpoczynku = 1 / 25, nazwa = null } = {}) {
+// E3-PR0b: odsyl — licznik odsyłania (domyślnie ODSYL: włączony, E2_AB_ODSYL=0 wyłącza); kroki — liczba mutacji zamiast
+// liczby z ziarna (losowanie liczby z ziarna i tak się wykonuje, więc to początek tego samego programu); slad — zwrócony
+// wynik ma też dziennik operacji i eksporty końcowe (przebieg „determinizm”; ślad nie trafia do WYNIKI ani do JSONL).
+async function przebiegZiarna(ziarno, profil, { koalescencja = null, w2s = true, dostawa: pDostawy = 0.3, spoczynek: pSpoczynku = 1 / 25, nazwa = null, odsyl = ODSYL, kroki = 0, slad = false } = {}) {
   const t0 = performance.now();
   const S = swiat(ziarno + (profil === 'pelny' ? 100000 : 0));
   S.profil = profil;
+  if (odsyl) S.odsyl = nowyLicznik();
   if (koalescencja) zKoalescencja(S);
   if (!w2s) S.w2s = false;
   S.wyrSwiat = `${nazwa || profil}${koalescencja ? ':' + koalescencja : ''}`;
@@ -4047,8 +4169,10 @@ async function przebiegZiarna(ziarno, profil, { koalescencja = null, w2s = true,
   krok(); await mutacja(S, A, 'nowa karta 1', async () => { const r = await A.d.zapiszKarte(1); S.indeks.set(r.patientId, 1); return r; });
   S.nrKarty = 1;
   A.Q.length = 0;
+  if (S.odsyl) S.odsyl.os.length = 0;
   const B = await urzadzenie(S, 'B', A);
-  const ile = KROKI || 60 + Math.floor(S.los() * 61);
+  const zZiarna = KROKI || 60 + Math.floor(S.los() * 61);
+  const ile = kroki || zZiarna;
   let mutacji = 0;
   while (mutacji < ile) {
     S.nrKroku += 1;
@@ -4065,10 +4189,13 @@ async function przebiegZiarna(ziarno, profil, { koalescencja = null, w2s = true,
   const naruszenia = S.wyrNaruszenia || [];
   const wynik = { ziarno, profil, ...(koalescencja ? { koalescencja, w2s } : {}), ...(nazwa ? { nazwa } : {}), mutacji, ms: Math.round(performance.now() - t0), ...S.stat, braki: S.braki, dziennikZostaw: S.dziennik.filter((l) => / zostaw notatkę /.test(l)).length,
     wyr: { punkty: S.wyrPunkty || 0, naruszen: naruszenia.length, czerwone: wyrCzerwone(naruszenia), klasy: WYR.podsumuj(naruszenia), zbior: zbiorWyr(naruszenia), liczby: licznikWyr(naruszenia) } };
-  WYNIKI[nazwa || (koalescencja ? `${profil}:${koalescencja}` : profil)].push(wynik);
-  if (process.env.E2_AB_WYNIKI) appendFileSync(process.env.E2_AB_WYNIKI, JSON.stringify({ ...wynik, dziennik: S.dziennik, ...(S.kolejkaLog ? { kolejka: S.kolejkaLog } : {}) }) + '\n');
+  const klucz = nazwa || (koalescencja ? `${profil}:${koalescencja}` : profil);
+  const odsylWynik = S.odsyl ? { ziarno, profil, nazwa, koalescencja, ...S.odsyl.podsumuj(), powtorka: S.odsylPowtorka || { partii: 0, zdarzen: 0 }, odcisk: odciskiWersji([A.stan, B.stan]) } : null;
+  if (odsylWynik) ODSYL_WYNIKI[klucz].push(odsylWynik);
+  WYNIKI[klucz].push(wynik);
+  if (process.env.E2_AB_WYNIKI) appendFileSync(process.env.E2_AB_WYNIKI, JSON.stringify({ ...wynik, ...(odsylWynik ? { odsyl: odsylWynik } : {}), dziennik: S.dziennik, ...(S.kolejkaLog ? { kolejka: S.kolejkaLog } : {}) }) + '\n');
   if (WYR_PLIK) appendFileSync(WYR_PLIK, JSON.stringify({ typ: 'ziarno', swiat: S.wyrSwiat, ziarno, mutacji, spoczynki: S.stat.spoczynki, ...wynik.wyr, scisle: S.stat.scisle }) + '\n');
-  return wynik;
+  return slad ? { ...wynik, slad: { dziennik: S.dziennik.slice(), eksport: { A: await eksport(A), B: await eksport(B) } } } : wynik;
 }
 // Listy literałów (3.6): [ziarno, krok, [klasy]] punktów W1 z niepustym D, [ziarno, krok, strona, [klasy]] punktów W2r.
 const listaW1 = (w) => w.w1Bledy.map((b) => [w.ziarno, b.krok, b.klasy]);
@@ -4291,8 +4418,2270 @@ afterEach(async () => { await sprzatnijUrzadzenia(); vi.useRealTimers(); vi.rest
 afterEach(() => { const n = EMITERY_NIEZGODNE.splice(0); expect(n, 'AB1: emitery ≡ model w każdej mutacji przypadku').toEqual([]); });
 // AB7: niezgodność haków scalania z modelem czerwieni przypadek także wtedy, gdy wyjątek dostawy złapał krok katalogu p. 5.
 afterEach(() => { const n = HAKI_NIEZGODNE.splice(0); expect(n, 'AB7: haki z emiterów ≡ model w każdej partii przypadku').toEqual([]); });
+afterEach(() => { expect(NORM_BEZ_FLOTY.splice(0), 'wyrocznia: normalizacja tożsamości wizyty nieużyta w punktach z samymi bieżącymi urządzeniami').toEqual([]); });
 afterAll(() => {
   console.log('E2-AB emitery (plik)', JSON.stringify(EMITERY_PLIK)); console.log('E2-AB haki (plik)', JSON.stringify(HAKI_PLIK));
   console.log('E2-AB wyrocznia, czas (ms)', JSON.stringify(Object.fromEntries(Object.entries(WYR_CZAS).map(([k, v]) => [k, Math.round(v)]))));
   if (WYR_PLIK) appendFileSync(WYR_PLIK, JSON.stringify({ typ: 'czas', ...WYR_CZAS }) + '\n');
+});
+
+// ══ Licznik odsyłania w profilach i urządzenie starszej aplikacji (E3-PR0b, P-ZBIEZNOSC-ZDARZEN; tylko testy) ════════
+// Licznik (tests/support/licznik-odsylania.mjs; definicje warstw, wierszy, bajtów i budżetu w nagłówku modułu) tylko czyta
+// eksporty: echo każdego scalenia u odbiorcy — zdarzenie po zdarzeniu każdej strony dostawy (źródło 'zdarzenie') i obie
+// połowy pierwszego obiegu wymiany każdej pary PO-A/PO-B w W4 na klonach (pół wymiany, źródło 'w4') — w warstwach
+// surowe, po2a, wyk (reguła T; E2_AB_ODSYL_REGULA=A|B — diagnostyka), nowe. Koperty nośników wierszy (bajty, żądania)
+// budują buildery odbiorcy w cichoLicznik: własny Math.random i własne numery klonów, bez S.nrPomiaru, więc istniejące
+// kr_cicho dostają te same ziarna, a program ziarna jest ten sam co bez licznika (strażnik: przebieg „determinizm” niżej;
+// zrzuty E2_AB_WYNIKI ziaren CI bez pól ms i odsyl są równe z licznikiem i bez). Bajty koperty = eventBytes sejfu
+// (rozmiar szyfrogramu {iv, data} z długości jawnego JSON) z dev 'abcdefgh' zamiast null. Powtórka partii: raz na ziarno
+// pierwsza partia dostawy z co najmniej dwoma zdarzeniami jeszcze raz na świeżym klonie odbiorcy (źródło 'powtórka').
+// Asercje (describe „licznik odsyłania w profilach”, na wynikach ziaren tego przebiegu), w każdym ziarnie:
+// - pola zawsze obecne: w ładunkach od bieżącej wersji każda wersja i każdy wpis Kosza z rodzicem pola z POLA_ZAWSZE ma to
+//   pole (warunek reguły T);
+// - między bieżącymi urządzeniami warstwa wykonalna = po2a w każdym źródle (reguła T niczego nie tłumi);
+// - budżet minuty slotu (warstwa wyk, bajty realne przy górnej granicy przeliczenia): ≤ 600 wierszy, ≤ 4 MiB, ≤ 20 żądań
+//   na urządzenie; budżet naiwny (po2a) i okna przesuwne 60 s zegara uprzęży — tylko druk;
+// - powtórka partii: jedna na ziarno, 0 wierszy surowych;
+// - odcisk testu (LO.odcisk, kopia Bgw_odcisk) = _pinnedState.h każdej wersji eksportów końcowych (bieżący sejf zapisuje h
+//   przy każdym zapisie treści i gwiazdki — Bgw_ustaw — i przelicza świeży h przy przeniesieniu wizyty);
+// - buildery nośników bez wyjątku;
+// oraz literał ZNANE_ODSYL[profil] dla ziaren domyślnych: klucz źródło|rodzaj|w ładunku/spoza|klasa → { wyk, nowe } (bez
+// ścieżek pól i bez bajtów). E2_AB_ODSYL=0 — licznik wyłączony (przypadki licznika pominięte); E2_AB_WYNIKI — pole odsyl
+// w JSONL ziarna.
+const ODSYL = process.env.E2_AB_ODSYL !== '0';
+const ODSYL_REGULA = process.env.E2_AB_ODSYL_REGULA || 'T';
+const WYK = 'wyk' + ODSYL_REGULA;
+const DEV_FIKCYJNY = 'abcdefgh';
+const ODSYL_WYNIKI = { podstawowy: [], pelny: [], 'podstawowy:ogon': [], 'pelny:ogon': [], 'bez-polaczenia': [], determinizm: [] };
+const nowyLicznik = () => LO.nowyLicznikOdsylania({ regula: ODSYL_REGULA, rekordZlozony });
+// Izolacja pomiaru licznika (wzór kr_cicho, ale bez S.nrPomiaru): własny Math.random (S.losAlt) i numery klonów od
+// 5 000 000 na czas fn; licznik urządzeń przywracany.
+async function cichoLicznik(S, fn) {
+  const nr = S.nrUrz, pop = S.losAlt;
+  S.nrCicho = (S.nrCicho || 0) + 1;
+  S.losAlt = rng(0xBADA55 + S.nrCicho * 977);
+  S.nrUrz = 5000000 + S.nrCicho * 100;
+  try { return await fn(); } finally { S.nrUrz = nr; S.losAlt = pop; }
+}
+const BUDOWNICZE_ECHA = Object.freeze({ ptomb: 'buildPatientTombstoneEvent', pnote: 'buildPatientNoteEvent', pnotetomb: 'buildPatientNoteTombstoneEvent', note: 'buildNoteEvent', notetomb: 'buildNoteTombstoneEvent', plist: 'buildPatientListEvent', plisttomb: 'buildPatientListTombstoneEvent', pref: 'buildPreferenceEvent', pk: 'buildPasskeyEvent', pktomb: 'buildPasskeyTombstoneEvent' });
+// Koperta nośnika wiersza echa z builderów Y po scaleniu: wersja — snap; karta — snap najnowszej wersji (reguła emituj);
+// null — brak nośnika; { blad } — wyjątek buildera.
+async function kopertaEcha(Y, r, poE) {
+  const ev = Y.ev;
+  try {
+    if (r.kind === 'snap') return await ev.buildSnapshotEvent(r.pid, String(r.key).split('/')[1], DEV_FIKCYJNY);
+    if (r.kind === 'karta') { const e = poE.get('karta:' + r.key); return e && e.najnowsza ? await ev.buildSnapshotEvent(r.key, e.najnowsza, DEV_FIKCYJNY) : null; }
+    if (r.kind === 'stomb') return await ev.buildSnapshotTombstoneEvent(r.key, DEV_FIKCYJNY);
+    if (r.kind === 'cred') return await ev.buildCredentialEvent(DEV_FIKCYJNY);
+    if (BUDOWNICZE_ECHA[r.kind]) return await ev[BUDOWNICZE_ECHA[r.kind]](r.key, DEV_FIKCYJNY);
+  } catch (e) { return { blad: String(e && (e.code || e.message)) }; }
+  return null;
+}
+const bajtyKoperty = (U, k) => U.ev.eventBytes(k.event && k.event.dev === null ? { ...k, event: { ...k.event, dev: DEV_FIKCYJNY } } : k);
+const urzOs = (U) => U.nazwa.replace(/-.*$/, '');
+const wyslijOs = (S, U, zrodlo, bajty) => S.odsyl.wyslij(urzOs(U), teraz, zrodlo, bajty);
+// Klucze encji wpisów rejestru łańcucha (haki scalania pełnej kopii na klonach; warstwa nowe).
+const kluczeWpisow = (wpisy) => new Set(wpisy.filter((z) => !z.znacznik).map((z) => (z.kind === 'pfull' ? 'pfull:' + z.klucze.patientId
+  : z.kind === 'snap' ? `snap:${z.klucze.patientId}/${z.klucze.snapshotId}` : `${z.kind}:${z.klucze}`)));
+
+// Echo jednej strony dostawy (albo jednego pół wymiany) na Y: każdy odcinek { przed, po, ladunek } to jedno scalenie
+// (warstwy, usunięcia przez scalanie; dla ładunku od bieżącej wersji — strażnik pól zawsze obecnych); wiersze strony to
+// unia encji odcinków w warstwie wyk i po2a, nośniki z builderów Y (cichoLicznik), bajty z eventBytes. Strona i oś czasu
+// — poza pół wymiany (W4 liczy się na klonach). Wynik: koperty warstwy wyk.
+async function liczEcho(S, Y, zrodlo, odcinki, haki, opis, { natychmiast = false, odBiezacej = false } = {}) {
+  const t0 = performance.now();
+  const L = S.odsyl;
+  const unia = new Map(), unia2a = new Map();
+  for (const { przed, po, ladunek, z221 = false } of odcinki) {
+    const lista = L.echo(przed, po, ladunek, { z221 });
+    L.zapiszScalenie(zrodlo, lista, haki, { natychmiast, opis });
+    L.zapiszUsuniecia(zrodlo, LO.usunieciaScalenia(przed, po, ladunek), opis);
+    if (odBiezacej) L.sprawdzPolaZawsze(S.bezRetencjiStarszej ? S.bezRetencjiStarszej(ladunek) : ladunek, opis);
+    for (const r of LO.wierszeEcha(lista.filter((q) => q[WYK]))) unia.set(r.k, r);
+    for (const r of LO.wierszeEcha(lista.filter((q) => q.po2a))) unia2a.set(r.k, r);
+  }
+  const poE = encje(odcinki[odcinki.length - 1].po);
+  const nosniki = async (mapa, zBrakiem) => {
+    const wiersze = [], koperty = [];
+    for (const r of mapa.values()) {
+      const k = await kopertaEcha(Y, r, poE);
+      if (!k) { if (zBrakiem) L.zapiszBrakNosnika(zrodlo, r); continue; }
+      if (k.blad) { L.bladBuildera += 1; continue; }
+      wiersze.push({ tresci: r.tresci, bajty: bajtyKoperty(Y, k) });
+      koperty.push(k);
+    }
+    return { wiersze, koperty };
+  };
+  const [w, w2a] = await cichoLicznik(S, async () => [await nosniki(unia, true), await nosniki(unia2a, false)]);
+  if (zrodlo !== 'w4') {
+    L.zapiszStrone(zrodlo, w.wiersze, w2a.wiersze, { t: teraz, dev: urzOs(Y), opis });
+    wyslijOs(S, Y, 'echo', w.wiersze.map((x) => x.bajty));
+    wyslijOs(S, Y, 'echo2a', w2a.wiersze.map((x) => x.bajty));
+  }
+  L.ms += performance.now() - t0;
+  if (S.echoKlony && zrodlo !== 'w4' && (w.koperty.length || w2a.koperty.length)) await echoNaKlonach(S, Y, w.koperty, w2a.koperty);
+  return w.koperty;
+}
+// Licznik partii dostawy X→Y (wołany z dostawa po ustawStan): strony ≤ 200 zdarzeń (strona scalana naraz; minuta slotu
+// = krok zegara uprzęży), w stronie odcinki zdarzenie po zdarzeniu (stany dostawy), haki partii (wpisy dopisane do Q_Y)
+// i przegląd natychmiast (drenaż zdarzeń, który scalił). Raz na ziarno — powtórka partii.
+async function poPartiiOdsyl(S, X, Y, partia, stany, dodane) {
+  const L = S.odsyl;
+  if (starszaAplikacja(Y)) return; // echo liczy się u bieżącego odbiorcy (flota: odbiorca ze starszą aplikacją nie odsyła)
+  if (partia.some((e) => !e.jaw)) throw new Error(`licznik odsyłania: wpis Q_${X.nazwa} bez jawnej kopii koperty (licznik włączony po dopisaniu)`);
+  const opis = `#${S.nrKroku || 0} ${X.nazwa}>${Y.nazwa}`;
+  const haki = LO.kluczeKopert(dodane);
+  if (dodane.length) wyslijOs(S, Y, 'haki', dodane.map((k) => bajtyKoperty(Y, k)));
+  L.zapiszPartie(partia.length, opis);
+  const zrodlo = X.app === 'S276' ? 'zdarzenie276' : 'zdarzenie';
+  for (const [od, d] of LO.strony(partia.length)) {
+    const odcinki = partia.slice(od, d).map((e, i) => ({ przed: stany[od + i], po: stany[od + i + 1], ladunek: e.jaw }));
+    await liczEcho(S, Y, zrodlo, odcinki, haki, `${opis} [${partia.length} zd., strona ${od / LO.LIMITY.stronaDostawy + 1}]`, { natychmiast: true, odBiezacej: !starszaAplikacja(X) });
+  }
+  if (!S.odsylPowtorka && partia.length >= 2) { S.odsylPowtorka = { partii: 1, zdarzen: partia.length, opis }; await powtorkaPartii(S, Y, partia, `${opis} (powtórka)`); }
+}
+// Powtórka partii (kursor cofnięty o całą partię): te same szyfrogramy z Q nadawcy jeszcze raz, zdarzenie po zdarzeniu,
+// na świeżym klonie odbiorcy po tej partii, w cichoLicznik (klon, jego identyfikatory i IV poza programem). Echo każdego
+// zdarzenia — źródło 'powtórka'; oczekiwane 0 wierszy surowych (scalanie nic nie zapisuje).
+async function powtorkaPartii(S, Y, partia, opis) {
+  const L = S.odsyl;
+  const t0 = performance.now();
+  await cichoLicznik(S, async () => {
+    const K = await klonBiezacy(S, Y, 'powt');
+    try {
+      for (const e of partia) {
+        const przed = await eksport(K);
+        await zastosuj(K, [e]);
+        L.zapiszScalenie('powtórka', L.echo(przed, await eksport(K), e.jaw), new Set(), { opis });
+      }
+    } finally { await zamknij(K); }
+  });
+  L.msDodatkowe.powtorka += performance.now() - t0;
+}
+// Wymiana PO-A na klonach W4 z licznikiem (pół wymiany): Y scala pełny stan X, potem X scala stan Y po scaleniu — jak
+// rundaPO; licz — echo obu połówek (pierwszy obieg wymiany; źródło 'w4'). Wpisy haków ze scalenia (rejestr łańcucha
+// klonu) — haki warstwy nowe. Dodatkowe eksporty przed scaleniem (tylko w obiegu, który licznik liczy) nie zmieniają
+// stanu ani losowań.
+async function wymianaPOLicz(S, X, Y, licz) {
+  const liczy = !!licz && !!S.odsyl;
+  const eksportLicznika = async (U) => { const t0 = performance.now(); const e = await eksport(U); S.odsyl.msDodatkowe.eksportyWymiany += performance.now() - t0; return e; };
+  const bx = json(await X.v.exportSyncPayload());
+  const y0 = liczy ? await eksportLicznika(Y) : null;
+  if (Y.lancuch) Y.lancuch.length = 0;
+  await Y.v.mergeSyncPayload(json(bx));
+  const by = json(await Y.v.exportSyncPayload());
+  const hY = Y.lancuch ? kluczeWpisow(Y.lancuch.splice(0)) : new Set();
+  const x0 = liczy ? await eksportLicznika(X) : null;
+  if (X.lancuch) X.lancuch.length = 0;
+  await X.v.mergeSyncPayload(json(by));
+  const x1 = await eksport(X);
+  const hX = X.lancuch ? kluczeWpisow(X.lancuch.splice(0)) : new Set();
+  ustawStan(X, x1); ustawStan(Y, by);
+  if (!liczy) return;
+  if (!starszaAplikacja(Y)) await liczEcho(S, Y, 'w4', [{ przed: y0, po: by, ladunek: bx }], hY, `W4 ${X.nazwa}→${Y.nazwa}`, { odBiezacej: !starszaAplikacja(X) });
+  if (!starszaAplikacja(X)) await liczEcho(S, X, 'w4', [{ przed: x0, po: x1, ladunek: by }], hX, `W4 ${Y.nazwa}→${X.nazwa}`, { odBiezacej: !starszaAplikacja(Y) });
+}
+// Odcisk testu wobec _pinnedState.h każdej wersji podanych eksportów.
+function odciskiWersji(stany) {
+  const o = { wersji: 0, zgodnych: 0, niezgodne: [] };
+  for (const lad of stany) {
+    for (const p of lad.patients || []) {
+      for (const s of p.snapshots || []) {
+        const h = s.payload && s.payload._pinnedState ? s.payload._pinnedState.h : undefined;
+        if (typeof h !== 'string') continue;
+        o.wersji += 1;
+        if (LO.odcisk(s.payload) === h) o.zgodnych += 1;
+        else if (o.niezgodne.length < 6) o.niezgodne.push(`${String(p.patientId).slice(0, 8)}/${String(s.snapshotId).slice(0, 8)}`);
+      }
+    }
+  }
+  return o;
+}
+// Mutacja na urządzeniu z sejfem 221 (bez dziennika zdarzeń): operacja, eksport po niej i zapis historii wyroczni
+// (wywołania API sejfu jak w mutacja), bez emisji i bez porównania z modelem. Odmowa sejfu 221 — wyjątek z kodem
+// z ODMOWY_STARSZEJ (operacja na karcie z lokalnym nagrobkiem, zajęta blokada scalania; tests/fixtures/vilda_vault-221.js.txt
+// :1906, :1270) — trafia do S.stat.odmowyStarszej (liczba i według kodu) i do dziennika, bez przerwania przebiegu. Każdy
+// inny wyjątek (błąd uprzęży, TypeError, kod spoza listy) rzuca się dalej po zapisie historii — jak w mutacja.
+const ODMOWY_STARSZEJ = Object.freeze(['PATIENT_DELETED', 'MERGE_BUSY']);
+async function mutacjaBezDziennika(S, U, opis, fn, { operacja = null } = {}) {
+  const przed = U.stan;
+  const operacje = operacja ? [operacja] : [];
+  const v0 = U.v;
+  U.v = new Proxy(v0, { get(cel, k) {
+    const f = cel[k];
+    if (typeof f !== 'function') return f;
+    if (!WYR.OPERACJE.includes(k)) return f.bind(cel);
+    return (...args) => { operacje.push({ nazwa: k, args }); return f.apply(cel, args); };
+  } });
+  const chwila = Date.now();
+  if (S.chwile) S.chwile.add(chwila);
+  let wynik, blad = null;
+  try { wynik = await fn(); } catch (e) { blad = e; } finally { U.v = v0; }
+  const po = await eksport(U);
+  { const t0 = performance.now(); WYR.zapisz(S.wyr = S.wyr || WYR.nowyModel(), { dev: U.nazwa, app: U.app, opis, przed, po, t: chwila, operacje }); WYR_CZAS.zapis += performance.now() - t0; }
+  ustawStan(U, po);
+  if (U.delty) await wyslijDelty(S, U, 'mutacja'); // flota 221: delty integracji po operacji (blok floty niżej)
+  const odmowa = !!blad && ODMOWY_STARSZEJ.includes(blad.code);
+  if (odmowa) {
+    S.stat.odmowyStarszej = (S.stat.odmowyStarszej || 0) + 1;
+    const k = S.stat.odmowyStarszejKody = S.stat.odmowyStarszejKody || {};
+    k[blad.code] = (k[blad.code] || 0) + 1;
+  }
+  S.dziennik.push(`#${S.nrKroku || 0} ${new Date(teraz).toISOString().slice(11, 23)} ${U.nazwa} (${U.app}): ${opis}${blad ? ` → ${odmowa ? 'odmowa' : 'wyjątek'} ${blad.code || blad.message}` : ''}`);
+  if (blad && !odmowa) throw blad;
+  return { wynik, koperty: [], model: [] };
+}
+
+describe('A ≡ B, urządzenie starszej aplikacji w uprzęży (E3-PR0b): app, mutacja bez dziennika, tabela pary', () => {
+  d1();
+  it('bliźniaki A z sejfem 221 i 276 (klon dziedziczy app i retencję v1); mutacja na 221 bez emisji z zapisem historii, na 276 z emiterami porównanymi z modelem; para z urządzeniem app ≠ N — tabela „flota” (tylko klasy par floty i R4n), para bieżących — tabela wołającego', async () => {
+    const S = swiat(960);
+    const A = await urzadzenie(S, 'A');
+    krok(); await mutacja(S, A, 'nowa karta 1', () => A.d.zapiszKarte(1));
+    const pid = A.stan.patients[0].patientId;
+    const B = await urzadzenie(S, 'B', A);
+    const C = await urzadzenie(S, 'C', A, { app: 'S221' });
+    const D = await urzadzenie(S, 'D', A, { app: 'S276' });
+    const C2 = await klon(S, C, 'k');
+    expect({ A: [A.app, A.retencja], C: [C.app, C.retencja, typeof C.ev, C.lancuch], D: [D.app, D.retencja, typeof D.ev, Array.isArray(D.lancuch)], C2: [C2.app, C2.retencja, typeof C2.ev] })
+      .toEqual({ A: ['N', null], C: ['S221', 'v1', 'undefined', null], D: ['S276', 'v1', 'object', true], C2: ['S221', 'v1', 'undefined'] });
+    const mutacjiPrzed = S.wyr.mutacji, porownanPrzed = S.stat.emitery.porownan;
+    krok(); await mutacja(S, C, 'nowa wersja 1 na 221', () => C.d.zapiszKarte(1, { wzrost: 120, zapis: { patientId: pid, forceNewSnapshot: true } }));
+    expect({ Q: C.Q.length, mutacji: S.wyr.mutacji - mutacjiPrzed, porownan: S.stat.emitery.porownan - porownanPrzed, wersji: C.stan.patients[0].snapshots.length, odmowy: S.stat.odmowyStarszej || 0 })
+      .toEqual({ Q: 0, mutacji: 1, porownan: 0, wersji: 2, odmowy: 0 });
+    krok(); const { koperty } = await mutacja(S, D, 'nowa wersja 1 na 276', () => D.d.zapiszKarte(1, { wzrost: 121, zapis: { patientId: pid, forceNewSnapshot: true } }));
+    expect({ porownan: S.stat.emitery.porownan - porownanPrzed, mutacji: S.wyr.mutacji - mutacjiPrzed, Q: D.Q.map((e) => e.kind) })
+      .toEqual({ porownan: 1, mutacji: 2, Q: koperty.map((k) => k.event.kind) });
+    expect(D.Q.map((e) => e.kind)).toContain('snap');
+    expect([kontPary(A, C, { tabela: 'p6' }).tabela, kontPary(D, A, { tabela: 'W4', wskrzeszone: null }).tabela, kontPary(A, B, { tabela: 'p6' }).tabela, kontPary(C2, B, { tabela: 'W4' }).tabela])
+      .toEqual(['flota', 'flota', 'p6', 'flota']);
+    expect([dozwolona('R2', {}, { tabela: 'flota' }), dozwolona('R4n', {}, { tabela: 'flota' }), dozwolona(D_TOZSAMOSC, {}, { tabela: 'flota' }), dozwolona(D_TOZSAMOSC, {}, { tabela: 'p6' }), dozwolona('R2', {}, { tabela: 'p6' })]).toEqual([false, 'tak', 'tak', false, 'tak']);
+    // Wyjątek w mutacji na 221: odmowa sejfu z kodem z listy — liczona, przebieg trwa; każdy inny — rzucany dalej
+    // (błąd uprzęży nie zmienia programu świata po cichu); historia wyroczni dostaje zapis w obu przypadkach.
+    const odmowa = (kod) => () => { const e = new Error('odmowa sejfu (syntetyczna)'); e.code = kod; throw e; };
+    krok(); await mutacja(S, C, 'odmowa na 221', odmowa('PATIENT_DELETED'));
+    krok(); await expect(mutacja(S, C, 'błąd uprzęży na 221', () => { throw new TypeError('brak metody (syntetyczny)'); })).rejects.toThrow(TypeError);
+    krok(); await expect(mutacja(S, C, 'kod spoza listy na 221', odmowa('BAD_JSON'))).rejects.toMatchObject({ code: 'BAD_JSON' });
+    expect({ odmowy: S.stat.odmowyStarszej, kody: S.stat.odmowyStarszejKody, mutacji: S.wyr.mutacji - mutacjiPrzed, dziennik: S.dziennik.slice(-3).map((w) => w.replace(/^.*\): /, '')) })
+      .toEqual({ odmowy: 1, kody: { PATIENT_DELETED: 1 }, mutacji: 5, dziennik: ['odmowa na 221 → odmowa PATIENT_DELETED', 'błąd uprzęży na 221 → wyjątek brak metody (syntetyczny)', 'kod spoza listy na 221 → wyjątek BAD_JSON'] });
+    await zamknij(C2);
+  }, 30_000);
+});
+
+// Literał licznika odsyłania dla ziaren domyślnych — linia bazowa echa między bieżącymi urządzeniami, zanim bieżąca
+// aplikacja zacznie odsyłać rekordy pochodne scalenia (E3-PR0h). Pierwszy poziom — profil (podstawowy: ziarna
+// DOMYSLNE_ZIARNA; 'podstawowy:ogon' — koalescencja kolejki, DOMYSLNE_ZIARNA_KOAL; pelny — DOMYSLNE_ZIARNA_PELNY),
+// liczby to sumy po tych ziarnach. Drugi poziom: klucz źródło|rodzaj|w ładunku/spoza|klasa (bez ścieżek pól i bez
+// bajtów) → { wyk — wiersze warstwy wykonalnej reguły T: rekordy, które scalanie zapisało inaczej, niż przyszły, i które
+// bieżąca aplikacja musiałaby odesłać; nowe — wyk bez tego, co wychodzi już dziś (wpisy haków H1/H2/H3 tego scalenia,
+// przegląd kolejki po drenażu zdarzeń, który coś scalił) }. Klucza bez wierszy nie ma (np. źródło 'w4' — 0 w każdym
+// profilu). Przydział (druk): profil podstawowy E3-PR0c 20, E3-PR0d 4, bez przydziału 12; notatki pacjenta spoza
+// ładunku pokrywają haki H2 i hak karty notatki (nowe 0). Zmiana zbieżności (E3-PR0c–f) przepisuje ten literał.
+const ZNANE_ODSYL = {
+  podstawowy: {
+    'zdarzenie|pnote|spoza|inne': { wyk: 10, nowe: 0 },
+    'zdarzenie|snap|spoza|gwiazdka': { wyk: 2, nowe: 2 },
+    'zdarzenie|snap|w ładunku|gwiazdka': { wyk: 11, nowe: 11 },
+    'zdarzenie|snap|w ładunku|inne': { wyk: 8, nowe: 8 },
+    'zdarzenie|snap|w ładunku|rekord złożony': { wyk: 1, nowe: 1 },
+    'zdarzenie|stomb|spoza|R4a': { wyk: 1, nowe: 1 },
+    'zdarzenie|stomb|spoza|R4a′': { wyk: 1, nowe: 1 },
+    'zdarzenie|stomb|w ładunku|R4a': { wyk: 1, nowe: 1 },
+    'zdarzenie|stomb|w ładunku|R4a′': { wyk: 1, nowe: 1 },
+  },
+  'podstawowy:ogon': {
+    'zdarzenie|pnote|spoza|inne': { wyk: 6, nowe: 0 },
+    'zdarzenie|snap|w ładunku|gwiazdka': { wyk: 4, nowe: 4 },
+    'zdarzenie|snap|w ładunku|inne': { wyk: 1, nowe: 1 },
+    'zdarzenie|snap|w ładunku|rekord złożony': { wyk: 1, nowe: 1 },
+    'zdarzenie|stomb|spoza|R4a′': { wyk: 2, nowe: 2 },
+    'zdarzenie|stomb|w ładunku|R4a′': { wyk: 2, nowe: 2 },
+  },
+  pelny: {
+    'zdarzenie|karta|w ładunku|nagłówek karty': { wyk: 2, nowe: 2 },
+    'zdarzenie|snap|w ładunku|gwiazdka': { wyk: 1, nowe: 1 },
+    'zdarzenie|snap|w ładunku|inne': { wyk: 1, nowe: 1 },
+  },
+};
+function literalOdsyl(lista) {
+  const o = {};
+  for (const w of lista) {
+    for (const [k, n] of Object.entries(w.literal)) (o[k] = o[k] || { wyk: 0, nowe: 0 }).wyk += n;
+    for (const [k, n] of Object.entries(w.literalNowe)) (o[k] = o[k] || { wyk: 0, nowe: 0 }).nowe += n;
+  }
+  return sortuj(o);
+}
+const dodajDo = (o, z) => { for (const [k, v] of Object.entries(z || {})) o[k] = (o[k] || 0) + v; return o; };
+// Podsumowanie licznika profilu (druk do opisu PR): scalenia i wiersze według źródła i warstwy, literał, przydział,
+// koszt reguł, usunięcia, strażniki, największe minuty slotu (warstwa wyk i naiwna), partie, okna przesuwne, czas.
+function sumaOdsyl(lista) {
+  const s = { ziaren: lista.length, scalen: {}, zEchem: {}, wiersze: {}, przydzial: {}, tlumi: { A: {}, B: {}, T: {} }, usuniecia: {}, utrata: {}, polaZawsze: { encji: 0, bezPola: 0 }, kandydaci: {}, odcisk: { wersji: 0, zgodnych: 0 }, brakNosnika: 0, brakNosnikaKlasy: {}, bladBuildera: 0, oversize: 0, oversizeRealne: 0, slotow: 0, maksSlotu: null, maksNaiwny: null, partieMaks: 0, partiePonad200: 0, okno: { wykonalne: null, echo: null, naiwne: null }, ms: 0, msDodatkowe: {} };
+  const wiekszy = (a, b, pole) => (!a || (b && b[pole] > a[pole]) ? b : a);
+  for (const w of lista) {
+    for (const k of ['scalen', 'zEchem', 'wiersze', 'usuniecia', 'utrata', 'brakNosnikaKlasy']) dodajDo(s[k], w[k]);
+    dodajDo(s.przydzial, w.rodzajePrzydzial);
+    for (const r of Object.keys(s.tlumi)) dodajDo(s.tlumi[r], w.tlumi[r]);
+    s.polaZawsze.encji += w.polaZawsze.encji; s.polaZawsze.bezPola += w.polaZawsze.bezPola;
+    for (const [k, v] of Object.entries(w.polaZawsze.kandydaci)) { const x = s.kandydaci[k] || (s.kandydaci[k] = { encji: 0, bezPola: 0 }); x.encji += v.encji; x.bezPola += v.bezPola; }
+    s.odcisk.wersji += w.odcisk.wersji; s.odcisk.zgodnych += w.odcisk.zgodnych;
+    s.brakNosnika += w.brakNosnika; s.bladBuildera += w.bladBuildera; s.oversize += w.oversize; s.oversizeRealne += w.budzet.oversize; s.slotow += w.budzet.slotow; s.ms += w.ms;
+    dodajDo(s.msDodatkowe, w.msDodatkowe);
+    const slot = (b) => (b ? { ziarno: w.ziarno, wierszy: b.wierszy, bajty: b.bajty, realneDo: b.realneDo, zadanMaks: b.zadanMaks } : null);
+    s.maksSlotu = wiekszy(s.maksSlotu, slot(w.budzet.maksRealne), 'realneDo');
+    s.maksNaiwny = wiekszy(s.maksNaiwny, slot(w.budzetNaiwny.maksRealne), 'realneDo');
+    s.partieMaks = Math.max(s.partieMaks, w.partieDostaw.maks); s.partiePonad200 += w.partieDostaw.ponad200;
+    for (const k of Object.keys(s.okno)) s.okno[k] = wiekszy(s.okno[k], { ziarno: w.ziarno, ...w.okno[k] }, 'slotBajtow');
+  }
+  return s;
+}
+// Zieleń licznika ziarna (lista pusta albo zero — zieleń).
+const ZRODLA_BIEZACE = ['zdarzenie', 'w4'];
+function zielenOdsyl(w) {
+  const zrodla = Object.keys(w.scalen).filter((z) => z !== 'powtórka').sort();
+  return {
+    'pola zawsze obecne: encje od bieżącej wersji bez pola z POLA_ZAWSZE': w.polaZawsze.bezPola,
+    'źródła spoza bieżących urządzeń': zrodla.filter((z) => !ZRODLA_BIEZACE.includes(z)),
+    'warstwa wykonalna ≠ po2a między bieżącymi (źródło: wyk / po2a)': zrodla.filter((z) => (w.wiersze[`${z}:wyk`] || 0) !== (w.wiersze[`${z}:po2a`] || 0)).map((z) => `${z}: ${w.wiersze[`${z}:wyk`] || 0} / ${w.wiersze[`${z}:po2a`] || 0}`),
+    'budżet minuty slotu przekroczony (≤ 600 wierszy, ≤ 4 MiB realnie, ≤ 20 żądań na urządzenie)': w.budzet.przekroczone.map((x) => `t ${x.t}: ${x.wierszy} wierszy, ${x.realneDo} B, ${x.zadanMaks} żądań`),
+    'powtórka partii: partii / wierszy surowych': [w.powtorka.partii, w.wiersze['powtórka:surowe'] || 0],
+    'odcisk testu ≠ h wersji': w.odcisk.wersji - w.odcisk.zgodnych,
+    'wyjątki builderów nośników': w.bladBuildera,
+  };
+}
+const ZIELEN_ODSYL = {
+  'pola zawsze obecne: encje od bieżącej wersji bez pola z POLA_ZAWSZE': 0,
+  'źródła spoza bieżących urządzeń': [],
+  'warstwa wykonalna ≠ po2a między bieżącymi (źródło: wyk / po2a)': [],
+  'budżet minuty slotu przekroczony (≤ 600 wierszy, ≤ 4 MiB realnie, ≤ 20 żądań na urządzenie)': [],
+  'powtórka partii: partii / wierszy surowych': [1, 0],
+  'odcisk testu ≠ h wersji': 0,
+  'wyjątki builderów nośników': 0,
+};
+const opisOdsyl = (w) => JSON.stringify({ ziarno: w.ziarno, przyklady: w.przyklady, polaZawsze: w.polaZawsze.przyklady, odcisk: w.odcisk.niezgodne, budzet: w.budzet.przekroczone.slice(0, 4) }, null, 1);
+// [klucz WYNIKI, opis, ziarna przebiegu, czy ziarno wchodzi do literału, ziarna literału]
+const PROFILE_ODSYL = [
+  ['podstawowy', 'profil podstawowy', () => ZIARNA, (z) => domyslne(z), DOMYSLNE_ZIARNA],
+  ['podstawowy:ogon', 'koalescencja kolejki', () => ZIARNA_KOAL, (z) => !KROKI && DOMYSLNE_ZIARNA_KOAL.includes(z), DOMYSLNE_ZIARNA_KOAL],
+  [KOAL_PELNY ? 'pelny:ogon' : 'pelny', 'profil pełny', () => ZIARNA_PELNY, (z) => !KROKI && !KOAL_PELNY && DOMYSLNE_ZIARNA_PELNY.includes(z), DOMYSLNE_ZIARNA_PELNY],
+  ...(process.env.E2_AB_PROFIL === 'bez-polaczenia' ? [['bez-polaczenia', 'profil „dłuższa praca bez połączenia”', () => ZIARNA, () => false, []]] : []),
+];
+describe.skipIf(!ODSYL)('A ≡ B, licznik odsyłania w profilach (E3-PR0b; wyniki ziaren profili wyżej)', () => {
+  d1();
+  for (const [klucz, opis, ziarna, zLiteralem, ziarnaLiteralu] of PROFILE_ODSYL) {
+    it(`${opis}: pola zawsze obecne, warstwa wykonalna = po2a, budżet minuty slotu, powtórka partii — 0, odcisk = h; literał ZNANE_ODSYL (druk: podsumowanie licznika)`, () => {
+      const lista = ODSYL_WYNIKI[klucz];
+      expect(lista.map((w) => w.ziarno), `ziarna ${opis} z licznikiem (przypadki ziaren wyżej w tym przebiegu)`).toEqual(ziarna());
+      for (const w of lista) {
+        expect.soft(zielenOdsyl(w), `licznik odsyłania, ${opis}, ziarno ${w.ziarno}\n${opisOdsyl(w)}`).toEqual(ZIELEN_ODSYL);
+        expect.soft({ encjiZPolem: w.polaZawsze.encji > 0, wersjiZOdciskiem: w.odcisk.wersji > 0 }, `strażniki niepuste (${opis}, ziarno ${w.ziarno})`).toEqual({ encjiZPolem: true, wersjiZOdciskiem: true });
+      }
+      const s = sumaOdsyl(lista);
+      console.log(`E3-AB licznik ${klucz}`, JSON.stringify(s));
+      const dom = lista.filter((w) => zLiteralem(w.ziarno));
+      if (ziarnaLiteralu.length && dom.length === ziarnaLiteralu.length) expect(literalOdsyl(dom), `ZNANE_ODSYL['${klucz}'] (warstwa ${WYK})`).toEqual(ZNANE_ODSYL[klucz]);
+    }, 10_000);
+  }
+});
+
+// Determinizm: ziarno 1 profilu podstawowego, 20 mutacji (początek programu ziarna 1), raz z licznikiem i powtórką
+// partii, raz bez — ten sam dziennik operacji, te same eksporty końcowe obu urządzeń i ten sam wynik (bez czasu). Ten
+// przebieg (nazwa 'determinizm') nie wchodzi do podsumowań AB2/AB7, ZNANE_WYR ani ZNANE_ODSYL.
+describe.skipIf(!ODSYL)('A ≡ B, licznik odsyłania: determinizm (ziarno z licznikiem i bez — ten sam program)', () => {
+  d1();
+  it('ziarno 1, 20 mutacji: dziennik operacji, eksporty końcowe A i B i wynik bez czasu równe z licznikiem i bez; powtórka partii — 0 wierszy surowych', async () => {
+    const z = await przebiegZiarna(1, 'podstawowy', { nazwa: 'determinizm', kroki: 20, odsyl: true, slad: true });
+    const o = ODSYL_WYNIKI.determinizm[ODSYL_WYNIKI.determinizm.length - 1];
+    await sprzatnijUrzadzenia();
+    vi.restoreAllMocks();
+    ustaw(START);
+    const b = await przebiegZiarna(1, 'podstawowy', { nazwa: 'determinizm', kroki: 20, odsyl: false, slad: true });
+    const bezCzasu = ({ ms: _ms, slad: _slad, ...r }) => r;
+    // Klucz główny konta pochodzi z prawdziwego źródła losowości (kryptoZiarna: z ziarna tylko identyfikatory i IV), więc
+    // jego szyfrogram w poświadczeniu różni się między przebiegami niezależnie od licznika — poza porównaniem.
+    const bezKlucza = (lad) => (lad.credential && lad.credential.encryptedMasterByPassword
+      ? { ...lad, credential: { ...lad.credential, encryptedMasterByPassword: { ...lad.credential.encryptedMasterByPassword, data: '(klucz losowy)' } } } : lad);
+    const eksporty = (x) => ({ A: bezKlucza(x.slad.eksport.A), B: bezKlucza(x.slad.eksport.B) });
+    expect(z.mutacji).toBe(20);
+    expect(o.scalen.zdarzenie, 'scalenia zdarzeń z licznikiem').toBeGreaterThan(0);
+    expect(z.slad.dziennik, 'dziennik operacji').toEqual(b.slad.dziennik);
+    expect(eksporty(z), 'eksporty końcowe A i B').toEqual(eksporty(b));
+    expect(bezCzasu(z), 'wynik ziarna bez czasu').toEqual(bezCzasu(b));
+    expect([o.powtorka.partii, o.scalen['powtórka'] === o.powtorka.zdarzen, o.wiersze['powtórka:surowe'] || 0], 'powtórka partii: partii, scalenie na zdarzenie, wierszy surowych').toEqual([1, true, 0]);
+  }, 60_000);
+});
+
+// ══ Flota ze starszą aplikacją (E3-PR0b, P-ZBIEZNOSC-ZDARZEN; tylko testy) ═══════════════════════════════════════════
+// Trzy urządzenia jednego konta: A i B — bieżący sejf (bliźniaki), C — bliźniak A z sejfem starszej aplikacji
+// (urzadzenie(..., { app }); tests/support/starsza-aplikacja.mjs) i retencją v1 (E2_AB_RET_C=biezaca — kontrola); klon
+// dziedziczy app i retencję. Moduły okna C: vilda_crypto.js bieżący (bajt w bajt równy obu starszym), retencja v1,
+// sejf z fikstury; vilda_sync.js nie jest ładowany (sync: false), transport C modeluje ten blok; skryptów punktu
+// kontrolnego (okno-magazynu.mjs) A ≡ B nie ładuje.
+// FLOTA 221 (vilda_vault.js z 54a84da3, bez dziennika zdarzeń):
+//   odbiór — kolejki A i B przez applyEncryptedDelta (jak /changes bez dziennika; B13 w sync-zdarzenia-buildery.test.mjs):
+//     dostawaDoStarszej;
+//   delty — słuchacze integracji z 54a84da3:vilda_sync_integration.js po każdej operacji sejfu C (mutacja, scalenie
+//     kolejki, scalenie pełnej kopii): karta — buildPatientDelta, pominięta przy data.length > PROG_DELT_FLOTY; nagrobek
+//     karty i nagrobek notatki — zawsze; notatka pacjenta — także action 'merge' z Le sejfu 221 ('merge-delete' —
+//     builder null); szablon biblioteki i jego nagrobek — z progiem. Jedno żądanie na deltę. Próg w treści uprzęży:
+//     PROG_DELT_221 (strażnik dł(2 wersje) < próg < dł(3 wersje) — starsza-aplikacja-fikstury.test.mjs);
+//     E2_AB_PROG_D221=60000 — próg aplikacji, E2_AB_D221=0 — bez delt (ręcznie). Delty szyfruje sejf C z osobnego
+//     strumienia IV i z własnym Math.random (program identyfikatorów C bez zmian). Dostawa do A i B — applyEncryptedEvent
+//     (drenaż /changes przy dzienniku), haki do Q odbiorcy (setId H1 do Y.setIds), losowo (osobny generator S.losD:
+//     0,35 na krok i odbiorcę) i zawsze w punkcie spoczynku;
+//   pełna kopia — E2_AB_BLOB_C=los (domyślnie): losowo między wszystkimi parami (0,08 na krok); publikuje (ręcznie):
+//     dodatkowo A i B scalają stan C (publikowany po każdej jego zmianie) z prawdopodobieństwem 0,5 na krok (osobny
+//     generator S.losB), gdy zmienił się od ich ostatniego pobrania, i zawsze w punkcie spoczynku. W aplikacji 221:
+//     PUT /blob do 60 s po pierwszej niewysłanej zmianie, co 20. zmiana po 1,5 s.
+// FLOTA 276 (vilda_vault.js z 743dba9a: dziennik zdarzeń, retencja v1; przy włączonym dzienniku bez /delta): zdarzenia
+//   między wszystkimi parami (losowo i w spoczynku), pełna kopia jak w wariancie los.
+// KONTROLA E2_AB_FLOTA=N: C = bieżący sejf w świecie i z transportem floty 276 (skutki samego trzeciego urządzenia).
+// PEŁNA KOPIA (scalBlob): Y scala eksport Z; na urządzeniu z dziennikiem wpisy haków ze scalenia idą do Q_Y, a setId haka
+//   H1 — do Y.setIds (jak Bem_pelne sejfu; bez tego model haków AB7 oczekuje pfull ponownie przy następnym zdarzeniu
+//   ptomb tej karty). Licznik odsyłania: echo u bieżącego odbiorcy, źródło blob221, blob276 albo blobN.
+// PUNKT SPOCZYNKU: flota 221 — najwyżej LO.MAKS_OBIEGOW obiegów: delty C → A, B (przy publikuje też stan C), spoczynek
+//   A↔B, kolejki A, B → C; flota 276 — dostawy między wszystkimi parami, aż kolejki są dostarczone. Potem W1 (D par
+//   z klasami i wyrocznia na żywych urządzeniach, świat 'W1 floty') i W4 floty na świeżych klonach: obiegi wymiany PO-A
+//   par (A, B), (B, C), (C, A), aż żaden eksport się nie zmienia (≤ 4; licznik — pół wymiany w pierwszym obiegu, źródło
+//   'w4'); D każdej pary — para z C w tabeli 'flota', para A, B w tabeli W4 profilu (R4n — z W4p); wyrocznia 'W4 floty'
+//   z widokiem C jako widokiem starszej aplikacji (stare).
+// WYROCZNIA: flota 221 — W1 floty tylko druk (karta ponad próg delty nie dochodzi do A i B przed pełną kopią), miarą jest
+//   W4 floty; flota 276 — W1 floty i W4 floty.
+// WAGI C: flota 221 — wagi profilu bez zmiany hasła, w profilu pełnym także bez „Scal pacjentów”, „Zostaw notatkę”
+//   i retencji przypiętej (jak w pomiarach przygotowawczych E3-PR0b); flota 276 — wagi profilu. Odmowy sejfu 221
+//   (ODMOWY_STARSZEJ) — literał według kodu.
+// ZIARNA ŚWIATA: ziarno + 200 000 (flota 221) albo + 400 000 (flota 276 i kontrola N), profil pełny + 100 000;
+//   E2_AB_SWIAT_FLOTA=<przesunięcie> zastępuje 200 000 / 400 000 (odtwarzanie światów z pomiarów przygotowawczych).
+// STRAŻNIK CHWIL (pomiar): każda updatedAtISO, _contentAtISO i _pinnedState.at wersji i wpisów Kosza w eksportach
+//   końcowych jest chwilą jakiejś operacji z historii (S.chwile — chwile mutacji).
+// Zmienne: E2_AB_FLOTA=221,276|0|N (domyślnie 221,276), E2_AB_ZIARNA_FLOTA221 (1,2,3), E2_AB_ZIARNA_FLOTA276 (2; też
+//   kontrola N), E2_AB_FLOTA_PROFIL=pelny, E2_AB_SWIAT_FLOTA, E2_AB_PROG_D221, E2_AB_D221=0, E2_AB_RET_C=biezaca,
+//   E2_AB_BLOB_C=publikuje, E2_AB_SLAD=<prefiks identyfikatora>[,…] (stan wersji i wpisu Kosza na A, B, C po każdym
+//   wierszu dziennika), E2_AB_WYNIKI (wiersze typ 'flota221' | 'flota276' | 'flotaN'), E2_AB_ECHO_KLONY=wszystkie (echo
+//   na klonach każdego scalenia z echem; poza programem świata — echoNaKlonach w bloku scenariuszy floty niżej). Literały
+//   tylko dla przebiegu domyślnego (FLOTA_DOMYSLNA) i ziaren CI.
+const FLOTA_ENV = (process.env.E2_AB_FLOTA || '221,276').trim();
+const FLOTY = FLOTA_ENV === '0' ? [] : FLOTA_ENV.split(',').map((s) => s.trim()).filter(Boolean);
+const listaZiaren = (zmienna, dom) => (process.env[zmienna] ? process.env[zmienna].split(',').map(Number).filter(Number.isFinite) : dom);
+const ZIARNA_FLOTA_CI = Object.freeze({ 221: Object.freeze([1, 2, 3]), 276: Object.freeze([2]) });
+const ZIARNA_FLOTA = { 221: listaZiaren('E2_AB_ZIARNA_FLOTA221', ZIARNA_FLOTA_CI[221]), 276: listaZiaren('E2_AB_ZIARNA_FLOTA276', ZIARNA_FLOTA_CI[276]) };
+ZIARNA_FLOTA.N = ZIARNA_FLOTA[276];
+const FLOTA_PROFIL = process.env.E2_AB_FLOTA_PROFIL === 'pelny' ? 'pelny' : 'podstawowy';
+const SWIAT_FLOTA = process.env.E2_AB_SWIAT_FLOTA ? Number(process.env.E2_AB_SWIAT_FLOTA) : null;
+const PROG_DELT_FLOTY = Number(process.env.E2_AB_PROG_D221) || PROG_DELT_221;
+const Z_DELTAMI_221 = process.env.E2_AB_D221 !== '0';
+const RET_C = process.env.E2_AB_RET_C === 'biezaca' ? 'biezaca' : 'v1';
+const BLOB_C = process.env.E2_AB_BLOB_C === 'publikuje' ? 'publikuje' : 'los';
+const SLAD_FLOTY = (process.env.E2_AB_SLAD || '').split(',').filter(Boolean);
+const FLOTA_DOMYSLNA = !KROKI && FLOTA_PROFIL === 'podstawowy' && PROG_DELT_FLOTY === PROG_DELT_221 && Z_DELTAMI_221 && RET_C === 'v1' && BLOB_C === 'los'
+  && SWIAT_FLOTA === null && WYR.NORM_VISIT.wlaczona && ODSYL;
+const zLiteralemFloty = (flota, z) => FLOTA_DOMYSLNA && (ZIARNA_FLOTA_CI[flota] || []).includes(z);
+WAGI['flota221:podstawowy'] = { ...WAGI.podstawowy, haslo: 0 };
+WAGI['flota221:pelny'] = { ...WAGI.pelny, haslo: 0, scal: 0, zostawNotatke: 0, retencjaPrzypietej: 0 };
+
+// ── Delty sejfu 221 (/delta) ─────────────────────────────────────────────────────────────────────────────────────────
+const BUDOWNICZE_DELT = Object.freeze({ karta: 'buildPatientDelta', ptomb: 'buildTombstoneDelta', pnote: 'buildNoteDelta', pnotetomb: 'buildNoteTombstoneDelta', note: 'buildLibraryNoteDelta', notetomb: 'buildLibraryNoteTombstoneDelta' });
+const DELTY_Z_PROGIEM = new Set(['karta', 'note', 'notetomb']);
+// crypto okna C: identyfikatory i IV z ziarna urządzenia, a na czas budowania delt — z osobnego strumienia.
+function kryptoZDeltami(ziarno, ziarnoDelt) {
+  const glowne = kryptoZiarna(ziarno), delt = kryptoZiarna(ziarnoDelt);
+  const p = { delty: false };
+  const k = () => (p.delty ? delt : glowne);
+  return { p, obj: { subtle: glowne.subtle, getRandomValues: (x) => k().getRandomValues(x), randomUUID: () => k().randomUUID() } };
+}
+function podepnijDelty(S, C, przel) {
+  C.delty = { zdarzenia: [], Q: [], przel };
+  S.stat.delty = { zbudowane: {}, prog: {}, puste: {}, dostaw: 0, wpisow: 0, statusy: {}, bajty: 0, zmian: 0, bezZmian: 0, haki: {}, ms: 0 };
+  const z = C.delty.zdarzenia;
+  C.v.onPatientSaved((e) => { z.push({ rodzaj: 'karta', id: e && e.patientId }); });
+  C.v.onPatientDeleted((e) => { z.push({ rodzaj: 'ptomb', id: e && e.patientId, at: e && e.deletedAtISO }); });
+  C.v.onPatientNoteChanged((e) => { if (e) z.push(e.action !== 'delete' ? { rodzaj: 'pnote', id: e.id, action: e.action } : { rodzaj: 'pnotetomb', id: e.id, at: e.deletedAtISO }); });
+  C.v.onNoteChanged((e) => { if (e) z.push(e.action !== 'delete' ? { rodzaj: 'note', id: e.id, action: e.action } : { rodzaj: 'notetomb', id: e.id, at: e.deletedAtISO }); });
+}
+async function cichoDelty(S, fn) {
+  S.nrDelty = (S.nrDelty || 0) + 1;
+  const alt = rng(0xD221 + S.ziarno * 31 + S.nrDelty);
+  if (!vi.isMockFunction(Math.random)) return fn();
+  let w;
+  await vi.mocked(Math.random).withImplementation(() => alt(), async () => { w = await fn(); });
+  return w;
+}
+// Delty z powiadomień sejfu C od ostatniego wywołania (zrodlo: 'mutacja' albo 'scalanie' — echo notatek z Le 221).
+async function wyslijDelty(S, C, zrodlo) {
+  if (!C.delty || !C.delty.zdarzenia.length) return 0;
+  const t0 = performance.now();
+  const zd = C.delty.zdarzenia.splice(0);
+  const st = S.stat.delty;
+  const dodaj = (o, k) => { o[k] = (o[k] || 0) + 1; };
+  const nowe = [];
+  await cichoDelty(S, async () => {
+    C.delty.przel.delty = true;
+    try {
+      for (const z of zd) {
+        const opis = `${z.rodzaj}${z.action && z.action !== 'save' ? ':' + z.action : ''}`;
+        const args = z.rodzaj === 'ptomb' || z.rodzaj === 'pnotetomb' || z.rodzaj === 'notetomb' ? [z.id, z.at] : [z.id];
+        const o = await C.v[BUDOWNICZE_DELT[z.rodzaj]](...args);
+        if (!o || !o.iv || !o.data) { dodaj(st.puste, opis); continue; }
+        if (DELTY_Z_PROGIEM.has(z.rodzaj) && o.data.length > PROG_DELT_FLOTY) { dodaj(st.prog, opis); continue; }
+        const jaw = await C.v.decryptPayloadForCurrentUser(o.iv, o.data);
+        const bajty = JSON.stringify({ token: 'x'.repeat(64), payload: { iv: o.iv, data: o.data } }).length; // ciało POST /delta
+        st.bajty += bajty;
+        dodaj(st.zbudowane, opis);
+        const e = Object.freeze({ kind: 'delta', rodzaj: z.rodzaj, opis, key: z.id, zrodlo, env: Object.freeze({ iv: o.iv, data: o.data }), jaw: Object.freeze(json(jaw)), bajty, t: teraz });
+        C.delty.Q.push(e); nowe.push(e);
+      }
+    } finally { C.delty.przel.delty = false; }
+  });
+  if (S.odsyl) for (const e of nowe) wyslijOs(S, C, 'delta221', [e.bajty]);
+  if (nowe.length) S.dziennik.push(`#${S.nrKroku || 0} ${new Date(teraz).toISOString().slice(11, 23)} ${C.nazwa} (${C.app}) /delta (${zrodlo}): ${nowe.map((e) => e.opis).join(',')}`);
+  st.ms += performance.now() - t0;
+  return nowe.length;
+}
+const kursorDelt = (S, C, Y) => S.kursor.get(`${C.nazwa}>${Y.nazwa}:delta`) || 0;
+// Dostawa delt C → Y (bieżący): FIFO od kursora, applyEncryptedEvent (status inny niż applied — błąd testu), haki do Q_Y
+// (setId H1 do Y.setIds), licznik: źródło delta221, strony ≤ 200, przegląd natychmiast (drenaż, który scalił).
+async function dostawaDelt(S, C, Y, { k = Infinity } = {}) {
+  if (!C.delty) return 0;
+  const nazwa = `${C.nazwa}>${Y.nazwa}:delta`;
+  const c = kursorDelt(S, C, Y);
+  const partia = C.delty.Q.slice(c, c + Math.min(k, C.delty.Q.length - c));
+  if (!partia.length) return 0;
+  const st = S.stat.delty;
+  const przed = Y.stan;
+  Y.lancuch.length = 0;
+  const stany = [przed];
+  for (const e of partia) {
+    const r = await Y.ev.applyEncryptedEvent(e.env);
+    const s = r && r.status;
+    st.statusy[s] = (st.statusy[s] || 0) + 1;
+    if (s !== 'applied') throw new Error(`${Y.nazwa}: delta ${e.opis} ${e.key} → status ${s} ${r && (r.reason || r.code || '')}`);
+    stany.push(await eksport(Y));
+    if (S.wyr) WYR.naBiezacym(S.wyr, { lad: e.jaw, po: stany[stany.length - 1] });
+  }
+  S.kursor.set(nazwa, c + partia.length);
+  const po = stany[stany.length - 1];
+  for (let i = 0; i < partia.length; i += 1) { if (JSON.stringify(kanon(stany[i])) !== JSON.stringify(kanon(stany[i + 1]))) st.zmian += 1; else st.bezZmian += 1; }
+  const dodane = await hakiScalenia(S, Y, po, (x) => { st.haki[x.event.kind] = (st.haki[x.event.kind] || 0) + 1; });
+  ustawStan(Y, po);
+  st.dostaw += 1; st.wpisow += partia.length;
+  S.dziennik.push(`#${S.nrKroku || 0} ${new Date(teraz).toISOString().slice(11, 23)} dostawa ${nazwa}: ${partia.length} [${partia.map((e) => e.opis + (e.zrodlo === 'mutacja' ? '' : '*')).join(',')}]${dodane.length ? ` → haki [${dodane.map((x) => x.event.kind).join(',')}]` : ''}`);
+  if (S.odsyl) {
+    if (dodane.length) wyslijOs(S, Y, 'haki', dodane.map((x) => bajtyKoperty(Y, x)));
+    const haki = LO.kluczeKopert(dodane);
+    for (const [od, d] of LO.strony(partia.length)) {
+      const odcinki = partia.slice(od, d).map((e, i) => ({ przed: stany[od + i], po: stany[od + i + 1], ladunek: json(e.jaw), z221: true }));
+      await liczEcho(S, Y, 'delta221', odcinki, haki, `#${S.nrKroku || 0} ${nazwa} [${partia.length} delt, strona ${od / LO.LIMITY.stronaDostawy + 1}]`, { natychmiast: true });
+    }
+  }
+  return partia.length;
+}
+async function losoweDelty(S, C, urz) {
+  if (!C.delty) return;
+  for (const Y of urz) {
+    const n = C.delty.Q.length - kursorDelt(S, C, Y);
+    if (n && S.losD() < 0.35) await dostawaDelt(S, C, Y, { k: S.losD() < 0.6 ? n : 1 + Math.floor(S.losD() * n) });
+  }
+}
+// Haki ze scalenia poza dostawą zdarzeń (pełna kopia, delta 221): wpisy rejestru łańcucha konta Y → koperty builderów
+// do Q_Y; setId haka H1 — do Y.setIds. Bez porównania z modelem haków (model dotyczy partii zdarzeń, AB7).
+async function hakiScalenia(S, Y, po, licz = null) {
+  if (!Array.isArray(Y.lancuch)) return [];
+  const dodane = [];
+  for (const z of Y.lancuch.splice(0).filter((x) => !x.znacznik && x.uid === po.userId)) {
+    if (z.kind === 'pfull' && z.o && z.o.setId) Y.setIds.add(z.o.setId);
+    const k = await zbuduj(Y, encjaWpisu(z));
+    for (const x of Array.isArray(k) ? k : k ? [k] : []) { await doKolejki(S, Y, x); dodane.push(x); if (licz) licz(x); }
+  }
+  if (dodane.length) S.stat.hakiScalenia = (S.stat.hakiScalenia || 0) + 1;
+  return dodane;
+}
+
+// ── Transport floty: kolejka do 221, pełna kopia, dostawy między wszystkimi parami ───────────────────────────────
+// Kolejka X → C (sejf 221): FIFO od kursora, applyEncryptedDelta (null — błąd testu); po scaleniu delty sejfu C.
+async function dostawaDoStarszej(S, X, C, { k = Infinity } = {}) {
+  const nazwa = X.nazwa + '>' + C.nazwa;
+  const c = S.kursor.get(nazwa) || 0;
+  const partia = X.Q.slice(c, c + Math.min(k, X.Q.length - c));
+  if (!partia.length) return 0;
+  for (const e of partia) { const w = await C.v.applyEncryptedDelta(e.env); if (w == null) throw new Error(`${C.nazwa}: applyEncryptedDelta odrzucił ${e.kind} ${e.key}`); }
+  S.kursor.set(nazwa, c + partia.length);
+  ustawStan(C, await eksport(C));
+  S.stat.dostawDoStarszej = (S.stat.dostawDoStarszej || 0) + 1;
+  S.dziennik.push(`#${S.nrKroku || 0} ${new Date(teraz).toISOString().slice(11, 23)} dostawa ${nazwa} (applyEncryptedDelta): ${partia.length} [${partia.map((e) => e.kind).join(',')}]`);
+  await wyslijDelty(S, C, 'scalanie');
+  return partia.length;
+}
+// Y scala pełną kopię Z (GET /blob po PUT innego urządzenia, także starszego).
+async function scalBlob(S, Z, Y) {
+  const blob = json(await Z.v.exportSyncPayload());
+  const przed = Y.stan;
+  if (Array.isArray(Y.lancuch)) Y.lancuch.length = 0;
+  await Y.v.mergeSyncPayload(json(blob));
+  const po = await eksport(Y);
+  // wyrocznia floty: zmiany starszej aplikacji, które doszły pełną kopią do żywej karty bieżącego urządzenia
+  if (S.wyr && starszaAplikacja(Z) && !starszaAplikacja(Y)) WYR.naBiezacym(S.wyr, { lad: blob, po });
+  const dodane = await hakiScalenia(S, Y, po);
+  ustawStan(Y, po);
+  S.stat.blobow = (S.stat.blobow || 0) + 1;
+  S.dziennik.push(`#${S.nrKroku || 0} ${new Date(teraz).toISOString().slice(11, 23)} blob ${Z.nazwa}→${Y.nazwa}${dodane.length ? ` → haki [${dodane.map((x) => x.event.kind).join(',')}]` : ''}`);
+  if (Y.delty) await wyslijDelty(S, Y, 'scalanie');
+  if (S.odsyl && !starszaAplikacja(Y)) {
+    if (dodane.length) wyslijOs(S, Y, 'haki', dodane.map((k) => bajtyKoperty(Y, k)));
+    const zrodlo = Z.app === 'S221' ? 'blob221' : Z.app === 'S276' ? 'blob276' : 'blobN';
+    await liczEcho(S, Y, zrodlo, [{ przed, po, ladunek: blob, z221: Z.app === 'S221' }], LO.kluczeKopert(dodane), `#${S.nrKroku || 0} blob ${Z.nazwa}→${Y.nazwa}`, { odBiezacej: !starszaAplikacja(Z) });
+  }
+}
+// Wariant publikuje: A i B scalają stan C, gdy zmienił się od ich ostatniego pobrania (wymus — w punkcie spoczynku).
+const podpisStanu = (U) => JSON.stringify(kanon(U.stan));
+async function pobierzStanC(S, C, urz, wymus) {
+  const p = podpisStanu(C);
+  for (const Y of urz) {
+    if (Y.pobranyC === p) continue;
+    if (!wymus && S.losB() >= 0.5) continue;
+    await scalBlob(S, C, Y);
+    Y.pobranyC = p;
+    S.stat.pobranStanuC = (S.stat.pobranStanuC || 0) + 1;
+  }
+}
+// Dostawa losowa między wszystkimi parami (flota 276, kontrola N): kierunek, FIFO-prefiks k, czasem powtórka sufiksu.
+async function losowaDostawaFloty(S, urz) {
+  const los = S.los;
+  const pary = [];
+  for (const X of urz) for (const Y of urz) if (X !== Y) pary.push([X, Y]);
+  const [X, Y] = wybierz(los, pary);
+  const c = kursor(S, X, Y);
+  const cofnij = c > 0 && los() < 0.15 ? 1 + Math.floor(los() * Math.min(c, 4)) : 0;
+  const ocz = X.Q.length - c + cofnij;
+  if (!ocz) return;
+  const k = los() < 0.5 ? ocz : 1 + Math.floor(los() * ocz);
+  await dostawa(S, X, Y, { k, cofnij, w2s: false });
+}
+async function spoczynekWszystkich(S, urz) {
+  for (let r = 1; r <= 6; r += 1) {
+    for (const X of urz) for (const Y of urz) if (X !== Y) await dostawa(S, X, Y, { w2s: false });
+    if (urz.every((X) => urz.every((Y) => X === Y || kursor(S, X, Y) === X.Q.length))) return r;
+  }
+  return null;
+}
+async function spoczynekFloty221(S, A, B, C) {
+  for (let obieg = 1; obieg <= LO.MAKS_OBIEGOW; obieg += 1) {
+    await dostawaDelt(S, C, A); await dostawaDelt(S, C, B);
+    if (S.blobC === 'publikuje') await pobierzStanC(S, C, [A, B], true);
+    if (await spoczynek(S, A, B, { w2s: false }) === null) return null;
+    await dostawaDoStarszej(S, A, C); await dostawaDoStarszej(S, B, C);
+    const czekaDelt = !!C.delty && [A, B].some((Y) => kursorDelt(S, C, Y) < C.delty.Q.length);
+    const czekaStan = S.blobC === 'publikuje' && [A, B].some((Y) => Y.pobranyC !== podpisStanu(C));
+    if (!czekaDelt && !czekaStan) return obieg;
+  }
+  S.stat.obiegiPonadLimit.push(S.nrKroku);
+  return LO.MAKS_OBIEGOW;
+}
+
+// ── Klasy różnic par floty (tabela 'flota'; DOZWOLONE wyżej) ─────────────────────────────────────────────────────────
+// Tylko w parze z urządzeniem starszej aplikacji (kont.starsza — jego strona, kont.appStarszej); ta sama różnica w parze
+// dwóch bieżących urządzeń nie dostaje tych klas.
+// - D_TOZSAMOSC „tożsamość wizyty nieznana starszej aplikacji”: wersja różni się tylko payload.visit (bieżąca aplikacja
+//   wyznacza tożsamość przy odczycie i scalaniu — Bvisit_read, Bvisit_legacy :5908–5918 — i ją utrwala; starsza jej nie
+//   pisze; po stronie bieżącej tożsamość z visitId i kartą wizyty równą karcie rekordu — Bvisit_owner :5897), a
+//   payload._pinnedState.h tylko z dowodem odcisku: treść strony bieżącej bez visit z odciskiem przeliczonym tak
+//   jak Bvisit_withMetadata (:5889–5895; przelicza tylko świeży h) jest równa stronie starszej; wpis Kosza — także
+//   visitIdentity i visitCipher (Bev_wpisKosza bieżącej wersji). Wariant karty wizyty: obie strony mają tę samą
+//   wizytę (visitId) z inną kartą, po stronie bieżącej karta wizyty jest kartą rekordu (Bvisit_owner :5897), reszta
+//   (bez h) równa. docs/PATIENT_VISITS.md „Zgodność i wycofanie”;
+// - D_POLE_221 „pole nieznane starszej aplikacji (221)”: tylko 221 — wpis Kosza różni się tylko polami koszISO, revPary,
+//   deletedWithPatient, gwiazdka (gwiazdka tylko przy tej samej gwiazdce obu stron w oknie Kosza) i polami tożsamości
+//   wizyty jak wyżej; nagrobek notatki — tylko deletedWithPatient (sejf 221 ich nie zna i gubi przy scaleniu);
+// - D_RETENCJA „retencja starszej aplikacji — obecność wersji”: wersja tylko po stronie bieżącej, po stronie starszej jest
+//   wpis Kosza tej wersji z powod 'retencja', a po stronie bieżącej wersja jest najnowszą wersją swojej wizyty w karcie
+//   (bieżący odbiorca nagrobka retencji zachowuje stan wizyty — Bvisit_protected :6189, Bvisit_keepRetention :6272).
+// - D7 przy tożsamości wpisu Kosza (tylko 276): wpis Kosza różni się polami tożsamości (276 nie zna visitIdentity —
+//   lista pól wpisu Kosza w tests/fixtures/vilda_vault-276.js.txt:5848 bez niego, vilda_vault.js:6358 z nim) i polami D7
+//   (koszISO, revPary, rev, updatedAtISO, zmianaISO); bez pól tożsamości różnica jest D7 dwóch bieżących urządzeń (ta sama
+//   różnica koszISO w kontroli N tych światów: urządzenie, do którego nie doszło „Przywróć”, zachowuje chwilę dawnego
+//   kosza w koszISO nagrobka retencji, vilda_vault.js:1849–1879). Klasa D7, dozwolona według tabeli wołającego
+//   (tabelaBiezacych z kontPary), nie tabeli 'flota'.
+const POLA_TOZSAMOSCI = Object.freeze({ wersja: Object.freeze(['payload.visit']), kosz: Object.freeze(['visitIdentity', 'visitCipher', 'payload.visit']) });
+const POLA_221_KOSZA = Object.freeze(['koszISO', 'revPary', 'deletedWithPatient']);
+function bezTozsamosci(p) {
+  if (!p || typeof p !== 'object' || !p.visit) return p;
+  const o = json(p);
+  delete o.visit;
+  if (o._pinnedState && typeof o._pinnedState.h === 'string' && p._pinnedState.h === LO.odcisk(p)) o._pinnedState.h = LO.odcisk(o);
+  return o;
+}
+function glowaWizyty(lad, pid, sid) {
+  const p = (lad.patients || []).find((q) => q.patientId === pid);
+  const q = p && (p.snapshots || []).find((s) => s.snapshotId === sid);
+  const vid = q && q.payload && q.payload.visit && q.payload.visit.visitId;
+  if (!vid) return false;
+  return !p.snapshots.some((s) => s.snapshotId !== sid && s.payload && s.payload.visit && s.payload.visit.visitId === vid && (s.savedAtISO || '') > (q.savedAtISO || ''));
+}
+function klasaParyFloty(r, X, Y, kont) {
+  const st = kont.starsza;
+  if (st !== 'x' && st !== 'y') return null;
+  const [Ls, Ln] = st === 'x' ? [X, Y] : [Y, X];
+  if (r.rodzaj === 'wersja' && r.tylko) {
+    if (r.tylko === st) return null;
+    const [pid, sid] = r.klucz.split('/');
+    const ret = (Ls.snapshotTombstones || []).some((e) => e.snapshotId === sid && e.powod === 'retencja');
+    return ret && glowaWizyty(Ln, pid, sid) ? { klasa: D_RETENCJA, wariant: 'wersja tylko u bieżącej, wpis retencji u starszej' } : null;
+  }
+  if (!r.a || !r.b) return null;
+  const [es, en] = st === 'x' ? [r.a, r.b] : [r.b, r.a];
+  const z221 = kont.appStarszej === 'S221';
+  if (r.rodzaj === 'pnotetomb') return z221 && r.sciezki.every((s) => wPolach(s, ['deletedWithPatient'])) ? { klasa: D_POLE_221, wariant: 'nagrobek notatki usuniętej z kartą' } : null;
+  if (r.rodzaj !== 'wersja' && r.rodzaj !== 'kosz') return null;
+  if (r.rodzaj === 'kosz' && !z221 && r.sciezki.some((s) => wPolach(s, ['visitIdentity'])) && r.sciezki.some((s) => wPolach(s, D7_POLA)) && r.sciezki.every((s) => wPolach(s, ['visitIdentity', ...D7_POLA]))) {
+    const bez = (e) => { const o = json(e); delete o.visitIdentity; return o; };
+    const r2 = { ...r, a: bez(r.a), b: bez(r.b), sciezki: r.sciezki.filter((s) => !wPolach(s, ['visitIdentity'])) };
+    return klasa(r2, X, Y, kont) === 'D7' ? { klasa: 'D7', wariant: 'D7 przy tożsamości wpisu Kosza nieznanej starszej aplikacji', tabela: kont.tabelaBiezacych } : null;
+  }
+  const sid = r.rodzaj === 'kosz' ? r.klucz.replace(/#\d+$/, '').split('|')[0] : r.klucz.split('/')[1];
+  const gwiazdki = (l) => (l || []).filter((e) => e.snapshotId === sid).map((e) => !!e.pinned);
+  const gwRowna = r.rodzaj === 'kosz' && !!kont.kosz && JSON.stringify(gwiazdki(kont.kosz.x)) === JSON.stringify(gwiazdki(kont.kosz.y));
+  const pola221 = z221 && r.rodzaj === 'kosz' ? [...POLA_221_KOSZA, ...(gwRowna ? ['gwiazdka'] : [])] : [];
+  if (!r.sciezki.every((s) => wPolach(s, [...POLA_TOZSAMOSCI[r.rodzaj], ...pola221, 'payload._pinnedState.h']))) return null;
+  const zdejmij = (e) => { const o = json(e); for (const p of [...POLA_TOZSAMOSCI[r.rodzaj].filter((q) => q !== 'payload.visit'), ...pola221]) delete o[p]; return o; };
+  const xs = zdejmij(es), xn = zdejmij(en);
+  const rowne = () => JSON.stringify(sortuj(xs)) === JSON.stringify(sortuj(xn));
+  const pola = r.sciezki.some((s) => wPolach(s, pola221)) ? D_POLE_221 : D_TOZSAMOSC;
+  const vs = xs.payload && xs.payload.visit, vn = xn.payload && xn.payload.visit;
+  const karta = r.rodzaj === 'kosz' ? en.patientId : r.klucz.split('/')[0];
+  if (vn && !vs) {
+    // tożsamość wyznaczona przez bieżącą aplikację: kształt tożsamości i karta wizyty = karta rekordu (Bvisit_owner)
+    if (typeof vn !== 'object' || typeof vn.visitId !== 'string' || !vn.visitId || vn.patientId !== karta) return null;
+    const swiezy = !!(xn.payload._pinnedState && xn.payload._pinnedState.h === LO.odcisk(xn.payload));
+    xn.payload = bezTozsamosci(xn.payload);
+    if (rowne()) return { klasa: pola, wariant: swiezy ? 'tożsamość wizyty, odcisk przeliczony' : 'tożsamość wizyty' };
+    return null;
+  }
+  if (vn && vs && vn.visitId === vs.visitId && vn.patientId !== vs.patientId) {
+    if (vn.patientId !== karta) return null;
+    for (const o of [xs, xn]) { delete o.payload.visit.patientId; if (o.payload._pinnedState) delete o.payload._pinnedState.h; }
+    return rowne() ? { klasa: pola, wariant: 'karta wizyty po „Scal pacjentów”' } : null;
+  }
+  return rowne() ? { klasa: pola, wariant: pola === D_POLE_221 ? 'pola Kosza 221' : 'tożsamość wpisu Kosza' } : null;
+}
+
+// ── W4 floty i punkt spoczynku ────────────────────────────────────────────────────────────────────────────────────────
+// Świeże klony A, B, C; obiegi wymiany PO-A par (A, B), (B, C), (C, A), aż żaden eksport się nie zmienia (≤ 4); licznik
+// — pół wymiany w pierwszym obiegu (wymianaPOLicz, źródło 'w4'); echo — wiersze warstwy wyk w obiegu. D par: kontPary
+// (para z C — tabela 'flota'), R4n z W4p. Wynik z widokami klonów dla wyroczni (wołający usuwa).
+async function w4Floty(S, urz, kontN) {
+  return kr_cicho(S, async () => {
+    const K = [];
+    for (const U of urz) K.push(await klon(S, U, 'w4f'));
+    try {
+      let obiegi = 0, stabilny = false;
+      const echo = [];
+      while (!stabilny && obiegi < LO.MAKS_OBIEGOW) {
+        obiegi += 1;
+        const przed = K.map((k) => JSON.stringify(kanon(k.stan)));
+        const w0 = S.odsyl ? S.odsyl.wiersze[`w4:${'wyk'}`] || 0 : 0;
+        for (const [i, j] of [[0, 1], [1, 2], [2, 0]]) await wymianaPOLicz(S, K[i], K[j], obiegi === 1);
+        echo.push(S.odsyl ? (S.odsyl.wiersze['w4:wyk'] || 0) - w0 : 0);
+        stabilny = K.every((k, i) => JSON.stringify(kanon(k.stan)) === przed[i]);
+      }
+      const pary = [];
+      let ok = stabilny;
+      for (const [i, j] of [[0, 1], [1, 2], [2, 0]]) {
+        const [a, b] = [kanon(K[i].stan), kanon(K[j].stan)];
+        const d = await sklasyfikuj(D(a, b), a, b, kontPary(urz[i], urz[j], kontN), async () => ({ x: await K[i].v.listTrashedSnapshots(), y: await K[j].v.listTrashedSnapshots() }));
+        const w4pp = [];
+        for (const r of d.filter((q) => q.klasa === 'R4n')) { const [sid, pid] = r.klucz.split('|'); w4pp.push(await w4p(S, K[i], K[j], sid, pid)); }
+        if (!d.every((r) => r.dozwolona && r.dozwolona !== 'dowód') || !w4pp.every((x) => x.ok)) ok = false;
+        pary.push({ para: urz[i].nazwa + urz[j].nazwa, roznice: d.map((r) => ({ ...skrotRoznicy(r), ...(r.wariantFloty ? { wariant: r.wariantFloty } : {}), ...(r.dozwolona ? {} : { a: r.a, b: r.b }) })), w4p: w4pp });
+      }
+      const wyr = await wyrWidokiKlonow(Object.fromEntries(urz.map((U, i) => [U.nazwa, K[i]])));
+      return { ok, obiegi, stabilny, echo, pary, wyr };
+    } finally { await zamknij(...K); }
+  });
+}
+async function punktFloty(S, A, B, C) {
+  S.stat.spoczynki += 1;
+  const obiegi = S.flota === '221' ? await spoczynekFloty221(S, A, B, C) : await spoczynekWszystkich(S, [A, B, C]);
+  if (obiegi === null) { S.stat.brakSpoczynku.push({ krok: S.nrKroku, ostatnie: S.dziennik.slice(-10) }); return; }
+  const pkt = { krok: S.nrKroku, obiegi, W1: {} };
+  for (const [X, Y] of [[A, B], [B, C], [C, A]]) {
+    const d = await w1Klasy(S, X, Y, kontPary(X, Y, { tabela: S.profil, wskrzeszone: S.wskrzeszone }));
+    pkt.W1[X.nazwa + Y.nazwa] = d.map((r) => ({ ...skrotRoznicy(r), ...(r.wariantFloty ? { wariant: r.wariantFloty } : {}), ...(r.klasa ? {} : { a: r.a, b: r.b }) }));
+  }
+  const stare = starszaAplikacja(C) ? [C.nazwa] : [];
+  pkt.wyrW1 = wyrOcena(S, 'W1 floty', 'W1 floty', await wyrWidoki(S, { A, B, C }), { stare }).length;
+  const w = await w4Floty(S, [A, B, C], { tabela: S.profil === 'pelny' ? 'pelny:W4' : 'W4', wskrzeszone: S.wskrzeszone });
+  pkt.wyrW4 = wyrOcena(S, 'W4 floty', 'W4 floty', w.wyr, { stare }).length;
+  delete w.wyr;
+  pkt.w4 = w;
+  S.stat.punktyFloty.push(pkt);
+  if (!w.ok) S.stat.w4Bledy.push({ krok: S.nrKroku, obiegi: w.obiegi, stabilny: w.stabilny, pary: w.pary.map((p) => ({ para: p.para, roznice: p.roznice.filter((r) => !r.dozwolona || r.dozwolona === 'dowód') })).filter((p) => p.roznice.length) });
+}
+// Strażnik chwil (pomiar): chwile wersji i wpisów Kosza spoza chwil operacji (S.chwile).
+function chwileSpoza(S, stany) {
+  const ok = new Set([...S.chwile].map((t) => new Date(t).toISOString()));
+  const out = { sprawdzonych: 0, spoza: [] };
+  const sprawdz = (n, opis, t) => { if (typeof t !== 'string') return; out.sprawdzonych += 1; if (!ok.has(t) && out.spoza.length < 20) out.spoza.push(`${n} ${opis} ${t}`); else if (!ok.has(t)) out.spoza.push(null); };
+  for (const [n, lad] of Object.entries(stany)) {
+    for (const p of lad.patients || []) for (const s of p.snapshots || []) {
+      const pl = s.payload || {};
+      sprawdz(n, `wersja ${String(s.snapshotId).slice(0, 4)} updatedAtISO`, s.updatedAtISO);
+      sprawdz(n, `wersja ${String(s.snapshotId).slice(0, 4)} _contentAtISO`, pl._contentAtISO);
+      sprawdz(n, `wersja ${String(s.snapshotId).slice(0, 4)} _pinnedState.at`, pl._pinnedState && pl._pinnedState.at);
+    }
+    for (const e of lad.snapshotTombstones || []) {
+      const pl = e.payload && typeof e.payload === 'object' ? e.payload : {};
+      sprawdz(n, `Kosz ${String(e.snapshotId).slice(0, 4)} updatedAtISO`, e.updatedAtISO);
+      sprawdz(n, `Kosz ${String(e.snapshotId).slice(0, 4)} _contentAtISO`, pl._contentAtISO);
+      sprawdz(n, `Kosz ${String(e.snapshotId).slice(0, 4)} _pinnedState.at`, pl._pinnedState && pl._pinnedState.at);
+    }
+  }
+  out.liczba = out.spoza.length; out.spoza = out.spoza.filter(Boolean);
+  return out;
+}
+// Ślad (E2_AB_SLAD): po każdym wierszu dziennika stan wersji i wpisu Kosza o podanym prefiksie na A, B, C (gdy się zmienił).
+function opisSladu(U, pre) {
+  const t = (s) => (s ? String(s).slice(11, 23) : '-');
+  const gw = (pl) => (pl._pinnedState ? `${pl._pinnedState.pin ? 1 : 0}@${t(pl._pinnedState.at)} h=${String(pl._pinnedState.h).slice(0, 6)}` : '-');
+  const out = [];
+  for (const p of U.stan.patients || []) for (const s of p.snapshots || []) if (String(s.snapshotId).startsWith(pre)) {
+    const pl = s.payload || {};
+    out.push(`karta ${String(p.patientId).slice(0, 4)} w=${pl.user && pl.user.weight} rev=${s.rev} upd=${t(s.updatedAtISO)} _p=${pl._pinned ? 1 : 0} ps=${gw(pl)} cat=${t(pl._contentAtISO)} v=${pl.visit ? String(pl.visit.visitId).slice(0, 4) + '/' + String(pl.visit.patientId).slice(0, 4) : '-'}`);
+  }
+  for (const e of U.stan.snapshotTombstones || []) if (String(e.snapshotId).startsWith(pre)) {
+    const pl = e.payload && typeof e.payload === 'object' ? e.payload : {};
+    out.push(`KOSZ ${String(e.patientId).slice(0, 4)} w=${pl.user && pl.user.weight} rev=${e.rev} del=${t(e.deletedAtISO)} upd=${t(e.updatedAtISO)} gw=${e.gwiazdka === undefined ? '?' : e.gwiazdka ? 1 : 0} _p=${pl._pinned ? 1 : 0} ps=${gw(pl)} k=${t(e.koszISO)} vi=${e.visitIdentity ? 1 : 0} ${e.powod || ''}`);
+  }
+  for (const n of U.stan.patientNotes || []) if (String(n.id).startsWith(pre)) out.push(`notatka ${String(n.patientId).slice(0, 4)} rev=${n.rev} upd=${t(n.updatedAtISO)}`);
+  for (const n of U.stan.patientNoteTombstones || []) if (String(n.id).startsWith(pre)) out.push(`NAGROBEK notatki rev=${n.rev} del=${t(n.deletedAtISO)}${n.deletedWithPatient ? ' zKarta' : ''}`);
+  return out.join(' | ') || '(brak)';
+}
+function podepnijSlad(S, urz) {
+  if (!SLAD_FLOTY.length) return;
+  const ost = new Map();
+  const push0 = S.dziennik.push;
+  S.dziennik.push = function (...a) {
+    const r = push0.apply(this, a);
+    for (const pre of SLAD_FLOTY) for (const U of urz) {
+      if (!U.stan) continue;
+      const o = opisSladu(U, pre), k = U.nazwa + pre;
+      if (ost.get(k) !== o) { ost.set(k, o); push0.call(this, `      ~ ${pre} ${U.nazwa}: ${o}`); }
+    }
+    return r;
+  };
+}
+
+// ── Przebieg floty ────────────────────────────────────────────────────────────────────────────────────────────────────
+const WYNIKI_FLOTY = { 221: [], 276: [], N: [] };
+const ODSYL_FLOTY = { 221: [], 276: [], N: [] };
+async function przebiegFloty(flota, ziarno, { profil = FLOTA_PROFIL, blobC = BLOB_C, pDostawy = 0.3, pBlob = 0.08, pSpoczynku = 1 / 25 } = {}) {
+  const t0 = performance.now();
+  const app = flota === '221' ? 'S221' : flota === '276' ? 'S276' : 'N';
+  const przes = SWIAT_FLOTA ?? (flota === '221' ? 200000 : 400000);
+  const S = swiat(ziarno + przes + (profil === 'pelny' ? 100000 : 0));
+  S.profil = profil; S.w2s = false; S.tylkoPOA = true;
+  S.flota = flota; S.blobC = flota === '221' ? blobC : 'los';
+  Object.assign(S.stat, { punktyFloty: [], obiegiPonadLimit: [] });
+  S.wyrSwiat = `flota${flota}`;
+  S.wyrEtyk = (id) => (S.indeks && S.indeks.has(id) ? 'K' + S.indeks.get(id) : String(id).slice(0, 4));
+  S.los = rng(S.ziarno); S.indeks = new Map(); S.nrKarty = 0; S.nrKroku = 0;
+  S.chwile = new Set();
+  const losMath = rng(S.ziarno ^ 0x5bd1e995);
+  vi.spyOn(Math, 'random').mockImplementation(() => (S.losAlt || losMath)());
+  if (ODSYL) S.odsyl = nowyLicznik();
+  const A = await urzadzenie(S, 'A');
+  krok(); await mutacja(S, A, 'nowa karta 1', async () => { const r = await A.d.zapiszKarte(1); S.indeks.set(r.patientId, 1); return r; });
+  S.nrKarty = 1;
+  A.Q.length = 0;
+  if (S.odsyl) S.odsyl.os.length = 0;
+  const B = await urzadzenie(S, 'B', A);
+  let C;
+  if (app === 'S221') {
+    const przel = kryptoZDeltami(S.ziarno * 7919 + S.nrUrz + 1, S.ziarno * 7919 + 0xD221);
+    C = await urzadzenie(S, 'C', A, { app, retencja: RET_C, dodatki: { crypto: przel.obj } });
+    if (Z_DELTAMI_221) podepnijDelty(S, C, przel.p);
+  } else C = await urzadzenie(S, 'C', A, app === 'N' ? {} : { app, retencja: RET_C });
+  const start = { CrownyA: JSON.stringify(kanon(C.stan)) === JSON.stringify(kanon(A.stan)), dziennikC: app === 'S221' ? typeof C.ev === 'undefined' : typeof (C.ev && C.ev.applyEncryptedEvent) === 'function' };
+  S.losD = rng((S.ziarno ^ 0x0D2210) >>> 0);
+  S.losB = rng((S.ziarno ^ 0x0B10B5) >>> 0);
+  podepnijSlad(S, [A, B, C]);
+  S.flotaUrz = [A, B, C]; S.echoKlony = ECHO_KLONY && !!S.odsyl; // echo na klonach (ręcznie; blok scenariuszy floty niżej)
+  // Strażnik pól zawsze obecnych we flocie: nagrobek retencji bez treści, który urządzenie starszej aplikacji ma bez
+  // visitIdentity (wersja zapisana i przycięta retencją v1 na nim — bieżąca aplikacja nie ma z czego wyznaczyć tożsamości
+  // i przechowuje wpis bez zmian), nie jest zapisem bieżącej wersji — poza strażnikiem, liczony osobno (druk).
+  if (starszaAplikacja(C)) {
+    S.stat.polaRetencjiStarszej = 0;
+    S.bezRetencjiStarszej = (lad) => {
+      const zC = (e) => e && e.powod === 'retencja' && !e.payload && !e.visitIdentity;
+      const ret = new Set((C.stan.snapshotTombstones || []).filter(zC).map((e) => e.snapshotId));
+      const wpisy = lad.snapshotTombstones || [];
+      const zostaja = wpisy.filter((e) => !(zC(e) && ret.has(e.snapshotId)));
+      if (zostaja.length === wpisy.length) return lad;
+      S.stat.polaRetencjiStarszej += wpisy.length - zostaja.length;
+      return { ...lad, snapshotTombstones: zostaja };
+    };
+  }
+  const profilC = app === 'S221' ? `flota221:${profil}` : profil;
+  const ile = KROKI || 60 + Math.floor(S.los() * 61);
+  let mutacji = 0, mutacjiC = 0;
+  while (mutacji < ile) {
+    S.nrKroku += 1;
+    krok(1000 + Math.floor(S.los() * 119e3));
+    if (app === 'S221') {
+      await losoweDelty(S, C, [A, B]);
+      if (S.blobC === 'publikuje') await pobierzStanC(S, C, [A, B], false);
+    }
+    const r = S.los();
+    if (r < pDostawy) {
+      if (app === 'S221') {
+        if (S.los() < 0.6) await losowaDostawa(S, A, B);
+        else {
+          const X = S.los() < 0.5 ? A : B;
+          const n = X.Q.length - kursor(S, X, C);
+          if (n) await dostawaDoStarszej(S, X, C, { k: S.los() < 0.5 ? n : 1 + Math.floor(S.los() * n) });
+        }
+      } else await losowaDostawaFloty(S, [A, B, C]);
+      continue;
+    }
+    if (r < pDostawy + pBlob) {
+      const [Z, Y] = wybierz(S.los, [[C, A], [C, B], [A, C], [B, C], [A, B], [B, A]]);
+      await scalBlob(S, Z, Y);
+      continue;
+    }
+    const u = S.los();
+    const X = u < 1 / 3 ? A : u < 2 / 3 ? B : C;
+    if (await losowaMutacja(S, X, X === C ? profilC : profil)) {
+      mutacji += 1;
+      if (X === C) mutacjiC += 1;
+      if (S.los() < pSpoczynku) await punktFloty(S, A, B, C);
+    }
+  }
+  S.nrKroku += 1;
+  await punktFloty(S, A, B, C);
+  const naruszenia = S.wyrNaruszenia || [];
+  const wgSwiata = (s) => naruszenia.filter((x) => x.swiat === s);
+  const wynik = {
+    flota, ziarno, swiat: S.ziarno, profil, blobC: S.blobC, progD221: PROG_DELT_FLOTY, delty221: !!C.delty, retencjaC: C.retencja, app,
+    mutacji, mutacjiC, ms: Math.round(performance.now() - t0), start,
+    zdarzen: S.stat.zdarzen, dostaw: S.stat.dostaw, dostawDoStarszej: S.stat.dostawDoStarszej || 0, blobow: S.stat.blobow || 0, pobranStanuC: S.stat.pobranStanuC || 0, h1: S.stat.h1, h2: S.stat.h2, hakiScalenia: S.stat.hakiScalenia || 0,
+    emitery: S.stat.emitery, haki: S.stat.haki, odmowy: S.stat.odmowyStarszejKody || {}, polaRetencjiStarszej: S.stat.polaRetencjiStarszej || 0, delty: S.stat.delty ? { ...S.stat.delty, ms: Math.round(S.stat.delty.ms), kolejka: C.delty.Q.length } : null,
+    spoczynki: S.stat.spoczynki, brakSpoczynku: S.stat.brakSpoczynku, obiegiPonadLimit: S.stat.obiegiPonadLimit, w4Bledy: S.stat.w4Bledy,
+    punkty: S.stat.punktyFloty.map((p) => ({ krok: p.krok, obiegi: p.obiegi, obiegiW4: p.w4.obiegi, echo: p.w4.echo, ok: p.w4.ok, wyrW1: p.wyrW1, wyrW4: p.wyrW4, W1: p.W1, W4: p.w4.pary })),
+    chwile: chwileSpoza(S, { A: A.stan, B: B.stan, C: C.stan }),
+    odcisk: odciskFloty([A.stan, B.stan], starszaAplikacja(C) ? C.stan : null),
+    wyr: { punkty: S.wyrPunkty || 0, naruszen: naruszenia.length, liczby: licznikWyr(naruszenia), czerwoneW1: wyrCzerwone(wgSwiata('W1 floty')), czerwoneW4: wyrCzerwone(wgSwiata('W4 floty')),
+      lista: naruszenia.filter((x) => WYR.bezWyjatku([x], x.swiat).length).map((x) => ({ swiat: x.swiat, krok: x.krok, urz: x.urz, encja: x.encja, id: x.id, et: x.et, rodzaj: x.rodzaj, klasa: x.klasa || null, oczek: x.oczek, fakt: x.fakt, gdzieIndziej: x.gdzieIndziej, hist: x.hist })) },
+  };
+  const odsyl = S.odsyl ? { flota, ziarno, ...S.odsyl.podsumuj(), powtorka: S.odsylPowtorka || { partii: 0, zdarzen: 0 }, odcisk: wynik.odcisk } : null;
+  WYNIKI_FLOTY[flota].push(wynik);
+  if (odsyl) ODSYL_FLOTY[flota].push(odsyl);
+  if (process.env.E2_AB_WYNIKI) appendFileSync(process.env.E2_AB_WYNIKI, JSON.stringify({ typ: `flota${flota}`, ...wynik, ...(odsyl ? { odsyl } : {}), dziennik: S.dziennik }) + '\n');
+  if (WYR_PLIK) appendFileSync(WYR_PLIK, JSON.stringify({ typ: 'ziarno', swiat: S.wyrSwiat, ziarno, mutacji, spoczynki: S.stat.spoczynki, ...wynik.wyr }) + '\n');
+  return { wynik, odsyl };
+}
+// Odcisk testu wobec _pinnedState.h wersji bieżących urządzeń floty: wersja z h innym niż odcisk treści jest dozwolona
+// tylko wtedy, gdy urządzenie starszej aplikacji ma tę wersję z tą samą treścią (bez tożsamości wizyty) i tym samym h —
+// sejf 221 kopiuje treść razem z nieaktualnym h ostatniego zapisu bieżącej aplikacji, a bieżąca aplikacja właśnie po
+// różnicy odcisku rozpoznaje zmianę treści przez starszą aplikację (Bgw_stan, vilda_vault.js:1567–1569).
+function odciskFloty(biezace, starsza) {
+  const wStarszej = new Map();
+  if (starsza) for (const p of starsza.patients || []) for (const s of p.snapshots || []) wStarszej.set(s.snapshotId, s.payload);
+  const bezWizyty = (t) => { const o = json(t); delete o.visit; return JSON.stringify(sortuj(o)); };
+  const o = { wersji: 0, zgodnych: 0, zeStarszej: 0, niezgodne: [] };
+  for (const lad of biezace) for (const p of lad.patients || []) for (const s of p.snapshots || []) {
+    const h = s.payload && s.payload._pinnedState ? s.payload._pinnedState.h : undefined;
+    if (typeof h !== 'string') continue;
+    o.wersji += 1;
+    if (LO.odcisk(s.payload) === h) { o.zgodnych += 1; continue; }
+    const t = wStarszej.get(s.snapshotId);
+    if (t && t._pinnedState && t._pinnedState.h === h && bezWizyty(t) === bezWizyty(s.payload)) { o.zeStarszej += 1; continue; }
+    o.niezgodne.push(`${String(p.patientId).slice(0, 8)}/${String(s.snapshotId).slice(0, 8)}`);
+  }
+  return o;
+}
+
+// ── Literały floty (ziarna CI, przebieg domyślny — FLOTA_DOMYSLNA) ───────────────────────────────────────────────────
+// [flota][ziarno] = { obiegiW4 (obiegi wymiany W4 floty w kolejnych punktach), W4 (różnice par W4 floty: para|rodzaj|klasa|
+// wariant → liczba, suma po punktach), W1AB (różnice A, B po samych zdarzeniach według klasy — linia bazowa echa po
+// scaleniu pełnej kopii), odsyl (licznik: klucz źródło|rodzaj|w ładunku/spoza|klasa → { wyk, nowe }), delty (flota 221:
+// zbudowane według rodzaju, odpadłe progiem, puste), odmowy (sejf 221 według kodu) }. Klucze bez ścieżek pól i bez bajtów.
+// Znaczenie: W4 — różnice, które zostają między urządzeniem starszej aplikacji a bieżącym po pełnej wymianie, każda
+// z klasą pary floty (dozwolona tylko w parze z C; ta sama różnica w parze A, B — czerwień); W1AB — różnice A, B
+// w punkcie spoczynku przed pełną wymianą („bez klasy” — różnica bez klasy pary, np. zmiana C, która doszła pełną kopią
+// tylko do jednego z nich, bo bieżąca aplikacja nie odsyła scalonego; W1 floty 221 nie jest warunkiem zieleni, literał
+// pilnuje liczby); odsyl — echo, które bieżące urządzenia musiałyby odesłać (jak ZNANE_ODSYL, także ze źródeł blob221,
+// blob276 i delta221); delty — ile delt zbudowała integracja 221 i ile odpadło progiem PROG_DELT_221. Zmiana zbieżności
+// (E3-PR0c–f) albo wyroczni przepisuje te literały.
+const ZNANE_FLOTA = {
+  221: {
+    1: { W1AB: { 'bez klasy': 13, 'rekord złożony po jednej stronie': 2 }, W4: { 'BC|kosz|pole nieznane starszej aplikacji (221)|pola Kosza 221': 2, 'BC|kosz|tożsamość wizyty nieznana starszej aplikacji|tożsamość wpisu Kosza': 4, 'BC|wersja|tożsamość wizyty nieznana starszej aplikacji|tożsamość wizyty': 12, 'CA|kosz|pole nieznane starszej aplikacji (221)|pola Kosza 221': 2, 'CA|kosz|tożsamość wizyty nieznana starszej aplikacji|tożsamość wpisu Kosza': 4, 'CA|wersja|tożsamość wizyty nieznana starszej aplikacji|tożsamość wizyty': 12 }, delty: { prog: { karta: 15 }, puste: { 'pnote:merge': 1, 'pnote:merge-delete': 4 }, zbudowane: { karta: 10, note: 2, notetomb: 1, pnote: 4, 'pnote:merge': 4, pnotetomb: 2 } }, odmowy: {}, odsyl: { 'blob221|snap|w ładunku|inne': { nowe: 1, wyk: 1 }, 'blob221|stomb|w ładunku|inne': { nowe: 1, wyk: 1 }, 'blobN|stomb|w ładunku|R4a′': { nowe: 1, wyk: 1 } }, obiegiW4: [1, 2, 2, 2] },
+    2: { W1AB: { R2: 1, R5: 1, 'bez klasy': 4 }, W4: { 'BC|kosz|tożsamość wizyty nieznana starszej aplikacji|tożsamość wizyty': 1, 'BC|kosz|tożsamość wizyty nieznana starszej aplikacji|tożsamość wpisu Kosza': 2, 'BC|wersja|tożsamość wizyty nieznana starszej aplikacji|tożsamość wizyty': 12, 'CA|kosz|tożsamość wizyty nieznana starszej aplikacji|tożsamość wizyty': 1, 'CA|kosz|tożsamość wizyty nieznana starszej aplikacji|tożsamość wpisu Kosza': 2, 'CA|wersja|tożsamość wizyty nieznana starszej aplikacji|tożsamość wizyty': 12 }, delty: { prog: { karta: 12 }, puste: { 'pnote:merge-delete': 2 }, zbudowane: { karta: 11, note: 2, pnote: 1, 'pnote:merge': 6, pnotetomb: 1, ptomb: 3 } }, odmowy: {}, odsyl: { 'blob221|snap|w ładunku|rekord złożony': { nowe: 1, wyk: 1 }, 'delta221|snap|w ładunku|inne': { nowe: 1, wyk: 1 }, 'zdarzenie|snap|w ładunku|gwiazdka': { nowe: 1, wyk: 1 } }, obiegiW4: [2, 2] },
+    3: { W1AB: { R4a: 2, R5: 1, 'bez klasy': 14 }, W4: { 'BC|kosz|pole nieznane starszej aplikacji (221)|pola Kosza 221': 4, 'BC|kosz|tożsamość wizyty nieznana starszej aplikacji|tożsamość wpisu Kosza': 5, 'BC|pnotetomb|pole nieznane starszej aplikacji (221)|nagrobek notatki usuniętej z kartą': 4, 'BC|wersja|tożsamość wizyty nieznana starszej aplikacji|tożsamość wizyty': 12, 'CA|kosz|pole nieznane starszej aplikacji (221)|pola Kosza 221': 4, 'CA|kosz|tożsamość wizyty nieznana starszej aplikacji|tożsamość wpisu Kosza': 5, 'CA|pnotetomb|pole nieznane starszej aplikacji (221)|nagrobek notatki usuniętej z kartą': 4, 'CA|wersja|tożsamość wizyty nieznana starszej aplikacji|tożsamość wizyty': 12 }, delty: { prog: { karta: 14 }, puste: { 'pnote:merge-delete': 4 }, zbudowane: { karta: 13, note: 2, pnote: 3, 'pnote:merge': 8, pnotetomb: 1 } }, odmowy: {}, odsyl: { 'blob221|stomb|w ładunku|inne': { nowe: 3, wyk: 3 }, 'delta221|snap|w ładunku|rekord złożony': { nowe: 4, wyk: 4 }, 'zdarzenie|snap|w ładunku|gwiazdka': { nowe: 1, wyk: 1 } }, obiegiW4: [2, 2] },
+  },
+  276: {
+    2: { W1AB: {}, W4: { 'BC|kosz|tożsamość wizyty nieznana starszej aplikacji|tożsamość wpisu Kosza': 3, 'BC|wersja|tożsamość wizyty nieznana starszej aplikacji|tożsamość wizyty, odcisk przeliczony': 6, 'CA|kosz|tożsamość wizyty nieznana starszej aplikacji|tożsamość wpisu Kosza': 3, 'CA|wersja|tożsamość wizyty nieznana starszej aplikacji|tożsamość wizyty, odcisk przeliczony': 6 }, odmowy: {}, odsyl: { 'zdarzenie|snap|w ładunku|gwiazdka': { nowe: 1, wyk: 1 } }, obiegiW4: [1, 1, 1] },
+  },
+};
+// Wyrocznia floty (ziarna CI): naruszenia według „klasa | świat” — flota 221 tylko W4 floty (W1 floty — druk), flota 276
+// W1 floty i W4 floty. Liczby to naruszenia Z KLASĄ floty — skutki samej starszej wersji (WYR.OGRANICZENIE_STARSZEJ:
+// znane ograniczenie starszej wersji, naprawa — aktualizacja urządzeń, decyzja właściciela z 2026-11-16); naruszenie
+// bez klasy to czerwień zieleni floty, nie wpis tego literału. Ziarno bez wpisu — bez naruszeń.
+const ZNANE_WYR_FLOTY = {
+  221: {
+    3: { 'gwiazdka ze starszej aplikacji | W4 floty': 6, 'notatka bez ratunku D-21 (starsza aplikacja) | W4 floty': 12 },
+  },
+  276: {},
+};
+const kluczParyFloty = (p, r) => `${p}|${r.rodzaj}|${r.klasa || 'bez klasy'}${r.wariant ? '|' + r.wariant : ''}`;
+function literalFloty(w, o) {
+  const W4 = {}, W1AB = {};
+  for (const pt of w.punkty) {
+    for (const pr of pt.W4) for (const r of pr.roznice) dodajDo(W4, { [kluczParyFloty(pr.para, r)]: 1 });
+    for (const r of pt.W1.AB || []) dodajDo(W1AB, { [r.klasa || 'bez klasy']: 1 });
+  }
+  const odsyl = o ? literalOdsyl([o]) : {};
+  return sortuj({
+    obiegiW4: w.punkty.map((p) => p.obiegiW4), W4, W1AB, odsyl,
+    ...(w.delty ? { delty: { zbudowane: w.delty.zbudowane, prog: w.delty.prog, puste: w.delty.puste } } : {}),
+    odmowy: w.odmowy,
+  });
+}
+const wyrFloty = (w) => Object.fromEntries(Object.entries(w.wyr.liczby).filter(([k]) => w.flota !== '221' || k.endsWith('| W4 floty')).sort());
+// Zieleń przebiegu floty (lista pusta albo zero — zieleń).
+function zielenFloty(w, o) {
+  return {
+    'W4 floty: punkt stały w ≤ 4 obiegach i każda różnica par z klasą dozwoloną': w.w4Bledy.map((b) => `#${b.krok} ${b.pary.map((p) => `${p.para}: ${p.roznice.map((r) => `${r.rodzaj} ${r.klasa || 'bez klasy'} [${r.sciezki.slice(0, 3).join(',')}]`).join('; ')}`).join(' | ')}`),
+    'wyrocznia W4 floty: naruszenia bez klasy z tabeli wyjątków': w.wyr.czerwoneW4,
+    'wyrocznia W1 floty: naruszenia bez klasy (flota 276)': w.flota === '221' ? [] : w.wyr.czerwoneW1,
+    'brak punktu spoczynku albo obiegi spoczynku ponad limit': [...w.brakSpoczynku.map((b) => b.krok), ...w.obiegiPonadLimit],
+    'odcisk testu ≠ h wersji bieżących urządzeń (poza treścią skopiowaną ze starszej aplikacji)': w.odcisk.niezgodne,
+    'chwile wersji i wpisów Kosza spoza chwil operacji (strażnik chwil)': w.chwile.spoza,
+    'licznik: pola zawsze obecne — encje od bieżącej wersji bez pola': o ? o.polaZawsze.bezPola : 0,
+    'licznik: budżet minuty slotu przekroczony': o ? o.budzet.przekroczone.map((x) => `t ${x.t}: ${x.wierszy} wierszy, ${x.realneDo} B`) : [],
+    'licznik: powtórka partii — partii / wierszy surowych': o ? [o.powtorka.partii, o.wiersze['powtórka:surowe'] || 0] : [1, 0],
+    'licznik: wyjątki builderów nośników': o ? o.bladBuildera : 0,
+  };
+}
+const ZIELEN_FLOTY = {
+  'W4 floty: punkt stały w ≤ 4 obiegach i każda różnica par z klasą dozwoloną': [],
+  'wyrocznia W4 floty: naruszenia bez klasy z tabeli wyjątków': [],
+  'wyrocznia W1 floty: naruszenia bez klasy (flota 276)': [],
+  'brak punktu spoczynku albo obiegi spoczynku ponad limit': [],
+  'odcisk testu ≠ h wersji bieżących urządzeń (poza treścią skopiowaną ze starszej aplikacji)': [],
+  'chwile wersji i wpisów Kosza spoza chwil operacji (strażnik chwil)': [],
+  'licznik: pola zawsze obecne — encje od bieżącej wersji bez pola': 0,
+  'licznik: budżet minuty slotu przekroczony': [],
+  'licznik: powtórka partii — partii / wierszy surowych': [1, 0],
+  'licznik: wyjątki builderów nośników': 0,
+};
+const OPIS_FLOTY = {
+  221: 'A, B — bieżąca, C — sejf 221 z retencją v1 i deltami',
+  276: 'A, B — bieżąca, C — sejf 276 z retencją v1 (zdarzenia między wszystkimi parami)',
+  N: 'kontrola: A, B, C — bieżąca (transport floty 276)',
+};
+for (const flota of ['221', '276', 'N']) {
+  describe.skipIf(!FLOTY.includes(flota))(`A ≡ B, flota ze starszą aplikacją: ${OPIS_FLOTY[flota]}`, () => {
+    d1();
+    for (const z of ZIARNA_FLOTA[flota]) {
+      const swiatZ = z + (SWIAT_FLOTA ?? (flota === '221' ? 200000 : 400000)) + (FLOTA_PROFIL === 'pelny' ? 100000 : 0);
+      it(`ziarno ${z} (świat ${swiatZ}, profil ${FLOTA_PROFIL}): W4 floty stabilne, różnice par z C z klasą; wyrocznia bez naruszeń bez klasy; echo pół wymiany w literale; pola zawsze obecne, budżet slotu, powtórka partii; odcisk; strażnik chwil${zLiteralemFloty(flota, z) ? '; literały floty' : ''}`, async () => {
+        const { wynik: w, odsyl: o } = await przebiegFloty(flota, z);
+        const { punkty: _p, ...reszta } = w;
+        console.log(`E3-AB flota ${flota} ziarno ${z} literały`, JSON.stringify({ literal: literalFloty(w, o), wyrocznia: wyrFloty(w) }));
+        console.log(`E3-AB flota ${flota} ziarno ${z}`, JSON.stringify({ ...reszta, wyr: { ...reszta.wyr, lista: undefined }, odsyl: o ? { scalen: o.scalen, wiersze: o.wiersze, literal: o.literal, budzet: { slotow: o.budzet.slotow, maks: o.budzet.maksRealne }, ms: o.ms } : null }));
+        expect(w.mutacji, 'mutacji').toBeGreaterThan(0);
+        expect(w.start, 'C na starcie: eksport równy A; dziennik zdarzeń tylko poza 221').toEqual({ CrownyA: true, dziennikC: true });
+        expect.soft(zielenFloty(w, o), `flota ${flota}, ziarno ${z}\n${JSON.stringify(w.wyr.lista.slice(0, 6), null, 1)}`).toEqual(ZIELEN_FLOTY);
+        if (zLiteralemFloty(flota, z)) {
+          expect.soft(literalFloty(w, o), `ZNANE_FLOTA[${flota}][${z}]`).toEqual(ZNANE_FLOTA[flota][z]);
+          expect.soft(wyrFloty(w), `ZNANE_WYR_FLOTY[${flota}][${z}]`).toEqual(ZNANE_WYR_FLOTY[flota][z] || {});
+        }
+      }, 120_000);
+    }
+    it('podsumowanie (druk do opisu PR i ALGORITHMS): ziarna, punkty, obiegi wymiany W4, klasy par i wyroczni, licznik, delty, czas', () => {
+      const lista = WYNIKI_FLOTY[flota];
+      const s = { ziaren: lista.length, mutacji: 0, ms: 0, punktow: 0, wyr: {}, W4: {}, delty: {}, prog: {}, blobow: 0, pobranStanuC: 0, odcisk: { wersji: 0, zeStarszej: 0 }, chwil: 0, polaRetencjiStarszej: 0 };
+      for (const w of lista) {
+        s.mutacji += w.mutacji; s.ms += w.ms; s.punktow += w.punkty.length; s.blobow += w.blobow; s.pobranStanuC += w.pobranStanuC;
+        dodajDo(s.wyr, w.wyr.liczby);
+        for (const pt of w.punkty) for (const pr of pt.W4) for (const r of pr.roznice) dodajDo(s.W4, { [kluczParyFloty(pr.para, r)]: 1 });
+        if (w.delty) { dodajDo(s.delty, w.delty.zbudowane); dodajDo(s.prog, w.delty.prog); }
+        s.odcisk.wersji += w.odcisk.wersji; s.odcisk.zeStarszej += w.odcisk.zeStarszej; s.chwil += w.chwile.sprawdzonych; s.polaRetencjiStarszej += w.polaRetencjiStarszej;
+      }
+      console.log(`E3-AB flota ${flota} podsumowanie`, JSON.stringify({ ...s, odsyl: sumaOdsyl(ODSYL_FLOTY[flota]) }));
+      expect(lista.map((w) => w.ziarno), `ziarna floty ${flota} (przypadki wyżej w tym przebiegu)`).toEqual(ZIARNA_FLOTA[flota]);
+    }, 10_000);
+  });
+}
+
+// Strażniki transportu floty: haki scalania na urządzeniu 276 (AB7 w dostawie do i z 276) i setId haka H1 z pełnej kopii.
+describe.skipIf(!FLOTY.length)('A ≡ B, flota ze starszą aplikacją: strażniki transportu (haki 276, setId H1 po pełnej kopii)', () => {
+  d1();
+  it('276 odbiera nagrobek karty starszy niż swoja zmiana: hak H1 z emiterów 276 = model (AB7), pfull w Q_C, A odzyskuje kartę; bieżące odbiera nagrobek z 276 tak samo', async () => {
+    const S = swiat(961);
+    S.w2s = false;
+    const A = await urzadzenie(S, 'A');
+    krok(); const pid = (await mutacja(S, A, 'nowa karta 1', () => A.d.zapiszKarte(1))).wynik.patientId;
+    A.Q.length = 0;
+    const C = await urzadzenie(S, 'C', A, { app: 'S276' });
+    const B = await urzadzenie(S, 'B', A);
+    krok(60e3); await mutacja(S, A, 'usuń pacjenta 1', () => A.v.removePatient(pid));
+    krok(60e3); await mutacja(S, C, 'nowa wersja 1 na 276', () => C.d.zapiszKarte(1, { wzrost: 125, zapis: { patientId: pid, forceNewSnapshot: true } }));
+    const haki0 = S.stat.haki.porownan;
+    const { dodane } = await dostawa(S, A, C, { w2s: false });
+    expect({ porownan: S.stat.haki.porownan - haki0, hakiC: dodane.map((k) => k.event.kind), kartaC: karty(C).includes(pid) }).toEqual({ porownan: 1, hakiC: ['pfull'], kartaC: true });
+    await dostawa(S, C, A, { w2s: false });
+    expect(karty(A).includes(pid), 'A odzyskuje kartę z pełnej karty 276').toBe(true);
+    krok(60e3); await mutacja(S, C, 'usuń pacjenta 1 na 276', () => C.v.removePatient(pid));
+    krok(60e3); await mutacja(S, B, 'nowa wersja 1 na B', () => B.d.zapiszKarte(1, { wzrost: 126, zapis: { patientId: pid, forceNewSnapshot: true } }));
+    const { dodane: zB } = await dostawa(S, C, B, { w2s: false });
+    expect(zB.map((k) => k.event.kind).filter((k) => k === 'pfull'), 'B: hak H1 po nagrobku z 276').toEqual(['pfull']);
+  }, 30_000);
+  it('pełna kopia z przegranym nagrobkiem karty: setId haka H1 trafia do Y.setIds, a następne zdarzenie ptomb tej karty nie daje haka ani niezgodności z modelem (AB7)', async () => {
+    const S = swiat(962);
+    S.w2s = false;
+    const A = await urzadzenie(S, 'A');
+    krok(); const pid = (await mutacja(S, A, 'nowa karta 1', () => A.d.zapiszKarte(1))).wynik.patientId;
+    A.Q.length = 0;
+    const B = await urzadzenie(S, 'B', A);
+    krok(60e3); await mutacja(S, A, 'usuń pacjenta 1', () => A.v.removePatient(pid));
+    const nagrobek = (A.stan.tombstones || []).find((t) => t.patientId === pid);
+    krok(60e3); await mutacja(S, B, 'nowa wersja 1 na B', () => B.d.zapiszKarte(1, { wzrost: 125, zapis: { patientId: pid, forceNewSnapshot: true } }));
+    const qB = B.Q.length;
+    await scalBlob(S, A, B);
+    expect({ setId: B.setIds.has(`${pid}:${nagrobek.deletedAtISO}`), hakiB: B.Q.slice(qB).map((e) => e.kind).includes('pfull') }, 'H1 z pełnej kopii').toEqual({ setId: true, hakiB: true });
+    const q2 = B.Q.length, haki0 = S.stat.haki.porownan;
+    await dostawa(S, A, B, { w2s: false });
+    expect({ porownan: S.stat.haki.porownan - haki0, noweB: B.Q.slice(q2).map((e) => e.kind) }, 'ptomb po pełnej kopii — bez drugiego haka').toEqual({ porownan: 1, noweB: [] });
+  }, 30_000);
+});
+
+// ── Echo na klonach (scenariusze deterministyczne floty z polem echo; E2_AB_ECHO_KLONY=wszystkie — losowe floty) ─────
+// Koperty echa jednego scalenia na Y (warstwa wyk i naiwna po2a; liczEcho) stosowane na świeżych klonach pozostałych
+// urządzeń floty (S.flotaUrz), w cichoLicznik (klony, szyfrowanie i identyfikatory poza programem świata). Drugi rząd
+// i dalsze obiegi liczone tylko na kluczach encji tych kopert (LO.kluczeKopert):
+// - bieżące urządzenie U: każda koperta osobno przez applyEncryptedEvent na klonie U′, echo U′ → klony.drugiRzad (wyk)
+//   i klony.drugiRzad2a (po2a); przykłady (druk): do 8 z warstwy po2a, wyk — do 16;
+// - urządzenie starszej aplikacji U: koperty na klonie U′ (221 — applyEncryptedDelta, jak /changes bez dziennika; 276 —
+//   applyEncryptedEvent; przezStarsza.zapisow — ile razy eksport U′ się przy tym zmienił), potem pełna kopia U′ do
+//   świeżych klonów bieżących urządzeń: wiersze wyk → przezStarsza.doNadawcy (klon Y) albo przezStarsza.doInnych,
+//   wiersze po2a → przezStarsza.po2a; obiegi (tylko wyk): echo Y′ po pełnej kopii U′ wraca do U′ i dalej, wiersze
+//   obiegu i → obiegi[i − 1], dłużej niż LO.MAKS_OBIEGOW → ponadObiegi.
+const ECHO_KLONY = process.env.E2_AB_ECHO_KLONY === 'wszystkie';
+async function kopertaNaKlonie(U2, E, k) {
+  const { env } = await E.ev.encryptEvent(k);
+  if (U2.app === 'S221') return U2.v.applyEncryptedDelta(env);
+  return U2.ev.applyEncryptedEvent(env);
+}
+async function echoNaKlonach(S, Y, koperty, koperty2a) {
+  const t0 = performance.now();
+  const K = S.odsyl.klony;
+  K.prob += 1;
+  const opis = (lista) => lista.map((r) => `${r.kind}${r.wLadunku ? '' : '(spoza)'} ${r.klasa} [${r.sc.join(',')}]`).join('; ');
+  await cichoLicznik(S, async () => {
+    for (const U of S.flotaUrz.filter((V) => V !== Y)) {
+      K.urzadzen += 1;
+      if (!starszaAplikacja(U)) {
+        for (const [warstwa, lista0] of [[WYK, koperty], ['po2a', koperty2a]]) {
+          if (!lista0.length) continue;
+          const U2 = await klonBiezacy(S, U, 'ek');
+          try {
+            for (const k of lista0) {
+              const przed = await eksport(U2);
+              await kopertaNaKlonie(U2, U2, k);
+              const lista = LO.wierszeEcha(S.odsyl.echo(przed, await eksport(U2), k, { klucze: LO.kluczeKopert([k]) }).filter((r) => r[warstwa]));
+              K[warstwa === 'po2a' ? 'drugiRzad2a' : 'drugiRzad'] += lista.length;
+              if (lista.length && K.przyklady.length < (warstwa === 'po2a' ? 8 : 16)) K.przyklady.push(`[${warstwa}] ${urzOs(Y)}→${urzOs(U)}′ ${k.event.kind}: ${opis(lista)}`);
+            }
+          } finally { await zamknij(U2); }
+        }
+        continue;
+      }
+      const z221 = U.app === 'S221';
+      for (const [warstwa, lista0] of [[WYK, koperty], ['po2a', koperty2a]]) {
+        if (!lista0.length) continue;
+        K.przezStarsza.prob += 1;
+        const U2 = await klon(S, U, 'ek'), E = await klonBiezacy(S, Y, 'ek');
+        try {
+          const u0 = JSON.stringify(kanon(await eksport(U2)));
+          for (const k of lista0) await kopertaNaKlonie(U2, E, k);
+          const blob = json(await U2.v.exportSyncPayload());
+          if (JSON.stringify(kanon(blob)) !== u0) K.przezStarsza.zapisow = (K.przezStarsza.zapisow || 0) + 1;
+          const klucze = LO.kluczeKopert(lista0);
+          for (const N of S.flotaUrz.filter((V) => !starszaAplikacja(V))) {
+            const N2 = await klonBiezacy(S, N, 'ek');
+            try {
+              const przed = await eksport(N2);
+              await N2.v.mergeSyncPayload(json(blob));
+              const lista = LO.wierszeEcha(S.odsyl.echo(przed, await eksport(N2), blob, { z221, klucze }).filter((r) => r[warstwa]));
+              if (warstwa === 'po2a') K.przezStarsza.po2a += lista.length;
+              else K.przezStarsza[N === Y ? 'doNadawcy' : 'doInnych'] += lista.length;
+              if (lista.length && K.przyklady.length < (warstwa === 'po2a' ? 8 : 16)) K.przyklady.push(`[${warstwa}] ${urzOs(Y)}→${urzOs(U)}′ (${lista0.length}) → pełna kopia → ${urzOs(N)}′: ${opis(lista)}`);
+            } finally { await zamknij(N2); }
+          }
+        } finally { await zamknij(U2, E); }
+      }
+      if (!koperty.length) continue;
+      const U3 = await klon(S, U, 'eo'), Y3 = await klonBiezacy(S, Y, 'eo');
+      try {
+        let lista0 = koperty;
+        for (let i = 0; i < LO.MAKS_OBIEGOW && lista0.length; i += 1) {
+          for (const k of lista0) await kopertaNaKlonie(U3, Y3, k);
+          const blob = json(await U3.v.exportSyncPayload());
+          const przed = await eksport(Y3);
+          await Y3.v.mergeSyncPayload(json(blob));
+          const po = await eksport(Y3);
+          const lista = LO.wierszeEcha(S.odsyl.echo(przed, po, blob, { z221, klucze: LO.kluczeKopert(lista0) }).filter((r) => r[WYK]));
+          K.obiegi[i] += lista.length;
+          const poE = encje(po), nast = [];
+          for (const r of lista) { const k = await kopertaEcha(Y3, r, poE); if (k && !k.blad) nast.push(k); }
+          lista0 = nast;
+        }
+        if (lista0.length) K.ponadObiegi += 1;
+      } finally { await zamknij(U3, Y3); }
+    }
+  });
+  K.ms += performance.now() - t0;
+}
+
+// ══ Flota ze starszą aplikacją: scenariusze deterministyczne (E3-PR0b) ══════════════════════════════════════════════
+// Jeden świat na scenariusz: swiat(800 + nr) i Math.random z rng(0x6800 + nr), nr — pozycja w P6F (nowy scenariusz
+// tylko na końcu literału — inaczej przesuwa światy istniejących; asercja nr < 40); ręczne kontrole C = N mają stały
+// świat 840 + pozycja scenariusza bazowego (niezależny od długości listy; asercja < 80, światy 880–899 ma blok znanych
+// usterek niżej).
+// A i B — bieżący sejf (bliźniaki); C — bliźniak A z sejfem starszej aplikacji (221 bez dziennika zdarzeń, 276
+// z dziennikiem; retencja v1) albo bieżący (kontrola C = N). Transport opisuje scenariusz: zdarzenia (dostawa, haki do Q odbiorcy), kolejka do 221
+// (dostawaDoStarszej — applyEncryptedDelta), pełna kopia (scalBlob, licznik: źródło blob221, blob276, blobN). Ocena
+// (p6fOcen): D par (A, B), (B, C), (C, A) na żywych urządzeniach (tabela 'p6', para z C starszej aplikacji — 'flota')
+// i wyrocznia 'p6f W1'; W4 trzech urządzeń na świeżych klonach (w4Trzy: obiegi wymiany PO-A par, D par w tabeli 'p6'
+// albo 'flota') i wyrocznia 'p6f W4' z widokiem C jako widokiem starszej aplikacji (stare). Warunki CI: W4 stabilne
+// i każda różnica par dozwolona, wyrocznia bez naruszeń bez klasy; literały P6F_LITERALY (D par po scenariuszu, stan
+// kliniczny po scenariuszu i po W4, D par W4, fakty scenariusza), P6F_WYR (naruszenia wyroczni: świat, urządzenie,
+// encja, rodzaj, klasa) i P6F_ODSYL (licznik: klucz → { wyk, nowe }; w scenariuszach z echem także echo na klonach);
+// literały tylko w przebiegu domyślnym (P6F_DOMYSLNE: normalizacja tożsamości wizyty, licznik, reguła T), warunki CI
+// zawsze; wymog — jawny fakt scenariusza (asercja niezależna od literału).
+// Scenariusze ręczne (E2_AB_P6_FLOTA=wszystkie): bloki p. 6 R2-0, R5-E1 i R3-E2 z jednym urządzeniem na 221 oraz
+// kontrole C = N scenariuszy CI — druk, bez literału. Zmiana zbieżności albo wyroczni przepisuje literały.
+const P6F_WSZYSTKIE = process.env.E2_AB_P6_FLOTA === 'wszystkie';
+const P6F_DOMYSLNE = WYR.NORM_VISIT.wlaczona && ODSYL && ODSYL_REGULA === 'T';
+async function p6fUrzadzenia(S, A, app) {
+  const B = await urzadzenie(S, 'B', A);
+  const C = await urzadzenie(S, 'C', A, app === 'N' ? {} : { app });
+  return { B, C };
+}
+// Baza: A — karta P z wizytami v (20 kg) i w (21 kg), z notatką n albo bez; B — bliźniak A; C — bliźniak A z sejfem app.
+async function p6fBaza(S, app, { notatka = false } = {}) {
+  const A = await urzadzenie(S, 'A');
+  krok(); const r1 = await A.d.zapiszKarte(1, { wzrost: 120, masa: 20 });
+  krok(); const r2 = await A.d.zapiszKarte(1, { wzrost: 125, masa: 21, zapis: { patientId: r1.patientId, forceNewSnapshot: true } });
+  let nId = null;
+  if (notatka) { krok(); nId = (await A.v.savePatientNote({ patientId: r1.patientId, title: 'Fikcyjna', body: 'Fikcyjna treść', category: 'inne' })).id; }
+  krok(); ustawStan(A, await eksport(A)); A.Q.length = 0;
+  const { B, C } = await p6fUrzadzenia(S, A, app);
+  return { A, B, C, P: r1.patientId, v: r1.snapshotId, w: r2.snapshotId, nId, n: new Map([[r1.patientId, 'P'], [r1.snapshotId, 'v'], [r2.snapshotId, 'w'], ...(nId ? [[nId, 'n']] : [])]) };
+}
+// Baza retencji: karta P z 8 wizytami z 8 dni (co 2 dni), zegar 54 dni po pierwszej (retencja z parametrami aplikacji
+// zostawia z nich jedną; jak strażnik retencji w starsza-aplikacja-fikstury.test.mjs).
+async function p6fOsiemDni(S, app) {
+  const A = await urzadzenie(S, 'A');
+  const DZIEN = 864e5, t0 = teraz;
+  krok(); const r0 = await A.d.zapiszKarte(1, { wzrost: 100, masa: 20 });
+  const n = new Map([[r0.patientId, 'P'], [r0.snapshotId, 'dz0']]);
+  for (let i = 1; i < 8; i += 1) { ustaw(t0 + i * 2 * DZIEN); n.set((await A.d.zapiszKarte(1, { wzrost: 100 + i, masa: 20 + i, zapis: { patientId: r0.patientId, forceNewSnapshot: true } })).snapshotId, 'dz' + i); }
+  krok(); ustawStan(A, await eksport(A)); A.Q.length = 0;
+  const { B, C } = await p6fUrzadzenia(S, A, app);
+  ustaw(t0 + 54 * DZIEN);
+  return { A, B, C, P: r0.patientId, n };
+}
+// Baza „Scal pacjentów” z wizytami o jawnych identyfikatorach (fikcyjne): karta P z wizytą v (jedyny stan wizyty), karta
+// Q z wizytą w.
+async function p6fDwieKarty(S, app) {
+  const A = await urzadzenie(S, 'A');
+  const wiz = (id) => ({ version: 1, visitId: id, patientId: null, clinicalDateISO: '2026-03-02', createdAtISO: new Date(Date.now()).toISOString(), origin: 'explicit' });
+  krok(); const r1 = await A.v.savePatient({ ...naglowek(1, { masa: 20 }), visit: wiz('fac0a000-0000-4000-8000-00000000f1e1') }, { dedup: false });
+  krok(); const r2 = await A.v.savePatient({ ...naglowek(2, { wzrost: 125, masa: 21 }), visit: wiz('fac0a000-0000-4000-8000-00000000f1e2') }, { dedup: false });
+  krok(); ustawStan(A, await eksport(A)); A.Q.length = 0;
+  const { B, C } = await p6fUrzadzenia(S, A, app);
+  return { A, B, C, P: r1.patientId, Q: r2.patientId, v: r1.snapshotId, w: r2.snapshotId, n: new Map([[r1.patientId, 'P'], [r2.patientId, 'Q'], [r1.snapshotId, 'v'], [r2.snapshotId, 'w']]) };
+}
+// Baza „Scal 5 → 4 → 3”: karta X (3) z dwiema wersjami na A; B, C — bliźniaki.
+async function p6fTrzyKarty(S, app) {
+  const A = await urzadzenie(S, 'A');
+  krok(); const r = await A.d.zapiszKarte(3);
+  krok(); const r2 = await A.d.zapiszKarte(3, { wzrost: 125, zapis: { patientId: r.patientId, forceNewSnapshot: true } });
+  krok(); ustawStan(A, await eksport(A)); A.Q.length = 0;
+  const { B, C } = await p6fUrzadzenia(S, A, app);
+  return { A, B, C, X: r.patientId, n: new Map([[r.patientId, 'X'], [r.snapshotId, 'a'], [r2.snapshotId, 'b']]) };
+}
+const p6fDoC = (u, X) => (u.C.app === 'S221' ? dostawaDoStarszej(u.S, X, u.C) : dostawa(u.S, X, u.C, { w2s: false }));
+const p6fOdC = (u, Y) => (u.C.app === 'S221' ? scalBlob(u.S, u.C, Y) : dostawa(u.S, u.C, Y, { w2s: false }));
+const p6fAB = (u) => spoczynek(u.S, u.A, u.B, { w2s: false });
+// Nowa wersja karty pid na U (etykieta et w mapie u.n); wynik — snapshotId.
+async function p6fNowaWersja(u, U, pid, et, { nr = 1, wzrost = 130, masa: kg = 25, opis = 'nowa wersja' } = {}) {
+  krok(60e3);
+  const r = (await mutacja(u.S, U, `${opis} ${et}`, () => U.d.zapiszKarte(nr, { wzrost, masa: kg, zapis: { patientId: pid, forceNewSnapshot: true } }))).wynik;
+  u.n.set(r.snapshotId, et);
+  return r.snapshotId;
+}
+const p6fUrz = (u) => [u.A, u.B, u.C];
+// Echo na klonach tylko dla scaleń w fn (scenariusz z polem echo; przy wyłączonym liczniku — bez echa).
+async function p6fZEchem(u, fn) {
+  u.S.echoKlony = !!u.S.odsyl;
+  try { return await fn(); } finally { u.S.echoKlony = false; }
+}
+// Fakty: karta P, notatka n, nagrobek notatki (z kartą — deletedWithPatient) na każdym urządzeniu.
+const faktyNotatki = (u) => Object.fromEntries(p6fUrz(u).map((U) => {
+  const t = (U.stan.patientNoteTombstones || []).find((x) => x.id === u.nId);
+  return [U.nazwa, `karta ${kartaW(U.stan, u.P) ? 'jest' : 'brak'}, notatka ${notatkaW(U.stan, u.nId) ? 'jest' : 'brak'}, nagrobek notatki ${t ? (t.deletedWithPatient ? 'z kartą' : 'bez karty') : '-'}`];
+}));
+// Fakty: liczba wersji karty pid na każdym urządzeniu i wpisy retencji.
+const faktyRetencji = (u, pid) => Object.fromEntries(p6fUrz(u).map((U) => [U.nazwa, `wersji ${wersjeKarty(U, pid).length}, wpisów retencji ${(U.stan.snapshotTombstones || []).filter((e) => e.powod === 'retencja').length}`]));
+// Fakty wersji sid: rev, gwiazdka w treści, rejestr gwiazdki, chwila treści — na każdym urządzeniu.
+const faktyWersji = (u, sid) => Object.fromEntries(p6fUrz(u).map((U) => {
+  const p = gdzie(U, sid);
+  const s = p && p.snapshots.find((q) => q.snapshotId === sid);
+  if (!s) return [U.nazwa, 'brak'];
+  const pl = s.payload || {};
+  return [U.nazwa, `karta ${etykieta(u.n, p.patientId)}, rev ${s.rev}, _pinned ${pl._pinned ? 1 : 0}, _pinnedState ${pl._pinnedState ? 'jest' : 'brak'}, _contentAtISO ${pl._contentAtISO ? 'jest' : 'brak'}`];
+}));
+const P6F = {
+  '„Usuń pacjenta” na 221, potem zmiana karty na A: notatka bez ratunku D-21': {
+    ci: true, app: 'S221', baza: (S, app) => p6fBaza(S, app, { notatka: true }),
+    kroki: async (u) => {
+      await p6usunPacjenta(u, u.C, u.P);
+      await p6fNowaWersja(u, u.A, u.P, 'x', { opis: 'nowa wersja (bez wiedzy o usunięciu)' });
+      krok(60e3); await p6fOdC(u, u.A); await p6fOdC(u, u.B); await p6fAB(u); await p6fDoC(u, u.A); await p6fDoC(u, u.B);
+    },
+    fakty: faktyNotatki,
+  },
+  '„Usuń pacjenta” na C, potem zmiana karty na A — C = N (notatka zostaje)': {
+    ci: true, app: 'N', baza: (S, app) => p6fBaza(S, app, { notatka: true }),
+    kroki: async (u) => {
+      await p6usunPacjenta(u, u.C, u.P);
+      await p6fNowaWersja(u, u.A, u.P, 'x', { opis: 'nowa wersja (bez wiedzy o usunięciu)' });
+      krok(60e3); await p6fOdC(u, u.A); await p6fOdC(u, u.B); await p6fAB(u); await p6fDoC(u, u.A); await p6fDoC(u, u.B);
+    },
+    fakty: faktyNotatki,
+  },
+  '„Usuń pacjenta” na A, zmiana karty na 221 — najpierw zdarzenia do C: notatka bez ratunku D-21': {
+    ci: true, app: 'S221', baza: (S, app) => p6fBaza(S, app, { notatka: true }),
+    kroki: async (u) => {
+      await p6usunPacjenta(u, u.A, u.P);
+      await p6fNowaWersja(u, u.C, u.P, 'x', { opis: 'nowa wersja (bez wiedzy o usunięciu)', wzrost: 131, masa: 26 });
+      krok(60e3); await p6fDoC(u, u.A); await p6fDoC(u, u.B);
+      krok(60e3); await p6fOdC(u, u.A); await p6fOdC(u, u.B); await p6fAB(u);
+    },
+    fakty: faktyNotatki,
+  },
+  '„Usuń pacjenta” na A, zmiana karty na 221 — najpierw pełna kopia C (notatka zostaje)': {
+    ci: true, app: 'S221', baza: (S, app) => p6fBaza(S, app, { notatka: true }),
+    kroki: async (u) => {
+      await p6usunPacjenta(u, u.A, u.P);
+      await p6fNowaWersja(u, u.C, u.P, 'x', { opis: 'nowa wersja (bez wiedzy o usunięciu)', wzrost: 131, masa: 26 });
+      krok(60e3); await p6fOdC(u, u.A); await p6fOdC(u, u.B); await p6fAB(u); await p6fDoC(u, u.A); await p6fDoC(u, u.B);
+    },
+    fakty: faktyNotatki,
+    // pełna kopia 221 z notatką dochodzi do bieżących urządzeń po usunięciu: ratunek D-21 bieżącej aplikacji ją przywraca
+    // (bez niego klasa notatki floty mogłaby uznać jej brak za skutek starszej aplikacji)
+    wymog: { opis: 'notatka n jest na A, B i C', fakt: (u) => p6fUrz(u).map((U) => `${U.nazwa}: ${notatkaW(U.stan, u.nId) ? 'jest' : 'brak'}`), oczekiwane: ['A: jest', 'B: jest', 'C: jest'] },
+  },
+  '„Usuń pacjenta” na A, zmiana karty na C — C = N, najpierw zdarzenia do C (notatka zostaje)': {
+    ci: true, app: 'N', baza: (S, app) => p6fBaza(S, app, { notatka: true }),
+    kroki: async (u) => {
+      await p6usunPacjenta(u, u.A, u.P);
+      await p6fNowaWersja(u, u.C, u.P, 'x', { opis: 'nowa wersja (bez wiedzy o usunięciu)', wzrost: 131, masa: 26 });
+      krok(60e3); await p6fDoC(u, u.A); await p6fDoC(u, u.B);
+      krok(60e3); await p6fOdC(u, u.A); await p6fOdC(u, u.B); await p6fAB(u);
+    },
+    fakty: faktyNotatki,
+  },
+  'Kosz na 221: echo tożsamości wizyty u odbiorcy pełnej kopii i echo na klonach': {
+    ci: true, kontrolaN: true, app: 'S221', echo: true, baza: (S, app) => p6fBaza(S, app),
+    kroki: async (u) => {
+      await doKosza(u, u.C, u.v);
+      krok(60e3); await p6fZEchem(u, () => p6fOdC(u, u.A)); await p6fOdC(u, u.B); await p6fAB(u);
+    },
+  },
+  // Echo wpisu Kosza z gwiazdką (A po koszu B bez wiedzy o gwiazdce; B po gwiazdce A) idzie do C, który ma niewysłaną
+  // nowszą poprawkę tej wizyty; pełna kopia C′ wraca do nadawcy z tą treścią (drugi rząd: 1 wiersz na echo), a echo
+  // tego wiersza przez C już nic nie daje (trzeci rząd 0).
+  'Drugi rząd przez 221: wpis Kosza z gwiazdką z A do C (C z niewysłaną poprawką), pełna kopia C′ do A′': {
+    ci: true, kontrolaN: true, app: 'S221', echo: true, baza: (S, app) => p6fBaza(S, app),
+    kroki: async (u) => {
+      await p6gwiazdka(u, u.A, u.v, true); await p6fDoC(u, u.A);
+      await popraw(u, u.C, u.v, 33);
+      await doKosza(u, u.B, u.v);
+      krok(60e3); await p6fZEchem(u, () => dostawa(u.S, u.B, u.A, { w2s: false }));
+      await p6fAB(u); await p6fDoC(u, u.A); await p6fDoC(u, u.B);
+      krok(60e3); await p6fOdC(u, u.A); await p6fOdC(u, u.B); await p6fAB(u);
+    },
+  },
+  'Retencja na 221 po „Scal pacjentów”: jedyny stan wizyty przeniesionej (recentHours 0)': {
+    ci: true, app: 'S221', baza: p6fDwieKarty,
+    kroki: async (u) => {
+      await scal(u, u.A, u.P, u.Q); await p6fAB(u); await p6fDoC(u, u.A); await p6fDoC(u, u.B);
+      krok(60e3); await mutacja(u.S, u.C, 'retencja Q', () => u.C.v.pruneSnapshotsForPatient(u.Q, { recentHours: 0 }));
+      krok(60e3); await p6fOdC(u, u.A); await p6fOdC(u, u.B); await p6fAB(u);
+    },
+    fakty: (u) => ({ ...faktyRetencji(u, u.Q), v: Object.fromEntries(p6fUrz(u).map((U) => [U.nazwa, gdzie(U, u.v) ? etykieta(u.n, gdzie(U, u.v).patientId) : 'brak'])) }),
+  },
+  'Retencja po „Scal pacjentów” — C = N (bez strat)': {
+    ci: true, app: 'N', baza: p6fDwieKarty,
+    kroki: async (u) => {
+      await scal(u, u.A, u.P, u.Q); await p6fAB(u); await p6fDoC(u, u.A); await p6fDoC(u, u.B);
+      krok(60e3); await mutacja(u.S, u.C, 'retencja Q', () => u.C.v.pruneSnapshotsForPatient(u.Q, { recentHours: 0 }));
+      krok(60e3); await p6fOdC(u, u.A); await p6fOdC(u, u.B); await p6fAB(u);
+    },
+    fakty: (u) => ({ ...faktyRetencji(u, u.Q), v: Object.fromEntries(p6fUrz(u).map((U) => [U.nazwa, gdzie(U, u.v) ? etykieta(u.n, gdzie(U, u.v).patientId) : 'brak'])) }),
+  },
+  'Retencja na 221 z parametrami aplikacji: 8 wizyt z 8 dni sprzed 40–54 dni': {
+    ci: true, kontrolaN: true, app: 'S221', baza: p6fOsiemDni,
+    kroki: async (u) => {
+      await mutacja(u.S, u.C, 'retencja P (24 h)', () => u.C.v.pruneSnapshotsForPatient(u.P, { recentHours: 24 }));
+      krok(60e3); await p6fOdC(u, u.A); await p6fOdC(u, u.B); await p6fAB(u);
+    },
+    fakty: (u) => faktyRetencji(u, u.P),
+    // bieżący odbiorca nagrobków retencji zachowuje najnowszy stan każdej z 8 wizyt (8 dni → 8 wizyt); wizyta zlana
+    // z innymi (tożsamość wizyty bez dnia albo z inną cechą niż dzień) zostawiłaby jedną wersję, a wyrocznia — liczona
+    // z tożsamości z eksportu — by tego nie zauważyła
+    wymog: { opis: 'A i B mają 8 wersji karty P', fakt: (u) => [u.A, u.B].map((U) => `${U.nazwa}: wersji ${wersjeKarty(U, u.P).length}`), oczekiwane: ['A: wersji 8', 'B: wersji 8'] },
+  },
+  'Retencja na 276 z parametrami aplikacji: nagrobek retencji idzie zdarzeniem': {
+    ci: true, kontrolaN: true, app: 'S276', baza: p6fOsiemDni,
+    kroki: async (u) => {
+      await mutacja(u.S, u.C, 'retencja P (24 h)', () => u.C.v.pruneSnapshotsForPatient(u.P, { recentHours: 24 }));
+      krok(60e3); await p6fOdC(u, u.A); await p6fOdC(u, u.B); await p6fAB(u);
+    },
+    fakty: (u) => faktyRetencji(u, u.P),
+  },
+  'Retencja na 276 po „Scal 5 → 4 → 3” na A': {
+    ci: true, kontrolaN: true, app: 'S276', baza: p6fTrzyKarty,
+    kroki: async (u) => {
+      const { S, A, B, C } = u;
+      krok(); const Y = (await mutacja(S, C, 'nowa karta 4', () => C.d.zapiszKarte(4))).wynik.patientId;
+      u.n.set(Y, 'Y');
+      await p6fOdC(u, A); await p6fOdC(u, B);
+      krok(); const Z = (await mutacja(S, A, 'nowa karta 5', () => A.d.zapiszKarte(5))).wynik.patientId;
+      u.n.set(Z, 'Z');
+      await scal(u, A, Z, Y);
+      await p6fNowaWersja(u, A, Y, 'c', { nr: 4, wzrost: 134 });
+      await scal(u, A, Y, u.X);
+      await p6fDoC(u, A); await dostawa(S, A, B, { w2s: false });
+      u.wizytyPrzed = Object.fromEntries(p6fUrz(u).map((U) => [U.nazwa, wizytyKarty(U, u.X)]));
+      krok(60e3); await mutacja(S, C, 'retencja karty 3', () => C.v.pruneSnapshotsForPatient(u.X, { recentHours: 0 }));
+      await p6fOdC(u, A);
+      krok(); await scalBlob(S, C, B);
+      await p6fAB(u);
+    },
+    fakty: (u) => ({ przed: u.wizytyPrzed, po: Object.fromEntries(p6fUrz(u).map((U) => [U.nazwa, wizytyKarty(U, u.X)])) }),
+  },
+  'Gwiazdka na 221: „Odepnij i usuń”, potem „Przywróć”': {
+    ci: true, kontrolaN: true, app: 'S221', baza: (S, app) => p6fBaza(S, app),
+    kroki: async (u) => {
+      await p6gwiazdka(u, u.A, u.v, true); await p6fAB(u); await p6fDoC(u, u.A); await p6fDoC(u, u.B);
+      await doKosza(u, u.C, u.v);
+      krok(60e3); await p6fOdC(u, u.A); await p6fOdC(u, u.B); await p6fAB(u);
+      await p6przywroc(u, u.C, u.v);
+      krok(60e3); await p6fOdC(u, u.A); await p6fOdC(u, u.B); await p6fAB(u);
+    },
+    fakty: (u) => faktyWersji(u, u.v),
+  },
+  // Wersja x powstaje na 221 (bez pól W3), A i B dostają ją z gwiazdką z pełnej kopii C, potem C ją odpina: obie kopie
+  // bez W3 i ta sama treść poza _pinned — odbiorca bierze całą nowszą wersję (Bgw_scal, vilda_vault.js:3951–3956), bez
+  // rekordu złożonego. Bez tej gałęzi odczyt bez pól daje starej kopii z gwiazdką późniejszy rejestr i rekord złożony
+  // z gwiazdką (zmiana gałęzi przeżywa resztę pliku A ≡ B i losowe floty; łapie ją też przypieta-w3-flota.test.mjs).
+  'Gwiazdka i odpięcie na 221 na wersji zapisanej na 221 (obie kopie bez W3): odbiorca bierze całą nowszą wersję': {
+    ci: true, kontrolaN: true, app: 'S221', baza: (S, app) => p6fBaza(S, app),
+    kroki: async (u) => {
+      u.x = await p6fNowaWersja(u, u.C, u.P, 'x', { opis: 'nowa wersja na 221', wzrost: 131, masa: 26 });
+      krok(60e3); await p6fOdC(u, u.A); await p6fOdC(u, u.B); await p6fAB(u);
+      await p6gwiazdka(u, u.C, u.x, true);
+      krok(60e3); await p6fOdC(u, u.A); await p6fOdC(u, u.B); await p6fAB(u);
+      await p6gwiazdka(u, u.C, u.x, false);
+      krok(60e3); await p6fOdC(u, u.A); await p6fOdC(u, u.B); await p6fAB(u);
+    },
+    fakty: (u) => faktyWersji(u, u.x),
+  },
+  '276: nowa wersja na C, A dopisuje tożsamość wizyty; echo na klonach': {
+    ci: true, kontrolaN: true, app: 'S276', echo: true, baza: (S, app) => p6fBaza(S, app),
+    kroki: async (u) => {
+      u.x = await p6fNowaWersja(u, u.C, u.P, 'x', { opis: 'nowa wersja na 276', wzrost: 131, masa: 26 });
+      krok(60e3); u.haki = (await p6fZEchem(u, () => dostawa(u.S, u.C, u.A, { w2s: false }))).dodane.length;
+      await dostawa(u.S, u.C, u.B, { w2s: false }); await p6fAB(u); await p6fDoC(u, u.A); await p6fDoC(u, u.B);
+    },
+    fakty: (u) => ({ hakiA: u.haki, ...faktyWersji(u, u.x) }),
+  },
+  'Same bieżące urządzenia: Kosz w zwróconej starej karcie, potem „Usuń pacjenta” karty scalonej': {
+    ci: true, app: 'N',
+    baza: async (S, app) => {
+      const A = await urzadzenie(S, 'A');
+      krok(); const r1 = await A.d.zapiszKarte(1, { masa: 20 });
+      krok(); const r3 = await A.d.zapiszKarte(3, { masa: 30 });
+      krok(); ustawStan(A, await eksport(A)); A.Q.length = 0;
+      const { B, C } = await p6fUrzadzenia(S, A, app);
+      return { A, B, C, Y: r1.patientId, X: r3.patientId, x: r3.snapshotId, n: new Map([[r1.patientId, 'Y'], [r3.patientId, 'X'], [r1.snapshotId, 'a'], [r3.snapshotId, 'x']]) };
+    },
+    kroki: async (u) => {
+      await scal(u, u.A, u.X, u.Y);
+      await p6fNowaWersja(u, u.B, u.X, 'y', { nr: 3, opis: 'nowa wersja (bez wiedzy o scaleniu)', wzrost: 133, masa: 31 });
+      await doKosza(u, u.B, u.x);
+      krok(60e3); await p6fAB(u);
+      await p6usunPacjenta(u, u.A, u.Y);
+      krok(60e3); await spoczynekWszystkich(u.S, p6fUrz(u));
+    },
+    fakty: async (u) => {
+      const o = {};
+      for (const U of p6fUrz(u)) {
+        const e = (await kr_cicho(u.S, () => U.v.listTrashedSnapshots())).find((q) => q.snapshotId === u.x);
+        o[U.nazwa] = e ? `Kosz pod ${etykieta(u.n, e.patientId)}${e.patientExists ? '' : ' (ukryty)'}` : 'brak w Koszu';
+      }
+      return o;
+    },
+  },
+  // ── ręcznie (E2_AB_P6_FLOTA=wszystkie): bloki p. 6 z urządzeniem 221 i kontrole C = N ──
+  'R2-0, C na 221: gwiazdka i poprawka na 221, poprawka na A': {
+    app: 'S221', baza: (S, app) => p6fBaza(S, app),
+    kroki: async (u) => {
+      await p6gwiazdka(u, u.C, u.v, true); await popraw(u, u.C, u.v, 27); await popraw(u, u.A, u.v, 30);
+      krok(60e3); await p6fOdC(u, u.A); await p6fOdC(u, u.B); await p6fAB(u); await p6fDoC(u, u.A); await p6fDoC(u, u.B);
+    },
+    fakty: (u) => faktyWersji(u, u.v),
+  },
+  'R5-E1, C na 221: kartę po „Przywróć” i „Usuń pacjenta” przywraca nowa wizyta na 221': {
+    app: 'S221', baza: (S, app) => p6fBaza(S, app),
+    kroki: async (u) => {
+      await doKosza(u, u.B, u.v); krok(); await dostawa(u.S, u.B, u.A, { w2s: false });
+      await p6przywroc(u, u.B, u.v); await p6usunPacjenta(u, u.A, u.P); await p6fAB(u);
+      await p6fNowaWersja(u, u.C, u.P, 'x', { opis: 'C: nowa wizyta' });
+      await scalBlob(u.S, u.C, u.A); await scalBlob(u.S, u.C, u.B); await p6fAB(u); await p6fDoC(u, u.A); await p6fDoC(u, u.B);
+    },
+    fakty: (u) => faktyWersji(u, u.v),
+  },
+  'R3-E2, C na 221: kopia z notatką poza siecią wraca po usunięciu i „Zostaw notatkę”': {
+    app: 'S221', baza: (S, app) => p6fBaza(S, app, { notatka: true }),
+    kroki: async (u) => {
+      const not = async (U, t) => { krok(60e3); await mutacja(u.S, U, `notatka „${t}”`, () => U.v.savePatientNote({ id: u.nId, patientId: u.P, title: 'Fikcyjna', body: t, category: 'inne' })); };
+      await not(u.A, 'A2'); await not(u.A, 'A3'); await p6fDoC(u, u.A);
+      krok(60e3); await mutacja(u.S, u.B, 'usuń notatkę', () => u.B.v.removePatientNote(u.nId)); await p6fAB(u);
+      await not(u.B, 'wskrzeszona na B'); await p6fAB(u);
+      krok(60e3); await scalBlob(u.S, u.B, u.C); await scalBlob(u.S, u.A, u.C); await scalBlob(u.S, u.C, u.A); await scalBlob(u.S, u.C, u.B); await p6fAB(u);
+    },
+    fakty: (u) => Object.fromEntries(p6fUrz(u).map((U) => { const x = (U.stan.patientNotes || []).find((q) => q.id === u.nId); return [U.nazwa, x ? x.body : 'brak']; })),
+  },
+  // ── CI, dopisane na końcu (warunki klas floty: przyczyna po stronie bieżącej aplikacji nie dostaje klasy floty) ──
+  // Przypięcie i odpięcie na 221 wersji z bieżącej aplikacji (rejestr „nieprzypięta”, chwila treści i odcisk h zgodny
+  // z treścią): bieżąca aplikacja czyta przypięcie w chwili zmiany rekordu i odpięcie też (Bgw_stan, vilda_vault.js
+  // :1568–1570; odcisk zgodny — starsza aplikacja wróciła do stanu rejestru), więc A, B i C kończą bez gwiazdki.
+  // Gwiazdka w widoku bieżącym (rekord złożony z przypięciem) byłaby błędem bieżącej aplikacji bez klasy floty.
+  'Przypięcie i odpięcie na 221 wersji z bieżącej aplikacji (odcisk zgodny z treścią): bieżąca aplikacja widzi odpięcie': {
+    ci: true, kontrolaN: true, app: 'S221', baza: (S, app) => p6fBaza(S, app),
+    kroki: async (u) => {
+      await p6gwiazdka(u, u.C, u.v, true);
+      krok(60e3); await p6fOdC(u, u.A); await p6fOdC(u, u.B); await p6fAB(u);
+      await p6gwiazdka(u, u.C, u.v, false);
+      krok(60e3); await p6fOdC(u, u.A); await p6fOdC(u, u.B); await p6fAB(u);
+    },
+    fakty: (u) => faktyWersji(u, u.v),
+    wymog: { opis: 'v bez gwiazdki na A, B i C', fakt: (u) => p6fUrz(u).map((U) => `${U.nazwa}: ${(gdzie(U, u.v) || { snapshots: [] }).snapshots.find((q) => q.snapshotId === u.v)?.payload?._pinned ? 'z gwiazdką' : 'bez gwiazdki'}`), oczekiwane: ['A: bez gwiazdki', 'B: bez gwiazdki', 'C: bez gwiazdki'] },
+  },
+  // Poprawka v na 221 bez wysłania (C bez delt), „Usuń pacjenta” na A, B bez wiedzy o usunięciu zwraca kartę nową wersją;
+  // nagrobek dochodzi do C przed jego pełną kopią — sejf 221 (bez dziennika zdarzeń) usuwa kartę razem z niewysłaną
+  // poprawką, a karta zwrócona przez B jej nie ma: klasa „zmiana starszej aplikacji usunięta z kartą przed wysłaniem”.
+  // Kontrola C = N (też CI): kolejka zdarzeń C niesie poprawkę i po pełnej wymianie v ma 33 kg wszędzie.
+  'Poprawka na 221 bez wysłania, „Usuń pacjenta” na A, B zwraca kartę: poprawka usunięta z kartą przed wysłaniem': {
+    ci: true, app: 'S221', baza: (S, app) => p6fBaza(S, app),
+    kroki: async (u) => {
+      await popraw(u, u.C, u.v, 33);
+      await p6usunPacjenta(u, u.A, u.P);
+      await p6fNowaWersja(u, u.B, u.P, 'x', { opis: 'nowa wersja (bez wiedzy o usunięciu)' });
+      krok(60e3); await p6fDoC(u, u.A); await p6fDoC(u, u.B);
+      krok(60e3); await p6fOdC(u, u.A); await p6fOdC(u, u.B); await p6fAB(u);
+    },
+    fakty: (u) => faktyWersji(u, u.v),
+  },
+  'Poprawka na C bez wysłania, „Usuń pacjenta” na A, B zwraca kartę — C = N (poprawka zostaje)': {
+    ci: true, app: 'N', baza: (S, app) => p6fBaza(S, app),
+    kroki: async (u) => {
+      await popraw(u, u.C, u.v, 33);
+      await p6usunPacjenta(u, u.A, u.P);
+      await p6fNowaWersja(u, u.B, u.P, 'x', { opis: 'nowa wersja (bez wiedzy o usunięciu)' });
+      krok(60e3); await p6fDoC(u, u.A); await p6fDoC(u, u.B);
+      krok(60e3); await p6fOdC(u, u.A); await p6fOdC(u, u.B); await p6fAB(u);
+    },
+    fakty: (u) => faktyWersji(u, u.v),
+  },
+};
+// Kontrole C = N scenariuszy CI z urządzeniem starszej aplikacji (ręcznie; ten sam program kroków; świat 840 + pozycja
+// scenariusza bazowego).
+for (const [nr, [nazwa, sc]] of Object.entries({ ...P6F }).entries()) if (sc.kontrolaN) P6F[`${nazwa} — kontrola C = N`] = { ...sc, ci: false, app: 'N', nrSwiata: 40 + nr };
+const wizytyKarty = (U, pid) => {
+  const m = {};
+  for (const s of ((U.stan.patients || []).find((p) => p.patientId === pid) || { snapshots: [] }).snapshots) { const v = s.payload && s.payload.visit ? String(s.payload.visit.visitId).slice(0, 4) : '-'; m[v] = (m[v] || 0) + 1; }
+  return sortuj(m);
+};
+async function p6fSwiat(nr0, sc) {
+  const nr = sc.nrSwiata ?? nr0;
+  if (!(sc.nrSwiata != null ? nr >= 40 && nr < 80 : nr < 40)) throw new Error(`scenariusz floty ${nr}: poza światami 800–839 (kontrole C = N — 840–879)`);
+  ustaw(START);
+  const S = swiat(800 + nr);
+  const los = rng(0x6800 + nr);
+  vi.spyOn(Math, 'random').mockImplementation(() => (S.losAlt || los)());
+  S.w2s = false; S.nrKroku = 0; S.wyrSwiat = 'p6f';
+  S.stat.obiegiPonadLimit = [];
+  if (ODSYL) S.odsyl = nowyLicznik();
+  const u = await sc.baza(S, sc.app);
+  u.S = S;
+  S.flotaUrz = p6fUrz(u);
+  await sc.kroki(u);
+  for (const U of p6fUrz(u)) ustawStan(U, await eksport(U));
+  p6fEtykiety(u);
+  return u;
+}
+// Wersje bez etykiety (głowa „Scal pacjentów”, wersje zapisane przez scalanie) — g1, g2, … w kolejności urządzeń,
+// kart i chwili zapisu, potem wizyty historii wyroczni, których na końcu nie ma (np. przycięte) — w kolejności historii
+// (literał bez skrótów identyfikatorów).
+function p6fEtykiety(u) {
+  let i = 0;
+  const dodaj = (id) => { if (!u.n.has(id)) u.n.set(id, 'g' + (i += 1)); };
+  for (const U of p6fUrz(u)) for (const p of U.stan.patients || []) {
+    for (const q of (p.snapshots || []).slice().sort((x, y) => ((x.savedAtISO || '') + x.snapshotId < (y.savedAtISO || '') + y.snapshotId ? -1 : 1))) dodaj(q.snapshotId);
+  }
+  if (u.S.wyr) for (const sid of u.S.wyr.w.keys()) dodaj(sid);
+}
+async function p6fOcen(u, nazwa) {
+  const { S, A, B, C, n } = u;
+  const urz = p6fUrz(u);
+  const stare = urz.filter(starszaAplikacja).map((U) => U.nazwa);
+  S.wyrEtyk = (id) => etykieta(n, id);
+  const W1 = {};
+  for (const [X, Y] of [[A, B], [B, C], [C, A]]) W1[X.nazwa + Y.nazwa] = opisD(await w1Klasy(S, X, Y, kontPary(X, Y, { tabela: 'p6' })), n, X.nazwa, Y.nazwa);
+  const kl = {};
+  for (const U of urz) kl[U.nazwa] = await kr_cicho(S, () => kliniczny(U, n));
+  const wyrW1 = wyrOcena(S, 'p6f W1', nazwa, await wyrWidoki(S, { A, B, C }), { stare });
+  const w = await w4Trzy(S, urz, n);
+  const wyrW4 = wyrOcena(S, 'p6f W4', nazwa, w.wyr, { stare });
+  delete w.wyr;
+  const nar = [...wyrW1, ...wyrW4];
+  return {
+    literal: { W1, kliniczny: kl, W4: { ok: w.ok, obiegi: w.rund, pary: Object.fromEntries(w.pary.map((p) => [p.para, p.roznice])), kliniczny: w.opis } },
+    wyr: nar.map((x) => `${x.swiat}: ${x.urz} ${x.encja} ${x.et} ${x.rodzaj} [${x.klasa || 'bez klasy'}]`).sort(),
+    czerwone: wyrCzerwone(nar),
+    w4ok: w.ok,
+  };
+}
+// Licznik scenariusza: klucz → { wyk, nowe }, wiersze według źródła i warstwy (surowe, po2a, wyk; bez zer); przy echu na
+// klonach — drugi rząd, przez starszą aplikację, obiegi.
+function p6fOdsyl(S, zEchem) {
+  if (!S.odsyl) return null;
+  const o = S.odsyl.podsumuj();
+  const K = o.klony;
+  const wiersze = Object.fromEntries(Object.entries(o.wiersze).filter(([k, v]) => v && /:(surowe|po2a|wyk)$/.test(k)));
+  return sortuj({
+    literal: literalOdsyl([o]), wiersze,
+    ...(zEchem ? { klony: { prob: K.prob, drugiRzad: K.drugiRzad, drugiRzad2a: K.drugiRzad2a, przezStarsza: K.przezStarsza, obiegi: K.obiegi, ponadObiegi: K.ponadObiegi } } : {}),
+  });
+}
+// Literały scenariuszy CI (zmierzone; charakterystyka dzisiejszego stanu). P6F_LITERALY: W1 — D par po scenariuszu
+// (opisD: rodzaj, klucz z etykietami, ścieżki albo strona, klasa), kliniczny — stan kliniczny urządzeń po scenariuszu,
+// W4 — obiegi wymiany, punkt stały z różnicami dozwolonymi (ok), D par i stan kliniczny klonów po pełnej wymianie,
+// fakty — fakty scenariusza. P6F_WYR — naruszenia wyroczni („świat: urządzenie encja etykieta rodzaj [klasa]”;
+// scenariusz spoza listy — bez naruszeń). P6F_ODSYL — licznik (klucz → { wyk, nowe }, wiersze według źródła i warstwy;
+// echo na klonach). Klucze bez ścieżek pól; ścieżki występują tylko w opisach różnic D (wartości W1 i W4.pary, jak
+// w P6_LITERALY). Skutki starszej aplikacji w tych literałach (utrata notatki, retencja, gwiazdka) to znane
+// ograniczenie starszej wersji — naprawa: aktualizacja urządzeń (decyzja właściciela z 2026-11-16;
+// WYR.OGRANICZENIE_STARSZEJ w opisach klas).
+const P6F_LITERALY = {
+  '„Usuń pacjenta” na 221, potem zmiana karty na A: notatka bez ratunku D-21': {
+    W1: { AB: [], BC: [], CA: [] },
+    W4: { kliniczny: { A: 'karty P[v:20 w:21 x:25] | Kosz - | notatki -', B: 'karty P[v:20 w:21 x:25] | Kosz - | notatki -', C: 'karty P[v:20 w:21 x:25] | Kosz - | notatki -' }, obiegi: 1, ok: true, pary: { AB: [], BC: [], CA: [] } },
+    fakty: { A: 'karta jest, notatka brak, nagrobek notatki bez karty', B: 'karta jest, notatka brak, nagrobek notatki bez karty', C: 'karta jest, notatka brak, nagrobek notatki bez karty' },
+    kliniczny: { A: 'karty P[v:20 w:21 x:25] | Kosz - | notatki -', B: 'karty P[v:20 w:21 x:25] | Kosz - | notatki -', C: 'karty P[v:20 w:21 x:25] | Kosz - | notatki -' },
+  },
+  '„Usuń pacjenta” na C, potem zmiana karty na A — C = N (notatka zostaje)': {
+    W1: { AB: [], BC: [], CA: [] },
+    W4: { kliniczny: { A: 'karty P[v:20 w:21 x:25] | Kosz - | notatki n: Fikcyjna treść', B: 'karty P[v:20 w:21 x:25] | Kosz - | notatki n: Fikcyjna treść', C: 'karty P[v:20 w:21 x:25] | Kosz - | notatki n: Fikcyjna treść' }, obiegi: 1, ok: true, pary: { AB: [], BC: [], CA: [] } },
+    fakty: { A: 'karta jest, notatka jest, nagrobek notatki -', B: 'karta jest, notatka jest, nagrobek notatki -', C: 'karta jest, notatka jest, nagrobek notatki -' },
+    kliniczny: { A: 'karty P[v:20 w:21 x:25] | Kosz - | notatki n: Fikcyjna treść', B: 'karty P[v:20 w:21 x:25] | Kosz - | notatki n: Fikcyjna treść', C: 'karty P[v:20 w:21 x:25] | Kosz - | notatki n: Fikcyjna treść' },
+  },
+  '„Usuń pacjenta” na A, zmiana karty na 221 — najpierw zdarzenia do C: notatka bez ratunku D-21': {
+    W1: { AB: [], BC: ['pnotetomb n: deletedWithPatient [pole nieznane starszej aplikacji (221)]', 'wersja P/x: payload.visit [tożsamość wizyty nieznana starszej aplikacji]'], CA: ['pnotetomb n: deletedWithPatient [pole nieznane starszej aplikacji (221)]', 'wersja P/x: payload.visit [tożsamość wizyty nieznana starszej aplikacji]'] },
+    W4: { kliniczny: { A: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -', B: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -', C: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -' }, obiegi: 1, ok: true, pary: { AB: [], BC: ['pnotetomb n: deletedWithPatient [pole nieznane starszej aplikacji (221)]', 'wersja P/x: payload.visit [tożsamość wizyty nieznana starszej aplikacji]'], CA: ['pnotetomb n: deletedWithPatient [pole nieznane starszej aplikacji (221)]', 'wersja P/x: payload.visit [tożsamość wizyty nieznana starszej aplikacji]'] } },
+    fakty: { A: 'karta jest, notatka brak, nagrobek notatki z kartą', B: 'karta jest, notatka brak, nagrobek notatki z kartą', C: 'karta jest, notatka brak, nagrobek notatki bez karty' },
+    kliniczny: { A: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -', B: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -', C: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -' },
+  },
+  '„Usuń pacjenta” na A, zmiana karty na 221 — najpierw pełna kopia C (notatka zostaje)': {
+    W1: { AB: [], BC: ['wersja P/x: payload.visit [tożsamość wizyty nieznana starszej aplikacji]'], CA: ['wersja P/x: payload.visit [tożsamość wizyty nieznana starszej aplikacji]'] },
+    W4: { kliniczny: { A: 'karty P[v:20 w:21 x:26] | Kosz - | notatki n: Fikcyjna treść', B: 'karty P[v:20 w:21 x:26] | Kosz - | notatki n: Fikcyjna treść', C: 'karty P[v:20 w:21 x:26] | Kosz - | notatki n: Fikcyjna treść' }, obiegi: 1, ok: true, pary: { AB: [], BC: ['wersja P/x: payload.visit [tożsamość wizyty nieznana starszej aplikacji]'], CA: ['wersja P/x: payload.visit [tożsamość wizyty nieznana starszej aplikacji]'] } },
+    fakty: { A: 'karta jest, notatka jest, nagrobek notatki -', B: 'karta jest, notatka jest, nagrobek notatki -', C: 'karta jest, notatka jest, nagrobek notatki -' },
+    kliniczny: { A: 'karty P[v:20 w:21 x:26] | Kosz - | notatki n: Fikcyjna treść', B: 'karty P[v:20 w:21 x:26] | Kosz - | notatki n: Fikcyjna treść', C: 'karty P[v:20 w:21 x:26] | Kosz - | notatki n: Fikcyjna treść' },
+  },
+  '„Usuń pacjenta” na A, zmiana karty na C — C = N, najpierw zdarzenia do C (notatka zostaje)': {
+    W1: { AB: [], BC: [], CA: [] },
+    W4: { kliniczny: { A: 'karty P[v:20 w:21 x:26] | Kosz - | notatki n: Fikcyjna treść', B: 'karty P[v:20 w:21 x:26] | Kosz - | notatki n: Fikcyjna treść', C: 'karty P[v:20 w:21 x:26] | Kosz - | notatki n: Fikcyjna treść' }, obiegi: 1, ok: true, pary: { AB: [], BC: [], CA: [] } },
+    fakty: { A: 'karta jest, notatka jest, nagrobek notatki -', B: 'karta jest, notatka jest, nagrobek notatki -', C: 'karta jest, notatka jest, nagrobek notatki -' },
+    kliniczny: { A: 'karty P[v:20 w:21 x:26] | Kosz - | notatki n: Fikcyjna treść', B: 'karty P[v:20 w:21 x:26] | Kosz - | notatki n: Fikcyjna treść', C: 'karty P[v:20 w:21 x:26] | Kosz - | notatki n: Fikcyjna treść' },
+  },
+  'Kosz na 221: echo tożsamości wizyty u odbiorcy pełnej kopii i echo na klonach': {
+    W1: { AB: [], BC: ['kosz v|P: visitIdentity [tożsamość wizyty nieznana starszej aplikacji]'], CA: ['kosz v|P: visitIdentity [tożsamość wizyty nieznana starszej aplikacji]'] },
+    W4: { kliniczny: { A: 'karty P[w:21] | Kosz v@P:20 | notatki -', B: 'karty P[w:21] | Kosz v@P:20 | notatki -', C: 'karty P[w:21] | Kosz v@P:20 | notatki -' }, obiegi: 1, ok: true, pary: { AB: [], BC: ['kosz v|P: visitIdentity [tożsamość wizyty nieznana starszej aplikacji]'], CA: ['kosz v|P: visitIdentity [tożsamość wizyty nieznana starszej aplikacji]'] } },
+    kliniczny: { A: 'karty P[w:21] | Kosz v@P:20 | notatki -', B: 'karty P[w:21] | Kosz v@P:20 | notatki -', C: 'karty P[w:21] | Kosz v@P:20 | notatki -' },
+  },
+  'Drugi rząd przez 221: wpis Kosza z gwiazdką z A do C (C z niewysłaną poprawką), pełna kopia C′ do A′': {
+    W1: { AB: [], BC: ['kosz v|P: gwiazdka, visitIdentity [pole nieznane starszej aplikacji (221)]'], CA: ['kosz v|P: gwiazdka, visitIdentity [pole nieznane starszej aplikacji (221)]'] },
+    W4: { kliniczny: { A: 'karty P[w:21] | Kosz v@P:33* | notatki -', B: 'karty P[w:21] | Kosz v@P:33* | notatki -', C: 'karty P[w:21] | Kosz v@P:33* | notatki -' }, obiegi: 1, ok: true, pary: { AB: [], BC: ['kosz v|P: gwiazdka, visitIdentity [pole nieznane starszej aplikacji (221)]'], CA: ['kosz v|P: gwiazdka, visitIdentity [pole nieznane starszej aplikacji (221)]'] } },
+    kliniczny: { A: 'karty P[w:21] | Kosz v@P:33* | notatki -', B: 'karty P[w:21] | Kosz v@P:33* | notatki -', C: 'karty P[w:21] | Kosz v@P:33* | notatki -' },
+  },
+  'Retencja na 221 po „Scal pacjentów”: jedyny stan wizyty przeniesionej (recentHours 0)': {
+    W1: { AB: [], BC: ['wersja Q/v: tylko B [retencja starszej aplikacji — obecność wersji]'], CA: ['wersja Q/v: tylko A [retencja starszej aplikacji — obecność wersji]'] },
+    W4: { kliniczny: { A: 'karty Q[v:20 g1:21] | Kosz - | notatki -', B: 'karty Q[v:20 g1:21] | Kosz - | notatki -', C: 'karty Q[g1:21] | Kosz - | notatki -' }, obiegi: 1, ok: true, pary: { AB: [], BC: ['wersja Q/v: tylko B [retencja starszej aplikacji — obecność wersji]'], CA: ['wersja Q/v: tylko A [retencja starszej aplikacji — obecność wersji]'] } },
+    fakty: { A: 'wersji 2, wpisów retencji 2', B: 'wersji 2, wpisów retencji 2', C: 'wersji 1, wpisów retencji 2', v: { A: 'Q', B: 'Q', C: 'brak' } },
+    kliniczny: { A: 'karty Q[v:20 g1:21] | Kosz - | notatki -', B: 'karty Q[v:20 g1:21] | Kosz - | notatki -', C: 'karty Q[g1:21] | Kosz - | notatki -' },
+  },
+  'Retencja po „Scal pacjentów” — C = N (bez strat)': {
+    W1: { AB: [], BC: [], CA: [] },
+    W4: { kliniczny: { A: 'karty Q[v:20 g1:21] | Kosz - | notatki -', B: 'karty Q[v:20 g1:21] | Kosz - | notatki -', C: 'karty Q[v:20 g1:21] | Kosz - | notatki -' }, obiegi: 1, ok: true, pary: { AB: [], BC: [], CA: [] } },
+    fakty: { A: 'wersji 2, wpisów retencji 1', B: 'wersji 2, wpisów retencji 1', C: 'wersji 2, wpisów retencji 1', v: { A: 'Q', B: 'Q', C: 'Q' } },
+    kliniczny: { A: 'karty Q[v:20 g1:21] | Kosz - | notatki -', B: 'karty Q[v:20 g1:21] | Kosz - | notatki -', C: 'karty Q[v:20 g1:21] | Kosz - | notatki -' },
+  },
+  'Retencja na 221 z parametrami aplikacji: 8 wizyt z 8 dni sprzed 40–54 dni': {
+    W1: { AB: [], BC: ['wersja P/dz0: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz1: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz2: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz3: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz4: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz5: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz6: tylko B [retencja starszej aplikacji — obecność wersji]'], CA: ['wersja P/dz0: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz1: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz2: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz3: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz4: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz5: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz6: tylko A [retencja starszej aplikacji — obecność wersji]'] },
+    W4: { kliniczny: { A: 'karty P[dz0:20 dz1:21 dz2:22 dz3:23 dz4:24 dz5:25 dz6:26 dz7:27] | Kosz - | notatki -', B: 'karty P[dz0:20 dz1:21 dz2:22 dz3:23 dz4:24 dz5:25 dz6:26 dz7:27] | Kosz - | notatki -', C: 'karty P[dz7:27] | Kosz - | notatki -' }, obiegi: 1, ok: true, pary: { AB: [], BC: ['wersja P/dz0: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz1: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz2: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz3: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz4: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz5: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz6: tylko B [retencja starszej aplikacji — obecność wersji]'], CA: ['wersja P/dz0: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz1: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz2: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz3: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz4: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz5: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz6: tylko A [retencja starszej aplikacji — obecność wersji]'] } },
+    fakty: { A: 'wersji 8, wpisów retencji 7', B: 'wersji 8, wpisów retencji 7', C: 'wersji 1, wpisów retencji 7' },
+    kliniczny: { A: 'karty P[dz0:20 dz1:21 dz2:22 dz3:23 dz4:24 dz5:25 dz6:26 dz7:27] | Kosz - | notatki -', B: 'karty P[dz0:20 dz1:21 dz2:22 dz3:23 dz4:24 dz5:25 dz6:26 dz7:27] | Kosz - | notatki -', C: 'karty P[dz7:27] | Kosz - | notatki -' },
+  },
+  'Retencja na 276 z parametrami aplikacji: nagrobek retencji idzie zdarzeniem': {
+    W1: { AB: [], BC: ['wersja P/dz0: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz1: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz2: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz3: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz4: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz5: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz6: tylko B [retencja starszej aplikacji — obecność wersji]'], CA: ['wersja P/dz0: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz1: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz2: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz3: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz4: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz5: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz6: tylko A [retencja starszej aplikacji — obecność wersji]'] },
+    W4: { kliniczny: { A: 'karty P[dz0:20 dz1:21 dz2:22 dz3:23 dz4:24 dz5:25 dz6:26 dz7:27] | Kosz - | notatki -', B: 'karty P[dz0:20 dz1:21 dz2:22 dz3:23 dz4:24 dz5:25 dz6:26 dz7:27] | Kosz - | notatki -', C: 'karty P[dz7:27] | Kosz - | notatki -' }, obiegi: 1, ok: true, pary: { AB: [], BC: ['wersja P/dz0: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz1: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz2: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz3: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz4: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz5: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz6: tylko B [retencja starszej aplikacji — obecność wersji]'], CA: ['wersja P/dz0: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz1: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz2: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz3: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz4: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz5: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja P/dz6: tylko A [retencja starszej aplikacji — obecność wersji]'] } },
+    fakty: { A: 'wersji 8, wpisów retencji 7', B: 'wersji 8, wpisów retencji 7', C: 'wersji 1, wpisów retencji 7' },
+    kliniczny: { A: 'karty P[dz0:20 dz1:21 dz2:22 dz3:23 dz4:24 dz5:25 dz6:26 dz7:27] | Kosz - | notatki -', B: 'karty P[dz0:20 dz1:21 dz2:22 dz3:23 dz4:24 dz5:25 dz6:26 dz7:27] | Kosz - | notatki -', C: 'karty P[dz7:27] | Kosz - | notatki -' },
+  },
+  'Retencja na 276 po „Scal 5 → 4 → 3” na A': {
+    W1: { AB: [], BC: ['wersja X/c: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja X/g1: tylko B [retencja starszej aplikacji — obecność wersji]'], CA: ['wersja X/c: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja X/g1: tylko A [retencja starszej aplikacji — obecność wersji]'] },
+    W4: { kliniczny: { A: 'karty X[g1:22 c:25 g2:22] | Kosz - | notatki -', B: 'karty X[g1:22 c:25 g2:22] | Kosz - | notatki -', C: 'karty X[g2:22] | Kosz - | notatki -' }, obiegi: 1, ok: true, pary: { AB: [], BC: ['wersja X/c: tylko B [retencja starszej aplikacji — obecność wersji]', 'wersja X/g1: tylko B [retencja starszej aplikacji — obecność wersji]'], CA: ['wersja X/c: tylko A [retencja starszej aplikacji — obecność wersji]', 'wersja X/g1: tylko A [retencja starszej aplikacji — obecność wersji]'] } },
+    fakty: { po: { A: { '0ad8': 1, '2ba5': 1, '2dd5': 1 }, B: { '0ad8': 1, '2ba5': 1, '2dd5': 1 }, C: { '0ad8': 1 } }, przed: { A: { '0ad8': 3, '2ba5': 3, '2dd5': 1 }, B: { '0ad8': 3, '2ba5': 3, '2dd5': 1 }, C: { '0ad8': 3, '2ba5': 3, '2dd5': 1 } } },
+    kliniczny: { A: 'karty X[g1:22 c:25 g2:22] | Kosz - | notatki -', B: 'karty X[g1:22 c:25 g2:22] | Kosz - | notatki -', C: 'karty X[g2:22] | Kosz - | notatki -' },
+  },
+  'Gwiazdka na 221: „Odepnij i usuń”, potem „Przywróć”': {
+    W1: { AB: [], BC: [], CA: [] },
+    W4: { kliniczny: { A: 'karty P[v:20* w:21] | Kosz - | notatki -', B: 'karty P[v:20* w:21] | Kosz - | notatki -', C: 'karty P[v:20* w:21] | Kosz - | notatki -' }, obiegi: 1, ok: true, pary: { AB: [], BC: [], CA: [] } },
+    fakty: { A: 'karta P, rev 2, _pinned 1, _pinnedState jest, _contentAtISO jest', B: 'karta P, rev 2, _pinned 1, _pinnedState jest, _contentAtISO jest', C: 'karta P, rev 2, _pinned 1, _pinnedState jest, _contentAtISO jest' },
+    kliniczny: { A: 'karty P[v:20* w:21] | Kosz - | notatki -', B: 'karty P[v:20* w:21] | Kosz - | notatki -', C: 'karty P[v:20* w:21] | Kosz - | notatki -' },
+  },
+  'Gwiazdka i odpięcie na 221 na wersji zapisanej na 221 (obie kopie bez W3): odbiorca bierze całą nowszą wersję': {
+    W1: { AB: [], BC: ['wersja P/x: payload.visit [tożsamość wizyty nieznana starszej aplikacji]'], CA: ['wersja P/x: payload.visit [tożsamość wizyty nieznana starszej aplikacji]'] },
+    W4: { kliniczny: { A: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -', B: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -', C: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -' }, obiegi: 1, ok: true, pary: { AB: [], BC: ['wersja P/x: payload.visit [tożsamość wizyty nieznana starszej aplikacji]'], CA: ['wersja P/x: payload.visit [tożsamość wizyty nieznana starszej aplikacji]'] } },
+    fakty: { A: 'karta P, rev 2, _pinned 0, _pinnedState brak, _contentAtISO brak', B: 'karta P, rev 2, _pinned 0, _pinnedState brak, _contentAtISO brak', C: 'karta P, rev 2, _pinned 0, _pinnedState brak, _contentAtISO brak' },
+    kliniczny: { A: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -', B: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -', C: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -' },
+  },
+  '276: nowa wersja na C, A dopisuje tożsamość wizyty; echo na klonach': {
+    W1: { AB: [], BC: ['wersja P/x: payload._pinnedState.h, payload.visit [tożsamość wizyty nieznana starszej aplikacji]'], CA: ['wersja P/x: payload._pinnedState.h, payload.visit [tożsamość wizyty nieznana starszej aplikacji]'] },
+    W4: { kliniczny: { A: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -', B: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -', C: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -' }, obiegi: 1, ok: true, pary: { AB: [], BC: ['wersja P/x: payload._pinnedState.h, payload.visit [tożsamość wizyty nieznana starszej aplikacji]'], CA: ['wersja P/x: payload._pinnedState.h, payload.visit [tożsamość wizyty nieznana starszej aplikacji]'] } },
+    fakty: { A: 'karta P, rev 0, _pinned 0, _pinnedState jest, _contentAtISO jest', B: 'karta P, rev 0, _pinned 0, _pinnedState jest, _contentAtISO jest', C: 'karta P, rev 0, _pinned 0, _pinnedState jest, _contentAtISO jest', hakiA: 0 },
+    kliniczny: { A: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -', B: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -', C: 'karty P[v:20 w:21 x:26] | Kosz - | notatki -' },
+  },
+  'Same bieżące urządzenia: Kosz w zwróconej starej karcie, potem „Usuń pacjenta” karty scalonej': {
+    W1: { AB: [], BC: ['kosz x|X: rev [R4a]'], CA: ['kosz x|X: rev [R4a]'] },
+    W4: { kliniczny: { A: 'karty X[y:31] | Kosz x@X:30 | notatki -', B: 'karty X[y:31] | Kosz x@X:30 | notatki -', C: 'karty X[y:31] | Kosz x@X:30 | notatki -' }, obiegi: 2, ok: true, pary: { AB: [], BC: [], CA: [] } },
+    fakty: { A: 'Kosz pod X', B: 'Kosz pod X', C: 'Kosz pod X' },
+    kliniczny: { A: 'karty X[y:31] | Kosz x@X:30 | notatki -', B: 'karty X[y:31] | Kosz x@X:30 | notatki -', C: 'karty X[y:31] | Kosz x@X:30 | notatki -' },
+  },
+  'Przypięcie i odpięcie na 221 wersji z bieżącej aplikacji (odcisk zgodny z treścią): bieżąca aplikacja widzi odpięcie': {
+    W1: { AB: [], BC: [], CA: [] },
+    W4: { kliniczny: { A: 'karty P[v:20 w:21] | Kosz - | notatki -', B: 'karty P[v:20 w:21] | Kosz - | notatki -', C: 'karty P[v:20 w:21] | Kosz - | notatki -' }, obiegi: 1, ok: true, pary: { AB: [], BC: [], CA: [] } },
+    fakty: { A: 'karta P, rev 2, _pinned 0, _pinnedState jest, _contentAtISO jest', B: 'karta P, rev 2, _pinned 0, _pinnedState jest, _contentAtISO jest', C: 'karta P, rev 2, _pinned 0, _pinnedState jest, _contentAtISO jest' },
+    kliniczny: { A: 'karty P[v:20 w:21] | Kosz - | notatki -', B: 'karty P[v:20 w:21] | Kosz - | notatki -', C: 'karty P[v:20 w:21] | Kosz - | notatki -' },
+  },
+  'Poprawka na 221 bez wysłania, „Usuń pacjenta” na A, B zwraca kartę: poprawka usunięta z kartą przed wysłaniem': {
+    W1: { AB: [], BC: ['wersja P/v: tylko B', 'wersja P/w: tylko B'], CA: ['wersja P/v: tylko A', 'wersja P/w: tylko A'] },
+    W4: { kliniczny: { A: 'karty P[v:20 w:21 x:25] | Kosz - | notatki -', B: 'karty P[v:20 w:21 x:25] | Kosz - | notatki -', C: 'karty P[v:20 w:21 x:25] | Kosz - | notatki -' }, obiegi: 2, ok: true, pary: { AB: [], BC: [], CA: [] } },
+    fakty: { A: 'karta P, rev 0, _pinned 0, _pinnedState jest, _contentAtISO jest', B: 'karta P, rev 0, _pinned 0, _pinnedState jest, _contentAtISO jest', C: 'brak' },
+    kliniczny: { A: 'karty P[v:20 w:21 x:25] | Kosz - | notatki -', B: 'karty P[v:20 w:21 x:25] | Kosz - | notatki -', C: 'karty P[x:25] | Kosz - | notatki -' },
+  },
+  'Poprawka na C bez wysłania, „Usuń pacjenta” na A, B zwraca kartę — C = N (poprawka zostaje)': {
+    W1: { AB: [], BC: ['wersja P/v: tylko B', 'wersja P/w: tylko B'], CA: ['wersja P/v: tylko A', 'wersja P/w: tylko A'] },
+    W4: { kliniczny: { A: 'karty P[v:33 w:21 x:25] | Kosz - | notatki -', B: 'karty P[v:33 w:21 x:25] | Kosz - | notatki -', C: 'karty P[v:33 w:21 x:25] | Kosz - | notatki -' }, obiegi: 2, ok: true, pary: { AB: [], BC: [], CA: [] } },
+    fakty: { A: 'karta P, rev 1, _pinned 0, _pinnedState jest, _contentAtISO jest', B: 'karta P, rev 1, _pinned 0, _pinnedState jest, _contentAtISO jest', C: 'brak' },
+    kliniczny: { A: 'karty P[v:33 w:21 x:25] | Kosz - | notatki -', B: 'karty P[v:33 w:21 x:25] | Kosz - | notatki -', C: 'karty P[x:25] | Kosz - | notatki -' },
+  },
+};
+const P6F_WYR = {
+  '„Usuń pacjenta” na 221, potem zmiana karty na A: notatka bez ratunku D-21': [
+    'p6f W1: A notatka n utrata [notatka bez ratunku D-21 (starsza aplikacja)]',
+    'p6f W1: B notatka n utrata [notatka bez ratunku D-21 (starsza aplikacja)]',
+    'p6f W1: C notatka n utrata [notatka bez ratunku D-21 (starsza aplikacja)]',
+    'p6f W4: A notatka n utrata [notatka bez ratunku D-21 (starsza aplikacja)]',
+    'p6f W4: B notatka n utrata [notatka bez ratunku D-21 (starsza aplikacja)]',
+    'p6f W4: C notatka n utrata [notatka bez ratunku D-21 (starsza aplikacja)]',
+  ],
+  '„Usuń pacjenta” na A, zmiana karty na 221 — najpierw zdarzenia do C: notatka bez ratunku D-21': [
+    'p6f W1: A notatka n utrata [notatka bez ratunku D-21 (starsza aplikacja)]',
+    'p6f W1: B notatka n utrata [notatka bez ratunku D-21 (starsza aplikacja)]',
+    'p6f W1: C notatka n utrata [notatka bez ratunku D-21 (starsza aplikacja)]',
+    'p6f W4: A notatka n utrata [notatka bez ratunku D-21 (starsza aplikacja)]',
+    'p6f W4: B notatka n utrata [notatka bez ratunku D-21 (starsza aplikacja)]',
+    'p6f W4: C notatka n utrata [notatka bez ratunku D-21 (starsza aplikacja)]',
+  ],
+  'Retencja na 221 po „Scal pacjentów”: jedyny stan wizyty przeniesionej (recentHours 0)': [
+    'p6f W1: C wizyta v retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W4: C wizyta v retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+  ],
+  'Retencja na 221 z parametrami aplikacji: 8 wizyt z 8 dni sprzed 40–54 dni': [
+    'p6f W1: C wizyta dz0 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W1: C wizyta dz1 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W1: C wizyta dz2 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W1: C wizyta dz3 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W1: C wizyta dz4 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W1: C wizyta dz5 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W1: C wizyta dz6 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W4: C wizyta dz0 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W4: C wizyta dz1 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W4: C wizyta dz2 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W4: C wizyta dz3 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W4: C wizyta dz4 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W4: C wizyta dz5 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W4: C wizyta dz6 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+  ],
+  'Retencja na 276 z parametrami aplikacji: nagrobek retencji idzie zdarzeniem': [
+    'p6f W1: C wizyta dz0 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W1: C wizyta dz1 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W1: C wizyta dz2 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W1: C wizyta dz3 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W1: C wizyta dz4 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W1: C wizyta dz5 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W1: C wizyta dz6 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W4: C wizyta dz0 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W4: C wizyta dz1 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W4: C wizyta dz2 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W4: C wizyta dz3 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W4: C wizyta dz4 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W4: C wizyta dz5 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W4: C wizyta dz6 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+  ],
+  'Retencja na 276 po „Scal 5 → 4 → 3” na A': [
+    'p6f W1: A wizyta g3 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (odbiorca zachował głowę wizyty)]',
+    'p6f W1: A wizyta g4 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (odbiorca zachował głowę wizyty)]',
+    'p6f W1: B wizyta g3 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (odbiorca zachował głowę wizyty)]',
+    'p6f W1: B wizyta g4 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (odbiorca zachował głowę wizyty)]',
+    'p6f W1: C wizyta c retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W1: C wizyta g1 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W1: C wizyta g3 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W1: C wizyta g4 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W4: A wizyta g3 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (odbiorca zachował głowę wizyty)]',
+    'p6f W4: A wizyta g4 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (odbiorca zachował głowę wizyty)]',
+    'p6f W4: B wizyta g3 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (odbiorca zachował głowę wizyty)]',
+    'p6f W4: B wizyta g4 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (odbiorca zachował głowę wizyty)]',
+    'p6f W4: C wizyta c retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W4: C wizyta g1 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W4: C wizyta g3 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+    'p6f W4: C wizyta g4 retencja usunęła ostatni stan wizyty [retencja starszej aplikacji (urządzenie przycinające)]',
+  ],
+  'Gwiazdka na 221: „Odepnij i usuń”, potem „Przywróć”': [
+    'p6f W1: A wizyta v gwiazdka [gwiazdka ze starszej aplikacji]',
+    'p6f W1: B wizyta v gwiazdka [gwiazdka ze starszej aplikacji]',
+    'p6f W1: C wizyta v gwiazdka [gwiazdka ze starszej aplikacji]',
+    'p6f W4: A wizyta v gwiazdka [gwiazdka ze starszej aplikacji]',
+    'p6f W4: B wizyta v gwiazdka [gwiazdka ze starszej aplikacji]',
+    'p6f W4: C wizyta v gwiazdka [gwiazdka ze starszej aplikacji]',
+  ],
+  'Same bieżące urządzenia: Kosz w zwróconej starej karcie, potem „Usuń pacjenta” karty scalonej': [
+    'p6f W1: A wizyta x wskrzeszenie [D-4 A (Kosz w zwróconej starej karcie)]',
+    'p6f W1: B wizyta x wskrzeszenie [D-4 A (Kosz w zwróconej starej karcie)]',
+    'p6f W1: C wizyta x wskrzeszenie [D-4 A (Kosz w zwróconej starej karcie)]',
+    'p6f W4: A wizyta x wskrzeszenie [D-4 A (Kosz w zwróconej starej karcie)]',
+    'p6f W4: B wizyta x wskrzeszenie [D-4 A (Kosz w zwróconej starej karcie)]',
+    'p6f W4: C wizyta x wskrzeszenie [D-4 A (Kosz w zwróconej starej karcie)]',
+  ],
+  'Poprawka na 221 bez wysłania, „Usuń pacjenta” na A, B zwraca kartę: poprawka usunięta z kartą przed wysłaniem': [
+    'p6f W1: A wizyta v treść [zmiana starszej aplikacji usunięta z kartą przed wysłaniem]',
+    'p6f W1: B wizyta v treść [zmiana starszej aplikacji usunięta z kartą przed wysłaniem]',
+    'p6f W1: C wizyta v utrata [karta częściowa (nagrobek przegrał lokalnie, bez haka H1)]',
+    'p6f W1: C wizyta w utrata [karta częściowa (nagrobek przegrał lokalnie, bez haka H1)]',
+    'p6f W4: A wizyta v treść [zmiana starszej aplikacji usunięta z kartą przed wysłaniem]',
+    'p6f W4: B wizyta v treść [zmiana starszej aplikacji usunięta z kartą przed wysłaniem]',
+    'p6f W4: C wizyta v treść [zmiana starszej aplikacji usunięta z kartą przed wysłaniem]',
+  ],
+  'Poprawka na C bez wysłania, „Usuń pacjenta” na A, B zwraca kartę — C = N (poprawka zostaje)': [
+    'p6f W1: C wizyta v utrata [karta częściowa (nagrobek przegrał lokalnie, bez haka H1)]',
+    'p6f W1: C wizyta w utrata [karta częściowa (nagrobek przegrał lokalnie, bez haka H1)]',
+  ],
+};
+const P6F_ODSYL = {
+  '„Usuń pacjenta” na 221, potem zmiana karty na A: notatka bez ratunku D-21': { literal: {}, wiersze: {} },
+  '„Usuń pacjenta” na C, potem zmiana karty na A — C = N (notatka zostaje)': { literal: { 'zdarzenie|pnote|spoza|inne': { nowe: 0, wyk: 1 } }, wiersze: { 'zdarzenie:po2a': 1, 'zdarzenie:surowe': 1, 'zdarzenie:wyk': 1 } },
+  '„Usuń pacjenta” na A, zmiana karty na 221 — najpierw zdarzenia do C: notatka bez ratunku D-21': { literal: {}, wiersze: { 'blob221:po2a': 2, 'blob221:surowe': 2 } },
+  '„Usuń pacjenta” na A, zmiana karty na 221 — najpierw pełna kopia C (notatka zostaje)': { literal: { 'blob221|pnote|w ładunku|inne': { nowe: 0, wyk: 1 }, 'zdarzenie|pnote|spoza|inne': { nowe: 0, wyk: 1 } }, wiersze: { 'blob221:po2a': 3, 'blob221:surowe': 3, 'blob221:wyk': 1, 'zdarzenie:po2a': 1, 'zdarzenie:surowe': 1, 'zdarzenie:wyk': 1 } },
+  '„Usuń pacjenta” na A, zmiana karty na C — C = N, najpierw zdarzenia do C (notatka zostaje)': { literal: { 'zdarzenie|pnote|spoza|inne': { nowe: 0, wyk: 1 } }, wiersze: { 'zdarzenie:po2a': 1, 'zdarzenie:surowe': 1, 'zdarzenie:wyk': 1 } },
+  'Kosz na 221: echo tożsamości wizyty u odbiorcy pełnej kopii i echo na klonach': { klony: { drugiRzad: 0, drugiRzad2a: 0, obiegi: [0, 0, 0, 0], ponadObiegi: 0, prob: 1, przezStarsza: { doInnych: 0, doNadawcy: 0, po2a: 1, prob: 1 } }, literal: {}, wiersze: { 'blob221:po2a': 2, 'blob221:surowe': 2 } },
+  'Drugi rząd przez 221: wpis Kosza z gwiazdką z A do C (C z niewysłaną poprawką), pełna kopia C′ do A′': { klony: { drugiRzad: 0, drugiRzad2a: 0, obiegi: [1, 0, 0, 0], ponadObiegi: 0, prob: 1, przezStarsza: { doInnych: 0, doNadawcy: 1, po2a: 2, prob: 2, zapisow: 2 } }, literal: { 'blob221|stomb|w ładunku|inne': { nowe: 2, wyk: 2 }, 'zdarzenie|stomb|spoza|R4a': { nowe: 1, wyk: 1 }, 'zdarzenie|stomb|w ładunku|R4a': { nowe: 1, wyk: 1 } }, wiersze: { 'blob221:po2a': 2, 'blob221:surowe': 2, 'blob221:wyk': 2, 'zdarzenie:po2a': 2, 'zdarzenie:surowe': 2, 'zdarzenie:wyk': 2 } },
+  'Retencja na 221 po „Scal pacjentów”: jedyny stan wizyty przeniesionej (recentHours 0)': { literal: {}, wiersze: {} },
+  'Retencja po „Scal pacjentów” — C = N (bez strat)': { literal: {}, wiersze: {} },
+  'Retencja na 221 z parametrami aplikacji: 8 wizyt z 8 dni sprzed 40–54 dni': { literal: {}, wiersze: {} },
+  'Retencja na 276 z parametrami aplikacji: nagrobek retencji idzie zdarzeniem': { literal: {}, wiersze: {} },
+  'Retencja na 276 po „Scal 5 → 4 → 3” na A': { literal: { 'zdarzenie|karta|w ładunku|nagłówek karty': { nowe: 4, wyk: 4 } }, wiersze: { 'zdarzenie276:po2a': 2, 'zdarzenie276:surowe': 2, 'zdarzenie:po2a': 4, 'zdarzenie:surowe': 4, 'zdarzenie:wyk': 4 } },
+  'Gwiazdka na 221: „Odepnij i usuń”, potem „Przywróć”': { literal: { 'blob221|stomb|w ładunku|inne': { nowe: 2, wyk: 2 } }, wiersze: { 'blob221:po2a': 2, 'blob221:surowe': 2, 'blob221:wyk': 2 } },
+  'Gwiazdka i odpięcie na 221 na wersji zapisanej na 221 (obie kopie bez W3): odbiorca bierze całą nowszą wersję': { literal: {}, wiersze: { 'blob221:po2a': 6, 'blob221:surowe': 6 } },
+  '276: nowa wersja na C, A dopisuje tożsamość wizyty; echo na klonach': { klony: { drugiRzad: 0, drugiRzad2a: 0, obiegi: [0, 0, 0, 0], ponadObiegi: 0, prob: 1, przezStarsza: { doInnych: 0, doNadawcy: 0, po2a: 1, prob: 1 } }, literal: {}, wiersze: { 'zdarzenie276:po2a': 2, 'zdarzenie276:surowe': 2 } },
+  'Same bieżące urządzenia: Kosz w zwróconej starej karcie, potem „Usuń pacjenta” karty scalonej': { literal: { 'zdarzenie|karta|w ładunku|nagłówek karty': { nowe: 1, wyk: 1 } }, wiersze: { 'zdarzenie:po2a': 1, 'zdarzenie:surowe': 3, 'zdarzenie:wyk': 1 } },
+  'Przypięcie i odpięcie na 221 wersji z bieżącej aplikacji (odcisk zgodny z treścią): bieżąca aplikacja widzi odpięcie': { literal: {}, wiersze: {} },
+  'Poprawka na 221 bez wysłania, „Usuń pacjenta” na A, B zwraca kartę: poprawka usunięta z kartą przed wysłaniem': { literal: {}, wiersze: {} },
+  'Poprawka na C bez wysłania, „Usuń pacjenta” na A, B zwraca kartę — C = N (poprawka zostaje)': { literal: {}, wiersze: {} },
+};
+describe('A ≡ B, flota ze starszą aplikacją: scenariusze deterministyczne (literały: D par, stan kliniczny, W4, wyrocznia, licznik)', () => {
+  d1();
+  for (const [nr, [nazwa, sc]] of Object.entries(P6F).entries()) {
+    it.skipIf(!sc.ci && !P6F_WSZYSTKIE)(`${sc.ci ? '' : '(ręcznie) '}${nazwa}`, async () => {
+      const u = await p6fSwiat(nr, sc);
+      const w = await p6fOcen(u, nazwa);
+      const fakty = sc.fakty ? await sc.fakty(u) : {};
+      const literal = sortuj({ ...w.literal, ...(sc.fakty ? { fakty } : {}) });
+      const odsyl = p6fOdsyl(u.S, !!sc.echo);
+      console.log(`E3-AB scenariusz floty ${nr} „${nazwa}”`, JSON.stringify({ literal, wyr: w.wyr, odsyl, przyklady: u.S.odsyl ? u.S.odsyl.podsumuj().klony.przyklady : null, dziennik: u.S.dziennik }));
+      if (process.env.E2_AB_WYNIKI) appendFileSync(process.env.E2_AB_WYNIKI, JSON.stringify({ typ: 'p6f', nr, nazwa, app: sc.app, literal, wyr: w.wyr, odsyl, dziennik: u.S.dziennik }) + '\n');
+      if (!sc.ci) return;
+      expect.soft({ w4ok: w.w4ok, czerwone: w.czerwone }, `${nazwa}: W4 stabilne z różnicami dozwolonymi; wyrocznia bez naruszeń bez klasy`).toEqual({ w4ok: true, czerwone: [] });
+      if (sc.wymog) expect.soft(await sc.wymog.fakt(u), `${nazwa}: ${sc.wymog.opis}`).toEqual(sc.wymog.oczekiwane);
+      if (!P6F_DOMYSLNE) return;
+      expect.soft(literal, `P6F_LITERALY[„${nazwa}”]`).toEqual(P6F_LITERALY[nazwa]);
+      expect.soft(w.wyr, `P6F_WYR[„${nazwa}”]`).toEqual(P6F_WYR[nazwa] || []);
+      expect.soft(odsyl, `P6F_ODSYL[„${nazwa}”]`).toEqual(P6F_ODSYL[nazwa]);
+    }, 30_000);
+  }
+});
+
+
+// ══ Znane usterki bieżącej aplikacji (ręcznie; dziś czerwone; E3-PR0b, E2_AB_ZNANE_USTERKI=1) ═══════════════════════
+// Naruszenia wyroczni bez klasy, których mechanizm leży w bieżącej aplikacji (odtwarzają się na samych bieżących
+// urządzeniach): bez klasy w tabeli wyjątków i bez literału; scenariusz deterministyczny jest dziś czerwony
+// (oczekiwanie: w każdym świecie wyrocznia bez naruszeń bez klasy). Każdy przypadek w trzech światach z tymi samymi
+// operacjami, każdy świat osobną asercją: 'W1' — po samych zdarzeniach (żywe urządzenia), 'W4' — te same zdarzenia,
+// a po nich pełna wymiana na świeżych klonach (w4Trzy), 'bloby' — transport tylko pełną kopią (Y scala eksport X).
+// Fakty (położenie i treść encji) — w komunikacie asercji i w druku. Światy swiat(880 + nr), Math.random z
+// rng(0x6880 + nr), nr — pozycja w ZNANE_USTERKI (nowy przypadek tylko na końcu). Każdy przypadek ma pole naprawa
+// (PR, który go naprawi; po naprawie przypadek staje się testem wejściowym tego PR): notatka pacjenta zmieniona na
+// dwóch urządzeniach — E3-PR0b2 (decyzja właściciela z 2026-11-16: wygrywa późniejsza zmiana); „Usuń pacjenta”
+// duplikatu karty po „Scal pacjentów” — E3-PR0e (plan D-4, decyzja 4a; do tego czasu duplikat scalać ponownie).
+const ZNANE_USTERKI_RECZNIE = process.env.E2_AB_ZNANE_USTERKI === '1';
+// Transport świata: zdarzenia (dostawa z hakami; do i od 221 — kolejka przez applyEncryptedDelta i pełna kopia) albo
+// same pełne kopie.
+async function ddDo(u, X, Y) {
+  if (u.tryb === 'bloby') return p6blob(X, Y);
+  if (Y.app === 'S221') return dostawaDoStarszej(u.S, X, Y);
+  if (X.app === 'S221') return scalBlob(u.S, X, Y);
+  return dostawa(u.S, X, Y, { w2s: false });
+}
+async function ddSpoczynek(u) {
+  if (u.tryb === 'bloby') return spoczynekBlobow(...p6fUrz(u));
+  if (u.C.app === 'S221') return spoczynekFloty221(u.S, u.A, u.B, u.C);
+  return spoczynekWszystkich(u.S, p6fUrz(u));
+}
+const ddNotatka = (u, U, tresc, krokMs = 60e3) => { krok(krokMs); return mutacja(u.S, U, `notatka „${tresc}”`, () => U.v.savePatientNote({ id: u.nId, patientId: u.P, title: 'Fikcyjna', body: tresc, category: 'inne' })); };
+const ddTrescNotatki = (u) => Object.fromEntries(p6fUrz(u).map((U) => { const x = (U.stan.patientNotes || []).find((q) => q.id === u.nId); return [U.nazwa, x ? `${x.body} (rev ${x.rev})` : 'brak']; }));
+const ddPolozenie = (u, sid) => Object.fromEntries(p6fUrz(u).map((U) => {
+  const p = gdzie(U, sid);
+  if (p) { const s = p.snapshots.find((q) => q.snapshotId === sid); return [U.nazwa, `karta ${etykieta(u.n, p.patientId)}, ${s.payload && s.payload.user ? s.payload.user.weight : '?'} kg`]; }
+  return [U.nazwa, (U.stan.snapshotTombstones || []).some((e) => e.snapshotId === sid) ? 'wpis Kosza' : `brak${kartaW(U.stan, u.X) ? '' : ' (karta X usunięta)'}`];
+}));
+// „Usuń pacjenta” zwróconej starej karty po „Scal pacjentów”: A — karta Y (3; wizyta a) i karta X (5; wizyta v,
+// 33,6 kg), B i C — bliźniaki. B scala X → Y; A bez wiedzy o scaleniu poprawia v w X na 41 kg — zwykła poprawka podnosi
+// chwilę zapisu karty, więc X wraca (D-4 A: duplikat karty); C, który ma X z v od A, usuwa X („Usuń pacjenta”) razem
+// z v. Mechanizm po stronie bieżącej aplikacji: „Usuń pacjenta” usuwa kartę razem ze wszystkimi jej wersjami (Bpu_usun,
+// vilda_vault.js:9441), także duplikat zwrócony poprawką, której nie ma w karcie scalonej; wersja z ładunku pod kartą,
+// gdy tutaj leży pod inną kartą, idzie według Bsw_decyzja (:3806). Wyrocznia: v (przez alias „Scal pacjentów” X → Y)
+// ma żyć w Y z 41 kg — „Usuń pacjenta” X nie jest dla niej operacją na v (tests/support/ostatnia-zmiana.mjs:493,
+// rozwiaz(alias) karty wizyty ≠ X). Wynik zależy od tego, co wie każde urządzenie, gdy dochodzi do niego nagrobek X
+// (kolejnosc):
+// - 'wszyscy' — A, B i C znają powrót X (v w X z 41 kg) przed usunięciem: v nie ma na żadnym urządzeniu w żadnym
+//   świecie (W1, W4, bloby — „utrata”);
+// - 'B bez powrotu' — B ma tylko swoje scalenie (v w Y z 33,6 kg), nagrobek X dochodzi do niego przed powrotem X od A:
+//   W1 — „utrata” na A i C, B ma v w Y z 41 kg (nagrobek X wygrywa z powrotem X od A, a poprawka v przechodzi do Y,
+//   gdzie B ma v — Bsw_decyzja); W4 — bez naruszeń (pełna wymiana roznosi v z B); bloby — v w Y z 33,6 kg na wszystkich
+//   („treść”: poprawka zginęła);
+// - 'C bez scalenia' — C dostaje scalenie od B dopiero po usunięciu: W1 — „utrata” na A i B, C ma v w Y z 33,6 kg
+//   („treść”); W4 — v w Y z 33,6 kg na wszystkich („treść”); bloby — „utrata” na wszystkich.
+// Zależnie od kolejności ginie więc wizyta (utrata) albo sama poprawka (wizyta zostaje w Y z 33,6 kg — „treść”).
+// W losowej flocie 221 (profil pełny, ziarno 4, świat 300 004, bez delt; tam X — karta 5, Y — karta 3, C — sejf 221):
+// W1 floty, krok 133 — „utrata” na A i C, a B ma v w X z 41 kg („inna karta” z klasą D-4 A, dozwolona; nagrobek C
+// dochodzi do B dopiero pełną kopią); W4 floty, krok 133 — „utrata” na A, B i C; krok 142 — W1 jak w kroku 133, a W4:
+// v w X (41 kg) na A, B i C — „inna karta” z klasą D-4 A (dozwolona), bez utraty, bo B zapisał w kroku 138 nową wersję
+// X (później niż nagrobek C), więc X wraca z v na wszystkich urządzeniach (znów D-4 A).
+async function ddDwieKarty(S, app = 'N') {
+  const A = await urzadzenie(S, 'A');
+  krok(); const r3 = await A.d.zapiszKarte(3, { masa: 30 });
+  krok(); const r5 = await A.d.zapiszKarte(5, { masa: 33.6 });
+  krok(); ustawStan(A, await eksport(A)); A.Q.length = 0;
+  const { B, C } = await p6fUrzadzenia(S, A, app);
+  S.stat.obiegiPonadLimit = [];
+  return { A, B, C, Y: r3.patientId, X: r5.patientId, v: r5.snapshotId, n: new Map([[r3.patientId, 'Y'], [r5.patientId, 'X'], [r3.snapshotId, 'a'], [r5.snapshotId, 'v']]) };
+}
+function ddUsunZwrocona(kolejnosc, app = 'N') {
+  return {
+    baza: (S) => ddDwieKarty(S, app),
+    kroki: async (u) => {
+      const { S, A, B, C } = u;
+      krok(60e3); await mutacja(S, B, 'Scal pacjentów 5 → 3', () => B.v.mergePatients(u.X, u.Y));
+      krok(60e3);
+      const s = (await A.v.getPatient(u.X)).snapshots.find((q) => q.snapshotId === u.v);
+      await mutacja(S, A, 'poprawka 5/v 41 kg (bez wiedzy o scaleniu)', () => A.v.updateSnapshotPayload(u.X, u.v, { ...s.payload, user: { ...s.payload.user, weight: 41 } }, { preserveSavedAt: true }));
+      krok(60e3);
+      if (kolejnosc !== 'C bez scalenia') await ddDo(u, B, C);
+      await ddDo(u, B, A); await ddDo(u, A, C);
+      if (kolejnosc === 'wszyscy') await ddDo(u, A, B);
+      u.przedUsun = ddPolozenie(u, u.v);
+      krok(60e3); await mutacja(S, C, 'usuń pacjenta 5', () => C.v.removePatient(u.X));
+      krok(60e3);
+      if (kolejnosc === 'C bez scalenia') { await ddDo(u, A, B); await ddDo(u, C, A); await ddDo(u, B, C); await ddDo(u, C, B); } else { await ddDo(u, C, A); await ddDo(u, C, B); }
+      await ddSpoczynek(u);
+    },
+    fakty: (u) => ({ przedUsun: u.przedUsun, koniec: ddPolozenie(u, u.v) }),
+    naprawa: 'do naprawy w E3-PR0e (decyzja właściciela 4a)',
+  };
+}
+const ZNANE_USTERKI = {
+  // Notatka pacjenta: A edytuje dwa razy (rev 3), B raz, 5 s później (rev 2); reguła notatek „wyższy rev, przy równym
+  // nowsza data” w scalaniu synchronizacji (Le, vilda_vault.js:11986; odpowiednik w podglądzie „Scal kopię konta”:
+  // Bks_wygrywaRev, :5435–5438; docs/clinical/ALGORITHMS.md P-KOPIA-DANE-KONTA, ok. 32144; plan — notatki pacjenta LWW
+  // z rev na pierwszym miejscu) zostawia tekst A we wszystkich trzech światach na A, B i C, a wyrocznia oczekuje
+  // późniejszej edycji B („treść” bez klasy). Wersje wizyt mają od D-7 zasadę odwrotną (wygrywa późniejsza zmiana).
+  'notatka pacjenta: wyższy rev wygrywa z późniejszą edycją na innym urządzeniu': {
+    baza: async (S) => {
+      const A = await urzadzenie(S, 'A');
+      krok(); const r = await A.d.zapiszKarte(1);
+      krok(); const nId = (await A.v.savePatientNote({ patientId: r.patientId, title: 'Fikcyjna', body: 'Fikcyjna treść', category: 'inne' })).id;
+      krok(); ustawStan(A, await eksport(A)); A.Q.length = 0;
+      const { B, C } = await p6fUrzadzenia(S, A, 'N');
+      return { A, B, C, P: r.patientId, nId, n: new Map([[r.patientId, 'P'], [nId, 'n']]) };
+    },
+    kroki: async (u) => {
+      await ddNotatka(u, u.A, 'Fikcyjna treść A1'); await ddNotatka(u, u.A, 'Fikcyjna treść A2');
+      await ddNotatka(u, u.B, 'Fikcyjna treść B1 (później)', 5e3);
+      krok(); await ddDo(u, u.A, u.B); await ddDo(u, u.B, u.A); await ddSpoczynek(u);
+    },
+    fakty: ddTrescNotatki,
+    naprawa: 'do naprawy w E3-PR0b2 (decyzja właściciela z 2026-11-16: wygrywa późniejsza zmiana)',
+  },
+  '„Usuń pacjenta” zwróconej starej karty po „Scal pacjentów” — wszyscy znają powrót karty przed usunięciem': ddUsunZwrocona('wszyscy'),
+  '„Usuń pacjenta” zwróconej starej karty po „Scal pacjentów” — B zna tylko scalenie, nagrobek dochodzi do niego przed powrotem karty': ddUsunZwrocona('B bez powrotu'),
+  '„Usuń pacjenta” zwróconej starej karty po „Scal pacjentów” — C dostaje scalenie dopiero po usunięciu': ddUsunZwrocona('C bez scalenia'),
+  '„Usuń pacjenta” zwróconej starej karty po „Scal pacjentów” — B zna tylko scalenie; kontrola: C na 221 (ten sam wynik)': ddUsunZwrocona('B bez powrotu', 'S221'),
+};
+async function ddSwiat(nr, sc, tryb) {
+  if (!(nr < 20)) throw new Error(`znana usterka ${nr}: poza światami 880–899`);
+  ustaw(START);
+  const S = swiat(880 + nr);
+  const los = rng(0x6880 + nr);
+  vi.spyOn(Math, 'random').mockImplementation(() => (S.losAlt || los)());
+  S.w2s = false; S.nrKroku = 0; S.wyrSwiat = 'znane usterki';
+  const u = await sc.baza(S);
+  u.S = S; u.tryb = tryb;
+  await sc.kroki(u);
+  for (const U of p6fUrz(u)) ustawStan(U, await eksport(U));
+  S.wyrEtyk = (id) => etykieta(u.n, id);
+  return u;
+}
+const ddNar = (lista) => lista.map((x) => `${x.swiat}: ${x.urz} ${x.encja} ${x.et} ${x.rodzaj} [${x.klasa || 'bez klasy'}] oczekiwane ${JSON.stringify(x.oczek)} fakt ${JSON.stringify(x.fakt)}`);
+describe.skipIf(!ZNANE_USTERKI_RECZNIE)('A ≡ B, znane usterki bieżącej aplikacji (ręcznie; dziś czerwone): przyczyna po stronie bieżącej aplikacji, bez klasy i bez literału — do naprawy w kolejnych PR', () => {
+  d1();
+  for (const [nr, [nazwa, sc]] of Object.entries(ZNANE_USTERKI).entries()) {
+    it(`${nazwa} — ${sc.naprawa}: wyrocznia bez naruszeń bez klasy po samych zdarzeniach (W1), po pełnej wymianie (W4) i przy samych pełnych kopiach (bloby)`, async () => {
+      const u = await ddSwiat(nr, sc, 'zdarzenia');
+      const stare = p6fUrz(u).filter(starszaAplikacja).map((U) => U.nazwa);
+      const W1 = wyrOcena(u.S, 'W1', nazwa, await wyrWidoki(u.S, { A: u.A, B: u.B, C: u.C }), { stare });
+      const faktyW1 = await sc.fakty(u);
+      const w = await w4Trzy(u.S, p6fUrz(u), u.n);
+      const W4 = wyrOcena(u.S, 'W4', nazwa, w.wyr, { stare });
+      delete w.wyr;
+      await sprzatnijUrzadzenia(); vi.restoreAllMocks();
+      const ub = await ddSwiat(nr, sc, 'bloby');
+      const bloby = wyrOcena(ub.S, 'bloby', nazwa, await wyrWidoki(ub.S, { A: ub.A, B: ub.B, C: ub.C }), { stare });
+      const faktyBlobow = await sc.fakty(ub);
+      const wynik = { W1: ddNar(W1), W4: ddNar(W4), bloby: ddNar(bloby), faktyW1, W4kliniczny: w.opis, faktyBlobow };
+      console.log(`E3-AB znana usterka „${nazwa}” — ${sc.naprawa}`, JSON.stringify({ ...wynik, dziennik: u.S.dziennik }));
+      if (process.env.E2_AB_WYNIKI) appendFileSync(process.env.E2_AB_WYNIKI, JSON.stringify({ typ: 'znana usterka', nr, nazwa, naprawa: sc.naprawa, ...wynik, dziennik: u.S.dziennik, dziennikBlobow: ub.S.dziennik }) + '\n');
+      const opis = JSON.stringify({ faktyW1, W4kliniczny: w.opis, faktyBlobow }, null, 1);
+      for (const [swiatN, lista] of [['W1', W1], ['W4', W4], ['bloby', bloby]]) expect.soft(ddNar(WYR.bezWyjatku(lista, swiatN)), `${nazwa} — ${sc.naprawa}, świat ${swiatN}\n${opis}`).toEqual([]);
+    }, 60_000);
+  }
+});
+
+// ══ Stres: echo jednego scalenia pełnej kopii w dużym świecie (E3-PR0b, P-ZBIEZNOSC-ZDARZEN; deterministyczny) ════════
+// Najgorsze echo jednego scalenia: cała praca urządzenia starszej aplikacji dochodzi do bieżącego jedną pełną kopią, bez
+// wcześniejszych delt i zdarzeń. Świat swiat(970 + nr), Math.random z rng(0x6970 + nr), nr — pozycja wariantu
+// w STRES_WARIANTY_ZNANE.
+// PRZYGOTOWANIE: C — bliźniak PUSTEGO A (wariant CI: sejf 221 z retencją v1); na A STRES_KART kart × 4 wersje (treść
+//   uprzęży, co trzecia karta z gwiazdką na jednej wersji); B — bliźniak A z tymi kartami; dane do C pełną kopią A → C
+//   (scalBlob, przed włączeniem licznika). Na C w każdej karcie: dwie najstarsze wersje do Kosza („Odepnij i usuń”),
+//   poprawka najnowszej (33 kg, bez zmiany chwili zapisu) i nowa wersja — razem 2 × STRES_KART koszy, STRES_KART poprawek
+//   i STRES_KART nowych wersji. Operacje na C i A wołane wprost na sejfie (stres nie ocenia wyroczni). Delt z C nie ma:
+//   delta karty z ≥ 3 wersjami odpada progiem (PROG_DELT_221), a każda wcześniejsza dostawa zmniejszyłaby echo.
+// SCALENIE: C → A (scalBlob; licznik — źródło blob221, blob276 albo blobN). Echo C → B: B jest bliźniakiem A, a eksporty
+//   A i B przed scaleniem są równe (asercja), więc scalenie tego samego ładunku daje na B tę samą stronę. W wariancie CI
+//   strona B to kopia strony A; ręcznie („C→A i C→B”) scalenie C → B idzie wprost (asercja: strona B = strona A).
+//   Warianty z konfliktem (A zmienia później te same wizyty: gwiazdka najstarszej wersji, w co drugiej karcie poprawka
+//   najnowszej) — scalenie C → B zawsze wprost, bez asercji równości.
+// LICZNIK (jedna minuta slotu: strony A i B w tym samym kroku zegara): na urządzenie wiersze surowe, po2a (reguła
+//   naiwna: kanon 2a bez reguły pola), wyk i nowe; klucze literału warstwy po2a i wyk; bajty i żądania reguły naiwnej
+//   w uprzęży; bajty realne reguły naiwnej (LO.realne: 32–45 KiB na treść wizyty, 3 KiB bez treści) na urządzenie i na
+//   slot, żądania na urządzenie przy górnej granicy; flagi „> 4 MiB” (LO.LIMITY.bajtowSlotMin).
+// ASERCJE (każdy wariant): eksport A = eksport B przed scaleniem (bez konfliktu); budżet minuty slotu warstwy wyk
+//   (LO.budzetSlotow: ≤ 600 wierszy, ≤ 4 MiB przy górnej granicy, ≤ 20 żądań na urządzenie) bez przekroczeń — przy
+//   warstwie wyk równej po2a (bez reguły pola) minuta slotu ma 240 wierszy i 11 059 200 B, więc budżet czerwienieje;
+//   obieg kontrolny (A → C, potem C → A) — 0 wierszy surowych; wyjątki builderów nośników 0; pola zawsze obecne
+//   w ładunku od bieżącej wersji. Literał STRES_ODSYL — wariant CI przy 40 kartach, treści uprzęży i regule T
+//   (STRES_DOMYSLNY).
+// Ręcznie: E2_AB_STRES_WARIANTY=<lista po przecinku> (klucze STRES_WARIANTY_ZNANE), E2_AB_STRES_KART=<n>,
+//   E2_AB_STRES_TRESC=<n> (wypełniacz: n pseudolosowych liter w treści każdej wersji, z osobnego generatora — bajty
+//   uprzęży bliższe realnym), E2_AB_STRES=0 — bez bloku; E2_AB_WYNIKI — wiersz typ 'stres'.
+const STRES = process.env.E2_AB_STRES !== '0';
+const STRES_KART = Number(process.env.E2_AB_STRES_KART) || 40;
+const STRES_TRESC = Number(process.env.E2_AB_STRES_TRESC) || 0;
+const STRES_WARIANTY = (process.env.E2_AB_STRES_WARIANTY || 'C→A').split(',').map((s) => s.trim()).filter(Boolean);
+const STRES_DOMYSLNY = STRES_KART === 40 && !STRES_TRESC && ODSYL_REGULA === 'T';
+// app — sejf C; wprost — scalenie C → B wykonane (inaczej strona B z równości eksportów bliźniaków); konflikt — zmiany A.
+const STRES_WARIANTY_ZNANE = Object.freeze({
+  'C→A': Object.freeze({ app: 'S221', wprost: false, konflikt: false }),
+  'C→A i C→B': Object.freeze({ app: 'S221', wprost: true, konflikt: false }),
+  'C→A+konflikt': Object.freeze({ app: 'S221', wprost: true, konflikt: true }),
+  '276→A': Object.freeze({ app: 'S276', wprost: false, konflikt: false }),
+  'N→A': Object.freeze({ app: 'N', wprost: false, konflikt: false }),
+  'N→A+konflikt': Object.freeze({ app: 'N', wprost: true, konflikt: true }),
+});
+const ZRODLO_PELNEJ = Object.freeze({ S221: 'blob221', S276: 'blob276', N: 'blobN' });
+const literyFikcyjne = (los, n) => { let s = ''; for (let i = 0; i < n; i += 1) s += String.fromCharCode(97 + Math.floor(los() * 26)); return s; };
+const wersjeOdNajstarszej = async (U, pid) => (await U.v.getPatient(pid)).snapshots.slice().sort((x, y) => ((x.savedAtISO || '') < (y.savedAtISO || '') ? -1 : 1));
+// Literał stresu (wariant CI „C→A”: 40 kart, treść uprzęży, reguła T; zmierzony). naUrzadzenie — wiersze echa scalenia
+// C → A na A według warstwy (surowe — każda różnica; po2a — reguła naiwna; wyk — warstwa wykonalna, czyli to, co bieżąca
+// aplikacja musiałaby odesłać; nowe — wyk bez haków i przeglądu); klasyPo2a, klasyWyk — klucz źródło|rodzaj|w ładunku
+// albo spoza|klasa → liczba wierszy tej warstwy (bez ścieżek pól i bez bajtów; 40 wersji nowych na C i 80 wpisów Kosza
+// z C dostaje na A tożsamość wizyty, której 221 nie zapisuje — warstwa wyk tę różnicę tłumi); naiwnaUprzaz — wiersze,
+// bajty kopert (eventBytes) i żądania reguły naiwnej na A w uprzęży; naiwnaRealne — bajty realne reguły naiwnej [dolna,
+// górna] na urządzenie i na minutę slotu (A + B) oraz żądania na urządzenie przy górnej granicy; flagi — przekroczenie
+// 4 MiB; wykSlot — minuta slotu warstwy wyk (wiersze, bajty realne przy górnej granicy, zgodność z budżetem);
+// kontrolna — wiersze surowe obiegu kontrolnego. Zmiana reguły odsyłania (E3-PR0c, E3-PR0d) albo modelu stresu
+// przepisuje ten literał.
+const STRES_ODSYL = {
+  'C→A': {
+    naUrzadzenie: { surowe: 120, po2a: 120, wyk: 0, nowe: 0 },
+    klasyPo2a: { 'snap|w ładunku|tożsamość wizyty': 40, 'stomb|w ładunku|tożsamość wizyty': 80 },
+    klasyWyk: {},
+    naiwnaUprzaz: { wierszy: 120, bajty: 208260, zadan: 1 },
+    naiwnaRealne: { urzadzenie: [3932160, 5529600], slot: [7864320, 11059200], zadanNaUrzadzenieGorna: 6 },
+    flagi: { 'urządzenie, dolna > 4 MiB': false, 'urządzenie, górna > 4 MiB': true, 'slot, dolna > 4 MiB': true },
+    wykSlot: { wierszy: 0, realneDo: 0, zgodny: true },
+    kontrolna: 0,
+  },
+};
+const rozWierszy = (po, przed, zr) => Object.fromEntries(Object.entries(po).filter(([k]) => k.startsWith(zr + '|') || k.startsWith(zr + ':')).map(([k, v]) => [k, v - (przed[k] || 0)]).filter(([, v]) => v));
+const warstwyStresu = (r, zr) => ({ surowe: r[`${zr}:surowe`] || 0, po2a: r[`${zr}:po2a`] || 0, wyk: r[`${zr}:wyk`] || 0, nowe: r[`${zr}:nowe`] || 0 });
+const kluczeBezZrodla = (r, zr) => sortuj(Object.fromEntries(Object.entries(r).map(([k, v]) => [k.slice(zr.length + 1), v])));
+const opisStrony = (s) => JSON.stringify([s.wiersze.map((w) => [w.tresci, w.bajty]).sort(), s.wiersze2a.map((w) => [w.tresci, w.bajty]).sort()]);
+async function stres(wariant) {
+  const wr = STRES_WARIANTY_ZNANE[wariant];
+  if (!wr) throw new Error(`stres: nieznany wariant „${wariant}” (${Object.keys(STRES_WARIANTY_ZNANE).join(', ')})`);
+  const nr = Object.keys(STRES_WARIANTY_ZNANE).indexOf(wariant);
+  const t0 = performance.now();
+  ustaw(START);
+  const S = swiat(970 + nr);
+  const los = rng(0x6970 + nr);
+  vi.spyOn(Math, 'random').mockImplementation(() => (S.losAlt || los)());
+  S.w2s = false; S.nrKroku = 0;
+  const losTresci = rng(0x57E5 + nr);
+  const glowa = (i, o) => (STRES_TRESC ? { ...naglowek(i, o), opisFikcyjny: literyFikcyjne(losTresci, STRES_TRESC) } : naglowek(i, o));
+  const zapisz = (U, i, o, zapis = {}) => U.v.savePatient(glowa(i, o), { dedup: false, ...zapis });
+  const A = await urzadzenie(S, 'A');
+  const C = await urzadzenie(S, 'C', A, wr.app === 'N' ? {} : { app: wr.app });
+  const karty = [];
+  for (let i = 1; i <= STRES_KART; i += 1) {
+    krok(); const r = await zapisz(A, i, { masa: 20 + i / 10 }); karty.push(r.patientId);
+    for (let j = 1; j <= 3; j += 1) { krok(); await zapisz(A, i, { wzrost: 100 + j, masa: 20 + j }, { patientId: r.patientId, forceNewSnapshot: true }); }
+    if (i % 3 === 0) { const p = await A.v.getPatient(r.patientId); krok(); await A.v.setSnapshotPinned(r.patientId, p.snapshots[1].snapshotId, true); }
+  }
+  ustawStan(A, await eksport(A)); A.Q.length = 0;
+  const B = await urzadzenie(S, 'B', A);
+  await scalBlob(S, A, C);
+  const tBudowy = performance.now() - t0;
+  S.odsyl = nowyLicznik();
+  for (const [i, pid] of karty.entries()) {
+    const sn = await wersjeOdNajstarszej(C, pid);
+    for (const s of sn.slice(0, 2)) { krok(); await C.v.moveSnapshotToTrash(pid, s.snapshotId, { odepnij: true }); }
+    const s = sn[sn.length - 1];
+    krok(); await C.v.updateSnapshotPayload(pid, s.snapshotId, { ...s.payload, user: { ...s.payload.user, weight: 33 } }, { preserveSavedAt: true });
+    krok(); await zapisz(C, i + 1, { wzrost: 140, masa: 30 }, { patientId: pid, forceNewSnapshot: true });
+  }
+  ustawStan(C, await eksport(C));
+  if (wr.konflikt) {
+    for (const [i, pid] of karty.entries()) {
+      const sn = await wersjeOdNajstarszej(A, pid);
+      krok(); await A.v.setSnapshotPinned(pid, sn[0].snapshotId, true);
+      if (i % 2 === 0) { const s = sn[sn.length - 1]; krok(); await A.v.updateSnapshotPayload(pid, s.snapshotId, { ...s.payload, user: { ...s.payload.user, weight: 35 } }, { preserveSavedAt: true }); }
+    }
+    ustawStan(A, await eksport(A));
+  }
+  const rowneAB = JSON.stringify(kanon(A.stan)) === JSON.stringify(kanon(B.stan));
+  krok(60e3);
+  const L = S.odsyl, zr = ZRODLO_PELNEJ[wr.app];
+  const stanL = () => ({ wiersze: { ...L.wiersze }, literal: { ...L.literal }, literal2a: { ...L.literal2a }, literalNowe: { ...L.literalNowe } });
+  const p0 = stanL(), s0 = L.strony.length;
+  const t1 = performance.now();
+  await scalBlob(S, C, A);
+  const pA = stanL();
+  if (wr.wprost) await scalBlob(S, C, B);
+  const tScalenia = performance.now() - t1;
+  const pB = stanL();
+  const naA = { wiersze: rozWierszy(pA.wiersze, p0.wiersze, zr), po2a: rozWierszy(pA.literal2a, p0.literal2a, zr), wyk: rozWierszy(pA.literal, p0.literal, zr), nowe: rozWierszy(pA.literalNowe, p0.literalNowe, zr) };
+  const naB = wr.wprost ? { wiersze: rozWierszy(pB.wiersze, pA.wiersze, zr) } : null;
+  const stronaA = L.strony[s0];
+  const stronaB = wr.wprost ? L.strony[s0 + 1] : { ...stronaA, dev: 'B', opis: `${stronaA.opis} (strona B z równości eksportów A i B)` };
+  if (!stronaA || !stronaB || stronaA.t !== stronaB.t) throw new Error('stres: brak stron scalenia C → A i C → B w jednej minucie slotu');
+  const naiwna = (s) => ({ t: s.t, dev: s.dev, wiersze: s.wiersze2a });
+  const budzet = LO.budzetSlotow([stronaA, stronaB]);
+  const budzetNaiwny = LO.budzetSlotow([naiwna(stronaA), naiwna(stronaB)]);
+  const reA = LO.realne(stronaA.wiersze2a);
+  const slotN = budzetNaiwny.maksRealne, slotW = budzet.maksRealne;
+  const MIB4 = LO.LIMITY.bajtowSlotMin;
+  const bajtyA = stronaA.wiersze2a.map((w) => w.bajty);
+  // obieg kontrolny: C scala pełną kopię A, potem A znów pełną kopię C — echo 0
+  krok(60e3);
+  const w1 = { ...L.wiersze };
+  await scalBlob(S, A, C);
+  await scalBlob(S, C, A);
+  const kontrolna = Object.entries(L.wiersze).filter(([k]) => k.endsWith(':surowe')).reduce((n, [k, v]) => n + v - (w1[k] || 0), 0);
+  const calosc = LO.budzetSlotow([...L.strony, ...(wr.wprost ? [] : [stronaB])]);
+  const literal = sortuj({
+    naUrzadzenie: warstwyStresu(naA.wiersze, zr),
+    klasyPo2a: kluczeBezZrodla(naA.po2a, zr), klasyWyk: kluczeBezZrodla(naA.wyk, zr),
+    naiwnaUprzaz: { wierszy: bajtyA.length, bajty: bajtyA.reduce((a, b) => a + b, 0), zadan: LO.partie(bajtyA).zadan },
+    naiwnaRealne: { urzadzenie: [reA.od, reA.do], slot: [slotN.realneOd, slotN.realneDo], zadanNaUrzadzenieGorna: slotN.zadanMaks },
+    flagi: { 'urządzenie, dolna > 4 MiB': reA.od > MIB4, 'urządzenie, górna > 4 MiB': reA.do > MIB4, 'slot, dolna > 4 MiB': slotN.realneOd > MIB4 },
+    wykSlot: { wierszy: slotW.wierszy, realneDo: slotW.realneDo, zgodny: slotW.zgodny },
+    kontrolna,
+  });
+  const zielen = {
+    'eksport A = eksport B przed scaleniem (bliźniaki, bez konfliktu)': wr.konflikt || rowneAB,
+    'budżet minuty slotu warstwy wyk przekroczony (≤ 600 wierszy, ≤ 4 MiB realnie, ≤ 20 żądań na urządzenie)': calosc.przekroczone.map((x) => `t ${x.t}: ${x.wierszy} wierszy, ${x.realneDo} B, ${x.zadanMaks} żądań`),
+    'obieg kontrolny: wiersze surowe': kontrolna,
+    'wyjątki builderów nośników': L.bladBuildera,
+    'pola zawsze obecne: encje od bieżącej wersji bez pola': L.polaZawsze.bezPola,
+    ...(wr.wprost && !wr.konflikt ? { 'strona C → B wprost = strona C → A': opisStrony(stronaB) === opisStrony(stronaA) } : {}),
+  };
+  const o = L.podsumuj();
+  return { wariant, kart: STRES_KART, tresc: STRES_TRESC, literal, zielen, naB: naB && warstwyStresu(naB.wiersze, zr), koszC: (C.stan.snapshotTombstones || []).length,
+    blobBajty: JSON.stringify(await C.v.exportSyncPayload()).length, tlumi: o.tlumi, przyklady: o.przyklady.slice(0, 6), budzetNaiwny: { slot: slotN, urz: slotN.urz },
+    ms: { budowa: Math.round(tBudowy), scalenie: Math.round(tScalenia), licznik: o.ms, razem: Math.round(performance.now() - t0) } };
+}
+const ZIELEN_STRESU = (wr) => ({
+  'eksport A = eksport B przed scaleniem (bliźniaki, bez konfliktu)': true,
+  'budżet minuty slotu warstwy wyk przekroczony (≤ 600 wierszy, ≤ 4 MiB realnie, ≤ 20 żądań na urządzenie)': [],
+  'obieg kontrolny: wiersze surowe': 0,
+  'wyjątki builderów nośników': 0,
+  'pola zawsze obecne: encje od bieżącej wersji bez pola': 0,
+  ...(wr.wprost && !wr.konflikt ? { 'strona C → B wprost = strona C → A': true } : {}),
+});
+describe.skipIf(!STRES || !ODSYL)('A ≡ B, flota ze starszą aplikacją: stres — echo jednego scalenia pełnej kopii w dużym świecie (budżet minuty slotu, literał STRES_ODSYL)', () => {
+  d1();
+  for (const wariant of STRES_WARIANTY) {
+    it(`${wariant}, ${STRES_KART} kart${STRES_TRESC ? `, wypełniacz ${STRES_TRESC} liter` : ''}: eksport A = eksport B, budżet minuty slotu warstwy wyk, obieg kontrolny 0${STRES_DOMYSLNY && STRES_ODSYL[wariant] ? '; literał STRES_ODSYL' : ''}`, async () => {
+      const w = await stres(wariant);
+      console.log(`E3-AB stres ${wariant}`, JSON.stringify(w));
+      if (process.env.E2_AB_WYNIKI) appendFileSync(process.env.E2_AB_WYNIKI, JSON.stringify({ typ: 'stres', regula: ODSYL_REGULA, ...w }) + '\n');
+      expect.soft(w.zielen, `stres ${wariant}\n${JSON.stringify({ przyklady: w.przyklady, literal: w.literal }, null, 1)}`).toEqual(ZIELEN_STRESU(STRES_WARIANTY_ZNANE[wariant]));
+      if (STRES_DOMYSLNY && STRES_ODSYL[wariant]) expect.soft(w.literal, `STRES_ODSYL[„${wariant}”]`).toEqual(STRES_ODSYL[wariant]);
+    }, 60_000);
+  }
 });
