@@ -28,7 +28,7 @@ function magazyn() {
   };
 }
 
-function urzadzenie(pliki) {
+function urzadzenie(pliki, ustawienia = {}) {
   const win = {
     crypto: globalThis.crypto, TextEncoder, TextDecoder, btoa: globalThis.btoa, atob: globalThis.atob,
     localStorage: magazyn(), sessionStorage: magazyn(),
@@ -37,6 +37,7 @@ function urzadzenie(pliki) {
     document: { addEventListener() {}, removeEventListener() {}, hidden: false },
   };
   win.window = win; win.self = win; win.top = win;
+  for (const [klucz, wartosc] of Object.entries(ustawienia)) win.localStorage.setItem(klucz, wartosc);
   for (const plik of pliki) loadBrowserScript(plik, win);
   const vault = win.VildaVault, adapter = vault.createInMemoryAdapter();
   vault.setStorageAdapter(adapter);
@@ -44,9 +45,9 @@ function urzadzenie(pliki) {
 }
 
 let licznik = 0;
-async function sejf(pliki = ['vilda_crypto.js', 'vilda_vault.js'], opcje = {}) {
+async function sejf(pliki = ['vilda_crypto.js', 'vilda_vault.js'], opcje = {}, ustawienia = {}) {
   licznik += 1;
-  const d = urzadzenie(pliki);
+  const d = urzadzenie(pliki, ustawienia);
   await d.vault.createUser(`Fikcyjne#Chwila!${licznik}`, { label: `Fikcyjny sejf chwili zapisu ${licznik}`, iterations: 10000, ...opcje });
   d.uid = d.vault.getCurrentUser().userId;
   return d;
@@ -102,6 +103,31 @@ async function pozniejszaZmianaPrzyRownymRev(s, zmianaA, zmianaB) {
   return { naEkranie, poScaleniu };
 }
 
+// B bez sieci poprawia notatkę dwa razy, A raz — później niż B. Scalenie B → A przyjmuje wersję B
+// (wyższy rev), choć jej chwila zapisu jest WCZEŚNIEJSZA niż chwila wersji na ekranie A. Porównanie
+// chwil musi pytać „czy w sejfie jest inna wersja”, a nie „czy późniejsza”.
+async function innaWersjaZWczesniejszaChwila(s, zmianyB, zmianaA) {
+  for (const zmiana of zmianyB) {
+    krok();
+    await s.B.vault.savePatientNote({ patientId: s.patientId, id: s.id, ...zmiana });
+  }
+  krok();
+  await s.A.vault.savePatientNote({ patientId: s.patientId, id: s.id, ...zmianaA });
+  const naEkranie = await s.A.vault.getPatientNote(s.id);
+  await wyslij(s.B, s.A);
+  const poScaleniu = await s.A.vault.getPatientNote(s.id);
+  expect(poScaleniu.rev, 'scalenie przyjęło wersję B z wyższym numerem').toBeGreaterThan(naEkranie.rev);
+  expect(poScaleniu.updatedAtISO < naEkranie.updatedAtISO, 'wersja w sejfie ma wcześniejszą chwilę zapisu niż wersja na ekranie').toBe(true);
+  krok();
+  return { naEkranie, poScaleniu };
+}
+
+const WARTOSCI_JAK_BRAK_POLA = [
+  ['pusty napis', ''],
+  ['null', null],
+  ['liczba', Date.parse('2026-11-16T08:01:00.000Z')],
+];
+
 describe('E3-PR0b2a — edytor notatki: konflikt po chwili zapisu wersji na ekranie', () => {
   it('scalenie przy równym rev przyniosło późniejszą treść: zapis z edytora otwartego na starej wersji zatrzymuje się', async () => {
     const s = await dwaUrzadzenia();
@@ -120,6 +146,24 @@ describe('E3-PR0b2a — edytor notatki: konflikt po chwili zapisu wersji na ekra
       .toBe('Dawka 75 od jutra (drugie urządzenie).');
     expect((await s.A.vault.getPatientNote(s.id)).body, 'nic się nie zapisało')
       .toBe('Dawka 75 od jutra (drugie urządzenie).');
+  });
+
+  it('scalenie przyniosło inną wersję z WCZEŚNIEJSZĄ chwilą zapisu (i wyższym rev): zapis z edytora też się zatrzymuje', async () => {
+    const s = await dwaUrzadzenia();
+    const { naEkranie, poScaleniu } = await innaWersjaZWczesniejszaChwila(s,
+      [{ title: 'Wizyta', body: 'B: pierwsza poprawka bez sieci.' }, { title: 'Wizyta', body: 'B: dawka 75 od jutra (druga poprawka bez sieci).' }],
+      { title: 'Wizyta', body: 'A: poprawka zapisana później.' });
+    expect(poScaleniu.body).toBe('B: dawka 75 od jutra (druga poprawka bez sieci).');
+
+    const wynik = await s.A.vault.savePatientNote({
+      patientId: s.patientId, id: s.id, title: 'Wizyta', body: 'A: dopisek na wersji z ekranu.',
+      baseRev: naEkranie.rev, baseUpdatedAtISO: naEkranie.updatedAtISO,
+    });
+
+    expect(wynik.conflict, 'w sejfie jest inna wersja niż na ekranie — wcześniejsza chwila też się liczy').toBe(true);
+    expect(wynik.current.body).toBe('B: dawka 75 od jutra (druga poprawka bez sieci).');
+    expect((await s.A.vault.getPatientNote(s.id)).body, 'nic się nie zapisało')
+      .toBe('B: dawka 75 od jutra (druga poprawka bez sieci).');
   });
 
   it('ta sama chwila zapisu przy wyższym rev (zmienił się sam numer wersji) nie jest konfliktem', async () => {
@@ -179,11 +223,7 @@ describe('E3-PR0b2a — edytor notatki: konflikt po chwili zapisu wersji na ekra
     expect((await s.A.vault.getPatientNote(s.id)).body).toBe('Zapis bez chwili.');
   });
 
-  it.each([
-    ['pusty napis', ''],
-    ['null', null],
-    ['liczba', Date.parse('2026-11-16T08:01:00.000Z')],
-  ])('baseUpdatedAtISO jako %s działa jak brak pola (decyduje rev)', async (_opis, wartosc) => {
+  it.each(WARTOSCI_JAK_BRAK_POLA)('baseUpdatedAtISO jako %s działa jak brak pola (decyduje rev)', async (_opis, wartosc) => {
     const s = await dwaUrzadzenia();
     const przed = await s.A.vault.getPatientNote(s.id);
     krok();
@@ -238,6 +278,39 @@ describe('E3-PR0b2a — wykonanie przypomnienia: konflikt po chwili zapisu wiers
     expect(koniec.dueDateISO, 'termin z drugiego urządzenia zostaje').toContain('2026-12-10');
     expect(koniec.body).toBe('Przełożone na drugim urządzeniu: nie wykonywać przed wynikiem.');
     expect(await s.A.vault.listPatientNotesForPatient(s.patientId)).toHaveLength(ileNotatek);
+  });
+
+  it('„przełóż” po scaleniu innej wersji z WCZEŚNIEJSZĄ chwilą zapisu (i wyższym rev): konflikt, termin z drugiego urządzenia zostaje', async () => {
+    const s = await dwaUrzadzenia(przypomnienie);
+    const { naEkranie } = await innaWersjaZWczesniejszaChwila(s,
+      [{ body: 'B: pierwsza poprawka bez sieci.' }, { body: 'B: przełożone, nie wykonywać przed wynikiem.', dueDateISO: '2026-12-10' }],
+      { body: 'A: ustalenia zapisane później.' });
+
+    const wynik = await s.A.vault.saveReminderOutcome({
+      id: s.id, patientId: s.patientId, baseRev: naEkranie.rev, baseUpdatedAtISO: naEkranie.updatedAtISO,
+      operationId: operacja(), action: 'reschedule', dateISO: '2026-11-25', text: '',
+    });
+
+    expect(wynik).toMatchObject({ saved: false, conflict: true, reason: 'conflict' });
+    const koniec = await s.A.vault.getPatientNote(s.id);
+    expect(koniec.dueDateISO, 'termin z drugiego urządzenia zostaje').toContain('2026-12-10');
+    expect(koniec.body).toBe('B: przełożone, nie wykonywać przed wynikiem.');
+  });
+
+  it.each(WARTOSCI_JAK_BRAK_POLA)('baseUpdatedAtISO jako %s działa jak brak pola (decyduje dokładny rev)', async (_opis, wartosc) => {
+    const s = await dwaUrzadzenia(przypomnienie);
+    const przed = await s.A.vault.getPatientNote(s.id);
+    krok();
+    const prosba = (baseRev) => ({
+      id: s.id, patientId: s.patientId, baseRev, baseUpdatedAtISO: wartosc,
+      operationId: operacja(), action: 'reschedule', dateISO: '2026-11-25', text: '',
+    });
+
+    expect(await s.A.vault.saveReminderOutcome(prosba(przed.rev + 1)), 'inny rev nadal daje konflikt')
+      .toMatchObject({ saved: false, conflict: true, reason: 'conflict' });
+    expect(await s.A.vault.saveReminderOutcome(prosba(przed.rev)), 'zgodny rev zapisuje — wartość nie udaje podanej chwili')
+      .toMatchObject({ saved: true, id: s.id });
+    expect((await s.A.vault.getPatientNote(s.id)).dueDateISO).toContain('2026-11-25');
   });
 
   it('„wykonane” z kolejnym krokiem z widoku sprzed scalenia: konflikt, sprawa otwarta, bez kolejnego kroku', async () => {
@@ -401,6 +474,44 @@ describe('E3-PR0b2a — wynik Klirensu: zmiana i usunięcie po chwili zapisu wer
     }
   });
 
+  it.each(['zmiana', 'usunięcie'])('%s po scaleniu innej wersji z WCZEŚNIEJSZĄ chwilą zapisu (i wyższym rev): konflikt, zostaje komentarz z drugiego urządzenia', async (rodzaj) => {
+    const s = await dwaUrzadzenia(pomiar);
+    const { naEkranie } = await innaWersjaZWczesniejszaChwila(s,
+      [{ body: 'B: pierwszy komentarz bez sieci.' }, { body: 'B: drugi komentarz bez sieci.' }],
+      { body: 'A: komentarz zapisany później.' });
+
+    const wynik = rodzaj === 'zmiana'
+      ? await s.A.vault.updateExistingPatientNote(edycja(s, naEkranie))
+      : await s.A.vault.removeExistingPatientNote({ id: s.id, patientId: s.patientId, baseRev: naEkranie.rev, baseUpdatedAtISO: naEkranie.updatedAtISO });
+
+    expect(wynik).toMatchObject({ id: s.id, reason: 'conflict', conflict: true });
+    expect(wynik[rodzaj === 'zmiana' ? 'updated' : 'removed']).toBe(false);
+    const koniec = await s.A.vault.getPatientNote(s.id);
+    expect(koniec.body).toBe('B: drugi komentarz bez sieci.');
+    expect(koniec.labResult.valueNum).toBe(45);
+    expect(await nagrobki(s.A)).not.toContain(s.id);
+  });
+
+  it.each(WARTOSCI_JAK_BRAK_POLA)('baseUpdatedAtISO jako %s działa jak brak pola: decyduje dokładny rev przy zmianie i usunięciu', async (_opis, wartosc) => {
+    const s = await dwaUrzadzenia(pomiar);
+    const przed = await s.A.vault.getPatientNote(s.id);
+    krok();
+
+    expect(await s.A.vault.updateExistingPatientNote(edycja(s, przed, { baseRev: przed.rev + 1, baseUpdatedAtISO: wartosc })), 'inny rev nadal daje konflikt')
+      .toMatchObject({ updated: false, reason: 'conflict' });
+    expect(await s.A.vault.updateExistingPatientNote(edycja(s, przed, { baseUpdatedAtISO: wartosc })), 'zgodny rev zmienia wynik')
+      .toMatchObject({ id: s.id, updated: true });
+    const poZmianie = await s.A.vault.getPatientNote(s.id);
+    expect(poZmianie.labResult.valueNum).toBe(13.6);
+    krok();
+
+    expect(await s.A.vault.removeExistingPatientNote({ id: s.id, patientId: s.patientId, baseRev: poZmianie.rev + 1, baseUpdatedAtISO: wartosc }), 'inny rev nadal daje konflikt')
+      .toMatchObject({ removed: false, reason: 'conflict' });
+    expect(await s.A.vault.removeExistingPatientNote({ id: s.id, patientId: s.patientId, baseRev: poZmianie.rev, baseUpdatedAtISO: wartosc }), 'zgodny rev usuwa')
+      .toEqual({ id: s.id, removed: true });
+    expect(await s.A.vault.getPatientNote(s.id)).toBeNull();
+  });
+
   it.each([0, 2])('bez baseUpdatedAtISO decyduje dokładny rev: baseRev=%s przy rev 1 to konflikt zmiany i usunięcia', async (baseRev) => {
     const s = await dwaUrzadzenia(pomiar);
     const przed = await s.A.vault.getPatientNote(s.id);
@@ -410,5 +521,67 @@ describe('E3-PR0b2a — wynik Klirensu: zmiana i usunięcie po chwili zapisu wer
     expect(await s.A.vault.updateExistingPatientNote(bezChwili)).toMatchObject({ updated: false, reason: 'conflict', rev: 1 });
     expect(await s.A.vault.removeExistingPatientNote({ id: s.id, patientId: s.patientId, baseRev })).toMatchObject({ removed: false, reason: 'conflict', rev: 1 });
     expect(await s.A.vault.getPatientNote(s.id)).toMatchObject({ rev: 1, body: 'Fikcyjna ocena.' });
+  });
+});
+
+describe('E3-PR0b2a — skutek uboczny: ratunek D-21 przesuwa chwilę zapisu bez zmiany treści', () => {
+  // Ratunek D-21 (P-NOTATKI-ZA-KARTA): A usuwa pacjenta, B w tym czasie dopisuje wizytę; po scaleniu
+  // ładunku A karta na B zostaje, a jej notatki dostają nową chwilę zapisu — rev i treść bez zmian.
+  // Edytor i formularz wykonania otwarte przed ratunkiem widzą „inną wersję” i zatrzymują zapis, choć
+  // treść jest ta sama. Kierunek bezpieczny (nic nie nadpisane, nic nie zgubione), zgodny z projektem;
+  // ograniczenie opisane w docs/clinical/ALGORITHMS.md (E3-PR0b2a).
+  const RETENCJA = { vildaRetention: '0' };
+  const PLIKI = ['vilda_crypto.js', 'vilda_retention.js', 'vilda_vault.js'];
+  const pacjent = (height, weight) => ({
+    name: 'Fikcyjny Ratunek',
+    user: { lastName: 'Fikcyjny', firstName: 'Ratunek', dobISO: '2016-03-12', sex: 'M', height, weight },
+  });
+
+  it('zapis z edytora i wykonanie przypomnienia zatrzymują się, nic nie nadpisano; ponowienie na wersji z sejfu zapisuje', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(teraz);
+    const A = await sejf(PLIKI, {}, RETENCJA), B = await sejf(PLIKI, {}, RETENCJA);
+    krok();
+    const { patientId } = await A.vault.savePatient(pacjent(120, 22), { dedup: false });
+    krok();
+    await A.vault.savePatient(pacjent(125, 24), { dedup: false, patientId });
+    krok(1000);
+    const n1 = await A.vault.savePatientNote({ patientId, title: 'Fikcyjna obserwacja', body: 'Fikcyjna treść n1.', category: 'followup', dueDateISO: '2026-11-30' });
+    krok(1000);
+    const n2 = await A.vault.savePatientNote({ patientId, title: 'Fikcyjna kontrola', body: 'Fikcyjna treść n2.', category: 'followup', dueDateISO: '2026-11-30' });
+    await wyslij(A, B);
+    const edytor = await B.vault.getPatientNote(n1.id), formularz = await B.vault.getPatientNote(n2.id);
+    krok();
+    await A.vault.removePatient(patientId);
+    krok();
+    await B.vault.savePatient(pacjent(130, 26), { dedup: false, patientId });
+    krok(5000);
+    await wyslij(A, B);
+
+    const po = await B.vault.getPatientNote(n1.id);
+    expect(po, 'karta i notatka zostają na B').not.toBeNull();
+    expect({ rev: po.rev, body: po.body }, 'ratunek: rev i treść bez zmian').toEqual({ rev: edytor.rev, body: edytor.body });
+    expect(po.updatedAtISO > edytor.updatedAtISO, 'ratunek: nowa chwila zapisu').toBe(true);
+    krok();
+
+    const tresc = { patientId, id: n1.id, title: 'Fikcyjna obserwacja', body: 'Fikcyjna treść n1. Dopisek lekarza.' };
+    const zapis = await B.vault.savePatientNote({ ...tresc, baseRev: edytor.rev, baseUpdatedAtISO: edytor.updatedAtISO });
+    expect(zapis.conflict, 'fałszywy konflikt — bezpieczny kierunek: zapis się zatrzymuje').toBe(true);
+    expect(zapis.current.body, 'wersja z sejfu ma tę samą treść co ekran').toBe(edytor.body);
+    expect((await B.vault.getPatientNote(n1.id)).body).toBe(edytor.body);
+    const nadpisz = await B.vault.savePatientNote({ ...tresc, baseRev: zapis.rev, baseUpdatedAtISO: zapis.current.updatedAtISO });
+    expect(nadpisz.conflict, '„Nadpisz moją wersją” (obie wartości z current) zapisuje tekst lekarza').toBeUndefined();
+    expect((await B.vault.getPatientNote(n1.id)).body).toBe('Fikcyjna treść n1. Dopisek lekarza.');
+
+    const prosba = (wiersz) => ({
+      id: n2.id, patientId, baseRev: wiersz.rev, baseUpdatedAtISO: wiersz.updatedAtISO,
+      operationId: operacja(), action: 'complete', dateISO: '2026-11-16', text: 'Fikcyjne wykonanie.',
+    });
+    expect(await B.vault.saveReminderOutcome(prosba(formularz)), 'formularz otwarty przed ratunkiem')
+      .toMatchObject({ saved: false, conflict: true, reason: 'conflict' });
+    expect((await B.vault.getPatientNote(n2.id)).completedAtISO).toBeNull();
+    expect(await B.vault.saveReminderOutcome(prosba(await B.vault.getPatientNote(n2.id))), 'ponowienie na aktualnym zapisie')
+      .toMatchObject({ saved: true, id: n2.id });
+    expect((await B.vault.getPatientNote(n2.id)).completedAtISO).toBeTruthy();
   });
 });

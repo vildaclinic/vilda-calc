@@ -138,6 +138,21 @@ test('scalenie przy tym samym numerze wersji w czasie otwartego formularza zatrz
   expect(stored.body).toBe('Fikcyjna nowsza treść z innego urządzenia.'); expect(stored.completedAtISO).toBeNull();
 });
 
+// E3-PR0b2a: formularz podaje chwilę ZAPISU wiersza (updatedAtISO), nie chwilę utworzenia. Wpis poprawiany
+// przed otwarciem Przypomnień ma te chwile różne — pomylenie ich dawałoby fałszywy konflikt przy każdym takim wpisie.
+test('wpis poprawiony przed otwarciem Przypomnień zapisuje wykonanie bez fałszywego konfliktu', async ({ page }) => {
+  const { notes, ids } = await setup(page);
+  await page.evaluate(async ({ id, patientId }) => { await new Promise((r) => { setTimeout(r, 20); }); await window.VildaVault.savePatientNote({ id, patientId, body: 'Fikcyjna treść poprawiona wcześniej.' }); }, { id: notes[0], patientId: ids.a });
+  const before = await page.evaluate(id => window.VildaVault.getPatientNote(id), notes[0]);
+  expect(before.updatedAtISO, 'wpis był poprawiany po utworzeniu').not.toBe(before.createdAtISO);
+  await open(page); await select(page, notes[0]);
+  await page.locator(DIALOG).getByRole('button', { name: 'Oznacz jako wykonane', exact: true }).click();
+  await outcomeField(page, 'Co zostało zrobione? (opcjonalnie)', 'Fikcyjny opis wykonania.');
+  await page.locator(OUTCOME).getByRole('button', { name: 'Zapisz wykonanie', exact: true }).click();
+  await expect(page.locator(`${DIALOG} .vb22-notice`)).toContainText('Zapisano w Karcie pacjenta');
+  expect((await page.evaluate(id => window.VildaVault.getPatientNote(id), notes[0])).completedAtISO).toBeTruthy();
+});
+
 test('the bell opens an empty workspace so the first reminder can be created', async ({ page }) => {
   await createFictionalVault(page); await open(page); await expect(page.locator(DIALOG)).toContainText('Brak przypomnień na dziś');
   await page.locator(DIALOG).getByRole('button', { name: 'Dodaj przypomnienie', exact: true }).click(); await expect(page.locator(DIALOG).getByLabel('Treść przypomnienia')).toBeVisible();

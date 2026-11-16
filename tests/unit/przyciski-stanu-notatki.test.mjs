@@ -12,6 +12,10 @@ import { loadBrowserScript } from '../support/load-browser-script.mjs';
 // Teraz przycisk wysyła tylko identyfikator, kartę i stan, a resztę sejf bierze z wersji
 // zapisanej, odczytanej już pod blokadą. Opis: docs/clinical/ALGORITHMS.md (E3-PR0b2a).
 //
+// Notatka usunięta w tym oknie albo nieczytelna (także wpis Terminarza bez pacjenta, dla
+// którego nie działa bramka „tytuł albo treść”): zapis się nie odbywa, a błąd jest zdaniem
+// dla lekarza — Przypomnienia i Terminarz pokazują go w oknie „Nie udało się …: <komunikat>”.
+//
 // Dane fikcyjne. Prawdziwy vilda_crypto.js + vilda_vault.js na adapterze pamięciowym. Okno
 // między odczytem przycisku a blokadą odtwarzamy, wstrzymując operację magazynu WEWNĄTRZ
 // blokady (zapis scalenia albo usunięcie) — tak jak tests/unit/klirens-existing-note-update-vault.test.mjs.
@@ -73,6 +77,8 @@ const PRZYCISKI = [
 ];
 
 const POCZATKOWA = { title: 'Fikcyjna kontrola', body: 'Baza.', category: 'followup', dueDateISO: '2026-11-20', linkedAgeMonths: 108 };
+// „savePatientNote: …”, „completePatientNote: …” — nazwa funkcji z dwukropkiem nic lekarzowi nie mówi.
+const TECHNICZNY_PREFIKS = /^[A-Za-z_$][A-Za-z0-9_$]*:\s/;
 
 async function jednoUrzadzenie(przycisk) {
   vi.useFakeTimers({ toFake: ['Date'] });
@@ -160,24 +166,51 @@ describe('E3-PR0b2a — przyciski stanu nie cofają treści zapisanej w oknie pr
     const wynik = await klik;
 
     expect(wynik.ok, 'przycisk kończy się błędem zamiast wskrzesić notatkę').toBe(false);
-    expect(String(wynik.blad && wynik.blad.message)).toMatch(/notatka nie istnieje \(usunięta na innym urządzeniu\?\)/);
+    const komunikat = String(wynik.blad && wynik.blad.message);
+    expect(komunikat, 'lekarz czyta, co się stało i co zrobić')
+      .toBe('Ta notatka już nie istnieje — została w międzyczasie usunięta (w innej karcie albo na innym urządzeniu). Nic nie zapisano; odśwież listę.');
+    expect(komunikat, 'bez technicznego prefiksu nazwy funkcji').not.toMatch(TECHNICZNY_PREFIKS);
     expect(await s.A.vault.getPatientNote(s.id), 'notatka zostaje usunięta').toBeNull();
     expect((await s.A.adapter.listPatientNoteTombstonesForUser(s.A.uid)).map((n) => n.id), 'nagrobek zostaje').toContain(s.id);
   });
 
-  it('„wykonane” na notatce z nieczytelnym szyfrogramem nie nadpisuje jej tytułem zastępczym', async () => {
+  // Wpis Terminarza bez pacjenta (ACTIVITY_PATIENT_ID) omija bramkę „tytuł albo treść”, więc przy
+  // nieczytelnym szyfrogramie zapis samego stanu podmieniał oryginał na pusty tytuł i treść.
+  const RODZAJE = [
+    ['notatka pacjenta', (s) => s.patientId],
+    ['wpis Terminarza bez pacjenta', (s) => s.A.vault.ACTIVITY_PATIENT_ID],
+  ];
+  it.each(RODZAJE.flatMap(([rodzaj, karta]) => PRZYCISKI.map((p) => [p.nazwa, rodzaj, p, karta])))('„%s” na nieczytelnym szyfrogramie (%s): odmowa ze zrozumiałym komunikatem, oryginał zostaje', async (_nazwa, _rodzaj, przycisk, karta) => {
     const s = await jednoUrzadzenie();
-    const zapisana = await s.A.adapter.getPatientNoteForUser(s.A.uid, s.id);
+    const patientId = karta(s);
+    expect(typeof patientId).toBe('string');
+    const { id } = await s.A.vault.savePatientNote({ patientId, ...POCZATKOWA });
+    if (przycisk.najpierwWykonana) { krok(); await s.A.vault.completePatientNote(id); }
+    krok();
+    const zapisana = await s.A.adapter.getPatientNoteForUser(s.A.uid, id);
     const uszkodzona = { ...zapisana, bodyCipher: { ...zapisana.bodyCipher, data: zapisana.bodyCipher.data.split('').reverse().join('') } };
     await s.A.adapter.putPatientNoteForUser(s.A.uid, uszkodzona);
-    expect((await s.A.vault.getPatientNote(s.id)).title, 'odczyt nie‑ścisły podstawia tytuł zastępczy').toBe('(błąd odczytu)');
+    expect((await s.A.vault.getPatientNote(id)).title, 'odczyt nie‑ścisły podstawia tytuł zastępczy').toBe('(błąd odczytu)');
 
-    await expect(s.A.vault.completePatientNote(s.id)).rejects.toThrow();
+    const wynik = await przycisk.klik(s.A.vault, id).then((w) => ({ ok: true, w }), (e) => ({ ok: false, blad: e }));
 
-    const po = await s.A.adapter.getPatientNoteForUser(s.A.uid, s.id);
-    expect(po.bodyCipher, 'oryginalny szyfrogram zostaje').toEqual(uszkodzona.bodyCipher);
-    expect(po.completedAtISO).toBeNull();
-    expect(po.rev).toBe(uszkodzona.rev);
+    expect(wynik.ok, 'zapis samego stanu nie może podmienić nieczytelnej treści').toBe(false);
+    const komunikat = String(wynik.blad && wynik.blad.message);
+    expect(komunikat).toBe('Nie można odczytać zapisanej treści tej notatki — nic nie zapisano, notatka zostaje bez zmian.');
+    expect(komunikat).not.toMatch(TECHNICZNY_PREFIKS);
+    const po = await s.A.adapter.getPatientNoteForUser(s.A.uid, id);
+    expect(po, 'oryginalny szyfrogram, stan, termin i wersja zostają').toEqual(uszkodzona);
+  });
+
+  it('kontrola: zapis z tytułem i treścią (edytor) na nieczytelnym szyfrogramie nadal zapisuje — odmowa dotyczy tylko zapisu samego stanu', async () => {
+    // Lekarz, który świadomie wpisuje nową treść w miejsce nieczytelnej, robi to jak dotąd.
+    const s = await jednoUrzadzenie();
+    const zapisana = await s.A.adapter.getPatientNoteForUser(s.A.uid, s.id);
+    await s.A.adapter.putPatientNoteForUser(s.A.uid, { ...zapisana, bodyCipher: { ...zapisana.bodyCipher, data: zapisana.bodyCipher.data.split('').reverse().join('') } });
+
+    await s.A.vault.savePatientNote({ id: s.id, patientId: s.patientId, title: 'Fikcyjna kontrola', body: 'Treść wpisana od nowa.' });
+
+    expect(await s.A.vault.getPatientNote(s.id)).toMatchObject({ title: 'Fikcyjna kontrola', body: 'Treść wpisana od nowa.', rev: zapisana.rev + 1 });
   });
 
   it.each(PRZYCISKI.map((p) => [p.nazwa, p]))('„%s” bez wyścigu: tytuł, treść, kategoria, termin i wiek wizyty bez zmian, stan ustawiony', async (_nazwa, przycisk) => {

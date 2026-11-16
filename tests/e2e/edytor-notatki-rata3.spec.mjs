@@ -189,6 +189,51 @@ test.describe('G14b — równoległa edycja tej samej notatki', () => {
     expect(wSejfie[0].body).toBe('Moja wersja z tego urządzenia.');
   });
 
+  test('druga zmiana przy tym samym numerze wersji między konfliktem a „Nadpisz moją wersją” znowu zatrzymuje zapis', async ({ page }) => {
+    // E3-PR0b2a: „Nadpisz moją wersją” podnosi chwilę zapisu do wersji pokazanej w konflikcie, a nie
+    // wyłącza porównania chwil. Kolejna wersja, która dotrze w tym czasie, też musi zatrzymać zapis.
+    await otworzZKontem(page);
+    const patientId = await zalozPacjenta(page);
+    const { noteId, rev } = await otworzIstniejaca(page, patientId);
+
+    await tresc(page).fill('Moja wersja z tego urządzenia.');
+    await inneUrzadzenieTenSamNumer(page, noteId, 'Druga wersja z innego urządzenia.');
+    await page.getByRole('button', { name: 'Zapisz zmiany' }).click();
+    await expect(page.getByRole('button', { name: 'Nadpisz moją wersją' })).toBeVisible();
+
+    const trzecia = await inneUrzadzenieTenSamNumer(page, noteId, 'Trzecia wersja z innego urządzenia.');
+    expect(trzecia.rev, 'nadal ten sam numer wersji').toBe(rev);
+    await page.getByRole('button', { name: 'Nadpisz moją wersją' }).click();
+    await expect(page.getByRole('button', { name: 'Nadpisz moją wersją' }),
+      'drugi konflikt — wybór pokazany ponownie').toBeVisible();
+    expect((await notatki(page, patientId))[0].body, 'trzecia wersja nietknięta')
+      .toBe('Trzecia wersja z innego urządzenia.');
+  });
+
+  test('notatka poprawiona przed otwarciem arkusza: zwykła edycja zapisuje się bez pytania', async ({ page }) => {
+    // E3-PR0b2a: arkusz zapamiętuje chwilę ZAPISU otwartej wersji (updatedAtISO), nie chwilę jej
+    // utworzenia. Notatka poprawiana wcześniej ma te chwile różne — pomylenie ich dawałoby fałszywy
+    // konflikt przy każdej edycji takiej notatki.
+    await otworzZKontem(page);
+    const patientId = await zalozPacjenta(page);
+    await page.evaluate(async (id) => {
+      const n = await window.VildaVault.savePatientNote({ patientId: id, title: 'Notatka kontrolna', body: 'Treść pierwotna.', category: 'observation' });
+      await new Promise((r) => { setTimeout(r, 20); });
+      await window.VildaVault.savePatientNote({ id: n.id, patientId: id, title: 'Notatka kontrolna', body: 'Treść poprawiona wcześniej.' });
+    }, patientId);
+    const lista = await notatki(page, patientId);
+    expect(lista[0].updatedAtISO, 'notatka była poprawiana po utworzeniu').not.toBe(lista[0].createdAtISO);
+    await page.evaluate((d) => window.VildaAuthUI.showPatientNoteEditor({ patientId: d.patientId, note: d.note }), { patientId, note: lista[0] });
+    await expect(page.getByRole('button', { name: 'Zapisz zmiany' })).toBeVisible();
+
+    await tresc(page).fill('Treść poprawiona drugi raz.');
+    await page.getByRole('button', { name: 'Zapisz zmiany' }).click();
+
+    await expect(page.getByRole('button', { name: 'Zapisz zmiany' })).toHaveCount(0);
+    await expect(page.getByText('Nowsza wersja tej notatki jest już w sejfie.')).toHaveCount(0);
+    expect((await notatki(page, patientId))[0].body).toBe('Treść poprawiona drugi raz.');
+  });
+
   test('zwykła edycja bez kolizji zapisuje się bez pytania', async ({ page }) => {
     // Kontrola negatywna: `baseRev` nie może utrudniać normalnej pracy.
     await otworzZKontem(page);
