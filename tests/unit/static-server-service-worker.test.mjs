@@ -11,6 +11,7 @@ const SCRIPT = 'tests/support/static-server.mjs';
 const EXPECTED_PATHS = [
   '/vilda_visit_context.js', '/vilda_visit_history_ui.js', '/vilda_visit_history_ui.css',
   '/vilda_home_workspace.js', '/vilda_home_workspace.css',
+  '/vilda_home_perinatal.js', '/vilda_sga_birth_results.css',
 ];
 const CONFIG = /const VISIT_UI_PRECACHE_PACK = Object\.freeze\((\{[\s\S]*?\})\);/;
 const servers = [], directories = [];
@@ -47,14 +48,14 @@ afterEach(async () => {
 });
 
 describe('actual E2E static-server service-worker endpoint', () => {
-  it('serves all five exact versioned UI keys and continues serving the application afterwards', async () => {
+  it('serves all seven exact versioned UI keys and continues serving the application afterwards', async () => {
     const { child, origin } = await startServer();
-    const response = await fetch(origin + '/__test-service-worker-kalorii.js?wersja=fixture-5-ui');
+    const response = await fetch(origin + '/__test-service-worker-kalorii.js?wersja=fixture-7-ui');
     expect(response.status).toBe(200);
     expect(response.headers.get('service-worker-allowed')).toBe('/');
     expect(response.headers.get('content-type')).toBe('text/javascript; charset=utf-8');
     const worker = await response.text();
-    expect(worker).toContain("const SW_VERSION = 'fixture-5-ui';");
+    expect(worker).toContain("const SW_VERSION = 'fixture-7-ui';");
     const config = JSON.parse(worker.match(CONFIG)[1]);
     const source = await readFile(path.join(ROOT, 'service-worker-kalorii.js'), 'utf8');
     expect(config).toEqual(JSON.parse(source.match(CONFIG)[1]));
@@ -89,7 +90,7 @@ describe('actual E2E static-server service-worker endpoint', () => {
     const { child, origin } = await startServer(directory);
     const response = await fetch(origin + '/__test-service-worker-kalorii.js');
     expect(response.status).toBe(500);
-    expect(await response.text()).toContain('requires exactly the five versioned visit/home UI resources');
+    expect(await response.text()).toContain('requires exactly the seven versioned visit/home UI resources');
     const page = await fetch(origin + '/index.html');
     expect(page.status).toBe(200);
     expect(await page.text()).toContain('Fictional server fixture');

@@ -1220,7 +1220,9 @@ function mergeMainSessionOwnedFields(target,source,previous){
     ["intake.estKcalPerDay",!!f("intakeMeasurements")],
     ["advanced.boneAgeContext",!!f("advBoneAge")],
     ["chartCreator",!!(r.VildaPublicationCreator&&r.VildaPublicationCreator.__vildaPublicationCreator)],
-    ["birth",!!(r.vildaSgaBirthPersistApi&&typeof r.vildaSgaBirthPersistApi.captureState==="function")]
+    ["birth",!!(r.vildaSgaBirthPersistApi&&typeof r.vildaSgaBirthPersistApi.captureState==="function")
+      ||!!(r.__VILDA_HOME_WORKSPACE_PREVIEW__===true&&r.VildaHomePerinatal
+        &&typeof r.VildaHomePerinatal.ownsCurrentBirth==="function"&&r.VildaHomePerinatal.ownsCurrentBirth())]
   ];
   // Models also run on partial pages and can publish null/[] without a form.
   // Match the existing persist-runtime container guards: only the actual owner
@@ -1669,6 +1671,34 @@ function explicitMainRestoreCurrent(source,options,basis){
     return currentMainRestoreFormBasis(options)===basis&&nativeRestoreCarrySourceCurrent(source);
   }catch(_){return false}
 }
+// The opted-in birth editor has no DOM mirror in sharedUserData. Recover only
+// its never-initialized carry when anonymous startup keeps matching shared
+// fields. Native account/key/panel/shell tickets, the exact unchanged session,
+// all available patient facts and the editor's untouched startup are required.
+// This does not apply the saved form or create/commit an encounter.
+function restoreHomeStartupBirth(payload,source,options){
+  try{
+    const editor=r.__VILDA_HOME_WORKSPACE_PREVIEW__===true&&r.VildaHomePerinatal;
+    if(!editor||typeof editor.allowsStartupBirthRestore!=="function"||!source
+      ||!Object.prototype.hasOwnProperty.call(payload,"birth")||mainSessionPatientId()
+      ||typeof r.vildaBirthData!=="undefined"||!nativeRestoreCarrySourceCurrent(source))return false;
+    const basis=currentMainRestoreFormBasis(options);
+    if(basis===null)return false;
+    const current=JSON.parse(basis),savedUser=payload.user||{},user=current.user||{};
+    if(!compatibleMainSessionIdentity(current,payload,true))return false;
+    const clean=value=>String(value==null?"":value).trim();
+    const sameNumber=(a,b)=>clean(a)===""||clean(b)===""?clean(a)===clean(b):N(a)===N(b);
+    if(clean(user.sex)!==clean(savedUser.sex)||clean(user.dobISO)!==clean(savedUser.dobISO))return false;
+    const measures=savedUser.dobISO?["height","weight"]:["age","ageMonths","height","weight"];
+    if(measures.some(key=>!sameNumber(user[key],savedUser[key])))return false;
+    if(!explicitMainRestoreCurrent(source,options,basis)||!editor.allowsStartupBirthRestore()
+      ||!nativeRestoreCarrySourceCurrent(source))return false;
+    const birth=payload.birth;
+    if(birth!==null&&(!birth||typeof birth!=="object"||Array.isArray(birth)))return false;
+    r.vildaBirthData=de(birth);
+    return true;
+  }catch(error){l("vilda_data_import_export:home-startup-birth",error);return false}
+}
 function Fe(e){
   const t=pe(e),explicit=arguments[1]===true;
   if(Ke)return!1;
@@ -1697,6 +1727,7 @@ function Fe(e){
       /* P-POKWITANIE-KONTRAKT: shared fields may restore before the full guest session.
        * Only the never-initialized hidden carrier may recover; other fields stay put. */
       if(r.VildaPubertyAssessmentState)r.VildaPubertyAssessmentState.restoreSessionIfUninitialized(i);
+      restoreHomeStartupBirth(i,carrySource,t);
       outcome={ready:true,reason:"kept-form"};return!1;
     }
     const d=A(t,"applyLoadedData","applyLoadedData");

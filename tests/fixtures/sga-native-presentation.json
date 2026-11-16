@@ -1,0 +1,1291 @@
+{
+  "baselineCommit": "7dadd7a2bcbeb45fd8b5fb9233c9267f2cba6b84",
+  "baselineSHA256": "fc65850995918c8916825e374f17dbf78fa78ebfac808cea132f0c74977e4d81",
+  "cases": [
+    {
+      "name": "male-compare",
+      "input": {
+        "sex": "male",
+        "weeks": "34",
+        "days": "2",
+        "weight": "1650",
+        "length": "41",
+        "head": "29",
+        "sourceKeys": [
+          "niklasson",
+          "intergrowth",
+          "malewski"
+        ],
+        "hasComputed": false
+      },
+      "expected": {
+        "birth": {
+          "sourceChoice": "compare",
+          "sourceKeys": [
+            "niklasson",
+            "intergrowth",
+            "malewski"
+          ],
+          "sex": "male",
+          "weeks": "34",
+          "days": "2",
+          "weight": "1650",
+          "length": "41",
+          "head": "29",
+          "hasComputed": true,
+          "assessment": {
+            "version": 1,
+            "inputs": {
+              "sex": "male",
+              "weeks": 34,
+              "days": 2,
+              "weightG": 1650,
+              "lengthCm": 41,
+              "headCm": 29
+            },
+            "requestedSourceKeys": [
+              "niklasson",
+              "intergrowth",
+              "malewski"
+            ],
+            "sources": [
+              {
+                "sourceKey": "niklasson",
+                "title": "Niklasson / Albertsson-Wikland",
+                "sourceLabel": "Niklasson, A., Albertsson-Wikland, K. Continuous growth reference from 24th week of gestation to 24 months by gender. BMC Pediatr 8, 8 (2008). https://doi.org/10.1186/1471-2431-8-8",
+                "helperLabel": "Wyniki obliczone wg Niklasson 2008.",
+                "metrics": {
+                  "weight": {
+                    "title": "Masa ciała przy urodzeniu",
+                    "valueLabel": "1650 g",
+                    "sds": -3.1265622206700416,
+                    "percentile": "<0,1 c",
+                    "interpretation": "poniżej -2 SDS",
+                    "unavailable": false
+                  },
+                  "length": {
+                    "title": "Długość ciała przy urodzeniu",
+                    "valueLabel": "41 cm",
+                    "sds": -3.4761904761904767,
+                    "percentile": "<0,1 c",
+                    "interpretation": "poniżej -2 SDS",
+                    "unavailable": false
+                  },
+                  "head": {
+                    "title": "Obwód głowy przy urodzeniu",
+                    "valueLabel": "29 cm",
+                    "sds": -2.285714285714288,
+                    "percentile": "1,1 c",
+                    "interpretation": "poniżej -2 SDS",
+                    "unavailable": false
+                  }
+                },
+                "summary": {
+                  "weightStatus": "TAK",
+                  "lengthStatus": "TAK"
+                },
+                "notes": [],
+                "metaLines": []
+              },
+              {
+                "sourceKey": "intergrowth",
+                "title": "INTERGROWTH-21st",
+                "sourceLabel": "INTERGROWTH-21st International Newborn Size References/Standards (24+0-42+6 tc): Villar et al. Lancet 2014;384:857-68 oraz Villar et al. Lancet 2016;387:844-5.",
+                "helperLabel": "Wyniki obliczone wg INTERGROWTH-21st.",
+                "metrics": {
+                  "weight": {
+                    "title": "Masa ciała przy urodzeniu",
+                    "valueLabel": "1650 g",
+                    "sds": -1.5952380952380953,
+                    "percentile": "5,5 c",
+                    "interpretation": "w zakresie referencyjnym",
+                    "unavailable": false
+                  },
+                  "length": {
+                    "title": "Długość ciała przy urodzeniu",
+                    "valueLabel": "41 cm",
+                    "sds": -2.038461538461539,
+                    "percentile": "2,1 c",
+                    "interpretation": "poniżej -2 SDS",
+                    "unavailable": false
+                  },
+                  "head": {
+                    "title": "Obwód głowy przy urodzeniu",
+                    "valueLabel": "29 cm",
+                    "sds": -1.9285714285714277,
+                    "percentile": "2,7 c",
+                    "interpretation": "w zakresie referencyjnym",
+                    "unavailable": false
+                  }
+                },
+                "summary": {
+                  "weightStatus": "NIE",
+                  "lengthStatus": "TAK"
+                },
+                "notes": [],
+                "metaLines": []
+              },
+              {
+                "sourceKey": "malewski",
+                "title": "Malewski i wsp. (PL, masa)",
+                "sourceLabel": "Malewski i wsp. (populacja polska, lata 1986–1994) – tabela masy urodzeniowej wg wieku ciążowego.",
+                "helperLabel": "Wyniki obliczone wg tabeli Malewski i wsp.",
+                "metrics": {
+                  "weight": {
+                    "title": "Masa ciała przy urodzeniu",
+                    "valueLabel": "1650 g",
+                    "sds": -1.5262683843557576,
+                    "percentile": "6,3 c",
+                    "interpretation": "w zakresie referencyjnym",
+                    "unavailable": false
+                  },
+                  "length": {
+                    "title": "Długość ciała przy urodzeniu",
+                    "valueLabel": "–",
+                    "sds": null,
+                    "percentile": "–",
+                    "interpretation": "Niedostępne w tym źródle",
+                    "unavailable": true
+                  },
+                  "head": {
+                    "title": "Obwód głowy przy urodzeniu",
+                    "valueLabel": "–",
+                    "sds": null,
+                    "percentile": "–",
+                    "interpretation": "Niedostępne w tym źródle",
+                    "unavailable": true
+                  }
+                },
+                "summary": {
+                  "weightStatus": "NIE",
+                  "lengthStatus": "Niedostępne w tym źródle"
+                },
+                "notes": [
+                  "Dla 34+2 tc zastosowano interpolację liniową między 34. a 35. tygodniem ciąży."
+                ],
+                "metaLines": []
+              }
+            ],
+            "notes": []
+          }
+        },
+        "html": "\n        \n        \n        <div class=\"sga-birth-compare-note\">\n          <p>Tryb porównawczy: te same dane policzono równolegle według Niklasson / Albertsson-Wikland, INTERGROWTH-21st, Malewski i wsp. (PL, masa).</p>\n        </div>\n        <div class=\"sga-birth-compare-table-stack\">\n          \n        <section class=\"sga-birth-compare-table-block\">\n          <h3>Podsumowanie SGA</h3>\n          <div class=\"sga-birth-compare-table-wrap\">\n            <table class=\"sga-birth-compare-table\">\n              <thead>\n                <tr>\n                  <th scope=\"col\">Źródło</th>\n                  <th scope=\"col\">SGA po masie urodzeniowej</th><th scope=\"col\">SGA po długości urodzeniowej</th>\n                </tr>\n              </thead>\n              <tbody>\n                \n                  <tr>\n                    <th scope=\"row\">Niklasson / Albertsson-Wikland</th>\n                    <td data-label=\"SGA po masie\"><span class=\"sga-birth-compare-badge is-sga\">TAK</span></td><td data-label=\"SGA po długości\"><span class=\"sga-birth-compare-badge is-sga\">TAK</span></td>\n                  </tr>\n                \n                  <tr>\n                    <th scope=\"row\">INTERGROWTH-21st</th>\n                    <td data-label=\"SGA po masie\"><span class=\"sga-birth-compare-badge is-ok\">NIE</span></td><td data-label=\"SGA po długości\"><span class=\"sga-birth-compare-badge is-sga\">TAK</span></td>\n                  </tr>\n                \n                  <tr>\n                    <th scope=\"row\">Malewski i wsp. (PL, masa)</th>\n                    <td data-label=\"SGA po masie\"><span class=\"sga-birth-compare-badge is-ok\">NIE</span></td><td data-label=\"SGA po długości\"><span class=\"sga-birth-compare-badge is-missing\">Niedostępne w tym źródle</span></td>\n                  </tr>\n                \n              </tbody>\n            </table>\n          </div>\n        </section>\n      \n        <section class=\"sga-birth-compare-table-block\">\n          <h3>Masa ciała przy urodzeniu</h3>\n          <div class=\"sga-birth-compare-table-wrap\">\n            <table class=\"sga-birth-compare-table\">\n              <thead>\n                <tr>\n                  <th scope=\"col\">Źródło</th>\n                  <th scope=\"col\">Wartość</th><th scope=\"col\">SDS</th><th scope=\"col\">Percentyl</th><th scope=\"col\">Ocena</th>\n                </tr>\n              </thead>\n              <tbody>\n                \n                  <tr>\n                    <th scope=\"row\">Niklasson / Albertsson-Wikland</th>\n                    <td data-label=\"Wartość\"><span class=\"sga-birth-compare-value\">1650 g</span></td><td data-label=\"SDS\"><span class=\"sga-birth-compare-value\">-3,13</span></td><td data-label=\"Percentyl\"><span class=\"sga-birth-compare-value\">&lt;0,1 c</span></td><td data-label=\"Ocena\"><span class=\"sga-birth-compare-badge is-sga\">poniżej -2 SDS</span></td>\n                  </tr>\n                \n                  <tr>\n                    <th scope=\"row\">INTERGROWTH-21st</th>\n                    <td data-label=\"Wartość\"><span class=\"sga-birth-compare-value\">1650 g</span></td><td data-label=\"SDS\"><span class=\"sga-birth-compare-value\">-1,60</span></td><td data-label=\"Percentyl\"><span class=\"sga-birth-compare-value\">5,5 c</span></td><td data-label=\"Ocena\"><span class=\"sga-birth-compare-badge is-ok\">w zakresie referencyjnym</span></td>\n                  </tr>\n                \n                  <tr>\n                    <th scope=\"row\">Malewski i wsp. (PL, masa)</th>\n                    <td data-label=\"Wartość\"><span class=\"sga-birth-compare-value\">1650 g</span></td><td data-label=\"SDS\"><span class=\"sga-birth-compare-value\">-1,53</span></td><td data-label=\"Percentyl\"><span class=\"sga-birth-compare-value\">6,3 c</span></td><td data-label=\"Ocena\"><span class=\"sga-birth-compare-badge is-ok\">w zakresie referencyjnym</span></td>\n                  </tr>\n                \n              </tbody>\n            </table>\n          </div>\n        </section>\n      \n        <section class=\"sga-birth-compare-table-block\">\n          <h3>Długość ciała przy urodzeniu</h3>\n          <div class=\"sga-birth-compare-table-wrap\">\n            <table class=\"sga-birth-compare-table\">\n              <thead>\n                <tr>\n                  <th scope=\"col\">Źródło</th>\n                  <th scope=\"col\">Wartość</th><th scope=\"col\">SDS</th><th scope=\"col\">Percentyl</th><th scope=\"col\">Ocena</th>\n                </tr>\n              </thead>\n              <tbody>\n                \n                  <tr>\n                    <th scope=\"row\">Niklasson / Albertsson-Wikland</th>\n                    <td data-label=\"Wartość\"><span class=\"sga-birth-compare-value\">41 cm</span></td><td data-label=\"SDS\"><span class=\"sga-birth-compare-value\">-3,48</span></td><td data-label=\"Percentyl\"><span class=\"sga-birth-compare-value\">&lt;0,1 c</span></td><td data-label=\"Ocena\"><span class=\"sga-birth-compare-badge is-sga\">poniżej -2 SDS</span></td>\n                  </tr>\n                \n                  <tr>\n                    <th scope=\"row\">INTERGROWTH-21st</th>\n                    <td data-label=\"Wartość\"><span class=\"sga-birth-compare-value\">41 cm</span></td><td data-label=\"SDS\"><span class=\"sga-birth-compare-value\">-2,04</span></td><td data-label=\"Percentyl\"><span class=\"sga-birth-compare-value\">2,1 c</span></td><td data-label=\"Ocena\"><span class=\"sga-birth-compare-badge is-sga\">poniżej -2 SDS</span></td>\n                  </tr>\n                \n                  <tr>\n                    <th scope=\"row\">Malewski i wsp. (PL, masa)</th>\n                    <td data-label=\"Wartość\"><span class=\"sga-birth-compare-value\">–</span></td><td data-label=\"SDS\"><span class=\"sga-birth-compare-value\">–</span></td><td data-label=\"Percentyl\"><span class=\"sga-birth-compare-value\">–</span></td><td data-label=\"Ocena\"><span class=\"sga-birth-compare-badge is-missing\">Niedostępne w tym źródle</span></td>\n                  </tr>\n                \n              </tbody>\n            </table>\n          </div>\n        </section>\n      \n        <section class=\"sga-birth-compare-table-block\">\n          <h3>Obwód głowy przy urodzeniu</h3>\n          <div class=\"sga-birth-compare-table-wrap\">\n            <table class=\"sga-birth-compare-table\">\n              <thead>\n                <tr>\n                  <th scope=\"col\">Źródło</th>\n                  <th scope=\"col\">Wartość</th><th scope=\"col\">SDS</th><th scope=\"col\">Percentyl</th><th scope=\"col\">Ocena</th>\n                </tr>\n              </thead>\n              <tbody>\n                \n                  <tr>\n                    <th scope=\"row\">Niklasson / Albertsson-Wikland</th>\n                    <td data-label=\"Wartość\"><span class=\"sga-birth-compare-value\">29 cm</span></td><td data-label=\"SDS\"><span class=\"sga-birth-compare-value\">-2,29</span></td><td data-label=\"Percentyl\"><span class=\"sga-birth-compare-value\">1,1 c</span></td><td data-label=\"Ocena\"><span class=\"sga-birth-compare-badge is-sga\">poniżej -2 SDS</span></td>\n                  </tr>\n                \n                  <tr>\n                    <th scope=\"row\">INTERGROWTH-21st</th>\n                    <td data-label=\"Wartość\"><span class=\"sga-birth-compare-value\">29 cm</span></td><td data-label=\"SDS\"><span class=\"sga-birth-compare-value\">-1,93</span></td><td data-label=\"Percentyl\"><span class=\"sga-birth-compare-value\">2,7 c</span></td><td data-label=\"Ocena\"><span class=\"sga-birth-compare-badge is-ok\">w zakresie referencyjnym</span></td>\n                  </tr>\n                \n                  <tr>\n                    <th scope=\"row\">Malewski i wsp. (PL, masa)</th>\n                    <td data-label=\"Wartość\"><span class=\"sga-birth-compare-value\">–</span></td><td data-label=\"SDS\"><span class=\"sga-birth-compare-value\">–</span></td><td data-label=\"Percentyl\"><span class=\"sga-birth-compare-value\">–</span></td><td data-label=\"Ocena\"><span class=\"sga-birth-compare-badge is-missing\">Niedostępne w tym źródle</span></td>\n                  </tr>\n                \n              </tbody>\n            </table>\n          </div>\n        </section>\n      \n        </div>\n        \n        <div class=\"sga-birth-meta-box sga-birth-compare-reference-box\">\n          <h3>Źródła referencyjne</h3>\n          <p><strong>Niklasson / Albertsson-Wikland:</strong> Niklasson, A., Albertsson-Wikland, K. Continuous growth reference from 24th week of gestation to 24 months by gender. BMC Pediatr 8, 8 (2008). https://doi.org/10.1186/1471-2431-8-8</p><p><strong>INTERGROWTH-21st:</strong> INTERGROWTH-21st International Newborn Size References/Standards (24+0-42+6 tc): Villar et al. Lancet 2014;384:857-68 oraz Villar et al. Lancet 2016;387:844-5.</p><p><strong>Malewski i wsp. (PL, masa):</strong> Malewski i wsp. (populacja polska, lata 1986–1994) – tabela masy urodzeniowej wg wieku ciążowego.</p>\n        </div>\n      \n        \n        <div class=\"sga-birth-note-box sga-birth-compare-footnotes\">\n          <h3>Uwagi</h3>\n          <p><strong>Malewski i wsp. (PL, masa):</strong> Dla 34+2 tc zastosowano interpolację liniową między 34. a 35. tygodniem ciąży.</p>\n        </div>\n      \n      \n      ",
+        "message": ""
+      }
+    },
+    {
+      "name": "female-compare",
+      "input": {
+        "sex": "female",
+        "weeks": "38",
+        "days": "0",
+        "weight": "2100",
+        "length": "48",
+        "head": "",
+        "sourceKeys": [
+          "niklasson",
+          "intergrowth",
+          "malewski"
+        ],
+        "hasComputed": false
+      },
+      "expected": {
+        "birth": {
+          "sourceChoice": "compare",
+          "sourceKeys": [
+            "niklasson",
+            "intergrowth",
+            "malewski"
+          ],
+          "sex": "female",
+          "weeks": "38",
+          "days": "0",
+          "weight": "2100",
+          "length": "48",
+          "head": "",
+          "hasComputed": true,
+          "assessment": {
+            "version": 1,
+            "inputs": {
+              "sex": "female",
+              "weeks": 38,
+              "days": 0,
+              "weightG": 2100,
+              "lengthCm": 48,
+              "headCm": null
+            },
+            "requestedSourceKeys": [
+              "niklasson",
+              "intergrowth",
+              "malewski"
+            ],
+            "sources": [
+              {
+                "sourceKey": "niklasson",
+                "title": "Niklasson / Albertsson-Wikland",
+                "sourceLabel": "Niklasson, A., Albertsson-Wikland, K. Continuous growth reference from 24th week of gestation to 24 months by gender. BMC Pediatr 8, 8 (2008). https://doi.org/10.1186/1471-2431-8-8",
+                "helperLabel": "Wyniki obliczone wg Niklasson 2008.",
+                "metrics": {
+                  "weight": {
+                    "title": "Masa ciała przy urodzeniu",
+                    "valueLabel": "2100 g",
+                    "sds": -3.196012823019649,
+                    "percentile": "<0,1 c",
+                    "interpretation": "poniżej -2 SDS",
+                    "unavailable": false
+                  },
+                  "length": {
+                    "title": "Długość ciała przy urodzeniu",
+                    "valueLabel": "48 cm",
+                    "sds": -0.7333333333333343,
+                    "percentile": "23,2 c",
+                    "interpretation": "w zakresie referencyjnym",
+                    "unavailable": false
+                  }
+                },
+                "summary": {
+                  "weightStatus": "TAK",
+                  "lengthStatus": "NIE"
+                },
+                "notes": [],
+                "metaLines": []
+              },
+              {
+                "sourceKey": "intergrowth",
+                "title": "INTERGROWTH-21st",
+                "sourceLabel": "INTERGROWTH-21st International Newborn Size References/Standards (24+0-42+6 tc): Villar et al. Lancet 2014;384:857-68 oraz Villar et al. Lancet 2016;387:844-5.",
+                "helperLabel": "Wyniki obliczone wg INTERGROWTH-21st.",
+                "metrics": {
+                  "weight": {
+                    "title": "Masa ciała przy urodzeniu",
+                    "valueLabel": "2100 g",
+                    "sds": -2.3023255813953485,
+                    "percentile": "1,1 c",
+                    "interpretation": "poniżej -2 SDS",
+                    "unavailable": false
+                  },
+                  "length": {
+                    "title": "Długość ciała przy urodzeniu",
+                    "valueLabel": "48 cm",
+                    "sds": 0,
+                    "percentile": "50,0 c",
+                    "interpretation": "w zakresie referencyjnym",
+                    "unavailable": false
+                  }
+                },
+                "summary": {
+                  "weightStatus": "TAK",
+                  "lengthStatus": "NIE"
+                },
+                "notes": [],
+                "metaLines": []
+              },
+              {
+                "sourceKey": "malewski",
+                "title": "Malewski i wsp. (PL, masa)",
+                "sourceLabel": "Malewski i wsp. (populacja polska, lata 1986–1994) – tabela masy urodzeniowej wg wieku ciążowego.",
+                "helperLabel": "Wyniki obliczone wg tabeli Malewski i wsp.",
+                "metrics": {
+                  "weight": {
+                    "title": "Masa ciała przy urodzeniu",
+                    "valueLabel": "2100 g",
+                    "sds": -2.6309592221986984,
+                    "percentile": "0,4 c",
+                    "interpretation": "poniżej -2 SDS",
+                    "unavailable": false
+                  },
+                  "length": {
+                    "title": "Długość ciała przy urodzeniu",
+                    "valueLabel": "–",
+                    "sds": null,
+                    "percentile": "–",
+                    "interpretation": "Niedostępne w tym źródle",
+                    "unavailable": true
+                  }
+                },
+                "summary": {
+                  "weightStatus": "TAK",
+                  "lengthStatus": "Niedostępne w tym źródle"
+                },
+                "notes": [],
+                "metaLines": []
+              }
+            ],
+            "notes": []
+          }
+        },
+        "html": "\n        \n        \n        <div class=\"sga-birth-compare-note\">\n          <p>Tryb porównawczy: te same dane policzono równolegle według Niklasson / Albertsson-Wikland, INTERGROWTH-21st, Malewski i wsp. (PL, masa).</p>\n        </div>\n        <div class=\"sga-birth-compare-table-stack\">\n          \n        <section class=\"sga-birth-compare-table-block\">\n          <h3>Podsumowanie SGA</h3>\n          <div class=\"sga-birth-compare-table-wrap\">\n            <table class=\"sga-birth-compare-table\">\n              <thead>\n                <tr>\n                  <th scope=\"col\">Źródło</th>\n                  <th scope=\"col\">SGA po masie urodzeniowej</th><th scope=\"col\">SGA po długości urodzeniowej</th>\n                </tr>\n              </thead>\n              <tbody>\n                \n                  <tr>\n                    <th scope=\"row\">Niklasson / Albertsson-Wikland</th>\n                    <td data-label=\"SGA po masie\"><span class=\"sga-birth-compare-badge is-sga\">TAK</span></td><td data-label=\"SGA po długości\"><span class=\"sga-birth-compare-badge is-ok\">NIE</span></td>\n                  </tr>\n                \n                  <tr>\n                    <th scope=\"row\">INTERGROWTH-21st</th>\n                    <td data-label=\"SGA po masie\"><span class=\"sga-birth-compare-badge is-sga\">TAK</span></td><td data-label=\"SGA po długości\"><span class=\"sga-birth-compare-badge is-ok\">NIE</span></td>\n                  </tr>\n                \n                  <tr>\n                    <th scope=\"row\">Malewski i wsp. (PL, masa)</th>\n                    <td data-label=\"SGA po masie\"><span class=\"sga-birth-compare-badge is-sga\">TAK</span></td><td data-label=\"SGA po długości\"><span class=\"sga-birth-compare-badge is-missing\">Niedostępne w tym źródle</span></td>\n                  </tr>\n                \n              </tbody>\n            </table>\n          </div>\n        </section>\n      \n        <section class=\"sga-birth-compare-table-block\">\n          <h3>Masa ciała przy urodzeniu</h3>\n          <div class=\"sga-birth-compare-table-wrap\">\n            <table class=\"sga-birth-compare-table\">\n              <thead>\n                <tr>\n                  <th scope=\"col\">Źródło</th>\n                  <th scope=\"col\">Wartość</th><th scope=\"col\">SDS</th><th scope=\"col\">Percentyl</th><th scope=\"col\">Ocena</th>\n                </tr>\n              </thead>\n              <tbody>\n                \n                  <tr>\n                    <th scope=\"row\">Niklasson / Albertsson-Wikland</th>\n                    <td data-label=\"Wartość\"><span class=\"sga-birth-compare-value\">2100 g</span></td><td data-label=\"SDS\"><span class=\"sga-birth-compare-value\">-3,20</span></td><td data-label=\"Percentyl\"><span class=\"sga-birth-compare-value\">&lt;0,1 c</span></td><td data-label=\"Ocena\"><span class=\"sga-birth-compare-badge is-sga\">poniżej -2 SDS</span></td>\n                  </tr>\n                \n                  <tr>\n                    <th scope=\"row\">INTERGROWTH-21st</th>\n                    <td data-label=\"Wartość\"><span class=\"sga-birth-compare-value\">2100 g</span></td><td data-label=\"SDS\"><span class=\"sga-birth-compare-value\">-2,30</span></td><td data-label=\"Percentyl\"><span class=\"sga-birth-compare-value\">1,1 c</span></td><td data-label=\"Ocena\"><span class=\"sga-birth-compare-badge is-sga\">poniżej -2 SDS</span></td>\n                  </tr>\n                \n                  <tr>\n                    <th scope=\"row\">Malewski i wsp. (PL, masa)</th>\n                    <td data-label=\"Wartość\"><span class=\"sga-birth-compare-value\">2100 g</span></td><td data-label=\"SDS\"><span class=\"sga-birth-compare-value\">-2,63</span></td><td data-label=\"Percentyl\"><span class=\"sga-birth-compare-value\">0,4 c</span></td><td data-label=\"Ocena\"><span class=\"sga-birth-compare-badge is-sga\">poniżej -2 SDS</span></td>\n                  </tr>\n                \n              </tbody>\n            </table>\n          </div>\n        </section>\n      \n        <section class=\"sga-birth-compare-table-block\">\n          <h3>Długość ciała przy urodzeniu</h3>\n          <div class=\"sga-birth-compare-table-wrap\">\n            <table class=\"sga-birth-compare-table\">\n              <thead>\n                <tr>\n                  <th scope=\"col\">Źródło</th>\n                  <th scope=\"col\">Wartość</th><th scope=\"col\">SDS</th><th scope=\"col\">Percentyl</th><th scope=\"col\">Ocena</th>\n                </tr>\n              </thead>\n              <tbody>\n                \n                  <tr>\n                    <th scope=\"row\">Niklasson / Albertsson-Wikland</th>\n                    <td data-label=\"Wartość\"><span class=\"sga-birth-compare-value\">48 cm</span></td><td data-label=\"SDS\"><span class=\"sga-birth-compare-value\">-0,73</span></td><td data-label=\"Percentyl\"><span class=\"sga-birth-compare-value\">23,2 c</span></td><td data-label=\"Ocena\"><span class=\"sga-birth-compare-badge is-ok\">w zakresie referencyjnym</span></td>\n                  </tr>\n                \n                  <tr>\n                    <th scope=\"row\">INTERGROWTH-21st</th>\n                    <td data-label=\"Wartość\"><span class=\"sga-birth-compare-value\">48 cm</span></td><td data-label=\"SDS\"><span class=\"sga-birth-compare-value\">0,00</span></td><td data-label=\"Percentyl\"><span class=\"sga-birth-compare-value\">50,0 c</span></td><td data-label=\"Ocena\"><span class=\"sga-birth-compare-badge is-ok\">w zakresie referencyjnym</span></td>\n                  </tr>\n                \n                  <tr>\n                    <th scope=\"row\">Malewski i wsp. (PL, masa)</th>\n                    <td data-label=\"Wartość\"><span class=\"sga-birth-compare-value\">–</span></td><td data-label=\"SDS\"><span class=\"sga-birth-compare-value\">–</span></td><td data-label=\"Percentyl\"><span class=\"sga-birth-compare-value\">–</span></td><td data-label=\"Ocena\"><span class=\"sga-birth-compare-badge is-missing\">Niedostępne w tym źródle</span></td>\n                  </tr>\n                \n              </tbody>\n            </table>\n          </div>\n        </section>\n      \n        </div>\n        \n        <div class=\"sga-birth-meta-box sga-birth-compare-reference-box\">\n          <h3>Źródła referencyjne</h3>\n          <p><strong>Niklasson / Albertsson-Wikland:</strong> Niklasson, A., Albertsson-Wikland, K. Continuous growth reference from 24th week of gestation to 24 months by gender. BMC Pediatr 8, 8 (2008). https://doi.org/10.1186/1471-2431-8-8</p><p><strong>INTERGROWTH-21st:</strong> INTERGROWTH-21st International Newborn Size References/Standards (24+0-42+6 tc): Villar et al. Lancet 2014;384:857-68 oraz Villar et al. Lancet 2016;387:844-5.</p><p><strong>Malewski i wsp. (PL, masa):</strong> Malewski i wsp. (populacja polska, lata 1986–1994) – tabela masy urodzeniowej wg wieku ciążowego.</p>\n        </div>\n      \n        \n      \n      ",
+        "message": ""
+      }
+    },
+    {
+      "name": "earliest-niklasson",
+      "input": {
+        "sex": "male",
+        "weeks": "24",
+        "days": "0",
+        "weight": "750",
+        "length": "31",
+        "head": "23",
+        "sourceKeys": [
+          "niklasson"
+        ],
+        "hasComputed": false
+      },
+      "expected": {
+        "birth": {
+          "sourceChoice": "niklasson",
+          "sourceKeys": [
+            "niklasson"
+          ],
+          "sex": "male",
+          "weeks": "24",
+          "days": "0",
+          "weight": "750",
+          "length": "31",
+          "head": "23",
+          "hasComputed": true,
+          "assessment": {
+            "version": 1,
+            "inputs": {
+              "sex": "male",
+              "weeks": 24,
+              "days": 0,
+              "weightG": 750,
+              "lengthCm": 31,
+              "headCm": 23
+            },
+            "requestedSourceKeys": [
+              "niklasson"
+            ],
+            "sources": [
+              {
+                "sourceKey": "niklasson",
+                "title": "Niklasson / Albertsson-Wikland",
+                "sourceLabel": "Niklasson, A., Albertsson-Wikland, K. Continuous growth reference from 24th week of gestation to 24 months by gender. BMC Pediatr 8, 8 (2008). https://doi.org/10.1186/1471-2431-8-8",
+                "helperLabel": "Wyniki obliczone wg Niklasson 2008.",
+                "metrics": {
+                  "weight": {
+                    "title": "Masa ciała przy urodzeniu",
+                    "valueLabel": "750 g",
+                    "sds": 0.6259572404953136,
+                    "percentile": "73,4 c",
+                    "interpretation": "w zakresie referencyjnym",
+                    "unavailable": false
+                  },
+                  "length": {
+                    "title": "Długość ciała przy urodzeniu",
+                    "valueLabel": "31 cm",
+                    "sds": -0.6923076923076912,
+                    "percentile": "24,4 c",
+                    "interpretation": "w zakresie referencyjnym",
+                    "unavailable": false
+                  },
+                  "head": {
+                    "title": "Obwód głowy przy urodzeniu",
+                    "valueLabel": "23 cm",
+                    "sds": 0.40000000000000097,
+                    "percentile": "65,5 c",
+                    "interpretation": "w zakresie referencyjnym",
+                    "unavailable": false
+                  }
+                },
+                "summary": {
+                  "weightStatus": "NIE",
+                  "lengthStatus": "NIE"
+                },
+                "notes": [],
+                "metaLines": []
+              }
+            ],
+            "notes": []
+          }
+        },
+        "html": "\n        \n        \n        <section class=\"sga-birth-source-block\" data-source=\"niklasson\">\n          <div class=\"sga-birth-source-header\">\n            <h3>Niklasson / Albertsson-Wikland</h3>\n            <p>Wyniki obliczone wg Niklasson 2008.</p>\n          </div>\n          <div class=\"sga-birth-summary-box\">\n            <h3>Podsumowanie</h3>\n            <div class=\"sga-birth-summary-grid\">\n              <div class=\"sga-birth-summary-item is-ok\"><span class=\"sga-birth-summary-label\">SGA po masie urodzeniowej</span><strong class=\"sga-birth-summary-value\">NIE</strong></div>\n              <div class=\"sga-birth-summary-item is-ok\"><span class=\"sga-birth-summary-label\">SGA po długości urodzeniowej</span><strong class=\"sga-birth-summary-value\">NIE</strong></div>\n            </div>\n          </div>\n          <div class=\"sga-birth-result-grid\">\n            \n      <div class=\"sga-birth-result-card\">\n        <h4>Masa ciała przy urodzeniu</h4>\n        <dl>\n          <div><dt>Wartość</dt><dd>750 g</dd></div>\n          <div><dt>SDS</dt><dd>0,63</dd></div>\n          <div><dt>Percentyl</dt><dd>73,4 c</dd></div>\n          <div><dt>Ocena</dt><dd>w zakresie referencyjnym</dd></div>\n        </dl>\n      </div>\n    \n      <div class=\"sga-birth-result-card\">\n        <h4>Długość ciała przy urodzeniu</h4>\n        <dl>\n          <div><dt>Wartość</dt><dd>31 cm</dd></div>\n          <div><dt>SDS</dt><dd>-0,69</dd></div>\n          <div><dt>Percentyl</dt><dd>24,4 c</dd></div>\n          <div><dt>Ocena</dt><dd>w zakresie referencyjnym</dd></div>\n        </dl>\n      </div>\n    \n      <div class=\"sga-birth-result-card\">\n        <h4>Obwód głowy przy urodzeniu</h4>\n        <dl>\n          <div><dt>Wartość</dt><dd>23 cm</dd></div>\n          <div><dt>SDS</dt><dd>0,40</dd></div>\n          <div><dt>Percentyl</dt><dd>65,5 c</dd></div>\n          <div><dt>Ocena</dt><dd>w zakresie referencyjnym</dd></div>\n        </dl>\n      </div>\n    \n          </div>\n          \n          <div class=\"sga-birth-meta-box\">\n            <p><strong>Źródło referencyjne:</strong> Niklasson, A., Albertsson-Wikland, K. Continuous growth reference from 24th week of gestation to 24 months by gender. BMC Pediatr 8, 8 (2008). https://doi.org/10.1186/1471-2431-8-8</p>\n            \n          </div>\n        </section>\n      \n      ",
+        "message": ""
+      }
+    },
+    {
+      "name": "niklasson-clamp-and-compare",
+      "input": {
+        "sex": "female",
+        "weeks": "42",
+        "days": "6",
+        "weight": "3450",
+        "length": "50",
+        "head": "34",
+        "sourceKeys": [
+          "niklasson",
+          "intergrowth",
+          "malewski"
+        ],
+        "hasComputed": false
+      },
+      "expected": {
+        "birth": {
+          "sourceChoice": "compare",
+          "sourceKeys": [
+            "niklasson",
+            "intergrowth",
+            "malewski"
+          ],
+          "sex": "female",
+          "weeks": "42",
+          "days": "6",
+          "weight": "3450",
+          "length": "50",
+          "head": "34",
+          "hasComputed": true,
+          "assessment": {
+            "version": 1,
+            "inputs": {
+              "sex": "female",
+              "weeks": 42,
+              "days": 6,
+              "weightG": 3450,
+              "lengthCm": 50,
+              "headCm": 34
+            },
+            "requestedSourceKeys": [
+              "niklasson",
+              "intergrowth",
+              "malewski"
+            ],
+            "sources": [
+              {
+                "sourceKey": "niklasson",
+                "title": "Niklasson / Albertsson-Wikland",
+                "sourceLabel": "Niklasson, A., Albertsson-Wikland, K. Continuous growth reference from 24th week of gestation to 24 months by gender. BMC Pediatr 8, 8 (2008). https://doi.org/10.1186/1471-2431-8-8",
+                "helperLabel": "Wyniki obliczone wg Niklasson 2008.",
+                "metrics": {
+                  "weight": {
+                    "title": "Masa ciała przy urodzeniu",
+                    "valueLabel": "3450 g",
+                    "sds": -0.6436180985345152,
+                    "percentile": "26,0 c",
+                    "interpretation": "w zakresie referencyjnym",
+                    "unavailable": false
+                  },
+                  "length": {
+                    "title": "Długość ciała przy urodzeniu",
+                    "valueLabel": "50 cm",
+                    "sds": -0.7783783783783771,
+                    "percentile": "21,8 c",
+                    "interpretation": "w zakresie referencyjnym",
+                    "unavailable": false
+                  },
+                  "head": {
+                    "title": "Obwód głowy przy urodzeniu",
+                    "valueLabel": "34 cm",
+                    "sds": -1.0153846153846156,
+                    "percentile": "15,5 c",
+                    "interpretation": "w zakresie referencyjnym",
+                    "unavailable": false
+                  }
+                },
+                "summary": {
+                  "weightStatus": "NIE",
+                  "lengthStatus": "NIE"
+                },
+                "notes": [
+                  "Dla 42 tygodni i dodatkowych dni zastosowano referencję dla 42. tygodnia, bo dane Niklasson kończą się na wartościach tygodniowych."
+                ],
+                "metaLines": []
+              },
+              {
+                "sourceKey": "intergrowth",
+                "title": "INTERGROWTH-21st",
+                "sourceLabel": "INTERGROWTH-21st International Newborn Size References/Standards (24+0-42+6 tc): Villar et al. Lancet 2014;384:857-68 oraz Villar et al. Lancet 2016;387:844-5.",
+                "helperLabel": "Wyniki obliczone wg INTERGROWTH-21st.",
+                "metrics": {
+                  "weight": {
+                    "title": "Masa ciała przy urodzeniu",
+                    "valueLabel": "3450 g",
+                    "sds": -0.2051282051282043,
+                    "percentile": "41,9 c",
+                    "interpretation": "w zakresie referencyjnym",
+                    "unavailable": false
+                  },
+                  "length": {
+                    "title": "Długość ciała przy urodzeniu",
+                    "valueLabel": "50 cm",
+                    "sds": -0.4000000000000009,
+                    "percentile": "34,5 c",
+                    "interpretation": "w zakresie referencyjnym",
+                    "unavailable": false
+                  },
+                  "head": {
+                    "title": "Obwód głowy przy urodzeniu",
+                    "valueLabel": "34 cm",
+                    "sds": -0.6000000000000014,
+                    "percentile": "27,4 c",
+                    "interpretation": "w zakresie referencyjnym",
+                    "unavailable": false
+                  }
+                },
+                "summary": {
+                  "weightStatus": "NIE",
+                  "lengthStatus": "NIE"
+                },
+                "notes": [],
+                "metaLines": []
+              },
+              {
+                "sourceKey": "malewski",
+                "title": "Malewski i wsp. (PL, masa)",
+                "sourceLabel": "Malewski i wsp. (populacja polska, lata 1986–1994) – tabela masy urodzeniowej wg wieku ciążowego.",
+                "helperLabel": "Wyniki obliczone wg tabeli Malewski i wsp.",
+                "metrics": {
+                  "weight": {
+                    "title": "Masa ciała przy urodzeniu",
+                    "valueLabel": "3450 g",
+                    "sds": 0.1982909733315873,
+                    "percentile": "57,9 c",
+                    "interpretation": "w zakresie referencyjnym",
+                    "unavailable": false
+                  },
+                  "length": {
+                    "title": "Długość ciała przy urodzeniu",
+                    "valueLabel": "–",
+                    "sds": null,
+                    "percentile": "–",
+                    "interpretation": "Niedostępne w tym źródle",
+                    "unavailable": true
+                  },
+                  "head": {
+                    "title": "Obwód głowy przy urodzeniu",
+                    "valueLabel": "–",
+                    "sds": null,
+                    "percentile": "–",
+                    "interpretation": "Niedostępne w tym źródle",
+                    "unavailable": true
+                  }
+                },
+                "summary": {
+                  "weightStatus": "NIE",
+                  "lengthStatus": "Niedostępne w tym źródle"
+                },
+                "notes": [
+                  "Dla 42+6 tc zastosowano interpolację liniową między 42. a 43. tygodniem ciąży."
+                ],
+                "metaLines": []
+              }
+            ],
+            "notes": []
+          }
+        },
+        "html": "\n        \n        \n        <div class=\"sga-birth-compare-note\">\n          <p>Tryb porównawczy: te same dane policzono równolegle według Niklasson / Albertsson-Wikland, INTERGROWTH-21st, Malewski i wsp. (PL, masa).</p>\n        </div>\n        <div class=\"sga-birth-compare-table-stack\">\n          \n        <section class=\"sga-birth-compare-table-block\">\n          <h3>Podsumowanie SGA</h3>\n          <div class=\"sga-birth-compare-table-wrap\">\n            <table class=\"sga-birth-compare-table\">\n              <thead>\n                <tr>\n                  <th scope=\"col\">Źródło</th>\n                  <th scope=\"col\">SGA po masie urodzeniowej</th><th scope=\"col\">SGA po długości urodzeniowej</th>\n                </tr>\n              </thead>\n              <tbody>\n                \n                  <tr>\n                    <th scope=\"row\">Niklasson / Albertsson-Wikland</th>\n                    <td data-label=\"SGA po masie\"><span class=\"sga-birth-compare-badge is-ok\">NIE</span></td><td data-label=\"SGA po długości\"><span class=\"sga-birth-compare-badge is-ok\">NIE</span></td>\n                  </tr>\n                \n                  <tr>\n                    <th scope=\"row\">INTERGROWTH-21st</th>\n                    <td data-label=\"SGA po masie\"><span class=\"sga-birth-compare-badge is-ok\">NIE</span></td><td data-label=\"SGA po długości\"><span class=\"sga-birth-compare-badge is-ok\">NIE</span></td>\n                  </tr>\n                \n                  <tr>\n                    <th scope=\"row\">Malewski i wsp. (PL, masa)</th>\n                    <td data-label=\"SGA po masie\"><span class=\"sga-birth-compare-badge is-ok\">NIE</span></td><td data-label=\"SGA po długości\"><span class=\"sga-birth-compare-badge is-missing\">Niedostępne w tym źródle</span></td>\n                  </tr>\n                \n              </tbody>\n            </table>\n          </div>\n        </section>\n      \n        <section class=\"sga-birth-compare-table-block\">\n          <h3>Masa ciała przy urodzeniu</h3>\n          <div class=\"sga-birth-compare-table-wrap\">\n            <table class=\"sga-birth-compare-table\">\n              <thead>\n                <tr>\n                  <th scope=\"col\">Źródło</th>\n                  <th scope=\"col\">Wartość</th><th scope=\"col\">SDS</th><th scope=\"col\">Percentyl</th><th scope=\"col\">Ocena</th>\n                </tr>\n              </thead>\n              <tbody>\n                \n                  <tr>\n                    <th scope=\"row\">Niklasson / Albertsson-Wikland</th>\n                    <td data-label=\"Wartość\"><span class=\"sga-birth-compare-value\">3450 g</span></td><td data-label=\"SDS\"><span class=\"sga-birth-compare-value\">-0,64</span></td><td data-label=\"Percentyl\"><span class=\"sga-birth-compare-value\">26,0 c</span></td><td data-label=\"Ocena\"><span class=\"sga-birth-compare-badge is-ok\">w zakresie referencyjnym</span></td>\n                  </tr>\n                \n                  <tr>\n                    <th scope=\"row\">INTERGROWTH-21st</th>\n                    <td data-label=\"Wartość\"><span class=\"sga-birth-compare-value\">3450 g</span></td><td data-label=\"SDS\"><span class=\"sga-birth-compare-value\">-0,21</span></td><td data-label=\"Percentyl\"><span class=\"sga-birth-compare-value\">41,9 c</span></td><td data-label=\"Ocena\"><span class=\"sga-birth-compare-badge is-ok\">w zakresie referencyjnym</span></td>\n                  </tr>\n                \n                  <tr>\n                    <th scope=\"row\">Malewski i wsp. (PL, masa)</th>\n                    <td data-label=\"Wartość\"><span class=\"sga-birth-compare-value\">3450 g</span></td><td data-label=\"SDS\"><span class=\"sga-birth-compare-value\">0,20</span></td><td data-label=\"Percentyl\"><span class=\"sga-birth-compare-value\">57,9 c</span></td><td data-label=\"Ocena\"><span class=\"sga-birth-compare-badge is-ok\">w zakresie referencyjnym</span></td>\n                  </tr>\n                \n              </tbody>\n            </table>\n          </div>\n        </section>\n      \n        <section class=\"sga-birth-compare-table-block\">\n          <h3>Długość ciała przy urodzeniu</h3>\n          <div class=\"sga-birth-compare-table-wrap\">\n            <table class=\"sga-birth-compare-table\">\n              <thead>\n                <tr>\n                  <th scope=\"col\">Źródło</th>\n                  <th scope=\"col\">Wartość</th><th scope=\"col\">SDS</th><th scope=\"col\">Percentyl</th><th scope=\"col\">Ocena</th>\n                </tr>\n              </thead>\n              <tbody>\n                \n                  <tr>\n                    <th scope=\"row\">Niklasson / Albertsson-Wikland</th>\n                    <td data-label=\"Wartość\"><span class=\"sga-birth-compare-value\">50 cm</span></td><td data-label=\"SDS\"><span class=\"sga-birth-compare-value\">-0,78</span></td><td data-label=\"Percentyl\"><span class=\"sga-birth-compare-value\">21,8 c</span></td><td data-label=\"Ocena\"><span class=\"sga-birth-compare-badge is-ok\">w zakresie referencyjnym</span></td>\n                  </tr>\n                \n                  <tr>\n                    <th scope=\"row\">INTERGROWTH-21st</th>\n                    <td data-label=\"Wartość\"><span class=\"sga-birth-compare-value\">50 cm</span></td><td data-label=\"SDS\"><span class=\"sga-birth-compare-value\">-0,40</span></td><td data-label=\"Percentyl\"><span class=\"sga-birth-compare-value\">34,5 c</span></td><td data-label=\"Ocena\"><span class=\"sga-birth-compare-badge is-ok\">w zakresie referencyjnym</span></td>\n                  </tr>\n                \n                  <tr>\n                    <th scope=\"row\">Malewski i wsp. (PL, masa)</th>\n                    <td data-label=\"Wartość\"><span class=\"sga-birth-compare-value\">–</span></td><td data-label=\"SDS\"><span class=\"sga-birth-compare-value\">–</span></td><td data-label=\"Percentyl\"><span class=\"sga-birth-compare-value\">–</span></td><td data-label=\"Ocena\"><span class=\"sga-birth-compare-badge is-missing\">Niedostępne w tym źródle</span></td>\n                  </tr>\n                \n              </tbody>\n            </table>\n          </div>\n        </section>\n      \n        <section class=\"sga-birth-compare-table-block\">\n          <h3>Obwód głowy przy urodzeniu</h3>\n          <div class=\"sga-birth-compare-table-wrap\">\n            <table class=\"sga-birth-compare-table\">\n              <thead>\n                <tr>\n                  <th scope=\"col\">Źródło</th>\n                  <th scope=\"col\">Wartość</th><th scope=\"col\">SDS</th><th scope=\"col\">Percentyl</th><th scope=\"col\">Ocena</th>\n                </tr>\n              </thead>\n              <tbody>\n                \n                  <tr>\n                    <th scope=\"row\">Niklasson / Albertsson-Wikland</th>\n                    <td data-label=\"Wartość\"><span class=\"sga-birth-compare-value\">34 cm</span></td><td data-label=\"SDS\"><span class=\"sga-birth-compare-value\">-1,02</span></td><td data-label=\"Percentyl\"><span class=\"sga-birth-compare-value\">15,5 c</span></td><td data-label=\"Ocena\"><span class=\"sga-birth-compare-badge is-ok\">w zakresie referencyjnym</span></td>\n                  </tr>\n                \n                  <tr>\n                    <th scope=\"row\">INTERGROWTH-21st</th>\n                    <td data-label=\"Wartość\"><span class=\"sga-birth-compare-value\">34 cm</span></td><td data-label=\"SDS\"><span class=\"sga-birth-compare-value\">-0,60</span></td><td data-label=\"Percentyl\"><span class=\"sga-birth-compare-value\">27,4 c</span></td><td data-label=\"Ocena\"><span class=\"sga-birth-compare-badge is-ok\">w zakresie referencyjnym</span></td>\n                  </tr>\n                \n                  <tr>\n                    <th scope=\"row\">Malewski i wsp. (PL, masa)</th>\n                    <td data-label=\"Wartość\"><span class=\"sga-birth-compare-value\">–</span></td><td data-label=\"SDS\"><span class=\"sga-birth-compare-value\">–</span></td><td data-label=\"Percentyl\"><span class=\"sga-birth-compare-value\">–</span></td><td data-label=\"Ocena\"><span class=\"sga-birth-compare-badge is-missing\">Niedostępne w tym źródle</span></td>\n                  </tr>\n                \n              </tbody>\n            </table>\n          </div>\n        </section>\n      \n        </div>\n        \n        <div class=\"sga-birth-meta-box sga-birth-compare-reference-box\">\n          <h3>Źródła referencyjne</h3>\n          <p><strong>Niklasson / Albertsson-Wikland:</strong> Niklasson, A., Albertsson-Wikland, K. Continuous growth reference from 24th week of gestation to 24 months by gender. BMC Pediatr 8, 8 (2008). https://doi.org/10.1186/1471-2431-8-8</p><p><strong>INTERGROWTH-21st:</strong> INTERGROWTH-21st International Newborn Size References/Standards (24+0-42+6 tc): Villar et al. Lancet 2014;384:857-68 oraz Villar et al. Lancet 2016;387:844-5.</p><p><strong>Malewski i wsp. (PL, masa):</strong> Malewski i wsp. (populacja polska, lata 1986–1994) – tabela masy urodzeniowej wg wieku ciążowego.</p>\n        </div>\n      \n        \n        <div class=\"sga-birth-note-box sga-birth-compare-footnotes\">\n          <h3>Uwagi</h3>\n          <p><strong>Niklasson / Albertsson-Wikland:</strong> Dla 42 tygodni i dodatkowych dni zastosowano referencję dla 42. tygodnia, bo dane Niklasson kończą się na wartościach tygodniowych.</p><p><strong>Malewski i wsp. (PL, masa):</strong> Dla 42+6 tc zastosowano interpolację liniową między 42. a 43. tygodniem ciąży.</p>\n        </div>\n      \n      \n      ",
+        "message": ""
+      }
+    },
+    {
+      "name": "malewski-last-week",
+      "input": {
+        "sex": "male",
+        "weeks": "43",
+        "days": "6",
+        "weight": "3600",
+        "length": "41",
+        "head": "29",
+        "sourceKeys": [
+          "niklasson",
+          "intergrowth",
+          "malewski"
+        ],
+        "hasComputed": false
+      },
+      "expected": {
+        "birth": {
+          "sourceChoice": "compare",
+          "sourceKeys": [
+            "niklasson",
+            "intergrowth",
+            "malewski"
+          ],
+          "sex": "male",
+          "weeks": "43",
+          "days": "6",
+          "weight": "3600",
+          "length": "41",
+          "head": "29",
+          "hasComputed": true,
+          "assessment": {
+            "version": 1,
+            "inputs": {
+              "sex": "male",
+              "weeks": 43,
+              "days": 6,
+              "weightG": 3600,
+              "lengthCm": 41,
+              "headCm": 29
+            },
+            "requestedSourceKeys": [
+              "niklasson",
+              "intergrowth",
+              "malewski"
+            ],
+            "sources": [
+              {
+                "sourceKey": "malewski",
+                "title": "Malewski i wsp. (PL, masa)",
+                "sourceLabel": "Malewski i wsp. (populacja polska, lata 1986–1994) – tabela masy urodzeniowej wg wieku ciążowego.",
+                "helperLabel": "Wyniki obliczone wg tabeli Malewski i wsp.",
+                "metrics": {
+                  "weight": {
+                    "title": "Masa ciała przy urodzeniu",
+                    "valueLabel": "3600 g",
+                    "sds": -0.032118559533146795,
+                    "percentile": "48,7 c",
+                    "interpretation": "w zakresie referencyjnym",
+                    "unavailable": false
+                  },
+                  "length": {
+                    "title": "Długość ciała przy urodzeniu",
+                    "valueLabel": "–",
+                    "sds": null,
+                    "percentile": "–",
+                    "interpretation": "Niedostępne w tym źródle",
+                    "unavailable": true
+                  },
+                  "head": {
+                    "title": "Obwód głowy przy urodzeniu",
+                    "valueLabel": "–",
+                    "sds": null,
+                    "percentile": "–",
+                    "interpretation": "Niedostępne w tym źródle",
+                    "unavailable": true
+                  }
+                },
+                "summary": {
+                  "weightStatus": "NIE",
+                  "lengthStatus": "Niedostępne w tym źródle"
+                },
+                "notes": [
+                  "Dla 43 tygodni i dodatkowych dni zastosowano referencję dla 43. tygodnia, bo źródło kończy się na wartościach tygodniowych."
+                ],
+                "metaLines": []
+              }
+            ],
+            "notes": [
+              "Źródło Niklasson / Albertsson-Wikland pominięto, bo obejmuje 24–42 tc.",
+              "Źródło INTERGROWTH-21st pominięto, bo obejmuje 24+0 do 42+6 tc."
+            ]
+          }
+        },
+        "html": "\n        \n        \n            <div class=\"sga-birth-compare-note\">\n              <p>Tryb porównawczy: dla tego wieku ciążowego i podanych parametrów dostępne było tylko źródło Malewski i wsp. (PL, masa).</p><p>Źródło Niklasson / Albertsson-Wikland pominięto, bo obejmuje 24–42 tc.</p><p>Źródło INTERGROWTH-21st pominięto, bo obejmuje 24+0 do 42+6 tc.</p>\n            </div>\n            \n        <section class=\"sga-birth-source-block\" data-source=\"malewski\">\n          <div class=\"sga-birth-source-header\">\n            <h3>Malewski i wsp. (PL, masa)</h3>\n            <p>Wyniki obliczone wg tabeli Malewski i wsp.</p>\n          </div>\n          <div class=\"sga-birth-summary-box\">\n            <h3>Podsumowanie</h3>\n            <div class=\"sga-birth-summary-grid\">\n              <div class=\"sga-birth-summary-item is-ok\"><span class=\"sga-birth-summary-label\">SGA po masie urodzeniowej</span><strong class=\"sga-birth-summary-value\">NIE</strong></div>\n              <div class=\"sga-birth-summary-item is-missing\"><span class=\"sga-birth-summary-label\">SGA po długości urodzeniowej</span><strong class=\"sga-birth-summary-value\">Niedostępne w tym źródle</strong></div>\n            </div>\n          </div>\n          <div class=\"sga-birth-result-grid is-single\">\n            \n      <div class=\"sga-birth-result-card\">\n        <h4>Masa ciała przy urodzeniu</h4>\n        <dl>\n          <div><dt>Wartość</dt><dd>3600 g</dd></div>\n          <div><dt>SDS</dt><dd>-0,03</dd></div>\n          <div><dt>Percentyl</dt><dd>48,7 c</dd></div>\n          <div><dt>Ocena</dt><dd>w zakresie referencyjnym</dd></div>\n        </dl>\n      </div>\n    \n          </div>\n          \n        <div class=\"sga-birth-note-box\">\n          <p>Dla 43 tygodni i dodatkowych dni zastosowano referencję dla 43. tygodnia, bo źródło kończy się na wartościach tygodniowych.</p>\n        </div>\n      \n          <div class=\"sga-birth-meta-box\">\n            <p><strong>Źródło referencyjne:</strong> Malewski i wsp. (populacja polska, lata 1986–1994) – tabela masy urodzeniowej wg wieku ciążowego.</p>\n            \n          </div>\n        </section>\n      \n          \n      ",
+        "message": ""
+      }
+    },
+    {
+      "name": "malewski-earliest",
+      "input": {
+        "sex": "male",
+        "weeks": "22",
+        "days": "0",
+        "weight": "500",
+        "length": "41",
+        "head": "29",
+        "sourceKeys": [
+          "niklasson",
+          "intergrowth",
+          "malewski"
+        ],
+        "hasComputed": false
+      },
+      "expected": {
+        "birth": {
+          "sourceChoice": "compare",
+          "sourceKeys": [
+            "niklasson",
+            "intergrowth",
+            "malewski"
+          ],
+          "sex": "male",
+          "weeks": "22",
+          "days": "0",
+          "weight": "500",
+          "length": "41",
+          "head": "29",
+          "hasComputed": true,
+          "assessment": {
+            "version": 1,
+            "inputs": {
+              "sex": "male",
+              "weeks": 22,
+              "days": 0,
+              "weightG": 500,
+              "lengthCm": 41,
+              "headCm": 29
+            },
+            "requestedSourceKeys": [
+              "niklasson",
+              "intergrowth",
+              "malewski"
+            ],
+            "sources": [
+              {
+                "sourceKey": "malewski",
+                "title": "Malewski i wsp. (PL, masa)",
+                "sourceLabel": "Malewski i wsp. (populacja polska, lata 1986–1994) – tabela masy urodzeniowej wg wieku ciążowego.",
+                "helperLabel": "Wyniki obliczone wg tabeli Malewski i wsp.",
+                "metrics": {
+                  "weight": {
+                    "title": "Masa ciała przy urodzeniu",
+                    "valueLabel": "500 g",
+                    "sds": -0.22482991673202724,
+                    "percentile": "41,1 c",
+                    "interpretation": "w zakresie referencyjnym",
+                    "unavailable": false
+                  },
+                  "length": {
+                    "title": "Długość ciała przy urodzeniu",
+                    "valueLabel": "–",
+                    "sds": null,
+                    "percentile": "–",
+                    "interpretation": "Niedostępne w tym źródle",
+                    "unavailable": true
+                  },
+                  "head": {
+                    "title": "Obwód głowy przy urodzeniu",
+                    "valueLabel": "–",
+                    "sds": null,
+                    "percentile": "–",
+                    "interpretation": "Niedostępne w tym źródle",
+                    "unavailable": true
+                  }
+                },
+                "summary": {
+                  "weightStatus": "NIE",
+                  "lengthStatus": "Niedostępne w tym źródle"
+                },
+                "notes": [
+                  "W najwcześniejszych tygodniach fotografia tabeli nie zawierała 5. i/lub 95. centyla; brakujące skrajne punkty oszacowano z podanej średniej i SD wyłącznie na potrzeby obliczeń SDS/percentyla."
+                ],
+                "metaLines": []
+              }
+            ],
+            "notes": [
+              "Źródło Niklasson / Albertsson-Wikland pominięto, bo obejmuje 24–42 tc.",
+              "Źródło INTERGROWTH-21st pominięto, bo obejmuje 24+0 do 42+6 tc."
+            ]
+          }
+        },
+        "html": "\n        \n        \n            <div class=\"sga-birth-compare-note\">\n              <p>Tryb porównawczy: dla tego wieku ciążowego i podanych parametrów dostępne było tylko źródło Malewski i wsp. (PL, masa).</p><p>Źródło Niklasson / Albertsson-Wikland pominięto, bo obejmuje 24–42 tc.</p><p>Źródło INTERGROWTH-21st pominięto, bo obejmuje 24+0 do 42+6 tc.</p>\n            </div>\n            \n        <section class=\"sga-birth-source-block\" data-source=\"malewski\">\n          <div class=\"sga-birth-source-header\">\n            <h3>Malewski i wsp. (PL, masa)</h3>\n            <p>Wyniki obliczone wg tabeli Malewski i wsp.</p>\n          </div>\n          <div class=\"sga-birth-summary-box\">\n            <h3>Podsumowanie</h3>\n            <div class=\"sga-birth-summary-grid\">\n              <div class=\"sga-birth-summary-item is-ok\"><span class=\"sga-birth-summary-label\">SGA po masie urodzeniowej</span><strong class=\"sga-birth-summary-value\">NIE</strong></div>\n              <div class=\"sga-birth-summary-item is-missing\"><span class=\"sga-birth-summary-label\">SGA po długości urodzeniowej</span><strong class=\"sga-birth-summary-value\">Niedostępne w tym źródle</strong></div>\n            </div>\n          </div>\n          <div class=\"sga-birth-result-grid is-single\">\n            \n      <div class=\"sga-birth-result-card\">\n        <h4>Masa ciała przy urodzeniu</h4>\n        <dl>\n          <div><dt>Wartość</dt><dd>500 g</dd></div>\n          <div><dt>SDS</dt><dd>-0,22</dd></div>\n          <div><dt>Percentyl</dt><dd>41,1 c</dd></div>\n          <div><dt>Ocena</dt><dd>w zakresie referencyjnym</dd></div>\n        </dl>\n      </div>\n    \n          </div>\n          \n        <div class=\"sga-birth-note-box\">\n          <p>W najwcześniejszych tygodniach fotografia tabeli nie zawierała 5. i/lub 95. centyla; brakujące skrajne punkty oszacowano z podanej średniej i SD wyłącznie na potrzeby obliczeń SDS/percentyla.</p>\n        </div>\n      \n          <div class=\"sga-birth-meta-box\">\n            <p><strong>Źródło referencyjne:</strong> Malewski i wsp. (populacja polska, lata 1986–1994) – tabela masy urodzeniowej wg wieku ciążowego.</p>\n            \n          </div>\n        </section>\n      \n          \n      ",
+        "message": ""
+      }
+    },
+    {
+      "name": "length-only",
+      "input": {
+        "sex": "male",
+        "weeks": "36",
+        "days": "6",
+        "weight": "",
+        "length": "45",
+        "head": "",
+        "sourceKeys": [
+          "niklasson",
+          "intergrowth",
+          "malewski"
+        ],
+        "hasComputed": false
+      },
+      "expected": {
+        "birth": {
+          "sourceChoice": "compare",
+          "sourceKeys": [
+            "niklasson",
+            "intergrowth",
+            "malewski"
+          ],
+          "sex": "male",
+          "weeks": "36",
+          "days": "6",
+          "weight": "",
+          "length": "45",
+          "head": "",
+          "hasComputed": true,
+          "assessment": {
+            "version": 1,
+            "inputs": {
+              "sex": "male",
+              "weeks": 36,
+              "days": 6,
+              "weightG": null,
+              "lengthCm": 45,
+              "headCm": null
+            },
+            "requestedSourceKeys": [
+              "niklasson",
+              "intergrowth",
+              "malewski"
+            ],
+            "sources": [
+              {
+                "sourceKey": "niklasson",
+                "title": "Niklasson / Albertsson-Wikland",
+                "sourceLabel": "Niklasson, A., Albertsson-Wikland, K. Continuous growth reference from 24th week of gestation to 24 months by gender. BMC Pediatr 8, 8 (2008). https://doi.org/10.1186/1471-2431-8-8",
+                "helperLabel": "Wyniki obliczone wg Niklasson 2008.",
+                "metrics": {
+                  "length": {
+                    "title": "Długość ciała przy urodzeniu",
+                    "valueLabel": "45 cm",
+                    "sds": -2.5142857142857147,
+                    "percentile": "0,6 c",
+                    "interpretation": "poniżej -2 SDS",
+                    "unavailable": false
+                  }
+                },
+                "summary": {
+                  "weightStatus": "Brak danych",
+                  "lengthStatus": "TAK"
+                },
+                "notes": [],
+                "metaLines": []
+              },
+              {
+                "sourceKey": "intergrowth",
+                "title": "INTERGROWTH-21st",
+                "sourceLabel": "INTERGROWTH-21st International Newborn Size References/Standards (24+0-42+6 tc): Villar et al. Lancet 2014;384:857-68 oraz Villar et al. Lancet 2016;387:844-5.",
+                "helperLabel": "Wyniki obliczone wg INTERGROWTH-21st.",
+                "metrics": {
+                  "length": {
+                    "title": "Długość ciała przy urodzeniu",
+                    "valueLabel": "45 cm",
+                    "sds": -1.4736842105263155,
+                    "percentile": "7,0 c",
+                    "interpretation": "w zakresie referencyjnym",
+                    "unavailable": false
+                  }
+                },
+                "summary": {
+                  "weightStatus": "Brak danych",
+                  "lengthStatus": "NIE"
+                },
+                "notes": [],
+                "metaLines": []
+              }
+            ],
+            "notes": [
+              "Źródło Malewski pominięto w trybie porównawczym, bo nie podano masy urodzeniowej."
+            ]
+          }
+        },
+        "html": "\n        \n        \n            <div class=\"sga-birth-compare-note\">\n              <p>Tryb porównawczy: te same dane policzono równolegle według Niklasson / Albertsson-Wikland, INTERGROWTH-21st.</p><p>Źródło Malewski pominięto w trybie porównawczym, bo nie podano masy urodzeniowej.</p>\n            </div>\n            <div class=\"sga-birth-compare-grid\">\n              \n        <section class=\"sga-birth-source-block\" data-source=\"niklasson\">\n          <div class=\"sga-birth-source-header\">\n            <h3>Niklasson / Albertsson-Wikland</h3>\n            <p>Wyniki obliczone wg Niklasson 2008.</p>\n          </div>\n          <div class=\"sga-birth-summary-box\">\n            <h3>Podsumowanie</h3>\n            <div class=\"sga-birth-summary-grid\">\n              <div class=\"sga-birth-summary-item is-missing\"><span class=\"sga-birth-summary-label\">SGA po masie urodzeniowej</span><strong class=\"sga-birth-summary-value\">Brak danych</strong></div>\n              <div class=\"sga-birth-summary-item is-sga\"><span class=\"sga-birth-summary-label\">SGA po długości urodzeniowej</span><strong class=\"sga-birth-summary-value\">TAK</strong></div>\n            </div>\n          </div>\n          <div class=\"sga-birth-result-grid is-single\">\n            \n      <div class=\"sga-birth-result-card\">\n        <h4>Długość ciała przy urodzeniu</h4>\n        <dl>\n          <div><dt>Wartość</dt><dd>45 cm</dd></div>\n          <div><dt>SDS</dt><dd>-2,51</dd></div>\n          <div><dt>Percentyl</dt><dd>0,6 c</dd></div>\n          <div><dt>Ocena</dt><dd>poniżej -2 SDS</dd></div>\n        </dl>\n      </div>\n    \n          </div>\n          \n          <div class=\"sga-birth-meta-box\">\n            <p><strong>Źródło referencyjne:</strong> Niklasson, A., Albertsson-Wikland, K. Continuous growth reference from 24th week of gestation to 24 months by gender. BMC Pediatr 8, 8 (2008). https://doi.org/10.1186/1471-2431-8-8</p>\n            \n          </div>\n        </section>\n      \n        <section class=\"sga-birth-source-block\" data-source=\"intergrowth\">\n          <div class=\"sga-birth-source-header\">\n            <h3>INTERGROWTH-21st</h3>\n            <p>Wyniki obliczone wg INTERGROWTH-21st.</p>\n          </div>\n          <div class=\"sga-birth-summary-box\">\n            <h3>Podsumowanie</h3>\n            <div class=\"sga-birth-summary-grid\">\n              <div class=\"sga-birth-summary-item is-missing\"><span class=\"sga-birth-summary-label\">SGA po masie urodzeniowej</span><strong class=\"sga-birth-summary-value\">Brak danych</strong></div>\n              <div class=\"sga-birth-summary-item is-ok\"><span class=\"sga-birth-summary-label\">SGA po długości urodzeniowej</span><strong class=\"sga-birth-summary-value\">NIE</strong></div>\n            </div>\n          </div>\n          <div class=\"sga-birth-result-grid is-single\">\n            \n      <div class=\"sga-birth-result-card\">\n        <h4>Długość ciała przy urodzeniu</h4>\n        <dl>\n          <div><dt>Wartość</dt><dd>45 cm</dd></div>\n          <div><dt>SDS</dt><dd>-1,47</dd></div>\n          <div><dt>Percentyl</dt><dd>7,0 c</dd></div>\n          <div><dt>Ocena</dt><dd>w zakresie referencyjnym</dd></div>\n        </dl>\n      </div>\n    \n          </div>\n          \n          <div class=\"sga-birth-meta-box\">\n            <p><strong>Źródło referencyjne:</strong> INTERGROWTH-21st International Newborn Size References/Standards (24+0-42+6 tc): Villar et al. Lancet 2014;384:857-68 oraz Villar et al. Lancet 2016;387:844-5.</p>\n            \n          </div>\n        </section>\n      \n            </div>\n          \n      ",
+        "message": ""
+      }
+    },
+    {
+      "name": "head-only",
+      "input": {
+        "sex": "male",
+        "weeks": "38",
+        "days": "0",
+        "weight": "",
+        "length": "",
+        "head": "33",
+        "sourceKeys": [
+          "niklasson"
+        ],
+        "hasComputed": false
+      },
+      "expected": {
+        "birth": {
+          "sourceChoice": "niklasson",
+          "sourceKeys": [
+            "niklasson"
+          ],
+          "sex": "male",
+          "weeks": "38",
+          "days": "0",
+          "weight": "",
+          "length": "",
+          "head": "33",
+          "hasComputed": true,
+          "assessment": {
+            "version": 1,
+            "inputs": {
+              "sex": "male",
+              "weeks": 38,
+              "days": 0,
+              "weightG": null,
+              "lengthCm": null,
+              "headCm": 33
+            },
+            "requestedSourceKeys": [
+              "niklasson"
+            ],
+            "sources": [
+              {
+                "sourceKey": "niklasson",
+                "title": "Niklasson / Albertsson-Wikland",
+                "sourceLabel": "Niklasson, A., Albertsson-Wikland, K. Continuous growth reference from 24th week of gestation to 24 months by gender. BMC Pediatr 8, 8 (2008). https://doi.org/10.1186/1471-2431-8-8",
+                "helperLabel": "Wyniki obliczone wg Niklasson 2008.",
+                "metrics": {
+                  "head": {
+                    "title": "Obwód głowy przy urodzeniu",
+                    "valueLabel": "33 cm",
+                    "sds": -1.30769230769231,
+                    "percentile": "9,5 c",
+                    "interpretation": "w zakresie referencyjnym",
+                    "unavailable": false
+                  }
+                },
+                "summary": {
+                  "weightStatus": "Brak danych",
+                  "lengthStatus": "Brak danych"
+                },
+                "notes": [],
+                "metaLines": []
+              }
+            ],
+            "notes": []
+          }
+        },
+        "html": "\n        \n        \n        <section class=\"sga-birth-source-block\" data-source=\"niklasson\">\n          <div class=\"sga-birth-source-header\">\n            <h3>Niklasson / Albertsson-Wikland</h3>\n            <p>Wyniki obliczone wg Niklasson 2008.</p>\n          </div>\n          <div class=\"sga-birth-summary-box\">\n            <h3>Podsumowanie</h3>\n            <div class=\"sga-birth-summary-grid\">\n              <div class=\"sga-birth-summary-item is-missing\"><span class=\"sga-birth-summary-label\">SGA po masie urodzeniowej</span><strong class=\"sga-birth-summary-value\">Brak danych</strong></div>\n              <div class=\"sga-birth-summary-item is-missing\"><span class=\"sga-birth-summary-label\">SGA po długości urodzeniowej</span><strong class=\"sga-birth-summary-value\">Brak danych</strong></div>\n            </div>\n          </div>\n          <div class=\"sga-birth-result-grid is-single\">\n            \n      <div class=\"sga-birth-result-card\">\n        <h4>Obwód głowy przy urodzeniu</h4>\n        <dl>\n          <div><dt>Wartość</dt><dd>33 cm</dd></div>\n          <div><dt>SDS</dt><dd>-1,31</dd></div>\n          <div><dt>Percentyl</dt><dd>9,5 c</dd></div>\n          <div><dt>Ocena</dt><dd>w zakresie referencyjnym</dd></div>\n        </dl>\n      </div>\n    \n          </div>\n          \n          <div class=\"sga-birth-meta-box\">\n            <p><strong>Źródło referencyjne:</strong> Niklasson, A., Albertsson-Wikland, K. Continuous growth reference from 24th week of gestation to 24 months by gender. BMC Pediatr 8, 8 (2008). https://doi.org/10.1186/1471-2431-8-8</p>\n            \n          </div>\n        </section>\n      \n      ",
+        "message": ""
+      }
+    },
+    {
+      "name": "invalid-number",
+      "input": {
+        "sex": "male",
+        "weeks": "34",
+        "days": "2",
+        "weight": "invalid",
+        "length": "41",
+        "head": "29",
+        "sourceKeys": [
+          "niklasson",
+          "intergrowth",
+          "malewski"
+        ],
+        "hasComputed": false
+      },
+      "expected": {
+        "birth": {
+          "sourceChoice": "compare",
+          "sourceKeys": [
+            "niklasson",
+            "intergrowth",
+            "malewski"
+          ],
+          "sex": "male",
+          "weeks": "34",
+          "days": "2",
+          "weight": "invalid",
+          "length": "41",
+          "head": "29",
+          "hasComputed": false
+        },
+        "html": "",
+        "message": "Sprawdź format liczb. Możesz użyć przecinka lub kropki jako separatora dziesiętnego."
+      }
+    },
+    {
+      "name": "missing-sex",
+      "input": {
+        "sex": "",
+        "weeks": "34",
+        "days": "2",
+        "weight": "1650",
+        "length": "41",
+        "head": "29",
+        "sourceKeys": [
+          "niklasson",
+          "intergrowth",
+          "malewski"
+        ],
+        "hasComputed": false
+      },
+      "expected": {
+        "birth": {
+          "sourceChoice": "compare",
+          "sourceKeys": [
+            "niklasson",
+            "intergrowth",
+            "malewski"
+          ],
+          "sex": "",
+          "weeks": "34",
+          "days": "2",
+          "weight": "1650",
+          "length": "41",
+          "head": "29",
+          "hasComputed": false
+        },
+        "html": "",
+        "message": "Wybierz płeć dziecka."
+      }
+    },
+    {
+      "name": "unsupported-single",
+      "input": {
+        "sex": "male",
+        "weeks": "23",
+        "days": "2",
+        "weight": "1650",
+        "length": "41",
+        "head": "29",
+        "sourceKeys": [
+          "niklasson"
+        ],
+        "hasComputed": false
+      },
+      "expected": {
+        "birth": {
+          "sourceChoice": "niklasson",
+          "sourceKeys": [
+            "niklasson"
+          ],
+          "sex": "male",
+          "weeks": "23",
+          "days": "2",
+          "weight": "1650",
+          "length": "41",
+          "head": "29",
+          "hasComputed": false
+        },
+        "html": "",
+        "message": "Źródło Niklasson jest dostępne dla wieku ciążowego 24–42 tc."
+      }
+    },
+    {
+      "name": "missing-mass-malewski",
+      "input": {
+        "sex": "male",
+        "weeks": "34",
+        "days": "2",
+        "weight": "",
+        "length": "41",
+        "head": "29",
+        "sourceKeys": [
+          "malewski"
+        ],
+        "hasComputed": false
+      },
+      "expected": {
+        "birth": {
+          "sourceChoice": "malewski",
+          "sourceKeys": [
+            "malewski"
+          ],
+          "sex": "male",
+          "weeks": "34",
+          "days": "2",
+          "weight": "",
+          "length": "41",
+          "head": "29",
+          "hasComputed": false
+        },
+        "html": "",
+        "message": "Źródło Malewski obejmuje tylko masę urodzeniową. Podaj masę ciała przy urodzeniu."
+      }
+    },
+    {
+      "name": "blank-days-comma",
+      "input": {
+        "sex": "male",
+        "weeks": "34",
+        "days": "",
+        "weight": "1650",
+        "length": "41,5",
+        "head": "29",
+        "sourceKeys": [
+          "niklasson",
+          "intergrowth",
+          "malewski"
+        ],
+        "hasComputed": false
+      },
+      "expected": {
+        "birth": {
+          "sourceChoice": "compare",
+          "sourceKeys": [
+            "niklasson",
+            "intergrowth",
+            "malewski"
+          ],
+          "sex": "male",
+          "weeks": "34",
+          "days": "",
+          "weight": "1650",
+          "length": "41,5",
+          "head": "29",
+          "hasComputed": true,
+          "assessment": {
+            "version": 1,
+            "inputs": {
+              "sex": "male",
+              "weeks": 34,
+              "days": 0,
+              "weightG": 1650,
+              "lengthCm": 41.5,
+              "headCm": 29
+            },
+            "requestedSourceKeys": [
+              "niklasson",
+              "intergrowth",
+              "malewski"
+            ],
+            "sources": [
+              {
+                "sourceKey": "niklasson",
+                "title": "Niklasson / Albertsson-Wikland",
+                "sourceLabel": "Niklasson, A., Albertsson-Wikland, K. Continuous growth reference from 24th week of gestation to 24 months by gender. BMC Pediatr 8, 8 (2008). https://doi.org/10.1186/1471-2431-8-8",
+                "helperLabel": "Wyniki obliczone wg Niklasson 2008.",
+                "metrics": {
+                  "weight": {
+                    "title": "Masa ciała przy urodzeniu",
+                    "valueLabel": "1650 g",
+                    "sds": -2.9377867104659603,
+                    "percentile": "0,2 c",
+                    "interpretation": "poniżej -2 SDS",
+                    "unavailable": false
+                  },
+                  "length": {
+                    "title": "Długość ciała przy urodzeniu",
+                    "valueLabel": "41,5 cm",
+                    "sds": -2.9333333333333322,
+                    "percentile": "0,2 c",
+                    "interpretation": "poniżej -2 SDS",
+                    "unavailable": false
+                  },
+                  "head": {
+                    "title": "Obwód głowy przy urodzeniu",
+                    "valueLabel": "29 cm",
+                    "sds": -2.142857142857143,
+                    "percentile": "1,6 c",
+                    "interpretation": "poniżej -2 SDS",
+                    "unavailable": false
+                  }
+                },
+                "summary": {
+                  "weightStatus": "TAK",
+                  "lengthStatus": "TAK"
+                },
+                "notes": [],
+                "metaLines": []
+              },
+              {
+                "sourceKey": "intergrowth",
+                "title": "INTERGROWTH-21st",
+                "sourceLabel": "INTERGROWTH-21st International Newborn Size References/Standards (24+0-42+6 tc): Villar et al. Lancet 2014;384:857-68 oraz Villar et al. Lancet 2016;387:844-5.",
+                "helperLabel": "Wyniki obliczone wg INTERGROWTH-21st.",
+                "metrics": {
+                  "weight": {
+                    "title": "Masa ciała przy urodzeniu",
+                    "valueLabel": "1650 g",
+                    "sds": -1.404761904761905,
+                    "percentile": "8,0 c",
+                    "interpretation": "w zakresie referencyjnym",
+                    "unavailable": false
+                  },
+                  "length": {
+                    "title": "Długość ciała przy urodzeniu",
+                    "valueLabel": "41,5 cm",
+                    "sds": -1.681818181818181,
+                    "percentile": "4,6 c",
+                    "interpretation": "w zakresie referencyjnym",
+                    "unavailable": false
+                  },
+                  "head": {
+                    "title": "Obwód głowy przy urodzeniu",
+                    "valueLabel": "29 cm",
+                    "sds": -1.8461538461538467,
+                    "percentile": "3,2 c",
+                    "interpretation": "w zakresie referencyjnym",
+                    "unavailable": false
+                  }
+                },
+                "summary": {
+                  "weightStatus": "NIE",
+                  "lengthStatus": "NIE"
+                },
+                "notes": [],
+                "metaLines": []
+              },
+              {
+                "sourceKey": "malewski",
+                "title": "Malewski i wsp. (PL, masa)",
+                "sourceLabel": "Malewski i wsp. (populacja polska, lata 1986–1994) – tabela masy urodzeniowej wg wieku ciążowego.",
+                "helperLabel": "Wyniki obliczone wg tabeli Malewski i wsp.",
+                "metrics": {
+                  "weight": {
+                    "title": "Masa ciała przy urodzeniu",
+                    "valueLabel": "1650 g",
+                    "sds": -1.4026522526802245,
+                    "percentile": "8,0 c",
+                    "interpretation": "w zakresie referencyjnym",
+                    "unavailable": false
+                  },
+                  "length": {
+                    "title": "Długość ciała przy urodzeniu",
+                    "valueLabel": "–",
+                    "sds": null,
+                    "percentile": "–",
+                    "interpretation": "Niedostępne w tym źródle",
+                    "unavailable": true
+                  },
+                  "head": {
+                    "title": "Obwód głowy przy urodzeniu",
+                    "valueLabel": "–",
+                    "sds": null,
+                    "percentile": "–",
+                    "interpretation": "Niedostępne w tym źródle",
+                    "unavailable": true
+                  }
+                },
+                "summary": {
+                  "weightStatus": "NIE",
+                  "lengthStatus": "Niedostępne w tym źródle"
+                },
+                "notes": [],
+                "metaLines": []
+              }
+            ],
+            "notes": []
+          }
+        },
+        "html": "\n        \n        \n        <div class=\"sga-birth-compare-note\">\n          <p>Tryb porównawczy: te same dane policzono równolegle według Niklasson / Albertsson-Wikland, INTERGROWTH-21st, Malewski i wsp. (PL, masa).</p>\n        </div>\n        <div class=\"sga-birth-compare-table-stack\">\n          \n        <section class=\"sga-birth-compare-table-block\">\n          <h3>Podsumowanie SGA</h3>\n          <div class=\"sga-birth-compare-table-wrap\">\n            <table class=\"sga-birth-compare-table\">\n              <thead>\n                <tr>\n                  <th scope=\"col\">Źródło</th>\n                  <th scope=\"col\">SGA po masie urodzeniowej</th><th scope=\"col\">SGA po długości urodzeniowej</th>\n                </tr>\n              </thead>\n              <tbody>\n                \n                  <tr>\n                    <th scope=\"row\">Niklasson / Albertsson-Wikland</th>\n                    <td data-label=\"SGA po masie\"><span class=\"sga-birth-compare-badge is-sga\">TAK</span></td><td data-label=\"SGA po długości\"><span class=\"sga-birth-compare-badge is-sga\">TAK</span></td>\n                  </tr>\n                \n                  <tr>\n                    <th scope=\"row\">INTERGROWTH-21st</th>\n                    <td data-label=\"SGA po masie\"><span class=\"sga-birth-compare-badge is-ok\">NIE</span></td><td data-label=\"SGA po długości\"><span class=\"sga-birth-compare-badge is-ok\">NIE</span></td>\n                  </tr>\n                \n                  <tr>\n                    <th scope=\"row\">Malewski i wsp. (PL, masa)</th>\n                    <td data-label=\"SGA po masie\"><span class=\"sga-birth-compare-badge is-ok\">NIE</span></td><td data-label=\"SGA po długości\"><span class=\"sga-birth-compare-badge is-missing\">Niedostępne w tym źródle</span></td>\n                  </tr>\n                \n              </tbody>\n            </table>\n          </div>\n        </section>\n      \n        <section class=\"sga-birth-compare-table-block\">\n          <h3>Masa ciała przy urodzeniu</h3>\n          <div class=\"sga-birth-compare-table-wrap\">\n            <table class=\"sga-birth-compare-table\">\n              <thead>\n                <tr>\n                  <th scope=\"col\">Źródło</th>\n                  <th scope=\"col\">Wartość</th><th scope=\"col\">SDS</th><th scope=\"col\">Percentyl</th><th scope=\"col\">Ocena</th>\n                </tr>\n              </thead>\n              <tbody>\n                \n                  <tr>\n                    <th scope=\"row\">Niklasson / Albertsson-Wikland</th>\n                    <td data-label=\"Wartość\"><span class=\"sga-birth-compare-value\">1650 g</span></td><td data-label=\"SDS\"><span class=\"sga-birth-compare-value\">-2,94</span></td><td data-label=\"Percentyl\"><span class=\"sga-birth-compare-value\">0,2 c</span></td><td data-label=\"Ocena\"><span class=\"sga-birth-compare-badge is-sga\">poniżej -2 SDS</span></td>\n                  </tr>\n                \n                  <tr>\n                    <th scope=\"row\">INTERGROWTH-21st</th>\n                    <td data-label=\"Wartość\"><span class=\"sga-birth-compare-value\">1650 g</span></td><td data-label=\"SDS\"><span class=\"sga-birth-compare-value\">-1,40</span></td><td data-label=\"Percentyl\"><span class=\"sga-birth-compare-value\">8,0 c</span></td><td data-label=\"Ocena\"><span class=\"sga-birth-compare-badge is-ok\">w zakresie referencyjnym</span></td>\n                  </tr>\n                \n                  <tr>\n                    <th scope=\"row\">Malewski i wsp. (PL, masa)</th>\n                    <td data-label=\"Wartość\"><span class=\"sga-birth-compare-value\">1650 g</span></td><td data-label=\"SDS\"><span class=\"sga-birth-compare-value\">-1,40</span></td><td data-label=\"Percentyl\"><span class=\"sga-birth-compare-value\">8,0 c</span></td><td data-label=\"Ocena\"><span class=\"sga-birth-compare-badge is-ok\">w zakresie referencyjnym</span></td>\n                  </tr>\n                \n              </tbody>\n            </table>\n          </div>\n        </section>\n      \n        <section class=\"sga-birth-compare-table-block\">\n          <h3>Długość ciała przy urodzeniu</h3>\n          <div class=\"sga-birth-compare-table-wrap\">\n            <table class=\"sga-birth-compare-table\">\n              <thead>\n                <tr>\n                  <th scope=\"col\">Źródło</th>\n                  <th scope=\"col\">Wartość</th><th scope=\"col\">SDS</th><th scope=\"col\">Percentyl</th><th scope=\"col\">Ocena</th>\n                </tr>\n              </thead>\n              <tbody>\n                \n                  <tr>\n                    <th scope=\"row\">Niklasson / Albertsson-Wikland</th>\n                    <td data-label=\"Wartość\"><span class=\"sga-birth-compare-value\">41,5 cm</span></td><td data-label=\"SDS\"><span class=\"sga-birth-compare-value\">-2,93</span></td><td data-label=\"Percentyl\"><span class=\"sga-birth-compare-value\">0,2 c</span></td><td data-label=\"Ocena\"><span class=\"sga-birth-compare-badge is-sga\">poniżej -2 SDS</span></td>\n                  </tr>\n                \n                  <tr>\n                    <th scope=\"row\">INTERGROWTH-21st</th>\n                    <td data-label=\"Wartość\"><span class=\"sga-birth-compare-value\">41,5 cm</span></td><td data-label=\"SDS\"><span class=\"sga-birth-compare-value\">-1,68</span></td><td data-label=\"Percentyl\"><span class=\"sga-birth-compare-value\">4,6 c</span></td><td data-label=\"Ocena\"><span class=\"sga-birth-compare-badge is-ok\">w zakresie referencyjnym</span></td>\n                  </tr>\n                \n                  <tr>\n                    <th scope=\"row\">Malewski i wsp. (PL, masa)</th>\n                    <td data-label=\"Wartość\"><span class=\"sga-birth-compare-value\">–</span></td><td data-label=\"SDS\"><span class=\"sga-birth-compare-value\">–</span></td><td data-label=\"Percentyl\"><span class=\"sga-birth-compare-value\">–</span></td><td data-label=\"Ocena\"><span class=\"sga-birth-compare-badge is-missing\">Niedostępne w tym źródle</span></td>\n                  </tr>\n                \n              </tbody>\n            </table>\n          </div>\n        </section>\n      \n        <section class=\"sga-birth-compare-table-block\">\n          <h3>Obwód głowy przy urodzeniu</h3>\n          <div class=\"sga-birth-compare-table-wrap\">\n            <table class=\"sga-birth-compare-table\">\n              <thead>\n                <tr>\n                  <th scope=\"col\">Źródło</th>\n                  <th scope=\"col\">Wartość</th><th scope=\"col\">SDS</th><th scope=\"col\">Percentyl</th><th scope=\"col\">Ocena</th>\n                </tr>\n              </thead>\n              <tbody>\n                \n                  <tr>\n                    <th scope=\"row\">Niklasson / Albertsson-Wikland</th>\n                    <td data-label=\"Wartość\"><span class=\"sga-birth-compare-value\">29 cm</span></td><td data-label=\"SDS\"><span class=\"sga-birth-compare-value\">-2,14</span></td><td data-label=\"Percentyl\"><span class=\"sga-birth-compare-value\">1,6 c</span></td><td data-label=\"Ocena\"><span class=\"sga-birth-compare-badge is-sga\">poniżej -2 SDS</span></td>\n                  </tr>\n                \n                  <tr>\n                    <th scope=\"row\">INTERGROWTH-21st</th>\n                    <td data-label=\"Wartość\"><span class=\"sga-birth-compare-value\">29 cm</span></td><td data-label=\"SDS\"><span class=\"sga-birth-compare-value\">-1,85</span></td><td data-label=\"Percentyl\"><span class=\"sga-birth-compare-value\">3,2 c</span></td><td data-label=\"Ocena\"><span class=\"sga-birth-compare-badge is-ok\">w zakresie referencyjnym</span></td>\n                  </tr>\n                \n                  <tr>\n                    <th scope=\"row\">Malewski i wsp. (PL, masa)</th>\n                    <td data-label=\"Wartość\"><span class=\"sga-birth-compare-value\">–</span></td><td data-label=\"SDS\"><span class=\"sga-birth-compare-value\">–</span></td><td data-label=\"Percentyl\"><span class=\"sga-birth-compare-value\">–</span></td><td data-label=\"Ocena\"><span class=\"sga-birth-compare-badge is-missing\">Niedostępne w tym źródle</span></td>\n                  </tr>\n                \n              </tbody>\n            </table>\n          </div>\n        </section>\n      \n        </div>\n        \n        <div class=\"sga-birth-meta-box sga-birth-compare-reference-box\">\n          <h3>Źródła referencyjne</h3>\n          <p><strong>Niklasson / Albertsson-Wikland:</strong> Niklasson, A., Albertsson-Wikland, K. Continuous growth reference from 24th week of gestation to 24 months by gender. BMC Pediatr 8, 8 (2008). https://doi.org/10.1186/1471-2431-8-8</p><p><strong>INTERGROWTH-21st:</strong> INTERGROWTH-21st International Newborn Size References/Standards (24+0-42+6 tc): Villar et al. Lancet 2014;384:857-68 oraz Villar et al. Lancet 2016;387:844-5.</p><p><strong>Malewski i wsp. (PL, masa):</strong> Malewski i wsp. (populacja polska, lata 1986–1994) – tabela masy urodzeniowej wg wieku ciążowego.</p>\n        </div>\n      \n        \n      \n      ",
+        "message": ""
+      }
+    },
+    {
+      "name": "zero-mass",
+      "input": {
+        "sex": "male",
+        "weeks": "34",
+        "days": "2",
+        "weight": "0",
+        "length": "41",
+        "head": "29",
+        "sourceKeys": [
+          "niklasson",
+          "intergrowth",
+          "malewski"
+        ],
+        "hasComputed": false
+      },
+      "expected": {
+        "birth": {
+          "sourceChoice": "compare",
+          "sourceKeys": [
+            "niklasson",
+            "intergrowth",
+            "malewski"
+          ],
+          "sex": "male",
+          "weeks": "34",
+          "days": "2",
+          "weight": "0",
+          "length": "41",
+          "head": "29",
+          "hasComputed": true
+        },
+        "html": "\n        \n        <div class=\"sga-birth-note-box\">\n          <p>Wpisana masa urodzeniowa jest nietypowa. Sprawdź, czy nie ma pomyłki.</p>\n        </div>\n      \n        \n        <div class=\"sga-birth-compare-note\">\n          <p>Tryb porównawczy: te same dane policzono równolegle według Niklasson / Albertsson-Wikland, INTERGROWTH-21st, Malewski i wsp. (PL, masa).</p>\n        </div>\n        <div class=\"sga-birth-compare-table-stack\">\n          \n        <section class=\"sga-birth-compare-table-block\">\n          <h3>Podsumowanie SGA</h3>\n          <div class=\"sga-birth-compare-table-wrap\">\n            <table class=\"sga-birth-compare-table\">\n              <thead>\n                <tr>\n                  <th scope=\"col\">Źródło</th>\n                  <th scope=\"col\">SGA po masie urodzeniowej</th><th scope=\"col\">SGA po długości urodzeniowej</th>\n                </tr>\n              </thead>\n              <tbody>\n                \n                  <tr>\n                    <th scope=\"row\">Niklasson / Albertsson-Wikland</th>\n                    <td data-label=\"SGA po masie\"><span class=\"sga-birth-compare-badge is-missing\">Brak danych</span></td><td data-label=\"SGA po długości\"><span class=\"sga-birth-compare-badge is-sga\">TAK</span></td>\n                  </tr>\n                \n                  <tr>\n                    <th scope=\"row\">INTERGROWTH-21st</th>\n                    <td data-label=\"SGA po masie\"><span class=\"sga-birth-compare-badge is-sga\">TAK</span></td><td data-label=\"SGA po długości\"><span class=\"sga-birth-compare-badge is-sga\">TAK</span></td>\n                  </tr>\n                \n                  <tr>\n                    <th scope=\"row\">Malewski i wsp. (PL, masa)</th>\n                    <td data-label=\"SGA po masie\"><span class=\"sga-birth-compare-badge is-sga\">TAK</span></td><td data-label=\"SGA po długości\"><span class=\"sga-birth-compare-badge is-missing\">Niedostępne w tym źródle</span></td>\n                  </tr>\n                \n              </tbody>\n            </table>\n          </div>\n        </section>\n      \n        <section class=\"sga-birth-compare-table-block\">\n          <h3>Masa ciała przy urodzeniu</h3>\n          <div class=\"sga-birth-compare-table-wrap\">\n            <table class=\"sga-birth-compare-table\">\n              <thead>\n                <tr>\n                  <th scope=\"col\">Źródło</th>\n                  <th scope=\"col\">Wartość</th><th scope=\"col\">SDS</th><th scope=\"col\">Percentyl</th><th scope=\"col\">Ocena</th>\n                </tr>\n              </thead>\n              <tbody>\n                \n                  <tr>\n                    <th scope=\"row\">Niklasson / Albertsson-Wikland</th>\n                    <td data-label=\"Wartość\"><span class=\"sga-birth-compare-value\">0 g</span></td><td data-label=\"SDS\"><span class=\"sga-birth-compare-value\">–</span></td><td data-label=\"Percentyl\"><span class=\"sga-birth-compare-value\">–</span></td><td data-label=\"Ocena\"><span class=\"sga-birth-compare-badge is-missing\">–</span></td>\n                  </tr>\n                \n                  <tr>\n                    <th scope=\"row\">INTERGROWTH-21st</th>\n                    <td data-label=\"Wartość\"><span class=\"sga-birth-compare-value\">0 g</span></td><td data-label=\"SDS\"><span class=\"sga-birth-compare-value\">-4,96</span></td><td data-label=\"Percentyl\"><span class=\"sga-birth-compare-value\">&lt;0,1 c</span></td><td data-label=\"Ocena\"><span class=\"sga-birth-compare-badge is-sga\">poniżej -2 SDS</span></td>\n                  </tr>\n                \n                  <tr>\n                    <th scope=\"row\">Malewski i wsp. (PL, masa)</th>\n                    <td data-label=\"Wartość\"><span class=\"sga-birth-compare-value\">0 g</span></td><td data-label=\"SDS\"><span class=\"sga-birth-compare-value\">-4,02</span></td><td data-label=\"Percentyl\"><span class=\"sga-birth-compare-value\">&lt;0,1 c</span></td><td data-label=\"Ocena\"><span class=\"sga-birth-compare-badge is-sga\">poniżej -2 SDS</span></td>\n                  </tr>\n                \n              </tbody>\n            </table>\n          </div>\n        </section>\n      \n        <section class=\"sga-birth-compare-table-block\">\n          <h3>Długość ciała przy urodzeniu</h3>\n          <div class=\"sga-birth-compare-table-wrap\">\n            <table class=\"sga-birth-compare-table\">\n              <thead>\n                <tr>\n                  <th scope=\"col\">Źródło</th>\n                  <th scope=\"col\">Wartość</th><th scope=\"col\">SDS</th><th scope=\"col\">Percentyl</th><th scope=\"col\">Ocena</th>\n                </tr>\n              </thead>\n              <tbody>\n                \n                  <tr>\n                    <th scope=\"row\">Niklasson / Albertsson-Wikland</th>\n                    <td data-label=\"Wartość\"><span class=\"sga-birth-compare-value\">41 cm</span></td><td data-label=\"SDS\"><span class=\"sga-birth-compare-value\">-3,48</span></td><td data-label=\"Percentyl\"><span class=\"sga-birth-compare-value\">&lt;0,1 c</span></td><td data-label=\"Ocena\"><span class=\"sga-birth-compare-badge is-sga\">poniżej -2 SDS</span></td>\n                  </tr>\n                \n                  <tr>\n                    <th scope=\"row\">INTERGROWTH-21st</th>\n                    <td data-label=\"Wartość\"><span class=\"sga-birth-compare-value\">41 cm</span></td><td data-label=\"SDS\"><span class=\"sga-birth-compare-value\">-2,04</span></td><td data-label=\"Percentyl\"><span class=\"sga-birth-compare-value\">2,1 c</span></td><td data-label=\"Ocena\"><span class=\"sga-birth-compare-badge is-sga\">poniżej -2 SDS</span></td>\n                  </tr>\n                \n                  <tr>\n                    <th scope=\"row\">Malewski i wsp. (PL, masa)</th>\n                    <td data-label=\"Wartość\"><span class=\"sga-birth-compare-value\">–</span></td><td data-label=\"SDS\"><span class=\"sga-birth-compare-value\">–</span></td><td data-label=\"Percentyl\"><span class=\"sga-birth-compare-value\">–</span></td><td data-label=\"Ocena\"><span class=\"sga-birth-compare-badge is-missing\">Niedostępne w tym źródle</span></td>\n                  </tr>\n                \n              </tbody>\n            </table>\n          </div>\n        </section>\n      \n        <section class=\"sga-birth-compare-table-block\">\n          <h3>Obwód głowy przy urodzeniu</h3>\n          <div class=\"sga-birth-compare-table-wrap\">\n            <table class=\"sga-birth-compare-table\">\n              <thead>\n                <tr>\n                  <th scope=\"col\">Źródło</th>\n                  <th scope=\"col\">Wartość</th><th scope=\"col\">SDS</th><th scope=\"col\">Percentyl</th><th scope=\"col\">Ocena</th>\n                </tr>\n              </thead>\n              <tbody>\n                \n                  <tr>\n                    <th scope=\"row\">Niklasson / Albertsson-Wikland</th>\n                    <td data-label=\"Wartość\"><span class=\"sga-birth-compare-value\">29 cm</span></td><td data-label=\"SDS\"><span class=\"sga-birth-compare-value\">-2,29</span></td><td data-label=\"Percentyl\"><span class=\"sga-birth-compare-value\">1,1 c</span></td><td data-label=\"Ocena\"><span class=\"sga-birth-compare-badge is-sga\">poniżej -2 SDS</span></td>\n                  </tr>\n                \n                  <tr>\n                    <th scope=\"row\">INTERGROWTH-21st</th>\n                    <td data-label=\"Wartość\"><span class=\"sga-birth-compare-value\">29 cm</span></td><td data-label=\"SDS\"><span class=\"sga-birth-compare-value\">-1,93</span></td><td data-label=\"Percentyl\"><span class=\"sga-birth-compare-value\">2,7 c</span></td><td data-label=\"Ocena\"><span class=\"sga-birth-compare-badge is-ok\">w zakresie referencyjnym</span></td>\n                  </tr>\n                \n                  <tr>\n                    <th scope=\"row\">Malewski i wsp. (PL, masa)</th>\n                    <td data-label=\"Wartość\"><span class=\"sga-birth-compare-value\">–</span></td><td data-label=\"SDS\"><span class=\"sga-birth-compare-value\">–</span></td><td data-label=\"Percentyl\"><span class=\"sga-birth-compare-value\">–</span></td><td data-label=\"Ocena\"><span class=\"sga-birth-compare-badge is-missing\">Niedostępne w tym źródle</span></td>\n                  </tr>\n                \n              </tbody>\n            </table>\n          </div>\n        </section>\n      \n        </div>\n        \n        <div class=\"sga-birth-meta-box sga-birth-compare-reference-box\">\n          <h3>Źródła referencyjne</h3>\n          <p><strong>Niklasson / Albertsson-Wikland:</strong> Niklasson, A., Albertsson-Wikland, K. Continuous growth reference from 24th week of gestation to 24 months by gender. BMC Pediatr 8, 8 (2008). https://doi.org/10.1186/1471-2431-8-8</p><p><strong>INTERGROWTH-21st:</strong> INTERGROWTH-21st International Newborn Size References/Standards (24+0-42+6 tc): Villar et al. Lancet 2014;384:857-68 oraz Villar et al. Lancet 2016;387:844-5.</p><p><strong>Malewski i wsp. (PL, masa):</strong> Malewski i wsp. (populacja polska, lata 1986–1994) – tabela masy urodzeniowej wg wieku ciążowego.</p>\n        </div>\n      \n        \n        <div class=\"sga-birth-note-box sga-birth-compare-footnotes\">\n          <h3>Uwagi</h3>\n          <p><strong>Malewski i wsp. (PL, masa):</strong> Dla 34+2 tc zastosowano interpolację liniową między 34. a 35. tygodniem ciąży.</p>\n        </div>\n      \n      \n      ",
+        "message": ""
+      }
+    }
+  ]
+}

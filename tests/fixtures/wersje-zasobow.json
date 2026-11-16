@@ -1088,8 +1088,8 @@
   "sha256": "a17c0e0ec94f5e9654c8007ec22bcce5efcc8ecc9829de748db2f582ab3fd09c"
  },
  "sga_birth_module.js": {
-  "v": 14,
-  "sha256": "fc65850995918c8916825e374f17dbf78fa78ebfac808cea132f0c74977e4d81"
+  "v": 15,
+  "sha256": "6445f99da0d8541dde67c2240b63b3fab214cb44e2b4eaace67efdcdb583c69a"
  },
  "style.css": {
   "v": 96,
@@ -1316,8 +1316,8 @@
   "sha256": "93104c7afce5beeb1e48c586bcfe22b857d05c0ca75fbbd2c98d260bb69148a7"
  },
  "vilda_data_import_export.js": {
-  "v": 125,
-  "sha256": "9f3db4cf68bc4c129a3bc3eb7e213895567643ab2781a9097813b822805485bc"
+  "v": 126,
+  "sha256": "0e805e7f0a95103176e3d46d30a3f747a6f16eef9fb7d81ee4893c6d60667c0c"
  },
  "vilda_data_safety_explainer.js": {
   "v": 5,
@@ -1559,13 +1559,17 @@
   "v": 3,
   "sha256": "3cc184cdcc8237c79f70c19c70862649de1ffe2acf680bb877629ca2f8c1483b"
  },
+ "vilda_home_perinatal.js": {
+  "v": 1,
+  "sha256": "981190bbca652d74e71acd083940d3fcb2c7071ca87a9d6ca56a0a59a004633f"
+ },
  "vilda_home_workspace.css": {
-  "v": 3,
-  "sha256": "7005cfcc8ffa288e44eab30554a8fe66e8e41820a7bd740c9d48736bbfa8d0ee"
+  "v": 4,
+  "sha256": "447195cbc950f7736bd53e941389438a93e75789979c6a7398bf858ff605e8ec"
  },
  "vilda_home_workspace.js": {
-  "v": 3,
-  "sha256": "e8c33edb312346fb53a3df93333e329216320dca8297447c3bdeeb5b3b1c9103"
+  "v": 4,
+  "sha256": "db4e485a1f8a8c277712fff9b2d25ea39badbaf71f9071bc89605b76ca47299d"
  },
  "vilda_hormone_lifespan.css": {
   "v": 7,
@@ -1994,6 +1998,10 @@
  "vilda_session_bridge.js": {
   "v": 207,
   "sha256": "50e235bf292e0265d7395426b7eaaeb3f51adedfd36340217ae28e899d6211e8"
+ },
+ "vilda_sga_birth_results.css": {
+  "v": 1,
+  "sha256": "c89848f95e87bf79fc0ed79652cdd08c63b587facbb3e03756651d940b649d6f"
  },
  "vilda_sga_catchup.js": {
   "v": 2,
