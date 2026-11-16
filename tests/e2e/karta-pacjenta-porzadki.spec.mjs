@@ -171,7 +171,11 @@ test.describe('P2 + P11 + P12 — Notatki i Historia', () => {
         category: 'wynik-klirens', clinicalDateISO: '2026-03-12',
         labResult: { test: 'eGFR', value: '95 ml/min', valueNum: 95, unit: 'ml/min' },
       });
-      return { patientId: id, zaleglyId: zalegly.id, klirensId: klirens.id };
+      const obserwacja = await window.VildaVault.savePatientNote({
+        patientId: id, title: 'Obserwacja kontrolna', body: 'Fikcyjna treść obserwacji.',
+        category: 'observation', clinicalDateISO: '2026-03-10',
+      });
+      return { patientId: id, zaleglyId: zalegly.id, klirensId: klirens.id, obserwacjaId: obserwacja.id };
     }, patientId);
   }
 
@@ -235,6 +239,25 @@ test.describe('P2 + P11 + P12 — Notatki i Historia', () => {
 
   test('P12 — kliknięcie wpisu wskazuje konkretną notatkę', async ({ page }) => {
     await otworzZKontem(page);
+    const { patientId, klirensId, obserwacjaId } = await pacjentZNotatkami(page);
+    await otworzKarte(page, patientId);
+    await zakladka(page, 'timeline').click();
+    await czekajNaHistorie(page);
+
+    const historia = page.locator('.vilda-patient-tab-content[data-tab="timeline"]');
+    await historia.getByText('Obserwacja kontrolna').first().click();
+
+    await expect(page.locator(`.vilda-patient-note-card[data-note-id="${obserwacjaId}"]`),
+      'notatka jest w DOM z własnym identyfikatorem').toBeVisible();
+    await expect(page.locator('.vilda-note-wskazana'),
+      'przejście z Historii nie może kończyć się ślepym zaułkiem').toHaveCount(1);
+    // P-KLIRENS-NOTATKI (decyzja właściciela 2026-11-15): wynik Klirensu nie ma karty w Notatkach.
+    await expect(page.locator(`.vilda-patient-note-card[data-note-id="${klirensId}"]`)).toHaveCount(0);
+    await expect(page.locator('.vilda-wb-notes-link')).toHaveText('Wyniki badań (1) są w zakładce Badania →');
+  });
+
+  test('P12 — kliknięcie wyniku Klirensu w Historii otwiera Badania ze szczegółami obliczenia', async ({ page }) => {
+    await otworzZKontem(page);
     const { patientId, klirensId } = await pacjentZNotatkami(page);
     await otworzKarte(page, patientId);
     await zakladka(page, 'timeline').click();
@@ -243,9 +266,8 @@ test.describe('P2 + P11 + P12 — Notatki i Historia', () => {
     const historia = page.locator('.vilda-patient-tab-content[data-tab="timeline"]');
     await historia.getByText('eGFR').first().click();
 
-    await expect(page.locator(`.vilda-patient-note-card[data-note-id="${klirensId}"]`),
-      'notatka jest w DOM z własnym identyfikatorem').toBeVisible();
-    await expect(page.locator('.vilda-note-wskazana'),
-      'przejście z Historii nie może kończyć się ślepym zaułkiem').toHaveCount(1);
+    await expect(zakladka(page, 'lab'), 'wynik Klirensu ma swoje miejsce w Badaniach').toHaveClass(/is-active|active/);
+    await expect(page.locator('#detailsDialog'), 'przejście z Historii nie może kończyć się ślepym zaułkiem').toBeVisible();
+    await expect(page.locator('#calculationDetails')).toHaveAttribute('data-note-id', klirensId);
   });
 });

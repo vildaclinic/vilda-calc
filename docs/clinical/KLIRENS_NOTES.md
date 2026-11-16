@@ -1,5 +1,22 @@
 # Wyniki Klirensu w Notatkach
 
+> **Zmiana 2026-11-15 (P-KLIRENS-NOTATKI, LAB-HISTORIA 6.37, decyzja właściciela:
+> „Notatki to nie jest miejsce na wyniki z Klirensu”).** Wynik Klirensu — zapis
+> kategorii `wynik-klirens` z polem wyniku — **nie jest już pokazywany
+> w Notatkach**. Ma jedno miejsce pełnej treści: panel „Klirens” w zakładce
+> „Badania” (wartość, zapisana norma, wykres, szczegóły obliczenia z edycją,
+> usunięciem i komentarzem lekarza). Notatki liczą go w linii „Wyniki badań (N)
+> są w zakładce Badania →”, Historia pokazuje go jak dotąd, a link do wyniku
+> otwiera Badania ze szczegółami obliczenia. Warunek:
+> `VildaLabHistory.isClcrResultNote` (kategoria i obiekt `labResult` — ten sam,
+> którym projekcja Klirensu przyjmuje zapis do Badań).
+>
+> Opisana niżej zwarta karta (`clcr_notes_view.js`, `ClcrNotesCard`) zostaje
+> w kodzie: rysuje się już tylko dla zapisu `wynik-klirens` **bez** pola wyniku,
+> a jej model (`ClcrNotesView.model`, `summary`, `title`) nadal służy
+> wyszukiwarce i tytułom wpisów w Historii. Reszta dokumentu opisuje stan
+> z 2026-10-28 i pozostaje źródłem dla tej karty i modelu.
+
 Zatwierdzona 28.10.2026 zmiana prezentacji dotyczy wyłącznie notatek kategorii
 `wynik-klirens`. Zwykłe obserwacje i notatki lekarza zachowują dotychczasowy widok
 i edytor.

@@ -1,12 +1,12 @@
 import { expect, test } from '../support/test-czas.mjs';
-import { badania, clcrNorm, clcrPoint, clcrRow, closeClcrDetails, openClcrDetails, showBadaniaView, showClcrResults } from '../support/badania-klirens.mjs';
+import { badania, clcrNorm, clcrPoint, clcrRow, closeClcrDetails, expectClcrOutsideNotes, openClcrDetails, openClcrDetailsInCard, showBadaniaView, showClcrResults } from '../support/badania-klirens.mjs';
 import { memory, PATIENT_ID, saveVisible } from '../support/klirens-patient-record.mjs';
 import { card, chooseVariant, expectResult, installFictionalPatient, openCalculator, readFrozen, restore, SERIES, snapshot } from '../support/klirens-ktv-browser.mjs';
 
 test.use({ chwila: '2026-11-06T12:00:00Z', serviceWorkers: 'block', reducedMotion: 'reduce' });
-const noteCard = (page, id) => page.locator(`.vilda-patient-note-card.vilda-clcr-note[data-note-id="${id}"]`);
-
-test('Kt/V: zapisuje wyłącznie wybraną serię; Badania, wykres i notatka edytują ten sam pomiar', async ({ page }) => {
+// P-KLIRENS-NOTATKI (decyzja właściciela 2026-11-15): wynik Klirensu nie ma karty w Notatkach; szczegóły, edycja
+// i usunięcie są w Badaniach, a Notatki pokazują tylko linię z liczbą wyników.
+test('Kt/V: zapisuje wyłącznie wybraną serię; Badania i wykres edytują ten sam pomiar, Notatki wyniku nie pokazują', async ({ page }) => {
   test.setTimeout(120000);
   await openCalculator(page); await installFictionalPatient(page); await restore(page);
   const variants = [['spktv', 1.4010540127569946], ['ektv', 1.2227380474970133], ['urr', 70]];
@@ -28,11 +28,9 @@ test('Kt/V: zapisuje wyłącznie wybraną serię; Badania, wykres i notatka edyt
   for (const note of saved) { await expect(clcrRow(page, note.id)).toBeVisible(); await expect(clcrNorm(page, note.id)).not.toHaveText('—'); }
   await showBadaniaView(page, 'charts');
   for (const note of saved) await expect(clcrPoint(page, note.id)).toHaveAttribute('data-value', String(note.labResult.valueNum));
-  await page.locator('button[data-tab="notes"]').click();
-  for (const note of saved) await expect(noteCard(page, note.id)).toBeVisible();
+  await expectClcrOutsideNotes(page, 3);
   await expect(page.locator('.vilda-patient-notes-section')).not.toContainText(/VILDA_CLCR|"schema"|schemaVersion|rawValue|\[tekst\]|"knownFacts"|Utrwalone dane oceny dawki dializy|Schemat zapisu|clcr-ktv/);
-  await noteCard(page, saved[0].id).getByRole('button', { name: 'Szczegóły obliczenia →', exact: true }).click();
-  await expect(page.locator('#calculationDetails')).toHaveAttribute('data-note-id', saved[0].id);
+  await openClcrDetailsInCard(page, saved[0].id);
   await page.locator('#editMeasurement').click(); await expect(page.locator('#editDialog')).toBeVisible();
   await expect(page.locator('#editDialog [data-clcr-edit-field]')).toHaveCount(7);
   for (const id of ['age', 'ktvKru', 'ktvPostMethod', 'ktvUreaAnalyte', 'ktvSameSession']) await expect(page.locator(`#editDialog [data-clcr-edit-field="${id}"]`)).toHaveCount(0);
@@ -45,17 +43,17 @@ test('Kt/V: zapisuje wyłącznie wybraną serię; Badania, wykres i notatka edyt
   const edited = stored.notes.find(note => note.id === saved[0].id), frozen = await readFrozen(page, edited);
   expect(frozen.status).toBe('below-minimum'); expect(frozen.outOfRange).toBe(true);
   expect(edited.labResult.valueNum).toBe(frozen.rawValue); expect(frozen.rawValue).toBeCloseTo(0.941559560743095, 12);
-  await closeClcrDetails(page); await expect(noteCard(page, edited.id).locator('.clcr-note-main')).toHaveAttribute('data-tone', 'danger');
-  await noteCard(page, edited.id).getByRole('button', { name: 'Zobacz w Badaniach →', exact: true }).click();
+  await closeClcrDetails(page);
   await showClcrResults(page, 'charts'); await expect(clcrPoint(page, edited.id)).toHaveAttribute('data-value', String(frozen.rawValue));
+  await expect(clcrPoint(page, edited.id)).toHaveAttribute('data-tone', 'below');
   await openClcrDetails(page, edited.id, { chart: true }); await page.locator('#deleteMeasurement').click();
   await page.locator('#deleteDialog').getByRole('button', { name: 'Anuluj', exact: true }).click(); expect((await memory(page)).notes).toHaveLength(3);
   await page.locator('#deleteMeasurement').click(); await page.locator('#confirmDeleteMeasurement').click();
   await expect(page.locator('#detailsDialog')).toBeHidden();
   stored = await memory(page); expect(stored.notes).toEqual(saved.slice(1)); expect(stored.deletes).toHaveLength(1);
   await showClcrResults(page, 'table'); await expect(clcrRow(page, edited.id)).toHaveCount(0);
-  await page.locator('button[data-tab="notes"]').click(); await expect(noteCard(page, edited.id)).toHaveCount(0);
-  for (const sibling of saved.slice(1)) await expect(noteCard(page, sibling.id)).toBeVisible();
+  for (const sibling of saved.slice(1)) await expect(clcrRow(page, sibling.id)).toBeVisible();
+  await expectClcrOutsideNotes(page, 2);
   expect(stored.originalsLocked).toBe(true); expect(stored.observerErrors).toEqual([]);
 });
 

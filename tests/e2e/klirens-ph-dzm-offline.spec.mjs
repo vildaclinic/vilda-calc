@@ -7,7 +7,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { expect, test } from '@playwright/test';
 import { enterGuest, prepareBrowser, installMemoryVault, saveVisible, memory, PATIENT_ID } from '../support/klirens-patient-record.mjs';
-import { showClcrResults, clcrPoint } from '../support/badania-klirens.mjs';
+import { showClcrResults, clcrPoint, clcrValue, clcrNorm, expectClcrOutsideNotes, openClcrDetails } from '../support/badania-klirens.mjs';
 
 import { restore, expectResult, expectBlocked } from '../support/klirens-ph-dzm-browser.mjs';
 
@@ -324,10 +324,11 @@ async function lazyStartAndNotes(page, origin, note, savedModel, resources, load
   await installMemoryVault(page);
   await page.evaluate(value => window.__clcrRecordFixture.seed([value]), note);
   await page.evaluate(pid => window.VildaAuthUI.showPatientCard(pid, null, null, { activeTab: 'notes' }), note.patientId);
-  const compact = page.locator('.vilda-clcr-note[data-clcr-note-state="ready"]');
-  await expect(compact).toHaveCount(1);
-  await expect(compact.locator('.clcr-note-value')).toHaveText(note.labResult.value);
-  await expect(compact.locator('.clcr-note-reference')).toHaveText(note.labResult.norm);
+  // P-KLIRENS-NOTATKI: wynik Klirensu nie ma karty w Notatkach (tylko linia z liczbą wyników); wartość, norma i szczegóły są w Badaniach.
+  await expectClcrOutsideNotes(page, 1);
+  await page.locator('button[data-tab="lab"]').click(); await showClcrResults(page, 'table');
+  await expect(clcrValue(page, note.id)).toContainText(note.labResult.value);
+  await expect(clcrNorm(page, note.id)).toContainText(note.labResult.norm);
   const frozen = await page.evaluate(value => {
     const engine = window.VildaClcrPhDzm;
     window.VildaClcrPhDzm = new Proxy({}, { get() { return () => { throw Error('Offline Start must read frozen pH DZM'); }; } });
@@ -339,7 +340,7 @@ async function lazyStartAndNotes(page, origin, note, savedModel, resources, load
   // The saved reader adds its public presentation fields to the frozen
   // assessment; assert those too instead of confusing it with the raw engine API.
   expect(frozen.snapshot).toEqual({ ...savedModel, norm: '4,5–8,0', displayValue: '5,2', comparator: '' });
-  await compact.getByRole('button', { name: 'Szczegóły obliczenia →', exact: true }).click();
+  await openClcrDetails(page, note.id);
   await page.locator('#editMeasurement').click();
   await page.locator('#editField-pH24').fill('8,2');
   await page.locator('#saveEditedMeasurement').click();
@@ -352,9 +353,8 @@ async function lazyStartAndNotes(page, origin, note, savedModel, resources, load
   expect(editedSnapshot.reference).toEqual(savedModel.reference);
   expect(editedSnapshot).toMatchObject({ status: 'high', outOfRange: true, rawValue: 8.2 });
   await page.locator('#detailsDialog').getByRole('button', { name: 'Zamknij', exact: true }).click();
-  await expect(compact.locator('.clcr-note-value')).toHaveText(edited.labResult.value);
-  await expect(compact.locator('.clcr-note-reference')).toHaveText(edited.labResult.norm);
-  await compact.getByRole('button', { name: 'Zobacz w Badaniach →', exact: true }).click();
+  await expect(clcrValue(page, note.id)).toContainText(edited.labResult.value);
+  await expect(clcrNorm(page, note.id)).toContainText(edited.labResult.norm);
   await showClcrResults(page, 'charts');
   const point = clcrPoint(page, note.id);
   await expect.poll(async () => Number(await point.getAttribute('data-value'))).toBe(8.2);

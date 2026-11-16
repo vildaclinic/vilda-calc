@@ -1,4 +1,4 @@
-import { showClcrResults, clcrPoint } from '../support/badania-klirens.mjs';
+import { showClcrResults, clcrPoint, clcrValue, clcrNorm, expectClcrOutsideNotes, openClcrDetails } from '../support/badania-klirens.mjs';
 import { createServer } from 'node:http';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
@@ -223,22 +223,28 @@ async function fictionalUrateCreatinineAndNotes(page) {
   expect((await memory(page)).notes).toHaveLength(1);
   expect(note.labResult.valueNum).toBeCloseTo(0.6728927487954316, 14);
   expect(note.labResult.value).toBe(model.presentation.valueText);
+  // P-KLIRENS-NOTATKI: zapis Klirensu bez pola wyniku (dawna notatka z samym opisem) zostaje w Notatkach ze zwartą
+  // kartą — to ona ładuje teraz clcr_notes_view.js i clcr_notes_view.css z produkcyjnego SW.
+  await page.evaluate(value => window.__clcrRecordFixture.seed([value]), { id: 'fictional-klirens-note-without-result', patientId: note.patientId, category: 'wynik-klirens', title: 'Fikcyjna dawna notatka Klirensu', body: 'Fikcyjny opis bez pola wyniku.', clinicalDateISO: '2026-10-20', rev: 1 });
   await page.locator('#clcrOpenBadaniaBtn').click();
   await showClcrResults(page, 'charts'); await expect(page.locator('.vilda-auth-patient-card')).toBeVisible();
-  await page.locator('button[data-tab="notes"]').click();
-  const compact = page.locator('.vilda-clcr-note[data-clcr-note-state="ready"]'); await expect(compact).toHaveCount(1);
-  await expect(compact.locator('.clcr-note-value')).toHaveText(model.presentation.valueText);
-  await expect(compact.locator('.clcr-note-reference')).toHaveText('0,11–0,53');
-  for (const key of ['VILDA_CLCR', 'engineVersion', 'exactMain', '[tekst]', 'Sam wynik nie rozpoznaje kamicy ani nie zastępuje oceny dobowego wydalania.']) await expect(compact).not.toContainText(key);
-  expect(await compact.evaluate(node => node.scrollWidth <= node.clientWidth + 1)).toBe(true);
-  await compact.getByRole('button', { name: 'Szczegóły obliczenia →', exact: true }).click();
+  // P-KLIRENS-NOTATKI: wynik Klirensu nie ma karty w Notatkach (tylko linia z liczbą wyników); wartość, norma i szczegóły są w Badaniach.
+  await expectClcrOutsideNotes(page, 1, { legacyCards: 1 });
+  const legacyCard = page.locator('.vilda-clcr-note[data-clcr-note-state="ready"][data-note-id="fictional-klirens-note-without-result"]');
+  await expect(legacyCard).toContainText('Fikcyjna dawna notatka Klirensu'); await expect(legacyCard).toContainText('Fikcyjny opis bez pola wyniku.');
+  expect(await legacyCard.evaluate(node => node.scrollWidth <= node.clientWidth + 1)).toBe(true);
+  await page.locator('button[data-tab="lab"]').click(); await showClcrResults(page, 'table');
+  await expect(clcrValue(page, note.id)).toContainText(model.presentation.valueText);
+  await expect(clcrNorm(page, note.id)).toContainText('0,11–0,53');
+  await expect(page.locator('.vilda-patient-notes-section')).not.toContainText('Sam wynik nie rozpoznaje kamicy ani nie zastępuje oceny dobowego wydalania.');
+  await openClcrDetails(page, note.id);
   await expect(page.locator('#calculationDetails')).toHaveAttribute('data-note-id', note.id);
   await page.locator('#editMeasurement').click(); await page.locator('#editField-URCR_uricAcid').fill('60');
   await page.locator('#saveEditedMeasurement').click(); await expect(page.locator('#editDialog')).toBeHidden();
   const edited = (await memory(page)).notes.find(item => item.id === note.id);
   expect(edited.labResult.valueNum).toBeCloseTo(Number('0.40373564927725894'), 14); expect(edited.id).toBe(note.id);
   await page.locator('#detailsDialog').getByRole('button', { name: 'Zamknij', exact: true }).click();
-  await expect(compact.locator('.clcr-note-value')).toHaveText(edited.labResult.value);
+  await expect(clcrValue(page, note.id)).toContainText(edited.labResult.value);
   const reread = await page.evaluate(value => window.ClcrSavedResults.projectPatientNotes([value]).measurements[0], edited);
   expect(reread.valueNum).toBeCloseTo(Number('0.40373564927725894'), 14); expect(reread.norm).toBe('0,11–0,53 mmol/mmol'); expect((await memory(page)).originalsLocked).toBe(true);
   return { samples, note: { value: note.labResult.value, unit: note.labResult.unit, category: note.category, editedValue: edited.labResult.valueNum, rereadValue: reread.valueNum } };
@@ -250,18 +256,22 @@ async function lazyStartAndNotes(page, origin, note, resources, loaded) {
   loaded.clear();
   await page.goto(origin + '/index.html', { waitUntil: 'load' });
   await enterGuest(page); await installMemoryVault(page);
-  await page.evaluate(value => window.__clcrRecordFixture.seed([value]), note);
+  await page.evaluate(values => window.__clcrRecordFixture.seed(values), [note, { id: 'fictional-klirens-note-without-result', patientId: note.patientId, category: 'wynik-klirens', title: 'Fikcyjna dawna notatka Klirensu', body: 'Fikcyjny opis bez pola wyniku.', clinicalDateISO: '2026-10-20', rev: 1 }]);
   await page.evaluate(pid => window.VildaAuthUI.showPatientCard(pid, null, null, { activeTab: 'notes' }), note.patientId);
-  const compact = page.locator('.vilda-clcr-note[data-clcr-note-state="ready"]');
-  await expect(compact).toHaveCount(1); await expect(compact.locator('.clcr-note-value')).toHaveText(note.labResult.value);
+  // P-KLIRENS-NOTATKI: wynik Klirensu nie ma karty w Notatkach (tylko linia z liczbą wyników); wartość, norma i szczegóły są w Badaniach.
+  await expectClcrOutsideNotes(page, 1, { legacyCards: 1 });
+  const legacyCard = page.locator('.vilda-clcr-note[data-clcr-note-state="ready"][data-note-id="fictional-klirens-note-without-result"]');
+  await expect(legacyCard).toContainText('Fikcyjna dawna notatka Klirensu'); await expect(legacyCard).toContainText('Fikcyjny opis bez pola wyniku.');
+  expect(await legacyCard.evaluate(node => node.scrollWidth <= node.clientWidth + 1)).toBe(true);
+  await page.locator('button[data-tab="lab"]').click(); await showClcrResults(page, 'table'); await expect(clcrValue(page, note.id)).toContainText(note.labResult.value);
   await page.waitForFunction(() => Boolean(window.VildaClcrUrateCreatinine && window.ClcrUrateCreatininePersistence));
-  await compact.getByRole('button', { name: 'Szczegóły obliczenia →', exact: true }).click();
+  await openClcrDetails(page, note.id);
   await page.locator('#editMeasurement').click(); await page.locator('#editField-URCR_uricAcid').fill('30');
   await page.locator('#saveEditedMeasurement').click(); await expect(page.locator('#editDialog')).toBeHidden();
   const edited = (await memory(page)).notes.find(value => value.id === note.id);
   expect(edited.id).toBe(note.id); expect(edited.labResult.valueNum).toBeCloseTo(Number('0.20186782463862947'), 14);
   await page.locator('#detailsDialog').getByRole('button', { name: 'Zamknij', exact: true }).click();
-  await expect(compact.locator('.clcr-note-value')).toHaveText(edited.labResult.value);
+  await expect(clcrValue(page, note.id)).toContainText(edited.labResult.value);
   const saved = await page.evaluate(value => {
     const engine = window.VildaClcrUrateCreatinine;
     window.VildaClcrUrateCreatinine = new Proxy({}, { get() { return () => { throw new Error('Offline Start history must remain frozen'); }; } });
@@ -269,7 +279,6 @@ async function lazyStartAndNotes(page, origin, note, resources, loaded) {
     finally { window.VildaClcrUrateCreatinine = engine; }
   }, edited);
   expect(saved.valueNum).toBeCloseTo(Number('0.20186782463862947'), 14); expect(saved).toMatchObject({ outOfRange: false, norm: '0,11–0,53 mmol/mmol' });
-  await compact.getByRole('button', { name: 'Zobacz w Badaniach →', exact: true }).click();
   await showClcrResults(page, 'charts');
   const point = clcrPoint(page, note.id);
   await expect.poll(async () => Number(await point.getAttribute('data-value'))).toBeCloseTo(Number('0.20186782463862947'), 14);

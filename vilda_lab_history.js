@@ -16,7 +16,9 @@
  * Od 1.5.0 (P-OCZEKUJACE-WYNIKI, decyzje właściciela 2026-11-15): pendingItem — pojedynczy wpis jako oczekujący
  * wynik (te same warunki co lista pending widoku), dla Jednostek lab. otwartych z takiego wpisu.
  * Od 1.6.0 (P-OCZEKUJACE-WYNIKI, etap 2): pendingItems — oczekujące wyniki pacjenta w kolejności listy widoku
- * (od najbliższego terminu), dla okna przypięcia i pakietu, gdy wynik wpisano bez wejścia z „Badań”.
+ * (od najbliższego terminu), dla okna przypięcia i pakietu, gdy wynik wpisano bez wejścia z „Badań”;
+ * isClcrResultNote (P-KLIRENS-NOTATKI, decyzja właściciela 2026-11-15: Notatki nie są miejscem na wyniki
+ * Klirensu) — warunek, którym karta chowa wynik Klirensu w Notatkach i kieruje do niego linki do „Badań”.
  * Projekt: docs/LAB_HISTORIA_WYNIKOW_PLAN.md, 3.1; opis: docs/clinical/ALGORITHMS.md,
  * „LAB-HISTORIA — model porównania”.
  */
@@ -96,14 +98,22 @@
   // miejsce pełnej treści). Ten sam warunek co droga notatki do widoku: sejf (kt, Po) zapisuje i układa w serie
   // tylko wynik z nazwą albo wartością i z kluczem serii (testKey albo skrót nazwy); buildHistoryView bierze
   // punkt z oceną albo z liczbą, a wartość tekstową bez oceny jako wiersz tekstowy. Jawna kategoria
-  // „wynik-badania” zawęża warunek: wpis innej kategorii z polem wyniku, zlecenie bez wartości i Klirens
-  // („wynik-klirens”) zostają w Notatkach. Zgodność z widokiem: tests/unit/lab-result-notes-projection.test.mjs.
+  // „wynik-badania” zawęża warunek: wpis innej kategorii z polem wyniku i zlecenie bez wartości
+  // zostają w Notatkach; wynik Klirensu („wynik-klirens”) ma własny warunek — isClcrResultNote niżej. Zgodność z widokiem: tests/unit/lab-result-notes-projection.test.mjs.
   function isResultNote(note) {
     if (!record(note) || note.category !== 'wynik-badania' || noteCategory(note) !== 'wynik-badania') return false;
     var lab = note.labResult;
     if (!record(lab) || !(text(lab.test) || text(lab.value))) return false;
     if (!text(lab.testKey) && !seriesSlug(lab.test)) return false;
     return own(lab, 'assessment') || finite(lab.valueNum) || !!text(lab.value);
+  }
+  // Wynik Klirensu, który zakładka „Badania” pokazuje w panelu „Klirens” (decyzja właściciela 2026-11-15: Notatki
+  // nie są miejscem na wyniki Klirensu). Ten sam warunek, którym ClcrSavedResults.buildSeriesFromNotes przyjmuje
+  // notatkę do projekcji Badań: kategoria „wynik-klirens” i obiekt labResult — także gdy zapisana ocena jest
+  // nieczytelna (Badania pokazują wtedy wpis bez oceny). Zapis Klirensu bez labResult (dawna notatka z samym
+  // opisem) zostaje w Notatkach. Zgodność z projekcją: tests/unit/lab-result-notes-projection.test.mjs.
+  function isClcrResultNote(note) {
+    return record(note) && note.category === 'wynik-klirens' && record(note.labResult);
   }
   function sampleDated(entry) { return SAMPLE_DATES.indexOf(entry.dateSource) !== -1; }
   function isoDate(value) { return typeof value === 'string' && ISO_DATE.test(value) ? value.slice(0, 10) : null; }
@@ -734,6 +744,6 @@
   return Object.freeze({
     version: '1.6.0', HISTORY_PANELS: HISTORY_PANELS, buildHistoryView: buildHistoryView,
     formatDelta: formatDelta, formatDate: formatDate, normalizeUnit: normalizeUnit, isResultNote: isResultNote,
-    recordedWarning: recordedWarning, pendingItem: pendingItem, pendingItems: pendingItems
+    isClcrResultNote: isClcrResultNote, recordedWarning: recordedWarning, pendingItem: pendingItem, pendingItems: pendingItems
   });
 });

@@ -1817,6 +1817,26 @@ Czytelne dodatki w tym samym pliku: `OwPinChoice(result, host)` (przed blokiem �
 
 **Znalezione przy okazji, bez zmiany.** „Dodaj wynik do kartoteki” w Przypomnieniach nie podaje sejfowi nazwy badania, więc dla wpisu „Wynik: Biopsja…” (Terminarz po procedurze) wynik opisowy dostaje tytuł „Wynik: Wynik: Biopsja…”. „Opisz wynik” w zakładce „Badania” podaje nazwę bez prefiksu. Do decyzji właściciela, czy wyrównać Przypomnienia.
 
+## Łatka P-KLIRENS-NOTATKI — wynik Klirensu poza Notatkami (`vilda_auth_ui.js`, 2026-11-15, decyzja właściciela)
+
+Opis działania i przypadki: `docs/clinical/ALGORITHMS.md`, „LAB-HISTORIA 6.37”; `docs/clinical/KLIRENS_NOTES.md`. Zmiany w czytelnych źródłach (`vilda_lab_history.js` — `isClcrResultNote`; `vilda_lab_history_tab.js` 2.7.0 — `focusRequested` dla zapisów Klirensu) nie wymagają opisu łatki. W `vilda_auth_ui.js` zmienia się czytelny blok P-WYNIKI-BADAN i dwa dokładne ciągi w części zminifikowanej, bez ponownej minifikacji:
+
+```js
+// Czytelny blok P-WYNIKI-BADAN: dwa nowe predykaty po WbJestWynikiem
+function WbJestKlirensem(note) { /* VildaLabHistory.isClcrResultNote, błąd → false */ }
+function WbWBadaniach(note) { return WbJestWynikiem(note) || WbJestKlirensem(note); }
+// WbNotatkiNaglowek: wyniki = notatki.filter(WbWBadaniach); komunikat po zapisie nadal tylko dla WbJestWynikiem.
+
+// 1. lista Notatek (funkcja Xo), dopisek P-WYNIKI-BADAN-NOTATKI — dwa wystąpienia w jednej instrukcji:
+//    było:  c.filter(function(S){return!WbJestWynikiem(S)})
+//    jest:  c.filter(function(S){return!WbWBadaniach(S)})
+// 2. rozstrzygnięcie linku (showPatientCard), dopisek P-WYNIKI-BADAN-LINK:
+//    było:  if(WbCel&&WbJestWynikiem(WbCel))r=Object.assign({},r,{activeTab:"lab",labFocusNoteId:WbCel.id,focusNoteId:null});
+//    jest:  if(WbCel&&WbWBadaniach(WbCel))r=Object.assign({},r,{activeTab:"lab",labFocusNoteId:WbCel.id,focusNoteId:null});
+```
+
+**Granice.** Punkty podpięcia zwartej karty Klirensu (`ClcrNotesCard`, `ClcrNotesTitle`, `ClcrOpenNoteResult`; `tools/patch-klirens-notes-view.mjs`) zostają bez zmian: karta rysuje się dla zapisu „wynik-klirens” bez pola wyniku, tytuły w Historii i szczegóły z ogólnego edytora działają jak dotąd. Grupowanie wyników w Historii (`WbHistoriaGrupuj`) nadal dotyczy tylko wyników badań — wpis Klirensu w Historii się nie zmienia. Sejf, wyszukiwarka i strona Klirens bez zmian.
+
 ## Trwała tożsamość wizyt — źródło i granica artefaktu sejfu
 
 Zmiana funkcjonalna `P-TRWALE-WIZYTY` ma bazę `audyt` z commita

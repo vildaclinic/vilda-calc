@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 import { czekajNaUstabilizowanyUklad } from '../support/uklad-czekanie.mjs';
 import { enterGuest, installMemoryVault, memory, saveVisible } from '../support/klirens-patient-record.mjs';
 import { readVisibleSavedHistory } from '../support/klirens-saved-history.mjs';
-import { clcrPoint, clcrPoints, showClcrResults } from '../support/badania-klirens.mjs';
+import { clcrPoint, clcrPoints, showClcrResults, expectClcrOutsideNotes } from '../support/badania-klirens.mjs';
 import { applySession, card, choose, chooseNativeUnit, details, expectBlocked, expectResult, openCalculator, restore } from '../support/klirens-cit-dzm-browser.mjs';
 
 async function geometry(page, width) {
@@ -274,9 +274,8 @@ test('Cit DZM: edycja i usunięcie dotyczą jednego pomiaru, Notatki pozostają 
   await restore(page, { CITDZM_inputMode: 'reported', CITDZM_reportedValue: '1.5' });
   const [sibling] = await saveVisible(page, '2026-10-25');
   await page.locator('#clcrOpenBadaniaBtn').click(); await showClcrResults(page, 'table');
-  await page.locator('button[data-tab="notes"]').click();
-  const notes = page.locator('.vilda-clcr-note[data-clcr-note-state="ready"]'); await expect(notes).toHaveCount(2);
-  for (const key of ['VILDA_CLCR', 'engineVersion', 'exactMain', '[tekst]']) await expect(notes.first()).not.toContainText(key);
+  // P-KLIRENS-NOTATKI: wynik Klirensu nie ma karty w Notatkach; zostaje linia z liczbą wyników i brak zapisu technicznego.
+  await expectClcrOutsideNotes(page, 2);
   await page.evaluate(note => window.ClcrResultDetails.open({ patientId: note.patientId, noteId: note.id }), first);
   await page.locator('#editMeasurement').click(); await page.locator('#editField-CITDZM_concentration').fill('1.4');
   await page.locator('#saveEditedMeasurement').click(); await expect(page.locator('#editDialog')).toBeHidden();
