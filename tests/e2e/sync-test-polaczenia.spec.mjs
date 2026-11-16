@@ -1,7 +1,7 @@
 import { expect, test } from '../support/test-czas.mjs';
 
 // P-SYNC-TEST-POLACZENIA — przycisk „Test połączenia z synchronizacją” w Ustawieniach (sekcja „Łączność na żywo”).
-// Prawdziwa strona Ustawień i prawdziwy vilda_sync_connection_test.js; serwer synchronizacji to route Playwright
+// Prawdziwa strona Ustawień i prawdziwy blok testu w inline_ustawienia_06.js; serwer synchronizacji to route Playwright
 // (GET /v1/health), bez sieci zewnętrznej. Konto fikcyjne, bez danych pacjentów; synchronizacja wyłączona, więc
 // test sprawdza serwer, a połączenie na żywo zgłasza jako niesprawdzone.
 //   E1 sieć przepuszcza → werdykt „działa prawidłowo”, pięć zapytań do /v1/health bez Authorization, raport bez ID konta.
@@ -57,7 +57,7 @@ test('E1 sieć przepuszcza: werdykt „działa prawidłowo” i raport bez ID ko
   expect(health.length).toBeGreaterThanOrEqual(5);
   for (const z of health) expect(z.naglowki.authorization).toBeUndefined();
 
-  const raport = await page.locator('#syncConnTestReport').inputValue();
+  const raport = await page.locator('#syncConnTestReport').textContent();
   expect(raport).toContain('vilda-sync.maciej-4b9.workers.dev');
   const material = await page.evaluate(async () => window.VildaVault.getSyncMaterial());
   if (material && material.slotId) expect(raport).not.toContain(material.slotId);

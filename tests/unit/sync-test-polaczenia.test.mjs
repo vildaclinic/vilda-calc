@@ -1,6 +1,6 @@
-// P-SYNC-TEST-POLACZENIA — „Test połączenia z synchronizacją” (vilda_sync_connection_test.js) i historia połączeń na
-// żywo (VildaRealtime.getHistory() w vilda_realtime.js). Prawdziwe pliki produkcyjne w sztucznym oknie
-// (loadBrowserScript); sieć, gniazdo i serwer to atrapy, zegar wirtualny. Dane wyłącznie FIKCYJNE, bez sieci.
+// P-SYNC-TEST-POLACZENIA — „Test połączenia z synchronizacją” (blok między znacznikami BEGIN/END P-SYNC-TEST-POLACZENIA
+// w inline_ustawienia_06.js, wycinany z PRAWDZIWEGO pliku) i historia połączeń na żywo (VildaRealtime.getHistory() w
+// vilda_realtime.js, ładowanym w całości). Sieć, gniazdo i serwer to atrapy, zegar wirtualny. Dane wyłącznie FIKCYJNE.
 //
 // Co pilnuje:
 //   M1 klasyfikacja próbki GET /v1/health (ok, sieć, limit czasu, HTTP, zła treść) i podsumowanie pięciu próbek.
@@ -13,18 +13,29 @@
 //      zamykający po 60 s daje regularne zerwania widoczne w analizie; disconnect() znaczy wpis „disconnect”;
 //      najwyżej 30 wpisów; dotychczasowe pola info() bez zmian.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
+
+const KORZEN = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+const ZRODLO_USTAWIEN = fs.readFileSync(path.join(KORZEN, 'inline_ustawienia_06.js'), 'utf8');
+const BLOK = (() => {
+  const a = ZRODLO_USTAWIEN.indexOf('/* BEGIN P-SYNC-TEST-POLACZENIA */');
+  const b = ZRODLO_USTAWIEN.indexOf('/* END P-SYNC-TEST-POLACZENIA */');
+  if (a < 0 || b < a) throw new Error('brak bloku P-SYNC-TEST-POLACZENIA w inline_ustawienia_06.js');
+  return ZRODLO_USTAWIEN.slice(a, b);
+})();
+function zaladujBlok(okno) { new Function('window', BLOK)(okno); return okno.VildaSyncConnectionTest; }
 
 const T0 = Date.parse('2026-11-16T08:00:00.000Z');
 const SLOT = 'f'.repeat(64);
 const TOKEN = 'FIKCYJNY-TOKEN-TESTU';
 
-function modul() {
-  return loadBrowserScript('vilda_sync_connection_test.js', {}).VildaSyncConnectionTest;
-}
+function modul() { return zaladujBlok({}); }
 
 const odpOk = (ms = 0) => async () => {
-  if (ms) await new Promise((r) => setTimeout(r, ms));
+  if (ms) await new Promise((r) => { setTimeout(r, ms); });
   return { status: 200, json: async () => ({ status: 'ok', version: '37', api: 37 }) };
 };
 
@@ -94,9 +105,8 @@ describe('model testu połączenia', () => {
   it('M4 run(): przebiegi z atrapami', async () => {
     const M = modul();
     const realtime = (o = {}) => ({
-      info: () => ({ status: o.status || 'open', opens: 1, lastError: null, supported: true }),
-      isLive: o.isLive || (() => true),
-      getLastPongAt: () => Date.now() - 4000,
+      info: () => ({ status: o.status || 'open', opens: 1, lastError: null, supported: true,
+        live: o.live ? o.live() : true, lastPongAt: Date.now() - 4000 }),
       getHistory: () => ({ since: T0, entries: [] }),
       connect: o.connect || (() => {}),
     });
@@ -141,7 +151,7 @@ describe('model testu połączenia', () => {
     expect(r.verdict.level).toBe('ok');
 
     // Gniazdo otwarte, ale pong nie przychodzi: czeka do limitu i zgłasza open-no-pong.
-    p = M.run({ fetch: odpOk(), realtime: realtime({ isLive: () => false }), syncActive: true, samples: 1, wsWaitMs: 5000 });
+    p = M.run({ fetch: odpOk(), realtime: realtime({ live: () => false }), syncActive: true, samples: 1, wsWaitMs: 5000 });
     await vi.runAllTimersAsync();
     r = await p;
     expect(r.ws.kind).toBe('open-no-pong');
@@ -151,7 +161,7 @@ describe('model testu połączenia', () => {
     // Gniazdo zamknięte: prosi o połączenie i zgłasza nawiązanie w trakcie testu.
     let polaczone = false;
     const connect = vi.fn(() => { setTimeout(() => { polaczone = true; }, 1200); });
-    p = M.run({ fetch: odpOk(), realtime: realtime({ status: 'closed', isLive: () => polaczone, connect }), syncActive: true, samples: 1 });
+    p = M.run({ fetch: odpOk(), realtime: realtime({ status: 'closed', live: () => polaczone, connect }), syncActive: true, samples: 1 });
     await vi.runAllTimersAsync();
     r = await p;
     expect(connect).toHaveBeenCalledTimes(1);
@@ -161,8 +171,7 @@ describe('model testu połączenia', () => {
   it('M5 raport dla IT bez ID konta i tokenu', async () => {
     const M = modul();
     const p = M.run({ fetch: odpOk(), syncActive: true, samples: 2, realtime: {
-      info: () => ({ status: 'open', supported: true, slotId: SLOT, authToken: TOKEN }),
-      isLive: () => true, getLastPongAt: () => Date.now(),
+      info: () => ({ status: 'open', supported: true, live: true, lastPongAt: Date.now(), slotId: SLOT, authToken: TOKEN }),
       getHistory: () => ({ since: T0 - 600_000, entries: [{ startedAt: T0 - 500_000, openedAt: T0 - 499_000, closedAt: T0 - 439_000, code: 1006, pongs: 2 }] }),
     } });
     await vi.runAllTimersAsync();
@@ -237,7 +246,7 @@ describe('historia połączeń w vilda_realtime.js', () => {
     hist.entries[0].code = 'zmienione';
     expect(RT.getHistory().entries[0].code).toBe(1006);
 
-    const M = loadBrowserScript('vilda_sync_connection_test.js', w).VildaSyncConnectionTest;
+    const M = zaladujBlok({});
     const a = M.analyzeHistory(RT.getHistory(), Date.now());
     expect(a.regular).toBe(true);
     expect(a.regularLifeMs).toBe(60_000);

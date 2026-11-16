@@ -22785,7 +22785,7 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
-## Test połączenia z synchronizacją i historia połączeń na żywo (P-SYNC-TEST-POLACZENIA, SW @SW@, `vilda_realtime.js` @RT@, `vilda_sync_connection_test.js` 1, 2026-11-16)
+## Test połączenia z synchronizacją i historia połączeń na żywo (P-SYNC-TEST-POLACZENIA, SW 1.1.541, `vilda_realtime.js` 11, `inline_ustawienia_06.js` 2, 2026-11-16)
 
 **Zmiana kliniczna: NIE** — wzory, progi, jednostki, interpretacje, dane pacjentów, zapis, scalanie, kursor, kolejka,
 odpytywanie, ping i odstępy ponownego łączenia bez zmian. Dochodzi narzędzie diagnostyczne tylko do odczytu. Wpływ
@@ -22805,7 +22805,8 @@ połączenia — a to odróżnia limit czasu połączenia w zaporze lub proxy od
    `code` (kod zamknięcia; `"disconnect"` przy rozłączeniu przez aplikację, np. blokadzie sejfu) i `pongs` (liczba
    odpowiedzi na bicie serca). Najwyżej 30 ostatnich wpisów, bez magazynu i bez sieci; wynik jest kopią. Pola `info()`
    bez zmian.
-2. *Test połączenia* (`vilda_sync_connection_test.js`, `window.VildaSyncConnectionTest`), przycisk w Ustawieniach →
+2. *Test połączenia* (blok `BEGIN/END P-SYNC-TEST-POLACZENIA` w `inline_ustawienia_06.js`, `window.VildaSyncConnectionTest`;
+   nie osobny plik, bo budżet 600 żądań instalacji service workera jest w pełni wykorzystany; bez stylów inline), przycisk w Ustawieniach →
    Synchronizacja → „Łączność na żywo”:
    - `navigator.onLine`;
    - 5 × `GET /v1/health` (bez logowania i nagłówka `Authorization`, `credentials: 'omit'`, limit 8 s, przerwa 0,8 s),
@@ -22828,7 +22829,7 @@ połączenia — a to odróżnia limit czasu połączenia w zaporze lub proxy od
 - Serwer zamyka gniazdo po 60 s (kod 1006), 4 zerwania → „…niestabilne”, „zrywane regularnie, za każdym razem po ok.
   1 min”, rada: zapora lub proxy, porównanie z hotspotem, raport dla IT.
 
-**Testy.** `tests/unit/sync-test-polaczenia.test.mjs` (M1–M5 model i przebiegi z atrapami; R1–R2 prawdziwy
+**Testy.** `tests/unit/sync-test-polaczenia.test.mjs` (M1–M5 model wycięty z produkcyjnego pliku, przebiegi z atrapami; R1–R2 prawdziwy
 `vilda_realtime.js` z atrapą gniazda: wpisy, regularność, `disconnect`, limit 30, pola `info()`),
 `tests/e2e/sync-test-polaczenia.spec.mjs` (E1 sieć przepuszcza, E2 sieć blokuje, E3 telefon bez poziomego przewijania).
 

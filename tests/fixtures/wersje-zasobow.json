@@ -988,8 +988,8 @@
   "sha256": "3a13901d77e746b0a5e9c326bbc63d6e62ebf7cdfd7b361ed08d0dde0b4a0cad"
  },
  "inline_ustawienia_06.js": {
-  "v": 1,
-  "sha256": "e059ba2a629ece3c7f715cc7b09289ec9f8bc5ea2579872dabc34db3e271ffc0"
+  "v": 2,
+  "sha256": "ca6e06b46fe6f3c91043e84ca93b6c7073d5617f7d07fe38b82e8a59e9de37c5"
  },
  "inline_ustawienia_07.js": {
   "v": 6,
@@ -1932,8 +1932,8 @@
   "sha256": "0562ff1730c42302136cba8b6a020135eda9015f99ee008107a6a34c3b22d48a"
  },
  "vilda_realtime.js": {
-  "v": 10,
-  "sha256": "70493c61a2ef5ada2279bafc79b1af5d1721e2110bb65e1f6be797ec7d2299c8"
+  "v": 11,
+  "sha256": "e4bd30ecdb562c23d2ed2f99870aafe841c6e908e42526f915305136ee5f6082"
  },
  "vilda_ree_rownania_data.js": {
   "v": 3,
