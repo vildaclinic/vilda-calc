@@ -42,7 +42,7 @@ describe('seven independent visit and home UI resources in one verified transpor
     expect(urls).toContain('/vilda_home_perinatal.js?v=1');
     expect(urls).toContain('/vilda_sga_birth_results.css?v=1');
     expect(urls).toContain('/vilda_home_workspace.js?v=4');
-    expect(urls).toContain('/vilda_home_workspace.css?v=4');
+    expect(urls).toContain('/vilda_home_workspace.css?v=5');
     expect(w.requests).toHaveLength(1);
     expect(w.requests[0].url).toBe('https://vilda.test' + scope + config.url.slice(1));
     expect(w.requests[0].cache).toBe('reload'); expect(w.requests[0].redirect).toBe('error');
