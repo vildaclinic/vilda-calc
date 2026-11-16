@@ -44,6 +44,11 @@ test('homepage puberty: cancel is pure, both axes and optional volume apply whil
   await frame.waitForFunction(() => window.VildaDataImportExport.captureCurrentUserDataReadOnly()
     .advanced?.data?.calculationFingerprint?.includes('"gnrhaStatus":"zakonczone"'));
   await frame.evaluate(() => window.vildaPersistFlushNow({ force: true }));
+  await frame.waitForFunction(() => {
+    const saved = window.VildaPersistence.readMainSession();
+    return saved?.puberty?.gnrhaStatus === 'zakonczone'
+      && saved.advanced?.data?.calculationFingerprint?.includes('"gnrhaStatus":"zakonczone"');
+  });
   const before = await snapshot(frame);
   const shortcut = frame.locator('#tannerToggleBtn');
   await expect(shortcut).toHaveClass(/vhome-input-shortcut/);
