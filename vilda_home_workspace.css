@@ -469,12 +469,10 @@
 html.vilda-home-workspace .vhome-detail-dialog .vhome-dialog-close { flex: 0 0 40px; width: 40px; height: 40px; min-height: 40px; padding: 0; margin: 0; font-size: 26px; line-height: 1; border: var(--border-hairline) solid var(--line) !important; border-radius: var(--radius-8) !important; background: var(--bg) !important; color: var(--muted) !important;  box-shadow: none !important; }
 .vilda-home-workspace .vhome-dialog-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 22px 25px; font-size: 16px; line-height: 1.65; }
 .vilda-home-workspace .vhome-dialog-context { margin: 0 0 var(--space-18px); color: var(--muted); }
-.vilda-home-workspace .vhome-dialog-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4px); padding: var(--space-4px); margin-bottom: 22px; border: var(--border-hairline) solid var(--line); border-radius: var(--radius-9); background: var(--bg); }
-html.vilda-home-workspace .vhome-detail-dialog .vhome-dialog-tabs button { min-width: 0; min-height: 44px; margin: 0; padding: var(--space-8px); font-size: 16px; line-height: 1.4; border: 0 !important; border-radius: 7px !important; background: transparent !important; color: var(--muted) !important;  box-shadow: none !important;}
-html.vilda-home-workspace .vhome-detail-dialog .vhome-dialog-tabs [aria-selected="true"] { background: var(--card) !important; color: var(--primary) !important; box-shadow: 0 1px 4px #123a4a12 !important; }
 .vilda-home-workspace .vhome-dialog-section[hidden],
 .vilda-home-workspace .vhome-dialog-fields label[hidden] { display: none; }
 .vilda-home-workspace .vhome-dialog-section h3 { margin: var(--space-20px) 0 var(--space-12px); font-size: 17px; line-height: 1.45; text-align: left; }
+.vilda-home-workspace .vhome-dialog-section .vhome-assessment-heading { margin-top: 0; }
 .vilda-home-workspace .vhome-dialog-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-18px); }
 .vilda-home-workspace .vhome-dialog-fields label { display: flex; flex-direction: column; gap: var(--space-6px); align-self: start; min-width: 0; margin: 0; font-size: 16px; line-height: 1.45; }
 .vilda-home-workspace .vhome-dialog-fields input,
@@ -511,3 +509,5 @@ html.vilda-home-workspace .vhome-detail-dialog .vhome-dialog-apply { background:
 
 .vilda-home-workspace .vhome-puberty-date { display: flex; flex-direction: column; gap: var(--space-6px); margin: 0; font-size: 16px; }
 .vilda-home-workspace .vhome-puberty-date input { box-sizing: border-box; width: 100%; min-height: 46px; margin: 0; font-size: 16px; }
+.vilda-home-workspace .vhome-puberty-volume { display: flex; flex-direction: column; gap: var(--space-6px); align-self: start; min-width: 0; margin: 0; font-size: 16px; }
+.vilda-home-workspace .vhome-volume-note { color: var(--muted); font-size: 14px; line-height: 1.5; }

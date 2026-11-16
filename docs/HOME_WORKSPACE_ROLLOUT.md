@@ -96,9 +96,10 @@ należą do etapu 3.
 
 ## Trzeci przyrost A — robocze dane pokwitaniowe
 
-Przycisk danych pokwitaniowych otwiera w podglądzie okno z zakładkami
-„Ocena pokwitania” i „Wywiad i leczenie”. G/Th i P są oddzielnymi listami
-rozwijalnymi. Wspólny renderer zachowuje dotychczasowe opisy i ściągi;
+Przycisk danych pokwitaniowych otwiera w podglądzie krótkie okno oceny
+bieżącej wizyty, bez zakładek i wywiadu. G/Th i P są oddzielnymi listami
+rozwijalnymi. Data pozostaje datą otwartej wizyty; u chłopców dostępna jest
+objętość jąder jako niezależny, opcjonalny pomiar dodatkowy. Wspólny renderer zachowuje dotychczasowe opisy i ściągi;
 pozostałe miejsca korzystające z niego zachowują swoje obecne kontrolki.
 
 Wejście do okna jest kafelkiem z zatwierdzonej makiety: dwuwierszowa nazwa,
@@ -112,8 +113,11 @@ Pola okna są szkicem bez identyfikatorów i nazw kanonicznych pól. Zdarzenia
 szkicu kończą się przed dokumentowymi słuchaczami autosave. Otwarcie i
 anulowanie nie zapisują sesji, nie przydzielają wizyty i nie zmieniają
 pochodzenia oceny. „Zastosuj dane pokwitaniowe” przekazuje kompletny zestaw
-ocen do natywnego stanu w jednej operacji; fakty trafiają do oryginalnych pól
-formularza przed powiadomieniem ich dotychczasowych odbiorców.
+ocen do natywnego stanu w jednej operacji; objętość trafia do oryginalnego pola
+przed powiadomieniem jego dotychczasowych odbiorców. Wiek początku pokwitania,
+dane menarche, KOWD i GnRHa pozostają w dotychczasowym zapisie, poza edytorem
+bieżącego badania. Ich udostępnienie w nowych miejscach jest osobnym etapem;
+zmiana okna ich nie usuwa ani nie przepisuje.
 
 Krzyżyk, Escape, kliknięcie tła i Wstecz wymagają potwierdzenia odrzucenia
 zmienionego szkicu. Zmiana konta, pacjenta, wizyty lub bazowych danych

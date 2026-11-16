@@ -27,15 +27,23 @@ async function snapshot(frame) {
 const draftField = (dialog, id) => dialog.locator(`[data-puberty-draft-field="${id}"]`);
 const apply = dialog => dialog.getByRole('button', { name: 'Zastosuj dane pokwitaniowe', exact: true });
 
-test('homepage puberty: cancel is pure, both axes apply together and facts survive F5', async ({ page }) => {
+test('homepage puberty: cancel is pure, both axes and optional volume apply while history survives F5', async ({ page }) => {
   const { frame, ids } = await open(page);
   await frame.evaluate(() => {
     window.__pubertyCanonical = document.getElementById('pubertyOnsetAge');
+    const history = { pubertyOnsetAge: '11.2', pubertyGnrhaStatus: 'zakonczone', pubertyGnrhaStartAge: '8.5', pubertyGnrhaStopAge: '10.5', pubertyCdgp: 'tak' };
+    Object.entries(history).forEach(([id, value]) => { document.getElementById(id).value = value; });
+    Object.keys(history).forEach(id => document.getElementById(id).dispatchEvent(new Event('change', { bubbles: true })));
     window.vildaPersistFlushNow({ force: true });
     window.__draftEvents = 0;
     document.addEventListener('input', event => { if (event.target.closest('#vhomePubertyDialog')) window.__draftEvents++; }, true);
     document.addEventListener('change', event => { if (event.target.closest('#vhomePubertyDialog')) window.__draftEvents++; }, true);
   });
+  // Let the native debounced calculation consume the seeded history before
+  // comparing the complete clinical payload during an untouched draft.
+  await frame.waitForFunction(() => window.VildaDataImportExport.captureCurrentUserDataReadOnly()
+    .advanced?.data?.calculationFingerprint?.includes('"gnrhaStatus":"zakonczone"'));
+  await frame.evaluate(() => window.vildaPersistFlushNow({ force: true }));
   const before = await snapshot(frame);
   const shortcut = frame.locator('#tannerToggleBtn');
   await expect(shortcut).toHaveClass(/vhome-input-shortcut/);
@@ -48,13 +56,17 @@ test('homepage puberty: cancel is pure, both axes apply together and facts survi
   await expect(dialog).toBeVisible();
   await expect(dialog.locator('[data-puberty-select-axis]').first()).toBeFocused();
   await expect(dialog.getByLabel('Data oceny — data bieżącej wizyty', { exact: true })).toHaveAttribute('readonly');
+  await expect(dialog.getByRole('tablist')).toHaveCount(0);
+  await expect(dialog.getByText('Pomiary i początek dojrzewania', { exact: true })).toHaveCount(0);
+  await expect(dialog.locator('[data-puberty-draft-field]')).toHaveCount(1);
+  await expect(dialog.getByLabel('Objętość jąder · opcjonalnie', { exact: true })).toBeVisible();
   await page.screenshot({ path: test.info().outputPath('puberty-desktop.png') });
   await dialog.getByRole('button', { name: 'Ściąga: G — narządy płciowe', exact: true }).click();
   await dialog.locator('[data-puberty-guide-choice][data-puberty-axis="G"][data-puberty-stage="4"]').click();
   await expect(dialog.locator('[data-puberty-select-axis="G"]')).toHaveValue('4');
   await dialog.locator('[data-puberty-select-axis="G"]').selectOption('3');
   await dialog.locator('[data-puberty-select-axis="P"]').selectOption('2');
-  await draftField(dialog, 'pubertyOnsetAge').fill('11.2');
+  await draftField(dialog, 'advTesticularVolume').selectOption('gt6');
   expect(await snapshot(frame)).toEqual(before);
   expect(await frame.evaluate(() => window.__draftEvents)).toBe(0);
   page.once('dialog', confirmation => confirmation.dismiss());
@@ -70,11 +82,8 @@ test('homepage puberty: cancel is pure, both axes apply together and facts survi
   await expect(dialog).toBeVisible();
   await dialog.locator('[data-puberty-select-axis="G"]').selectOption('3');
   await dialog.locator('[data-puberty-select-axis="P"]').selectOption('2');
-  await draftField(dialog, 'pubertyOnsetAge').fill('11.2');
-  await dialog.getByRole('tab', { name: 'Wywiad i leczenie' }).click();
-  await draftField(dialog, 'pubertyGnrhaStatus').selectOption('zakonczone');
-  await draftField(dialog, 'pubertyGnrhaStartAge').fill('8.5');
-  await draftField(dialog, 'pubertyGnrhaStopAge').fill('10.5');
+  await draftField(dialog, 'advTesticularVolume').selectOption('gt6');
+  await expect(dialog.locator('[data-puberty-draft-field^=puberty]')).toHaveCount(0);
   await apply(dialog).click();
   await expect(dialog).toBeHidden();
   await expect(shortcut.locator('.vhome-shortcut-status')).toHaveText('G3 · P2');
@@ -88,23 +97,26 @@ test('homepage puberty: cancel is pure, both axes apply together and facts survi
     && document.getElementById('pubertyOnsetAge').form === document.getElementById('calcForm'))).toBe(true);
   await expect(frame.locator('#pubertyOnsetAge')).toHaveValue('11.2');
   const saved = await frame.evaluate(() => { window.vildaPersistFlushNow({ force: true }); return window.VildaDataImportExport.captureCurrentUserDataReadOnly(); });
-  expect(saved.puberty.gnrhaStatus).toBe('zakonczone');
+  expect(saved.puberty).toEqual(before.payload.puberty);
+  expect(saved.advanced.testicularVolume).toBe('gt6');
   await page.reload({ waitUntil: 'load' });
   await frame.waitForFunction(() => window.VildaVault?.isUnlocked() && !window.VildaDataImportExport?.isMainSessionRestorePending()
     && window.VildaPubertyAssessmentState?.readReadOnly().assessment?.observations.G?.stage === 3);
   await frame.locator('#tannerToggleBtn').click();
   await expect(dialog).toBeVisible();
-  await expect(draftField(dialog, 'pubertyOnsetAge')).toHaveValue('11.2');
-  await dialog.getByRole('tab', { name: 'Wywiad i leczenie' }).click();
-  await expect(draftField(dialog, 'pubertyGnrhaStopAge')).toHaveValue('10.5');
+  await expect(draftField(dialog, 'advTesticularVolume')).toHaveValue('gt6');
+  await expect(frame.locator('#pubertyOnsetAge')).toHaveValue('11.2');
+  await expect(frame.locator('#pubertyGnrhaStopAge')).toHaveValue('10.5');
+  await expect(dialog.locator('[data-puberty-draft-field^=puberty]')).toHaveCount(0);
   await dialog.getByRole('button', { name: 'Anuluj', exact: true }).click();
   await loadPatient(frame, ids.b, 'restore');
+  await frame.evaluate(() => { document.getElementById('pubertyMenarcheAge').value = '11.5'; });
   await frame.locator('#tannerToggleBtn').click();
   await expect(dialog.locator('[data-puberty-select-axis="Th"]')).toBeVisible();
   await expect(dialog.locator('[data-puberty-select-axis="G"]')).toHaveCount(0);
   await expect(draftField(dialog, 'advTesticularVolume')).toHaveCount(0);
   await dialog.locator('[data-puberty-select-axis="Th"]').selectOption('2');
-  await draftField(dialog, 'pubertyMenarcheAge').fill('11.5');
+  await expect(dialog.locator('[data-puberty-draft-field]')).toHaveCount(0);
   await apply(dialog).click();
   expect(await frame.evaluate(() => window.VildaPubertyAssessmentState.readReadOnly().assessment.observations.Th.stage)).toBe(2);
   await expect(frame.locator('#pubertyMenarcheAge')).toHaveValue('11.5');
@@ -127,12 +139,12 @@ test('homepage puberty: stale draft closes without edits and the native non-prev
   });
   await frame.locator('#tannerToggleBtn').click();
   const dialog = frame.getByRole('dialog', { name: 'Dane pokwitaniowe', exact: true });
-  await draftField(dialog, 'pubertyOnsetAge').fill('11');
+  await draftField(dialog, 'advTesticularVolume').selectOption('gt6');
   await frame.evaluate(() => { document.getElementById('height').value = '159'; document.getElementById('height').dispatchEvent(new Event('input', { bubbles: true })); });
   await expect(dialog).toBeHidden();
-  await expect(frame.locator('#pubertyOnsetAge')).toHaveValue('');
+  await expect(frame.locator('#advTesticularVolume')).toHaveValue('');
   await frame.locator('#tannerToggleBtn').click();
-  await draftField(dialog, 'pubertyOnsetAge').fill('10');
+  await draftField(dialog, 'advTesticularVolume').selectOption('4to6');
   await frame.evaluate(() => window.VildaVault.lock());
   await expect(dialog).toBeHidden();
   expect(await frame.evaluate(() => window.VildaPubertyAssessmentState.readReadOnly().assessment)).toBeNull();
@@ -193,10 +205,10 @@ test('homepage puberty: mobile shell keeps uniform geometry, hides dock and rest
   await expect(page.locator('#mobileBottomDock')).toHaveCSS('visibility', 'visible');
   const beforeFacts = await frame.evaluate(() => window.VildaPubertyAssessmentState.readReadOnly());
   await frame.locator('#tannerToggleBtn').click();
-  await draftField(dialog, 'pubertyOnsetAge').fill('11');
+  await draftField(dialog, 'advTesticularVolume').selectOption('gt6');
   await apply(dialog).click();
   await expect(dialog).toBeHidden();
-  await expect(frame.locator('#pubertyOnsetAge')).toHaveValue('11');
+  await expect(frame.locator('#advTesticularVolume')).toHaveValue('gt6');
   const afterFacts = await frame.evaluate(() => window.VildaPubertyAssessmentState.readReadOnly());
   expect(afterFacts.activityRevision).toBeGreaterThan(beforeFacts.activityRevision);
   expect(afterFacts.assessment).toEqual(beforeFacts.assessment);
@@ -208,7 +220,7 @@ test('homepage puberty: a synchronous owner change during Apply cannot write opt
   await frame.locator('#tannerToggleBtn').click();
   const dialog = frame.getByRole('dialog', { name: 'Dane pokwitaniowe', exact: true });
   await dialog.locator('[data-puberty-select-axis="G"]').selectOption('3');
-  await draftField(dialog, 'pubertyOnsetAge').fill('11');
+  await draftField(dialog, 'advTesticularVolume').selectOption('gt6');
   await frame.evaluate(nextPatientId => {
     const unsubscribe = window.VildaPubertyAssessmentState.subscribe(reason => {
       if (reason !== 'edit') return;
@@ -217,6 +229,6 @@ test('homepage puberty: a synchronous owner change during Apply cannot write opt
   }, ids.b);
   await apply(dialog).click();
   await expect(dialog).toBeHidden();
-  await expect(frame.locator('#pubertyOnsetAge')).toHaveValue('');
+  await expect(frame.locator('#advTesticularVolume')).toHaveValue('');
   expect(await frame.evaluate(() => sessionStorage.getItem('vildaCurrentPatientId'))).toBe(ids.b);
 });

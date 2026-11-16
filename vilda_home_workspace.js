@@ -250,30 +250,10 @@
     pubertyDraft.fields[id] = event.target.value;
     pubertyDraft.changedFields[id] = true;
     pubertyDraft.dirty = true;
-    if (id === 'pubertyGnrhaStatus') {
-      var status = event.target.value;
-      if (status !== 'zakonczone') setPubertyDraftValue('pubertyGnrhaStopAge', '');
-      if (status !== 'zakonczone' && status !== 'w-trakcie') setPubertyDraftValue('pubertyGnrhaStartAge', '');
-      showPubertyDraftFields();
-    }
-  }
-  function setPubertyDraftValue(id, value) {
-    pubertyDraft.fields[id] = value;
-    pubertyDraft.changedFields[id] = true;
-    var control = pubertyDialog.querySelector('[data-puberty-draft-field="' + id + '"]');
-    if (control) control.value = value;
-  }
-  function showPubertyDraftFields() {
-    var status = pubertyDraft.fields.pubertyGnrhaStatus;
-    ['pubertyGnrhaStartAge', 'pubertyGnrhaStopAge'].forEach(function (id) {
-      var control = pubertyDialog.querySelector('[data-puberty-draft-field="' + id + '"]');
-      if (control) control.closest('label').hidden = id === 'pubertyGnrhaStopAge'
-        ? status !== 'zakonczone' : status !== 'zakonczone' && status !== 'w-trakcie';
-    });
   }
   function pubertyDraftControl(entry, host) {
     if (entry[2] && entry[2] !== pubertyDraft.sex) return;
-    var original = byId(entry[0]), label = element('label', '', entry[1]);
+    var original = byId(entry[0]), label = element('label', 'vhome-puberty-volume', entry[1]);
     var control = d.createElement(original.tagName.toLowerCase());
     // Copy constraints and choices, never canonical identity, listeners or state.
     ['type', 'min', 'max', 'step', 'inputmode'].forEach(function (attribute) {
@@ -286,17 +266,11 @@
     control.setAttribute('data-puberty-draft-field', entry[0]);
     control.autocomplete = 'off';
     control.value = pubertyDraft.fields[entry[0]];
-    label.appendChild(control); host.appendChild(label);
-  }
-  function selectPubertyTab(key, focus) {
-    pubertyDialog.querySelectorAll('[data-puberty-dialog-tab]').forEach(function (button) {
-      var active = button.dataset.pubertyDialogTab === key;
-      button.setAttribute('aria-selected', String(active)); button.tabIndex = active ? 0 : -1;
-      if (active && focus) button.focus();
-    });
-    pubertyDialog.querySelectorAll('[data-puberty-dialog-panel]').forEach(function (panel) {
-      panel.hidden = panel.dataset.pubertyDialogPanel !== key;
-    });
+    label.appendChild(control);
+    var note = element('small', 'vhome-volume-note', 'Pomiar dodatkowy; nie zastępuje oceny G.');
+    note.id = 'vhomePubertyVolumeNote'; control.setAttribute('aria-describedby', note.id);
+    control.setAttribute('aria-label', entry[1]);
+    label.appendChild(note); host.appendChild(label);
   }
   function applyPuberty() {
     if (!pubertyDraft || !samePubertyOwner()) { closePuberty(true); return; }
@@ -403,35 +377,12 @@
     var body = pubertyDialog.querySelector('.vhome-dialog-body');
     var name = [byId('firstName').value, byId('lastName').value].filter(Boolean).join(' ');
     body.appendChild(element('p', 'vhome-dialog-context', name + (name ? ' · ' : '') + (pubertyDraft.sex === 'F' ? 'Dziewczynka' : 'Chłopiec')));
-    var tabs = element('div', 'vhome-dialog-tabs'); tabs.setAttribute('role', 'tablist'); tabs.setAttribute('aria-label', 'Dane pokwitaniowe');
-    [['assessment', 'Ocena pokwitania'], ['history', 'Wywiad i leczenie']].forEach(function (entry) {
-      var button = element('button', '', entry[1]); button.type = 'button'; button.dataset.pubertyDialogTab = entry[0];
-      button.id = 'vhomePubertyTab-' + entry[0]; button.setAttribute('role', 'tab');
-      button.setAttribute('aria-controls', 'vhomePubertyPanel-' + entry[0]);
-      button.addEventListener('click', function () { selectPubertyTab(entry[0]); });
-      button.addEventListener('keydown', function (event) {
-        if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].indexOf(event.key) < 0) return;
-        event.preventDefault(); selectPubertyTab(event.key === 'Home' ? 'assessment' : event.key === 'End' ? 'history' : entry[0] === 'assessment' ? 'history' : 'assessment', true);
-      });
-      tabs.appendChild(button);
-    });
-    body.appendChild(tabs);
-    var assessment = element('section', 'vhome-dialog-section'), history = element('section', 'vhome-dialog-section');
-    [assessment, history].forEach(function (panel, i) {
-      var key = i ? 'history' : 'assessment'; panel.dataset.pubertyDialogPanel = key;
-      panel.id = 'vhomePubertyPanel-' + key; panel.setAttribute('role', 'tabpanel'); panel.setAttribute('aria-labelledby', 'vhomePubertyTab-' + key);
-    });
+    var assessment = element('section', 'vhome-dialog-section');
+    assessment.appendChild(element('h3', 'vhome-assessment-heading', 'Ocena podczas wizyty'));
     var editor = element('div', 'vhome-puberty-assessment'); assessment.appendChild(editor);
     var context = snapshot.context.visitContext;
-    assessment.appendChild(element('p', 'vhome-dialog-note', 'Każdą cechę ocenia się niezależnie. Brak wpisu pozostaje brakiem oceny.'));
-    assessment.appendChild(element('h3', '', 'Pomiary i początek dojrzewania'));
-    var measurements = element('div', 'vhome-dialog-fields'), treatments = element('div', 'vhome-dialog-fields');
-    pubertyFields.forEach(function (entry, index) { pubertyDraftControl(entry, index < 5 ? measurements : treatments); });
-    assessment.appendChild(measurements);
-    history.appendChild(element('h3', '', 'Leczenie i ocena lekarza')); history.appendChild(treatments);
-    history.appendChild(element('p', 'vhome-dialog-note', 'KOWD: konstytucjonalne opóźnienie wzrastania i dojrzewania. Dane są wspólne z zaawansowanymi obliczeniami wzrostowymi.'));
     var error = element('p', 'vhome-dialog-error'); error.setAttribute('data-puberty-dialog-error', ''); error.setAttribute('role', 'alert');
-    body.append(assessment, history, error);
+    body.append(assessment, error);
     pubertyDraft.editor = w.VildaPubertyAssessmentUI.mountEditor(editor, {
       idPrefix: 'vhomePubertyDraft', controlType: 'select', sex: function () { return pubertyDraft.sex; },
       read: function () { return pubertyDraft.context; },
@@ -453,11 +404,11 @@
         return { ok: true };
       }
     });
+    pubertyDraftControl(['advTesticularVolume', 'Objętość jąder · opcjonalnie', 'M'], editor);
     var dateLabel = element('label', 'vhome-puberty-date', 'Data oceny · bieżąca wizyta');
     var dateInput = d.createElement('input'); dateInput.type = 'text'; dateInput.readOnly = true;
     dateInput.setAttribute('aria-label', 'Data oceny — data bieżącej wizyty');
     dateInput.value = context.measuredAtISO ? context.measuredAtISO.slice(8, 10) + '.' + context.measuredAtISO.slice(5, 7) + '.' + context.measuredAtISO.slice(0, 4) : ''; dateLabel.appendChild(dateInput); editor.appendChild(dateLabel);
-    showPubertyDraftFields(); selectPubertyTab('assessment');
     fitPubertyDialog();
     pubertyDialog.setAttribute('aria-modal', 'true');
     pubertyDialog.showModal();
