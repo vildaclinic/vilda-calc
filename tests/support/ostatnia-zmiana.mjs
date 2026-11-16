@@ -22,8 +22,8 @@
 // bieżącą wartość pola, jest późniejszy od niej także przy zegarze spóźnionym (chwila = max(zegar, chwila znanej
 // wartości); jak Bpp_chwilaZmiany sejfu). Reguły:
 // - „Przywróć” jest zapisem treści z chwilą przywrócenia (R4, PD-9: ALGORITHMS P-PRZYWROC-Z-KARTY, „„Przywróć” =
-//   najpóźniejsza zmiana (R4, PD-9)”, ok. 28942–28944, i P-POZNIEJSZA-POPRAWKA, „R4, „Przywróć” i import z kosza są
-//   najpóźniejszą zmianą zapisu”, ok. 30946–30947) — wygrywa z poprawką z innego urządzenia zrobioną po koszu, której
+//   najpóźniejsza zmiana (R4, PD-9)”, ok. 28944–28946, i P-POZNIEJSZA-POPRAWKA, „R4, „Przywróć” i import z kosza są
+//   najpóźniejszą zmianą zapisu”, ok. 30948–30949) — wygrywa z poprawką z innego urządzenia zrobioną po koszu, której
 //   urządzenie przywracające nie znało; chwila przywrócenia jest późniejsza od zdejmowanego wpisu Kosza.
 // - Kosz to zmiana w karcie: wygrywa z wcześniejszym „Usuń pacjenta” (karta wraca); „Odepnij i usuń” to zapis gwiazdki.
 // - „Usuń pacjenta” jest operacją kartową (także wizyty nieznane urządzeniu); późniejsza zmiana w karcie na urządzeniu
@@ -119,7 +119,7 @@ const maks = (a, b) => (cmp(a, b) >= 0 ? a : b);
 //   Kosza; „Odepnij i usuń” wkłada do Kosza treść z _pinned (fikstura 221:757–787); rekord tej samej wersji bierze w całości
 //   (Bkz_nowszaWersja, fikstura 221:454–462); tylko 221 (276 ma Bgw_);
 // - najpierw rev — wersję tej samej karty wybiera po rev, a nie po chwili zmiany (docs/clinical/ALGORITHMS.md, „Flota
-//   mieszana”, ok. 29442–29445); tylko 221;
+//   mieszana”, ok. 29444–29447); tylko 221;
 // - bez haka H1 — nie ma haków dziennika zdarzeń (Bem_): karta, która wraca jej zmianą, nie niesie pełnej karty; tylko 221;
 // - bez ratunku notatek — nie ma ratunku notatki D-21 (Bnp_) ani pola deletedWithPatient nagrobka notatki
 //   (vilda_vault.js:4901); tylko 221;
@@ -729,69 +729,69 @@ export const WYJATKI = Object.freeze({
   'E1 (obecność)': Object.freeze({
     opis: 'wizyta, którą ostatni kosz kładzie w Koszu, zostaje na części urządzeń jedyną wersją karty z najnowszą treścią — wyjątek ostatniej wersji karty (Q8); treść jest widoczna, różni się obecność. Tak też Q8-obca-2 (decyzja właściciela 3a z 2026-11-15: miarą jest wynik taki sam jak po pełnej synchronizacji, wybór wizyty odłożony)',
     mechanizm: 'wizyta dana do Kosza na urządzeniu, które miało w karcie więcej niż tę jedną wersję; w widoku jedyna wersja żywej karty bez aliasu „Scal pacjentów”',
-    zrodlo: 'ALGORITHMS „E1 — obecność wizyty przy dwóch koszach offline” (ok. 28397) i „Wpływ kliniczny” P-KOSZ-PO-KLUCZU (ok. 28493: „zostaje w niej tylko jako ostatnia wersja karty, jak dotąd — E1, Q8”); tests/unit/kosz-po-kluczu.test.mjs:203–204',
+    zrodlo: 'ALGORITHMS „E1 — obecność wizyty przy dwóch koszach offline” (ok. 28399) i „Wpływ kliniczny” P-KOSZ-PO-KLUCZU (ok. 28495: „zostaje w niej tylko jako ostatnia wersja karty, jak dotąd — E1, Q8”); tests/unit/kosz-po-kluczu.test.mjs:203–204',
     swiaty: Object.freeze(['W1', 'W4', 'bloby']),
   }),
   'E1/E1b (utrata wersji nieznanej scalającemu)': Object.freeze({
     opis: '„Scal pacjentów” X → Y na urządzeniu, które nie znało wersji X (zapisanej na innym urządzeniu bez połączenia albo znanej tylko z Kosza): nagrobek scalenia usuwa X z tą wersją — nie ma jej nigdzie, także przy samych blobach',
     mechanizm: 'nagrobek scalenia na urządzeniu, w którego eksporcie przed scaleniem nie było tej wersji w karcie X',
-    zrodlo: 'ALGORITHMS P-SYNC-WLASCICIEL, „Ograniczenia”: „Utrata wersji (E1/E1b), osobna wada” (ok. 31995–32004); też ok. 31823 (rodzina E1: nagrobek scalenia nie niesie celu)',
+    zrodlo: 'ALGORITHMS P-SYNC-WLASCICIEL, „Ograniczenia”: „Utrata wersji (E1/E1b), osobna wada” (ok. 31997–32006); też ok. 31825 (rodzina E1: nagrobek scalenia nie niesie celu)',
     naprawa: 'do naprawy w E3-PR0 (decyzja właściciela 9a z 2026-11-15)',
     swiaty: Object.freeze(['W1', 'W4', 'bloby']),
   }),
   'E4b (stara karta po „Scal pacjentów”)': Object.freeze({
     opis: 'stara karta X przeżywa po samych zdarzeniach na urządzeniu, które o scaleniu nie wiedziało (wizyta jako jedyna wersja albo pod starą kartą); pełna wymiana to leczy, więc klasa jest dozwolona tylko w W1 (decyzja właściciela 4a z 2026-11-15)',
     mechanizm: 'karta wizyty albo notatki w widoku ma alias „Scal pacjentów” (stara karta X)',
-    zrodlo: 'ALGORITHMS P-KOSZ-PO-KLUCZU, rodzina E4b (ok. 28168, tabela ok. 28290–28298)',
+    zrodlo: 'ALGORITHMS P-KOSZ-PO-KLUCZU, rodzina E4b (ok. 28170, tabela ok. 28292–28300)',
     naprawa: 'do naprawy w osobnym PR etapu E3-PR0 (stara karta po „Scal pacjentów”; decyzja właściciela 4a z 2026-11-15)',
     swiaty: Object.freeze(['W1']),
   }),
   'kosz-po-2 (stara karta z ostatnią wersją przy samych blobach)': Object.freeze({
     opis: 'kosz-po-2: K scala X → Y → Z, C (bez wiedzy) poprawia x w starej X, P (też bez wiedzy) daje x do Kosza w X; przy samych blobach C zostaje ze starą kartą X z x jako ostatnią wersją karty (karta X przeżywa nagrobek scalenia, bo poprawka C jest późniejsza niż scalenie, a wcześniejsza niż kosz P)',
     mechanizm: 'zapis wizyty w starej karcie X po scaleniu, potem kosz tej wizyty w X na urządzeniu bez wiedzy o scaleniu; w widoku x jedyną wersją karty X z aliasem',
-    zrodlo: 'ALGORITHMS P-KOSZ-PO-KLUCZU, „kosz-po-2” (ok. 28400–28403): „Domknięcie wymaga celu scalenia w nagrobku (zmiana formatu, P5)”; blok p. 5 (KAT_ZMIANY: kosz-po-2 K←C,P←K)',
+    zrodlo: 'ALGORITHMS P-KOSZ-PO-KLUCZU, „kosz-po-2” (ok. 28402–28405): „Domknięcie wymaga celu scalenia w nagrobku (zmiana formatu, P5)”; blok p. 5 (KAT_ZMIANY: kosz-po-2 K←C,P←K)',
     swiaty: Object.freeze(['bloby']),
   }),
   'D-4 A (stara karta wraca po zapisie bez wiedzy o scaleniu)': Object.freeze({
     opis: 'zmiana w starej karcie X (wizyta, gwiazdka, notatka) na urządzeniu, które o „Scal pacjentów” X → Y nie wiedziało, jest późniejsza niż scalenie: X wraca na wszystkich urządzeniach jako duplikat karty i trzyma tę wizytę albo notatkę (treść widoczna, w innej karcie tego samego pacjenta); także po pełnej wymianie',
     mechanizm: 'ta wizyta albo notatka (nie inna z tej karty) zapisana w starej karcie X po scaleniu; w widoku pod X',
-    zrodlo: 'plan D-4 (wariant A: „duplikat karty po „Scal pacjentów” na innym urządzeniu zaakceptowany (do ponownego scalenia)”, docs/SYNC_PRZYROSTOWA_PLAN.md, rozdział 6, tabela decyzji, wiersz D-4); ALGORITHMS P-KOSZ-PO-KLUCZU (ok. 28437–28440: „stara karta — zapisana teraz później niż „Scal pacjentów” — wraca na wszystkich urządzeniach (D-4 A)”)',
+    zrodlo: 'plan D-4 (wariant A: „duplikat karty po „Scal pacjentów” na innym urządzeniu zaakceptowany (do ponownego scalenia)”, docs/SYNC_PRZYROSTOWA_PLAN.md, rozdział 6, tabela decyzji, wiersz D-4); ALGORITHMS P-KOSZ-PO-KLUCZU (ok. 28439–28442: „stara karta — zapisana teraz później niż „Scal pacjentów” — wraca na wszystkich urządzeniach (D-4 A)”)',
     swiaty: Object.freeze(['W1', 'W4', 'bloby']),
   }),
   'P5 (Kosz pod kartą usuniętą po scaleniu)': Object.freeze({
     opis: 'wizyta dana do Kosza pod kartą, która zniknęła po „Scal pacjentów” (kosz-przed, kosz-po, kosz-po-2): wpis z treścią leży w Koszu, ale okno Kosza go nie pokazuje (patientExists = false) i nie da się go przywrócić',
     mechanizm: 'ukryty wpis Kosza wskazuje kartę z aliasem „Scal pacjentów”, a model oczekuje wizyty w Koszu',
-    zrodlo: 'ALGORITHMS P-KOSZ-PO-KLUCZU: „Domknięcie wymaga celu scalenia w nagrobku (zmiana formatu, P5)” (ok. 28422) i „Wpływ kliniczny” (ok. 28494–28495: wizyty dane do kosza w duplikacie, który zniknął — w koszu, ale bez karty); vilda_kosz_zapisow.js:226',
+    zrodlo: 'ALGORITHMS P-KOSZ-PO-KLUCZU: „Domknięcie wymaga celu scalenia w nagrobku (zmiana formatu, P5)” (ok. 28424) i „Wpływ kliniczny” (ok. 28496–28497: wizyty dane do kosza w duplikacie, który zniknął — w koszu, ale bez karty); vilda_kosz_zapisow.js:226',
     swiaty: Object.freeze(['W1', 'W4', 'bloby']),
   }),
   'P6 (notatka przy starej karcie)': Object.freeze({
     opis: 'notatka dopisana do starej karty na urządzeniu, które o „Scal pacjentów” nie wiedziało (albo zapisana przed scaleniem, ale nieznana urządzeniu scalającemu): zostaje w magazynie bez karty i nie widać jej w żadnej karcie',
     mechanizm: 'notatka pod kartą z aliasem, zapisana w niej po scaleniu albo nieobecna w eksporcie urządzenia scalającego przed scaleniem',
-    zrodlo: 'ALGORITHMS P-KOSZ-PO-KLUCZU: decyzja P6 (ok. 28154) i „Notatki dopisane do starej karty” (ok. 28441–28444); tests/unit/kosz-po-kluczu-krawedzie.test.mjs:360–390 (F1)',
+    zrodlo: 'ALGORITHMS P-KOSZ-PO-KLUCZU: decyzja P6 (ok. 28156) i „Notatki dopisane do starej karty” (ok. 28443–28446); tests/unit/kosz-po-kluczu-krawedzie.test.mjs:360–390 (F1)',
     swiaty: Object.freeze(['W1', 'W4', 'bloby']),
   }),
   'D21-9 (notatka przepięta przy równoległym „Usuń pacjenta”)': Object.freeze({
     opis: '„Scal pacjentów” X → Y na jednym urządzeniu równolegle z „Usuń pacjenta” X na drugim: notatki przepięte pod Y giną (nagrobki notatek z „Usuń pacjenta” są późniejsze); wizyty zostają',
     mechanizm: 'nagrobek notatki z „Usuń pacjenta” X pominięty w modelu, bo notatka była już przepięta pod Y',
-    zrodlo: 'ALGORITHMS P-NOTATKI-ZA-KARTA, „Poza zakresem (D21-9)” (ok. 30629–30631); tests/unit/notatki-za-karta.test.mjs:2606–2607, 3265',
+    zrodlo: 'ALGORITHMS P-NOTATKI-ZA-KARTA, „Poza zakresem (D21-9)” (ok. 30631–30633); tests/unit/notatki-za-karta.test.mjs:2606–2607, 3265',
     swiaty: Object.freeze(['W1', 'W4', 'bloby']),
   }),
   'notatki od nowa po „Scal pacjentów”': Object.freeze({
     opis: '„Scal pacjentów” zapisuje notatki źródła od nowa, z nową chwilą: wcześniejsza edycja albo usunięcie tej notatki na innym urządzeniu przegrywa (wskrzeszenie albo starsza treść, nie utrata)',
     mechanizm: 'zapis notatki przez „Scal pacjentów” późniejszy niż ostatnia edycja albo usunięcie tej notatki',
-    zrodlo: 'ALGORITHMS P-DZIENNIK-ZDARZEN, „Osobna sprawa: „Scal pacjentów” zapisuje notatki źródła od nowa” (ok. 27304–27305)',
+    zrodlo: 'ALGORITHMS P-DZIENNIK-ZDARZEN, „Osobna sprawa: „Scal pacjentów” zapisuje notatki źródła od nowa” (ok. 27306–27307)',
     swiaty: Object.freeze(['W1', 'W4', 'bloby']),
   }),
   'retencja (przycięcie bez treści)': Object.freeze({
     opis: 'nagrobek retencji nie niesie treści, a cień jest tylko tutejszy: gwiazdka albo poprawka na starszej kopii zostawia wersję ze starszą treścią albo bez niej; po samych zdarzeniach',
     mechanizm: 'przycięcie retencją późniejsze niż ostatni zapis treści wizyty',
-    zrodlo: 'tests/unit/kosz-po-kluczu-fuzz.test.mjs:27–28, 45–50; ALGORITHMS „Retencja przez duplikat w obie strony” (P2, ok. 28445) i tabela E4b-ret (ok. 28297)',
+    zrodlo: 'tests/unit/kosz-po-kluczu-fuzz.test.mjs:27–28, 45–50; ALGORITHMS „Retencja przez duplikat w obie strony” (P2, ok. 28447) i tabela E4b-ret (ok. 28299)',
     swiaty: Object.freeze(['W1']),
   }),
   'npret (przypięta wizyta przeżywa przycięcie)': Object.freeze({
     opis: 'przypięta wersja przeżywa przycięcie z innego urządzenia: po samych zdarzeniach bywa jej jeszcze brak (npret-pin, npret-K), po pełnej wymianie jest',
     mechanizm: 'przycięcie retencją wizyty, której ostatni rejestr gwiazdki jest przypięty',
-    zrodlo: 'blok p. 5 (KAT_LISTA: npret-pin, npret-K); ALGORITHMS tabela E4b-ret-pin (ok. 28298)',
+    zrodlo: 'blok p. 5 (KAT_LISTA: npret-pin, npret-K); ALGORITHMS tabela E4b-ret-pin (ok. 28300)',
     swiaty: Object.freeze(['W1']),
   }),
   R4a: Object.freeze({
@@ -809,7 +809,7 @@ export const WYJATKI = Object.freeze({
   'karta częściowa (nagrobek przegrał lokalnie, bez haka H1)': Object.freeze({
     opis: 'karta usunięta „Usuń pacjenta” wraca po samych zdarzeniach tylko z wersjami urządzenia, które nagrobka nie znało i wysłało tylko swoją zmianę: u odbiorców nagrobek przegrał lokalnie, więc nie wysyłają pełnej karty (świadomie bez haka H1), a urządzenie z pełną kartą nagrobka nie dostało; dowozi ją pełna wymiana',
     mechanizm: 'wizyta usunięta „Usuń pacjenta”, która wraca z kartą (późniejsza zmiana w karcie na urządzeniu bez wiedzy); karta jest w widoku, wizyty nie ma',
-    zrodlo: 'ALGORITHMS „Dziennik zdarzeń: haki scalania” (P-DZIENNIK-ZDARZEN, E2-PR3b), „Świadomie bez haka H1”: lokalny nagrobek karty przegrywa z kartą z ładunku (Bsl_zdejmijNagrobek) — karta częściowa u odbiorcy, partialSince w etapie 3, w etapie 2 dowozi ją pełna wysyłka (decyzja 7) (ok. 24746); blok p. 6 „R5-E1, C wysyła tylko zdarzenia”',
+    zrodlo: 'ALGORITHMS „Dziennik zdarzeń: haki scalania” (P-DZIENNIK-ZDARZEN, E2-PR3b), „Świadomie bez haka H1”: lokalny nagrobek karty przegrywa z kartą z ładunku (Bsl_zdejmijNagrobek) — karta częściowa u odbiorcy, partialSince w etapie 3, w etapie 2 dowozi ją pełna wysyłka (decyzja 7) (ok. 24747); blok p. 6 „R5-E1, C wysyła tylko zdarzenia”',
     swiaty: Object.freeze(['W1']),
   }),
   'R5-E1': Object.freeze({
@@ -824,7 +824,7 @@ export const WYJATKI = Object.freeze({
   [KL_KOSZ_W_ZWROCONEJ]: Object.freeze({
     opis: 'stara karta X wraca zapisem w niej na urządzeniu, które o „Scal pacjentów” X → Y nie wiedziało (D-4 A), a potem takie urządzenie daje wizytę z X do Kosza w X: wpis Kosza zostaje przy żywej X także wtedy, gdy kartę Y usunięto („Usuń pacjenta”); model przypisuje kosz karcie docelowej (zapis za scaleniem) i usuwa go razem z nią — nic nie ginie, wpis jest w Koszu karty X',
     mechanizm: 'kosz tej wizyty w starej karcie X po scaleniu, gdy X wróciła już wcześniejszym zapisem wizyty albo notatki w X po scaleniu (urządzenie bez wiedzy o nim), potem „Usuń pacjenta” karty, z którą model usunął wpis; w widoku wpis Kosza pod X („wskrzeszenie”). Kosz w starej karcie, która przed nim nie wróciła — bez klasy',
-    zrodlo: 'plan D-4 (wariant A: „duplikat karty po „Scal pacjentów” na innym urządzeniu zaakceptowany (do ponownego scalenia)”, docs/SYNC_PRZYROSTOWA_PLAN.md, rozdział 6, tabela decyzji, wiersz D-4); ALGORITHMS P-KOSZ-PO-KLUCZU, „kosz-po-2” (ok. 28400–28403); tests/unit/ostatnia-zmiana.test.mjs, przypadek „D-4 A (Kosz w zwróconej starej karcie)”',
+    zrodlo: 'plan D-4 (wariant A: „duplikat karty po „Scal pacjentów” na innym urządzeniu zaakceptowany (do ponownego scalenia)”, docs/SYNC_PRZYROSTOWA_PLAN.md, rozdział 6, tabela decyzji, wiersz D-4); ALGORITHMS P-KOSZ-PO-KLUCZU, „kosz-po-2” (ok. 28402–28405); tests/unit/ostatnia-zmiana.test.mjs, przypadek „D-4 A (Kosz w zwróconej starej karcie)”',
     swiaty: Object.freeze(['W1', 'W4', 'bloby']),
   }),
   // E3-PR0b: klasa samych bieżących urządzeń (rodzina D-4 A i E1/E1b): sprawdzana tuż przed E4b i tylko przy utracie E1
@@ -832,7 +832,7 @@ export const WYJATKI = Object.freeze({
   [KL_WERSJA_W_ZWROCONEJ]: Object.freeze({
     opis: '„Scal pacjentów” X → Y na urządzeniu, które nie znało wersji X, usuwa ją razem z kartą X (E1/E1b), ale X wraca zapisem w niej na urządzeniu bez wiedzy o scaleniu (D-4 A), a urządzenie, które tę wersję ma (także w kolejce zdarzeń), oddaje ją do żywej X: wersja jest w duplikacie karty X, a nie w karcie scalonej Y — nic nie ginie, także po pełnej wymianie (pełna wymiana nie przenosi jej do Y)',
     mechanizm: 'utrata E1/E1b tej wersji z kartą źródłową X (nagrobek scalenia na urządzeniu, które jej nie znało), a X wróciła zapisem innej wizyty albo notatki w X po scaleniu na urządzeniu bez wiedzy o nim; w widoku wersja pod X („inna karta”). Wersja pod starą kartą, która nie wróciła, albo zapisana w niej po scaleniu — E4b albo D-4 A jak dotąd',
-    zrodlo: 'plan D-4 (wariant A: „duplikat karty po „Scal pacjentów” na innym urządzeniu zaakceptowany (do ponownego scalenia)”, docs/SYNC_PRZYROSTOWA_PLAN.md, rozdział 6, tabela decyzji, wiersz D-4); ALGORITHMS P-SYNC-WLASCICIEL, „Ograniczenia”: „Utrata wersji (E1/E1b), osobna wada” (ok. 31995–32004); ręczny przebieg kontrolny floty N (E2_AB_FLOTA=N E2_AB_FLOTA_PROFIL=pelny E2_AB_SWIAT_FLOTA=300000 E2_AB_ZIARNA_FLOTA276=3, świat 400 003, krok 203: wersja nowa na B w karcie 6, „Scal 6 → 3” na A bez niej, karta 6 wraca zapisem C, dostawa B → C oddaje wersję do karty 6); tests/unit/ostatnia-zmiana.test.mjs, przypadek „D-4 A (wersja nieznana scalającemu w zwróconej starej karcie)”',
+    zrodlo: 'plan D-4 (wariant A: „duplikat karty po „Scal pacjentów” na innym urządzeniu zaakceptowany (do ponownego scalenia)”, docs/SYNC_PRZYROSTOWA_PLAN.md, rozdział 6, tabela decyzji, wiersz D-4); ALGORITHMS P-SYNC-WLASCICIEL, „Ograniczenia”: „Utrata wersji (E1/E1b), osobna wada” (ok. 31997–32006); ręczny przebieg kontrolny floty N (E2_AB_FLOTA=N E2_AB_FLOTA_PROFIL=pelny E2_AB_SWIAT_FLOTA=300000 E2_AB_ZIARNA_FLOTA276=3, świat 400 003, krok 203: wersja nowa na B w karcie 6, „Scal 6 → 3” na A bez niej, karta 6 wraca zapisem C, dostawa B → C oddaje wersję do karty 6); tests/unit/ostatnia-zmiana.test.mjs, przypadek „D-4 A (wersja nieznana scalającemu w zwróconej starej karcie)”',
     swiaty: Object.freeze(['W1', 'W4', 'bloby']),
   }),
   [KL_RET_PRZYCINAJACE]: Object.freeze({
@@ -852,7 +852,7 @@ export const WYJATKI = Object.freeze({
   [KL_GWIAZDKA]: Object.freeze({
     opis: `„Odepnij i usuń” starszej aplikacji wkłada do Kosza treść z gwiazdką i bez pola gwiazdka, a jej „Przywróć” i przypięcie nie zapisują rejestru gwiazdki: wizyta leży w Koszu i wraca do karty z gwiazdką sprzed. Dozwolony jest tylko jeden fakt: w widoku bieżącej aplikacji wynik reguły W20 (brak pola gwiazdka — decyduje gwiazdka wersji sprzed kosza), w widoku starszej aplikacji jej własna gwiazdka (_pinned treści); każdy inny fakt to czerwień — ${DO_DECYZJI}`,
     mechanizm: 'ostatni zapis gwiazdki tej wersji (kosz, „Przywróć” albo zmiana gwiazdki; przypięcie — tylko w widoku starszej aplikacji, bo bieżąca czyta je jako przypięcie w chwili zmiany rekordu) na urządzeniu bez składników W3, bez późniejszego zapisu gwiazdki ani kosza na urządzeniu bieżącej aplikacji; „gwiazdka” w karcie albo „gwiazdka Kosza” z faktem równym dozwolonemu. Dozwolona gwiazdka w widoku bieżącej aplikacji to ta, którą Bgw_stan czyta z rekordu starszej aplikacji (vilda_vault.js:1558–1571): odpięcie przy rejestrze „przypięta” albo przy odcisku h zgodnym z treścią, a także odpięcie wersji, której kopie bieżących urządzeń też nie mają pól W3 (Bgw_scal bierze całą nowszą wersję, :3956), widać; bez rejestru albo bez chwili treści, przy rejestrze „nieprzypięta” z odciskiem niezgodnym albo bez odcisku zostaje gwiazdka sprzed. W widoku starszej aplikacji gwiazdka bieżącej aplikacji (rekord złożony z wyższym rev) tylko wtedy, gdy któryś widok bieżącego urządzenia w punkcie ją ma. Kosz na urządzeniu bez składników W3, które nie znało ostatniej gwiazdki, i bieżący widok z gwiazdką sprzed kosza tego widoku — R4a (tylko po samych zdarzeniach)',
-    zrodlo: 'vilda_vault.js:2766–2771 (W20); docs/clinical/ALGORITHMS.md „Flota mieszana”, W20 (ok. 29661–29665); tests/fixtures/vilda_vault-221.js.txt:757–787 (Bkz_doKosza: treść Kosza z _pinned) i :833 (gwiazdka okna Kosza z treści)',
+    zrodlo: 'vilda_vault.js:2766–2771 (W20); docs/clinical/ALGORITHMS.md „Flota mieszana”, W20 (ok. 29663–29667); tests/fixtures/vilda_vault-221.js.txt:757–787 (Bkz_doKosza: treść Kosza z _pinned) i :833 (gwiazdka okna Kosza z treści)',
     cechy: Object.freeze([BEZ_W3]),
     swiaty: W_FLOCIE,
   }),
@@ -866,7 +866,7 @@ export const WYJATKI = Object.freeze({
   [KL_NADPISANA]: Object.freeze({
     opis: `starsza aplikacja nie zna składników W3 i bierze cały nowszy rekord wersji: (a) jej poprawka albo gwiazdka ginie, gdy przed jej wysłaniem dochodzi do niej zapis tej wersji z bieżącej aplikacji, który jej nie znał; (b) jej gwiazdkę na wersji, którą sama utworzyła (bez pól W3), bieżąca aplikacja czyta jak zmianę treści (PD-12) i bierze jej starą treść zamiast poprawki — ${DO_DECYZJI}`,
     mechanizm: '(a) ostatni zapis treści (gwiazdki) na urządzeniu bez składników W3, potem zapis tej wersji na urządzeniu bieżącej aplikacji bez wiedzy o nim, który go nie zastąpił — fakt równy treści (gwiazdce) tego zapisu; (b) przypięcie na urządzeniu bez składników W3 wersji przez nie utworzonej, bez wiedzy o poprawce z bieżącej aplikacji — fakt równy treści urządzenia starszej aplikacji. W obu oczekiwanej treści (gwiazdki) nie ma w żadnym widoku punktu, a zmiana starszej aplikacji nie doszła do żadnego bieżącego urządzenia (w jego eksporcie przed jego mutacją ani w dostawie od starszej aplikacji do żywej karty): gdy gdzieś jest albo doszła, zmiana opuściła urządzenie i klasy nie ma (jej brak leży po stronie scalania bieżącej aplikacji)',
-    zrodlo: 'docs/clinical/ALGORITHMS.md „Flota mieszana” (ok. 29442–29445: „nie zna rejestru gwiazdki ani składników”); tests/fixtures/vilda_vault-221.js.txt:454–462 (Bkz_nowszaWersja); vilda_vault.js:1526–1527 (wersja bez pól W3)',
+    zrodlo: 'docs/clinical/ALGORITHMS.md „Flota mieszana” (ok. 29444–29447: „nie zna rejestru gwiazdki ani składników”); tests/fixtures/vilda_vault-221.js.txt:454–462 (Bkz_nowszaWersja); vilda_vault.js:1526–1527 (wersja bez pól W3)',
     cechy: Object.freeze([BEZ_W3]),
     swiaty: W_FLOCIE,
   }),
@@ -880,35 +880,35 @@ export const WYJATKI = Object.freeze({
   [KL_NAJPIERW_REV]: Object.freeze({
     opis: `starsza aplikacja wybiera treść tej samej wersji najpierw po rev: wcześniejsza treść z wyższym rev wygrywa u niej z późniejszą, a gdy karta wraca z niej, ta treść trafia na wszystkie urządzenia — ${DO_DECYZJI}`,
     mechanizm: 'dwie treści tej wersji z odwrotną kolejnością rev i chwili (fakt — wcześniejsza z wyższym rev, oczekiwana — późniejsza), a jedną z nich zapisało urządzenie, które wybiera wersję najpierw po rev; w widoku bieżącego urządzenia tylko wtedy, gdy oczekiwanej treści nie ma w żadnym widoku i widok nie należy do urządzenia, które ją zapisało (albo kartę zwróciła zmiana urządzenia, które wybiera najpierw po rev)',
-    zrodlo: 'docs/clinical/ALGORITHMS.md „Flota mieszana” (ok. 29443–29447: „Wersję tej samej karty 221 i 218 wybierają „najpierw rev””; rekord złożony dostaje rev + 1); vilda_vault.js:1543',
+    zrodlo: 'docs/clinical/ALGORITHMS.md „Flota mieszana” (ok. 29445–29449: „Wersję tej samej karty 221 i 218 wybierają „najpierw rev””; rekord złożony dostaje rev + 1); vilda_vault.js:1543',
     cechy: Object.freeze([NAJPIERW_REV]),
     swiaty: W_FLOCIE,
   }),
   [KL_NOTATKA]: Object.freeze({
     opis: `starsza aplikacja nie ma ratunku notatki D-21: (a) po „Usuń pacjenta” na bieżącym urządzeniu, gdy nagrobek dojdzie do niej przed jej pełną kopią, a potem ona zmieni kartę, karta wraca bez notatek; (b) jej „Usuń pacjenta” zapisuje nagrobki notatek bez deletedWithPatient, więc powrót karty zmianą na bieżącym urządzeniu notatek nie przywraca — ${DO_DECYZJI}`,
     mechanizm: 'notatka usunięta „Usuń pacjenta”, karta wraca późniejszą zmianą, a usunięcie było na urządzeniu bez ratunku notatek albo kartę przywróciła zmiana na takim urządzeniu, które przed nią notatki już nie miało albo straciło ją potem bez własnego usunięcia, zanim jego pełna kopia z notatką doszła do bieżącego urządzenia z żywą kartą; „utrata” notatki. Po takiej dostawie ratunek D-21 bieżącej aplikacji ją przywraca, więc jej brak leży po stronie bieżącej (bez klasy). Ograniczenie: dostawy liczy się tylko w świecie zdarzeń, nie w pełnej wymianie na klonach',
-    zrodlo: 'plan D-21 (docs/SYNC_PRZYROSTOWA_PLAN.md); docs/clinical/ALGORITHMS.md „Hak H2: ratunek notatki zawsze do kolejki” (ok. 24752–24754); vilda_vault.js:4901 (deletedWithPatient); tests/fixtures/vilda_vault-221.js.txt:2515 (Bpu_usun)',
+    zrodlo: 'plan D-21 (docs/SYNC_PRZYROSTOWA_PLAN.md); docs/clinical/ALGORITHMS.md „Hak H2: ratunek notatki zawsze do kolejki” (ok. 24753–24755); vilda_vault.js:4901 (deletedWithPatient); tests/fixtures/vilda_vault-221.js.txt:2515 (Bpu_usun)',
     cechy: Object.freeze([BEZ_RATUNKU]),
     swiaty: W_FLOCIE,
   }),
   [KL_KARTA_CZESCIOWA]: Object.freeze({
     opis: `karta usunięta „Usuń pacjenta” wraca bez części wersji także po pełnej wymianie: (a) wraca zmianą starszej aplikacji, która nie ma haka H1 i nie wysyła pełnej karty; (b) przed usunięciem retencja v1 starszej aplikacji usunęła u niej ostatni stan wizyty — ${DO_DECYZJI}`,
     mechanizm: 'wizyta usunięta „Usuń pacjenta”, która wraca z kartą (karta jest w widoku, wizyty nie ma), a kartę przywróciła zmiana na urządzeniu bez haka H1 albo przed usunięciem ostatni stan wizyty usunęła retencja v1 urządzenia starszej aplikacji, które potem kartę przywróciło (albo to jego widok)',
-    zrodlo: 'docs/clinical/ALGORITHMS.md tabela klas E3-PR0a, „karta częściowa” (ok. 40248) i „Świadomie bez haka H1” (ok. 24746); tests/fixtures/vilda_vault-221.js.txt (bez haków Bem_)',
+    zrodlo: 'docs/clinical/ALGORITHMS.md tabela klas E3-PR0a, „karta częściowa” (ok. 40250) i „Świadomie bez haka H1” (ok. 24747); tests/fixtures/vilda_vault-221.js.txt (bez haków Bem_)',
     cechy: Object.freeze([BEZ_H1, RETENCJA_V1]),
     swiaty: W_FLOCIE,
   }),
   [KL_R4A]: Object.freeze({
     opis: `kosz na bieżącym urządzeniu bez wiedzy o gwiazdce ze starszej aplikacji: starsza trzyma ją tylko w karcie i traci po nagrobku, więc gwiazdka wpisu Kosza różni się także po pełnej wymianie (między bieżącymi urządzeniami leczy to pełna wymiana) — ${DO_DECYZJI}`,
     mechanizm: 'kosz na urządzeniu bieżącej aplikacji, które nie znało ostatniego zapisu gwiazdki, a ten zapis zrobiło urządzenie bez składników W3; „gwiazdka Kosza”',
-    zrodlo: 'klasa R4a (wyżej); docs/clinical/ALGORITHMS.md „Flota mieszana” (ok. 29442–29445); tests/fixtures/vilda_vault-221.js.txt:454–462 (Bkz_nowszaWersja)',
+    zrodlo: 'klasa R4a (wyżej); docs/clinical/ALGORITHMS.md „Flota mieszana” (ok. 29444–29447); tests/fixtures/vilda_vault-221.js.txt:454–462 (Bkz_nowszaWersja)',
     cechy: Object.freeze([BEZ_W3]),
     swiaty: W_FLOCIE,
   }),
   [KL_R4A_PRIM]: Object.freeze({
     opis: `kosz na bieżącym urządzeniu bez wiedzy o poprawce ze starszej aplikacji: starsza trzyma nowszą treść tylko w karcie i traci ją po nagrobku, więc wpis Kosza ma starszą treść także po pełnej wymianie (między bieżącymi urządzeniami leczy to scalenie treści Kosza, P-KOSZ-NOWSZA-TRESC) — ${DO_DECYZJI}`,
     mechanizm: 'kosz na urządzeniu bieżącej aplikacji, które nie znało ostatniego zapisu treści, a ten zapis zrobiło urządzenie bez składników W3; „treść” wpisu Kosza',
-    zrodlo: 'klasa R4a′ (wyżej); docs/clinical/ALGORITHMS.md P-KOSZ-NOWSZA-TRESC (ok. 31332) i „Flota mieszana” (ok. 29442–29445)',
+    zrodlo: 'klasa R4a′ (wyżej); docs/clinical/ALGORITHMS.md P-KOSZ-NOWSZA-TRESC (ok. 31334) i „Flota mieszana” (ok. 29444–29447)',
     cechy: Object.freeze([BEZ_W3]),
     swiaty: W_FLOCIE,
   }),
