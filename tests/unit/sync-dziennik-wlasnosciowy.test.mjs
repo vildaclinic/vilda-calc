@@ -179,8 +179,8 @@
 //   aplikacji w W4 — tabela 'flota' (kontPary).
 // - Wyrocznia: w punktach bez urządzenia starszej aplikacji normalizacja tożsamości wizyty nieużyta (NORM_BEZ_FLOTY).
 // - Bloki floty na końcu pliku: flota 221 i 276 (ziarna CI), strażniki transportu, scenariusze deterministyczne floty,
-//   ręczny blok do decyzji właściciela i stres (echo jednego scalenia pełnej kopii ze starszej aplikacji w dużym
-//   świecie: budżet minuty slotu na bajtach realnych, literał STRES_ODSYL) — opis przy każdym bloku.
+//   ręczny blok znanych usterek bieżącej aplikacji i stres (echo jednego scalenia pełnej kopii ze starszej aplikacji
+//   w dużym świecie: budżet minuty slotu na bajtach realnych, literał STRES_ODSYL) — opis przy każdym bloku.
 //
 // KOLEJNOŚĆ W KROKU (E2-PR3a2, sprawdzana na emiterach): snap (także wersje przeniesione pod kartę celu „Scal pacjentów”
 // i głowy scalenia), potem stomb, potem ptomb, potem pnote, pnotetomb, note, notetomb, plist, plisttomb, pref, pk, pktomb,
@@ -5419,9 +5419,9 @@ const ZNANE_FLOTA = {
   },
 };
 // Wyrocznia floty (ziarna CI): naruszenia według „klasa | świat” — flota 221 tylko W4 floty (W1 floty — druk), flota 276
-// W1 floty i W4 floty. Liczby to naruszenia Z KLASĄ floty — skutki samej starszej wersji (WYR.DO_DECYZJI: znane
-// ograniczenie starszej wersji do decyzji właściciela, pytanie z 2026-11-15); naruszenie bez klasy to czerwień zieleni
-// floty, nie wpis tego literału. Ziarno bez wpisu — bez naruszeń.
+// W1 floty i W4 floty. Liczby to naruszenia Z KLASĄ floty — skutki samej starszej wersji (WYR.OGRANICZENIE_STARSZEJ:
+// znane ograniczenie starszej wersji, naprawa — aktualizacja urządzeń, decyzja właściciela z 2026-11-16); naruszenie
+// bez klasy to czerwień zieleni floty, nie wpis tego literału. Ziarno bez wpisu — bez naruszeń.
 const ZNANE_WYR_FLOTY = {
   221: {
     3: { 'gwiazdka ze starszej aplikacji | W4 floty': 6, 'notatka bez ratunku D-21 (starsza aplikacja) | W4 floty': 12 },
@@ -5643,8 +5643,8 @@ async function echoNaKlonach(S, Y, koperty, koperty2a) {
 // ══ Flota ze starszą aplikacją: scenariusze deterministyczne (E3-PR0b) ══════════════════════════════════════════════
 // Jeden świat na scenariusz: swiat(800 + nr) i Math.random z rng(0x6800 + nr), nr — pozycja w P6F (nowy scenariusz
 // tylko na końcu literału — inaczej przesuwa światy istniejących; asercja nr < 40); ręczne kontrole C = N mają stały
-// świat 840 + pozycja scenariusza bazowego (niezależny od długości listy; asercja < 80, światy 880–899 ma blok do decyzji
-// niżej).
+// świat 840 + pozycja scenariusza bazowego (niezależny od długości listy; asercja < 80, światy 880–899 ma blok znanych
+// usterek niżej).
 // A i B — bieżący sejf (bliźniaki); C — bliźniak A z sejfem starszej aplikacji (221 bez dziennika zdarzeń, 276
 // z dziennikiem; retencja v1) albo bieżący (kontrola C = N). Transport opisuje scenariusz: zdarzenia (dostawa, haki do Q odbiorcy), kolejka do 221
 // (dostawaDoStarszej — applyEncryptedDelta), pełna kopia (scalBlob, licznik: źródło blob221, blob276, blobN). Ocena
@@ -5837,6 +5837,10 @@ const P6F = {
       krok(60e3); await p6fOdC(u, u.A); await p6fOdC(u, u.B); await p6fAB(u);
     },
     fakty: (u) => faktyRetencji(u, u.P),
+    // bieżący odbiorca nagrobków retencji zachowuje najnowszy stan każdej z 8 wizyt (8 dni → 8 wizyt); wizyta zlana
+    // z innymi (tożsamość wizyty bez dnia albo z inną cechą niż dzień) zostawiłaby jedną wersję, a wyrocznia — liczona
+    // z tożsamości z eksportu — by tego nie zauważyła
+    wymog: { opis: 'A i B mają 8 wersji karty P', fakt: (u) => [u.A, u.B].map((U) => `${U.nazwa}: wersji ${wersjeKarty(U, u.P).length}`), oczekiwane: ['A: wersji 8', 'B: wersji 8'] },
   },
   'Retencja na 276 z parametrami aplikacji: nagrobek retencji idzie zdarzeniem': {
     ci: true, kontrolaN: true, app: 'S276', baza: p6fOsiemDni,
@@ -6079,8 +6083,9 @@ function p6fOdsyl(S, zEchem) {
 // fakty — fakty scenariusza. P6F_WYR — naruszenia wyroczni („świat: urządzenie encja etykieta rodzaj [klasa]”;
 // scenariusz spoza listy — bez naruszeń). P6F_ODSYL — licznik (klucz → { wyk, nowe }, wiersze według źródła i warstwy;
 // echo na klonach). Klucze bez ścieżek pól; ścieżki występują tylko w opisach różnic D (wartości W1 i W4.pary, jak
-// w P6_LITERALY). Skutki starszej aplikacji w tych literałach (utrata notatki, retencja, gwiazdka) to ograniczenie
-// starszej wersji do decyzji właściciela (pytanie z 2026-11-15; WYR.DO_DECYZJI w opisach klas).
+// w P6_LITERALY). Skutki starszej aplikacji w tych literałach (utrata notatki, retencja, gwiazdka) to znane
+// ograniczenie starszej wersji — naprawa: aktualizacja urządzeń (decyzja właściciela z 2026-11-16;
+// WYR.OGRANICZENIE_STARSZEJ w opisach klas).
 const P6F_LITERALY = {
   '„Usuń pacjenta” na 221, potem zmiana karty na A: notatka bez ratunku D-21': {
     W1: { AB: [], BC: [], CA: [] },
@@ -6340,17 +6345,18 @@ describe('A ≡ B, flota ze starszą aplikacją: scenariusze deterministyczne (l
 });
 
 
-// ══ Do decyzji właściciela: przyczyna po stronie bieżącej aplikacji (E3-PR0b; ręcznie, E2_AB_DO_DECYZJI=1) ══════════
+// ══ Znane usterki bieżącej aplikacji (ręcznie; dziś czerwone; E3-PR0b, E2_AB_ZNANE_USTERKI=1) ═══════════════════════
 // Naruszenia wyroczni bez klasy, których mechanizm leży w bieżącej aplikacji (odtwarzają się na samych bieżących
 // urządzeniach): bez klasy w tabeli wyjątków i bez literału; scenariusz deterministyczny jest dziś czerwony
 // (oczekiwanie: w każdym świecie wyrocznia bez naruszeń bez klasy). Każdy przypadek w trzech światach z tymi samymi
 // operacjami, każdy świat osobną asercją: 'W1' — po samych zdarzeniach (żywe urządzenia), 'W4' — te same zdarzenia,
 // a po nich pełna wymiana na świeżych klonach (w4Trzy), 'bloby' — transport tylko pełną kopią (Y scala eksport X).
 // Fakty (położenie i treść encji) — w komunikacie asercji i w druku. Światy swiat(880 + nr), Math.random z
-// rng(0x6880 + nr), nr — pozycja w DO_DECYZJI. Pytania do właściciela z 2026-11-15: która treść notatki pacjenta ma
-// zostać po edycji na dwóch urządzeniach; „Usuń pacjenta” duplikatu karty po „Scal pacjentów” (plan D-4, decyzja 4a;
-// poprawka — E3-PR0e).
-const DO_DECYZJI_RECZNIE = process.env.E2_AB_DO_DECYZJI === '1';
+// rng(0x6880 + nr), nr — pozycja w ZNANE_USTERKI (nowy przypadek tylko na końcu). Każdy przypadek ma pole naprawa
+// (PR, który go naprawi; po naprawie przypadek staje się testem wejściowym tego PR): notatka pacjenta zmieniona na
+// dwóch urządzeniach — E3-PR0b2 (decyzja właściciela z 2026-11-16: wygrywa późniejsza zmiana); „Usuń pacjenta”
+// duplikatu karty po „Scal pacjentów” — E3-PR0e (plan D-4, decyzja 4a; do tego czasu duplikat scalać ponownie).
+const ZNANE_USTERKI_RECZNIE = process.env.E2_AB_ZNANE_USTERKI === '1';
 // Transport świata: zdarzenia (dostawa z hakami; do i od 221 — kolejka przez applyEncryptedDelta i pełna kopia) albo
 // same pełne kopie.
 async function ddDo(u, X, Y) {
@@ -6423,9 +6429,10 @@ function ddUsunZwrocona(kolejnosc, app = 'N') {
       await ddSpoczynek(u);
     },
     fakty: (u) => ({ przedUsun: u.przedUsun, koniec: ddPolozenie(u, u.v) }),
+    naprawa: 'do naprawy w E3-PR0e (decyzja właściciela 4a)',
   };
 }
-const DO_DECYZJI = {
+const ZNANE_USTERKI = {
   // Notatka pacjenta: A edytuje dwa razy (rev 3), B raz, 5 s później (rev 2); reguła notatek „wyższy rev, przy równym
   // nowsza data” (vilda_vault.js:5434–5438, Bks_wygrywaRev; docs/clinical/ALGORITHMS.md P-SYNC-WLASCICIEL, ok. 32144;
   // plan — notatki pacjenta LWW z rev na pierwszym miejscu) zostawia tekst A we wszystkich trzech światach na A, B i C,
@@ -6446,6 +6453,7 @@ const DO_DECYZJI = {
       krok(); await ddDo(u, u.A, u.B); await ddDo(u, u.B, u.A); await ddSpoczynek(u);
     },
     fakty: ddTrescNotatki,
+    naprawa: 'do naprawy w E3-PR0b2 (decyzja właściciela z 2026-11-16: wygrywa późniejsza zmiana)',
   },
   '„Usuń pacjenta” zwróconej starej karty po „Scal pacjentów” — wszyscy znają powrót karty przed usunięciem': ddUsunZwrocona('wszyscy'),
   '„Usuń pacjenta” zwróconej starej karty po „Scal pacjentów” — B zna tylko scalenie, nagrobek dochodzi do niego przed powrotem karty': ddUsunZwrocona('B bez powrotu'),
@@ -6453,12 +6461,12 @@ const DO_DECYZJI = {
   '„Usuń pacjenta” zwróconej starej karty po „Scal pacjentów” — B zna tylko scalenie; kontrola: C na 221 (ten sam wynik)': ddUsunZwrocona('B bez powrotu', 'S221'),
 };
 async function ddSwiat(nr, sc, tryb) {
-  if (!(nr < 20)) throw new Error(`przypadek do decyzji ${nr}: poza światami 880–899`);
+  if (!(nr < 20)) throw new Error(`znana usterka ${nr}: poza światami 880–899`);
   ustaw(START);
   const S = swiat(880 + nr);
   const los = rng(0x6880 + nr);
   vi.spyOn(Math, 'random').mockImplementation(() => (S.losAlt || los)());
-  S.w2s = false; S.nrKroku = 0; S.wyrSwiat = 'do decyzji';
+  S.w2s = false; S.nrKroku = 0; S.wyrSwiat = 'znane usterki';
   const u = await sc.baza(S);
   u.S = S; u.tryb = tryb;
   await sc.kroki(u);
@@ -6467,10 +6475,10 @@ async function ddSwiat(nr, sc, tryb) {
   return u;
 }
 const ddNar = (lista) => lista.map((x) => `${x.swiat}: ${x.urz} ${x.encja} ${x.et} ${x.rodzaj} [${x.klasa || 'bez klasy'}] oczekiwane ${JSON.stringify(x.oczek)} fakt ${JSON.stringify(x.fakt)}`);
-describe.skipIf(!DO_DECYZJI_RECZNIE)('A ≡ B, do decyzji właściciela (ręcznie): przyczyna po stronie bieżącej aplikacji — dziś czerwone, bez klasy i bez literału', () => {
+describe.skipIf(!ZNANE_USTERKI_RECZNIE)('A ≡ B, znane usterki bieżącej aplikacji (ręcznie; dziś czerwone): przyczyna po stronie bieżącej aplikacji, bez klasy i bez literału — do naprawy w kolejnych PR', () => {
   d1();
-  for (const [nr, [nazwa, sc]] of Object.entries(DO_DECYZJI).entries()) {
-    it(`${nazwa}: wyrocznia bez naruszeń bez klasy po samych zdarzeniach (W1), po pełnej wymianie (W4) i przy samych pełnych kopiach (bloby)`, async () => {
+  for (const [nr, [nazwa, sc]] of Object.entries(ZNANE_USTERKI).entries()) {
+    it(`${nazwa} — ${sc.naprawa}: wyrocznia bez naruszeń bez klasy po samych zdarzeniach (W1), po pełnej wymianie (W4) i przy samych pełnych kopiach (bloby)`, async () => {
       const u = await ddSwiat(nr, sc, 'zdarzenia');
       const stare = p6fUrz(u).filter(starszaAplikacja).map((U) => U.nazwa);
       const W1 = wyrOcena(u.S, 'W1', nazwa, await wyrWidoki(u.S, { A: u.A, B: u.B, C: u.C }), { stare });
@@ -6483,10 +6491,10 @@ describe.skipIf(!DO_DECYZJI_RECZNIE)('A ≡ B, do decyzji właściciela (ręczni
       const bloby = wyrOcena(ub.S, 'bloby', nazwa, await wyrWidoki(ub.S, { A: ub.A, B: ub.B, C: ub.C }), { stare });
       const faktyBlobow = await sc.fakty(ub);
       const wynik = { W1: ddNar(W1), W4: ddNar(W4), bloby: ddNar(bloby), faktyW1, W4kliniczny: w.opis, faktyBlobow };
-      console.log(`E3-AB do decyzji „${nazwa}”`, JSON.stringify({ ...wynik, dziennik: u.S.dziennik }));
-      if (process.env.E2_AB_WYNIKI) appendFileSync(process.env.E2_AB_WYNIKI, JSON.stringify({ typ: 'do decyzji', nr, nazwa, ...wynik, dziennik: u.S.dziennik, dziennikBlobow: ub.S.dziennik }) + '\n');
+      console.log(`E3-AB znana usterka „${nazwa}” — ${sc.naprawa}`, JSON.stringify({ ...wynik, dziennik: u.S.dziennik }));
+      if (process.env.E2_AB_WYNIKI) appendFileSync(process.env.E2_AB_WYNIKI, JSON.stringify({ typ: 'znana usterka', nr, nazwa, naprawa: sc.naprawa, ...wynik, dziennik: u.S.dziennik, dziennikBlobow: ub.S.dziennik }) + '\n');
       const opis = JSON.stringify({ faktyW1, W4kliniczny: w.opis, faktyBlobow }, null, 1);
-      for (const [swiatN, lista] of [['W1', W1], ['W4', W4], ['bloby', bloby]]) expect.soft(ddNar(WYR.bezWyjatku(lista, swiatN)), `${nazwa} — świat ${swiatN}\n${opis}`).toEqual([]);
+      for (const [swiatN, lista] of [['W1', W1], ['W4', W4], ['bloby', bloby]]) expect.soft(ddNar(WYR.bezWyjatku(lista, swiatN)), `${nazwa} — ${sc.naprawa}, świat ${swiatN}\n${opis}`).toEqual([]);
     }, 60_000);
   }
 });

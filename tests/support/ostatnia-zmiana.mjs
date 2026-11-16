@@ -705,12 +705,13 @@ export function ocen(M, widoki, { etykieta = (id) => String(id).slice(0, 6), sta
 // 4a, 9a) — plan, rozdział 6, „Decyzje z 2026-11-15”.
 //
 // Klasy floty ze starszą aplikacją (E3-PR0b; pole cechy — cechy starszej aplikacji, na których stoi mechanizm,
-// CECHY_STARSZYCH): dozwolone tylko w światach floty; skutki starszej wersji czekają na decyzję właściciela (opis).
+// CECHY_STARSZYCH): dozwolone tylko w światach floty; skutki samej starszej wersji to znane ograniczenie, naprawą jest
+// aktualizacja urządzeń (decyzja właściciela z 2026-11-16, opis).
 // Światy floty i ich odpowiedniki bez floty: klasa samych bieżących urządzeń (bez pola cechy) jest w świecie floty
 // dozwolona tak jak w odpowiedniku (dozwolonaW).
 export const SWIATY_FLOTY = Object.freeze({ 'W1 floty': 'W1', 'W4 floty': 'W4', 'p6f W1': 'W1', 'p6f W4': 'W4' });
 export const SWIATY = Object.freeze(['W1', 'W4', 'bloby', ...Object.keys(SWIATY_FLOTY)]);
-export const DO_DECYZJI = 'znane ograniczenie starszej wersji — do decyzji właściciela (pytanie z 2026-11-15)';
+export const OGRANICZENIE_STARSZEJ = 'znane ograniczenie starszej wersji — naprawa: aktualizacja urządzeń (decyzja właściciela z 2026-11-16)';
 const W_FLOCIE = Object.freeze(Object.keys(SWIATY_FLOTY));
 const KL_RET_PRZYCINAJACE = 'retencja starszej aplikacji (urządzenie przycinające)';
 const KL_RET_GLOWA = 'retencja starszej aplikacji (odbiorca zachował głowę wizyty)';
@@ -836,77 +837,77 @@ export const WYJATKI = Object.freeze({
     swiaty: Object.freeze(['W1', 'W4', 'bloby']),
   }),
   [KL_RET_PRZYCINAJACE]: Object.freeze({
-    opis: `retencja v1 starszej aplikacji (bez ochrony wizyt) usuwa u siebie ostatni stan wizyty; bieżące urządzenia go zachowują (P-TRWALE-WIZYTY); naruszenie tylko w widoku urządzenia przycinającego — ${DO_DECYZJI}`,
+    opis: `retencja v1 starszej aplikacji (bez ochrony wizyt) usuwa u siebie ostatni stan wizyty; bieżące urządzenia go zachowują (P-TRWALE-WIZYTY); naruszenie tylko w widoku urządzenia przycinającego — ${OGRANICZENIE_STARSZEJ}`,
     mechanizm: 'przycięcie retencją na urządzeniu z retencją v1, po którym w jego karcie nie zostaje żadna wersja tej wizyty (visitId); „retencja usunęła ostatni stan wizyty” tylko w widoku tego urządzenia',
     zrodlo: 'docs/PATIENT_VISITS.md:41, :43, :47; tests/fixtures/vilda_retention-v1.js.txt; tests/unit/starsza-aplikacja-fikstury.test.mjs, „retencja na starszej aplikacji: v1 przycina, bieżąca nie” (z 8 wersji z 8 dni sprzed 40–54 dni retencja v1 zostawia 1, bieżąca 8)',
     cechy: Object.freeze([RETENCJA_V1]),
     swiaty: W_FLOCIE,
   }),
   [KL_RET_GLOWA]: Object.freeze({
-    opis: `bieżący odbiorca nagrobka retencji ze starszej aplikacji zachowuje najnowszy stan wizyty, a jej starsze wersje usuwa (reguła wizyty, nie wersji): przycięta wersja znika, w karcie zostaje inna wersja tej samej wizyty — ${DO_DECYZJI}`,
+    opis: `bieżący odbiorca nagrobka retencji ze starszej aplikacji zachowuje najnowszy stan wizyty, a jej starsze wersje usuwa (reguła wizyty, nie wersji): przycięta wersja znika, w karcie zostaje inna wersja tej samej wizyty — ${OGRANICZENIE_STARSZEJ}`,
     mechanizm: 'jak „retencja starszej aplikacji (urządzenie przycinające)”, a do widoku bieżącego urządzenia doszedł nagrobek retencji tej wersji i jest w nim w karcie inna wersja tej samej wizyty (visitId); także „utrata” po „Usuń pacjenta” i powrocie karty, gdy to przycięcie było przed usunięciem (pełna karta odbiorcy, hak H1, nie niesie usuniętej przez niego wersji)',
     zrodlo: 'vilda_vault.js Bvisit_protected (:6189) i Bvisit_keepRetention (:6272); docs/PATIENT_VISITS.md:41, :43',
     cechy: Object.freeze([RETENCJA_V1]),
     swiaty: W_FLOCIE,
   }),
   [KL_GWIAZDKA]: Object.freeze({
-    opis: `„Odepnij i usuń” starszej aplikacji wkłada do Kosza treść z gwiazdką i bez pola gwiazdka, a jej „Przywróć” i przypięcie nie zapisują rejestru gwiazdki: wizyta leży w Koszu i wraca do karty z gwiazdką sprzed. Dozwolony jest tylko jeden fakt: w widoku bieżącej aplikacji wynik reguły W20 (brak pola gwiazdka — decyduje gwiazdka wersji sprzed kosza), w widoku starszej aplikacji jej własna gwiazdka (_pinned treści); każdy inny fakt to czerwień — ${DO_DECYZJI}`,
+    opis: `„Odepnij i usuń” starszej aplikacji wkłada do Kosza treść z gwiazdką i bez pola gwiazdka, a jej „Przywróć” i przypięcie nie zapisują rejestru gwiazdki: wizyta leży w Koszu i wraca do karty z gwiazdką sprzed. Dozwolony jest tylko jeden fakt: w widoku bieżącej aplikacji wynik reguły W20 (brak pola gwiazdka — decyduje gwiazdka wersji sprzed kosza), w widoku starszej aplikacji jej własna gwiazdka (_pinned treści); każdy inny fakt to czerwień — ${OGRANICZENIE_STARSZEJ}`,
     mechanizm: 'ostatni zapis gwiazdki tej wersji (kosz, „Przywróć” albo zmiana gwiazdki; przypięcie — tylko w widoku starszej aplikacji, bo bieżąca czyta je jako przypięcie w chwili zmiany rekordu) na urządzeniu bez składników W3, bez późniejszego zapisu gwiazdki ani kosza na urządzeniu bieżącej aplikacji; „gwiazdka” w karcie albo „gwiazdka Kosza” z faktem równym dozwolonemu. Dozwolona gwiazdka w widoku bieżącej aplikacji to ta, którą Bgw_stan czyta z rekordu starszej aplikacji (vilda_vault.js:1558–1571): odpięcie przy rejestrze „przypięta” albo przy odcisku h zgodnym z treścią, a także odpięcie wersji, której kopie bieżących urządzeń też nie mają pól W3 (Bgw_scal bierze całą nowszą wersję, :3956), widać; bez rejestru albo bez chwili treści, przy rejestrze „nieprzypięta” z odciskiem niezgodnym albo bez odcisku zostaje gwiazdka sprzed. W widoku starszej aplikacji gwiazdka bieżącej aplikacji (rekord złożony z wyższym rev) tylko wtedy, gdy któryś widok bieżącego urządzenia w punkcie ją ma. Kosz na urządzeniu bez składników W3, które nie znało ostatniej gwiazdki, i bieżący widok z gwiazdką sprzed kosza tego widoku — R4a (tylko po samych zdarzeniach)',
     zrodlo: 'vilda_vault.js:2766–2771 (W20); docs/clinical/ALGORITHMS.md „Flota mieszana”, W20 (ok. 29733–29737); tests/fixtures/vilda_vault-221.js.txt:757–787 (Bkz_doKosza: treść Kosza z _pinned) i :833 (gwiazdka okna Kosza z treści)',
     cechy: Object.freeze([BEZ_W3]),
     swiaty: W_FLOCIE,
   }),
   [KL_PRZYWROC]: Object.freeze({
-    opis: `„Przywróć” starszej aplikacji oddaje treść z Kosza ze starą chwilą treści i tym samym odciskiem; bieżąca aplikacja czyta to jak zmianę samej gwiazdki, więc zostaje wcześniejsza poprawka (z bieżącej albo ze starszej aplikacji), a nie treść z Kosza (nic nie ginie) — ${DO_DECYZJI}`,
+    opis: `„Przywróć” starszej aplikacji oddaje treść z Kosza ze starą chwilą treści i tym samym odciskiem; bieżąca aplikacja czyta to jak zmianę samej gwiazdki, więc zostaje wcześniejsza poprawka (z bieżącej albo ze starszej aplikacji), a nie treść z Kosza (nic nie ginie) — ${OGRANICZENIE_STARSZEJ}`,
     mechanizm: '„Przywróć” na urządzeniu bez składników W3 jako ostatni zapis treści, a przywracana treść niesie pola W3 bieżącej aplikacji ze zgodnym odciskiem (stara chwila treści); wcześniejszy, późniejszy od przywracanej treści zapis treści (poprawka na dowolnym urządzeniu) zostaje; „treść” z faktem równym tej poprawce. Ten sam fakt daje bieżące urządzenie, które przywrócenia w ogóle nie przyjęło — z widoku nie da się tego odróżnić (ograniczenie klasy)',
     zrodlo: 'vilda_vault.js Bgw_stan (:1558, gałąź :1569–1570); tests/fixtures/vilda_vault-221.js.txt:854–877 (Bkz_przywroc: payloadCipher wpisu Kosza bez zmiany, nowe updatedAtISO)',
     cechy: Object.freeze([BEZ_W3]),
     swiaty: W_FLOCIE,
   }),
   [KL_NADPISANA]: Object.freeze({
-    opis: `starsza aplikacja nie zna składników W3 i bierze cały nowszy rekord wersji: (a) jej poprawka albo gwiazdka ginie, gdy przed jej wysłaniem dochodzi do niej zapis tej wersji z bieżącej aplikacji, który jej nie znał; (b) jej gwiazdkę na wersji, którą sama utworzyła (bez pól W3), bieżąca aplikacja czyta jak zmianę treści (PD-12) i bierze jej starą treść zamiast poprawki — ${DO_DECYZJI}`,
+    opis: `starsza aplikacja nie zna składników W3 i bierze cały nowszy rekord wersji: (a) jej poprawka albo gwiazdka ginie, gdy przed jej wysłaniem dochodzi do niej zapis tej wersji z bieżącej aplikacji, który jej nie znał; (b) jej gwiazdkę na wersji, którą sama utworzyła (bez pól W3), bieżąca aplikacja czyta jak zmianę treści (PD-12) i bierze jej starą treść zamiast poprawki — ${OGRANICZENIE_STARSZEJ}`,
     mechanizm: '(a) ostatni zapis treści (gwiazdki) na urządzeniu bez składników W3, potem zapis tej wersji na urządzeniu bieżącej aplikacji bez wiedzy o nim, który go nie zastąpił — fakt równy treści (gwiazdce) tego zapisu; (b) przypięcie na urządzeniu bez składników W3 wersji przez nie utworzonej, bez wiedzy o poprawce z bieżącej aplikacji — fakt równy treści urządzenia starszej aplikacji. W obu oczekiwanej treści (gwiazdki) nie ma w żadnym widoku punktu, a zmiana starszej aplikacji nie doszła do żadnego bieżącego urządzenia (w jego eksporcie przed jego mutacją ani w dostawie od starszej aplikacji do żywej karty): gdy gdzieś jest albo doszła, zmiana opuściła urządzenie i klasy nie ma (jej brak leży po stronie scalania bieżącej aplikacji)',
     zrodlo: 'docs/clinical/ALGORITHMS.md „Flota mieszana” (ok. 29514–29517: „nie zna rejestru gwiazdki ani składników”); tests/fixtures/vilda_vault-221.js.txt:454–462 (Bkz_nowszaWersja); vilda_vault.js:1526–1527 (wersja bez pól W3)',
     cechy: Object.freeze([BEZ_W3]),
     swiaty: W_FLOCIE,
   }),
   [KL_Z_KARTA]: Object.freeze({
-    opis: `starsza aplikacja bez dziennika zdarzeń wysyła swoją zmianę tylko deltą (karta do progu) albo w pełnej kopii; gdy „Usuń pacjenta” tej karty (późniejsze niż ta zmiana) dojdzie do niej albo zrobi się na niej wcześniej, karta znika u niej razem z niewysłaną zmianą (poprawką, gwiazdką, nową wersją), a karta zwrócona później zmianą innego urządzenia jej nie ma — ${DO_DECYZJI}`,
+    opis: `starsza aplikacja bez dziennika zdarzeń wysyła swoją zmianę tylko deltą (karta do progu) albo w pełnej kopii; gdy „Usuń pacjenta” tej karty (późniejsze niż ta zmiana) dojdzie do niej albo zrobi się na niej wcześniej, karta znika u niej razem z niewysłaną zmianą (poprawką, gwiazdką, nową wersją), a karta zwrócona później zmianą innego urządzenia jej nie ma — ${OGRANICZENIE_STARSZEJ}`,
     mechanizm: 'ostatni zapis treści albo gwiazdki wersji (także jej utworzenie) na urządzeniu bez kolejki zdarzeń, wcześniejszy niż „Usuń pacjenta” tej karty; karta wróciła późniejszą zmianą innego urządzenia; oczekiwanej treści (gwiazdki, wersji) nie ma w żadnym widoku punktu. Bez klasy, gdy zmiana doszła do bieżącego urządzenia (jego eksport przed jego mutacją albo dostawa od starszej aplikacji do żywej karty ją ma) albo urządzenie, które zwróciło kartę, miało ją przed swoją zmianą (jego pełna karta, hak H1, ją niesie) — wtedy zmiana opuściła starszą aplikację',
     zrodlo: 'tests/fixtures/vilda_vault-221.js.txt (bez _eventLog i Bem_; :2481–2496 — nagrobek późniejszy niż ostatni zapis usuwa kartę z wersjami); tests/support/starsza-aplikacja.mjs (PROG_DELT_221 — delta karty do progu)',
     cechy: Object.freeze([BEZ_KOLEJKI]),
     swiaty: W_FLOCIE,
   }),
   [KL_NAJPIERW_REV]: Object.freeze({
-    opis: `starsza aplikacja wybiera treść tej samej wersji najpierw po rev: wcześniejsza treść z wyższym rev wygrywa u niej z późniejszą, a gdy karta wraca z niej, ta treść trafia na wszystkie urządzenia — ${DO_DECYZJI}`,
+    opis: `starsza aplikacja wybiera treść tej samej wersji najpierw po rev: wcześniejsza treść z wyższym rev wygrywa u niej z późniejszą, a gdy karta wraca z niej, ta treść trafia na wszystkie urządzenia — ${OGRANICZENIE_STARSZEJ}`,
     mechanizm: 'dwie treści tej wersji z odwrotną kolejnością rev i chwili (fakt — wcześniejsza z wyższym rev, oczekiwana — późniejsza), a jedną z nich zapisało urządzenie, które wybiera wersję najpierw po rev; w widoku bieżącego urządzenia tylko wtedy, gdy oczekiwanej treści nie ma w żadnym widoku i widok nie należy do urządzenia, które ją zapisało (albo kartę zwróciła zmiana urządzenia, które wybiera najpierw po rev)',
     zrodlo: 'docs/clinical/ALGORITHMS.md „Flota mieszana” (ok. 29515–29519: „Wersję tej samej karty 221 i 218 wybierają „najpierw rev””; rekord złożony dostaje rev + 1); vilda_vault.js:1543',
     cechy: Object.freeze([NAJPIERW_REV]),
     swiaty: W_FLOCIE,
   }),
   [KL_NOTATKA]: Object.freeze({
-    opis: `starsza aplikacja nie ma ratunku notatki D-21: (a) po „Usuń pacjenta” na bieżącym urządzeniu, gdy nagrobek dojdzie do niej przed jej pełną kopią, a potem ona zmieni kartę, karta wraca bez notatek; (b) jej „Usuń pacjenta” zapisuje nagrobki notatek bez deletedWithPatient, więc powrót karty zmianą na bieżącym urządzeniu notatek nie przywraca — ${DO_DECYZJI}`,
+    opis: `starsza aplikacja nie ma ratunku notatki D-21: (a) po „Usuń pacjenta” na bieżącym urządzeniu, gdy nagrobek dojdzie do niej przed jej pełną kopią, a potem ona zmieni kartę, karta wraca bez notatek; (b) jej „Usuń pacjenta” zapisuje nagrobki notatek bez deletedWithPatient, więc powrót karty zmianą na bieżącym urządzeniu notatek nie przywraca — ${OGRANICZENIE_STARSZEJ}`,
     mechanizm: 'notatka usunięta „Usuń pacjenta”, karta wraca późniejszą zmianą, a usunięcie było na urządzeniu bez ratunku notatek albo kartę przywróciła zmiana na takim urządzeniu, które przed nią notatki już nie miało albo straciło ją potem bez własnego usunięcia, zanim jego pełna kopia z notatką doszła do bieżącego urządzenia z żywą kartą; „utrata” notatki. Po takiej dostawie ratunek D-21 bieżącej aplikacji ją przywraca, więc jej brak leży po stronie bieżącej (bez klasy). Ograniczenie: dostawy liczy się tylko w świecie zdarzeń, nie w pełnej wymianie na klonach',
     zrodlo: 'plan D-21 (docs/SYNC_PRZYROSTOWA_PLAN.md); docs/clinical/ALGORITHMS.md „Hak H2: ratunek notatki zawsze do kolejki” (ok. 24823–24825); vilda_vault.js:4901 (deletedWithPatient); tests/fixtures/vilda_vault-221.js.txt:2515 (Bpu_usun)',
     cechy: Object.freeze([BEZ_RATUNKU]),
     swiaty: W_FLOCIE,
   }),
   [KL_KARTA_CZESCIOWA]: Object.freeze({
-    opis: `karta usunięta „Usuń pacjenta” wraca bez części wersji także po pełnej wymianie: (a) wraca zmianą starszej aplikacji, która nie ma haka H1 i nie wysyła pełnej karty; (b) przed usunięciem retencja v1 starszej aplikacji usunęła u niej ostatni stan wizyty — ${DO_DECYZJI}`,
+    opis: `karta usunięta „Usuń pacjenta” wraca bez części wersji także po pełnej wymianie: (a) wraca zmianą starszej aplikacji, która nie ma haka H1 i nie wysyła pełnej karty; (b) przed usunięciem retencja v1 starszej aplikacji usunęła u niej ostatni stan wizyty — ${OGRANICZENIE_STARSZEJ}`,
     mechanizm: 'wizyta usunięta „Usuń pacjenta”, która wraca z kartą (karta jest w widoku, wizyty nie ma), a kartę przywróciła zmiana na urządzeniu bez haka H1 albo przed usunięciem ostatni stan wizyty usunęła retencja v1 urządzenia starszej aplikacji, które potem kartę przywróciło (albo to jego widok)',
     zrodlo: 'docs/clinical/ALGORITHMS.md tabela klas E3-PR0a, „karta częściowa” (ok. 40320) i „Świadomie bez haka H1” (ok. 24817); tests/fixtures/vilda_vault-221.js.txt (bez haków Bem_)',
     cechy: Object.freeze([BEZ_H1, RETENCJA_V1]),
     swiaty: W_FLOCIE,
   }),
   [KL_R4A]: Object.freeze({
-    opis: `kosz na bieżącym urządzeniu bez wiedzy o gwiazdce ze starszej aplikacji: starsza trzyma ją tylko w karcie i traci po nagrobku, więc gwiazdka wpisu Kosza różni się także po pełnej wymianie (między bieżącymi urządzeniami leczy to pełna wymiana) — ${DO_DECYZJI}`,
+    opis: `kosz na bieżącym urządzeniu bez wiedzy o gwiazdce ze starszej aplikacji: starsza trzyma ją tylko w karcie i traci po nagrobku, więc gwiazdka wpisu Kosza różni się także po pełnej wymianie (między bieżącymi urządzeniami leczy to pełna wymiana) — ${OGRANICZENIE_STARSZEJ}`,
     mechanizm: 'kosz na urządzeniu bieżącej aplikacji, które nie znało ostatniego zapisu gwiazdki, a ten zapis zrobiło urządzenie bez składników W3; „gwiazdka Kosza”',
     zrodlo: 'klasa R4a (wyżej); docs/clinical/ALGORITHMS.md „Flota mieszana” (ok. 29514–29517); tests/fixtures/vilda_vault-221.js.txt:454–462 (Bkz_nowszaWersja)',
     cechy: Object.freeze([BEZ_W3]),
     swiaty: W_FLOCIE,
   }),
   [KL_R4A_PRIM]: Object.freeze({
-    opis: `kosz na bieżącym urządzeniu bez wiedzy o poprawce ze starszej aplikacji: starsza trzyma nowszą treść tylko w karcie i traci ją po nagrobku, więc wpis Kosza ma starszą treść także po pełnej wymianie (między bieżącymi urządzeniami leczy to scalenie treści Kosza, P-KOSZ-NOWSZA-TRESC) — ${DO_DECYZJI}`,
+    opis: `kosz na bieżącym urządzeniu bez wiedzy o poprawce ze starszej aplikacji: starsza trzyma nowszą treść tylko w karcie i traci ją po nagrobku, więc wpis Kosza ma starszą treść także po pełnej wymianie (między bieżącymi urządzeniami leczy to scalenie treści Kosza, P-KOSZ-NOWSZA-TRESC) — ${OGRANICZENIE_STARSZEJ}`,
     mechanizm: 'kosz na urządzeniu bieżącej aplikacji, które nie znało ostatniego zapisu treści, a ten zapis zrobiło urządzenie bez składników W3; „treść” wpisu Kosza',
     zrodlo: 'klasa R4a′ (wyżej); docs/clinical/ALGORITHMS.md P-KOSZ-NOWSZA-TRESC (ok. 31404) i „Flota mieszana” (ok. 29514–29517)',
     cechy: Object.freeze([BEZ_W3]),

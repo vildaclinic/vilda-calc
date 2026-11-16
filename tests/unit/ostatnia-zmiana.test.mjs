@@ -1093,17 +1093,17 @@ describe('wyrocznia: flota ze starszą aplikacją (E3-PR0b) — normalizacja to�
     }
   });
 
-  it('tabela klas floty: opis z „znane ograniczenie starszej wersji — do decyzji właściciela (pytanie z 2026-11-15)”, cechy starszej aplikacji, tylko światy floty; klasa samych bieżących urządzeń w świecie floty — jak w odpowiedniku bez floty; zapis historii zna app urządzenia', () => {
+  it('tabela klas floty: opis z „znane ograniczenie starszej wersji — naprawa: aktualizacja urządzeń (decyzja właściciela z 2026-11-16)”, cechy starszej aplikacji, tylko światy floty; klasa samych bieżących urządzeń w świecie floty — jak w odpowiedniku bez floty; zapis historii zna app urządzenia', () => {
     const floty = Object.entries(WYR.WYJATKI).filter(([, w]) => w.cechy);
     expect(floty.map(([nazwa]) => nazwa).sort()).toEqual(Object.values(KL).sort());
     const cechy = new Set(Object.values(WYR.CECHY_STARSZYCH).flat());
     for (const [nazwa, w] of floty) {
-      expect(w.opis.includes(WYR.DO_DECYZJI), `opis: ${nazwa}`).toBe(true);
+      expect(w.opis.includes(WYR.OGRANICZENIE_STARSZEJ), `opis: ${nazwa}`).toBe(true);
       expect(w.swiaty, `światy: ${nazwa}`).toEqual(W_FLOCIE);
       expect(w.cechy.length > 0 && w.cechy.every((c) => cechy.has(c)) && Object.isFrozen(w.cechy), `cechy: ${nazwa}`).toBe(true);
       expect(['W1', 'W4', 'bloby'].map((s) => WYR.dozwolonaW(nazwa, s)), `bez floty: ${nazwa}`).toEqual([false, false, false]);
     }
-    expect(WYR.DO_DECYZJI).toBe('znane ograniczenie starszej wersji — do decyzji właściciela (pytanie z 2026-11-15)');
+    expect(WYR.OGRANICZENIE_STARSZEJ).toBe('znane ograniczenie starszej wersji — naprawa: aktualizacja urządzeń (decyzja właściciela z 2026-11-16)');
     expect(WYR.SWIATY).toEqual(['W1', 'W4', 'bloby', ...W_FLOCIE]);
     expect(Object.keys(WYR.CECHY_STARSZYCH)).toEqual(['S221', 'S276']);
     expect(W_FLOCIE.map((s) => WYR.dozwolonaW('E1 (obecność)', s)), 'E1: W1, W4, bloby').toEqual([true, true, true, true]);
