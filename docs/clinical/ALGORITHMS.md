@@ -41274,7 +41274,9 @@ B przy tym samym numerze):
   przy „przełóż” — „Nie udało się przełożyć: <zdanie>”; w Terminarzu — „Nie udało się oznaczyć jako wykonane:
   <zdanie>”. Zamknięcie oczekującego wyniku po przypięciu wyniku (`lab_pin_result.js`) pokazuje dawny komunikat
   „Wynik zapisany, ale nie udało się oznaczyć oczekującego wyniku „…” jako wykonanego — zrób to w Przypomnieniach.”
-  (okno wąskie: moduł sprawdza wpis tuż przed zamknięciem).
+  (okno wąskie: moduł sprawdza wpis tuż przed zamknięciem). „Cofnij” w tym samym module — jedyne miejsce w interfejsie,
+  które woła `uncompletePatientNote` — przy odmowie pokazuje „Nie udało się cofnąć zamknięcia — zrób to w
+  Przypomnieniach.” (z kodu).
 
 **Testy.** Dane wyłącznie fikcyjne, bez PESEL; prawdziwy `vilda_crypto.js` i `vilda_vault.js` na adapterze
 pamięciowym, podstawiony zegar `Date`:
@@ -41376,14 +41378,15 @@ trwałych wizyt z `40d742d3` odtwarza stan sprzed tej zmiany — `docs/ZRODLA_AR
   zmianę samej karty notatki przez scalanie w tym oknie zapis by cofnął (jak dotąd; z kodu).
 - **Inne zapisy z treścią sprzed blokady.** „Scal pacjentów” przenosi notatki z tytułem i treścią z odczytu sprzed
   blokady notatki (tak samo przypisanie pacjenta do wpisu Terminarza spoza bazy) — ten sam rodzaj okna co przyciski,
-  poza zakresem; przebieg na kopii daje ten sam wynik przed zmianą i po niej.
+  poza zakresem; wynik jest ten sam przed zmianą i po niej (z kodu).
 - **„Opisz wynik”** czyta wpis tuż przed prośbą, więc chwila zapisu chroni tylko okno do blokady, nie czas pisania
   opisu (jak dotąd `baseRev`); zapis dopisuje opis do treści czytanej pod blokadą, więc nic nie ginie.
 - **Teksty.** Notatka usunięta przed kliknięciem (nieaktualna lista) — dalej techniczne „completePatientNote:
   notatka nie istnieje.”; po przypięciu wyniku rada „zrób to w Przypomnieniach” wskazuje wpis, którego już nie ma.
 
 **Wdrożenie.** Od razu przy wydaniu, bez przełącznika i bez uśpienia: reguła synchronizacji się nie zmienia, a nowe
-pole działa tylko przy zapisie na tym urządzeniu (nie trafia do rekordu, ładunku ani zdarzeń). Starsza wersja
+pole działa tylko przy zapisie na tym urządzeniu (nie trafia do rekordu, ładunku ani zdarzeń — z kodu: rekord notatki
+powstaje z jawnej listy pól). Starsza wersja
 aplikacji na innym urządzeniu niczego nie zauważa.
 
 **Cofnięcie** = rewert PR (bez migracji; rewert cofa też skróty kontroli granicy).
