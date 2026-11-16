@@ -1,4 +1,4 @@
-import { showClcrResults, showBadaniaView } from '../support/badania-klirens.mjs';
+import { showClcrResults, showBadaniaView, expectClcrOutsideNotes, openClcrDetailsInCard } from '../support/badania-klirens.mjs';
 import fs from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 import { czekajNaUstabilizowanyUklad } from '../support/uklad-czekanie.mjs';
@@ -325,9 +325,8 @@ test('Potas DZM: jedna notatka i Badania odczytują zamrożoną normę bez bież
   await page.locator('#clcrOpenBadaniaBtn').click();
   await showClcrResults(page, 'charts');
   await expect(page.locator('.vilda-lab-hist .vilda-lab-hist-card[data-source="clcr"] .vilda-lab-result-chart-point')).toHaveCount(2);
-  await page.locator('button[data-tab="notes"]').click();
-  const notes = page.locator('.vilda-clcr-note[data-clcr-note-state="ready"]'); await expect(notes).toHaveCount(2);
-  for (const key of ['VILDA_CLCR', 'engineVersion', 'exactMain', '[tekst]']) await expect(notes.first()).not.toContainText(key);
+  // P-KLIRENS-NOTATKI: wynik Klirensu nie ma karty w Notatkach; zostaje linia z liczbą wyników i brak zapisu technicznego.
+  await expectClcrOutsideNotes(page, 2);
   expect((await memory(page)).originalsLocked).toBe(true);
 });
 
@@ -433,12 +432,9 @@ test('Potas DZM: dokładne przekroczenie granicy pozostaje czytelne w Notatce i 
   expect(exact.presentation.fullValueText.replace(',', '.')).toBe('116.00000000000000000001');
   const [note] = await saveVisible(page, '2026-10-26');
   expect(note.labResult.valueNum).toBe(116);
-  await page.locator('#clcrOpenBadaniaBtn').click(); await page.locator('button[data-tab="notes"]').click();
-  const compact = page.locator('.vilda-clcr-note[data-clcr-note-state="ready"]'); await expect(compact).toHaveCount(1);
-  await expect(compact.locator('.clcr-note-boundary')).toContainText('Wartość przed zaokrągleniem');
-  await expect(compact.locator('.clcr-note-boundary')).toContainText('116,00000000000000000001');
-  await compact.getByRole('button', { name: 'Szczegóły obliczenia →', exact: true }).click();
-  await expect(page.locator('#calculationDetails')).toHaveAttribute('data-note-id', note.id);
+  // P-KLIRENS-NOTATKI: wartość przed zaokrągleniem pokazują szczegóły obliczenia w Badaniach; Notatki wyniku nie mają.
+  await page.locator('#clcrOpenBadaniaBtn').click(); await expectClcrOutsideNotes(page, 1);
+  await openClcrDetailsInCard(page, note.id);
   await expect(page.locator('#calculationDetails')).toContainText('Przed zaokrągleniem');
   await expect(page.locator('#calculationDetails')).toContainText(exact.presentation.fullValueText);
   expect((await memory(page)).originalsLocked).toBe(true);

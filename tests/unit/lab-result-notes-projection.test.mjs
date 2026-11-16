@@ -6,7 +6,10 @@ import { loadBrowserScript } from '../support/load-browser-script.mjs';
 // Karta chowa go w Notatkach i kieruje do niego linki warunkiem VildaLabHistory.isResultNote. Ten test pilnuje
 // kontraktu na prawdziwym sejfie: każdy wpis, który karta chowa w Notatkach, widok Badań pokazuje jako wynik
 // (nic nie znika), a każdy wynik kategorii „wynik-badania” z widoku Badań karta chowa (nic nie zostaje w dwóch
-// miejscach). Klirens, zlecenie bez wartości, notatka leczenia i wpis innej kategorii zostają w Notatkach.
+// miejscach). Zlecenie bez wartości, notatka leczenia i wpis innej kategorii zostają w Notatkach.
+// P-KLIRENS-NOTATKI (decyzja właściciela 2026-11-15: Notatki nie są miejscem na wyniki Klirensu): wynik Klirensu
+// karta chowa osobnym warunkiem VildaLabHistory.isClcrResultNote — tym samym, którym projekcja Klirensu
+// (ClcrSavedResults.projectPatientNotes) przyjmuje zapis do panelu „Klirens” w Badaniach.
 // Wszystkie dane fikcyjne.
 const authSource = readFileSync(new URL('../../vilda_auth_ui.js', import.meta.url), 'utf8');
 const Dl = new Function(`${authSource.slice(authSource.indexOf('function Dl('), authSource.indexOf('function Ol('))};return Dl;`)();
@@ -88,7 +91,7 @@ describe('P-WYNIKI-BADAN — wynik chowany w Notatkach jest w Badaniach', () => 
     for (const id of shown) if (byId[id].category === 'wynik-badania') expect(isResult(byId[id]), `${byId[id].labResult.test} chowany w Notatkach`).toBe(true);
   });
 
-  it('zostają w Notatkach: zlecenie bez wartości, sama nazwa badania, inna kategoria, klirens, leczenie, zwykła notatka', async () => {
+  it('isResultNote nie obejmuje: zlecenia bez wartości, samej nazwy badania, innej kategorii, klirensu (osobny warunek), leczenia, zwykłej notatki', async () => {
     const { dev, ids, notes } = await scenario();
     const byId = Object.fromEntries(notes.map((n) => [n.id, n]));
     for (const name of ['order', 'nameOnly', 'otherCategory', 'clcr', 'treatment', 'note']) {
@@ -133,5 +136,58 @@ describe('P-WYNIKI-BADAN — ostrzeżenie zapisanej oceny w krótkim wpisie Hist
     expect(moved.status).toBe('invalidated');
     expect(model.recordedWarning(moved)).toBe('');
     for (const value of [null, undefined, {}, { status: 'recorded' }]) expect(model.recordedWarning(value)).toBe('');
+  });
+});
+
+describe('P-KLIRENS-NOTATKI — wynik Klirensu chowany w Notatkach jest w Badaniach', () => {
+  async function klirens() {
+    const dev = await card();
+    loadBrowserScript('clcr_saved_results.js', dev.win);
+    const save = (fields) => dev.vault.savePatientNote({ patientId: dev.patientId, title: 'Fikcyjny wpis', ...fields });
+    const clcr = (fields) => save({ category: 'wynik-klirens', clinicalDateISO: '2026-09-12', ...fields });
+    const ids = {
+      // Chowane w Notatkach — Badania pokazują je w panelu „Klirens”:
+      exact: (await clcr({ title: 'Fikcyjny klirens', labResult: { test: 'Klirens kreatyniny', value: '90', valueNum: 90, unit: 'ml/min' } })).id,
+      text: (await clcr({ title: 'Fikcyjny wynik tekstowy', labResult: { test: 'Fikcyjne obliczenie', value: '<18' } })).id,
+      // Nieczytelny zapis oceny w treści: Badania pokazują wpis bez oceny, więc karta też go chowa.
+      broken: (await clcr({ title: 'Fikcyjny zapis z uszkodzoną oceną', body: 'Kalkulator klirensu\n\n[VILDA_CLCR_CALCULATION_V1]\nto-nie-jest-zapis', labResult: { test: 'Klirens kreatyniny', value: '75', valueNum: 75, unit: 'ml/min' } })).id,
+      undated: (await clcr({ title: 'Fikcyjny klirens bez daty', clinicalDateISO: null, labResult: { test: 'Klirens kreatyniny', value: '88', valueNum: 88, unit: 'ml/min' } })).id,
+      // Zostają w Notatkach:
+      noResult: (await clcr({ title: 'Fikcyjna dawna notatka Klirensu', body: 'Opis bez pola wyniku.' })).id,
+      lab: (await save({ category: 'wynik-badania', clinicalDateISO: '2026-11-05', labResult: { test: 'TSH (tyreotropina)', testKey: 'tsh', value: '2,1', valueNum: 2.1, unit: 'mIU/L' } })).id,
+      note: (await save({ category: 'observation', title: 'Fikcyjna obserwacja', body: 'Bez wyniku.' })).id,
+    };
+    const notes = await dev.vault.listPatientNotesForPatient(dev.patientId);
+    return { dev, ids, notes, byId: Object.fromEntries(notes.map((n) => [n.id, n])) };
+  }
+
+  it('prawdziwy sejf: isClcrResultNote ⇔ zapis w projekcji Klirensu (handledNoteIds) i w widoku Badań', async () => {
+    const { dev, ids, notes, byId } = await klirens();
+    const history = dev.win.VildaLabHistory, isClcr = history.isClcrResultNote;
+    const hidden = Object.keys(ids).filter((name) => isClcr(byId[ids[name]]));
+    expect(hidden).toEqual(['exact', 'text', 'broken', 'undated']);
+    const projection = dev.win.ClcrSavedResults.projectPatientNotes(notes, { patientId: dev.patientId });
+    const handled = new Set(projection.handledNoteIds);
+    // Nic nie znika i nic nie zostaje w dwóch miejscach: warunek karty i przyjęcie do projekcji to ten sam zbiór.
+    for (const note of notes) expect(isClcr(note), `${note.title}`).toBe(handled.has(note.id));
+    const view = history.buildHistoryView(await dev.vault.listPatientLabSeries(dev.patientId), {
+      converter: dev.win.LabUnitConverter, notesById: byId, treatment: [], parseNorm: Dl, nowISO: '2026-11-11',
+      clcrSavedResults: dev.win.ClcrSavedResults, patientId: dev.patientId,
+    });
+    expect(view.clcr.measurements.map((point) => point.noteId).sort()).toEqual(hidden.map((name) => ids[name]).sort());
+    // Wynik Klirensu nie jest wynikiem badania i odwrotnie: każdy wpis ma najwyżej jeden z dwóch warunków.
+    for (const note of notes) expect(isClcr(note) && history.isResultNote(note)).toBe(false);
+    expect(history.isResultNote(byId[ids.lab])).toBe(true);
+  });
+
+  it('zdarzenie osi czasu daje to samo rozstrzygnięcie co notatka; błędne dane nie są wynikiem Klirensu', async () => {
+    const { dev, ids } = await klirens();
+    const isClcr = dev.win.VildaLabHistory.isClcrResultNote;
+    const events = (await dev.vault.listPatientTimelineEvents(dev.patientId)).filter((event) => event.type === 'note' && event.noteId);
+    const hidden = Object.keys(ids).filter((name) => events.some((event) => event.noteId === ids[name] && isClcr(event)));
+    expect(hidden.sort()).toEqual(['broken', 'exact', 'text', 'undated']);
+    for (const value of [null, undefined, 'tekst', 5, [], { category: 'wynik-klirens' }, { category: 'wynik-klirens', labResult: 'x' },
+      { category: 'wynik-klirens', labResult: [] }, { category: 'wynik-badania', labResult: {} }]) expect(isClcr(value)).toBe(false);
+    expect(isClcr({ category: 'wynik-klirens', labResult: {} })).toBe(true);
   });
 });

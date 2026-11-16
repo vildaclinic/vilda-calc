@@ -1,4 +1,4 @@
-import { showClcrResults, showBadaniaView } from '../support/badania-klirens.mjs';
+import { showClcrResults, showBadaniaView, expectClcrOutsideNotes, openClcrDetailsInCard } from '../support/badania-klirens.mjs';
 import fs from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 import { czekajNaUstabilizowanyUklad } from '../support/uklad-czekanie.mjs';
@@ -197,8 +197,8 @@ test('KM/Cr: Badania i Notatki odczytują ten sam zamrożony wynik bez bieżące
   const history = await readVisibleSavedHistory(page, '__urateSyntheticNotes'); expect(history.visible).toBe(true); expect(history.ids).toEqual(history.originalIds); expect(history.points).toHaveLength(2);
   await page.locator('#clcrOpenBadaniaBtn').click();
   await showClcrResults(page, 'charts'); await expect(page.locator('.vilda-lab-hist .vilda-lab-hist-card[data-source="clcr"] .vilda-lab-result-chart-point')).toHaveCount(2);
-  await page.locator('button[data-tab="notes"]').click(); const notes = page.locator('.vilda-clcr-note[data-clcr-note-state="ready"]'); await expect(notes).toHaveCount(2);
-  for (const hidden of ['VILDA_CLCR','engineVersion','exactMain','[tekst]',REMOVED_RESULT_SENTENCE]) await expect(notes.first()).not.toContainText(hidden);
+  // P-KLIRENS-NOTATKI: wynik Klirensu nie ma karty w Notatkach; zostaje linia z liczbą wyników i brak zapisu technicznego.
+  const notes = await expectClcrOutsideNotes(page, 2); await expect(notes).not.toContainText(REMOVED_RESULT_SENTENCE);
   expect((await memory(page)).originalsLocked).toBe(true);
 });
 
@@ -250,10 +250,11 @@ test('KM/Cr: raporty AI i Word zachowują jeden wynik i normę bez usuniętego k
   const pending=page.waitForEvent('download');await page.locator('#downloadDOCX').click();const download=await pending,html=await fs.readFile(await download.path(),'utf8');const text=await page.evaluate(value=>new DOMParser().parseFromString(value,'text/html').body.textContent,html);expect(text).not.toContain(REMOVED_RESULT_SENTENCE);for(const value of expected)expect(text.replace(/\s/g,'')).toContain(value.replace(/\s/g,''));
 });
 
-test('KM/Cr: dokładny wynik tuż poza normą pozostaje oznaczony w Notatkach i Szczegółach', async ({ page }) => {
+test('KM/Cr: dokładny wynik tuż poza normą pozostaje oznaczony w Szczegółach; w Notatkach wyniku nie ma', async ({ page }) => {
   await openCalculator(page);await installMemoryVault(page);await restore(page,{URCR_inputMode:'reported',URCR_reportedValue:'0.5300000000000000000001'});
   const model=await expectResult(page,{raw:0.53,guest:false});expect(model.presentation.valueText).toMatch(/^≈/);expect(model.presentation.fullValueText.replace(',','.')).toBe('0.5300000000000000000001');
-  const [note]=await saveVisible(page,'2026-11-02');expect(note.labResult.valueNum).toBe(0.53);await page.locator('#clcrOpenBadaniaBtn').click();await page.locator('button[data-tab="notes"]').click();
-  const compact=page.locator('.vilda-clcr-note[data-clcr-note-state="ready"]');await expect(compact).toHaveCount(1);await expect(compact).not.toContainText(REMOVED_RESULT_SENTENCE);await expect(compact.locator('.clcr-note-boundary')).toContainText('0,5300000000000000000001');
-  await compact.getByRole('button',{name:'Szczegóły obliczenia →',exact:true}).click();await expect(page.locator('#calculationDetails')).toHaveAttribute('data-note-id',note.id);await expect(page.locator('#calculationDetails')).toContainText(model.presentation.fullValueText);expect((await memory(page)).originalsLocked).toBe(true);
+  const [note]=await saveVisible(page,'2026-11-02');expect(note.labResult.valueNum).toBe(0.53);await page.locator('#clcrOpenBadaniaBtn').click();
+  // P-KLIRENS-NOTATKI: wartość przed zaokrągleniem pokazują szczegóły obliczenia w Badaniach.
+  const notes=await expectClcrOutsideNotes(page,1);await expect(notes).not.toContainText(REMOVED_RESULT_SENTENCE);
+  await openClcrDetailsInCard(page,note.id);await expect(page.locator('#calculationDetails')).not.toContainText(REMOVED_RESULT_SENTENCE);await expect(page.locator('#calculationDetails')).toContainText(model.presentation.fullValueText);expect((await memory(page)).originalsLocked).toBe(true);
 });

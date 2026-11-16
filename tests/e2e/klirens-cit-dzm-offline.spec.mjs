@@ -7,7 +7,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { expect, test } from '@playwright/test';
 import { enterGuest, prepareBrowser, installMemoryVault, saveVisible, memory, PATIENT_ID } from '../support/klirens-patient-record.mjs';
-import { showClcrResults, clcrPoint } from '../support/badania-klirens.mjs';
+import { showClcrResults, clcrPoint, clcrValue, clcrNorm, expectClcrOutsideNotes, openClcrDetails } from '../support/badania-klirens.mjs';
 
 import { restore, expectResult, expectBlocked } from '../support/klirens-cit-dzm-browser.mjs';
 
@@ -312,12 +312,13 @@ async function lazyStartAndNotes(page, origin, note, savedModel, resources, load
   await installMemoryVault(page);
   await page.evaluate(value => window.__clcrRecordFixture.seed([value]), note);
   await page.evaluate(pid => window.VildaAuthUI.showPatientCard(pid, null, null, { activeTab: 'notes' }), note.patientId);
-  const compact = page.locator('.vilda-clcr-note[data-clcr-note-state="ready"]');
-  await expect(compact).toHaveCount(1);
-  await expect(compact.locator('.clcr-note-value')).toHaveText(note.labResult.value);
+  // P-KLIRENS-NOTATKI: wynik Klirensu nie ma karty w Notatkach (tylko linia z liczbą wyników); wartość, norma i szczegóły są w Badaniach.
+  await expectClcrOutsideNotes(page, 1);
+  await page.locator('button[data-tab="lab"]').click(); await showClcrResults(page, 'table');
+  await expect(clcrValue(page, note.id)).toContainText(note.labResult.value);
   const expectedReference = note.labResult.norm.slice(0, -note.labResult.unit.length).trim();
-  await expect(compact.locator('.clcr-note-reference')).toHaveText(expectedReference);
-  await expect(compact.locator('.clcr-note-column').nth(1).locator('.clcr-note-unit')).toHaveText(note.labResult.unit);
+  await expect(clcrNorm(page, note.id)).toContainText(expectedReference);
+  await expect(clcrValue(page, note.id)).toContainText(note.labResult.unit);
   const frozen = await page.evaluate(value => {
     const engine = window.VildaClcrCitDzm;
     window.VildaClcrCitDzm = new Proxy({}, { get() { return () => { throw Error('Offline Start must read frozen citrate DZM'); }; } });
@@ -327,7 +328,7 @@ async function lazyStartAndNotes(page, origin, note, savedModel, resources, load
   }, note);
   expect(frozen.measurement).toMatchObject({ valueNum: 0.8, parameterKey: 'clcr:Cit_total24', outOfRange: true, norm: note.labResult.norm });
   expect(frozen.snapshot).toEqual(savedModel);
-  await compact.getByRole('button', { name: 'Szczegóły obliczenia →', exact: true }).click();
+  await openClcrDetails(page, note.id);
   await page.locator('#editMeasurement').click();
   await page.locator('#editField-CITDZM_concentration').fill('1.4');
   await page.locator('#saveEditedMeasurement').click();
@@ -343,10 +344,9 @@ async function lazyStartAndNotes(page, origin, note, savedModel, resources, load
   expect(Number(editedSnapshot.input.heightCm)).toBe(140);
   expect(editedSnapshot.reference).toEqual(savedModel.reference);
   await page.locator('#detailsDialog').getByRole('button', { name: 'Zamknij', exact: true }).click();
-  await expect(compact.locator('.clcr-note-value')).toHaveText(edited.labResult.value);
-  await expect(compact.locator('.clcr-note-reference')).toHaveText(expectedReference);
-  await expect(compact.locator('.clcr-note-column').nth(1).locator('.clcr-note-unit')).toHaveText(edited.labResult.unit);
-  await compact.getByRole('button', { name: 'Zobacz w Badaniach →', exact: true }).click();
+  await expect(clcrValue(page, note.id)).toContainText(edited.labResult.value);
+  await expect(clcrNorm(page, note.id)).toContainText(expectedReference);
+  await expect(clcrValue(page, note.id)).toContainText(edited.labResult.unit);
   await showClcrResults(page, 'charts');
   const point = clcrPoint(page, note.id);
   await expect.poll(async () => Number(await point.getAttribute('data-value'))).toBe(edited.labResult.valueNum);
