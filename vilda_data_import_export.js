@@ -1685,7 +1685,7 @@ function restoreHomeStartupBirth(payload,source,options){
     const basis=currentMainRestoreFormBasis(options);
     if(basis===null)return false;
     const current=JSON.parse(basis),savedUser=payload.user||{},user=current.user||{};
-    if(!compatibleMainSessionIdentity(current,payload,false))return false;
+    if(!compatibleMainSessionIdentity(current,payload,true))return false;
     const clean=value=>String(value==null?"":value).trim();
     const sameNumber=(a,b)=>clean(a)===""||clean(b)===""?clean(a)===clean(b):N(a)===N(b);
     if(clean(user.sex)!==clean(savedUser.sex)||clean(user.dobISO)!==clean(savedUser.dobISO))return false;

@@ -120,15 +120,17 @@ test('home perinatal: mobile uses shared modal geometry and stale owners cannot 
   await expect(page.locator('#mobileBottomDock')).toHaveCSS('visibility', 'visible');
 });
 
-test('home perinatal: a new measurement keeps its encounter and birth data before the first patient save', async ({ page }) => {
+for (const withName of [true, false]) {
+test('home perinatal: a new measurement keeps its encounter and birth data before the first patient save — ' + (withName ? 'named' : 'anonymous'), async ({ page }) => {
   const { frame } = await open(page, { perinatal: null });
   await frame.evaluate(() => window.clearAllData());
   await expect(frame.locator('#vhomePerinatalButton')).toBeEnabled();
-  for (const [id, value] of Object.entries({ firstName: 'Fikcyjny', lastName: 'Nowy', age: '13', weight: '49', height: '158' }))
+  for (const [id, value] of Object.entries({ firstName: withName ? 'Fikcyjny' : '', lastName: withName ? 'Nowy' : '', age: '13', weight: '49', height: '158' }))
     await frame.locator('#' + id).fill(value);
   await frame.locator('#sex').selectOption('M');
   await frame.waitForFunction(() => window.VildaPersistence.readMainSession()?.user?.height === 158);
   const before = await snapshot(frame);
+  if (!withName) expect(before.payload.name).toBe('');
   expect(await frame.evaluate(() => sessionStorage.getItem('vildaCurrentPatientId'))).toBeNull();
   const dialog = await show(frame);
   await field(dialog, 'weeks').selectOption('34'); await field(dialog, 'days').selectOption('2');
@@ -143,3 +145,4 @@ test('home perinatal: a new measurement keeps its encounter and birth data befor
   await expect.poll(() => page.evaluate(() => window.vildaBirthData)).toEqual(saved.birth);
   expect(await page.evaluate(() => sessionStorage.getItem('vildaCurrentPatientId'))).toBeNull();
 });
+}

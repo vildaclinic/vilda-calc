@@ -35,6 +35,8 @@ describe('perinatal untouched startup consent', () => {
 
 const source = fs.readFileSync(new URL('../../vilda_data_import_export.js', import.meta.url), 'utf8');
 const realFunctions = source.slice(source.indexOf('function currentMainRestoreFormBasis('), source.indexOf('function Fe('));
+const identityFunctions = source.slice(source.indexOf('function Gt_tozsamosc('), source.indexOf('function Gt_obcaSesja('))
+  + source.slice(source.indexOf('function compatibleMainSessionIdentity('), source.indexOf('// Legacy exports can predate PAL fields.'));
 const clone = value => JSON.parse(JSON.stringify(value));
 function restore() {
   const payload = { version: 1, name: 'FIKCYJNY Pacjent', user: { sex: 'M', age: 13, ageMonths: 0, height: 158, weight: 49 },
@@ -45,10 +47,11 @@ function restore() {
   const origin = { payloadJSON: JSON.stringify(payload), adapter: { readMainSession: () => session } };
   const context = vm.createContext({ r, CURRENT_USER_READONLY_CAPTURE: Symbol('readonly'),
     Ee: () => clone(current), nativeRestoreCarrySourceCurrent: () => valid,
-    mainSessionPatientId: () => patientId, compatibleMainSessionIdentity: (a, b) => a.name === b.name,
+    mainSessionPatientId: () => patientId,
     N: value => Number(String(value).replace(',', '.')), de: clone, l: vi.fn() });
-  vm.runInContext(realFunctions + '\nthis.restoreBirth = restoreHomeStartupBirth;', context);
+  vm.runInContext(identityFunctions + realFunctions + '\nthis.restoreBirth = restoreHomeStartupBirth;', context);
   return { r, payload, current, allow, run: () => context.restoreBirth(payload, origin, {}),
+    resetSource: () => { session = clone(payload); origin.payloadJSON = JSON.stringify(payload); },
     changeSession: () => { session = { ...session, timestampISO: 'fictional-newer-session' }; },
     switchOwner: () => { valid = false; }, selectPatient: () => { patientId = 'fictional-next'; } };
 }
@@ -58,6 +61,12 @@ describe('real native kept-form birth recovery', () => {
     const h = restore(), before = clone(h.current); expect(h.run()).toBe(true);
     expect(h.r.vildaBirthData).toEqual(h.payload.birth); expect(h.r.vildaBirthData).not.toBe(h.payload.birth);
     expect(h.current).toEqual(before);
+  });
+  it('recovers the same untouched anonymous working measurement without requiring a name', () => {
+    const h = restore(); h.payload.name = ''; h.current.name = '';
+    // Source provenance must describe the actual anonymous session too.
+    h.resetSource();
+    expect(h.run()).toBe(true); expect(h.r.vildaBirthData).toEqual(h.payload.birth);
   });
   it.each(['sex', 'age', 'ageMonths', 'height', 'weight', 'dobISO'])('rejects conflicting %s', key => {
     const h = restore(); h.current.user[key] = key === 'sex' ? 'F' : key === 'dobISO' ? '2013-01-01' : 99;

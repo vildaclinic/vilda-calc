@@ -163,6 +163,7 @@ zachować, ale bez fikcyjnej oceny SGA. Niezmieniony wynik zachowuje oryginalną
 datę obliczenia. Wszystkie zmiany interfejsu pozostają opt-in.
 
 Nowy pomiar przed pierwszym zapisem pacjenta zachowuje dane SGA po F5.
+Dotyczy to również pomiaru bez wpisanego imienia i nazwiska.
 Gdy natywny start pozostawia pola odtworzone przez `sharedUserData`, importer
 odzyskuje tylko niezainicjalizowane `birth`: jednorazowo, przed edycją,
 z niezmienionej sesji i z kontrolą konta, klucza, panelu, ramki oraz zgodności
