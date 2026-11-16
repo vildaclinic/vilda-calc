@@ -145,7 +145,41 @@
       isCurrent: function () { return currentPatientId() === id; }
     });
   }
-  var pubertyDialog = null, pubertyDraft = null;
+  var pubertyDialog = null, pubertyDraft = null, pubertyShortcutHasData = false;
+  function refreshPubertyShortcut(hasData) {
+    if (!started) return false;
+    var button = byId('tannerToggleBtn');
+    if (!button) return false;
+    if (typeof hasData === 'boolean') pubertyShortcutHasData = hasData;
+    var status = button.querySelector('.vhome-shortcut-status');
+    if (!status) {
+      var title = element('span', 'vhome-shortcut-title', 'Dane');
+      title.appendChild(element('br'));
+      title.appendChild(d.createTextNode('pokwitaniowe'));
+      var icon = d.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      icon.setAttribute('viewBox', '0 0 24 24');
+      icon.setAttribute('aria-hidden', 'true');
+      icon.setAttribute('focusable', 'false');
+      var path = d.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', 'M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5');
+      icon.appendChild(path);
+      status = element('small', 'vhome-shortcut-status'); status.id = 'vhomePubertyShortcutStatus';
+      button.replaceChildren(title, icon, status);
+      button.classList.add('vhome-input-shortcut');
+      button.setAttribute('aria-label', 'Dane pokwitaniowe');
+      button.setAttribute('aria-describedby', status.id);
+      button.setAttribute('aria-haspopup', 'dialog');
+      button.setAttribute('aria-controls', 'vhomePubertyDialog');
+    }
+    // Reuse the native, date-aware wording: an earlier or incompatible exam
+    // must never look like a current examination just to fit the shortcut.
+    var nativeSummary = byId('pubertyAssessmentSummary');
+    var summary = nativeSummary ? nativeSummary.textContent : '';
+    status.textContent = summary && summary !== 'Nie oceniono stadium'
+      ? summary : pubertyShortcutHasData ? 'Uzupełniono wywiad' : 'Nie uzupełniono';
+    button.setAttribute('aria-expanded', String(!!(pubertyDialog && pubertyDialog.open)));
+    return true;
+  }
   var pubertyFields = [
     ['advTesticularVolume', 'Objętość jąder', 'M'],
     ['pubertyOnsetAge', 'Wiek początku pokwitania · lata'],
@@ -509,7 +543,13 @@
       w.addEventListener('change', referenceInput, true);
     }
     var extras = element('div', 'vhome-extra-data');
-    appendExisting(extras, ['tannerToggleBtn', 'pubertyAssessmentSummary', 'tannerStageWrap']);
+    var shortcuts = element('div', 'vhome-data-shortcuts');
+    appendExisting(shortcuts, ['tannerToggleBtn']);
+    extras.appendChild(shortcuts);
+    appendExisting(extras, ['pubertyAssessmentSummary', 'tannerStageWrap']);
+    var nativePubertySummary = byId('pubertyAssessmentSummary');
+    if (nativePubertySummary) new w.MutationObserver(function () { refreshPubertyShortcut(); })
+      .observe(nativePubertySummary, { childList: true, characterData: true, subtree: true });
     content.appendChild(extras);
     appendExisting(content, ['loadDataMessage']);
     actions = element('div', 'vhome-form-actions');
@@ -530,6 +570,7 @@
     // its identity but remove the margin that would become an empty form row.
     oldActions.classList.add('vhome-empty-action-home');
     card.appendChild(content);
+    d.dispatchEvent(new w.CustomEvent('vilda:home-workspace-ready'));
 
     ['input', 'change', 'vilda:data-applied', 'vilda:dob-restored', 'vilda:user-state-cleared',
       'vilda:session-changed', 'vilda:professional-summary-updated', 'vilda:state-restored',
@@ -542,7 +583,8 @@
     refresh();
     if (w.VildaSummaryLayout) w.VildaSummaryLayout.refresh();
   }
-  w.VildaHomeWorkspace = Object.freeze({ start: start, refresh: refresh, openPuberty: openPuberty });
+  w.VildaHomeWorkspace = Object.freeze({ start: start, refresh: refresh, openPuberty: openPuberty,
+    refreshPubertyShortcut: refreshPubertyShortcut });
   if (d.readyState === 'loading') d.addEventListener('DOMContentLoaded', start, { once: true });
   else start();
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -101,6 +101,13 @@ Przycisk danych pokwitaniowych otwiera w podglądzie okno z zakładkami
 rozwijalnymi. Wspólny renderer zachowuje dotychczasowe opisy i ściągi;
 pozostałe miejsca korzystające z niego zachowują swoje obecne kontrolki.
 
+Wejście do okna jest kafelkiem z zatwierdzonej makiety: dwuwierszowa nazwa,
+ikona powiększenia i stan uzupełnienia, w połowie szerokości pary skrótów.
+Na telefonie kafelek ma zwartą wysokość zależną od treści. Natywne odświeżenie
+etykiety korzysta z tej prezentacji wyłącznie w podglądzie; zwykły formularz
+i DocPro zachowują dotychczasowy przycisk. Opis ocen wcześniejszych lub
+wymagających sprawdzenia pochodzi z istniejącego renderera, bez zmiany oceny.
+
 Pola okna są szkicem bez identyfikatorów i nazw kanonicznych pól. Zdarzenia
 szkicu kończą się przed dokumentowymi słuchaczami autosave. Otwarcie i
 anulowanie nie zapisują sesji, nie przydzielają wizyty i nie zmieniają

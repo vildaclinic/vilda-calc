@@ -37,6 +37,12 @@ test('homepage puberty: cancel is pure, both axes apply together and facts survi
     document.addEventListener('change', event => { if (event.target.closest('#vhomePubertyDialog')) window.__draftEvents++; }, true);
   });
   const before = await snapshot(frame);
+  const shortcut = frame.locator('#tannerToggleBtn');
+  await expect(shortcut).toHaveClass(/vhome-input-shortcut/);
+  await expect(shortcut).toHaveAttribute('aria-haspopup', 'dialog');
+  await expect(shortcut.locator('.vhome-shortcut-title')).toHaveText('Danepokwitaniowe');
+  await expect(shortcut.locator('svg')).toBeVisible();
+  expect((await shortcut.boundingBox()).height).toBe(104);
   await frame.locator('#tannerToggleBtn').click();
   const dialog = frame.getByRole('dialog', { name: 'Dane pokwitaniowe', exact: true });
   await expect(dialog).toBeVisible();
@@ -58,6 +64,7 @@ test('homepage puberty: cancel is pure, both axes apply together and facts survi
   await page.keyboard.press('Escape');
   await expect(dialog).toBeHidden();
   await expect(frame.locator('#tannerToggleBtn')).toBeFocused();
+  await expect(shortcut.locator('.vhome-shortcut-status')).toBeVisible();
   expect(await snapshot(frame)).toEqual(before);
   await frame.evaluate(() => window.VildaPubertyAssessmentUI.open());
   await expect(dialog).toBeVisible();
@@ -70,6 +77,11 @@ test('homepage puberty: cancel is pure, both axes apply together and facts survi
   await draftField(dialog, 'pubertyGnrhaStopAge').fill('10.5');
   await apply(dialog).click();
   await expect(dialog).toBeHidden();
+  await expect(shortcut.locator('.vhome-shortcut-status')).toHaveText('G3 · P2');
+  // Native refreshes must preserve the tile instead of restoring the old + label.
+  await frame.evaluate(() => window.updateTannerVisibility());
+  await expect(shortcut).toHaveClass(/vhome-input-shortcut/);
+  await expect(shortcut.locator('.vhome-shortcut-status')).toHaveText('G3 · P2');
   await expect.poll(() => frame.evaluate(() => window.VildaPubertyAssessmentState.readReadOnly().assessment?.observations.G?.stage)).toBe(3);
   expect(await frame.evaluate(() => window.VildaPubertyAssessmentState.readReadOnly().assessment.observations.P.stage)).toBe(2);
   expect(await frame.evaluate(() => document.getElementById('pubertyOnsetAge') === window.__pubertyCanonical

@@ -160,9 +160,75 @@
   cursor: not-allowed;
 }
 .vilda-home-workspace .vhome-extra-data {
-  margin-top: var(--space-16px);
-  padding-top: var(--space-12px);
-  border-top: var(--border-hairline) solid var(--line);
+  margin-top: 18px;
+}
+.vilda-home-workspace .vhome-data-shortcuts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-12px);
+}
+.vilda-home-workspace #tannerToggleBtn.vhome-input-shortcut {
+  position: relative;
+  box-sizing: border-box;
+  display: flex !important;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 5px;
+  width: 100% !important;
+  min-width: 0;
+  height: 104px !important;
+  min-height: 104px !important;
+  margin: 0 !important;
+  padding: 12px 30px 12px 14px !important;
+  border: var(--border-hairline) solid #dbe7e9 !important;
+  border-radius: var(--radius-10) !important;
+  background: #fbfdfd !important;
+  color: var(--text) !important;
+  font-size: 15px !important;
+  font-weight: 550 !important;
+  line-height: 1.4 !important;
+  text-align: left !important;
+}
+.vilda-home-workspace #tannerToggleBtn.vhome-input-shortcut:hover {
+  border-color: #accfd2 !important;
+  background: #f3f9f9 !important;
+}
+.vilda-home-workspace .vhome-shortcut-title { display: block; min-height: 42px; }
+.vilda-home-workspace .vhome-shortcut-status {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 18px;
+  overflow-wrap: anywhere;
+}
+.vilda-home-workspace .vhome-input-shortcut > svg {
+  position: absolute;
+  top: 15px;
+  right: 11px;
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: var(--primary);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+/* The native renderer retains this live region; its same date-aware summary
+ * is visible inside the shortcut rather than duplicated below the tile. */
+.vilda-home-workspace #pubertyAssessmentSummary {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+@media (min-width: 601px) and (max-width: 850px) {
+  .vilda-home-workspace #tannerToggleBtn.vhome-input-shortcut { height: 100px !important; min-height: 100px !important; }
 }
 .vilda-home-workspace .vhome-form-actions {
   display: grid;
@@ -309,7 +375,20 @@
     margin-top: 0;
     padding: var(--space-8px) var(--space-10px);
   }
-  .vilda-home-workspace .vhome-extra-data { margin-top: var(--space-12px); padding-top: var(--space-10px); }
+  .vilda-home-workspace .vhome-extra-data { margin-top: var(--space-12px); }
+  .vilda-home-workspace .vhome-data-shortcuts { gap: var(--space-10px); }
+  .vilda-home-workspace #tannerToggleBtn.vhome-input-shortcut {
+    height: auto !important;
+    min-height: 64px !important;
+    padding: 9px 24px 9px 10px !important;
+    gap: 3px;
+    border-radius: var(--radius-9) !important;
+    font-size: 14px !important;
+    line-height: 20px !important;
+  }
+  .vilda-home-workspace .vhome-shortcut-title { min-height: 0; }
+  .vilda-home-workspace .vhome-shortcut-status { font-size: 13px; }
+  .vilda-home-workspace .vhome-input-shortcut > svg { width: 14px; height: 14px; right: 8px; top: 11px; }
   .vilda-home-workspace .vhome-form-actions { margin-top: var(--space-12px); padding-top: var(--space-12px); }
   .vilda-home-workspace .vhome-form-actions :is(#clearAllDataBtn, #metabolicSummaryBtn) {
     min-height: 48px;
@@ -320,6 +399,10 @@
   .vilda-home-workspace .vhome-action-full,
   .vilda-home-workspace .vhome-action-label small { display: none; }
   .vilda-home-workspace .vhome-action-compact { display: inline; }
+}
+@media (max-width: 360px) {
+  .vilda-home-workspace #tannerToggleBtn.vhome-input-shortcut { padding-right: 10px !important; font-size: 13px !important; line-height: 19px !important; }
+  .vilda-home-workspace .vhome-input-shortcut > svg { display: none; }
 }
 @media (max-width: 354px) {
   .vilda-home-workspace .vhome-visit-heading { padding-inline: var(--space-4px); }
