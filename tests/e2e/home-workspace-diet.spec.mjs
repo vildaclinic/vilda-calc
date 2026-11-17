@@ -267,7 +267,7 @@ test('home diet: road uses native movement actions and complete clinical output,
     };
   });
   const report = await openReport(frame, dialog);
-  expect(await report.boundingBox()).toEqual(bounds);
+  await expect.poll(() => report.boundingBox()).toEqual(bounds);
   expect(await report.locator('.vhome-diet-native-energy').textContent()).toBe(await frame.locator('#dietEnergyResult').textContent());
   await report.press('Escape');
   await expect(report).toBeHidden(); await expect(dialog).toBeVisible();

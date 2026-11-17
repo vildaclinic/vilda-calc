@@ -518,6 +518,9 @@ function readDietA1NativeProjection(options) {
     var control = byId('dietRecommendationsContent').querySelector(selector); if (control && !control.disabled) control.click();
   }
   function close(force, focus, fromHistory) {
+    // Owner/readiness may recover before the next animation-frame refresh.
+    // A forced invalidation must discard the report even after that recovery.
+    if (force) output = null;
     if (!dialog?.open) return true;
     if (!force && dirty() && !w.confirm('Odrzucić niezastosowane założenia zaleceń?')) return false;
     var previewOpen = !!reportDialog?.open, old = draft; closeReport(false, true); draft = null; if (old) w.clearInterval(old.timer);

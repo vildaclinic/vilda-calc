@@ -249,7 +249,23 @@ async function withGh(frame) {
   // queued update. Settle that actor before taking the pure-cancel baseline.
   await expect.poll(() => frame.evaluate(() => VildaDataImportExport.captureCurrentUserDataReadOnly().intake.history
     .some(row => row.ageMonths === 72 && row.height === 115 && row.weight === 20))).toBe(true);
-  await frame.evaluate(() => { vildaPersistFlushNow({ force: true }); VildaDataImportExport.saveMainSessionNow(); });
+  // The synthetic module write is not a main-session save acknowledgment.
+  // Wait for the same pause/owner gates as the native writer, then require its
+  // receipt and the initial GH list before comparing later pure-cancel state.
+  await frame.waitForFunction(() => {
+    if (VildaDataImportExport.isMainSessionAutosavePaused()
+      || VildaDataImportExport.isMainSessionRestorePending()
+      || VildaPersistence.isAutosaveSuppressed()) return false;
+    const panel = window.VildaPanelPacjent;
+    if (!panel?.captureWriteAuthority) return true;
+    const ticket = panel.captureWriteAuthority();
+    return !!ticket && panel.isWriteAuthorityCurrent(ticket);
+  });
+  await expect.poll(() => frame.evaluate(() => {
+    vildaPersistFlushNow({ force: true });
+    return VildaDataImportExport.saveMainSessionNow();
+  })).toBe(true);
+  await expect.poll(() => frame.evaluate(() => VildaPersistence.readMainSession()?.ghTherapyPoints)).toEqual([ghStart]);
 }
 async function ghAction(dialog) {
   const key = await dialog.locator('[data-growth-source-index="0"]').getAttribute('data-growth-row');
