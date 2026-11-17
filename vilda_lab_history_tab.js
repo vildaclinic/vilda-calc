@@ -588,7 +588,8 @@
           Promise.resolve(vault.getPatientNote(item.noteId)).then(function (note) {
             if (!stillPending(note)) throw userError('Ten oczekujący wynik zmienił się albo został już zamknięty. Zamknij okno i sprawdź go w Przypomnieniach.');
             // E3-PR0b2a: chwila zapisu obok rev - sejf porównuje ją z wersją pod blokadą notatki.
-            var request = { id: note.id, patientId: note.patientId, baseRev: note.rev || 0, baseUpdatedAtISO: note.updatedAtISO || null, action: 'result', dateISO: day, text: value };
+            // E3-PR0b2b: i sama wersja (baseNote) - ta sama widoczna wersja z nową chwilą zapisu nie jest konfliktem.
+            var request = { id: note.id, patientId: note.patientId, baseRev: note.rev || 0, baseUpdatedAtISO: note.updatedAtISO || null, action: 'result', dateISO: day, text: value, baseNote: note };
             var name = pendingTestName(note);
             if (name) request.test = name;
             // Ponowienie tej samej prośby (np. po błędzie sieci) niesie ten sam identyfikator operacji.

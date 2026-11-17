@@ -73,7 +73,12 @@ describe('native notes and staged evidence respect the same document boundary', 
     // wersji (QbaseU) i wysyła ją jako baseUpdatedAtISO, a „Nadpisz moją wersją” podnosi ją z wersji w sejfie
     // (current konfliktu). Jedyna zmiana w treści edytora: te trzy instrukcje i dwa komentarze; bramka dostępu
     // i zapis bez zmian. Działanie: tests/unit/konflikt-edycji-notatki-chwila.test.mjs, tests/e2e/edytor-notatki-rata3.spec.mjs.
-    expect(createHash('sha256').update(source.slice(...body.range)).digest('hex')).toBe('d08016347153638a9a09077de765db16789300f0db3bdb0fc687afa4eef7c6d1');
+    // Odświeżony świadomie 2026-11-17 (E3-PR0b2b, P-NOTATKA-POZNIEJSZA): edytor pamięta całą otwartą wersję (QbaseN)
+    // i wysyła ją jako baseNote obok baseUpdatedAtISO, a „Nadpisz moją wersją” podnosi ją do current konfliktu; baner
+    // o zmianie z innego urządzenia pokazuje się tylko, gdy wersja w sejfie różni się od otwartej (Qshow czyta ją
+    // i porównuje polami odczytu, Qpokaz — dawna treść banera). Jedyna zmiana w treści edytora: te instrukcje, trzy małe
+    // funkcje przy banerze i komentarz; bramka dostępu i zapis bez zmian. Działanie: tests/unit/notatka-pozniejsza-zapis.test.mjs.
+    expect(createHash('sha256').update(source.slice(...body.range)).digest('hex')).toBe('60dd540af147f7b4c2fec361bdf6758e899c66b4e20a6b87714061ac2399183d');
   });
 
   it('opens a genuinely new note synchronously without a needless patient-plan read', () => {

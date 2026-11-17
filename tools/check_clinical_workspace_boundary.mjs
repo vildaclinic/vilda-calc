@@ -23,8 +23,10 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 // refuse a deleted or unreadable note with a message for the doctor; docs/clinical/ALGORITHMS.md) and E3-PR0b2b
 // (a patient note changed on two devices keeps the later content change: content time with an anchor, technical
 // writes keep it, the note save stamp, the highest revision after a merge, a patient merge moves notes without
-// content read before the note lock; care plans and patient lists keep the earlier rule).
-const BASE = '458c7a49b2210b15d15002a3eee4399ad83b8e4af37e96a3b8117d44e8288a30';
+// content read before the note lock; the done, no-show and reopen mark is a separate register with its own change time,
+// a record joining the content of one version with the mark of the other is saved 1 ms after both; the same visible
+// version shown to the doctor is not a save conflict; care plans and patient lists keep the earlier rule).
+const BASE = 'c92b272cd5cac071032629ab2689ae382bcabaf46771209a4d5afe18cdb250e1';
 const START = '/* BEGIN VILDA CLINICAL WORKSPACE NATIVE V1 */\n';
 const END = '/* END VILDA CLINICAL WORKSPACE NATIVE V1 */\n';
 const digest = value => createHash('sha256').update(value).digest('hex');

@@ -4144,7 +4144,8 @@ describe('P-NOTATKI-ZA-KARTA — strażniki źródła', () => {
     // nowsze” po chwili treści.
     expect(plan).toContain('const stan = await Bks_stanNotatek(kontekst, kopia, tutaj, nagrobki, zKopii, nagrobkiKopii, plany);');
     // E2-PR3c4: obie sekcje (notatki pacjentów i wpisy Terminarza) także ze zmianami samej karty (Bks_zmianyKarty).
-    expect(plan.split(', stan, zmianaKarty, Bnp_chwilaTresci));').length - 1).toBe(2);
+    // E3-PR0b2b: i z zapisem samego oznaczenia z kopii przy tutejszej treści (oznaczenie — zmieniona notatka, jak w Le).
+    expect(plan.split(', stan, zmianaKarty, Bnp_chwilaTresci, oznaczenie));').length - 1).toBe(2);
     const st = sekcja('async function Bks_stanNotatek(', 'const Bks_RODZAJE');
     expect(st).toContain('Bnp_zlacz(nagrobkiKopii.concat(nagrobki))');
     expect(st).toContain('Bks_kartaPo(kontekst, kopia, pid)');
