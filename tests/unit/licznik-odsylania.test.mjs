@@ -265,3 +265,65 @@ describe('licznik odsyłania: żądania, strony, bajty realne i budżet minuty s
     expect([p.stron, p.budzet.zgodne, p.budzetNaiwny.zgodne, p.budzetNaiwny.maksWierszy.wierszy]).toEqual([2, true, false, 120]);
   });
 });
+
+// E3-PR0c: model odsyłania (wyrocznia sejfu z włączonym przełącznikiem odsyłania) i warstwa „odesłane”.
+describe('licznik odsyłania: model odsyłania poprawionych wizyt (E3-PR0c) i warstwa „odesłane”', () => {
+  const zdarzenie = (o) => ({ event: { kind: 'snap', key: 'P/v', atISO: T1, dev: null }, ...lad(o) });
+  const zlozony = () => {
+    const przed = lad({ patients: [karta('P', [wersja('v', { payload: { _pinned: true, _pinnedState: { pin: true, at: T1 } } })])] });
+    const P = { patients: [karta('P', [wersja('v', { rev: 2, updatedAtISO: T1, payload: { user: { weight: 17.2 } } })])] };
+    const po = lad({ patients: [karta('P', [wersja('v', { rev: 3, updatedAtISO: T1, payload: { user: { weight: 17.2 }, _pinned: true, _pinnedState: { pin: true, at: T1 } } })])] });
+    return { przed, P, po };
+  };
+  it('rekord złożony po kopercie zdarzenia → jeden wiersz snap; ten sam ładunek bez event (stara delta) → pusto', () => {
+    const { przed, P, po } = zlozony();
+    const m = LO.modelEcha(przed, po, zdarzenie(P));
+    expect(m.wiersze.map((r) => [r.k, r.klasa])).toEqual([['snap:P/v', 'gwiazdka']]);
+    expect(m.spoza).toEqual([]);
+    expect(LO.modelEcha(przed, po, lad(P))).toEqual({ wiersze: [], spoza: [] });
+  });
+  it('wersja przeniesiona w tym scaleniu (przed pod Q, po pod P) → pusto; wersja przed scaleniem pod żadną kartą (np. tylko w Koszu) → wiersz', () => {
+    const { P, po } = zlozony();
+    const przedQ = lad({ patients: [karta('Q', [wersja('v')])] });
+    expect(LO.modelEcha(przedQ, po, zdarzenie(P)).wiersze, 'przeniesiona').toEqual([]);
+    const przedKosz = lad({ patients: [karta('P', [wersja('w')])], snapshotTombstones: [wpis('P', 'v')] });
+    const poK = lad({ patients: [karta('P', [wersja('w'), ...po.patients[0].snapshots])] });
+    expect(LO.modelEcha(przedKosz, poK, zdarzenie(P)).wiersze.map((r) => [r.k, r.nowa]), 'tylko w Koszu przed scaleniem').toEqual([['snap:P/v', true]]);
+  });
+  it('wersja spoza kandydatów ładunku zmieniona scaleniem → wiersz w spoza (strażnik kandydatów); kandydaci — wersje kart i wpisy Kosza ładunku', () => {
+    const przed = lad({ patients: [karta('P', [wersja('v'), wersja('x')])] });
+    const P = { patients: [karta('P', [wersja('v')])], snapshotTombstones: [wpis('P', 'y')] };
+    const po = lad({ patients: [karta('P', [wersja('v'), wersja('x', { rev: 2, updatedAtISO: T1, payload: { user: { weight: 33 } } })])] });
+    const m = LO.modelEcha(przed, po, zdarzenie(P));
+    expect(m.spoza.map((r) => r.k)).toEqual(['snap:P/x']);
+    expect([...LO.kandydaciEcha(P)].sort()).toEqual(['v', 'y']);
+  });
+  it('sam rev i tożsamość wizyty dopisana przez bieżącą wersję → pusto (warstwa wykonalna reguły T)', () => {
+    const przed = lad({ patients: [karta('P', [wersja('v')])] });
+    expect(LO.modelEcha(przed, lad({ patients: [karta('P', [wersja('v', { rev: 4 })])] }), zdarzenie({ patients: [karta('P', [wersja('v', { rev: 4 })])] })).wiersze, 'sam rev').toEqual([]);
+    const P = { patients: [karta('P', [bezVisit(wersja('v', { rev: 2, updatedAtISO: T1 }))])] };
+    const po = lad({ patients: [karta('P', [wersja('v', { rev: 2, updatedAtISO: T1 })])] });
+    expect(LO.modelEcha(lad(), po, zdarzenie(P)).wiersze, 'tożsamość wizyty').toEqual([]);
+  });
+  it('warstwa „odesłane”: koperta = wiersz modelu → klucz literału; koperta bez wiersza → ponad model; wiersz bez koperty → nieodesłane; pusta bez wywołań', () => {
+    const L = LO.nowyLicznikOdsylania();
+    expect(L.podsumuj().odeslane).toEqual({ literal: {}, ponadModel: 0, nieodeslane: 0, przyklady: [] });
+    const { przed, P, po } = zlozony();
+    const m = LO.modelEcha(przed, po, zdarzenie(P));
+    L.zapiszOdeslane('zdarzenie', [{ event: { kind: 'snap', key: 'P/v' } }], m.wiersze);
+    L.zapiszOdeslane('zdarzenie', [{ event: { kind: 'snap', key: 'P/x' } }], []);
+    L.zapiszOdeslane('zdarzenie', [], m.wiersze);
+    const o = L.podsumuj().odeslane;
+    expect({ literal: o.literal, ponadModel: o.ponadModel, nieodeslane: o.nieodeslane }).toEqual({ literal: { 'zdarzenie|snap|w ładunku|gwiazdka': 1 }, ponadModel: 1, nieodeslane: 1 });
+    expect(() => L.zapiszOdeslane('nieznane', [], [])).toThrow(/nieznane źródło/);
+  });
+  it('„samo oznaczenie” notatki (wykonanie z ładunku i tutejsza późniejsza treść — rekord złączony) → klucz zdarzenie|pnote|w ładunku|inne (nie „sam rev notatki”)', () => {
+    const notatka = (o = {}) => ({ id: 'n', patientId: 'P', category: 'observation', rev: 2, createdAtISO: T0, updatedAtISO: T1, bodyCipher: { iv: 'iv-1', data: 'tutejsza' }, ...o });
+    const przed = lad({ patientNotes: [notatka()] });
+    const P = lad({ patientNotes: [notatka({ rev: 3, updatedAtISO: T0, completedAtISO: T0, bodyCipher: { iv: 'iv-2', data: 'z ładunku' } })] });
+    const po = lad({ patientNotes: [notatka({ rev: 3, completedAtISO: T0, updatedAtISO: '2026-03-02T09:00:00.001Z', bodyCipher: { iv: 'iv-3', data: 'złączenie' } })] });
+    const l = echo(przed, po, P).filter((r) => r.wykT);
+    expect(l.map((r) => LO.kluczLiteralu('zdarzenie', r))).toEqual(['zdarzenie|pnote|w ładunku|inne']);
+    expect(LO.modelEcha(przed, po, { ...P, event: { kind: 'pnote', key: 'n', atISO: T0, dev: null } }).wiersze, 'notatek model odsyłania nie obejmuje').toEqual([]);
+  });
+});

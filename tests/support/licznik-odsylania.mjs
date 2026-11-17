@@ -71,7 +71,20 @@
 //   elementCiala(bajty), cialo(elementy), partie(bajty), strony(n), realny(w), realne(wiersze), budzetSlotow(strony),
 //   oknaPrzesuwne(os, filtr).
 //   nowyLicznikOdsylania({ regula = 'T', rekordZlozony }) → L (zapiszScalenie, sprawdzPolaZawsze, zapiszUsuniecia,
-//     zapiszBrakNosnika, zapiszStrone, zapiszPartie, wyslij, klony, podsumuj).
+//     zapiszBrakNosnika, zapiszStrone, zapiszPartie, wyslij, klony, zapiszOdeslane, podsumuj).
+//   kandydaciEcha(ladunek), modelEcha(przed, po, ladunek, { rekordZlozony }) — E3-PR0c, niżej.
+//
+// MODEL ODSYŁANIA (E3-PR0c, odsyłanie poprawionych wizyt; wyrocznia sejfu z włączonym przełącznikiem odsyłania)
+//   modelEcha(przed, po, ladunek) → { wiersze, spoza } — wiersze echa, które sejf odsyła po zastosowaniu jednego zdarzenia:
+//   tylko ładunek z polem event (koperta zdarzenia; stara delta tą samą drogą — pusto), z echoScalenia warstwa wykonalna
+//   reguły T (wykT) rodzaju snap, bez wersji przeniesionej w tym scaleniu (przed scaleniem pod inną kartą niż po), bez
+//   odejmowania haków. spoza — wiersze, których snapshotId nie ma wśród kandydatów ładunku (kandydaciEcha:
+//   patients[].snapshots[] i snapshotTombstones[]); sejf ich nie odsyła, więc niepusta lista to niezgodność modelu
+//   z sejfem (strażnik kandydatów).
+//   L.zapiszOdeslane(zrodlo, koperty, wiersze) — warstwa „odesłane”: koperty echa z łańcucha sejfu (jawne, rodzaj snap)
+//   wobec wierszy modelu tego samego zdarzenia; para (klucz encji) → odeslane.literal[klucz literału wiersza]; koperta bez
+//   wiersza modelu — ponadModel, wiersz bez koperty — nieodeslane (przykłady — druk). Przy wyłączonym przełączniku
+//   nikt jej nie woła: podsumowanie ma pustą warstwę.
 import { encje } from './encje-ladunku.mjs';
 
 export const LIMITY = Object.freeze({
@@ -294,6 +307,25 @@ export function echoScalenia(przed, po, ladunek, { z221 = false, rekordZlozony =
   return out;
 }
 
+// Kandydaci odsyłania (E3-PR0c): snapshotId wersji ładunku — patients[].snapshots[] i snapshotTombstones[].
+export function kandydaciEcha(ladunek) {
+  const s = new Set();
+  for (const p of (ladunek && ladunek.patients) || []) for (const w of (p && p.snapshots) || []) if (w && w.snapshotId) s.add(w.snapshotId);
+  for (const e of (ladunek && ladunek.snapshotTombstones) || []) if (e && e.snapshotId) s.add(e.snapshotId);
+  return s;
+}
+// Model odsyłania jednego zdarzenia (E3-PR0c; opis w nagłówku, MODEL ODSYŁANIA).
+export function modelEcha(przed, po, ladunek, { rekordZlozony = null } = {}) {
+  if (!ladunek || !obiekt(ladunek.event)) return { wiersze: [], spoza: [] };
+  const kartaPrzed = new Map();
+  for (const [, e] of encje(przed)) if (e.kind === 'snap') kartaPrzed.set(e.snapshotId, e.patientId);
+  const kand = kandydaciEcha(ladunek);
+  const wiersze = echoScalenia(przed, po, ladunek, { rekordZlozony })
+    .filter((r) => r.kind === 'snap' && r.wykT)
+    .filter((r) => { const sid = String(r.key).split('/')[1]; return !kartaPrzed.has(sid) || kartaPrzed.get(sid) === r.pid; });
+  return { wiersze, spoza: wiersze.filter((r) => !kand.has(String(r.key).split('/')[1])) };
+}
+
 // Usunięcia przez scalanie: encje przed ∪ ładunek, których po scaleniu nie ma, ze śladem w stanie po albo bez śladu.
 export function usunieciaScalenia(przed, po, ladunek) {
   const a = encje(przed), b = encje(po), p = encje(ladunek);
@@ -430,6 +462,8 @@ export function nowyLicznikOdsylania({ regula = 'T', rekordZlozony = null } = {}
     // echo na klonach — wypełnia uprząż: drugi rząd na klonach bieżących urządzeń, przez starszą aplikację (do nadawcy
     // i do drugiego bieżącego), obiegi wymiany (1…MAKS_OBIEGOW) i pętle ponad limit
     klony: { prob: 0, urzadzen: 0, drugiRzad: 0, drugiRzad2a: 0, przezStarsza: { prob: 0, doNadawcy: 0, doInnych: 0, po2a: 0 }, obiegi: Array(MAKS_OBIEGOW).fill(0), ponadObiegi: 0, przyklady: [], ms: 0 },
+    // E3-PR0c: warstwa „odesłane” — koperty echa sejfu wobec modelu odsyłania (zapiszOdeslane)
+    odeslane: { literal: {}, ponadModel: 0, nieodeslane: 0, przyklady: [] },
   };
   L.echo = (przed, po, ladunek, o = {}) => echoScalenia(przed, po, ladunek, { rekordZlozony, ...o });
   // Jedno scalenie. natychmiast — przegląd rusza zaraz po tym scaleniu (drenaż zdarzeń ze zmianą).
@@ -487,6 +521,21 @@ export function nowyLicznikOdsylania({ regula = 'T', rekordZlozony = null } = {}
   L.zapiszPartie = (n, opis = '') => { const P = L.partieDostaw; P.n += 1; if (n > LIMITY.stronaDostawy) P.ponad200 += 1; if (n > P.maks) { P.maks = n; P.opisMaks = opis; } };
   // Oś czasu wysyłek (okna przesuwne, druk): zrodlo — 'wlasne', 'haki', 'echo' (warstwa wyk), 'echo2a' (naiwna).
   L.wyslij = (dev, t, zrodlo, bajty) => { if (bajty.length) L.os.push({ t, dev, zrodlo, wiersze: bajty.length, bajty: bajty.reduce((a, b) => a + b, 0), zad: partie(bajty).zadan }); };
+  // E3-PR0c: koperty echa sejfu (jawne) wobec wierszy modelu odsyłania jednego zdarzenia.
+  L.zapiszOdeslane = (zrodlo, koperty, wiersze, opis = '') => {
+    if (!ZRODLA.includes(zrodlo)) throw new Error(`licznik odsyłania: nieznane źródło ${zrodlo}`);
+    const O = L.odeslane;
+    const model = new Map(wiersze.map((r) => [r.k, r]));
+    const wyslane = new Set();
+    for (const k of koperty) {
+      const klucz = `${k.event.kind}:${k.event.key}`;
+      wyslane.add(klucz);
+      const r = model.get(klucz);
+      if (r) dodaj(O.literal, kluczLiteralu(zrodlo, r));
+      else { O.ponadModel += 1; if (O.przyklady.length < 10) O.przyklady.push(`${opis} ponad model: ${klucz.slice(0, 24)}`); }
+    }
+    for (const [klucz] of model) if (!wyslane.has(klucz)) { O.nieodeslane += 1; if (O.przyklady.length < 10) O.przyklady.push(`${opis} nieodesłane: ${klucz.slice(0, 24)}`); }
+  };
   L.podsumuj = () => {
     const wyk2a = L.strony.map((s) => ({ t: s.t, dev: s.dev, wiersze: s.wiersze2a }));
     const oversize = L.strony.reduce((n, s) => n + partie(s.wiersze.map((w) => w.bajty)).oversize, 0);
@@ -496,7 +545,7 @@ export function nowyLicznikOdsylania({ regula = 'T', rekordZlozony = null } = {}
       stron: L.strony.length, partieDostaw: L.partieDostaw, oversize, brakNosnika: L.brakNosnika, brakNosnikaKlasy: L.brakNosnikaKlasy, bladBuildera: L.bladBuildera,
       budzet: budzetSlotow(L.strony), budzetNaiwny: budzetSlotow(wyk2a),
       okno: { wykonalne: oknaPrzesuwne(L.os, (x) => x.zrodlo !== 'echo2a'), echo: oknaPrzesuwne(L.os, (x) => x.zrodlo === 'echo'), naiwne: oknaPrzesuwne(L.os, (x) => x.zrodlo !== 'echo') },
-      przyklady: L.przyklady, klony: L.klony, ms: Math.round(L.ms), msDodatkowe: Object.fromEntries(Object.entries(L.msDodatkowe).map(([k, v]) => [k, Math.round(v)])),
+      przyklady: L.przyklady, klony: L.klony, odeslane: L.odeslane, ms: Math.round(L.ms), msDodatkowe: Object.fromEntries(Object.entries(L.msDodatkowe).map(([k, v]) => [k, Math.round(v)])),
     };
   };
   return L;

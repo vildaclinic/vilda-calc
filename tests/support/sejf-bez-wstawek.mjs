@@ -35,20 +35,32 @@
 //       Bem_zHaka, Bem_zmiana, Bem_krokStart i Bem_krokKoniec (synchroniczne; od E2-PR3a4 także Bem_przeglad
 //       i Bem_zChmury, od E2-PR3b Bem_przegrane, Bem_przegrany i Bem_ratunek, jeśli są) wywoływane przez opakowanie o tej
 //       samej nazwie: `__testEmisji.wejscie(nazwa)`, wywołanie, w finally `__testEmisji.wyjscie(nazwa)`.
+//       E3-PR0c (odsyłanie poprawionych wizyt): `__testEmisji.zastosowanie();` w Bem_zastosujEcho tuż przed instrukcją
+//       z Bob_bramka() (dokładnie raz) — odczyt bramki przy włączonym przełączniku odsyłania; źródło bez tej funkcji
+//       (sejf sprzed E3-PR0c) — bez tego licznika.
 //   zRejestremLancucha(zrodlo = ZRODLO_SEJFU) → tekst kopii z rejestrem łańcucha: w Bem_zmiana warunek
 //       `if (!T() || !Bob_trybPrywatny() || !Bob_idb()) return;` → `if (!T()) return;`, a ciało Bem_doLancucha zaczyna się
 //       od `__testEmisji.lancuch(z); return;` (wpis łańcucha — { kind, klucze, s, uid } albo znacznik partii { uid,
 //       znacznik } — trafia do rejestru testu; bez bazy kolejki, szyfrowania i Bob_dopiszZ). Bramka zostaje: okno potrzebuje
 //       pola VILDA_EVENT_LOG = true. Samokontrola: znacznik części emisji i każda z dwóch kotwic dokładnie raz, kotwice
 //       w części emisji (warunek trybu w ciele Bem_zmiana), wynik parsuje się — inaczej wyjątek (np. sejf sprzed E2-PR3a2).
-//       Ładowanie: zaladujZrodlo(win, tekst, { lancuch(z) }).
+//       Ładowanie: zaladujZrodlo(win, tekst, { lancuch(z) }). E3-PR0c: trzecia kotwica, opcjonalna — warunek kolejki
+//       w Bem_zastosujEcho `if (Bem_kolejka()) return Bev_zastosuj(env);` → `if (!T()) return Bev_zastosuj(env);`
+//       (urządzenia uprzęży nie są w trybie „Komputer prywatny”, jak warunek trybu w Bem_zmiana); brak w źródle (sejf
+//       sprzed E3-PR0c) — bez zmiany, więcej niż raz albo poza częścią emisji — wyjątek.
+//   bezOdsylania(zrodlo = ZRODLO_SEJFU) → { zrodlo, jest } — E3-PR0c: kopia, w której w literale Bev_EKSPORT
+//       `applyEncryptedEvent: Bem_zastosuj,` zamieniono na `applyEncryptedEvent: Bev_zastosuj,` (zastosowanie zdarzenia
+//       bez przełącznika odsyłania, jak przed E3-PR0c). Samokontrola: kotwica dokładnie raz, w literale Bev_EKSPORT,
+//       wynik parsuje się. Źródło bez kotwicy, w którym jest `applyEncryptedEvent: Bev_zastosuj,` (sejf sprzed
+//       E3-PR0c) — kopia = źródło, jest: false; bez żadnej z nich — wyjątek.
 //   zaladujZrodlo(win, zrodlo, test = null) — wykonanie tekstu w oknie; test — obiekt __testEmisji kopii z licznikiem
 //       albo kopii z rejestrem łańcucha.
 //   licznikEmisji({ zrodlo = ZRODLO_SEJFU, opakuj = false, przy = null } = {}) → l — licznik jednego okna:
 //       l.emisje ([{ kind, klucze, sesja }] każdego wywołania Bem_zmiana, sesja: true — podana sesja operacji),
 //       l.przeglady ([{ sieroty }] każdego wywołania Bem_przeglad), l.scalenia ([{}] każdego odczytu bramki
 //       w Bem_zChmury), l.przegrane ([{ p, d }] każdego odczytu bramki w Bem_przegrany), l.ratunki ([{ id }] każdego
-//       wywołania Bem_ratunek), l.odczyty() — suma pięciu (odczyty pola bramki z tych funkcji),
+//       wywołania Bem_ratunek), l.zastosowania ([{}] każdego odczytu bramki w Bem_zastosujEcho, E3-PR0c),
+//       l.odczyty() — suma sześciu (odczyty pola bramki z tych funkcji),
 //       l.jest, l.wEmisji() (true w trakcie opakowanej funkcji Bem_*; tylko opakuj), l.zaladuj(win) (do opcji zrodla);
 //       przy(nazwa, 'wejscie' | 'wyjscie') — wołane synchronicznie na wejściu i wyjściu opakowanej funkcji.
 import fs from 'node:fs';
@@ -152,6 +164,8 @@ export function zLicznikiem(zrodlo = ZRODLO_SEJFU, { opakuj = false } = {}) {
   if (przegrany) zmiany.push([odczytBramki(przegrany).start, 0, `__testEmisji.przegrany(${przegrany.params.slice(0, 2).map((x) => x.name).join(', ')}); `]);
   const ratunek = deklaracja(ast, 'Bem_ratunek');
   if (ratunek) zmiany.push([odczytBramki(ratunek).start, 0, `__testEmisji.ratunek(${ratunek.params[0].name}); `]);
+  const zastosowanie = deklaracja(ast, 'Bem_zastosujEcho');
+  if (zastosowanie) zmiany.push([odczytBramki(zastosowanie).start, 0, '__testEmisji.zastosowanie(); ']);
   if (opakuj) {
     for (const nazwa of [...OPAKOWANE, ...OPAKOWANE_PRZEGLADU.filter((n) => deklaracja(ast, n))]) {
       const f = deklaracja(ast, nazwa);
@@ -169,6 +183,7 @@ export function zLicznikiem(zrodlo = ZRODLO_SEJFU, { opakuj = false } = {}) {
 
 const KOTWICA_TRYBU = 'if (!T() || !Bob_trybPrywatny() || !Bob_idb()) return;';
 const KOTWICA_LANCUCHA = 'function Bem_doLancucha(z) {';
+const KOTWICA_ECHA = 'if (Bem_kolejka()) return Bev_zastosuj(env);';
 export function zRejestremLancucha(zrodlo = ZRODLO_SEJFU) {
   if (ile(zrodlo, ZNACZNIK_EMISJI) !== 1) throw new Error('kopia z rejestrem łańcucha: znacznik części emisji nie dokładnie raz');
   for (const k of [KOTWICA_TRYBU, KOTWICA_LANCUCHA]) {
@@ -180,10 +195,38 @@ export function zRejestremLancucha(zrodlo = ZRODLO_SEJFU) {
   const iTrybu = zrodlo.indexOf(KOTWICA_TRYBU), iLancucha = zrodlo.indexOf(KOTWICA_LANCUCHA);
   if (!zmiana || iTrybu < zmiana.body.start || iTrybu > zmiana.body.end) throw new Error('kopia z rejestrem łańcucha: warunek trybu poza ciałem Bem_zmiana');
   if (iLancucha < emisja || iLancucha > z) throw new Error('kopia z rejestrem łańcucha: Bem_doLancucha poza częścią emisji');
-  const wynik = zrodlo.replace(KOTWICA_TRYBU, 'if (!T()) return;')
+  const nEcha = ile(zrodlo, KOTWICA_ECHA);
+  if (nEcha > 1) throw new Error(`kopia z rejestrem łańcucha: kotwica więcej niż raz: ${KOTWICA_ECHA}`);
+  if (nEcha === 1) {
+    const iEcha = zrodlo.indexOf(KOTWICA_ECHA);
+    const f = deklaracja(drzewo(zrodlo), 'Bem_zastosujEcho');
+    if (!f || iEcha < f.body.start || iEcha > f.body.end) throw new Error('kopia z rejestrem łańcucha: warunek kolejki poza ciałem Bem_zastosujEcho');
+  }
+  let wynik = zrodlo.replace(KOTWICA_TRYBU, 'if (!T()) return;')
     .replace(KOTWICA_LANCUCHA, `${KOTWICA_LANCUCHA} __testEmisji.lancuch(z); return;`);
+  if (nEcha === 1) wynik = wynik.replace(KOTWICA_ECHA, 'if (!T()) return Bev_zastosuj(env);');
   drzewo(wynik);
   return wynik;
+}
+
+const ODSYLANIE = 'applyEncryptedEvent: Bem_zastosuj,';
+const BEZ_ODSYLANIA = 'applyEncryptedEvent: Bev_zastosuj,';
+const LITERAL_EKSPORTU = 'const Bev_EKSPORT = Object.freeze({';
+export function bezOdsylania(zrodlo = ZRODLO_SEJFU) {
+  const n = ile(zrodlo, ODSYLANIE);
+  if (n === 0) {
+    if (ile(zrodlo, BEZ_ODSYLANIA) !== 1) throw new Error('sejf bez odsyłania: brak applyEncryptedEvent w literale Bev_EKSPORT');
+    return { zrodlo, jest: false };
+  }
+  if (n !== 1 || ile(zrodlo, BEZ_ODSYLANIA) !== 0) throw new Error('sejf bez odsyłania: kotwica applyEncryptedEvent nie dokładnie raz');
+  if (ile(zrodlo, LITERAL_EKSPORTU) !== 1) throw new Error('sejf bez odsyłania: literał Bev_EKSPORT nie dokładnie raz');
+  const lit = zrodlo.indexOf(LITERAL_EKSPORTU);
+  const koniec = zrodlo.indexOf('});', lit);
+  const i = zrodlo.indexOf(ODSYLANIE);
+  if (i < lit || i > koniec) throw new Error('sejf bez odsyłania: kotwica poza literałem Bev_EKSPORT');
+  const wynik = zrodlo.replace(ODSYLANIE, BEZ_ODSYLANIA);
+  drzewo(wynik);
+  return { zrodlo: wynik, jest: true };
 }
 
 export function zaladujZrodlo(win, zrodlo, test = null) {
@@ -199,6 +242,7 @@ export function licznikEmisji({ zrodlo = ZRODLO_SEJFU, opakuj = false, przy = nu
   const scalenia = [];
   const przegrane = [];
   const ratunki = [];
+  const zastosowania = [];
   let glebokosc = 0;
   const test = {
     zmiana(kind, klucze, s) { emisje.push({ kind, klucze, sesja: !!(s && typeof s === 'object') }); },
@@ -206,6 +250,7 @@ export function licznikEmisji({ zrodlo = ZRODLO_SEJFU, opakuj = false, przy = nu
     scalenie() { scalenia.push({}); },
     przegrany(p, d) { przegrane.push({ p, d }); },
     ratunek(id) { ratunki.push({ id }); },
+    zastosowanie() { zastosowania.push({}); },
     wejscie(nazwa) { glebokosc += 1; if (przy) przy(nazwa, 'wejscie'); },
     wyjscie(nazwa) { glebokosc -= 1; if (przy) przy(nazwa, 'wyjscie'); },
   };
@@ -215,7 +260,8 @@ export function licznikEmisji({ zrodlo = ZRODLO_SEJFU, opakuj = false, przy = nu
     scalenia,
     przegrane,
     ratunki,
-    odczyty: () => emisje.length + przeglady.length + scalenia.length + przegrane.length + ratunki.length,
+    zastosowania,
+    odczyty: () => emisje.length + przeglady.length + scalenia.length + przegrane.length + ratunki.length + zastosowania.length,
     jest: kopia.jest,
     wEmisji: () => glebokosc > 0,
     zaladuj: (win) => zaladujZrodlo(win, kopia.zrodlo, test),
