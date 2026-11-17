@@ -6702,6 +6702,9 @@ function createVisitUIPrecacheState(config = VISIT_UI_PRECACHE_PACK) {
     ['/vilda_home_growth_views.js', 'text/javascript; charset=utf-8'],
     ['/vilda_home_growth_views.css', 'text/css; charset=utf-8'],
     ['/vilda_home_growth_charts.js', 'text/javascript; charset=utf-8'],
+    ['/vilda_home_diet.js', 'text/javascript; charset=utf-8'],
+    ['/vilda_home_diet_bmi.css', 'text/css; charset=utf-8'],
+    ['/vilda_home_diet.css', 'text/css; charset=utf-8'],
     ['/vilda_sga_birth_results.css', 'text/css; charset=utf-8'],
   ]);
   if (!config || !Array.isArray(config.files) || config.files.length !== types.size
