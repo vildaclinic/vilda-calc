@@ -446,7 +446,19 @@ test('preview copy action honors its native visibility preference even when the 
     });
     window.updateMetabolicSummaryVisibility();
   });
-  await expect(page.locator('#metabolicSummarySection')).toBeVisible();
+  // The staged dietary card owns presentation; its canonical actors remain
+  // clipped so their native display/visibility gates still control eligibility.
+  await expect(page.locator('#vhomeDietCard')).toBeVisible();
+  const dietEntry = page.locator('#vhomeDietCard [data-home-diet-open="energy"]');
+  await expect(dietEntry).toBeVisible();
+  await expect(dietEntry).toBeEnabled();
+  await expect(page.locator('#metabolicSummarySection')).not.toHaveCSS('display', 'none');
+  await expect(page.locator('#metabolicSummarySection')).toHaveCSS('visibility', 'visible');
+  expect(await page.locator('#metabolicSummarySection').evaluate(section => section.hidden)).toBe(false);
+  await expect(page.locator('#dietRecommendationsBtn')).not.toHaveCSS('display', 'none');
+  await expect(page.locator('#dietRecommendationsBtn')).toHaveCSS('visibility', 'visible');
+  await expect(page.locator('#dietRecommendationsBtn')).toBeEnabled();
+  expect(await page.locator('#dietRecommendationsBtn').evaluate(button => button.hidden)).toBe(false);
   await expect(page.locator('#metabolicSummaryBtn')).toBeHidden();
   expect(await page.locator('#metabolicSummaryBtn').evaluate(button => button.hidden)).toBe(true);
   await expect(page.locator('.vhome-form-actions')).toHaveClass(/vhome-single-action/);
