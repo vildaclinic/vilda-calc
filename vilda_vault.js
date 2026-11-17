@@ -6690,7 +6690,9 @@ async function Bsl_usunPacjenta(patientId, deletedAtISO, opcje, ctx) {const Pati
  * w emiterach hakow i miejscach zapisu oraz kroki operacji zlozonych; z czesci c takze przeglad kolejki na poczatku
  * odblokowania, pary encji scalanych z chmury w Le i haki scalania: przegrany nagrobek karty w Le i Bsl_usunPacjenta,
  * ratunek notatki w Bnp_ratuj), poza tym dostep tylko przez zamrozony obiekt
- * Bev_EKSPORT w eksporcie sejfu (testy i kolejne etapy).
+ * Bev_EKSPORT w eksporcie sejfu (testy i kolejne etapy). Zastosowanie zdarzenia z odsylaniem poprawionych wizyt (E3-PR0c):
+ * applyEncryptedEvent w eksporcie wskazuje funkcje czesci c, uspiona przelacznikiem odsylania (klucz vilda-event-echo-v1
+ * = "1" w pamieci przegladarki albo pole okna VILDA_EVENT_ECHO === true); przy wylaczonym — Bev_zastosuj jak dotad.
  * Bez bramki: sprzatanie po koncie, czesc a oraz kasowanie bazy i podsumowanie wyniku z czesci b; reszta
  * czesci b konczy sie na bramce — bez otwarcia bazy kolejki, szyfrowania i zadan sieci. Sprzatanie po koncie przy
  * zamknietej bramce konczy sie na liscie baz (bez listy — na kasowaniu bazy, ktorej nie ma, bez otwarcia; w trybie
@@ -6698,8 +6700,9 @@ async function Bsl_usunPacjenta(patientId, deletedAtISO, opcje, ctx) {const Pati
  * Zawartosc czesci a: koperta zdarzenia jednej encji (tylko jej sekcja i event = { kind, key, atISO, dev, full }),
  * walidacja koperty (Bev_sprawdz), rozmiar szyfrogramu (Bev_bajty), 14 builderow czytajacych sklep (chwile tylko
  * z rekordow, nigdy z zegara), szyfrowanie kluczem glownym bez AAD i bez kompresji (Bev_szyfruj) oraz zastosowanie
- * zaszyfrowanego zdarzenia ze statusem (Bev_zastosuj). Bledy bloku niosa kod i staly komunikat — nigdy tresci ani
- * komunikatu bledu odszyfrowania.
+ * zaszyfrowanego zdarzenia ze statusem (Bev_zastosuj; z kolektorem z czesci c — Bev_zastosujZEchem: odczyt stanu wersji
+ * kandydatow z ladunku przed scaleniem i po nim przez strzezony adapter, bez zapisow, i lista wersji do odeslania). Bledy
+ * bloku niosa kod i staly komunikat — nigdy tresci ani komunikatu bledu odszyfrowania.
  * Czesc b (ponizej znacznika magazynu): magazyn kolejki i kwarantanny vilda_sync_<userId> (schemat wersji 1), za bramka
  * (pole okna VILDA_EVENT_LOG === true), tylko tryb prywatny, czyste podsumowanie wyniku zastosowania zdarzenia oraz
  * sprzatanie po koncie (kasowanie kolejki konta, identyfikatora urzadzenia i znacznika ponowienia; koordynacja kart
@@ -6707,7 +6710,8 @@ async function Bsl_usunPacjenta(patientId, deletedAtISO, opcje, ctx) {const Pati
  * Czesc c (ponizej znacznika emisji): emisja zmian do kolejki z miejsc zapisu — przy zamknietej bramce jeden odczyt
  * pola okna na zmiane i nic wiecej; przeglad kolejki (sweepOutbox) — przy zamknietej bramce jeden odczyt pola przy
  * odblokowaniu i jeden przy scaleniu z chmury; haki scalania — jeden odczyt pola na przegrany nagrobek karty i na ratunek
- * notatki.
+ * notatki; odsylanie poprawionych wizyt (applyEncryptedEvent, E3-PR0c) — przy wylaczonym przelaczniku odsylania jeden
+ * odczyt przelacznika i nic wiecej, przy wlaczonym jeden odczyt pola bramki przed zastosowaniem.
  * Opis: docs/clinical/ALGORITHMS.md, wpis P-DZIENNIK-ZDARZEN. */
 const Bev_RODZAJE = Object.freeze(['snap', 'pfull', 'ptomb', 'stomb', 'pnote', 'pnotetomb', 'note', 'notetomb', 'plist',
   'plisttomb', 'pref', 'pk', 'pktomb', 'cred']);
@@ -7295,7 +7299,9 @@ async function Bev_szyfruj(koperta) {
 // scalanie co przy deltach (Le bez opcji); statusy: applied (result: liczniki scalania), unreadable (reason: envelope,
 // format — z albo aad rozne od 0, decrypt, shape; zero zapisow), locked, session-changed, busy (code), apply-error
 // (code; oryginalny wyjatek jako niewyliczalne pole error, do sladu — nie do zapisu). Zaden wynik nie niesie komunikatu
-// bledu ani tresci.
+// bledu ani tresci. Drugi argument Bev_zastosuj (kolektor odsylania, E3-PR0c) podaje wylacznie czesc emisji przy
+// wlaczonym przelaczniku odsylania: koperta zdarzenia (ladunek z polem event) idzie wtedy przez Bev_zastosujZEchem; bez
+// kolektora albo bez pola event (stara delta) — jak dotad.
 function Bev_wynik(status) {
   return { status: status };
 }
@@ -7315,7 +7321,7 @@ function Bev_bladZastosowania(x) {
 function Bev_bladOdczytu(x) {
   return !!x && Bev_BLEDY_ODCZYTU.indexOf(x.name) >= 0;
 }
-async function Bev_zastosuj(env) {
+async function Bev_zastosuj(env, kol) {
   if (!T()) return Bev_wynik('locked');
   // P-SYNC-NADAWCA-WPIECIA (E2-PR4e2): usuwanie konta w toku albo zakonczone w tym dokumencie — na wejsciu i po
   // odszyfrowaniu koniec bez zapisu, jak po zmianie sesji (drenaz: stop bez kursora).
@@ -7335,6 +7341,7 @@ async function Bev_zastosuj(env) {
   if (Bses_zmieniona(s)) return Bev_poSesji();
   if (Bob_wKasowaniu(b)) return Bev_wynik('session-changed');
   if (!Bev_obiekt(tresc)) return { status: 'unreadable', reason: 'shape' };
+  if (Bev_obiekt(kol) && Bev_obiekt(tresc.event)) return Bev_zastosujZEchem(tresc, s, kol);
   let wynik;
   try {
     wynik = await Le(tresc);
@@ -7466,6 +7473,189 @@ function Bev_pary(t) {
   return out;
 }
 
+// ── Odsylanie poprawionych wizyt (E3-PR0c, P-ZBIEZNOSC-ZDARZEN) ── zastosowanie koperty zdarzenia z kolektorem z czesci
+// emisji: odczyt stanu wersji kandydatow z ladunku przed scaleniem i po nim przez strzezony adapter (bez zapisow i bez
+// zegara), porownanie w ksztalcie elementu eksportu i lista { patientId, snapshotId } wersji do odeslania (same
+// identyfikatory, bez tresci). Reguly scalania bez zmian.
+// Pola zapisywane zawsze przez biezaca wersje, gdy jest ich rodzic (tozsamosc wizyty; ta sama lista co POLA_ZAWSZE.snap
+// licznika odsylania w testach).
+const Bev_ECHO_ZAWSZE = Object.freeze(['payload.visit']);
+// Wartosc sciezki 'a.b' albo undefined (funkcja czysta).
+function Bev_pole(o, s) {
+  const g = s.split('.');
+  let x = o;
+  for (let i = 0; i < g.length; i += 1) {
+    if (!Bev_obiekt(x)) return undefined;
+    x = x[g[i]];
+  }
+  return x;
+}
+// Kopia bez sciezki 'a.b'; wejscie bez zmian, bez pola — to samo wejscie (funkcja czysta).
+function Bev_bezPola(o, s) {
+  const g = s.split('.');
+  if (!Bev_obiekt(o) || !Bev_ma(o, g[0])) return o;
+  const k = {};
+  Object.keys(o).forEach(function (n) {
+    if (n !== g[0]) k[n] = o[n];
+  });
+  if (g.length > 1) k[g[0]] = Bev_bezPola(o[g[0]], g.slice(1).join('.'));
+  return k;
+}
+// JSON z posortowanymi kluczami (Bgw_kanon), bez pol undefined: kolejnosc kluczy rekordu bez znaczenia.
+function Bev_json(x) {
+  return x === undefined ? 'undefined' : Bgw_kanon(Bev_kopia(x));
+}
+// Kandydaci z ladunku: identyfikatory wersji z patients[].snapshots[] i snapshotTombstones[] (bez powtorzen, w kolejnosci
+// ladunku), P — kopia wersji z ladunku pod kluczem 'karta/wersja' (sprzed scalania), karta — pierwsza karta wersji
+// w ladunku (funkcja czysta).
+function Bev_kandydaciEcha(t) {
+  const ids = [];
+  const P = new Map();
+  const karta = new Map();
+  const dodaj = function (v, p) {
+    if (!Bev_id(v)) return;
+    if (ids.indexOf(v) < 0) ids.push(v);
+    if (Bev_id(p) && !karta.has(v)) karta.set(v, p);
+  };
+  (Array.isArray(t.patients) ? t.patients : []).forEach(function (p) {
+    if (!Bev_obiekt(p) || !Bev_id(p.patientId)) return;
+    (Array.isArray(p.snapshots) ? p.snapshots : []).forEach(function (w) {
+      if (!Bev_obiekt(w) || !Bev_id(w.snapshotId)) return;
+      dodaj(w.snapshotId, p.patientId);
+      P.set(p.patientId + '/' + w.snapshotId, Bev_kopia(w));
+    });
+  });
+  (Array.isArray(t.snapshotTombstones) ? t.snapshotTombstones : []).forEach(function (e) {
+    if (Bev_obiekt(e)) dodaj(e.snapshotId, e.patientId);
+  });
+  return { ids: ids, P: P, karta: karta };
+}
+// Stan kandydatow: kopia rekordu sklepu wersji po samym snapshotId (pod dowolna karta) albo null, przez strzezony adapter
+// (Bev_start: od poczatku removeUser tego konta — SYNC_DB_DELETED); sesja zastosowania s sprawdzana po kazdym odczycie;
+// bez odszyfrowania.
+async function Bev_stanEcha(ids, s) {
+  const c = Bev_start(null);
+  const m = new Map();
+  for (let i = 0; i < ids.length; i += 1) {
+    const w = await c.a.getSnapshotForUser(c.u, ids[i]);
+    Bses_pilnuj(s);
+    m.set(ids[i], Bev_obiekt(w) ? Bev_kopia(w) : null);
+  }
+  return { c: c, m: m };
+}
+// Wersja w ksztalcie elementu eksportu (Bev_wersja), tresc przez Bvisit_read — tozsamosc wizyty wyliczona dla starych
+// rekordow tak jak w pelnej kopii.
+async function Bev_wersjaEcha(c, w) {
+  const t = await Bev_odszyfruj(c, w.payloadCipher, 'snap', w.patientId + '/' + w.snapshotId);
+  return Bev_wersja(w, await Bvisit_read(t, w.patientId, w));
+}
+// Regula pola (niezalezna od zrodla): bez pol Bev_ECHO_ZAWSZE nieobecnych w wersji z ladunku P; gdy odcisk h po scaleniu
+// jest swiezy, a odcisk tresci bez tych pol rowna sie h z ladunku — h z ladunku (funkcja czysta).
+function Bev_echoT(po, P) {
+  let x = po;
+  Bev_ECHO_ZAWSZE.forEach(function (s) {
+    if (Bev_pole(P, s) === undefined) x = Bev_bezPola(x, s);
+  });
+  const hP = Bev_pole(P, 'payload._pinnedState.h');
+  const hPo = Bev_pole(po, 'payload._pinnedState.h');
+  if (typeof hP === 'string' && typeof hPo === 'string' && Bev_obiekt(po.payload) && Bev_obiekt(x.payload)
+    && hPo === Bgw_odcisk(po.payload) && Bgw_odcisk(x.payload) === hP) {
+    const st = Object.assign({}, x.payload._pinnedState, { h: hP });
+    x = Object.assign({}, x, { payload: Object.assign({}, x.payload, { _pinnedState: st }) });
+  }
+  return x;
+}
+// Wersje do odeslania (k — kandydaci; przed, po — stan kandydatow): po scaleniu wersja lezy pod karta p, a przed — pod p
+// albo pod zadna (wersja przeniesiona pod inna karte — bez odeslania); rekord sklepu przed != po (inaczej bez
+// odszyfrowania); wersja w ksztalcie eksportu bez rev przed != po; wersji nie ma w ladunku pod p albo po regule pola
+// != wersja z ladunku (obie bez rev). Blad odczytu albo porownania: kazdy kandydat z karta z odczytu po, inaczej przed,
+// inaczej z ladunku (klucz bez wersji nie daje wiersza przy dopisaniu). Nigdy nie rzuca.
+async function Bev_echo(k, przed, po) {
+  const bledu = function () {
+    const out = [];
+    k.ids.forEach(function (v) {
+      const b = po && po.m ? po.m.get(v) : null;
+      const a = przed && przed.m ? przed.m.get(v) : null;
+      const p = b ? b.patientId : a ? a.patientId : k.karta.get(v);
+      if (Bev_id(p)) out.push({ patientId: p, snapshotId: v });
+    });
+    return out;
+  };
+  if (!przed || !przed.m || !po || !po.m) return bledu();
+  try {
+    const out = [];
+    for (let i = 0; i < k.ids.length; i += 1) {
+      const v = k.ids[i];
+      const a = przed.m.get(v) || null;
+      const b = po.m.get(v) || null;
+      if (!b) continue;
+      const p = b.patientId;
+      if (a && a.patientId !== p) continue;
+      if (a && Bev_json(a) === Bev_json(b)) continue;
+      const wb = Bev_bezPola(await Bev_wersjaEcha(po.c, b), 'rev');
+      if (a && Bev_json(Bev_bezPola(await Bev_wersjaEcha(przed.c, a), 'rev')) === Bev_json(wb)) continue;
+      const P = k.P.get(p + '/' + v);
+      if (P) {
+        const Pr = Bev_bezPola(P, 'rev');
+        if (Bev_json(Bev_echoT(wb, Pr)) === Bev_json(Pr)) continue;
+      }
+      out.push({ patientId: p, snapshotId: v });
+    }
+    return out;
+  } catch (x) {
+    return bledu();
+  }
+}
+// Zastosowanie koperty zdarzenia z kolektorem kol: stan kandydatow przed, scalanie jak w Bev_zastosuj, stan po, potem
+// kol.echo (lista z Bev_echo) i kol.s (sesja scalania) — tylko gdy scalanie ruszylo w tej sesji (applied albo wyjatek
+// scalania zamieniony na busy lub apply-error). Zmiana sesji, zablokowany sejf albo usuwanie konta w trakcie odczytu
+// przed — koniec bez scalania, jak po zmianie sesji (zdarzenie zostaje do ponowienia); w trakcie scalania albo odczytu
+// po — bez kolektora. Statusy jak w Bev_zastosuj; nigdy wyjatek.
+async function Bev_zastosujZEchem(tresc, s, kol) {
+  const k = Bev_kandydaciEcha(tresc);
+  let przed = null;
+  if (k.ids.length) {
+    try {
+      przed = await Bev_stanEcha(k.ids, s);
+      przed.c.strzez();
+    } catch (x) {
+      if (Bses_zmieniona(s) || (x && (x.code === 'SESSION_CHANGED' || x.code === 'VAULT_LOCKED'))) return Bev_poSesji();
+      if (x && x.code === 'SYNC_DB_DELETED') return Bev_wynik('session-changed');
+      przed = { m: null };
+    }
+    if (Bses_zmieniona(s)) return Bev_poSesji();
+  }
+  let wynik;
+  let blad = null;
+  try {
+    wynik = await Le(tresc);
+  } catch (x) {
+    if (Bses_zmieniona(s) || (x && x.code === 'SESSION_CHANGED')) return Bev_poSesji();
+    blad = { x: x };
+  }
+  if (k.ids.length && !Bses_zmieniona(s)) {
+    let po;
+    try {
+      po = await Bev_stanEcha(k.ids, s);
+    } catch (x) {
+      po = x && x.code === 'SYNC_DB_DELETED' ? null : { m: null };
+    }
+    if (po && !Bses_zmieniona(s)) {
+      const e = await Bev_echo(k, przed, po);
+      if (!Bses_zmieniona(s)) {
+        kol.echo = e;
+        kol.s = s;
+      }
+    }
+  }
+  if (blad) {
+    const x = blad.x;
+    if (x && x.vildaMergeBusy) return { status: 'busy', code: typeof x.code === 'string' && x.code ? x.code : null };
+    return Bev_bladZastosowania(x);
+  }
+  return { status: 'applied', result: wynik };
+}
+
 const Bev_EKSPORT = Object.freeze({
   kinds: Bev_RODZAJE,
   buildSnapshotEvent: Bev_snap,
@@ -7484,7 +7674,7 @@ const Bev_EKSPORT = Object.freeze({
   buildCredentialEvent: Bev_cred,
   encryptEvent: Bev_szyfruj,
   eventBytes: Bev_bajty,
-  applyEncryptedEvent: Bev_zastosuj,
+  applyEncryptedEvent: Bem_zastosuj,
   gateOpen: Bob_bramka,
   enqueue: Bob_dopisz,
   outboxCount: Bob_licz,
@@ -7537,7 +7727,9 @@ const Bev_EKSPORT = Object.freeze({
  * odblokowaniu. Wyniki: { ok: true, … }
  * albo { ok: false, powod, code? } (kody z bialej listy, nigdy tresc ani obiekt bledu); obietnice nie sa odrzucane.
  * Podsumowanie wyniku zastosowania zdarzenia (Bob_skrot) jest funkcja czysta i synchroniczna: bez bramki, bez pol okna,
- * sesji i zegara. Opis: docs/clinical/ALGORITHMS.md (ten sam wpis co czesc a). */
+ * sesji i zegara. Przelacznik odsylania poprawionych wizyt (Bob_bramkaEcha, E3-PR0c, uspione): pole okna
+ * VILDA_EVENT_ECHO === true albo klucz Bob_KLUCZ_ECHA w pamieci przegladarki dokladnie "1"; czyta go wylacznie czesc c
+ * (applyEncryptedEvent), przed bramka. Opis: docs/clinical/ALGORITHMS.md (ten sam wpis co czesc a). */
 const Bob_BAZA = 'vilda_sync_';
 const Bob_SKLEPY = Object.freeze(['meta', 'outbox', 'quarantine']);
 // Schemat wersji 1: keyPath i indeksy [nazwa, keyPath, unique] kazdego sklepu (tworzenie bazy i sprawdzenie sklepow
@@ -7565,6 +7757,8 @@ const Bob_LICZNIK = 'licznik';
 const Bob_ALFABET = 'abcdefghijkmnpqrstuvwxyz23456789';
 // Znacznik ponowienia kasowania kolejki konta: przedrostek + ':' + userId, wartosc "1" (poza userId zadnych danych).
 const Bob_KLUCZ_KASOWANIA = 'vilda-sync-delete-v1';
+// Klucz przelacznika odsylania poprawionych wizyt w pamieci przegladarki (E3-PR0c, uspione): wlacza tylko dokladnie "1".
+const Bob_KLUCZ_ECHA = 'vilda-event-echo-v1';
 const Bob_LIMIT_MS = 10000;
 // Limit czekania dopisania na blokade konta: suma limitow trzymania wylacznej (lista baz, potem kasowanie, kazde do
 // Bob_LIMIT_MS).
@@ -7620,14 +7814,26 @@ const Bob_zapisane = new Set();
 
 // ── Wejscie operacji ────────────────────────────────────────────────────────────────────────────────────────────────
 // Bramka: pole okna VILDA_EVENT_LOG === true (testy) albo wlacznik dziennika z synchronizacji tego okna
-// (P-SYNC-ZDARZENIA, E2-PR4b): VildaSync.isEventLogEnabled() === true — "events" w ostatnim health tej strony (pamiec),
-// flaga vilda-event-log-v1 = "1" i pobieranie stronami. Bez "events" w health wlacznik nie czyta magazynu. Brak pola,
-// inna wartosc, brak VildaSync albo wyjatek — zamknieta.
+// (P-SYNC-ZDARZENIA, E2-PR4b, E2-PR6): VildaSync.isEventLogEnabled() === true — domyslnie otwarty przy "events"
+// w ostatnim health tej strony (pamiec) i pobieraniu stronami; flaga vilda-event-log-v1 = "0" wylacza dziennik na tym
+// urzadzeniu (brak klucza i kazda inna wartosc — wlaczony); w ramce — wlacznik okna nadrzednego. Bez "events" w health
+// wlacznik nie czyta magazynu. Brak pola, inna wartosc, brak VildaSync albo wyjatek — zamknieta.
 function Bob_bramka() {
   try {
     if (v.VILDA_EVENT_LOG === true) return true;
     const s = v.VildaSync;
     return !!s && typeof s.isEventLogEnabled === 'function' && s.isEventLogEnabled() === true;
+  } catch (x) {
+    return false;
+  }
+}
+// Przelacznik odsylania poprawionych wizyt (E3-PR0c): pole okna VILDA_EVENT_ECHO === true (testy) albo klucz
+// Bob_KLUCZ_ECHA w pamieci przegladarki dokladnie "1". Brak, inna wartosc, brak pamieci albo wyjatek — wylaczony.
+function Bob_bramkaEcha() {
+  try {
+    if (v.VILDA_EVENT_ECHO === true) return true;
+    const s = v.localStorage;
+    return !!s && s.getItem(Bob_KLUCZ_ECHA) === '1';
   } catch (x) {
     return false;
   }
@@ -9387,8 +9593,13 @@ function Bob_poOdblokowaniu() {
  * i karta zapisana w trakcie scalania w Bsl_usunPacjenta) daje pelna karte (pfull, setId z karty i chwili nagrobka, bez
  * powtorzen w tym dokumencie, poza krokiem importu); ratunek notatki D-21 (Bnp_ratuj) daje pnote zawsze, takze gdy
  * w partii przyszla wlasna koperta tej notatki; karta idzie przed notatka (kolejnosc w Le); wiersz z haka pokrywa encje
- * w przegladzie (wiersz pfull, para ratunku). Opis: docs/clinical/ALGORITHMS.md (wpis P-DZIENNIK-ZDARZEN, E2-PR3a2,
- * E2-PR3a3, E2-PR3a4 i E2-PR3b). */
+ * w przegladzie (wiersz pfull, para ratunku). Odsylanie poprawionych wizyt (E3-PR0c, uspione przelacznikiem odsylania
+ * Bob_bramkaEcha) — czwarta droga ze scalania do kolejki: applyEncryptedEvent (Bem_zastosuj) przy wylaczonym
+ * przelaczniku oddaje te sama obietnice co Bev_zastosuj(env); przy wlaczonym, otwartej bramce i warunku kolejki po
+ * zastosowaniu koperty zdarzenia wersje z ladunku, ktore scalanie zapisalo inaczej, niz przyszly (bez samego rev, samej
+ * tozsamosci wizyty i przeniesien pod inna karte), ida do lancucha jako snap w sesji scalania; wynik bez czekania na
+ * wpis; pelna karta z haka H1 i osobne odeslanie tej samej wersji moga wyjsc obie. Opis: docs/clinical/ALGORITHMS.md
+ * (wpis P-DZIENNIK-ZDARZEN, E2-PR3a2, E2-PR3a3, E2-PR3a4, E2-PR3b i E3-PR0c). */
 const Bem_RANGI = Object.freeze({ snap: 0, pfull: 0, stomb: 1, ptomb: 2, pnote: 3, pnotetomb: 4, note: 5, notetomb: 6, plist: 7,
   plisttomb: 8, pref: 9, pk: 10, pktomb: 11, cred: 12 });
 // Lancuch dopisan konta: userId -> obietnica ostatniego dopisania (zdejmowana po rozstrzygnieciu, gdy nadal ostatnia).
@@ -9787,6 +9998,23 @@ function Bem_paraRatunku(z) {
   } catch (x) {
     // bez pary; przeglad moze dolozyc wiersz drugi raz (bez skutku u odbiorcy)
   }
+}
+// ── Odsylanie poprawionych wizyt (E3-PR0c) ── applyEncryptedEvent: przelacznik odsylania jako pierwsza instrukcja;
+// wylaczony — ta sama obietnica co Bev_zastosuj(env), bez dodatkowych mikrozadan. Zwykla funkcja; nigdy nie rzuca.
+function Bem_zastosuj(env) {
+  if (!Bob_bramkaEcha()) return Bev_zastosuj(env);
+  return Bem_zastosujEcho(env);
+}
+// Wlaczony przelacznik: bramka dziennika i warunek kolejki (odmowa — zastosowanie jak dotad), potem zastosowanie
+// z kolektorem i emisja wersji z kol.echo w sesji scalania; wynik bez czekania na wpis lancucha (w otwartym kroku
+// Bem_zmiana odklada wpisy do konca kroku).
+async function Bem_zastosujEcho(env) {
+  if (!Bob_bramka()) return Bev_zastosuj(env);
+  if (Bem_kolejka()) return Bev_zastosuj(env);
+  const kol = {};
+  const w = await Bev_zastosuj(env, kol);
+  if (Array.isArray(kol.echo) && kol.echo.length) Bem_zmiana('snap', kol.echo, kol.s);
+  return w;
 }
 // emissionsSettled(): rozstrzyga sie, gdy lancuchy dopisan sa puste (takze dopisania dodane w trakcie czekania).
 function Bem_gotowe() {
