@@ -170,9 +170,10 @@ jobs:
     name: Geometria wykresów — Safari/WebKit
     runs-on: ubuntu-latest
     if: github.event_name != 'push'
-    # Includes seven additional real-vault advanced-growth scenarios. Keep all
-    # chart, M1, mobile, puberty and perinatal cases and their per-case budgets.
-    timeout-minutes: 20
+    # The dietary increment adds twelve real-vault scenarios to the existing
+    # chart, M1, mobile, puberty, perinatal and growth suite. Preserve every
+    # assertion and per-case budget, with room for the complete WebKit run.
+    timeout-minutes: 25
     steps:
       - name: Pobierz repozytorium
         uses: actions/checkout@v4

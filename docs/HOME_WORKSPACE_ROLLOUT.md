@@ -251,6 +251,65 @@ przyciski, ich kwalifikację i kontekst. Okno nie wprowadza nowych generatorów,
 interpretacji zakresu wieku, danych ani schematu zapisu. Ten skrót nie oznacza
 zakończenia późniejszego etapu przebudowy całego centrum Dokumentów.
 
+## Piąty przyrost — zalecenia dietetyczne i Droga do normy BMI
+
+`vilda_home_diet.js` i `.css` dodają kartę zaleceń do istniejącej grupy głównych
+kart. Desktop zachowuje 352 px i wspólną wysokość z kartą wzrastania; przy
+tej samej granicy 850 px tablet i telefon przechodzą na naturalną wysokość.
+Dwa równe skróty prowadzą do założeń energetycznych oraz kopiowania i PDF.
+Podgląd drogi BMI pojawia się wyłącznie, gdy istnieje bieżący natywny moduł
+tej drogi. Nie jest odtwarzany przez nowy próg BMI ani przez przykładowe liczby.
+
+Wspólne okno zachowuje dotychczasowy rozmiar, animację i stopkę. Cztery sekcje
+to założenia, zalecenia energetyczne, elementy dokumentu i dokument pacjenta.
+Pełny wygenerowany tekst ma własne miejsce na całej szerokości, zamiast
+rozciągać pojedynczą kolumnę i zostawiać obok pustą kartę. Poniżej mieści się
+natywna Droga do normy BMI, jej szczegóły i ostrzeżenia. Źródłem treści jest
+obecny generator; nie przywracamy usuniętego wcześniej generatora SMART.
+
+Pola i wybory ruchu są szkicem bez kanonicznych ID, nazw i delegowanych akcji
+modułów źródłowych. Otwarcie, zamknięcie i anulowanie nie zapisują danych ani
+nie kopiują tekstu. Jawne zastosowanie korzysta z oryginalnych pól i akcji,
+łącznie ze strategią, celem własnym, PAL, dietą i preferencją ruchu. Lista diet
+oraz dostępność celu i flag pochodzą z bieżących natywnych kontrolek. Ukryty
+lub wyłączony wariant nie otrzymuje dostępności na podstawie własnej reguły
+nowego interfejsu. Przy niezastosowanych założeniach wyniki i eksport są
+wstrzymane, aż moduły natywne przeliczą zatwierdzony zestaw.
+
+Oryginalne węzły pozostają w tym samym dokumencie. Ich osobne niewidoczne
+opakowanie zachowuje własne style bramek, instancje i słuchacze; zmiany układu
+w `reposition.js` nie odrywają formularza od otwartego okna. Sam kontener
+`metabolicSummarySection` nadal obsługuje dostępność kopiowania głównego
+podsumowania. Stan ruchu pozostaje dotychczasową preferencją modułu
+`VildaBmiJourney`, a pola planu używają istniejącej sesji i zapisu pacjenta.
+Nie ma migracji, nowego modelu planu ani automatycznej wersji pacjenta.
+
+Ważność szkicu i wyniku obejmuje konto, sesję vaulta, pacjenta, wizytę,
+generację wczytania, pomiary, referencję i populację, historyczne pomiary,
+spożycie energii, założenia norm żywieniowych oraz natywne ustawienia planu.
+Zmiana źródła unieważnia poprzedni wynik. Odczyt oryginalnych pól jest
+uporządkowany według ID, aby przeniesienie węzłów po obrocie urządzenia nie
+udawało zmiany danych. Zamknięte zalecenia poprzedniego pacjenta nie są źródłem
+nowego podsumowania ani dokumentu.
+
+Generowanie i kopiowanie to jawne akcje. Przycisk generowania zachowuje
+dotychczasową semantykę natywnego generatora, który jednocześnie kopiuje tekst.
+PDF korzysta z tego samego aktora i dokumentu. Opcjonalny strażnik zadania
+wiąże nowy eksport z instancją otwartego okna i jego danymi również podczas
+oczekiwania na biblioteki, układ i obraz strony. Zwykłe wywołania aktora bez
+tego argumentu zachowują dotychczasowe działanie; nie zmieniają się treść,
+wartości, algorytmy, progi ani schemat zapisu.
+
+Arkusz kopii BMI jest mechanicznie wyprowadzony z natywnego `ensureStyles()`:
+`node tools/build-home-diet-bmi-styles.mjs` sprawdza odtwarzalność. Selektory
+są ograniczone do kopii w oknie, a dotychczasowe kolory, ostrzeżenia i reguły
+mediów pozostają źródłowe. Zgodnie z istniejącą zasadą P-STYLE 4b stale włączona
+skórka jest bazą: jej dwanaście zwycięskich wartości zastępuje martwe wartości
+zapasowe w kopii arkusza, bez nowych nadpisań ani zmiany wyglądu.
+Drobna poprawka pól list rozwijalnych ogranicza
+wyłącznie wyciek ich szerokości wewnętrznej w WebKit; nie przycina treści
+wyniku ani ostrzeżeń.
+
 ## Podgląd i odbiór
 
 Podgląd jest osobnym eksportem z gałęzi roboczej, z własnym pochodzeniem
@@ -274,7 +333,7 @@ scalenie modułu opt-in nie zmienia domyślnego widoku. Eksporter, fikcyjne
 konto i blokada usług są wyłącznie narzędziami podglądu.
 
 Nowy JS i CSS strony głównej korzystają z istniejącego, sprawdzanego po SHA
-pakietu transportowego UI wizyt. Pakiet zawiera jedenaście zasobów zamiast trzech;
+pakietu transportowego UI wizyt. Pakiet zawiera czternaście zasobów zamiast trzech;
 każdy nadal ma własny wersjonowany adres i niezmienioną treść w pamięci offline.
 Historyczny pakiet pozostaje dostępny. Pozwala to zachować dotychczasowy limit
 600 żądań podczas instalacji PWA, bez usuwania zasobów ani rozluźniania testów.
