@@ -1903,7 +1903,8 @@ mocniejszą obwódkę, a jego punkt na wykresie — poświatę.
 - panel szczegółów po kliknięciu chipa lub punktu (data, wiek wizyty,
   „przeliczono z …”, zapisana ocena, norma wpisu z uwagą o metodzie, zakres
   zapisany z wynikiem, komentarz, „Otwórz w karcie →”) — klik tylko zaznacza
-  chip i jego punkt, drugi klik odznacza;
+  chip i jego punkt, drugi klik odznacza (potwierdzone przez właściciela po
+  wdrożeniu: „klik w chip niech tylko zaznacza”);
 - linia porównania („ostatni zapisany wynik … → różnica …”, „to wynik
   z formularza, już w karcie”, „wynik z formularza jest w karcie z datą …”)
   — w obu stanach;
