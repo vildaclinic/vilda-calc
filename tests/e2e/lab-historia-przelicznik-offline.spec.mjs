@@ -118,9 +118,9 @@ test('pasek poprzednich wyników po zimnym starcie offline: zasoby z SW, sejf i 
     await page.locator('#labValue').fill('1,9');
     const pasek = page.locator('#labHistoryStrip');
     await expect(pasek).toHaveClass(/is-on/);
-    await expect(pasek.locator('.lab-strip-sub')).toContainText('Fikcyjna Offline · 2 wyniki');
+    await expect(pasek.locator('button.lab-strip-chip[data-note-id]')).toHaveCount(2);
     await expect(pasek.locator('svg.lab-strip-svg g.lab-strip-pt')).toHaveCount(2);
-    await expect(pasek.locator('.lab-strip-diff')).toContainText('różnica −1,5 mIU/L');
+    await expect(pasek.locator('.lab-strip-now .lab-strip-chip-v')).toHaveText('1,9');
     expect(await noNetwork(), 'źródło nadal niedostępne po renderze').toBe(true);
   } finally {
     if (context) await context.close();

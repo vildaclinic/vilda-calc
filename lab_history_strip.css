@@ -19,10 +19,6 @@
   display: flex
 }
 
-#labHistoryStrip [hidden] {
-  display: none!important
-}
-
 #labHistoryStrip p {
   margin: 0
 }
@@ -33,31 +29,21 @@
   width: auto
 }
 
+/* LAB-HISTORIA 6.39: tytuł i „Badania w karcie →” w jednej linii; na wąskim ekranie odnośnik pod tytułem. */
 .lab-strip-head {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: var(--space-8px);
   flex-wrap: wrap
 }
 
-.lab-strip-titles {
-  min-width: 0
-}
-
 .lab-strip-title {
+  min-width: 0;
   font-size: .86rem;
   font-weight: 600;
   line-height: 1.3;
   color: #26215C
-}
-
-.lab-strip-sub {
-  font-size: .74rem;
-  font-weight: 500;
-  line-height: 1.3;
-  color: #534AB7;
-  margin-top: 2px
 }
 
 #labHistoryStrip button.lab-strip-link {
@@ -163,7 +149,7 @@
 }
 
 /* LAB-HISTORIA 6.38: zapisany wynik, który jest teraz w formularzu (już w karcie) — zamiast chipu „teraz”.
-   Różni się od wybranego chipu (aria-pressed): tło fioletu modułu i cienka obwódka. */
+   Różni się od wybranego chipu (aria-pressed): tło fioletu modułu i cienka obwódka; bez znacznika w treści (6.39). */
 #labHistoryStrip button.lab-strip-chip.is-pinned {
   background: #EEEDFE!important;
   border: var(--border-hairline) solid #5856D6!important
@@ -174,78 +160,9 @@
   box-shadow: 0 0 0 2px #CECBF6!important
 }
 
-#labHistoryStrip .lab-strip-chip.is-pinned .lab-strip-chip-d,
-.lab-strip-chip-pin {
-  color: #4341B5
-}
-
-.lab-strip-chip-top {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--space-4px)
-}
-
-.lab-strip-chip-pin {
-  font-size: .68rem;
-  font-weight: 600;
-  line-height: 1.2
-}
-
-.lab-strip-detail {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  background: #fff;
-  border: .5px solid #CECBF6;
-  border-radius: var(--radius-10);
-  padding: var(--space-8px) var(--space-10px)
-}
-
-.lab-strip-detail-h {
-  font-size: .8rem;
-  font-weight: 600;
-  line-height: 1.35;
-  color: #26215C
-}
-
-.lab-strip-detail-norm,
-.lab-strip-detail-range,
-.lab-strip-detail-comment,
-.lab-strip-muted {
-  font-size: .76rem;
-  line-height: 1.4;
-  color: #534AB7
-}
-
-.lab-strip-assessment {
-  min-width: 0
-}
-
-.lab-strip-diff {
-  font-size: .8rem;
-  line-height: 1.45;
-  color: #26215C
-}
-
-.lab-strip-delta {
+#labHistoryStrip .lab-strip-chip.is-pinned .lab-strip-chip-d {
+  color: #4341B5;
   font-weight: 600
-}
-
-#labHistoryStrip button.lab-strip-toggle {
-  background: #fff!important;
-  color: #534AB7!important;
-  border: var(--border-hairline) solid #CECBF6!important;
-  border-radius: var(--radius-10)!important;
-  box-shadow: none!important;
-  backdrop-filter: none!important;
-  -webkit-backdrop-filter: none!important;
-  padding: var(--space-6px) var(--space-10px);
-  min-height: 36px;
-  font-family: inherit;
-  font-size: .76rem;
-  font-weight: 600;
-  cursor: pointer
 }
 
 .lab-strip-chart {
@@ -327,12 +244,6 @@
   stroke-width: 1.5
 }
 
-.lab-strip-pin-sub {
-  fill: #4341B5;
-  font-size: 10px;
-  font-weight: 600
-}
-
 .lab-strip-tick,
 .lab-strip-date {
   fill: #3a4a52;
@@ -340,7 +251,6 @@
   font-weight: 600
 }
 
-.lab-strip-unit,
 .lab-strip-now-sub {
   fill: var(--text-muted);
   font-size: 10px
@@ -353,19 +263,6 @@
   font-weight: 600
 }
 
-.lab-strip-chart-note,
-.lab-strip-foot {
-  font-size: .74rem;
-  font-weight: 500;
-  line-height: 1.45;
-  color: #534AB7
-}
-
-#labHistoryStrip .lab-strip-chart-note {
-  margin-top: var(--space-4px);
-  color: #5b6672
-}
-
 .lab-strip-svg.is-narrow .lab-strip-tick {
   font-size: 10px
 }
@@ -376,8 +273,7 @@
   font-size: 10.5px
 }
 
-.lab-strip-svg.is-narrow .lab-strip-now-sub,
-.lab-strip-svg.is-narrow .lab-strip-pin-sub {
+.lab-strip-svg.is-narrow .lab-strip-now-sub {
   font-size: 9.5px
 }
 
@@ -392,9 +288,11 @@
     min-height: 44px
   }
 
+  /* Chip sam w rzędzie (is-wide, lab_history_strip.js) wypełnia rząd jak „+N”, przypięty i „teraz” (6.39). */
   #labHistoryStrip .lab-strip-more,
   #labHistoryStrip .lab-strip-now,
-  #labHistoryStrip .lab-strip-chip.is-pinned {
+  #labHistoryStrip .lab-strip-chip.is-pinned,
+  #labHistoryStrip .lab-strip-chip.is-wide {
     grid-column: 1/-1
   }
 

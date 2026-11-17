@@ -237,8 +237,11 @@ test('female TT preserves existing GnRHa exclusions and stored laboratory result
   await setQuickAge(page, 15, 0);
   await expectMedian(page, .7399787024590178);
   expect((await page.evaluate(id => window.VildaVault.getPatientNote(id), saved.id)).labResult).toEqual(saved.labResult);
-  await page.locator(`#labHistoryStrip button.lab-strip-chip[data-note-id="${saved.id}"]`).click();
+  const savedChip = page.locator(`#labHistoryStrip button.lab-strip-chip[data-note-id="${saved.id}"]`);
+  await savedChip.click();
   await expect(page.locator('#labHistoryStrip')).not.toContainText('Madsen');
+  // LAB-HISTORIA 6.39: szczegóły wpisu (także źródła zakresu) są w podpowiedzi chipu.
+  await expect(savedChip).not.toHaveAttribute('title', /Madsen/i);
   expect((await page.evaluate(id => window.VildaVault.getPatientNote(id), saved.id)).labResult).toEqual(saved.labResult);
   await loadPatient(page, { age: 12, gnrhaStatus: 'w-trakcie' });
   await choose(page);
