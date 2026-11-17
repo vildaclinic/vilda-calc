@@ -294,7 +294,7 @@
     var access = !!w.VildaProAccess?.hasAccess();
     card.hidden = !access || !configured();
     var ready = available(); card.querySelectorAll('button').forEach(function (n) { n.disabled = !ready; });
-    setText(byId('vhomeDietNote'), ready ? 'Zalecenia dla pacjenta i rodziny, założenia i dokument po wizycie.' : 'Uzupełnij bieżące dane pacjenta, aby sprawdzić dostępne zalecenia.');
+    setText(byId('vhomeDietNote'), ready ? 'Zalecenia dla pacjenta i rodziny, założenia i dokument po wizycie.' : 'Dla bieżących danych moduł nie udostępnia zaleceń dietetycznych.');
     var preview = byId('vhomeDietRoadPreview'); preview.hidden = !hasRoad();
     setText(byId('vhomeDietRoadSummary'), hasRoad() ? 'Strategia, PAL, dieta i ruch w jednym planie.' : '');
     var grid = byId('vhomeMainCards'), heading = byId('vhomeAnalysisHeading'); if (grid && heading) heading.hidden = grid.hidden = Array.from(grid.children).every(function (n) { return n.hidden; });
