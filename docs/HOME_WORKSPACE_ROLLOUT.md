@@ -260,12 +260,28 @@ Dwa równe skróty prowadzą do założeń energetycznych oraz kopiowania i PDF.
 Podgląd drogi BMI pojawia się wyłącznie, gdy istnieje bieżący natywny moduł
 tej drogi. Nie jest odtwarzany przez nowy próg BMI ani przez przykładowe liczby.
 
-Wspólne okno zachowuje dotychczasowy rozmiar, animację i stopkę. Cztery sekcje
-to założenia, zalecenia energetyczne, elementy dokumentu i dokument pacjenta.
-Pełny wygenerowany tekst ma własne miejsce na całej szerokości, zamiast
-rozciągać pojedynczą kolumnę i zostawiać obok pustą kartę. Poniżej mieści się
-natywna Droga do normy BMI, jej szczegóły i ostrzeżenia. Źródłem treści jest
-obecny generator; nie przywracamy usuniętego wcześniej generatora SMART.
+Wspólne okno zachowuje dotychczasowy rozmiar, animację i stopkę. Zaakceptowane
+rozwinięcie A1 prowadzi pionowo przez założenia, skrócony plan BMI, domyślnie
+zwinięte elementy dokumentu, podsumowanie planu i akcje dokumentów. Pełne
+obliczenia pozostają dostępne w rozwijanych szczegółach. Ostrzeżenia, kwalifikatory
+celu, energii i czasu oraz uwagi interpretacyjne zachowują treść modułów źródłowych.
+Nie przywracamy usuniętego wcześniej generatora SMART.
+
+Podsumowanie A1 jest wyłącznie odczytem aktualnych wyborów i istniejącego wyniku.
+Cel, szacunek czasu, kaloryczność, kontrola i uwagi są kopiami źródłowych węzłów;
+widok nie wywołuje modelu PDF ani nie przelicza danych. Zachowuje znak ≤, jednostki
+i opis górnej granicy energii, odróżnia utrzymanie masy od granicy normy oraz
+nie przedstawia masy rówieśnika jako celu leczenia. Niezastosowany szkic ukrywa
+wyniki i pozostawia tylko odczyt wyborów. Nieobecny wynik nie otrzymuje wymyślonej
+wartości ani terminu. U młodszych dzieci bez wyrenderowanej Drogi do normy BMI
+pozostaje odczyt istniejącego wyniku modułu energetycznego.
+
+Podgląd wygenerowanych zaleceń otwiera drugie okno o tych samych wymiarach.
+Jego otwarcie i zamknięcie nie generuje dokumentu, nie kopiuje tekstu i nie
+zapisuje pacjenta; powrót zachowuje położenie oraz dane głównego okna. Zmiana
+właściciela, przywrócenie danych lub blokada sejfu zamyka oba widoki. Podsumowanie
+ekranowe nie jest nową stroną, sekcją ani załącznikiem PDF. Aktor, szablony,
+style i treść dotychczasowych PDF-ów pozostają niezmienione.
 
 Pola i wybory ruchu są szkicem bez kanonicznych ID, nazw i delegowanych akcji
 modułów źródłowych. Otwarcie, zamknięcie i anulowanie nie zapisują danych ani
