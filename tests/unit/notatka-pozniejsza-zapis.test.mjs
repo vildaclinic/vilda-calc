@@ -531,7 +531,8 @@ describe('E3-PR0b2b — luki modułu planów z etapami: dowód kroku według chw
   // 2c (P-DOWOD-KROKU): dowód może mieć też chwilę zapisu dokumentu (sourceRecordUpdatedAtISOAtCapture); ekran planu
   // porównuje wtedy chwilę zapisu (updatedAtISO), a dowód bez niej — jak dotąd po rev. Nowe pole w dwóch wydaniach:
   // najpierw odczyt i porównanie, zapis pola dopiero po potwierdzeniu właściciela, że wszystkie urządzenia mają pierwsze.
-  // Testy 1–2 pokazują na prawdziwym sejfie, że chwila zapisu odróżnia oba przypadki; działanie ekranu i modeli:
+  // Testy 1–2 pokazują na prawdziwym sejfie, że chwila zapisu odróżnia oba przypadki, a test 3 — znane ograniczenie
+  // porównania po chwili zapisu (import karty); działanie ekranu i modeli:
   // tests/unit/care-plan-staged-ui.test.mjs, care-plan-model.test.mjs, care-plan-mutation.test.mjs.
   it('scalenie przyjmuje późniejszą treść z niższym rev, a rev dokumentu się nie zmienia — po rev tej zmiany nie widać, po chwili zapisu — widać', async () => {
     const s = await dwaUrzadzenia();
@@ -555,6 +556,27 @@ describe('E3-PR0b2b — luki modułu planów z etapami: dowód kroku według chw
     expect([po.body, po.rev], 'ta sama treść, wyższy rev').toEqual(['B1 (później).', przypiety + 1]);
     expect(typeof przed.updatedAtISO, 'dokument przy przypięciu ma chwilę zapisu').toBe('string');
     expect(po.updatedAtISO, 'chwila zapisu bez zmian — porównanie po niej nie zgłasza zmiany').toBe(przed.updatedAtISO);
+  });
+
+  // Znane ograniczenie (P-DOWOD-KROKU, „Ograniczenia”): import karty, ratunek D-21 i rekord złączony przesuwają chwilę
+  // zapisu bez zmiany treści. Dowód z chwilą zapisu pokaże wtedy „Dokument został zmieniony…”, a synchronizacja niesie
+  // nową chwilę zapisu dalej (ta sama treść i rev — wygrywa późniejsza chwila zapisu), więc komunikat pojawi się na
+  // każdym urządzeniu. Porównanie po rev tego nie zgłaszało; porównanie po chwili treści też by nie zgłosiło.
+  it('import karty na urządzeniu bez dokumentu przesuwa jego chwilę zapisu bez zmiany treści, rev i chwili treści, a synchronizacja niesie ją do urządzenia, które miało dokument od początku', async () => {
+    const chwilaTresci = (n) => n.contentAtISO || n.updatedAtISO;
+    const A = await sejf('A');
+    krok(); const patientId = (await A.vault.savePatient({ name: 'Fikcyjna Pacjentka Dowód', user: { sex: 'F', age: 9, height: 130, weight: 28 } })).patientId;
+    krok(); const { id } = await A.vault.savePatientNote({ patientId, title: 'Wynik', body: 'Fikcyjna treść wyniku.', category: 'observation' });
+    krok(); const przed = await A.vault.getPatientNote(id), plik = await A.vault.exportPatientEnvelope(patientId);
+    krok(5 * MIN); const C = await sejf('C', { zKopii: A });
+    await C.vault.importPatientFromEnvelope(plik, C.haslo);
+    const naC = await C.vault.getPatientNote(id);
+    expect([naC.body, naC.rev, chwilaTresci(naC)], 'po imporcie: ta sama treść, rev i chwila treści').toEqual([przed.body, przed.rev, chwilaTresci(przed)]);
+    expect(naC.updatedAtISO, 'po imporcie: nowa chwila zapisu').not.toBe(przed.updatedAtISO);
+    await wyslij(C, A);
+    const naA = await A.vault.getPatientNote(id);
+    expect([naA.body, naA.rev, chwilaTresci(naA)], 'po synchronizacji: ta sama treść, rev i chwila treści').toEqual([przed.body, przed.rev, chwilaTresci(przed)]);
+    expect(naA.updatedAtISO, 'chwila zapisu z importu doszła do urządzenia, które miało dokument od początku').toBe(naC.updatedAtISO);
   });
 
   it('ekran planu porównuje dowód z chwilą zapisu po chwili zapisu dokumentu, a dowód bez niej — po rev; model przyjmuje to pole w dowodzie i w powiązaniu', () => {

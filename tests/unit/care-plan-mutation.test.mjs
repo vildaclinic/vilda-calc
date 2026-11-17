@@ -486,6 +486,8 @@ describe('optional document capture instant in step evidence', () => {
   it.each([
     ['a date without a time', '2026-11-02'], ['null', null], ['an empty text', ''], ['a number', 5],
     ['a local offset', '2026-11-02T08:06:06+01:00'], ['an impossible day', '2026-02-31T08:00:00.000Z'], ['free text', 'wczoraj'],
+    // the same range as the plan model: years 1900–2999 only (the vault caps write stamps at year 9999)
+    ['a year after 2999', '9999-12-31T23:59:59.999Z'], ['a year before 1900', '1899-12-31T23:59:59.000Z'],
   ])('rejects a capture instant given as %s as invalid evidence for both actions', async (_name, invalid) => {
     const f = await fixture(), before = JSON.stringify(f.state);
     for (const action of actions) {

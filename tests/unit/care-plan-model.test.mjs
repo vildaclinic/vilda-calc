@@ -436,10 +436,14 @@ describe('optional document capture instant in step evidence and associations', 
     expect(model.validateCarePlanV2(value)).toEqual({ valid: true, issues: [] });
   });
 
+  // The vault can hold a write instant the model refuses: a stamp capped at the end of year 9999, an instant with an
+  // offset from a damaged payload, or none at all. A release that writes the field writes it only when the document's
+  // write instant passes this same check; otherwise the evidence stays without it (revision comparison).
   it.each([
     ['a date without a time', '2026-11-02'], ['null', null], ['an empty text', ''], ['a number', 5],
     ['a local offset', '2026-11-02T08:06:06+01:00'], ['an impossible day', '2026-02-31T08:00:00.000Z'],
     ['an impossible hour', '2026-11-02T24:00:00.000Z'], ['free text', 'wczoraj'],
+    ['a year after 2999 (the vault caps write stamps at year 9999)', '9999-12-31T23:59:59.999Z'], ['a year before 1900', '1899-12-31T23:59:59.000Z'],
   ])('rejects a capture instant given as %s as invalid evidence at its exact place', (_name, invalid) => {
     const model = api(), inFact = context(), inAssociation = context();
     inFact.facts.push(factWith(invalid)); inAssociation.associations.push(association('document', { [CAPTURED]: invalid }));

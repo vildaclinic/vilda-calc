@@ -24,7 +24,7 @@ Plan, jego dokumentacja i przypomnienia są zatwierdzane jako jedna operacja. Ut
 
 Nowe plany są widoczne w Planach opieki i wyszukiwaniu. Dokumentacja pozostaje dostępna w Notatkach; odnośnik prowadzi do odpowiedniego planu. Nieczytelne lub osierocone powiązanie nie ukrywa wpisu. Ogólny edytor notatek nie może ominąć zasad zapisu faktu należącego do planu.
 
-Powiązanie z wcześniej istniejącą notatką zapisuje identyfikator i wersję źródła, bez archiwizowania jego treści z chwili powiązania. Jeśli później zmieni się wersja notatki, widok dowodu wyjaśnia rozbieżność i nie przedstawia bieżącej treści jako historycznego potwierdzenia. Fakt i historia planu pozostają zachowane, a bieżąca notatka jest dostępna w dokumentacji pacjenta.
+Powiązanie z wcześniej istniejącą notatką zapisuje identyfikator i wersję źródła, bez archiwizowania jego treści z chwili powiązania. Jeśli później zmieni się wersja notatki, widok dowodu wyjaśnia rozbieżność i nie przedstawia bieżącej treści jako historycznego potwierdzenia. Fakt i historia planu pozostają zachowane, a bieżąca notatka jest dostępna w dokumentacji pacjenta. *(2026-11-17, 2c: od drugiego wydania powiązanie zapisze też chwilę zapisu źródła, a widok dowodu porówna ją zamiast wersji; pierwsze wydanie tylko ją odczytuje i porównuje, gdy jest — docs/CARE_PLANS.md, ALGORITHMS P-DOWOD-KROKU.)*
 
 ## Zapis bez przygotowywania konta
 

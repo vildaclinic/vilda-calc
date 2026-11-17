@@ -42023,6 +42023,12 @@ zmienił — przy następnej pracy w `vilda-source` weź nową bazę z `runtime/
   niedostępny. Sprawdź dokumentację pacjenta.”; z kodu). (1) przypina test działania (`notatka-pozniejsza-zapis.test.mjs`,
   „luki modułu planów z etapami”); (2) — tylko strażnik źródła: literał warunku `wins` we fragmencie natywnym (ten sam
   plik, „sejf: notatki według nowej reguły…”), bez testu działania. Fragmentu natywnego ten PR nie zmienia.
+  *(2026-11-17, 2c, P-DOWOD-KROKU: luka (1) — pierwsze wydanie: model planu i model zmian przyjmują chwilę zapisu
+  dokumentu w dowodzie kroku i w powiązaniu (`sourceRecordUpdatedAtISOAtCapture`; walidacja w `vilda_care_plan_model.js`
+  w funkcji `evidence` i przy powiązaniach, nie w ogólnej `fields`), a ekran planu porównuje dowód po niej, gdy ją ma;
+  zapis pola dopiero w drugim wydaniu, po potwierdzeniu właściciela, że wszystkie urządzenia mają pierwsze. Luka (2) —
+  reguła notatek we fragmencie natywnym taka jak w scalaniu, z artefaktów repozytorium źródeł modułu, w tym samym PR.
+  Testy w bloku „luki modułu planów z etapami” opisują teraz nowe porównanie, a nie dawne zachowanie.)*
 - **Powiązanie wyniku z planem** (`linkedRev`, `linkedUpdatedAtISO`) — po zapisie samego `rev` fałszywe „Wynik zmienił
   się. Wybierz go ponownie” (kierunek bezpieczny; z kodu).
 - **Wołający bez `baseNote`** (Terminarz, moduły terapii, punkt serii Klirensu, ekran z pamięci podręcznej starszej
@@ -42043,7 +42049,9 @@ zmienił — przy następnej pracy w `vilda-source` weź nową bazę z `runtime/
 
 **Wymagania dla następnych PR.** E3-PR0c: zapis samego `rev` i zapis samego oznaczenia nie są echem do odesłania
 (klasa „sam rev notatki”); `pnote` w ładunku — pomiar odsyłania na regule po E3-PR0b2b. Moduł planów z etapami
-(repozytorium źródeł, przed E3-PR0c): chwila zapisu dowodu kroku i reguła notatek we fragmencie natywnym. Przyciski
+(repozytorium źródeł, przed E3-PR0c): chwila zapisu dowodu kroku i reguła notatek we fragmencie natywnym *(2026-11-17,
+2c, P-DOWOD-KROKU: chwila zapisu dowodu kroku w dwóch wydaniach — pierwsze w PR 2c, drugie osobnym PR po potwierdzeniu
+właściciela)*. Przyciski
 stanu: karta w ładunku bez treści (osobny PR). Do rozważenia: siatka bezpieczeństwa dla przegranej równoległej treści.
 
 **Wdrożenie.** Od razu przy wydaniu, bez przełącznika i bez uśpienia (decyzja 2 (a)). Jak każda dotychczasowa zmiana
@@ -42073,3 +42081,195 @@ podtytuł „Scal kopię konta” (`uo`) i komentarz dopisku podsumowania; `vild
 `clcr_result_details.js` 20 → 21, `vilda_terminarz.js` 197 → 198; wstrzykujące: `vilda_chrome.js` 297 → 298,
 `vilda_session_bridge.js` 213 → 214, `clcr_record_resources.js` 29 → 30; SW 1.1.543 → 1.1.544 — `npm run
 podbij-wersje`; baza `origin/audyt` `3c1fc748` (po vildaclinic/vilda-calc#978). Bez nowego pliku w pamięci offline.
+
+## Plan z etapami: dowód kroku według chwili zapisu dokumentu — najpierw odczyt i porównanie, zapis pola w drugim wydaniu (P-DOWOD-KROKU, 2c, 2026-11-17)
+
+**Zmiana kliniczna: TAK — synchronizacja.** Wzory, progi, jednostki i interpretacje bez zmian. Zmienia się, które
+plany z etapami aplikacja przyjmuje przy synchronizacji, „Scal kopię konta”, imporcie pliku pacjenta i odtworzeniu
+konta, oraz jak plan sprawdza, czy dokument powiązany z krokiem zmienił się od powiązania. Format planu dostaje jedno
+pole opcjonalne `sourceRecordUpdatedAtISOAtCapture` (chwila zapisu dokumentu, `updatedAtISO`, w chwili powiązania)
+w dowodzie faktu (`facts[].evidence`) i w powiązaniu (`associations[]`). Nowe pole w dwóch wydaniach: najpierw odczyt
+i porównanie, zapis dopiero po potwierdzeniu właściciela. To wydanie pole przyjmuje, sprawdza i według niego
+porównuje, ale ekran planu go nie zapisuje; zapis zaczyna osobne, drugie wydanie, gdy właściciel potwierdzi, że
+wszystkie urządzenia mają to wydanie. Druga luka z tego samego wiersza planu (reguła notatek we fragmencie natywnym)
+przychodzi w tym samym PR z artefaktami repozytorium źródeł modułu; jej opis dojdzie do tego wpisu razem z nimi.
+
+**Skąd.** Decyzja 2 (a) z 2026-11-16 i decyzja 2 z 2026-11-17 (plan `docs/SYNC_PRZYROSTOWA_PLAN.md`, rozdział 6;
+tabela „Podział E3-PR0”, wiersz 2c): dwie luki modułu planów z etapami po regule notatek E3-PR0b2b
+(P-NOTATKA-POZNIEJSZA, „Ograniczenia”). Decyzja z 2026-11-17 po sprawdzeniu starszej wersji aplikacji: nowe pole
+w dwóch wydaniach (plan, rozdział 6, „Decyzja z 2026-11-17 (2c, format dowodu kroku)”). Kolejność wobec odsyłania
+poprawionych wizyt: decyzja 1 z 2026-11-17 (E3-PR0c) — najpierw ta poprawka.
+
+### 2c — dowód kroku, wydanie pierwsze
+
+**Co było** (`audyt` `2ad5df78`; prawdziwy sejf, dane fikcyjne).
+- Dowód kroku pamięta numer wersji dokumentu (`sourceRecordRevAtCapture`), a ekran planu porównuje go z bieżącym
+  `rev` przy otwarciu dokumentu z planu. Po E3-PR0b2b scalenie może przyjąć późniejszą treść bez zmiany `rev` (`rev`
+  3 → 3, chwila zapisu …08:06:01 → …08:06:06): plan pokazywał zmieniony dokument jako ten sam. Zapis samego `rev`
+  (wygrywa tutejsza treść) podnosi `rev` bez zmiany treści i chwili zapisu: plan pokazywał fałszywe „Dokument został
+  zmieniony…”.
+- Model planu ma zamkniętą listę pól dowodu i powiązania — nowe pole oznacza dla starszej wersji plan nieprawidłowy
+  (niżej, „Starsza aplikacja”).
+
+**Reguła.**
+- Dowód albo powiązanie z polem `sourceRecordUpdatedAtISOAtCapture`: dokument jest „zmieniony”, gdy jego chwila zapisu
+  (`updatedAtISO`) jest inna niż zapisana w dowodzie; `rev` nie gra roli. Dokument bez chwili zapisu — „zmieniony”.
+- Dowód bez pola (wszystkie dzisiejsze plany): po `rev`, jak dotąd.
+- Kilka odwołań do tego samego dokumentu (fakt i powiązanie, także w wersjach zachowanych przy konflikcie): każde
+  swoją regułą; wystarczy jedno „zmienione”.
+- Pole jest opcjonalne; gdy jest, musi być chwilą `RRRR-MM-DDTgg:mm:ss[.mmm]Z` z prawdziwą datą i rokiem 1900–2999
+  (ten sam sprawdzian co `recordedAtISO`). Zły format = plan nieprawidłowy (`CARE_MODEL_EVIDENCE_INVALID`) i polecenie
+  odrzucone (`CARE_PLAN_EVIDENCE_INVALID`), jak inne złe pola dowodu. `sourceRecordRevAtCapture` zostaje wymagane.
+- Wybór istniejącego dokumentu do kroku: przed zapisem dokument czytany jest ponownie i porównywany z podglądem po
+  `rev` **i** po chwili zapisu (dotąd: po `rev`). Chwila służy tylko temu porównaniu i nie trafia do planu, kopii,
+  eksportu ani ładunku: ekran wysyła dowód `{ noteId, sourceRecordRevAtCapture }`.
+- Ekran planu w tym wydaniu nie zapisuje pola. Model zmian przyjmuje polecenie z polem (zapisze je w powiązaniu albo
+  w dowodzie faktu, a zależność odczytu dostaje `expectedUpdatedAtISO`, żeby moduł zapisu porównał dokument po chwili
+  zapisu) — z tej drogi skorzysta dopiero drugie wydanie. Bez pola wynik modelu zmian jest taki jak dotąd.
+
+**Przypadki** (dane fikcyjne; testy niżej):
+
+| Dowód | Dokument teraz | Wynik |
+|---|---|---|
+| z chwilą T1, `rev` 2 | `rev` 3, chwila T1 (zapis samego `rev`) | otwiera się, bez komunikatu |
+| z chwilą T1, `rev` 3 | `rev` 3, chwila T2 (późniejsza treść ze scalenia) | „Dokument został zmieniony po powiązaniu z planem…” |
+| z chwilą T1, `rev` 3 | `rev` 3, chwila T2, ta sama treść i chwila treści (import karty, ratunek D-21) | „Dokument został zmieniony…” (znane ograniczenie, niżej) |
+| z chwilą T1 | bez chwili zapisu | „Dokument został zmieniony…” |
+| bez chwili, `rev` 3 | `rev` 3, chwila T2 | otwiera się (jak dotąd, po `rev`) |
+| wybór dokumentu: podgląd `rev` 1/T1 | przed zapisem `rev` 1/T2 | „Dokument zmienił się. Wybierz go ponownie i sprawdź aktualną treść.”, nic nie zapisano |
+
+**Co widzi lekarz.** Bez nowych tekstów. Jedyna widoczna dziś zmiana: rzadki komunikat „Dokument zmienił się. Wybierz
+go ponownie i sprawdź aktualną treść.” także wtedy, gdy między podglądem a zapisem zmieniła się chwila zapisu
+dokumentu bez zmiany numeru wersji (późniejsza treść ze scalenia, ale też import albo ratunek w tym czasie). Porównanie
+po chwili zapisu przy otwarciu dokumentu z planu zadziała w praktyce dopiero dla powiązań zapisanych drugim wydaniem.
+
+**Starsza aplikacja (sprzed tego PR) wobec planu z chwilą zapisu w dowodzie kroku** (sprawdzone w Chromium na kopii
+`audyt` `4389d34a`, dane fikcyjne). Starszy model planu ma zamkniętą listę pól dowodu i powiązania, więc plan z nowym
+polem uznaje za nieprawidłowy (`CARE_MODEL_UNSUPPORTED_FIELD`), a moduły planu odmawiają z kodem
+`CARE_NATIVE_PLAN_INVALID` („Nie można potwierdzić kompletności planu opieki.”). Odmowa obejmuje cały ładunek, nie
+tylko plan, i zapada przed pierwszym zapisem:
+- synchronizacja: pełny ładunek, delta planu i zdarzenie dziennika są odrzucane; inne notatki z tego samego ładunku
+  nie docierają (delta samej innej notatki dociera). Pobieranie przy każdej próbie trafia na ten sam ładunek; drenaż
+  dziennika zatrzymuje się na tym zdarzeniu do czasu aktualizacji (z kodu, `vilda_sync.js`);
+- „Scal kopię konta”: podgląd pokazuje dodane i zmienione notatki, ale samo scalenie odrzuca cały plik; import pliku
+  pacjenta z takim planem i odtworzenie konta z `.wiw` — odrzucone w całości (konto nie powstaje);
+- plan, który już leży w pamięci przeglądarki starszej wersji (druga, nieodświeżona karta albo cofnięta wersja):
+  odczyt planów, notatek tego pacjenta, wszystkich notatek konta, Terminarza i wyszukiwania kończy się błędem, okno
+  przypomnień pokazuje „Nie udało się wczytać przypomnień. Spróbuj ponownie.”, eksport i kopia zapasowa też się nie
+  udają, a przyjęcie zmian z innego urządzenia jest odrzucane.
+Dlatego nowe pole wchodzi w dwóch wydaniach. W tym wydaniu nic nie tworzy planu z nowym polem, więc starsza aplikacja
+nie dostaje go z tej wersji (strażnik testem: jednostkowy, źródła i w przeglądarce).
+
+**Ta wersja wobec planu z polem.** Moduły planów nie mają własnych list pól dowodu ani powiązania: odczyt idzie przez
+model zmian i model planu (`validateState` → `decodeCarePlanRecord`), a moduły czytają z dowodu tylko `noteId`. Plan
+z polem (w teście zapisany przez prawdziwy moduł zapisu, tak jak zapisze go drugie wydanie) dochodzi do osobnego
+urządzenia tego samego konta, które ma ten plan bez pola, każdą drogą osobno: pełny ładunek, delta planu, zdarzenie
+dziennika, „Scal kopię konta”, import pliku pacjenta; odtworzenie konta z `.wiw` tworzy konto z tym planem (e2e niżej).
+
+**Do akceptacji właściciela przy PR.**
+1. Ostrzejsze porównanie przy wyborze dokumentu (wyżej, „Co widzi lekarz”) — działa od razu.
+2. Model zmian przyjmuje już polecenie z polem, choć ekran go nie wysyła: adres modelu zmian stoi we fragmencie
+   natywnym, więc bez tego drugie wydanie wymagałoby znów repozytorium źródeł modułu.
+3. Warunek drugiego wydania: potwierdzenie właściciela, że wszystkie urządzenia mają to wydanie (niżej, „Wymagania dla
+   następnych PR”).
+4. Znaczenie pola: chwila zapisu dokumentu (`updatedAtISO`), jak w wierszu 2c planu. Po drugim wydaniu daje to trwałe
+   fałszywe „Dokument został zmieniony…” po imporcie karty, ratunku D-21, złączeniu wersji i „wykonane” z innego
+   urządzenia, na każdym urządzeniu (niżej, „Ograniczenia”). Porównanie po chwili zmiany treści (pole `contentAtISO`
+   z kotwicą, inaczej chwila zapisu — P-NOTATKA-POZNIEJSZA) tych alarmów by nie dawało, a późniejszą treść przy tym
+   samym `rev` dalej by widziało; wymagałoby innej nazwy i znaczenia pola. Decyzja musi zapaść, zanim format się
+   zamrozi: przed skopiowaniem plików modelu do repozytorium źródeł modułu i zmianą modułu zapisu.
+5. Zmiana odmów kontroli przed scaleniem po regule notatek we fragmencie natywnym (druga luka) — opis dojdzie
+   z artefaktami.
+
+**Testy.** Dane wyłącznie fikcyjne, bez PESEL.
+- `tests/unit/care-plan-model.test.mjs` (23 nowe przypadki): poprawna chwila w dowodzie faktu i w powiązaniu (z
+  milisekundami i bez); zły format — data bez czasu, `null`, pusty napis, liczba, przesunięcie strefy, 31 lutego,
+  godzina 24, dowolny tekst, rok po 2999 (sejf obcina stempel zapisu na końcu roku 9999) i przed 1900 →
+  `CARE_MODEL_EVIDENCE_INVALID` dokładnie na ścieżce dowodu; `rev` wymagany obok chwili; inne nowe pole i inna
+  pisownia nazwy → `CARE_MODEL_UNSUPPORTED_FIELD`; projekcja przenosi pole bez zmian; dowód bez pola bez wymyślonej
+  chwili; wiersze w tabeli przypadków „makes … explicit”.
+- `tests/unit/care-plan-mutation.test.mjs` (20): `associate` i `recordFact` z polem — pole w planie, zależność odczytu
+  z `expectedUpdatedAtISO`, plan dalej czytelny i przyjmuje następną zmianę; ponowienie tej samej operacji bez nowych
+  zależności, inna chwila = inna operacja; zły format jak w modelu → `CARE_PLAN_EVIDENCE_INVALID`; inne pole →
+  `CARE_PLAN_FIELDS_INVALID`; bez pola zależność dokładnie jak dotąd; dowód dokumentu tworzonego przez plan nigdy
+  z polem; zapisany plan ze złym polem odrzucony z nazwą miejsca.
+- `tests/unit/care-plan-staged-ui.test.mjs` (18): wyższy `rev` przy tej samej chwili — dokument się otwiera; ten sam
+  `rev`, późniejsza chwila — „zmieniony”, treść niewidoczna, plan bez zmian; dokument bez chwili — „zmieniony”; dawny
+  dowód bez pola — po `rev` w obu kierunkach; każde odwołanie do tego samego dokumentu swoją regułą; wersja zachowana
+  przy konflikcie; chwila zmieniona między podglądem a zapisem — odmowa bez zapisu; strażnik tego wydania: obie akcje
+  wysyłają dowód dokładnie `{ noteId, sourceRecordRevAtCapture }`; dokument z nową chwilą zapisu i tą samą chwilą
+  treści — „zmieniony” (porównanie po chwili zapisu, nie po chwili treści).
+- `tests/unit/notatka-pozniejsza-zapis.test.mjs`, blok „luki modułu planów z etapami” (prawdziwy sejf): późniejsza
+  treść przy tym samym `rev` zmienia chwilę zapisu, a zapis samego `rev` jej nie zmienia; import karty na urządzeniu
+  bez dokumentu przesuwa chwilę zapisu bez zmiany treści, `rev` i chwili treści, a synchronizacja niesie ją do
+  urządzenia, które miało dokument od początku (znane ograniczenie); strażnik źródła nowego porównania; strażnik źródła
+  tego wydania (ekran nie zapisuje pola).
+- e2e `tests/e2e/care-template-native-storage.spec.mjs` (desktop Chromium, 2 nowe): plan z polem dochodzi do
+  osobnego urządzenia każdą drogą osobno (wyżej, „Ta wersja wobec planu z polem”), a urządzenie z planem dalej czyta
+  notatki, przypomnienia i eksport i przyjmuje zmianę z innego urządzenia; strażnik w przeglądarce: powiązanie
+  i potwierdzenie istniejącym dokumentem przez formularze ekranu nie zapisują pola (plan, ładunek synchronizacji,
+  kopia konta).
+
+**Czerwone na bazie** (`2ad5df78` z testami tego PR): 48 jednostkowych — model 18 z 23 nowych, model zmian 15 z 20,
+ekran 14 z 18, `notatka-pozniejsza-zapis` 1 (strażnik źródła nowego porównania) — i 1 e2e (dzisiejszy model zmian
+odrzuca polecenie z polem, `CARE_PLAN_FIELDS_INVALID`; do dróg przenoszenia na bazie test nie dochodzi — ich odmowę na
+starym modelu pokazało sprawdzenie starszej wersji, wyżej). Zielone z natury: strażniki tego wydania, dawne dowody po
+`rev`, inne nowe pola nadal nieobsługiwane i pomiary na prawdziwym sejfie (sejf się nie zmienia). Sprawdzone zmianą
+kodu na kopii: ekran porównuje chwilę treści zamiast chwili zapisu — czerwone tylko 2 przypadki ekranu „nie po chwili
+treści”; model przyjmuje lata do 9999 — czerwone 2 wiersze „rok po 2999” (model i model zmian); model zmian dopisuje
+`expectedUpdatedAtISO` także bez pola — 15 czerwonych.
+
+**Ograniczenia.**
+- **Chwila zapisu przesuwa się też bez zmiany treści**: import karty na urządzeniu bez tego dokumentu, ratunek D-21
+  (`Bnp_dotknij`), rekord złączony (treść z jednej wersji, oznaczenie z drugiej, chwila zapisu o 1 ms późniejsza niż
+  obie) oraz „wykonane” albo „nie zgłosił się” z innego urządzenia. Dowód z polem pokaże wtedy „Dokument został
+  zmieniony po powiązaniu z planem…”. Komunikat jest trwały — plan nie ma akcji odpięcia dokumentu ani poprawki faktu —
+  i pojawia się na każdym urządzeniu: synchronizacja niesie nową chwilę zapisu dalej (przy tej samej chwili treści
+  i `rev` wygrywa późniejsza chwila zapisu). Kierunek bezpieczny: bieżąca treść nie jest pokazywana jako potwierdzenie
+  wcześniejszego wpisu, a dokument jest dostępny w Karcie pacjenta. Wobec porównania po `rev` nowe są import, ratunek
+  i złączenie; „wykonane” z innego urządzenia dawało alarm także po `rev` (podnosi `rev`), a zapis samego `rev`
+  przestaje go dawać. „Scal kopię konta” na urządzeniu bez dokumentu chwili zapisu nie zmienia. Dotyczy planów z polem,
+  czyli powiązań zapisanych od drugiego wydania (znaczenie pola — „Do akceptacji”, punkt 4).
+- **Okno między ponownym odczytem przed zapisem a zapisem w module planów.** Moduł zapisu porównuje w tym wydaniu
+  dokument po `rev` (zależność z chwilą zapisu powstaje tylko z pola w poleceniu, którego ekran nie wysyła).
+  Późniejsza treść przy tym samym `rev`, która dojdzie między ponownym odczytem na ekranie a odczytem w transakcji
+  modułu (milisekundy), przejdzie niezauważona. Wartością przekazaną tylko w poleceniu nie da się tego domknąć: całe
+  polecenie zostaje w historii operacji planu (`intentCanonical`) i jedzie w ładunku. Domyka to drugie wydanie (pole
+  w dowodzie).
+- **Dowód dokumentu utworzonego przez sam plan** zostaje przy `rev` (model zmian nie zna chwili zapisu tworzonego
+  dokumentu); taki dokument nie istniał na innym urządzeniu przed powiązaniem.
+- **Do drugiego wydania porównanie w module zapisu w praktyce zostaje po `rev`** (nikt nie wysyła pola).
+- **Jeden plan, którego dana wersja aplikacji nie umie odczytać, blokuje dziś odczyt notatek i przypomnień całego
+  konta** — osobna poprawka.
+
+**Wymagania dla następnych PR.**
+- Ten PR, artefakty repozytorium źródeł modułu: moduł zapisu (`plan-service.mjs`) porównuje dokument po chwili zapisu,
+  gdy zależność ma `expectedUpdatedAtISO` (bez niej — po `rev`, jak dziś), a dokument czytany przez moduł na koncie
+  przygotowanym (`adapter.mjs`, `document`) niesie chwilę zapisu z rekordu — dziś ma tylko treść, identyfikator, kartę,
+  kategorię i `rev`, więc bez tego drugie wydanie dawałoby na takim koncie zawsze „dokument się zmienił”
+  (`CARE_APPLICATION_DOCUMENT_CHANGED`); adres modelu zmian we fragmencie natywnym z nowym `?v=`; kopie
+  `vilda_care_plan_model.js` i `vilda_care_plan_mutation.js` z tego PR bajt w bajt w testach repozytorium źródeł. Po
+  artefaktach — `npm run podbij-wersje`.
+- Drugie wydanie (osobny mały PR tylko w vilda-calc): warunek — właściciel potwierdza, że wszystkie urządzenia mają to
+  wydanie: Ustawienia → „Wersja aplikacji” co najmniej SW z tego PR (z nowym `?v=` modelu planu; pamięć offline
+  przenosi wpisy z `?v=` ze starszych pamięci, więc liczy się wersja po podbiciu). Ekran zapisuje pole tylko wtedy,
+  gdy chwila zapisu dokumentu przechodzi ten sam sprawdzian co w modelu (rok 1900–2999, czas UTC z „Z”, prawdziwa
+  data) — sejf może mieć stempel do końca roku 9999, chwilę z przesunięciem strefy z uszkodzonego ładunku albo brak
+  chwili; wtedy dowód bez pola (po `rev`). Strażniki „ekran nie zapisuje pola” odwrócone. Znaczenie pola — według
+  decyzji z „Do akceptacji”, punkt 4. Zalecana wcześniej osobna poprawka „jeden nieczytelny plan nie blokuje notatek
+  i przypomnień konta”.
+
+**Wdrożenie.** Od razu przy wydaniu, bez przełącznika; nic w tym wydaniu nie tworzy planu z nowym polem.
+
+**Cofnięcie** = rewert PR, bez migracji (żaden plan nie ma pola, dopóki nie wejdzie drugie wydanie). Po drugim
+wydaniu rewert tego PR przywróciłby odmowę planów z polem — wtedy cofać tylko drugie wydanie.
+
+**Gdzie w kodzie.** `vilda_care_plan_model.js`: `evidence`, `validateContext` (powiązania).
+`vilda_care_plan_mutation.js`: `checkEvidence`, `readDependency`, `prepareTransaction` (`recordFact`, `associate`).
+`vilda_care_plans.js`: `stagedEvidenceChanged`, `openRecord` (plan z etapami), `stagedEvidencePicker` (`read`).
+Repozytorium źródeł modułu: `plan-service.mjs` i `adapter.mjs` — z artefaktami.
+
+**Wersje.** Po artefaktach repozytorium źródeł modułu i `npm run podbij-wersje`. Podbicie wcześniej zmieniłoby adres
+modelu zmian wewnątrz fragmentu natywnego (kontrola granicy obrazu sejfu to odrzuca), więc do tego czasu strażnik
+wersji plików (`tests/unit/wersje-zasobow.test.mjs`) jest czerwony dla `vilda_care_plan_model.js`,
+`vilda_care_plan_mutation.js` i `vilda_care_plans.js`, a PR nie jest do scalenia.

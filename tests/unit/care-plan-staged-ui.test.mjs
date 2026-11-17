@@ -262,6 +262,17 @@ describe('V2 staged care-plan UI compares step evidence by the capture instant w
     expectChanged(d, await openEvidence(d, d.host, 'Otwórz dokument')); d.controller.destroy();
   });
 
+  // Known limitation (docs/clinical/ALGORITHMS.md, P-DOWOD-KROKU, „Ograniczenia”): a patient card import, the D-21 rescue
+  // and a merged record move the document's updatedAtISO while its content and its content instant (contentAtISO anchored
+  // to the new updatedAtISO) stay the same. The evidence compares the write instant, so such a document is reported as
+  // changed. Comparing the content instant instead would be a deliberate change of this test.
+  it.each(['fact', 'association'])('compares the write instant, not the content instant: the %s document moved without a content change is reported as changed', async relation => {
+    const moved = Object.assign(sourceNote(3, T2), { contentAtISO: T1, contentForISO: T2 });
+    const d = fixture({ edit: relation === 'fact' ? withFact({ noteId: 'fictional-document', sourceRecordRevAtCapture: 3, [CAPTURED]: T1 }) : withAssociation({ sourceRecordRevAtCapture: 3, [CAPTURED]: T1 }),
+      overrides: { getPatientNote: vi.fn(async () => moved) } }); await settle();
+    expectChanged(d, await openEvidence(d, d.host, relation === 'fact' ? 'Otwórz dokument' : 'Otwórz wpis')); d.controller.destroy();
+  });
+
   it.each(['fact', 'association'])('keeps the revision comparison for older %s evidence without a capture instant', async relation => {
     const same = fixture({ edit: relation === 'fact' ? withFact({ noteId: 'fictional-document', sourceRecordRevAtCapture: 3 }) : withAssociation({ sourceRecordRevAtCapture: 3 }),
       overrides: { getPatientNote: vi.fn(async () => sourceNote(3, T2)) } }); await settle();
