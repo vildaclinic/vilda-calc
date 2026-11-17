@@ -87,6 +87,12 @@
   }
   var stagedViewCache = new WeakMap();
   function staged(plan) { return !!(plan && plan.careContext && plan.careContext.version === 2); }
+  // Evidence with a capture instant is compared by the document's updatedAtISO only: a merge may keep a later text
+  // without a higher revision, and a revision-only write leaves the text unchanged. Older evidence keeps the revision check.
+  function stagedEvidenceChanged(evidence, original) {
+    if (Object.prototype.hasOwnProperty.call(evidence, 'sourceRecordUpdatedAtISOAtCapture')) return evidence.sourceRecordUpdatedAtISOAtCapture !== original.updatedAtISO;
+    return evidence.sourceRecordRevAtCapture !== original.rev;
+  }
   function stagedView(plan) {
     if (!staged(plan) || !win.VildaCarePlanModel) return null;
     var dayNow = today(), cached = stagedViewCache.get(plan);
@@ -603,20 +609,20 @@
           if (!current() || ticket !== recordSequence || state.selected !== planId || recordNoteId !== noteId) return;
           var retainedPlans = freshPlan && freshPlan.patientId === patientId && freshPlan.id === planId && staged(freshPlan)
             ? [freshPlan].concat((freshPlan.nativeConflicts || []).map(function (version) { return version && version.record; })) : [];
-          var referenced = false, capturedRevisions = [];
+          var referenced = false, captured = [];
           retainedPlans.forEach(function (version) {
             if (!version || version.id !== planId || version.patientId !== patientId || !staged(version)) return;
             var projected = stagedView(version), context = version.careContext;
             if (!projected || projected.kind !== 'v2') return;
-            context.facts.forEach(function (fact) { if (fact.evidence.noteId === noteId) { referenced = true; capturedRevisions.push(fact.evidence.sourceRecordRevAtCapture); } });
-            context.associations.forEach(function (association) { if (association.noteId === noteId) { referenced = true; capturedRevisions.push(association.sourceRecordRevAtCapture); } });
+            context.facts.forEach(function (fact) { if (fact.evidence.noteId === noteId) { referenced = true; captured.push(fact.evidence); } });
+            context.associations.forEach(function (association) { if (association.noteId === noteId) { referenced = true; captured.push(association); } });
             if (context.log.some(function (entry) { return entry.documentIds.includes(noteId); })) referenced = true;
           });
           if (!referenced) throw new Error('Ten dokument nie jest już powiązany z planem. Wróć do planu i odśwież widok.');
           var stagedOriginal = await vault.getPatientNote(noteId);
           if (!current() || ticket !== recordSequence || state.selected !== planId || recordNoteId !== noteId) return;
           if (!stagedOriginal || stagedOriginal.id !== noteId || stagedOriginal.patientId !== patientId) throw new Error('Dokument jest niedostępny. Sprawdź dokumentację pacjenta.');
-          if (capturedRevisions.some(function (revision) { return revision !== stagedOriginal.rev; }))
+          if (captured.some(function (evidence) { return stagedEvidenceChanged(evidence, stagedOriginal); }))
             throw new Error('Dokument został zmieniony po powiązaniu z planem. Plan zachowuje odwołanie do wcześniejszej wersji, ale nie przechowuje jej treści. Bieżąca treść nie jest wyświetlana jako potwierdzenie tamtego wpisu. Sprawdź aktualną dokumentację w Karcie pacjenta.');
           record = stagedOriginal; renderDetail();
           if (!refreshing) { var stagedHeading = detail.querySelector('.vcp-record h2'); if (stagedHeading) stagedHeading.focus({ preventScroll: true }); }
@@ -1288,7 +1294,9 @@
       return { box: box, read: async function () {
         if (!selected || selected.id !== picker.value) throw new Error('Wybierz dokument i przeczytaj jego podgląd.');
         var original = await vault.getPatientNote(selected.id);
-        if (!original || original.id !== selected.id || original.patientId !== plan.patientId || original.rev !== selected.rev) throw new Error('Dokument zmienił się. Wybierz go ponownie i sprawdź aktualną treść.');
+        // The capture instant is only compared here. The evidence does not record it yet: older app versions reject such plans.
+        if (!original || original.id !== selected.id || original.patientId !== plan.patientId || original.rev !== selected.rev
+          || original.updatedAtISO !== selected.updatedAtISO) throw new Error('Dokument zmienił się. Wybierz go ponownie i sprawdź aktualną treść.');
         return { noteId: selected.id, sourceRecordRevAtCapture: selected.rev };
       } };
     }

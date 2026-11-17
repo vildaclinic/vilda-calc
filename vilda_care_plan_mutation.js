@@ -221,9 +221,18 @@
   function stageFor(context, stageId) { const stage = context.stages.find(item => item.id === stageId); if (!stage) fail('CARE_PLAN_STAGE_MISSING'); return stage; }
   function stepFor(context, stepId) { const step = context.steps.find(item => item.id === stepId); if (!step) fail('CARE_PLAN_STEP_MISSING'); return step; }
   function editableStage(context, stage) { if (context.status !== 'active') fail('CARE_PLAN_CLOSED'); if (stage.control.state === 'reviewed') fail('CARE_PLAN_STAGE_REVIEWED'); }
-  function checkEvidence(value) {
-    fields(value, ['noteId', 'sourceRecordRevAtCapture']);
-    if (!id(value.noteId) || !Number.isSafeInteger(value.sourceRecordRevAtCapture) || value.sourceRecordRevAtCapture < 0) fail('CARE_PLAN_EVIDENCE_INVALID');
+  // The document capture instant is optional and needs the revision beside it.
+  function checkEvidence(value, model) {
+    fields(value, ['noteId', 'sourceRecordRevAtCapture', 'sourceRecordUpdatedAtISOAtCapture'], ['noteId', 'sourceRecordRevAtCapture']);
+    if (!id(value.noteId) || !Number.isSafeInteger(value.sourceRecordRevAtCapture) || value.sourceRecordRevAtCapture < 0
+        || own(value, 'sourceRecordUpdatedAtISOAtCapture') && !validInstant(value.sourceRecordUpdatedAtISOAtCapture, model)) fail('CARE_PLAN_EVIDENCE_INVALID');
+  }
+  // Evidence with a capture instant also asks the protected writer to compare the
+  // document's updatedAtISO (expectedUpdatedAtISO); without it only the revision.
+  function readDependency(evidence, command) {
+    const dependency = { noteId: evidence.noteId, patientId: command.patientId, expectedRevision: evidence.sourceRecordRevAtCapture, kind: command.kind };
+    if (own(evidence, 'sourceRecordUpdatedAtISOAtCapture')) dependency.expectedUpdatedAtISO = evidence.sourceRecordUpdatedAtISOAtCapture;
+    return dependency;
   }
   function effectDocument(state, command, clock, document, role, stageId, stepId) {
     fields(document, ['id', 'title', 'body']);
@@ -324,11 +333,10 @@
           if (own(command, 'evidence') === own(command, 'document')) fail('CARE_PLAN_EVIDENCE_INVALID');
           let evidence;
           if (command.evidence) {
-            checkEvidence(command.evidence); evidence = copy(command.evidence);
+            checkEvidence(command.evidence, model); evidence = copy(command.evidence);
             if (used.has(evidence.noteId) && !context.facts.some(fact => fact.evidence.noteId === evidence.noteId)
                 && !context.associations.some(item => item.noteId === evidence.noteId)) fail('CARE_PLAN_EVIDENCE_INVALID');
-            readDependencies.push({ noteId: evidence.noteId, patientId: command.patientId,
-              expectedRevision: evidence.sourceRecordRevAtCapture, kind: command.kind });
+            readDependencies.push(readDependency(evidence, command));
           } else {
             freshId(command.document && command.document.id, used);
             documentEffects.push(effectDocument(state, command, clock, command.document, command.kind === 'resultReceipt' ? 'result' : 'note', stage.id, step.id));
@@ -343,15 +351,16 @@
           const step = stepFor(context, command.stepId), stage = stageFor(context, step.stageId); editableStage(context, stage);
           stepId = step.id; stageId = stage.id;
           if (!['result', 'event', 'document'].includes(command.kind)) fail('CARE_PLAN_ASSOCIATION_INVALID');
-          checkEvidence(command.evidence); freshId(command.associationId, used);
+          checkEvidence(command.evidence, model); freshId(command.associationId, used);
           if (used.has(command.evidence.noteId) && !context.facts.some(fact => fact.evidence.noteId === command.evidence.noteId)
               && !context.associations.some(item => item.noteId === command.evidence.noteId)) fail('CARE_PLAN_EVIDENCE_INVALID');
           if (context.associations.some(item => item.stepId === step.id && item.kind === command.kind && item.noteId === command.evidence.noteId)) fail('CARE_PLAN_ASSOCIATION_EXISTS');
-          context.associations.push({ id: command.associationId, stepId: step.id, kind: command.kind,
+          const association = { id: command.associationId, stepId: step.id, kind: command.kind,
             noteId: command.evidence.noteId, sourceRecordRevAtCapture: command.evidence.sourceRecordRevAtCapture,
-            operationId: command.operationId, recordedAtISO: clock.recordedAtISO });
-          readDependencies.push({ noteId: command.evidence.noteId, patientId: command.patientId,
-            expectedRevision: command.evidence.sourceRecordRevAtCapture, kind: command.kind });
+            operationId: command.operationId, recordedAtISO: clock.recordedAtISO };
+          if (own(command.evidence, 'sourceRecordUpdatedAtISOAtCapture')) association.sourceRecordUpdatedAtISOAtCapture = command.evidence.sourceRecordUpdatedAtISOAtCapture;
+          context.associations.push(association);
+          readDependencies.push(readDependency(command.evidence, command));
           logText = 'Powiązano oryginalny dokument z krokiem: ' + step.title + '.';
         } else if (command.action === 'omitStep' || command.action === 'reopenStep') {
           const step = stepFor(context, command.stepId), stage = stageFor(context, step.stageId); editableStage(context, stage);
