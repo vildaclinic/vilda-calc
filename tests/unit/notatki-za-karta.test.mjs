@@ -4156,3 +4156,27 @@ describe('P-NOTATKI-ZA-KARTA — strażniki źródła', () => {
     expect(pz).toContain('const D = nag.deletedAtISO > kiedy ? nag.deletedAtISO : kiedy;');
   });
 });
+
+describe('E3-PR0b2b — zwycięzcy dla nagrobków liczeni tą samą regułą co scalanie (zostaje późniejsza zmiana treści)', () => {
+  it('B poprawia n1 dwa razy (rev 3), E raz później (rev 2), potem „Usuń pacjenta” na A; E czeka, B ratuje swoją wersję → E ratuje swoją późniejszą poprawkę; echo starszego urządzenia jej nie kasuje', async () => {
+    const x = await przygotuj({ A: {}, B: {}, E: {}, O: { stara: true } });
+    const { A, B, E, O } = x.urz;
+    przesun(20e3); await B.v.savePatientNote({ id: x.id('n1'), patientId: x.pid, title: 'n1', body: 'B1' });
+    przesun(5e3); await B.v.savePatientNote({ id: x.id('n1'), patientId: x.pid, title: 'n1', body: 'B2' });
+    przesun(10e3); await E.v.savePatientNote({ id: x.id('n1'), patientId: x.pid, title: 'n1', body: 'poprawka E' });
+    przesun(60e3); await A.v.removePatient(x.pid);
+    const R = (await nagrobkiNotatek(A)).find((t) => t.id === x.id('n1')).deletedAtISO;
+    await pelny(A, O);
+    przesun(1000); await E.scal({ ...kopia(await A.v.exportSyncPayload()), patients: [], tombstones: [] });
+    expect(await stan(E, x)).toBe('karta [n1=poprawka E,n2] nagr[n1+pole,n2+pole]');
+    await wizyta(B, x);
+    await pelny(A, B); await pelny(B, A);
+    await pelny(B, E);
+    const n1E = (await E.v.listAllPatientNotes()).find((n) => n.id === x.id('n1'));
+    expect([n1E.body, n1E.updatedAtISO > R], 'poprawka E uratowana, chwila > R').toEqual(['poprawka E', true]);
+    await pelny(E, B); await pelny(E, A);
+    await pelny(O, A); await pelny(O, B); await pelny(O, E);
+    for (let r = 0; r < 2; r += 1) for (const [z, na] of [[A, O], [O, A], [A, B], [B, E], [E, A]]) await pelny(z, na);
+    for (const k of ['A', 'B', 'E', 'O']) expect((await stan(x.urz[k], x)).replace(/\+pole/g, ''), k).toBe('karta [n1=poprawka E,n2] nagr[]');
+  });
+});

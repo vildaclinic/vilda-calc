@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
+import { zaladuj221, zaladuj276, zaladujRetencjeV1 } from '../support/starsza-aplikacja.mjs';
 
 // E3-PR0b2b (P-NOTATKA-POZNIEJSZA) — notatka pacjenta zmieniona na dwóch urządzeniach: zostaje zmiana późniejsza.
 //
@@ -41,7 +42,8 @@ function magazyn() {
   };
 }
 
-function urzadzenie(pliki, ustawienia = {}) {
+// starsza — '221' albo '276': urządzenie ze starszą aplikacją z fikstur (ucina pola chwil, dawna reguła).
+function urzadzenie(pliki, ustawienia = {}, starsza = null) {
   const win = {
     crypto: globalThis.crypto, TextEncoder, TextDecoder, btoa: globalThis.btoa, atob: globalThis.atob,
     localStorage: magazyn(), sessionStorage: magazyn(),
@@ -51,7 +53,11 @@ function urzadzenie(pliki, ustawienia = {}) {
   };
   win.window = win; win.self = win; win.top = win;
   for (const [klucz, wartosc] of Object.entries(ustawienia)) win.localStorage.setItem(klucz, wartosc);
-  for (const plik of pliki) loadBrowserScript(plik, win);
+  if (starsza) {
+    loadBrowserScript('vilda_crypto.js', win);
+    zaladujRetencjeV1(win);
+    (starsza === '221' ? zaladuj221 : zaladuj276)(win);
+  } else for (const plik of pliki) loadBrowserScript(plik, win);
   const vault = win.VildaVault, adapter = vault.createInMemoryAdapter();
   vault.setStorageAdapter(adapter);
   // Licznik zapisów rekordów notatek (bez zapisu = bez zmiany w magazynie).
@@ -62,9 +68,9 @@ function urzadzenie(pliki, ustawienia = {}) {
 }
 
 let licznik = 0;
-async function sejf(nazwa, { pliki = PLIKI, ustawienia = {} } = {}) {
+async function sejf(nazwa, { pliki = PLIKI, ustawienia = {}, starsza = null } = {}) {
   licznik += 1;
-  const d = urzadzenie(pliki, ustawienia);
+  const d = urzadzenie(pliki, ustawienia, starsza);
   d.haslo = `Fikcyjne#Pozniej!${licznik}`;
   await d.vault.createUser(d.haslo, { label: `Fikcyjny sejf ${nazwa} ${licznik}`, iterations: 10000 });
   d.uid = d.vault.getCurrentUser().userId;
@@ -548,6 +554,28 @@ describe('E3-PR0b2b — ratunek D-21 („Usuń pacjenta”) i import karty zacho
     expect(await stan(s.C, s.id)).toEqual(otwarta('B: edycja po wyeksportowaniu pliku.', 2));
   });
 
+  it('ratunek notatki kroku planu opieki (kontekst planu tylko w treści): notatka wraca jak plan — bez pól chwili treści i oznaczenia', async () => {
+    const s = { urz: [] };
+    for (const n of ['A', 'B']) { s[n] = await sejf(n, { pliki: PLIKI_RATUNKU, ustawienia: RETENCJA }); s.urz.push(s[n]); }
+    krok(); s.patientId = (await s.A.vault.savePatient(pacjent(120, 22), { dedup: false })).patientId;
+    krok(); await s.A.vault.savePatient(pacjent(125, 24), { dedup: false, patientId: s.patientId });
+    krok(); const plan = (await s.A.vault.mutateCarePlan({ patientId: s.patientId, operationId: 'fikcyjna-op-ratunek-planu-1', action: 'create', title: 'Fikcyjny plan ratunku' })).plan;
+    krok(); const p = await s.A.vault.getCarePlan(plan.id);
+    const zKrokiem = (await s.A.vault.mutateCarePlan({ planId: p.id, patientId: s.patientId, baseRev: p.rev, operationId: 'fikcyjna-op-ratunek-planu-2', action: 'addStep', step: { title: 'Fikcyjny krok', kind: 'Konsultacja', state: 'pending', description: 'Fikcyjny opis.' } })).plan;
+    const kontekst = { version: 1, role: 'note', planId: zKrokiem.id, stepId: zKrokiem.steps[0].id };
+    krok(); const nid = (await s.A.vault.savePatientNote({ patientId: s.patientId, title: 'Fikcyjna notatka kroku', body: 'Baza kroku.', category: 'observation', careContext: kontekst })).id;
+    await wyslij(s.A, s.B);
+    krok(); await s.B.vault.savePatientNote({ patientId: s.patientId, id: nid, title: 'Fikcyjna notatka kroku', body: 'B: poprawka kroku przed usunięciem pacjenta.', category: 'observation', careContext: kontekst });
+    krok(); await s.A.vault.removePatient(s.patientId);
+    krok(); await s.B.vault.savePatient(pacjent(130, 26), { dedup: false, patientId: s.patientId });
+    krok(5000);
+    const przed = (await zapisana(s.B, nid)).updatedAtISO;
+    await wyslij(s.A, s.B);
+    const r = await zapisana(s.B, nid);
+    expect(r && r.updatedAtISO > przed, 'notatka kroku uratowana (nowa chwila zapisu)').toBe(true);
+    expect([r.contentAtISO, r.stateAtISO], 'plan opieki: dawna reguła, bez pól').toEqual([undefined, undefined]);
+  });
+
   it('import karty na urządzeniu z zegarem 10 min do tyłu: chwila zapisu nie cofa się przed wersję z pliku (stempel importu)', async () => {
     losowo(0.5);
     const s = await swiat(['A', 'B']);
@@ -739,5 +767,501 @@ describe('E3-PR0b2b — oznaczenie „wykonane”, „nie zgłosił się” i co
     }
     expect(wynik[0]).toEqual(wynik[1]);
     expect(wynik[0]).toEqual(stanO('C: dawka 75 µg.', 2, { wykonane: true }));
+  });
+});
+
+describe('E3-PR0b2b — starsza aplikacja we flocie: oznaczenie o tej samej wartości nie przepisuje notatki przy każdej wymianie', () => {
+  // A (bieżąca) ma chwilę oznaczenia różną od chwili samego oznaczenia: po cofnięciu „wykonane”, przy dacie wykonania
+  // wcześniejszej niż zapis i przy zwykłym „wykonane”, gdy zegar idzie w trakcie zapisu (data z przycisku jest
+  // wcześniejsza niż chwila zapisu pod blokadą). Starsza aplikacja (C) przyjmuje wersję A i ucina pola chwil; kopia
+  // ucięta wraca z tą samą wartością oznaczenia. Złączenie „treść z kopii, oznaczenie z A” z chwilą zapisu + 1 ms dawało
+  // przy każdej pełnej wymianie nowy rekord po obu stronach (zapis, zdarzenie, licznik) — bez końca, dopóki we flocie
+  // jest starsze urządzenie. Ta sama wartość oznaczenia to tylko pole chwili oznaczenia, bez nowej chwili zapisu.
+  async function flota(app) {
+    const s = { urz: [] };
+    for (const [n, st] of [['A', null], ['B', null], ['C', app]]) { s[n] = await sejf(n, { starsza: st }); s.urz.push(s[n]); }
+    krok(); s.patientId = (await s.A.vault.savePatient(PACJENTKA, { dedup: false })).patientId;
+    krok(); s.id = (await s.A.vault.savePatientNote({ patientId: s.patientId, title: 'Fikcyjna kontrola', body: 'Fikcyjna kontrola TSH.', category: 'followup' })).id;
+    krok(); await wymiana(s);
+    krok();
+    return s;
+  }
+  // Każdy odczyt notatki z magazynu trwa 3 ms (jak IndexedDB): zegar idzie między przyciskiem a zapisem pod blokadą.
+  async function zIdacymZegarem(U, fn) {
+    const get = U.adapter.getPatientNoteForUser;
+    U.adapter.getPatientNoteForUser = async (...a) => { ustaw(teraz + 3); return get.apply(U.adapter, a); };
+    try { return await fn(); } finally { U.adapter.getPatientNoteForUser = get; }
+  }
+  const PRZYPADKI = [
+    ['„wykonane”, potem „cofnij”', async (s) => { await oznacz(s, s.A, 'wykonane'); await oznacz(s, s.A, 'cofnij'); }, false],
+    ['data wykonania wcześniejsza niż chwila zapisu', async (s) => { krok(); await s.A.vault.savePatientNote({ id: s.id, patientId: s.patientId, completedAtISO: '2026-11-10T12:00:00.000Z' }); }, true],
+    ['zwykłe „wykonane” przy zegarze idącym w trakcie zapisu', async (s) => { krok(); await zIdacymZegarem(s.A, () => s.A.vault.completePatientNote(s.id)); }, true],
+    ['„nie zgłosił się” przy zegarze idącym, potem „cofnij”', async (s) => { krok(); await zIdacymZegarem(s.A, () => s.A.vault.noShowPatientNote(s.id)); await oznacz(s, s.A, 'cofnij'); }, false],
+  ];
+  for (const app of ['221', '276']) {
+    it.each(PRZYPADKI)(`starsza ${app}: %s — po dwóch pełnych wymianach ten sam widok wszędzie, kolejna wymiana bez zapisów`, async (_opis, zrob, wykonane) => {
+      const s = await flota(app);
+      await zrob(s);
+      krok();
+      await wymiana(s); await wymiana(s);
+      const w = await stany(s);
+      expect(w.A, 'A').toMatchObject({ body: 'Fikcyjna kontrola TSH.', wykonane, nieZglosil: false });
+      expect([w.B, w.C], 'B i C widzą to samo co A').toEqual([w.A, w.A]);
+      await bezZmianPoKolejnejWymianie(s);
+    });
+  }
+
+  it('między bieżącymi urządzeniami: oznaczenie z ładunku o tej samej wartości, ale późniejsze — sama chwila oznaczenia, bez nowej chwili zapisu i bez licznika', async () => {
+    const s = await swiat();
+    // A: „wykonane” z datą wcześniejszą niż zapis (pole chwili oznaczenia = chwila zapisu); B ma tę wersję bez pól chwili
+    // oznaczenia (jak kopia przekazana przez starszą aplikację).
+    krok(); await s.A.vault.savePatientNote({ id: s.id, patientId: s.patientId, completedAtISO: '2026-11-10T12:00:00.000Z' });
+    await wyslij(s.A, s.B);
+    const a = await zapisana(s.A, s.id), b0 = await zapisana(s.B, s.id);
+    expect([a.stateAtISO, b0.updatedAtISO], 'A: pole chwili oznaczenia; B: ta sama wersja').toEqual([a.updatedAtISO, a.updatedAtISO]);
+    const bezPola = { ...b0 }; delete bezPola.stateAtISO; delete bezPola.stateForISO;
+    await s.B.adapter.putPatientNoteForUser(s.B.uid, bezPola);
+    const wynik = await wyslij(s.A, s.B);
+    const b = await zapisana(s.B, s.id);
+    expect([b.updatedAtISO, b.stateAtISO, b.stateForISO], 'B: ta sama chwila zapisu, pole chwili oznaczenia z A').toEqual([a.updatedAtISO, a.updatedAtISO, a.updatedAtISO]);
+    expect(wynik.updatedPatientNoteCount, 'bez zmiany widocznej — bez licznika').toBe(0);
+    await bezZmianPoKolejnejWymianie(s);
+  });
+});
+
+describe('E3-PR0b2b — przełożenie otwartej sprawy liczy się jako zmiana oznaczenia na „otwarte”', () => {
+  // Przypomnienie albo wizyta zamknięta na jednym urządzeniu („wykonane”, „nie zgłosił się”), a na drugim — bez
+  // połączenia, na wersji otwartej — później przełożona (przycisk „Przełóż”, Terminarz, edytor, formularz wykonania
+  // z akcją „przełóż”). Zamiar przełożenia to „sprawa otwarta, wróć w nowym terminie”; dotąd po synchronizacji wpis
+  // zostawał zamknięty z nowym terminem (przypomnienie nie wracało, przyszła wizyta jako „nie zgłosił się”). Zmiana
+  // terminu otwartego wpisu daje oznaczeniu „otwarte” chwilę tego zapisu — późniejsze przełożenie otwiera wpis wszędzie.
+  const ZADANIE = { title: 'Kontrola TSH', body: 'Kontrola TSH za 3 mies.', category: 'followup', dueDateISO: '2026-12-01' };
+  const widok = async (U, id) => {
+    const n = await U.vault.getPatientNote(id);
+    return { body: n.body, termin: String(n.dueDateISO || '').slice(0, 10), wykonane: !!n.completedAtISO, nieZglosil: !!n.noShowAtISO };
+  };
+  async function widoki(s) { const o = {}; for (const U of s.urz) o[U.nazwa] = await widok(U, s.id); return o; }
+  const sprawa = (termin, { wykonane = false, nieZglosil = false, body = ZADANIE.body } = {}) => ({ body, termin, wykonane, nieZglosil });
+
+  it('tablet „wykonane”, laptop (bez połączenia) później „Przełóż”: na obu nowy termin i sprawa otwarta', async () => {
+    const s = await swiat(['tablet', 'laptop'], ZADANIE);
+    krok(); await s.tablet.vault.completePatientNote(s.id);
+    krok(5e3); await s.laptop.vault.snoozePatientNote(s.id, '2027-01-15');
+    krok(); await wymiana(s); await wymiana(s);
+    expect(await widoki(s)).toEqual(wszedzie(s, sprawa('2027-01-15')));
+    await bezZmianPoKolejnejWymianie(s);
+  });
+
+  it('telefon „nie zgłosił się”, recepcja (bez połączenia) później „Przełóż”: na obu nowy termin i wizyta otwarta', async () => {
+    const s = await swiat(['telefon', 'recepcja'], ZADANIE);
+    krok(); await s.telefon.vault.noShowPatientNote(s.id);
+    krok(5e3); await s.recepcja.vault.snoozePatientNote(s.id, '2026-12-08');
+    krok(); await wymiana(s); await wymiana(s);
+    expect(await widoki(s)).toEqual(wszedzie(s, sprawa('2026-12-08')));
+  });
+
+  it('telefon „nie zgłosił się”, recepcja później zmienia termin w edytorze: na obu nowy termin i wizyta otwarta', async () => {
+    const s = await swiat(['telefon', 'recepcja'], ZADANIE);
+    krok(); await s.telefon.vault.noShowPatientNote(s.id);
+    krok(5e3); await s.recepcja.vault.savePatientNote({ id: s.id, patientId: s.patientId, ...ZADANIE, dueDateISO: '2026-12-08' });
+    krok(); await wymiana(s); await wymiana(s);
+    expect(await widoki(s)).toEqual(wszedzie(s, sprawa('2026-12-08')));
+  });
+
+  it('telefon „nie zgłosił się”, recepcja później przenosi wizytę w Terminarzu (tylko id, karta i termin): wizyta otwarta', async () => {
+    const s = await swiat(['telefon', 'recepcja'], ZADANIE);
+    krok(); await s.telefon.vault.noShowPatientNote(s.id);
+    krok(5e3); await s.recepcja.vault.savePatientNote({ id: s.id, patientId: s.patientId, dueDateISO: '2026-12-08' });
+    krok(); await wymiana(s); await wymiana(s);
+    expect(await widoki(s)).toEqual(wszedzie(s, sprawa('2026-12-08')));
+  });
+
+  it('laptop „wykonane”, telefon później zapisuje w formularzu wykonania akcję „przełóż”: nowy termin, wpis formularza w treści, sprawa otwarta', async () => {
+    const s = await swiat(['laptop', 'telefon'], ZADANIE);
+    krok(); await s.laptop.vault.completePatientNote(s.id);
+    const w = await s.telefon.vault.getPatientNote(s.id);
+    krok(5e3);
+    const r = await s.telefon.vault.saveReminderOutcome({ id: s.id, patientId: s.patientId, baseRev: w.rev, baseUpdatedAtISO: w.updatedAtISO, baseNote: w, operationId: 'fikcyjna-op-przeloz', action: 'reschedule', dateISO: '2027-01-15', text: 'Pacjent prosi o przesunięcie.' });
+    expect(r.saved).toBe(true);
+    krok(); await wymiana(s); await wymiana(s);
+    const v = await widoki(s);
+    expect(v.laptop).toEqual(v.telefon);
+    expect(v.telefon).toMatchObject({ termin: '2027-01-15', wykonane: false, nieZglosil: false });
+    expect(v.telefon.body).toContain('Zmieniono termin: 01.12.2026 → 15.01.2027');
+  });
+
+  it('[kontrola] telefon przekłada, laptop (bez połączenia) później „wykonane”: na obu nowy termin i „wykonane”', async () => {
+    const s = await swiat(['laptop', 'telefon'], ZADANIE);
+    krok(); await s.telefon.vault.snoozePatientNote(s.id, '2027-01-15');
+    krok(5e3); await s.laptop.vault.completePatientNote(s.id);
+    krok(); await wymiana(s); await wymiana(s);
+    expect(await widoki(s)).toEqual(wszedzie(s, sprawa('2027-01-15', { wykonane: true })));
+  });
+
+  it('[kontrola] zmiana terminu wpisu oznaczonego „wykonane” w edytorze nie otwiera go (na tym i na drugim urządzeniu)', async () => {
+    const s = await swiat(['laptop', 'telefon'], ZADANIE);
+    krok(); await s.laptop.vault.completePatientNote(s.id);
+    krok(); await wymiana(s);
+    krok(); await s.laptop.vault.savePatientNote({ id: s.id, patientId: s.patientId, ...ZADANIE, dueDateISO: '2026-12-20' });
+    krok(); await wymiana(s);
+    expect(await widoki(s)).toEqual(wszedzie(s, sprawa('2026-12-20', { wykonane: true })));
+  });
+});
+
+describe('E3-PR0b2b — wykonanie przypomnienia z kolejnym krokiem a późniejsza zmiana treści na drugim urządzeniu', () => {
+  it('telefon zapisuje wykonanie z kolejnym krokiem, laptop (bez połączenia) później zmienia treść, potem ponowne wykonanie na laptopie: odmowa, jeden kolejny krok wszędzie', async () => {
+    const s = await swiat(['laptop', 'telefon'], { title: 'Kontrola TSH', body: 'Kontrola TSH za 3 mies.', category: 'followup', dueDateISO: '2026-12-01' });
+    const w = await s.telefon.vault.getPatientNote(s.id);
+    krok();
+    const r1 = await s.telefon.vault.saveReminderOutcome({ id: s.id, patientId: s.patientId, baseRev: w.rev, baseUpdatedAtISO: w.updatedAtISO, baseNote: w, operationId: 'fikcyjna-op-krok-1', action: 'complete', dateISO: '2026-11-16', text: 'TSH 2,1 mIU/l — bez zmian dawki.', next: { title: 'Kontrola TSH za 6 mies.', dateISO: '2027-05-16' } });
+    expect(r1.saved).toBe(true);
+    krok(5e3); await s.laptop.vault.savePatientNote({ id: s.id, patientId: s.patientId, title: 'Kontrola TSH', body: 'Kontrola TSH + FT4 (dopisek laptopa).', category: 'followup', dueDateISO: '2026-12-01' });
+    krok(); await wymiana(s); await wymiana(s);
+    const naLaptopie = await s.laptop.vault.getPatientNote(s.id);
+    expect([naLaptopie.body, !!naLaptopie.completedAtISO], 'późniejsza treść laptopa i „wykonane” z telefonu').toEqual(['Kontrola TSH + FT4 (dopisek laptopa).', true]);
+    krok();
+    const r2 = await s.laptop.vault.saveReminderOutcome({ id: s.id, patientId: s.patientId, baseRev: naLaptopie.rev, baseUpdatedAtISO: naLaptopie.updatedAtISO, baseNote: naLaptopie, operationId: 'fikcyjna-op-krok-2', action: 'complete', dateISO: '2026-11-16', text: 'Ponowne wykonanie.', next: { title: 'Kontrola TSH za 6 mies. (drugi raz)', dateISO: '2027-05-17' } });
+    expect([r2.saved, r2.reason], 'sprawa już zamknięta na laptopie').toEqual([false, 'already-closed']);
+    krok(); await wymiana(s); await wymiana(s);
+    for (const U of s.urz) {
+      const kroki = (await U.vault.listPatientNotesForPatient(s.patientId)).filter((n) => /^rem-next-/.test(n.id)).map((n) => n.title);
+      expect(kroki, `${U.nazwa}: jeden kolejny krok`).toEqual(['Kontrola TSH za 6 mies.']);
+    }
+  });
+});
+
+describe('E3-PR0b2b — chwila zapisu spoza postaci toISOString przy złączeniu treści i oznaczenia', () => {
+  it('zwycięzca treści z chwilą zapisu bez milisekund (uszkodzony ładunek) i późniejsze „wykonane”: złączenie zachowuje chwilę treści, późniejsza treść z trzeciego urządzenia wygrywa wszędzie', async () => {
+    const s = await swiat(['A', 'B', 'C']);
+    await zmien(s, s.A, 'W (A).');
+    const uW = (await zapisana(s.A, s.id)).updatedAtISO, uWn = uW.replace('.000Z', 'Z');
+    await zmien(s, s.C, 'C: później niż W.');
+    await oznacz(s, s.B, 'wykonane');
+    await wyslij(s.A, s.B, przerobNotatke(s.id, (n) => ({ ...n, updatedAtISO: uWn })));
+    const b = await zapisana(s.B, s.id);
+    expect([b.contentAtISO, b.contentForISO], 'B: złączenie z chwilą treści W w postaci kanonicznej').toEqual([uW, b.updatedAtISO]);
+    for (let r = 0; r < 2; r += 1) { await wyslij(s.B, s.C); await wyslij(s.C, s.B); }
+    expect([await stan(s.B, s.id), await stan(s.C, s.id)]).toEqual([
+      { body: 'C: później niż W.', rev: 2, wykonane: true, nieZglosil: false },
+      { body: 'C: później niż W.', rev: 2, wykonane: true, nieZglosil: false },
+    ]);
+  });
+});
+
+describe('E3-PR0b2b — zapis zmieniający jedno pole (poza oznaczeniem) jest zmianą treści', () => {
+  // Przełożenie, zmiana samego leku, kategorii, tytułu, wyniku, wieku wizyty albo karty — późniejsza niż poprawka treści
+  // na drugim urządzeniu — nie może zginąć po cichu pod wcześniejszą poprawką.
+  const ZMIANY = [
+    ['termin', { dueDateISO: '2026-12-01' }, (n) => n.dueDateISO && n.dueDateISO.slice(0, 10) === '2026-12-01'],
+    ['lek', { medication: { action: 'change', name: 'Fikcyjny lek', dose: '1 mg' } }, (n) => !!n.medication && n.medication.name === 'Fikcyjny lek'],
+    ['kategoria', { category: 'followup' }, (n) => n.category === 'followup'],
+    ['tytuł', { title: 'Fikcyjna wizyta (nowy tytuł)' }, (n) => n.title === 'Fikcyjna wizyta (nowy tytuł)'],
+    ['wynik badania', { labResult: { test: 'Fikcyjne TSH', value: '4,1', valueNum: 4.1, unit: 'mIU/l' } }, (n) => !!n.labResult && n.labResult.test === 'Fikcyjne TSH'],
+    ['wiek wizyty', { linkedAgeMonths: 110 }, (n) => n.linkedAgeMonths === 110],
+    ['karta', 'karta', null],
+  ];
+  it.each(ZMIANY)('A zmienia tylko %s pięć sekund po poprawce treści na B: zostaje zmiana A (późniejsza), na obu ta sama wersja', async (_o, zmiana, jest) => {
+    const s = await swiat();
+    let Q = null;
+    if (zmiana === 'karta') { krok(); Q = (await s.A.vault.savePatient({ name: 'Fikcyjna Druga Karta', user: { sex: 'F', age: 8, height: 125, weight: 25 } }, { dedup: false })).patientId; await wyslij(s.A, s.B); }
+    await zmien(s, s.B, 'B: poprawka treści.');
+    krok(5000);
+    const a0 = await s.A.vault.getPatientNote(s.id);
+    const extra = zmiana === 'karta' ? { patientId: Q } : zmiana;
+    await s.A.vault.savePatientNote({ patientId: s.patientId, id: s.id, title: a0.title, body: a0.body, category: a0.category, ...extra });
+    krok(); await wymiana(s); await wymiana(s);
+    const [a, b] = [await s.A.vault.getPatientNote(s.id), await s.B.vault.getPatientNote(s.id)];
+    expect([a.body, b.body], 'treść z wersji A (zmiana A późniejsza)').toEqual(['Fikcyjna treść bazowa.', 'Fikcyjna treść bazowa.']);
+    if (jest) expect([jest(a), jest(b)], 'zmienione pole na obu').toEqual([true, true]);
+    else expect([a.patientId, b.patientId], 'karta na obu').toEqual([Q, Q]);
+  });
+});
+
+describe('E3-PR0b2b — notatka kroku planu: odłączenie na jednym urządzeniu, równoległa edycja na drugim', () => {
+  // Plan opieki po którejkolwiek stronie (kategoria albo kontekst w metadanych lub w treści) — dawna reguła treści
+  // i oznaczenia; careContext: null (znacznik odłączenia) to zwykła notatka. Podgląd „Scal kopię konta” liczy to samo.
+  let op = 0;
+  const operacja = () => `fikcyjna-op-odlaczenie-${++op}`;
+  async function swiatPlanu() {
+    const s = await swiat(['A', 'B']);
+    krok(); const plan = (await s.A.vault.mutateCarePlan({ patientId: s.patientId, operationId: operacja(), action: 'create', title: 'Fikcyjny plan kroku' })).plan;
+    krok(); const p = await s.A.vault.getCarePlan(plan.id);
+    const po = (await s.A.vault.mutateCarePlan({ planId: p.id, patientId: s.patientId, baseRev: p.rev, operationId: operacja(), action: 'addStep', step: { title: 'Fikcyjny krok', kind: 'Konsultacja', state: 'pending', description: 'Fikcyjny opis.' } })).plan;
+    s.plan = po; s.stepId = po.steps[0].id;
+    krok(); s.nid = (await s.A.vault.savePatientNote({ patientId: s.patientId, title: 'Fikcyjna notatka kroku', body: 'Baza kroku.', category: 'observation', careContext: { version: 1, role: 'note', planId: po.id, stepId: s.stepId } })).id;
+    krok(); await wyslij(s.A, s.B);
+    return s;
+  }
+  const notatka = async (U, id) => { const n = await U.vault.getPatientNote(id); return n && { body: n.body, plan: n.careContext === null ? 'odłączona' : n.careContext ? 'plan' : 'brak', rev: n.rev }; };
+  it('A odłącza notatkę od planu (później), B dwa razy poprawia treść w planie: dawna reguła (plan po jednej stronie) — wszędzie ta sama wersja', async () => {
+    const s = await swiatPlanu();
+    const b0 = await s.B.vault.getPatientNote(s.nid);
+    krok(); await s.B.vault.savePatientNote({ patientId: s.patientId, id: s.nid, title: 'Fikcyjna notatka kroku', body: 'B1.', category: 'observation', careContext: b0.careContext });
+    krok(); await s.B.vault.savePatientNote({ patientId: s.patientId, id: s.nid, title: 'Fikcyjna notatka kroku', body: 'B2.', category: 'observation', careContext: b0.careContext });
+    const a0 = await s.A.vault.getPatientNote(s.nid);
+    krok(5000); const odl = await s.A.vault.savePatientNote({ id: s.nid, patientId: s.patientId, baseRev: a0.rev, careContext: null });
+    expect(odl.conflict).toBeUndefined();
+    expect((await notatka(s.A, s.nid)).plan, 'odłączona na A').toBe('odłączona');
+    krok(); await wymiana(s); await wymiana(s);
+    const [a, b] = [await notatka(s.A, s.nid), await notatka(s.B, s.nid)];
+    expect(a, 'oba urządzenia mają tę samą wersję').toEqual(b);
+    expect(a.body, 'dawna reguła: wyższy rev (dwie poprawki B)').toBe('B2.');
+  });
+  it('notatka odłączona od planu na obu (careContext: null) — zwykła notatka: A dwa razy, B raz później, zostaje zmiana B', async () => {
+    const s = await swiatPlanu();
+    const a0 = await s.A.vault.getPatientNote(s.nid);
+    krok(); await s.A.vault.savePatientNote({ id: s.nid, patientId: s.patientId, baseRev: a0.rev, careContext: null });
+    krok(); await wymiana(s);
+    expect([(await notatka(s.A, s.nid)).plan, (await notatka(s.B, s.nid)).plan]).toEqual(['odłączona', 'odłączona']);
+    krok(); await s.A.vault.savePatientNote({ patientId: s.patientId, id: s.nid, title: 'Fikcyjna notatka kroku', body: 'A1.', category: 'observation' });
+    krok(); await s.A.vault.savePatientNote({ patientId: s.patientId, id: s.nid, title: 'Fikcyjna notatka kroku', body: 'A2.', category: 'observation' });
+    krok(5000); await s.B.vault.savePatientNote({ patientId: s.patientId, id: s.nid, title: 'Fikcyjna notatka kroku', body: 'B1 (później).', category: 'observation' });
+    krok(); await wymiana(s);
+    expect([(await notatka(s.A, s.nid)).body, (await notatka(s.B, s.nid)).body]).toEqual(['B1 (później).', 'B1 (później).']);
+  });
+  it('notatka kroku planu: B dwa razy poprawia treść, A później klika „wykonane”: dawna reguła oznaczenia planów — wszędzie wersja B bez „wykonane”', async () => {
+    const s = await swiatPlanu();
+    const b0 = await s.B.vault.getPatientNote(s.nid);
+    krok(); await s.B.vault.savePatientNote({ patientId: s.patientId, id: s.nid, title: 'Fikcyjna notatka kroku', body: 'B1.', category: 'observation', careContext: b0.careContext });
+    krok(); await s.B.vault.savePatientNote({ patientId: s.patientId, id: s.nid, title: 'Fikcyjna notatka kroku', body: 'B2.', category: 'observation', careContext: b0.careContext });
+    krok(5000); await s.A.vault.completePatientNote(s.nid);
+    expect((await s.A.vault.getPatientNote(s.nid)).completedAtISO, 'A: wykonane').toBeTruthy();
+    krok(); await wymiana(s); await wymiana(s);
+    const w = async (U) => { const n = await U.vault.getPatientNote(s.nid); return [n.body, !!n.completedAtISO, n.rev, n.updatedAtISO]; };
+    const [a, b] = [await w(s.A), await w(s.B)];
+    expect(a, 'ta sama wersja na obu').toEqual(b);
+    expect(a.slice(0, 2), 'plan: dawna reguła (wyższy rev, bez złączenia oznaczenia)').toEqual(['B2.', false]);
+  });
+  it('notatka kroku planu odłączona na A i potem „wykonane” na A; B (w planie) trzy razy poprawia treść w międzyczasie: plan po stronie B — bez złączenia oznaczenia, wszędzie wersja B', async () => {
+    const s = await swiatPlanu();
+    const a0 = await s.A.vault.getPatientNote(s.nid), b0 = await s.B.vault.getPatientNote(s.nid);
+    krok(); await s.A.vault.savePatientNote({ id: s.nid, patientId: s.patientId, baseRev: a0.rev, careContext: null });
+    for (const t of ['B1.', 'B2.', 'B3.']) { krok(); await s.B.vault.savePatientNote({ patientId: s.patientId, id: s.nid, title: 'Fikcyjna notatka kroku', body: t, category: 'observation', careContext: b0.careContext }); }
+    krok(5000); await s.A.vault.completePatientNote(s.nid);
+    krok(); await wymiana(s); await wymiana(s);
+    const w = async (U) => { const n = await U.vault.getPatientNote(s.nid); return [n.body, !!n.completedAtISO, n.rev, n.updatedAtISO]; };
+    const [a, b] = [await w(s.A), await w(s.B)];
+    expect(a, 'ta sama wersja na obu').toEqual(b);
+    expect(a.slice(0, 2), 'plan po stronie B: dawna reguła oznaczenia').toEqual(['B3.', false]);
+  });
+  it('„Scal kopię konta” na B (notatka w planie, dwie poprawki) z kopii A (odłączona później): podgląd = wynik', async () => {
+    const s = await swiatPlanu();
+    const b0 = await s.B.vault.getPatientNote(s.nid);
+    krok(); await s.B.vault.savePatientNote({ patientId: s.patientId, id: s.nid, title: 'Fikcyjna notatka kroku', body: 'B1.', category: 'observation', careContext: b0.careContext });
+    krok(); await s.B.vault.savePatientNote({ patientId: s.patientId, id: s.nid, title: 'Fikcyjna notatka kroku', body: 'B2.', category: 'observation', careContext: b0.careContext });
+    const a0 = await s.A.vault.getPatientNote(s.nid);
+    krok(5000); await s.A.vault.savePatientNote({ id: s.nid, patientId: s.patientId, baseRev: a0.rev, careContext: null });
+    krok();
+    const kopiaA = await s.A.vault.exportVaultBackup();
+    const podglad = await s.B.vault.previewVaultBackupMerge(kopiaA, s.A.haslo);
+    const wynik = await s.B.vault.mergeVaultBackup(kopiaA, s.A.haslo);
+    const k = ['updatedPatientNoteCount', 'addedPatientNoteCount'];
+    expect(k.map((x) => podglad[x]), 'podgląd').toEqual(k.map((x) => wynik[x]));
+    expect((await s.B.vault.getPatientNote(s.nid)).body, 'plan na B: dawna reguła').toBe('B2.');
+  });
+  it('A (odłączona) dwa razy poprawia treść, B (w planie) później klika „wykonane”: treść A wygrywa, plan po stronie B — bez złączenia oznaczenia, wszędzie ta sama wersja', async () => {
+    const s = await swiatPlanu();
+    const a0 = await s.A.vault.getPatientNote(s.nid);
+    krok(); await s.A.vault.savePatientNote({ id: s.nid, patientId: s.patientId, baseRev: a0.rev, careContext: null });
+    for (const t of ['A1.', 'A2.']) { krok(); await s.A.vault.savePatientNote({ patientId: s.patientId, id: s.nid, title: 'Fikcyjna notatka kroku', body: t, category: 'observation' }); }
+    krok(5000); await s.B.vault.completePatientNote(s.nid);
+    krok(); await wymiana(s); await wymiana(s);
+    const w = async (U) => { const n = await U.vault.getPatientNote(s.nid); return [n.body, !!n.completedAtISO, n.rev, n.updatedAtISO]; };
+    const [a, b] = [await w(s.A), await w(s.B)];
+    expect(a, 'ta sama wersja na obu').toEqual(b);
+    expect(a.slice(0, 2), 'plan po stronie B: dawna reguła oznaczenia (wyższy rev bez „wykonane”)').toEqual(['A2.', false]);
+  });
+  it('„Scal kopię konta” na B (w planie, trzy poprawki) z kopii A (odłączona, potem „wykonane”): podgląd = wynik', async () => {
+    const s = await swiatPlanu();
+    const a0 = await s.A.vault.getPatientNote(s.nid), b0 = await s.B.vault.getPatientNote(s.nid);
+    krok(); await s.A.vault.savePatientNote({ id: s.nid, patientId: s.patientId, baseRev: a0.rev, careContext: null });
+    for (const t of ['B1.', 'B2.', 'B3.']) { krok(); await s.B.vault.savePatientNote({ patientId: s.patientId, id: s.nid, title: 'Fikcyjna notatka kroku', body: t, category: 'observation', careContext: b0.careContext }); }
+    krok(5000); await s.A.vault.completePatientNote(s.nid);
+    krok();
+    const kopiaA = await s.A.vault.exportVaultBackup();
+    const podglad = await s.B.vault.previewVaultBackupMerge(kopiaA, s.A.haslo);
+    const wynik = await s.B.vault.mergeVaultBackup(kopiaA, s.A.haslo);
+    const k = ['updatedPatientNoteCount', 'addedPatientNoteCount'];
+    expect(k.map((x) => podglad[x]), 'podgląd').toEqual(k.map((x) => wynik[x]));
+  });
+  it('notatka kroku planu (kontekst tylko w treści): „wykonane” i cofnięcie nie zapisują pól chwili treści ani oznaczenia (plany bez pól)', async () => {
+    const s = await swiatPlanu();
+    krok(); await s.A.vault.completePatientNote(s.nid);
+    let r = await zapisana(s.A, s.nid);
+    expect([r.contentAtISO, r.stateAtISO], 'po „wykonane”').toEqual([undefined, undefined]);
+    krok(); await s.A.vault.uncompletePatientNote(s.nid);
+    r = await zapisana(s.A, s.nid);
+    expect([r.contentAtISO, r.stateAtISO], 'po cofnięciu').toEqual([undefined, undefined]);
+  });
+});
+
+describe('E3-PR0b2b — zapis przy wygranej tutejszej treści: świeży rekord, chwila utworzenia, remis oznaczenia, kontekst przypomnienia', () => {
+  it('zapis w oknie (inna karta przeglądarki) między listą notatek a blokadą: zapis oznaczenia z ładunku idzie na świeży rekord, treść z okna zostaje', async () => {
+    const s = await swiat();
+    await oznacz(s, s.A, 'wykonane');
+    await zmien(s, s.B, 'B2.'); await zmien(s, s.B, 'B2b.');
+    const stary = await zapisana(s.B, s.id);
+    await zmien(s, s.B, 'B3 (zapis w oknie).');
+    const nowy = await zapisana(s.B, s.id);
+    await s.B.adapter.putPatientNoteForUser(s.B.uid, stary);
+    const odczyt = s.B.adapter.getPatientNoteForUser.bind(s.B.adapter);
+    let uzbrojone = true;
+    s.B.adapter.getPatientNoteForUser = async (u, id) => { if (uzbrojone && id === s.id) { uzbrojone = false; await s.B.adapter.putPatientNoteForUser(s.B.uid, nowy); } return odczyt(u, id); };
+    await wyslij(s.A, s.B);
+    const b = await stan(s.B, s.id);
+    expect([b.body, b.wykonane], 'treść z okna i „wykonane” z A').toEqual(['B3 (zapis w oknie).', true]);
+  });
+  it('para wpuszczona pod blokadę przez dawną regułę, zostaje tutejsza treść: chwila utworzenia z ładunku (wcześniejsza) przyjęta', async () => {
+    const s = await swiat();
+    await zmien(s, s.B, 'B1.'); await zmien(s, s.B, 'B2.');
+    await zmien(s, s.A, 'A1 (później).');
+    const wczesniej = iso(START - 3600e3);
+    await wyslij(s.B, s.A, przerobNotatke(s.id, (n) => ({ ...n, createdAtISO: wczesniej })));
+    const a = await zapisana(s.A, s.id);
+    expect([(await stan(s.A, s.id)).body, a.createdAtISO]).toEqual(['A1 (później).', wczesniej]);
+  });
+  it('„wykonane” na A i „nie zgłosił się” na B w tej samej milisekundzie: po wymianie na obu to samo oznaczenie', async () => {
+    const s = await swiat();
+    await oznacz(s, s.A, 'wykonane');
+    await oznacz(s, s.B, 'nie zgłosił się', 0);
+    krok(); await wymiana(s); await wymiana(s);
+    const [a, b] = [await stan(s.A, s.id), await stan(s.B, s.id)];
+    expect([a.wykonane, a.nieZglosil], 'A').toEqual([b.wykonane, b.nieZglosil]);
+    expect([a.wykonane, a.nieZglosil], 'stały porządek: „wykonane”').toEqual([true, false]);
+  });
+  it('wykonanie przypomnienia na A pięć sekund po poprawce treści na B: kontekst przypomnienia z A zostaje na obu', async () => {
+    const s = await swiat(['A', 'B'], { dueDateISO: '2026-12-01', category: 'followup' });
+    await zmien(s, s.B, 'B: poprawka treści.', MIN, { category: 'followup', dueDateISO: '2026-12-01' });
+    krok(5000);
+    const n = await s.A.vault.getPatientNote(s.id);
+    const w = await s.A.vault.saveReminderOutcome({ id: s.id, patientId: s.patientId, baseRev: n.rev, baseUpdatedAtISO: n.updatedAtISO, operationId: 'fikcyjna-op-tutejsza-1', action: 'complete', dateISO: '2026-11-16', text: '' });
+    expect(w.saved).toBe(true);
+    const ctxA = (await s.A.vault.getPatientNote(s.id)).reminderContext;
+    expect(ctxA, 'kontekst po wykonaniu').toBeTruthy();
+    krok(); await wymiana(s); await wymiana(s);
+    const [a, b] = [await s.A.vault.getPatientNote(s.id), await s.B.vault.getPatientNote(s.id)];
+    expect([a.reminderContext && a.reminderContext.operationId, b.reminderContext && b.reminderContext.operationId]).toEqual(['fikcyjna-op-tutejsza-1', 'fikcyjna-op-tutejsza-1']);
+  });
+});
+
+describe('E3-PR0b2b — zapis samego oznaczenia przy wygranej tutejszej treści', () => {
+  it('para wpuszczona pod blokadę przez dawną regułę (A: dwie poprawki i „wykonane”, B: jedna poprawka pomiędzy): na B treść B, „wykonane” z A, licznik i zdarzenie „merge”', async () => {
+    const s = await swiat();
+    await zmien(s, s.A, 'A1.'); await zmien(s, s.A, 'A2.');
+    await zmien(s, s.B, 'B1 (później).');
+    await oznacz(s, s.A, 'wykonane');
+    const zmiany = [];
+    s.B.vault.onPatientNoteChanged((e) => zmiany.push(e && { id: e.id, action: e.action }));
+    const wynik = await wyslij(s.A, s.B);
+    const b = await stan(s.B, s.id);
+    expect([b.body, b.wykonane]).toEqual(['B1 (później).', true]);
+    expect(wynik.updatedPatientNoteCount, 'licznik').toBe(1);
+    expect(zmiany.filter((e) => e && e.id === s.id).map((e) => e.action), 'zdarzenie scalenia').toContain('merge');
+  });
+  it('cofnięcie z A przekazane dalej przez zapis samego oznaczenia na B: C (z „wykonane”) dostaje od B cofnięcie', async () => {
+    const s = await swiat(['A', 'B', 'C']);
+    await oznacz(s, s.A, 'wykonane');
+    await wyslij(s.A, s.B); await wyslij(s.A, s.C);
+    await oznacz(s, s.A, 'cofnij');
+    await zmien(s, s.B, 'B: późniejsza treść.');
+    await wyslij(s.A, s.B);
+    expect((await stan(s.B, s.id)).wykonane, 'B: cofnięcie z A').toBe(false);
+    await wyslij(s.B, s.C);
+    const c = await stan(s.C, s.id);
+    expect([c.body, c.wykonane], 'C: treść B i cofnięcie (późniejsze niż „wykonane” na C)').toEqual(['B: późniejsza treść.', false]);
+  });
+  it('zapis samego oznaczenia zachowuje tutejszą chwilę treści: późniejsza treść C (sprzed „wykonane” na A) wygrywa na B', async () => {
+    const s = await swiat(['A', 'B', 'C']);
+    await zmien(s, s.B, 'B: treść.');
+    await zmien(s, s.C, 'C: późniejsza treść.');
+    await oznacz(s, s.A, 'wykonane');
+    await wyslij(s.A, s.B);
+    expect((await stan(s.B, s.id)).wykonane).toBe(true);
+    await wyslij(s.C, s.B);
+    const b = await stan(s.B, s.id);
+    expect([b.body, b.wykonane]).toEqual(['C: późniejsza treść.', true]);
+  });
+  it('„nie zgłosił się” na B, A później zmienia treść; najpierw B → A: na A treść A i „nie zgłosił się” (zapis samego oznaczenia)', async () => {
+    const s = await swiat();
+    await oznacz(s, s.B, 'nie zgłosił się');
+    await zmien(s, s.A, 'A: nowy termin do ustalenia.');
+    await wyslij(s.B, s.A);
+    const a = await stan(s.A, s.id);
+    expect([a.body, a.nieZglosil, a.wykonane]).toEqual(['A: nowy termin do ustalenia.', true, false]);
+  });
+});
+
+describe('E3-PR0b2b — import karty zachowuje chwilę oznaczenia (cofnięcie „wykonane”)', () => {
+  it('A: „wykonane”, B to dostaje, A cofa; karta A zaimportowana na nowym urządzeniu I, I → B: na B sprawa otwarta (cofnięcie późniejsze niż „wykonane”)', async () => {
+    const s = await swiat(['A', 'B']);
+    await oznacz(s, s.A, 'wykonane');
+    await wyslij(s.A, s.B);
+    expect((await stan(s.B, s.id)).wykonane).toBe(true);
+    await oznacz(s, s.A, 'cofnij');
+    const plik = await s.A.vault.exportPatientEnvelope(s.patientId);
+    const I = await sejf('I');
+    krok(); await I.vault.importPatientFromEnvelope(plik, s.A.haslo);
+    expect((await stan(I, s.id)).wykonane, 'I: po imporcie otwarta').toBe(false);
+    await wyslij(I, s.B);
+    expect((await stan(s.B, s.id)).wykonane, 'B: cofnięcie z A (przez import) późniejsze niż „wykonane”').toBe(false);
+  });
+});
+
+describe('E3-PR0b2b — nieważne pole chwili treści w zapisanym rekordzie (kotwica innej chwili zapisu)', () => {
+  it('rekord z nieważnym polem (kotwica innej chwili zapisu), potem „wykonane”: późniejsza treść B nie przegrywa z wcześniejszą treścią A', async () => {
+    const s = await swiat();
+    await zmien(s, s.A, 'A: wcześniejsza treść.');
+    await zmien(s, s.B, 'B: późniejsza treść.');
+    const b = await zapisana(s.B, s.id);
+    // pole przeniesione przez kopię rekordu z nową chwilą zapisu (np. starsza aplikacja) — nieważne, bo kotwica nie pasuje
+    await s.B.adapter.putPatientNoteForUser(s.B.uid, { ...b, contentAtISO: iso(START), contentForISO: iso(START) });
+    await oznacz(s, s.B, 'wykonane');
+    krok();
+    await wymiana(s);
+    const st = await stany(s);
+    expect(Object.values(st).map((x) => [x.body, x.wykonane])).toEqual([['B: późniejsza treść.', true], ['B: późniejsza treść.', true]]);
+  });
+  it('odczyt notatki (Ft) nie oddaje nieważnego pola chwili treści (kotwica innej chwili zapisu)', async () => {
+    const s = await swiat();
+    await zmien(s, s.B, 'B: treść.');
+    const b = await zapisana(s.B, s.id);
+    await s.B.adapter.putPatientNoteForUser(s.B.uid, { ...b, contentAtISO: iso(START), contentForISO: iso(START) });
+    const n = await s.B.vault.getPatientNote(s.id);
+    expect([n.contentAtISO, n.contentForISO]).toEqual([undefined, undefined]);
+    const l = await s.B.vault.exportSyncPayload();
+    const w = l.patientNotes.find((x) => x.id === s.id);
+    expect([w.contentAtISO, w.contentForISO], 'ładunek synchronizacji bez nieważnego pola').toEqual([undefined, undefined]);
+  });
+});
+
+describe('E3-PR0b2b — pole chwili oznaczenia w ładunku: tylko z kotwicą i nie później niż chwila zapisu', () => {
+  async function wykonaneNaBTrescNaA() {
+    const s = await swiat();
+    await oznacz(s, s.B, 'wykonane');
+    await zmien(s, s.A, 'A: późniejsza treść.');
+    s.uA = (await zapisana(s.A, s.id)).updatedAtISO;
+    s.W = (await zapisana(s.B, s.id)).completedAtISO;
+    return s;
+  }
+  it.each([
+    ['bez kotwicy', (s) => ({ stateAtISO: iso(Date.parse(s.uA) - 1000) })],
+    ['kotwica inna niż chwila zapisu', (s) => ({ stateAtISO: iso(Date.parse(s.uA) - 1000), stateForISO: s.W })],
+    ['późniejsze niż chwila zapisu tej wersji', (s) => ({ stateAtISO: iso(Date.parse(s.uA) + MIN), stateForISO: s.uA })],
+  ])('pole chwili oznaczenia w ładunku: %s — ignorowane, „wykonane” z B zostaje', async (_o, pola) => {
+    const s = await wykonaneNaBTrescNaA();
+    await wyslij(s.A, s.B, przerobNotatke(s.id, (n) => ({ ...n, ...pola(s) })));
+    const b = await stan(s.B, s.id);
+    expect({ body: b.body, wykonane: b.wykonane }).toEqual({ body: 'A: późniejsza treść.', wykonane: true });
+  });
+});
+
+describe('E3-PR0b2b — złączenie, gdy jedna wersja ma chwilę zapisu 9999-12-31T23:59:59.999Z', () => {
+  it('treść z ładunku z chwilą 9999-12-31T23:59:59.999Z, „wykonane” tutejsze: rekord złączony w postaci kanonicznej (bez roku 10000)', async () => {
+    const s = await swiat();
+    await oznacz(s, s.B, 'wykonane');
+    await wyslij(s.A, s.B, przerobNotatke(s.id, (n) => ({ ...n, updatedAtISO: '9999-12-31T23:59:59.999Z' })));
+    const r = await zapisana(s.B, s.id);
+    expect(r.updatedAtISO, 'postać kanoniczna').toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
+    expect((await stan(s.B, s.id)).wykonane).toBe(true);
   });
 });

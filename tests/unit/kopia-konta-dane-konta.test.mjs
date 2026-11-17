@@ -677,7 +677,7 @@ describe('P-KOPIA-DANE-KONTA — uwagi recenzji: listy oczekujących z magazynu,
     expect((await r.C.v.listPatientNotesForPatient(r.ids.p1)).map((n) => n.body), 'notatka: zostaje zmiana późniejsza (jak Le)').toEqual(['C1 późniejsza edycja tutaj (fikcja)']);
     expect((await r.C.v.listPatientLists()).map((l) => l.name), 'lista: reguła rev bez zmian (jak Le)').toEqual(['Lista rev A2']);
     expect(PODTYTUL).not.toContain('nowsza poprawka z kopii zastąpi starszą');
-    expect(PODTYTUL).toContain('Notatki scali jak synchronizacja: zostanie wersja zmieniona później — tutejsza albo z kopii');
+    expect(PODTYTUL).toContain('Notatki scali jak synchronizacja: zostanie treść zmieniona później — tutejsza albo z kopii');
     expect(PODTYTUL).toContain('Plany opieki i listy pacjentów z kopii mogą zastąpić tutejsze, nawet zmienione tu później.');
     parzystosc(r);
   });
@@ -1341,13 +1341,15 @@ describe('P-KOPIA-DANE-KONTA — odmiana i źródło', () => {
     // starszą” (uwagi recenzji: nagłówek karty, reguła rev) i wymienia cały nagłówek, także kontakt osoby spoza bazy
     // (runda 2) i przynależność do bazy (recenzja końcowa, T39); zdanie o pominiętych pacjentach bez zmian.
     // E3-PR0b2b (P-NOTATKA-POZNIEJSZA, tekst do akceptacji właściciela): zdanie o notatkach mówi o nowej regule
-    // (zostaje zmiana późniejsza, oznaczenie „wykonane” według chwili jego zmiany); plany opieki i listy pacjentów
+    // (zostaje treść zmieniona później, oznaczenie „wykonane” albo „nie zgłosił się” według chwili jego zmiany — mogą
+    // pochodzić z różnych stron); plany opieki i listy pacjentów
     // zostają przy dawnej regule, więc kopia może je zastąpić.
     expect(uo).not.toContain('bez usuwania ani nadpisywania');
     expect(PODTYTUL).toBe('Podaj hasło do tej kopii. Aplikacja doda zapisy i pacjentów, których tu brakuje; dane osoby na liście'
       + ' (imię i nazwisko, płeć, data urodzenia i wiek, rok urodzenia i kontakt) i to, czy osoba jest w bazie, karta weźmie'
-      + ' ze swojego najnowszego zapisu — tutejszego albo z kopii. Notatki scali jak synchronizacja: zostanie wersja'
-      + ' zmieniona później — tutejsza albo z kopii; oznaczenie „wykonane” też według tego, gdzie zmieniono je później.'
+      + ' ze swojego najnowszego zapisu — tutejszego albo z kopii. Notatki scali jak synchronizacja: zostanie treść'
+      + ' zmieniona później — tutejsza albo z kopii — a oznaczenie „wykonane” lub „nie zgłosił się” z tej strony, po której'
+      + ' zmieniono je później.'
       + ' Plany opieki i listy pacjentów z kopii mogą zastąpić tutejsze, nawet zmienione tu później. Późniejsze usunięcie'
       + ' w kopii usunie wpis także tutaj — podgląd wymieni każdą taką zmianę. Nie przywraca pacjentów scalonych z inną'
       + ' kartą ani usuniętych po ich ostatnim zapisie w kopii.');
@@ -1396,6 +1398,36 @@ describe('E3-PR0b2b — „Scal kopię konta”: notatki według zmiany późnie
     expect([r.podglad.updatedPatientNoteCount, r.podglad.replacedNewerPatientNoteCount]).toEqual([1, 0]);
     const [po] = await r.C.v.listPatientNotesForPatient(r.ids.p1);
     expect([po.body, !!po.completedAtISO], 'treść tutejsza (późniejsza zmiana treści), „wykonane” z kopii').toEqual(['C: dawka 75 od jutra (tutaj)', true]);
+    parzystosc(r);
+  });
+
+  it('tutejszy rekord po dotknięciu technicznym (ratunek albo import: późniejsza chwila zapisu, wcześniejsza treść), w kopii poprawka pomiędzy: wygrywa kopia, podgląd nie mówi o „poprawionej tu później”', async () => {
+    const r = await przypadek({
+      przed: async (A, { p1 }) => { await notatka(A.v, p1, 'N-dotknięcie (fikcja)'); },
+      po: async (A, { p1 }) => { await chwila(5); const [n] = await A.v.listPatientNotesForPatient(p1); await A.v.savePatientNote({ ...n, body: 'A1 w kopii (później niż treść tutaj)' }); },
+      wC: async (C, { p1 }) => {
+        await chwila(5);
+        const [n] = await C.v.listPatientNotesForPatient(p1), rek = await C.baza.getPatientNoteForUser(C.uid, n.id), u = new Date().toISOString();
+        await C.baza.putPatientNoteForUser(C.uid, { ...rek, updatedAtISO: u, contentAtISO: rek.updatedAtISO, contentForISO: u });
+      },
+    });
+    expect([r.podglad.updatedPatientNoteCount, r.podglad.replacedNewerPatientNoteCount], 'tutaj nikt nie poprawiał treści później').toEqual([1, 0]);
+    expect(r.wynik.updatedPatientNoteCount, 'wynik scalania').toBe(1);
+    expect((await r.C.v.listPatientNotesForPatient(r.ids.p1)).map((n) => n.body)).toEqual(['A1 w kopii (później niż treść tutaj)']);
+  });
+
+  it('wpis Terminarza bez pacjenta: samo późniejsze „wykonane” z kopii przy treści poprawionej tutaj — zostaje treść tutejsza i „wykonane”, część Terminarza w podglądzie zgodna z wynikiem', async () => {
+    const r = await przypadek({
+      przed: async (A) => { await A.v.savePatientNote({ patientId: AKTYWNOSC, title: 'Fikcyjna konsultacja', body: 'Terminarz.', category: 'observation', dueDateISO: '2026-12-01', externalName: 'Fikcyjny Gość' }); },
+      po: async (A, _ids, C) => {
+        const wpis = async (v) => (await v.listAllPatientNotes()).find((n) => n.patientId === AKTYWNOSC);
+        await chwila(5); await C.v.savePatientNote({ ...(await wpis(C.v)), body: 'C: poprawka tutaj' });
+        await chwila(5); await A.v.completePatientNote((await wpis(A.v)).id);
+      },
+    });
+    expect(r.podglad.updatedActivityNoteCount).toBe(1);
+    const po = (await r.C.v.listAllPatientNotes()).find((n) => n.patientId === AKTYWNOSC);
+    expect([po.body, !!po.completedAtISO]).toEqual(['C: poprawka tutaj', true]);
     parzystosc(r);
   });
 });

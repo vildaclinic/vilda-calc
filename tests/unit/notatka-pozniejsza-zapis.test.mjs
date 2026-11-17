@@ -152,6 +152,16 @@ describe('E3-PR0b2b — ta sama widoczna wersja nie jest konfliktem (edytor nota
     expect((await s.B.vault.getPatientNote(s.id)).body).toBe('Baza.');
   });
 
+  it('[kontrola] baseNote różny w wieku wizyty (notatka z wiekiem wizyty): konflikt, nic nie zapisano', async () => {
+    const s = await dwaUrzadzenia({ linkedAgeMonths: 110 });
+    const naEkranie = await s.B.vault.getPatientNote(s.id);
+    expect(naEkranie.linkedAgeMonths).toBe(110);
+    await dotkniecie(s);
+    const w = await s.B.vault.savePatientNote(edytor(s, naEkranie, 'B: zapis na innej wersji.', { baseNote: { ...naEkranie, linkedAgeMonths: 98 } }));
+    expect(w.conflict).toBe(true);
+    expect((await s.B.vault.getPatientNote(s.id)).body).toBe('Baza.');
+  });
+
   it('[kontrola] baseNote niespójny (inne id albo inna chwila zapisu niż baseUpdatedAtISO): konflikt', async () => {
     const s = await dwaUrzadzenia();
     const naEkranie = await s.B.vault.getPatientNote(s.id);
@@ -364,8 +374,9 @@ describe('E3-PR0b2b — „Scal pacjentów” i „spoza bazy” przenoszą nota
     const nagrobek = (await s.B.adapter.listPatientNoteTombstonesForUser(s.B.uid)).find((t) => t.id === s.id);
     krok();
     oknoListy(s.A, async () => { await s.A.adapter.removePatientNoteForUser(s.A.uid, s.id); await s.A.adapter.putPatientNoteTombstoneForUser(s.A.uid, nagrobek); });
-    await s.A.vault.mergePatients(s.P, s.Q);
+    const wynik = await s.A.vault.mergePatients(s.P, s.Q);
     expect(await zapisana(s.A, s.id), 'usunięcie z okna nie jest cofane').toBeFalsy();
+    expect(wynik.notesMoved, 'pominięta notatka nie jest liczona jako przeniesiona').toBe(0);
     expect((await s.A.adapter.listPatientNoteTombstonesForUser(s.A.uid)).map((t) => t.id)).toContain(s.id);
   });
 
@@ -377,6 +388,20 @@ describe('E3-PR0b2b — „Scal pacjentów” i „spoza bazy” przenoszą nota
     krok(); await s.A.vault.mergePatients(s.P, s.Q);
     const po = await zapisana(s.A, s.id);
     expect([s.karty[po.patientId], po.bodyCipher]).toEqual(['Q', uszkodzony]);
+  });
+
+  it('notatka z nieczytelnym szyfrogramem i polami klinicznymi w metadanych (stary zapis): lek, data kliniczna, zabieg i priorytet zostają po przeniesieniu', async () => {
+    const s = await poczatek();
+    const r = await zapisana(s.A, s.id);
+    const uszkodzony = { ...r.bodyCipher, data: r.bodyCipher.data.split('').reverse().join('') };
+    await s.A.adapter.putPatientNoteForUser(s.A.uid, { ...r, bodyCipher: uszkodzony,
+      medication: { name: 'Fikcyjny lek', dose: '50 mg', action: 'start' }, clinicalDateISO: '2026-11-10', procedureType: 'Fikcyjny zabieg', waitlistPriority: 'urgent' });
+    const pola = (n) => ({ medication: n.medication, clinicalDateISO: n.clinicalDateISO, procedureType: n.procedureType, waitlistPriority: n.waitlistPriority });
+    const przed = pola(await s.A.vault.getPatientNote(s.id));
+    expect(przed.medication, 'pola widoczne przed scaleniem').toBeTruthy();
+    krok(); await s.A.vault.mergePatients(s.P, s.Q);
+    const po = await s.A.vault.getPatientNote(s.id);
+    expect([s.karty[po.patientId], pola(po)]).toEqual(['Q', przed]);
   });
 
   it('„spoza bazy” (osoba z Terminarza dołączona do karty): notatka zmieniona w oknie zostaje z treścią z okna', async () => {
@@ -415,6 +440,8 @@ describe('E3-PR0b2b — strażniki źródła: przeniesienie, Terminarz „Edytuj
     const obiekt = t.slice(i, t.indexOf('})', i) + 2);
     expect(obiekt).toContain('externalName:_');
     expect(obiekt, 'treść, kategoria i termin z listy sprzed okna nie wracają do zapisu').not.toMatch(/body:|category:|dueDateISO:/);
+    expect(obiekt, 'tytuł z listy tylko dla wpisu bez tytułu (tytuł zmieniony w oknie nie jest cofany)')
+      .toContain('Object.assign({id:t.id,patientId:i,externalName:_},t.title&&t.title.trim()?{}:{title:_})');
   });
 
   // Każdy wołający, który podaje baseUpdatedAtISO, podaje też wersję pokazaną lekarzowi (baseNote).
@@ -472,6 +499,27 @@ describe('E3-PR0b2b — Terminarz „Edytuj osobę”: zapis samej nazwy osoby n
     krok(); await A.vault.savePatientNote({ id, patientId: PID, externalName: 'Fikcyjny Gość Nowy' });
     const po = await A.vault.getPatientNote(id);
     expect([po.title, po.body, String(po.dueDateISO).slice(0, 10), po.externalName]).toEqual(['Fikcyjna konsultacja', 'Treść zmieniona w oknie.', '2026-11-21', 'Fikcyjny Gość Nowy']);
+  });
+
+  it('wpis bez tytułu usunięty w innej karcie przed zapisem nazwy osoby: odmowa z komunikatem, wpis nie wraca bez treści i terminu', async () => {
+    const A = await sejf('A');
+    const PID = '__vilda_activity__';
+    krok(); const { id } = await A.vault.savePatientNote({ patientId: PID, title: '', body: 'Fikcyjny opis wizyty.', category: 'followup', dueDateISO: '2026-11-20', externalName: 'Fikcyjny Gość' });
+    krok(); await A.vault.removePatientNote(id);
+    krok();
+    // Ładunek Terminarza dla wpisu, który nie miał tytułu: id, karta, nazwa osoby i tytuł = nazwa.
+    await expect(A.vault.savePatientNote({ id, patientId: PID, externalName: 'Fikcyjny Gość Nowy', title: 'Fikcyjny Gość Nowy' }))
+      .rejects.toThrow('Ta notatka już nie istnieje');
+    expect(await A.vault.getPatientNote(id), 'usunięty wpis nie wraca').toBeFalsy();
+  });
+
+  it('[kontrola] nowy wpis nieobecności bez treści z identyfikatorem nadanym przez Terminarz (seria): zapisany', async () => {
+    const A = await sejf('A');
+    const PID = '__vilda_activity__';
+    krok();
+    const r = await A.vault.savePatientNote({ id: 'fikcyjny-wpis-nieobecnosci-1', patientId: PID, externalName: '', title: 'Urlop (fikcja)', category: 'absence', dueDateISO: '2026-12-01', dueTime: null, seriesId: 'fikcyjna-seria-1' });
+    expect(r.isNew).toBe(true);
+    expect((await A.vault.getPatientNote('fikcyjny-wpis-nieobecnosci-1')).title).toBe('Urlop (fikcja)');
   });
 });
 

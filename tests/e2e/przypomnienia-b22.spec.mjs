@@ -153,6 +153,26 @@ test('wpis poprawiony przed otwarciem Przypomnień zapisuje wykonanie bez fałsz
   expect((await page.evaluate(id => window.VildaVault.getPatientNote(id), notes[0])).completedAtISO).toBeTruthy();
 });
 
+// E3-PR0b2b (P-NOTATKA-POZNIEJSZA): dotknięcie techniczne pod otwartym formularzem (ratunek D-21 albo import karty na
+// innym urządzeniu: ta sama treść, nowa chwila zapisu, chwila treści zachowana) nie jest zmianą sprawy — zapis bez
+// fałszywego „zmieniła się”, wpisany opis trafia do treści.
+test('dotknięcie techniczne w czasie otwartego formularza wykonania: zapis bez fałszywego konfliktu', async ({ page }) => {
+  const { notes } = await setup(page); await open(page); await select(page, notes[0]);
+  await page.locator(DIALOG).getByRole('button', { name: 'Oznacz jako wykonane', exact: true }).click(); await outcomeField(page, 'Co zostało zrobione? (opcjonalnie)', 'Fikcyjny opis: TSH 2,1.');
+  const po = await page.evaluate(async id => {
+    const vault = window.VildaVault, payload = JSON.parse(JSON.stringify(await vault.exportSyncPayload())), note = payload.patientNotes.find(item => item.id === id);
+    const u = new Date(Math.max(Date.parse(note.updatedAtISO) + 1000, Date.now())).toISOString();
+    note.contentAtISO = note.updatedAtISO; note.contentForISO = u; note.updatedAtISO = u;
+    await vault.mergeSyncPayload(payload);
+    const after = await vault.getPatientNote(id); return { updatedAtISO: after.updatedAtISO, body: after.body };
+  }, notes[0]);
+  expect(po.body).toBe('Pierwotna fikcyjna treść.');
+  await page.locator(OUTCOME).getByRole('button', { name: 'Zapisz wykonanie', exact: true }).click();
+  await expect(page.locator(`${DIALOG} .vb22-notice`)).toContainText('Zapisano w Karcie pacjenta');
+  const stored = await page.evaluate(id => window.VildaVault.getPatientNote(id), notes[0]);
+  expect(stored.completedAtISO).toBeTruthy(); expect(stored.body).toContain('Fikcyjny opis: TSH 2,1.');
+});
+
 test('the bell opens an empty workspace so the first reminder can be created', async ({ page }) => {
   await createFictionalVault(page); await open(page); await expect(page.locator(DIALOG)).toContainText('Brak przypomnień na dziś');
   await page.locator(DIALOG).getByRole('button', { name: 'Dodaj przypomnienie', exact: true }).click(); await expect(page.locator(DIALOG).getByLabel('Treść przypomnienia')).toBeVisible();

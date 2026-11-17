@@ -137,7 +137,7 @@ test.describe('P-KOPIA-DANE-KONTA — „Scal kopię konta” mówi o notatkach 
       + ' data urodzenia i wiek, rok urodzenia i kontakt) i to, czy osoba jest w bazie, karta weźmie ze swojego najnowszego zapisu'
       + ' — tutejszego albo z kopii.'
       // E3-PR0b2b (P-NOTATKA-POZNIEJSZA, tekst do akceptacji właściciela): notatki według zmiany późniejszej.
-      + ' Notatki scali jak synchronizacja: zostanie wersja zmieniona później — tutejsza albo z kopii')).toBeVisible();
+      + ' Notatki scali jak synchronizacja: zostanie treść zmieniona później — tutejsza albo z kopii')).toBeVisible();
     await expect(ekran.getByText('nowsza poprawka z kopii zastąpi starszą')).toHaveCount(0);
     await expect(ekran.getByText('Nie przywraca pacjentów scalonych z inną kartą ani usuniętych po ich ostatnim zapisie w kopii.')).toBeVisible();
     await expect(ekran.getByText('Brak nowych zapisów · 1 nowa notatka pacjenta · 1 nowy szablon w Notatkach · 1 nowa lista pacjentów'
