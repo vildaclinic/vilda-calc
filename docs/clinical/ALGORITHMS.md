@@ -32291,7 +32291,7 @@ gubił pięć liczników Le (listy pacjentów, usunięte notatki pacjentów i sz
   osoba jest w bazie: osoba dodana tu do bazy może wrócić do osób spoza bazy. Notatki i listy scali jak synchronizacja:
   wersja z kopii może zastąpić tutejszą, nawet poprawioną tu później, a późniejsze usunięcie w kopii usunie je także
   tutaj — podgląd wymieni każdą taką zmianę. Nie przywraca pacjentów scalonych z inną kartą ani usuniętych po ich
-  ostatnim zapisie w kopii.” („Każdą taką zmianę” dotyczy notatek i list; zmiany nagłówka podgląd nie wymienia.) *(2026-11-17, E3-PR0b2b, P-NOTATKA-POZNIEJSZA: zdanie o notatkach i listach zastąpione: „Notatki scali jak synchronizacja: zostanie treść zmieniona później — tutejsza albo z kopii — a oznaczenie „wykonane” lub „nie zgłosił się” z tej strony, po której zmieniono je później. Plany opieki i listy pacjentów z kopii mogą zastąpić tutejsze, nawet zmienione tu później. Późniejsze usunięcie w kopii usunie wpis także tutaj — podgląd wymieni każdą taką zmianę.” — do akceptacji właściciela.)*
+  ostatnim zapisie w kopii.” („Każdą taką zmianę” dotyczy notatek i list; zmiany nagłówka podgląd nie wymienia.) *(2026-11-17, E3-PR0b2b, P-NOTATKA-POZNIEJSZA: zdanie o notatkach i listach zastąpione: „Notatki scali jak synchronizacja: zostanie treść zmieniona później — tutejsza albo z kopii — a oznaczenie „wykonane” lub „nie zgłosił się” z tej strony, po której zmieniono je później. Plany opieki i listy pacjentów z kopii mogą zastąpić tutejsze, nawet zmienione tu później. Późniejsze usunięcie w kopii usunie wpis także tutaj — podgląd wymieni każdą taką zmianę.” — przyjęte przez właściciela 2026-11-17.)*
 - Przycisk: dotychczasowa część i najwyżej trzy krótkie — notatki (pacjentów i szablony), wpisy w Terminarzu (bez
   pacjenta), listy (pacjentów i oczekujących), np. „Scal teraz (1 nowych zapisów, 1 notatka, 1 lista)”, „Scal teraz
   (1 notatka, 2 wpisy w Terminarzu)”; same terminy albo usunięcia — „Scal teraz”.
@@ -41588,7 +41588,7 @@ w pamięci, dane fikcyjne).
 | „Scal kopię konta”: notatka poprawiona tu dwa razy, w kopii raz później | zostaje tutejsza, podgląd: 0 zmian | wygrywa kopia, podgląd i wynik: 1 zmieniona |
 | „Scal kopię konta”: treść poprawiona tutaj później, w kopii samo późniejsze „wykonane” | „wykonane”, ale tutejsza późniejsza zmiana treści ginie | treść tutejsza i „wykonane”, podgląd liczy zaktualizowaną |
 
-**Co widzi lekarz.** Nowych tekstów w aplikacji jest jeden: podtytuł „Scal kopię konta” (niżej, do akceptacji).
+**Co widzi lekarz.** Nowych tekstów w aplikacji jest jeden: podtytuł „Scal kopię konta” (niżej; przyjęty przez właściciela 2026-11-17).
 Po synchronizacji notatka pokazuje treść zmienioną później i oznaczenie zmienione później. Okno konfliktu
 w edytorze, przypomnieniach i Klirensie nie pojawia się po samym ratunku, imporcie karty albo podniesieniu numeru
 wersji, a pojawia się przy każdej widocznej zmianie z innego urządzenia (także samej karty, terminu albo oznaczenia).
@@ -41596,7 +41596,7 @@ Baner edytora — tylko przy widocznej zmianie. Dopiski podsumowania „Scal kop
 później”, którą zastąpi starsza z kopii, dla notatek i wpisów Terminarza poza planami opieki się nie pojawiają
 (tekst w kodzie zostaje dla planów i list).
 
-**Skutki do odbioru przez właściciela** (każdy przypięty testem):
+**Skutki do odbioru przez właściciela** (każdy przypięty testem; **odebrane 2026-11-17** przy PR, bez uwag):
 - **Wcześniejsza pełniejsza wersja przegrywa z późniejszą małą zmianą.** Laptop trzy razy zapisuje pełny opis wizyty
   ze zmianą dawki, telefon bez synchronizacji pięć sekund później poprawia literówkę w starej wersji — wszędzie stara
   wersja z poprawioną literówką; pełny opis ginie bez kopii (dotąd zostawał opis laptopa). Test
@@ -41622,8 +41622,8 @@ później”, którą zastąpi starsza z kopii, dla notatek i wpisów Terminarza
   „Przełóż” — na obu nowy termin i sprawa otwarta; wcześniejsze „wykonane” znika widocznie (wpis wraca na listę).
   Test „przełożenie otwartej sprawy liczy się jako zmiana oznaczenia na „otwarte””.
 
-**Do akceptacji właściciela przy PR** (rozstrzygnięcia spoza projektu i decyzji, wariant najbezpieczniejszy dla
-danych; alternatywy w opisie PR):
+**Do akceptacji właściciela przy PR** — **przyjęte 2026-11-17** bez uwag (rozstrzygnięcia spoza projektu i decyzji,
+wariant najbezpieczniejszy dla danych; alternatywy w opisie PR):
 1. „Ta sama widoczna wersja nie jest konfliktem” (wołający podaje wersję pokazaną, porównanie wszystkich pól odczytu
    z pełnej listy, tylko przy innej chwili zapisu, bez chwili utworzenia) — usuwa fałszywy konflikt po ratunku D-21
    i imporcie karty. Odrzucone: porównanie samych chwil treści i oznaczenia (przy dwóch zapisach w tej samej
@@ -41647,7 +41647,7 @@ danych; alternatywy w opisie PR):
 11. Chwila treści spoza postaci `toISOString` sprowadzana do postaci kanonicznej przy zapisie pola.
 12. Nowy podtytuł „Scal kopię konta” i nota wydania (niżej).
 
-**Teksty dla użytkownika** (do akceptacji właściciela przy PR).
+**Teksty dla użytkownika** (przyjęte przez właściciela 2026-11-17 przy PR).
 - Podtytuł „Scal kopię konta” (`vilda_auth_ui.js`, `uo`), zdanie o notatkach zamiast „Notatki i listy scali jak
   synchronizacja: wersja z kopii może zastąpić tutejszą, nawet poprawioną tu później, a późniejsze usunięcie w kopii
   usunie je także tutaj — podgląd wymieni każdą taką zmianę.”: „Notatki scali jak synchronizacja: zostanie treść

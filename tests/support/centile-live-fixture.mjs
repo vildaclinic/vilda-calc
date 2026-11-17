@@ -177,6 +177,14 @@ export async function createFictionalVault(page, { shell = false, waitForAccount
 }
 
 export async function loadPatient(frame, patientId, choice = 'new', { clear = false } = {}) {
+  // Like the app's own menu (vilda_chrome.js), open the card only after the auth UI has finished
+  // starting and the vault is open. Right after a page navigation, a card opened earlier is
+  // silently dropped or closed when the start-up completes, and „Wczytaj tego pacjenta” never shows.
+  await expect.poll(() => frame.evaluate(() => {
+    const ui = window.VildaAuthUI, vault = window.VildaVault;
+    const ready = !ui || typeof ui.isBootReady !== 'function' || ui.isBootReady();
+    return !!(ready && vault && typeof vault.isUnlocked === 'function' && vault.isUnlocked());
+  })).toBe(true);
   await frame.evaluate(({ patientId, clear }) => {
     if (clear) window.clearAllData();
     window.VildaAuthUI.showPatientCard(patientId, record => {
