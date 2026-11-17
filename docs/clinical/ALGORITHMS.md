@@ -41516,8 +41516,9 @@ w pamięci, dane fikcyjne).
   zdarzenie „merge” przez istniejące powiadomienie scalania (`qr`; bez nowego miejsca dziennika zdarzeń i bez
   kolejki — drugie urządzenie liczy to samo złączenie).
 - **Oznaczenie o tej samej wartości** (`Bnp_samaChwilaStanu`): gdy późniejsze oznaczenie drugiej wersji ma tę samą
-  wartość co oznaczenie zwycięzcy treści, rekord to zwycięzca treści z samą chwilą oznaczenia — bez nowej chwili
-  zapisu, licznika, zdarzenia i „zmienionej” w podglądzie. Bez tego kopia ucięta przez starszą aplikację dawała przy
+  wartość co oznaczenie zwycięzcy treści, a jego chwila nie jest późniejsza niż chwila zapisu zwycięzcy treści, rekord
+  to zwycięzca treści z samą chwilą oznaczenia (pole z kotwicą jego chwili zapisu) — bez nowej chwili zapisu,
+  licznika, zdarzenia i „zmienionej” w podglądzie. Bez tego kopia ucięta przez starszą aplikację dawała przy
   każdej pełnej wymianie nowe złączenie.
 - **Przełożenie otwartej sprawy** (inny termin, wynik bez oznaczenia) potwierdza oznaczenie „otwarte” z chwilą tego
   zapisu — w jednym miejscu `Ad`, więc tak samo dla przycisku „Przełóż”, przeniesienia wizyty w Terminarzu, zmiany
@@ -41574,9 +41575,9 @@ w pamięci, dane fikcyjne).
 | tablet „wykonane”, laptop bez połączenia później „Przełóż” na 2027-01-15 | tablet: nowy termin i „wykonane”, laptop: otwarta (rozjazd) | termin 2027-01-15, sprawa otwarta na obu (przypomnienie wraca) |
 | telefon przekłada, laptop później „wykonane” | inaczej (test czerwony na bazie) | nowy termin i „wykonane” na obu |
 | telefon wykonuje przypomnienie z kolejnym krokiem, laptop bez połączenia później zmienia treść, potem ponowne wykonanie na laptopie | „wykonane” z telefonu nie zostaje przy późniejszej treści laptopa (test czerwony na bazie) | późniejsza treść laptopa i „wykonane”; ponowne wykonanie — odmowa, jeden kolejny krok wszędzie |
-| B i C poprawiają notatkę przed „Usuń pacjenta” na A (C później) | po ratunku wersja z wyższym `rev` albo większym h | wszędzie poprawka C |
+| B i C poprawiają notatkę przed „Usuń pacjenta” na A (C później, h treści B większe) | po ratunku wszędzie poprawka B (większe h) | wszędzie poprawka C |
 | dwa ratunki z tym samym h i różną treścią | pełny remis, każde urządzenie swoją | wszędzie późniejsza poprawka |
-| „Scal pacjentów” P → Q na A, B bez połączenia poprawia notatkę pod P | B: notatka pod P (bez karty) po pierwszej wymianie | notatka pod Q na obu, z poprawką B, po pierwszej wymianie |
+| „Scal pacjentów” P → Q na A, B bez połączenia poprawia notatkę pod P | notatka pod Q na obu, ale bez poprawki B | notatka pod Q na obu, z poprawką B, po pierwszej wymianie |
 | notatka zmieniona w innej karcie przeglądarki między listą notatek a blokadą „Scal pacjentów” | treść sprzed okna pod kartą docelową | treść z okna pod kartą docelową |
 | notatka usunięta w tym oknie | wraca starą treścią, nagrobek zdjęty | pominięta, nagrobek zostaje |
 | notatka z nieczytelnym szyfrogramem przy „Scal pacjentów” | „(błąd odczytu)”, pusta treść, oryginał stracony | przeniesiona bez ponownego szyfrowania |
@@ -41585,7 +41586,7 @@ w pamięci, dane fikcyjne).
 | notatka kroku planu: B dwa razy poprawia, A później klika „wykonane” | wersja B bez „wykonane” | to samo (plan — dawna reguła) |
 | lista pacjentów zmieniona później z niższym `rev` | tutejsza | tutejsza (dawna reguła) |
 | „Scal kopię konta”: notatka poprawiona tu dwa razy, w kopii raz później | zostaje tutejsza, podgląd: 0 zmian | wygrywa kopia, podgląd i wynik: 1 zmieniona |
-| „Scal kopię konta”: treść poprawiona tutaj później, w kopii samo późniejsze „wykonane” | treść tutejsza bez „wykonane” | treść tutejsza i „wykonane”, podgląd liczy zaktualizowaną |
+| „Scal kopię konta”: treść poprawiona tutaj później, w kopii samo późniejsze „wykonane” | „wykonane”, ale tutejsza późniejsza zmiana treści ginie | treść tutejsza i „wykonane”, podgląd liczy zaktualizowaną |
 
 **Co widzi lekarz.** Nowych tekstów w aplikacji jest jeden: podtytuł „Scal kopię konta” (niżej, do akceptacji).
 Po synchronizacji notatka pokazuje treść zmienioną później i oznaczenie zmienione później. Okno konfliktu
@@ -41731,11 +41732,15 @@ MS4 ×2, W14a, W14b, W11, dwa strażniki źródła stanów nagrobków i podgląd
 `kopia-konta-dane-konta` 8 (T10b, T32, podtytuł, cztery przypadki podglądu = wyniku, dotknięcie techniczne tutaj),
 `sync-dziennik-wlasnosciowy` 4 (test wejściowy, dwa scenariusze cofnięcia na starszej aplikacji, literał scenariusza
 221), `notatki-karta-po-scaleniu` 1, `notatki-pacjenta-integralnosc` 1, skrót edytora `care-plan-auth-ui-boundary` 1,
-skrót bazy `visits-vault-boundary` 1. Zielone z natury: kontrole („[kontrola]”), `konflikt-edycji-notatki-chwila`
+skrót bazy `visits-vault-boundary` 1. Zielone z natury: kontrole („[kontrola]”) poza dwiema (przełożenie, potem
+„wykonane” — na bazie oznaczenie się rozjeżdża; kontrola D-4 A, której wartość zmienia się zgodnie z zamiarem), `konflikt-edycji-notatki-chwila`
 (30) i `licznik-odsylania` (23; nowy przypadek klasy „sam rev notatki” czerwienieje bez zmiany wspólnego modułu
 testów, sprawdzone osobno), przypadki floty ze starszą aplikacją bez wymiany w kółko i plany opieki przy dawnej regule.
 Dwa przypadki luk modułu planów są czerwone na bazie, bo luki powstają dopiero przy nowej regule (przypinają
-zachowanie po zmianie).
+zachowanie po zmianie). e2e na bazie (desktop Chromium; `edytor-notatki-rata3`, `przypomnienia-b22`,
+`kopia-konta-dane-konta`; 34 przypadki): 4 czerwone — dwa edytora z dotknięciem technicznym, wykonanie przypomnienia
+z dotknięciem technicznym i podtytuł „Scal kopię konta”; zielone z natury: inna karta pacjenta i „wykonane” z innego
+urządzenia (baner i okno wyboru — pilnują, że widoczna zmiana dalej daje konflikt).
 
 **Mutanty** (kopia, jedna zmiana tekstu, testy jednostkowe, test A ≡ B, dla interfejsu też e2e): 141, z nich 130
 czerwieni co najmniej jeden test CI. Rodziny: reguła treści (filtr wstępny i decyzja pod blokadą po dawnej regule,
@@ -41770,7 +41775,8 @@ bez sprawdzenia sesji po odczycie (sprawdzenie przed zapisem i tak przerywa), ko
 porównaniem treści (jedyny zapis kontekstu dopisuje też treść). Bez testu (4): podgląd „Scal kopię konta” — reguła
 karty i stany nagrobków dla tutejszego planu tylko w treści (wymaga martwej tutejszej karty albo „Usuń pacjenta” na
 notatce kroku planu), wynik bez odczytów bez gałęzi planów (tylko nagrobki), odzyskanie rozszerzenia planu
-porównujące pola chwil — do pliku planów opieki przy PR modułu.
+porównujące pola chwil — propozycje testów: `notatki-za-karta.test.mjs` (podgląd) i `care-plans-vault.test.mjs`
+(odzyskanie rozszerzenia), poza tym PR.
 
 **Długie przebiegi** (2026-11-17, kod tego PR i baza `9fc26c71`, kopie): profil podstawowy 40 ziaren — zielony
 (410 ocen wyroczni, 4 naruszenia z klasą R4a); pełny 20, „dłuższa praca bez połączenia” 40 i każdy w trybie ścisłym —
@@ -41841,7 +41847,7 @@ zmienił — przy następnej pracy w `vilda-source` weź nową bazę z `runtime/
   nazwa osoby (jak dotąd).
 - **Starsza aplikacja** — „Flota mieszana” wyżej.
 - **Nagrobek przy wersji z przyszłości**: równoległa poprawka wygrywa z równoległym usunięciem (skutek do odbioru);
-  wskrzeszenie wobec nagrobku, którego wskrzeszające urządzenie nie zna, przegrywa jak dotąd.
+  wskrzeszenie wobec nagrobka, którego wskrzeszające urządzenie nie zna, przegrywa jak dotąd.
 
 **Wymagania dla następnych PR.** E3-PR0c: zapis samego `rev` i zapis samego oznaczenia nie są echem do odesłania
 (klasa „sam rev notatki”); `pnote` w ładunku — pomiar odsyłania na regule po E3-PR0b2b. Moduł planów z etapami
