@@ -537,6 +537,41 @@
       text-align: left;
       cursor: pointer;
     }
+    /* P-PRZYPIETY-WYNIK (LAB-HISTORIA 6.38): przycisk przypięcia, gdy wynik formularza jest już w karcie, i ostrzeżenie
+       okna przypięcia. Bazowy wygląd przycisku daje <style id="labPinStyle"> z lab_pin_result.js, stąd wyższa specyficzność. */
+    #labPinRow button#labPinResultBtn.is-pinned {
+      background: #fff !important;
+      color: #4341B5 !important;
+      border: 1.5px solid #5856D6 !important;
+      box-shadow: none !important;
+    }
+    #labPinRow button#labPinResultBtn.is-pinned:hover {
+      background: #F6F5FF !important;
+      color: #4341B5 !important;
+    }
+    .lab-pin-duplicate {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      box-sizing: border-box;
+      margin: 0 0 var(--space-12px);
+      padding: var(--space-10px) var(--space-12px);
+      border: var(--border-hairline) solid #f0d9ad;
+      border-radius: var(--radius-10);
+      background: #fff8ec;
+      color: #6b4500;
+      text-align: left;
+    }
+    .lab-pin-duplicate[hidden] { display: none; }
+    .lab-pin-duplicate-title { font-size: .86rem; font-weight: 600; line-height: 1.35; }
+    .lab-pin-duplicate-text { font-size: .8rem; line-height: 1.45; }
+    .lab-pin-duplicate-date {
+      margin: var(--space-4px) 0 0;
+      color: var(--warning);
+      font-size: .78rem;
+      line-height: 1.4;
+    }
+    #labPinDate.is-duplicate { border-color: var(--warning) !important; }
     .lab-pkg-pending[hidden],
     .lab-pkg-pending:empty { display: none; }
     .lab-pkg-pending .lab-pending-choice { margin: 0; }
