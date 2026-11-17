@@ -21,6 +21,12 @@ export async function prepareLabReset(page, { standalone = false } = {}) {
     });
   });
   await page.goto(standalone ? '/przelicznik-jednostek.html' : '/app.html#/lab', { waitUntil: 'domcontentloaded' });
+  // Standalone conversion works without loading authentication or opening a vault.
+  if (standalone) {
+    await expect(page.locator('#labSubstance')).toBeVisible();
+    await page.waitForFunction(() => typeof window.LabUnitConverter?.find === 'function');
+    return page;
+  }
   const guest = page.getByRole('button', { name: 'Korzystaj bez logowania', exact: true });
   if (!await page.evaluate(() => window.VildaGuestMode === true)) {
     await expect(guest).toBeVisible();
@@ -28,10 +34,6 @@ export async function prepareLabReset(page, { standalone = false } = {}) {
   }
   await page.waitForFunction(() => window.VildaGuestMode === true
     && !document.documentElement.classList.contains('vilda-auth-locked'));
-  if (standalone) {
-    await expect(page.locator('#labSubstance')).toBeVisible();
-    return page;
-  }
   return labResetFrame(page);
 }
 
