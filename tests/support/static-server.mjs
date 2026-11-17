@@ -46,7 +46,7 @@ function createE2eServiceWorker(source, wersja) {
     '/vilda_visit_context.js', '/vilda_visit_history_ui.js', '/vilda_visit_history_ui.css',
     '/vilda_home_workspace.js', '/vilda_home_workspace.css',
     '/vilda_home_perinatal.js', '/vilda_sga_birth_results.css',
-    '/vilda_home_growth.js',
+    '/vilda_home_growth.js', '/vilda_home_growth_views.js', '/vilda_home_growth_views.css', '/vilda_home_growth_charts.js',
   ]);
   const visitFiles = JSON.parse(visitPack[1]).files;
   const visitUrls = Array.isArray(visitFiles) ? visitFiles.map(file => file?.url) : [];
@@ -54,7 +54,7 @@ function createE2eServiceWorker(source, wersja) {
     ? url.split('?')[0] : null);
   if (visitUrls.length !== expectedVisitPaths.size || new Set(visitPaths).size !== expectedVisitPaths.size
     || visitPaths.some(resource => !expectedVisitPaths.has(resource)))
-    throw new Error('Test service worker requires exactly the eight versioned visit/home UI resources.');
+    throw new Error('Test service worker requires exactly the eleven versioned visit/home UI resources.');
   const visitCore = visitUrls.map(url => '  ' + JSON.stringify(url) + ',').join('\n');
   const zWersja = wersja && /^[0-9A-Za-z.-]{1,32}$/.test(wersja)
     ? source.replace(/const SW_VERSION = '[^']*';/, `const SW_VERSION = '${wersja}';`)

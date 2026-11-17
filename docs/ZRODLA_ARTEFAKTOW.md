@@ -1835,7 +1835,7 @@ każdej treści. Dopiero wtedy zapisuje odpowiedzi pod ośmioma oryginalnymi
 kluczami. CSS ma typ `text/css`, skrypty `text/javascript`; archiwum nie może
 zmienić tych typów. Wspólny mechanizm weryfikacji transportu ma dwie oddzielne
 listy dozwolonych zasobów: dotychczasowe moduły przestrzeni klinicznej oraz
-dokładnie osiem zasobów wizyt i strony głównej. Nie rozszerza listy akceptowanych adresów
+dokładnie jedenaście zasobów wizyt i strony głównej (po dodaniu prezentacji A2). Nie rozszerza listy akceptowanych adresów
 przestrzeni klinicznej. Nieudana weryfikacja przerywa wymaganą instalację.
 
 Po zmianie treści lub numeru `?v=` tych plików, **po** `npm run podbij-wersje`:
@@ -1860,9 +1860,36 @@ sprawdza wszystkie wymagane klucze oraz niezmienione budżety.
 Warstwa prezentacji i szkicu korzysta z kanonicznych pól, natywnych akcji
 dodawania/usuwania pomiarów oraz `calculateGrowthAdvanced()`. Wyniki są
 kopiami już wyrenderowanego `advResults`; nie odtwarza wzorów ani kwalifikacji
-metod. `vilda_advanced_growth.js`, `vilda_growth_card_c.js` i
-`vilda_trajectory_analysis.js` pozostają bajtowo niezmienione.
+metod. `vilda_advanced_growth.js` i `vilda_growth_card_c.js` pozostają bajtowo
+niezmienione. `vilda_trajectory_analysis.js` dodaje wyłącznie opt-in metadane
+prezentacyjne już obliczonego modelu; bez flagi HTML pozostaje identyczny.
 
 Regresje rzeczywistego zapisu i anulowania, tożsamości węzłów, metadanych,
 blokad GH, zmiany pacjenta oraz F5 sprawdza `home-workspace-growth.spec.mjs`.
 Odrębność formularza G/Th/P sprawdza `home-workspace-puberty.spec.mjs`.
+
+Wariant A2 (2026-11-17): `vilda_home_growth_views.js` i
+`vilda_home_growth_views.css` są bezpośrednimi, czytelnymi źródłami prezentacji.
+Nie używają fikcyjnych modeli makiety Sites. Wykres wartości czyta natywne
+`model.points` (również gotowe BMI), karty i opisy kopiuje z natywnego DOM.
+Zakresy prognoz czytają `finalHeightPrediction.methods[].publikacjaCm` oraz
+`errorHalfWidthCm`; wynik obcięty ma punkt bez wymyślonego symetrycznego zakresu.
+Metadane modelu nie zawierają kontekstu konta/pacjenta i nie są zapisywane.
+
+`vilda_gh_punkt_z_wiersza.js` dopuszcza opcjonalny host istniejącego formularza
+we wspólnym dialogu opt-in. Pozostają ten sam aktor zapisu, dawki, jednostki,
+sprawdzenie pokazanego pomiaru i import przez mostek. Dotychczasowy formularz
+pod wierszem działa bez zmiany kontraktu poza podglądem.
+
+`vilda_home_growth_charts.js` jest wspólnym wejściem do istniejących przycisków
+PDF/kreatorów i szkicem kanonicznych adnotacji. Integracja Dokumentów dodaje
+wyłącznie skrót do tego samego okna. Zasoby mają własne adresy i treści w
+sprawdzanym po SHA pakiecie transportowym UI (11 zasobów). Dawne archiwa
+pozostają niezmienione. Testy `trajectory-analysis` potwierdzają dokładność
+metadanych i identyczny HTML bez flagi; `home-workspace-growth` sprawdzają
+natywny GH, czyste anulowanie, prognozy, źródłowe węzły i geometrię mobile.
+
+Wykresy zakresów używają procentowych współrzędnych SVG w rzeczywistym
+widoku (bez rozciągania promienia punktów). Nie ustawiają stylów z JS. Nowy
+arkusz korzysta z istniejących tokenów i wspólnej skórki; limity stylów inline
+i instalacji PWA pozostają niezmienione.

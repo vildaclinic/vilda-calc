@@ -7,6 +7,7 @@
   if (!w || w.__VILDA_HOME_WORKSPACE_PREVIEW__ !== true || w.VildaHomeGrowth) return;
   var d = w.document, started = false, card, dialog, draft = null, renderFrame = 0, sequence = 0, readinessTimer;
   var rowKeys = new WeakMap(), inputChanges = new WeakMap(), inputInitials = new WeakMap(), historyTemplate;
+  var ghView = null, resultView = null, selectedMetric = 'height';
   var fields = [
     ['advMotherHeight', 'Wzrost matki · cm'], ['advFatherHeight', 'Wzrost ojca · cm'],
     ['advBoneAge', 'Wiek kostny tej wizyty · lata'], ['advFamilyDelayedPuberty', 'Rodzinne opóźnienie dojrzewania', 'M'],
@@ -40,8 +41,9 @@
         && !(w.VildaPanelPacjent && w.VildaPanelPacjent.nieaktualny()));
     } catch (_) { return false; }
   }
-  function owner() {
-    if (!canEdit()) return null;
+  function owner(waitingForImport) {
+    if (!canEdit() && !(waitingForImport && w.VildaVault?.isUnlocked() && w.VildaProAccess?.hasAccess()
+      && (!w.VildaPanelPacjent || (w.VildaPanelPacjent.wlasciciel() || null) === patientId()))) return null;
     var measured = w.VildaDobAge ? w.VildaDobAge.readMeasuredAtISO() : null;
     return { account: w.VildaVault.getCurrentUser().userId, patient: patientId(),
       load: w.VildaDataImportExport.getApplyLoadedDataSequence(),
@@ -66,18 +68,23 @@
       source: d.querySelector('input[name="dataSource"]:checked')?.value,
       birth: w.vildaBirthData || null, gh: w.ghTherapyPoints || null, obesity: w.obesityTherapyPoints || null };
   }
-  function tokenValid(item) {
+  function tokenValid(item, waitingForImport) {
     try {
       if (item.vault !== w.VildaVault) return false;
       if (item.token != null) item.vault.assertSyncOperationSession(item.token);
-      return JSON.stringify(owner()) === item.ownerKey;
+      return JSON.stringify(owner(waitingForImport)) === item.ownerKey;
     } catch (_) { return false; }
   }
   function stillOwned() {
     try { return !!(draft && tokenValid(draft) && JSON.stringify(snapshot()) === draft.fingerprint); }
     catch (_) { return false; }
   }
-  function dirty() { return !!(draft && JSON.stringify([draft.values, draft.rows.map(function (r) { return [r.key, r.values]; })]) !== draft.initial); }
+  function dirty() {
+    if (ghView) return ghView.phase === 'edit' && ghInputs() !== ghView.initial;
+    return !!(draft && JSON.stringify([draft.values, draft.rows.map(function (r) { return [r.key, r.values]; })]) !== draft.initial);
+  }
+  function viewOwned() { return ghView ? tokenValid(draft, ghView.phase === 'waiting') : stillOwned(); }
+  function disposeResultView() { if (resultView) resultView.dispose(); resultView = null; }
   function fresh() {
     return !!(w.VildaAdvancedGrowth && w.VildaAdvancedGrowth.advGrowthPredictionsMatchCurrentInput());
   }
@@ -86,6 +93,7 @@
   function close(force, focus, fromHistory) {
     if (!dialog || !dialog.open) return true;
     if (!force && dirty() && !w.confirm('Odrzucić niezastosowane dane obliczeń wzrostowych?')) return false;
+    disposeResultView(); stopGh();
     var old = draft; draft = null;
     if (old) w.clearInterval(old.timer);
     dialog.close(); dialog.removeAttribute('aria-modal'); dialog.querySelector('.vhome-dialog-body').replaceChildren();
@@ -109,7 +117,7 @@
   }
   function renderResults(tab) {
     var panel = byId('vhomeGrowthPanel-' + tab); if (!panel) return;
-    panel.replaceChildren();
+    disposeResultView(); panel.replaceChildren();
     if (dirty() || !fresh()) {
       panel.appendChild(el('p', 'vhome-growth-empty', dirty()
         ? 'Masz niezastosowane dane. Zastosuj je, aby zobaczyć aktualną analizę i prognozy.'
@@ -117,6 +125,11 @@
       return;
     }
     var native = byId('advResults');
+    if (w.VildaHomeGrowthViews) {
+      resultView = w.VildaHomeGrowthViews.render({ panel: panel, native: native, data: w.advancedGrowthData, tab: tab,
+        copy: resultCopy, metric: selectedMetric, onMetric: function (name) { selectedMetric = name; }, onData: function () { selectTab('data', true); } });
+      if (resultView) return;
+    }
     if (tab === 'methods') {
       panel.appendChild(el('h3', '', 'Prognozy wzrostu ostatecznego'));
       var methods = native.querySelector('.vgcc');
@@ -144,6 +157,9 @@
   }
   function selectTab(tab, focus) {
     if (!draft || !tabs[tab]) return;
+    if (ghView) return;
+    if (!stillOwned()) { close(true); return; }
+    if (tab === 'data') disposeResultView();
     draft.tab = tab;
     Object.keys(tabs).forEach(function (name) {
       var button = byId('vhomeGrowthTab-' + name);
@@ -155,12 +171,30 @@
     dialog.querySelector('.vhome-dialog-body').scrollTop = 0;
     refreshFooter();
   }
+  function setText(node, text) { if (node.textContent !== text) node.textContent = text; }
   function refreshFooter() {
     if (!draft) return;
+    var applyButton = dialog.querySelector('.vhome-dialog-apply'), cancelButton = dialog.querySelector('.vhome-dialog-cancel');
+    if (ghView) {
+      setText(applyButton, ghView.phase === 'point' ? 'Przejdź do DocPro' : 'Zapisz punkt leczenia');
+      setText(cancelButton, ghView.phase === 'point' ? 'Wróć do pomiarów' : 'Anuluj punkt');
+      var nativeSave = ghView.host.querySelector('#ghZWierszaZapisz');
+      applyButton.disabled = ghView.phase === 'waiting' || ghView.phase === 'edit' && (!nativeSave || nativeSave.disabled);
+      cancelButton.disabled = ghView.phase === 'waiting';
+      return;
+    }
+    cancelButton.disabled = false;
+    setText(applyButton, 'Zastosuj dane'); setText(cancelButton, 'Anuluj');
     var changed = dirty();
     dialog.querySelector('.vhome-dialog-apply').disabled = !changed;
-    byId('vhomeGrowthDraftStatus').textContent = changed ? 'Masz niezastosowane dane.' : 'Wspólne pomiary · zmiany pozostają szkicem do zatwierdzenia.';
+    setText(byId('vhomeGrowthDraftStatus'), changed ? 'Masz niezastosowane dane.' : 'Wspólne pomiary · zmiany pozostają szkicem do zatwierdzenia.');
     dialog.querySelectorAll('[data-growth-document]').forEach(function (button) { button.disabled = changed || !fresh(); });
+    dialog.querySelectorAll('[data-growth-gh]').forEach(function (button) {
+      var row = draft.rows.find(function (r) { return r.key === button.dataset.growthGh; });
+      var nativeButton = row?.node?.querySelector('.gh-z-wiersza-btn');
+      button.disabled = changed || !(row?.protected || nativeButton && !nativeButton.disabled);
+      button.title = changed ? 'Najpierw zastosuj zmiany pomiarów.' : '';
+    });
   }
   function inputCopy(original, labelText, container, initial, onChange, disabled) {
     var label = el('label', '', labelText), control = d.createElement(original.tagName.toLowerCase());
@@ -191,43 +225,151 @@
   function section(title, parent) { var node = el('section', 'vhome-growth-section'); node.appendChild(el('h3', '', title)); parent.appendChild(node); return node; }
   function renderRows() {
     var host = byId('vhomeGrowthRows'); host.replaceChildren();
-    draft.rows.forEach(function (row) {
-      var node = el('div', 'vhome-growth-history-row'); node.dataset.growthRow = row.key;
+    var table = el('table', 'vhome-growth-table'), head = el('thead'), header = el('tr'), body = el('tbody');
+    ['Wiek · lata / mies.', 'Wzrost · cm', 'Masa · kg', 'Wiek kostny · lata', 'Akcje'].forEach(function (text) {
+      var th = el('th', '', text); th.scope = 'col'; header.appendChild(th);
+    }); head.appendChild(header); table.append(head, body); host.appendChild(table);
+    if (w.VildaGhPunktZWiersza) w.VildaGhPunktZWiersza.odswiez();
+    // Display newest first; retain the canonical array and node order for Apply.
+    var ordered = draft.rows.slice().sort(function (a, b) {
+      if (!a.node || !b.node) return a.node ? 1 : b.node ? -1 : 0;
+      return (Number(b.values[0]) * 12 + Number(b.values[1])) - (Number(a.values[0]) * 12 + Number(a.values[1]));
+    });
+    ordered.forEach(function (row) {
+      var node = el('tr', 'vhome-growth-history-row'); node.dataset.growthRow = row.key;
+      node.dataset.growthSourceIndex = String(draft.rows.indexOf(row));
+      var ageCell = el('td', 'vhome-growth-age'), agePair = el('div', 'vhome-growth-age-pair'); ageCell.appendChild(agePair); node.appendChild(ageCell);
       historyFields.forEach(function (entry, index) {
         var original = row.node ? row.node.querySelector(entry[0]) : draft.template.querySelector(entry[0]);
-        var label = inputCopy(original, entry[1], node, row.values[index], function (next) { row.values[index] = next; }, row.protected);
+        var cell = index < 2 ? agePair : el('td'); if (index >= 2) node.appendChild(cell);
+        var label = inputCopy(original, entry[1], cell, row.values[index], function (next) { row.values[index] = next; }, row.protected);
+        label.classList.add('vhome-growth-history-label');
         var control = label.querySelector('input'); control.setAttribute('data-growth-history-field', String(index));
-        // Rebuilding after Add/Remove must not make an edited value its own
-        // baseline and accidentally bypass the native input constraints.
         inputInitials.set(control, row.node ? original.value : index === 1 ? '0' : '');
       });
-      if (row.protected) node.appendChild(el('p', 'vhome-growth-field-note', 'Punkt terapii GH · edycja w monitorze leczenia.'));
-      var remove = el('button', 'vhome-growth-remove', 'Usuń pomiar'); remove.type = 'button'; remove.disabled = row.protected;
+      var actions = el('td', 'vhome-growth-row-remove');
+      var remove = el('button', 'vhome-growth-remove', '×'); remove.type = 'button'; remove.disabled = row.protected;
+      remove.setAttribute('aria-label', 'Usuń pomiar'); remove.title = row.protected ? 'Punkt GH jest edytowany w DocPro.' : 'Usuń pomiar';
       remove.addEventListener('click', function () { draft.rows = draft.rows.filter(function (item) { return item !== row; }); renderRows(); refreshFooter(); });
-      node.appendChild(remove); host.appendChild(node);
+      actions.appendChild(remove); node.appendChild(actions); body.appendChild(node);
+      var tools = el('tr', 'vhome-growth-row-tools'), cell = el('td'), line = el('div', 'vhome-growth-row-origin'); cell.colSpan = 5;
+      line.appendChild(el('span', row.protected ? 'vhome-growth-gh-badge' : '', row.protected
+        ? row.node.querySelector('.gh-z-wiersza-etykieta')?.textContent || 'Punkt terapii GH' : 'Pomiar historyczny'));
+      var nativeButton = row.node?.querySelector('.gh-z-wiersza-btn');
+      if (row.protected || nativeButton) {
+        var gh = el('button', 'vhome-growth-text-action', row.protected ? 'Zobacz punkt w DocPro ↗' : '＋ Zapisz jako punkt leczenia GH'); gh.type = 'button';
+        gh.dataset.growthGh = row.key; gh.disabled = dirty() || !row.protected && nativeButton.disabled;
+        gh.addEventListener('click', function () { if (row.protected) openGhPoint(row); else openGh(row); }); line.appendChild(gh);
+      }
+      cell.appendChild(line); tools.appendChild(cell); body.appendChild(tools);
     });
-    byId('vhomeGrowthRowsEmpty').hidden = draft.rows.length > 0;
+    byId('vhomeGrowthRowsEmpty').hidden = draft.rows.length > 0; table.hidden = !draft.rows.length;
+  }
+  function fold(title, entries, parent) {
+    var details = el('details', 'vhome-growth-fold'), summary = el('summary', '', title), grid = el('div', 'vhome-growth-fields');
+    details.append(summary, grid); entries.forEach(function (entry) { dataField(entry, grid); });
+    if (grid.children.length) parent.appendChild(details);
   }
   function renderData(panel) {
-    var family = section('Dane rodzinne i wiek kostny', panel), familyGrid = el('div', 'vhome-growth-fields'); family.appendChild(familyGrid);
-    fields.slice(0, 4).forEach(function (entry) { dataField(entry, familyGrid); });
-    var conditions = section('Warunki interpretacji', panel), conditionGrid = el('div', 'vhome-growth-fields'); conditions.appendChild(conditionGrid);
-    fields.slice(4, 6).forEach(function (entry) { dataField(entry, conditionGrid); });
-    var puberty = section('Początek dojrzewania i wywiad', panel), pubertyGrid = el('div', 'vhome-growth-fields'); puberty.appendChild(pubertyGrid);
-    fields.slice(6).forEach(function (entry) { dataField(entry, pubertyGrid); });
-    var history = section('Historyczne pomiary', panel);
-    history.appendChild(el('p', 'vhome-growth-field-note', 'Bieżący pomiar pozostaje w formularzu głównym. Punkty terapii GH są edytowane w monitorze leczenia.'));
-    var list = el('div', ''); list.id = 'vhomeGrowthRows'; history.appendChild(list);
+    var family = section('Dane rodzinne i wiek kostny', panel), familyGrid = el('div', 'vhome-growth-fields vhome-growth-family-fields'); family.appendChild(familyGrid);
+    family.classList.add('vhome-growth-family'); fields.slice(0, 3).forEach(function (entry) { dataField(entry, familyGrid); });
+    var history = section('Historyczne pomiary', panel); history.classList.add('vhome-growth-history');
+    var add = el('button', 'vhome-growth-secondary vhome-growth-add', '+ Dodaj pomiar'); add.type = 'button'; add.dataset.growthAdd = '';
+    var heading = history.querySelector('h3'), top = el('div', 'vhome-growth-history-heading'); heading.replaceWith(top); top.append(heading, add);
+    history.appendChild(el('p', 'vhome-growth-current-measurement', 'Bieżący pomiar: ' + value('height') + ' cm · ' + value('weight') + ' kg · z formularza głównego'));
+    var list = el('div', 'vhome-growth-table-wrap'); list.id = 'vhomeGrowthRows'; history.appendChild(list);
     var empty = el('p', 'vhome-growth-empty', 'Brak wcześniejszych pomiarów.'); empty.id = 'vhomeGrowthRowsEmpty'; history.appendChild(empty);
-    var add = el('button', 'vhome-growth-secondary', '+ Dodaj pomiar'); add.type = 'button'; add.dataset.growthAdd = '';
     add.addEventListener('click', function () {
       if (!stillOwned()) { close(true); return; }
-      draft.rows.push({ key: 'new-' + (++sequence), node: null, values: ['', '0', '', '', ''], protected: false });
-      renderRows(); refreshFooter(); list.lastElementChild.querySelector('input').focus();
+      var row = { key: 'new-' + (++sequence), node: null, values: ['', '0', '', '', ''], protected: false };
+      draft.rows.push(row); renderRows(); refreshFooter();
+      list.querySelector('[data-growth-row="' + row.key + '"] input').focus();
     });
-    history.appendChild(add); renderRows();
+    renderRows();
+    fold('Warunki interpretacji', fields.slice(3, 6), panel);
+    fold('Początek dojrzewania i wywiad', fields.slice(6), panel);
+  }
+  function ghInputs() {
+    return ghView ? JSON.stringify(Array.from(ghView.host.querySelectorAll('input,select')).map(function (node) {
+      return [node.id, node.value, node.type === 'radio' || node.type === 'checkbox' ? node.checked : null];
+    })) : '';
+  }
+  function pointIds() { return (w.ghTherapyPoints || []).map(function (point) { return String(point.id); }); }
+  function stopGh() {
+    var old = ghView; ghView = null;
+    if (!old) return;
+    if (old.observer) old.observer.disconnect();
+    if (w.VildaGhPunktZWiersza) w.VildaGhPunktZWiersza.zamknijDlaKontenera(old.host);
+  }
+  function ghShell() {
+    disposeResultView();
+    var panel = byId('vhomeGrowthPanel-data'); panel.replaceChildren();
+    dialog.querySelector('.vhome-growth-tabs').hidden = true;
+    dialog.querySelector('.vhome-growth-documents').hidden = true;
+    var host = el('div', 'vhome-growth-gh-host'); panel.appendChild(host); return host;
+  }
+  function returnFromGh() {
+    if (!draft || !tokenValid(draft)) { close(true); return; }
+    var current = snapshot(); if (!current) { close(true); return; }
+    stopGh();
+    var values = {}; fields.forEach(function (entry) { values[entry[0]] = value(entry[0]); });
+    var history = rows().map(function (node) { return { key: key(node), node: node, values: rowValues(node), protected: protectedRow(node) }; });
+    draft.values = values; draft.rows = history;
+    draft.initial = JSON.stringify([values, history.map(function (r) { return [r.key, r.values]; })]);
+    draft.fingerprint = JSON.stringify(current);
+    var panel = byId('vhomeGrowthPanel-data'); panel.replaceChildren(); renderData(panel);
+    dialog.querySelector('.vhome-growth-tabs').hidden = false;
+    dialog.querySelector('.vhome-growth-documents').hidden = false;
+    selectTab('data', true); schedule();
+  }
+  function settleGh() {
+    if (!ghView || ghView.phase !== 'waiting' || !canEdit()) return;
+    if (ghView.savedId && !rows().some(function (row) { return row.getAttribute('data-gh-id') === ghView.savedId; })) return;
+    returnFromGh();
+  }
+  function openGh(row) {
+    if (!stillOwned() || dirty() || !row.node || row.protected || !w.VildaGhPunktZWiersza) return;
+    var before = pointIds(), host = ghShell();
+    ghView = { phase: 'edit', host: host, initial: '', before: before };
+    host.addEventListener('click', function (event) {
+      if (!tokenValid(draft)) { event.preventDefault(); event.stopImmediatePropagation(); close(true); }
+    }, true);
+    if (!w.VildaGhPunktZWiersza.otworzDlaWiersza(row.node, host)) { returnFromGh(); return; }
+    ghView.initial = ghInputs();
+    ghView.observer = new w.MutationObserver(function () {
+      if (!ghView || ghView.host !== host) return;
+      if (!tokenValid(draft, ghView.phase === 'waiting')) { close(true); return; }
+      if (!host.querySelector('.gh-z-wiersza-panel')) {
+        ghView.phase = 'waiting'; ghView.savedId = pointIds().find(function (id) { return before.indexOf(id) < 0; }) || null;
+        byId('vhomeGrowthDraftStatus').textContent = ghView.savedId ? 'Punkt leczenia zapisano. Aktualizuję historię pomiarów…' : 'Wracam do pomiarów…';
+        refreshFooter(); settleGh();
+      } else refreshFooter();
+    });
+    ghView.observer.observe(host, { childList: true, subtree: true, attributes: true, attributeFilter: ['disabled'] });
+    byId('vhomeGrowthDraftStatus').textContent = 'Pomiar z historii · zapis przez monitor leczenia GH.'; refreshFooter();
+  }
+  function openGhPoint(row) {
+    if (!stillOwned() || dirty() || !row.node || !row.protected) return;
+    var host = ghShell(); ghView = { phase: 'point', host: host };
+    host.append(el('h3', '', 'DocPro · Monitorowanie leczenia GH'),
+      el('p', 'vhome-growth-field-note', 'Punkt leczenia jest tu tylko do odczytu. Poprawki wykonuje się w DocPro.'));
+    var values = el('div', 'vhome-growth-fields');
+    historyFields.forEach(function (entry, index) { var item = el('div'); item.append(el('span', '', entry[1]), el('strong', '', row.values[index] || '—')); values.appendChild(item); });
+    host.appendChild(values);
+    var id = row.node.getAttribute('data-gh-id'), point = (w.ghTherapyPoints || []).find(function (p) { return String(p.id) === id; });
+    if (point) host.appendChild(el('p', 'vhome-growth-gh-badge', w.VildaGhPunktZWiersza.etykietaWierszaGh(point)));
+    refreshFooter();
   }
   function apply() {
+    if (ghView) {
+      if (!tokenValid(draft)) { close(true); return; }
+      if (ghView.phase === 'point') {
+        close(true);
+        if (w.parent !== w) w.parent.location.hash = '/docpro';
+        else w.location.assign('app.html#/docpro');
+      } else if (ghView.phase === 'edit') ghView.host.querySelector('#ghZWierszaZapisz')?.click();
+      return;
+    }
     if (!stillOwned()) { close(true); return; }
     if (!dirty()) return;
     var controls = Array.from(dialog.querySelectorAll('[data-growth-field], [data-growth-history-field]'));
@@ -294,6 +436,12 @@
     if (!dialog) {
       dialog = w.VildaHomeWorkspace.createDialog({ id: 'vhomeGrowthDialog', titleId: 'vhomeGrowthTitle', title: 'Zaawansowane obliczenia wzrostowe',
         applyLabel: 'Zastosuj dane', onApply: apply, onClose: function () { close(false); } });
+      dialog.querySelector('.vhome-dialog-cancel').addEventListener('click', function (event) {
+        if (!ghView) return;
+        event.preventDefault(); event.stopImmediatePropagation();
+        if (ghView.phase === 'edit') ghView.host.querySelector('#ghZWierszaAnuluj')?.click();
+        else if (ghView.phase === 'point') returnFromGh();
+      }, true);
     }
     var vault = w.VildaVault, token = typeof vault.captureSyncOperationSession === 'function' ? vault.captureSyncOperationSession() : null;
     var values = {}; fields.forEach(function (entry) { values[entry[0]] = value(entry[0]); });
@@ -321,19 +469,18 @@
     renderData(byId('vhomeGrowthPanel-data'));
     var status = el('p', 'vhome-growth-draft-status'); status.id = 'vhomeGrowthDraftStatus'; status.setAttribute('role', 'status'); body.appendChild(status);
     var documents = el('div', 'vhome-growth-documents');
-    [['Siatki centylowe', 'charts'], ['Raport wzrastania', 'report']].forEach(function (entry) {
+    [['Generuj siatki', 'charts'], ['Raport wzrastania', 'report']].forEach(function (entry) {
       var button = el('button', 'vhome-growth-secondary', entry[0]); button.type = 'button'; button.dataset.growthDocument = entry[1];
       button.addEventListener('click', function () {
         if (!stillOwned() || dirty() || !fresh()) return;
-        close(true, true);
-        if (entry[1] === 'charts' && w.VildaPatientDocuments) w.VildaPatientDocuments.open({ opener: byId('vhomeGrowthExpand') });
-        else if (entry[1] === 'report') w.generateAdvancedGrowthPdfReport();
+        if (entry[1] === 'charts') openCharts();
+        else { close(true, true); w.generateAdvancedGrowthPdfReport(); }
       }); documents.appendChild(button);
     }); body.appendChild(documents);
     selectTab(tabs[tab] ? tab : 'analysis');
     w.VildaHomeWorkspace.fitDialog(dialog); dialog.setAttribute('aria-modal', 'true'); dialog.showModal();
     w.history.pushState(Object.assign({}, w.history.state, { vildaHomeDialog: draft.historyToken }), '', w.location.href);
-    draft.timer = w.setInterval(function () { if (!stillOwned()) close(true); }, 250);
+    draft.timer = w.setInterval(function () { if (!viewOwned()) close(true); else if (ghView?.phase === 'waiting') settleGh(); }, 250);
     byId('vhomeGrowthTab-' + draft.tab).focus({ preventScroll: true });
     return true;
   }
@@ -408,13 +555,18 @@
     new w.MutationObserver(schedule).observe(native, { attributes: true, attributeFilter: ['style', 'hidden', 'class'] });
     new w.MutationObserver(function () {
       schedule();
-      if (draft && !stillOwned()) close(true);
-      else if (draft && !dirty() && draft.tab !== 'data') renderResults(draft.tab);
+      if (draft && !viewOwned()) close(true);
+      else if (draft && !ghView && !dirty() && draft.tab !== 'data') renderResults(draft.tab);
     })
       .observe(byId('advResults'), { childList: true });
     ['input', 'change'].forEach(function (name) {
       w.addEventListener(name, function (event) {
         if (!dialog?.open || !dialog.contains(event.target)) return;
+        if (ghView && ghView.host.contains(event.target)) {
+          if (!tokenValid(draft)) { event.stopImmediatePropagation(); close(true); }
+          else refreshFooter();
+          return;
+        }
         event.stopImmediatePropagation();
         if (!stillOwned()) { close(true); return; }
         var change = inputChanges.get(event.target);
@@ -438,6 +590,14 @@
     });
     renderCard();
   }
-  w.VildaHomeGrowth = Object.freeze({ open: open, refresh: schedule });
+  function openCharts() {
+    if (!canEdit() || !w.VildaHomeGrowthCharts || dialog?.open && (!stillOwned() || dirty() || ghView)) return false;
+    var vault = w.VildaVault, item = { vault: vault, token: vault.captureSyncOperationSession(), ownerKey: JSON.stringify(owner()) };
+    var handoff = !!dialog?.open;
+    if (handoff) close(true, false, true);
+    return w.VildaHomeGrowthCharts.open({ valid: function () { return tokenValid(item); }, snapshot: snapshot,
+      opener: byId('vhomeGrowthExpand'), replaceHistory: handoff });
+  }
+  w.VildaHomeGrowth = Object.freeze({ open: open, openCharts: openCharts, refresh: schedule });
   if (d.readyState === 'loading') d.addEventListener('DOMContentLoaded', start, { once: true }); else start();
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -8,9 +8,13 @@ describe('home workspace isolation boundary', () => {
     loadBrowserScript('vilda_home_workspace.js', window);
     loadBrowserScript('vilda_home_perinatal.js', window);
     loadBrowserScript('vilda_home_growth.js', window);
+    loadBrowserScript('vilda_home_growth_views.js', window);
+    loadBrowserScript('vilda_home_growth_charts.js', window);
     expect(window.VildaHomeWorkspace).toBeUndefined();
     expect(window.VildaHomePerinatal).toBeUndefined();
     expect(window.VildaHomeGrowth).toBeUndefined();
+    expect(window.VildaHomeGrowthViews).toBeUndefined();
+    expect(window.VildaHomeGrowthCharts).toBeUndefined();
   });
 
   it('waits for the actual document and remains harmless outside the main form', () => {
