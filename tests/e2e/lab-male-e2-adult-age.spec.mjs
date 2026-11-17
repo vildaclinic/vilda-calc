@@ -236,8 +236,11 @@ test('adult E2 preserves independent saved laboratory results and reads current 
   await setQuickAge(page, 55, '');
   await expectAdultMedian(page, ADULT_P50_55);
   expect((await page.evaluate(id => window.VildaVault.getPatientNote(id), saved.id)).labResult).toEqual(saved.labResult);
-  await page.locator(`#labHistoryStrip button.lab-strip-chip[data-note-id="${saved.id}"]`).click();
+  const savedChip = page.locator(`#labHistoryStrip button.lab-strip-chip[data-note-id="${saved.id}"]`);
+  await savedChip.click();
   await expect(page.locator('#labHistoryStrip')).not.toContainText('Frederiksen');
+  // LAB-HISTORIA 6.39: szczegóły wpisu (także źródła zakresu) są w podpowiedzi chipu.
+  await expect(savedChip).not.toHaveAttribute('title', /frederiksen|madsen/i);
   expect((await page.evaluate(id => window.VildaVault.getPatientNote(id), saved.id)).labResult).toEqual(saved.labResult);
   await loadPatient(page, { age: 40, gnrhaStatus: 'w-trakcie' });
   await choose(page, '125');

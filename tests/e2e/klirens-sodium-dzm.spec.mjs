@@ -1,4 +1,4 @@
-import { showClcrResults, showBadaniaView } from '../support/badania-klirens.mjs';
+import { showClcrResults, showBadaniaView, expectClcrOutsideNotes } from '../support/badania-klirens.mjs';
 import fs from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 import { czekajNaUstabilizowanyUklad } from '../support/uklad-czekanie.mjs';
@@ -329,9 +329,8 @@ test('Sód DZM: jedna notatka i Badania odczytują zamrożoną normę bez bież�
   await page.locator('#clcrOpenBadaniaBtn').click();
   await showClcrResults(page, 'charts');
   await expect(page.locator('.vilda-lab-hist .vilda-lab-hist-card[data-source="clcr"] .vilda-lab-result-chart-point')).toHaveCount(2);
-  await page.locator('button[data-tab="notes"]').click();
-  const notes = page.locator('.vilda-clcr-note[data-clcr-note-state="ready"]'); await expect(notes).toHaveCount(2);
-  for (const key of ['VILDA_CLCR', 'engineVersion', 'exactMain', '[tekst]']) await expect(notes.first()).not.toContainText(key);
+  // P-KLIRENS-NOTATKI: wynik Klirensu nie ma karty w Notatkach; zostaje linia z liczbą wyników i brak zapisu technicznego.
+  await expectClcrOutsideNotes(page, 2);
   expect((await memory(page)).originalsLocked).toBe(true);
 });
 

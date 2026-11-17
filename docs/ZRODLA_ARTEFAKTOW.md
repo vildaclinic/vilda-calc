@@ -757,6 +757,8 @@ pozostają bez zmian. Adaptery IndexedDB, pamięciowy i hybrydowy udostępniają
 `tools/patch-vault-existing-note.mjs` uwzględnia wspólny punkt przygotowania rekordu,
 porównanie terminu nowych przypomnień i położenie istniejącego bloku przed B2.2;
 test odtworzenia nadal wymaga identycznych bajtów artefaktu i idempotencji łatki.
+Od E3-PR0b2a (P-KONFLIKT-ZAPISU-NOTATKI) blok niesie też warunek konfliktu po chwili
+zapisu (`baseUpdatedAtISO`); łatka i sejf zmieniają się razem, bajt w bajt.
 
 Test `reminders-outcome-vault.test.mjs` uruchamia rzeczywisty sejf i kryptografię;
 testy `przypomnienia-b22*` sprawdzają natywną aplikację desktop/mobile, awarię
@@ -998,7 +1000,7 @@ function GdLabRender() {
   var modul = window.VildaLabHistoryTab;
   if (!modul) { /* „Zakładka Badania nie jest dostępna — odśwież stronę.” */ return; }
   modul.render(GdLabHost, t, {
-    openEditor(o) {                         // + Dodaj wynik, Wpisz wynik, klik w wartość
+    openEditor(o) {                         // + Dodaj wynik (do 2026-11-15, P-BADANIA-WEJSCIE), Wpisz wynik, klik w wartość
       ga({ patientId: t, note: o.note || null, template: o.template, anchor: o.anchor, onSaved: o.onSaved });
       if (o.anchor === 'date') document.querySelector('.b3-clinical-date')?.focus();   // tylko widoczne pole
     },
@@ -1722,6 +1724,162 @@ Skutki, o których warto pamiętać:
 
 Testy: `tests/unit/ustawienia-konta-na-urzadzeniu.test.mjs` (prawdziwy adapter i sejf: rejestr, gość, przejęcie, dwa konta, sesja jednorazowa, synchronizacja między urządzeniami), e2e `tests/e2e/ustawienia-konta.spec.mjs` (gość, lekarz A, lekarz B i trzecie konto w jednej przeglądarce: „Widoczność kart” w Ustawieniach i jej skutek na stronie głównej).
 
+## Łatka P-BADANIA-WEJSCIE — jedna droga dodawania wyników (`vilda_auth_ui.js`, `vilda_terminarz.js`, 2026-11-15, decyzja właściciela)
+
+Opis działania: `docs/LAB_HISTORIA_WYNIKOW_PLAN.md`, decyzja 6.34 i „Uzupełnienie z wdrożenia 6.34”; `docs/clinical/ALGORITHMS.md`, „LAB-HISTORIA 6.34”. Czytelny moduł: `vilda_lab_history_tab.js` 2.5.0. Poniżej czytelne bloki wstawione do artefaktów, bez ponownej minifikacji.
+
+```js
+// vilda_auth_ui.js, w se() przed GdLabHost — jedna droga wczytania pacjenta z karty
+var BdWczytajPacjenta = function (BdZastosuj, BdPo) { /* dotychczasowa obsługa „Wczytaj tego pacjenta”, 1:1:
+  patientLoadCapture(t) → wo(t, nazwa, Lt) → o.getPatient(t) → patientLoadRun(…, apply, publish);
+  apply = BdZastosuj(value, t); publish: vilda:patient-loaded, $t(), a na końcu BdPo() */ };
+var BdZastosujNaStronie = function (dane) { applyLoadedData(dane); /* + odświeżenie chipa w ramce i w powłoce */ };
+var BdLabWczytaj = typeof i.applyLoadedData == 'function'
+  ? function (cel) { BdWczytajPacjenta(typeof a == 'function' ? a : BdZastosujNaStronie,
+      function () { BdPrzejdzPoWczytaniu(t, cel && cel.href || null); }); }
+  : null;
+// przycisk karty:  onclick: function () { BdWczytajPacjenta(a, null) }
+// GdLabRender:     render(…, { …, loadPatient: BdLabWczytaj })
+
+// vilda_auth_ui.js, przed patientLoadCapture — przejście do przelicznika po wczytaniu
+BdPrzejdzPoWczytaniu(patientId, href)   // bilet {patientId, href, okno, wczytano, od}; pierwsze sprawdzenie po 80 ms
+BdPrzejscieSprawdz(bilet)               // co 150 ms: inny pacjent → koniec; #vildaLoadChoiceModal → czekaj;
+                                        // getPatientLoadPresentation() loading → czekaj (limit 15 s);
+                                        // okno było i vildaLoadChoiceV1 ∉ {new, restore} → koniec (rezygnacja);
+                                        // BdSesjaZgodna() → BdOtworzPrzelicznik(href); inaczej czekaj (limit 6 s)
+BdSesjaZgodna()                         // readShared().age/ageMonths === wartości pól #age/#ageMonths
+BdSesjaOdswiez()                        // raz, po 3,4 s od wczytania i po pauzie autozapisu: change na #age
+BdOtworzPrzelicznik(href)               // powłoka: VildaShell.navigate('lab', true[, href]); inaczej location.assign
+
+// vilda_auth_ui.js, w ga(): szablon „Wynik badania” tylko tam, gdzie edytor otwarto z nim
+S = [none, med-start, med-change, med-stop];  w === 'lab' && S.push({ value: 'lab', label: 'Wynik badania' });
+
+// vilda_terminarz.js, za wyborem szablonu z zapisanego wpisu (de = #tzNtTpl)
+(function () { if (!de || de.value === 'lab') return; /* usuń option[value="lab"] */ })();
+```
+
+**Dlaczego przejście czeka na sesję wspólną.** Przelicznik czyta pacjenta z sesji wspólnej (`VildaSession.getPatient()`, klucze `age` i `ageMonths` najwyższego poziomu). Dopisuje je `userData.js` przy zdarzeniu `input`/`change` pól pacjenta, ale nie podczas pauzy autozapisu — a na nią przypadają zdarzenia z wczytania i z „Nowy pomiar”. Zapis następuje, gdy lustro pól w `custom-fixes.js` (`F`) 3,2 s po `vilda:patient-loaded` ponowi `change`. Przejście wcześniej otwierało przelicznik bez wieku. Odtworzenie zapisu („Odtwórz zapisany stan”) wpisuje wiek od razu, więc tam czekania nie ma.
+
+**Znany błąd aplikacji, poza tą łatką — naprawiony 2026-11-15 przez P-WIEK-NOWY-POMIAR (niżej); obejście `BdSesjaOdswiez` usunięte, opis zostaje jako historia** (potwierdzony sondą na `audyt` `28ee1c3e` i na `743dba9a`): w powłoce przy drugim i kolejnym pacjencie wczytanym w tej samej karcie przeglądarki lustro nie ponawia `change` po „Nowy pomiar”, więc wiek nie trafia do sesji wspólnej, dopóki lekarz nie zmieni pola pacjenta; ręczne przejście do Jednostek lab. w ciągu ok. 3,2 s po „Nowy pomiar” ma ten sam skutek także przy pierwszym pacjencie. Droga z zakładki „Badania” obchodzi to jednym zdarzeniem `change` na `#age` (`BdSesjaOdswiez`) — tym samym, które wysyła lustro, w tej samej chwili (po 3,4 s od wczytania); wysłane wcześniej (ok. 1 s po wyborze) w jednym z trzech przebiegów sondy oznaczało pacjenta jako zmienionego, po 3,4 s w sześciu z sześciu nie. Po naprawie przyczyny obejście można usunąć; samo czekanie (`BdSesjaZgodna`) może zostać.
+
+**Granice.** Przycisk „Wczytaj tego pacjenta” działa bez zmian (to samo ciało funkcji, `BdPo = null`). Karta otwarta bez funkcji listy (chip, wyszukiwarka, Terminarz) nadal nie ma tego przycisku; zakładka „Badania” wczytuje wtedy przez `applyLoadedData` — tak jak listy pacjentów w `vilda_chrome.js` i `custom-fixes.js`. Na stronie bez `applyLoadedData` zakładka dostaje `loadPatient: null`. Nic poza zdarzeniem `change` nie zapisuje danych; sejf, synchronizacja i eksport bez zmian. Testy: `tests/unit/lab-history-tab.test.mjs`, `tests/unit/badania-przejscie-po-wczytaniu.test.mjs` (wycinek produkcyjnego bloku przejścia), `tests/unit/auth-patient-load-authority.test.mjs` (wycinek `BdWczytajPacjenta`), `tests/unit/care-plan-auth-ui-boundary.test.mjs` (odcisk treści edytora odświeżony świadomie), e2e `tests/e2e/badania-wczytaj-i-dodaj.spec.mjs`, `tests/e2e/badania-wczytaj-i-dodaj-mobile.spec.mjs`, `tests/e2e/wyniki-badan-karta.spec.mjs`, `tests/e2e/karta-pacjenta-porzadki.spec.mjs`, `tests/e2e/lab-snapshot.spec.mjs`.
+
+## Łatka P-WIEK-NOWY-POMIAR — „Nowy pomiar” zapisuje pola wizyty do sesji od razu (`custom-fixes.js`, `vilda_auth_ui.js`, `przelicznik-jednostek.html`, 2026-11-15, decyzja właściciela)
+
+Opis działania i przypadki: `docs/clinical/ALGORITHMS.md`, „P-WIEK-NOWY-POMIAR”. Czytelne bloki, bez ponownej minifikacji.
+
+```js
+// custom-fixes.js — przed finishLoadChoicePresentation
+function publishNewVisitFields() {
+  // VildaPersistence.updateShared((shared, persisted) => { dla age, ageMonths, weight, height:
+  //   shared[id] = String(pole.value); gdy persisted.byId ma już ten klucz — także byId[id] }, { force: true })
+}
+// obsługa #vildaLcmNew:  …; L(), p();  publishNewVisitFields();  …; dispatch vilda:load-choice-applied
+
+// vilda_auth_ui.js — blok przejścia po wczytaniu (P-BADANIA-WEJSCIE): usunięte BdSesjaOdswiez i BD_PRZEJSCIE_LUSTRO_MS;
+// BD_PRZEJSCIE_SESJA_MS 6 s → 3 s; BdSesjaZgodna zostaje jako strażnik.
+
+// przelicznik-jednostek.html — przed readPatientFromShared
+function readLoadedPatientAge() { /* tylko dla wczytanego pacjenta: wiek wizyty (VildaPubertyAssessmentContext albo
+  sesja formularza z visit.patientId tego pacjenta), inaczej wiek z daty urodzenia na dziś (packageAgeAt) */ }
+// readPatientFromShared: wiek z sesji wspólnej ma pierwszeństwo; bez niego readLoadedPatientAge(); wynik niesie ageSource
+// getEffectivePatient / getPackagePatient: p._age_missing; describePatient: „brak wieku”; buildClinicalHint: AGE_MISSING_HINT
+```
+
+**Przyczyna, ustalona sondami na kodzie produkcyjnym.** Pola pacjenta w sesji wspólnej (`age`, `ageMonths`, `weight`, `height` na najwyższym poziomie) zapisuje `userData.js` przy zdarzeniu `input`/`change` tych pól — ale nie podczas pauzy autozapisu. Po wczytaniu z listy sesja wspólna dostaje nazwisko i płeć; pola wizyty dopisuje dopiero wybór: „Odtwórz zapisany stan” synchronicznie (odtworzenie zapisuje sesję), a „Nowy pomiar” nie zapisywał nic — jego zdarzenia (`L`) przypadają na pauzę. Zapis następował, gdy lustro pól (`F`) 3,2 s po `vilda:patient-loaded` ponawiało `change`.
+
+**Dlaczego przy drugim pacjencie w powłoce lustro nie startuje.** `F` jest wołane na `vilda:patient-loaded`, zanim inny nasłuch `custom-fixes.js` wpisze nowy identyfikator do `vildaCurrentPatientId`. W tej chwili sesja wskazuje jeszcze poprzedniego pacjenta, więc `VildaPanelPacjent.nieaktualny()` jest prawdą, `captureMirrorWriter()` zwraca `null`, a `F` kasuje timery i kończy — bez paczek 180/1000/2600 ms i bez ponowienia po 3,2 s. Przy pierwszym pacjencie w karcie identyfikatora jeszcze nie ma, panel nie jest „nieaktualny” i lustro działa. Lustra **nie zmieniono**: po tej łatce nie ma znanego skutku jego braku (pola wizyty zapisuje wybór, a DocPro i Klirens przejmują pacjenta z sesji formularza — sprawdzone sondą dla obu wyborów), a włączenie paczek dla kolejnych pacjentów zmieniłoby zachowanie między ramkami, na którym opierają się testy przejęcia pacjenta. To osobna decyzja.
+
+**Skutki uboczne sprawdzone.** Zapis do sesji w „Nowy pomiar” nie zmienia stanu wskaźnika zapisu („zapisane” w sondzie i w `tests/e2e/wiek-po-nowym-pomiarze.spec.mjs`; `tests/e2e/patient-chip-navigation.spec.mjs` bez zmian). `force: true` jak w `syncSharedUserDataFromLoadedData`: zapis jest częścią wczytania. Przelicznik niczego nie zapisuje — tylko czyta wiek z dodatkowych źródeł.
+
+**Poza łatką (zgłoszone osobno).** Na stronie samodzielnej pakiet badań nie zna daty urodzenia pacjenta bez znacznika oceny pokwitania (`readPubertyPatientContext` czyta ją z kontekstu oceny albo z `shared.dobISO`, a jest w sesji formularza), więc przy dacie pobrania wstecz zostaje w trybie „bez daty urodzenia”. W powłoce działa.
+
+## Łatka P-OCZEKUJACE-WYNIKI — oczekujący wynik przez Jednostki lab. (`lab_pin_result.js`, 2026-11-15, decyzje właściciela)
+
+Opis działania i przypadki: `docs/clinical/ALGORITHMS.md`, „LAB-HISTORIA 6.35”. Zmiany w czytelnych źródłach (`vilda_lab_history.js` 1.5.0 — `pendingItem`; `vilda_lab_history_tab.js` 2.6.0; `vilda_lab_packages.js` — `drawPending`, `closePending`; pasek `#labPendingStrip` w `przelicznik-jednostek.html`; style w `inline_przelicznik_jednostek_00.css` i `vilda_lab_history_tab.css`) nie wymagają opisu łatki. Łatką jest tylko zminifikowana część `lab_pin_result.js` — trzy podmiany dokładnych ciągów, bez ponownej minifikacji:
+
+```js
+// 1. budowa okna (funkcja V): znacznik po podglądach oceny i zakresu
+//    było:  RrPinRange(t,o),s.addEventListener("click",…),…,u("labPinSave").addEventListener("click",function(){A(t,e,i)})}}
+//    jest:  RrPinRange(t,o);var OwChoice=OwPinChoice(t,o);s.addEventListener("click",…),…,…function(){A(t,e,i,OwChoice)})}}
+// 2. nagłówek funkcji zapisu:  function A(t,e,n){…  →  function A(t,e,n,OwChoice){…
+// 3. po zapisaniu wyniku:  await r.savePatientNote(p),g();  +
+//    if(OwChoice&&a.VildaLabPendingResult&&typeof a.VildaLabPendingResult.commit=="function")try{await a.VildaLabPendingResult.commit(OwChoice,r)}catch{}
+```
+
+Czytelne dodatki w tym samym pliku: `OwPinChoice(result, host)` (przed blokiem „PR3: modal shows…”) rysuje znacznik nad datą badania przez `VildaLabPendingResult.choice`; na końcu pliku drugi moduł (własne IIFE) `window.VildaLabPendingResult` — podpięty wpis, pasek, znacznik, zamknięcie i cofnięcie.
+
+**Dlaczego moduł jest w pliku okna przypięcia, a nie w osobnym pliku.** Nowy plik to dodatkowe żądanie przy instalacji aplikacji (budżet żądań service workera, `FRESH_STATIC_ALIAS_PATHS`); ten sam wzorzec co `VildaResultDetailsDialog` w `vilda_lab_result_chart.js` i pakiet badań w jednym pliku.
+
+**Dlaczego wywołanie zamknięcia jest wewnątrz funkcji zapisu `A`.** Testy `search-note-producers`, `lab-snapshot-ui` i `lab-testosterone-snapshot-vault` uruchamiają wycinek `async function A(` … `function I(){` z wolnymi zmiennymi `a, u, T, D, g, h`. Funkcja musi więc zostać samodzielna: bez znacznika (`OwChoice` niezdefiniowane) działa dokładnie jak dotąd, a zapisywana notatka wyniku nie zmienia postaci.
+
+**Granice.** Sejf bez zmian: zamknięcie to istniejące `completePatientNote` / `uncompletePatientNote`, opis słowny — istniejące `saveReminderOutcome` (action „result”), odczyt — `getPatientNote`. Edytor karty (`vilda_auth_ui.js`) i Terminarz bez zmian; zakładka przestała otwierać edytor z szablonem „Wynik badania” przy oczekującym wyniku, więc szablon jest osiągalny tylko przez edycję zapisanego wyniku. W ramce powłoki cel przychodzi zdarzeniem `vilda:shell-navigate-target` (jak `?badanie=` i `?pakiet=`); adres strony samodzielnej traci `oczekujacy` po odpięciu albo zamknięciu (`history.replaceState`), żeby odświeżenie nie podpinało wpisu ponownie.
+
+**Etap 2 (LAB-HISTORIA 6.36, 2026-11-15) — bez nowej łatki.** Lista oczekujących wyników przy wyniku wpisanym bez wejścia z „Badań” zmienia tylko czytelne źródła: drugi moduł `lab_pin_result.js` (`VildaLabPendingResult` 1.1.0 — `listChoice`, `listDefault`, `listVisible`, `listPending`, nasłuch `onPatientNoteChanged`), `vilda_lab_history.js` 1.6.0 (`pendingItems`), `vilda_lab_packages.js` (`drawPending`) i style w `inline_przelicznik_jednostek_00.css`. Trzy podmiany w zminifikowanej części `lab_pin_result.js` zostają bez zmian: `OwPinChoice` woła to samo `choice`, a `A` to samo `commit`. Sejf nadal bez zmian — dochodzi tylko odczyt `listPatientNotesForPatient`.
+
+**Znalezione przy okazji, bez zmiany.** „Dodaj wynik do kartoteki” w Przypomnieniach nie podaje sejfowi nazwy badania, więc dla wpisu „Wynik: Biopsja…” (Terminarz po procedurze) wynik opisowy dostaje tytuł „Wynik: Wynik: Biopsja…”. „Opisz wynik” w zakładce „Badania” podaje nazwę bez prefiksu. Do decyzji właściciela, czy wyrównać Przypomnienia.
+
+## Łatka P-KLIRENS-NOTATKI — wynik Klirensu poza Notatkami (`vilda_auth_ui.js`, 2026-11-15, decyzja właściciela)
+
+Opis działania i przypadki: `docs/clinical/ALGORITHMS.md`, „LAB-HISTORIA 6.37”; `docs/clinical/KLIRENS_NOTES.md`. Zmiany w czytelnych źródłach (`vilda_lab_history.js` — `isClcrResultNote`; `vilda_lab_history_tab.js` 2.7.0 — `focusRequested` dla zapisów Klirensu) nie wymagają opisu łatki. W `vilda_auth_ui.js` zmienia się czytelny blok P-WYNIKI-BADAN i dwa dokładne ciągi w części zminifikowanej, bez ponownej minifikacji:
+
+```js
+// Czytelny blok P-WYNIKI-BADAN: dwa nowe predykaty po WbJestWynikiem
+function WbJestKlirensem(note) { /* VildaLabHistory.isClcrResultNote, błąd → false */ }
+function WbWBadaniach(note) { return WbJestWynikiem(note) || WbJestKlirensem(note); }
+// WbNotatkiNaglowek: wyniki = notatki.filter(WbWBadaniach); komunikat po zapisie nadal tylko dla WbJestWynikiem.
+
+// 1. lista Notatek (funkcja Xo), dopisek P-WYNIKI-BADAN-NOTATKI — dwa wystąpienia w jednej instrukcji:
+//    było:  c.filter(function(S){return!WbJestWynikiem(S)})
+//    jest:  c.filter(function(S){return!WbWBadaniach(S)})
+// 2. rozstrzygnięcie linku (showPatientCard), dopisek P-WYNIKI-BADAN-LINK:
+//    było:  if(WbCel&&WbJestWynikiem(WbCel))r=Object.assign({},r,{activeTab:"lab",labFocusNoteId:WbCel.id,focusNoteId:null});
+//    jest:  if(WbCel&&WbWBadaniach(WbCel))r=Object.assign({},r,{activeTab:"lab",labFocusNoteId:WbCel.id,focusNoteId:null});
+```
+
+**Granice.** Punkty podpięcia zwartej karty Klirensu (`ClcrNotesCard`, `ClcrNotesTitle`, `ClcrOpenNoteResult`; `tools/patch-klirens-notes-view.mjs`) zostają bez zmian: karta rysuje się dla zapisu „wynik-klirens” bez pola wyniku, tytuły w Historii i szczegóły z ogólnego edytora działają jak dotąd. Grupowanie wyników w Historii (`WbHistoriaGrupuj`) nadal dotyczy tylko wyników badań — wpis Klirensu w Historii się nie zmienia. Sejf, wyszukiwarka i strona Klirens bez zmian.
+
+## Łatka P-PRZYPIETY-WYNIK — przypięty wynik i blokada duplikatu (`lab_pin_result.js`, 2026-11-17, decyzja właściciela)
+
+Opis działania i przypadki: `docs/clinical/ALGORITHMS.md`, „LAB-HISTORIA 6.38”; `docs/LAB_HISTORIA_WYNIKOW_PLAN.md`, decyzja 6.38 i „Uzupełnienie z wdrożenia 6.38”. Zmiany w czytelnych źródłach (`lab_history_strip.js` 1.4.0 — `pinnedFor` czyta `VildaLabPinResult.pinned()`, `markPinned` usunięte; style w `lab_history_strip.css` i `inline_przelicznik_jednostek_00.css`) nie wymagają opisu łatki. W zminifikowanej części `lab_pin_result.js` są dwie podmiany dokładnych ciągów i jedno wstawienie czytelnego bloku, bez ponownej minifikacji:
+
+```js
+// 1. budowa okna (funkcja V): ostrzeżenie o duplikacie po znaczniku oczekującego wyniku
+//    było:  var OwChoice=OwPinChoice(t,o);
+//    jest:  var OwChoice=OwPinChoice(t,o);PpDialog(t,e,o);
+// 2. zapis (funkcja A): świeże sprawdzenie karty tuż przed savePatientNote
+//    było:  n&&(p.linkedAgeMonths=n),await r.savePatientNote(p),g();
+//    jest:  n&&(p.linkedAgeMonths=n);var Pb=typeof PpBlocked=="function"?await PpBlocked(r,p):null;if(Pb){h(Pb);return}await r.savePatientNote(p),g();
+// 3. koniec pierwszego IIFE: czytelny blok między końcem I() a jej uruchomieniem (od nowej linii)
+//    było:  …c(),setTimeout(c,1200)}l.readyState==="loading"?l.addEventListener("DOMContentLoaded",I):I()})(window);
+//    jest:  …c(),setTimeout(c,1200)}
+//           /* Przypięty wynik (P-PRZYPIETY-WYNIK, LAB-HISTORIA 6.38; …) */
+//           var PP_PIN_TEXT = …; … function PpStart() { … }
+//           a.VildaLabPinResult.pinned = …; a.VildaLabPinResult._internal = Object.freeze({ … });
+//           if (l.readyState === "loading") l.addEventListener("DOMContentLoaded", PpStart); else PpStart();
+//           l.readyState==="loading"?l.addEventListener("DOMContentLoaded",I):I()})(window);
+```
+
+Czytelny blok leży w tym samym domknięciu co część zminifikowana i korzysta z jej `a`, `l`, `u`, `L`, `E`, `D` i `N`: stałe tekstów, stan `PpState`, czyste funkcje reguły (`PpParse`, `PpNums`, `PpNormUnit`, `PpRawIs`, `PpSame`, `PpHolds`, `PpResolve`, `PpDuplicates`), odświeżanie (`PpStart`, `PpRefresh`, `PpApply`, `PpWatch`, `PpClaim`), okno (`PpDialog`, `PpDialogSync`) i sprawdzenie zapisu (`PpBlocked`). Na końcu dopisuje `pinned` i zamrożone `_internal` do obiektu `window.VildaLabPinResult`, który część zminifikowana tworzy z `setAssessmentProvider`.
+
+**Dlaczego sprawdzenie w `A` ma strażnika `typeof`.** Testy `search-note-producers`, `lab-snapshot-ui` i `lab-testosterone-snapshot-vault` uruchamiają wycinek `async function A(` … `function I(){` z wolnymi zmiennymi (jak przy P-OCZEKUJACE-WYNIKI). `PpBlocked` leży poza wycinkiem, więc bez niego zapis działa dokładnie jak dotąd, a zapisywana notatka wyniku nie zmienia postaci.
+
+**Dlaczego blok stoi za `I()`.** Jest poza każdym wycinkiem testów na tym pliku (`var Lh2AssessmentProvider=` … `var s=null;` albo `/* AMH educational reference`, `async function A(` … `function I(){`). `tests/unit/lab-pin-pinned-state.test.mjs` pilnuje, że blok zaczyna się po `I()` i kończy przed jej uruchomieniem, że znaczniki wycinków `A` i `I` są nadal jednoznaczne oraz że `PpDialog` i `PpBlocked` są w części zminifikowanej wołane dokładnie raz.
+
+**Granice.** Bez nowych stylów ustawianych wprost na elementach: ostrzeżenie, komunikat pod datą i stan przycisku mają klasy z arkuszy, więc liczba dla `lab_pin_result.js` w `tests/fixtures/style-elementow.json` zostaje 17. Ciągi kontraktu z `tests/unit/lab-pending-result.test.mjs` (`RrPinRange(t,o);var OwChoice=OwPinChoice(t,o);`, `function(){A(t,e,i,OwChoice)}`, zamknięcie oczekującego wyniku zaraz po `await r.savePatientNote(p),g();`, notatka bez śladu oczekującego wyniku) są bez zmian. Sejf bez zmian: blok tylko czyta (`listPatientNotesForPatient`, `getPatientNote`) i korzysta z istniejących nasłuchów `onPatientNoteChanged` i `onLock` oraz z sygnału sejfu dla innych kart (`BroadcastChannel` „vilda-notes”, klucz `storage` „vilda-note-changed-ping-v1”). Pakiet badań (`vilda_lab_packages.js`) zapisuje wyniki własną drogą i nie jest blokowany.
+
+## Łatka P-PASEK-WARIANT-A — krótszy podpis wiersza przypięcia (`lab_pin_result.js`, 2026-11-17, decyzja właściciela)
+
+Opis: `docs/clinical/ALGORITHMS.md`, „LAB-HISTORIA 6.39”; `docs/LAB_HISTORIA_WYNIKOW_PLAN.md`, decyzja 6.39. Zmiany w czytelnych źródłach (`lab_history_strip.js` 1.5.0, `lab_history_strip.css`, blok `Pp*` w `lab_pin_result.js`: `PP_PIN_SUB` i podpis w `PpApply`) nie wymagają opisu łatki. W zminifikowanej części `lab_pin_result.js` jest jedna podmiana dokładnego ciągu, bez ponownej minifikacji:
+
+```js
+// tekst początkowy podpisu wiersza przypięcia (funkcja N)
+//    było:  n.id="labPinSub",n.textContent="wynik trafi do karty pacjenta"
+//    jest:  n.id="labPinSub",n.textContent="Jeszcze nie w karcie"
+```
+
+Tekst jest ten sam co `PP_PIN_SUB` w czytelnym bloku, więc wiersz nie zmienia podpisu, zanim blok go odświeży. `tests/unit/lab-pin-pinned-state.test.mjs` pilnuje, że oba ciągi występują dokładnie raz, a dawnego tekstu nie ma. Bez nowych stylów ustawianych wprost na elementach (liczba dla `lab_pin_result.js` w `tests/fixtures/style-elementow.json` zostaje 17); znaczniki wycinków testów (`var Lh2AssessmentProvider=`, `var s=null;`, `async function A(`, `function I(){`) bez zmian.
+
 ## Trwała tożsamość wizyt — źródło i granica artefaktu sejfu
 
 Zmiana funkcjonalna `P-TRWALE-WIZYTY` ma bazę `audyt` z commita
@@ -1746,6 +1904,25 @@ node tools/visits-vault-delta.mjs --rebuild /tmp/vilda-vault-visits-base.js /tmp
 cmp vilda_vault.js /tmp/vilda-vault-visits-built.js
 node tools/visits-vault-delta.mjs
 ```
+
+Od E3-PR0b2a (P-KONFLIKT-ZAPISU-NOTATKI, pierwsza zmiana sejfu po tej integracji)
+bazą delty jest obraz sejfu po tej zmianie bez bloku trwałych wizyt: SHA-256
+`5d77d03694150d19957de8d42a35083d59dae24391f8b575d679c29bf754f49b`
+(`tools/visits-vault-delta.mjs`, manifest). Przepis wyżej z `40d742d3` odtwarza stan
+sprzed E3-PR0b2a narzędziem z tamtego stanu (`audyt` `214a44c7`); bieżące narzędzie
+odrzuca tamtą bazę („unexpected input artifact”). Bieżącą bazę daje odwrócenie delty
+z `vilda_vault.js`:
+
+```bash
+node --input-type=module -e "import { readFileSync, writeFileSync } from 'node:fs'; import { restoreDurableVisitsBaseline } from './tools/visits-vault-delta.mjs'; writeFileSync('/tmp/vilda-vault-visits-base.js', restoreDurableVisitsBaseline(readFileSync('vilda_vault.js', 'utf8')));"
+node tools/visits-vault-delta.mjs --rebuild /tmp/vilda-vault-visits-base.js /tmp/vilda-vault-visits-built.js
+cmp vilda_vault.js /tmp/vilda-vault-visits-built.js
+```
+
+Od E3-PR0b2b (P-NOTATKA-POZNIEJSZA) bazą delty jest obraz sejfu po tej zmianie bez bloku trwałych
+wizyt: SHA-256 `a9672e38d4890b2516d3afd2f184006ad72ec4443cad8df7663d42abbb5731c4`. Baza z E3-PR0b2a
+(`5d77d036…`) odpowiada stanowi sprzed E3-PR0b2b (`audyt` `3c1fc748`); bieżącą bazę daje to samo
+odwrócenie delty co wyżej.
 
 Każdy punkt wpięcia musi występować dokładnie raz. Narzędzie odrzuca inne
 bajty bazy, zmianę źródła bez zgodnego manifestu, niejednoznaczny punkt wpięcia

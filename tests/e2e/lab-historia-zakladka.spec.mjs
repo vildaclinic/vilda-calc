@@ -162,7 +162,7 @@ test('wyniki tego samego dnia i nakładające się zera zachowują normy, kolory
   await expect(page.locator('.vilda-lab-hist-result-details, .vilda-lab-hist-result-row')).toHaveCount(0);
 });
 
-test('akcje: szczegóły wyniku prowadzą do edycji, „+ Dodaj wynik” i „Wpisz wynik” zachowują formularze i zamknięcie zlecenia', async ({ page }) => {
+test('akcje: szczegóły wyniku prowadzą do edycji; przy oczekującym wyniku wczytanie do Jednostek lab. albo „Opisz wynik” — bez ręcznego wpisu wartości i bez „+ Dodaj wynik”', async ({ page }) => {
   const patientId = await otworzSejf(page);
   const ids = await zapiszHistorie(page, patientId);
   await otworzBadania(page, patientId);
@@ -181,25 +181,27 @@ test('akcje: szczegóły wyniku prowadzą do edycji, „+ Dodaj wynik” i „Wp
   await page.keyboard.press('Escape');
   await expect(edytor).toHaveCount(0);
 
-  await badania.getByRole('button', { name: '+ Dodaj wynik' }).click();
-  await expect(edytor).toHaveValue('lab');
-  await expect(page.locator('input[name="b3-anchor"][value="date"]')).toBeChecked();
-  await expect(page.locator('.b3-clinical-date')).toBeFocused();
-  await page.keyboard.press('Escape');
-  await expect(edytor).toHaveCount(0);
+  // P-BADANIA-WEJSCIE (decyzja właściciela 2026-11-15): nowego wyniku zakładka nie wpisuje ręcznie (wpis bez oceny).
+  // Karta pacjenta niewczytanego ma jedną akcję: wczytanie i przejście do Jednostek lab.
+  await expect(badania.getByRole('button', { name: '+ Dodaj wynik' })).toHaveCount(0);
+  await expect(badania.locator('.vilda-lab-hist-actions > *')).toHaveText(['Wczytaj pacjenta i dodaj wyniki →']);
+  await expect(badania.locator('a.vilda-lab-hist-check')).toHaveCount(0);
 
-  await badania.getByRole('button', { name: 'Wpisz wynik' }).click();
-  await expect(edytor).toHaveValue('lab');
-  await expect(page.locator('.b3-lab-test')).toHaveValue('TSH (tyreotropina)');
-  await expect(page.locator('input[name="b3-anchor"][value="date"]')).toBeChecked();
-  await expect(page.locator('.b3-clinical-date')).toBeFocused();
-  // Wpisanie wyniku zamyka zlecenie: wpis przenosi się z „Oczekujących” do serii TSH.
-  await page.locator('.b3-clinical-date').fill('2026-06-16');
-  await page.locator('.b3-lab-value-row input').first().fill('0,4');
-  await page.getByRole('dialog', { name: /Edytuj notatkę/ }).getByRole('button', { name: 'Zapisz zmiany' }).click();
+  // P-OCZEKUJACE-WYNIKI (decyzje właściciela 2026-11-15): przy oczekującym wyniku nie ma już ręcznego „Wpisz wynik”
+  // (edytor z wartością bez oceny). Pacjent niewczytany: wczytanie i Jednostki lab. z tym wpisem albo opis słowny.
+  const oczekujacy = badania.locator(`.vilda-lab-hist-pending-row[data-note-id="${ids.zlecenie}"]`);
+  await expect(oczekujacy.locator('.vilda-lab-hist-pending-actions > *')).toHaveText(['Wczytaj pacjenta i wpisz wynik →', 'Opisz wynik']);
+  await expect(badania.getByRole('button', { name: 'Wpisz wynik', exact: true })).toHaveCount(0);
+  await expect(oczekujacy.locator('a')).toHaveCount(0);
+  await oczekujacy.getByRole('button', { name: 'Opisz wynik' }).click();
+  const opis = page.locator('#labPendingDescribeDialog');
+  await expect(opis).toBeVisible();
+  // To nie jest edytor notatki: bez szablonu wyniku, bez pól wartości i jednostki.
   await expect(edytor).toHaveCount(0);
-  await expect(badania.locator('.vilda-lab-hist-pending')).toHaveCount(0);
-  await expect(wynik(badania, ids.zlecenie)).toContainText('0,4');
+  await expect(opis.locator('input:not([type="date"]), select')).toHaveCount(0);
+  await opis.getByRole('button', { name: 'Anuluj' }).click();
+  await expect(opis).toHaveCount(0);
+  await expect(badania.locator('.vilda-lab-hist-pending-title')).toHaveText('Kontrola TSH · termin 16.06.26');
 });
 
 test('Historia bez sekcji „Trend wyników”: odnośnik przełącza na zakładkę Badania', async ({ page }) => {

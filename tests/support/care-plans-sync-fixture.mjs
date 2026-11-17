@@ -3,7 +3,7 @@ import { readyForPatient } from './centile-live-fixture.mjs';
 
 // Fresh synthetic accounts only. Every request to the production worker URL is
 // intercepted, including WebSocket; no request reaches an account or server.
-const WORKER = 'https://vilda-sync.maciej-4b9.workers.dev';
+const WORKER = 'https://sync.vildasync.com';
 const PASSWORD = 'Fikcyjny#CareSync2026!aA';
 const CORS = {
   'access-control-allow-origin': '*', 'access-control-allow-headers': '*',
@@ -59,7 +59,7 @@ export function fictionalCareCloud({ preserveSyncPreference = false } = {}) {
       if (endpoint === 'entitlement') return json(200, { plan: 'free' });
       return json(404, {});
     });
-    await context.routeWebSocket(/vilda-sync\.maciej-4b9\.workers\.dev/, ws => ws.close());
+    await context.routeWebSocket(/vilda-sync\.maciej-4b9\.workers\.dev|sync\.vildasync\.com/, ws => ws.close());
     await context.addInitScript(({ preserveSyncPreference }) => {
       localStorage.setItem('vilda-terms-accepted-v1', JSON.stringify({ version: 1, acceptedAtISO: new Date().toISOString() }));
       localStorage.setItem('analyticsConsent', 'denied');

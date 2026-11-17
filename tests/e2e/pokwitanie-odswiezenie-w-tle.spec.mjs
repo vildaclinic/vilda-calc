@@ -15,7 +15,7 @@ import { expect, test } from '../support/test-czas.mjs';
 // nadal jest czytany po każdym zdarzeniu. Dane FIKCYJNE.
 test.use({ serviceWorkers: 'block' });
 
-const SERWER = 'https://vilda-sync.maciej-4b9.workers.dev';
+const SERWER = 'https://sync.vildasync.com';
 const HASLO = 'E2e#PokwitanieWTle!26';
 const ANNA = {
   name: 'Probna Anna',
@@ -43,7 +43,7 @@ async function atrapaSynchronizacji(context) {
     if (sciezka.endsWith('/delta')) return json(204, {});
     return json(404, {});
   });
-  await context.routeWebSocket(/vilda-sync\.maciej-4b9\.workers\.dev/, (ws) => { ws.close(); });
+  await context.routeWebSocket(/vilda-sync\.maciej-4b9\.workers\.dev|sync\.vildasync\.com/, (ws) => { ws.close(); });
 }
 
 async function otworz(page, context, strona) {

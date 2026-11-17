@@ -8,6 +8,10 @@ const autocomplete = auth.slice(auth.indexOf('function ks('), auth.indexOf('func
 const quickMeasure = auth.slice(auth.indexOf('async function hi('), auth.indexOf('var Zr=', auth.indexOf('async function hi(')));
 const cardStart = auth.indexOf('onclick:function(){', auth.indexOf('text:"Wczytaj tego pacjenta"')) + 'onclick:'.length;
 const cardClick = auth.slice(cardStart, auth.indexOf('}}));var Co=', cardStart) + 1);
+// P-BADANIA-WEJSCIE (2026-11-15): obsługa przycisku jest wspólną funkcją BdWczytajPacjenta (to samo ciało, przeniesione
+// bez zmian); przycisk woła ją z funkcją listy, zakładka „Badania” — także z krokiem po wczytaniu (BdPo).
+const loaderStart = auth.indexOf('var BdWczytajPacjenta=function(BdZastosuj,BdPo){');
+const cardLoader = auth.slice(loaderStart, auth.indexOf('\nvar BdZastosujNaStronie=', loaderStart));
 const PID = 'fictional-auth-load-patient';
 const NEXT = 'fictional-auth-next-patient';
 const clone = value => JSON.parse(JSON.stringify(value));
@@ -94,12 +98,16 @@ function environment({ guard = 'hold' } = {}) {
     return new Function(...Object.keys(bindings), `${helpers}\n${source}\nreturn ${result};`)(...Object.values(bindings));
   };
   const hidden = vi.fn();
-  const card = (target = NEXT, apply = value => { win.applyLoadedData(value); }) => make('', cardClick, {
+  const cardBindings = (target, apply) => ({
     t: target, a: apply, o: vault, s: initial, c: { payload: initial }, l: { snapshotCount: 1 }, d: [initial], $t: hidden,
   });
+  const card = (target = NEXT, apply = value => { win.applyLoadedData(value); }) => make(cardLoader, cardClick, cardBindings(target, apply));
+  // Droga zakładki „Badania”: ta sama funkcja z krokiem po wczytaniu.
+  const cardThen = (after, target = NEXT, apply = value => { win.applyLoadedData(value); }) =>
+    make(cardLoader, 'function(){BdWczytajPacjenta(a,after)}', { ...cardBindings(target, apply), after });
   const quick = make(quickMeasure, 'hi'), pick = make(autocomplete, 'ks');
   const helperApi = make('', '({capture:patientLoadCapture,current:patientLoadCurrent,run:patientLoadRun})');
-  return { win, api, vault, read, save, trace, applied, published, runs, nodes, fields, restore, hidden, card, quick, pick, helperApi,
+  return { win, api, vault, read, save, trace, applied, published, runs, nodes, fields, restore, hidden, card, cardThen, quick, pick, helperApi,
     proceed: () => proceed?.(), main: () => clone(main), rotate: () => { generation++; }, lock: () => { unlocked = false; generation++; },
     setPatient(id) { values.set('vildaCurrentPatientId', id); win._vildaCurrentPatientId = id; },
     resolveRead(value = initial) { read.resolve({ snapshots: [{ snapshotId: 'fictional-snapshot', payload: value }], snapshotCount: 1 }); },
@@ -143,6 +151,34 @@ describe('AuthUI explicit patient loads use the actual accepted-load authority',
   it('a delegated card callback that refuses without applying cannot publish success', async () => {
     const h = environment({ guard: 'proceed' }); h.card(NEXT, () => undefined)(); h.resolveRead(); await settle();
     expect(h.applied).toEqual([]); expect(h.published).toEqual([]); expect(h.hidden).not.toHaveBeenCalled();
+  });
+
+  it('the card button is the shared loader called with the list callback and no follow-up step', () => {
+    expect(loaderStart).toBeGreaterThan(-1);
+    expect(cardClick).toBe('function(){BdWczytajPacjenta(a,null)}');
+  });
+
+  it('P-BADANIA-WEJSCIE: the follow-up step runs once, only after publication and after the card is hidden', async () => {
+    const order = [], after = vi.fn(() => order.push('after'));
+    const h = environment({ guard: 'proceed' }), incoming = payload();
+    h.hidden.mockImplementation(() => order.push('hidden'));
+    h.cardThen(after)(); await settle();
+    expect(after).not.toHaveBeenCalled();
+    h.resolveRead(incoming); await settle();
+    expect(h.applied).toEqual([incoming]); expect(h.published).toHaveLength(1);
+    expect(h.published[0].detail).toMatchObject({ patientId: NEXT, source: 'pick' });
+    expect(after).toHaveBeenCalledOnce(); expect(order).toEqual(['hidden', 'after']);
+  });
+
+  it.each(['cancelled', 'stale', 'empty', 'refused'])('P-BADANIA-WEJSCIE: a %s load never runs the follow-up step', async reason => {
+    const after = vi.fn();
+    const h = environment(reason === 'cancelled' ? {} : { guard: 'proceed' });
+    h.cardThen(after, NEXT, reason === 'refused' ? () => undefined : value => { h.win.applyLoadedData(value); })(); await settle();
+    if (reason === 'stale') { h.rotate(); h.resolveRead(); }
+    if (reason === 'empty') h.read.resolve({ snapshots: [] });
+    if (reason === 'refused') h.resolveRead();
+    await settle();
+    expect(after).not.toHaveBeenCalled(); expect(h.published).toEqual([]); expect(h.hidden).not.toHaveBeenCalled();
   });
 
   it.each(['read', 'confirmation'])('autocomplete invalidated during %s cannot apply or publish', async stage => {

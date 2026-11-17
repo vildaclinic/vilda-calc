@@ -11,6 +11,7 @@ test.setTimeout(180_000);
 async function account(page, label) {
   await fixturePreferences(page);
   await page.route('https://vilda-sync.maciej-4b9.workers.dev/**', route => route.abort());
+  await page.route('https://sync.vildasync.com/**', route => route.abort());
   await page.goto('/index.html', { waitUntil: 'load' });
   await page.waitForFunction(() => window.VildaVault && window.VildaAuthUI?.isBootReady());
   await page.evaluate(async ({ password, label }) => {

@@ -104,7 +104,7 @@ function installDebounceObserver() {
 
 export async function openFictionalClearAccount(page, context, { path = '/index.html', width = 1440, shell = false } = {}) {
   const network = [];
-  await context.route(/https?:\/\/[^/]+\.workers\.dev(?:\/|$)/, route => {
+  await context.route(/https?:\/\/(?:[^/]+\.workers\.dev|sync\.vildasync\.com)(?:\/|$)/, route => {
     const request = route.request(), url = new URL(request.url());
     const endpoint = url.pathname.replace(/^\/v1\/slots\/[^/]+\/?/, '');
     const status = request.method() === 'OPTIONS' ? 204 : endpoint === 'entitlement' ? 200 : 404;
@@ -113,7 +113,7 @@ export async function openFictionalClearAccount(page, context, { path = '/index.
       'access-control-allow-headers': '*', 'content-type': 'application/json' },
     ...(status === 204 ? {} : { body: JSON.stringify(endpoint === 'entitlement' ? { plan: 'free' } : {}) }) });
   });
-  await context.routeWebSocket(/wss?:\/\/[^/]+\.workers\.dev(?:\/|$)/, socket => {
+  await context.routeWebSocket(/wss?:\/\/(?:[^/]+\.workers\.dev|sync\.vildasync\.com)(?:\/|$)/, socket => {
     network.push({ websocket: 'intercepted-and-closed' }); socket.close();
   });
   await page.setViewportSize({ width, height: 1000 });

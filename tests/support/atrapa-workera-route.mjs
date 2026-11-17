@@ -5,7 +5,7 @@
 // ALLOWED_ORIGIN_PROD jako lista), inaczej przeglądarka odrzuci odpowiedź tak samo jak przy prawdziwym workerze.
 // Usterka sieci albo zgubienia odpowiedzi (atrapa rzuca) → route.abort('failed'), jak zerwane połączenie. Gniazdo na
 // żywo jest zamykane od razu (WebSocket poza modelem atrapy). Dane wyłącznie FIKCYJNE.
-export const ADRES_WORKERA = 'https://vilda-sync.maciej-4b9.workers.dev';
+export const ADRES_WORKERA = 'https://sync.vildasync.com';
 
 /**
  * @param {import('@playwright/test').BrowserContext | import('@playwright/test').Page} kontekst

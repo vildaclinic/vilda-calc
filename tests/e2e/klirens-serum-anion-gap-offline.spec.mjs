@@ -1,4 +1,4 @@
-import { showClcrResults, clcrPoint } from '../support/badania-klirens.mjs';
+import { showClcrResults, clcrPoint, clcrValue, expectClcrOutsideNotes, openClcrDetails, clcrNorm } from '../support/badania-klirens.mjs';
 import { createServer } from 'node:http';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
@@ -282,10 +282,11 @@ async function lazyStartAndNotes(page, origin, note, resources, loaded) {
   await installMemoryVault(page);
   await page.evaluate(value => window.__clcrRecordFixture.seed([value]), note);
   await page.evaluate(pid => window.VildaAuthUI.showPatientCard(pid, null, null, { activeTab: 'notes' }), note.patientId);
-  const compact = page.locator('.vilda-clcr-note[data-clcr-note-state="ready"]');
-  await expect(compact).toHaveCount(1);
-  await expect(compact.locator('.clcr-note-value')).toHaveText(note.labResult.value);
-  await expect(compact).toContainText('7–15');
+  // P-KLIRENS-NOTATKI: wynik Klirensu nie ma karty w Notatkach (tylko linia z liczbą wyników); wartość, norma i szczegóły są w Badaniach.
+  await expectClcrOutsideNotes(page, 1);
+  await page.locator('button[data-tab="lab"]').click(); await showClcrResults(page, 'table');
+  await expect(clcrValue(page, note.id)).toContainText(note.labResult.value);
+  await expect(clcrNorm(page, note.id)).toContainText('7–15');
   const frozen = await page.evaluate(value => {
     const engine = window.VildaClcrSerumAnionGap;
     window.VildaClcrSerumAnionGap = new Proxy({}, { get() { return () => { throw Error('Offline Start must read frozen AG'); }; } });
@@ -293,7 +294,7 @@ async function lazyStartAndNotes(page, origin, note, resources, loaded) {
     finally { window.VildaClcrSerumAnionGap = engine; }
   }, note);
   expect(frozen).toMatchObject({ valueNum: note.labResult.valueNum, parameterKey: 'clcr:AGs', outOfRange: false, norm: '7–15 mmol/L' });
-  await compact.getByRole('button', { name: 'Szczegóły obliczenia →', exact: true }).click();
+  await openClcrDetails(page, note.id);
   await page.locator('#editMeasurement').click();
   await page.locator('#editField-S_Na').fill('142');
   await page.locator('#saveEditedMeasurement').click();
@@ -306,9 +307,8 @@ async function lazyStartAndNotes(page, origin, note, resources, loaded) {
   expect(editedProjection.serumAnionGapAssessment.context.ageYears).toBe(10);
   expect(editedProjection.serumAnionGapAssessment.correction.rawValue).toBe(19);
   await page.locator('#detailsDialog').getByRole('button', { name: 'Zamknij', exact: true }).click();
-  await expect(compact.locator('.clcr-note-value')).toHaveText(edited.labResult.value);
-  await expect(compact).toContainText('7–15');
-  await compact.getByRole('button', { name: 'Zobacz w Badaniach →', exact: true }).click();
+  await expect(clcrValue(page, note.id)).toContainText(edited.labResult.value);
+  await expect(clcrNorm(page, note.id)).toContainText('7–15');
   await showClcrResults(page, 'charts');
   const point = clcrPoint(page, note.id);
   await expect.poll(async () => Number(await point.getAttribute('data-value'))).toBe(edited.labResult.valueNum);

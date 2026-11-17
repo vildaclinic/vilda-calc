@@ -2,8 +2,8 @@ import { expect, test } from '../support/test-czas.mjs';
 import { otworzBadania, otworzPrzelicznik, pasekHistorii, sekcjaBadan } from '../support/lab-historia-dane.mjs';
 
 // Decyzja 6.3 (LAB-HISTORIA): przypięcie w prawdziwym przeliczniku zapisuje z wynikiem zakres, którego przelicznik
-// użył (selectRange + evaluate dla fikcyjnej dziewczynki 12 l 3 mies. z formularza), a pasek i zakładka „Badania”
-// pokazują go z zapisu. Starsze wpisy z fikcyjnej historii (tests/support/lab-historia-dane.mjs) zostają bez oceny
+// użył (selectRange + evaluate dla fikcyjnej dziewczynki 12 l 3 mies. z formularza), a pasek (od 6.39 w podpowiedzi
+// chipu) i zakładka „Badania” pokazują go z zapisu. Starsze wpisy z fikcyjnej historii (tests/support/lab-historia-dane.mjs) zostają bez oceny
 // z zakresu. Dane wyłącznie FIKCYJNE. Zegar stron: 17.06.2026.
 test.use({ serviceWorkers: 'block' });
 
@@ -40,12 +40,13 @@ test('przypięcie TSH zapisuje zakres przelicznika; pasek i zakładka „Badania
       range: { id: 'tsh_11_19y', low: 0.5, high: 4.3, unit: 'mIU/L', context: 'Młodzież 11–19 lat', sourceIds: ['mayo_test_tsh'] },
       binding: { testKey: 'tsh', valueNum: 5.1, unit: 'mIU/L', clinicalDateISO: '2026-06-17' } } });
 
-  // Pasek: nowy chip ze strzałką z zapisu, szczegóły z granicami i źródłem.
+  // Pasek: nowy chip ze strzałką z zapisu; granice, dla kogo i źródło w podpowiedzi chipu (6.39: bez panelu szczegółów).
   const pasek = pasekHistorii(page);
   const chip = pasek.locator('button.lab-strip-chip[data-note-id]').last();
   await expect(chip.locator('.lab-strip-chip-v')).toHaveText('5,1↑');
   await chip.click();
-  expect(await tekst(pasek.locator('.lab-strip-detail-range'))).toBe('zakres zapisany z wynikiem: 0,5–4,3 mIU/L · powyżej · Młodzież 11–19 lat · dziewczynka, 12 l 3 m · Mayo Test 8939 — TSH');
+  await expect(chip).toHaveAttribute('aria-pressed', 'true');
+  expect(bezTwardejSpacji(await chip.getAttribute('title'))).toBe('zapisano: 5,1 mIU/L · powyżej zapisanego zakresu 0,5–4,3 mIU/L · Młodzież 11–19 lat · dziewczynka, 12 l 3 m · Mayo Test 8939 — TSH · wynik z formularza — już w karcie');
 
   // Zwarta tabela pokazuje granice i kolor; pełny zachowany kontekst jest w szczegółach wpisu.
   await otworzBadania(page, patientId);
@@ -123,7 +124,7 @@ test('prolaktyna u dziecka z zakresem ogólnym: okno i historia bez oceny, zapis
   const chip = pasek.locator('button.lab-strip-chip[data-note-id]').last();
   await expect(chip.locator('.lab-strip-chip-v')).toHaveText('35');
   await chip.click();
-  expect(await tekst(pasek.locator('.lab-strip-detail-range'))).toBe('zakres zapisany z wynikiem: 2–29 ng/mL · zakres ogólny — bez oceny dla dziecka · Dorośli, zakres ogólny · dziewczynka, 12 l 3 m · Mayo Test 85670 — Prolaktyna');
+  expect(bezTwardejSpacji(await chip.getAttribute('title'))).toBe('zapisano: 35 ng/mL · zakres ogólny — bez oceny dla dziecka 2–29 ng/mL · Dorośli, zakres ogólny · dziewczynka, 12 l 3 m · Mayo Test 85670 — Prolaktyna · wynik z formularza — już w karcie');
 
   await otworzBadania(page, patientId);
   const badania = sekcjaBadan(page);

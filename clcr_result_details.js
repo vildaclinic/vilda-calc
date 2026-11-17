@@ -289,7 +289,9 @@
         const snapshot = root.ClcrSavedCalculation.createSnapshot(dp, { capture: dp.capture, patientId, clinicalDateISO: date });
         payload = root.ClcrSavedResults.buildPatientNotePayload(dp, { patientId, clinicalDateISO: date, comment: humanComment(draft.note) });
         payload.body += "\n\n" + root.ClcrSavedCalculation.serializeSnapshot(snapshot, payload);
-        Object.assign(payload, { id: noteId, patientId, baseRev: draft.note.rev });
+        // E3-PR0b2a: chwila zapisu pokazanej wersji - konflikt także po scaleniu przy równym rev.
+        // E3-PR0b2b: i sama pokazana wersja (baseNote) - ta sama widoczna wersja z nową chwilą zapisu nie jest konfliktem.
+        Object.assign(payload, { id: noteId, patientId, baseRev: draft.note.rev, baseUpdatedAtISO: draft.note.updatedAtISO || null, baseNote: draft.note });
       } catch (cause) { error("editError", cause?.message || "Sprawdź dane obliczenia."); return; }
       if (typeof vault?.updateExistingPatientNote !== "function") { error("editError", "Moduł bezpiecznej edycji nie jest dostępny. Odśwież aplikację."); return; }
       lock(true);
@@ -318,7 +320,8 @@
       if (typeof vault?.removeExistingPatientNote !== "function") { error("deleteError", "Moduł bezpiecznego usuwania nie jest dostępny. Odśwież aplikację."); return; }
       lock(true);
       try {
-        const result = await vault.removeExistingPatientNote({ id: noteId, patientId, baseRev: currentNote.rev });
+        // E3-PR0b2a: jak przy zmianie - usuwamy tylko wersję, którą lekarz ma na ekranie (E3-PR0b2b: także baseNote).
+        const result = await vault.removeExistingPatientNote({ id: noteId, patientId, baseRev: currentNote.rev, baseUpdatedAtISO: currentNote.updatedAtISO || null, baseNote: currentNote });
         if (!result?.removed) { if (ensureAlive()) error("deleteError", rejection(result)); return; }
         changed("deleted");
         if (ensureAlive()) destroy();

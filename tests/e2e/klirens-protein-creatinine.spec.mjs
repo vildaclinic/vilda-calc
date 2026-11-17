@@ -1,4 +1,4 @@
-import { showClcrResults, showBadaniaView, clcrRow, clcrPoints, clcrPoint, clcrCards, closeClcrDetails } from '../support/badania-klirens.mjs';
+import { showClcrResults, showBadaniaView, clcrRow, clcrPoints, clcrPoint, clcrCards, closeClcrDetails, expectClcrOutsideNotes } from '../support/badania-klirens.mjs';
 import fs from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 import { czekajNaUstabilizowanyUklad, kliknij } from '../support/uklad-czekanie.mjs';
@@ -487,10 +487,9 @@ test('B/Cr: zapisany pacjent, małe raw i brak normy spójne w Badaniach, Notatk
   await showClcrResults(page, 'charts');
   await expect(clcrPoints(page)).toHaveCount(2);
   expect(Number(await clcrPoint(page, tiny.id).getAttribute('data-value'))).toBe(model.rawValue);
-  await page.locator('button[data-tab="notes"]').click();
-  const notes = page.locator('.vilda-clcr-note[data-clcr-note-state="ready"]');
-  await expect(notes).toHaveCount(2);
-  for (const note of await notes.all()) await expect(note).not.toContainText('W zakresie');
+  // P-KLIRENS-NOTATKI: dawne zapisy nie dostają oceny w Badaniach (ton bez oceny), a w Notatkach nie mają karty.
+  for (const note of [tiny, standard]) await expect(clcrPoint(page, note.id)).toHaveAttribute('data-tone', 'neutral');
+  await expectClcrOutsideNotes(page, 2);
   expect((await memory(page)).originalsLocked).toBe(true);
 });
 
@@ -753,7 +752,7 @@ test('B/Cr: licznik 2/1/3 obejmuje tylko poprawne dane wzoru i nie dodaje pytań
   await expect(inputCard(page)).not.toContainText('Do pełnej interpretacji');
 });
 
-test('B/Cr: zapis dorosłego pokazuje polski opis KDIGO w Notatkach i Szczegółach, zachowując techniczne ID w migawce', async ({ page }) => {
+test('B/Cr: zapis dorosłego pokazuje polski opis KDIGO w Szczegółach, zachowując techniczne ID w migawce; w Notatkach wyniku nie ma', async ({ page }) => {
   await open(page);
   await installMemoryVault(page);
   await restore(page, { age: '18', BCR_inputMode: 'direct', BCR_reportedValue: '.3' });
@@ -761,11 +760,9 @@ test('B/Cr: zapis dorosłego pokazuje polski opis KDIGO w Notatkach i Szczegół
   expect(model.category.id).toBe('moderate');
   const [saved] = await saveVisible(page, '2026-10-25');
   await page.locator('#clcrOpenBadaniaBtn').click();
-  await page.locator('button[data-tab="notes"]').click();
-  const note = page.locator('.vilda-clcr-note[data-clcr-note-state="ready"]');
-  await expect(note).toHaveCount(1);
-  await expect(note).toContainText('Umiarkowanie zwiększony');
-  await expect(note).not.toContainText(/normal-mild|moderate|severe/);
+  // P-KLIRENS-NOTATKI: Notatki nie pokazują wyniku ani technicznych identyfikatorów kategorii.
+  const notes = await expectClcrOutsideNotes(page, 1);
+  await expect(notes).not.toContainText(/normal-mild|moderate|severe/);
   await page.evaluate(item => window.ClcrResultDetails.open({ patientId: item.patientId, noteId: item.id }), saved);
   await expect(page.locator('#detailsDialog')).toContainText('Umiarkowanie zwiększony');
   await expect(page.locator('#detailsDialog')).not.toContainText(/normal-mild|moderate|severe/);

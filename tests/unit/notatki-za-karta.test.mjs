@@ -144,7 +144,18 @@ function okno(opcje = {}) {
 
 const kopia = (x) => { const y = JSON.parse(JSON.stringify(x)); if (y && typeof y === 'object') delete y.credential; return y; };
 // Emulacja starej aplikacji (346dd81a): pole ucinane w ładunku przed scaleniem i w adapterze.
-const bezPola = (p) => { const y = kopia(p); (y.patientNoteTombstones || []).forEach((t) => { delete t.deletedWithPatient; }); return y; };
+// E3-PR0b2b (P-NOTATKA-POZNIEJSZA): starsza aplikacja nie zna też pól chwili treści i oznaczenia notatki (contentAtISO,
+// contentForISO, stateAtISO, stateForISO) — emulacja ucina je w ładunku i w zapisie notatki. Reguły wyboru wersji
+// notatki („najpierw rev”) starszej aplikacji emulacja nie odwzorowuje (kod notatek jest bieżący); sprawdza ją A ≡ B na
+// prawdziwych fiksturach 221 i 276 (tests/unit/sync-dziennik-wlasnosciowy.test.mjs, flota ze starszą aplikacją).
+const POLA_CHWIL_NOTATKI = ['contentAtISO', 'contentForISO', 'stateAtISO', 'stateForISO'];
+const bezChwil = (n) => { const c = Object.assign({}, n); for (const k of POLA_CHWIL_NOTATKI) delete c[k]; return c; };
+const bezPola = (p) => {
+  const y = kopia(p);
+  (y.patientNoteTombstones || []).forEach((t) => { delete t.deletedWithPatient; });
+  if (Array.isArray(y.patientNotes)) y.patientNotes = y.patientNotes.map(bezChwil);
+  return y;
+};
 function adapterStarej(baza) {
   return new Proxy(baza, {
     get(cel, klucz) {
@@ -153,6 +164,7 @@ function adapterStarej(baza) {
       if (klucz === 'putPatientNoteTombstoneForUser') {
         return (u, n) => { const c = Object.assign({}, n); delete c.deletedWithPatient; return f.call(cel, u, c); };
       }
+      if (klucz === 'putPatientNoteForUser') return (u, n) => f.call(cel, u, bezChwil(n));
       return f.bind(cel);
     },
   });
@@ -1680,7 +1692,7 @@ describe('P-NOTATKI-ZA-KARTA — przegląd 1: podgląd „Scal kopię konta” =
     expect(r.d).toEqual({ dodane: 2, zmienione: 0, usuniete: 0, przywrocone: 0 });
     expect(await stan(B, x)).toBe('karta [n1,n2] nagr[n1+pole,n2+pole]');
   });
-  it('P4 ratunek wersji z wyższym rev i wcześniejszą chwilą niż tutejsza (G13) → nie „zastąpiona późniejsza edycja”', async () => {
+  it('P4 ratunek wersji z wyższym rev (G13; od E3-PR0b2b poprawka ma też późniejszą chwilę — stempel) → nie „zastąpiona późniejsza edycja”', async () => {
     const x = await trzy();
     const { A, B, C } = x.urz;
     vi.setSystemTime(zegar + 3600e3);
@@ -1691,10 +1703,14 @@ describe('P-NOTATKI-ZA-KARTA — przegląd 1: podgląd „Scal kopię konta” =
     nagrywaj(A);
     przesun(60e3); await A.v.removePatient(x.pid);
     await dostarcz(A, C, (t) => t === 'nagrNot');
-    expect(await stan(C, x)).toBe('karta [n1=poprawka C] nagr[n1+pole]');
+    // E3-PR0b2b (P-NOTATKA-POZNIEJSZA): zapis notatki dostaje stempel D-7 — poprawka C wersji z zegara do przodu ma
+    // chwilę późniejszą niż ta wersja, więc i niż nagrobek R (= u wersji z przyszłości): nagrobek zdjęty przy zapisie
+    // (dotąd zostawał, bo zapis w „teraz” był wcześniejszy niż R), a kopia C ma wyższy rev I późniejszą chwilę (dotąd
+    // wcześniejszą). Wynik scalenia kopii (zmieniona 1, bez „zastąpionej późniejszej edycji”) bez zmian.
+    expect(await stan(C, x)).toBe('karta [n1=poprawka C] nagr[]');
     await wizyta(B, x);
     const nB = (await B.v.listAllPatientNotes()).find((n) => n.id === n1.id), nC = (await C.v.listAllPatientNotes()).find((n) => n.id === n1.id);
-    expect([nC.rev, nB.rev, nC.updatedAtISO < nB.updatedAtISO], 'kopia: wyższy rev, wcześniejsza chwila').toEqual([2, 1, true]);
+    expect([nC.rev, nB.rev, nC.updatedAtISO < nB.updatedAtISO], 'kopia: wyższy rev i późniejsza chwila (stempel)').toEqual([2, 1, false]);
     const r = await scalKopie(B, C);
     expect(r.d).toEqual({ dodane: 0, zmienione: 1, usuniete: 0, przywrocone: 0 });
     expect(r.podglad.replacedNewerPatientNoteCount).toBe(0);
@@ -1963,7 +1979,7 @@ describe('P-NOTATKI-ZA-KARTA — przegląd 2: zapis notatki w stanie „czeka”
     expect(await stan(B, x)).toBe('karta [n1=poprawka B,n2] nagr[n2+pole]');
   });
 
-  it('CZ9 G13: n1 z updatedAtISO 1 h w przyszłości (R = u); B „czeka” i poprawia n1 → nagrobek zostaje na R; echo starego O i wizyta B → poprawka uratowana', async () => {
+  it('CZ9 G13: n1 z updatedAtISO 1 h w przyszłości (R = u); B „czeka” i poprawia n1 → nagrobek zostaje (od E3-PR0b2b na chwili zapisu po stemplu); echo starego O i wizyta B → poprawka uratowana', async () => {
     const x = await przygotuj({ A: {}, B: {}, O: { stara: true } });
     const { A, B, O } = x.urz;
     vi.setSystemTime(zegar + 3600e3);
@@ -1977,8 +1993,13 @@ describe('P-NOTATKI-ZA-KARTA — przegląd 2: zapis notatki w stanie „czeka”
     expect(await stan(B, x)).toBe('karta [n1=z przyszłości,n2] nagr[n1+pole,n2+pole]');
     await pelny(A, O);
     const kiedy = await popraw(B, x);
-    expect(kiedy < R, 'zapis wcześniejszy niż R').toBe(true);
-    expect((await nagrobekNotatki(B, x, 'n1')).deletedAtISO, 'max(R, chwila zapisu)').toBe(R);
+    expect(kiedy < R, 'zegar zapisu wcześniejszy niż R').toBe(true);
+    // E3-PR0b2b (P-NOTATKA-POZNIEJSZA): zapis notatki dostaje stempel D-7 — poprawka wersji z zegara do przodu ma chwilę
+    // późniejszą niż ta wersja (R = u), więc max(R, chwila zapisu) to teraz chwila zapisu (dotąd R; zapis szedł w
+    // „teraz” < R). Nagrobek zostaje (karta jeszcze nie jest późniejsza niż e), koniec bez zmian.
+    const uB = (await B.v.listAllPatientNotes()).find((n) => n.id === x.id('n1')).updatedAtISO;
+    expect(uB > R, 'stempel: chwila zapisu późniejsza niż R').toBe(true);
+    expect((await nagrobekNotatki(B, x, 'n1')).deletedAtISO, 'max(R, chwila zapisu)').toBe(uB);
     await wizyta(B, x);
     await pelny(O, B);
     expect(await stan(B, x)).toBe('karta [n1=poprawka B,n2] nagr[]');
@@ -2522,7 +2543,10 @@ describe('P-NOTATKI-ZA-KARTA — przegląd przeniesienia na D-7: zapis w stanie 
     await x.c.sync(A); await x.c.sync(O);
     expect(await stan(O, x), 'stare O przyjęło usunięcie').toBe('BRAK [] nagr[n1,n2]');
     await wizytaIPoprawka(x);
-    expect(await stan(B, x), 'nagrobek n1 zostaje').toBe('karta [n1=poprawka B,n2] nagr[n1+pole,n2+pole]');
+    // E3-PR0b2b (P-NOTATKA-POZNIEJSZA): zapis notatki dostaje stempel D-7, więc poprawka wersji z zegara do przodu ma
+    // chwilę późniejszą niż ta wersja (R = u) — przy karcie > e nagrobek n1 zdjęty od razu przy zapisie (dotąd zostawał
+    // na R, bo zapis w „teraz” był wcześniejszy niż R). Koniec bez zmian: poprawka wszędzie.
+    expect(await stan(B, x), 'nagrobek n1 zdjęty przy zapisie (stempel > R)').toBe('karta [n1=poprawka B,n2] nagr[n2+pole]');
     await x.c.sync(B);
     expect(await stan(B, x), 'echo starego O nie odbiera pola: ratunek poprawki').toBe('karta [n1=poprawka B,n2] nagr[]');
     const w = await rundy(x, ['A', 'B', 'O'], 3);
@@ -2532,13 +2556,17 @@ describe('P-NOTATKI-ZA-KARTA — przegląd przeniesienia na D-7: zapis w stanie 
 
   // MS2 (mutacja st:pozapisie-karta-vs-R) w odwróconej postaci: przypina nową regułę — nagrobek n1 zostaje z chwilą R
   // i z polem, rev = max (poprawka B ma rev 3). CZ3b (R = e) tego nie odróżnia.
-  it('MS2 [CZERWONY na 12b0cd4d] G13: B „czeka”, dopisuje wizytę (karta > e, ale < R), poprawia n1 → nagrobek n1 zostaje (chwila R, pole, rev 3); wszędzie poprawka B', async () => {
+  it('MS2 [CZERWONY na 12b0cd4d] G13: B „czeka”, dopisuje wizytę (karta > e, ale < R), poprawia n1 → od E3-PR0b2b zapis po stemplu > R zdejmuje nagrobek n1; wszędzie poprawka B', async () => {
     const x = await czekaG13({ A: {}, B: {} });
     const { B } = x.urz;
     await wizytaIPoprawka(x);
-    expect(await stan(B, x)).toBe('karta [n1=poprawka B,n2] nagr[n1+pole,n2+pole]');
-    const n1 = await nagrobekNotatkiM(B, x, 'n1');
-    expect([n1.deletedAtISO, n1.rev, n1.deletedWithPatient], 'chwila R, rev = max, pole bez zmian').toEqual([x.R, 3, { patientId: x.pid, deletedAtISO: x.e }]);
+    // E3-PR0b2b (P-NOTATKA-POZNIEJSZA): zapis notatki dostaje stempel D-7, więc poprawka wersji z zegara do przodu ma
+    // chwilę późniejszą niż ta wersja (R = u) — przy karcie > e nagrobek n1 zdjęty od razu przy zapisie (dotąd zostawał
+    // na R, bo zapis w „teraz” był wcześniejszy niż R). Koniec bez zmian: poprawka wszędzie.
+    // Reguła „nagrobek zostaje na R przy zapisie ≤ R” — w MS2r (wersja na B wcześniejsza niż R).
+    expect(await stan(B, x)).toBe('karta [n1=poprawka B,n2] nagr[n2+pole]');
+    const u1 = (await B.v.listAllPatientNotes()).find((n) => n.id === x.id('n1'));
+    expect([await nagrobekNotatkiM(B, x, 'n1'), u1.updatedAtISO > x.R, u1.rev], 'bez nagrobka n1; zapis po stemplu > R, rev 3').toEqual([null, true, 3]);
     const w = await rundy(x, ['B', 'A'], 3);
     expect(w.zbiezne && w.stabilne, JSON.stringify(w.ost)).toBe(true);
     expect(w.ost.A).toBe('karta [n1=poprawka B,n2] nagr[]');
@@ -2546,10 +2574,22 @@ describe('P-NOTATKI-ZA-KARTA — przegląd przeniesienia na D-7: zapis w stanie 
 
   // MS2r (granice nowej reguły): zapis dokładnie w chwili R nie jest późniejszy niż R — nagrobek zostaje (mutacja „≥”);
   // zapis R + 1 ms przy karcie > e (karta między e i R) — zdjęty jak dotąd (mutacja „karta porównana z R”).
-  it('MS2r [CZERWONY na 12b0cd4d] granice: B „czeka” (G13), wizyta (karta między e i R); zapis poprawki w chwili R → nagrobek n1 zostaje, w R + 1 ms → zdjęty', async () => {
+  // E3-PR0b2b (P-NOTATKA-POZNIEJSZA): zapis notatki dostaje stempel D-7 — poprawka wersji z chwilą R (wersja z zegara do
+  // przodu) ma zawsze chwilę > R, więc granica „zapis w chwili R” nie jest osiągalna, gdy B zna tę wersję. Przypadek
+  // idzie teraz wersją n1 wcześniejszą niż R na B: B nie dostaje wersji z przyszłości (zna ją tylko A, który usuwa
+  // pacjenta, więc R = jej chwila > e); poprawka B liczy stempel od swojej wersji, czyli chwilą zegara.
+  it('MS2r [CZERWONY na 12b0cd4d] granice: B „czeka” (G13; B zna wersję n1 wcześniejszą niż R), wizyta (karta między e i R); zapis poprawki w chwili R → nagrobek n1 zostaje, w R + 1 ms → zdjęty', async () => {
     for (const [d, oczek] of [[0, 'karta [n1=poprawka B,n2] nagr[n1+pole,n2+pole]'], [1, 'karta [n1=poprawka B,n2] nagr[n2+pole]']]) {
-      const x = await czekaG13({ A: {}, B: {} });
+      const x = await przygotuj({ A: {}, B: {} });
+      await n1ZPrzyszlosci(x, ['A']);
+      nagrywaj(x.urz.A, { nagrPac: true });
+      przesun(60e3); await x.urz.A.v.removePatient(x.pid);
+      x.e = (await nagrobekKarty(x.urz.A, x.pid)).deletedAtISO;
+      x.R = (await nagrobekNotatkiM(x.urz.A, x, 'n1')).deletedAtISO;
+      expect(x.R > x.e, 'G13: R > e').toBe(true);
+      await dostarcz(x.urz.A, x.urz.B);
       const { B } = x.urz;
+      expect(await stan(B, x), 'B czeka (wersja n1 sprzed zegara do przodu)').toBe('karta [n1,n2] nagr[n1+pole,n2+pole]');
       await wizyta(B, x);
       const karta = await kartaNa(B, x);
       expect([karta > x.e, karta < x.R], 'karta B między e i R').toEqual([true, true]);
@@ -2618,7 +2658,10 @@ describe('P-NOTATKI-ZA-KARTA — przegląd przeniesienia na D-7: zapis w stanie 
     expect(await stan(B, x), 'B czeka').toBe('karta [n1=z przyszłości,n2] nagr[n1+pole,n2+pole]');
     przesun(60e3); expect((await B.v.mergePatients(x.pid, y.patientId)).notesMoved).toBe(2);
     const n1 = (await B.v.listAllPatientNotes()).find((n) => n.id === x.id('n1'));
-    expect([n1.patientId === y.patientId, n1.updatedAtISO < R], 'n1 pod Y z chwilą < R').toEqual([true, true]);
+    // E3-PR0b2b (P-NOTATKA-POZNIEJSZA): przeniesienie idzie zapisem ze stemplem D-7 od wersji z chwilą R, więc n1 pod Y
+    // ma chwilę > R (dotąd < R), ale w paśmie ratunku (≤ R + 1 s): przy braku karty X nagrobek z polem nadal ją usuwa
+    // — ograniczenie zostaje bez zmian.
+    expect([n1.patientId === y.patientId, n1.updatedAtISO > R, Date.parse(n1.updatedAtISO) <= Date.parse(R) + 1000], 'n1 pod Y z chwilą w paśmie ratunku').toEqual([true, true, true]);
     await dostarcz(B, A);
     const w = await rundy(x, ['A', 'B'], 3);
     expect(w.zbiezne && w.stabilne, JSON.stringify(w.ost)).toBe(true);
@@ -2702,7 +2745,9 @@ describe('P-NOTATKI-ZA-KARTA — przegląd przeniesienia na D-7: luki testów (M
     expect(R > e, 'G13: R > e').toBe(true);
     await pelny(A, O);
     przesun(1000); await E.scal({ ...kopia(await A.v.exportSyncPayload()), patients: [], tombstones: [] });
-    expect(await stan(E, x)).toBe('karta [n1=poprawka E,n2] nagr[n1+pole,n2+pole]');
+    // E3-PR0b2b: poprawka E wersji z przyszłości ma po stemplu chwilę > R, więc E nie „czeka” na n1 (wersja
+    // późniejsza niż nagrobek); dalej bez zmian.
+    expect(await stan(E, x)).toBe('karta [n1=poprawka E,n2] nagr[n2+pole]');
     await wizyta(B, x);
     await pelny(A, B); await pelny(B, A);
     const kartaB = await kartaNa(B, x);
@@ -2729,7 +2774,8 @@ describe('P-NOTATKI-ZA-KARTA — przegląd przeniesienia na D-7: luki testów (M
     const R = (await nagrobekNotatkiM(A, x, 'n1')).deletedAtISO;
     expect(R > (await nagrobekKarty(A, x.pid)).deletedAtISO, 'G13').toBe(true);
     expect(await dostarcz(A, E, (t) => t === 'nagrNot'), 'delty nagrobków z polem').toEqual(['nagrNot+pole', 'nagrNot+pole']);
-    expect(await stan(E, x), 'E czeka').toBe('karta [n1=poprawka E,n2] nagr[n1+pole,n2+pole]');
+    // E3-PR0b2b: poprawka E wersji z przyszłości ma po stemplu chwilę > R — n1 nie czeka (wersja późniejsza niż nagrobek).
+    expect(await stan(E, x), 'E czeka na n2').toBe('karta [n1=poprawka E,n2] nagr[n2+pole]');
     await wizyta(B, x);
     await pelny(A, B);
     expect(await stan(B, x), 'B ratuje').toBe('karta [n1=z przyszłości,n2] nagr[]');
@@ -2955,14 +3001,21 @@ describe('P-NOTATKI-ZA-KARTA — przegląd poprawki MS2: ręczne usunięcie przy
   // zdejmowany, poprawka zostawała z chwilą < R i usunięcie wygrywało — ale przy starym urządzeniu ta sama poprawka
   // ginęła przy żywej karcie (S8b). Wariant kodu (ręczny nagrobek wersji z przyszłości na u + 1 s, Eb) zmieniałby
   // regułę P-NOTATKI-1 G13 — nie wdrożony.
-  async function w14(kol, tresc) {
+  // E3-PR0b2b (P-NOTATKA-POZNIEJSZA): poprawka D wersji z chwilą R dostaje stempel D-7 — chwilę R + 1 ms + los × 1000 ms
+  // (los: Math.random przy zapisie D). Wynik zależy teraz od losu stempla wobec h_B (chwila ręcznego nagrobka A = u_B
+  // = R + 1 ms + h_B), a nie od h_D; ograniczenie zostaje: przy stemplu późniejszym niż u_B n1 wraca wszędzie (H2b),
+  // przy wcześniejszym usunięcie wygrywa.
+  async function w14(kol, tresc, los) {
     const x = await g13Czeka({ A: {}, B: {}, D: {} }, ['B', 'D'], 'z przyszłości 1');
     const { A, B, D } = x.urz;
     await wizyta(B, x);
     await pelny(A, B); await pelny(B, A);
     const uB = (await n1Na(A, x)).updatedAtISO;
     if (kol === 'a') await wizyta(D, x);
-    przesun(60e3); await D.v.savePatientNote({ id: x.id('n1'), patientId: x.pid, title: 'n1', body: tresc });
+    przesun(60e3);
+    const zLosem = vi.spyOn(Math, 'random').mockReturnValue(los);
+    try { await D.v.savePatientNote({ id: x.id('n1'), patientId: x.pid, title: 'n1', body: tresc }); } finally { zLosem.mockRestore(); }
+    const uD = (await n1Na(D, x)).updatedAtISO;
     if (kol === 'b') await wizyta(D, x);
     const nagD = await nagrobekNotatkiM(D, x, 'n1');
     przesun(60e3); await A.v.removePatientNote(x.id('n1'));
@@ -2970,21 +3023,27 @@ describe('P-NOTATKI-ZA-KARTA — przegląd poprawki MS2: ręczne usunięcie przy
     await pelny(B, D);
     const nD = await n1Na(D, x);
     const w = await rundy(x, ['A', 'B', 'D'], 4);
-    return { x, uB, nagD, reczny, nD, w };
+    return { x, uB, uD, nagD, reczny, nD, w };
   }
   for (const [kol, opis] of [['a', 'wizyta, potem poprawka n1 (nowa gałąź MS2)'], ['b', 'poprawka n1 w stanie CZEKA, potem wizyta']]) {
-    it(`W14${kol} [znane ograniczenie] G13: D „czeka”, ${opis}; A ręcznie usuwa uratowaną n1 → przy h_D > h_B ratunek D wygrywa i n1 wraca wszędzie, przy h_D < h_B usunięcie wygrywa`, async () => {
+    it(`W14${kol} [znane ograniczenie] G13: D „czeka”, ${opis}; A ręcznie usuwa uratowaną n1 → przy stemplu poprawki D późniejszym niż u_B poprawka D wygrywa i n1 wraca wszędzie, przy wcześniejszym usunięcie wygrywa`, async () => {
       const hB = hTresci(trescNowej('n1', 'z przyszłości 1'), jawneNowej());
-      for (const [tresc, oczek] of [['poprawka D2', 'karta [n1=poprawka D2,n2] nagr[]'], ['poprawka D1', 'karta [n2] nagr[n1]']]) {
-        const hD = hTresci(trescNowej('n1', tresc), jawneNowej());
-        const r = await w14(kol, tresc);
+      expect(hB > 1 && hB < 997, `h_B = ${hB}`).toBe(true);
+      // (b): nagrobek z polem zostaje na D z chwilą zapisu, a po wizycie D ratuje poprawkę na u_D + 1 ms + h_D — później
+      // niż u_B także przy stemplu tuż przed u_B, więc n1 wraca w obu przypadkach (ograniczenie H2b częściej niż dotąd).
+      const WRACA = 'karta [n1=poprawka D,n2] nagr[]', USUNIETA = 'karta [n2] nagr[n1]';
+      for (const [los, oczek] of [[(hB + 1.5) / 1000, WRACA], [(hB - 0.5) / 1000, kol === 'a' ? USUNIETA : WRACA]]) {
+        const r = await w14(kol, 'poprawka D', los);
         const { x } = r;
         expect(po(r.uB, x), 'u_B = R + 1 ms + h_B').toBe(hB);
-        expect(r.nagD && [r.nagD.deletedAtISO, r.nagD.deletedWithPatient], 'nagrobek z polem zostaje na D (chwila R)').toEqual([x.R, { patientId: x.pid, deletedAtISO: x.e }]);
+        expect(po(r.uD, x), 'stempel D: R + 1 ms + los × 1000 ms').toBe(Math.floor(los * 1000));
+        // (a) karta D > e i zapis > R — nagrobek zdjęty przy zapisie; (b) karta D jeszcze nie > e — nagrobek zostaje
+        // z chwilą max(R, zapis) = chwila zapisu D.
+        expect(r.nagD && [r.nagD.deletedAtISO, r.nagD.deletedWithPatient], 'nagrobek n1 na D po zapisie').toEqual(kol === 'a' ? null : [r.uD, { patientId: x.pid, deletedAtISO: x.e }]);
         expect([r.reczny.deletedAtISO, r.reczny.deletedWithPatient], 'ręczny nagrobek A: chwila u_B, bez pola').toEqual([r.uB, undefined]);
-        expect([r.nD.body, r.nD.rev, po(r.nD.updatedAtISO, x)], 'ratunek D: rev 3, R + 1 ms + h_D').toEqual([tresc, 3, hD]);
+        expect([r.nD.body, r.nD.rev], 'poprawka D: rev 3').toEqual(['poprawka D', 3]);
         expect(r.w.zbiezne && r.w.stabilne, JSON.stringify(r.w.ost)).toBe(true);
-        expect(r.w.ost.A, `h_B = ${hB}, h_D = ${hD}`).toBe(oczek);
+        expect(r.w.ost.A, `h_B = ${hB}, stempel D = ${Math.floor(los * 1000)}`).toBe(oczek);
         if (oczek.startsWith('karta [n1')) {
           // H2b: wystarczy usunąć ponownie — nikt nie ma już nagrobka z polem, więc drugie ręczne usunięcie wygrywa
           przesun(60e3); await x.urz.B.v.removePatientNote(x.id('n1'));
@@ -3001,7 +3060,7 @@ describe('P-NOTATKI-ZA-KARTA — przegląd poprawki MS2: ręczne usunięcie przy
   // obie notatki, które miało. Echo O (nagrobki bez pola, te same chwile) nie odbiera pola na B, B ratuje, a O dostaje
   // notatki z powrotem z następnym ładunkiem B. Na 12b0cd4d O traciło pośrodku tylko n2 (nagrobek n1 był przy zapisie
   // zdejmowany); koniec ten sam.
-  it('W11 stare nieświadome O (ma n1 i n2) dostaje pełny ładunek B w nowej gałęzi MS2 → O kasuje obie notatki do ratunku na B; potem poprawka B wszędzie', async () => {
+  it('W11 stare nieświadome O (ma n1 i n2) dostaje pełny ładunek B po poprawce n1 (od E3-PR0b2b ze stemplem > R) → O zachowuje n1 z poprawką B i kasuje n2 do ratunku na B; potem poprawka B wszędzie', async () => {
     const x = await g13Czeka({ A: {}, B: {}, O: { stara: true } }, ['B'], 'z przyszłości');
     const { B, O } = x.urz;
     expect(await stan(O, x), 'O nie wie o usunięciu').toBe('karta [n1=z przyszłości,n2] nagr[]');
@@ -3010,10 +3069,13 @@ describe('P-NOTATKI-ZA-KARTA — przegląd poprawki MS2: ręczne usunięcie przy
     expect([karta > x.e, karta < x.R], 'karta B między e i R').toEqual([true, true]);
     const kiedy = przesun(60e3);
     await B.v.savePatientNote({ id: x.id('n1'), patientId: x.pid, title: 'n1', body: 'poprawka B' });
-    expect(kiedy < x.R, 'zapis wcześniejszy niż R').toBe(true);
-    expect(await stan(B, x), 'nowa gałąź MS2: nagrobki zostają').toBe('karta [n1=poprawka B,n2] nagr[n1+pole,n2+pole]');
+    expect(kiedy < x.R, 'zegar zapisu wcześniejszy niż R').toBe(true);
+    // E3-PR0b2b (P-NOTATKA-POZNIEJSZA): zapis notatki dostaje stempel D-7 — poprawka B wersji z chwilą R ma chwilę > R,
+    // więc przy karcie > e nagrobek n1 zdjęty od razu (dotąd zostawał w gałęzi MS2), a stare O zachowuje n1 z poprawką B
+    // i kasuje tylko n2 (dotąd kasowało obie do ratunku na B). Koniec bez zmian.
+    expect(await stan(B, x), 'nagrobek n1 zdjęty przy zapisie (stempel > R), nagrobek n2 zostaje').toBe('karta [n1=poprawka B,n2] nagr[n2+pole]');
     await pelny(B, O);
-    expect(await stan(O, x), 'O kasuje notatki, które miało').toBe('karta [] nagr[n1,n2]');
+    expect(await stan(O, x), 'O zachowuje n1 z poprawką B, kasuje n2').toBe('karta [n1=poprawka B] nagr[n2]');
     await pelny(O, B);
     expect(await stan(B, x), 'echo O nie odbiera pola: ratunek').toBe('karta [n1=poprawka B,n2] nagr[]');
     await pelny(B, O);
@@ -3982,7 +4044,10 @@ describe('P-NOTATKI-ZA-KARTA — strażniki źródła', () => {
     const notatki = sekcja('var Qch=[];', 'let St=0,Dt=0,dt=0;');
     expect(notatki.length).toBeGreaterThan(5000);
     expect(notatki).toContain('Qkn=Bnp_zlacz(W.concat(K))');
-    expect(notatki).toContain('Qwy=Bnp_zwyciezcy(X,j)');
+    // E3-PR0b2b (P-NOTATKA-POZNIEJSZA): zwycięzcy tą samą regułą co pętla przyjmowania — z tutejszymi planami opieki,
+    // które mają kontekst tylko w treści (odszyfrowane przed decyzją, jak pod blokadą).
+    expect(notatki).toContain('const Qnp_plW=await Bnp_planyTutaj(X,j,Object.keys(R));');
+    expect(notatki).toContain('Qwy=Bnp_zwyciezcy(X,j,Qnp_plW)');
     expect(notatki).toContain('let Qs=Bnp_stan(Qkn[S],g,void 0,Qwy[S]);');
     expect(notatki).toContain('Qs=Bnp_stan(Qkn[S],g,Qkr[Qp],Qwy[S])');
     expect(notatki).toContain('Nt+=await Bnp_ratuj(P,{kanon:Qkn,ratunek:Qrt,czeka:Qcz,rev:Qrev,liczone:Qdn,zdarzenia:Qch,nagrobki:K},e);');
@@ -4075,9 +4140,12 @@ describe('P-NOTATKI-ZA-KARTA — strażniki źródła', () => {
   });
   it('podgląd „Scal kopię konta” liczy te same stany co Le (Bnp_zlacz, Bnp_stan), z kartą przewidywaną po pętli kart', () => {
     const plan = sekcja('async function Bks_planDanych(', 'async function Bks_mapyOczekujacych(');
-    expect(plan).toContain('const stan = await Bks_stanNotatek(kontekst, kopia, tutaj, nagrobki, zKopii, nagrobkiKopii);');
+    // E3-PR0b2b (P-NOTATKA-POZNIEJSZA): z tutejszymi planami opieki z kontekstem tylko w treści (jak Le) i „zastąpione
+    // nowsze” po chwili treści.
+    expect(plan).toContain('const stan = await Bks_stanNotatek(kontekst, kopia, tutaj, nagrobki, zKopii, nagrobkiKopii, plany);');
     // E2-PR3c4: obie sekcje (notatki pacjentów i wpisy Terminarza) także ze zmianami samej karty (Bks_zmianyKarty).
-    expect(plan.split(', stan, zmianaKarty));').length - 1).toBe(2);
+    // E3-PR0b2b: i z zapisem samego oznaczenia z kopii przy tutejszej treści (oznaczenie — zmieniona notatka, jak w Le).
+    expect(plan.split(', stan, zmianaKarty, Bnp_chwilaTresci, oznaczenie));').length - 1).toBe(2);
     const st = sekcja('async function Bks_stanNotatek(', 'const Bks_RODZAJE');
     expect(st).toContain('Bnp_zlacz(nagrobkiKopii.concat(nagrobki))');
     expect(st).toContain('Bks_kartaPo(kontekst, kopia, pid)');
@@ -4086,5 +4154,29 @@ describe('P-NOTATKI-ZA-KARTA — strażniki źródła', () => {
     const pz = sekcja('async function Bnp_poZapisie(', '\n}\n');
     expect(pz).toContain('if (karta !== null && (!(karta > p.deletedAtISO) || !(kiedy > nag.deletedAtISO))) {');
     expect(pz).toContain('const D = nag.deletedAtISO > kiedy ? nag.deletedAtISO : kiedy;');
+  });
+});
+
+describe('E3-PR0b2b — zwycięzcy dla nagrobków liczeni tą samą regułą co scalanie (zostaje późniejsza zmiana treści)', () => {
+  it('B poprawia n1 dwa razy (rev 3), E raz później (rev 2), potem „Usuń pacjenta” na A; E czeka, B ratuje swoją wersję → E ratuje swoją późniejszą poprawkę; echo starszego urządzenia jej nie kasuje', async () => {
+    const x = await przygotuj({ A: {}, B: {}, E: {}, O: { stara: true } });
+    const { A, B, E, O } = x.urz;
+    przesun(20e3); await B.v.savePatientNote({ id: x.id('n1'), patientId: x.pid, title: 'n1', body: 'B1' });
+    przesun(5e3); await B.v.savePatientNote({ id: x.id('n1'), patientId: x.pid, title: 'n1', body: 'B2' });
+    przesun(10e3); await E.v.savePatientNote({ id: x.id('n1'), patientId: x.pid, title: 'n1', body: 'poprawka E' });
+    przesun(60e3); await A.v.removePatient(x.pid);
+    const R = (await nagrobkiNotatek(A)).find((t) => t.id === x.id('n1')).deletedAtISO;
+    await pelny(A, O);
+    przesun(1000); await E.scal({ ...kopia(await A.v.exportSyncPayload()), patients: [], tombstones: [] });
+    expect(await stan(E, x)).toBe('karta [n1=poprawka E,n2] nagr[n1+pole,n2+pole]');
+    await wizyta(B, x);
+    await pelny(A, B); await pelny(B, A);
+    await pelny(B, E);
+    const n1E = (await E.v.listAllPatientNotes()).find((n) => n.id === x.id('n1'));
+    expect([n1E.body, n1E.updatedAtISO > R], 'poprawka E uratowana, chwila > R').toEqual(['poprawka E', true]);
+    await pelny(E, B); await pelny(E, A);
+    await pelny(O, A); await pelny(O, B); await pelny(O, E);
+    for (let r = 0; r < 2; r += 1) for (const [z, na] of [[A, O], [O, A], [A, B], [B, E], [E, A]]) await pelny(z, na);
+    for (const k of ['A', 'B', 'E', 'O']) expect((await stan(x.urz[k], x)).replace(/\+pole/g, ''), k).toBe('karta [n1=poprawka E,n2] nagr[]');
   });
 });

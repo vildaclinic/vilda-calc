@@ -6,9 +6,14 @@
  * model PR1 (VildaLabHistory.buildHistoryView) w jednostce formularza. Dawne wyniki nie są oceniane
  * dzisiejszymi normami ani danymi pacjenta z formularza: strzałka ↑/↓ stoi przy wartości tylko wtedy,
  * gdy wpis ma zapisaną normę w swojej jednostce; wykres ma przy punktach same wartości (decyzja 6.22).
- * Bieżący wynik z formularza stoi osobno („teraz · niezapisany”), bez daty i bez linii łączącej.
+ * Bieżący wynik z formularza stoi osobno (chip i pas „teraz”), bez daty i bez linii łączącej. Gdy ten wynik
+ * jest już w karcie (od 1.4.0, LAB-HISTORIA 6.38: stan liczy moduł przypięcia, VildaLabPinResult.pinned()),
+ * pasek nie rysuje go drugi raz: bez chipu i pasa „teraz”, a chip tej notatki ma tło fioletu, punkt — obwódkę.
+ * Od 1.5.0 (LAB-HISTORIA 6.39, makieta właściciela „wariant A”) pasek pokazuje tylko nagłówek, chipy i wykres:
+ * bez podpisu z liczbą wyników, panelu szczegółów, linii różnicy, przycisku „Ukryj wykres”, objaśnień i stopki.
+ * Szczegóły wpisu (norma, zakres zapisany z wynikiem, komentarz) są w podpowiedzi chipu i w karcie („Badania w karcie →”).
  * Pasek nie zasila punktu pacjenta na wykresie hormonów (PATIENT_POINT.md).
- * Projekt: docs/LAB_HISTORIA_WYNIKOW_PLAN.md, 3.3 (decyzje 6.6–6.10, 6.21, 6.22);
+ * Projekt: docs/LAB_HISTORIA_WYNIKOW_PLAN.md, 3.3 (decyzje 6.6–6.10, 6.21, 6.22, 6.38, 6.39);
  * opis: docs/clinical/ALGORITHMS.md, „LAB-HISTORIA PR3”.
  */
 (function (root, factory) {
@@ -24,6 +29,8 @@
   var NBSP = ' ';
   var SVG_NS = 'http://www.w3.org/2000/svg';
   var PATIENT_KEY = 'vildaCurrentPatientId';
+  // Sygnał sejfu o zmianie notatki w innej ramce albo karcie przeglądarki (bez identyfikatora notatki).
+  var NOTE_PING_KEY = 'vilda-note-changed-ping-v1';
   var STRIP_ID = 'labHistoryStrip';
   var CHART_ID = 'labHistoryStripChart';
   var MAX_CHIPS = 5;
@@ -32,12 +39,14 @@
   var KIND_NOTE = {
     'other-unit': 'jednostka nierozpoznana albo brak jednostki — wynik jak zapisano, bez porównania',
     text: 'wynik tekstowy — jak zapisano, bez porównania',
-    censored: 'wynik poza zakresem oznaczalności — bez punktu na wykresie i bez różnicy'
+    censored: 'wynik poza zakresem oznaczalności — bez punktu na wykresie'
   };
   var DATE_SOURCE = { termin: 'termin zlecenia', wpis: 'data wpisu', kontrola: 'data kontroli GH' };
   var DATE_PREFIX = { termin: 'termin ', wpis: 'wpis ', kontrola: 'kontrola ' };
   // IGF-1 z notatki leczenia GH (decyzje 6.24–6.25, model VildaLabHistory 1.1.0).
   var GH_SOURCE = 'z notatki leczenia GH';
+  // LAB-HISTORIA 6.38: zapisany wynik, który jest teraz w formularzu (podpowiedź chipu; bez znacznika w treści, 6.39).
+  var PINNED_TITLE = 'wynik z formularza — już w karcie';
   var FLAG_LABEL = { '↑': 'powyżej normy z wpisu', '↓': 'poniżej normy z wpisu' };
 
   function own(value, key) { return value != null && Object.prototype.hasOwnProperty.call(value, key); }
@@ -69,17 +78,6 @@
   function commentText(body) {
     return String(body || '').split(/\r?\n/).map(function (line) { return line.trim(); })
       .filter(function (line) { return line && !/^=\s/.test(line) && !/^Norma:\s/i.test(line); }).join(' · ');
-  }
-  // Wiek wizyty jak w wierszu przypięcia (lab_pin_result.js): „7 l 3 m”.
-  function formatAge(months) {
-    if (!finite(months) || months < 0) return '';
-    var years = Math.floor(months / 12), rest = Math.round(months % 12);
-    return years + ' l' + (rest ? ' ' + rest + ' m' : '');
-  }
-  function daysAgo(days) {
-    if (!finite(days) || days < 0) return '';
-    if (days === 0) return 'dziś';
-    return days + ' ' + (days === 1 ? 'dzień' : 'dni') + ' temu';
   }
 
   // ── Geometria wykresu: czysta funkcja (bez DOM), testowana osobno ─────────────────────────────
@@ -185,6 +183,16 @@
   }
 
   // Etykiety wartości od najnowszej: punkt dostaje podpis, gdy nie zachodzi na podpis już postawiony.
+  // Krótki skrót treści (FNV-1a z długością) do porównania odczytów; null, gdy treści nie da się zserializować.
+  function digestOf(value) {
+    var json;
+    try { json = JSON.stringify(value); } catch (_) { return null; }
+    if (typeof json !== 'string') return null;
+    var hash = 0x811c9dc5;
+    for (var i = 0; i < json.length; i++) { hash ^= json.charCodeAt(i); hash = Math.imul(hash, 0x01000193) >>> 0; }
+    return json.length + ':' + hash.toString(36);
+  }
+
   function valueLabelIndexes(laid, widthOf) {
     var placed = [], out = [];
     for (var i = laid.length - 1; i >= 0; i--) {
@@ -201,7 +209,7 @@
     var doc = w.document;
     var state = {
       timer: 0, readGen: 0, noteGen: 0, cache: null, signature: '', selected: null, expanded: false,
-      chartHidden: false, pinned: null, subscribedVault: null, lockVault: null, lastWidth: 0, pid: null
+      subscribedVault: null, lockVault: null, lastWidth: 0, pid: null
     };
     var strip = null;
 
@@ -292,7 +300,6 @@
       state.cache = null;
       state.selected = null;
       state.expanded = false;
-      state.pinned = null;
       state.pid = null;
       hide();
     }
@@ -310,7 +317,6 @@
           if (w.VildaVault !== vault) return;
           if (event && event.patientId && event.patientId !== state.pid) return;
           state.noteGen += 1;
-          if (event && event.action === 'save' && event.id) markPinned(vault, event.id);
           schedule();
         });
       }
@@ -319,22 +325,21 @@
         vault.onLock(function () { if (w.VildaVault === vault) forget(); });
       }
     }
-    // „Już przypięty”: zapisana notatka tego pacjenta z tym samym badaniem, liczbą i jednostką co formularz
-    // (niezależnie od daty badania).
-    function markPinned(vault, noteId) {
-      if (typeof vault.getPatientNote !== 'function') return;
-      var pid = state.pid;
-      Promise.resolve().then(function () { return vault.getPatientNote(noteId); }).then(function (note) {
-        var lab = note && note.labResult;
-        if (!lab || note.patientId !== pid || state.pid !== pid || !finite(lab.valueNum)) return;
-        state.pinned = { noteId: noteId, testKey: text(lab.testKey), valueNum: lab.valueNum, unit: normalizeUnit(lab.unit), dateISO: note.clinicalDateISO || null };
-        schedule();
-      }).catch(function () { /* bez oznaczenia */ });
-    }
-    function pinnedFor(current) {
-      var pinned = state.pinned;
-      return pinned && current && finite(current.valueNum) && pinned.testKey === current.testKey
-        && pinned.valueNum === current.valueNum && pinned.unit === normalizeUnit(current.unit) ? pinned : null;
+    // „Już w karcie” (LAB-HISTORIA 6.38): wynik formularza jest zapisaną notatką tej serii. Regułę ma jedną moduł
+    // przypięcia (VildaLabPinResult.pinned(): ostatnie przypięcie z tej strony albo notatka z datą, którą zaproponuje
+    // okno przypięcia). Pasek sprawdza tylko, że stan dotyczy tego pacjenta, badania, tekstu wartości i jednostki
+    // formularza oraz że notatka jest wpisem serii; bez modułu przypięcia pasek pokazuje chip „teraz”.
+    function pinnedFor(ctx, series) {
+      var api = w.VildaLabPinResult, pinned;
+      try { pinned = api && typeof api.pinned === 'function' ? api.pinned() : null; } catch (_) { pinned = null; }
+      var current = ctx.current;
+      if (!pinned || !current || !pinned.noteId || String(pinned.patientId) !== String(ctx.pid) || pinned.testKey !== ctx.testKey) return null;
+      if (text(pinned.raw) !== text(current.value) || normalizeUnit(pinned.unit) !== normalizeUnit(current.unit)) return null;
+      for (var i = 0; i < series.entries.length; i++) {
+        var entry = series.entries[i];
+        if (entry.noteId === pinned.noteId) return { noteId: pinned.noteId, dateISO: pinned.dateISO || entry.dateISO || null, entry: entry };
+      }
+      return null;
     }
 
     function run() {
@@ -343,7 +348,7 @@
       watchVault(ctx.vault);
       if (state.pid !== ctx.pid) {
         // Inny pacjent: nic z poprzedniego nie zostaje na ekranie ani w pamięci.
-        state.cache = null; state.selected = null; state.expanded = false; state.pinned = null;
+        state.cache = null; state.selected = null; state.expanded = false;
         state.pid = ctx.pid;
         hide();
       }
@@ -361,13 +366,12 @@
         // Tożsamość po odczycie: ten sam pacjent i ten sam odblokowany sejf; inaczej odczyt od nowa.
         var now = readContext();
         if (!now || now.pid !== pid || now.vault !== vault) { schedule(); return; }
-        var record = results[2];
-        if (!record) { hide(); return; }
+        // Rekord pacjenta w tym samym sejfie (3.3); nazwisko stoi w wierszu przypięcia nad paskiem (6.39).
+        if (!results[2]) { hide(); return; }
         var notesById = {};
         (Array.isArray(results[1]) ? results[1] : []).forEach(function (note) { if (note && note.id) notesById[note.id] = note; });
-        // Nazwisko z nagłówka rekordu sejfu tego samego pacjenta, z którego odczytano serie (3.3).
-        var name = record.header && typeof record.header.name === 'string' ? text(record.header.name) : '';
-        state.cache = { pid: pid, vault: vault, noteGen: noteGen, series: results[0], notesById: notesById, name: name };
+        state.cache = { pid: pid, vault: vault, noteGen: noteGen, series: results[0], notesById: notesById,
+          digest: digestOf([results[0], results[1]]) };
         draw(now, state.cache);
       }).catch(function () {
         if (gen === state.readGen) hide();
@@ -412,14 +416,16 @@
       // Szerokość mierzona przy widocznym pasku (ukryty ma szerokość 0).
       strip.classList.add('is-on');
       var width = chartLayout([], null, hostWidth()).width;
-      var pinned = pinnedFor(ctx.current);
-      var signature = JSON.stringify([ctx.pid, cache.noteGen, cache.name, ctx.testKey, ctx.unit, ctx.current, state.selected,
-        state.expanded, state.chartHidden, width, pinned && pinned.noteId, !!(w.__vildaLabTrend && w.__vildaLabTrend.parseNorm)]);
+      var pinned = pinnedFor(ctx, found.series);
+      // Treść odczytu (skrót serii i notatek), nie numer odczytu: ponowny odczyt tych samych danych (sygnał sejfu,
+      // zmiana stanu przypięcia, powrót fokusu) nie przebudowuje paska.
+      var signature = JSON.stringify([ctx.pid, cache.digest == null ? 'n' + cache.noteGen : cache.digest, ctx.testKey, ctx.unit, ctx.current, state.selected,
+        state.expanded, width, pinned && pinned.noteId, pinned && pinned.dateISO, !!(w.__vildaLabTrend && w.__vildaLabTrend.parseNorm)]);
       if (signature === state.signature && strip.classList.contains('is-on')) return;
       state.signature = signature;
       state.lastWidth = width;
       var focusKey = focusedKey();
-      render(found.series, found.preview, cache, pinned);
+      render(found.series, found.preview, pinned);
       restoreFocus(focusKey);
     }
     function focusedKey() {
@@ -433,7 +439,8 @@
       if (target && typeof target.focus === 'function') target.focus();
     }
 
-    function render(series, preview, cache, pinned) {
+    // LAB-HISTORIA 6.39: nagłówek w jednej linii z odnośnikiem do karty, chipy i wykres — nic więcej.
+    function render(series, preview, pinned) {
       clear(strip);
       var unit = series.unit;
       var label = shortLabel(series.label);
@@ -441,36 +448,22 @@
       strip.classList.add('is-on');
 
       var head = add(strip, 'div', 'lab-strip-head');
-      var titles = add(head, 'div', 'lab-strip-titles');
-      add(titles, 'p', 'lab-strip-title', 'Poprzednie wyniki pacjenta · ' + label + (unit ? ' · w ' + unit : ''));
-      var count = series.entries.length;
-      add(titles, 'p', 'lab-strip-sub', [cache.name, count + ' ' + plural(count, ['wynik', 'wyniki', 'wyników']),
-        series.last ? 'ostatni ' + formatDate(series.last.dateISO) : ''].filter(Boolean).join(' · '));
-      linkButton(head, 'Badania w karcie →', 'card');
+      add(head, 'p', 'lab-strip-title', 'Poprzednie wyniki pacjenta · ' + label + (unit ? ' · w ' + unit : ''));
+      var link = add(head, 'button', 'lab-strip-link', 'Badania w karcie →');
+      link.type = 'button';
+      link.setAttribute('data-focus', 'card');
+      link.addEventListener('click', openCard);
 
+      keepSelection(series);
       drawChips(series, preview, pinned);
-      var selected = selectedEntry(series);
-      if (selected) drawDetail(selected, unit);
-      var shownDelta = drawDifference(series, preview, pinned);
-      drawChart(series, preview);
-      var foot = 'Historia pokazuje zapisane wyniki bez ponownej oceny.';
-      if (shownDelta && !shownDelta.methodChecked) foot += ' Różnica liczona z wartości zapisanych; metoda oznaczenia mogła się różnić.';
-      add(strip, 'p', 'lab-strip-foot', foot);
+      drawChart(series, preview, pinned);
     }
 
-    function linkButton(parent, label, focus, noteId) {
-      var button = add(parent, 'button', 'lab-strip-link', label);
-      button.type = 'button';
-      button.setAttribute('data-focus', focus + (noteId ? ':' + noteId : ''));
-      button.addEventListener('click', openCard);
-      return button;
-    }
-
-    function selectedEntry(series) {
-      if (!state.selected) return null;
-      for (var i = 0; i < series.entries.length; i++) if (series.entries[i].noteId === state.selected) return series.entries[i];
+    // Zaznaczenie chipu łączy chip z punktem wykresu (bez panelu szczegółów, 6.39); wpis spoza serii — bez zaznaczenia.
+    function keepSelection(series) {
+      if (!state.selected) return;
+      for (var i = 0; i < series.entries.length; i++) if (series.entries[i].noteId === state.selected) return;
       state.selected = null;
-      return null;
     }
     function select(noteId) {
       state.selected = state.selected === noteId ? null : noteId;
@@ -482,34 +475,63 @@
       row.setAttribute('role', 'group');
       row.setAttribute('aria-label', 'Zapisane wyniki');
       var entries = series.entries;
-      var hiddenCount = state.expanded ? 0 : Math.max(0, entries.length - MAX_CHIPS);
-      if (entries.length > MAX_CHIPS) {
-        var more = add(row, 'button', 'lab-strip-chip lab-strip-more',
-          state.expanded ? 'zwiń wcześniejsze' : '+' + hiddenCount + ' ' + plural(hiddenCount, ['wcześniejszy', 'wcześniejsze', 'wcześniejszych']));
-        more.type = 'button';
-        more.setAttribute('aria-expanded', state.expanded ? 'true' : 'false');
-        more.setAttribute('data-focus', 'more');
-        more.addEventListener('click', function () { state.expanded = !state.expanded; run(); });
-      }
-      entries.slice(hiddenCount).forEach(function (entry) {
-        var chip = add(row, 'button', 'lab-strip-chip');
+      var overflow = Math.max(0, entries.length - MAX_CHIPS);
+      var pinAt = pinned ? entries.indexOf(pinned.entry) : -1;
+      var pinnedHidden = pinAt >= 0 && pinAt < overflow;
+      var shown = entries.slice(state.expanded ? 0 : overflow);
+      // Przypięty wynik widoczny także wtedy, gdy jego data jest wśród wcześniejszych (schowanych). Schowane starsze
+      // od niego mają przycisk przed nim, schowane późniejsze — zaraz za nim, więc daty w wierszu idą po kolei.
+      var before = state.expanded ? 0 : overflow, after = 0;
+      if (!state.expanded && pinnedHidden) { shown.unshift(pinned.entry); before = pinAt; after = overflow - pinAt - 1; }
+      var more = function (count) {
+        var button = add(row, 'button', 'lab-strip-chip lab-strip-more',
+          state.expanded ? 'zwiń wcześniejsze' : '+' + count + ' ' + plural(count, ['wcześniejszy', 'wcześniejsze', 'wcześniejszych']));
+        button.type = 'button';
+        button.setAttribute('aria-expanded', state.expanded ? 'true' : 'false');
+        button.setAttribute('data-focus', 'more');
+        button.addEventListener('click', function () { state.expanded = !state.expanded; run(); });
+      };
+      // Rozwinięte: „zwiń” tylko wtedy, gdy zwinięcie coś schowa.
+      if (state.expanded ? overflow - (pinnedHidden ? 1 : 0) > 0 : before > 0) more(before);
+      shown.forEach(function (entry) {
+        var isPinned = !!pinned && entry === pinned.entry;
+        var chip = add(row, 'button', isPinned ? 'lab-strip-chip is-pinned' : 'lab-strip-chip');
         chip.type = 'button';
         chip.setAttribute('aria-pressed', state.selected === entry.noteId ? 'true' : 'false');
         chip.setAttribute('data-note-id', entry.noteId || '');
         chip.setAttribute('data-focus', 'chip:' + (entry.noteId || ''));
-        chip.setAttribute('title', chipTitle(entry));
-        var date = entry.dateISO ? (DATE_PREFIX[entry.dateSource] || '') + formatDate(entry.dateISO) : 'bez daty';
-        add(chip, 'span', 'lab-strip-chip-d', date);
+        chip.setAttribute('title', [chipTitle(entry), isPinned ? PINNED_TITLE : ''].filter(Boolean).join(' · '));
+        // Przypięty chip ma tę samą treść co pozostałe (data i wartość); wyróżnia go tylko tło (6.39).
+        add(chip, 'span', 'lab-strip-chip-d', entry.dateISO ? (DATE_PREFIX[entry.dateSource] || '') + formatDate(entry.dateISO) : 'bez daty');
         var value = add(chip, 'span', 'lab-strip-chip-v', bareValue(entry, series.unit));
         if (entry.flag) flag(value, entry.flag);
         chip.addEventListener('click', function () { select(entry.noteId); });
+        if (isPinned && after > 0) more(after);
       });
-      if (preview && (preview.value != null || preview.raw)) {
+      // Wynik formularza, który jest już w karcie, nie ma osobnego chipu „teraz” (LAB-HISTORIA 6.38). Czy jest
+      // w karcie, mówi wiersz przypięcia nad paskiem (6.39); podpowiedź tego nie powtarza, bo pasek bez stanu
+      // przypięcia (np. bez modułu przypięcia) nie wie tego na pewno.
+      if (!pinned && preview && (preview.value != null || preview.raw)) {
         add(row, 'span', 'lab-strip-sep').setAttribute('aria-hidden', 'true');
         var now = add(row, 'div', 'lab-strip-chip lab-strip-now');
-        add(now, 'span', 'lab-strip-chip-d', pinned ? 'teraz · już przypięty' : 'teraz · niezapisany');
+        now.setAttribute('title', 'bieżący wynik z formularza, bez daty');
+        add(now, 'span', 'lab-strip-chip-d', 'teraz');
         add(now, 'span', 'lab-strip-chip-v', preview.value != null ? bareValue(preview, series.unit) : preview.raw);
       }
+      widenLoneChips(row);
+    }
+    // Telefon (siatka dwóch kolumn): „+N”, przypięty chip i „teraz” zajmują cały rząd, więc chip, który zostałby
+    // sam w rzędzie przed nimi albo na końcu, też go wypełnia (klasa działa tylko w siatce, @media w arkuszu).
+    function widenLoneChips(row) {
+      var run = [];
+      var flush = function () { if (run.length % 2) run[run.length - 1].classList.add('is-wide'); run = []; };
+      for (var i = 0; i < row.children.length; i++) {
+        var item = row.children[i], cls = item.classList;
+        if (cls.contains('lab-strip-sep')) continue;
+        if (cls.contains('lab-strip-more') || cls.contains('lab-strip-now') || cls.contains('is-pinned')) flush();
+        else run.push(item);
+      }
+      flush();
     }
     function flag(parent, glyph) {
       var mark = add(parent, 'span', 'lab-strip-flag', glyph);
@@ -520,97 +542,44 @@
     function recorded(entry) {
       return finite(entry.recordedValue) ? String(entry.recordedValue).replace('.', ',') + (entry.recordedUnit ? NBSP + entry.recordedUnit : '') : entry.raw;
     }
+    // Podpowiedź chipu (6.39, zamiast panelu szczegółów): źródło daty, GH, opis wyniku bez porównania, zapis w jednostce
+    // zapisu, norma wpisu, zakres zapisany z wynikiem, zapisana ocena (cytat tytułu) i komentarz. Bez wieku wizyty,
+    // uwagi o metodzie przy normie i pełnego widoku oceny — te są w karcie.
     function chipTitle(entry) {
       var parts = [];
       if (entry.dateSource !== 'badanie' && DATE_SOURCE[entry.dateSource]) parts.push(DATE_SOURCE[entry.dateSource] + ' (brak daty badania)');
-      if (entry.source === 'gh-note') parts.push(GH_SOURCE);
+      if (entry.source === 'gh-note') parts.push(GH_SOURCE + ' (pole „IGF-1 (wynik z kontroli)”), bez normy i bez oceny');
+      if (KIND_NOTE[entry.kind]) parts.push(KIND_NOTE[entry.kind]);
       if (entry.raw) parts.push('zapisano: ' + recorded(entry));
       if (entry.norm) parts.push('norma z wpisu: ' + entry.norm);
-      if (entry.status && (entry.status.kind === 'range' || entry.status.kind === 'range-general')) parts.push(entry.status.text + (entry.status.bounds ? ' ' + entry.status.bounds : ''));
+      var status = entry.status;
+      // Decyzja 6.3: zakres zapisany z wynikiem przy przypięciu, nie dzisiejsza norma; 6.30: zakres ogólny u dziecka.
+      if (status && (status.kind === 'range' || status.kind === 'range-general')) {
+        parts.push([status.text + (status.bounds ? ' ' + status.bounds : ''), status.population, status.subject]
+          .concat(status.sources || []).filter(Boolean).join(' · '));
+      } else if (status && status.kind === 'recorded') {
+        // Ocena zapisana z wynikiem cytowana dosłownie (ostrzeżenie kliniczne ma pierwszeństwo, decyzja 6.20).
+        parts.push('ocena zapisana z wynikiem: „' + status.text + '”');
+      } else if (status && (status.kind === 'invalidated' || status.kind === 'unavailable' || status.kind === 'range-invalidated' || status.kind === 'range-unavailable')) {
+        parts.push(status.text + (status.detail && status.detail.length ? ' (' + status.detail.join(', ') + ')' : ''));
+      }
+      var comment = commentText(entry.comment);
+      if (comment) parts.push('komentarz: ' + comment);
       return parts.join(' · ');
     }
 
-    var RANGE_SHORT = { within: 'w zakresie', below: 'poniżej', above: 'powyżej', far_below: 'znacznie poniżej', far_above: 'znacznie powyżej' };
-    function drawDetail(entry, unit) {
-      var box = add(strip, 'div', 'lab-strip-detail');
-      var when = entry.dateISO ? formatDate(entry.dateISO) : 'bez daty';
-      if (entry.dateSource !== 'badanie' && DATE_SOURCE[entry.dateSource]) when += ' (' + DATE_SOURCE[entry.dateSource] + ')';
-      var head = add(box, 'p', 'lab-strip-detail-h', when + ' · ' + (entry.display || entry.raw || '—'));
-      if (entry.flag) flag(head, entry.flag);
-      var visit = formatAge(entry.ageMonths);
-      if (visit) add(head, 'span', '', ' · wizyta ' + visit);
-      if (entry.source === 'gh-note') add(box, 'p', 'lab-strip-muted', GH_SOURCE + ' (pole „IGF-1 (wynik z kontroli)”), bez normy i bez oceny');
-      if (entry.converted) add(box, 'p', 'lab-strip-muted', 'przeliczono z ' + recorded(entry));
-      if (KIND_NOTE[entry.kind]) add(box, 'p', 'lab-strip-muted', KIND_NOTE[entry.kind]);
-      var status = entry.status;
-      if (status && status.kind === 'recorded') {
-        var host = add(box, 'div', 'lab-strip-assessment');
-        var ui = w.VildaLabAssessmentUI;
-        var drawn = false;
-        if (ui && typeof ui.renderAssessment === 'function') {
-          try { ui.renderAssessment(host, entry.assessment, { compact: true }); drawn = true; } catch (_) { drawn = false; }
-        }
-        if (!drawn) add(host, 'p', 'lab-strip-muted', '„' + status.text + '”');
-      } else if (status && (status.kind === 'invalidated' || status.kind === 'unavailable' || status.kind === 'range-invalidated' || status.kind === 'range-unavailable')) {
-        add(box, 'p', 'lab-strip-muted', status.text + (status.detail && status.detail.length ? ' · ' + status.detail.join(', ') : ''));
-      } else if (status && (status.kind === 'range' || status.kind === 'range-general')) {
-        // Decyzja 6.3: zakres zapisany z wynikiem przy przypięciu, nie dzisiejsza norma. Decyzja 6.30: zakres ogólny
-        // u dziecka — granice i populacja z zapisu, a w miejscu kategorii „zakres ogólny — bez oceny dla dziecka”.
-        add(box, 'p', 'lab-strip-detail-range', 'zakres zapisany z wynikiem: ' + [status.bounds,
-          status.kind === 'range' ? RANGE_SHORT[status.classification] : status.text,
-          status.population, status.subject].concat(status.sources || []).filter(Boolean).join(' · '));
-      }
-      if (entry.norm) {
-        add(box, 'p', 'lab-strip-detail-norm', (status && status.kind === 'norm' ? status.text : 'norma z wpisu') + ': ' + entry.norm
-          + ' — zakres laboratorium z dnia badania; metoda oznaczenia mogła być inna');
-      }
-      var comment = commentText(entry.comment);
-      if (comment) add(box, 'p', 'lab-strip-detail-comment', 'komentarz: ' + comment);
-      linkButton(box, 'Otwórz w karcie →', 'open', entry.noteId);
-    }
-
-    function drawDifference(series, preview, pinned) {
-      var last = series.last;
-      if (!last) return null;
-      var line = add(strip, 'p', 'lab-strip-diff');
-      var days = daysAgo(series.daysSinceLast);
-      var base = 'ostatni zapisany wynik: ' + formatDate(last.dateISO) + (days ? ' (' + days + ')' : '') + ' · ' + (last.display || last.raw);
-      if (pinned) {
-        line.textContent = base;
-        add(line, 'span', 'lab-strip-muted', ' · ten wynik jest już przypięty' + (pinned.dateISO ? ' (' + formatDate(pinned.dateISO) + ')' : ''));
-        return null;
-      }
-      if (!preview || preview.value == null) { line.textContent = base; return null; }
-      line.textContent = base + ' · teraz ' + bareValue(preview, series.unit);
-      var delta = preview.delta;
-      if (!delta) return null;
-      if (!delta.available) { add(line, 'span', '', ' → ' + delta.text); return null; }
-      add(line, 'span', '', ' → ');
-      add(line, 'strong', 'lab-strip-delta', 'różnica ' + delta.text);
-      add(line, 'span', 'lab-strip-muted', ' (data bieżącej próbki ustalana przy przypięciu)');
-      return delta;
-    }
-
-    function drawChart(series, preview) {
+    function drawChart(series, preview, pinned) {
       var points = series.chart && series.chart.points || [];
       if (!points.length) return;
-      var bar = add(strip, 'div', 'lab-strip-chart-bar');
-      var toggle = add(bar, 'button', 'lab-strip-toggle', state.chartHidden ? 'Pokaż wykres ▾' : 'Ukryj wykres ▴');
-      toggle.type = 'button';
-      toggle.setAttribute('aria-expanded', state.chartHidden ? 'false' : 'true');
-      toggle.setAttribute('aria-controls', CHART_ID);
-      toggle.setAttribute('data-focus', 'toggle');
-      toggle.addEventListener('click', function () { state.chartHidden = !state.chartHidden; run(); });
+      // Wykres zawsze widoczny, bez przycisku zwijania i bez objaśnienia pod nim (6.39).
       var box = add(strip, 'div', 'lab-strip-chart');
       box.id = CHART_ID;
-      if (state.chartHidden) { box.hidden = true; return; }
-      var current = preview && preview.value != null && preview.unit === series.unit ? preview.value : null;
-      drawSvg(box, series, chartLayout(points, current, state.lastWidth), preview);
-      // Objaśnienie pod wykresem (HTML, zawija się na wąskim ekranie, zamiast podpisu w SVG).
-      add(box, 'p', 'lab-strip-chart-note', 'Oś: data badania · przy punkcie wartość · bez pasma norm');
+      // Wynik formularza, który jest już w karcie, to punkt jego notatki — bez pasa „teraz” (LAB-HISTORIA 6.38).
+      var current = !pinned && preview && preview.value != null && preview.unit === series.unit ? preview.value : null;
+      drawSvg(box, series, chartLayout(points, current, state.lastWidth), preview, pinned ? pinned.noteId : null);
     }
 
-    function drawSvg(box, series, layout, preview) {
+    function drawSvg(box, series, layout, preview, pinnedId) {
       var entryById = {};
       series.entries.forEach(function (entry) { if (entry.noteId) entryById[entry.noteId] = entry; });
       var valueText = function (point) {
@@ -620,16 +589,15 @@
       var svg = svgNode(box, 'svg', { viewBox: '0 0 ' + layout.width + ' ' + layout.height, role: 'img' }, 'lab-strip-svg' + (layout.narrow ? ' is-narrow' : ''));
       var described = layout.points.map(function (point) { return formatDate(point.dateISO) + ' ' + valueText(point); });
       if (layout.now) described.push('bieżący, niezapisany wynik ' + bareValue(preview, series.unit) + ' w osobnym pasie bez daty');
+      var pinnedPoint = null;
+      layout.points.forEach(function (point) { if (pinnedId && point.noteId === pinnedId) pinnedPoint = point; });
+      if (pinnedPoint) described.push('wynik z formularza ' + formatDate(pinnedPoint.dateISO) + ' jest już w karcie');
       svg.setAttribute('aria-label', 'Poprzednie wyniki pacjenta, ' + shortLabel(series.label) + (series.unit ? ' w ' + series.unit : '') + ', bez pasma norm: ' + described.join('; '));
       layout.ticks.forEach(function (tick) {
         svgNode(svg, 'line', { x1: layout.left, y1: tick.y, x2: layout.right, y2: tick.y }, 'lab-strip-grid');
         svgNode(svg, 'text', { x: layout.left - 6, y: tick.y + 3.5, 'text-anchor': 'end' }, 'lab-strip-tick', formatNumber(tick.value));
       });
-      // Na wąskim wykresie jednostka tylko w nagłówku paska (pionowy podpis zachodziłby na podziałkę).
-      if (series.unit && !layout.narrow) {
-        var middle = layout.top + (layout.axisY - layout.top) / 2, ux = 12;
-        svgNode(svg, 'text', { x: ux, y: middle, 'text-anchor': 'middle', transform: 'rotate(-90 ' + ux + ' ' + middle + ')' }, 'lab-strip-unit', series.unit);
-      }
+      // Jednostka tylko w nagłówku paska („· w mIU/L”), bez pionowego podpisu przy osi (6.39).
       svgNode(svg, 'line', { x1: layout.left, y1: layout.axisY, x2: layout.right, y2: layout.axisY }, 'lab-strip-axis');
       layout.points.forEach(function (point) {
         svgNode(svg, 'line', { x1: point.x, y1: point.y, x2: point.x, y2: layout.axisY }, 'lab-strip-drop');
@@ -638,8 +606,10 @@
         svgNode(svg, 'polyline', { points: layout.points.map(function (point) { return point.x + ',' + point.y; }).join(' ') }, 'lab-strip-line');
       }
       layout.points.forEach(function (point) {
-        var group = svgNode(svg, 'g', { 'data-note-id': point.noteId || '' }, 'lab-strip-pt' + (state.selected === point.noteId ? ' is-selected' : ''));
+        var group = svgNode(svg, 'g', { 'data-note-id': point.noteId || '' }, 'lab-strip-pt' + (state.selected === point.noteId ? ' is-selected' : '')
+          + (point === pinnedPoint ? ' is-pinned' : ''));
         if (state.selected === point.noteId) svgNode(group, 'circle', { cx: point.x, cy: point.y, r: 10 }, 'lab-strip-halo');
+        if (point === pinnedPoint) svgNode(group, 'circle', { cx: point.x, cy: point.y, r: 9 }, 'lab-strip-pin-ring');
         svgNode(group, 'circle', { cx: point.x, cy: point.y, r: 5 }, 'lab-strip-dot' + (point.conv ? ' is-conv' : ''));
         svgNode(group, 'circle', { cx: point.x, cy: point.y, r: 12 }, 'lab-strip-hit');
         var entry = entryById[point.noteId];
@@ -653,8 +623,9 @@
         var point = layout.points[i], half = widthOf(i) / 2, x = point.x, anchor = 'middle';
         // Przy brzegu osi podpis wyrównany do punktu, żeby nie wchodził na podziałkę ani na pas „teraz”.
         if (x - half < layout.left) { anchor = 'start'; x -= 4; } else if (x + half > rightEdge) { anchor = 'end'; x += 4; }
-        valueNodes.unshift(svgNode(svg, 'text', { x: x, y: point.y - 10, 'text-anchor': anchor }, 'lab-strip-val', valueText(point)));
+        valueNodes.unshift(svgNode(svg, 'text', { x: x, y: point.y - (point === pinnedPoint ? 14 : 10), 'text-anchor': anchor }, 'lab-strip-val', valueText(point)));
       });
+      // Przypięty punkt wyróżnia sama obwódka, bez podpisu pod datą (6.39).
       var axisNodes = [];
       if (layout.now) {
         var now = layout.now;
@@ -727,9 +698,23 @@
       ['vilda:session-changed', 'vilda:auth-loaded', 'vilda:patient-loaded', 'vilda:lab-substance-changed'].forEach(function (type) {
         doc.addEventListener(type, schedule);
       });
+      // Notatki zmienione w innej ramce albo karcie przeglądarki: sejf daje tam tylko sygnał bez notatki (onPatientNoteChanged
+      // działa w ramce zapisu), więc seria czytana od nowa — tak jak w module przypięcia, żeby przycisk i pasek mówiły to samo.
+      var staleNotes = function () { state.noteGen += 1; schedule(); };
+      doc.addEventListener('vilda:lab-pin-state-changed', staleNotes);
+      doc.addEventListener('visibilitychange', function () { if (doc.visibilityState === 'visible') staleNotes(); });
+      try {
+        if (typeof w.BroadcastChannel === 'function') new w.BroadcastChannel('vilda-notes').addEventListener('message', function (event) {
+          if (!event || !event.data || event.data.type === 'note-changed') staleNotes();
+        });
+      } catch (_) { /* bez kanału: zostaje focus i storage */ }
       if (typeof w.addEventListener === 'function') {
         w.addEventListener('vilda:user-state-cleared', forget);
-        w.addEventListener('storage', function (event) { if (!event || event.key == null || event.key === PATIENT_KEY) schedule(); });
+        w.addEventListener('storage', function (event) {
+          if (event && event.key === NOTE_PING_KEY) staleNotes();
+          else if (!event || event.key == null || event.key === PATIENT_KEY) schedule();
+        });
+        w.addEventListener('focus', staleNotes);
         w.addEventListener('resize', function () {
           if (strip && strip.classList.contains('is-on') && chartLayout([], null, hostWidth()).width !== state.lastWidth) schedule();
         });
@@ -744,7 +729,7 @@
 
   var instance = null;
   return Object.freeze({
-    version: '1.3.0',
+    version: '1.5.0',
     start: function () {
       if (instance || !win || !win.document) return instance;
       instance = create(win);
@@ -755,6 +740,6 @@
     },
     // Tylko do testów: natychmiastowy przebieg bez opóźnienia.
     refresh: function () { if (instance) instance.refresh(); },
-    _internal: Object.freeze({ chartLayout: chartLayout, dateLabels: dateLabels, niceStep: niceStep, valueLabelIndexes: valueLabelIndexes, plural: plural, formatAge: formatAge, daysAgo: daysAgo })
+    _internal: Object.freeze({ chartLayout: chartLayout, dateLabels: dateLabels, niceStep: niceStep, valueLabelIndexes: valueLabelIndexes, plural: plural })
   });
 });

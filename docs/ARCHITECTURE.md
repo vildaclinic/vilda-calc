@@ -157,13 +157,36 @@ Do tej warstwy należą m.in.:
   pacjenta i pasek „Poprzednie wyniki” w przeliczniku (`docs/LAB_HISTORIA_WYNIKOW_PLAN.md`). Zakładkę
   rysuje `vilda_lab_history_tab.js` (+ `.css`): tylko widok, dane z sejfu, porównanie z modelu, wykres
   rendererem karty (`window.__vildaLabTrend`, eksport z `vilda_auth_ui.js`); oba pliki ładują strony
-  z kartą tagami statycznymi i leniwe stosy auth (most sesji, `vilda_chrome.js`). Pasek w przeliczniku
+  z kartą tagami statycznymi i leniwe stosy auth (most sesji, `vilda_chrome.js`). Nowych wyników zakładka
+  nie wpisuje (P-BADANIA-WEJSCIE, 2026-11-15): dodaje się je w Jednostkach lab. pacjentowi wczytanemu do
+  formularza; karta pacjenta niewczytanego najpierw go wczytuje (`options.loadPatient`, droga
+  „Wczytaj tego pacjenta” z wyborem wizyty) i dopiero potem otwiera przelicznik. Pasek w przeliczniku
   rysuje `lab_history_strip.js` (+ `.css`, tagi tylko na `przelicznik-jednostek.html`): tylko do odczytu,
   widoczny przy odblokowanym sejfie, wybrane badanie bierze z `VildaLabConverterRuntime.getSubstanceId()`
   (czytelny skrypt strony), wykres rysuje własnym lekkim rendererem SVG, kartę otwiera przez
   `VildaShell.openPatientCardInStart(id, {activeTab: 'lab'})`. Odwrotnie karta badania otwiera
   przelicznik adresem `przelicznik-jednostek.html?badanie=<id>` (`applySubstanceDeepLink`
   w skrypcie strony; w powłoce cel dochodzi zdarzeniem `vilda:shell-navigate-target`);
+- oczekujący wynik (P-OCZEKUJACE-WYNIKI): `window.VildaLabPendingResult`, drugi moduł pliku
+  `lab_pin_result.js` (bez osobnego pliku — budżet żądań instalacji PWA). Zakładka „Badania” otwiera
+  przelicznik adresem `przelicznik-jednostek.html?oczekujacy=<id notatki>`; moduł sprawdza wpis w sejfie
+  (`VildaLabHistory.pendingItem`), rysuje pasek `#labPendingStrip` w nagłówku karty i daje oknu przypięcia
+  oraz pakietowi znacznik „Zamknij oczekujący wynik” (`choice`, `commit` → `completePatientNote`). Bez
+  podpiętego wpisu (etap 2, LAB-HISTORIA 6.36) to samo `choice` daje wybór z listy oczekujących wyników
+  wczytanego pacjenta (`VildaLabHistory.pendingItems` z `listPatientNotesForPatient`; domyślnie nic się nie
+  zamyka), odświeżany po zapisie notatki pacjenta w sejfie (`onPatientNoteChanged`). Zmianę stanu ogłasza
+  zdarzenie dokumentu `vilda:lab-pending-result-changed`;
+- przypięty wynik (P-PRZYPIETY-WYNIK, LAB-HISTORIA 6.38): stan „wynik formularza jest już w karcie” liczy
+  czytelny blok `Pp*` w `lab_pin_result.js` — jedno źródło dla przycisku „Przypnij do wizyty” („✓ Przypięto”),
+  okna przypięcia (ostrzeżenie i blokada tego samego wyniku z tą samą datą badania) i paska „Poprzednie
+  wyniki”. Stan daje `window.VildaLabPinResult.pinned()` (`{patientId, testKey, unit, raw, noteId, dateISO,
+  source}` albo `null`), a jego zmianę ogłasza zdarzenie dokumentu `vilda:lab-pin-state-changed`. Pasek
+  (`lab_history_strip.js` 1.5.0) nie ma własnej reguły: czyta `pinned()`, sprawdza tylko zgodność z formularzem
+  i serią, odświeża się na to zdarzenie, a bez modułu przypięcia pokazuje chip „teraz”. Od LAB-HISTORIA 6.39
+  pasek rysuje tylko nagłówek, chipy i wykres (szczegóły wpisu w podpowiedzi chipu, pełny wpis w karcie). Czyste funkcje
+  reguły (`resolve`, `duplicates`, `parse`, `nums`, `normalizeUnit`) są w `VildaLabPinResult._internal` tylko dla
+  testów. Blok czyta notatki karty (`listPatientNotesForPatient`, `getPatientNote`); zapisuje dalej tylko
+  przypięcie (`A`);
 - pakiety badań: `vilda_lab_packages.js` (dane pakietu, model i widok w jednym pliku — budżet żądań
   instalacji PWA; tag tylko na `przelicznik-jednostek.html`). Zakładka „Pakiet badań” karty przelicznika
   (jedna karta, zakładki `#labModeBar` pod tytułem; pakiet jest panelem `#labPackageCard` tej karty): kilka
@@ -413,6 +436,12 @@ ani jawnych rekordów. Przygotowanie szyfrogramów nie zapisuje danych. Adapter
 zapisuje komplet atomowo (jedna transakcja IndexedDB lub wymiana mapy adaptera
 pamięciowego). Identyfikator operacji z odciskiem treści daje bezpieczne ponowienie.
 Konflikt zachowuje wpisany formularz zamiast nadpisywać nowszą notatkę.
+Wołający podaje obok `baseRev` chwilę zapisu wiersza (`baseUpdatedAtISO`); przy niej
+konflikt wykrywa inna chwila zapisu notatki w sejfie (scalanie przy równym `rev`
+podmienia treść bez zmiany numeru), a transakcja sprawdza `rev` świeżo odczytany
+pod blokadą notatki (E3-PR0b2a, P-KONFLIKT-ZAPISU-NOTATKI). Od E3-PR0b2b wołający podaje też wiersz (`baseNote`);
+przy innej chwili zapisu ta sama widoczna wersja (ratunek D-21, import karty) nie jest konfliktem
+(P-NOTATKA-POZNIEJSZA).
 
 Ustalony termin badania/wizyty jest osobną informacją w treści notatki, niezależną
 od `dueDateISO` przypomnienia. Data otrzymania opisu wyniku nie jest datą pobrania
@@ -763,6 +792,8 @@ Projekt synchronizacji przyrostowej (urządzenie wysyła tylko własne zmiany ja
 **„Zostaw notatkę” na dwóch urządzeniach (E2-PR3c3, P-NOTATKI-1, 2026-11-10).** W sekcji notatek `Le` najwyższy znany `rev` notatki (`Qrev`) liczy się także z notatek ładunku, więc nagrobek, który z nimi wygrywa, niesie ich numer, a „Zostaw notatkę” zawsze daje wersję nowszą od starych: zostaje tekst zapisany później, skasowana treść nie wraca z innego urządzenia. Chwila utworzenia notatki = najwcześniejsza znana (`Bnp_utworzona`; przy wygranej tutejszej treści zapis samej chwili pod blokadą notatki, `Bnp_wczesniejUtworzona`). Zmienia działanie dziś (pełne kopie, delty). Opis: `docs/clinical/ALGORITHMS.md`, P-NOTATKI-1, E2-PR3c3.
 
 **Notatka po „Scal pacjentów” za kartą, która istnieje (E2-PR3c4, P-NOTATKI-ZA-KARTA, 2026-11-10).** Gdy wersja notatki tutejsza i z ładunku leżą pod różnymi kartami, sekcja notatek `Le` wybiera kartę regułą karty notatki: karta martwa (nagrobek znany tu albo z ładunku i brak karty po fazie kart; odczyt leniwy, raz na pacjenta) przegrywa z kartą, która istnieje; pełny remis — mniejszy `patientId`; inaczej karta zwycięzcy treści (zastępuje G5). Gdy wygrywa tutejsza treść, a reguła daje kartę z ładunku — zapis samej karty pod blokadą notatki na świeżym odczycie (`Bnp_zmienKarte`); plan opieki — tylko przy karcie martwej. Podgląd „Scal kopię konta” liczy to samo (`Bks_zmianyKarty`). Hak karty notatki (`Bem_wlasciciel`, uśpiony): notatka przyjęta z koperty pod inną kartą idzie raz dalej do kolejki. Zmienia działanie dziś (pełne kopie, delty). Opis: `docs/clinical/ALGORITHMS.md`, P-NOTATKI-ZA-KARTA, E2-PR3c4.
+
+**Notatka pacjenta: zostaje zmiana późniejsza (E3-PR0b2b, P-NOTATKA-POZNIEJSZA, 2026-11-17).** Sekcja notatek `Le`, zwycięzcy dla nagrobków (`Bnp_zwyciezcy`) i podgląd „Scal kopię konta” (`Bks_wygrywaNotatka`) wybierają wersję notatki jedną funkcją `Bnp_nowsza`: chwila zmiany treści (`contentAtISO` z kotwicą `contentForISO === updatedAtISO`, inaczej chwila zapisu), potem `rev`, potem chwila zapisu; plan opieki po którejkolwiek stronie — dawna reguła (`rev`, potem data); `rev` po scaleniu = najwyższy. Oznaczenie „wykonane”, „nie zgłosił się” i cofnięcie to osobny rejestr (`stateAtISO` z kotwicą `stateForISO`); rekord łączący treść jednej wersji z oznaczeniem drugiej dostaje chwilę zapisu o 1 ms późniejszą niż obie. Ratunek D-21, import karty i przeniesienie przy „Scal pacjentów” zachowują chwilę treści; zapis `Ad` dostaje stempel jak wersje D-7. Wołający z `baseUpdatedAtISO` mogą podać wersję pokazaną (`baseNote`) — przy innej chwili zapisu ta sama widoczna wersja nie jest konfliktem (`Bnp_takSamoWidoczna`). Bez nowych wywołań `Bem_`, `Bob_`, `Bev_`; fragment natywny, blok trwałych wizyt, serwer i `vilda_sync.js` bez zmian.
 
 **Kosz po przywróceniu i porządkowaniu (E2-PR3c5, P-KOSZ-USUWANEJ-KARTY, 2026-11-11).** Wersja karty przegranej z nagrobkiem pacjenta (karta z ładunku — `Bsl_koszZLadunku`, karta usuwana tutaj — `Bsl_koszUsuwanejKarty`) zmieniona po ważnym Koszu, z którą wygrywa późniejsze porządkowanie, oddaje wpisowi zmianę, opis i rejestr gwiazdki (bez treści i bez cienia), więc wpis przestaje być ważnym Koszem; w zapisie listy przed usunięciem karty taki wpis ma od razu zdjęty cień tej karty (`Bpc_bezKarty`). Wizyta dana do Kosza, przywrócona i usunięta porządkowaniem na innym urządzeniu przed „Scal pacjentów” jej karty nie wraca do Kosza. Zmienia działanie dziś (pełne kopie, delty). Opis: `docs/clinical/ALGORITHMS.md`, P-KOSZ-USUWANEJ-KARTY, E2-PR3c5.
 

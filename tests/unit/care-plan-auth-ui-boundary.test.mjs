@@ -66,7 +66,19 @@ describe('native notes and staged evidence respect the same document boundary', 
     // Odświeżony świadomie 2026-11-12 (P-WYNIKI-BADAN-EDYTOR, prośba właściciela): opis kotwicy „Notatka ogólna”
     // zależy od kategorii — wynik badania trafia do Badań. Jedyna zmiana w treści edytora: x._wbOpis przy opisie,
     // odświeżenie opisu w Wt() i nasłuch zmiany kategorii; bramka dostępu i zapis bez zmian.
-    expect(createHash('sha256').update(source.slice(...body.range)).digest('hex')).toBe('26321100044a3ee36ae0fabcbf5118be43819e16340c111261a06623d50cc582');
+    // Odświeżony świadomie 2026-11-15 (P-BADANIA-WEJSCIE, decyzja właściciela): nowa notatka nie ma szablonu
+    // „Wynik badania” — nowego wyniku nie wpisuje się ręcznie. Jedyna zmiana w treści edytora: lista szablonów S
+    // dostaje pozycję „lab” tylko, gdy edytor otwarto z tym szablonem (w === "lab"); bramka dostępu i zapis bez zmian.
+    // Odświeżony świadomie 2026-11-16 (E3-PR0b2a, P-KONFLIKT-ZAPISU-NOTATKI): edytor pamięta chwilę zapisu otwartej
+    // wersji (QbaseU) i wysyła ją jako baseUpdatedAtISO, a „Nadpisz moją wersją” podnosi ją z wersji w sejfie
+    // (current konfliktu). Jedyna zmiana w treści edytora: te trzy instrukcje i dwa komentarze; bramka dostępu
+    // i zapis bez zmian. Działanie: tests/unit/konflikt-edycji-notatki-chwila.test.mjs, tests/e2e/edytor-notatki-rata3.spec.mjs.
+    // Odświeżony świadomie 2026-11-17 (E3-PR0b2b, P-NOTATKA-POZNIEJSZA): edytor pamięta całą otwartą wersję (QbaseN)
+    // i wysyła ją jako baseNote obok baseUpdatedAtISO, a „Nadpisz moją wersją” podnosi ją do current konfliktu; baner
+    // o zmianie z innego urządzenia pokazuje się tylko, gdy wersja w sejfie różni się od otwartej (Qshow czyta ją
+    // i porównuje polami odczytu, Qpokaz — dawna treść banera). Jedyna zmiana w treści edytora: te instrukcje, trzy małe
+    // funkcje przy banerze i komentarz; bramka dostępu i zapis bez zmian. Działanie: tests/unit/notatka-pozniejsza-zapis.test.mjs.
+    expect(createHash('sha256').update(source.slice(...body.range)).digest('hex')).toBe('60dd540af147f7b4c2fec361bdf6758e899c66b4e20a6b87714061ac2399183d');
   });
 
   it('opens a genuinely new note synchronously without a needless patient-plan read', () => {

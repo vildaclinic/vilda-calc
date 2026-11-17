@@ -43,7 +43,7 @@
     // readSaved is pure and needed for the new capture format. Its recalculate
     // method is not called while opening history and resolves engines lazily.
     ["clcr_saved_calculation.js?v=23", "ClcrSavedCalculation"],
-    ["clcr_saved_results.js?v=23", "ClcrSavedResults"],
+    ["clcr_saved_results.js?v=24", "ClcrSavedResults"],
     ["clcr_saved_results_view.js?v=3", "ClcrSavedResultsView"],
   ];
   const editor = [
@@ -119,7 +119,7 @@
     ["clcr_result_presentation.js?v=8", "ClcrResultPresentation"],
     ["clcr_saved_legacy_calculator.js?v=23", "ClcrSavedLegacyCalculator"],
     ["vilda_lab_result_chart.js?v=4", "VildaResultDetailsDialog"],
-    ["clcr_result_details.js?v=19", "ClcrResultDetails"],
+    ["clcr_result_details.js?v=21", "ClcrResultDetails"],
   ];
   function load(path, name, style = false) {
     if (name && root[name]) return Promise.resolve();
@@ -170,7 +170,7 @@
   }
   function ensureEditor() {
     if (!editorPromise) {
-      editorPromise = ensureReader().then(() => Promise.all([load("clcr_result_details.css?v=2", null, true), load("vilda_lab_history_tab.css?v=12", null, true), ordered(editor)]))
+      editorPromise = ensureReader().then(() => Promise.all([load("clcr_result_details.css?v=2", null, true), load("vilda_lab_history_tab.css?v=14", null, true), ordered(editor)]))
         .then(() => root.ClcrResultDetails);
       editorPromise.catch(() => { editorPromise = null; });
     }
