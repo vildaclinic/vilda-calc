@@ -3,13 +3,13 @@ import { otworzPrzelicznik, pasekHistorii, wybierzBadanie } from '../support/lab
 
 // LAB-HISTORIA 6.38 (P-PRZYPIETY-WYNIK, decyzje właściciela 2026-11-17): po przypięciu wynik formularza jest „już
 // w karcie”. Przycisk „Przypnij do wizyty” pokazuje „✓ Przypięto”, pasek „Poprzednie wyniki pacjenta” nie rysuje
-// tego samego pomiaru drugi raz (bez chipu i pasa „teraz”, chip i punkt notatki ze znacznikiem „✓ z formularza”),
-// a okno przypięcia nie zapisze drugi raz tego samego wyniku z tą samą datą badania. Prawdziwy sejf z fikcyjną
-// historią TSH (tests/support/lab-historia-dane.mjs; zegar stron 17.06.2026).
+// tego samego pomiaru drugi raz (bez chipu i pasa „teraz”; chip notatki wyróżniony tłem, punkt — obwódką),
+// a okno przypięcia nie zapisze drugi raz tego samego wyniku z tą samą datą badania. LAB-HISTORIA 6.39 (makieta
+// właściciela „wariant A”): podpis wiersza „Już w karcie · data badania …” / „Jeszcze nie w karcie”, pasek bez
+// znacznika „✓ z formularza”, linii różnicy i podpisu z liczbą wyników. Prawdziwy sejf z fikcyjną historią TSH
+// (tests/support/lab-historia-dane.mjs; zegar stron 17.06.2026).
 test.use({ serviceWorkers: 'block' });
 
-const bezTwardejSpacji = (s) => String(s).replace(/\u00a0/g, ' ');
-const tekst = async (locator) => bezTwardejSpacji(await locator.innerText()).replace(/\s+/g, ' ').trim();
 const PRZYPNIJ = '\u{1F4CC} Przypnij do wizyty';
 const BLOKADA = 'Ten sam wynik z tą datą badania jest już w karcie. Zmień datę badania albo anuluj.';
 
@@ -27,8 +27,8 @@ test('TSH 0,38: „✓ Przypięto”, pasek bez drugiego punktu, blokada tej sam
   const pasek = pasekHistorii(page), svg = pasek.locator('svg.lab-strip-svg');
   await expect(przycisk).toHaveText(PRZYPNIJ);
   await expect(przycisk).not.toHaveClass(/is-pinned/);
-  await expect(podpis).toHaveText('wynik trafi do karty pacjenta');
-  await expect(pasek.locator('.lab-strip-now .lab-strip-chip-d')).toHaveText('teraz · niezapisany');
+  await expect(podpis).toHaveText('Jeszcze nie w karcie');
+  await expect(pasek.locator('.lab-strip-now .lab-strip-chip-d')).toHaveText('teraz');
 
   // Przypięcie z proponowaną datą (dziś).
   await przycisk.click();
@@ -44,20 +44,20 @@ test('TSH 0,38: „✓ Przypięto”, pasek bez drugiego punktu, blokada tej sam
   await expect(przycisk).toHaveText('✓ Przypięto');
   await expect(przycisk).toHaveClass(/is-pinned/);
   await expect(przycisk).toHaveAttribute('title', /już w karcie/);
-  await expect(podpis).toHaveText('TSH 0,38 mIU/L jest już w karcie · badanie 17.06.26');
+  await expect(podpis).toHaveText('Już w karcie · data badania 17.06.26');
 
-  // Pasek: jeden chip i jeden punkt tej notatki ze znacznikiem, bez chipu i pasa „teraz”.
-  await expect(pasek.locator('.lab-strip-sub')).toHaveText('Fikcyjna Badaniowa · 5 wyników · ostatni 17.06.26');
+  // Pasek: jeden chip i jeden punkt tej notatki (wyróżnione), bez chipu i pasa „teraz”; bez podpisu z liczbą wyników.
+  await expect(pasek.locator('button.lab-strip-chip[data-note-id]')).toHaveCount(5);
   await expect(pasek.locator('.lab-strip-now')).toHaveCount(0);
   await expect(pasek.locator('.lab-strip-sep')).toHaveCount(0);
   const przypiety = pasek.locator('button.lab-strip-chip.is-pinned');
   await expect(przypiety).toHaveCount(1);
   await expect(przypiety).toHaveAttribute('data-note-id', pierwsza.id);
   await expect(przypiety.locator('.lab-strip-chip-d')).toHaveText('17.06.26');
-  await expect(przypiety.locator('.lab-strip-chip-pin')).toHaveText('· ✓ z formularza');
+  await expect(przypiety.locator('.lab-strip-chip-pin')).toHaveCount(0);
   // Strzałka wg zakresu zapisanego z wynikiem przy przypięciu (decyzja 6.3), jak przy każdym zapisanym chipie.
   await expect(przypiety.locator('.lab-strip-chip-v')).toHaveText('0,38↓');
-  expect(await tekst(pasek.locator('.lab-strip-diff'))).toBe('ostatni zapisany wynik: 17.06.26 (dziś) · 0,38 mIU/L · to wynik z formularza, już w karcie');
+  await expect(pasek.locator('.lab-strip-diff')).toHaveCount(0);
   await expect(svg.locator('g.lab-strip-pt')).toHaveCount(5);
   await expect(svg.locator('line.lab-strip-drop')).toHaveCount(5);
   await expect(svg.locator('rect.lab-strip-lane')).toHaveCount(0);
@@ -66,7 +66,7 @@ test('TSH 0,38: „✓ Przypięto”, pasek bez drugiego punktu, blokada tej sam
   await expect(svg.locator('text.lab-strip-val')).toHaveText(['0,01', '0,02', '0,05', '0,12', '0,38']);
   await expect(svg.locator('g.lab-strip-pt.is-pinned')).toHaveAttribute('data-note-id', pierwsza.id);
   await expect(svg.locator('circle.lab-strip-pin-ring')).toHaveCount(1);
-  await expect(svg.locator('text.lab-strip-pin-sub')).toHaveText('✓ z formularza');
+  await expect(svg.locator('text.lab-strip-pin-sub')).toHaveCount(0);
   await expect(svg).toHaveAttribute('aria-label', /wynik z formularza 17\.06\.26 jest już w karcie$/);
 
   // Sama zmiana jednostki docelowej (przeliczenie) nie zmienia stanu: to ten sam pomiar.
@@ -77,8 +77,8 @@ test('TSH 0,38: „✓ Przypięto”, pasek bez drugiego punktu, blokada tej sam
   await page.locator('#labValue').fill('0,5');
   await expect(przycisk).toHaveText(PRZYPNIJ);
   await expect(przycisk).not.toHaveClass(/is-pinned/);
-  await expect(podpis).toHaveText('wynik trafi do karty pacjenta');
-  await expect(pasek.locator('.lab-strip-now .lab-strip-chip-d')).toHaveText('teraz · niezapisany');
+  await expect(podpis).toHaveText('Jeszcze nie w karcie');
+  await expect(pasek.locator('.lab-strip-now .lab-strip-chip-d')).toHaveText('teraz');
   await expect(pasek.locator('button.lab-strip-chip.is-pinned')).toHaveCount(0);
   await expect(svg.locator('rect.lab-strip-lane')).toHaveCount(1);
   await expect(svg.locator('text.lab-strip-now-label')).toHaveText('teraz');
@@ -112,9 +112,9 @@ test('TSH 0,38: „✓ Przypięto”, pasek bez drugiego punktu, blokada tej sam
 
   // Ostatnie przypięcie z tej strony (inna data niż dzisiejsza) — nadal „✓ Przypięto”, z jego datą badania.
   await expect(przycisk).toHaveText('✓ Przypięto');
-  await expect(podpis).toHaveText('TSH 0,38 mIU/L jest już w karcie · badanie 10.06.26');
+  await expect(podpis).toHaveText('Już w karcie · data badania 10.06.26');
   await expect(pasek.locator('button.lab-strip-chip.is-pinned')).toHaveAttribute('data-note-id', druga.id);
-  expect(await tekst(pasek.locator('.lab-strip-diff'))).toBe('ostatni zapisany wynik: 17.06.26 (dziś) · 0,38 mIU/L · wynik z formularza jest w karcie z datą 10.06.26');
+  await expect(pasek.locator('button.lab-strip-chip.is-pinned .lab-strip-chip-d')).toHaveText('10.06.26');
   // Okno z proponowaną dzisiejszą datą: blokuje notatka z 17.06.26 i to ją nazywa ostrzeżenie (nie ostatnie przypięcie z 10.06.26).
   await przycisk.click();
   await expect(page.locator('#labPinSave')).toBeDisabled();
@@ -133,7 +133,7 @@ test('TSH 0,38: „✓ Przypięto”, pasek bez drugiego punktu, blokada tej sam
   await page.locator('#labUnit').selectOption('mIU/L');
   await page.locator('#labValue').fill('0,38');
   await expect(przycisk).toHaveText('✓ Przypięto');
-  await expect(podpis).toHaveText('TSH 0,38 mIU/L jest już w karcie · badanie 17.06.26');
+  await expect(podpis).toHaveText('Już w karcie · data badania 17.06.26');
   await expect(pasek.locator('button.lab-strip-chip.is-pinned')).toHaveAttribute('data-note-id', pierwsza.id);
   await expect(pasek.locator('.lab-strip-now')).toHaveCount(0);
   await przycisk.click();
@@ -149,7 +149,7 @@ test('wynik bez przypięcia z tą samą liczbą sprzed miesięcy: zwykłe okno, 
   await page.locator('#labUnit').selectOption('mIU/L');
   await page.locator('#labValue').fill('0,12');
   await expect(page.locator('#labPinResultBtn')).toHaveText(PRZYPNIJ);
-  await expect(pasekHistorii(page).locator('.lab-strip-now .lab-strip-chip-d')).toHaveText('teraz · niezapisany');
+  await expect(pasekHistorii(page).locator('.lab-strip-now .lab-strip-chip-d')).toHaveText('teraz');
   await page.locator('#labPinResultBtn').click();
   await expect(page.locator('#labPinDuplicate')).toBeHidden();
   await expect(page.locator('#labPinDuplicateDate')).toBeHidden();

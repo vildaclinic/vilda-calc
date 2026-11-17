@@ -348,7 +348,8 @@ describe('VildaLabPinResult.pinned i odczyt karty po załadowaniu strony', () =>
     expect(btn.textContent).toBe('✓ Przypięto');
     expect(btn.classList.contains('is-pinned')).toBe(true);
     expect(btn.getAttribute('title')).toContain('już w karcie');
-    expect(env.doc.getElementById('labPinSub').textContent).toBe('TSH 0,38 mIU/L jest już w karcie · badanie 17.06.26');
+    // LAB-HISTORIA 6.39: krótki podpis, bez nazwy badania i wartości.
+    expect(env.doc.getElementById('labPinSub').textContent).toBe('Już w karcie · data badania 17.06.26');
 
     env.pola.labValue.value = '0,5';
     env.pola.labValue.dispatch('input');
@@ -358,7 +359,7 @@ describe('VildaLabPinResult.pinned i odczyt karty po załadowaniu strony', () =>
     expect(btn.textContent).toBe('\u{1F4CC} Przypnij do wizyty');
     expect(btn.classList.contains('is-pinned')).toBe(false);
     expect(btn.getAttribute('title')).toBeNull();
-    expect(env.doc.getElementById('labPinSub').textContent).toBe('wynik trafi do karty pacjenta');
+    expect(env.doc.getElementById('labPinSub').textContent).toBe('Jeszcze nie w karcie');
 
     env.pola.labValue.value = '0,38';
     env.pola.labValue.dispatch('input');
@@ -397,6 +398,12 @@ describe('lab_pin_result.js: wywołania reguły w minifikowanej części (kontra
     expect(blok).toContain('a.VildaLabPinResult.pinned = function');
     const wycinekA = pin.slice(pin.indexOf('async function A('), pin.indexOf('function I(){'));
     expect(wycinekA).not.toContain('function Pp');
+  });
+
+  it('LAB-HISTORIA 6.39: początkowy podpis wiersza w części zminifikowanej (N) jest tym samym tekstem co PP_PIN_SUB', () => {
+    expect(ile('n.id="labPinSub",n.textContent="Jeszcze nie w karcie"')).toBe(1);
+    expect(ile('PP_PIN_SUB = "Jeszcze nie w karcie"')).toBe(1);
+    expect(ile('wynik trafi do karty pacjenta')).toBe(0);
   });
 });
 

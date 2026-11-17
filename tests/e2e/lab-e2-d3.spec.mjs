@@ -374,9 +374,12 @@ test('E2 D3 stays read-only when a result is pinned and historical RI is replaye
       window.__e2D3HistoricalCalls++; throw new Error('History requested current E2 norms');
     } };
   });
-  await page.locator(`#labHistoryStrip button.lab-strip-chip[data-note-id="${saved.id}"]`).click();
-  await expect(page.locator('#labHistoryStrip .lab-strip-detail-range')).toContainText('19,1–79');
+  // LAB-HISTORIA 6.39: zakres zapisany z wynikiem jest w podpowiedzi chipu (bez panelu szczegółów).
+  const historicalChip = page.locator(`#labHistoryStrip button.lab-strip-chip[data-note-id="${saved.id}"]`);
+  await historicalChip.click();
+  await expect(historicalChip).toHaveAttribute('title', /19,1–79/);
   await expect(page.locator('#labHistoryStrip')).not.toContainText('Grisendi');
+  await expect(historicalChip).not.toHaveAttribute('title', /Grisendi/);
   expect(await page.evaluate(() => window.__e2D3HistoricalCalls)).toBe(0);
   expect((await page.evaluate(id => window.VildaVault.getPatientNote(id), saved.id)).labResult).toEqual(saved.labResult);
 });

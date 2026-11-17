@@ -326,7 +326,9 @@ test('E2 inequalities retain their operator and the phase statistic never change
   });
   const chip = page.locator(`#labHistoryStrip button.lab-strip-chip[data-note-id="${saved[0].id}"]`);
   await chip.click();
-  await expect(page.locator('#labHistoryStrip .lab-strip-detail-range')).toContainText('104–398');
+  // LAB-HISTORIA 6.39: zakres zapisany z wynikiem jest w podpowiedzi chipu (bez panelu szczegółów).
+  await expect(chip).toHaveAttribute('title', /104–398/);
   await expect(page.locator('#labHistoryStrip')).not.toContainText('Anckaert');
+  await expect(chip).not.toHaveAttribute('title', /Anckaert/);
   expect(await page.evaluate(() => window.__phaseHistoricalCalls)).toBe(0);
 });

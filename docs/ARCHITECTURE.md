@@ -181,8 +181,9 @@ Do tej warstwy należą m.in.:
   okna przypięcia (ostrzeżenie i blokada tego samego wyniku z tą samą datą badania) i paska „Poprzednie
   wyniki”. Stan daje `window.VildaLabPinResult.pinned()` (`{patientId, testKey, unit, raw, noteId, dateISO,
   source}` albo `null`), a jego zmianę ogłasza zdarzenie dokumentu `vilda:lab-pin-state-changed`. Pasek
-  (`lab_history_strip.js` 1.4.0) nie ma własnej reguły: czyta `pinned()`, sprawdza tylko zgodność z formularzem
-  i serią, odświeża się na to zdarzenie, a bez modułu przypięcia pokazuje „teraz · niezapisany”. Czyste funkcje
+  (`lab_history_strip.js` 1.5.0) nie ma własnej reguły: czyta `pinned()`, sprawdza tylko zgodność z formularzem
+  i serią, odświeża się na to zdarzenie, a bez modułu przypięcia pokazuje chip „teraz”. Od LAB-HISTORIA 6.39
+  pasek rysuje tylko nagłówek, chipy i wykres (szczegóły wpisu w podpowiedzi chipu, pełny wpis w karcie). Czyste funkcje
   reguły (`resolve`, `duplicates`, `parse`, `nums`, `normalizeUnit`) są w `VildaLabPinResult._internal` tylko dla
   testów. Blok czyta notatki karty (`listPatientNotesForPatient`, `getPatientNote`); zapisuje dalej tylko
   przypięcie (`A`);

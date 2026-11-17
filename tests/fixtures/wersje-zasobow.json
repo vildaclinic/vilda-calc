@@ -1020,16 +1020,16 @@
   "sha256": "fa7b4bc5c86aad30460f47bded9218ae73106912ed256c8d441143b3a5fd9dcd"
  },
  "lab_history_strip.css": {
-  "v": 3,
-  "sha256": "0b5d613dd210f1338fae54a27a6c7a522a1609eb992fc5f89d22fa2420ea9660"
+  "v": 4,
+  "sha256": "5b3b968cabf43d9383cb9e70eac42fa65a5a8df934f5b721f413bf2aeb988fd6"
  },
  "lab_history_strip.js": {
-  "v": 5,
-  "sha256": "c44296af82345b4b583a7ed3a610f1d1ebc62dee581fce2b8f4f5130c8cd9162"
+  "v": 6,
+  "sha256": "e6180aa1b901b4db43ca572281c9522d7c1164247fc7243be376f5b374058b4e"
  },
  "lab_pin_result.js": {
-  "v": 14,
-  "sha256": "d4c6f00b371037093830702dff181202f7a5b7be875d9d053d607bbfb2a8b425"
+  "v": 15,
+  "sha256": "bbc062db59a25961bbba0c46c6116a169fbd2cb3783e218d97222b6bed6f2f89"
  },
  "lab_unit_converter.js": {
   "v": 10,

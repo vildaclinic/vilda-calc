@@ -1868,6 +1868,18 @@ Czytelny blok leży w tym samym domknięciu co część zminifikowana i korzysta
 
 **Granice.** Bez nowych stylów ustawianych wprost na elementach: ostrzeżenie, komunikat pod datą i stan przycisku mają klasy z arkuszy, więc liczba dla `lab_pin_result.js` w `tests/fixtures/style-elementow.json` zostaje 17. Ciągi kontraktu z `tests/unit/lab-pending-result.test.mjs` (`RrPinRange(t,o);var OwChoice=OwPinChoice(t,o);`, `function(){A(t,e,i,OwChoice)}`, zamknięcie oczekującego wyniku zaraz po `await r.savePatientNote(p),g();`, notatka bez śladu oczekującego wyniku) są bez zmian. Sejf bez zmian: blok tylko czyta (`listPatientNotesForPatient`, `getPatientNote`) i korzysta z istniejących nasłuchów `onPatientNoteChanged` i `onLock` oraz z sygnału sejfu dla innych kart (`BroadcastChannel` „vilda-notes”, klucz `storage` „vilda-note-changed-ping-v1”). Pakiet badań (`vilda_lab_packages.js`) zapisuje wyniki własną drogą i nie jest blokowany.
 
+## Łatka P-PASEK-WARIANT-A — krótszy podpis wiersza przypięcia (`lab_pin_result.js`, 2026-11-17, decyzja właściciela)
+
+Opis: `docs/clinical/ALGORITHMS.md`, „LAB-HISTORIA 6.39”; `docs/LAB_HISTORIA_WYNIKOW_PLAN.md`, decyzja 6.39. Zmiany w czytelnych źródłach (`lab_history_strip.js` 1.5.0, `lab_history_strip.css`, blok `Pp*` w `lab_pin_result.js`: `PP_PIN_SUB` i podpis w `PpApply`) nie wymagają opisu łatki. W zminifikowanej części `lab_pin_result.js` jest jedna podmiana dokładnego ciągu, bez ponownej minifikacji:
+
+```js
+// tekst początkowy podpisu wiersza przypięcia (funkcja N)
+//    było:  n.id="labPinSub",n.textContent="wynik trafi do karty pacjenta"
+//    jest:  n.id="labPinSub",n.textContent="Jeszcze nie w karcie"
+```
+
+Tekst jest ten sam co `PP_PIN_SUB` w czytelnym bloku, więc wiersz nie zmienia podpisu, zanim blok go odświeży. `tests/unit/lab-pin-pinned-state.test.mjs` pilnuje, że oba ciągi występują dokładnie raz, a dawnego tekstu nie ma. Bez nowych stylów ustawianych wprost na elementach (liczba dla `lab_pin_result.js` w `tests/fixtures/style-elementow.json` zostaje 17); znaczniki wycinków testów (`var Lh2AssessmentProvider=`, `var s=null;`, `async function A(`, `function I(){`) bez zmian.
+
 ## Trwała tożsamość wizyt — źródło i granica artefaktu sejfu
 
 Zmiana funkcjonalna `P-TRWALE-WIZYTY` ma bazę `audyt` z commita
