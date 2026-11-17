@@ -305,6 +305,25 @@ describe('E3-PR0b2b — zegary urządzeń i stempel zapisu', () => {
     await wyslij(s.B, s.A);
     expect(await stan(s.A, s.id)).toEqual(otwarta('B: poprawka wersji z odległą chwilą.', 3));
   });
+
+  // Dwa zapisy tej samej notatki w jednej milisekundzie: drugi dostaje stempel (chwila poprzedniej wersji + 1 ms +
+  // los), czyli chwilę z najbliższej sekundy; nagrobek usunięcia bierze max(teraz, chwila usuwanej wersji) (G13).
+  // „Zostaw notatkę” (wskrzeszenie) w tej samej chwili — od E3-PR0b2b później niż nagrobek, który zna; inaczej
+  // („teraz”) przegrywało z nagrobkiem i wskrzeszona notatka ginęła po cichu na drugim urządzeniu.
+  it('wskrzeszenie tuż po zapisie ze stemplem i usunięciu w tej samej chwili: notatka zostaje na obu urządzeniach', async () => {
+    losowo(0.5);
+    const s = await swiat();
+    await zmien(s, s.A, 'A: wersja 1.');
+    await zmien(s, s.A, 'A: wersja 2 w tej samej milisekundzie.', 0);
+    const u2 = (await zapisana(s.A, s.id)).updatedAtISO;
+    expect(u2 > iso(teraz), 'stempel: chwila zapisu późniejsza niż „teraz”').toBe(true);
+    await s.A.vault.removePatientNote(s.id);
+    const wsk = await s.A.vault.savePatientNote({ patientId: s.patientId, id: s.id, title: 'Fikcyjna wizyta', body: 'A: zostaw notatkę.', category: 'observation' });
+    expect(wsk.isNew, 'wskrzeszenie').toBe(true);
+    expect((await zapisana(s.A, s.id)).updatedAtISO > u2, 'wskrzeszenie później niż nagrobek').toBe(true);
+    await wyslij(s.A, s.B); await wyslij(s.B, s.A);
+    expect(await stany(s)).toEqual(wszedzie(s, otwarta('A: zostaw notatkę.', 4)));
+  });
 });
 
 describe('E3-PR0b2b — nagrobek notatki a późniejsza zmiana', () => {
@@ -411,10 +430,13 @@ describe('E3-PR0b2b — pola chwili treści w rekordzie i ładunku', () => {
 
   it('kopia ucięta przez starszą aplikację (ta sama wersja bez pól chwili): pole znika na obu, kolejna wymiana bez zapisu', async () => {
     const s = await dwieWersje();
-    // A ma swoją wersję z ważnym polem chwili treści (np. po ratunku), B — tę samą wersję bez pól.
+    // A ma swoją wersję z ważnym polem chwili treści (np. po ratunku), B — tę samą wersję bez pól. B dostaje ją
+    // zwykłym scaleniem (własny szyfrogram — rekord z adaptera A byłby na B nieczytelny i pomijany w eksporcie);
+    // pole na A dopisujemy dopiero potem.
+    await wyslij(s.A, s.B);
     const a = await zapisana(s.A, s.id);
+    expect([(await zapisana(s.B, s.id)).updatedAtISO, (await zapisana(s.B, s.id)).rev], 'B: ta sama wersja co A').toEqual([a.updatedAtISO, a.rev]);
     await s.A.adapter.putPatientNoteForUser(s.A.uid, { ...a, contentAtISO: s.przedB, contentForISO: a.updatedAtISO });
-    await s.B.adapter.putPatientNoteForUser(s.B.uid, { ...a });
     await wymiana(s);
     const r = await rekordy(s);
     expect([r.A.contentAtISO, r.B.contentAtISO], 'wygrywa wersja bez pola (chwila treści = chwila zapisu, późniejsza)').toEqual([undefined, undefined]);

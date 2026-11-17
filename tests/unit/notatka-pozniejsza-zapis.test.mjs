@@ -456,8 +456,10 @@ describe('E3-PR0b2b — strażniki źródła: przeniesienie, Terminarz „Edytuj
     const od = sejfZrodlo.indexOf('/* BEGIN VILDA CLINICAL WORKSPACE NATIVE V1 */'), doo = sejfZrodlo.indexOf('/* END VILDA CLINICAL WORKSPACE NATIVE V1 */');
     expect(sejfZrodlo.slice(od, doo), 'fragment natywny bez zmian (dawna reguła wins)')
       .toContain("var wins = Bnp_rev(incoming) > Bnp_rev(stored) || Bnp_rev(incoming) === Bnp_rev(stored) && incoming.updatedAtISO > (stored.updatedAtISO || '');");
+    // Cała funkcja (wielowierszowa): rekord oryginału po edycji składany z poprzedniego rekordu bez jego pól chwil.
     const j = sejfZrodlo.indexOf('async function CareMvpWriteCalendarOriginal(');
-    expect(sejfZrodlo.slice(j, sejfZrodlo.indexOf('\n', j)), 'oryginał terminu planu bez pól chwili z poprzedniego rekordu').toContain('Bnp_bezChwil(');
+    expect(j, 'funkcja zapisu oryginału terminu planu').toBeGreaterThan(0);
+    expect(sejfZrodlo.slice(j, sejfZrodlo.indexOf('\n}\n', j)), 'oryginał terminu planu bez pól chwili z poprzedniego rekordu').toContain('Object.assign({}, Bnp_bezChwil(original), next, { bodyCipher })');
   });
 });
 

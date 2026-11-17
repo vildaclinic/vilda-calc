@@ -4044,7 +4044,10 @@ describe('P-NOTATKI-ZA-KARTA — strażniki źródła', () => {
     const notatki = sekcja('var Qch=[];', 'let St=0,Dt=0,dt=0;');
     expect(notatki.length).toBeGreaterThan(5000);
     expect(notatki).toContain('Qkn=Bnp_zlacz(W.concat(K))');
-    expect(notatki).toContain('Qwy=Bnp_zwyciezcy(X,j)');
+    // E3-PR0b2b (P-NOTATKA-POZNIEJSZA): zwycięzcy tą samą regułą co pętla przyjmowania — z tutejszymi planami opieki,
+    // które mają kontekst tylko w treści (odszyfrowane przed decyzją, jak pod blokadą).
+    expect(notatki).toContain('const Qnp_plW=await Bnp_planyTutaj(X,j,Object.keys(R));');
+    expect(notatki).toContain('Qwy=Bnp_zwyciezcy(X,j,Qnp_plW)');
     expect(notatki).toContain('let Qs=Bnp_stan(Qkn[S],g,void 0,Qwy[S]);');
     expect(notatki).toContain('Qs=Bnp_stan(Qkn[S],g,Qkr[Qp],Qwy[S])');
     expect(notatki).toContain('Nt+=await Bnp_ratuj(P,{kanon:Qkn,ratunek:Qrt,czeka:Qcz,rev:Qrev,liczone:Qdn,zdarzenia:Qch,nagrobki:K},e);');
@@ -4137,9 +4140,11 @@ describe('P-NOTATKI-ZA-KARTA — strażniki źródła', () => {
   });
   it('podgląd „Scal kopię konta” liczy te same stany co Le (Bnp_zlacz, Bnp_stan), z kartą przewidywaną po pętli kart', () => {
     const plan = sekcja('async function Bks_planDanych(', 'async function Bks_mapyOczekujacych(');
-    expect(plan).toContain('const stan = await Bks_stanNotatek(kontekst, kopia, tutaj, nagrobki, zKopii, nagrobkiKopii);');
+    // E3-PR0b2b (P-NOTATKA-POZNIEJSZA): z tutejszymi planami opieki z kontekstem tylko w treści (jak Le) i „zastąpione
+    // nowsze” po chwili treści.
+    expect(plan).toContain('const stan = await Bks_stanNotatek(kontekst, kopia, tutaj, nagrobki, zKopii, nagrobkiKopii, plany);');
     // E2-PR3c4: obie sekcje (notatki pacjentów i wpisy Terminarza) także ze zmianami samej karty (Bks_zmianyKarty).
-    expect(plan.split(', stan, zmianaKarty));').length - 1).toBe(2);
+    expect(plan.split(', stan, zmianaKarty, Bnp_chwilaTresci));').length - 1).toBe(2);
     const st = sekcja('async function Bks_stanNotatek(', 'const Bks_RODZAJE');
     expect(st).toContain('Bnp_zlacz(nagrobkiKopii.concat(nagrobki))');
     expect(st).toContain('Bks_kartaPo(kontekst, kopia, pid)');
