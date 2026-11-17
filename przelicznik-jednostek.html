@@ -78,9 +78,9 @@
   <script src="vilda_logger.js?v=2"></script>
   <script src="vilda_html.js?v=5"></script>
   <script src="vilda_schowek.js?v=5"></script>
-  <script src="vilda_persistence_adapter.js?v=38"></script>
+  <script src="vilda_persistence_adapter.js?v=39"></script>
 <script src="vilda_reminders_privacy.js?v=1"></script>
-  <script src="vilda_session_bridge.js?v=214"></script>
+  <script src="vilda_session_bridge.js?v=215"></script>
   <script src="vilda_init.js?v=5"></script>
   <script src="vilda_deps.js?v=98"></script>
   <script>
@@ -117,7 +117,7 @@
 
   <link href="inline_przelicznik_jednostek_00.css?v=16" rel="stylesheet">
 
-  <script src="vilda_chrome.js?v=298"></script>
+  <script src="vilda_chrome.js?v=299"></script>
   <script src="lucide.min.js?v=1" defer></script>
   <script defer src="vilda_frame_sync.js?v=3"></script>
   <link rel="stylesheet" href="vilda_phone_landscape.css?v=2">
@@ -5486,6 +5486,11 @@
       if (pubertyUI) pubertyUI.setAnalyte(isPubertySubstance(substance) ? substance.id : null);
       renderSubstanceHint(substance, rawText || (substance ? substance.label_pl : ''));
       if (!substance) {
+        // The empty selection must also survive navigation and a cold restart.
+        // Removal is allowed while autosave is paused during a patient reset.
+        if (persistence && typeof persistence.removeModuleKey === 'function') {
+          persistence.removeModuleKey(PREF_SUBSTANCE);
+        }
         // Pusty stan: zerujemy bieżącą substancję i czyścimy widok wyników.
         currentSubstance = null;
         updateLifespan(null);
@@ -5600,8 +5605,28 @@
       renderResults(currentSubstance);
     }
 
-    function onClear() {
+    // One reset for the local button, a patient reset and the shell's clear echo.
+    // Keep toast/focus out of this function: a hidden panel must not steal focus.
+    function resetLabForm() {
+      if (persistence && typeof persistence.clearModuleState === 'function') {
+        persistence.clearModuleState({ scope: 'lab', dispatchEvent: false });
+      }
       if (pubertyUI) pubertyUI.reset();
+      resetLocalPatientOverride();
+      lastLifespanContext = null;
+      lastAmhSourceContext = null;
+      lastE2SourceContext = null;
+      if (typeof lastFshSourceContext !== 'undefined') lastFshSourceContext = null;
+      if (lifespanUI) lifespanUI.clear();
+      if (amhAgeReferenceUI) amhAgeReferenceUI.clear();
+      if (typeof amhLilacsSourceUI !== 'undefined' && amhLilacsSourceUI) amhLilacsSourceUI.clear();
+      if (typeof e2PhaseSourceUI !== 'undefined' && e2PhaseSourceUI) e2PhaseSourceUI.clear();
+      if (typeof fshSourceUI !== 'undefined' && fshSourceUI) fshSourceUI.clear();
+      resetFshD3Context();
+      resetE2D3Context();
+      resetFemaleTtAge();
+      resetFemaleTtInfantUpper();
+      resetMaleE2Age();
       // Pełny reset podstrony do stanu startowego:
       //   – oba pola wejściowe puste (substancja, wartość),
       //   – brak wybranej substancji → karta wyników w pustym stanie
@@ -5609,7 +5634,7 @@
       //   – karta zakresów referencyjnych ukryta,
       //   – atrybuty pomiaru (pora pobrania, test diagnostyczny) zresetowane,
       //   – jednostka docelowa zresetowana (Faza 18),
-      //   – fokus wraca na pole substancji, żeby od razu można było wpisać kolejny wynik.
+      //   – lokalne nadpisania pacjenta i zapamiętane wybory są usunięte.
       valueEl.value = '';
       substanceEl.value = '';
       if (measTimeEl) measTimeEl.value = '';
@@ -5623,6 +5648,12 @@
       if (typeof updateSubstanceClearVisibility === 'function') {
         updateSubstanceClearVisibility();
       }
+      closeSubstanceDropdown();
+      refreshPatientContext();
+    }
+
+    function onClear() {
+      resetLabForm();
       showToast('Wyczyszczono');
       try { substanceEl.focus(); } catch (_) { /* noop */ }
     }
@@ -6023,44 +6054,7 @@
         || /shared|user/i.test(e.key)) refreshPatientContext();
     });
     window.addEventListener('focus', refreshPatientContext);
-    window.addEventListener('vilda:user-state-cleared', function () {
-      if (pubertyUI) pubertyUI.reset();
-      resetLocalPatientOverride();
-      lastAmhSourceContext = null;
-      lastE2SourceContext = null;
-      if (typeof lastFshSourceContext !== 'undefined') lastFshSourceContext = null;
-      if (lifespanUI) lifespanUI.clear();
-      if (amhAgeReferenceUI) amhAgeReferenceUI.clear();
-      if (typeof amhLilacsSourceUI !== 'undefined' && amhLilacsSourceUI) amhLilacsSourceUI.clear();
-      if (typeof e2PhaseSourceUI !== 'undefined' && e2PhaseSourceUI) e2PhaseSourceUI.clear();
-      if (typeof fshSourceUI !== 'undefined' && fshSourceUI) fshSourceUI.clear();
-      resetFshD3Context();
-      resetE2D3Context();
-      resetFemaleTtAge();
-      resetFemaleTtInfantUpper();
-      resetMaleE2Age();
-      // Świeża sesja = puste formularze. Pole „Substancja" mogło zostać
-      // wypełnione przy inicjalizacji podstrony ze starej preferencji
-      // LAB_CONV_SUBSTANCE (gdy user logował się będąc już na przeliczniku,
-      // init zdążył odczytać preferencję, zanim reset ją wyczyścił). Reset sesji
-      // czyści preferencję, ale nie tknie już wpisanej wartości w polu — dlatego
-      // tutaj jawnie zerujemy selektor substancji do stanu startowego.
-      try {
-        if (valueEl) valueEl.value = '';
-        if (substanceEl) substanceEl.value = '';
-        if (measTimeEl) measTimeEl.value = '';
-        if (measProtocolEl) measProtocolEl.value = '';
-        if (measMethodEl) measMethodEl.value = '';
-        measurementCtx = { time_of_day: null, test_protocol: null, method: null };
-        testosteroneMeasurementContext = {};
-        userSelectedTargetUnit = null;
-        showError('');
-        applySubstance(null, '');
-        if (typeof updateSubstanceClearVisibility === 'function') updateSubstanceClearVisibility();
-        if (typeof closeSubstanceDropdown === 'function') closeSubstanceDropdown();
-      } catch (_) { /* noop */ }
-      refreshPatientContext();
-    });
+    window.addEventListener('vilda:user-state-cleared', resetLabForm);
 
     document.addEventListener('vilda:patient-loaded', function () {
       resetFshD3Context();

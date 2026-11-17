@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.544';
+const SW_VERSION = '1.1.545';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -879,6 +879,7 @@ const CORE_SHELL_URLS = [
   '/vilda_persistence_adapter.js?v=36',
   '/vilda_persistence_adapter.js?v=37',
   '/vilda_persistence_adapter.js?v=38',
+  '/vilda_persistence_adapter.js?v=39',
   '/vilda_panel_pacjent.js?v=1',
   '/vilda_panel_pacjent.js?v=2',
   '/vilda_panel_pacjent.js?v=3',
@@ -2176,6 +2177,7 @@ const CORE_SHELL_URLS = [
   '/vilda_chrome.js?v=296',
   '/vilda_chrome.js?v=297',
   '/vilda_chrome.js?v=298',
+  '/vilda_chrome.js?v=299',
   '/vilda_realtime.js?v=1',
   '/vilda_realtime.js?v=2',
   '/vilda_realtime.js?v=3',
@@ -3074,6 +3076,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_auth_ui.js?v=563',
   '/vilda_auth_ui.js?v=564',
   '/vilda_auth_ui.js?v=565',
+  '/vilda_auth_ui.js?v=566',
   '/vilda_session_bridge.js?v=148',
   '/vilda_session_bridge.js?v=149',
   '/vilda_session_bridge.js?v=150',
@@ -3141,6 +3144,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_session_bridge.js?v=212',
   '/vilda_session_bridge.js?v=213',
   '/vilda_session_bridge.js?v=214',
+  '/vilda_session_bridge.js?v=215',
   '/vilda_sync.js?v=48',
   '/vilda_sync.js?v=49',
   '/vilda_sync.js?v=50',
