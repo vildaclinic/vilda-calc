@@ -42023,12 +42023,14 @@ zmienił — przy następnej pracy w `vilda-source` weź nową bazę z `runtime/
   niedostępny. Sprawdź dokumentację pacjenta.”; z kodu). (1) przypina test działania (`notatka-pozniejsza-zapis.test.mjs`,
   „luki modułu planów z etapami”); (2) — tylko strażnik źródła: literał warunku `wins` we fragmencie natywnym (ten sam
   plik, „sejf: notatki według nowej reguły…”), bez testu działania. Fragmentu natywnego ten PR nie zmienia.
-  *(2026-11-17, 2c, P-DOWOD-KROKU: luka (1) — pierwsze wydanie: model planu i model zmian przyjmują chwilę zapisu
-  dokumentu w dowodzie kroku i w powiązaniu (`sourceRecordUpdatedAtISOAtCapture`; walidacja w `vilda_care_plan_model.js`
-  w funkcji `evidence` i przy powiązaniach, nie w ogólnej `fields`), a ekran planu porównuje dowód po niej, gdy ją ma;
-  zapis pola dopiero w drugim wydaniu, po potwierdzeniu właściciela, że wszystkie urządzenia mają pierwsze. Luka (2) —
-  reguła notatek we fragmencie natywnym taka jak w scalaniu, z artefaktów repozytorium źródeł modułu, w tym samym PR.
-  Testy w bloku „luki modułu planów z etapami” opisują teraz nowe porównanie, a nie dawne zachowanie.)*
+  *(2026-11-17, 2c, P-DOWOD-KROKU: luka (1) — część vilda-calc w PR 2c, pierwsze wydanie: model planu i model zmian
+  przyjmują chwilę zapisu dokumentu w dowodzie kroku i w powiązaniu (`sourceRecordUpdatedAtISOAtCapture`; walidacja w
+  `vilda_care_plan_model.js` w funkcji `evidence` i przy powiązaniach, nie w ogólnej `fields`), a ekran planu porównuje
+  dowód po niej, gdy ją ma; zapis pola dopiero w drugim wydaniu, po potwierdzeniu właściciela, że wszystkie urządzenia
+  mają pierwsze. Moduły natywne luki (1) (moduł zapisu porównuje dokument po chwili zapisu, dokument czytany przez moduł
+  niesie chwilę zapisu) i luka (2) (reguła notatek we fragmencie natywnym taka jak w scalaniu) — w `vilda-source`; ich
+  artefakty dochodzą do tego samego PR 2c, który przed nimi nie jest do scalenia. Testy w bloku „luki modułu planów z
+  etapami” opisują teraz nowe porównanie, a nie dawne zachowanie; strażnik literału `wins` zostaje do artefaktów.)*
 - **Powiązanie wyniku z planem** (`linkedRev`, `linkedUpdatedAtISO`) — po zapisie samego `rev` fałszywe „Wynik zmienił
   się. Wybierz go ponownie” (kierunek bezpieczny; z kodu).
 - **Wołający bez `baseNote`** (Terminarz, moduły terapii, punkt serii Klirensu, ekran z pamięci podręcznej starszej
@@ -42051,8 +42053,8 @@ zmienił — przy następnej pracy w `vilda-source` weź nową bazę z `runtime/
 (klasa „sam rev notatki”); `pnote` w ładunku — pomiar odsyłania na regule po E3-PR0b2b. Moduł planów z etapami
 (repozytorium źródeł, przed E3-PR0c): chwila zapisu dowodu kroku i reguła notatek we fragmencie natywnym *(2026-11-17,
 2c, P-DOWOD-KROKU: chwila zapisu dowodu kroku w dwóch wydaniach — pierwsze w PR 2c, drugie osobnym PR po potwierdzeniu
-właściciela)*. Przyciski
-stanu: karta w ładunku bez treści (osobny PR). Do rozważenia: siatka bezpieczeństwa dla przegranej równoległej treści.
+właściciela; reguła notatek we fragmencie natywnym — artefakty `vilda-source` w PR 2c)*. Przyciski stanu: karta
+w ładunku bez treści (osobny PR). Do rozważenia: siatka bezpieczeństwa dla przegranej równoległej treści.
 
 **Wdrożenie.** Od razu przy wydaniu, bez przełącznika i bez uśpienia (decyzja 2 (a)). Jak każda dotychczasowa zmiana
 reguły treści (D-7, D-21, E2-PR3c2–E2-PR3c4): przełącznik oznaczałby dwie reguły na urządzeniach jednego właściciela,
@@ -42161,8 +42163,11 @@ Dlatego nowe pole wchodzi w dwóch wydaniach. W tym wydaniu nic nie tworzy planu
 nie dostaje go z tej wersji (strażnik testem: jednostkowy, źródła i w przeglądarce).
 
 **Ta wersja wobec planu z polem.** Moduły planów nie mają własnych list pól dowodu ani powiązania: odczyt idzie przez
-model zmian i model planu (`validateState` → `decodeCarePlanRecord`), a moduły czytają z dowodu tylko `noteId`. Plan
-z polem (w teście zapisany przez prawdziwy moduł zapisu, tak jak zapisze go drugie wydanie) dochodzi do osobnego
+model zmian i model planu (`validateState` → `decodeCarePlanRecord`), a moduły czytają z dowodu tylko `noteId` (z kodu,
+aktywna rodzina modułów `67818dc1656f`: `portable-plan.mjs` i `legacy-plan-workspace.mjs` sprawdzają plan przez
+`validateState`, `plan-service.mjs` też, `adapter.mjs` przy blokadzie dokumentu-dowodu czyta tylko `noteId`; jedyna
+zamknięta lista pól w tych modułach, w `encodePortableReference`, dotyczy kontekstu planu w notatce, nie dowodu). Plan z
+polem (w teście zapisany przez prawdziwy moduł zapisu, tak jak zapisze go drugie wydanie) dochodzi do osobnego
 urządzenia tego samego konta, które ma ten plan bez pola, każdą drogą osobno: pełny ładunek, delta planu, zdarzenie
 dziennika, „Scal kopię konta”, import pliku pacjenta; odtworzenie konta z `.wiw` tworzy konto z tym planem (e2e niżej).
 
@@ -42243,13 +42248,40 @@ treści”; model przyjmuje lata do 9999 — czerwone 2 wiersze „rok po 2999�
   konta** — osobna poprawka.
 
 **Wymagania dla następnych PR.**
-- Ten PR, artefakty repozytorium źródeł modułu: moduł zapisu (`plan-service.mjs`) porównuje dokument po chwili zapisu,
-  gdy zależność ma `expectedUpdatedAtISO` (bez niej — po `rev`, jak dziś), a dokument czytany przez moduł na koncie
-  przygotowanym (`adapter.mjs`, `document`) niesie chwilę zapisu z rekordu — dziś ma tylko treść, identyfikator, kartę,
-  kategorię i `rev`, więc bez tego drugie wydanie dawałoby na takim koncie zawsze „dokument się zmienił”
-  (`CARE_APPLICATION_DOCUMENT_CHANGED`); adres modelu zmian we fragmencie natywnym z nowym `?v=`; kopie
-  `vilda_care_plan_model.js` i `vilda_care_plan_mutation.js` z tego PR bajt w bajt w testach repozytorium źródeł. Po
-  artefaktach — `npm run podbij-wersje`.
+- Ten PR, artefakty repozytorium źródeł modułu (`vilda-source`), luka 1 — moduły natywne: moduł zapisu
+  (`plan-service.mjs`) porównuje dokument po chwili zapisu, gdy zależność ma `expectedUpdatedAtISO` (bez niej — po
+  `rev`, jak dziś), a dokument czytany przez moduł na koncie przygotowanym (`adapter.mjs`, `document`) niesie chwilę
+  zapisu z rekordu — dziś ma tylko treść, identyfikator, kartę, kategorię i `rev`, więc bez tego drugie wydanie
+  dawałoby na takim koncie zawsze „dokument się zmienił” (`CARE_APPLICATION_DOCUMENT_CHANGED`); adres modelu zmian we
+  fragmencie natywnym z nowym `?v=` (dziś `?v=2`); kopie `vilda_care_plan_model.js` i `vilda_care_plan_mutation.js`
+  z tego PR bajt w bajt w testach repozytorium źródeł, z pinem skrótu (zmiana tych plików tutaj = artefakty od nowa).
+  Nowa rodzina modułów też bez własnych list pól dowodu i powiązania (wyżej, „Ta wersja wobec planu z polem”); test
+  przejścia planu z polem przez moduły zapisu, odczytu i scalenia.
+- Ten PR, artefakty `vilda-source`, luka 2 — reguła notatek we fragmencie natywnym: kontrola przed scaleniem
+  (`PatientPortablePreflightMerge`) przewiduje, czy scalenie (`Le`) przyjmie wersję z ładunku, więc ma decydować jak
+  `Le` od E3-PR0b2b: `Bnp_nowsza` z planami tutejszymi (`Bnp_planyTutaj`) zamiast dawnego warunku `wins` (najpierw
+  `rev`); zmiana samej karty regułą karty notatki (jak w `Le`: karta tutejsza usunięta w tym scaleniu albo jej brak,
+  albo pełny remis z mniejszym identyfikatorem karty w ładunku) jak przeniesienie; zwycięzcy nagrobków liczeni z planami
+  tutejszymi; ścieżka odzyskania brakującego rozszerzenia planu sprawdzona. Bez nowych wywołań i nazw `Bev_`, `Bob_`,
+  `Bem_` we fragmencie, także w komentarzach (pilnuje `tests/unit/sync-dziennik-uspienie.test.mjs`).
+  Testy na prawdziwych funkcjach `Bnp_*`, nie na zastępnikach. To zmiana działania synchronizacji (odbiór właściciela
+  przy PR): odmowa dla dokumentu-dowodu przenoszonego do innej karty ładunkiem z niższym `rev` i późniejszą treścią
+  (dziś bez odmowy) i brak odmowy dla ładunku z wyższym `rev`, wcześniejszą treścią i inną kartą, gdy obie karty
+  istnieją, a `Le` zostawia tutejszą treść i kartę (dziś odmowa przerywa całe scalenie, a ten sam ładunek wraca przy
+  każdej próbie; z kodu). W vilda-calc: strażnik literału `wins` (`notatka-pozniejsza-zapis.test.mjs`, „sejf: notatki
+  według nowej reguły…”) odwrócony na nową regułę; e2e planu z etapami: dokument-dowód z innego urządzenia ładunkiem z
+  niższym `rev` i późniejszą treścią — odmowa synchronizacji, dane zachowane; reguła, przypadki i testy luki 2 dopisane
+  do tego wpisu.
+- Ten PR, w vilda-calc po artefaktach: nowa rodzina modułów i jej archiwum w pamięci offline (dawne adresy zostają,
+  rodzina `67818dc1656f` przechodzi do historycznych); manifest z buildera; w `vilda_vault.js` tylko tekst między
+  `BEGIN` a `END VILDA CLINICAL WORKSPACE NATIVE V1` z buildera (nie cały sejf z buildera — ten nie ma warstw KTV
+  i trwałych wizyt); delta trwałych wizyt — hak `40-visit-metadata` i baza delty przeliczone; nowy adres modelu zmian
+  w pamięci offline obok `?v=1` i `?v=2` (`tools/check_clinical_workspace_boundary.mjs` sprawdza, że adres z sejfu tam
+  jest); `docs/CARE_TEMPLATE_APPLICATION.md` (przypięcie i commit `vilda-source`), `docs/ZRODLA_ARTEFAKTOW.md`, wiersz 2c
+  planu. Na końcu `npm run podbij-wersje` (sprawdzić, że nie zmienia adresu modelu zmian we fragmencie), numery wersji
+  w nagłówku tego wpisu, `npm test`, e2e, kontrola granicy i delty trwałych wizyt. Scalanie: najpierw ten PR
+  w vilda-calc, potem pin CI `vilda-source` na commit scalenia i PR w `vilda-source`; kolejność ustala właściciel.
+- E3-PR0c: PR dopiero po scaleniu tego PR, przygotowanie równolegle (decyzja 1 z 2026-11-17, E3-PR0c).
 - Drugie wydanie (osobny mały PR tylko w vilda-calc): warunek — właściciel potwierdza, że wszystkie urządzenia mają to
   wydanie: Ustawienia → „Wersja aplikacji” co najmniej SW z tego PR (z nowym `?v=` modelu planu; pamięć offline
   przenosi wpisy z `?v=` ze starszych pamięci, więc liczy się wersja po podbiciu). Ekran zapisuje pole tylko wtedy,
