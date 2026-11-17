@@ -1568,12 +1568,12 @@
   "sha256": "68a21421d6be2907231dc12821f5d47dcd035da6e3bdda06c09c444e69da298e"
  },
  "vilda_home_growth_views.css": {
-  "v": 4,
-  "sha256": "71f1fc028dc939a40dfc2ae45a8066a7fd7157086ca5d341d43a20499df1abf1"
+  "v": 5,
+  "sha256": "dc2a2516f6d82ecdbb521cc587519f10784e7d3437b36ebee61d76f5af5f3d0a"
  },
  "vilda_home_growth_views.js": {
-  "v": 3,
-  "sha256": "41bcb20a76d190fe1eb003a8cfada1bd6f70b5fd33b3b6e38388784115573fba"
+  "v": 4,
+  "sha256": "55445c53ab3f3afa1f7739c78502e7e37122064274212c580d16f68293f17a4f"
  },
  "vilda_home_perinatal.js": {
   "v": 1,

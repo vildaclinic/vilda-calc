@@ -1888,3 +1888,8 @@ sprawdzanym po SHA pakiecie transportowym UI (11 zasobów). Dawne archiwa
 pozostają niezmienione. Testy `trajectory-analysis` potwierdzają dokładność
 metadanych i identyczny HTML bez flagi; `home-workspace-growth` sprawdzają
 natywny GH, czyste anulowanie, prognozy, źródłowe węzły i geometrię mobile.
+
+Wykresy zakresów używają procentowych współrzędnych SVG w rzeczywistym
+widoku (bez rozciągania promienia punktów). Nie ustawiają stylów z JS. Nowy
+arkusz korzysta z istniejących tokenów i wspólnej skórki; limity stylów inline
+i instalacji PWA pozostają niezmienione.

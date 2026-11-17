@@ -364,8 +364,8 @@ test('home A2: forecast graphics preserve native published values, clamps, exclu
         const name = row.querySelector('.vgcc-nm').textContent.replace(/[–—−]/g, '-').toLowerCase();
         const method = prediction.methods.find(m => name.includes(m.label.replace(/[–—−]/g, '-').toLowerCase()));
         return { clamped: method.clamped, nativeSymmetric: !!row.querySelector('.vgcc-pm')?.textContent.includes('±'), hasBar: !!row.querySelector('.vhome-a2-error'), aria: row.querySelector('.vhome-a2-range').getAttribute('aria-label'),
-          publication: method.publikacjaCm ?? method.cm, dot: parseFloat(row.querySelector('.vhome-a2-range-dot').style.left),
-          barWidth: row.querySelector('.vhome-a2-error') ? parseFloat(row.querySelector('.vhome-a2-error').style.width) : null };
+          publication: method.publikacjaCm ?? method.cm, dot: parseFloat(row.querySelector('.vhome-a2-range-dot').getAttribute('cx')),
+          barWidth: row.querySelector('.vhome-a2-error') ? parseFloat(row.querySelector('.vhome-a2-error').getAttribute('x2')) - parseFloat(row.querySelector('.vhome-a2-error').getAttribute('x1')) : null };
       });
       const selectors = ['.vgcc-hero', '.vgcc-nm', '.vgcc-val', '.vgcc-det-body', '.vgcc-hint'];
       const parity = selectors.every(selector => JSON.stringify(Array.from(native.querySelectorAll(selector), n => n.textContent)) === JSON.stringify(Array.from(host.querySelectorAll(selector), n => n.textContent)));

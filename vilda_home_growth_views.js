@@ -144,21 +144,24 @@
         methods.classList.add('vhome-a2-ranges');
         bars.forEach(function (entry) {
           var item = entry.item, x = function (value) { return (value - min) / (max - min) * 100; };
-          var graphic = el('div', 'vhome-a2-range'); graphic.setAttribute('role', 'img');
-          graphic.setAttribute('aria-label', item.method.label + ' · ' + fmt(item.value) + ' cm');
-          function mark(cls, left, width) {
-            var node = el('span', cls); node.style.left = x(left) + '%';
-            if (width != null) node.style.width = width / (max - min) * 100 + '%';
-            graphic.appendChild(node);
+          var graphic = svgNode('svg', { class: 'vhome-a2-range', width: '100%', height: 44, role: 'img',
+            'aria-label': item.method.label + ' · ' + fmt(item.value) + ' cm' });
+          function line(cls, from, to, y1, y2) {
+            graphic.appendChild(svgNode('line', { class: cls, x1: x(from) + '%', x2: x(to) + '%', y1: y1, y2: y2 }));
           }
-          if (prediction.source === 'consensus' && finite(prediction.cm)) mark('vhome-a2-consensus', prediction.cm);
-          if (item.error != null) mark('vhome-a2-error', item.low, item.high - item.low);
-          mark('vhome-a2-range-dot', item.value);
+          line('vhome-a2-range-grid', min, max, 22, 22);
+          if (prediction.source === 'consensus' && finite(prediction.cm)) line('vhome-a2-consensus', prediction.cm, prediction.cm, 0, 44);
+          if (item.error != null) {
+            line('vhome-a2-error', item.low, item.high, 22, 22);
+            line('vhome-a2-error-cap', item.low, item.low, 15, 29); line('vhome-a2-error-cap', item.high, item.high, 15, 29);
+          }
+          graphic.appendChild(svgNode('circle', { class: 'vhome-a2-range-dot', cx: x(item.value) + '%', cy: 22, r: 5 }));
           entry.row.insertBefore(graphic, entry.row.lastElementChild);
         });
-        var axis = el('div', 'vhome-a2-range-axis'); [min, (min + max) / 2, max].forEach(function (value) { axis.appendChild(el('span', '', fmt(value, 0) + ' cm')); }); methods.after(axis);
+        var axis = el('div', 'vhome-a2-range-axis'); [min, (min + max) / 2, max].forEach(function (value) { axis.appendChild(el('span', '', fmt(value, 0) + ' cm')); });
+        var axisRow = el('div', 'vhome-a2-axis-row'); axisRow.append(el('span'), axis, el('span')); methods.appendChild(axisRow);
       }
-      var note = el('p', 'vhome-a2-caption', 'Odcinki przedstawiają przybliżone błędy poszczególnych metod, nie przedział ufności konsensusu. Opis ograniczeń i wartości obciętych pozostaje przy wyniku.'); (methods.nextElementSibling?.classList.contains('vhome-a2-range-axis') ? methods.nextElementSibling : methods).after(note);
+      var note = el('p', 'vhome-a2-caption', 'Odcinki przedstawiają przybliżone błędy poszczególnych metod, nie przedział ufności konsensusu. Opis ograniczeń i wartości obciętych pozostaje przy wyniku.'); methods.after(note);
     }
     root.appendChild(card); options.panel.appendChild(root); return { dispose: function () {} };
   }
