@@ -192,6 +192,16 @@
   }
 
   // Etykiety wartości od najnowszej: punkt dostaje podpis, gdy nie zachodzi na podpis już postawiony.
+  // Krótki skrót treści (FNV-1a z długością) do porównania odczytów; null, gdy treści nie da się zserializować.
+  function digestOf(value) {
+    var json;
+    try { json = JSON.stringify(value); } catch (_) { return null; }
+    if (typeof json !== 'string') return null;
+    var hash = 0x811c9dc5;
+    for (var i = 0; i < json.length; i++) { hash ^= json.charCodeAt(i); hash = Math.imul(hash, 0x01000193) >>> 0; }
+    return json.length + ':' + hash.toString(36);
+  }
+
   function valueLabelIndexes(laid, widthOf) {
     var placed = [], out = [];
     for (var i = laid.length - 1; i >= 0; i--) {
@@ -371,7 +381,8 @@
         (Array.isArray(results[1]) ? results[1] : []).forEach(function (note) { if (note && note.id) notesById[note.id] = note; });
         // Nazwisko z nagłówka rekordu sejfu tego samego pacjenta, z którego odczytano serie (3.3).
         var name = record.header && typeof record.header.name === 'string' ? text(record.header.name) : '';
-        state.cache = { pid: pid, vault: vault, noteGen: noteGen, series: results[0], notesById: notesById, name: name };
+        state.cache = { pid: pid, vault: vault, noteGen: noteGen, series: results[0], notesById: notesById, name: name,
+          digest: digestOf([results[0], results[1], name]) };
         draw(now, state.cache);
       }).catch(function () {
         if (gen === state.readGen) hide();
@@ -417,7 +428,9 @@
       strip.classList.add('is-on');
       var width = chartLayout([], null, hostWidth()).width;
       var pinned = pinnedFor(ctx, found.series);
-      var signature = JSON.stringify([ctx.pid, cache.noteGen, cache.name, ctx.testKey, ctx.unit, ctx.current, state.selected,
+      // Treść odczytu (skrót serii i notatek), nie numer odczytu: ponowny odczyt tych samych danych (sygnał sejfu,
+      // zmiana stanu przypięcia, powrót fokusu) nie przebudowuje paska.
+      var signature = JSON.stringify([ctx.pid, cache.digest == null ? 'n' + cache.noteGen : cache.digest, cache.name, ctx.testKey, ctx.unit, ctx.current, state.selected,
         state.expanded, state.chartHidden, width, pinned && pinned.noteId, pinned && pinned.dateISO, !!(w.__vildaLabTrend && w.__vildaLabTrend.parseNorm)]);
       if (signature === state.signature && strip.classList.contains('is-on')) return;
       state.signature = signature;

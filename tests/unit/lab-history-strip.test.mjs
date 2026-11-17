@@ -618,6 +618,24 @@ describe('pasek: przypięcie i karta pacjenta', () => {
     await vi.waitFor(() => expect(vault.odczyty).toBeGreaterThan(przed));
   });
 
+  it('ponowny odczyt tych samych danych (sygnał sejfu, powrót fokusu) nie przebudowuje paska; zmiana danych — przebudowuje', async () => {
+    const vault = sejf();
+    const env = strona({ vault, wartosc: '0,38' });
+    await widoczny(env);
+    const chip = pasek(env).querySelector('button.lab-strip-chip[data-note-id="tsh-6"]');
+    const przed = vault.odczyty;
+    env.win.zdarzenie('storage', { key: 'vilda-note-changed-ping-v1' });
+    await vi.waitFor(() => expect(vault.odczyty).toBeGreaterThan(przed));
+    env.win.zdarzenie('focus');
+    await vi.waitFor(() => expect(vault.odczyty).toBeGreaterThan(przed + 1));
+    await new Promise((r) => { setTimeout(r, 200); });
+    expect(pasek(env).querySelector('button.lab-strip-chip[data-note-id="tsh-6"]')).toBe(chip);
+    vault.dodaj(PID, tsh(PID, 'tsh-9', '2026-06-16', 0.2, 'mIU/L'));
+    env.win.zdarzenie('focus');
+    await vi.waitFor(() => expect(chipyNotatek(pasek(env))).toContain('tsh-9'));
+    expect(pasek(env).querySelector('button.lab-strip-chip[data-note-id="tsh-6"]')).not.toBe(chip);
+  });
+
   it('przypięta notatka bez daty badania (data usunięta w karcie): linia mówi o dacie wpisu, nie o dacie badania', async () => {
     const vault = sejf();
     vault.dodaj(PID, tsh(PID, 'tsh-8', null, 0.07, 'mIU/L'), { dateISO: '2026-06-10' });
