@@ -353,7 +353,7 @@ test('home A2: forecast graphics preserve native published values, clamps, exclu
       motherHeightCm: 165, fatherHeightCm: 179, bp: { available: true, predictedAdultHeightCm: 179.2, errorBoundHalfWidthCm: 5.2 },
       rwt: { available: true, predictedAdultHeightCm: 177.8, errorBoundHalfWidthCm: 4.6 }, reinehr: { available: true, predictedAdultHeightCm: 176.5 },
       mphCm: 178.5, growthVelocityCmPerYear: 5.1 };
-    const variants = [base, { ...base, currentHeightCm: 190 }, { ...base, sex: 'F', ageYears: 14, ageMonths: 168, boneAgeYears: 15,
+    const variants = [base, { ...base, currentHeightCm: 178, boneAgeYears: 10.5 }, { ...base, currentHeightCm: 190 }, { ...base, sex: 'F', ageYears: 14, ageMonths: 168, boneAgeYears: 15,
       postmenarcheal: true, menarcheAgeYears: 12, heightAtMenarcheCm: 145 }, { ...base, ageYears: 6, ageMonths: 72, boneAgeYears: 5 }];
     return variants.map(input => {
       const prediction = VildaGrowthCardC.computeFinalHeightPrediction(input), native = document.createElement('div');
@@ -363,7 +363,7 @@ test('home A2: forecast graphics preserve native published values, clamps, exclu
       const plotted = rows.filter(row => row.querySelector('.vhome-a2-range')).map(row => {
         const name = row.querySelector('.vgcc-nm').textContent.replace(/[–—−]/g, '-').toLowerCase();
         const method = prediction.methods.find(m => name.includes(m.label.replace(/[–—−]/g, '-').toLowerCase()));
-        return { clamped: method.clamped, hasBar: !!row.querySelector('.vhome-a2-error'), aria: row.querySelector('.vhome-a2-range').getAttribute('aria-label'),
+        return { clamped: method.clamped, nativeSymmetric: !!row.querySelector('.vgcc-pm')?.textContent.includes('±'), hasBar: !!row.querySelector('.vhome-a2-error'), aria: row.querySelector('.vhome-a2-range').getAttribute('aria-label'),
           publication: method.publikacjaCm ?? method.cm, dot: parseFloat(row.querySelector('.vhome-a2-range-dot').style.left),
           barWidth: row.querySelector('.vhome-a2-error') ? parseFloat(row.querySelector('.vhome-a2-error').style.width) : null };
       });
@@ -374,9 +374,10 @@ test('home A2: forecast graphics preserve native published values, clamps, exclu
   });
   expect(results.some(result => result.clamped)).toBe(true);
   expect(results.every(result => result.parity && result.unchanged)).toBe(true);
+  expect(results.some(result => result.plotted.some(range => range.clamped && range.nativeSymmetric))).toBe(true);
   for (const result of results) for (const range of result.plotted) {
     expect(range.aria).toContain(range.publication.toLocaleString('pl-PL', { maximumFractionDigits: 1 }));
-    if (range.clamped) expect(range.hasBar).toBe(false);
+    expect(range.hasBar).toBe(range.nativeSymmetric);
     expect(range.dot).toBeGreaterThanOrEqual(0); expect(range.dot).toBeLessThanOrEqual(100);
     if (range.barWidth != null) { expect(range.barWidth).toBeGreaterThan(0); expect(range.barWidth).toBeLessThanOrEqual(100); }
   }

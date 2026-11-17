@@ -42,7 +42,7 @@ describe('eleven independent visit and home UI resources in one verified transpo
     expect(urls).toContain('/vilda_home_perinatal.js?v=1');
     expect(urls).toContain('/vilda_home_growth.js?v=2');
     expect(urls).toContain('/vilda_sga_birth_results.css?v=1');
-    expect(urls).toContain('/vilda_home_growth_views.js?v=2');
+    expect(urls).toContain('/vilda_home_growth_views.js?v=3');
     expect(urls).toContain('/vilda_home_growth_views.css?v=3');
     expect(urls).toContain('/vilda_home_growth_charts.js?v=1');
     expect(urls).toContain('/vilda_home_workspace.js?v=5');

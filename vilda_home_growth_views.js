@@ -109,9 +109,9 @@
   function rangeData(prediction) {
     return (prediction?.methods || []).filter(function (method) { return finite(method.publikacjaCm) || finite(method.cm); }).map(function (method) {
       var value = finite(method.publikacjaCm) ? method.publikacjaCm : method.cm;
-      // The renderer already clips an out-of-range publication interval. Never
-      // invent a symmetric band in that case; keep its original text instead.
-      var error = !method.clamped && finite(method.errorHalfWidthCm) ? method.errorHalfWidthCm : null;
+      // The native row below decides whether its publication interval is
+      // symmetric. The consensus clamp flag can differ from the publication.
+      var error = finite(method.errorHalfWidthCm) ? method.errorHalfWidthCm : null;
       return { method: method, value: value, low: error == null ? value : value - error, high: error == null ? value : value + error, error: error };
     });
   }
@@ -131,6 +131,8 @@
       var bars = Array.from(methods.querySelectorAll('.vgcc-row')).map(function (row) {
         var name = row.querySelector('.vgcc-nm');
         var item = ranges.find(function (range) { return name && normalized(name.textContent).includes(normalized(range.method.label)); });
+        if (item && !row.querySelector('.vgcc-pm')?.textContent.includes('±'))
+          item = Object.assign({}, item, { error: null, low: item.value, high: item.value });
         return { row: row, item: item };
       }).filter(function (item) { return item.item; });
       var min = bars.length ? Math.floor(Math.min.apply(null, bars.map(function (b) { return b.item.low; })) / 5) * 5 : null;
