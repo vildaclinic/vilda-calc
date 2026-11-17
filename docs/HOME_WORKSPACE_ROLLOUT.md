@@ -303,7 +303,10 @@ wartości, algorytmy, progi ani schemat zapisu.
 Arkusz kopii BMI jest mechanicznie wyprowadzony z natywnego `ensureStyles()`:
 `node tools/build-home-diet-bmi-styles.mjs` sprawdza odtwarzalność. Selektory
 są ograniczone do kopii w oknie, a dotychczasowe kolory, ostrzeżenia i reguły
-mediów pozostają źródłowe. Drobna poprawka pól list rozwijalnych ogranicza
+mediów pozostają źródłowe. Zgodnie z istniejącą zasadą P-STYLE 4b stale włączona
+skórka jest bazą: jej dwanaście zwycięskich wartości zastępuje martwe wartości
+zapasowe w kopii arkusza, bez nowych nadpisań ani zmiany wyglądu.
+Drobna poprawka pól list rozwijalnych ogranicza
 wyłącznie wyciek ich szerokości wewnętrznej w WebKit; nie przycina treści
 wyniku ani ostrzeżeń.
 

@@ -1,18 +1,6 @@
 /* Generated from vilda_bmi_journey.js ensureStyles() by tools/build-home-diet-bmi-styles.mjs.
-   Native declarations and clinical tones are preserved; only selectors and constant tokens are adapted. */
+   Native winning values and clinical tones are preserved; the always-on skin is folded into the scoped base. */
 #vhomeDietDialog .vhome-diet-native-road {
-  --bj-muted:#5b6f6f;
-  --bj-line:rgba(91,111,111,.35);
-  --bj-teal:var(--primary,#00838d);
-  --bj-green:#2e8f57;
-  --bj-num:#00727b;
-  --bj-chipbg:rgba(255,255,255,.55);
-  --bj-warnbg:#fdf3e0;
-  --bj-warnink:#7a5a19;
-  --bj-kcalbg:rgba(46,143,87,.14)
-}
-
-.liquid-ios26 #vhomeDietDialog .vhome-diet-native-road {
   --bj-muted:#28494b;
   --bj-line:rgba(10,50,54,.28);
   --bj-teal:#0b6d76;
@@ -67,15 +55,11 @@
 
 #vhomeDietDialog .vhome-diet-native-road .bmi-journey-gain span {
   display: inline-block;
-  background: rgba(46,143,87,.14);
+  background: rgba(46,143,87,.16);
   color: var(--bj-green);
   font-weight: 650;
   border-radius: var(--radius-pill);
   padding: .16rem var(--space-0-6)
-}
-
-.liquid-ios26 #vhomeDietDialog .vhome-diet-native-road .bmi-journey-gain span {
-  background: rgba(46,143,87,.16)
 }
 
 #vhomeDietDialog .vhome-diet-native-road .bmi-journey-goalbox {
@@ -388,16 +372,11 @@
 }
 
 #vhomeDietDialog .vhome-diet-native-road .bmi-journey-badge {
-  background: rgba(176,116,31,.13);
-  color: #8a5c17;
+  background: rgba(255,244,214,.55);
+  color: #6d4a12;
   border-radius: var(--radius-8);
   padding: .42rem var(--space-0-6);
   font-size: .76rem;
   margin-top: var(--space-0-6);
   text-align: left
-}
-
-.liquid-ios26 #vhomeDietDialog .vhome-diet-native-road .bmi-journey-badge {
-  background: rgba(255,244,214,.55);
-  color: #6d4a12
 }

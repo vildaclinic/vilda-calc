@@ -7,6 +7,7 @@ import { parse } from 'espree';
 import { parseCss, splitTopLevel } from '../design-system/lib/css.mjs';
 import { mapaWartosci, tokenizuj } from '../tests/support/tokeny-css.mjs';
 import { formatujCss } from '../tests/scripts/formatuj-css.mjs';
+import { WLASNOSCI_BEHAWIORALNE, zlozony } from '../tests/support/skorka-css.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const SOURCE = 'vilda_bmi_journey.js';
@@ -39,6 +40,43 @@ export function extractNativeBmiJourneyStyles(source) {
   return css;
 }
 
+// The application's established skin is always enabled (P-STYLE 4b). Preserve
+// its native winning values as this component's base, without reviving the
+// superseded native fallback declarations or introducing new skin overrides.
+export function canonicalHomeDietBmiStyles(css) {
+  const rules = parseCss(css), removed = new Set();
+  for (let index = 0; index < rules.length; index++) {
+    const rule = rules[index];
+    if (rule.type !== 'style') fail('unsupported canonical at-rule: ' + rule.name);
+    const selectors = splitTopLevel(rule.selector, ',').map(selector => selector.trim());
+    if (!selectors.some(selector => selector.includes('.liquid-ios26'))) continue;
+    const baseSelectors = selectors.map(zlozony);
+    if (baseSelectors.some(selector => !selector || !selector.includes(SCOPE)))
+      fail('native skin selector cannot be folded inside the cloned road: ' + rule.selector);
+    for (const declaration of rule.declarations) {
+      if (WLASNOSCI_BEHAWIORALNE.has(declaration.prop))
+        fail('native skin changes behavior: ' + declaration.prop);
+      for (const selector of baseSelectors) {
+        const bases = rules.slice(0, index).filter(candidate => !removed.has(candidate)
+          && candidate.selector === selector && JSON.stringify(candidate.media) === JSON.stringify(rule.media)
+          && candidate.declarations.some(item => item.prop === declaration.prop));
+        if (bases.length !== 1) fail('expected exactly one native base for ' + selector + ' ' + declaration.prop);
+        const targets = bases[0].declarations.filter(item => item.prop === declaration.prop);
+        if (targets.length !== 1 || targets[0].important !== declaration.important)
+          fail('native skin changes declaration precedence: ' + declaration.prop);
+        targets[0].value = declaration.value;
+      }
+    }
+    removed.add(rule);
+  }
+  return rules.filter(rule => !removed.has(rule)).map(rule => {
+    let output = rule.selector + ' {' + rule.declarations.map(declaration => declaration.prop + ':'
+      + declaration.value + (declaration.important ? '!important' : '')).join(';') + '}';
+    for (const media of rule.media.slice().reverse()) output = media + ' {\n' + output + '\n}';
+    return output;
+  }).join('\n');
+}
+
 export function buildHomeDietBmiStyles(repository = ROOT) {
   const css = extractNativeBmiJourneyStyles(readFileSync(resolve(repository, SOURCE), 'utf8'));
   const rules = parseCss(css).map(rule => {
@@ -53,9 +91,9 @@ export function buildHomeDietBmiStyles(repository = ROOT) {
     return output;
   });
   if (!rules.length) fail('native stylesheet is empty');
-  const scoped = rules.join('\n'), tokenized = tokenizuj(scoped, mapaWartosci().mapa).text;
+  const scoped = canonicalHomeDietBmiStyles(rules.join('\n')), tokenized = tokenizuj(scoped, mapaWartosci().mapa).text;
   return '/* Generated from vilda_bmi_journey.js ensureStyles() by tools/build-home-diet-bmi-styles.mjs.\n'
-    + '   Native declarations and clinical tones are preserved; only selectors and constant tokens are adapted. */\n'
+    + '   Native winning values and clinical tones are preserved; the always-on skin is folded into the scoped base. */\n'
     + formatujCss(tokenized);
 }
 
