@@ -204,8 +204,369 @@ function Lh3PinAssessment(result, host) {
   if (date) { date.addEventListener('input', refresh); date.addEventListener('change', refresh); }
   refresh();
 }
-var s=null;function g(){s&&(s.remove(),s=null)}function Lh2SampleDate(t){var e=t.assessment&&t.assessment.evaluation&&t.assessment.evaluation.input,n=e&&e.sampleDateISO;return typeof n==="string"&&/^\d{4}-\d{2}-\d{2}$/.test(n)?n:D()}function V(){g();var t=L(),e=E(),n=S();if(!(!t||!e||!n)){Lh2CaptureAssessment(t),HrCaptureReference(t,e),RrCaptureRange(t),t.sampleDateISO=Lh2SampleDate(t);try{a.VildaSession&&typeof a.VildaSession.ensureAuthLoaded=="function"&&a.VildaSession.ensureAuthLoaded()}catch{}var i=R(),r=j();s=l.createElement("div"),s.id="labPinOverlay",s.style.cssText="position:fixed;left:0;right:0;top:0;bottom:"+r+"px;background:rgba(8,30,35,0.42);z-index:2000020;display:flex;align-items:center;justify-content:center;padding:16px;";var o=l.createElement("div");o.style.cssText="background:#fff;border-radius:14px;max-width:420px;width:100%;max-height:100%;overflow-y:auto;padding:16px;box-sizing:border-box;font-family:inherit;",o.innerHTML='<div style="font-size:1rem;font-weight:600;color:#0f2b33;margin:0 0 12px;">Przypnij wynik \xB7 '+m(n.name)+'</div><div style="background:#EEEDFE;border-left:3px solid #5856D6;border-radius:0 9px 9px 0;padding:9px 12px;margin:0 0 12px;"><div style="font-size:0.92rem;font-weight:600;color:#26215C;">'+m(t.test)+": "+m(t.raw)+" "+m(t.unitFrom)+" = "+m(t.converted)+'</div><div style="font-size:0.74rem;color:#534AB7;margin-top:2px;">kategoria: Badanie'+(i?" \xB7 kotwica: wizyta "+m(z(i)):" \xB7 bez kotwicy wieku (uzupe\u0142nij wiek na stronie g\u0142\xF3wnej)")+'</div></div><div style="margin:0 0 10px;"><label style="display:block;font-size:0.76rem;color:#5b6672;margin-bottom:4px;" for="labPinDate">Data badania</label><input type="date" id="labPinDate" value="'+t.sampleDateISO+'" style="width:100%;box-sizing:border-box;border:1px solid #cfe3e6;border-radius:9px;padding:8px 10px;font-size:16px;font-family:inherit;color:#0f2b33;background:#fff;" /></div><div style="margin:0 0 14px;"><label style="display:block;font-size:0.76rem;color:#5b6672;margin-bottom:4px;" for="labPinComment">Komentarz (opcjonalnie)</label><input type="text" id="labPinComment" maxlength="300" placeholder="np. kontrola po zmianie dawki" style="width:100%;box-sizing:border-box;border:1px solid #cfe3e6;border-radius:9px;padding:8px 10px;font-size:16px;font-family:inherit;color:#0f2b33;background:#fff;" /></div><p id="labPinErr" style="display:none;color:#C2271D;font-size:0.78rem;margin:0 0 10px;"></p><div style="display:flex;justify-content:flex-end;gap:8px;"><button type="button" id="labPinCancel" style="background:#fff;border:1px solid #d7e9ec;color:#5b6672;border-radius:9px;padding:8px 14px;font-size:0.85rem;cursor:pointer;font-family:inherit;">Anuluj</button><button type="button" id="labPinSave" style="background:#00838d;border:0;color:#fff;border-radius:9px;padding:8px 16px;font-size:0.85rem;font-weight:600;cursor:pointer;font-family:inherit;">Zapisz do karty</button></div>',s.appendChild(o),l.body.appendChild(s),Lh3PinAssessment(t,o),HrPinReference(t,o),RrPinRange(t,o);var OwChoice=OwPinChoice(t,o);s.addEventListener("click",function(d){d.target===s&&g()}),u("labPinCancel").addEventListener("click",g),u("labPinSave").addEventListener("click",function(){A(t,e,i,OwChoice)})}}function m(t){return String(t??"").replace(/[&<>"']/g,function(e){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[e]})}function h(t){var e=u("labPinErr");e&&(e.textContent=t,e.style.display="block")}function T(t){return new Promise(function(e){var n=Date.now();(function i(){var r=a.VildaVault;if(r&&typeof r.savePatientNote=="function"){e(r);return}if(Date.now()-n>t){e(null);return}setTimeout(i,120)})()})}async function A(t,e,n,OwChoice){var i=u("labPinSave");i&&(i.disabled=!0,i.textContent="Zapisuj\u0119\u2026");try{try{a.VildaSession&&typeof a.VildaSession.ensureAuthLoaded=="function"&&a.VildaSession.ensureAuthLoaded()}catch{}var r=await T(5e3);if(!r){h("Modu\u0142 danych nie za\u0142adowa\u0142 si\u0119 \u2014 od\u015Bwie\u017C stron\u0119.");return}if(typeof r.isUnlocked!="function"||!r.isUnlocked()){h("Zaloguj si\u0119, aby przypi\u0105\u0107 wynik do karty pacjenta.");return}var o=null;try{o=await r.getPatient(e)}catch{o=null}if(!o){h('Nie znalaz\u0142em pacjenta w bazie \u2014 wczytaj go ponownie z listy \u201EPacjenci".');return}var d=u("labPinDate"),y=u("labPinComment"),w=d&&/^\d{4}-\d{2}-\d{2}$/.test(d.value)?d.value:D(),P=y?String(y.value||"").trim():"",C=t.raw+" "+t.unitFrom+" = "+t.converted,p={patientId:e,title:t.test+": "+t.raw+" "+t.unitFrom,body:"= "+t.converted+(P?`
-`+P:""),category:"wynik-badania",clinicalDateISO:w,labResult:{test:t.test,value:Object.prototype.hasOwnProperty.call(t,"assessment")||Object.prototype.hasOwnProperty.call(t,"hormoneReference")?t.raw:C}};Object.prototype.hasOwnProperty.call(t,"assessment")&&(p.labResult.assessment=a.VildaLabSnapshot&&typeof a.VildaLabSnapshot.normalize==="function"?a.VildaLabSnapshot.normalize(t.assessment):{schemaVersion:1,status:"unavailable",reasonCodes:["snapshot_helper_unavailable"],evaluation:null}),t.testKey&&(p.labResult.testKey=t.testKey),t.valueNum!=null&&(p.labResult.valueNum=t.valueNum),t.unitSym&&(p.labResult.unit=t.unitSym),Object.prototype.hasOwnProperty.call(t,"assessment")&&a.VildaLabSnapshot&&typeof a.VildaLabSnapshot.reconcile==="function"&&(p.labResult=a.VildaLabSnapshot.reconcile(p.labResult,p.labResult,t.sampleDateISO,w)),Object.prototype.hasOwnProperty.call(t,"hormoneReference")&&(p.labResult.hormoneReference=HrReferenceLab(t,w).hormoneReference),Object.prototype.hasOwnProperty.call(t,"range")&&a.VildaLabRangeSnapshot&&(p.labResult.range=a.VildaLabRangeSnapshot.normalize(t.range)),n&&(p.linkedAgeMonths=n),await r.savePatientNote(p),g();if(OwChoice&&a.VildaLabPendingResult&&typeof a.VildaLabPendingResult.commit=="function")try{await a.VildaLabPendingResult.commit(OwChoice,r)}catch{}try{var k=u("labToast");k&&(k.textContent="\u2713 Przypi\u0119to do karty: "+t.test+(n?" (wizyta "+z(n)+")":""),k.classList.add("is-visible"),setTimeout(function(){k.classList.remove("is-visible")},2400))}catch{}}catch(b){h("Nie uda\u0142o si\u0119 zapisa\u0107: "+(b&&b.message?b.message:b))}finally{i&&(i.disabled=!1,i.textContent="Zapisz do karty")}}function I(){["labSubstance","labValue","labUnit","labUnitTarget"].forEach(function(e){var n=u(e);n&&(n.addEventListener("input",c),n.addEventListener("change",c))});var t=u("labResultBig");t&&typeof a.MutationObserver=="function"&&new a.MutationObserver(c).observe(t,{childList:!0,characterData:!0,subtree:!0}),l.addEventListener("vilda:session-changed",c),l.addEventListener("vilda:auth-loaded",c),l.addEventListener("vilda:patient-loaded",c),c(),setTimeout(c,1200)}l.readyState==="loading"?l.addEventListener("DOMContentLoaded",I):I()})(window);
+var s=null;function g(){s&&(s.remove(),s=null)}function Lh2SampleDate(t){var e=t.assessment&&t.assessment.evaluation&&t.assessment.evaluation.input,n=e&&e.sampleDateISO;return typeof n==="string"&&/^\d{4}-\d{2}-\d{2}$/.test(n)?n:D()}function V(){g();var t=L(),e=E(),n=S();if(!(!t||!e||!n)){Lh2CaptureAssessment(t),HrCaptureReference(t,e),RrCaptureRange(t),t.sampleDateISO=Lh2SampleDate(t);try{a.VildaSession&&typeof a.VildaSession.ensureAuthLoaded=="function"&&a.VildaSession.ensureAuthLoaded()}catch{}var i=R(),r=j();s=l.createElement("div"),s.id="labPinOverlay",s.style.cssText="position:fixed;left:0;right:0;top:0;bottom:"+r+"px;background:rgba(8,30,35,0.42);z-index:2000020;display:flex;align-items:center;justify-content:center;padding:16px;";var o=l.createElement("div");o.style.cssText="background:#fff;border-radius:14px;max-width:420px;width:100%;max-height:100%;overflow-y:auto;padding:16px;box-sizing:border-box;font-family:inherit;",o.innerHTML='<div style="font-size:1rem;font-weight:600;color:#0f2b33;margin:0 0 12px;">Przypnij wynik \xB7 '+m(n.name)+'</div><div style="background:#EEEDFE;border-left:3px solid #5856D6;border-radius:0 9px 9px 0;padding:9px 12px;margin:0 0 12px;"><div style="font-size:0.92rem;font-weight:600;color:#26215C;">'+m(t.test)+": "+m(t.raw)+" "+m(t.unitFrom)+" = "+m(t.converted)+'</div><div style="font-size:0.74rem;color:#534AB7;margin-top:2px;">kategoria: Badanie'+(i?" \xB7 kotwica: wizyta "+m(z(i)):" \xB7 bez kotwicy wieku (uzupe\u0142nij wiek na stronie g\u0142\xF3wnej)")+'</div></div><div style="margin:0 0 10px;"><label style="display:block;font-size:0.76rem;color:#5b6672;margin-bottom:4px;" for="labPinDate">Data badania</label><input type="date" id="labPinDate" value="'+t.sampleDateISO+'" style="width:100%;box-sizing:border-box;border:1px solid #cfe3e6;border-radius:9px;padding:8px 10px;font-size:16px;font-family:inherit;color:#0f2b33;background:#fff;" /></div><div style="margin:0 0 14px;"><label style="display:block;font-size:0.76rem;color:#5b6672;margin-bottom:4px;" for="labPinComment">Komentarz (opcjonalnie)</label><input type="text" id="labPinComment" maxlength="300" placeholder="np. kontrola po zmianie dawki" style="width:100%;box-sizing:border-box;border:1px solid #cfe3e6;border-radius:9px;padding:8px 10px;font-size:16px;font-family:inherit;color:#0f2b33;background:#fff;" /></div><p id="labPinErr" style="display:none;color:#C2271D;font-size:0.78rem;margin:0 0 10px;"></p><div style="display:flex;justify-content:flex-end;gap:8px;"><button type="button" id="labPinCancel" style="background:#fff;border:1px solid #d7e9ec;color:#5b6672;border-radius:9px;padding:8px 14px;font-size:0.85rem;cursor:pointer;font-family:inherit;">Anuluj</button><button type="button" id="labPinSave" style="background:#00838d;border:0;color:#fff;border-radius:9px;padding:8px 16px;font-size:0.85rem;font-weight:600;cursor:pointer;font-family:inherit;">Zapisz do karty</button></div>',s.appendChild(o),l.body.appendChild(s),Lh3PinAssessment(t,o),HrPinReference(t,o),RrPinRange(t,o);var OwChoice=OwPinChoice(t,o);PpDialog(t,e,o);s.addEventListener("click",function(d){d.target===s&&g()}),u("labPinCancel").addEventListener("click",g),u("labPinSave").addEventListener("click",function(){A(t,e,i,OwChoice)})}}function m(t){return String(t??"").replace(/[&<>"']/g,function(e){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[e]})}function h(t){var e=u("labPinErr");e&&(e.textContent=t,e.style.display="block")}function T(t){return new Promise(function(e){var n=Date.now();(function i(){var r=a.VildaVault;if(r&&typeof r.savePatientNote=="function"){e(r);return}if(Date.now()-n>t){e(null);return}setTimeout(i,120)})()})}async function A(t,e,n,OwChoice){var i=u("labPinSave");i&&(i.disabled=!0,i.textContent="Zapisuj\u0119\u2026");try{try{a.VildaSession&&typeof a.VildaSession.ensureAuthLoaded=="function"&&a.VildaSession.ensureAuthLoaded()}catch{}var r=await T(5e3);if(!r){h("Modu\u0142 danych nie za\u0142adowa\u0142 si\u0119 \u2014 od\u015Bwie\u017C stron\u0119.");return}if(typeof r.isUnlocked!="function"||!r.isUnlocked()){h("Zaloguj si\u0119, aby przypi\u0105\u0107 wynik do karty pacjenta.");return}var o=null;try{o=await r.getPatient(e)}catch{o=null}if(!o){h('Nie znalaz\u0142em pacjenta w bazie \u2014 wczytaj go ponownie z listy \u201EPacjenci".');return}var d=u("labPinDate"),y=u("labPinComment"),w=d&&/^\d{4}-\d{2}-\d{2}$/.test(d.value)?d.value:D(),P=y?String(y.value||"").trim():"",C=t.raw+" "+t.unitFrom+" = "+t.converted,p={patientId:e,title:t.test+": "+t.raw+" "+t.unitFrom,body:"= "+t.converted+(P?`
+`+P:""),category:"wynik-badania",clinicalDateISO:w,labResult:{test:t.test,value:Object.prototype.hasOwnProperty.call(t,"assessment")||Object.prototype.hasOwnProperty.call(t,"hormoneReference")?t.raw:C}};Object.prototype.hasOwnProperty.call(t,"assessment")&&(p.labResult.assessment=a.VildaLabSnapshot&&typeof a.VildaLabSnapshot.normalize==="function"?a.VildaLabSnapshot.normalize(t.assessment):{schemaVersion:1,status:"unavailable",reasonCodes:["snapshot_helper_unavailable"],evaluation:null}),t.testKey&&(p.labResult.testKey=t.testKey),t.valueNum!=null&&(p.labResult.valueNum=t.valueNum),t.unitSym&&(p.labResult.unit=t.unitSym),Object.prototype.hasOwnProperty.call(t,"assessment")&&a.VildaLabSnapshot&&typeof a.VildaLabSnapshot.reconcile==="function"&&(p.labResult=a.VildaLabSnapshot.reconcile(p.labResult,p.labResult,t.sampleDateISO,w)),Object.prototype.hasOwnProperty.call(t,"hormoneReference")&&(p.labResult.hormoneReference=HrReferenceLab(t,w).hormoneReference),Object.prototype.hasOwnProperty.call(t,"range")&&a.VildaLabRangeSnapshot&&(p.labResult.range=a.VildaLabRangeSnapshot.normalize(t.range)),n&&(p.linkedAgeMonths=n);var Pb=typeof PpBlocked=="function"?await PpBlocked(r,p):null;if(Pb){h(Pb);return}await r.savePatientNote(p),g();if(OwChoice&&a.VildaLabPendingResult&&typeof a.VildaLabPendingResult.commit=="function")try{await a.VildaLabPendingResult.commit(OwChoice,r)}catch{}try{var k=u("labToast");k&&(k.textContent="\u2713 Przypi\u0119to do karty: "+t.test+(n?" (wizyta "+z(n)+")":""),k.classList.add("is-visible"),setTimeout(function(){k.classList.remove("is-visible")},2400))}catch{}}catch(b){h("Nie uda\u0142o si\u0119 zapisa\u0107: "+(b&&b.message?b.message:b))}finally{i&&(i.disabled=!1,i.textContent="Zapisz do karty")}}function I(){["labSubstance","labValue","labUnit","labUnitTarget"].forEach(function(e){var n=u(e);n&&(n.addEventListener("input",c),n.addEventListener("change",c))});var t=u("labResultBig");t&&typeof a.MutationObserver=="function"&&new a.MutationObserver(c).observe(t,{childList:!0,characterData:!0,subtree:!0}),l.addEventListener("vilda:session-changed",c),l.addEventListener("vilda:auth-loaded",c),l.addEventListener("vilda:patient-loaded",c),c(),setTimeout(c,1200)}
+/* Przypięty wynik (P-PRZYPIETY-WYNIK, LAB-HISTORIA 6.38; decyzje właściciela 2026-11-17, makieta
+ * https://claude.ai/artifact/2kAR79mQMnTuxbQ24u8x2e).
+ *
+ * Jedna reguła „ten wynik jest już w karcie” dla przycisku „Przypnij do wizyty”, okna przypięcia i paska
+ * „Poprzednie wyniki pacjenta” (lab_history_strip.js czyta ją przez VildaLabPinResult.pinned() i zdarzenie
+ * vilda:lab-pin-state-changed). Wynik formularza jest przypięty, gdy karta tego pacjenta ma notatkę z tym
+ * samym badaniem (testKey), jednostką i liczbą oraz:
+ *   (a) to jest notatka zapisana z tej strony ostatnim przypięciem (dowolna data badania; wynik z operatorem,
+ *       np. „<0,1”, porównany tekstem), albo
+ *   (b) jej data badania to data, którą zaproponuje okno przypięcia — w pojedynczym formularzu zawsze
+ *       dzisiejsza (ocena pokwitania ma tu contextBasis „current-patient”, więc bez sampleDateISO);
+ *       tak stan wraca po odświeżeniu strony i w drugiej karcie przeglądarki.
+ * Sama zmiana kontekstu (faza cyklu, stadium, wiek) nie zmienia stanu: to ten sam pomiar (decyzja 1).
+ * Okno przypięcia nie zapisze drugi raz tego samego wyniku z tą samą datą badania (decyzja 2); z inną datą
+ * zapisuje go jako osobne badanie. Wyniki bez liczby nie są blokowane.
+ * Stan liczony jest z formularza i notatek karty, bez dostawców oceny, zakresu i odniesienia: one przerysowują
+ * wynik (#labResultBig), więc nie wolno ich wołać przy odświeżaniu. Sejf czytany jest dopiero, gdy formularz
+ * ma wynik do przypięcia. Pakiety badań zapisują wyniki własną drogą i nie są tu blokowane. */
+var PP_PIN_TEXT = "\u{1F4CC} Przypnij do wizyty",
+  PP_PIN_SUB = "wynik trafi do karty pacjenta",
+  PP_SAVE_TEXT = "Zapisz do karty",
+  PP_SAVING_TEXT = "Zapisuję…",
+  PP_EVENT = "vilda:lab-pin-state-changed",
+  PP_PING_KEY = "vilda-note-changed-ping-v1",
+  PP_BLOCK_TEXT = "Ten sam wynik z tą datą badania jest już w karcie. Zmień datę badania albo anuluj.";
+var PpState = { timer: 0, gen: 0, readGen: 0, pid: null, vault: null, notes: null, notesGen: -1, watched: [], last: null, expect: null, current: null, key: "", dialog: null };
+function PpFinite(n) { return typeof n === "number" && isFinite(n); }
+function PpNormUnit(unit) { return String(unit == null ? "" : unit).trim().replace(/\s+/g, " ").replace(/µ/g, "μ"); }
+function PpDate(note) {
+  var d = note && note.clinicalDateISO;
+  return typeof d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : null;
+}
+function PpShort(iso) { return iso ? iso.slice(8, 10) + "." + iso.slice(5, 7) + "." + iso.slice(2, 4) : ""; }
+function PpLab(note) { return note && note.labResult && typeof note.labResult === "object" ? note.labResult : null; }
+/* Liczby, które zapis może nadać temu tekstowi: LabUnitConverter.parseNumber (zakres, AMH, TT, pasek historii)
+ * i parseFloat z L() (pozostałe badania). Różnią się tylko dla zapisu z odstępami, np. „1 000”. */
+function PpParse(raw) {
+  var out = [], text = String(raw == null ? "" : raw).trim(), conv = a.LabUnitConverter;
+  try {
+    if (conv && typeof conv.parseNumber === "function") {
+      var n = conv.parseNumber(text);
+      if (PpFinite(n) && n >= 0) out.push(n);
+    }
+  } catch (_) { /* tylko parseFloat */ }
+  var f = parseFloat(text.replace(",", "."));
+  if (PpFinite(f) && f >= 0 && out.indexOf(f) < 0) out.push(f);
+  return out;
+}
+/* Liczby dla tekstu wyniku tego badania. Pierwsza to liczba, jaką widzi przelicznik (parseNumber: zakres, AMH,
+ * pasek); dla testosteronu całkowitego liczba oceny (Lh2CaptureAssessment: sourceValue dokładnego pomiaru, także
+ * z „=”, np. „=0,38”). Dalsze (parseFloat, np. 1 z „1 200”) liczą się tylko dla notatki zapisanej z tego tekstu. */
+function PpNums(raw, testKey, unitSym) {
+  var nums = PpParse(raw), tt = a.VildaLabTestosterone, text = String(raw == null ? "" : raw).trim();
+  if (testKey === "testosterone_total" && tt && typeof tt.parseMeasurement === "function") {
+    try {
+      var m = tt.parseMeasurement(text, unitSym);
+      if (m && m.status === "valid" && m.isExact === true && PpFinite(m.sourceValue) && m.sourceValue >= 0
+        && (m.sourceUnit == null || m.sourceUnit === unitSym)) {
+        var at = nums.indexOf(m.sourceValue);
+        if (at !== 0) { if (at > 0) nums.splice(at, 1); nums.unshift(m.sourceValue); }
+      }
+    } catch (_) { /* tylko PpParse */ }
+  }
+  return nums;
+}
+function PpSame(note, key) {
+  var lab = PpLab(note);
+  if (!lab || String(lab.testKey || "") !== key.testKey || PpNormUnit(lab.unit) !== key.unit || !PpFinite(lab.valueNum)) return false;
+  var at = key.nums.indexOf(lab.valueNum);
+  return at === 0 || (at > 0 && PpRawIs(lab, key.raw));
+}
+/* Notatka niesie wynik formularza: ta sama liczba (PpSame) albo — dla wyniku bez liczby — ten sam tekst. */
+function PpHolds(note, form) {
+  var lab = PpLab(note);
+  if (!lab || String(lab.testKey || "") !== form.testKey || PpNormUnit(lab.unit) !== form.unit) return false;
+  return PpFinite(lab.valueNum) ? PpSame(note, form) : !form.nums.length && PpRawIs(lab, form.raw);
+}
+/* Wynik bez liczby (np. „<0,1”) zapisany przypięciem: labResult.value to tekst formularza, sam albo z jednostką i przeliczeniem. */
+function PpRawIs(lab, raw) {
+  var value = String(lab && lab.value != null ? lab.value : "").trim(), text = String(raw == null ? "" : raw).trim();
+  return !!text && (value === text || value.indexOf(text + " ") === 0);
+}
+function PpOwner(note, pid) { return !!note && (note.patientId == null || String(note.patientId) === pid); }
+function PpStamp(note) { return String(note && (note.updatedAtISO || note.createdAtISO) || ""); }
+/**
+ * Stan „przypięty” dla wyniku formularza (czysta funkcja; testy: VildaLabPinResult._internal.resolve).
+ * @param {Array} notes notatki pacjenta (listPatientNotesForPatient)
+ * @param {{pid, testKey, unit, raw, nums}} form wynik formularza (unit po PpNormUnit)
+ * @param {{pid, noteId, testKey, unit, valueNum, raw}|null} last ostatnie przypięcie z tej strony
+ * @param {string} proposedISO data, którą zaproponuje okno przypięcia
+ * @returns {{noteId, dateISO, source: 'session'|'card'}|null}
+ */
+function PpResolve(notes, form, last, proposedISO) {
+  if (!form || !form.testKey || !Array.isArray(notes)) return null;
+  if (last && last.pid === form.pid && last.testKey === form.testKey && last.unit === form.unit
+    && (PpFinite(last.valueNum) ? form.nums[0] === last.valueNum || last.raw === form.raw && form.nums.indexOf(last.valueNum) >= 0
+      : last.raw === form.raw)) {
+    for (var i = 0; i < notes.length; i++) {
+      var own = notes[i], lab = PpLab(own);
+      // Notatka nadal jest w karcie i nadal niesie ten wynik (edycja w karcie albo usunięcie zdejmuje stan).
+      if (own && own.id === last.noteId && lab && PpOwner(own, form.pid) && String(lab.testKey || "") === last.testKey
+        && PpNormUnit(lab.unit) === last.unit && (PpFinite(last.valueNum) ? lab.valueNum === last.valueNum : !PpFinite(lab.valueNum) && PpRawIs(lab, last.raw)))
+        return { noteId: own.id, dateISO: PpDate(own), source: "session" };
+    }
+  }
+  var best = null;
+  for (var k = 0; k < notes.length; k++) {
+    var note = notes[k];
+    if (!note || !note.id || !PpOwner(note, form.pid) || PpDate(note) !== proposedISO || !PpSame(note, form)) continue;
+    if (!best || PpStamp(note) > PpStamp(best)) best = note;
+  }
+  return best ? { noteId: best.id, dateISO: PpDate(best), source: "card" } : null;
+}
+/**
+ * Notatki z tym samym wynikiem, jaki zapisze okno (liczba po przechwyceniu oceny i zakresu); z dateISO —
+ * tylko z tą datą badania. Wynik bez liczby nie ma duplikatów (wyniki z operatorem zapisują się zawsze).
+ */
+function PpDuplicates(notes, key, dateISO) {
+  var out = [];
+  if (!Array.isArray(notes) || !key || !key.testKey || !PpFinite(key.valueNum)) return out;
+  // Liczba zapisu inna niż liczba przelicznika (parseFloat z „1 200”) — duplikat tylko notatki z tego samego tekstu.
+  var exact = key.raw == null || PpNums(key.raw, key.testKey, key.unitSym)[0] === key.valueNum;
+  var match = { testKey: key.testKey, unit: key.unit, raw: key.raw, nums: exact ? [key.valueNum] : [NaN, key.valueNum] };
+  for (var i = 0; i < notes.length; i++) {
+    var note = notes[i];
+    if (note && PpOwner(note, key.pid) && PpSame(note, match) && (dateISO == null || PpDate(note) === dateISO)) out.push(note);
+  }
+  return out;
+}
+function PpForm() {
+  var t = L(), pid = E();
+  if (!t || !pid || !t.testKey) return null;
+  return { pid: String(pid), testKey: t.testKey, unit: PpNormUnit(t.unitSym), raw: t.raw, nums: PpNums(t.raw, t.testKey, t.unitSym), test: t.test, unitSym: t.unitSym };
+}
+function PpName(test) { var name = String(test || "").split("(")[0].trim(); return name || String(test || ""); }
+function PpSchedule() { clearTimeout(PpState.timer); PpState.timer = setTimeout(PpRefresh, 150); }
+function PpStale() { PpState.gen++; PpSchedule(); }
+function PpForget() {
+  PpState.readGen++;
+  PpState.pid = null; PpState.vault = null; PpState.notes = null; PpState.notesGen = -1;
+  PpState.last = null; PpState.expect = null;
+  PpApply(null, null);
+}
+function PpWatch(vault) {
+  if (PpState.watched.indexOf(vault) >= 0) return;
+  PpState.watched.push(vault);
+  // Sejf nie ma wypisania z nasłuchu: jeden nasłuch na instancję sejfu, zdarzenia innych instancji pomijane.
+  if (typeof vault.onPatientNoteChanged === "function") vault.onPatientNoteChanged(function (detail) {
+    if (a.VildaVault !== vault) return;
+    PpState.gen++;
+    var ex = PpState.expect;
+    // Pierwszy zapis po przypięciu z okna to ta notatka: sejf ogłasza go, zanim savePatientNote się rozstrzygnie.
+    if (ex && detail && detail.action === "save" && detail.id && (detail.patientId == null || String(detail.patientId) === ex.pid)) {
+      PpState.expect = null;
+      PpClaim(vault, String(detail.id), ex);
+    }
+    PpSchedule();
+  });
+  if (typeof vault.onLock === "function") vault.onLock(function () { if (a.VildaVault === vault) PpForget(); });
+}
+function PpClaim(vault, id, ex) {
+  Promise.resolve().then(function () {
+    return typeof vault.getPatientNote === "function" ? vault.getPatientNote(id) : null;
+  }).then(function (note) {
+    var lab = PpLab(note);
+    if (!lab || String(note.patientId) !== ex.pid || String(lab.testKey || "") !== ex.testKey || PpNormUnit(lab.unit) !== ex.unit) return;
+    if (PpFinite(ex.valueNum) ? lab.valueNum !== ex.valueNum : PpFinite(lab.valueNum)) return;
+    PpState.last = { pid: ex.pid, noteId: id, testKey: ex.testKey, unit: ex.unit, valueNum: ex.valueNum, raw: ex.raw };
+    PpStale();
+  }).catch(function () { /* bez oznaczenia */ });
+}
+function PpRefresh() {
+  PpState.timer = 0;
+  var form = PpForm(), vault = a.VildaVault;
+  if (!form) { PpApply(null, null); return; }
+  if (!vault || typeof vault.isUnlocked !== "function" || typeof vault.listPatientNotesForPatient !== "function" || !vault.isUnlocked()) {
+    PpApply(null, form);
+    return;
+  }
+  if (PpState.pid !== form.pid || PpState.vault !== vault) {
+    PpState.readGen++;
+    PpState.pid = form.pid; PpState.vault = vault; PpState.notes = null; PpState.notesGen = -1;
+  }
+  PpWatch(vault);
+  // Do czasu świeżego odczytu stan z poprzedniego odczytu tego samego pacjenta (bez migotania przycisku).
+  PpApply(PpState.notes ? PpResolve(PpState.notes, form, PpState.last, D()) : null, form);
+  if (PpState.notes && PpState.notesGen === PpState.gen) return;
+  var gen = ++PpState.readGen, noteGen = PpState.gen, pid = form.pid;
+  Promise.resolve().then(function () { return vault.listPatientNotesForPatient(pid); }).then(function (notes) {
+    if (gen !== PpState.readGen || PpState.pid !== pid || PpState.vault !== vault) return;
+    PpState.notes = Array.isArray(notes) ? notes : [];
+    PpState.notesGen = noteGen;
+    var now = PpForm();
+    PpApply(now && now.pid === pid ? PpResolve(PpState.notes, now, PpState.last, D()) : null, now);
+  }).catch(function () { if (gen === PpState.readGen) PpApply(null, form); });
+}
+function PpApply(found, form) {
+  var current = found && form ? {
+    patientId: form.pid, testKey: form.testKey, unit: form.unitSym, raw: form.raw,
+    noteId: found.noteId, dateISO: found.dateISO || null, source: found.source
+  } : null;
+  PpState.current = current;
+  if (current) N();
+  var btn = u("labPinResultBtn"), sub = u("labPinSub");
+  if (btn) {
+    btn.classList.toggle("is-pinned", !!current);
+    var label = current ? "✓ Przypięto" : PP_PIN_TEXT;
+    if (btn.textContent !== label) btn.textContent = label;
+    if (current) btn.setAttribute("title", "Ten wynik jest już w karcie. Kliknij, aby przypiąć go ponownie jako osobne badanie z inną datą.");
+    else btn.removeAttribute("title");
+  }
+  if (sub) {
+    var line = current ? PpName(form.test) + " " + form.raw + " " + form.unitSym + " jest już w karcie"
+      + (current.dateISO ? " · badanie " + PpShort(current.dateISO) : "") : PP_PIN_SUB;
+    if (sub.textContent !== line) sub.textContent = line;
+  }
+  var key = current ? [current.patientId, current.testKey, current.unit, current.raw, current.noteId, current.dateISO].join("|") : "";
+  if (key === PpState.key) return;
+  PpState.key = key;
+  try {
+    if (typeof a.CustomEvent === "function") l.dispatchEvent(new a.CustomEvent(PP_EVENT, { detail: current ? Object.assign({}, current) : null }));
+  } catch (_) { /* pasek odświeży się przy następnej zmianie */ }
+}
+function PpCreated(note) {
+  var at = note && note.createdAtISO ? new Date(note.createdAtISO) : null;
+  if (!at || isNaN(at.getTime())) return "";
+  var two = function (n) { return String(n).padStart(2, "0"); };
+  var day = at.getFullYear() + "-" + two(at.getMonth() + 1) + "-" + two(at.getDate());
+  return day === D() ? " · przypięty dziś o " + two(at.getHours()) + ":" + two(at.getMinutes())
+    : " · przypięty " + PpShort(day);
+}
+/* Okno przypięcia (wywołanie w V, po liście oczekujących): ostrzeżenie „Ten wynik jest już w karcie”, gdy
+ * przycisk był w stanie przypiętym albo karta ma ten wynik z wybraną datą; zapis zablokowany przy tej samej
+ * dacie badania, po zmianie daty „Zapisz jako osobne badanie”. Bez nowych pól (dwa pola okna zostają). */
+function PpDialog(t, pid, box) {
+  var date = u("labPinDate"), save = u("labPinSave");
+  if (!t || !date || !save || !box || !date.parentNode) return;
+  var key = { pid: String(pid), testKey: String(t.testKey || ""), unit: PpNormUnit(t.unitSym), valueNum: t.valueNum, raw: t.raw, unitSym: t.unitSym };
+  // Stan przycisku liczony 150 ms po zmianie formularza: dotyczy tego okna tylko przy tej samej wartości i jednostce.
+  var cur = PpState.current, pinned = cur && cur.patientId === key.pid && cur.testKey === key.testKey
+    && String(cur.raw) === String(t.raw) && PpNormUnit(cur.unit) === key.unit ? cur : null;
+  var warn = l.createElement("div"), title = l.createElement("strong"), text = l.createElement("span"), err = l.createElement("p");
+  warn.id = "labPinDuplicate";
+  warn.className = "lab-pin-duplicate";
+  warn.setAttribute("role", "status");
+  warn.hidden = true;
+  title.className = "lab-pin-duplicate-title";
+  title.textContent = "Ten wynik jest już w karcie";
+  text.className = "lab-pin-duplicate-text";
+  warn.appendChild(title);
+  warn.appendChild(text);
+  var summary = box.children && box.children[1];
+  box.insertBefore(warn, summary && summary.nextSibling ? summary.nextSibling : date.parentNode);
+  err.id = "labPinDuplicateDate";
+  err.className = "lab-pin-duplicate-date";
+  err.hidden = true;
+  date.parentNode.appendChild(err);
+  var st = { key: key, t: t, pinned: pinned, notes: null, warn: warn, text: text, err: err, date: date, save: save };
+  PpState.dialog = st;
+  PpState.expect = null;
+  date.addEventListener("input", PpDialogSync);
+  date.addEventListener("change", PpDialogSync);
+  // Zapis (A) w finally przywraca przycisk; obserwator przywraca blokadę i podpis tego okna.
+  if (typeof a.MutationObserver === "function") new a.MutationObserver(PpDialogSync).observe(save, { attributes: true, attributeFilter: ["disabled"], childList: true, characterData: true, subtree: true });
+  var vault = a.VildaVault;
+  if (key.testKey && vault && typeof vault.isUnlocked === "function" && typeof vault.listPatientNotesForPatient === "function" && vault.isUnlocked()) {
+    Promise.resolve().then(function () { return vault.listPatientNotesForPatient(key.pid); }).then(function (notes) {
+      if (PpState.dialog !== st) return;
+      st.notes = Array.isArray(notes) ? notes : [];
+      PpDialogSync();
+    }).catch(function () { /* bez ostrzeżenia; zapis sprawdzi kartę ponownie */ });
+  }
+  PpDialogSync();
+}
+function PpDialogSync() {
+  var st = PpState.dialog;
+  if (!st) return;
+  if (u("labPinSave") !== st.save) { PpState.dialog = null; return; }
+  if (st.save.textContent === PP_SAVING_TEXT) return;
+  var dateISO = /^\d{4}-\d{2}-\d{2}$/.test(st.date.value) ? st.date.value : D();
+  var same = st.notes ? PpDuplicates(st.notes, st.key, dateISO) : [], pinNote = null;
+  if (st.pinned && st.notes) {
+    var form = { testKey: st.key.testKey, unit: st.key.unit, raw: st.t.raw, nums: PpNums(st.t.raw, st.key.testKey, st.t.unitSym) };
+    for (var i = 0; i < st.notes.length; i++) {
+      var n = st.notes[i];
+      if (n && n.id === st.pinned.noteId && PpOwner(n, st.key.pid) && PpHolds(n, form)) pinNote = n;
+    }
+    // Świeży odczyt karty: przypięta notatka zniknęła albo niesie inny wynik — ostrzeżenie już nie z przycisku.
+    if (!pinNote) st.pinned = null;
+  }
+  // Przy blokadzie okno nazywa notatkę, która blokuje (tę z wybraną datą badania).
+  var ref = same.length ? (pinNote && same.indexOf(pinNote) >= 0 ? pinNote : same[0]) : pinNote;
+  var show = !!(st.pinned || same.length), blocked = same.length > 0;
+  var refDate = ref ? PpDate(ref) : st.pinned ? st.pinned.dateISO : null;
+  st.warn.hidden = !show;
+  st.text.textContent = show ? PpName(st.t.test) + " " + st.t.raw + " " + st.t.unitSym
+    + (refDate ? " · badanie " + PpShort(refDate) : "") + (ref ? PpCreated(ref) : "")
+    + ". Zapisz drugi raz tylko wtedy, gdy to osobne badanie z inną datą." : "";
+  st.err.hidden = !blocked;
+  st.err.textContent = blocked ? PP_BLOCK_TEXT : "";
+  st.date.classList.toggle("is-duplicate", blocked);
+  if (blocked) { st.date.setAttribute("aria-invalid", "true"); st.date.setAttribute("aria-describedby", st.err.id); }
+  else { st.date.removeAttribute("aria-invalid"); st.date.removeAttribute("aria-describedby"); }
+  // Komunikat zapisu przy wyścigu z odczytem karty (PpBlocked) zastępuje komunikat pod datą badania.
+  var msg = u("labPinErr");
+  if (msg && msg.textContent === PP_BLOCK_TEXT) msg.textContent = "";
+  var label = show ? "Zapisz jako osobne badanie" : PP_SAVE_TEXT;
+  if (st.save.textContent !== label) st.save.textContent = label;
+  if (st.save.disabled !== blocked) st.save.disabled = blocked;
+}
+/* Wywołanie w zapisie A, tuż przed savePatientNote: świeży odczyt karty. Ten sam wynik z tą samą datą
+ * badania — bez zapisu (zwraca komunikat). Inaczej zapamiętuje oczekiwany zapis, żeby jego notatka stała się
+ * „ostatnim przypięciem” tej strony. Błąd odczytu nie blokuje zapisu. */
+async function PpBlocked(r, p) {
+  var lab = p && p.labResult;
+  PpState.expect = null;
+  if (!lab || !p.patientId) return null;
+  var dlg = PpState.dialog;
+  var key = { pid: String(p.patientId), testKey: String(lab.testKey || ""), unit: PpNormUnit(lab.unit), valueNum: lab.valueNum,
+    raw: dlg && dlg.t ? dlg.t.raw : null, unitSym: lab.unit };
+  if (key.testKey && PpFinite(key.valueNum) && r && typeof r.listPatientNotesForPatient === "function") {
+    var notes = await Promise.resolve().then(function () { return r.listPatientNotesForPatient(key.pid); }).catch(function () { return null; });
+    if (PpDuplicates(notes, key, PpDate(p)).length) {
+      if (PpState.dialog) {
+        PpState.dialog.notes = notes;
+        setTimeout(PpDialogSync, 0);
+      }
+      return PP_BLOCK_TEXT;
+    }
+  }
+  PpState.expect = { pid: key.pid, testKey: key.testKey, unit: key.unit, valueNum: PpFinite(key.valueNum) ? key.valueNum : null, raw: key.raw };
+  return null;
+}
+function PpStart() {
+  ["labSubstance", "labValue", "labUnit", "labUnitTarget"].forEach(function (id) {
+    var field = u(id);
+    if (field) { field.addEventListener("input", PpSchedule); field.addEventListener("change", PpSchedule); }
+  });
+  var big = u("labResultBig");
+  if (big && typeof a.MutationObserver === "function") new a.MutationObserver(PpSchedule).observe(big, { childList: true, characterData: true, subtree: true });
+  ["vilda:session-changed", "vilda:auth-loaded", "vilda:patient-loaded", "vilda:lab-substance-changed"].forEach(function (type) {
+    l.addEventListener(type, PpSchedule);
+  });
+  // Zapis albo usunięcie w innej ramce lub karcie: sejf rozsyła sam sygnał (bez id), więc karta czytana od nowa.
+  if (typeof a.addEventListener === "function") {
+    a.addEventListener("vilda:user-state-cleared", PpForget);
+    a.addEventListener("focus", PpStale);
+    a.addEventListener("storage", function (event) { if (event && event.key === PP_PING_KEY) PpStale(); });
+  }
+  l.addEventListener("visibilitychange", function () { if (l.visibilityState === "visible") PpStale(); });
+  try {
+    if (typeof a.BroadcastChannel === "function") new a.BroadcastChannel("vilda-notes").addEventListener("message", PpStale);
+  } catch (_) { /* bez kanału: zostaje focus i storage */ }
+  PpSchedule();
+  setTimeout(PpSchedule, 1200);
+}
+a.VildaLabPinResult.pinned = function () { return PpState.current ? Object.assign({}, PpState.current) : null; };
+a.VildaLabPinResult._internal = Object.freeze({ resolve: PpResolve, duplicates: PpDuplicates, parse: PpParse, nums: PpNums, normalizeUnit: PpNormUnit });
+if (l.readyState === "loading") l.addEventListener("DOMContentLoaded", PpStart);
+else PpStart();
+l.readyState==="loading"?l.addEventListener("DOMContentLoaded",I):I()})(window);
 
 /* Oczekujący wynik w Jednostkach lab. (P-OCZEKUJACE-WYNIKI, decyzje właściciela 2026-11-15).
  *

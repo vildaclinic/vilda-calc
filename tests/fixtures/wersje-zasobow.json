@@ -928,8 +928,8 @@
   "sha256": "22c5b3ec86177c574023351c8d5a0576a49652efbc28df0df99288778cfc526d"
  },
  "inline_przelicznik_jednostek_00.css": {
-  "v": 16,
-  "sha256": "e2c2fa28a695497c669b4f05d891cc5bd48427c675108fcbb2d1714622f4f931"
+  "v": 17,
+  "sha256": "83a034b0c5a703a85352b039bb1e3b7933e7c19d698c1054cf1aabfe0ea29cde"
  },
  "inline_regulamin_00.css": {
   "v": 1,
@@ -1020,16 +1020,16 @@
   "sha256": "fa7b4bc5c86aad30460f47bded9218ae73106912ed256c8d441143b3a5fd9dcd"
  },
  "lab_history_strip.css": {
-  "v": 2,
-  "sha256": "6465e544c1e36b82d065cf41eff0c0de8da53c102f486f33c3be8b8d0966205a"
+  "v": 3,
+  "sha256": "0b5d613dd210f1338fae54a27a6c7a522a1609eb992fc5f89d22fa2420ea9660"
  },
  "lab_history_strip.js": {
-  "v": 4,
-  "sha256": "3004e9cfb64ebf3858d6e520ac289ec2020623c258e0e7853271fd60a2b68c37"
+  "v": 5,
+  "sha256": "c44296af82345b4b583a7ed3a610f1d1ebc62dee581fce2b8f4f5130c8cd9162"
  },
  "lab_pin_result.js": {
-  "v": 13,
-  "sha256": "3408efcdc88c095a02636440e978765af98c2639356b353727af8f750f97393a"
+  "v": 14,
+  "sha256": "d4c6f00b371037093830702dff181202f7a5b7be875d9d053d607bbfb2a8b425"
  },
  "lab_unit_converter.js": {
   "v": 10,

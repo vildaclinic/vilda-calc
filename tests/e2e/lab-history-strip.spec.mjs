@@ -67,8 +67,14 @@ test('TSH: pasek za wierszem przypięcia, chipy wg zapisu, różnica, wykres bez
   await expect(page.locator('#labPinOverlay')).toHaveCount(0);
   await expect(pasek.locator('.lab-strip-sub')).toHaveText('Fikcyjna Badaniowa · 5 wyników · ostatni 17.06.26');
   await expect(chipy.last().locator('.lab-strip-chip-d')).toHaveText('17.06.26');
-  await expect(pasek.locator('.lab-strip-now .lab-strip-chip-d')).toHaveText('teraz · już przypięty');
-  await expect(pasek.locator('.lab-strip-diff')).toContainText('ten wynik jest już przypięty (17.06.26)');
+  // LAB-HISTORIA 6.38 (P-PRZYPIETY-WYNIK): przypięty wynik formularza to ten sam pomiar co nowy chip — bez chipu
+  // „teraz”, chip notatki ze znacznikiem „✓ z formularza”, różnica bez porównania z samym sobą, przycisk „✓ Przypięto”.
+  await expect(pasek.locator('.lab-strip-now')).toHaveCount(0);
+  await expect(chipy.last()).toHaveClass(/is-pinned/);
+  await expect(chipy.last().locator('.lab-strip-chip-pin')).toHaveText('· ✓ z formularza');
+  await expect(pasek.locator('.lab-strip-diff')).toContainText('ostatni zapisany wynik: 17.06.26 (dziś)');
+  await expect(pasek.locator('.lab-strip-diff')).toContainText('to wynik z formularza, już w karcie');
+  await expect(page.locator('#labPinResultBtn')).toHaveText('✓ Przypięto');
   // Pasek niczego nie zapisuje: jedyna nowa notatka to przypięcie.
   const tsh = (await page.evaluate((pid) => window.VildaVault.listPatientNotesForPatient(pid), patientId))
     .filter((n) => n.labResult && n.labResult.testKey === 'tsh' && n.labResult.valueNum != null);

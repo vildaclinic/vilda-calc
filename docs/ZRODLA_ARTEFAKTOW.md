@@ -1839,6 +1839,35 @@ function WbWBadaniach(note) { return WbJestWynikiem(note) || WbJestKlirensem(not
 
 **Granice.** Punkty podpięcia zwartej karty Klirensu (`ClcrNotesCard`, `ClcrNotesTitle`, `ClcrOpenNoteResult`; `tools/patch-klirens-notes-view.mjs`) zostają bez zmian: karta rysuje się dla zapisu „wynik-klirens” bez pola wyniku, tytuły w Historii i szczegóły z ogólnego edytora działają jak dotąd. Grupowanie wyników w Historii (`WbHistoriaGrupuj`) nadal dotyczy tylko wyników badań — wpis Klirensu w Historii się nie zmienia. Sejf, wyszukiwarka i strona Klirens bez zmian.
 
+## Łatka P-PRZYPIETY-WYNIK — przypięty wynik i blokada duplikatu (`lab_pin_result.js`, 2026-11-17, decyzja właściciela)
+
+Opis działania i przypadki: `docs/clinical/ALGORITHMS.md`, „LAB-HISTORIA 6.38”; `docs/LAB_HISTORIA_WYNIKOW_PLAN.md`, decyzja 6.38 i „Uzupełnienie z wdrożenia 6.38”. Zmiany w czytelnych źródłach (`lab_history_strip.js` 1.4.0 — `pinnedFor` czyta `VildaLabPinResult.pinned()`, `markPinned` usunięte; style w `lab_history_strip.css` i `inline_przelicznik_jednostek_00.css`) nie wymagają opisu łatki. W zminifikowanej części `lab_pin_result.js` są dwie podmiany dokładnych ciągów i jedno wstawienie czytelnego bloku, bez ponownej minifikacji:
+
+```js
+// 1. budowa okna (funkcja V): ostrzeżenie o duplikacie po znaczniku oczekującego wyniku
+//    było:  var OwChoice=OwPinChoice(t,o);
+//    jest:  var OwChoice=OwPinChoice(t,o);PpDialog(t,e,o);
+// 2. zapis (funkcja A): świeże sprawdzenie karty tuż przed savePatientNote
+//    było:  n&&(p.linkedAgeMonths=n),await r.savePatientNote(p),g();
+//    jest:  n&&(p.linkedAgeMonths=n);var Pb=typeof PpBlocked=="function"?await PpBlocked(r,p):null;if(Pb){h(Pb);return}await r.savePatientNote(p),g();
+// 3. koniec pierwszego IIFE: czytelny blok między końcem I() a jej uruchomieniem (od nowej linii)
+//    było:  …c(),setTimeout(c,1200)}l.readyState==="loading"?l.addEventListener("DOMContentLoaded",I):I()})(window);
+//    jest:  …c(),setTimeout(c,1200)}
+//           /* Przypięty wynik (P-PRZYPIETY-WYNIK, LAB-HISTORIA 6.38; …) */
+//           var PP_PIN_TEXT = …; … function PpStart() { … }
+//           a.VildaLabPinResult.pinned = …; a.VildaLabPinResult._internal = Object.freeze({ … });
+//           if (l.readyState === "loading") l.addEventListener("DOMContentLoaded", PpStart); else PpStart();
+//           l.readyState==="loading"?l.addEventListener("DOMContentLoaded",I):I()})(window);
+```
+
+Czytelny blok leży w tym samym domknięciu co część zminifikowana i korzysta z jej `a`, `l`, `u`, `L`, `E`, `D` i `N`: stałe tekstów, stan `PpState`, czyste funkcje reguły (`PpParse`, `PpNums`, `PpNormUnit`, `PpRawIs`, `PpSame`, `PpHolds`, `PpResolve`, `PpDuplicates`), odświeżanie (`PpStart`, `PpRefresh`, `PpApply`, `PpWatch`, `PpClaim`), okno (`PpDialog`, `PpDialogSync`) i sprawdzenie zapisu (`PpBlocked`). Na końcu dopisuje `pinned` i zamrożone `_internal` do obiektu `window.VildaLabPinResult`, który część zminifikowana tworzy z `setAssessmentProvider`.
+
+**Dlaczego sprawdzenie w `A` ma strażnika `typeof`.** Testy `search-note-producers`, `lab-snapshot-ui` i `lab-testosterone-snapshot-vault` uruchamiają wycinek `async function A(` … `function I(){` z wolnymi zmiennymi (jak przy P-OCZEKUJACE-WYNIKI). `PpBlocked` leży poza wycinkiem, więc bez niego zapis działa dokładnie jak dotąd, a zapisywana notatka wyniku nie zmienia postaci.
+
+**Dlaczego blok stoi za `I()`.** Jest poza każdym wycinkiem testów na tym pliku (`var Lh2AssessmentProvider=` … `var s=null;` albo `/* AMH educational reference`, `async function A(` … `function I(){`). `tests/unit/lab-pin-pinned-state.test.mjs` pilnuje, że blok zaczyna się po `I()` i kończy przed jej uruchomieniem, że znaczniki wycinków `A` i `I` są nadal jednoznaczne oraz że `PpDialog` i `PpBlocked` są w części zminifikowanej wołane dokładnie raz.
+
+**Granice.** Bez nowych stylów ustawianych wprost na elementach: ostrzeżenie, komunikat pod datą i stan przycisku mają klasy z arkuszy, więc liczba dla `lab_pin_result.js` w `tests/fixtures/style-elementow.json` zostaje 17. Ciągi kontraktu z `tests/unit/lab-pending-result.test.mjs` (`RrPinRange(t,o);var OwChoice=OwPinChoice(t,o);`, `function(){A(t,e,i,OwChoice)}`, zamknięcie oczekującego wyniku zaraz po `await r.savePatientNote(p),g();`, notatka bez śladu oczekującego wyniku) są bez zmian. Sejf bez zmian: blok tylko czyta (`listPatientNotesForPatient`, `getPatientNote`) i korzysta z istniejących nasłuchów `onPatientNoteChanged` i `onLock` oraz z sygnału sejfu dla innych kart (`BroadcastChannel` „vilda-notes”, klucz `storage` „vilda-note-changed-ping-v1”). Pakiet badań (`vilda_lab_packages.js`) zapisuje wyniki własną drogą i nie jest blokowany.
+
 ## Trwała tożsamość wizyt — źródło i granica artefaktu sejfu
 
 Zmiana funkcjonalna `P-TRWALE-WIZYTY` ma bazę `audyt` z commita

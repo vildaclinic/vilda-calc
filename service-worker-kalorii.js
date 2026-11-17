@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.545';
+const SW_VERSION = '1.1.546';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -3521,12 +3521,15 @@ const OPTIONAL_ASSETS = [
   '/lab_pin_result.js?v=11',
   '/lab_pin_result.js?v=12',
   '/lab_pin_result.js?v=13',
+  '/lab_pin_result.js?v=14',
   '/lab_history_strip.js?v=1',
   '/lab_history_strip.js?v=2',
   '/lab_history_strip.js?v=3',
   '/lab_history_strip.js?v=4',
+  '/lab_history_strip.js?v=5',
   '/lab_history_strip.css?v=1',
   '/lab_history_strip.css?v=2',
+  '/lab_history_strip.css?v=3',
   '/vilda_lab_packages.js?v=1',
   '/vilda_lab_packages.js?v=2',
   '/vilda_lab_packages.js?v=3',
@@ -5093,6 +5096,7 @@ const OPTIONAL_ASSETS = [
   '/inline_przelicznik_jednostek_00.css?v=14',
   '/inline_przelicznik_jednostek_00.css?v=15',
   '/inline_przelicznik_jednostek_00.css?v=16',
+  '/inline_przelicznik_jednostek_00.css?v=17',
   '/inline_regulamin_00.css?v=1',
   '/inline_steroidy_00.css?v=1',
   '/inline_subskrypcja_00.css?v=1',

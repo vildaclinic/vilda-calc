@@ -162,6 +162,36 @@
   color: #4341B5
 }
 
+/* LAB-HISTORIA 6.38: zapisany wynik, który jest teraz w formularzu (już w karcie) — zamiast chipu „teraz”.
+   Różni się od wybranego chipu (aria-pressed): tło fioletu modułu i cienka obwódka. */
+#labHistoryStrip button.lab-strip-chip.is-pinned {
+  background: #EEEDFE!important;
+  border: var(--border-hairline) solid #5856D6!important
+}
+
+#labHistoryStrip button.lab-strip-chip.is-pinned[aria-pressed=true] {
+  border: 1.5px solid #5856D6!important;
+  box-shadow: 0 0 0 2px #CECBF6!important
+}
+
+#labHistoryStrip .lab-strip-chip.is-pinned .lab-strip-chip-d,
+.lab-strip-chip-pin {
+  color: #4341B5
+}
+
+.lab-strip-chip-top {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-4px)
+}
+
+.lab-strip-chip-pin {
+  font-size: .68rem;
+  font-weight: 600;
+  line-height: 1.2
+}
+
 .lab-strip-detail {
   display: flex;
   flex-direction: column;
@@ -291,6 +321,18 @@
   stroke-dasharray: 3 2
 }
 
+.lab-strip-pin-ring {
+  fill: #EEEDFE;
+  stroke: #5856D6;
+  stroke-width: 1.5
+}
+
+.lab-strip-pin-sub {
+  fill: #4341B5;
+  font-size: 10px;
+  font-weight: 600
+}
+
 .lab-strip-tick,
 .lab-strip-date {
   fill: #3a4a52;
@@ -334,7 +376,8 @@
   font-size: 10.5px
 }
 
-.lab-strip-svg.is-narrow .lab-strip-now-sub {
+.lab-strip-svg.is-narrow .lab-strip-now-sub,
+.lab-strip-svg.is-narrow .lab-strip-pin-sub {
   font-size: 9.5px
 }
 
@@ -350,7 +393,8 @@
   }
 
   #labHistoryStrip .lab-strip-more,
-  #labHistoryStrip .lab-strip-now {
+  #labHistoryStrip .lab-strip-now,
+  #labHistoryStrip .lab-strip-chip.is-pinned {
     grid-column: 1/-1
   }
 
