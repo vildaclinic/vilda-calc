@@ -1,7 +1,7 @@
 import { test, expect } from '../support/test-czas.mjs';
 import { createFictionalVault, shellFrame } from '../support/centile-live-fixture.mjs';
 import { otworzBadania, sekcjaBadan } from '../support/lab-historia-dane.mjs';
-import { pointViewport, expectSameViewport } from '../support/lab-chart-m1.mjs';
+import { pointViewport, expectSameViewport, showCharts } from '../support/lab-chart-m1.mjs';
 
 test.use({ serviceWorkers: 'block', reducedMotion: 'reduce' });
 
@@ -53,7 +53,7 @@ async function controlViewport(control) {
 for (const width of [390, 320]) {
   test(`${width}px shell: M1 keeps the dock interactive; full Details still hides it and returns to the same chart`, async ({ page }) => {
     const { frame, section, ids, before, notes } = await labInShell(page, width);
-    await section.locator('[data-view="charts"]').tap();
+    await showCharts(section, { tap: true });
     const point = section.locator(`.vilda-lab-result-chart-point[data-note-id="${ids.tsh1}"]`);
     await point.scrollIntoViewIfNeeded();
     const position = await pointViewport(point);

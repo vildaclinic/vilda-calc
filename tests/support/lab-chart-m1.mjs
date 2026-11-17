@@ -29,8 +29,22 @@ export async function prepareM1(page, width) {
   const before = await notes();
   await otworzBadania(page, patientId);
   const section = sekcjaBadan(page);
-  await section.locator('[data-view="charts"]').click();
+  await showCharts(section);
   return { patientId, ids, notes, before, section };
+}
+
+// Every click on a view button runs setView → preserveViewport
+// (vilda_lab_history_tab.js), which restores the ancestor scroll positions it
+// saw at the click once more in the next animation frame. Under page.clock that
+// frame is a fake timer and can arrive after the test's next command, undoing
+// its scrollIntoViewIfNeeded. Wait for two page frames, as the view-switch
+// contract test does (lab-results-presentation-controls.mjs), before the test
+// scrolls or measures.
+export async function showCharts(section, { tap = false } = {}) {
+  const control = section.locator('[data-view="charts"]');
+  if (tap) await control.tap();
+  else await control.click();
+  await control.evaluate(() => new Promise(resolve => { requestAnimationFrame(() => requestAnimationFrame(resolve)); }));
 }
 
 // A selection must not replace the plotted DOM, move an ancestor scroller or
