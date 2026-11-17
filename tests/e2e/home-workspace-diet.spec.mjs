@@ -350,6 +350,7 @@ for (const { title, patient, ds } of [
     expect(native.available).toBe(true);
     const dialog = await show(frame);
     await expect(dialog.locator('.vhome-diet-road')).toHaveCount(native.hasJourney ? 1 : 0);
+    await expect(dialog.locator('.vhome-diet-section-number')).toHaveText(native.hasJourney ? ['1', '2', '3', '4', '5'] : ['1', '2', '3', '4']);
     expect(await draft(dialog, 'dietLevel').isVisible()).toBe(native.hasDietChoices);
     expect(await frame.locator('#toNormInfo').textContent()).toBe(native.road);
     if (native.hasJourney) await expect(dialog.locator('#vhomeDietRoadResult > .vhome-diet-native-road')).toHaveText(native.road);

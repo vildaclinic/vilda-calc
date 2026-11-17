@@ -385,8 +385,8 @@ function readDietA1NativeProjection(options) {
   function render() {
     var body = dialog.querySelector('.vhome-dialog-body'); body.replaceChildren(); valueChanges = new WeakMap();
     body.appendChild(el('p', 'vhome-dialog-context', [value('firstName'), value('lastName')].filter(Boolean).join(' ') || 'Bieżący pomiar'));
-    var grid = el('div', 'vhome-diet-grid'); body.appendChild(grid);
-    var assumptions = section('Założenia', 'vhome-diet-assumptions', grid, 1), controls = el('div', 'vhome-diet-fields'); assumptions.appendChild(controls);
+    var grid = el('div', 'vhome-diet-grid'), step = 1; body.appendChild(grid);
+    var assumptions = section('Założenia', 'vhome-diet-assumptions', grid, step++), controls = el('div', 'vhome-diet-fields'); assumptions.appendChild(controls);
     var strategies = Array.from(byId('dietRecommendationsContent').querySelectorAll('[data-diet-strategy-choice]'));
     if (strategies.length && withinVisible(strategies[0], byId('dietRecommendationsContent'))) choice('strategy', 'Strategia', strategies.map(function (n) {
       return { value: n.getAttribute('data-diet-strategy-choice'), text: n.textContent, disabled: n.disabled };
@@ -413,7 +413,7 @@ function readDietA1NativeProjection(options) {
     var planWarning = byId('planWarning');
     if (sourceVisible(byId('planCard')) && sourceVisible(planWarning) && planWarning.textContent.trim()) assumptions.appendChild(readonlyCopy(planWarning, 'vhome-diet-native-warning'));
     if (hasRoad()) {
-      var road = section('Droga do normy BMI', 'vhome-diet-road', grid, 2), brief = el('div', 'vhome-diet-road-brief vhome-diet-native-road'); brief.id = 'vhomeDietRoadBrief'; road.appendChild(brief);
+      var road = section('Droga do normy BMI', 'vhome-diet-road', grid, step++), brief = el('div', 'vhome-diet-road-brief vhome-diet-native-road'); brief.id = 'vhomeDietRoadBrief'; road.appendChild(brief);
       var moves = Array.from(byId('bmiJourneyMount').querySelectorAll('[data-journey="move"]'));
       if (moves.length) { road.appendChild(el('h4', '', 'Ruch w planie')); var row = el('div', 'vhome-diet-moves'); road.appendChild(row);
         moves.forEach(function (original) { var key = original.getAttribute('data-key'), n = button(original.textContent, function () { draft.moves[key] = !draft.moves[key]; n.setAttribute('aria-pressed', String(draft.moves[key])); refreshFooter(); }); n.dataset.homeDietJourney = 'move'; n.dataset.key = key; n.disabled = original.disabled; n.setAttribute('aria-pressed', String(!!draft.moves[key])); row.appendChild(n); });
@@ -421,7 +421,7 @@ function readDietA1NativeProjection(options) {
       var details = el('details', 'vhome-diet-road-details'), result = el('div'); result.id = 'vhomeDietRoadResult'; details.append(el('summary', '', 'Pełne obliczenia i uwagi'), result); road.appendChild(details);
     }
     var options = el('details', 'vhome-diet-section vhome-diet-options'), optionsSummary = el('summary', 'vhome-diet-options-summary');
-    optionsSummary.append(el('span', 'vhome-diet-section-number', '3'), el('span', '', 'Elementy dokumentu'), el('span', 'vhome-diet-options-count'));
+    optionsSummary.append(el('span', 'vhome-diet-section-number', String(step++)), el('span', '', 'Elementy dokumentu'), el('span', 'vhome-diet-options-count'));
     var optionsBody = el('div', 'vhome-diet-options-body'); options.append(optionsSummary, optionsBody); grid.appendChild(options);
     flags.forEach(function (entry) {
       var original = byId(entry[0]); if (!original || !withinVisible(original, byId('dietRecommendationsContent'))) return;
@@ -429,8 +429,8 @@ function readDietA1NativeProjection(options) {
       var label = el('label', 'vhome-diet-check'), check = el('input'); check.type = 'checkbox'; check.checked = !!draft.values[entry[0]]; check.disabled = original.disabled;
       check.dataset.homeDietField = entry[0]; check.setAttribute('aria-label', nativeLabel); change(check, function () { draft.values[entry[0]] = check.checked; }); label.append(check, el('span', '', nativeLabel)); optionsBody.appendChild(label);
     });
-    var plan = section('Podsumowanie planu', 'vhome-diet-plan-section', grid, 4), planBody = el('div', 'vhome-diet-plan vhome-diet-native-road'); planBody.id = 'vhomeDietPlanSummary'; plan.appendChild(planBody);
-    var document = section('Dokumenty dla pacjenta', 'vhome-diet-document', grid, 5), energyResult = el('div'); energyResult.id = 'vhomeDietEnergy'; document.appendChild(energyResult);
+    var plan = section('Podsumowanie planu', 'vhome-diet-plan-section', grid, step++), planBody = el('div', 'vhome-diet-plan vhome-diet-native-road'); planBody.id = 'vhomeDietPlanSummary'; plan.appendChild(planBody);
+    var document = section('Dokumenty dla pacjenta', 'vhome-diet-document', grid, step), energyResult = el('div'); energyResult.id = 'vhomeDietEnergy'; document.appendChild(energyResult);
     var actions = el('div', 'vhome-diet-actions'); document.appendChild(actions);
     [['generate', 'Generuj i skopiuj zalecenia'], ['preview', 'Podgląd zaleceń'], ['copy', 'Kopiuj zalecenia'], ['pdf', 'Raport PDF dla pacjenta']].forEach(function (entry) { var n = button(entry[1], function () { if (entry[0] === 'preview') openReport(); else action(entry[0]); }); n.dataset.homeDietAction = entry[0]; actions.appendChild(n); });
     if (!readDietA1NativeProjection({ pending: dirty(), draft: draft }).available) {
