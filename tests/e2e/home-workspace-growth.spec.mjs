@@ -3,12 +3,13 @@ import { createFictionalVault, fictionalPatient, loadPatient, readyForPatient, s
 
 test.use({ serviceWorkers: 'block', reducedMotion: 'reduce' });
 test.setTimeout(240_000);
-async function setup(page, { shell = false } = {}) {
+async function setup(page, { shell = false, gh = false } = {}) {
   await page.addInitScript(() => { window.__VILDA_HOME_WORKSPACE_PREVIEW__ = true; });
   await page.route('**/*', route => new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort());
   const fixture = await createFictionalVault(page, { shell, waitForAccountReadyBeforeReload: true });
   const payload = fictionalPatient(); payload.advanced.testicularVolume = '4to6';
   payload.puberty = { onsetAgeYears: 11.2, gnrhaStatus: 'zakonczone', gnrhaStartAgeYears: 8.5, gnrhaStopAgeYears: 10.5, cdgp: 'tak' };
+  if (gh) payload.ghTherapyPoints = [{ ...ghStart }];
   const id = await fixture.frame.evaluate(async data => (await VildaVault.savePatient(data, { dedup: false })).patientId, payload);
   await loadPatient(fixture.frame, id, 'restore');
   await fixture.frame.waitForFunction(() => !window.__vildaPersistRestoring && !window.__vildaLustroWpis
@@ -239,32 +240,21 @@ test('home growth: new anonymous measurement retains explicit advanced values af
 const ghStart = { id: 'fictional-a2-gh-start', type: 'start', ageYears: 6, ageMonths: 0, weight: 20, height: 115, boneAge: null,
   dose: .03, doseUnit: 'mg/kg/d', drug: 'Omnitrope 10 mg', program: 'SNP', igf1: null, igf1Unit: 'ng/mL', igf1DaysSinceDose: null, doseAbs: .6 };
 async function withGh(frame) {
-  await frame.evaluate(point => {
-    VildaPersistence.writeModuleJSON('GH_THERAPY_POINTS', [point], { force: true }); window.ghTherapyPoints = [point];
+  // The accepted patient payload owns this initial list. Injecting module state
+  // after load can invalidate the native carrier before its first write.
+  await frame.waitForFunction(() => VildaDataImportExport.getSaveReadiness().ready);
+  await expect.poll(() => frame.evaluate(() => VildaPersistence.readModuleJSON('GH_THERAPY_POINTS', []))).toEqual([ghStart]);
+  await expect.poll(() => frame.evaluate(() => VildaDataImportExport.captureCurrentUserDataReadOnly().ghTherapyPoints)).toEqual([ghStart]);
+  await expect.poll(() => frame.evaluate(() => VildaPersistence.readMainSession()?.ghTherapyPoints)).toEqual([ghStart]);
+  await frame.evaluate(() => {
     importTherapyPointsToAdvancedGrowth(); calculateGrowthAdvanced(); vildaPersistFlushNow({ force: true });
-  }, ghStart);
+  });
   await expect(frame.locator('#advMeasurements [data-gh-id]')).toHaveCount(1);
   await expect(frame.locator('#advMeasurements .gh-z-wiersza-btn').first()).toBeEnabled();
   // The real bridge also imports this fixture into the intake history on its
   // queued update. Settle that actor before taking the pure-cancel baseline.
   await expect.poll(() => frame.evaluate(() => VildaDataImportExport.captureCurrentUserDataReadOnly().intake.history
     .some(row => row.ageMonths === 72 && row.height === 115 && row.weight === 20))).toBe(true);
-  // The synthetic module write is not a main-session save acknowledgment.
-  // Wait for the same pause/owner gates as the native writer, then require its
-  // receipt and the initial GH list before comparing later pure-cancel state.
-  await frame.waitForFunction(() => {
-    if (VildaDataImportExport.isMainSessionAutosavePaused()
-      || VildaDataImportExport.isMainSessionRestorePending()
-      || VildaPersistence.isAutosaveSuppressed()) return false;
-    const panel = window.VildaPanelPacjent;
-    if (!panel?.captureWriteAuthority) return true;
-    const ticket = panel.captureWriteAuthority();
-    return !!ticket && panel.isWriteAuthorityCurrent(ticket);
-  });
-  await expect.poll(() => frame.evaluate(() => {
-    vildaPersistFlushNow({ force: true });
-    return VildaDataImportExport.saveMainSessionNow();
-  })).toBe(true);
   await expect.poll(() => frame.evaluate(() => VildaPersistence.readMainSession()?.ghTherapyPoints)).toEqual([ghStart]);
 }
 async function ghAction(dialog) {
@@ -274,7 +264,7 @@ async function ghAction(dialog) {
 for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844 }]) {
   test('home A2: native GH portal cancels purely and saves/imports the original therapy point · ' + viewport.width, async ({ page }) => {
     await page.setViewportSize(viewport);
-    const { frame, id } = await setup(page, { shell: true }); await withGh(frame);
+    const { frame, id } = await setup(page, { shell: true, gh: true }); await withGh(frame);
     const before = await snapshot(frame), dialog = await show(frame);
     await (await ghAction(dialog)).click();
     await expect(dialog.locator('#ghZWierszaPanel')).toBeVisible();
@@ -316,7 +306,7 @@ for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844
 }
 
 test('home A2: native GH refuses an unseen measurement and invalidates an old owner before saving', async ({ page }) => {
-  const { frame, ids } = await setup(page); await withGh(frame);
+  const { frame, ids } = await setup(page, { gh: true }); await withGh(frame);
   const dialog = await show(frame); await (await ghAction(dialog)).click();
   await dialog.locator('#ghZWierszaDawka').fill('.8');
   await frame.evaluate(() => {
