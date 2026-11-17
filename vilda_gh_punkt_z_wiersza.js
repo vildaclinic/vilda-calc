@@ -229,6 +229,7 @@
     return { lata: v('.adv-age-years'), miesiace: v('.adv-age-months'), wzrost: v('.adv-height'), masa: v('.adv-weight'), wiekKostny: v('.adv-bone-age') };
   }
   function panelWiersza(r) {
+    if (otwarty && otwarty.r === r && otwarty.host && wDokumencie(otwarty.p)) return otwarty.p;
     var n = r.nextElementSibling;
     return n && n.classList.contains('gh-z-wiersza-panel') ? n : null;
   }
@@ -354,7 +355,7 @@
     if (wybrana != null) select.value = wybrana;
   }
 
-  function otworz(r) {
+  function otworz(r, host) {
     var A = api();
     var D = dane();
     if (!A || !D || !gotowe()) { status(TEKSTY.odswiez); return; }
@@ -541,9 +542,10 @@
       if (powod.hidden !== stan.aktywny) powod.hidden = stan.aktywny;
     }
 
-    r.parentNode.insertBefore(p, r.nextSibling);
+    if (host) host.appendChild(p);
+    else r.parentNode.insertBefore(p, r.nextSibling);
     przycisk(r, { widoczny: false });
-    otwarty = { r: r, p: p, pacjent: znacznikPacjenta(), odswiezPomiar: odswiezPomiar, pokazany: function () { return pomiar; } };
+    otwarty = { r: r, p: p, host: host || null, pacjent: znacznikPacjenta(), odswiezPomiar: odswiezPomiar, pokazany: function () { return pomiar; } };
     odswiezPomiar(L);
     dawka.focus();
   }
@@ -644,7 +646,23 @@
     etykietaWierszaGh: etykietaWierszaGh,
     przygotujPunkt: przygotujPunkt,
     init: init,
-    odswiez: odswiez
+    odswiez: odswiez,
+    // Presentation portal for the opt-in home workspace. The canonical row,
+    // its fresh shown-value check, dose handling and VildaGhPunkty save actor
+    // remain the same as in the inline panel.
+    otworzDlaWiersza: function (r, host) {
+      var c = kontener();
+      if (w.__VILDA_HOME_WORKSPACE_PREVIEW__ !== true || !gotowe() || !c || !r || !c.contains(r)
+        || !r.classList.contains('measure-row') || wierszGh(r) || !host || host.ownerDocument !== d
+        || !wDokumencie(host) || !host.closest('dialog[open]') || r.contains(host)) return false;
+      var stan = stanPrzycisku(lista(), pomiarWiersza(wartosciWiersza(r)), true);
+      if (!stan.widoczny || !stan.aktywny) return false;
+      otworz(r, host);
+      return !!(otwarty && otwarty.r === r && otwarty.host === host);
+    },
+    zamknijDlaKontenera: function (host) {
+      if (otwarty && otwarty.host === host) { zamknijPanel(); zaplanuj(); }
+    }
   });
 
   if (d.readyState === 'loading') d.addEventListener('DOMContentLoaded', init, { once: true });

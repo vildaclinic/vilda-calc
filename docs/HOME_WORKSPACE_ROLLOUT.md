@@ -210,14 +210,46 @@ Widoki analityczne kopiują wyłącznie już wyrenderowane wyniki natywnego
 oraz ograniczeniami. ID kopii są odrębne od kanonicznych. Nie ma drugiej ścieżki
 obliczeń, nowych norm, progów, współczynników ani danych demonstracyjnych
 udających wynik. Niezastosowany szkic zasłania wyniki i wyłącza eksport.
-Raport korzysta z istniejącego generatora; skrót siatek otwiera istniejące
-Dokumenty pacjenta.
+Raport korzysta z istniejącego generatora. Skrót „Generuj siatki” i wejście
+z Dokumentów pacjenta prowadzą do tego samego edytora ustawień i adnotacji.
 
 Podsumowanie strony głównej zachowuje tylko linie konsensusu rozpoznane
 przez natywne `linieKonsensusu()`, również przy nazwie pojedynczej metody.
 Pozostałe metody są dostępne w oknie zaawansowanym. Nie zmienia to źródłowych
 linii kopiowania ani prezentacji DocPro; brak konsensusu nie jest zastępowany
 samodzielnie wybraną metodą. Pełny opis źródeł: `ZRODLA_ARTEFAKTOW.md`.
+
+### Przyjęty wariant A2 — 17 listopada 2026
+
+Dane rodzinne i aktualny wiek kostny są nad tabelą historycznych pomiarów.
+Tabela pokazuje najnowsze pomiary na górze; kolejność kanonicznych węzłów
+pozostaje niezmieniona. Warunki interpretacji i początek dojrzewania z wywiadem
+są domyślnie zwinięte. Na telefonie tabela przechodzi w zwarte grupy pól.
+
+Analiza pokazuje wykres surowych pomiarów, trzy natywne karty trajektorii obok
+oraz kontekst tempa, MPH i wieku kostnego poniżej. Pełny natywny opis odcinków
+pozostaje w szczegółach. Model jest przekazany wyłącznie jako metadane DOM
+z tego samego renderowania, bez ponownego analizowania i bez kontekstu konta.
+Wykres wartości nie zastępuje siatki centylowej.
+
+Prognozy eksponują natywny konsensus i kontekst. Zakresy metod używają wartości
+publikacyjnej i jej natywnego błędu; nie oznaczają przedziału ufności konsensusu.
+Przy obciętym wyniku pozostaje sam punkt z pełnym dotychczasowym opisem zakresu.
+Wykluczenia, korekty, wiarygodność i ograniczenia metod pozostają z oryginalnego
+renderera. Nie ma dodatkowego wykluczania wyników przez nowy widok.
+
+Akcja punktu GH osadza dotychczasowy formularz w tym samym wspólnym oknie.
+Zapis przechodzi przez natywnego aktora VildaGhPunktZWiersza / VildaGhPunkty;
+nie ma kopiowania reguł dawkowania ani drugiego zapisu. Po zapisie widok czeka
+na natywny import wiersza terapii. Zapisane punkty pozostają tylko do odczytu,
+z przejściem do DocPro po jawnej akcji. Anulowanie nie zmienia danych.
+
+Komentarze, strzałki, układ PDF Palczewskiej (2 A4 pion / 1 A4 poziom) i tryb
+publikacji są dostępne w jednym oknie „Generuj siatki”, również z Dokumentów.
+Są szkicem z jawnym zastosowaniem. Generowanie i oba kreatory wywołują istniejące
+przyciski, ich kwalifikację i kontekst. Okno nie wprowadza nowych generatorów,
+interpretacji zakresu wieku, danych ani schematu zapisu. Ten skrót nie oznacza
+zakończenia późniejszego etapu przebudowy całego centrum Dokumentów.
 
 ## Podgląd i odbiór
 
@@ -242,7 +274,7 @@ scalenie modułu opt-in nie zmienia domyślnego widoku. Eksporter, fikcyjne
 konto i blokada usług są wyłącznie narzędziami podglądu.
 
 Nowy JS i CSS strony głównej korzystają z istniejącego, sprawdzanego po SHA
-pakietu transportowego UI wizyt. Pakiet zawiera osiem zasobów zamiast trzech;
+pakietu transportowego UI wizyt. Pakiet zawiera jedenaście zasobów zamiast trzech;
 każdy nadal ma własny wersjonowany adres i niezmienioną treść w pamięci offline.
 Historyczny pakiet pozostaje dostępny. Pozwala to zachować dotychczasowy limit
 600 żądań podczas instalacji PWA, bez usuwania zasobów ani rozluźniania testów.

@@ -31,14 +31,26 @@
       "sha256": "c89848f95e87bf79fc0ed79652cdd08c63b587facbb3e03756651d940b649d6f"
     },
     {
-      "path": "vilda_home_growth.js?v=1",
-      "sha256": "6d0df3dc71085daabb8630b222308a4c75c9a06806f55bfdec15449b23e1c2c1"
+      "path": "vilda_home_growth.js?v=2",
+      "sha256": "54321573d3ab52598d8ee4202984971e64ff34a7b03de91449e31875a47b7aa9"
+    },
+    {
+      "path": "vilda_home_growth_views.js?v=1",
+      "sha256": "eeaa6c8de66b30b2562a5fe85cfb48cccbc8111a4ac5d8b03a2e9ecd977265f7"
+    },
+    {
+      "path": "vilda_home_growth_views.css?v=1",
+      "sha256": "b80c855490edc5138652f67de2945be34b9af2d8ed9ba34a6c89526337246d2e"
+    },
+    {
+      "path": "vilda_home_growth_charts.js?v=1",
+      "sha256": "68a21421d6be2907231dc12821f5d47dcd035da6e3bdda06c09c444e69da298e"
     }
   ],
   "pack": {
-    "path": "runtime/visit-ui-precache/precache-1101bc5edee5.json",
-    "sha256": "1101bc5edee535b81c13cda9660df19d4e91f49fd77efe4d9623c7aefed7fa6a",
-    "byteLength": 152778
+    "path": "runtime/visit-ui-precache/precache-dbe0f6ad8b75.json",
+    "sha256": "dbe0f6ad8b750c059a60e138c7ee87c79497fdc4aaad1ed8058cc305ec2607e4",
+    "byteLength": 204902
   },
   "historicalPacks": [
     {
@@ -165,6 +177,11 @@
       "path": "runtime/visit-ui-precache/precache-ceb674ed250c.json",
       "sha256": "ceb674ed250ce51874fd5377dd0dfc590bc07e6083c34a707b812c5e8c229e60",
       "byteLength": 151918
+    },
+    {
+      "path": "runtime/visit-ui-precache/precache-1101bc5edee5.json",
+      "sha256": "1101bc5edee535b81c13cda9660df19d4e91f49fd77efe4d9623c7aefed7fa6a",
+      "byteLength": 152778
     }
   ]
 }

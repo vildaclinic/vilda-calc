@@ -1973,7 +1973,21 @@
       hideRedFlag: o.hideRedFlag != null ? o.hideRedFlag : true
     });
     if (!html) return '';
-    return '<div class="adv-growth-result-block adv-growth-result-block--trajectory"><div class="vtap">' + html + '</div></div>';
+    // Opt-in Start uses the exact model which produced this presentation.
+    // Metadata is ephemeral DOM output, never a patient-store field. In
+    // particular, do not expose the assessment/account context here.
+    var view = '';
+    if (w.__VILDA_HOME_WORKSPACE_PREVIEW__ === true && model) {
+      view = ' data-vhome-trajectory="' + esc(JSON.stringify({
+        version: model.version, source: model.source, sex: model.sex,
+        points: (model.points || []).map(function (p) {
+          return { ageMonths: p.ageMonths, ageYears: p.ageYears, height: p.height,
+            weight: p.weight, bmi: p.bmi, isCurrent: p.isCurrent };
+        }), metrics: model.metrics, velocity: model.velocity,
+        delayedPuberty: model.delayedPuberty
+      })) + '"';
+    }
+    return '<div class="adv-growth-result-block adv-growth-result-block--trajectory"' + view + '><div class="vtap">' + html + '</div></div>';
   }
 
   // Montuje panel w Karcie pacjenta: przed pierwszym elementem `beforeSelector` (domyślnie panel

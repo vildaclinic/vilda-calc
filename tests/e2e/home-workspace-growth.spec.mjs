@@ -22,7 +22,13 @@ async function setup(page, { shell = false } = {}) {
 async function show(frame, tab = 'data') {
   await frame.locator(`[data-growth-open="${tab}"]`).click();
   const dialog = frame.getByRole('dialog', { name: 'Zaawansowane obliczenia wzrostowe', exact: true });
-  await expect(dialog).toBeVisible(); return dialog;
+  await expect(dialog).toBeVisible();
+  if (tab === 'data') {
+    await expect(dialog.locator('.vhome-growth-fold[open]')).toHaveCount(0);
+    await dialog.locator('.vhome-growth-fold > summary').filter({ hasText: 'Warunki interpretacji' }).click();
+    expect(await dialog.locator('.vhome-growth-family').evaluate(node => node.compareDocumentPosition(document.querySelector('.vhome-growth-history')) & Node.DOCUMENT_POSITION_FOLLOWING)).toBeTruthy();
+  }
+  return dialog;
 }
 const field = (dialog, id) => dialog.locator(`[data-growth-field="${id}"]`);
 const apply = dialog => dialog.getByRole('button', { name: 'Zastosuj dane', exact: true });
@@ -54,7 +60,7 @@ test('home growth: volume belongs only to advanced data; drafts and tabs cancel 
   await field(dialog, 'advTesticularVolume').selectOption('gt6');
   await field(dialog, 'advMotherHeight').fill('170');
   await dialog.getByRole('button', { name: '+ Dodaj pomiar', exact: true }).click();
-  await dialog.locator('[data-growth-row]').last().locator('[data-growth-history-field="2"]').fill('-1');
+  await dialog.locator('[data-growth-row^="new-"]').first().locator('[data-growth-history-field="2"]').fill('-1');
   await dialog.getByRole('button', { name: '+ Dodaj pomiar', exact: true }).click();
   await apply(dialog).click();
   await expect(dialog).toBeVisible();
@@ -113,17 +119,19 @@ test('home growth: history edits keep original nodes, metadata, annotations and 
     return Array.from(row.querySelectorAll('input, select, textarea'), input => ({ value: input.value, disabled: input.disabled }));
   });
   const protectedBefore = await frame.locator('#advMeasurements .measure-row').nth(1).evaluate(row => row.outerHTML);
-  const dialog = await show(frame), locked = dialog.locator('[data-growth-row]').nth(1);
+  const dialog = await show(frame), locked = dialog.locator('[data-growth-source-index="1"]');
   await expect(locked.locator('input')).toHaveCount(5);
   for (const control of await locked.locator('input').all()) await expect(control).toBeDisabled();
   await expect(locked.getByRole('button', { name: 'Usuń pomiar', exact: true })).toBeDisabled();
-  await dialog.locator('[data-growth-row]').first().locator('[data-growth-history-field="2"]').fill('124');
+  await dialog.locator('[data-growth-source-index="0"]').locator('[data-growth-history-field="2"]').fill('124');
   await field(dialog, 'advFatherHeight').fill('183');
   await field(dialog, 'advBoneAge').fill('11.5');
   await dialog.getByRole('button', { name: '+ Dodaj pomiar', exact: true }).click();
-  const added = dialog.locator('[data-growth-row]').last();
+  const added = dialog.locator('[data-growth-row^="new-"]').first();
   for (const [index, value] of [[0, '10'], [1, '6'], [2, '145'], [3, '35']]) await added.locator(`[data-growth-history-field="${index}"]`).fill(value);
-  await apply(dialog).click();
+  const invalid = await dialog.locator('input:enabled, select:enabled').evaluateAll(controls => controls.filter(c => !c.checkValidity()).map(c => ({ field: c.getAttribute('aria-label'), value: c.value, step: c.step, message: c.validationMessage })));
+  expect(invalid).toEqual([]);
+  await apply(dialog).click(); await expect(dialog).toBeHidden();
   expect(await frame.evaluate(() => window.__growthRow === document.querySelector('#advMeasurements .measure-row'))).toBe(true);
   await expect(frame.locator('#advMeasurements .measure-row').first()).toHaveAttribute('data-fictional-retained', 'keep');
   await expect(frame.locator('#advMeasurements .measure-row').first().locator('.adv-arrow-comment')).toHaveValue('Fikcyjna adnotacja');
@@ -135,9 +143,19 @@ test('home growth: history edits keep original nodes, metadata, annotations and 
   await expect(frame.locator('#advFatherHeight')).toHaveValue('183');
   await expect(frame.locator('#advBoneAge')).toHaveValue('11.5');
   await show(frame, 'analysis');
+  await expect(dialog.locator('.vhome-a2-chart svg')).toBeVisible();
+  for (const metric of ['height', 'weight', 'bmi']) {
+    await dialog.locator('[data-growth-metric="' + metric + '"]').click();
+    const nativeSeries = await frame.evaluate(name => JSON.parse(document.querySelector('#advResults [data-vhome-trajectory]').getAttribute('data-vhome-trajectory')).points.filter(p => Number.isFinite(p[name])), metric);
+    await expect(dialog.locator('.vhome-a2-chart circle')).toHaveCount(nativeSeries.length);
+  }
   expect(await dialog.locator('.adv-growth-result-block--trajectory').textContent()).toBe(await frame.locator('#advResults .adv-growth-result-block--trajectory').textContent());
   await dialog.getByRole('tab', { name: 'Prognozy', exact: true }).click();
-  expect(await dialog.locator('.vgcc').textContent()).toBe(await frame.locator('#advResults .vgcc').textContent());
+  for (const selector of ['.vgcc-hero', '.vgcc-mph', '.vgcc-target', '.vgcc-stats', '.vgcc-det-body', '.vgcc-hint']) {
+    expect(await dialog.locator('.vgcc ' + selector).allTextContents()).toEqual(await frame.locator('#advResults .vgcc ' + selector).allTextContents());
+  }
+  const values = '.vgcc-row .vgcc-nm, .vgcc-row .vgcc-val';
+  expect(await dialog.locator('.vgcc ' + values.split(', ').join(', .vgcc ')).allTextContents()).toEqual(await frame.locator('#advResults .vgcc ' + values.split(', ').join(', #advResults .vgcc ')).allTextContents());
 });
 
 test('home growth: stale load, changed patient and locked vault cannot apply an old draft', async ({ page }) => {
@@ -216,4 +234,150 @@ test('home growth: new anonymous measurement retains explicit advanced values af
   await page.reload({ waitUntil: 'load' });
   await expect(frame.locator('#advTesticularVolume')).toHaveValue('lt4'); await expect(frame.locator('#advMotherHeight')).toHaveValue('167');
   expect(await frame.evaluate(() => sessionStorage.getItem('vildaCurrentPatientId'))).toBeNull();
+});
+
+const ghStart = { id: 'fictional-a2-gh-start', type: 'start', ageYears: 6, ageMonths: 0, weight: 20, height: 115, boneAge: null,
+  dose: .03, doseUnit: 'mg/kg/d', drug: 'Omnitrope 10 mg', program: 'SNP', igf1: null, igf1Unit: 'ng/mL', igf1DaysSinceDose: null, doseAbs: .6 };
+async function withGh(frame) {
+  await frame.evaluate(point => {
+    VildaPersistence.writeModuleJSON('GH_THERAPY_POINTS', [point], { force: true }); window.ghTherapyPoints = [point];
+    importTherapyPointsToAdvancedGrowth(); calculateGrowthAdvanced(); vildaPersistFlushNow({ force: true });
+  }, ghStart);
+  await expect(frame.locator('#advMeasurements [data-gh-id]')).toHaveCount(1);
+  await expect(frame.locator('#advMeasurements .gh-z-wiersza-btn').first()).toBeEnabled();
+}
+async function ghAction(dialog) {
+  const key = await dialog.locator('[data-growth-source-index="0"]').getAttribute('data-growth-row');
+  return dialog.locator('[data-growth-gh="' + key + '"]');
+}
+for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844 }]) {
+  test('home A2: native GH portal cancels purely and saves/imports the original therapy point · ' + viewport.width, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    const { frame } = await setup(page, { shell: true }); await withGh(frame);
+    const before = await snapshot(frame), dialog = await show(frame);
+    await (await ghAction(dialog)).click();
+    await expect(dialog.locator('#ghZWierszaPanel')).toBeVisible();
+    await expect(dialog.locator('#ghZWierszaDawka')).toHaveValue('');
+    await expect(dialog.locator('#ghZWierszaProgram')).toHaveValue('SNP');
+    await dialog.locator('#ghZWierszaDawka').fill('.8');
+    await dialog.getByRole('button', { name: 'Anuluj punkt', exact: true }).click();
+    await expect(dialog.locator('#ghZWierszaPanel')).toHaveCount(0);
+    expect(await snapshot(frame)).toEqual(before);
+    await (await ghAction(dialog)).click();
+    await dialog.getByRole('button', { name: 'Zapisz punkt leczenia', exact: true }).click();
+    await expect(dialog.locator('#ghZWierszaBlad')).toContainText('dawkę');
+    await dialog.locator('#ghZWierszaDawka').fill('.8');
+    await dialog.getByRole('button', { name: 'Zapisz punkt leczenia', exact: true }).click();
+    await expect(dialog.locator('.vhome-growth-tabs')).toBeVisible();
+    const points = await frame.evaluate(() => VildaPersistence.readModuleJSON('GH_THERAPY_POINTS', []));
+    expect(points).toHaveLength(2); expect(points[0]).toEqual(ghStart);
+    const added = points.find(p => p.id !== ghStart.id);
+    expect(added).toMatchObject({ type: 'continue', ageYears: 7, ageMonths: 0, height: 123.6, weight: 23.9, doseAbs: .8, doseUnit: 'mg/kg/d' });
+    expect(added.dose).toBeCloseTo(.8 / 23.9, 10);
+    const native = frame.locator('#advMeasurements [data-gh-id="' + added.id + '"]'); await expect(native).toHaveCount(1);
+    const rowKey = await native.evaluate(row => Array.from(document.querySelectorAll('#advMeasurements .measure-row')).indexOf(row));
+    const readOnly = dialog.locator('[data-growth-source-index="' + rowKey + '"]');
+    for (const input of await readOnly.locator('input').all()) await expect(input).toBeDisabled();
+    const geometry = await dialog.evaluate(node => { const r = node.getBoundingClientRect(); return { overflow: node.scrollWidth > r.width, footer: node.querySelector('.vhome-dialog-footer').getBoundingClientRect().bottom <= r.bottom }; });
+    expect(geometry).toEqual({ overflow: false, footer: true });
+    await dialog.getByRole('button', { name: 'Anuluj', exact: true }).click();
+    await frame.evaluate(() => saveUserData());
+    await page.reload({ waitUntil: 'load' }); const restored = await shellFrame(page); await readyForPatient(restored);
+    await expect(restored.locator('#advMeasurements [data-gh-id="' + added.id + '"]')).toHaveCount(1);
+    expect(await restored.evaluate(() => VildaPersistence.readModuleJSON('GH_THERAPY_POINTS', []))).toEqual(points);
+  });
+}
+
+test('home A2: native GH refuses an unseen measurement and invalidates an old owner before saving', async ({ page }) => {
+  const { frame, ids } = await setup(page); await withGh(frame);
+  const dialog = await show(frame); await (await ghAction(dialog)).click();
+  await dialog.locator('#ghZWierszaDawka').fill('.8');
+  await frame.evaluate(() => {
+    // Deliberately omit an event: the native actor must notice this itself.
+    document.querySelector('#advMeasurements .measure-row .adv-height').value = '124';
+    document.querySelector('#vhomeGrowthDialog .vhome-dialog-apply').click();
+  });
+  await expect(dialog.locator('#ghZWierszaBlad')).toBeVisible();
+  expect(await frame.evaluate(() => VildaPersistence.readModuleJSON('GH_THERAPY_POINTS', []).length)).toBe(1);
+  await frame.evaluate(next => {
+    sessionStorage.setItem('vildaCurrentPatientId', next);
+    document.querySelector('#vhomeGrowthDialog .vhome-dialog-apply').click();
+  }, ids.b);
+  await expect(dialog).toBeHidden();
+  expect(await frame.evaluate(() => VildaPersistence.readModuleJSON('GH_THERAPY_POINTS', []).length)).toBe(1);
+});
+
+test('home A2: Generuj siatki shares native generators and keeps annotation/layout drafts pure until Apply', async ({ page }) => {
+  const { frame } = await setup(page, { shell: true });
+  await frame.getByRole('combobox', { name: 'Siatki referencyjne', exact: true }).selectOption('PALCZEWSKA');
+  await frame.waitForFunction(() => VildaAdvancedGrowth.advGrowthPredictionsMatchCurrentInput());
+  await frame.evaluate(() => { calculateGrowthAdvanced(); vildaPersistFlushNow({ force: true }); VildaDataImportExport.saveMainSessionNow(); });
+  const before = await snapshot(frame); await show(frame);
+  await frame.locator('[data-growth-document="charts"]').click();
+  const charts = frame.getByRole('dialog', { name: 'Generuj siatki', exact: true }); await expect(charts).toBeVisible();
+  await expect(charts.locator('[data-chart-native]')).toHaveCount(4);
+  await charts.getByLabel('Układ PDF', { exact: true }).selectOption('landscape');
+  await charts.getByLabel('Siatki do publikacji', { exact: true }).check();
+  await charts.getByLabel('Komentarz ze strzałką · Bieżący pomiar', { exact: true }).check();
+  await charts.getByLabel('Komentarz · Bieżący pomiar', { exact: true }).fill('E2E-A2: fikcyjny komentarz');
+  expect(await snapshot(frame)).toEqual(before);
+  await expect(charts.locator('[data-chart-native="generatePalCentileChart"]')).toBeDisabled();
+  page.once('dialog', confirmation => confirmation.accept()); await charts.getByRole('button', { name: 'Anuluj', exact: true }).click();
+  expect(await snapshot(frame)).toEqual(before);
+  await frame.evaluate(() => VildaHomeGrowth.openCharts()); await expect(charts).toBeVisible();
+  await charts.getByLabel('Układ PDF', { exact: true }).selectOption('landscape');
+  await charts.getByLabel('Siatki do publikacji', { exact: true }).check();
+  await charts.getByLabel('Komentarz ze strzałką · Bieżący pomiar', { exact: true }).check();
+  await charts.getByLabel('Komentarz · Bieżący pomiar', { exact: true }).fill('E2E-A2: fikcyjny komentarz');
+  await charts.getByRole('button', { name: 'Zastosuj ustawienia', exact: true }).click(); await expect(charts).toBeHidden();
+  await expect(frame.locator('#advCurrentArrowEnable')).toBeChecked(); await expect(frame.locator('#advCurrentArrowComment')).toHaveValue('E2E-A2: fikcyjny komentarz');
+  await expect(frame.locator('#palPdfLayoutLandscape')).toBeChecked();
+  await frame.evaluate(() => VildaHomeGrowth.openCharts());
+  // Selecting a creator invokes the original button handler exactly once.
+  await frame.evaluate(() => { window.__a2NativeCreator = []; VildaPublicationCreator.open = options => window.__a2NativeCreator.push(options); });
+  await charts.locator('[data-chart-native="openChartCreatorBtn"]').click();
+  await expect(charts).toBeHidden(); expect(await frame.evaluate(() => window.__a2NativeCreator.length)).toBe(1);
+  // The sidebar's existing documents modal routes to this exact same editor.
+  await frame.evaluate(() => VildaPatientDocuments.open());
+  const docs = page.locator('#patientDocumentsDialog'); await expect(docs).toBeVisible();
+  await docs.locator('[data-patient-documents-charts]').click(); await expect(charts).toBeVisible();
+  await frame.evaluate(() => VildaVault.lock());
+  await expect(page.getByRole('heading', { name: 'Kto się loguje?', exact: true })).toBeVisible();
+  for (const remaining of page.frames()) await expect(remaining.locator('#vhomeGrowthChartsDialog:visible')).toHaveCount(0);
+});
+
+test('home A2: forecast graphics preserve native published values, clamps, exclusions and complete qualifications', async ({ page }) => {
+  const { frame } = await setup(page);
+  const results = await frame.evaluate(() => {
+    const base = { sex: 'M', ageYears: 13, ageMonths: 156, boneAgeYears: 12.5, currentHeightCm: 155, currentWeightKg: 44,
+      motherHeightCm: 165, fatherHeightCm: 179, bp: { available: true, predictedAdultHeightCm: 179.2, errorBoundHalfWidthCm: 5.2 },
+      rwt: { available: true, predictedAdultHeightCm: 177.8, errorBoundHalfWidthCm: 4.6 }, reinehr: { available: true, predictedAdultHeightCm: 176.5 },
+      mphCm: 178.5, growthVelocityCmPerYear: 5.1 };
+    const variants = [base, { ...base, currentHeightCm: 190 }, { ...base, sex: 'F', ageYears: 14, ageMonths: 168, boneAgeYears: 15,
+      postmenarcheal: true, menarcheAgeYears: 12, heightAtMenarcheCm: 145 }, { ...base, ageYears: 6, ageMonths: 72, boneAgeYears: 5 }];
+    return variants.map(input => {
+      const prediction = VildaGrowthCardC.computeFinalHeightPrediction(input), native = document.createElement('div');
+      native.innerHTML = VildaGrowthCardC.render(input); const before = native.innerHTML, host = document.createElement('div');
+      const view = VildaHomeGrowthViews.render({ tab: 'methods', native, panel: host, copy: node => node.cloneNode(true), data: { finalHeightPrediction: prediction, currentAgeMonths: input.ageMonths, boneAgeMonths: input.boneAgeYears * 12 } });
+      const rows = Array.from(host.querySelectorAll('.vgcc-row'));
+      const plotted = rows.filter(row => row.querySelector('.vhome-a2-range')).map(row => {
+        const name = row.querySelector('.vgcc-nm').textContent.replace(/[–—−]/g, '-').toLowerCase();
+        const method = prediction.methods.find(m => name.includes(m.label.replace(/[–—−]/g, '-').toLowerCase()));
+        return { clamped: method.clamped, hasBar: !!row.querySelector('.vhome-a2-error'), aria: row.querySelector('.vhome-a2-range').getAttribute('aria-label'),
+          publication: method.publikacjaCm ?? method.cm, dot: parseFloat(row.querySelector('.vhome-a2-range-dot').style.left),
+          barWidth: row.querySelector('.vhome-a2-error') ? parseFloat(row.querySelector('.vhome-a2-error').style.width) : null };
+      });
+      const selectors = ['.vgcc-hero', '.vgcc-nm', '.vgcc-val', '.vgcc-det-body', '.vgcc-hint'];
+      const parity = selectors.every(selector => JSON.stringify(Array.from(native.querySelectorAll(selector), n => n.textContent)) === JSON.stringify(Array.from(host.querySelectorAll(selector), n => n.textContent)));
+      view.dispose(); return { plotted, parity, unchanged: before === native.innerHTML, clamped: prediction.methods.some(m => m.clamped), excluded: prediction.methods.some(m => m.excluded) };
+    });
+  });
+  expect(results.some(result => result.clamped)).toBe(true);
+  expect(results.every(result => result.parity && result.unchanged)).toBe(true);
+  for (const result of results) for (const range of result.plotted) {
+    expect(range.aria).toContain(range.publication.toLocaleString('pl-PL', { maximumFractionDigits: 1 }));
+    if (range.clamped) expect(range.hasBar).toBe(false);
+    expect(range.dot).toBeGreaterThanOrEqual(0); expect(range.dot).toBeLessThanOrEqual(100);
+    if (range.barWidth != null) { expect(range.barWidth).toBeGreaterThan(0); expect(range.barWidth).toBeLessThanOrEqual(100); }
+  }
 });

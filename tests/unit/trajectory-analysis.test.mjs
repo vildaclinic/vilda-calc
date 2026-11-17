@@ -1049,6 +1049,24 @@ describe('panel trajektorii w karcie zaawansowanej (buildCardPanelHtml, hybryda)
     expect(vta.buildCardPanelHtml(null)).toBe('');
   });
 
+  it('A2 exports the exact native model only in the opt-in renderer, without account or patient context', () => {
+    const ordinary = makeVta(T), preview = makeVta(T, { __VILDA_HOME_WORKSPACE_PREVIEW__: true });
+    const model = mkModel(ordinary); model.context = { account: 'private-account', patientId: 'private-patient' };
+    const before = JSON.stringify(model);
+    const plain = ordinary.buildCardPanelHtml(model), flagged = preview.buildCardPanelHtml(model);
+    const match = flagged.match(/ data-vhome-trajectory="([^"]*)"/);
+    expect(match).toBeTruthy();
+    const unescape = value => value.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+    const metadata = JSON.parse(unescape(match[1]));
+    expect(metadata.metrics).toEqual(model.metrics); expect(metadata.velocity).toEqual(model.velocity);
+    expect(metadata.points).toEqual(model.points.map(({ ageMonths, ageYears, height, weight, bmi, isCurrent }) => JSON.parse(JSON.stringify({ ageMonths, ageYears, height, weight, bmi, isCurrent }))));
+    expect(metadata).not.toHaveProperty('context'); expect(match[1]).not.toContain('private-');
+    expect(flagged.replace(match[0], '')).toBe(plain); expect(plain).not.toContain('data-vhome-trajectory');
+    expect(JSON.stringify(model)).toBe(before);
+    model.source = '" onmouseover="fictional';
+    expect(preview.buildCardPanelHtml(model)).not.toContain(' onmouseover="fictional');
+  });
+
   it('respektuje zapamiętane zwinięcie z localStorage (wspólny klucz z Kartą pacjenta)', () => {
     const store = { vildaTrajectoryPanelCollapsed: '1' };
     const vta = makeVta(T, {

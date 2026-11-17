@@ -270,6 +270,17 @@
     narrative.append(copy, copyReason);
     body.appendChild(narrative);
 
+    if (w.VildaHomeGrowth && typeof w.VildaHomeGrowth.openCharts === 'function') {
+      var charts = element(doc, 'section', 'vilda-patient-documents-narrative');
+      charts.appendChild(element(doc, 'h3', '', 'Siatki centylowe'));
+      var openCharts = button(doc, 'Generuj siatki', 'data-patient-documents-charts');
+      listen(record, openCharts, 'click', function () {
+        if (!current(record)) return;
+        close(record, false); w.VildaHomeGrowth.openCharts();
+      });
+      charts.appendChild(openCharts); body.appendChild(charts);
+    }
+
     var pdf = element(doc, 'section', 'vilda-patient-documents-pdf');
     var pdfTitle = element(doc, 'h3', '', 'Raporty PDF');
     pdfTitle.id = 'patientDocumentsPdfTitle';

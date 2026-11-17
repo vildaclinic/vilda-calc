@@ -1504,8 +1504,8 @@
   "sha256": "a392d978cea2fc9ee92bd758a376cb0eb17f34365244972fb0fb3f5ceb84d4a9"
  },
  "vilda_gh_punkt_z_wiersza.js": {
-  "v": 3,
-  "sha256": "768665ad0cc92d7a8720dd72e17ccfe66d3d4fa62794ddc836ef2e185ff88a29"
+  "v": 4,
+  "sha256": "8c74c8c0439f6d7f85bf65a633bd16332b2ca5f882724fa8b883eb2b6d2caf5e"
  },
  "vilda_gh_punkty.js": {
   "v": 6,
@@ -1560,8 +1560,20 @@
   "sha256": "3cc184cdcc8237c79f70c19c70862649de1ffe2acf680bb877629ca2f8c1483b"
  },
  "vilda_home_growth.js": {
+  "v": 2,
+  "sha256": "54321573d3ab52598d8ee4202984971e64ff34a7b03de91449e31875a47b7aa9"
+ },
+ "vilda_home_growth_charts.js": {
   "v": 1,
-  "sha256": "6d0df3dc71085daabb8630b222308a4c75c9a06806f55bfdec15449b23e1c2c1"
+  "sha256": "68a21421d6be2907231dc12821f5d47dcd035da6e3bdda06c09c444e69da298e"
+ },
+ "vilda_home_growth_views.css": {
+  "v": 1,
+  "sha256": "b80c855490edc5138652f67de2945be34b9af2d8ed9ba34a6c89526337246d2e"
+ },
+ "vilda_home_growth_views.js": {
+  "v": 1,
+  "sha256": "eeaa6c8de66b30b2562a5fe85cfb48cccbc8111a4ac5d8b03a2e9ecd977265f7"
  },
  "vilda_home_perinatal.js": {
   "v": 1,
@@ -1784,8 +1796,8 @@
   "sha256": "585daa31f5ad25bbdffbee7c23e34b01a8062961d33fdeee7dc8898c85cd9cc8"
  },
  "vilda_patient_documents.js": {
-  "v": 4,
-  "sha256": "41837318409c50b95afe6322a94763d065bd096ccdcf68c1992f967ebd35930c"
+  "v": 5,
+  "sha256": "4e56bdbbed2aa708ddfbb362c392eb0a293e160f91d847abaf41267aea520f30"
  },
  "vilda_patient_identity_protocol.js": {
   "v": 1,
@@ -2068,8 +2080,8 @@
   "sha256": "872eda8f28b9c101af73ddecb52ad605d15678a0d1e168745be89ef558fb470e"
  },
  "vilda_trajectory_analysis.js": {
-  "v": 45,
-  "sha256": "3c712cc363dc47875ad99750c3418cb92ac087bd6c079aeb9ba837d0b1cf400b"
+  "v": 46,
+  "sha256": "0ab4bc39531e1d137567c26c836278e3fa42f436d22151a8de8818ce431dbc92"
  },
  "vilda_tw2_prediction.js": {
   "v": 4,
