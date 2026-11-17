@@ -226,9 +226,11 @@
   function renderRows() {
     var host = byId('vhomeGrowthRows'); host.replaceChildren();
     var table = el('table', 'vhome-growth-table'), head = el('thead'), header = el('tr'), body = el('tbody');
+    var columns = el('colgroup');
+    ['vhome-growth-col-age', '', '', '', 'vhome-growth-col-actions'].forEach(function (cls) { columns.appendChild(el('col', cls)); });
     ['Wiek · lata / mies.', 'Wzrost · cm', 'Masa · kg', 'Wiek kostny · lata', 'Akcje'].forEach(function (text) {
       var th = el('th', '', text); th.scope = 'col'; header.appendChild(th);
-    }); head.appendChild(header); table.append(head, body); host.appendChild(table);
+    }); head.appendChild(header); table.append(columns, head, body); host.appendChild(table);
     if (w.VildaGhPunktZWiersza) w.VildaGhPunktZWiersza.odswiez();
     // Display newest first; retain the canonical array and node order for Apply.
     var ordered = draft.rows.slice().sort(function (a, b) {
@@ -238,12 +240,20 @@
     ordered.forEach(function (row) {
       var node = el('tr', 'vhome-growth-history-row'); node.dataset.growthRow = row.key;
       node.dataset.growthSourceIndex = String(draft.rows.indexOf(row));
-      var ageCell = el('td', 'vhome-growth-age'), agePair = el('div', 'vhome-growth-age-pair'); ageCell.appendChild(agePair); node.appendChild(ageCell);
+      var ageCell = el('td', 'vhome-growth-age'), agePair = el('div', 'vhome-growth-age-pair');
+      ageCell.append(el('span', 'vhome-growth-history-title', 'Wiek'), agePair); node.appendChild(ageCell);
       historyFields.forEach(function (entry, index) {
         var original = row.node ? row.node.querySelector(entry[0]) : draft.template.querySelector(entry[0]);
         var cell = index < 2 ? agePair : el('td'); if (index >= 2) node.appendChild(cell);
         var label = inputCopy(original, entry[1], cell, row.values[index], function (next) { row.values[index] = next; }, row.protected);
         label.classList.add('vhome-growth-history-label');
+        // Every row carries its own visible field names and units. The two age
+        // controls share the title above their pair, but keep distinct units.
+        label.firstChild.remove();
+        var caption = el('span', 'vhome-growth-history-caption');
+        if (index >= 2) caption.appendChild(el('span', 'vhome-growth-history-title', entry[1].split(' · ')[0]));
+        caption.appendChild(el('small', 'vhome-growth-history-unit', index === 1 ? 'miesiące' : entry[1].split(' · ')[1]));
+        label.prepend(caption);
         var control = label.querySelector('input'); control.setAttribute('data-growth-history-field', String(index));
         inputInitials.set(control, row.node ? original.value : index === 1 ? '0' : '');
       });
@@ -264,6 +274,8 @@
       cell.appendChild(line); tools.appendChild(cell); body.appendChild(tools);
     });
     byId('vhomeGrowthRowsEmpty').hidden = draft.rows.length > 0; table.hidden = !draft.rows.length;
+    var count = byId('vhomeGrowthHistoryCount');
+    if (count) count.textContent = 'Wcześniejsze pomiary: ' + draft.rows.length;
   }
   function fold(title, entries, parent) {
     var details = el('details', 'vhome-growth-fold'), summary = el('summary', '', title), grid = el('div', 'vhome-growth-fields');
@@ -275,7 +287,12 @@
     family.classList.add('vhome-growth-family'); fields.slice(0, 3).forEach(function (entry) { dataField(entry, familyGrid); });
     var history = section('Historyczne pomiary', panel); history.classList.add('vhome-growth-history');
     var add = el('button', 'vhome-growth-secondary vhome-growth-add', '+ Dodaj pomiar'); add.type = 'button'; add.dataset.growthAdd = '';
-    var heading = history.querySelector('h3'), top = el('div', 'vhome-growth-history-heading'); heading.replaceWith(top); top.append(heading, add);
+    var heading = history.querySelector('h3'), top = el('div', 'vhome-growth-history-heading'), title = el('div', 'vhome-growth-history-heading-title');
+    var symbol = el('span', 'vhome-growth-history-symbol'), icon = d.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    icon.setAttribute('viewBox', '0 0 24 24'); icon.setAttribute('aria-hidden', 'true');
+    var path = d.createElementNS('http://www.w3.org/2000/svg', 'path'); path.setAttribute('d', 'M5 3h14v18H5zM9 7h6M9 11h6M9 15h6'); icon.appendChild(path); symbol.appendChild(icon);
+    var count = el('p', 'vhome-growth-history-count'); count.id = 'vhomeGrowthHistoryCount';
+    heading.replaceWith(top); title.append(heading, count); var label = el('div', 'vhome-growth-history-heading-label'); label.append(symbol, title); top.append(label, add);
     history.appendChild(el('p', 'vhome-growth-current-measurement', 'Bieżący pomiar: ' + value('height') + ' cm · ' + value('weight') + ' kg · z formularza głównego'));
     var list = el('div', 'vhome-growth-table-wrap'); list.id = 'vhomeGrowthRows'; history.appendChild(list);
     var empty = el('p', 'vhome-growth-empty', 'Brak wcześniejszych pomiarów.'); empty.id = 'vhomeGrowthRowsEmpty'; history.appendChild(empty);

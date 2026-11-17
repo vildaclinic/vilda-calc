@@ -393,3 +393,74 @@ test('home A2: forecast graphics preserve native published values, clamps, exclu
     if (range.barWidth != null) { expect(range.barWidth).toBeGreaterThan(0); expect(range.barWidth).toBeLessThanOrEqual(100); }
   }
 });
+
+test('home A2: long native trajectory stays compact and every historical measurement keeps visible field labels', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  const { frame } = await setup(page);
+  const dialog = await show(frame);
+  const rows = dialog.locator('.vhome-growth-history-row');
+  await expect(rows).toHaveCount(4);
+  async function expectLabeledMeasurements() {
+    for (const row of await rows.all()) {
+      for (const title of ['Wiek', 'Wzrost', 'Masa', 'Wiek kostny']) {
+        await expect(row.locator('.vhome-growth-history-title').filter({ hasText: new RegExp('^' + title + '$') })).toBeVisible();
+      }
+      for (const [index, unit] of ['lata', 'miesiące', 'cm', 'kg', 'lata'].entries()) {
+        const control = row.locator(`[data-growth-history-field="${index}"]`);
+        await expect(control).toHaveAccessibleName(/\S/);
+        const label = control.locator('..');
+        await expect(label.locator('.vhome-growth-history-unit')).toHaveText(unit);
+        await expect(label.locator('.vhome-growth-history-caption')).toBeVisible();
+      }
+    }
+    await expect(dialog.locator('#vhomeGrowthRowsEmpty')).toBeHidden();
+  }
+  await expectLabeledMeasurements();
+  const firstMeasurement = rows.first(), removeBox = await firstMeasurement.getByRole('button', { name: 'Usuń pomiar', exact: true }).boundingBox();
+  const inputBoxes = await firstMeasurement.locator('input').evaluateAll(inputs => inputs.map(input => ({ top: input.getBoundingClientRect().top, width: input.getBoundingClientRect().width })));
+  expect(Math.max(...inputBoxes.map(box => box.top)) - Math.min(...inputBoxes.map(box => box.top))).toBeLessThan(2);
+  expect(removeBox.width).toBeLessThan(inputBoxes[2].width);
+  await expect(dialog.locator('.vhome-growth-history')).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+  const native = frame.locator('#advResults .adv-growth-result-block--trajectory');
+  // This real native result contains phase/segment prose: the summary must not
+  // grow in proportion to it, while the complete result remains available.
+  expect(await native.locator('.vtap-seg').count()).toBeGreaterThan(0);
+  const parts = await native.locator('.vtap-cards > .vtap-card:not(.vtap-hvc)').evaluateAll(cards => cards.map(card => {
+    const value = card.querySelector('.big').cloneNode(true); value.querySelector('.d')?.remove();
+    return { title: card.querySelector('.nm').textContent, value: value.textContent,
+      raw: card.querySelector('.sub').textContent.split(' · SDS ')[0],
+      delta: card.querySelector('.big .d')?.textContent ?? null, verdict: card.querySelector('.vdt')?.textContent ?? null };
+  }));
+  await dialog.getByRole('tab', { name: 'Analiza', exact: true }).click();
+  const summaries = dialog.locator('.vhome-a2-metrics > .vhome-a2-metric-card');
+  await expect(summaries).toHaveCount(3);
+  await expect(summaries.locator('.vtap-seg')).toHaveCount(0);
+  for (const [index, expected] of parts.entries()) {
+    const card = summaries.nth(index);
+    await expect(card.locator('.nm')).toHaveText(expected.title);
+    await expect(card.locator('.big')).toHaveText(expected.value);
+    await expect(card.locator('.sub')).toHaveText(expected.raw);
+    if (expected.delta != null) await expect(card.locator('.vhome-a2-metric-delta')).toHaveText(expected.delta);
+    if (expected.verdict != null) await expect(card.locator('.vdt')).toHaveText(expected.verdict);
+    await expect(card).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+  }
+  await expect(dialog.locator('.vhome-a2-plot')).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+  expect(await dialog.locator('.adv-growth-result-block--trajectory').textContent()).toBe(await native.textContent());
+  const plot = dialog.locator('.vhome-a2-plot'), stack = dialog.locator('.vhome-a2-metrics');
+  await expect(dialog.locator('.vhome-a2-chart svg')).toBeVisible();
+  const plotBox = await plot.boundingBox(), stackBox = await stack.boundingBox(), chartBox = await dialog.locator('.vhome-a2-chart svg').boundingBox();
+  expect(plotBox.x + plotBox.width).toBeLessThan(stackBox.x);
+  expect(Math.abs(plotBox.y - stackBox.y)).toBeLessThan(2);
+  // Three summaries fit beside a single chart, rather than creating a tall
+  // column of the full native phase narratives and a mostly empty plot panel.
+  expect(stackBox.height).toBeLessThan(chartBox.height * 3);
+  for (const width of [390, 320]) {
+    await page.setViewportSize({ width, height: 844 });
+    await dialog.getByRole('tab', { name: 'Dane i pomiary', exact: true }).click();
+    await expectLabeledMeasurements();
+    for (const tab of ['Dane i pomiary', 'Analiza']) {
+      await dialog.getByRole('tab', { name: tab, exact: true }).click();
+      expect(await dialog.locator('.vhome-dialog-body').evaluate(node => node.scrollWidth <= node.clientWidth + 1)).toBe(true);
+    }
+  }
+});
