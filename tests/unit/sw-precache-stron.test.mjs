@@ -359,7 +359,7 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
     // The home UI files join the existing verified transport. Their own
     // cache keys remain required; the single archive keeps the 600-request cap.
     expect(ZASOBY_WIZYT.size).toBe(11);
-    for (const resource of ['/vilda_home_workspace.js?v=5', '/vilda_home_workspace.css?v=6', '/vilda_home_growth_views.js?v=4', '/vilda_home_growth_views.css?v=5', '/vilda_home_growth_charts.js?v=1']) {
+    for (const resource of ['/vilda_home_workspace.js?v=5', '/vilda_home_workspace.css?v=6', '/vilda_home_growth_views.js?v=5', '/vilda_home_growth_views.css?v=6', '/vilda_home_growth_charts.js?v=1']) {
       expect(ZASOBY_WIZYT.has(resource)).toBe(true);
       expect(wpisy.has(resource)).toBe(true);
     }

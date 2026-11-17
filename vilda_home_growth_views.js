@@ -54,6 +54,33 @@
       var title = svgNode('title'); title.textContent = point.getAttribute('aria-label'); point.appendChild(title); svg.appendChild(point);
     }); host.appendChild(svg);
   }
+  function compactMetricCard(options, source) {
+    // Rearrange native presentation only. The complete card, including SDS
+    // endpoints, treatment phases and segment warnings, remains in the native
+    // details below. Never choose or shorten the clinical verdict here.
+    var card = options.copy(source), top = card.querySelector('.top'), value = card.querySelector('.big');
+    if (!top || !value) return card;
+    var delta = value.querySelector('.d'), raw = card.querySelector('.sub'), verdict = card.querySelector('.vdt');
+    if (delta) delta.remove();
+    Array.from(value.childNodes).forEach(function (node) {
+      if (node.nodeType !== 3 || !/c$/.test(node.textContent)) return;
+      var suffix = el('small', '', 'c');
+      node.replaceWith(d.createTextNode(node.textContent.slice(0, -1)), suffix);
+    });
+    if (raw) {
+      // This separator is emitted by patientMetricCardHtml. Preserve its exact
+      // raw values/units; the full native SDS line stays in the details.
+      var separator = raw.textContent.indexOf(' · SDS ');
+      if (separator !== -1) raw.textContent = raw.textContent.slice(0, separator);
+    }
+    var bottom = el('div', 'vhome-a2-metric-bottom');
+    if (delta) { delta.classList.add('vhome-a2-metric-delta'); bottom.appendChild(delta); }
+    if (verdict) bottom.appendChild(verdict);
+    card.classList.add('vhome-a2-metric-card'); card.replaceChildren(top, value);
+    if (raw) card.appendChild(raw);
+    if (bottom.children.length) card.appendChild(bottom);
+    return card;
+  }
   function analysis(options) {
     var source = options.native.querySelector('.adv-growth-result-block--trajectory'), model = source && trajectoryModel(source);
     if (!model || !Array.isArray(model.metrics)) return false;
@@ -81,7 +108,7 @@
     }); plotHeader.appendChild(switches); plot.append(plotHeader, host, el('p', 'vhome-a2-caption', 'Wyróżniony punkt: bieżąca wizyta. Wykres wartości nie jest siatką centylową.'));
     var cards = el('div', 'vhome-a2-metrics');
     var nativeCards = Array.from(source.querySelectorAll('.vtap-cards > .vtap-card'));
-    nativeCards.filter(function (node) { return !node.classList.contains('vtap-hvc'); }).forEach(function (node) { cards.appendChild(options.copy(node)); });
+    nativeCards.filter(function (node) { return !node.classList.contains('vtap-hvc'); }).forEach(function (node) { cards.appendChild(compactMetricCard(options, node)); });
     dashboard.append(plot, cards); root.appendChild(dashboard);
     var context = el('section', 'vhome-a2-panel vhome-a2-context'); context.appendChild(el('h4', '', 'Tempo i potencjał rodzinny'));
     var slots = el('div', 'vhome-a2-context-slots');
