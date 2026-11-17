@@ -245,6 +245,11 @@ async function withGh(frame) {
   }, ghStart);
   await expect(frame.locator('#advMeasurements [data-gh-id]')).toHaveCount(1);
   await expect(frame.locator('#advMeasurements .gh-z-wiersza-btn').first()).toBeEnabled();
+  // The real bridge also imports this fixture into the intake history on its
+  // queued update. Settle that actor before taking the pure-cancel baseline.
+  await expect.poll(() => frame.evaluate(() => VildaDataImportExport.captureCurrentUserDataReadOnly().intake.history
+    .some(row => row.ageMonths === 72 && row.height === 115 && row.weight === 20))).toBe(true);
+  await frame.evaluate(() => { vildaPersistFlushNow({ force: true }); VildaDataImportExport.saveMainSessionNow(); });
 }
 async function ghAction(dialog) {
   const key = await dialog.locator('[data-growth-source-index="0"]').getAttribute('data-growth-row');
