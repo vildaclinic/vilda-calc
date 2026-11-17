@@ -41399,7 +41399,7 @@ trwałych wizyt z `40d742d3` odtwarza stan sprzed tej zmiany — `docs/ZRODLA_AR
 - **Reguła scalania bez zmian.** Przy notatce zmienionej na dwóch urządzeniach, zanim się zsynchronizowały, zostaje
   dalej wersja z wyższym `rev` (przy równym — nowsza data); „wygrywa późniejsza zmiana” to E3-PR0b2b. Gdy scalanie
   zacznie podnosić `rev` bez zmiany treści, wołający bez `baseUpdatedAtISO` dostaną fałszywe konflikty — wejście do
-  E3-PR0b2b. *(2026-11-17, E3-PR0b2b, P-NOTATKA-POZNIEJSZA: reguła zmieniona — zostaje późniejsza zmiana treści, a oznaczenie według chwili zmiany oznaczenia; scalanie podnosi `rev` bez zmiany treści, więc wołający bez `baseUpdatedAtISO` (dawna umowa po `rev`) mogą dostać fałszywy konflikt, kierunek bezpieczny.)*
+  E3-PR0b2b. *(2026-11-17, E3-PR0b2b, P-NOTATKA-POZNIEJSZA: reguła zmieniona — zostaje późniejsza zmiana treści, a oznaczenie według chwili zmiany oznaczenia; scalanie podnosi `rev` bez zmiany treści, więc wołający bez `baseUpdatedAtISO` (dawna umowa po `rev`) mogą dostać fałszywy konflikt, kierunek bezpieczny (z kodu).)*
 - **Plany opieki na `rev`.** Wpisy planu (krok, termin w bieżącej relacji) zapisują się dalej po `rev`
   (`CareMvpLegacyWrite`, `CareMvpReminderOutcome`, `updateLinked`); edytor wysyła `baseUpdatedAtISO` także dla wpisu
   planu, ale decyduje tam `rev` — równoległa zmiana treści wpisu planu przy równym `rev` nie zatrzymuje zapisu (jak
@@ -41550,7 +41550,7 @@ w pamięci, dane fikcyjne).
   wersja w sejfie (odczyt po zdarzeniu) różni się od otwartej w którymkolwiek polu odczytu poza technicznymi; przy
   błędzie odczytu albo braku notatki — jak dotąd. Teksty bez zmian.
 - **Ft** oddaje cztery pola chwil tylko wtedy, gdy są ważne (z kotwicą), więc idą też w ładunku, deltach, zdarzeniach
-  i kopii konta. `CareMvpHydrateSyncRecord` pomija je przy porównaniu, a `CareMvpWriteCalendarOriginal` zdejmuje je
+  i kopii konta. `CareMvpHydrateSyncRecord` pomija je przy porównaniu (z kodu), a `CareMvpWriteCalendarOriginal` zdejmuje je
   z poprzedniego rekordu przed `Object.assign`.
 - **Bez zmian:** nagrobek notatki (`Bnp_stan` po chwili zapisu), reguła karty notatki (E2-PR3c4), listy pacjentów,
   szablony strony „Notatki”, wpisy planów opieki (dawna reguła, bez stempla i bez pól, oznaczenie „lepkie” jak
@@ -41573,7 +41573,7 @@ w pamięci, dane fikcyjne).
 | telefon „nie zgłosił się”, laptop później zmienia treść | „nie zgłosił się” nie zostaje na obu (test czerwony na bazie) | nowa treść i „nie zgłosił się” na obu |
 | A „dawka 50”, B później „dawka 75 od jutra”, A jeszcze później „wykonane”; edytor A otwarty po kliknięciu | treść A (test czerwony na bazie) | rekord złączony: „dawka 75” i „wykonane”, chwila zapisu +1 ms; zapis z edytora A — konflikt, dawka B zostaje |
 | tablet „wykonane”, laptop bez połączenia później „Przełóż” na 2027-01-15 | tablet: nowy termin i „wykonane”, laptop: otwarta (rozjazd) | termin 2027-01-15, sprawa otwarta na obu (przypomnienie wraca) |
-| telefon przekłada, laptop później „wykonane” | inaczej (test czerwony na bazie) | nowy termin i „wykonane” na obu |
+| telefon przekłada, laptop później „wykonane” | na bazie oznaczenie się rozjeżdża (kontrola czerwona na bazie) | nowy termin i „wykonane” na obu |
 | telefon wykonuje przypomnienie z kolejnym krokiem, laptop bez połączenia później zmienia treść, potem ponowne wykonanie na laptopie | „wykonane” z telefonu nie zostaje przy późniejszej treści laptopa (test czerwony na bazie) | późniejsza treść laptopa i „wykonane”; ponowne wykonanie — odmowa, jeden kolejny krok wszędzie |
 | B i C poprawiają notatkę przed „Usuń pacjenta” na A (C później, h treści B większe) | po ratunku wszędzie poprawka B (większe h) | wszędzie poprawka C |
 | dwa ratunki z tym samym h i różną treścią | pełny remis, każde urządzenie swoją | wszędzie późniejsza poprawka |
@@ -41726,7 +41726,7 @@ aplikacji — fikstury 221 i 276) na adapterze pamięciowym, kilka urządzeń, p
   okna), `przypomnienia-b22.spec.mjs` — 1 nowy (dotknięcie techniczne w czasie otwartego formularza wykonania: zapis
   bez fałszywego konfliktu), `kopia-konta-dane-konta.spec.mjs` — podtytuł.
 
-**Czerwone na bazie** (kod `9fc26c71` z testami tego PR, 11 plików, przebieg 2026-11-17): 110 z 800 —
+**Czerwone na bazie** (kod `9fc26c71` z testami tego PR, 11 plików, przebieg 2026-11-17): 110 z 800 (780 uruchamianych, 20 pominiętych w pliku A ≡ B) —
 `notatka-pozniejsza` 55 ze 106, `notatka-pozniejsza-zapis` 26 z 50, `notatki-za-karta` 13 (P4, CZ9, S8b, MS2, SP1g,
 MS4 ×2, W14a, W14b, W11, dwa strażniki źródła stanów nagrobków i podglądu, zwycięzcy dla nagrobków),
 `kopia-konta-dane-konta` 8 (T10b, T32, podtytuł, cztery przypadki podglądu = wyniku, dotknięcie techniczne tutaj),
@@ -41829,25 +41829,26 @@ zmienił — przy następnej pracy w `vilda-source` weź nową bazę z `runtime/
   dokument bez zmiany `rev`, więc zmiany nie widać; zapis samego `rev` daje odwrotnie fałszywe „dokument się zmienił”.
   (2) Fragment natywny ma własny warunek `wins` i woła `Bnp_zwyciezcy` bez kontekstu tutejszego planu — dokument-dowód
   bez kontekstu planu może zostać przeniesiony do innej karty bez odmowy (plan pokaże wtedy „Dokument jest
-  niedostępny. Sprawdź dokumentację pacjenta.”). Oba przypięte testem (`notatka-pozniejsza-zapis.test.mjs`, „luki
-  modułu planów z etapami”); fragmentu natywnego ten PR nie zmienia.
+  niedostępny. Sprawdź dokumentację pacjenta.”; z kodu). (1) przypina test działania (`notatka-pozniejsza-zapis.test.mjs`,
+  „luki modułu planów z etapami”); (2) — tylko strażnik źródła: literał warunku `wins` we fragmencie natywnym (ten sam
+  plik, „sejf: notatki według nowej reguły…”), bez testu działania. Fragmentu natywnego ten PR nie zmienia.
 - **Powiązanie wyniku z planem** (`linkedRev`, `linkedUpdatedAtISO`) — po zapisie samego `rev` fałszywe „Wynik zmienił
-  się. Wybierz go ponownie” (kierunek bezpieczny).
+  się. Wybierz go ponownie” (kierunek bezpieczny; z kodu).
 - **Wołający bez `baseNote`** (Terminarz, moduły terapii, punkt serii Klirensu, ekran z pamięci podręcznej starszej
   wersji) — fałszywy konflikt po ratunku i imporcie jak dotąd; ekran, który przerobi pole odczytu, też dostaje konflikt
   (bezpiecznie).
 - **Zmiana karty regułą E2-PR3c4** nie zmienia chwili zapisu, więc zapis z edytora otwartego wcześniej może ją cofnąć
-  (jak dotąd). Wariant „konflikt przy każdej różnicy, także przy tej samej chwili zapisu” odłożony.
+  (jak dotąd; z kodu). Wariant „konflikt przy każdej różnicy, także przy tej samej chwili zapisu” odłożony.
 - **Przycisk stanu z kartą odczytaną przed blokadą** — gdy w tym oknie (milisekundy) scalenie zmieni kartę notatki,
   zapis przywraca poprzednią kartę (jak na bazie) i liczy się przy tym jako zmiana treści. Poprawka wymaga zmiany
-  znaczenia karty w ładunku bez treści na wszystkich drogach (także plany opieki) — osobny PR.
+  znaczenia karty w ładunku bez treści na wszystkich drogach (także plany opieki) — osobny PR (z kodu).
 - **Chwila zapisu złączenia zależy od drogi dostaw** przy kilku złączeniach (milisekundy); treść i oznaczenie są te
   same, a przy następnej wymianie wyrównuje się bez dalszych zapisów (test „zbieżność chwili zapisu złączeń”).
 - **Terminarz „Edytuj osobę”**: wpis bez tytułu, któremu inne urządzenie w tym czasie nadało tytuł, dostaje tytuł =
-  nazwa osoby (jak dotąd).
+  nazwa osoby (jak dotąd; z kodu).
 - **Starsza aplikacja** — „Flota mieszana” wyżej.
 - **Nagrobek przy wersji z przyszłości**: równoległa poprawka wygrywa z równoległym usunięciem (skutek do odbioru);
-  wskrzeszenie wobec nagrobka, którego wskrzeszające urządzenie nie zna, przegrywa jak dotąd.
+  wskrzeszenie wobec nagrobka, którego wskrzeszające urządzenie nie zna, przegrywa jak dotąd (z kodu).
 
 **Wymagania dla następnych PR.** E3-PR0c: zapis samego `rev` i zapis samego oznaczenia nie są echem do odesłania
 (klasa „sam rev notatki”); `pnote` w ładunku — pomiar odsyłania na regule po E3-PR0b2b. Moduł planów z etapami
