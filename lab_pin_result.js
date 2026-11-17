@@ -254,10 +254,39 @@ function PpParse(raw) {
   if (PpFinite(f) && f >= 0 && out.indexOf(f) < 0) out.push(f);
   return out;
 }
+/* Liczby dla tekstu wyniku tego badania. Pierwsza to liczba, jaką widzi przelicznik (parseNumber: zakres, AMH,
+ * pasek); dla testosteronu całkowitego liczba oceny (Lh2CaptureAssessment: sourceValue dokładnego pomiaru, także
+ * z „=”, np. „=0,38”). Dalsze (parseFloat, np. 1 z „1 200”) liczą się tylko dla notatki zapisanej z tego tekstu. */
+function PpNums(raw, testKey, unitSym) {
+  var nums = PpParse(raw), tt = a.VildaLabTestosterone, text = String(raw == null ? "" : raw).trim();
+  if (testKey === "testosterone_total" && tt && typeof tt.parseMeasurement === "function") {
+    try {
+      var m = tt.parseMeasurement(text, unitSym);
+      if (m && m.status === "valid" && m.isExact === true && PpFinite(m.sourceValue) && m.sourceValue >= 0
+        && (m.sourceUnit == null || m.sourceUnit === unitSym)) {
+        var at = nums.indexOf(m.sourceValue);
+        if (at !== 0) { if (at > 0) nums.splice(at, 1); nums.unshift(m.sourceValue); }
+      }
+    } catch (_) { /* tylko PpParse */ }
+  }
+  return nums;
+}
 function PpSame(note, key) {
   var lab = PpLab(note);
-  return !!lab && String(lab.testKey || "") === key.testKey && PpNormUnit(lab.unit) === key.unit
-    && PpFinite(lab.valueNum) && key.nums.indexOf(lab.valueNum) >= 0;
+  if (!lab || String(lab.testKey || "") !== key.testKey || PpNormUnit(lab.unit) !== key.unit || !PpFinite(lab.valueNum)) return false;
+  var at = key.nums.indexOf(lab.valueNum);
+  return at === 0 || (at > 0 && PpRawIs(lab, key.raw));
+}
+/* Notatka niesie wynik formularza: ta sama liczba (PpSame) albo — dla wyniku bez liczby — ten sam tekst. */
+function PpHolds(note, form) {
+  var lab = PpLab(note);
+  if (!lab || String(lab.testKey || "") !== form.testKey || PpNormUnit(lab.unit) !== form.unit) return false;
+  return PpFinite(lab.valueNum) ? PpSame(note, form) : !form.nums.length && PpRawIs(lab, form.raw);
+}
+/* Wynik bez liczby (np. „<0,1”) zapisany przypięciem: labResult.value to tekst formularza, sam albo z jednostką i przeliczeniem. */
+function PpRawIs(lab, raw) {
+  var value = String(lab && lab.value != null ? lab.value : "").trim(), text = String(raw == null ? "" : raw).trim();
+  return !!text && (value === text || value.indexOf(text + " ") === 0);
 }
 function PpOwner(note, pid) { return !!note && (note.patientId == null || String(note.patientId) === pid); }
 function PpStamp(note) { return String(note && (note.updatedAtISO || note.createdAtISO) || ""); }
@@ -272,12 +301,13 @@ function PpStamp(note) { return String(note && (note.updatedAtISO || note.create
 function PpResolve(notes, form, last, proposedISO) {
   if (!form || !form.testKey || !Array.isArray(notes)) return null;
   if (last && last.pid === form.pid && last.testKey === form.testKey && last.unit === form.unit
-    && (PpFinite(last.valueNum) ? form.nums.indexOf(last.valueNum) >= 0 : last.raw === form.raw)) {
+    && (PpFinite(last.valueNum) ? form.nums[0] === last.valueNum || last.raw === form.raw && form.nums.indexOf(last.valueNum) >= 0
+      : last.raw === form.raw)) {
     for (var i = 0; i < notes.length; i++) {
       var own = notes[i], lab = PpLab(own);
       // Notatka nadal jest w karcie i nadal niesie ten wynik (edycja w karcie albo usunięcie zdejmuje stan).
       if (own && own.id === last.noteId && lab && PpOwner(own, form.pid) && String(lab.testKey || "") === last.testKey
-        && PpNormUnit(lab.unit) === last.unit && (PpFinite(last.valueNum) ? lab.valueNum === last.valueNum : !PpFinite(lab.valueNum)))
+        && PpNormUnit(lab.unit) === last.unit && (PpFinite(last.valueNum) ? lab.valueNum === last.valueNum : !PpFinite(lab.valueNum) && PpRawIs(lab, last.raw)))
         return { noteId: own.id, dateISO: PpDate(own), source: "session" };
     }
   }
@@ -296,7 +326,9 @@ function PpResolve(notes, form, last, proposedISO) {
 function PpDuplicates(notes, key, dateISO) {
   var out = [];
   if (!Array.isArray(notes) || !key || !key.testKey || !PpFinite(key.valueNum)) return out;
-  var match = { testKey: key.testKey, unit: key.unit, nums: [key.valueNum] };
+  // Liczba zapisu inna niż liczba przelicznika (parseFloat z „1 200”) — duplikat tylko notatki z tego samego tekstu.
+  var exact = key.raw == null || PpNums(key.raw, key.testKey, key.unitSym)[0] === key.valueNum;
+  var match = { testKey: key.testKey, unit: key.unit, raw: key.raw, nums: exact ? [key.valueNum] : [NaN, key.valueNum] };
   for (var i = 0; i < notes.length; i++) {
     var note = notes[i];
     if (note && PpOwner(note, key.pid) && PpSame(note, match) && (dateISO == null || PpDate(note) === dateISO)) out.push(note);
@@ -306,7 +338,7 @@ function PpDuplicates(notes, key, dateISO) {
 function PpForm() {
   var t = L(), pid = E();
   if (!t || !pid || !t.testKey) return null;
-  return { pid: String(pid), testKey: t.testKey, unit: PpNormUnit(t.unitSym), raw: t.raw, nums: PpParse(t.raw), test: t.test, unitSym: t.unitSym };
+  return { pid: String(pid), testKey: t.testKey, unit: PpNormUnit(t.unitSym), raw: t.raw, nums: PpNums(t.raw, t.testKey, t.unitSym), test: t.test, unitSym: t.unitSym };
 }
 function PpName(test) { var name = String(test || "").split("(")[0].trim(); return name || String(test || ""); }
 function PpSchedule() { clearTimeout(PpState.timer); PpState.timer = setTimeout(PpRefresh, 150); }
@@ -411,8 +443,10 @@ function PpCreated(note) {
 function PpDialog(t, pid, box) {
   var date = u("labPinDate"), save = u("labPinSave");
   if (!t || !date || !save || !box || !date.parentNode) return;
-  var key = { pid: String(pid), testKey: String(t.testKey || ""), unit: PpNormUnit(t.unitSym), valueNum: t.valueNum };
-  var cur = PpState.current, pinned = cur && cur.patientId === key.pid && cur.testKey === key.testKey ? cur : null;
+  var key = { pid: String(pid), testKey: String(t.testKey || ""), unit: PpNormUnit(t.unitSym), valueNum: t.valueNum, raw: t.raw, unitSym: t.unitSym };
+  // Stan przycisku liczony 150 ms po zmianie formularza: dotyczy tego okna tylko przy tej samej wartości i jednostce.
+  var cur = PpState.current, pinned = cur && cur.patientId === key.pid && cur.testKey === key.testKey
+    && String(cur.raw) === String(t.raw) && PpNormUnit(cur.unit) === key.unit ? cur : null;
   var warn = l.createElement("div"), title = l.createElement("strong"), text = l.createElement("span"), err = l.createElement("p");
   warn.id = "labPinDuplicate";
   warn.className = "lab-pin-duplicate";
@@ -452,9 +486,18 @@ function PpDialogSync() {
   if (u("labPinSave") !== st.save) { PpState.dialog = null; return; }
   if (st.save.textContent === PP_SAVING_TEXT) return;
   var dateISO = /^\d{4}-\d{2}-\d{2}$/.test(st.date.value) ? st.date.value : D();
-  var same = st.notes ? PpDuplicates(st.notes, st.key, dateISO) : [], ref = null;
-  if (st.pinned && st.notes) for (var i = 0; i < st.notes.length; i++) if (st.notes[i] && st.notes[i].id === st.pinned.noteId) ref = st.notes[i];
-  ref = ref || same[0] || null;
+  var same = st.notes ? PpDuplicates(st.notes, st.key, dateISO) : [], pinNote = null;
+  if (st.pinned && st.notes) {
+    var form = { testKey: st.key.testKey, unit: st.key.unit, raw: st.t.raw, nums: PpNums(st.t.raw, st.key.testKey, st.t.unitSym) };
+    for (var i = 0; i < st.notes.length; i++) {
+      var n = st.notes[i];
+      if (n && n.id === st.pinned.noteId && PpOwner(n, st.key.pid) && PpHolds(n, form)) pinNote = n;
+    }
+    // Świeży odczyt karty: przypięta notatka zniknęła albo niesie inny wynik — ostrzeżenie już nie z przycisku.
+    if (!pinNote) st.pinned = null;
+  }
+  // Przy blokadzie okno nazywa notatkę, która blokuje (tę z wybraną datą badania).
+  var ref = same.length ? (pinNote && same.indexOf(pinNote) >= 0 ? pinNote : same[0]) : pinNote;
   var show = !!(st.pinned || same.length), blocked = same.length > 0;
   var refDate = ref ? PpDate(ref) : st.pinned ? st.pinned.dateISO : null;
   st.warn.hidden = !show;
@@ -480,7 +523,9 @@ async function PpBlocked(r, p) {
   var lab = p && p.labResult;
   PpState.expect = null;
   if (!lab || !p.patientId) return null;
-  var key = { pid: String(p.patientId), testKey: String(lab.testKey || ""), unit: PpNormUnit(lab.unit), valueNum: lab.valueNum };
+  var dlg = PpState.dialog;
+  var key = { pid: String(p.patientId), testKey: String(lab.testKey || ""), unit: PpNormUnit(lab.unit), valueNum: lab.valueNum,
+    raw: dlg && dlg.t ? dlg.t.raw : null, unitSym: lab.unit };
   if (key.testKey && PpFinite(key.valueNum) && r && typeof r.listPatientNotesForPatient === "function") {
     var notes = await Promise.resolve().then(function () { return r.listPatientNotesForPatient(key.pid); }).catch(function () { return null; });
     if (PpDuplicates(notes, key, PpDate(p)).length) {
@@ -491,8 +536,7 @@ async function PpBlocked(r, p) {
       return PP_BLOCK_TEXT;
     }
   }
-  var d = PpState.dialog;
-  PpState.expect = { pid: key.pid, testKey: key.testKey, unit: key.unit, valueNum: PpFinite(key.valueNum) ? key.valueNum : null, raw: d && d.t ? d.t.raw : null };
+  PpState.expect = { pid: key.pid, testKey: key.testKey, unit: key.unit, valueNum: PpFinite(key.valueNum) ? key.valueNum : null, raw: key.raw };
   return null;
 }
 function PpStart() {
@@ -519,7 +563,7 @@ function PpStart() {
   setTimeout(PpSchedule, 1200);
 }
 a.VildaLabPinResult.pinned = function () { return PpState.current ? Object.assign({}, PpState.current) : null; };
-a.VildaLabPinResult._internal = Object.freeze({ resolve: PpResolve, duplicates: PpDuplicates, parse: PpParse, normalizeUnit: PpNormUnit });
+a.VildaLabPinResult._internal = Object.freeze({ resolve: PpResolve, duplicates: PpDuplicates, parse: PpParse, nums: PpNums, normalizeUnit: PpNormUnit });
 if (l.readyState === "loading") l.addEventListener("DOMContentLoaded", PpStart);
 else PpStart();
 l.readyState==="loading"?l.addEventListener("DOMContentLoaded",I):I()})(window);

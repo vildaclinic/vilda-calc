@@ -115,6 +115,12 @@ test('TSH 0,38: „✓ Przypięto”, pasek bez drugiego punktu, blokada tej sam
   await expect(podpis).toHaveText('TSH 0,38 mIU/L jest już w karcie · badanie 10.06.26');
   await expect(pasek.locator('button.lab-strip-chip.is-pinned')).toHaveAttribute('data-note-id', druga.id);
   expect(await tekst(pasek.locator('.lab-strip-diff'))).toBe('ostatni zapisany wynik: 17.06.26 (dziś) · 0,38 mIU/L · wynik z formularza jest w karcie z datą 10.06.26');
+  // Okno z proponowaną dzisiejszą datą: blokuje notatka z 17.06.26 i to ją nazywa ostrzeżenie (nie ostatnie przypięcie z 10.06.26).
+  await przycisk.click();
+  await expect(page.locator('#labPinSave')).toBeDisabled();
+  await expect(page.locator('#labPinDuplicate .lab-pin-duplicate-text')).toHaveText(/^TSH 0,38 mIU\/L · badanie 17\.06\.26 · /);
+  await page.locator('#labPinCancel').click();
+  await expect(page.locator('#labPinOverlay')).toHaveCount(0);
 
   // Po odświeżeniu (pole wartości jest puste) ten sam wynik wpisany ponownie — stan z karty: notatka z dzisiejszą datą.
   await page.reload({ waitUntil: 'load' });

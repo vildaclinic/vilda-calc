@@ -26,6 +26,8 @@
   var NBSP = ' ';
   var SVG_NS = 'http://www.w3.org/2000/svg';
   var PATIENT_KEY = 'vildaCurrentPatientId';
+  // Sygnał sejfu o zmianie notatki w innej ramce albo karcie przeglądarki (bez identyfikatora notatki).
+  var NOTE_PING_KEY = 'vilda-note-changed-ping-v1';
   var STRIP_ID = 'labHistoryStrip';
   var CHART_ID = 'labHistoryStripChart';
   var MAX_CHIPS = 5;
@@ -484,18 +486,24 @@
       row.setAttribute('role', 'group');
       row.setAttribute('aria-label', 'Zapisane wyniki');
       var entries = series.entries;
-      var hiddenCount = state.expanded ? 0 : Math.max(0, entries.length - MAX_CHIPS);
-      var shown = entries.slice(hiddenCount);
-      // Przypięty wynik widoczny także wtedy, gdy jego data jest wśród wcześniejszych (schowanych).
-      if (pinned && entries.indexOf(pinned.entry) < hiddenCount) { shown.unshift(pinned.entry); hiddenCount -= 1; }
-      if (state.expanded ? entries.length > MAX_CHIPS : hiddenCount > 0) {
-        var more = add(row, 'button', 'lab-strip-chip lab-strip-more',
-          state.expanded ? 'zwiń wcześniejsze' : '+' + hiddenCount + ' ' + plural(hiddenCount, ['wcześniejszy', 'wcześniejsze', 'wcześniejszych']));
-        more.type = 'button';
-        more.setAttribute('aria-expanded', state.expanded ? 'true' : 'false');
-        more.setAttribute('data-focus', 'more');
-        more.addEventListener('click', function () { state.expanded = !state.expanded; run(); });
-      }
+      var overflow = Math.max(0, entries.length - MAX_CHIPS);
+      var pinAt = pinned ? entries.indexOf(pinned.entry) : -1;
+      var pinnedHidden = pinAt >= 0 && pinAt < overflow;
+      var shown = entries.slice(state.expanded ? 0 : overflow);
+      // Przypięty wynik widoczny także wtedy, gdy jego data jest wśród wcześniejszych (schowanych). Schowane starsze
+      // od niego mają przycisk przed nim, schowane późniejsze — zaraz za nim, więc daty w wierszu idą po kolei.
+      var before = state.expanded ? 0 : overflow, after = 0;
+      if (!state.expanded && pinnedHidden) { shown.unshift(pinned.entry); before = pinAt; after = overflow - pinAt - 1; }
+      var more = function (count) {
+        var button = add(row, 'button', 'lab-strip-chip lab-strip-more',
+          state.expanded ? 'zwiń wcześniejsze' : '+' + count + ' ' + plural(count, ['wcześniejszy', 'wcześniejsze', 'wcześniejszych']));
+        button.type = 'button';
+        button.setAttribute('aria-expanded', state.expanded ? 'true' : 'false');
+        button.setAttribute('data-focus', 'more');
+        button.addEventListener('click', function () { state.expanded = !state.expanded; run(); });
+      };
+      // Rozwinięte: „zwiń” tylko wtedy, gdy zwinięcie coś schowa.
+      if (state.expanded ? overflow - (pinnedHidden ? 1 : 0) > 0 : before > 0) more(before);
       shown.forEach(function (entry) {
         var isPinned = !!pinned && entry === pinned.entry;
         var chip = add(row, 'button', isPinned ? 'lab-strip-chip is-pinned' : 'lab-strip-chip');
@@ -516,6 +524,7 @@
         var value = add(chip, 'span', 'lab-strip-chip-v', bareValue(entry, series.unit));
         if (entry.flag) flag(value, entry.flag);
         chip.addEventListener('click', function () { select(entry.noteId); });
+        if (isPinned && after > 0) more(after);
       });
       // Wynik formularza, który jest już w karcie, nie ma osobnego chipu „teraz” (LAB-HISTORIA 6.38).
       if (!pinned && preview && (preview.value != null || preview.raw)) {
@@ -591,8 +600,14 @@
       var base = 'ostatni zapisany wynik: ' + formatDate(last.dateISO) + (days ? ' (' + days + ')' : '') + ' · ' + (last.display || last.raw);
       if (pinned) {
         line.textContent = base;
-        add(line, 'span', 'lab-strip-muted', pinned.noteId === last.noteId ? ' · to wynik z formularza, już w karcie'
-          : ' · wynik z formularza jest w karcie z datą ' + (pinned.dateISO ? formatDate(pinned.dateISO) : 'bez daty'));
+        var entry = pinned.entry, when;
+        if (pinned.noteId === last.noteId) when = ' · to wynik z formularza, już w karcie';
+        else if (entry && entry.dateSource !== 'badanie' && entry.dateSource !== 'kontrola') {
+          // Notatka bez daty badania (np. data usunięta w karcie): data wpisu albo terminu nie udaje daty badania.
+          when = ' · wynik z formularza jest w karcie' + (entry.dateISO && DATE_SOURCE[entry.dateSource]
+            ? ' (' + DATE_SOURCE[entry.dateSource] + ' ' + formatDate(entry.dateISO) + ', brak daty badania)' : ', bez daty badania');
+        } else when = ' · wynik z formularza jest w karcie z datą ' + (pinned.dateISO ? formatDate(pinned.dateISO) : 'bez daty');
+        add(line, 'span', 'lab-strip-muted', when);
         return null;
       }
       if (!preview || preview.value == null) { line.textContent = base; return null; }
@@ -676,12 +691,13 @@
         if (x - half < layout.left) { anchor = 'start'; x -= 4; } else if (x + half > rightEdge) { anchor = 'end'; x += 4; }
         valueNodes.unshift(svgNode(svg, 'text', { x: x, y: point.y - (point === pinnedPoint ? 14 : 10), 'text-anchor': anchor }, 'lab-strip-val', valueText(point)));
       });
-      var axisNodes = [];
+      var axisNodes = [], pinNode = null;
       if (pinnedPoint) {
-        // Podpis pod datą punktu (jak „bez daty” pod „teraz”), przy brzegu wyrównany do punktu.
+        // Podpis pod datą punktu, przy brzegu wyrównany do punktu. Niżej niż „bez daty” pod „teraz” i najmniej ważny
+        // przy usuwaniu nakładających się podpisów: przy wysokim kroju (Segoe UI) nie zabiera daty punktu.
         var pinHalf = PINNED_MARK.length * (layout.narrow ? 5.6 : 6.2) / 2, pinX = pinnedPoint.x, pinAnchor = 'middle';
         if (pinX - pinHalf < layout.left) { pinAnchor = 'start'; pinX -= 4; } else if (pinX + pinHalf > layout.right) { pinAnchor = 'end'; pinX += 4; }
-        axisNodes.push(svgNode(svg, 'text', { x: pinX, y: layout.axisY + 31, 'text-anchor': pinAnchor }, 'lab-strip-pin-sub', PINNED_MARK));
+        pinNode = svgNode(svg, 'text', { x: pinX, y: layout.axisY + 33, 'text-anchor': pinAnchor }, 'lab-strip-pin-sub', PINNED_MARK);
       }
       if (layout.now) {
         var now = layout.now;
@@ -703,7 +719,7 @@
         var rank = function (d) { return d.index === lastIndex ? 0 : d.index === 0 ? 1 : 2; };
         return rank(a) - rank(b) || b.index - a.index;
       });
-      pruneOverlaps(axisNodes.concat(dates.map(function (d) { return d.node; })));
+      pruneOverlaps(axisNodes.concat(dates.map(function (d) { return d.node; }), pinNode ? [pinNode] : []));
       pruneOverlaps(valueNodes);
     }
 
@@ -751,12 +767,26 @@
       });
       var big = el('labResultBig');
       if (big && typeof w.MutationObserver === 'function') new w.MutationObserver(schedule).observe(big, { childList: true, characterData: true, subtree: true });
-      ['vilda:session-changed', 'vilda:auth-loaded', 'vilda:patient-loaded', 'vilda:lab-substance-changed', 'vilda:lab-pin-state-changed'].forEach(function (type) {
+      ['vilda:session-changed', 'vilda:auth-loaded', 'vilda:patient-loaded', 'vilda:lab-substance-changed'].forEach(function (type) {
         doc.addEventListener(type, schedule);
       });
+      // Notatki zmienione w innej ramce albo karcie przeglądarki: sejf daje tam tylko sygnał bez notatki (onPatientNoteChanged
+      // działa w ramce zapisu), więc seria czytana od nowa — tak jak w module przypięcia, żeby przycisk i pasek mówiły to samo.
+      var staleNotes = function () { state.noteGen += 1; schedule(); };
+      doc.addEventListener('vilda:lab-pin-state-changed', staleNotes);
+      doc.addEventListener('visibilitychange', function () { if (doc.visibilityState === 'visible') staleNotes(); });
+      try {
+        if (typeof w.BroadcastChannel === 'function') new w.BroadcastChannel('vilda-notes').addEventListener('message', function (event) {
+          if (!event || !event.data || event.data.type === 'note-changed') staleNotes();
+        });
+      } catch (_) { /* bez kanału: zostaje focus i storage */ }
       if (typeof w.addEventListener === 'function') {
         w.addEventListener('vilda:user-state-cleared', forget);
-        w.addEventListener('storage', function (event) { if (!event || event.key == null || event.key === PATIENT_KEY) schedule(); });
+        w.addEventListener('storage', function (event) {
+          if (event && event.key === NOTE_PING_KEY) staleNotes();
+          else if (!event || event.key == null || event.key === PATIENT_KEY) schedule();
+        });
+        w.addEventListener('focus', staleNotes);
         w.addEventListener('resize', function () {
           if (strip && strip.classList.contains('is-on') && chartLayout([], null, hostWidth()).width !== state.lastWidth) schedule();
         });

@@ -539,6 +539,8 @@
     }
     /* P-PRZYPIETY-WYNIK (LAB-HISTORIA 6.38): przycisk przypięcia, gdy wynik formularza jest już w karcie, i ostrzeżenie
        okna przypięcia. Bazowy wygląd przycisku daje <style id="labPinStyle"> z lab_pin_result.js, stąd wyższa specyficzność. */
+    /* Cel dotyku co najmniej 44 px w obu stanach (makieta 6.38); zawartość przycisku przeglądarka centruje w pionie. */
+    #labPinRow button#labPinResultBtn { min-height: 44px; }
     #labPinRow button#labPinResultBtn.is-pinned {
       background: #fff !important;
       color: #4341B5 !important;

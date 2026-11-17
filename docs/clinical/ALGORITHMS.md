@@ -698,7 +698,9 @@ uwaga o możliwej innej metodzie.
   strzałki (K26), zapis i norma w podpowiedzi; data badania albo „wpis/termin
   DD.MM.RR”, gdy wpis nie ma daty badania. Chip „teraz · niezapisany”
   z wartością formularza (tylko gdy przelicznik pokazuje wynik), osobno, bez
-  daty.
+  daty. *Zmienione w LAB-HISTORIA 6.38 (wpis niżej): gdy wynik formularza
+  jest już w karcie, chipu „teraz” nie ma, a chip tej notatki ma znacznik
+  „✓ z formularza”.*
 - Szczegóły po kliknięciu chipa lub punktu: data, wartość ze strzałką
   z zapisu, wiek wizyty (kotwica wpisu), „przeliczono z …”, zapisana ocena
   (`VildaLabAssessmentUI.renderAssessment`, widok skrócony, historyczny),
@@ -710,7 +712,12 @@ uwaga o możliwej innej metodzie.
   różnica tylko, gdy ostatni wynik jest dokładny i w tej samej jednostce;
   różne metody w kopertach → „— · różne metody oznaczenia”. Po zapisie tego
   samego wyniku (badanie, liczba, jednostka — niezależnie od daty) „teraz ·
-  już przypięty” i „ten wynik jest już przypięty (DATA)”.
+  już przypięty” i „ten wynik jest już przypięty (DATA)”. *Zmienione
+  w LAB-HISTORIA 6.38 (wpis niżej): pasek nie ma już własnej reguły
+  „niezależnie od daty”; stan „już w karcie” liczy moduł przypięcia
+  (`VildaLabPinResult.pinned()`), a linia kończy się „to wynik z formularza,
+  już w karcie” albo „wynik z formularza jest w karcie z datą DATA”, bez
+  różnicy.*
 - Wykres (lekki renderer SVG, decyzja 6.21): oś Y od zera z krokiem 1–2–2,5–5,
   punkty dokładne z datą badania na osi dat, wartość przy każdym punkcie
   (podpisy zachodzące — zostaje nowszy), przerywana kreska od punktu do osi,
@@ -718,7 +725,10 @@ uwaga o możliwej innej metodzie.
   wykresem, bez pasma norm i bez strzałek. Bieżący wynik w osobnym pasie
   „teraz / bez daty”, bez linii łączącej. Szerokość `viewBox` = szerokość
   karty (180–660), na wąskim ekranie najwyżej trzy daty na osi, prostokąty
-  podpisów bez nakładania. „Ukryj wykres” zwija wykres.
+  podpisów bez nakładania. „Ukryj wykres” zwija wykres. *Zmienione
+  w LAB-HISTORIA 6.38 (wpis niżej): wynik formularza, który jest już
+  w karcie, nie ma pasa „teraz” — to punkt jego notatki z obwódką i podpisem
+  „✓ z formularza”.*
 - „Badania w karcie →”: w powłoce `openPatientCardInStart(id, {activeTab:
   'lab'})` (łatka P-POWLOKA-KARTA-ZAKLADKA), poza powłoką
   `ensureAuthLoaded()` i `showPatientCard(id, null, null, {activeTab: 'lab'})`.
@@ -1699,6 +1709,148 @@ obliczeń (wartość, norma i ton w Badaniach; Notatki tylko liczą wyniki).
 Opis: `docs/LAB_HISTORIA_WYNIKOW_PLAN.md`, decyzja 6.37;
 `docs/clinical/KLIRENS_NOTES.md`; `docs/ZRODLA_ARTEFAKTOW.md`, „Łatka
 P-KLIRENS-NOTATKI”.
+
+### LAB-HISTORIA 6.38 — przypięty wynik w karcie i blokada duplikatu (P-PRZYPIETY-WYNIK; `lab_pin_result.js`, `lab_history_strip.js` 1.4.0, 2026-11-17)
+
+**Klasyfikacja: zmiana funkcjonalna, bez zmiany wyników i interpretacji.**
+Żadna norma, wzór, próg, jednostka ani reguła oceny się nie zmienia; wynik
+zapisuje się tak samo (ta sama notatka „wynik-badania” z oceną, zakresem
+i odniesieniem). Zmienia się to, co Jednostki lab. pokazują po przypięciu,
+i to, że okno przypięcia nie zapisze drugi raz tego samego wyniku z tą samą
+datą badania. Decyzja właściciela z 2026-11-17 po makiecie
+(https://claude.ai/artifact/2kAR79mQMnTuxbQ24u8x2e): „akceptuję rekomendacje
+1-3, wdrażaj i zrób draft PR”. Zastępuje regułę „już przypięty” paska z PR3
+(wpis wyżej).
+
+**Problem.** Po przypięciu pasek „Poprzednie wyniki pacjenta” rysował jeden
+pomiar dwa razy: nowy chip i punkt zapisanej notatki, a obok chip „teraz ·
+już przypięty” i pas „teraz” na wykresie z tą samą wartością. Przycisk
+„Przypnij do wizyty” się nie zmieniał — po zapisie był tylko komunikat
+„✓ Przypięto do karty: …” przez 2,4 s — więc drugie kliknięcie zapisywało
+identyczną notatkę (ten sam wynik, ta sama data badania).
+
+**Reguła.** Jedna reguła „wynik formularza jest już w karcie” dla przycisku,
+okna przypięcia i paska; liczy ją `lab_pin_result.js`
+(`VildaLabPinResult.pinned()`), pasek tylko ją czyta. Wynik formularza jest
+w karcie, gdy karta wczytanego pacjenta ma notatkę z tym samym badaniem
+(`labResult.testKey`), tą samą jednostką (po przycięciu, z jedną spacją,
+„µ” jako „μ”) i tą samą liczbą: `valueNum` równe liczbie przelicznika
+(`LabUnitConverter.parseNumber`; dla testosteronu całkowitego liczba
+dokładnego pomiaru z oceny, także zapisanego z „=”, np. „=0,38”). Liczba
+z `parseFloat` (z kropką zamiast przecinka), inna niż liczba przelicznika
+— np. 1 z „1 200” — liczy się tylko dla notatki zapisanej z tego samego
+tekstu wyniku. A przy tym:
+
+- **(a)** to notatka zapisana ostatnim przypięciem z tej strony — z dowolną
+  datą badania; wynik bez liczby (np. „<0,1”) porównywany jest wtedy
+  tekstem. Notatka musi nadal być w karcie i nieść ten wynik: usunięcie
+  albo zmiana wyniku w karcie zdejmuje stan; albo
+- **(b)** jej data badania to data, którą zaproponuje okno przypięcia —
+  w pojedynczym badaniu zawsze dzisiejsza. Tak stan wraca po odświeżeniu
+  strony i w innej karcie przeglądarki (decyzja 3). Przy kilku takich
+  notatkach liczy się najnowsza.
+- **Przycisk:** „✓ Przypięto” (biały z fioletową obwódką; podpowiedź „Ten
+  wynik jest już w karcie. Kliknij, aby przypiąć go ponownie jako osobne
+  badanie z inną datą.”), podpis wiersza „<badanie> <wartość> <jednostka>
+  jest już w karcie · badanie DD.MM.RR” (nazwa badania bez nawiasu).
+  W innym razie „Przypnij do wizyty” i „wynik trafi do karty pacjenta”.
+  Przycisk ma w obu stanach co najmniej 44 px wysokości (cel dotyku;
+  wcześniej ok. 36 px).
+- **Sama zmiana kontekstu** — faza cyklu, stadium Tannera, wiek, jednostka
+  docelowa przeliczenia — nie zmienia stanu: to ten sam pomiar (decyzja 1).
+  Zmiana wartości, jednostki wyniku, badania albo pacjenta liczy stan od
+  nowa.
+- **Okno przypięcia** (decyzja 2) pokazuje ostrzeżenie „Ten wynik jest już
+  w karcie” („<badanie> <wartość> <jednostka> · badanie DD.MM.RR · przypięty
+  dziś o HH:MM. Zapisz drugi raz tylko wtedy, gdy to osobne badanie z inną
+  datą.”), gdy przycisk był w stanie przypiętym albo karta ma ten wynik
+  z wybraną datą badania. **Ten sam wynik z tą samą datą badania:** pod datą
+  „Ten sam wynik z tą datą badania jest już w karcie. Zmień datę badania
+  albo anuluj.”, pole daty oznaczone jako błędne, zapis wyłączony. **Inna
+  data** — zapis jako osobne badanie. Przycisk zapisu mówi przy ostrzeżeniu
+  „Zapisz jako osobne badanie”, bez niego „Zapisz do karty”. Zmiana daty
+  sprawdza od nowa; okno nie ma nowych pól. Zapis tuż przed
+  `savePatientNote` czyta kartę jeszcze raz i odmawia tego samego wyniku
+  z tą samą datą (np. zapisanego w innej karcie po otwarciu okna). Przy
+  blokadzie ostrzeżenie nazywa notatkę z wybraną datą badania. Gdy świeży
+  odczyt karty w oknie nie ma już przypiętej notatki (usunięta albo
+  zmieniona gdzie indziej), ostrzeżenie z samego stanu przycisku znika.
+- **Pasek** (`VildaLabHistoryStrip` 1.4.0) przyjmuje stan tylko dla tego
+  pacjenta, badania, tekstu wartości i jednostki formularza i tylko wtedy,
+  gdy notatka jest wpisem serii. Wtedy nie ma separatora ani chipu „teraz”;
+  chip tej notatki jest wyróżniony („17.06.26 · ✓ z formularza”,
+  w podpowiedzi „wynik z formularza — już w karcie”) i widoczny także wtedy,
+  gdy jego data jest wśród schowanych pod „+N wcześniejsze” (N o jeden
+  mniej; schowane późniejsze od niego mają przycisk zaraz za nim, więc daty
+  w wierszu idą po kolei; „zwiń wcześniejsze” tylko wtedy, gdy zwinięcie
+  coś schowa). Linia porównania bez różnicy: „ostatni zapisany wynik: … · to
+  wynik z formularza, już w karcie”, a gdy przypięta notatka nie jest
+  ostatnim wynikiem serii — „… · wynik z formularza jest w karcie z datą
+  DD.MM.RR”; notatka bez daty badania — „… (data wpisu DD.MM.RR, brak daty
+  badania)”. Wykres bez pasa „teraz”: punkt notatki z obwódką, wartość nieco
+  wyżej, pod datą „✓ z formularza” (podpis najmniej ważny przy usuwaniu
+  nakładających się podpisów — nie zabiera daty punktu); opis wykresu dla
+  czytnika ekranu kończy się „wynik z formularza DD.MM.RR jest już
+  w karcie”. Bez modułu przypięcia pasek pokazuje „teraz · niezapisany”.
+
+**Ograniczenia.** Zapis pakietu badań (`vilda_lab_packages.js`) nie jest
+blokowany: pakiet zapisuje wyniki własną drogą. Wynik bez liczby
+(z operatorem albo tekstowy) nie jest nigdy blokowany; „✓ Przypięto” dostaje
+tylko po przypięciu z tej strony (reguła a). Okno z oczekującym wynikiem
+(6.35–6.36) nie zamknie go, gdy zapis jest zablokowany jako duplikat —
+oczekujący wynik trzeba wtedy zamknąć w Przypomnieniach („Wykonano”; zakładka
+„Badania” nie ma akcji zamknięcia bez wyniku). Zdarzenia notatek z innej
+ramki albo karty przeglądarki docierają tylko jako sygnał bez identyfikatora
+notatki, więc moduł przypięcia i pasek czytają kartę od nowa przy powrocie
+fokusu i widoczności strony, przy wiadomości kanału `BroadcastChannel`
+„vilda-notes” i przy zmianie klucza `storage` „vilda-note-changed-ping-v1”
+(pasek także przy zmianie stanu przypięcia), żeby przycisk i pasek mówiły
+to samo. Reguła (a) dotyczy tylko przypięć z tej
+strony: przypięcie w innej karcie przeglądarki z datą inną niż dzisiejsza
+nie zmienia tu stanu przycisku (okno i tak zablokuje ten wynik z tą datą).
+
+**Przypadki `wejście → wynik`** (fikcyjna pacjentka z historią TSH jak
+w PR3: 0,01 μIU/mL 14.01.26; 0,02, 0,05 i 0,12 mIU/L 25.02, 08.04
+i 02.06.26; zegar 17.06.26; pojedyncze badanie TSH w mIU/L):
+
+| Wejście | Wynik |
+|---|---|
+| 0,38, „Przypnij do wizyty”, data 17.06.26, „Zapisz do karty” | „✓ Przypięto”, „TSH 0,38 mIU/L jest już w karcie · badanie 17.06.26”; pasek: 5 wyników, chip „17.06.26 · ✓ z formularza” z „0,38↓”, bez chipu i pasa „teraz”; „ostatni zapisany wynik: 17.06.26 (dziś) · 0,38 mIU/L · to wynik z formularza, już w karcie”; na wykresie pięć punktów, jeden z obwódką i „✓ z formularza” |
+| zmiana jednostki docelowej przeliczenia | dalej „✓ Przypięto” |
+| wartość 0,5 | „Przypnij do wizyty”, „wynik trafi do karty pacjenta”; chip „teraz · niezapisany” i pas „teraz” na wykresie |
+| z powrotem 0,38 | znów „✓ Przypięto”, bez chipu „teraz” |
+| „✓ Przypięto” → okno z datą 17.06.26 | ostrzeżenie „Ten wynik jest już w karcie” („TSH 0,38 mIU/L · badanie 17.06.26 · przypięty dziś o HH:MM…”); pod datą „Ten sam wynik z tą datą badania jest już w karcie…”; „Zapisz jako osobne badanie” wyłączony |
+| data 10.06.26, „Zapisz jako osobne badanie” | druga notatka TSH 0,38 z 10.06.26; „✓ Przypięto” z „· badanie 10.06.26” (ostatnie przypięcie z tej strony); wyróżniony chip 10.06.26; „ostatni zapisany wynik: 17.06.26 (dziś) · 0,38 mIU/L · wynik z formularza jest w karcie z datą 10.06.26” |
+| odświeżenie strony, ponownie 0,38 | „✓ Przypięto” z karty: notatka z 17.06.26 (data, którą zaproponuje okno); w oknie zapis wyłączony; po „Anuluj” w karcie dalej dwie notatki 0,38 |
+| 0,12 (w karcie 0,12 z 02.06.26) | „Przypnij do wizyty”, „teraz · niezapisany”; okno bez ostrzeżenia, „Zapisz do karty” |
+| jak wyżej, w oknie data 02.06.26 | ostrzeżenie i blokada tej daty; data 17.06.26 — zapis możliwy, po nim „✓ Przypięto” |
+| LH „<0,1” IU/L przypięte z tej strony | „✓ Przypięto” (porównanie tekstem); okno ostrzega, ale zapisu nie blokuje |
+
+Testy na kodzie produkcyjnym: `tests/unit/lab-pin-pinned-state.test.mjs`
+(prawdziwy `lab_pin_result.js` na atrapie DOM i sejfu z prawdziwym
+konwerterem: `_internal.resolve` — przypięcie z tej strony z dowolną datą,
+wynik bez liczby tekstem, notatka usunięta albo zmieniona w karcie, reguła
+karty z datą proponowaną, najnowsza z kilku notatek, inny pacjent, „µ”
+i „μ”; `duplicates`, `parse`, `normalizeUnit`; `pinned()` i zdarzenie po
+odczycie karty, strona bez formularza nie czyta sejfu; kontrakt wywołań
+`PpDialog` i `PpBlocked` w części zminifikowanej i granice wycinków; zapis
+`A` z `PpBlocked` — odmowa bez `savePatientNote`, wynik bez liczby i błąd
+odczytu nie blokują), `tests/unit/lab-history-strip.test.mjs` (zaktualizowany:
+stan z atrapy `VildaLabPinResult` i zdarzenia — chip i punkt ze znacznikiem,
+bez „teraz”; spacje i „µ”; bez modułu albo z błędem w `pinned()` — „teraz ·
+niezapisany”; przypięty wpis wśród schowanych; przypięta notatka, która nie
+jest ostatnim wynikiem serii), e2e na prawdziwym sejfie z fikcyjną historią:
+`tests/e2e/lab-przypiety-wynik.spec.mjs` (przycisk, podpis, pasek i wykres,
+zmiana wartości, okno z blokadą, osobne badanie, stan po odświeżeniu, TSH
+0,12 z historii), `tests/e2e/lab-przypiety-wynik-mobile.spec.mjs` (telefon
+i 320 px: „✓ Przypięto” na całą szerokość, chip przypiętej notatki w całym
+rzędzie, okno duplikatu na ekranie), zaktualizowane
+`tests/e2e/lab-history-strip.spec.mjs` (po przypięciu chip ze znacznikiem
+zamiast „teraz · już przypięty”), `tests/e2e/lab-snapshot.spec.mjs`
+i `tests/e2e/lab-amh-reference-snapshot.spec.mjs` (drugie przypięcie tego
+samego wyniku z tą samą datą jest blokowane; sama zmiana wieku albo widoku
+wykresu nie zmienia pomiaru). Opis: `docs/LAB_HISTORIA_WYNIKOW_PLAN.md`,
+decyzja 6.38; `docs/ZRODLA_ARTEFAKTOW.md`, „Łatka P-PRZYPIETY-WYNIK”.
 
 ### LAB-PAKIETY PR1 — pakiet badań „Tarczyca” w przeliczniku jednostek (`vilda_lab_packages.js` 1.0.0, 2026-11-12)
 
