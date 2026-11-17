@@ -22985,7 +22985,8 @@ Przypadki `wejście → oczekiwany wynik`:
 **Ograniczenia.**
 - Komentarz bramki w `vilda_vault.js` (`Bob_bramka`) dalej opisuje flagę `'1'`; sam kod czyta włącznik synchronizacji,
   więc działa poprawnie. Komentarz do poprawy przy najbliższej zmianie sejfu (bez zmiany sejfu tutaj: bez przepinania
-  fragmentu sejfu).
+  fragmentu sejfu). *(2026-11-17, E3-PR0c, P-ZBIEZNOSC-ZDARZEN: komentarz poprawiony — włącznik dziennika domyślnie otwarty przy
+  „events” w health i pobieraniu stronami, flaga `vilda-event-log-v1` = `'0'` wyłącza dziennik na urządzeniu.)*
 - Bicie serca nadawcy, pierścień własnych zdarzeń i `appliedUpTo` nie są kasowane przy „Usuń konto” (identyfikatory
   i numery, bez treści); polityka prywatności mówi o tym wprost („po ręcznym wyczyszczeniu danych witryny”).
 - Strona otwarta samodzielnie (poza powłoką) zna „events” dopiero po health tej strony — przy pobieraniu na starcie
@@ -24761,6 +24762,8 @@ fragment natywny, haki, moduły i paczka bez zmian.
 - **E2-PR3c3, E2-PR3c4, E2-PR3c5.** Literały testu A ≡ B (p. 5, p. 6, lista zmian zachowania) i `kosz-po-kluczu`
   (`npret-kosz3-P`) — w postaci po tym PR.
 - **E3-PR0.** Echo zmian pochodnych scalania obejmuje też zmianę przyjętą tą regułą (bez nowego haka w etapie 2).
+  *(2026-11-17, E3-PR0c, P-ZBIEZNOSC-ZDARZEN: odsyłanie poprawionych wizyt obejmuje wersję pod kartą docelową „Scal pacjentów”, którą
+  zmieniło scalenie koperty starej karty — uśpione; wpis na końcu pliku.)*
 
 **Cofnięcie** = rewert PR (bez migracji: rekordy zapisane regułą to zwykłe rekordy wersji; rewert cofa też skróty
 kontroli granicy).
@@ -24867,7 +24870,9 @@ bazie (model jest w teście, haki sejfu te same).
   `oversize`); wpisy P-SYNC-SLAD liczbą.
 - **E2-PR5.** Licznik wierszy `oversize` w Ustawieniach obejmuje też takie koperty.
 - **E3-PR0.** Echo zmian pochodnych scalania (zbieżność bez pełnej wysyłki, także dla przypiętej wizyty na pozostałych
-  urządzeniach); R4n.
+  urządzeniach); R4n. *(2026-11-17, E3-PR0c, P-ZBIEZNOSC-ZDARZEN: wersje wizyt zapisane przez scalanie inaczej, niż przyszły (także
+  przypięta wizyta po retencji na drugim urządzeniu) — odsyłanie poprawionych wizyt, uśpione, wpis na końcu pliku;
+  wersje przeniesione pod kartę scaloną — E3-PR0f; R4n bez odsyłania — decyzja 2a z 2026-11-15.)*
 - **Etap 3.** Koniec pełnej wysyłki (decyzja 7) wymaga, żeby zdarzenie `ptomb` bez znanego celu albo wiersz `oversize`
   miały inny nośnik karty scalonej (punkt kontrolny).
 
@@ -25074,7 +25079,9 @@ Po scaleniu E2-PR3b warunek decyzji 10 („test właściciela po PR ze zmianami 
   dzielony na E2-PR3c1–E2-PR3c5 (decyzje z 2026-11-10): `ctx.pelny` bez zmian; K6 po pełnej wymianie, `npret-pin`
   i `npret-K` — wykonane w E2-PR3c1 (wpis wyżej); K6 w zdarzeniach — wykonane w E2-PR3c2 (wpis wyżej); R3-E1 i R3-E2 —
   wykonane w E2-PR3c3 (wpis wyżej).
-- **E3-PR0.** Echo zmian pochodnych scalania (pamięć par jako punkt wyjścia).
+- **E3-PR0.** Echo zmian pochodnych scalania (pamięć par jako punkt wyjścia). *(2026-11-17, E3-PR0c, P-ZBIEZNOSC-ZDARZEN: wersje wizyt —
+  bez pamięci par: sejf porównuje stan wersji z ładunku przed scaleniem i po nim; czwarta droga ze scalania do kolejki,
+  uśpiona; wpis na końcu pliku. Wpisy Kosza — E3-PR0d.)*
 - **Etap 3.** `partialSince` (odbiorca, znak w UI, lista w Ustawieniach, `pfull` ze scalania karty z `partialSince`).
 - Kolejne PR: nowe miejsce zapisu w scalaniu — emisja albo reguła „świadomie bez haka” (tabela wyżej) i przypadek
   w `sync-wskrzeszenie-calej-karty`; zmiana `vilda_vault.js` poza fragmentem natywnym — przeliczenie skrótów kontroli
@@ -25275,7 +25282,9 @@ i 4 e2e. Test A ≡ B (125) i test pokrycia (73) bez zmian, zielone.
   (wpis wyżej).
 - **E2-PR6.** Polityka prywatności, opisując bazę `vilda_sync_<userId>`, wymienia też znacznik przeglądu i pamięć par
   (identyfikatory encji i chwile, bez treści).
-- **E3-PR0.** Hak echa zmian pochodnych scalania (pamięć par jako punkt wyjścia); literał R2-E3.
+- **E3-PR0.** Hak echa zmian pochodnych scalania (pamięć par jako punkt wyjścia); literał R2-E3. *(2026-11-17, E3-PR0c, P-ZBIEZNOSC-ZDARZEN: odsyłanie
+  poprawionych wizyt bez pamięci par (porównanie stanu wersji przed scaleniem i po nim), uśpione; wiersz odsyłania
+  ma chwilę utworzenia z chwili dopisania, więc przegląd kolejki go nie dubluje; wpis na końcu pliku.)*
 - **Etap 3.** `rewind` cofa znacznik przeglądu i czyści pamięć par.
 - Kolejne PR: nowa chwila zegara w scaleniu — przypadek testu przeglądu (jak PG23); zmiana `vilda_vault.js` poza
   fragmentem natywnym — przeliczenie skrótów kontroli granicy; nowe miejsce zapisu — emisja w kroku albo reguła
@@ -27379,7 +27388,9 @@ przypadkach zastosowanie kończy się bez dalszych zapisów i bez klasyfikowania
 - **Odpowiedniki w dzisiejszym drenażu** (`Bdz_zastosuj`; podmiana w E2-PR4): `blokada` ↔ `locked`; `busy` ↔ `busy` i `session-changed`;
   `nieczytelne` ↔ `unreadable`; `blad` ↔ `apply-error`; `zmiana`/`ok` ↔ `applied`.
 - **Scalanie z chmury nie dopisuje do kolejki.** Kolejki jeszcze nie ma. Dwa wyjątki z decyzji 9 to haki E2-PR3b
-  (niżej; w kodzie od E2-PR3b, wpis wyżej).
+  (niżej; w kodzie od E2-PR3b, wpis wyżej). *(2026-11-17, E3-PR0c, P-ZBIEZNOSC-ZDARZEN: czwarta droga — odsyłanie poprawionych wizyt po
+  zastosowaniu koperty zdarzenia (`applyEncryptedEvent` = `Bem_zastosuj`), uśpione przełącznikiem odsyłania; wpis na
+  końcu pliku.)*
 
 **Zgodność ze starszą aplikacją.** Każda z 14 kopert przechodzi przez `mergeSyncPayload` starszego sejfu (wersja 221,
 fikstura testów) bez wyjątku. Stan jest taki jak po pełnym blobie dla tej encji (B13). Urządzenie bez aktualizacji
@@ -41077,6 +41088,10 @@ trwał w nim 200,8 s (przed scaleniem 161,9 s i 162,7 s, na bazie `4355e325` 127
   fakcie zapisu dałoby echo bez końca przez urządzenie 221). Reguła jest niezależna od źródła: nie odsyłać różnicy
   samych pól z `POLA_ZAWSZE`, których nie ma w encji ładunku, ani `h` przeliczonego z nich; `POLA_ZAWSZE` rośnie z każdą
   wersją, która zaczyna jakieś pole zapisywać zawsze (strażnik: pola zawsze obecne). Kanon 2a: bez R2, R4n i D7.
+  *(2026-11-17, E3-PR0c, P-ZBIEZNOSC-ZDARZEN: wykonane dla wersji wizyt — wpis na końcu pliku; zakres po decyzjach z 2026-11-17:
+  bez samego nagłówka karty (2A), notatki i ich nagrobki bez odsyłania, tylko pomiar (3A), tylko po pojedynczych
+  zmianach (4A), pełna karta z haka H1 i osobne odesłanie tej samej wersji mogą wyjść obie (5A); wpisy Kosza —
+  E3-PR0d.)*
 - **Rozbicie zakresu**: `snap` w ładunku → E3-PR0c (CI: 20 wierszy w profilu podstawowym; ręcznie 67 / 34 / 91), w
   tym rekord złożony i gwiazdka; `stomb` w ładunku i spoza ładunku (R4a, R4a′, R5, inne) → E3-PR0d (CI 4; ręcznie
   32 / 30 / 61); nagłówek karty w ładunku i spoza ładunku (34 i 1 w profilu pełnym) i `snap` spoza ładunku (z gwiazdką
@@ -41890,7 +41905,10 @@ zmienił — przy następnej pracy w `vilda-source` weź nową bazę z `runtime/
   wskrzeszenie wobec nagrobka, którego wskrzeszające urządzenie nie zna, przegrywa jak dotąd (z kodu).
 
 **Wymagania dla następnych PR.** E3-PR0c: zapis samego `rev` i zapis samego oznaczenia nie są echem do odesłania
-(klasa „sam rev notatki”); `pnote` w ładunku — pomiar odsyłania na regule po E3-PR0b2b. Moduł planów z etapami
+(klasa „sam rev notatki”); `pnote` w ładunku — pomiar odsyłania na regule po E3-PR0b2b. *(2026-11-17, E3-PR0c, P-ZBIEZNOSC-ZDARZEN: notatek
+E3-PR0c nie odsyła — decyzja 3A z 2026-11-17, także w E3-PR0d tylko pomiar; „samo oznaczenie” licznik liczy jako
+`pnote|w ładunku|inne`, a klasa „sam rev notatki” obejmuje tylko sam `rev` — przypadek
+w `tests/unit/licznik-odsylania.test.mjs`.)* Moduł planów z etapami
 (repozytorium źródeł, przed E3-PR0c): chwila zapisu dowodu kroku i reguła notatek we fragmencie natywnym. Przyciski
 stanu: karta w ładunku bez treści (osobny PR). Do rozważenia: siatka bezpieczeństwa dla przegranej równoległej treści.
 
@@ -41921,3 +41939,471 @@ podtytuł „Scal kopię konta” (`uo`) i komentarz dopisku podsumowania; `vild
 `clcr_result_details.js` 20 → 21, `vilda_terminarz.js` 197 → 198; wstrzykujące: `vilda_chrome.js` 297 → 298,
 `vilda_session_bridge.js` 213 → 214, `clcr_record_resources.js` 29 → 30; SW 1.1.543 → 1.1.544 — `npm run
 podbij-wersje`; baza `origin/audyt` `3c1fc748` (po vildaclinic/vilda-calc#978). Bez nowego pliku w pamięci offline.
+
+## Dziennik zdarzeń: odsyłanie poprawionych wizyt po zastosowaniu zmiany z innego urządzenia — uśpione (P-ZBIEZNOSC-ZDARZEN, E3-PR0c, SW 1.1.546, `vilda_vault.js` 280, 2026-11-17)
+
+**Zmiana kliniczna: NIE (uśpiona).** Wzory, progi, jednostki, interpretacje, reguły scalania (`Le`), format kopii,
+serwer i `vilda_sync.js` bez zmian. Dla użytkownika dziś nic się nie zmienia: odsyłanie włącza tylko przełącznik
+odsyłania (klucz `localStorage` `vilda-event-echo-v1` dokładnie `'1'` albo pole okna `VILDA_EVENT_ECHO === true`),
+którego żaden ekran aplikacji nie ustawia. Przy wyłączonym przełączniku zastosowanie zmiany z innego urządzenia
+(`applyEncryptedEvent`) czyta przełącznik (jedno pole okna i jeden klucz) i idzie dokładnie jak dotąd: ta sama
+obietnica, te same zapisy, te same wiersze kolejki. Po włączeniu przełącznika zmienia się wynik synchronizacji na
+innych urządzeniach. Urządzenie, które scaliło zmianę z innego urządzenia i zapisało inny rekord wizyty, niż przyszedł
+(np. poprawkę masy z jednego urządzenia i gwiazdkę z drugiego), samo wyśle ten rekord pozostałym — dziś niesie go
+tylko pełna wysyłka. W przykładzie niżej na drugim urządzeniu zamiast 20 kg zostaje 17,2 kg (to cel). To rozszerzenie
+decyzji 9 z 2026-10-29 (czwarta droga ze scalania do kolejki) — do akceptacji właściciela przy PR (niżej).
+
+**Skąd.** Plan `docs/SYNC_PRZYROSTOWA_PLAN.md`, rozdział 5, „Etap 3”, tabela „Podział E3-PR0”, wiersz 3. Decyzje
+z 2026-11-15: 1a (odsyłanie uśpione osobną flagą do PR włączającego), 2a (bez odsyłania samego `rev`, R4n i D7).
+Decyzje z 2026-11-17 — odpowiedź „1A, 2A, 3A, 4A, 5A, 6A” na sześć pytań projektu E3-PR0c; zapis w planie,
+rozdział 6, blok „Decyzje z 2026-11-17 (E3-PR0c, pytania 1–6 projektu)”, który dopisuje PR poprawki modułu planów
+z etapami (wiersz 2c):
+- 1A — najpierw poprawka modułu planów z etapami (wiersz 2c); E3-PR0c przygotowany równolegle, PR po jej scaleniu;
+- 2A — bez osobnego odsyłania samego opisu karty;
+- 3A — notatki pacjenta i ich nagrobki bez odsyłania (ani w E3-PR0c, ani w E3-PR0d), tylko pomiar;
+- 4A — odsyłanie tylko po pojedynczych zmianach (`applyEncryptedEvent`), nie po pełnej kopii ani delcie;
+- 5A — dopuszczona podwójna wysyłka wizyty (pełna karta z haka H1 i osobne odesłanie), bez pomijania przy H1;
+- 6A — różnica „tylko lista usuniętych pacjentów” odłożona do E3-PR0e.
+
+Wejście z E3-PR0b (wpis P-ZBIEZNOSC-ZDARZEN, E3-PR0b, „Wejście do kolejnych PR”: reguła echa, rozbicie zakresu, bez
+podwójnego wysyłania) i z E3-PR0b2b (wpis P-NOTATKA-POZNIEJSZA, „Wymagania dla następnych PR”). Sprawy, których
+projekt i decyzje nie rozstrzygały, rozstrzygnięto wariantem najbezpieczniejszym dla danych; są niżej, w punkcie „Do
+akceptacji właściciela przy PR”.
+
+### E3-PR0c
+
+**Co było** (`audyt` `4389d34a`; prawdziwy sejf, urządzenia A, B, C jednego fikcyjnego konta, test wejściowy A ≡ B
+niżej). Gdy urządzenie scala zmianę z innego urządzenia, czasem zapisuje inny rekord, niż przyszedł: rekord złożony
+(`Bgw_scal` — treść wizyty z jednego urządzenia, gwiazdka z drugiego). Taki rekord pochodny nie trafiał do kolejki.
+Scalanie z chmury dopisywało do kolejki tylko przez trzy haki: H1 (pełna karta po przegranym nagrobku), H2 (ratunek
+notatki D-21) i hak karty notatki (E2-PR3c4). Pozostałe urządzenia dostawały rekord pochodny dopiero pełną wysyłką
+(`PUT /blob`), którą etap 3 wyłączy. Zwykle drugie urządzenie składa ten sam rekord samo, bo reguły scalania są
+symetryczne (treść i gwiazdka liczone osobno). Nie zawsze:
+- karta „Testowy Jan1”, wizyta v z masą 20 kg. B bez sieci poprawia masę na 17,2 kg; A, nie wiedząc o poprawce, daje
+  v gwiazdkę. Dostawa B → A: A składa 17,2 kg z gwiazdką (`rev` 2, rekord złożony). Potem na B porządkowanie starych
+  wizyt (retencja) usuwa v wpisem bez treści, bo B nie zna gwiazdki. Do B dochodzi gwiazdka od A — koperta zbudowana
+  przed scaleniem, z 20 kg. Wersja z gwiazdką przeżywa porządkowanie, więc B przyjmuje 20 kg z gwiazdką;
+- po samych zdarzeniach: A i C — 17,2 kg z gwiazdką, B — 20 kg z gwiazdką (W1 A–B z różnicą). Poprawka B zginęła
+  na B i wracała dopiero po pełnej wymianie.
+
+**Reguła.** Po zastosowaniu pojedynczej zmiany z innego urządzenia (koperta zdarzenia) urządzenie dopisuje do kolejki
+każdą wersję wizyty z ładunku, którą scalanie zapisało inaczej, niż przyszła — z wyjątkiem samego `rev`, samej
+tożsamości wizyty dopisanej przez bieżącą wersję i wersji przeniesionej w tym scaleniu pod inną kartę.
+- **Kandydaci** — identyfikatory wersji z ładunku: `patients[].snapshots[].snapshotId` i
+  `snapshotTombstones[].snapshotId`, bez powtórzeń (`Bev_kandydaciEcha`). Każdy kandydat jest odczytany przed
+  scaleniem i po nim po samym `snapshotId`, pod dowolną kartą (`Bev_stanEcha`: strzeżony adapter `Bev_start(null)`,
+  sprawdzenie sesji po każdym odczycie, bez odszyfrowania i bez zapisów). Ładunek bez wersji (notatka, lista,
+  preferencja, hasło) — bez odczytów.
+- **Wersja idzie do kolejki, gdy zachodzi wszystko naraz** (`Bev_echo`):
+  - scalanie ruszyło w tej sesji: wynik `applied` albo wyjątek z `Le` zamieniony na `busy` lub `apply-error`. `Le`
+    zapisuje wersje przed fazą Kosza, a ta może jeszcze rzucić (`vildaMergeBusy`, `VISIT_IDENTITY_CONFLICT`);
+    ponowienie zdarzenia ma potem stan przed = po, więc odesłanie z pierwszej próby nie wróciłoby. Przy `locked`
+    i `session-changed` — bez odsyłania;
+  - bez przeniesienia: po scaleniu v leży pod kartą p, a przed scaleniem leżała pod p albo pod żadną kartą (np. tylko
+    we wpisie Kosza). Wersja, która przed scaleniem leżała pod inną kartą, to przeniesienie (E3-PR0f);
+  - scalanie zapisało: rekord sklepu po ≠ rekord przed (JSON z posortowanymi kluczami, `Bev_json`, więc sama kolejność
+    kluczy nie jest różnicą). Ten sam rekord — bez odszyfrowania;
+  - nie sam `rev`: wersja po scaleniu w kształcie elementu pełnej kopii (`Bev_wersjaEcha` — `Bev_wersja` z treścią
+    przez `Bvisit_read`, czyli z tożsamością wizyty wyliczoną dla starych rekordów, jak w `exportSyncPayload`) bez
+    `rev` ≠ wersja przed scaleniem bez `rev` (kanon decyzji 2a z 2026-11-15);
+  - nie to, co przyszło: v nie ma w ładunku pod p albo po regule pola wersja po scaleniu ≠ wersja z ładunku (obie bez
+    `rev`). Reguła pola (`Bev_echoT`, niezależna od źródła ładunku): z wersji po scaleniu usuwa pola
+    z `Bev_ECHO_ZAWSZE` (dziś `payload.visit` — tożsamość wizyty), których nie ma w wersji z ładunku; gdy odcisk `h`
+    po scaleniu jest świeży (`Bgw_odcisk` treści), a odcisk treści bez tych pól równa się `h` z ładunku — podstawia
+    `h` z ładunku. `Bev_ECHO_ZAWSZE` = `POLA_ZAWSZE.snap` licznika odsyłania (strażnik w teście).
+- **Błędy odczytu — osobno dla każdej wersji.** Nieczytelna treść wersji przed scaleniem albo nieudany cały odczyt
+  stanu „przed”: dla tej wersji bez porównania treści przed i po; zostaje porównanie z ładunkiem, a gdy rekord sprzed
+  scalenia jest — także sprawdzenie przeniesienia i „ten sam rekord”. Nieczytelna treść wersji po scaleniu albo błąd
+  porównania: odesłanie tej wersji. Nieudany cały odczyt stanu „po”: odesłanie każdego kandydata z kartą z odczytu
+  „po”, inaczej „przed”, inaczej z ładunku. Wiersz buduje się ze stanu w chwili dopisania; klucz, pod którym wersji już
+  nie ma, nie daje wiersza (dopisanie kończy się „brak encji”). Wersja, którą reguła bez błędu by odesłała, jest
+  odesłana zawsze: błąd zdejmuje tylko porównanie, nigdy nie dokłada wersji spoza kandydatów.
+- **Sesja, blokada i usuwanie konta.** Odczyt stanu „przed” czeka na sklep, więc po nim jest kontrola sesji: zmiana
+  sesji albo zablokowany sejf (także gdy z tego powodu zawiódł odczyt) — wynik jak dziś po zmianie sesji, bez scalania
+  (zdarzenie zostaje do ponowienia); usuwanie konta w toku (`SYNC_DB_DELETED`) — `session-changed`, bez scalania;
+  strażnik tożsamości chronionego sejfu niedostępny (`PATIENT_AUTHORITY_UNAVAILABLE`) — `busy` z tym kodem, jak dziś
+  zwraca scalanie, które odmawia na wejściu; bez scalania. Inny błąd odczytu „przed” — scalanie jak dziś, porównanie
+  bez stanu „przed” (wyżej). Zmiana sesji w trakcie `Le` albo odczytu „po” i usuwanie konta w trakcie odczytu „po” —
+  wynik jak dziś, bez odsyłania.
+- **Droga.** Tylko `applyEncryptedEvent` z kopertą zdarzenia (ładunek z polem `event`): drenaż, ponowienie
+  kwarantanny i ramka na żywo w `vilda_sync.js` (bez zmian). Stara delta, którą drenaż stosuje tą samą funkcją
+  (urządzenie ze starszą aplikacją, urządzenie z wyłączonym dziennikiem) — bez odsyłania. Po pełnej kopii
+  (`mergeSyncPayload`) i po delcie (`applyEncryptedDelta`) — bez odsyłania (decyzja 4A z 2026-11-17): `Le` i eksport
+  `VildaVault` zostają bez zmian, więc poza blokiem P-DZIENNIK-ZDARZEN nie ma nowego wywołania. Importy (karta z pliku,
+  scalenie i odtworzenie kopii konta) bez zmian — dopisują to, co zapisały, swoją partią.
+- **Wpięcie.** `VildaVault._eventLog.applyEncryptedEvent` wskazuje `Bem_zastosuj` (dotąd `Bev_zastosuj`; 38 kluczy
+  eksportu bez zmian). `Bem_zastosuj` jest zwykłą funkcją: pierwsza instrukcja czyta przełącznik (`Bob_bramkaEcha`);
+  wyłączony — zwraca tę samą obietnicę co `Bev_zastosuj(env)`, bez dodatkowych mikrozadań. Włączony —
+  `Bem_zastosujEcho`: bramka dziennika (`Bob_bramka`) i warunek kolejki (`Bem_kolejka`: „Komputer prywatny”,
+  IndexedDB); odmowa — zastosowanie jak dotąd; inaczej `Bev_zastosuj(env, kol)` z kolektorem, a przy niepustej liście
+  jedno `Bem_zmiana('snap', kol.echo, kol.s)` w sesji scalania. `Bev_zastosuj` bez kolektora albo z ładunkiem bez
+  pola `event` — kod bez zmian; z kolektorem i kopertą zdarzenia — `Bev_zastosujZEchem` (stan „przed”, `Le` jak dotąd,
+  stan „po”, lista wersji). Kolektor dostaje same identyfikatory wersji, bez treści.
+- **Bez czekania na wpis.** Wynik zastosowania nie czeka na dopisanie wiersza odsyłania. Czekanie nie dawało
+  trwałości (ponowienie zdarzenia ma stan przed = po), a mogło stać za krokiem przeglądu albo za blokadą konta do
+  20 s i spowalniać drenaż; kolejność „odesłanie przed przeglądem” daje łańcuch dopisań konta. W otwartym kroku
+  (import w tym samym dokumencie) `Bem_zmiana` odkłada wpis do końca kroku.
+- **Wiersz odsyłania** to zwykły wiersz `snap`, zbudowany ze stanu w chwili dopisania (`Bev_snap`), więc koperta niesie
+  też kartę (opis karty liczony z najnowszej wersji). Reguła łączenia wpisów kolejki (`Bob_plan`) bez zmian: odesłanie
+  po własnym czekającym wierszu tej wersji zastępuje go, własna zmiana po odesłaniu zastępuje odesłanie, a odesłanie
+  i wiersz innej encji między nimi — oba zostają (reguła ogona). Linia bazowa koalescencji przy wyłączonym
+  przełączniku bez zmian (literał `ZNANE_ODSYL`).
+
+**Bez podwójnego wysyłania.**
+- Przegląd kolejki rekordu złożonego sam nie wysyła: jego chwila zmiany nie jest późniejsza od pary z ładunku i od
+  wiersza własnej zmiany. Wiersz odsyłania ma chwilę utworzenia z chwili dopisania, więc późniejszy przegląd uznaje
+  encję za pokrytą, a odesłanie wchodzi do łańcucha konta przed przeglądem po drenażu (ten sam łańcuch).
+- H2 i hak karty notatki dotyczą notatek, których E3-PR0c nie odsyła — bez części wspólnej.
+- **H1 — świadomy wyjątek (decyzja 5A z 2026-11-17).** Odsyłanie nie pomija wersji karty, dla której H1 dał pełną
+  kartę. H1 emituje się w `Le` przed fazą Kosza, a porcje pełnej karty buduje dopisanie pod blokadą konta, a nie karty,
+  pod którą faza Kosza zapisuje rekord złożony — pełna karta może więc nieść wersję sprzed złożenia. Druga kopia
+  u odbiorcy niczego nie zapisuje.
+- Dwa urządzenia, które złożyły ten sam rekord, odsyłają go po razie (test wejściowy bez retencji: 2 koperty);
+  odbiorca ma już ten rekord, nic nie zapisuje, więc echa echa nie ma. Odsiewanie „rekord równy ładunkowi z tej samej
+  strony dostawy” odrzucone: wymaga pamięci całej strony w dokumencie (ginie przy zamknięciu, a ramka na żywo nie ma
+  końca strony); koszt duplikatów — pomiar w E3-PR0h.
+
+**Zakres** (licznik odsyłania testu A ≡ B, warstwa wykonalna, źródło „zdarzenie”, rodzaj `snap`; pomiar przed kodem
+na `6876869d`; CI: profil podstawowy 8 ziaren, pełny 2, koalescencja 3; ręcznie: podstawowy 40, pełny 20, „dłuższa
+praca bez połączenia” 40 — ziarna 101–140).
+
+| Klasa | CI podst. | CI pełny | Ręcznie 40 / 20 / 40 | E3-PR0c | Dlaczego |
+|---|---|---|---|---|---|
+| wersja w ładunku, ta sama karta przed i po (gwiazdka / rekord złożony / inne) | 18 (9/1/8) | 2 (1/0/1) | 62 / 28 / 84 | odsyła | rdzeń wiersza 3 planu |
+| wersja wpisana z ładunku i od razu złożona z rejestrem gwiazdki tutejszego wpisu Kosza (przed scaleniem nie leżała pod żadną kartą) | 2 | 0 | 5 / 2 / 7 | odsyła | rekord pochodny scalania: wpis Kosza przegrywa z późniejszą wersją z ładunku i oddaje jej rejestr gwiazdki (`Bkz_pomin`, `Bgw_zloz` w `Bkz_scalKoniec`); drugie urządzenie składa ten sam rekord ze zdarzenia `stomb`, odesłanie bez szkody |
+| wersja zmieniona fazą Kosza (zdarzenie `stomb`: wpis Kosza z gwiazdką przegrywa z późniejszą tutejszą wersją; v tylko w `snapshotTombstones` ładunku) | 2 | 0 | 3 / 2 / 4 | odsyła | zapis wersji (`Bgw_zloz` w `Bkz_scalKoniec`); sam wpis Kosza — E3-PR0d |
+| wersja spoza ładunku pod inną kartą niż w ładunku (po „Scal pacjentów”; ta sama karta przed i po) | 0 | 0 | 0 / 6 / 0 | odsyła | wejście z E3-PR0b (wersja spoza ładunku z gwiazdką, tak samo bez gwiazdki) |
+| wersja przeniesiona w tym scaleniu pod inną kartę (`ptomb` z kartą docelową albo `snap`) | 0 | 0 | 0 / 4 / 0 | nie | E3-PR0f |
+| sam nagłówek karty (wizyta bez zmian, opis karty i data ostatniego zapisu inne niż w ładunku) | 0 | 2 | 0 / 35 / 0 (34 w ładunku, 1 spoza) | nie (decyzja 2A z 2026-11-17) | sejf liczy opis karty z najnowszej własnej wersji i opisu z ładunku nie przepisuje, więc odesłany opis nic u odbiorcy nie zmienia; każda koperta niesie całą najnowszą wizytę (32–45 KiB) |
+| notatka pacjenta (`pnote`) w ładunku, także „samo oznaczenie” | 0 | 0 | 0 / 5 / 0 | nie, pomiar (decyzja 3A z 2026-11-17) | W1 bez różnic notatek; część pokrywa hak karty notatki; rekord złączony +1 ms wysyła przegląd |
+| nagrobek notatki (`pnotetomb`) w ładunku | 0 | 0 | 4 / 2 / 0 | nie, pomiar (decyzja 3A z 2026-11-17) | krata `Bnp_zlacz`; W1 bez różnic |
+| notatka pacjenta spoza ładunku | 10 | 0 | 27 / 4 / 32 | nie | pokryta hakami |
+| sam `rev` wersji (R2); sam `rev` notatki | — | — | — | nie | decyzja 2a z 2026-11-15; wejście z E3-PR0b2b |
+| wpis Kosza (`stomb`: R4a, R4a′, R5, inne), R4n, D7 | 4 | 0 | 32 / 30 / 61 | nie | E3-PR0d |
+
+Razem w zakresie: CI 22 wiersze w profilu podstawowym, 2 w pełnym, 6 w koalescencji; ręcznie 70 / 38 / 95. Wszystkie
+wiersze `snap` warstwy wykonalnej mają `snapshotId` z ładunku (0 wyjątków w czterech przebiegach) — stąd zbiór
+kandydatów; strażnikiem na przyszłość jest model haków i odsyłania w teście A ≡ B (niżej). „Samo oznaczenie” notatki
+licznik liczy jako `pnote|w ładunku|inne` (klasa „sam rev notatki” obejmuje tylko sam `rev`; przypadek
+w `tests/unit/licznik-odsylania.test.mjs`).
+
+**Uśpienie.** `Bob_bramkaEcha` (część `Bob_` bloku P-DZIENNIK-ZDARZEN): pole okna `VILDA_EVENT_ECHO === true` (testy)
+albo klucz `localStorage` `vilda-event-echo-v1` (`Bob_KLUCZ_ECHA`) dokładnie `'1'`. Brak klucza, inna wartość (`'0'`,
+`'true'`, `'1 '`), pole inne niż `true` (np. napis `'true'`, liczba 1), brak pamięci przeglądarki albo wyjątek —
+wyłączony (wzór E2-PR4b). Przełącznik czyta wyłącznie część emisji, przed bramką dziennika; `vilda_sync.js` bez zmian
+(bez nowych pinów granicy synchronizacji). W E3-PR0c klucz ustawiają tylko testy. Przełącznik w Ustawieniach (obok
+„Wysyłaj zmiany pojedynczo”, tylko na tym urządzeniu) i instrukcja testu — E3-PR0g, razem z wpisem polityki
+prywatności (gdy użytkownik może ustawić klucz); E3-PR0i zmienia znaczenie na „brak klucza = włączone, `'0'` wyłącza”.
+
+**Przy wyłączonym przełączniku (co nowego).**
+
+| Skutek | Wartość | Dowód |
+|---|---|---|
+| odczyty przy `applyEncryptedEvent` | jedno pole okna `VILDA_EVENT_ECHO` i jeden `getItem('vilda-event-echo-v1')` (przy rzucającym getterze — jeden odczyt `localStorage`); 0 odczytów `VILDA_EVENT_LOG`, `indexedDB` i `crypto` ponad dziś | U1 (E3-PR0c) w teście uśpienia; przypadki „przełącznik wyłączony” w `sync-odsylanie` |
+| wynik, zapisy sklepu, wiersze kolejki, operacje `crypto.subtle`, odczyty bramki | te same co w kopii sejfu z `applyEncryptedEvent: Bev_zastosuj` (bliźniacze okna; rekord złożony, sam `rev`, wpis Kosza, ładunek nieczytelny, stara delta) | test równoważności w `sync-odsylanie` |
+| kolejność względem łańcucha dopisań w tle | ta sama obietnica (`Bem_zastosuj` jest zwykłą funkcją) | strażnik formy w teście uśpienia |
+| zapis bazowy (`tests/fixtures/dziennik-zapis-bazowy.json`) | fikstura bez zmian; klucz `'0'`, `'true'`, `'1 '` i pole `'true'` (napis) — zapis równy fiksturze; klucz `'1'` i pole `true` przy zamkniętej bramce — fikstura z jednym odczytem bramki więcej (`Bob_bramka` w `Bem_zastosujEcho` przy jedynym `applyEncryptedEvent` scenariusza) | `sync-dziennik-zapis-bazowy` |
+| test A ≡ B | wszystkie literały bajt w bajt (`ZNANE_ODSYL`, `ZNANE_W1`, `ZNANE_WYR`, floty, stres, AB2/AB7, determinizm) | przebieg CI |
+| literał miejsc poza blokiem P-DZIENNIK-ZDARZEN, KH6, HK1 | bez zmian (poza blokiem nic) | test uśpienia, test haków |
+
+**Bez pętli.**
+1. Odesłanie tylko przy różnicy (bez `rev`) wobec stanu przed scaleniem i wobec ładunku — nigdy na samym fakcie zapisu.
+2. Rekord pochodny dominuje oba wejścia: odbiorca bez nowszego składnika zapisuje dokładnie odesłany rekord albo nic
+   (`Bgw_scal`: rekord wobec siebie — brak zapisu; wobec starszego — cały rekord).
+3. Rekord pochodny jest deterministyczną funkcją dwóch wejść (`rev` = wyższy + 1, chwile tylko prawdziwe); dwa różne
+   rekordy złożone o tym samym `rev` i chwili — jednorazowo `rev` + 1, potem tylko R2, a R2 nie jest odsyłane.
+4. Bez odsyłania samego `rev` (decyzja 2a z 2026-11-15) — obrona przed obiegiem `rev` z aplikacją liczącą „najpierw
+   `rev`”.
+5. Reguła pola niezależna od źródła (`Bev_ECHO_ZAWSZE`, odcisk `h`).
+
+Każde odesłanie przenosi złączenie składników (treść według chwili treści, gwiazdka według rejestru); odbiorca
+z nowszym składnikiem wylicza złączenie ściśle większe i odsyła je raz. Łańcuch kończy się po liczbie niezależnych
+zmian. Sprawdzone w kodzie: powtórka partii (przed = po), zegar do przodu (tylko prawdziwe chwile), konflikt tożsamości
+wizyty (`Bvisit_sync` zostawia tutejszą, różnica to tylko `rev`). Test odbiorców: B bez nowszego składnika zapisuje
+rekord i nic nie odsyła; C z późniejszą poprawką składa nowe złączenie i odsyła je raz; A po złączeniu C nic nie odsyła.
+
+**Model haków i odsyłania w teście A ≡ B.** Przy włączonym przełączniku (pole świata `S.echo` albo `E2_AB_ECHO=1` dla
+wszystkich światów, ręcznie) urządzenia testu mają pole `VILDA_EVENT_ECHO = true` (dziedziczą je klony). Wpisy `snap`
+rejestru łańcucha z zastosowania partii to odsyłanie (wpis Q z polem `src: 'echo'`), a model haków dostaje model
+odsyłania z licznika (`modelEcha`: warstwa wykonalna rodzaju `snap`, liczona zdarzenie po zdarzeniu, tylko dla
+ładunku z polem `event`, bez wersji przeniesionych, bez odejmowania haków). Odsyłanie sejfu musi równać się modelowi
+w każdej partii; wiersz modelu dla wersji spoza kandydatów ładunku to niezgodność (strażnik kandydatów). Warstwa
+„odesłane” licznika porównuje koperty odsyłania z łańcucha sejfu z wierszami modelu (koperta bez wiersza — „ponad
+model”, wiersz bez koperty — „nieodesłane”). Urządzenie ze starszą aplikacją (276) odsyłania nie ma — jego wpisy
+porównuje model haków jak przy wyłączonym przełączniku. Limit spoczynku przy włączonym przełączniku — 6 obiegów dostaw
+(dotąd 4). Przy wyłączonym przełączniku model i warstwa są puste, a literały bez zmian. Literał „nowe” licznika
+(`ZNANE_ODSYL`) zostaje przy dzisiejszym odejmowaniu haków całej partii — to inna miara (pokrycie dziś).
+
+**Długie przebiegi** (ręcznie, 2026-11-17, kod tego PR na kopii drzewa, każdy przy obu stanach przełącznika:
+`E2_AB_ECHO=1` i bez; czas przy CPU dzielonym z innym przebiegiem). Koperty odsyłania według klas licznika: w ładunku —
+gwiazdka / inne; spoza ładunku — gwiazdka / inne; tożsamość wizyty.
+
+| Przebieg (ziarna) | Przełącznik | Koperty odsyłania | Ponad model / nieodesłane | Ponowne wysłanie tej samej wartości | Brak spoczynku, W3, W4 | Punkty W1 z różnicą (wszystkie z klasą) | Wyrocznia: naruszenia bez klasy | Czerwone przypadki | Czas |
+|---|---|---|---|---|---|---|---|---|---|
+| profil pełny (1–20) | włączony | 37 (16 / 11; 5 / 4; 1) | 0 / 0 | 0 | 0, 0, 0 | 11 | 16 — tylko ziarno 8 (niżej) | ziarno 8 | 114 s |
+| profil pełny (1–20) | wyłączony | 0 | — | — | 0, 0, 1 | 13 | 0 | ziarno 5 (W4, tak samo na bazie) | 117 s |
+| profil podstawowy (1–40) | włączony | 66 (35 / 28; 3 / 0; 0) | 0 / 0 | 0 | 0, 0, 0 | 7 | 0 | ziarna 1 i 4 — tylko literał `ZNANE_W1` (opisuje przebieg bez przełącznika) | 196 s |
+| profil podstawowy (1–40) | wyłączony | 0 | — | — | 0, 0, 0 | 11 | 0 | — | 213 s |
+| „dłuższa praca bez połączenia” (101–140) | włączony | 95 (43 / 48; 4 / 0; 0) | 0 / 0 | 0 | 0, 0, 0 | 12 | 0 | 104, 123, 128, 132, 137 — R4a′ w W1 (E3-PR0d; tak samo bez przełącznika i na bazie) | 128 s |
+| „dłuższa praca bez połączenia” (101–140) | wyłączony | 0 | — | — | 0, 0, 0 | 19 | 0 | te same pięć | 127 s |
+| flota 221 (1–10) | włączony | 5 (5 / 0; 0 / 0; 0) | 0 / 0 | — | 0, —, 0 | — | 0 | ziarna 2 i 3 — tylko literały floty | 30 s |
+| flota 221 (1–10) | wyłączony | 0 | — | — | 0, —, 0 | — | 0 | — | 27 s |
+| flota 276 (1–10) | włączony | 26 (11 / 12; 3 / 0; 0) | 0 / 0 | — | 0, —, 0 | — | 0 | ziarno 2 — tylko literał floty | 43 s |
+| flota 276 (1–10) | wyłączony | 0 | — | — | 0, —, 0 | — | 0 | — | 45 s |
+
+Przy włączonym przełączniku historia losowania jest inna (koperty odsyłania zmieniają długość kolejek), więc punkty W1
+obu stanów nie odpowiadają sobie jeden do jednego; mniej różnic po samych zdarzeniach (pełny 13 → 11, podstawowy
+11 → 7, „dłuższa praca bez połączenia” 19 → 12) to spodziewany skutek odsyłania, ale nie dowód. Floty mierzą odsyłanie między bieżącymi urządzeniami świata z urządzeniem
+starszej aplikacji.
+
+**Profil pełny, ziarno 8, z włączonym przełącznikiem.** Wyrocznia „nie zginęła ostatnia zmiana” zgłasza utratę dwóch
+wizyt jednej karty na A i B (W1 i W4, kroki 78 i 109; 16 naruszeń bez klasy). Bez przełącznika to ziarno jest czyste,
+ale przebiega innym ciągiem operacji: koperty odsyłania wydłużają kolejki, więc losowanie długości dostaw i cały dalszy
+program idą inaczej (pierwsza różnica w kroku 13). Ten sam ciąg operacji odtworzony bez odsyłania (te same 103
+mutacje, te same dostawy bez kopert odsyłania, te same identyfikatory) gubi te same dwie wizyty w tych samych
+punktach, z tymi samymi klasami wyroczni; żadna koperta odsyłania nie bierze udziału w utracie. Przyczyna to znana
+usterka „Usuń pacjenta” zwróconej starej karty po „Scal pacjentów”: B zapisuje w karcie X dwie wizyty bez wiedzy
+o scaleniu X → Y na A, X wraca na A (D-4 A, klasa dozwolona), a A usuwa X razem z tymi wizytami (naprawa w E3-PR0e,
+decyzja 4a z 2026-11-15). Scenariusz deterministyczny (12 operacji z kroków 35–78 tego ziarna) jest w ręcznym bloku
+znanych usterek testu A ≡ B (`E2_AB_ZNANE_USTERKI=1`, świat 885): dziś czerwony w W1, W4 i przy samych pełnych
+kopiach, przy obu stanach przełącznika, z tymi samymi faktami i bez ani jednej koperty odsyłania. Bez klasy w tabeli
+wyjątków wyroczni i bez literału — nic nie zostaje ukryte. Skutek: ręczny przebieg profilu pełnego z włączonym
+przełącznikiem ma jedno czerwone ziarno (8) do czasu E3-PR0e. Kontrola w drugą stronę: czysty przebieg ziarna 8 bez
+przełącznika odtworzony z przełącznikiem — te same mutacje, 7 kopert odsyłania, 0 naruszeń bez klasy (odsyłanie usuwa
+przy tym jedyną różnicę W1 tego przebiegu, „retencja — przycięcie bez treści”).
+
+**Flota ze starszą aplikacją.**
+- 221 (bez dziennika zdarzeń): wysyła pełne kopie i delty. Delty idą u bieżącego urządzenia przez
+  `applyEncryptedEvent` bez pola `event`, więc bez odsyłania; po pełnej kopii — też bez. Obiegu przez 221 nie ma
+  z konstrukcji. Ręcznie (ziarna 1–10, z przełącznikiem): 5 kopert odsyłania między bieżącymi urządzeniami, model
+  zgodny w każdej partii, wyrocznia bez naruszeń bez klasy.
+- 276 (zdarzenia, SW 1.1.530–1.1.534): sam nie odsyła; odesłania od bieżących urządzeń często pomija jako „nie nowsze”
+  (w pomiarze E3-PR0b 154 ze 168 kopert wersji) — odsyłanie nie leczy różnicy z 276, ale jej nie zapętla. Ręcznie
+  (ziarna 1–10, z przełącznikiem): 26 kopert odsyłania między bieżącymi urządzeniami, model zgodny w każdej partii,
+  wyrocznia bez naruszeń bez klasy.
+- Znane ograniczenie (decyzja 2 z 2026-11-16): odczyt zmian starszej aplikacji (`Bgw_stan`) może złożyć rekord ze
+  starszą treścią, a odsyłanie rozniesie go szybciej niż pełna wysyłka; klasa „znane ograniczenie starszej wersji”
+  jak w E3-PR0b.
+- „R4a i R4a′ przez urządzenie ze starszą aplikacją dają jeden dodatkowy obieg echa” (plan, wiersz 4) przy odsyłaniu
+  tylko po zdarzeniach dotyczy urządzenia 276, nie 221.
+- Literały floty w CI opisują przebieg z wyłączonym przełącznikiem. Przy włączonym różnią się: ziarna 2 i 3 floty 221
+  (literał floty) i ziarno 2 (wyrocznia floty — dozwolona klasa „zmiana starszej aplikacji usunięta z kartą przed
+  wysłaniem”), ziarno 2 floty 276 (wiersz „nowe” 1 → 0, bo pokrywa go odesłanie). Przebiegi z przełącznikiem ocenia
+  wyrocznia, model odsyłania i zieleń profilu; literały przepisze E3-PR0i.
+
+**Budżety.** Odesłania jednego zdarzenia ≤ liczba kandydatów (`snap` — 1, porcja `pfull` — kilka, w granicy rozmiaru
+porcji). Model w zakresie E3-PR0c: 0 przekroczeń limitów (20 żądań na minutę na urządzenie, 600 zdarzeń i 4 MiB na
+minutę na slot). Najgorszy przypadek drogi zdarzeń (niemierzony): karta z dziesiątkami wersji, każda złożona — tyle
+kopert, ile wersji (ok. 90 kopert po 45 KiB to 4 MiB); serwer odpowie 429, a kolejka FIFO opóźni późniejsze zmiany
+lekarza o 1–2 minuty. Stres drogi zdarzeń i ewentualne rozkładanie odesłań w czasie — E3-PR0h.
+
+**Testy.** Dane wyłącznie fikcyjne („Testowy Jan…”, „Pacjent Testowy 1”, masy 15–45 kg), bez PESEL; prawdziwy
+`vilda_vault.js` i `vilda_sync.js` w uprzęży (okno `tests/support/okno-magazynu.mjs`, atrapa IndexedDB, bliźniaki
+na kopii baz atrapy, kopia sejfu z licznikiem odczytów bramki).
+- `tests/unit/sync-odsylanie.test.mjs` (nowy, 49 przypadków): przełącznik wyłączony (równoważność z kopią sejfu bez
+  odsyłania w bliźniaczych oknach, wartości klucza i pola, jeden odczyt przełącznika na zastosowanie); wersja zapisana
+  inaczej, niż przyszła (rekord złożony, gwiazdka z ładunku przy późniejszej tutejszej treści, sam `rev` w dwóch
+  odmianach, to samo zdarzenie drugi raz bez odszyfrowań w porównaniu, ładunek bez tożsamości wizyty, ładunek równy
+  stanowi, wersja z ładunku przyjęta bez zmian; strażniki źródła: kształt pełnej kopii, JSON z posortowanymi kluczami,
+  reguła pola ze świeżym i nieświeżym odciskiem, `Bev_ECHO_ZAWSZE` = licznik); kandydaci (zdarzenie `stomb`, wersja pod
+  inną kartą po „Scal pacjentów”, wersja tylko w Koszu, wersja w `snapshots` i `snapshotTombstones` jednego ładunku,
+  sam nagłówek karty — bez wiersza karty); hak H1 i odesłanie w jednym zdarzeniu (koperta `ptomb` z kartą docelową;
+  koperta spoza buildera z nagrobkiem karty starszym od karty — wiersze `pfull P` i `snap P/v`); notatki i ładunki bez
+  wersji (te same wiersze co bez odsyłania, także po przeglądzie); łańcuch dopisań (otwarty krok, wstrzymany wpis
+  w bazie kolejki, przegląd nie dubluje, odbiorcy, łączenie wpisów); `busy` i `apply-error` po zapisie wersji, błąd
+  przed zapisem, zmiana sesji w trakcie `Le`, odczytu „przed” (także blokada i ponowne odblokowanie tego samego konta)
+  i odczytu „po”, blokada przy pierwszym z trzech kandydatów, błędy odczytu treści osobno dla każdej wersji, nieudany
+  cały odczyt „przed” i „po”, usuwanie konta w trakcie odczytu „przed” i „po”, strażnik tożsamości niedostępny;
+  drogi bez odsyłania (wersja przeniesiona, pełna kopia, delta, stara delta przez `applyEncryptedEvent`); zamknięta
+  bramka dziennika i „Komputer w pracy”; wartownik treści przy włączonym przełączniku i samokontrola kopii bez
+  odsyłania. Zajęta blokada karty w fazie Kosza, konflikt tożsamości wizyty, nieudany cały odczyt stanu i odmowa
+  odczytu „po” przy usuwaniu konta — przez kopię sejfu tylko w pliku testu (jednorazowy fikcyjny błąd w opisanym
+  miejscu; prawdziwa droga wymaga limitu blokady 20 s).
+- `tests/unit/sync-dziennik-wlasnosciowy.test.mjs` (test A ≡ B, 197 przypadków, było 188; 21 pominiętych, było 20):
+  test wejściowy (światy 930–935; z retencją A–B, bez retencji A–B, trzy urządzenia z retencją — każdy przy obu
+  stanach przełącznika; fakty v na każdym urządzeniu, wpis retencji v na B, treść wpisów kolejki każdego urządzenia,
+  obiegi do spoczynku, koperty odsyłania, 0 ponownych wysłań tej samej wartości); jedno ziarno CI z włączonym
+  przełącznikiem (profil podstawowy, ziarno 1: model haków i odsyłania zgodny w każdej partii, koperty odsyłania > 0,
+  bez ponownego wysłania tej samej wartości, spoczynek, wyrocznia bez naruszeń bez klasy, zieleń profilu; lokalnie
+  3 koperty, ok. 6 s); model haków i odsyłania; warstwa „odesłane”; trzecia kotwica kopii z rejestrem łańcucha (AB5);
+  urządzenie ze starszą aplikacją bez modelu odsyłania; nowy przypadek ręcznego bloku znanych usterek (świat 885,
+  wyżej). Przy wyłączonym przełączniku wszystkie literały bajt w bajt.
+- `tests/unit/sync-dziennik-uspienie.test.mjs` (53): reguły części `Bev_`, `Bob_` i `Bem_` dla przełącznika
+  (`VILDA_EVENT_ECHO` i `localStorage` tylko w `Bob_bramkaEcha`, raz), formy `Bem_zastosuj` (zwykła funkcja, dwie
+  instrukcje: przełącznik, potem `Bem_zastosujEcho`) i `Bem_zastosujEcho` (bramka, warunek kolejki, jedno
+  `Bev_zastosuj` z dwoma argumentami, jedno `Bem_zmiana('snap', …)`) z samokontrolą wariantami zła; U1 przy wyłączonym
+  przełączniku; nazwy wiążące; literał miejsc poza blokiem bez zmian.
+- `tests/unit/sync-zdarzenia-buildery.test.mjs` (B7): funkcje odsyłania części `Bev_` sklasyfikowane (domknięcie przez
+  strzeżony adapter, bez zegara, bez `V`, `Le`, emiterów i zapisów; `Bev_zastosujZEchem` — szyfrowanie i zastosowanie).
+- `tests/unit/sync-dziennik-zapis-bazowy.test.mjs` (23, +1 pominięty; było 16): przebiegi z kluczem przełącznika
+  w wariancie „Komputer prywatny” i strażnik jednego `applyEncryptedEvent` w scenariuszu; fikstura bez zmian.
+- `tests/unit/licznik-odsylania.test.mjs` (29, było 23): model odsyłania (rekord złożony po kopercie zdarzenia, stara
+  delta pusto, wersja przeniesiona wykluczona, wersja tylko w Koszu — wiersz, wersja spoza kandydatów zgłoszona, sam
+  `rev` i tożsamość wizyty pusto), warstwa „odesłane”, „samo oznaczenie” notatki → `pnote|w ładunku|inne`.
+- Uprząż: `tests/support/sejf-bez-wstawek.mjs` (licznik odczytów bramki w `Bem_zastosujEcho`, opcjonalna trzecia
+  kotwica kopii z rejestrem łańcucha, kopia bez odsyłania `bezOdsylania`), `tests/support/licznik-odsylania.mjs`
+  (`kandydaciEcha`, `modelEcha`, `zapiszOdeslane`).
+- e2e `tests/e2e/sync-zdarzenia-drenaz.spec.mjs` (Chromium, 2 nowe): klucz `'1'` ustawiony przed załadowaniem —
+  prawdziwy drenaż `vilda_sync.js` z poprawką B składa na A rekord złożony i daje w kolejce A dokładnie jeden wiersz
+  `snap P/v` (17,2 kg z gwiazdką), a B przyjmuje go bez nowego wiersza; bez klucza — ten sam drenaż, rekord złożony
+  tylko na A, w kolejce A bez wiersza `snap`. Liczone są tylko wiersze wersji (wiersz hasła z przeglądu kolejki po
+  drenażu powstaje niezależnie od odsyłania).
+
+**Czerwone na bazie** (`4389d34a`, sejf bez odsyłania, testy i uprząż tego PR): `sync-odsylanie` 29 z 49 (zielone
+z natury: przełącznik wyłączony, sam `rev`, powtórka, reguła pola na prawdziwej drodze, ładunek równy stanowi, wersja
+przyjęta bez zmian, sam nagłówek karty, notatki i ładunki bez wersji, zmiana sesji w trakcie `Le` i odczytu „po”, drogi
+bez odsyłania, „Komputer w pracy”, samokontrola kopii — strażniki „bez zmian”), test uśpienia 5 (U1, U2(a), U2(c)
+części `Bob_` i `Bem_`, U2(d)), buildery 1 (B7), zapis bazowy 2 (klucz `'1'` i pole `true`: o jeden odczyt bramki
+mniej), test A ≡ B 4 (trzy warianty testu wejściowego z włączonym przełącznikiem i ziarno CI — „odsyłanie sejfu ≠
+model”; warianty z wyłączonym przełącznikiem i wszystkie dotychczasowe literały zielone), e2e drenażu 1 z 2 (klucz
+`'1'`), skrót bazy `visits-vault-boundary` 1. Licznik odsyłania — 0 (funkcje uprzęży). Pełny `vitest run` na sejfie
+bazy z testami napisanymi przed kodem: czerwone wyłącznie w plikach tego PR (33 przypadki; reszta 31 116 zielona).
+
+**Mutanty** (kopia drzewa, jedna zmiana tekstu, pliki celu i test A ≡ B, część także w szerokim przebiegu i e2e):
+64 mutanty kodu odsyłania i jego otoczenia — 52 na kodzie przed poprawkami po przeglądzie i 12 nowych dla poprawek;
+na kodzie końcowym ponownie 30 mutantów porównania i zastosowania (części zmienionej poprawkami) i 12 nowych. Wynik:
+63 czerwieni co najmniej jeden test CI, 1 przeżywa. Rodziny: porównanie przed
+i po (bez porównania rekordów sklepu, bez porównania treści w kształcie pełnej kopii, decyzja po samym szyfrogramie,
+`rev` w porównaniu przed i po albo z ładunkiem, JSON bez sortowania kluczy, treść bez `Bvisit_read`); reguła pola
+(bez niej, bez podstawienia `h`, bez usuwania tożsamości wizyty, podstawienie bez warunku świeżości odcisku,
+`Bev_ECHO_ZAWSZE` puste albo z dodatkowym polem); kandydaci (bez `snapshotTombstones`, tylko wersje spod kart
+z ładunku, bez usuwania powtórzeń, bez przeniesienia jako wyjątku, przeniesienie jako „istniała przed scaleniem”);
+droga (odsyłanie także po starej delcie, po pełnej kopii i po delcie — dwa ostatnie tylko jako mutanty poza blokiem);
+sesja i błędy (odsyłanie przy zmianie sesji w trakcie `Le` z sesją scalania i bez niej, bez kontroli sesji po `Le`,
+bez kontroli sesji po odczycie „przed”, bez sprawdzenia sesji po każdym odczycie stanu, bez sprawdzenia strażnika
+tożsamości po odczycie, bez odsyłania przy `busy`/`apply-error` po zapisie, ścieżka błędu bez odsyłania, każda wersja
+przy błędzie odczytu „przed”, wszystkie wersje przy pierwszym błędzie, błąd „po” jako koniec bez wiersza, bez osobnych
+wyników przy usuwaniu konta i przy strażniku tożsamości); przełącznik i bramki (każda wartość klucza poza `'0'`
+włącza, luźna równość pola, klucz po obcięciu spacji, napis `'true'` w polu, przełącznik ignorowany, odsyłanie przy
+wyłączonym przełączniku, bramka dziennika przed przełącznikiem, `Bem_zastosujEcho` bez bramki albo bez warunku
+kolejki, `async function Bem_zastosuj`); emisja (odsyłanie notatek, pełnej karty każdej karty z ładunku, brak
+odsyłania rekordu złożonego, emisja usunięta, podwójna emisja, pomijanie przy H1 całego zdarzenia albo wersji karty
+z pełną kartą, emisja bez sesji scalania, czekanie na wpis przed wynikiem); poza blokiem tylko jako mutanty: rekord
+złożony z chwilą scalania zamiast prawdziwych chwil, reguła ogona w `Bob_plan` usunięta. Mutanty, które w pierwszym
+przebiegu przeżyły (bez porównania rekordów sklepu, podstawienie `h` bez warunku świeżości, odsyłanie przy zmianie
+sesji w trakcie `Le` w obu odmianach i po zmianie sesji w fazie „po”, bez kontroli sesji po odczycie „przed”, bez
+sprawdzenia sesji po każdym odczycie, bez usuwania powtórzeń kandydatów, pomijanie wersji karty z pełną kartą H1)
+oraz dwa łapane tylko strażnikiem formy (bez warunku kolejki, czekanie na wpis) dostały testy działania czerwone na
+mutancie; strażnikiem formy zostaje tylko `async function Bem_zastosuj` (przeplot mikrozadań). Przeżywa 1, w praktyce
+równoważny: kontrola sesji po odczycie „przed” tylko przy błędzie odczytu. Zmiana sesji po odczycie bez błędu jest
+niemożliwa do wywołania (odczyt sprawdza sesję po każdej wersji, a blokada między ostatnim sprawdzeniem a scalaniem
+kończy się odmową scalania przy zablokowanym sejfie); kontrola zostaje (wariant bezpieczniejszy). Jeden mutant
+łapał w szerokim przebiegu tylko niestabilny test spoza tego PR (`sync-zdarzenie-status`, „zły znacznik GCM”: zmiana
+trzeciego od końca znaku szyfrogramu trafia czasem w bity dopełnienia base64, ok. 1 przebieg na 12); dostał własny
+test.
+
+**Czas pliku A ≡ B** (lokalnie, sam plik w ustawieniach CI, CPU dzielone z innym przebiegiem): 132–143 s (197
+zielonych, 21 pominiętych); na bazie z testami tego PR 135 s, w pełnym `vitest run` na bazie 153 s; przed tym PR
+127 s sam (wpis P-NOTATKA-POZNIEJSZA). Dochodzi test wejściowy (6 × 0,15–0,4 s) i ziarno z przełącznikiem (ok. 6 s).
+Cel ok. 180 s w CI — zmierzyć w opisie PR.
+
+**Kontrola granicy obrazu sejfu.** Zmiana stoi wyłącznie w bloku P-DZIENNIK-ZDARZEN (poza blokiem nic, także
+komentarze; literał miejsc poza blokiem bez zmian, 35 wpisów); fragment natywny i blok trwałych wizyt bez zmian.
+Przeliczone 7 skrótów w 5 plikach: baza trwałych wizyt (`runtime/durable-visits-v1/manifest.json` — baza i obraz,
+`tools/visits-vault-delta.mjs`, `tests/unit/visits-vault-boundary.test.mjs`) oraz `baseVaultSHA256`,
+`integratedVaultSHA256` i `BASE` natywnej przestrzeni klinicznej (`runtime/clinical-workspace-v1/manifest.json`,
+`tools/check_clinical_workspace_boundary.mjs`, z opisem E3-PR0c w komentarzu); `node tools/visits-vault-delta.mjs`
+i `node tools/check_clinical_workspace_boundary.mjs` — zielone. `vilda_sync.js` i jego piny bez zmian. Sejf się
+zmienił — przy następnej pracy w `vilda-source` weź nową bazę z `runtime/clinical-workspace-v1/manifest.json` na
+`audyt`.
+
+**Ograniczenia.**
+- **Zmiana sesji albo blokada sejfu w trakcie scalania** (`session-changed`, `locked`): wersje mogły się już zapisać,
+  odesłania nie ma. Zabezpieczenia jak niżej.
+- **Zamknięcie dokumentu między zapisem `Le` a dopisaniem wiersza odsyłania**: ponowienie zdarzenia ma stan przed =
+  po, więc odesłanie nie powstanie. Nieudane dopisanie w otwartym dokumencie (np. limit blokady konta 20 s) trafia do
+  pamięci braków, a przegląd kolejki dopisuje je bez względu na pokrycie; po zamknięciu dokumentu pamięć ginie.
+- **Ten sam stan najpierw pełnym pobraniem**: gdy rekord pochodny zapisze `Le` po pełnej kopii (do etapu 3 działa
+  pełna synchronizacja; wymuszone pobranie przy `ahead`, `base` i dziurze w numeracji), odesłania nie ma, a późniejsze
+  zdarzenie ma stan przed = po.
+- Zabezpieczenia do tego czasu: pełna wysyłka (do etapu 3); w etapie 3 porównanie z manifestem punktu kontrolnego
+  kolejkuje rekord złożony z inną treścią (plan, 3.3). Pomiar okien — E3-PR0h.
+- **Lokalna zmiana lekarza między odczytem „przed” a „po”** daje nadmiarowe odesłanie tej wersji — bez szkody (zmiana
+  ma własny wiersz, `Bob_plan` łączy je w jeden).
+- **Ścieżka błędu odczytu** może raz wysłać wersję, która różni się od ładunku tylko `rev` (odstępstwo od decyzji 2a
+  wyłącznie na tej ścieżce); jednorazowe, bez pętli (odbiorca odsyła tylko przy różnicy przed i po).
+- **H1 i odesłanie tej samej wersji** mogą wyjść obie (decyzja 5A z 2026-11-17; wyżej); druga kopia u odbiorcy nic nie
+  zapisuje.
+- **Granica z E3-PR0d.** Odesłanie wersji zmienionej fazą Kosza (zdarzenie `stomb`) jest w E3-PR0c, bo to zapis
+  wersji; sam wpis Kosza (R4a, R4a′, R5) — E3-PR0d.
+- **Notatki** (decyzja 3A z 2026-11-17): rekord złączony notatki (+1 ms, `Bnp_poObu`) E3-PR0c nie odsyła; wysyła go
+  przegląd kolejki, gdy chwila złączenia jest późniejsza od pary z ładunku i od wiersza encji. Oba urządzenia liczą
+  to samo złączenie, więc podwójna wysyłka, jeśli zajdzie, jest bez szkody. Komentarz „Bez kolejki” w
+  `Bnp_tutejszaZapis` (poza blokiem, bez zmian w tym PR) dotyczy samego zapisu — wiersz złączenia dokłada przegląd.
+- **Starsza aplikacja** — „Flota ze starszą aplikacją” wyżej.
+- **Najgorszy przypadek drogi zdarzeń** — „Budżety” wyżej.
+
+**Do akceptacji właściciela przy PR** (rozstrzygnięcia spoza projektu i decyzji, wariant najbezpieczniejszy dla
+danych; alternatywy w opisie PR). Rekomendacja przy każdym punkcie: przyjąć.
+1. **Rozszerzenie decyzji 9 z 2026-10-29: czwarta droga ze scalania do kolejki.** Po włączeniu odsyłania urządzenie,
+   które zastosowało zmianę z innego urządzenia i zapisało inną wersję wizyty, niż przyszła, wyśle tę wersję
+   pozostałym urządzeniom (obok trzech haków: pełna karta po przegranym usunięciu, uratowana notatka, karta notatki).
+   Reguły scalania bez zmian.
+2. **Tylko po kopertach zdarzeń.** Drenaż stosuje tą samą funkcją także stare delty (urządzenie ze starszą aplikacją
+   albo z wyłączonym dziennikiem). Po starej delcie — bez odsyłania, także na tej drodze (zgodne z decyzją 4A
+   i z pomiarami: obiegu przez starszą aplikację nie ma). Inna możliwość: odsyłać także po deltach.
+3. **Przy wyłączonym przełączniku ta sama obietnica co dziś** — funkcja wejścia jest zwykła, więc nie zmienia nawet
+   kolejności drobnych kroków względem zapisów w tle; część z odsyłaniem jest osobno.
+4. **Porównanie w kształcie pełnej kopii** (tożsamość wizyty wyliczona dla starych rekordów, jak w liczniku testu) —
+   dopisanie samej tożsamości wizyty do starego rekordu nie daje odesłania.
+5. **Zmiana sesji, blokada albo usuwanie konta w trakcie odczytu stanu „przed”** — scalanie nie rusza, wynik jak dziś
+   po zmianie sesji (zdarzenie zostaje do ponowienia); usuwanie konta w trakcie odczytu „po” — bez odsyłania; strażnik
+   tożsamości chronionego sejfu niedostępny przy odczycie „przed” — `busy` z tym kodem, jak dziś, bez scalania.
+6. **Błędy odczytu osobno dla każdej wersji** (odejście od projektu, który przy każdym błędzie odczytu kazał odesłać
+   wszystkie wersje z ładunku): jedna nieczytelna wersja nie wysyła całej karty, a nieudany cały odczyt „przed” —
+   wersji przeniesionych pod inną kartę bez różnicy wobec ładunku. Wersja, którą reguła bez błędu by odesłała, jest
+   odesłana zawsze. Inna możliwość: dosłownie projekt (jednorazowy nadmiar bez pętli).
+7. **Pełna karta z H1 i odesłanie wersji tej samej karty w jednym zdarzeniu** — koperta budowana przez bieżącą
+   aplikację tego nie daje (wersję spod karty docelowej scalanie przenosi, czyli bez odsyłania); daje to koperta spoza
+   buildera (jak od innej wersji aplikacji) — test pokazuje oba wiersze (decyzja 5A sprawdzona także dla tej samej
+   karty).
+8. **Ziarno 8 profilu pełnego** jako przypadek ręcznego bloku znanych usterek (bez klasy w tabeli wyjątków, bez
+   literału), a nie wpis w tabeli wyjątków — usterka zostaje widoczna; ręczny przebieg profilu pełnego z włączonym
+   przełącznikiem ma jedno czerwone ziarno do E3-PR0e. Inna możliwość: wpis w tabeli wyjątków (przebieg zielony,
+   usterka mniej widoczna).
+9. **Literały ręcznych przebiegów** (floty, `ZNANE_W1`) opisują przebieg z wyłączonym przełącznikiem; przebiegi
+   z przełącznikiem ocenia wyrocznia, model odsyłania i zieleń profilu (przepisanie literałów — E3-PR0i).
+10. **Bez wpisu polityki prywatności** dla klucza `vilda-event-echo-v1` w tym PR (klucz ustawiają tylko testy; wpis
+    razem z przełącznikiem w Ustawieniach, E3-PR0g).
+
+**Wejście do kolejnych PR.**
+- **E3-PR0d** (wpisy Kosza): odsyłanie wpisu Kosza po scaleniu innego niż w ładunku (R4a, R4a′, R5); R4n i D7 bez
+  odsyłania; ta sama droga (`Bem_zastosujEcho`, kolektor), rodzaj `stomb` jako kandydat; odesłanie wersji zmienionej
+  fazą Kosza zostaje z E3-PR0c (bez podwójnego wysyłania tej samej wersji); notatki i nagrobki notatek dalej bez
+  odsyłania, tylko pomiar (decyzja 3A z 2026-11-17); R4a i R4a′ przez urządzenie 276 — jeden dodatkowy obieg,
+  opisać; model haków i odsyłania w teście A ≡ B rozszerzony o `stomb`; warstwa „odesłane” jest gotowa.
+- **E3-PR0e**: „Usuń pacjenta” zwróconej starej karty po „Scal pacjentów” — scenariusz z ziarna 8 profilu pełnego
+  (świat 885 ręcznego bloku znanych usterek) obok czterech dotychczasowych; po naprawie ziarno 8 z włączonym
+  przełącznikiem ma być czyste; różnica „tylko lista usuniętych pacjentów” (decyzja 6A z 2026-11-17).
+- **E3-PR0f**: wersje przeniesione pod inną kartę (dziś wykluczone z odsyłania) i wizyta nieznana urządzeniu
+  scalającemu; mutant „bez wyjątku przeniesienia” czerwieni dziś test wersji przeniesionej — po zmianie reguły
+  przepisać.
+- **E3-PR0g**: przełącznik odsyłania w Ustawieniach (zapis i usunięcie klucza `vilda-event-echo-v1`, obok „Wysyłaj
+  zmiany pojedynczo”, tylko na tym urządzeniu), instrukcja testu właściciela, wpis polityki prywatności.
+- **E3-PR0h**: koszt duplikatów (dwa urządzenia odsyłają ten sam rekord; H1 i odesłanie), stres drogi zdarzeń
+  (najgorszy przypadek z „Budżetów”), wyścig pełnej kopii ze zdarzeniem i przerwa między scaleniem a wpisem
+  odesłania (test), koalescencja z odsyłaniem, floty z odsyłaniem (221, 276, kontrola z trzema bieżącymi
+  urządzeniami), profil „dłuższa praca bez połączenia” z odsyłaniem jako pomiar, echo po scaleniu pełnej kopii i pół
+  wymiany — 0 z konstrukcji (decyzja 4A), pomiar zostaje; wyniesienie uprzęży testu A ≡ B do `tests/support/`
+  i osobny plik przebiegów z przełącznikiem (równoległość plików w vitest).
+- **E3-PR0i**: znaczenie klucza odwrócone („brak klucza = włączone, `'0'` wyłącza”), literały A ≡ B, floty
+  i `ZNANE_W1` przepisane na wynik z odsyłaniem, ziarno 8 profilu pełnego po E3-PR0e.
+- Każdy PR: nowe miejsce zapisu wersji w scalaniu — sprawdzić, czy kandydat jest w ładunku (strażnik kandydatów
+  w modelu haków i odsyłania); nowe pole zapisywane zawsze przez bieżącą wersję — dopisać do `Bev_ECHO_ZAWSZE`
+  i `POLA_ZAWSZE.snap` licznika (test równości); zmiana `vilda_vault.js` poza fragmentem natywnym — przeliczenie
+  skrótów kontroli granicy.
+
+**Cofnięcie** = rewert PR, bez migracji (przy wyłączonym przełączniku nic nie powstaje; wiersze odsyłania to zwykłe
+wiersze `snap`; klucz przełącznika po rewercie nic nie znaczy; rewert cofa też skróty kontroli granicy).
+
+**Gdzie w kodzie.** `vilda_vault.js`, blok P-DZIENNIK-ZDARZEN (6686–10045): część `Bev_` — `Bev_zastosuj(env, kol)`
+(7324; jedna wstawka po kontroli kształtu), `Bev_ECHO_ZAWSZE`, `Bev_pole`, `Bev_bezPola`, `Bev_json`,
+`Bev_kandydaciEcha`, `Bev_stanEcha`, `Bev_wersjaEcha`, `Bev_echoT`, `Bev_echo`, `Bev_zastosujZEchem` (7476–7677),
+`Bev_EKSPORT` (`applyEncryptedEvent: Bem_zastosuj`, 7697); część `Bob_` — `Bob_KLUCZ_ECHA` (7781), poprawiony
+komentarz `Bob_bramka` (włącznik dziennika po E2-PR6: flaga `vilda-event-log-v1` = `'0'` wyłącza), `Bob_bramkaEcha`
+(7852); część `Bem_` — `Bem_zastosuj`, `Bem_zastosujEcho` (10022–10038); nagłówki części (opis czwartej drogi ze
+scalania do kolejki i przełącznika). Poza blokiem bez zmian.
+
+**Wersje.** `vilda_vault.js` 279 → 280, `vilda_chrome.js` 299 → 300 i `vilda_session_bridge.js` 215 → 216
+(wstrzykują sejf), SW 1.1.545 → 1.1.546 — `npm run podbij-wersje`; baza `origin/audyt` `4389d34a` (po
+vildaclinic/vilda-calc#983). Bez nowego pliku w pamięci offline.

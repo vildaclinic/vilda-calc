@@ -1883,6 +1883,11 @@ wizyt: SHA-256 `a9672e38d4890b2516d3afd2f184006ad72ec4443cad8df7663d42abbb5731c4
 (`5d77d036…`) odpowiada stanowi sprzed E3-PR0b2b (`audyt` `3c1fc748`); bieżącą bazę daje to samo
 odwrócenie delty co wyżej.
 
+Od E3-PR0c (P-ZBIEZNOSC-ZDARZEN, odsyłanie poprawionych wizyt; zmiana tylko w bloku P-DZIENNIK-ZDARZEN) bazą
+delty jest obraz sejfu po tej zmianie bez bloku trwałych wizyt: SHA-256
+`f4312c519d413b38f614f1ca89253caa0849a1b257568115507c8d49f290744e`. Baza z E3-PR0b2b (`a9672e38…`)
+odpowiada stanowi sprzed E3-PR0c (`audyt` `4389d34a`); bieżącą bazę daje to samo odwrócenie delty co wyżej.
+
 Każdy punkt wpięcia musi występować dokładnie raz. Narzędzie odrzuca inne
 bajty bazy, zmianę źródła bez zgodnego manifestu, niejednoznaczny punkt wpięcia
 i wynik różniący się od zapisanego skrótu. Odwrócenie delty musi odtworzyć
