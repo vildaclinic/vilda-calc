@@ -1005,9 +1005,11 @@ function porownajHaki(S, Y, partia, model, emitery, wpisy, po) {
 // poprawionych wizyt (echo) — poza modelem haków; ich koperty porównuje model odsyłania (porownajEcho), do Q_Y idą
 // z src 'echo' w kolejności rejestru (jak łańcuch konta). Przy wyłączonym — każdy wpis porównuje model haków (AB7), więc
 // wpis snap z zastosowania partii jest niezgodnością. stanyEcha — eksporty odbiorcy przed partią i po każdym zdarzeniu.
+// Odbiorca ze starszą aplikacją (sejf 276, flota) nie ma odsyłania — także przy włączonym przełączniku jego wpisy
+// porównuje model haków, jak przy wyłączonym.
 async function haki(S, Y, partia, przed, po, stany = null, stanyEcha = null) {
   const wpisy = Y.lancuch.splice(0).filter((z) => !z.znacznik && z.uid === po.userId);
-  const echo = zEchem(S);
+  const echo = zEchem(S) && Y.app === 'N';
   const jestEcho = (z) => echo && z.kind === 'snap';
   const model = hakiModelu(Y, partia, przed, po, stany);
   const zbudowane = [];
