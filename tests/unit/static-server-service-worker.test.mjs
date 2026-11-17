@@ -90,7 +90,7 @@ describe('actual E2E static-server service-worker endpoint', () => {
     const { child, origin } = await startServer(directory);
     const response = await fetch(origin + '/__test-service-worker-kalorii.js');
     expect(response.status).toBe(500);
-    expect(await response.text()).toContain('requires exactly the eleven versioned visit/home UI resources');
+    expect(await response.text()).toContain('requires exactly the fourteen versioned visit/home UI resources');
     const page = await fetch(origin + '/index.html');
     expect(page.status).toBe(200);
     expect(await page.text()).toContain('Fictional server fixture');

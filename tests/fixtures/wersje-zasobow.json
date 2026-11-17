@@ -1332,8 +1332,8 @@
   "sha256": "331c51b29998e450666f3caff8bdc7768d38c985595a62b913bacc22c81525a6"
  },
  "vilda_diet_recommendations.js": {
-  "v": 70,
-  "sha256": "f227761d1de9d59f63f6739b2b7084ebdf5a2d94dec95ffc0bfdab9c291fb088"
+  "v": 71,
+  "sha256": "2cc3cbb5d99f64002b0c31a6be84518e0cdbffa1b808ee221baf35b6174184c5"
  },
  "vilda_dob_age.js": {
   "v": 12,
@@ -1558,6 +1558,18 @@
  "vilda_height_velocity.js": {
   "v": 3,
   "sha256": "3cc184cdcc8237c79f70c19c70862649de1ffe2acf680bb877629ca2f8c1483b"
+ },
+ "vilda_home_diet.css": {
+  "v": 1,
+  "sha256": "fe5dbddb941a47c7eba45a65e44ec4a9c7f63f357c25f9ffedec16f02bca8d48"
+ },
+ "vilda_home_diet.js": {
+  "v": 1,
+  "sha256": "c5cb60a6d9f123e30f7033903ca5d8bb6219e32aee76912831c054e84abeb265"
+ },
+ "vilda_home_diet_bmi.css": {
+  "v": 1,
+  "sha256": "70675e9e8523e7b9b9e36096547e0a78d2c684ecb3c89ae52aaebebde453611b"
  },
  "vilda_home_growth.js": {
   "v": 3,

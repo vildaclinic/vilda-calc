@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.543';
+const SW_VERSION = '1.1.544';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -1896,6 +1896,9 @@ const CORE_SHELL_URLS = [
   '/vilda_home_growth_views.css?v=5',
   '/vilda_home_growth_views.css?v=6',
   '/vilda_home_growth_charts.js?v=1',
+  '/vilda_home_diet.js?v=1',
+  '/vilda_home_diet_bmi.css?v=1',
+  '/vilda_home_diet.css?v=1',
   '/vilda_sga_birth_results.css?v=1',
   '/qrcode.min.js?v=1',
   '/vilda_chrome.js?v=8',
@@ -4637,6 +4640,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_diet_recommendations.js?v=68',
   '/vilda_diet_recommendations.js?v=69',
   '/vilda_diet_recommendations.js?v=70',
+  '/vilda_diet_recommendations.js?v=71',
   '/vilda_auth_ui.js?v=432',
   '/vilda_auth_ui.js?v=433',
   '/vilda_auth_ui.js?v=434',
@@ -6513,8 +6517,8 @@ const CLINICAL_WORKSPACE_PRECACHE_PACK = Object.freeze({
 
 // BEGIN VISIT UI PACK CONFIG
 const VISIT_UI_PRECACHE_PACK = Object.freeze({
-  "url": "/runtime/visit-ui-precache/precache-80097538ba16.json",
-  "sha256": "80097538ba1617a7712451376a930ef830616d1588df6046e20cc12e964b0c44",
+  "url": "/runtime/visit-ui-precache/precache-9b1cf3120cbe.json",
+  "sha256": "9b1cf3120cbe1f2fe073cd47529220f213949401c7f00d2376ae763c42736b95",
   "files": [
     {
       "url": "/vilda_visit_context.js?v=1",
@@ -6559,6 +6563,18 @@ const VISIT_UI_PRECACHE_PACK = Object.freeze({
     {
       "url": "/vilda_home_growth_charts.js?v=1",
       "sha256": "68a21421d6be2907231dc12821f5d47dcd035da6e3bdda06c09c444e69da298e"
+    },
+    {
+      "url": "/vilda_home_diet.js?v=1",
+      "sha256": "c5cb60a6d9f123e30f7033903ca5d8bb6219e32aee76912831c054e84abeb265"
+    },
+    {
+      "url": "/vilda_home_diet_bmi.css?v=1",
+      "sha256": "70675e9e8523e7b9b9e36096547e0a78d2c684ecb3c89ae52aaebebde453611b"
+    },
+    {
+      "url": "/vilda_home_diet.css?v=1",
+      "sha256": "fe5dbddb941a47c7eba45a65e44ec4a9c7f63f357c25f9ffedec16f02bca8d48"
     }
   ]
 });
