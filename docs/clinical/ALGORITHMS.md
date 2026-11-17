@@ -12203,11 +12203,11 @@ Notatka PACJENTA powiązana z wizytą: przycisk `addVisitNoteBtnSidebar` w menu 
 
 **G3 — re-import karty `.wiw` po usunięciu.** `importPatientFromEnvelope` (`ns`) nie kasował nagrobka pacjenta, więc własne scalanie usuwało go zaraz po imporcie albo przy pierwszym pobraniu (pomiar: `isNew:true, addedSnapshots:1`, a `listPatients()` puste). Import kasuje teraz nagrobek pacjenta (jak `savePatient`; *od P-ZAPIS-USUNIETEJ, 2026-10-08, `savePatient` z id karty usuniętej albo scalonej odmawia — nagrobek zdejmuje już tylko jawny import i synchronizacja*) **oraz nagrobki importowanych notatek** — bez tego drugiego kroku, po naprawie G2, wracał sam pacjent, bez wyników i zaleceń (zmierzone regresem `tests/e2e/klirens-faza6.spec.mjs`).
 
-**G6 — wskrzeszenie notatki nie cofa wersji (D3: nowsza treść wygrywa).** Ścieżka P5 („Zostaw notatkę") zapisywała wskrzeszoną notatkę z `rev:1`, a scalanie rozstrzyga najpierw po `rev` — dopisek z urządzenia wskrzeszającego przegrywał ze starszą edycją z innego urządzenia, bez błędu (pomiar: A `rev 3` wygrywało z wskrzeszeniem 40 ms późniejszym). Nagrobek notatki niesie teraz `rev` kasowanej wersji (**oba adaptery**, IndexedDB i pamięciowy, zapisywały dotąd tylko `{id, deletedAtISO}`), `savePatientNote` startuje przy wskrzeszeniu od tego `rev`, a scalanie przenosi najwyższy znany `rev` do nagrobka. Świadomie **nie** zmieniono reguły dla ładunku bez pola `rev` (podpunkt E7 audytu — sceptyk miał do niego zastrzeżenie; zostaje do raty 2). *(Aktualizacja 2026-10-21, P-NOTATKI-ZA-KARTA: obok `rev` oba adaptery zachowują ważne pole `deletedWithPatient` osobną instrukcją; strzeżone napisy `rev` bez zmian; chwila nagrobka `max(teraz, updatedAtISO)` (G13) bez zmian, a uratowana notatka dostaje R + 1 ms + h z tym samym `rev`.)*
+**G6 — wskrzeszenie notatki nie cofa wersji (D3: nowsza treść wygrywa).** Ścieżka P5 („Zostaw notatkę") zapisywała wskrzeszoną notatkę z `rev:1`, a scalanie rozstrzyga najpierw po `rev` — dopisek z urządzenia wskrzeszającego przegrywał ze starszą edycją z innego urządzenia, bez błędu (pomiar: A `rev 3` wygrywało z wskrzeszeniem 40 ms późniejszym). Nagrobek notatki niesie teraz `rev` kasowanej wersji (**oba adaptery**, IndexedDB i pamięciowy, zapisywały dotąd tylko `{id, deletedAtISO}`), `savePatientNote` startuje przy wskrzeszeniu od tego `rev`, a scalanie przenosi najwyższy znany `rev` do nagrobka. Świadomie **nie** zmieniono reguły dla ładunku bez pola `rev` (podpunkt E7 audytu — sceptyk miał do niego zastrzeżenie; zostaje do raty 2). *(Aktualizacja 2026-10-21, P-NOTATKI-ZA-KARTA: obok `rev` oba adaptery zachowują ważne pole `deletedWithPatient` osobną instrukcją; strzeżone napisy `rev` bez zmian; chwila nagrobka `max(teraz, updatedAtISO)` (G13) bez zmian, a uratowana notatka dostaje R + 1 ms + h z tym samym `rev`.)* *(2026-11-17, E3-PR0b2b, P-NOTATKA-POZNIEJSZA: scalanie notatek rozstrzyga najpierw po chwili zmiany treści, potem po `rev`; wskrzeszenie dostaje chwilę zapisu późniejszą niż znany nagrobek.)*
 
 **G12 — nieodszyfrowalna notatka zostaje na urządzeniu (D4: tak, jak w bibliotece).** `buildNoteDelta` (`cs`) i `exportSyncPayload` (`is`) mapowały notatkę przez `Ft`, który przy nieudanym odszyfrowaniu oddaje `{title:"(błąd odczytu)", body:""}` **z oryginalnym `rev`** — atrapa nadpisywała czytelną treść na drugim urządzeniu (zmierzone: „Dobra treść" → „(błąd odczytu)"). Biblioteka szablonów miała tę bramkę od 1.0.833 (`Qb0`); notatki pacjenta dostają ją teraz w obu miejscach.
 
-**G5 — scalenie duplikatów kontra równoległa edycja (D6: przynależność od celu).** `mergePatients` przepina notatki zwykłym zapisem (rev+1), a scalanie zapisywało `patientId` **nadawcy**: notatka edytowana równolegle na drugim urządzeniu wracała pod usunięte źródło i znikała z Karty, Przypomnień i Terminarza (pomiar: `notatki celu na B: 0`). Teraz, gdy `patientId` z ładunku ma wygrywający nagrobek (lokalny albo z tego ładunku), a lokalny rekord notatki ma inny `patientId`, zostaje **lokalna przynależność**; treść dalej rozstrzyga „ostatni zapis wygrywa". Od E2-PR3c4 (decyzja 6 z 2026-11-10) G5 zastępuje reguła karty notatki — notatka idzie za kartą, która istnieje, symetrycznie na obu urządzeniach (wpis „Notatka po »Scal pacjentów« idzie za kartą, która istnieje”).
+**G5 — scalenie duplikatów kontra równoległa edycja (D6: przynależność od celu).** `mergePatients` przepina notatki zwykłym zapisem (rev+1), a scalanie zapisywało `patientId` **nadawcy**: notatka edytowana równolegle na drugim urządzeniu wracała pod usunięte źródło i znikała z Karty, Przypomnień i Terminarza (pomiar: `notatki celu na B: 0`). Teraz, gdy `patientId` z ładunku ma wygrywający nagrobek (lokalny albo z tego ładunku), a lokalny rekord notatki ma inny `patientId`, zostaje **lokalna przynależność**; treść dalej rozstrzyga „ostatni zapis wygrywa". Od E2-PR3c4 (decyzja 6 z 2026-11-10) G5 zastępuje reguła karty notatki — notatka idzie za kartą, która istnieje, symetrycznie na obu urządzeniach (wpis „Notatka po »Scal pacjentów« idzie za kartą, która istnieje”). *(2026-11-17, E3-PR0b2b, P-NOTATKA-POZNIEJSZA: „Scal pacjentów” przenosi notatki bez treści sprzed blokady (tylko karta; tytuł i treść `Ad` bierze z wersji zapisanej pod blokadą notatki), a przeniesienie nie zmienia chwili treści — przy równoległej poprawce i powrocie starej karty notatka z poprawką zostaje przy starej karcie (D-4 A).)*
 
 **G7 — edytor notatki nie przeżywa blokady sejfu (D5: nakładka znika).** `showPatientNoteEditor` nie rejestrował `onLock`, a auto-blokada nie usuwa nakładek: na wspólnym komputerze po zalogowaniu drugiego lekarza wracał szkic poprzednika (dane pacjenta), a „Zapisz" wpisywał cudzą notatkę do jego sejfu. Edytor rejestruje teraz raz na okno `onLock`, który usuwa wszystkie nakładki `.vilda-patient-note-editor-overlay` (`onLock` nie ma wyrejestrowania, stąd jedna rejestracja globalna).
 
@@ -24350,7 +24350,7 @@ urządzeniu notatka mogła zostać pod kartą usuniętą — treść była, ale 
 tego nie naprawiała. Teraz notatka trafia do karty, która istnieje, na wszystkich urządzeniach; treść, jak dotąd,
 z poprawki zapisanej najpóźniej. Gdy istnieją obie karty (np. stara karta wróciła, bo na drugim urządzeniu dopisano do
 niej wizytę) — notatka zostaje pod kartą, pod którą zapisano ją najpóźniej. Tak samo plan opieki. Serwer,
-`vilda_sync.js`, schemat IndexedDB, format ładunku, nagrobków i zdarzeń, API `window.VildaVault` bez zmian.
+`vilda_sync.js`, schemat IndexedDB, format ładunku, nagrobków i zdarzeń, API `window.VildaVault` bez zmian. *(2026-11-17, E3-PR0b2b, P-NOTATKA-POZNIEJSZA: „z poprawki zapisanej najpóźniej” to od E3-PR0b2b treść zmieniona najpóźniej; przeniesienie przy „Scal pacjentów” nie zmienia chwili treści, więc przy powrocie starej karty z równoległą poprawką notatka z poprawką zostaje pod starą kartą, pod którą ją poprawiono (D-4 A, skutek do odbioru).)*
 
 **Decyzja właściciela.** Decyzja 6 z 2026-11-10 (pytania E2-PR3c, „1–8 tak”; rozdział 6 planu): notatka po „Scal
 pacjentów” trafia zawsze do karty, która istnieje, z treścią z najpóźniejszej poprawki; gdy obie karty istnieją — tam,
@@ -24516,7 +24516,7 @@ notatki ta sama na wszystkich urządzeniach (zmiana działania dziś). Plan: wie
 - W sekcji notatek `Le` najwyższy znany `rev` notatki (P-NOTATKI-1 G6: „nagrobek go niesie dalej”) liczył się
   z nagrobków z ładunku i tutejszych oraz z notatek tutejszych, ale nie z notatek ładunku. B, które dostało wersję A
   (rev 3) przegraną z usunięciem, zapisywało nagrobek z rev 1; „Zostaw notatkę” na B dawało rev 2 — niższy niż wersja
-  A, a scalanie rozstrzyga najpierw po `rev`.
+  A, a scalanie rozstrzyga najpierw po `rev`. *(2026-11-17, E3-PR0b2b, P-NOTATKA-POZNIEJSZA: scalanie rozstrzyga najpierw po chwili zmiany treści; `rev` po scaleniu to najwyższy z obu wersji.)*
 - Skutki: po „Zostaw notatkę” na A (wcześniej) i na B (później) na obu zostawał tekst A; gdy B wskrzesiło notatkę,
   zanim A poznało usunięcie, albo trzecie urządzenie miało jeszcze „A3” — wszędzie wracało „A3”, a tekst wskrzeszenia
   ginął. W teście A ≡ B: „ZNANA UTRATA” R3-E1 i R3-E2, klasa R3 (R3-0, p. 7c, ziarno 6).
@@ -27456,7 +27456,7 @@ i `Q8-obca-2` wobec dzisiejszej aplikacji niezmierzone).
     innym urządzeniu przegrywa więc jak każda starsza poprawka (późniejsza zmiana wygrywa), także dziś.
   - Naprawa: osobna poprawka reguły (decyzja 9). Naprawa w E2-PR3c (decyzja właściciela 2026-11-03, po scaleniu
     vildaclinic/vilda-calc#869); od 2026-11-10 w E2-PR3c4 (decyzja 6 z 2026-11-10) — wykonane w E2-PR3c4 (wpis
-    P-NOTATKI-ZA-KARTA, E2-PR3c4): notatka pod kartą, która istnieje, na obu urządzeniach.
+    P-NOTATKI-ZA-KARTA, E2-PR3c4): notatka pod kartą, która istnieje, na obu urządzeniach. *(2026-11-17, E3-PR0b2b, P-NOTATKA-POZNIEJSZA: „Scal pacjentów” nie zapisuje już notatki od nowa jako zmiany treści — przeniesienie zachowuje chwilę treści, więc wcześniejsza równoległa edycja na innym urządzeniu wygrywa, gdy jest późniejsza od ostatniej zmiany treści.)*
 - **D7 i `createdAtISO` notatki.** Opis nagrobka wersji (`rev`, `updatedAtISO`, `zmianaISO`, `koszISO`) i chwila
   utworzenia notatki po dwóch równoległych wskrzeszeniach zależą od kolejności scaleń także przy samych blobach.
 
@@ -30134,8 +30134,8 @@ wszystko”):
 - D21-2 (a): ręczne usunięcie notatki przed „Usuń pacjenta” jest pamiętane (krata `manualDeletedAtISO`), notatka
   nie wraca;
 - D21-3 (a): wyjątek H2b akceptowany i opisany (niżej, „Ograniczenia”);
-- D21-4 (a): starsza wersja notatki (`rev` niższy niż w nagrobku) jest przywracana;
-- D21-5 (a): z równoległych poprawek zostaje jedna, ta sama na każdym urządzeniu (dotknięcie R + 1 ms + h z treści);
+- D21-4 (a): starsza wersja notatki (`rev` niższy niż w nagrobku) jest przywracana; *(2026-11-17, E3-PR0b2b, P-NOTATKA-POZNIEJSZA: z równoległych wersji zostaje ta z późniejszą zmianą treści; ratunek zachowuje chwilę treści, więc h rozstrzyga już tylko chwilę zapisu tej samej treści.)*
+- D21-5 (a): z równoległych poprawek zostaje jedna, ta sama na każdym urządzeniu (dotknięcie R + 1 ms + h z treści); *(2026-11-17, E3-PR0b2b, P-NOTATKA-POZNIEJSZA: zostaje poprawka zmieniona później, nie ta z większym h.)*
 - D21-6 (a): stan „czeka” — notatki widoczne, dopóki nie dojdzie usunięcie karty; wtedy znikają razem z nią;
 - D21-7 (a): nagrobek bez pola z tą samą chwilą (echo starej aplikacji) to ta sama wiadomość, nie ręczne usunięcie;
 - D21-8 (a): nota wydania o aktualizacji wszystkich urządzeń przed użyciem „Usuń pacjenta”, bez blokady na serwerze;
@@ -30181,7 +30181,7 @@ pomiar D-21: 13 scenariuszy × 4 kolejności wymiany A↔B × 2 kolejności trze
   ważnego pola wcześniejsze niż R oraz `manualDeletedAtISO` każdej kopii (D21-2). Max i argmax: wynik nie zależy od
   kolejności ani liczby urządzeń. Zapisany nagrobek niesie kanon pola (dotąd pole ginęłoby przy każdym scaleniu).
 - **Decyzja po fazie kart** (`Bnp_stan`; Y — najnowsza wersja notatki tu i w ładunku, w — wersja, która zostanie po
-  pętli przyjmowania: `rev`, potem data, `Bnp_zwyciezcy`):
+  pętli przyjmowania: `rev`, potem data, `Bnp_zwyciezcy`): *(2026-11-17, E3-PR0b2b, P-NOTATKA-POZNIEJSZA: `Bnp_zwyciezcy` liczy zwycięzcę regułą scalania notatek — chwila treści, potem `rev`, potem data; plany opieki — `rev`, potem data.)*
   1. brak wersji → nagrobek zostaje (jak dotąd);
   2. Y > R → notatka wygrywa (jak dotąd), z dwoma wyjątkami przy ważnym polu (przegląd 1; karta czytana leniwie jak
      w kroku 5):
@@ -30191,7 +30191,7 @@ pomiar D-21: 13 scenariuszy × 4 kolejności wymiany A↔B × 2 kolejności trze
      - zostaje wersja sprzed usunięcia (w ≤ R, np. poprawka z wyższym `rev`, której usuwający nie znał), a Y > R
        pochodzi z ratunku innej wersji → przy karcie późniejszej niż e **RATUNEK** tej wersji, przy karcie jeszcze nie
        późniejszej **CZEKA** (bez wyjątku wersja zostawała z chwilą ≤ R i bez nagrobka, więc echo starego urządzenia
-       kasowało ją wszędzie — flota, zgł. 2b); ręczne usunięcie M ≥ w — bez wyjątku;
+       kasowało ją wszędzie — flota, zgł. 2b); ręczne usunięcie M ≥ w — bez wyjątku; *(2026-11-17, E3-PR0b2b, P-NOTATKA-POZNIEJSZA: „z wyższym `rev`” czytać: „zmieniona później”.)*
   3. brak pola P → usuń (jak dotąd: ręczne usunięcie, stare urządzenie);
   4. M ≥ Y → usuń (ręczne usunięcie późniejsze niż każda znana wersja; remis dalej na korzyść usunięcia);
   5. karta `P.patientId` (`getPatientForUser`, leniwie, tylko dla kandydatów, raz na pacjenta): brak → usuń;
@@ -30206,7 +30206,7 @@ pomiar D-21: 13 scenariuszy × 4 kolejności wymiany A↔B × 2 kolejności trze
   różne poprawki — różne chwile, więc wszędzie zostaje ta sama (D21-5). Nagrobek zdejmowany tylko, gdy zapisany nie jest
   nowszy niż R; zdarzenie `merge` wysyła notatkę dalej (`buildNoteDelta`). `updatedPatientNoteCount` +1, gdy pętla
   przyjmowania tej notatki nie policzyła. Blokada zajęta (`MERGE_BUSY`) albo błąd → CZEKA w tym przebiegu; rozstrzyga
-  następne scalanie (sekcja notatek nie przerywa się po cichu).
+  następne scalanie (sekcja notatek nie przerywa się po cichu). *(2026-11-17, E3-PR0b2b, P-NOTATKA-POZNIEJSZA: zwykła reguła to od E3-PR0b2b chwila treści, potem `rev`, potem data; dotknięcie ratunku zachowuje chwilę treści i oznaczenia — `Bnp_dotknij`.)*
 - **CZEKA** (D21-6): karta jest, ale nie jest późniejsza od usunięcia (wiadomość o usunięciu karty jeszcze nie doszła):
   notatka zostaje, kanon nagrobka zapisany obok niej (bez cofania nowszego nagrobka). CZEKA przechodzi w RATUNEK (karta
   stanie się późniejsza — `lastSavedAtISO` nigdy nie maleje) albo w usunięcie (karta zostanie usunięta). „Usuń
@@ -30344,7 +30344,7 @@ pomiar D-21: 13 scenariuszy × 4 kolejności wymiany A↔B × 2 kolejności trze
   przy wersji nowszej od nagrobka (wyjątki z kroku 2), więc wersja z kopii w pasmie ratunku przy karcie usuniętej tutaj
   jest „usunięta”, nie „dodana”. Podgląd = wynik = różnica magazynu (dodane, zmienione, usunięte, przywrócone).
   „Zastąpiona późniejsza edycja” jest liczona semantycznie: przy ratunku wersji z wyższym `rev` w miejsce tutejszej
-  uratowanej wersji (zgł. 2b) mechaniczna różnica chwil zależy od h obu treści, a lekarz nie traci nowszej treści.
+  uratowanej wersji (zgł. 2b) mechaniczna różnica chwil zależy od h obu treści, a lekarz nie traci nowszej treści. *(2026-11-17, E3-PR0b2b, P-NOTATKA-POZNIEJSZA: wersja uratowana wygrywa po chwili treści, nie po `rev`.)*
 - **Flota mieszana.** Stara aplikacja ucina pole bez błędu i zachowuje się jak dotąd. Pacjenta usuwa stare urządzenie
   → nagrobki bez pola, wynik jak dziś. Nowe A ratuje z ładunku starego B (B przyjmuje, bo u′ > R). Stare urządzenie,
   które przyjęło usunięcie, dostaje notatki po ratunku. Echo starego urządzenia przed ratunkiem nie odbiera pola.
@@ -30683,7 +30683,7 @@ P1 (10 z tej poprawki i 5 z poprawki F2, #754) i 11 z jego weryfikacji 2; wejśc
   i bez nagrobka, rozchodzi się, a echo starego urządzenia (nagrobek bez pola, chwila R) kasuje notatkę wszędzie — jak
   na bazie, gdzie ginie od razu, ale lekarz widzi, że wraca i znika. Naprawa wymagałaby niesienia R razem z notatką
   (zmiana formatu notatki), poza zakresem D-21. Gdy to urządzenie ma nagrobek z polem, poprawka jest ratowana (zgł. 2b;
-  także poprawka zapisana w stanie CZEKA przy G13 — S8b).
+  także poprawka zapisana w stanie CZEKA przy G13 — S8b). *(2026-11-17, E3-PR0b2b, P-NOTATKA-POZNIEJSZA: decyduje późniejsza zmiana treści, nie wyższy `rev`; mechanizm echa starego urządzenia bez zmian.)*
 - **Import pliku karty w stanie CZEKA** (przegląd przeniesienia na D-7, sprawdzenie miejsc zdejmujących nagrobek;
   test IM1). Import do istniejącej karty zdejmuje nagrobki importowanych notatek (P-NOTATKI-1 G3),
   a ich chwil nie podbija (P-IMPORT-NAGROBEK podbija tylko przy karcie przywracanej z pliku): zostają wersje z chwilą
@@ -32227,7 +32227,7 @@ mówią o tym jawnie, a przycisk jest dostępny. **Wpływ kliniczny pośredni:**
 (wyniki badań, leki, IGF-1, terminy kontroli), a listy oczekujących — organizację zabiegów; dotąd bywały nieosiągalne
 z ekranu albo usuwane po cichu. Wada „Scal teraz” z przeglądu „trzy wady”, wariant (a) z raportu krytyka.
 *(2026-11-16: decyzja właściciela — przy notatce pacjenta zmienionej na dwóch urządzeniach ma wygrywać późniejsza
-zmiana; zmiana reguły w E3-PR0b2. Opis wyżej to stan kodu.)*
+zmiana; zmiana reguły w E3-PR0b2. Opis wyżej to stan kodu.)* *(2026-11-17, E3-PR0b2b, P-NOTATKA-POZNIEJSZA: reguła zmieniona — notatki pacjentów i wpisy Terminarza: zostaje późniejsza zmiana treści, oznaczenie „wykonane”/„nie zgłosił się” według chwili zmiany oznaczenia; plany opieki i listy pacjentów: wyższy `rev`, przy równym nowsza data, bez zmian.)*
 
 **Co było** (`audyt` `2df41a8`, prawdziwy sejf, magazyn w pamięci, dane fikcyjne; A robi kopię konta, C ją scala, C
 zsynchronizowany wcześniej z A). „Scal teraz” było widoczne tylko przy `totalNewSnapshots>0 || addPatients.length>0`;
@@ -32254,7 +32254,7 @@ gubił pięć liczników Le (listy pacjentów, usunięte notatki pacjentów i sz
   notatka bez `patientId`, lista o pustej nazwie po `Z`, pozycja i klucz preferencji z kopii bez `updatedAtISO` nie są
   liczone; błąd sekcji = 0.
 - Kategorie: „dodane” (w tym „przywrócone” — z przegranym tu nagrobkiem), „zmienione” (w tym „zastąpione późniejsze
-  edycje”, `replacedNewer…Count` — tutejsza data późniejsza niż data wersji z kopii, wygrywającej wyższym `rev`),
+  edycje”, `replacedNewer…Count` — tutejsza data późniejsza niż data wersji z kopii, wygrywającej wyższym `rev`), *(2026-11-17, E3-PR0b2b, P-NOTATKA-POZNIEJSZA: dla notatek i Terminarza poza planami opieki „zastąpione nowsze” liczy się po chwili treści, więc zwykle 0; plany opieki i listy — jak tu opisano.)*
   „usunięte” (najnowszy nagrobek nie starszy niż najnowsza zmiana tu i w kopii, przy rekordzie tutaj). Listy
   oczekujących (`wllists`) i terminy (`wlsched`): `Ak(tutaj, z kopii)` i porównanie widocznych wpisów bez znaczników
   czasu — sam nowszy znacznik nie jest zmianą. Pozostałe preferencje — `uiPreferenceCount`, nie odsłania przycisku.
@@ -32291,7 +32291,7 @@ gubił pięć liczników Le (listy pacjentów, usunięte notatki pacjentów i sz
   osoba jest w bazie: osoba dodana tu do bazy może wrócić do osób spoza bazy. Notatki i listy scali jak synchronizacja:
   wersja z kopii może zastąpić tutejszą, nawet poprawioną tu później, a późniejsze usunięcie w kopii usunie je także
   tutaj — podgląd wymieni każdą taką zmianę. Nie przywraca pacjentów scalonych z inną kartą ani usuniętych po ich
-  ostatnim zapisie w kopii.” („Każdą taką zmianę” dotyczy notatek i list; zmiany nagłówka podgląd nie wymienia.)
+  ostatnim zapisie w kopii.” („Każdą taką zmianę” dotyczy notatek i list; zmiany nagłówka podgląd nie wymienia.) *(2026-11-17, E3-PR0b2b, P-NOTATKA-POZNIEJSZA: zdanie o notatkach i listach zastąpione: „Notatki scali jak synchronizacja: zostanie treść zmieniona później — tutejsza albo z kopii — a oznaczenie „wykonane” lub „nie zgłosił się” z tej strony, po której zmieniono je później. Plany opieki i listy pacjentów z kopii mogą zastąpić tutejsze, nawet zmienione tu później. Późniejsze usunięcie w kopii usunie wpis także tutaj — podgląd wymieni każdą taką zmianę.” — do akceptacji właściciela.)*
 - Przycisk: dotychczasowa część i najwyżej trzy krótkie — notatki (pacjentów i szablony), wpisy w Terminarzu (bez
   pacjenta), listy (pacjentów i oczekujących), np. „Scal teraz (1 nowych zapisów, 1 notatka, 1 lista)”, „Scal teraz
   (1 notatka, 2 wpisy w Terminarzu)”; same terminy albo usunięcia — „Scal teraz”.
@@ -32324,7 +32324,7 @@ magazynu, a każdy licznik spełnia parzystość podgląd = wynik scalania = ró
 - T25 błąd zapisu notatki w sekcji Le, T27 zapis meta konta rzuca przy zmianie list → wynik 0 (w T27 mimo licznika
   preferencji Le 1), ekran „Nie scalono …”;
 - T32 notatka i lista poprawiane na A dwa razy, w C później raz → „1 notatka pacjenta poprawiona tutaj później zostanie
-  zastąpiona starszą wersją z kopii”, w C wersje z kopii;
+  zastąpiona starszą wersją z kopii”, w C wersje z kopii; *(2026-11-17, E3-PR0b2b, P-NOTATKA-POZNIEJSZA: T32 przepisany: notatka tutejsza, zmieniona później, zostaje; listę zastąpi starsza wersja z kopii.)*
 - T34, T35 w trakcie Le inna karta w C dodaje, zmienia albo usuwa listy oczekujących → wynik liczy tylko zmiany z kopii;
 - T31, T38, T39 nowa wersja z kopii po późniejszej tutejszej poprawce nagłówka („Testowy Adam”/M w kopii, „Poprawiona
   Ada”/K tutaj), kontaktu osoby spoza bazy albo „Dodaj do bazy” → nagłówek z kopii ze starszym `timestampISO`, osoba
@@ -32361,7 +32361,7 @@ poziomego przewijania. Na `2df41a8` pierwsze trzy czerwone;
 pacjentów, szablony, listy i listy oczekujących, które dojdą, zmienią się albo zostaną usunięte — także tutejsze
 poprawki, które zastąpi starsza wersja z kopii — i może je scalić, gdy kopia nie niesie nowych zapisów. Wynik nie mówi
 już „wszystko już było”, gdy coś doszło albo zapis się nie udał. Podtytuł mówi, że karta z nowymi zapisami przejmie
-z kopii dane osoby i przynależność do bazy.
+z kopii dane osoby i przynależność do bazy. *(2026-11-17, E3-PR0b2b, P-NOTATKA-POZNIEJSZA: „tutejsze poprawki, które zastąpi starsza wersja z kopii” — od E3-PR0b2b już tylko plany opieki i listy pacjentów.)*
 
 **Ograniczenia.**
 - Reguły sekcji Le są powtórzone w `Bks_planDanych` (wariant (a)); zmiana Le wymaga zmiany planu — pilnuje test
@@ -41032,7 +41032,7 @@ trwał w nim 200,8 s (przed scaleniem 161,9 s i 162,7 s, na bazie `4355e325` 127
   czerwonymi na bazie i odbiorem właściciela; test wejściowy — przypadek notatki z bloku znanych usterek (niżej).
   *(2026-11-16: E3-PR0b2 podzielony na E3-PR0b2a — przygotowanie bez zmiany reguły scalania: konflikt zapisu po
   chwili zapisu i przyciski stanu bez treści sprzed blokady, wpis P-KONFLIKT-ZAPISU-NOTATKI niżej — i E3-PR0b2b, samą
-  regułę; plan, tabela „Podział E3-PR0”, wiersze 2a i 2b.)*
+  regułę; plan, tabela „Podział E3-PR0”, wiersze 2a i 2b.)* *(2026-11-17, E3-PR0b2b, P-NOTATKA-POZNIEJSZA: reguła wdrożona — wpis P-NOTATKA-POZNIEJSZA na końcu pliku; przypadek z bloku znanych usterek jest testem wejściowym w CI.)*
 - **Reguła echa** (E3-PR0c, E3-PR0d): odsyłać rekord, który scalanie zapisało inaczej, niż przyszedł; warunek „scalanie
   zapisało” porównuje rekord przed i po scaleniu (bez niego powtórka partii daje wiersze surowe, a odsyłanie na samym
   fakcie zapisu dałoby echo bez końca przez urządzenie 221). Reguła jest niezależna od źródła: nie odsyłać różnicy
@@ -41119,7 +41119,7 @@ wynik.
 | `E2_AB_ECHO_KLONY=wszystkie` | echo na klonach każdego scalenia z echem w losowych flotach |
 | `E2_AB_NORM_VISIT=0` | wyrocznia bez normalizacji tożsamości wizyty (czerwienieje także literały scenariuszy) |
 | `E2_AB_P6_FLOTA=wszystkie` | scenariusze ręczne floty i kontrole C = N |
-| `E2_AB_ZNANE_USTERKI=1` | blok znanych usterek bieżącej aplikacji (dziś czerwony): notatka pacjenta — do naprawy w E3-PR0b2, „Usuń pacjenta” duplikatu karty — w E3-PR0e |
+| `E2_AB_ZNANE_USTERKI=1` | blok znanych usterek bieżącej aplikacji (dziś czerwony): notatka pacjenta — do naprawy w E3-PR0b2, „Usuń pacjenta” duplikatu karty — w E3-PR0e *(2026-11-17, E3-PR0b2b, P-NOTATKA-POZNIEJSZA: notatka pacjenta naprawiona, przypadek w CI; w bloku zostaje duplikat karty.)* |
 | `E2_AB_STRES=0`, `E2_AB_STRES_WARIANTY=<lista>`, `E2_AB_STRES_KART=<n>`, `E2_AB_STRES_TRESC=<n>` | stres: wyłączenie, warianty („C→A”, „C→A i C→B”, „C→A+konflikt”, „276→A”, „N→A”, „N→A+konflikt”), liczba kart, wypełniacz w treści każdej wersji |
 | `E2_AB_SLAD=<prefiks>[,…]` | stan wersji i wpisu Kosza na A, B, C po każdym wierszu dziennika floty |
 | `E2_AB_WYNIKI=<plik>` | JSONL: pole `odsyl` ziaren, wiersze `typ` 'flota221', 'flota276', 'flotaN', 'p6f', 'stres', 'znana usterka' |
@@ -41136,7 +41136,7 @@ i `E2_AB_SLAD`); warunki zieleni — zawsze.
   wszystkich trzech światach zostaje treść A z `rev` 3). W losowej flocie: 221 bez delt, ziarno 7 (świat 200 007), W4
   floty, krok 132. Bez klasy i bez literału; wersje wizyt mają od D-7 wariant 2 regułę odwrotną (wygrywa późniejsza).
   Przypadek z bloku jest testem wejściowym E3-PR0b2; E3-PR0b sejfu nie zmienia, a opis reguły w P-KOPIA-DANE-KONTA (stan
-  kodu) dostał dopisek z 2026-11-16.
+  kodu) dostał dopisek z 2026-11-16. *(2026-11-17, E3-PR0b2b, P-NOTATKA-POZNIEJSZA: naprawione — zostaje zmiana późniejsza; przypadek z bloku jest w CI (zielony w W1, W4 i blobach, na bazie czerwony). Ziarno 7 floty 221 bez delt (ręcznie) zostaje czerwone, identycznie na bazie: przyczyna po stronie 221 — w kroku 132 dostawa B → C z wersją o wyższym `rev` nadpisuje na C jego późniejszą poprawkę, zanim ją wysłał; bieżąca aplikacja tej zmiany nie dostaje (wpis P-NOTATKA-POZNIEJSZA, „Flota mieszana”).)*
 - **„Usuń pacjenta” duplikatu karty po „Scal pacjentów” — do naprawy w E3-PR0e (decyzja 4a).** B scala X → Y; A bez
   wiedzy o scaleniu poprawia wizytę v w X (33,6 → 41 kg), więc X wraca (D-4 A); C usuwa X razem z v (`Bpu_usun`,
   `vilda_vault.js:9441`; poprawka trafia do karty, w której wersja leży lokalnie — `Bsw_decyzja`, :3806). Wynik zależy
@@ -41395,21 +41395,21 @@ trwałych wizyt z `40d742d3` odtwarza stan sprzed tej zmiany — `docs/ZRODLA_AR
   tym samym `rev` wygra wersja z importu i otwarty edytor też się zatrzyma (z kodu). Nic się wtedy nie zapisuje ani
   nie kasuje: edytor daje wybór (lekarz może wybrać „Wczytaj nowszą (porzuci Twój tekst)” dla tej samej treści),
   przypomnienie zostawia opis w formularzu, a Klirens każe otworzyć szczegóły i wpisać zmianę ponownie (najbardziej
-  uciążliwe). Wymiana: rzadki fałszywy alarm zamiast cichego nadpisania późniejszej zmiany.
+  uciążliwe). Wymiana: rzadki fałszywy alarm zamiast cichego nadpisania późniejszej zmiany. *(2026-11-17, E3-PR0b2b, P-NOTATKA-POZNIEJSZA: dla wołających, którzy podają wersję pokazaną lekarzowi (`baseNote`: edytor notatki, formularz wykonania przypomnienia, „Opisz wynik”, zmiana i usunięcie wyniku Klirensu), fałszywego konfliktu po ratunku D-21, imporcie karty i zapisie samego `rev` już nie ma — „ta sama widoczna wersja” nie jest konfliktem, a każda widoczna zmiana z innego urządzenia dalej go daje; wołający bez `baseNote` — jak tu opisano.)*
 - **Reguła scalania bez zmian.** Przy notatce zmienionej na dwóch urządzeniach, zanim się zsynchronizowały, zostaje
   dalej wersja z wyższym `rev` (przy równym — nowsza data); „wygrywa późniejsza zmiana” to E3-PR0b2b. Gdy scalanie
   zacznie podnosić `rev` bez zmiany treści, wołający bez `baseUpdatedAtISO` dostaną fałszywe konflikty — wejście do
-  E3-PR0b2b.
+  E3-PR0b2b. *(2026-11-17, E3-PR0b2b, P-NOTATKA-POZNIEJSZA: reguła zmieniona — zostaje późniejsza zmiana treści, a oznaczenie według chwili zmiany oznaczenia; scalanie podnosi `rev` bez zmiany treści, więc wołający bez `baseUpdatedAtISO` (dawna umowa po `rev`) mogą dostać fałszywy konflikt, kierunek bezpieczny (z kodu).)*
 - **Plany opieki na `rev`.** Wpisy planu (krok, termin w bieżącej relacji) zapisują się dalej po `rev`
   (`CareMvpLegacyWrite`, `CareMvpReminderOutcome`, `updateLinked`); edytor wysyła `baseUpdatedAtISO` także dla wpisu
   planu, ale decyduje tam `rev` — równoległa zmiana treści wpisu planu przy równym `rev` nie zatrzymuje zapisu (jak
   dotąd). Dowód kroku planu z etapami porównuje tylko `rev` (ścisły format modelu planu) — do E3-PR0b2b i projektu
-  modułu planów.
+  modułu planów. *(2026-11-17, E3-PR0b2b, P-NOTATKA-POZNIEJSZA: wpisy planów opieki zostają przy dawnej regule; dowód kroku planu z etapami po `rev` — luka opisana i przypięta testem w E3-PR0b2b, poprawka w repozytorium źródeł modułu, decyzja 2 (a).)*
 - **Karta pacjenta przycisku z odczytu sprzed blokady.** Przycisk stanu wysyła `patientId` z odczytu przed blokadą;
-  zmianę samej karty notatki przez scalanie w tym oknie zapis by cofnął (jak dotąd; z kodu).
+  zmianę samej karty notatki przez scalanie w tym oknie zapis by cofnął (jak dotąd; z kodu). *(2026-11-17, E3-PR0b2b, P-NOTATKA-POZNIEJSZA: bez zmian; zapis liczy się przy tym jako zmiana treści — osobny PR.)*
 - **Inne zapisy z treścią sprzed blokady.** „Scal pacjentów” przenosi notatki z tytułem i treścią z odczytu sprzed
   blokady notatki (tak samo przypisanie pacjenta do wpisu Terminarza spoza bazy) — ten sam rodzaj okna co przyciski,
-  poza zakresem; wynik jest ten sam przed zmianą i po niej (z kodu).
+  poza zakresem; wynik jest ten sam przed zmianą i po niej (z kodu). *(2026-11-17, E3-PR0b2b, P-NOTATKA-POZNIEJSZA: „Scal pacjentów”, „spoza bazy” i Terminarz „Edytuj osobę” nie wysyłają już treści sprzed blokady — `Ad` bierze ją z wersji zapisanej pod blokadą notatki.)*
 - **„Opisz wynik”** czyta wpis tuż przed prośbą, więc chwila zapisu chroni tylko okno do blokady, nie czas pisania
   opisu (jak dotąd `baseRev`); zapis dopisuje opis do treści czytanej pod blokadą, więc nic nie ginie.
 - **Teksty.** Notatka usunięta przed kliknięciem (nieaktualna lista) — dalej techniczne „completePatientNote:
@@ -41433,3 +41433,452 @@ pomiaru); `clcr_saved_results.js` (punkt serii).
 `clcr_result_details.js` 19 → 20, `clcr_saved_results.js` 23 → 24; wstrzykujące: `vilda_chrome.js` 296 → 297,
 `vilda_session_bridge.js` 212 → 213, `clcr_record_resources.js` 28 → 29; SW 1.1.541 → 1.1.542; baza `origin/audyt`
 `214a44c7` (po vildaclinic/vilda-calc#971). Bez nowego pliku w pamięci offline.
+
+## Notatka pacjenta: zostaje zmiana późniejsza, a oznaczenie „wykonane” ma własną chwilę (P-NOTATKA-POZNIEJSZA, E3-PR0b2b, SW 1.1.544, `vilda_vault.js` 279, `vilda_auth_ui.js` 565, 2026-11-17)
+
+**Zmiana kliniczna: TAK — synchronizacja.** Wzory, progi, jednostki i interpretacje bez zmian. Zmienia się, która
+treść notatki pacjenta zostaje po synchronizacji, po „Scal kopię konta” i po imporcie karty, gdy notatkę zmieniono na
+dwóch urządzeniach, zanim się zsynchronizowały. Dotyczy to wszystkiego, co sejf trzyma jako notatkę pacjenta: opisu
+wizyty, wyniku badania, leku i dawki, IGF-1, terminu kontroli, przypomnienia, wpisu Terminarza (także bez pacjenta)
+i wyniku Klirensu. Dotąd zostawała wersja poprawiana więcej razy (wyższy `rev`), teraz zostaje wersja zmieniona
+później. Oznaczenie „wykonane”, „nie zgłosił się” i jego cofnięcie idzie osobno, według chwili zmiany oznaczenia.
+Serwer, schemat IndexedDB, koperty zdarzeń i `vilda_sync.js` bez zmian. Rekord i ładunek notatki dostają cztery pola
+opcjonalne: `contentAtISO` i `contentForISO` (chwila zmiany treści i jej kotwica), `stateAtISO` i `stateForISO`
+(chwila zmiany oznaczenia i jej kotwica). Plany opieki i listy pacjentów zostają przy dawnej regule.
+
+**Skąd.** Decyzja 1 właściciela z 2026-11-16 („1 tak”: przy notatce pacjenta zmienionej na dwóch urządzeniach ma
+wygrywać późniejsza zmiana) oraz odpowiedź na pytania 1–2 projektu E3-PR0b2 z 2026-11-16 („2a, a w 1 polecane d”):
+1 (d) — oznaczenie to osobny rejestr (treść według chwili zmiany treści, oznaczenie według chwili zmiany oznaczenia),
+2 (a) — reguła wchodzi od razu, a dwie wąskie luki modułu planów z etapami są opisane niżej („Ograniczenia”)
+i przypięte testem. Plan `docs/SYNC_PRZYROSTOWA_PLAN.md`, rozdział 6, blok „Decyzje z 2026-11-16 (E3-PR0b2, pytania
+1–2 projektu)”, tabela „Podział E3-PR0”, wiersz 2b. Przygotowanie bez zmiany reguły — E3-PR0b2a (wpis
+P-KONFLIKT-ZAPISU-NOTATKI wyżej). Sprawy, których projekt i decyzje nie rozstrzygały, rozstrzygnięto wariantem
+najbezpieczniejszym dla danych; są niżej, w punkcie „Do akceptacji właściciela przy PR”.
+
+### E3-PR0b2b
+
+**Co było** (`audyt` `9fc26c71`, sejf bajt w bajt taki sam jak w `3c1fc748` po #978; prawdziwy sejf, magazyny
+w pamięci, dane fikcyjne).
+- A zapisuje notatkę dwa razy („A: TSH 4,1.”, potem „A: TSH 4,1 mIU/l, kontrola za 6 tygodni.”, `rev` 3), B pięć
+  sekund później raz („B: lewotyroksyna 50 µg od jutra.”, `rev` 2). Po wymianie na obu zostawała treść A. Zmiana B
+  ginęła bez śladu. To samo w teście A ≡ B (przypadek z ręcznego bloku znanych usterek E3-PR0b, świat 880: wszędzie
+  „Fikcyjna treść A2”, `rev` 3) i w „Scal kopię konta” (kopia poprawiana tam częściej zastępowała późniejszą edycję
+  tutaj).
+- Telefon klikał „wykonane”, laptop bez połączenia później zmieniał treść: zostawała treść laptopa, a „wykonane”
+  ginęło albo zostawało, zależnie od liczby poprawek (`!z&&xe&&et<=rt?xe:z` — oznaczenie „lepkie” przy nie wyższym
+  `rev`). Cofnięcie „wykonane” na jednym urządzeniu i równoległa zmiana treści na drugim mogły zgubić cofnięcie.
+- Ratunek notatek przy „Usuń pacjenta” (D-21), import karty i przeniesienie przy „Scal pacjentów” nadawały notatce
+  nową chwilę zapisu. Przy równym `rev` taka wersja wygrywała z późniejszą poprawką z innego urządzenia.
+- Po scaleniu `rev` mógł spaść: przy wygranej tutejszej treści zostawał tutejszy, niższy `rev`.
+- „Scal pacjentów” i „spoza bazy” zapisywały notatki z tytułem i treścią odczytanymi przed blokadą notatki.
+
+**Reguła.**
+- **Treść.** Scalanie dwóch wersji tej samej notatki (`Bnp_nowsza`): brak tutejszej — wersja z ładunku; plan opieki
+  po którejkolwiek stronie (kategoria `care-plan` albo `careContext` obiekt różny od `null`; po stronie tutejszej
+  także kontekst tylko w zaszyfrowanej treści, odczytany pod blokadą notatki) — dawna reguła (`rev`, potem chwila
+  zapisu); inaczej porządek: chwila treści, potem `rev`, potem chwila zapisu. Pełny remis — zostaje tutejsza. Tą samą
+  funkcją idą `Le` (filtr wstępny i decyzja pod blokadą), zwycięzcy dla nagrobków (`Bnp_zwyciezcy`) i podgląd
+  „Scal kopię konta” (`Bks_wygrywaNotatka`, `Bks_planZbioru`, `Bks_zmianyKarty`, `Bks_planDanych`), więc podgląd
+  = wynik. Listy pacjentów — dawna reguła (`Bks_wygrywaRev`).
+- **Chwila treści** (`Bnp_chwilaTresci`): `contentAtISO`, ważne tylko z kotwicą `contentForISO === updatedAtISO`,
+  w postaci `toISOString` i nie później niż `updatedAtISO`; inaczej chwila zapisu. Każdy zapis, który zmienia
+  `updatedAtISO` i nie przenosi pola świadomie, liczy się więc jako zmiana treści, a pole przepisane przez starszy kod
+  z nową chwilą zapisu traci ważność. Pole piszą tylko zapisy, które przesuwają chwilę zapisu bez zmiany treści:
+  ratunek D-21 (`Bnp_dotknij`), import karty (`Bnp_zImportu`), przeniesienie przy „Scal pacjentów” i „spoza bazy”
+  (`Bnp_zPrzeniesienia`) oraz zapis `Ad`, który treści nie zmienia (np. „wykonane”). „Nie zmienia” znaczy: te same
+  znormalizowane wartości przed i po (tytuł, treść, kategoria, termin, godzina, czas trwania, karta, nazwa osoby spoza
+  bazy, lek, wynik, IGF-1, data kliniczna, rodzaj zabiegu, priorytet listy, wiek wizyty, seria i jej reguła, punkt GH,
+  dni kontroli, kontekst przypomnienia, znacznik odłączenia od planu). Każde z tych pól zmienione osobno jest zmianą
+  treści. Scalenie przenosi pole zwycięzcy. Chwila spoza postaci `toISOString` (np. bez milisekund, z uszkodzonego
+  ładunku) jest przy zapisie pola sprowadzana do postaci kanonicznej (`Bnp_kanonChwili`). Pól z ładunku wołającego
+  `savePatientNote` sejf nie przyjmuje.
+- **Stempel zapisu** (`Bnp_chwilaNotatki`, jak D-7 dla wizyt): zapis `Ad` dostaje „teraz”, ale później niż
+  poprawiana wersja (zegar spóźniony albo wersja z przyszłości), a obcięty na `9999-12-31T23:59:59.999Z`.
+  Wskrzeszenie („Zostaw notatkę”) dostaje chwilę późniejszą niż najpóźniejszy znany nagrobek tej notatki. Plany
+  opieki i nowa notatka — „teraz”. Import karty: chwila zapisu nie cofa się przed wersję z pliku.
+- **`rev` po scaleniu** — najwyższy z obu wersji, w obu gałęziach. Gdy zostaje tutejsza treść, a `rev` z ładunku jest
+  wyższy, sejf zapisuje sam `rev` pod blokadą notatki, na świeżym odczycie (`Bnp_tutejszaZapis`), bez licznika,
+  zdarzenia i kolejki. Plany opieki — bez zmian.
+- **Oznaczenie** („wykonane”, „nie zgłosił się”, cofnięcie) to osobny rejestr. Chwila oznaczenia (`Bnp_chwilaStanu`):
+  `stateAtISO` z kotwicą `stateForISO === updatedAtISO`, inaczej chwila samego oznaczenia (`completedAtISO`, potem
+  `noShowAtISO`), bez oznaczenia — pusty napis. Zapis `Ad`, który zmienia oznaczenie, daje mu chwilę tego zapisu,
+  a zapis bez zmiany oznaczenia, ratunek i import ją zachowują. Pole `stateAtISO` trafia do rekordu tylko wtedy, gdy
+  różni się od chwili samego oznaczenia (np. po cofnięciu). Przy scalaniu (poza planami opieki) oznaczenie pochodzi
+  z wersji o ściśle późniejszym oznaczeniu (`Bnp_stanNowszy`). Przy równej chwili rozstrzyga wartość, w stałym
+  porządku niezależnym od strony: „wykonane”, potem „nie zgłosił się”, potem sprawa otwarta. Równe rejestry nie są
+  zmianą.
+- **Złączenie.** Gdy treść wygrywa jedna wersja, a oznaczenie druga, rekord łączy treść i chwilę treści zwycięzcy
+  treści z oznaczeniem i chwilą oznaczenia drugiej wersji, `rev` = najwyższy, a chwilę zapisu o 1 ms późniejszą niż
+  obie wersje (`Bnp_poObu`; przy `9999-12-31T23:59:59.999Z` bez zmiany). Rekord różni się widocznie od obu wersji, więc
+  każda kontrola po chwili zapisu go widzi (konflikt zapisu z E3-PR0b2a w edytorze, w przypomnieniach i w Klirensie,
+  „ten sam rekord” w scalaniu). Obie strony liczą ten sam rekord. Na urządzeniu z tutejszą treścią to zapis samego
+  oznaczenia (bez ponownego szyfrowania): liczy się jako zmieniona notatka (`updatedPatientNoteCount`) i zgłasza
+  zdarzenie „merge” przez istniejące powiadomienie scalania (`qr`; bez nowego miejsca dziennika zdarzeń i bez
+  kolejki — drugie urządzenie liczy to samo złączenie).
+- **Oznaczenie o tej samej wartości** (`Bnp_samaChwilaStanu`): gdy późniejsze oznaczenie drugiej wersji ma tę samą
+  wartość co oznaczenie zwycięzcy treści, a jego chwila nie jest późniejsza niż chwila zapisu zwycięzcy treści, rekord
+  to zwycięzca treści z samą chwilą oznaczenia (pole z kotwicą jego chwili zapisu) — bez nowej chwili zapisu,
+  licznika, zdarzenia i „zmienionej” w podglądzie. Bez tego kopia ucięta przez starszą aplikację dawała przy
+  każdej pełnej wymianie nowe złączenie.
+- **Przełożenie otwartej sprawy** (inny termin, wynik bez oznaczenia) potwierdza oznaczenie „otwarte” z chwilą tego
+  zapisu — w jednym miejscu `Ad`, więc tak samo dla przycisku „Przełóż”, przeniesienia wizyty w Terminarzu, zmiany
+  terminu w edytorze i formularza wykonania z akcją „przełóż”. Zmiana terminu wpisu już zamkniętego go nie otwiera.
+- **„Wygrywa tutejsza”** w filtrze wstępnym i pod blokadą robi to samo na świeżym rekordzie: regułę karty notatki
+  (E2-PR3c4), najwcześniejszą chwilę utworzenia (E2-PR3c3), `rev` = max i — gdy oznaczenie z ładunku jest późniejsze —
+  zapis oznaczenia. Gdy rekord zmienił się w oknie między początkiem sekcji a blokadą, decyzja zapada na świeżym
+  rekordzie.
+- **Przeniesienie.** „Scal pacjentów” i „spoza bazy” wysyłają tylko identyfikator, kartę docelową i wyczyszczenie
+  nazwy osoby spoza bazy. Tytuł, treść, kategorię, termin i pola kliniczne `Ad` bierze z wersji zapisanej, odczytanej
+  pod blokadą notatki. Przeniesienie nie zmienia chwili treści. Notatka bez tytułu dostaje „(wpis)” tylko wtedy, gdy
+  zapisana wersja nie ma tytułu. Notatka usunięta w oknie jest pomijana (nie liczy się jako przeniesiona). Notatka
+  z nieczytelnym szyfrogramem przechodzi bez ponownego szyfrowania, z polami klinicznymi starego zapisu.
+- **Terminarz „Edytuj osobę”** (wpis bez pacjenta) wysyła tylko identyfikator, kartę i nazwę osoby, a tytuł — tylko
+  gdy wpis go nie miał. Na wpisie bez tytułu usuniętym w innej karcie zapis kończy się zdaniem „Ta notatka już nie
+  istnieje…” (jak przyciski stanu w E3-PR0b2a). Nowy wpis nieobecności z serii zapisuje się jak dotąd.
+- **„Ta sama widoczna wersja” nie jest konfliktem** (`Bnp_takSamoWidoczna`; obietnica z P-KONFLIKT-ZAPISU-NOTATKI).
+  Wołający, który zna wersję pokazaną lekarzowi, wysyła obok `baseUpdatedAtISO` całą tę wersję (`baseNote`, tak jak
+  ją oddał sejf): edytor notatki (po „Nadpisz moją wersją” — `current` konfliktu), formularz wykonania przypomnienia,
+  „Opisz wynik” w Badaniach, zmiana i usunięcie wyniku Klirensu. Sejf (`Ad`, `RemB22SaveOutcome`,
+  `VildaChangeExistingPatientNote` z blokiem KLIRENS-ISTNIEJACY-WYNIK bajt w bajt z
+  `tools/patch-vault-existing-note.mjs`) sprawdza to tylko tam, gdzie E3-PR0b2a daje konflikt (inna chwila zapisu):
+  `baseNote` z tym samym `id` i tą samą chwilą zapisu co `baseUpdatedAtISO`, a odczyt wersji w sejfie równy jej
+  w każdym polu z pełnej, stałej listy pól odczytu poza technicznymi (`rev`, chwila zapisu, chwila utworzenia, cztery
+  pola chwil; brak klucza ≡ `null`). Równe — zapis bez konfliktu. Różne w czymkolwiek, bez `baseNote` albo z niespójną
+  wersją — konflikt jak dotąd. Zwolnienie nigdy nie dodaje konfliktu. Usuwa fałszywy konflikt po ratunku D-21, po
+  imporcie karty na innym urządzeniu, po przeniesieniu tej samej treści i po zapisie samego `rev`.
+- **Baner edytora** „Ta notatka zmieniła się na innym urządzeniu…” pokazuje się po zdarzeniu scalenia tylko wtedy, gdy
+  wersja w sejfie (odczyt po zdarzeniu) różni się od otwartej w którymkolwiek polu odczytu poza technicznymi; przy
+  błędzie odczytu albo braku notatki — jak dotąd. Teksty bez zmian.
+- **Ft** oddaje cztery pola chwil tylko wtedy, gdy są ważne (z kotwicą), więc idą też w ładunku, deltach, zdarzeniach
+  i kopii konta. `CareMvpHydrateSyncRecord` pomija je przy porównaniu (z kodu), a `CareMvpWriteCalendarOriginal` zdejmuje je
+  z poprzedniego rekordu przed `Object.assign`.
+- **Bez zmian:** nagrobek notatki (`Bnp_stan` po chwili zapisu), reguła karty notatki (E2-PR3c4), listy pacjentów,
+  szablony strony „Notatki”, wpisy planów opieki (dawna reguła, bez stempla i bez pól, oznaczenie „lepkie” jak
+  dotąd), fragment natywny planów z etapami (własny warunek `wins`), blok trwałych wizyt, blok P-DZIENNIK-ZDARZEN.
+
+**Przypadki** (dane fikcyjne; A, B — dwa urządzenia bez połączenia, potem wymiana; testy niżej):
+
+| Wejście | Dotąd | Teraz |
+|---|---|---|
+| A dwa razy („A: TSH 4,1 mIU/l, kontrola za 6 tygodni.”), B pięć sekund później raz („B: lewotyroksyna 50 µg od jutra.”) | wszędzie treść A, `rev` 3 | wszędzie treść B, `rev` 3 |
+| B dwa razy, A raz później („A: dawka 75 od jutra (później).”) | treść B | treść A, `rev` 3 |
+| trzy urządzenia: A dwa razy, B trzy razy, C raz najpóźniej, pierścień pełnych kopii w każdej kolejności | treść B | wszędzie treść C, `rev` 4 |
+| laptop trzy razy pełny opis wizyty („…masa 28 kg. Zmiana dawki: 0,9 mg na dobę od poniedziałku.”), telefon pięć sekund później poprawia literówkę w starej wersji | wszędzie opis laptopa | wszędzie wersja telefonu, pełny opis ginie (przykład odwrotny, skutek do odbioru) |
+| ta sama milisekunda zapisu na A (dwa razy) i B (raz) | A | A (wyższy `rev`, jak dotąd) |
+| A z zegarem 10 min do przodu „lek X”, B naprawdę 5 min później równolegle „lek Y” | „lek X” (równy `rev`) | „lek X” (znane ograniczenie, jak D-7) |
+| A z zegarem 10 min do przodu zapisuje X, B poprawia X | poprawka B | poprawka B (stempel później niż X) |
+| laptop dwa razy zmienia dawkę, telefon pięć sekund później klika „wykonane” | nowa dawka, bez „wykonane” | nowa dawka i „wykonane” |
+| telefon „wykonane”, laptop później zmienia treść raz albo dwa razy | raz: „wykonane” tylko na telefonie (rozjazd); dwa razy: „wykonane” ginie wszędzie | nowa treść i „wykonane” na obu |
+| „wykonane” na obu; laptop zmienia treść, telefon później cofa | zmiana treści laptopa ginie; laptop „wykonane”, telefon otwarta (trwały rozjazd) | nowa treść, sprawa otwarta na obu |
+| telefon „nie zgłosił się”, laptop później zmienia treść | „nie zgłosił się” nie zostaje na obu (test czerwony na bazie) | nowa treść i „nie zgłosił się” na obu |
+| A „dawka 50”, B później „dawka 75 od jutra”, A jeszcze później „wykonane”; edytor A otwarty po kliknięciu | treść A (test czerwony na bazie) | rekord złączony: „dawka 75” i „wykonane”, chwila zapisu +1 ms; zapis z edytora A — konflikt, dawka B zostaje |
+| tablet „wykonane”, laptop bez połączenia później „Przełóż” na 2027-01-15 | tablet: nowy termin i „wykonane”, laptop: otwarta (rozjazd) | termin 2027-01-15, sprawa otwarta na obu (przypomnienie wraca) |
+| telefon przekłada, laptop później „wykonane” | na bazie oznaczenie się rozjeżdża (kontrola czerwona na bazie) | nowy termin i „wykonane” na obu |
+| telefon wykonuje przypomnienie z kolejnym krokiem, laptop bez połączenia później zmienia treść, potem ponowne wykonanie na laptopie | „wykonane” z telefonu nie zostaje przy późniejszej treści laptopa (test czerwony na bazie) | późniejsza treść laptopa i „wykonane”; ponowne wykonanie — odmowa, jeden kolejny krok wszędzie |
+| B i C poprawiają notatkę przed „Usuń pacjenta” na A (C później, h treści B większe) | po ratunku wszędzie poprawka B (większe h) | wszędzie poprawka C |
+| dwa ratunki z tym samym h i różną treścią | pełny remis, każde urządzenie swoją | wszędzie późniejsza poprawka |
+| „Scal pacjentów” P → Q na A, B bez połączenia poprawia notatkę pod P | notatka pod Q na obu, ale bez poprawki B | notatka pod Q na obu, z poprawką B, po pierwszej wymianie |
+| notatka zmieniona w innej karcie przeglądarki między listą notatek a blokadą „Scal pacjentów” | treść sprzed okna pod kartą docelową | treść z okna pod kartą docelową |
+| notatka usunięta w tym oknie | wraca starą treścią, nagrobek zdjęty | pominięta, nagrobek zostaje |
+| notatka z nieczytelnym szyfrogramem przy „Scal pacjentów” | „(błąd odczytu)”, pusta treść, oryginał stracony | przeniesiona bez ponownego szyfrowania |
+| edytor otwarty, w tym czasie ratunek D-21 albo import karty na innym urządzeniu (ta sama treść, nowa chwila zapisu) | konflikt „Nowsza wersja tej notatki jest już w sejfie.” | zapis bez pytania, bez banera |
+| edytor otwarty, inne urządzenie zmienia kartę albo klika „wykonane” | baner i okno wyboru (jak teraz) | baner i okno wyboru; „Nadpisz moją wersją” zapisuje tekst lekarza i zostawia „wykonane” |
+| notatka kroku planu: B dwa razy poprawia, A później klika „wykonane” | wersja B bez „wykonane” | to samo (plan — dawna reguła) |
+| lista pacjentów zmieniona później z niższym `rev` | tutejsza | tutejsza (dawna reguła) |
+| „Scal kopię konta”: notatka poprawiona tu dwa razy, w kopii raz później | zostaje tutejsza, podgląd: 0 zmian | wygrywa kopia, podgląd i wynik: 1 zmieniona |
+| „Scal kopię konta”: treść poprawiona tutaj później, w kopii samo późniejsze „wykonane” | „wykonane”, ale tutejsza późniejsza zmiana treści ginie | treść tutejsza i „wykonane”, podgląd liczy zaktualizowaną |
+
+**Co widzi lekarz.** Nowych tekstów w aplikacji jest jeden: podtytuł „Scal kopię konta” (niżej, do akceptacji).
+Po synchronizacji notatka pokazuje treść zmienioną później i oznaczenie zmienione później. Okno konfliktu
+w edytorze, przypomnieniach i Klirensie nie pojawia się po samym ratunku, imporcie karty albo podniesieniu numeru
+wersji, a pojawia się przy każdej widocznej zmianie z innego urządzenia (także samej karty, terminu albo oznaczenia).
+Baner edytora — tylko przy widocznej zmianie. Dopiski podsumowania „Scal kopię konta” o wersji „poprawionej tutaj
+później”, którą zastąpi starsza z kopii, dla notatek i wpisów Terminarza poza planami opieki się nie pojawiają
+(tekst w kodzie zostaje dla planów i list).
+
+**Skutki do odbioru przez właściciela** (każdy przypięty testem):
+- **Wcześniejsza pełniejsza wersja przegrywa z późniejszą małą zmianą.** Laptop trzy razy zapisuje pełny opis wizyty
+  ze zmianą dawki, telefon bez synchronizacji pięć sekund później poprawia literówkę w starej wersji — wszędzie stara
+  wersja z poprawioną literówką; pełny opis ginie bez kopii (dotąd zostawał opis laptopa). Test
+  `notatka-pozniejsza.test.mjs`, „druga strona reguły”.
+- **Urządzenie z zegarem do przodu wygrywa równoległą zmianę.** Telefon z zegarem +10 min wpisuje „lek X”, laptop
+  naprawdę 5 min później, bez wiedzy o tym, „lek Y” — zostaje „lek X” (dotąd tylko przy równym `rev`). Poprawka
+  wersji z przyszłości, o której urządzenie wie, zostaje (stempel). Test „zegar 10 min do przodu, równolegle”
+  i „stempel w oknie rozjazdu zegarów”.
+- **D-4 A: notatka z poprawką zostaje przy starej karcie.** „Scal pacjentów” X → Y na laptopie; telefon bez
+  połączenia poprawia notatkę X i dopisuje wizytę do X, więc X wraca — notatka z poprawką zostaje pod X (dotąd pod Y,
+  bez poprawki), bo przeniesienie nie jest zmianą treści. Test `notatki-karta-po-scaleniu.test.mjs`, „B poprawia n
+  pod P PRZED „Scal pacjentów” na A”.
+- **Notatka usunięta przy zegarze do przodu może wrócić.** Telefon z zegarem +10 min zapisuje X, tablet poprawia X,
+  laptop bez wiedzy o poprawce usuwa X — X wraca z poprawką (dotąd usunięta); w odwrotnej kolejności poprawka nie
+  ginie (dotąd ginęła). Wystarczy usunąć ponownie. Ręczne usunięcie uratowanej notatki z przyszłości (W14b) może
+  dlatego wrócić częściej niż dotąd. Testy „wersja z zegara do przodu” (oba kierunki), kontrola na dobrych zegarach,
+  W14a i W14b w `notatki-za-karta.test.mjs`.
+- **Cofnięcie ze starszej aplikacji przegrywa z „wykonane”.** B (bieżąca) klika „wykonane”, C (aplikacja sprzed
+  aktualizacji, fikstura 221 albo 276) później cofa — po zdarzeniach A i B „wykonane”, C otwarta; po pełnej wymianie
+  „wykonane” wszędzie (dotąd cofnięcie wygrywało wszędzie). Test A ≡ B, scenariusze floty „„Wykonane” na B, potem
+  cofnięcie na 276” i „… na 221” (literał).
+- **Przełożenie otwartej sprawy kasuje równoległe „wykonane”.** Tablet „wykonane”, laptop bez połączenia później
+  „Przełóż” — na obu nowy termin i sprawa otwarta; wcześniejsze „wykonane” znika widocznie (wpis wraca na listę).
+  Test „przełożenie otwartej sprawy liczy się jako zmiana oznaczenia na „otwarte””.
+
+**Do akceptacji właściciela przy PR** (rozstrzygnięcia spoza projektu i decyzji, wariant najbezpieczniejszy dla
+danych; alternatywy w opisie PR):
+1. „Ta sama widoczna wersja nie jest konfliktem” (wołający podaje wersję pokazaną, porównanie wszystkich pól odczytu
+   z pełnej listy, tylko przy innej chwili zapisu, bez chwili utworzenia) — usuwa fałszywy konflikt po ratunku D-21
+   i imporcie karty. Odrzucone: porównanie samych chwil treści i oznaczenia (przy dwóch zapisach w tej samej
+   milisekundzie i późniejszym ratunku przepuściłoby inną treść) oraz konflikt przy każdej różnicy także przy tej
+   samej chwili zapisu (zmienia umowę E3-PR0b2a).
+2. „Scal pacjentów” i „spoza bazy” bez treści sprzed blokady: „(wpis)” tylko przy pustym tytule zapisanej wersji,
+   notatka usunięta w oknie pomijana, nieczytelny szyfrogram przenoszony bez ponownego szyfrowania.
+3. Terminarz „Edytuj osobę” wysyła tylko nazwę osoby (i tytuł = nazwa przy wpisie bez tytułu); na wpisie bez tytułu
+   usuniętym w innej karcie — odmowa z komunikatem.
+4. Zapis samego oznaczenia przy wygranej tutejszej treści — bez nowego miejsca w dzienniku zdarzeń i bez kolejki.
+5. Rekord złączony dostaje chwilę zapisu o 1 ms późniejszą niż obie wersje (bez tego zapis z edytora po cichu
+   nadpisywał późniejszą zmianę dawki — zmierzone).
+6. Oznaczenie o tej samej wartości — sama chwila oznaczenia, bez złączenia; pole chwili oznaczenia tylko wtedy, gdy
+   niesie informację; remis chwili oznaczenia rozstrzyga wartość w stałym porządku.
+7. Baner edytora tylko przy widocznej zmianie (odczyt i porównanie po zdarzeniu).
+8. Wskrzeszenie dostaje chwilę później niż najpóźniejszy znany nagrobek (dotąd wskrzeszona w tej samej sekundzie co
+   zapis ze stemplem notatka mogła po cichu zginąć na drugim urządzeniu).
+9. „Wygrywa tutejsza” po zapisie w oknie — decyzja na świeżym rekordzie; plan opieki tylko w treści rozpoznawany po
+   odszyfrowaniu (nieczytelna treść = nie plan, tak samo w `Le` i w podglądzie).
+10. Przełożenie otwartej sprawy potwierdza oznaczenie „otwarte” (skutek wyżej).
+11. Chwila treści spoza postaci `toISOString` sprowadzana do postaci kanonicznej przy zapisie pola.
+12. Nowy podtytuł „Scal kopię konta” i nota wydania (niżej).
+
+**Teksty dla użytkownika** (do akceptacji właściciela przy PR).
+- Podtytuł „Scal kopię konta” (`vilda_auth_ui.js`, `uo`), zdanie o notatkach zamiast „Notatki i listy scali jak
+  synchronizacja: wersja z kopii może zastąpić tutejszą, nawet poprawioną tu później, a późniejsze usunięcie w kopii
+  usunie je także tutaj — podgląd wymieni każdą taką zmianę.”: „Notatki scali jak synchronizacja: zostanie treść
+  zmieniona później — tutejsza albo z kopii — a oznaczenie „wykonane” lub „nie zgłosił się” z tej strony, po której
+  zmieniono je później. Plany opieki i listy pacjentów z kopii mogą zastąpić tutejsze, nawet zmienione tu później.
+  Późniejsze usunięcie w kopii usunie wpis także tutaj — podgląd wymieni każdą taką zmianę.” Reszta podtytułu bez
+  zmian. Testy: `kopia-konta-dane-konta.test.mjs` (pełny tekst, T32), e2e `kopia-konta-dane-konta.spec.mjs`.
+- Nota wydania (opis PR): „Po aktualizacji przy notatce zmienionej na dwóch urządzeniach zostaje zmiana późniejsza —
+  także gdy wcześniejsza była obszerniejsza; wcześniejsza równoległa zmiana nie jest zachowywana. Oznaczenie
+  „wykonane”, „nie zgłosił się” i jego cofnięcie zostaje według tego, kiedy je zmieniono, niezależnie od zmiany
+  treści na innym urządzeniu; przełożenie terminu otwiera sprawę ponownie. Zaktualizuj wszystkie urządzenia tego
+  samego dnia i włącz automatyczny czas na urządzeniach; cofnięcie „wykonane” zrobione na niezaktualizowanym
+  urządzeniu przegrywa z „wykonane”.”
+- Edytor, przypomnienia, Klirens, Terminarz i „Scal pacjentów” — teksty bez zmian. Polityka prywatności, instrukcja,
+  „O aplikacji” i Ustawienia nie opisują, która notatka wygrywa — bez zmian.
+
+**Dziennik zdarzeń (uśpiony) i test A ≡ B.** Przypadek notatki z ręcznego bloku znanych usterek E3-PR0b
+(`E2_AB_ZNANE_USTERKI=1`) przeszedł do CI jako test wejściowy: „A dwa razy, B raz pięć sekund później: wszędzie zmiana
+B, rev 3” w światach W1, W4 i bloby, z wyrocznią i literałem faktów, w tym samym świecie 880 (numer świata jest teraz
+jawnym polem przypadku), oraz dwie kontrole (kolejność, w której obie reguły się zgadzają; remis chwili — wyższy `rev`).
+W bloku ręcznym zostały cztery przypadki duplikatu karty po „Scal pacjentów” (E3-PR0e, światy 881–884 bez zmian).
+Bez nowych haków i bez nowych wywołań `Bem_`, `Bob_`, `Bev_` (literał miejsc poza blokiem P-DZIENNIK-ZDARZEN bez
+zmian). Licznik odsyłania (`tests/support/licznik-odsylania.mjs`): kanon notatki w warstwie po decyzji 2a pomija `rev`,
+klasa „sam rev notatki” — zapis samego `rev` nie jest echem do odesłania (w światach testu wejściowego 0 wierszy
+notatek). Flota: nowa klasa par „chwile notatki nieznane starszej aplikacji” (różnica tylko w czterech polach chwil,
+których starsza aplikacja nie zna; status znanego ograniczenia starszej wersji); scenariusz „„Usuń pacjenta” na A,
+zmiana karty na 221 — najpierw pełna kopia C” ma w W1 tę różnicę pary, a pełna wymiana wyrównuje ją w drugim obiegu
+(obiegi 2, dotąd 1; widok kliniczny bez zmian). Fikstury 221 i 276 bez zmian (dawna reguła).
+
+**Import i „Scal kopię konta”.** „Importuj pacjenta z pliku”: notatki z pliku zachowują chwilę treści i oznaczenia,
+a chwila zapisu nie cofa się przed wersję z pliku (plany — „teraz”, jak dotąd). „Scal kopię konta”: wewnętrzne
+scalanie (`Le`) i podgląd liczą notatki tą samą regułą; „zastąpione nowsze” (`replacedNewer…Count`) dla notatek
+i Terminarza poza planami liczy się po chwili treści, więc rekord po ratunku albo imporcie nie jest „poprawiony tu
+później”; przegrana treść z późniejszym oznaczeniem z kopii jest „zaktualizowana” (jak zapis oznaczenia w `Le`).
+
+**Testy.** Dane wyłącznie fikcyjne, bez PESEL; prawdziwy `vilda_crypto.js` i `vilda_vault.js` (dla starszej
+aplikacji — fikstury 221 i 276) na adapterze pamięciowym, kilka urządzeń, podstawiony zegar `Date`, ustalony
+`Math.random` tam, gdzie liczy się stempel.
+- `tests/unit/notatka-pozniejsza.test.mjs` (nowy, 106 przypadków): reguła treści (dwa i trzy urządzenia, pierścień
+  pełnych kopii, druga strona reguły, remis milisekundy, ładunek powtórzony i starszy, wersja bez chwili zapisu albo
+  bez `rev`), zegary i stempel (zegar do tyłu i do przodu, okno rozjazdu, ten sam los, rok 9999, wskrzeszenie po
+  nagrobku z tej samej chwili), nagrobek a późniejsza zmiana (oba kierunki przy zegarze do przodu, kontrola na
+  dobrych zegarach), pola chwil w rekordzie i ładunku (kotwica, pole późniejsze niż chwila zapisu, kopia ucięta przez
+  starszą aplikację, pola z ładunku wołającego ignorowane, nieważne pole w zapisanym rekordzie), ratunek D-21 i import
+  (h treści, dwa ratunki z tym samym h, przekaźnik, import sprzed późniejszej edycji, notatka kroku planu, zegar do
+  tyłu, chwila oznaczenia po cofnięciu), plany opieki i listy przy dawnej regule, oznaczenie jako osobny rejestr
+  (dawka i „wykonane”, „nie zgłosił się”, cofnięcie w obu kolejnościach, trzy urządzenia w każdej kolejności,
+  złączenie pod otwartym edytorem z konfliktem, zapis samego oznaczenia, zbieżność chwili zapisu złączeń różnymi
+  drogami), flota ze starszą aplikacją bez wymiany w kółko, przełożenie a równoległe oznaczenie (z kontrolami),
+  jeden kolejny krok i odmowa ponownego wykonania, chwila spoza postaci kanonicznej, zapis zmieniający jedno pole
+  (karta, termin, lek, kategoria, tytuł, wynik badania, wiek wizyty), notatka kroku planu przy odłączeniu (także
+  podgląd „Scal kopię konta”), zapis przy wygranej tutejszej treści (świeży rekord, chwila utworzenia, remis
+  oznaczenia, kontekst przypomnienia), zapis samego oznaczenia (licznik, zdarzenie, przekazanie cofnięcia dalej,
+  zachowanie tutejszej chwili treści), import po cofnięciu, kotwica pola chwili oznaczenia, rok 9999 przy złączeniu;
+- `tests/unit/notatka-pozniejsza-zapis.test.mjs` (nowy, 50): „ta sama widoczna wersja” w edytorze (bez `baseNote`
+  konflikt jak w E3-PR0b2a, z `baseNote` zapis, `baseNote` różny w jednym polu — konflikt, w tym kontekst przypomnienia
+  i planu oraz wiek wizyty; klucze dodane przez ekran i inna chwila utworzenia nie przeszkadzają), na prawdziwych
+  ścieżkach ratunku D-21 i importu karty, w wykonaniu przypomnienia, „Opisz wynik” i wyniku Klirensu (zmiana
+  i usunięcie); „Scal pacjentów” i „spoza bazy” (pierwsza wymiana, karta martwa, zmiana w oknie, notatka usunięta
+  w oknie i licznik przeniesionych, nieczytelny szyfrogram z polami klinicznymi); Terminarz „Edytuj osobę” (zmiana
+  w oknie, dokładny ładunek, wpis bez tytułu usunięty w innej karcie, kontrola nowego wpisu nieobecności); strażniki
+  źródła (przeniesienie, Terminarz, wołający z `baseNote`, zwolnienie tylko w gałęzi konfliktu, reguły w `Le`,
+  podglądzie, listach i fragmencie natywnym); luki modułu planów z etapami (przypięte, niżej);
+- zmienione: `notatki-za-karta.test.mjs` (stempel zapisu przy G13 i W14, zwycięzcy dla nagrobków tą samą regułą co
+  scalanie, emulacja starszej aplikacji), `kopia-konta-dane-konta.test.mjs` (T10b, T32, podtytuł, podgląd = wynik
+  dla późniejszej zmiany, wpisu Terminarza, samego „wykonane” i dotknięcia technicznego tutaj),
+  `sync-dziennik-wlasnosciowy.test.mjs` (test wejściowy, klasa floty, dwa scenariusze cofnięcia na starszej
+  aplikacji, literał scenariusza 221), `notatki-karta-po-scaleniu.test.mjs` (kontrola D-4 A: `['P','P']` z poprawką B),
+  `notatki-pacjenta-integralnosc.test.mjs` (strażnik G6g), `konflikt-edycji-notatki-chwila.test.mjs` (przygotowanie
+  „innej wersji z wcześniejszą chwilą zapisu” działające przy obu regułach), `licznik-odsylania.test.mjs` (klasa „sam
+  rev notatki”), `care-plan-auth-ui-boundary.test.mjs` (świadomie odświeżony skrót ciała edytora),
+  `visits-vault-boundary.test.mjs` (skrót bazy);
+- e2e: `edytor-notatki-rata3.spec.mjs` — 4 nowe (dotknięcie techniczne: bez banera i bez okna wyboru; inna karta
+  pacjenta z innego urządzenia: baner i okno wyboru; „wykonane” z innego urządzenia: baner, okno wyboru, „Nadpisz moją
+  wersją” zostawia „wykonane”; po oknie wyboru dotknięcie techniczne przed „Nadpisz moją wersją” — zapis bez drugiego
+  okna), `przypomnienia-b22.spec.mjs` — 1 nowy (dotknięcie techniczne w czasie otwartego formularza wykonania: zapis
+  bez fałszywego konfliktu), `kopia-konta-dane-konta.spec.mjs` — podtytuł.
+
+**Czerwone na bazie** (kod `9fc26c71` z testami tego PR, 11 plików, przebieg 2026-11-17): 110 z 800 (780 uruchamianych, 20 pominiętych w pliku A ≡ B) —
+`notatka-pozniejsza` 55 ze 106, `notatka-pozniejsza-zapis` 26 z 50, `notatki-za-karta` 13 (P4, CZ9, S8b, MS2, SP1g,
+MS4 ×2, W14a, W14b, W11, dwa strażniki źródła stanów nagrobków i podglądu, zwycięzcy dla nagrobków),
+`kopia-konta-dane-konta` 8 (T10b, T32, podtytuł, cztery przypadki podglądu = wyniku, dotknięcie techniczne tutaj),
+`sync-dziennik-wlasnosciowy` 4 (test wejściowy, dwa scenariusze cofnięcia na starszej aplikacji, literał scenariusza
+221), `notatki-karta-po-scaleniu` 1, `notatki-pacjenta-integralnosc` 1, skrót edytora `care-plan-auth-ui-boundary` 1,
+skrót bazy `visits-vault-boundary` 1. Zielone z natury: kontrole („[kontrola]”) poza dwiema (przełożenie, potem
+„wykonane” — na bazie oznaczenie się rozjeżdża; kontrola D-4 A, której wartość zmienia się zgodnie z zamiarem), `konflikt-edycji-notatki-chwila`
+(30) i `licznik-odsylania` (23; nowy przypadek klasy „sam rev notatki” czerwienieje bez zmiany wspólnego modułu
+testów, sprawdzone osobno), przypadki floty ze starszą aplikacją bez wymiany w kółko i plany opieki przy dawnej regule.
+Dwa przypadki luk modułu planów są czerwone na bazie, bo luki powstają dopiero przy nowej regule (przypinają
+zachowanie po zmianie). e2e na bazie (desktop Chromium; `edytor-notatki-rata3`, `przypomnienia-b22`,
+`kopia-konta-dane-konta`; 34 przypadki): 4 czerwone — dwa edytora z dotknięciem technicznym, wykonanie przypomnienia
+z dotknięciem technicznym i podtytuł „Scal kopię konta”; zielone z natury: inna karta pacjenta i „wykonane” z innego
+urządzenia (baner i okno wyboru — pilnują, że widoczna zmiana dalej daje konflikt).
+
+**Mutanty** (kopia, jedna zmiana tekstu, testy jednostkowe, test A ≡ B, dla interfejsu też e2e): 141, z nich 130
+czerwieni co najmniej jeden test CI. Rodziny: reguła treści (filtr wstępny i decyzja pod blokadą po dawnej regule,
+zwycięzcy dla nagrobków po dawnej regule, każdy człon porządku osobno, pełny remis na korzyść ładunku, dawny warunek
+remisu przed chwilą treści, listy po nowej regule, fragment natywny po nowej regule); kotwice (chwila treści
+i oznaczenia bez kotwicy i bez warunku „nie później niż chwila zapisu”, `Ft` bez pól albo z surowymi polami, pole przy
+równej chwili zapisu, pola z ładunku wołającego); predykat planu (tylko jedna strona, bez kontekstu w treści,
+`null` liczone jako plan, sama kategoria, bez odszyfrowania tutejszej, rejestr oznaczenia dla planów, ratunek
+i zapis `Ad` planu tylko w treści); stempel (brak, także dla planów, bez obcięcia na roku 9999, wskrzeszenie bez
+nagrobka, import bez stempla, złączenie bez obcięcia); ratunek, import i przeniesienie (bez pól chwil, przeniesienie
+jako zmiana treści, z treścią sprzed blokady, notatka usunięta w oknie wskrzeszona albo liczona, nieczytelny
+szyfrogram odrzucany); zapis bez zmiany treści (każde z pól — karta, termin, lek, kategoria, tytuł, treść, wynik,
+wiek wizyty — pominięte w porównaniu); `rev` (z ładunku zamiast najwyższego, bez zapisu samego `rev`, zapis na
+nieświeżym rekordzie, bez reguły karty i bez chwili utworzenia w gałęzi „wygrywa tutejsza”); rejestr oznaczenia
+(oznaczenie zawsze za treścią, dawna reguła „lepka”, remis bez wartości, równe rejestry jako nowsze, bez chwili
+oznaczenia, cofnięcie bez chwili zapisu, każdy zapis jako zmiana oznaczenia, zapis samego oznaczenia bez licznika
+albo bez zdarzenia, bez +1 ms w każdym miejscu, bez pól chwil w zapisie, tylko `completedAtISO`, odwrócony porządek
+wartości); podgląd (dawna reguła, listy po regule notatek, zapis samego oznaczenia nieliczony, „zastąpione nowsze”
+po chwili zapisu, bez planów w treści, wpisy Terminarza bez oznaczenia); zwolnienie (brak w każdym z trzech miejsc,
+bez sprawdzenia `id` i chwili wersji pokazanej, klucze wersji pokazanej zamiast pełnej listy, z chwilą utworzenia,
+także przy równej chwili zapisu, za szerokie — bez każdego pola osobno); interfejs (edytor, „Nadpisz moją wersją”,
+baner bez porównania i z porównaniem za szerokim, formularz przypomnienia, „Opisz wynik”, Klirens, Terminarz);
+licznik odsyłania; dawny warunek w narzędziu łatki Klirensu. Mutanty interfejsu edytora, banera i formularza
+przypomnienia zabija e2e (jednostkowo — strażniki źródła i skrót edytora); „Opisz wynik”, Klirens i Terminarz bez
+`baseNote` albo z dawnym ładunkiem — strażniki źródła (działanie sejfu z `baseNote` sprawdzają testy sejfu). Celowo
+tylko pinem: fragment natywny (`fragmentSHA256`) i blok łatki Klirensu (bajt w bajt). Przeżywa 11. Równoważne (7):
+predykat planu tylko po stronie ładunku (kategoria `care-plan` jest po obu stronach ta sama), zapis oznaczenia na
+rekordzie z okna bez warunku „świeży rekord dalej wygrywa” (chwila treści zachowana, treść ładunku wygrywa przy
+kolejnej wymianie), `rev` w wyniku bez odczytów (zwycięzcy oddają tylko chwilę zapisu), wynik bez odczytów bez
+złączenia oznaczenia albo bez +1 ms (wpływa tylko na decyzję nagrobka, różnica najwyżej o jedną wymianę), zwolnienie
+bez sprawdzenia sesji po odczycie (sprawdzenie przed zapisem i tak przerywa), kontekst przypomnienia poza
+porównaniem treści (jedyny zapis kontekstu dopisuje też treść). Bez testu (4): podgląd „Scal kopię konta” — reguła
+karty i stany nagrobków dla tutejszego planu tylko w treści (wymaga martwej tutejszej karty albo „Usuń pacjenta” na
+notatce kroku planu), wynik bez odczytów bez gałęzi planów (tylko nagrobki), odzyskanie rozszerzenia planu
+porównujące pola chwil — propozycje testów: `notatki-za-karta.test.mjs` (podgląd) i `care-plans-vault.test.mjs`
+(odzyskanie rozszerzenia), poza tym PR.
+
+**Długie przebiegi** (2026-11-17, kod tego PR i baza `9fc26c71`, kopie): profil podstawowy 40 ziaren — zielony
+(410 ocen wyroczni, 4 naruszenia z klasą R4a); pełny 20, „dłuższa praca bez połączenia” 40 i każdy w trybie ścisłym —
+naruszeń bez klasy 0; czerwone ziarna (pełny 5; bez połączenia 104, 123, 128, 132, 137; ścisły podstawowy 19, 22, 31;
+ścisły pełny 3, 5, 8, 16; ścisły bez połączenia 104, 113, 114, 123, 128, 132, 137) są czerwone tak samo na bazie —
+wiersze wyroczni i trybu ścisłego identyczne bajt w bajt; żadna z tych czerwieni nie dotyczy notatek (klasy wizyt
+i Kosza z E3-PR0a). Blok znanych usterek: przypadek notatki — zielony (w CI); cztery przypadki duplikatu karty —
+czerwone tak samo jak na bazie (E3-PR0e). Flota: profil pełny 8/8, ziarna 1–10 dla 221 i 276 24/24, kontrola C = N
+3/3, scenariusze ręczne z 221 i kontrole C = N 34/34 — zielone. Plik A ≡ B w ustawieniach CI, sam na maszynie: 127 s
+(188 zielonych, 20 pominiętych; cel ok. 180 s), w pełnym `vitest run` 140 s.
+
+**Flota mieszana** (w czasie aktualizacji urządzeń). Starsza aplikacja (221, 276) liczy dalej „najpierw `rev`” i ucina
+pola chwil. Dzięki `rev` = max rekord po scaleniu na bieżącym urządzeniu ma `rev` nie niższy niż każda znana wersja,
+więc starsza aplikacja zwykle go przyjmuje. Znane ograniczenia starszej wersji (decyzja 2 z 2026-11-16, naprawa —
+aktualizacja urządzeń): po samych zdarzeniach starsze urządzenie może zostać przy wcześniejszej treści o wyższym `rev`;
+późniejsza zmiana na starszym urządzeniu może zostać nadpisana przed wysłaniem (jak dotąd); wersja uratowana,
+zaimportowana albo przeniesiona, która przeszła przez starsze urządzenie, wraca bez chwili treści (jak D21-8);
+cofnięcie „wykonane” ze starszej przegrywa z „wykonane”. W losowej flocie 221 bez delt (`E2_AB_D221=0`, ziarno 7,
+świat 200 007, ręcznie) naruszenie notatki w W4 floty (krok 132) zostaje — identyczne na bazie i po zmianie
+(2026-11-17). Przyczyna po stronie 221: B poprawia notatkę o 10:01:50, C (221) o 10:01:56, a w kroku 132 dostawa
+B → C z wersją o wyższym `rev` nadpisuje na C jego późniejszą poprawkę, zanim ją wysłał (dziennik przebiegu
+z `E2_AB_WYNIKI`); bieżąca aplikacja tej zmiany nigdy nie dostaje. Wyrocznia nie przypisuje tego przypadku do klasy
+„zmiana starszej aplikacji nadpisana przed wysłaniem” (dalej bez klasy, poza CI).
+
+**Kontrola granicy obrazu sejfu.** Zmiana stoi poza fragmentem natywnym, blokiem trwałych wizyt i blokiem
+P-DZIENNIK-ZDARZEN, bez nowych wywołań `Bem_`, `Bob_` i `Bev_` (literał miejsc poza blokiem bez zmian). Przeliczone
+7 skrótów w 5 plikach: baza trwałych wizyt (`runtime/durable-visits-v1/manifest.json` — baza i obraz,
+`tools/visits-vault-delta.mjs`, `tests/unit/visits-vault-boundary.test.mjs`) oraz `baseVaultSHA256`,
+`integratedVaultSHA256` i `BASE` natywnej przestrzeni klinicznej (`runtime/clinical-workspace-v1/manifest.json`,
+`tools/check_clinical_workspace_boundary.mjs`, z opisem E3-PR0b2b w komentarzu); fragment natywny, haki, moduły
+i paczka bez zmian; `node tools/visits-vault-delta.mjs` i `node tools/check_clinical_workspace_boundary.mjs` — zielone.
+Blok KLIRENS-ISTNIEJACY-WYNIK w `tools/patch-vault-existing-note.mjs` niesie zwolnienie bajt w bajt z sejfem. Sejf się
+zmienił — przy następnej pracy w `vilda-source` weź nową bazę z `runtime/clinical-workspace-v1/manifest.json` na
+`audyt`.
+
+**Ograniczenia.**
+- **Zegar do przodu** wygrywa równoległą zmianę, o której urządzenie nie wiedziało (skutek do odbioru); stempel
+  utrwala chwilę „z przyszłości” na kolejnych poprawkach. Jak D-7: nota „automatyczny czas”, chwil nie korygujemy.
+- **Stempel w oknie rozjazdu zegarów**: dwie poprawki wersji zapisanej na zegarze do przodu mają kolejność według losu,
+  nie prawdziwą; przy tym samym losie (1/1000 na parę) — pełny remis różnej treści i trwały rozjazd (jak D-7; test
+  „ten sam los stempla”).
+- **Ta sama chwila treści, `rev` i chwila zapisu** dwóch różnych zapisów — zostaje tutejsza, możliwy trwały rozjazd
+  (jak dotąd i jak D-7).
+- **Przegrana równoległa treść ginie bez kopii** — po zmianie także obszerniejsza wcześniejsza wersja (skutek do
+  odbioru). Siatka bezpieczeństwa (zachowanie przegranej wersji w historii notatki albo znacznik do przejrzenia) —
+  do rozważenia osobnym PR.
+- **Luki modułu planów z etapami (decyzja 2 (a), poprawka osobno w repozytorium źródeł modułu, przed E3-PR0c).**
+  (1) Dowód kroku planu porównuje tylko `rev` dokumentu (`vilda_care_plans.js` ok. :611–620; model z zamkniętą listą
+  pól `vilda_care_plan_model.js` ok. :98–101): scalenie, które przyjmuje późniejszą treść z niższym `rev`, zmienia
+  dokument bez zmiany `rev`, więc zmiany nie widać; zapis samego `rev` daje odwrotnie fałszywe „dokument się zmienił”.
+  (2) Fragment natywny ma własny warunek `wins` i woła `Bnp_zwyciezcy` bez kontekstu tutejszego planu — dokument-dowód
+  bez kontekstu planu może zostać przeniesiony do innej karty bez odmowy (plan pokaże wtedy „Dokument jest
+  niedostępny. Sprawdź dokumentację pacjenta.”; z kodu). (1) przypina test działania (`notatka-pozniejsza-zapis.test.mjs`,
+  „luki modułu planów z etapami”); (2) — tylko strażnik źródła: literał warunku `wins` we fragmencie natywnym (ten sam
+  plik, „sejf: notatki według nowej reguły…”), bez testu działania. Fragmentu natywnego ten PR nie zmienia.
+- **Powiązanie wyniku z planem** (`linkedRev`, `linkedUpdatedAtISO`) — po zapisie samego `rev` fałszywe „Wynik zmienił
+  się. Wybierz go ponownie” (kierunek bezpieczny; z kodu).
+- **Wołający bez `baseNote`** (Terminarz, moduły terapii, punkt serii Klirensu, ekran z pamięci podręcznej starszej
+  wersji) — fałszywy konflikt po ratunku i imporcie jak dotąd; ekran, który przerobi pole odczytu, też dostaje konflikt
+  (bezpiecznie).
+- **Zmiana karty regułą E2-PR3c4** nie zmienia chwili zapisu, więc zapis z edytora otwartego wcześniej może ją cofnąć
+  (jak dotąd; z kodu). Wariant „konflikt przy każdej różnicy, także przy tej samej chwili zapisu” odłożony.
+- **Przycisk stanu z kartą odczytaną przed blokadą** — gdy w tym oknie (milisekundy) scalenie zmieni kartę notatki,
+  zapis przywraca poprzednią kartę (jak na bazie) i liczy się przy tym jako zmiana treści. Poprawka wymaga zmiany
+  znaczenia karty w ładunku bez treści na wszystkich drogach (także plany opieki) — osobny PR (z kodu).
+- **Chwila zapisu złączenia zależy od drogi dostaw** przy kilku złączeniach (milisekundy); treść i oznaczenie są te
+  same, a przy następnej wymianie wyrównuje się bez dalszych zapisów (test „zbieżność chwili zapisu złączeń”).
+- **Terminarz „Edytuj osobę”**: wpis bez tytułu, któremu inne urządzenie w tym czasie nadało tytuł, dostaje tytuł =
+  nazwa osoby (jak dotąd; z kodu).
+- **Starsza aplikacja** — „Flota mieszana” wyżej.
+- **Nagrobek przy wersji z przyszłości**: równoległa poprawka wygrywa z równoległym usunięciem (skutek do odbioru);
+  wskrzeszenie wobec nagrobka, którego wskrzeszające urządzenie nie zna, przegrywa jak dotąd (z kodu).
+
+**Wymagania dla następnych PR.** E3-PR0c: zapis samego `rev` i zapis samego oznaczenia nie są echem do odesłania
+(klasa „sam rev notatki”); `pnote` w ładunku — pomiar odsyłania na regule po E3-PR0b2b. Moduł planów z etapami
+(repozytorium źródeł, przed E3-PR0c): chwila zapisu dowodu kroku i reguła notatek we fragmencie natywnym. Przyciski
+stanu: karta w ładunku bez treści (osobny PR). Do rozważenia: siatka bezpieczeństwa dla przegranej równoległej treści.
+
+**Wdrożenie.** Od razu przy wydaniu, bez przełącznika i bez uśpienia (decyzja 2 (a)). Jak każda dotychczasowa zmiana
+reguły treści (D-7, D-21, E2-PR3c2–E2-PR3c4): przełącznik oznaczałby dwie reguły na urządzeniach jednego właściciela,
+czyli właśnie flotę mieszaną. Nota wydania: aktualizacja wszystkich urządzeń tego samego dnia, automatyczny czas.
+
+**Cofnięcie** = rewert PR, bez migracji. Pola chwil są opcjonalne: stary kod buduje rekord z jawnej listy pól, więc je
+pomija i gubi przy następnym zapisie; podniesione `rev` są zwykłymi liczbami, a rekordy złączone — zwykłymi
+rekordami. Po rewercie notatki wracają do reguły „najpierw `rev`” (rewert cofa też skróty kontroli granicy).
+
+**Gdzie w kodzie.** `vilda_vault.js`, blok `Bnp_` (komentarz P-NOTATKA-POZNIEJSZA): `Bnp_chwilaTresci`,
+`Bnp_chwilaStanu`, `Bnp_stanKlucz`, `Bnp_stanNowszy`, `Bnp_samaChwilaStanu`, `Bnp_planOpieki`, `Bnp_planWTresci`,
+`Bnp_staraRegula`, `Bnp_nowsza`, `Bnp_stanWygrywa`, `Bnp_chwilaNotatki`, `Bnp_kanonChwili`, `Bnp_poObu`,
+`Bnp_bezChwil`, `Bnp_ustawChwileTresci`, `Bnp_ustawChwileStanu`, `Bnp_dotknij`, `Bnp_zImportu`, `Bnp_zapisZLadunku`,
+`Bnp_poScaleniu`, `Bnp_tutejszaZapis`, `Bnp_tutejszaWygrywa`, `Bnp_zPrzeniesienia`, `Bnp_TECHNICZNE`,
+`Bnp_takSamoWidoczna`, `Bnp_planyTutaj`, `Bnp_zwyciezcy`, `Bnp_ratuj`; podgląd `Bks_wygrywaNotatka`,
+`Bks_planZbioru`, `Bks_zmianyKarty`, `Bks_planDanych`, `Bks_stanNotatek`; „Scal pacjentów” i „spoza bazy”
+(`Bsc_podBlokada`, `mergeExternalIntoPatient`); `Ft`; `VildaChangeExistingPatientNote`; `CareMvpHydrateSyncRecord`;
+`CareMvpWriteCalendarOriginal`; `RemB22SaveOutcome`; `Ad` (odczyt pod blokadą, stempel, pola chwil, przełożenie,
+przeniesienie, zwolnienie); import karty (`Bpi_`); `Le` (filtr wstępny, odszyfrowanie tutejszej przed decyzją,
+decyzja, obie gałęzie „wygrywa tutejsza”, zapis z ładunku). `tools/patch-vault-existing-note.mjs`.
+`vilda_auth_ui.js`: edytor (`CareOpenLegacyNoteEditor`: `baseNote`, baner), formularz wykonania przypomnienia,
+podtytuł „Scal kopię konta” (`uo`) i komentarz dopisku podsumowania; `vilda_lab_history_tab.js` („Opisz wynik”);
+`clcr_result_details.js` (zmiana i usunięcie pomiaru); `vilda_terminarz.js` („Edytuj osobę”).
+
+**Wersje.** `vilda_vault.js` 278 → 279, `vilda_auth_ui.js` 564 → 565, `vilda_lab_history_tab.js` 41 → 42,
+`clcr_result_details.js` 20 → 21, `vilda_terminarz.js` 197 → 198; wstrzykujące: `vilda_chrome.js` 297 → 298,
+`vilda_session_bridge.js` 213 → 214, `clcr_record_resources.js` 29 → 30; SW 1.1.543 → 1.1.544 — `npm run
+podbij-wersje`; baza `origin/audyt` `3c1fc748` (po vildaclinic/vilda-calc#978). Bez nowego pliku w pamięci offline.

@@ -121,6 +121,10 @@ export const rodzajEncji = (kind) => (RODZAJE.includes(kind) ? kind : 'inne');
 // Kanon decyzji 2a (warstwa po2a). Wartość: obiekt encji (JSON.parse(val)).
 export function kanon2a(kind, v) {
   if (kind === 'snap') return bez(v, ['rev']);
+  // E3-PR0b2b (P-NOTATKA-POZNIEJSZA): scalenie, w którym zostaje tutejsza treść notatki, zapisuje sam rev = najwyższy
+  // z obu wersji; ta różnica nie jest zmianą dla lekarza i nie jest odsyłana (jak R2 wersji, decyzja 2a) — klasa
+  // „sam rev notatki” (echoScalenia).
+  if (kind === 'pnote') return bez(v, ['rev']);
   if (kind === 'stomb') return (Array.isArray(v) ? v : []).map((e) => bezW(bez(e, POLA_D7), 'payload', POSTAC_GWIAZDKI));
   if (BEZ_REV.includes(kind)) return bez(v, ['rev']);
   return v;
@@ -282,7 +286,8 @@ export function echoScalenia(przed, po, ladunek, { z221 = false, rekordZlozony =
       chwila: chwilaEncji(e.kind, ev), chwilaP: qv ? chwilaEncji(e.kind, qv) : '', chwilaPrzed: xv ? chwilaEncji(e.kind, xv) : '',
       tresci: trescWizyt(e.kind, ev),
     };
-    r.klasa = klasaEcha(e.kind, ref, ev, roz, po, { rekordZlozony });
+    // E3-PR0b2b: notatka równa tutejszej sprzed scalenia poza rev — zapis samego rev (klasa niezależna od ładunku).
+    r.klasa = e.kind === 'pnote' && xv && rowne(kanon2a(e.kind, xv), ke) ? 'sam rev notatki' : klasaEcha(e.kind, ref, ev, roz, po, { rekordZlozony });
     r.przydzial = przydzial(r);
     out.push(r);
   }

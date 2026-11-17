@@ -13,6 +13,9 @@ import { loadBrowserScript } from '../support/load-browser-script.mjs';
 // zapisu tej wersji. Gdy pole jest niepustym napisem, o konflikcie decyduje tylko ono; bez niego
 // (Terminarz, moduły terapii, starsze wywołania) zostaje dawna umowa po rev. Reguła scalania
 // się nie zmienia. Uzasadnienie i skutki: docs/clinical/ALGORITHMS.md (E3-PR0b2a).
+// E3-PR0b2b (P-NOTATKA-POZNIEJSZA) zmienia regułę scalania notatek (zostaje zmiana późniejsza), więc przygotowanie
+// „innej wersji z wcześniejszą chwilą zapisu” idzie teraz zapisem bez zmiany treści (opis przy pomocniku); umowa
+// konfliktu z tego pliku zostaje bez zmian.
 //
 // Dane fikcyjne. Prawdziwy vilda_crypto.js + vilda_vault.js na adapterze pamięciowym, dwa
 // urządzenia; podstawiony zegar Date, żeby chwile zapisu były rozróżnialne i powtarzalne.
@@ -103,20 +106,27 @@ async function pozniejszaZmianaPrzyRownymRev(s, zmianaA, zmianaB) {
   return { naEkranie, poScaleniu };
 }
 
-// B bez sieci poprawia notatkę dwa razy, A raz — później niż B. Scalenie B → A przyjmuje wersję B
-// (wyższy rev), choć jej chwila zapisu jest WCZEŚNIEJSZA niż chwila wersji na ekranie A. Porównanie
-// chwil musi pytać „czy w sejfie jest inna wersja”, a nie „czy późniejsza”.
-async function innaWersjaZWczesniejszaChwila(s, zmianyB, zmianaA) {
+// B bez sieci poprawia treść notatki, A później zapisuje ją BEZ zmiany treści (np. „Zapisz” bez edycji). Scalenie
+// B → A przyjmuje wersję B (późniejsza zmiana treści), choć jej chwila zapisu jest WCZEŚNIEJSZA niż chwila wersji na
+// ekranie A. Porównanie chwil musi pytać „czy w sejfie jest inna wersja”, a nie „czy późniejsza”.
+// E3-PR0b2b (P-NOTATKA-POZNIEJSZA): dotąd przygotowanie szło dwiema poprawkami B i jedną późniejszą poprawką treści
+// na A — scalenie przyjmowało B, bo wygrywał wyższy rev. Po E3-PR0b2b zostaje wtedy późniejsza zmiana A, więc
+// wersji z wcześniejszą chwilą zapisu w sejfie by nie było; ten sam przypadek (inna wersja z wcześniejszą chwilą)
+// daje zapis A bez zmiany treści — jego chwila treści zostaje sprzed zmiany B. Asercja rev: „ten sam albo wyższy”
+// (rev po scaleniu to najwyższy z obu wersji), nie „wyższy”.
+async function innaWersjaZWczesniejszaChwila(s, zmianyB) {
   for (const zmiana of zmianyB) {
     krok();
     await s.B.vault.savePatientNote({ patientId: s.patientId, id: s.id, ...zmiana });
   }
   krok();
-  await s.A.vault.savePatientNote({ patientId: s.patientId, id: s.id, ...zmianaA });
+  const przed = await s.A.vault.getPatientNote(s.id);
+  await s.A.vault.savePatientNote({ ...przed, patientId: s.patientId, id: s.id });
   const naEkranie = await s.A.vault.getPatientNote(s.id);
+  expect(naEkranie.updatedAtISO > przed.updatedAtISO, 'zapis A bez zmiany treści ma nową chwilę zapisu').toBe(true);
   await wyslij(s.B, s.A);
   const poScaleniu = await s.A.vault.getPatientNote(s.id);
-  expect(poScaleniu.rev, 'scalenie przyjęło wersję B z wyższym numerem').toBeGreaterThan(naEkranie.rev);
+  expect(poScaleniu.rev, 'scalenie przyjęło wersję B; rev ten sam albo wyższy').toBeGreaterThanOrEqual(naEkranie.rev);
   expect(poScaleniu.updatedAtISO < naEkranie.updatedAtISO, 'wersja w sejfie ma wcześniejszą chwilę zapisu niż wersja na ekranie').toBe(true);
   krok();
   return { naEkranie, poScaleniu };
@@ -148,11 +158,11 @@ describe('E3-PR0b2a — edytor notatki: konflikt po chwili zapisu wersji na ekra
       .toBe('Dawka 75 od jutra (drugie urządzenie).');
   });
 
-  it('scalenie przyniosło inną wersję z WCZEŚNIEJSZĄ chwilą zapisu (i wyższym rev): zapis z edytora też się zatrzymuje', async () => {
+  // E3-PR0b2b: nazwa bez „(i wyższym rev)”, przygotowanie bez późniejszej poprawki treści na A (opis przy pomocniku).
+  it('scalenie przyniosło inną wersję z WCZEŚNIEJSZĄ chwilą zapisu: zapis z edytora też się zatrzymuje', async () => {
     const s = await dwaUrzadzenia();
     const { naEkranie, poScaleniu } = await innaWersjaZWczesniejszaChwila(s,
-      [{ title: 'Wizyta', body: 'B: pierwsza poprawka bez sieci.' }, { title: 'Wizyta', body: 'B: dawka 75 od jutra (druga poprawka bez sieci).' }],
-      { title: 'Wizyta', body: 'A: poprawka zapisana później.' });
+      [{ title: 'Wizyta', body: 'B: pierwsza poprawka bez sieci.' }, { title: 'Wizyta', body: 'B: dawka 75 od jutra (druga poprawka bez sieci).' }]);
     expect(poScaleniu.body).toBe('B: dawka 75 od jutra (druga poprawka bez sieci).');
 
     const wynik = await s.A.vault.savePatientNote({
@@ -280,11 +290,11 @@ describe('E3-PR0b2a — wykonanie przypomnienia: konflikt po chwili zapisu wiers
     expect(await s.A.vault.listPatientNotesForPatient(s.patientId)).toHaveLength(ileNotatek);
   });
 
-  it('„przełóż” po scaleniu innej wersji z WCZEŚNIEJSZĄ chwilą zapisu (i wyższym rev): konflikt, termin z drugiego urządzenia zostaje', async () => {
+  // E3-PR0b2b: nazwa bez „(i wyższym rev)”, przygotowanie bez późniejszej poprawki treści na A (opis przy pomocniku).
+  it('„przełóż” po scaleniu innej wersji z WCZEŚNIEJSZĄ chwilą zapisu: konflikt, termin z drugiego urządzenia zostaje', async () => {
     const s = await dwaUrzadzenia(przypomnienie);
     const { naEkranie } = await innaWersjaZWczesniejszaChwila(s,
-      [{ body: 'B: pierwsza poprawka bez sieci.' }, { body: 'B: przełożone, nie wykonywać przed wynikiem.', dueDateISO: '2026-12-10' }],
-      { body: 'A: ustalenia zapisane później.' });
+      [{ body: 'B: pierwsza poprawka bez sieci.' }, { body: 'B: przełożone, nie wykonywać przed wynikiem.', dueDateISO: '2026-12-10' }]);
 
     const wynik = await s.A.vault.saveReminderOutcome({
       id: s.id, patientId: s.patientId, baseRev: naEkranie.rev, baseUpdatedAtISO: naEkranie.updatedAtISO,
@@ -474,11 +484,11 @@ describe('E3-PR0b2a — wynik Klirensu: zmiana i usunięcie po chwili zapisu wer
     }
   });
 
-  it.each(['zmiana', 'usunięcie'])('%s po scaleniu innej wersji z WCZEŚNIEJSZĄ chwilą zapisu (i wyższym rev): konflikt, zostaje komentarz z drugiego urządzenia', async (rodzaj) => {
+  // E3-PR0b2b: nazwa bez „(i wyższym rev)”, przygotowanie bez późniejszej poprawki treści na A (opis przy pomocniku).
+  it.each(['zmiana', 'usunięcie'])('%s po scaleniu innej wersji z WCZEŚNIEJSZĄ chwilą zapisu: konflikt, zostaje komentarz z drugiego urządzenia', async (rodzaj) => {
     const s = await dwaUrzadzenia(pomiar);
     const { naEkranie } = await innaWersjaZWczesniejszaChwila(s,
-      [{ body: 'B: pierwszy komentarz bez sieci.' }, { body: 'B: drugi komentarz bez sieci.' }],
-      { body: 'A: komentarz zapisany później.' });
+      [{ body: 'B: pierwszy komentarz bez sieci.' }, { body: 'B: drugi komentarz bez sieci.' }]);
 
     const wynik = rodzaj === 'zmiana'
       ? await s.A.vault.updateExistingPatientNote(edycja(s, naEkranie))

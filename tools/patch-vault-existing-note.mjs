@@ -13,6 +13,9 @@ export const existingNoteUpdateSource = `
  * E3-PR0b2a (P-KONFLIKT-ZAPISU-NOTATKI): opcjonalne baseUpdatedAtISO - chwila zapisu
  * wersji pokazanej lekarzowi - decyduje o konflikcie zamiast baseRev (scalanie przy
  * rownym rev podmienia tresc i chwile, a rev zostaje); bez niego - jak dotad, po rev.
+ * E3-PR0b2b (P-NOTATKA-POZNIEJSZA): przy innej chwili zapisu wersja w sejfie rowna
+ * wersji pokazanej (baseNote) we wszystkich polach odczytu nie jest konfliktem
+ * (Bnp_takSamoWidoczna; ratunek D-21, import karty, zapis samego rev).
  */
 const VildaExistingNoteUpdateToken = {};
 async function VildaChangeExistingPatientNote(payload, remove) {
@@ -53,7 +56,7 @@ async function VildaChangeExistingPatientNote(payload, remove) {
     if (typeof next.baseUpdatedAtISO === "string" && next.baseUpdatedAtISO ? (stored.updatedAtISO || "") !== next.baseUpdatedAtISO : revision !== next.baseRev) {
       const current = await Ft(stored);
       assertSession();
-      return Object.assign(result, { reason: "conflict", conflict: true, rev: revision, current });
+      if (!Bnp_takSamoWidoczna(current, next.baseNote, next.id, next.baseUpdatedAtISO)) return Object.assign(result, { reason: "conflict", conflict: true, rev: revision, current });
     }
     // Dispatch plan-owned records only after acquiring this note's original
     // lock and checking its patient, tombstone and exact captured revision.

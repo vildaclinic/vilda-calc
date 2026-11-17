@@ -39,6 +39,18 @@ describe('licznik odsyłania: warstwy echa, reguły pola, klasy i przydział', (
     const po = lad({ patients: [karta('P', [wersja('v', { rev: 3 })])] });
     expect(warstwy(echo(lad({ patients: [karta('P', [wersja('v')])] }), po, P))).toEqual({ surowe: 1, po2a: 0, wykA: 0, wykB: 0, wykT: 0 });
   });
+  // E3-PR0b2b (P-NOTATKA-POZNIEJSZA): scalenie zostawia tutejszą treść notatki i zapisuje sam rev = najwyższy z obu wersji.
+  it('notatka pacjenta różna tylko rev (zapis samego rev przy wygranej tutejszej treści) → surowe 1, po2a 0, klasa „sam rev notatki”', () => {
+    const notatka = (o = {}) => ({ id: 'n', patientId: 'P', category: 'observation', rev: 2, createdAtISO: T0, updatedAtISO: T1, bodyCipher: { iv: 'iv-1', data: 'tutejsza' }, ...o });
+    const przed = lad({ patientNotes: [notatka()] });
+    const P = lad({ patientNotes: [notatka({ rev: 3, updatedAtISO: T0, bodyCipher: { iv: 'iv-2', data: 'z ładunku' } })] });
+    const po = lad({ patientNotes: [notatka({ rev: 3 })] });
+    const l = echo(przed, po, P);
+    expect(warstwy(l)).toEqual({ surowe: 1, po2a: 0, wykA: 0, wykB: 0, wykT: 0 });
+    expect(l.map((r) => [r.rodzaj, r.klasa])).toEqual([['pnote', 'sam rev notatki']]);
+    const tresc = echo(przed, lad({ patientNotes: [notatka({ rev: 3, bodyCipher: { iv: 'iv-3', data: 'złączenie' } })] }), P);
+    expect([warstwy(tresc).po2a, tresc.map((r) => r.klasa)], 'inna treść niż przed i niż w ładunku — echo').toEqual([1, ['inne']]);
+  });
   it('wpis Kosza różny tylko opisem D7 (rev, koszISO, revPary) i postacią gwiazdki w treści → po2a 0', () => {
     const k = karta('P', [wersja('w')]);
     const P = lad({ patients: [k], snapshotTombstones: [wpis('P', 'v')] });

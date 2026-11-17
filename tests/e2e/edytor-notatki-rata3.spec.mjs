@@ -251,6 +251,89 @@ test.describe('G14b — równoległa edycja tej samej notatki', () => {
   });
 });
 
+// E3-PR0b2b (P-NOTATKA-POZNIEJSZA): zmiana, która dociera scaleniem pod otwarty arkusz. Dotknięcie techniczne
+// (ratunek D-21 albo import karty na innym urządzeniu: ta sama treść, nowa chwila zapisu, chwila treści zachowana)
+// nie jest widoczną zmianą — bez banera i bez okna wyboru. Inna karta pacjenta, inna treść albo „wykonane” z innego
+// urządzenia — baner i okno wyboru jak dotąd.
+const BANER = 'Ta notatka zmieniła się na innym urządzeniu.';
+const KONFLIKT = 'Nowsza wersja tej notatki jest już w sejfie.';
+const zmianaScaleniem = (page, noteId, zmiana) => page.evaluate(async (d) => {
+  const v = window.VildaVault;
+  const ladunek = JSON.parse(JSON.stringify(await v.exportSyncPayload()));
+  const n = ladunek.patientNotes.find((x) => x.id === d.noteId);
+  const u = new Date(Math.max(Date.parse(n.updatedAtISO) + 1000, Date.now())).toISOString();
+  if (d.zmiana.rodzaj === 'dotkniecie') { n.contentAtISO = n.updatedAtISO; n.contentForISO = u; }
+  if (d.zmiana.rodzaj === 'karta') n.patientId = d.zmiana.patientId;
+  if (d.zmiana.rodzaj === 'tresc') n.body = d.zmiana.body;
+  if (d.zmiana.rodzaj === 'wykonane') n.completedAtISO = u;
+  n.updatedAtISO = u;
+  await v.mergeSyncPayload(ladunek);
+  const po = await v.getPatientNote(d.noteId);
+  return { updatedAtISO: po.updatedAtISO, patientId: po.patientId, body: po.body, wykonane: !!po.completedAtISO };
+}, { noteId, zmiana });
+// Baner pojawia się po odczycie notatki po zdarzeniu scalenia — przy braku banera czekamy, aż ten odczyt minie.
+const bezBanera = async (page) => { await page.waitForTimeout(1500); await expect(page.getByText(BANER)).toBeHidden(); };
+
+test.describe('E3-PR0b2b — zmiana z innego urządzenia pod otwartym arkuszem', () => {
+  test('dotknięcie techniczne (jak ratunek albo import karty na innym urządzeniu): bez banera, zapis bez okna wyboru', async ({ page }) => {
+    await otworzZKontem(page);
+    const patientId = await zalozPacjenta(page);
+    const { noteId } = await otworzIstniejaca(page, patientId);
+    await tresc(page).fill('Moja wersja z tego urządzenia.');
+    const po = await zmianaScaleniem(page, noteId, { rodzaj: 'dotkniecie' });
+    expect(po.body, 'treść w sejfie bez zmian').toBe('Treść pierwotna.');
+    await bezBanera(page);
+    await page.getByRole('button', { name: 'Zapisz zmiany' }).click();
+    await expect(page.getByRole('button', { name: 'Zapisz zmiany' }), 'zapis przeszedł bez okna wyboru').toHaveCount(0);
+    await expect(page.getByText(KONFLIKT)).toHaveCount(0);
+    expect((await notatki(page, patientId))[0].body).toBe('Moja wersja z tego urządzenia.');
+  });
+
+  test('inna karta pacjenta z innego urządzenia: baner i okno wyboru, notatka zostaje na nowej karcie', async ({ page }) => {
+    await otworzZKontem(page);
+    const patientId = await zalozPacjenta(page);
+    const druga = await page.evaluate(async () => (await window.VildaVault.savePatient({ name: 'Fikcyjna Druga', user: { lastName: 'Fikcyjna', firstName: 'Druga', sex: 'F', age: 6, height: 115, weight: 20 } }, { dedup: false })).patientId);
+    const { noteId } = await otworzIstniejaca(page, patientId);
+    await tresc(page).fill('Moja wersja z tego urządzenia.');
+    const po = await zmianaScaleniem(page, noteId, { rodzaj: 'karta', patientId: druga });
+    expect(po.patientId, 'scalenie przyjęło nową kartę').toBe(druga);
+    await expect(page.getByText(BANER), 'zmiana karty jest widoczna dla lekarza').toBeVisible();
+    await page.getByRole('button', { name: 'Zapisz zmiany' }).click();
+    await expect(page.getByText(KONFLIKT)).toBeVisible();
+    expect((await page.evaluate((id) => window.VildaVault.getPatientNote(id), noteId)).patientId, 'karta nie wraca po cichu').toBe(druga);
+  });
+
+  test('„wykonane” z innego urządzenia: baner i okno wyboru, „Nadpisz moją wersją” zapisuje mój tekst i zostawia „wykonane”', async ({ page }) => {
+    await otworzZKontem(page);
+    const patientId = await zalozPacjenta(page);
+    const { noteId } = await otworzIstniejaca(page, patientId);
+    await tresc(page).fill('Moja wersja z tego urządzenia.');
+    const po = await zmianaScaleniem(page, noteId, { rodzaj: 'wykonane' });
+    expect(po.wykonane).toBe(true);
+    await expect(page.getByText(BANER)).toBeVisible();
+    await page.getByRole('button', { name: 'Zapisz zmiany' }).click();
+    await expect(page.getByText(KONFLIKT)).toBeVisible();
+    await page.getByRole('button', { name: 'Nadpisz moją wersją' }).click();
+    await expect(page.getByRole('button', { name: 'Zapisz zmiany' })).toHaveCount(0);
+    const n = await page.evaluate((id) => window.VildaVault.getPatientNote(id), noteId);
+    expect([n.body, !!n.completedAtISO]).toEqual(['Moja wersja z tego urządzenia.', true]);
+  });
+
+  test('po oknie wyboru dotknięcie techniczne przed „Nadpisz moją wersją”: zapis bez drugiego okna wyboru', async ({ page }) => {
+    await otworzZKontem(page);
+    const patientId = await zalozPacjenta(page);
+    const { noteId } = await otworzIstniejaca(page, patientId);
+    await tresc(page).fill('Moja wersja z tego urządzenia.');
+    await zmianaScaleniem(page, noteId, { rodzaj: 'tresc', body: 'Wersja z innego urządzenia.' });
+    await page.getByRole('button', { name: 'Zapisz zmiany' }).click();
+    await expect(page.getByRole('button', { name: 'Nadpisz moją wersją' })).toBeVisible();
+    await zmianaScaleniem(page, noteId, { rodzaj: 'dotkniecie' });
+    await page.getByRole('button', { name: 'Nadpisz moją wersją' }).click();
+    await expect(page.getByRole('button', { name: 'Zapisz zmiany' }), 'wersja pokazana w oknie wyboru jest tą samą widoczną wersją').toHaveCount(0);
+    expect((await notatki(page, patientId))[0].body).toBe('Moja wersja z tego urządzenia.');
+  });
+});
+
 test.describe('G21 — arkusz pyta, zanim wyrzuci niezapisany tekst', () => {
   test('„Anuluj" pyta, a odmowa zostawia tekst na miejscu', async ({ page }) => {
     await otworzZKontem(page);
