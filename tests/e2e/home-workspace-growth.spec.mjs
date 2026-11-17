@@ -258,7 +258,7 @@ async function ghAction(dialog) {
 for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844 }]) {
   test('home A2: native GH portal cancels purely and saves/imports the original therapy point · ' + viewport.width, async ({ page }) => {
     await page.setViewportSize(viewport);
-    const { frame } = await setup(page, { shell: true }); await withGh(frame);
+    const { frame, id } = await setup(page, { shell: true }); await withGh(frame);
     const before = await snapshot(frame), dialog = await show(frame);
     await (await ghAction(dialog)).click();
     await expect(dialog.locator('#ghZWierszaPanel')).toBeVisible();
@@ -286,7 +286,13 @@ for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844
     const geometry = await dialog.evaluate(node => { const r = node.getBoundingClientRect(); return { overflow: node.scrollWidth > r.width, footer: node.querySelector('.vhome-dialog-footer').getBoundingClientRect().bottom <= r.bottom }; });
     expect(geometry).toEqual({ overflow: false, footer: true });
     await dialog.getByRole('button', { name: 'Anuluj', exact: true }).click();
-    await frame.evaluate(() => saveUserData());
+    // A queued native session import and an explicit patient save are separate
+    // acknowledgements. Reload only after both writers confirm this point.
+    await expect.poll(() => frame.evaluate(() => VildaPersistence.readMainSession()?.ghTherapyPoints)).toEqual(points);
+    await expect.poll(() => frame.evaluate(() => VildaSaveStatusIndicator.getCurrentDecision().ready)).toBe(true);
+    const receipt = await frame.evaluate(() => VildaDataImportExport.saveUserDataWithReceipt({}));
+    expect(receipt).toMatchObject({ saved: true });
+    await expect.poll(() => frame.evaluate(patient => VildaVault.getPatient(patient).then(row => row.snapshots[0].payload.ghTherapyPoints), id)).toEqual(points);
     await page.reload({ waitUntil: 'load' }); const restored = await shellFrame(page); await readyForPatient(restored);
     await expect(restored.locator('#advMeasurements [data-gh-id="' + added.id + '"]')).toHaveCount(1);
     expect(await restored.evaluate(() => VildaPersistence.readModuleJSON('GH_THERAPY_POINTS', []))).toEqual(points);
