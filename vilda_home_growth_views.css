@@ -39,13 +39,14 @@
 #vhomeGrowthDialog .vhome-a2-heading p { text-align: left; color: var(--text-muted); font-size: 14px; margin: 0; }
 #vhomeGrowthDialog .vhome-a2 h4 { font-size: 16px; line-height: 1.45; margin: 0; }
 #vhomeGrowthDialog .vhome-a2-panel { background: var(--card, #fff); border: 1px solid var(--line, #dce7eb); border-radius: 12px; padding: 18px; min-width: 0; }
-#vhomeGrowthDialog .vhome-a2-dashboard { display: grid; grid-template-columns: minmax(0, 1fr) 255px; gap: 16px; align-items: start; margin: 16px 0; }
+#vhomeGrowthDialog .vhome-a2-dashboard { display: grid; grid-template-columns: minmax(0, 1fr) 255px; gap: 16px; align-items: stretch; margin: 16px 0; }
+#vhomeGrowthDialog .vhome-a2-plot { display: flex; flex-direction: column; justify-content: center; }
 #vhomeGrowthDialog .vhome-a2-plot-heading { display: flex; flex-wrap: wrap; gap: 14px; justify-content: space-between; align-items: center; }
 #vhomeGrowthDialog .vhome-a2-plot-heading p { font-size: 14px; color: var(--text-muted); margin: 3px 0 0; }
 #vhomeGrowthDialog .vhome-a2-metric-switch { display: flex; gap: 3px; padding: 3px; background: #f0f5f6; border: 1px solid var(--line, #dce7eb); border-radius: 8px; }
 #vhomeGrowthDialog .vhome-a2-metric-switch button { width: auto; min-height: 38px; padding: 6px 10px; margin: 0; border: 1px solid transparent !important; border-radius: 6px; background: transparent !important; color: var(--text-muted) !important; box-shadow: none !important; font-size: 14px; font-weight: 500; }
 #vhomeGrowthDialog .vhome-a2-metric-switch button[aria-pressed=true] { background: var(--card, #fff) !important; color: var(--primary, #00838d) !important; border-color: var(--line, #dce7eb) !important; }
-#vhomeGrowthDialog .vhome-a2-chart { margin-top: 16px; min-width: 0; }
+#vhomeGrowthDialog .vhome-a2-chart { margin-block: auto; padding-top: 16px; min-width: 0; }
 #vhomeGrowthDialog .vhome-a2-chart svg { width: 100%; height: auto; display: block; fill: none; }
 #vhomeGrowthDialog .vhome-a2-chart text { fill: var(--text-muted, #607986); stroke: none; font: 14px sans-serif; }
 #vhomeGrowthDialog .vhome-a2-gridline { stroke: #e1eaed; stroke-dasharray: 3 4; }
@@ -64,7 +65,8 @@
 #vhomeGrowthDialog .vhome-a2-metrics .big .d { font-size: 15px; margin-left: 8px; }
 #vhomeGrowthDialog .vhome-a2-metrics .sub { color: var(--text-muted); }
 #vhomeGrowthDialog .vhome-a2-metrics .vdt { border-top: 1px solid var(--line, #dce7eb); padding-top: 8px; margin-top: 4px; }
-#vhomeGrowthDialog .vhome-a2-context-slots { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: start; margin: 16px 0 4px; }
+#vhomeGrowthDialog .vhome-a2-context-slots { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; align-items: start; margin: 16px 0 4px; }
+#vhomeGrowthDialog .vhome-a2-wide-context { grid-column: 1 / -1; }
 #vhomeGrowthDialog .vhome-a2-context-slots > *, #vhomeGrowthDialog .vhome-a2-bone { min-width: 0; margin: 0; }
 #vhomeGrowthDialog .vhome-a2-bone span { display: block; font-size: 14px; color: var(--text-muted); }
 #vhomeGrowthDialog .vhome-a2-bone strong { display: block; font-size: 24px; font-variant-numeric: tabular-nums; }
@@ -96,6 +98,8 @@
 }
 @media (max-width: 600px) {
   #vhomeGrowthDialog .vhome-growth-family-fields, #vhomeGrowthDialog .vhome-a2-forecast-top, #vhomeGrowthDialog .vhome-a2-context-slots, #vhomeGrowthDialog .vhome-a2-metrics { grid-template-columns: minmax(0, 1fr); }
+  #vhomeGrowthDialog .vhome-growth-family-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 10px; }
+  #vhomeGrowthDialog .vhome-growth-family-fields > label:last-child { grid-column: 1 / -1; }
   #vhomeGrowthDialog .vhome-growth-family { padding: 14px; }
   #vhomeGrowthDialog .vhome-growth-history-heading { align-items: flex-start; }
   #vhomeGrowthDialog .vhome-growth-history-heading h3 { padding-top: 8px; }

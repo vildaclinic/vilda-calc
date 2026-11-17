@@ -16,7 +16,7 @@
     Object.keys(attrs || {}).forEach(function (name) { node.setAttribute(name, attrs[name]); }); return node;
   }
   function heading(title, note) {
-    var box = el('header', 'vhome-a2-heading'); box.append(el('h3', '', title));
+    var box = el('div', 'vhome-a2-heading'); box.append(el('h3', '', title));
     if (note) box.appendChild(el('p', '', note)); return box;
   }
   function details(label, content) {
@@ -85,9 +85,11 @@
     dashboard.append(plot, cards); root.appendChild(dashboard);
     var context = el('section', 'vhome-a2-panel vhome-a2-context'); context.appendChild(el('h4', '', 'Tempo i potencjał rodzinny'));
     var slots = el('div', 'vhome-a2-context-slots');
-    ['.vgcc-stats', '.vgcc-mph', '.vgcc-target'].forEach(function (selector) { var node = options.native.querySelector(selector); if (node) slots.appendChild(options.copy(node)); });
+    ['.vgcc-stats', '.vgcc-mph'].forEach(function (selector) { var node = options.native.querySelector(selector); if (node) slots.appendChild(options.copy(node)); });
     var bone = el('div', 'vhome-a2-bone'); bone.append(el('span', '', 'Wiek kostny'), el('strong', '', finite(options.data.boneAgeMonths) ? fmt(options.data.boneAgeMonths / 12) + ' lat' : '—')); slots.appendChild(bone);
-    nativeCards.filter(function (node) { return node.classList.contains('vtap-hvc'); }).forEach(function (node) { slots.appendChild(options.copy(node)); });
+    var target = options.native.querySelector('.vgcc-target');
+    if (target) { var targetCopy = options.copy(target); targetCopy.classList.add('vhome-a2-wide-context'); slots.appendChild(targetCopy); }
+    nativeCards.filter(function (node) { return node.classList.contains('vtap-hvc'); }).forEach(function (node) { var copy = options.copy(node); copy.classList.add('vhome-a2-wide-context'); slots.appendChild(copy); });
     context.appendChild(slots); var dataLink = el('button', 'vhome-a2-link', 'Przejdź do danych i pomiarów ↗'); dataLink.type = 'button'; dataLink.addEventListener('click', options.onData); context.appendChild(dataLink); root.appendChild(context);
     var nativeDetails = options.copy(source); root.appendChild(details('Szczegóły odcinków i warunki oceny', nativeDetails));
     var extras = el('div', 'vhome-a2-native-extras');
