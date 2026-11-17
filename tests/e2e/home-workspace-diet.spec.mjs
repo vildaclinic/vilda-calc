@@ -10,6 +10,81 @@ const draft = (dialog, id) => dialog.locator(`[data-home-diet-field="${id}"]`);
 const apply = dialog => dialog.getByRole('button', { name: 'Zastosuj założenia', exact: true });
 const generate = dialog => dialog.getByRole('button', { name: 'Generuj i skopiuj zalecenia', exact: true });
 const pdf = dialog => dialog.getByRole('button', { name: 'Raport PDF dla pacjenta', exact: true });
+const preview = dialog => dialog.locator('[data-home-diet-action="preview"]');
+
+async function openReport(frame, dialog) {
+  await expect(preview(dialog)).toBeEnabled();
+  await preview(dialog).click();
+  const report = frame.getByRole('dialog', { name: 'Podgląd zaleceń', exact: true });
+  await expect(report).toBeVisible();
+  await expect(report.locator('.vhome-diet-native-energy')).toBeVisible();
+  await expect(report.locator('input:enabled, select:enabled, textarea:enabled, button[data-diet-copy-result], [data-diet-report-direct]')).toHaveCount(0);
+  await expect(report.locator('.vhome-diet-native-energy button:enabled')).toHaveCount(0);
+  return report;
+}
+
+async function openRoadDetails(dialog) {
+  const details = dialog.locator('.vhome-diet-road-details');
+  if (!await details.evaluate(node => node.open)) await details.locator(':scope > summary').click();
+  await expect(details.locator(':scope > summary')).toHaveText('Pełne obliczenia i uwagi');
+  await expect(dialog.locator('#vhomeDietRoadResult')).toBeVisible();
+}
+
+async function openDocumentFlags(dialog) {
+  const details = dialog.locator('.vhome-diet-options');
+  if (!await details.evaluate(node => node.open)) await details.locator(':scope > summary').click();
+  await expect(details).toHaveAttribute('open', '');
+}
+
+async function expectNativeSummary(frame, dialog) {
+  const summary = dialog.locator('#vhomeDietPlanSummary.vhome-diet-plan');
+  await expect(summary).toBeVisible();
+  await expect(summary.locator('input, select, textarea, button, [data-journey], [data-diet-strategy-choice], [data-diet-goal-choice]')).toHaveCount(0);
+  for (const key of ['strategy', 'scope']) {
+    await expect(summary.locator(`[data-home-diet-summary="${key}"]`)).toHaveCount(1);
+  }
+  const hasNativeJourney = await frame.evaluate(() => !!document.querySelector('#bmiJourneyMount .bmi-journey-goalbox')
+    && !document.getElementById('toNormCard').hidden && getComputedStyle(document.getElementById('toNormCard')).display !== 'none');
+  if (hasNativeJourney) {
+    for (const key of ['current', 'goal', 'forecast', 'pal', 'diet', 'movement', 'energy', 'control']) {
+      await expect(summary.locator(`[data-home-diet-summary="${key}"]`)).toHaveCount(1);
+    }
+    for (const [key, selectors] of [
+      ['goal', ['.bmi-journey-goalbox']],
+      ['forecast', ['.bmi-journey-hero']],
+      ['energy', ['.bmi-journey-kcal']],
+      ['control', ['.bmi-journey-kontrola']],
+    ]) {
+      for (const selector of selectors) {
+        // Complete source blocks retain units, ≤, custom-goal and growth
+        // qualifications, stabilization language and control thresholds.
+        const source = frame.locator('#bmiJourneyMount ' + selector);
+        const expected = key === 'goal' ? await source.evaluateAll(nodes => nodes.map(node => {
+          const copy = node.cloneNode(true);
+          // Native intermediate milestones remain in full calculations;
+          // the compact goal preserves the treatment goal and its basis.
+          copy.querySelectorAll('.bmi-journey-g4').forEach(part => part.remove());
+          return copy.textContent;
+        })) : await source.allTextContents();
+        expect(await summary.locator(`[data-home-diet-summary="${key}"] ${selector}`).allTextContents()).toEqual(expected);
+      }
+    }
+    expect(await summary.locator('.bmi-journey-growth').allTextContents())
+      .toEqual(await frame.locator('#bmiJourneyMount .bmi-journey-growth').allTextContents());
+    expect(await summary.locator('.energy-mode-badge-row').allTextContents())
+      .toEqual(await frame.locator('#bmiJourneyMount .energy-mode-badge-row').allTextContents());
+    const current = summary.locator('[data-home-diet-summary="current"]');
+    if (await current.locator('[data-home-diet-projection="current"]').count()) {
+      expect(await current.textContent()).toBe(await frame.locator('#bmiJourneyMount .bmi-journey-g3 b').first().textContent());
+    } else {
+      await expect(current).toHaveText(await frame.locator('#weight').inputValue() + ' kg');
+    }
+    expect(await summary.locator('[data-home-diet-summary="pal"] > span').textContent())
+      .toBe(await frame.locator('#palFactor option:checked').textContent());
+  } else {
+    await expect(summary.locator('.bmi-journey-goalbox, .bmi-journey-hero, .bmi-journey-kcal, .bmi-journey-kontrola')).toHaveCount(0);
+  }
+}
 
 async function settled(frame) {
   await frame.waitForFunction(() => !window.__vildaPersistRestoring && !window.__vildaLustroWpis
@@ -79,6 +154,16 @@ test('home diet: isolated assumptions and movement drafts cancel without clinica
   const { frame, id } = await setup(page);
   const before = await snapshot(frame, id), cardBefore = await frame.locator('#vhomeDietCard').boundingBox();
   const dialog = await show(frame, 'road');
+  expect(await dialog.locator('.vhome-diet-grid').evaluate(grid => Array.from(grid.children).map(node =>
+    ['assumptions', 'road', 'options', 'plan-section', 'document'].find(key => node.classList.contains('vhome-diet-' + key))))
+  ).toEqual(['assumptions', 'road', 'options', 'plan-section', 'document']);
+  await expect(dialog.locator('.vhome-diet-road-details')).not.toHaveAttribute('open', '');
+  await expect(dialog.locator('.vhome-diet-options')).not.toHaveAttribute('open', '');
+  await expect(draft(dialog, 'nutritionNormsFlag')).toBeHidden();
+  await expect(preview(dialog)).toBeDisabled();
+  await expectNativeSummary(frame, dialog);
+  await openRoadDetails(dialog); await dialog.locator('.vhome-diet-road-details > summary').click();
+  await openDocumentFlags(dialog); await dialog.locator('.vhome-diet-options > summary').click();
   await expect(dialog.locator('input[id], input[name], select[id], select[name]')).toHaveCount(0);
   await expectOriginalNodes(frame);
   expect(await frame.evaluate(() => window.__homeDietClipboard)).toEqual([]);
@@ -89,8 +174,11 @@ test('home diet: isolated assumptions and movement drafts cancel without clinica
   await expect(draft(dialog, 'palFactor')).toHaveValue('1.8');
   await expect(generate(dialog)).toBeDisabled();
   await expect(pdf(dialog)).toBeDisabled();
+  await expect(preview(dialog)).toBeDisabled();
   await expect(dialog.locator('.vhome-diet-native-energy')).toBeHidden();
-  await expect(dialog.locator('.vhome-diet-native-road')).toBeHidden();
+  await expect(dialog.locator('#vhomeDietRoadResult > .vhome-diet-native-road')).toBeHidden();
+  await expect(dialog.locator('#vhomeDietPlanSummary .bmi-journey-goalbox, #vhomeDietPlanSummary .bmi-journey-hero, #vhomeDietPlanSummary .bmi-journey-kcal, #vhomeDietPlanSummary .bmi-journey-kontrola')).toHaveCount(0);
+  await expect(dialog.locator('#vhomeDietPlanSummary [data-home-diet-projection], #vhomeDietRoadBrief [data-home-diet-projection]')).toHaveCount(0);
   expect(await snapshot(frame, id)).toEqual(before);
   page.once('dialog', confirmation => confirmation.accept());
   await dialog.getByRole('button', { name: 'Anuluj', exact: true }).click();
@@ -135,26 +223,70 @@ test('home diet: explicit Apply updates original PAL and diet once, preserves th
 });
 
 test('home diet: road uses native movement actions and complete clinical output, and generation copies only on explicit click', async ({ page }) => {
-  const { frame } = await setup(page), dialog = await show(frame, 'road');
+  const { frame, id } = await setup(page), dialog = await show(frame, 'road');
   const move = dialog.locator('[data-home-diet-journey="move"]').first(), key = await move.getAttribute('data-key');
   const before = await frame.evaluate(() => ({ state: VildaBmiJourney.getSnapshot().state, stored: localStorage.getItem('vildaBmiJourneyState') }));
   await move.click();
   expect(await frame.evaluate(() => ({ state: VildaBmiJourney.getSnapshot().state, stored: localStorage.getItem('vildaBmiJourneyState') }))).toEqual(before);
   await apply(dialog).click();
   await expect.poll(() => frame.evaluate(key => VildaBmiJourney.getSnapshot().state.moves[key], key)).toBe(!before.state.moves[key]);
-  const clinicalParts = ['.bmi-journey-hero', '.bmi-journey-goalbox', '.bmi-journey-kcal', '.bmi-journey-growth', '.bmi-journey-kontrola', '.bmi-journey-warn', '.bmi-journey-table'];
+  await expectNativeSummary(frame, dialog);
+  await openRoadDetails(dialog);
+  const clinicalParts = ['.bmi-journey-hero', '.bmi-journey-goalbox', '.bmi-journey-kcal', '.bmi-journey-growth', '.bmi-journey-kontrola', '.bmi-journey-warn', '.bmi-journey-table',
+    '.bmi-journey-pal-note', '.bmi-journey-gain', '.bmi-journey-bullets', '.bmi-journey-badge', '.energy-mode-badge-row'];
   for (const selector of clinicalParts) {
-    expect(await dialog.locator('.vhome-diet-native-road ' + selector).allTextContents()).toEqual(await frame.locator('#toNormInfo ' + selector).allTextContents());
+    expect(await dialog.locator('#vhomeDietRoadResult > .vhome-diet-native-road ' + selector).allTextContents()).toEqual(await frame.locator('#toNormInfo ' + selector).allTextContents());
   }
   await expect(dialog.locator('[data-journey], [data-diet-strategy-choice], [data-diet-goal-choice], [data-diet-copy-result], [data-diet-report-direct]')).toHaveCount(0);
   expect(await frame.evaluate(() => window.__homeDietClipboard)).toEqual([]);
   await expect(generate(dialog)).toBeEnabled(); await generate(dialog).click();
-  await expect(dialog.locator('.vhome-diet-native-energy')).toBeVisible();
-  expect(await dialog.locator('.vhome-diet-native-energy').textContent()).toBe(await frame.locator('#dietEnergyResult').textContent());
+  await expect(dialog.locator('.vhome-diet-native-energy')).toHaveCount(0);
   const text = await frame.evaluate(() => VildaSchowek.dlaSystemuSzpitalnego(VildaDietRecommendations.getLastOutputs().energy.textOutput));
   await expect.poll(() => frame.evaluate(() => window.__homeDietClipboard)).toEqual([text]);
+  await frame.waitForFunction(() => {
+    const pending = vildaGetPersistAutosaveCoalescingSnapshot();
+    return !pending.hasPendingSaveTimer && !pending.hasPendingForceSaveTimer && !pending.hasPendingElementRefreshTimer;
+  });
+  const applied = await snapshot(frame, id);
+  await preview(dialog).scrollIntoViewIfNeeded();
+  const bounds = await dialog.boundingBox(), scrollTop = await dialog.locator('.vhome-dialog-body').evaluate(node => node.scrollTop);
+  await frame.evaluate(() => {
+    window.__homeDietPreviewEffects = { generate: 0, copy: 0, storage: [] };
+    document.getElementById('generateEnergyDietBtn').addEventListener('click', () => { window.__homeDietPreviewEffects.generate += 1; });
+    document.getElementById('dietRecommendationsContent').addEventListener('click', event => {
+      if (event.target.closest('[data-diet-copy-result]')) window.__homeDietPreviewEffects.copy += 1;
+    });
+    window.__homeDietStorageSetItem = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (key, value) {
+      // Native chrome periodically refreshes account-label/has-patient/PRO
+      // presentation flags. This exact session UI cache is not an autosave.
+      if (this !== window.sessionStorage || String(key) !== 'vildaChromeUiSnapV1') {
+        window.__homeDietPreviewEffects.storage.push(String(key));
+      }
+      return window.__homeDietStorageSetItem.call(this, key, value);
+    };
+  });
+  const report = await openReport(frame, dialog);
+  await expect.poll(() => report.boundingBox()).toEqual(bounds);
+  expect(await report.locator('.vhome-diet-native-energy').textContent()).toBe(await frame.locator('#dietEnergyResult').textContent());
+  await report.press('Escape');
+  await expect(report).toBeHidden(); await expect(dialog).toBeVisible();
+  await expect(preview(dialog)).toBeFocused();
+  expect(await dialog.locator('.vhome-dialog-body').evaluate(node => node.scrollTop)).toBe(scrollTop);
+  expect(await snapshot(frame, id)).toEqual(applied);
+  expect(await frame.evaluate(() => window.__homeDietClipboard)).toEqual([text]);
+  expect(await frame.evaluate(() => window.__homeDietPreviewEffects)).toEqual({ generate: 0, copy: 0, storage: [] });
+  await frame.evaluate(() => { Storage.prototype.setItem = window.__homeDietStorageSetItem; });
   await dialog.getByRole('button', { name: 'Kopiuj zalecenia', exact: true }).click();
   await expect.poll(() => frame.evaluate(() => window.__homeDietClipboard)).toEqual([text, text]);
+  await draft(dialog, 'palFactor').selectOption(applied.controls.palFactor.value === '1.8' ? '1.6' : '1.8');
+  await expect(preview(dialog)).toBeDisabled();
+  await expect(generate(dialog)).toBeDisabled(); await expect(pdf(dialog)).toBeDisabled();
+  await expect(frame.locator('#vhomeDietReportDialog .vhome-diet-native-energy')).toHaveCount(0);
+  await expect(dialog.locator('#vhomeDietRoadResult > .vhome-diet-native-road')).toBeHidden();
+  await expect(dialog.locator('#vhomeDietPlanSummary .bmi-journey-goalbox, #vhomeDietPlanSummary .bmi-journey-hero, #vhomeDietPlanSummary .bmi-journey-kcal, #vhomeDietPlanSummary .bmi-journey-kontrola')).toHaveCount(0);
+  await expect(dialog.locator('#vhomeDietPlanSummary [data-home-diet-projection], #vhomeDietRoadBrief [data-home-diet-projection]')).toHaveCount(0);
+  expect(await snapshot(frame, id)).toEqual(applied);
   await expectOriginalNodes(frame);
 });
 
@@ -180,6 +312,7 @@ test('home diet: restoring, changing the owner and locking invalidate stale assu
     sessionStorage.setItem('vildaCurrentPatientId', original); VildaHomeDiet.refresh();
   }, id);
   await show(frame);
+  await openDocumentFlags(dialog);
   const flag = draft(dialog, 'nutritionNormsFlag');
   await expect(flag).toBeVisible();
   await flag.setChecked(!await flag.isChecked());
@@ -217,17 +350,25 @@ for (const { title, patient, ds } of [
     expect(native.available).toBe(true);
     const dialog = await show(frame);
     await expect(dialog.locator('.vhome-diet-road')).toHaveCount(native.hasJourney ? 1 : 0);
+    await expect(dialog.locator('.vhome-diet-section-number')).toHaveText(native.hasJourney ? ['1', '2', '3', '4', '5'] : ['1', '2', '3', '4']);
     expect(await draft(dialog, 'dietLevel').isVisible()).toBe(native.hasDietChoices);
     expect(await frame.locator('#toNormInfo').textContent()).toBe(native.road);
-    if (native.hasJourney) await expect(dialog.locator('.vhome-diet-native-road')).toHaveText(native.road);
+    if (native.hasJourney) await expect(dialog.locator('#vhomeDietRoadResult > .vhome-diet-native-road')).toHaveText(native.road);
+    await expectNativeSummary(frame, dialog);
+    if (title === 'child stabilization') {
+      const nativePlan = await frame.locator('#planResults').textContent();
+      expect(nativePlan.trim()).not.toBe('');
+      expect(await dialog.locator('.vhome-diet-native-plan').textContent()).toBe(nativePlan);
+    }
     await expect(dialog.locator('[data-home-diet-journey="move"]')).toHaveCount(0);
     if (native.strategyHidden) {
       expect(await draft(dialog, 'reduceToggle').isVisible()).toBe(false);
       expect(await draft(dialog, 'stabilizationToggle').isVisible()).toBe(false);
     }
     await expect(generate(dialog)).toBeEnabled(); await generate(dialog).click();
-    expect(await dialog.locator('.vhome-diet-native-energy').textContent()).toBe(await frame.locator('#dietEnergyResult').textContent());
-    await expect(dialog.locator('.vhome-diet-native-energy')).not.toContainText('Musisz zredukować');
+    const report = await openReport(frame, dialog);
+    expect(await report.locator('.vhome-diet-native-energy').textContent()).toBe(await frame.locator('#dietEnergyResult').textContent());
+    await expect(report.locator('.vhome-diet-native-energy')).not.toContainText('Musisz zredukować');
   });
 }
 
@@ -244,11 +385,13 @@ test('home diet: an eligible custom goal remains a draft until Apply and then us
   await expect(frame.locator('#customGoalKg')).toHaveValue('62');
   await expect.poll(() => frame.evaluate(() => VildaDataImportExport.captureCurrentUserDataReadOnly().plan.customGoalKg)).toBe(62);
   await expect(frame.locator('#toNormInfo')).toContainText('Cel własny');
-  expect(await dialog.locator('.vhome-diet-native-road .bmi-journey-goalbox').allTextContents()).toEqual(await frame.locator('#toNormInfo .bmi-journey-goalbox').allTextContents());
+  expect(await dialog.locator('#vhomeDietRoadResult > .vhome-diet-native-road .bmi-journey-goalbox').allTextContents()).toEqual(await frame.locator('#toNormInfo .bmi-journey-goalbox').allTextContents());
   expect((await snapshot(frame, id)).versions).toBe(before.versions);
   expect(await frame.evaluate(() => window.__homeDietClipboard)).toEqual([]);
   await expect(generate(dialog)).toBeEnabled(); await generate(dialog).click();
-  expect(await dialog.locator('.vhome-diet-native-energy').textContent()).toBe(await frame.locator('#dietEnergyResult').textContent());
+  await expectNativeSummary(frame, dialog);
+  const report = await openReport(frame, dialog);
+  expect(await report.locator('.vhome-diet-native-energy').textContent()).toBe(await frame.locator('#dietEnergyResult').textContent());
   await expectOriginalNodes(frame);
 });
 
@@ -357,4 +500,63 @@ test('home diet: the existing card visibility preference closes and hides the ed
   }, preferences);
   await expect(frame.locator('#vhomeDietCard')).toBeVisible();
   expect(await snapshot(frame, id)).toEqual(before);
+});
+
+test('home diet: restore, owner changes and lock close both dialogs and discard the previous report', async ({ page }) => {
+  const { frame, id, ids } = await setup(page);
+  const pal = await frame.locator('#palFactor').inputValue();
+  for (const reason of ['restore', 'owner', 'lock']) {
+    const dialog = await show(frame);
+    await expect(preview(dialog)).toBeDisabled();
+    await generate(dialog).click();
+    const report = await openReport(frame, dialog);
+    const clipboard = await frame.evaluate(() => window.__homeDietClipboard);
+    if (reason === 'restore') {
+      await frame.evaluate(() => VildaDataImportExport.applyLoadedData(VildaPersistence.readMainSession(), { isSessionRestore: true }));
+    } else if (reason === 'owner') {
+      await frame.evaluate(next => { sessionStorage.setItem('vildaCurrentPatientId', next); VildaHomeDiet.refresh(); }, ids.b);
+    } else {
+      await frame.evaluate(() => VildaVault.lock());
+    }
+    await expect(report).toBeHidden(); await expect(dialog).toBeHidden();
+    await expect(frame.locator('#vhomeDietReportDialog .vhome-diet-native-energy')).toHaveCount(0);
+    await expect(frame.locator('#palFactor')).toHaveValue(reason === 'lock' ? '' : pal);
+    expect(await frame.evaluate(() => window.__homeDietClipboard)).toEqual(clipboard);
+    await expectOriginalNodes(frame);
+    if (reason === 'restore') await settled(frame);
+    if (reason === 'owner') {
+      // Restore the ID-only ownership probe; the native form stayed A.
+      await frame.evaluate(original => { sessionStorage.setItem('vildaCurrentPatientId', original); VildaHomeDiet.refresh(); }, id);
+    }
+  }
+  expect(await frame.evaluate(() => VildaVault.isUnlocked())).toBe(false);
+});
+
+test('home diet: history Back returns from preview, leaving the editor closes both dialogs, and reload restores no report', async ({ page }) => {
+  const { frame, id } = await setup(page), before = await snapshot(frame, id), dialog = await show(frame);
+  await generate(dialog).click();
+  const report = await openReport(frame, dialog);
+  const clipboard = await frame.evaluate(() => window.__homeDietClipboard);
+  await frame.evaluate(() => history.back());
+  await expect(report).toBeHidden(); await expect(dialog).toBeVisible();
+  await expect(preview(dialog)).toBeFocused();
+  expect(await snapshot(frame, id)).toEqual(before);
+  expect(await frame.evaluate(() => window.__homeDietClipboard)).toEqual(clipboard);
+  await openReport(frame, dialog);
+  await frame.evaluate(() => history.go(-2));
+  await expect(report).toBeHidden(); await expect(dialog).toBeHidden();
+  await expect(frame.locator('#vhomeDietExpand')).toBeFocused();
+  await expect(frame.locator('#vhomeDietReportDialog .vhome-diet-native-energy')).toHaveCount(0);
+  expect(await snapshot(frame, id)).toEqual(before);
+  expect(await frame.evaluate(() => window.__homeDietClipboard)).toEqual(clipboard);
+  await show(frame);
+  await generate(dialog).click(); await openReport(frame, dialog);
+  await page.reload({ waitUntil: 'load' }); await readyForPatient(page); await settled(page);
+  await page.evaluate(() => VildaPatientReportLoader.ensure());
+  await expect(page.getByRole('dialog', { name: 'Zalecenia dietetyczne', exact: true })).toBeHidden();
+  await expect(page.getByRole('dialog', { name: 'Podgląd zaleceń', exact: true })).toBeHidden();
+  const restored = await show(page);
+  await expect(preview(restored)).toBeDisabled();
+  expect(await snapshot(page, id)).toEqual(before);
+  expect(await page.evaluate(() => window.__homeDietClipboard)).toEqual([]);
 });

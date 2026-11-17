@@ -1560,20 +1560,20 @@
   "sha256": "3cc184cdcc8237c79f70c19c70862649de1ffe2acf680bb877629ca2f8c1483b"
  },
  "vilda_home_diet.css": {
-  "v": 1,
-  "sha256": "fe5dbddb941a47c7eba45a65e44ec4a9c7f63f357c25f9ffedec16f02bca8d48"
+  "v": 2,
+  "sha256": "492ea1461360455bb2266fe71667d0b5539a3223c53fa3717a2cea36582ca8d4"
  },
  "vilda_home_diet.js": {
-  "v": 1,
-  "sha256": "9d642fcc2494e7ed4e7af87135921c1c787630e599b0fbd2d28093d60b2d0133"
+  "v": 2,
+  "sha256": "ce4f774ce6f7ce2d383b2c66e7cf4b53ae6e4aedfd6a336ab82b5fc6e1447b60"
  },
  "vilda_home_diet_bmi.css": {
   "v": 1,
   "sha256": "b0e200f45ae28d4bf016b2e8a1d3de3a58b3d0f6da5b6beea6c88297c0b6af33"
  },
  "vilda_home_growth.js": {
-  "v": 3,
-  "sha256": "899267a03bcc884d111b9365b6233627e2fd18b4a3eb3e1d34497f88e313b78e"
+  "v": 4,
+  "sha256": "022ac27b9e0c55a15c93e0a4ce2ae15ecd5f8b4ddb893ef3385f359a3289403f"
  },
  "vilda_home_growth_charts.js": {
   "v": 1,
