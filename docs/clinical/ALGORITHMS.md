@@ -367,6 +367,45 @@ Przypadki `wejście → oczekiwany wynik`:
 
 Testy nie stanowią walidacji klinicznej.
 
+### P-LAB-RESET — czyszczenie wyboru substancji i otwartej ramki lab (2026-11-17)
+
+**Zgłoszenie i odtworzenie.** W pustej sesji: Kortyzol, wynik 10, lokalnie
+kobieta, 30 lat. „Wyczyść wszystkie pola” na Starcie oraz „Wyczyść” w menu
+przy aktywnym Starcie zerowały Start, ale po powrocie do otwartej ramki lab
+pozostawały wszystkie cztery wartości. Lokalny przycisk lab zerował substancję
+i wynik, pozostawiał nadpisania pacjenta, a po F5 przywracał Kortyzol.
+
+**Reguła.** `LAB_CONV_SUBSTANCE` i rodzina `LAB_CONV_UNIT:*` to dane robocze
+zakresu `lab`. Reset usuwa je z dotychczasowego, aktywnego magazynu adaptera
+(zwykłego, jednorazowego albo cloud-only), także podczas blokady autozapisu.
+Nie zmienia miejsca zapisu ani nie czyści ustawień konta, profili oznaczeń,
+definicji własnych pakietów czy zapisanych wyników pacjenta. Usunięcie samej
+substancji przez × usuwa także jej zapamiętany wybór.
+
+Wspólny `resetLabForm()` zeruje wybór, wynik, atrybuty próbki, jednostki,
+lokalne nadpisania pacjenta i konteksty widoku. Wywołują go lokalny przycisk
+i zdarzenie `vilda:user-state-cleared`. Echo pełnego czyszczenia powłoki
+doręcza to zdarzenie również już otwartej ramce lab, w tej samej karcie;
+dotychczasowi odbiorcy pakietów i przypinania wyniku otrzymują ten sam reset.
+Lokalne czyszczenie lab nie wysyła pełnego resetu do Startu ani innych ramek.
+Reset ukrytej ramki nie zmienia fokusu i nie pokazuje komunikatu.
+
+**Wpływ kliniczny.** Zmiana funkcjonalna integralności danych wejściowych:
+po świadomym czyszczeniu poprzedni wynik i nadpisany wiek/płeć nie uczestniczą
+w dalszej ocenie. Wzory konwersji, współczynniki, jednostki, zakresy i reguły
+interpretacji pozostają bez zmian. Brak nowego źródła medycznego lub normy.
+
+**Przypadki regresyjne:** Kortyzol/10/F/30 → każdy z obu przycisków na Starcie
+→ otwarty lab pusty; lokalne czyszczenie lab → nadpisania puste i dane Startu
+zachowane; × → F5 bez odtworzenia substancji; reset → zimny start offline
+z produkcyjnej pamięci PWA bez odtworzenia wyboru.
+
+**Walidacja:** rzeczywisty adapter i funkcja resetu sesji w
+`tests/unit/lab-session-reset.test.mjs`; rzeczywisty interfejs i powłoka w
+`tests/e2e/lab-session-reset.spec.mjs` oraz `lab-session-reset-mobile.spec.mjs`;
+produkcyjny SW i zimny restart w `lab-session-reset-offline.spec.mjs`.
+Wyniki przebiegów są podane w PR. Testy nie stanowią walidacji klinicznej.
+
 ### LAB-HISTORIA — model porównania zapisanych wyników (`vilda_lab_history.js` 1.0.0, PR1 planu historii wyników, 2026-10-14)
 
 **Wpływ kliniczny: brak w tym etapie.** Moduł nie jest ładowany przez żadną
