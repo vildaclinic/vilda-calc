@@ -1021,11 +1021,11 @@
  },
  "lab_history_strip.css": {
   "v": 4,
-  "sha256": "5b3b968cabf43d9383cb9e70eac42fa65a5a8df934f5b721f413bf2aeb988fd6"
+  "sha256": "cc155d8cf510c3d78c67b93c66c4c6c637d5b0f1f0e2608ff9a72915efc0b887"
  },
  "lab_history_strip.js": {
   "v": 6,
-  "sha256": "e6180aa1b901b4db43ca572281c9522d7c1164247fc7243be376f5b374058b4e"
+  "sha256": "ae611c48fb7e309da61af03353df5a32021b2ecde1e945b26aad20f3af9e9a0e"
  },
  "lab_pin_result.js": {
   "v": 15,

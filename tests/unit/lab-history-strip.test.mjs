@@ -139,9 +139,9 @@ describe('pasek „Poprzednie wyniki”: zawartość z zapisu', () => {
     expect(chipy[1].querySelector('.lab-strip-flag')).toBeNull();
     expect(txtS(chipy[1].getAttribute('title'))).toBe('zapisano: 0,04 μIU/mL · norma z wpisu: 0,27–4,2 μIU/mL');
     expect(chipy[0].querySelector('.lab-strip-flag').getAttribute('aria-label')).toBe('poniżej normy z wpisu');
-    // Chip „teraz” bez dopisku „niezapisany” (mówi o tym wiersz przypięcia, 6.39); dopisek w podpowiedzi.
+    // Chip „teraz” bez dopisku „niezapisany” (czy wynik jest w karcie, mówi wiersz przypięcia, 6.39).
     expect(txt(el.querySelector('.lab-strip-now'))).toBe('teraz0,38');
-    expect(el.querySelector('.lab-strip-now').getAttribute('title')).toBe('wynik z formularza — jeszcze nie w karcie, bez daty');
+    expect(el.querySelector('.lab-strip-now').getAttribute('title')).toBe('bieżący wynik z formularza, bez daty');
     // Bez linii różnicy, panelu szczegółów, przycisku wykresu i stopki: nagłówek, chipy, wykres (6.39).
     expect(el.querySelector('.lab-strip-diff')).toBeNull();
     expect(el.children.map((c) => c.className)).toEqual(['lab-strip-head', 'lab-strip-chips', 'lab-strip-chart']);
@@ -193,8 +193,35 @@ describe('pasek „Poprzednie wyniki”: zawartość z zapisu', () => {
     const env = strona();
     await widoczny(env);
     const chip = (id) => pasek(env).querySelector(`button.lab-strip-chip[data-note-id="${id}"]`);
+    // Przeliczony: chip w jednostce nagłówka (mIU/L), zapis w jednostce wpisu; punkt z obwódką przeliczenia.
+    expect(txt(chip('tsh-4').querySelector('.lab-strip-chip-v'))).toBe('0,04');
     expect(txtS(chip('tsh-4').getAttribute('title'))).toContain('zapisano: 0,04 μIU/mL');
+    expect(pasek(env).querySelectorAll('g.lab-strip-pt[data-note-id="tsh-4"] circle.lab-strip-dot.is-conv')).toHaveLength(1);
+    expect(pasek(env).querySelectorAll('g.lab-strip-pt[data-note-id="tsh-5"] circle.lab-strip-dot.is-conv')).toHaveLength(0);
     expect(txtS(chip('tsh-7').getAttribute('title'))).toBe('wynik tekstowy — jak zapisano, bez porównania · zapisano: <0,01 mIU/L');
+  });
+
+  it('podpowiedzi pozostałych rodzajów wpisu: termin zlecenia, jednostka nierozpoznana, ocena do ponownej oceny i niedostępna', async () => {
+    const vault = sejf();
+    vault.dodaj(PID, tsh(PID, 'tsh-t', null, 0.09, 'mIU/L', { dueDateISO: '2026-06-05' }), { dateISO: '2026-06-05' });
+    vault.dodaj(PID, tsh(PID, 'tsh-u', '2026-06-08', 1.5, 'jedn./ml'));
+    vault.dodaj(PID, tsh(PID, 'tsh-i', '2026-06-10', 0.2, 'mIU/L'),
+      { assessment: { schemaVersion: 1, status: 'invalidated', reasonCodes: ['result_or_clinical_date_changed'], evaluation: null } });
+    vault.dodaj(PID, tsh(PID, 'tsh-n', '2026-06-12', 0.3, 'mIU/L'),
+      { assessment: { schemaVersion: 1, status: 'unavailable', reasonCodes: ['snapshot_helper_unavailable'], evaluation: null } });
+    const env = strona({ vault });
+    await widoczny(env);
+    pasek(env).querySelector('.lab-strip-more').click();
+    const chip = (id) => pasek(env).querySelector(`button.lab-strip-chip[data-note-id="${id}"]`);
+    const tytul = (id) => txtS(chip(id).getAttribute('title'));
+    expect(txt(chip('tsh-t').querySelector('.lab-strip-chip-d'))).toBe('termin 05.06.26');
+    expect(tytul('tsh-t')).toBe('termin zlecenia (brak daty badania) · zapisano: 0,09 mIU/L');
+    expect(tytul('tsh-u')).toBe('jednostka nierozpoznana albo brak jednostki — wynik jak zapisano, bez porównania · zapisano: 1,5 jedn./ml');
+    expect(tytul('tsh-i')).toBe('zapisano: 0,2 mIU/L · wymaga ponownej oceny (zmieniono wynik lub datę badania)');
+    expect(tytul('tsh-n')).toBe('zapisano: 0,3 mIU/L · ocena niedostępna');
+    // Żadna podpowiedź bez „undefined”/„null” i bez podwójnych separatorów.
+    const wszystkie = pasek(env).querySelectorAll('button.lab-strip-chip[data-note-id]').map((c) => txtS(c.getAttribute('title')));
+    expect(wszystkie.filter((t) => /undefined|null| · · |^ · | · $/.test(t))).toEqual([]);
   });
 
   it('bez wartości w formularzu: bez chipa „teraz”, bez linii różnicy, wykres bez pasa „teraz”', async () => {
@@ -382,7 +409,7 @@ describe('pasek: przypięcie i karta pacjenta', () => {
     env.pola.wartosc.value = '0,5';
     modul.ustaw(null);
     await vi.waitFor(() => expect(txt(pasek(env).querySelector('.lab-strip-now'))).toBe('teraz0,5'));
-    expect(pasek(env).querySelector('.lab-strip-now').getAttribute('title')).toBe('wynik z formularza — jeszcze nie w karcie, bez daty');
+    expect(pasek(env).querySelector('.lab-strip-now').getAttribute('title')).toBe('bieżący wynik z formularza, bez daty');
     expect(pasek(env).querySelector('button.lab-strip-chip.is-pinned')).toBeNull();
     expect(pasek(env).querySelectorAll('rect.lab-strip-lane')).toHaveLength(1);
   });

@@ -19,10 +19,6 @@
   display: flex
 }
 
-#labHistoryStrip [hidden] {
-  display: none!important
-}
-
 #labHistoryStrip p {
   margin: 0
 }

@@ -1897,8 +1897,9 @@ mocniejszą obwódkę, a jego punkt na wykresie — poświatę.
   w wierszu przypięcia, liczba i daty — w chipach);
 - znacznik „· ✓ z formularza” w przypiętym chipie i pod datą przypiętego
   punktu (podpowiedź chipu „wynik z formularza — już w karcie” zostaje);
-- dopisek „· niezapisany” w chipie „teraz” (mówi o tym wiersz przypięcia;
-  podpowiedź chipu „wynik z formularza — jeszcze nie w karcie, bez daty”);
+- dopisek „· niezapisany” w chipie „teraz” (czy wynik jest w karcie, mówi
+  wiersz przypięcia; podpowiedź chipu „bieżący wynik z formularza, bez
+  daty”);
 - panel szczegółów po kliknięciu chipa lub punktu (data, wiek wizyty,
   „przeliczono z …”, zapisana ocena, norma wpisu z uwagą o metodzie, zakres
   zapisany z wynikiem, komentarz, „Otwórz w karcie →”) — klik tylko zaznacza
@@ -1911,8 +1912,8 @@ mocniejszą obwódkę, a jego punkt na wykresie — poświatę.
   pionowy podpis jednostki przy osi i stopka „Historia pokazuje zapisane
   wyniki bez ponownej oceny.” (z uwagą o metodzie przy różnicy).
 
-**Gdzie są teraz te informacje.** Podpowiedź chipu (`title`) mówi wszystko,
-co wpis ma poza datą i wartością: źródło daty („data wpisu (brak daty
+**Gdzie są teraz te informacje.** Podpowiedź chipu (`title`) przejmuje
+większość treści panelu: źródło daty („data wpisu (brak daty
 badania)”, „termin zlecenia …”, „data kontroli GH …”), IGF-1 z notatki
 leczenia GH (z polem i „bez normy i bez oceny”), opis wyniku bez porównania
 (jednostka nierozpoznana, wynik tekstowy, poza zakresem oznaczalności),
@@ -1921,8 +1922,13 @@ z wynikiem (kategoria z granicami, populacja, dla kogo dobrano i źródło —
 decyzje 6.3 i 6.30), zapisaną ocenę cytowaną dosłownie („ocena zapisana
 z wynikiem: „…”” — ostrzeżenie kliniczne koperty ma pierwszeństwo, 6.20),
 ocenę do ponownej oceny albo niedostępną (z powodami) i komentarz wpisu
-(bez linii „= …” i „Norma: …”). Pełny wpis jest w karcie („Badania
-w karcie →”). Zakładka „Badania” i Historia bez zmian.
+(bez linii „= …” i „Norma: …”). Wynik przeliczony z innej jednostki
+poznać po jednostce w „zapisano: …” i po obwódce punktu. W pasku nie ma już
+wcale: wieku wizyty wpisu, słów „poniżej/powyżej normy z wpisu” (zostaje
+strzałka z etykietą dla czytnika ekranu), uwagi „zakres laboratorium z dnia
+badania; metoda oznaczenia mogła być inna” i pełnego widoku zapisanej oceny
+— te są w karcie („Badania w karcie →”). Zakładka „Badania” i Historia bez
+zmian.
 
 **Ograniczenia (świadome, z decyzji właściciela).** Na telefonie
 podpowiedzi nie ma, więc szczegóły wpisu — także zapisane ostrzeżenie
@@ -1956,7 +1962,8 @@ Testy na kodzie produkcyjnym: `tests/unit/lab-history-strip.test.mjs`
 (układ paska: nagłówek, chipy, wykres i nic więcej; brak panelu, linii
 różnicy, przycisku wykresu, objaśnienia, stopki, podpisu jednostki i znacznika
 „z formularza”; podpowiedzi chipów z zapisem, normą, komentarzem, zakresem
-zapisanym z wynikiem i źródłem GH; zaznaczenie chipu i punktu; `is-wide`),
+zapisanym z wynikiem i źródłem GH; termin zlecenia, jednostka nierozpoznana,
+ocena do ponownej oceny i niedostępna; zaznaczenie chipu i punktu; `is-wide`),
 `tests/unit/lab-pin-pinned-state.test.mjs` (podpisy wiersza; tekst początkowy
 w części zminifikowanej równy `PP_PIN_SUB`), e2e
 `lab-przypiety-wynik.spec.mjs`, `lab-przypiety-wynik-mobile.spec.mjs`,
@@ -1964,9 +1971,12 @@ w części zminifikowanej równy `PP_PIN_SUB`), e2e
 `lab-historia-przelicznik-mobile.spec.mjs`,
 `lab-historia-przelicznik-offline.spec.mjs`,
 `powloka-badania-nawigacja.spec.mjs`, `lab-e2-d3.spec.mjs`,
-`lab-e2-phase-source.spec.mjs`, `lab-estradiol-reference-scope.spec.mjs`
-(zakres zapisany z wynikiem sprawdzany w podpowiedzi chipu zamiast
-w panelu). Opis: `docs/LAB_HISTORIA_WYNIKOW_PLAN.md`, decyzja 6.39;
+`lab-e2-phase-source.spec.mjs`, `lab-estradiol-reference-scope.spec.mjs`,
+`lab-male-e2-age.spec.mjs`, `lab-female-tt-age.spec.mjs`,
+`lab-male-e2-adult-age.spec.mjs` (zakres zapisany z wynikiem i brak
+dzisiejszych źródeł sprawdzane w podpowiedzi chipu zamiast w panelu);
+`lab-historia-przelicznik-mobile.spec.mjs` ma nowy test samotnego chipu
+w prawdziwej przeglądarce (telefon i 320 px). Opis: `docs/LAB_HISTORIA_WYNIKOW_PLAN.md`, decyzja 6.39;
 `docs/ZRODLA_ARTEFAKTOW.md`, „Łatka P-PASEK-WARIANT-A”.
 
 ### LAB-PAKIETY PR1 — pakiet badań „Tarczyca” w przeliczniku jednostek (`vilda_lab_packages.js` 1.0.0, 2026-11-12)

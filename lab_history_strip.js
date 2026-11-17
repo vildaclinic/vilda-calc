@@ -328,7 +328,7 @@
     // „Już w karcie” (LAB-HISTORIA 6.38): wynik formularza jest zapisaną notatką tej serii. Regułę ma jedną moduł
     // przypięcia (VildaLabPinResult.pinned(): ostatnie przypięcie z tej strony albo notatka z datą, którą zaproponuje
     // okno przypięcia). Pasek sprawdza tylko, że stan dotyczy tego pacjenta, badania, tekstu wartości i jednostki
-    // formularza oraz że notatka jest wpisem serii; bez modułu przypięcia pasek pokazuje „teraz · niezapisany”.
+    // formularza oraz że notatka jest wpisem serii; bez modułu przypięcia pasek pokazuje chip „teraz”.
     function pinnedFor(ctx, series) {
       var api = w.VildaLabPinResult, pinned;
       try { pinned = api && typeof api.pinned === 'function' ? api.pinned() : null; } catch (_) { pinned = null; }
@@ -508,12 +508,13 @@
         chip.addEventListener('click', function () { select(entry.noteId); });
         if (isPinned && after > 0) more(after);
       });
-      // Wynik formularza, który jest już w karcie, nie ma osobnego chipu „teraz” (LAB-HISTORIA 6.38). Że jest
-      // niezapisany, mówi wiersz przypięcia nad paskiem („Jeszcze nie w karcie”, 6.39); tu — podpowiedź.
+      // Wynik formularza, który jest już w karcie, nie ma osobnego chipu „teraz” (LAB-HISTORIA 6.38). Czy jest
+      // w karcie, mówi wiersz przypięcia nad paskiem (6.39); podpowiedź tego nie powtarza, bo pasek bez stanu
+      // przypięcia (np. bez modułu przypięcia) nie wie tego na pewno.
       if (!pinned && preview && (preview.value != null || preview.raw)) {
         add(row, 'span', 'lab-strip-sep').setAttribute('aria-hidden', 'true');
         var now = add(row, 'div', 'lab-strip-chip lab-strip-now');
-        now.setAttribute('title', 'wynik z formularza — jeszcze nie w karcie, bez daty');
+        now.setAttribute('title', 'bieżący wynik z formularza, bez daty');
         add(now, 'span', 'lab-strip-chip-d', 'teraz');
         add(now, 'span', 'lab-strip-chip-v', preview.value != null ? bareValue(preview, series.unit) : preview.raw);
       }
@@ -541,7 +542,9 @@
     function recorded(entry) {
       return finite(entry.recordedValue) ? String(entry.recordedValue).replace('.', ',') + (entry.recordedUnit ? NBSP + entry.recordedUnit : '') : entry.raw;
     }
-    // Podpowiedź chipu: wszystko, co wpis mówi poza datą i wartością (dawniej panel szczegółów, 6.39).
+    // Podpowiedź chipu (6.39, zamiast panelu szczegółów): źródło daty, GH, opis wyniku bez porównania, zapis w jednostce
+    // zapisu, norma wpisu, zakres zapisany z wynikiem, zapisana ocena (cytat tytułu) i komentarz. Bez wieku wizyty,
+    // uwagi o metodzie przy normie i pełnego widoku oceny — te są w karcie.
     function chipTitle(entry) {
       var parts = [];
       if (entry.dateSource !== 'badanie' && DATE_SOURCE[entry.dateSource]) parts.push(DATE_SOURCE[entry.dateSource] + ' (brak daty badania)');
