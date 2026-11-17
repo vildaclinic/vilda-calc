@@ -42,7 +42,8 @@ function fixture({ capability = { available: true }, edit, overrides = {}, mount
   };
   const win = { document: doc, crypto: globalThis.crypto, setTimeout, clearTimeout, matchMedia: () => ({ matches: false }) };
   loadBrowserScript('vilda_care_plan_model.js', win); if (edit) edit(plan, win.VildaCarePlanModel);
-  expect(win.VildaCarePlanModel.decodeCarePlanRecord(plan).kind).toBe('v2');
+  const decoded = win.VildaCarePlanModel.decodeCarePlanRecord(plan);
+  expect(decoded.kind, 'plan fixture: ' + JSON.stringify(decoded.issues)).toBe('v2');
   loadBrowserScript('vilda_care_plans.js', win);
   const controller = win.VildaCarePlans.mount(host, { vault, full: true, planId: plan.id, ...mount });
   return { host, doc, plan, win, vault, provider, controller, lock: () => { unlocked = false; lock(); } };
@@ -211,5 +212,111 @@ describe('V2 staged care-plan UI uses its protected writer', () => {
     expect(button(d.host, 'Uruchom pierwszy etap')).toBeTruthy();
     expect(destroy).toHaveBeenCalledTimes(1); expect(button(d.host, '← Szablon')).toBeTruthy(); button(d.host, '← Szablon').click(); await settle();
     expect(d.win.VildaCareTemplates.open.mock.calls[1][0].navigationContext).toEqual(returnContext); expect(d.vault.mutateCarePlan).not.toHaveBeenCalled(); d.controller.destroy();
+  });
+});
+
+// 2c (P-DOWOD-KROKU): evidence holding the document's capture instant (sourceRecordUpdatedAtISOAtCapture) is compared by
+// the document's updatedAtISO only; evidence without it keeps the revision comparison. New field in two releases: this
+// release reads and compares the instant, and the plan screen does not write it yet; a second release starts writing it
+// after the owner confirms that every device runs this one.
+describe('V2 staged care-plan UI compares step evidence by the capture instant when the evidence has one', () => {
+  const CAPTURED = 'sourceRecordUpdatedAtISOAtCapture', T1 = '2026-11-02T08:06:01.000Z', T2 = '2026-11-02T08:06:06.000Z';
+  const CHANGED = 'Dokument został zmieniony po powiązaniu z planem.', CURRENT = 'Fikcyjna bieżąca treść dokumentu.';
+  const sourceNote = (rev, updatedAtISO) => {
+    const value = { id: 'fictional-document', patientId: 'fictional-staged-patient', rev, category: 'observation', title: 'Fikcyjny dokument', body: CURRENT };
+    if (updatedAtISO !== undefined) value.updatedAtISO = updatedAtISO;
+    return value;
+  };
+  const withFact = evidence => plan => { plan.careContext.facts.push({ id: 'fictional-fact', stepId: 'step-a', kind: 'resultReceipt', ...audit('fictional-receipt'), evidence }); };
+  const withAssociation = extra => plan => { plan.careContext.associations.push({ id: 'fictional-association', stepId: 'step-a', kind: 'document', noteId: 'fictional-document',
+    sourceRecordRevAtCapture: 0, operationId: 'fictional-association-operation', recordedAtISO: clinicalDay + 'T12:00:00.000Z', ...extra }); };
+  async function openEvidence(d, root, label) {
+    const control = button(root, label); expect(control, label).toBeTruthy();
+    control.click(); await settle(); return d.host.textContent;
+  }
+  function expectChanged(d, text) {
+    expect(text).toContain(CHANGED); expect(text).not.toContain(CURRENT); expect(d.host.querySelector('.vcp-record-body')).toBeNull();
+    expect(d.vault.mutateStagedCarePlan).not.toHaveBeenCalled();
+  }
+  function expectOpened(d, text) {
+    expect(text).not.toContain(CHANGED); expect(text).toContain(CURRENT); expect(d.host.querySelector('.vcp-record')).toBeTruthy();
+    expect(d.vault.mutateStagedCarePlan).not.toHaveBeenCalled();
+  }
+
+  it.each(['fact', 'association'])('opens the %s document whose revision rose while its capture instant is unchanged', async relation => {
+    const d = fixture({ edit: relation === 'fact' ? withFact({ noteId: 'fictional-document', sourceRecordRevAtCapture: 2, [CAPTURED]: T1 }) : withAssociation({ sourceRecordRevAtCapture: 2, [CAPTURED]: T1 }),
+      overrides: { getPatientNote: vi.fn(async () => sourceNote(3, T1)) } }); await settle();
+    expectOpened(d, await openEvidence(d, d.host, relation === 'fact' ? 'Otwórz dokument' : 'Otwórz wpis')); d.controller.destroy();
+  });
+
+  it.each(['fact', 'association'])('does not present a %s document with a later capture instant at the same revision', async relation => {
+    const d = fixture({ edit: relation === 'fact' ? withFact({ noteId: 'fictional-document', sourceRecordRevAtCapture: 3, [CAPTURED]: T1 }) : withAssociation({ sourceRecordRevAtCapture: 3, [CAPTURED]: T1 }),
+      overrides: { getPatientNote: vi.fn(async () => sourceNote(3, T2)) } }); await settle();
+    const before = JSON.stringify(d.plan);
+    expectChanged(d, await openEvidence(d, d.host, relation === 'fact' ? 'Otwórz dokument' : 'Otwórz wpis'));
+    expect(JSON.stringify(d.plan)).toBe(before); d.controller.destroy();
+  });
+
+  it.each([['null', null], ['missing', undefined]])('treats a document whose capture instant is %s as changed for evidence holding one', async (_name, updatedAtISO) => {
+    const d = fixture({ edit: withFact({ noteId: 'fictional-document', sourceRecordRevAtCapture: 3, [CAPTURED]: T1 }), overrides: { getPatientNote: vi.fn(async () => sourceNote(3, updatedAtISO)) } }); await settle();
+    expectChanged(d, await openEvidence(d, d.host, 'Otwórz dokument')); d.controller.destroy();
+  });
+
+  it.each(['fact', 'association'])('keeps the revision comparison for older %s evidence without a capture instant', async relation => {
+    const same = fixture({ edit: relation === 'fact' ? withFact({ noteId: 'fictional-document', sourceRecordRevAtCapture: 3 }) : withAssociation({ sourceRecordRevAtCapture: 3 }),
+      overrides: { getPatientNote: vi.fn(async () => sourceNote(3, T2)) } }); await settle();
+    expectOpened(same, await openEvidence(same, same.host, relation === 'fact' ? 'Otwórz dokument' : 'Otwórz wpis')); same.controller.destroy();
+    const raised = fixture({ edit: relation === 'fact' ? withFact({ noteId: 'fictional-document', sourceRecordRevAtCapture: 2 }) : withAssociation({ sourceRecordRevAtCapture: 2 }),
+      overrides: { getPatientNote: vi.fn(async () => sourceNote(3, T1)) } }); await settle();
+    expectChanged(raised, await openEvidence(raised, raised.host, relation === 'fact' ? 'Otwórz dokument' : 'Otwórz wpis')); raised.controller.destroy();
+  });
+
+  it.each([
+    ['fact with a matching instant, older association with another revision', plan => { withFact({ noteId: 'fictional-document', sourceRecordRevAtCapture: 2, [CAPTURED]: T1 })(plan); withAssociation({ sourceRecordRevAtCapture: 2 })(plan); }],
+    ['older fact with the same revision, association with another instant', plan => { withFact({ noteId: 'fictional-document', sourceRecordRevAtCapture: 3 })(plan); withAssociation({ sourceRecordRevAtCapture: 3, [CAPTURED]: T2 })(plan); }],
+  ])('checks every reference to the same document by its own rule: %s', async (_name, edit) => {
+    const d = fixture({ edit, overrides: { getPatientNote: vi.fn(async () => sourceNote(3, T1)) } }); await settle();
+    expectChanged(d, await openEvidence(d, d.host, 'Otwórz dokument')); d.controller.destroy();
+  });
+
+  it.each([['an unchanged capture instant', 3, T1, false], ['a later capture instant', 2, T2, true]])('applies the same rule to evidence retained only in an alternative conflict version (%s)', async (_name, rev, updatedAtISO, changed) => {
+    const d = fixture({ edit: plan => {
+      const alternative = structuredClone(plan); active(alternative);
+      withFact({ noteId: 'fictional-document', sourceRecordRevAtCapture: 2, [CAPTURED]: T1 })(alternative);
+      plan.nativeConflicts = [{ record: alternative, operations: [{ id: 'fictional-alternate-operation' }] }]; plan.syncNeedsReview = true;
+    }, overrides: { getPatientNote: vi.fn(async () => sourceNote(rev, updatedAtISO)) } }); await settle();
+    const alternative = d.host.querySelectorAll('.vcp-native-conflict-version')[1]; expect(alternative).toBeTruthy();
+    alternative.open = true; alternative.dispatch('toggle');
+    const text = await openEvidence(d, alternative, 'Otwórz dokument');
+    if (changed) expectChanged(d, text); else expectOpened(d, text);
+    d.controller.destroy();
+  });
+
+  it.each(['associate', 'recordFact'])('%s: refuses to link a document whose capture instant changed between the preview and the save', async action => {
+    const reads = [sourceNote(1, T1), sourceNote(1, T2)];
+    const d = fixture({ overrides: { listPatientNotesForPatient: vi.fn(async () => [sourceNote(1, T1)]), getPatientNote: vi.fn(async () => structuredClone(reads.shift() || sourceNote(1, T2))) } }); await settle();
+    button(d.host, action === 'associate' ? 'Powiąż dokument lub termin' : 'Zapisz otrzymanie wyniku').click(); const form = formOf(d); await settle();
+    if (action === 'recordFact') { field(form, 'Dokumentacja').value = 'existing'; field(form, 'Dokumentacja').dispatch('change'); field(form, 'Data otrzymania wyniku').value = clinicalDay; }
+    field(form, 'Dokument pacjenta').value = 'fictional-document'; field(form, 'Dokument pacjenta').dispatch('change'); await settle();
+    expect(form.textContent).toContain(CURRENT);
+    check(form).checked = true; form.dispatch('submit'); await settle();
+    expect(d.vault.getPatientNote).toHaveBeenCalledTimes(2);
+    expect(d.vault.mutateStagedCarePlan).not.toHaveBeenCalled();
+    expect(form.textContent).toContain('Dokument zmienił się. Wybierz go ponownie i sprawdź aktualną treść.'); d.controller.destroy();
+  });
+
+  // In this release the plan screen only reads the capture instant: a plan with it would be refused as a whole by
+  // older application versions. Writing it belongs to the second release, after the owner's confirmation.
+  it.each(['associate', 'recordFact'])('%s: sends evidence without the document capture instant in this release', async action => {
+    const d = fixture({ overrides: { listPatientNotesForPatient: vi.fn(async () => [sourceNote(1, T1)]), getPatientNote: vi.fn(async () => sourceNote(1, T1)) } }); await settle();
+    button(d.host, action === 'associate' ? 'Powiąż dokument lub termin' : 'Zapisz otrzymanie wyniku').click(); const form = formOf(d); await settle();
+    if (action === 'recordFact') { field(form, 'Dokumentacja').value = 'existing'; field(form, 'Dokumentacja').dispatch('change'); field(form, 'Data otrzymania wyniku').value = clinicalDay; }
+    field(form, 'Dokument pacjenta').value = 'fictional-document'; field(form, 'Dokument pacjenta').dispatch('change'); await settle();
+    check(form).checked = true; form.dispatch('submit'); await settle();
+    expect(d.vault.mutateStagedCarePlan).toHaveBeenCalledTimes(1);
+    const request = d.vault.mutateStagedCarePlan.mock.calls[0][0];
+    expect(request).toMatchObject({ action, stepId: 'step-a' });
+    expect(request.evidence).toEqual({ noteId: 'fictional-document', sourceRecordRevAtCapture: 1 });
+    expect(JSON.stringify(request)).not.toContain(CAPTURED); d.controller.destroy();
   });
 });

@@ -226,6 +226,10 @@ describe('strict version dispatch retains unsupported JSON for an explicit read-
     ['missing original revision', value => { value.facts.push(fact('resultReceipt', { evidence: { noteId: 'original-result' } })); }, 'CARE_MODEL_EVIDENCE_INVALID'],
     ['appointment rule masquerading as anchor', value => { value.steps[0].reminderRule = { kind: 'result-offset', amount: 3, unit: 'day' }; }, 'CARE_MODEL_RULE_INVALID'],
     ['materialized reminder in planned stage', value => { value.steps[0].reminderSchedule = { dateISO: '2027-01-01', origin: 'manual', overrideOperationId: 'override' }; }, 'CARE_MODEL_SCHEDULE_BEFORE_ACTIVATION'],
+    ['evidence capture instant without a time', value => { value.facts.push(fact('resultReceipt', { evidence: { noteId: 'original-result', sourceRecordRevAtCapture: 3, sourceRecordUpdatedAtISOAtCapture: '2026-11-02' } })); }, 'CARE_MODEL_EVIDENCE_INVALID'],
+    ['association capture instant with a local offset', value => { value.associations.push(association('document', { sourceRecordUpdatedAtISOAtCapture: '2026-11-02T08:06:06+01:00' })); }, 'CARE_MODEL_EVIDENCE_INVALID'],
+    ['null association capture instant', value => { value.associations.push(association('event', { sourceRecordUpdatedAtISOAtCapture: null })); }, 'CARE_MODEL_EVIDENCE_INVALID'],
+    ['unknown evidence field', value => { value.facts.push(fact('resultReceipt', { evidence: { noteId: 'original-result', sourceRecordRevAtCapture: 3, capturedBodyText: 'Fikcyjna treść.' } })); }, 'CARE_MODEL_UNSUPPORTED_FIELD'],
   ])('makes %s explicit rather than dropping/defaulting it', (_name, change, code) => {
     const value = context(); change(value); const input = record(value), model = api(), before = JSON.stringify(input), decoded = model.decodeCarePlanRecord(input);
     expect(decoded.kind).toBe('unsupported'); expect(decoded.issues.some(item => item.code === code)).toBe(true);
@@ -415,5 +419,68 @@ describe('V2 component canonicalization uses a separate explicit domain', () => 
 
   it('does not accept unversioned or unknown component namespaces', () => {
     expect(() => api().canonicalizeV2Component('legacy-sha', {})).toThrow('CARE_MODEL_COMPONENT_INVALID');
+  });
+});
+
+// 2c (P-DOWOD-KROKU): an optional capture instant of the linked document (its updatedAtISO when it was linked) in fact
+// evidence and in an association. New field in two releases: this release reads, validates and compares it; the plan
+// screen starts writing it only in a second release, after the owner confirms that every device runs this one.
+describe('optional document capture instant in step evidence and associations', () => {
+  const CAPTURED = 'sourceRecordUpdatedAtISOAtCapture', T1 = '2026-11-02T08:06:01.000Z';
+  const factWith = instant => fact('resultReceipt', { evidence: { noteId: 'original-resultReceipt', sourceRecordRevAtCapture: 3, [CAPTURED]: instant } });
+
+  it.each([T1, '2026-11-02T08:06:01Z', '2026-11-02T08:06:01.5Z'])('accepts the capture instant %s in fact evidence and in an association', instant => {
+    const value = context(); value.facts.push(factWith(instant)); value.associations.push(association('document', { [CAPTURED]: instant }));
+    const model = api(), decoded = model.decodeCarePlanRecord(record(value));
+    expect(decoded.issues).toEqual([]); expect(decoded.kind).toBe('v2');
+    expect(model.validateCarePlanV2(value)).toEqual({ valid: true, issues: [] });
+  });
+
+  it.each([
+    ['a date without a time', '2026-11-02'], ['null', null], ['an empty text', ''], ['a number', 5],
+    ['a local offset', '2026-11-02T08:06:06+01:00'], ['an impossible day', '2026-02-31T08:00:00.000Z'],
+    ['an impossible hour', '2026-11-02T24:00:00.000Z'], ['free text', 'wczoraj'],
+  ])('rejects a capture instant given as %s as invalid evidence at its exact place', (_name, invalid) => {
+    const model = api(), inFact = context(), inAssociation = context();
+    inFact.facts.push(factWith(invalid)); inAssociation.associations.push(association('document', { [CAPTURED]: invalid }));
+    expect(model.validateCarePlanV2(inFact).issues).toEqual([{ code: 'CARE_MODEL_EVIDENCE_INVALID', path: 'facts[0].evidence' }]);
+    expect(model.validateCarePlanV2(inAssociation).issues).toEqual([{ code: 'CARE_MODEL_EVIDENCE_INVALID', path: 'associations[0]' }]);
+    expect(model.decodeCarePlanRecord(record(inAssociation)).kind).toBe('unsupported');
+  });
+
+  it('still requires the captured revision next to a capture instant', () => {
+    const model = api(), inFact = context(), inAssociation = context(), linked = association('document', { [CAPTURED]: T1 });
+    inFact.facts.push(fact('resultReceipt', { evidence: { noteId: 'original-resultReceipt', [CAPTURED]: T1 } }));
+    delete linked.sourceRecordRevAtCapture; inAssociation.associations.push(linked);
+    expect(model.validateCarePlanV2(inFact).issues).toEqual([{ code: 'CARE_MODEL_EVIDENCE_INVALID', path: 'facts[0].evidence' }]);
+    expect(model.validateCarePlanV2(inAssociation).issues).toEqual([{ code: 'CARE_MODEL_EVIDENCE_INVALID', path: 'associations[0]' }]);
+  });
+
+  it.each([
+    ['fact evidence', value => { value.facts.push(fact('resultReceipt', { evidence: { noteId: 'original-resultReceipt', sourceRecordRevAtCapture: 3, capturedTitle: 'Fikcyjny tytuł' } })); }, 'facts[0].evidence.capturedTitle'],
+    ['an association', value => { value.associations.push(association('document', { capturedTitle: 'Fikcyjny tytuł' })); }, 'associations[0].capturedTitle'],
+    ['a differently spelled capture instant', value => { value.associations.push(association('document', { sourceRecordUpdatedAtIsoAtCapture: T1 })); }, 'associations[0].sourceRecordUpdatedAtIsoAtCapture'],
+  ])('keeps any other new field in %s unsupported', (_name, change, path) => {
+    const value = context(); change(value);
+    expect(api().validateCarePlanV2(value).issues).toEqual([{ code: 'CARE_MODEL_UNSUPPORTED_FIELD', path }]);
+  });
+
+  it('carries the capture instant unchanged into the projected facts and associations', () => {
+    const value = context(); value.facts.push(factWith(T1)); value.associations.push(association('document', { [CAPTURED]: T1 }));
+    const before = JSON.stringify(value), projected = view(freeze(value));
+    expect(projected.kind, JSON.stringify(projected.issues)).toBe('v2');
+    const step = projected.stages[0].steps[0], captured = { noteId: 'original-resultReceipt', sourceRecordRevAtCapture: 3, [CAPTURED]: T1 };
+    expect(projected.facts[0].evidence).toEqual(captured); expect(step.facts[0].evidence).toEqual(captured);
+    expect(projected.associations).toEqual(value.associations); expect(step.associations).toEqual(value.associations);
+    expect(projected.associations[0][CAPTURED]).toBe(T1); expect(JSON.stringify(value)).toBe(before);
+  });
+
+  it('does not invent a capture instant for evidence recorded without one', () => {
+    const value = context(); value.facts.push(fact('resultReceipt')); value.associations.push(association('document'));
+    const projected = view(value);
+    expect(projected.kind).toBe('v2');
+    const step = projected.stages[0].steps[0];
+    expect(step.facts[0].evidence).toEqual({ noteId: 'original-resultReceipt', sourceRecordRevAtCapture: 3 });
+    expect(step.associations).toEqual([association('document')]); expect(step.associations[0]).not.toHaveProperty(CAPTURED);
   });
 });

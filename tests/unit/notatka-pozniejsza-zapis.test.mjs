@@ -20,7 +20,9 @@ import { loadBrowserScript } from '../support/load-browser-script.mjs';
 //    notatka usunięta w oknie jest pomijana, nieczytelny szyfrogram przechodzi bez ponownego szyfrowania.
 // 3. Terminarz „Edytuj osobę” przy wpisie bez pacjenta wysyła tylko nazwę osoby (i tytuł, gdy wpis go nie miał).
 // 4. Luki modułu planów z etapami (decyzja właściciela z 2026-11-16: reguła wchodzi od razu, poprawka modułu osobno):
-//    dowód kroku planu porównywany po rev i zamknięta lista pól dowodu — przypięte tu dzisiejszym zachowaniem.
+//    2c — dowód kroku według chwili zapisu dokumentu (nowe pole w dwóch wydaniach: najpierw odczyt i porównanie, zapis
+//    pola dopiero po potwierdzeniu właściciela); reguła notatek we fragmencie natywnym — z artefaktów repozytorium
+//    źródeł modułu (do tego czasu przypięta tu dawna reguła fragmentu).
 // Opis: docs/clinical/ALGORITHMS.md (P-NOTATKA-POZNIEJSZA, P-KONFLIKT-ZAPISU-NOTATKI „Ograniczenia”), docs/CARE_PLANS.md.
 //
 // Dane wyłącznie fikcyjne. Prawdziwy vilda_crypto.js + vilda_vault.js na adapterze pamięciowym, podstawiony zegar Date.
@@ -523,35 +525,58 @@ describe('E3-PR0b2b — Terminarz „Edytuj osobę”: zapis samej nazwy osoby n
   });
 });
 
-describe('E3-PR0b2b — luki modułu planów z etapami (przypięte; poprawka w osobnym PR modułu planów)', () => {
-  // Dowód kroku planu z etapami pamięta numer wersji dokumentu (sourceRecordRevAtCapture) i porównuje go z bieżącym rev
-  // (vilda_care_plans.js, model z zamkniętą listą pól dowodu: vilda_care_plan_model.js). Po E3-PR0b2b scalenie może
+describe('E3-PR0b2b — luki modułu planów z etapami: dowód kroku według chwili zapisu (pole czytane i porównywane, zapis pola w drugim wydaniu); reguła notatek we fragmencie natywnym — z artefaktów repozytorium źródeł modułu', () => {
+  // Dowód kroku planu z etapami pamięta numer wersji dokumentu (sourceRecordRevAtCapture). Po E3-PR0b2b scalenie może
   // przyjąć późniejszą treść z niższym rev (rev zostaje najwyższy — bez zmiany) albo podnieść sam rev bez zmiany treści.
-  // Oba skutki przypinamy tu; po poprawce modułu (porównanie chwili treści) ten blok trzeba odwrócić.
-  it('scalenie przyjmuje późniejszą treść z niższym rev, a rev dokumentu się nie zmienia — porównanie dowodu po rev tej zmiany nie widzi', async () => {
+  // 2c (P-DOWOD-KROKU): dowód może mieć też chwilę zapisu dokumentu (sourceRecordUpdatedAtISOAtCapture); ekran planu
+  // porównuje wtedy chwilę zapisu (updatedAtISO), a dowód bez niej — jak dotąd po rev. Nowe pole w dwóch wydaniach:
+  // najpierw odczyt i porównanie, zapis pola dopiero po potwierdzeniu właściciela, że wszystkie urządzenia mają pierwsze.
+  // Testy 1–2 pokazują na prawdziwym sejfie, że chwila zapisu odróżnia oba przypadki; działanie ekranu i modeli:
+  // tests/unit/care-plan-staged-ui.test.mjs, care-plan-model.test.mjs, care-plan-mutation.test.mjs.
+  it('scalenie przyjmuje późniejszą treść z niższym rev, a rev dokumentu się nie zmienia — po rev tej zmiany nie widać, po chwili zapisu — widać', async () => {
     const s = await dwaUrzadzenia();
     for (const t of ['A1.', 'A2.']) { krok(); await s.A.vault.savePatientNote({ patientId: s.patientId, id: s.id, title: 'Wizyta', body: t, category: 'observation' }); }
-    const przypiety = (await s.A.vault.getPatientNote(s.id)).rev;
+    const przed = await s.A.vault.getPatientNote(s.id), przypiety = przed.rev;
     krok(5000); await s.B.vault.savePatientNote({ patientId: s.patientId, id: s.id, title: 'Wizyta', body: 'B1 (później).', category: 'observation' });
     await wyslij(s.B, s.A);
     const po = await s.A.vault.getPatientNote(s.id);
     expect([po.body, po.rev], 'treść zmieniona, rev ten sam co przy przypięciu').toEqual(['B1 (później).', przypiety]);
+    expect(typeof przed.updatedAtISO, 'dokument przy przypięciu ma chwilę zapisu').toBe('string');
+    expect(po.updatedAtISO, 'chwila zapisu się zmieniła — porównanie po niej tę zmianę widzi').not.toBe(przed.updatedAtISO);
   });
 
-  it('zapis samego rev: dokument zostaje bez zmian treści, a rev rośnie — porównanie dowodu po rev zgłosi zmianę dokumentu (fałszywy alarm)', async () => {
+  it('zapis samego rev: dokument zostaje bez zmian treści, a rev rośnie — po rev byłby fałszywy alarm, po chwili zapisu go nie ma', async () => {
     const s = await dwaUrzadzenia();
     for (const t of ['A1.', 'A2.']) { krok(); await s.A.vault.savePatientNote({ patientId: s.patientId, id: s.id, title: 'Wizyta', body: t, category: 'observation' }); }
     krok(5000); await s.B.vault.savePatientNote({ patientId: s.patientId, id: s.id, title: 'Wizyta', body: 'B1 (później).', category: 'observation' });
-    const przypiety = (await s.B.vault.getPatientNote(s.id)).rev;
+    const przed = await s.B.vault.getPatientNote(s.id), przypiety = przed.rev;
     await wyslij(s.A, s.B);
     const po = await s.B.vault.getPatientNote(s.id);
     expect([po.body, po.rev], 'ta sama treść, wyższy rev').toEqual(['B1 (później).', przypiety + 1]);
+    expect(typeof przed.updatedAtISO, 'dokument przy przypięciu ma chwilę zapisu').toBe('string');
+    expect(po.updatedAtISO, 'chwila zapisu bez zmian — porównanie po niej nie zgłasza zmiany').toBe(przed.updatedAtISO);
   });
 
-  it('moduł planów z etapami nadal porównuje dowód kroku po rev, a model dowodu ma zamkniętą listę pól (noteId, sourceRecordRevAtCapture)', () => {
+  it('ekran planu porównuje dowód z chwilą zapisu po chwili zapisu dokumentu, a dowód bez niej — po rev; model przyjmuje to pole w dowodzie i w powiązaniu', () => {
     const plany = zrodlo('vilda_care_plans.js');
-    expect(plany).toContain('if (capturedRevisions.some(function (revision) { return revision !== stagedOriginal.rev; }))');
+    const i = plany.indexOf('function stagedEvidenceChanged(');
+    expect(i, 'funkcja porównania dowodu kroku').toBeGreaterThan(0);
+    const porownanie = plany.slice(i, plany.indexOf('\n  }\n', i));
+    expect(porownanie, 'dowód z chwilą zapisu: porównanie z updatedAtISO dokumentu').toContain("'sourceRecordUpdatedAtISOAtCapture'");
+    expect(porownanie, 'dowód z chwilą zapisu: porównanie z updatedAtISO dokumentu').toContain('!== original.updatedAtISO');
+    expect(porownanie, 'dawny dowód: porównanie po rev').toContain('sourceRecordRevAtCapture !== original.rev');
+    expect(plany.split('stagedEvidenceChanged(').length - 1, 'funkcja użyta przy otwarciu dokumentu z planu').toBeGreaterThanOrEqual(2);
+    expect(plany, 'bez dawnej listy samych numerów wersji').not.toContain('capturedRevisions');
     expect(plany).toContain('Dokument został zmieniony po powiązaniu z planem.');
-    expect(zrodlo('vilda_care_plan_model.js')).toContain("if (!fields(value, ['noteId', 'sourceRecordRevAtCapture'], path, issues)) return;");
+    const model = zrodlo('vilda_care_plan_model.js');
+    expect(model, 'lista pól dowodu').toContain("['noteId', 'sourceRecordRevAtCapture', 'sourceRecordUpdatedAtISOAtCapture']");
+    expect(model, 'lista pól powiązania').toContain("'noteId', 'sourceRecordRevAtCapture', 'sourceRecordUpdatedAtISOAtCapture', 'operationId', 'recordedAtISO'");
+  });
+
+  it('ekran planu w tym wydaniu nie zapisuje chwili zapisu w dowodzie kroku (tylko ją czyta) — zapis dopiero w drugim wydaniu, po potwierdzeniu właściciela', () => {
+    const plany = zrodlo('vilda_care_plans.js');
+    expect(plany, 'dowód z wyboru dokumentu: identyfikator i numer wersji').toContain('return { noteId: selected.id, sourceRecordRevAtCapture: selected.rev };');
+    expect(plany, 'pole nie jest kluczem literału').not.toMatch(/sourceRecordUpdatedAtISOAtCapture['"]?\s*:/);
+    expect(plany, 'pole nie jest przypisywane').not.toMatch(/(?:\.sourceRecordUpdatedAtISOAtCapture|\[\s*['"]sourceRecordUpdatedAtISOAtCapture['"]\s*\])\s*=(?!=)/);
   });
 });
