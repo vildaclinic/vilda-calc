@@ -1878,6 +1878,11 @@ node tools/visits-vault-delta.mjs --rebuild /tmp/vilda-vault-visits-base.js /tmp
 cmp vilda_vault.js /tmp/vilda-vault-visits-built.js
 ```
 
+Od E3-PR0b2b (P-NOTATKA-POZNIEJSZA) bazą delty jest obraz sejfu po tej zmianie bez bloku trwałych
+wizyt: SHA-256 `a9672e38d4890b2516d3afd2f184006ad72ec4443cad8df7663d42abbb5731c4`. Baza z E3-PR0b2a
+(`5d77d036…`) odpowiada stanowi sprzed E3-PR0b2b (`audyt` `3c1fc748`); bieżącą bazę daje to samo
+odwrócenie delty co wyżej.
+
 Każdy punkt wpięcia musi występować dokładnie raz. Narzędzie odrzuca inne
 bajty bazy, zmianę źródła bez zgodnego manifestu, niejednoznaczny punkt wpięcia
 i wynik różniący się od zapisanego skrótu. Odwrócenie delty musi odtworzyć
