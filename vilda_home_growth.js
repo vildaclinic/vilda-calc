@@ -92,6 +92,11 @@
   function format(value) { return number(value) ? value.toLocaleString('pl-PL', { maximumFractionDigits: 1 }) : '—'; }
   function close(force, focus, fromHistory) {
     if (!dialog || !dialog.open) return true;
+    if (!force && ghView?.phase === 'waiting' && ghView.savedId) {
+      settleGh();
+      if (!dialog.open) return true;
+      if (ghView?.phase === 'waiting') return false;
+    }
     if (!force && dirty() && !w.confirm('Odrzucić niezastosowane dane obliczeń wzrostowych?')) return false;
     disposeResultView(); stopGh();
     var old = draft; draft = null;
@@ -312,6 +317,35 @@
     })) : '';
   }
   function pointIds() { return (w.ghTherapyPoints || []).map(function (point) { return String(point.id); }); }
+  function sameGhList(left, right) {
+    if (!Array.isArray(left) || !Array.isArray(right)) return false;
+    // GH record serialization is part of the native vault merge contract.
+    // Compare it intact; do not reorder records or normalize their fields.
+    return JSON.stringify(left) === JSON.stringify(right);
+  }
+  function ghSessionAcknowledged(item, view) {
+    function current() { return draft === item && ghView === view && canEdit() && tokenValid(item); }
+    if (!current()) return false;
+    var points = w.VildaPersistence.readModuleJSON('GH_THERAPY_POINTS', null);
+    if (!current() || !Array.isArray(points) || !points.some(function (point) { return String(point.id) === view.savedId; })) return false;
+    var saved = w.VildaPersistence.readMainSession();
+    if (!current()) return false;
+    if (sameGhList(saved?.ghTherapyPoints, points)) return true;
+    // A native import can finish its rows before its queued session writer.
+    // Complete this explicit point-save through that same protected writer;
+    // never force it through restore, pause, ownership or carrier refusals.
+    var readiness = w.VildaDataImportExport.getSaveReadiness();
+    if (!current() || !readiness.ready || w.VildaDataImportExport.isMainSessionAutosavePaused()
+      || !sameGhList(w.ghTherapyPoints, points)) return false;
+    if (!current()) return false;
+    view.saveRefused = w.VildaDataImportExport.saveMainSessionNow() === false;
+    if (!current()) return false;
+    saved = w.VildaPersistence.readMainSession();
+    if (!current()) return false;
+    points = w.VildaPersistence.readModuleJSON('GH_THERAPY_POINTS', null);
+    return current() && Array.isArray(points) && points.some(function (point) { return String(point.id) === view.savedId; })
+      && sameGhList(saved?.ghTherapyPoints, points);
+  }
   function stopGh() {
     var old = ghView; ghView = null;
     if (!old) return;
@@ -340,8 +374,23 @@
     selectTab('data', true); schedule();
   }
   function settleGh() {
-    if (!ghView || ghView.phase !== 'waiting' || !canEdit()) return;
-    if (ghView.savedId && !rows().some(function (row) { return row.getAttribute('data-gh-id') === ghView.savedId; })) return;
+    if (!ghView || ghView.phase !== 'waiting') return;
+    var item = draft, view = ghView;
+    if (!tokenValid(item, true)) { close(true); return; }
+    if (!canEdit()) return;
+    if (view.savedId) {
+      if (!rows().some(function (row) { return row.getAttribute('data-gh-id') === view.savedId; })) return;
+      var acknowledged = false;
+      try { acknowledged = ghSessionAcknowledged(item, view); } catch (_) { view.saveRefused = true; }
+      if (draft !== item || ghView !== view || !tokenValid(item, true)) { close(true); return; }
+      if (!acknowledged) {
+        setText(byId('vhomeGrowthDraftStatus'), view.saveRefused
+          ? 'Nie udało się jeszcze potwierdzić zapisu punktu leczenia. Ponawiam potwierdzenie.'
+          : 'Czekam na potwierdzenie zapisu punktu leczenia.');
+        return;
+      }
+    }
+    if (!canEdit()) return;
     returnFromGh();
   }
   function openGh(row) {
@@ -358,7 +407,7 @@
       if (!tokenValid(draft, ghView.phase === 'waiting')) { close(true); return; }
       if (!host.querySelector('.gh-z-wiersza-panel')) {
         ghView.phase = 'waiting'; ghView.savedId = pointIds().find(function (id) { return before.indexOf(id) < 0; }) || null;
-        byId('vhomeGrowthDraftStatus').textContent = ghView.savedId ? 'Punkt leczenia zapisano. Aktualizuję historię pomiarów…' : 'Wracam do pomiarów…';
+        byId('vhomeGrowthDraftStatus').textContent = ghView.savedId ? 'Potwierdzam zapis punktu leczenia i aktualizuję historię pomiarów…' : 'Wracam do pomiarów…';
         refreshFooter(); settleGh();
       } else refreshFooter();
     });

@@ -261,6 +261,23 @@ async function ghAction(dialog) {
   const key = await dialog.locator('[data-growth-source-index="0"]').getAttribute('data-growth-row');
   return dialog.locator('[data-growth-gh="' + key + '"]');
 }
+async function expectGhPortalReturned(frame, dialog) {
+  try { await expect(dialog.locator('.vhome-growth-tabs')).toBeVisible(); }
+  catch (error) {
+    const diagnostic = await frame.evaluate(() => ({
+      readiness: VildaDataImportExport.getSaveReadiness(),
+      paused: VildaDataImportExport.isMainSessionAutosavePaused(),
+      suppressed: VildaPersistence.isAutosaveSuppressed(),
+      sequence: VildaDataImportExport.getApplyLoadedDataSequence(),
+      module: VildaPersistence.readModuleJSON('GH_THERAPY_POINTS', []),
+      window: window.ghTherapyPoints,
+      session: VildaPersistence.readMainSession()?.ghTherapyPoints,
+      status: document.getElementById('vhomeGrowthDraftStatus')?.textContent,
+    }));
+    await test.info().attach('pending-native-gh-session', { body: JSON.stringify(diagnostic), contentType: 'application/json' });
+    throw error;
+  }
+}
 for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844 }]) {
   test('home A2: native GH portal cancels purely and saves/imports the original therapy point · ' + viewport.width, async ({ page }) => {
     await page.setViewportSize(viewport);
@@ -278,10 +295,25 @@ for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844
     await dialog.getByRole('button', { name: 'Zapisz punkt leczenia', exact: true }).click();
     await expect(dialog.locator('#ghZWierszaBlad')).toContainText('dawkę');
     await dialog.locator('#ghZWierszaDawka').fill('.8');
+    // Capture the session at the exact moment the ordinary data UI returns.
+    // Later Playwright round trips must not hide an early-success race.
+    await frame.evaluate(() => {
+      window.__ghSessionAtPortalReturn = null;
+      const host = document.getElementById('vhomeGrowthDialog');
+      const observer = new MutationObserver(() => {
+        const tabs = host.querySelector('.vhome-growth-tabs');
+        if (!host.open || !tabs || tabs.hidden || host.querySelector('#ghZWierszaPanel')) return;
+        observer.disconnect();
+        window.__ghSessionAtPortalReturn = JSON.stringify(VildaPersistence.readMainSession()?.ghTherapyPoints);
+      });
+      observer.observe(host, { childList: true, attributes: true, subtree: true });
+    });
     await dialog.getByRole('button', { name: 'Zapisz punkt leczenia', exact: true }).click();
-    await expect(dialog.locator('.vhome-growth-tabs')).toBeVisible();
+    await expectGhPortalReturned(frame, dialog);
     const points = await frame.evaluate(() => VildaPersistence.readModuleJSON('GH_THERAPY_POINTS', []));
     expect(points).toHaveLength(2); expect(points[0]).toEqual(ghStart);
+    await expect.poll(() => frame.evaluate(() => window.__ghSessionAtPortalReturn)).toBe(JSON.stringify(points));
+    expect(await frame.evaluate(() => JSON.stringify(VildaPersistence.readMainSession()?.ghTherapyPoints))).toBe(JSON.stringify(points));
     const added = points.find(p => p.id !== ghStart.id);
     expect(added).toMatchObject({ type: 'continue', ageYears: 7, ageMonths: 0, height: 123.6, weight: 23.9, doseAbs: .8, doseUnit: 'mg/kg/d' });
     expect(added.dose).toBeCloseTo(.8 / 23.9, 10);

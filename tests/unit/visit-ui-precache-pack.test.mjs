@@ -40,7 +40,7 @@ describe('fourteen independent visit and home UI resources in one verified trans
     expect(w.api.VISIT_UI_PRECACHE_PACK).toEqual(config);
     expect(urls).toHaveLength(14);
     expect(urls).toContain('/vilda_home_perinatal.js?v=1');
-    expect(urls).toContain('/vilda_home_growth.js?v=3');
+    expect(urls).toContain('/vilda_home_growth.js?v=4');
     expect(urls).toContain('/vilda_sga_birth_results.css?v=1');
     expect(urls).toContain('/vilda_home_growth_views.js?v=5');
     expect(urls).toContain('/vilda_home_growth_views.css?v=6');

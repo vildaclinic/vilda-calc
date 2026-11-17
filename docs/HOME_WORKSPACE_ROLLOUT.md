@@ -240,9 +240,12 @@ renderera. Nie ma dodatkowego wykluczania wyników przez nowy widok.
 
 Akcja punktu GH osadza dotychczasowy formularz w tym samym wspólnym oknie.
 Zapis przechodzi przez natywnego aktora VildaGhPunktZWiersza / VildaGhPunkty;
-nie ma kopiowania reguł dawkowania ani drugiego zapisu. Po zapisie widok czeka
-na natywny import wiersza terapii. Zapisane punkty pozostają tylko do odczytu,
-z przejściem do DocPro po jawnej akcji. Anulowanie nie zmienia danych.
+nie ma kopiowania reguł dawkowania ani osobnego modelu punktów. Powrót do pomiarów
+czeka na import wiersza terapii i dokładną zgodność listy GH z natywną sesją.
+W razie potrzeby używa istniejącego zapisu sesji z kontrolą właściciela i gotowości,
+bez wymuszania zapisu. Zwykłe zamknięcie czeka na potwierdzenie; zmiana właściciela
+lub blokada nadal zamyka okno. Zapisane punkty pozostają tylko do odczytu,
+z przejściem do DocPro po jawnej akcji. Anulowanie punktu nie zmienia danych.
 
 Komentarze, strzałki, układ PDF Palczewskiej (2 A4 pion / 1 A4 poziom) i tryb
 publikacji są dostępne w jednym oknie „Generuj siatki”, również z Dokumentów.
