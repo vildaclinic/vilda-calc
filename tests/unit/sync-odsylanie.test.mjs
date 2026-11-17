@@ -12,7 +12,10 @@
 // wersja w kształcie eksportu (tożsamość wizyty wyliczona dla starych rekordów) bez rev przed ≠ po; wersji nie ma
 // w ładunku pod p albo po regule pola (tożsamość wizyty dopisana przez bieżącą wersję, odcisk przeliczony z niej) wersja
 // ≠ ładunek (bez rev). Echo także po busy i apply-error rzuconych z Le (po zapisie wersji); bez echa przy
-// session-changed i locked. Błąd odczytu albo porównania — snap każdego kandydata (klucz bez wersji — bez wiersza).
+// session-changed i locked. Błędy odczytu osobno dla każdego kandydata: stan „przed” nieznany albo nieczytelny —
+// porównanie tylko z ładunkiem (z warunkami z rekordów sklepu, gdy są); nieczytelna treść „po” — snap tego kandydata;
+// cały odczyt „po” zawodzi — snap każdego kandydata (klucz bez wersji — bez wiersza). Strażnik tożsamości chronionego
+// sejfu niedostępny przy odczycie „przed” — busy z kodem jak dziś, bez scalania.
 // Prawdziwy sejf w oknie uprzęży tests/support/okno-magazynu.mjs (emisja: true, przegląd przy odblokowaniu, moduły
 // punktu odzyskiwania) na adapterze IndexedDB sejfu nad atrapą tests/support/atrapa-indexeddb.mjs (tryb „Komputer
 // prywatny”, jeśli przypadek nie mówi inaczej), ładowany z kopii źródła z licznikiem (tests/support/sejf-bez-wstawek.mjs:
@@ -40,44 +43,61 @@
 //   gwiazdka z ładunku, tutejsza późniejsza treść — jeden wiersz (C);
 //   sam rev: tutejsza treść wygrywa chwilą, ładunek ma wyższy rev (zapis samego rev) — 0; wersja z ładunku o wyższym rev,
 //        ta sama treść i chwila (nowy szyfrogram) — 0 (Z);
-//   to samo zdarzenie drugi raz — 0 (stan przed = po) (Z);
+//   to samo zdarzenie drugi raz — 0 (stan przed = po), bez odszyfrowania w porównaniu (Z);
 //   ładunek bez payload.visit z odciskiem h liczonym z treści bez tożsamości — 0, reguła pola (Z);
 //   porównanie w kształcie eksportu: Bev_wersjaEcha czyta treść przez Bvisit_read — strażnik źródła (rekordu bez
 //        tożsamości wizyty bieżący sejf nie zapisuje; osiągalny tylko z kopii starszej aplikacji) (C);
 //   ładunek równy stanowi — 0 (Z); wersja z ładunku nowsza, przyjęta bez zmian — 0 (Z);
 //   porównanie JSON-em z posortowanymi kluczami — Bev_json wycięty z sejfu (C);
+//   reguła pola — Bev_echoT wycięty z sejfu: tożsamość wizyty usuwana, gdy ładunek jej nie ma; odcisk h z ładunku tylko
+//        przy świeżym odcisku po scaleniu (C);
 //   Bev_ECHO_ZAWSZE (tekst sejfu) = POLA_ZAWSZE.snap licznika odsyłania (C);
 //   zdarzenie stomb: wpis Kosza z gwiazdką przegrywa z późniejszą tutejszą poprawką (v tylko w snapshotTombstones) —
 //        snap P/v (C);
 //   wersja spoza ładunku pod inną kartą: gwiazdka v pod P po „Scal pacjentów” P → G na A — snap G/v (C);
 //   v przed scaleniem tylko w Koszu A, późniejsza poprawka z ładunku wraca z rejestrem gwiazdki wpisu Kosza — snap P/v (C);
+//   wersja w snapshots i w snapshotTombstones jednego ładunku (koperta spoza buildera) — jeden kandydat, emisja z kluczem
+//        P/v raz (C);
 //   sam nagłówek karty inny — 0 wierszy, bez wiersza karty (Z);
 //   hak H1 i echo w jednym zdarzeniu (koperta ptomb z kartą docelową): pfull P i snap G/g — bez pomijania echa przy H1
-//        (C). Wariant „pełna karta p i echo p/v tej samej wersji” nie jest osiągalny prawdziwą drogą: wersję z karty
+//        (C). Wariant „pełna karta p i echo p/v tej samej wersji” nie jest osiągalny kopertą buildera: wersję z karty
 //        docelowej koperty scalanie przenosi pod tę kartę (przeniesienie, bez echa) także wtedy, gdy nagrobek przegrywa;
+//        z koperty spoza buildera (snap z nagrobkiem karty P starszym od karty) — pfull P i snap P/v (C);
 //   notatki (samo oznaczenie, rekord złączony) — te same wiersze co w sejfie bez odsyłania, także po sweepOutbox (Z);
 //   ładunki bez wersji (notatka, lista) — zapis przebiegu atrapy jak w sejfie bez odsyłania, bez odczytów wersji (Z);
 //   zdarzenie w otwartym kroku (wstrzymane „Usuń do Kosza” innej karty) — applyEncryptedEvent przed końcem kroku,
 //        wiersz echa po końcu kroku, raz (C);
+//   wpis echa wstrzymany w bazie kolejki — applyEncryptedEvent rozstrzyga się przed wpisem (C);
 //   po emissionsSettled wiersz echa w kolejce, sweepOutbox go nie dubluje (C);
 //   odbiorcy odesłanego rekordu: bez nowszego składnika — zapis i 0 echa; z nowszym — jedno złączenie i koniec (C);
 //   łączenie wpisów (Bob_plan): echo zastępuje czekający wiersz tej wersji; własny wiersz zastępuje echo; echo z wierszem
 //        innej encji między nimi — oba zostają (C — na bazie bez echa);
 //   busy z fazy Kosza po zapisie wersji — echo przy pierwszej próbie, ponowienie bez duplikatu (C);
 //   apply-error z Le po zapisie wersji — echo (C); błąd przed zapisem — 0 (Z);
-//   zmiana sesji w trakcie Le i zablokowany sejf — locked, 0 (Z); w trakcie odczytu stanu „przed” — locked, Le nie rusza
-//        (C); w trakcie odczytu stanu „po” — applied, 0 (Z);
-//   błąd odszyfrowania przy porównaniu — ścieżka błędu: echo kandydatów z wersją, wersja tylko w Koszu bez wiersza (C);
+//   zmiana sesji w trakcie Le (blokada albo ponowne odblokowanie A) i zablokowany sejf — locked albo session-changed, bez
+//        emisji odsyłania, 0 (Z); w trakcie odczytu stanu „przed” (blokada albo ponowne odblokowanie A) — Le nie rusza ani
+//        w nowej sesji (C); blokada przy odczycie pierwszego z trzech kandydatów — bez dalszych odczytów sklepu wersji (C);
+//        w trakcie odczytu stanu „po” — applied, bez emisji odsyłania, 0 (Z);
+//   błędy odczytu treści osobno dla każdego kandydata: nieczytelna treść „przed” — porównanie z ładunkiem; nieczytelna
+//        treść „po” — echo tego kandydata (C); cały odczyt „przed” zawodzi — porównanie z ładunkiem; cały odczyt „po”
+//        zawodzi — echo kandydatów z kartą z odczytu „przed”, wersja tylko w Koszu bez wiersza (C);
+//   removeUser tego konta w toku (sejf jeszcze odblokowany) w chwili wznowienia odczytu stanu „przed” — session-changed,
+//        scalanie nie rusza (C); usuwanie konta w trakcie odczytu „po” (odmowa SYNC_DB_DELETED) — applied, bez emisji
+//        odsyłania (C — na bazie odczytu stanu nie ma);
+//   strażnik tożsamości chronionego sejfu niedostępny od chwili po odszyfrowaniu koperty — busy z kodem jak dziś, bez
+//        scalania i bez emisji odsyłania (Z);
 //   wersja przeniesiona (ptomb z kartą docelową), pełna kopia, delta, stara delta przez applyEncryptedEvent — 0 (Z);
 //   zamknięta bramka dziennika przy włączonym przełączniku — 0, zapis przebiegu atrapy jak w sejfie bez odsyłania, jeden
-//        odczyt bramki w Bem_zastosujEcho (C); „Komputer w pracy” — rekord złożony bez wiersza i bez bazy kolejki (Z);
+//        odczyt bramki w Bem_zastosujEcho (C); „Komputer w pracy” — rekord złożony bez wiersza i bez bazy kolejki, bez
+//        porównania stanu kandydatów (Z);
 //   wartownik treści przy włączonym przełączniku: fikcyjny napis z nazwiska nie wychodzi poza szyfrogram (wyniki, także
 //        ścieżka błędu porównania; emisja odsyłania z samymi identyfikatorami wersji; console, localStorage,
 //        sessionStorage) (C — na bazie bez emisji odsyłania);
 //   samokontrola kopii bez odsyłania (bezOdsylania na tekstach syntetycznych) (Z).
-// Kopia sejfu tylko w tym pliku (busy i apply-error): wstawka na początku Bkz_scalKoniec (faza Kosza, po zapisie wersji
-// w Le) albo na początku Le rzuca raz fikcyjny błąd z pola okna — prawdziwą drogą zajęta blokada karty w fazie Kosza
-// wymaga limitu blokady; strażnik osiągalności: Le ponownie rzuca vildaMergeBusy i VISIT_IDENTITY_CONFLICT z fazy Kosza.
+// Kopia sejfu tylko w tym pliku (busy, apply-error i błąd odczytu stanu): wstawka na początku Bkz_scalKoniec (faza Kosza,
+// po zapisie wersji w Le), na początku Le albo na początku Bev_stanEcha (odczyt stanu kandydatów) rzuca raz fikcyjny błąd
+// z pola okna — prawdziwą drogą zajęta blokada karty w fazie Kosza wymaga limitu blokady; strażnik osiągalności: Le
+// ponownie rzuca vildaMergeBusy i VISIT_IDENTITY_CONFLICT z fazy Kosza.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SKRYPTY_PUNKTU, oknoMagazynu, przechwycZadaniaWTle } from '../support/okno-magazynu.mjs';
 import { naglowek } from './sesja-zapisu-uprzaz.mjs';
@@ -223,6 +243,22 @@ function wstrzymaj(o, wz) {
 const bazaSejfu = (o) => `vilda_user_${o.uid}`;
 // Transakcje atrapy na sklepie wersji bazy sejfu od znacznika (odczyty stanu kandydatów).
 const txWersji = (o, z) => o.idb.__atrapa.log.slice(z.log).filter((w) => w[0] === 'tx' && w[1] === bazaSejfu(o) && w[2].includes('snapshots') && w[4] === 'start').length;
+// Transakcje zapisu sklepu wersji bazy sejfu od znacznika.
+const zapisyWersji = (o, z) => o.idb.__atrapa.log.slice(z.log).filter((w) => w[0] === 'tx' && w[1] === bazaSejfu(o) && w[3] === 'readwrite' && String(w[2]).includes('snapshots'));
+// Licznik odszyfrowań w porównaniu (Bev_wersjaEcha) w oknie o od chwili wywołania.
+function odszWersji(o) {
+  const n = { ile: 0 };
+  o.krypto.obserwuj((metoda, _argumenty, stos) => { if (metoda === 'decrypt' && String(stos).includes('Bev_wersjaEcha')) n.ile += 1; });
+  return n;
+}
+// Wywołania emisji rodzaju snap (Bem_zmiana) od znacznika e0 (l.emisje kopii sejfu z licznikiem).
+const emisjeSnap = (o, e0) => o.l.emisje.slice(e0).filter((x) => x.kind === 'snap');
+// Funkcja najwyższego poziomu z tekstu sejfu (do sprawdzeń funkcji czystych poza oknem).
+function wytnij(nazwa) {
+  const m = ZRODLO_SEJFU.match(new RegExp(`\\nfunction ${nazwa}\\([^)]*\\) \\{[\\s\\S]*?\\n\\}`));
+  expect(m, `funkcja ${nazwa} w sejfie`).toBeTruthy();
+  return m[0];
+}
 
 // Scenariusz bazowy rekordu złożonego (przykład 1 projektu bez retencji): A — karta P z wersją v (20 kg); bliźniak B
 // poprawia v na 17,2 kg (koperta snap B); A daje v gwiazdkę. Zastosowanie koperty B u A składa rekord 17,2 kg
@@ -240,6 +276,34 @@ async function rekordZlozony(o, { echoB = undefined, emisjaB = false } = {}) {
   await o.gotowe();
   return { P: k.P, v, B, kB };
 }
+// Pełna karta P z bliźniaka B u A (jedna porcja; wersje w kolejności ładunku): v — poprawka B (17,2 kg) i gwiazdka A
+// (rekord złożony), w — poprawka B (30 kg) przyjęta bez zmian, x — w Koszu A (po scaleniu bez wersji pod kartą), y — bez
+// zmian (rekord sklepu przed = po).
+async function pelnaKarta(o) {
+  const k = await karta(o, 1, [20, 21, 22, 23]);
+  const [v, w, x, y] = k.w;
+  await o.gotowe();
+  const B = await blizniak(o);
+  tik(MIN);
+  await popraw(B, k.P, v, 17.2);
+  await popraw(B, k.P, w, 30);
+  const porcje = await B.ev.buildPatientFullEvents(k.P, null);
+  expect(porcje.length, 'kontrola: jedna porcja pełnej karty').toBe(1);
+  const kB = await koperta(B, porcje[0]);
+  expect(kB.k.patients[0].snapshots.map((q) => q.snapshotId), 'kontrola: wersje w kolejności ładunku').toEqual([v, w, x, y]);
+  tik(MIN);
+  await gwiazdka(o, k.P, v);
+  await o.v.moveSnapshotToTrash(k.P, x);
+  tik();
+  await o.gotowe();
+  return { P: k.P, v, w, x, y, kB };
+}
+// Nazwy wersji (v, w, x, y) wierszy snap kolejki — posortowane.
+const nazwyWersji = (s, wiersze) => wiersze.filter((r) => r.kind === 'snap')
+  .map((r) => ({ [s.v]: 'v', [s.w]: 'w', [s.x]: 'x', [s.y]: 'y' })[r.entityKey.split('/')[1]] || r.entityKey).sort();
+// Stan pełnej karty po zastosowaniu: masa v i w, gwiazdka v, x poza kartą.
+const stanKarty = async (o, s) => ({ v: await stanWersji(o, s.P, s.v), w: (await stanWersji(o, s.P, s.w)).masa, x: await wersja(o, s.P, s.x) });
+const STAN_KARTY = { v: { masa: 17.2, gwiazdka: true, rev: 2 }, w: 30, x: null };
 
 // ── przełącznik wyłączony = jak dziś ───────────────────────────────────────────────────────────────────────
 // Zestaw kopert przypadku równoważności na A: rekord złożony (v), sam rev (w: tutejsza treść późniejsza, ładunek z wyższym rev), wpis Kosza
@@ -446,7 +510,7 @@ describe('wersja, którą scalanie zapisało inaczej, niż przyszła', () => {
     expect(wierszeOd(o, s0).map(opis), 'wiersze echa').toEqual([]);
   }, CZAS);
 
-  it('to samo zdarzenie drugi raz — 0 wierszy (stan przed = po)', async () => {
+  it('to samo zdarzenie drugi raz — 0 wierszy (stan przed = po), bez odszyfrowania w porównaniu', async () => {
     const o = await okno({ bramka: true, echo: true });
     await o.zaloguj('A');
     const s = await rekordZlozony(o);
@@ -454,9 +518,11 @@ describe('wersja, którą scalanie zapisało inaczej, niż przyszła', () => {
     tik();
     const s0 = ostatni(o);
     const przed = await stanWersji(o, s.P, s.v);
+    const n = odszWersji(o);
     expect((await zastosuj(o, s.kB.env)).status).toBe('applied');
     expect(await stanWersji(o, s.P, s.v), 'kontrola: stan bez zmian').toEqual(przed);
     expect(wierszeOd(o, s0).map(opis), 'wiersze echa po powtórce').toEqual([]);
+    expect(n.ile, 'bez odszyfrowania w porównaniu (rekord sklepu przed = po)').toBe(0);
   }, CZAS);
 
   it('ładunek bez payload.visit z odciskiem h liczonym z treści bez tożsamości (jak od starszej aplikacji) — scalanie dopisuje tożsamość i przelicza odcisk, rekord z gwiazdką z ładunku: 0 wierszy (reguła pola)', async () => {
@@ -517,16 +583,29 @@ describe('wersja, którą scalanie zapisało inaczej, niż przyszła', () => {
   }, CZAS);
 
   it('porównanie rekordów i wersji JSON-em z posortowanymi kluczami — Bev_json z kodu sejfu: ta sama treść z inną kolejnością kluczy (także zagnieżdżonych) daje ten sam tekst, pole undefined pomijane, inna wartość — inny tekst', () => {
-    const wytnij = (nazwa) => {
-      const m = ZRODLO_SEJFU.match(new RegExp(`\\nfunction ${nazwa}\\([^)]*\\) \\{[\\s\\S]*?\\n\\}`));
-      expect(m, `funkcja ${nazwa} w sejfie`).toBeTruthy();
-      return m[0];
-    };
     const json = new Function(`${wytnij('Bgw_kanon')}\n${wytnij('Bev_kopia')}\n${wytnij('Bev_json')}\nreturn Bev_json;`)();
     const w1 = { snapshotId: 'v', rev: 2, payload: { user: { weight: 17.2, height: 120 }, _pinned: true }, updatedAtISO: null };
     const w2 = { updatedAtISO: null, payload: { _pinned: true, user: { height: 120, weight: 17.2 } }, rev: 2, snapshotId: 'v', brak: undefined };
     expect(json(w1), 'inna kolejność kluczy, pole undefined').toBe(json(w2));
     expect(json(w1), 'inna wartość').not.toBe(json({ ...w1, payload: { ...w1.payload, user: { weight: 17.3, height: 120 } } }));
+  });
+
+  it('reguła pola — Bev_echoT z kodu sejfu: tożsamość wizyty z wersji po scaleniu usuwana, gdy ładunek jej nie ma; odcisk h po scaleniu świeży (z treści z tożsamością) — h z ładunku; nieświeży (gwiazdka sprzed zmiany treści) — bez podstawienia; ładunek z tożsamością — wersja bez zmian', () => {
+    const stala = ZRODLO_SEJFU.match(/\nconst Bev_ECHO_ZAWSZE = [^;]*;/);
+    expect(stala, 'stała Bev_ECHO_ZAWSZE w sejfie').toBeTruthy();
+    const NAZWY = ['Bev_obiekt', 'Bev_ma', 'Bev_kopia', 'Bgw_kanon', 'Bgw_odcisk', 'Bev_pole', 'Bev_bezPola', 'Bev_json', 'Bev_echoT'];
+    const f = new Function(`${stala[0]}\n${NAZWY.map(wytnij).join('\n')}\nreturn { echoT: Bev_echoT, json: Bev_json, odcisk: Bgw_odcisk };`)();
+    const tresc = { user: { weight: 17.2, height: 120 } };
+    const gwiazdkaZ = (h) => ({ _pinned: true, _pinnedState: { pin: true, at: '2026-03-02T08:03:00.000Z', h } });
+    const P = { snapshotId: 'v', payload: { ...tresc, ...gwiazdkaZ(f.odcisk(tresc)) } };
+    const zTozsamoscia = { ...tresc, visit: { key: 'fikcyjny-klucz', date: '2026-03-02' } };
+    const swiezy = { snapshotId: 'v', payload: { ...zTozsamoscia, ...gwiazdkaZ(f.odcisk(zTozsamoscia)) } };
+    const nieswiezy = { snapshotId: 'v', payload: { ...zTozsamoscia, ...gwiazdkaZ(f.odcisk({ user: { weight: 20, height: 120 } })) } };
+    expect(f.json(f.echoT(swiezy, P)), 'świeży odcisk: bez tożsamości, h z ładunku — równe ładunkowi').toBe(f.json(P));
+    expect(f.json(f.echoT(nieswiezy, P)), 'nieświeży odcisk: bez podstawienia').not.toBe(f.json(P));
+    expect(f.json(f.echoT(nieswiezy, P)), 'nieświeży odcisk: tożsamość usunięta, h bez zmian').toBe(f.json({ snapshotId: 'v', payload: { ...tresc, ...gwiazdkaZ(nieswiezy.payload._pinnedState.h) } }));
+    const PzT = { snapshotId: 'v', payload: { ...zTozsamoscia, ...gwiazdkaZ(f.odcisk(zTozsamoscia)) } };
+    expect(f.json(f.echoT(swiezy, PzT)), 'ładunek z tożsamością: wersja bez zmian').toBe(f.json(swiezy));
   });
 });
 
@@ -623,6 +702,31 @@ describe('kandydaci z ładunku — wersje pod inną kartą, w Koszu i nagłówek
     expect(kk.patients[0].snapshots[0].payload, 'treść wiersza echa = wersja po scaleniu').toEqual(po.payload);
   }, CZAS);
 
+  it('wersja w patients[].snapshots i w snapshotTombstones jednego ładunku (koperta spoza buildera: snap v z wpisem Kosza v) — jeden kandydat: emisja odsyłania z kluczem P/v raz', async () => {
+    const o = await okno({ bramka: true, echo: true });
+    await o.zaloguj('A');
+    const k = await karta(o, 1, [20, 21]);
+    const v = k.w[0];
+    await o.gotowe();
+    const B = await blizniak(o);
+    tik(MIN);
+    await popraw(B, k.P, v, 17.2);
+    const ks = await kopertaSnap(B, k.P, v);
+    tik(MIN);
+    await B.v.moveSnapshotToTrash(k.P, v, { odepnij: true });
+    tik();
+    const kx = await koperta(B, await B.ev.buildSnapshotTombstoneEvent(v, null));
+    tik(MIN);
+    await gwiazdka(o, k.P, v);
+    await o.gotowe();
+    const c = await B.v.encryptPayloadForCurrentUser({ ...ks.k, snapshotTombstones: kx.k.snapshotTombstones });
+    expect(kx.k.snapshotTombstones.map((e) => e.snapshotId), 'kontrola: wpis Kosza v w ładunku').toEqual([v]);
+    const e0 = o.l.emisje.length;
+    expect((await zastosuj(o, { iv: c.iv, data: c.data })).status).toBe('applied');
+    const klucze = emisjeSnap(o, e0).flatMap((x) => [].concat(x.klucze)).map((x) => `${x.patientId}/${x.snapshotId}`);
+    expect(klucze, 'klucze emisji odsyłania').toEqual([`${k.P}/${v}`]);
+  }, CZAS);
+
   it('sam nagłówek karty inny (koperta starszej wersji z opisem karty B; A ma nowszą własną wersję) — 0 wierszy echa, bez wiersza karty', async () => {
     const o = await okno({ bramka: true, echo: true });
     await o.zaloguj('A');
@@ -644,9 +748,10 @@ describe('kandydaci z ładunku — wersje pod inną kartą, w Koszu i nagłówek
 
 // ── pełna karta z haka H1 i osobne echo w jednym zdarzeniu (decyzja z 2026-11-17: dopuszczona podwójna wysyłka) ───────────────
 // Wariant z projektu (pełna karta p i echo p/v tej samej wersji z koperty ptomb z kartą docelową) nie jest osiągalny
-// prawdziwą drogą: wersja v, którą koperta niesie pod kartą docelową G, scalanie przenosi pod G także wtedy, gdy nagrobek
+// kopertą buildera: wersja v, którą koperta niesie pod kartą docelową G, scalanie przenosi pod G także wtedy, gdy nagrobek
 // P przegrywa (przeniesienie — bez echa, E3-PR0f). Osiągalny jest hak H1 karty P i echo wersji karty G z tej samej
-// koperty: echa się nie pomija.
+// koperty, a z koperty spoza buildera (snap z nagrobkiem karty, jak od innej wersji aplikacji) — pełna karta P i echo P/v:
+// echa się nie pomija.
 describe('hak H1 i echo w jednym zdarzeniu', () => {
   it('koperta ptomb P z kartą docelową G (B: poprawka g pod G, potem „Scal pacjentów” P → G); A daje g gwiazdkę i dopisuje wersję P później — nagrobek P przegrywa (pełna karta P z haka H1), v przeniesiona pod G (bez echa), g z rekordem złożonym: wiersze pfull P i snap G/g', async () => {
     const o = await okno({ bramka: true, echo: true });
@@ -674,6 +779,18 @@ describe('hak H1 i echo w jednym zdarzeniu', () => {
     const stan = await stanWersji(o, kg.P, g);
     expect([stan.masa, stan.gwiazdka], 'kontrola: g — treść B z gwiazdką A').toEqual([31.5, true]);
     expect(wierszeOd(o, s0).map((w) => [w.kind, w.entityKey]), 'pełna karta P z haka H1 i echo G/g').toEqual([['pfull', kp.P], ['snap', `${kg.P}/${g}`]]);
+  }, CZAS);
+
+  it('koperta snap spoza buildera z nagrobkiem karty P starszym od karty (nagrobek przegrywa — pełna karta P z haka H1) i poprawką v pod P; A dało v gwiazdkę — v z rekordem złożonym: wiersze pfull P i snap P/v', async () => {
+    const o = await okno({ bramka: true, echo: true });
+    await o.zaloguj('A');
+    const s = await rekordZlozony(o);
+    const s0 = ostatni(o);
+    const c = await s.B.v.encryptPayloadForCurrentUser({ ...s.kB.k, tombstones: [{ patientId: s.P, deletedAtISO: '2026-03-01T00:00:00.000Z' }] });
+    expect((await zastosuj(o, { iv: c.iv, data: c.data })).status).toBe('applied');
+    const stan = await stanWersji(o, s.P, s.v);
+    expect([stan.masa, stan.gwiazdka, !!(await o.v.getPatient(s.P))], 'kontrola: rekord złożony, karta P zostaje').toEqual([17.2, true, true]);
+    expect(wierszeOd(o, s0).map(opis).sort(), 'pełna karta P z haka H1 i echo P/v').toEqual([['pfull', s.P, 'pending'], ['snap', `${s.P}/${s.v}`, 'pending']].sort());
   }, CZAS);
 });
 
@@ -765,6 +882,21 @@ describe('wiersz echa w łańcuchu dopisań — krok, przegląd, odbiorcy, łąc
     expect(nowe.map(opis), 'po końcu kroku: jeden wiersz echa').toEqual([['snap', `${s.P}/${s.v}`, 'pending']]);
   }, CZAS);
 
+  it('wpis echa wstrzymany w bazie kolejki (dodanie wiersza) — applyEncryptedEvent rozstrzyga się przed wpisem; wiersz echa po zwolnieniu', async () => {
+    const o = await okno({ bramka: true, echo: true });
+    await o.zaloguj('A');
+    const s = await rekordZlozony(o);
+    const s0 = ostatni(o);
+    const h = wstrzymaj(o, { przy: 'success', baza: `vilda_sync_${o.uid}`, sklep: 'outbox', metoda: 'add' });
+    const r = await Promise.race([o.ev.applyEncryptedEvent(s.kB.env), new Promise((ok) => { setTimeout(() => ok({ status: 'czeka' }), 5000); })]);
+    const stan = await Promise.race([h.czeka.then(() => 'wstrzymane'), new Promise((ok) => { setTimeout(() => ok('bez wpisu'), 5000); })]);
+    h.zwolnij();
+    expect(r.status, 'applyEncryptedEvent przed wpisem echa').toBe('applied');
+    expect(stan, 'kontrola: wpis echa doszedł do wstrzymania').toBe('wstrzymane');
+    await o.gotowe();
+    expect(wierszeOd(o, s0).map(opis), 'wiersz echa po zwolnieniu').toEqual([['snap', `${s.P}/${s.v}`, 'pending']]);
+  }, CZAS);
+
   it('po emissionsSettled wiersz echa jest w kolejce; przegląd kolejki (sweepOutbox) go nie dubluje', async () => {
     const o = await okno({ bramka: true, echo: true });
     await o.zaloguj('A');
@@ -854,11 +986,14 @@ describe('wiersz echa w łańcuchu dopisań — krok, przegląd, odbiorcy, łąc
 });
 
 // ── wyniki zastosowania i ścieżka błędu ────────────────────────────────────────────────────────────────
-// Kopia sejfu w teście (tylko tutaj): wstawka na początku Bkz_scalKoniec (faza Kosza, po zapisie wersji w Le) albo na
-// początku Le (przed zapisem) rzuca raz fikcyjny błąd z polem okna __fikcyjnyBlad — jak zajęta blokada karty w fazie
-// Kosza (vildaMergeBusy), konflikt tożsamości wizyty (VISIT_IDENTITY_CONFLICT) albo błąd przed zapisem.
+// Kopia sejfu w teście (tylko tutaj): wstawka na początku Bkz_scalKoniec (faza Kosza, po zapisie wersji w Le), na
+// początku Le (przed zapisem) albo na początku Bev_stanEcha (odczyt stanu kandydatów) rzuca raz fikcyjny błąd z polem
+// okna __fikcyjnyBlad — jak zajęta blokada karty w fazie Kosza (vildaMergeBusy), konflikt tożsamości wizyty
+// (VISIT_IDENTITY_CONFLICT), błąd przed zapisem albo błąd odczytu sklepu wersji.
 const KOTWICA_KOSZA = 'async function Bkz_scalKoniec(';
 const KOTWICA_LE = 'async function Le(t,e){';
+// Kopia z usterką odczytu stanu kandydatów (błąd na początku Bev_stanEcha — cały odczyt „przed” albo „po” zawodzi).
+const KOTWICA_STANU = 'async function Bev_stanEcha(';
 function zUsterka(kotwica) {
   const ile = ZRODLO_SEJFU.split(kotwica).length - 1;
   if (ile !== 1) throw new Error(`kopia z usterką: kotwica nie dokładnie raz: ${kotwica}`);
@@ -899,59 +1034,95 @@ describe('busy, apply-error, zmiana sesji i błąd odczytu', () => {
     }
   }, 2 * CZAS);
 
-  it('zmiana sesji w trakcie Le (blokada sejfu przy szyfrowaniu rekordu złożonego) i zablokowany sejf przed zastosowaniem — wynik jak dziś (locked), 0 wierszy', async () => {
-    for (const nazwa of ['w trakcie Le', 'sejf zablokowany']) {
+  it('zmiana sesji w trakcie Le (blokada sejfu albo ponowne odblokowanie A przy szyfrowaniu rekordu złożonego) i zablokowany sejf przed zastosowaniem — wynik jak dziś (locked, przy ponownym odblokowaniu session-changed), bez emisji odsyłania, 0 wierszy (także w nowej sesji)', async () => {
+    for (const [nazwa, oczek] of [['blokada w trakcie Le', 'locked'], ['ponowne odblokowanie A w trakcie Le', 'session-changed'], ['sejf zablokowany', 'locked']]) {
       const o = await okno({ bramka: true, echo: true });
       await o.zaloguj('A');
       const s = await rekordZlozony(o);
       const s0 = ostatni(o);
+      const e0 = o.l.emisje.length;
       let r;
-      if (nazwa === 'w trakcie Le') {
+      if (nazwa === 'sejf zablokowany') {
+        o.zablokuj();
+        r = await o.ev.applyEncryptedEvent(s.kB.env);
+      } else {
         const h = o.krypto.wstrzymaj({ metoda: 'encrypt', wStosie: 'Bgw_scal' });
         const p = o.ev.applyEncryptedEvent(s.kB.env);
         await h.osiagnieta;
-        o.zablokuj();
+        if (nazwa.startsWith('blokada')) o.zablokuj();
+        else await o.przelaczWTle('A').koniec;
         h.zwolnij();
         r = await p;
-      } else {
-        o.zablokuj();
-        r = await o.ev.applyEncryptedEvent(s.kB.env);
       }
       await o.cisza();
-      expect(r, `${nazwa}: wynik`).toEqual({ status: 'locked' });
+      expect(r, `${nazwa}: wynik`).toEqual({ status: oczek });
+      expect(emisjeSnap(o, e0), `${nazwa}: emisje odsyłania`).toEqual([]);
+      if (oczek === 'locked') await o.zaloguj('A');
+      await o.gotowe();
+      expect(wierszeOd(o, s0).map(opis), `${nazwa}: wiersze echa`).toEqual([]);
+    }
+  }, 3 * CZAS);
+
+  it('zmiana sesji w trakcie odczytu stanu „przed” (blokada sejfu albo blokada i ponowne odblokowanie A przy odczycie wersji kandydata) — wynik locked albo session-changed, Le nie rusza ani w starej, ani w nowej sesji (0 transakcji zapisu sklepu wersji, v bez rekordu złożonego), 0 wierszy', async () => {
+    for (const [nazwa, oczek] of [['blokada', 'locked'], ['ponowne odblokowanie A', 'session-changed']]) {
+      const o = await okno({ bramka: true, echo: true });
       await o.zaloguj('A');
+      const s = await rekordZlozony(o);
+      const s0 = ostatni(o);
+      const h = wstrzymaj(o, { przy: 'success', baza: bazaSejfu(o), sklep: 'snapshots', metoda: 'get' });
+      const p = o.ev.applyEncryptedEvent(s.kB.env);
+      const stan = await Promise.race([h.czeka.then(() => 'wstrzymane'), p.then(() => 'koniec')]);
+      expect(stan, `${nazwa}: odczyt wersji kandydata przed Le (stan „przed”)`).toBe('wstrzymane');
+      const z = o.znacznik();
+      let prz = null;
+      if (nazwa === 'blokada') o.zablokuj();
+      else {
+        prz = o.przelaczWTle('A');
+        await prz.sesja;
+      }
+      h.zwolnij();
+      const r = await p;
+      if (prz) await prz.koniec;
+      await o.cisza();
+      expect(r, `${nazwa}: wynik`).toEqual({ status: oczek });
+      expect(zapisyWersji(o, z), `${nazwa}: Le nie rusza — bez transakcji zapisu sklepu wersji`).toEqual([]);
+      if (oczek === 'locked') await o.zaloguj('A');
+      expect((await stanWersji(o, s.P, s.v)).masa, `${nazwa}: v bez rekordu złożonego`).toBe(20);
       await o.gotowe();
       expect(wierszeOd(o, s0).map(opis), `${nazwa}: wiersze echa`).toEqual([]);
     }
   }, 2 * CZAS);
 
-  it('zmiana sesji w trakcie odczytu stanu „przed” (blokada sejfu przy odczycie wersji kandydata) — wynik locked, Le nie rusza (0 transakcji zapisu w bazie sejfu), 0 wierszy', async () => {
+  it('blokada sejfu przy odczycie stanu „przed” pierwszego z trzech kandydatów (pełna karta) — locked, bez dalszych odczytów sklepu wersji', async () => {
     const o = await okno({ bramka: true, echo: true });
     await o.zaloguj('A');
-    const s = await rekordZlozony(o);
-    const s0 = ostatni(o);
-    const z = o.znacznik();
-    const h = wstrzymaj(o, { przy: 'success', baza: bazaSejfu(o), sklep: 'snapshots', metoda: 'get' });
-    const p = o.ev.applyEncryptedEvent(s.kB.env);
-    const stan = await Promise.race([h.czeka.then(() => 'wstrzymane'), p.then(() => 'koniec')]);
-    if (stan === 'wstrzymane') o.zablokuj();
-    h.zwolnij();
-    const r = await p;
-    await o.cisza();
-    expect(stan, 'odczyt wersji kandydata przed Le (stan „przed”)').toBe('wstrzymane');
-    expect(r, 'wynik').toEqual({ status: 'locked' });
-    const zapisy = o.idb.__atrapa.log.slice(z.log).filter((w) => w[0] === 'tx' && w[1] === bazaSejfu(o) && w[3] === 'readwrite');
-    expect(zapisy, 'Le nie rusza: bez transakcji zapisu w bazie sejfu').toEqual([]);
-    await o.zaloguj('A');
+    const k = await karta(o, 1, [20, 21, 22]);
     await o.gotowe();
-    expect(wierszeOd(o, s0).map(opis), 'wiersze echa').toEqual([]);
+    const B = await blizniak(o);
+    tik(MIN);
+    await popraw(B, k.P, k.w[0], 17.2);
+    const porcje = await B.ev.buildPatientFullEvents(k.P, null);
+    expect(porcje.length, 'kontrola: jedna porcja pełnej karty').toBe(1);
+    const kB = await koperta(B, porcje[0]);
+    const h = wstrzymaj(o, { przy: 'success', baza: bazaSejfu(o), sklep: 'snapshots', metoda: 'get' });
+    const p = o.ev.applyEncryptedEvent(kB.env);
+    const stan = await Promise.race([h.czeka.then(() => 'wstrzymane'), p.then(() => 'koniec')]);
+    expect(stan, 'kontrola: odczyt pierwszego kandydata wstrzymany').toBe('wstrzymane');
+    o.zablokuj();
+    const z = o.znacznik();
+    h.zwolnij();
+    expect(await p).toEqual({ status: 'locked' });
+    await o.cisza();
+    expect(txWersji(o, z), 'odczyty sklepu wersji po blokadzie').toBe(0);
+    await o.zaloguj('A');
   }, CZAS);
 
-  it('zmiana sesji w trakcie odczytu stanu „po” (blokada sejfu przy odszyfrowaniu wersji po scaleniu) — wynik applied jak dziś (Le skończony), 0 wierszy', async () => {
+  it('zmiana sesji w trakcie odczytu stanu „po” (blokada sejfu przy odszyfrowaniu wersji po scaleniu) — wynik applied jak dziś (Le skończony), bez emisji odsyłania, 0 wierszy', async () => {
     const o = await okno({ bramka: true, echo: true });
     await o.zaloguj('A');
     const s = await rekordZlozony(o);
     const s0 = ostatni(o);
+    const e0 = o.l.emisje.length;
     const h = o.krypto.wstrzymaj({ metoda: 'decrypt', wStosie: 'Bev_wersjaEcha' });
     const p = o.ev.applyEncryptedEvent(s.kB.env);
     const stan = await Promise.race([h.osiagnieta.then(() => 'wstrzymane'), p.then(() => 'koniec')]);
@@ -961,34 +1132,96 @@ describe('busy, apply-error, zmiana sesji i błąd odczytu', () => {
     const r = await p;
     await o.cisza();
     expect(r.status, 'wynik').toBe('applied');
+    expect(emisjeSnap(o, e0), 'bez emisji odsyłania').toEqual([]);
     await o.zaloguj('A');
     await o.gotowe();
     expect(wierszeOd(o, s0).map(opis), 'wiersze echa').toEqual([]);
   }, CZAS);
 
-  it('błąd odszyfrowania wersji przy porównaniu (stan „po”) — ścieżka błędu: echo każdego kandydata z kluczem (v zmieniona, w bez zmian), wersja tylko w Koszu (x) — bez wiersza', async () => {
+  it('błędy odczytu treści osobno dla każdego kandydata (pełna karta: v z rekordem złożonym, w przyjęta z ładunku bez zmian, x tylko w Koszu A, y bez zmian) — bez błędu: v; nieczytelna treść „przed” v albo w: v (porównanie z ładunkiem); nieczytelna treść „po” w: v i w; x i y bez odszyfrowania i bez wiersza', async () => {
+    // Odszyfrowania w porównaniu w kolejności ładunku: 1 — „po” v, 2 — „przed” v, 3 — „po” w, 4 — „przed” w.
+    for (const [nazwa, ktory, oczek] of [['bez błędu', 0, ['v']], ['„przed” v', 2, ['v']], ['„po” w', 3, ['v', 'w']], ['„przed” w', 4, ['v']]]) {
+      const o = await okno({ bramka: true, echo: true });
+      await o.zaloguj('A');
+      const s = await pelnaKarta(o);
+      const s0 = ostatni(o);
+      const n = odszWersji(o);
+      if (ktory) o.krypto.blad({ metoda: 'decrypt', wStosie: 'Bev_wersjaEcha', ktory }, { kod: 'OperationError' });
+      expect((await zastosuj(o, s.kB.env)).status, `${nazwa}: wynik`).toBe('applied');
+      expect(await stanKarty(o, s), `${nazwa}: kontrola — stan karty po scaleniu`).toEqual(STAN_KARTY);
+      if (!ktory) expect(n.ile, 'kontrola: odszyfrowania w porównaniu (po i przed v, po i przed w)').toBe(4);
+      expect(nazwyWersji(s, wierszeOd(o, s0)), `${nazwa}: wiersze echa`).toEqual(oczek);
+    }
+  }, 4 * CZAS);
+
+  it('cały odczyt stanu „przed” zawodzi (błąd odczytu sklepu wersji) — scalanie jak dziś, porównanie tylko z ładunkiem: v; cały odczyt stanu „po” zawodzi — ścieżka błędu: v, w i y z kartą z odczytu „przed”, x (tylko w Koszu) bez wiersza', async () => {
+    for (const [nazwa, oczek] of [['przed', ['v']], ['po', ['v', 'w', 'y']]]) {
+      const o = await okno({ bramka: true, echo: true, zrodlo: zUsterka(KOTWICA_STANU) });
+      await o.zaloguj('A');
+      const s = await pelnaKarta(o);
+      const s0 = ostatni(o);
+      const bladOdczytu = blad({ name: 'UnknownError' });
+      if (nazwa === 'przed') o.win.__fikcyjnyBlad = bladOdczytu;
+      else o.krypto.po({ metoda: 'encrypt', wStosie: 'Bgw_scal' }, () => { o.win.__fikcyjnyBlad = bladOdczytu; });
+      expect((await zastosuj(o, s.kB.env)).status, `${nazwa}: wynik`).toBe('applied');
+      expect(o.win.__fikcyjnyBlad, `${nazwa}: kontrola — błąd odczytu stanu użyty`).toBe(null);
+      expect(await stanKarty(o, s), `${nazwa}: kontrola — stan karty po scaleniu`).toEqual(STAN_KARTY);
+      expect(nazwyWersji(s, wierszeOd(o, s0)), `${nazwa}: wiersze echa`).toEqual(oczek);
+    }
+  }, 2 * CZAS);
+
+  it('usuwanie konta w tym dokumencie w trakcie odczytu stanu „po” (odczyt odmawia: SYNC_DB_DELETED) — applied (scalanie skończone), bez emisji odsyłania, 0 wierszy', async () => {
+    const o = await okno({ bramka: true, echo: true, zrodlo: zUsterka(KOTWICA_STANU) });
+    await o.zaloguj('A');
+    const s = await rekordZlozony(o);
+    const s0 = ostatni(o);
+    const e0 = o.l.emisje.length;
+    o.krypto.po({ metoda: 'encrypt', wStosie: 'Bgw_scal' }, () => { o.win.__fikcyjnyBlad = blad({ code: 'SYNC_DB_DELETED' }); });
+    expect((await zastosuj(o, s.kB.env)).status, 'wynik').toBe('applied');
+    expect(o.win.__fikcyjnyBlad, 'kontrola: odmowa odczytu „po” użyta').toBe(null);
+    expect((await stanWersji(o, s.P, s.v)).masa, 'kontrola: rekord złożony zapisany').toBe(17.2);
+    expect(emisjeSnap(o, e0), 'bez emisji odsyłania').toEqual([]);
+    expect(wierszeOd(o, s0).map(opis), 'wiersze echa').toEqual([]);
+  }, CZAS);
+
+  it('removeUser tego konta w toku (konto oznaczone, sejf jeszcze odblokowany) w chwili wznowienia odczytu stanu „przed” — session-changed, scalanie nie rusza, bez emisji odsyłania; potem konto usunięte', async () => {
     const o = await okno({ bramka: true, echo: true });
     await o.zaloguj('A');
-    const k = await karta(o, 1, [20, 21, 22]);
-    const [v, w, x] = k.w;
-    await o.gotowe();
-    const B = await blizniak(o);
-    tik(MIN);
-    await popraw(B, k.P, v, 17.2);
-    const porcje = await B.ev.buildPatientFullEvents(k.P, null);
-    expect(porcje.length, 'kontrola: jedna porcja pełnej karty').toBe(1);
-    const kB = await koperta(B, porcje[0]);
-    tik(MIN);
-    await gwiazdka(o, k.P, v);
-    await o.v.moveSnapshotToTrash(k.P, x);
-    tik();
-    await o.gotowe();
+    const s = await rekordZlozony(o);
+    const e0 = o.l.emisje.length;
+    const h = wstrzymaj(o, { przy: 'success', baza: bazaSejfu(o), sklep: 'snapshots', metoda: 'get' });
+    const p = o.ev.applyEncryptedEvent(s.kB.env);
+    expect(await Promise.race([h.czeka.then(() => 'wstrzymane'), p.then(() => 'koniec')]), 'kontrola: odczyt stanu „przed” wstrzymany').toBe('wstrzymane');
+    // removeUser oznacza konto przed pierwszym oczekiwaniem; wstrzymane na wyprowadzeniu powiązania lokalnego (przed blokadą sejfu).
+    const k = o.krypto.wstrzymaj((_metoda, _argumenty, stos) => String(stos).includes('deriveLocalBinding'));
+    const z = o.znacznik();
+    const usuwanie = o.v.removeUser(o.A.userId, o.A.haslo).then(() => 'usunięte', (x) => `błąd ${x && x.code}`);
+    await k.osiagnieta;
+    expect(o.v.isUnlocked(), 'kontrola: sejf odblokowany w chwili wznowienia odczytu').toBe(true);
+    h.zwolnij();
+    const r = await p;
+    k.zwolnij();
+    expect(await usuwanie, 'removeUser').toBe('usunięte');
+    await o.cisza();
+    expect(r, 'wynik').toEqual({ status: 'session-changed' });
+    expect(zapisyWersji(o, z), 'scalanie nie rusza — bez transakcji zapisu sklepu wersji').toEqual([]);
+    expect(emisjeSnap(o, e0), 'bez emisji odsyłania').toEqual([]);
+  }, CZAS);
+
+  it('strażnik tożsamości chronionego sejfu niedostępny od chwili po odszyfrowaniu koperty (odczyt stanu „przed” odmawia) — busy z kodem PATIENT_AUTHORITY_UNAVAILABLE jak dziś, scalanie nie rusza, bez emisji odsyłania, 0 wierszy', async () => {
+    const o = await okno({ bramka: true, echo: true });
+    await o.zaloguj('A');
+    const s = await rekordZlozony(o);
     const s0 = ostatni(o);
-    o.krypto.blad({ metoda: 'decrypt', wStosie: 'Bev_wersjaEcha' }, { kod: 'OperationError' });
-    expect((await zastosuj(o, kB.env)).status).toBe('applied');
-    expect(await wersja(o, k.P, x), 'kontrola: x zostaje w Koszu').toBe(null);
-    const nowe = wierszeOd(o, s0).filter((r) => r.kind === 'snap');
-    expect(nowe.map(opis).sort(), 'echo kandydatów z wersją (bez x)').toEqual([['snap', `${k.P}/${v}`, 'pending'], ['snap', `${k.P}/${w}`, 'pending']].sort());
+    const e0 = o.l.emisje.length;
+    const z = o.znacznik();
+    o.krypto.po({ metoda: 'decrypt' }, () => { o.v.inspectPatientAuthority().catch(() => {}); });
+    const r = await o.ev.applyEncryptedEvent(s.kB.env);
+    await o.gotowe();
+    expect(r, 'wynik').toEqual({ status: 'busy', code: 'PATIENT_AUTHORITY_UNAVAILABLE' });
+    expect(zapisyWersji(o, z), 'bez transakcji zapisu sklepu wersji').toEqual([]);
+    expect(emisjeSnap(o, e0), 'bez emisji odsyłania').toEqual([]);
+    expect(wierszeOd(o, s0).map(opis), 'wiersze echa').toEqual([]);
   }, CZAS);
 });
 
@@ -1056,7 +1289,7 @@ describe('przeniesienie, pełna kopia, delta, tryb i bramka — bez echa', () =>
     expect({ sejf: w.sejf.bramka, bez: w['bez odsyłania'].bramka }, 'odczyty pola bramki: jeden ponad sejf bez odsyłania').toEqual({ sejf: w['bez odsyłania'].bramka + 1, bez: w['bez odsyłania'].bramka });
   }, 2 * CZAS);
 
-  it('„Komputer w pracy” przy otwartej bramce i włączonym przełączniku — rekord złożony bez wiersza, bez bazy kolejki', async () => {
+  it('„Komputer w pracy” przy otwartej bramce i włączonym przełączniku — rekord złożony bez wiersza, bez bazy kolejki, bez porównania stanu kandydatów', async () => {
     const o = await okno({ bramka: true, echo: true, chmura: ['A'] });
     await o.zaloguj('A');
     const k = await karta(o, 1, [20]);
@@ -1072,10 +1305,12 @@ describe('przeniesienie, pełna kopia, delta, tryb i bramka — bez echa', () =>
     tik(MIN);
     await gwiazdka(o, k.P, v);
     await o.gotowe();
+    const n = odszWersji(o);
     expect((await zastosuj(o, kB.env)).status).toBe('applied');
     const stan = await stanWersji(o, k.P, v);
     expect([stan.masa, stan.gwiazdka], 'kontrola: rekord złożony').toEqual([17.2, true]);
     expect(o.jestBaza('A'), 'bez bazy kolejki').toBe(false);
+    expect(n.ile, 'bez odczytu i porównania stanu kandydatów (odszyfrowania w porównaniu)').toBe(0);
     if (MA_ECHO) expect(o.l.zastosowania.length, 'odczyt bramki w Bem_zastosujEcho (potem odmowa trybu)').toBe(1);
   }, CZAS);
 });

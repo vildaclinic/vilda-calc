@@ -29,7 +29,7 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 // version shown to the doctor is not a save conflict; care plans and patient lists keep the earlier rule) and E3-PR0c
 // (after a single change from another device is applied, a visit version the merge saved differently than it
 // arrived is queued again; dormant behind a hidden switch).
-const BASE = '4461ee57144836c11c72bc90c62f75947c53eaf35bf9ce98eb77c05c121b7864';
+const BASE = '06ea023197d3e70fc30e965d5b2b57744fbbcbc0f638f5baa798e5ce3e209031';
 const START = '/* BEGIN VILDA CLINICAL WORKSPACE NATIVE V1 */\n';
 const END = '/* END VILDA CLINICAL WORKSPACE NATIVE V1 */\n';
 const digest = value => createHash('sha256').update(value).digest('hex');

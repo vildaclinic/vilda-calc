@@ -7568,7 +7568,10 @@ function Bev_echoT(po, P) {
 // Wersje do odeslania (k — kandydaci; przed, po — stan kandydatow): po scaleniu wersja lezy pod karta p, a przed — pod p
 // albo pod zadna (wersja przeniesiona pod inna karte — bez odeslania); rekord sklepu przed != po (inaczej bez
 // odszyfrowania); wersja w ksztalcie eksportu bez rev przed != po; wersji nie ma w ladunku pod p albo po regule pola
-// != wersja z ladunku (obie bez rev). Blad odczytu albo porownania: kazdy kandydat z karta z odczytu po, inaczej przed,
+// != wersja z ladunku (obie bez rev). Bledy osobno dla kazdego kandydata: stan przed nieznany (caly odczyt przed
+// zawiodl) albo nieczytelna tresc wersji przed — bez porownania tresci przed i po (zostaje porownanie z ladunkiem,
+// a warunki z rekordow sklepu, gdy rekord przed jest); nieczytelna tresc wersji po albo blad porownania — odeslanie tego
+// kandydata. Caly odczyt po zawiodl (albo blad poza kandydatem): kazdy kandydat z karta z odczytu po, inaczej przed,
 // inaczej z ladunku (klucz bez wersji nie daje wiersza przy dopisaniu). Nigdy nie rzuca.
 async function Bev_echo(k, przed, po) {
   const bledu = function () {
@@ -7581,23 +7584,35 @@ async function Bev_echo(k, przed, po) {
     });
     return out;
   };
-  if (!przed || !przed.m || !po || !po.m) return bledu();
+  if (!po || !po.m) return bledu();
   try {
     const out = [];
     for (let i = 0; i < k.ids.length; i += 1) {
       const v = k.ids[i];
-      const a = przed.m.get(v) || null;
+      const a = przed && przed.m ? przed.m.get(v) || null : null;
       const b = po.m.get(v) || null;
       if (!b) continue;
       const p = b.patientId;
       if (a && a.patientId !== p) continue;
       if (a && Bev_json(a) === Bev_json(b)) continue;
-      const wb = Bev_bezPola(await Bev_wersjaEcha(po.c, b), 'rev');
-      if (a && Bev_json(Bev_bezPola(await Bev_wersjaEcha(przed.c, a), 'rev')) === Bev_json(wb)) continue;
-      const P = k.P.get(p + '/' + v);
-      if (P) {
-        const Pr = Bev_bezPola(P, 'rev');
-        if (Bev_json(Bev_echoT(wb, Pr)) === Bev_json(Pr)) continue;
+      try {
+        const wb = Bev_bezPola(await Bev_wersjaEcha(po.c, b), 'rev');
+        let wa = null;
+        if (a) {
+          try {
+            wa = Bev_bezPola(await Bev_wersjaEcha(przed.c, a), 'rev');
+          } catch (x) {
+            wa = null;
+          }
+        }
+        if (wa && Bev_json(wa) === Bev_json(wb)) continue;
+        const P = k.P.get(p + '/' + v);
+        if (P) {
+          const Pr = Bev_bezPola(P, 'rev');
+          if (Bev_json(Bev_echoT(wb, Pr)) === Bev_json(Pr)) continue;
+        }
+      } catch (x) {
+        // nieczytelna tresc wersji po albo blad porownania — odeslanie tego kandydata
       }
       out.push({ patientId: p, snapshotId: v });
     }
@@ -7608,22 +7623,27 @@ async function Bev_echo(k, przed, po) {
 }
 // Zastosowanie koperty zdarzenia z kolektorem kol: stan kandydatow przed, scalanie jak w Bev_zastosuj, stan po, potem
 // kol.echo (lista z Bev_echo) i kol.s (sesja scalania) — tylko gdy scalanie ruszylo w tej sesji (applied albo wyjatek
-// scalania zamieniony na busy lub apply-error). Zmiana sesji, zablokowany sejf albo usuwanie konta w trakcie odczytu
-// przed — koniec bez scalania, jak po zmianie sesji (zdarzenie zostaje do ponowienia); w trakcie scalania albo odczytu
-// po — bez kolektora. Statusy jak w Bev_zastosuj; nigdy wyjatek.
+// scalania zamieniony na busy lub apply-error). Zmiana sesji albo zablokowany sejf (takze gdy z tego powodu zawiodl
+// odczyt), usuwanie konta albo niedostepny straznik tozsamosci chronionego sejfu w trakcie odczytu przed — koniec bez
+// scalania (status jak po zmianie sesji, a przy strazniku — busy z kodem, jak dotad zwraca scalanie; zdarzenie zostaje
+// do ponowienia); inny blad odczytu przed — scalanie i porownanie bez stanu przed. W trakcie scalania albo odczytu po —
+// bez kolektora. Statusy jak w Bev_zastosuj; nigdy wyjatek.
 async function Bev_zastosujZEchem(tresc, s, kol) {
   const k = Bev_kandydaciEcha(tresc);
   let przed = null;
   if (k.ids.length) {
+    let bladOdczytu = null;
     try {
       przed = await Bev_stanEcha(k.ids, s);
       przed.c.strzez();
     } catch (x) {
-      if (Bses_zmieniona(s) || (x && (x.code === 'SESSION_CHANGED' || x.code === 'VAULT_LOCKED'))) return Bev_poSesji();
-      if (x && x.code === 'SYNC_DB_DELETED') return Bev_wynik('session-changed');
+      bladOdczytu = x;
       przed = { m: null };
     }
     if (Bses_zmieniona(s)) return Bev_poSesji();
+    const kod = bladOdczytu ? bladOdczytu.code : null;
+    if (kod === 'SYNC_DB_DELETED') return Bev_wynik('session-changed');
+    if (kod === 'PATIENT_AUTHORITY_UNAVAILABLE') return { status: 'busy', code: kod };
   }
   let wynik;
   let blad = null;
