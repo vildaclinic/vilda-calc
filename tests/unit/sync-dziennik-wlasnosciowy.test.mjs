@@ -6558,6 +6558,44 @@ function ddUsunZwrocona(kolejnosc, app = 'N') {
     naprawa: 'do naprawy w E3-PR0e (decyzja właściciela 4a)',
   };
 }
+// „Usuń pacjenta” zwróconej starej karty na urządzeniu, które samo ją scaliło (ta sama rodzina; odtworzenie ciągu
+// operacji profilu pełnego, ziarno 8, przy włączonym przełączniku odsyłania — ten sam ciąg bez odsyłania daje to samo,
+// więc przyczyna nie leży w odsyłaniu). Baza ddDwieKarty (A — karta Y z wizytą a i karta X z wizytą v; B i C —
+// bliźniaki). B bez wiedzy o scaleniu zapisuje w X nową wizytę b; A scala X → Y, nie znając b; B, nadal bez wiedzy
+// o scaleniu, zapisuje w X nową wizytę w. Dostawa B → A: b jest starsza od nagrobka X ze scalenia (zostaje odrzucona),
+// w jest późniejsza, więc X wraca na A z w (D-4 A: duplikat karty). Dostawa A → B: nagrobek X przegrywa na B z w (karta
+// zostaje, hak H1 — pełna karta X z b i w). B daje b gwiazdkę; dostawa B → A wnosi pełną kartę X, więc A ma znów X z b
+// i w. A poprawia w (38,8 kg) i usuwa zwróconą kartę X („Usuń pacjenta”) — razem z b i w, których nie ma w karcie
+// scalonej Y. Wyrocznia: b i w (przez alias „Scal pacjentów” X → Y) mają żyć w Y; po nagrobku X nie ma ich na żadnym
+// urządzeniu („utrata” w W1 i W4).
+function ddUsunZwroconaScalajacy() {
+  return {
+    baza: (S) => ddDwieKarty(S),
+    kroki: async (u) => {
+      const { S, A, B, C } = u;
+      krok(60e3); u.b = (await mutacja(S, B, 'nowa wersja 5 → b (bez wiedzy o scaleniu)', () => B.d.zapiszKarte(5, { wzrost: 103, masa: 21.4, zapis: { patientId: u.X, forceNewSnapshot: true } }))).wynik.snapshotId;
+      u.n.set(u.b, 'b');
+      krok(60e3); await mutacja(S, A, 'Scal pacjentów 5 → 3', () => A.v.mergePatients(u.X, u.Y));
+      krok(60e3); u.w = (await mutacja(S, B, 'nowa wersja 5 → w (bez wiedzy o scaleniu)', () => B.d.zapiszKarte(5, { wzrost: 146, masa: 40.9, zapis: { patientId: u.X, forceNewSnapshot: true } }))).wynik.snapshotId;
+      u.n.set(u.w, 'w');
+      krok(60e3); await ddDo(u, B, A);
+      krok(60e3); await ddDo(u, A, B);
+      krok(60e3);
+      const sb = (await B.v.getPatient(u.X)).snapshots.find((q) => q.snapshotId === u.b);
+      await mutacja(S, B, 'gwiazdka 5/b', () => B.v.setSnapshotPinned(u.X, u.b, !sb.pinned));
+      krok(60e3); await ddDo(u, B, A);
+      krok(60e3);
+      const sw = (await A.v.getPatient(u.X)).snapshots.find((q) => q.snapshotId === u.w);
+      await mutacja(S, A, 'poprawka 5/w 38,8 kg', () => A.v.updateSnapshotPayload(u.X, u.w, { ...sw.payload, user: { ...sw.payload.user, weight: 38.8 } }, { preserveSavedAt: true }));
+      u.przedUsun = { b: ddPolozenie(u, u.b), w: ddPolozenie(u, u.w) };
+      krok(60e3); await mutacja(S, A, 'usuń pacjenta 5', () => A.v.removePatient(u.X));
+      krok(60e3); await ddDo(u, A, B); await ddDo(u, A, C); await ddDo(u, B, C);
+      await ddSpoczynek(u);
+    },
+    fakty: (u) => ({ przedUsun: u.przedUsun, koniec: { b: ddPolozenie(u, u.b), w: ddPolozenie(u, u.w) } }),
+    naprawa: 'do naprawy w E3-PR0e (decyzja właściciela 4a)',
+  };
+}
 // Notatka pacjenta zmieniona na dwóch urządzeniach (świat 880, nr 0) — od E3-PR0b2b test wejściowy w CI
 // (NOTATKA_POZNIEJSZA niżej). Numery światów pozostałych przypadków bez zmian (881–884).
 const ddNotatkaBaza = async (S) => {
@@ -6573,6 +6611,7 @@ const ZNANE_USTERKI = {
   '„Usuń pacjenta” zwróconej starej karty po „Scal pacjentów” — B zna tylko scalenie, nagrobek dochodzi do niego przed powrotem karty': { ...ddUsunZwrocona('B bez powrotu'), nr: 2 },
   '„Usuń pacjenta” zwróconej starej karty po „Scal pacjentów” — C dostaje scalenie dopiero po usunięciu': { ...ddUsunZwrocona('C bez scalenia'), nr: 3 },
   '„Usuń pacjenta” zwróconej starej karty po „Scal pacjentów” — B zna tylko scalenie; kontrola: C na 221 (ten sam wynik)': { ...ddUsunZwrocona('B bez powrotu', 'S221'), nr: 4 },
+  '„Usuń pacjenta” zwróconej starej karty po „Scal pacjentów” — usuwa urządzenie, które scaliło; karta wraca z nowymi wizytami zapisanymi bez wiedzy o scaleniu': { ...ddUsunZwroconaScalajacy(), nr: 5 },
 };
 async function ddSwiat(sc, tryb) {
   const nr = sc.nr;
