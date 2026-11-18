@@ -7,14 +7,13 @@ import { zaladuj221, zaladuj276, zaladujRetencjeV1 } from '../support/starsza-ap
 // od wizyt: każda wersja wpisu to osobna notatka pacjenta zapisana RAZ (savePatientNoteOnce), kategoria
 // „leczenie-otylosci”, dane w ostatniej linii treści (JSON). Sejf bez zmian.
 //
-// Ten plik woła PRODUKCYJNY moduł vilda_dziennik_otylosci.js (z produkcyjnym modułem cykli do porządku punktów)
+// Ten plik woła PRODUKCYJNY moduł VildaDziennikOtylosci (vilda_cykle_leczenia.js, razem z modułem cykli)
 // i — w części „flota” — PRAWDZIWY sejf (vilda_crypto.js + vilda_vault.js) na adapterze pamięciowym, także starsze
 // wersje aplikacji z fikstur (sejf 221 i 276). Dane wyłącznie FIKCYJNE.
 
 function modul() {
   const win = {};
   loadBrowserScript('vilda_cykle_leczenia.js', win);
-  loadBrowserScript('vilda_dziennik_otylosci.js', win);
   return win.VildaDziennikOtylosci;
 }
 const D = modul();
@@ -192,6 +191,39 @@ describe('dawne punkty z migawki (sprzed dziennika)', () => {
   });
 });
 
+describe('planDzialania — monitor i Karta działają na punkcie projekcji', () => {
+  const MIG = [
+    { id: 'm-start', type: 'start', ageYears: 13, ageMonths: 0, weight: 80, height: 160, drug: WEGOVY, dose: '0,25 mg', dateISO: '2026-04-14' },
+    { id: 'm-paz', type: 'continue', ageYears: 13, ageMonths: 6, weight: 75.2, height: 162.9, drug: WEGOVY, dose: '2,4 mg', dateISO: '2026-10-13' },
+  ];
+  it('poprawka punktu migawki: przeniesienie wszystkich dawnych punktów, potem poprawka przeniesionego wpisu', () => {
+    const s = D.zloz([], MIG);
+    const plan = D.planDzialania(s, PID, { rodzaj: 'popraw', id: 'm-paz', dane: dane({ dateISO: '2026-10-13', ageMonths: 6, weight: 75.0, weightSource: 'gabinet' }) });
+    expect(plan.ok).toBe(true);
+    expect(plan.wersje.map((v) => v.op)).toEqual(['migracja', 'migracja', 'poprawka']);
+    const po = D.zloz(zapisane(plan), MIG);
+    expect(po.niezmigrowane).toEqual([]);
+    expect(po.punkty.map((p) => [p.dateISO, p.weight])).toEqual([['2026-04-14', 80], ['2026-10-13', 75]]);
+    expect(plan.entryId).toMatch(/^otylm-.*-m-paz$/);
+  });
+  it('usunięcie punktu migawki: przeniesienie i wersja „usunięty” — punkt nie wraca z migawki', () => {
+    const plan = D.planDzialania(D.zloz([], MIG), PID, { rodzaj: 'usun', id: 'm-start' });
+    expect(plan.wersje.map((v) => v.op)).toEqual(['migracja', 'migracja', 'wycofanie']);
+    const po = D.zloz(zapisane(plan), MIG);
+    expect(po.punkty.map((p) => p.dateISO)).toEqual(['2026-10-13']);
+    expect(po.wpisy.filter((x) => x.stan === 'usuniety')).toHaveLength(1);
+  });
+  it('dodanie i działanie na wpisie dziennika; nieznany punkt — odmowa', () => {
+    const s = D.zloz([], MIG);
+    const dodaj = D.planDzialania(s, PID, { rodzaj: 'dodaj', dane: dane() });
+    expect(dodaj.wersje.map((v) => v.op)).toEqual(['migracja', 'migracja', 'zapis']);
+    const po = D.zloz(zapisane(dodaj), MIG);
+    const popraw = D.planDzialania(po, PID, { rodzaj: 'popraw', id: dodaj.entryId, dane: dane({ weight: 74.2 }) });
+    expect(popraw.wersje.map((v) => v.op)).toEqual(['poprawka']);
+    expect(D.planDzialania(po, PID, { rodzaj: 'usun', id: 'nie-ma' }).bledy).toEqual(['brak-wpisu']);
+  });
+});
+
 describe('wiek w dniu pomiaru', () => {
   it('z daty urodzenia', () => {
     expect(D.wiekNaDzien('2026-11-10', { urodzenieISO: '2013-04-11' })).toEqual({ ageYears: 13, ageMonths: 6, zrodlo: 'urodzenie' });
@@ -228,7 +260,6 @@ function okno(starsza) {
   loadBrowserScript('vilda_crypto.js', win);
   if (starsza) { zaladujRetencjeV1(win); (starsza === '221' ? zaladuj221 : zaladuj276)(win); } else loadBrowserScript('vilda_vault.js', win);
   loadBrowserScript('vilda_cykle_leczenia.js', win);
-  loadBrowserScript('vilda_dziennik_otylosci.js', win);
   const vault = win.VildaVault;
   vault.setStorageAdapter(vault.createInMemoryAdapter());
   return { win, vault, D: win.VildaDziennikOtylosci };
