@@ -2262,3 +2262,8 @@ odpowiedzi ani nowe akcje zapisu z poprzedniego widoku; zapis już przekazany
 sejfowi zachowuje pierwotne identyfikatory. Domyślne wejście globalne pozostaje
 bez filtra pacjenta. Nowe źródła nie wprowadzają wzorów klinicznych ani nowego
 sposobu utrwalania danych.
+
+Przed przekazaniem zakresu do powłoki kontroler sprawdza jej obsługę kontekstu
+pacjenta i kompletność prezentacji. Niepełna aktualizacja wymaga odświeżenia
+całej karty. Zakres pozostaje związany z kontrolerem niezależnie od dostępności
+dekoratora; wejścia do odczytu i okna sprawdzają zgodność przed wykonaniem.

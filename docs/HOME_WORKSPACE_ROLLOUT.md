@@ -421,6 +421,11 @@ Główne okno oraz jego formularze korzystają z koordynatora historii ramki
 kontroler zachowuje odmowę zamknięcia podczas zapisu i potwierdzenia zmian.
 Historia przeglądarki zawiera wyłącznie niejawne znaczniki okien.
 
+Przekazanie kontekstu z ramki do powłoki wymaga zgodnych możliwości obu
+komponentów. Przy niepełnej aktualizacji kliknięcie wyświetla prośbę o
+odświeżenie całej karty przeglądarki. Kontekst pacjenta jest sprawdzany także
+przed odczytem i utworzeniem pełnego okna, niezależnie od warstwy prezentacji.
+
 Testy `home-workspace-reminders-foundation.spec.mjs` oraz
 `home-workspace-reminders-patient.spec.mjs` używają fikcyjnego, rzeczywistego
 sejfu. Sprawdzają automatyczne umieszczenie karty, działanie natywnych akcji,

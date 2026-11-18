@@ -5,14 +5,14 @@ import { authProductionFunction } from '../support/search-return-auth-harness.mj
 
 const source = fs.readFileSync(new URL('../../vilda_auth_ui.js', import.meta.url), 'utf8');
 const production = (name, parent) => authProductionFunction(source, name, parent);
-const globals = ['remInlineHide', 'HomeRemindersContextCurrent', 'HomeRemindersInlineContext', 'HomeRemindersInlineViewOptions', 'HomeRemindersDisposeEditors', 'HomeRemindersDisposeScope'];
+const globals = ['HomeRemindersPresentationRequested', 'remInlineHide', 'HomeRemindersContextCurrent', 'HomeRemindersInlineContext', 'HomeRemindersInlineViewOptions', 'HomeRemindersDisposeEditors', 'HomeRemindersDisposeScope'];
 const own = ['HomeRemindersOwnNote', 'HomeRemindersOwnRow', 'HomeRemindersRows', 'HomeRemindersCurrent', 'HomeRemindersReadGroups'];
 const note = (patientId, id, extra = {}) => ({ patientId, id, dueDateISO: '2026-11-20', category: 'followup', ...extra });
 const group = (patientId, notes) => ({ patientId, patientName: 'Fikcyjny ' + patientId, notes });
 function base() {
   const state = { current: true, marked: true, owner: true }, owner = {};
   const host = { style: { removeProperty(name) { delete this[name]; } }, childNodes: [], isConnected: true, removeAttribute: vi.fn() };
-  const win = { top: null, document: { querySelector: () => null } }; win.top = win;
+  const win = { top: null, document: { querySelector: () => null }, __VILDA_HOME_WORKSPACE_PREVIEW__: true, VildaHomeRemindersPresentation: { decorate() {} } }; win.top = win;
   const ctx = vm.createContext({ i: win, HomeRemindersContexts: new WeakMap(), HomeRemindersEditorLeases: new Set(),
     remReadOwner: () => owner, remReadCurrent: candidate => candidate === owner && state.owner,
     HomeRemindersInlineEnabled: () => state.marked, remInvalidateInline: vi.fn(),
@@ -239,5 +239,79 @@ describe('selected-patient native dialog history leases', () => {
     expect(e.ctx.HomeRemindersOutcomeCleanup).toBeNull(); expect(e.ctx.HomeRemindersMainCleanup).toBeNull();
     e.state.current = false; expect(e.ctx.HomeRemindersBindNativeDialog({}, { kind: 'care' })).toBeNull();
     expect(e.options.onDialog).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('selected-patient reminders refuse a mixed application update', () => {
+  const refreshMessage = 'Odśwież całą kartę przeglądarki, aby dokończyć aktualizację aplikacji.';
+  function requestEnvironment() {
+    const topCall = vi.fn(() => 'top-scoped-result'), localCall = vi.fn(), alert = vi.fn();
+    const target = { __VILDA_HOME_WORKSPACE_PREVIEW__: true,
+      VildaAuthUI: { maybeShowReminders: topCall, disposeHomeReminders: vi.fn() },
+      VildaHomeRemindersPresentation: { decorate() {} } };
+    const win = { top: target, alert, VildaAuthUI: { maybeShowReminders: localCall } };
+    const context = vm.createContext({ i: win });
+    vm.runInContext(production('remB22Request'), context);
+    return { context, target, topCall, localCall, alert };
+  }
+
+  it.each(['old-auth', 'missing-presenter', 'missing-decorator', 'disabled-preview'])('never forwards a selected patient to %s or falls back to the local/global opener', capability => {
+    const e = requestEnvironment(), patientContext = { current: () => true };
+    if (capability === 'old-auth') delete e.target.VildaAuthUI.disposeHomeReminders;
+    if (capability === 'missing-presenter') delete e.target.VildaHomeRemindersPresentation;
+    if (capability === 'missing-decorator') e.target.VildaHomeRemindersPresentation = {};
+    if (capability === 'disabled-preview') e.target.__VILDA_HOME_WORKSPACE_PREVIEW__ = false;
+    expect(e.context.remB22Request({ homePresentation: true, homeContext: patientContext })).toBe(false);
+    expect(e.topCall).not.toHaveBeenCalled(); expect(e.localCall).not.toHaveBeenCalled();
+    expect(e.alert).toHaveBeenCalledExactlyOnceWith(refreshMessage);
+  });
+
+  it('forwards the same immutable patient context only to a compatible top shell', () => {
+    const e = requestEnvironment(), patientContext = { current: () => true }, request = { homePresentation: true, homeContext: patientContext, history: true };
+    expect(e.context.remB22Request(request)).toBe('top-scoped-result');
+    expect(e.topCall).toHaveBeenCalledExactlyOnceWith({ force: true, homePresentation: true, homeContext: patientContext, history: true });
+    expect(e.topCall.mock.calls[0][0].homeContext).toBe(patientContext);
+    expect(request).toEqual({ homePresentation: true, homeContext: patientContext, history: true });
+    expect(e.localCall).not.toHaveBeenCalled(); expect(e.alert).not.toHaveBeenCalled();
+  });
+
+  it('keeps a global request compatible with the existing top opener during an update', () => {
+    const e = requestEnvironment(); delete e.target.VildaAuthUI.disposeHomeReminders;
+    delete e.target.VildaHomeRemindersPresentation; delete e.target.__VILDA_HOME_WORKSPACE_PREVIEW__;
+    expect(e.context.remB22Request({ history: true })).toBe('top-scoped-result');
+    expect(e.topCall).toHaveBeenCalledExactlyOnceWith({ force: true, history: true });
+    expect(e.alert).not.toHaveBeenCalled();
+  });
+
+  it.each(['missing-presenter', 'disabled-preview', 'missing-request-flag', 'expired-context'])('rejects a direct scoped native open and read before any work for %s', failure => {
+    const e = base(), patientContext = { current: () => failure !== 'expired-context' };
+    if (failure === 'missing-presenter') delete e.ctx.i.VildaHomeRemindersPresentation;
+    if (failure === 'disabled-preview') e.ctx.i.__VILDA_HOME_WORKSPACE_PREVIEW__ = false;
+    const options = { force: true, homePresentation: failure !== 'missing-request-flag', homeContext: patientContext };
+    Object.assign(e.ctx, { al: vi.fn(), jt: vi.fn(), wn: vi.fn(), remB22Create: vi.fn(),
+      remSearchDropReturn: vi.fn(), remShowReadError: vi.fn() });
+    vm.runInContext(production('remB22Open') + '\n' + production('tn'), e.ctx);
+    expect(e.ctx.remB22Open([], options)).toBeNull();
+    expect(e.ctx.al).not.toHaveBeenCalled(); expect(e.ctx.remB22Create).not.toHaveBeenCalled();
+    return e.ctx.tn(options).then(result => {
+      expect(result).toBe(false); expect(e.ctx.jt).not.toHaveBeenCalled(); expect(e.ctx.wn).not.toHaveBeenCalled();
+      expect(e.ctx.remSearchDropReturn).not.toHaveBeenCalled(); expect(e.ctx.remShowReadError).not.toHaveBeenCalled();
+    });
+  });
+
+  it('retains patient filtering independently of presentation availability and refuses a downgraded factory return', async () => {
+    const e = base(), patientContext = { patientId: 'A', current: () => true };
+    const declaration = source.split('\n').find(line => /^  var HomeRemindersContext =/.test(line));
+    expect(declaration).toBeTruthy();
+    Object.assign(e.ctx, { options: { homeContext: patientContext }, HomeRemindersRequested: false,
+      vault: { listPatientNotesDueByDate: vi.fn().mockResolvedValue([]) }, remB22Request: vi.fn() });
+    vm.runInContext(declaration + '\n' + production('remB22Flat') + '\n'
+      + own.map(name => production(name, 'remB22Create')).join('\n') + '\n' + production('HomeRemindersRequest', 'remB22Create'), e.ctx);
+    expect(e.ctx.HomeRemindersContext).toBe(patientContext);
+    expect(e.ctx.HomeRemindersRows([group('A', [note('A', 'a')]), group('B', [note('B', 'b')])]).map(row => row.n.id)).toEqual(['a']);
+    await e.ctx.HomeRemindersReadGroups();
+    expect(e.ctx.vault.listPatientNotesDueByDate).toHaveBeenCalledWith('9999-12-31T23:59:59.999Z');
+    expect(e.ctx.HomeRemindersRequest({ history: true })).toBe(false);
+    expect(e.ctx.remB22Request).not.toHaveBeenCalled();
   });
 });

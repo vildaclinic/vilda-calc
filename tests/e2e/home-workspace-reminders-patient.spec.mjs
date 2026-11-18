@@ -354,3 +354,57 @@ test('selected patient: replacing an account closes an active editor before its 
   expect(await page.evaluate(() => window.__homeReplacementWrites)).toEqual([]);
   await expect(card).toBeHidden();
 });
+
+test('selected patient: an unsupported parent bridge fails closed and a current bridge keeps the patient scope', async ({ page }) => {
+  const { frame, ids, notes, card } = await setup(page);
+  const before = await frame.evaluate(async ids => ({
+    a: await window.VildaVault.listPatientNotesForPatient(ids.a),
+    b: await window.VildaVault.listPatientNotesForPatient(ids.b),
+  }), ids);
+  const reports = await frame.evaluate(() => {
+    const host = window.top, originalAPI = host.VildaAuthUI;
+    const originalPresenter = host.VildaHomeRemindersPresentation;
+    const originalAlert = window.alert, originalHostAlert = host.alert;
+    const expand = document.querySelector('#remindersInline [aria-label="Powiększ Przypomnienia"]');
+    const reports = [];
+    for (const mode of ['old-api', 'missing-presenter']) {
+      let calleeCalls = 0;
+      const notices = [];
+      try {
+        const invoked = function () { calleeCalls += 1; return false; };
+        // Simulate the earlier shell API that ignores the new scope options,
+        // then the current API whose presenter is not available yet.
+        host.VildaAuthUI = mode === 'old-api' ? { maybeShowReminders: invoked }
+          : Object.assign({}, originalAPI, { maybeShowReminders: invoked });
+        host.VildaHomeRemindersPresentation = mode === 'missing-presenter' ? undefined : originalPresenter;
+        window.alert = host.alert = message => { notices.push(String(message)); };
+        expand.click();
+        reports.push({ mode, calleeCalls, notices, dialogs: host.document.querySelectorAll('dialog.vb22-modal,dialog.vb22-outcome').length });
+      } finally {
+        // No mocked bridge, renderer or alert survives this synchronous turn.
+        host.VildaAuthUI = originalAPI;
+        host.VildaHomeRemindersPresentation = originalPresenter;
+        window.alert = originalAlert; host.alert = originalHostAlert;
+      }
+    }
+    return { probes: reports, restored: host.VildaAuthUI === originalAPI
+      && host.VildaHomeRemindersPresentation === originalPresenter
+      && window.alert === originalAlert && host.alert === originalHostAlert };
+  });
+  expect(reports.restored).toBe(true);
+  for (const report of reports.probes) {
+    expect(report.calleeCalls, report.mode).toBe(0);
+    expect(report.dialogs, report.mode).toBe(0);
+    expect(report.notices, report.mode).toEqual(['Odśwież całą kartę przeglądarki, aby dokończyć aktualizację aplikacji.']);
+  }
+  await expect(page.locator('dialog.vb22-modal,dialog.vb22-outcome')).toHaveCount(0);
+  expect(await frame.evaluate(async ids => ({
+    a: await window.VildaVault.listPatientNotesForPatient(ids.a),
+    b: await window.VildaVault.listPatientNotesForPatient(ids.b),
+  }), ids)).toEqual(before);
+  const dialog = await open(page, card);
+  await expect(dialog.locator('.vhome-reminders-full-entry')).toHaveCount(3);
+  await expect(row(dialog, notes.aFuture)).toBeVisible();
+  await expect(dialog.locator(`[data-note-id="${notes.bPast}"]`)).toHaveCount(0);
+  await close(dialog);
+});

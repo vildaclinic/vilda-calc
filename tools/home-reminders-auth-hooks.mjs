@@ -48,7 +48,7 @@ const FACTORY_HELPERS = `  /* BEGIN HOME REMINDERS PRESENTATION CONTROLLER */
     return { day: day.slice(8, 10), month: new Intl.DateTimeFormat('pl-PL', { month: 'short', timeZone: 'UTC' }).format(new Date(Date.UTC(2000, month - 1, 1))) };
   }
   function HomeRemindersRequest(request) {
-    if (HomeRemindersContext && !HomeRemindersContextCurrent(HomeRemindersContext)) return false;
+    if (HomeRemindersContext && (!HomeRemindersRequested || !HomeRemindersContextCurrent(HomeRemindersContext))) return false;
     return remB22Request(HomeRemindersRequested ? Object.assign({}, request || {}, { homePresentation: true,
       homeContext: HomeRemindersContext, contextLabel: options.contextLabel || '', showPatientName: options.showPatientName !== false }) : request);
   }
@@ -209,7 +209,7 @@ function HomeRemindersShowReadFailure(request) {
 `;
 
 const SCOPE_FACTORY_HELPERS = `  /* BEGIN HOME REMINDERS PATIENT CONTROLLER */
-  var HomeRemindersContext = HomeRemindersRequested && options.homeContext || null, HomeRemindersMainCleanup = null;
+  var HomeRemindersContext = options.homeContext || null, HomeRemindersMainCleanup = null;
   function HomeRemindersBindNativeDialog(dialog, metadata) {
     if (!HomeRemindersContext || !HomeRemindersCurrent() || !HomeRemindersContext.onDialog) return null;
     try { return HomeRemindersContext.onDialog(dialog, metadata); }
@@ -361,7 +361,7 @@ const SCOPE_PAIRS = [
   ],
   [
     "function remB22Open(groups, options) {\n  al();",
-    "function remB22Open(groups, options) {\n  al();\n  if (options && options.homeContext && !HomeRemindersContextCurrent(options.homeContext)) return null;\n  if (remB22Full && remB22Full.homeContext && !remB22Full.alive()) remB22Full.close();"
+    "function remB22Open(groups, options) {\n  if (options && options.homeContext && (!HomeRemindersPresentationRequested(options) || !HomeRemindersContextCurrent(options.homeContext))) return null;\n  al();\n  if (remB22Full && remB22Full.homeContext && !remB22Full.alive()) remB22Full.close();"
   ],
   [
     "function alive() { return root.isConnected && remReadCurrent(owner); }",
@@ -481,7 +481,7 @@ const SCOPE_PAIRS = [
   ],
   [
     "var owner, sequence, forced = !!(t && t.force);",
-    "var owner, sequence, forced = !!(t && t.force);\n  var homeContext = t && t.homePresentation === true && t.homeContext || null;"
+    "var owner, sequence, forced = !!(t && t.force);\n  var homeContext = t && t.homeContext || null;\n  if (homeContext && (!HomeRemindersPresentationRequested(t) || !HomeRemindersContextCurrent(homeContext))) return false;"
   ],
   [
     "function searchReturnCurrent() { return !restoringSearch || t._searchReturnCurrent(); }",
@@ -542,6 +542,10 @@ const SCOPE_PAIRS = [
   [
     "onDialog: function (dialog) { return privacy ? privacy.protectDialog(dialog) : null; },",
     "onDialog: function (dialog) {\n          var privateCleanup = privacy ? privacy.protectDialog(dialog) : null, historyCleanup = HomeRemindersBindNativeDialog(dialog, { kind: 'care' });\n          return function () { try { if (typeof privateCleanup === 'function') privateCleanup(); } finally { if (typeof historyCleanup === 'function') historyCleanup(); } };\n        },"
+  ],
+  [
+    "  var api = target.VildaAuthUI;\n  if (api && api.maybeShowReminders)",
+    "  var api = target.VildaAuthUI;\n  if (options && options.homeContext && (target.__VILDA_HOME_WORKSPACE_PREVIEW__ !== true\n      || !api || typeof api.disposeHomeReminders !== 'function'\n      || !target.VildaHomeRemindersPresentation || typeof target.VildaHomeRemindersPresentation.decorate !== 'function')) {\n    try { if (typeof i.alert === 'function') i.alert('Odśwież całą kartę przeglądarki, aby dokończyć aktualizację aplikacji.'); } catch (_) {}\n    return false;\n  }\n  if (api && api.maybeShowReminders)"
   ]
 ];
 
