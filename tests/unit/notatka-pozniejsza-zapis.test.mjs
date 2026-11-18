@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
+import { wytnijFunkcje } from './sesja-zapisu-uprzaz.mjs';
 
 // E3-PR0b2b (P-NOTATKA-POZNIEJSZA) — zapisy notatki pacjenta wokół reguły „zostaje zmiana późniejsza”.
 //
@@ -20,9 +21,10 @@ import { loadBrowserScript } from '../support/load-browser-script.mjs';
 //    notatka usunięta w oknie jest pomijana, nieczytelny szyfrogram przechodzi bez ponownego szyfrowania.
 // 3. Terminarz „Edytuj osobę” przy wpisie bez pacjenta wysyła tylko nazwę osoby (i tytuł, gdy wpis go nie miał).
 // 4. Luki modułu planów z etapami (decyzja właściciela z 2026-11-16: reguła wchodzi od razu, poprawka modułu osobno):
-//    2c — dowód kroku według chwili zapisu dokumentu (nowe pole w dwóch wydaniach: najpierw odczyt i porównanie, zapis
-//    pola dopiero po potwierdzeniu właściciela); reguła notatek we fragmencie natywnym — z artefaktów repozytorium
-//    źródeł modułu (do tego czasu przypięta tu dawna reguła fragmentu).
+//    2c — dowód kroku według chwili zmiany treści dokumentu (decyzja właściciela z 2026-11-17: pole niesie chwilę
+//    zmiany treści dokumentu; nowe pole w dwóch wydaniach: najpierw odczyt i porównanie, zapis pola dopiero po
+//    potwierdzeniu właściciela); reguła notatek we fragmencie natywnym — z artefaktów repozytorium źródeł modułu (do tego
+//    czasu przypięta tu dawna reguła fragmentu).
 // Opis: docs/clinical/ALGORITHMS.md (P-NOTATKA-POZNIEJSZA, P-KONFLIKT-ZAPISU-NOTATKI „Ograniczenia”), docs/CARE_PLANS.md.
 //
 // Dane wyłącznie fikcyjne. Prawdziwy vilda_crypto.js + vilda_vault.js na adapterze pamięciowym, podstawiony zegar Date.
@@ -525,80 +527,437 @@ describe('E3-PR0b2b — Terminarz „Edytuj osobę”: zapis samej nazwy osoby n
   });
 });
 
-describe('E3-PR0b2b — luki modułu planów z etapami: dowód kroku według chwili zapisu (pole czytane i porównywane, zapis pola w drugim wydaniu); reguła notatek we fragmencie natywnym — z artefaktów repozytorium źródeł modułu', () => {
+
+describe('E3-PR0b2b — luki modułu planów z etapami: dowód kroku według chwili zmiany treści dokumentu (pole czytane i porównywane, zapis pola w drugim wydaniu); reguła notatek we fragmencie natywnym — z artefaktów repozytorium źródeł modułu', () => {
   // Dowód kroku planu z etapami pamięta numer wersji dokumentu (sourceRecordRevAtCapture). Po E3-PR0b2b scalenie może
   // przyjąć późniejszą treść z niższym rev (rev zostaje najwyższy — bez zmiany) albo podnieść sam rev bez zmiany treści.
-  // 2c (P-DOWOD-KROKU): dowód może mieć też chwilę zapisu dokumentu (sourceRecordUpdatedAtISOAtCapture); ekran planu
-  // porównuje wtedy chwilę zapisu (updatedAtISO), a dowód bez niej — jak dotąd po rev. Nowe pole w dwóch wydaniach:
-  // najpierw odczyt i porównanie, zapis pola dopiero po potwierdzeniu właściciela, że wszystkie urządzenia mają pierwsze.
-  // Testy 1–2 pokazują na prawdziwym sejfie, że chwila zapisu odróżnia oba przypadki, a test 3 — znane ograniczenie
-  // porównania po chwili zapisu (import karty); działanie ekranu i modeli:
-  // tests/unit/care-plan-staged-ui.test.mjs, care-plan-model.test.mjs, care-plan-mutation.test.mjs.
-  it('scalenie przyjmuje późniejszą treść z niższym rev, a rev dokumentu się nie zmienia — po rev tej zmiany nie widać, po chwili zapisu — widać', async () => {
+  // 2c (P-DOWOD-KROKU), decyzja właściciela z 2026-11-17: pole niesie chwilę zmiany treści dokumentu
+  // (sourceRecordContentAtISOAtCapture), nie chwilę zapisu. Ekran planu porównuje wtedy efektywną chwilę treści
+  // dokumentu — regułą sejfu Bnp_chwilaTresci: contentAtISO tylko w postaci toISOString, nie później niż updatedAtISO
+  // i z kotwicą contentForISO === updatedAtISO, inaczej updatedAtISO; dokładne napisy. Dowód bez pola — jak dotąd po rev.
+  // Nowe pole w dwóch wydaniach: najpierw odczyt i porównanie, zapis pola dopiero po potwierdzeniu właściciela, że
+  // wszystkie urządzenia mają pierwsze. Testy niżej pokazują na prawdziwym sejfie, które drogi zapisu zmieniają chwilę
+  // treści, a które tylko chwilę zapisu; działanie ekranu i modeli: tests/unit/care-plan-staged-ui.test.mjs,
+  // care-plan-model.test.mjs, care-plan-mutation.test.mjs.
+  const sejfTekst = zrodlo('vilda_vault.js');
+  const RETENCJA = { vildaRetention: '0' };
+  const PLIKI_RATUNKU = ['vilda_crypto.js', 'vilda_retention.js', 'vilda_vault.js'];
+  // Reguła sejfu wycięta z prawdziwego vilda_vault.js (Bnp_iso i Bnp_chwilaTresci) — ta sama, której używa scalanie.
+  const chwilaTresciSejfu = new Function(`${wytnijFunkcje(sejfTekst, 'Bnp_iso')}\n${wytnijFunkcje(sejfTekst, 'Bnp_chwilaTresci')}\nreturn Bnp_chwilaTresci;`)();
+  // Pola widoczne w dowodzie kroku planu: nagłówek (tytuł) i treść oryginału (termin z godziną, data badania, wynik, treść).
+  const WIDOCZNE = ['title', 'body', 'dueDateISO', 'dueTime', 'clinicalDateISO', 'labResult'];
+  const DOK = { title: 'Fikcyjny wynik', body: 'Fikcyjna treść wyniku.', category: 'observation', dueDateISO: '2026-11-30', dueTime: '09:30',
+    clinicalDateISO: '2026-11-10', labResult: { test: 'Fikcyjne badanie', value: '2,1', valueNum: 2.1, unit: 'mIU/l', norm: '0,4–4,0' } };
+  const bezChwil = (r) => { const x = { ...r }; for (const k of ['contentAtISO', 'contentForISO', 'stateAtISO', 'stateForISO']) delete x[k]; return x; };
+
+  // Stan dokumentu tak, jak go widzi dowód kroku: pola widoczne, rev, chwila zapisu i chwila treści (reguła sejfu na
+  // surowym rekordzie). Odczyt getPatientNote podaje contentAtISO tylko przy ważnej kotwicy — chwila z odczytu ta sama.
+  async function stan(U, id) {
+    const n = await U.vault.getPatientNote(id), r = await zapisana(U, id);
+    expect(n, 'dokument jest w sejfie').toBeTruthy();
+    const tresc = chwilaTresciSejfu(r);
+    expect(n.contentAtISO === undefined ? n.updatedAtISO : n.contentAtISO, 'chwila treści z odczytu = chwila treści z rekordu').toBe(tresc);
+    return { widoczne: JSON.stringify(WIDOCZNE.map((k) => (n[k] === undefined ? null : n[k]))), patientId: n.patientId, rev: n.rev,
+      zapis: n.updatedAtISO, tresc, kotwica: typeof r.contentAtISO === 'string' && r.contentForISO === r.updatedAtISO };
+  }
+  async function dokument(U, extra = {}) {
+    krok(); const patientId = (await U.vault.savePatient({ name: 'Fikcyjna Pacjentka Dowód', user: { sex: 'F', age: 9, height: 130, weight: 28 } }, { dedup: false })).patientId;
+    krok(); const { id } = await U.vault.savePatientNote({ patientId, ...DOK, ...extra });
+    krok();
+    return { patientId, id };
+  }
+  const zapiszDok = (U, s, zmiana = {}) => U.vault.savePatientNote({ patientId: s.patientId, id: s.id, ...DOK, ...zmiana });
+
+  it('scalenie przyjmuje późniejszą treść z niższym rev, a rev dokumentu się nie zmienia — po rev tej zmiany nie widać, po chwili treści — widać', async () => {
     const s = await dwaUrzadzenia();
     for (const t of ['A1.', 'A2.']) { krok(); await s.A.vault.savePatientNote({ patientId: s.patientId, id: s.id, title: 'Wizyta', body: t, category: 'observation' }); }
-    const przed = await s.A.vault.getPatientNote(s.id), przypiety = przed.rev;
+    const przed = await stan(s.A, s.id), przypiety = przed.rev;
     krok(5000); await s.B.vault.savePatientNote({ patientId: s.patientId, id: s.id, title: 'Wizyta', body: 'B1 (później).', category: 'observation' });
     await wyslij(s.B, s.A);
-    const po = await s.A.vault.getPatientNote(s.id);
-    expect([po.body, po.rev], 'treść zmieniona, rev ten sam co przy przypięciu').toEqual(['B1 (później).', przypiety]);
-    expect(typeof przed.updatedAtISO, 'dokument przy przypięciu ma chwilę zapisu').toBe('string');
-    expect(po.updatedAtISO, 'chwila zapisu się zmieniła — porównanie po niej tę zmianę widzi').not.toBe(przed.updatedAtISO);
+    const po = await stan(s.A, s.id);
+    expect([JSON.parse(po.widoczne)[1], po.rev], 'treść zmieniona, rev ten sam co przy przypięciu').toEqual(['B1 (później).', przypiety]);
+    expect(typeof przed.tresc, 'dokument przy przypięciu ma chwilę treści').toBe('string');
+    expect(po.tresc, 'chwila treści się zmieniła — porównanie po niej tę zmianę widzi').not.toBe(przed.tresc);
+    expect(po.tresc > przed.tresc, 'późniejsza chwila treści').toBe(true);
   });
 
-  it('zapis samego rev: dokument zostaje bez zmian treści, a rev rośnie — po rev byłby fałszywy alarm, po chwili zapisu go nie ma', async () => {
+  it('zapis samego rev: dokument zostaje bez zmian treści, a rev rośnie — po rev byłby fałszywy alarm, po chwili treści go nie ma', async () => {
     const s = await dwaUrzadzenia();
     for (const t of ['A1.', 'A2.']) { krok(); await s.A.vault.savePatientNote({ patientId: s.patientId, id: s.id, title: 'Wizyta', body: t, category: 'observation' }); }
     krok(5000); await s.B.vault.savePatientNote({ patientId: s.patientId, id: s.id, title: 'Wizyta', body: 'B1 (później).', category: 'observation' });
-    const przed = await s.B.vault.getPatientNote(s.id), przypiety = przed.rev;
+    const przed = await stan(s.B, s.id), przypiety = przed.rev;
     await wyslij(s.A, s.B);
-    const po = await s.B.vault.getPatientNote(s.id);
-    expect([po.body, po.rev], 'ta sama treść, wyższy rev').toEqual(['B1 (później).', przypiety + 1]);
-    expect(typeof przed.updatedAtISO, 'dokument przy przypięciu ma chwilę zapisu').toBe('string');
-    expect(po.updatedAtISO, 'chwila zapisu bez zmian — porównanie po niej nie zgłasza zmiany').toBe(przed.updatedAtISO);
+    const po = await stan(s.B, s.id);
+    expect([po.widoczne, po.rev], 'ta sama treść, wyższy rev').toEqual([przed.widoczne, przypiety + 1]);
+    expect(po.tresc, 'chwila treści bez zmian — porównanie po niej nie zgłasza zmiany').toBe(przed.tresc);
+    expect(po.zapis, 'chwila zapisu też bez zmian').toBe(przed.zapis);
   });
 
-  // Znane ograniczenie (P-DOWOD-KROKU, „Ograniczenia”): import karty, ratunek D-21 i rekord złączony przesuwają chwilę
-  // zapisu bez zmiany treści. Dowód z chwilą zapisu pokaże wtedy „Dokument został zmieniony…”, a synchronizacja niesie
-  // nową chwilę zapisu dalej (ta sama treść i rev — wygrywa późniejsza chwila zapisu), więc komunikat pojawi się na
-  // każdym urządzeniu. Porównanie po rev tego nie zgłaszało; porównanie po chwili treści też by nie zgłosiło.
-  it('import karty na urządzeniu bez dokumentu przesuwa jego chwilę zapisu bez zmiany treści, rev i chwili treści, a synchronizacja niesie ją do urządzenia, które miało dokument od początku', async () => {
-    const chwilaTresci = (n) => n.contentAtISO || n.updatedAtISO;
-    const A = await sejf('A');
-    krok(); const patientId = (await A.vault.savePatient({ name: 'Fikcyjna Pacjentka Dowód', user: { sex: 'F', age: 9, height: 130, weight: 28 } })).patientId;
-    krok(); const { id } = await A.vault.savePatientNote({ patientId, title: 'Wynik', body: 'Fikcyjna treść wyniku.', category: 'observation' });
-    krok(); const przed = await A.vault.getPatientNote(id), plik = await A.vault.exportPatientEnvelope(patientId);
+  // Import karty na urządzeniu bez dokumentu daje mu nową chwilę zapisu „teraz” i zachowuje chwilę treści z pliku
+  // (kotwica nowej chwili zapisu); synchronizacja niesie nową chwilę zapisu dalej (ta sama treść i rev — wygrywa
+  // późniejsza chwila zapisu). Pole z chwilą zapisu dawałoby tu trwały fałszywy „Dokument został zmieniony…” na każdym
+  // urządzeniu — dlatego pole niesie chwilę treści: dowód złapany przed importem otwiera się wszędzie.
+  it('import karty przesuwa chwilę zapisu, nie chwilę treści: dowód złapany przed importem otwiera się na urządzeniu z importem i na tym, które miało dokument od początku', async () => {
+    const A = await sejf('A'), s = await dokument(A);
+    const przed = await stan(A, s.id), plik = await A.vault.exportPatientEnvelope(s.patientId);
     krok(5 * MIN); const C = await sejf('C', { zKopii: A });
     await C.vault.importPatientFromEnvelope(plik, C.haslo);
-    const naC = await C.vault.getPatientNote(id);
-    expect([naC.body, naC.rev, chwilaTresci(naC)], 'po imporcie: ta sama treść, rev i chwila treści').toEqual([przed.body, przed.rev, chwilaTresci(przed)]);
-    expect(naC.updatedAtISO, 'po imporcie: nowa chwila zapisu').not.toBe(przed.updatedAtISO);
+    const naC = await stan(C, s.id);
+    expect([naC.widoczne, naC.rev, naC.tresc], 'po imporcie: ta sama treść, rev i chwila treści').toEqual([przed.widoczne, przed.rev, przed.tresc]);
+    expect(naC.zapis, 'po imporcie: nowa chwila zapisu').not.toBe(przed.zapis);
+    expect(naC.kotwica, 'chwila treści z pliku zakotwiczona do nowej chwili zapisu').toBe(true);
     await wyslij(C, A);
-    const naA = await A.vault.getPatientNote(id);
-    expect([naA.body, naA.rev, chwilaTresci(naA)], 'po synchronizacji: ta sama treść, rev i chwila treści').toEqual([przed.body, przed.rev, chwilaTresci(przed)]);
-    expect(naA.updatedAtISO, 'chwila zapisu z importu doszła do urządzenia, które miało dokument od początku').toBe(naC.updatedAtISO);
+    const naA = await stan(A, s.id);
+    expect([naA.widoczne, naA.rev, naA.tresc], 'po synchronizacji: ta sama treść, rev i chwila treści').toEqual([przed.widoczne, przed.rev, przed.tresc]);
+    expect(naA.zapis, 'chwila zapisu z importu doszła do urządzenia, które miało dokument od początku').toBe(naC.zapis);
   });
 
-  it('ekran planu porównuje dowód z chwilą zapisu po chwili zapisu dokumentu, a dowód bez niej — po rev; model przyjmuje to pole w dowodzie i w powiązaniu', () => {
+  // Groźny przypadek porównania po chwili zapisu w zwykłej pracy: A poprawia dokument dwa razy (pierwsza poprawka dochodzi
+  // do C, druga nie), B — z pierwotną wersją — oznacza „wykonane”. Złączenia „treść stąd, oznaczenie stamtąd” liczone
+  // z różnymi wersjami A dostają tę samą chwilę zapisu (1 ms po „wykonane”), a różną treść. Dowód złapany na C przy
+  // pierwszej poprawce, potem na C przychodzi złączenie z drugą poprawką: chwila zapisu ta sama, chwila treści — nie.
+  it.each([['trzy urządzenia: złączenie z drugą poprawką liczy A', false], ['cztery urządzenia: złączenie z drugą poprawką liczy D', true]])(
+    'dwa złączenia z tą samą chwilą zapisu i różną treścią (%s): po chwili zapisu zmiany nie widać, po chwili treści — widać', async (_opis, cztery) => {
+      const A = await sejf('A'), B = await sejf('B'), C = await sejf('C'), D = cztery ? await sejf('D') : null, s = await dokument(A);
+      for (const U of [B, C, D]) if (U) await wyslij(A, U);
+      krok(); await zapiszDok(A, s, { body: 'V2: pierwsza poprawka na A.' });
+      await wyslij(A, C);
+      krok(); await zapiszDok(A, s, { body: 'V3: druga poprawka na A.' });
+      if (cztery) await wyslij(A, D);
+      krok(); await B.vault.completePatientNote(s.id);
+      await wyslij(B, C); await wyslij(B, cztery ? D : A);
+      const przed = await stan(C, s.id);
+      expect(JSON.parse(przed.widoczne)[1], 'dowód na C: pierwsza poprawka z „wykonane” z B').toBe('V2: pierwsza poprawka na A.');
+      await wyslij(cztery ? D : A, C);
+      const po = await stan(C, s.id);
+      expect(JSON.parse(po.widoczne)[1], 'na C przyszła druga poprawka').toBe('V3: druga poprawka na A.');
+      expect(po.zapis, 'ta sama chwila zapisu — porównanie po niej uznałoby dokument za niezmieniony').toBe(przed.zapis);
+      expect(po.tresc, 'chwila treści się zmieniła — porównanie po niej pokazuje zmianę').not.toBe(przed.tresc);
+      expect(po.tresc > przed.tresc).toBe(true);
+    });
+
+  // Zapisy bez zmiany widocznej treści: chwila zapisu się przesuwa (pole z chwilą zapisu dawałoby fałszywy alarm),
+  // chwila treści zostaje — dowód złapany wcześniej otwiera się.
+  const BEZ_ZMIANY_TRESCI = [
+    ['„wykonane” na tym samym urządzeniu', async () => {
+      const A = await sejf('A'), s = await dokument(A), przed = await stan(A, s.id);
+      krok(); await A.vault.completePatientNote(s.id);
+      return { przed, po: [await stan(A, s.id)] };
+    }],
+    ['„nie zgłosił się”, potem cofnięcie', async () => {
+      const A = await sejf('A'), s = await dokument(A), przed = await stan(A, s.id);
+      krok(); await A.vault.noShowPatientNote(s.id); const po1 = await stan(A, s.id);
+      krok(); await A.vault.uncompletePatientNote(s.id);
+      return { przed, po: [po1, await stan(A, s.id)] };
+    }],
+    ['„wykonane” z innego urządzenia', async () => {
+      const A = await sejf('A'), B = await sejf('B'), s = await dokument(A);
+      await wyslij(A, B); const przed = await stan(A, s.id);
+      krok(); await B.vault.completePatientNote(s.id); await wyslij(B, A);
+      return { przed, po: [await stan(A, s.id)] };
+    }],
+    ['zapis z edytora bez zmian, tu i z innego urządzenia', async () => {
+      const A = await sejf('A'), B = await sejf('B'), s = await dokument(A);
+      await wyslij(A, B); const przed = await stan(A, s.id);
+      krok(); await zapiszDok(A, s); const tutaj = await stan(A, s.id);
+      krok(); await zapiszDok(B, s); await wyslij(B, A);
+      return { przed, po: [tutaj, await stan(A, s.id)] };
+    }],
+    ['złączenie: treść stąd, „wykonane” z innego urządzenia — na tym i na drugim urządzeniu', async () => {
+      const A = await sejf('A'), B = await sejf('B'), s = await dokument(A);
+      await wyslij(A, B);
+      krok(); await zapiszDok(A, s, { body: 'A: późniejsza treść.' });
+      const przed = await stan(A, s.id);
+      krok(); await B.vault.completePatientNote(s.id); await wyslij(B, A);
+      const naA = await stan(A, s.id); await wyslij(A, B);
+      return { przed, po: [naA, await stan(B, s.id)] };
+    }],
+    ['„Scal kopię konta” z kopii z „wykonane” z innego urządzenia', async () => {
+      const A = await sejf('A'), B = await sejf('B'), s = await dokument(A);
+      await wyslij(A, B); const przed = await stan(A, s.id);
+      krok(); await B.vault.completePatientNote(s.id);
+      krok(); const kopiaKonta = await B.vault.exportVaultBackup();
+      krok(); await A.vault.mergeVaultBackup(kopiaKonta, B.haslo);
+      return { przed, po: [await stan(A, s.id)] };
+    }],
+    ['ratunek D-21 prawdziwą ścieżką („Usuń pacjenta” na A, późniejszy zapis karty na B)', async () => {
+      const A = await sejf('A', { pliki: PLIKI_RATUNKU, ustawienia: RETENCJA }), B = await sejf('B', { pliki: PLIKI_RATUNKU, ustawienia: RETENCJA });
+      const karta = (height) => ({ name: 'Fikcyjny Ratunek', user: { lastName: 'Fikcyjny', firstName: 'Ratunek', dobISO: '2016-03-12', sex: 'M', height, weight: 24 } });
+      krok(); const { patientId } = await A.vault.savePatient(karta(120), { dedup: false });
+      krok(); await A.vault.savePatient(karta(125), { dedup: false, patientId });
+      krok(1000); const { id } = await A.vault.savePatientNote({ patientId, ...DOK });
+      await wyslij(A, B); const przed = await stan(B, id);
+      krok(); await A.vault.removePatient(patientId);
+      krok(); await B.vault.savePatient(karta(130), { dedup: false, patientId });
+      krok(5000); await wyslij(A, B);
+      return { przed, po: [await stan(B, id)] };
+    }],
+  ];
+  it.each(BEZ_ZMIANY_TRESCI)('%s: chwila zapisu się przesuwa, chwila treści zostaje — dowód złapany wcześniej otwiera się', async (_opis, przebieg) => {
+    const { przed, po } = await przebieg();
+    for (const [i, teraz] of po.entries()) {
+      expect(teraz.widoczne, `odczyt ${i + 1}: widoczna treść bez zmian`).toBe(przed.widoczne);
+      expect(teraz.zapis, `odczyt ${i + 1}: nowa chwila zapisu`).not.toBe(przed.zapis);
+      expect(teraz.tresc, `odczyt ${i + 1}: ta sama chwila treści`).toBe(przed.tresc);
+      expect(teraz.kotwica, `odczyt ${i + 1}: chwila treści zakotwiczona do nowej chwili zapisu`).toBe(true);
+    }
+  });
+
+  // Znane ograniczenie (jak przy rev i chwili zapisu): wskrzeszenie usuniętej notatki tą samą treścią („Zostaw notatkę”)
+  // jest nowym zapisem treści — dowód pokaże „Dokument został zmieniony…”.
+  it('wskrzeszenie usuniętej notatki tą samą treścią daje nową chwilę treści', async () => {
+    const A = await sejf('A'), s = await dokument(A), przed = await stan(A, s.id);
+    krok(); await A.vault.removePatientNote(s.id);
+    krok(); await zapiszDok(A, s);
+    const po = await stan(A, s.id);
+    expect(po.widoczne).toBe(przed.widoczne);
+    expect(po.tresc, 'nowa chwila treści').not.toBe(przed.tresc);
+    expect(po.kotwica, 'bez kotwicy: chwila treści = chwila zapisu').toBe(false);
+  });
+
+  // Jedna reguła w trzech miejscach (sejf, ekran planu, moduł zapisu planu): funkcja ekranu wycięta z vilda_care_plans.js
+  // ma dawać dla tych samych rekordów tę samą chwilę co Bnp_chwilaTresci z sejfu — z surowego rekordu i z odczytu
+  // getPatientNote (który podaje contentAtISO tylko przy ważnej kotwicy).
+  it('funkcja ekranu planu (stagedContentInstant) liczy chwilę treści tak samo jak sejf (Bnp_chwilaTresci) dla tych samych rekordów, przy ważnej i nieważnych kotwicach', async () => {
+    const ekran = new Function(`${wytnijFunkcje(zrodlo('vilda_care_plans.js'), 'stagedContentInstant')}\nreturn stagedContentInstant;`)();
+    const A = await sejf('A'), s = await dokument(A), r0 = bezChwil(await zapisana(A, s.id));
+    const U = '2026-11-16T09:00:00.000Z', C = '2026-11-16T08:30:00.000Z';
+    const KOTWICE = [
+      ['bez kotwicy', { updatedAtISO: U }],
+      ['ważna kotwica', { updatedAtISO: U, contentAtISO: C, contentForISO: U }],
+      ['kotwica innej chwili zapisu', { updatedAtISO: U, contentAtISO: C, contentForISO: '2026-11-16T08:45:00.000Z' }],
+      ['chwila treści bez contentForISO', { updatedAtISO: U, contentAtISO: C }],
+      ['chwila treści późniejsza niż chwila zapisu', { updatedAtISO: C, contentAtISO: U, contentForISO: C }],
+      ['chwila treści równa chwili zapisu', { updatedAtISO: U, contentAtISO: U, contentForISO: U }],
+      ['chwila treści bez milisekund', { updatedAtISO: U, contentAtISO: '2026-11-16T08:30:00Z', contentForISO: U }],
+      ['chwila treści z przesunięciem strefy', { updatedAtISO: U, contentAtISO: '2026-11-16T09:30:00.000+01:00', contentForISO: U }],
+      ['chwila treści z niemożliwym dniem', { updatedAtISO: U, contentAtISO: '2026-02-31T08:30:00.000Z', contentForISO: U }],
+      ['chwila treści jako liczba', { updatedAtISO: U, contentAtISO: Date.parse(C), contentForISO: U }],
+      ['chwila zapisu bez milisekund z kotwicą do niej', { updatedAtISO: '2026-11-16T09:00:00Z', contentAtISO: C, contentForISO: '2026-11-16T09:00:00Z' }],
+      ['chwila zapisu bez milisekund, bez kotwicy', { updatedAtISO: '2026-11-16T09:00:00Z' }],
+    ];
+    for (const [opis, pola] of KOTWICE) {
+      await A.adapter.putPatientNoteForUser(A.uid, { ...r0, ...pola });
+      const surowy = await zapisana(A, s.id), odczyt = await A.vault.getPatientNote(s.id), wSejfie = chwilaTresciSejfu(surowy);
+      expect(ekran(surowy), `${opis}: z surowego rekordu`).toBe(wSejfie);
+      expect(ekran(odczyt), `${opis}: z odczytu getPatientNote`).toBe(wSejfie);
+      expect(odczyt.contentAtISO !== undefined, `${opis}: odczyt podaje contentAtISO tylko przy ważnej kotwicy`).toBe(wSejfie !== surowy.updatedAtISO);
+    }
+    // Bez chwili zapisu sejf daje pusty napis (żaden dowód mu nie odpowiada), ekran — brak chwili (dokument „zmieniony”).
+    for (const pola of [{}, { contentAtISO: C, contentForISO: C }, { contentAtISO: C }]) {
+      const rekord = { ...r0, ...pola }; delete rekord.updatedAtISO;
+      await A.adapter.putPatientNoteForUser(A.uid, rekord);
+      const surowy = await zapisana(A, s.id), odczyt = await A.vault.getPatientNote(s.id);
+      expect(chwilaTresciSejfu(surowy), JSON.stringify(pola)).toBe('');
+      expect(ekran(surowy), JSON.stringify(pola) + ': z surowego rekordu').toBeNull();
+      expect(ekran(odczyt), JSON.stringify(pola) + ': z odczytu getPatientNote').toBeNull();
+    }
+  });
+
+  // Niezmiennik (chwila treści robi z kotwicy własność bezpieczeństwa dowodu, nie tylko regułę scalania): każdy zapis
+  // notatki, który zmienia pole widoczne w dowodzie, nie zostawia ważnej kotwicy ze starą chwilą treści. Dokument startuje
+  // z ważną kotwicą (zapis z edytora bez zmian), więc stara chwila treści jest w rekordzie i mogłaby przetrwać.
+  const ZMIANY_WIDOCZNE = [
+    ['treść', { body: 'Fikcyjna treść wyniku — poprawiona.' }],
+    ['tytuł', { title: 'Fikcyjny wynik (kontrola)' }],
+    ['termin', { dueDateISO: '2026-12-02' }],
+    ['godzina', { dueTime: '11:00' }],
+    ['data badania', { clinicalDateISO: '2026-11-11' }],
+    ['wartość wyniku', { labResult: { ...DOK.labResult, value: '7,9', valueNum: 7.9 } }],
+    ['jednostka wyniku', { labResult: { ...DOK.labResult, unit: 'µIU/ml' } }],
+  ];
+  async function zakotwiczony(U) {
+    const s = await dokument(U);
+    krok(); await zapiszDok(U, s);
+    const przed = await stan(U, s.id);
+    expect(przed.kotwica, 'start: ważna kotwica ze starą chwilą treści').toBe(true);
+    return { s, przed };
+  }
+  function niezmiennik(przed, po, opis) {
+    expect(po.widoczne, `${opis}: pole widoczne zmienione`).not.toBe(przed.widoczne);
+    expect(po.tresc, `${opis}: nie zostaje stara chwila treści`).not.toBe(przed.tresc);
+    expect(po.tresc > przed.tresc, `${opis}: chwila treści późniejsza`).toBe(true);
+  }
+  const DROGI = [
+    ['zapis z edytora', async (zmiana) => {
+      const A = await sejf('A'), { s, przed } = await zakotwiczony(A);
+      krok(); await zapiszDok(A, s, zmiana);
+      return { przed, po: await stan(A, s.id) };
+    }],
+    ['późniejsza treść z innego urządzenia (scalenie synchronizacji)', async (zmiana) => {
+      const A = await sejf('A'), B = await sejf('B'), { s, przed } = await zakotwiczony(A);
+      await wyslij(A, B);
+      krok(); await zapiszDok(B, s, zmiana); await wyslij(B, A);
+      return { przed, po: await stan(A, s.id) };
+    }],
+    ['złączenie: treść z innego urządzenia, „wykonane” stąd (scalenie synchronizacji)', async (zmiana) => {
+      const A = await sejf('A'), B = await sejf('B'), { s } = await zakotwiczony(A);
+      await wyslij(A, B);
+      krok(); await zapiszDok(B, s, zmiana);
+      krok(); await A.vault.completePatientNote(s.id);
+      const przed = await stan(A, s.id);
+      await wyslij(B, A);
+      const po = await stan(A, s.id);
+      expect(po.zapis > przed.zapis && po.zapis !== przed.zapis, 'złączenie z nową chwilą zapisu').toBe(true);
+      return { przed, po };
+    }],
+    ['import pliku pacjenta z nowszą treścią', async (zmiana) => {
+      const A = await sejf('A'), B = await sejf('B'), { s, przed } = await zakotwiczony(A);
+      await wyslij(A, B);
+      krok(); await zapiszDok(B, s, zmiana);
+      krok(); const plik = await B.vault.exportPatientEnvelope(s.patientId);
+      krok(); await A.vault.importPatientFromEnvelope(plik, B.haslo);
+      return { przed, po: await stan(A, s.id) };
+    }],
+    ['„Scal kopię konta” z kopii z nowszą treścią', async (zmiana) => {
+      const A = await sejf('A'), B = await sejf('B'), { s, przed } = await zakotwiczony(A);
+      await wyslij(A, B);
+      krok(); await zapiszDok(B, s, zmiana);
+      krok(); const kopiaKonta = await B.vault.exportVaultBackup();
+      krok(); await A.vault.mergeVaultBackup(kopiaKonta, B.haslo);
+      return { przed, po: await stan(A, s.id) };
+    }],
+  ];
+  it.each(DROGI.flatMap(([droga, przebieg]) => ZMIANY_WIDOCZNE.map(([pole, zmiana]) => [droga, pole, przebieg, zmiana])))(
+    'niezmiennik — %s, zmienione pole: %s: nie zostaje ważna kotwica ze starą chwilą treści', async (droga, pole, przebieg, zmiana) => {
+      const { przed, po } = await przebieg(zmiana);
+      niezmiennik(przed, po, `${droga} / ${pole}`);
+    });
+
+  it.each([
+    ['„Przełóż” (snoozePatientNote)', async (A, s) => { await A.vault.snoozePatientNote(s.id, '2026-12-05'); }],
+    ['wykonanie przypomnienia z opisem (saveReminderOutcome)', async (A, s) => {
+      const cur = await A.vault.getPatientNote(s.id);
+      const w = await A.vault.saveReminderOutcome({ id: s.id, patientId: s.patientId, baseRev: cur.rev, baseUpdatedAtISO: cur.updatedAtISO, baseNote: cur,
+        operationId: operacja(), action: 'complete', dateISO: '2026-11-16', text: 'Fikcyjny opis wykonania.' });
+      expect(w.saved).toBe(true);
+    }],
+  ])('niezmiennik — %s: nie zostaje ważna kotwica ze starą chwilą treści', async (_opis, zapis) => {
+    const A = await sejf('A'), { s, przed } = await zakotwiczony(A);
+    krok(); await zapis(A, s);
+    niezmiennik(przed, await stan(A, s.id), _opis);
+  });
+
+  // „Scal pacjentów” przenosi dokument do karty docelowej bez nowej treści i zachowuje chwilę treści (przeniesienie nie
+  // jest zmianą treści). Dokument bez tytułu dostaje przy tym tytuł „(wpis)” — to jedyna znana droga, która zmienia pole
+  // widoczne (nagłówek) i zostawia ważną kotwicę. Dokument trafia do innej karty niż plan, a ekran planu otwiera tylko
+  // dokument z karty planu („Dokument jest niedostępny”), więc dowód tej zmiany nie pokaże jako niezmienionej.
+  it.each([['dokument z tytułem', {}, false], ['dokument bez tytułu', { title: '' }, true]])('„Scal pacjentów” — %s: chwila treści zostaje, dokument przechodzi do karty docelowej', async (_opis, extra, nowyTytul) => {
+    const A = await sejf('A'), s = await dokument(A, extra), przed = await stan(A, s.id);
+    krok(); const cel = (await A.vault.savePatient({ name: 'Fikcyjna Pacjentka Docelowa', user: { sex: 'F', age: 9, height: 131, weight: 29 } }, { dedup: false })).patientId;
+    krok(); await A.vault.mergePatients(s.patientId, cel);
+    const po = await stan(A, s.id);
+    expect([po.patientId, po.tresc, po.kotwica], 'karta docelowa, ta sama chwila treści z kotwicą').toEqual([cel, przed.tresc, true]);
+    if (nowyTytul) expect(JSON.parse(po.widoczne)[0], 'dokument bez tytułu dostaje tytuł „(wpis)”').toBe('(wpis)');
+    else expect(po.widoczne, 'widoczna treść bez zmian').toBe(przed.widoczne);
     const plany = zrodlo('vilda_care_plans.js');
-    const i = plany.indexOf('function stagedEvidenceChanged(');
-    expect(i, 'funkcja porównania dowodu kroku').toBeGreaterThan(0);
-    const porownanie = plany.slice(i, plany.indexOf('\n  }\n', i));
-    expect(porownanie, 'dowód z chwilą zapisu: porównanie z updatedAtISO dokumentu').toContain("'sourceRecordUpdatedAtISOAtCapture'");
-    expect(porownanie, 'dowód z chwilą zapisu: porównanie z updatedAtISO dokumentu').toContain('!== original.updatedAtISO');
+    expect(plany, 'ekran planu otwiera tylko dokument z karty planu').toContain("stagedOriginal.patientId !== patientId) throw new Error('Dokument jest niedostępny. Sprawdź dokumentację pacjenta.')");
+  });
+
+  // Hydracja (starszy klient pominął rozszerzenie planu opieki): rozszerzenie wraca tylko do rekordu równego we wszystkich
+  // polach odczytu poza careContext i polami chwil — zapis bez zmiany pól widocznych, z tą samą chwilą zapisu i treści.
+  it('hydracja rozszerzenia planu opieki nie zmienia pól widocznych ani chwili treści; rekord z inną treścią nie jest hydratowany', async () => {
+    const A = await sejf('A'), B = await sejf('B');
+    krok(); const patientId = (await A.vault.savePatient({ name: 'Fikcyjna Pacjentka Plan', user: { sex: 'F', age: 12, height: 150, weight: 40 } }, { dedup: false })).patientId;
+    krok(); const utworzony = await A.vault.mutateCarePlan({ patientId, operationId: operacja(), action: 'create', title: 'Fikcyjny plan', goal: 'Fikcyjny cel planu.' });
+    expect(utworzony.saved).toBe(true);
+    const plan = utworzony.plan || await A.vault.getCarePlan(utworzony.planId);
+    krok(); const krokPlanu = await A.vault.mutateCarePlan({ planId: plan.id, patientId, baseRev: plan.rev, operationId: operacja(), action: 'addStep',
+      step: { title: 'Fikcyjne badanie', kind: 'Badanie', state: 'pending', reminderDateISO: '2026-11-30', description: 'Fikcyjne ustalenia.' } });
+    expect(krokPlanu.saved).toBe(true);
+    const ladunek = kopia(await A.vault.exportSyncPayload()), stary = kopia(ladunek);
+    stary.patientNotes.forEach((n) => { delete n.careContext; });
+    await B.vault.mergeSyncPayload(stary);
+    expect(await B.vault.getCarePlan(plan.id), 'po starszym kliencie: plan bez rozszerzenia').toBeNull();
+    const ids = ladunek.patientNotes.map((n) => n.id), przed = new Map();
+    for (const id of ids) przed.set(id, { stan: await stan(B, id), rekord: bezChwil(await zapisana(B, id)), chwile: await zapisana(B, id) });
+    // Rekord o tym samym rev i chwili zapisu, ale innej treści — nie jest hydratowany (rekord bez zmian).
+    const inna = kopia(ladunek); inna.patients = [];
+    inna.patientNotes = inna.patientNotes.filter((n) => n.id === plan.id).map((n) => ({ ...n, body: `${n.body}\nFikcyjna inna treść.` }));
+    await B.vault.mergeSyncPayload(inna);
+    expect(await zapisana(B, plan.id), 'rekord z inną treścią: bez zmian').toEqual(przed.get(plan.id).chwile);
+    await B.vault.mergeSyncPayload(ladunek);
+    expect(await B.vault.getCarePlan(plan.id), 'hydracja przywróciła plan').toBeTruthy();
+    for (const id of ids) {
+      const po = await stan(B, id), r = await zapisana(B, id), p = przed.get(id);
+      expect([po.widoczne, po.rev, po.zapis, po.tresc], `${id}: pola widoczne, rev, chwila zapisu i treści bez zmian`).toEqual([p.stan.widoczne, p.stan.rev, p.stan.zapis, p.stan.tresc]);
+      for (const k of ['contentAtISO', 'contentForISO']) expect(r[k], `${id}: ${k} bez zmian`).toBe(p.chwile[k]);
+    }
+  });
+
+  // Strażnik źródła tego samego niezmiennika: zapisy, które budują rekord notatki z poprzedniego rekordu (Object.assign
+  // z nowym szyfrogramem), przenoszą jego pola chwil. Dziś kotwicę unieważnia nowa chwila zapisu albo zapis nie zmienia
+  // pól widocznych. Nowy taki zapis musi zrobić jedno z dwojga albo usunąć pola chwil (Bnp_bezChwil).
+  it('sejf: zapisy budowane z poprzedniego rekordu z nowym szyfrogramem — znana lista, każdy z nową chwilą zapisu albo bez zmiany pól widocznych', () => {
+    const znalezione = [];
+    const re = /Object\.assign\(\{\},\s*([^,()]{1,60}?)\s*,\s*\{([^{}]{0,400})\}/g;
+    for (let m = re.exec(sejfTekst); m; m = re.exec(sejfTekst)) if (/bodyCipher/.test(m[2])) znalezione.push(m[0]);
+    expect(znalezione, 'lista zapisów z nowym szyfrogramem na metadanych poprzedniego rekordu').toEqual([
+      // migracja clinicalScrubDoneV1: pola kliniczne z metadanych do szyfrogramu (odczyt bierze treść, potem metadane) —
+      // pola widoczne bez zmian, ta sama chwila zapisu
+      'Object.assign({},a,{bodyCipher:c,medication:null,labResult:null,clinicalDateISO:null,procedureType:null,waitlistPriority:null}',
+      // hydracja rozszerzenia planu: tylko przy równych polach odczytu (test wyżej)
+      'Object.assign({}, stored, { bodyCipher }',
+      // odłączenie terminu z historii planu i odłączenie oryginału od planu: nowa chwila zapisu unieważnia kotwicę
+      'Object.assign({}, parent, { bodyCipher, rev: (parent.rev || 0) + 1, updatedAtISO: new Date().toISOString() }',
+      'Object.assign({}, original.stored, { bodyCipher, updatedAtISO: new Date().toISOString(), rev: (original.stored.rev || 0) + 1 }',
+    ]);
+    const h = wytnijFunkcje(sejfTekst, 'CareMvpHydrateSyncRecord');
+    expect(h, 'hydracja tylko przy równych polach odczytu poza careContext i polami chwil')
+      .toContain("keys.every(function (key) { return key === 'careContext' || Bnp_POLA_CHWIL.indexOf(key) >= 0 || CareMvpSyncEqual(decoded[key], incoming[key]); })");
+    expect(wytnijFunkcje(sejfTekst, 'CareMvpSyncHydrationCandidate'), 'hydracja przy tej samej chwili zapisu i rev').toContain('stored.updatedAtISO === incoming.updatedAtISO');
+    // Zapis planu we fragmencie natywnym składa rekord z poprzedniego z nową chwilą zapisu „teraz”.
+    const i = sejfTekst.indexOf('async function seal(note, before, hidden) {');
+    expect(i, 'zapis rekordu we fragmencie natywnym').toBeGreaterThan(0);
+    const seal = sejfTekst.slice(i, sejfTekst.indexOf('\n  }\n', i));
+    expect(seal).toContain('var now = new Date().toISOString(), raw = Object.assign({}, before || {}, {');
+    expect(seal).toContain('updatedAtISO: now,');
+    expect(seal).toContain('raw.bodyCipher = await V(plain);');
+    // Jedyne miejsce, które ustawia pole chwili treści, bierze chwilę wersji, której treść zostaje (Bnp_ustawChwileTresci).
+    expect(sejfTekst.split(/\.contentAtISO\s*=(?!=)/).length - 1, 'contentAtISO przypisywane tylko w Bnp_ustawChwileTresci').toBe(1);
+    expect(wytnijFunkcje(sejfTekst, 'Bnp_ustawChwileTresci')).toMatch(/r\.contentAtISO\s*=\s*c;\s*r\.contentForISO\s*=\s*u;/);
+  });
+
+  it('ekran planu porównuje dowód z chwilą treści po efektywnej chwili treści dokumentu (jedna funkcja, dokładne napisy), a dowód bez niej — po rev; modele przyjmują tylko nową nazwę pola', () => {
+    const plany = zrodlo('vilda_care_plans.js');
+    const regula = wytnijFunkcje(plany, 'stagedContentInstant'), porownanie = wytnijFunkcje(plany, 'stagedEvidenceChanged');
+    expect(porownanie, 'dowód z chwilą treści: pole po nowej nazwie').toContain("'sourceRecordContentAtISOAtCapture'");
+    expect(porownanie, 'dowód z chwilą treści: porównanie z efektywną chwilą treści dokumentu').toContain('stagedContentInstant(original)');
     expect(porownanie, 'dawny dowód: porównanie po rev').toContain('sourceRecordRevAtCapture !== original.rev');
-    expect(plany.split('stagedEvidenceChanged(').length - 1, 'funkcja użyta przy otwarciu dokumentu z planu').toBeGreaterThanOrEqual(2);
+    // Porównanie dokładnych napisów: bez Date.parse i bez sprowadzania postaci (kontrola postaci kanonicznej jak Bnp_iso
+    // jest w funkcji reguły; jej wynik to zawsze jeden z napisów dokumentu — sprawdza to test zgodności z sejfem wyżej).
+    expect(porownanie, 'porównanie bez Date.parse').not.toContain('Date.parse');
+    expect(porownanie, 'porównanie bez sprowadzania do toISOString').not.toContain('toISOString');
+    // Reguła jest jedna: pola kotwicy czyta tylko stagedContentInstant.
+    const bezReguly = plany.replace(regula, '');
+    expect(bezReguly, 'contentAtISO poza funkcją reguły').not.toContain('contentAtISO');
+    expect(bezReguly, 'contentForISO poza funkcją reguły').not.toContain('contentForISO');
+    expect(plany.split('stagedEvidenceChanged(').length - 1, 'funkcja porównania użyta przy otwarciu dokumentu z planu').toBeGreaterThanOrEqual(2);
+    // Ponowny odczyt przed zapisem: rev, chwila zapisu i efektywna chwila treści obu odczytów.
+    const i = plany.indexOf('return { box: box, read: async function () {');
+    expect(i, 'odczyt dowodu przed zapisem').toBeGreaterThan(0);
+    const odczyt = plany.slice(i, plany.indexOf('return { noteId: selected.id', i));
+    expect(odczyt).toContain('original.rev !== selected.rev');
+    expect(odczyt).toContain('original.updatedAtISO !== selected.updatedAtISO');
+    expect(odczyt).toMatch(/stagedContentInstant\(original\)\s*!==\s*stagedContentInstant\(selected\)/);
     expect(plany, 'bez dawnej listy samych numerów wersji').not.toContain('capturedRevisions');
     expect(plany).toContain('Dokument został zmieniony po powiązaniu z planem.');
-    const model = zrodlo('vilda_care_plan_model.js');
-    expect(model, 'lista pól dowodu').toContain("['noteId', 'sourceRecordRevAtCapture', 'sourceRecordUpdatedAtISOAtCapture']");
-    expect(model, 'lista pól powiązania').toContain("'noteId', 'sourceRecordRevAtCapture', 'sourceRecordUpdatedAtISOAtCapture', 'operationId', 'recordedAtISO'");
+    const model = zrodlo('vilda_care_plan_model.js'), zmiany = zrodlo('vilda_care_plan_mutation.js');
+    expect(model, 'lista pól dowodu').toContain("['noteId', 'sourceRecordRevAtCapture', 'sourceRecordContentAtISOAtCapture']");
+    expect(model, 'lista pól powiązania').toContain("'noteId', 'sourceRecordRevAtCapture', 'sourceRecordContentAtISOAtCapture', 'operationId', 'recordedAtISO'");
+    expect(zmiany, 'zależność odczytu z chwilą treści').toContain('expectedContentAtISO');
+    for (const [plik, kod] of [['vilda_care_plans.js', plany], ['vilda_care_plan_model.js', model], ['vilda_care_plan_mutation.js', zmiany]]) {
+      expect(kod, `${plik}: bez dawnej nazwy pola`).not.toContain('sourceRecordUpdatedAtISOAtCapture');
+      expect(kod, `${plik}: bez dawnego klucza zależności`).not.toContain('expectedUpdatedAtISO');
+    }
   });
 
-  it('ekran planu w tym wydaniu nie zapisuje chwili zapisu w dowodzie kroku (tylko ją czyta) — zapis dopiero w drugim wydaniu, po potwierdzeniu właściciela', () => {
+  it('ekran planu w tym wydaniu nie zapisuje pola w dowodzie kroku (ani nowej, ani dawnej nazwy) — zapis dopiero w drugim wydaniu, po potwierdzeniu właściciela', () => {
     const plany = zrodlo('vilda_care_plans.js');
     expect(plany, 'dowód z wyboru dokumentu: identyfikator i numer wersji').toContain('return { noteId: selected.id, sourceRecordRevAtCapture: selected.rev };');
-    expect(plany, 'pole nie jest kluczem literału').not.toMatch(/sourceRecordUpdatedAtISOAtCapture['"]?\s*:/);
-    expect(plany, 'pole nie jest przypisywane').not.toMatch(/(?:\.sourceRecordUpdatedAtISOAtCapture|\[\s*['"]sourceRecordUpdatedAtISOAtCapture['"]\s*\])\s*=(?!=)/);
+    for (const pole of ['sourceRecordContentAtISOAtCapture', 'sourceRecordUpdatedAtISOAtCapture']) {
+      expect(plany, `${pole}: nie jest kluczem literału`).not.toMatch(new RegExp(`${pole}['"]?\\s*:`));
+      expect(plany, `${pole}: nie jest przypisywane`).not.toMatch(new RegExp(`(?:\\.${pole}|\\[\\s*['"]${pole}['"]\\s*\\])\\s*=(?!=)`));
+    }
   });
 });

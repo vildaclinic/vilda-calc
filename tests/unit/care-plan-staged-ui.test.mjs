@@ -215,23 +215,35 @@ describe('V2 staged care-plan UI uses its protected writer', () => {
   });
 });
 
-// 2c (P-DOWOD-KROKU): evidence holding the document's capture instant (sourceRecordUpdatedAtISOAtCapture) is compared by
-// the document's updatedAtISO only; evidence without it keeps the revision comparison. New field in two releases: this
-// release reads and compares the instant, and the plan screen does not write it yet; a second release starts writing it
-// after the owner confirms that every device runs this one.
-describe('V2 staged care-plan UI compares step evidence by the capture instant when the evidence has one', () => {
-  const CAPTURED = 'sourceRecordUpdatedAtISOAtCapture', T1 = '2026-11-02T08:06:01.000Z', T2 = '2026-11-02T08:06:06.000Z';
+// 2c (P-DOWOD-KROKU): evidence holding the document's content instant (sourceRecordContentAtISOAtCapture — the instant
+// of the document's last content change when it was linked; owner's decision of 2026-11-17) is compared with the
+// document's effective content instant only; evidence without it keeps the revision comparison. The effective content
+// instant follows the vault rule (Bnp_chwilaTresci in vilda_vault.js): contentAtISO counts only in the exact toISOString
+// form, not later than updatedAtISO and anchored to it (contentForISO === updatedAtISO); otherwise it is updatedAtISO. A
+// document without updatedAtISO has no instant and is reported as changed. Texts are compared exactly, without
+// Date.parse and without bringing either side to one form. New field in two releases: this release reads and compares
+// the instant, and the plan screen does not write it yet; a second release starts writing it after the owner confirms
+// that every device runs this one.
+describe('V2 staged care-plan UI compares step evidence by the document content instant when the evidence has one', () => {
+  const CAPTURED = 'sourceRecordContentAtISOAtCapture', FORMER = 'sourceRecordUpdatedAtISOAtCapture';
+  const T1 = '2026-11-02T08:06:01.000Z', T2 = '2026-11-02T08:06:06.000Z', T3 = '2026-11-02T08:07:00.000Z';
   const CHANGED = 'Dokument został zmieniony po powiązaniu z planem.', CURRENT = 'Fikcyjna bieżąca treść dokumentu.';
-  const sourceNote = (rev, updatedAtISO) => {
-    const value = { id: 'fictional-document', patientId: 'fictional-staged-patient', rev, category: 'observation', title: 'Fikcyjny dokument', body: CURRENT };
+  const sourceNote = (rev, updatedAtISO, extra = {}) => {
+    const value = { id: 'fictional-document', patientId: 'fictional-staged-patient', rev, category: 'observation', title: 'Fikcyjny dokument', body: CURRENT, ...extra };
     if (updatedAtISO !== undefined) value.updatedAtISO = updatedAtISO;
     return value;
   };
+  // A document written again without a content change: a new write instant and the earlier content instant anchored to it.
+  const anchored = (rev, updatedAtISO, contentAtISO) => sourceNote(rev, updatedAtISO, { contentAtISO, contentForISO: updatedAtISO });
   const withFact = evidence => plan => { plan.careContext.facts.push({ id: 'fictional-fact', stepId: 'step-a', kind: 'resultReceipt', ...audit('fictional-receipt'), evidence }); };
   const withAssociation = extra => plan => { plan.careContext.associations.push({ id: 'fictional-association', stepId: 'step-a', kind: 'document', noteId: 'fictional-document',
     sourceRecordRevAtCapture: 0, operationId: 'fictional-association-operation', recordedAtISO: clinicalDay + 'T12:00:00.000Z', ...extra }); };
-  async function openEvidence(d, root, label) {
-    const control = button(root, label); expect(control, label).toBeTruthy();
+  const linked = (relation, rev, instant) => relation === 'fact'
+    ? withFact({ noteId: 'fictional-document', sourceRecordRevAtCapture: rev, [CAPTURED]: instant })
+    : withAssociation({ sourceRecordRevAtCapture: rev, [CAPTURED]: instant });
+  const label = relation => relation === 'fact' ? 'Otwórz dokument' : 'Otwórz wpis';
+  async function openEvidence(d, root, text) {
+    const control = button(root, text); expect(control, text).toBeTruthy();
     control.click(); await settle(); return d.host.textContent;
   }
   function expectChanged(d, text) {
@@ -242,60 +254,95 @@ describe('V2 staged care-plan UI compares step evidence by the capture instant w
     expect(text).not.toContain(CHANGED); expect(text).toContain(CURRENT); expect(d.host.querySelector('.vcp-record')).toBeTruthy();
     expect(d.vault.mutateStagedCarePlan).not.toHaveBeenCalled();
   }
+  async function opens(relation, rev, instant, document) {
+    const d = fixture({ edit: linked(relation, rev, instant), overrides: { getPatientNote: vi.fn(async () => structuredClone(document)) } }); await settle();
+    const before = JSON.stringify(d.plan), text = await openEvidence(d, d.host, label(relation));
+    expect(JSON.stringify(d.plan)).toBe(before);
+    return { d, text };
+  }
+  const relations = ['fact', 'association'];
 
-  it.each(['fact', 'association'])('opens the %s document whose revision rose while its capture instant is unchanged', async relation => {
-    const d = fixture({ edit: relation === 'fact' ? withFact({ noteId: 'fictional-document', sourceRecordRevAtCapture: 2, [CAPTURED]: T1 }) : withAssociation({ sourceRecordRevAtCapture: 2, [CAPTURED]: T1 }),
-      overrides: { getPatientNote: vi.fn(async () => sourceNote(3, T1)) } }); await settle();
-    expectOpened(d, await openEvidence(d, d.host, relation === 'fact' ? 'Otwórz dokument' : 'Otwórz wpis')); d.controller.destroy();
+  it.each(relations)('opens the %s document whose revision rose while its content instant is unchanged', async relation => {
+    const { d, text } = await opens(relation, 2, T1, sourceNote(3, T1)); expectOpened(d, text); d.controller.destroy();
   });
 
-  it.each(['fact', 'association'])('does not present a %s document with a later capture instant at the same revision', async relation => {
-    const d = fixture({ edit: relation === 'fact' ? withFact({ noteId: 'fictional-document', sourceRecordRevAtCapture: 3, [CAPTURED]: T1 }) : withAssociation({ sourceRecordRevAtCapture: 3, [CAPTURED]: T1 }),
-      overrides: { getPatientNote: vi.fn(async () => sourceNote(3, T2)) } }); await settle();
-    const before = JSON.stringify(d.plan);
-    expectChanged(d, await openEvidence(d, d.host, relation === 'fact' ? 'Otwórz dokument' : 'Otwórz wpis'));
-    expect(JSON.stringify(d.plan)).toBe(before); d.controller.destroy();
+  // Marking the document done here or on another device, saving it again unchanged, merging versions, importing the
+  // patient card and the D-21 rescue move the write instant and keep the content instant (valid anchor). The document
+  // opens: this is why the field carries the content instant, not the write instant.
+  it.each(relations)('opens the %s document written again without a content change: a new write instant, the same content instant with a valid anchor', async relation => {
+    const { d, text } = await opens(relation, 3, T1, anchored(4, T2, T1)); expectOpened(d, text); d.controller.destroy();
   });
 
-  it.each([['null', null], ['missing', undefined]])('treats a document whose capture instant is %s as changed for evidence holding one', async (_name, updatedAtISO) => {
-    const d = fixture({ edit: withFact({ noteId: 'fictional-document', sourceRecordRevAtCapture: 3, [CAPTURED]: T1 }), overrides: { getPatientNote: vi.fn(async () => sourceNote(3, updatedAtISO)) } }); await settle();
-    expectChanged(d, await openEvidence(d, d.host, 'Otwórz dokument')); d.controller.destroy();
+  it.each(relations.flatMap(relation => [
+    [relation, 'a later write instant without an anchor', sourceNote(3, T2)],
+    [relation, 'a later content instant with a valid anchor', anchored(3, T3, T2)],
+  ]))('does not present the %s document with %s at the same revision', async (relation, _name, document) => {
+    const { d, text } = await opens(relation, 3, T1, document); expectChanged(d, text); d.controller.destroy();
   });
 
-  // Known limitation (docs/clinical/ALGORITHMS.md, P-DOWOD-KROKU, „Ograniczenia”): a patient card import, the D-21 rescue
-  // and a merged record move the document's updatedAtISO while its content and its content instant (contentAtISO anchored
-  // to the new updatedAtISO) stay the same. The evidence compares the write instant, so such a document is reported as
-  // changed. Comparing the content instant instead would be a deliberate change of this test.
-  it.each(['fact', 'association'])('compares the write instant, not the content instant: the %s document moved without a content change is reported as changed', async relation => {
-    const moved = Object.assign(sourceNote(3, T2), { contentAtISO: T1, contentForISO: T2 });
-    const d = fixture({ edit: relation === 'fact' ? withFact({ noteId: 'fictional-document', sourceRecordRevAtCapture: 3, [CAPTURED]: T1 }) : withAssociation({ sourceRecordRevAtCapture: 3, [CAPTURED]: T1 }),
-      overrides: { getPatientNote: vi.fn(async () => moved) } }); await settle();
-    expectChanged(d, await openEvidence(d, d.host, relation === 'fact' ? 'Otwórz dokument' : 'Otwórz wpis')); d.controller.destroy();
+  // An anchor that is not valid does not count: the write instant (updatedAtISO) is the document's content instant. The
+  // same document opens for evidence holding its write instant and is reported as changed for evidence holding the
+  // instant from the invalid anchor.
+  it.each([
+    ['an anchor for another write instant (contentForISO is not updatedAtISO)', sourceNote(3, T2, { contentAtISO: T1, contentForISO: T3 }), T1],
+    ['an anchor without contentForISO', sourceNote(3, T2, { contentAtISO: T1 }), T1],
+    ['a content instant later than the write instant', sourceNote(3, T1, { contentAtISO: T2, contentForISO: T1 }), T2],
+    ['a content instant without milliseconds', sourceNote(3, T2, { contentAtISO: '2026-11-02T08:06:01Z', contentForISO: T2 }), '2026-11-02T08:06:01Z'],
+    ['a content instant with a time-zone offset', sourceNote(3, T2, { contentAtISO: '2026-11-02T09:06:01.000+01:00', contentForISO: T2 }), T1],
+  ])('counts the write instant when the document holds %s', async (_name, document, anchorInstant) => {
+    for (const relation of relations) {
+      const stale = await opens(relation, 3, anchorInstant, document); expectChanged(stale.d, stale.text); stale.d.controller.destroy();
+      const current = await opens(relation, 3, document.updatedAtISO, document); expectOpened(current.d, current.text); current.d.controller.destroy();
+    }
   });
 
-  it.each(['fact', 'association'])('keeps the revision comparison for older %s evidence without a capture instant', async relation => {
-    const same = fixture({ edit: relation === 'fact' ? withFact({ noteId: 'fictional-document', sourceRecordRevAtCapture: 3 }) : withAssociation({ sourceRecordRevAtCapture: 3 }),
-      overrides: { getPatientNote: vi.fn(async () => sourceNote(3, T2)) } }); await settle();
-    expectOpened(same, await openEvidence(same, same.host, relation === 'fact' ? 'Otwórz dokument' : 'Otwórz wpis')); same.controller.destroy();
-    const raised = fixture({ edit: relation === 'fact' ? withFact({ noteId: 'fictional-document', sourceRecordRevAtCapture: 2 }) : withAssociation({ sourceRecordRevAtCapture: 2 }),
-      overrides: { getPatientNote: vi.fn(async () => sourceNote(3, T1)) } }); await settle();
-    expectChanged(raised, await openEvidence(raised, raised.host, relation === 'fact' ? 'Otwórz dokument' : 'Otwórz wpis')); raised.controller.destroy();
+  // Exact texts: an instant of the same moment in another form is a different instant. Bringing both sides to one form
+  // would let a damaged payload with a new text and a write instant without milliseconds pass as the linked version.
+  it.each([
+    ['a field without milliseconds, a canonical document instant', '2026-11-02T08:06:01Z', sourceNote(3, T1)],
+    ['a canonical field, a document instant without milliseconds', T1, sourceNote(3, '2026-11-02T08:06:01Z')],
+    ['a field with one millisecond digit, a canonical document instant', '2026-11-02T08:06:01.5Z', sourceNote(3, '2026-11-02T08:06:01.500Z')],
+  ])('compares exact texts of the same moment: %s is reported as changed', async (_name, instant, document) => {
+    for (const relation of relations) {
+      const { d, text } = await opens(relation, 3, instant, document); expectChanged(d, text); d.controller.destroy();
+    }
   });
 
   it.each([
-    ['fact with a matching instant, older association with another revision', plan => { withFact({ noteId: 'fictional-document', sourceRecordRevAtCapture: 2, [CAPTURED]: T1 })(plan); withAssociation({ sourceRecordRevAtCapture: 2 })(plan); }],
-    ['older fact with the same revision, association with another instant', plan => { withFact({ noteId: 'fictional-document', sourceRecordRevAtCapture: 3 })(plan); withAssociation({ sourceRecordRevAtCapture: 3, [CAPTURED]: T2 })(plan); }],
+    ['null', sourceNote(3, null)], ['missing', sourceNote(3, undefined)], ['an empty text', sourceNote(3, '')], ['a number', sourceNote(3, 5)],
+    ['missing, with an anchor-like content instant equal to the field', sourceNote(3, undefined, { contentAtISO: T1, contentForISO: T1 })],
+  ])('treats a document whose write instant is %s as changed for evidence holding a content instant', async (_name, document) => {
+    for (const relation of relations) {
+      const { d, text } = await opens(relation, 3, T1, document); expectChanged(d, text); d.controller.destroy();
+    }
+  });
+
+  // Evidence recorded without the field stays exactly at the revision comparison, whatever instants the document holds.
+  it.each(relations)('keeps the revision comparison for older %s evidence without a content instant', async relation => {
+    const older = rev => relation === 'fact' ? withFact({ noteId: 'fictional-document', sourceRecordRevAtCapture: rev }) : withAssociation({ sourceRecordRevAtCapture: rev });
+    for (const [rev, document, changed] of [[3, sourceNote(3, T2), false], [3, sourceNote(3, T3, { contentAtISO: T2, contentForISO: T3 }), false],
+      [2, sourceNote(3, T1), true], [2, anchored(3, T2, T1), true]]) {
+      const d = fixture({ edit: older(rev), overrides: { getPatientNote: vi.fn(async () => structuredClone(document)) } }); await settle();
+      const text = await openEvidence(d, d.host, label(relation));
+      if (changed) expectChanged(d, text); else expectOpened(d, text);
+      d.controller.destroy();
+    }
+  });
+
+  it.each([
+    ['fact with a matching content instant, older association with another revision', plan => { withFact({ noteId: 'fictional-document', sourceRecordRevAtCapture: 2, [CAPTURED]: T1 })(plan); withAssociation({ sourceRecordRevAtCapture: 2 })(plan); }],
+    ['older fact with the same revision, association with another content instant', plan => { withFact({ noteId: 'fictional-document', sourceRecordRevAtCapture: 3 })(plan); withAssociation({ sourceRecordRevAtCapture: 3, [CAPTURED]: T2 })(plan); }],
   ])('checks every reference to the same document by its own rule: %s', async (_name, edit) => {
-    const d = fixture({ edit, overrides: { getPatientNote: vi.fn(async () => sourceNote(3, T1)) } }); await settle();
+    const d = fixture({ edit, overrides: { getPatientNote: vi.fn(async () => anchored(3, T2, T1)) } }); await settle();
     expectChanged(d, await openEvidence(d, d.host, 'Otwórz dokument')); d.controller.destroy();
   });
 
-  it.each([['an unchanged capture instant', 3, T1, false], ['a later capture instant', 2, T2, true]])('applies the same rule to evidence retained only in an alternative conflict version (%s)', async (_name, rev, updatedAtISO, changed) => {
+  it.each([['an unchanged content instant', anchored(3, T2, T1), false], ['a later content instant', sourceNote(2, T2), true]])('applies the same rule to evidence retained only in an alternative conflict version (%s)', async (_name, document, changed) => {
     const d = fixture({ edit: plan => {
       const alternative = structuredClone(plan); active(alternative);
       withFact({ noteId: 'fictional-document', sourceRecordRevAtCapture: 2, [CAPTURED]: T1 })(alternative);
       plan.nativeConflicts = [{ record: alternative, operations: [{ id: 'fictional-alternate-operation' }] }]; plan.syncNeedsReview = true;
-    }, overrides: { getPatientNote: vi.fn(async () => sourceNote(rev, updatedAtISO)) } }); await settle();
+    }, overrides: { getPatientNote: vi.fn(async () => structuredClone(document)) } }); await settle();
     const alternative = d.host.querySelectorAll('.vcp-native-conflict-version')[1]; expect(alternative).toBeTruthy();
     alternative.open = true; alternative.dispatch('toggle');
     const text = await openEvidence(d, alternative, 'Otwórz dokument');
@@ -303,31 +350,49 @@ describe('V2 staged care-plan UI compares step evidence by the capture instant w
     d.controller.destroy();
   });
 
-  it.each(['associate', 'recordFact'])('%s: refuses to link a document whose capture instant changed between the preview and the save', async action => {
-    const reads = [sourceNote(1, T1), sourceNote(1, T2)];
-    const d = fixture({ overrides: { listPatientNotesForPatient: vi.fn(async () => [sourceNote(1, T1)]), getPatientNote: vi.fn(async () => structuredClone(reads.shift() || sourceNote(1, T2))) } }); await settle();
+  async function linkWithReads(action, reads, listed) {
+    const pending = reads.map(read => structuredClone(read)), last = reads[reads.length - 1];
+    const d = fixture({ overrides: { listPatientNotesForPatient: vi.fn(async () => [structuredClone(listed || reads[0])]),
+      getPatientNote: vi.fn(async () => pending.shift() || structuredClone(last)) } }); await settle();
     button(d.host, action === 'associate' ? 'Powiąż dokument lub termin' : 'Zapisz otrzymanie wyniku').click(); const form = formOf(d); await settle();
     if (action === 'recordFact') { field(form, 'Dokumentacja').value = 'existing'; field(form, 'Dokumentacja').dispatch('change'); field(form, 'Data otrzymania wyniku').value = clinicalDay; }
     field(form, 'Dokument pacjenta').value = 'fictional-document'; field(form, 'Dokument pacjenta').dispatch('change'); await settle();
     expect(form.textContent).toContain(CURRENT);
     check(form).checked = true; form.dispatch('submit'); await settle();
     expect(d.vault.getPatientNote).toHaveBeenCalledTimes(2);
-    expect(d.vault.mutateStagedCarePlan).not.toHaveBeenCalled();
-    expect(form.textContent).toContain('Dokument zmienił się. Wybierz go ponownie i sprawdź aktualną treść.'); d.controller.destroy();
+    return { d, form };
+  }
+  const REFUSED = 'Dokument zmienił się. Wybierz go ponownie i sprawdź aktualną treść.';
+  const actions = ['associate', 'recordFact'];
+
+  it.each(actions)('%s: refuses to link a document whose write instant changed between the preview and the save', async action => {
+    const { d, form } = await linkWithReads(action, [sourceNote(1, T1), sourceNote(1, T2)]);
+    expect(d.vault.mutateStagedCarePlan).not.toHaveBeenCalled(); expect(form.textContent).toContain(REFUSED); d.controller.destroy();
   });
 
-  // In this release the plan screen only reads the capture instant: a plan with it would be refused as a whole by
-  // older application versions. Writing it belongs to the second release, after the owner's confirmation.
-  it.each(['associate', 'recordFact'])('%s: sends evidence without the document capture instant in this release', async action => {
-    const d = fixture({ overrides: { listPatientNotesForPatient: vi.fn(async () => [sourceNote(1, T1)]), getPatientNote: vi.fn(async () => sourceNote(1, T1)) } }); await settle();
-    button(d.host, action === 'associate' ? 'Powiąż dokument lub termin' : 'Zapisz otrzymanie wyniku').click(); const form = formOf(d); await settle();
-    if (action === 'recordFact') { field(form, 'Dokumentacja').value = 'existing'; field(form, 'Dokumentacja').dispatch('change'); field(form, 'Data otrzymania wyniku').value = clinicalDay; }
-    field(form, 'Dokument pacjenta').value = 'fictional-document'; field(form, 'Dokument pacjenta').dispatch('change'); await settle();
-    check(form).checked = true; form.dispatch('submit'); await settle();
+  // The fresh read before the save compares the revision and the write instant as before, and also the effective
+  // content instant of both reads: the preview is the version the doctor confirms.
+  it.each(actions.flatMap(action => [
+    [action, 'the anchor disappears', [anchored(1, T2, T1), sourceNote(1, T2)]],
+    [action, 'an anchor appears', [sourceNote(1, T2), anchored(1, T2, T1)]],
+    [action, 'the anchored content instant moves', [anchored(1, T2, T1), anchored(1, T2, '2026-11-02T08:06:02.000Z')]],
+  ]))('%s: refuses to link a document whose content instant changed between the preview and the save at the same revision and write instant (%s)', async (action, _name, reads) => {
+    const { d, form } = await linkWithReads(action, reads);
+    expect(d.vault.mutateStagedCarePlan).not.toHaveBeenCalled(); expect(form.textContent).toContain(REFUSED); d.controller.destroy();
+  });
+
+  // In this release the plan screen only reads the content instant: a plan with it would be refused as a whole by
+  // older application versions. Writing it belongs to the second release, after the owner's confirmation. Neither the
+  // new field nor the former write-instant field is sent, also for a document with a valid anchor.
+  it.each(actions.flatMap(action => [[action, 'without an anchor', sourceNote(1, T1)], [action, 'with a valid anchor', anchored(1, T2, T1)]]))('%s: sends evidence of exactly the identifier and the revision in this release (document %s)', async (action, _name, document) => {
+    const { d } = await linkWithReads(action, [document, document]);
     expect(d.vault.mutateStagedCarePlan).toHaveBeenCalledTimes(1);
     const request = d.vault.mutateStagedCarePlan.mock.calls[0][0];
     expect(request).toMatchObject({ action, stepId: 'step-a' });
     expect(request.evidence).toEqual({ noteId: 'fictional-document', sourceRecordRevAtCapture: 1 });
-    expect(JSON.stringify(request)).not.toContain(CAPTURED); d.controller.destroy();
+    expect(Object.keys(request.evidence).sort()).toEqual(['noteId', 'sourceRecordRevAtCapture']);
+    const sent = JSON.stringify(request);
+    expect(sent).not.toContain(CAPTURED); expect(sent).not.toContain(FORMER); expect(sent).not.toContain('contentAtISO');
+    d.controller.destroy();
   });
 });

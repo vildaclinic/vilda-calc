@@ -550,27 +550,36 @@ test('an actual encrypted parent-only delta hides a stale physical reminder befo
   } finally { await otherContext.close(); }
 });
 
-// 2c (P-DOWOD-KROKU): new field in two releases — this release reads and compares the document capture instant
-// (sourceRecordUpdatedAtISOAtCapture) in step evidence and associations; a second release starts writing it after the
-// owner confirms that every device runs this one. An older model refuses such a plan together with the whole payload,
-// copy or file, so this release must carry it on every path. The plan is written here through the real protected writer,
-// as the second release will write it; each path is the first to bring it to a separate device of the same account
-// that holds the plan without the field.
-const CAPTURED = 'sourceRecordUpdatedAtISOAtCapture';
+// 2c (P-DOWOD-KROKU): new field in two releases — this release reads and compares the document content instant
+// (sourceRecordContentAtISOAtCapture: the instant of the document's last content change when it was linked; owner's
+// decision of 2026-11-17) in step evidence and associations; a second release starts writing it after the owner confirms
+// that every device runs this one. The field replaces the former write-instant field sourceRecordUpdatedAtISOAtCapture,
+// which this release refuses. An older model refuses such a plan together with the whole payload, copy or file, so this
+// release must carry it on every path. The plan is written here through the real protected writer, as the second release
+// will write it; each path is the first to bring it to a separate device of the same account that holds the plan
+// without the field.
+const CAPTURED = 'sourceRecordContentAtISOAtCapture', FORMER = 'sourceRecordUpdatedAtISOAtCapture';
 
-test('a plan holding the document capture instant reaches another device by every sync and copy path', async ({ page, browser, baseURL }) => {
+test('a plan holding the document content instant reaches another device by every sync and copy path', async ({ page, browser, baseURL }) => {
   test.setTimeout(300_000);
   const options = { baseURL, locale: 'pl-PL', timezoneId: 'Europe/Warsaw', serviceWorkers: 'block' };
   const { ids } = await seedNativeAccount(page);
   const { panel, plan: saved } = await applyFromLibrary(page, ids);
   const day = await activateFirstStage(page, panel);
+  // The linked document is written again without a content change: a new write instant and the earlier content instant
+  // anchored to it. The plan screen opens it at the end because it compares the content instant, not the write instant.
+  await page.evaluate(({ patientId, id }) => window.VildaVault.savePatientNote({ patientId, id, title: 'Fikcyjna wcześniejsza notatka',
+    body: 'Treść sprzed utworzenia planu.', category: 'observation' }), { patientId: ids.a, id: ids.note });
   const syncCode = await page.evaluate(password => window.VildaVault.exportSyncCode(password), PASSWORD);
   const initial = await page.evaluate(() => window.VildaVault.exportSyncPayload());
   const source = await page.evaluate(id => window.VildaVault.getPatientNote(id), ids.note);
   expect(typeof source.updatedAtISO).toBe('string');
-  const written = await page.evaluate(async ({ planId, patientId, source, captured, day }) => {
+  // The document's effective content instant as the vault reads it: contentAtISO is given only with a valid anchor.
+  const contentInstant = source.contentAtISO === undefined ? source.updatedAtISO : source.contentAtISO;
+  expect(contentInstant < source.updatedAtISO, 'the document holds a content instant earlier than its write instant').toBe(true);
+  const written = await page.evaluate(async ({ planId, patientId, source, captured, contentInstant, day }) => {
     const vault = window.VildaVault, outcome = {};
-    const evidence = { noteId: source.id, sourceRecordRevAtCapture: source.rev, [captured]: source.updatedAtISO };
+    const evidence = { noteId: source.id, sourceRecordRevAtCapture: source.rev, [captured]: contentInstant };
     for (const action of ['associate', 'recordFact']) {
       const plan = await vault.getCarePlan(planId), common = { action, operationId: crypto.randomUUID(), planId, patientId, expectedRevision: plan.rev, stepId: plan.careContext.steps[0].id, evidence };
       const request = action === 'associate' ? { ...common, associationId: crypto.randomUUID(), kind: 'document' }
@@ -579,12 +588,12 @@ test('a plan holding the document capture instant reaches another device by ever
       catch (error) { outcome[action] = error && (error.code || error.message) || 'error'; }
     }
     return outcome;
-  }, { planId: saved.id, patientId: ids.a, source, captured: CAPTURED, day });
-  expect(written, 'the transaction model accepts evidence with the capture instant').toEqual({ associate: 'saved', recordFact: 'saved' });
+  }, { planId: saved.id, patientId: ids.a, source, captured: CAPTURED, contentInstant, day });
+  expect(written, 'the transaction model accepts evidence with the content instant').toEqual({ associate: 'saved', recordFact: 'saved' });
   const plan = await page.evaluate(id => window.VildaVault.getCarePlan(id), saved.id);
-  const holdsInstant = value => !!value && value.careContext.associations.some(item => item.noteId === source.id && item[CAPTURED] === source.updatedAtISO)
-    && value.careContext.facts.some(fact => fact.evidence.noteId === source.id && fact.evidence[CAPTURED] === source.updatedAtISO);
-  expect(holdsInstant(plan)).toBe(true);
+  const holdsInstant = value => !!value && value.careContext.associations.some(item => item.noteId === source.id && item[CAPTURED] === contentInstant)
+    && value.careContext.facts.some(fact => fact.evidence.noteId === source.id && fact.evidence[CAPTURED] === contentInstant);
+  expect(holdsInstant(plan)).toBe(true); expect(JSON.stringify(plan)).not.toContain(FORMER);
   const beside = await page.evaluate(async ({ ids, day }) => ({
     a: (await window.VildaVault.savePatientNote({ patientId: ids.a, title: 'Fikcyjna notatka obok planu', body: 'Fikcyjna zmiana obok planu.', category: 'observation' })).id,
     b: (await window.VildaVault.savePatientNote({ patientId: ids.b, title: 'Fikcyjne przypomnienie obok planu', body: 'Fikcyjna zmiana drugiego pacjenta.', category: 'reminder-contact', dueDateISO: day })).id,
@@ -620,6 +629,7 @@ test('a plan holding the document capture instant reaches another device by ever
     }
     const before = await other.evaluate(id => window.VildaVault.getCarePlan(id), saved.id);
     expect(before.rev, label).toBeLessThan(plan.rev); expect(JSON.stringify(before), label).not.toContain(CAPTURED);
+    expect(JSON.stringify(before), label).not.toContain(FORMER);
     return other;
   }
   function expectCarried(state, name, besideIds) {
@@ -685,12 +695,12 @@ test('a plan holding the document capture instant reaches another device by ever
   } finally { for (const context of contexts) await context.close(); }
 });
 
-test('the plan screen of this release links a document without its capture instant', async ({ page }) => {
+test('the plan screen of this release links a document without its content instant or the former write instant', async ({ page }) => {
   const { ids, original, requests } = await seedNativeAccount(page);
   const { panel, plan: saved } = await applyFromLibrary(page, ids);
   const day = await activateFirstStage(page, panel);
   const source = await page.evaluate(id => window.VildaVault.getPatientNote(id), ids.note);
-  expect(typeof source.updatedAtISO, 'the document has a capture instant the screen could copy').toBe('string');
+  expect(typeof source.updatedAtISO, 'the document has an instant the screen could copy').toBe('string');
   const firstStep = panel.locator('.vcp-step', { hasText: FIRST_STEP });
   await firstStep.getByRole('button', { name: 'Powiąż dokument lub termin', exact: true }).click();
   let form = page.locator(CARE_FORM);
@@ -720,7 +730,9 @@ test('the plan screen of this release links a document without its capture insta
   }, { password: PASSWORD, planId: saved.id });
   expect(stored.payload.careContext.nativeState.record.careContext.associations).toHaveLength(1);
   expect(stored.backup.careContext.nativeState.record.careContext.facts).toHaveLength(1);
-  for (const [name, value] of [['plan', plan], ['sync payload', stored.payload], ['account copy', stored.backup]]) expect(JSON.stringify(value), name).not.toContain(CAPTURED);
+  for (const [name, value] of [['plan', plan], ['sync payload', stored.payload], ['account copy', stored.backup]]) {
+    expect(JSON.stringify(value), name).not.toContain(CAPTURED); expect(JSON.stringify(value), name).not.toContain(FORMER);
+  }
   await assertOrdinaryAccount(page, ids, original, requests);
 });
 

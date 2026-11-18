@@ -441,13 +441,18 @@ describe('pure staged care plan mutation transactions', () => {
   });
 });
 
-// 2c (P-DOWOD-KROKU): the transaction model accepts an optional capture instant of an existing document in the command
-// evidence, keeps it in the association or fact evidence and adds expectedUpdatedAtISO to the read dependency, so the
-// protected writer can compare the document's updatedAtISO. New field in two releases: in this release the plan screen
-// does not send it yet (tests/unit/care-plan-staged-ui.test.mjs); a second release starts sending it after the owner
-// confirms that every device runs this one.
-describe('optional document capture instant in step evidence', () => {
-  const CAPTURED = 'sourceRecordUpdatedAtISOAtCapture', T1 = '2026-11-02T08:06:01.000Z', T2 = '2026-11-02T08:06:06.000Z';
+// 2c (P-DOWOD-KROKU): the transaction model accepts an optional content instant of an existing document in the command
+// evidence (sourceRecordContentAtISOAtCapture: the instant of the document's last content change when it was linked —
+// owner's decision of 2026-11-17), keeps it in the association or fact evidence and adds expectedContentAtISO to the
+// read dependency, so the protected writer compares the document's effective content instant (contentAtISO with a valid
+// anchor, otherwise updatedAtISO). The field replaces the former write-instant field sourceRecordUpdatedAtISOAtCapture
+// and its dependency key expectedUpdatedAtISO; the former name is refused. Without the field the dependency is exactly
+// the revision dependency it was before. New field in two releases: in this release the plan screen does not send it
+// yet (tests/unit/care-plan-staged-ui.test.mjs); a second release starts sending it after the owner confirms that every
+// device runs this one.
+describe('optional document content instant in step evidence', () => {
+  const CAPTURED = 'sourceRecordContentAtISOAtCapture', FORMER = 'sourceRecordUpdatedAtISOAtCapture';
+  const T1 = '2026-11-02T08:06:01.000Z', T2 = '2026-11-02T08:06:06.000Z';
   const captured = (noteId, rev = 2, instant = T1) => ({ noteId, sourceRecordRevAtCapture: rev, [CAPTURED]: instant });
   const input = {
     associate: evidence => ({ stepId: ids.result, associationId: 'fictional-capture-association', kind: 'document', evidence }),
@@ -457,7 +462,7 @@ describe('optional document capture instant in step evidence', () => {
   const stored = (state, action) => action === 'associate' ? state.record.careContext.associations[0] : state.record.careContext.facts[0].evidence;
   const actions = ['associate', 'recordFact'];
 
-  it.each(actions)('%s keeps a valid capture instant in the plan and asks the writer to compare it', async action => {
+  it.each(actions)('%s keeps a valid content instant in the plan and asks the writer to compare the document content instant', async action => {
     const f = await fixture(), result = change(f, action, input[action](captured('fictional-captured-document')));
     expect(result.ok, result.code).toBe(true);
     expect(stored(f.state, action)).toEqual(action === 'associate'
@@ -465,15 +470,17 @@ describe('optional document capture instant in step evidence', () => {
         [CAPTURED]: T1, operationId: result.input.operationId, recordedAtISO: clock.recordedAtISO }
       : captured('fictional-captured-document'));
     expect(result.readDependencies).toEqual([{ noteId: 'fictional-captured-document', patientId: 'fictional-patient', expectedRevision: 2,
-      expectedUpdatedAtISO: T1, kind: kindOf(action) }]);
+      expectedContentAtISO: T1, kind: kindOf(action) }]);
+    expect(result.readDependencies[0]).not.toHaveProperty('expectedUpdatedAtISO');
     expect(result.documentEffects.filter(effect => effect.document)).toEqual([]);
     // The saved plan holding the instant stays readable and accepts the next change.
     expect(f.api.validateState(f.state).ok).toBe(true);
     success(f, activate(f)); expect(stored(f.state, action)[CAPTURED]).toBe(T1);
+    expect(JSON.stringify(f.state)).not.toContain(FORMER);
     expect(f.forbidden).not.toHaveBeenCalled();
   });
 
-  it.each(actions)('%s retried exactly with a capture instant reuses the saved operation without new dependencies', async action => {
+  it.each(actions)('%s retried exactly with a content instant reuses the saved operation without new dependencies', async action => {
     const f = await fixture(), first = change(f, action, input[action](captured('fictional-captured-document')));
     expect(first.ok, first.code).toBe(true);
     const saved = clone(f.state), retry = f.api.prepareTransaction(f.state, first.input, clock);
@@ -488,7 +495,7 @@ describe('optional document capture instant in step evidence', () => {
     ['a local offset', '2026-11-02T08:06:06+01:00'], ['an impossible day', '2026-02-31T08:00:00.000Z'], ['free text', 'wczoraj'],
     // the same range as the plan model: years 1900–2999 only (the vault caps write stamps at year 9999)
     ['a year after 2999', '9999-12-31T23:59:59.999Z'], ['a year before 1900', '1899-12-31T23:59:59.000Z'],
-  ])('rejects a capture instant given as %s as invalid evidence for both actions', async (_name, invalid) => {
+  ])('rejects a content instant given as %s as invalid evidence for both actions', async (_name, invalid) => {
     const f = await fixture(), before = JSON.stringify(f.state);
     for (const action of actions) {
       const result = change(f, action, input[action](captured('fictional-captured-document', 2, invalid)));
@@ -497,34 +504,48 @@ describe('optional document capture instant in step evidence', () => {
     expect(JSON.stringify(f.state)).toBe(before);
   });
 
-  it.each(actions)('%s still rejects any other new evidence field and a capture instant without the captured revision', async action => {
+  // The former write-instant name is not an alias: alone or beside the new field it is an unknown evidence field.
+  it.each(actions)('%s refuses the former write-instant field, alone or beside the content instant', async action => {
+    const f = await fixture(), before = JSON.stringify(f.state);
+    for (const evidence of [{ noteId: 'fictional-captured-document', sourceRecordRevAtCapture: 2, [FORMER]: T1 },
+      { ...captured('fictional-captured-document'), [FORMER]: T1 }]) {
+      const result = change(f, action, input[action](evidence));
+      failed(result); expect(result.code, JSON.stringify(evidence)).toBe('CARE_PLAN_FIELDS_INVALID');
+    }
+    expect(JSON.stringify(f.state)).toBe(before);
+  });
+
+  it.each(actions)('%s still rejects any other new evidence field and a content instant without the captured revision', async action => {
     const f = await fixture(), before = JSON.stringify(f.state);
     for (const evidence of [{ noteId: 'fictional-captured-document', sourceRecordRevAtCapture: 2, capturedTitle: 'Fikcyjny tytuł' },
-      { noteId: 'fictional-captured-document', sourceRecordRevAtCapture: 2, sourceRecordUpdatedAtIsoAtCapture: T1 }]) {
+      { noteId: 'fictional-captured-document', sourceRecordRevAtCapture: 2, sourceRecordContentAtIsoAtCapture: T1 },
+      { noteId: 'fictional-captured-document', sourceRecordRevAtCapture: 2, expectedContentAtISO: T1 }]) {
       const result = change(f, action, input[action](evidence)); failed(result); expect(result.code).toBe('CARE_PLAN_FIELDS_INVALID');
     }
     failed(change(f, action, input[action]({ noteId: 'fictional-captured-document', [CAPTURED]: T1 })));
     expect(JSON.stringify(f.state)).toBe(before);
   });
 
-  it.each(actions)('%s without a capture instant keeps revision-only evidence and dependency', async action => {
+  it.each(actions)('%s without a content instant keeps revision-only evidence and exactly the revision dependency', async action => {
     const f = await fixture(), result = change(f, action, input[action]({ noteId: 'fictional-revision-document', sourceRecordRevAtCapture: 2 }));
     success(f, result);
     expect(result.readDependencies).toEqual([{ noteId: 'fictional-revision-document', patientId: 'fictional-patient', expectedRevision: 2, kind: kindOf(action) }]);
+    expect(Object.keys(result.readDependencies[0]).sort()).toEqual(['expectedRevision', 'kind', 'noteId', 'patientId']);
     expect(stored(f.state, action)).not.toHaveProperty(CAPTURED);
     if (action === 'recordFact') expect(stored(f.state, action)).toEqual({ noteId: 'fictional-revision-document', sourceRecordRevAtCapture: 2 });
-    expect(JSON.stringify(f.state)).not.toContain(CAPTURED);
+    expect(JSON.stringify(f.state)).not.toContain(CAPTURED); expect(JSON.stringify(f.state)).not.toContain(FORMER);
   });
 
-  it('never writes a capture instant for a fact documented by a newly created document', async () => {
+  it('never writes a content instant for a fact documented by a newly created document', async () => {
     const f = await fixture(), result = change(f, 'recordFact', { stepId: ids.result, factId: 'fictional-new-fact', kind: 'performance', effectiveDateISO: day,
       document: { id: 'fictional-new-fact-document', title: 'Fikcyjny wpis', body: 'Fikcyjna treść wpisu.' } });
     success(f, result);
     expect(f.state.record.careContext.facts[0].evidence).toEqual({ noteId: 'fictional-new-fact-document', sourceRecordRevAtCapture: 1 });
-    expect(result.readDependencies).toEqual([]); expect(JSON.stringify(result)).not.toContain(CAPTURED);
+    expect(result.readDependencies).toEqual([]);
+    expect(JSON.stringify(result)).not.toContain(CAPTURED); expect(JSON.stringify(result)).not.toContain(FORMER);
   });
 
-  it.each(actions)('a saved plan whose %s evidence holds a malformed capture instant is refused with that evidence named', async action => {
+  it.each(actions)('a saved plan whose %s evidence holds a malformed content instant or the former field is refused with that evidence named', async action => {
     const f = await fixture(); success(f, change(f, action, input[action]({ noteId: 'fictional-captured-document', sourceRecordRevAtCapture: 2 })));
     const altered = clone(f.state), evidence = stored(altered, action);
     evidence[CAPTURED] = 'wczoraj';
@@ -534,5 +555,10 @@ describe('optional document capture instant in step evidence', () => {
     failed(f.api.prepareTransaction(altered, command(f, 'activateStage', { stageId: ids.first, effectiveDateISO: day }), clock));
     evidence[CAPTURED] = T1;
     expect(f.api.validateState(altered).ok).toBe(true);
+    delete evidence[CAPTURED]; evidence[FORMER] = T1;
+    expect(f.api.validateState(altered)).toMatchObject({ ok: false, code: 'CARE_PLAN_STATE_INVALID' });
+    expect(f.model.validateCarePlanV2(altered.record.careContext).issues)
+      .toEqual([{ code: 'CARE_MODEL_UNSUPPORTED_FIELD', path: (action === 'associate' ? 'associations[0].' : 'facts[0].evidence.') + FORMER }]);
+    failed(f.api.prepareTransaction(altered, command(f, 'activateStage', { stageId: ids.first, effectiveDateISO: day }), clock));
   });
 });
