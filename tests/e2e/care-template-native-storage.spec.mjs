@@ -476,6 +476,89 @@ test('ordinary incoming sync cannot delete or reassign a staged plan, its patien
   await assertOrdinaryAccount(page, ids, original, requests);
 });
 
+// SHA-256 of every store of the signed-in account's native database, read without the vault.
+function nativeDigest(device) {
+  return device.evaluate(async () => {
+    const name = window.VildaVault.USER_DB_PREFIX + window.VildaVault.getCurrentUser().userId;
+    const database = await new Promise((resolve, reject) => {
+      const request = indexedDB.open(name);
+      request.onupgradeneeded = () => { request.transaction.abort(); reject(new Error('Native source observer cannot create storage')); };
+      request.onerror = () => reject(request.error); request.onsuccess = () => resolve(request.result);
+    });
+    let image;
+    try {
+      const names = [...database.objectStoreNames].sort();
+      image = await new Promise((resolve, reject) => {
+        const transaction = database.transaction(names, 'readonly');
+        const rows = names.map(store => transaction.objectStore(store).getAll());
+        transaction.oncomplete = () => resolve(names.map((store, index) => [store, rows[index].result]));
+        transaction.onabort = transaction.onerror = () => reject(transaction.error);
+      });
+    } finally { database.close(); }
+    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(image)));
+    return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
+  });
+}
+
+// The check before a merge predicts the winner of each note with the vault's own note rule (the later content change
+// wins; the revision decides only between equal content instants). Another device moves its older copy of a step's
+// evidence document to the second patient with a new text: a lower revision and a later content. The merge would take
+// that version, so the check refuses the whole payload before any write. The former revision-first rule in the check
+// skipped this note, and the merge then moved the evidence to the other patient without a refusal.
+test('another device moving step evidence to another patient with a lower revision and later content is refused before the merge', async ({ page, browser, baseURL }) => {
+  const { ids } = await seedNativeAccount(page);
+  const { panel, plan: saved } = await applyFromLibrary(page, ids);
+  const day = await activateFirstStage(page, panel);
+  const otherContext = await browser.newContext({ baseURL, locale: 'pl-PL', timezoneId: 'Europe/Warsaw', serviceWorkers: 'block' });
+  try {
+    const other = await otherContext.newPage(); await openNativePage(other);
+    const syncCode = await page.evaluate(password => window.VildaVault.exportSyncCode(password), PASSWORD);
+    await other.evaluate(({ syncCode, password }) => window.VildaVault.importSyncCode(syncCode, password, {
+      label: 'Fikcyjne drugie urządzenie z kopią dowodu kroku',
+    }), { syncCode, password: PASSWORD });
+    await other.reload({ waitUntil: 'load' }); await readyForPatient(other);
+    await other.evaluate(() => window.VildaSyncIntegration.setSyncEnabled(false));
+    // The other device receives the document at its first revision.
+    const initial = await page.evaluate(() => window.VildaVault.exportSyncPayload());
+    await other.evaluate(payload => window.VildaVault.mergeSyncPayload(payload), initial);
+    expect(await other.evaluate(id => window.VildaVault.getPatientNote(id).then(note => note && note.rev), ids.note)).toBe(1);
+    // This device corrects the document twice (revision 3) before it becomes step evidence.
+    await page.evaluate(async ({ patientId, id }) => {
+      for (const body of ['Fikcyjna pierwsza poprawka na tym urządzeniu.', 'Fikcyjna druga poprawka na tym urządzeniu.'])
+        await window.VildaVault.savePatientNote({ patientId, id, title: 'Fikcyjna wcześniejsza notatka', body, category: 'observation' });
+    }, { patientId: ids.a, id: ids.note });
+    // Later, the other device moves its copy to the second patient with a new text: revision 2, a later content.
+    await other.evaluate(async ({ patientId, id }) => {
+      await window.VildaVault.savePatientNote({ patientId, id, title: 'Fikcyjna wcześniejsza notatka',
+        body: 'Fikcyjna treść przeniesiona na innym urządzeniu.', category: 'observation' });
+    }, { patientId: ids.b, id: ids.note });
+    const incoming = await other.evaluate(() => window.VildaVault.exportSyncPayload());
+    const carried = incoming.patientNotes.find(note => note.id === ids.note);
+    const evidence = await page.evaluate(async ({ ids, planId, day }) => {
+      const vault = window.VildaVault, source = await vault.getPatientNote(ids.note), current = await vault.getCarePlan(planId);
+      const recorded = await vault.mutateStagedCarePlan({ action: 'recordFact', operationId: crypto.randomUUID(),
+        planId, patientId: ids.a, expectedRevision: current.rev, stepId: current.careContext.steps[0].id,
+        factId: crypto.randomUUID(), kind: 'performance', effectiveDateISO: day,
+        evidence: { noteId: source.id, sourceRecordRevAtCapture: source.rev } });
+      if (!recorded.saved) throw new Error('Actual native evidence link was not saved');
+      return source;
+    }, { ids, planId: saved.id, day });
+    expect({ patientId: carried.patientId, lowerRevision: carried.rev < evidence.rev, laterContent: carried.updatedAtISO > evidence.updatedAtISO },
+      'the payload carries the evidence under another patient with a lower revision and a later content').toEqual({ patientId: ids.b, lowerRevision: true, laterContent: true });
+    const read = () => page.evaluate(async ({ noteId, planId }) => ({
+      note: await window.VildaVault.getPatientNote(noteId), plan: await window.VildaVault.getCarePlan(planId),
+    }), { noteId: ids.note, planId: saved.id });
+    const before = await read(), digest = await nativeDigest(page);
+    const code = await page.evaluate(async payload => {
+      try { await window.VildaVault.mergeSyncPayload(payload); return null; } catch (error) { return error.code || error.name; }
+    }, incoming);
+    expect(code, 'the check before the merge refuses the payload').toBe('CARE_NATIVE_DOCUMENT_REFERENCED');
+    expect(await read(), 'the evidence and the plan on this device are unchanged').toEqual(before);
+    expect(before.note).toMatchObject({ patientId: ids.a, rev: evidence.rev, body: 'Fikcyjna druga poprawka na tym urządzeniu.' });
+    expect(await nativeDigest(page), 'no native store was written').toBe(digest);
+  } finally { await otherContext.close(); }
+});
+
 test('an actual encrypted parent-only delta hides a stale physical reminder before its child delta arrives', async ({ page, browser, baseURL }) => {
   const { ids, original, requests } = await seedNativeAccount(page);
   const { panel, plan: saved } = await applyFromLibrary(page, ids);
@@ -548,6 +631,192 @@ test('an actual encrypted parent-only delta hides a stale physical reminder befo
     expect((await other.evaluate(id => window.VildaVault.getCarePlan(id), saved.id)).careContext.facts).toEqual(plan.careContext.facts);
     await assertOrdinaryAccount(other, ids, otherOriginal, otherRequests);
   } finally { await otherContext.close(); }
+});
+
+// 2c (P-DOWOD-KROKU): new field in two releases — this release reads and compares the document content instant
+// (sourceRecordContentAtISOAtCapture: the instant of the document's last content change when it was linked; owner's
+// decision of 2026-11-17) in step evidence and associations; a second release starts writing it after the owner confirms
+// that every device runs this one. The field replaces the former write-instant field sourceRecordUpdatedAtISOAtCapture,
+// which this release refuses. An older model refuses such a plan together with the whole payload, copy or file, so this
+// release must carry it on every path. The plan is written here through the real protected writer, as the second release
+// will write it; each path is the first to bring it to a separate device of the same account that holds the plan
+// without the field.
+const CAPTURED = 'sourceRecordContentAtISOAtCapture', FORMER = 'sourceRecordUpdatedAtISOAtCapture';
+
+test('a plan holding the document content instant reaches another device by every sync and copy path', async ({ page, browser, baseURL }) => {
+  test.setTimeout(300_000);
+  const options = { baseURL, locale: 'pl-PL', timezoneId: 'Europe/Warsaw', serviceWorkers: 'block' };
+  const { ids } = await seedNativeAccount(page);
+  const { panel, plan: saved } = await applyFromLibrary(page, ids);
+  const day = await activateFirstStage(page, panel);
+  // The linked document is written again without a content change: a new write instant and the earlier content instant
+  // anchored to it. The plan screen opens it at the end because it compares the content instant, not the write instant.
+  await page.evaluate(({ patientId, id }) => window.VildaVault.savePatientNote({ patientId, id, title: 'Fikcyjna wcześniejsza notatka',
+    body: 'Treść sprzed utworzenia planu.', category: 'observation' }), { patientId: ids.a, id: ids.note });
+  const syncCode = await page.evaluate(password => window.VildaVault.exportSyncCode(password), PASSWORD);
+  const initial = await page.evaluate(() => window.VildaVault.exportSyncPayload());
+  const source = await page.evaluate(id => window.VildaVault.getPatientNote(id), ids.note);
+  expect(typeof source.updatedAtISO).toBe('string');
+  // The document's effective content instant as the vault reads it: contentAtISO is given only with a valid anchor.
+  const contentInstant = source.contentAtISO === undefined ? source.updatedAtISO : source.contentAtISO;
+  expect(contentInstant < source.updatedAtISO, 'the document holds a content instant earlier than its write instant').toBe(true);
+  const written = await page.evaluate(async ({ planId, patientId, source, captured, contentInstant, day }) => {
+    const vault = window.VildaVault, outcome = {};
+    const evidence = { noteId: source.id, sourceRecordRevAtCapture: source.rev, [captured]: contentInstant };
+    for (const action of ['associate', 'recordFact']) {
+      const plan = await vault.getCarePlan(planId), common = { action, operationId: crypto.randomUUID(), planId, patientId, expectedRevision: plan.rev, stepId: plan.careContext.steps[0].id, evidence };
+      const request = action === 'associate' ? { ...common, associationId: crypto.randomUUID(), kind: 'document' }
+        : { ...common, factId: crypto.randomUUID(), kind: 'resultReceipt', effectiveDateISO: day };
+      try { const result = await vault.mutateStagedCarePlan(request); outcome[action] = result && result.saved === true ? 'saved' : result && (result.code || result.reason) || 'not saved'; }
+      catch (error) { outcome[action] = error && (error.code || error.message) || 'error'; }
+    }
+    return outcome;
+  }, { planId: saved.id, patientId: ids.a, source, captured: CAPTURED, contentInstant, day });
+  expect(written, 'the transaction model accepts evidence with the content instant').toEqual({ associate: 'saved', recordFact: 'saved' });
+  const plan = await page.evaluate(id => window.VildaVault.getCarePlan(id), saved.id);
+  const holdsInstant = value => !!value && value.careContext.associations.some(item => item.noteId === source.id && item[CAPTURED] === contentInstant)
+    && value.careContext.facts.some(fact => fact.evidence.noteId === source.id && fact.evidence[CAPTURED] === contentInstant);
+  expect(holdsInstant(plan)).toBe(true); expect(JSON.stringify(plan)).not.toContain(FORMER);
+  const beside = await page.evaluate(async ({ ids, day }) => ({
+    a: (await window.VildaVault.savePatientNote({ patientId: ids.a, title: 'Fikcyjna notatka obok planu', body: 'Fikcyjna zmiana obok planu.', category: 'observation' })).id,
+    b: (await window.VildaVault.savePatientNote({ patientId: ids.b, title: 'Fikcyjne przypomnienie obok planu', body: 'Fikcyjna zmiana drugiego pacjenta.', category: 'reminder-contact', dueDateISO: day })).id,
+  }), { ids, day });
+  const transfers = await page.evaluate(async ({ planId, patientId }) => {
+    const vault = window.VildaVault, text = value => typeof value === 'string' ? value : JSON.stringify(value);
+    return { payload: await vault.exportSyncPayload(), delta: await vault.buildNoteDelta(planId),
+      backup: text(await vault.exportVaultBackup()), patient: text(await vault.exportPatientEnvelope(patientId)) };
+  }, { planId: saved.id, patientId: ids.a });
+  expect(JSON.stringify(transfers.payload.patientNotes.find(note => note.id === saved.id).careContext.nativeState)).toContain(CAPTURED);
+  async function read(device) {
+    return device.evaluate(async ({ planId, patientId, noteIds, day }) => {
+      const vault = window.VildaVault, attempt = async run => { try { return await run(); } catch (error) { return 'error: ' + (error && (error.code || error.message)); } };
+      const present = {};
+      for (const id of noteIds) present[id] = !!(await vault.getPatientNote(id));
+      return { plan: await vault.getCarePlan(planId), present,
+        patientNotes: await attempt(async () => (await vault.listPatientNotesForPatient(patientId)).some(note => note.id === planId)),
+        accountNotes: await attempt(async () => (await vault.listAllPatientNotes()).some(note => note.id === planId)),
+        reminders: await attempt(async () => Array.isArray(await vault.listPatientNotesDueByDate(day + 'T23:59:59.999Z'))) };
+    }, { planId: saved.id, patientId: ids.a, noteIds: [ids.note, beside.a, beside.b], day });
+  }
+  const contexts = [];
+  async function device(label) {
+    const context = await browser.newContext(options); contexts.push(context);
+    const other = await context.newPage(); await openNativePage(other);
+    await other.evaluate(({ syncCode, password, label }) => window.VildaVault.importSyncCode(syncCode, password, { label }), { syncCode, password: PASSWORD, label });
+    await other.reload({ waitUntil: 'load' }); await readyForPatient(other);
+    await other.evaluate(() => window.VildaSyncIntegration.setSyncEnabled(false));
+    await other.evaluate(payload => window.VildaVault.mergeSyncPayload(payload), initial);
+    for (const current of [page, other]) {
+      const notice = current.getByRole('alertdialog', { name: 'Hasło do konta zostało zmienione', exact: true });
+      if (await notice.isVisible()) await notice.getByRole('button', { name: 'Rozumiem', exact: true }).click();
+    }
+    const before = await other.evaluate(id => window.VildaVault.getCarePlan(id), saved.id);
+    expect(before.rev, label).toBeLessThan(plan.rev); expect(JSON.stringify(before), label).not.toContain(CAPTURED);
+    expect(JSON.stringify(before), label).not.toContain(FORMER);
+    return other;
+  }
+  function expectCarried(state, name, besideIds) {
+    expect(state.plan && state.plan.rev, name).toBe(plan.rev);
+    expect(holdsInstant(state.plan), name).toBe(true);
+    expect(state.plan.careContext.associations, name).toEqual(plan.careContext.associations);
+    expect(state.plan.careContext.facts, name).toEqual(plan.careContext.facts);
+    for (const id of besideIds) expect(state.present[id], name + ': note beside the plan').toBe(true);
+    expect({ patientNotes: state.patientNotes, accountNotes: state.accountNotes, reminders: state.reminders }, name).toEqual({ patientNotes: true, accountNotes: true, reminders: true });
+  }
+  const paths = [
+    ['full sync payload', other => other.evaluate(payload => window.VildaVault.mergeSyncPayload(payload), transfers.payload), [beside.a, beside.b]],
+    ['plan delta', other => other.evaluate(delta => window.VildaVault.applyEncryptedDelta(delta), transfers.delta), []],
+    ['journal event', async other => {
+      expect(await other.evaluate(delta => window.VildaVault._eventLog.applyEncryptedEvent(delta), transfers.delta)).toMatchObject({ status: 'applied' });
+    }, []],
+    ['account copy merge', async other => {
+      const preview = await other.evaluate(({ backup, password }) => window.VildaVault.previewVaultBackupMerge(backup, password), { backup: transfers.backup, password: PASSWORD });
+      expect(preview.updatedPatientNoteCount).toBeGreaterThan(0);
+      await other.evaluate(({ backup, password }) => window.VildaVault.mergeVaultBackup(backup, password), { backup: transfers.backup, password: PASSWORD });
+    }, [beside.a, beside.b]],
+    ['patient file import', other => other.evaluate(({ envelope, password }) => window.VildaVault.importPatientFromEnvelope(envelope, password), { envelope: transfers.patient, password: PASSWORD }), [beside.a]],
+  ];
+  try {
+    let last = null;
+    for (const [name, bring, besideIds] of paths) {
+      const other = await device('Fikcyjne urządzenie: ' + name);
+      await bring(other);
+      expectCarried(await read(other), name, besideIds);
+      last = other;
+    }
+    const restoredContext = await browser.newContext(options); contexts.push(restoredContext);
+    const restored = await restoredContext.newPage(); await openNativePage(restored);
+    await restored.evaluate(({ backup, password }) => window.VildaVault.restoreVaultBackup(backup, password, { label: 'Fikcyjne konto odtworzone z planem' }), { backup: transfers.backup, password: PASSWORD });
+    await expect.poll(() => restored.evaluate(() => window.VildaVault.isUnlocked())).toBe(true);
+    expectCarried(await read(restored), '.wiw restore', [ids.note, beside.a, beside.b]);
+    // The device holding the plan keeps its notes, reminders and exports, and accepts a change from another device.
+    const fromOther = await last.evaluate(async patientId => {
+      const note = await window.VildaVault.savePatientNote({ patientId, title: 'Fikcyjna notatka z drugiego urządzenia', body: 'Fikcyjna zmiana z drugiego urządzenia.', category: 'observation' });
+      return { id: note.id, delta: await window.VildaVault.buildNoteDelta(note.id) };
+    }, ids.b);
+    await page.evaluate(delta => window.VildaVault.applyEncryptedDelta(delta), fromOther.delta);
+    const local = await read(page);
+    expectCarried(local, 'device holding the plan', [ids.note, beside.a, beside.b]);
+    expect(await page.evaluate(async ({ planId, noteId }) => {
+      const vault = window.VildaVault;
+      return { delta: !!(await vault.getPatientNote(noteId)), exported: (await vault.exportSyncPayload()).patientNotes.some(note => note.id === planId),
+        backup: typeof (await vault.exportVaultBackup()) !== 'undefined' };
+    }, { planId: saved.id, noteId: fromOther.id })).toEqual({ delta: true, exported: true, backup: true });
+    const workspace = page.locator(CARE_WORKSPACE);
+    if (await workspace.isVisible()) await workspace.getByRole('button', { name: 'Zamknij Przypomnienia', exact: true }).click();
+    await expect(workspace).toHaveCount(0);
+    await page.locator('#vildaRemindersBtn').click();
+    await workspace.getByRole('button', { name: /^Do wykonania(?:\s|$)/u }).click();
+    await expect(workspace.locator('[data-note-id="' + beside.b + '"]')).toBeVisible();
+    await expect(workspace).not.toContainText('Nie udało się wczytać przypomnień');
+    await workspace.getByRole('button', { name: 'Plany opieki', exact: true }).click();
+    const reopened = workspace.locator('.vcp');
+    await selectPlan(reopened, saved.id);
+    await reopened.getByRole('button', { name: 'Otwórz dokument', exact: true }).first().click();
+    await expect(reopened.locator('.vcp-record-body')).toHaveText('Treść sprzed utworzenia planu.');
+    await expect(reopened).not.toContainText('Dokument został zmieniony po powiązaniu z planem.');
+  } finally { for (const context of contexts) await context.close(); }
+});
+
+test('the plan screen of this release links a document without its content instant or the former write instant', async ({ page }) => {
+  const { ids, original, requests } = await seedNativeAccount(page);
+  const { panel, plan: saved } = await applyFromLibrary(page, ids);
+  const day = await activateFirstStage(page, panel);
+  const source = await page.evaluate(id => window.VildaVault.getPatientNote(id), ids.note);
+  expect(typeof source.updatedAtISO, 'the document has an instant the screen could copy').toBe('string');
+  const firstStep = panel.locator('.vcp-step', { hasText: FIRST_STEP });
+  await firstStep.getByRole('button', { name: 'Powiąż dokument lub termin', exact: true }).click();
+  let form = page.locator(CARE_FORM);
+  await form.getByLabel('Dokument pacjenta', { exact: true }).selectOption(ids.note);
+  await expect(form.locator('.vcp-result-preview')).toContainText('Treść sprzed utworzenia planu.');
+  await form.getByLabel('Potwierdzam powiązanie wybranego dokumentu z tym krokiem', { exact: true }).check();
+  await form.getByRole('button', { name: 'Zapisz powiązanie', exact: true }).click();
+  await expect(form).toHaveCount(0);
+  await firstStep.getByRole('button', { name: 'Zapisz otrzymanie wyniku', exact: true }).click();
+  form = page.locator(CARE_FORM);
+  await form.getByLabel('Data otrzymania wyniku', { exact: true }).fill(day);
+  await form.getByLabel('Dokumentacja', { exact: true }).selectOption('existing');
+  await form.getByLabel('Dokument pacjenta', { exact: true }).selectOption(ids.note);
+  await expect(form.locator('.vcp-result-preview')).toContainText('Treść sprzed utworzenia planu.');
+  await form.getByLabel('Potwierdzam, że dokumentuje to otrzymanie wyniku tego kroku', { exact: true }).check();
+  await form.getByRole('button', { name: 'Zapisz potwierdzenie', exact: true }).click();
+  await expect(form).toHaveCount(0);
+  const plan = await page.evaluate(id => window.VildaVault.getCarePlan(id), saved.id);
+  expect(plan.careContext.associations).toEqual([expect.objectContaining({ noteId: ids.note, sourceRecordRevAtCapture: source.rev })]);
+  expect(plan.careContext.facts.map(fact => fact.evidence)).toEqual([{ noteId: ids.note, sourceRecordRevAtCapture: source.rev }]);
+  const stored = await page.evaluate(async ({ password, planId }) => {
+    const vault = window.VildaVault, cryptoApi = window.VildaCrypto;
+    const payload = await vault.exportSyncPayload(), envelope = cryptoApi.parseEnvelope(await vault.exportVaultBackup());
+    const key = await cryptoApi.unwrapMasterFromEnvelope(envelope, password);
+    const backup = await cryptoApi.decryptJson(key, envelope.payload.iv, envelope.payload.data);
+    return { payload: payload.patientNotes.find(note => note.id === planId), backup: backup.patientNotes.find(note => note.id === planId) };
+  }, { password: PASSWORD, planId: saved.id });
+  expect(stored.payload.careContext.nativeState.record.careContext.associations).toHaveLength(1);
+  expect(stored.backup.careContext.nativeState.record.careContext.facts).toHaveLength(1);
+  for (const [name, value] of [['plan', plan], ['sync payload', stored.payload], ['account copy', stored.backup]]) {
+    expect(JSON.stringify(value), name).not.toContain(CAPTURED); expect(JSON.stringify(value), name).not.toContain(FORMER);
+  }
+  await assertOrdinaryAccount(page, ids, original, requests);
 });
 
 test.describe('ordinary staged plans with the production PWA cache', () => {

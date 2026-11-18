@@ -176,6 +176,17 @@ Do tej warstwy należą m.in.:
   wczytanego pacjenta (`VildaLabHistory.pendingItems` z `listPatientNotesForPatient`; domyślnie nic się nie
   zamyka), odświeżany po zapisie notatki pacjenta w sejfie (`onPatientNoteChanged`). Zmianę stanu ogłasza
   zdarzenie dokumentu `vilda:lab-pending-result-changed`;
+- przypięty wynik (P-PRZYPIETY-WYNIK, LAB-HISTORIA 6.38): stan „wynik formularza jest już w karcie” liczy
+  czytelny blok `Pp*` w `lab_pin_result.js` — jedno źródło dla przycisku „Przypnij do wizyty” („✓ Przypięto”),
+  okna przypięcia (ostrzeżenie i blokada tego samego wyniku z tą samą datą badania) i paska „Poprzednie
+  wyniki”. Stan daje `window.VildaLabPinResult.pinned()` (`{patientId, testKey, unit, raw, noteId, dateISO,
+  source}` albo `null`), a jego zmianę ogłasza zdarzenie dokumentu `vilda:lab-pin-state-changed`. Pasek
+  (`lab_history_strip.js` 1.5.0) nie ma własnej reguły: czyta `pinned()`, sprawdza tylko zgodność z formularzem
+  i serią, odświeża się na to zdarzenie, a bez modułu przypięcia pokazuje chip „teraz”. Od LAB-HISTORIA 6.39
+  pasek rysuje tylko nagłówek, chipy i wykres (szczegóły wpisu w podpowiedzi chipu, pełny wpis w karcie). Czyste funkcje
+  reguły (`resolve`, `duplicates`, `parse`, `nums`, `normalizeUnit`) są w `VildaLabPinResult._internal` tylko dla
+  testów. Blok czyta notatki karty (`listPatientNotesForPatient`, `getPatientNote`); zapisuje dalej tylko
+  przypięcie (`A`);
 - pakiety badań: `vilda_lab_packages.js` (dane pakietu, model i widok w jednym pliku — budżet żądań
   instalacji PWA; tag tylko na `przelicznik-jednostek.html`). Zakładka „Pakiet badań” karty przelicznika
   (jedna karta, zakładki `#labModeBar` pod tytułem; pakiet jest panelem `#labPackageCard` tej karty): kilka

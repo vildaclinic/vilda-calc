@@ -431,14 +431,15 @@ test('nowy zapis E2 bez fazy zachowuje pomiar bez oceny, a stary zakres folikula
   const strip = page.locator('#labHistoryStrip');
   const oldChip = strip.locator(`button.lab-strip-chip[data-note-id="${oldNoteId}"]`);
   await expect(oldChip.locator('.lab-strip-chip-v')).toHaveText('50↓');
+  // LAB-HISTORIA 6.39: zakres zapisany z wynikiem jest w podpowiedzi chipu (bez panelu szczegółów).
   await oldChip.click();
-  await expect(strip.locator('.lab-strip-detail-range')).toContainText('70–290');
-  await expect(strip.locator('.lab-strip-detail-range')).toContainText('poniżej');
-  await expect(strip.locator('.lab-strip-detail-range')).toContainText('faza folikularna');
+  await expect(oldChip).toHaveAttribute('title', /70–290/);
+  await expect(oldChip).toHaveAttribute('title', /poniżej/);
+  await expect(oldChip).toHaveAttribute('title', /faza folikularna/);
   const currentChip = strip.locator(`button.lab-strip-chip[data-note-id="${current.id}"]`);
   await expect(currentChip.locator('.lab-strip-chip-v')).toHaveText('20');
   await currentChip.click();
-  await expect(strip.locator('.lab-strip-detail .lab-strip-muted')).toContainText('bez oceny względem zakresu w dniu przypięcia');
+  await expect(currentChip).toHaveAttribute('title', /bez oceny względem zakresu w dniu przypięcia/);
   await expect(strip.locator('.lab-strip-detail-range, [data-reference-variants]')).toHaveCount(0);
   expect((await notes()).find(note => note.id === oldNoteId).labResult).toEqual(oldSaved);
   await testInfo.attach('E2-cycle-new-and-historical-envelopes', { body: JSON.stringify(saved.map(note => note.labResult), null, 2), contentType: 'application/json' });

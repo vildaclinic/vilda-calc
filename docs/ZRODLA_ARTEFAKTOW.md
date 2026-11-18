@@ -1839,6 +1839,47 @@ function WbWBadaniach(note) { return WbJestWynikiem(note) || WbJestKlirensem(not
 
 **Granice.** Punkty podpięcia zwartej karty Klirensu (`ClcrNotesCard`, `ClcrNotesTitle`, `ClcrOpenNoteResult`; `tools/patch-klirens-notes-view.mjs`) zostają bez zmian: karta rysuje się dla zapisu „wynik-klirens” bez pola wyniku, tytuły w Historii i szczegóły z ogólnego edytora działają jak dotąd. Grupowanie wyników w Historii (`WbHistoriaGrupuj`) nadal dotyczy tylko wyników badań — wpis Klirensu w Historii się nie zmienia. Sejf, wyszukiwarka i strona Klirens bez zmian.
 
+## Łatka P-PRZYPIETY-WYNIK — przypięty wynik i blokada duplikatu (`lab_pin_result.js`, 2026-11-17, decyzja właściciela)
+
+Opis działania i przypadki: `docs/clinical/ALGORITHMS.md`, „LAB-HISTORIA 6.38”; `docs/LAB_HISTORIA_WYNIKOW_PLAN.md`, decyzja 6.38 i „Uzupełnienie z wdrożenia 6.38”. Zmiany w czytelnych źródłach (`lab_history_strip.js` 1.4.0 — `pinnedFor` czyta `VildaLabPinResult.pinned()`, `markPinned` usunięte; style w `lab_history_strip.css` i `inline_przelicznik_jednostek_00.css`) nie wymagają opisu łatki. W zminifikowanej części `lab_pin_result.js` są dwie podmiany dokładnych ciągów i jedno wstawienie czytelnego bloku, bez ponownej minifikacji:
+
+```js
+// 1. budowa okna (funkcja V): ostrzeżenie o duplikacie po znaczniku oczekującego wyniku
+//    było:  var OwChoice=OwPinChoice(t,o);
+//    jest:  var OwChoice=OwPinChoice(t,o);PpDialog(t,e,o);
+// 2. zapis (funkcja A): świeże sprawdzenie karty tuż przed savePatientNote
+//    było:  n&&(p.linkedAgeMonths=n),await r.savePatientNote(p),g();
+//    jest:  n&&(p.linkedAgeMonths=n);var Pb=typeof PpBlocked=="function"?await PpBlocked(r,p):null;if(Pb){h(Pb);return}await r.savePatientNote(p),g();
+// 3. koniec pierwszego IIFE: czytelny blok między końcem I() a jej uruchomieniem (od nowej linii)
+//    było:  …c(),setTimeout(c,1200)}l.readyState==="loading"?l.addEventListener("DOMContentLoaded",I):I()})(window);
+//    jest:  …c(),setTimeout(c,1200)}
+//           /* Przypięty wynik (P-PRZYPIETY-WYNIK, LAB-HISTORIA 6.38; …) */
+//           var PP_PIN_TEXT = …; … function PpStart() { … }
+//           a.VildaLabPinResult.pinned = …; a.VildaLabPinResult._internal = Object.freeze({ … });
+//           if (l.readyState === "loading") l.addEventListener("DOMContentLoaded", PpStart); else PpStart();
+//           l.readyState==="loading"?l.addEventListener("DOMContentLoaded",I):I()})(window);
+```
+
+Czytelny blok leży w tym samym domknięciu co część zminifikowana i korzysta z jej `a`, `l`, `u`, `L`, `E`, `D` i `N`: stałe tekstów, stan `PpState`, czyste funkcje reguły (`PpParse`, `PpNums`, `PpNormUnit`, `PpRawIs`, `PpSame`, `PpHolds`, `PpResolve`, `PpDuplicates`), odświeżanie (`PpStart`, `PpRefresh`, `PpApply`, `PpWatch`, `PpClaim`), okno (`PpDialog`, `PpDialogSync`) i sprawdzenie zapisu (`PpBlocked`). Na końcu dopisuje `pinned` i zamrożone `_internal` do obiektu `window.VildaLabPinResult`, który część zminifikowana tworzy z `setAssessmentProvider`.
+
+**Dlaczego sprawdzenie w `A` ma strażnika `typeof`.** Testy `search-note-producers`, `lab-snapshot-ui` i `lab-testosterone-snapshot-vault` uruchamiają wycinek `async function A(` … `function I(){` z wolnymi zmiennymi (jak przy P-OCZEKUJACE-WYNIKI). `PpBlocked` leży poza wycinkiem, więc bez niego zapis działa dokładnie jak dotąd, a zapisywana notatka wyniku nie zmienia postaci.
+
+**Dlaczego blok stoi za `I()`.** Jest poza każdym wycinkiem testów na tym pliku (`var Lh2AssessmentProvider=` … `var s=null;` albo `/* AMH educational reference`, `async function A(` … `function I(){`). `tests/unit/lab-pin-pinned-state.test.mjs` pilnuje, że blok zaczyna się po `I()` i kończy przed jej uruchomieniem, że znaczniki wycinków `A` i `I` są nadal jednoznaczne oraz że `PpDialog` i `PpBlocked` są w części zminifikowanej wołane dokładnie raz.
+
+**Granice.** Bez nowych stylów ustawianych wprost na elementach: ostrzeżenie, komunikat pod datą i stan przycisku mają klasy z arkuszy, więc liczba dla `lab_pin_result.js` w `tests/fixtures/style-elementow.json` zostaje 17. Ciągi kontraktu z `tests/unit/lab-pending-result.test.mjs` (`RrPinRange(t,o);var OwChoice=OwPinChoice(t,o);`, `function(){A(t,e,i,OwChoice)}`, zamknięcie oczekującego wyniku zaraz po `await r.savePatientNote(p),g();`, notatka bez śladu oczekującego wyniku) są bez zmian. Sejf bez zmian: blok tylko czyta (`listPatientNotesForPatient`, `getPatientNote`) i korzysta z istniejących nasłuchów `onPatientNoteChanged` i `onLock` oraz z sygnału sejfu dla innych kart (`BroadcastChannel` „vilda-notes”, klucz `storage` „vilda-note-changed-ping-v1”). Pakiet badań (`vilda_lab_packages.js`) zapisuje wyniki własną drogą i nie jest blokowany.
+
+## Łatka P-PASEK-WARIANT-A — krótszy podpis wiersza przypięcia (`lab_pin_result.js`, 2026-11-17, decyzja właściciela)
+
+Opis: `docs/clinical/ALGORITHMS.md`, „LAB-HISTORIA 6.39”; `docs/LAB_HISTORIA_WYNIKOW_PLAN.md`, decyzja 6.39. Zmiany w czytelnych źródłach (`lab_history_strip.js` 1.5.0, `lab_history_strip.css`, blok `Pp*` w `lab_pin_result.js`: `PP_PIN_SUB` i podpis w `PpApply`) nie wymagają opisu łatki. W zminifikowanej części `lab_pin_result.js` jest jedna podmiana dokładnego ciągu, bez ponownej minifikacji:
+
+```js
+// tekst początkowy podpisu wiersza przypięcia (funkcja N)
+//    było:  n.id="labPinSub",n.textContent="wynik trafi do karty pacjenta"
+//    jest:  n.id="labPinSub",n.textContent="Jeszcze nie w karcie"
+```
+
+Tekst jest ten sam co `PP_PIN_SUB` w czytelnym bloku, więc wiersz nie zmienia podpisu, zanim blok go odświeży. `tests/unit/lab-pin-pinned-state.test.mjs` pilnuje, że oba ciągi występują dokładnie raz, a dawnego tekstu nie ma. Bez nowych stylów ustawianych wprost na elementach (liczba dla `lab_pin_result.js` w `tests/fixtures/style-elementow.json` zostaje 17); znaczniki wycinków testów (`var Lh2AssessmentProvider=`, `var s=null;`, `async function A(`, `function I(){`) bez zmian.
+
 ## Trwała tożsamość wizyt — źródło i granica artefaktu sejfu
 
 Zmiana funkcjonalna `P-TRWALE-WIZYTY` ma bazę `audyt` z commita
@@ -1883,10 +1924,17 @@ wizyt: SHA-256 `a9672e38d4890b2516d3afd2f184006ad72ec4443cad8df7663d42abbb5731c4
 (`5d77d036…`) odpowiada stanowi sprzed E3-PR0b2b (`audyt` `3c1fc748`); bieżącą bazę daje to samo
 odwrócenie delty co wyżej.
 
+Od 2c (P-DOWOD-KROKU, 2026-11-18: nowy blok natywny z repozytorium źródeł modułu i bez haka
+`40-visit-metadata`) bazą delty jest SHA-256
+`fe4fad0b1119e4e6ee6fdaaca793f12d76614e4cac418328fc38756895c6fe2c`, a wynikiem — bieżący
+`vilda_vault.js` (`175fb1ab57b47cf4b58d19369536722edc1177c1c3d7f83311e63727298bff9b`). Bazę daje to
+samo odwrócenie delty co wyżej.
+
 Od E3-PR0c (P-ZBIEZNOSC-ZDARZEN, odsyłanie poprawionych wizyt; zmiana tylko w bloku P-DZIENNIK-ZDARZEN) bazą
 delty jest obraz sejfu po tej zmianie bez bloku trwałych wizyt: SHA-256
-`f4312c519d413b38f614f1ca89253caa0849a1b257568115507c8d49f290744e`. Baza z E3-PR0b2b (`a9672e38…`)
-odpowiada stanowi sprzed E3-PR0c (`audyt` `4389d34a`); bieżącą bazę daje to samo odwrócenie delty co wyżej.
+`22f7d1f27f71ea7cb01304cc048b885159d04cc237431d842064ddd3d199e86f`, a wynikiem — bieżący `vilda_vault.js`
+(`4ca270bc7461e33d50b791242cd9298da710cfd651ffe1a099b059f80c4acd7a`). Baza z 2c (`fe4fad0b…`) odpowiada
+stanowi sprzed E3-PR0c (`audyt` `64fa29dc`); bieżącą bazę daje to samo odwrócenie delty co wyżej.
 
 Każdy punkt wpięcia musi występować dokładnie raz. Narzędzie odrzuca inne
 bajty bazy, zmianę źródła bez zgodnego manifestu, niejednoznaczny punkt wpięcia
@@ -1940,6 +1988,28 @@ szyfrowanie, serializację źródła odzyskiwania i ponowne szyfrowanie tożsamo
 starsze dane, izolację sesji, odrzucenie dodatkowych pól i odtworzenie drzewa.
 Test precache obejmuje wszystkie 202 adresy modułów, w tym 151 historycznych.
 
+*(2026-11-18, 2c, P-DOWOD-KROKU.)* Kodek z tożsamością usuniętej wizyty ma teraz
+źródło w repozytorium źródeł modułu (`vilda-source`,
+`client/patient-clinical-workspace-source/codec.mjs`), a aktywną rodzinę modułów
+buduje tamtejszy budowniczy (niżej, „Moduł planów z etapami — blok natywny sejfu
+i rodzina modułów z repozytorium źródeł modułu”). Kopia
+`runtime/durable-visits-v1/workspace-source-codec.mjs` zostaje: jest bajt w bajt
+równa modułowi `codec.mjs` aktywnej rodziny (test w
+`visits-workspace-codec.test.mjs`). `tools/build-visits-workspace-family.mjs`
+zostaje dowodem historycznej rodziny `67818dc1656f`: domyślne uruchomienie
+odtwarza ją z rodziny `e410c8725541` i czytelnego kodeka i sprawdza, że jej 51
+modułów leży bajt w bajt wśród `historicalFiles`, a sejf jej nie wybiera
+(„Visit workspace family: 67818dc1656f… (51 modules; historical bytes
+retained).”); `--write` odmawia, gdy aktywna jest inna rodzina, więc nie
+przywróci starej. Hak `40-visit-metadata` delty trwałych wizyt (zmiana adresu
+importu rodziny wewnątrz fragmentu natywnego) jest usunięty — blok natywny
+z budowniczego ma już adres aktywnej rodziny; delta ma 41 haków. Test precache
+obejmuje 253 adresy modułów, w tym 202 historyczne. Zdanie wyżej, że skróty
+pierwotnego fragmentu w manifeście opisują bazę dowodu, a zmianę adresu importu
+obejmuje delta wizyt, dotyczy rodziny `67818dc1656f`. Od 2c `fragmentSHA256`
+w manifeście opisuje blok natywny w `vilda_vault.js` taki, jaki jest, a delta
+trwałych wizyt bloku nie zmienia.
+
 ### Transport trzech zasobów interfejsu wizyt w PWA
 
 `vilda_visit_context.js`, `vilda_visit_history_ui.js` i
@@ -1973,3 +2043,89 @@ pozostają bez zmian. Testy `visit-ui-precache-pack.test.mjs` sprawdzają
 oryginalne treści, MIME, zakres `/vilda-calc/`, odrzucenie uszkodzeń i błędy
 zapisu; `sw-precache-stron.test.mjs` nadal wykonuje rzeczywisty worker,
 sprawdza wszystkie wymagane klucze oraz niezmienione budżety.
+
+## Moduł planów z etapami — blok natywny sejfu i rodzina modułów z repozytorium źródeł modułu (2c, 2026-11-18)
+
+Fragment natywny w `vilda_vault.js` (tekst między `/* BEGIN VILDA CLINICAL WORKSPACE NATIVE V1 */`
+a `/* END VILDA CLINICAL WORKSPACE NATIVE V1 */`), rodzinę modułów `runtime/clinical-workspace-v1/<12
+znaków drzewa>/`, jej archiwum precache, `runtime/clinical-workspace-v1/manifest.json` oraz sekcje
+`BEGIN/END CLINICAL WORKSPACE PRECACHE V1` i `CLINICAL_WORKSPACE_PRECACHE_PACK` w
+`service-worker-kalorii.js` buduje `tools/build-clinical-workspace-runtime.mjs` w prywatnym
+repozytorium źródeł modułu (`vilda-source`). Czytelne źródła są tam w
+`client/patient-clinical-workspace*/`. Bieżące artefakty: commit
+`f2130f8993aa9f07de8b4ef7970b2cf23127c8dc`, drzewo
+`0278bf7106c27008499d80c14acf3e2d733cccb52f3b06debbd91c443874cb25` (51 modułów), `fragmentSHA256`
+`f1605482c3466e86c9c7ff94e19859eeaea8a70b5e6ccb0fad4fa302f2101d78`, `integratedVaultSHA256`
+`077c76e943710aff8712b87921fd288d12b24d8a30a5c7787a53e89f45c8fb97`, archiwum
+`runtime/clinical-workspace-v1/0278bf7106c2/precache-3689c59590e5.json`. Baza sejfu bez zmian:
+`44d82633d45bf9db1e964457c69d07f2009b683848a00d21315fc63fdd542499`.
+
+Od E3-PR0c (P-ZBIEZNOSC-ZDARZEN; zmiana sejfu tylko poza blokiem natywnym, w bloku P-DZIENNIK-ZDARZEN) baza sejfu to
+`06ea023197d3e70fc30e965d5b2b57744fbbcbc0f638f5baa798e5ce3e209031`, a `integratedVaultSHA256` (obraz pośredni) —
+`76214599a49249fc762d29e4eb31f079440ef254149ffc8cde8ecf5e36b77bb2`. Blok natywny, haki natywne, rodzina modułów
+`0278bf7106c2`, `fragmentSHA256` i archiwum bez zmian; bieżące wartości są w `runtime/clinical-workspace-v1/manifest.json`.
+
+Warstwy `vilda_vault.js` od środka: baza → blok natywny i 16 haków natywnych (manifest,
+`nativeHooks`) → delta Kt/V (`tools/klirens-ktv-vault-delta.mjs`, poza blokiem) → delta trwałych
+wizyt (`runtime/durable-visits-v1/`, `tools/visits-vault-delta.mjs`). Budowniczy zna tylko dwie
+pierwsze. Jego `vilda_vault.js` nie ma delty Kt/V ani trwałych wizyt — **nie kopiować go do tego
+repozytorium.**
+
+Nowe artefakty (budowniczy uruchamiany tylko z `--output` na kopii tego repozytorium, nigdy na samym
+repozytorium). Budowniczy importuje parser `acorn`, więc w checkoutcie repozytorium źródeł modułu najpierw
+`npm ci`:
+
+```bash
+(cd <vilda-source> && npm ci)
+node --input-type=module -e "import { readFileSync, writeFileSync } from 'node:fs'; import { reduceClinicalWorkspaceVault } from './tools/check_clinical_workspace_boundary.mjs'; writeFileSync('/tmp/vilda-baza-sejfu.js', reduceClinicalWorkspaceVault(readFileSync('vilda_vault.js', 'utf8')));"
+sha256sum /tmp/vilda-baza-sejfu.js   # = baseVaultSHA256 z manifestu i BASE z kontroli granicy
+mkdir -p /tmp/vilda-kopia && git archive HEAD | tar -x -C /tmp/vilda-kopia
+node <vilda-source>/tools/build-clinical-workspace-runtime.mjs --source-vault /tmp/vilda-baza-sejfu.js --output /tmp/vilda-kopia
+```
+
+Z kopii do repozytorium:
+1. Katalog nowej rodziny z archiwum precache i `runtime/clinical-workspace-v1/manifest.json` bez zmian.
+   Dawne rodziny zostają (manifest przenosi je do `historicalFiles`).
+2. W `service-worker-kalorii.js` tylko sekcja `BEGIN/END CLINICAL WORKSPACE PRECACHE V1` (dawne adresy
+   zostają) i `CLINICAL_WORKSPACE_PRECACHE_PACK`.
+3. W `vilda_vault.js` tylko tekst między znacznikami `BEGIN` i `END VILDA CLINICAL WORKSPACE NATIVE V1`
+   — zastąpiony blokiem z `vilda_vault.js` kopii; poza blokiem bajt w bajt.
+
+Kontrola warstw: `restoreKtvVaultBaseline(restoreDurableVisitsBaseline(vilda_vault.js))` ma skrót
+`integratedVaultSHA256` z manifestu budowniczego, a budowniczy z `--check` na kopii, w której
+`vilda_vault.js` zastąpiono tym obrazem pośrednim, kończy się „Checked 257 clinical workspace runtime
+files.” (stan 2c):
+
+```bash
+node --input-type=module -e "import { readFileSync, writeFileSync } from 'node:fs'; import { restoreDurableVisitsBaseline } from './tools/visits-vault-delta.mjs'; import { restoreKtvVaultBaseline } from './tools/klirens-ktv-vault-delta.mjs'; writeFileSync('/tmp/vilda-obraz-posredni.js', restoreKtvVaultBaseline(restoreDurableVisitsBaseline(readFileSync('vilda_vault.js', 'utf8'))));"
+sha256sum /tmp/vilda-obraz-posredni.js   # = integratedVaultSHA256 z runtime/clinical-workspace-v1/manifest.json
+rm -rf /tmp/vilda-kontrola && mkdir -p /tmp/vilda-kontrola && git archive HEAD | tar -x -C /tmp/vilda-kontrola
+cp /tmp/vilda-obraz-posredni.js /tmp/vilda-kontrola/vilda_vault.js
+node <vilda-source>/tools/build-clinical-workspace-runtime.mjs --source-vault /tmp/vilda-baza-sejfu.js --output /tmp/vilda-kontrola --check
+```
+
+Polecenia czytają pliki zatwierdzone w `HEAD`; zmiany jeszcze niezatwierdzone trzeba najpierw zatwierdzić albo
+skopiować do kopii.
+
+Potem delta trwałych wizyt: hak, którego tekst zmienił się wewnątrz bloku, usunąć albo przepisać
+(w 2c usunięty hak `40-visit-metadata`); bazę delty (odwrócenie delty wyżej, „Trwała tożsamość
+wizyt”) zapisać w `runtime/durable-visits-v1/manifest.json` (`baseVaultSHA256`),
+`tools/visits-vault-delta.mjs` (`BASE`) i `tests/unit/visits-vault-boundary.test.mjs`, a
+`integratedVaultSHA256` = skrót nowego `vilda_vault.js`. Na końcu `node tools/visits-vault-delta.mjs`,
+`node tools/check_clinical_workspace_boundary.mjs` i testy rodziny i pamięci offline
+(`visits-workspace-codec`, `clinical-workspace-precache-pack`, `sw-precache-stron`). Blok natywny
+zmienia się tylko w środku, więc baza sejfu (`baseVaultSHA256`, `BASE`) zostaje, o ile nie zmieniły
+się haki natywne.
+
+Adres `vilda_care_plan_mutation.js?v=…` stoi wewnątrz bloku natywnego i ustawia go repozytorium
+źródeł modułu; kontrola granicy wymaga, żeby ten adres był w pamięci offline. Po zmianie
+`vilda_care_plan_mutation.js`, `vilda_care_plan_model.js` albo `vilda_care_template_model.js` tutaj trzeba
+nowych kopii tych plików w testach repozytorium źródeł (pin SHA-256 wszystkich trzech) i nowych artefaktów.
+
+`npm run podbij-wersje` daje zmienionemu `vilda_care_plan_mutation.js` numer o jeden większy niż najwyższy
+w `audyt` i przepisuje ten adres we wszystkich skryptach korzenia, także w bloku natywnym. Numer we fragmencie
+z repozytorium źródeł modułu musi więc być tym samym numerem (w 2c: `?v=3`, bo `audyt` `fe4f1754` ma najwyżej
+`?v=2`). Gdy podbicie zmieni blok, `node tools/check_clinical_workspace_boundary.mjs` (także w `npm test`)
+i `node tools/visits-vault-delta.mjs` kończą się błędem — wtedy nowy fragment z tym numerem z repozytorium
+źródeł modułu, nie zmiana ręczna.
+

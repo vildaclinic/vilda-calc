@@ -2,8 +2,8 @@
   "namespace": "vilda-durable-visits-vault",
   "version": 1,
   "sourceRef": "40d742d38f4d2924d3ba85a50d746790d0de6644",
-  "baseVaultSHA256": "f4312c519d413b38f614f1ca89253caa0849a1b257568115507c8d49f290744e",
-  "integratedVaultSHA256": "b23bd038c6f234b712deb8f83d3d2e422e9890b59cb255a39b0bd6c69fae45a2",
+  "baseVaultSHA256": "22f7d1f27f71ea7cb01304cc048b885159d04cc237431d842064ddd3d199e86f",
+  "integratedVaultSHA256": "4ca270bc7461e33d50b791242cd9298da710cfd651ffe1a099b059f80c4acd7a",
   "fragmentSHA256": "5b7d345724247d971d1a18129d101bf27fbaf01db5c91d1383606302fd31f88d",
   "hooks": [
     {
@@ -278,13 +278,6 @@
       "after": "kz_scalKoniec(Bkz_S,e)}catch(Bkz_e){PatientClinicalRethrow(Bkz_e);if(Bkz_e&&(Bkz_e.vildaMergeBusy||Bkz_e.code===\"SESSION_CHANGED\"||Bkz_e.code===\"VISIT_IDENTITY_CONFLICT\"||Bkz_e.code===\"INVALID_VISIT_IDENTITY\"))throw Bkz_e;try{console.warn(\"[vault] kosz zapisow: scalanie nagrobkow\",Bkz_e)}catch(PatientClinicalCaught){PatientClinicalRe",
       "beforeSHA256": "976ab050b5fd5687113e3f0af1dd8002263b6478a24a50d8b65c6a267c92f7d6",
       "afterSHA256": "38be51d93d1878d85bc8c7eb13ff9cbf7d839dd55fb4a4c09e99b32cb2fd7fbc"
-    },
-    {
-      "name": "40-visit-metadata",
-      "before": "r('UNSUPPORTED');\n  if (!PatientWorkspaceModule) {\n    PatientWorkspaceModule = import(new v.URL('runtime/clinical-workspace-v1/e410c8725541/client/patient-clinical-workspace-native/index.mjs', PatientWorkspaceScriptURL).href)\n      .catch(function (error) { PatientWo",
-      "after": "r('UNSUPPORTED');\n  if (!PatientWorkspaceModule) {\n    PatientWorkspaceModule = import(new v.URL('runtime/clinical-workspace-v1/67818dc1656f/client/patient-clinical-workspace-native/index.mjs', PatientWorkspaceScriptURL).href)\n      .catch(function (error) { PatientWo",
-      "beforeSHA256": "d35d052ef1ef0ad6eb11b254e680d353ac5029db77d06dbb63cac9ac3d6ba0be",
-      "afterSHA256": "c473aa65cde3d40eeddb66ae0f92a72cd595fa4b817491427fd79445b140cae3"
     },
     {
       "name": "41-Bvisit_list",

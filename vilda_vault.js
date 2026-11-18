@@ -12993,7 +12993,7 @@ function PatientWorkspaceSelection(account) {
 async function PatientWorkspaceModules() {
   if (!PatientWorkspaceScriptURL) throw PatientWorkspaceError('UNSUPPORTED');
   if (!PatientWorkspaceModule) {
-    PatientWorkspaceModule = import(new v.URL('runtime/clinical-workspace-v1/67818dc1656f/client/patient-clinical-workspace-native/index.mjs', PatientWorkspaceScriptURL).href)
+    PatientWorkspaceModule = import(new v.URL('runtime/clinical-workspace-v1/0278bf7106c2/client/patient-clinical-workspace-native/index.mjs', PatientWorkspaceScriptURL).href)
       .catch(function (error) { PatientWorkspaceModule = null; throw error; });
   }
   return PatientWorkspaceModule;
@@ -13001,7 +13001,7 @@ async function PatientWorkspaceModules() {
 async function PatientWorkspaceModels() {
   if (!PatientWorkspaceScriptURL) throw PatientWorkspaceError('UNSUPPORTED');
   if (!v.VildaCareTemplateModel) await import(new v.URL('vilda_care_template_model.js?v=3', PatientWorkspaceScriptURL).href);
-  if (!v.VildaCarePlanMutation) await import(new v.URL('vilda_care_plan_mutation.js?v=2', PatientWorkspaceScriptURL).href);
+  if (!v.VildaCarePlanMutation) await import(new v.URL('vilda_care_plan_mutation.js?v=3', PatientWorkspaceScriptURL).href);
   if (!v.VildaCarePlanModel || !v.VildaCareTemplateModel || !v.VildaCarePlanMutation) throw PatientWorkspaceError('UNSUPPORTED');
 }
 function PatientWorkspaceLock(account, mode, action) {
@@ -13706,6 +13706,8 @@ async function PatientLegacyService() {
       updatedAtISO: now, dueDateISO: plain.dueDateISO || null,
       completedAtISO: plain.completedAtISO || null, noShowAtISO: plain.noShowAtISO || null
     });
+    // A new text never keeps the old record's content or state instants.
+    ['contentAtISO', 'contentForISO', 'stateAtISO', 'stateForISO'].forEach(function (key) { delete raw[key]; });
     raw.bodyCipher = await V(plain); check(); return raw;
   }
   async function commit(change) {
@@ -13809,6 +13811,7 @@ async function PatientPortablePreflightMerge(payload, state) {
   var noteTombs = Array.isArray(payload.patientNoteTombstones) ? payload.patientNoteTombstones : [];
   var patients = new Map(), incomingDates = new Map(), acceptedCardDates = new Map(), noteRows = new Map(), notesById = new Map(), tombsById = new Map();
   var removals = new Set(), documents = new Set(), transfers = [], newNotes = new Map();
+  var noteCardTombs = null;
   var bulkRows = null, bulkPlans = null, bulkOwners = null, bulkSnapshots = null;
   var snapshotCount = incomingPatients.reduce(function (count, item) { return count + (item && Array.isArray(item.snapshots) ? item.snapshots.length : 0); }, 0);
   function check() { PatientWorkspaceCheck(state); }
@@ -13816,6 +13819,30 @@ async function PatientPortablePreflightMerge(payload, state) {
   async function patient(id) {
     if (!patients.has(id)) { patients.set(id, await adapter.getPatientForUser(account, id)); check(); }
     return patients.get(id);
+  }
+  // The vault tests for a known tombstone and an absent card after merging cards.
+  // Before the merge, project deletion or restoration from the card dates.
+  async function deadNoteCard(id) {
+    if (!noteCardTombs) {
+      var localTombs = [];
+      if (typeof adapter.listTombstonesForUser === 'function') {
+        try { localTombs = await adapter.listTombstonesForUser(account); }
+        catch (error) { PatientClinicalRethrow(error); check(); throw error; }
+        check();
+      }
+      noteCardTombs = new Map();
+      patientTombs.concat(localTombs || []).forEach(function (item) {
+        if (item && item.patientId) noteCardTombs.set(item.patientId, later(noteCardTombs.get(item.patientId), item.deletedAtISO));
+      });
+    }
+    if (!noteCardTombs.has(id)) return false;
+    if (removals.has(id)) return true;
+    var card;
+    try { card = await patient(id); }
+    catch (error) { PatientClinicalRethrow(error); check(); throw error; }
+    var deletedAt = noteCardTombs.get(id);
+    if (deletedAt && deletedAt >= later(card && card.lastSavedAtISO, incomingDates.get(id))) return true;
+    return !card && !acceptedCardDates.has(id);
   }
   async function storedNote(id) {
     if (!noteRows.has(id)) { noteRows.set(id, bulkRows ? null : await adapter.getPatientNoteForUser(account, id)); check(); }
@@ -13878,18 +13905,27 @@ async function PatientPortablePreflightMerge(payload, state) {
     if (!incoming || !incoming.id || !incoming.updatedAtISO || typeof incoming.patientId !== 'string' || !incoming.patientId) continue;
     var stored = await storedNote(incoming.id);
     if (!stored) { if (!newNotes.has(incoming.id)) newNotes.set(incoming.id, []); newNotes.get(incoming.id).push(incoming); continue; }
-    var wins = Bnp_rev(incoming) > Bnp_rev(stored) || Bnp_rev(incoming) === Bnp_rev(stored) && incoming.updatedAtISO > (stored.updatedAtISO || '');
+    var localPlans = await Bnp_planyTutaj([stored], [incoming], [incoming.id]); check();
+    var wins = Bnp_nowsza(incoming, stored, localPlans.has(incoming.id));
     var mayMerge = incoming.category === 'care-plan' && incoming.careContext && incoming.careContext.role === 'plan';
-    if (!wins && !mayMerge) continue;
-    var changedOwner = incoming.patientId !== stored.patientId;
-    var explicitContext = Object.prototype.hasOwnProperty.call(incoming, 'careContext');
-    if (changedOwner || incoming.category !== stored.category || explicitContext) {
+    var moved = false;
+    if (incoming.patientId !== stored.patientId) {
+      if (typeof stored.patientId === 'string' && stored.patientId) {
+        var incomingDead = await deadNoteCard(incoming.patientId), storedDead = await deadNoteCard(stored.patientId); check();
+        var tied = Bnp_rev(incoming) === Bnp_rev(stored) && incoming.updatedAtISO === (stored.updatedAtISO || '');
+        if (incomingDead !== storedDead) moved = storedDead;
+        else moved = tied ? incoming.patientId < stored.patientId : wins;
+      } else moved = wins;
+    }
+    var changesCategory = (wins || mayMerge) && incoming.category !== stored.category;
+    var changesContext = (wins || mayMerge) && Object.prototype.hasOwnProperty.call(incoming, 'careContext');
+    if (moved || changesCategory || changesContext) {
       var plain = await G(stored.bodyCipher.iv, stored.bodyCipher.data); check();
       var current = plain && plain.careContext, next = incoming.careContext;
       if (PatientPortableMarked(current)) {
-        if (changedOwner || incoming.category !== stored.category || explicitContext && (!PatientPortableMarked(next)
+        if (moved || changesCategory || changesContext && (!PatientPortableMarked(next)
           || ['version', 'nativeFormat', 'role', 'planId', 'stageId', 'stepId'].some(function (key) { return current[key] !== next[key]; }))) throw PatientPortableSyncDenied(true);
-      } else if (changedOwner || PatientPortableMarked(next)) documents.add(incoming.id);
+      } else if (moved || changesContext && PatientPortableMarked(next)) documents.add(incoming.id);
     }
   }
   // Use the native note-tombstone lattice, including patient-deletion rescue.
@@ -13901,10 +13937,13 @@ async function PatientPortablePreflightMerge(payload, state) {
     var copies = tombEntry[1].concat(localTomb ? [localTomb] : []), related = notesById.get(tombId) || [];
     var knownDate = raw && raw.updatedAtISO || '';
     related.forEach(function (item) { knownDate = later(knownDate, item.updatedAtISO); });
-    var canon = Bnp_zlacz(copies)[tombId], winner = Bnp_zwyciezcy(raw ? [raw] : [], related)[tombId];
+    var localRows = raw ? [raw] : [];
+    var planyTutaj = await Bnp_planyTutaj(localRows, related, [tombId]); check();
+    var canon = Bnp_zlacz(copies)[tombId], winner = Bnp_zwyciezcy(localRows, related, planyTutaj)[tombId];
     var decision = Bnp_stan(canon, knownDate || null, undefined, winner);
     if (decision === 'karta') {
-      var owner = canon.pole.patientId, card = await patient(owner), date = card ? later(card.lastSavedAtISO, acceptedCardDates.get(owner)) : null;
+      var owner = canon.pole.patientId, card = await patient(owner), accepted = acceptedCardDates.get(owner);
+      var date = (card || accepted) && !(await deadNoteCard(owner)) ? later(card && card.lastSavedAtISO, accepted) : null;
       if (removals.has(owner)) date = null;
       decision = Bnp_stan(canon, knownDate || null, date, winner);
     }
