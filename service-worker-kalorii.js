@@ -1939,6 +1939,8 @@ const CORE_SHELL_URLS = [
   '/vilda_icd10_search.js?v=1',
   '/vilda_icd10_picker.js?v=1',
   '/vilda_icd10_picker.css?v=1',
+  '/vilda_home_reminders.js?v=1',
+  '/vilda_home_reminders.css?v=1',
   '/vilda_home_workspace.js?v=1',
   '/vilda_home_workspace.js?v=2',
   '/vilda_home_workspace.js?v=3',
@@ -3172,6 +3174,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_auth_ui.js?v=559',
   '/vilda_auth_ui.js?v=560',
   '/vilda_auth_ui.js?v=561',
+  '/vilda_auth_ui.js?v=562',
   '/vilda_session_bridge.js?v=148',
   '/vilda_session_bridge.js?v=149',
   '/vilda_session_bridge.js?v=150',
@@ -6831,8 +6834,8 @@ const CLINICAL_WORKSPACE_PRECACHE_PACK = Object.freeze({
 
 // BEGIN VISIT UI PACK CONFIG
 const VISIT_UI_PRECACHE_PACK = Object.freeze({
-  "url": "/runtime/visit-ui-precache/precache-937fcc18a989.json",
-  "sha256": "937fcc18a9890811d70d1f6caec833926695437dd41eca18917a8e4bd4a6783e",
+  "url": "/runtime/visit-ui-precache/precache-dfc3b9023318.json",
+  "sha256": "dfc3b9023318a5f2d026f0eb831c9901c9fdd8cea84c4cc6cc0ca898d1490f0d",
   "files": [
     {
       "url": "/vilda_visit_context.js?v=1",
@@ -6949,6 +6952,14 @@ const VISIT_UI_PRECACHE_PACK = Object.freeze({
     {
       "url": "/vilda_icd10_picker.css?v=1",
       "sha256": "c4f87b9eb34d2ff53e09015929c98b8e6b36259664b8342dbbbc3a47e4116bec"
+    },
+    {
+      "url": "/vilda_home_reminders.js?v=1",
+      "sha256": "93c4cc89ae594a36b33271fbf6e9ee7aa13e03aa1c34bbf99e35b22a10de261f"
+    },
+    {
+      "url": "/vilda_home_reminders.css?v=1",
+      "sha256": "2f6661f3aeb4307fa4d0248eae4522ea14e06e7e04549e86c15762b79170e167"
     }
   ]
 });
@@ -7095,6 +7106,8 @@ function createVisitUIPrecacheState(config = VISIT_UI_PRECACHE_PACK) {
     ['/vilda_icd10_search.js', 'text/javascript; charset=utf-8'],
     ['/vilda_icd10_picker.js', 'text/javascript; charset=utf-8'],
     ['/vilda_icd10_picker.css', 'text/css; charset=utf-8'],
+    ['/vilda_home_reminders.js', 'text/javascript; charset=utf-8'],
+    ['/vilda_home_reminders.css', 'text/css; charset=utf-8'],
   ]);
   if (!config || !Array.isArray(config.files) || config.files.length !== types.size
     || !/^[a-f0-9]{64}$/.test(config.sha256)

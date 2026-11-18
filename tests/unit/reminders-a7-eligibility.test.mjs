@@ -59,7 +59,9 @@ function surface(name) {
     remMaybeForced: null, remMaybeReadSequence: 0, Fa: () => '2026-10-28', wn() {},
     Ot: (_label, error) => errors.push(error), remInlineError() {}, remShowReadError() {},
   });
-  vm.runInContext(searchReturnCode + '\n' + productionFunction(name), context);
+  // Br also reports its read phase to the optional presentation. Load the
+  // actual dependency; an unmarked legacy surface has no presentation view.
+  vm.runInContext(searchReturnCode + '\n' + productionFunction('HomeRemindersInlineReadPhase') + '\n' + productionFunction(name), context);
   return { run: () => name === 'Br' ? context.Br(host) : context.tn({ force: true }),
     groups: () => rendered, errors };
 }

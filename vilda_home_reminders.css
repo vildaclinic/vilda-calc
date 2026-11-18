@@ -1,0 +1,189 @@
+/* Approved homepage geometry over explicitly opted-in native Reminder nodes.
+ * The outer slot never overrides the native display/PRO/lock eligibility. */
+.vb22.vb22--stable.vhome-reminders-card,
+.vb22.vb22--stable.vhome-reminders-dialog,
+.vhome-reminders-child-dialog {
+  --vhr-ink: #294b55;
+  --vhr-muted: #617986;
+  --vhr-line: #dbe7e8;
+  --vhr-accent: var(--primary, #00838d);
+  --vhr-soft: #f6f8f9;
+  box-sizing: border-box;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--vhr-ink);
+  background: #fff;
+  font-size: 16px;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+.vhome-reminders-slot { min-width: 0; height: 352px; min-height: 352px; max-height: 352px; margin: 0; padding: 0; }
+.vb22.vb22--stable.vhome-reminders-card {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: var(--border-hairline) solid var(--vhr-line);
+  border-radius: var(--radius-13);
+  box-shadow: 0 2px 8px #244d5505;
+}
+.vb22.vb22--stable.vhome-reminders-card[hidden] { display: none; }
+.vb22.vb22--stable.vhome-reminders-card .vb22-head {
+  box-sizing: border-box;
+  flex: 0 0 80px;
+  height: 80px;
+  min-height: 0 !important;
+  gap: var(--space-12px);
+  padding: var(--space-14px) var(--space-20px);
+}
+.vb22.vb22--stable.vhome-reminders-card .vb22-heading { flex: 1 1 auto; min-width: 0; }
+.vb22.vb22--stable.vhome-reminders-card .vb22-head h2 { margin: 0; font-size: 17px; font-weight: 600; line-height: 1.4; white-space: normal; overflow-wrap: anywhere; }
+.vb22.vb22--stable.vhome-reminders-card .vb22-tools { display: flex; flex-wrap: nowrap; align-items: center; gap: var(--space-6px); max-width: none; }
+.vb22.vb22--stable.vhome-reminders-card .vhome-reminders-count { padding: 3px var(--space-8px); border-radius: 5px; background: var(--vhr-soft); color: var(--vhr-muted); font-size: 13px; line-height: 1.4; }
+.vb22.vb22--stable.vhome-reminders-card .vhome-reminders-count:empty { display: none; }
+.vb22.vb22--stable.vhome-reminders-card .vb22-tools button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  height: 44px;
+  margin: 0;
+  padding: var(--space-10px);
+  border: 0 !important;
+  background: transparent !important;
+  color: var(--vhr-accent) !important;
+  box-shadow: none !important;
+}
+.vb22.vb22--stable.vhome-reminders-card .vb22-create-label { display: none; }
+.vb22.vb22--stable.vhome-reminders-card .vb22-tools svg { display: block; width: 20px; height: 20px; }
+.vb22.vb22--stable.vhome-reminders-card .vb22-tabs,
+.vb22.vb22--stable.vhome-reminders-card .vb22-filters,
+.vb22.vb22--stable.vhome-reminders-card .vb22-list-tools { display: none; }
+.vb22.vb22--stable.vhome-reminders-card .vb22-layout { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; overflow: hidden; }
+.vb22.vb22--stable.vhome-reminders-card .vb22-list-pane { flex: 1 1 auto; min-width: 0; min-height: 0; padding: 0; border: 0; overflow: hidden; }
+.vb22.vb22--stable.vhome-reminders-card .vb22-mini-list { display: grid; grid-template-rows: repeat(2, minmax(min-content, 1fr)); min-height: 0; overflow: auto; }
+.vhome-reminders-entry { display: grid; grid-template-columns: 43px minmax(0, 1fr); align-items: center; gap: var(--space-12px); min-width: 0; min-height: 78px; margin: 0 var(--space-20px); padding: var(--space-8px) 0; border-bottom: var(--border-hairline) solid var(--vhr-line); }
+.vhome-reminders-date { box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; width: 43px; min-height: 46px; padding: var(--space-4px); border: var(--border-hairline) solid var(--vhr-line); border-radius: 7px; background: var(--vhr-soft); color: var(--vhr-muted); text-align: center; font-size: 12px; line-height: 1.2; }
+.vhome-reminders-date strong { display: block; font-size: 20px; font-weight: 550; }
+.vhome-reminders-date > span { text-transform: uppercase; }
+.vb22.vb22--stable.vhome-reminders-card .vhome-reminders-entry-open { display: flex; flex-direction: column; justify-content: center; align-items: stretch; gap: 2px; min-width: 0; min-height: 44px; width: 100%; height: 100%; margin: 0; padding: 0; border: 0 !important; background: transparent !important; color: var(--vhr-ink) !important; box-shadow: none !important; text-align: left; }
+.vb22.vb22--stable.vhome-reminders-card .vb22-row-title { flex: 0 0 auto; margin: 0; color: var(--vhr-ink); font-size: 16px; font-weight: 500; line-height: 1.4; -webkit-line-clamp: 2; }
+.vhome-reminders-entry-context { display: -webkit-box; flex: 0 0 auto; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; font-size: 14px; font-weight: 400; line-height: 1.4; color: var(--vhr-muted); }
+.vb22.vb22--stable.vhome-reminders-card .vhome-reminders-entry-context .vb22-row-patient,
+.vhome-reminders-source { display: inline; margin: 0; color: var(--vhr-muted); font-family: inherit; font-size: 14px; line-height: 1.4; }
+.vhome-reminders-entry-context > :not(:first-child)::before { content: " · "; }
+.vb22.vb22--stable.vhome-reminders-card .vhome-reminders-patient-omitted { display: none !important; }
+.vb22.vb22--stable.vhome-reminders-card .vhome-reminders-patient-omitted + .vhome-reminders-source::before { content: none; }
+.vb22.vb22--stable.vhome-reminders-card .vb22-row-meta { flex: 0 0 auto; display: flex; flex-wrap: wrap; margin: 0; font-size: 14px; line-height: 1.4; }
+.vb22.vb22--stable.vhome-reminders-card .vb22-row-date { display: block; font-size: 14px; line-height: 1.4; }
+.vb22.vb22--stable.vhome-reminders-card .vb22-row-meta .vild-rem-when { display: block; max-width: 100%; margin: 0; text-align: left; font-size: 14px; line-height: 1.4; }
+.vb22.vb22--stable.vhome-reminders-card .vb22-foot { flex: 0 0 auto; min-height: 0; margin-top: auto; padding: var(--space-8px) var(--space-20px) var(--space-12px); border: 0; background: #fff; }
+.vb22.vb22--stable.vhome-reminders-card .vb22-foot > span { display: none; }
+.vb22.vb22--stable.vhome-reminders-card .vb22-foot button { min-height: 44px; padding: var(--space-6px) 0; font-size: 14px; line-height: 1.5; }
+.vhome-reminders-empty { grid-column: 1 / -1; grid-row: 1 / -1; margin: var(--space-10px) var(--space-20px); padding: var(--space-18px); border: var(--border-hairline) dashed var(--vhr-line); border-radius: var(--radius-9); color: var(--vhr-muted); font-size: 14px; line-height: 1.6; }
+.vb22.vb22--stable.vhome-reminders-card[data-home-reminders-phase="error"] .vhome-reminders-empty { color: var(--danger, #b3261e); }
+
+/* Explicit classes also work when the native overlay belongs to app.html. */
+html dialog.vb22.vb22--stable.vhome-reminders-dialog {
+  position: fixed;
+  inset: 16px 16px calc(16px + var(--vb22-inset, 0px));
+  margin: auto;
+  padding: 0;
+  width: min(1000px, calc(100vw - 32px));
+  height: min(820px, calc(var(--vb22-height, 100dvh) - 32px - var(--vb22-inset, 0px)));
+  border-radius: var(--radius-14);
+  max-width: none;
+  max-height: none;
+  border: var(--border-hairline) solid var(--vhr-line);
+  overflow: hidden;
+  background: #fff;
+}
+html dialog.vb22.vb22--stable.vhome-reminders-dialog[open],
+html dialog.vb22.vb22-outcome.vhome-reminders-child-dialog[open] { animation: vhome-reminders-open 180ms ease-out both; }
+html dialog.vb22.vb22--stable.vhome-reminders-dialog::backdrop { background: #163b4b66; backdrop-filter: none; -webkit-backdrop-filter: none; }
+.vb22.vb22--stable.vhome-reminders-dialog .vb22-head { flex: 0 0 auto; height: auto; min-height: 0 !important; gap: var(--space-18px); padding: 21px 25px; }
+.vb22.vb22--stable.vhome-reminders-dialog .vb22-head h2 { font-size: 21px; font-weight: 600; line-height: 1.4; white-space: normal; overflow-wrap: anywhere; }
+.vb22.vb22--stable.vhome-reminders-dialog .vb22-subtitle[data-home-reminders-context]:not(:empty) { display: block; margin-top: var(--space-4px); color: var(--vhr-muted); font-size: 14px; line-height: 1.5; }
+.vb22.vb22--stable.vhome-reminders-dialog .vb22-icon { width: 44px; height: 44px; min-width: 44px; min-height: 44px; }
+.vb22.vb22--stable.vhome-reminders-dialog .vb22-heading,
+.vb22.vb22--stable.vhome-reminders-dialog .vb22-layout,
+.vb22.vb22--stable.vhome-reminders-dialog .vb22-detail { min-width: 0; }
+.vb22.vb22--stable.vhome-reminders-dialog .vhome-reminders-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); flex: 0 0 auto; height: auto; min-height: 0; gap: 5px; margin: 0 var(--space-24px) var(--space-18px); padding: 5px; border: var(--border-hairline) solid var(--vhr-line); border-radius: var(--radius-10); background: var(--vhr-soft); }
+.vb22.vb22--stable.vhome-reminders-dialog .vhome-reminders-tabs button { min-width: 0; min-height: 44px; margin: 0; padding: var(--space-8px) var(--space-10px); border: var(--border-hairline) solid transparent !important; border-radius: 7px !important; background: transparent !important; color: var(--vhr-muted) !important; box-shadow: none !important; font-size: 14px; line-height: 1.45; }
+.vb22.vb22--stable.vhome-reminders-dialog .vhome-reminders-tabs button[aria-selected="true"] { border-color: var(--vhr-line) !important; background: #fff !important; color: var(--vhr-accent) !important; }
+.vb22.vb22--stable.vhome-reminders-dialog .vhome-reminders-tabs button::after { display: none; }
+.vb22.vb22--stable.vhome-reminders-dialog .vb22-body { font-size: 16px; line-height: 1.6; }
+.vb22.vb22--stable.vhome-reminders-dialog .vb22-category,
+.vb22.vb22--stable.vhome-reminders-dialog .vb22-row-meta,
+.vb22.vb22--stable.vhome-reminders-dialog .vb22-field,
+.vb22.vb22--stable.vhome-reminders-dialog .vb22-origin { font-size: 14px; line-height: 1.5; }
+.vb22.vb22--stable.vhome-reminders-dialog .vb22-field :is(input, select, textarea) { font-size: 16px; }
+.vb22.vb22--stable.vhome-reminders-dialog.vhome-reminders-list-view .vb22-layout { display: flex; flex-direction: column; }
+.vb22.vb22--stable.vhome-reminders-dialog.vhome-reminders-list-view .vb22-list-pane { border: 0; padding: 0 var(--space-24px) var(--space-16px); }
+.vb22.vb22--stable.vhome-reminders-dialog.vhome-reminders-list-view .vb22-detail { display: none; }
+.vhome-reminders-full-entry { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-18px); min-width: 0; margin-bottom: var(--space-14px); padding: var(--space-18px); border: var(--border-hairline) solid var(--vhr-line); border-radius: var(--radius-10); background: #fff; }
+.vb22.vb22--stable.vhome-reminders-dialog .vhome-reminders-full-entry > .vhome-reminders-entry-open { display: flex; flex-direction: column; align-items: stretch; gap: var(--space-6px); width: 100%; min-width: 0; padding: 0; border: 0 !important; background: transparent !important; box-shadow: none !important; text-align: left; }
+.vb22.vb22--stable.vhome-reminders-dialog .vhome-reminders-full-entry > .vb22-detail-patient { min-width: 0; margin: 0; color: var(--vhr-ink); font-size: 14px; font-weight: 500; line-height: 1.5; }
+.vb22.vb22--stable.vhome-reminders-dialog .vhome-reminders-full-entry > .vb22-detail-patient .vb22-patient-link { min-height: 44px; padding: 0; color: var(--vhr-accent) !important; font-size: 14px; font-weight: 500; line-height: 1.5; }
+.vb22.vb22--stable.vhome-reminders-dialog .vhome-reminders-full-entry .vb22-row-patient { display: none; }
+.vb22.vb22--stable.vhome-reminders-dialog .vhome-reminders-full-entry .vb22-row-title { order: -1; margin: 0; color: var(--vhr-ink); font-size: 16px; font-weight: 500; line-height: 1.5; }
+.vb22.vb22--stable.vhome-reminders-dialog .vhome-reminders-full-entry .vb22-row-meta { margin: 0; }
+.vhome-reminders-full-entry .vhome-reminders-entry-detail { min-width: 0; padding: 0; overflow-wrap: anywhere; }
+html dialog.vb22.vb22--stable.vhome-reminders-dialog .vhome-reminders-full-entry .vhome-reminders-entry-detail .vb22-back,
+html dialog.vb22.vb22--stable.vhome-reminders-dialog .vhome-reminders-full-entry .vhome-reminders-entry-detail .vb22-detail-label,
+html dialog.vb22.vb22--stable.vhome-reminders-dialog .vhome-reminders-full-entry .vhome-reminders-entry-detail .vb22-detail-title,
+html dialog.vb22.vb22--stable.vhome-reminders-dialog .vhome-reminders-full-entry .vhome-reminders-entry-detail .vb22-detail-date { display: none; }
+.vb22.vb22--stable.vhome-reminders-dialog .vhome-reminders-full-entry .vb22-meta { margin: 0 0 var(--space-12px); }
+.vb22.vb22--stable.vhome-reminders-dialog .vhome-reminders-full-entry .vb22-meta .vb22-category { max-width: 100%; margin-left: 0; text-align: left; }
+.vb22.vb22--stable.vhome-reminders-dialog .vb22-action-row button { font-size: 14px !important; line-height: 1.5 !important; }
+.vb22.vhome-reminders-dialog .vb22-primary,
+.vb22.vhome-reminders-child-dialog .vb22-primary { background: var(--vhr-accent) !important; }
+html dialog.vb22.vb22-outcome.vhome-reminders-child-dialog { position: fixed; inset: auto; top: calc(var(--vb22-inset, 0px) + var(--vb22-height, 100dvh) / 2); left: 50%; transform: translate(-50%, -50%); margin: 0; padding: 0; width: min(1000px, calc(100vw - 32px)); height: min(820px, calc(var(--vb22-height, 100dvh) - 32px)); max-width: none; max-height: none; border: var(--border-hairline) solid var(--vhr-line); border-radius: var(--radius-14); background: #fff; }
+.vb22.vb22--stable.vhome-reminders-card :is(button, a, input, select, textarea, summary):focus-visible,
+.vb22.vb22--stable.vhome-reminders-dialog :is(button, a, input, select, textarea, summary):focus-visible { outline: var(--border-pro) solid var(--vhr-accent); outline-offset: 2px; }
+.vhome-device-compact .vhome-reminders-slot,
+.vhome-reminders-slot.vhome-reminders-compact { height: auto; min-height: 0; max-height: none; align-self: start; }
+.vhome-device-compact .vb22.vb22--stable.vhome-reminders-card,
+.vb22.vb22--stable.vhome-reminders-card.vhome-reminders-compact { height: auto; min-height: 0; max-height: none; }
+.vhome-device-compact .vb22.vb22--stable.vhome-reminders-card .vb22-head,
+.vb22.vb22--stable.vhome-reminders-card.vhome-reminders-compact .vb22-head { flex-basis: auto; height: auto; padding-block: var(--space-10px); }
+.vhome-device-compact .vb22.vb22--stable.vhome-reminders-card .vb22-mini-list,
+.vb22.vb22--stable.vhome-reminders-card.vhome-reminders-compact .vb22-mini-list { display: flex; overflow: visible; }
+.vhome-device-compact .vb22.vb22--stable.vhome-reminders-card .vb22-foot,
+.vb22.vb22--stable.vhome-reminders-card.vhome-reminders-compact .vb22-foot { margin-top: 0; }
+@media (max-width: 680px) {
+  .vhome-reminders-full-entry { grid-template-columns: minmax(0, 1fr); gap: var(--space-12px); padding: var(--space-16px); }
+  .vb22.vb22--stable.vhome-reminders-dialog .vhome-reminders-tabs { margin-inline: var(--space-16px); }
+}
+@media (max-width: 600px) {
+  .vb22.vb22--stable.vhome-reminders-card .vb22-head { padding-inline: 17px; }
+  .vb22.vb22--stable.vhome-reminders-card .vb22-head h2 { font-size: 16px; }
+  .vb22.vb22--stable.vhome-reminders-card .vb22-tools { gap: var(--space-4px); }
+  .vhome-reminders-entry { margin-inline: 17px; gap: var(--space-10px); min-height: 84px; }
+  .vb22.vb22--stable.vhome-reminders-card .vb22-foot { padding-inline: 17px; }
+  html dialog.vb22.vb22--stable.vhome-reminders-dialog,
+  html dialog.vb22.vb22-outcome.vhome-reminders-child-dialog { width: calc(100vw - 20px); height: calc(var(--vb22-height, 100dvh) - 24px - var(--vb22-inset, 0px)); }
+  html dialog.vb22.vb22--stable.vhome-reminders-dialog { inset: 12px 10px calc(12px + var(--vb22-inset, 0px)); }
+  .vb22.vb22--stable.vhome-reminders-dialog .vb22-head { flex: 0 0 auto; height: auto; min-height: 0 !important; gap: var(--space-12px); padding: var(--space-14px) var(--space-16px); }
+  .vb22.vb22--stable.vhome-reminders-dialog .vb22-head h2 { font-size: 19px; }
+  .vb22.vb22--stable.vhome-reminders-dialog .vb22-tools { gap: var(--space-4px); }
+}
+@keyframes vhome-reminders-open { from { opacity: 0; translate: 0 6px; scale: .99; } to { opacity: 1; translate: 0 0; scale: 1; } }
+@media (prefers-reduced-motion: reduce) { html dialog.vb22.vb22--stable.vhome-reminders-dialog[open],
+html dialog.vb22.vb22-outcome.vhome-reminders-child-dialog[open] { animation: none; } }
+
+.vb22.vb22--stable.vhome-reminders-card .vb22-foot button { display: flex; align-items: center; justify-content: space-between; gap: var(--space-12px); width: 100%; }
+.vb22.vb22--stable.vhome-reminders-card .vb22-foot button svg { width: 20px; height: 20px; flex: 0 0 20px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+html dialog.vb22.vb22--stable.vhome-reminders-dialog.vhome-reminders-list-view .vb22-list-pane { display: flex; }
+html dialog.vb22.vb22--stable.vhome-reminders-dialog.vhome-reminders-list-view .vb22-detail { display: none; }
+html dialog.vb22.vb22--stable.vhome-reminders-dialog.vhome-reminders-list-view .vhome-reminders-tabs { display: grid; }
+html dialog.vb22.vb22--stable.vhome-reminders-dialog:is(.vhome-reminders-inline-editing, .vhome-reminders-detached-detail) .vb22-layout { display: flex; flex-direction: column; }
+html dialog.vb22.vb22--stable.vhome-reminders-dialog:is(.vhome-reminders-inline-editing, .vhome-reminders-detached-detail) .vb22-list-pane { display: none; }
+html dialog.vb22.vb22--stable.vhome-reminders-dialog:is(.vhome-reminders-inline-editing, .vhome-reminders-detached-detail) .vb22-detail { display: block; width: 100%; }
+html dialog.vb22.vb22--stable.vhome-reminders-dialog.vhome-reminders-detached-detail .vb22-detail > .vb22-back { display: block; min-height: 44px; }

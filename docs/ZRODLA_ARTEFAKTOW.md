@@ -2226,3 +2226,31 @@ baza publiczna nadal wynosi
 `e02ac735993506a4cc30a450524fce89b5fe1108a2e053e1838f1be90d0a0fc5`.
 Weryfikują to `patient-treatment-vault-delta.mjs`,
 `check_clinical_workspace_boundary.mjs` i testy granic źródła.
+
+
+## Opcjonalna prezentacja Przypomnień — przygotowanie nowej strony
+
+`vilda_home_reminders.js` oraz `.css` są czytelnymi źródłami warstwy prezentacji.
+Sam ich załadunek nie montuje karty, nie odczytuje danych i nie zmienia zakresu
+przypomnień. Dekorator wymaga jawnej flagi podglądu oraz wywołania przez
+natywny kontroler. Niezmienione węzły przycisków, formularzy, wyników, błędów
+i paginacji zachowują swoje natywne procedury obsługi.
+
+Dokładne haki w `vilda_auth_ui.js` odtwarza
+`tools/home-reminders-auth-hooks.mjs`. Narzędzie sprawdza SHA256 bazowego
+artefaktu B1, jednoznaczność par źródłowych oraz pełne odwrócenie i ponowne
+zastosowanie zmian. Nie zastępuje reguł kategorii, dat, kwalifikacji ani
+natywnych zapisów. Wyjątki od starego położenia karty wymagają oryginalnego
+`#remindersInline` z jawnym znacznikiem wewnątrz `#vhomeMainCards`; blokady
+konta i dostępu oraz osłona prywatności pozostają natywne.
+
+```bash
+node tools/home-reminders-auth-hooks.mjs --check
+node tools/patient_b1_auth_hooks.mjs --check
+```
+
+Stan odczytu, pełne liczniki i sformatowane daty pochodzą od kontrolera.
+Brak wyniku odczytu nie staje się liczbą zero. Osobne natywne formularze
+oraz szczegóły zapisu spoza bieżącej listy są przekazywane bez kopiowania ich
+pól lub reguł. Domyślne wejścia pozostają globalnym widokiem natywnym.
+Warstwa przygotowawcza nie aktywuje automatycznie nowej karty ani filtra pacjenta.

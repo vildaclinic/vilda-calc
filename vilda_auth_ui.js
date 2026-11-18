@@ -1701,14 +1701,19 @@ function remB22Watch(vault) {
 function remB22Inline(host, groups) {
   host.setAttribute('role', 'region'); host.setAttribute('aria-label', 'Przypomnienia');
   var view = remB22Views.get(host);
-  if (!view || !view.alive()) { if (view) view.destroyCare(); view = remB22Create(host, false, {}); remB22Views.set(host, view); }
+  var homePresentation = HomeRemindersInlineEnabled(host);
+  if (!view || !view.alive() || view.homePresentation !== homePresentation) { if (view) view.destroyCare(); view = remB22Create(host, false, homePresentation ? { homePresentation: true } : {}); remB22Views.set(host, view); }
   view.setGroups(groups);
   Tr(remB22Flat(groups).filter(function (row) { return remB22Day(row.n.dueDateISO) <= Fa(); }).length);
   Nr();
 }
 function remB22Open(groups, options) {
   al();
-  if (remB22Full && remB22Full.alive()) { remB22Full.request(options || {}); return remB22Full.root; }
+  if (remB22Full && remB22Full.alive()) {
+    if (remB22Full.homePresentation === HomeRemindersPresentationRequested(options)) { remB22Full.request(options || {}); return remB22Full.root; }
+    if (!remB22Full.canChangePresentation()) return remB22Full.root;
+    remB22Full.close();
+  }
   var root = remB22Node('dialog', 'vilda-reminders-modal-overlay vb22 vb22-modal');
   root.setAttribute('aria-label', 'Przypomnienia');
   i.document.body.appendChild(root);
@@ -1730,6 +1735,103 @@ function remB22Create(host, full, options) {
   var outcomeRoot = null, outcomeOrigin = null, listContext = null, outcomePrivacyCleanup = null;
   var privacy = i.VildaRemindersPrivacy, privacyCleanup = null, searchView = null, searchNavigation = null;
   var previousFocus = i.document.activeElement, previousNavHidden = i.document.body.classList.contains('nav-ui-temporarily-hidden');
+  /* BEGIN HOME REMINDERS PRESENTATION CONTROLLER */
+  var HomeRemindersRequested = HomeRemindersPresentationRequested(options);
+  var HomeRemindersPresentation = null, HomeRemindersUpdating = false, HomeRemindersOutcomeCleanup = null;
+  var HomeRemindersReadPhase = 'loading', HomeRemindersHistoryReadPhase = 'loading';
+  function HomeRemindersDateParts(value) {
+    var day = remB22Day(value), month = Number(day.slice(5, 7));
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || month < 1 || month > 12) return { day: '', month: '' };
+    return { day: day.slice(8, 10), month: new Intl.DateTimeFormat('pl-PL', { month: 'short', timeZone: 'UTC' }).format(new Date(Date.UTC(2000, month - 1, 1))) };
+  }
+  function HomeRemindersRequest(request) {
+    return remB22Request(HomeRemindersRequested ? Object.assign({}, request || {}, { homePresentation: true }) : request);
+  }
+  function HomeRemindersDispose() {
+    HomeRemindersClearOutcome();
+    var presentation = HomeRemindersPresentation; HomeRemindersPresentation = null;
+    if (presentation && typeof presentation.destroy === 'function') {
+      try { presentation.destroy(); } catch (error) { Ot('homeRemindersDestroy', error); }
+    }
+  }
+  function HomeRemindersClearOutcome() {
+    var cleanup = HomeRemindersOutcomeCleanup; HomeRemindersOutcomeCleanup = null;
+    if (cleanup) { try { cleanup(); } catch (error) { Ot('homeRemindersDialogDestroy', error); } }
+  }
+  function HomeRemindersOnDialog(dialog) {
+    HomeRemindersClearOutcome();
+    if (!HomeRemindersPresentation || typeof HomeRemindersPresentation.onDialog !== 'function') return;
+    try {
+      var cleanup = HomeRemindersPresentation.onDialog(dialog);
+      if (typeof cleanup === 'function') HomeRemindersOutcomeCleanup = cleanup;
+    } catch (error) { Ot('homeRemindersDialog', error); }
+  }
+  function HomeRemindersUpdate() {
+    if (!HomeRemindersPresentation || HomeRemindersUpdating || !alive()) return;
+    HomeRemindersUpdating = true;
+    try {
+      var rows = visible(), entries = [], nativeNodes = Array.from(list.querySelectorAll('[data-note-id]'));
+      var phase = state.historyLoading ? 'loading' : state.tab === 'history' ? HomeRemindersHistoryReadPhase : HomeRemindersReadPhase;
+      if (state.savedOutcome && state.savedOutcome.awaitingRead) phase = state.savedOutcome.readError ? 'error' : 'partial';
+      var limit = full ? state.tab === 'history' ? state.historyLimit : rows.length : 2;
+      if (state.tab !== 'plans' && state.tab !== 'search' && !state.editing && !state.historyLoading) {
+        rows.slice(0, limit).forEach(function (row) {
+          var node = nativeNodes.find(function (candidate) { return candidate.dataset.noteId === row.n.id; });
+          if (!node) return;
+          var entry = {
+            id: row.n.id, node: node,
+            dateParts: HomeRemindersDateParts(row.n.dueDateISO),
+            sourceLabel: row.n.careContext && row.n.careContext.planId ? 'Plan opieki' : remA7Category(row.n.category),
+            titleLabel: row.n.title || Jv(row.n.category).label,
+            dateLabel: remB22Date(row.n.dueDateISO) + (row.n.dueTime ? ' · ' + row.n.dueTime : ''),
+            statusLabel: status(row)
+          };
+          if (full) {
+            entry.detailNode = make('section', 'vhome-reminders-native-entry');
+            entry.detailNode.dataset.homeReminderId = row.n.id;
+            HomeRemindersRenderDetail(entry.detailNode, row);
+          }
+          entries.push(entry);
+        });
+      }
+      HomeRemindersPresentation.render({
+        phase: phase, activeTab: state.tab,
+        total: phase === 'ready' ? rows.length : null, entries: entries, busy: state.busy, editing: state.editing,
+        inlineFormEditing: root.classList.contains('vb22-form-editing'),
+        detachedDetailVisible: !!(full && state.detached && state.detached.n.id === state.selected),
+        contextLabel: typeof options.contextLabel === 'string' ? options.contextLabel : '',
+        showPatientName: options.showPatientName !== false,
+        emptyText: state.tab === 'history' ? 'Brak wykonanych spraw z terminem.'
+          : state.rows.length ? 'Brak spraw w tym filtrze.' : 'Brak przypomnień na dziś. Możesz dodać nowe przypomnienie.',
+        tailNodes: Array.from(list.children).filter(function (node) {
+          return node.classList && ['vb22-empty', 'vild-rem-empty', 'vb22-text', 'vb22-error'].some(function (name) { return node.classList.contains(name); });
+        }),
+        feedbackNodes: Array.from(detail.children).concat(Array.from(list.children)).filter(function (node) {
+          return node.classList.contains('vb22-notice') || node.classList.contains('vb22-error');
+        })
+      });
+    } catch (error) { Ot('homeRemindersPresentation', error); }
+    finally { HomeRemindersUpdating = false; }
+  }
+  function HomeRemindersDecorate() {
+    if (!HomeRemindersRequested) return;
+    HomeRemindersPresentation = i.VildaHomeRemindersPresentation.decorate({
+      root: root, host: host, full: full,
+      nodes: { header: header, heading: heading, title: heading.firstChild, subtitle: subtitle, tools: tools,
+        privacyButton: privacyButton, addButton: addButton, exitButton: exitButton, tabs: tabs,
+        activeTab: activeTab, historyTab: historyTab, plansTab: plansTab, count: tabCount,
+        filters: filters, layout: layout, left: left, searchTools: searchTools, search: search,
+        list: list, detail: detail, footer: footer, careHost: careHost, globalSearchHost: globalSearchHost },
+      commands: {
+        isCurrent: alive,
+        selectTab: function (tab) { if (!alive() || state.busy || state.editing || ['active', 'history', 'plans'].indexOf(tab) < 0) return false; return switchTab(tab); },
+        openAll: function (request) { if (!alive() || state.busy || state.editing) return false; return HomeRemindersRequest(request || {}); },
+        add: function () { if (!alive() || state.busy || state.editing) return false; return addReminder(); },
+        close: closed
+      }
+    });
+  }
+  /* END HOME REMINDERS PRESENTATION CONTROLLER */
   function alive() { return root.isConnected && remReadCurrent(owner); }
   function clear(node) { while (node.firstChild) node.removeChild(node.firstChild); }
   function make(tag, cls, text) { return remB22Node(tag, cls, text); }
@@ -1739,6 +1841,7 @@ function remB22Create(host, full, options) {
     if (full && !state.busy && (!state.editing || i.confirm('Odrzucić niezapisany opis?'))) { remSearchDropReturn(); close(); }
   }
   function close() {
+    HomeRemindersDispose();
     sequence += 1; if (timer) i.clearTimeout(timer);
     if (careView) { careView.destroy(); careView = null; }
     if (searchView) { searchView.destroy(); searchView = null; }
@@ -1855,8 +1958,8 @@ function remB22Create(host, full, options) {
   tools.appendChild(privacyButton);
   var actionZone = make('div', 'vb22-action-zone');
   var addButton = btn('', 'vb22-add vb22-primary-create', function () {
-    if (state.tab === 'plans') { if (!full) remB22Request({ carePlans: true, newCarePlan: true }); else if (careView) careView.create(); return; }
-    if (!full) remB22Request({ newReminder: true }); else addReminder();
+    if (state.tab === 'plans') { if (!full) HomeRemindersRequest({ carePlans: true, newCarePlan: true }); else if (careView) careView.create(); return; }
+    if (!full) HomeRemindersRequest({ newReminder: true }); else addReminder();
   });
   addButton.appendChild(headerIcon('M12 5v14M5 12h14'));
   var addLabel = make('span', 'vb22-create-label', 'Dodaj +'); addButton.appendChild(addLabel);
@@ -1867,7 +1970,7 @@ function remB22Create(host, full, options) {
   }
   var templateButton = btn('Moje szablony', 'vb22-add vb22-template-open', openCareTemplates); templateButton.hidden = true; actionZone.appendChild(templateButton);
   tools.appendChild(actionZone);
-  var exitButton = btn('', 'vb22-icon vb22-exit', full ? closed : function () { remB22Request({ globalSearch: state.tab === 'search' && searchView ? searchView.getContext() : state.tab === 'history', carePlans: state.tab === 'plans' }); });
+  var exitButton = btn('', 'vb22-icon vb22-exit', full ? closed : function () { HomeRemindersRequest({ globalSearch: state.tab === 'search' && searchView ? searchView.getContext() : state.tab === 'history', carePlans: state.tab === 'plans' }); });
   exitButton.appendChild(headerIcon(full ? 'm6 6 12 12M18 6 6 18' : 'M9 4H4v5M15 4h5v5M20 15v5h-5M9 20H4v-5'));
   tools.appendChild(exitButton);
   tools.lastChild.setAttribute('aria-label', full ? 'Zamknij Przypomnienia' : 'Powiększ Przypomnienia');
@@ -1900,10 +2003,11 @@ function remB22Create(host, full, options) {
     var next = list.querySelector('[data-note-id]') || activeTab; next.focus({ preventScroll: true });
   }); clearQueryButton.classList.add('vb22-local-query-reset');
   var footer = make('footer', 'vb22-foot'); footer.appendChild(make('span', '', 'Bieżące przypomnienia'));
-  if (!full) { var allButton = textButton('Pokaż wszystkie →', function () { remB22Request({ history: state.tab === 'history' }); }); allButton.classList.add('vild-rem-all'); footer.appendChild(allButton); } root.appendChild(footer);
+  if (!full) { var allButton = textButton('Pokaż wszystkie →', function () { HomeRemindersRequest({ history: state.tab === 'history' }); }); allButton.classList.add('vild-rem-all'); footer.appendChild(allButton); } root.appendChild(footer);
   var careHost = make('section', 'vb22-care-host'), careView = null, careReturn = null; careHost.hidden = true; root.insertBefore(careHost, footer);
   var globalSearchHost = make('section', 'vb22-global-search-host'); globalSearchHost.hidden = true; root.insertBefore(globalSearchHost, footer);
   [tabs, filters, layout, careHost, globalSearchHost, footer].forEach(function (node) { node.classList.add('vb22-private-content'); });
+  HomeRemindersDecorate();
   if (privacy) privacyCleanup = privacy.register({ root: root, content: [tabs, filters, layout, careHost, globalSearchHost, footer], button: privacyButton, header: header });
   else privacyButton.hidden = true;
   async function openSearchPatient(patientId, noteId, row, context, parent) {
@@ -1944,7 +2048,7 @@ function remB22Create(host, full, options) {
           return '';
         },
         renderLabContext: function (host, lab) { Lh3SavedAssessment(host, lab); HrSavedReference(host, lab); },
-        requestExpand: function (context) { remB22Request({ globalSearch: context || true }); },
+        requestExpand: function (context) { HomeRemindersRequest({ globalSearch: context || true }); },
         openPatient: openSearchPatient,
         openCalendar: async function (noteId, row) {
           if (!alive() || state.editing || state.busy) return false;
@@ -1968,10 +2072,10 @@ function remB22Create(host, full, options) {
             return false;
           } finally { if (searchNavigation && searchNavigation.token === token) searchNavigation = null; }
         },
-        openReminder: function (noteId) { remSearchDropReturn(); if (!full) return remB22Request({ noteId: noteId, searchContext: searchView.getContext() }); enterDetail(noteId); return selectLinked(noteId); },
+        openReminder: function (noteId) { remSearchDropReturn(); if (!full) return HomeRemindersRequest({ noteId: noteId, searchContext: searchView.getContext() }); enterDetail(noteId); return selectLinked(noteId); },
         openCare: function (planId, stepId, row) {
           var recordId=row&&row.source&&row.source.careContext&&['result','note'].includes(row.source.careContext.role)?row.noteId:null;
-          if(!full)return remB22Request({carePlans:true,planId:planId,careRecordId:recordId,searchContext:searchView.getContext()});else openCare(planId,null,recordId);
+          if(!full)return HomeRemindersRequest({carePlans:true,planId:planId,careRecordId:recordId,searchContext:searchView.getContext()});else openCare(planId,null,recordId);
         }
       });
     }
@@ -2001,7 +2105,7 @@ function remB22Create(host, full, options) {
         isCurrent: alive,
         openTemplates: openCareTemplates,
         onDialog: function (dialog) { return privacy ? privacy.protectDialog(dialog) : null; },
-        requestExpand: function (selectedPlan, newPlan, recordId) { remB22Request({ carePlans: true, planId: selectedPlan || null, careRecordId:recordId||null, newCarePlan: !!newPlan }); },
+        requestExpand: function (selectedPlan, newPlan, recordId) { HomeRemindersRequest({ carePlans: true, planId: selectedPlan || null, careRecordId:recordId||null, newCarePlan: !!newPlan }); },
         hasReturn: function () { return !!careReturn; },
         backLabel: function () { return careReturn ? careReturn.tab === 'history' || careReturn.tab === 'search' ? '← Szukaj' : '← Przypomnienia' : '← Lista planów'; },
         onReturnToReminders: function () {
@@ -2044,7 +2148,7 @@ function remB22Create(host, full, options) {
               transferred = true;
               CareProtectNativeEditor(privacy); return true;
             }
-            function returned(){if(remReadCurrent(navigationOwner))remB22Request({carePlans:true,planId:planId,careRecordId:note.id})}
+            function returned(){if(remReadCurrent(navigationOwner))HomeRemindersRequest({carePlans:true,planId:planId,careRecordId:note.id})}
             close();if(!remReadCurrent(navigationOwner))return false;
             await ga({patientId:note.patientId,note:note,onSaved:returned,onCancel:returned});CareProtectNativeEditor(privacy);
           } catch (error) {
@@ -2073,8 +2177,8 @@ function remB22Create(host, full, options) {
             }
             var planId = note.careContext && note.careContext.planId;
             var navigationOwner=remReadOwner();close();setTimeout(function () { if(!remReadCurrent(navigationOwner))return;ga({ patientId: note.patientId, note: note,
-              onSaved: function () { remB22Request({ carePlans: true, planId: planId }); },
-              onCancel: function () { remB22Request({ carePlans: true, planId: planId }); }
+              onSaved: function () { HomeRemindersRequest({ carePlans: true, planId: planId }); },
+              onCancel: function () { HomeRemindersRequest({ carePlans: true, planId: planId }); }
             }); }, 0);
           } catch (error) {
             if (fromSearch && !careSearchNavigationCurrent(navigation)) return false;
@@ -2125,8 +2229,8 @@ function remB22Create(host, full, options) {
   }
   function rowNode(row) {
     var note = row.n, node = btn('', 'vb22-row vild-rem-row' + (full ? ' vilda-reminders-row' : '') + (state.selected === note.id && full ? ' is-selected' : ''), function () {
-      if (note.careContext && note.careContext.planId) { if (!full) remB22Request({ carePlans: true, planId: note.careContext.planId }); else openCare(note.careContext.planId, note.id); return; }
-      if (!full) { remB22Request({ noteId: note.id, history: state.tab === 'history' }); return; }
+      if (note.careContext && note.careContext.planId) { if (!full) HomeRemindersRequest({ carePlans: true, planId: note.careContext.planId }); else openCare(note.careContext.planId, note.id); return; }
+      if (!full) { HomeRemindersRequest({ noteId: note.id, history: state.tab === 'history' }); return; }
       if (state.editing || state.busy) return; enterDetail(note.id); sequence += 1; state.selected = note.id; state.detached = null; state.savedOutcome = null; updateSelection(); renderDetail();
     });
     node.dataset.noteId = note.id;
@@ -2149,6 +2253,7 @@ function remB22Create(host, full, options) {
     });
   }
   function render() {
+    try {
     if (!alive()) return;
     var previousScroll = list.scrollTop; counts(); clear(list);
     if (state.tab === 'plans') { mountCare(); return; }
@@ -2165,11 +2270,12 @@ function remB22Create(host, full, options) {
       var selectedIndex = rows.findIndex(function (row) { return row.n.id === state.selected; });
       if (selectedIndex >= state.historyLimit) state.historyLimit = Math.ceil((selectedIndex + 1) / 50) * 50;
     }
-    rows.slice(0, state.tab === 'history' ? state.historyLimit : rows.length).forEach(function (row) { list.appendChild(rowNode(row)); });
+    rows.slice(0, HomeRemindersPresentation && !full ? 2 : state.tab === 'history' ? state.historyLimit : rows.length).forEach(function (row) { list.appendChild(rowNode(row)); });
     if (state.tab === 'history' && rows.length > state.historyLimit) list.appendChild(textButton('Pokaż kolejne ' + Math.min(50, rows.length - state.historyLimit) + ' spraw', function () { state.historyLimit += 50; render(); }));
     if (!rows.length) list.appendChild(make('p', 'vb22-empty vild-rem-empty', state.tab === 'history' ? 'Brak wykonanych spraw z terminem.' : state.rows.length ? 'Brak spraw w tym filtrze.' : 'Brak przypomnień na dziś. Możesz dodać nowe przypomnienie.'));
     list.scrollTop = previousScroll;
     if (full && !state.editing) renderDetail();
+    } finally { HomeRemindersUpdate(); }
   }
   function openCard(row, noteId) {
     if (state.editing || state.busy) return;
@@ -2190,8 +2296,9 @@ function remB22Create(host, full, options) {
     event.preventDefault(); event.stopPropagation(); menu.open = false;
     menu.querySelector('summary').focus({ preventScroll: true });
   }, true);
-  function renderDetail() {
-    clear(detail); detail.scrollTop = 0; var row = currentRow();
+  function renderDetail() { return HomeRemindersRenderDetail(detail, currentRow()); }
+  function HomeRemindersRenderDetail(detail, row) {
+    clear(detail); detail.scrollTop = 0;
     detail.appendChild(btn(listContext && listContext.searchContext ? '← Wróć do Szukaj' : '← Lista spraw',
       (listContext && listContext.searchContext ? '' : 'vb22-back ') + 'vb22-text', backToList));
     detail.appendChild(make('div', 'vb22-detail-label', 'Szczegóły wydarzenia'));
@@ -2239,7 +2346,7 @@ function remB22Create(host, full, options) {
           ga({ patientId: note.patientId, note: note, onSaved: function () { remSearchResume(token); }, onCancel: function () { remSearchResume(token); } });
           CareProtectNativeEditor(privacy); return;
         }
-        close(); ga({ patientId: note.patientId, note: note, onSaved: function () { remB22Request({ noteId: note.id }); } });
+        close(); ga({ patientId: note.patientId, note: note, onSaved: function () { HomeRemindersRequest({ noteId: note.id }); } });
       }); edit.setAttribute('aria-label', 'Edytuj treść przypomnienia'); actionBar.appendChild(edit);
       var extraActions = actions.filter(function (action) { return action.k === 'noshow' || action.k === 'recheck'; });
       if (extraActions.length) {
@@ -2297,7 +2404,7 @@ function remB22Create(host, full, options) {
     input.addEventListener('input', function () { input.setCustomValidity(''); });
     wrap.appendChild(input); form.appendChild(wrap); return input;
   }
-  function editing(value) { if (value) { sequence += 1; state.historyLoading = false; } else root.classList.remove('vb22-form-editing'); state.editing = value; counts(); }
+  function editing(value) { if (value) { sequence += 1; state.historyLoading = false; } else root.classList.remove('vb22-form-editing'); state.editing = value; counts(); HomeRemindersUpdate(); }
   function formActions(form, submitText, onCancel) {
     var actions = make('div', 'vb22-actions'), cancel = btn('Anuluj', '', async function () { if (state.busy) return; editing(false); if (onCancel) await onCancel(); else render(); if (state.stale || state.tab === 'history' && !state.historyReady) refresh(); });
     var save = make('button', 'vb22-primary', submitText); save.type = 'submit'; actions.appendChild(cancel); actions.appendChild(save); form.appendChild(actions); return [save, cancel];
@@ -2305,6 +2412,7 @@ function remB22Create(host, full, options) {
   function operationId() { return i.crypto && i.crypto.randomUUID ? i.crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2); }
   function dismissOutcome(restoreFocus) {
     var dialog = outcomeRoot, focus = outcomeOrigin; outcomeRoot = null; outcomeOrigin = null;
+    HomeRemindersClearOutcome();
     if (outcomePrivacyCleanup) { outcomePrivacyCleanup(); outcomePrivacyCleanup = null; }
     if (dialog) { if (dialog.open) dialog.close(); dialog.remove(); }
     if (root.isConnected) fit();
@@ -2373,6 +2481,7 @@ function remB22Create(host, full, options) {
       finally { state.busy = false; if (fields) fields.forEach(function (node) { node.disabled = false; }); controls.forEach(function (node) { node.disabled = false; }); nextSummary.removeAttribute('aria-disabled'); }
     });
     nextSummary.addEventListener('click', function (event) { if (state.busy) event.preventDefault(); });
+    HomeRemindersOnDialog(dialog);
     if (privacy) outcomePrivacyCleanup = privacy.protectDialog(dialog);
     i.document.body.appendChild(dialog); fit(); dialog.showModal(); closeButton.focus({ preventScroll: true });
   }
@@ -2381,7 +2490,7 @@ function remB22Create(host, full, options) {
     var returnToSearch = state.tab === 'search';
     if (returnToSearch) { state.tab = 'active'; root.classList.remove('vb22-show-detail'); render(); }
     var wasDetail = root.classList.contains('vb22-show-detail');
-    enterDetail(state.selected); clear(detail); editing(true); root.classList.add('vb22-form-editing');
+    enterDetail(state.selected); clear(detail); editing(true); root.classList.add('vb22-form-editing'); HomeRemindersUpdate();
     var form = make('form', 'vb22-form vb22-reminder-form'), formHead = make('header', 'vb22-form-head'), formTitle = make('h3', '', 'Dodaj przypomnienie');
     formTitle.id = 'rem-add-title-' + operationId(); form.setAttribute('aria-labelledby', formTitle.id); formHead.appendChild(formTitle);
     var formClose = btn('×', 'vb22-icon vb22-form-close', function () { if (controls) controls[1].click(); }); formClose.setAttribute('aria-label', 'Anuluj dodawanie przypomnienia'); formHead.appendChild(formClose); form.appendChild(formHead);
@@ -2500,7 +2609,7 @@ function remB22Create(host, full, options) {
     if (ticket == null) ticket = ++sequence;
     var notes = typeof vault.listReminderHistory === 'function' ? await vault.listReminderHistory() : await vault.listPatientNotesInRange('0001-01-01', '9999-12-31T23:59:59.999Z');
     if (!alive() || ticket !== sequence || state.editing) return false;
-    state.history = (notes || []).filter(function (note) { return note.category !== 'absence' && (note.completedAtISO || note.noShowAtISO); }).map(remA7DatedRow); state.historyReady = true; state.historyLoading = false; return true;
+    state.history = (notes || []).filter(function (note) { return note.category !== 'absence' && (note.completedAtISO || note.noShowAtISO); }).map(remA7DatedRow); state.historyReady = true; state.historyLoading = false; HomeRemindersHistoryReadPhase = 'ready'; return true;
   }
   async function switchTab(tab) {
     if (state.editing || tab === state.tab && state.historyLoading) return;
@@ -2513,13 +2622,14 @@ function remB22Create(host, full, options) {
     state.historyLoading = tab === 'history' && !state.historyReady; render();
     if (state.historyLoading) {
       try { if (!await loadHistory(ticket)) return; }
-      catch (error) { if (alive() && ticket === sequence && !state.editing) { state.historyLoading = false; render(); report(error, list); list.appendChild(textButton('Spróbuj ponownie', function () { switchTab('history'); })); } return; }
+      catch (error) { if (alive() && ticket === sequence && !state.editing) { state.historyLoading = false; HomeRemindersHistoryReadPhase = 'error'; render(); report(error, list); list.appendChild(textButton('Spróbuj ponownie', function () { switchTab('history'); })); HomeRemindersUpdate(); } return; }
     }
     if (!alive() || ticket !== sequence || state.editing) return; state.historyLoading = false; render();
   }
   async function refresh() {
     if (!alive() || state.editing || state.busy) { state.stale = true; return; }
     var ticket = ++sequence;
+    HomeRemindersReadPhase = 'loading'; if (state.tab === 'history') HomeRemindersHistoryReadPhase = 'loading'; HomeRemindersUpdate();
     try {
       var groups = await vault.listPatientNotesDueByDate();
       if (!alive() || ticket !== sequence) return;
@@ -2539,13 +2649,14 @@ function remB22Create(host, full, options) {
       if (state.tab === 'history' && !await loadHistory(ticket)) return;
       if (!alive() || ticket !== sequence || state.editing) return;
       if (state.savedOutcome) { state.savedOutcome.awaitingRead = false; state.savedOutcome.readError = false; }
-      state.historyLoading = false; state.stale = false; render();
+      state.historyLoading = false; state.stale = false; HomeRemindersReadPhase = 'ready'; render();
     } catch (error) {
       if (alive() && ticket === sequence && !state.editing) {
-        Ot('readRemindersB22', error); state.historyLoading = false;
+        Ot('readRemindersB22', error); state.historyLoading = false; HomeRemindersReadPhase = 'error'; if (state.tab === 'history') HomeRemindersHistoryReadPhase = 'error';
         if (state.savedOutcome && state.savedOutcome.awaitingRead) state.savedOutcome.readError = true;
         render();
         if (!state.savedOutcome || !state.savedOutcome.readError) { report(new Error('Nie udało się wczytać przypomnień.'), list); list.appendChild(textButton('Spróbuj ponownie', refresh)); }
+        HomeRemindersUpdate();
       }
     }
   }
@@ -2558,10 +2669,12 @@ function remB22Create(host, full, options) {
     if (state.tab === 'plans' && careView) careView.refresh();
     if (!timer) timer = i.setTimeout(function () { timer = null; refresh(); }, 0);
   }
-  var controller = { root: root, owner: owner, alive: alive, close: close, changed: changed, refresh: refresh, fit: fit,
+  var controller = { root: root, owner: owner, alive: alive, close: close, changed: changed, refresh: refresh, fit: fit, homePresentation: HomeRemindersRequested, canChangePresentation: function () { return !state.busy && !state.editing; },
     retainHiddenSearch: function () { return !full && alive() && state.tab === 'search' && !!searchView; },
-    destroyCare: function () { if (careView) { careView.destroy(); careView = null; } if (searchView) { searchView.destroy(); searchView = null; } if (privacyCleanup) { privacyCleanup(); privacyCleanup = null; } },
-    setGroups: function (groups) { if (!alive()) return; state.rows = remB22Flat(groups); if (!state.editing) render(); },
+    destroyCare: function () { HomeRemindersDispose(); if (careView) { careView.destroy(); careView = null; } if (searchView) { searchView.destroy(); searchView = null; } if (privacyCleanup) { privacyCleanup(); privacyCleanup = null; } },
+    setReadPhase: function (phase) { if (!alive()) return; HomeRemindersReadPhase = phase; HomeRemindersUpdate(); },
+    showReadFailure: function () { if (!alive()) return; HomeRemindersReadPhase = 'error'; clear(list); list.appendChild(remReadErrorContent(function () { Rr(); })); HomeRemindersUpdate(); },
+    setGroups: function (groups) { if (!alive()) return; HomeRemindersReadPhase = 'ready'; state.rows = remB22Flat(groups); if (!state.editing) render(); },
     request: function (request) {
       if (state.editing || !alive()) return;
       if (request.carePlans || request.planId || request.newCarePlan) { careReturn = request.searchContext ? { tab: 'search', searchContext: remSearchCopyContext(request.searchContext) } : null; state.tab = 'plans'; render(); mountCare(request.planId, request.newCarePlan, request.careRecordId); }
@@ -2632,7 +2745,38 @@ function remInlineState(host) {
   if (!state) { state = { sequence: 0, owner: null }; remInlineReads.set(host, state); }
   return state;
 }
+/* BEGIN HOME REMINDERS PRESENTATION ELIGIBILITY
+ * Only the moved original host can opt out of legacy placement constraints.
+ * Account access, PRO, the native reader and hidden-frame rules stay native.
+ */
+function HomeRemindersInlineEnabled(host) {
+  if (i.__VILDA_HOME_WORKSPACE_PREVIEW__ !== true || !i.document) return false;
+  host = host || i.document.getElementById('remindersInline');
+  return !!(host && host.id === 'remindersInline' && host.ownerDocument === i.document
+    && host.isConnected !== false && host.getAttribute('data-home-reminders-presentation') === 'true'
+    && host.closest && host.closest('#vhomeMainCards')
+    && i.VildaHomeRemindersPresentation && typeof i.VildaHomeRemindersPresentation.decorate === 'function');
+}
+function HomeRemindersPresentationRequested(options) {
+  return !!(options && options.homePresentation === true && i.__VILDA_HOME_WORKSPACE_PREVIEW__ === true
+    && i.VildaHomeRemindersPresentation && typeof i.VildaHomeRemindersPresentation.decorate === 'function');
+}
+function HomeRemindersInlineReadPhase(host, phase) {
+  var view = typeof remB22Views !== 'undefined' && remB22Views.get(host);
+  if (view && view.homePresentation && view.alive() && view.setReadPhase) view.setReadPhase(phase);
+}
+function HomeRemindersInlineFailure(host) {
+  if (!HomeRemindersInlineEnabled(host) || !dl() || Fr()) return false;
+  var view = remB22Views.get(host);
+  if (!view || !view.alive() || !view.homePresentation) {
+    if (view) view.destroyCare();
+    view = remB22Create(host, false, { homePresentation: true }); remB22Views.set(host, view);
+  }
+  view.showReadFailure(); return true;
+}
+/* END HOME REMINDERS PRESENTATION ELIGIBILITY */
 function remInlineReserved() {
+  if (HomeRemindersInlineEnabled()) return false;
   var root = i.document && i.document.documentElement;
   if (!root || !root.classList) return false;
   return root.classList.contains('vilda-centile-live-reserved')
@@ -2680,6 +2824,7 @@ function remReadErrorContent(retry) {
   ]);
 }
 function remInlineError(host) {
+  if (HomeRemindersInlineFailure(host)) { host.setAttribute('data-reminders-state', 'error'); host.setAttribute('aria-busy', 'false'); Nr(); return; }
   oe(host);
   var card = e('div', { class: 'vild-rem-card' });
   card.appendChild(e('div', { class: 'vild-rem-head' }, [
@@ -2747,7 +2892,7 @@ async function tn(t) {
     if (!forced && (Fr() || arkuszCzekaWyzej())) return false;
     if (!forced && lekarzPisze()) { ponowArkuszPoPrzerwie(); return false; }
     if (!forced && Er(Sr)) return false;
-    Mr(groups, { onClose: function () { ol(day); }, noteId: t && t.noteId, history: t && t.history, newReminder: t && t.newReminder, carePlans: t && t.carePlans, planId: t && t.planId, careRecordId: t && t.careRecordId, newCarePlan: t && t.newCarePlan, globalSearch: t && t.globalSearch, searchContext: t && t.searchContext }); return true;
+    Mr(groups, { onClose: function () { ol(day); }, noteId: t && t.noteId, history: t && t.history, newReminder: t && t.newReminder, carePlans: t && t.carePlans, planId: t && t.planId, careRecordId: t && t.careRecordId, newCarePlan: t && t.newCarePlan, globalSearch: t && t.globalSearch, searchContext: t && t.searchContext, homePresentation: t && t.homePresentation === true }); return true;
   } catch (error) {
     Ot('maybeShowReminders', error);
     if (forced && sequence === remMaybeReadSequence && remReadCurrent(owner) && searchReturnCurrent()) remShowReadError();
@@ -2755,13 +2900,13 @@ async function tn(t) {
   } finally {
     if (remMaybeForced && remMaybeForced.sequence === sequence) remMaybeForced = null;
   }
-}var jr=!1;function Is(){if(!jr){var t=jt();!t||typeof t.onUnlock!="function"||(t.onUnlock(function(){try{if(i.localStorage&&i.localStorage.getItem("vilda-names-split-migrated-v1")==="1")return}catch{}setTimeout(function(){var a=jt();!a||typeof a.migratePatientNamesSplit!="function"||!a.isUnlocked()||Promise.resolve(a.migratePatientNamesSplit()).then(function(){try{i.localStorage&&i.localStorage.setItem("vilda-names-split-migrated-v1","1")}catch{}}).catch(function(){})},1500)}),jr=!0)}}var ni=!1,Pr=!1,Ir=null;function ll(){try{return!!(i.VildaProAccess&&typeof i.VildaProAccess.hasAccess=="function"&&i.VildaProAccess.hasAccess())}catch{return!1}}function Fr(){try{return!!(i.frameElement&&i.frameElement.hidden)}catch{return!1}}function Lr(){/* P-OSTATNI-2a: karta porownania stoi pod obiema kolumnami, nie w prawej — Przypomnienia chowa juz tylko widoczne „Podsumowanie wynikow" w prawej kolumnie (decyzja wlasciciela 2026-09-17). */try{var t=i.document.getElementById("currentSummaryCard");if(t&&t.style&&t.style.display!=="none")return!0}catch{}return!1}function sl(){try{return i.matchMedia?i.matchMedia("(min-width: 700px)").matches&&!i.matchMedia("(pointer: coarse)").matches:(i.innerWidth||0)>=700}catch{return(i.innerWidth||0)>=700}}function dl(){var t=jt();return!(!t||typeof t.isUnlocked!="function"||!t.isUnlocked()||!ll()||typeof t.listPatientNotesDueByDate!="function"||Lr()||!sl())}function Dr(t){try{var a=i.document.querySelector("fieldset.user-card");if(a&&a.offsetHeight>0&&i.innerWidth>=700){/* P-OSTATNI-3 (zgloszenie wlasciciela 2026-09-17): karta Przypomnien stoi w prawej kolumnie POD paskiem statusu, wiec pelna wysokosc fieldsetu wypychala kolumne w dol i karta porownania miala 1rem od Przypomnien, a ~6rem od formularza. Wyrownujemy DOLNA krawedz z dolna krawedzia fieldsetu (zapas: pelna wysokosc, gdy karta nie jest jeszcze w ukladzie albo miejsca jest za malo). */var h0=NaN;try{if(t.getClientRects().length){h0=a.getBoundingClientRect().bottom-t.getBoundingClientRect().top}}catch{h0=NaN}var n=(isFinite(h0)&&h0>=192?Math.round(h0):a.offsetHeight)+"px";t.style.height=n,t.style.maxHeight=n,t.style.minHeight=n}else t.style.height="",t.style.maxHeight="",t.style.minHeight=""}catch{try{t.style.height="",t.style.maxHeight="",t.style.minHeight=""}catch{}}}var ii='<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 5 1.5 7 1.5 7H4.5S6 13 6 8Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9.5 19a2.5 2.5 0 0 0 5 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';function Qa9(t,a){var n={},r=[];t.forEach(function(u){var h=String(u.n&&u.n.category||"activity-other");n[h]||(n[h]=[],r.push(h)),n[h].push(u)});var o=[];return r.forEach(function(u){var h=Jv(u),v=Qa4(u),m=n[u],y=e("div",{class:"vild-rem-cat-head"+(v?" is-collapsed":""),"data-vild-cat":u,"aria-expanded":v?"false":"true",style:"color:"+h.color+";background:"+h.bg+";"},[e("span",{class:"vild-rem-caret",text:v?"\u25B8":"\u25BE"}),e("span",{class:"vild-rem-cat-nm",text:h.label}),e("span",{class:"vild-rem-cat-n",text:String(m.length)})]),x=e("div",{class:"vild-rem-cat-rows","data-vild-cat":u,"data-vild-flow":"block"},m.map(function(k){return ri(k.name,k.n,a,k.act,k.g)}));Qa8(y,function(){Qa7(u)}),v&&(x.style.display="none"),o.push(y),o.push(x)}),o}function remLm(G,nt,j,E){return G===1?nt:G%10>=2&&G%10<=4&&(G%100<12||G%100>14)?j:E}function remAkcje(G){var o=jt(),nt=G.n,j=G.g||{},E=o&&o.EXTERNAL_PATIENT_ID||"__vilda_external__",g=o&&o.ACTIVITY_PATIENT_ID||"__vilda_activity__",B=nt.category==="wynik-badania"&&typeof nt.recheckDays=="number"&&nt.recheckDays>0&&!nt.completedAtISO,U=j.patientId!==E&&j.patientId!==g&&!j.isActivity&&!j.isExternal,O=[];if(B)O.push({k:"complete",label:"Wynik dost\u0119pny",ico:"\u2713"}),O.push({k:"recheck",label:"Jeszcze nie ma \u2192 za "+nt.recheckDays+" "+remLm(nt.recheckDays,"dzie\u0144","dni","dni"),ico:"\u{1F553}"}),U&&O.push({k:"open",label:"Otw\xF3rz kart\u0119 pacjenta",ico:"\u{1F464}"}),O.push({k:"snooze",label:"Prze\u0142\xF3\u017C\u2026",ico:"\u{1F4C5}"});else{if(nt.category==="duty")return[];U&&O.push({k:"open",label:"Otw\xF3rz kart\u0119 pacjenta",ico:"\u{1F464}"}),nt.category==="clinic"||nt.category==="clinic-nfz"||O.push({k:"complete",label:"Zrobione",ico:"\u2713"}),O.push({k:"snooze",label:"Prze\u0142\xF3\u017C\u2026",ico:"\u{1F4C5}"}),["followup","treatment","observation","wynik-badania"].indexOf(nt.category)>=0&&!j.isActivity&&O.push({k:"noshow",label:"Nie zg\u0142osi\u0142 si\u0119",ico:"\u2715",destructive:!0})}return O}function remPrzeloz(G,nt,H){var o=jt();try{for(var j=i.document.querySelectorAll(".vilda-reminders-snooze-menu"),E=0;E<j.length;E++)j[E].remove()}catch{}var g=e("div",{class:"vilda-reminders-snooze-menu",style:"position:fixed;background:#fff;border:0.5px solid #d7e9ec;border-radius:10px;box-shadow:0 8px 24px rgba(0,40,48,0.18);padding:6px;display:flex;flex-direction:column;gap:2px;z-index:1000002;min-width:200px;"});function B(kt,Ft){var Nt=e("button",{type:"button",style:"background:transparent;border:none;text-align:left;padding:8px 12px;font-size:0.85rem;color:#0f2b33;cursor:pointer;border-radius:6px;font-family:inherit;",text:kt,onclick:async function(){g.remove();var zt=new Date;zt.setDate(zt.getDate()+Ft);var At=zt.getFullYear(),Dt=String(zt.getMonth()+1).padStart(2,"0"),ne=String(zt.getDate()).padStart(2,"0");try{await o.snoozePatientNote(nt,At+"-"+Dt+"-"+ne),await (typeof H=="function"?H():null)}catch(Jt){Ot("reminder-snooze",Jt);try{i.alert("Nie uda\u0142o si\u0119 prze\u0142o\u017Cy\u0107: "+(Jt&&Jt.message?Jt.message:Jt))}catch{}}}});Nt.addEventListener("mouseover",function(){Nt.style.background="#f5fafb"}),Nt.addEventListener("mouseout",function(){Nt.style.background="transparent"}),g.appendChild(Nt)}B("Jutro",1),B("Pojutrze",2),B("Za tydzie\u0144",7),g.appendChild(e("div",{style:"height:1px;background:#d7e9ec;margin:4px 6px;"}));var U=e("div",{style:"padding:6px 8px;display:flex;flex-direction:column;gap:6px;"});U.appendChild(e("div",{text:"Wybierz dat\u0119:",style:"font-size:0.78rem;color:#5b6672;font-weight:500;"}));var O=e("input",{type:"date",style:"width:100%;height:32px;padding:0 8px;font-size:0.85rem;border:0.5px solid #d7e9ec;border-radius:6px;background:#fff;color:#0f2b33;"}),J=new Date;J.setDate(J.getDate()+1),O.value=J.getFullYear()+"-"+String(J.getMonth()+1).padStart(2,"0")+"-"+String(J.getDate()).padStart(2,"0"),U.appendChild(O);var at=e("button",{type:"button",class:"vilda-auth-btn vilda-auth-btn-small",style:"background:#00838d !important;color:#fff !important;border-color:#00838d !important;width:100% !important;padding:6px !important;font-size:0.8rem !important;font-weight:600;",text:"Prze\u0142\xF3\u017C",onclick:async function(){if(O.value){g.remove();try{await o.snoozePatientNote(nt,O.value),await (typeof H=="function"?H():null)}catch(kt){Ot("reminder-snooze-custom",kt);try{i.alert("Nie uda\u0142o si\u0119 prze\u0142o\u017Cy\u0107: "+(kt&&kt.message?kt.message:kt))}catch{}}}}});U.appendChild(at),g.appendChild(U),i.document.body.appendChild(g);var _t=G.getBoundingClientRect(),It=g.offsetWidth||220,Pt=g.offsetHeight||240,Mt=i.innerWidth||i.document.documentElement.clientWidth,Et=i.innerHeight||i.document.documentElement.clientHeight,Bt=_t.bottom+4,pt=_t.left;pt+It>Mt-8&&(pt=Math.max(8,_t.right-It)),Bt+Pt>Et-8&&(Bt=Math.max(8,_t.top-Pt-4)),g.style.top=Bt+"px",g.style.left=pt+"px",setTimeout(function(){function kt(Ft){!g.contains(Ft.target)&&Ft.target!==G&&(g.remove(),i.document.removeEventListener("click",kt,!0))}i.document.addEventListener("click",kt,!0)},0)}function remOdswiez() { try { xe(); } catch (error) { Ot('rem-card-refresh', error); } }function remWykonaj(zt,G,done){var o=jt(),U=G.n,O=G.g||{};if(!o||!U)return Promise.resolve();if(zt==="open"){setTimeout(function(){try{se(O.patientId,null,{focusNoteId:U.id})}catch(Jt){Ot("rem-card-open",Jt)}},50);return Promise.resolve()}var At;if(zt==="complete")At=o.completePatientNote(U.id);else if(zt==="noshow")At=o.noShowPatientNote(U.id);else if(zt==="recheck"){var Dt=new Date(Fa()+"T12:00:00");Dt.setDate(Dt.getDate()+(U.recheckDays||0));At=o.snoozePatientNote(U.id,Dt.getFullYear()+"-"+String(Dt.getMonth()+1).padStart(2,"0")+"-"+String(Dt.getDate()).padStart(2,"0"))}else return Promise.resolve();return Promise.resolve(At).then(function(){typeof done=="function"&&done()}).catch(function(Jt){Ot("rem-card-act",Jt);try{i.alert("Nie uda\u0142o si\u0119 wykona\u0107 akcji: "+(Jt&&Jt.message?Jt.message:Jt))}catch{}})}function remSzczegoly(nt,done){try{for(var j=i.document.querySelectorAll(".vild-rem-dlg-ov"),E=0;E<j.length;E++)j[E].remove()}catch{}var U=nt.n||{},O=nt.g||{},Jm=O.isActivity===!0,B=Jv(U.category),Jq=Jm?String(U.title||"").trim()||B.label:String(nt.name||O.patientName||"").trim()||"\u2014";var ov=e("div",{class:"vild-rem-dlg-ov",role:"dialog","aria-modal":"true","aria-label":"Szczeg\xF3\u0142y przypomnienia"}),dl=e("div",{class:"vild-rem-dlg"});function Wt(){try{var k=er();ov.style.bottom=k>0?k+"px":""}catch{}}function _t(){try{ov.remove()}catch{}try{i.document.removeEventListener("keydown",It)}catch{}try{i.removeEventListener("resize",Wt)}catch{}try{i.visualViewport&&i.visualViewport.removeEventListener("resize",Wt)}catch{}try{i.document.body.classList.remove("nav-ui-temporarily-hidden")}catch{}}function It(zt){zt.key==="Escape"&&_t()}i.document.addEventListener("keydown",It),ov.addEventListener("click",function(zt){zt.target===ov&&_t()});var hd=e("div",{class:"vild-rem-dlg-head"},[e("span",{class:"vild-rem-dlg-cat",style:"color:"+B.color+";background:"+B.bg,text:B.label}),e("button",{type:"button",class:"vild-rem-dlg-x","aria-label":"Zamknij",text:"\xD7",onclick:_t})]);dl.appendChild(hd);var bd=e("div",{class:"vild-rem-dlg-body"});bd.appendChild(e("div",{class:"vild-rem-dlg-nm",text:Jq}));!Jm&&String(U.title||"").trim()&&bd.appendChild(e("div",{class:"vild-rem-dlg-ttl",text:String(U.title).trim()}));Jm&&O.patientName&&bd.appendChild(e("div",{class:"vild-rem-dlg-ttl",text:String(O.patientName)}));String(U.body||"").trim()&&bd.appendChild(e("div",{class:"vild-rem-dlg-txt",text:String(U.body).trim()}));function rw(k,v){v&&bd.appendChild(e("div",{class:"vild-rem-dlg-row"},[e("b",{text:k}),e("span",{text:v})]))}var day=String(U.dueDateISO||"").slice(0,10),dt=day?new Date(day+"T12:00:00"):null,dtx="";try{dt&&!isNaN(dt.getTime())&&(dtx=dt.toLocaleDateString("pl-PL",{weekday:"long",day:"numeric",month:"long",year:"numeric"}))}catch{dtx=day}var rel=null;try{rel=gn(U.dueDateISO)}catch{}rw("Termin",dtx+(U.dueTime?", godz. "+U.dueTime:"")+(rel&&rel.label&&day<Fa()?" \xB7 "+rel.label:day===Fa()?" \xB7 dzi\u015B":""));U.category==="wynik-badania"&&typeof U.recheckDays=="number"&&U.recheckDays>0&&!U.completedAtISO&&rw("Wynik","oczekuj\u0105cy \xB7 sprawdzaj co "+U.recheckDays+" "+remLm(U.recheckDays,"dzie\u0144","dni","dni"));var md=U.medication;if(md&&typeof md=="object"){var ac={start:"rozpocz\u0119cie",change:"zmiana dawki",stop:"odstawienie"}[md.action]||"";rw("Lek",[md.name,ac].filter(Boolean).join(" \u2014 "));rw("Dawka",[md.dose,md.previousDose?"(poprzednio "+md.previousDose+")":""].filter(Boolean).join(" "))}var lb=U.labResult;lb&&typeof lb=="object"&&(rw("Badanie",lb.test||""),rw("Warto\u015B\u0107",[Lh3HasAssessment(lb)||HrHasReference(lb)?Lh3ResultText(lb):lb.value,lb.norm?"(norma "+lb.norm+")":""].filter(Boolean).join(" ")));Lh3SavedAssessment(bd,lb);HrSavedReference(bd,lb);U.completedAtISO&&rw("Status","wykonane");U.noShowAtISO&&rw("Status","nie zg\u0142osi\u0142 si\u0119");dl.appendChild(bd);var acts=e("div",{class:"vild-rem-dlg-acts"}),g=remAkcje(nt);g.forEach(function(zt){acts.appendChild(e("button",{type:"button",class:"vilda-auth-btn vilda-auth-btn-small"+(zt.destructive?" vild-rem-dlg-destr":zt.k==="open"?" vild-rem-dlg-pri":""),text:(zt.ico?zt.ico+" ":"")+zt.label,onclick:function(Jt){if(zt.k==="snooze"){remPrzeloz(Jt.currentTarget,U.id,function(){_t(),typeof done=="function"&&done()});return}_t(),remWykonaj(zt.k,nt,done)}}))});acts.appendChild(e("button",{type:"button",class:"vilda-auth-btn vilda-auth-btn-small vild-rem-dlg-ghost",text:"Zamknij",onclick:_t})),dl.appendChild(acts),ov.appendChild(dl),i.document.body.appendChild(ov);try{i.document.body.classList.add("nav-ui-temporarily-hidden")}catch{}Wt(),i.setTimeout(Wt,600);try{i.addEventListener("resize",Wt,{passive:!0})}catch{}try{i.visualViewport&&i.visualViewport.addEventListener("resize",Wt,{passive:!0})}catch{}try{var fb=dl.querySelector(".vild-rem-dlg-acts button");fb&&fb.focus()}catch{}return ov}function ri(t,a,n,Je,Jg2){var r=Jv(a.category),o=r.accent,Jk=r.color,l=r.label,Jf=Je===!0,Jg=String(a.title||"").trim(),Jh=Jf?Jg||l:String(t||"").trim(),d=(String(Jf?Jh||l:t||"?").trim().charAt(0)||"?").toUpperCase(),c=e("div",{class:"vild-rem-av",style:"background:linear-gradient(135deg,"+o+","+o+"cc)",text:d}),s=e("div",{class:"vild-rem-nm",text:Jh||"\u2014"}),p=e("div",{class:"vild-rem-cat",style:"color:"+Jk},[e("span",{class:"vild-rem-dot",style:"background:"+o}),Jf?l+(t?" \u00B7 "+t:""):l+(a.title?" \u2014 "+a.title:"")]),u=e("div",{class:"vild-rem-meta"},[s,p]),h,v;if(n==="pend")h=typeof a.recheckDays=="number"&&a.recheckDays>0?"co "+a.recheckDays+" dni":"oczekuje",v="w-pend";else if(n==="today")h=a.dueTime?String(a.dueTime):"dzi\u015B",v="w-today";else{var m=gn(a.dueDateISO);h=m&&m.label||"",v="w-over"}var y=e("div",{class:"vild-rem-when "+v,text:h}),Jg3={n:a,g:Jg2||{patientName:t,isActivity:Jf},name:t},Jg4=e("button",{type:"button",class:"vild-rem-more","aria-label":"Szczeg\xF3\u0142y i akcje","aria-haspopup":"dialog",title:"Szczeg\xF3\u0142y i akcje",html:'<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>',onclick:function(Jt){Jt&&Jt.stopPropagation&&Jt.stopPropagation(),remSzczegoly(Jg3,remOdswiez)}}),Jg5=e("div",{class:"vild-rem-row",role:"button",tabindex:"0","aria-label":"Szczeg\xF3\u0142y: "+(Jh||l),onclick:function(Jt){try{if(Jt&&Jt.target&&Jt.target.closest&&Jt.target.closest("button"))return}catch{}remSzczegoly(Jg3,remOdswiez)},onkeydown:function(Jt){(Jt.key==="Enter"||Jt.key===" ")&&(Jt.preventDefault(),remSzczegoly(Jg3,remOdswiez))}},[c,u,y,Jg4]);return Jg5}function oi(t,a,n,Qb2){if(!n.length)return null;var r=e("div",{class:"vild-rem-sec-head"},[e("span",{text:a}),e("span",{text:String(typeof Qb2=="number"?Qb2:n.length)})]);return e("div",{class:"vild-rem-sec vild-rem-sec-"+t},[r].concat(n))}var kn=null;try{typeof i.BroadcastChannel=="function"&&(kn=new i.BroadcastChannel("vilda-notes"))}catch{kn=null}var Or=0;function Tr(t){try{var a=i.sessionStorage&&i.sessionStorage.getItem("vilda-reminders-count-v1"),n=a?JSON.parse(a):null;if(n&&typeof n.count=="number"&&n.count===t)return;var r=Date.now();if(r-Or<15e3)return;Or=r;try{i.VildaChrome&&typeof i.VildaChrome.refreshRemindersBtn=="function"&&i.VildaChrome.refreshRemindersBtn()}catch{}var o={type:"note-changed",ts:r,sender:"rem-inline-selfheal",action:"recount"};if(kn)try{kn.postMessage(o)}catch{}try{i.localStorage&&i.localStorage.setItem("vilda-note-changed-ping-v1",JSON.stringify(o))}catch{}}catch{}}var en=0,La=null,zn=0;function cl(){try{var t=i.sessionStorage&&i.sessionStorage.getItem("vilda-reminders-count-v1"),a=t?JSON.parse(t):null;return a&&typeof a.count=="number"&&isFinite(a.count)?a.count:0}catch{return 0}}function Nr(){if(en=0,La){try{clearTimeout(La)}catch{}La=null}}function ul(){try{var t=zn&&Date.now()-zn<12e3;if(cl()<=0&&!t){Nr();return}if(en>=5||La)return;var a=1e3+en*1500;La=setTimeout(function(){if(La=null,en+=1,en<=2)try{wn(3e3)}catch{}try{xe()}catch{}},a)}catch{}}function Jb(P){var Q=String(P&&P.n&&P.n.dueDateISO||"").slice(0,10),Z=P&&P.n&&P.n.dueTime?String(P.n.dueTime):"";return Q+"|"+(Z?"1"+Z:"0")}function Jc(P,Q){var Z=Jb(P),W=Jb(Q);return Z<W?-1:Z>W?1:0}async function Br(t) {
+}var jr=!1;function Is(){if(!jr){var t=jt();!t||typeof t.onUnlock!="function"||(t.onUnlock(function(){try{if(i.localStorage&&i.localStorage.getItem("vilda-names-split-migrated-v1")==="1")return}catch{}setTimeout(function(){var a=jt();!a||typeof a.migratePatientNamesSplit!="function"||!a.isUnlocked()||Promise.resolve(a.migratePatientNamesSplit()).then(function(){try{i.localStorage&&i.localStorage.setItem("vilda-names-split-migrated-v1","1")}catch{}}).catch(function(){})},1500)}),jr=!0)}}var ni=!1,Pr=!1,Ir=null;function ll(){try{return!!(i.VildaProAccess&&typeof i.VildaProAccess.hasAccess=="function"&&i.VildaProAccess.hasAccess())}catch{return!1}}function Fr(){try{return!!(i.frameElement&&i.frameElement.hidden)}catch{return!1}}function Lr(){/* P-OSTATNI-2a: karta porownania stoi pod obiema kolumnami, nie w prawej — Przypomnienia chowa juz tylko widoczne „Podsumowanie wynikow" w prawej kolumnie (decyzja wlasciciela 2026-09-17). */try{var t=i.document.getElementById("currentSummaryCard");if(t&&t.style&&t.style.display!=="none")return!0}catch{}return!1}function sl(){try{return i.matchMedia?i.matchMedia("(min-width: 700px)").matches&&!i.matchMedia("(pointer: coarse)").matches:(i.innerWidth||0)>=700}catch{return(i.innerWidth||0)>=700}}function dl(){var t=jt();return!(!t||typeof t.isUnlocked!="function"||!t.isUnlocked()||!ll()||typeof t.listPatientNotesDueByDate!="function"||!HomeRemindersInlineEnabled()&&(Lr()||!sl()))}function Dr(t){if(HomeRemindersInlineEnabled(t)){["height","maxHeight","minHeight"].forEach(function(name){if(t.style[name])t.style[name]=""});return}try{var a=i.document.querySelector("fieldset.user-card");if(a&&a.offsetHeight>0&&i.innerWidth>=700){/* P-OSTATNI-3 (zgloszenie wlasciciela 2026-09-17): karta Przypomnien stoi w prawej kolumnie POD paskiem statusu, wiec pelna wysokosc fieldsetu wypychala kolumne w dol i karta porownania miala 1rem od Przypomnien, a ~6rem od formularza. Wyrownujemy DOLNA krawedz z dolna krawedzia fieldsetu (zapas: pelna wysokosc, gdy karta nie jest jeszcze w ukladzie albo miejsca jest za malo). */var h0=NaN;try{if(t.getClientRects().length){h0=a.getBoundingClientRect().bottom-t.getBoundingClientRect().top}}catch{h0=NaN}var n=(isFinite(h0)&&h0>=192?Math.round(h0):a.offsetHeight)+"px";t.style.height=n,t.style.maxHeight=n,t.style.minHeight=n}else t.style.height="",t.style.maxHeight="",t.style.minHeight=""}catch{try{t.style.height="",t.style.maxHeight="",t.style.minHeight=""}catch{}}}var ii='<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 5 1.5 7 1.5 7H4.5S6 13 6 8Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9.5 19a2.5 2.5 0 0 0 5 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';function Qa9(t,a){var n={},r=[];t.forEach(function(u){var h=String(u.n&&u.n.category||"activity-other");n[h]||(n[h]=[],r.push(h)),n[h].push(u)});var o=[];return r.forEach(function(u){var h=Jv(u),v=Qa4(u),m=n[u],y=e("div",{class:"vild-rem-cat-head"+(v?" is-collapsed":""),"data-vild-cat":u,"aria-expanded":v?"false":"true",style:"color:"+h.color+";background:"+h.bg+";"},[e("span",{class:"vild-rem-caret",text:v?"\u25B8":"\u25BE"}),e("span",{class:"vild-rem-cat-nm",text:h.label}),e("span",{class:"vild-rem-cat-n",text:String(m.length)})]),x=e("div",{class:"vild-rem-cat-rows","data-vild-cat":u,"data-vild-flow":"block"},m.map(function(k){return ri(k.name,k.n,a,k.act,k.g)}));Qa8(y,function(){Qa7(u)}),v&&(x.style.display="none"),o.push(y),o.push(x)}),o}function remLm(G,nt,j,E){return G===1?nt:G%10>=2&&G%10<=4&&(G%100<12||G%100>14)?j:E}function remAkcje(G){var o=jt(),nt=G.n,j=G.g||{},E=o&&o.EXTERNAL_PATIENT_ID||"__vilda_external__",g=o&&o.ACTIVITY_PATIENT_ID||"__vilda_activity__",B=nt.category==="wynik-badania"&&typeof nt.recheckDays=="number"&&nt.recheckDays>0&&!nt.completedAtISO,U=j.patientId!==E&&j.patientId!==g&&!j.isActivity&&!j.isExternal,O=[];if(B)O.push({k:"complete",label:"Wynik dost\u0119pny",ico:"\u2713"}),O.push({k:"recheck",label:"Jeszcze nie ma \u2192 za "+nt.recheckDays+" "+remLm(nt.recheckDays,"dzie\u0144","dni","dni"),ico:"\u{1F553}"}),U&&O.push({k:"open",label:"Otw\xF3rz kart\u0119 pacjenta",ico:"\u{1F464}"}),O.push({k:"snooze",label:"Prze\u0142\xF3\u017C\u2026",ico:"\u{1F4C5}"});else{if(nt.category==="duty")return[];U&&O.push({k:"open",label:"Otw\xF3rz kart\u0119 pacjenta",ico:"\u{1F464}"}),nt.category==="clinic"||nt.category==="clinic-nfz"||O.push({k:"complete",label:"Zrobione",ico:"\u2713"}),O.push({k:"snooze",label:"Prze\u0142\xF3\u017C\u2026",ico:"\u{1F4C5}"}),["followup","treatment","observation","wynik-badania"].indexOf(nt.category)>=0&&!j.isActivity&&O.push({k:"noshow",label:"Nie zg\u0142osi\u0142 si\u0119",ico:"\u2715",destructive:!0})}return O}function remPrzeloz(G,nt,H){var o=jt();try{for(var j=i.document.querySelectorAll(".vilda-reminders-snooze-menu"),E=0;E<j.length;E++)j[E].remove()}catch{}var g=e("div",{class:"vilda-reminders-snooze-menu",style:"position:fixed;background:#fff;border:0.5px solid #d7e9ec;border-radius:10px;box-shadow:0 8px 24px rgba(0,40,48,0.18);padding:6px;display:flex;flex-direction:column;gap:2px;z-index:1000002;min-width:200px;"});function B(kt,Ft){var Nt=e("button",{type:"button",style:"background:transparent;border:none;text-align:left;padding:8px 12px;font-size:0.85rem;color:#0f2b33;cursor:pointer;border-radius:6px;font-family:inherit;",text:kt,onclick:async function(){g.remove();var zt=new Date;zt.setDate(zt.getDate()+Ft);var At=zt.getFullYear(),Dt=String(zt.getMonth()+1).padStart(2,"0"),ne=String(zt.getDate()).padStart(2,"0");try{await o.snoozePatientNote(nt,At+"-"+Dt+"-"+ne),await (typeof H=="function"?H():null)}catch(Jt){Ot("reminder-snooze",Jt);try{i.alert("Nie uda\u0142o si\u0119 prze\u0142o\u017Cy\u0107: "+(Jt&&Jt.message?Jt.message:Jt))}catch{}}}});Nt.addEventListener("mouseover",function(){Nt.style.background="#f5fafb"}),Nt.addEventListener("mouseout",function(){Nt.style.background="transparent"}),g.appendChild(Nt)}B("Jutro",1),B("Pojutrze",2),B("Za tydzie\u0144",7),g.appendChild(e("div",{style:"height:1px;background:#d7e9ec;margin:4px 6px;"}));var U=e("div",{style:"padding:6px 8px;display:flex;flex-direction:column;gap:6px;"});U.appendChild(e("div",{text:"Wybierz dat\u0119:",style:"font-size:0.78rem;color:#5b6672;font-weight:500;"}));var O=e("input",{type:"date",style:"width:100%;height:32px;padding:0 8px;font-size:0.85rem;border:0.5px solid #d7e9ec;border-radius:6px;background:#fff;color:#0f2b33;"}),J=new Date;J.setDate(J.getDate()+1),O.value=J.getFullYear()+"-"+String(J.getMonth()+1).padStart(2,"0")+"-"+String(J.getDate()).padStart(2,"0"),U.appendChild(O);var at=e("button",{type:"button",class:"vilda-auth-btn vilda-auth-btn-small",style:"background:#00838d !important;color:#fff !important;border-color:#00838d !important;width:100% !important;padding:6px !important;font-size:0.8rem !important;font-weight:600;",text:"Prze\u0142\xF3\u017C",onclick:async function(){if(O.value){g.remove();try{await o.snoozePatientNote(nt,O.value),await (typeof H=="function"?H():null)}catch(kt){Ot("reminder-snooze-custom",kt);try{i.alert("Nie uda\u0142o si\u0119 prze\u0142o\u017Cy\u0107: "+(kt&&kt.message?kt.message:kt))}catch{}}}}});U.appendChild(at),g.appendChild(U),i.document.body.appendChild(g);var _t=G.getBoundingClientRect(),It=g.offsetWidth||220,Pt=g.offsetHeight||240,Mt=i.innerWidth||i.document.documentElement.clientWidth,Et=i.innerHeight||i.document.documentElement.clientHeight,Bt=_t.bottom+4,pt=_t.left;pt+It>Mt-8&&(pt=Math.max(8,_t.right-It)),Bt+Pt>Et-8&&(Bt=Math.max(8,_t.top-Pt-4)),g.style.top=Bt+"px",g.style.left=pt+"px",setTimeout(function(){function kt(Ft){!g.contains(Ft.target)&&Ft.target!==G&&(g.remove(),i.document.removeEventListener("click",kt,!0))}i.document.addEventListener("click",kt,!0)},0)}function remOdswiez() { try { xe(); } catch (error) { Ot('rem-card-refresh', error); } }function remWykonaj(zt,G,done){var o=jt(),U=G.n,O=G.g||{};if(!o||!U)return Promise.resolve();if(zt==="open"){setTimeout(function(){try{se(O.patientId,null,{focusNoteId:U.id})}catch(Jt){Ot("rem-card-open",Jt)}},50);return Promise.resolve()}var At;if(zt==="complete")At=o.completePatientNote(U.id);else if(zt==="noshow")At=o.noShowPatientNote(U.id);else if(zt==="recheck"){var Dt=new Date(Fa()+"T12:00:00");Dt.setDate(Dt.getDate()+(U.recheckDays||0));At=o.snoozePatientNote(U.id,Dt.getFullYear()+"-"+String(Dt.getMonth()+1).padStart(2,"0")+"-"+String(Dt.getDate()).padStart(2,"0"))}else return Promise.resolve();return Promise.resolve(At).then(function(){typeof done=="function"&&done()}).catch(function(Jt){Ot("rem-card-act",Jt);try{i.alert("Nie uda\u0142o si\u0119 wykona\u0107 akcji: "+(Jt&&Jt.message?Jt.message:Jt))}catch{}})}function remSzczegoly(nt,done){try{for(var j=i.document.querySelectorAll(".vild-rem-dlg-ov"),E=0;E<j.length;E++)j[E].remove()}catch{}var U=nt.n||{},O=nt.g||{},Jm=O.isActivity===!0,B=Jv(U.category),Jq=Jm?String(U.title||"").trim()||B.label:String(nt.name||O.patientName||"").trim()||"\u2014";var ov=e("div",{class:"vild-rem-dlg-ov",role:"dialog","aria-modal":"true","aria-label":"Szczeg\xF3\u0142y przypomnienia"}),dl=e("div",{class:"vild-rem-dlg"});function Wt(){try{var k=er();ov.style.bottom=k>0?k+"px":""}catch{}}function _t(){try{ov.remove()}catch{}try{i.document.removeEventListener("keydown",It)}catch{}try{i.removeEventListener("resize",Wt)}catch{}try{i.visualViewport&&i.visualViewport.removeEventListener("resize",Wt)}catch{}try{i.document.body.classList.remove("nav-ui-temporarily-hidden")}catch{}}function It(zt){zt.key==="Escape"&&_t()}i.document.addEventListener("keydown",It),ov.addEventListener("click",function(zt){zt.target===ov&&_t()});var hd=e("div",{class:"vild-rem-dlg-head"},[e("span",{class:"vild-rem-dlg-cat",style:"color:"+B.color+";background:"+B.bg,text:B.label}),e("button",{type:"button",class:"vild-rem-dlg-x","aria-label":"Zamknij",text:"\xD7",onclick:_t})]);dl.appendChild(hd);var bd=e("div",{class:"vild-rem-dlg-body"});bd.appendChild(e("div",{class:"vild-rem-dlg-nm",text:Jq}));!Jm&&String(U.title||"").trim()&&bd.appendChild(e("div",{class:"vild-rem-dlg-ttl",text:String(U.title).trim()}));Jm&&O.patientName&&bd.appendChild(e("div",{class:"vild-rem-dlg-ttl",text:String(O.patientName)}));String(U.body||"").trim()&&bd.appendChild(e("div",{class:"vild-rem-dlg-txt",text:String(U.body).trim()}));function rw(k,v){v&&bd.appendChild(e("div",{class:"vild-rem-dlg-row"},[e("b",{text:k}),e("span",{text:v})]))}var day=String(U.dueDateISO||"").slice(0,10),dt=day?new Date(day+"T12:00:00"):null,dtx="";try{dt&&!isNaN(dt.getTime())&&(dtx=dt.toLocaleDateString("pl-PL",{weekday:"long",day:"numeric",month:"long",year:"numeric"}))}catch{dtx=day}var rel=null;try{rel=gn(U.dueDateISO)}catch{}rw("Termin",dtx+(U.dueTime?", godz. "+U.dueTime:"")+(rel&&rel.label&&day<Fa()?" \xB7 "+rel.label:day===Fa()?" \xB7 dzi\u015B":""));U.category==="wynik-badania"&&typeof U.recheckDays=="number"&&U.recheckDays>0&&!U.completedAtISO&&rw("Wynik","oczekuj\u0105cy \xB7 sprawdzaj co "+U.recheckDays+" "+remLm(U.recheckDays,"dzie\u0144","dni","dni"));var md=U.medication;if(md&&typeof md=="object"){var ac={start:"rozpocz\u0119cie",change:"zmiana dawki",stop:"odstawienie"}[md.action]||"";rw("Lek",[md.name,ac].filter(Boolean).join(" \u2014 "));rw("Dawka",[md.dose,md.previousDose?"(poprzednio "+md.previousDose+")":""].filter(Boolean).join(" "))}var lb=U.labResult;lb&&typeof lb=="object"&&(rw("Badanie",lb.test||""),rw("Warto\u015B\u0107",[Lh3HasAssessment(lb)||HrHasReference(lb)?Lh3ResultText(lb):lb.value,lb.norm?"(norma "+lb.norm+")":""].filter(Boolean).join(" ")));Lh3SavedAssessment(bd,lb);HrSavedReference(bd,lb);U.completedAtISO&&rw("Status","wykonane");U.noShowAtISO&&rw("Status","nie zg\u0142osi\u0142 si\u0119");dl.appendChild(bd);var acts=e("div",{class:"vild-rem-dlg-acts"}),g=remAkcje(nt);g.forEach(function(zt){acts.appendChild(e("button",{type:"button",class:"vilda-auth-btn vilda-auth-btn-small"+(zt.destructive?" vild-rem-dlg-destr":zt.k==="open"?" vild-rem-dlg-pri":""),text:(zt.ico?zt.ico+" ":"")+zt.label,onclick:function(Jt){if(zt.k==="snooze"){remPrzeloz(Jt.currentTarget,U.id,function(){_t(),typeof done=="function"&&done()});return}_t(),remWykonaj(zt.k,nt,done)}}))});acts.appendChild(e("button",{type:"button",class:"vilda-auth-btn vilda-auth-btn-small vild-rem-dlg-ghost",text:"Zamknij",onclick:_t})),dl.appendChild(acts),ov.appendChild(dl),i.document.body.appendChild(ov);try{i.document.body.classList.add("nav-ui-temporarily-hidden")}catch{}Wt(),i.setTimeout(Wt,600);try{i.addEventListener("resize",Wt,{passive:!0})}catch{}try{i.visualViewport&&i.visualViewport.addEventListener("resize",Wt,{passive:!0})}catch{}try{var fb=dl.querySelector(".vild-rem-dlg-acts button");fb&&fb.focus()}catch{}return ov}function ri(t,a,n,Je,Jg2){var r=Jv(a.category),o=r.accent,Jk=r.color,l=r.label,Jf=Je===!0,Jg=String(a.title||"").trim(),Jh=Jf?Jg||l:String(t||"").trim(),d=(String(Jf?Jh||l:t||"?").trim().charAt(0)||"?").toUpperCase(),c=e("div",{class:"vild-rem-av",style:"background:linear-gradient(135deg,"+o+","+o+"cc)",text:d}),s=e("div",{class:"vild-rem-nm",text:Jh||"\u2014"}),p=e("div",{class:"vild-rem-cat",style:"color:"+Jk},[e("span",{class:"vild-rem-dot",style:"background:"+o}),Jf?l+(t?" \u00B7 "+t:""):l+(a.title?" \u2014 "+a.title:"")]),u=e("div",{class:"vild-rem-meta"},[s,p]),h,v;if(n==="pend")h=typeof a.recheckDays=="number"&&a.recheckDays>0?"co "+a.recheckDays+" dni":"oczekuje",v="w-pend";else if(n==="today")h=a.dueTime?String(a.dueTime):"dzi\u015B",v="w-today";else{var m=gn(a.dueDateISO);h=m&&m.label||"",v="w-over"}var y=e("div",{class:"vild-rem-when "+v,text:h}),Jg3={n:a,g:Jg2||{patientName:t,isActivity:Jf},name:t},Jg4=e("button",{type:"button",class:"vild-rem-more","aria-label":"Szczeg\xF3\u0142y i akcje","aria-haspopup":"dialog",title:"Szczeg\xF3\u0142y i akcje",html:'<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>',onclick:function(Jt){Jt&&Jt.stopPropagation&&Jt.stopPropagation(),remSzczegoly(Jg3,remOdswiez)}}),Jg5=e("div",{class:"vild-rem-row",role:"button",tabindex:"0","aria-label":"Szczeg\xF3\u0142y: "+(Jh||l),onclick:function(Jt){try{if(Jt&&Jt.target&&Jt.target.closest&&Jt.target.closest("button"))return}catch{}remSzczegoly(Jg3,remOdswiez)},onkeydown:function(Jt){(Jt.key==="Enter"||Jt.key===" ")&&(Jt.preventDefault(),remSzczegoly(Jg3,remOdswiez))}},[c,u,y,Jg4]);return Jg5}function oi(t,a,n,Qb2){if(!n.length)return null;var r=e("div",{class:"vild-rem-sec-head"},[e("span",{text:a}),e("span",{text:String(typeof Qb2=="number"?Qb2:n.length)})]);return e("div",{class:"vild-rem-sec vild-rem-sec-"+t},[r].concat(n))}var kn=null;try{typeof i.BroadcastChannel=="function"&&(kn=new i.BroadcastChannel("vilda-notes"))}catch{kn=null}var Or=0;function Tr(t){try{var a=i.sessionStorage&&i.sessionStorage.getItem("vilda-reminders-count-v1"),n=a?JSON.parse(a):null;if(n&&typeof n.count=="number"&&n.count===t)return;var r=Date.now();if(r-Or<15e3)return;Or=r;try{i.VildaChrome&&typeof i.VildaChrome.refreshRemindersBtn=="function"&&i.VildaChrome.refreshRemindersBtn()}catch{}var o={type:"note-changed",ts:r,sender:"rem-inline-selfheal",action:"recount"};if(kn)try{kn.postMessage(o)}catch{}try{i.localStorage&&i.localStorage.setItem("vilda-note-changed-ping-v1",JSON.stringify(o))}catch{}}catch{}}var en=0,La=null,zn=0;function cl(){try{var t=i.sessionStorage&&i.sessionStorage.getItem("vilda-reminders-count-v1"),a=t?JSON.parse(t):null;return a&&typeof a.count=="number"&&isFinite(a.count)?a.count:0}catch{return 0}}function Nr(){if(en=0,La){try{clearTimeout(La)}catch{}La=null}}function ul(){try{var t=zn&&Date.now()-zn<12e3;if(cl()<=0&&!t){Nr();return}if(en>=5||La)return;var a=1e3+en*1500;La=setTimeout(function(){if(La=null,en+=1,en<=2)try{wn(3e3)}catch{}try{xe()}catch{}},a)}catch{}}function Jb(P){var Q=String(P&&P.n&&P.n.dueDateISO||"").slice(0,10),Z=P&&P.n&&P.n.dueTime?String(P.n.dueTime):"";return Q+"|"+(Z?"1"+Z:"0")}function Jc(P,Q){var Z=Jb(P),W=Jb(Q);return Z<W?-1:Z>W?1:0}async function Br(t) {
   if (!t || !remInlineAllowed(t)) return;
   var owner = remReadOwner(), state = remInlineState(t), sequence = ++state.sequence;
   if (state.owner && !remReadCurrent(state.owner)) { oe(t); t.removeAttribute('data-reminders-state'); }
   state.owner = owner;
   function current() { return state.sequence === sequence && remReadCurrent(owner) && remInlineAllowed(t); }
-  t.setAttribute('aria-busy', 'true');
+  t.setAttribute('aria-busy', 'true'); HomeRemindersInlineReadPhase(t, 'loading');
   var n;
   try { n = await owner.vault.listPatientNotesDueByDate(); }
   catch (error) {

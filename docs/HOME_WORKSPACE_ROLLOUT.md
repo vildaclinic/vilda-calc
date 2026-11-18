@@ -385,7 +385,36 @@ scalenie modułu opt-in nie zmienia domyślnego widoku. Eksporter, fikcyjne
 konto i blokada usług są wyłącznie narzędziami podglądu.
 
 Nowy JS i CSS strony głównej korzystają z istniejącego, sprawdzanego po SHA
-pakietu transportowego UI wizyt. Pakiet zawiera dwadzieścia zasobów zamiast trzech;
-każdy nadal ma własny wersjonowany adres i niezmienioną treść w pamięci offline.
+pakietu transportowego UI wizyt. Bieżący inwentarz pakietu określa `runtime/visit-ui-precache/manifest.json`;
+każdy zasób nadal ma własny wersjonowany adres i niezmienioną treść w pamięci offline.
 Historyczny pakiet pozostaje dostępny. Pozwala to zachować dotychczasowy limit
 600 żądań podczas instalacji PWA, bez usuwania zasobów ani rozluźniania testów.
+
+
+## Przygotowanie Przypomnień — adapter prezentacji
+
+Nowa warstwa `vilda_home_reminders.js` / `.css` jest ładowana pasywnie w stronie
+Start i w powłoce. Nie przenosi samodzielnie starej karty ani nie ustala zakresu
+odczytu. Natywny kontroler może jawnie przekazać jej swoje węzły, polecenia,
+liczniki oraz status odczytu. Dotychczasowy globalny dzwonek zachowuje swój
+widok i działanie.
+
+Przygotowany dekorator odpowiada za geometrię czwartej karty, wspólnego okna
+oraz trzech zakładek z makiety. Formularze, historia, paginacja, potwierdzenia,
+błędy odczytu i akcje nadal należą do natywnego modułu. Nie ma drugiego
+magazynu przypomnień ani nowych reguł zapisu, kategorii i kwalifikacji terminów.
+Zasady odtwarzania źródła opisuje `ZRODLA_ARTEFAKTOW.md`.
+
+Aktywacja nowej karty i ustalenie jej zakresu są osobnym krokiem: makieta
+pokazuje sprawy bieżącego pacjenta, a obecna karta natywna obejmuje całe konto.
+Na tym etapie nie dodano filtra pacjenta, nie rozszerzono zakresu dat i nie
+zmieniono domyślnych odczytów. Warstwa przygotowawcza nie montuje jeszcze
+automatycznie czwartej karty.
+
+Test `home-workspace-reminders-foundation.spec.mjs` włącza prezentację wyłącznie
+w swojej fikcyjnej sesji. Wszystkie jego sprawy należą do jednego pacjenta;
+nie rozstrzyga więc przyszłego zakresu karty. Sprawdza rzeczywisty sejf,
+przekazanie okna do powłoki, zapis i ponawianie po błędzie, historię z paginacją,
+powrót do listy, geometrię desktopową i mobilną oraz osobne, nadal globalne
+wejście z dzwonka. Pełna walidacja etapu i publikacja nastąpią po ustaleniu
+zakresu oraz podłączeniu karty w aplikacji.
