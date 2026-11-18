@@ -78,6 +78,25 @@ describe('ICD-10 editor query and committed diagnosis code', () => {
     f.input(''); expect(f.onCommit).toHaveBeenCalledTimes(commits + 1);
   });
 
+  it('keeps the committed popup closed during blur change so the immediate source-name action can run', () => {
+    const f = fixture({ name: 'Fikcyjne rozpoznanie lekarza', code: 'I10' });
+    f.query.value = 'e10'; f.picker.handleInput({ target: f.query, type: 'input' });
+    f.host.querySelector('[role="option"]').click();
+    expect(f.canonical.value).toBe(first.code); expect(f.nameInput.value).toBe('Fikcyjne rozpoznanie lekarza');
+    expect(f.query.getAttribute('aria-expanded')).toBe('false');
+    const searches = f.search.mock.calls.length, commits = f.onCommit.mock.calls.length;
+    // Browsers dispatch change when the edited query loses focus, between the
+    // source-name button's pointerdown and click. That event must not move it.
+    f.picker.handleInput({ target: f.query, type: 'change' });
+    expect(f.search).toHaveBeenCalledTimes(searches);
+    expect(f.host.querySelector('.vpt-icd10-list').hidden).toBe(true);
+    expect(f.query.getAttribute('aria-expanded')).toBe('false'); expect(f.canonical.value).toBe(first.code);
+    expect(f.query.validationMessage).toBe(''); expect(f.onCommit).toHaveBeenCalledTimes(commits);
+    f.host.querySelector('.vpt-icd10-use-name').click();
+    expect(f.nameInput.value).toBe(first.name); expect(f.canonical.value).toBe(first.code);
+    expect(f.onCommit).toHaveBeenCalledTimes(commits + 1);
+  });
+
   it('closes search on Escape/Tab and refuses a manual query longer than the persisted-code limit', () => {
     const f = fixture(); f.input('Fikcyjny tekst wyszukiwania dłuższy niż kod');
     expect(f.query.getAttribute('aria-expanded')).toBe('true'); expect(f.host.querySelectorAll('[role="option"]')).toHaveLength(0);

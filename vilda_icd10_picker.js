@@ -140,7 +140,11 @@
           var changed = !!code.value; code.value = ''; query.value = ''; showSelected();
           if (changed) options.onCommit();
         }
-        validate(); render(); return true;
+        validate();
+        // Blur can dispatch change between another control's pointerdown and
+        // click. Reopening the in-flow list here would move that click target.
+        if (!event.type || event.type === 'input') render();
+        return true;
       },
       setWorking: function (value) { if (disposed) return; working = !!value; if (working) close(); },
       destroy: function () {

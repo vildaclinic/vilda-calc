@@ -654,11 +654,12 @@ test('ICD-10: live catalogue narrowing and explicit keyboard choice preserve Pol
 
 test('ICD-10: pending search cannot overwrite a saved code, physician names remain explicit and manual or empty codes persist', async ({ page }) => {
   const { frame, id, ids } = await setup(page);
+  await page.setViewportSize({ width: 390, height: 844 });
   const before = { patient: await records(frame, id), other: await records(frame, ids.b), clinical: await clinical(frame) };
   await openTreatment(frame);
   const customName = 'Fikcyjny indywidualny opis rozpoznania lekarza';
   await createDiagnosis(frame, { name: customName, code: 'I10' });
-  let selected = (await treatmentState(frame, id)).diagnoses[0];
+  const selected = (await treatmentState(frame, id)).diagnoses[0];
   expect(selected.context).toMatchObject({ code: 'I10', name: customName });
   await frame.locator(`${TREATMENT} [data-treatment-diagnosis-id="${selected.id}"] [data-treatment-action="edit-diagnosis"]`).click();
   const editor = frame.locator(EDITOR), query = editor.locator('.vpt-icd10-query');
@@ -675,12 +676,12 @@ test('ICD-10: pending search cannot overwrite a saved code, physician names rema
   await expect(editor.getByRole('listbox')).toBeHidden(); await expect(editor).toBeVisible();
   await chooseDiagnosisCode(editor, 'E10.2†', { query: 'E102' });
   await expect(editor.locator('[name="name"]')).toHaveValue(customName);
-  await saveEditor(frame);
-  selected = (await treatmentState(frame, id)).diagnoses[0];
-  expect(selected.context).toMatchObject({ code: 'E10.2†', name: customName });
-  await frame.locator(`${TREATMENT} [data-treatment-diagnosis-id="${selected.id}"] [data-treatment-action="edit-diagnosis"]`).click();
+  // Keep the edited query focused: this real click must blur it without a
+  // native change event reopening the list between pointerdown and pointerup.
+  await expect(query).toBeFocused();
   await editor.getByRole('button', { name: 'Użyj nazwy z katalogu', exact: true }).click();
   await expect(editor.locator('[name="name"]')).toHaveValue('Z powikłaniami nerkowymi');
+  await expect(editor.getByRole('listbox')).toBeHidden();
   await saveEditor(frame);
   const canonical = (await treatmentState(frame, id)).diagnoses[0];
   expect(canonical.id).toBe(selected.id); expect(canonical.context).toMatchObject({ code: 'E10.2†', name: 'Z powikłaniami nerkowymi' });
