@@ -77,7 +77,7 @@
 // MODEL ODSYŁANIA (E3-PR0c, odsyłanie poprawionych wizyt; wyrocznia sejfu z włączonym przełącznikiem odsyłania)
 //   modelEcha(przed, po, ladunek) → { wiersze, spoza } — wiersze echa, które sejf odsyła po zastosowaniu jednego zdarzenia:
 //   tylko ładunek z polem event (koperta zdarzenia; stara delta tą samą drogą — pusto), z echoScalenia warstwa wykonalna
-//   reguły T (wykT) rodzaju snap, bez wersji przeniesionej w tym scaleniu (przed scaleniem pod inną kartą niż po), bez
+//   reguły pola (wykT) rodzaju snap, bez wersji przeniesionej w tym scaleniu (przed scaleniem pod inną kartą niż po), bez
 //   odejmowania haków. spoza — wiersze, których snapshotId nie ma wśród kandydatów ładunku (kandydaciEcha:
 //   patients[].snapshots[] i snapshotTombstones[]); sejf ich nie odsyła, więc niepusta lista to niezgodność modelu
 //   z sejfem (strażnik kandydatów).

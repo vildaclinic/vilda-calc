@@ -42909,9 +42909,12 @@ poprawki modułu planów z etapami (wiersz 2c, vildaclinic/vilda-calc#990):
 - różnica „tylko lista usuniętych pacjentów” odłożona do E3-PR0e.
 
 Wejście z E3-PR0b (wpis P-ZBIEZNOSC-ZDARZEN, E3-PR0b, „Wejście do kolejnych PR”: reguła echa, rozbicie zakresu, bez
-podwójnego wysyłania) i z E3-PR0b2b (wpis P-NOTATKA-POZNIEJSZA, „Wymagania dla następnych PR”). Sprawy, których
-projekt i decyzje nie rozstrzygały, rozstrzygnięto wariantem najbezpieczniejszym dla danych; są niżej, w punkcie „Do
-akceptacji właściciela przy PR”.
+podwójnego wysyłania) i z E3-PR0b2b (wpis P-NOTATKA-POZNIEJSZA, „Wymagania dla następnych PR”). *(2026-11-18, po
+scaleniu 2c:)* Wymaganie z wpisu P-DOWOD-KROKU („Wymagania dla następnych PR”: nowa droga zapisu notatki wchodzi do
+listy dróg niezmiennika chwili treści) tego PR nie dotyczy. Odsyłanie nie zapisuje notatek ani innych rekordów sejfu,
+tylko dopisuje wiersz `snap` do kolejki. Dowód kroku wskazuje tylko notatkę, więc chwila treści dowodu nie przechodzi
+przez odsyłanie. Sprawy, których projekt i decyzje nie rozstrzygały, rozstrzygnięto wariantem najbezpieczniejszym
+dla danych; są niżej, w punkcie „Do akceptacji właściciela przy PR”.
 
 ### E3-PR0c
 
@@ -42940,8 +42943,10 @@ tożsamości wizyty dopisanej przez bieżącą wersję i wersji przeniesionej w 
 - **Wersja idzie do kolejki, gdy zachodzi wszystko naraz** (`Bev_echo`):
   - scalanie ruszyło w tej sesji: wynik `applied` albo wyjątek z `Le` zamieniony na `busy` lub `apply-error`. `Le`
     zapisuje wersje przed fazą Kosza, a ta może jeszcze rzucić (`vildaMergeBusy`, `VISIT_IDENTITY_CONFLICT`);
-    ponowienie zdarzenia ma potem stan przed = po, więc odesłanie z pierwszej próby nie wróciłoby. Przy `locked`
-    i `session-changed` — bez odsyłania;
+    ponowienie zdarzenia ma potem stan przed = po, więc odesłanie z pierwszej próby nie wróciłoby. Odmowa kontroli
+    przed scaleniem we fragmencie natywnym (opakowanie `Le`) to też wyjątek z `Le` (status jak dziś), ale przed
+    zapisem: stan przed = po, więc bez odesłania (wyjątek przy nieudanym całym odczycie „przed” —
+    „Ograniczenia”). Przy `locked` i `session-changed` — bez odsyłania;
   - bez przeniesienia: po scaleniu v leży pod kartą p, a przed scaleniem leżała pod p albo pod żadną kartą (np. tylko
     we wpisie Kosza). Wersja, która przed scaleniem leżała pod inną kartą, to przeniesienie (E3-PR0f);
   - scalanie zapisało: rekord sklepu po ≠ rekord przed (JSON z posortowanymi kluczami, `Bev_json`, więc sama kolejność
@@ -43078,9 +43083,9 @@ porównuje model haków jak przy wyłączonym przełączniku. Limit spoczynku pr
 (dotąd 4). Przy wyłączonym przełączniku model i warstwa są puste, a literały bez zmian. Literał „nowe” licznika
 (`ZNANE_ODSYL`) zostaje przy dzisiejszym odejmowaniu haków całej partii — to inna miara (pokrycie dziś).
 
-**Długie przebiegi** (ręcznie, 2026-11-17, kod tego PR na kopii drzewa, każdy przy obu stanach przełącznika:
-`E2_AB_ECHO=1` i bez; czas przy CPU dzielonym z innym przebiegiem). Koperty odsyłania według klas licznika: w ładunku —
-gwiazdka / inne; spoza ładunku — gwiazdka / inne; tożsamość wizyty.
+**Długie przebiegi** (ręcznie, 2026-11-17, przed scaleniem 2c, kod tego PR na kopii drzewa, każdy przy obu stanach
+przełącznika: `E2_AB_ECHO=1` i bez; czas przy CPU dzielonym z innym przebiegiem). Koperty odsyłania według klas
+licznika: w ładunku — gwiazdka / inne; spoza ładunku — gwiazdka / inne; tożsamość wizyty.
 
 | Przebieg (ziarna) | Przełącznik | Koperty odsyłania | Ponad model / nieodesłane | Ponowne wysłanie tej samej wartości | Brak spoczynku, W3, W4 | Punkty W1 z różnicą (wszystkie z klasą) | Wyrocznia: naruszenia bez klasy | Czerwone przypadki | Czas |
 |---|---|---|---|---|---|---|---|---|---|
@@ -43097,8 +43102,8 @@ gwiazdka / inne; spoza ładunku — gwiazdka / inne; tożsamość wizyty.
 
 Przy włączonym przełączniku historia losowania jest inna (koperty odsyłania zmieniają długość kolejek), więc punkty W1
 obu stanów nie odpowiadają sobie jeden do jednego; mniej różnic po samych zdarzeniach (pełny 13 → 11, podstawowy
-11 → 7, „dłuższa praca bez połączenia” 19 → 12) to spodziewany skutek odsyłania, ale nie dowód. Floty mierzą odsyłanie między bieżącymi urządzeniami świata z urządzeniem
-starszej aplikacji.
+11 → 7, „dłuższa praca bez połączenia” 19 → 12) to spodziewany skutek odsyłania, ale nie dowód. Floty mierzą
+odsyłanie między bieżącymi urządzeniami świata z urządzeniem starszej aplikacji.
 
 **Profil pełny, ziarno 8, z włączonym przełącznikiem.** Wyrocznia „nie zginęła ostatnia zmiana” zgłasza utratę dwóch
 wizyt jednej karty na A i B (W1 i W4, kroki 78 i 109; 16 naruszeń bez klasy). Bez przełącznika to ziarno jest czyste,
@@ -43202,8 +43207,12 @@ mniej), test A ≡ B 4 (trzy warianty testu wejściowego z włączonym przełąc
 model”; warianty z wyłączonym przełącznikiem i wszystkie dotychczasowe literały zielone), e2e drenażu 1 z 2 (klucz
 `'1'`), skrót bazy `visits-vault-boundary` 1. Licznik odsyłania — 0 (funkcje uprzęży). Pełny `vitest run` na sejfie
 bazy z testami napisanymi przed kodem: czerwone wyłącznie w plikach tego PR (33 przypadki; reszta 31 116 zielona).
+*(2026-11-18, po scaleniu 2c:)* na nowej bazie (`64fa29dc`, sejf `audyt` z 2c, testy i uprząż tego PR) te same
+liczby w tych samych plikach: `sync-odsylanie` 29 z 49, test uśpienia 5, buildery 1, zapis bazowy 2, test A ≡ B 4,
+e2e drenażu 1 z 2, `visits-vault-boundary` 1, licznik odsyłania 0.
 
-**Mutanty** (kopia drzewa, jedna zmiana tekstu, pliki celu i test A ≡ B, część także w szerokim przebiegu i e2e):
+**Mutanty** (przed scaleniem 2c; kopia drzewa, jedna zmiana tekstu, pliki celu i test A ≡ B, część także w szerokim
+przebiegu i e2e):
 64 mutanty kodu odsyłania i jego otoczenia — 52 na kodzie przed poprawkami po przeglądzie i 12 nowych dla poprawek;
 na kodzie końcowym ponownie 30 mutantów porównania i zastosowania (części zmienionej poprawkami) i 12 nowych. Wynik:
 63 czerwieni co najmniej jeden test CI, 1 przeżywa. Rodziny: porównanie przed
@@ -43239,7 +43248,11 @@ test.
 **Czas pliku A ≡ B** (lokalnie, sam plik w ustawieniach CI, CPU dzielone z innym przebiegiem): 132–143 s (197
 zielonych, 21 pominiętych); na bazie z testami tego PR 135 s, w pełnym `vitest run` na bazie 153 s; przed tym PR
 127 s sam (wpis P-NOTATKA-POZNIEJSZA). Dochodzi test wejściowy (6 × 0,15–0,4 s) i ziarno z przełącznikiem (ok. 6 s).
-Cel ok. 180 s w CI — zmierzyć w opisie PR.
+Cel ok. 180 s w CI — zmierzyć w opisie PR. *(2026-11-18, po scaleniu 2c, lokalnie:)* sam plik 130,8 s, w pełnym
+`vitest run` 172,3 s.
+
+Długie przebiegi, mutanty i pierwszy pomiar czerwonych na bazie są sprzed scalenia 2c. Wynik się nie zmienia: 2c nie
+zmienił bloku P-DZIENNIK-ZDARZEN, `vilda_sync.js` ani plików testów tego PR.
 
 **Kontrola granicy obrazu sejfu.** Zmiana stoi wyłącznie w bloku P-DZIENNIK-ZDARZEN (poza blokiem nic, także
 komentarze; literał miejsc poza blokiem bez zmian, 35 wpisów); fragment natywny i blok trwałych wizyt bez zmian.
@@ -43270,6 +43283,11 @@ z `runtime/clinical-workspace-v1/manifest.json` na `audyt`.
   ma własny wiersz, `Bob_plan` łączy je w jeden).
 - **Ścieżka błędu odczytu** może raz wysłać wersję, która różni się od ładunku tylko `rev` (odstępstwo od decyzji 2a
   wyłącznie na tej ścieżce); jednorazowe, bez pętli (odbiorca odsyła tylko przy różnicy przed i po).
+- **Nieudany cały odczyt stanu „przed”** *(2026-11-18, po scaleniu 2c)*: porównanie idzie tylko z ładunkiem, więc
+  może raz wyjść tutejsza wersja, której scalanie nie zmieniło, a która różni się od ładunku (wygrała tutejsza treść
+  albo scalanie przerwało się przed zapisem, np. przy odmowie kontroli przed scaleniem we fragmencie natywnym).
+  Jednorazowe, bez pętli: odbiorca scala ją zwykłymi regułami, a ponowienie zdarzenia po odmowie scala i odsyła
+  właściwy rekord (`Bob_plan` łączy wiersze tej wersji).
 - **H1 i odesłanie tej samej wersji** mogą wyjść obie (decyzja z 2026-11-17: dopuszczona podwójna wysyłka wizyty;
   wyżej); druga kopia u odbiorcy nic nie zapisuje.
 - **Granica z E3-PR0d.** Odesłanie wersji zmienionej fazą Kosza (zdarzenie `stomb`) jest w E3-PR0c, bo to zapis

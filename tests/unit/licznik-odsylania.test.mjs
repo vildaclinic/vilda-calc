@@ -298,7 +298,7 @@ describe('licznik odsyłania: model odsyłania poprawionych wizyt (E3-PR0c) i wa
     expect(m.spoza.map((r) => r.k)).toEqual(['snap:P/x']);
     expect([...LO.kandydaciEcha(P)].sort()).toEqual(['v', 'y']);
   });
-  it('sam rev i tożsamość wizyty dopisana przez bieżącą wersję → pusto (warstwa wykonalna reguły T)', () => {
+  it('sam rev i tożsamość wizyty dopisana przez bieżącą wersję → pusto (warstwa wykonalna reguły pola)', () => {
     const przed = lad({ patients: [karta('P', [wersja('v')])] });
     expect(LO.modelEcha(przed, lad({ patients: [karta('P', [wersja('v', { rev: 4 })])] }), zdarzenie({ patients: [karta('P', [wersja('v', { rev: 4 })])] })).wiersze, 'sam rev').toEqual([]);
     const P = { patients: [karta('P', [bezVisit(wersja('v', { rev: 2, updatedAtISO: T1 }))])] };

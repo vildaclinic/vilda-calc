@@ -31,69 +31,81 @@
 // HIGIENA: po przypadku cisza każdego okna, zero otwartych połączeń baz kolejki, zero transakcji atrapy w toku, każde
 // wstrzymanie zwolnione.
 //
-// PRZYPADKI (tytuły opisowe; w nawiasie — na bazie bez odsyłania: C czerwony, Z zielony z natury)
+// PRZYPADKI (tytuły opisowe; w nawiasie — wynik na bazie bez odsyłania: czerwony na bazie albo zielony z natury)
 //   przełącznik wyłączony — sejf a sejf bez odsyłania (bezOdsylania: applyEncryptedEvent = Bev_zastosuj) w bliźniaczych
-//        oknach: zestaw kopert (rekord złożony, sam rev, wpis Kosza, ładunek nieczytelny, stara delta) — te same wyniki,
-//        zapis przebiegu atrapy (zbiór z krotnością), wiersze kolejki, operacje crypto.subtle i odczyty VILDA_EVENT_LOG;
-//        jeden odczyt pola przełącznika i jeden odczyt klucza na zastosowanie w sejfie, 0 w sejfie bez odsyłania (Z).
+//        oknach: zestaw kopert (rekord złożony, sam rev, wpis Kosza, ładunek nieczytelny, stara delta) — te same
+//        wyniki, zapis przebiegu atrapy (zbiór z krotnością), wiersze kolejki, operacje crypto.subtle i odczyty
+//        VILDA_EVENT_LOG; jeden odczyt pola przełącznika i jeden odczyt klucza na zastosowanie w sejfie, 0 w sejfie bez
+//        odsyłania (zielony z natury).
 //   przełącznik wyłączony — brak pola i klucza, klucz '0', 'true', '1 ', pole 'true' (napis), pole 1, getter
-//        localStorage rzucający: jeden odczyt pola i jeden odczyt klucza (albo localStorage), zapis przebiegu atrapy jak
-//        w sejfie bez odsyłania, 0 wierszy (Z); przełącznik włączony — klucz '1' i pole true: wiersz echa (C).
-//   rekord złożony (poprawka masy z ładunku i tutejsza gwiazdka) — jeden wiersz snap P/v z rekordem złożonym (C);
-//   gwiazdka z ładunku, tutejsza późniejsza treść — jeden wiersz (C);
-//   sam rev: tutejsza treść wygrywa chwilą, ładunek ma wyższy rev (zapis samego rev) — 0; wersja z ładunku o wyższym rev,
-//        ta sama treść i chwila (nowy szyfrogram) — 0 (Z);
-//   to samo zdarzenie drugi raz — 0 (stan przed = po), bez odszyfrowania w porównaniu (Z);
-//   ładunek bez payload.visit z odciskiem h liczonym z treści bez tożsamości — 0, reguła pola (Z);
+//        localStorage rzucający: jeden odczyt pola i jeden odczyt klucza (albo localStorage), zapis przebiegu atrapy
+//        jak w sejfie bez odsyłania, 0 wierszy (zielony z natury); przełącznik włączony — klucz '1' i pole true: wiersz
+//        echa (czerwony na bazie).
+//   rekord złożony (poprawka masy z ładunku i tutejsza gwiazdka) — jeden wiersz snap P/v z rekordem złożonym (czerwony
+//        na bazie);
+//   gwiazdka z ładunku, tutejsza późniejsza treść — jeden wiersz (czerwony na bazie);
+//   sam rev: tutejsza treść wygrywa chwilą, ładunek ma wyższy rev (zapis samego rev) — 0; wersja z ładunku o wyższym
+//        rev, ta sama treść i chwila (nowy szyfrogram) — 0 (zielony z natury);
+//   to samo zdarzenie drugi raz — 0 (stan przed = po), bez odszyfrowania w porównaniu (zielony z natury);
+//   ładunek bez payload.visit z odciskiem h liczonym z treści bez tożsamości — 0, reguła pola (zielony z natury);
 //   porównanie w kształcie eksportu: Bev_wersjaEcha czyta treść przez Bvisit_read — strażnik źródła (rekordu bez
-//        tożsamości wizyty bieżący sejf nie zapisuje; osiągalny tylko z kopii starszej aplikacji) (C);
-//   ładunek równy stanowi — 0 (Z); wersja z ładunku nowsza, przyjęta bez zmian — 0 (Z);
-//   porównanie JSON-em z posortowanymi kluczami — Bev_json wycięty z sejfu (C);
+//        tożsamości wizyty bieżący sejf nie zapisuje; osiągalny tylko z kopii starszej aplikacji) (czerwony na bazie);
+//   ładunek równy stanowi — 0 (zielony z natury); wersja z ładunku nowsza, przyjęta bez zmian — 0 (zielony z natury);
+//   porównanie JSON-em z posortowanymi kluczami — Bev_json wycięty z sejfu (czerwony na bazie);
 //   reguła pola — Bev_echoT wycięty z sejfu: tożsamość wizyty usuwana, gdy ładunek jej nie ma; odcisk h z ładunku tylko
-//        przy świeżym odcisku po scaleniu (C);
-//   Bev_ECHO_ZAWSZE (tekst sejfu) = POLA_ZAWSZE.snap licznika odsyłania (C);
+//        przy świeżym odcisku po scaleniu (czerwony na bazie);
+//   Bev_ECHO_ZAWSZE (tekst sejfu) = POLA_ZAWSZE.snap licznika odsyłania (czerwony na bazie);
 //   zdarzenie stomb: wpis Kosza z gwiazdką przegrywa z późniejszą tutejszą poprawką (v tylko w snapshotTombstones) —
-//        snap P/v (C);
-//   wersja spoza ładunku pod inną kartą: gwiazdka v pod P po „Scal pacjentów” P → G na A — snap G/v (C);
-//   v przed scaleniem tylko w Koszu A, późniejsza poprawka z ładunku wraca z rejestrem gwiazdki wpisu Kosza — snap P/v (C);
-//   wersja w snapshots i w snapshotTombstones jednego ładunku (koperta spoza buildera) — jeden kandydat, emisja z kluczem
-//        P/v raz (C);
-//   sam nagłówek karty inny — 0 wierszy, bez wiersza karty (Z);
+//        snap P/v (czerwony na bazie);
+//   wersja spoza ładunku pod inną kartą: gwiazdka v pod P po „Scal pacjentów” P → G na A — snap G/v (czerwony na
+//        bazie);
+//   v przed scaleniem tylko w Koszu A, późniejsza poprawka z ładunku wraca z rejestrem gwiazdki wpisu Kosza — snap P/v
+//        (czerwony na bazie);
+//   wersja w snapshots i w snapshotTombstones jednego ładunku (koperta spoza buildera) — jeden kandydat, emisja z
+//        kluczem P/v raz (czerwony na bazie);
+//   sam nagłówek karty inny — 0 wierszy, bez wiersza karty (zielony z natury);
 //   hak H1 i echo w jednym zdarzeniu (koperta ptomb z kartą docelową): pfull P i snap G/g — bez pomijania echa przy H1
-//        (C). Wariant „pełna karta p i echo p/v tej samej wersji” nie jest osiągalny kopertą buildera: wersję z karty
-//        docelowej koperty scalanie przenosi pod tę kartę (przeniesienie, bez echa) także wtedy, gdy nagrobek przegrywa;
-//        z koperty spoza buildera (snap z nagrobkiem karty P starszym od karty) — pfull P i snap P/v (C);
-//   notatki (samo oznaczenie, rekord złączony) — te same wiersze co w sejfie bez odsyłania, także po sweepOutbox (Z);
-//   ładunki bez wersji (notatka, lista) — zapis przebiegu atrapy jak w sejfie bez odsyłania, bez odczytów wersji (Z);
+//        (czerwony na bazie). Wariant „pełna karta p i echo p/v tej samej wersji” nie jest osiągalny kopertą buildera:
+//        wersję z karty docelowej koperty scalanie przenosi pod tę kartę (przeniesienie, bez echa) także wtedy, gdy
+//        nagrobek przegrywa; z koperty spoza buildera (snap z nagrobkiem karty P starszym od karty) — pfull P i snap
+//        P/v (czerwony na bazie);
+//   notatki (samo oznaczenie, rekord złączony) — te same wiersze co w sejfie bez odsyłania, także po sweepOutbox
+//        (zielony z natury);
+//   ładunki bez wersji (notatka, lista) — zapis przebiegu atrapy jak w sejfie bez odsyłania, bez odczytów wersji
+//        (zielony z natury);
 //   zdarzenie w otwartym kroku (wstrzymane „Usuń do Kosza” innej karty) — applyEncryptedEvent przed końcem kroku,
-//        wiersz echa po końcu kroku, raz (C);
-//   wpis echa wstrzymany w bazie kolejki — applyEncryptedEvent rozstrzyga się przed wpisem (C);
-//   po emissionsSettled wiersz echa w kolejce, sweepOutbox go nie dubluje (C);
-//   odbiorcy odesłanego rekordu: bez nowszego składnika — zapis i 0 echa; z nowszym — jedno złączenie i koniec (C);
-//   łączenie wpisów (Bob_plan): echo zastępuje czekający wiersz tej wersji; własny wiersz zastępuje echo; echo z wierszem
-//        innej encji między nimi — oba zostają (C — na bazie bez echa);
-//   busy z fazy Kosza po zapisie wersji — echo przy pierwszej próbie, ponowienie bez duplikatu (C);
-//   apply-error z Le po zapisie wersji — echo (C); błąd przed zapisem — 0 (Z);
-//   zmiana sesji w trakcie Le (blokada albo ponowne odblokowanie A) i zablokowany sejf — locked albo session-changed, bez
-//        emisji odsyłania, 0 (Z); w trakcie odczytu stanu „przed” (blokada albo ponowne odblokowanie A) — Le nie rusza ani
-//        w nowej sesji (C); blokada przy odczycie pierwszego z trzech kandydatów — bez dalszych odczytów sklepu wersji (C);
-//        w trakcie odczytu stanu „po” — applied, bez emisji odsyłania, 0 (Z);
+//        wiersz echa po końcu kroku, raz (czerwony na bazie);
+//   wpis echa wstrzymany w bazie kolejki — applyEncryptedEvent rozstrzyga się przed wpisem (czerwony na bazie);
+//   po emissionsSettled wiersz echa w kolejce, sweepOutbox go nie dubluje (czerwony na bazie);
+//   odbiorcy odesłanego rekordu: bez nowszego składnika — zapis i 0 echa; z nowszym — jedno złączenie i koniec
+//        (czerwony na bazie);
+//   łączenie wpisów (Bob_plan): echo zastępuje czekający wiersz tej wersji; własny wiersz zastępuje echo; echo z
+//        wierszem innej encji między nimi — oba zostają (czerwony na bazie bez echa);
+//   busy z fazy Kosza po zapisie wersji — echo przy pierwszej próbie, ponowienie bez duplikatu (czerwony na bazie);
+//   apply-error z Le po zapisie wersji — echo (czerwony na bazie); błąd przed zapisem — 0 (zielony z natury);
+//   zmiana sesji w trakcie Le (blokada albo ponowne odblokowanie A) i zablokowany sejf — locked albo session-changed,
+//        bez emisji odsyłania, 0 (zielony z natury); w trakcie odczytu stanu „przed” (blokada albo ponowne odblokowanie
+//        A) — Le nie rusza ani w nowej sesji (czerwony na bazie); blokada przy odczycie pierwszego z trzech kandydatów
+//        — bez dalszych odczytów sklepu wersji (czerwony na bazie); w trakcie odczytu stanu „po” — applied, bez emisji
+//        odsyłania, 0 (zielony z natury);
 //   błędy odczytu treści osobno dla każdego kandydata: nieczytelna treść „przed” — porównanie z ładunkiem; nieczytelna
-//        treść „po” — echo tego kandydata (C); cały odczyt „przed” zawodzi — porównanie z ładunkiem; cały odczyt „po”
-//        zawodzi — echo kandydatów z kartą z odczytu „przed”, wersja tylko w Koszu bez wiersza (C);
-//   removeUser tego konta w toku (sejf jeszcze odblokowany) w chwili wznowienia odczytu stanu „przed” — session-changed,
-//        scalanie nie rusza (C); usuwanie konta w trakcie odczytu „po” (odmowa SYNC_DB_DELETED) — applied, bez emisji
-//        odsyłania (C — na bazie odczytu stanu nie ma);
+//        treść „po” — echo tego kandydata (czerwony na bazie); cały odczyt „przed” zawodzi — porównanie z ładunkiem;
+//        cały odczyt „po” zawodzi — echo kandydatów z kartą z odczytu „przed”, wersja tylko w Koszu bez wiersza
+//        (czerwony na bazie);
+//   removeUser tego konta w toku (sejf jeszcze odblokowany) w chwili wznowienia odczytu stanu „przed” —
+//        session-changed, scalanie nie rusza (czerwony na bazie); usuwanie konta w trakcie odczytu „po” (odmowa
+//        SYNC_DB_DELETED) — applied, bez emisji odsyłania (czerwony na bazie, gdzie odczytu stanu nie ma);
 //   strażnik tożsamości chronionego sejfu niedostępny od chwili po odszyfrowaniu koperty — busy z kodem jak dziś, bez
-//        scalania i bez emisji odsyłania (Z);
-//   wersja przeniesiona (ptomb z kartą docelową), pełna kopia, delta, stara delta przez applyEncryptedEvent — 0 (Z);
-//   zamknięta bramka dziennika przy włączonym przełączniku — 0, zapis przebiegu atrapy jak w sejfie bez odsyłania, jeden
-//        odczyt bramki w Bem_zastosujEcho (C); „Komputer w pracy” — rekord złożony bez wiersza i bez bazy kolejki, bez
-//        porównania stanu kandydatów (Z);
+//        scalania i bez emisji odsyłania (zielony z natury);
+//   wersja przeniesiona (ptomb z kartą docelową), pełna kopia, delta, stara delta przez applyEncryptedEvent — 0
+//        (zielony z natury);
+//   zamknięta bramka dziennika przy włączonym przełączniku — 0, zapis przebiegu atrapy jak w sejfie bez odsyłania,
+//        jeden odczyt bramki w Bem_zastosujEcho (czerwony na bazie); „Komputer w pracy” — rekord złożony bez wiersza i
+//        bez bazy kolejki, bez porównania stanu kandydatów (zielony z natury);
 //   wartownik treści przy włączonym przełączniku: fikcyjny napis z nazwiska nie wychodzi poza szyfrogram (wyniki, także
 //        ścieżka błędu porównania; emisja odsyłania z samymi identyfikatorami wersji; console, localStorage,
-//        sessionStorage) (C — na bazie bez emisji odsyłania);
-//   samokontrola kopii bez odsyłania (bezOdsylania na tekstach syntetycznych) (Z).
+//        sessionStorage) (czerwony na bazie bez emisji odsyłania);
+//   samokontrola kopii bez odsyłania (bezOdsylania na tekstach syntetycznych) (zielony z natury).
 // Kopia sejfu tylko w tym pliku (busy, apply-error i błąd odczytu stanu): wstawka na początku Bkz_scalKoniec (faza Kosza,
 // po zapisie wersji w Le), na początku Le albo na początku Bev_stanEcha (odczyt stanu kandydatów) rzuca raz fikcyjny błąd
 // z pola okna — prawdziwą drogą zajęta blokada karty w fazie Kosza wymaga limitu blokady; strażnik osiągalności: Le
