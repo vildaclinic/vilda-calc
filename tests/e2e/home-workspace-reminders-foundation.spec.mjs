@@ -90,6 +90,7 @@ test('native home reminders retain card geometry, top-shell actions, history, re
   expect((await card.boundingBox()).height).toBeCloseTo(352, 0);
   expect((await card.locator('.vb22-head').boundingBox()).height).toBeCloseTo(80, 0);
   await expect(card.locator('.vb22-head button:visible')).toHaveCount(1);
+  await expect(card.locator('.vb22-action-zone')).toBeHidden();
   const compactGeometry = await card.evaluate(node => {
     const box = node.getBoundingClientRect(), range = document.createRange();
     range.selectNodeContents(node.querySelector('.vb22-head h2'));
