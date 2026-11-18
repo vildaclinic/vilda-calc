@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { webcrypto } from 'node:crypto';
 import { describe, expect, it, vi } from 'vitest';
-import { verifyVisitWorkspaceFamily } from '../../tools/build-visits-workspace-family.mjs';
+import { verifyHistoricalVisitWorkspaceFamily } from '../../tools/build-visits-workspace-family.mjs';
 
 const manifest = JSON.parse(readFileSync(new URL('../../runtime/clinical-workspace-v1/manifest.json', import.meta.url), 'utf8'));
 const prefix = '../../runtime/clinical-workspace-v1/' + manifest.moduleTreeSHA256.slice(0, 12) + '/';
@@ -94,10 +94,15 @@ describe('durable visit identity in the current encrypted clinical workspace', (
       assertCurrent: () => { if (!current) throw new Error('fictional-session-changed'); } })).rejects.toThrow('fictional-session-changed');
   });
 
-  it('reproduces the complete family and keeps every earlier module byte unchanged', () => {
-    const built = verifyVisitWorkspaceFamily();
-    expect(built.manifest.files).toHaveLength(51);
-    expect(built.manifest.historicalFiles).toHaveLength(151);
+  it('reproduces the retained historical family and keeps every earlier module byte unchanged', () => {
+    // The active family is built in the module source repository (vilda-source); the
+    // historical family remains exactly the base family plus the readable codec.
+    const built = verifyHistoricalVisitWorkspaceFamily();
+    expect(built.moduleTreeSHA256).toBe('67818dc1656fcd24871e8621feb2131008e2746f70e920dfd628819b869a299c');
+    expect(manifest.moduleTreeSHA256).not.toBe(built.moduleTreeSHA256);
+    expect(built.sources.size).toBe(51);
+    const retained = new Map(manifest.historicalFiles.map(entry => [entry.path, entry.sha256]));
+    for (const path of built.sources.keys()) expect(retained.has(path), path).toBe(true);
     const previous = 'runtime/clinical-workspace-v1/e410c8725541/';
     const differences = [];
     for (const [path, source] of built.sources) {
@@ -106,5 +111,11 @@ describe('durable visit identity in the current encrypted clinical workspace', (
       if (old !== source) differences.push(name);
     }
     expect(differences).toEqual(['client/patient-clinical-workspace-source/codec.mjs']);
+  });
+
+  it('keeps the readable codec byte for byte equal to the codec module of the active family', () => {
+    const readable = readFileSync(new URL('../../runtime/durable-visits-v1/workspace-source-codec.mjs', import.meta.url));
+    const active = readFileSync(new URL(prefix + 'client/patient-clinical-workspace-source/codec.mjs', import.meta.url));
+    expect(readable.equals(active)).toBe(true);
   });
 });
