@@ -670,6 +670,7 @@ test('ICD-10: pending search cannot overwrite a saved code, physician names rema
   expect(await query.evaluate(node => node.validity.customError)).toBe(true);
   expect((await treatmentState(frame, id)).diagnoses).toEqual([selected]);
   await flushMain(frame); expect(await clinical(frame)).toEqual(before.clinical);
+  await query.click(); await expect(editor.getByRole('listbox')).toBeVisible();
   await query.press('Escape');
   await expect(editor.getByRole('listbox')).toBeHidden(); await expect(editor).toBeVisible();
   await chooseDiagnosisCode(editor, 'E10.2†', { query: 'E102' });

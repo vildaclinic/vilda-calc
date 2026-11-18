@@ -43,6 +43,13 @@ oraz rozpakowanego XML. Źródłowe archiwum gzip ma `mtime=0`, 606 817 bajtów
 i SHA256 `39ecb2cb69d0a170972bf68485d516201c25610e8d5767de362e32e1cb293a3b`.
 Źródło pozostaje w narzędziach; aplikacja ładuje wyłącznie czytelny artefakt JS.
 
+Polityka repozytorium dopuszcza wyłącznie ten dokładny publiczny plik źródłowy
+po kontroli ścieżki, rozmiaru i SHA256 archiwum oraz ograniczonej dekompresji
+z kontrolą rozmiaru i SHA256 całego XML. Następnie skanuje pełny rozpakowany
+tekst tymi samymi regułami sekretów i PESEL co inne pliki. Pozostałe archiwa
+nadal są odrzucane; przypięcie nie jest ogólnym wyjątkiem dla katalogu narzędzi.
+
+
 ```bash
 python3 tools/build-icd10-pl.py
 python3 tools/build-icd10-pl.py --check
