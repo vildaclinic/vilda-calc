@@ -1924,6 +1924,12 @@ wizyt: SHA-256 `a9672e38d4890b2516d3afd2f184006ad72ec4443cad8df7663d42abbb5731c4
 (`5d77d036…`) odpowiada stanowi sprzed E3-PR0b2b (`audyt` `3c1fc748`); bieżącą bazę daje to samo
 odwrócenie delty co wyżej.
 
+Od 2c (P-DOWOD-KROKU, 2026-11-18: nowy blok natywny z repozytorium źródeł modułu i bez haka
+`40-visit-metadata`) bazą delty jest SHA-256
+`fe4fad0b1119e4e6ee6fdaaca793f12d76614e4cac418328fc38756895c6fe2c`, a wynikiem — bieżący
+`vilda_vault.js` (`175fb1ab57b47cf4b58d19369536722edc1177c1c3d7f83311e63727298bff9b`). Bazę daje to
+samo odwrócenie delty co wyżej.
+
 Każdy punkt wpięcia musi występować dokładnie raz. Narzędzie odrzuca inne
 bajty bazy, zmianę źródła bez zgodnego manifestu, niejednoznaczny punkt wpięcia
 i wynik różniący się od zapisanego skrótu. Odwrócenie delty musi odtworzyć
@@ -1975,6 +1981,28 @@ zasobów. Testy `visits-workspace-codec.test.mjs` sprawdzają rzeczywiste
 szyfrowanie, serializację źródła odzyskiwania i ponowne szyfrowanie tożsamości,
 starsze dane, izolację sesji, odrzucenie dodatkowych pól i odtworzenie drzewa.
 Test precache obejmuje wszystkie 202 adresy modułów, w tym 151 historycznych.
+
+*(2026-11-18, 2c, P-DOWOD-KROKU.)* Kodek z tożsamością usuniętej wizyty ma teraz
+źródło w repozytorium źródeł modułu (`vilda-source`,
+`client/patient-clinical-workspace-source/codec.mjs`), a aktywną rodzinę modułów
+buduje tamtejszy budowniczy (niżej, „Moduł planów z etapami — blok natywny sejfu
+i rodzina modułów z repozytorium źródeł modułu”). Kopia
+`runtime/durable-visits-v1/workspace-source-codec.mjs` zostaje: jest bajt w bajt
+równa modułowi `codec.mjs` aktywnej rodziny (test w
+`visits-workspace-codec.test.mjs`). `tools/build-visits-workspace-family.mjs`
+zostaje dowodem historycznej rodziny `67818dc1656f`: domyślne uruchomienie
+odtwarza ją z rodziny `e410c8725541` i czytelnego kodeka i sprawdza, że jej 51
+modułów leży bajt w bajt wśród `historicalFiles`, a sejf jej nie wybiera
+(„Visit workspace family: 67818dc1656f… (51 modules; historical bytes
+retained).”); `--write` odmawia, gdy aktywna jest inna rodzina, więc nie
+przywróci starej. Hak `40-visit-metadata` delty trwałych wizyt (zmiana adresu
+importu rodziny wewnątrz fragmentu natywnego) jest usunięty — blok natywny
+z budowniczego ma już adres aktywnej rodziny; delta ma 41 haków. Test precache
+obejmuje 253 adresy modułów, w tym 202 historyczne. Zdanie wyżej, że skróty
+pierwotnego fragmentu w manifeście opisują bazę dowodu, a zmianę adresu importu
+obejmuje delta wizyt, dotyczy rodziny `67818dc1656f`. Od 2c `fragmentSHA256`
+w manifeście opisuje blok natywny w `vilda_vault.js` taki, jaki jest, a delta
+trwałych wizyt bloku nie zmienia.
 
 ### Wspólna prezentacja SGA w DocPro i nowym oknie danych
 
@@ -2096,3 +2124,105 @@ dotychczasowych funkcji prezentacji Planu opieki i SGA.
 Historia okien jest oddzielnym modułem stanu UI. Nie zapisuje dokumentacji
 pacjenta. Odtwarzanie nieprzyjętego Wstecz zachowuje istniejący token,
 a zamknięcie rodzica i dziecka rozlicza wspólne przejście historii.
+
+## Moduł planów z etapami — blok natywny sejfu i rodzina modułów z repozytorium źródeł modułu (2c, 2026-11-18)
+
+Fragment natywny w `vilda_vault.js` (tekst między `/* BEGIN VILDA CLINICAL WORKSPACE NATIVE V1 */`
+a `/* END VILDA CLINICAL WORKSPACE NATIVE V1 */`), rodzinę modułów `runtime/clinical-workspace-v1/<12
+znaków drzewa>/`, jej archiwum precache, `runtime/clinical-workspace-v1/manifest.json` oraz sekcje
+`BEGIN/END CLINICAL WORKSPACE PRECACHE V1` i `CLINICAL_WORKSPACE_PRECACHE_PACK` w
+`service-worker-kalorii.js` buduje `tools/build-clinical-workspace-runtime.mjs` w prywatnym
+repozytorium źródeł modułu (`vilda-source`). Czytelne źródła są tam w
+`client/patient-clinical-workspace*/`. Bieżące artefakty: commit
+`f2130f8993aa9f07de8b4ef7970b2cf23127c8dc`, drzewo
+`0278bf7106c27008499d80c14acf3e2d733cccb52f3b06debbd91c443874cb25` (51 modułów), `fragmentSHA256`
+`f1605482c3466e86c9c7ff94e19859eeaea8a70b5e6ccb0fad4fa302f2101d78`, `integratedVaultSHA256`
+`077c76e943710aff8712b87921fd288d12b24d8a30a5c7787a53e89f45c8fb97`, archiwum
+`runtime/clinical-workspace-v1/0278bf7106c2/precache-3689c59590e5.json`. Baza sejfu bez zmian:
+`44d82633d45bf9db1e964457c69d07f2009b683848a00d21315fc63fdd542499`.
+
+Warstwy `vilda_vault.js` od środka: baza → blok natywny i 16 haków natywnych (manifest,
+`nativeHooks`) → delta Kt/V (`tools/klirens-ktv-vault-delta.mjs`, poza blokiem) → delta trwałych
+wizyt (`runtime/durable-visits-v1/`, `tools/visits-vault-delta.mjs`). Budowniczy zna tylko dwie
+pierwsze. Jego `vilda_vault.js` nie ma delty Kt/V ani trwałych wizyt — **nie kopiować go do tego
+repozytorium.**
+
+Nowe artefakty (budowniczy uruchamiany tylko z `--output` na kopii tego repozytorium, nigdy na samym
+repozytorium). Budowniczy importuje parser `acorn`, więc w checkoutcie repozytorium źródeł modułu najpierw
+`npm ci`:
+
+```bash
+(cd <vilda-source> && npm ci)
+node --input-type=module -e "import { readFileSync, writeFileSync } from 'node:fs'; import { reduceClinicalWorkspaceVault } from './tools/check_clinical_workspace_boundary.mjs'; writeFileSync('/tmp/vilda-baza-sejfu.js', reduceClinicalWorkspaceVault(readFileSync('vilda_vault.js', 'utf8')));"
+sha256sum /tmp/vilda-baza-sejfu.js   # = baseVaultSHA256 z manifestu i BASE z kontroli granicy
+mkdir -p /tmp/vilda-kopia && git archive HEAD | tar -x -C /tmp/vilda-kopia
+node <vilda-source>/tools/build-clinical-workspace-runtime.mjs --source-vault /tmp/vilda-baza-sejfu.js --output /tmp/vilda-kopia
+```
+
+Z kopii do repozytorium:
+1. Katalog nowej rodziny z archiwum precache i `runtime/clinical-workspace-v1/manifest.json` bez zmian.
+   Dawne rodziny zostają (manifest przenosi je do `historicalFiles`).
+2. W `service-worker-kalorii.js` tylko sekcja `BEGIN/END CLINICAL WORKSPACE PRECACHE V1` (dawne adresy
+   zostają) i `CLINICAL_WORKSPACE_PRECACHE_PACK`.
+3. W `vilda_vault.js` tylko tekst między znacznikami `BEGIN` i `END VILDA CLINICAL WORKSPACE NATIVE V1`
+   — zastąpiony blokiem z `vilda_vault.js` kopii; poza blokiem bajt w bajt.
+
+Kontrola warstw: `restoreKtvVaultBaseline(restoreDurableVisitsBaseline(vilda_vault.js))` ma skrót
+`integratedVaultSHA256` z manifestu budowniczego, a budowniczy z `--check` na kopii, w której
+`vilda_vault.js` zastąpiono tym obrazem pośrednim, kończy się „Checked 257 clinical workspace runtime
+files.” (stan 2c):
+
+```bash
+node --input-type=module -e "import { readFileSync, writeFileSync } from 'node:fs'; import { restoreDurableVisitsBaseline } from './tools/visits-vault-delta.mjs'; import { restoreKtvVaultBaseline } from './tools/klirens-ktv-vault-delta.mjs'; writeFileSync('/tmp/vilda-obraz-posredni.js', restoreKtvVaultBaseline(restoreDurableVisitsBaseline(readFileSync('vilda_vault.js', 'utf8'))));"
+sha256sum /tmp/vilda-obraz-posredni.js   # = integratedVaultSHA256 z runtime/clinical-workspace-v1/manifest.json
+rm -rf /tmp/vilda-kontrola && mkdir -p /tmp/vilda-kontrola && git archive HEAD | tar -x -C /tmp/vilda-kontrola
+cp /tmp/vilda-obraz-posredni.js /tmp/vilda-kontrola/vilda_vault.js
+node <vilda-source>/tools/build-clinical-workspace-runtime.mjs --source-vault /tmp/vilda-baza-sejfu.js --output /tmp/vilda-kontrola --check
+```
+
+Polecenia czytają pliki zatwierdzone w `HEAD`; zmiany jeszcze niezatwierdzone trzeba najpierw zatwierdzić albo
+skopiować do kopii.
+
+Potem delta trwałych wizyt: hak, którego tekst zmienił się wewnątrz bloku, usunąć albo przepisać
+(w 2c usunięty hak `40-visit-metadata`); bazę delty (odwrócenie delty wyżej, „Trwała tożsamość
+wizyt”) zapisać w `runtime/durable-visits-v1/manifest.json` (`baseVaultSHA256`),
+`tools/visits-vault-delta.mjs` (`BASE`) i `tests/unit/visits-vault-boundary.test.mjs`, a
+`integratedVaultSHA256` = skrót nowego `vilda_vault.js`. Na końcu `node tools/visits-vault-delta.mjs`,
+`node tools/check_clinical_workspace_boundary.mjs` i testy rodziny i pamięci offline
+(`visits-workspace-codec`, `clinical-workspace-precache-pack`, `sw-precache-stron`). Blok natywny
+zmienia się tylko w środku, więc baza sejfu (`baseVaultSHA256`, `BASE`) zostaje, o ile nie zmieniły
+się haki natywne.
+
+Adres `vilda_care_plan_mutation.js?v=…` stoi wewnątrz bloku natywnego i ustawia go repozytorium
+źródeł modułu; kontrola granicy wymaga, żeby ten adres był w pamięci offline. Po zmianie
+`vilda_care_plan_mutation.js`, `vilda_care_plan_model.js` albo `vilda_care_template_model.js` tutaj trzeba
+nowych kopii tych plików w testach repozytorium źródeł (pin SHA-256 wszystkich trzech) i nowych artefaktów.
+
+`npm run podbij-wersje` daje zmienionemu `vilda_care_plan_mutation.js` numer o jeden większy niż najwyższy
+w `audyt` i przepisuje ten adres we wszystkich skryptach korzenia, także w bloku natywnym. Numer we fragmencie
+z repozytorium źródeł modułu musi więc być tym samym numerem (w 2c: `?v=3`, bo `audyt` `fe4f1754` ma najwyżej
+`?v=2`). Gdy podbicie zmieni blok, `node tools/check_clinical_workspace_boundary.mjs` (także w `npm test`)
+i `node tools/visits-vault-delta.mjs` kończą się błędem — wtedy nowy fragment z tym numerem z repozytorium
+źródeł modułu, nie zmiana ręczna.
+
+### Integracja aktualnej rodziny natywnej z rejestrem leczenia (2026-11-18)
+
+Po przyjęciu `audyt` `64fa29dc` do integracji strony głównej rejestr leczenia
+jest odtwarzany z dokładnego oficjalnego Vaulta
+`175fb1ab57b47cf4b58d19369536722edc1177c1c3d7f83311e63727298bff9b`.
+Te same osiemnaście publicznych haków z
+`runtime/patient-treatment-v1/manifest.json` oraz niezmienione trzy źródła
+modelu, magazynu i fragmentu dają obraz
+`74c915fe38120adbd9be1158756853ae4bec0432c4c384c9e020f169d9714127`.
+Wynik jest bajtowo identyczny z połączeniem obu zatwierdzonych zmian.
+Chroniony fragment natywny pozostaje bajtowo zgodny z wydaniem `audyt`;
+publiczna delta leczenia go nie modyfikuje.
+
+Aktualne przypięcia wejścia/wyjścia warstwy leczenia zostały odświeżone.
+Historyczna baza natywnej integracji `44d82633…`, definicje jej haków,
+niezmienne rodziny modułów oraz opublikowane archiwa zachowują swoje dowody.
+Po usunięciu bieżącego fragmentu natywnego i odwróceniu jego dokładnych haków
+baza publiczna nadal wynosi
+`e02ac735993506a4cc30a450524fce89b5fe1108a2e053e1838f1be90d0a0fc5`.
+Weryfikują to `patient-treatment-vault-delta.mjs`,
+`check_clinical_workspace_boundary.mjs` i testy granic źródła.

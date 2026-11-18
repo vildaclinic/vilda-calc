@@ -42152,6 +42152,27 @@ zmienił — przy następnej pracy w `vilda-source` weź nową bazę z `runtime/
   niedostępny. Sprawdź dokumentację pacjenta.”; z kodu). (1) przypina test działania (`notatka-pozniejsza-zapis.test.mjs`,
   „luki modułu planów z etapami”); (2) — tylko strażnik źródła: literał warunku `wins` we fragmencie natywnym (ten sam
   plik, „sejf: notatki według nowej reguły…”), bez testu działania. Fragmentu natywnego ten PR nie zmienia.
+  *(2026-11-17, 2c, P-DOWOD-KROKU: luka (1) — część vilda-calc w PR 2c, pierwsze wydanie: model planu i model zmian
+  przyjmują chwilę zmiany treści dokumentu w dowodzie kroku i w powiązaniu (`sourceRecordContentAtISOAtCapture` —
+  efektywna chwila treści według `Bnp_chwilaTresci`; decyzja właściciela z 2026-11-17: pole niesie chwilę zmiany treści
+  dokumentu, nie chwilę zapisu; walidacja w `vilda_care_plan_model.js` w funkcji `evidence` i przy powiązaniach, nie
+  w ogólnej `fields`), a ekran planu porównuje dowód po niej, gdy ją ma; zapis pola dopiero w drugim wydaniu, po
+  potwierdzeniu właściciela, że wszystkie urządzenia mają pierwsze. Moduły natywne luki (1) (moduł zapisu porównuje
+  dokument po efektywnej chwili treści tą samą regułą, dokument czytany przez moduł niesie chwilę zapisu i — przy ważnej
+  kotwicy — chwilę treści) i luka (2) (reguła notatek we fragmencie natywnym taka jak w scalaniu) — w `vilda-source`;
+  ich artefakty dochodzą do tego samego PR 2c, który przed nimi nie jest do scalenia. Kotwica chwili treści staje się
+  przez to własnością bezpieczeństwa dowodu kroku, nie tylko regułą scalania (P-DOWOD-KROKU, „Wymagania dla następnych
+  PR”). Testy w bloku „luki modułu planów z etapami” opisują teraz nowe porównanie, a nie dawne zachowanie; strażnik
+  literału `wins` zostaje do artefaktów.)* *(2026-11-18, 2c, P-DOWOD-KROKU: obie luki modułu planów z etapami
+  naprawione w pierwszym wydaniu, z artefaktami repozytorium źródeł modułu (`vilda-source`, commit
+  `f2130f8993aa9f07de8b4ef7970b2cf23127c8dc`). Luka (1): moduł zapisu planu porównuje dowód z polem po efektywnej
+  chwili treści tą samą regułą co sejf i ekran planu, a dokument czytany przez moduł niesie chwilę zapisu i — przy
+  ważnej kotwicy — chwilę treści; zapis pola w dowodzie dopiero w drugim wydaniu, po potwierdzeniu właściciela, więc
+  do tego czasu dowody porównują się po `rev`. Luka (2): kontrola przed scaleniem we fragmencie natywnym wybiera
+  zwycięzcę notatki i nagrobka tak jak scalanie (`Bnp_nowsza` i `Bnp_zwyciezcy` z `Bnp_planyTutaj`), a kartę jak
+  reguła karty notatki; dokument-dowód przenoszony ładunkiem z niższym `rev` i późniejszą treścią daje odmowę (test
+  e2e), a strażnik literału sprawdza nową regułę. Szczegóły i zmiana odmów: P-DOWOD-KROKU, „2c — kontrola przed
+  scaleniem liczy notatki jak scalanie”.)*
 - **Powiązanie wyniku z planem** (`linkedRev`, `linkedUpdatedAtISO`) — po zapisie samego `rev` fałszywe „Wynik zmienił
   się. Wybierz go ponownie” (kierunek bezpieczny; z kodu).
 - **Wołający bez `baseNote`** (Terminarz, moduły terapii, punkt serii Klirensu, ekran z pamięci podręcznej starszej
@@ -42172,8 +42193,11 @@ zmienił — przy następnej pracy w `vilda-source` weź nową bazę z `runtime/
 
 **Wymagania dla następnych PR.** E3-PR0c: zapis samego `rev` i zapis samego oznaczenia nie są echem do odesłania
 (klasa „sam rev notatki”); `pnote` w ładunku — pomiar odsyłania na regule po E3-PR0b2b. Moduł planów z etapami
-(repozytorium źródeł, przed E3-PR0c): chwila zapisu dowodu kroku i reguła notatek we fragmencie natywnym. Przyciski
-stanu: karta w ładunku bez treści (osobny PR). Do rozważenia: siatka bezpieczeństwa dla przegranej równoległej treści.
+(repozytorium źródeł, przed E3-PR0c): chwila zapisu dowodu kroku i reguła notatek we fragmencie natywnym *(2026-11-17,
+2c, P-DOWOD-KROKU: dowód kroku w dwóch wydaniach — pierwsze w PR 2c, drugie osobnym PR po potwierdzeniu właściciela;
+decyzja właściciela z 2026-11-17: pole dowodu niesie chwilę zmiany treści dokumentu, nie chwilę zapisu; reguła notatek
+we fragmencie natywnym — artefakty `vilda-source` w PR 2c)*. Przyciski stanu: karta
+w ładunku bez treści (osobny PR). Do rozważenia: siatka bezpieczeństwa dla przegranej równoległej treści.
 
 **Wdrożenie.** Od razu przy wydaniu, bez przełącznika i bez uśpienia (decyzja 2 (a)). Jak każda dotychczasowa zmiana
 reguły treści (D-7, D-21, E2-PR3c2–E2-PR3c4): przełącznik oznaczałby dwie reguły na urządzeniach jednego właściciela,
@@ -42265,3 +42289,642 @@ zachowanie własnej nazwy, zapis/odczyt i izolację od formularza klinicznego.
 PWA przechowuje pełny katalog i silnik lokalnie; wyszukiwanie nie wysyła
 rozpoznań do usług zewnętrznych. Wyniki weryfikacji technicznej nie oznaczają
 walidacji klinicznej klasyfikacji.
+
+## Plan z etapami: dowód kroku według chwili zmiany treści dokumentu — najpierw odczyt i porównanie, zapis pola w drugim wydaniu (P-DOWOD-KROKU, 2c, 2026-11-17)
+
+**Zmiana kliniczna: TAK — synchronizacja.** Wzory, progi, jednostki i interpretacje bez zmian. Zmienia się, które
+plany z etapami aplikacja przyjmuje przy synchronizacji, „Scal kopię konta”, imporcie pliku pacjenta i odtworzeniu
+konta, oraz jak plan sprawdza, czy dokument powiązany z krokiem zmienił się od powiązania. Format planu dostaje jedno
+pole opcjonalne `sourceRecordContentAtISOAtCapture` w dowodzie faktu (`facts[].evidence`) i w powiązaniu
+(`associations[]`): chwilę zmiany treści dokumentu w chwili powiązania, czyli jego efektywną chwilę treści według
+reguły sejfu (`Bnp_chwilaTresci`, P-NOTATKA-POZNIEJSZA), a nie chwilę zapisu (`updatedAtISO`). Nowe pole w dwóch
+wydaniach: najpierw odczyt i porównanie, zapis dopiero po potwierdzeniu właściciela. To wydanie pole przyjmuje,
+sprawdza i według niego porównuje, ale ekran planu go nie zapisuje; zapis zaczyna osobne, drugie wydanie, gdy
+właściciel potwierdzi, że wszystkie urządzenia mają to wydanie. Druga luka z tego samego wiersza planu (reguła notatek
+we fragmencie natywnym) przychodzi w tym samym PR z artefaktami repozytorium źródeł modułu; jej opis dojdzie do tego
+wpisu razem z nimi. *(2026-11-18: artefakty z repozytorium źródeł modułu (`vilda-source`, commit
+`f2130f8993aa9f07de8b4ef7970b2cf23127c8dc`) są w tym PR. Moduły natywne luki 1 — niżej, „2c — moduły natywne: moduł
+zapisu planu i dokument czytany przez moduł”; reguła notatek we fragmencie natywnym — niżej, „2c — kontrola przed
+scaleniem liczy notatki jak scalanie”.)*
+
+**Skąd.** Decyzja 2 (a) z 2026-11-16 i decyzja 2 z 2026-11-17 (plan `docs/SYNC_PRZYROSTOWA_PLAN.md`, rozdział 6;
+tabela „Podział E3-PR0”, wiersz 2c): dwie luki modułu planów z etapami po regule notatek E3-PR0b2b
+(P-NOTATKA-POZNIEJSZA, „Ograniczenia”). Decyzja z 2026-11-17 po sprawdzeniu starszej wersji aplikacji: nowe pole
+w dwóch wydaniach (plan, rozdział 6, „Decyzja z 2026-11-17 (2c, format dowodu kroku)”). Decyzja właściciela
+z 2026-11-17: pole niesie chwilę zmiany treści dokumentu (plan, rozdział 6, „Decyzja z 2026-11-17 (2c, znaczenie pola
+dowodu kroku)”; niżej, „Do akceptacji”, punkt 4). Kolejność wobec odsyłania poprawionych wizyt: decyzja 1
+z 2026-11-17 (E3-PR0c) — najpierw ta poprawka.
+
+### 2c — dowód kroku, wydanie pierwsze
+
+**Co było** (`audyt` `2ad5df78`; prawdziwy sejf, dane fikcyjne).
+- Dowód kroku pamięta numer wersji dokumentu (`sourceRecordRevAtCapture`), a ekran planu porównuje go z bieżącym
+  `rev` przy otwarciu dokumentu z planu. Po E3-PR0b2b scalenie może przyjąć późniejszą treść bez zmiany `rev` (`rev`
+  3 → 3, chwila zapisu …08:06:01 → …08:06:06): plan pokazywał zmieniony dokument jako ten sam. Zapis samego `rev`
+  (wygrywa tutejsza treść) podnosi `rev` bez zmiany treści: plan pokazywał fałszywe „Dokument został zmieniony…”;
+  tak samo po „wykonane”, „nie zgłosił się” i zapisie z edytora bez zmian (każdy podnosi `rev`).
+- Model planu ma zamkniętą listę pól dowodu i powiązania — nowe pole oznacza dla starszej wersji plan nieprawidłowy
+  (niżej, „Starsza aplikacja”).
+
+**Reguła.**
+- **Efektywna chwila treści dokumentu** — ta sama reguła co w sejfie (`Bnp_chwilaTresci` z kontrolą postaci jak
+  `Bnp_iso`). `contentAtISO` liczy się tylko wtedy, gdy jednocześnie:
+  1. ma postać kanoniczną `RRRR-MM-DDTgg:mm:ss.mmmZ` (dokładnie trzy cyfry milisekund i `Z`), jest prawdziwą chwilą
+     i po `new Date(x).toISOString()` daje ten sam napis (nie liczą się: brak milisekund, przesunięcie strefy, rok
+     w postaci rozszerzonej, miesiąc 13, 31 lutego);
+  2. `updatedAtISO` jest napisem;
+  3. `contentAtISO` nie jest późniejsze niż `updatedAtISO` (porównanie napisów);
+  4. kotwica jest ważna: `contentForISO === updatedAtISO`.
+
+  Inaczej efektywna chwila treści = `updatedAtISO`. Dokument bez `updatedAtISO` w postaci napisu nie ma chwili. Sejf
+  przy odczycie (`getPatientNote`, `Ft`) podaje `contentAtISO` i `contentForISO` tylko przy ważnej kotwicy, więc reguła
+  daje to samo z odczytu i z surowego rekordu.
+- **Dowód albo powiązanie z polem `sourceRecordContentAtISOAtCapture`:** dokument jest „zmieniony”, gdy pole jest
+  inne niż efektywna chwila treści dokumentu albo dokument nie ma chwili; `rev` i chwila zapisu nie grają roli.
+  Porównanie **dokładnych napisów**, bez `Date.parse` i bez sprowadzania obu stron do jednej postaci: ta sama chwila
+  zapisana inaczej (np. bez milisekund) to inny napis, więc dokument jest „zmieniony” (kierunek bezpieczny).
+  Sprowadzanie postaci uznałoby za niezmieniony dokument z uszkodzonego ładunku z tą samą chwilą bez milisekund
+  i inną treścią.
+- Dowód bez pola (wszystkie dzisiejsze plany): po `rev`, jak dotąd.
+- Kilka odwołań do tego samego dokumentu (fakt i powiązanie, także w wersjach zachowanych przy konflikcie): każde
+  swoją regułą; wystarczy jedno „zmienione”.
+- Reguła stoi na ekranie w jednym miejscu — funkcja `stagedContentInstant` w `vilda_care_plans.js`; tylko ona czyta
+  pola kotwicy (strażnik źródła). Test na prawdziwym sejfie sprawdza, że daje to samo co `Bnp_chwilaTresci` dla tych
+  samych rekordów. Ta sama reguła ma wejść do modułu zapisu w repozytorium źródeł modułu („Wymagania dla następnych
+  PR”). *(2026-11-18: weszła z artefaktami — `documentContentInstant` w `adapter.mjs` aktywnej rodziny modułów; test
+  zgodności trzech kopii — niżej, „2c — moduły natywne…”.)*
+- Pole jest opcjonalne; gdy jest, musi być chwilą `RRRR-MM-DDTgg:mm:ss[.mmm]Z` z prawdziwą datą i rokiem 1900–2999
+  (ten sam sprawdzian co `recordedAtISO`). Zły format = plan nieprawidłowy (`CARE_MODEL_EVIDENCE_INVALID`) i polecenie
+  odrzucone (`CARE_PLAN_EVIDENCE_INVALID`), jak inne złe pola dowodu. `sourceRecordRevAtCapture` zostaje wymagane.
+- Model planu i model zmian przyjmują tylko tę nazwę. Pole z pierwszej wersji tego PR
+  (`sourceRecordUpdatedAtISOAtCapture`, chwila zapisu), samo albo obok nowego, daje `CARE_MODEL_UNSUPPORTED_FIELD`
+  (model planu) i `CARE_PLAN_FIELDS_INVALID` (model zmian): plan z dawnym znaczeniem zostałby odrzucony, a nie
+  odczytany z innym znaczeniem. Dawna nazwa nie weszła na `audyt`.
+- Wybór istniejącego dokumentu do kroku: przed zapisem dokument czytany jest ponownie i porównywany z podglądem po
+  `rev`, po chwili zapisu i po efektywnej chwili treści (dotąd: po `rev`). Te chwile służą tylko temu porównaniu i nie
+  trafiają do planu, kopii, eksportu ani ładunku: ekran wysyła dowód `{ noteId, sourceRecordRevAtCapture }`.
+- Ekran planu w tym wydaniu nie zapisuje pola. Model zmian przyjmuje polecenie z polem (zapisze je w powiązaniu albo
+  w dowodzie faktu, a zależność odczytu dostaje `expectedContentAtISO`, żeby moduł zapisu porównał efektywną chwilę
+  treści dokumentu) — z tej drogi skorzysta dopiero drugie wydanie. Bez pola wynik modelu zmian jest taki jak dotąd.
+
+**Przypadki** (dane fikcyjne; chwile skrócone do godziny; testy niżej):
+
+| Dowód | Dokument teraz | Wynik |
+|---|---|---|
+| chwila treści …08:06:01, `rev` 2 | `rev` 3, ta sama chwila treści (zapis samego `rev`) | otwiera się, bez komunikatu |
+| chwila treści …08:06:01, `rev` 3 | `rev` 3, chwila treści …08:06:06 (późniejsza treść ze scalenia) | „Dokument został zmieniony po powiązaniu z planem…” |
+| chwila treści …08:06:01 | ta sama treść i chwila treści z ważną kotwicą, nowa chwila zapisu, zwykle wyższy `rev`: import karty, ratunek D-21, „wykonane” i „nie zgłosił się” tu albo z innego urządzenia, zapis z edytora bez zmian, złączenie (treść stąd, „wykonane” stamtąd), „Scal kopię konta” | otwiera się, bez komunikatu |
+| złapany na trzecim urządzeniu przy pierwszej z dwóch poprawek (opis pod tabelą) | ta sama chwila zapisu, późniejsza chwila treści | „Dokument został zmieniony…” |
+| chwila treści …08:06:01 | kotwica nieważna: `contentForISO` innej chwili zapisu albo brak, `contentAtISO` późniejsze niż chwila zapisu albo nie w postaci kanonicznej | liczy się chwila zapisu; „zmieniony”, gdy jest inna niż pole |
+| …08:06:01Z (bez milisekund) | chwila treści …08:06:01.000Z (ta sama chwila, inny napis) | „Dokument został zmieniony…” |
+| chwila treści …08:06:01 | bez chwili zapisu | „Dokument został zmieniony…” |
+| chwila treści …08:06:01 | usunięty i wskrzeszony tą samą treścią („Zostaw notatkę”) | „Dokument został zmieniony…” (znane ograniczenie, niżej) |
+| bez chwili, `rev` 3 | `rev` 3, późniejsza treść | otwiera się (jak dotąd, po `rev`) |
+| wybór dokumentu: podgląd `rev` 1 | przed zapisem `rev` 1, ale inna chwila zapisu albo inna efektywna chwila treści (kotwica zniknęła, pojawiła się albo się przesunęła) | „Dokument zmienił się. Wybierz go ponownie i sprawdź aktualną treść.”, nic nie zapisano |
+
+Przypadek trzech urządzeń (zwykła praca, sama bieżąca aplikacja): urządzenie A poprawia dokument dwa razy; pierwsza
+poprawka dochodzi do C, druga nie. B, które ma jeszcze pierwotną wersję, oznacza „wykonane” i wysyła je do C i do A.
+Na C powstaje złączenie „pierwsza poprawka z A, »wykonane« z B”, na A — „druga poprawka, »wykonane« z B”. Oba złączenia
+dostają tę samą chwilę zapisu (1 ms po „wykonane”), choć mają różną treść. Dowód złapany na C przy pierwszej poprawce;
+potem z A przychodzi druga. Porównanie po chwili zapisu pokazałoby zmienioną treść jako niezmienioną, a porównanie po
+chwili treści daje „zmieniony”. Tak samo przy czterech urządzeniach, gdy drugie złączenie liczy czwarte urządzenie.
+
+**Co widzi lekarz.** Bez nowych tekstów. Jedyna widoczna dziś zmiana: rzadki komunikat „Dokument zmienił się. Wybierz
+go ponownie i sprawdź aktualną treść.” także wtedy, gdy między podglądem a zapisem zmieniła się chwila zapisu albo
+chwila treści dokumentu bez zmiany numeru wersji (późniejsza treść ze scalenia, ale też import albo ratunek w tym
+czasie). Porównanie po chwili treści przy otwarciu dokumentu z planu zadziała w praktyce dopiero dla powiązań
+zapisanych drugim wydaniem.
+
+**Starsza aplikacja (sprzed tego PR) wobec planu z nowym polem w dowodzie kroku** (sprawdzone w Chromium na kopii
+`audyt` `4389d34a`, dane fikcyjne, z polem pod nazwą z pierwszej wersji tego PR; starszy model odrzuca każde pole spoza
+zamkniętej listy dowodu i powiązania, więc dla `sourceRecordContentAtISOAtCapture` skutek jest ten sam — z kodu,
+`vilda_care_plan_model.js` na `audyt`, funkcja `evidence` i powiązania). Starszy model planu uznaje plan z nowym polem
+za nieprawidłowy (`CARE_MODEL_UNSUPPORTED_FIELD`), a moduły planu odmawiają z kodem `CARE_NATIVE_PLAN_INVALID` („Nie
+można potwierdzić kompletności planu opieki.”). Odmowa obejmuje cały ładunek, nie tylko plan, i zapada przed pierwszym
+zapisem:
+- synchronizacja: pełny ładunek, delta planu i zdarzenie dziennika są odrzucane; inne notatki z tego samego ładunku
+  nie docierają (delta samej innej notatki dociera). Pobieranie przy każdej próbie trafia na ten sam ładunek; drenaż
+  dziennika zatrzymuje się na tym zdarzeniu do czasu aktualizacji (z kodu, `vilda_sync.js`);
+- „Scal kopię konta”: podgląd pokazuje dodane i zmienione notatki, ale samo scalenie odrzuca cały plik; import pliku
+  pacjenta z takim planem i odtworzenie konta z `.wiw` — odrzucone w całości (konto nie powstaje);
+- plan, który już leży w pamięci przeglądarki starszej wersji (druga, nieodświeżona karta albo cofnięta wersja):
+  odczyt planów, notatek tego pacjenta, wszystkich notatek konta, Terminarza i wyszukiwania kończy się błędem, okno
+  przypomnień pokazuje „Nie udało się wczytać przypomnień. Spróbuj ponownie.”, eksport i kopia zapasowa też się nie
+  udają, a przyjęcie zmian z innego urządzenia jest odrzucane.
+Dlatego nowe pole wchodzi w dwóch wydaniach. W tym wydaniu nic nie tworzy planu z nowym polem, więc starsza aplikacja
+nie dostaje go z tej wersji (strażnik testem: jednostkowy, źródła i w przeglądarce).
+
+**Ta wersja wobec planu z polem.** Moduły planów nie mają własnych list pól dowodu ani powiązania: odczyt idzie przez
+model zmian i model planu (`validateState` → `decodeCarePlanRecord`), a moduły czytają z dowodu tylko `noteId` (z kodu,
+aktywna rodzina modułów `67818dc1656f`: `portable-plan.mjs` i `legacy-plan-workspace.mjs` sprawdzają plan przez
+`validateState`, `plan-service.mjs` też, `adapter.mjs` przy blokadzie dokumentu-dowodu czyta tylko `noteId`; jedyna
+zamknięta lista pól w tych modułach, w `encodePortableReference`, dotyczy kontekstu planu w notatce, nie dowodu). Plan
+z polem (w teście zapisany przez prawdziwy moduł zapisu, tak jak zapisze go drugie wydanie) dochodzi do osobnego
+urządzenia tego samego konta, które ma ten plan bez pola, każdą drogą osobno: pełny ładunek, delta planu, zdarzenie
+dziennika, „Scal kopię konta”, import pliku pacjenta; odtworzenie konta z `.wiw` tworzy konto z tym planem. Dokument
+powiązany z krokiem, zapisany ponownie bez zmiany treści (nowa chwila zapisu, wcześniejsza chwila treści z kotwicą),
+otwiera się potem z planu bez komunikatu (e2e niżej).
+
+**Do akceptacji właściciela przy PR.**
+1. Ostrzejsze porównanie przy wyborze dokumentu (wyżej, „Co widzi lekarz”) — działa od razu.
+2. Model zmian przyjmuje już polecenie z polem, choć ekran go nie wysyła: adres modelu zmian stoi we fragmencie
+   natywnym, więc bez tego drugie wydanie wymagałoby znów repozytorium źródeł modułu.
+3. Warunek drugiego wydania: potwierdzenie właściciela, że wszystkie urządzenia mają to wydanie (niżej, „Wymagania dla
+   następnych PR”).
+4. **Decyzja właściciela z 2026-11-17: chwila zmiany treści.** Pole niesie chwilę zmiany treści dokumentu (efektywną
+   chwilę treści według reguły sejfu), nie chwilę zapisu. Chwila zapisu przesuwa się też bez zmiany treści — po
+   „wykonane” tu i z innego urządzenia, imporcie karty, złączeniu wersji, ratunku D-21 i innych zapisach. W pomiarze
+   na prawdziwym sejfie i ekranie planu (54 przypadki, dane fikcyjne, poza testami repozytorium) dawała 14 sytuacji
+   trwałego fałszywego „Dokument został zmieniony…”, a przy trzech urządzeniach w zwykłej pracy pokazywała zmienioną
+   treść jako niezmienioną. Chwila zmiany treści nie daje żadnej z tych 14 sytuacji ani tej pomyłki; zostają rzadkie
+   luki przy zbiegu stempli co do milisekundy albo przy przerobionym ładunku oraz nowe fałszywe alarmy po kotwicy
+   zerwanej przez starszą aplikację albo stary plik (niżej, „Ograniczenia”).
+5. Zmiana odmów kontroli przed scaleniem po regule notatek we fragmencie natywnym (druga luka) *(2026-11-18,
+   z artefaktami; reguła, przypadki i testy — niżej, „2c — kontrola przed scaleniem liczy notatki jak scalanie”)*. To
+   zmiana działania synchronizacji. Kontrola przewiduje teraz zwycięzcę notatki tak jak scalanie (wygrywa późniejsza
+   zmiana treści, `rev` rozstrzyga dopiero przy tej samej chwili treści), a kartę — tak jak reguła karty notatki
+   w scalaniu. Dokument-dowód kroku:
+   - **nowa odmowa:** przeniesienie do innej karty ładunkiem z niższym `rev` i późniejszą treścią (dotąd bez odmowy:
+     scalenie przenosiło dowód, a plan pokazywał „Dokument jest niedostępny. Sprawdź dokumentację pacjenta.”); sama
+     zmiana karty (ten sam `rev` i ta sama chwila zapisu), gdy tutejsza karta jest usunięta w tym ładunku albo ma
+     nagrobek i jej nie ma, albo przy pełnym remisie z mniejszym identyfikatorem karty w ładunku;
+   - **koniec odmowy:** ładunek z wyższym `rev`, wcześniejszą treścią i inną kartą, gdy obie karty istnieją (scalenie
+     zostawia tutejszą treść i kartę; dotąd odmowa przerywała całe scalenie, a ten sam ładunek wracał przy każdej
+     próbie); późniejsza treść z ładunku, który przenosi dokument do karty usuwanej tym samym ładunkiem (scalenie
+     zostawia dokument przy żywej tutejszej karcie, a treść przyjmuje jak zwykłą zmianę);
+   - **bez zmian:** ładunek wygrywający obiema regułami — odmowa; przegrywający obiema — bez odmowy; zmiana kontekstu
+     albo kategorii przypomnienia i rekordu planu — sprawdzana tylko wtedy, gdy wersja z ładunku wygrywa (dla notatek
+     z planem zapisanym tylko w zaszyfrowanej treści dawną regułą, jak w scalaniu);
+   - nagrobek notatki: zwycięzca liczony z informacją o planie zapisanym tylko w treści, jak w scalaniu, więc decyzja
+     nagrobka jest taka jak w scalaniu (dotąd mogła się różnić w obie strony: odmowa bez potrzeby albo usunięcie
+     dokumentacji bez odmowy);
+   - **nowe przerwanie scalenia:** na koncie z planem z etapami kontrola czyta teraz kartę i listę nagrobków kart przy
+     każdej notatce z ładunku pod inną kartą niż wersja tutejsza. Przejściowy błąd takiego odczytu przerywa całe
+     scalenie, także wtedy, gdy scalenie przyjęłoby ładunek; dane zostają bez zmian, a ładunek wraca przy następnej
+     synchronizacji (niżej, reguła 6). Przy trwałym błędzie odczytu karty samo scalenie też kończy się błędem.
+   Odmowy wcześniejsze niż w scalaniu (świadome, kierunek bezpieczny) i wąskie luki — niżej, w tym samym rozdziale.
+6. *(2026-11-18, z artefaktami.)* Moduły natywne luki 1: moduł zapisu planu porównuje dowód z polem po efektywnej
+   chwili treści dokumentu, tą samą regułą co sejf i ekran (w tym wydaniu bez skutku w zwykłej pracy, bo ekran pola nie
+   wysyła); zapis dokumentu przez moduł na koncie przygotowanym i zapis rekordu planu we fragmencie natywnym nie
+   przenoszą chwil treści i oznaczenia z poprzedniego rekordu (niżej, „2c — moduły natywne…”). Kierunek bezpieczny:
+   nowa treść nie dostaje starej kotwicy chwili treści.
+7. *(2026-11-18, z artefaktami.)* Delta trwałych wizyt i narzędzie rodziny wizyt. Hak `40-visit-metadata` usunięty,
+   nie przepisany: blok natywny z repozytorium źródeł modułu ma już adres aktywnej rodziny modułów; delta ma 41 haków,
+   a jej baza jest przeliczona. `tools/build-visits-workspace-family.mjs` i jego test zostają jako dowód historycznej
+   rodziny `67818dc1656f`: narzędzie odtwarza ją i sprawdza, że leży bajt w bajt wśród modułów historycznych, a
+   `--write` odmawia, gdy aktywna jest inna rodzina. Kopia kodeka `runtime/durable-visits-v1/workspace-source-codec.mjs`
+   zostaje z testem równości z modułem `codec.mjs` aktywnej rodziny (`docs/ZRODLA_ARTEFAKTOW.md`).
+8. *(2026-11-18, informacja, bez osobnej decyzji.)* CI repozytorium źródeł modułu po scaleniu tego PR: pin na commit
+   scalenia w dwóch checkoutach — nienaruszony na testy przeglądarkowe (uprząż testów porównuje z manifestem obraz
+   pośredni, bo pełny sejf ma jeszcze warstwy Kt/V i trwałych wizyt) i roboczy na kontrolę budowniczego przez obraz
+   pośredni; dawny pin tymczasowo tylko dla kontroli synchronizacji. Kolejność: najpierw ten PR, potem pin CI i PR
+   w tamtym repozytorium.
+
+**Testy.** Dane wyłącznie fikcyjne, bez PESEL.
+- `tests/unit/care-plan-model.test.mjs` (30 nowych przypadków): poprawna chwila w dowodzie faktu i w powiązaniu (z
+  trzema cyframi milisekund, bez milisekund, z jedną cyfrą); zły format — data bez czasu, `null`, pusty napis, liczba,
+  przesunięcie strefy, 31 lutego, godzina 24, dowolny tekst, rok po 2999 (sejf obcina stempel zapisu na końcu roku
+  9999) i przed 1900 → `CARE_MODEL_EVIDENCE_INVALID` dokładnie na ścieżce dowodu; `rev` wymagany obok chwili; pole
+  z pierwszej wersji tego PR samo i obok nowego, w dowodzie i w powiązaniu, inne nowe pole, inna pisownia nazwy i pole
+  kotwicy sejfu skopiowane do dowodu → `CARE_MODEL_UNSUPPORTED_FIELD`; projekcja przenosi pole bez zmian; dowód bez
+  pola bez wymyślonej chwili; wiersze w tabeli przypadków „makes … explicit”.
+- `tests/unit/care-plan-mutation.test.mjs` (22): `associate` i `recordFact` z polem — pole w planie, zależność odczytu
+  z `expectedContentAtISO`, plan dalej czytelny i przyjmuje następną zmianę; ponowienie tej samej operacji bez nowych
+  zależności; zły format jak w modelu → `CARE_PLAN_EVIDENCE_INVALID`; dawne pole samo i obok nowego, inne nowe pole
+  i chwila bez `rev` → odmowa; bez pola zależność dokładnie jak dotąd (bez `expectedContentAtISO`); dowód dokumentu
+  tworzonego przez plan nigdy z polem; zapisany plan ze złym polem albo z dawnym polem odrzucony z nazwą miejsca.
+- `tests/unit/care-plan-staged-ui.test.mjs` (43): wyższy `rev` przy tej samej chwili treści i zapis bez zmiany treści
+  (nowa chwila zapisu, ta sama chwila treści z ważną kotwicą) — dokument się otwiera; ten sam `rev`, późniejsza chwila
+  zapisu bez kotwicy albo późniejsza chwila treści z kotwicą — „zmieniony”, treść niewidoczna, plan bez zmian; kotwica
+  nieważna (inna chwila zapisu, brak `contentForISO`, chwila treści późniejsza niż chwila zapisu, bez milisekund,
+  z przesunięciem strefy, rok w postaci rozszerzonej po 9999 i przed rokiem 0, miesiąc 13, 31 lutego) — liczy się
+  chwila zapisu; ta sama chwila w innej postaci po jednej ze stron (bez milisekund, jedna cyfra milisekund) —
+  „zmieniony”; dokument bez chwili zapisu (`null`, brak, pusty napis, liczba, brak przy kotwicy równej polu) —
+  „zmieniony”; dawny dowód bez pola — po `rev` w obu kierunkach; każde odwołanie swoją regułą; wersja zachowana przy
+  konflikcie; zmiana chwili zapisu albo chwili treści między podglądem a zapisem (kotwica znika, pojawia się,
+  przesuwa się) — odmowa bez zapisu; strażnik tego wydania: obie akcje wysyłają dowód dokładnie
+  `{ noteId, sourceRecordRevAtCapture }`, z kotwicą i bez.
+- `tests/unit/notatka-pozniejsza-zapis.test.mjs`, blok „luki modułu planów z etapami” (prawdziwy sejf; 64 przypadki,
+  w tym 3 przepisane z dawnego bloku):
+  - późniejsza treść przy tym samym `rev` zmienia chwilę treści, a zapis samego `rev` jej nie zmienia;
+  - import karty przesuwa chwilę zapisu, a chwila treści zostaje — na urządzeniu z importem i na tym, które miało
+    dokument od początku;
+  - dwa złączenia z tą samą chwilą zapisu i różną treścią (trzy i cztery urządzenia, przypadek wyżej);
+  - zapisy bez zmiany treści — „wykonane” tu, „nie zgłosił się” i cofnięcie, „wykonane” z innego urządzenia, zapis
+    z edytora bez zmian tu i z innego urządzenia, złączenie na obu urządzeniach, „Scal kopię konta”, ratunek D-21
+    prawdziwą ścieżką: chwila treści zostaje z ważną kotwicą;
+  - wskrzeszenie daje nową chwilę treści; znane ograniczenie: dwie treści z tej samej milisekundy na dwóch
+    urządzeniach mają tę samą chwilę treści;
+  - zgodność funkcji ekranu z `Bnp_chwilaTresci`: 15 rodzajów kotwicy, rekord bez chwili zapisu i z pustą chwilą
+    zapisu, z surowego rekordu i z odczytu `getPatientNote`;
+  - niezmiennik kotwicy (41 + 2): każda zmiana pola widocznego w dowodzie (treść, tytuł, termin, godzina, data
+    badania, wartość i jednostka wyniku) drogą zapisu z edytora, późniejszej treści z innego urządzenia, złączenia,
+    „Przełóż” stąd przy późniejszej treści z innego urządzenia (gałąź scalenia „to samo oznaczenie, chwila oznaczenia
+    tutaj”), importu pliku pacjenta i „Scal kopię konta”, a także „Przełóż” i wykonanie przypomnienia z opisem — nie
+    zostawia ważnej kotwicy ze starą chwilą treści;
+  - „Scal pacjentów” (dokument z tytułem i bez — bez tytułu dostaje „(wpis)” i zachowuje kotwicę, ale trafia do innej
+    karty niż plan, więc ekran pokazuje „Dokument jest niedostępny”); hydracja rozszerzenia planu nie zmienia pól
+    widocznych ani chwili treści;
+  - strażniki źródła: zapisy sejfu budowane z poprzedniego rekordu z nowym szyfrogramem (znana lista, zapis rekordu
+    we fragmencie natywnym, jedyne przypisanie `contentAtISO`); nowe porównanie na ekranie (jedna funkcja, dokładne
+    napisy, ponowny odczyt przed zapisem, w modelach tylko nowa nazwa pola); ekran tego wydania nie zapisuje pola pod
+    żadną z nazw.
+- e2e `tests/e2e/care-template-native-storage.spec.mjs` (desktop Chromium, 2 nowe): plan z polem dochodzi do
+  osobnego urządzenia każdą drogą osobno (wyżej, „Ta wersja wobec planu z polem”), urządzenie z planem dalej czyta
+  notatki, przypomnienia i eksport i przyjmuje zmianę z innego urządzenia, a dokument zapisany ponownie bez zmiany
+  treści otwiera się z planu; strażnik w przeglądarce: powiązanie i potwierdzenie istniejącym dokumentem przez
+  formularze ekranu nie zapisują pola pod żadną z nazw (plan, ładunek synchronizacji, kopia konta).
+- Poza testami repozytorium: losowe przebiegi na prawdziwym sejfie (trzy i cztery urządzenia, zegary zgodne
+  i rozjechane o 20 s) nie znalazły dowodu z chwilą treści, który pokazałby zmienioną treść jako niezmienioną. W tych
+  samych przebiegach nie wyszła jednak też znana pomyłka porównania po chwili zapisu przy trzech urządzeniach, więc
+  ten wynik dotyczy tylko prostych kolejności; ciąg dwóch złączeń pokrywa test stały wyżej.
+- *(2026-11-18.)* Testy z artefaktami repozytorium źródeł modułu (4 nowe jednostkowe, 2 zmienione strażniki źródła,
+  1 nowy e2e) — niżej, w rozdziałach „2c — moduły natywne…” i „2c — kontrola przed scaleniem…”.
+
+**Czerwone na bazie** (`origin/audyt` `fe4f1754` z testami tego PR; sejf ten sam co na `2ad5df78`): 74 jednostkowe —
+model 20 z 30 nowych, model zmian 15 z 22, ekran 37 z 43, `notatka-pozniejsza-zapis` 2 z 64 (test zgodności reguły
+ekranu z sejfem i strażnik źródła nowego porównania: na bazie nie ma funkcji reguły) — i 1 e2e z 9 w pliku (dzisiejszy
+model zmian odrzuca polecenie z polem, `CARE_PLAN_FIELDS_INVALID`; do dróg przenoszenia na bazie test nie dochodzi —
+ich odmowę na starym modelu pokazało sprawdzenie starszej wersji, wyżej). Zielone z natury: strażniki tego wydania,
+dawne dowody po `rev`, inne nowe pola nadal nieobsługiwane oraz pomiary i niezmiennik na prawdziwym sejfie (sejf się
+nie zmienia).
+
+**Sprawdzone zmianą kodu na kopii** (testy tego PR, cztery pliki jednostkowe, 385 przypadków; w nawiasie liczba
+czerwonych):
+- ekran — reguła: porównanie przez `Date.parse` zamiast dokładnych napisów (4); bez kontroli postaci kanonicznej (5),
+  bez samego wzorca (3), bez porównania z wynikiem `toISOString` (2), bez sprawdzenia, że napis jest datą (2); bez
+  warunku „`updatedAtISO` jest napisem” (1 — test zgodności z sejfem; na ekranie decyzja się nie zmienia, bo pole
+  nigdy nie równa się wartości, która nie jest napisem); bez warunku „`contentAtISO` nie później niż `updatedAtISO`”
+  (2); bez warunku kotwicy `contentForISO === updatedAtISO` (3); przy braku `updatedAtISO` chwila wzięta z samego
+  `contentAtISO` (2);
+- ekran — porównanie: z chwilą zapisu zamiast chwili treści (4), reguła oddająca zawsze chwilę zapisu (11); dokument bez
+  chwili zapisu jako niezmieniony (4); dowód z polem po `rev` (24); dowód bez pola porównany jak dowód z polem (3);
+  ponowny odczyt przed zapisem bez porównania chwili treści (7); ekran zapisuje pole (5), także z nazwą składaną tak, że
+  strażnik źródła jej nie widzi (4);
+- model planu i model zmian: model przyjmuje dawną nazwę zamiast nowej (60), obie nazwy (9), obie z dawną ukrytą przed
+  strażnikami źródła (8); model zmian z dawną nazwą (16), z obiema, dawna ukryta (2); zależność odczytu z dawnym kluczem
+  `expectedUpdatedAtISO` (3); `expectedContentAtISO` także bez pola (15), jako `null` bez pola (4);
+- sejf (tylko na kopii; ten PR sejfu nie zmienia): gałąź scalenia „to samo oznaczenie, chwila oznaczenia tutaj” bierze
+  chwilę treści wersji tutejszej (6 — niezmiennik, droga „Przełóż” stąd); zwykły zapis z ładunku bierze chwilę treści
+  wersji tutejszej (32);
+- e2e (desktop Chromium; kod tego PR przed ostatnią zmianą komentarza, plik e2e bez zmian od tamtej pory): porównanie
+  z chwilą zapisu, reguła oddająca chwilę zapisu, ekran zapisujący pole jawnie i z nazwą składaną — po 1 czerwonym;
+  ponowny odczyt bez chwili treści — e2e zielone (w przeglądarce nic nie zapisuje dokumentu między podglądem
+  a zapisem), łapią go testy ekranu i strażnik źródła.
+
+Przeżywają 2, oba równoważne: wzorzec postaci przyjmujący 0–2 cyfry milisekund (porównanie z wynikiem `toISOString`
+i tak wymaga trzech) oraz wynik scalenia bez odczytów z chwilą treści wersji przegranej (`Bnp_zwyciezcy` oddaje tylko
+chwilę zapisu).
+
+**Ograniczenia.**
+- **Kolizja chwili treści przy zbiegu stempli.** Dwie różne treści mogą mieć tę samą chwilę treści: zapis w tej samej
+  milisekundzie na dwóch urządzeniach (test „znane ograniczenie”) albo ten sam los stempla w oknie rozjazdu zegarów (ok.
+  1 na 1000 par równoległych poprawek; P-NOTATKA-POZNIEJSZA, „Ograniczenia”). Scalenie zostawia wtedy wersję z wyższym
+  `rev`, a dowód złapany przy wersji przegranej jej nie pokaże (porównanie po `rev` ją pokazuje). Jeśli potem po stronie
+  zwycięskiej ktoś zapisze dokument bez zmiany treści (np. „wykonane”), zmieniają się `rev` i chwila zapisu, a chwila
+  treści nie — tej luki nie mają porównania po `rev` ani po chwili zapisu (z pomiaru poza testami repozytorium; w
+  repozytorium test ma tylko przypadek tej samej milisekundy). Ta sama kolizja już dziś daje trwały rozjazd treści
+  między urządzeniami. Podobnie rzadkie: starsza aplikacja zapisuje nową treść ze stemplem równym uchwyconej chwili
+  treści co do milisekundy (po warunku drugiego wydania starsza aplikacja nie powinna pisać).
+- **Pełny remis** (ta sama chwila treści, `rev` i chwila zapisu przy różnej treści; każde urządzenie zostaje przy
+  swojej) — dowód tego nie pokaże przy żadnym porównaniu; znane ograniczenie sejfu, goi je następna zmiana notatki.
+- **Przerobiony ładunek** z nową treścią i starą kotwicą albo starą chwilą (ładunek, plik i kopia są szyfrowane
+  kluczem konta) oszuka porównanie po chwili treści; każde porównanie po metadanych da się tak oszukać. Żaden zapis
+  bieżącej ani starszej wersji takiego ładunku nie tworzy (z kodu).
+- **Kotwica zerwana przez starszą aplikację albo stary plik** — trwały fałszywy alarm po drugim wydaniu. Starsza
+  aplikacja ucina pola chwil, więc gdy wersja z kotwicą przejdzie przez nią, gdy wróci plik pacjenta albo kopia konta
+  zrobione w starszej wersji, gdy konto zostanie odtworzone z takiej kopii albo gdy urządzenie pobrało notatkę jako
+  starsze i wysłało ją po aktualizacji, efektywna chwila treści staje się chwilą zapisu i dowód pokazuje „Dokument
+  został zmieniony…”. Kierunek bezpieczny. Warunek drugiego wydania (wszystkie urządzenia mają to wydanie) mocno
+  zawęża tę klasę; stare pliki i kopie zostają jej źródłem.
+- **Wskrzeszenie** usuniętej notatki tą samą treścią („Zostaw notatkę”) jest nowym zapisem treści — „zmieniony” (jak
+  przy `rev` i chwili zapisu).
+- **Pola niewidoczne w dowodzie** (kategoria, lek, IGF-1, zabieg, priorytet i inne pola notatki spoza dowodu): ich
+  zmiana daje nową chwilę treści i „zmieniony”, choć w dowodzie zmiany nie widać (jak przy `rev` i chwili zapisu).
+- **Błąd odczytu**: uszkodzony szyfrogram daje w `Ft` „(błąd odczytu)” i pustą treść przy tych samych metadanych,
+  więc dowód pokaże dokument jako niezmieniony (każde porównanie). `Ft` ma opcję `strict`, ale `getPatientNote` jej
+  nie przekazuje — osobna, mała poprawka API sejfu.
+- **Brak akcji odpięcia**: „Dokument został zmieniony…” jest trwały — plan nie ma akcji odpięcia dokumentu ani poprawki
+  faktu — i pojawia się na każdym urządzeniu. Kierunek bezpieczny: bieżąca treść nie jest pokazywana jako
+  potwierdzenie wcześniejszego wpisu, a dokument jest dostępny w Karcie pacjenta.
+- **Fałszywe alarmy „na tym samym urządzeniu” w przeglądarce.** Na zwykłym koncie w bezpiecznym kontekście z Web Locks
+  sejf odmawia zapisów dokumentu, do którego odwołuje się plan z etapami (`PatientPortableGuardIntent`,
+  `CARE_NATIVE_DOCUMENT_REFERENCED`; z kodu). „Wykonane” albo zapis z edytora na tym samym urządzeniu nie dochodzą tam
+  więc do dokumentu-dowodu, a zmiany z innych urządzeń nadal przychodzą synchronizacją. Pomiar z punktu 4 („Do
+  akceptacji”) szedł w Node, bez tej blokady, więc liczy też zapisy na tym samym urządzeniu.
+- **Okno między ponownym odczytem przed zapisem a zapisem w module planów.** Moduł zapisu porównuje w tym wydaniu
+  dokument po `rev` (zależność z chwilą treści powstaje tylko z pola w poleceniu, którego ekran nie wysyła).
+  Późniejsza treść przy tym samym `rev`, która dojdzie między ponownym odczytem na ekranie a odczytem w transakcji
+  modułu (milisekundy), przejdzie niezauważona. Wartością przekazaną tylko w poleceniu nie da się tego domknąć: całe
+  polecenie zostaje w historii operacji planu (`intentCanonical`) i jedzie w ładunku. Domyka to drugie wydanie (pole
+  w dowodzie).
+- **Dowód dokumentu utworzonego przez sam plan** zostaje przy `rev` (model zmian nie zna chwili treści tworzonego
+  dokumentu); taki dokument nie istniał na innym urządzeniu przed powiązaniem.
+- **Do drugiego wydania porównanie w module zapisu w praktyce zostaje po `rev`** (ekran nie wysyła pola). Pole może
+  zapisać tylko bezpośrednie wywołanie sejfu (`mutateStagedCarePlan`), z którego celowo korzysta e2e.
+- **Jeden plan, którego dana wersja aplikacji nie umie odczytać, blokuje dziś odczyt notatek i przypomnień całego
+  konta** — osobna poprawka.
+
+**Wymagania dla następnych PR.**
+- Ten PR, artefakty repozytorium źródeł modułu (`vilda-source`), luka 1 — moduły natywne, oba razem:
+  - moduł zapisu (`plan-service.mjs`), gdy zależność ma `expectedContentAtISO`: odmowa
+    (`CARE_APPLICATION_DOCUMENT_CHANGED`), gdy klucz nie jest napisem, gdy dokument nie ma `updatedAtISO` w postaci
+    napisu albo gdy efektywna chwila treści dokumentu jest inna niż `expectedContentAtISO` — ta sama reguła co
+    w sejfie i na ekranie (cztery warunki kotwicy wyżej), dokładne napisy, bez `Date.parse`; bez klucza — po `rev`,
+    jak dziś; sprawdzenia `patientId` i `deleted` zostają;
+  - dokument czytany przez moduł na koncie przygotowanym (`adapter.mjs`, `document`): `updatedAtISO` z rekordu
+    (napis albo `null`), a `contentAtISO` i `contentForISO` tylko przy ważnej kotwicy, jak `Ft`; te klucze
+    z odszyfrowanej treści usuwane jawnie. Dziś dokument ma tylko treść, identyfikator, kartę, kategorię i `rev`, więc
+    sam moduł zapisu z obecnym adapterem dawałby na takim koncie fałszywe „dokument się zmienił”;
+  - test zgodności reguły modułu z `Bnp_chwilaTresci` na tych samych przypadkach co test ekranu (także rok w postaci
+    rozszerzonej, miesiąc 13, 31 lutego, pusta chwila zapisu) oraz: ten sam `rev` i inna chwila treści → odmowa;
+    wyższy `rev` i ta sama chwila treści z ważną kotwicą → zapis; brak `updatedAtISO` → odmowa; adapter nie
+    przepuszcza kluczy kotwicy z treści;
+  - utwardzenie: zapis dokumentu w adapterze (`writeDocument`) i zapis rekordu we fragmencie natywnym (`seal`) usuwają
+    przed zapisem `contentAtISO`, `contentForISO`, `stateAtISO` i `stateForISO` (jak `Bnp_bezChwil`); dziś starą
+    kotwicę unieważnia tylko nowa chwila zapisu. Przy artefakcie fragmentu zmienić strażnik źródła zapisu rekordu we
+    fragmencie (`notatka-pozniejsza-zapis.test.mjs`, „sejf: zapisy budowane z poprzedniego rekordu…”);
+  - adres modelu zmian we fragmencie natywnym z nowym `?v=` (dziś `?v=2`); kopie `vilda_care_plan_model.js`
+    i `vilda_care_plan_mutation.js` z tego PR bajt w bajt w testach repozytorium źródeł, z pinem skrótu. Tych dwóch
+    plików nie zmieniać już w vilda-calc, także w komentarzach — zmiana = kopie i artefakty od nowa.
+  Nowa rodzina modułów też bez własnych list pól dowodu i powiązania (wyżej, „Ta wersja wobec planu z polem”); test
+  przejścia planu z polem przez moduły zapisu, odczytu i scalenia. *(2026-11-18: zrobione w repozytorium źródeł
+  modułu, commit `f2130f8993aa9f07de8b4ef7970b2cf23127c8dc`; artefakty i testy w vilda-calc — niżej, „2c — moduły
+  natywne…”. Pin obejmuje też niezmieniony `vilda_care_template_model.js`, więc i tego pliku nie zmieniać bez nowych
+  kopii i artefaktów.)*
+- Ten PR, artefakty `vilda-source`, luka 2 — reguła notatek we fragmencie natywnym: kontrola przed scaleniem
+  (`PatientPortablePreflightMerge`) przewiduje, czy scalenie (`Le`) przyjmie wersję z ładunku, więc ma decydować jak
+  `Le` od E3-PR0b2b: `Bnp_nowsza` z planami tutejszymi (`Bnp_planyTutaj`) zamiast dawnego warunku `wins` (najpierw
+  `rev`); zmiana samej karty regułą karty notatki (jak w `Le`: karta tutejsza usunięta w tym scaleniu albo jej brak,
+  albo pełny remis z mniejszym identyfikatorem karty w ładunku) jak przeniesienie; zwycięzcy nagrobków liczeni z planami
+  tutejszymi; ścieżka odzyskania brakującego rozszerzenia planu sprawdzona. Fragment nie może zostawić kotwicy chwili
+  treści przy innej treści, także w gałęzi scalenia „to samo oznaczenie, chwila oznaczenia tutaj”. Bez nowych wywołań
+  i nazw `Bev_`, `Bob_`, `Bem_` we fragmencie, także w komentarzach (pilnuje
+  `tests/unit/sync-dziennik-uspienie.test.mjs`).
+  Testy na prawdziwych funkcjach `Bnp_*`, nie na zastępnikach. To zmiana działania synchronizacji (odbiór właściciela
+  przy PR): odmowa dla dokumentu-dowodu przenoszonego do innej karty ładunkiem z niższym `rev` i późniejszą treścią
+  (dziś bez odmowy) i brak odmowy dla ładunku z wyższym `rev`, wcześniejszą treścią i inną kartą, gdy obie karty
+  istnieją, a `Le` zostawia tutejszą treść i kartę (dziś odmowa przerywa całe scalenie, a ten sam ładunek wraca przy
+  każdej próbie; z kodu). W vilda-calc: strażnik literału `wins` (`notatka-pozniejsza-zapis.test.mjs`, „sejf: notatki
+  według nowej reguły…”) odwrócony na nową regułę; e2e planu z etapami: dokument-dowód z innego urządzenia ładunkiem z
+  niższym `rev` i późniejszą treścią — odmowa synchronizacji, dane zachowane; reguła, przypadki i testy luki 2 dopisane
+  do tego wpisu. *(2026-11-18: zrobione — niżej, „2c — kontrola przed scaleniem liczy notatki jak scalanie”.)*
+- **Kotwica chwili treści jest od tego PR własnością bezpieczeństwa dowodu kroku, nie tylko regułą scalania.** Każdy
+  zapis notatki, który zmienia pole widoczne w dowodzie (tytuł, treść, termin z godziną, data badania, wynik), musi dać
+  nową chwilę treści — nie może zostawić ważnej kotwicy ze starą chwilą treści, bo dowód pokazałby zmienioną treść jako
+  niezmienioną. Pilnują tego niezmiennik na prawdziwym sejfie i strażnik źródła zapisów budowanych z poprzedniego
+  rekordu (`notatka-pozniejsza-zapis.test.mjs`, wyżej). Nowa droga zapisu notatki (także w E3-PR0c i dalej) wchodzi do
+  listy dróg niezmiennika; nowy zapis składany z poprzedniego rekordu z nowym szyfrogramem wchodzi do listy strażnika
+  i dostaje nową chwilę zapisu albo usuwa pola chwil.
+- Ten PR, w vilda-calc po artefaktach: nowa rodzina modułów i jej archiwum w pamięci offline (dawne adresy zostają,
+  rodzina `67818dc1656f` przechodzi do historycznych); manifest z buildera; w `vilda_vault.js` tylko tekst między
+  `BEGIN` a `END VILDA CLINICAL WORKSPACE NATIVE V1` z buildera (nie cały sejf z buildera — ten nie ma warstw KTV
+  i trwałych wizyt); delta trwałych wizyt — hak `40-visit-metadata` i baza delty przeliczone; nowy adres modelu zmian
+  w pamięci offline obok `?v=1` i `?v=2` (`tools/check_clinical_workspace_boundary.mjs` sprawdza, że adres z sejfu tam
+  jest); `docs/CARE_TEMPLATE_APPLICATION.md` (przypięcie i commit `vilda-source`), `docs/ZRODLA_ARTEFAKTOW.md`, wiersz 2c
+  planu. Na końcu `npm run podbij-wersje` (sprawdzić, że nie zmienia adresu modelu zmian we fragmencie), numery wersji
+  w nagłówku tego wpisu, `npm test`, e2e, kontrola granicy i delty trwałych wizyt. Scalanie: najpierw ten PR
+  w vilda-calc, potem pin CI `vilda-source` na commit scalenia i PR w `vilda-source`; kolejność ustala właściciel.
+  *(2026-11-18: artefakty, sejf, delta trwałych wizyt, narzędzie i testy rodziny wizyt oraz dokumenty — w PR;
+  podbicie wersji i wpis nowego adresu modelu zmian w pamięci offline — przy podbiciu, na końcu PR. Hak
+  `40-visit-metadata` jest usunięty, nie przepisany (wyżej, „Do akceptacji”, punkt 7). Podbicie daje
+  `vilda_care_plan_mutation.js` numer o jeden większy niż najwyższy w `audyt` i przepisuje ten adres we wszystkich
+  skryptach korzenia, także we fragmencie natywnym `vilda_vault.js`. Na `audyt` `fe4f1754` najwyższy jest `?v=2`, więc
+  wychodzi `?v=3`, ten sam co we fragmencie. Gdyby przed podbiciem inny PR w `audyt` podniósł ten numer, podbicie
+  zmieniłoby fragment, a `npm test` (kontrola granicy w `test:repo`) i `tools/visits-vault-delta.mjs` to odrzucą
+  (sprawdzone zmianą na kopii); wtedy nowy fragment z tym numerem z repozytorium źródeł modułu, nie zmiana ręczna.
+  Podbicie zrobione na `audyt` `fe4f1754`: blok natywny bez zmian, numery — niżej, „Wersje”.)*
+- E3-PR0c: PR dopiero po scaleniu tego PR, przygotowanie równolegle (decyzja 1 z 2026-11-17, E3-PR0c).
+- Drugie wydanie (osobny mały PR tylko w vilda-calc). Warunek: właściciel potwierdza, że wszystkie urządzenia mają to
+  wydanie — Ustawienia → „Wersja aplikacji” co najmniej SW z tego PR (z nowym `?v=` modelu planu; pamięć offline
+  przenosi wpisy z `?v=` ze starszych pamięci, więc liczy się wersja po podbiciu) — i są już artefakty obu modułów
+  natywnych luki 1. Zapis pola:
+  - jedna funkcja na ekranie dla obu akcji (potwierdzenie istniejącym dokumentem i powiązanie);
+  - wartość = efektywna chwila treści dokumentu z ponownego odczytu przed zapisem (tą samą funkcją reguły), po
+    sprawdzeniu, że `rev`, chwila zapisu i chwila treści są te same co w podglądzie (jak w tym wydaniu);
+  - pole tylko wtedy, gdy ta chwila ma postać kanoniczną jak `Bnp_iso` i przechodzi sprawdzian modelu (prawdziwa
+    data, rok 1900–2999); inaczej dowód bez pola, czyli po `rev` (sejf może mieć stempel do końca roku 9999, chwilę
+    z przesunięciem strefy albo bez milisekund z uszkodzonego ładunku albo brak chwili). Bez przycinania do zakresu
+    i bez sprowadzania postaci;
+  - dowód dokumentu tworzonego przez sam plan zostaje przy `rev`; strażniki „ekran nie zapisuje pola” odwrócone;
+  - zalecana wcześniej osobna poprawka „jeden nieczytelny plan nie blokuje notatek i przypomnień konta”.
+
+**Wdrożenie.** Od razu przy wydaniu, bez przełącznika; nic w tym wydaniu nie tworzy planu z nowym polem.
+
+**Cofnięcie** = rewert PR, bez migracji (żaden plan nie ma pola, dopóki nie wejdzie drugie wydanie). Po drugim
+wydaniu rewert tego PR przywróciłby odmowę planów z polem — wtedy cofać tylko drugie wydanie.
+
+**Gdzie w kodzie.** `vilda_care_plan_model.js`: `evidence`, `validateContext` (powiązania).
+`vilda_care_plan_mutation.js`: `checkEvidence`, `readDependency`, `prepareTransaction` (`recordFact`, `associate`).
+`vilda_care_plans.js`: `stagedContentInstant` (reguła efektywnej chwili treści), `stagedEvidenceChanged`, `openRecord`
+(plan z etapami), `stagedEvidencePicker` (`read`). `vilda_vault.js` (bez zmian, wzorzec reguły): `Bnp_iso`,
+`Bnp_chwilaTresci`, `Bnp_ustawChwileTresci`, `Ft` (pola kotwicy tylko przy ważnej kotwicy),
+`PatientPortableGuardIntent`. Repozytorium źródeł modułu: `plan-service.mjs` i `adapter.mjs` — z artefaktami.
+*(2026-11-18: aktywna rodzina `runtime/clinical-workspace-v1/0278bf7106c2/client/patient-clinical-workspace-native/`:
+`plan-service.mjs` (`apply`, porównanie zależności odczytu), `adapter.mjs` (`documentContentInstant`,
+`createNativeStage`: `document`, `writeDocument`). Fragment natywny w `vilda_vault.js` (blok natywny między
+znacznikami `BEGIN` i `END VILDA CLINICAL WORKSPACE NATIVE V1`): `PatientPortablePreflightMerge` (kontrola przed
+scaleniem, `deadNoteCard`), `PatientLegacyService` (`seal`), `PatientWorkspaceModels` (adres
+`vilda_care_plan_mutation.js?v=3`).)*
+
+**Wersje.** `vilda_care_plan_model.js` 2 → 3, `vilda_care_plan_mutation.js` 2 → 3, `vilda_care_plans.js` 15 → 16,
+`vilda_vault.js` 279 → 280 (zmieniony tylko blok natywny); wstrzykujące: `vilda_chrome.js` 299 → 300,
+`vilda_session_bridge.js` 215 → 216; SW 1.1.547 → **1.1.548** — `npm run podbij-wersje` po artefaktach repozytorium
+źródeł modułu; baza `origin/audyt` `fe4f1754`. Podbicie nie zmieniło bloku natywnego: adres
+`vilda_care_plan_mutation.js?v=3` stał w nim już z artefaktów, a podbicie dopisało ten adres do pamięci offline obok
+`?v=1` i `?v=2`. Nowe pliki w pamięci offline: 51 modułów rodziny `0278bf7106c2` i jej archiwum (z artefaktami).
+SW 1.1.548 to wersja z warunku drugiego wydania (wyżej: Ustawienia → „Wersja aplikacji” co najmniej SW z tego PR).
+
+### 2c — moduły natywne: moduł zapisu planu i dokument czytany przez moduł
+
+*(2026-11-18.)* **Skąd.** Repozytorium źródeł modułu (`vilda-source`), commit
+`f2130f8993aa9f07de8b4ef7970b2cf23127c8dc`. W tym PR: rodzina modułów `runtime/clinical-workspace-v1/0278bf7106c2/`
+(51 modułów; wobec poprzedniej rodziny `67818dc1656f` zmienione tylko `adapter.mjs` i `plan-service.mjs`) i blok
+natywny w `vilda_vault.js` (źródło i sposób podmiany bloku — `docs/ZRODLA_ARTEFAKTOW.md`).
+
+**Co było** (rodzina `67818dc1656f`, z kodu).
+- Moduł zapisu planu (`plan-service.mjs`) porównywał dokument z zależności odczytu tylko po `rev`.
+- Dokument czytany przez moduł na koncie przygotowanym (`adapter.mjs`, `document`) miał treść, identyfikator, kartę,
+  kategorię i `rev`, bez chwili zapisu i chwil kotwicy; klucze chwil z odszyfrowanej treści przechodziły do wyniku.
+- Zapis dokumentu w module (`writeDocument`) i zapis rekordu planu we fragmencie (`seal`) składały rekord
+  z poprzedniego i przenosiły jego pola chwil treści i oznaczenia. Starą kotwicę unieważniała tylko nowa chwila zapisu.
+
+**Reguła po zmianie** (z kodu; działanie — testy niżej).
+- Moduł zapisu: gdy zależność odczytu ma `expectedContentAtISO` (model zmian dopisuje go tylko z pola
+  `sourceRecordContentAtISOAtCapture` w poleceniu), odmowa `CARE_APPLICATION_DOCUMENT_CHANGED`, gdy klucz nie jest
+  napisem albo gdy efektywna chwila treści dokumentu (`documentContentInstant`) nie jest dokładnie tym napisem — także
+  gdy dokument nie ma chwili zapisu w postaci napisu. Bez klucza — po `rev`, jak dotąd. Sprawdzenia karty (`patientId`)
+  i usunięcia (`deleted`) zostają.
+- `documentContentInstant` (`adapter.mjs`) to ta sama reguła co `Bnp_chwilaTresci` z `Bnp_iso` w sejfie
+  i `stagedContentInstant` na ekranie (cztery warunki wyżej, „Reguła”), z dokładnymi napisami; dokument bez chwili
+  zapisu w postaci napisu nie ma chwili (`null`).
+- Dokument czytany przez moduł na koncie przygotowanym: `updatedAtISO` z rekordu (napis albo `null`); `contentAtISO`
+  i `contentForISO` tylko przy ważnej kotwicy z chwilą treści wcześniejszą niż chwila zapisu, tak jak `Ft`; te klucze
+  z odszyfrowanej treści są usuwane. Zwykłe konto bez zmian: moduł czyta dokument przez sejf (`Ft`).
+- Utwardzenie: `writeDocument` i `seal` usuwają przed zapisem `contentAtISO`, `contentForISO`, `stateAtISO`
+  i `stateForISO` poprzedniego rekordu (jak `Bnp_bezChwil`). Nowa treść nie dostaje ważnej starej kotwicy, także gdy
+  zegar da napis równy poprzedniej chwili zapisu.
+- Adres modelu zmian we fragmencie: `vilda_care_plan_mutation.js?v=3` (dotąd `?v=2`).
+- Drugie wydanie nie wymaga zmian w modułach: moduły przekazują polecenie do modelu zmian bez własnych list pól
+  dowodu, a odczyt przez sejf i odczyt przez moduł dają tę samą chwilę (z kodu; porównanie trzech kopii — test niżej).
+
+**Przypadki** (dane fikcyjne; moduł zapisu, dowód z polem, `rev` dokumentu taki jak w dowodzie):
+
+| Pole dowodu | Dokument | Wynik |
+|---|---|---|
+| chwila treści z ważnej kotwicy | ta sama kotwica | zapis |
+| chwila zapisu | ważna kotwica z wcześniejszą chwilą treści | `CARE_APPLICATION_DOCUMENT_CHANGED` |
+| chwila zapisu | kotwica nieważna: inna `contentForISO`, brak, chwila treści późniejsza niż chwila zapisu albo nie w postaci kanonicznej | zapis |
+| chwila treści z kotwicy nieważnej | jak wyżej | `CARE_APPLICATION_DOCUMENT_CHANGED` |
+| ta sama chwila bez milisekund | chwila z milisekundami | `CARE_APPLICATION_DOCUMENT_CHANGED` |
+| dowolna chwila | bez chwili zapisu albo z pustą | `CARE_APPLICATION_DOCUMENT_CHANGED` |
+| bez pola | dowolne chwile | po `rev`, jak dotąd (testy repozytorium źródeł modułu) |
+
+**Testy.** Dane wyłącznie fikcyjne.
+- `tests/unit/notatka-pozniejsza-zapis.test.mjs`, blok „luki modułu planów z etapami” (4 nowe przypadki, 1 zmieniony
+  strażnik):
+  - zgodność trzech kopii reguły: `documentContentInstant` z `adapter.mjs` aktywnej rodziny (import przez manifest,
+    jak w testach rodziny) daje to samo co `stagedContentInstant` z `vilda_care_plans.js` i `Bnp_chwilaTresci` z sejfu
+    dla 15 rodzajów kotwicy z testu zgodności ekranu — z surowego rekordu, z odczytu sejfu (`getPatientNote`) i z odczytu
+    modułu na koncie przygotowanym (`createNativeStage`, odszyfrowana treść z własnymi kluczami chwil, które nie
+    przechodzą); `plan-service.mjs` bierze regułę z `adapter.mjs`. Rekordy bez chwili zapisu albo z pustą test sprawdza
+    osobno, bo kopie odpowiadają tam inaczej: przy 3 rekordach bez chwili zapisu moduł i ekran dają brak chwili
+    (`null`), a sejf z surowego rekordu pusty napis; przy pustej chwili zapisu z surowego rekordu wszystkie trzy dają
+    pusty napis, z odczytu sejfu reguła modułu daje brak chwili, a z odczytu modułu — pusty napis. Każda z tych
+    odpowiedzi daje „zmieniony”, bo pole dowodu nie bywa pustym napisem;
+  - decyzja modułu zapisu na prawdziwych modułach i modelach planu: plan z szablonu przez `plan-service.mjs` na
+    `createNativeStage`, potwierdzenie kroku istniejącym dokumentem z polem; dla każdego z 19 rekordów 5 chwil (w tym ta
+    sama chwila bez milisekund) — zapis dokładnie przy chwili treści według sejfu i ekranu, inaczej
+    `CARE_APPLICATION_DOCUMENT_CHANGED`, zawsze przy tym samym `rev`;
+  - zapis rekordu planu we fragmencie (`seal`, prawdziwa funkcja wycięta z sejfu): bez pól chwil treści i oznaczenia
+    poprzedniego rekordu, chwila treści równa chwili tego zapisu — przy tej samej milisekundzie co poprzedni zapis
+    i przy późniejszej; strażnik źródła „sejf: zapisy budowane z poprzedniego rekordu…”: usunięcie tych pól po złożeniu
+    rekordu, przed szyfrogramem.
+- Repozytorium źródeł modułu (commit wyżej): moduł zapisu (zależność z `expectedContentAtISO`, kotwice ważne
+  i nieważne, brak chwili, dawny dowód po `rev`, zły format), adapter (chwile z rekordu, klucze z treści nie
+  przechodzą, `writeDocument` bez starych pól chwil), `seal` na prawdziwej funkcji, przejście planu z polem przez
+  moduły przesłania, scalania i projekcji; kopie `vilda_care_plan_model.js` i `vilda_care_plan_mutation.js` z tego PR
+  oraz niezmienionego `vilda_care_template_model.js`, każda z pinem SHA-256 (stan tej gałęzi
+  `c615c6f92a837b560d2e1c508af0cf009b87b75f`).
+
+**Czerwone na bazie** (c615c6f9, rodzina `67818dc1656f`, z testami tego rozdziału; sprawdzone na kopii): wszystkie
+4 nowe przypadki i zmieniony strażnik — w module nie ma `documentContentInstant`; moduł zapisu przyjmuje każdą z 5
+chwil przy zgodnym `rev`; `seal` zostawia `contentAtISO` i pozostałe pola chwil (przy tej samej milisekundzie stara
+chwila treści zostaje ważna); w strażniku brak usunięcia pól. Po artefaktach zielone.
+
+**Sprawdzone zmianą kodu na kopii** (8 zmian w modułach aktywnej rodziny, testy tego rozdziału): porównanie z chwilą
+zapisu zamiast chwili treści, porównanie po `rev` mimo pola, `Date.parse` po obu stronach, reguła bez warunku „chwila
+treści nie później niż chwila zapisu”, bez warunku kotwicy, bez kontroli postaci kanonicznej, odczyt modułu bez
+chwili zapisu i odczyt przepuszczający klucze kotwicy z treści — każdą wykrył co najmniej jeden test.
+
+**Ograniczenia.**
+- Do drugiego wydania porównanie w module zapisu w praktyce zostaje po `rev` (wyżej, „Ograniczenia”).
+- Pusta chwila zapisu: odczyt przez moduł podaje pusty napis, odczyt przez sejf — brak chwili. Reguła daje wtedy pusty
+  napis albo brak chwili; w obu przypadkach dokument jest „zmieniony”, bo pole dowodu nie bywa pustym napisem (test).
+
+### 2c — kontrola przed scaleniem liczy notatki jak scalanie (reguła notatek we fragmencie natywnym)
+
+*(2026-11-18.)* **Zmiana kliniczna: TAK — synchronizacja**: zmienia się, które scalenia są odrzucane. Odbiór
+właściciela przy PR (wyżej, „Do akceptacji”, punkt 5). Wzory, progi i interpretacje bez zmian.
+
+**Skąd.** Druga luka po regule notatek E3-PR0b2b (P-NOTATKA-POZNIEJSZA, „Ograniczenia”, luka (2)). Źródło:
+repozytorium źródeł modułu, commit `f2130f8993aa9f07de8b4ef7970b2cf23127c8dc`, plik
+`client/patient-clinical-workspace-native/runtime-legacy-plan.fragment.txt`; w `vilda_vault.js` — blok natywny,
+`PatientPortablePreflightMerge`.
+
+**Co było** (c615c6f9; z kodu, przypadek a) także e2e niżej). Kontrola przed scaleniem przewiduje, czy scalenie
+(`Le`) przyjmie wersję z ładunku, i odmawia, gdy przeniosłoby albo usunęło dokumentację planu z etapami. Liczyła
+zwycięzcę własnym warunkiem `wins` (najpierw `rev`, przy równym — późniejsza chwila zapisu) i sprawdzała tylko
+wersje, które ten warunek uznał za zwycięskie. `Le` od E3-PR0b2b liczy `Bnp_nowsza` (późniejsza zmiana treści;
+`rev` dopiero przy tej samej chwili treści). Zwycięzców nagrobków kontrola liczyła bez informacji o planie zapisanym
+tylko w treści. Skutki:
+- a) ładunek z niższym `rev` i późniejszą treścią pod inną kartą nie był sprawdzany, a scalenie przenosiło
+  dokument-dowód;
+- b) ładunek z wyższym `rev`, wcześniejszą treścią i inną kartą dawał odmowę, choć scalenie zostawiłoby tutejszą treść
+  i kartę; odmowa przerywa całe scalenie, a ten sam ładunek wraca przy każdej próbie;
+- c) samej zmiany karty regułą karty notatki (ten sam `rev` i chwila zapisu) kontrola nie widziała;
+- d) decyzja nagrobka mogła się różnić od decyzji scalenia.
+
+**Reguła po zmianie** (z kodu fragmentu; przypadki — testy repozytorium źródeł modułu na prawdziwych funkcjach sejfu).
+1. Treść: zwycięzca `Bnp_nowsza(wersja z ładunku, wersja tutejsza, plan tutaj)`. „Plan tutaj” daje `Bnp_planyTutaj`:
+   notatka, która jest planem tylko w zaszyfrowanej treści tutejszej wersji, liczy się dawną regułą, jak w `Le`.
+   Odszyfrowanie tylko wtedy, gdy reguły dają inny wynik albo różnią się oznaczenia; błąd odszyfrowania = „nie plan”.
+2. Karta, gdy ładunek ma inną kartę niż wersja tutejsza: kontrola przewiduje, czy każda z dwóch kart jest w tym
+   scaleniu martwa (`deadNoteCard`), tak jak scalanie po fazie kart (`Qmart`). Karta jest martwa, gdy ma nagrobek
+   (z ładunku albo tutejszy) i: nagrobek nie jest starszy niż chwila zapisu karty (tutejszej albo z ładunku; tak jest
+   też z kartą usuwaną tym ładunkiem) albo karty nie ma, a ładunek nie przywraca jej nagłówkiem. Karta bez nagrobka
+   jest żywa, także gdy jej nie ma. Gdy martwa jest tylko jedna, dokument zostaje przy żywej. Gdy obie są żywe albo
+   obie martwe: przy pełnym remisie (ten sam `rev` i ta sama chwila zapisu) wygrywa mniejszy identyfikator karty,
+   inaczej karta zwycięskiej treści. Tak decyduje reguła karty notatki w scalaniu (`Qwl`, `Bnp_zmienKarte`). Wersja
+   tutejsza bez ważnej karty — karta zwycięskiej treści.
+3. Kategoria i kontekst planu liczą się tylko z wersji, która wygrywa (albo przy scalaniu planów).
+4. Odmowa `CARE_NATIVE_DOCUMENT_REFERENCED`: przeniesienie dokumentu oznaczonego jako dokumentacja planu, zmiana jego
+   kategorii albo kontekstu; przeniesienie zwykłego dokumentu, do którego odwołuje się plan (dowód faktu, powiązanie,
+   wpis historii), także w wersji zachowanej przy konflikcie.
+5. Nagrobki notatek: zwycięzca liczony z „planem tutaj”, a karta usunięta albo przywrócona tym samym ładunkiem liczy
+   się tak jak w fazie kart scalania.
+6. Przejściowy błąd odczytu karty albo listy nagrobków kart przerywa kontrolę; ładunek zostaje do następnej
+   synchronizacji.
+
+**Przypadki** (dane fikcyjne; dokument-dowód kroku; obie karty żywe, jeśli nie napisano inaczej; testy repozytorium
+źródeł modułu, wiersz pierwszy także e2e w vilda-calc):
+
+| Ładunek | Dotąd | Teraz |
+|---|---|---|
+| niższy `rev`, późniejsza treść, inna karta | bez odmowy; dowód przeniesiony (e2e: do drugiego pacjenta, z treścią z drugiego urządzenia) | odmowa |
+| wyższy `rev`, wcześniejsza treść, inna karta | odmowa | bez odmowy; zostaje tutejsza treść i karta |
+| wygrywa obiema regułami, inna karta | odmowa | odmowa |
+| przegrywa obiema regułami, inna karta | bez odmowy | bez odmowy |
+| sama zmiana karty (ten sam `rev` i chwila zapisu), tutejsza karta usunięta tym ładunkiem albo z nagrobkiem i bez rekordu | bez odmowy | odmowa |
+| sama zmiana karty, większy identyfikator karty w ładunku, tutejszej karty brak bez nagrobka albo jej nagrobek starszy niż karta przywrócona tym ładunkiem (przy mniejszym identyfikatorze — wiersz niżej) | bez odmowy | bez odmowy |
+| sama zmiana karty, pełny remis, mniejszy identyfikator karty w ładunku (także przy wcześniejszej treści z ładunku) | bez odmowy | odmowa |
+| jak wyżej, ale karta z ładunku jest martwa | bez odmowy | bez odmowy |
+| ten sam `rev`, późniejsza treść, karta z ładunku usuwana tym ładunkiem | odmowa | bez odmowy; tutejsza karta, treść z ładunku |
+| ten sam `rev`, późniejsza treść; albo ta sama chwila zapisu i wyższy `rev` | odmowa | odmowa |
+| notatka z planem tylko w zaszyfrowanej treści tutejszej wersji | według `rev` | według `rev` (dawna reguła, jak w scalaniu) |
+| zmiana kontekstu albo kategorii przypomnienia i rekordu planu, oznaczenie dowodu jako kroku | odmowa, gdy wygrywa | odmowa, gdy wygrywa (dla notatek z planem w treści — dawną regułą) |
+| nagrobek notatki kroku z planem tylko w treści, scalenie decyduje „czeka” | bez odmowy (dawny zwycięzca: notatka) | odmowa (świadoma, niżej) |
+
+**Odmowy wcześniejsze niż w scalaniu** (świadome, kierunek bezpieczny; z kodu fragmentu w repozytorium źródeł
+modułu, commit `f2130f8993aa9f07de8b4ef7970b2cf23127c8dc`, i kodu scalania w sejfie; pierwszą sprawdzono też na
+prawdziwych funkcjach sejfu poza testami repozytorium). Kontrola czyta stan przed scaleniem, a scalanie czyta karty
+po ich scaleniu i notatkę pod jej blokadą; zwykłe zapisy dokumentów planu w tym czasie blokuje
+`PatientPortableGuardIntent`.
+- Nagrobek, przy którym scalenie decyduje „czeka”, daje odmowę; scalenie zachowałoby dokument i zapisało kanon
+  nagrobka obok niego.
+- Pełny remis i mniejszy identyfikator karty w ładunku przy rekordzie planu: odmowa przeniesienia rekordu planu, choć
+  scalenie planów, które niczego nie zmienia, zostawia kartę (odmowa była także przed zmianą).
+- Adapter bez zapisu albo usuwania nagrobków kart: scalenie pomija usunięcie karty, a kontrola może uznać ją za martwą.
+
+**Wąskie luki** (z kodu fragmentu w repozytorium źródeł modułu, ten sam commit, i kodu scalania w sejfie).
+- Karta, która przeżywa nagrobek, może w scalaniu po kontroli stracić ostatnią wizytę (przeniesienie wizyt,
+  `Bsw_przenies`, `Bsw_poOddaniu`) albo zniknąć w koszu duplikatów (`Bkz_usunZObcych`). Dotyczy dokumentu zapisanego
+  już pod inną kartą niż karta planu; przeniesienie wizyty z karty samego planu sprawdza istniejący strażnik.
+- Nagrobki kart z ładunku wchodzą do kontroli dla właścicieli planów. Równo datowany albo nowszy tutejszy nagrobek obok
+  karty planu pozwoliłby scaleniu usunąć kartę poza tą kontrolą. Import i scalanie zdejmują takie tutejsze nagrobki,
+  więc zwykłą ścieżką ten stan jest dziś nieosiągalny.
+- Odzyskanie brakującego rozszerzenia planu (`CareMvpSyncHydrationCandidate`) zachowuje kartę, kategorię i treść;
+  dodanie kontekstu planu w wersji 1 do dokumentu-dowodu przez odzyskanie albo zwycięski ładunek zostaje poza kontrolą
+  znacznika natywnego.
+
+**Testy.** Dane wyłącznie fikcyjne.
+- e2e `tests/e2e/care-template-native-storage.spec.mjs` (desktop Chromium, 1 nowy): drugie urządzenie tego samego
+  konta przenosi swoją kopię dokumentu-dowodu (`rev` 1) do drugiego pacjenta z nową treścią (`rev` 2, późniejsza
+  treść); tutaj dokument ma `rev` 3 (dwie poprawki przed powiązaniem z krokiem). Scalenie ładunku z drugiego
+  urządzenia kończy się odmową `CARE_NATIVE_DOCUMENT_REFERENCED`; dokument, plan i cała baza natywna (skrót wszystkich
+  magazynów) zostają bez zmian.
+- `tests/unit/notatka-pozniejsza-zapis.test.mjs`, strażnik „sejf: notatki według nowej reguły…” odwrócony: we
+  fragmencie zwycięzca notatki przez `Bnp_nowsza` z `Bnp_planyTutaj`, zwycięzca nagrobka z planami tutaj, bez dawnego
+  warunku `wins`.
+- Repozytorium źródeł modułu: `tests/unit/legacy-plan-native-guard.test.mjs` — przypadki z tabeli na prawdziwych
+  deklaracjach `Bnp_*` wyciętych z przypiętego obrazu bazy sejfu (pin SHA-256), z prawdziwą regułą karty notatki,
+  fazą kart przy nagrobkach, błędami odczytu i kartą przywróconą tym samym ładunkiem.
+
+**Czerwone na bazie** (c615c6f9 z testami tego rozdziału; sprawdzone na kopii): e2e — scalenie przyjmuje ładunek bez
+odmowy, a dokument-dowód trafia do drugiego pacjenta z treścią z drugiego urządzenia (`rev` zostaje 3, plan bez
+zmian); strażnik — we fragmencie dawny warunek `wins`. Po artefaktach zielone.
+
+**Wdrożenie.** Od razu przy wydaniu, razem z całym PR, bez przełącznika. Odmowa zapada przed pierwszym zapisem
+scalenia. Urządzenia ze starszą wersją liczą dawną regułą do czasu aktualizacji.
+
+**Cofnięcie** = rewert PR (wraca dawna reguła fragmentu i poprzednia rodzina modułów), bez migracji.

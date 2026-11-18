@@ -364,10 +364,11 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
       expect(wpisy.has(resource)).toBe(true);
     }
     expect(MANIFEST_WORKSPACE.files).toHaveLength(51);
-    // The visit-identity codec adds one immutable family. All previous module
-    // URLs remain available to clients holding their historical resources.
-    expect(HISTORYCZNE_MODULY_WORKSPACE).toHaveLength(151);
-    expect(MODULY_WORKSPACE.size).toBe(202);
+    // The visit-identity codec and the next release from the module source repository
+    // (vilda-source) each add one immutable family. All previous module URLs remain
+    // available to clients holding their historical resources.
+    expect(HISTORYCZNE_MODULY_WORKSPACE).toHaveLength(202);
+    expect(MODULY_WORKSPACE.size).toBe(253);
     // Budżet: dziś ok. 390 adresów i 24 MB. Chromium przerywa zdarzenie install po 5 minutach — przy 8 Mb/s i 80 ms
     // opóźnienia na żądanie 24 MB zajęło 64 s, a 474 MB (historia) nie mieściło się nawet przy 20 Mb/s.
     const bajty = pobrane.reduce((suma, adres) => suma + (rozmiarPliku(adres) || 0), 0);
