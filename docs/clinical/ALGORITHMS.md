@@ -43251,8 +43251,9 @@ zielonych, 21 pominiętych); na bazie z testami tego PR 135 s, w pełnym `vitest
 Cel ok. 180 s w CI — zmierzyć w opisie PR. *(2026-11-18, po scaleniu 2c, lokalnie:)* sam plik 130,8 s, w pełnym
 `vitest run` 172,3 s.
 
-Długie przebiegi, mutanty i pierwszy pomiar czerwonych na bazie są sprzed scalenia 2c. Wynik się nie zmienia: 2c nie
-zmienił bloku P-DZIENNIK-ZDARZEN, `vilda_sync.js` ani plików testów tego PR.
+Długie przebiegi, mutanty i pierwszy pomiar czerwonych na bazie są sprzed scalenia 2c. Mierzony kod jest po scaleniu
+ten sam: 2c nie zmienił bloku P-DZIENNIK-ZDARZEN, `vilda_sync.js` ani plików testów tego PR; czerwone na bazie
+powtórzone po scaleniu (wyżej).
 
 **Kontrola granicy obrazu sejfu.** Zmiana stoi wyłącznie w bloku P-DZIENNIK-ZDARZEN (poza blokiem nic, także
 komentarze; literał miejsc poza blokiem bez zmian, 35 wpisów); fragment natywny i blok trwałych wizyt bez zmian.
