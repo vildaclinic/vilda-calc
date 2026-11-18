@@ -87,6 +87,28 @@
   }
   var stagedViewCache = new WeakMap();
   function staged(plan) { return !!(plan && plan.careContext && plan.careContext.version === 2); }
+  // The document's effective content instant, by the vault rule (Bnp_chwilaTresci in vilda_vault.js). The only place
+  // on this screen that reads the anchor. When updatedAtISO is not a text the document has no instant (null); an empty
+  // updatedAtISO gives the empty text, as in the vault. No evidence field is empty, so both mean a changed document.
+  function stagedContentInstant(original) {
+    var updated = original && typeof original.updatedAtISO === 'string' ? original.updatedAtISO : null;
+    if (updated === null) return null;
+    // contentAtISO counts only in the exact toISOString form (as Bnp_iso), not later than updatedAtISO and anchored to
+    // it (contentForISO === updatedAtISO); otherwise the content instant is updatedAtISO.
+    var content = original.contentAtISO, canonical = typeof content === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(content)
+      && isFinite(Date.parse(content)) && new Date(content).toISOString() === content;
+    return canonical && content <= updated && original.contentForISO === updated ? content : updated;
+  }
+  // Evidence with a content instant is compared by the document's effective content instant only, as exact texts:
+  // a merge may keep a later text without a higher revision, and marking the document done or saving it again without
+  // a content change moves the revision and the write instant but not the text. Older evidence keeps the revision check.
+  function stagedEvidenceChanged(evidence, original) {
+    if (Object.prototype.hasOwnProperty.call(evidence, 'sourceRecordContentAtISOAtCapture')) {
+      var instant = stagedContentInstant(original);
+      return instant === null || evidence.sourceRecordContentAtISOAtCapture !== instant;
+    }
+    return evidence.sourceRecordRevAtCapture !== original.rev;
+  }
   function stagedView(plan) {
     if (!staged(plan) || !win.VildaCarePlanModel) return null;
     var dayNow = today(), cached = stagedViewCache.get(plan);
@@ -603,20 +625,20 @@
           if (!current() || ticket !== recordSequence || state.selected !== planId || recordNoteId !== noteId) return;
           var retainedPlans = freshPlan && freshPlan.patientId === patientId && freshPlan.id === planId && staged(freshPlan)
             ? [freshPlan].concat((freshPlan.nativeConflicts || []).map(function (version) { return version && version.record; })) : [];
-          var referenced = false, capturedRevisions = [];
+          var referenced = false, captured = [];
           retainedPlans.forEach(function (version) {
             if (!version || version.id !== planId || version.patientId !== patientId || !staged(version)) return;
             var projected = stagedView(version), context = version.careContext;
             if (!projected || projected.kind !== 'v2') return;
-            context.facts.forEach(function (fact) { if (fact.evidence.noteId === noteId) { referenced = true; capturedRevisions.push(fact.evidence.sourceRecordRevAtCapture); } });
-            context.associations.forEach(function (association) { if (association.noteId === noteId) { referenced = true; capturedRevisions.push(association.sourceRecordRevAtCapture); } });
+            context.facts.forEach(function (fact) { if (fact.evidence.noteId === noteId) { referenced = true; captured.push(fact.evidence); } });
+            context.associations.forEach(function (association) { if (association.noteId === noteId) { referenced = true; captured.push(association); } });
             if (context.log.some(function (entry) { return entry.documentIds.includes(noteId); })) referenced = true;
           });
           if (!referenced) throw new Error('Ten dokument nie jest już powiązany z planem. Wróć do planu i odśwież widok.');
           var stagedOriginal = await vault.getPatientNote(noteId);
           if (!current() || ticket !== recordSequence || state.selected !== planId || recordNoteId !== noteId) return;
           if (!stagedOriginal || stagedOriginal.id !== noteId || stagedOriginal.patientId !== patientId) throw new Error('Dokument jest niedostępny. Sprawdź dokumentację pacjenta.');
-          if (capturedRevisions.some(function (revision) { return revision !== stagedOriginal.rev; }))
+          if (captured.some(function (evidence) { return stagedEvidenceChanged(evidence, stagedOriginal); }))
             throw new Error('Dokument został zmieniony po powiązaniu z planem. Plan zachowuje odwołanie do wcześniejszej wersji, ale nie przechowuje jej treści. Bieżąca treść nie jest wyświetlana jako potwierdzenie tamtego wpisu. Sprawdź aktualną dokumentację w Karcie pacjenta.');
           record = stagedOriginal; renderDetail();
           if (!refreshing) { var stagedHeading = detail.querySelector('.vcp-record h2'); if (stagedHeading) stagedHeading.focus({ preventScroll: true }); }
@@ -1288,7 +1310,10 @@
       return { box: box, read: async function () {
         if (!selected || selected.id !== picker.value) throw new Error('Wybierz dokument i przeczytaj jego podgląd.');
         var original = await vault.getPatientNote(selected.id);
-        if (!original || original.id !== selected.id || original.patientId !== plan.patientId || original.rev !== selected.rev) throw new Error('Dokument zmienił się. Wybierz go ponownie i sprawdź aktualną treść.');
+        // The saved version must be the previewed one: the same revision, write instant and effective content instant.
+        // The content instant is only compared here. The evidence does not record it yet: older app versions reject such plans.
+        if (!original || original.id !== selected.id || original.patientId !== plan.patientId || original.rev !== selected.rev
+          || original.updatedAtISO !== selected.updatedAtISO || stagedContentInstant(original) !== stagedContentInstant(selected)) throw new Error('Dokument zmienił się. Wybierz go ponownie i sprawdź aktualną treść.');
         return { noteId: selected.id, sourceRecordRevAtCapture: selected.rev };
       } };
     }
