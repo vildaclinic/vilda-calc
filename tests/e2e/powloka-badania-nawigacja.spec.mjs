@@ -81,7 +81,7 @@ test('pasek „Poprzednie wyniki” → karta pacjenta na zakładce „Badania�
   await lab.locator('#labUnit').selectOption('mIU/L');
   await lab.locator('#labValue').fill('0,38');
   const pasek = lab.locator('#labHistoryStrip');
-  await expect(pasek.locator('.lab-strip-sub')).toHaveText('Fikcyjna Badaniowa · 4 wyniki · ostatni 02.06.26');
+  await expect(pasek.locator('button.lab-strip-chip[data-note-id]')).toHaveCount(4);
   await pasek.locator('.lab-strip-head button.lab-strip-link').click();
   await expect(page).toHaveURL(/\/app\.html#\/start/);
   await expect(start.locator('.vilda-patient-tab[data-tab="lab"]')).toHaveClass(/active/);

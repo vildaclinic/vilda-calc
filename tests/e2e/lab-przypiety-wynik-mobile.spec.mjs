@@ -3,9 +3,10 @@ import { otworzPrzelicznik, pasekHistorii } from '../support/lab-historia-dane.m
 
 // LAB-HISTORIA 6.38 (P-PRZYPIETY-WYNIK, decyzje właściciela 2026-11-17) na telefonie (projekt mobile-chromium,
 // iPhone): po przypięciu przycisk „✓ Przypięto” zajmuje całą szerokość wiersza przypięcia, pasek „Poprzednie wyniki
-// pacjenta” nie ma chipu „teraz”, a chip przypiętej notatki biegnie przez cały rząd chipów ze znacznikiem
-// „✓ z formularza” w jednej linii z datą. Wykres w wąskim układzie mieści podpis „✓ z formularza”, a okno przypięcia
-// z ostrzeżeniem o duplikacie mieści się na ekranie. Cele dotyku ≥ 44 px, bez poziomego przewijania strony.
+// pacjenta” nie ma chipu „teraz”, a chip przypiętej notatki biegnie przez cały rząd chipów (wyróżniony tłem, z tą
+// samą treścią co pozostałe — bez znacznika „✓ z formularza”, LAB-HISTORIA 6.39). Wykres w wąskim układzie mieści
+// pierścień przypiętego punktu i jego wartość, a okno przypięcia z ostrzeżeniem o duplikacie mieści się na ekranie.
+// Cele dotyku ≥ 44 px, bez poziomego przewijania strony.
 // Prawdziwy sejf z fikcyjną historią TSH (tests/support/lab-historia-dane.mjs; zegar stron 17.06.2026).
 test.use({ serviceWorkers: 'block' });
 
@@ -34,10 +35,10 @@ async function sprawdzPrzypiety(page) {
   await expect(pasek).toHaveClass(/is-on/);
   await expect(przycisk).toHaveText(PRZYPNIJ);
   await expect(przycisk).not.toHaveClass(/is-pinned/);
-  await expect(podpis).toHaveText('wynik trafi do karty pacjenta');
+  await expect(podpis).toHaveText('Jeszcze nie w karcie');
 
-  // Przed przypięciem: chip „teraz · niezapisany” na całą szerokość rzędu chipów.
-  await expect(pasek.locator('.lab-strip-now .lab-strip-chip-d')).toHaveText('teraz · niezapisany');
+  // Przed przypięciem: chip „teraz” na całą szerokość rzędu chipów.
+  await expect(pasek.locator('.lab-strip-now .lab-strip-chip-d')).toHaveText('teraz');
   await expect(pasek.locator('button.lab-strip-chip.is-pinned')).toHaveCount(0);
   const teraz = await prostokat(pasek.locator('.lab-strip-now')), rzadPrzed = await prostokat(rzad);
   expect(Math.abs(teraz.width - rzadPrzed.width)).toBeLessThanOrEqual(1);
@@ -57,20 +58,20 @@ async function sprawdzPrzypiety(page) {
   await expect(przycisk).toHaveText('✓ Przypięto');
   await expect(przycisk).toHaveClass(/is-pinned/);
   await expect(przycisk).toHaveAttribute('title', /już w karcie/);
-  await expect(podpis).toHaveText('TSH 0,38 mIU/L jest już w karcie · badanie 17.06.26');
+  await expect(podpis).toHaveText('Już w karcie · data badania 17.06.26');
 
-  // Pasek: bez chipu „teraz”, jeden chip przypiętej notatki ze znacznikiem; wykres w wąskim układzie.
+  // Pasek: bez chipu „teraz”, jeden chip przypiętej notatki (bez znacznika); wykres w wąskim układzie.
   await expect(pasek.locator('.lab-strip-now')).toHaveCount(0);
   await expect(pasek.locator('.lab-strip-sep')).toHaveCount(0);
   const przypiety = pasek.locator('button.lab-strip-chip.is-pinned');
   await expect(przypiety).toHaveCount(1);
   await expect(przypiety).toHaveAttribute('data-note-id', zapisane[0].id);
   await expect(przypiety.locator('.lab-strip-chip-d')).toHaveText('17.06.26');
-  await expect(przypiety.locator('.lab-strip-chip-pin')).toHaveText('· ✓ z formularza');
+  await expect(przypiety.locator('.lab-strip-chip-pin')).toHaveCount(0);
   await expect(svg).toHaveClass(/is-narrow/);
   await expect(svg.locator('rect.lab-strip-lane')).toHaveCount(0);
   await expect(svg.locator('circle.lab-strip-pin-ring')).toHaveCount(1);
-  await expect(svg.locator('text.lab-strip-pin-sub')).toHaveText('✓ z formularza');
+  await expect(svg.locator('text.lab-strip-pin-sub')).toHaveCount(0);
 
   // „✓ Przypięto” na całą szerokość wiersza przypięcia i z celem dotyku ≥ 44 px; strona bez poziomego przewijania.
   const strona = await page.evaluate(() => {
@@ -92,21 +93,20 @@ async function sprawdzPrzypiety(page) {
   expect(Math.abs(chip.width - rzadPo.width)).toBeLessThanOrEqual(1);
   expect(Math.abs(chip.left - rzadPo.left)).toBeLessThanOrEqual(1);
   expect(chip.height).toBeGreaterThanOrEqual(44);
-  // „· ✓ z formularza” w jednej linii z datą (nie zawija się pod nią), wartość linię niżej.
+  // Treść jak w pozostałych chipach: data, pod nią wartość, obie w chipie.
   const data = await prostokat(przypiety.locator('.lab-strip-chip-d'));
-  const znacznik = await prostokat(przypiety.locator('.lab-strip-chip-pin'));
   const wartosc = await prostokat(przypiety.locator('.lab-strip-chip-v'));
-  expect(Math.abs(znacznik.top - data.top)).toBeLessThanOrEqual(4);
-  expect(znacznik.left).toBeGreaterThanOrEqual(data.right);
-  expect(znacznik.right).toBeLessThanOrEqual(chip.right);
+  expect(data.left).toBeGreaterThanOrEqual(chip.left);
+  expect(data.right).toBeLessThanOrEqual(chip.right);
+  expect(wartosc.right).toBeLessThanOrEqual(chip.right);
   expect(wartosc.top).toBeGreaterThanOrEqual(data.bottom - 1);
   // Każdy chip paska jest celem dotyku ≥ 44 px.
   expect(strona.chipy.length).toBeGreaterThanOrEqual(2);
   expect(Math.min(...strona.chipy)).toBeGreaterThanOrEqual(44);
 
-  // Podpis „✓ z formularza” i pierścień punktu mieszczą się w wykresie.
+  // Wartość przypiętego punktu (nad pierścieniem) i pierścień mieszczą się w wykresie.
   const wykres = await prostokat(svg);
-  const podpisPunktu = await prostokat(svg.locator('text.lab-strip-pin-sub'));
+  const podpisPunktu = await prostokat(svg.locator('text.lab-strip-val', { hasText: '0,38' }));
   const pierscien = await prostokat(svg.locator('circle.lab-strip-pin-ring'));
   expect(podpisPunktu.left).toBeGreaterThanOrEqual(wykres.left - 0.5);
   expect(podpisPunktu.right).toBeLessThanOrEqual(wykres.right + 0.5);

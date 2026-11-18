@@ -693,6 +693,8 @@ uwaga o możliwej innej metodzie.
   nazwisko z nagłówka rekordu sejfu tego samego pacjenta; zmiana pacjenta
   w trakcie odczytu, blokada sejfu i reset stanu użytkownika ukrywają pasek
   i czyszczą pamięć (pokolenie odczytu, porównanie tożsamości po odczycie).
+  *Zmienione w LAB-HISTORIA 6.39 (wpis niżej): pasek nie pokazuje nazwiska
+  ani liczby wyników — nazwisko stoi w wierszu przypięcia nad paskiem.*
 - Chipy: do pięciu ostatnich wyników (wcześniejsze pod „+N wcześniejsze”),
   wartość w jednostce formularza; wynik przeliczony z innej jednostki — bez
   strzałki (K26), zapis i norma w podpowiedzi; data badania albo „wpis/termin
@@ -700,13 +702,17 @@ uwaga o możliwej innej metodzie.
   z wartością formularza (tylko gdy przelicznik pokazuje wynik), osobno, bez
   daty. *Zmienione w LAB-HISTORIA 6.38 (wpis niżej): gdy wynik formularza
   jest już w karcie, chipu „teraz” nie ma, a chip tej notatki ma znacznik
-  „✓ z formularza”.*
+  „✓ z formularza”.* *Zmienione w LAB-HISTORIA 6.39: chip „teraz” bez
+  dopisku „niezapisany”, przypięty chip bez znacznika (wyróżnia go tło).*
 - Szczegóły po kliknięciu chipa lub punktu: data, wartość ze strzałką
   z zapisu, wiek wizyty (kotwica wpisu), „przeliczono z …”, zapisana ocena
   (`VildaLabAssessmentUI.renderAssessment`, widok skrócony, historyczny),
   „norma z wpisu: … — zakres laboratorium z dnia badania; metoda oznaczenia
   mogła być inna” (przy strzałce „poniżej/powyżej normy z wpisu: …”),
-  komentarz bez linii „= …” i „Norma: …”, „Otwórz w karcie →”.
+  komentarz bez linii „= …” i „Norma: …”, „Otwórz w karcie →”. *Usunięte
+  w LAB-HISTORIA 6.39 (wpis niżej): klik chipa lub punktu tylko zaznacza
+  oba; zapis, norma, zakres zapisany z wynikiem, zapisana ocena i komentarz
+  są w podpowiedzi chipu, pełny wpis — w karcie.*
 - Linia porównania: „ostatni zapisany wynik: DATA (N dni temu) · X · teraz Y
   → różnica ±Z jednostka (data bieżącej próbki ustalana przy przypięciu)”;
   różnica tylko, gdy ostatni wynik jest dokładny i w tej samej jednostce;
@@ -717,7 +723,7 @@ uwaga o możliwej innej metodzie.
   „niezależnie od daty”; stan „już w karcie” liczy moduł przypięcia
   (`VildaLabPinResult.pinned()`), a linia kończy się „to wynik z formularza,
   już w karcie” albo „wynik z formularza jest w karcie z datą DATA”, bez
-  różnicy.*
+  różnicy.* *Usunięta w LAB-HISTORIA 6.39 (wpis niżej), w obu stanach.*
 - Wykres (lekki renderer SVG, decyzja 6.21): oś Y od zera z krokiem 1–2–2,5–5,
   punkty dokładne z datą badania na osi dat, wartość przy każdym punkcie
   (podpisy zachodzące — zostaje nowszy), przerywana kreska od punktu do osi,
@@ -728,7 +734,9 @@ uwaga o możliwej innej metodzie.
   podpisów bez nakładania. „Ukryj wykres” zwija wykres. *Zmienione
   w LAB-HISTORIA 6.38 (wpis niżej): wynik formularza, który jest już
   w karcie, nie ma pasa „teraz” — to punkt jego notatki z obwódką i podpisem
-  „✓ z formularza”.*
+  „✓ z formularza”.* *Zmienione w LAB-HISTORIA 6.39: wykres zawsze widoczny
+  (bez „Ukryj wykres”), bez pionowego podpisu jednostki, objaśnienia pod
+  wykresem i podpisu „✓ z formularza”; zostaje obwódka punktu.*
 - „Badania w karcie →”: w powłoce `openPatientCardInStart(id, {activeTab:
   'lab'})` (łatka P-POWLOKA-KARTA-ZAKLADKA), poza powłoką
   `ensureAuthLoaded()` i `showPatientCard(id, null, null, {activeTab: 'lab'})`.
@@ -1754,6 +1762,8 @@ tekstu wyniku. A przy tym:
   badanie z inną datą.”), podpis wiersza „<badanie> <wartość> <jednostka>
   jest już w karcie · badanie DD.MM.RR” (nazwa badania bez nawiasu).
   W innym razie „Przypnij do wizyty” i „wynik trafi do karty pacjenta”.
+  *Podpis zmieniony w 6.39 (wpis niżej): „Już w karcie · data badania
+  DD.MM.RR” i „Jeszcze nie w karcie”.*
   Przycisk ma w obu stanach co najmniej 44 px wysokości (cel dotyku;
   wcześniej ok. 36 px).
 - **Sama zmiana kontekstu** — faza cyklu, stadium Tannera, wiek, jednostka
@@ -1792,6 +1802,8 @@ tekstu wyniku. A przy tym:
   nakładających się podpisów — nie zabiera daty punktu); opis wykresu dla
   czytnika ekranu kończy się „wynik z formularza DD.MM.RR jest już
   w karcie”. Bez modułu przypięcia pasek pokazuje „teraz · niezapisany”.
+  *Zmienione w 6.39 (wpis niżej): chip i punkt bez znacznika „✓ z formularza”,
+  bez linii porównania, chip „teraz” bez dopisku „niezapisany”.*
 
 **Ograniczenia.** Zapis pakietu badań (`vilda_lab_packages.js`) nie jest
 blokowany: pakiet zapisuje wyniki własną drogą. Wynik bez liczby
@@ -1851,6 +1863,122 @@ i `tests/e2e/lab-amh-reference-snapshot.spec.mjs` (drugie przypięcie tego
 samego wyniku z tą samą datą jest blokowane; sama zmiana wieku albo widoku
 wykresu nie zmienia pomiaru). Opis: `docs/LAB_HISTORIA_WYNIKOW_PLAN.md`,
 decyzja 6.38; `docs/ZRODLA_ARTEFAKTOW.md`, „Łatka P-PRZYPIETY-WYNIK”.
+
+### LAB-HISTORIA 6.39 — mniej informacji w pasku „Poprzednie wyniki” i w wierszu przypięcia (makieta właściciela „wariant A”; `lab_history_strip.js` 1.5.0, `lab_pin_result.js`, 2026-11-17)
+
+**Klasyfikacja: zmiana prezentacji, bez zmiany wyników, norm
+i interpretacji.** Żaden wzór, próg, norma, jednostka ani zapis się nie
+zmienia; model `VildaLabHistory` liczy to samo, reguła „już w karcie” (6.38)
+i blokada duplikatu działają tak samo. Zmienia się, ile pasek i wiersz
+przypięcia pokazują. Decyzja właściciela z 2026-11-17: po wdrożeniu 6.38
+zrzut paska z przypiętym estradiolem („przecież lekarz zwariuje jak to
+zobaczy, nie będzie wiedział co jest ważne a co nie, trzeba ograniczyć ilość
+zawartych tam informacji”); z trzech makiet (https://claude.ai/artifact/GdjHMnFiPzu3HZT8QNqA1Q)
+właściciel wybrał wariant A i sam go zmodyfikował: „idziemy w wariant A,
+który zmodyfikowałem”.
+
+**Co zostaje.** Wiersz przypięcia: pacjent i wiek wizyty, podpis, przycisk.
+Pasek: tytuł „Poprzednie wyniki pacjenta · <badanie> · w <jednostka>” w jednej
+linii z „Badania w karcie →” (na wąskim ekranie odnośnik pod tytułem); chipy
+z datą i wartością (strzałka tylko z zapisu, „+N wcześniejsze” jak dotąd);
+chip „teraz” dla wyniku formularza, którego nie ma w karcie; wykres
+(wartość przy punkcie, daty, pas „teraz / bez daty”, obwódka przypiętego
+punktu). Przypięty chip ma tło fioletu modułu, wybrany (kliknięty) —
+mocniejszą obwódkę, a jego punkt na wykresie — poświatę.
+
+**Co znika** (wszystko z makiety właściciela):
+
+- podpis wiersza „<badanie> <wartość> <jednostka> jest już w karcie · badanie
+  DD.MM.RR” → „Już w karcie · data badania DD.MM.RR” (notatka bez daty
+  badania — samo „Już w karcie”); „wynik trafi do karty pacjenta” → „Jeszcze
+  nie w karcie” (także tekst początkowy w części zminifikowanej, łatka
+  P-PASEK-WARIANT-A);
+- podpis paska „<nazwisko> · N wyników · ostatni DD.MM.RR” (nazwisko jest
+  w wierszu przypięcia, liczba i daty — w chipach);
+- znacznik „· ✓ z formularza” w przypiętym chipie i pod datą przypiętego
+  punktu (podpowiedź chipu „wynik z formularza — już w karcie” zostaje);
+- dopisek „· niezapisany” w chipie „teraz” (czy wynik jest w karcie, mówi
+  wiersz przypięcia; podpowiedź chipu „bieżący wynik z formularza, bez
+  daty”);
+- panel szczegółów po kliknięciu chipa lub punktu (data, wiek wizyty,
+  „przeliczono z …”, zapisana ocena, norma wpisu z uwagą o metodzie, zakres
+  zapisany z wynikiem, komentarz, „Otwórz w karcie →”) — klik tylko zaznacza
+  chip i jego punkt, drugi klik odznacza (potwierdzone przez właściciela po
+  wdrożeniu: „klik w chip niech tylko zaznacza”);
+- linia porównania („ostatni zapisany wynik … → różnica …”, „to wynik
+  z formularza, już w karcie”, „wynik z formularza jest w karcie z datą …”)
+  — w obu stanach;
+- przycisk „Ukryj wykres ▴ / Pokaż wykres ▾” (wykres zawsze widoczny),
+  objaśnienie „Oś: data badania · przy punkcie wartość · bez pasma norm”,
+  pionowy podpis jednostki przy osi i stopka „Historia pokazuje zapisane
+  wyniki bez ponownej oceny.” (z uwagą o metodzie przy różnicy).
+
+**Gdzie są teraz te informacje.** Podpowiedź chipu (`title`) przejmuje
+większość treści panelu: źródło daty („data wpisu (brak daty
+badania)”, „termin zlecenia …”, „data kontroli GH …”), IGF-1 z notatki
+leczenia GH (z polem i „bez normy i bez oceny”), opis wyniku bez porównania
+(jednostka nierozpoznana, wynik tekstowy, poza zakresem oznaczalności),
+„zapisano: …” w jednostce zapisu, „norma z wpisu: …”, zakres zapisany
+z wynikiem (kategoria z granicami, populacja, dla kogo dobrano i źródło —
+decyzje 6.3 i 6.30), zapisaną ocenę cytowaną dosłownie („ocena zapisana
+z wynikiem: „…”” — ostrzeżenie kliniczne koperty ma pierwszeństwo, 6.20),
+ocenę do ponownej oceny albo niedostępną (z powodami) i komentarz wpisu
+(bez linii „= …” i „Norma: …”). Wynik przeliczony z innej jednostki
+poznać po jednostce w „zapisano: …” i po obwódce punktu. W pasku nie ma już
+wcale: wieku wizyty wpisu, słów „poniżej/powyżej normy z wpisu” (zostaje
+strzałka z etykietą dla czytnika ekranu), uwagi „zakres laboratorium z dnia
+badania; metoda oznaczenia mogła być inna” i pełnego widoku zapisanej oceny
+— te są w karcie („Badania w karcie →”). Zakładka „Badania” i Historia bez
+zmian.
+
+**Ograniczenia (świadome, z decyzji właściciela).** Na telefonie
+podpowiedzi nie ma, więc szczegóły wpisu — także zapisane ostrzeżenie
+kliniczne oceny — są tam tylko w karcie (wcześniej jedno dotknięcie dalej,
+w panelu). Pasek nie pokazuje różnicy do ostatniego wyniku (6.10): model
+nadal ją liczy, ale w pasku jej nie ma. Nie ma też stałego zdania, że
+historia nie jest ponownie oceniana; sama reguła obowiązuje bez zmian
+(dawne wyniki bez dzisiejszych norm, strzałka tylko z zapisu, wykres bez
+pasma norm, a opis wykresu dla czytnika ekranu nadal mówi „bez pasma
+norm”).
+
+**Telefon (≤560 px).** Chipy w siatce dwóch kolumn; „+N”, przypięty chip
+i „teraz” zajmują cały rząd, a chip, który zostałby sam w rzędzie (przed
+nimi albo na końcu), też go wypełnia (klasa `is-wide`, liczona przy
+rysowaniu chipów) — jak w makiecie telefonu właściciela.
+
+**Przypadki `wejście → wynik`** (fikcyjna pacjentka z historią TSH jak
+w PR3 i 6.38; zegar 17.06.26; pojedyncze badanie TSH w mIU/L):
+
+| Wejście | Wynik |
+|---|---|
+| 0,38 przed przypięciem | wiersz: „Jeszcze nie w karcie”, „Przypnij do wizyty”; pasek: tytuł i „Badania w karcie →”, chipy „0,01”, „0,02↓”, „0,05↓”, „0,12↓”, chip „teraz 0,38”, wykres z pasem „teraz / bez daty”; bez podpisu z liczbą wyników, linii różnicy, przycisku wykresu, objaśnienia i stopki |
+| przypięcie 0,38 z datą 17.06.26 | „✓ Przypięto”, „Już w karcie · data badania 17.06.26”; pięć chipów, ostatni „17.06.26 0,38↓” z tłem, bez znacznika; punkt z obwódką, bez podpisu pod datą |
+| to samo, potem osobne badanie z datą 10.06.26 | „Już w karcie · data badania 10.06.26”; wyróżniony chip 10.06.26 |
+| klik chipa 25.02.26 | chip i punkt zaznaczone, bez panelu; podpowiedź „zapisano: 0,02 mIU/L · norma z wpisu: 0,27–4,2 mIU/L · komentarz: redukcja do 20 mg” |
+| TSH 5,1 mIU/L przypięte u dziewczynki 12 l 3 m | chip „5,1↑”; podpowiedź „zapisano: 5,1 mIU/L · powyżej zapisanego zakresu 0,5–4,3 mIU/L · Młodzież 11–19 lat · dziewczynka, 12 l 3 m · Mayo Test 8939 — TSH · wynik z formularza — już w karcie” |
+| LH 1,8 IU/L z kopertą oceny | podpowiedź chipu „… ocena zapisana z wynikiem: „<tytuł oceny>” · komentarz: …”; bez widoku oceny w pasku |
+| telefon: „+2 wcześniejsze”, pięć chipów i „teraz” | „+2” w całym rzędzie, dwa rzędy po dwa chipy, piąty chip i „teraz” — każdy w całym rzędzie |
+
+Testy na kodzie produkcyjnym: `tests/unit/lab-history-strip.test.mjs`
+(układ paska: nagłówek, chipy, wykres i nic więcej; brak panelu, linii
+różnicy, przycisku wykresu, objaśnienia, stopki, podpisu jednostki i znacznika
+„z formularza”; podpowiedzi chipów z zapisem, normą, komentarzem, zakresem
+zapisanym z wynikiem i źródłem GH; termin zlecenia, jednostka nierozpoznana,
+ocena do ponownej oceny i niedostępna; zaznaczenie chipu i punktu; `is-wide`),
+`tests/unit/lab-pin-pinned-state.test.mjs` (podpisy wiersza; tekst początkowy
+w części zminifikowanej równy `PP_PIN_SUB`), e2e
+`lab-przypiety-wynik.spec.mjs`, `lab-przypiety-wynik-mobile.spec.mjs`,
+`lab-history-strip.spec.mjs`, `lab-historia-zakres-zapisany.spec.mjs`,
+`lab-historia-przelicznik-mobile.spec.mjs`,
+`lab-historia-przelicznik-offline.spec.mjs`,
+`powloka-badania-nawigacja.spec.mjs`, `lab-e2-d3.spec.mjs`,
+`lab-e2-phase-source.spec.mjs`, `lab-estradiol-reference-scope.spec.mjs`,
+`lab-male-e2-age.spec.mjs`, `lab-female-tt-age.spec.mjs`,
+`lab-male-e2-adult-age.spec.mjs` (zakres zapisany z wynikiem i brak
+dzisiejszych źródeł sprawdzane w podpowiedzi chipu zamiast w panelu);
+`lab-historia-przelicznik-mobile.spec.mjs` ma nowy test samotnego chipu
+w prawdziwej przeglądarce (telefon i 320 px). Opis: `docs/LAB_HISTORIA_WYNIKOW_PLAN.md`, decyzja 6.39;
+`docs/ZRODLA_ARTEFAKTOW.md`, „Łatka P-PASEK-WARIANT-A”.
 
 ### LAB-PAKIETY PR1 — pakiet badań „Tarczyca” w przeliczniku jednostek (`vilda_lab_packages.js` 1.0.0, 2026-11-12)
 

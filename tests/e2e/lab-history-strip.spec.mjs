@@ -3,8 +3,9 @@ import { otworzPrzelicznik, pasekHistorii, wybierzBadanie } from '../support/lab
 
 // LAB-HISTORIA PR3: pasek „Poprzednie wyniki pacjenta” w przeliczniku jednostek (lab_history_strip.js) na prawdziwym
 // sejfie z fikcyjną historią (tests/support/lab-historia-dane.mjs; zegar stron 17.06.2026). Pasek jest tylko do odczytu
-// (6.6), stoi za wierszem przypięcia (6.8), ukrywa się bez wyników badania (6.9), różnica to liczba bez dni (6.10),
-// wykres ma wartość przy każdym punkcie bez strzałek i bez pasma norm (6.21, 6.22).
+// (6.6), stoi za wierszem przypięcia (6.8), ukrywa się bez wyników badania (6.9), wykres ma wartość przy każdym
+// punkcie bez strzałek i bez pasma norm (6.21, 6.22). Od 6.39 (makieta właściciela „wariant A”) pasek to nagłówek,
+// chipy i wykres: bez podpisu z liczbą wyników, panelu szczegółów, linii różnicy i przycisku „Ukryj wykres”.
 test.use({ serviceWorkers: 'block' });
 
 const bezTwardejSpacji = (s) => String(s).replace(/\u00a0/g, ' ');
@@ -15,7 +16,7 @@ async function tshWMiliIU(page) {
   await page.locator('#labValue').fill('0,38');
 }
 
-test('TSH: pasek za wierszem przypięcia, chipy wg zapisu, różnica, wykres bez strzałek; przypięcie dopisuje wynik', async ({ page }) => {
+test('TSH: pasek za wierszem przypięcia, chipy wg zapisu, wykres bez strzałek, bez linii różnicy; przypięcie dopisuje wynik', async ({ page }) => {
   const { patientId } = await otworzPrzelicznik(page, { wartosc: '' });
   await tshWMiliIU(page);
   const pasek = pasekHistorii(page);
@@ -27,14 +28,14 @@ test('TSH: pasek za wierszem przypięcia, chipy wg zapisu, różnica, wykres bez
     return a.nextElementSibling === b && b.nextElementSibling === c;
   })).toBe(true);
   await expect(pasek.locator('.lab-strip-title')).toHaveText('Poprzednie wyniki pacjenta · TSH · w mIU/L');
-  await expect(pasek.locator('.lab-strip-sub')).toHaveText('Fikcyjna Badaniowa · 4 wyniki · ostatni 02.06.26');
+  await expect(pasek.locator('.lab-strip-sub')).toHaveCount(0);
   const chipy = pasek.locator('button.lab-strip-chip[data-note-id]');
   await expect(chipy).toHaveCount(4);
   await expect(chipy.locator('.lab-strip-chip-v')).toHaveText(['0,01', '0,02↓', '0,05↓', '0,12↓']);
-  // Pierwszy wynik zapisany w μIU/mL: przeliczony, bez strzałki, zapis w podpowiedzi.
-  expect(bezTwardejSpacji(await chipy.first().getAttribute('title'))).toBe('zapisano: 0,01 μIU/mL');
-  await expect(pasek.locator('.lab-strip-now')).toContainText('teraz · niezapisany');
-  expect(await tekst(pasek.locator('.lab-strip-diff'))).toBe('ostatni zapisany wynik: 02.06.26 (15 dni temu) · 0,12 mIU/L · teraz 0,38 → różnica +0,26 mIU/L (data bieżącej próbki ustalana przy przypięciu)');
+  // Pierwszy wynik zapisany w μIU/mL: przeliczony, bez strzałki, zapis i komentarz wpisu w podpowiedzi (6.39).
+  expect(bezTwardejSpacji(await chipy.first().getAttribute('title'))).toBe('zapisano: 0,01 μIU/mL · komentarz: rozpoznanie · tiamazol 30 mg');
+  expect(await tekst(pasek.locator('.lab-strip-now'))).toBe('teraz 0,38');
+  await expect(pasek.locator('.lab-strip-diff')).toHaveCount(0);
 
   const svg = pasek.locator('svg.lab-strip-svg');
   await expect(svg.locator('g.lab-strip-pt')).toHaveCount(4);
@@ -50,14 +51,14 @@ test('TSH: pasek za wierszem przypięcia, chipy wg zapisu, różnica, wykres bez
   prostokaty.sort((a, b) => a.l - b.l);
   for (let i = 1; i < prostokaty.length; i++) expect(prostokaty[i].l).toBeGreaterThanOrEqual(prostokaty[i - 1].r);
 
-  // Szczegóły po kliknięciu chipa i zwijanie wykresu.
+  // Klik chipa zaznacza chip i punkt (bez panelu szczegółów); komentarz wpisu w podpowiedzi; wykres bez zwijania.
   await chipy.nth(1).click();
-  await expect(pasek.locator('.lab-strip-detail-h')).toHaveText('25.02.26 · 0,02 mIU/L↓');
-  await expect(pasek.locator('.lab-strip-detail-comment')).toHaveText('komentarz: redukcja do 20 mg');
-  await pasek.locator('button.lab-strip-toggle').click();
-  await expect(pasek.locator('svg.lab-strip-svg')).toHaveCount(0);
-  await expect(pasek.locator('button.lab-strip-toggle')).toHaveAttribute('aria-expanded', 'false');
-  await pasek.locator('button.lab-strip-toggle').click();
+  await expect(chipy.nth(1)).toHaveAttribute('aria-pressed', 'true');
+  await expect(pasek.locator('.lab-strip-detail')).toHaveCount(0);
+  await expect(chipy.nth(1)).toHaveAttribute('title', /komentarz: redukcja do 20 mg$/);
+  await expect(pasek.locator('button.lab-strip-toggle')).toHaveCount(0);
+  await expect(svg.locator('g.lab-strip-pt.is-selected')).toHaveCount(1);
+  await expect(pasek.locator('.lab-strip-chart-note, .lab-strip-foot')).toHaveCount(0);
   await expect(pasek.locator('svg.lab-strip-svg')).toHaveCount(1);
 
   // Przypięcie: nowy wpis w pasku, bieżący wynik oznaczony jako przypięty.
@@ -65,15 +66,15 @@ test('TSH: pasek za wierszem przypięcia, chipy wg zapisu, różnica, wykres bez
   await page.locator('#labPinDate').fill('2026-06-17');
   await page.locator('#labPinSave').click();
   await expect(page.locator('#labPinOverlay')).toHaveCount(0);
-  await expect(pasek.locator('.lab-strip-sub')).toHaveText('Fikcyjna Badaniowa · 5 wyników · ostatni 17.06.26');
+  await expect(chipy).toHaveCount(5);
   await expect(chipy.last().locator('.lab-strip-chip-d')).toHaveText('17.06.26');
   // LAB-HISTORIA 6.38 (P-PRZYPIETY-WYNIK): przypięty wynik formularza to ten sam pomiar co nowy chip — bez chipu
-  // „teraz”, chip notatki ze znacznikiem „✓ z formularza”, różnica bez porównania z samym sobą, przycisk „✓ Przypięto”.
+  // „teraz”, chip notatki wyróżniony tłem (od 6.39 bez znacznika „✓ z formularza”), przycisk „✓ Przypięto”.
   await expect(pasek.locator('.lab-strip-now')).toHaveCount(0);
   await expect(chipy.last()).toHaveClass(/is-pinned/);
-  await expect(chipy.last().locator('.lab-strip-chip-pin')).toHaveText('· ✓ z formularza');
-  await expect(pasek.locator('.lab-strip-diff')).toContainText('ostatni zapisany wynik: 17.06.26 (dziś)');
-  await expect(pasek.locator('.lab-strip-diff')).toContainText('to wynik z formularza, już w karcie');
+  await expect(chipy.last().locator('.lab-strip-chip-pin')).toHaveCount(0);
+  expect(await tekst(chipy.last())).toBe('17.06.26 0,38↓');
+  await expect(page.locator('#labPinSub')).toHaveText('Już w karcie · data badania 17.06.26');
   await expect(page.locator('#labPinResultBtn')).toHaveText('✓ Przypięto');
   // Pasek niczego nie zapisuje: jedyna nowa notatka to przypięcie.
   const tsh = (await page.evaluate((pid) => window.VildaVault.listPatientNotesForPatient(pid), patientId))
@@ -98,7 +99,7 @@ test('zmiana #labUnit: wyniki przeliczone bez ↑/↓ (K26); badanie bez wynikó
   await expect(pasek).toBeHidden();
 });
 
-test('LH: wynik z operatorem bez punktu, zapisana ocena w szczegółach; kolejność przed wykresem hormonów; „Wyczyść” bez śladu w układzie', async ({ page }) => {
+test('LH: wynik z operatorem bez punktu, zapisana ocena w podpowiedzi chipu; kolejność przed wykresem hormonów; „Wyczyść” bez śladu w układzie', async ({ page }) => {
   await otworzPrzelicznik(page, { badanie: null });
   // Pusty formularz → wynik LH → „Wyczyść”: dół treści panelu wyniku wraca dokładnie na swoje miejsce (pasek nie
   // zostawia odstępu). Mierzymy treść panelu, nie przycisk „Wyczyść”: od warsztatu na szerokim ekranie przycisk stoi
@@ -124,9 +125,10 @@ test('LH: wynik z operatorem bez punktu, zapisana ocena w szczegółach; kolejno
   const chipy = pasek.locator('button.lab-strip-chip[data-note-id]');
   await expect(chipy.locator('.lab-strip-chip-v')).toHaveText(['<0,1', '1,8', '2,4']);
   await expect(pasek.locator('svg g.lab-strip-pt')).toHaveCount(2);
+  // Zapisana ocena cytowana dosłownie w podpowiedzi chipu (6.39: bez panelu szczegółów), z komentarzem wpisu.
   await chipy.nth(1).click();
-  await expect(pasek.locator('.lab-strip-assessment .vilda-lab-assessment')).toHaveCount(1);
-  await expect(pasek.locator('.lab-strip-detail-comment')).toHaveText('komentarz: Fikcyjny komentarz LH');
+  await expect(pasek.locator('.lab-strip-assessment .vilda-lab-assessment')).toHaveCount(0);
+  await expect(chipy.nth(1)).toHaveAttribute('title', /ocena zapisana z wynikiem: „[^”]+” · komentarz: Fikcyjny komentarz LH$/);
 
   await page.locator('#labClearBtn').click();
   await expect(pasek).toBeHidden();
@@ -140,7 +142,7 @@ test('„Badania w karcie →” poza powłoką otwiera kartę pacjenta na zakł
   const pasek = pasekHistorii(page);
   await expect(pasek).toHaveClass(/is-on/);
 
-  // Drugi fikcyjny pacjent bez wyników TSH: pasek znika; pacjent z wynikiem — jego dane i nazwisko z sejfu.
+  // Drugi fikcyjny pacjent bez wyników TSH: pasek znika; pacjent z wynikiem — jego dane z sejfu.
   const drugi = await page.evaluate(async () => (await window.VildaVault.savePatient({
     name: 'Fikcyjny Drugi', user: { name: 'Fikcyjny Drugi', sex: 'M', age: 9, ageMonths: 0, height: 130, weight: 28 },
   }, { dedup: false })).patientId);
@@ -154,9 +156,9 @@ test('„Badania w karcie →” poza powłoką otwiera kartę pacjenta na zakł
     patientId: pid, title: 'Fikcyjne TSH', body: '', category: 'wynik-badania', clinicalDateISO: '2026-05-20',
     labResult: { test: 'TSH (tyreotropina)', testKey: 'tsh', value: '3,1', valueNum: 3.1, unit: 'mIU/L' },
   }), drugi);
-  await expect(pasek.locator('.lab-strip-sub')).toHaveText('Fikcyjny Drugi · 1 wynik · ostatni 20.05.26');
+  await expect(pasek.locator('button.lab-strip-chip[data-note-id] .lab-strip-chip-d')).toHaveText(['20.05.26']);
   await ustawPacjenta(patientId);
-  await expect(pasek.locator('.lab-strip-sub')).toHaveText('Fikcyjna Badaniowa · 4 wyniki · ostatni 02.06.26');
+  await expect(pasek.locator('button.lab-strip-chip[data-note-id] .lab-strip-chip-d')).toHaveText(['14.01.26', '25.02.26', '08.04.26', '02.06.26']);
 
   await pasek.locator('.lab-strip-head button.lab-strip-link').click();
   await expect(page.locator('.vilda-patient-tab[data-tab="lab"]')).toHaveClass(/active/);
