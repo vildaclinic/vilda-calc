@@ -100,7 +100,10 @@ describe('Kafelki, dymek siatki i oś czasu Karty — strażnicy źródła i kol
     expect(karta).toContain('i.VildaBmi.policz({bmi:t,plec:a,wiekMies:n*12,zrodlo:o})');
     expect(karta).toContain('Y.push("bmiSDS "+be(q,"",2))');
     expect(karta).toContain('Y.push("BMI "+qt(dt,1)+" kg/m\\xB2")');
-    expect(karta).toContain('var mt=x!=null&&k!=null&&!s?k-x:null,f=$.evaluate(it,{weeks:Q,massPct:N,bmiPct:H,bmiSdsDelta:mt})');
+    // P-OTYLOSC-WZROST (2026-11-18): ΔbmiSDS z ostatniego punktu (k−x), a gdy ocena dziecka liczy się z wcześniejszego
+    // punktu ze wzrostem (Ob_pkt) — z tego punktu, tą samą bezwzględną różnicą SDS (P-BMI-3).
+    expect(karta).toContain('var mt=Ob_po&&Ob_po.inny?Ob_po.bmiSdsDelta:x!=null&&k!=null&&!s?k-x:null,f=Ob_po&&Ob_po.wstrzymaj?null:$.evaluate(it,{weeks:Q,massPct:N,bmiPct:H,bmiSdsDelta:mt})');
+    expect(karta).toContain('w.bmiSdsDelta = x != null && k != null ? k - x : null;');
     expect(karta).not.toContain('bmiZscorePct');
     expect(karta).toContain('f.status==="clinical-zscore"');
   });

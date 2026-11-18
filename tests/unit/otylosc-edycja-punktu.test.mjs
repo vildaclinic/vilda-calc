@@ -14,7 +14,8 @@ const zrodlo = (p) => fs.readFileSync(path.join(korzen, p), 'utf8');
 //
 // Reguły, których pilnuje `Ed()` — czystej funkcji scalającej, wyciętej tu z pliku produkcyjnego
 // i uruchamianej wprost:
-//   • komplet wiek/masa/wzrost, tak samo jak przy dodawaniu;
+//   • komplet wiek/masa, tak samo jak przy dodawaniu; wzrost — wg reguły R9 modułu cykli (P-OTYLOSC-WZROST:
+//     Kontynuacja może być bez wzrostu), a bez modułu jak dotąd obowiązkowy;
 //   • poprawny rodzaj wizyty;
 //   • BRAK drugiego punktu „Włączenie" W TYM SAMYM CYKLU — kod bierze pierwszy `start` cyklu jako
 //     punkt odniesienia oceny odpowiedzi na leczenie, więc dwa starty po cichu przestawiłyby baseline.
@@ -99,10 +100,33 @@ describe('Monitor otyłości — czego edycja nie przepuści', () => {
     expect(w.wasBaseline).toBe(true);
   });
 
-  it('brak masy, wzrostu albo wieku zatrzymuje zapis — ta sama reguła co przy dodawaniu', () => {
+  it('brak masy albo wieku zatrzymuje zapis — ta sama reguła co przy dodawaniu', () => {
     expect(Ed(PUNKTY, 'p2', late({ weight: 0 })).reason).toBe('braki');
-    expect(Ed(PUNKTY, 'p2', late({ height: Number.NaN })).reason).toBe('braki');
     expect(Ed(PUNKTY, 'p2', late({ ageMonthsTotal: 0 })).reason).toBe('braki');
+  });
+
+  // P-OTYLOSC-WZROST (decyzje właściciela 2026-11-17/18) — świadoma zmiana: dotąd brak wzrostu zawsze dawał
+  // „braki”. Teraz regułę wzrostu (R9) trzyma moduł cykli: Kontynuacja może być bez wzrostu, Włączenie nie.
+  it('Kontynuacja bez wzrostu zapisuje się — BMI punktu zostaje puste, nie stare', () => {
+    const w = Ed(PUNKTY, 'p2', late({ height: Number.NaN }));
+    expect(w.ok).toBe(true);
+    expect(w.point.height).toBeNull();
+    expect(w.point.bmi).toBeNull();
+    expect(Ed(PUNKTY, 'p2', late({ height: '' })).point.height).toBeNull();
+    expect(Ed(PUNKTY, 'p2', late({ height: null })).point.bmi).toBeNull();
+  });
+
+  it('Włączenie bez wzrostu — odmowa modułu cykli „brak-wzrostu” z komunikatem', () => {
+    const w = Ed(PUNKTY, 'p1', late({ type: 'start', ageMonthsTotal: 156, weight: 91, height: Number.NaN }));
+    expect(w.ok).toBe(false);
+    expect(w.reason).toBe('brak-wzrostu');
+    expect(w.message).toMatch(/Włączenie.*wymaga wzrostu/);
+  });
+
+  it('bez modułu cykli brak wzrostu zatrzymuje zapis jak dotąd (kontrola negatywna)', () => {
+    expect(EdSurowe(PUNKTY, 'p2', late({ height: Number.NaN }), null).reason).toBe('braki');
+    expect(EdSurowe(PUNKTY, 'p2', late({ height: 0 }), null).reason).toBe('braki');
+    expect(EdSurowe(PUNKTY, 'p2', late(), null).ok).toBe(true);
   });
 
   it('nieznany rodzaj wizyty nie przechodzi', () => {

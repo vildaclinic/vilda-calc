@@ -186,7 +186,7 @@
 <script defer src="vilda_persistence_adapter.js?v=39"></script>
 <script src="vilda_reminders_privacy.js?v=1"></script>
 <script defer src="vilda_panel_pacjent.js?v=5"></script>
-<script defer src="vilda_session_bridge.js?v=217"></script>
+<script defer src="vilda_session_bridge.js?v=218"></script>
 <script defer src="vilda_init.js?v=5"></script>
 <script defer src="vilda_crypto.js?v=15"></script>
 <script defer src="vilda_retention.js?v=2"></script>
@@ -216,7 +216,7 @@
 <script defer src="vilda_realtime.js?v=11"></script>
 <script defer src="vilda_nowe_urzadzenie.js?v=2"></script>
 <script defer src="qrcode.min.js?v=1"></script>
-<script defer src="obesity_response_criteria.js?v=4"></script>
+<script defer src="obesity_response_criteria.js?v=5"></script>
 <script defer src="gh_therapy_segments.js?v=5"></script>
 <!-- P-GH-WAZNOSC: dane i licznik opakowan GH/IGF-1 (waznosc po otwarciu, ChPL 6.3); czyta je karta gh_igf_therapy.js -->
 <script defer src="vilda_gh_opakowania_dane.js?v=1"></script>
@@ -246,7 +246,7 @@
 <script defer src="vilda_search_navigation.js?v=1"></script>
 <script defer src="vilda_patients_list.js?v=5"></script>
 <script defer src="vilda_visit_context.js?v=1"></script>
-<script defer src="vilda_auth_ui.js?v=566"></script>
+<script defer src="vilda_auth_ui.js?v=567"></script>
 <script defer src="vilda_urodzeniowe_rozbieznosc.js?v=1"></script>
 <script defer src="vilda_name_fix.js?v=6"></script>
 <script defer src="vilda_version_history_ui.js?v=17"></script>
@@ -417,7 +417,7 @@
            user data fields into two columns on larger screens and hide the
            standard results section that is not relevant to the professional
            module. -->
-<script defer src="vilda_chrome.js?v=301"></script>
+<script defer src="vilda_chrome.js?v=302"></script>
 <link href="vilda_lab_assessment_ui.css?v=13" rel="stylesheet">
 <link href="vilda_lab_history_tab.css?v=14" rel="stylesheet">
   <link rel="stylesheet" href="vilda_centile_live_panel.css?v=7">
@@ -535,7 +535,7 @@
       <!-- DOB-AGE-1 (decyzja właściciela 2026-09-13): data urodzenia w formularzu głównym.
            Pole OPCJONALNE; po wpisaniu poprawnej daty wiek w latach i miesiącach wypełnia się
            sam (ukończone pełne miesiące) i staje się tylko do odczytu. Logika: vilda_dob_age.js. -->
-      <link href="inline_docpro_01.css?v=4" rel="stylesheet">
+      <link href="inline_docpro_01.css?v=5" rel="stylesheet">
       <label>Data urodzenia <span style="font-weight:400;opacity:0.65;">(opcjonalnie)</span>:
         <input type="text" id="dobInput" inputmode="numeric" maxlength="10" placeholder="DD-MM-RRRR" autocomplete="bday">
       </label>
@@ -1172,28 +1172,30 @@
     <div id="obesityTabMonPanel" role="tabpanel" style="display:none;">
     <div id="obesityMonitorSection">
       <p style="text-align:center; font-size:0.82rem; color:#5a7274; margin:0 0 0.8rem;">
-        Dodawaj punkty terapii (Włączenie / Kontynuacja / Zakończenie). BMI, BMI-SDS i redukcję masy od włączenia liczymy automatycznie. Punkty zapisują się z pacjentem.
+        Dodawaj punkty terapii (Włączenie / Kontynuacja / Zakończenie). BMI, BMI-SDS i redukcję masy od włączenia liczymy automatycznie. Kontynuację zapiszesz też bez wzrostu, np. z masą przysłaną przez pacjenta. Punkty zapisują się z pacjentem.
       </p>
       <!-- Prefill leku z notatek (fix 3, 2026-07-04): pasek podpowiedzi wypełnia
            obesity_therapy.js (maybeSuggestMonitorDrugFromNotes) — DOM-safe, bez HTML. -->
       <div id="obesityMonDrugSuggest" style="display:none;border:1px dashed #f0c68a;background:#fff7ed;border-radius:10px;padding:9px 12px;margin:0 0 10px;font-size:.82rem;color:#5a7274;"></div>
       <!-- OBESITY-PREFILL-1: wiek, masa i wzrost są już w formularzu głównym — przycisk przepisuje
-           je razem z dzisiejszą datą, a przy kontynuacji także lek z poprzedniego punktu. -->
+           je razem z datą pomiaru tej wizyty (P-OTYLOSC-WZROST; gdy data nie jest pewna — dzisiejszą),
+           a przy kontynuacji także lek z poprzedniego punktu. -->
       <div class="obm-prefill">
         <button type="button" id="obesityPrefillBtn" class="igf-btn">Uzupełnij z formularza</button>
-        <span class="obm-prefill-hint">Wiek, masa, wzrost i dzisiejsza data z kalkulatora; przy kontynuacji również lek z poprzedniego punktu.</span>
+        <span class="obm-prefill-hint">Wiek, masa i wzrost z kalkulatora oraz data pomiaru tej wizyty (gdy nie jest pewna — dzisiejsza); przy kontynuacji również lek z poprzedniego punktu.</span>
       </div>
       <div class="obm-fgrid">
         <label>Wiek (lata)<input id="obesityAge" inputmode="numeric" placeholder="np. 15"></label>
         <label>Wiek — mies.<input id="obesityAgeMonths" inputmode="numeric" placeholder="0–11"></label>
         <label>Masa (kg)<input id="obesityWeight" inputmode="decimal" placeholder="np. 85,5"></label>
-        <label>Wzrost (cm)<input id="obesityHeight" inputmode="decimal" placeholder="np. 166"></label>
+        <!-- P-OTYLOSC-WZROST: wzrost wymagany przy Włączeniu i Zakończeniu cyklu dziecka, przy Kontynuacji opcjonalny; pod polem ostatni zapisany wzrost (treść ustawia obesity_therapy_monitor.js). -->
+        <label>Wzrost (cm) — opcjonalnie<input id="obesityHeight" inputmode="decimal" placeholder="np. 166" aria-describedby="obesityHeightLast"><small id="obesityHeightLast" class="obm-hlast" hidden></small></label>
         <!-- Fix 2 (2026-07-04): monitor ma WŁASNY wybór leku (dokumentuje stan
              faktyczny — celowo bez age-gate i bez confirmu poza-ChPL). Opcje
              wypełnia obesity_therapy.js (populateMonitorDrugSelect). -->
         <label>Lek<select id="obesityMonDrug"><option value="">– wybierz –</option></select></label>
         <label>Dawka<input id="obesityDose" placeholder="np. 2,4 mg"></label>
-        <label>Data wizyty<input id="obesityDate" type="date"></label>
+        <label><span>Data wizyty <span class="obm-req" aria-hidden="true">*</span></span><input id="obesityDate" type="date" aria-required="true"></label>
       </div>
       <!-- P-OTYLOSC-CYKLE rata 2: do którego cyklu trafi wizyta (na żywo, z daty i wieku); treść ustawia obesity_therapy_monitor.js. -->
       <div id="obesityTherapyAssign" class="obm-assign" role="status" aria-live="polite" hidden></div>
@@ -1204,6 +1206,8 @@
         <div class="obm-vbtn"><button type="button" class="igf-btn" data-typ="continue" onclick="window.obesityAddTherapyPoint && window.obesityAddTherapyPoint('continue')">Kontynuacja leczenia</button><small id="obesityWhy-continue" class="obm-why" hidden></small></div>
         <div class="obm-vbtn"><button type="button" class="igf-btn" data-typ="end" onclick="window.obesityAddTherapyPoint && window.obesityAddTherapyPoint('end')">Zakończenie leczenia</button><small id="obesityWhy-end" class="obm-why" hidden></small></div>
       </div>
+      <!-- P-OTYLOSC-WZROST (reguły R8/R9 modułu cykli): co musi mieć punkt danego rodzaju. -->
+      <p class="obm-rule">Data wizyty — zawsze. Włączenie zawsze ze wzrostem, Zakończenie u dziecka też. Kontynuacja — wzrost tylko, jeśli był mierzony.</p>
       <!-- P-OTYLOSC-CYKLE rata 1: komunikat o regułach cykli leczenia w miejscu przycisków (zamiast okienka); treść i przyciski wyboru wstawia obesity_therapy_monitor.js. -->
       <div id="obesityTherapyActionMsg" class="obm-msg" role="status" aria-live="polite" hidden></div>
             <!-- OBESITY-EDIT-1: pasek trybu edycji — wypełnia go monitor, gdy wczytasz punkt ołówkiem. -->
@@ -3061,8 +3065,8 @@
     <script src="flu_therapy.js?v=9" defer></script>
 <script src="obesity_therapy.js?v=12" defer></script>
 <!-- P-OTYLOSC-CYKLE rata 1: reguły cykli leczenia (jedno Włączenie, jedno Zakończenie, nowy cykl po Zakończeniu) — czysty moduł, wołany przez monitor otyłości. -->
-<script src="vilda_cykle_leczenia.js?v=3" defer></script>
-<script src="obesity_therapy_monitor.js?v=27" defer></script>
+<script src="vilda_cykle_leczenia.js?v=4" defer></script>
+<script src="obesity_therapy_monitor.js?v=28" defer></script>
 <script src="hypertension_therapy.js?v=11" defer></script>
 <script src="thyroid_cancer_kids.js?v=5" defer></script>
 

@@ -100,7 +100,10 @@ function monitor({ punkty = [], cykle } = {}) {
   if (cykle !== undefined) okno.VildaCykleLeczenia = cykle;
   const el = {};
   const dodajEl = (id, tag) => { el[id] = new El(tag); el[id].id = id; return el[id]; };
-  ['obesityAge', 'obesityAgeMonths', 'obesityDate'].forEach((id) => dodajEl(id, 'input'));
+  ['obesityAge', 'obesityAgeMonths', 'obesityDate', 'obesityHeight'].forEach((id) => dodajEl(id, 'input'));
+  // P-OTYLOSC-WZROST: podgląd przycisków niesie wzrost z formularza (R9 — Włączenie ze wzrostem). Pole jest
+  // wypełnione jak na stronie po wpisaniu wizyty albo po wczytaniu punktu ołówkiem (Ee); test R9 je czyści.
+  el.obesityHeight.value = '170';
   dodajEl('obesityTherapyAssign', 'p');
   dodajEl('obesityTherapyFixBanner', 'div');
   const lista = dodajEl('obesityMonDrug', 'select');
@@ -140,6 +143,7 @@ function monitor({ punkty = [], cykle } = {}) {
     if ('lata' in pola) el.obesityAge.value = String(pola.lata);
     if ('mies' in pola) el.obesityAgeMonths.value = String(pola.mies);
     if ('data' in pola) el.obesityDate.value = pola.data;
+    if ('wzrost' in pola) el.obesityHeight.value = String(pola.wzrost);
     if ('lek' in pola) {
       lista.selectedIndex = OPCJE.findIndex((o) => o[0] === pola.lek);
       lista.value = pola.lek;
@@ -207,6 +211,20 @@ describe('R6 w podglądzie pod przyciskami (CyS): kandydat niesie lek z formular
     expect(m.przyciskStan('start')).toEqual({ wylaczony: false, powod: '' });
   });
 
+  it('P-OTYLOSC-WZROST (R9): bez wzrostu w formularzu Włączenie jest wyłączone z krótkim powodem, Kontynuacja aktywna', () => {
+    const m = monitor({ punkty: [W_SAX, K_SAX] });
+    m.api.edytuj('a');
+    m.ustaw({ lata: 40, mies: 0, data: '2024-01-12', lek: '', wzrost: '' });
+    m.api.CyS();
+    expect(m.przyciskStan('start')).toEqual({ wylaczony: true, powod: 'Wymaga wzrostu' });
+    const n = monitor({ punkty: [W_SAX, K_SAX] });
+    n.ustaw({ lata: 40, mies: 6, data: '2024-07-12', lek: 'saxenda', wzrost: '' });
+    n.api.CyS();
+    expect(n.przyciskStan('continue')).toEqual({ wylaczony: false, powod: '' });
+    // Dorosły: Zakończenie bez wzrostu też przechodzi.
+    expect(n.przyciskStan('end')).toEqual({ wylaczony: false, powod: '' });
+  });
+
   it('edycja z pustą listą: zapasowy lek punktu liczy się w podglądzie — data przenosząca wizytę Saxendy do cyklu Wegovy jest wyłączona', () => {
     // Zapis (Eb → Eh) weźmie lek edytowanego punktu, więc moduł odmówi; podgląd z gołym ht()
     // (pusty lek = punkt neutralny) pokazałby aktywny przycisk.
@@ -260,7 +278,7 @@ describe('R6 na banerze porządkowania (CyB) i podpowiedź Zakończenia (CsZ)', 
     expect(m.slad.ec, 'formularz wraca do dodawania (jak przy dwóch Włączeniach)').toBe(1);
     expect(m.slad.komunikat).toEqual({
       klasa: 'warn',
-      tekst: 'Wpisz wizytę kończącą leczenie Saxenda — datę (najpóźniej 12.07.2024; może być ten sam dzień), masę i wzrost — wybierz w liście lek Saxenda i „Zakończenie leczenia”. Potem zmień wizytę 12.07.2024 na Włączenie (ołówek przy wizycie).',
+      tekst: 'Wpisz wizytę kończącą leczenie Saxenda — datę (najpóźniej 12.07.2024; może być ten sam dzień), masę (u dziecka także wzrost) — wybierz w liście lek Saxenda i „Zakończenie leczenia”. Potem zmień wizytę 12.07.2024 na Włączenie (ołówek przy wizycie).',
       akcje: [],
     });
     expect(m.slad.punkty, 'podpowiedź niczego nie zapisuje').toBe(STARY);
@@ -311,7 +329,7 @@ describe('R6 na banerze porządkowania (CyB) i podpowiedź Zakończenia (CsZ)', 
     expect(p[0].pasekAkcji).toBe(false);
     expect(p[1].akcje).toEqual(['Dopisz Zakończenie przed 12.07.2024', 'Edytuj wizytę 12.07.2024']);
     p[1].przycisk('Dopisz Zakończenie przed 12.07.2024').click();
-    expect(m.slad.komunikat.tekst).toBe('Wpisz wizytę kończącą leczenie Saxenda — datę (najpóźniej 12.07.2024; może być ten sam dzień), masę i wzrost — wybierz w liście lek Saxenda i „Zakończenie leczenia”.');
+    expect(m.slad.komunikat.tekst).toBe('Wpisz wizytę kończącą leczenie Saxenda — datę (najpóźniej 12.07.2024; może być ten sam dzień), masę (u dziecka także wzrost) — wybierz w liście lek Saxenda i „Zakończenie leczenia”.');
   });
 
   it('dwa Włączenia z tym samym lekiem (np. po poprawce leku drugiego): pozycja i podpowiedź jak przed ratą 4', () => {
@@ -324,10 +342,10 @@ describe('R6 na banerze porządkowania (CyB) i podpowiedź Zakończenia (CsZ)', 
       ['Zmień 12.07.2024 na Kontynuację', 'Dopisz Zakończenie przed 12.07.2024'],
     ]]);
     p[0].przycisk('Dopisz Zakończenie przed 12.07.2024').click();
-    expect(m.slad.komunikat.tekst).toBe('Wpisz dane wizyty, która zakończyła wcześniejszy cykl — datę (przed 12.07.2024), masę i wzrost — i wybierz „Zakończenie leczenia”.');
+    expect(m.slad.komunikat.tekst).toBe('Wpisz dane wizyty, która zakończyła wcześniejszy cykl — datę (przed 12.07.2024), masę (u dziecka także wzrost) — i wybierz „Zakończenie leczenia”.');
     // Wariant dwóch Włączeń nie zostawia przypomnienia o kroku 2 poprawki R6.
     m.api.CsK();
-    expect(m.slad.komunikat.tekst).toBe('Wpisz dane wizyty, która zakończyła wcześniejszy cykl — datę (przed 12.07.2024), masę i wzrost — i wybierz „Zakończenie leczenia”.');
+    expect(m.slad.komunikat.tekst).toBe('Wpisz dane wizyty, która zakończyła wcześniejszy cykl — datę (przed 12.07.2024), masę (u dziecka także wzrost) — i wybierz „Zakończenie leczenia”.');
   });
 
   it('Zakończenie z nowym lekiem: tylko edycja (drugiego Zakończenia cykl nie przyjmie)', () => {
