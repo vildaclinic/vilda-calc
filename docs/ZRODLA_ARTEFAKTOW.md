@@ -1880,6 +1880,72 @@ Opis: `docs/clinical/ALGORITHMS.md`, „LAB-HISTORIA 6.39”; `docs/LAB_HISTORIA
 
 Tekst jest ten sam co `PP_PIN_SUB` w czytelnym bloku, więc wiersz nie zmienia podpisu, zanim blok go odświeży. `tests/unit/lab-pin-pinned-state.test.mjs` pilnuje, że oba ciągi występują dokładnie raz, a dawnego tekstu nie ma. Bez nowych stylów ustawianych wprost na elementach (liczba dla `lab_pin_result.js` w `tests/fixtures/style-elementow.json` zostaje 17); znaczniki wycinków testów (`var Lh2AssessmentProvider=`, `var s=null;`, `async function A(`, `function I(){`) bez zmian.
 
+## Łatka P-OTYLOSC-WZROST — Kontynuacja bez wzrostu, data każdego punktu, ocena dziecka z ostatniego punktu ze wzrostem (`obesity_therapy_monitor.js` 27 → 28, `vilda_auth_ui.js` 566 → 567, `obesity_response_criteria.js` 4 → 5, 2026-11-18, decyzje właściciela)
+
+Opis działania i przypadki: `docs/clinical/ALGORITHMS.md`, „Leczenie otyłości — etap 1” (P-OTYLOSC-WZROST). Zmiany w czytelnych źródłach (`vilda_cykle_leczenia.js` VERSION 3 — R8, R9, `wzrostWymagany`; `docpro.html`; style w `inline_docpro_01.css`) nie wymagają opisu łatki. W trzech plikach zminifikowanych są podmiany dokładnych ciągów i wstawione czytelne bloki, bez ponownej minifikacji:
+
+```js
+// obesity_response_criteria.js — czytelny blok przed obiektem modułu (od nowej linii)
+//    było:  …zdanieGrupy(nazwa,wiek){…}var g={CRITERIA:d,…,zdaniaLeku:zdaniaLeku,zdanieGrupy:zdanieGrupy};
+//    jest:  …zdanieGrupy(nazwa,wiek){…}
+//           /* P-OTYLOSC-WZROST … */ function Pw_ms(t){…} function Pw_mies(p){…} function Pw_bmi(p){…}
+//           function tygodnieOceny(start,p){…} function Pw_okno(grupa,tygodnie){…} function punktOceny(kryterium,punkty){…}
+//           var g={CRITERIA:d,…,zdanieGrupy:zdanieGrupy,punktOceny:punktOceny,tygodnieOceny:tygodnieOceny};
+
+// obesity_therapy_monitor.js
+// 1. vt: wiek i masa obowiązkowe; wzrost opcjonalny przy module cykli, wpisany zły — błąd przy polu
+//    było:  if(!isFinite(o)||!(o>0)||!isFinite(r)||!(r>0)||!(s>0)){Cm("err","Uzupe\u0142nij co najmniej wiek, mas\u0119 i wzrost, aby doda\u0107 punkt leczenia.");return}
+//    jest:  if(!isFinite(o)||!(o>0)||!(s>0)||!Hc()&&!(isFinite(r)&&r>0)){Cm("err",Hm("doda\u0107 punkt leczenia"));return}var Hz=Hw(J("obesityHeight"));if(Hz.blad){Cm("err",Hz.blad),Hf("obesityHeight");return}r=Hz.wzrost;
+// 2. vt: odmowa modułu cykli wskazuje pole
+//    było:  Cr.wybor?Cw(Cr):Cm("err",Cr.komunikat);return}
+//    jest:  Cr.wybor?Cw(Cr):(Cm("err",Cr.komunikat),Hk(Cr.kod));return}
+// 3. Ed (czysta): wzrost opcjonalny, gdy jest moduł cykli (4. argument albo window); bez modułu — „braki” jak dotąd
+//    było:  var b=Number(u.weight),p=Number(u.height),M=Math.round(Number(u.ageMonthsTotal));if(!isFinite(b)||!(b>0)||!isFinite(p)||!(p>0)||!isFinite(M)||!(M>0))return{ok:!1,reason:"braki"};
+//    jest:  var b=Number(u.weight),p=u.height==null?NaN:Number(u.height),M=…,Hv=arguments.length>3?arguments[3]:typeof window<"u"?window.VildaCykleLeczenia:null;/* … */isFinite(p)&&p>0||(p=null);if(!isFinite(b)||!(b>0)||!isFinite(M)||!(M>0)||p==null&&!(Hv&&typeof Hv.sprawdz=="function"))return{ok:!1,reason:"braki"};
+// 4. Eb: wpisany zły wzrost — błąd przy polu
+//    było:  if(!Es)return!1;Cc();
+//    jest:  if(!Es)return!1;Cc();var Hz=Hw(J("obesityHeight"));if(Hz.blad){Cm("err",Hz.blad),Hf("obesityHeight");return!1}
+// 5. Eb: komunikat braków i wskazanie pola
+//    było:  b.reason==="braki"?"Uzupe\u0142nij co najmniej wiek, mas\u0119 i wzrost, aby zapisa\u0107 zmiany.":   …   Cm("err",p);return!1}
+//    jest:  b.reason==="braki"?Hm("zapisa\u0107 zmiany"):   …   Cm("err",p),Hk(b.reason);return!1}
+// 6. Eb: pytanie przy usunięciu wzrostu, który był (obok dawki i daty, OBESITY-EDIT-2)
+//    było:  f(Em.dateISO)&&!f(a)&&En.push(
+//    jest:  Number(Em.height)>0&&!(Hz.wzrost>0)&&En.push("Usuni\u0119cie wzrostu: …");f(Em.dateISO)&&!f(a)&&En.push(
+// 7. Ep: data pomiaru tej wizyty, a gdy nie jest pewna — dzisiejsza
+//    było:  Ek("obesityHeight",s),Ek("obesityDate",Et())
+//    jest:  Ek("obesityHeight",s),Ek("obesityDate",Hd()||Et())
+// 8. podgląd przycisków (CyS, CyE) z wzrostem z formularza, odświeżenie podpowiedzi wzrostu, nasłuch pola wzrostu
+//    było:  weight:1,height:1,dateISO:r          jest:  weight:1,height:x("obesityHeight"),dateISO:r
+//    było:  n.type=t.type,n.ageYears=t.ageYears,n.ageMonths=t.ageMonths,n.dateISO=t.dateISO
+//    jest:  n.type=t.type,n.ageYears=t.ageYears,n.ageMonths=t.ageMonths,n.height=t.height,n.dateISO=t.dateISO
+//    było:  function CyS(){                      jest:  function CyS(){typeof Hl=="function"&&Hl();
+//    było:  ["obesityDate","obesityAge","obesityAgeMonths"].forEach(…
+//    jest:  ["obesityDate","obesityAge","obesityAgeMonths","obesityHeight"].forEach(…
+// 9. teksty podpowiedzi Zakończenia (CyZ, CsZ): „masę i wzrost” → „masę (u dziecka także wzrost)”
+// 10. czytelny blok przed Ep (od nowej linii): Hc, Hm, Hw, Hf, Hk, Hd, Hl
+
+// vilda_auth_ui.js (Ob_b w Ml)
+// 1. wejście oceny z punktu oceny
+//    było:  var mt=x!=null&&k!=null&&!s?k-x:null,f=$.evaluate(it,{weeks:Q,massPct:N,bmiPct:H,bmiSdsDelta:mt}),K=null,P="";
+//    jest:  var Ob_po=typeof Ob_pkt=="function"?Ob_pkt($,it,o,l,c,a,n,Ob_g,Ob_m,N,u):null;Ob_po&&Ob_po.inny&&(Q=Ob_po.weeks,_=Ob_po.zWieku,H=Ob_po.bmiPct);var mt=Ob_po&&Ob_po.inny?Ob_po.bmiSdsDelta:x!=null&&k!=null&&!s?k-x:null,f=Ob_po&&Ob_po.wstrzymaj?null:$.evaluate(…),K=null,P="";
+// 2. kafelek „Wzrost do oceny” za „Próg ChPL”
+//    było:  ht.thresholdPct!=null?"%":"",ht.label));var KT=
+//    jest:  ht.thresholdPct!=null?"%":"",ht.label)),Ob_po&&Ob_po.kafelek&&ot.push(Ob_po.kafelek);var KT=
+// 3. stan wstrzymania albo dopisek o punkcie oceny — po wyborze werdyktu, przed notą o kotwicy nominalnej
+//    było:  :gt={cls:"wait",ic:"\u2139\uFE0F",title:"Ocena niedost\u0119pna",desc:""};try{if(gt&&f&&f.anchorMode==="nominalna"
+//    jest:  :gt={…};Ob_po&&(Ob_po.wstrzymaj&&Ob_po.stan?gt=Ob_po.stan:Ob_po.inny&&gt&&Ob_po.dopisek&&(gt.desc=(gt.desc?gt.desc+" ":"")+Ob_po.dopisek));try{if(gt&&f&&f.anchorMode==="nominalna"
+// 4. kafelek „Redukcja BMI”: podpis, gdy ostatni wpis nie ma wzrostu
+//    było:  s?"dodaj punkt kontrolny":null));var V=
+//    jest:  s?"dodaj punkt kontrolny":v==null?"ostatni wpis bez wzrostu":null));var V=
+// 5. czytelny blok Ob_pkt przed function Ob_css( (od nowej linii)
+```
+
+**Dlaczego strażnicy `typeof`.** `tests/unit/monitor-otylosci-r6.test.mjs` uruchamia wycinek monitora z `CyS` bez czytelnego bloku — `CyS` woła `Hl` tylko, gdy istnieje. W `Ob_b` `Ob_pkt` jest wołane przez `typeof`, a przy jego braku albo przy module kryteriów bez `punktOceny` (starsza wersja w pamięci) `Ob_po` jest `null`, czyli ocena jak przed etapem 1.
+
+**Dlaczego `Ed` bez pomocników.** `tests/unit/otylosc-edycja-punktu.test.mjs` wycina `function Ed(t,e,n)` … `function Q(t)` razem z `L` i `f` — reguła wzrostu jest więc w samym `Ed` (moduł cykli z 4. argumentu albo z `window`, jak dotąd w `Cv`).
+
+**Granice.** Znaczniki wycinków testów bez zmian: w monitorze `function L(t,e)`, `var g=""`, `var ft="`, `function R(t)`, `function Ed(t,e,n)`, `function Q(t)`, `function Eh()`, `function Ee(t)`, `function Eo(t)`, `function Et(t)`, `function Ek(t,e)`, `function CyB(t)`, `function z()`, `function CyL(t)`, `function CyG(t,e)`; w Karcie `function Ye(`, `function An(`, `function Ob_ks(`, `function Ob_css(`, `if(Ob_m.bad&&Ob_m.bad.length){`, `/* Zakonczony cykl`. Czytelny blok `Ob_pkt` leży w wycinku `function Ob_ks(` … `function Ob_css(` testów Karty — tylko jako deklaracja, której te testy nie wołają. Bez nowych stylów ustawianych wprost na elementach. Sejf, eksport i import bez zmian.
+
 ## Trwała tożsamość wizyt — źródło i granica artefaktu sejfu
 
 Zmiana funkcjonalna `P-TRWALE-WIZYTY` ma bazę `audyt` z commita

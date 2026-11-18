@@ -54,11 +54,24 @@
  * Zakończenie wpisane tuż przed pierwszym punktem nowej substancji starego zapisu jest poprawką
  * (jak rozdzielenie dwóch Włączeń w racie 2) — odcięta część staje się cyklem bez Włączenia;
  * samo Zakończenie musi i wtedy mieć lek zamykanego cyklu (albo być bez leku).
+ *
+ * P-OTYLOSC-WZROST (wersja 3; decyzje właściciela 2026-11-17/18, etap 1 projektu „Leczenie otyłości
+ * — wpisy poza wizytą”): rodzice co miesiąc przysyłają masę dziecka, a wzrost dziecka nie zmienia się
+ * istotnie z miesiąca na miesiąc (dorosły w ogóle nie rośnie). Dlatego:
+ *   R8 — KAŻDY NOWY punkt (także Kontynuacja) wymaga daty wizyty: od niej liczą się tygodnie
+ *        leczenia i okno oceny wg ChPL, a jeden punkt bez daty przestawia kolejność całej listy na
+ *        wiek. Stare punkty bez daty wolno poprawiać jak dotąd (R7 pilnuje Włączenia i Zakończenia);
+ *   R9 — wzrost jest wymagany przy Włączeniu (punkt odniesienia BMI i kwalifikacji) oraz przy
+ *        Zakończeniu cyklu dziecka (wiek przy Włączeniu cyklu < 18 l.: grupy ChPL dzieci oceniają
+ *        odpowiedź z BMI). Kontynuacja — wzrost tylko, jeśli był zmierzony. Stary punkt bez wzrostu
+ *        wolno poprawiać bez dopisywania wzrostu, dopóki nie zmienia rodzaju (jak R7 dla daty).
+ * Moduł dalej niczego nie liczy klinicznie: sprawdza tylko, czy punkt niesie dane, bez których
+ * ocena wg ChPL nie powstanie. `wzrostWymagany(lista, punkt)` podaje tę regułę do podpowiedzi.
  */
 (function (w) {
   'use strict';
 
-  var VERSION = '2';
+  var VERSION = '3';
   var RODZAJE = { start: 1, 'continue': 1, end: 1 };
 
   // ── Daty i wiek: te same reguły co monitor (H, K, A, D w obesity_therapy_monitor.js) ──────
@@ -420,6 +433,40 @@
     return null;
   }
 
+  // ── R9: wzrost przy Włączeniu i przy Zakończeniu cyklu dziecka ─────────────────────────
+
+  function maWzrost(p) {
+    var h = Number(p && p.height);
+    return isFinite(h) && h > 0;
+  }
+
+  // Cykl dziecka: wiek przy Włączeniu cyklu (a w cyklu bez Włączenia — przy jego 1. punkcie)
+  // poniżej 18 l. Tak samo grupę kryteriów ChPL wybiera Karta pacjenta (wiek przy Włączeniu).
+  function cyklDziecka(podzial, p) {
+    var c = cyklPunktu(podzial, p);
+    var poczatek = c ? c.wlaczenie || c.punkty[0] : p;
+    return wiekMies(poczatek) < 18 * 12;
+  }
+
+  // Czy punkt `p` z listy `lista` (lista zawiera już ten punkt) musi mieć wzrost.
+  function wzrostWymagany(lista, p) {
+    if (!p || typeof p !== 'object') return false;
+    if (p.type === 'start') return true;
+    if (p.type !== 'end') return false;
+    var pts = Array.isArray(lista) ? lista : [];
+    return cyklDziecka(podziel(pts.indexOf(p) >= 0 ? pts : pts.concat([p])), p);
+  }
+
+  function brakWzrostu(po, kand, oryg, rodzaj) {
+    if (maWzrost(kand) || !wzrostWymagany(po, kand)) return null;
+    // Stary punkt bez wzrostu wolno poprawiać bez dopisywania wzrostu, dopóki nie zmienia rodzaju.
+    if (rodzaj === 'edytuj' && oryg && oryg.type === kand.type && !maWzrost(oryg)) return null;
+    return blad('brak-wzrostu', kand.type === 'start'
+      ? 'Punkt „Włączenie” wymaga wzrostu — od BMI przy włączeniu liczy się kwalifikacja i ocena odpowiedzi na leczenie.'
+      : 'Zakończenie leczenia u dziecka wymaga wzrostu — u dzieci ocena odpowiedzi wg ChPL liczy się z BMI.',
+      { krotko: 'Wymaga wzrostu' });
+  }
+
   // Która z nowych niezgodności trafia do komunikatu. Kody sprzed R6 (dwa Włączenia, wizyta przed
   // Włączeniem, Zakończenie bez wizyt) mają pierwszeństwo — np. drugie Włączenie z innym lekiem
   // w aktywnym cyklu to dalej `dwa-wlaczenia`. Przy R6 numer wystąpienia pary nie mówi, KTÓRE
@@ -596,6 +643,12 @@
       }
     }
 
+    // R8 (P-OTYLOSC-WZROST): każdy nowy punkt z datą — Włączenie i Zakończenie sprawdził już R7.
+    if (a.rodzaj === 'dodaj' && !maDate(kand)) {
+      return blad('brak-daty', 'Punkt „Kontynuacja” wymaga daty wizyty — od niej liczą się tygodnie leczenia i okno oceny wg ChPL.',
+        { krotko: 'Wymaga daty wizyty' });
+    }
+
     // Gdy żadne miejsce nie przechodzi, oddajemy odmowę z pierwszego (najbardziej naturalnego) —
     // chyba że któreś odpadło przez zmianę substancji (R6): ta przyczyna nie zależy od miejsca
     // w remisie, a odmowa z pierwszego miejsca (np. „wypada w trakcie cyklu”) by ją zasłoniła.
@@ -611,6 +664,9 @@
       po.splice(miejsca[j], 0, kand);
       var r2 = ocen(przed, po, kand, oryg, a.rodzaj, kl, o);
       if (r2.ok) {
+        // R9 dopiero w znanym cyklu: przy Zakończeniu liczy się wiek przy Włączeniu tego cyklu.
+        var rw = brakWzrostu(po, kand, oryg, a.rodzaj);
+        if (rw) return rw;
         r2.punkty = po;
         r2.indeks = miejsca[j];
         return r2;
@@ -629,6 +685,7 @@
     sprawdz: sprawdz,
     opisPunktu: opisPunktu,
     substancja: substancja,
-    nazwaLeku: nazwaLeku
+    nazwaLeku: nazwaLeku,
+    wzrostWymagany: wzrostWymagany
   };
 }(typeof window !== 'undefined' ? window : this));
