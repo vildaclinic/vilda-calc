@@ -1,5 +1,6 @@
 import { restoreKtvVaultBaseline } from './klirens-ktv-vault-delta.mjs';
 import { restoreDurableVisitsBaseline } from './visits-vault-delta.mjs';
+import { restorePatientTreatmentBaseline } from './patient-treatment-vault-delta.mjs';
 // Verify the exact generated native-workspace delta before the original V1
 // authority proof runs. This reduction never strips arbitrary new functions.
 import { createHash } from 'node:crypto';
@@ -55,11 +56,13 @@ function reverseOnce(text, before, after) {
   return text.replace(after, before);
 }
 export function reduceClinicalWorkspaceVault(source, repository = ROOT) {
+  source = restorePatientTreatmentBaseline(source, repository);
   source = restoreDurableVisitsBaseline(source, repository);
   source = restoreKtvVaultBaseline(source);
   if (!source.includes(START)) return source;
   const manifest = JSON.parse(readFileSync(resolve(repository, 'runtime/clinical-workspace-v1/manifest.json'), 'utf8'));
-  if (manifest.namespace !== 'vilda-clinical-workspace-runtime' || manifest.version !== 1 || manifest.baseVaultSHA256 !== BASE
+  if (manifest.namespace !== 'vilda-clinical-workspace-runtime' || manifest.version !== 1
+    || (manifest.nativeIntegrationBaseVaultSHA256 || manifest.baseVaultSHA256) !== BASE
     || manifest.integratedVaultSHA256 !== digest(source) || !Array.isArray(manifest.nativeHooks)
     || manifest.nativeHooks.length !== EXPECTED_HOOKS.length) fail('unexpected integration manifest or vault image');
   const start = source.indexOf(START), end = source.indexOf(END);
@@ -75,6 +78,32 @@ export function reduceClinicalWorkspaceVault(source, repository = ROOT) {
   }
   if (digest(reduced) !== BASE) fail('non-workspace change in the native V1 artifact');
   return reduced;
+}
+// The immutable V1 integration still reduces to BASE. The next private build
+// also needs the CURRENT public base, retaining later public Vault deltas.
+// Verify these independently instead of relabelling the historical pin.
+export function deriveClinicalWorkspacePublicBase(source, repository = ROOT) {
+  reduceClinicalWorkspaceVault(source, repository);
+  const manifest = JSON.parse(readFileSync(resolve(repository, 'runtime/clinical-workspace-v1/manifest.json'), 'utf8'));
+  const marker = '{{VILDA_CURRENT_NATIVE_FRAGMENT}}';
+  const start = source.indexOf(START), end = source.indexOf(END);
+  if (start < 0 || end < start || source.includes(marker)) fail('current base delimiters');
+  const fragment = source.slice(start, end + END.length);
+  let masked = source.slice(0, start) + marker + source.slice(end + END.length);
+  for (const hook of manifest.nativeHooks.slice().reverse()) masked = reverseOnce(masked, hook.before, hook.after);
+  const baseSource = masked.replace(marker, '');
+  let replay = masked;
+  for (const hook of manifest.nativeHooks) replay = reverseOnce(replay, hook.after, hook.before);
+  if (replay.replace(marker, fragment) !== source) fail('current base replay differs');
+  return { baseSource, baseVaultSHA256: digest(baseSource), publicVaultSHA256: digest(source),
+    nativeIntegrationBaseVaultSHA256: BASE };
+}
+export function verifyClinicalWorkspaceCurrentBase(source, repository = ROOT) {
+  const derived = deriveClinicalWorkspacePublicBase(source, repository);
+  const manifest = JSON.parse(readFileSync(resolve(repository, 'runtime/clinical-workspace-v1/manifest.json'), 'utf8'));
+  if (manifest.nativeIntegrationBaseVaultSHA256 !== BASE || manifest.baseVaultSHA256 !== derived.baseVaultSHA256
+    || manifest.publicVaultSHA256 !== derived.publicVaultSHA256) fail('current public base metadata differs; refresh after the final Vault delta');
+  return derived;
 }
 export function verifyClinicalWorkspaceModules(repository = ROOT) {
   const manifest = JSON.parse(readFileSync(resolve(repository, 'runtime/clinical-workspace-v1/manifest.json'), 'utf8'));
@@ -126,7 +155,7 @@ export function verifyClinicalWorkspacePrecache(repository = ROOT) {
   if (!config || JSON.stringify(JSON.parse(config)) !== JSON.stringify(expected)) fail('precache archive configuration differs from release');
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  reduceClinicalWorkspaceVault(readFileSync(resolve(ROOT, 'vilda_vault.js'), 'utf8'));
+  verifyClinicalWorkspaceCurrentBase(readFileSync(resolve(ROOT, 'vilda_vault.js'), 'utf8'));
   verifyClinicalWorkspacePrecache();
   process.stdout.write('Clinical workspace delta and ' + verifyClinicalWorkspaceModules() + ' immutable modules verified.\n');
 }

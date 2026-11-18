@@ -59,6 +59,17 @@
   text-align: left;
   overflow-wrap: anywhere;
 }
+#vhomePatientCard .vhome-patient-heading-copy { min-width: 0; }
+#vhomePatientCard .vhome-patient-treatment-summary {
+  margin: 3px 0 0;
+  color: var(--vhome-patient-muted);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.45;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
 html.vilda-home-workspace #vhomePatientCard .vhome-patient-expand {
   box-sizing: border-box;
@@ -91,13 +102,14 @@ html.vilda-home-workspace #vhomePatientCard .vhome-patient-expand {
 
 #vhomePatientCard .vhome-patient-tabs {
   box-sizing: border-box;
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   flex: 0 0 44px;
   align-items: stretch;
-  gap: var(--space-6px);
+  gap: 0;
   height: 44px;
   min-height: 44px;
-  padding: 0 var(--space-20px);
+  padding: 0;
   border-bottom: var(--border-hairline) solid var(--vhome-patient-line);
 }
 
@@ -109,7 +121,7 @@ html.vilda-home-workspace #vhomePatientCard .vhome-patient-tab {
   flex: 0 1 auto;
   gap: var(--space-4px);
   min-width: 0;
-  width: auto;
+  width: 100%;
   min-height: 44px;
   margin: 0;
   padding: var(--space-8px) 9px;
@@ -124,6 +136,11 @@ html.vilda-home-workspace #vhomePatientCard .vhome-patient-tab {
   font-weight: 450;
   line-height: 1.4;
   white-space: nowrap;
+  transform: none !important;
+  transition: color 180ms ease, border-color 180ms ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  html.vilda-home-workspace #vhomePatientCard .vhome-patient-tab { transition: none; }
 }
 
 html.vilda-home-workspace #vhomePatientCard .vhome-patient-tab[aria-selected=true] {
@@ -144,7 +161,7 @@ html.vilda-home-workspace #vhomePatientCard .vhome-patient-tab[aria-selected=tru
   border-radius: var(--radius-4, 4px);
   background: #edf5f5;
   color: inherit;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 500;
   line-height: 1.5;
   font-variant-numeric: tabular-nums;
@@ -171,7 +188,7 @@ html.vilda-home-workspace #vhomePatientCard .vhome-patient-tab[aria-selected=tru
   gap: var(--space-4px) var(--space-10px);
   margin: 0;
   color: var(--vhome-patient-muted);
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.6;
 }
 
@@ -317,8 +334,8 @@ html.vilda-home-workspace #vhomePatientCard .vhome-patient-tab[aria-selected=tru
   -webkit-line-clamp: 2;
   flex-shrink: 0;
   margin: 0;
-  color: var(--vhome-patient-muted);
-  font-size: 14px;
+  color: var(--vhome-patient-ink);
+  font-size: 16px;
   line-height: 1.6;
   overflow: hidden;
 }

@@ -1,0 +1,350 @@
+/* Recorded treatment facts: B1 typography and native shared editor geometry. */
+.vhome-treatment,
+.vhome-treatment-editor {
+  --vpt-ink: var(--vhome-b1-ink, #294b55);
+  --vpt-muted: var(--vhome-b1-muted, #5d7580);
+  --vpt-line: var(--vhome-b1-line, #dbe7e8);
+  --vpt-soft-line: #edf2f3;
+  --vpt-accent: var(--primary, #00838d);
+  color: var(--vpt-ink);
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.5;
+}
+.vhome-treatment [hidden],
+.vhome-treatment-editor [hidden] { display: none !important; }
+.vhome-treatment,
+.vhome-treatment .vpt-content,
+.vhome-treatment .vpt-legacy,
+.vhome-treatment-editor .vpt-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16px);
+  min-width: 0;
+}
+.vhome-treatment > *,
+.vhome-treatment .vpt-content > * { min-width: 0; flex-shrink: 0; margin-block: 0; }
+.vhome-treatment .vpt-toolbar,
+.vhome-treatment .vpt-heading,
+.vhome-treatment .vpt-diagnosis-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-12px) var(--space-16px);
+  min-width: 0;
+}
+.vhome-treatment .vpt-heading { margin-bottom: var(--space-16px); }
+.vhome-treatment .vpt-toolbar-copy { display: grid; flex: 1; gap: var(--space-4px); min-width: 0; }
+html.vilda-home-workspace .vhome-native-patient-card .vhome-treatment .vpt-toolbar-copy > h3 {
+  margin: 0;
+  color: var(--vpt-ink);
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: -.2px;
+  text-transform: none;
+}
+.vhome-treatment .vpt-heading-copy,
+.vhome-treatment .vpt-diagnosis-row > div { flex: 1; min-width: 0; }
+.vhome-treatment .vpt-heading h4,
+.vhome-treatment .vpt-timeline h5 {
+  margin: 0;
+  color: var(--vpt-ink);
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -.2px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.vhome-treatment .vpt-heading p { margin-top: var(--space-4px); }
+.vhome-treatment .vpt-meta,
+.vhome-treatment-editor .vpt-meta {
+  margin: 0;
+  color: var(--vpt-muted);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+html.vilda-home-workspace :is(.vhome-treatment, .vhome-treatment-editor) .vpt-button {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  gap: var(--space-8px);
+  min-width: 0;
+  min-height: 44px !important;
+  margin: 0;
+  padding: var(--space-10px) var(--space-14px);
+  border: var(--border-hairline) solid var(--vpt-line) !important;
+  border-radius: var(--radius-8) !important;
+  background: #fff !important;
+  color: var(--vpt-accent) !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.4;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  transition: none !important;
+  transform: none !important;
+  touch-action: manipulation;
+  overflow-wrap: anywhere;
+}
+html.vilda-home-workspace :is(.vhome-treatment, .vhome-treatment-editor) .vpt-text { border-color: transparent !important; background: transparent !important; }
+html.vilda-home-workspace :is(.vhome-treatment, .vhome-treatment-editor) .vpt-primary {
+  border-color: var(--vpt-accent) !important;
+  background: var(--vpt-accent) !important;
+  color: #fff !important;
+}
+html.vilda-home-workspace :is(.vhome-treatment, .vhome-treatment-editor) .vpt-button:hover { filter: brightness(.96); transform: none !important; }
+html.vilda-home-workspace :is(.vhome-treatment, .vhome-treatment-editor) .vpt-button:disabled { cursor: default; opacity: .55; }
+:is(.vhome-treatment, .vhome-treatment-editor) :is(button, input, select, textarea):focus-visible {
+  outline: 3px solid var(--vpt-accent);
+  outline-offset: 2px;
+}
+.vhome-treatment .vpt-section {
+  box-sizing: border-box;
+  min-width: 0;
+  margin: 0;
+  padding: var(--space-20px);
+  border: var(--border-hairline) solid var(--vpt-line);
+  border-radius: var(--radius-12);
+  background: #fff;
+}
+.vhome-treatment .vpt-empty {
+  min-width: 0;
+  margin: 0;
+  padding: var(--space-14px) var(--space-16px);
+  border: var(--border-hairline) dashed var(--vpt-line);
+  border-radius: var(--radius-8);
+  background: #fff;
+  color: var(--vpt-muted);
+  font-size: 16px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.vhome-treatment .vpt-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  max-width: 100%;
+  padding: var(--space-4px) var(--space-8px);
+  border: var(--border-hairline) solid var(--vpt-line);
+  border-radius: var(--radius-6);
+  background: #f7f9fa;
+  color: var(--vpt-muted);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.35;
+  text-align: center;
+}
+.vhome-treatment .vpt-diagnosis-list { display: grid; min-width: 0; }
+.vhome-treatment .vpt-diagnosis-row { padding-block: var(--space-14px); border-bottom: var(--border-hairline) solid var(--vpt-soft-line); }
+.vhome-treatment .vpt-diagnosis-row:first-child { padding-top: 0; }
+.vhome-treatment .vpt-diagnosis-row:last-child { padding-bottom: 0; border-bottom: 0; }
+.vhome-treatment .vpt-diagnosis-row strong { font-size: 16px; font-weight: 600; line-height: 1.45; overflow-wrap: anywhere; }
+.vhome-treatment .vpt-diagnosis-row p { margin-top: var(--space-4px); }
+.vhome-treatment .vpt-episode-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-16px); min-width: 0; }
+.vhome-treatment .vpt-episode-card { display: flex; flex-direction: column; gap: var(--space-14px); }
+.vhome-treatment .vpt-episode-card .vpt-heading { align-items: flex-start; flex-wrap: wrap; gap: var(--space-8px) var(--space-12px); margin: 0; }
+.vhome-treatment .vpt-episode-card .vpt-heading h4 { font-size: 16px; letter-spacing: 0; }
+.vhome-treatment .vpt-episode-card > .vpt-actions { margin-top: auto; }
+.vhome-treatment .vpt-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-8px); min-width: 0; }
+.vhome-treatment .vpt-episode-dates { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-16px); padding-block: var(--space-12px); border-block: var(--border-hairline) solid var(--vpt-soft-line); }
+.vhome-treatment .vpt-episode-dates > div { display: grid; align-content: start; gap: var(--space-4px); min-width: 0; }
+.vhome-treatment .vpt-episode-dates strong { color: var(--vpt-ink); font-size: 16px; font-weight: 500; overflow-wrap: anywhere; }
+.vhome-treatment .vpt-line { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-12px); min-width: 0; padding-block: var(--space-12px); border-bottom: var(--border-hairline) solid var(--vpt-soft-line); }
+.vhome-treatment .vpt-line > :last-child { min-width: 0; text-align: right; overflow-wrap: anywhere; }
+.vhome-treatment .vpt-note { margin: var(--space-12px) 0 0; color: var(--vpt-ink); font-size: 16px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
+.vhome-treatment .vpt-course { min-width: 0; margin-top: var(--space-20px); }
+.vhome-treatment .vpt-timeline { margin: 0; padding: 0; list-style: none; }
+.vhome-treatment .vpt-timeline > li { display: grid; grid-template-columns: 100px minmax(0, 1fr); gap: var(--space-16px); min-width: 0; padding-block: var(--space-16px); border-bottom: var(--border-hairline) solid var(--vpt-soft-line); }
+.vhome-treatment .vpt-timeline > li:last-child { border-bottom: 0; padding-bottom: 0; }
+.vhome-treatment .vpt-timeline h5 { font-size: 16px; letter-spacing: 0; }
+.vhome-treatment .vpt-timeline p { margin-top: var(--space-4px); }
+.vhome-treatment .vpt-unsupported { min-width: 0; padding-block: var(--space-14px); border-bottom: var(--border-hairline) solid var(--vpt-soft-line); }
+.vhome-treatment .vpt-unsupported:last-child { padding-bottom: 0; border-bottom: 0; }
+.vhome-treatment .vpt-unsupported h5 { margin: 0; color: var(--vpt-ink); font-size: 16px; font-weight: 600; line-height: 1.5; overflow-wrap: anywhere; }
+.vhome-treatment .vpt-status { margin: 0; color: var(--vpt-ink); font-size: 14px; line-height: 1.5; }
+.vhome-treatment .vpt-status.is-error,
+.vhome-treatment-editor .vpt-error { color: var(--danger, #b43b45); }
+.vhome-treatment-editor .vpt-form { margin: 0; padding: 0; }
+.vhome-treatment-editor .vpt-editor-heading { display: grid; flex: 1; gap: var(--space-4px); min-width: 0; }
+.vhome-treatment-editor .vpt-editor-owner { margin: 0; color: var(--vpt-muted); font-size: 14px; font-weight: 400; line-height: 1.4; overflow-wrap: anywhere; }
+.vhome-treatment-editor .vpt-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: var(--space-16px); min-width: 0; }
+.vhome-treatment-editor .vpt-field { display: flex; flex-direction: column; gap: var(--space-8px); min-width: 0; margin: 0; color: var(--vpt-ink); font-size: 14px; font-weight: 500; line-height: 1.5; }
+html.vilda-home-workspace .vhome-treatment-editor .vpt-field :is(input, select, textarea) {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  margin: 0;
+  padding: var(--space-12px);
+  border: var(--border-hairline) solid var(--vpt-line);
+  border-radius: var(--radius-8);
+  background: #fff;
+  color: var(--vpt-ink);
+  box-shadow: none;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.45;
+}
+.vhome-treatment-editor .vpt-field textarea { min-height: 160px; resize: vertical; }
+.vhome-treatment-editor .vpt-diagnosis-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-8px) var(--space-16px); min-width: 0; margin: 0; padding: var(--space-12px) var(--space-14px); border: var(--border-hairline) solid var(--vpt-line); border-radius: var(--radius-8); background: #fff; }
+.vhome-treatment-editor .vpt-diagnosis-options legend { padding-inline: var(--space-4px); color: var(--vpt-ink); font-size: 14px; font-weight: 500; }
+.vhome-treatment-editor .vpt-check { display: flex; align-items: flex-start; gap: var(--space-10px); min-width: 0; min-height: 44px; margin: 0; padding-block: var(--space-8px); color: var(--vpt-ink); font-size: 16px; font-weight: 400; line-height: 1.5; }
+html.vilda-home-workspace .vhome-treatment-editor .vpt-check input { flex: 0 0 20px; width: 20px; height: 20px; min-height: 20px; margin: 2px 0 0; accent-color: var(--vpt-accent); }
+.vhome-treatment-editor .vpt-check span { min-width: 0; overflow-wrap: anywhere; }
+.vhome-treatment-editor .vpt-error { margin: 0; font-size: 16px; line-height: 1.5; }
+.vhome-treatment-editor .vpt-editor-context { margin: 0; color: var(--vpt-ink); font-size: 16px; font-weight: 600; line-height: 1.5; overflow-wrap: anywhere; }
+/* The native glass skin uses !important on buttons. Override that skin only
+ * for B1 controls; semantic alarm/result classes inside monitor analytics
+ * keep their original colors and remain owned by the native modules. */
+html.vilda-home-workspace .vhome-native-patient-card .vhome-treatment .vpt-toolbar-copy > p,
+html.vilda-home-workspace .vhome-native-patient-card .vhome-treatment .vpt-heading-copy > p {
+  margin: 0;
+  color: var(--vpt-muted);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+html.vilda-home-workspace .vhome-native-patient-card .vhome-treatment .vpt-heading-copy > h4 {
+  margin: 0;
+  color: var(--vpt-ink);
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: -.2px;
+}
+html.vilda-home-workspace .vhome-native-patient-card .vhome-treatment .vpt-heading-copy { display: grid; gap: var(--space-4px); }
+html.vilda-home-workspace .vhome-native-patient-card .vhome-treatment .vpt-episode-card .vpt-heading-copy > h4 { font-size: 16px; letter-spacing: 0; }
+html.vilda-home-workspace .vhome-native-patient-card .vhome-treatment .vpt-legacy .vilda-gh-summary {
+  box-sizing: border-box;
+  min-width: 0;
+  margin: 0;
+  padding: var(--space-20px);
+  border: var(--border-hairline) solid var(--vpt-line);
+  border-radius: var(--radius-12);
+  background: #fff;
+  box-shadow: none;
+}
+html.vilda-home-workspace .vhome-native-patient-card .vhome-treatment .vpt-legacy .vilda-gh-summary-head {
+  align-items: center;
+  gap: var(--space-8px) var(--space-12px);
+  margin-bottom: var(--space-16px);
+}
+html.vilda-home-workspace .vhome-native-patient-card .vhome-treatment .vpt-legacy .vilda-gh-summary-badge {
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--vpt-ink);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+html.vilda-home-workspace .vhome-native-patient-card .vhome-treatment .vpt-legacy .vilda-gh-summary-chip {
+  padding: var(--space-4px) var(--space-8px);
+  border: var(--border-hairline) solid var(--vpt-line);
+  border-radius: var(--radius-6);
+  background: #f7f9fa;
+  color: var(--vpt-muted);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.35;
+}
+html.vilda-home-workspace .vhome-native-patient-card .vhome-treatment .vpt-legacy .vilda-gh-summary-grid {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--space-16px);
+}
+html.vilda-home-workspace .vhome-native-patient-card .vhome-treatment .vpt-legacy .vilda-gh-summary-k {
+  margin: 0 0 var(--space-4px);
+  color: var(--vpt-muted);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+html.vilda-home-workspace .vhome-native-patient-card .vhome-treatment .vpt-legacy .vilda-gh-summary-v {
+  color: var(--vpt-ink);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+html.vilda-home-workspace .vhome-native-patient-card .vhome-treatment .vpt-legacy .vilda-gha-btn {
+  min-height: 44px !important;
+  height: auto !important;
+  margin: 0 !important;
+  padding: var(--space-12px) var(--space-16px) !important;
+  border: var(--border-hairline) solid var(--vpt-line) !important;
+  border-radius: var(--radius-12) !important;
+  background: #fff !important;
+  color: var(--vpt-ink) !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  line-height: 1.4 !important;
+  transition: none !important;
+  transform: none !important;
+}
+html.vilda-home-workspace .vhome-native-patient-card .vhome-treatment .vpt-legacy .vilda-gha-panel {
+  min-width: 0;
+  margin-top: var(--space-12px);
+  padding: var(--space-16px);
+  border-color: var(--vpt-line);
+  border-radius: var(--radius-12);
+  background: #fff;
+}
+html.vilda-home-workspace .vhome-native-patient-card .vhome-treatment .vpt-legacy .vilda-gha-sec {
+  margin: 0 0 var(--space-12px);
+  color: var(--vpt-ink);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: 0;
+  text-transform: none;
+}
+html.vilda-home-workspace .vhome-native-patient-card .vhome-treatment .vpt-legacy .vilda-gha-sec:not(:first-child) { margin-top: var(--space-20px); }
+html.vilda-home-workspace .vhome-native-patient-card .vhome-treatment .vpt-legacy .vilda-gha-grid { min-width: 0; gap: var(--space-12px); }
+html.vilda-home-workspace .vhome-native-patient-card .vhome-treatment .vpt-legacy .vilda-gha-k {
+  color: var(--vpt-muted);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.45;
+  letter-spacing: 0;
+  text-transform: none;
+}
+html.vilda-home-workspace .vhome-native-patient-card .vhome-treatment .vpt-legacy .vilda-gha-v { font-size: 22px; font-weight: 600; line-height: 1.25; }
+html.vilda-home-workspace .vhome-native-patient-card .vhome-treatment .vpt-legacy .vilda-gha-v small { font-size: 14px; font-weight: 400; }
+html.vilda-home-workspace .vhome-native-patient-card .vhome-treatment .vpt-legacy :is(.vilda-gha-sub, .vilda-gha-hint, .vilda-gha-note) { font-size: 14px; line-height: 1.5; }
+@media (max-width: 1000px) {
+  .vhome-treatment .vpt-episode-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 680px) {
+  .vhome-treatment .vpt-toolbar,
+  .vhome-treatment .vpt-heading,
+  .vhome-treatment .vpt-diagnosis-row { flex-wrap: wrap; gap: var(--space-8px); }
+  .vhome-treatment .vpt-toolbar > .vpt-button { width: 100%; }
+  .vhome-treatment .vpt-heading > .vpt-button,
+  .vhome-treatment .vpt-diagnosis-row > .vpt-button { margin-left: auto; }
+  .vhome-treatment .vpt-section { padding: var(--space-16px); }
+  html.vilda-home-workspace .vhome-native-patient-card .vhome-treatment .vpt-legacy .vilda-gh-summary { padding: var(--space-16px); }
+  html.vilda-home-workspace .vhome-native-patient-card .vhome-treatment .vpt-legacy .vilda-gh-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-12px); }
+  .vhome-treatment .vpt-timeline > li { grid-template-columns: minmax(0, 1fr); gap: var(--space-4px); }
+  .vhome-treatment-editor .vpt-form-grid,
+  .vhome-treatment-editor .vpt-diagnosis-options { grid-template-columns: minmax(0, 1fr); }
+}

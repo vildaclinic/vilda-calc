@@ -12,6 +12,7 @@ const nativeSources = [
   'vilda_lab_range_snapshot.js', 'vilda_lab_assessment_ui.js',
   'vilda_lab_history.js', 'vilda_lab_result_presentation.js',
   'vilda_care_plan_model.js', 'vilda_care_plans.js',
+  'runtime/patient-treatment-v1/model.js',
 ];
 const production = new Map(nativeSources.map(file => [file, source(file)]));
 const auth = source('vilda_auth_ui.js');
@@ -53,6 +54,31 @@ function fixture(overrides = {}) {
 const read = (vault, isCurrent = () => true) => w.VildaHomePatientData.read({ vault, patientId: pid, isCurrent });
 
 describe('home patient: native saved documentation projection', () => {
+  it('projects the first-open active treatment subtitle from saved documents without counting a closed episode', async () => {
+    var therapy = w.VildaPatientTreatmentModel.normalize({ schemaVersion: 1, kind: 'therapy',
+      title: 'Fikcyjne postępowanie aktywne', method: 'other', status: 'active', diagnosisIds: [], followups: [] });
+    baseNotes.push({ id: 'fictional-active-therapy', patientId: pid, category: 'treatment', treatmentContext: therapy });
+    baseNotes.push({ id: 'fictional-closed-therapy', patientId: pid, category: 'treatment',
+      treatmentContext: { ...therapy, title: 'Fikcyjny zakończony epizod', status: 'closed', endDateISO: '2026-10-31' } });
+    var before = JSON.stringify(baseNotes), result = await read(fixture());
+    expect(result.treatmentSummary).toEqual({ status: 'ready', activeCount: 1,
+      activeLabels: ['Fikcyjne postępowanie aktywne'], unsupportedCount: 0 });
+    expect(result.counts.notes).toBe(3);
+    expect(result.latestNote.id).toBe('general');
+    expect(JSON.stringify(baseNotes)).toBe(before);
+  });
+  it('keeps structured treatment records out of the general-note preview without altering encrypted-note input', async () => {
+    baseNotes.unshift(
+      { id: 'fictional-diagnosis', patientId: pid, title: 'Rozpoznanie', body: 'Fikcyjny zapis', category: 'observation', updatedAtISO: '2026-12-01T12:00:00Z', treatmentContext: { version: 1, kind: 'diagnosis', name: 'Fikcyjne rozpoznanie', code: 'I10' } },
+      { id: 'fictional-future-treatment', patientId: pid, title: 'Nowszy zapis leczenia', body: 'Fikcyjny zapis', category: 'observation', updatedAtISO: '2026-12-02T12:00:00Z', treatmentContext: { version: 99, kind: 'future' } }
+    );
+    var before = JSON.stringify(baseNotes);
+    const result = await read(fixture());
+    expect(result.counts.notes).toBe(3);
+    expect(result.latestNote.id).toBe('general');
+    expect(result.currentNotes.some(note => note.id === 'fictional-diagnosis' || note.id === 'fictional-future-treatment')).toBe(false);
+    expect(JSON.stringify(baseNotes)).toBe(before);
+  });
   it('preserves actual visit, plaintext notes, saved lab norm and flat V1 plan without reassessment', async () => {
     const result = await read(fixture());
     expect(result.areas.notes).toBe('ready'); expect(result.counts.notes).toBe(3);
