@@ -385,7 +385,49 @@ scalenie modułu opt-in nie zmienia domyślnego widoku. Eksporter, fikcyjne
 konto i blokada usług są wyłącznie narzędziami podglądu.
 
 Nowy JS i CSS strony głównej korzystają z istniejącego, sprawdzanego po SHA
-pakietu transportowego UI wizyt. Pakiet zawiera dwadzieścia zasobów zamiast trzech;
-każdy nadal ma własny wersjonowany adres i niezmienioną treść w pamięci offline.
+pakietu transportowego UI wizyt. Bieżący inwentarz pakietu określa `runtime/visit-ui-precache/manifest.json`;
+każdy zasób nadal ma własny wersjonowany adres i niezmienioną treść w pamięci offline.
 Historyczny pakiet pozostaje dostępny. Pozwala to zachować dotychczasowy limit
 600 żądań podczas instalacji PWA, bez usuwania zasobów ani rozluźniania testów.
+
+
+## Przypomnienia wybranego pacjenta
+
+Czwarta karta, obok Zaleceń dietetycznych, korzysta z oryginalnego hosta
+`#remindersInline` i natywnego kontrolera. Zgodnie z decyzją właściciela
+pokazuje sprawy wybranego pacjenta, także z przyszłymi terminami. Na stronie
+głównej mieszczą się dwa wpisy oraz pełny licznik; powiększenie udostępnia
+zakładki Do wykonania, Historia i Plany. Wszystkie cztery karty mają na
+komputerze tę samą wysokość. Tablet i telefon zachowują wysokość wynikającą
+z treści. Globalny dzwonek nadal obejmuje całe konto i zachowuje dotychczasowe
+reguły terminów oraz wyszukiwanie.
+
+Warstwa `vilda_home_reminders_runtime.js` odpowiada za umieszczenie karty oraz
+życie kontekstu konta, pacjenta i wizyty. Kontroler wiąże z nim odczyty,
+historię, plany, formularze oraz powroty z edycji. Zmiana kontekstu usuwa
+odszyfrowaną treść i zamyka należące do niego okno w powłoce. Operacja zapisu
+już przekazana natywnemu sejfowi może dokończyć zapis do pierwotnego pacjenta;
+nie zostaje przekierowana na nowego pacjenta ani nie odtwarza starego okna.
+
+`vilda_home_reminders.js` / `.css` odpowiadają za prezentację istniejących
+węzłów. Formularze, paginacja, błędy, ponawianie i zapisy nadal należą do
+natywnego modułu. Nie powstaje drugi magazyn przypomnień. Domyślny widok
+aplikacji poza opt-in przebudowy zachowuje dotychczasowe zachowanie.
+Zasady odtwarzania źródła opisuje `ZRODLA_ARTEFAKTOW.md`.
+
+Anulowanie edycji przywraca listę z jej filtrem, wyszukiwaniem i pozycją.
+Główne okno oraz jego formularze korzystają z koordynatora historii ramki
+źródłowej, wspólnego z edytorem notatek. Wstecz wywołuje natywne anulowanie;
+kontroler zachowuje odmowę zamknięcia podczas zapisu i potwierdzenia zmian.
+Historia przeglądarki zawiera wyłącznie niejawne znaczniki okien.
+
+Przekazanie kontekstu z ramki do powłoki wymaga zgodnych możliwości obu
+komponentów. Przy niepełnej aktualizacji kliknięcie wyświetla prośbę o
+odświeżenie całej karty przeglądarki. Kontekst pacjenta jest sprawdzany także
+przed odczytem i utworzeniem pełnego okna, niezależnie od warstwy prezentacji.
+
+Testy `home-workspace-reminders-foundation.spec.mjs` oraz
+`home-workspace-reminders-patient.spec.mjs` używają fikcyjnego, rzeczywistego
+sejfu. Sprawdzają automatyczne umieszczenie karty, działanie natywnych akcji,
+powroty i błędy, historię z paginacją, granicę między pacjentami i globalnym
+dzwonkiem oraz geometrię desktopową i mobilną.

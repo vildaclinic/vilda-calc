@@ -92,7 +92,7 @@ describe('production inline reminder read boundary', () => {
     const e = environment(), child = element('section', { text: 'Fikcyjny zachowany wynik' });
     e.state.hidden = true; e.host.children.push(child);
     e.host.setAttribute('data-reminders-state', 'ready'); e.host.style.height = '240px';
-    Object.assign(e.context, { root: e.host, owner: e.context.remReadOwner(), full: false, state: { tab: 'search' }, searchView: {} });
+    Object.assign(e.context, { HomeRemindersContext: null, root: e.host, owner: e.context.remReadOwner(), full: false, state: { tab: 'search' }, searchView: {} });
     vm.runInContext(production(auth, 'alive', 'remB22Create') + '\nvar retainedSearchGuard = ' + retainedGuard, e.context);
     const view = { retainHiddenSearch: vi.fn(() => e.context.retainedSearchGuard()), destroyCare: vi.fn() };
     e.context.remB22Views = new WeakMap([[e.host, view]]);

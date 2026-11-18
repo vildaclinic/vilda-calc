@@ -116,7 +116,7 @@ async function openExpandedNote(frame) {
   await expect(nativeNote(frame)).toBeVisible(); return nativeNote(frame);
 }
 
-// The mock's first row is Growth/Patient. Diet begins the following row.
+// The mock's rows are Growth/Patient, then Diet/Reminders.
 // Tab interaction never resizes the compact desktop card or writes records.
 test('home patient: approved position, equal desktop cards, keyboard tabs and pure expansion', async ({ page }) => {
   const { frame, id } = await setup(page);
@@ -124,13 +124,15 @@ test('home patient: approved position, equal desktop cards, keyboard tabs and pu
   const before = { records: await records(frame, id), clinical: await clinical(frame) };
   await frame.locator(CARD).scrollIntoViewIfNeeded();
   expect(await frame.locator('#vhomeMainCards').evaluate(root => [...root.children].map(node => node.id)))
-    .toEqual(['vhomeGrowthCard', 'vhomePatientCard', 'vhomeDietCard']);
-  const boxes = await Promise.all(['#vhomeGrowthCard', CARD, '#vhomeDietCard'].map(selector => frame.locator(selector).boundingBox()));
+    .toEqual(['vhomeGrowthCard', 'vhomePatientCard', 'vhomeDietCard', 'remindersInline']);
+  const boxes = await Promise.all(['#vhomeGrowthCard', CARD, '#vhomeDietCard', '#remindersInline'].map(selector => frame.locator(selector).boundingBox()));
   for (const box of boxes) expect(box.height).toBe(352);
   expect(boxes[1].y).toBe(boxes[0].y);
   expect(boxes[1].x).toBeGreaterThan(boxes[0].x + boxes[0].width);
   expect(boxes[2].y).toBeGreaterThanOrEqual(boxes[0].y + boxes[0].height);
   expect(boxes[1].width).toBe(boxes[0].width);
+  expect(boxes[3].y).toBe(boxes[2].y);
+  expect(boxes[3].width).toBe(boxes[2].width);
   await expect(tab(frame, /^Notatki/)).toHaveAttribute('aria-selected', 'true');
   await selectTab(frame, /^Badania/); await tab(frame, /^Badania/).focus();
   await page.keyboard.press('ArrowRight');

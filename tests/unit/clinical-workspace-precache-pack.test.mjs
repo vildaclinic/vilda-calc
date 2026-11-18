@@ -12,8 +12,11 @@ const PACK_URL = '/' + MANIFEST.precachePack.path;
 const VISIT_PACK = JSON.parse(fs.readFileSync(path.join(ROOT, 'runtime/visit-ui-precache/manifest.json'), 'utf8')).pack;
 const HISTORICAL_FILES = MANIFEST.historicalFiles || [];
 const PACK_FILES = MANIFEST.files.concat(HISTORICAL_FILES);
-// The source list remains append-only: historical addresses precede the new graph.
-const MODULE_FILES = HISTORICAL_FILES.concat(MANIFEST.files);
+// The source list remains append-only: historical addresses precede the new graph,
+// one family after another in release order. The manifest lists historical files by path.
+const RELEASED_TREES = ['37562593af68', '4002da88b355', 'e410c8725541', '67818dc1656f'];
+const MODULE_FILES = RELEASED_TREES.flatMap(tree => HISTORICAL_FILES.filter(file => file.path.split('/')[2] === tree))
+  .concat(MANIFEST.files);
 const MODULE_URLS = MODULE_FILES.map(file => '/' + file.path);
 const MODULES = new Set(MODULE_URLS);
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -87,12 +90,12 @@ describe('clinical workspace immutable precache transport', () => {
     expect(digest(PACK_BYTES)).toBe(MANIFEST.precachePack.sha256);
     expect(PACK_BYTES.length).toBe(MANIFEST.precachePack.byteLength);
     expect(MANIFEST.files).toHaveLength(51);
-    expect(HISTORICAL_FILES).toHaveLength(151);
-    expect(MODULE_URLS).toHaveLength(202);
+    expect(HISTORICAL_FILES).toHaveLength(202);
+    expect(MODULE_URLS).toHaveLength(253);
     const retainedTrees = HISTORICAL_FILES.reduce((counts, file) => {
       const prefix = file.path.split('/')[2]; counts[prefix] = (counts[prefix] || 0) + 1; return counts;
     }, {});
-    expect(retainedTrees).toEqual({ '37562593af68': 49, '4002da88b355': 51, 'e410c8725541': 51 });
+    expect(retainedTrees).toEqual({ '37562593af68': 49, '4002da88b355': 51, 'e410c8725541': 51, '67818dc1656f': 51 });
     for (const url of MODULE_URLS) expect(sw.INSTALL_CORE_URLS).toContain(url);
     expect(sw.INSTALL_CORE_URLS).not.toContain(PACK_URL);
   });
@@ -116,7 +119,8 @@ describe('clinical workspace immutable precache transport', () => {
       expect(Number(response.headers.get('content-length'))).toBe(original.byteLength);
       expect(Buffer.from(await response.arrayBuffer()), file.path).toEqual(original);
     }
-  });
+    // Every retained family adds 51 byte-for-byte comparisons of module bodies.
+  }, 30_000);
 
   it('fetches a fresh archive per install and never reuses unchecked module bodies from an older cache', async () => {
     const { sw, caches, requests, installEvent } = worker();

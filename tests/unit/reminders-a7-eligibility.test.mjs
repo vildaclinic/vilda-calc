@@ -3,6 +3,7 @@ import vm from 'node:vm';
 import { createRequire } from 'node:module';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
+import { reverseHomeRemindersHooks } from '../../tools/home-reminders-auth-hooks.mjs';
 import { authProductionReturnProgram } from '../support/search-return-auth-harness.mjs';
 
 const require = createRequire(import.meta.url);
@@ -59,7 +60,9 @@ function surface(name) {
     remMaybeForced: null, remMaybeReadSequence: 0, Fa: () => '2026-10-28', wn() {},
     Ot: (_label, error) => errors.push(error), remInlineError() {}, remShowReadError() {},
   });
-  vm.runInContext(searchReturnCode + '\n' + productionFunction(name), context);
+  // Br also reports its read phase to the optional presentation. Load the
+  // actual dependency; an unmarked legacy surface has no presentation view.
+  vm.runInContext(searchReturnCode + '\n' + 'var HomeRemindersContexts = new WeakMap();\n' + ['HomeRemindersInlineEnabled', 'HomeRemindersInlineContext', 'HomeRemindersInlineReadPhase'].map(productionFunction).join('\n') + '\n' + productionFunction(name), context);
   return { run: () => name === 'Br' ? context.Br(host) : context.tn({ force: true }),
     groups: () => rendered, errors };
 }
@@ -121,12 +124,18 @@ describe('A7 reminder eligibility returns to the pre-B2.2 daily boundary', () =>
     for (const key of ['future', 'pendingFuture', 'lectureFuture']) expect(all).not.toContain(notes[key]);
   });
 
-  it('all auth reminder reads, including workspace refresh, retain the native default cutoff', () => {
+  it('keeps native default cutoffs and adds explicit future reads only at the three scoped Home boundaries', () => {
     const reads = [];
-    visit(ast, node => {
-      if (node.type === 'CallExpression' && node.callee.type === 'MemberExpression' && node.callee.property.name === 'listPatientNotesDueByDate') reads.push(node);
-    });
-    expect(reads.length).toBeGreaterThanOrEqual(4);
-    expect(reads.map(read => source.slice(read.start, read.end))).toEqual(reads.map(read => source.slice(read.callee.start, read.callee.end) + '()'));
+    visit(ast, node => { if (node.type === 'CallExpression' && node.callee?.property?.name === 'listPatientNotesDueByDate') reads.push(node); });
+    const scoped = reads.filter(node => node.arguments.length);
+    expect(scoped).toHaveLength(3);
+    expect(scoped.every(node => node.arguments.length === 1 && node.arguments[0].value === '9999-12-31T23:59:59.999Z')).toBe(true);
+    expect(productionFunction('Br')).toContain('if (homeContext)');
+    expect(productionFunction('HomeRemindersReadGroups')).toContain('return HomeRemindersContext ?');
+    expect(productionFunction('tn')).toContain('var groups = homeContext ?');
+    const nativeAst = parse(reverseHomeRemindersHooks(source), { ecmaVersion: 'latest' }), nativeReads = [];
+    visit(nativeAst, node => { if (node.type === 'CallExpression' && node.callee?.property?.name === 'listPatientNotesDueByDate') nativeReads.push(node); });
+    expect(nativeReads.length).toBeGreaterThanOrEqual(4);
+    expect(nativeReads.every(node => node.arguments.length === 0)).toBe(true);
   });
 });

@@ -25,12 +25,12 @@ function environment() {
   const editor = vi.fn(), open = vi.fn(async () => true);
   let fixture, owner;
   const production = [authProductionReturnProgram(source),
-    ...['careSearchNavigationStart', 'careSearchNavigationCurrent', 'openCareTemplates', 'mountCare', 'switchTab', 'closed']
+    ...['HomeRemindersOwnNote', 'HomeRemindersOpenEditor', 'careSearchNavigationStart', 'careSearchNavigationCurrent', 'openCareTemplates', 'mountCare', 'switchTab', 'closed']
       .map(name => authProductionFunction(source, name, 'remB22Create')),
     authProductionFunction(source, '$t'),
   ].join('\n');
   fixture = authReturnEnvironment(production, {
-    full: true, careView: null, careHost: {}, searchView: null, searchNavigation: null,
+    full: true, HomeRemindersContext: null, careView: null, careHost: {}, searchView: null, searchNavigation: null,
     careReturn: { tab: 'search', searchContext: searchContext() },
     state: { tab: 'plans', editing: false, busy: false, historyReady: true, historyLoading: false },
     sequence: 0, root: { classList: { remove: vi.fn() } },

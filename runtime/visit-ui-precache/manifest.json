@@ -117,12 +117,24 @@
     {
       "path": "vilda_icd10_picker.css?v=1",
       "sha256": "c4f87b9eb34d2ff53e09015929c98b8e6b36259664b8342dbbbc3a47e4116bec"
+    },
+    {
+      "path": "vilda_home_reminders.js?v=1",
+      "sha256": "47c8cf1bcb62ea6d16d235573aeb09bc4311407d593126668259146619701885"
+    },
+    {
+      "path": "vilda_home_reminders.css?v=1",
+      "sha256": "9b0205162e5d2d403fbfdd622bbc4b7fb6697cdcb979217f7a9c6dff9dc2bbcb"
+    },
+    {
+      "path": "vilda_home_reminders_runtime.js?v=1",
+      "sha256": "c6f959850773f3296475d2cc1688b6fdd3088805a6f29c67afe014c147c0d33d"
     }
   ],
   "pack": {
-    "path": "runtime/visit-ui-precache/precache-937fcc18a989.json",
-    "sha256": "937fcc18a9890811d70d1f6caec833926695437dd41eca18917a8e4bd4a6783e",
-    "byteLength": 1492577
+    "path": "runtime/visit-ui-precache/precache-e47049586d3e.json",
+    "sha256": "e47049586d3eb4ecfff7395887100c9a515052180080dfe9e7a4fff3ed66be8a",
+    "byteLength": 1540893
   },
   "historicalPacks": [
     {
@@ -364,6 +376,46 @@
       "path": "runtime/visit-ui-precache/precache-ba210d6e17df.json",
       "sha256": "ba210d6e17dfb7fc93a1a72d639b31f9ce6f04e67200e02a48ccce0106656575",
       "byteLength": 1492356
+    },
+    {
+      "path": "runtime/visit-ui-precache/precache-937fcc18a989.json",
+      "sha256": "937fcc18a9890811d70d1f6caec833926695437dd41eca18917a8e4bd4a6783e",
+      "byteLength": 1492577
+    },
+    {
+      "path": "runtime/visit-ui-precache/precache-fa69fa64b193.json",
+      "sha256": "fa69fa64b193736c6f860fcfa22d188c01f5c33fb4a0cc9072814c19b3cf421e",
+      "byteLength": 1524624
+    },
+    {
+      "path": "runtime/visit-ui-precache/precache-e21099992eda.json",
+      "sha256": "e21099992eda82830adea62809e0ac4d0103aba83fb09a63d5251710029c88f8",
+      "byteLength": 1526880
+    },
+    {
+      "path": "runtime/visit-ui-precache/precache-dfc3b9023318.json",
+      "sha256": "dfc3b9023318a5f2d026f0eb831c9901c9fdd8cea84c4cc6cc0ca898d1490f0d",
+      "byteLength": 1526866
+    },
+    {
+      "path": "runtime/visit-ui-precache/precache-c56cdeb1384a.json",
+      "sha256": "c56cdeb1384a2df799f3c9685794a70428dad9b4cabae1fb228de53b7d80d560",
+      "byteLength": 1539230
+    },
+    {
+      "path": "runtime/visit-ui-precache/precache-192ff71ed3e3.json",
+      "sha256": "192ff71ed3e37f0a0983a9e3f737ab72c4cf80e23238940ace83bf3f3030a9e8",
+      "byteLength": 1540387
+    },
+    {
+      "path": "runtime/visit-ui-precache/precache-d9f8e49ee6ea.json",
+      "sha256": "d9f8e49ee6ea69a3838eae175f928c44c862d357a23fd198ac78dccf909f3198",
+      "byteLength": 1540478
+    },
+    {
+      "path": "runtime/visit-ui-precache/precache-105fa5cf34c6.json",
+      "sha256": "105fa5cf34c676a210027eb6094a914a3859959b8f1c17f8774b0f9b09d0f3d0",
+      "byteLength": 1540774
     }
   ]
 }
