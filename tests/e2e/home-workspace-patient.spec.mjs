@@ -909,9 +909,23 @@ test('home patient: APP lock while a rejected Back has queued its native forward
     expect(locked.queuedLocks).toBe(1); expect(locked.calls).toEqual([]);
     expect(locked.connected).toBe(false); expect(locked.text).toBe(''); expect(locked.length).toBe(opened.length);
     await expect.poll(() => reports.some(report => report.queuedLocks === 1 && report.tokens.length === 0)).toBe(true);
+    await test.info().attach('lock-report-timeline', {
+      body: Buffer.from(JSON.stringify(reports, null, 2)), contentType: 'application/json',
+    });
     for (const report of reports) {
-      expect(report.calls).toEqual([]); expect(report.connected).toBe(false); expect(report.text).toBe('');
+      expect(report.calls).toEqual([]);
       expect(report.length).toBe(opened.length);
+      // A capture-phase observer can see the original Back before the native
+      // dirty veto queues its forward restore and the real lock. Its still-live
+      // editor is expected. Every observation after that lock must stay wiped.
+      if (report.queuedLocks === 0) {
+        expect(report.source).toBe('popstate'); expect(report.connected).toBe(true);
+        expect(report.text.length).toBeGreaterThan(0);
+      } else {
+        expect(report.queuedLocks).toBe(1);
+        expect(['lock', 'popstate', 'pagehide']).toContain(report.source);
+        expect(report.connected).toBe(false); expect(report.text).toBe('');
+      }
     }
     // The fresh shell must also remain locked. Do not retain an invalid Frame
     // after the native synchronization reload, or replace that reload in tests.

@@ -116,6 +116,9 @@ async function sprawdzPrzypiety(page) {
   expect(pierscien.right).toBeLessThanOrEqual(wykres.right + 0.5);
 
   // „✓ Przypięto” otwiera okno z ostrzeżeniem; ta sama data badania — zapis zablokowany.
+  // Po zamknięciu okna wraca stały dock. Przewinięcie do środka ekranu odsłania przycisk
+  // przed rzeczywistym dotknięciem; automatyczny nearest-scroll nie uwzględnia nakładki fixed.
+  await przycisk.evaluate(button => button.scrollIntoView({ block: 'center', behavior: 'instant' }));
   await przycisk.tap();
   const nakladka = page.locator('#labPinOverlay');
   await expect(nakladka).toHaveCount(1);
