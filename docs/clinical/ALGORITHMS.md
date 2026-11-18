@@ -42628,7 +42628,8 @@ chwilę zapisu).
   skryptach korzenia, także we fragmencie natywnym `vilda_vault.js`. Na `audyt` `fe4f1754` najwyższy jest `?v=2`, więc
   wychodzi `?v=3`, ten sam co we fragmencie. Gdyby przed podbiciem inny PR w `audyt` podniósł ten numer, podbicie
   zmieniłoby fragment, a `npm test` (kontrola granicy w `test:repo`) i `tools/visits-vault-delta.mjs` to odrzucą
-  (sprawdzone zmianą na kopii); wtedy nowy fragment z tym numerem z repozytorium źródeł modułu, nie zmiana ręczna.)*
+  (sprawdzone zmianą na kopii); wtedy nowy fragment z tym numerem z repozytorium źródeł modułu, nie zmiana ręczna.
+  Podbicie zrobione na `audyt` `fe4f1754`: blok natywny bez zmian, numery — niżej, „Wersje”.)*
 - E3-PR0c: PR dopiero po scaleniu tego PR, przygotowanie równolegle (decyzja 1 z 2026-11-17, E3-PR0c).
 - Drugie wydanie (osobny mały PR tylko w vilda-calc). Warunek: właściciel potwierdza, że wszystkie urządzenia mają to
   wydanie — Ustawienia → „Wersja aplikacji” co najmniej SW z tego PR (z nowym `?v=` modelu planu; pamięć offline
@@ -42662,18 +42663,13 @@ znacznikami `BEGIN` i `END VILDA CLINICAL WORKSPACE NATIVE V1`): `PatientPortabl
 scaleniem, `deadNoteCard`), `PatientLegacyService` (`seal`), `PatientWorkspaceModels` (adres
 `vilda_care_plan_mutation.js?v=3`).)*
 
-**Wersje.** Po artefaktach repozytorium źródeł modułu i `npm run podbij-wersje`. Podbicie wcześniej zmieniłoby adres
-modelu zmian wewnątrz fragmentu natywnego (kontrola granicy obrazu sejfu to odrzuca), więc do tego czasu strażnik
-wersji plików (`tests/unit/wersje-zasobow.test.mjs`) jest czerwony dla `vilda_care_plan_model.js`,
-`vilda_care_plan_mutation.js` i `vilda_care_plans.js`, a PR nie jest do scalenia. *(2026-11-18: artefakty są
-w PR. Do podbicia strażnik jest czerwony także dla `vilda_vault.js` (nowy blok natywny pod tym samym `?v=`) i dla
-nowego adresu `vilda_care_plan_mutation.js?v=3` z fragmentu, a kontrola granicy
-(`tools/check_clinical_workspace_boundary.mjs`) zgłasza brak tego adresu w pamięci offline. Z tej samej przyczyny
-(brak `?v=3` w pamięci offline) do podbicia są czerwone: `tests/unit/sw-precache-stron.test.mjs` („zasób doładowywany
-z pliku JS… też jest w pamięci”) oraz e2e „prawdziwy SW bez sieci…” (`tests/e2e/pwa-strony-offline.spec.mjs`; moduł
-modelu zmian nie ładuje się bez sieci) i „cold offline reload…” (`tests/e2e/care-template-native-storage.spec.mjs`).
-Na kopii z samym dopisanym adresem `?v=3` w pamięci offline te testy i kontrola granicy są zielone. Po podbiciu ten
-dopisek zastępują numery wersji.)*
+**Wersje.** `vilda_care_plan_model.js` 2 → 3, `vilda_care_plan_mutation.js` 2 → 3, `vilda_care_plans.js` 15 → 16,
+`vilda_vault.js` 279 → 280 (zmieniony tylko blok natywny); wstrzykujące: `vilda_chrome.js` 299 → 300,
+`vilda_session_bridge.js` 215 → 216; SW 1.1.547 → **1.1.548** — `npm run podbij-wersje` po artefaktach repozytorium
+źródeł modułu; baza `origin/audyt` `fe4f1754`. Podbicie nie zmieniło bloku natywnego: adres
+`vilda_care_plan_mutation.js?v=3` stał w nim już z artefaktów, a podbicie dopisało ten adres do pamięci offline obok
+`?v=1` i `?v=2`. Nowe pliki w pamięci offline: 51 modułów rodziny `0278bf7106c2` i jej archiwum (z artefaktami).
+SW 1.1.548 to wersja z warunku drugiego wydania (wyżej: Ustawienia → „Wersja aplikacji” co najmniej SW z tego PR).
 
 ### 2c — moduły natywne: moduł zapisu planu i dokument czytany przez moduł
 
