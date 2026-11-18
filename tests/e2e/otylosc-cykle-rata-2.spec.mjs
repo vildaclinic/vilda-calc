@@ -164,7 +164,7 @@ test('baner starego zapisu: dopisane Zakończenie rozdziela dwa Włączenia na d
   await otworzMonitor(page, STARY);
   const baner = page.locator('#obesityTherapyFixBanner');
   await baner.getByRole('button', { name: 'Dopisz Zakończenie przed 03.05.2024' }).click();
-  await expect(komunikat(page)).toHaveText('Wpisz dane wizyty, która zakończyła wcześniejszy cykl — datę (przed 03.05.2024), masę i wzrost — i wybierz „Zakończenie leczenia”.');
+  await expect(komunikat(page)).toHaveText('Wpisz dane wizyty, która zakończyła wcześniejszy cykl — datę (przed 03.05.2024), masę (u dziecka także wzrost) — i wybierz „Zakończenie leczenia”.');
 
   await wpisz(page, { lata: 40, mies: 3, masa: 99, data: '2024-04-30' });
   await expect(przycisk(page, 'Zakończenie leczenia')).not.toHaveAttribute('aria-disabled', 'true');
