@@ -42882,7 +42882,7 @@ scalenia. Urządzenia ze starszą wersją liczą dawną regułą do czasu aktual
 
 **Cofnięcie** = rewert PR (wraca dawna reguła fragmentu i poprzednia rodzina modułów), bez migracji.
 
-## Dziennik zdarzeń: odsyłanie poprawionych wizyt po zastosowaniu zmiany z innego urządzenia — uśpione (P-ZBIEZNOSC-ZDARZEN, E3-PR0c, SW 1.1.546, `vilda_vault.js` 280, 2026-11-17)
+## Dziennik zdarzeń: odsyłanie poprawionych wizyt po zastosowaniu zmiany z innego urządzenia — uśpione (P-ZBIEZNOSC-ZDARZEN, E3-PR0c, SW 1.1.549, `vilda_vault.js` 281, 2026-11-17)
 
 **Zmiana kliniczna: NIE (uśpiona).** Wzory, progi, jednostki, interpretacje, reguły scalania (`Le`), format kopii,
 serwer i `vilda_sync.js` bez zmian. Dla użytkownika dziś nic się nie zmienia: odsyłanie włącza tylko przełącznik
@@ -43354,6 +43354,6 @@ komentarz `Bob_bramka` (włącznik dziennika po E2-PR6: flaga `vilda-event-log-v
 (7852); część `Bem_` — `Bem_zastosuj`, `Bem_zastosujEcho` (10022–10038); nagłówki części (opis czwartej drogi ze
 scalania do kolejki i przełącznika). Poza blokiem bez zmian.
 
-**Wersje.** `vilda_vault.js` 279 → 280, `vilda_chrome.js` 299 → 300 i `vilda_session_bridge.js` 215 → 216
-(wstrzykują sejf), SW 1.1.545 → 1.1.546 — `npm run podbij-wersje`; baza `origin/audyt` `4389d34a` (po
-vildaclinic/vilda-calc#983). Bez nowego pliku w pamięci offline.
+**Wersje.** `vilda_vault.js` 280 → 281, `vilda_chrome.js` 300 → 301 i `vilda_session_bridge.js` 216 → 217
+(wstrzykują sejf), SW 1.1.548 → 1.1.549 — `npm run podbij-wersje`; baza `origin/audyt` `64fa29dc` (po
+vildaclinic/vilda-calc#990). Bez nowego pliku w pamięci offline.
