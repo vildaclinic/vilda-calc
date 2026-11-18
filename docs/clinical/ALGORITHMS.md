@@ -20555,6 +20555,8 @@ Zakończeniu).
   która by je połączyła, są odrzucane; usunięcie Włączenia pyta z podaniem skutku dla Karty pacjenta;
 - R7 (D4) nowe Włączenie i Zakończenie bez daty są odrzucane (dotąd Włączenie bez daty przechodziło po potwierdzeniu);
   stare Włączenie bez daty da się poprawiać bez dopisywania daty, dopóki nie zmienia rodzaju.
+  *Rozszerzone w P-OTYLOSC-WZROST (wpis „Leczenie otyłości — etap 1”): R8 — data każdego nowego punktu, także
+  Kontynuacji; R9 — wzrost przy Włączeniu i przy Zakończeniu cyklu dziecka, Kontynuacja bez wzrostu.*
 
 **Kolejność i granice.** Kolejność jak w tabeli monitora i w Karcie pacjenta: po datach, gdy datę ma każdy punkt, inaczej
 po wieku w miesiącach; remisy w kolejności tablicy. Granicę cyklu wyznacza **wyłącznie Zakończenie** — dwa Włączenia bez
@@ -42864,3 +42866,121 @@ zmian); strażnik — we fragmencie dawny warunek `wins`. Po artefaktach zielone
 scalenia. Urządzenia ze starszą wersją liczą dawną regułą do czasu aktualizacji.
 
 **Cofnięcie** = rewert PR (wraca dawna reguła fragmentu i poprzednia rodzina modułów), bez migracji.
+
+## Leczenie otyłości — etap 1: Kontynuacja bez wzrostu, data każdego nowego punktu, ocena wg ChPL dziecka z ostatniego punktu ze wzrostem (P-OTYLOSC-WZROST, SW 1.1.549, `vilda_cykle_leczenia.js` 4, `obesity_response_criteria.js` 5, `obesity_therapy_monitor.js` 28, `vilda_auth_ui.js` 567, `inline_docpro_01.css` 5, 2026-11-18)
+
+**Zgłoszenie i decyzje właściciela (2026-11-17/18).** „Leczę dużo dzieci i dorosłych lekami na otyłość typu Wegovy;
+rodzice co miesiąc przysyłają mi wagę dziecka, a ja odsyłam receptę. Aplikacja wymaga wagi i wzrostu, żeby dodać
+kolejną pozycję monitorowania, a wzrost u dziecka nie zmienia się z miesiąca na miesiąc — nie powinno się tak często
+mierzyć dzieci, a dorośli już wcale nie rosną.” Po analizie i makiecie (zaakceptowanej 2026-11-18, z etykietą
+źródła „Pacjent” zamiast „Rodzic”) właściciel przyjął:
+- **A** — Kontynuacja **bez wzrostu**; wzrost wymagany przy **Włączeniu** zawsze i przy **Zakończeniu** cyklu dziecka;
+- **B** — ocena odpowiedzi wg ChPL u dziecka z **ostatniego punktu ze zmierzonym wzrostem** i stan „potrzebny pomiar
+  wzrostu”, gdy takiego punktu w oknie oceny nie ma;
+- data wizyty **obowiązkowa**; wzrost zmierzony przez **rodzica albo pacjenta** wolno użyć do oceny wg ChPL;
+- kolejność etapów 1 → 3 → 4 (etap 2 — przycisk w Karcie — połączony z etapem 4). Etap 3 (dziennik wpisów leczenia
+  poza wizytą, w sejfie) i etap 4 (Karta: „+ Kontynuacja” bez wczytywania pacjenta) — osobne PR; zmiana sejfu czeka na
+  kolejkę E3-PR0c–E3-PR0i. **Ten wpis to etap 1**: bez zmiany sejfu i zapisu; zmienia się, jakie punkty monitor
+  przyjmuje i z którego punktu Karta liczy ocenę dziecka.
+
+**Stan przed zmianą (sprawdzony na kodzie, produkcja 64fa29dc).**
+- Monitor DocPro: dodanie (`vt`) i edycja (`Ed`) każdego punktu wymagały wieku, masy **i wzrostu** („Uzupełnij co
+  najmniej wiek, masę i wzrost…”); Kontynuacja bez daty przechodziła (R7 pilnował daty tylko Włączenia i Zakończenia);
+  „Uzupełnij z formularza” wpisywał zawsze **dzisiejszą** datę, także przy odtworzonej dawnej wizycie.
+- Karta pacjenta: ocena wg ChPL z **ostatniego** punktu cyklu. Punkt bez wzrostu (np. z importu) nie ma BMI, więc
+  u dziecka (grupy oceniane z BMI) werdykt brzmiał „Za mało danych do oceny — brak metryki wiodącej (bmiPct)”.
+- Pozostałe miejsca czytające punkty terapii (sejf, eksport/import, trajektoria, karta porównania, „Postępy”, wykres
+  dawki, odznaki) sprawdzone: punkt z `height: null`, `bmi: null` niczego nie wywraca ani nie jest odrzucany.
+
+**Reguły (moduł cykli `VildaCykleLeczenia` VERSION 3).**
+- **R8** każdy **nowy** punkt (także Kontynuacja) wymaga daty wizyty: od niej liczą się tygodnie leczenia i okno oceny
+  wg ChPL, a jeden punkt bez daty przestawia kolejność całej listy na wiek. Odmowa `brak-daty`, krótko „Wymaga daty
+  wizyty”. Stare punkty bez daty wolno poprawiać jak dotąd (dla Włączenia i Zakończenia dalej obowiązuje R7).
+- **R9** wzrost jest wymagany przy **Włączeniu** (punkt odniesienia BMI) i przy **Zakończeniu cyklu dziecka** (wiek przy
+  Włączeniu cyklu < 18 l.; w cyklu bez Włączenia — wiek przy jego 1. punkcie; tak samo grupę ChPL wybiera Karta).
+  Kontynuacja — wzrost tylko, jeśli był zmierzony. Odmowa `brak-wzrostu`, krótko „Wymaga wzrostu”. Stary punkt bez wzrostu
+  wolno poprawiać bez dopisywania wzrostu, dopóki nie zmienia rodzaju; usunięcie wzrostu z Włączenia, które go miało —
+  odmowa. R7 (data) ma pierwszeństwo przed R9. `wzrostWymagany(lista, punkt)` podaje regułę do podpowiedzi.
+
+**Punkt oceny wg ChPL (`ObesityResponseCriteria.punktOceny`, `tygodnieOceny`).** Dla grup ocenianych z BMI (Wegovy
+12–17 l.: redukcja BMI ≥ 5 %; Saxenda 6–11 i 12–17 l.: BMI lub BMI z-score) punkt oceny to:
+- **„ostatni”** — ostatni punkt, jak dotąd, gdy ma BMI albo gdy okno oceny w ostatnim punkcie jeszcze się nie otworzyło
+  (stan „Przed oknem oceny” jak dotąd);
+- **„ostatni-ze-wzrostem”** — ostatni punkt nie ma wzrostu, okno trwa, a ostatni punkt ze wzrostem też leży w oknie:
+  ocena (BMI %, ΔbmiSDS, tygodnie) z tego punktu; werdykt dostaje dopisek „Ocena z wpisu DD.MM.RRRR — ostatniego ze
+  wzrostem; nowsze wpisy nie mają wzrostu.”;
+- **„potrzebny-wzrost”** — okno trwa, a żaden punkt w oknie nie ma wzrostu: werdykt **wstrzymany**, „Potrzebny pomiar
+  wzrostu do oceny ChPL” (okno od daty, ostatni wzrost i jego data, prośba o pomiar; masa od włączenia z zastrzeżeniem,
+  że u rosnącego dziecka redukcja masy zaniża redukcję BMI i nie zastępuje kryterium ChPL);
+- **„brak-wzrostu-wlaczenia”** — okno trwa, a Włączenie (stary zapis) nie ma wzrostu: werdykt wstrzymany z prośbą
+  o uzupełnienie wzrostu Włączenia.
+Okno ocenia ta sama funkcja kotwicy co `evaluate` (P-KOTWICA; także nominalny czas zwiększania dawki). Tygodnie liczą się
+jak w Karcie: z dat obu punktów, a bez nich z różnicy wieku × 4,345. BMI punktu jak w Karcie (`An`): z masy i wzrostu,
+a bez nich z zapisanego BMI. Dorośli (ocena z masy — Saxenda, Mysimba — albo kliniczna — Wegovy, Mounjaro) i cykl bez
+Włączenia: bez zmian. **Progi, okna, kotwice i zdania ChPL bez zmian** (P-CHPL, P-KOTWICA).
+
+**Kod.**
+- `vilda_cykle_leczenia.js` 4 (czytelny, VERSION 3): R8 w `sprawdz` po R7; R9 (`maWzrost`, `cyklDziecka`,
+  `wzrostWymagany`, `brakWzrostu`) po znalezieniu miejsca punktu w cyklu; eksport `wzrostWymagany`.
+- `obesity_response_criteria.js` 5: czytelny blok `punktOceny`, `tygodnieOceny` (pomocnicze `Pw_ms`, `Pw_mies`, `Pw_bmi`,
+  `Pw_okno`) przed obiektem modułu; obiekt dalej zamrożony.
+- `obesity_therapy_monitor.js` 28: wiek i masa obowiązkowe, wzrost opcjonalny, gdy działa moduł cykli (bez modułu — jak
+  dotąd); wpisany, ale zły wzrost to błąd przy polu (`aria-invalid`, fokus); odmowa `brak-daty`/`brak-wzrostu` wskazuje
+  pole; podgląd przycisków niesie wzrost z formularza (Włączenie bez wzrostu — „Wymaga wzrostu” pod przyciskiem); pod
+  polem wzrostu ostatni zapisany wzrost z datą; „Uzupełnij z formularza” wpisuje datę pomiaru tej wizyty
+  (`VildaDobAge.readMeasuredAtISO`), a gdy nie jest pewna — dzisiejszą; edycja pyta przy usunięciu wzrostu, który był.
+- `vilda_auth_ui.js` 567: `Ob_pkt` (czytelny) i trzy wpięcia w `Ob_b` — wejście oceny z punktu oceny, kafelek „Wzrost do
+  oceny” (grupy z BMI), stan wstrzymania albo dopisek; podpis „ostatni wpis bez wzrostu” w kafelku „Redukcja BMI”.
+- `docpro.html`, `inline_docpro_01.css` 5: etykiety „Wzrost (cm) — opcjonalnie”, „Data wizyty *”, podpowiedź reguł pod
+  przyciskami rodzaju wizyty, podpowiedź przycisku „Uzupełnij z formularza”, style (`.obm-hlast`, `.obm-req`,
+  `.obm-rule`, pole z `aria-invalid`).
+
+**Przypadki syntetyczne** (dane fikcyjne; przykład z makiety: Testowa Zuzanna, 13 l., Wegovy; Włączenie 14.04.2026
+80,0 kg, 160,0 cm; okno Wegovy 12–17 l. od 28. tyg. = 27.10.2026):
+
+| Przypadek | Wejście | Oczekiwany wynik | Przed zmianą |
+|---|---|---|---|
+| WZ-1 | monitor: Kontynuacja 10.11.2026, 74,6 kg, bez wzrostu | zapisana; wzrost i BMI puste; w tabeli BMI „—”, redukcja masy −6,8 % | odmowa „Uzupełnij co najmniej wiek, masę i wzrost” |
+| WZ-1 | monitor: Zakończenie dziecka bez wzrostu | przycisk wyłączony „Wymaga wzrostu”; po kliknięciu odmowa, pole wzrostu oznaczone | odmowa „…masę i wzrost” |
+| WZ-2 | monitor: nowa Kontynuacja bez daty | przycisk wyłączony „Wymaga daty wizyty”; odmowa, pole daty oznaczone | dodana |
+| WZ-3 | monitor: wzrost „abc” | odmowa „Wzrost: wpisz liczbę w cm (np. 163,5) albo zostaw pole puste…” | odmowa „…masę i wzrost” |
+| WZ-4 | monitor: Włączenie bez wzrostu | przycisk wyłączony „Wymaga wzrostu”; ze wzrostem 160 — zapisane | odmowa „…masę i wzrost” (przycisk aktywny) |
+| WZ-5 | „Uzupełnij z formularza” przy pomiarze z 13.10.2026 | data 13.10.2026; bez pewnej daty — dzisiejsza | zawsze dzisiejsza |
+| WZ-6 | edycja: usuń wzrost z Kontynuacji / z Włączenia | pytanie o skutki, zapis z pustym BMI / odmowa „Włączenie wymaga wzrostu” | odmowa „…masę i wzrost” w obu |
+| WZ-7 | Karta: W, K 13.10 (162,9 cm, 26. tydz.), K 10.11 (bez wzrostu, 30. tydz.) | „Potrzebny pomiar wzrostu do oceny ChPL”: okno od 27.10.2026, ostatni wzrost 162,9 cm z 13.10.2026 — przed oknem; masa −6,8 %; kafelek „Wzrost do oceny” „—” | „Za mało danych do oceny” (punktu bez wzrostu nie dało się dodać w monitorze) |
+| WZ-8 | Karta: jak WZ-7 + K 17.11 (74,3 kg, 163,4 cm — pomiar pacjenta) | „Odpowiedź wystarczająca” (BMI −10,9 %); kafelek „163,4 cm, pomiar z 17.11.2026” | ten sam werdykt, bez kafelka |
+| WZ-9 | Karta: W, K 13.10, K 27.10 (163,0 cm, 28. tydz.), K 10.11 bez wzrostu | ocena z 27.10: BMI −9,8 % po 12 tyg. dawki podtrzymującej, „Odpowiedź wystarczająca” z dopiskiem „Ocena z wpisu 27.10.2026…” | „Za mało danych do oceny” |
+| WZ-10 | Karta: dorosły, Saxenda, K bez wzrostu (−7 % masy po 16 tyg.) | „kontynuować” z masy, bez kafelka wzrostu | ten sam werdykt |
+
+**Wpływ kliniczny.** Werdykt zmienia się wyłącznie u dziecka (grupy ChPL oceniane z BMI), gdy ostatni punkt cyklu nie
+ma wzrostu — dotąd taki punkt nie mógł powstać w monitorze (tylko z importu), a werdykt brzmiał „Za mało danych”.
+Teraz: ocena z ostatniego punktu ze wzrostem w oknie albo jawne wstrzymanie z prośbą o pomiar. Ocena **nie zgaduje**
+BMI ze starego wzrostu sprzed okna ani z masy. Dorośli, punkty ze wzrostem i progi — bez zmian.
+
+**Granice i znane ograniczenia.**
+- Bez zmiany sejfu, eksportu i importu; punkt nadal nie ma pola „źródło” (gabinet/pacjent) — przyjdzie z dziennikiem
+  (etap 3; dawne punkty dostaną źródło „gabinet”).
+- Bez modułu cykli (nie wczytał się) monitor wymaga wzrostu i nie pilnuje R8 — jak przed etapem 1.
+- Zakładka „Postępy” dorosłego scala ten sam dzień z pomiarów i punktów kluczem z masą i wzrostem: wizyta zapisana
+  i jako pomiar ze wzrostem, i jako Kontynuacja bez wzrostu może pojawić się dwa razy (do etapu 3).
+- `obesity_migration_assist.js` (niezaładowany przez żadną stronę, P-OTYLOSC-CYKLE rata 4) dalej wymaga wzrostu.
+
+**Testy.** Dane wyłącznie fikcyjne.
+- `tests/unit/cykle-leczenia.test.mjs`: R8 (nowa Kontynuacja bez daty — odmowa; stary punkt bez daty poprawialny
+  i usuwalny), R9 (dziecko i dorosły, wiek przy Włączeniu, cykl bez Włączenia, stary zapis, usunięcie wzrostu, pierwszeństwo
+  R7, `wzrostWymagany`). Świadoma zmiana: dawny test „Kontynuacja bez daty przechodzi jak dotąd” zastąpiony odmową R8.
+- `tests/unit/otylosc-punkt-oceny.test.mjs` (nowy): tryby `punktOceny` na produkcyjnym module, Saxenda 12–17 l.,
+  dorośli, dane brzegowe, zgodność tygodni z funkcjami Karty (`Ye`, `Da`) — także przez zmianę czasu.
+- `tests/unit/otylosc-edycja-punktu.test.mjs`: świadoma zmiana — Kontynuacja bez wzrostu przechodzi z pustym BMI;
+  Włączenie bez wzrostu — `brak-wzrostu`; bez modułu cykli — `braki` jak dotąd (kontrola negatywna).
+- `tests/unit/monitor-otylosci-r6.test.mjs`: makieta formularza ma pole wzrostu (wypełnione jak na stronie); nowy
+  przypadek R9 w podglądzie; teksty podpowiedzi Zakończenia („masę (u dziecka także wzrost)”).
+- e2e `tests/e2e/otylosc-wzrost-etap-1.spec.mjs` (nowy, desktop Chromium, WZ-1…WZ-10) na prawdziwych stronach DocPro
+  i Karty pacjenta; `tests/e2e/otylosc-wzrost-etap-1-mobile.spec.mjs` (nowy, telefon): stan „Potrzebny pomiar wzrostu”,
+  kafelek wzrostu, podpowiedzi monitora i odmowa bez daty mieszczą się na ekranie bez przewijania w bok; `otylosc-cykle-rata-2.spec.mjs`, `otylosc-cykle-rata-4.spec.mjs` — nowe brzmienie podpowiedzi.
+
+**Wdrożenie.** Od razu przy wydaniu, bez przełącznika. Starsza wersja na innym urządzeniu pokaże punkt bez wzrostu
+z pustym BMI, a u dziecka „Za mało danych do oceny” — jak dotąd przy imporcie.
+
+**Cofnięcie** = rewert PR, bez migracji (punkty bez wzrostu zostają poprawnymi rekordami; starsza wersja monitora
+wymaga wzrostu dopiero przy ich edycji).

@@ -189,8 +189,21 @@ describe('data przy Włączeniu i Zakończeniu (R7, D4)', () => {
     expect(dodaj(CYKL1.slice(0, 2), P('x', 'end', 41, 0, 96, '')).kod).toBe('brak-daty');
   });
 
-  it('Kontynuacja bez daty przechodzi jak dotąd', () => {
-    expect(dodaj(CYKL1.slice(0, 2), P('x', 'continue', 40, 5, 98, '')).ok).toBe(true);
+  it('R8 (P-OTYLOSC-WZROST, wersja 3): NOWA Kontynuacja bez daty — odmowa „brak-daty" (dotąd przechodziła)', () => {
+    // Świadoma zmiana zachowania: od daty liczą się tygodnie leczenia i okno oceny wg ChPL, a punkt
+    // bez daty przestawia kolejność całej listy na wiek (decyzja właściciela 2026-11-18: data obowiązkowa).
+    const r = dodaj(CYKL1.slice(0, 2), P('x', 'continue', 40, 5, 98, ''));
+    expect(r.ok).toBe(false);
+    expect(r.kod).toBe('brak-daty');
+    expect(r.krotko).toBe('Wymaga daty wizyty');
+    expect(r.komunikat).toMatch(/Kontynuacja.*wymaga daty wizyty/);
+    expect(dodaj(CYKL1.slice(0, 2), P('x', 'continue', 40, 5, 98, '2024-06-12')).ok).toBe(true);
+  });
+
+  it('R8 nie rusza starych punktów: Kontynuację bez daty wolno poprawić bez dopisywania daty', () => {
+    const stary = [P('s', 'start', 40, 0, 104, '2024-01-12'), P('k', 'continue', 40, 3, 99, '')];
+    expect(C.sprawdz(stary, { rodzaj: 'edytuj', id: 'k', punkt: { ...stary[1], weight: 98.5 } }).ok).toBe(true);
+    expect(C.sprawdz(stary, { rodzaj: 'usun', id: 'k' }).ok).toBe(true);
   });
 
   it('stare Włączenie bez daty wolno poprawić bez dopisywania daty, dopóki nie zmienia rodzaju', () => {
@@ -688,5 +701,93 @@ describe('R6: zachowanie bez modułu kryteriów i przy jego awarii', () => {
     expect(awaria.nazwaLeku({ substance: '' })).toBe('');
     const r = awaria.sprawdz([W_SAX], { rodzaj: 'dodaj', punkt: M('x', 'continue', 40, 3, 99, '2024-04-12', WEGOVY) });
     expect(r.ok).toBe(true);
+  });
+});
+
+// P-OTYLOSC-WZROST (wersja 3, decyzje właściciela 2026-11-17/18): rodzic co miesiąc przysyła masę
+// dziecka, a wzrostu nie mierzy się co miesiąc (dorosły w ogóle nie rośnie). Dane FIKCYJNE.
+describe('R9: wzrost przy Włączeniu i przy Zakończeniu cyklu dziecka', () => {
+  const H = (id, type, lata, mies, masa, data, wzrost, lek = 'Wegovy') => ({
+    id, type, ageYears: lata, ageMonths: mies, weight: masa, height: wzrost, dateISO: data, drug: lek, dose: '',
+  });
+  const DZIECKO = Object.freeze([
+    H('w', 'start', 13, 0, 80, '2026-04-14', 160),
+    H('k1', 'continue', 13, 1, 79, '2026-05-12', null),
+  ]);
+  const DOROSLY = Object.freeze([
+    H('w', 'start', 40, 0, 104, '2024-01-12', 170),
+    H('k1', 'continue', 40, 3, 99, '2024-04-12', null),
+  ]);
+
+  it('Kontynuacja bez wzrostu przechodzi — u dziecka i u dorosłego', () => {
+    expect(dodaj(DZIECKO, H('x', 'continue', 13, 2, 78.4, '2026-06-09', null)).ok).toBe(true);
+    expect(dodaj(DOROSLY, H('x', 'continue', 40, 5, 98, '2024-06-12', '')).ok).toBe(true);
+    expect(dodaj(DOROSLY, H('x', 'continue', 40, 5, 98, '2024-06-12', 0)).ok).toBe(true);
+  });
+
+  it('Włączenie bez wzrostu — odmowa „brak-wzrostu" (dziecko i dorosły)', () => {
+    const r = dodaj([], H('x', 'start', 40, 0, 104, '2024-01-12', null));
+    expect(r.ok).toBe(false);
+    expect(r.kod).toBe('brak-wzrostu');
+    expect(r.krotko).toBe('Wymaga wzrostu');
+    expect(r.komunikat).toMatch(/Włączenie.*wymaga wzrostu/);
+    expect(dodaj([], H('x', 'start', 13, 0, 80, '2026-04-14', NaN)).kod).toBe('brak-wzrostu');
+    expect(dodaj([], H('x', 'start', 13, 0, 80, '2026-04-14', 160)).ok).toBe(true);
+    // Wzrost zapisany tekstem z formularza też jest wzrostem.
+    expect(dodaj([], H('x', 'start', 13, 0, 80, '2026-04-14', '160.5')).ok).toBe(true);
+  });
+
+  it('Zakończenie bez wzrostu: u dziecka odmowa, u dorosłego przechodzi', () => {
+    const rd = dodaj(DZIECKO, H('x', 'end', 13, 6, 75, '2026-10-13', null));
+    expect(rd.ok).toBe(false);
+    expect(rd.kod).toBe('brak-wzrostu');
+    expect(rd.komunikat).toMatch(/Zakończenie leczenia u dziecka wymaga wzrostu/);
+    expect(dodaj(DZIECKO, H('x', 'end', 13, 6, 75, '2026-10-13', 161)).ok).toBe(true);
+    expect(dodaj(DOROSLY, H('x', 'end', 40, 9, 97.5, '2024-10-15', null)).ok).toBe(true);
+  });
+
+  it('cykl dziecka liczy wiek przy Włączeniu: 18. urodziny w trakcie cyklu nie zdejmują wymogu', () => {
+    const cykl = [H('w', 'start', 17, 10, 90, '2026-01-10', 175)];
+    const r = dodaj(cykl, H('x', 'end', 18, 2, 84, '2026-05-10', null));
+    expect(r.kod).toBe('brak-wzrostu');
+    // Dorosły od Włączenia (18 l. 0 mies.) — bez wymogu.
+    expect(dodaj([H('w', 'start', 18, 0, 90, '2026-01-10', 175)], H('x', 'end', 18, 4, 84, '2026-05-10', null)).ok).toBe(true);
+  });
+
+  it('cykl dziecka bez Włączenia (świadomy wybór D2): wiek z 1. punktu cyklu', () => {
+    const bez = [H('k1', 'continue', 14, 0, 82, '2026-02-10', null)];
+    expect(dodaj(bez, H('x', 'end', 14, 4, 79, '2026-06-10', null)).kod).toBe('brak-wzrostu');
+  });
+
+  it('stary punkt bez wzrostu wolno poprawić bez dopisywania wzrostu, dopóki nie zmienia rodzaju', () => {
+    const stary = [H('w', 'start', 13, 0, 80, '2026-04-14', null), H('k1', 'continue', 13, 1, 79, '2026-05-12', null)];
+    expect(C.sprawdz(stary, { rodzaj: 'edytuj', id: 'w', punkt: { ...stary[0], weight: 80.4 } }).ok).toBe(true);
+    const r = C.sprawdz(stary, { rodzaj: 'edytuj', id: 'k1', punkt: { ...stary[1], type: 'end' } });
+    expect(r.kod).toBe('brak-wzrostu');
+  });
+
+  it('usunięcie wzrostu z Włączenia, które go miało — odmowa', () => {
+    const r = C.sprawdz(DZIECKO, { rodzaj: 'edytuj', id: 'w', punkt: { ...DZIECKO[0], height: null } });
+    expect(r.ok).toBe(false);
+    expect(r.kod).toBe('brak-wzrostu');
+    // Kontynuacja może stracić wzrost — nie jest punktem odniesienia.
+    const k = [...DZIECKO.slice(0, 1), { ...DZIECKO[1], height: 160.5 }];
+    expect(C.sprawdz(k, { rodzaj: 'edytuj', id: 'k1', punkt: { ...k[1], height: null } }).ok).toBe(true);
+  });
+
+  it('R7 (data) ma pierwszeństwo przed R9 — jeden powód naraz', () => {
+    expect(dodaj([], H('x', 'start', 13, 0, 80, '', null)).kod).toBe('brak-daty');
+  });
+
+  it('wzrostWymagany() podaje regułę do podpowiedzi formularza', () => {
+    expect(C.wzrostWymagany([], H('x', 'start', 40, 0, 104, '2024-01-12', null))).toBe(true);
+    expect(C.wzrostWymagany(DOROSLY, H('x', 'continue', 40, 5, 98, '2024-06-12', null))).toBe(false);
+    expect(C.wzrostWymagany(DOROSLY, H('x', 'end', 40, 9, 97, '2024-10-15', null))).toBe(false);
+    expect(C.wzrostWymagany(DZIECKO, H('x', 'end', 13, 6, 75, '2026-10-13', null))).toBe(true);
+    // Lista już z punktem daje to samo.
+    const z = H('x', 'end', 13, 6, 75, '2026-10-13', null);
+    expect(C.wzrostWymagany([...DZIECKO, z], z)).toBe(true);
+    expect(C.wzrostWymagany(null, null)).toBe(false);
+    expect(C.VERSION).toBe('3');
   });
 });
