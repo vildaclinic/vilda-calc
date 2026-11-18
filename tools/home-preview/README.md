@@ -34,6 +34,7 @@ aplikacji; podgląd nie odczytuje danych obcego dokumentu nadrzędnego.
 - Indeksowane pliki runtime z katalogu głównego oraz zasoby `runtime/`,
   `pwa-icons/`, `templates/` i informacje licencyjne. Bez repozytorium Git,
   zależności deweloperskich, testów, sekretów i nieśledzonych plików.
+  Śledzone arkusze XLSX do pobrania zachowują oryginalne bajty.
 - `vilda_home_preview.js` i CSS pochodzące z tego katalogu. Są dołączane do
   wygenerowanych dokumentów, nigdy do dokumentów produkcyjnych.
 - `.vilda-home-preview-export.json`: SHA źródła, oznaczenie lokalnych zmian,

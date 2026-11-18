@@ -82,6 +82,32 @@ describe('separate homepage preview export', () => {
     expect(realtime).not.toContain('workers.dev');
   });
 
+  test('tracked XLSX downloads preserve their binary bytes and export hashes, while untracked workbooks stay private', async () => {
+    const fixture = await repository();
+    const names = ['klirens.xlsx', 'zscore_przyklad_palczewska.xlsx', 'zscore_przyklad_olaf.xlsx'];
+    const workbooks = await Promise.all(names.map(async name => ({
+      name, bytes: await readFile(new URL('../../' + name, import.meta.url)),
+    })));
+    for (const { name, bytes } of workbooks) await writeFile(path.join(fixture.source, name), bytes);
+    const git = args => execFileSync('git', args, { cwd: fixture.source, stdio: 'pipe' });
+    git(['add', '--', ...names]);
+    git(['-c', 'user.name=Fictional Preview Test', '-c', 'user.email=preview@example.invalid', 'commit', '-qm', 'Track example workbook downloads']);
+    await writeFile(path.join(fixture.source, 'untracked-workbook.xlsx'), workbooks[0].bytes);
+
+    const result = await exportPreview(fixture);
+    const manifest = JSON.parse(await readFile(path.join(fixture.output, '.vilda-home-preview-export.json'), 'utf8'));
+    expect(result.sourceDirty).toBe(false);
+    expect(manifest.sourceCommit).toBe(result.sourceCommit);
+    expect(manifest.files.map(entry => entry.file)).not.toContain('untracked-workbook.xlsx');
+    for (const { name, bytes } of workbooks) {
+      expect(await readFile(path.join(fixture.output, name))).toEqual(bytes);
+      expect(await readFile(path.join(fixture.source, name))).toEqual(bytes);
+      expect(manifest.files.find(entry => entry.file === name)).toMatchObject({
+        sha256: hash(bytes), size: bytes.length,
+      });
+    }
+  });
+
   test('every HTML document installs network policy and bootstrap before any native script', async () => {
     const fixture = await repository();
     await exportPreview(fixture);

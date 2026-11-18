@@ -23,7 +23,7 @@ export const PREVIEW_WORKER_NETWORK_GUARD = `/* Preview-only: a service worker h
   };
 })();
 `;
-const ASSET_EXTENSIONS = new Set(['.html', '.js', '.css', '.json', '.png', '.jpg', '.jpeg', '.svg', '.webp', '.ico', '.woff', '.woff2', '.ttf', '.pdf', '.webmanifest']);
+const ASSET_EXTENSIONS = new Set(['.html', '.js', '.css', '.json', '.png', '.jpg', '.jpeg', '.svg', '.webp', '.ico', '.woff', '.woff2', '.ttf', '.pdf', '.xlsx', '.webmanifest']);
 const EXCLUDED_ROOT = /(?:^package(?:-lock)?\.json$|^eslint(?:[.-])|^playwright[.-]|^vitest[.-]|_regression_test\.js$)/;
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
 const isInside = (parent, candidate) => candidate === parent || candidate.startsWith(parent + path.sep);
