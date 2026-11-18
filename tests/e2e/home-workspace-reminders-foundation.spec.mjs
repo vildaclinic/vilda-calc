@@ -89,6 +89,16 @@ test('native home reminders retain card geometry, top-shell actions, history, re
   await expect(card.locator('.vhome-reminders-count')).toHaveText('3');
   expect((await card.boundingBox()).height).toBeCloseTo(352, 0);
   expect((await card.locator('.vb22-head').boundingBox()).height).toBeCloseTo(80, 0);
+  await expect(card.locator('.vb22-head button:visible')).toHaveCount(1);
+  const compactGeometry = await card.evaluate(node => {
+    const box = node.getBoundingClientRect(), range = document.createRange();
+    range.selectNodeContents(node.querySelector('.vb22-head h2'));
+    const title = range.getBoundingClientRect(), arrow = node.querySelector('.vb22-foot button svg').getBoundingClientRect();
+    return { titleInset: title.left - box.left, arrowInset: box.right - arrow.right };
+  });
+  expect(Math.abs(compactGeometry.titleInset - 21)).toBeLessThanOrEqual(1);
+  expect(Math.abs(compactGeometry.arrowInset - 21)).toBeLessThanOrEqual(1);
+  writeFileSync(test.info().outputPath('home-reminders-foundation-compact-geometry.json'), JSON.stringify(compactGeometry, null, 2));
   await expect(card).toContainText('09:30');
   await expect(card.getByRole('button', { name: 'Wszystkie przypomnienia', exact: true })).toBeVisible();
   await card.screenshot({ path: test.info().outputPath('home-reminders-foundation-desktop-card.png') });

@@ -5,18 +5,18 @@ import { authProductionFunction } from '../support/search-return-auth-harness.mj
 
 const source = fs.readFileSync(new URL('../../vilda_auth_ui.js', import.meta.url), 'utf8');
 const production = (name, parent) => authProductionFunction(source, name, parent);
-const globals = ['HomeRemindersContextCurrent', 'HomeRemindersInlineContext', 'HomeRemindersInlineViewOptions', 'HomeRemindersDisposeEditors', 'HomeRemindersDisposeScope'];
+const globals = ['remInlineHide', 'HomeRemindersContextCurrent', 'HomeRemindersInlineContext', 'HomeRemindersInlineViewOptions', 'HomeRemindersDisposeEditors', 'HomeRemindersDisposeScope'];
 const own = ['HomeRemindersOwnNote', 'HomeRemindersOwnRow', 'HomeRemindersRows', 'HomeRemindersCurrent', 'HomeRemindersReadGroups'];
 const note = (patientId, id, extra = {}) => ({ patientId, id, dueDateISO: '2026-11-20', category: 'followup', ...extra });
 const group = (patientId, notes) => ({ patientId, patientName: 'Fikcyjny ' + patientId, notes });
 function base() {
   const state = { current: true, marked: true, owner: true }, owner = {};
-  const host = { style: {}, childNodes: [], isConnected: true };
+  const host = { style: { removeProperty(name) { delete this[name]; } }, childNodes: [], isConnected: true, removeAttribute: vi.fn() };
   const win = { top: null, document: { querySelector: () => null } }; win.top = win;
   const ctx = vm.createContext({ i: win, HomeRemindersContexts: new WeakMap(), HomeRemindersEditorLeases: new Set(),
     remReadOwner: () => owner, remReadCurrent: candidate => candidate === owner && state.owner,
     HomeRemindersInlineEnabled: () => state.marked, remInvalidateInline: vi.fn(),
-    remB22Views: new WeakMap(), remB22Full: null, oe: vi.fn(), owner });
+    remB22Views: new WeakMap(), remB22Full: null, oe: vi.fn(), Nr: vi.fn(), Fr: () => false, owner });
   vm.runInContext(globals.map(name => production(name)).join('\n'), ctx);
   const options = { homePresentation: true, patientId: 'A', contextLabel: 'Fikcyjny A', showPatientName: false, isCurrent: () => state.current };
   return { ctx, host, options, state, owner };
@@ -41,6 +41,7 @@ describe('selected-patient reminders reuse native data boundaries', () => {
     expect(e.ctx.HomeRemindersDisposeScope(e.host, {})).toBe(false);
     expect(e.ctx.HomeRemindersDisposeScope(e.host, e.options)).toBe(true);
     expect(inline.close).toHaveBeenCalledOnce(); expect(full.close).toHaveBeenCalledOnce();
+    expect(e.host.style.display).toBe('none'); expect(e.ctx.remInvalidateInline).toHaveBeenCalledWith(e.host);
     expect(e.ctx.HomeRemindersInlineContext(e.host)).toBe(context);
     expect(e.ctx.HomeRemindersContextCurrent(context)).toBe(false);
     const inactive = { homePresentation: true, patientId: null, isCurrent: () => true };
@@ -62,7 +63,9 @@ describe('selected-patient reminders reuse native data boundaries', () => {
       remBadgeRecover: vi.fn(), HomeRemindersInlineReadPhase: vi.fn(), remInlineError: vi.fn(), Ot: vi.fn(),
       Fa: () => '2026-11-20', Tr: badge, Nr: vi.fn(), HomeRemindersInlineEnabled: () => true });
     vm.runInContext(['remB22Flat', 'remB22Day', 'remB22Inline', 'Br'].map(name => production(name)).join('\n'), e.ctx);
+    e.host.style.display = 'none';
     await e.ctx.Br(e.host, e.options);
+    expect(Object.prototype.hasOwnProperty.call(e.host.style, 'display')).toBe(false);
     expect(reader.mock.calls).toEqual([[], ['9999-12-31T23:59:59.999Z']]);
     expect(setGroups).toHaveBeenCalledWith(future);
     expect(badge).toHaveBeenCalledWith(2);

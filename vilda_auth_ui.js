@@ -2902,11 +2902,10 @@ function HomeRemindersDisposeScope(host, source) {
   var context = host ? HomeRemindersContexts.get(host) : source;
   if (!context || host && context.source !== source) return false;
   if (host) {
-    context.retire(); remInvalidateInline(host);
+    context.retire();
     var inline = remB22Views.get(host);
     if (inline && inline.homeContext === context) { inline.close(); remB22Views.delete(host); }
-    if (host.style.display !== 'none') host.style.display = 'none';
-    if (host.childNodes.length) oe(host);
+    remInlineHide(host);
   }
   HomeRemindersDisposeEditors(context);
   if (remB22Full && remB22Full.homeContext === context) remB22Full.close();
@@ -3057,7 +3056,7 @@ async function tn(t) {
   var homeContext = HomeRemindersInlineContext(t, homeOptions);
   if (homeContext && !HomeRemindersContextCurrent(homeContext)) { remInlineHide(t); return; }
   if (!remInlineAllowed(t)) return;
-  if (homeContext && t.style.display) t.style.display = '';
+  if (homeContext && t.style.display) t.style.removeProperty('display');
   var owner = remReadOwner(), state = remInlineState(t), sequence = ++state.sequence;
   if (state.owner && !remReadCurrent(state.owner)) { oe(t); t.removeAttribute('data-reminders-state'); }
   state.owner = owner;

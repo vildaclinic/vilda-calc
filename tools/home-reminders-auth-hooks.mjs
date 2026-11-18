@@ -183,11 +183,10 @@ function HomeRemindersDisposeScope(host, source) {
   var context = host ? HomeRemindersContexts.get(host) : source;
   if (!context || host && context.source !== source) return false;
   if (host) {
-    context.retire(); remInvalidateInline(host);
+    context.retire();
     var inline = remB22Views.get(host);
     if (inline && inline.homeContext === context) { inline.close(); remB22Views.delete(host); }
-    if (host.style.display !== 'none') host.style.display = 'none';
-    if (host.childNodes.length) oe(host);
+    remInlineHide(host);
   }
   HomeRemindersDisposeEditors(context);
   if (remB22Full && remB22Full.homeContext === context) remB22Full.close();
@@ -330,7 +329,7 @@ const PAIRS = [
 const SCOPE_PAIRS = [
   [
     "async function Br(t) {\n  if (!t || !remInlineAllowed(t)) return;",
-    "async function Br(t, homeOptions) {\n  if (!t) return;\n  var homeContext = HomeRemindersInlineContext(t, homeOptions);\n  if (homeContext && !HomeRemindersContextCurrent(homeContext)) { remInlineHide(t); return; }\n  if (!remInlineAllowed(t)) return;\n  if (homeContext && t.style.display) t.style.display = '';"
+    "async function Br(t, homeOptions) {\n  if (!t) return;\n  var homeContext = HomeRemindersInlineContext(t, homeOptions);\n  if (homeContext && !HomeRemindersContextCurrent(homeContext)) { remInlineHide(t); return; }\n  if (!remInlineAllowed(t)) return;\n  if (homeContext && t.style.display) t.style.removeProperty('display');"
   ],
   [
     "function current() { return state.sequence === sequence && remReadCurrent(owner) && remInlineAllowed(t); }",

@@ -213,6 +213,11 @@
     mark(root, full ? 'vhome-reminders-dialog' : 'vhome-reminders-card');
     if (!full) {
       mark(host, 'vhome-reminders-slot');
+      // The approved compact card has one expand action. The full native
+      // window retains Add and the privacy control with their own listeners.
+      var addZone = nodes.addButton && nodes.addButton.closest('.vb22-action-zone');
+      attribute(addZone || nodes.addButton, 'hidden', '');
+      attribute(nodes.privacyButton, 'hidden', '');
       // This decorative counter is guarded from its very first paint by the
       // native privacy class. It adds no accessible-name reference to data.
       count = make('span', 'vhome-reminders-count vb22-private-content'); count.setAttribute('aria-hidden', 'true'); created.push(count);
