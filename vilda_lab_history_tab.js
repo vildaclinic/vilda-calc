@@ -130,6 +130,70 @@
   }
 
   function createApi() {
+    function ensureRecordResources(options, doc, editor) {
+      // Jawne wstrzyknięcie zależności i lekki DOM testowy nie potrzebują sieci.
+      if (editor && typeof options.openClcrResult === 'function') return Promise.resolve();
+      if (!editor && (options.clcrSavedResults || options.clcrSavedResultsView)) return Promise.resolve();
+      if (!win || !win.location || !doc.head) return Promise.resolve();
+      function ready() {
+        var resources = win.ClcrRecordResources;
+        if (!resources || typeof resources[editor ? 'ensureEditor' : 'ensureReader'] !== 'function') throw new Error('Moduł zapisanych obliczeń jest niedostępny.');
+        return resources[editor ? 'ensureEditor' : 'ensureReader']();
+      }
+      if (win.ClcrRecordResources) return Promise.resolve().then(ready);
+      if (!resourceBootstrap) {
+        resourceBootstrap = new Promise(function (resolve, reject) {
+          var script = doc.createElement('script'), finished = false, timer;
+          function finish(error) {
+            if (finished) return; finished = true;
+            if (timer) win.clearTimeout(timer);
+            if (error) { if (script.parentNode) script.parentNode.removeChild(script); reject(error); }
+            else resolve();
+          }
+          script.addEventListener('load', function () { finish(win.ClcrRecordResources ? null : new Error('Moduł zapisanych obliczeń jest niedostępny.')); });
+          script.addEventListener('error', function () { finish(new Error('Nie udało się wczytać zapisanych obliczeń.')); });
+          script.setAttribute('src', new URL('clcr_record_resources.js?v=27', moduleURL || win.location.href).href);
+          timer = win.setTimeout(function () { finish(new Error('Upłynął czas wczytywania zapisanych obliczeń.')); }, 15000);
+          doc.head.appendChild(script);
+        });
+        resourceBootstrap.catch(function () { resourceBootstrap = null; });
+      }
+      return resourceBootstrap.then(ready);
+    }
+
+    function waitForConverter(trend) {
+      if (win && win.LabUnitConverter && typeof win.LabUnitConverter.find === 'function') return Promise.resolve(true);
+      if (!trend || typeof trend.loadConverter !== 'function') return Promise.resolve(false);
+      return new Promise(function (resolve) {
+        var settled = false;
+        var finish = function (ok) { if (!settled) { settled = true; resolve(!!ok); } };
+        var timer = win ? win.setTimeout(function () { finish(false); }, CONVERTER_WAIT_MS) : 0;
+        try {
+          trend.loadConverter(function (ok) { if (timer && win) win.clearTimeout(timer); finish(ok); });
+        } catch (_) { finish(false); }
+      });
+    }
+
+    // Read-only shared bootstrap for the home documentation preview. Resource
+    // lists and their loader remain the SAME native actors used by this tab.
+    async function ensureReaderDependencies(settings) {
+      settings = settings || {};
+      var doc = win && win.document;
+      function check() {
+        if (settings.isCurrent && settings.isCurrent() !== true) throw new Error('HOME_PATIENT_STALE');
+      }
+      check();
+      if (!doc) throw new Error('LAB_READER_UNAVAILABLE');
+      var ok = await waitForConverter(win.__vildaLabTrend);
+      check();
+      if (!ok || !win.LabUnitConverter) throw new Error('LAB_CONVERTER_UNAVAILABLE');
+      if (settings.includeClcr === true) {
+        await ensureRecordResources({}, doc, false);
+        check();
+      }
+      return true;
+    }
+
     var instances = [];
     var subscribed = [];
 
@@ -205,7 +269,7 @@
 
       var instance = {
         vault: vault,
-        alive: function () { return !state.destroyed && host.isConnected !== false; },
+        alive: function () { return !state.destroyed && host.isConnected !== false && (!options.isCurrent || options.isCurrent() === true); },
         noteChanged: function (event) {
           if (event && event.patientId && event.patientId !== patientId) return;
           schedule();
@@ -231,50 +295,6 @@
         if (!win) load();
       }
       function current(gen) { return gen === state.gen && instance.alive(); }
-
-      function ensureRecordResources(editor) {
-        // Jawne wstrzyknięcie zależności i lekki DOM testowy nie potrzebują sieci.
-        if (editor && typeof options.openClcrResult === 'function') return Promise.resolve();
-        if (!editor && (options.clcrSavedResults || options.clcrSavedResultsView)) return Promise.resolve();
-        if (!win || !win.location || !doc.head) return Promise.resolve();
-        function ready() {
-          var resources = win.ClcrRecordResources;
-          if (!resources || typeof resources[editor ? 'ensureEditor' : 'ensureReader'] !== 'function') throw new Error('Moduł zapisanych obliczeń jest niedostępny.');
-          return resources[editor ? 'ensureEditor' : 'ensureReader']();
-        }
-        if (win.ClcrRecordResources) return Promise.resolve().then(ready);
-        if (!resourceBootstrap) {
-          resourceBootstrap = new Promise(function (resolve, reject) {
-            var script = doc.createElement('script'), finished = false, timer;
-            function finish(error) {
-              if (finished) return; finished = true;
-              if (timer) win.clearTimeout(timer);
-              if (error) { if (script.parentNode) script.parentNode.removeChild(script); reject(error); }
-              else resolve();
-            }
-            script.addEventListener('load', function () { finish(win.ClcrRecordResources ? null : new Error('Moduł zapisanych obliczeń jest niedostępny.')); });
-            script.addEventListener('error', function () { finish(new Error('Nie udało się wczytać zapisanych obliczeń.')); });
-            script.setAttribute('src', new URL('clcr_record_resources.js?v=30', moduleURL || win.location.href).href);
-            timer = win.setTimeout(function () { finish(new Error('Upłynął czas wczytywania zapisanych obliczeń.')); }, 15000);
-            doc.head.appendChild(script);
-          });
-          resourceBootstrap.catch(function () { resourceBootstrap = null; });
-        }
-        return resourceBootstrap.then(ready);
-      }
-
-      function waitForConverter() {
-        if (win && win.LabUnitConverter && typeof win.LabUnitConverter.find === 'function') return Promise.resolve(true);
-        if (!trend || typeof trend.loadConverter !== 'function') return Promise.resolve(false);
-        return new Promise(function (resolve) {
-          var settled = false;
-          var finish = function (ok) { if (!settled) { settled = true; resolve(!!ok); } };
-          var timer = win ? win.setTimeout(function () { finish(false); }, CONVERTER_WAIT_MS) : 0;
-          try {
-            trend.loadConverter(function (ok) { if (timer && win) win.clearTimeout(timer); finish(ok); });
-          } catch (_) { finish(false); }
-        });
-      }
 
       function message(className, content, retry) {
         resetViewportReserve();
@@ -311,14 +331,14 @@
             vault.listPatientNotesForPatient(patientId),
             typeof vault.listPatientTreatmentPeriods === 'function'
               ? Promise.resolve(vault.listPatientTreatmentPeriods(patientId)).catch(function () { return []; }) : [],
-            waitForConverter()
+            waitForConverter(trend)
           ]);
         }).then(function (results) {
           if (!current(gen)) return results;
           // Nie obciążamy zwykłej historii dodatkowymi modułami, dopóki pacjent
           // nie ma zapisanych obliczeń. Kolejne zdarzenie sejfu ponowi tę bramkę.
           var hasSavedCalculations = (Array.isArray(results[1]) ? results[1] : []).some(function (note) { return note && note.category === 'wynik-klirens'; });
-          return (hasSavedCalculations ? ensureRecordResources(false) : Promise.resolve()).then(function () {
+          return (hasSavedCalculations ? ensureRecordResources(options, doc, false) : Promise.resolve()).then(function () {
             savedResults = options.clcrSavedResults || (win && win.ClcrSavedResults) || savedResults;
             return results;
           });
@@ -503,6 +523,7 @@
         describeDialog = null;
         if (!previous) return;
         previous.shell.destroy({ restoreFocus: restoreFocus !== false });
+        if (previous.releasePresentation) previous.releasePresentation();
         if (previous.host.parentNode) previous.host.parentNode.removeChild(previous.host);
       }
       function operationId() {
@@ -563,13 +584,16 @@
         var cancel = button(actions, 'vilda-auth-btn vilda-auth-btn-small vilda-auth-btn-ghost', 'Anuluj', function () { closeDescribe(true); });
         var save = button(actions, 'vilda-auth-btn vilda-auth-btn-small vilda-auth-btn-primary vilda-lab-hist-describe-save', 'Zapisz opis', submit);
         doc.body.appendChild(overlay);
+        var presentationCleanup = typeof options.onDialog === 'function' ? options.onDialog(dialog) : null;
+        function releasePresentation() { var cleanup = presentationCleanup; presentationCleanup = null; if (typeof cleanup === 'function') cleanup(); }
         var shell = helper.attach(dialog, { context: section, onClose: function () {
+          releasePresentation();
           if (describeDialog && describeDialog.host === overlay) describeDialog = null;
           if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
         } });
         var busy = false, op = operationId(), signature = null;
         dialog.addEventListener('cancel', function (event) { event.preventDefault(); if (!busy) closeDescribe(true); });
-        describeDialog = { host: overlay, dialog: dialog, shell: shell };
+        describeDialog = { host: overlay, dialog: dialog, shell: shell, releasePresentation: releasePresentation };
         function fail(message) { error.textContent = message; error.hidden = !message; }
         function setBusy(value) {
           busy = value;
@@ -578,7 +602,7 @@
         }
         function userError(message) { var problem = new Error(message); problem.forUser = true; return problem; }
         function submit() {
-          if (busy) return;
+          if (busy || typeof options.isCurrent === 'function' && !instance.alive()) return;
           var value = text(area.value), day = date.value;
           if (!value) { fail('Wpisz opis otrzymanego wyniku.'); if (typeof area.focus === 'function') area.focus(); return; }
           if (!/^\d{4}-\d{2}-\d{2}$/.test(day || '')) { fail('Podaj datę otrzymania wyniku.'); return; }
@@ -586,6 +610,7 @@
           setBusy(true);
           var opened = describeDialog;
           Promise.resolve(vault.getPatientNote(item.noteId)).then(function (note) {
+            if (typeof options.isCurrent === 'function' && (!instance.alive() || describeDialog !== opened)) return null;
             if (!stillPending(note)) throw userError('Ten oczekujący wynik zmienił się albo został już zamknięty. Zamknij okno i sprawdź go w Przypomnieniach.');
             // E3-PR0b2a: chwila zapisu obok rev - sejf porównuje ją z wersją pod blokadą notatki.
             // E3-PR0b2b: i sama wersja (baseNote) - ta sama widoczna wersja z nową chwilą zapisu nie jest konfliktem.
@@ -597,8 +622,10 @@
             if (signature && signature !== sig) op = operationId();
             signature = sig;
             request.operationId = op;
+            if (typeof options.isCurrent === 'function' && (!instance.alive() || describeDialog !== opened)) return null;
             return vault.saveReminderOutcome(request);
           }).then(function (result) {
+            if (typeof options.isCurrent === 'function' && (!instance.alive() || describeDialog !== opened)) return;
             if (!result || result.saved !== true) {
               throw userError(result && (result.reason === 'conflict' || result.reason === 'already-closed')
                 ? 'Ten wpis zmienił się w innej karcie lub na innym urządzeniu. Zachowaj wpisany opis i sprawdź wpis w Przypomnieniach.'
@@ -610,7 +637,7 @@
             schedule();
             if (typeof options.onChanged === 'function') options.onChanged();
           }).catch(function (problem) {
-            if (describeDialog !== opened) return;
+            if (describeDialog !== opened || typeof options.isCurrent === 'function' && !instance.alive()) return;
             setBusy(false);
             fail(problem && problem.forUser ? problem.message : 'Nie udało się zapisać opisu: ' + (problem && problem.message ? problem.message : problem));
           });
@@ -868,7 +895,7 @@
           if (!callback) throw new Error('Szczegóły zapisanych obliczeń są niedostępne.');
           if (state.notice && state.notice.kind === 'clcr-resource-error') { state.notice = null; draw(); }
           watchDetails();
-          return Promise.resolve(callback({ patientId: patientId, noteId: record.noteId, record: record, vault: vault, anchor: anchor, context: section, isCurrent: function () { return !detailsHidden(); }, onChanged: function () {
+          return Promise.resolve(callback({ patientId: patientId, noteId: record.noteId, record: record, vault: vault, anchor: anchor, context: section, onDialog: options.onDialog, isCurrent: function () { return instance.alive() && !detailsHidden(); }, onChanged: function () {
             if (!instance.alive()) return;
             schedule();
             if (typeof options.onChanged === 'function') options.onChanged();
@@ -880,7 +907,7 @@
         // Wstrzyknięty callback pozostaje synchroniczny; produkcyjna ścieżka
         // dociąga silniki dopiero przy otwieraniu szczegółów/edycji.
         if (typeof options.openClcrResult === 'function') { open(); return; }
-        ensureRecordResources(true).then(open).catch(function (error) {
+        ensureRecordResources(options, doc, true).then(open).catch(function (error) {
           if (!current(gen) || request !== detailsRequest || detailsHidden()) return;
           state.notice = { kind: 'clcr-resource-error', record: record, text: error && error.message || 'Nie udało się otworzyć szczegółów obliczenia.' };
           draw();
@@ -1008,7 +1035,7 @@
       function closeLabDetails(restoreFocus) {
         var previous = labDetails;
         labDetails = null; state.selected = null;
-        if (previous) { previous.shell.destroy({ restoreFocus: restoreFocus !== false }); if (previous.host.parentNode) previous.host.parentNode.removeChild(previous.host); }
+        if (previous) { previous.shell.destroy({ restoreFocus: restoreFocus !== false }); if (previous.releasePresentation) previous.releasePresentation(); if (previous.host.parentNode) previous.host.parentNode.removeChild(previous.host); }
       }
       function closeAllDetails(restoreFocus) {
         detailsRequest++;
@@ -1043,12 +1070,15 @@
         var body = add(layout, 'div', 'vilda-result-details-body');
         var actions = add(layout, 'footer', 'vilda-result-details-actions vilda-lab-hist-detail-actions');
         doc.body.appendChild(overlay);
+        var presentationCleanup = typeof options.onDialog === 'function' ? options.onDialog(dialog) : null;
+        function releasePresentation() { var cleanup = presentationCleanup; presentationCleanup = null; if (typeof cleanup === 'function') cleanup(); }
         var shell = helper.attach(dialog, { context: section, onClose: function () {
+          releasePresentation();
           if (labDetails && labDetails.host === overlay) { labDetails = null; state.selected = null; }
           if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
         } });
         dialog.addEventListener('cancel', function (event) { event.preventDefault(); closeResult(); });
-        labDetails = { host: overlay, dialog: dialog, shell: shell, body: body, actions: actions, layout: layout, title: title, kicker: kicker, close: close, anchor: null };
+        labDetails = { host: overlay, dialog: dialog, shell: shell, body: body, actions: actions, layout: layout, title: title, kicker: kicker, close: close, anchor: null, releasePresentation: releasePresentation };
         return labDetails;
       }
       function selectResult(entry, view, anchor) {
@@ -1415,7 +1445,7 @@
       };
     }
 
-    return Object.freeze({ version: '2.7.0', render: render, _internal: Object.freeze({ plural: plural, commentText: commentText, shortLabel: shortLabel, mergedNote: mergedNote }) });
+    return Object.freeze({ version: '2.7.0', render: render, ensureReaderDependencies: ensureReaderDependencies, _internal: Object.freeze({ plural: plural, commentText: commentText, shortLabel: shortLabel, mergedNote: mergedNote }) });
   }
 
   return createApi();

@@ -427,7 +427,8 @@ html.vilda-home-workspace #userSection :is(#tannerToggleBtn, #vhomePerinatalButt
 }
 
 /* Shared expanded-window geometry from the accepted mockup. */
-.vilda-home-workspace .vhome-detail-dialog {
+.vilda-home-workspace .vhome-detail-dialog,
+html.vilda-home-workspace dialog.vhome-patient-native-dialog {
   position: fixed;
   box-sizing: border-box;
   width: min(1000px, calc(100vw - 32px));
@@ -445,14 +446,18 @@ html.vilda-home-workspace #userSection :is(#tannerToggleBtn, #vhomePerinatalButt
   color: var(--text);
   box-shadow: 0 25px 100px #123a4a26;
 }
-.vilda-home-workspace .vhome-detail-dialog:not([open]) { display: none; }
-.vilda-home-workspace .vhome-detail-dialog[open] {
+.vilda-home-workspace .vhome-detail-dialog:not([open]),
+html.vilda-home-workspace dialog.vhome-patient-native-dialog:not([open]) { display: none; }
+.vilda-home-workspace .vhome-detail-dialog[open],
+html.vilda-home-workspace dialog.vhome-patient-native-dialog[open] {
   display: flex;
   flex-direction: column;
   animation: vhome-window-open 180ms ease-out both;
 }
-.vilda-home-workspace .vhome-detail-dialog::backdrop { background: #163b4b66; }
-.vilda-home-workspace .vhome-detail-dialog[open]::backdrop { animation: vhome-backdrop-open 150ms ease-out both; }
+.vilda-home-workspace .vhome-detail-dialog::backdrop,
+html.vilda-home-workspace dialog.vhome-patient-native-dialog::backdrop { background: #163b4b66; backdrop-filter: none; -webkit-backdrop-filter: none; }
+.vilda-home-workspace .vhome-detail-dialog[open]::backdrop,
+html.vilda-home-workspace dialog.vhome-patient-native-dialog[open]::backdrop { animation: vhome-backdrop-open 150ms ease-out both; }
 @keyframes vhome-window-open {
   from { opacity: 0; transform: translate(-50%, calc(-50% + 6px)) scale(.99); }
   to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
@@ -484,7 +489,8 @@ html.vilda-home-workspace .vhome-detail-dialog .vhome-dialog-footer button { min
 html.vilda-home-workspace .vhome-detail-dialog .vhome-dialog-cancel { border: var(--border-hairline) solid var(--line) !important; color: var(--text) !important; background: var(--card) !important; }
 html.vilda-home-workspace .vhome-detail-dialog .vhome-dialog-apply { background: var(--primary) !important; color: #fff !important; }
 @media (max-width: 600px) {
-  .vilda-home-workspace .vhome-detail-dialog { width: calc(100vw - 20px); height: calc(var(--vhome-dialog-viewport-height, 100dvh) - 24px); }
+  .vilda-home-workspace .vhome-detail-dialog,
+  html.vilda-home-workspace dialog.vhome-patient-native-dialog { width: calc(100vw - 20px); height: calc(var(--vhome-dialog-viewport-height, 100dvh) - 24px); }
   .vilda-home-workspace .vhome-dialog-heading { gap: var(--space-12px); padding: var(--space-14px) var(--space-16px); }
   .vilda-home-workspace .vhome-dialog-heading h2 { font-size: 19px; }
   .vilda-home-workspace .vhome-dialog-body { padding: var(--space-16px); }
@@ -492,7 +498,9 @@ html.vilda-home-workspace .vhome-detail-dialog .vhome-dialog-apply { background:
 }
 @media (prefers-reduced-motion: reduce) {
   .vilda-home-workspace .vhome-detail-dialog[open],
-  .vilda-home-workspace .vhome-detail-dialog[open]::backdrop { animation: none; }
+  html.vilda-home-workspace dialog.vhome-patient-native-dialog[open],
+  .vilda-home-workspace .vhome-detail-dialog[open]::backdrop,
+  html.vilda-home-workspace dialog.vhome-patient-native-dialog[open]::backdrop { animation: none; }
 }
 .vilda-home-workspace .vhome-puberty-assessment { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-12px); }
 .vilda-home-workspace .vhome-puberty-assessment > p { grid-column: 1 / -1; }
@@ -530,7 +538,7 @@ html.vilda-home-workspace .vhome-perinatal-clear { width: auto; margin: var(--sp
 /* Advanced growth: approved compact card and shared-size three-tab window. */
 .vilda-home-workspace .vhome-growth-native { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); pointer-events: none; }
 .vilda-home-workspace .vhome-analysis-heading { display: flex; justify-content: space-between; gap: var(--space-12px); margin: var(--space-20px) 0 var(--space-12px); color: var(--text-muted); font-size: 13px; line-height: 1.5; }
-.vilda-home-workspace .vhome-main-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-20px); margin: 0 0 var(--space-20px); }
+.vilda-home-workspace .vhome-main-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-16px); margin: 0 0 var(--space-20px); }
 .vilda-home-workspace :is(.vhome-main-cards, .vhome-analysis-heading)[hidden] { display: none; }
 .vilda-home-workspace .vhome-growth-card { box-sizing: border-box; display: flex; flex-direction: column; min-width: 0; height: 352px; padding: 0; border: var(--border-hairline) solid var(--line); border-radius: var(--radius-11); background: var(--card); overflow: hidden; }
 .vilda-home-workspace .vhome-growth-card[hidden] { display: none; }
@@ -578,9 +586,6 @@ html.vilda-home-workspace .vhome-growth-remove { min-height: 46px; align-self: e
 .vilda-home-workspace #vhomeGrowthDialog .vtap { min-width: 0; }
 @media (max-width: 850px) {
   .vilda-home-workspace .vhome-main-cards { grid-template-columns: minmax(0, 1fr); }
-  .vilda-home-workspace .vhome-growth-card { height: auto; }
-  .vilda-home-workspace .vhome-growth-heading { flex-basis: auto; min-height: 70px; }
-  .vilda-home-workspace .vhome-growth-bottom { margin-top: var(--space-6px); }
 }
 @media (max-width: 680px) {
   .vilda-home-workspace .vhome-growth-fields { grid-template-columns: minmax(0, 1fr); gap: var(--space-16px); }
@@ -597,3 +602,29 @@ html.vilda-home-workspace .vhome-growth-remove { min-height: 46px; align-self: e
   .vilda-home-workspace .vhome-growth-summary strong { font-size: 22px; }
   .vilda-home-workspace .vhome-growth-bottom { margin-inline: var(--space-14px); }
 }
+
+/* Native documentation forms keep their actors inside the shared frame. */
+html.vilda-home-workspace dialog.vhome-patient-native-dialog > :is(.vcp-form, .vilda-result-details-layout, .clcr-record-inner) {
+  flex: 1 1 auto;
+  height: 100%;
+  max-height: none;
+  min-height: 0;
+  width: 100%;
+}
+html.vilda-home-workspace dialog.vhome-patient-native-dialog .vcp-form-body { flex: 1 1 auto; }
+html.vilda-home-workspace dialog.vhome-patient-native-dialog :is(.vcp-field, .vcp-check) { font-size: 16px; }
+html.vilda-home-workspace dialog.vhome-patient-native-dialog :is(.vcp-help, .vcp-notice, .vcp-form-patient) { font-size: 14px; }
+html.vilda-home-workspace dialog.vhome-patient-native-dialog > .clcr-record-inner { box-sizing: border-box; overflow: auto; overscroll-behavior: contain; }
+html.vilda-home-workspace dialog.vhome-patient-native-dialog.clcr-record-dialog { font-size: 16px; }
+html.vilda-home-workspace dialog.vhome-patient-native-dialog.clcr-record-dialog :is(label, .clcr-record-label, .clcr-record-context) { font-size: 14px; }
+#vhomePatientDialog .vhome-dialog-body:has(> [data-home-patient-view="care"]) { display: flex; flex-direction: column; gap: var(--space-14px); }
+#vhomePatientDialog [data-home-patient-view="care"] { flex: 1 1 auto; min-height: 0; }
+#vhomePatientDialog .vhome-dialog-footer { grid-template-columns: minmax(0, 1fr); }
+#vhomePatientDialog [data-home-patient-status]:empty { display: none; }
+/* Device compactness comes from the APP viewport, while columns above use the
+   space actually available to the iframe. Desktop cards stay equal beside the
+   shell sidebars; tablet/phone cards use only the height their content needs. */
+.vilda-home-workspace.vhome-device-compact .vhome-main-cards { align-items: start; }
+.vilda-home-workspace.vhome-device-compact .vhome-growth-card { height: auto; min-height: 0; max-height: none; align-self: start; }
+.vilda-home-workspace.vhome-device-compact .vhome-growth-heading { flex-basis: auto; min-height: 0; padding-block: var(--space-10px); }
+.vilda-home-workspace.vhome-device-compact .vhome-growth-bottom { margin-top: 0; }

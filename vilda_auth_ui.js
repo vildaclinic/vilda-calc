@@ -514,7 +514,7 @@ function ClcrNotesResources() {
   if (ClcrNotesBootstrapPromise) return ClcrNotesBootstrapPromise;
   ClcrNotesBootstrapPromise = new Promise(function (resolve, reject) {
     var doc = i.document, finished = false, timer = null;
-    var url = new URL("clcr_record_resources.js?v=30", i.location.href);
+    var url = new URL("clcr_record_resources.js?v=27", i.location.href);
     var script = Array.from(doc.querySelectorAll("script[src]")).find(function (node) {
       try { return new URL(node.getAttribute("src"), i.location.href).href === url.href; } catch (_) { return false; }
     });
@@ -893,18 +893,130 @@ function CareShowReadOnlyNote(note, destination, options) {
   });
   dismiss.focus(); return true;
 }
+/* Optional native note presentation. This is UI lifetime/presentation only.
+ * It intentionally sits OUTSIDE CareOpenLegacyNoteEditor's SHA-pinned body.
+ * The native conflict-reload branch preserves onSaved/onCancel identities but
+ * drops other options. Recover the same guard/host through those identities.
+ * Do not delete a disposed provider: its false isCurrent must deny late calls.
+ */
+var CareNotePresentations = new WeakMap();
+function CareNotePresentationFor(options) {
+  if (!options) return null;
+  var supplied = options.notePresentation || null, recovered = null;
+  var callbacks = [options.onSaved, options.onCancel].filter(function (value) { return typeof value === 'function'; });
+  callbacks.forEach(function (callback) {
+    var known = CareNotePresentations.get(callback);
+    if (known && !recovered) recovered = known;
+    else if (known && recovered !== known) recovered = CareNotePresentationDenied;
+  });
+  if (supplied && recovered && supplied !== recovered) return CareNotePresentationDenied;
+  var presentation = supplied || recovered;
+  if (!presentation) return null;
+  if (typeof presentation.isCurrent !== 'function' || typeof presentation.adopt !== 'function'
+    || typeof presentation.pending !== 'function' || !callbacks.length) return CareNotePresentationDenied;
+  callbacks.forEach(function (callback) { CareNotePresentations.set(callback, presentation); });
+  return presentation;
+}
+var CareNotePresentationDenied = Object.freeze({ isCurrent: function () { return false; } });
+function CareNotePresentationCurrent(presentation, options) {
+  try {
+    return !!(presentation && presentation !== CareNotePresentationDenied
+      && presentation.patientId === (options.patientId || options.note && options.note.patientId)
+      && presentation.isCurrent() === true);
+  } catch (_) { return false; }
+}
+function CareNotePresentationNotify(presentation, action, value) {
+  if (presentation && typeof presentation[action] === 'function') presentation[action](value);
+}
+function CareNotePresentationRoots() {
+  return Array.from(i.document.querySelectorAll('.vilda-patient-note-editor-overlay'));
+}
+function CareNotePresentationDiscard(root) {
+  var fields = root.querySelectorAll('input,textarea,select'), descendants = Array.from(root.querySelectorAll('*'));
+  fields.forEach(function (field) { try { field.value = ''; } catch (_) { /* No change event is dispatched. */ } });
+  root.remove(); descendants.forEach(function (node) { node.textContent = ''; }); root.textContent = '';
+}
+function CareNotePresentationOpen(options, presentation, current, access) {
+  if (!current()) { CareNotePresentationNotify(presentation, 'abort'); return false; }
+  var destination = access && access.destination, readonly = !!(destination && destination.readOnly);
+  // The saved Clcr document has its own native detail controller; this host
+  // does not manufacture a general-note form or silently navigate elsewhere.
+  if (options.note && options.note.category === 'wynik-klirens') {
+    CareNotePresentationNotify(presentation, 'unavailable', 'native-result-details-required'); return false;
+  }
+  if (readonly && destination.kind === 'care' && destination.planId
+    && !(typeof presentation.canOpenPlan === 'function' && presentation.canOpenPlan())) {
+    CareNotePresentationNotify(presentation, 'unavailable', 'care-plan-handler-required'); return false;
+  }
+  var before = new Set(CareNotePresentationRoots());
+  try {
+    if (readonly) CareShowReadOnlyNote(options.note, destination,
+      Object.assign({}, options, { openPlan: presentation.openPlan }));
+    else CareOpenLegacyNoteEditor(options);
+  } catch (error) {
+    CareNotePresentationRoots().filter(function (root) { return !before.has(root); }).forEach(CareNotePresentationDiscard);
+    Ot('open presented native patient note', error);
+    CareNotePresentationNotify(presentation, 'unavailable', 'native-open-failed'); return false;
+  }
+  var created = CareNotePresentationRoots().filter(function (root) { return !before.has(root); });
+  if (!current()) {
+    created.forEach(CareNotePresentationDiscard); CareNotePresentationNotify(presentation, 'abort'); return false;
+  }
+  // A declined native dirty prompt creates no new overlay. It must leave the
+  // existing editor and its patient data exactly where the native opener left it.
+  if (created.length !== 1) {
+    created.forEach(CareNotePresentationDiscard);
+    var kept = created.length === 0 && Array.from(before).some(function (root) { return root.isConnected; });
+    CareNotePresentationNotify(presentation, 'unavailable', kept ? 'native-editor-kept' : 'native-not-opened'); return false;
+  }
+  var root = created[0], sheet = root.querySelector('.vilda-pne'), adopted = false;
+  try {
+    adopted = !!(sheet && presentation.adopt({ root: root, sheet: sheet,
+      patientId: options.patientId || options.note && options.note.patientId,
+      kind: readonly ? 'readonly' : 'editor' }));
+  } catch (error) { Ot('present native patient note', error); }
+  if (!adopted) {
+    CareNotePresentationDiscard(root); CareNotePresentationNotify(presentation, 'abort'); return false;
+  }
+  return true;
+}
 var CareEditorSequence = 0;
 function ga(options) {
   var sequence = ++CareEditorSequence, owner = remReadOwner();
-  if (!options || !options.note || !options.note.id) return CareOpenLegacyNoteEditor(options);
-  var anchor = i.document.activeElement, card = anchor && typeof anchor.closest === "function" ? anchor.closest(".vilda-auth-patient-card") : null;
-  function current() { return sequence === CareEditorSequence && remReadCurrent(owner) && (!card || card.isConnected) && (!options.isCurrent || options.isCurrent()); }
+  // typeof keeps the existing isolated legacy-access fixtures independent of
+  // the optional UI presentation helpers. The full artifact defines them above.
+  var presentation = typeof CareNotePresentationFor === 'function' ? CareNotePresentationFor(options) : null;
+  function presentedCurrent() {
+    return sequence === CareEditorSequence && remReadCurrent(owner)
+      && (!options.isCurrent || options.isCurrent()) && CareNotePresentationCurrent(presentation, options);
+  }
+  if (!options || !options.note || !options.note.id) {
+    if (!presentation) return CareOpenLegacyNoteEditor(options);
+    if (!presentedCurrent()) { CareNotePresentationNotify(presentation, 'abort'); return false; }
+    if (presentation.pending() === false || !presentedCurrent()) { CareNotePresentationNotify(presentation, 'abort'); return false; }
+    return CareNotePresentationOpen(options, presentation, presentedCurrent, null);
+  }
+  var anchor = i.document.activeElement, card = anchor && typeof anchor.closest === 'function' ? anchor.closest('.vilda-auth-patient-card') : null;
+  function current() {
+    return sequence === CareEditorSequence && remReadCurrent(owner) && (!card || card.isConnected)
+      && (!options.isCurrent || options.isCurrent()) && (!presentation || CareNotePresentationCurrent(presentation, options));
+  }
+  if (presentation) {
+    if (!current()) { CareNotePresentationNotify(presentation, 'abort'); return false; }
+    if (presentation.pending() === false || !current()) { CareNotePresentationNotify(presentation, 'abort'); return false; }
+  }
   return CareReadNoteAccess(options.note, options.patientId || options.note.patientId, current).then(function (access) {
-    if (!access || !current()) { if (current() && typeof options.onCancel === "function") options.onCancel(); return false; }
+    if (!access || !current()) {
+      if (current() && typeof options.onCancel === 'function') options.onCancel();
+      else if (presentation) CareNotePresentationNotify(presentation, 'abort');
+      return false;
+    }
+    if (presentation) return CareNotePresentationOpen(Object.assign({}, options, { note: access.note }), presentation, current, access);
     if (access.destination.readOnly) return CareShowReadOnlyNote(access.note, access.destination, options);
     CareOpenLegacyNoteEditor(Object.assign({}, options, { note: access.note })); return true;
   }).catch(function (error) {
-    if (current()) { Ot("open patient document access", error); if (typeof options.onCancel === "function") options.onCancel(); Gd5("Nie udało się otworzyć wpisu", "Nie udało się sprawdzić powiązań dokumentu. Spróbuj ponownie."); }
+    if (current()) { Ot('open patient document access', error); if (typeof options.onCancel === 'function') options.onCancel(); Gd5('Nie udało się otworzyć wpisu', 'Nie udało się sprawdzić powiązań dokumentu. Spróbuj ponownie.'); }
+    else if (presentation) CareNotePresentationNotify(presentation, 'abort');
     return false;
   });
 }
@@ -3780,4 +3892,7 @@ function patientLoadRun(load,payload,apply,publish){
 }
 var ws="Uwaga: to ten sam pacjent, kt\xF3ry jest ju\u017C wczytany w tej karcie. Wczytanie przywr\xF3ci ostatni zapis z karty pacjenta.";function bo(t){if(!t)return!1;try{if(i._vildaCurrentPatientId===t)return!0}catch{}try{if(i.sessionStorage&&i.sessionStorage.getItem("vildaCurrentPatientId")===t)return!0}catch{}return!1}function wo(t,a,n){var r=i.VildaUnsavedGuard,o=!!(r&&typeof r.run=="function");if(bo(t)&&r&&typeof r.confirmSamePatientReload=="function"){var l=null;try{l=i.VildaSaveStatusIndicator&&typeof i.VildaSaveStatusIndicator.getState=="function"?i.VildaSaveStatusIndicator.getState():null}catch{}l==="dirty"||l==="new_patient"?r.run({reason:"load",extraNote:ws,onProceed:n}):r.confirmSamePatientReload({patientLabel:a||null,onProceed:n});return}o?r.run({reason:"load",onProceed:n}):n()}function ko(t,a){var n=t.header&&t.header.name||"";if(a&&n)if(mo[a.id]&&i.document){var r=i.document.getElementById("name");if(r){r.value=n;try{r.dispatchEvent(new i.Event("input",{bubbles:!0}))}catch{}}else a.value=n}else a.value=n;Ua(),ks(t.patientId,n)}function ks(t,a){var n=jt();if(!n||typeof n.getPatient!="function"||!t)return;var patientLoad=patientLoadCapture(t);if(!patientLoadCurrent(patientLoad))return;Promise.resolve(n.getPatient(t)).then(function(r){if(!patientLoadCurrent(patientLoad))return;var o=r&&r.snapshots&&r.snapshots[0];if(!(!o||!o.payload)){var l=o.payload;try{a&&!String(l&&l.name||"").trim()&&(l=Object.assign({},l,{name:a}))}catch{}var d=function(){if(!patientLoadCurrent(patientLoad))return;return patientLoadRun(patientLoad,l,function(value){if(typeof i.applyLoadedData!=="function")return false;return i.applyLoadedData(value)},function(operationDetail){try{typeof i.CustomEvent=="function"&&i.document&&i.document.dispatchEvent(new i.CustomEvent("vilda:patient-loaded",{detail:Object.assign({patientId:t,savedAtISO:o&&o.savedAtISO||null,snapshotCount:r&&r.snapshotCount||r&&r.snapshots&&r.snapshots.length||null,name:o.payload&&o.payload.name||a||null,source:"pick"},operationDetail||{})}))}catch{}try{i.VildaChrome&&typeof i.VildaChrome.refreshPatientChip=="function"&&i.VildaChrome.refreshPatientChip()}catch{}})},c=!1;try{var s=i.VildaSaveStatusIndicator;if(s&&typeof s.getState=="function"&&s.getState()==="new_patient"&&typeof i.collectUserData=="function"){var p=i.collectUserData({source:"ac-pick-guard-check"})||{},u=p.user||{},h=!!(u.weight||u.height||u.age!=null&&u.age!=="");c=!h}}catch{c=!1}if(!patientLoadCurrent(patientLoad))return;if(bo(t))wo(t,a||null,d);else{var v=i.VildaUnsavedGuard;!c&&v&&typeof v.run=="function"?v.run({reason:"load",onProceed:d}):d()}}}).catch(function(){})}function Bz0(t){try{if(!t)return!1;if(t.readOnly||t.disabled)return!0;if(t.dataset&&t.dataset.zKartoteki)return!0;/* tozsamosc jest jedna: zablokowana para Nazwisko/Imie gasi podpowiedz takze w advName i basicGrowthName (po zapisie te pola bywaja wolne i wstepnie wypelnione tym samym nazwiskiem) */if(i.document){var a=i.document.getElementById("lastName"),n=i.document.getElementById("firstName");if(a&&(a.readOnly||a.disabled)||n&&(n.readOnly||n.disabled))return!0}}catch{}return!1}function Ii(){if(i.document){var t=vo.some(function(n){return i.document.getElementById(n)});if(t){gs(),xs(),vo.forEach(function(n){var r=i.document.getElementById(n);if(!(!r||r._vildaAcBound)){r._vildaAcBound=!0;try{r.setAttribute("autocomplete","off")}catch{}r.addEventListener("focus",function(o){o&&o.isTrusted===!1||(Xe=r,Ln(!1).then(function(){Xe===r&&Pi(r)}))}),r.addEventListener("input",function(o){o&&o.isTrusted===!1||(Xe=r,Qe?Pi(r):Ln(!1).then(function(){Xe===r&&Pi(r)}))}),r.addEventListener("keydown",bs),r.addEventListener("blur",function(){setTimeout(function(){Xe===r&&Ua()},120)})}}),yo||(yo=!0,i.addEventListener("scroll",function(){ji(Xe)},!0),i.addEventListener("resize",function(){ji(Xe)}),i.document.addEventListener("click",function(n){ie&&!ie.contains(n.target)&&n.target!==Xe&&Ua()},!0),i.document.addEventListener("vilda:patient-loaded",function(){Qe=null,Ua()}),i.document.addEventListener("vilda:patient-saved",function(){Qe=null,Ua()}),i.document.addEventListener("vilda:tozsamosc-zmiana",function(n){n&&n.detail&&n.detail.zablokowane&&Ua()}));try{var a=jt();a&&typeof a.isUnlocked=="function"&&a.isUnlocked()&&Ln(!1),a&&typeof a.onUnlock=="function"&&!go&&(go=!0,a.onUnlock(function(){Qe=null;try{Ln(!1)}catch{}}))}catch{}}}}const zs={__vildaAuthUI:!0,resumeSearch:remSearchResume,closeSearchNavigation:remSearchLeaveRoute,isSearchCalendarTransferCurrent:remSearchCalendarTransferCurrent,resumeSearchCalendarTransfer:remSearchResumeCalendarTransfer,getSearchCalendarTransfer:remSearchGetCalendarTransfer,resolveSearchCalendarTarget:remSearchResolveCalendarTarget,_pytanieOTozsamosc:Gz2,_opisKandydata:Gz0,_liczbaImiennikow:Gz3,_liczbaWersji:Gz1,initPatientNameAutocomplete:Ii,VERSION:_o,STEP:Ao,boot:Ei,isBootReady:isAuthBootReady,showStartupScreen:me,showEmptyStartupScreen:ar,showUserPicker:nr,showSetupWizard:mn,showLoginForUser:qn,showPostLoginBiometricPrompt:rr,showPostLoginAdoptionPrompt:or,showRecoveryFlowForUser:lr,showPatientsList:remSearchNewNavigation(Be),showExternalRegistry:remSearchNewNavigation(ze),showExternalPatientCard:remSearchNewNavigation(ln),showPatientCard:remSearchNewNavigation(se),showPatientEditScreen:remSearchNewNavigation(fi),showPatientNoteEditor:remSearchNewNavigation(ga),showQuickMeasureModal:remSearchNewNavigation(hi),showRemindersModal:Mr,maybeShowReminders:tn,showCarePlans:function(options){return tn(Object.assign({},options||{},{force:true,carePlans:true}))},renderRemindersInline:Br,syncRemindersInline:Rr,showImportPatientsFlow:zi,showMergeAccountFlow:uo,showRestoreVaultFlow:Jn,showSyncCodeRestoreScreen:Re,showBackupCodeRestoreScreen:fo,showForcedPasswordResetScreen:po,showQRLoginScreen:Wa,showPasskeyEphemeralLoginScreen:Ai,showLoginModeChooser:oa,mapEphemeralLoginError:Vi,hide:$t,lockAndShowLogin:hs,isGuestMode:Vn,exitGuestMode:Fo,setBusy:Kt,updateProBadge:Ja,isTrustedDevice:Ci,setTrustedDevice:fs,TRUSTED_DEVICE_IDLE_MS:Ti,getCloudOnlyIdlePref:co,setCloudOnlyIdlePref:ps,CLOUD_ONLY_IDLE_CHOICES_MS:Si,effectiveIdleMs:Ba,recordActivity:vildaRecordActivity,getBiometricAutoTrigger:Wn,setBiometricAutoTrigger:Wi,getBiometricDismissCount:Hi,resetBiometricDismissCount:function(t){Hn(t,0)},getBiometricLabel:Ze};/* P-BADANIA-EKSPORT (LAB-HISTORIA PR2): zakladka „Badania” (vilda_lab_history_tab.js) rysuje wykres tym samym
    rendererem co dawny „Trend wynikow” i bierze zapisane oceny, parser normy wpisu, format wieku i leniwe ladowanie
-   konwertera z tej IIFE. Celowo bez vi i Jl: dzisiejsze normy nie dostaja nowych konsumentow. */i.__vildaLabTrend=Object.freeze({render:Nl,assessments:Lh3TrendAssessments,parseNorm:Dl,formatAge:eo,loadConverter:ja});if(i.VildaAuthUI=zs,i.document)if(i.document.readyState==="loading")i.document.addEventListener("DOMContentLoaded",function(){Ei();try{Ii()}catch{}try{Wr()}catch{}try{Gh3()}catch{}},{once:!0});else{try{Ei()}catch(t){Ot("autostart boot",t)}try{Ii()}catch{}try{Wr()}catch{}try{Gh3()}catch{}}})(typeof window<"u"?window:typeof globalThis<"u"?globalThis:null);
+   konwertera z tej IIFE. Celowo bez vi i Jl: dzisiejsze normy nie dostaja nowych konsumentow. */
+// Optional UI hosting capability; the pinned native editor body is unchanged.
+zs.notePresentationVersion = 1;
+i.__vildaLabTrend=Object.freeze({render:Nl,assessments:Lh3TrendAssessments,parseNorm:Dl,formatAge:eo,loadConverter:ja});if(i.VildaAuthUI=zs,i.document)if(i.document.readyState==="loading")i.document.addEventListener("DOMContentLoaded",function(){Ei();try{Ii()}catch{}try{Wr()}catch{}try{Gh3()}catch{}},{once:!0});else{try{Ei()}catch(t){Ot("autostart boot",t)}try{Ii()}catch{}try{Wr()}catch{}try{Gh3()}catch{}}})(typeof window<"u"?window:typeof globalThis<"u"?globalThis:null);

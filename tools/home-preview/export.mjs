@@ -9,6 +9,7 @@ const TOOL_DIRECTORY = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_SOURCE = path.resolve(TOOL_DIRECTORY, '../..');
 const EXPORT_MARKER = '.vilda-home-preview-export.json';
 const BLOCKED_ORIGIN = 'https://vilda-preview-disabled.invalid';
+const PRODUCTION_HOSTS = ['vilda-sync.maciej-4b9.workers.dev', 'sync.vildasync.com'];
 export const PREVIEW_CSP = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; connect-src 'self'; frame-src 'self' blob:; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'";
 export const PREVIEW_WORKER_NETWORK_GUARD = `/* Preview-only: a service worker has its own network context. */
 (function () {
@@ -60,8 +61,9 @@ export function isolateDocument(source, buildId) {
 }
 
 export function isolateText(source) {
-  return source.replaceAll('https://vilda-sync.maciej-4b9.workers.dev', BLOCKED_ORIGIN)
-    .replaceAll('wss://vilda-sync.maciej-4b9.workers.dev', 'wss://vilda-preview-disabled.invalid');
+  return PRODUCTION_HOSTS.reduce((text, host) => text
+    .replaceAll('https://' + host, BLOCKED_ORIGIN)
+    .replaceAll('wss://' + host, BLOCKED_ORIGIN.replace(/^https:/, 'wss:')), source);
 }
 
 export function demoAccessDocument(source) {
@@ -182,7 +184,8 @@ export async function exportPreview({ source = DEFAULT_SOURCE, output }) {
     files.set(relative, result);
   }
   for (const [relative, bytes] of files) {
-    if (['.html', '.js', '.mjs', '.json'].includes(path.extname(relative)) && bytes.includes(Buffer.from('vilda-sync.maciej-4b9.workers.dev'))) {
+    if (['.html', '.js', '.mjs', '.json'].includes(path.extname(relative))
+      && PRODUCTION_HOSTS.some(host => bytes.includes(Buffer.from(host)))) {
       throw new Error('Production endpoint survived preview export: ' + relative);
     }
   }

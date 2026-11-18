@@ -7,6 +7,7 @@
   var d = w.document, started = false, frame = 0;
   var dateLabel, historyButton, copyButton, copySource, actions, referenceSection, referenceToggle;
   var referenceSelect, referenceChoices = [];
+  var deviceResizeParent = null, deviceFrameObserver = null;
 
   function element(tag, className, text) {
     var node = d.createElement(tag);
@@ -15,6 +16,43 @@
     return node;
   }
   function byId(id) { return d.getElementById(id); }
+  function deviceViewportWindow() {
+    try {
+      if (w.parent !== w && w.frameElement && w.frameElement.classList.contains('app-pane')) {
+        // Reading the width verifies same-origin access before the parent is
+        // used. Shell initialization need not have published its API yet.
+        if (typeof w.parent.innerWidth === 'number') return w.parent;
+      }
+    } catch (_) { /* A foreign embed keeps its own viewport. */ }
+    return w;
+  }
+  function getDeviceViewportWidth() { return deviceViewportWindow().innerWidth; }
+  function refreshDeviceLayout() {
+    d.documentElement.classList.toggle('vhome-device-compact', getDeviceViewportWidth() <= 1024);
+  }
+  function unbindDeviceViewportResize() {
+    if (deviceResizeParent) {
+      try { deviceResizeParent.removeEventListener('resize', schedule); } catch (_) { /* Parent navigation can revoke access. */ }
+    }
+    if (deviceFrameObserver) deviceFrameObserver.disconnect();
+    deviceResizeParent = null; deviceFrameObserver = null;
+  }
+  function bindDeviceViewportResize() {
+    var parent = deviceViewportWindow();
+    if (parent === deviceResizeParent) return;
+    unbindDeviceViewportResize();
+    if (parent === w) return;
+    parent.addEventListener('resize', schedule); deviceResizeParent = parent;
+    // A native pane replacement can discard this document. Release the
+    // parent's callbacks even if that teardown does not deliver pagehide.
+    var ownedFrame = w.frameElement;
+    if (ownedFrame && typeof w.MutationObserver === 'function') {
+      deviceFrameObserver = new w.MutationObserver(function () {
+        if (!ownedFrame.isConnected || ownedFrame.contentDocument !== d) unbindDeviceViewportResize();
+      });
+      deviceFrameObserver.observe(parent.document.documentElement, { childList: true, subtree: true });
+    }
+  }
   function currentPatientId() {
     try { return w.sessionStorage.getItem('vildaCurrentPatientId') || null; }
     catch (_) { return null; }
@@ -120,6 +158,7 @@
   }
   function refresh() {
     if (!started) return;
+    refreshDeviceLayout();
     doctorResults();
     var date = civilDate();
     dateLabel.textContent = date ? date.slice(8, 10) + '.' + date.slice(5, 7) + '.' + date.slice(0, 4) : 'Data nieznana';
@@ -408,6 +447,7 @@
     if (!form || !card || !byId('clearAllDataBtn')) return;
     started = true;
     d.documentElement.classList.add('vilda-home-workspace');
+    refreshDeviceLayout();
 
     var header = element('section', 'vhome-visit-heading');
     header.setAttribute('aria-label', 'Bieżąca wizyta');
@@ -510,14 +550,17 @@
       'vilda:auth-boot-settled', 'vildaProAccessChanged', 'vildaResultsModeChanged'].forEach(function (name) {
       d.addEventListener(name, schedule);
     });
-    w.addEventListener('pageshow', schedule);
+    w.addEventListener('pageshow', function () { bindDeviceViewportResize(); schedule(); });
+    w.addEventListener('pagehide', unbindDeviceViewportResize);
+    w.addEventListener('resize', schedule);
+    bindDeviceViewportResize();
     if (w.VildaVault && typeof w.VildaVault.onLock === 'function') w.VildaVault.onLock(schedule);
     refresh();
     if (w.VildaSummaryLayout) w.VildaSummaryLayout.refresh();
   }
   w.VildaHomeWorkspace = Object.freeze({ start: start, refresh: refresh, openPuberty: openPuberty,
     refreshPubertyShortcut: refreshPubertyShortcut, createDialog: createDetailDialog, fitDialog: fitDetailDialog,
-    decorateShortcut: decorateShortcut });
+    decorateShortcut: decorateShortcut, getDeviceViewportWidth: getDeviceViewportWidth });
   if (d.readyState === 'loading') d.addEventListener('DOMContentLoaded', start, { once: true });
   else start();
 })(typeof window !== 'undefined' ? window : globalThis);

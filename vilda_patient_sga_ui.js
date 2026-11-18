@@ -246,5 +246,13 @@
     });
     return tile;
   }
-  win.VildaPatientSgaUI = Object.freeze({ createTile, close });
+  // Presentation-only entry point for the shared home dialog. The model
+  // comes from VildaPatientSgaModel.build(savedBirth); no reassessment occurs.
+  function renderSummary(host, model) {
+    if (!host || !host.ownerDocument || !model) return false;
+    while (host.firstChild) host.removeChild(host.firstChild);
+    fillBody(host.ownerDocument, host, model);
+    return true;
+  }
+  win.VildaPatientSgaUI = Object.freeze({ createTile, close, renderSummary });
 })(typeof window !== 'undefined' ? window : null);

@@ -47,7 +47,8 @@ CSP: połączenia tylko do własnego originu, brak zewnętrznych ramek i formula
 Wygenerowany service worker ma dodatkowo własną blokadę `fetch` poza swoim
 originem; nie polega ona na obsłudze pliku `_headers` przez hosting.
 
-Adres produkcyjnego Workera jest zastępowany zarezerwowanym adresem `.invalid`
+Dawny adres Workera oraz aktualna domena `sync.vildasync.com` są zastępowane
+zarezerwowanym adresem `.invalid`
 w eksportowanych plikach JS i HTML. Obejmuje to również stały adres natywnego
 clinical workspace w `vilda_vault.js`, niezależny od `VILDA_SYNC_WORKER_URL`.
 Końcowy skan przerywa eksport, jeśli adres produkcji pozostał w pliku tekstowym.

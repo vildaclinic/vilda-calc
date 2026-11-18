@@ -1,0 +1,599 @@
+/* Patient card and summary presentation. Native readers own values, saved
+ * ranges, assessment tones and actions; the workspace owns dialog geometry.
+ */
+#vhomePatientCard,
+#vhomePatientDialog {
+  --vhome-patient-surface: #fff;
+  --vhome-patient-ink: #31545e;
+  --vhome-patient-muted: #617986;
+  --vhome-patient-line: #dbe7e8;
+  --vhome-patient-accent: var(--primary, #00838d);
+  --vhome-patient-soft: #f6f8f9;
+  --vhome-patient-teal-pale: #edf8f6;
+  --vhome-patient-teal-line: #cce4e6;
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: var(--vhome-patient-ink);
+  background: var(--vhome-patient-surface);
+}
+
+.vilda-home-workspace #vhomePatientCard.vhome-patient-card {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: 352px;
+  min-height: 352px;
+  max-height: 352px;
+  margin: 0;
+  padding: 0;
+  border: var(--border-hairline) solid var(--vhome-patient-line);
+  border-radius: var(--radius-13);
+  box-shadow: 0 2px 8px #244d5505;
+  overflow: hidden;
+}
+
+#vhomePatientCard[hidden],
+#vhomePatientCard [hidden],
+#vhomePatientDialog [hidden] {
+  display: none !important;
+}
+
+#vhomePatientCard .vhome-patient-heading {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 0 0 80px;
+  min-height: 0;
+  gap: var(--space-12px);
+  padding: var(--space-14px) var(--space-20px);
+}
+
+#vhomePatientCard .vhome-patient-heading h2 {
+  min-width: 0;
+  margin: 0;
+  color: var(--vhome-patient-ink);
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.4;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+html.vilda-home-workspace #vhomePatientCard .vhome-patient-expand {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  margin: 0;
+  padding: var(--space-10px);
+  border: 0 !important;
+  border-radius: var(--radius-8) !important;
+  background: transparent !important;
+  color: var(--vhome-patient-accent) !important;
+  box-shadow: none !important;
+}
+
+#vhomePatientCard .vhome-patient-expand svg {
+  display: block;
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+#vhomePatientCard .vhome-patient-tabs {
+  box-sizing: border-box;
+  display: flex;
+  flex: 0 0 44px;
+  align-items: stretch;
+  gap: var(--space-6px);
+  height: 44px;
+  min-height: 44px;
+  padding: 0 var(--space-20px);
+  border-bottom: var(--border-hairline) solid var(--vhome-patient-line);
+}
+
+html.vilda-home-workspace #vhomePatientCard .vhome-patient-tab {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 1 auto;
+  gap: var(--space-4px);
+  min-width: 0;
+  width: auto;
+  min-height: 44px;
+  margin: 0;
+  padding: var(--space-8px) 9px;
+  border: 0 !important;
+  border-bottom: 2px solid transparent !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--vhome-patient-muted) !important;
+  box-shadow: none !important;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 450;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+html.vilda-home-workspace #vhomePatientCard .vhome-patient-tab[aria-selected=true] {
+  border-bottom-color: var(--vhome-patient-accent) !important;
+  color: var(--vhome-patient-accent) !important;
+  font-weight: 600;
+}
+
+#vhomePatientCard .vhome-patient-tab-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#vhomePatientCard .vhome-patient-count {
+  flex-shrink: 0;
+  padding: 1px 5px;
+  border-radius: var(--radius-4, 4px);
+  background: #edf5f5;
+  color: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+
+#vhomePatientCard .vhome-patient-tabpanel {
+  box-sizing: border-box;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-6px);
+  min-width: 0;
+  min-height: 0;
+  padding: var(--space-10px) var(--space-20px) var(--space-12px);
+  overflow: hidden;
+}
+
+#vhomePatientCard .vhome-patient-caption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  gap: var(--space-4px) var(--space-10px);
+  margin: 0;
+  color: var(--vhome-patient-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+#vhomePatientCard .vhome-patient-caption time {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Normal three-row previews fit without scrolling. Unusually long native
+ * units/assessment labels remain reachable within the fixed desktop card.
+ */
+#vhomePatientCard .vhome-patient-preview-body {
+  flex: 0 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+#vhomePatientCard .vhome-patient-labs {
+  display: table;
+  width: 100%;
+  margin: 0;
+  border: 0;
+  border-collapse: collapse;
+  table-layout: fixed;
+  background: var(--vhome-patient-surface);
+  color: var(--vhome-patient-ink);
+  font-size: 14px;
+  line-height: 1.45;
+  font-variant-numeric: tabular-nums;
+}
+
+#vhomePatientCard .vhome-patient-labs tbody {
+  display: table-row-group;
+}
+
+#vhomePatientCard .vhome-patient-labs tr {
+  display: table-row;
+}
+
+#vhomePatientCard .vhome-patient-labs th,
+#vhomePatientCard .vhome-patient-labs td {
+  display: table-cell;
+  min-width: 0;
+  padding: 7px 0;
+  border: 0;
+  border-bottom: var(--border-hairline) solid #ecf1f2;
+  background: var(--vhome-patient-surface);
+  vertical-align: middle;
+  font-size: 14px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+#vhomePatientCard .vhome-patient-labs th {
+  width: 32%;
+  padding-right: var(--space-8px);
+  font-weight: 550;
+  text-align: left;
+}
+
+#vhomePatientCard .vhome-patient-labs td {
+  text-align: right;
+}
+
+#vhomePatientCard .vhome-patient-labs td:last-child {
+  width: 30%;
+  padding-left: var(--space-8px);
+}
+
+#vhomePatientCard .vhome-patient-analyte {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#vhomePatientCard .vhome-patient-result {
+  color: inherit;
+  font-size: 14px;
+  font-weight: 550;
+  overflow-wrap: anywhere;
+}
+
+#vhomePatientCard .vhome-patient-unit {
+  color: var(--vhome-patient-muted);
+  font-size: 14px;
+  font-weight: 400;
+}
+
+:is(#vhomePatientCard, #vhomePatientDialog) .vhome-patient-badge {
+  box-sizing: border-box;
+  display: inline-block;
+  max-width: 100%;
+  padding: 2px 5px;
+  border: var(--border-hairline) solid #e0e9eb;
+  border-radius: var(--radius-4, 4px);
+  background: var(--vhome-patient-surface);
+  color: var(--vhome-patient-muted);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.4;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+/* Only native presentation tokens select a tone; missing assessment is neutral. */
+:is(#vhomePatientCard, #vhomePatientDialog) .vhome-patient-badge[data-tone=normal] {
+  border-color: var(--vhome-patient-teal-line);
+  background: var(--vhome-patient-teal-pale);
+  color: #087a78;
+}
+
+:is(#vhomePatientCard, #vhomePatientDialog) .vhome-patient-badge[data-tone=warn] {
+  border-color: #efdfba;
+  background: #fff8eb;
+  color: #855a18;
+}
+
+:is(#vhomePatientCard, #vhomePatientDialog) .vhome-patient-badge[data-tone=danger] {
+  border-color: #edd2d7;
+  background: #fff0f1;
+  color: #9b3f49;
+}
+
+#vhomePatientCard .vhome-patient-preview-title {
+  flex-shrink: 0;
+  min-width: 0;
+  margin: 0;
+  color: var(--vhome-patient-ink);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#vhomePatientCard .vhome-patient-excerpt {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  flex-shrink: 0;
+  margin: 0;
+  color: var(--vhome-patient-muted);
+  font-size: 14px;
+  line-height: 1.6;
+  overflow: hidden;
+}
+
+#vhomePatientCard .vhome-patient-plan-meta {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  flex-shrink: 0;
+  margin: 0;
+  padding: var(--space-4px) var(--space-8px);
+  border-radius: var(--radius-7, 7px);
+  background: #f1f7f7;
+  color: var(--vhome-patient-ink);
+  font-size: 14px;
+  line-height: 1.55;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+html.vilda-home-workspace #vhomePatientCard .vhome-patient-link {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex-shrink: 0;
+  gap: var(--space-8px);
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  margin: auto 0 0;
+  padding: var(--space-6px) 0 0;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--vhome-patient-accent) !important;
+  box-shadow: none !important;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.5;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+#vhomePatientCard .vhome-patient-link svg {
+  flex-shrink: 0;
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+}
+
+:is(#vhomePatientCard, #vhomePatientDialog) .vhome-patient-empty {
+  margin: 0;
+  padding: var(--space-14px);
+  border: var(--border-hairline) dashed var(--vhome-patient-line);
+  border-radius: var(--radius-8);
+  background: #f8fbfb;
+  color: var(--vhome-patient-muted);
+  font-size: 14px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+/* No dimensions, position, top-layer, scroll-container or motion overrides. */
+#vhomePatientDialog .vhome-dialog-heading,
+#vhomePatientDialog .vhome-dialog-footer,
+#vhomePatientDialog .vhome-dialog-body {
+  background: var(--vhome-patient-surface);
+  color: var(--vhome-patient-ink);
+}
+
+#vhomePatientDialog .vhome-dialog-body {
+  font-size: 16px;
+  line-height: 1.65;
+}
+
+html.vilda-home-workspace #vhomePatientDialog .vhome-dialog-cancel {
+  border-color: var(--vhome-patient-line) !important;
+  background: var(--vhome-patient-surface) !important;
+  color: var(--vhome-patient-ink) !important;
+}
+
+#vhomePatientDialog .vhome-patient-overview {
+  display: grid;
+  gap: var(--space-20px);
+  min-width: 0;
+}
+
+#vhomePatientDialog .vhome-patient-context {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-8px) var(--space-18px);
+  min-width: 0;
+  margin: 0;
+  color: var(--vhome-patient-muted);
+  font-size: 14px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+#vhomePatientDialog .vhome-patient-context strong {
+  color: var(--vhome-patient-ink);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+#vhomePatientDialog .vhome-patient-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: stretch;
+  gap: var(--space-12px);
+  min-width: 0;
+}
+
+html.vilda-home-workspace #vhomePatientDialog .vhome-patient-button {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-8px);
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  margin: 0;
+  padding: var(--space-10px) var(--space-12px);
+  border: var(--border-hairline) solid var(--vhome-patient-line) !important;
+  border-radius: var(--radius-8) !important;
+  background: var(--vhome-patient-surface) !important;
+  color: var(--vhome-patient-accent) !important;
+  box-shadow: none !important;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.5;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+#vhomePatientDialog .vhome-patient-section {
+  min-width: 0;
+  margin: 0;
+  padding: 0 0 22px;
+  border-bottom: var(--border-hairline) solid var(--vhome-patient-line);
+  overflow-wrap: anywhere;
+}
+
+#vhomePatientDialog .vhome-patient-section:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+#vhomePatientDialog .vhome-patient-section > h3 {
+  margin: 0 0 var(--space-10px);
+  color: var(--vhome-patient-ink);
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+#vhomePatientDialog .vhome-patient-section > p {
+  margin: 0 0 var(--space-12px);
+  color: var(--vhome-patient-ink);
+  font-size: 16px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+#vhomePatientDialog .vhome-patient-section > .vhome-patient-button {
+  width: auto;
+  max-width: 100%;
+  min-height: 44px;
+  font-size: 14px;
+}
+
+#vhomePatientDialog .vhome-patient-note-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-6px) var(--space-14px);
+  margin: 0 0 var(--space-10px);
+  color: var(--vhome-patient-muted);
+  font-size: 14px;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+
+html.vilda-home-workspace :is(#vhomePatientCard, #vhomePatientDialog) :is(.vhome-patient-expand, .vhome-patient-tab, .vhome-patient-link, .vhome-patient-button):disabled {
+  opacity: var(--opacity-disabled-label);
+  cursor: not-allowed;
+}
+
+html.vilda-home-workspace :is(#vhomePatientCard, #vhomePatientDialog) :is(.vhome-patient-expand, .vhome-patient-tab, .vhome-patient-link, .vhome-patient-button):focus-visible {
+  outline: var(--border-emphasis) solid var(--vhome-patient-accent);
+  outline-offset: 2px;
+}
+
+#vhomePatientCard .vhome-patient-tab:focus-visible {
+  outline-offset: -3px;
+}
+
+.vilda-home-workspace.vhome-device-compact #vhomePatientCard.vhome-patient-card {
+  height: auto;
+  min-height: 0;
+  max-height: none;
+  align-self: start;
+}
+.vhome-device-compact #vhomePatientCard .vhome-patient-heading {
+  flex-basis: auto;
+  padding-block: var(--space-10px);
+}
+.vhome-device-compact #vhomePatientCard .vhome-patient-tabpanel {
+  flex: 0 0 auto;
+}
+.vhome-device-compact #vhomePatientCard .vhome-patient-preview-body {
+  flex: 0 0 auto;
+  overflow: visible;
+}
+.vhome-device-compact #vhomePatientCard .vhome-patient-link {
+  margin-top: 0;
+}
+
+@media (max-width: 680px) {
+  #vhomePatientDialog .vhome-patient-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  #vhomePatientCard .vhome-patient-heading {
+    padding-inline: 17px;
+  }
+  #vhomePatientCard .vhome-patient-heading h2 {
+    font-size: 16px;
+  }
+  #vhomePatientCard .vhome-patient-tabs {
+    gap: var(--space-4px);
+    padding-inline: 17px;
+  }
+  #vhomePatientCard .vhome-patient-tab {
+    padding-inline: 7px;
+  }
+  #vhomePatientCard .vhome-patient-tabpanel {
+    padding-inline: 17px;
+  }
+}
+
+@media (max-width: 359px) {
+  #vhomePatientCard .vhome-patient-tab {
+    padding-inline: 5px;
+    font-size: 13px;
+  }
+}
+
+
+#vhomePatientCard .tone-within { color: #087f5b !important; }
+#vhomePatientCard :is(.tone-below, .tone-above, .tone-outside) { color: #cf222e !important; }
+#vhomePatientCard .tone-neutral { color: var(--text-strong, #263f49) !important; }
+#vhomePatientCard .vhome-patient-native-symbol { font-size: 14px; white-space: nowrap; }
+#vhomePatientCard .vhome-patient-native-warning {
+  display: block;
+  margin-top: 3px;
+  color: var(--text-muted, #56717c);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+#vhomePatientCard .vhome-patient-native-warning:is([data-warning-kind=clinical], [data-warning-kind=invalidated], [data-warning-kind=unavailable]) {
+  color: #8a4a18;
+  font-weight: 500;
+}
+#vhomePatientDialog .vhome-patient-note-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+#vhomePatientDialog .vhome-patient-dialog-status { margin: 0; font-size: 14px; line-height: 1.45; }

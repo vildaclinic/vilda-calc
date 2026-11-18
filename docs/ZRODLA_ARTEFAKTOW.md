@@ -1995,24 +1995,25 @@ Test `sga-shared-presentation.test.mjs` wywołuje ten sam kod produkcyjny przez
 DocPro oraz nowy czysty punkt wejścia. `vilda_sga_birth_results.css` pochodzi
 wyłącznie z odpowiadających wynikowi reguł `inline_docpro_00.css`.
 
-### Transport ośmiu zasobów interfejsu wizyt i strony głównej w PWA
+### Transport zasobów interfejsu wizyt i strony głównej w PWA
 
 `vilda_visit_context.js`, `vilda_visit_history_ui.js`,
 `vilda_visit_history_ui.css`, `vilda_home_workspace.js`,
 `vilda_home_workspace.css`, `vilda_home_perinatal.js`,
-`vilda_sga_birth_results.css` i `vilda_home_growth.js` pozostają niezależnymi plikami źródłowymi oraz
-ośmioma oddzielnymi adresami offline z `?v=`. Instalacja pobiera ich dokładne
+`vilda_sga_birth_results.css` i `vilda_home_growth.js` oraz późniejsze moduły
+prezentacji A2, zaleceń i Karty pacjenta pozostają niezależnymi źródłami
+z dwudziestoma oddzielnymi adresami offline z `?v=`. Instalacja pobiera ich dokładne
 treści w jednym archiwum JSON. `tools/build-visit-ui-precache.mjs` odczytuje
 bajty źródeł i bieżące wersje precache, zapisuje archiwum pod adresem z hashem,
 manifest `runtime/visit-ui-precache/manifest.json` oraz konfigurację
 `VISIT_UI_PRECACHE_PACK` w SW. Nie łączy wykonywanego kodu ani arkuszy stylów.
 
 Worker najpierw sprawdza hash całego archiwum, pełną listę członków i hash
-każdej treści. Dopiero wtedy zapisuje odpowiedzi pod ośmioma oryginalnymi
+każdej treści. Dopiero wtedy zapisuje odpowiedzi pod oryginalnymi
 kluczami. CSS ma typ `text/css`, skrypty `text/javascript`; archiwum nie może
 zmienić tych typów. Wspólny mechanizm weryfikacji transportu ma dwie oddzielne
 listy dozwolonych zasobów: dotychczasowe moduły przestrzeni klinicznej oraz
-dokładnie jedenaście zasobów wizyt i strony głównej (po dodaniu prezentacji A2). Nie rozszerza listy akceptowanych adresów
+dokładnie dwadzieścia zasobów wizyt i strony głównej (po dodaniu Karty pacjenta). Nie rozszerza listy akceptowanych adresów
 przestrzeni klinicznej. Nieudana weryfikacja przerywa wymaganą instalację.
 
 Po zmianie treści lub numeru `?v=` tych plików, **po** `npm run podbij-wersje`:
@@ -2070,3 +2071,28 @@ Wykresy zakresów używają procentowych współrzędnych SVG w rzeczywistym
 widoku (bez rozciągania promienia punktów). Nie ustawiają stylów z JS. Nowy
 arkusz korzysta z istniejących tokenów i wspólnej skórki; limity stylów inline
 i instalacji PWA pozostają niezmienione.
+
+### Karta pacjenta w nowej stronie głównej
+
+`vilda_home_patient_data.js`, `vilda_home_patient.js`,
+`vilda_home_patient.css`, `vilda_home_patient_note_host.js`,
+`vilda_home_patient_note_host.css` i `vilda_home_dialog_history.js` są czytelnymi
+źródłami wykonywanymi bez kompilacji. Wchodzą do tego samego transportu UI;
+nie dodają zasobów do chronionej przestrzeni klinicznej.
+
+Adapter odczytuje istniejące API sejfu, modele planów i zapisane prezentacje
+wyników badań. Nie wybiera dzisiejszej normy ani nie interpretuje wyniku
+ponownie. Rozróżnienie wyników Klirensu i notatek wykorzystuje te same natywne
+predykaty co aktualna Karta pacjenta. Błąd odczytu nie staje się pustą listą.
+
+Czytelny most prezentacji w `vilda_auth_ui.js` otacza dotychczasową bramkę
+`ga()`. Całe ciało `CareOpenLegacyNoteEditor` zachowuje pin z bazy `audyt`
+(60dd540af147f7b4c2fec361bdf6758e899c66b4e20a6b87714061ac2399183d).
+Host przenosi cały oryginalny węzeł edytora; nie rekonstruuje pól, transakcji,
+konfliktów ani potwierdzeń. Natywne loadery Badania są wspólne dla widoku
+i adaptera; publiczne `describeSummary` i `renderSummary` delegują do
+dotychczasowych funkcji prezentacji Planu opieki i SGA.
+
+Historia okien jest oddzielnym modułem stanu UI. Nie zapisuje dokumentacji
+pacjenta. Odtwarzanie nieprzyjętego Wstecz zachowuje istniejący token,
+a zamknięcie rodzica i dziecka rozlicza wspólne przejście historii.

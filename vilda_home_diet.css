@@ -943,23 +943,21 @@ html.vilda-home-workspace :is(#vhomeDietCard, #vhomeDietDialog, #vhomeDietReport
   outline-offset: -2px;
 }
 
-@media (max-width: 850px) {
-  .vilda-home-workspace #vhomeDietCard.vhome-diet-card {
-    height: auto;
-    min-height: 0;
-    max-height: none;
-    align-self: start;
-  }
-  #vhomeDietCard .vhome-diet-heading {
-    flex-basis: auto;
-    padding-block: var(--space-10px);
-  }
-  #vhomeDietCard .vhome-diet-content {
-    flex: 0 0 auto;
-  }
-  #vhomeDietCard .vhome-diet-links {
-    margin-top: 0;
-  }
+.vilda-home-workspace.vhome-device-compact #vhomeDietCard.vhome-diet-card {
+  height: auto;
+  min-height: 0;
+  max-height: none;
+  align-self: start;
+}
+.vhome-device-compact #vhomeDietCard .vhome-diet-heading {
+  flex-basis: auto;
+  padding-block: var(--space-10px);
+}
+.vhome-device-compact #vhomeDietCard .vhome-diet-content {
+  flex: 0 0 auto;
+}
+.vhome-device-compact #vhomeDietCard .vhome-diet-links {
+  margin-top: 0;
 }
 
 @media (max-width: 850px) {

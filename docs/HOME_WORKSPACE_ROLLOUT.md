@@ -329,6 +329,39 @@ Drobna poprawka pól list rozwijalnych ogranicza
 wyłącznie wyciek ich szerokości wewnętrznej w WebKit; nie przycina treści
 wyniku ani ostrzeżeń.
 
+## Karta pacjenta — dokumentacja obok obliczeń wzrostowych
+
+Rzeczywista kolejność DOM to Obliczenia wzrostowe → Karta pacjenta →
+Zalecenia dietetyczne. Na desktopie Karta pacjenta zajmuje prawe miejsce
+pierwszego rzędu, a zalecenia lewe miejsce drugiego. Zakładki Badania,
+Plan opieki i Notatki zachowują stałą wysokość 352 px przy szerokości aplikacji powyżej 1024 px.
+Na tablecie i telefonie wszystkie trzy karty mają naturalną wysokość;
+pojedyncza kolumna zaczyna się przy 850 px. Obsługa istniejącej karty
+Przypomnień należy do dalszego przyrostu.
+
+Podgląd czyta dokumentację wczytanego pacjenta. Liczba badań pochodzi z
+natywnej historii; do trzech pokazanych wierszy pochodzi z jednej rzeczywistej
+daty i tego samego rodzaju daty. Zachowane są zapisane normy, ostrzeżenia,
+jednostki i znaczenie daty wpisu lub kontroli. Plan może być zakończony;
+stan i najbliższy termin pochodzą z istniejącej prezentacji. Notatki obejmują
+te same wpisy ogólne i kliniczne co aktualna Karta pacjenta. Wyniki badań
+nie są dublowane w Notatkach. Niepowodzenie odczytu ma osobny stan ponowienia.
+
+Powiększenie otwiera wspólne okno. Badania i Plany korzystają z natywnych
+komponentów. Notatka zachowuje cały natywny edytor, jego czyste anulowanie,
+kontrolę konfliktów oraz zapis. SGA pokazuje zapisaną ocenę z dokumentacji;
+edycja danych okołoporodowych pozostaje w swoim dotychczasowym oknie.
+Zmiana konta, pacjenta, wizyty, ponowne wczytanie albo blokada unieważnia
+odczyty i usuwa odszyfrowaną treść. Opis oczekującego wyniku sprawdza
+aktualność również po asynchronicznym odczycie, bezpośrednio przed natywnym
+zapisem. Wstecz zamyka najwyższe okno przez jego oryginalną akcję anulowania.
+
+Przyrost obejmuje włączenie zatwierdzonych zmian `audyt` do integracji przed
+nową warstwą UI. Dotyczy to także aktualnego natywnego zapisu notatek i wejścia
+do przelicznika badań. Własna warstwa przebudowy nie zmienia obliczeń,
+interpretacji, dawek ani dokumentów PDF. Eksporter odłącza zarówno dawny adres
+Workera, jak i aktualną domenę synchronizacji; kontrola końcowa sprawdza oba.
+
 ## Podgląd i odbiór
 
 Podgląd jest osobnym eksportem z gałęzi roboczej, z własnym pochodzeniem
@@ -352,7 +385,7 @@ scalenie modułu opt-in nie zmienia domyślnego widoku. Eksporter, fikcyjne
 konto i blokada usług są wyłącznie narzędziami podglądu.
 
 Nowy JS i CSS strony głównej korzystają z istniejącego, sprawdzanego po SHA
-pakietu transportowego UI wizyt. Pakiet zawiera czternaście zasobów zamiast trzech;
+pakietu transportowego UI wizyt. Pakiet zawiera dwadzieścia zasobów zamiast trzech;
 każdy nadal ma własny wersjonowany adres i niezmienioną treść w pamięci offline.
 Historyczny pakiet pozostaje dostępny. Pozwala to zachować dotychczasowy limit
 600 żądań podczas instalacji PWA, bez usuwania zasobów ani rozluźniania testów.
