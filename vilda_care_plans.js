@@ -87,10 +87,25 @@
   }
   var stagedViewCache = new WeakMap();
   function staged(plan) { return !!(plan && plan.careContext && plan.careContext.version === 2); }
-  // Evidence with a capture instant is compared by the document's updatedAtISO only: a merge may keep a later text
-  // without a higher revision, and a revision-only write leaves the text unchanged. Older evidence keeps the revision check.
+  // The document's effective content instant, by the vault rule (Bnp_chwilaTresci in vilda_vault.js). The only place
+  // on this screen that reads the anchor; without updatedAtISO the document has no instant (null).
+  function stagedContentInstant(original) {
+    var updated = original && typeof original.updatedAtISO === 'string' ? original.updatedAtISO : null;
+    if (updated === null) return null;
+    // contentAtISO counts only in the exact toISOString form (as Bnp_iso), not later than updatedAtISO and anchored to
+    // it (contentForISO === updatedAtISO); otherwise the content instant is updatedAtISO.
+    var content = original.contentAtISO, canonical = typeof content === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(content)
+      && isFinite(Date.parse(content)) && new Date(content).toISOString() === content;
+    return canonical && content <= updated && original.contentForISO === updated ? content : updated;
+  }
+  // Evidence with a content instant is compared by the document's effective content instant only, as exact texts:
+  // a merge may keep a later text without a higher revision, and marking the document done or saving it again without
+  // a content change moves the revision and the write instant but not the text. Older evidence keeps the revision check.
   function stagedEvidenceChanged(evidence, original) {
-    if (Object.prototype.hasOwnProperty.call(evidence, 'sourceRecordUpdatedAtISOAtCapture')) return evidence.sourceRecordUpdatedAtISOAtCapture !== original.updatedAtISO;
+    if (Object.prototype.hasOwnProperty.call(evidence, 'sourceRecordContentAtISOAtCapture')) {
+      var instant = stagedContentInstant(original);
+      return instant === null || evidence.sourceRecordContentAtISOAtCapture !== instant;
+    }
     return evidence.sourceRecordRevAtCapture !== original.rev;
   }
   function stagedView(plan) {
@@ -1294,9 +1309,10 @@
       return { box: box, read: async function () {
         if (!selected || selected.id !== picker.value) throw new Error('Wybierz dokument i przeczytaj jego podgląd.');
         var original = await vault.getPatientNote(selected.id);
-        // The capture instant is only compared here. The evidence does not record it yet: older app versions reject such plans.
+        // The saved version must be the previewed one: the same revision, write instant and effective content instant.
+        // The content instant is only compared here. The evidence does not record it yet: older app versions reject such plans.
         if (!original || original.id !== selected.id || original.patientId !== plan.patientId || original.rev !== selected.rev
-          || original.updatedAtISO !== selected.updatedAtISO) throw new Error('Dokument zmienił się. Wybierz go ponownie i sprawdź aktualną treść.');
+          || original.updatedAtISO !== selected.updatedAtISO || stagedContentInstant(original) !== stagedContentInstant(selected)) throw new Error('Dokument zmienił się. Wybierz go ponownie i sprawdź aktualną treść.');
         return { noteId: selected.id, sourceRecordRevAtCapture: selected.rev };
       } };
     }

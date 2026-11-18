@@ -126,12 +126,13 @@
       if (basis.some(id => !identifier(id))) issue(issues, 'CARE_MODEL_AUDIT_INVALID', path + '.reviewBasis');
     }
   }
-  // The document capture instant is optional. When present it must be a real UTC
-  // instant; the revision stays required. Evidence without it keeps the revision comparison.
+  // The document content instant (the instant of the document's last content change when it was
+  // linked) is optional. When present it must be a real UTC instant; the revision stays required.
+  // Evidence without it keeps the revision comparison.
   function evidence(value, path, issues) {
-    if (!fields(value, ['noteId', 'sourceRecordRevAtCapture', 'sourceRecordUpdatedAtISOAtCapture'], path, issues)) return;
+    if (!fields(value, ['noteId', 'sourceRecordRevAtCapture', 'sourceRecordContentAtISOAtCapture'], path, issues)) return;
     if (!identifier(value.noteId) || !Number.isSafeInteger(value.sourceRecordRevAtCapture) || value.sourceRecordRevAtCapture < 0
-        || own(value, 'sourceRecordUpdatedAtISOAtCapture') && !instant(value.sourceRecordUpdatedAtISOAtCapture)) issue(issues, 'CARE_MODEL_EVIDENCE_INVALID', path);
+        || own(value, 'sourceRecordContentAtISOAtCapture') && !instant(value.sourceRecordContentAtISOAtCapture)) issue(issues, 'CARE_MODEL_EVIDENCE_INVALID', path);
   }
   function reminderRule(value, path, issues) {
     if (!object(value)) { issue(issues, 'CARE_MODEL_RULE_INVALID', path); return; }
@@ -211,10 +212,10 @@
     });
     associations.forEach((association, index) => {
       const path = 'associations[' + index + ']';
-      if (!fields(association, ['id', 'stepId', 'kind', 'noteId', 'sourceRecordRevAtCapture', 'sourceRecordUpdatedAtISOAtCapture', 'operationId', 'recordedAtISO'], path, issues)) return;
+      if (!fields(association, ['id', 'stepId', 'kind', 'noteId', 'sourceRecordRevAtCapture', 'sourceRecordContentAtISOAtCapture', 'operationId', 'recordedAtISO'], path, issues)) return;
       if (!stepIds.has(association.stepId) || !['result', 'event', 'document'].includes(association.kind) || !identifier(association.operationId) || !instant(association.recordedAtISO)) issue(issues, 'CARE_MODEL_ASSOCIATION_INVALID', path);
       const captured = { noteId: association.noteId, sourceRecordRevAtCapture: association.sourceRecordRevAtCapture };
-      if (own(association, 'sourceRecordUpdatedAtISOAtCapture')) captured.sourceRecordUpdatedAtISOAtCapture = association.sourceRecordUpdatedAtISOAtCapture;
+      if (own(association, 'sourceRecordContentAtISOAtCapture')) captured.sourceRecordContentAtISOAtCapture = association.sourceRecordContentAtISOAtCapture;
       evidence(captured, path, issues);
     });
     return { valid: issues.length === 0, issues };

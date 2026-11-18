@@ -221,17 +221,17 @@
   function stageFor(context, stageId) { const stage = context.stages.find(item => item.id === stageId); if (!stage) fail('CARE_PLAN_STAGE_MISSING'); return stage; }
   function stepFor(context, stepId) { const step = context.steps.find(item => item.id === stepId); if (!step) fail('CARE_PLAN_STEP_MISSING'); return step; }
   function editableStage(context, stage) { if (context.status !== 'active') fail('CARE_PLAN_CLOSED'); if (stage.control.state === 'reviewed') fail('CARE_PLAN_STAGE_REVIEWED'); }
-  // The document capture instant is optional and needs the revision beside it.
+  // The document content instant is optional and needs the revision beside it.
   function checkEvidence(value, model) {
-    fields(value, ['noteId', 'sourceRecordRevAtCapture', 'sourceRecordUpdatedAtISOAtCapture'], ['noteId', 'sourceRecordRevAtCapture']);
+    fields(value, ['noteId', 'sourceRecordRevAtCapture', 'sourceRecordContentAtISOAtCapture'], ['noteId', 'sourceRecordRevAtCapture']);
     if (!id(value.noteId) || !Number.isSafeInteger(value.sourceRecordRevAtCapture) || value.sourceRecordRevAtCapture < 0
-        || own(value, 'sourceRecordUpdatedAtISOAtCapture') && !validInstant(value.sourceRecordUpdatedAtISOAtCapture, model)) fail('CARE_PLAN_EVIDENCE_INVALID');
+        || own(value, 'sourceRecordContentAtISOAtCapture') && !validInstant(value.sourceRecordContentAtISOAtCapture, model)) fail('CARE_PLAN_EVIDENCE_INVALID');
   }
-  // Evidence with a capture instant also asks the protected writer to compare the
-  // document's updatedAtISO (expectedUpdatedAtISO); without it only the revision.
+  // Evidence with a content instant also asks the protected writer to compare the document's
+  // effective content instant (expectedContentAtISO); without it only the revision.
   function readDependency(evidence, command) {
     const dependency = { noteId: evidence.noteId, patientId: command.patientId, expectedRevision: evidence.sourceRecordRevAtCapture, kind: command.kind };
-    if (own(evidence, 'sourceRecordUpdatedAtISOAtCapture')) dependency.expectedUpdatedAtISO = evidence.sourceRecordUpdatedAtISOAtCapture;
+    if (own(evidence, 'sourceRecordContentAtISOAtCapture')) dependency.expectedContentAtISO = evidence.sourceRecordContentAtISOAtCapture;
     return dependency;
   }
   function effectDocument(state, command, clock, document, role, stageId, stepId) {
@@ -358,7 +358,7 @@
           const association = { id: command.associationId, stepId: step.id, kind: command.kind,
             noteId: command.evidence.noteId, sourceRecordRevAtCapture: command.evidence.sourceRecordRevAtCapture,
             operationId: command.operationId, recordedAtISO: clock.recordedAtISO };
-          if (own(command.evidence, 'sourceRecordUpdatedAtISOAtCapture')) association.sourceRecordUpdatedAtISOAtCapture = command.evidence.sourceRecordUpdatedAtISOAtCapture;
+          if (own(command.evidence, 'sourceRecordContentAtISOAtCapture')) association.sourceRecordContentAtISOAtCapture = command.evidence.sourceRecordContentAtISOAtCapture;
           context.associations.push(association);
           readDependencies.push(readDependency(command.evidence, command));
           logText = 'Powiązano oryginalny dokument z krokiem: ' + step.title + '.';
