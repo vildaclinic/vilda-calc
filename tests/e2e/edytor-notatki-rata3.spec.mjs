@@ -93,6 +93,20 @@ const inneUrzadzenie = (page, patientId, noteId, body) => page.evaluate((d) => w
     category: 'observation',
   }), { patientId, noteId, body });
 
+// E3-PR0b2a: zapis z innego urządzenia, który dociera scaleniem PRZY TYM SAMYM numerze wersji.
+// Ładunek niesie nową treść i późniejszą chwilę zapisu, rev zostaje ten sam; scalanie przyjmuje
+// późniejszą wersję. Sam baseRev tego nie widział — arkusz zapisywał bez konfliktu.
+const inneUrzadzenieTenSamNumer = (page, noteId, body) => page.evaluate(async (d) => {
+  const v = window.VildaVault;
+  const ladunek = JSON.parse(JSON.stringify(await v.exportSyncPayload()));
+  const n = ladunek.patientNotes.find((x) => x.id === d.noteId);
+  n.body = d.body;
+  n.updatedAtISO = new Date(Math.max(Date.parse(n.updatedAtISO) + 1, Date.now())).toISOString();
+  await v.mergeSyncPayload(ladunek);
+  const po = await v.getPatientNote(d.noteId);
+  return { rev: po.rev, body: po.body };
+}, { noteId, body });
+
 test.describe('G14b — równoległa edycja tej samej notatki', () => {
   test('zapis zatrzymuje się i pokazuje wybór, a sejf zostaje nietknięty', async ({ page }) => {
     await otworzZKontem(page);
@@ -151,6 +165,75 @@ test.describe('G14b — równoległa edycja tej samej notatki', () => {
     expect(wSejfie[0].body, 'nic nie zapisano po drodze').toBe('Wersja z innego urządzenia.');
   });
 
+  test('inne urządzenie zapisuje później przy tym samym numerze wersji: zapis zatrzymuje się, „Nadpisz moją wersją” zapisuje mój tekst', async ({ page }) => {
+    await otworzZKontem(page);
+    const patientId = await zalozPacjenta(page);
+    const { noteId, rev } = await otworzIstniejaca(page, patientId);
+
+    await tresc(page).fill('Moja wersja z tego urządzenia.');
+    const po = await inneUrzadzenieTenSamNumer(page, noteId, 'Wersja z innego urządzenia przy tym samym numerze.');
+    expect(po.rev, 'scalenie nie zmienia numeru wersji').toBe(rev);
+    expect(po.body, 'scalenie przyjęło późniejszą wersję').toBe('Wersja z innego urządzenia przy tym samym numerze.');
+
+    await page.getByRole('button', { name: 'Zapisz zmiany' }).click();
+    await expect(page.getByText('Nowsza wersja tej notatki jest już w sejfie.'),
+      'arkusz zna chwilę zapisu wersji, z którą się otworzył').toBeVisible();
+    expect((await notatki(page, patientId))[0].body, 'późniejsza wersja nietknięta')
+      .toBe('Wersja z innego urządzenia przy tym samym numerze.');
+
+    await page.getByRole('button', { name: 'Nadpisz moją wersją' }).click();
+    await expect(page.getByRole('button', { name: 'Zapisz zmiany' }),
+      '„Nadpisz” podnosi też chwilę zapisu — drugi zapis nie wraca konfliktem').toHaveCount(0);
+    const wSejfie = await notatki(page, patientId);
+    expect(wSejfie.length).toBe(1);
+    expect(wSejfie[0].body).toBe('Moja wersja z tego urządzenia.');
+  });
+
+  test('druga zmiana przy tym samym numerze wersji między konfliktem a „Nadpisz moją wersją” znowu zatrzymuje zapis', async ({ page }) => {
+    // E3-PR0b2a: „Nadpisz moją wersją” podnosi chwilę zapisu do wersji pokazanej w konflikcie, a nie
+    // wyłącza porównania chwil. Kolejna wersja, która dotrze w tym czasie, też musi zatrzymać zapis.
+    await otworzZKontem(page);
+    const patientId = await zalozPacjenta(page);
+    const { noteId, rev } = await otworzIstniejaca(page, patientId);
+
+    await tresc(page).fill('Moja wersja z tego urządzenia.');
+    await inneUrzadzenieTenSamNumer(page, noteId, 'Druga wersja z innego urządzenia.');
+    await page.getByRole('button', { name: 'Zapisz zmiany' }).click();
+    await expect(page.getByRole('button', { name: 'Nadpisz moją wersją' })).toBeVisible();
+
+    const trzecia = await inneUrzadzenieTenSamNumer(page, noteId, 'Trzecia wersja z innego urządzenia.');
+    expect(trzecia.rev, 'nadal ten sam numer wersji').toBe(rev);
+    await page.getByRole('button', { name: 'Nadpisz moją wersją' }).click();
+    await expect(page.getByRole('button', { name: 'Nadpisz moją wersją' }),
+      'drugi konflikt — wybór pokazany ponownie').toBeVisible();
+    expect((await notatki(page, patientId))[0].body, 'trzecia wersja nietknięta')
+      .toBe('Trzecia wersja z innego urządzenia.');
+  });
+
+  test('notatka poprawiona przed otwarciem arkusza: zwykła edycja zapisuje się bez pytania', async ({ page }) => {
+    // E3-PR0b2a: arkusz zapamiętuje chwilę ZAPISU otwartej wersji (updatedAtISO), nie chwilę jej
+    // utworzenia. Notatka poprawiana wcześniej ma te chwile różne — pomylenie ich dawałoby fałszywy
+    // konflikt przy każdej edycji takiej notatki.
+    await otworzZKontem(page);
+    const patientId = await zalozPacjenta(page);
+    await page.evaluate(async (id) => {
+      const n = await window.VildaVault.savePatientNote({ patientId: id, title: 'Notatka kontrolna', body: 'Treść pierwotna.', category: 'observation' });
+      await new Promise((r) => { setTimeout(r, 20); });
+      await window.VildaVault.savePatientNote({ id: n.id, patientId: id, title: 'Notatka kontrolna', body: 'Treść poprawiona wcześniej.' });
+    }, patientId);
+    const lista = await notatki(page, patientId);
+    expect(lista[0].updatedAtISO, 'notatka była poprawiana po utworzeniu').not.toBe(lista[0].createdAtISO);
+    await page.evaluate((d) => window.VildaAuthUI.showPatientNoteEditor({ patientId: d.patientId, note: d.note }), { patientId, note: lista[0] });
+    await expect(page.getByRole('button', { name: 'Zapisz zmiany' })).toBeVisible();
+
+    await tresc(page).fill('Treść poprawiona drugi raz.');
+    await page.getByRole('button', { name: 'Zapisz zmiany' }).click();
+
+    await expect(page.getByRole('button', { name: 'Zapisz zmiany' })).toHaveCount(0);
+    await expect(page.getByText('Nowsza wersja tej notatki jest już w sejfie.')).toHaveCount(0);
+    expect((await notatki(page, patientId))[0].body).toBe('Treść poprawiona drugi raz.');
+  });
+
   test('zwykła edycja bez kolizji zapisuje się bez pytania', async ({ page }) => {
     // Kontrola negatywna: `baseRev` nie może utrudniać normalnej pracy.
     await otworzZKontem(page);
@@ -165,6 +248,89 @@ test.describe('G14b — równoległa edycja tej samej notatki', () => {
     const wSejfie = await notatki(page, patientId);
     expect(wSejfie.length).toBe(1);
     expect(wSejfie[0].body).toBe('Treść poprawiona.');
+  });
+});
+
+// E3-PR0b2b (P-NOTATKA-POZNIEJSZA): zmiana, która dociera scaleniem pod otwarty arkusz. Dotknięcie techniczne
+// (ratunek D-21 albo import karty na innym urządzeniu: ta sama treść, nowa chwila zapisu, chwila treści zachowana)
+// nie jest widoczną zmianą — bez banera i bez okna wyboru. Inna karta pacjenta, inna treść albo „wykonane” z innego
+// urządzenia — baner i okno wyboru jak dotąd.
+const BANER = 'Ta notatka zmieniła się na innym urządzeniu.';
+const KONFLIKT = 'Nowsza wersja tej notatki jest już w sejfie.';
+const zmianaScaleniem = (page, noteId, zmiana) => page.evaluate(async (d) => {
+  const v = window.VildaVault;
+  const ladunek = JSON.parse(JSON.stringify(await v.exportSyncPayload()));
+  const n = ladunek.patientNotes.find((x) => x.id === d.noteId);
+  const u = new Date(Math.max(Date.parse(n.updatedAtISO) + 1000, Date.now())).toISOString();
+  if (d.zmiana.rodzaj === 'dotkniecie') { n.contentAtISO = n.updatedAtISO; n.contentForISO = u; }
+  if (d.zmiana.rodzaj === 'karta') n.patientId = d.zmiana.patientId;
+  if (d.zmiana.rodzaj === 'tresc') n.body = d.zmiana.body;
+  if (d.zmiana.rodzaj === 'wykonane') n.completedAtISO = u;
+  n.updatedAtISO = u;
+  await v.mergeSyncPayload(ladunek);
+  const po = await v.getPatientNote(d.noteId);
+  return { updatedAtISO: po.updatedAtISO, patientId: po.patientId, body: po.body, wykonane: !!po.completedAtISO };
+}, { noteId, zmiana });
+// Baner pojawia się po odczycie notatki po zdarzeniu scalenia — przy braku banera czekamy, aż ten odczyt minie.
+const bezBanera = async (page) => { await page.waitForTimeout(1500); await expect(page.getByText(BANER)).toBeHidden(); };
+
+test.describe('E3-PR0b2b — zmiana z innego urządzenia pod otwartym arkuszem', () => {
+  test('dotknięcie techniczne (jak ratunek albo import karty na innym urządzeniu): bez banera, zapis bez okna wyboru', async ({ page }) => {
+    await otworzZKontem(page);
+    const patientId = await zalozPacjenta(page);
+    const { noteId } = await otworzIstniejaca(page, patientId);
+    await tresc(page).fill('Moja wersja z tego urządzenia.');
+    const po = await zmianaScaleniem(page, noteId, { rodzaj: 'dotkniecie' });
+    expect(po.body, 'treść w sejfie bez zmian').toBe('Treść pierwotna.');
+    await bezBanera(page);
+    await page.getByRole('button', { name: 'Zapisz zmiany' }).click();
+    await expect(page.getByRole('button', { name: 'Zapisz zmiany' }), 'zapis przeszedł bez okna wyboru').toHaveCount(0);
+    await expect(page.getByText(KONFLIKT)).toHaveCount(0);
+    expect((await notatki(page, patientId))[0].body).toBe('Moja wersja z tego urządzenia.');
+  });
+
+  test('inna karta pacjenta z innego urządzenia: baner i okno wyboru, notatka zostaje na nowej karcie', async ({ page }) => {
+    await otworzZKontem(page);
+    const patientId = await zalozPacjenta(page);
+    const druga = await page.evaluate(async () => (await window.VildaVault.savePatient({ name: 'Fikcyjna Druga', user: { lastName: 'Fikcyjna', firstName: 'Druga', sex: 'F', age: 6, height: 115, weight: 20 } }, { dedup: false })).patientId);
+    const { noteId } = await otworzIstniejaca(page, patientId);
+    await tresc(page).fill('Moja wersja z tego urządzenia.');
+    const po = await zmianaScaleniem(page, noteId, { rodzaj: 'karta', patientId: druga });
+    expect(po.patientId, 'scalenie przyjęło nową kartę').toBe(druga);
+    await expect(page.getByText(BANER), 'zmiana karty jest widoczna dla lekarza').toBeVisible();
+    await page.getByRole('button', { name: 'Zapisz zmiany' }).click();
+    await expect(page.getByText(KONFLIKT)).toBeVisible();
+    expect((await page.evaluate((id) => window.VildaVault.getPatientNote(id), noteId)).patientId, 'karta nie wraca po cichu').toBe(druga);
+  });
+
+  test('„wykonane” z innego urządzenia: baner i okno wyboru, „Nadpisz moją wersją” zapisuje mój tekst i zostawia „wykonane”', async ({ page }) => {
+    await otworzZKontem(page);
+    const patientId = await zalozPacjenta(page);
+    const { noteId } = await otworzIstniejaca(page, patientId);
+    await tresc(page).fill('Moja wersja z tego urządzenia.');
+    const po = await zmianaScaleniem(page, noteId, { rodzaj: 'wykonane' });
+    expect(po.wykonane).toBe(true);
+    await expect(page.getByText(BANER)).toBeVisible();
+    await page.getByRole('button', { name: 'Zapisz zmiany' }).click();
+    await expect(page.getByText(KONFLIKT)).toBeVisible();
+    await page.getByRole('button', { name: 'Nadpisz moją wersją' }).click();
+    await expect(page.getByRole('button', { name: 'Zapisz zmiany' })).toHaveCount(0);
+    const n = await page.evaluate((id) => window.VildaVault.getPatientNote(id), noteId);
+    expect([n.body, !!n.completedAtISO]).toEqual(['Moja wersja z tego urządzenia.', true]);
+  });
+
+  test('po oknie wyboru dotknięcie techniczne przed „Nadpisz moją wersją”: zapis bez drugiego okna wyboru', async ({ page }) => {
+    await otworzZKontem(page);
+    const patientId = await zalozPacjenta(page);
+    const { noteId } = await otworzIstniejaca(page, patientId);
+    await tresc(page).fill('Moja wersja z tego urządzenia.');
+    await zmianaScaleniem(page, noteId, { rodzaj: 'tresc', body: 'Wersja z innego urządzenia.' });
+    await page.getByRole('button', { name: 'Zapisz zmiany' }).click();
+    await expect(page.getByRole('button', { name: 'Nadpisz moją wersją' })).toBeVisible();
+    await zmianaScaleniem(page, noteId, { rodzaj: 'dotkniecie' });
+    await page.getByRole('button', { name: 'Nadpisz moją wersją' }).click();
+    await expect(page.getByRole('button', { name: 'Zapisz zmiany' }), 'wersja pokazana w oknie wyboru jest tą samą widoczną wersją').toHaveCount(0);
+    expect((await notatki(page, patientId))[0].body).toBe('Moja wersja z tego urządzenia.');
   });
 });
 

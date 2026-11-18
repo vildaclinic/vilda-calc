@@ -1,4 +1,4 @@
-import { showClcrResults, showBadaniaView, clcrRow, clcrPoints, clcrPoint } from '../support/badania-klirens.mjs';
+import { showClcrResults, showBadaniaView, clcrRow, clcrPoints, clcrPoint, expectClcrOutsideNotes } from '../support/badania-klirens.mjs';
 import fs from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 import { czekajNaUstabilizowanyUklad, kliknij } from '../support/uklad-czekanie.mjs';
@@ -383,10 +383,9 @@ test('Mg/Ca: dopiero zapisany pacjent umożliwia zapis; mały wynik pozostaje do
   const points = clcrPoints(page);
   await expect(points).toHaveCount(2);
   expect(Number(await clcrPoint(page, tiny.id).getAttribute('data-value'))).toBe(model.rawValue);
-  await page.locator('button[data-tab="notes"]').click();
-  const notes = page.locator('.vilda-clcr-note[data-clcr-note-state="ready"]');
-  await expect(notes).toHaveCount(2);
-  for (const note of await notes.all()) await expect(note).not.toContainText('W zakresie');
+  // P-KLIRENS-NOTATKI: dawne zapisy nie dostają oceny w Badaniach (ton bez oceny), a w Notatkach nie mają karty.
+  for (const note of [tiny, standard]) await expect(clcrPoint(page, note.id)).toHaveAttribute('data-tone', 'neutral');
+  await expectClcrOutsideNotes(page, 2);
   expect((await memory(page)).originalsLocked).toBe(true);
 });
 

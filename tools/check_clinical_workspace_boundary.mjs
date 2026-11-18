@@ -17,9 +17,17 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 // patient merge), E2-PR3c5 (a version changed after a valid trash entry and pruned later invalidates that entry)
 // E2-PR4b (the event-log gate also opens with the synchronization switch), E2-PR4c (the last merge time is
 // recorded when the event drain reaches the head), E2-PR4e2 (the event-log outbox and the storage mode or account
-// removal), E2-PR5c (a discarded outbox row leaves a pair in the sweep memory) and E2-PR5d (an accepted outbox row
-// leaves its pair at once; docs/clinical/ALGORITHMS.md).
-const BASE = '55dddd3c950f056d2dda769f09e2781d1212f40230ac14e74231bdb4f671ccf6';
+// removal), E2-PR5c (a discarded outbox row leaves a pair in the sweep memory), E2-PR5d (an accepted outbox row
+// leaves its pair at once), E3-PR0b2a (a patient note editor, reminder outcome or Klirens result change compares
+// the save time of the version shown to the doctor; status buttons read the note under its lock and
+// refuse a deleted or unreadable note with a message for the doctor; docs/clinical/ALGORITHMS.md) and E3-PR0b2b
+// (a patient note changed on two devices keeps the later content change: content time with an anchor, technical
+// writes keep it, the note save stamp, the highest revision after a merge, a patient merge moves notes without
+// content read before the note lock; the done, no-show and reopen mark is a separate register with its own change time,
+// a record joining the content of one version with the mark of the other is saved 1 ms after both, while a later mark of
+// the same value keeps only its change time; moving the date of an open entry confirms it open; the same visible
+// version shown to the doctor is not a save conflict; care plans and patient lists keep the earlier rule).
+const BASE = '44d82633d45bf9db1e964457c69d07f2009b683848a00d21315fc63fdd542499';
 const START = '/* BEGIN VILDA CLINICAL WORKSPACE NATIVE V1 */\n';
 const END = '/* END VILDA CLINICAL WORKSPACE NATIVE V1 */\n';
 const digest = value => createHash('sha256').update(value).digest('hex');

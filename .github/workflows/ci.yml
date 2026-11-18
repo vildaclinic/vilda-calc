@@ -26,9 +26,9 @@ jobs:
   unit:
     name: Lint, składnia i testy jednostkowe
     runs-on: ubuntu-latest
-    # Pełne npm test obejmuje ponad 900 plików unit. W PR #963 limit 15 min
-    # dwukrotnie przerwał aktywny przebieg bez zgłoszonych błędów testów.
-    timeout-minutes: 20
+    # Zwykle około 10 min. Na wolniejszej maszynie CI (2026-11-15: wszystkie kroki około 1,6 raza wolniej,
+    # także lint i kontrola składni) przekraczało 15 min, także na audyt; 25 min daje zapas.
+    timeout-minutes: 25
     steps:
       - name: Pobierz repozytorium
         uses: actions/checkout@v4
@@ -170,10 +170,10 @@ jobs:
     name: Geometria wykresów — Safari/WebKit
     runs-on: ubuntu-latest
     if: github.event_name != 'push'
-    # The dietary increment adds twelve real-vault scenarios to the existing
-    # chart, M1, mobile, puberty, perinatal and growth suite. Preserve every
-    # assertion and per-case budget, with room for the complete WebKit run.
-    timeout-minutes: 25
+    # Patient documentation adds native note/care/lab flows to the full existing
+    # WebKit suite. Keep all cases and their budgets, with room for real Vault
+    # setup, browser installation and the complete run on slower runners.
+    timeout-minutes: 35
     steps:
       - name: Pobierz repozytorium
         uses: actions/checkout@v4

@@ -33,8 +33,8 @@ async function repository() {
     'subskrypcja.html': '<!doctype html><html><head><title>Paid subscription</title></head><body><header>Native header</header><main class="main-content"><button id="subTrialBtn">Trial</button><button id="subBuyBtn">Checkout</button></main><footer>Native footer</footer><script defer src="inline_subskrypcja_00.js?v=2"></script><script defer src="inline_subskrypcja_01.js?v=1"></script></body></html>',
     'vilda_home_workspace.js': 'window.VildaHomeWorkspace = {};',
     'vilda_home_workspace.css': '.vilda-home-workspace { display: grid; }',
-    'vilda_vault.js': "const nativeOrigin = 'https://vilda-sync.maciej-4b9.workers.dev'; const formula = 46 / (1.58 * 1.58);",
-    'vilda_realtime.js': "const source = 'wss://vilda-sync.maciej-4b9.workers.dev';",
+    'vilda_vault.js': "const nativeOrigin = 'https://vilda-sync.maciej-4b9.workers.dev'; const currentOrigin = 'https://sync.vildasync.com'; const formula = 46 / (1.58 * 1.58);",
+    'vilda_realtime.js': "const source = 'wss://vilda-sync.maciej-4b9.workers.dev'; const currentSource = 'wss://sync.vildasync.com';",
     'manifest.json': JSON.stringify({ name: 'Native app', short_name: 'Native', start_url: 'app.html#/start', scope: './' }),
     'service-worker-kalorii.js': WORKER_FIXTURE,
     'runtime/clinical-workspace-v1/family/client/model.mjs': 'export const VERSION = 1;\n',
@@ -76,6 +76,36 @@ describe('separate homepage preview export', () => {
     expect(vault).toContain('https://vilda-preview-disabled.invalid');
     expect(vault).toContain('const formula = 46 / (1.58 * 1.58);');
     expect(vault).not.toContain('workers.dev');
+    expect(vault).not.toContain('sync.vildasync.com');
+    const realtime = await readFile(path.join(fixture.output, 'vilda_realtime.js'), 'utf8');
+    expect(realtime).not.toContain('sync.vildasync.com');
+    expect(realtime).not.toContain('workers.dev');
+  });
+
+  test('tracked XLSX downloads preserve their binary bytes and export hashes, while untracked workbooks stay private', async () => {
+    const fixture = await repository();
+    const names = ['klirens.xlsx', 'zscore_przyklad_palczewska.xlsx', 'zscore_przyklad_olaf.xlsx'];
+    const workbooks = await Promise.all(names.map(async name => ({
+      name, bytes: await readFile(new URL('../../' + name, import.meta.url)),
+    })));
+    for (const { name, bytes } of workbooks) await writeFile(path.join(fixture.source, name), bytes);
+    const git = args => execFileSync('git', args, { cwd: fixture.source, stdio: 'pipe' });
+    git(['add', '--', ...names]);
+    git(['-c', 'user.name=Fictional Preview Test', '-c', 'user.email=preview@example.invalid', 'commit', '-qm', 'Track example workbook downloads']);
+    await writeFile(path.join(fixture.source, 'untracked-workbook.xlsx'), workbooks[0].bytes);
+
+    const result = await exportPreview(fixture);
+    const manifest = JSON.parse(await readFile(path.join(fixture.output, '.vilda-home-preview-export.json'), 'utf8'));
+    expect(result.sourceDirty).toBe(false);
+    expect(manifest.sourceCommit).toBe(result.sourceCommit);
+    expect(manifest.files.map(entry => entry.file)).not.toContain('untracked-workbook.xlsx');
+    for (const { name, bytes } of workbooks) {
+      expect(await readFile(path.join(fixture.output, name))).toEqual(bytes);
+      expect(await readFile(path.join(fixture.source, name))).toEqual(bytes);
+      expect(manifest.files.find(entry => entry.file === name)).toMatchObject({
+        sha256: hash(bytes), size: bytes.length,
+      });
+    }
   });
 
   test('every HTML document installs network policy and bootstrap before any native script', async () => {
@@ -173,9 +203,9 @@ describe('separate homepage preview export', () => {
     await expect(exportPreview(fixture)).rejects.toMatchObject({ code: 'ELOOP' });
   });
 
-  test('fails closed if a future immutable package embeds a production endpoint', async () => {
+  test.each(['vilda-sync.maciej-4b9.workers.dev', 'sync.vildasync.com'])('fails closed if a future immutable package embeds %s', async host => {
     const fixture = await repository();
-    await writeFile(path.join(fixture.source, 'runtime/clinical-workspace-v1/family/client/model.mjs'), "export const origin = 'https://vilda-sync.maciej-4b9.workers.dev';");
+    await writeFile(path.join(fixture.source, 'runtime/clinical-workspace-v1/family/client/model.mjs'), "export const origin = 'https://" + host + "';");
     await expect(exportPreview(fixture)).rejects.toThrow(/Production endpoint survived/);
   });
 
@@ -184,6 +214,8 @@ describe('separate homepage preview export', () => {
     expect(() => isolateWorker('unknown worker format', '0123456789abcdefabcd')).toThrow(/Unknown service-worker/);
     expect(isolateText("'https://vilda-sync.maciej-4b9.workers.dev' 'wss://vilda-sync.maciej-4b9.workers.dev'"))
       .toBe("'https://vilda-preview-disabled.invalid' 'wss://vilda-preview-disabled.invalid'");
+    expect(isolateText("'https://sync.vildasync.com/v1/workspace' 'wss://sync.vildasync.com/v1/ws'"))
+      .toBe("'https://vilda-preview-disabled.invalid/v1/workspace' 'wss://vilda-preview-disabled.invalid/v1/ws'");
     for (const privatePath of ['.git/config', '/index.html', '../index.html', 'tests/data.json', 'node_modules/index.js', '.env', 'package-lock.json']) expect(isPreviewAsset(privatePath)).toBe(false);
   });
 
@@ -204,7 +236,7 @@ describe('separate homepage preview export', () => {
     const scope = { location: { href: 'https://preview.example.invalid/service-worker-kalorii.js', origin: 'https://preview.example.invalid' },
       fetch(input, options) { calls.push({ input, options }); return Promise.resolve('local response'); } };
     vm.runInNewContext(PREVIEW_WORKER_NETWORK_GUARD, { self: scope, URL, Promise, TypeError });
-    for (const url of ['https://vilda-sync.maciej-4b9.workers.dev/v1/slots/test', 'https://www.google-analytics.com/collect', '//external.example.invalid/api']) {
+    for (const url of ['https://vilda-sync.maciej-4b9.workers.dev/v1/slots/test', 'https://sync.vildasync.com/v1/workspace', 'https://www.google-analytics.com/collect', '//external.example.invalid/api']) {
       await expect(scope.fetch(url)).rejects.toThrow(/disabled/);
     }
     await expect(scope.fetch({ url: 'https://vilda-sync.maciej-4b9.workers.dev/v1/workspace' })).rejects.toThrow(/disabled/);

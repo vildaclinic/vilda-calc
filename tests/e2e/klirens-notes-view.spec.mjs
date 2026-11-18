@@ -1,9 +1,12 @@
-import { showClcrResults } from '../support/badania-klirens.mjs';
+import { clcrRow, clcrValue, expectClcrOutsideNotes, openClcrDetailsInCard, showClcrResults } from '../support/badania-klirens.mjs';
 import { expect, test } from '../support/test-czas.mjs';
 import { openCalculator, applyAcr, saveVisible, memory, PATIENT_ID } from '../support/klirens-patient-record.mjs';
 
 test.use({ chwila: '2026-10-28T12:00:00Z' });
-const noteCard = (page, id) => page.locator(`.vilda-patient-note-card.vilda-clcr-note[data-note-id="${id}"]`);
+// P-KLIRENS-NOTATKI (decyzja właściciela 2026-11-15: Notatki nie są miejscem na wyniki Klirensu). Wynik Klirensu
+// ma jedno miejsce pełnej treści — panel „Klirens” w Badaniach. Notatki pokazują tylko linię z liczbą wyników;
+// zwykłe notatki zostają bez zmian. Szczegóły, edycja, usunięcie i komentarz lekarza są w Badaniach.
+const noteCard = (page, id) => page.locator(`.vilda-patient-note-card[data-note-id="${id}"]`);
 
 async function applyCalcium(page) {
   expect(await page.evaluate(() => window.applyClcrSessionSnapshot({ version: 2, currentVersion: 'advanced', selectedFormula: 'Ca_mgkg', inputs: {
@@ -22,79 +25,89 @@ async function createNotes(page) {
   }, { note: calcium, pid: PATIENT_ID });
   return { calcium, acr };
 }
-async function openNotes(page) {
+async function openCard(page) {
   await page.locator('#clcrOpenBadaniaBtn').click();
   await showClcrResults(page, 'table');
   await expect(page.locator('.vilda-auth-patient-card')).toBeVisible();
-  await page.locator('button[data-tab="notes"]').click();
 }
 
 for (const width of [1440, 390, 320]) {
-  test(`Klirens notes: compact frozen entries, comments and ordinary notes ${width}px`, async ({ page }, testInfo) => {
+  test(`Klirens results stay out of Notes; ordinary notes and the link to Badania remain ${width}px`, async ({ page }, testInfo) => {
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await openCalculator(page, { width }); const ids = await createNotes(page), before = await memory(page);
-    await openNotes(page);
-    await expect(page.locator('.vilda-clcr-note[data-clcr-note-state="ready"]')).toHaveCount(2);
-    const calcium = noteCard(page, ids.calcium.id), acr = noteCard(page, ids.acr.id);
-    await expect(calcium.locator('.clcr-note-value')).toHaveText(ids.calcium.labResult.value.replace('.', ','));
-    await expect(calcium.locator('.clcr-note-reference')).toHaveText('<4');
-    await expect(calcium.locator('.clcr-note-comment')).toContainText('Komentarz zachowany.\nKontrola według planu.');
-    await expect(acr.locator('.clcr-note-status')).toHaveText('A2');
-    await expect(acr.locator('.clcr-note-main')).toHaveAttribute('data-tone', 'warning');
-    for (const key of ['exactMain', 'numerator', 'VILDA_CLCR', 'engineVersion', '[tekst]']) await expect(page.locator('.vilda-patient-notes-section')).not.toContainText(key);
-    await expect(calcium.getByRole('button', { name: 'Edytuj', exact: true })).toHaveCount(0);
-    const ordinary = page.locator('.vilda-patient-note-card[data-note-id="fictional-ordinary-note"]');
+    await openCard(page);
+    // Badania pokazują oba zapisane obliczenia z zamrożoną wartością.
+    await expect(clcrRow(page, ids.calcium.id)).toBeVisible();
+    await expect(clcrRow(page, ids.acr.id)).toBeVisible();
+    await expect(clcrValue(page, ids.calcium.id)).toContainText(ids.calcium.labResult.value.replace('.', ','));
+    const notes = await expectClcrOutsideNotes(page, 2);
+    await expect(noteCard(page, ids.calcium.id)).toHaveCount(0);
+    await expect(noteCard(page, ids.acr.id)).toHaveCount(0);
+    for (const key of ['numerator', 'Komentarz zachowany.']) await expect(notes).not.toContainText(key);
+    const ordinary = noteCard(page, 'fictional-ordinary-note');
     await expect(ordinary).toContainText('Treść zwykłej notatki pozostaje bez zmian.');
     await expect(ordinary.getByRole('button', { name: 'Edytuj', exact: true })).toBeVisible();
-    const geometry = await page.locator('.vilda-patient-notes-section').evaluate(node => ({ overflow: node.scrollWidth - node.clientWidth,
-      buttons: [...node.querySelectorAll('.clcr-note-button,.clcr-note-link')].map(button => ({ height: button.getBoundingClientRect().height, width: button.getBoundingClientRect().width })) }));
-    expect(geometry.overflow).toBeLessThanOrEqual(1);
-    for (const button of geometry.buttons) { expect(button.height).toBeGreaterThanOrEqual(48); expect(button.width).toBeGreaterThan(0); }
+    expect(await notes.evaluate(node => node.scrollWidth - node.clientWidth)).toBeLessThanOrEqual(1);
+    await expect(notes.locator('.vilda-wb-notes-link button')).toBeVisible();
+    await page.screenshot({ path: testInfo.outputPath(`fictional-notes-without-clcr-${width}.png`) });
+    // Linia prowadzi do Badań, gdzie wyniki są nadal.
+    await notes.locator('.vilda-wb-notes-link button').click();
+    await showClcrResults(page, 'table');
+    await expect(clcrRow(page, ids.calcium.id)).toBeVisible();
     expect((await memory(page)).notes).toEqual(before.notes);
     expect((await memory(page)).updates).toHaveLength(0);
     expect((await memory(page)).originalsLocked).toBe(true);
     expect(errors).toEqual([]);
-    await calcium.scrollIntoViewIfNeeded();
-    await page.screenshot({ path: testInfo.outputPath(`fictional-notes-calcium-${width}.png`) });
-    await acr.scrollIntoViewIfNeeded();
-    await page.screenshot({ path: testInfo.outputPath(`fictional-notes-acr-${width}.png`) });
   });
 }
 
-test('Klirens note details edit/delete the same canonical measurement in Notes and Badania', async ({ page }) => {
-  await openCalculator(page); const ids = await createNotes(page); await openNotes(page);
-  await noteCard(page, ids.calcium.id).getByRole('button', { name: 'Szczegóły obliczenia →', exact: true }).click();
-  await expect(page.locator('#detailsDialog')).toBeVisible();
-  await expect(page.locator('#calculationDetails')).toHaveAttribute('data-note-id', ids.calcium.id);
+test('Klirens details in Badania edit/delete the canonical measurement; Notes only count it', async ({ page }) => {
+  await openCalculator(page); const ids = await createNotes(page); await openCard(page);
+  await expectClcrOutsideNotes(page, 2);
+  await openClcrDetailsInCard(page, ids.calcium.id);
+  // Komentarz lekarza zostaje w szczegółach obliczenia.
+  await expect(page.locator('#detailsDialog')).toContainText('Komentarz zachowany.');
   await page.locator('#editMeasurement').click();
   await page.locator('[data-clcr-edit-field="CA_concentration"]').fill('3');
   await page.locator('#saveEditedMeasurement').click();
   await expect(page.locator('#editDialog')).toBeHidden();
   await expect(page.locator('#detailsDialog')).toBeVisible();
   await expect(page.locator('#detailActionNotice')).toContainText('Zapisano zmiany');
-  await expect(noteCard(page, ids.calcium.id).locator('.clcr-note-main')).toHaveAttribute('data-tone', 'warning');
+  await expect(page.locator('#detailsDialog')).toContainText('Komentarz zachowany.');
   await page.locator('#detailsDialog').getByRole('button', { name: 'Zamknij', exact: true }).click();
-  await expect(noteCard(page, ids.calcium.id).locator('.clcr-note-comment')).toContainText('Komentarz zachowany.');
   const after = await memory(page), edited = after.notes.find(note => note.id === ids.calcium.id);
   expect(after.notes).toHaveLength(3); expect(after.updates).toHaveLength(1);
   expect(edited.labResult.valueNum).toBeGreaterThan(ids.calcium.labResult.valueNum);
-  await noteCard(page, ids.calcium.id).getByRole('button', { name: 'Zobacz w Badaniach →', exact: true }).click();
   await showClcrResults(page, 'table');
-  const renal = page.locator('.vilda-lab-hist');
-  await expect(renal.locator(`.vilda-lab-hist-result-row[data-source="clcr"][data-note-id="${ids.calcium.id}"]`)).toBeVisible();
-  await expect(renal).toContainText(edited.labResult.value.replace('.', ','));
-  await page.locator('button[data-tab="notes"]').click();
-  await noteCard(page, ids.calcium.id).getByRole('button', { name: 'Szczegóły obliczenia →', exact: true }).click();
+  await expect(clcrRow(page, ids.calcium.id)).toBeVisible();
+  await expect(page.locator('.vilda-lab-hist')).toContainText(edited.labResult.value.replace('.', ','));
+  // Edycja nie przenosi wyniku do Notatek.
+  await expectClcrOutsideNotes(page, 2);
+  await openClcrDetailsInCard(page, ids.calcium.id);
   await page.locator('#deleteMeasurement').click();
   await page.locator('#deleteDialog').getByRole('button', { name: 'Anuluj', exact: true }).click();
   expect((await memory(page)).notes).toHaveLength(3);
   await page.locator('#deleteMeasurement').click(); await page.locator('#confirmDeleteMeasurement').click();
-  await expect(noteCard(page, ids.calcium.id)).toHaveCount(0);
-  await expect(noteCard(page, ids.acr.id)).toBeVisible();
-  expect((await memory(page)).notes).toHaveLength(2);
-  await page.locator('button[data-tab="lab"]').click();
   await showClcrResults(page, 'table');
-  await expect(renal.locator(`.vilda-lab-hist-result-row[data-source="clcr"][data-note-id="${ids.calcium.id}"]`)).toHaveCount(0);
+  await expect(clcrRow(page, ids.calcium.id)).toHaveCount(0);
+  await expect(clcrRow(page, ids.acr.id)).toBeVisible();
+  expect((await memory(page)).notes).toHaveLength(2);
+  await expectClcrOutsideNotes(page, 1);
+  expect((await memory(page)).originalsLocked).toBe(true);
+});
+
+test('a link to a Klirens result opens Badania with its calculation details, not Notes', async ({ page }) => {
+  await openCalculator(page); const ids = await createNotes(page);
+  // Tak otwierają kartę Historia, wyszukiwarka i Przypomnienia: zakładka Notatki ze wskazanym wpisem.
+  await page.evaluate(note => window.VildaAuthUI.showPatientCard(note.patientId, null, null, { activeTab: 'notes', focusNoteId: note.id }), ids.acr);
+  await expect(page.locator('button[data-tab="lab"]')).toHaveClass(/is-active|active/);
+  await expect(page.locator('#detailsDialog')).toBeVisible();
+  await expect(page.locator('#calculationDetails')).toHaveAttribute('data-note-id', ids.acr.id);
+  await page.locator('#detailsDialog').getByRole('button', { name: 'Zamknij', exact: true }).click();
+  // Zwykła notatka nadal jest wskazywana w Notatkach.
+  await page.evaluate(pid => window.VildaAuthUI.showPatientCard(pid, null, null, { activeTab: 'notes', focusNoteId: 'fictional-ordinary-note' }), PATIENT_ID);
+  await expect(noteCard(page, 'fictional-ordinary-note')).toBeVisible();
+  await expect(page.locator('#detailsDialog')).toBeHidden();
   expect((await memory(page)).originalsLocked).toBe(true);
 });
 

@@ -73,15 +73,15 @@
   <link href="vilda_female_tt_age_ui.css?v=2" rel="stylesheet">
   <link href="vilda_female_tt_infant_upper_ui.css?v=1" rel="stylesheet">
   <link href="vilda_male_e2_age_ui.css?v=1" rel="stylesheet">
-  <link href="lab_history_strip.css?v=2" rel="stylesheet">
+  <link href="lab_history_strip.css?v=3" rel="stylesheet">
 
   <script src="vilda_logger.js?v=2"></script>
   <script src="vilda_html.js?v=5"></script>
   <script src="vilda_schowek.js?v=5"></script>
-  <script src="vilda_persistence_adapter.js?v=38"></script>
+  <script src="vilda_persistence_adapter.js?v=39"></script>
 <script src="vilda_reminders_privacy.js?v=1"></script>
-  <script src="vilda_session_bridge.js?v=207"></script>
-  <script src="vilda_init.js?v=4"></script>
+  <script src="vilda_session_bridge.js?v=208"></script>
+  <script src="vilda_init.js?v=5"></script>
   <script src="vilda_deps.js?v=98"></script>
   <script>
   (function() {
@@ -115,9 +115,9 @@
   <link rel="icon" type="image/png" sizes="48x48" href="/pwa-icons/icon-48x48.png">
   <link rel="icon" type="image/png" sizes="96x96" href="/pwa-icons/icon-96x96.png">
 
-  <link href="inline_przelicznik_jednostek_00.css?v=14" rel="stylesheet">
+  <link href="inline_przelicznik_jednostek_00.css?v=15" rel="stylesheet">
 
-  <script src="vilda_chrome.js?v=291"></script>
+  <script src="vilda_chrome.js?v=292"></script>
   <script src="lucide.min.js?v=1" defer></script>
   <script defer src="vilda_frame_sync.js?v=3"></script>
   <link rel="stylesheet" href="vilda_phone_landscape.css?v=2">
@@ -152,6 +152,11 @@
               <button type="button" class="lab-mode-tab" id="labModeSingle" role="tab" aria-selected="true" aria-controls="labFormPane labResultPane labChartPane">Pojedyncze badanie</button>
               <button type="button" class="lab-mode-tab" id="labModePackage" role="tab" aria-selected="false" aria-controls="labPackageCard" tabindex="-1"><svg class="lab-mode-lock" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Pakiet badań</button>
             </div>
+            <!-- P-OCZEKUJACE-WYNIKI (decyzje właściciela 2026-11-15): pasek wpisu „oczekujący wynik”, z którego
+                 zakładka „Badania” otworzyła Jednostki lab., a po zapisie — komunikat o jego zamknięciu.
+                 W nagłówku karty, żeby był widoczny w pojedynczym badaniu i w pakiecie. Wypełnia
+                 VildaLabPendingResult (lab_pin_result.js); bez podpiętego wpisu pasek jest ukryty. -->
+            <div class="lab-pending-strip" id="labPendingStrip" hidden></div>
            </div>
            <div class="lab-pane lab-pane--form" id="labFormPane">
 
@@ -516,10 +521,10 @@
   <script src="vilda_female_tt_infant_upper_ui.js?v=1"></script>
   <script src="vilda_male_e2_age.js?v=2"></script>
   <script src="vilda_male_e2_age_ui.js?v=2"></script>
-  <script src="lab_pin_result.js?v=11"></script>
-  <script src="vilda_lab_history.js?v=6"></script>
-  <script src="lab_history_strip.js?v=4"></script>
-  <script src="vilda_lab_packages.js?v=8"></script>
+  <script src="lab_pin_result.js?v=12"></script>
+  <script src="vilda_lab_history.js?v=7"></script>
+  <script src="lab_history_strip.js?v=5"></script>
+  <script src="vilda_lab_packages.js?v=9"></script>
   <!-- P2 (2026-06-07): 939 KB paneli klinicznych ładowane LENIWIE — strona startuje
        bez parsowania największego pliku w aplikacji. Konsument ma bezpieczny getter
        (global_LabClinicalPanels) z fallbackiem do zwykłego wyszukiwania, więc okno
@@ -2181,6 +2186,61 @@
       return current === false && (kind === 'G' || kind === 'Th') ? base + ' — wcześniejsza ocena' : base;
     }
 
+    // P-WIEK-NOWY-POMIAR (2026-11-15, decyzja właściciela): wiek wczytanego pacjenta, gdy sesja wspólna go nie
+    // niesie. Bez wieku przelicznik przyjmuje etap życia „dorosły” (getEffectivePatient niżej) — u wczytanego
+    // dziecka dobierałby więc zakresy dla dorosłych. Sesja wspólna dostaje wiek od formularza (userData.js;
+    // „Nowy pomiar” i „Odtwórz zapisany stan” zapisują go od razu), ale wczytanie inną drogą albo przejście
+    // tuż po nim może ją wyprzedzić. Wtedy, tylko dla pacjenta wczytanego do formularza:
+    //   1) wiek bieżącej wizyty — z żywego formularza albo z jego sesji (ten sam nośnik, z którego wiek biorą
+    //      silniki LH/FSH: VildaPubertyAssessmentContext), a bez niego z sesji formularza, jeśli jej wizyta
+    //      należy do tego pacjenta (payload.visit.patientId, docs/PATIENT_VISITS.md);
+    //   2) inaczej wiek z daty urodzenia na dziś — ukończone lata i miesiące (packageAgeAt, jak wiek w dniu
+    //      pobrania w pakiecie).
+    // Zwraca { age, source: 'visit' | 'birth-date' } albo null. Niczego nie zapisuje.
+    function readLoadedPatientAge() {
+      var identity = currentPatientIdentity();
+      if (!identity) return null;
+      var years = null, months = null, birth = null;
+      var asNumber = function (value) {
+        if (value == null || value === '') return null;
+        var number = Number(value);
+        return isFinite(number) ? number : null;
+      };
+      try {
+        var runtime = window.VildaPubertyAssessmentContext;
+        var active = runtime && typeof runtime.readActiveContext === 'function'
+          ? runtime.readActiveContext({ patientId: identity }) : null;
+        if (active && active.available && active.demographics) {
+          years = asNumber(active.demographics.ageYears);
+          months = asNumber(active.demographics.ageMonths);
+          birth = active.demographics.birthDateISO || null;
+        }
+      } catch (_) { /* kolejne źródło */ }
+      if (years == null && !birth) {
+        try {
+          var main = persistence && typeof persistence.readMainSession === 'function' ? persistence.readMainSession() : null;
+          if (main && main.visit && main.visit.patientId === identity && main.user && typeof main.user === 'object') {
+            years = asNumber(main.user.age);
+            months = asNumber(main.user.ageMonths);
+            birth = main.user.dobISO || null;
+          }
+        } catch (_) { /* kolejne źródło */ }
+      }
+      if (years != null && years >= 0) {
+        return { age: years + (months != null && months > 0 ? months / 12 : 0), source: 'visit' };
+      }
+      if (!birth) {
+        try {
+          var stored = persistence && typeof persistence.readShared === 'function' ? persistence.readShared(null) : null;
+          birth = stored && stored.dobISO || null;
+        } catch (_) { birth = null; }
+      }
+      var now = new Date();
+      var today = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+      var at = birth ? packageAgeAt(String(birth), today) : null;
+      return at ? { age: at.years + at.months / 12, source: 'birth-date' } : null;
+    }
+
     function readPatientFromShared() {
       var shared = null;
 
@@ -2215,6 +2275,13 @@
         ageNum = ageNum + monthsNum / 12;
       }
 
+      // P-WIEK-NOWY-POMIAR: wczytany pacjent bez wieku w sesji wspólnej — wiek wizyty albo z daty urodzenia.
+      var ageSource = (ageNum != null && isFinite(ageNum)) ? 'shared' : null;
+      if (!ageSource) {
+        var loadedAge = readLoadedPatientAge();
+        if (loadedAge) { ageNum = loadedAge.age; ageSource = loadedAge.source; }
+      }
+
       // Wyciąganie płci
       var sex = (shared.sex === 'M' || shared.sex === 'F') ? shared.sex : null;
 
@@ -2246,6 +2313,7 @@
         tanner: tannerVal,
         tannerKind: typed ? typed.kind : null,
         tannerCurrent: typed ? typed.current : null,
+        ageSource: ageSource,
         source: 'shared'
       };
     }
@@ -2294,6 +2362,8 @@
       p._shared_tanner_kind = shared.tannerKind || null;
       p._shared_tanner_current = shared.tannerCurrent == null ? null : shared.tannerCurrent;
       p._tanner_overridden = (typeof localOverride.tanner === 'number' && isFinite(localOverride.tanner));
+      // P-WIEK-NOWY-POMIAR: wczytany pacjent bez wieku z żadnego źródła — opis i podpowiedź mówią to wprost.
+      p._age_missing = typeof p.age !== 'number' && !!currentPatientIdentity();
       if (typeof currentSubstance !== 'undefined' && currentSubstance && currentSubstance.id === 'estradiol') {
         var e2Source = readPubertyPatientContext();
         var e2Age = e2Source.sourceStatus === 'ready' && lifespanLegacyAge(e2Source).resolved;
@@ -2695,6 +2765,7 @@
         p._tanner_overridden = true;
         if (typeof p.age !== 'number') p.life_stage = typeof p.tanner === 'number' ? (p.tanner >= 5 ? 'adult' : 'pediatric') : 'adult';
       }
+      p._age_missing = typeof p.age !== 'number' && !!currentPatientIdentity();
       var description = describePatient(p);
       if (analyteId === 'estradiol') {
         // Ten sam nośnik wieku co blok estradiolu w getEffectivePatient (rok lub miesiąc nie staje się dniem).
@@ -2751,6 +2822,7 @@
       }
       var bits = [];
       if (p.sex) bits.push(p.sex === 'M' ? 'Mężczyzna' : 'Kobieta');
+      if (p.age == null && p._age_missing) bits.push('brak wieku');
       if (p.age != null) {
         var rounded = (p.age < 18) ? p.age.toFixed(1).replace(/\.0$/, '') : Math.round(p.age);
         bits.push(rounded + ' ' + (p.age < 1 ? 'r.ż.' : 'lat') + (p._age_at_sample ? ' w dniu pobrania' : ''));
@@ -2809,11 +2881,16 @@
      * pola (Tanner, faza cyklu) zaowocuje precyzyjniejszym zakresem normy.
      * Zwraca pusty string, gdy nic nie warto sugerować.
      */
+    var AGE_MISSING_HINT = 'Brak wieku pacjenta — zakres nie jest dobrany do wieku. Uzupełnij wiek albo datę urodzenia na stronie głównej albo wpisz wiek w „Zmień ▼".';
     function buildClinicalHint(patient) {
       if (!currentSubstance || !patient) return '';
       var hints = [];
       var tannerAware = !!TANNER_AWARE[currentSubstance.id];
       var cycleAware  = !!CYCLE_AWARE[currentSubstance.id];
+
+      // P-WIEK-NOWY-POMIAR: wczytany pacjent bez wieku (ani w sesji, ani w wizycie, ani z daty urodzenia).
+      // Zakres jest wtedy dobrany bez wieku — przelicznik mówi to wprost, zamiast milczeć.
+      if (patient._age_missing) hints.push(AGE_MISSING_HINT);
 
       // Hint Tannera pokazuj TYLKO gdy WSZYSTKIE 4 warunki spełnione:
       //   1) Substancja jest TANNER_AWARE
@@ -5409,6 +5486,11 @@
       if (pubertyUI) pubertyUI.setAnalyte(isPubertySubstance(substance) ? substance.id : null);
       renderSubstanceHint(substance, rawText || (substance ? substance.label_pl : ''));
       if (!substance) {
+        // The empty selection must also survive navigation and a cold restart.
+        // Removal is allowed while autosave is paused during a patient reset.
+        if (persistence && typeof persistence.removeModuleKey === 'function') {
+          persistence.removeModuleKey(PREF_SUBSTANCE);
+        }
         // Pusty stan: zerujemy bieżącą substancję i czyścimy widok wyników.
         currentSubstance = null;
         updateLifespan(null);
@@ -5523,8 +5605,28 @@
       renderResults(currentSubstance);
     }
 
-    function onClear() {
+    // One reset for the local button, a patient reset and the shell's clear echo.
+    // Keep toast/focus out of this function: a hidden panel must not steal focus.
+    function resetLabForm() {
+      if (persistence && typeof persistence.clearModuleState === 'function') {
+        persistence.clearModuleState({ scope: 'lab', dispatchEvent: false });
+      }
       if (pubertyUI) pubertyUI.reset();
+      resetLocalPatientOverride();
+      lastLifespanContext = null;
+      lastAmhSourceContext = null;
+      lastE2SourceContext = null;
+      if (typeof lastFshSourceContext !== 'undefined') lastFshSourceContext = null;
+      if (lifespanUI) lifespanUI.clear();
+      if (amhAgeReferenceUI) amhAgeReferenceUI.clear();
+      if (typeof amhLilacsSourceUI !== 'undefined' && amhLilacsSourceUI) amhLilacsSourceUI.clear();
+      if (typeof e2PhaseSourceUI !== 'undefined' && e2PhaseSourceUI) e2PhaseSourceUI.clear();
+      if (typeof fshSourceUI !== 'undefined' && fshSourceUI) fshSourceUI.clear();
+      resetFshD3Context();
+      resetE2D3Context();
+      resetFemaleTtAge();
+      resetFemaleTtInfantUpper();
+      resetMaleE2Age();
       // Pełny reset podstrony do stanu startowego:
       //   – oba pola wejściowe puste (substancja, wartość),
       //   – brak wybranej substancji → karta wyników w pustym stanie
@@ -5532,7 +5634,7 @@
       //   – karta zakresów referencyjnych ukryta,
       //   – atrybuty pomiaru (pora pobrania, test diagnostyczny) zresetowane,
       //   – jednostka docelowa zresetowana (Faza 18),
-      //   – fokus wraca na pole substancji, żeby od razu można było wpisać kolejny wynik.
+      //   – lokalne nadpisania pacjenta i zapamiętane wybory są usunięte.
       valueEl.value = '';
       substanceEl.value = '';
       if (measTimeEl) measTimeEl.value = '';
@@ -5546,6 +5648,12 @@
       if (typeof updateSubstanceClearVisibility === 'function') {
         updateSubstanceClearVisibility();
       }
+      closeSubstanceDropdown();
+      refreshPatientContext();
+    }
+
+    function onClear() {
+      resetLabForm();
       showToast('Wyczyszczono');
       try { substanceEl.focus(); } catch (_) { /* noop */ }
     }
@@ -5946,44 +6054,7 @@
         || /shared|user/i.test(e.key)) refreshPatientContext();
     });
     window.addEventListener('focus', refreshPatientContext);
-    window.addEventListener('vilda:user-state-cleared', function () {
-      if (pubertyUI) pubertyUI.reset();
-      resetLocalPatientOverride();
-      lastAmhSourceContext = null;
-      lastE2SourceContext = null;
-      if (typeof lastFshSourceContext !== 'undefined') lastFshSourceContext = null;
-      if (lifespanUI) lifespanUI.clear();
-      if (amhAgeReferenceUI) amhAgeReferenceUI.clear();
-      if (typeof amhLilacsSourceUI !== 'undefined' && amhLilacsSourceUI) amhLilacsSourceUI.clear();
-      if (typeof e2PhaseSourceUI !== 'undefined' && e2PhaseSourceUI) e2PhaseSourceUI.clear();
-      if (typeof fshSourceUI !== 'undefined' && fshSourceUI) fshSourceUI.clear();
-      resetFshD3Context();
-      resetE2D3Context();
-      resetFemaleTtAge();
-      resetFemaleTtInfantUpper();
-      resetMaleE2Age();
-      // Świeża sesja = puste formularze. Pole „Substancja" mogło zostać
-      // wypełnione przy inicjalizacji podstrony ze starej preferencji
-      // LAB_CONV_SUBSTANCE (gdy user logował się będąc już na przeliczniku,
-      // init zdążył odczytać preferencję, zanim reset ją wyczyścił). Reset sesji
-      // czyści preferencję, ale nie tknie już wpisanej wartości w polu — dlatego
-      // tutaj jawnie zerujemy selektor substancji do stanu startowego.
-      try {
-        if (valueEl) valueEl.value = '';
-        if (substanceEl) substanceEl.value = '';
-        if (measTimeEl) measTimeEl.value = '';
-        if (measProtocolEl) measProtocolEl.value = '';
-        if (measMethodEl) measMethodEl.value = '';
-        measurementCtx = { time_of_day: null, test_protocol: null, method: null };
-        testosteroneMeasurementContext = {};
-        userSelectedTargetUnit = null;
-        showError('');
-        applySubstance(null, '');
-        if (typeof updateSubstanceClearVisibility === 'function') updateSubstanceClearVisibility();
-        if (typeof closeSubstanceDropdown === 'function') closeSubstanceDropdown();
-      } catch (_) { /* noop */ }
-      refreshPatientContext();
-    });
+    window.addEventListener('vilda:user-state-cleared', resetLabForm);
 
     document.addEventListener('vilda:patient-loaded', function () {
       resetFshD3Context();

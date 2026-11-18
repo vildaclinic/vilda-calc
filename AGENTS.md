@@ -38,6 +38,7 @@ referencyjnych jest listą rozwijalną, nie grupą widocznych przycisków.
 - Nie wprowadzaj frameworka, bundlera, migracji modułów ani zmiany modelu wdrożenia bez osobnej decyzji właściciela.
 - Zachowuj kolejność globalnych skryptów, ich efekty uboczne oraz publiczne API `window.Vilda…`.
 - Refaktoryzacja oznacza brak zmiany wyników, jednostek, progów, danych, zapisu i synchronizacji. Jeżeli nie można tego wykazać, traktuj zmianę jako kliniczną lub funkcjonalną.
+- Fragment natywny sejfu (blok `BEGIN/END VILDA CLINICAL WORKSPACE NATIVE V1` w `vilda_vault.js`) składa program w prywatnym repozytorium `vilda-source`. Startuje on od dokładnej bazy sejfu: `baseVaultSHA256` w `runtime/clinical-workspace-v1/manifest.json`. Zmiana `vilda_vault.js` poza tym blokiem zmienia tę bazę. Przelicz ją w tym samym PR (pilnuje tego `node tools/check_clinical_workspace_boundary.mjs`). W opisie PR i w podsumowaniu dla właściciela napisz jedno zdanie: „Sejf się zmienił — przy następnej pracy w `vilda-source` weź nową bazę z `runtime/clinical-workspace-v1/manifest.json` na `audyt`.”
 
 ## 3. Klasyfikacja zmian klinicznych
 

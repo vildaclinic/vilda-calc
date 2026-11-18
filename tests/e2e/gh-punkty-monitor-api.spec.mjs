@@ -46,7 +46,7 @@ async function zaloguj(page) {
 // 'bezModulu' (vilda_gh_punkty.js nie dochodzi), 'bezModuluDawki' (vilda_gh_dawka.js nie dochodzi; D6).
 async function otworzDocPro(page, wariant) {
   // Serwer synchronizacji odcięty: wynik nie zależy od sieci środowiska testu.
-  await page.route(/^https:\/\/vilda-sync\./, (route) => route.abort());
+  await page.route(/^https:\/\/(?:vilda-sync\.|sync\.vildasync\.com\/)/, (route) => route.abort());
   if (wariant === 'bezModulu') await page.route(/\/vilda_gh_punkty\.js(\?|$)/, (route) => route.abort());
   if (wariant === 'bezModuluDawki') await page.route(/\/vilda_gh_dawka\.js(\?|$)/, (route) => route.abort());
   if (wariant === 'przedApi') {

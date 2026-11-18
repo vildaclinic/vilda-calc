@@ -171,6 +171,7 @@ describe('ClcrSavedResults — complete shared historical read contract', () => 
     const { api } = reader();
     const saved = note(api, 'ckid_u25', 'fictional-edit-target', {
       rev: 12,
+      updatedAtISO: '2026-10-21T08:00:00.000Z',
       clinicalDateISO: '2026-10-20',
       labResult: { value: '83', valueNum: 83, norm: '≥90 mL/min/1,73 m²' },
     });
@@ -179,6 +180,8 @@ describe('ClcrSavedResults — complete shared historical read contract', () => 
       noteId: saved.id,
       patientId: PATIENT_ID,
       baseRev: 12,
+      // E3-PR0b2a: obok rev punkt niesie chwilę zapisu wersji, którą pokazuje.
+      baseUpdatedAtISO: '2026-10-21T08:00:00.000Z',
       dateISO: '2026-10-20',
       norm: '≥90 mL/min/1,73 m²',
       displayValue: '83',

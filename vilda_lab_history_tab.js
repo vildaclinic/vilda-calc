@@ -7,13 +7,22 @@
  * norm i bez ponownej oceny (LAB_INTERPRETATION_AGENT_GUIDE.md § 7).
  *
  * window.VildaLabHistoryTab.render(host, patientId, options) → { refresh, destroy }
- *   options.openEditor({ note, template, anchor, onSaved })  edytor notatki karty (ga); po „Wpisz wynik”
- *     z zapisaną wartością zakładka zamyka zlecenie (vault.completePatientNote, decyzja 6.11) i daje „Cofnij”
+ *   options.openEditor({ note, template, anchor, onSaved })  edytor notatki karty (ga): edycja zapisanego wyniku.
+ *     Nowego wyniku zakładka nie wpisuje ręcznie — także przy oczekującym wyniku (P-OCZEKUJACE-WYNIKI, decyzje
+ *     właściciela 2026-11-15): „Wpisz wynik →” otwiera Jednostki lab. z tym wpisem (?oczekujacy=<id>; wynik
+ *     dostaje ocenę, a wpis zamyka okno przypięcia — VildaLabPendingResult w lab_pin_result.js), „Opisz wynik” zapisuje wynik
+ *     opisowy operacją sejfu saveReminderOutcome (ta sama co „Dodaj wynik do kartoteki” w Przypomnieniach).
+ *   options.loadPatient({ href })                            wczytanie pacjenta tej karty do formularza drogą
+ *     karty („Wczytaj tego pacjenta”: strażnik niezapisanych zmian, wybór „Nowy pomiar” / „Odtwórz zapisany
+ *     stan”), a po nim przejście do przelicznika pod href (bez href: sam przelicznik). Bez tej opcji zakładka
+ *     pacjenta niewczytanego pokazuje tylko podpowiedź (P-BADANIA-WEJSCIE, decyzja właściciela 2026-11-15).
  *   options.openReminders(list)                              arkusz przypomnień (Mr)
  *   options.onChanged()                                      zapis z zakładki zmienił notatki
  *   options.openClcrResult({patientId,noteId,record,vault,onChanged}) — szczegóły obliczenia, nigdy edytor lab
  *   options.focusNoteId                                      po pierwszym odczycie otwiera szczegóły tego wyniku
- *     (link do wyniku z Historii, wyszukiwarki, Przypomnień lub planu opieki; decyzja właściciela 2026-11-11)
+ *     (link do wyniku z Historii, wyszukiwarki, Przypomnień lub planu opieki; decyzja właściciela 2026-11-11);
+ *     od 2.7.0 także wyniku Klirensu — otwiera szczegóły obliczenia (P-KLIRENS-NOTATKI, decyzja 2026-11-15:
+ *     wynik Klirensu nie ma już karty w Notatkach)
  *   options.deleteNote({ note }) → Promise<boolean>         „Usuń wpis” w szczegółach wyniku: potwierdzenie
  *     i usunięcie robi karta (ta sama funkcja co „Usuń” w Notatkach); true = wpis usunięty
  *   options.vault, options.model, options.trend, options.storage, options.now — do testów
@@ -51,6 +60,27 @@
   var GH_SOURCE = 'z notatki leczenia GH';
   // LAB-PAKIETY PR1: skrót do pakietu „Tarczyca” w przeliczniku (slug z danych w vilda_lab_packages.js).
   var PACKAGE_SHORTCUT = { href: 'przelicznik-jednostek.html?pakiet=tarczyca', label: 'Wpisz pakiet: Tarczyca →' };
+  // P-BADANIA-WEJSCIE (decyzja właściciela 2026-11-15): wyniki dodaje się tylko w Jednostkach lab., pacjentowi
+  // wczytanemu do formularza — tam aplikacja zna wizytę (nową albo odtworzoną), wiek i ocenę pokwitania.
+  // Karta pacjenta niewczytanego najpierw go wczytuje; nigdy nie przenosi do przelicznika „na ślepo”.
+  var ENTRY = {
+    href: 'przelicznik-jednostek.html',
+    loaded: 'Dodaj wyniki →',
+    load: 'Wczytaj pacjenta i dodaj wyniki →',
+    hint: 'Wyniki dodasz w Jednostkach lab. po wczytaniu tego pacjenta z Bazy pacjentów.',
+    emptyLoaded: 'Wyniki dodasz w Jednostkach lab. — pojedynczo albo pakietem badań.',
+    emptyLoad: 'Wyniki dodasz w Jednostkach lab. po wczytaniu tego pacjenta.'
+  };
+  // P-OCZEKUJACE-WYNIKI (decyzje właściciela 2026-11-15): przy każdym oczekującym wyniku dwie akcje. Nazwa wpisu
+  // jest wpisana odręcznie, więc zakładka nie rozstrzyga, czy wynik będzie liczbowy, czy opisowy.
+  var PENDING = {
+    param: 'oczekujacy',
+    enter: 'Wpisz wynik →',
+    load: 'Wczytaj pacjenta i wpisz wynik →',
+    describe: 'Opisz wynik',
+    help: '„Wpisz wynik →” otwiera Jednostki lab. z tym oczekującym wynikiem: wynik liczbowy dostaje ocenę, a wpis znika z oczekujących po przypięciu. „Opisz wynik” służy do wyniku opisowego, np. biopsji albo USG.',
+    helpDescribeOnly: '„Opisz wynik” zapisuje wynik opisowy, np. biopsji albo USG. Wynik liczbowy wpiszesz w Jednostkach lab. po wczytaniu tego pacjenta z Bazy pacjentów.'
+  };
   var resourceBootstrap = null;
   var moduleURL = win && win.document && win.document.currentScript && win.document.currentScript.src;
 
@@ -100,6 +130,70 @@
   }
 
   function createApi() {
+    function ensureRecordResources(options, doc, editor) {
+      // Jawne wstrzyknięcie zależności i lekki DOM testowy nie potrzebują sieci.
+      if (editor && typeof options.openClcrResult === 'function') return Promise.resolve();
+      if (!editor && (options.clcrSavedResults || options.clcrSavedResultsView)) return Promise.resolve();
+      if (!win || !win.location || !doc.head) return Promise.resolve();
+      function ready() {
+        var resources = win.ClcrRecordResources;
+        if (!resources || typeof resources[editor ? 'ensureEditor' : 'ensureReader'] !== 'function') throw new Error('Moduł zapisanych obliczeń jest niedostępny.');
+        return resources[editor ? 'ensureEditor' : 'ensureReader']();
+      }
+      if (win.ClcrRecordResources) return Promise.resolve().then(ready);
+      if (!resourceBootstrap) {
+        resourceBootstrap = new Promise(function (resolve, reject) {
+          var script = doc.createElement('script'), finished = false, timer;
+          function finish(error) {
+            if (finished) return; finished = true;
+            if (timer) win.clearTimeout(timer);
+            if (error) { if (script.parentNode) script.parentNode.removeChild(script); reject(error); }
+            else resolve();
+          }
+          script.addEventListener('load', function () { finish(win.ClcrRecordResources ? null : new Error('Moduł zapisanych obliczeń jest niedostępny.')); });
+          script.addEventListener('error', function () { finish(new Error('Nie udało się wczytać zapisanych obliczeń.')); });
+          script.setAttribute('src', new URL('clcr_record_resources.js?v=27', moduleURL || win.location.href).href);
+          timer = win.setTimeout(function () { finish(new Error('Upłynął czas wczytywania zapisanych obliczeń.')); }, 15000);
+          doc.head.appendChild(script);
+        });
+        resourceBootstrap.catch(function () { resourceBootstrap = null; });
+      }
+      return resourceBootstrap.then(ready);
+    }
+
+    function waitForConverter(trend) {
+      if (win && win.LabUnitConverter && typeof win.LabUnitConverter.find === 'function') return Promise.resolve(true);
+      if (!trend || typeof trend.loadConverter !== 'function') return Promise.resolve(false);
+      return new Promise(function (resolve) {
+        var settled = false;
+        var finish = function (ok) { if (!settled) { settled = true; resolve(!!ok); } };
+        var timer = win ? win.setTimeout(function () { finish(false); }, CONVERTER_WAIT_MS) : 0;
+        try {
+          trend.loadConverter(function (ok) { if (timer && win) win.clearTimeout(timer); finish(ok); });
+        } catch (_) { finish(false); }
+      });
+    }
+
+    // Read-only shared bootstrap for the home documentation preview. Resource
+    // lists and their loader remain the SAME native actors used by this tab.
+    async function ensureReaderDependencies(settings) {
+      settings = settings || {};
+      var doc = win && win.document;
+      function check() {
+        if (settings.isCurrent && settings.isCurrent() !== true) throw new Error('HOME_PATIENT_STALE');
+      }
+      check();
+      if (!doc) throw new Error('LAB_READER_UNAVAILABLE');
+      var ok = await waitForConverter(win.__vildaLabTrend);
+      check();
+      if (!ok || !win.LabUnitConverter) throw new Error('LAB_CONVERTER_UNAVAILABLE');
+      if (settings.includeClcr === true) {
+        await ensureRecordResources({}, doc, false);
+        check();
+      }
+      return true;
+    }
+
     var instances = [];
     var subscribed = [];
 
@@ -175,7 +269,7 @@
 
       var instance = {
         vault: vault,
-        alive: function () { return !state.destroyed && host.isConnected !== false; },
+        alive: function () { return !state.destroyed && host.isConnected !== false && (!options.isCurrent || options.isCurrent() === true); },
         noteChanged: function (event) {
           if (event && event.patientId && event.patientId !== patientId) return;
           schedule();
@@ -201,50 +295,6 @@
         if (!win) load();
       }
       function current(gen) { return gen === state.gen && instance.alive(); }
-
-      function ensureRecordResources(editor) {
-        // Jawne wstrzyknięcie zależności i lekki DOM testowy nie potrzebują sieci.
-        if (editor && typeof options.openClcrResult === 'function') return Promise.resolve();
-        if (!editor && (options.clcrSavedResults || options.clcrSavedResultsView)) return Promise.resolve();
-        if (!win || !win.location || !doc.head) return Promise.resolve();
-        function ready() {
-          var resources = win.ClcrRecordResources;
-          if (!resources || typeof resources[editor ? 'ensureEditor' : 'ensureReader'] !== 'function') throw new Error('Moduł zapisanych obliczeń jest niedostępny.');
-          return resources[editor ? 'ensureEditor' : 'ensureReader']();
-        }
-        if (win.ClcrRecordResources) return Promise.resolve().then(ready);
-        if (!resourceBootstrap) {
-          resourceBootstrap = new Promise(function (resolve, reject) {
-            var script = doc.createElement('script'), finished = false, timer;
-            function finish(error) {
-              if (finished) return; finished = true;
-              if (timer) win.clearTimeout(timer);
-              if (error) { if (script.parentNode) script.parentNode.removeChild(script); reject(error); }
-              else resolve();
-            }
-            script.addEventListener('load', function () { finish(win.ClcrRecordResources ? null : new Error('Moduł zapisanych obliczeń jest niedostępny.')); });
-            script.addEventListener('error', function () { finish(new Error('Nie udało się wczytać zapisanych obliczeń.')); });
-            script.setAttribute('src', new URL('clcr_record_resources.js?v=26', moduleURL || win.location.href).href);
-            timer = win.setTimeout(function () { finish(new Error('Upłynął czas wczytywania zapisanych obliczeń.')); }, 15000);
-            doc.head.appendChild(script);
-          });
-          resourceBootstrap.catch(function () { resourceBootstrap = null; });
-        }
-        return resourceBootstrap.then(ready);
-      }
-
-      function waitForConverter() {
-        if (win && win.LabUnitConverter && typeof win.LabUnitConverter.find === 'function') return Promise.resolve(true);
-        if (!trend || typeof trend.loadConverter !== 'function') return Promise.resolve(false);
-        return new Promise(function (resolve) {
-          var settled = false;
-          var finish = function (ok) { if (!settled) { settled = true; resolve(!!ok); } };
-          var timer = win ? win.setTimeout(function () { finish(false); }, CONVERTER_WAIT_MS) : 0;
-          try {
-            trend.loadConverter(function (ok) { if (timer && win) win.clearTimeout(timer); finish(ok); });
-          } catch (_) { finish(false); }
-        });
-      }
 
       function message(className, content, retry) {
         resetViewportReserve();
@@ -281,14 +331,14 @@
             vault.listPatientNotesForPatient(patientId),
             typeof vault.listPatientTreatmentPeriods === 'function'
               ? Promise.resolve(vault.listPatientTreatmentPeriods(patientId)).catch(function () { return []; }) : [],
-            waitForConverter()
+            waitForConverter(trend)
           ]);
         }).then(function (results) {
           if (!current(gen)) return results;
           // Nie obciążamy zwykłej historii dodatkowymi modułami, dopóki pacjent
           // nie ma zapisanych obliczeń. Kolejne zdarzenie sejfu ponowi tę bramkę.
           var hasSavedCalculations = (Array.isArray(results[1]) ? results[1] : []).some(function (note) { return note && note.category === 'wynik-klirens'; });
-          return (hasSavedCalculations ? ensureRecordResources(false) : Promise.resolve()).then(function () {
+          return (hasSavedCalculations ? ensureRecordResources(options, doc, false) : Promise.resolve()).then(function () {
             savedResults = options.clcrSavedResults || (win && win.ClcrSavedResults) || savedResults;
             return results;
           });
@@ -437,76 +487,164 @@
         state.data.view.panels.forEach(function (panel) { panel.series.forEach(function (series) {
           series.entries.forEach(function (entry) { if (!found && entry.noteId === noteId) found = { entry: entry, view: series }; });
         }); });
+        // P-KLIRENS-NOTATKI: link do wyniku Klirensu (Historia, wyszukiwarka) otwiera szczegóły tego obliczenia.
+        if (!found && state.data.view.clcr) {
+          (clcrSeries() || []).forEach(function (series) {
+            series.entries.forEach(function (entry) { if (!found && entry.noteId === noteId) found = { entry: entry, view: series }; });
+          });
+        }
         if (found) selectResult(found.entry, found.view);
       }
-      function openEditor(request, afterSave) {
+      function openEditor(request) {
         if (typeof options.openEditor !== 'function') return;
         options.openEditor(Object.assign({}, request, {
           onSaved: function () {
-            var refresh = function () {
-              schedule();
-              if (typeof options.onChanged === 'function') options.onChanged();
-            };
-            // Bez dodatkowego kroku — jak dotąd od razu; po „Wpisz wynik” dopiero po zamknięciu zlecenia.
-            var done = typeof afterSave === 'function' ? afterSave() : null;
-            if (done && typeof done.then === 'function') done.then(refresh, refresh);
-            else refresh();
+            schedule();
+            if (typeof options.onChanged === 'function') options.onChanged();
           }
         }));
       }
-      // „Wpisz wynik” przy zleceniu: edytor z szablonem wyniku i datą badania (K7). Zlecenie dopasowane do badania
-      // dostaje nazwę badania z listy przelicznika, żeby edytor zapisał klucz serii.
-      function enterResult(item) {
-        if (!vault || typeof vault.getPatientNote !== 'function') return;
-        Promise.resolve(vault.getPatientNote(item.noteId)).then(function (note) {
-          if (!note) return;
-          var copy = Object.assign({}, note);
-          var label = converterLabel(item.seriesKey);
-          if (label && !(note.labResult && text(note.labResult.test))) copy.labResult = Object.assign({}, note.labResult || {}, { test: label });
-          openEditor({ note: copy, template: 'lab', anchor: 'date' }, function () { return completeAfterResult(item.noteId, item.title || note.title); });
-        }).catch(function () { /* wpis zniknął */ });
+      // „Wpisz wynik →” przy oczekującym wyniku: Jednostki lab. z tym wpisem. Wpis dopasowany do badania z listy
+      // przelicznika (testKey albo dokładna nazwa po „Wynik: ”) otwiera od razu to badanie.
+      function pendingHref(item) {
+        return ENTRY.href + '?' + PENDING.param + '=' + encodeURIComponent(item.noteId)
+          + (item.seriesKey ? '&badanie=' + encodeURIComponent(item.seriesKey) : '');
       }
-      // Decyzja 6.11 (PR5b): zlecenie, w którym „Wpisz wynik” zapisał wartość, zamyka się jak „Wykonano”
-      // w Przypomnieniach (completePatientNote). Nie przekłada go na kolejny termin („kontrola co N dni”):
-      // następny wynik nadpisałby ten w tej samej notatce. Bez wartości, po niestawieniu albo już wykonane — bez zmian.
-      function hasValue(note) {
-        var lab = note && note.labResult;
-        return !!lab && typeof lab === 'object' && (text(lab.value) !== '' || finite(lab.valueNum));
+      // „Opisz wynik”: wynik opisowy (biopsja, USG) — bez pól wartości i jednostki, bo wynik liczbowy ma przejść
+      // przez Jednostki lab. i dostać ocenę. Zapis robi sejf jedną operacją (saveReminderOutcome, action „result”),
+      // tą samą co „Dodaj wynik do kartoteki” w Przypomnieniach: opis trafia do karty jako wynik opisowy, a wpis
+      // zostaje oznaczony jako wykonany. Nie wymaga wczytania pacjenta do formularza.
+      var describeDialog = null;
+      function canDescribe() {
+        return !!vault && typeof vault.saveReminderOutcome === 'function' && typeof vault.getPatientNote === 'function';
       }
-      // Nazwa zlecenia sprzed edycji: szablon wyniku zmienia tytuł notatki na „Badanie: wartość”.
-      function completeAfterResult(noteId, title) {
-        if (typeof vault.completePatientNote !== 'function') return null;
-        return Promise.resolve(vault.getPatientNote(noteId)).then(function (note) {
-          if (!note || !hasValue(note) || note.completedAtISO || note.noShowAtISO) return;
-          return Promise.resolve(vault.completePatientNote(noteId)).then(function () {
-            return vault.getPatientNote(noteId);
-          }).then(function (saved) {
-            // Znacznik tego zamknięcia: „Cofnij” działa tylko, dopóki zlecenie jest w tym samym stanie.
-            state.notice = { kind: 'completed', noteId: noteId, title: text(title), completedAtISO: saved && saved.completedAtISO || null };
+      function closeDescribe(restoreFocus) {
+        var previous = describeDialog;
+        describeDialog = null;
+        if (!previous) return;
+        previous.shell.destroy({ restoreFocus: restoreFocus !== false });
+        if (previous.releasePresentation) previous.releasePresentation();
+        if (previous.host.parentNode) previous.host.parentNode.removeChild(previous.host);
+      }
+      function operationId() {
+        var random = '';
+        try {
+          var bytes = new Uint8Array(12);
+          win.crypto.getRandomValues(bytes);
+          for (var i = 0; i < bytes.length; i++) random += ('0' + bytes[i].toString(16)).slice(-2);
+        } catch (_) { random = Math.random().toString(36).slice(2) + Date.now().toString(36); }
+        return 'bad-opis-' + random;
+      }
+      // Nazwa badania dla wyniku opisowego: z wpisu, a przy tytule „Wynik: …” (Terminarz po procedurze) bez prefiksu.
+      function pendingTestName(note) {
+        var named = text(note.labResult && note.labResult.test);
+        if (named) return named;
+        var title = text(note.title);
+        return title.indexOf('Wynik: ') === 0 ? title.slice('Wynik: '.length).trim() : title;
+      }
+      function stillPending(note) {
+        if (!note || (note.patientId && note.patientId !== patientId)) return false;
+        if (model && typeof model.pendingItem === 'function') return !!model.pendingItem(note, win && win.LabUnitConverter || null);
+        return !note.completedAtISO && !note.noShowAtISO;
+      }
+      function describePending(item, anchor) {
+        if (!canDescribe() || detailsHidden()) return;
+        var helper = win && win.VildaResultDetailsDialog;
+        if (!helper || typeof helper.attach !== 'function') {
+          state.notice = { kind: 'details-resource-error', text: 'Nie udało się otworzyć okna opisu wyniku. Odśwież stronę.' }; draw(); return;
+        }
+        closeAllDetails(false);
+        var overlay = node('div', 'vilda-result-details-host');
+        var dialog = add(overlay, 'dialog', 'vilda-lab-hist');
+        dialog.setAttribute('id', 'labPendingDescribeDialog');
+        dialog.setAttribute('aria-labelledby', 'labPendingDescribeTitle');
+        var layout = add(dialog, 'div', 'vilda-result-details-layout vilda-lab-hist-describe');
+        var heading = add(layout, 'header', 'vilda-result-details-heading');
+        var titles = add(heading, 'div', 'vilda-result-details-titles');
+        add(titles, 'p', 'vilda-lab-hist-muted', 'Oczekujący wynik');
+        var title = add(titles, 'h2', '', 'Opisz wynik'); title.setAttribute('id', 'labPendingDescribeTitle');
+        var close = button(heading, 'vilda-lab-hist-details-close', '×', function () { closeDescribe(true); });
+        close.setAttribute('aria-label', 'Zamknij okno opisu wyniku');
+        var body = add(layout, 'div', 'vilda-result-details-body vilda-lab-hist-describe-body');
+        var context = add(body, 'p', 'vilda-lab-hist-describe-context', item.title || 'Zlecone badanie');
+        if (item.dueDateISO) add(context, 'span', 'vilda-lab-hist-muted', ' · termin ' + formatDate(item.dueDateISO));
+        var areaLabel = add(body, 'label', 'vilda-lab-hist-describe-label', 'Opis otrzymanego wyniku');
+        var area = add(body, 'textarea', 'vilda-lab-hist-describe-text');
+        area.setAttribute('id', 'labPendingDescribeText'); areaLabel.setAttribute('for', 'labPendingDescribeText');
+        area.setAttribute('rows', '5'); area.setAttribute('maxlength', '20000');
+        area.setAttribute('placeholder', 'Wpisz treść otrzymanego wyniku lub najważniejsze ustalenia…');
+        var dateLabel = add(body, 'label', 'vilda-lab-hist-describe-label', 'Data otrzymania wyniku');
+        var date = add(body, 'input', 'vilda-lab-hist-describe-date');
+        date.setAttribute('id', 'labPendingDescribeDate'); dateLabel.setAttribute('for', 'labPendingDescribeDate');
+        date.type = 'date'; date.value = localISO(now()); date.setAttribute('max', localISO(now()));
+        add(body, 'p', 'vilda-lab-hist-muted vilda-lab-hist-describe-help', 'Opis zostanie zapisany w karcie pacjenta jako wynik opisowy, a oczekujący wynik zostanie oznaczony jako wykonany. Aplikacja nie ocenia opisu i nie rysuje go na wykresach. Data otrzymania nie jest datą pobrania badania.');
+        var error = add(body, 'p', 'vilda-lab-hist-describe-error');
+        error.setAttribute('role', 'alert'); error.hidden = true;
+        var actions = add(layout, 'footer', 'vilda-result-details-actions vilda-lab-hist-detail-actions');
+        var cancel = button(actions, 'vilda-auth-btn vilda-auth-btn-small vilda-auth-btn-ghost', 'Anuluj', function () { closeDescribe(true); });
+        var save = button(actions, 'vilda-auth-btn vilda-auth-btn-small vilda-auth-btn-primary vilda-lab-hist-describe-save', 'Zapisz opis', submit);
+        doc.body.appendChild(overlay);
+        var presentationCleanup = typeof options.onDialog === 'function' ? options.onDialog(dialog) : null;
+        function releasePresentation() { var cleanup = presentationCleanup; presentationCleanup = null; if (typeof cleanup === 'function') cleanup(); }
+        var shell = helper.attach(dialog, { context: section, onClose: function () {
+          releasePresentation();
+          if (describeDialog && describeDialog.host === overlay) describeDialog = null;
+          if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+        } });
+        var busy = false, op = operationId(), signature = null;
+        dialog.addEventListener('cancel', function (event) { event.preventDefault(); if (!busy) closeDescribe(true); });
+        describeDialog = { host: overlay, dialog: dialog, shell: shell, releasePresentation: releasePresentation };
+        function fail(message) { error.textContent = message; error.hidden = !message; }
+        function setBusy(value) {
+          busy = value;
+          [area, date, cancel, save, close].forEach(function (control) { control.disabled = value; });
+          save.textContent = value ? 'Zapisuję…' : 'Zapisz opis';
+        }
+        function userError(message) { var problem = new Error(message); problem.forUser = true; return problem; }
+        function submit() {
+          if (busy || typeof options.isCurrent === 'function' && !instance.alive()) return;
+          var value = text(area.value), day = date.value;
+          if (!value) { fail('Wpisz opis otrzymanego wyniku.'); if (typeof area.focus === 'function') area.focus(); return; }
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(day || '')) { fail('Podaj datę otrzymania wyniku.'); return; }
+          fail('');
+          setBusy(true);
+          var opened = describeDialog;
+          Promise.resolve(vault.getPatientNote(item.noteId)).then(function (note) {
+            if (typeof options.isCurrent === 'function' && (!instance.alive() || describeDialog !== opened)) return null;
+            if (!stillPending(note)) throw userError('Ten oczekujący wynik zmienił się albo został już zamknięty. Zamknij okno i sprawdź go w Przypomnieniach.');
+            // E3-PR0b2a: chwila zapisu obok rev - sejf porównuje ją z wersją pod blokadą notatki.
+            // E3-PR0b2b: i sama wersja (baseNote) - ta sama widoczna wersja z nową chwilą zapisu nie jest konfliktem.
+            var request = { id: note.id, patientId: note.patientId, baseRev: note.rev || 0, baseUpdatedAtISO: note.updatedAtISO || null, action: 'result', dateISO: day, text: value, baseNote: note };
+            var name = pendingTestName(note);
+            if (name) request.test = name;
+            // Ponowienie tej samej prośby (np. po błędzie sieci) niesie ten sam identyfikator operacji.
+            var sig = JSON.stringify(request);
+            if (signature && signature !== sig) op = operationId();
+            signature = sig;
+            request.operationId = op;
+            if (typeof options.isCurrent === 'function' && (!instance.alive() || describeDialog !== opened)) return null;
+            return vault.saveReminderOutcome(request);
+          }).then(function (result) {
+            if (typeof options.isCurrent === 'function' && (!instance.alive() || describeDialog !== opened)) return;
+            if (!result || result.saved !== true) {
+              throw userError(result && (result.reason === 'conflict' || result.reason === 'already-closed')
+                ? 'Ten wpis zmienił się w innej karcie lub na innym urządzeniu. Zachowaj wpisany opis i sprawdź wpis w Przypomnieniach.'
+                : 'Nie zapisano opisu. Wpis mógł zostać usunięty.');
+            }
+            if (describeDialog === opened) closeDescribe(true);
+            if (!instance.alive()) return;
+            state.notice = { kind: 'described', noteId: item.noteId, title: text(item.title) };
+            schedule();
+            if (typeof options.onChanged === 'function') options.onChanged();
+          }).catch(function (problem) {
+            if (describeDialog !== opened || typeof options.isCurrent === 'function' && !instance.alive()) return;
+            setBusy(false);
+            fail(problem && problem.forUser ? problem.message : 'Nie udało się zapisać opisu: ' + (problem && problem.message ? problem.message : problem));
           });
-        }).catch(function () {
-          state.notice = { kind: 'error', noteId: noteId };
-        });
-      }
-      // uncompletePatientNote czyści też niestawienie, więc nie cofa stanu nadanego później (inna karta,
-      // synchronizacja): tylko to zamknięcie, które zrobiła zakładka, i tylko gdy nikt go nie zmienił.
-      function undoComplete(notice) {
-        if (!vault || typeof vault.uncompletePatientNote !== 'function') return;
-        var base = { noteId: notice.noteId, title: notice.title };
-        Promise.resolve(vault.getPatientNote(notice.noteId)).then(function (note) {
-          if (!note || !notice.completedAtISO || note.completedAtISO !== notice.completedAtISO || note.noShowAtISO) {
-            state.notice = Object.assign({ kind: 'undo-stale' }, base);
-            return;
-          }
-          return Promise.resolve(vault.uncompletePatientNote(notice.noteId)).then(function () {
-            state.notice = Object.assign({ kind: 'undone' }, base);
-          });
-        }).catch(function () {
-          state.notice = Object.assign({ kind: 'undo-error' }, base);
-        }).then(function () {
-          schedule();
-          if (typeof options.onChanged === 'function') options.onChanged();
-        });
+        }
+        watchDetails();
+        shell.show(anchor || doc.activeElement);
+        if (typeof area.focus === 'function') area.focus({ preventScroll: true });
       }
       function drawNotice() {
         var notice = state.notice;
@@ -516,28 +654,12 @@
         box.setAttribute('data-note-id', notice.noteId || '');
         var name = notice.title ? ' „' + notice.title + '”' : '';
         var message = {
-          completed: 'Wynik zapisany — zlecenie' + name + ' oznaczone jako wykonane w Przypomnieniach.',
-          error: 'Wynik zapisany, ale nie udało się oznaczyć zlecenia jako wykonanego — zrób to w Przypomnieniach.',
-          undone: 'Cofnięto — zlecenie' + name + ' znów jest w Przypomnieniach.',
-          'undo-error': 'Nie udało się cofnąć oznaczenia — zrób to w Przypomnieniach.',
-          'undo-stale': 'Nie cofnięto: zlecenie' + name + ' zmieniło się w międzyczasie — sprawdź je w Przypomnieniach.',
+          described: 'Opis zapisany — oczekujący wynik' + name + ' oznaczony jako wykonany.',
           'clcr-resource-error': notice.text,
           'details-resource-error': notice.text
         }[notice.kind];
         add(box, 'span', 'vilda-lab-hist-notice-text', message);
-        if (notice.kind === 'completed' && typeof vault.uncompletePatientNote === 'function') {
-          button(box, 'vilda-lab-hist-link vilda-lab-hist-notice-undo', 'Cofnij', function () { undoComplete(notice); });
-        }
         if (notice.kind === 'clcr-resource-error' && notice.record) button(box, 'vilda-lab-hist-link', 'Spróbuj ponownie', function () { state.notice = null; draw(); openClcrResult(notice.record); });
-      }
-      function converterLabel(id) {
-        var converter = win && win.LabUnitConverter;
-        if (!id || !converter || typeof converter.list !== 'function') return '';
-        try {
-          var list = converter.list() || [];
-          for (var i = 0; i < list.length; i++) if (list[i] && list[i].id === id) return text(list[i].label);
-        } catch (_) { return ''; }
-        return '';
       }
       // W powłoce przelicznik otwiera jej trasa „lab” (z adresem, gdy odnośnik niesie badanie);
       // poza powłoką działa zwykły odnośnik.
@@ -561,6 +683,16 @@
         catch (_) { current = null; }
         return !!current && String(current) === String(patientId);
       }
+      function canLoad() { return typeof options.loadPatient === 'function'; }
+      // Przejście do przelicznika. Pacjent tej karty wczytany do formularza: od razu (jak dotąd). Inny albo
+      // żaden: wczytanie drogą karty, a przelicznik otwiera się po nim. Stan sprawdzany także przy kliknięciu
+      // (poza powłoką; w jej ramce odnośniki <a> obsługuje vilda_chrome.js, dlatego akcje pacjenta
+      // niewczytanego są przyciskami).
+      function goConverter(event, href) {
+        if (isLoadedPatient()) { openConverter(event, href); return; }
+        if (event && typeof event.preventDefault === 'function') event.preventDefault();
+        if (canLoad()) options.loadPatient({ href: href || null });
+      }
 
       var remindersButton = null;
       function paintReminders() {
@@ -580,7 +712,7 @@
         if (!view.panels.length && !view.pending.length && !renal) {
           var empty = add(section, 'div', 'vilda-lab-hist-state vilda-lab-hist-empty');
           add(empty, 'p', '', 'Brak zapisanych wyników badań.');
-          add(empty, 'p', 'vilda-lab-hist-muted', 'Wynik dodasz przyciskiem „+ Dodaj wynik” albo przypniesz w przeliczniku jednostek.');
+          add(empty, 'p', 'vilda-lab-hist-muted', isLoadedPatient() ? ENTRY.emptyLoaded : canLoad() ? ENTRY.emptyLoad : ENTRY.hint);
           drawFooter(view);
           return;
         }
@@ -674,23 +806,26 @@
           add(titles, 'p', 'vilda-lab-hist-muted', count(view.summary.missingNotes, ['wynik zmienił', 'wyniki zmieniły', 'wyników zmieniło']) + ' się w trakcie odczytu — odśwież zakładkę.');
         }
         var actions = add(head, 'div', 'vilda-lab-hist-actions');
-        if (typeof options.openEditor === 'function') {
-          button(actions, 'vilda-auth-btn vilda-auth-btn-small vilda-auth-btn-ghost vilda-lab-hist-add', '+ Dodaj wynik', function () {
-            openEditor({ note: null, template: 'lab', anchor: 'date' });
-          });
-        }
+        var loaded = isLoadedPatient();
         // LAB-PAKIETY PR1 (decyzja właściciela 2026-11-12): skrót do pakietu badań w przeliczniku. Pakiet
         // opisuje vilda_lab_packages.js; zakładka zna tylko adres i nazwę skrótu. Pakiet zapisuje
         // wyniki pacjentowi wczytanemu do formularza, więc skrót stoi tylko w jego karcie — z karty innej
         // osoby wyniki trafiłyby do niewłaściwego pacjenta.
-        if (isLoadedPatient()) {
+        if (loaded) {
           var pack = add(actions, 'a', 'vilda-auth-btn vilda-auth-btn-small vilda-auth-btn-ghost vilda-lab-hist-package', PACKAGE_SHORTCUT.label);
           pack.setAttribute('href', PACKAGE_SHORTCUT.href);
-          pack.addEventListener('click', function (event) { openConverter(event, PACKAGE_SHORTCUT.href); });
+          pack.addEventListener('click', function (event) { goConverter(event, PACKAGE_SHORTCUT.href); });
         }
-        var link = add(actions, 'a', 'vilda-auth-btn vilda-auth-btn-small vilda-auth-btn-primary vilda-lab-hist-check', 'Sprawdź nowy wynik →');
-        link.setAttribute('href', 'przelicznik-jednostek.html');
-        link.addEventListener('click', function (event) { openConverter(event); });
+        // P-BADANIA-WEJSCIE: jedna akcja dodania wyników. Ręcznego „+ Dodaj wynik” (wpis bez oceny) już nie ma.
+        if (loaded) {
+          var link = add(actions, 'a', 'vilda-auth-btn vilda-auth-btn-small vilda-auth-btn-primary vilda-lab-hist-check', ENTRY.loaded);
+          link.setAttribute('href', ENTRY.href);
+          link.addEventListener('click', function (event) { goConverter(event); });
+        } else if (canLoad()) {
+          button(actions, 'vilda-auth-btn vilda-auth-btn-small vilda-auth-btn-primary vilda-lab-hist-check vilda-lab-hist-load', ENTRY.load, function (event) { goConverter(event); });
+        } else {
+          add(actions, 'p', 'vilda-lab-hist-muted vilda-lab-hist-entry-hint', ENTRY.hint);
+        }
       }
 
       function drawToolbar(view) {
@@ -760,7 +895,7 @@
           if (!callback) throw new Error('Szczegóły zapisanych obliczeń są niedostępne.');
           if (state.notice && state.notice.kind === 'clcr-resource-error') { state.notice = null; draw(); }
           watchDetails();
-          return Promise.resolve(callback({ patientId: patientId, noteId: record.noteId, record: record, vault: vault, anchor: anchor, context: section, isCurrent: function () { return !detailsHidden(); }, onChanged: function () {
+          return Promise.resolve(callback({ patientId: patientId, noteId: record.noteId, record: record, vault: vault, anchor: anchor, context: section, onDialog: options.onDialog, isCurrent: function () { return instance.alive() && !detailsHidden(); }, onChanged: function () {
             if (!instance.alive()) return;
             schedule();
             if (typeof options.onChanged === 'function') options.onChanged();
@@ -772,7 +907,7 @@
         // Wstrzyknięty callback pozostaje synchroniczny; produkcyjna ścieżka
         // dociąga silniki dopiero przy otwieraniu szczegółów/edycji.
         if (typeof options.openClcrResult === 'function') { open(); return; }
-        ensureRecordResources(true).then(open).catch(function (error) {
+        ensureRecordResources(options, doc, true).then(open).catch(function (error) {
           if (!current(gen) || request !== detailsRequest || detailsHidden()) return;
           state.notice = { kind: 'clcr-resource-error', record: record, text: error && error.message || 'Nie udało się otworzyć szczegółów obliczenia.' };
           draw();
@@ -787,16 +922,34 @@
           if (typeof options.openReminders === 'function') options.openReminders(state.reminders);
         });
         paintReminders();
+        // P-OCZEKUJACE-WYNIKI: dwie akcje przy każdym wpisie. Ta sama reguła wejścia do przelicznika co w nagłówku
+        // (P-BADANIA-WEJSCIE): pacjent wczytany — odnośnik; niewczytany — przycisk, który najpierw go wczytuje;
+        // bez drogi wczytania zostaje sam opis. Ręcznego wpisu wartości bez oceny już tu nie ma.
+        var loaded = isLoadedPatient(), enter = loaded || canLoad(), describe = canDescribe();
         view.pending.forEach(function (item) {
           var row = add(box, 'div', 'vilda-lab-hist-pending-row');
           row.setAttribute('data-note-id', item.noteId || '');
           add(row, 'span', 'vilda-lab-hist-tag', 'oczekuje na wynik');
           var label = add(row, 'span', 'vilda-lab-hist-pending-title', item.title || 'Zlecone badanie');
           if (item.dueDateISO) add(label, 'span', 'vilda-lab-hist-muted', ' · termin ' + formatDate(item.dueDateISO));
-          if (typeof options.openEditor === 'function') {
-            button(row, 'vilda-auth-btn vilda-auth-btn-small vilda-auth-btn-ghost', 'Wpisz wynik', function () { enterResult(item); });
+          if (!enter && !describe) return;
+          var actions = add(row, 'span', 'vilda-lab-hist-pending-actions');
+          var href = pendingHref(item);
+          if (loaded) {
+            var link = add(actions, 'a', 'vilda-auth-btn vilda-auth-btn-small vilda-auth-btn-ghost vilda-lab-hist-pending-enter', PENDING.enter);
+            link.setAttribute('href', href);
+            link.addEventListener('click', function (event) { goConverter(event, href); });
+          } else if (canLoad()) {
+            button(actions, 'vilda-auth-btn vilda-auth-btn-small vilda-auth-btn-ghost vilda-lab-hist-pending-enter vilda-lab-hist-pending-load', PENDING.load,
+              function (event) { goConverter(event, href); });
+          }
+          if (describe) {
+            button(actions, 'vilda-auth-btn vilda-auth-btn-small vilda-auth-btn-ghost vilda-lab-hist-pending-describe', PENDING.describe,
+              function (event) { describePending(item, event && event.currentTarget); });
           }
         });
+        if (enter) add(box, 'p', 'vilda-lab-hist-muted vilda-lab-hist-pending-help', PENDING.help);
+        else if (describe) add(box, 'p', 'vilda-lab-hist-muted vilda-lab-hist-pending-help', PENDING.helpDescribeOnly);
       }
 
       function statusLine(parent, entry) {
@@ -882,11 +1035,12 @@
       function closeLabDetails(restoreFocus) {
         var previous = labDetails;
         labDetails = null; state.selected = null;
-        if (previous) { previous.shell.destroy({ restoreFocus: restoreFocus !== false }); if (previous.host.parentNode) previous.host.parentNode.removeChild(previous.host); }
+        if (previous) { previous.shell.destroy({ restoreFocus: restoreFocus !== false }); if (previous.releasePresentation) previous.releasePresentation(); if (previous.host.parentNode) previous.host.parentNode.removeChild(previous.host); }
       }
       function closeAllDetails(restoreFocus) {
         detailsRequest++;
         if (detailsObserver) { detailsObserver.disconnect(); detailsObserver = null; }
+        closeDescribe(restoreFocus);
         closeLabDetails(restoreFocus);
         if (clcrDetails && clcrDetails.destroy) clcrDetails.destroy({ restoreFocus: restoreFocus !== false });
         clcrDetails = null;
@@ -916,12 +1070,15 @@
         var body = add(layout, 'div', 'vilda-result-details-body');
         var actions = add(layout, 'footer', 'vilda-result-details-actions vilda-lab-hist-detail-actions');
         doc.body.appendChild(overlay);
+        var presentationCleanup = typeof options.onDialog === 'function' ? options.onDialog(dialog) : null;
+        function releasePresentation() { var cleanup = presentationCleanup; presentationCleanup = null; if (typeof cleanup === 'function') cleanup(); }
         var shell = helper.attach(dialog, { context: section, onClose: function () {
+          releasePresentation();
           if (labDetails && labDetails.host === overlay) { labDetails = null; state.selected = null; }
           if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
         } });
         dialog.addEventListener('cancel', function (event) { event.preventDefault(); closeResult(); });
-        labDetails = { host: overlay, dialog: dialog, shell: shell, body: body, actions: actions, layout: layout, title: title, kicker: kicker, close: close, anchor: null };
+        labDetails = { host: overlay, dialog: dialog, shell: shell, body: body, actions: actions, layout: layout, title: title, kicker: kicker, close: close, anchor: null, releasePresentation: releasePresentation };
         return labDetails;
       }
       function selectResult(entry, view, anchor) {
@@ -1122,11 +1279,21 @@
           drawResultNotice(card, info);
         }
         drawChart(add(card, 'div', 'vilda-lab-hist-card-chart'), view, pointSelected);
-        if (view.testKey) {
+        // P-BADANIA-WEJSCIE: ta sama reguła co w nagłówku. Pacjent wczytany: odnośnik do przelicznika z badaniem
+        // (jak dotąd). Niewczytany: przycisk, który najpierw go wczytuje i mówi to w nazwie; bez drogi wczytania
+        // akcji nie ma. Przycisk, nie <a>: w ramce powłoki kliknięcie odnośnika do strony aplikacji przechwytuje
+        // vilda_chrome.js (faza capture) i od razu przełącza trasę — wczytanie by się nie odbyło.
+        var cardLoaded = isLoadedPatient();
+        if (view.testKey && (cardLoaded || canLoad())) {
           var href = 'przelicznik-jednostek.html?badanie=' + encodeURIComponent(view.testKey);
-          var check = add(card, 'a', 'vilda-lab-hist-card-check', 'Nowy wynik ' + seriesLabel(view) + ' →');
-          check.setAttribute('href', href);
-          check.addEventListener('click', function (event) { openConverter(event, href); });
+          if (cardLoaded) {
+            var check = add(card, 'a', 'vilda-lab-hist-card-check', 'Nowy wynik ' + seriesLabel(view) + ' →');
+            check.setAttribute('href', href);
+            check.addEventListener('click', function (event) { goConverter(event, href); });
+          } else {
+            button(card, 'vilda-lab-hist-link vilda-lab-hist-card-check vilda-lab-hist-card-load', 'Wczytaj i dodaj ' + seriesLabel(view) + ' →',
+              function (event) { goConverter(event, href); });
+          }
         }
       }
       function drawChart(box, view, pointSelected) {
@@ -1278,7 +1445,7 @@
       };
     }
 
-    return Object.freeze({ version: '2.4.0', render: render, _internal: Object.freeze({ plural: plural, commentText: commentText, shortLabel: shortLabel, mergedNote: mergedNote }) });
+    return Object.freeze({ version: '2.7.0', render: render, ensureReaderDependencies: ensureReaderDependencies, _internal: Object.freeze({ plural: plural, commentText: commentText, shortLabel: shortLabel, mergedNote: mergedNote }) });
   }
 
   return createApi();

@@ -112,6 +112,25 @@ async function pin(page, id, { comment, date } = {}) {
   return (await notes(page, id)).find(note => !previous.has(note.id));
 }
 
+// P-PRZYPIETY-WYNIK (LAB-HISTORIA 6.38, owner decisions 2026-11-17): the same result with the same sample date
+// is already in the card, also after a context-only change (age, chart view). The button reads „✓ Przypięto”,
+// the modal warns and refuses a second save; it is closed without saving. A different pin date would
+// invalidate the AMH reference, so the tests remove the earlier note before pinning the same result again.
+const DUPLICATE_DATE = 'Ten sam wynik z tą datą badania jest już w karcie. Zmień datę badania albo anuluj.';
+const removeNote = (page, noteId) => page.evaluate(id => window.VildaVault.removePatientNote(id), noteId);
+
+async function expectDuplicateBlocked(page, id) {
+  const before = (await notes(page, id)).length;
+  await expect(page.locator('#labPinResultBtn')).toHaveText('✓ Przypięto');
+  await page.locator('#labPinResultBtn').click();
+  await expect(page.locator('#labPinDuplicate')).toBeVisible();
+  await expect(page.locator('#labPinDuplicateDate')).toHaveText(DUPLICATE_DATE);
+  await expect(page.locator('#labPinSave')).toBeDisabled();
+  await page.locator('#labPinCancel').click();
+  await expect(page.locator('#labPinOverlay')).toHaveCount(0);
+  expect(await notes(page, id)).toHaveLength(before);
+}
+
 async function history(page, id) {
   await page.evaluate(pid => window.VildaAuthUI.showPatientCard(pid), id);
   await page.locator('.vilda-patient-tab[data-tab="timeline"]').click();
@@ -304,9 +323,14 @@ test('AMH pin captures an ordinary source independently of selected lines and co
   await chart(page).locator('[data-hormone="amh"]').click();
   await chart(page).locator('[data-view="puberty"]').click();
   await chart(page).locator('.vhl-compare-toggle').click();
+  // The chart view alone does not change the measurement: today's same result is already in the card.
+  await expectDuplicateBlocked(page, id);
+  await removeNote(page, deselected.id);
   const comparison = await pin(page, id);
   expectF15(comparison.labResult.hormoneReference);
   expect(comparison.labResult.hormoneReference.reference).toEqual(deselected.labResult.hormoneReference.reference);
+  // '+21.14' is the same number as the saved 21.14 with the same sample date.
+  await removeNote(page, comparison.id);
   for (const [raw, value] of [['+21.14', 21.14], ['1 000', 1000]]) {
     await page.locator('#labValue').fill(raw);
     const grouped = await pin(page, id);
@@ -337,19 +361,24 @@ test('AMH stores model and young-adult group medians and explicit source gaps wi
     reference: { statistic: 'group-median', profileId: 'woloszynek2015-male-amh-age-18-20',
       ageGroup: { label: '18–30 lat', n: 63 } }, display: { unit: 'ng/mL' } });
   expect(youngAdult.labResult.hormoneReference.display.referenceValue).toBeCloseTo(6.3, 8);
+  // The trend keeps the measured value, not the group median (read before the note is removed below).
+  const youngSeries = await page.evaluate(pid => window.VildaVault.listPatientLabSeries(pid), id);
+  expect(youngSeries.find(s => s.testKey === 'amh').points.find(p => p.noteId === youngAdult.id)).toMatchObject({ valueNum: 2, unit: 'ng/mL' });
   await page.evaluate(() => {
     window.VildaPersistence.writeShared({ name: 'Fikcyjny brak odniesienia AMH', sex: 'M', age: 71, ageMonths: 0 }, { force: true });
     document.dispatchEvent(new CustomEvent('vilda:session-changed'));
   });
   await page.locator('#labValue').fill('2');
   await expect(sourcePoint(page)).toHaveCount(0);
+  // Decisions 1 and 2: an age-only change with the same value and sample date is the same measurement — blocked.
+  await expectDuplicateBlocked(page, id);
+  await removeNote(page, youngAdult.id);
   const gap = await pin(page, id);
   expect(gap.labResult.hormoneReference).toMatchObject({ status: 'unavailable', reference: null,
     context: { sex: 'male', ageYears: 71 }, measurement: { raw: '2', sourceUnit: 'ng/mL' } });
   expect(gap.labResult.hormoneReference.reasonCodes.length).toBeGreaterThan(0);
   const series = await page.evaluate(pid => window.VildaVault.listPatientLabSeries(pid), id);
   expect(series.find(s => s.testKey === 'amh').points.find(p => p.noteId === gap.id)).toMatchObject({ valueNum: 2, unit: 'ng/mL' });
-  expect(series.find(s => s.testKey === 'amh').points.find(p => p.noteId === youngAdult.id)).toMatchObject({ valueNum: 2, unit: 'ng/mL' });
   const timeline = await history(page, id);
   await expect(timeline.locator('.vilda-hormone-reference[data-reference-status="unavailable"]')).toBeVisible();
 });
@@ -389,7 +418,10 @@ test('AMH saved editor preserves comments, invalidates result or date changes, a
   test.setTimeout(120_000);
   const id = await prepare(page);
   await choose(page);
-  const saved = await pin(page, id), dated = await pin(page, id);
+  const saved = await pin(page, id);
+  // The same result with the same sample date cannot be pinned twice; the second, date-edited note is pinned
+  // below, once the first one no longer carries 0.45 ng/mL. Both notes are needed until the history check.
+  await expectDuplicateBlocked(page, id);
   let form = await editor(page, saved);
   await expect(savedReference(form)).toContainText('2,96 ng/mL');
   await form.locator('textarea').fill('Wyłącznie fikcyjny komentarz po zapisie');
@@ -407,6 +439,8 @@ test('AMH saved editor preserves comments, invalidates result or date changes, a
   const changed = await readNote(page, saved.id);
   expect(changed.labResult.hormoneReference.status).toBe('invalidated');
   expect(changed.labResult.hormoneReference.reference).toEqual(saved.labResult.hormoneReference.reference);
+  const dated = await pin(page, id);
+  expect(dated.labResult.hormoneReference.status).toBe('recorded');
   form = await editor(page, dated);
   await form.locator('input[name="b3-anchor"][value="date"]').check();
   await form.locator('.b3-clinical-date').fill('2026-06-16');

@@ -60,3 +60,22 @@ export async function closeClcrDetails(scope) {
   await scope.locator('#detailsDialog [data-clcr-close="detailsDialog"]').first().click();
   await expect(scope.locator('#detailsDialog')).toBeHidden();
 }
+
+// P-KLIRENS-NOTATKI (decyzja właściciela 2026-11-15: Notatki nie są miejscem na wyniki Klirensu). Wynik Klirensu
+// nie ma karty w Notatkach: zakładka pokazuje tylko linię z liczbą wyników, która prowadzi do Badań, a techniczny
+// zapis obliczenia nie pojawia się w jej treści. Zwraca sekcję Notatek do dalszych sprawdzeń.
+// legacyCards: liczba zapisów „wynik-klirens” bez pola wyniku — te zostają w Notatkach ze zwartą kartą.
+export async function expectClcrOutsideNotes(scope, count, { legacyCards = 0 } = {}) {
+  await scope.locator('button[data-tab="notes"]').click();
+  const notes = scope.locator('.vilda-patient-notes-section');
+  await expect(notes.locator('.vilda-wb-notes-link')).toHaveText(`Wyniki badań (${count}) są w zakładce Badania →`);
+  await expect(notes.locator('.vilda-clcr-note')).toHaveCount(legacyCards);
+  for (const key of ['VILDA_CLCR', 'engineVersion', 'exactMain', '[tekst]']) await expect(notes).not.toContainText(key);
+  return notes;
+}
+
+// Szczegóły zapisanego obliczenia z karty pacjenta: zakładka „Badania”, panel „Klirens”, wiersz tego zapisu.
+export async function openClcrDetailsInCard(scope, id, options) {
+  await scope.locator('button[data-tab="lab"]').click();
+  await openClcrDetails(scope, id, options);
+}

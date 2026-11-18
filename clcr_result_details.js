@@ -74,7 +74,11 @@
   }
   async function open(options = {}) {
     const doc = options.document || root.document;
-    if (!doc?.body) return null;
+    function callerCurrent() {
+      try { return typeof options.isCurrent !== "function" || options.isCurrent(); }
+      catch (_) { return false; }
+    }
+    if (!doc?.body || !callerCurrent()) return null;
     if (active) active.destroy({ restoreFocus: false });
     const vault = options.vault || root.VildaVault;
     const patientId = text(options.patientId);
@@ -87,13 +91,44 @@
     host.innerHTML = '<dialog class="clcr-record-dialog vilda-result-details-dialog" id="detailsDialog" aria-labelledby="clcrDetailsTitle"><div class="vilda-result-details-layout"><header class="vilda-result-details-heading"><div><p class="clcr-record-eyebrow">Klirens</p><h2 id="clcrDetailsTitle">Szczegóły wyniku</h2></div><button type="button" class="clcr-record-button secondary" data-clcr-close="detailsDialog" aria-label="Zamknij">×</button></header><div class="vilda-result-details-body"><div id="calculationDetails"></div><p id="detailActionNotice" class="clcr-record-notice" role="status" hidden></p><p id="legacyEditNotice" class="clcr-record-context" hidden></p></div><footer class="vilda-result-details-actions" id="detailActions" hidden><button type="button" class="clcr-record-button primary" id="editMeasurement">Edytuj pomiar</button><button type="button" class="clcr-record-button danger-outline" id="deleteMeasurement">Usuń pomiar</button></footer></div></dialog><dialog class="clcr-record-dialog" id="editDialog" aria-labelledby="clcrEditTitle"><div class="clcr-record-inner"><div class="clcr-record-heading"><h2 id="clcrEditTitle">Edytuj pomiar</h2><button type="button" class="clcr-record-button secondary" data-clcr-close="editDialog">Anuluj</button></div><div id="editSummary" class="clcr-record-context"></div><form id="editForm"><label for="editDate">Data badania</label><input id="editDate" type="date" required><section class="clcr-record-context"><span class="clcr-record-label">Dane z dnia badania</span><strong id="editHistoricalSummary"></strong><p id="editDateContext"></p><button type="button" class="clcr-record-link" id="changeHistoricalContext" aria-expanded="false">Zmień dane z dnia badania</button><div id="historicalFields" hidden><label for="editAge">Wiek w dniu badania · lata</label><input id="editAge" type="text" inputmode="decimal"><div id="editSexField"><label for="editSex">Płeć uwzględniona we wzorze</label><select id="editSex"><option value="">Nie podano</option><option value="F">Kobieta</option><option value="M">Mężczyzna</option></select></div></div></section><fieldset class="clcr-record-inputs"><legend>Oryginalne dane obliczenia</legend><div id="editInputFields"></div></fieldset><p id="editError" class="clcr-record-error" role="alert" hidden></p><div class="clcr-record-actions editor"><button type="button" class="clcr-record-button secondary" data-clcr-close="editDialog">Anuluj</button><button type="submit" class="clcr-record-button primary" id="saveEditedMeasurement">Przelicz i zapisz zmiany</button></div></form></div></dialog><dialog class="clcr-record-dialog clcr-record-delete" id="deleteDialog" aria-labelledby="clcrDeleteTitle"><div class="clcr-record-inner"><span class="clcr-record-delete-icon" aria-hidden="true">×</span><h2 id="clcrDeleteTitle">Usunąć ten pomiar?</h2><p>Pomiar zniknie z Badań pacjenta, historii Klirensu i wykresu.</p><div id="deleteSummary" class="clcr-record-context"></div><p>Pozostałe pomiary pozostaną bez zmian.</p><p id="deleteError" class="clcr-record-error" role="alert" hidden></p><div class="clcr-record-actions"><button type="button" class="clcr-record-button secondary" data-clcr-close="deleteDialog">Anuluj</button><button type="button" class="clcr-record-button danger" id="confirmDeleteMeasurement">Usuń pomiar</button></div></div></dialog>';
     doc.body.appendChild(host);
     const $ = id => host.querySelector("#" + id);
+    const presentations = new Map();
     const sharedDialog = typeof root.VildaResultDetailsDialog?.attach === "function"
       ? root.VildaResultDetailsDialog.attach($("detailsDialog"), { context: options.context, isCurrent: options.isCurrent, onClose: () => { if (!destroyed) destroy(); } }) : null;
-    function show(id) { const dialog = $(id); if (id === "detailsDialog" && sharedDialog) { sharedDialog.show(origin); return; } if (!dialog.open) { if (typeof dialog.showModal === "function") dialog.showModal(); else dialog.setAttribute("open", ""); } }
-    function close(id) { const dialog = $(id); if (dialog.open && typeof dialog.close === "function") dialog.close(); else dialog.removeAttribute("open"); }
+    function releasePresentation(id) {
+      const cleanup = presentations.get(id); presentations.delete(id);
+      if (typeof cleanup === "function") cleanup();
+    }
+    function show(id) {
+      if (!ensureCaller()) return;
+      const dialog = $(id);
+      if (id === "detailsDialog" && sharedDialog) sharedDialog.show(origin);
+      else if (!dialog.open) {
+        if (typeof dialog.showModal === "function") dialog.showModal(); else dialog.setAttribute("open", "");
+      }
+      if (dialog.open && typeof options.onDialog === "function" && !presentations.has(id)) {
+        presentations.set(id, options.onDialog(dialog, { kind: "clcr-saved-result", dialogId: id,
+          requestClose() {
+            if (!dialog.open) return true;
+            const button = dialog.querySelector('[data-clcr-close="' + id + '"]');
+            if (!button || button.disabled) return false;
+            button.click();
+            return !dialog.open || destroyed;
+          }
+        }));
+      }
+    }
+    function close(id) {
+      const dialog = $(id);
+      if (dialog.open && typeof dialog.close === "function") dialog.close(); else dialog.removeAttribute("open");
+      releasePresentation(id);
+    }
     function lock(value) { pending = value; host.querySelectorAll("button,input,select").forEach(control => { control.disabled = value; }); if (!value && currentNote) $("editMeasurement").disabled = !root.ClcrSavedCalculation?.describe(currentNote).editable; }
     function error(id, message) { $(id).textContent = message; $(id).hidden = false; }
-    function ensureAlive() { return !destroyed && active?.token === token; }
+    function ensureAlive() { return !destroyed && active?.token === token && callerCurrent(); }
+    function ensureCaller() {
+      if (ensureAlive()) return true;
+      destroy({ restoreFocus: false }); return false;
+    }
     function focusParent() {
       const target = origin?.isConnected ? origin : null;
       try { target?.focus({ preventScroll: true }); } catch (_) { /* detached origin */ }
@@ -104,6 +139,7 @@
       for (const id of ["deleteDialog", "editDialog"]) close(id);
       if (sharedDialog) sharedDialog.destroy({ restoreFocus: closeOptions.restoreFocus !== false });
       else close("detailsDialog");
+      releasePresentation("detailsDialog");
       host.remove();
       if (active?.token === token) active = null;
       if (!sharedDialog && closeOptions.restoreFocus !== false) focusParent();
@@ -253,7 +289,7 @@
       }));
     }
     function openEditor() {
-      if (pending || !currentNote) return;
+      if (!ensureCaller() || pending || !currentNote) return;
       const description = root.ClcrSavedCalculation?.describe(currentNote);
       if (!description?.editable) return;
       draft = { note: clone(currentNote), description, historicalChanged: false, changedFields: new Set() };
@@ -274,7 +310,7 @@
     }
     async function saveEdited(event) {
       event.preventDefault();
-      if (pending || !draft) return;
+      if (!ensureCaller() || pending || !draft) return;
       $("editError").hidden = true;
       if (!$("editForm").reportValidity()) return;
       const date = $("editDate").value;
@@ -289,44 +325,56 @@
         const snapshot = root.ClcrSavedCalculation.createSnapshot(dp, { capture: dp.capture, patientId, clinicalDateISO: date });
         payload = root.ClcrSavedResults.buildPatientNotePayload(dp, { patientId, clinicalDateISO: date, comment: humanComment(draft.note) });
         payload.body += "\n\n" + root.ClcrSavedCalculation.serializeSnapshot(snapshot, payload);
-        Object.assign(payload, { id: noteId, patientId, baseRev: draft.note.rev });
+        // E3-PR0b2a: chwila zapisu pokazanej wersji - konflikt także po scaleniu przy równym rev.
+        // E3-PR0b2b: i sama pokazana wersja (baseNote) - ta sama widoczna wersja z nową chwilą zapisu nie jest konfliktem.
+        Object.assign(payload, { id: noteId, patientId, baseRev: draft.note.rev, baseUpdatedAtISO: draft.note.updatedAtISO || null, baseNote: draft.note });
       } catch (cause) { error("editError", cause?.message || "Sprawdź dane obliczenia."); return; }
       if (typeof vault?.updateExistingPatientNote !== "function") { error("editError", "Moduł bezpiecznej edycji nie jest dostępny. Odśwież aplikację."); return; }
       lock(true);
       try {
+        if (!ensureCaller()) return;
         const result = await vault.updateExistingPatientNote(payload);
+        if (!ensureCaller()) return;
         if (!result?.updated) { if (ensureAlive()) error("editError", rejection(result)); return; }
         changed("updated");
+        if (!ensureCaller()) return;
         const fresh = await vault.getPatientNote(noteId);
-        if (!ensureAlive()) return;
+        if (!ensureCaller() || !ensureAlive()) return;
         if (!fresh || fresh.patientId !== patientId) { destroy(); return; }
         currentNote = fresh;
         close("editDialog");
         draft = null;
         renderDetails("Zapisano zmiany i przeliczono wynik.");
-      } catch (cause) { if (ensureAlive()) error("editError", cause?.message || "Nie udało się zapisać zmian."); }
-      finally { if (ensureAlive()) lock(false); }
+      } catch (cause) { if (ensureCaller() && ensureAlive()) error("editError", cause?.message || "Nie udało się zapisać zmian."); }
+      finally { if (ensureCaller() && ensureAlive()) lock(false); }
     }
     function openDelete() {
-      if (pending || !currentNote) return;
+      if (!ensureCaller() || pending || !currentNote) return;
       $("deleteSummary").innerHTML = `<strong>${escape(currentRecord.label || currentRecord.method)}</strong><span class="clcr-record-value ${escape(currentRecord.tone || "neutral")}">${escape(decimal(valueLabel(currentRecord)))} <small>${escape(currentRecord.unit)}</small></span><time datetime="${escape(text(currentNote.clinicalDateISO).slice(0, 10))}">Data badania: ${escape(dateLabel(currentNote.clinicalDateISO))}</time>`;
       $("deleteError").hidden = true;
       show("deleteDialog");
     }
     async function confirmDelete() {
-      if (pending || !currentNote) return;
+      if (!ensureCaller() || pending || !currentNote) return;
       if (typeof vault?.removeExistingPatientNote !== "function") { error("deleteError", "Moduł bezpiecznego usuwania nie jest dostępny. Odśwież aplikację."); return; }
       lock(true);
       try {
-        const result = await vault.removeExistingPatientNote({ id: noteId, patientId, baseRev: currentNote.rev });
+        if (!ensureCaller()) return;
+        // E3-PR0b2a: jak przy zmianie - usuwamy tylko wersję, którą lekarz ma na ekranie (E3-PR0b2b: także baseNote).
+        const result = await vault.removeExistingPatientNote({ id: noteId, patientId, baseRev: currentNote.rev, baseUpdatedAtISO: currentNote.updatedAtISO || null, baseNote: currentNote });
+        if (!ensureCaller()) return;
         if (!result?.removed) { if (ensureAlive()) error("deleteError", rejection(result)); return; }
         changed("deleted");
         if (ensureAlive()) destroy();
-      } catch (cause) { if (ensureAlive()) error("deleteError", cause?.message || "Nie udało się usunąć pomiaru."); }
-      finally { if (ensureAlive()) lock(false); }
+      } catch (cause) { if (ensureCaller() && ensureAlive()) error("deleteError", cause?.message || "Nie udało się usunąć pomiaru."); }
+      finally { if (ensureCaller() && ensureAlive()) lock(false); }
     }
     host.querySelectorAll("[data-clcr-close]").forEach(button => button.addEventListener("click", () => { if (pending) return; if (button.dataset.clcrClose === "detailsDialog") destroy(); else { close(button.dataset.clcrClose); draft = null; } }));
-    for (const id of ["detailsDialog", "editDialog", "deleteDialog"]) $(id).addEventListener("cancel", event => { if (pending) event.preventDefault(); else if (id === "detailsDialog") destroy(); else draft = null; });
+    for (const id of ["detailsDialog", "editDialog", "deleteDialog"]) {
+      const dialog = $(id);
+      dialog.addEventListener("cancel", event => { if (pending) event.preventDefault(); else if (id === "detailsDialog") destroy(); else draft = null; });
+      dialog.addEventListener("close", () => { if (!dialog.open) releasePresentation(id); });
+    }
     $("editMeasurement").addEventListener("click", openEditor);
     $("deleteMeasurement").addEventListener("click", openDelete);
     $("editForm").addEventListener("submit", saveEdited);
@@ -336,14 +384,15 @@
     $("calculationDetails").textContent = "Wczytywanie pomiaru…";
     show("detailsDialog");
     try {
+      if (!ensureCaller()) return api;
       if (!vault || !patientId || !noteId || typeof vault.getPatientNote !== "function") throw new Error("Nie można odczytać pomiaru. Otwórz kartę pacjenta ponownie.");
       if (typeof vault.isUnlocked === "function" && !vault.isUnlocked()) throw new Error("Odblokuj kartę pacjenta, aby zobaczyć szczegóły pomiaru.");
       const note = await vault.getPatientNote(noteId);
-      if (!ensureAlive()) return api;
+      if (!ensureCaller() || !ensureAlive()) return api;
       if (!note || note.patientId !== patientId || note.category !== "wynik-klirens") throw new Error("Tego pomiaru już nie ma w karcie wskazanego pacjenta.");
       currentNote = note;
       renderDetails();
-    } catch (cause) { if (ensureAlive()) $("calculationDetails").textContent = cause?.message || "Nie udało się odczytać pomiaru."; }
+    } catch (cause) { if (ensureCaller() && ensureAlive()) $("calculationDetails").textContent = cause?.message || "Nie udało się odczytać pomiaru."; }
     return api;
   }
   return Object.freeze({

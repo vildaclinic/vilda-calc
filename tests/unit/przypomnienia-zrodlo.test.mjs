@@ -160,6 +160,12 @@ describe('vilda_auth_ui.js — kształt źródła po audycie karty „Przypomnie
       .toBeGreaterThanOrEqual(5);
   });
 
+  it('E3-PR0b2a: wykonanie przypomnienia podaje obok baseRev chwilę zapisu wiersza (baseUpdatedAtISO)', () => {
+    // Scalanie przy równym rev podmienia treść i termin, a numer zostaje; sejf przy podanej
+    // chwili porównuje ją zamiast rev (tests/unit/konflikt-edycji-notatki-chwila.test.mjs).
+    expect(AUTH_UI_SOURCE).toContain('baseRev: row.n.rev || 0, baseUpdatedAtISO: row.n.updatedAtISO || null, action: kind');
+  });
+
   it('PR 14: martwa funkcja Fs() nie wróciła', () => {
     // Formatowała datę względną („dziś · HH:MM”), niosła powyższy błąd doby i nie miała ani
     // jednego wywołania. Usunięta; gdyby wróciła, wróciłby też nieużywany kod z wadą.

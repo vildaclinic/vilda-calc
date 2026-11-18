@@ -5,6 +5,7 @@ import { expect, test } from '../support/test-czas.mjs';
 // test producer to prepare historical fixtures.
 // Every test creates a fresh, fictional vault in its isolated browser context.
 const SAMPLE_DATE = '2026-06-17';
+const LEGACY_PIN_DATE = '2026-06-15';
 test.use({ serviceWorkers: 'block' });
 
 async function openVault(page, path = '/index.html') {
@@ -138,12 +139,19 @@ test('pin captures a detached assessment, survives reload and leaves legacy pinn
   await page.evaluate(() => window.VildaLabPinResult.setAssessmentProvider(null));
   await page.locator('#labPinResultBtn').click();
   await page.locator('#labPinDate').fill(SAMPLE_DATE);
+  // P-PRZYPIETY-WYNIK (decyzja właściciela 2026-11-17): LH 2 IU/L z datą SAMPLE_DATE jest już w karcie (pierwsze
+  // przypięcie), więc okno nie zapisze go drugi raz. Przypięcie bez dostawcy oceny dostaje osobną datę badania,
+  // nieużytą przez dwa wcześniejsze zapisy; notatki z oceną zostają nietknięte.
+  await expect(page.locator('#labPinDuplicateDate')).toHaveText('Ten sam wynik z tą datą badania jest już w karcie. Zmień datę badania albo anuluj.');
+  await expect(page.locator('#labPinSave')).toBeDisabled();
+  await page.locator('#labPinDate').fill(LEGACY_PIN_DATE);
   await page.locator('#labPinSave').click();
   await expect(page.locator('#labPinOverlay')).toHaveCount(0);
   const legacy = (await page.evaluate((pid) => window.VildaVault.listPatientNotesForPatient(pid), patientId))
     .find((n) => !Object.hasOwn(n.labResult, 'assessment'));
   expect(legacy.labResult).not.toHaveProperty('assessment');
   expect(legacy.labResult.valueNum).toBe(2);
+  expect(legacy.clinicalDateISO).toBe(LEGACY_PIN_DATE);
 
   await page.reload({ waitUntil: 'load' });
   await page.waitForFunction(() => window.VildaVault?.isUnlocked());
@@ -195,6 +203,8 @@ test('calendar editor preserves assessment on comment edit and invalidates a cha
     await expect(page.locator('#tzNewTermOverlay')).toBeVisible();
   };
   await edit();
+  // P-BADANIA-WEJSCIE: wpis, który już niesie wynik, zachowuje szablon „Wynik badania” w formularzu Terminarza.
+  await expect(page.locator('#tzNtTpl')).toHaveValue('lab');
   await page.locator('#tzNtBody').fill('Komentarz terminarza');
   await page.locator('#tzNtSave').evaluate((el) => el.click());
   await expect(page.locator('#tzNewTermOverlay')).toHaveCount(0);
@@ -212,6 +222,13 @@ test('calendar editor preserves assessment on comment edit and invalidates a cha
   await page.locator('#tzNtSave').evaluate((el) => el.click());
   await expect(page.locator('#tzNewTermOverlay')).toHaveCount(0);
   expect((await readNote(page, legacy.id)).labResult).toEqual(legacy.labResult);
+
+  // P-BADANIA-WEJSCIE (decyzja właściciela 2026-11-15): nowy wpis Terminarza nie ma szablonu „Wynik badania” —
+  // nowego wyniku nie wpisuje się ręcznie (bez oceny); wyniki dodaje się w Jednostkach lab.
+  await page.locator('#tzAddBtn').evaluate((el) => el.click());
+  await expect(page.locator('#tzNewTermOverlay')).toBeVisible();
+  expect(await page.locator('#tzNtTpl option').evaluateAll((opcje) => opcje.map((o) => o.value)))
+    .toEqual(['none', 'med-start', 'med-change', 'med-stop']);
 });
 
 test('history retains censored and unavailable assessments without inventing numeric trend points or legacy context', async ({ page }) => {

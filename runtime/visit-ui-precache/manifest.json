@@ -15,12 +15,12 @@
       "sha256": "97ee23baf0a0f1e35ab2aa2cdbce998a7633a916e08b09d96e6fa5810e67d3f8"
     },
     {
-      "path": "vilda_home_workspace.js?v=5",
-      "sha256": "5586389404523c39b70c4455d95de7ae969a710521ee9b95250db80b562db3e5"
+      "path": "vilda_home_workspace.js?v=6",
+      "sha256": "d37350f4a661de97d6dffb0fde04fc84da65f58f713e3b3208f4ed9137f462c9"
     },
     {
-      "path": "vilda_home_workspace.css?v=6",
-      "sha256": "21d3118c9db4479691c3379fc56a3cefac6ee1be8c872e5bc1e535171e00857c"
+      "path": "vilda_home_workspace.css?v=7",
+      "sha256": "457deac55ebdd44e6b463b426bc016e406564a65674df2d266b1a6ab1d916e0c"
     },
     {
       "path": "vilda_home_perinatal.js?v=1",
@@ -55,14 +55,38 @@
       "sha256": "b0e200f45ae28d4bf016b2e8a1d3de3a58b3d0f6da5b6beea6c88297c0b6af33"
     },
     {
-      "path": "vilda_home_diet.css?v=2",
-      "sha256": "492ea1461360455bb2266fe71667d0b5539a3223c53fa3717a2cea36582ca8d4"
+      "path": "vilda_home_diet.css?v=3",
+      "sha256": "f86330f1d9c02c8fb8bce3dfc0c7dd73543128d9552a15086cc12bc54b401fc5"
+    },
+    {
+      "path": "vilda_home_dialog_history.js?v=1",
+      "sha256": "27ab28f4fa35dd32e129dbf737ddf801c40e27dd1b4bc045063fffd7ac9d6767"
+    },
+    {
+      "path": "vilda_home_patient_data.js?v=1",
+      "sha256": "269e730c0684214e668030b6391dacad902eb15ddc91569eafa93dc1458e7448"
+    },
+    {
+      "path": "vilda_home_patient_note_host.js?v=1",
+      "sha256": "55dce9ae4fa5416735ac3aac992500923cac03be657e797c5c50ec2e89672d44"
+    },
+    {
+      "path": "vilda_home_patient_note_host.css?v=1",
+      "sha256": "0280464c2496960fc20568b398fd0bb3f2dd7d57429cd70e6aa9452cab97b56b"
+    },
+    {
+      "path": "vilda_home_patient.js?v=1",
+      "sha256": "94914125b8b9d29e8df1127936eeb8277113279da13ed8205fabd9ee312fb957"
+    },
+    {
+      "path": "vilda_home_patient.css?v=1",
+      "sha256": "f1edd2673fb8a57146c5cfef8eeeadc28c42dd4de24eecd97f651e4917121570"
     }
   ],
   "pack": {
-    "path": "runtime/visit-ui-precache/precache-cf1648063bf4.json",
-    "sha256": "cf1648063bf46db3a1f010fbedd66c79aa9c2eb7fd206a332e2cefffb9c8fce3",
-    "byteLength": 311062
+    "path": "runtime/visit-ui-precache/precache-642d9cfc1633.json",
+    "sha256": "642d9cfc1633dfcb427cf7ee832adab58d102c94b608a78ddf79684aee25aa2f",
+    "byteLength": 413890
   },
   "historicalPacks": [
     {
@@ -269,6 +293,16 @@
       "path": "runtime/visit-ui-precache/precache-c7fb8e7de2a9.json",
       "sha256": "c7fb8e7de2a9f27c6072b4f9df683dc9c6f5ef211f419b600bf0a7ee0879efa3",
       "byteLength": 308344
+    },
+    {
+      "path": "runtime/visit-ui-precache/precache-cf1648063bf4.json",
+      "sha256": "cf1648063bf46db3a1f010fbedd66c79aa9c2eb7fd206a332e2cefffb9c8fce3",
+      "byteLength": 311062
+    },
+    {
+      "path": "runtime/visit-ui-precache/precache-87f351f9d472.json",
+      "sha256": "87f351f9d472faf85f4762a0574cc3e6a633b5fa74d7b384c3a59c01ecc771b6",
+      "byteLength": 413689
     }
   ]
 }

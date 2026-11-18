@@ -1,5 +1,5 @@
 import { test, expect } from '../support/test-czas.mjs';
-import { prepareM1, pointViewport, expectSameViewport } from '../support/lab-chart-m1.mjs';
+import { prepareM1, pointViewport, expectSameViewport, showCharts } from '../support/lab-chart-m1.mjs';
 import { otworzBadania, sekcjaBadan } from '../support/lab-historia-dane.mjs';
 
 test.use({ serviceWorkers: 'block' });
@@ -19,7 +19,7 @@ test('phone: selecting a point in horizontally scrolled history and closing expl
   const before = await notes();
   await otworzBadania(page, patientId);
   const section = sekcjaBadan(page);
-  await section.locator('[data-view="charts"]').click();
+  await showCharts(section);
   const point = section.locator(`.vilda-lab-result-chart-point[data-note-id="${ids[5]}"]`);
   await point.scrollIntoViewIfNeeded();
   const card = point.locator('xpath=ancestor::article[1]');

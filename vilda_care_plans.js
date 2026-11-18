@@ -321,6 +321,17 @@
       ? 'Nie można potwierdzić, czy wszystkie zmiany pochodzą z tej samej historii planu. Zachowano dostępne kroki i ustalenia.'
       : 'Wykryto równoległe zmiany tego planu na kilku urządzeniach. Zachowano kroki i ustalenia z obu wersji.';
   }
+  // Read-only summary of the same native plan projection used by the list.
+  // This exposes display labels; it never grants a write capability.
+  function describeSummary(plan) {
+    if (!plan || typeof plan !== 'object') return null;
+    var stagedPlan = staged(plan), view = stagedPlan ? stagedView(plan) : null;
+    if (stagedPlan ? !view || view.kind !== 'v2' : !Array.isArray(plan.steps) || !Array.isArray(plan.log) || !['active', 'closed'].includes(plan.status)) return null;
+    var state = planState(plan), due = dueStep(plan);
+    return Object.freeze({ stateKind: state[0], stateLabel: state[1],
+      stepCount: (stagedPlan ? stagedSteps(plan) : steps(plan)).length,
+      nextDateISO: due && due.reminderDateISO || null });
+  }
   function mount(host, options) {
     options = options || {};
     var remindersLayout = options.remindersLayout === true;
@@ -1699,5 +1710,5 @@
     var controller = { refresh: refresh, refreshNavigation: refreshNavigation, destroy: destroy, create: create, select: select, openRecord: openRecord, openTemplates: openTemplateLibrary, isEditing: function () { return state.editing || state.busy; }, getSelected: function () { return state.selected; }, getContext: function () { return { planId: state.selected, noteId: recordNoteId, detail: state.detail }; } };
     refresh(); return controller;
   }
-  win.VildaCarePlans = { mount: mount, projectPatientNotes: projectPatientNotes, resolveNoteDestination: resolveNoteDestination, ensureTemplateLibrary: ensureTemplateLibrary, openTemplates: openTemplates };
+  win.VildaCarePlans = { mount: mount, describeSummary: describeSummary, projectPatientNotes: projectPatientNotes, resolveNoteDestination: resolveNoteDestination, ensureTemplateLibrary: ensureTemplateLibrary, openTemplates: openTemplates };
 })(typeof window !== 'undefined' ? window : null);

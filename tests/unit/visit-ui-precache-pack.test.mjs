@@ -34,11 +34,11 @@ function worker({ scope = '/', response, failPut = () => false } = {}) {
   return { api, cache, requests, writes, installUI };
 }
 
-describe('fourteen independent visit and home UI resources in one verified transport', () => {
+describe('twenty independent visit and home UI resources in one verified transport', () => {
   it.each(['/', '/vilda-calc/'])('caches every original body and MIME under its own offline URL in %s', async scope => {
     const w = worker({ scope }); await w.installUI();
     expect(w.api.VISIT_UI_PRECACHE_PACK).toEqual(config);
-    expect(urls).toHaveLength(14);
+    expect(urls).toHaveLength(20);
     expect(urls).toContain('/vilda_home_perinatal.js?v=1');
     expect(urls).toContain('/vilda_home_growth.js?v=4');
     expect(urls).toContain('/vilda_sga_birth_results.css?v=1');
@@ -47,9 +47,15 @@ describe('fourteen independent visit and home UI resources in one verified trans
     expect(urls).toContain('/vilda_home_growth_charts.js?v=1');
     expect(urls).toContain('/vilda_home_diet.js?v=2');
     expect(urls).toContain('/vilda_home_diet_bmi.css?v=1');
-    expect(urls).toContain('/vilda_home_diet.css?v=2');
-    expect(urls).toContain('/vilda_home_workspace.js?v=5');
-    expect(urls).toContain('/vilda_home_workspace.css?v=6');
+    expect(urls).toContain('/vilda_home_diet.css?v=3');
+    expect(urls).toContain('/vilda_home_dialog_history.js?v=1');
+    expect(urls).toContain('/vilda_home_patient_data.js?v=1');
+    expect(urls).toContain('/vilda_home_patient_note_host.js?v=1');
+    expect(urls).toContain('/vilda_home_patient_note_host.css?v=1');
+    expect(urls).toContain('/vilda_home_patient.js?v=1');
+    expect(urls).toContain('/vilda_home_patient.css?v=1');
+    expect(urls).toContain('/vilda_home_workspace.js?v=6');
+    expect(urls).toContain('/vilda_home_workspace.css?v=7');
     expect(w.requests).toHaveLength(1);
     expect(w.requests[0].url).toBe('https://vilda.test' + scope + config.url.slice(1));
     expect(w.requests[0].cache).toBe('reload'); expect(w.requests[0].redirect).toBe('error');
