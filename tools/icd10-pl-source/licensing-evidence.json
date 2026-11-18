@@ -1,0 +1,44 @@
+{
+  "checkedDate": "2026-11-18",
+  "pinnedRelease": "ICD-10-2008-PL; Centrum e-Zdrowia snapshot 2021-03-31",
+  "publisherLicense": {
+    "publisher": "Centrum e-Zdrowia",
+    "datasetMetadataUrl": "https://api.dane.gov.pl/datasets/27",
+    "resourceMetadataUrl": "https://api.dane.gov.pl/resources/55725",
+    "resourceId": "55725",
+    "dataDate": "2021-03-31",
+    "licenseName": "CC BY 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+    "observedDatasetFields": {
+      "license_name": "CC BY 4.0",
+      "license_condition_default_cc40": true,
+      "license_condition_timestamp": true,
+      "license_condition_db_or_copyrighted": "",
+      "license_condition_custom_description": null,
+      "license_description": "Other (Public Domain)"
+    },
+    "interpretation": "Use the explicit CC BY 4.0 conditions, including attribution and source/information/retrieval dates. The legacy description does not justify claiming public-domain status. The archived dataset/resource responses are the primary express publisher-license evidence."
+  },
+  "polishTranslationRights": {
+    "url": "https://ezdrowie.gov.pl/pobierz/icd_10_tom_i",
+    "publication": "Międzynarodowa Statystyczna Klasyfikacja Chorób i Problemów Zdrowotnych, rewizja dziesiąta, tom I, wydanie 2008",
+    "page": "ii",
+    "observedNotice": "WHO granted Polish translation publishing rights to Centrum Systemów Informacyjnych Ochrony Zdrowia. The Polish publication identifies © CSIOZ 2012 and the English original © WHO 2009.",
+    "purpose": "Evidence of the Polish publisher/translation-rights chain. This notice alone is not a redistribution license; the pinned CeZ dataset supplies the express CC BY 4.0 license."
+  },
+  "whoClassificationPolicy": {
+    "url": "https://www.who.int/about/policies/publishing/copyright",
+    "section": "Licensing of WHO Classifications",
+    "observedTerms": "Classification-specific policy permits commercial and noncommercial use of ICD under CC BY-ND 3.0 IGO with unchanged codes and appropriate citation. Translation rights are separate written agreements.",
+    "licenseUrl": "https://creativecommons.org/licenses/by-nd/3.0/igo/",
+    "english2019NoticeUrl": "https://icd.who.int/browse10/Content/statichtml/ICD10Volume2_en_2019.pdf",
+    "scope": "These WHO terms are distinguished from the general WHO noncommercial publication policy. The Polish source names/codes are preserved; no new translation, clinical synonyms or terminology mappings are introduced."
+  },
+  "reuseRequirements": [
+    "Credit Centrum e-Zdrowia / CSIOZ and the WHO classification; link the source and CC BY 4.0 license.",
+    "Identify data date 2021-03-31 and retrieval date 2026-11-18.",
+    "Describe XML-to-search-format processing and preserve classification marks and source labels.",
+    "Do not imply endorsement by WHO, CeZ or CSIOZ or use their logos as an endorsement.",
+    "Keep dataset licensing distinct from application-code licensing."
+  ]
+}

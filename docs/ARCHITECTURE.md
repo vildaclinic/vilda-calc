@@ -1073,6 +1073,18 @@ Kontrakt zapisu, wersjonowanie, transport i relacje opisuje
 własne miejsce w Leczeniu i nie zastępują ostatniej zwykłej notatki na stronie
 głównej. Zamknięcie lub zmiana właściciela usuwa otwarte formularze i ich dane.
 
+### Lokalny katalog ICD-10
+
+Wyszukiwanie kodu rozpoznania w Leczeniu ma odrębne warstwy:
+`vilda_icd10_pl_data.js` (przypięte źródło i metadane),
+`vilda_icd10_search.js` (czysty indeks przyjmujący katalog jako argument) oraz
+`vilda_icd10_picker.js` (tymczasowy combobox związany z właścicielem edytora).
+`vilda_patient_treatment_ui.js` przekazuje pickerowi zdarzenia z istniejącego
+izolowanego handlera capture. Dopiero jawny wybór zmienia ukryte pole kodu;
+wyszukiwanie nie zapisuje danych pacjenta. Model dokumentów leczenia i sejf
+pozostają bez zmian. Źródło odtwarza deterministyczny generator
+`tools/build-icd10-pl.py`; archiwum źródłowe jest poza eksportem aplikacji.
+
 ### Aktualna baza publiczna sejfu a historyczny dowód integracji
 
 `runtime/clinical-workspace-v1/manifest.json` rozróżnia dwie informacje:

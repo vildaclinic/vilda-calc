@@ -36,6 +36,7 @@ Rejestr jest inwentaryzacją techniczną. Nie nadaje opisanym modułom statusu w
 | ANTIBIOTIC-RX | Schematy antybiotykoterapii | `antibiotic_therapy.js` | kontrola składni; brak dedykowanej regresji dawkowania | wymaga ponownego przeglądu mapowania źródeł |
 | BISPHOS-RX | Bisfosfoniany | `bisphos_therapy.js`, `bisphos_therapy_monitor.js` | kontrola składni; brak dedykowanej regresji dawkowania | zinwentaryzowane; dawki i limity do rejestru szczegółowego |
 | OTHER-RX | Grypa, nadciśnienie i tarczyca | `flu_therapy.js`, `hypertension_therapy.js`, `thyroid_cancer_kids.js` | kontrola składni; brak dedykowanej regresji dawkowania | źródło do weryfikacji per moduł |
+| ICD10-PL-CATALOGUE | Wyszukiwanie kodu rozpoznania z polskiego katalogu CeZ | `vilda_icd10_pl_data.js`, `vilda_icd10_search.js`, `vilda_icd10_picker.js` | testy rzeczywistego katalogu, generatora i funkcji wyszukiwania; E2E formularza | CeZ 31.03.2021, 12 010 pozycji; wybór lekarza, bez automatycznego rozpoznawania; [źródło i ograniczenia](ICD10_CATALOGUE.md) |
 | STEROIDS | Konwersje GKS/AAS i model HPTA | `steroidy.html` | kontrola składni; brak dedykowanego E2E lub regresji wyników | zinwentaryzowane; część HPTA ma charakter edukacyjny |
 | DIABETES | Kalkulatory diabetologiczne | `cukrzyca.html`, `cukrzyca.js` | kontrola składni; brak dedykowanego E2E lub regresji wyników | źródło do weryfikacji |
 | SEX-FROM-NAME | Podpowiedź płci nowego pacjenta z imienia i nazwiska (P-PLEC-IMIE) | `vilda_plec_z_imienia.js`, `vilda_imiona_plec_dane.js` (rejestr PESEL), generator `tests/scripts/imiona-pesel.mjs` | `tests/unit/plec-z-imienia.test.mjs`, E2E `plec-z-imienia.spec.mjs`, `plec-z-imienia-mobile.spec.mjs` | 2026-10-12; zmienia tylko domyślną płeć nowego pacjenta, z notką; P-PLEC-IMIE-2 (2026-10-13): także kolejny nowy pacjent po „Wyczyść”; akceptacja kliniczna właściciela 2026-10-13 (progi 99 % / 20, ostrzeżenia i kolor notek bez zmian) |
@@ -42231,3 +42232,36 @@ kilka epizodów, zachowanie rozpoznania po zakończeniu terapii, konflikt rewizj
 nieobsługiwaną wersję, transport kontekstu oraz wygaśnięcie właściciela podczas
 szyfrowania przed utrwaleniem. Testy przeglądarkowe używają wyłącznie fikcyjnych
 sejfów i natywnych aktorów.
+
+### ICD10-PL-CATALOGUE — wyszukiwanie rozpoznań CeZ (2026-11-18)
+
+**Wpływ kliniczny:** nowy wybór kodu i nazwy do dokumentacji, oparty na polskim
+źródle referencyjnym. Nie przypisuje diagnozy na podstawie wyników, nie zmienia
+progów, dawek, centyli, planów ani PDF. Lekarz jawnie wybiera kod; własny opis
+rozpoznania jest zachowany. Zakres to klasyfikacja chorób/stanów ICD-10 PL,
+nie populacyjne normy ani ICD-10-CM. Nie ma jednostek ani przedziałów
+referencyjnych. Właściciel zlecił dodanie katalogu 18.11.2026; końcowy przegląd
+kliniczny źródła i zakresu pozostaje częścią odbioru nowej strony głównej.
+
+Źródło: Centrum e-Zdrowia, Rejestr Systemów Kodowania, zasób 55725,
+ICD-10-2008-PL, stan na **31.03.2021** (historyczne wydanie, data w UI).
+Oficjalny plik XML i jawne warunki CC BY 4.0 oraz ich kopie, SHA256, liczności
+i ograniczenia opisuje [ICD10_CATALOGUE.md](ICD10_CATALOGUE.md). Generator
+rozwija względne kody według struktury XML, zachowuje oznaczenia †/* oraz
+źródłowe nazwy, oddziela zakresy i dodatkowe podziały. Nazwa kategorii jest
+osobnym kontekstem; nie powstają nieudokumentowane synonimy ani nowe kody.
+
+Syntetyczne wejście → wynik produkcyjnej wyszukiwarki: `E119` → pierwsze
+dopasowanie `E11.9`, „Bez powikłań”, kategoria „Cukrzyca insulinoniezależna”;
+`nadcisnienie samoistne` → `I10`, „Nadciśnienie samoistne (pierwotne)”.
+Kod E10.2† zachowuje † po wyborze. Nieobecny kod można jawnie wpisać ręcznie;
+brak dopasowania nie jest oceną prawidłowości kodu. Tekst wyszukiwania nie jest
+zapisywany jako kod; zaznaczenie podpowiedzi i zapis formularza są odrębne.
+
+Testy `icd10-catalogue`, `icd10-search` i `icd10-picker` wywołują produkcyjny
+generator/artefakt/API oraz kontrolkę. E2E używa natywnych aktorów i sejfu
+z fikcyjnymi pacjentami, sprawdzając jawny wybór, zawężanie, klawiaturę,
+zachowanie własnej nazwy, zapis/odczyt i izolację od formularza klinicznego.
+PWA przechowuje pełny katalog i silnik lokalnie; wyszukiwanie nie wysyła
+rozpoznań do usług zewnętrznych. Wyniki weryfikacji technicznej nie oznaczają
+walidacji klinicznej klasyfikacji.

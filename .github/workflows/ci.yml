@@ -170,10 +170,11 @@ jobs:
     name: Geometria wykresów — Safari/WebKit
     runs-on: ubuntu-latest
     if: github.event_name != 'push'
-    # Patient documentation adds native note/care/lab flows to the full existing
-    # WebKit suite. Keep all cases and their budgets, with room for real Vault
-    # setup, browser installation and the complete run on slower runners.
-    timeout-minutes: 35
+    # 2026-11-18: all 88 cases progressed without assertion failures, but the
+    # 35-minute job cap cancelled the last case ~15 s after it started (33m42s
+    # in tests, ~2m setup). Keep every case and its individual timeout; allow
+    # the full single-worker suite to finish with room for slower runners.
+    timeout-minutes: 50
     steps:
       - name: Pobierz repozytorium
         uses: actions/checkout@v4

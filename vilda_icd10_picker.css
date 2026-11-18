@@ -1,0 +1,54 @@
+/* The list scrolls inside the existing fixed treatment-editor frame. */
+.vhome-treatment-editor .vpt-icd10 { min-width: 0; }
+.vhome-treatment-editor .vpt-icd10 > label { margin: 0; }
+.vhome-treatment-editor .vpt-icd10-help,
+.vhome-treatment-editor .vpt-icd10-status,
+.vhome-treatment-editor .vpt-icd10-source,
+.vhome-treatment-editor .vpt-icd10-parent,
+.vhome-treatment-editor .vpt-icd10-official {
+  min-width: 0;
+  margin: 0;
+  color: var(--vpt-muted);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.vhome-treatment-editor .vpt-icd10-source { font-size: 12px; }
+.vhome-treatment-editor .vpt-icd10-status:empty { display: none; }
+.vhome-treatment-editor .vpt-icd10-list {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  max-height: min(320px, 40dvh);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: var(--border-hairline) solid var(--vpt-line);
+  border-radius: var(--radius-8);
+  background: #fff;
+}
+html.vilda-home-workspace .vhome-treatment-editor .vpt-icd10-option {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: var(--space-4px);
+  width: 100%;
+  min-height: 48px !important;
+  padding: var(--space-12px);
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: #fff !important;
+  color: var(--vpt-ink) !important;
+  text-align: left;
+  white-space: normal;
+}
+html.vilda-home-workspace .vhome-treatment-editor .vpt-icd10-option + .vpt-icd10-option { border-top: var(--border-hairline) solid var(--vpt-soft-line) !important; }
+html.vilda-home-workspace .vhome-treatment-editor .vpt-icd10-option[aria-selected="true"],
+html.vilda-home-workspace .vhome-treatment-editor .vpt-icd10-option:hover { background: var(--vpt-soft-line) !important; filter: none; }
+.vhome-treatment-editor .vpt-icd10-option-name { min-width: 0; font-size: 16px; font-weight: 500; line-height: 1.5; overflow-wrap: anywhere; }
+.vhome-treatment-editor .vpt-icd10-selected { display: grid; gap: var(--space-4px); min-width: 0; padding-top: var(--space-4px); }
+.vhome-treatment-editor .vpt-icd10-official { color: var(--vpt-ink); }
+.vhome-treatment-editor .vpt-icd10-empty { margin: 0; padding: var(--space-12px); color: var(--vpt-muted); font-size: 14px; font-weight: 400; line-height: 1.5; overflow-wrap: anywhere; }
+html.vilda-home-workspace .vhome-treatment-editor .vpt-icd10-use-name { justify-self: start; min-height: 48px !important; text-align: left; }

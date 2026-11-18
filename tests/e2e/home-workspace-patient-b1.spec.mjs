@@ -138,10 +138,17 @@ async function saveEditor(frame) {
   await frame.locator(`${EDITOR} button[type="submit"]`).click();
   await expect(frame.locator(EDITOR)).toBeHidden();
 }
-async function createDiagnosis(frame, { name, code = '' }) {
+async function chooseDiagnosisCode(editor, code, { query = code, manual = false } = {}) {
+  await editor.locator('.vpt-icd10-query').fill(query);
+  const option = manual ? editor.locator('[data-icd10-manual="true"]') : editor.locator(`[data-icd10-code="${code}"]`);
+  await expect(option).toBeVisible(); await option.click();
+  await expect(editor.locator('input[type="hidden"][name="code"]')).toHaveValue(code);
+}
+async function createDiagnosis(frame, { name, code = '', manual = false }) {
   await frame.locator(`${TREATMENT} [data-treatment-action="new-diagnosis"]`).click();
   const editor = frame.locator(EDITOR); await expect(editor).toBeVisible(); await geometry(frame, EDITOR);
-  await editor.locator('[name="name"]').fill(name); await editor.locator('[name="code"]').fill(code);
+  await editor.locator('[name="name"]').fill(name);
+  if (code) await chooseDiagnosisCode(editor, code, { manual });
   await editor.locator('[name="dateISO"]').fill('2026-09-15'); await saveEditor(frame);
 }
 async function createEpisode(frame, { title, diagnosisIds, method = 'nonpharmacological' }) {
@@ -282,7 +289,7 @@ test('B1 treatment editors: typing, a real sync refresh and Cancel preserve the 
   const before = { records: await records(frame, id), clinical: await clinical(frame) };
   await frame.locator(`${TREATMENT} [data-treatment-action="new-diagnosis"]`).click();
   const editor = frame.locator(EDITOR); await editor.locator('[name="name"]').fill('Fikcyjny niezapisany prywatny tekst B1');
-  await editor.locator('[name="code"]').fill('I10');
+  await chooseDiagnosisCode(editor, 'I10');
   const root = await editor.elementHandle();
   const parent = await frame.locator(NATIVE).elementHandle();
   const merged = await frame.evaluate(async noteId => {
@@ -445,7 +452,7 @@ test('B1 treatment: an already pending native background read cannot replace a s
   await frame.locator(`${TREATMENT} [data-treatment-action="new-diagnosis"]`).click();
   const editor = frame.locator(EDITOR); await expect(editor).toBeVisible();
   await editor.locator('[name="name"]').fill('Fikcyjny prywatny tekst wpisany podczas odczytu w tle.');
-  await editor.locator('[name="code"]').fill('I10'); const editorRoot = await editor.elementHandle();
+  await chooseDiagnosisCode(editor, 'I10'); const editorRoot = await editor.elementHandle();
   const completed = await frame.evaluate(() => window.__treatmentBackgroundRead.release());
   expect(completed.ok).toBe(true);
   await expect(editor).toBeVisible(); await expect(editor.locator('[name="name"]')).toHaveValue('Fikcyjny prywatny tekst wpisany podczas odczytu w tle.');
@@ -467,7 +474,7 @@ test('B1 treatment: locking the real Vault wipes the open editor and never submi
   const { frame } = await setup(page); await openTreatment(frame);
   await frame.locator(`${TREATMENT} [data-treatment-action="new-diagnosis"]`).click();
   await frame.locator(`${EDITOR} [name="name"]`).fill('Fikcyjny prywatny niezapisany wywiad B1.');
-  await frame.locator(`${EDITOR} [name="code"]`).fill('I10');
+  await chooseDiagnosisCode(frame.locator(EDITOR), 'I10');
   await frame.evaluate(() => {
     const vault = window.VildaVault, root = document.querySelector('#vhomePatientTreatmentDialog');
     const fields = [...root.querySelectorAll('input,textarea,select')], writes = [];
@@ -550,7 +557,7 @@ test('B1 treatment: genuine reload veto retains an isolated dirty draft and rele
   await frame.locator(`${TREATMENT} [data-treatment-action="new-diagnosis"]`).click();
   const editor = frame.locator(EDITOR); await expect(editor).toBeVisible();
   await editor.locator('[name="name"]').fill('Fikcyjny szkic zachowany po odrzuconym F5');
-  await editor.locator('[name="code"]').fill('I10');
+  await chooseDiagnosisCode(editor, 'I10');
   await flushMain(frame);
   expect(await clinical(frame)).toEqual(before.clinical);
   await expect.poll(() => frame.evaluate(() => window.VildaSaveStatusIndicator.getCurrentDecision().state)).toBe('saved');
@@ -595,4 +602,135 @@ test('B1 treatment: genuine reload veto retains an isolated dirty draft and rele
   expect(unexpected).toEqual([]);
   await page.waitForFunction(() => Boolean(window.VildaVault));
   await expect(page.locator(EDITOR)).toHaveCount(0);
+});
+
+test('ICD-10: live catalogue narrowing and explicit keyboard choice preserve Polish source names, parent context and marked codes through F5', async ({ page }) => {
+  const { frame, id, ids } = await setup(page);
+  const before = { patient: await records(frame, id), other: await records(frame, ids.b), clinical: await clinical(frame) };
+  await openTreatment(frame);
+  await frame.locator(`${TREATMENT} [data-treatment-action="new-diagnosis"]`).click();
+  const editor = frame.locator(EDITOR), query = editor.locator('.vpt-icd10-query');
+  const popup = editor.getByRole('listbox', { name: 'Kody ICD-10', exact: true });
+  const totals = [];
+  for (const text of ['E', 'E1', 'E10', 'E102']) {
+    await query.fill(text); await expect(popup).toBeVisible();
+    const status = await editor.locator('.vpt-icd10-status').textContent(), count = status.match(/\d+/);
+    expect(count).not.toBeNull(); totals.push(Number(count[0]));
+    await expect(editor.locator('[name="code"]')).toHaveValue('');
+    await expect(editor.locator('[name="name"]')).toHaveValue('');
+  }
+  for (let index = 1; index < totals.length; index++) expect(totals[index]).toBeLessThan(totals[index - 1]);
+  expect(totals.at(-1)).toBe(1);
+  await query.fill('cukrzyca powiklan nerkowymi');
+  const marked = popup.locator('[data-icd10-code="E10.2†"]');
+  await expect(marked).toContainText('E10.2† — Z powikłaniami nerkowymi');
+  await expect(marked.locator('.vpt-icd10-parent')).toHaveText('Kategoria: E10 — Cukrzyca insulinozależna');
+  await expect(popup.locator('[data-icd10-code="E11.2†"] .vpt-icd10-parent')).toHaveText('Kategoria: E11 — Cukrzyca insulinoniezależna');
+  await query.fill('e102');
+  await query.press('Enter');
+  await expect(editor).toBeVisible(); await expect(popup).toBeVisible();
+  await expect(editor.locator('[name="code"]')).toHaveValue('');
+  expect((await treatmentState(frame, id)).diagnoses).toEqual([]);
+  await flushMain(frame);
+  expect(await records(frame, id)).toEqual(before.patient); expect(await clinical(frame)).toEqual(before.clinical);
+  await query.press('ArrowDown');
+  const activeId = await query.getAttribute('aria-activedescendant'); expect(activeId).toBeTruthy();
+  await expect(popup.locator(`[id="${activeId}"]`)).toHaveAttribute('data-icd10-code', 'E10.2†');
+  await query.press('Enter');
+  await expect(popup).toBeHidden(); await expect(query).toHaveValue('E10.2†');
+  await expect(editor.locator('[name="name"]')).toHaveValue('Z powikłaniami nerkowymi');
+  await expect(editor.locator('[name="code"]')).toHaveValue('E10.2†');
+  await expect(editor.locator('.vpt-icd10-selected .vpt-icd10-parent')).toHaveText('Kategoria: E10 — Cukrzyca insulinozależna');
+  await expect(editor.locator('.vpt-icd10-source')).toHaveText('Polski katalog ICD-10 · Centrum e-Zdrowia · 31.03.2021');
+  await saveEditor(frame);
+  const saved = (await treatmentState(frame, id)).diagnoses;
+  expect(saved).toHaveLength(1); expect(saved[0].context).toMatchObject({ code: 'E10.2†', name: 'Z powikłaniami nerkowymi', codingSystem: 'ICD-10' });
+  expect(await clinical(frame)).toEqual(before.clinical); expect(await records(frame, ids.b)).toEqual(before.other);
+  expect((await records(frame, id)).patient).toEqual(before.patient.patient);
+  await closeCard(frame); await page.reload({ waitUntil: 'load' }); await readyForPatient(page); await settled(page);
+  const reloaded = (await treatmentState(page, id)).diagnoses;
+  expect(reloaded).toEqual(saved);
+});
+
+test('ICD-10: pending search cannot overwrite a saved code, physician names remain explicit and manual or empty codes persist', async ({ page }) => {
+  const { frame, id, ids } = await setup(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  const before = { patient: await records(frame, id), other: await records(frame, ids.b), clinical: await clinical(frame) };
+  await openTreatment(frame);
+  const customName = 'Fikcyjny indywidualny opis rozpoznania lekarza';
+  await createDiagnosis(frame, { name: customName, code: 'I10' });
+  const selected = (await treatmentState(frame, id)).diagnoses[0];
+  expect(selected.context).toMatchObject({ code: 'I10', name: customName });
+  await frame.locator(`${TREATMENT} [data-treatment-diagnosis-id="${selected.id}"] [data-treatment-action="edit-diagnosis"]`).click();
+  const editor = frame.locator(EDITOR), query = editor.locator('.vpt-icd10-query');
+  await expect(editor.locator('.vpt-icd10-selected .vpt-icd10-official')).toHaveText('I10 — Nadciśnienie samoistne (pierwotne)');
+  await query.fill('powiklan nerkowymi');
+  await expect(editor.locator('[name="code"]')).toHaveValue('I10');
+  await editor.locator('button[type="submit"]').click();
+  await expect(editor).toBeVisible(); await expect(query).toHaveAttribute('aria-invalid', 'true');
+  expect(await query.evaluate(node => node.validity.customError)).toBe(true);
+  expect((await treatmentState(frame, id)).diagnoses).toEqual([selected]);
+  await flushMain(frame); expect(await clinical(frame)).toEqual(before.clinical);
+  await query.click(); await expect(editor.getByRole('listbox')).toBeVisible();
+  await query.press('Escape');
+  await expect(editor.getByRole('listbox')).toBeHidden(); await expect(editor).toBeVisible();
+  await chooseDiagnosisCode(editor, 'E10.2†', { query: 'E102' });
+  await expect(editor.locator('[name="name"]')).toHaveValue(customName);
+  // Keep the edited query focused: this real click must blur it without a
+  // native change event reopening the list between pointerdown and pointerup.
+  await expect(query).toBeFocused();
+  await editor.getByRole('button', { name: 'Użyj nazwy z katalogu', exact: true }).click();
+  await expect(editor.locator('[name="name"]')).toHaveValue('Z powikłaniami nerkowymi');
+  await expect(editor.getByRole('listbox')).toBeHidden();
+  await saveEditor(frame);
+  const canonical = (await treatmentState(frame, id)).diagnoses[0];
+  expect(canonical.id).toBe(selected.id); expect(canonical.context).toMatchObject({ code: 'E10.2†', name: 'Z powikłaniami nerkowymi' });
+  const manualName = 'Fikcyjny opis z kodem ręcznym lekarza', manualCode = 'QA-lekarza-2030';
+  await createDiagnosis(frame, { name: manualName, code: manualCode, manual: true });
+  let manual = (await treatmentState(frame, id)).diagnoses.find(row => row.id !== canonical.id);
+  expect(manual.context).toMatchObject({ name: manualName, code: manualCode });
+  await frame.locator(`${TREATMENT} [data-treatment-diagnosis-id="${manual.id}"] [data-treatment-action="edit-diagnosis"]`).click();
+  await expect(editor.locator('.vpt-icd10-selected .vpt-icd10-official')).toHaveText('Kod ręczny: ' + manualCode);
+  await query.fill(''); await expect(editor.locator('[name="code"]')).toHaveValue('');
+  await expect(editor.locator('[name="name"]')).toHaveValue(manualName); await saveEditor(frame);
+  const final = await treatmentState(frame, id); manual = final.diagnoses.find(row => row.id === manual.id);
+  expect(manual.context).toMatchObject({ name: manualName, code: '' });
+  expect(final.diagnoses.find(row => row.id === canonical.id)).toEqual(canonical); expect(final.episodes).toEqual([]);
+  expect((await records(frame, id)).patient).toEqual(before.patient.patient);
+  expect(await records(frame, ids.b)).toEqual(before.other); expect(await clinical(frame)).toEqual(before.clinical);
+});
+
+test('ICD-10: phone suggestions stay bounded and scroll by keyboard while search and Escape/Cancel leave clinical data unchanged', async ({ page }) => {
+  const { frame, id } = await setup(page);
+  const before = { records: await records(frame, id), clinical: await clinical(frame) };
+  await openTreatment(frame);
+  for (const [width, height] of [[390, 844], [320, 640]]) {
+    await page.setViewportSize({ width, height });
+    await frame.locator(`${TREATMENT} [data-treatment-action="new-diagnosis"]`).click();
+    const editor = frame.locator(EDITOR), query = editor.locator('.vpt-icd10-query');
+    await geometry(frame, EDITOR); await query.fill('E');
+    const popup = editor.getByRole('listbox', { name: 'Kody ICD-10', exact: true });
+    await expect(popup).toBeVisible(); await expect(popup.getByRole('option')).toHaveCount(13);
+    await popup.scrollIntoViewIfNeeded();
+    const bounds = await popup.evaluate(node => {
+      const rect = node.getBoundingClientRect(), owner = node.closest('dialog').getBoundingClientRect();
+      return { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom, height: rect.height,
+        scrollHeight: node.scrollHeight, clientHeight: node.clientHeight, viewportWidth: innerWidth, viewportHeight: innerHeight,
+        ownerTop: owner.top, ownerBottom: owner.bottom, overflow: document.documentElement.scrollWidth - innerWidth };
+    });
+    expect(bounds.left).toBeGreaterThanOrEqual(0); expect(bounds.right).toBeLessThanOrEqual(bounds.viewportWidth);
+    expect(bounds.top).toBeGreaterThanOrEqual(bounds.ownerTop); expect(bounds.bottom).toBeLessThanOrEqual(bounds.ownerBottom);
+    expect(bounds.bottom).toBeLessThanOrEqual(bounds.viewportHeight); expect(bounds.scrollHeight).toBeGreaterThan(bounds.clientHeight);
+    expect(bounds.height).toBeGreaterThan(0); expect(bounds.overflow).toBeLessThanOrEqual(1);
+    await query.press('ArrowUp');
+    await expect(popup.locator('[aria-selected="true"]')).toHaveAttribute('data-icd10-manual', 'true');
+    expect(await popup.evaluate(node => node.scrollTop)).toBeGreaterThan(0);
+    await expect(query).toHaveAttribute('aria-activedescendant', await popup.locator('[aria-selected="true"]').getAttribute('id'));
+    await expect(editor.locator('[name="code"]')).toHaveValue('');
+    await query.press('Escape');
+    await expect(popup).toBeHidden(); await expect(editor).toBeVisible(); await expect(query).toBeFocused();
+    await flushMain(frame); expect(await records(frame, id)).toEqual(before.records); expect(await clinical(frame)).toEqual(before.clinical);
+    await editor.getByRole('button', { name: 'Anuluj', exact: true }).click(); await expect(editor).toBeHidden();
+    expect(await records(frame, id)).toEqual(before.records); expect(await clinical(frame)).toEqual(before.clinical);
+  }
 });
