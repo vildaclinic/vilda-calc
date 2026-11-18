@@ -109,6 +109,11 @@ async function przejdz(page, panel) {
   await page.evaluate((p) => window.VildaShell.navigate(p), panel);
   const fr = await ramka(page, panel === 'start' ? 'Start' : 'DocPro');
   await page.waitForTimeout(1800); // kaskada persistence, lustro formularza i monitor GH
+  // Po wejściu ramka sama jeszcze odtwarza sesję formularza. Na obciążonym runnerze trwa to
+  // dłużej niż stała pauza, a jawny zapis w tym oknie jest odrzucany („Trwa przywracanie danych
+  // pacjenta…”). Edycja i zapis czekają więc na gotowość zapisu ramki, a nie na stały czas.
+  await expect.poll(() => fr.evaluate(() => window.VildaDataImportExport.getSaveReadiness().ready),
+    { timeout: 30_000 }).toBe(true);
   return fr;
 }
 
