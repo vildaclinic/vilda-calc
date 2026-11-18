@@ -41369,9 +41369,8 @@ trwał w nim 200,8 s (przed scaleniem 161,9 s i 162,7 s, na bazie `4355e325` 127
   samych pól z `POLA_ZAWSZE`, których nie ma w encji ładunku, ani `h` przeliczonego z nich; `POLA_ZAWSZE` rośnie z każdą
   wersją, która zaczyna jakieś pole zapisywać zawsze (strażnik: pola zawsze obecne). Kanon 2a: bez R2, R4n i D7.
   *(2026-11-17, E3-PR0c, P-ZBIEZNOSC-ZDARZEN: wykonane dla wersji wizyt — wpis na końcu pliku; zakres po decyzjach z 2026-11-17:
-  bez samego nagłówka karty (2A), notatki i ich nagrobki bez odsyłania, tylko pomiar (3A), tylko po pojedynczych
-  zmianach (4A), pełna karta z haka H1 i osobne odesłanie tej samej wersji mogą wyjść obie (5A); wpisy Kosza —
-  E3-PR0d.)*
+  bez samego nagłówka karty, notatki i ich nagrobki bez odsyłania, tylko pomiar, tylko po pojedynczych zmianach, pełna
+  karta z haka H1 i osobne odesłanie tej samej wersji mogą wyjść obie; wpisy Kosza — E3-PR0d.)*
 - **Rozbicie zakresu**: `snap` w ładunku → E3-PR0c (CI: 20 wierszy w profilu podstawowym; ręcznie 67 / 34 / 91), w
   tym rekord złożony i gwiazdka; `stomb` w ładunku i spoza ładunku (R4a, R4a′, R5, inne) → E3-PR0d (CI 4; ręcznie
   32 / 30 / 61); nagłówek karty w ładunku i spoza ładunku (34 i 1 w profilu pełnym) i `snap` spoza ładunku (z gwiazdką
@@ -42207,9 +42206,9 @@ zmienił — przy następnej pracy w `vilda-source` weź nową bazę z `runtime/
 
 **Wymagania dla następnych PR.** E3-PR0c: zapis samego `rev` i zapis samego oznaczenia nie są echem do odesłania
 (klasa „sam rev notatki”); `pnote` w ładunku — pomiar odsyłania na regule po E3-PR0b2b. *(2026-11-17, E3-PR0c,
-P-ZBIEZNOSC-ZDARZEN: notatek E3-PR0c nie odsyła — decyzja 3A z 2026-11-17, także w E3-PR0d tylko pomiar; „samo
-oznaczenie” licznik liczy jako `pnote|w ładunku|inne`, a klasa „sam rev notatki” obejmuje tylko sam `rev` — przypadek
-w `tests/unit/licznik-odsylania.test.mjs`.)* Moduł planów z etapami
+P-ZBIEZNOSC-ZDARZEN: notatek E3-PR0c nie odsyła — decyzja z 2026-11-17: notatki i ich nagrobki bez odsyłania, także
+w E3-PR0d tylko pomiar; „samo oznaczenie” licznik liczy jako `pnote|w ładunku|inne`, a klasa „sam rev notatki”
+obejmuje tylko sam `rev` — przypadek w `tests/unit/licznik-odsylania.test.mjs`.)* Moduł planów z etapami
 (repozytorium źródeł, przed E3-PR0c): chwila zapisu dowodu kroku i reguła notatek we fragmencie natywnym *(2026-11-17,
 2c, P-DOWOD-KROKU: dowód kroku w dwóch wydaniach — pierwsze w PR 2c, drugie osobnym PR po potwierdzeniu właściciela;
 decyzja właściciela z 2026-11-17: pole dowodu niesie chwilę zmiany treści dokumentu, nie chwilę zapisu; reguła notatek
@@ -42898,15 +42897,16 @@ decyzji 9 z 2026-10-29 (czwarta droga ze scalania do kolejki) — do akceptacji 
 
 **Skąd.** Plan `docs/SYNC_PRZYROSTOWA_PLAN.md`, rozdział 5, „Etap 3”, tabela „Podział E3-PR0”, wiersz 3. Decyzje
 z 2026-11-15: 1a (odsyłanie uśpione osobną flagą do PR włączającego), 2a (bez odsyłania samego `rev`, R4n i D7).
-Decyzje z 2026-11-17 — odpowiedź „1A, 2A, 3A, 4A, 5A, 6A” na sześć pytań projektu E3-PR0c; zapis w planie,
-rozdział 6, blok „Decyzje z 2026-11-17 (E3-PR0c, pytania 1–6 projektu)”, który dopisał PR poprawki modułu planów
-z etapami (wiersz 2c, vildaclinic/vilda-calc#990):
-- 1A — najpierw poprawka modułu planów z etapami (wiersz 2c); E3-PR0c przygotowany równolegle, PR po jej scaleniu;
-- 2A — bez osobnego odsyłania samego opisu karty;
-- 3A — notatki pacjenta i ich nagrobki bez odsyłania (ani w E3-PR0c, ani w E3-PR0d), tylko pomiar;
-- 4A — odsyłanie tylko po pojedynczych zmianach (`applyEncryptedEvent`), nie po pełnej kopii ani delcie;
-- 5A — dopuszczona podwójna wysyłka wizyty (pełna karta z haka H1 i osobne odesłanie), bez pomijania przy H1;
-- 6A — różnica „tylko lista usuniętych pacjentów” odłożona do E3-PR0e.
+Decyzje z 2026-11-17 — odpowiedź właściciela na sześć pytań projektu E3-PR0c (we wszystkich przyjęta odpowiedź
+polecana); zapis w planie, rozdział 6, blok „Decyzje z 2026-11-17 (E3-PR0c, pytania 1–6 projektu)”, który dopisał PR
+poprawki modułu planów z etapami (wiersz 2c, vildaclinic/vilda-calc#990):
+- kolejność: najpierw poprawka modułu planów z etapami (wiersz 2c); E3-PR0c przygotowany równolegle, PR po jej
+  scaleniu;
+- bez osobnego odsyłania samego opisu karty;
+- notatki pacjenta i ich nagrobki bez odsyłania (ani w E3-PR0c, ani w E3-PR0d), tylko pomiar;
+- odsyłanie tylko po pojedynczych zmianach (`applyEncryptedEvent`), nie po pełnej kopii ani delcie;
+- dopuszczona podwójna wysyłka wizyty (pełna karta z haka H1 i osobne odesłanie), bez pomijania przy H1;
+- różnica „tylko lista usuniętych pacjentów” odłożona do E3-PR0e.
 
 Wejście z E3-PR0b (wpis P-ZBIEZNOSC-ZDARZEN, E3-PR0b, „Wejście do kolejnych PR”: reguła echa, rozbicie zakresu, bez
 podwójnego wysyłania) i z E3-PR0b2b (wpis P-NOTATKA-POZNIEJSZA, „Wymagania dla następnych PR”). Sprawy, których
@@ -42971,9 +42971,10 @@ tożsamości wizyty dopisanej przez bieżącą wersję i wersji przeniesionej w 
 - **Droga.** Tylko `applyEncryptedEvent` z kopertą zdarzenia (ładunek z polem `event`): drenaż, ponowienie
   kwarantanny i ramka na żywo w `vilda_sync.js` (bez zmian). Stara delta, którą drenaż stosuje tą samą funkcją
   (urządzenie ze starszą aplikacją, urządzenie z wyłączonym dziennikiem) — bez odsyłania. Po pełnej kopii
-  (`mergeSyncPayload`) i po delcie (`applyEncryptedDelta`) — bez odsyłania (decyzja 4A z 2026-11-17): `Le` i eksport
-  `VildaVault` zostają bez zmian, więc poza blokiem P-DZIENNIK-ZDARZEN nie ma nowego wywołania. Importy (karta z pliku,
-  scalenie i odtworzenie kopii konta) bez zmian — dopisują to, co zapisały, swoją partią.
+  (`mergeSyncPayload`) i po delcie (`applyEncryptedDelta`) — bez odsyłania (decyzja z 2026-11-17: odsyłanie tylko po
+  pojedynczych zmianach): `Le` i eksport `VildaVault` zostają bez zmian, więc poza blokiem P-DZIENNIK-ZDARZEN nie ma
+  nowego wywołania. Importy (karta z pliku, scalenie i odtworzenie kopii konta) bez zmian — dopisują to, co zapisały,
+  swoją partią.
 - **Wpięcie.** `VildaVault._eventLog.applyEncryptedEvent` wskazuje `Bem_zastosuj` (dotąd `Bev_zastosuj`; 38 kluczy
   eksportu bez zmian). `Bem_zastosuj` jest zwykłą funkcją: pierwsza instrukcja czyta przełącznik (`Bob_bramkaEcha`);
   wyłączony — zwraca tę samą obietnicę co `Bev_zastosuj(env)`, bez dodatkowych mikrozadań. Włączony —
@@ -42997,10 +42998,10 @@ tożsamości wizyty dopisanej przez bieżącą wersję i wersji przeniesionej w 
   wiersza własnej zmiany. Wiersz odsyłania ma chwilę utworzenia z chwili dopisania, więc późniejszy przegląd uznaje
   encję za pokrytą, a odesłanie wchodzi do łańcucha konta przed przeglądem po drenażu (ten sam łańcuch).
 - H2 i hak karty notatki dotyczą notatek, których E3-PR0c nie odsyła — bez części wspólnej.
-- **H1 — świadomy wyjątek (decyzja 5A z 2026-11-17).** Odsyłanie nie pomija wersji karty, dla której H1 dał pełną
-  kartę. H1 emituje się w `Le` przed fazą Kosza, a porcje pełnej karty buduje dopisanie pod blokadą konta, a nie karty,
-  pod którą faza Kosza zapisuje rekord złożony — pełna karta może więc nieść wersję sprzed złożenia. Druga kopia
-  u odbiorcy niczego nie zapisuje.
+- **H1 — świadomy wyjątek (decyzja z 2026-11-17: dopuszczona podwójna wysyłka wizyty).** Odsyłanie nie pomija
+  wersji karty, dla której H1 dał pełną kartę. H1 emituje się w `Le` przed fazą Kosza, a porcje pełnej karty buduje
+  dopisanie pod blokadą konta, a nie karty, pod którą faza Kosza zapisuje rekord złożony — pełna karta może więc nieść
+  wersję sprzed złożenia. Druga kopia u odbiorcy niczego nie zapisuje.
 - Dwa urządzenia, które złożyły ten sam rekord, odsyłają go po razie (test wejściowy bez retencji: 2 koperty);
   odbiorca ma już ten rekord, nic nie zapisuje, więc echa echa nie ma. Odsiewanie „rekord równy ładunkowi z tej samej
   strony dostawy” odrzucone: wymaga pamięci całej strony w dokumencie (ginie przy zamknięciu, a ramka na żywo nie ma
@@ -43017,9 +43018,9 @@ praca bez połączenia” 40 — ziarna 101–140).
 | wersja zmieniona fazą Kosza (zdarzenie `stomb`: wpis Kosza z gwiazdką przegrywa z późniejszą tutejszą wersją; v tylko w `snapshotTombstones` ładunku) | 2 | 0 | 3 / 2 / 4 | odsyła | zapis wersji (`Bgw_zloz` w `Bkz_scalKoniec`); sam wpis Kosza — E3-PR0d |
 | wersja spoza ładunku pod inną kartą niż w ładunku (po „Scal pacjentów”; ta sama karta przed i po) | 0 | 0 | 0 / 6 / 0 | odsyła | wejście z E3-PR0b (wersja spoza ładunku z gwiazdką, tak samo bez gwiazdki) |
 | wersja przeniesiona w tym scaleniu pod inną kartę (`ptomb` z kartą docelową albo `snap`) | 0 | 0 | 0 / 4 / 0 | nie | E3-PR0f |
-| sam nagłówek karty (wizyta bez zmian, opis karty i data ostatniego zapisu inne niż w ładunku) | 0 | 2 | 0 / 35 / 0 (34 w ładunku, 1 spoza) | nie (decyzja 2A z 2026-11-17) | sejf liczy opis karty z najnowszej własnej wersji i opisu z ładunku nie przepisuje, więc odesłany opis nic u odbiorcy nie zmienia; każda koperta niesie całą najnowszą wizytę (32–45 KiB) |
-| notatka pacjenta (`pnote`) w ładunku, także „samo oznaczenie” | 0 | 0 | 0 / 5 / 0 | nie, pomiar (decyzja 3A z 2026-11-17) | W1 bez różnic notatek; część pokrywa hak karty notatki; rekord złączony +1 ms wysyła przegląd |
-| nagrobek notatki (`pnotetomb`) w ładunku | 0 | 0 | 4 / 2 / 0 | nie, pomiar (decyzja 3A z 2026-11-17) | krata `Bnp_zlacz`; W1 bez różnic |
+| sam nagłówek karty (wizyta bez zmian, opis karty i data ostatniego zapisu inne niż w ładunku) | 0 | 2 | 0 / 35 / 0 (34 w ładunku, 1 spoza) | nie (decyzja z 2026-11-17: bez osobnego odsyłania samego opisu karty) | sejf liczy opis karty z najnowszej własnej wersji i opisu z ładunku nie przepisuje, więc odesłany opis nic u odbiorcy nie zmienia; każda koperta niesie całą najnowszą wizytę (32–45 KiB) |
+| notatka pacjenta (`pnote`) w ładunku, także „samo oznaczenie” | 0 | 0 | 0 / 5 / 0 | nie, pomiar (decyzja z 2026-11-17: notatki bez odsyłania) | W1 bez różnic notatek; część pokrywa hak karty notatki; rekord złączony +1 ms wysyła przegląd |
+| nagrobek notatki (`pnotetomb`) w ładunku | 0 | 0 | 4 / 2 / 0 | nie, pomiar (decyzja z 2026-11-17: notatki bez odsyłania) | krata `Bnp_zlacz`; W1 bez różnic |
 | notatka pacjenta spoza ładunku | 10 | 0 | 27 / 4 / 32 | nie | pokryta hakami |
 | sam `rev` wersji (R2); sam `rev` notatki | — | — | — | nie | decyzja 2a z 2026-11-15; wejście z E3-PR0b2b |
 | wpis Kosza (`stomb`: R4a, R4a′, R5, inne), R4n, D7 | 4 | 0 | 32 / 30 / 61 | nie | E3-PR0d |
@@ -43269,14 +43270,15 @@ z `runtime/clinical-workspace-v1/manifest.json` na `audyt`.
   ma własny wiersz, `Bob_plan` łączy je w jeden).
 - **Ścieżka błędu odczytu** może raz wysłać wersję, która różni się od ładunku tylko `rev` (odstępstwo od decyzji 2a
   wyłącznie na tej ścieżce); jednorazowe, bez pętli (odbiorca odsyła tylko przy różnicy przed i po).
-- **H1 i odesłanie tej samej wersji** mogą wyjść obie (decyzja 5A z 2026-11-17; wyżej); druga kopia u odbiorcy nic nie
-  zapisuje.
+- **H1 i odesłanie tej samej wersji** mogą wyjść obie (decyzja z 2026-11-17: dopuszczona podwójna wysyłka wizyty;
+  wyżej); druga kopia u odbiorcy nic nie zapisuje.
 - **Granica z E3-PR0d.** Odesłanie wersji zmienionej fazą Kosza (zdarzenie `stomb`) jest w E3-PR0c, bo to zapis
   wersji; sam wpis Kosza (R4a, R4a′, R5) — E3-PR0d.
-- **Notatki** (decyzja 3A z 2026-11-17): rekord złączony notatki (+1 ms, `Bnp_poObu`) E3-PR0c nie odsyła; wysyła go
-  przegląd kolejki, gdy chwila złączenia jest późniejsza od pary z ładunku i od wiersza encji. Oba urządzenia liczą
-  to samo złączenie, więc podwójna wysyłka, jeśli zajdzie, jest bez szkody. Komentarz „Bez kolejki” w
-  `Bnp_tutejszaZapis` (poza blokiem, bez zmian w tym PR) dotyczy samego zapisu — wiersz złączenia dokłada przegląd.
+- **Notatki** (decyzja z 2026-11-17: notatki bez odsyłania): rekord złączony notatki (+1 ms, `Bnp_poObu`) E3-PR0c
+  nie odsyła; wysyła go przegląd kolejki, gdy chwila złączenia jest późniejsza od pary z ładunku i od wiersza encji.
+  Oba urządzenia liczą to samo złączenie, więc podwójna wysyłka, jeśli zajdzie, jest bez szkody. Komentarz „Bez
+  kolejki” w `Bnp_tutejszaZapis` (poza blokiem, bez zmian w tym PR) dotyczy samego zapisu — wiersz złączenia dokłada
+  przegląd.
 - **Starsza aplikacja** — „Flota ze starszą aplikacją” wyżej.
 - **Najgorszy przypadek drogi zdarzeń** — „Budżety” wyżej.
 
@@ -43287,8 +43289,9 @@ danych; alternatywy w opisie PR). Rekomendacja przy każdym punkcie: przyjąć.
    pozostałym urządzeniom (obok trzech haków: pełna karta po przegranym usunięciu, uratowana notatka, karta notatki).
    Reguły scalania bez zmian.
 2. **Tylko po kopertach zdarzeń.** Drenaż stosuje tą samą funkcją także stare delty (urządzenie ze starszą aplikacją
-   albo z wyłączonym dziennikiem). Po starej delcie — bez odsyłania, także na tej drodze (zgodne z decyzją 4A
-   i z pomiarami: obiegu przez starszą aplikację nie ma). Inna możliwość: odsyłać także po deltach.
+   albo z wyłączonym dziennikiem). Po starej delcie — bez odsyłania, także na tej drodze (zgodne z decyzją
+   z 2026-11-17 o odsyłaniu tylko po pojedynczych zmianach i z pomiarami: obiegu przez starszą aplikację nie ma).
+   Inna możliwość: odsyłać także po deltach.
 3. **Przy wyłączonym przełączniku ta sama obietnica co dziś** — funkcja wejścia jest zwykła, więc nie zmienia nawet
    kolejności drobnych kroków względem zapisów w tle; część z odsyłaniem jest osobno.
 4. **Porównanie w kształcie pełnej kopii** (tożsamość wizyty wyliczona dla starych rekordów, jak w liczniku testu) —
@@ -43302,8 +43305,8 @@ danych; alternatywy w opisie PR). Rekomendacja przy każdym punkcie: przyjąć.
    odesłana zawsze. Inna możliwość: dosłownie projekt (jednorazowy nadmiar bez pętli).
 7. **Pełna karta z H1 i odesłanie wersji tej samej karty w jednym zdarzeniu** — koperta budowana przez bieżącą
    aplikację tego nie daje (wersję spod karty docelowej scalanie przenosi, czyli bez odsyłania); daje to koperta spoza
-   buildera (jak od innej wersji aplikacji) — test pokazuje oba wiersze (decyzja 5A sprawdzona także dla tej samej
-   karty).
+   buildera (jak od innej wersji aplikacji) — test pokazuje oba wiersze (decyzja z 2026-11-17 o podwójnej wysyłce
+   sprawdzona także dla tej samej karty).
 8. **Ziarno 8 profilu pełnego** jako przypadek ręcznego bloku znanych usterek (bez klasy w tabeli wyjątków, bez
    literału), a nie wpis w tabeli wyjątków — usterka zostaje widoczna; ręczny przebieg profilu pełnego z włączonym
    przełącznikiem ma jedno czerwone ziarno do E3-PR0e. Inna możliwość: wpis w tabeli wyjątków (przebieg zielony,
@@ -43317,11 +43320,11 @@ danych; alternatywy w opisie PR). Rekomendacja przy każdym punkcie: przyjąć.
 - **E3-PR0d** (wpisy Kosza): odsyłanie wpisu Kosza po scaleniu innego niż w ładunku (R4a, R4a′, R5); R4n i D7 bez
   odsyłania; ta sama droga (`Bem_zastosujEcho`, kolektor), rodzaj `stomb` jako kandydat; odesłanie wersji zmienionej
   fazą Kosza zostaje z E3-PR0c (bez podwójnego wysyłania tej samej wersji); notatki i nagrobki notatek dalej bez
-  odsyłania, tylko pomiar (decyzja 3A z 2026-11-17); R4a i R4a′ przez urządzenie 276 — jeden dodatkowy obieg,
+  odsyłania, tylko pomiar (decyzja z 2026-11-17); R4a i R4a′ przez urządzenie 276 — jeden dodatkowy obieg,
   opisać; model haków i odsyłania w teście A ≡ B rozszerzony o `stomb`; warstwa „odesłane” jest gotowa.
 - **E3-PR0e**: „Usuń pacjenta” zwróconej starej karty po „Scal pacjentów” — scenariusz z ziarna 8 profilu pełnego
   (świat 885 ręcznego bloku znanych usterek) obok czterech dotychczasowych; po naprawie ziarno 8 z włączonym
-  przełącznikiem ma być czyste; różnica „tylko lista usuniętych pacjentów” (decyzja 6A z 2026-11-17).
+  przełącznikiem ma być czyste; różnica „tylko lista usuniętych pacjentów” (odłożona tutaj decyzją z 2026-11-17).
 - **E3-PR0f**: wersje przeniesione pod inną kartę (dziś wykluczone z odsyłania) i wizyta nieznana urządzeniu
   scalającemu; mutant „bez wyjątku przeniesienia” czerwieni dziś test wersji przeniesionej — po zmianie reguły
   przepisać.
@@ -43331,8 +43334,8 @@ danych; alternatywy w opisie PR). Rekomendacja przy każdym punkcie: przyjąć.
   (najgorszy przypadek z „Budżetów”), wyścig pełnej kopii ze zdarzeniem i przerwa między scaleniem a wpisem
   odesłania (test), koalescencja z odsyłaniem, floty z odsyłaniem (221, 276, kontrola z trzema bieżącymi
   urządzeniami), profil „dłuższa praca bez połączenia” z odsyłaniem jako pomiar, echo po scaleniu pełnej kopii i pół
-  wymiany — 0 z konstrukcji (decyzja 4A), pomiar zostaje; wyniesienie uprzęży testu A ≡ B do `tests/support/`
-  i osobny plik przebiegów z przełącznikiem (równoległość plików w vitest).
+  wymiany — 0 z konstrukcji (odsyłanie tylko po pojedynczych zmianach), pomiar zostaje; wyniesienie uprzęży testu
+  A ≡ B do `tests/support/` i osobny plik przebiegów z przełącznikiem (równoległość plików w vitest).
 - **E3-PR0i**: znaczenie klucza odwrócone („brak klucza = włączone, `'0'` wyłącza”), literały A ≡ B, floty
   i `ZNANE_W1` przepisane na wynik z odsyłaniem, ziarno 8 profilu pełnego po E3-PR0e.
 - Każdy PR: nowe miejsce zapisu wersji w scalaniu — sprawdzić, czy kandydat jest w ładunku (strażnik kandydatów
