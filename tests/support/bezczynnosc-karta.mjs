@@ -27,6 +27,8 @@ const PATIENT = {
 // Stan roboczy pacjenta w pamięci karty: sesje formularzy i znaczniki wczytanego pacjenta.
 export const STATE_KEYS = ['vildaMainSessionV1', 'sharedUserData', 'vildaCurrentPatientId', 'vilda-save-ref-v1', 'vildaPrevSummaryPid',
   'vildaPrevSummaryAnchor', 'vildaLoadChoiceV1', 'vildaDobAgeZapisV1', 'vildaClcrSessionV1', 'vildaSteroidsSessionV1'];
+// Znacznik pacjenta panelu HOMA-IR (dla kogo wpisano jego pola): po końcu sesji zostaje najwyżej pusty.
+export const HOMA_REF = 'vildaHomaIdentityRefV1';
 // Zapis sesji sejfu w karcie.
 export const SESSION_RECORD = 'vilda-vault-session-v2';
 // Własne klucze testu w pamięci karty (dziennik blokad przeżywa nawigację dokumentu głównego).
@@ -82,7 +84,7 @@ async function readTab(page, read, argument) {
 // Stan karty: klucze stanu roboczego, wartości niosące dane fikcyjnej pacjentki (po treści — odporne na nowe
 // klucze), zapis sesji sejfu i liczba odblokowanych dokumentów (dokument główny i jego ramki).
 export function tabState(page, patientId = '') {
-  return readTab(page, ({ keys, id, sessionRecord }) => {
+  return readTab(page, ({ keys, id, sessionRecord, homaRef }) => {
     const withPatient = [];
     for (let index = 0; index < sessionStorage.length; index += 1) {
       const key = sessionStorage.key(index), value = String(sessionStorage.getItem(key) || '');
@@ -91,9 +93,9 @@ export function tabState(page, patientId = '') {
     }
     const unlocked = [window, ...Array.from({ length: window.frames.length }, (_, index) => window.frames[index])]
       .filter(view => { try { return view.VildaVault?.isUnlocked(); } catch (_) { return false; } }).length;
-    return { keys: keys.filter(key => sessionStorage.getItem(key) != null), withPatient,
+    return { keys: keys.filter(key => sessionStorage.getItem(key) != null).concat(sessionStorage.getItem(homaRef) ? [homaRef] : []), withPatient,
       session: sessionStorage.getItem(sessionRecord) != null, unlocked };
-  }, { keys: STATE_KEYS, id: patientId, sessionRecord: SESSION_RECORD });
+  }, { keys: STATE_KEYS, id: patientId, sessionRecord: SESSION_RECORD, homaRef: HOMA_REF });
 }
 export const TAB_ENDED = { keys: [], withPatient: [], session: false, unlocked: 0 };
 
@@ -105,7 +107,7 @@ export async function expectTabEnded(page, patientId) {
 // Dziennik blokad wszystkich dokumentów karty i — opcjonalnie — skrócony limit bezczynności: we wszystkich
 // dokumentach albo tylko w ramce o podanym tytule. Bez idleMs sam dziennik.
 export async function watchTabLocks(page, { idleMs = null, onlyFrame = null, patientId = '' } = {}) {
-  await page.evaluate(({ timeout, onlyFrame, id, logKey }) => {
+  await page.evaluate(({ timeout, onlyFrame, id, logKey, homaRef }) => {
     sessionStorage.removeItem(logKey);
     const all = [window, ...Array.from({ length: window.frames.length }, (_, index) => window.frames[index])];
     for (const view of all) {
@@ -117,7 +119,8 @@ export async function watchTabLocks(page, { idleMs = null, onlyFrame = null, pat
         const unlockedLeft = all.filter(other => { try { return other.VildaVault?.isUnlocked(); } catch (_) { return false; } }).length;
         const patientKeys = Object.keys(sessionStorage).filter(key => {
           const value = String(sessionStorage.getItem(key));
-          return !key.startsWith('__e2e') && (/Zmyslona|Weronika|2014-11-10/.test(value) || (id && value.includes(id)));
+          return !key.startsWith('__e2e') && (/Zmyslona|Weronika|2014-11-10/.test(value) || (id && value.includes(id))
+            || (key === homaRef && value !== ''));
         });
         log.push({ path: view.location.pathname, reason, at: Date.now(), unlockedLeft, patientKeys });
         sessionStorage.setItem(logKey, JSON.stringify(log));
@@ -126,7 +129,7 @@ export async function watchTabLocks(page, { idleMs = null, onlyFrame = null, pat
       vault.DEFAULT_IDLE_LOCK_MS = timeout;
       vault.startIdleTimer(timeout);
     }
-  }, { timeout: idleMs, onlyFrame, id: patientId, logKey: LOCK_LOG });
+  }, { timeout: idleMs, onlyFrame, id: patientId, logKey: LOCK_LOG, homaRef: HOMA_REF });
 }
 export const tabLocks = page => readTab(page, logKey => JSON.parse(sessionStorage.getItem(logKey) || '[]'), LOCK_LOG);
 export async function waitForTabLock(page, timeout) {

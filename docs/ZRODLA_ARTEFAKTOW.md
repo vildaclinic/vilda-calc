@@ -1880,6 +1880,47 @@ Opis: `docs/clinical/ALGORITHMS.md`, „LAB-HISTORIA 6.39”; `docs/LAB_HISTORIA
 
 Tekst jest ten sam co `PP_PIN_SUB` w czytelnym bloku, więc wiersz nie zmienia podpisu, zanim blok go odświeży. `tests/unit/lab-pin-pinned-state.test.mjs` pilnuje, że oba ciągi występują dokładnie raz, a dawnego tekstu nie ma. Bez nowych stylów ustawianych wprost na elementach (liczba dla `lab_pin_result.js` w `tests/fixtures/style-elementow.json` zostaje 17); znaczniki wycinków testów (`var Lh2AssessmentProvider=`, `var s=null;`, `async function A(`, `function I(){`) bez zmian.
 
+## Łatka P-BEZCZYNNOSC-KARTA — bezczynność i koniec sesji liczone dla całej karty (`vilda_auth_ui.js` 566 → 567, `vilda_session_bridge.js` 215 → 216, 2026-11-18, polecenie właściciela)
+
+Opis działania i walidacja: `docs/clinical/ALGORITHMS.md`, „Bezczynność i koniec sesji liczone dla całej karty”. Czytelne bloki wstawione wprost do artefaktów, bez ponownej minifikacji; w części zminifikowanej `vilda_auth_ui.js` zmieniają się trzy dokładne ciągi.
+
+```js
+// vilda_auth_ui.js — czytelny blok aktywności (nad „var authBootReady=false;”)
+function vildaRecordActivity(event) { /* jak dotąd: Bn = teraz, resetIdleTimer(), refreshPersistedSession();
+  nowe: zdarzenie niezaufane zostaje lokalne, a w pozostałych dokumentach karty wołane jest recordPeerActivity() */ }
+function vildaRecordPeerActivity() { /* Bn = teraz, resetIdleTimer(); bez zapisu sesji i bez dalszego rozsyłania */ }
+
+// vilda_auth_ui.js — między „function isAuthBootReady(){return authBootReady}” a „async function Ei(){”
+function vildaTabPeers() { /* dokument główny (i.top) i jego bezpośrednie ramki, bez własnego okna;
+  tylko ten sam origin, każdy dostęp w try/catch */ }
+function vildaClearTabWorkState() { /* gdy karta nie ma zapisu sesji sejfu:
+  VildaPersistence.clearUserState({ includeSessions: true, source: "auth.tabSessionEnded", dispatchEvent: false })
+  i znaczniki wczytanego pacjenta; znacznik pacjenta panelu HOMA-IR (vildaHomaIdentityRefV1) jest opróżniany,
+  nie usuwany — pusty nie pasuje do żadnego pacjenta, więc panel nadal czyści swoje pola przy zmianie pacjenta */ }
+function vildaEndTabSession(reason) { /* vildaClearTabWorkState(); dla "idle" i "manual": lock(reason)
+  w pozostałych odblokowanych dokumentach karty; "manual" zaczęte w ramce: VildaFrameSync.resync() dokumentu głównego */ }
+
+// vilda_auth_ui.js, część zminifikowana — dokładne ciągi, każdy występuje raz:
+// 1. nasłuch onLock w Ei
+//    było:  var n=dn;dn=null;try{qa("on-lock")}catch{}
+//    jest:  var n=dn;dn=null;try{qa("on-lock")}catch{}try{vildaEndTabSession(a)}catch{}
+// 2. start zablokowanej strony w Ei
+//    było:  if(Io()){Aa(!0,{skipReset:!0}),$t();return}Aa(!1);let Bkr_s=null;
+//    jest:  if(Io()){Aa(!0,{skipReset:!0}),$t();return}if(authNeedsCleanup)vildaClearTabWorkState();Aa(!1);let Bkr_s=null;
+// 3. publiczne API VildaAuthUI
+//    było:  recordActivity:vildaRecordActivity,
+//    jest:  recordActivity:vildaRecordActivity,recordPeerActivity:vildaRecordPeerActivity,
+
+// vilda_session_bridge.js — czytelny blok przed „var h=n.document;h&&(h.readyState==="loading"?”
+function relayTabActivity(event) { /* zaufane zdarzenie wejścia na stronie w ramce bez czynnego własnego
+  modułu konta → top.VildaAuthUI.recordActivity(); tylko gdy karta ma zapis sesji sejfu (l() mostu) */ }
+// nasłuch na document: mousedown, keydown, touchstart, scroll, pointerdown (passive)
+```
+
+Nazwy z artefaktu użyte w nowym kodzie: `i` — okno, `jt()` — sejf (`VildaVault`), `Bn` — znacznik ostatniej aktywności, `Ot` — zapis błędu modułu konta; w `vilda_session_bridge.js`: `n` — okno, `l()` — czy karta ma zapis sesji sejfu (`hasSessionKey`).
+
+**Granice.** Pomocnicy `vildaTabPeers`, `vildaClearTabWorkState` i `vildaEndTabSession` zostają w wycinku od `var authBootReady=false;` do `function uo(` — ten fragment wycinają uprzęże `tests/unit/auth-boot-readiness.test.mjs` i `tests/unit/sejf-usun-konto-karty-2.test.mjs`. Miejsca wywołań przypina `tests/unit/bezczynnosc-karta.test.mjs` („okablowanie końca sesji karty w plikach produkcyjnych”). `vilda_vault.js`, `vilda_frame_sync.js`, `vilda_shell.js` i kolejność skryptów bez zmian; `vilda_chrome.js` 299 → 300 i lista w `vilda_session_bridge.js` zmieniają tylko `?v=` wstrzykiwanego `vilda_auth_ui.js` (`npm run podbij-wersje`).
+
 ## Trwała tożsamość wizyt — źródło i granica artefaktu sejfu
 
 Zmiana funkcjonalna `P-TRWALE-WIZYTY` ma bazę `audyt` z commita

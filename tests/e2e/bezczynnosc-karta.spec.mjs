@@ -92,7 +92,9 @@ test('R2: „Wyloguj się” w powłoce czyści stan roboczy karty przed ekranem
   await page.locator('button.chrome-menu-logout:visible').first().click();
   await waitForTabLock(page, 20_000);
   const first = (await tabLocks(page))[0];
-  expect({ reason: first.reason, patientKeys: first.patientKeys }).toEqual({ reason: 'manual', patientKeys: [] });
+  // W chwili pierwszej blokady: wszystkie dokumenty karty zablokowane, stan roboczy pacjentki pusty.
+  expect({ reason: first.reason, unlockedLeft: first.unlockedLeft, patientKeys: first.patientKeys })
+    .toEqual({ reason: 'manual', unlockedLeft: 0, patientKeys: [] });
   await expectTabEnded(page, patientId);
   await expect(page).toHaveURL(/\/index\.html$/u);
   await signIn(page);

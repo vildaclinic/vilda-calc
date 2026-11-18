@@ -113,7 +113,13 @@ test('gość w powłoce → „Zaloguj się” → logowanie: dane wpisane przez
   await expect.poll(() => page.evaluate(() => /Goscinny/.test(String(sessionStorage.getItem('vildaMainSessionV1')))), { timeout: 20_000 }).toBe(true);
   const cleared = [];
   await page.exposeFunction('__e2eGuestCleared', source => cleared.push(source));
-  await start.evaluate(() => window.addEventListener('vilda:user-state-cleared', event => window.top.__e2eGuestCleared(event.detail?.source || '')));
+  // Nasłuch w bieżącym dokumencie ramki Start i w każdym następnym: po zalogowaniu ramka bywa przeładowana.
+  const listen = () => {
+    if (window.frameElement?.title !== 'Start') return;
+    window.addEventListener('vilda:user-state-cleared', event => window.top.__e2eGuestCleared?.(event.detail?.source || ''));
+  };
+  await page.addInitScript(listen);
+  await start.evaluate(listen);
   await page.locator('button.chrome-menu-logout:visible').first().click();
   await expect(page.locator('#vilda-auth-ui-root')).toBeVisible();
   await signIn(page);

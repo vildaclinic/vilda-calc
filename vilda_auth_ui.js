@@ -3701,6 +3701,10 @@ function vildaClearTabWorkState(){
     // Markers of the loaded patient that the adapter does not own.
     ["vildaCurrentPatientId","vilda-save-ref-v1","vildaPrevSummaryPid","vildaPrevSummaryAnchor","vildaLoadChoiceV1","vildaDobAgeZapisV1"]
       .forEach(function(key){storage.removeItem(key)});
+    // The HOMA-IR page keeps a reference of the patient its fields were entered
+    // for. It is emptied, not removed: an empty reference matches no patient,
+    // so the page still resets those fields for the next one.
+    if(storage.getItem("vildaHomaIdentityRefV1")!=null)storage.setItem("vildaHomaIdentityRefV1","");
     i._vildaCurrentPatientId=null;
     return true;
   }catch(c){Ot("clearTabWorkState",c);return false}

@@ -12,6 +12,8 @@ const SESSION_RECORD = 'vilda-vault-session-v2';
 const MARKERS = ['vildaCurrentPatientId', 'vilda-save-ref-v1', 'vildaPrevSummaryPid', 'vildaPrevSummaryAnchor', 'vildaLoadChoiceV1', 'vildaDobAgeZapisV1'];
 const SESSIONS = ['vildaMainSessionV1', 'vildaClcrSessionV1', 'vildaSteroidsSessionV1', 'sharedUserData'];
 const KEPT = ['VildaGuestMode', 'vilda-vault-removed-v1'];
+// Znacznik pacjenta panelu HOMA-IR: opróżniany, nie usuwany (pusty nie pasuje do żadnego pacjenta).
+const HOMA_REF = 'vildaHomaIdentityRefV1';
 const FUNCTIONS = ['vildaRecordActivity', 'vildaRecordPeerActivity', 'vildaTabPeers', 'vildaClearTabWorkState', 'vildaEndTabSession'];
 const cut = FUNCTIONS.map(name => wytnijFunkcje(source, name)).join(';');
 
@@ -25,13 +27,14 @@ function storage() {
 }
 
 // Okno z prawdziwym adapterem zapisu i wyciętymi funkcjami modułu konta.
-function clearHarness({ sessionRecord = false } = {}) {
+function clearHarness({ sessionRecord = false, homaRef = true } = {}) {
   const local = storage(), session = storage(), events = [], warnings = [];
   const win = { localStorage: local, sessionStorage: session, navigator: {}, name: '', _vildaCurrentPatientId: 'FICTIONAL-ID',
     dispatchEvent: event => { events.push(event); },
     CustomEvent: class { constructor(type, options) { this.type = type; this.detail = options.detail; } } };
   loadBrowserScript('vilda_persistence_adapter.js', win);
   for (const key of [...SESSIONS, ...MARKERS, ...KEPT]) session.setItem(key, JSON.stringify({ fictional: 'FICTIONAL-WORK-STATE ' + key }));
+  if (homaRef) session.setItem(HOMA_REF, 'FICTIONAL-WORK-STATE|11|F');
   local.setItem('vilda-trust-device-v1', '1');
   local.setItem('labAssayProfiles', 'FICTIONAL-PROFILE');
   if (sessionRecord) session.setItem(SESSION_RECORD, 'FICTIONAL-ENCRYPTED-SESSION');
@@ -46,6 +49,7 @@ describe('stan roboczy karty po końcu sesji (vildaClearTabWorkState)', () => {
     expect(h.api.clear()).toBe(true);
     for (const key of [...SESSIONS, ...MARKERS]) expect(h.session.getItem(key), key).toBeNull();
     for (const key of KEPT) expect(h.session.getItem(key), key).not.toBeNull();
+    expect(h.session.getItem(HOMA_REF)).toBe('');
     expect(h.win._vildaCurrentPatientId).toBeNull();
     expect(h.local.getItem('vilda-trust-device-v1')).toBe('1');
     expect(h.local.getItem('labAssayProfiles')).toBe('FICTIONAL-PROFILE');
@@ -56,8 +60,18 @@ describe('stan roboczy karty po końcu sesji (vildaClearTabWorkState)', () => {
     const h = clearHarness({ sessionRecord: true });
     expect(h.api.clear()).toBe(false);
     for (const key of [...SESSIONS, ...MARKERS]) expect(h.session.getItem(key), key).not.toBeNull();
+    expect(h.session.getItem(HOMA_REF)).toBe('FICTIONAL-WORK-STATE|11|F');
     expect(h.win._vildaCurrentPatientId).toBe('FICTIONAL-ID');
     expect(h.events).toEqual([]);
+  });
+  it('znacznik pacjenta panelu HOMA-IR: nieobecny nie powstaje, już pusty zostaje pusty', () => {
+    const absent = clearHarness({ homaRef: false });
+    expect(absent.api.clear()).toBe(true);
+    expect(absent.session.getItem(HOMA_REF)).toBeNull();
+    const emptied = clearHarness();
+    expect(emptied.api.clear()).toBe(true);
+    expect(emptied.api.clear()).toBe(true);
+    expect(emptied.session.getItem(HOMA_REF)).toBe('');
   });
   it('bez adaptera zapisu usuwa znaczniki; nieczytelny magazyn nie rzuca', () => {
     const h = clearHarness();
@@ -198,7 +212,7 @@ describe('koniec sesji karty (vildaEndTabSession)', () => {
 });
 
 describe('most sesji: aktywność strony bez czynnego modułu konta', () => {
-  function bridge({ top = true, ownAuth = false, ownUnlocked = false } = {}) {
+  function bridge({ top = true, ownAuth = false, ownUnlocked = false, sessionRecord = true } = {}) {
     const listeners = {};
     const record = vi.fn();
     const win = {
@@ -207,11 +221,13 @@ describe('most sesji: aktywność strony bez czynnego modułu konta', () => {
         querySelector: () => null, dispatchEvent: () => {}, createElement: () => ({}), head: { appendChild: () => {} } },
       addEventListener: () => {}, CustomEvent: class { constructor(type) { this.type = type; } }, setTimeout, clearTimeout,
     };
+    // Karta zalogowana: w pamięci karty jest zapis sesji sejfu.
+    if (sessionRecord) win.sessionStorage.setItem(SESSION_RECORD, 'FICTIONAL-ENCRYPTED-SESSION');
     win.top = top === true ? { VildaAuthUI: { recordActivity: record } } : top === 'self' ? win : top;
     if (ownAuth) { win.VildaAuthUI = { recordActivity: record }; win.VildaVault = { isUnlocked: () => ownUnlocked }; }
     loadBrowserScript('vilda_session_bridge.js', win);
     const fire = (type, event) => (listeners[type] || []).forEach(fn => fn(event));
-    return { fire, record, listeners };
+    return { fire, record, listeners, win };
   }
   it('zaufane wejście w dokumencie bez modułu konta trafia do dokumentu głównego', () => {
     const h = bridge();
@@ -234,6 +250,17 @@ describe('most sesji: aktywność strony bez czynnego modułu konta', () => {
   it('własny moduł konta z zamkniętym sejfem: wejście trafia do dokumentu głównego', () => {
     const h = bridge({ ownAuth: true, ownUnlocked: false }); h.fire('keydown', { isTrusted: true });
     expect(h.record).toHaveBeenCalledOnce();
+  });
+  it('karta bez zapisu sesji (sesja karty zakończona): nic nie jest przekazywane', () => {
+    for (const h of [bridge({ sessionRecord: false }), bridge({ sessionRecord: false, ownAuth: true, ownUnlocked: false })]) {
+      for (const type of ['mousedown', 'keydown', 'touchstart', 'scroll', 'pointerdown']) h.fire(type, { isTrusted: true });
+      expect(h.record).not.toHaveBeenCalled();
+    }
+    // Nieczytelna pamięć karty liczy się jak brak zapisu sesji.
+    const broken = bridge();
+    broken.win.sessionStorage.getItem = () => { throw new Error('FICTIONAL-STORAGE-FAILURE'); };
+    expect(() => broken.fire('keydown', { isTrusted: true })).not.toThrow();
+    expect(broken.record).not.toHaveBeenCalled();
   });
 });
 
