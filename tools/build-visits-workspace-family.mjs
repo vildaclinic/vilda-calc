@@ -1,6 +1,9 @@
 // Reproduce one bounded extension of the existing immutable runtime family.
 // All 51 base modules remain byte-for-byte historical resources; only the
 // readable source codec differs in the new family. This is not a bundler.
+// The codec now also lives in the module source repository (vilda-source), whose
+// builder produces the active family. This tool remains the proof that the
+// historical family 67818dc1656f is exactly the base family plus this codec.
 import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
@@ -9,14 +12,14 @@ import { fileURLToPath } from 'node:url';
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const BASE_TREE = 'e410c87255418a499356b314d4e2da79abbba5677fadbe5649e352eac0c5a34e';
 const BASE_PREFIX = 'runtime/clinical-workspace-v1/' + BASE_TREE.slice(0, 12) + '/';
+const FAMILY_TREE = '67818dc1656fcd24871e8621feb2131008e2746f70e920dfd628819b869a299c';
 const CODEC = 'client/patient-clinical-workspace-source/codec.mjs';
 const MANIFEST = 'runtime/clinical-workspace-v1/manifest.json';
 const digest = value => createHash('sha256').update(value).digest('hex');
 const json = value => JSON.stringify(value, null, 2) + '\n';
 function fail(message) { throw new Error('Visit workspace family: ' + message); }
 
-export function visitWorkspaceFamily(repository = ROOT) {
-  const manifest = JSON.parse(readFileSync(resolve(repository, MANIFEST), 'utf8'));
+function reproduceVisitWorkspaceFamily(repository, manifest) {
   const base = manifest.files.concat(manifest.historicalFiles || [])
     .filter(entry => entry.path.startsWith(BASE_PREFIX))
     .map(entry => ({ name: entry.path.slice(BASE_PREFIX.length), sha256: entry.sha256,
@@ -31,15 +34,38 @@ export function visitWorkspaceFamily(repository = ROOT) {
     ? { name: CODEC, source: codec, sha256: digest(codec) } : entry);
   const moduleTreeSHA256 = digest(JSON.stringify(current.map(({ name, sha256 }) => ({ name, sha256 }))));
   if (moduleTreeSHA256 === BASE_TREE) fail('missing codec extension');
-  if (![BASE_TREE, moduleTreeSHA256].includes(manifest.moduleTreeSHA256)) fail('unexpected active family');
   const prefix = 'runtime/clinical-workspace-v1/' + moduleTreeSHA256.slice(0, 12) + '/';
+  return { base, current, moduleTreeSHA256, prefix,
+    sources: new Map(current.map(entry => [prefix + entry.name, entry.source])) };
+}
+
+// The historical family is retained: every reproduced module is listed with its
+// digest among the historical files and its bytes on disk are unchanged.
+export function verifyHistoricalVisitWorkspaceFamily(repository = ROOT) {
+  const manifest = JSON.parse(readFileSync(resolve(repository, MANIFEST), 'utf8'));
+  const built = reproduceVisitWorkspaceFamily(repository, manifest);
+  if (built.moduleTreeSHA256 !== FAMILY_TREE) fail('the historical family differs');
+  if (manifest.moduleTreeSHA256 === FAMILY_TREE || manifest.moduleTreeSHA256 === BASE_TREE) fail('the historical family is still active');
+  const historical = new Map((manifest.historicalFiles || []).map(entry => [entry.path, entry.sha256]));
+  for (const [path, source] of built.sources) {
+    if (historical.get(path) !== digest(source)) fail('historical module is not retained: ' + path);
+    if (readFileSync(resolve(repository, path), 'utf8') !== source) fail('historical module differs: ' + path);
+  }
+  const vault = readFileSync(resolve(repository, 'vilda_vault.js'), 'utf8');
+  if (vault.includes(BASE_PREFIX) || vault.includes(built.prefix)) fail('vault still selects a historical family');
+  return { moduleTreeSHA256: built.moduleTreeSHA256, prefix: built.prefix, sources: built.sources };
+}
+
+export function visitWorkspaceFamily(repository = ROOT) {
+  const manifest = JSON.parse(readFileSync(resolve(repository, MANIFEST), 'utf8'));
+  const { base, current, moduleTreeSHA256, prefix, sources } = reproduceVisitWorkspaceFamily(repository, manifest);
+  if (![BASE_TREE, moduleTreeSHA256].includes(manifest.moduleTreeSHA256)) fail('unexpected active family');
   const files = current.map(entry => ({ path: prefix + entry.name, sha256: entry.sha256 }));
   const historicalFiles = (manifest.historicalFiles || []).slice();
   for (const entry of base) {
     const path = BASE_PREFIX + entry.name;
     if (!historicalFiles.some(previous => previous.path === path)) historicalFiles.push({ path, sha256: entry.sha256 });
   }
-  const sources = new Map(current.map(entry => [prefix + entry.name, entry.source]));
   const packFiles = files.concat(historicalFiles).map(entry => ({ ...entry,
     source: sources.get(entry.path) ?? readFileSync(resolve(repository, entry.path), 'utf8') }));
   if (packFiles.some(entry => digest(entry.source) !== entry.sha256)) fail('historical member changed');
@@ -97,6 +123,7 @@ export function writeVisitWorkspaceFamily(repository = ROOT) {
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const args = process.argv.slice(2);
   if (args.length > 1 || args.length && args[0] !== '--write') fail('usage: node tools/build-visits-workspace-family.mjs [--write]');
-  const result = args.length ? writeVisitWorkspaceFamily() : verifyVisitWorkspaceFamily();
+  // --write still refuses any active family other than the base or the reproduced one.
+  const result = args.length ? writeVisitWorkspaceFamily() : verifyHistoricalVisitWorkspaceFamily();
   process.stdout.write('Visit workspace family: ' + result.moduleTreeSHA256 + ' (51 modules; historical bytes retained).\n');
 }

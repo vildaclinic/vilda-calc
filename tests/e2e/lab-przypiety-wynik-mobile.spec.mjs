@@ -116,6 +116,9 @@ async function sprawdzPrzypiety(page) {
   expect(pierscien.right).toBeLessThanOrEqual(wykres.right + 0.5);
 
   // „✓ Przypięto” otwiera okno z ostrzeżeniem; ta sama data badania — zapis zablokowany.
+  // Przycisk bywa wtedy pod dolnym paskiem nawigacji: Playwright uznaje go za widoczny i nie przewija, a przy płynnym
+  // przewijaniu strony kolejne próby się nie stabilizują. Najpierw środek ekranu, bez animacji.
+  await przycisk.evaluate((el) => el.scrollIntoView({ block: 'center', behavior: 'instant' }));
   await przycisk.tap();
   const nakladka = page.locator('#labPinOverlay');
   await expect(nakladka).toHaveCount(1);

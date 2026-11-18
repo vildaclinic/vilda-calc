@@ -1880,7 +1880,7 @@ Opis: `docs/clinical/ALGORITHMS.md`, „LAB-HISTORIA 6.39”; `docs/LAB_HISTORIA
 
 Tekst jest ten sam co `PP_PIN_SUB` w czytelnym bloku, więc wiersz nie zmienia podpisu, zanim blok go odświeży. `tests/unit/lab-pin-pinned-state.test.mjs` pilnuje, że oba ciągi występują dokładnie raz, a dawnego tekstu nie ma. Bez nowych stylów ustawianych wprost na elementach (liczba dla `lab_pin_result.js` w `tests/fixtures/style-elementow.json` zostaje 17); znaczniki wycinków testów (`var Lh2AssessmentProvider=`, `var s=null;`, `async function A(`, `function I(){`) bez zmian.
 
-## Łatka P-BEZCZYNNOSC-KARTA — bezczynność i koniec sesji liczone dla całej karty (`vilda_auth_ui.js` 566 → 567, `vilda_session_bridge.js` 215 → 216, 2026-11-18, polecenie właściciela)
+## Łatka P-BEZCZYNNOSC-KARTA — bezczynność i koniec sesji liczone dla całej karty (`vilda_auth_ui.js` 567 → 568, `vilda_session_bridge.js` 217 → 218, 2026-11-18, polecenie właściciela)
 
 Opis działania i walidacja: `docs/clinical/ALGORITHMS.md`, „Bezczynność i koniec sesji liczone dla całej karty”. Czytelne bloki wstawione wprost do artefaktów, bez ponownej minifikacji; w części zminifikowanej `vilda_auth_ui.js` zmieniają się trzy dokładne ciągi.
 
@@ -1920,6 +1920,72 @@ function relayTabActivity(event) { /* zaufane zdarzenie wejścia na stronie w ra
 Nazwy z artefaktu użyte w nowym kodzie: `i` — okno, `jt()` — sejf (`VildaVault`), `Bn` — znacznik ostatniej aktywności, `Ot` — zapis błędu modułu konta; w `vilda_session_bridge.js`: `n` — okno, `l()` — czy karta ma zapis sesji sejfu (`hasSessionKey`).
 
 **Granice.** Pomocnicy `vildaTabPeers`, `vildaClearTabWorkState` i `vildaEndTabSession` zostają w wycinku od `var authBootReady=false;` do `function uo(` — ten fragment wycinają uprzęże `tests/unit/auth-boot-readiness.test.mjs` i `tests/unit/sejf-usun-konto-karty-2.test.mjs`. Miejsca wywołań przypina `tests/unit/bezczynnosc-karta.test.mjs` („okablowanie końca sesji karty w plikach produkcyjnych”). `vilda_vault.js`, `vilda_frame_sync.js`, `vilda_shell.js` i kolejność skryptów bez zmian; `vilda_chrome.js` 299 → 300 i lista w `vilda_session_bridge.js` zmieniają tylko `?v=` wstrzykiwanego `vilda_auth_ui.js` (`npm run podbij-wersje`).
+
+## Łatka P-OTYLOSC-WZROST — Kontynuacja bez wzrostu, data każdego punktu, ocena dziecka z ostatniego punktu ze wzrostem (`obesity_therapy_monitor.js` 27 → 28, `vilda_auth_ui.js` 566 → 567, `obesity_response_criteria.js` 4 → 5, 2026-11-18, decyzje właściciela)
+
+Opis działania i przypadki: `docs/clinical/ALGORITHMS.md`, „Leczenie otyłości — etap 1” (P-OTYLOSC-WZROST). Zmiany w czytelnych źródłach (`vilda_cykle_leczenia.js` VERSION 3 — R8, R9, `wzrostWymagany`; `docpro.html`; style w `inline_docpro_01.css`) nie wymagają opisu łatki. W trzech plikach zminifikowanych są podmiany dokładnych ciągów i wstawione czytelne bloki, bez ponownej minifikacji:
+
+```js
+// obesity_response_criteria.js — czytelny blok przed obiektem modułu (od nowej linii)
+//    było:  …zdanieGrupy(nazwa,wiek){…}var g={CRITERIA:d,…,zdaniaLeku:zdaniaLeku,zdanieGrupy:zdanieGrupy};
+//    jest:  …zdanieGrupy(nazwa,wiek){…}
+//           /* P-OTYLOSC-WZROST … */ function Pw_ms(t){…} function Pw_mies(p){…} function Pw_bmi(p){…}
+//           function tygodnieOceny(start,p){…} function Pw_okno(grupa,tygodnie){…} function punktOceny(kryterium,punkty){…}
+//           var g={CRITERIA:d,…,zdanieGrupy:zdanieGrupy,punktOceny:punktOceny,tygodnieOceny:tygodnieOceny};
+
+// obesity_therapy_monitor.js
+// 1. vt: wiek i masa obowiązkowe; wzrost opcjonalny przy module cykli, wpisany zły — błąd przy polu
+//    było:  if(!isFinite(o)||!(o>0)||!isFinite(r)||!(r>0)||!(s>0)){Cm("err","Uzupe\u0142nij co najmniej wiek, mas\u0119 i wzrost, aby doda\u0107 punkt leczenia.");return}
+//    jest:  if(!isFinite(o)||!(o>0)||!(s>0)||!Hc()&&!(isFinite(r)&&r>0)){Cm("err",Hm("doda\u0107 punkt leczenia"));return}var Hz=Hw(J("obesityHeight"));if(Hz.blad){Cm("err",Hz.blad),Hf("obesityHeight");return}r=Hz.wzrost;
+// 2. vt: odmowa modułu cykli wskazuje pole
+//    było:  Cr.wybor?Cw(Cr):Cm("err",Cr.komunikat);return}
+//    jest:  Cr.wybor?Cw(Cr):(Cm("err",Cr.komunikat),Hk(Cr.kod));return}
+// 3. Ed (czysta): wzrost opcjonalny, gdy jest moduł cykli (4. argument albo window); bez modułu — „braki” jak dotąd
+//    było:  var b=Number(u.weight),p=Number(u.height),M=Math.round(Number(u.ageMonthsTotal));if(!isFinite(b)||!(b>0)||!isFinite(p)||!(p>0)||!isFinite(M)||!(M>0))return{ok:!1,reason:"braki"};
+//    jest:  var b=Number(u.weight),p=u.height==null?NaN:Number(u.height),M=…,Hv=arguments.length>3?arguments[3]:typeof window<"u"?window.VildaCykleLeczenia:null;/* … */isFinite(p)&&p>0||(p=null);if(!isFinite(b)||!(b>0)||!isFinite(M)||!(M>0)||p==null&&!(Hv&&typeof Hv.sprawdz=="function"))return{ok:!1,reason:"braki"};
+// 4. Eb: wpisany zły wzrost — błąd przy polu
+//    było:  if(!Es)return!1;Cc();
+//    jest:  if(!Es)return!1;Cc();var Hz=Hw(J("obesityHeight"));if(Hz.blad){Cm("err",Hz.blad),Hf("obesityHeight");return!1}
+// 5. Eb: komunikat braków i wskazanie pola
+//    było:  b.reason==="braki"?"Uzupe\u0142nij co najmniej wiek, mas\u0119 i wzrost, aby zapisa\u0107 zmiany.":   …   Cm("err",p);return!1}
+//    jest:  b.reason==="braki"?Hm("zapisa\u0107 zmiany"):   …   Cm("err",p),Hk(b.reason);return!1}
+// 6. Eb: pytanie przy usunięciu wzrostu, który był (obok dawki i daty, OBESITY-EDIT-2)
+//    było:  f(Em.dateISO)&&!f(a)&&En.push(
+//    jest:  Number(Em.height)>0&&!(Hz.wzrost>0)&&En.push("Usuni\u0119cie wzrostu: …");f(Em.dateISO)&&!f(a)&&En.push(
+// 7. Ep: data pomiaru tej wizyty, a gdy nie jest pewna — dzisiejsza
+//    było:  Ek("obesityHeight",s),Ek("obesityDate",Et())
+//    jest:  Ek("obesityHeight",s),Ek("obesityDate",Hd()||Et())
+// 8. podgląd przycisków (CyS, CyE) z wzrostem z formularza, odświeżenie podpowiedzi wzrostu, nasłuch pola wzrostu
+//    było:  weight:1,height:1,dateISO:r          jest:  weight:1,height:x("obesityHeight"),dateISO:r
+//    było:  n.type=t.type,n.ageYears=t.ageYears,n.ageMonths=t.ageMonths,n.dateISO=t.dateISO
+//    jest:  n.type=t.type,n.ageYears=t.ageYears,n.ageMonths=t.ageMonths,n.height=t.height,n.dateISO=t.dateISO
+//    było:  function CyS(){                      jest:  function CyS(){typeof Hl=="function"&&Hl();
+//    było:  ["obesityDate","obesityAge","obesityAgeMonths"].forEach(…
+//    jest:  ["obesityDate","obesityAge","obesityAgeMonths","obesityHeight"].forEach(…
+// 9. teksty podpowiedzi Zakończenia (CyZ, CsZ): „masę i wzrost” → „masę (u dziecka także wzrost)”
+// 10. czytelny blok przed Ep (od nowej linii): Hc, Hm, Hw, Hf, Hk, Hd, Hl
+
+// vilda_auth_ui.js (Ob_b w Ml)
+// 1. wejście oceny z punktu oceny
+//    było:  var mt=x!=null&&k!=null&&!s?k-x:null,f=$.evaluate(it,{weeks:Q,massPct:N,bmiPct:H,bmiSdsDelta:mt}),K=null,P="";
+//    jest:  var Ob_po=typeof Ob_pkt=="function"?Ob_pkt($,it,o,l,c,a,n,Ob_g,Ob_m,N,u):null;Ob_po&&Ob_po.inny&&(Q=Ob_po.weeks,_=Ob_po.zWieku,H=Ob_po.bmiPct);var mt=Ob_po&&Ob_po.inny?Ob_po.bmiSdsDelta:x!=null&&k!=null&&!s?k-x:null,f=Ob_po&&Ob_po.wstrzymaj?null:$.evaluate(…),K=null,P="";
+// 2. kafelek „Wzrost do oceny” za „Próg ChPL”
+//    było:  ht.thresholdPct!=null?"%":"",ht.label));var KT=
+//    jest:  ht.thresholdPct!=null?"%":"",ht.label)),Ob_po&&Ob_po.kafelek&&ot.push(Ob_po.kafelek);var KT=
+// 3. stan wstrzymania albo dopisek o punkcie oceny — po wyborze werdyktu, przed notą o kotwicy nominalnej
+//    było:  :gt={cls:"wait",ic:"\u2139\uFE0F",title:"Ocena niedost\u0119pna",desc:""};try{if(gt&&f&&f.anchorMode==="nominalna"
+//    jest:  :gt={…};Ob_po&&(Ob_po.wstrzymaj&&Ob_po.stan?gt=Ob_po.stan:Ob_po.inny&&gt&&Ob_po.dopisek&&(gt.desc=(gt.desc?gt.desc+" ":"")+Ob_po.dopisek));try{if(gt&&f&&f.anchorMode==="nominalna"
+// 4. kafelek „Redukcja BMI”: podpis, gdy ostatni wpis nie ma wzrostu
+//    było:  s?"dodaj punkt kontrolny":null));var V=
+//    jest:  s?"dodaj punkt kontrolny":v==null?"ostatni wpis bez wzrostu":null));var V=
+// 5. czytelny blok Ob_pkt przed function Ob_css( (od nowej linii)
+```
+
+**Dlaczego strażnicy `typeof`.** `tests/unit/monitor-otylosci-r6.test.mjs` uruchamia wycinek monitora z `CyS` bez czytelnego bloku — `CyS` woła `Hl` tylko, gdy istnieje. W `Ob_b` `Ob_pkt` jest wołane przez `typeof`, a przy jego braku albo przy module kryteriów bez `punktOceny` (starsza wersja w pamięci) `Ob_po` jest `null`, czyli ocena jak przed etapem 1.
+
+**Dlaczego `Ed` bez pomocników.** `tests/unit/otylosc-edycja-punktu.test.mjs` wycina `function Ed(t,e,n)` … `function Q(t)` razem z `L` i `f` — reguła wzrostu jest więc w samym `Ed` (moduł cykli z 4. argumentu albo z `window`, jak dotąd w `Cv`).
+
+**Granice.** Znaczniki wycinków testów bez zmian: w monitorze `function L(t,e)`, `var g=""`, `var ft="`, `function R(t)`, `function Ed(t,e,n)`, `function Q(t)`, `function Eh()`, `function Ee(t)`, `function Eo(t)`, `function Et(t)`, `function Ek(t,e)`, `function CyB(t)`, `function z()`, `function CyL(t)`, `function CyG(t,e)`; w Karcie `function Ye(`, `function An(`, `function Ob_ks(`, `function Ob_css(`, `if(Ob_m.bad&&Ob_m.bad.length){`, `/* Zakonczony cykl`. Czytelny blok `Ob_pkt` leży w wycinku `function Ob_ks(` … `function Ob_css(` testów Karty — tylko jako deklaracja, której te testy nie wołają. Bez nowych stylów ustawianych wprost na elementach. Sejf, eksport i import bez zmian.
 
 ## Trwała tożsamość wizyt — źródło i granica artefaktu sejfu
 
@@ -1964,6 +2030,12 @@ Od E3-PR0b2b (P-NOTATKA-POZNIEJSZA) bazą delty jest obraz sejfu po tej zmianie 
 wizyt: SHA-256 `a9672e38d4890b2516d3afd2f184006ad72ec4443cad8df7663d42abbb5731c4`. Baza z E3-PR0b2a
 (`5d77d036…`) odpowiada stanowi sprzed E3-PR0b2b (`audyt` `3c1fc748`); bieżącą bazę daje to samo
 odwrócenie delty co wyżej.
+
+Od 2c (P-DOWOD-KROKU, 2026-11-18: nowy blok natywny z repozytorium źródeł modułu i bez haka
+`40-visit-metadata`) bazą delty jest SHA-256
+`fe4fad0b1119e4e6ee6fdaaca793f12d76614e4cac418328fc38756895c6fe2c`, a wynikiem — bieżący
+`vilda_vault.js` (`175fb1ab57b47cf4b58d19369536722edc1177c1c3d7f83311e63727298bff9b`). Bazę daje to
+samo odwrócenie delty co wyżej.
 
 Każdy punkt wpięcia musi występować dokładnie raz. Narzędzie odrzuca inne
 bajty bazy, zmianę źródła bez zgodnego manifestu, niejednoznaczny punkt wpięcia
@@ -2017,6 +2089,28 @@ szyfrowanie, serializację źródła odzyskiwania i ponowne szyfrowanie tożsamo
 starsze dane, izolację sesji, odrzucenie dodatkowych pól i odtworzenie drzewa.
 Test precache obejmuje wszystkie 202 adresy modułów, w tym 151 historycznych.
 
+*(2026-11-18, 2c, P-DOWOD-KROKU.)* Kodek z tożsamością usuniętej wizyty ma teraz
+źródło w repozytorium źródeł modułu (`vilda-source`,
+`client/patient-clinical-workspace-source/codec.mjs`), a aktywną rodzinę modułów
+buduje tamtejszy budowniczy (niżej, „Moduł planów z etapami — blok natywny sejfu
+i rodzina modułów z repozytorium źródeł modułu”). Kopia
+`runtime/durable-visits-v1/workspace-source-codec.mjs` zostaje: jest bajt w bajt
+równa modułowi `codec.mjs` aktywnej rodziny (test w
+`visits-workspace-codec.test.mjs`). `tools/build-visits-workspace-family.mjs`
+zostaje dowodem historycznej rodziny `67818dc1656f`: domyślne uruchomienie
+odtwarza ją z rodziny `e410c8725541` i czytelnego kodeka i sprawdza, że jej 51
+modułów leży bajt w bajt wśród `historicalFiles`, a sejf jej nie wybiera
+(„Visit workspace family: 67818dc1656f… (51 modules; historical bytes
+retained).”); `--write` odmawia, gdy aktywna jest inna rodzina, więc nie
+przywróci starej. Hak `40-visit-metadata` delty trwałych wizyt (zmiana adresu
+importu rodziny wewnątrz fragmentu natywnego) jest usunięty — blok natywny
+z budowniczego ma już adres aktywnej rodziny; delta ma 41 haków. Test precache
+obejmuje 253 adresy modułów, w tym 202 historyczne. Zdanie wyżej, że skróty
+pierwotnego fragmentu w manifeście opisują bazę dowodu, a zmianę adresu importu
+obejmuje delta wizyt, dotyczy rodziny `67818dc1656f`. Od 2c `fragmentSHA256`
+w manifeście opisuje blok natywny w `vilda_vault.js` taki, jaki jest, a delta
+trwałych wizyt bloku nie zmienia.
+
 ### Transport trzech zasobów interfejsu wizyt w PWA
 
 `vilda_visit_context.js`, `vilda_visit_history_ui.js` i
@@ -2050,3 +2144,84 @@ pozostają bez zmian. Testy `visit-ui-precache-pack.test.mjs` sprawdzają
 oryginalne treści, MIME, zakres `/vilda-calc/`, odrzucenie uszkodzeń i błędy
 zapisu; `sw-precache-stron.test.mjs` nadal wykonuje rzeczywisty worker,
 sprawdza wszystkie wymagane klucze oraz niezmienione budżety.
+
+## Moduł planów z etapami — blok natywny sejfu i rodzina modułów z repozytorium źródeł modułu (2c, 2026-11-18)
+
+Fragment natywny w `vilda_vault.js` (tekst między `/* BEGIN VILDA CLINICAL WORKSPACE NATIVE V1 */`
+a `/* END VILDA CLINICAL WORKSPACE NATIVE V1 */`), rodzinę modułów `runtime/clinical-workspace-v1/<12
+znaków drzewa>/`, jej archiwum precache, `runtime/clinical-workspace-v1/manifest.json` oraz sekcje
+`BEGIN/END CLINICAL WORKSPACE PRECACHE V1` i `CLINICAL_WORKSPACE_PRECACHE_PACK` w
+`service-worker-kalorii.js` buduje `tools/build-clinical-workspace-runtime.mjs` w prywatnym
+repozytorium źródeł modułu (`vilda-source`). Czytelne źródła są tam w
+`client/patient-clinical-workspace*/`. Bieżące artefakty: commit
+`f2130f8993aa9f07de8b4ef7970b2cf23127c8dc`, drzewo
+`0278bf7106c27008499d80c14acf3e2d733cccb52f3b06debbd91c443874cb25` (51 modułów), `fragmentSHA256`
+`f1605482c3466e86c9c7ff94e19859eeaea8a70b5e6ccb0fad4fa302f2101d78`, `integratedVaultSHA256`
+`077c76e943710aff8712b87921fd288d12b24d8a30a5c7787a53e89f45c8fb97`, archiwum
+`runtime/clinical-workspace-v1/0278bf7106c2/precache-3689c59590e5.json`. Baza sejfu bez zmian:
+`44d82633d45bf9db1e964457c69d07f2009b683848a00d21315fc63fdd542499`.
+
+Warstwy `vilda_vault.js` od środka: baza → blok natywny i 16 haków natywnych (manifest,
+`nativeHooks`) → delta Kt/V (`tools/klirens-ktv-vault-delta.mjs`, poza blokiem) → delta trwałych
+wizyt (`runtime/durable-visits-v1/`, `tools/visits-vault-delta.mjs`). Budowniczy zna tylko dwie
+pierwsze. Jego `vilda_vault.js` nie ma delty Kt/V ani trwałych wizyt — **nie kopiować go do tego
+repozytorium.**
+
+Nowe artefakty (budowniczy uruchamiany tylko z `--output` na kopii tego repozytorium, nigdy na samym
+repozytorium). Budowniczy importuje parser `acorn`, więc w checkoutcie repozytorium źródeł modułu najpierw
+`npm ci`:
+
+```bash
+(cd <vilda-source> && npm ci)
+node --input-type=module -e "import { readFileSync, writeFileSync } from 'node:fs'; import { reduceClinicalWorkspaceVault } from './tools/check_clinical_workspace_boundary.mjs'; writeFileSync('/tmp/vilda-baza-sejfu.js', reduceClinicalWorkspaceVault(readFileSync('vilda_vault.js', 'utf8')));"
+sha256sum /tmp/vilda-baza-sejfu.js   # = baseVaultSHA256 z manifestu i BASE z kontroli granicy
+mkdir -p /tmp/vilda-kopia && git archive HEAD | tar -x -C /tmp/vilda-kopia
+node <vilda-source>/tools/build-clinical-workspace-runtime.mjs --source-vault /tmp/vilda-baza-sejfu.js --output /tmp/vilda-kopia
+```
+
+Z kopii do repozytorium:
+1. Katalog nowej rodziny z archiwum precache i `runtime/clinical-workspace-v1/manifest.json` bez zmian.
+   Dawne rodziny zostają (manifest przenosi je do `historicalFiles`).
+2. W `service-worker-kalorii.js` tylko sekcja `BEGIN/END CLINICAL WORKSPACE PRECACHE V1` (dawne adresy
+   zostają) i `CLINICAL_WORKSPACE_PRECACHE_PACK`.
+3. W `vilda_vault.js` tylko tekst między znacznikami `BEGIN` i `END VILDA CLINICAL WORKSPACE NATIVE V1`
+   — zastąpiony blokiem z `vilda_vault.js` kopii; poza blokiem bajt w bajt.
+
+Kontrola warstw: `restoreKtvVaultBaseline(restoreDurableVisitsBaseline(vilda_vault.js))` ma skrót
+`integratedVaultSHA256` z manifestu budowniczego, a budowniczy z `--check` na kopii, w której
+`vilda_vault.js` zastąpiono tym obrazem pośrednim, kończy się „Checked 257 clinical workspace runtime
+files.” (stan 2c):
+
+```bash
+node --input-type=module -e "import { readFileSync, writeFileSync } from 'node:fs'; import { restoreDurableVisitsBaseline } from './tools/visits-vault-delta.mjs'; import { restoreKtvVaultBaseline } from './tools/klirens-ktv-vault-delta.mjs'; writeFileSync('/tmp/vilda-obraz-posredni.js', restoreKtvVaultBaseline(restoreDurableVisitsBaseline(readFileSync('vilda_vault.js', 'utf8'))));"
+sha256sum /tmp/vilda-obraz-posredni.js   # = integratedVaultSHA256 z runtime/clinical-workspace-v1/manifest.json
+rm -rf /tmp/vilda-kontrola && mkdir -p /tmp/vilda-kontrola && git archive HEAD | tar -x -C /tmp/vilda-kontrola
+cp /tmp/vilda-obraz-posredni.js /tmp/vilda-kontrola/vilda_vault.js
+node <vilda-source>/tools/build-clinical-workspace-runtime.mjs --source-vault /tmp/vilda-baza-sejfu.js --output /tmp/vilda-kontrola --check
+```
+
+Polecenia czytają pliki zatwierdzone w `HEAD`; zmiany jeszcze niezatwierdzone trzeba najpierw zatwierdzić albo
+skopiować do kopii.
+
+Potem delta trwałych wizyt: hak, którego tekst zmienił się wewnątrz bloku, usunąć albo przepisać
+(w 2c usunięty hak `40-visit-metadata`); bazę delty (odwrócenie delty wyżej, „Trwała tożsamość
+wizyt”) zapisać w `runtime/durable-visits-v1/manifest.json` (`baseVaultSHA256`),
+`tools/visits-vault-delta.mjs` (`BASE`) i `tests/unit/visits-vault-boundary.test.mjs`, a
+`integratedVaultSHA256` = skrót nowego `vilda_vault.js`. Na końcu `node tools/visits-vault-delta.mjs`,
+`node tools/check_clinical_workspace_boundary.mjs` i testy rodziny i pamięci offline
+(`visits-workspace-codec`, `clinical-workspace-precache-pack`, `sw-precache-stron`). Blok natywny
+zmienia się tylko w środku, więc baza sejfu (`baseVaultSHA256`, `BASE`) zostaje, o ile nie zmieniły
+się haki natywne.
+
+Adres `vilda_care_plan_mutation.js?v=…` stoi wewnątrz bloku natywnego i ustawia go repozytorium
+źródeł modułu; kontrola granicy wymaga, żeby ten adres był w pamięci offline. Po zmianie
+`vilda_care_plan_mutation.js`, `vilda_care_plan_model.js` albo `vilda_care_template_model.js` tutaj trzeba
+nowych kopii tych plików w testach repozytorium źródeł (pin SHA-256 wszystkich trzech) i nowych artefaktów.
+
+`npm run podbij-wersje` daje zmienionemu `vilda_care_plan_mutation.js` numer o jeden większy niż najwyższy
+w `audyt` i przepisuje ten adres we wszystkich skryptach korzenia, także w bloku natywnym. Numer we fragmencie
+z repozytorium źródeł modułu musi więc być tym samym numerem (w 2c: `?v=3`, bo `audyt` `fe4f1754` ma najwyżej
+`?v=2`). Gdy podbicie zmieni blok, `node tools/check_clinical_workspace_boundary.mjs` (także w `npm test`)
+i `node tools/visits-vault-delta.mjs` kończą się błędem — wtedy nowy fragment z tym numerem z repozytorium
+źródeł modułu, nie zmiana ręczna.
+

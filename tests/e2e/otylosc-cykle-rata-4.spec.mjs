@@ -84,7 +84,7 @@ const tekst = (loc) => loc.evaluate((e) => e.textContent.replace(/\s+/g, ' ').tr
 const KOMUNIKAT_CY11 = 'Ta wizyta ma inną substancję czynną (Wegovy) niż wcześniejsze wizyty cyklu 1 (Saxenda). Zmiana substancji czynnej zaczyna nowy cykl: zapisz najpierw Zakończenie cyklu 1 z lekiem Saxenda (może mieć tę samą datę), a tę wizytę jako Włączenie nowego cyklu.';
 const POZYCJA_R6 = 'W cyklu 1 zmienia się substancja czynna: Saxenda (do 12.04.2024) → Wegovy (od 12.07.2024) bez Zakończenia między nimi.';
 const PRZYPOMNIENIE_KROK_2 = 'Zakończenie zapisane. Teraz zmień wizytę 12.07.2024 na Włączenie (ołówek przy wizycie) — nie dopisuj nowego Włączenia.';
-const PODPOWIEDZ_R6 = 'Wpisz wizytę kończącą leczenie Saxenda — datę (najpóźniej 12.07.2024; może być ten sam dzień), masę i wzrost — wybierz w liście lek Saxenda i „Zakończenie leczenia”. Potem zmień wizytę 12.07.2024 na Włączenie (ołówek przy wizycie).';
+const PODPOWIEDZ_R6 = 'Wpisz wizytę kończącą leczenie Saxenda — datę (najpóźniej 12.07.2024; może być ten sam dzień), masę (u dziecka także wzrost) — wybierz w liście lek Saxenda i „Zakończenie leczenia”. Potem zmień wizytę 12.07.2024 na Włączenie (ołówek przy wizycie).';
 
 test('CY-11: przyciski z innym lekiem wyłączone z powodem i odświeżane po zmianie leku na liście', async ({ page }) => {
   test.setTimeout(120_000);

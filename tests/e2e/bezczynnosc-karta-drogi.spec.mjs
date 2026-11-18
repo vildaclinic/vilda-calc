@@ -13,7 +13,7 @@ test.setTimeout(120_000);
 
 test('blokada ręczna zaczęta w ramce bez formularza: karta zostaje w powłoce z ekranem logowania, stan roboczy znika od razu', async ({ page }) => {
   const { calendar, patientId } = await openShellWithPatient(page);
-  const navigated = page.waitForEvent('framenavigated', { predicate: current => current === page.mainFrame() });
+  const navigated = page.waitForEvent('framenavigated', { predicate: current => current === page.mainFrame(), timeout: 30_000 });
   // Stan karty odczytany w tym samym zadaniu co blokada i zapisany w pamięci karty: dokument główny zaraz
   // się przeładuje, a odpowiedź z ramki mogłaby nie zdążyć przed jej wymianą.
   await calendar.evaluate(keys => {
