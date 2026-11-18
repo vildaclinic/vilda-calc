@@ -1998,7 +1998,11 @@ retained).”); `--write` odmawia, gdy aktywna jest inna rodzina, więc nie
 przywróci starej. Hak `40-visit-metadata` delty trwałych wizyt (zmiana adresu
 importu rodziny wewnątrz fragmentu natywnego) jest usunięty — blok natywny
 z budowniczego ma już adres aktywnej rodziny; delta ma 41 haków. Test precache
-obejmuje 253 adresy modułów, w tym 202 historyczne.
+obejmuje 253 adresy modułów, w tym 202 historyczne. Zdanie wyżej, że skróty
+pierwotnego fragmentu w manifeście opisują bazę dowodu, a zmianę adresu importu
+obejmuje delta wizyt, dotyczy rodziny `67818dc1656f`. Od 2c `fragmentSHA256`
+w manifeście opisuje blok natywny w `vilda_vault.js` taki, jaki jest, a delta
+trwałych wizyt bloku nie zmienia.
 
 ### Transport trzech zasobów interfejsu wizyt w PWA
 
@@ -2057,9 +2061,11 @@ pierwsze. Jego `vilda_vault.js` nie ma delty Kt/V ani trwałych wizyt — **nie 
 repozytorium.**
 
 Nowe artefakty (budowniczy uruchamiany tylko z `--output` na kopii tego repozytorium, nigdy na samym
-repozytorium):
+repozytorium). Budowniczy importuje parser `acorn`, więc w checkoutcie repozytorium źródeł modułu najpierw
+`npm ci`:
 
 ```bash
+(cd <vilda-source> && npm ci)
 node --input-type=module -e "import { readFileSync, writeFileSync } from 'node:fs'; import { reduceClinicalWorkspaceVault } from './tools/check_clinical_workspace_boundary.mjs'; writeFileSync('/tmp/vilda-baza-sejfu.js', reduceClinicalWorkspaceVault(readFileSync('vilda_vault.js', 'utf8')));"
 sha256sum /tmp/vilda-baza-sejfu.js   # = baseVaultSHA256 z manifestu i BASE z kontroli granicy
 mkdir -p /tmp/vilda-kopia && git archive HEAD | tar -x -C /tmp/vilda-kopia
@@ -2082,7 +2088,13 @@ files.” (stan 2c):
 ```bash
 node --input-type=module -e "import { readFileSync, writeFileSync } from 'node:fs'; import { restoreDurableVisitsBaseline } from './tools/visits-vault-delta.mjs'; import { restoreKtvVaultBaseline } from './tools/klirens-ktv-vault-delta.mjs'; writeFileSync('/tmp/vilda-obraz-posredni.js', restoreKtvVaultBaseline(restoreDurableVisitsBaseline(readFileSync('vilda_vault.js', 'utf8'))));"
 sha256sum /tmp/vilda-obraz-posredni.js   # = integratedVaultSHA256 z runtime/clinical-workspace-v1/manifest.json
+rm -rf /tmp/vilda-kontrola && mkdir -p /tmp/vilda-kontrola && git archive HEAD | tar -x -C /tmp/vilda-kontrola
+cp /tmp/vilda-obraz-posredni.js /tmp/vilda-kontrola/vilda_vault.js
+node <vilda-source>/tools/build-clinical-workspace-runtime.mjs --source-vault /tmp/vilda-baza-sejfu.js --output /tmp/vilda-kontrola --check
 ```
+
+Polecenia czytają pliki zatwierdzone w `HEAD`; zmiany jeszcze niezatwierdzone trzeba najpierw zatwierdzić albo
+skopiować do kopii.
 
 Potem delta trwałych wizyt: hak, którego tekst zmienił się wewnątrz bloku, usunąć albo przepisać
 (w 2c usunięty hak `40-visit-metadata`); bazę delty (odwrócenie delty wyżej, „Trwała tożsamość
@@ -2096,6 +2108,13 @@ się haki natywne.
 
 Adres `vilda_care_plan_mutation.js?v=…` stoi wewnątrz bloku natywnego i ustawia go repozytorium
 źródeł modułu; kontrola granicy wymaga, żeby ten adres był w pamięci offline. Po zmianie
-`vilda_care_plan_mutation.js` albo `vilda_care_plan_model.js` tutaj trzeba nowych kopii tych plików
-w testach repozytorium źródeł (pin SHA-256) i nowych artefaktów.
+`vilda_care_plan_mutation.js`, `vilda_care_plan_model.js` albo `vilda_care_template_model.js` tutaj trzeba
+nowych kopii tych plików w testach repozytorium źródeł (pin SHA-256 wszystkich trzech) i nowych artefaktów.
+
+`npm run podbij-wersje` daje zmienionemu `vilda_care_plan_mutation.js` numer o jeden większy niż najwyższy
+w `audyt` i przepisuje ten adres we wszystkich skryptach korzenia, także w bloku natywnym. Numer we fragmencie
+z repozytorium źródeł modułu musi więc być tym samym numerem (w 2c: `?v=3`, bo `audyt` `fe4f1754` ma najwyżej
+`?v=2`). Gdy podbicie zmieni blok, `node tools/check_clinical_workspace_boundary.mjs` (także w `npm test`)
+i `node tools/visits-vault-delta.mjs` kończą się błędem — wtedy nowy fragment z tym numerem z repozytorium
+źródeł modułu, nie zmiana ręczna.
 
