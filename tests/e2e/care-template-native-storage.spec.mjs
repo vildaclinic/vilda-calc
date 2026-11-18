@@ -476,6 +476,89 @@ test('ordinary incoming sync cannot delete or reassign a staged plan, its patien
   await assertOrdinaryAccount(page, ids, original, requests);
 });
 
+// SHA-256 of every store of the signed-in account's native database, read without the vault.
+function nativeDigest(device) {
+  return device.evaluate(async () => {
+    const name = window.VildaVault.USER_DB_PREFIX + window.VildaVault.getCurrentUser().userId;
+    const database = await new Promise((resolve, reject) => {
+      const request = indexedDB.open(name);
+      request.onupgradeneeded = () => { request.transaction.abort(); reject(new Error('Native source observer cannot create storage')); };
+      request.onerror = () => reject(request.error); request.onsuccess = () => resolve(request.result);
+    });
+    let image;
+    try {
+      const names = [...database.objectStoreNames].sort();
+      image = await new Promise((resolve, reject) => {
+        const transaction = database.transaction(names, 'readonly');
+        const rows = names.map(store => transaction.objectStore(store).getAll());
+        transaction.oncomplete = () => resolve(names.map((store, index) => [store, rows[index].result]));
+        transaction.onabort = transaction.onerror = () => reject(transaction.error);
+      });
+    } finally { database.close(); }
+    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(image)));
+    return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
+  });
+}
+
+// The check before a merge predicts the winner of each note with the vault's own note rule (the later content change
+// wins; the revision decides only between equal content instants). Another device moves its older copy of a step's
+// evidence document to the second patient with a new text: a lower revision and a later content. The merge would take
+// that version, so the check refuses the whole payload before any write. The former revision-first rule in the check
+// skipped this note, and the merge then moved the evidence to the other patient without a refusal.
+test('another device moving step evidence to another patient with a lower revision and later content is refused before the merge', async ({ page, browser, baseURL }) => {
+  const { ids } = await seedNativeAccount(page);
+  const { panel, plan: saved } = await applyFromLibrary(page, ids);
+  const day = await activateFirstStage(page, panel);
+  const otherContext = await browser.newContext({ baseURL, locale: 'pl-PL', timezoneId: 'Europe/Warsaw', serviceWorkers: 'block' });
+  try {
+    const other = await otherContext.newPage(); await openNativePage(other);
+    const syncCode = await page.evaluate(password => window.VildaVault.exportSyncCode(password), PASSWORD);
+    await other.evaluate(({ syncCode, password }) => window.VildaVault.importSyncCode(syncCode, password, {
+      label: 'Fikcyjne drugie urządzenie z kopią dowodu kroku',
+    }), { syncCode, password: PASSWORD });
+    await other.reload({ waitUntil: 'load' }); await readyForPatient(other);
+    await other.evaluate(() => window.VildaSyncIntegration.setSyncEnabled(false));
+    // The other device receives the document at its first revision.
+    const initial = await page.evaluate(() => window.VildaVault.exportSyncPayload());
+    await other.evaluate(payload => window.VildaVault.mergeSyncPayload(payload), initial);
+    expect(await other.evaluate(id => window.VildaVault.getPatientNote(id).then(note => note && note.rev), ids.note)).toBe(1);
+    // This device corrects the document twice (revision 3) before it becomes step evidence.
+    await page.evaluate(async ({ patientId, id }) => {
+      for (const body of ['Fikcyjna pierwsza poprawka na tym urządzeniu.', 'Fikcyjna druga poprawka na tym urządzeniu.'])
+        await window.VildaVault.savePatientNote({ patientId, id, title: 'Fikcyjna wcześniejsza notatka', body, category: 'observation' });
+    }, { patientId: ids.a, id: ids.note });
+    // Later, the other device moves its copy to the second patient with a new text: revision 2, a later content.
+    await other.evaluate(async ({ patientId, id }) => {
+      await window.VildaVault.savePatientNote({ patientId, id, title: 'Fikcyjna wcześniejsza notatka',
+        body: 'Fikcyjna treść przeniesiona na innym urządzeniu.', category: 'observation' });
+    }, { patientId: ids.b, id: ids.note });
+    const incoming = await other.evaluate(() => window.VildaVault.exportSyncPayload());
+    const carried = incoming.patientNotes.find(note => note.id === ids.note);
+    const evidence = await page.evaluate(async ({ ids, planId, day }) => {
+      const vault = window.VildaVault, source = await vault.getPatientNote(ids.note), current = await vault.getCarePlan(planId);
+      const recorded = await vault.mutateStagedCarePlan({ action: 'recordFact', operationId: crypto.randomUUID(),
+        planId, patientId: ids.a, expectedRevision: current.rev, stepId: current.careContext.steps[0].id,
+        factId: crypto.randomUUID(), kind: 'performance', effectiveDateISO: day,
+        evidence: { noteId: source.id, sourceRecordRevAtCapture: source.rev } });
+      if (!recorded.saved) throw new Error('Actual native evidence link was not saved');
+      return source;
+    }, { ids, planId: saved.id, day });
+    expect({ patientId: carried.patientId, lowerRevision: carried.rev < evidence.rev, laterContent: carried.updatedAtISO > evidence.updatedAtISO },
+      'the payload carries the evidence under another patient with a lower revision and a later content').toEqual({ patientId: ids.b, lowerRevision: true, laterContent: true });
+    const read = () => page.evaluate(async ({ noteId, planId }) => ({
+      note: await window.VildaVault.getPatientNote(noteId), plan: await window.VildaVault.getCarePlan(planId),
+    }), { noteId: ids.note, planId: saved.id });
+    const before = await read(), digest = await nativeDigest(page);
+    const code = await page.evaluate(async payload => {
+      try { await window.VildaVault.mergeSyncPayload(payload); return null; } catch (error) { return error.code || error.name; }
+    }, incoming);
+    expect(code, 'the check before the merge refuses the payload').toBe('CARE_NATIVE_DOCUMENT_REFERENCED');
+    expect(await read(), 'the evidence and the plan on this device are unchanged').toEqual(before);
+    expect(before.note).toMatchObject({ patientId: ids.a, rev: evidence.rev, body: 'Fikcyjna druga poprawka na tym urządzeniu.' });
+    expect(await nativeDigest(page), 'no native store was written').toBe(digest);
+  } finally { await otherContext.close(); }
+});
+
 test('an actual encrypted parent-only delta hides a stale physical reminder before its child delta arrives', async ({ page, browser, baseURL }) => {
   const { ids, original, requests } = await seedNativeAccount(page);
   const { panel, plan: saved } = await applyFromLibrary(page, ids);

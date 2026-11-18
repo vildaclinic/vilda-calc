@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
+import { webcrypto } from 'node:crypto';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import vm from 'node:vm';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
 import { wytnijFunkcje } from './sesja-zapisu-uprzaz.mjs';
 
@@ -23,9 +25,11 @@ import { wytnijFunkcje } from './sesja-zapisu-uprzaz.mjs';
 // 4. Luki modułu planów z etapami (decyzja właściciela z 2026-11-16: reguła wchodzi od razu, poprawka modułu osobno):
 //    2c — dowód kroku według chwili zmiany treści dokumentu (decyzja właściciela z 2026-11-17: pole niesie chwilę
 //    zmiany treści dokumentu; nowe pole w dwóch wydaniach: najpierw odczyt i porównanie, zapis pola dopiero po
-//    potwierdzeniu właściciela); reguła notatek we fragmencie natywnym — z artefaktów repozytorium źródeł modułu (do tego
-//    czasu przypięta tu dawna reguła fragmentu).
-// Opis: docs/clinical/ALGORITHMS.md (P-NOTATKA-POZNIEJSZA, P-KONFLIKT-ZAPISU-NOTATKI „Ograniczenia”), docs/CARE_PLANS.md.
+//    potwierdzeniu właściciela); reguła notatek we fragmencie natywnym — z artefaktów repozytorium źródeł modułu
+//    (vilda-source, commit f2130f8993aa9f07de8b4ef7970b2cf23127c8dc): kontrola przed scaleniem wybiera zwycięzcę notatki
+//    i nagrobka jak scalanie, a moduł zapisu planu porównuje dowód z polem po chwili treści, jak ekran planu i sejf.
+// Opis: docs/clinical/ALGORITHMS.md (P-NOTATKA-POZNIEJSZA, P-KONFLIKT-ZAPISU-NOTATKI „Ograniczenia”, P-DOWOD-KROKU),
+// docs/CARE_PLANS.md.
 //
 // Dane wyłącznie fikcyjne. Prawdziwy vilda_crypto.js + vilda_vault.js na adapterze pamięciowym, podstawiony zegar Date.
 
@@ -478,15 +482,26 @@ describe('E3-PR0b2b — strażniki źródła: przeniesienie, Terminarz „Edytuj
     expect(narzedzie, 'narzędzie Klirensu (blok istniejącego wyniku) zgodne z blokiem w sejfie').toContain('Bnp_takSamoWidoczna(current, next.baseNote, next.id, next.baseUpdatedAtISO)');
   });
 
-  it('sejf: notatki według nowej reguły (Le pod blokadą i w filtrze, podgląd „Scal kopię konta”), listy i fragment natywny — dawnej', () => {
+  it('sejf: notatki według nowej reguły (Le pod blokadą i w filtrze, podgląd „Scal kopię konta”, kontrola przed scaleniem we fragmencie natywnym), listy — dawnej', () => {
     for (const f of ['function Bnp_nowsza(', 'function Bnp_staraRegula(', 'function Bnp_chwilaTresci(', 'function Bnp_chwilaStanu(', 'function Bks_wygrywaNotatka(', 'function Bnp_zPrzeniesienia(', 'function Bnp_bezChwil(']) expect(sejfZrodlo, f).toContain(f);
     const i = sejfZrodlo.indexOf('function Bks_planDanych(');
     const planDanych = sejfZrodlo.slice(i, sejfZrodlo.indexOf('\n}\n', i));
     expect(planDanych, 'podgląd: notatki i Terminarz').toContain('Bks_wygrywaNotatka');
     expect(planDanych, 'podgląd: listy pacjentów').toContain('Bks_wygrywaRev');
+    // Kontrola przed scaleniem we fragmencie natywnym (artefakty repozytorium źródeł modułu, vilda-source f2130f8993aa)
+    // przewiduje wynik scalenia, więc wybiera zwycięzcę jak Le: notatki — Bnp_nowsza z informacją o planie zapisanym
+    // tylko w zaszyfrowanej treści (Bnp_planyTutaj), nagrobka — Bnp_zwyciezcy z tą samą informacją. Działanie
+    // (odmowa dla dokumentu-dowodu przenoszonego ładunkiem z niższym rev i późniejszą treścią) sprawdza e2e
+    // tests/e2e/care-template-native-storage.spec.mjs.
     const od = sejfZrodlo.indexOf('/* BEGIN VILDA CLINICAL WORKSPACE NATIVE V1 */'), doo = sejfZrodlo.indexOf('/* END VILDA CLINICAL WORKSPACE NATIVE V1 */');
-    expect(sejfZrodlo.slice(od, doo), 'fragment natywny bez zmian (dawna reguła wins)')
-      .toContain("var wins = Bnp_rev(incoming) > Bnp_rev(stored) || Bnp_rev(incoming) === Bnp_rev(stored) && incoming.updatedAtISO > (stored.updatedAtISO || '');");
+    const fragment = sejfZrodlo.slice(od, doo);
+    expect(fragment, 'fragment natywny bez dawnej reguły wins (najpierw rev)').not.toContain('var wins = Bnp_rev(incoming) > Bnp_rev(stored)');
+    expect(fragment, 'fragment natywny: plan zapisany tylko w treści tutejszej notatki')
+      .toContain('var localPlans = await Bnp_planyTutaj([stored], [incoming], [incoming.id]); check();');
+    expect(fragment, 'fragment natywny: zwycięzca notatki jak w Le').toContain('var wins = Bnp_nowsza(incoming, stored, localPlans.has(incoming.id));');
+    expect(fragment, 'fragment natywny: plany tutaj dla nagrobka').toContain('var planyTutaj = await Bnp_planyTutaj(localRows, related, [tombId]); check();');
+    expect(fragment.match(/Bnp_zwyciezcy\([^)]*\)/g), 'fragment natywny: zwycięzca nagrobka z planami tutaj, jedno wywołanie')
+      .toEqual(['Bnp_zwyciezcy(localRows, related, planyTutaj)']);
     // Cała funkcja (wielowierszowa): rekord oryginału po edycji składany z poprzedniego rekordu bez jego pól chwil.
     const j = sejfZrodlo.indexOf('async function CareMvpWriteCalendarOriginal(');
     expect(j, 'funkcja zapisu oryginału terminu planu').toBeGreaterThan(0);
@@ -735,12 +750,12 @@ describe('E3-PR0b2b — luki modułu planów z etapami: dowód kroku według chw
 
   // Jedna reguła w trzech miejscach (sejf, ekran planu, moduł zapisu planu): funkcja ekranu wycięta z vilda_care_plans.js
   // ma dawać dla tych samych rekordów tę samą chwilę co Bnp_chwilaTresci z sejfu — z surowego rekordu i z odczytu
-  // getPatientNote (który podaje contentAtISO tylko przy ważnej kotwicy).
-  it('funkcja ekranu planu (stagedContentInstant) liczy chwilę treści tak samo jak sejf (Bnp_chwilaTresci) dla tych samych rekordów, przy ważnej i nieważnych kotwicach', async () => {
-    const ekran = new Function(`${wytnijFunkcje(zrodlo('vilda_care_plans.js'), 'stagedContentInstant')}\nreturn stagedContentInstant;`)();
-    const A = await sejf('A'), s = await dokument(A), r0 = bezChwil(await zapisana(A, s.id));
+  // getPatientNote (który podaje contentAtISO tylko przy ważnej kotwicy). Te same przypadki sprawdza test modułu zapisu
+  // planu z aktywnej rodziny modułów natywnych niżej.
+  const ekranPlanu = () => new Function(`${wytnijFunkcje(zrodlo('vilda_care_plans.js'), 'stagedContentInstant')}\nreturn stagedContentInstant;`)();
+  const KOTWICE = (() => {
     const U = '2026-11-16T09:00:00.000Z', C = '2026-11-16T08:30:00.000Z';
-    const KOTWICE = [
+    return [
       ['bez kotwicy', { updatedAtISO: U }],
       ['ważna kotwica', { updatedAtISO: U, contentAtISO: C, contentForISO: U }],
       ['kotwica innej chwili zapisu', { updatedAtISO: U, contentAtISO: C, contentForISO: '2026-11-16T08:45:00.000Z' }],
@@ -759,6 +774,13 @@ describe('E3-PR0b2b — luki modułu planów z etapami: dowód kroku według chw
       // Napis w postaci czterocyfrowej, który nie jest chwilą (miesiąc 13): reguła go nie liczy i nie rzuca wyjątku.
       ['chwila treści z niemożliwym miesiącem', { updatedAtISO: U, contentAtISO: '2026-13-16T08:30:00.000Z', contentForISO: U }],
     ];
+  })();
+  // Rekordy bez chwili zapisu (pole usunięte): sejf daje pusty napis, ekran i moduł zapisu — brak chwili.
+  const BEZ_CHWILI_ZAPISU = [{}, { contentAtISO: '2026-11-16T08:30:00.000Z', contentForISO: '2026-11-16T08:30:00.000Z' }, { contentAtISO: '2026-11-16T08:30:00.000Z' }];
+  it('funkcja ekranu planu (stagedContentInstant) liczy chwilę treści tak samo jak sejf (Bnp_chwilaTresci) dla tych samych rekordów, przy ważnej i nieważnych kotwicach', async () => {
+    const ekran = ekranPlanu();
+    const A = await sejf('A'), s = await dokument(A), r0 = bezChwil(await zapisana(A, s.id));
+    const C = '2026-11-16T08:30:00.000Z';
     for (const [opis, pola] of KOTWICE) {
       await A.adapter.putPatientNoteForUser(A.uid, { ...r0, ...pola });
       const surowy = await zapisana(A, s.id), odczyt = await A.vault.getPatientNote(s.id), wSejfie = chwilaTresciSejfu(surowy);
@@ -767,7 +789,7 @@ describe('E3-PR0b2b — luki modułu planów z etapami: dowód kroku według chw
       expect(odczyt.contentAtISO !== undefined, `${opis}: odczyt podaje contentAtISO tylko przy ważnej kotwicy`).toBe(wSejfie !== surowy.updatedAtISO);
     }
     // Bez chwili zapisu sejf daje pusty napis (żaden dowód mu nie odpowiada), ekran — brak chwili (dokument „zmieniony”).
-    for (const pola of [{}, { contentAtISO: C, contentForISO: C }, { contentAtISO: C }]) {
+    for (const pola of BEZ_CHWILI_ZAPISU) {
       const rekord = { ...r0, ...pola }; delete rekord.updatedAtISO;
       await A.adapter.putPatientNoteForUser(A.uid, rekord);
       const surowy = await zapisana(A, s.id), odczyt = await A.vault.getPatientNote(s.id);
@@ -782,6 +804,139 @@ describe('E3-PR0b2b — luki modułu planów z etapami: dowód kroku według chw
     const pustySurowy = await zapisana(A, s.id), pustyOdczyt = await A.vault.getPatientNote(s.id);
     expect([chwilaTresciSejfu(pustySurowy), ekran(pustySurowy)], 'pusta chwila zapisu: z surowego rekordu').toEqual(['', '']);
     expect([pustyOdczyt.updatedAtISO, pustyOdczyt.contentAtISO, ekran(pustyOdczyt)], 'pusta chwila zapisu: z odczytu getPatientNote').toEqual([null, undefined, null]);
+  });
+
+  // Trzecia kopia reguły: moduł zapisu planu z aktywnej rodziny modułów natywnych, zbudowanej w repozytorium źródeł
+  // modułu (vilda-source) — plan-service.mjs porównuje dowód z polem funkcją documentContentInstant z adapter.mjs, a adapter
+  // podaje dokument z chwilami rekordu (createNativeStage, konto przygotowane). Prawdziwe moduły z katalogu rodziny,
+  // import jak w testach rodziny (przez manifest), prawdziwe modele planu z tego repozytorium.
+  const manifestRodziny = JSON.parse(zrodlo('runtime/clinical-workspace-v1/manifest.json'));
+  const katalogRodziny = path.join(korzen, 'runtime/clinical-workspace-v1', manifestRodziny.moduleTreeSHA256.slice(0, 12),
+    'client/patient-clinical-workspace-native');
+  const modulRodziny = (plik) => import(pathToFileURL(path.join(katalogRodziny, plik)).href);
+  // Dokument czytany przez moduł na koncie przygotowanym: obraz z jedną kartą i jednym rekordem notatki. Odszyfrowana treść
+  // ma własne (fikcyjne, wcześniejsze) klucze chwil — moduł nie może ich przepuścić.
+  const TRESC_Z_CHWILAMI = { title: 'Fikcyjny wynik', body: 'Fikcyjna treść wyniku.', updatedAtISO: '2000-01-01T00:00:00.000Z',
+    contentAtISO: '2000-01-01T00:00:00.000Z', contentForISO: '2000-01-01T00:00:00.000Z' };
+  function obrazModulu(STORE_KEYS, rekordy = []) {
+    const image = { stores: Object.keys(STORE_KEYS).map((name) => ({ name, records: [] })), clinicalMeta: { key: 'singleton', value: {} }, shadows: [] };
+    const sklep = (name) => image.stores.find((store) => store.name === name).records;
+    sklep('patients').push({ key: 'fikcyjna-karta-modulu', value: { patientId: 'fikcyjna-karta-modulu', header: { name: 'Fikcyjna Pacjentka Modułu' } } });
+    for (const value of rekordy) sklep('patientNotes').push({ key: value.id, value });
+    return image;
+  }
+  const etapModulu = (createNativeStage, image, zegar) => createNativeStage({ accountId: 'fikcyjne-konto-modulu', image, assertCurrent() {},
+    legacyAdapter: {}, decrypt: async () => kopia(TRESC_Z_CHWILAMI), encrypt: async (value) => ({ iv: 'fikcyjny-iv', data: JSON.stringify(value) }),
+    clock: () => kopia(zegar) });
+  const rekordModulu = (pola, id = 'fikcyjny-dokument-modulu') => {
+    const r = { id, patientId: 'fikcyjna-karta-modulu', category: 'observation', rev: 1, bodyCipher: { iv: 'fikcyjny-iv', data: '{}' }, ...pola };
+    for (const k of Object.keys(r)) if (r[k] === undefined) delete r[k];
+    return r;
+  };
+  const ZEGAR_MODULU = { recordedAtISO: '2026-11-16T10:00:00.000Z', recordedLocalDateISO: '2026-11-16', originTimeZone: 'Europe/Warsaw' };
+
+  it('moduł zapisu planu z aktywnej rodziny (documentContentInstant z adapter.mjs, której używa plan-service.mjs) liczy chwilę treści tak samo jak ekran planu i sejf — trzy kopie reguły, jedna odpowiedź', async () => {
+    const adapterModulu = await modulRodziny('adapter.mjs');
+    expect(typeof adapterModulu.documentContentInstant, 'reguła chwili treści w module natywnym').toBe('function');
+    expect(readFileSync(path.join(katalogRodziny, 'plan-service.mjs'), 'utf8'), 'moduł zapisu bierze regułę z adaptera')
+      .toContain("import { documentContentInstant } from './adapter.mjs';");
+    const modul = adapterModulu.documentContentInstant, ekran = ekranPlanu();
+    async function odczytModulu(rekord) {
+      const etap = etapModulu(adapterModulu.createNativeStage, obrazModulu(adapterModulu.STORE_KEYS, [rekord]), ZEGAR_MODULU);
+      try { return await etap.transaction.getDocument(rekord.id); } finally { etap.finish(); }
+    }
+    const A = await sejf('A'), s = await dokument(A), r0 = bezChwil(await zapisana(A, s.id));
+    for (const [opis, pola] of KOTWICE) {
+      await A.adapter.putPatientNoteForUser(A.uid, { ...r0, ...pola });
+      const surowy = await zapisana(A, s.id), wSejfie = chwilaTresciSejfu(surowy);
+      const zSejfu = await A.vault.getPatientNote(s.id), zModulu = await odczytModulu(rekordModulu(pola));
+      expect([modul(surowy), ekran(surowy)], `${opis}: z surowego rekordu (moduł, ekran)`).toEqual([wSejfie, wSejfie]);
+      expect([modul(zSejfu), modul(zModulu), ekran(zModulu)], `${opis}: z odczytu sejfu i odczytu modułu`).toEqual([wSejfie, wSejfie, wSejfie]);
+      expect([zModulu.updatedAtISO, zModulu.contentAtISO, zModulu.contentForISO], `${opis}: odczyt modułu podaje chwile jak odczyt sejfu`)
+        .toEqual([zSejfu.updatedAtISO, zSejfu.contentAtISO, zSejfu.contentForISO]);
+    }
+    for (const pola of BEZ_CHWILI_ZAPISU) {
+      const rekord = { ...r0, ...pola }; delete rekord.updatedAtISO;
+      await A.adapter.putPatientNoteForUser(A.uid, rekord);
+      const surowy = await zapisana(A, s.id), zSejfu = await A.vault.getPatientNote(s.id), zModulu = await odczytModulu(rekordModulu(pola));
+      expect(chwilaTresciSejfu(surowy), JSON.stringify(pola)).toBe('');
+      expect([modul(surowy), modul(zSejfu), modul(zModulu), ekran(zModulu)], JSON.stringify(pola) + ': brak chwili').toEqual([null, null, null, null]);
+      expect([zModulu.updatedAtISO, zModulu.contentAtISO, zModulu.contentForISO], JSON.stringify(pola) + ': bez kluczy chwil z treści').toEqual([null, undefined, undefined]);
+    }
+    // Pusta chwila zapisu: z surowego rekordu sejf, ekran i moduł dają ten sam pusty napis; odczyt sejfu podaje brak chwili
+    // zapisu, odczyt modułu — pusty napis z rekordu. Pole dowodu nigdy nie jest pustym napisem (walidator modelu), więc
+    // każda z tych odpowiedzi daje „zmieniony”.
+    const pusty = { updatedAtISO: '', contentAtISO: '2026-11-16T08:30:00.000Z', contentForISO: '' };
+    await A.adapter.putPatientNoteForUser(A.uid, { ...r0, ...pusty });
+    const pustySurowy = await zapisana(A, s.id), pustyZModulu = await odczytModulu(rekordModulu(pusty));
+    expect([chwilaTresciSejfu(pustySurowy), ekran(pustySurowy), modul(pustySurowy)], 'pusta chwila zapisu: z surowego rekordu').toEqual(['', '', '']);
+    expect([modul(await A.vault.getPatientNote(s.id)), modul(pustyZModulu), pustyZModulu.contentAtISO], 'pusta chwila zapisu: z odczytów').toEqual([null, '', undefined]);
+  });
+
+  // Decyzja modułu zapisu na prawdziwych modułach: plan utworzony z szablonu przez plan-service.mjs na koncie przygotowanym
+  // (createNativeStage z adapter.mjs), potwierdzenie kroku istniejącym dokumentem z polem sourceRecordContentAtISOAtCapture
+  // (tak zapisze je drugie wydanie). Zapis przechodzi tylko wtedy, gdy pole jest dokładnie chwilą treści dokumentu według
+  // sejfu (Bnp_chwilaTresci) i ekranu planu; każda inna chwila, także ta sama zapisana bez milisekund, daje odmowę
+  // CARE_APPLICATION_DOCUMENT_CHANGED — przy tym samym rev dokumentu co w dowodzie. Dokument bez chwili zapisu — odmowa.
+  it('moduł zapisu planu z aktywnej rodziny (plan-service.mjs na adapterze konta przygotowanego) przyjmuje dowód z polem tylko przy chwili równej chwili treści dokumentu według sejfu — dokładny napis, ten sam rev', async () => {
+    const { createCarePlanService } = await modulRodziny('plan-service.mjs'), adapterModulu = await modulRodziny('adapter.mjs');
+    const okno = { crypto: { subtle: webcrypto.subtle } }, kontekst = vm.createContext({ window: okno });
+    for (const plik of ['vilda_care_plan_model.js', 'vilda_care_template_model.js', 'vilda_care_plan_mutation.js']) vm.runInContext(zrodlo(plik), kontekst);
+    const templateModel = okno.VildaCareTemplateModel, mutationModel = okno.VildaCarePlanMutation;
+    const definicja = { contentVersion: 1, name: 'Fikcyjny plan modułu', purpose: 'Fikcyjny cel.', labels: [], stageOrder: ['fikcyjny-etap'],
+      stages: [{ id: 'fikcyjny-etap', title: 'Fikcyjny etap', stepIds: ['fikcyjny-krok'] }],
+      steps: [{ id: 'fikcyjny-krok', stageId: 'fikcyjny-etap', title: 'Fikcyjne badanie', taskKind: 'examination', instruction: 'Fikcyjna instrukcja.',
+        requiredOutcome: 'resultReceipt', reminderRule: { kind: 'none' }, includedByDefault: true }] };
+    const przygotowany = await templateModel.prepareTemplateOperation(null, { action: 'save', templateId: 'fikcyjny-szablon-modulu',
+      operationId: 'fikcyjna-op-szablon-modulu', baseToken: null, definition: definicja }, { recordedAtISO: ZEGAR_MODULU.recordedAtISO });
+    expect(przygotowany.ok, przygotowany.code).toBe(true);
+    const widok = przygotowany.view, rewizja = widok.revisions.find((item) => item.id === widok.headRevisionId);
+    const szablon = { templateId: widok.templateId, status: 'active', baseToken: widok.baseToken, headRevisionId: widok.headRevisionId,
+      revisionId: widok.headRevisionId, revisionNumber: rewizja.revisionNumber, title: rewizja.definition.name, definition: rewizja.definition,
+      stageCount: rewizja.definition.stages.length, stepCount: rewizja.definition.steps.length, conflicts: null, revisions: widok.revisions, syncState: { pending: 0 } };
+    let obraz = obrazModulu(adapterModulu.STORE_KEYS), numer = 0;
+    async function wEtapie(callback, zapis) {
+      const etap = etapModulu(adapterModulu.createNativeStage, obraz, ZEGAR_MODULU);
+      try { const wynik = await callback(etap.transaction); if (zapis && etap.changed) obraz = etap.image(); return wynik; } finally { etap.finish(); }
+    }
+    const usluga = createCarePlanService({ templateModel, mutationModel,
+      workspace: { getCapability: async () => ({ available: true }), read: (callback) => wEtapie(callback, false), transact: (_, callback) => wEtapie(callback, true) },
+      readTemplate: async () => kopia(szablon), listPatients: async () => [{ patientId: 'fikcyjna-karta-modulu', header: { name: 'Fikcyjna Pacjentka Modułu' } }],
+      captureSession: () => Object.freeze({ epoch: 1 }), assertSession: (token) => { if (!token || token.epoch !== 1) throw new Error('fikcyjna-zmiana-sesji'); },
+      newId: () => `fikcyjny-id-modulu-${++numer}`, clock: () => kopia(ZEGAR_MODULU) });
+    const wejscie = { patientId: 'fikcyjna-karta-modulu', templateId: szablon.templateId, revisionId: szablon.revisionId };
+    const szkic = await usluga.application.prepare(wejscie);
+    const { plan } = await usluga.application.commit({ ...wejscie, token: szkic.token, operationId: 'fikcyjna-op-plan-modulu', definition: kopia(szkic.definition) });
+    const poUtworzeniu = kopia(obraz), ekran = ekranPlanu();
+    async function potwierdz(pola, chwila) {
+      obraz = kopia(poUtworzeniu);
+      const rekord = rekordModulu({ rev: 3, ...pola });
+      obraz.stores.find((store) => store.name === 'patientNotes').records.push({ key: rekord.id, value: rekord });
+      let wynik;
+      try {
+        wynik = await usluga.mutate({ action: 'recordFact', operationId: `fikcyjna-op-dowod-${++numer}`, planId: plan.id, patientId: plan.patientId,
+          expectedRevision: plan.rev, stepId: plan.careContext.steps[0].id, factId: `fikcyjny-fakt-${numer}`, kind: 'resultReceipt', effectiveDateISO: '2026-11-16',
+          evidence: { noteId: rekord.id, sourceRecordRevAtCapture: 3, sourceRecordContentAtISOAtCapture: chwila } });
+      } catch (error) { return error.code || error.message; }
+      expect(wynik.plan.careContext.facts[0].evidence.sourceRecordContentAtISOAtCapture, 'pole w zapisanym planie').toBe(chwila);
+      return 'zapis';
+    }
+    // Chwile, które przechodzą sprawdzian modelu (RRRR-MM-DDTgg:mm:ss[.mmm]Z), w tym ta sama chwila bez milisekund.
+    const CHWILE = ['2026-11-16T09:00:00.000Z', '2026-11-16T08:30:00.000Z', '2026-11-16T08:45:00.000Z', '2026-11-16T09:00:00Z', '2026-11-16T08:30:00Z'];
+    const przypadki = [...KOTWICE, ...BEZ_CHWILI_ZAPISU.map((pola) => [`bez chwili zapisu ${JSON.stringify(pola)}`, pola]),
+      ['pusta chwila zapisu', { updatedAtISO: '', contentAtISO: '2026-11-16T08:30:00.000Z', contentForISO: '' }]];
+    for (const [opis, pola] of przypadki) {
+      const rekord = rekordModulu({ rev: 3, ...pola }), wSejfie = chwilaTresciSejfu(rekord);
+      const wyniki = [];
+      for (const chwila of CHWILE) {
+        const oczekiwany = wSejfie !== '' && chwila === wSejfie ? 'zapis' : 'CARE_APPLICATION_DOCUMENT_CHANGED';
+        expect(ekran(rekord) === chwila, `${opis}, ${chwila}: ekran planu tak samo`).toBe(oczekiwany === 'zapis');
+        wyniki.push([chwila, await potwierdz(pola, chwila), oczekiwany]);
+      }
+      expect(wyniki.map(([chwila, wynik]) => [chwila, wynik]), opis).toEqual(wyniki.map(([chwila, , oczekiwany]) => [chwila, oczekiwany]));
+      expect(wyniki.filter(([, wynik]) => wynik === 'zapis').length, `${opis}: przechodzi dokładnie chwila treści według sejfu`)
+        .toBe(CHWILE.includes(wSejfie) ? 1 : 0);
+    }
   });
 
   // Niezmiennik (chwila treści robi z kotwicy własność bezpieczeństwa dowodu, nie tylko regułę scalania): każdy zapis
@@ -953,17 +1108,45 @@ describe('E3-PR0b2b — luki modułu planów z etapami: dowód kroku według chw
     expect(h, 'hydracja tylko przy równych polach odczytu poza careContext i polami chwil')
       .toContain("keys.every(function (key) { return key === 'careContext' || Bnp_POLA_CHWIL.indexOf(key) >= 0 || CareMvpSyncEqual(decoded[key], incoming[key]); })");
     expect(wytnijFunkcje(sejfTekst, 'CareMvpSyncHydrationCandidate'), 'hydracja przy tej samej chwili zapisu i rev').toContain('stored.updatedAtISO === incoming.updatedAtISO');
-    // Zapis planu we fragmencie natywnym składa rekord z poprzedniego z nową chwilą zapisu „teraz”.
+    // Zapis planu we fragmencie natywnym składa rekord z poprzedniego z nową chwilą zapisu „teraz” i przed nowym
+    // szyfrogramem usuwa pola chwil treści i stanu poprzedniego rekordu (jak Bnp_bezChwil; działanie — test niżej).
     const i = sejfTekst.indexOf('async function seal(note, before, hidden) {');
     expect(i, 'zapis rekordu we fragmencie natywnym').toBeGreaterThan(0);
     const seal = sejfTekst.slice(i, sejfTekst.indexOf('\n  }\n', i));
-    expect(seal).toContain('var now = new Date().toISOString(), raw = Object.assign({}, before || {}, {');
+    const zlozenie = seal.indexOf('var now = new Date().toISOString(), raw = Object.assign({}, before || {}, {');
+    const bezChwilPoprzedniego = seal.indexOf("['contentAtISO', 'contentForISO', 'stateAtISO', 'stateForISO'].forEach(function (key) { delete raw[key]; });");
+    const szyfrogram = seal.indexOf('raw.bodyCipher = await V(plain);');
     expect(seal).toContain('updatedAtISO: now,');
-    expect(seal).toContain('raw.bodyCipher = await V(plain);');
+    expect([zlozenie, bezChwilPoprzedniego, szyfrogram].every((x) => x > 0), 'złożenie z poprzedniego rekordu, usunięcie pól chwil, szyfrogram').toBe(true);
+    expect(zlozenie < bezChwilPoprzedniego && bezChwilPoprzedniego < szyfrogram, 'pola chwil usuwane po złożeniu rekordu, przed szyfrogramem').toBe(true);
     // Jedyne miejsce, które ustawia pole chwili treści, bierze chwilę wersji, której treść zostaje (Bnp_ustawChwileTresci).
     expect(sejfTekst.split(/\.contentAtISO\s*=(?!=)/).length - 1, 'contentAtISO przypisywane tylko w Bnp_ustawChwileTresci').toBe(1);
     expect(wytnijFunkcje(sejfTekst, 'Bnp_ustawChwileTresci')).toMatch(/r\.contentAtISO\s*=\s*c;\s*r\.contentForISO\s*=\s*u;/);
   });
+
+  // To samo działaniem: prawdziwa funkcja zapisu rekordu z fragmentu natywnego (wycięta z sejfu; nowy szyfrogram i blokada
+  // sesji zastąpione). Zegar może dać napis równy chwili zapisu poprzedniego rekordu (ta sama milisekunda). Gdyby zapis
+  // zostawił pola chwil poprzedniego rekordu, stara kotwica byłaby ważna przy nowej treści i dowód kroku pokazałby
+  // zmienioną treść jako niezmienioną.
+  it.each([['ta sama milisekunda co poprzedni zapis', 0], ['późniejsza chwila zapisu', MIN]])(
+    'fragment natywny: zapis rekordu planu (seal) nie przenosi chwil treści i stanu poprzedniego rekordu — %s', async (_opis, odstep) => {
+      const i = sejfTekst.indexOf('async function seal(note, before, hidden) {');
+      const tekst = sejfTekst.slice(i, sejfTekst.indexOf('\n  }\n', i) + 4);
+      const szyfr = async (plain) => ({ iv: 'fikcyjny-iv', data: JSON.stringify(plain) });
+      const seal = new Function('check', 'V', `${tekst}\nreturn seal;`)(() => {}, szyfr);
+      const U = iso(teraz), C = iso(teraz - 30 * MIN);
+      const before = { id: 'fikcyjny-dokument-planu', patientId: 'fikcyjna-karta', category: 'followup', rev: 4,
+        createdAtISO: iso(teraz - 60 * MIN), updatedAtISO: U, contentAtISO: C, contentForISO: U, stateAtISO: C, stateForISO: U,
+        dueDateISO: '2026-11-30', bodyCipher: { iv: 'stary-iv', data: '{}' } };
+      expect(chwilaTresciSejfu(before), 'start: ważna kotwica ze starą chwilą treści').toBe(C);
+      krok(odstep);
+      const raw = await seal({ id: before.id, patientId: before.patientId, category: 'followup', title: 'Fikcyjny krok planu',
+        body: 'Fikcyjna nowa treść kroku.', dueDateISO: '2026-12-01' }, before, false);
+      expect([raw.updatedAtISO, raw.rev], 'nowa chwila zapisu i wyższy rev').toEqual([iso(teraz), 5]);
+      for (const k of ['contentAtISO', 'contentForISO', 'stateAtISO', 'stateForISO']) expect(raw, k).not.toHaveProperty(k);
+      expect(chwilaTresciSejfu(raw), 'nowa treść ma chwilę treści tego zapisu, nie starą').toBe(raw.updatedAtISO);
+      expect(JSON.parse(raw.bodyCipher.data).body).toBe('Fikcyjna nowa treść kroku.');
+    });
 
   it('ekran planu porównuje dowód z chwilą treści po efektywnej chwili treści dokumentu (jedna funkcja, dokładne napisy), a dowód bez niej — po rev; modele przyjmują tylko nową nazwę pola', () => {
     const plany = zrodlo('vilda_care_plans.js');
