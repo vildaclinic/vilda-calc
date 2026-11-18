@@ -264,6 +264,7 @@
   function editorCurrent(view) { return !!(view && activeEditor === view && !view.closed && current(view.owner)); }
   function setWorking(view, value) {
     view.saving = value;
+    if (view.picker) view.picker.setWorking(value || view.uncertain);
     view.dialog.querySelectorAll('input,select,textarea,button').forEach(function (field) { field.disabled = value; });
     view.dialog.setAttribute('aria-busy', String(value));
     if (!value) {
@@ -282,6 +283,7 @@
     if (view.releaseBack) { try { view.releaseBack(); } catch (_) { /* Continue wiping a disposed editor. */ } view.releaseBack = null; }
     if (view.releaseDialog) { try { view.releaseDialog(); } catch (_) { /* Continue wiping a disposed editor. */ } view.releaseDialog = null; }
     if (view.history) { view.history.release(); view.history = null; }
+    if (view.picker) { view.picker.destroy(); view.picker = null; }
     if (view.dialog.open) view.dialog.close();
     view.dialog.removeAttribute('aria-busy'); view.dialog.removeAttribute('aria-modal');
     var ownerLabel = view.dialog.querySelector('.vpt-editor-owner'); ownerLabel.textContent = ''; ownerLabel.hidden = true;
@@ -335,7 +337,7 @@
     var dialog = ensureEditor(); if (!dialog) { status(owner, 'Nie udało się otworzyć formularza.', true); return false; }
     var opener = d.activeElement, view = { owner: owner, dialog: dialog, kind: options.kind, dto: options.dto || null,
       opener: opener, hint: { action: opener && opener.dataset.treatmentAction, id: opener && opener.dataset.treatmentId },
-      dirty: false, saving: false, uncertain: false, closed: false, beforeUnload: null, submit: options.submit, read: options.read, releaseBack: null, releaseDialog: null, history: null };
+      dirty: false, saving: false, uncertain: false, closed: false, beforeUnload: null, submit: options.submit, read: options.read, releaseBack: null, releaseDialog: null, history: null, picker: null };
     activeEditor = view;
     dialog.querySelector('#vhomePatientTreatmentTitle').textContent = options.title;
     var ownerLabel = dialog.querySelector('.vpt-editor-owner');
@@ -345,7 +347,7 @@
     dialog.querySelectorAll('button').forEach(function (control) { control.disabled = false; });
     var form = node('form', 'vpt-form'); form.id = 'vhomePatientTreatmentForm'; form.dataset.treatmentForm = options.kind;
     view.form = form; view.error = node('p', 'vpt-error'); view.error.hidden = true; view.error.tabIndex = -1; view.error.setAttribute('role', 'alert'); form.appendChild(view.error);
-    try { options.build(form); }
+    try { options.build(form, view); }
     catch (_) { closeEditor(view, true, false); status(owner, 'Nie udało się otworzyć formularza.', true); return false; }
     dialog.querySelector('.vhome-dialog-body').replaceChildren(form);
     form.addEventListener('submit', function (event) { event.preventDefault(); submitEditor(); });
@@ -394,11 +396,14 @@
   function diagnosisEditor(view, dto) {
     var context = dto && dto.context || {};
     openEditor(view, { kind: 'diagnosis', dto: dto, title: dto ? 'Edytuj rozpoznanie' : 'Dodaj rozpoznanie',
-      build: function (form) {
-        var grid = node('div', 'vpt-form-grid');
-        grid.append(field('Nazwa rozpoznania', 'name', context.name, 'text', true, 200), field('Kod ICD-10 · opcjonalnie', 'code', context.code, 'text', false, 24),
+      build: function (form, editor) {
+        var grid = node('div', 'vpt-form-grid'), name = field('Nazwa rozpoznania', 'name', context.name, 'text', true, 200), code = node('div');
+        grid.append(name, code,
           select('Status rozpoznania', 'status', [['active', 'Aktywne'], ['closed', 'Zamknięte']], context.status || 'active'), field('Data rozpoznania', 'dateISO', context.dateISO || today(), 'date', true));
-        form.append(grid, node('p', 'vpt-meta', 'Kod wpisuje lekarz. Rozpoznanie można zapisać bez kodu ICD-10.'));
+        form.append(grid, node('p', 'vpt-meta', 'Rozpoznanie i kod wybiera lekarz. Rozpoznanie można zapisać bez kodu ICD-10.'));
+        editor.picker = w.VildaICD10Picker.mount({ host: code, nameInput: name.querySelector('input'), code: context.code,
+          isCurrent: function () { return editorCurrent(editor) && !editor.saving && !editor.uncertain; },
+          onCommit: function () { if (editorCurrent(editor) && !editor.saving && !editor.uncertain) { editor.dirty = true; syncEditor(editor); } } });
       }, read: function (data) { return { name: data.get('name').trim(), code: data.get('code').trim(), status: data.get('status'), dateISO: data.get('dateISO') }; },
       submit: function (values) { return dto ? view.scope.updateDiagnosis(dto, values) : view.scope.createDiagnosis(values); } });
   }
@@ -446,6 +451,7 @@
     if (!view || !view.form || !view.form.contains(event.target)) return;
     event.stopImmediatePropagation();
     if (!editorCurrent(view) || view.saving) return;
+    if (view.picker && view.picker.handleInput(event)) return;
     view.dirty = true; syncEditor(view);
   }
   w.addEventListener('input', editorInput, true); w.addEventListener('change', editorInput, true);

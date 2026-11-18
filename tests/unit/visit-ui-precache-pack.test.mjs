@@ -34,11 +34,11 @@ function worker({ scope = '/', response, failPut = () => false } = {}) {
   return { api, cache, requests, writes, installUI };
 }
 
-describe('twenty-five independent visit and home UI resources in one verified transport', () => {
+describe('twenty-nine independent visit and home UI resources in one verified transport', () => {
   it.each(['/', '/vilda-calc/'])('caches every original body and MIME under its own offline URL in %s', async scope => {
     const w = worker({ scope }); await w.installUI();
     expect(w.api.VISIT_UI_PRECACHE_PACK).toEqual(config);
-    expect(urls).toHaveLength(25);
+    expect(urls).toHaveLength(29);
     expect(urls).toContain('/vilda_home_perinatal.js?v=1');
     expect(urls).toContain('/vilda_home_growth.js?v=4');
     expect(urls).toContain('/vilda_sga_birth_results.css?v=1');
@@ -56,9 +56,13 @@ describe('twenty-five independent visit and home UI resources in one verified tr
     expect(urls).toContain('/vilda_home_patient.css?v=2');
     expect(urls).toContain('/vilda_home_patient_native.js?v=1');
     expect(urls).toContain('/vilda_home_patient_native.css?v=1');
-    expect(urls).toContain('/vilda_patient_treatment_ui.js?v=1');
+    expect(urls).toContain('/vilda_patient_treatment_ui.js?v=2');
     expect(urls).toContain('/vilda_patient_treatment_ui.css?v=1');
     expect(urls).toContain('/vilda_home_patient_native_note.js?v=1');
+    expect(urls).toContain('/vilda_icd10_pl_data.js?v=1');
+    expect(urls).toContain('/vilda_icd10_search.js?v=1');
+    expect(urls).toContain('/vilda_icd10_picker.js?v=1');
+    expect(urls).toContain('/vilda_icd10_picker.css?v=1');
     expect(urls).toContain('/vilda_home_workspace.js?v=6');
     expect(urls).toContain('/vilda_home_workspace.css?v=7');
     expect(w.requests).toHaveLength(1);

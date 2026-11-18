@@ -90,6 +90,34 @@ wynikiem zapisu korzysta z natywnej ochrony `beforeunload`. Odmowa odświeżenia
 zachowuje ten sam formularz. Zamknięcie, blokada i usunięcie widoku zwalniają
 handler; ochrona nie zapisuje szkicu automatycznie.
 
+## Wyszukiwanie kodu ICD-10
+
+W polu „Kod ICD-10 · opcjonalnie” lekarz wyszukuje kod lub polską nazwę.
+Lokalny katalog CeZ zawiera 12 010 pozycji, stan na 31.03.2021; data jest
+widoczna przy polu. Źródło, licencja i ograniczenia:
+[ICD10_CATALOGUE.md](clinical/ICD10_CATALOGUE.md). Wyszukiwanie ignoruje
+wielkość liter i polskie znaki, uwzględnia wszystkie wpisane wyrazy oraz
+osobny kontekst kategorii. Zapis `E119` odnajduje `E11.9`. Lista pokazuje
+najwyżej 12 kodów i liczbę pozostałych dopasowań; dalsze pisanie ją zawęża.
+
+Tekst wyszukiwania nie jest polem zapisywanego dokumentu. Kod ustala dopiero
+wybór podpowiedzi lub jawne zatwierdzenie własnego kodu ręcznego (do 24 znaków).
+Nierozstrzygnięte wyszukiwanie blokuje zapis formularza. Puste pole usuwa kod;
+rozpoznanie nadal można zapisać bez niego. Brak w historycznym katalogu nie
+oznacza nieprawidłowego kodu. Dotychczasowe ręczne kody pozostają dostępne.
+
+Wybranie pozycji zachowuje źródłowy kod wraz z `†`/`*`. Pełna nazwa katalogowa
+uzupełnia puste pole nazwy albo poprzednią automatyczną nazwę z tego samego
+edytora. Własny opis lekarza i nazwa istniejącego rozpoznania nie są nadpisywane;
+można jawnie użyć nazwy z katalogu. Kategoria nadrzędna jest prezentowana osobno,
+bez doklejania ani skracania zapisywanej nazwy. Limity modelu pozostają bez zmian.
+
+Strzałki wybierają podpowiedź, Enter zatwierdza wyłącznie aktywną pozycję;
+sam Enter w polu wyszukiwania nie zapisuje formularza. Escape najpierw zamyka
+listę. Zapytanie nie trafia do sieci, historii, sejfu ani localStorage. Zamknięcie,
+blokada i utrata właściciela usuwają formularz oraz jego wyszukiwanie. Katalog
+i moduły wyszukiwania są częścią zweryfikowanego precache PWA i działają offline.
+
 ## Transport i zgodność
 
 `Ft` odczytuje opcjonalne pole, `Ad` zachowuje je przy pominięciu przez starszego
