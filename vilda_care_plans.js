@@ -88,7 +88,8 @@
   var stagedViewCache = new WeakMap();
   function staged(plan) { return !!(plan && plan.careContext && plan.careContext.version === 2); }
   // The document's effective content instant, by the vault rule (Bnp_chwilaTresci in vilda_vault.js). The only place
-  // on this screen that reads the anchor; without updatedAtISO the document has no instant (null).
+  // on this screen that reads the anchor. When updatedAtISO is not a text the document has no instant (null); an empty
+  // updatedAtISO gives the empty text, as in the vault. No evidence field is empty, so both mean a changed document.
   function stagedContentInstant(original) {
     var updated = original && typeof original.updatedAtISO === 'string' ? original.updatedAtISO : null;
     if (updated === null) return null;

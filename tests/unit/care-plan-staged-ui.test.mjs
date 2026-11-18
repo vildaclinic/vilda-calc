@@ -296,6 +296,22 @@ describe('V2 staged care-plan UI compares step evidence by the document content 
     }
   });
 
+  // A damaged payload can hold, with a valid anchor, a content instant that the plan model cannot hold at all: a year in
+  // the extended form (toISOString gives it back unchanged, but it is not the four-digit form of Bnp_iso) or a text in
+  // the four-digit form that is not a real instant (an impossible month or day). The vault does not count any of them;
+  // the screen counts the write instant, so the document opens for evidence holding its write instant.
+  it.each([
+    ['a year in the extended form after 9999', '+010000-01-01T00:00:00.000Z'],
+    ['a year in the extended form before year 0', '-000001-01-01T00:00:00.000Z'],
+    ['an impossible month in the four-digit form', '2026-13-02T08:06:01.000Z'],
+    ['an impossible day in the four-digit form', '2026-02-31T08:06:01.000Z'],
+  ])('counts the write instant when the anchored content instant has %s', async (_name, contentAtISO) => {
+    const document = sourceNote(3, T2, { contentAtISO, contentForISO: T2 });
+    for (const relation of relations) {
+      const { d, text } = await opens(relation, 3, T2, document); expectOpened(d, text); d.controller.destroy();
+    }
+  });
+
   // Exact texts: an instant of the same moment in another form is a different instant. Bringing both sides to one form
   // would let a damaged payload with a new text and a write instant without milliseconds pass as the linked version.
   it.each([

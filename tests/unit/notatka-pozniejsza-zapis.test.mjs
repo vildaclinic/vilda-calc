@@ -715,6 +715,24 @@ describe('E3-PR0b2b — luki modułu planów z etapami: dowód kroku według chw
     expect(po.kotwica, 'bez kotwicy: chwila treści = chwila zapisu').toBe(false);
   });
 
+  // Znane ograniczenie porównania po chwili treści (zbieg stempli co do milisekundy): dwie różne treści zapisane w tej
+  // samej milisekundzie na dwóch urządzeniach. Scalenie zostawia wersję z wyższym rev, a obie wersje mają tę samą chwilę
+  // treści — dowód z chwilą treści złapany przy wersji przegranej nie pokaże zmiany. Rev ją pokazuje.
+  it('znane ograniczenie: dwie różne treści z tej samej milisekundy na dwóch urządzeniach mają tę samą chwilę treści', async () => {
+    const A = await sejf('A'), B = await sejf('B'), s = await dokument(A);
+    await wyslij(A, B);
+    krok(); await zapiszDok(A, s, { body: 'A: pierwsza poprawka.' });
+    krok(); const ta = teraz;
+    await zapiszDok(A, s, { body: 'A: druga poprawka (wyższy rev).' });
+    ustaw(ta); await zapiszDok(B, s, { body: 'B: poprawka z tej samej milisekundy.' });
+    const przed = await stan(B, s.id);
+    await wyslij(A, B);
+    const po = await stan(B, s.id);
+    expect(JSON.parse(po.widoczne)[1], 'zostaje wersja z wyższym rev').toBe('A: druga poprawka (wyższy rev).');
+    expect(po.tresc, 'ta sama chwila treści — porównanie po niej tej zmiany nie widzi').toBe(przed.tresc);
+    expect(po.rev, 'rev się zmienił — porównanie po rev ją widzi').not.toBe(przed.rev);
+  });
+
   // Jedna reguła w trzech miejscach (sejf, ekran planu, moduł zapisu planu): funkcja ekranu wycięta z vilda_care_plans.js
   // ma dawać dla tych samych rekordów tę samą chwilę co Bnp_chwilaTresci z sejfu — z surowego rekordu i z odczytu
   // getPatientNote (który podaje contentAtISO tylko przy ważnej kotwicy).
@@ -735,6 +753,11 @@ describe('E3-PR0b2b — luki modułu planów z etapami: dowód kroku według chw
       ['chwila treści jako liczba', { updatedAtISO: U, contentAtISO: Date.parse(C), contentForISO: U }],
       ['chwila zapisu bez milisekund z kotwicą do niej', { updatedAtISO: '2026-11-16T09:00:00Z', contentAtISO: C, contentForISO: '2026-11-16T09:00:00Z' }],
       ['chwila zapisu bez milisekund, bez kotwicy', { updatedAtISO: '2026-11-16T09:00:00Z' }],
+      // Rok w postaci rozszerzonej: toISOString oddaje ten sam napis, ale to nie postać czterocyfrowa (Bnp_iso).
+      ['chwila treści z rokiem w postaci rozszerzonej po 9999', { updatedAtISO: U, contentAtISO: '+010000-01-01T00:00:00.000Z', contentForISO: U }],
+      ['chwila treści z rokiem w postaci rozszerzonej przed rokiem 0', { updatedAtISO: U, contentAtISO: '-000001-01-01T00:00:00.000Z', contentForISO: U }],
+      // Napis w postaci czterocyfrowej, który nie jest chwilą (miesiąc 13): reguła go nie liczy i nie rzuca wyjątku.
+      ['chwila treści z niemożliwym miesiącem', { updatedAtISO: U, contentAtISO: '2026-13-16T08:30:00.000Z', contentForISO: U }],
     ];
     for (const [opis, pola] of KOTWICE) {
       await A.adapter.putPatientNoteForUser(A.uid, { ...r0, ...pola });
@@ -752,6 +775,13 @@ describe('E3-PR0b2b — luki modułu planów z etapami: dowód kroku według chw
       expect(ekran(surowy), JSON.stringify(pola) + ': z surowego rekordu').toBeNull();
       expect(ekran(odczyt), JSON.stringify(pola) + ': z odczytu getPatientNote').toBeNull();
     }
+    // Pusta chwila zapisu: z surowego rekordu sejf i ekran dają ten sam pusty napis, a odczyt getPatientNote podaje brak
+    // chwili zapisu, więc ekran — brak chwili. Pole dowodu nigdy nie jest pustym napisem (walidator modelu), więc w obu
+    // przypadkach dokument jest „zmieniony”.
+    await A.adapter.putPatientNoteForUser(A.uid, { ...r0, updatedAtISO: '', contentAtISO: C, contentForISO: '' });
+    const pustySurowy = await zapisana(A, s.id), pustyOdczyt = await A.vault.getPatientNote(s.id);
+    expect([chwilaTresciSejfu(pustySurowy), ekran(pustySurowy)], 'pusta chwila zapisu: z surowego rekordu').toEqual(['', '']);
+    expect([pustyOdczyt.updatedAtISO, pustyOdczyt.contentAtISO, ekran(pustyOdczyt)], 'pusta chwila zapisu: z odczytu getPatientNote').toEqual([null, undefined, null]);
   });
 
   // Niezmiennik (chwila treści robi z kotwicy własność bezpieczeństwa dowodu, nie tylko regułę scalania): każdy zapis
@@ -801,6 +831,23 @@ describe('E3-PR0b2b — luki modułu planów z etapami: dowód kroku według chw
       expect(po.zapis > przed.zapis && po.zapis !== przed.zapis, 'złączenie z nową chwilą zapisu').toBe(true);
       return { przed, po };
     }],
+    // Osobna gałąź scalenia: to samo oznaczenie po obu stronach, a chwila oznaczenia tylko tutaj. „Przełóż” potwierdza
+    // tu sprawę otwartą z chwilą tego zapisu; wersja z innego urządzenia jest otwarta bez tej chwili i ma późniejszą treść.
+    // Treść przychodzi z ładunku, oznaczenie zostaje tutejsze bez złączenia (chwila zapisu z ładunku). Bez zmiany terminu:
+    // nowy termin z edytora też zapisuje chwilę oznaczenia, więc wtedy scalenie idzie drogą „późniejsza treść z innego
+    // urządzenia” wyżej.
+    ['„Przełóż” stąd, późniejsza treść z innego urządzenia (scalenie synchronizacji, oznaczenie zostaje tutejsze)', async (zmiana) => {
+      const A = await sejf('A'), B = await sejf('B'), { s } = await zakotwiczony(A);
+      await wyslij(A, B);
+      krok(); await A.vault.snoozePatientNote(s.id, '2026-12-05');
+      const przed = await stan(A, s.id), oznaczenie = (await zapisana(A, s.id)).stateAtISO;
+      expect(typeof oznaczenie, '„Przełóż” zapisuje chwilę oznaczenia').toBe('string');
+      krok(); await zapiszDok(B, s, zmiana); await wyslij(B, A);
+      const po = await stan(A, s.id), r = await zapisana(A, s.id);
+      expect([r.updatedAtISO, r.stateAtISO], 'bez złączenia: chwila zapisu z ładunku, chwila oznaczenia stąd')
+        .toEqual([(await zapisana(B, s.id)).updatedAtISO, oznaczenie]);
+      return { przed, po };
+    }, ['termin']],
     ['import pliku pacjenta z nowszą treścią', async (zmiana) => {
       const A = await sejf('A'), B = await sejf('B'), { s, przed } = await zakotwiczony(A);
       await wyslij(A, B);
@@ -818,7 +865,7 @@ describe('E3-PR0b2b — luki modułu planów z etapami: dowód kroku według chw
       return { przed, po: await stan(A, s.id) };
     }],
   ];
-  it.each(DROGI.flatMap(([droga, przebieg]) => ZMIANY_WIDOCZNE.map(([pole, zmiana]) => [droga, pole, przebieg, zmiana])))(
+  it.each(DROGI.flatMap(([droga, przebieg, bez = []]) => ZMIANY_WIDOCZNE.filter(([pole]) => !bez.includes(pole)).map(([pole, zmiana]) => [droga, pole, przebieg, zmiana])))(
     'niezmiennik — %s, zmienione pole: %s: nie zostaje ważna kotwica ze starą chwilą treści', async (droga, pole, przebieg, zmiana) => {
       const { przed, po } = await przebieg(zmiana);
       niezmiennik(przed, po, `${droga} / ${pole}`);
