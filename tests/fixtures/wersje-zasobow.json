@@ -1593,7 +1593,7 @@
  },
  "vilda_home_patient.css": {
   "v": 1,
-  "sha256": "78a878b84587a7098c863dc3198abe1f175f3d024c6c8d802cf42ce0cd42a709"
+  "sha256": "f1edd2673fb8a57146c5cfef8eeeadc28c42dd4de24eecd97f651e4917121570"
  },
  "vilda_home_patient.js": {
   "v": 1,
@@ -1605,7 +1605,7 @@
  },
  "vilda_home_patient_note_host.css": {
   "v": 1,
-  "sha256": "f8c97786b5d5957f80b8ba957cdfc98757f9365ba90ed1e347d9aaac72585cf3"
+  "sha256": "0280464c2496960fc20568b398fd0bb3f2dd7d57429cd70e6aa9452cab97b56b"
  },
  "vilda_home_patient_note_host.js": {
   "v": 1,

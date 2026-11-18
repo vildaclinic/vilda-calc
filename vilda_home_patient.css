@@ -114,7 +114,7 @@ html.vilda-home-workspace #vhomePatientCard .vhome-patient-tab {
   margin: 0;
   padding: var(--space-8px) 9px;
   border: 0 !important;
-  border-bottom: 2px solid transparent !important;
+  border-bottom: var(--border-emphasis) solid transparent !important;
   border-radius: 0 !important;
   background: transparent !important;
   color: var(--vhome-patient-muted) !important;
@@ -570,7 +570,7 @@ html.vilda-home-workspace :is(#vhomePatientCard, #vhomePatientDialog) :is(.vhome
   }
 }
 
-@media (max-width: 359px) {
+@media (max-width: 360px) {
   #vhomePatientCard .vhome-patient-tab {
     padding-inline: 5px;
     font-size: 13px;
