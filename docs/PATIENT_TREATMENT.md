@@ -80,6 +80,16 @@ tylko do odczytu również w dawnych ścieżkach edycji notatek. Natywne przenie
 całego pacjenta zachowuje taki nieprzezroczysty dokument pod tym samym ID;
 import i synchronizacja przenoszą go bez interpretowania jego pól.
 
+Edytor rozpoznań i epizodów jest dostępny w nowej Karcie pacjenta na stronie
+głównej. Na ekranach bez tego modułu, np. w dotychczasowej karcie w DocPro,
+wybranie edycji wpisu leczenia pokazuje informację o miejscu edycji i zachowuje
+obecną kartę. Nie uruchamia zwykłego edytora tekstowej notatki ani pustej zakładki.
+
+Bieżący formularz z niezapisanymi zmianami, trwającym zapisem lub niepewnym
+wynikiem zapisu korzysta z natywnej ochrony `beforeunload`. Odmowa odświeżenia
+zachowuje ten sam formularz. Zamknięcie, blokada i usunięcie widoku zwalniają
+handler; ochrona nie zapisuje szkicu automatycznie.
+
 ## Transport i zgodność
 
 `Ft` odczytuje opcjonalne pole, `Ad` zachowuje je przy pominięciu przez starszego

@@ -767,7 +767,12 @@ test('home patient: a delayed native conflict reload cannot resurrect an old not
 
 async function exactSharedFrame(dialog, referenceBounds) {
   await expect(dialog).toBeVisible();
-  await expect.poll(() => dialog.boundingBox()).toEqual(referenceBounds);
+  await expect.poll(async () => {
+    const bounds = await dialog.boundingBox();
+    return bounds ? Object.fromEntries(['x', 'y', 'width', 'height'].map(key => [key, Math.round(bounds[key] - referenceBounds[key]) || 0])) : null;
+  }).toEqual({ x: 0, y: 0, width: 0, height: 0 });
+  const bounds = await dialog.boundingBox();
+  for (const key of ['x', 'y', 'width', 'height']) expect(bounds[key]).toBeCloseTo(referenceBounds[key], 0);
   const actual = await dialog.evaluate(node => {
     const rect = node.getBoundingClientRect();
     return { x: rect.x, y: rect.y, width: rect.width, height: rect.height,
@@ -822,9 +827,10 @@ test('home patient: APP native Clcr details and edit/delete Cancel share the fra
     await page.setViewportSize({ width, height });
     await expect.poll(() => shared.evaluate(node => {
       const rect = node.getBoundingClientRect();
-      return { width: rect.width - Math.min(1000, innerWidth - 32),
+      const deltas = { width: rect.width - Math.min(1000, innerWidth - 32),
         height: rect.height - Math.min(820, innerHeight - 32),
         x: rect.x - (innerWidth - rect.width) / 2, y: rect.y - (innerHeight - rect.height) / 2 };
+      return Object.fromEntries(Object.entries(deltas).map(([key, value]) => [key, Math.round(value) || 0]));
     })).toEqual({ width: 0, height: 0, x: 0, y: 0 });
     await exactSharedFrame(detail, await shared.boundingBox());
     await detail.getByRole('button', { name: 'Zamknij', exact: true }).click({ trial: true });

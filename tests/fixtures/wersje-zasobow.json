@@ -1169,7 +1169,7 @@
  },
  "vilda_auth_ui.js": {
   "v": 561,
-  "sha256": "aab38a87cb58ae58cea3c4d0abfb5142b182956132b406730cc77997671ae4c9"
+  "sha256": "a2d5108045cb94cde15c36f759233db7cb110a1f17580393ccba5927e56aa4a9"
  },
  "vilda_b64_checklist.js": {
   "v": 2,
@@ -1889,7 +1889,7 @@
  },
  "vilda_patient_treatment_ui.js": {
   "v": 1,
-  "sha256": "ca146af59b7961ba3852becdb5420b4d7849b86c52272fccd46fee6835cb44bb"
+  "sha256": "617b67d6fd98ba5af78732932c38c177769fcfa6918c7c3f8b99599495090261"
  },
  "vilda_patients_list.css": {
   "v": 4,

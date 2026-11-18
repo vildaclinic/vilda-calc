@@ -111,11 +111,13 @@ async function geometry(frame, selector = DIALOG) {
       viewportWidth: innerWidth, viewportHeight: innerHeight, scrollWidth: node.scrollWidth, clientWidth: node.clientWidth };
   });
   // Opening motion may still be running when the native sheet becomes visible.
-  // Observe its exact accepted final frame rather than an intermediate scale.
+  // Poll at CSS-pixel precision; the raw checks below retain their original
+  // half-pixel bound, including WebKit's 1/64px layout rounding.
   await expect.poll(async () => {
     const value = await measure(), width = Math.min(1000, value.viewportWidth - 32), height = Math.min(820, value.viewportHeight - 32);
-    return { width: value.width - width, height: value.height - height,
+    const deltas = { width: value.width - width, height: value.height - height,
       x: value.x - (value.viewportWidth - width) / 2, y: value.y - (value.viewportHeight - height) / 2 };
+    return Object.fromEntries(Object.entries(deltas).map(([key, value]) => [key, Math.round(value) || 0]));
   }).toEqual({ width: 0, height: 0, x: 0, y: 0 });
   const actual = await measure();
   expect(actual.width).toBeCloseTo(Math.min(1000, actual.viewportWidth - 32), 0);
@@ -128,6 +130,9 @@ async function geometry(frame, selector = DIALOG) {
   expect(actual.scrollWidth - actual.clientWidth).toBeLessThanOrEqual(1);
   expect(await frame.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
   return actual;
+}
+function sameFrame(actual, expected) {
+  for (const key of ['x', 'y', 'width', 'height']) expect(actual[key]).toBeCloseTo(expected[key], 0);
 }
 async function saveEditor(frame) {
   await frame.locator(`${EDITOR} button[type="submit"]`).click();
@@ -175,13 +180,13 @@ test('B1 native card: seven sections keep the accepted shared frame and do not m
       await selectSection(frame, 'treatment');
       await frame.locator(`${TREATMENT} [data-treatment-action="new-diagnosis"]`).click();
       const editor = frame.locator(EDITOR); await expect(editor).toBeVisible();
-      await geometry(frame, EDITOR); expect(await editor.boundingBox()).toEqual(bounds);
+      await geometry(frame, EDITOR); sameFrame(await editor.boundingBox(), bounds);
       await editor.getByRole('button', { name: 'Anuluj', exact: true }).click();
       await expect(editor).toBeHidden();
       const notes = await selectSection(frame, 'notes');
       await notes.getByRole('button', { name: '+ Dodaj notatkę', exact: true }).click();
       const note = frame.locator('.vilda-pne.vhome-b1-native-note'); await expect(note).toBeVisible();
-      await geometry(frame, '.vilda-pne.vhome-b1-native-note'); expect(await note.boundingBox()).toEqual(bounds);
+      await geometry(frame, '.vilda-pne.vhome-b1-native-note'); sameFrame(await note.boundingBox(), bounds);
       await note.getByRole('button', { name: 'Anuluj', exact: true }).click();
       await expect(note).toBeHidden();
     }
@@ -481,4 +486,113 @@ test('B1 treatment: locking the real Vault wipes the open editor and never submi
   expect(reports[0].connected).toBe(false); expect(reports[0].text).not.toContain('Fikcyjny prywatny niezapisany wywiad B1.');
   expect(reports[0].values.every(value => value === '')).toBe(true); expect(reports[0].writes).toEqual([]);
   await expect(frame.locator(EDITOR)).toHaveCount(0); await expect(frame.locator(NATIVE)).toHaveCount(0);
+});
+
+test('B1 treatment: native DocPro Notes preserves its card when the treatment editor capability is unavailable', async ({ page }) => {
+  const fixture = await setup(page);
+  const diagnosis = await fixture.frame.evaluate(async patientId => {
+    const scope = window.VildaPatientTreatmentStore.createScope({ vault: window.VildaVault, patientId, isCurrent: () => true });
+    try { return await scope.createDiagnosis({ name: 'Fikcyjne rozpoznanie do odczytu w DocPro', code: 'I10', status: 'active', dateISO: '2026-10-01' }); }
+    finally { scope.dispose(); }
+  }, fixture.id);
+  await page.goto('/docpro.html', { waitUntil: 'load' });
+  await readyForPatient(page); await settled(page);
+  const confirmation = page.locator('#professionalConfirmBtn');
+  if (await confirmation.isVisible()) await confirmation.click();
+  await page.waitForFunction(() => window.VildaDocproStatePersistence?.isReady());
+  expect(await page.evaluate(() => typeof window.VildaHomePatientNative?.decorate)).toBe('undefined');
+  await page.evaluate(patientId => window.VildaAuthUI.showPatientCard(patientId, null, null, { activeTab: 'notes' }), fixture.id);
+  const card = page.locator('.vilda-auth-patient-card:not(.vhome-native-patient-card)');
+  const panel = card.locator('.vilda-patient-tab-content[data-tab="notes"]');
+  await expect(card).toBeVisible(); await expect(panel).toBeVisible();
+  const row = panel.locator(`.vilda-patient-note-card[data-note-id="${diagnosis.id}"]`);
+  await expect(row).toBeVisible();
+  await flushMain(page);
+  const before = { patient: await records(page, fixture.id), other: await records(page, fixture.ids.b), clinical: await clinical(page),
+    docpro: await page.evaluate(() => { const state = structuredClone(window.VildaPersistence.readDocproUi()); if (state) delete state.savedAt; return state; }) };
+  await page.evaluate(() => {
+    const vault = window.VildaVault, originals = {}, calls = [];
+    for (const name of ['savePatientNote', 'savePatientNoteOnce', 'updateExistingPatientNote', 'saveReminderOutcome']) {
+      if (typeof vault[name] !== 'function') continue;
+      originals[name] = vault[name]; vault[name] = function (...args) { calls.push(name); return Reflect.apply(originals[name], this, args); };
+    }
+    window.__b1DocproGuard = { root: document.querySelector('.vilda-auth-patient-card'), panel: document.querySelector('.vilda-patient-tab-content[data-tab="notes"]'), calls,
+      restore() { for (const name of Object.keys(originals)) vault[name] = originals[name]; } };
+  });
+  const question = page.waitForEvent('dialog');
+  const editing = row.getByRole('button', { name: 'Edytuj', exact: true }).click();
+  const alert = await question;
+  expect(alert.type()).toBe('alert');
+  expect(alert.message()).toBe('Dokumentację leczenia otworzysz na stronie głównej: Karta pacjenta → Leczenie.');
+  await alert.accept();
+  await editing;
+  expect(await page.evaluate(() => document.querySelector('.vilda-auth-patient-card') === window.__b1DocproGuard.root
+    && document.querySelector('.vilda-patient-tab-content[data-tab="notes"]') === window.__b1DocproGuard.panel)).toBe(true);
+  await expect(card).toBeVisible(); await expect(panel).toBeVisible();
+  await expect(card.locator('.vilda-patient-tab-content:visible')).toHaveCount(1);
+  await expect(page.locator('.vilda-patient-note-editor-overlay, #vhomePatientTreatmentDialog')).toHaveCount(0);
+  await flushMain(page);
+  expect(await page.evaluate(() => window.__b1DocproGuard.calls)).toEqual([]);
+  expect(await records(page, fixture.id)).toEqual(before.patient); expect(await records(page, fixture.ids.b)).toEqual(before.other);
+  expect(await clinical(page)).toEqual(before.clinical);
+  expect(await page.evaluate(() => { const state = structuredClone(window.VildaPersistence.readDocproUi()); if (state) delete state.savedAt; return state; })).toEqual(before.docpro);
+  await page.evaluate(() => { window.__b1DocproGuard.restore(); delete window.__b1DocproGuard; });
+});
+
+test('B1 treatment: genuine reload veto retains an isolated dirty draft and releases protection after Cancel and Vault lock', async ({ page }) => {
+  const { frame, id } = await setup(page);
+  await frame.waitForFunction(() => window.VildaDataImportExport.getSaveReadiness().ready && !window.VildaPersistence.isAutosaveSuppressed());
+  expect(await frame.evaluate(async () => Boolean(await window.saveUserData()))).toBe(true);
+  await expect.poll(() => frame.evaluate(() => window.VildaSaveStatusIndicator.getCurrentDecision().state)).toBe('saved');
+  await flushMain(frame);
+  const before = { records: await records(frame, id), clinical: await clinical(frame) };
+  await openTreatment(frame);
+  await frame.locator(`${TREATMENT} [data-treatment-action="new-diagnosis"]`).click();
+  const editor = frame.locator(EDITOR); await expect(editor).toBeVisible();
+  await editor.locator('[name="name"]').fill('Fikcyjny szkic zachowany po odrzuconym F5');
+  await editor.locator('[name="code"]').fill('I10');
+  await flushMain(frame);
+  expect(await clinical(frame)).toEqual(before.clinical);
+  await expect.poll(() => frame.evaluate(() => window.VildaSaveStatusIndicator.getCurrentDecision().state)).toBe('saved');
+  const handles = { editor: await editor.elementHandle(), parent: await frame.locator(NATIVE).elementHandle() };
+  const historyBefore = await frame.evaluate(() => ({ length: history.length, state: structuredClone(history.state), url: location.href }));
+  const question = page.waitForEvent('dialog');
+  const reloading = page.reload({ waitUntil: 'load' }).then(() => true, () => false);
+  const confirmation = await question;
+  expect(confirmation.type()).toBe('beforeunload'); expect(confirmation.message()).toBe('');
+  // Chromium keeps the canceled load waiter pending. The retained live roots
+  // prove the veto; the next accepted real reload settles that same waiter.
+  await confirmation.dismiss();
+  expect(await handles.editor.evaluate(node => node.isConnected)).toBe(true);
+  expect(await handles.parent.evaluate(node => node.isConnected)).toBe(true);
+  await expect(editor.locator('[name="name"]')).toHaveValue('Fikcyjny szkic zachowany po odrzuconym F5');
+  await expect(editor.locator('[name="code"]')).toHaveValue('I10');
+  expect(await frame.evaluate(() => ({ length: history.length, state: structuredClone(history.state), url: location.href }))).toEqual(historyBefore);
+  expect(await clinical(frame)).toEqual(before.clinical); expect(await records(frame, id)).toEqual(before.records);
+  page.once('dialog', dialog => dialog.accept());
+  await editor.getByRole('button', { name: 'Anuluj', exact: true }).click();
+  await expect(editor).toBeHidden();
+  expect(await clinical(frame)).toEqual(before.clinical); expect(await records(frame, id)).toEqual(before.records);
+  const unexpected = [];
+  const rejectUnexpected = dialog => { unexpected.push({ type: dialog.type(), message: dialog.message() }); return dialog.dismiss(); };
+  page.on('dialog', rejectUnexpected);
+  try { await page.reload({ waitUntil: 'load' }); }
+  finally { page.off('dialog', rejectUnexpected); }
+  await reloading;
+  expect(unexpected).toEqual([]);
+  await readyForPatient(page); await settled(page);
+  expect(await records(page, id)).toEqual(before.records);
+  await openTreatment(page);
+  await page.locator(`${TREATMENT} [data-treatment-action="new-therapy"]`).click();
+  const lockedEditor = page.locator(EDITOR); await expect(lockedEditor).toBeVisible();
+  await lockedEditor.locator('[name="title"]').fill('Fikcyjny szkic przed blokadą sejfu');
+  await page.evaluate(() => window.VildaVault.lock());
+  expect(await page.evaluate(() => window.VildaVault.isUnlocked())).toBe(false);
+  await expect(lockedEditor).toBeHidden(); await expect(page.locator(NATIVE)).toBeHidden();
+  page.on('dialog', rejectUnexpected);
+  try { await page.reload({ waitUntil: 'load' }); }
+  finally { page.off('dialog', rejectUnexpected); }
+  expect(unexpected).toEqual([]);
+  await page.waitForFunction(() => Boolean(window.VildaVault));
+  await expect(page.locator(EDITOR)).toHaveCount(0);
 });

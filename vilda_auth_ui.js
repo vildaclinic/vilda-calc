@@ -988,6 +988,12 @@ function ga(options) {
     &&Object.prototype.hasOwnProperty.call(options.note,"treatmentContext")){
     if(!options.patientId||options.note.patientId!==options.patientId||!options.note.id
       ||options.isCurrent&&options.isCurrent()!==true)return false;
+    var treatmentVault=jt();
+    if(!treatmentVault||!treatmentVault.isUnlocked())return false;
+    if(!i.VildaHomePatientNative||typeof i.VildaHomePatientNative.decorate!=="function"){
+      try{i.alert("Dokumentację leczenia otworzysz na stronie głównej: Karta pacjenta → Leczenie.")}catch{}
+      return false;
+    }
     return se(options.patientId,null,{homePatientPresentation:true},{activeTab:"treatment",treatmentFocusNoteId:options.note.id});
   }
   var sequence = ++CareEditorSequence, owner = remReadOwner();

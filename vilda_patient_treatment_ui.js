@@ -278,6 +278,7 @@
       if (view.dirty && !w.confirm('Masz niezapisane zmiany. Odrzucić je i zamknąć formularz?')) return false;
     }
     view.closed = true; activeEditor = null;
+    if (view.beforeUnload) { w.removeEventListener('beforeunload', view.beforeUnload); view.beforeUnload = null; }
     if (view.releaseBack) { try { view.releaseBack(); } catch (_) { /* Continue wiping a disposed editor. */ } view.releaseBack = null; }
     if (view.releaseDialog) { try { view.releaseDialog(); } catch (_) { /* Continue wiping a disposed editor. */ } view.releaseDialog = null; }
     if (view.history) { view.history.release(); view.history = null; }
@@ -334,7 +335,7 @@
     var dialog = ensureEditor(); if (!dialog) { status(owner, 'Nie udało się otworzyć formularza.', true); return false; }
     var opener = d.activeElement, view = { owner: owner, dialog: dialog, kind: options.kind, dto: options.dto || null,
       opener: opener, hint: { action: opener && opener.dataset.treatmentAction, id: opener && opener.dataset.treatmentId },
-      dirty: false, saving: false, uncertain: false, closed: false, submit: options.submit, read: options.read, releaseBack: null, releaseDialog: null, history: null };
+      dirty: false, saving: false, uncertain: false, closed: false, beforeUnload: null, submit: options.submit, read: options.read, releaseBack: null, releaseDialog: null, history: null };
     activeEditor = view;
     dialog.querySelector('#vhomePatientTreatmentTitle').textContent = options.title;
     var ownerLabel = dialog.querySelector('.vpt-editor-owner');
@@ -355,6 +356,15 @@
         if (typeof releaseDialog === 'function') view.releaseDialog = releaseDialog;
       }
       w.VildaHomeWorkspace.fitDialog(dialog); dialog.setAttribute('aria-modal', 'true'); dialog.showModal();
+      view.beforeUnload = function (event) {
+        if (!editorCurrent(view) || !dialog.isConnected || !dialog.open) {
+          if (activeEditor === view) closeEditor(view, true, false);
+          return;
+        }
+        if (!view.dirty && !view.saving && !view.uncertain) return;
+        event.preventDefault(); event.returnValue = '';
+      };
+      w.addEventListener('beforeunload', view.beforeUnload);
       if (typeof owner.options.registerBack === 'function') {
         var releaseBack = owner.options.registerBack(function () { return closeEditor(view, false, true); });
         if (typeof releaseBack === 'function') view.releaseBack = releaseBack;
