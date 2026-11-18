@@ -198,11 +198,12 @@
   }
   function nativeDialog(view, target, metadata) {
     if (!current(view) || !target) return null;
-    target.classList.add('vhome-patient-native-dialog');
+    target.classList.add('vhome-patient-native-dialog', 'vhome-b1-child-dialog');
     var closed = false, observer = null, release = null;
     function fit() { w.VildaHomeWorkspace?.fitDialog?.(target); }
     function cleanup() {
       if (closed) return; closed = true;
+      target.classList.remove('vhome-b1-child-dialog');
       if (observer) observer.disconnect(); if (release) release();
       target.removeEventListener('close', sync); w.removeEventListener('resize', fit);
       w.visualViewport?.removeEventListener('resize', fit); view.dialogCleanups.delete(cleanup);
@@ -396,6 +397,8 @@
           if (!shell?.isConnected) return;
           w.VildaHomeWorkspace?.fitDialog?.(shell);
           var height = shell.style.getPropertyValue('--vhome-dialog-viewport-height');
+          // The overlay must share the fitted card's measured visible iframe
+          // height; CSS cannot read its intersection with the parent viewport.
           if (height && shell.parentElement) shell.parentElement.style.setProperty('--vhome-dialog-viewport-height', height);
         };
         view.fit(); w.addEventListener('resize', view.fit); w.visualViewport?.addEventListener('resize', view.fit);

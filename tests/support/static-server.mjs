@@ -38,7 +38,7 @@ function createE2eServiceWorker(source, wersja) {
   // Keep that exact block while trimming unrelated shell assets for these tests.
   const clinicalWorkspace = source.match(/  \/\/ BEGIN CLINICAL WORKSPACE PRECACHE V1[\s\S]*?  \/\/ END CLINICAL WORKSPACE PRECACHE V1/);
   if (!clinicalWorkspace) throw new Error('Test service worker requires the complete clinical workspace precache block.');
-  // The visit/home UI pack has the same production requirement: its twenty pinned
+  // The visit/home UI pack has the same production requirement: its 25 pinned
   // URLs must stay in CORE even when this fixture trims unrelated assets.
   const visitPack = source.match(/const VISIT_UI_PRECACHE_PACK = Object\.freeze\((\{[\s\S]*?\})\);/);
   if (!visitPack) throw new Error('Test service worker requires the visit UI precache configuration.');
@@ -49,6 +49,8 @@ function createE2eServiceWorker(source, wersja) {
     '/vilda_home_growth.js', '/vilda_home_growth_views.js', '/vilda_home_growth_views.css', '/vilda_home_growth_charts.js',
     '/vilda_home_diet.js', '/vilda_home_diet_bmi.css', '/vilda_home_diet.css',
     '/vilda_home_dialog_history.js', '/vilda_home_patient_data.js', '/vilda_home_patient_note_host.js', '/vilda_home_patient_note_host.css', '/vilda_home_patient.js', '/vilda_home_patient.css',
+    '/vilda_home_patient_native.js', '/vilda_home_patient_native.css', '/vilda_home_patient_native_note.js',
+    '/vilda_patient_treatment_ui.js', '/vilda_patient_treatment_ui.css',
   ]);
   const visitFiles = JSON.parse(visitPack[1]).files;
   const visitUrls = Array.isArray(visitFiles) ? visitFiles.map(file => file?.url) : [];
@@ -56,7 +58,7 @@ function createE2eServiceWorker(source, wersja) {
     ? url.split('?')[0] : null);
   if (visitUrls.length !== expectedVisitPaths.size || new Set(visitPaths).size !== expectedVisitPaths.size
     || visitPaths.some(resource => !expectedVisitPaths.has(resource)))
-    throw new Error('Test service worker requires exactly the twenty versioned visit/home UI resources.');
+    throw new Error('Test service worker requires exactly the 25 versioned visit/home UI resources.');
   const visitCore = visitUrls.map(url => '  ' + JSON.stringify(url) + ',').join('\n');
   const zWersja = wersja && /^[0-9A-Za-z.-]{1,32}$/.test(wersja)
     ? source.replace(/const SW_VERSION = '[^']*';/, `const SW_VERSION = '${wersja}';`)

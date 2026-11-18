@@ -768,6 +768,16 @@ test('home patient: a delayed native conflict reload cannot resurrect an old not
 async function exactSharedFrame(dialog, referenceBounds) {
   await expect(dialog).toBeVisible();
   await expect.poll(() => dialog.boundingBox()).toEqual(referenceBounds);
+  const actual = await dialog.evaluate(node => {
+    const rect = node.getBoundingClientRect();
+    return { x: rect.x, y: rect.y, width: rect.width, height: rect.height,
+      viewportWidth: innerWidth, viewportHeight: innerHeight, overflow: node.scrollWidth - node.clientWidth };
+  });
+  expect(actual.width).toBeCloseTo(Math.min(1000, actual.viewportWidth - 32), 0);
+  expect(actual.height).toBeCloseTo(Math.min(820, actual.viewportHeight - 32), 0);
+  expect(actual.x).toBeCloseTo((actual.viewportWidth - actual.width) / 2, 0);
+  expect(actual.y).toBeCloseTo((actual.viewportHeight - actual.height) / 2, 0);
+  expect(actual.overflow).toBeLessThanOrEqual(1);
 }
 async function clcrTable(frame) {
   await selectTab(frame, /^Badania/); await frame.locator('#vhomePatientLabsOpen').click();
@@ -808,6 +818,19 @@ test('home patient: APP native Clcr details and edit/delete Cancel share the fra
   const rowSelector = `.vilda-lab-hist-result-row[data-source="clcr"][data-note-id="${saved.id}"]`;
   await table.locator(rowSelector).click();
   const detail = frame.locator('#detailsDialog'); await exactSharedFrame(detail, referenceBounds);
+  for (const [width, height] of [[1440, 1000], [850, 1000], [390, 1000], [390, 844]]) {
+    await page.setViewportSize({ width, height });
+    await expect.poll(() => shared.evaluate(node => {
+      const rect = node.getBoundingClientRect();
+      return { width: rect.width - Math.min(1000, innerWidth - 32),
+        height: rect.height - Math.min(820, innerHeight - 32),
+        x: rect.x - (innerWidth - rect.width) / 2, y: rect.y - (innerHeight - rect.height) / 2 };
+    })).toEqual({ width: 0, height: 0, x: 0, y: 0 });
+    await exactSharedFrame(detail, await shared.boundingBox());
+    await detail.getByRole('button', { name: 'Zamknij', exact: true }).click({ trial: true });
+  }
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await exactSharedFrame(detail, referenceBounds);
   await expect(detail.locator('#calculationDetails')).toHaveAttribute('data-note-id', saved.id);
   await expect(detail.locator('#editMeasurement')).toBeEnabled();
   await detail.locator('#editMeasurement').click();
@@ -857,7 +880,7 @@ test('home patient: APP native Clcr details and edit/delete Cancel share the fra
   await expect(page).toHaveURL(/\/app\.html#\/start$/);
 });
 
-test('home patient: APP history-menu jump rejects a dirty child and restores its existing entry without another push', async ({ page }) => {
+test('home patient: APP cross-document history jump veto preserves the native dirty child without another push', async ({ page }) => {
   const { frame, id } = await setup(page, { shell: true });
   const before = { records: await records(frame, id), clinical: await clinical(frame) };
   await show(frame); await openExpandedNote(frame);
@@ -866,10 +889,13 @@ test('home patient: APP history-menu jump rejects a dirty child and restores its
   await frame.evaluate(() => { window.__patientMenuJumpRoot = document.querySelector('.vilda-patient-note-editor-overlay'); });
   const opened = await nativeHistoryState(frame); expect(opened.current).toBe(true); expect(opened.dialogs).toBe(2);
   const question = page.waitForEvent('dialog');
-  // A history-menu jump can traverse multiple real entries while the native
-  // auth entry owns a dirty child. No synthetic popstate is supplied.
+  // Native gr() owns the child within one auth history entry. A genuine -2
+  // jump crosses the document, so the native Qbu beforeunload veto is the
+  // authority; its message is browser-controlled rather than the local prompt.
   await frame.evaluate(() => history.go(-2));
-  const confirmation = await question; expect(confirmation.message()).toContain('niezapisan'); await confirmation.dismiss();
+  const confirmation = await question;
+  expect(confirmation.type()).toBe('beforeunload'); expect(confirmation.message()).toBe('');
+  await confirmation.dismiss();
   await expect.poll(async () => (await nativeHistoryState(frame)).current).toBe(true);
   expect((await nativeHistoryState(frame)).length).toBe(opened.length);
   expect((await nativeHistoryState(frame)).dialogs).toBe(opened.dialogs);

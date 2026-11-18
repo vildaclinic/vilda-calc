@@ -358,7 +358,7 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
     expect(pobrane.filter(adres => ZASOBY_WIZYT.has(adres))).toEqual([]);
     // The home UI files join the existing verified transport. Their own
     // cache keys remain required; the single archive keeps the 600-request cap.
-    expect(ZASOBY_WIZYT.size).toBe(20);
+    expect(ZASOBY_WIZYT.size).toBe(25);
     for (const resource of ['/vilda_home_workspace.js?v=6', '/vilda_home_workspace.css?v=7', '/vilda_home_growth_views.js?v=5', '/vilda_home_growth_views.css?v=6', '/vilda_home_growth_charts.js?v=1', '/vilda_home_diet.js?v=2', '/vilda_home_diet_bmi.css?v=1', '/vilda_home_diet.css?v=3', '/vilda_home_dialog_history.js?v=1', '/vilda_home_patient_data.js?v=2', '/vilda_home_patient_note_host.js?v=1', '/vilda_home_patient_note_host.css?v=1', '/vilda_home_patient.js?v=2', '/vilda_home_patient.css?v=2', '/vilda_home_patient_native.js?v=1', '/vilda_home_patient_native.css?v=1', '/vilda_patient_treatment_ui.js?v=1', '/vilda_patient_treatment_ui.css?v=1', '/vilda_home_patient_native_note.js?v=1']) {
       expect(ZASOBY_WIZYT.has(resource)).toBe(true);
       expect(wpisy.has(resource)).toBe(true);

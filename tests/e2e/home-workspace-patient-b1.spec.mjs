@@ -105,13 +105,23 @@ async function closeCard(frame) {
   await expect(frame.locator(NATIVE)).toBeHidden();
 }
 async function geometry(frame, selector = DIALOG) {
-  const actual = await frame.locator(selector).evaluate(node => {
+  const measure = () => frame.locator(selector).evaluate(node => {
     const box = node.getBoundingClientRect();
     return { width: box.width, height: box.height, x: box.x, y: box.y,
       viewportWidth: innerWidth, viewportHeight: innerHeight, scrollWidth: node.scrollWidth, clientWidth: node.clientWidth };
   });
+  // Opening motion may still be running when the native sheet becomes visible.
+  // Observe its exact accepted final frame rather than an intermediate scale.
+  await expect.poll(async () => {
+    const value = await measure(), width = Math.min(1000, value.viewportWidth - 32), height = Math.min(820, value.viewportHeight - 32);
+    return { width: value.width - width, height: value.height - height,
+      x: value.x - (value.viewportWidth - width) / 2, y: value.y - (value.viewportHeight - height) / 2 };
+  }).toEqual({ width: 0, height: 0, x: 0, y: 0 });
+  const actual = await measure();
   expect(actual.width).toBeCloseTo(Math.min(1000, actual.viewportWidth - 32), 0);
   expect(actual.height).toBeCloseTo(Math.min(820, actual.viewportHeight - 32), 0);
+  expect(actual.x).toBeCloseTo((actual.viewportWidth - actual.width) / 2, 0);
+  expect(actual.y).toBeCloseTo((actual.viewportHeight - actual.height) / 2, 0);
   expect(actual.x).toBeGreaterThanOrEqual(0); expect(actual.y).toBeGreaterThanOrEqual(0);
   expect(actual.x + actual.width).toBeLessThanOrEqual(actual.viewportWidth + 1);
   expect(actual.y + actual.height).toBeLessThanOrEqual(actual.viewportHeight + 1);
@@ -157,9 +167,24 @@ test('B1 native card: seven sections keep the accepted shared frame and do not m
     await expect(actions.getByRole('menuitem', { name, exact: true })).toBeVisible();
   }
   await actions.press('Escape'); await expect(actions).toBeHidden(); await expect(frame.locator(DIALOG)).toBeVisible();
-  for (const width of [1440, 1920, 834, 390, 320]) {
-    await page.setViewportSize({ width, height: 1000 });
+  for (const [width, height] of [[1440, 1000], [1920, 1000], [834, 1000], [850, 1000], [390, 1000], [320, 1000], [390, 844]]) {
+    await page.setViewportSize({ width, height });
     for (const key of SECTIONS) { await selectSection(frame, key); await geometry(frame); }
+    if ([1440, 850, 390].includes(width)) {
+      const bounds = await frame.locator(DIALOG).boundingBox();
+      await selectSection(frame, 'treatment');
+      await frame.locator(`${TREATMENT} [data-treatment-action="new-diagnosis"]`).click();
+      const editor = frame.locator(EDITOR); await expect(editor).toBeVisible();
+      await geometry(frame, EDITOR); expect(await editor.boundingBox()).toEqual(bounds);
+      await editor.getByRole('button', { name: 'Anuluj', exact: true }).click();
+      await expect(editor).toBeHidden();
+      const notes = await selectSection(frame, 'notes');
+      await notes.getByRole('button', { name: '+ Dodaj notatkę', exact: true }).click();
+      const note = frame.locator('.vilda-pne.vhome-b1-native-note'); await expect(note).toBeVisible();
+      await geometry(frame, '.vilda-pne.vhome-b1-native-note'); expect(await note.boundingBox()).toEqual(bounds);
+      await note.getByRole('button', { name: 'Anuluj', exact: true }).click();
+      await expect(note).toBeHidden();
+    }
   }
   await closeCard(frame);
   expect(await records(frame, id)).toEqual(before.records); expect(await clinical(frame)).toEqual(before.clinical);
