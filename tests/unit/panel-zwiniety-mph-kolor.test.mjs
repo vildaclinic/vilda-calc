@@ -112,7 +112,7 @@ describe('Kafelek MPH w Karcie pacjenta kolorowany regułą wzrostu (vilda_auth_
     expect(src).not.toContain('ce.push(xt("MPH",St(rt)+" cm",Oe,null))');
     // P-STATUS-DOROSLY (2026-09-20): kafelek wzrostu dostał trzeci wiersz (`nz` zamiast
     // stałego `zt`) — u dorosłego niesie nazwę siatki odniesienia. Reguła koloru bez zmian.
-    expect(src).toContain('At.push(xt("Wzrost",St(D)+" cm",ne,Dt,nz))');
+    expect(src).toContain('At.push(HomePatientMetrics.height=xt("Wzrost",St(D)+" cm",ne,Dt,nz))');
     // MPH jest pojęciem o rosnącym dziecku — u dorosłego kafelek w ogóle nie powstaje.
     expect(src).toContain('if(!tt&&rt!=null){var Oe=');
   });

@@ -42201,3 +42201,33 @@ podtytuł „Scal kopię konta” (`uo`) i komentarz dopisku podsumowania; `vild
 `clcr_result_details.js` 20 → 21, `vilda_terminarz.js` 197 → 198; wstrzykujące: `vilda_chrome.js` 297 → 298,
 `vilda_session_bridge.js` 213 → 214, `clcr_record_resources.js` 29 → 30; SW 1.1.543 → 1.1.544 — `npm run
 podbij-wersje`; baza `origin/audyt` `3c1fc748` (po vildaclinic/vilda-calc#978). Bez nowego pliku w pamięci offline.
+
+
+### P-HOME-PATIENT-B1 — natywna Karta pacjenta i ręczny rejestr leczenia (2026-11-18)
+
+**Klasyfikacja:** zmiana funkcjonalna prezentacji i zapisu dokumentacji, bez
+zmiany algorytmu medycznego. Zaakceptowany wariant B1 rozwija małą kartę do
+natywnego widoku pacjenta z siedmioma sekcjami. Status korzysta z dotychczasowych
+wyników, źródeł, jednostek i ocen. Klasy kolorów wzrostu i masy pozostają klasami
+Statusu; BMI i Cole zachowują własne oceny. Obecne moduły GH i otyłości zachowują
+swoje punkty i obliczenia.
+
+Rozpoznanie z opcjonalnym kodem ICD-10 oraz epizod terapii są niezależnymi
+ręcznie wpisanymi dokumentami. Aplikacja nie wyprowadza rozpoznania z BMI,
+preparatu ani programu GH. Zakończenie epizodu nie zamyka rozpoznania. Wpisane
+preparaty, dawki i kontrole są dokumentacją; ten moduł nie ocenia dawkowania
+ani skuteczności dowolnej terapii. Kontrakt: `docs/PATIENT_TREATMENT.md`.
+
+`treatmentContext` jest częścią zaszyfrowanej treści natywnej notatki. Te same
+identyfikatory i powiązania przechodzą przez odczyt, import, backup,
+synchronizację i przeniesienie pacjenta. Zmiana jest odtwarzana z czytelnych
+źródeł `runtime/patient-treatment-v1/` i dokładnych haków
+`tools/patient-treatment-vault-delta.mjs`. Chroniony fragment klinicznego
+obszaru pozostaje niezmieniony; aktualna baza publiczna i historyczny dowód
+integracji są weryfikowane oddzielnie.
+
+Przypadki regresyjne obejmują zapis i ponowny odczyt ręcznego rozpoznania,
+kilka epizodów, zachowanie rozpoznania po zakończeniu terapii, konflikt rewizji,
+nieobsługiwaną wersję, transport kontekstu oraz wygaśnięcie właściciela podczas
+szyfrowania przed utrwaleniem. Testy przeglądarkowe używają wyłącznie fikcyjnych
+sejfów i natywnych aktorów.

@@ -16,6 +16,8 @@ import { atrybutyStyle, doFixture, inwentarzStyliElementow, korzen, miejscaJs, p
 // dozwolona własność i brak innych zapisów są sprawdzane osobno poniżej.
 // Okno strony głównej analogicznie przekazuje wyłącznie zmierzoną wysokość
 // widocznego obszaru ramki; wymiary, kolory i animacje pozostają w arkuszu.
+// Natywna karta B1 przekazuje ten sam zmierzony parametr ze wspólnej karty
+// do jej nakładki; CSS nie odczyta części ramki widocznej w oknie rodzica.
 
 const FIXTURE = path.join(korzen, 'tests/fixtures/style-elementow.json');
 
@@ -36,6 +38,12 @@ describe('P-STYLE krok 5b: stylów ustawianych wprost na elementach nie przybywa
 
   it('okno strony głównej ustawia wyłącznie zmierzoną wysokość widocznego obszaru ramki', () => {
     const js = fs.readFileSync(path.join(korzen, 'vilda_home_workspace.js'), 'utf8');
+    expect(miejscaJs(js)).toEqual({ wlasnosc: 0, cssText: 0, setProperty: 1, atrybut: 0, lancuch: 0, razem: 1 });
+    expect([...js.matchAll(/\.style\.setProperty\(\s*['"]([^'"]+)['"]/g)].map((match) => match[1])).toEqual(['--vhome-dialog-viewport-height']);
+  });
+
+  it('nakładka natywnej karty B1 przekazuje wyłącznie zmierzoną wysokość widocznego obszaru ramki', () => {
+    const js = fs.readFileSync(path.join(korzen, 'vilda_home_patient_native.js'), 'utf8');
     expect(miejscaJs(js)).toEqual({ wlasnosc: 0, cssText: 0, setProperty: 1, atrybut: 0, lancuch: 0, razem: 1 });
     expect([...js.matchAll(/\.style\.setProperty\(\s*['"]([^'"]+)['"]/g)].map((match) => match[1])).toEqual(['--vhome-dialog-viewport-height']);
   });

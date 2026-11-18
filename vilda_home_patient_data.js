@@ -53,7 +53,9 @@
     if (!labHistory || typeof labHistory.isResultNote !== 'function' || typeof labHistory.isClcrResultNote !== 'function') throw failure('HOME_PATIENT_LAB_MODEL_UNAVAILABLE');
     var projected = care.projectPatientNotes(notes, patientId, { plans: plans });
     if (!Array.isArray(projected)) throw failure('HOME_PATIENT_NOTES_PROJECTION_INVALID');
-    return projected.filter(function (note) { return note && note.patientId === patientId && !note.ghPointId && !labHistory.isResultNote(note) && !labHistory.isClcrResultNote(note); })
+    return projected.filter(function (note) { return note && note.patientId === patientId && !note.ghPointId
+      && !Object.prototype.hasOwnProperty.call(note, 'treatmentContext')
+      && !labHistory.isResultNote(note) && !labHistory.isClcrResultNote(note); })
       .map(function (note) {
         return {
           id: note.id,
@@ -177,6 +179,7 @@
       patient: results[0].status === 'fulfilled' ? results[0].value : null,
       identity: null, currentNotes: null, generalNotes: null, clinicalNotes: null, latestNote: null,
       labView: null, latestLabRows: null, careRecords: null, latestPlanSummary: null,
+      treatmentSummary: null,
       counts: { notes: null, labResults: null, carePlans: null },
       areas: { patient: sources.getPatient, notes: 'unavailable', labs: 'unavailable', care: 'unavailable' },
       errors: errors
@@ -189,6 +192,14 @@
     output.identity = identity(output.patient);
     var notesReady = sources.listPatientNotesForPatient === 'ready', plansReady = sources.listCarePlans === 'ready';
     var notes = notesReady ? results[1].value : null, plans = plansReady ? results[4].value : null;
+    if (notesReady && typeof root.VildaPatientTreatmentModel?.project === 'function') {
+      try {
+        var treatments = root.VildaPatientTreatmentModel.project(notes, { patientId: patientId });
+        var activeEpisodes = treatments.episodes.filter(function (entry) { return entry.context.status === 'active'; });
+        output.treatmentSummary = { status: 'ready', activeCount: activeEpisodes.length,
+          activeLabels: activeEpisodes.map(function (entry) { return entry.context.title; }), unsupportedCount: treatments.unsupported.length };
+      } catch (_) { errors.push({ area: 'treatment', code: 'HOME_PATIENT_TREATMENT_PROJECTION_FAILED' }); }
+    }
     var history = root.VildaLabHistory, presentation = root.VildaLabResultPresentation, trend = root.__vildaLabTrend;
     if (notesReady && plansReady) {
       try {

@@ -9,7 +9,7 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const FILES = ['vilda_visit_context.js', 'vilda_visit_history_ui.js', 'vilda_visit_history_ui.css',
   'vilda_home_workspace.js', 'vilda_home_workspace.css', 'vilda_home_perinatal.js', 'vilda_sga_birth_results.css', 'vilda_home_growth.js', 'vilda_home_growth_views.js', 'vilda_home_growth_views.css', 'vilda_home_growth_charts.js',
   'vilda_home_diet.js', 'vilda_home_diet_bmi.css', 'vilda_home_diet.css',
-  'vilda_home_dialog_history.js', 'vilda_home_patient_data.js', 'vilda_home_patient_note_host.js', 'vilda_home_patient_note_host.css', 'vilda_home_patient.js', 'vilda_home_patient.css'];
+  'vilda_home_dialog_history.js', 'vilda_home_patient_data.js', 'vilda_home_patient_note_host.js', 'vilda_home_patient_note_host.css', 'vilda_home_patient.js', 'vilda_home_patient.css', 'vilda_home_patient_native.js', 'vilda_home_patient_native.css', 'vilda_patient_treatment_ui.js', 'vilda_patient_treatment_ui.css', 'vilda_home_patient_native_note.js'];
 const MANIFEST = 'runtime/visit-ui-precache/manifest.json';
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 function fail(message) { throw new Error('Visit UI precache: ' + message); }

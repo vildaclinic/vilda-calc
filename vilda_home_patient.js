@@ -7,10 +7,10 @@
   if (!w || w.__VILDA_HOME_WORKSPACE_PREVIEW__ !== true || w.VildaHomePatient) return;
   var d = w.document, card = null, dialog = null, active = null, model = null;
   var started = false, frame = 0, refreshRequested = true, generation = 0, readGeneration = 0;
-  var nativeView = null, noteView = null, modal = null, selectedTab = 'labs';
+  var nativeView = null, noteView = null, modal = null, selectedTab = 'notes';
   var previewState = null;
   var subscribed = new WeakSet();
-  var tabNames = [['labs', 'Badania'], ['care', 'Plan opieki'], ['notes', 'Notatki']];
+  var tabNames = [['labs', 'Badania'], ['care', 'Plany'], ['notes', 'Notatki']];
   var lifecycle = ['vilda:user-state-cleared', 'vilda:data-applied', 'vilda:patient-loaded', 'vilda:auth-loaded', 'vilda:session-changed'];
 
   function el(tag, cls, value) {
@@ -64,6 +64,11 @@
     if (target) target.textContent = value;
   }
   function close(force, focus) {
+    var native = w.VildaHomePatientNative;
+    if (native && (force || native.isOpen())) {
+      var accepted = native.close(force);
+      if (!force) return accepted;
+    }
     return w.VildaHomeDialogHistory.batch(function () {
       if (noteView) {
         if (force) noteView.destroy();
@@ -99,6 +104,7 @@
     if (card) {
       card.querySelectorAll('.vhome-patient-tabpanel').forEach(function (panel) { panel.replaceChildren(); });
       var count = byId('vhomePatientLabCount'); if (count) { count.textContent = ''; count.hidden = true; }
+      var treatment = byId('vhomePatientTreatmentSummary'); if (treatment) { treatment.textContent = ''; treatment.hidden = true; }
       card.querySelectorAll('button').forEach(function (control) { control.disabled = true; });
       card.removeAttribute('aria-busy');
     }
@@ -236,7 +242,7 @@
   }
   function compactNotes(panel) {
     var note = ready('notes') ? model.latestNote : null;
-    caption(panel, 'Ostatnia notatka', note && note.dateISO);
+    caption(panel, note ? note.scope === 'general' ? 'Notatka ogólna' : 'Notatka z wizyty' : 'Ostatnia notatka', note && note.dateISO);
     var body = el('div', 'vhome-patient-preview-body'); panel.appendChild(body);
     if (!note) empty(body, areaMessage('notes', 'Brak zapisanych notatek.'));
     else {
@@ -267,6 +273,15 @@
     card.querySelectorAll('[role=tab]').forEach(function (tab) { tab.disabled = false; });
     var count = byId('vhomePatientLabCount'), value = model?.counts.labResults;
     count.hidden = !Number.isInteger(value); count.textContent = Number.isInteger(value) ? String(value) : '';
+    var treatment = byId('vhomePatientTreatmentSummary'), treatmentText = '';
+    try { treatmentText = w.VildaAuthUI?.describePatientTreatmentSummary?.(model?.patient?.snapshots?.[0]?.payload) || ''; }
+    catch (_) { /* No summary is inferred after a failed native read. */ }
+    var generic = model?.treatmentSummary;
+    if (generic?.status === 'ready' && Number.isInteger(generic.activeCount) && generic.activeCount > 0) {
+      var genericText = generic.activeCount === 1 && Array.isArray(generic.activeLabels) ? generic.activeLabels[0] : 'Aktywne leczenie: ' + generic.activeCount;
+      treatmentText = [treatmentText, genericText].filter(Boolean).join(' · ');
+    }
+    treatment.textContent = treatmentText; treatment.hidden = !treatmentText;
     tabNames.forEach(function (entry) {
       var panel = byId('vhomePatientPanel-' + entry[0]); panel.replaceChildren();
       if (entry[0] === 'labs') compactLabs(panel);
@@ -461,23 +476,36 @@
     if (!current(active)) { requestRead(); return false; }
     mode = mode || 'overview'; options = options || {};
     if (nativeView?.isEditing?.()) { announce('Najpierw zakończ lub anuluj otwarty formularz planu.'); return false; }
+    if (noteView?.isCurrent?.()) {
+      if (!noteView.requestClose()) return false;
+      noteView = null;
+    }
+    if (w.VildaHomePatientNative && typeof w.VildaAuthUI?.showPatientCard === 'function') {
+      var target = { overview: 'antro', status: 'antro', labs: 'lab', care: 'care', notes: 'notes', timeline: 'timeline', treatment: 'treatment', sga: 'antro' }[mode] || 'antro';
+      var nativeOptions = Object.assign({}, options, { activeTab: target });
+      if (options.planId) nativeOptions.carePlanId = options.planId;
+      if (options.noteId) nativeOptions.careNoteId = options.noteId;
+      if (options.detail) nativeOptions.careDetail = options.detail;
+      var opener = d.activeElement && card.contains(d.activeElement) ? d.activeElement.id : 'vhomePatientExpand';
+      w.VildaAuthUI.showPatientCard(active.owner.patientId, null, { homePatientPresentation: true, homePatientOpenerId: opener }, nativeOptions);
+      return true;
+    }
+    // Recover an asset/version failure visibly; never substitute the retired
+    // overview for the accepted native card.
     ensureDialog();
     if (!dialog.isConnected) d.body.appendChild(dialog);
     if (!dialog.open) {
-      var nextModal = { opener: d.activeElement, mode: mode, history: null };
-      modal = nextModal;
-      nextModal.history = w.VildaHomeDialogHistory.create({ group: active,
-        isOpen: function () { return modal === nextModal && dialog.open; },
+      modal = { opener: d.activeElement, mode: 'unavailable', history: null };
+      var pending = modal;
+      pending.history = w.VildaHomeDialogHistory.create({ group: active,
+        isOpen: function () { return modal === pending && dialog.open; },
         requestClose: function () { return close(false, true); } });
-      nextModal.history.enter();
-      w.VildaHomeWorkspace.fitDialog(dialog); dialog.setAttribute('aria-modal', 'true'); dialog.showModal();
-    } else modal.mode = mode;
-    announce('');
-    byId('vhomePatientTitle').textContent = mode === 'labs' ? 'Badania pacjenta' : mode === 'care' ? 'Plan opieki' : mode === 'sga' ? 'SGA · DocPro' : 'Karta pacjenta';
-    if (mode === 'overview') renderOverview(); else renderNative(mode, options);
-    dialog.querySelector('.vhome-dialog-close').focus({ preventScroll: true });
-    return true;
+      pending.history.enter(); w.VildaHomeWorkspace.fitDialog(dialog); dialog.showModal();
+    }
+    dialog.querySelector('.vhome-dialog-body').replaceChildren(el('p', 'vhome-patient-empty', 'Nie można otworzyć Karty pacjenta. Odśwież aplikację.'));
+    return false;
   }
+
   function refresh() {
     frame = 0; if (!started) return;
     subscribe(w.VildaVault);
@@ -503,7 +531,9 @@
     var expand = button('', function () { open('overview'); }, 'vhome-patient-expand'); expand.id = 'vhomePatientExpand';
     expand.setAttribute('aria-label', 'Powiększ kartę pacjenta'); expand.setAttribute('aria-haspopup', 'dialog'); expand.setAttribute('aria-controls', 'vhomePatientDialog');
     var icon = byId('vhomeGrowthExpand')?.querySelector('svg'); if (icon) expand.appendChild(icon.cloneNode(true));
-    heading.append(title, expand); card.appendChild(heading);
+    var headingCopy = el('div', 'vhome-patient-heading-copy'), treatment = el('p', 'vhome-patient-treatment-summary');
+    treatment.id = 'vhomePatientTreatmentSummary'; treatment.hidden = true;
+    headingCopy.append(title, treatment); heading.append(headingCopy, expand); card.appendChild(heading);
     var tabs = el('div', 'vhome-patient-tabs'); tabs.setAttribute('role', 'tablist'); tabs.setAttribute('aria-label', 'Dokumentacja pacjenta');
     tabNames.forEach(function (entry) {
       var tab = button('', function () { selectTab(entry[0], false); }, 'vhome-patient-tab');

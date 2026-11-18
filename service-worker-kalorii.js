@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.546';
+const SW_VERSION = '1.1.547';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -1901,10 +1901,13 @@ const CORE_SHELL_URLS = [
   '/vilda_home_growth.js?v=4',
   '/vilda_home_dialog_history.js?v=1',
   '/vilda_home_patient_data.js?v=1',
+  '/vilda_home_patient_data.js?v=2',
   '/vilda_home_patient_note_host.js?v=1',
   '/vilda_home_patient_note_host.css?v=1',
   '/vilda_home_patient.js?v=1',
+  '/vilda_home_patient.js?v=2',
   '/vilda_home_patient.css?v=1',
+  '/vilda_home_patient.css?v=2',
   '/vilda_home_growth_views.js?v=1',
   '/vilda_home_growth_views.js?v=2',
   '/vilda_home_growth_views.js?v=3',
@@ -2205,6 +2208,7 @@ const CORE_SHELL_URLS = [
   '/vilda_chrome.js?v=290',
   '/vilda_chrome.js?v=291',
   '/vilda_chrome.js?v=292',
+  '/vilda_chrome.js?v=293',
   '/vilda_realtime.js?v=1',
   '/vilda_realtime.js?v=2',
   '/vilda_realtime.js?v=3',
@@ -3004,7 +3008,12 @@ const CORE_SHELL_URLS = [
   '/vilda_phone_landscape.js?v=2',
   '/vilda_phone_landscape.js?v=3',
   '/vilda_phone_landscape.css?v=1',
-  '/vilda_phone_landscape.css?v=2'
+  '/vilda_phone_landscape.css?v=2',
+  '/vilda_home_patient_native.js?v=1',
+  '/vilda_home_patient_native.css?v=1',
+  '/vilda_patient_treatment_ui.js?v=1',
+  '/vilda_patient_treatment_ui.css?v=1',
+  '/vilda_home_patient_native_note.js?v=1',
 ];
 
 // Dodatkowe strony i zasoby próbujemy dociągnąć w tle podczas instalacji,
@@ -3074,6 +3083,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_vault.js?v=276',
   '/vilda_vault.js?v=277',
   '/vilda_vault.js?v=278',
+  '/vilda_vault.js?v=279',
   '/vilda_auth_ui.js?v=535',
   '/vilda_auth_ui.js?v=536',
   '/vilda_auth_ui.js?v=537',
@@ -3100,6 +3110,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_auth_ui.js?v=558',
   '/vilda_auth_ui.js?v=559',
   '/vilda_auth_ui.js?v=560',
+  '/vilda_auth_ui.js?v=561',
   '/vilda_session_bridge.js?v=148',
   '/vilda_session_bridge.js?v=149',
   '/vilda_session_bridge.js?v=150',
@@ -3161,6 +3172,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_session_bridge.js?v=206',
   '/vilda_session_bridge.js?v=207',
   '/vilda_session_bridge.js?v=208',
+  '/vilda_session_bridge.js?v=209',
   '/vilda_sync.js?v=48',
   '/vilda_sync.js?v=49',
   '/vilda_sync.js?v=50',
@@ -6553,8 +6565,8 @@ const CLINICAL_WORKSPACE_PRECACHE_PACK = Object.freeze({
 
 // BEGIN VISIT UI PACK CONFIG
 const VISIT_UI_PRECACHE_PACK = Object.freeze({
-  "url": "/runtime/visit-ui-precache/precache-642d9cfc1633.json",
-  "sha256": "642d9cfc1633dfcb427cf7ee832adab58d102c94b608a78ddf79684aee25aa2f",
+  "url": "/runtime/visit-ui-precache/precache-e141ee7a4f08.json",
+  "sha256": "e141ee7a4f08b42b0549cb60718ca4a090fa793592d91e2955f6db3f59deae2d",
   "files": [
     {
       "url": "/vilda_visit_context.js?v=1",
@@ -6617,8 +6629,8 @@ const VISIT_UI_PRECACHE_PACK = Object.freeze({
       "sha256": "27ab28f4fa35dd32e129dbf737ddf801c40e27dd1b4bc045063fffd7ac9d6767"
     },
     {
-      "url": "/vilda_home_patient_data.js?v=1",
-      "sha256": "269e730c0684214e668030b6391dacad902eb15ddc91569eafa93dc1458e7448"
+      "url": "/vilda_home_patient_data.js?v=2",
+      "sha256": "f53c8e29fd7fa406a4dbe725a0f506a7d5da07aff3b97d167f5907d16621c858"
     },
     {
       "url": "/vilda_home_patient_note_host.js?v=1",
@@ -6629,12 +6641,32 @@ const VISIT_UI_PRECACHE_PACK = Object.freeze({
       "sha256": "0280464c2496960fc20568b398fd0bb3f2dd7d57429cd70e6aa9452cab97b56b"
     },
     {
-      "url": "/vilda_home_patient.js?v=1",
-      "sha256": "94914125b8b9d29e8df1127936eeb8277113279da13ed8205fabd9ee312fb957"
+      "url": "/vilda_home_patient.js?v=2",
+      "sha256": "8b11ec6ac64bce9233bd2bd6ea2ec488c492d88f6e56a14e434cdc718645e90d"
     },
     {
-      "url": "/vilda_home_patient.css?v=1",
-      "sha256": "f1edd2673fb8a57146c5cfef8eeeadc28c42dd4de24eecd97f651e4917121570"
+      "url": "/vilda_home_patient.css?v=2",
+      "sha256": "4d53f179f8ae5629b88b21f4682b768881ee395a69b295777ad37d0e3f398a36"
+    },
+    {
+      "url": "/vilda_home_patient_native.js?v=1",
+      "sha256": "0355d77d71137b58249151e0fd8591d13325c55276f8aac0884d840164ad94e7"
+    },
+    {
+      "url": "/vilda_home_patient_native.css?v=1",
+      "sha256": "7a654c47e0c7d9b5048e7fd191b72bfdf04561efddddaf054ee8b59c27aca39b"
+    },
+    {
+      "url": "/vilda_patient_treatment_ui.js?v=1",
+      "sha256": "617b67d6fd98ba5af78732932c38c177769fcfa6918c7c3f8b99599495090261"
+    },
+    {
+      "url": "/vilda_patient_treatment_ui.css?v=1",
+      "sha256": "190ab193df13c34e6d64d05523ebea26c9dc612c6ce00ba03ca1b960f5e6d90b"
+    },
+    {
+      "url": "/vilda_home_patient_native_note.js?v=1",
+      "sha256": "3af837a7652415e6fe958cfdd66c55ed1f9dc5e347e76f41398ef1113f66ced4"
     }
   ]
 });
@@ -6772,6 +6804,11 @@ function createVisitUIPrecacheState(config = VISIT_UI_PRECACHE_PACK) {
     ['/vilda_home_patient_note_host.css', 'text/css; charset=utf-8'],
     ['/vilda_home_patient.js', 'text/javascript; charset=utf-8'],
     ['/vilda_home_patient.css', 'text/css; charset=utf-8'],
+    ['/vilda_home_patient_native.js', 'text/javascript; charset=utf-8'],
+    ['/vilda_home_patient_native.css', 'text/css; charset=utf-8'],
+    ['/vilda_patient_treatment_ui.js', 'text/javascript; charset=utf-8'],
+    ['/vilda_patient_treatment_ui.css', 'text/css; charset=utf-8'],
+    ['/vilda_home_patient_native_note.js', 'text/javascript; charset=utf-8'],
   ]);
   if (!config || !Array.isArray(config.files) || config.files.length !== types.size
     || !/^[a-f0-9]{64}$/.test(config.sha256)

@@ -4,12 +4,13 @@ import { expect, test } from '@playwright/test';
 import { createFictionalVault, loadPatient, readyForPatient, shellFrame } from '../support/centile-live-fixture.mjs';
 import { zapiszHistorie } from '../support/lab-historia-dane.mjs';
 
-// The implementation keeps the accepted names/roots. These selectors contain
+// The compact entry opens the accepted native B1 card. These selectors contain
 // no synthetic rendering, copied clinical calculation or replacement writer.
 const CARD = '#vhomePatientCard';
-const DETAIL = '#vhomePatientDialog';
-const NOTE = '#vhomePatientNoteDialog';
-const nativeNote = frame => frame.locator(`${NOTE} .vilda-patient-note-editor-overlay`);
+const NATIVE = '.vhome-native-patient-card';
+const DETAIL = '.vilda-auth-card[role="dialog"]:has(.vhome-native-patient-card)';
+const NOTE = '.vilda-patient-note-editor-overlay';
+const nativeNote = frame => frame.locator(NOTE);
 const noteBody = frame => nativeNote(frame).locator('textarea').first();
 const tab = (frame, label) => frame.locator(CARD).getByRole('tab', { name: label });
 const currentPanel = frame => frame.locator(`${CARD} [role=tabpanel]:not([hidden])`);
@@ -99,8 +100,20 @@ async function openNewNote(frame) {
   return nativeNote(frame);
 }
 async function closeDetail(frame) {
-  await frame.locator(DETAIL).getByRole('button', { name: 'Zamknij', exact: true }).click();
+  await frame.locator(DETAIL).getByRole('button', { name: 'Zamknij kartę', exact: true }).click();
   await expect(frame.locator(DETAIL)).toBeHidden();
+}
+async function selectNativeTab(frame, key) {
+  const mobile = frame.locator(`${NATIVE} .vhome-b1-mobile-select`);
+  if (await mobile.isVisible()) await mobile.selectOption(key);
+  else await frame.locator(`${NATIVE} .vhome-b1-nav [data-tab="${key}"]`).click();
+  const panel = frame.locator(`${NATIVE} .vilda-patient-tab-content[data-tab="${key}"]`);
+  await expect(panel).toBeVisible(); return panel;
+}
+async function openExpandedNote(frame) {
+  const panel = await selectNativeTab(frame, 'notes');
+  await panel.getByRole('button', { name: /^\+ Dodaj notatkę$/ }).click();
+  await expect(nativeNote(frame)).toBeVisible(); return nativeNote(frame);
 }
 
 // The mock's first row is Growth/Patient. Diet begins the following row.
@@ -118,14 +131,15 @@ test('home patient: approved position, equal desktop cards, keyboard tabs and pu
   expect(boxes[1].x).toBeGreaterThan(boxes[0].x + boxes[0].width);
   expect(boxes[2].y).toBeGreaterThanOrEqual(boxes[0].y + boxes[0].height);
   expect(boxes[1].width).toBe(boxes[0].width);
-  await tab(frame, /^Badania/).focus();
+  await expect(tab(frame, /^Notatki/)).toHaveAttribute('aria-selected', 'true');
+  await selectTab(frame, /^Badania/); await tab(frame, /^Badania/).focus();
   await page.keyboard.press('ArrowRight');
-  await expect(tab(frame, /^Plan opieki/)).toBeFocused();
-  await expect(tab(frame, /^Plan opieki/)).toHaveAttribute('aria-selected', 'true');
+  await expect(tab(frame, /^Plany/)).toBeFocused();
+  await expect(tab(frame, /^Plany/)).toHaveAttribute('aria-selected', 'true');
   await page.keyboard.press('End'); await expect(tab(frame, /^Notatki/)).toBeFocused();
   await expect(currentPanel(frame)).toContainText('Fikcyjna ogólna notatka podglądu.');
   await page.keyboard.press('Home'); await expect(tab(frame, /^Badania/)).toBeFocused();
-  for (const name of [/^Plan opieki/, /^Notatki/, /^Badania/]) {
+  for (const name of [/^Plany/, /^Notatki/, /^Badania/]) {
     await selectTab(frame, name);
     expect(await frame.locator(CARD).boundingBox()).toEqual(boxes[1]);
   }
@@ -147,7 +161,7 @@ test('home patient: tablet uses natural cards and phone preserves full labels wi
   const { frame } = await setup(page);
   for (const width of [1025, 1024, 851, 850, 820, 390, 320]) {
     await page.setViewportSize({ width, height: 1000 });
-    for (const name of [/^Badania/, /^Plan opieki/, /^Notatki/]) {
+    for (const name of [/^Badania/, /^Plany/, /^Notatki/]) {
       await selectTab(frame, name);
       expect(await frame.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
       expect(await frame.locator(CARD).evaluate(node => node.scrollWidth - node.clientWidth)).toBeLessThanOrEqual(1);
@@ -160,7 +174,7 @@ test('home patient: tablet uses natural cards and phone preserves full labels wi
       else { expect(layout.minHeight).toBe(0); expect(layout.maxHeight).toBe('none'); }
     }
     await expect(tab(frame, /^Badania/)).toContainText('Badania');
-    await expect(tab(frame, /^Plan opieki/)).toContainText('Plan opieki');
+    await expect(tab(frame, /^Plany/)).toContainText('Plany');
     await expect(tab(frame, /^Notatki/)).toContainText('Notatki');
     const dialog = await show(frame), box = await dialog.boundingBox();
     expect(box.x).toBeGreaterThanOrEqual(0); expect(box.x + box.width).toBeLessThanOrEqual(width + 1);
@@ -206,7 +220,7 @@ test('home patient: native general-note Cancel is pure and Save survives F5 with
 test('home patient: the shared care form preserves native Cancel and creates one patient-scoped plan', async ({ page }) => {
   const { frame, id } = await setup(page);
   const before = { records: await records(frame, id), clinical: await clinical(frame) };
-  const panel = await selectTab(frame, /^Plan opieki/);
+  const panel = await selectTab(frame, /^Plany/);
   await panel.getByRole('button', { name: 'Otwórz plan opieki', exact: true }).click();
   const native = frame.locator(`${DETAIL} [data-home-patient-view="care"] .vcp`);
   await expect(native).toBeVisible();
@@ -230,7 +244,7 @@ test('home patient: the shared care form preserves native Cancel and creates one
   await expect.poll(async () => (await records(frame, id)).plans.filter(plan => plan.title === title).length).toBe(1);
   const saved = (await records(frame, id)).plans.find(plan => plan.title === title);
   expect(saved.patientId).toBe(id);
-  await closeDetail(frame); await refresh(frame); await selectTab(frame, /^Plan opieki/);
+  await closeDetail(frame); await refresh(frame); await selectTab(frame, /^Plany/);
   await expect(currentPanel(frame)).toContainText(title);
   await expect(currentPanel(frame)).toContainText(goal);
   expect(await clinical(frame)).toEqual(before.clinical);
@@ -336,6 +350,7 @@ test('home patient: lock removes expanded content and an unsaved native note wit
   const { frame, id } = await setup(page);
   const privateText = 'Fikcyjna prywatna treść przed zablokowaniem.';
   await seedGeneral(frame, id, privateText); await refresh(frame); await show(frame);
+  await selectNativeTab(frame, 'notes');
   await expect(frame.locator(DETAIL)).toContainText(privateText);
   await closeDetail(frame);
   await openNewNote(frame); await noteBody(frame).fill('Fikcyjny niezapisany tekst przed blokadą.');
@@ -570,8 +585,23 @@ const historyState = frame => frame.evaluate(() => ({
   length: history.length, token: history.state?.vildaHomeDialog || null,
   tokens: history.state?.vildaHomeDialogStack?.tokens || [],
 }));
+// Expanded B1 is owned by native AuthUI's auth entry; the compact note
+// continues to use HomeDialogHistory. Observe both genuine owners.
+const nativeHistoryState = frame => frame.evaluate(() => {
+  const host = window.parent !== window ? window.parent : window;
+  const shell = host.VildaShell;
+  return { length: host.history.length,
+    token: host.history.state?.shellAuthId || history.state?.vildaNavSentinel || null,
+    current: shell?.isAuthHistoryCurrent ? shell.isAuthHistoryCurrent(window) : history.state?.vildaNavSentinel === true,
+    dialogs: document.querySelectorAll('.vhome-native-patient-card, .vilda-patient-note-editor-overlay').length };
+});
 async function noPatientDialogHistory(frame) {
-  await expect.poll(() => frame.evaluate(() => history.state?.vildaHomeDialogStack?.tokens?.length || 0)).toBe(0);
+  await expect.poll(() => frame.evaluate(() => {
+    const home = history.state?.vildaHomeDialogStack?.tokens?.length || 0;
+    const host = window.parent !== window ? window.parent : window;
+    const native = host.VildaShell?.isAuthHistoryCurrent ? host.VildaShell.isAuthHistoryCurrent(window) : history.state?.vildaNavSentinel === true;
+    return home + (native ? 1 : 0);
+  })).toBe(0);
 }
 
 // Chromium can traverse an iframe's joint-history entry without committing a
@@ -627,18 +657,20 @@ test('home patient: APP Back from a direct dirty note declines without replacing
 test('home patient: APP Back from the native care form cancels only that child and preserves its expanded parent', async ({ page }) => {
   const { frame, id } = await setup(page, { shell: true });
   const before = { records: await records(frame, id), clinical: await clinical(frame) };
-  await selectTab(frame, /^Plan opieki/); await frame.locator('#vhomePatientCareOpen').click();
+  await selectTab(frame, /^Plany/); await frame.locator('#vhomePatientCareOpen').click();
   const parent = frame.locator(DETAIL); await expect(parent).toBeVisible();
-  const parentHistory = await historyState(frame); expect(parentHistory.tokens).toHaveLength(1);
+  const parentHistory = await nativeHistoryState(frame); expect(parentHistory.current).toBe(true);
   const native = parent.locator('[data-home-patient-view="care"] .vcp');
   await native.getByRole('button', { name: 'Nowy plan', exact: true }).click();
   const child = frame.locator('dialog.vcp-dialog.vhome-patient-native-dialog'); await expect(child).toBeVisible();
   await child.getByLabel('Nazwa planu', { exact: true }).fill('Fikcyjny plan do anulowania przez Wstecz');
-  await expect.poll(async () => (await historyState(frame)).tokens.length).toBe(2);
+  expect((await nativeHistoryState(frame)).current).toBe(true);
+  expect((await nativeHistoryState(frame)).length).toBe(parentHistory.length);
   await browserBackInApp(page);
   await expect(child).toHaveCount(0); await expect(parent).toBeVisible(); await expect(native).toBeVisible();
   await expect(page).toHaveURL(/\/app\.html#\/start$/);
-  await expect.poll(async () => (await historyState(frame)).token).toBe(parentHistory.token);
+  await expect.poll(async () => (await nativeHistoryState(frame)).current).toBe(true);
+  expect((await nativeHistoryState(frame)).length).toBe(parentHistory.length);
   expect(await records(frame, id)).toEqual(before.records); expect(await clinical(frame)).toEqual(before.clinical);
   await closeDetail(frame); await noPatientDialogHistory(frame);
 });
@@ -656,9 +688,9 @@ async function mergeNoteFromOtherDevice(frame, noteId, body) {
   }, { noteId, body });
 }
 async function openExistingNote(frame) {
-  await show(frame); await frame.locator(`${DETAIL} [data-home-patient-action="note-edit"]`).click();
-  await expect(frame.locator(NOTE)).toBeVisible(); await expect(nativeNote(frame)).toBeVisible();
-  return nativeNote(frame);
+  await show(frame); const panel = await selectNativeTab(frame, 'notes');
+  await panel.locator('.vilda-patient-note-card').first().getByRole('button', { name: 'Edytuj', exact: true }).click();
+  await expect(nativeNote(frame)).toBeVisible(); return nativeNote(frame);
 }
 const CHANGE_BANNER = 'Ta notatka zmieniła się na innym urządzeniu.';
 const CONFLICT_NOTICE = 'Nowsza wersja tej notatki jest już w sejfie.';
@@ -673,13 +705,13 @@ test('home patient: native conflict reload keeps one same-id editor and its seco
   await expect(editor.getByText(CHANGE_BANNER, { exact: true })).toBeVisible();
   await editor.getByRole('button', { name: 'Zapisz zmiany', exact: true }).click();
   await expect(editor.getByText(CONFLICT_NOTICE, { exact: true })).toBeVisible();
-  const historyBefore = await historyState(frame);
+  const historyBefore = await nativeHistoryState(frame);
   await editor.getByRole('button', { name: RELOAD_NOTE, exact: true }).click();
   editor = nativeNote(frame);
   await expect(editor).toHaveCount(1); await expect(noteBody(frame)).toHaveValue(second.body);
   expect((await notes(frame, id)).find(note => note.id === saved.id)).toEqual(second);
-  expect((await historyState(frame)).token).toBe(historyBefore.token);
-  expect((await historyState(frame)).length).toBe(historyBefore.length);
+  expect((await nativeHistoryState(frame)).token).toBe(historyBefore.token);
+  expect((await nativeHistoryState(frame)).length).toBe(historyBefore.length);
   await expect(editor.getByText(CHANGE_BANNER, { exact: true })).toBeHidden();
   // The old root's unchanged native cleanup must not unregister the replacement
   // editor's watcher for this same note ID.
@@ -735,7 +767,22 @@ test('home patient: a delayed native conflict reload cannot resurrect an old not
 
 async function exactSharedFrame(dialog, referenceBounds) {
   await expect(dialog).toBeVisible();
-  await expect.poll(() => dialog.boundingBox()).toEqual(referenceBounds);
+  await expect.poll(async () => {
+    const bounds = await dialog.boundingBox();
+    return bounds ? Object.fromEntries(['x', 'y', 'width', 'height'].map(key => [key, Math.round(bounds[key] - referenceBounds[key]) || 0])) : null;
+  }).toEqual({ x: 0, y: 0, width: 0, height: 0 });
+  const bounds = await dialog.boundingBox();
+  for (const key of ['x', 'y', 'width', 'height']) expect(bounds[key]).toBeCloseTo(referenceBounds[key], 0);
+  const actual = await dialog.evaluate(node => {
+    const rect = node.getBoundingClientRect();
+    return { x: rect.x, y: rect.y, width: rect.width, height: rect.height,
+      viewportWidth: innerWidth, viewportHeight: innerHeight, overflow: node.scrollWidth - node.clientWidth };
+  });
+  expect(actual.width).toBeCloseTo(Math.min(1000, actual.viewportWidth - 32), 0);
+  expect(actual.height).toBeCloseTo(Math.min(820, actual.viewportHeight - 32), 0);
+  expect(actual.x).toBeCloseTo((actual.viewportWidth - actual.width) / 2, 0);
+  expect(actual.y).toBeCloseTo((actual.viewportHeight - actual.height) / 2, 0);
+  expect(actual.overflow).toBeLessThanOrEqual(1);
 }
 async function clcrTable(frame) {
   await selectTab(frame, /^Badania/); await frame.locator('#vhomePatientLabsOpen').click();
@@ -776,6 +823,20 @@ test('home patient: APP native Clcr details and edit/delete Cancel share the fra
   const rowSelector = `.vilda-lab-hist-result-row[data-source="clcr"][data-note-id="${saved.id}"]`;
   await table.locator(rowSelector).click();
   const detail = frame.locator('#detailsDialog'); await exactSharedFrame(detail, referenceBounds);
+  for (const [width, height] of [[1440, 1000], [850, 1000], [390, 1000], [390, 844]]) {
+    await page.setViewportSize({ width, height });
+    await expect.poll(() => shared.evaluate(node => {
+      const rect = node.getBoundingClientRect();
+      const deltas = { width: rect.width - Math.min(1000, innerWidth - 32),
+        height: rect.height - Math.min(820, innerHeight - 32),
+        x: rect.x - (innerWidth - rect.width) / 2, y: rect.y - (innerHeight - rect.height) / 2 };
+      return Object.fromEntries(Object.entries(deltas).map(([key, value]) => [key, Math.round(value) || 0]));
+    })).toEqual({ width: 0, height: 0, x: 0, y: 0 });
+    await exactSharedFrame(detail, await shared.boundingBox());
+    await detail.getByRole('button', { name: 'Zamknij', exact: true }).click({ trial: true });
+  }
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await exactSharedFrame(detail, referenceBounds);
   await expect(detail.locator('#calculationDetails')).toHaveAttribute('data-note-id', saved.id);
   await expect(detail.locator('#editMeasurement')).toBeEnabled();
   await detail.locator('#editMeasurement').click();
@@ -825,22 +886,25 @@ test('home patient: APP native Clcr details and edit/delete Cancel share the fra
   await expect(page).toHaveURL(/\/app\.html#\/start$/);
 });
 
-test('home patient: APP history-menu jump rejects a dirty child and restores its existing entry without another push', async ({ page }) => {
+test('home patient: APP cross-document history jump veto preserves the native dirty child without another push', async ({ page }) => {
   const { frame, id } = await setup(page, { shell: true });
   const before = { records: await records(frame, id), clinical: await clinical(frame) };
-  await show(frame); await frame.locator(`${DETAIL} [data-home-patient-action="note"]`).click();
+  await show(frame); await openExpandedNote(frame);
   const editor = nativeNote(frame); await expect(editor).toBeVisible();
   await noteBody(frame).fill('Fikcyjny tekst zachowany po skoku przez dwa wpisy historii.');
   await frame.evaluate(() => { window.__patientMenuJumpRoot = document.querySelector('.vilda-patient-note-editor-overlay'); });
-  const opened = await historyState(frame); expect(opened.tokens).toHaveLength(2);
+  const opened = await nativeHistoryState(frame); expect(opened.current).toBe(true); expect(opened.dialogs).toBe(2);
   const question = page.waitForEvent('dialog');
-  // The browser's history menu can skip the note and its still-open parent in
-  // one traversal. This is actual history; no synthetic popstate is supplied.
+  // Native gr() owns the child within one auth history entry. A genuine -2
+  // jump crosses the document, so the native Qbu beforeunload veto is the
+  // authority; its message is browser-controlled rather than the local prompt.
   await frame.evaluate(() => history.go(-2));
-  const confirmation = await question; expect(confirmation.message()).toContain('niezapisan'); await confirmation.dismiss();
-  await expect.poll(async () => (await historyState(frame)).token).toBe(opened.token);
-  expect((await historyState(frame)).length).toBe(opened.length);
-  expect((await historyState(frame)).tokens).toEqual(opened.tokens);
+  const confirmation = await question;
+  expect(confirmation.type()).toBe('beforeunload'); expect(confirmation.message()).toBe('');
+  await confirmation.dismiss();
+  await expect.poll(async () => (await nativeHistoryState(frame)).current).toBe(true);
+  expect((await nativeHistoryState(frame)).length).toBe(opened.length);
+  expect((await nativeHistoryState(frame)).dialogs).toBe(opened.dialogs);
   expect(await frame.evaluate(() => document.querySelector('.vilda-patient-note-editor-overlay') === window.__patientMenuJumpRoot)).toBe(true);
   await expect(noteBody(frame)).toHaveValue('Fikcyjny tekst zachowany po skoku przez dwa wpisy historii.');
   await expect(frame.locator(DETAIL)).toBeVisible(); await expect(page).toHaveURL(/\/app\.html#\/start$/);
@@ -960,7 +1024,7 @@ test('home patient: APP desktop card heights follow the real device viewport whi
   for (const width of [1920, 1440, 1280, 1025, 1024, 820, 390]) {
     await page.setViewportSize({ width, height: 1000 });
     expect(await page.evaluate(() => innerWidth)).toBe(width);
-    for (const name of [/^Badania/, /^Plan opieki/, /^Notatki/]) {
+    for (const name of [/^Badania/, /^Plany/, /^Notatki/]) {
       await selectTab(frame, name);
       if (width > 1024) {
         await expect.poll(async () => Promise.all(selectors.map(selector => frame.locator(selector)

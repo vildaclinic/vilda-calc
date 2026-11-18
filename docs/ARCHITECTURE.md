@@ -1045,3 +1045,47 @@ nie ujawnia późniejszej decyzji o usunięciu, dopóki urządzenie się nie zsy
 - biblioteki i zasoby zewnętrzne wymagają kompletnego rejestru wersji, licencji i not prawnych;
 - kompletność czystego artefaktu wdrożeniowego wymaga osobnej kontroli przed automatyzacją publikacji;
 - domyślna gałąź GitHuba powinna zostać przełączona ze starego `main` na `audyt` po zachowaniu historycznego `main`.
+
+
+## Karta pacjenta B1 w nowej stronie głównej
+
+Wariant B1 jest prezentacją istniejącej natywnej Karty pacjenta w torze
+`agent/nowa-strona-glowna`. Mała karta zachowuje trzy zakładki Badania / Plany /
+Notatki. Rozwinięcie korzysta z natywnego `showPatientCard` i jego aktorów,
+obliczeń, routingu oraz historii. `vilda_home_patient_native.js` dekoruje ten
+widok wyłącznie przy włączonym podglądzie nowej strony i jawnym znaczniku
+wywołania. Pełna karta ma menu sekcji po lewej, wspólną geometrię okna i krótkie
+menu operacji pacjenta. Sześć dotychczasowych obszarów zachowuje swoje modele.
+Dodatkowy obszar Leczenie montuje `vilda_patient_treatment_ui.js`.
+
+Status pokazuje natywne wyniki i ich klasy oceny. Warstwa prezentacji nie liczy
+własnych centyli, BMI, Cole'a ani norm tempa. Brak oceny pozostaje neutralny.
+Ocena SGA jest skrótem zapisanych danych; formularz danych okołoporodowych
+pozostaje w głównym formularzu. Mała karta i podglądy są odczytami, bez
+modyfikacji formularza bieżącego pomiaru.
+
+Natywne notatki w pełnej karcie zachowują oryginalny edytor i mechanizm
+konfliktów. `vilda_home_patient_native_note.js` wiąże ich prezentację z czasem
+życia konkretnej karty. Zakładka Leczenie otrzymuje natywne panele GH i otyłości
+oraz korzysta z odrębnych, ręcznie wpisanych dokumentów `treatmentContext`.
+Kontrakt zapisu, wersjonowanie, transport i relacje opisuje
+[PATIENT_TREATMENT.md](PATIENT_TREATMENT.md). Te strukturalne dokumenty mają
+własne miejsce w Leczeniu i nie zastępują ostatniej zwykłej notatki na stronie
+głównej. Zamknięcie lub zmiana właściciela usuwa otwarte formularze i ich dane.
+
+### Aktualna baza publiczna sejfu a historyczny dowód integracji
+
+`runtime/clinical-workspace-v1/manifest.json` rozróżnia dwie informacje:
+`baseVaultSHA256` jest aktualną bazą publiczną dla następnej pracy w prywatnym
+`vilda-source`; `nativeIntegrationBaseVaultSHA256` zachowuje pierwotny, sztywno
+przypięty dowód integracji V1. `integratedVaultSHA256` identyfikuje historyczny
+obraz tej integracji, a `publicVaultSHA256` — pełny bieżący artefakt publiczny.
+
+`node tools/update-clinical-workspace-base.mjs --write` najpierw sprawdza
+odtwarzalne publiczne delty, następnie usuwa wyłącznie chroniony fragment V1
+i odwraca jego dokładne haki. Publiczne warstwy wizyt, Klirensu i leczenia
+pozostają w nowej bazie. Ponowne zastosowanie haków i fragmentu musi odtworzyć
+cały artefakt bajt w bajt. `check_clinical_workspace_boundary.mjs` niezależnie
+sprawdza aktualne hashe i pierwotną redukcję do przypiętej bazy; nie dopuszcza
+niepowiązanych zmian. Po końcowej zmianie sejfu metadane odświeżamy w tym samym
+PR. Chronione moduły i historyczne archiwa pozostają niezmienne.

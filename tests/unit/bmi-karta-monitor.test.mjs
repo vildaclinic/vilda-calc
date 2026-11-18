@@ -93,7 +93,7 @@ describe('Kafelki, dymek siatki i oś czasu Karty — strażnicy źródła i kol
     expect(karta).toContain('Tb.ocen({bmi:$,plec:it,wiekMies:Gw0!=null?Gw0:I,zrodlo:h})');
     expect(karta).toContain('Tb.cole({bmi:$,plec:it,wiekMies:Gw0!=null?Gw0:I,zrodlo:h})');
     expect(karta).toContain('var Pe=Tb&&!tt?Bk:Y("bmi",$,yt)');
-    expect(karta).toContain('At.push(xt("BMI",St($)+" kg/m\\xB2",Xt,Pe,zt))');
+    expect(karta).toContain('At.push(HomePatientMetrics.bmi=xt("BMI",St($)+" kg/m\\xB2",Xt,Pe,zt))');
     expect(karta).toContain('var de=Tb&&!tt?Ck:Y("cole",f,null)');
   });
   it('panel otyłości: Mn z policz(); wiersz punktu „bmiSDS …", „BMI … kg/m²"; kryteria z bmiSdsDelta', () => {
