@@ -1941,6 +1941,7 @@ const CORE_SHELL_URLS = [
   '/vilda_icd10_picker.css?v=1',
   '/vilda_home_reminders.js?v=1',
   '/vilda_home_reminders.css?v=1',
+  '/vilda_home_reminders_runtime.js?v=1',
   '/vilda_home_workspace.js?v=1',
   '/vilda_home_workspace.js?v=2',
   '/vilda_home_workspace.js?v=3',
@@ -6834,8 +6835,8 @@ const CLINICAL_WORKSPACE_PRECACHE_PACK = Object.freeze({
 
 // BEGIN VISIT UI PACK CONFIG
 const VISIT_UI_PRECACHE_PACK = Object.freeze({
-  "url": "/runtime/visit-ui-precache/precache-dfc3b9023318.json",
-  "sha256": "dfc3b9023318a5f2d026f0eb831c9901c9fdd8cea84c4cc6cc0ca898d1490f0d",
+  "url": "/runtime/visit-ui-precache/precache-d9f8e49ee6ea.json",
+  "sha256": "d9f8e49ee6ea69a3838eae175f928c44c862d357a23fd198ac78dccf909f3198",
   "files": [
     {
       "url": "/vilda_visit_context.js?v=1",
@@ -6955,11 +6956,15 @@ const VISIT_UI_PRECACHE_PACK = Object.freeze({
     },
     {
       "url": "/vilda_home_reminders.js?v=1",
-      "sha256": "93c4cc89ae594a36b33271fbf6e9ee7aa13e03aa1c34bbf99e35b22a10de261f"
+      "sha256": "cc05cb83dc97c4bb35cdeff5298a6aed86f8ffbdb5fc467bf49e5fb030ab7968"
     },
     {
       "url": "/vilda_home_reminders.css?v=1",
-      "sha256": "2f6661f3aeb4307fa4d0248eae4522ea14e06e7e04549e86c15762b79170e167"
+      "sha256": "57b3b212727e7602f587543fce8a619881e2b53690da03eebc401bbb53a2e553"
+    },
+    {
+      "url": "/vilda_home_reminders_runtime.js?v=1",
+      "sha256": "c6f959850773f3296475d2cc1688b6fdd3088805a6f29c67afe014c147c0d33d"
     }
   ]
 });
@@ -7108,6 +7113,7 @@ function createVisitUIPrecacheState(config = VISIT_UI_PRECACHE_PACK) {
     ['/vilda_icd10_picker.css', 'text/css; charset=utf-8'],
     ['/vilda_home_reminders.js', 'text/javascript; charset=utf-8'],
     ['/vilda_home_reminders.css', 'text/css; charset=utf-8'],
+    ['/vilda_home_reminders_runtime.js', 'text/javascript; charset=utf-8'],
   ]);
   if (!config || !Array.isArray(config.files) || config.files.length !== types.size
     || !/^[a-f0-9]{64}$/.test(config.sha256)

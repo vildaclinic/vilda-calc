@@ -72,16 +72,16 @@ describe('optional home reminders native presentation boundary', () => {
   });
   it('carries an explicit presentation request to the top document and preserves default request options', () => {
     const opened = vi.fn(), opts = { newReminder: true }, ctx = vm.createContext({
-      HomeRemindersRequested: true, i: { top: { VildaAuthUI: { maybeShowReminders: opened } } },
+      HomeRemindersRequested: true, HomeRemindersContext: null, options: {}, i: { top: { VildaAuthUI: { maybeShowReminders: opened } } },
     });
     vm.runInContext(production('remB22Request') + '\n' + production('HomeRemindersRequest', 'remB22Create'), ctx);
-    ctx.HomeRemindersRequest(opts); expect(opened).toHaveBeenLastCalledWith({ force: true, newReminder: true, homePresentation: true });
+    ctx.HomeRemindersRequest(opts); expect(opened).toHaveBeenLastCalledWith({ force: true, newReminder: true, homePresentation: true, homeContext: null, contextLabel: '', showPatientName: true });
     expect(opts).toEqual({ newReminder: true });
     ctx.HomeRemindersRequested = false; ctx.HomeRemindersRequest(opts);
     expect(opened).toHaveBeenLastCalledWith({ force: true, newReminder: true });
   });
   it('retains a busy native dialog and changes presentation only after an idle dialog can close', () => {
-    const previous = { alive: () => true, homePresentation: false, root: {}, request: vi.fn(), close: vi.fn(), canChangePresentation: () => false };
+    const previous = { alive: () => true, homePresentation: false, homeContext: null, root: {}, request: vi.fn(), close: vi.fn(), canChangePresentation: () => false };
     const root = { setAttribute: vi.fn(), showModal: vi.fn(), querySelector: () => ({ focus: vi.fn() }) };
     const next = { setGroups: vi.fn(), request: vi.fn(), fit: vi.fn() }, create = vi.fn(() => next);
     const ctx = vm.createContext({ remB22Full: previous, al: vi.fn(), remB22Node: () => root, remB22Create: create,
@@ -101,7 +101,13 @@ describe('optional home reminders native presentation boundary', () => {
     expect(start).toBeGreaterThan(0); expect(end).toBeGreaterThan(start);
     const original = baseline.slice(start, end).trim().replace('function renderDetail() {', 'function HomeRemindersRenderDetail(detail, row) {')
       .replace('clear(detail); detail.scrollTop = 0; var row = currentRow();', 'clear(detail); detail.scrollTop = 0;')
-      .replaceAll('remB22Request(', 'HomeRemindersRequest(');
+      .replaceAll('remB22Request(', 'HomeRemindersRequest(')
+      .replaceAll('ga(', 'HomeRemindersOpenEditor(')
+      .replace("        close(); HomeRemindersOpenEditor({ patientId: note.patientId, note: note, onSaved: function () { HomeRemindersRequest({ noteId: note.id }); } });",
+        "        var homeReturn = HomeRemindersContext ? HomeRemindersPosition() : null;\n        close(); HomeRemindersOpenEditor({ patientId: note.patientId, note: note, onSaved: function () { HomeRemindersRequest({ noteId: note.id }); },\n          onCancel: homeReturn ? function () { HomeRemindersRequest({ homePosition: homeReturn }); } : undefined });")
+      .replace('if (!row) {', 'if (!row || !HomeRemindersOwnRow(row)) {')
+      .replace('if (!saved && !note.completedAtISO', 'if (!HomeRemindersContext && !saved && !note.completedAtISO')
+      .replace('if (state.busy) return; more.open = false;', 'if (state.busy || !alive() || !HomeRemindersOwnRow(row)) return; more.open = false;');
     expect(production('HomeRemindersRenderDetail', 'remB22Create')).toBe(original);
   });
   it('produces at most two actual native card nodes, full totals and native formatted labels without a read/write', () => {
@@ -150,11 +156,11 @@ describe('optional home reminders native presentation boundary', () => {
     const errorNode = {}, retryNode = {}, list = { children: [], appendChild(node) { this.children.push(node); } };
     const update = vi.fn(), read = vi.fn().mockRejectedValueOnce(Error('FICTIONAL_HISTORY_READ')).mockResolvedValueOnce([]);
     const ctx = vm.createContext({ sequence: 0, searchNavigation: null, careReturn: null, full: true, search: {}, list,
-      HomeRemindersHistoryReadPhase: 'loading', HomeRemindersUpdate: update,
+      HomeRemindersHistoryReadPhase: 'loading', HomeRemindersUpdate: update, HomeRemindersContext: null,
       state: { tab: 'active', historyReady: false, historyLoading: false, editing: false, history: [] },
       root: { classList: { remove() {} } }, alive: () => true, vault: { listReminderHistory: read },
       render: vi.fn(), report: () => list.appendChild(errorNode), textButton: () => retryNode, remA7DatedRow: vi.fn() });
-    vm.runInContext(production('loadHistory', 'remB22Create') + '\n' + production('switchTab', 'remB22Create'), ctx);
+    vm.runInContext(production('HomeRemindersOwnNote', 'remB22Create') + '\n' + production('loadHistory', 'remB22Create') + '\n' + production('switchTab', 'remB22Create'), ctx);
     await ctx.switchTab('history');
     expect(ctx.HomeRemindersHistoryReadPhase).toBe('error'); expect(ctx.state.historyReady).toBe(false);
     expect(list.children).toEqual([errorNode, retryNode]); expect(update).toHaveBeenCalledOnce();
@@ -163,7 +169,7 @@ describe('optional home reminders native presentation boundary', () => {
   });
   it('disposes presentation and nested-dialog callbacks once without preventing native cleanup', () => {
     const child = vi.fn(), destroy = vi.fn(() => { throw Error('Fikcyjny błąd dekoratora'); }), logged = vi.fn();
-    const ctx = vm.createContext({ HomeRemindersPresentation: { destroy }, HomeRemindersOutcomeCleanup: child, Ot: logged });
+    const ctx = vm.createContext({ HomeRemindersPresentation: { destroy }, HomeRemindersMainCleanup: null, HomeRemindersOutcomeCleanup: child, Ot: logged });
     vm.runInContext(production('HomeRemindersClearOutcome', 'remB22Create') + '\n' + production('HomeRemindersDispose', 'remB22Create'), ctx);
     ctx.HomeRemindersDispose(); ctx.HomeRemindersDispose(); expect(child).toHaveBeenCalledOnce(); expect(destroy).toHaveBeenCalledOnce();
     expect(ctx.HomeRemindersPresentation).toBeNull(); expect(ctx.HomeRemindersOutcomeCleanup).toBeNull(); expect(logged).toHaveBeenCalledOnce();

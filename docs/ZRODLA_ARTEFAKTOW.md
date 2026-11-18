@@ -2228,7 +2228,7 @@ Weryfikują to `patient-treatment-vault-delta.mjs`,
 `check_clinical_workspace_boundary.mjs` i testy granic źródła.
 
 
-## Opcjonalna prezentacja Przypomnień — przygotowanie nowej strony
+## Przypomnienia w kontekście wybranego pacjenta
 
 `vilda_home_reminders.js` oraz `.css` są czytelnymi źródłami warstwy prezentacji.
 Sam ich załadunek nie montuje karty, nie odczytuje danych i nie zmienia zakresu
@@ -2253,4 +2253,12 @@ Stan odczytu, pełne liczniki i sformatowane daty pochodzą od kontrolera.
 Brak wyniku odczytu nie staje się liczbą zero. Osobne natywne formularze
 oraz szczegóły zapisu spoza bieżącej listy są przekazywane bez kopiowania ich
 pól lub reguł. Domyślne wejścia pozostają globalnym widokiem natywnym.
-Warstwa przygotowawcza nie aktywuje automatycznie nowej karty ani filtra pacjenta.
+Czytelny `vilda_home_reminders_runtime.js` umieszcza oryginalny host i wiąże
+jego kontekst z kontem, wybranym pacjentem oraz wizytą. Opcjonalne haki
+kontrolera filtrują wszystkie wejścia do tego samego pacjenta i używają
+natywnego odczytu również dla przyszłych terminów. Osobne globalne odczyty
+nadal zasilają dzwonek. Po zmianie kontekstu nie są przyjmowane spóźnione
+odpowiedzi ani nowe akcje zapisu z poprzedniego widoku; zapis już przekazany
+sejfowi zachowuje pierwotne identyfikatory. Domyślne wejście globalne pozostaje
+bez filtra pacjenta. Nowe źródła nie wprowadzają wzorów klinicznych ani nowego
+sposobu utrwalania danych.

@@ -11,7 +11,7 @@ const FILES = ['vilda_visit_context.js', 'vilda_visit_history_ui.js', 'vilda_vis
   'vilda_home_diet.js', 'vilda_home_diet_bmi.css', 'vilda_home_diet.css',
   'vilda_home_dialog_history.js', 'vilda_home_patient_data.js', 'vilda_home_patient_note_host.js', 'vilda_home_patient_note_host.css', 'vilda_home_patient.js', 'vilda_home_patient.css', 'vilda_home_patient_native.js', 'vilda_home_patient_native.css', 'vilda_patient_treatment_ui.js', 'vilda_patient_treatment_ui.css', 'vilda_home_patient_native_note.js',
   'vilda_icd10_pl_data.js', 'vilda_icd10_search.js', 'vilda_icd10_picker.js', 'vilda_icd10_picker.css',
-  'vilda_home_reminders.js', 'vilda_home_reminders.css'];
+  'vilda_home_reminders.js', 'vilda_home_reminders.css', 'vilda_home_reminders_runtime.js'];
 const MANIFEST = 'runtime/visit-ui-precache/manifest.json';
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 function fail(message) { throw new Error('Visit UI precache: ' + message); }

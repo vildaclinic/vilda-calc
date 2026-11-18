@@ -1,6 +1,6 @@
-// Neutral presentation proof only: the original native host is opted in by
-// this fixture. Every reminder belongs to the loaded fictional patient, so
-// this test neither selects nor activates the product's pending scope choice.
+// The accepted selected-patient card mounts through the real home runtime.
+// Every record here belongs to one fictional patient; the separate patient
+// scope suite covers boundaries between different patients and the global bell.
 import { expect, test } from '@playwright/test';
 import { writeFileSync } from 'node:fs';
 import { createFictionalVault, loadPatient } from '../support/centile-live-fixture.mjs';
@@ -47,7 +47,7 @@ async function alignedEntryTitle(dialog) {
   expect(Math.abs((await title.boundingBox()).x - (await row.boundingBox()).x)).toBeLessThanOrEqual(1);
 }
 
-test('opted-in native reminders retain card geometry, top-shell actions, history, retry and the legacy bell', async ({ page }) => {
+test('native home reminders retain card geometry, top-shell actions, history, retry and the legacy bell', async ({ page }) => {
   await page.addInitScript(() => { window.__VILDA_HOME_WORKSPACE_PREVIEW__ = true; });
   await page.route('**/*', route => {
     const url = new URL(route.request().url());
@@ -59,9 +59,8 @@ test('opted-in native reminders retain card geometry, top-shell actions, history
     && !window.__vildaSuspendIntakeUserReset && !window.VildaDataImportExport.isMainSessionRestorePending()
     && !window.VildaDobAge.restorePending() && Boolean(window.VildaHomeRemindersPresentation));
   await expect(frame.locator('#vhomeMainCards')).toBeVisible();
-  // Loading the assets alone must not opt the product into this presentation.
-  await expect(frame.locator('.vhome-reminders-card')).toHaveCount(0);
-  await expect(frame.locator('#remindersInline')).not.toHaveAttribute('data-home-reminders-presentation', 'true');
+  await expect(frame.locator('#vhomeMainCards #remindersInline')).toHaveAttribute('data-home-reminders-presentation', 'true');
+  await frame.evaluate(() => { window.__homeRemindersOriginalHost = document.getElementById('remindersInline'); });
   const seeded = await frame.evaluate(async patientId => {
     const vault = window.VildaVault, today = new Date();
     const day = offset => {
@@ -82,14 +81,6 @@ test('opted-in native reminders retain card geometry, top-shell actions, history
     return { active };
   }, ids.a);
   expect(await frame.evaluate(async patientId => (await window.VildaVault.listPatientNotesForPatient(patientId)).length, ids.b)).toBe(0);
-  await frame.evaluate(async () => {
-    const host = document.getElementById('remindersInline');
-    window.__homeRemindersOriginalHost = host;
-    document.getElementById('vhomeMainCards').appendChild(host);
-    host.setAttribute('data-home-reminders-presentation', 'true');
-    await window.VildaAuthUI.renderRemindersInline(host);
-    window.VildaAuthUI.syncRemindersInline();
-  });
   const card = frame.locator(CARD);
   await expect(card).toBeVisible();
   await expect(card).toHaveAttribute('data-home-reminders-phase', 'ready');

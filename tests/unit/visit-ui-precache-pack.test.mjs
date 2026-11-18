@@ -34,11 +34,11 @@ function worker({ scope = '/', response, failPut = () => false } = {}) {
   return { api, cache, requests, writes, installUI };
 }
 
-describe('thirty-one independent visit and home UI resources in one verified transport', () => {
+describe('thirty-two independent visit and home UI resources in one verified transport', () => {
   it.each(['/', '/vilda-calc/'])('caches every original body and MIME under its own offline URL in %s', async scope => {
     const w = worker({ scope }); await w.installUI();
     expect(w.api.VISIT_UI_PRECACHE_PACK).toEqual(config);
-    expect(urls).toHaveLength(31);
+    expect(urls).toHaveLength(32);
     expect(urls).toContain('/vilda_home_perinatal.js?v=1');
     expect(urls).toContain('/vilda_home_growth.js?v=4');
     expect(urls).toContain('/vilda_sga_birth_results.css?v=1');
@@ -65,6 +65,7 @@ describe('thirty-one independent visit and home UI resources in one verified tra
     expect(urls).toContain('/vilda_icd10_picker.css?v=1');
     expect(urls).toContain('/vilda_home_reminders.js?v=1');
     expect(urls).toContain('/vilda_home_reminders.css?v=1');
+    expect(urls).toContain('/vilda_home_reminders_runtime.js?v=1');
     expect(urls).toContain('/vilda_home_workspace.js?v=6');
     expect(urls).toContain('/vilda_home_workspace.css?v=7');
     expect(w.requests).toHaveLength(1);

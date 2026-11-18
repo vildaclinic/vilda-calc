@@ -48,9 +48,13 @@ const FACTORY_HELPERS = `  /* BEGIN HOME REMINDERS PRESENTATION CONTROLLER */
     return { day: day.slice(8, 10), month: new Intl.DateTimeFormat('pl-PL', { month: 'short', timeZone: 'UTC' }).format(new Date(Date.UTC(2000, month - 1, 1))) };
   }
   function HomeRemindersRequest(request) {
-    return remB22Request(HomeRemindersRequested ? Object.assign({}, request || {}, { homePresentation: true }) : request);
+    if (HomeRemindersContext && !HomeRemindersContextCurrent(HomeRemindersContext)) return false;
+    return remB22Request(HomeRemindersRequested ? Object.assign({}, request || {}, { homePresentation: true,
+      homeContext: HomeRemindersContext, contextLabel: options.contextLabel || '', showPatientName: options.showPatientName !== false }) : request);
   }
   function HomeRemindersDispose() {
+    var mainCleanup = HomeRemindersMainCleanup; HomeRemindersMainCleanup = null;
+    if (mainCleanup) { try { mainCleanup(); } catch (error) { Ot('homeRemindersMainHistoryDestroy', error); } }
     HomeRemindersClearOutcome();
     var presentation = HomeRemindersPresentation; HomeRemindersPresentation = null;
     if (presentation && typeof presentation.destroy === 'function') {
@@ -63,11 +67,15 @@ const FACTORY_HELPERS = `  /* BEGIN HOME REMINDERS PRESENTATION CONTROLLER */
   }
   function HomeRemindersOnDialog(dialog) {
     HomeRemindersClearOutcome();
-    if (!HomeRemindersPresentation || typeof HomeRemindersPresentation.onDialog !== 'function') return;
-    try {
-      var cleanup = HomeRemindersPresentation.onDialog(dialog);
-      if (typeof cleanup === 'function') HomeRemindersOutcomeCleanup = cleanup;
-    } catch (error) { Ot('homeRemindersDialog', error); }
+    var decorationCleanup = null, historyCleanup = HomeRemindersBindNativeDialog(dialog, { kind: 'outcome' });
+    if (HomeRemindersPresentation && typeof HomeRemindersPresentation.onDialog === 'function') {
+      try { decorationCleanup = HomeRemindersPresentation.onDialog(dialog); }
+      catch (error) { Ot('homeRemindersDialog', error); }
+    }
+    HomeRemindersOutcomeCleanup = function () {
+      try { if (typeof decorationCleanup === 'function') decorationCleanup(); }
+      finally { if (typeof historyCleanup === 'function') historyCleanup(); }
+    };
   }
   function HomeRemindersUpdate() {
     if (!HomeRemindersPresentation || HomeRemindersUpdating || !alive()) return;
@@ -105,7 +113,7 @@ const FACTORY_HELPERS = `  /* BEGIN HOME REMINDERS PRESENTATION CONTROLLER */
         contextLabel: typeof options.contextLabel === 'string' ? options.contextLabel : '',
         showPatientName: options.showPatientName !== false,
         emptyText: state.tab === 'history' ? 'Brak wykonanych spraw z terminem.'
-          : state.rows.length ? 'Brak spraw w tym filtrze.' : 'Brak przypomnień na dziś. Możesz dodać nowe przypomnienie.',
+          : state.rows.length ? 'Brak spraw w tym filtrze.' : HomeRemindersContext ? 'Brak przypomnień wybranego pacjenta. Możesz dodać nowe przypomnienie.' : 'Brak przypomnień na dziś. Możesz dodać nowe przypomnienie.',
         tailNodes: Array.from(list.children).filter(function (node) {
           return node.classList && ['vb22-empty', 'vild-rem-empty', 'vb22-text', 'vb22-error'].some(function (name) { return node.classList.contains(name); });
         }),
@@ -137,8 +145,140 @@ const FACTORY_HELPERS = `  /* BEGIN HOME REMINDERS PRESENTATION CONTROLLER */
   /* END HOME REMINDERS PRESENTATION CONTROLLER */
 `;
 
+// Patient context is a short-lived controller lease, never persistent data.
+// Its current() closure belongs to the originating frame: the top shell has
+// its own Vault facade and must not compare that facade with the frame's one.
+const SCOPE_HELPERS = `/* BEGIN HOME REMINDERS PATIENT CONTEXT */
+var HomeRemindersContexts = new WeakMap(), HomeRemindersEditorLeases = new Set();
+function HomeRemindersDisposeEditors(context) {
+  Array.from(HomeRemindersEditorLeases).forEach(function (lease) { if (lease.context === context) lease.dispose(); });
+}
+function HomeRemindersContextCurrent(context) {
+  if (!context) return true;
+  try { return context.current() === true; } catch (_) { return false; }
+}
+function HomeRemindersInlineContext(host, supplied) {
+  var context = HomeRemindersContexts.get(host);
+  if (!supplied || supplied.homePresentation !== true || !Object.prototype.hasOwnProperty.call(supplied, 'patientId')) return HomeRemindersInlineEnabled(host) ? context || null : null;
+  if (context && context.source === supplied) return context;
+  if (context) HomeRemindersDisposeScope(host, context.source);
+  var owner = remReadOwner(), retired = false, patientId = typeof supplied.patientId === 'string' ? supplied.patientId.trim() : '';
+  var isCurrent = supplied.isCurrent, openPatient = supplied.openPatient, openNote = supplied.openNote, onDialog = supplied.onDialog;
+  context = Object.freeze({ source: supplied, patientId: patientId,
+    contextLabel: typeof supplied.contextLabel === 'string' ? supplied.contextLabel : '',
+    showPatientName: supplied.showPatientName !== false,
+    openPatient: typeof openPatient === 'function' ? openPatient : null,
+    openNote: typeof openNote === 'function' ? openNote : null,
+    onDialog: typeof onDialog === 'function' ? onDialog : null,
+    current: function () { return !retired && !!patientId && remReadCurrent(owner) && typeof isCurrent === 'function' && isCurrent() === true; },
+    retire: function () { retired = true; }
+  });
+  HomeRemindersContexts.set(host, context); return context;
+}
+function HomeRemindersInlineViewOptions(host) {
+  var context = HomeRemindersContexts.get(host);
+  return context ? { homePresentation: true, homeContext: context, contextLabel: context.contextLabel, showPatientName: context.showPatientName } : { homePresentation: true };
+}
+function HomeRemindersDisposeScope(host, source) {
+  var context = host ? HomeRemindersContexts.get(host) : source;
+  if (!context || host && context.source !== source) return false;
+  if (host) {
+    context.retire(); remInvalidateInline(host);
+    var inline = remB22Views.get(host);
+    if (inline && inline.homeContext === context) { inline.close(); remB22Views.delete(host); }
+    if (host.style.display !== 'none') host.style.display = 'none';
+    if (host.childNodes.length) oe(host);
+  }
+  HomeRemindersDisposeEditors(context);
+  if (remB22Full && remB22Full.homeContext === context) remB22Full.close();
+  try {
+    if (host && i.top && i.top !== i && i.top.VildaAuthUI && typeof i.top.VildaAuthUI.disposeHomeReminders === 'function') i.top.VildaAuthUI.disposeHomeReminders(null, context);
+  } catch (_) {}
+  // Keep a retired registration: an automatic legacy refresh must not turn an
+  // empty or changing patient scope into an account-wide home card.
+  return true;
+}
+function HomeRemindersShowReadFailure(request) {
+  var context = request && request.homeContext;
+  if (!context || !HomeRemindersContextCurrent(context)) return false;
+  remB22Open([], { homePresentation: true, homeContext: context,
+    contextLabel: request.contextLabel || context.contextLabel || '', showPatientName: request.showPatientName !== false });
+  if (remB22Full && remB22Full.homeContext === context && remB22Full.alive()) { remB22Full.showReadFailure(); return true; }
+  return false;
+}
+/* END HOME REMINDERS PATIENT CONTEXT */
+`;
+
+const SCOPE_FACTORY_HELPERS = `  /* BEGIN HOME REMINDERS PATIENT CONTROLLER */
+  var HomeRemindersContext = HomeRemindersRequested && options.homeContext || null, HomeRemindersMainCleanup = null;
+  function HomeRemindersBindNativeDialog(dialog, metadata) {
+    if (!HomeRemindersContext || !HomeRemindersCurrent() || !HomeRemindersContext.onDialog) return null;
+    try { return HomeRemindersContext.onDialog(dialog, metadata); }
+    catch (error) { Ot('homeRemindersDialogHistory', error); return null; }
+  }
+  function HomeRemindersBindMainDialog() {
+    if (!full || HomeRemindersMainCleanup || !root.open || !alive()) return;
+    HomeRemindersMainCleanup = HomeRemindersBindNativeDialog(root, { kind: 'main' });
+  }
+  function HomeRemindersOwnNote(note) { return !HomeRemindersContext || !!(note && note.patientId === HomeRemindersContext.patientId && !note.isActivity && !note.isExternal); }
+  function HomeRemindersOwnRow(row) { return !HomeRemindersContext || !!(row && row.g && row.g.patientId === HomeRemindersContext.patientId && !row.g.isActivity && !row.g.isExternal && HomeRemindersOwnNote(row.n)); }
+  function HomeRemindersRows(groups) { return remB22Flat(groups).filter(HomeRemindersOwnRow); }
+  function HomeRemindersCurrent() { return remReadCurrent(owner) && HomeRemindersContextCurrent(HomeRemindersContext); }
+  function HomeRemindersReadGroups() { return HomeRemindersContext ? vault.listPatientNotesDueByDate('9999-12-31T23:59:59.999Z') : vault.listPatientNotesDueByDate(); }
+  function HomeRemindersOpenPatient(patientId, noteId) {
+    if (!HomeRemindersContext) return false;
+    if (!alive() || state.busy || state.editing || patientId !== HomeRemindersContext.patientId) return false;
+    var open = HomeRemindersContext.openPatient;
+    if (!open) return false;
+    close();
+    if (HomeRemindersCurrent()) open(patientId, noteId || null);
+    return true;
+  }
+  function HomeRemindersPosition() {
+    return { tab: state.tab, filter: state.filter, query: state.query, selected: state.selected,
+      historyLimit: state.historyLimit, scrollTop: list.scrollTop };
+  }
+  async function HomeRemindersRestorePosition(position) {
+    if (!HomeRemindersContext || !position || !alive() || state.editing || state.busy) return false;
+    var tab = position.tab === 'history' ? 'history' : 'active';
+    state.filter = keys.some(function (entry) { return entry[0] === position.filter; }) ? position.filter : 'all';
+    state.query = typeof position.query === 'string' ? position.query : ''; search.value = state.query;
+    var pending = switchTab(tab), ticket = sequence;
+    await pending;
+    if (!alive() || ticket !== sequence || state.editing || state.tab !== tab || state.historyLoading || tab === 'history' && !state.historyReady) return false;
+    if (Number.isInteger(position.historyLimit) && position.historyLimit >= 50) state.historyLimit = position.historyLimit;
+    var rows = visible();
+    if (rows.some(function (row) { return row.n.id === position.selected; })) state.selected = position.selected;
+    render();
+    if (Number.isFinite(position.scrollTop) && position.scrollTop >= 0) list.scrollTop = position.scrollTop;
+    return true;
+  }
+  function HomeRemindersOpenEditor(request) {
+    if (!HomeRemindersContext) return ga(request);
+    if (!HomeRemindersCurrent() || !request || request.patientId !== HomeRemindersContext.patientId
+        || request.note && !HomeRemindersOwnNote(request.note) || !HomeRemindersContext.openNote) return false;
+    var saved = request.onSaved, cancelled = request.onCancel, editor = null, lease = null;
+    function release(closeEditor) {
+      if (lease) { HomeRemindersEditorLeases.delete(lease); lease = null; }
+      if (closeEditor && editor && typeof editor.destroy === 'function') editor.destroy();
+    }
+    editor = HomeRemindersContext.openNote(Object.assign({}, request, {
+      isCurrent: HomeRemindersCurrent,
+      onSaved: function () { release(false); if (HomeRemindersCurrent() && typeof saved === 'function') saved(); },
+      onCancel: function () { release(false); if (HomeRemindersCurrent() && typeof cancelled === 'function') cancelled(); }
+    }));
+    if (editor && typeof editor.destroy === 'function') {
+      lease = { context: HomeRemindersContext, dispose: function () { release(true); } };
+      HomeRemindersEditorLeases.add(lease);
+      Promise.resolve(editor.ready).then(function () { if (!editor.isCurrent()) release(false); }, function () { release(true); });
+    }
+    return editor;
+  }
+  /* END HOME REMINDERS PATIENT CONTROLLER */
+`;
+
 const PAIRS = [
-  ['function remInlineReserved() {\n  var root =', HELPERS + 'function remInlineReserved() {\n  if (HomeRemindersInlineEnabled()) return false;\n  var root ='],
+  ['function remInlineReserved() {\n  var root =', HELPERS + SCOPE_HELPERS + 'function remInlineReserved() {\n  if (HomeRemindersInlineEnabled()) return false;\n  var root ='],
   ['function dl(){var t=jt();return!(!t||typeof t.isUnlocked!="function"||!t.isUnlocked()||!ll()||typeof t.listPatientNotesDueByDate!="function"||Lr()||!sl())}',
     'function dl(){var t=jt();return!(!t||typeof t.isUnlocked!="function"||!t.isUnlocked()||!ll()||typeof t.listPatientNotesDueByDate!="function"||!HomeRemindersInlineEnabled()&&(Lr()||!sl()))}'],
   ['function Dr(t){try{var a=', 'function Dr(t){if(HomeRemindersInlineEnabled(t)){["height","maxHeight","minHeight"].forEach(function(name){if(t.style[name])t.style[name]=""});return}try{var a='],
@@ -147,7 +287,7 @@ const PAIRS = [
   ['if (remB22Full && remB22Full.alive()) { remB22Full.request(options || {}); return remB22Full.root; }',
     'if (remB22Full && remB22Full.alive()) {\n    if (remB22Full.homePresentation === HomeRemindersPresentationRequested(options)) { remB22Full.request(options || {}); return remB22Full.root; }\n    if (!remB22Full.canChangePresentation()) return remB22Full.root;\n    remB22Full.close();\n  }'],
   ['var previousFocus = i.document.activeElement, previousNavHidden = i.document.body.classList.contains(\'nav-ui-temporarily-hidden\');\n  function alive()',
-    'var previousFocus = i.document.activeElement, previousNavHidden = i.document.body.classList.contains(\'nav-ui-temporarily-hidden\');\n' + FACTORY_HELPERS + '  function alive()'],
+    'var previousFocus = i.document.activeElement, previousNavHidden = i.document.body.classList.contains(\'nav-ui-temporarily-hidden\');\n' + FACTORY_HELPERS + SCOPE_FACTORY_HELPERS + '  function alive()'],
   ['function close() {\n    sequence += 1; if (timer) i.clearTimeout(timer);',
     'function close() {\n    HomeRemindersDispose();\n    sequence += 1; if (timer) i.clearTimeout(timer);'],
   ["  if (privacy) privacyCleanup = privacy.register({ root: root, content: [tabs, filters, layout, careHost, globalSearchHost, footer], button: privacyButton, header: header });",
@@ -187,6 +327,225 @@ const PAIRS = [
     'globalSearch: t && t.globalSearch, searchContext: t && t.searchContext, homePresentation: t && t.homePresentation === true }); return true;']
 ];
 
+const SCOPE_PAIRS = [
+  [
+    "async function Br(t) {\n  if (!t || !remInlineAllowed(t)) return;",
+    "async function Br(t, homeOptions) {\n  if (!t) return;\n  var homeContext = HomeRemindersInlineContext(t, homeOptions);\n  if (homeContext && !HomeRemindersContextCurrent(homeContext)) { remInlineHide(t); return; }\n  if (!remInlineAllowed(t)) return;\n  if (homeContext && t.style.display) t.style.display = '';"
+  ],
+  [
+    "function current() { return state.sequence === sequence && remReadCurrent(owner) && remInlineAllowed(t); }",
+    "function current() { return state.sequence === sequence && remReadCurrent(owner) && remInlineAllowed(t)\n    && (!homeContext || HomeRemindersInlineContext(t) === homeContext && HomeRemindersContextCurrent(homeContext)); }"
+  ],
+  [
+    "  if (!current()) return;\n  t.setAttribute('data-reminders-state', 'ready');",
+    "  if (!current()) return;\n  var homeGroups;\n  if (homeContext) {\n    try { homeGroups = await owner.vault.listPatientNotesDueByDate('9999-12-31T23:59:59.999Z'); }\n    catch (error) { if (current()) { Ot('readHomeRemindersInline', error); remInlineError(t); } return; }\n    if (!current()) return;\n  }\n  t.setAttribute('data-reminders-state', 'ready');"
+  ],
+  [
+    "remB22Inline(t, n); return;",
+    "remB22Inline(t, n, homeGroups); return;"
+  ],
+  [
+    "function remB22Inline(host, groups) {",
+    "function remB22Inline(host, groups, homeGroups) {"
+  ],
+  [
+    "var homePresentation = HomeRemindersInlineEnabled(host);\n  if (!view || !view.alive() || view.homePresentation !== homePresentation) { if (view) view.destroyCare(); view = remB22Create(host, false, homePresentation ? { homePresentation: true } : {}); remB22Views.set(host, view); }\n  view.setGroups(groups);",
+    "var homePresentation = HomeRemindersInlineEnabled(host), homeContext = homePresentation ? HomeRemindersInlineContext(host) : null;\n  if (homeContext && !HomeRemindersContextCurrent(homeContext)) { remInlineHide(host); return; }\n  if (!view || !view.alive() || view.homePresentation !== homePresentation || view.homeContext !== homeContext) { if (view) view.destroyCare(); view = remB22Create(host, false, homePresentation ? HomeRemindersInlineViewOptions(host) : {}); remB22Views.set(host, view); }\n  view.setGroups(homeGroups || groups);"
+  ],
+  [
+    "view = remB22Create(host, false, { homePresentation: true }); remB22Views.set(host, view);",
+    "view = remB22Create(host, false, HomeRemindersInlineViewOptions(host)); remB22Views.set(host, view);"
+  ],
+  [
+    "    if (remB22Full.homePresentation === HomeRemindersPresentationRequested(options)) { remB22Full.request(options || {}); return remB22Full.root; }",
+    "    if (remB22Full.homePresentation === HomeRemindersPresentationRequested(options) && remB22Full.homeContext === (options && options.homeContext || null)) { remB22Full.request(options || {}); return remB22Full.root; }"
+  ],
+  [
+    "function remB22Open(groups, options) {\n  al();",
+    "function remB22Open(groups, options) {\n  al();\n  if (options && options.homeContext && !HomeRemindersContextCurrent(options.homeContext)) return null;\n  if (remB22Full && remB22Full.homeContext && !remB22Full.alive()) remB22Full.close();"
+  ],
+  [
+    "function alive() { return root.isConnected && remReadCurrent(owner); }",
+    "function alive() { return root.isConnected && remReadCurrent(owner) && HomeRemindersContextCurrent(HomeRemindersContext); }"
+  ],
+  [
+    "function btn(text, cls, fn) { return remB22Button(text, cls, fn); }",
+    "function btn(text, cls, fn) { return remB22Button(text, cls, function (event) { if (HomeRemindersContext && !alive()) return; return fn(event); }); }"
+  ],
+  [
+    "var search = make('input', 'vb22-search'); search.type = 'search'; search.placeholder = 'Szukaj pacjenta lub sprawy…'; search.setAttribute('aria-label', 'Szukaj pacjenta lub sprawy');",
+    "var search = make('input', 'vb22-search'); search.type = 'search'; search.placeholder = HomeRemindersContext ? 'Szukaj przypomnienia…' : 'Szukaj pacjenta lub sprawy…'; search.setAttribute('aria-label', HomeRemindersContext ? 'Szukaj przypomnienia' : 'Szukaj pacjenta lub sprawy');"
+  ],
+  [
+    "careView = module.mount(careHost, { full: full, vault: vault, planId:",
+    "careView = module.mount(careHost, { full: full, vault: vault, patientId: HomeRemindersContext && HomeRemindersContext.patientId || null, planId:"
+  ],
+  [
+    "openPatient: function (patientId, noteId) {\n          if (careReturn",
+    "openPatient: function (patientId, noteId) {\n          if (HomeRemindersContext) return HomeRemindersOpenPatient(patientId, noteId);\n          if (careReturn"
+  ],
+  [
+    "openRecordDetails: async function (record, onChanged, isCurrentRecord) {\n          var fromSearch",
+    "openRecordDetails: async function (record, onChanged, isCurrentRecord) {\n          if (HomeRemindersContext && (!alive() || !HomeRemindersOwnNote(record))) return false;\n          var fromSearch"
+  ],
+  [
+    "if(!isCurrentRecord()||!note||note.id!==record.id||note.patientId!==record.patientId||!note.careContext||note.careContext.planId!==record.careContext.planId)return false;",
+    "if(!isCurrentRecord()||!note||note.id!==record.id||note.patientId!==record.patientId||!HomeRemindersOwnNote(note)||!note.careContext||note.careContext.planId!==record.careContext.planId)return false;"
+  ],
+  [
+    "if (!note || note.id!==noteId) return false;",
+    "if (!note || note.id!==noteId || !HomeRemindersOwnNote(note)) return false;"
+  ],
+  [
+    "function openCard(row, noteId) {\n    if (state.editing || state.busy) return;",
+    "function openCard(row, noteId) {\n    if (state.editing || state.busy) return;\n    if (HomeRemindersContext) { if (HomeRemindersOwnRow(row)) HomeRemindersOpenPatient(row.g.patientId, noteId || row.n.id); return; }"
+  ],
+  [
+    "if (state.busy) return; more.open = false; state.busy = true;",
+    "if (state.busy || !alive() || !HomeRemindersOwnRow(row)) return; more.open = false; state.busy = true;"
+  ],
+  [
+    "if (!row) { detail.appendChild(make('p', 'vb22-empty', 'Wybierz sprawę z listy lub dodaj przypomnienie.')); return; }",
+    "if (!row || !HomeRemindersOwnRow(row)) { detail.appendChild(make('p', 'vb22-empty', 'Wybierz sprawę z listy lub dodaj przypomnienie.')); return; }"
+  ],
+  [
+    "var note = await vault.getPatientNote(id); if (!alive() || ticket !== sequence || state.editing || !note) return;",
+    "var note = await vault.getPatientNote(id); if (!alive() || ticket !== sequence || state.editing || !note || !HomeRemindersOwnNote(note)) return;"
+  ],
+  [
+    "var day = remB22Day(note && note.dueDateISO); if (!day) return null;",
+    "var day = remB22Day(note && note.dueDateISO); if (!day || !HomeRemindersOwnNote(note)) return null;"
+  ],
+  [
+    "var current = (notes || []).find(function (item) { return item.id === note.id; });",
+    "var current = (notes || []).find(function (item) { return item.id === note.id && HomeRemindersOwnNote(item); });"
+  ],
+  [
+    "if (state.editing || state.busy || !alive()) return;\n    editing(true);",
+    "if (state.editing || state.busy || !alive() || !HomeRemindersOwnRow(row)) return;\n    editing(true);"
+  ],
+  [
+    "async function addReminder() {\n    if (state.editing || state.busy) return;",
+    "async function addReminder() {\n    if (state.editing || state.busy || !alive()) return;"
+  ],
+  [
+    "if (state.busy || !pickerAlive()) return;\n      selectedPatient = null;",
+    "if (state.busy || !pickerAlive() || HomeRemindersContext) return;\n      selectedPatient = null;"
+  ],
+  [
+    "if (state.busy || !pickerAlive()) return;\n      selectedPatient = record;",
+    "if (state.busy || !pickerAlive() || HomeRemindersContext && record.patientId !== HomeRemindersContext.patientId) return;\n      selectedPatient = record;"
+  ],
+  [
+    "return record && typeof record.patientId === 'string' && record.patientId;",
+    "return record && typeof record.patientId === 'string' && record.patientId && (!HomeRemindersContext || record.patientId === HomeRemindersContext.patientId);"
+  ],
+  [
+    "patientsReady = true; renderPatients();",
+    "patientsReady = true; renderPatients();\n        if (HomeRemindersContext) {\n          var fixedPatient = patientHeaders.find(function (record) { return record.patientId === HomeRemindersContext.patientId; });\n          if (fixedPatient) { choosePatient(fixedPatient); clearPatient.hidden = true; patientStatus.textContent = 'Przypomnienie dotyczy wybranego pacjenta.'; title.focus({ preventScroll: true }); }\n        }"
+  ],
+  [
+    "async function loadCareChoices(patientId) {\n      clearCareChoices();",
+    "async function loadCareChoices(patientId) {\n      if (HomeRemindersContext && (!pickerAlive() || patientId !== HomeRemindersContext.patientId)) return;\n      clearCareChoices();"
+  ],
+  [
+    "var chosenPatient = selectedPatient;\n      state.busy",
+    "var chosenPatient = selectedPatient;\n      if (HomeRemindersContext && (!HomeRemindersOwnNote({ patientId: chosenPatient.patientId }) || !HomeRemindersCurrent())) return;\n      state.busy"
+  ],
+  [
+    "return note.category !== 'absence' && (note.completedAtISO || note.noShowAtISO);",
+    "return HomeRemindersOwnNote(note) && note.category !== 'absence' && (note.completedAtISO || note.noShowAtISO);"
+  ],
+  [
+    "var groups = await vault.listPatientNotesDueByDate();\n      if (!alive()",
+    "var groups = await HomeRemindersReadGroups();\n      if (!alive()"
+  ],
+  [
+    "state.rows = remB22Flat(groups); state.historyReady = false;",
+    "state.rows = HomeRemindersRows(groups); state.historyReady = false;"
+  ],
+  [
+    "state.rows = remB22Flat(groups); if (!state.editing) render();",
+    "state.rows = HomeRemindersRows(groups); if (!state.editing) render();"
+  ],
+  [
+    "if (detachedNote && !state.rows.some",
+    "if (detachedNote && HomeRemindersOwnNote(detachedNote) && !state.rows.some"
+  ],
+  [
+    "homePresentation: HomeRemindersRequested, canChangePresentation",
+    "homePresentation: HomeRemindersRequested, homeContext: HomeRemindersContext, bindHomeDialog: HomeRemindersBindMainDialog, canChangePresentation"
+  ],
+  [
+    "else if (request.globalSearch || request.history) { switchTab('search'); mountGlobalSearch(request.history ? { status: 'completed' } : request.globalSearch); }",
+    "else if (request.globalSearch || request.history) { if (HomeRemindersContext) switchTab('history'); else { switchTab('search'); mountGlobalSearch(request.history ? { status: 'completed' } : request.globalSearch); } }"
+  ],
+  [
+    "var owner, sequence, forced = !!(t && t.force);",
+    "var owner, sequence, forced = !!(t && t.force);\n  var homeContext = t && t.homePresentation === true && t.homeContext || null;"
+  ],
+  [
+    "function searchReturnCurrent() { return !restoringSearch || t._searchReturnCurrent(); }",
+    "function searchReturnCurrent() { return (!homeContext || HomeRemindersContextCurrent(homeContext)) && (!restoringSearch || t._searchReturnCurrent()); }"
+  ],
+  [
+    "var groups = await vault.listPatientNotesDueByDate();\n    if (sequence !== remMaybeReadSequence",
+    "var groups = homeContext ? await vault.listPatientNotesDueByDate('9999-12-31T23:59:59.999Z') : await vault.listPatientNotesDueByDate();\n    if (sequence !== remMaybeReadSequence"
+  ],
+  [
+    "homePresentation: t && t.homePresentation === true }); return true;",
+    "homePresentation: t && t.homePresentation === true, homeContext: homeContext, homePosition: t && t.homePosition, contextLabel: t && t.contextLabel, showPatientName: t && t.showPatientName }); return true;"
+  ],
+  [
+    "renderRemindersInline:Br,syncRemindersInline:Rr,",
+    "renderRemindersInline:Br,syncRemindersInline:Rr,disposeHomeReminders:HomeRemindersDisposeScope,"
+  ],
+  [
+    "state.tab === 'history' ? 'Brak wykonanych spraw z terminem.' : state.rows.length ? 'Brak spraw w tym filtrze.' : 'Brak przypomnień na dziś. Możesz dodać nowe przypomnienie.'));",
+    "state.tab === 'history' ? 'Brak wykonanych spraw z terminem.' : state.rows.length ? 'Brak spraw w tym filtrze.' : HomeRemindersContext ? 'Brak przypomnień wybranego pacjenta. Możesz dodać nowe przypomnienie.' : 'Brak przypomnień na dziś. Możesz dodać nowe przypomnienie.'));"
+  ],
+  [
+    "finally { state.busy = false; if (fields) fields.forEach(function (node) { node.disabled = false; }); controls.forEach(function (node) { node.disabled = false; }); nextSummary.removeAttribute('aria-disabled'); }",
+    "finally { state.busy = false; if (!HomeRemindersContext || alive()) { if (fields) fields.forEach(function (node) { node.disabled = false; }); controls.forEach(function (node) { node.disabled = false; }); nextSummary.removeAttribute('aria-disabled'); } }"
+  ],
+  [
+    "finally { state.busy = false; if (fields) fields.forEach(function (node) { node.disabled = false; }); controls.forEach(function (node) { node.disabled = false; }); updatePatientSave(); }",
+    "finally { state.busy = false; if (!HomeRemindersContext || alive()) { if (fields) fields.forEach(function (node) { node.disabled = false; }); controls.forEach(function (node) { node.disabled = false; }); updatePatientSave(); } }"
+  ],
+  [
+    "onBusy: function (working, editorOpen) { state.busy = !!working; state.editing = !!editorOpen; counts(); },",
+    "onBusy: function (working, editorOpen) { if (HomeRemindersContext && !alive()) return; state.busy = !!working; state.editing = !!editorOpen; counts(); },"
+  ],
+  [
+    "if (!saved && !note.completedAtISO && !note.noShowAtISO && remB22Day(note.dueDateISO) > Fa()) detail.appendChild(make('p', 'vb22-notice',",
+    "if (!HomeRemindersContext && !saved && !note.completedAtISO && !note.noShowAtISO && remB22Day(note.dueDateISO) > Fa()) detail.appendChild(make('p', 'vb22-notice',"
+  ],
+  [
+    "if (forced && sequence === remMaybeReadSequence && remReadCurrent(owner) && searchReturnCurrent()) remShowReadError();",
+    "if (forced && sequence === remMaybeReadSequence && remReadCurrent(owner) && searchReturnCurrent()) { if (homeContext) HomeRemindersShowReadFailure(t); else remShowReadError(); }"
+  ],
+  [
+    "showReadFailure: function () { if (!alive()) return; HomeRemindersReadPhase = 'error'; clear(list); list.appendChild(remReadErrorContent(function () { Rr(); })); HomeRemindersUpdate(); },",
+    "showReadFailure: function () { if (!alive()) return; HomeRemindersReadPhase = 'error'; clear(list); list.appendChild(remReadErrorContent(full ? refresh : function () { Rr(); })); HomeRemindersUpdate(); },"
+  ],
+  [
+    "        close(); ga({ patientId: note.patientId, note: note, onSaved: function () { HomeRemindersRequest({ noteId: note.id }); } });",
+    "        var homeReturn = HomeRemindersContext ? HomeRemindersPosition() : null;\n        close(); ga({ patientId: note.patientId, note: note, onSaved: function () { HomeRemindersRequest({ noteId: note.id }); },\n          onCancel: homeReturn ? function () { HomeRemindersRequest({ homePosition: homeReturn }); } : undefined });"
+  ],
+  [
+    "    request: function (request) {\n      if (state.editing || !alive()) return;",
+    "    request: function (request) {\n      if (state.editing || !alive()) return;\n      if (HomeRemindersContext && request.homePosition) { HomeRemindersRestorePosition(request.homePosition); return; }"
+  ],
+  [
+    "  root.showModal(); i.document.body.classList.add('vilda-reminders-open', 'nav-ui-temporarily-hidden');",
+    "  root.showModal(); if (view.bindHomeDialog) view.bindHomeDialog(); i.document.body.classList.add('vilda-reminders-open', 'nav-ui-temporarily-hidden');"
+  ],
+  [
+    "onDialog: function (dialog) { return privacy ? privacy.protectDialog(dialog) : null; },",
+    "onDialog: function (dialog) {\n          var privateCleanup = privacy ? privacy.protectDialog(dialog) : null, historyCleanup = HomeRemindersBindNativeDialog(dialog, { kind: 'care' });\n          return function () { try { if (typeof privateCleanup === 'function') privateCleanup(); } finally { if (typeof historyCleanup === 'function') historyCleanup(); } };\n        },"
+  ]
+];
+
 function once(source, before, after) {
   if (source.split(before).length !== 2) throw new Error('Home reminders hook anchor changed: ' + before.slice(0, 90));
   return source.replace(before, after);
@@ -196,7 +555,7 @@ function rewriteRequests(source, forward) {
   const start = source.indexOf('function remB22Create('), end = source.indexOf('\nfunction remB22Styles()', start);
   if (start < 0 || end < 0) throw new Error('Native reminders factory boundary missing.');
   let factory = source.slice(start, end), helper = '';
-  if (factory.includes(FACTORY_HELPERS)) { helper = FACTORY_HELPERS; factory = once(factory, helper, '/* HOME REQUEST HELPER PLACEHOLDER */'); }
+  if (factory.includes(FACTORY_HELPERS + SCOPE_FACTORY_HELPERS)) { helper = FACTORY_HELPERS + SCOPE_FACTORY_HELPERS; factory = once(factory, helper, '/* HOME REQUEST HELPER PLACEHOLDER */'); }
   const from = forward ? 'remB22Request(' : 'HomeRemindersRequest(', to = forward ? 'HomeRemindersRequest(' : 'remB22Request(';
   const count = factory.split(from).length - 1, already = factory.split(to).length - 1;
   if (!count && already === 14) return source;
@@ -206,16 +565,36 @@ function rewriteRequests(source, forward) {
   return source.slice(0, start) + factory + source.slice(end);
 }
 
+function rewriteEditors(source, forward) {
+  const start = source.indexOf('function remB22Create('), end = source.indexOf('\nfunction remB22Styles()', start);
+  let factory = source.slice(start, end), helper = '';
+  if (factory.includes(SCOPE_FACTORY_HELPERS)) { helper = SCOPE_FACTORY_HELPERS; factory = once(factory, helper, '/* HOME EDITOR HELPER PLACEHOLDER */'); }
+  const from = forward ? 'ga(' : 'HomeRemindersOpenEditor(', to = forward ? 'HomeRemindersOpenEditor(' : 'ga(';
+  const count = factory.split(from).length - 1, already = factory.split(to).length - 1;
+  if (!count && already === 6) return source;
+  if (count !== 6 || already) throw new Error('Unexpected native editor request count: ' + count + '/' + already);
+  factory = factory.replaceAll(from, to);
+  if (helper) factory = once(factory, '/* HOME EDITOR HELPER PLACEHOLDER */', helper);
+  return source.slice(0, start) + factory + source.slice(end);
+}
+
 export function applyHomeRemindersHooks(source) {
+  if (source.includes('/* BEGIN HOME REMINDERS PATIENT CONTEXT */')) source = reverseHomeRemindersHooks(source);
   source = rewriteRequests(source, true);
   for (const [before, after] of PAIRS) {
     if (source.includes(after)) { if (source.split(after).length !== 2) throw new Error('Repeated home reminders hook.'); continue; }
     source = once(source, before, after);
   }
-  return source;
+  for (const [before, after] of SCOPE_PAIRS) {
+    if (source.includes(after)) { if (source.split(after).length !== 2) throw new Error('Repeated home reminders scope hook.'); continue; }
+    source = once(source, before, after);
+  }
+  return rewriteEditors(source, true);
 }
 
 export function reverseHomeRemindersHooks(source) {
+  source = rewriteEditors(source, false);
+  for (const [before, after] of SCOPE_PAIRS.slice().reverse()) source = once(source, after, before);
   for (const [before, after] of PAIRS.slice().reverse()) source = once(source, after, before);
   return rewriteRequests(source, false);
 }

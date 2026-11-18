@@ -117,19 +117,26 @@
       });
       return article;
     }
-    function fullRow(entry) {
+    function fullRow(entry, showPatientName) {
       if (!entry || !entry.node || !entry.detailNode) return null;
       var article = make('article', 'vhome-reminders-full-entry');
       var patientHeading = entry.detailNode.querySelector('.vb22-detail-patient');
       var patientNext = patientHeading && patientHeading.nextSibling;
+      var patientOmitted = !!(patientHeading && showPatientName === false);
       entry.node.classList.add('vhome-reminders-entry-open'); entry.detailNode.classList.add('vhome-reminders-entry-detail');
       // Native row buttons and native action/form nodes are siblings, never
       // nested interactive controls. Keep the original patient link once,
       // above the row, with its native listener and keyboard access intact.
-      if (patientHeading) article.appendChild(patientHeading);
+      if (patientHeading) {
+        if (patientOmitted) patientHeading.classList.add('vhome-reminders-patient-omitted');
+        article.appendChild(patientHeading);
+      }
       article.append(entry.node, entry.detailNode);
       restoreRows.push(function () {
-        if (patientHeading) entry.detailNode.insertBefore(patientHeading, patientNext && patientNext.parentNode === entry.detailNode ? patientNext : null);
+        if (patientHeading) {
+          if (patientOmitted) patientHeading.classList.remove('vhome-reminders-patient-omitted');
+          entry.detailNode.insertBefore(patientHeading, patientNext && patientNext.parentNode === entry.detailNode ? patientNext : null);
+        }
         entry.node.classList.remove('vhome-reminders-entry-open'); entry.detailNode.classList.remove('vhome-reminders-entry-detail');
         if (article.parentNode === nodes.list) { nodes.list.insertBefore(entry.node, article); nodes.list.insertBefore(entry.detailNode, article); }
         article.remove();
@@ -172,7 +179,7 @@
       var asFullList = full && Array.isArray(snapshot.entries); root.classList.toggle('vhome-reminders-list-view', asFullList);
       var suppliedMessages = nativeMessages(snapshot.feedbackNodes);
       (full ? entries : entries.slice(0, 2)).forEach(function (entry) {
-        var row = full ? fullRow(entry) : previewRow(entry, snapshot.showPatientName);
+        var row = full ? fullRow(entry, snapshot.showPatientName) : previewRow(entry, snapshot.showPatientName);
         if (row) nodes.list.appendChild(row);
       });
       suppliedMessages += nativeMessages(snapshot.tailNodes);

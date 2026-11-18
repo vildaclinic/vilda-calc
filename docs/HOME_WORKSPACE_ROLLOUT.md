@@ -391,30 +391,38 @@ Historyczny pakiet pozostaje dostępny. Pozwala to zachować dotychczasowy limit
 600 żądań podczas instalacji PWA, bez usuwania zasobów ani rozluźniania testów.
 
 
-## Przygotowanie Przypomnień — adapter prezentacji
+## Przypomnienia wybranego pacjenta
 
-Nowa warstwa `vilda_home_reminders.js` / `.css` jest ładowana pasywnie w stronie
-Start i w powłoce. Nie przenosi samodzielnie starej karty ani nie ustala zakresu
-odczytu. Natywny kontroler może jawnie przekazać jej swoje węzły, polecenia,
-liczniki oraz status odczytu. Dotychczasowy globalny dzwonek zachowuje swój
-widok i działanie.
+Czwarta karta, obok Zaleceń dietetycznych, korzysta z oryginalnego hosta
+`#remindersInline` i natywnego kontrolera. Zgodnie z decyzją właściciela
+pokazuje sprawy wybranego pacjenta, także z przyszłymi terminami. Na stronie
+głównej mieszczą się dwa wpisy oraz pełny licznik; powiększenie udostępnia
+zakładki Do wykonania, Historia i Plany. Wszystkie cztery karty mają na
+komputerze tę samą wysokość. Tablet i telefon zachowują wysokość wynikającą
+z treści. Globalny dzwonek nadal obejmuje całe konto i zachowuje dotychczasowe
+reguły terminów oraz wyszukiwanie.
 
-Przygotowany dekorator odpowiada za geometrię czwartej karty, wspólnego okna
-oraz trzech zakładek z makiety. Formularze, historia, paginacja, potwierdzenia,
-błędy odczytu i akcje nadal należą do natywnego modułu. Nie ma drugiego
-magazynu przypomnień ani nowych reguł zapisu, kategorii i kwalifikacji terminów.
+Warstwa `vilda_home_reminders_runtime.js` odpowiada za umieszczenie karty oraz
+życie kontekstu konta, pacjenta i wizyty. Kontroler wiąże z nim odczyty,
+historię, plany, formularze oraz powroty z edycji. Zmiana kontekstu usuwa
+odszyfrowaną treść i zamyka należące do niego okno w powłoce. Operacja zapisu
+już przekazana natywnemu sejfowi może dokończyć zapis do pierwotnego pacjenta;
+nie zostaje przekierowana na nowego pacjenta ani nie odtwarza starego okna.
+
+`vilda_home_reminders.js` / `.css` odpowiadają za prezentację istniejących
+węzłów. Formularze, paginacja, błędy, ponawianie i zapisy nadal należą do
+natywnego modułu. Nie powstaje drugi magazyn przypomnień. Domyślny widok
+aplikacji poza opt-in przebudowy zachowuje dotychczasowe zachowanie.
 Zasady odtwarzania źródła opisuje `ZRODLA_ARTEFAKTOW.md`.
 
-Aktywacja nowej karty i ustalenie jej zakresu są osobnym krokiem: makieta
-pokazuje sprawy bieżącego pacjenta, a obecna karta natywna obejmuje całe konto.
-Na tym etapie nie dodano filtra pacjenta, nie rozszerzono zakresu dat i nie
-zmieniono domyślnych odczytów. Warstwa przygotowawcza nie montuje jeszcze
-automatycznie czwartej karty.
+Anulowanie edycji przywraca listę z jej filtrem, wyszukiwaniem i pozycją.
+Główne okno oraz jego formularze korzystają z koordynatora historii ramki
+źródłowej, wspólnego z edytorem notatek. Wstecz wywołuje natywne anulowanie;
+kontroler zachowuje odmowę zamknięcia podczas zapisu i potwierdzenia zmian.
+Historia przeglądarki zawiera wyłącznie niejawne znaczniki okien.
 
-Test `home-workspace-reminders-foundation.spec.mjs` włącza prezentację wyłącznie
-w swojej fikcyjnej sesji. Wszystkie jego sprawy należą do jednego pacjenta;
-nie rozstrzyga więc przyszłego zakresu karty. Sprawdza rzeczywisty sejf,
-przekazanie okna do powłoki, zapis i ponawianie po błędzie, historię z paginacją,
-powrót do listy, geometrię desktopową i mobilną oraz osobne, nadal globalne
-wejście z dzwonka. Pełna walidacja etapu i publikacja nastąpią po ustaleniu
-zakresu oraz podłączeniu karty w aplikacji.
+Testy `home-workspace-reminders-foundation.spec.mjs` oraz
+`home-workspace-reminders-patient.spec.mjs` używają fikcyjnego, rzeczywistego
+sejfu. Sprawdzają automatyczne umieszczenie karty, działanie natywnych akcji,
+powroty i błędy, historię z paginacją, granicę między pacjentami i globalnym
+dzwonkiem oraz geometrię desktopową i mobilną.

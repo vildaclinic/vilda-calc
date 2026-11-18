@@ -1169,7 +1169,7 @@
  },
  "vilda_auth_ui.js": {
   "v": 562,
-  "sha256": "c13701715ae8b17acc4534a7a49b113966af16a83655b7494cb83d02a8fa5306"
+  "sha256": "7fe2b157e67571dc48b9e4dd9f3418334379b1de0ea4783eabda69890b5d0e98"
  },
  "vilda_b64_checklist.js": {
   "v": 2,
@@ -1629,11 +1629,15 @@
  },
  "vilda_home_reminders.css": {
   "v": 1,
-  "sha256": "2f6661f3aeb4307fa4d0248eae4522ea14e06e7e04549e86c15762b79170e167"
+  "sha256": "57b3b212727e7602f587543fce8a619881e2b53690da03eebc401bbb53a2e553"
  },
  "vilda_home_reminders.js": {
   "v": 1,
-  "sha256": "93c4cc89ae594a36b33271fbf6e9ee7aa13e03aa1c34bbf99e35b22a10de261f"
+  "sha256": "cc05cb83dc97c4bb35cdeff5298a6aed86f8ffbdb5fc467bf49e5fb030ab7968"
+ },
+ "vilda_home_reminders_runtime.js": {
+  "v": 1,
+  "sha256": "c6f959850773f3296475d2cc1688b6fdd3088805a6f29c67afe014c147c0d33d"
  },
  "vilda_home_workspace.css": {
   "v": 7,
