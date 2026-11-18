@@ -3,10 +3,11 @@ import { describe, expect, it, vi } from 'vitest';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
 import { wytnijFunkcje } from './sesja-zapisu-uprzaz.mjs';
 
-// P-BEZCZYNNOSC-KARTA: jedna karta = jedna sesja aktywności i jeden koniec sesji. Produkcyjne funkcje z
-// vilda_auth_ui.js (wycięte po nazwie), prawdziwy vilda_persistence_adapter.js i prawdziwy vilda_session_bridge.js;
-// atrapy dotyczą tylko okien i sejfu. Dane fikcyjne.
+// P-BEZCZYNNOSC-KARTA: jedna karta przeglądarki = jedna sesja aktywności i jeden koniec sesji. Produkcyjne
+// funkcje z vilda_auth_ui.js (wycięte po nazwie), prawdziwy vilda_persistence_adapter.js i prawdziwy
+// vilda_session_bridge.js; atrapy dotyczą tylko okien i sejfu. Dane fikcyjne.
 const source = fs.readFileSync(new URL('../../vilda_auth_ui.js', import.meta.url), 'utf8');
+const bridgeSource = fs.readFileSync(new URL('../../vilda_session_bridge.js', import.meta.url), 'utf8');
 const SESSION_RECORD = 'vilda-vault-session-v2';
 const MARKERS = ['vildaCurrentPatientId', 'vilda-save-ref-v1', 'vildaPrevSummaryPid', 'vildaPrevSummaryAnchor', 'vildaLoadChoiceV1', 'vildaDobAgeZapisV1'];
 const SESSIONS = ['vildaMainSessionV1', 'vildaClcrSessionV1', 'vildaSteroidsSessionV1', 'sharedUserData'];
@@ -24,14 +25,13 @@ function storage() {
 }
 
 // Okno z prawdziwym adapterem zapisu i wyciętymi funkcjami modułu konta.
-function clearHarness({ sessionRecord = false, mode = 'normal' } = {}) {
+function clearHarness({ sessionRecord = false } = {}) {
   const local = storage(), session = storage(), events = [], warnings = [];
   const win = { localStorage: local, sessionStorage: session, navigator: {}, name: '', _vildaCurrentPatientId: 'FICTIONAL-ID',
     dispatchEvent: event => { events.push(event); },
     CustomEvent: class { constructor(type, options) { this.type = type; this.detail = options.detail; } } };
   loadBrowserScript('vilda_persistence_adapter.js', win);
-  if (mode === 'ephemeral') win.VildaPersistence.setEphemeralMode(true);
-  for (const key of [...SESSIONS, ...MARKERS, ...KEPT]) session.setItem(key, JSON.stringify({ fictional: 'FICTIONAL-PATIENT ' + key }));
+  for (const key of [...SESSIONS, ...MARKERS, ...KEPT]) session.setItem(key, JSON.stringify({ fictional: 'FICTIONAL-WORK-STATE ' + key }));
   local.setItem('vilda-trust-device-v1', '1');
   local.setItem('labAssayProfiles', 'FICTIONAL-PROFILE');
   if (sessionRecord) session.setItem(SESSION_RECORD, 'FICTIONAL-ENCRYPTED-SESSION');
@@ -208,7 +208,7 @@ describe('most sesji: aktywność strony bez czynnego modułu konta', () => {
       addEventListener: () => {}, CustomEvent: class { constructor(type) { this.type = type; } }, setTimeout, clearTimeout,
     };
     win.top = top === true ? { VildaAuthUI: { recordActivity: record } } : top === 'self' ? win : top;
-    if (ownAuth) { win.VildaAuthUI = {}; win.VildaVault = { isUnlocked: () => ownUnlocked }; }
+    if (ownAuth) { win.VildaAuthUI = { recordActivity: record }; win.VildaVault = { isUnlocked: () => ownUnlocked }; }
     loadBrowserScript('vilda_session_bridge.js', win);
     const fire = (type, event) => (listeners[type] || []).forEach(fn => fn(event));
     return { fire, record, listeners };
@@ -223,7 +223,11 @@ describe('most sesji: aktywność strony bez czynnego modułu konta', () => {
     expect(untrusted.record).not.toHaveBeenCalled();
     const own = bridge({ ownAuth: true, ownUnlocked: true }); own.fire('keydown', { isTrusted: true });
     expect(own.record).not.toHaveBeenCalled();
-    const alone = bridge({ top: 'self' }); expect(() => alone.fire('keydown', { isTrusted: true })).not.toThrow();
+    // Strona samodzielna (także z własnym modułem konta i zamkniętym sejfem) nie ma komu przekazywać.
+    for (const alone of [bridge({ top: 'self' }), bridge({ top: 'self', ownAuth: true })]) {
+      expect(() => alone.fire('keydown', { isTrusted: true })).not.toThrow();
+      expect(alone.record).not.toHaveBeenCalled();
+    }
     const foreign = bridge({ top: new Proxy({}, { get() { throw new Error('SecurityError'); } }) });
     expect(() => foreign.fire('keydown', { isTrusted: true })).not.toThrow();
   });
@@ -242,7 +246,7 @@ describe('start strony po zakończonej sesji', () => {
     const win = { localStorage: local, sessionStorage: session, navigator: {}, name: '', dispatchEvent: () => {}, document: { dispatchEvent: () => {} },
       CustomEvent: class { constructor(type, options) { this.type = type; this.detail = options.detail; } } };
     loadBrowserScript('vilda_persistence_adapter.js', win);
-    if (residue) for (const key of [...SESSIONS, ...MARKERS]) session.setItem(key, JSON.stringify({ version: 1, name: 'FICTIONAL-RETAINED-PATIENT' }));
+    if (residue) for (const key of [...SESSIONS, ...MARKERS]) session.setItem(key, JSON.stringify({ version: 1, name: 'FICTIONAL-WORK-STATE' }));
     if (sessionRecord) session.setItem(SESSION_RECORD, 'FICTIONAL-ENCRYPTED-SESSION');
     const left = () => [...SESSIONS, ...MARKERS].filter(key => session.getItem(key) != null).length;
     const vault = { onLock() {}, onUnlock() {}, tryRestoreSession: async () => restored, getStatus: () => null };
@@ -276,5 +280,35 @@ describe('start strony po zakończonej sesji', () => {
   it('pusty start: nic do czyszczenia, ekran bez resetu', async () => {
     const h = await boot({ residue: false });
     expect(h.seen).toEqual([{ options: { skipReset: true }, left: 0 }]);
+  });
+});
+
+// Okablowanie: miejsca wywołań w plikach produkcyjnych, których uprzęże wyżej nie uruchamiają.
+describe('okablowanie końca sesji karty w plikach produkcyjnych', () => {
+  const count = (text, part) => text.split(part).length - 1;
+  it('moduł konta: krok karty po resecie blokady, czyszczenie przy zablokowanym starcie i eksport odbioru aktywności', () => {
+    for (const part of [
+      'try{qa("on-lock")}catch{}try{vildaEndTabSession(a)}catch{}',
+      'if(authNeedsCleanup)vildaClearTabWorkState();Aa(!1);',
+      'recordActivity:vildaRecordActivity,recordPeerActivity:vildaRecordPeerActivity,',
+    ]) expect(count(source, part), part).toBe(1);
+  });
+  it('pomocnicy karty leżą w wycinku startu modułu konta, każdy zdefiniowany raz', () => {
+    const from = source.indexOf('var authBootReady=false;'), to = source.indexOf('function uo(', from);
+    expect(from).toBeGreaterThan(-1);
+    expect(to).toBeGreaterThan(from);
+    for (const name of ['vildaTabPeers', 'vildaClearTabWorkState', 'vildaEndTabSession']) {
+      const definition = `function ${name}(`;
+      expect(count(source, definition), name).toBe(1);
+      const at = source.indexOf(definition);
+      expect(at > from && at < to, name).toBe(true);
+    }
+  });
+  it('most sesji: przekazanie aktywności jest zdefiniowane przed startem mostu', () => {
+    const relay = bridgeSource.indexOf('function relayTabActivity(event){');
+    const start = bridgeSource.indexOf('var h=n.document;h&&(h.readyState==="loading"?');
+    expect(relay).toBeGreaterThan(-1);
+    expect(start).toBeGreaterThan(relay);
+    expect(count(bridgeSource, 'function relayTabActivity(event){')).toBe(1);
   });
 });

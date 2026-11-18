@@ -1,61 +1,19 @@
-import { expect, test } from '@playwright/test';
-import { createFictionalVault, loadPatient, shellFrame } from '../support/centile-live-fixture.mjs';
+import { expect, test } from '../support/test-czas.mjs';
+import { createFictionalVault, shellFrame } from '../support/centile-live-fixture.mjs';
+import {
+  SESSION_RECORD, TAB_TEST_OPTIONS, expectNoPatientAfterSignIn, openShellWithPatient, signIn, startForm, tabState,
+} from '../support/bezczynnosc-karta.mjs';
 
-// P-BEZCZYNNOSC-KARTA — przepływy, których poprawka nie może zmienić, oraz drogi bez zdarzenia blokady.
-// Prawdziwa powłoka app.html, fikcyjne konto i fikcyjna pacjentka; czas rzeczywisty.
-test.use({ serviceWorkers: 'block', reducedMotion: 'reduce' });
-test.setTimeout(240_000);
-
-const PASSWORD = 'E2e#SiatkaNowyPomiar!2026';
-const stage = (value, date, months) => ({ stage: value, sex: 'F', observedAtISO: date, ageMonths: months, source: 'clinician-entry' });
-const PATIENT = {
-  version: 1, name: 'Zmyslona Weronika',
-  user: { lastName: 'Zmyslona', firstName: 'Weronika', sex: 'F', dobISO: '2014-11-10', age: 11, ageMonths: 6, height: 148, weight: 40, measuredAtISO: '2026-05-10',
-    pubertyAssessment: { version: 1, sex: 'F', observations: { G: null, Th: stage(4, '2026-05-10', 138), P: stage(4, '2026-05-10', 138) } } },
-};
-const KEYS = ['vildaMainSessionV1', 'sharedUserData', 'vildaCurrentPatientId', 'vilda-save-ref-v1', 'vildaPrevSummaryPid',
-  'vildaPrevSummaryAnchor', 'vildaLoadChoiceV1', 'vildaDobAgeZapisV1', 'vildaClcrSessionV1', 'vildaSteroidsSessionV1'];
-
-async function openShellWithPatient(page) {
-  const { frame } = await createFictionalVault(page, { shell: true });
-  const patientId = await frame.evaluate(async record => (await window.VildaVault.savePatient(record, { dedup: false })).patientId, PATIENT);
-  await loadPatient(frame, patientId, 'new', { clear: true });
-  await expect.poll(() => frame.evaluate(() => window.VildaPubertyAssessmentState.capture().present)).toBe(true);
-  await page.evaluate(() => window.VildaShell.navigate('terminarz'));
-  await shellFrame(page, 'Terminarz');
-  await page.evaluate(() => window.VildaShell.navigate('lab'));
-  const lab = await shellFrame(page, 'Jednostki laboratoryjne');
-  await lab.waitForFunction(() => window.VildaVault?.isUnlocked() && window.VildaAuthUI && document.getElementById('labValue'));
-  await lab.locator('#labSubstance').fill('Estradiol');
-  await lab.locator('#labSubstanceDropdown [data-id="estradiol"]').click();
-  await lab.locator('#labValue').fill('40');
-  await expect(lab.locator('#labPatientText')).toContainText('Th IV');
-  return { start: frame, lab, patientId };
-}
-const patientKeys = page => page.evaluate(keys => {
-  const present = keys.filter(key => sessionStorage.getItem(key) != null);
-  const withPatient = [];
-  for (let index = 0; index < sessionStorage.length; index += 1) {
-    const key = sessionStorage.key(index);
-    if (/Zmyslona|Weronika|2014-11-10/.test(String(sessionStorage.getItem(key) || ''))) withPatient.push(key);
-  }
-  return { present, withPatient };
-}, KEYS);
-async function signIn(page) {
-  const login = page.locator('#vilda-auth-ui-root');
-  await login.getByRole('button', { name: /Fikcyjny sejf testu panelu siatek/ }).click();
-  await login.locator('input[type=password]').fill(PASSWORD);
-  await login.getByRole('button', { name: 'Zaloguj się', exact: true }).click();
-  await page.waitForFunction(() => window.VildaVault?.isUnlocked() && window.VildaAuthUI?.isBootReady()
-    && !document.documentElement.classList.contains('vilda-auth-locked'));
-}
+// P-BEZCZYNNOSC-KARTA — przepływy, których zmiana nie może naruszyć (odświeżenie przy odblokowanym sejfie,
+// gość → logowanie), pojedyncze zdarzenie aktywności oraz start karty po terminie sesji.
+// Prawdziwa powłoka app.html, fikcyjne konto i fikcyjna pacjentka; czas biegnie normalnym tempem.
+test.use(TAB_TEST_OPTIONS);
+test.setTimeout(120_000);
 
 test('F5 przy odblokowanym sejfie zachowuje pacjentkę razem z oceną Th', async ({ page }) => {
   await openShellWithPatient(page);
   await page.reload({ waitUntil: 'load' });
-  const start = await shellFrame(page);
-  await start.waitForFunction(() => window.VildaVault?.isUnlocked() && window.VildaAuthUI?.isBootReady()
-    && typeof window.collectUserData === 'function' && !window.VildaDataImportExport.isMainSessionRestorePending());
+  const start = await startForm(page);
   await expect(start.locator('#lastName')).toHaveValue('Zmyslona');
   await expect.poll(() => start.evaluate(() => {
     const carrier = window.VildaPubertyAssessmentState.capture();
@@ -63,57 +21,68 @@ test('F5 przy odblokowanym sejfie zachowuje pacjentkę razem z oceną Th', async
     return { present: carrier.present, th: user.pubertyAssessment?.observations?.Th?.stage ?? null };
   })).toEqual({ present: true, th: 4 });
   // Ramki dociągane w tle odtwarzają sesję chwilę po dokumencie głównym.
-  await expect.poll(() => page.evaluate(() => [window, ...Array.from({ length: frames.length }, (_, i) => frames[i])]
+  await expect.poll(() => page.evaluate(() => [window, ...Array.from({ length: window.frames.length }, (_, index) => window.frames[index])]
     .filter(view => view.VildaVault).every(view => view.VildaVault.isUnlocked()))).toBe(true);
 });
 
 test('jeden prawdziwy klawisz w ramce odświeża każdy dokument karty dokładnie raz; zdarzenie syntetyczne zostaje lokalne', async ({ page }) => {
   const { lab } = await openShellWithPatient(page);
+  // Licznik wywołań resetIdleTimer w każdym dokumencie karty z odblokowanym sejfem.
   await page.evaluate(() => {
-    window.__resets = {};
-    for (const view of [window, ...Array.from({ length: frames.length }, (_, i) => frames[i])]) {
-      const vault = view.VildaVault; if (!vault?.isUnlocked()) continue;
-      const name = view.location.pathname; window.__resets[name] = 0;
+    window.__e2eResets = {};
+    for (const view of [window, ...Array.from({ length: window.frames.length }, (_, index) => window.frames[index])]) {
+      const vault = view.VildaVault;
+      if (!vault?.isUnlocked()) continue;
+      const name = view.location.pathname;
+      window.__e2eResets[name] = 0;
       const original = vault.resetIdleTimer;
-      vault.resetIdleTimer = function () { window.top.__resets[name] += 1; return original.apply(this, arguments); };
+      vault.resetIdleTimer = function (...args) { window.top.__e2eResets[name] += 1; return original.apply(this, args); };
     }
   });
+  const zero = () => page.evaluate(() => { for (const key of Object.keys(window.__e2eResets)) window.__e2eResets[key] = 0; });
   await lab.locator('#labValue').focus();
-  await page.evaluate(() => { for (const key of Object.keys(window.__resets)) window.__resets[key] = 0; });
+  await zero();
   await page.keyboard.press('End');
-  const real = await page.evaluate(() => ({ ...window.__resets }));
+  const real = await page.evaluate(() => ({ ...window.__e2eResets }));
   expect(Object.keys(real).length).toBeGreaterThanOrEqual(4);
+  // Każdy dokument raz: zdarzenie dociera do wszystkich i nie wraca echem.
   expect(Object.values(real).every(count => count === 1)).toBe(true);
-  await page.evaluate(() => { for (const key of Object.keys(window.__resets)) window.__resets[key] = 0; });
+  await zero();
   await lab.evaluate(() => document.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true })));
-  const synthetic = await page.evaluate(() => ({ ...window.__resets }));
+  const synthetic = await page.evaluate(() => ({ ...window.__e2eResets }));
   expect(synthetic['/przelicznik-jednostek.html']).toBe(1);
   expect(Object.entries(synthetic).filter(([name]) => name !== '/przelicznik-jednostek.html').every(([, count]) => count === 0)).toBe(true);
 });
 
 test('karta odświeżona po terminie sesji: stan roboczy znika przed logowaniem, także gdy skrypt formularza dochodzi późno', async ({ page, context }) => {
-  await openShellWithPatient(page);
-  expect((await patientKeys(page)).withPatient.length).toBeGreaterThan(0);
-  await page.evaluate(() => {
-    const key = 'vilda-vault-session-v2', record = JSON.parse(sessionStorage.getItem(key));
+  const { patientId } = await openShellWithPatient(page);
+  expect((await tabState(page, patientId)).withPatient.length).toBeGreaterThan(0);
+  // Termin zapisu sesji w karcie przesunięty w przeszłość: po odświeżeniu sesja nie zostanie odtworzona.
+  await page.evaluate(key => {
+    const record = JSON.parse(sessionStorage.getItem(key));
     record.expiresAtISO = new Date(Date.now() - 60_000).toISOString();
     sessionStorage.setItem(key, JSON.stringify(record));
+  }, SESSION_RECORD);
+  // Skrypt formularza (z jego resetem) dochodzi długo po starcie modułu konta.
+  const delayed = [];
+  await context.route('**/vilda_data_import_export.js*', async route => {
+    delayed.push(route.request().url());
+    await new Promise(done => { setTimeout(done, 2500); });
+    await route.continue();
   });
-  // Niekorzystna kolejność: reset formularza (clearAllData) pojawia się długo po starcie modułu konta.
-  await context.route('**/vilda_data_import_export.js*', async route => { await new Promise(done => { setTimeout(done, 2500); }); await route.continue(); });
   await page.reload({ waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => window.VildaAuthUI?.isBootReady());
-  await expect.poll(() => patientKeys(page), { timeout: 20_000 }).toEqual({ present: [], withPatient: [] });
+  // Powłoka dociąga formularz Start w tle; jego skrypt jest już w drodze, gdy sprawdzany jest stan karty.
+  await expect.poll(() => delayed.length, { timeout: 20_000 }).toBeGreaterThan(0);
+  await expect.poll(async () => {
+    const state = await tabState(page, patientId);
+    return { keys: state.keys, withPatient: state.withPatient };
+  }, { timeout: 20_000 }).toEqual({ keys: [], withPatient: [] });
   expect(await page.evaluate(() => window.VildaVault.isUnlocked())).toBe(false);
-  await context.unroute('**/vilda_data_import_export.js*');
+  // Zdjęcie opóźnienia czeka na odpowiedzi będące w drodze: żadne wstrzymane żądanie nie zostaje bez odpowiedzi.
+  await context.unrouteAll({ behavior: 'wait' });
   await signIn(page);
-  const start = await shellFrame(page);
-  await start.waitForFunction(() => window.VildaVault?.isUnlocked() && typeof window.collectUserData === 'function'
-    && window.VildaAuthUI?.isBootReady() && !window.VildaDataImportExport.isMainSessionRestorePending());
-  await expect(start.locator('#lastName')).toHaveValue('');
-  expect(await start.evaluate(() => ({ carrier: window.VildaPubertyAssessmentState.capture().present,
-    id: window._vildaCurrentPatientId || sessionStorage.getItem('vildaCurrentPatientId') }))).toEqual({ carrier: false, id: null });
-  expect(await patientKeys(page)).toEqual({ present: [], withPatient: [] });
+  await expectNoPatientAfterSignIn(page, patientId);
 });
 
 test('gość w powłoce → „Zaloguj się” → logowanie: dane wpisane przez gościa zostają', async ({ page }) => {
@@ -143,14 +112,13 @@ test('gość w powłoce → „Zaloguj się” → logowanie: dane wpisane przez
   await start.locator('#weight').press('Tab');
   await expect.poll(() => page.evaluate(() => /Goscinny/.test(String(sessionStorage.getItem('vildaMainSessionV1')))), { timeout: 20_000 }).toBe(true);
   const cleared = [];
-  await page.exposeFunction('__guestCleared', source => cleared.push(source));
-  await start.evaluate(() => window.addEventListener('vilda:user-state-cleared', event => window.top.__guestCleared(event.detail?.source || '')));
+  await page.exposeFunction('__e2eGuestCleared', source => cleared.push(source));
+  await start.evaluate(() => window.addEventListener('vilda:user-state-cleared', event => window.top.__e2eGuestCleared(event.detail?.source || '')));
   await page.locator('button.chrome-menu-logout:visible').first().click();
   await expect(page.locator('#vilda-auth-ui-root')).toBeVisible();
   await signIn(page);
-  const after = await shellFrame(page);
-  await after.waitForFunction(() => window.VildaVault?.isUnlocked() && typeof window.collectUserData === 'function'
-    && window.VildaAuthUI?.isBootReady() && !window.VildaDataImportExport.isMainSessionRestorePending());
+  await startForm(page);
+  // Okno na ewentualne czyszczenie po zalogowaniu: asercje niżej stwierdzają, że żadne nie zaszło.
   await page.waitForTimeout(3000);
   // Stan roboczy gościa zostaje w pamięci karty; żaden krok końca sesji go nie czyści.
   expect(await page.evaluate(() => {
@@ -158,8 +126,7 @@ test('gość w powłoce → „Zaloguj się” → logowanie: dane wpisane przez
     return { name: /Goscinny/.test(raw), height: /171/.test(raw) };
   })).toEqual({ name: true, height: true });
   expect(cleared).toEqual([]);
-  const form = await (await shellFrame(page)).evaluate(() => ({ lastName: document.getElementById('lastName').value,
-    age: document.getElementById('age').value, height: document.getElementById('height').value }));
-  console.log('FORMULARZ PO ZALOGOWANIU', JSON.stringify(form), 'ramka wymieniona:', after !== start);
-  expect(form).toEqual({ lastName: 'Goscinny', age: '31', height: '171' });
+  expect(await (await shellFrame(page)).evaluate(() => ({ lastName: document.getElementById('lastName').value,
+    age: document.getElementById('age').value, height: document.getElementById('height').value })))
+    .toEqual({ lastName: 'Goscinny', age: '31', height: '171' });
 });

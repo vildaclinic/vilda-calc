@@ -32,19 +32,29 @@ export const SESSION_RECORD = 'vilda-vault-session-v2';
 // Własne klucze testu w pamięci karty (dziennik blokad przeżywa nawigację dokumentu głównego).
 const LOCK_LOG = '__e2eTabLocks';
 
+// Panel po własnym starcie: sejf odblokowany, moduł konta gotowy, bez ekranu logowania.
+const paneReady = () => Boolean(window.VildaVault?.isUnlocked() && window.VildaAuthUI?.isBootReady()
+  && !document.documentElement.classList.contains('vilda-auth-locked'));
+
 // Powłoka z zalogowanym fikcyjnym kontem, pacjentką wczytaną z bazy i trzema panelami: Start, Terminarz
 // i „Jednostki laboratoryjne” z wynikiem ocenianym wg stadium wczytanej pacjentki.
 export async function openShellWithPatient(page) {
   const { frame } = await createFictionalVault(page, { shell: true });
+  // Terminarz i „Jednostki lab.” najpierw kończą własny start, dopiero potem wczytywana jest pacjentka.
+  // Powłoka dociąga panele w tle, a wczytanie pacjenta rozsyła powiadomienie do pozostałych dokumentów;
+  // scenariusz nie może zależeć od tego, czy trafi ono w panel będący w połowie startu.
+  await page.evaluate(() => window.VildaShell.navigate('terminarz'));
+  const calendar = await shellFrame(page, 'Terminarz');
+  await calendar.waitForFunction(paneReady);
+  await page.evaluate(() => window.VildaShell.navigate('lab'));
+  const lab = await shellFrame(page, 'Jednostki laboratoryjne');
+  await lab.waitForFunction(paneReady);
+  await lab.waitForSelector('#labValue', { state: 'attached' });
+  await page.evaluate(() => window.VildaShell.navigate('start'));
   const patientId = await frame.evaluate(async record => (await window.VildaVault.savePatient(record, { dedup: false })).patientId, PATIENT);
   await loadPatient(frame, patientId, 'new', { clear: true });
   await expect.poll(() => frame.evaluate(() => window.VildaPubertyAssessmentState.capture().present)).toBe(true);
-  await page.evaluate(() => window.VildaShell.navigate('terminarz'));
-  const calendar = await shellFrame(page, 'Terminarz');
-  await calendar.waitForFunction(() => window.VildaVault?.isUnlocked() && window.VildaAuthUI);
   await page.evaluate(() => window.VildaShell.navigate('lab'));
-  const lab = await shellFrame(page, 'Jednostki laboratoryjne');
-  await lab.waitForFunction(() => window.VildaVault?.isUnlocked() && window.VildaAuthUI && document.getElementById('labValue'));
   await lab.locator('#labSubstance').fill('Estradiol');
   await lab.locator('#labSubstanceDropdown [data-id="estradiol"]').click();
   await lab.locator('#labValue').fill('40');
@@ -164,5 +174,6 @@ export async function expectNoPatientAfterSignIn(page, patientId) {
   await expect(start.locator('#lastName')).toHaveValue('');
   expect(await start.evaluate(() => ({ carrier: window.VildaPubertyAssessmentState.capture().present,
     id: window._vildaCurrentPatientId || sessionStorage.getItem('vildaCurrentPatientId') }))).toEqual({ carrier: false, id: null });
-  expect((await tabState(page, patientId)).withPatient).toEqual([]);
+  const state = await tabState(page, patientId);
+  expect({ keys: state.keys, withPatient: state.withPatient }).toEqual({ keys: [], withPatient: [] });
 }
