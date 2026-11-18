@@ -43,4 +43,23 @@ function initPageSaveStatus(){
     if(event&&["vildaCurrentPatientId","vilda-save-ref-v1","vildaMainSessionV1","vildaClcrSessionV1"].indexOf(event.key)!==-1)refreshPageSaveStatus();
   });
 }
+// P-BEZCZYNNOSC-KARTA: a framed page whose own account module is not counting
+// activity (it was opened before sign-in, so the module is not loaded, or its
+// vault is not open) hands real input to the top document of the tab. Work on
+// such a page then keeps the tab's session alive like work on any other panel.
+function relayTabActivity(event){
+  if(!event||event.isTrusted!==true)return;
+  try{
+    var own=n.VildaVault;
+    if(n.VildaAuthUI&&own&&typeof own.isUnlocked==="function"&&own.isUnlocked())return;
+    var top=n.top;
+    if(!top||top===n)return;
+    var auth=top.VildaAuthUI;
+    if(auth&&typeof auth.recordActivity==="function")auth.recordActivity();
+  }catch(_){}
+}
+if(n.document&&typeof n.document.addEventListener==="function")
+  ["mousedown","keydown","touchstart","scroll","pointerdown"].forEach(function(type){
+    try{n.document.addEventListener(type,relayTabActivity,{passive:true})}catch(_){}
+  });
 var h=n.document;h&&(h.readyState==="loading"?h.addEventListener("DOMContentLoaded",function(){I();initPageSaveStatus()},{once:!0}):(I(),initPageSaveStatus())),n.VildaSession={VERSION:1,TOOLTIPS:c,isLoggedIn:v,isGuestMode:E,getCurrentUser:L,hasSessionKey:l,getPatient:p,getSaveButtonState:P,getPatientsButtonState:_,notifySessionChanged:g,fireEvent:y,ensureAuthLoaded:w}})(typeof window<"u"?window:this);
