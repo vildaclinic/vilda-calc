@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-export const HOME_REMINDERS_AUTH_BASE_SHA256 = '05788f1bac66edfb60c8069c45db4c98ebce30ba770a0626d6d022456386f1b1';
+export const HOME_REMINDERS_AUTH_BASE_SHA256 = 'f493d3850028758156fd78dbd96abef5a811b16324e5763afd8dc695838d5f50';
 const target = fileURLToPath(new URL('../vilda_auth_ui.js', import.meta.url));
 const digest = value => createHash('sha256').update(value).digest('hex');
 const HELPERS = `/* BEGIN HOME REMINDERS PRESENTATION ELIGIBILITY

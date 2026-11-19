@@ -105,49 +105,35 @@
     return ageRaw !== '' || monthsRaw !== '';
   }
 
-  function render() {
-    var resultEl = document.getElementById('respiratoryResult');
-    if (!resultEl) return;
+  // Presentation only: all patient/UI context and the existing vital-signs
+  // engine are supplied by the caller. A resolver keeps the native renderer's
+  // engine lookup after validation; draft callers can pass the engine itself.
+  function buildResult(input, nativeEngine) {
+    return buildResultFromRate(input, nativeEngine, parseFloat(input.rrRaw));
+  }
 
-    var age = 0;
-    if (typeof getAgeDecimal === 'function') {
-      age = getAgeDecimal();
-    } else {
-      var ageRaw = document.getElementById('age') ? document.getElementById('age').value : '';
-      age = parseFloat(ageRaw) || 0;
-    }
-
-    var input = document.getElementById('respiratoryRateInput');
-    var rrRaw = input && input.value != null ? String(input.value).trim() : '';
-    var rr = parseFloat(rrRaw);
-
-    resetTone(resultEl);
+  function buildResultFromRate(input, nativeEngine, rr) {
+    var age = input.ageYears;
+    var rrRaw = input.rrRaw;
 
     if (rrRaw === '' || !isFinite(rr)) {
-      setTrustedHtml(resultEl, '<p class="bp-placeholder">Wpisz liczbę oddechów powyżej, aby zobaczyć wynik.</p>', 'respiratory-module:resultEl');
-      return;
+      return { html: '<p class="bp-placeholder">Wpisz liczbę oddechów powyżej, aby zobaczyć wynik.</p>', severity: '' };
     }
-    if (!ageFieldsFilled()) {
-      setTrustedHtml(resultEl, '<p>Wpisz wiek dziecka (pola „Wiek” u góry), aby obliczyć centyl liczby oddechów.</p>', 'respiratory-module:resultEl');
-      return;
+    if (!input.ageFieldsFilled) {
+      return { html: '<p>Wpisz wiek dziecka (pola „Wiek” u góry), aby obliczyć centyl liczby oddechów.</p>', severity: '' };
     }
     if (age < 0 || isNaN(age) || age > 18) {
-      setTrustedHtml(resultEl, '<p>Normy liczby oddechów dostępne są dla wieku 0–18&nbsp;lat.</p>', 'respiratory-module:resultEl');
-      return;
+      return { html: '<p>Normy liczby oddechów dostępne są dla wieku 0–18&nbsp;lat.</p>', severity: '' };
     }
     if (rr < RR_MIN || rr > RR_MAX) {
-      setTrustedHtml(resultEl, '<p>Liczba oddechów poza zakresem ' + RR_MIN + '–' + RR_MAX + '&nbsp;/min — sprawdź wpisaną wartość.</p>', 'respiratory-module:resultEl');
-      return;
+      return { html: '<p>Liczba oddechów poza zakresem ' + RR_MIN + '–' + RR_MAX + '&nbsp;/min — sprawdź wpisaną wartość.</p>', severity: '' };
     }
 
-    var vs = typeof window !== 'undefined' ? window.vitalSigns : null;
+    var vs = typeof nativeEngine === 'function' ? nativeEngine() : nativeEngine;
     if (vs && (typeof vs.getRrAssessment === 'function' || typeof vs.getRrPercentile === 'function')) {
-      var stateEl = document.getElementById('respState');
-      var populationEl = document.getElementById('respPopulation');
-      var temperatureEl = document.getElementById('respTemperature');
-      var state = stateEl ? stateEl.value : 'awake';
-      var population = populationEl ? populationEl.value : 'healthy';
-      var temperatureRaw = temperatureEl ? temperatureEl.value : '';
+      var state = input.state;
+      var population = input.population;
+      var temperatureRaw = input.temperatureRaw;
       var temperature = temperatureRaw && !isNaN(parseFloat(temperatureRaw)) ? parseFloat(temperatureRaw) : null;
 
       var temperatureInfo = '';
@@ -170,19 +156,13 @@
       }
 
       if (assessment && assessment.sleepBeyondCoverage) {
-        setTrustedHtml(
-          resultEl,
-          '<p>Normy liczby oddechów we śnie (Herbert et&nbsp;al.&nbsp;2020) obejmują wiek do 4,5&nbsp;roku życia. ' +
-            'U starszego dziecka oceń liczbę oddechów w czuwaniu.</p>',
-          'respiratory-module:resultEl'
-        );
-        return;
+        return { html: '<p>Normy liczby oddechów we śnie (Herbert et&nbsp;al.&nbsp;2020) obejmują wiek do 4,5&nbsp;roku życia. ' +
+          'U starszego dziecka oceń liczbę oddechów w czuwaniu.</p>', severity: '' };
       }
 
       var percentile = assessment ? assessment.percentile : NaN;
       if (typeof percentile === 'number' && !isNaN(percentile)) {
-        var professional = (typeof professionalMode !== 'undefined' && professionalMode) ||
-          (typeof window !== 'undefined' && window.professionalMode);
+        var professional = input.professional;
         var line = 'Liczba oddechów: <strong>' + rr.toFixed(0) + '&nbsp;/min</strong> – ' + percText(percentile);
         if (professional && typeof assessment.z === 'number' && isFinite(assessment.z)) {
           line += ' (Z‑score = ' + assessment.z.toFixed(2) + ')';
@@ -191,13 +171,55 @@
         var html = '<p>' + line + '</p>';
         if (cls.verdict) html += '<p><strong>' + cls.verdict + '</strong></p>';
         html += sourceNote(assessment, temperatureInfo);
-        setTrustedHtml(resultEl, html, 'respiratory-module:resultEl');
-        applyTone(resultEl, cls.severity);
-        return;
+        return { html: html, severity: cls.severity };
       }
     }
 
-    setTrustedHtml(resultEl, '<p>Brak danych do obliczenia centyla.</p>', 'respiratory-module:resultEl');
+    return { html: '<p>Brak danych do obliczenia centyla.</p>', severity: '' };
+  }
+
+  function render() {
+    var resultEl = document.getElementById('respiratoryResult');
+    if (!resultEl) return;
+
+    var age = 0;
+    if (typeof getAgeDecimal === 'function') {
+      age = getAgeDecimal();
+    } else {
+      var ageRaw = document.getElementById('age') ? document.getElementById('age').value : '';
+      age = parseFloat(ageRaw) || 0;
+    }
+
+    var input = document.getElementById('respiratoryRateInput');
+    var rrRaw = input && input.value != null ? String(input.value).trim() : '';
+    var rr = parseFloat(rrRaw);
+    var options;
+    function readOptions() {
+      if (!options) {
+        var stateEl = document.getElementById('respState');
+        var populationEl = document.getElementById('respPopulation');
+        var temperatureEl = document.getElementById('respTemperature');
+        options = { state: stateEl ? stateEl.value : 'awake',
+          population: populationEl ? populationEl.value : 'healthy',
+          temperatureRaw: temperatureEl ? temperatureEl.value : '' };
+      }
+      return options;
+    }
+
+    resetTone(resultEl);
+    // Lazy reads retain the native validation/engine/context lookup order.
+    var result = buildResultFromRate({ ageYears: age, rrRaw: rrRaw,
+      get ageFieldsFilled() { return ageFieldsFilled(); },
+      get state() { return readOptions().state; },
+      get population() { return readOptions().population; },
+      get temperatureRaw() { return readOptions().temperatureRaw; },
+      get professional() {
+        return (typeof professionalMode !== 'undefined' && professionalMode) ||
+          (typeof window !== 'undefined' && window.professionalMode);
+      }
+    }, function () { return typeof window !== 'undefined' ? window.vitalSigns : null; }, rr);
+    setTrustedHtml(resultEl, result.html, 'respiratory-module:resultEl');
+    applyTone(resultEl, result.severity);
   }
 
   function init() {
@@ -227,6 +249,10 @@
     if (proToggle) proToggle.addEventListener('change', render);
 
     render();
+  }
+
+  if (typeof window !== 'undefined') {
+    window.VildaRespiratory = Object.freeze({ buildResult: buildResult });
   }
 
   if (typeof window !== 'undefined' && typeof window.vildaOnReady === 'function') {

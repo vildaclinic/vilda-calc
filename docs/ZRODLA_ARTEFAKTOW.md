@@ -1880,6 +1880,47 @@ Opis: `docs/clinical/ALGORITHMS.md`, „LAB-HISTORIA 6.39”; `docs/LAB_HISTORIA
 
 Tekst jest ten sam co `PP_PIN_SUB` w czytelnym bloku, więc wiersz nie zmienia podpisu, zanim blok go odświeży. `tests/unit/lab-pin-pinned-state.test.mjs` pilnuje, że oba ciągi występują dokładnie raz, a dawnego tekstu nie ma. Bez nowych stylów ustawianych wprost na elementach (liczba dla `lab_pin_result.js` w `tests/fixtures/style-elementow.json` zostaje 17); znaczniki wycinków testów (`var Lh2AssessmentProvider=`, `var s=null;`, `async function A(`, `function I(){`) bez zmian.
 
+## Łatka P-BEZCZYNNOSC-KARTA — bezczynność i koniec sesji liczone dla całej karty (`vilda_auth_ui.js` 567 → 568, `vilda_session_bridge.js` 217 → 218, 2026-11-18, polecenie właściciela)
+
+Opis działania i walidacja: `docs/clinical/ALGORITHMS.md`, „Bezczynność i koniec sesji liczone dla całej karty”. Czytelne bloki wstawione wprost do artefaktów, bez ponownej minifikacji; w części zminifikowanej `vilda_auth_ui.js` zmieniają się trzy dokładne ciągi.
+
+```js
+// vilda_auth_ui.js — czytelny blok aktywności (nad „var authBootReady=false;”)
+function vildaRecordActivity(event) { /* jak dotąd: Bn = teraz, resetIdleTimer(), refreshPersistedSession();
+  nowe: zdarzenie niezaufane zostaje lokalne, a w pozostałych dokumentach karty wołane jest recordPeerActivity() */ }
+function vildaRecordPeerActivity() { /* Bn = teraz, resetIdleTimer(); bez zapisu sesji i bez dalszego rozsyłania */ }
+
+// vilda_auth_ui.js — między „function isAuthBootReady(){return authBootReady}” a „async function Ei(){”
+function vildaTabPeers() { /* dokument główny (i.top) i jego bezpośrednie ramki, bez własnego okna;
+  tylko ten sam origin, każdy dostęp w try/catch */ }
+function vildaClearTabWorkState() { /* gdy karta nie ma zapisu sesji sejfu:
+  VildaPersistence.clearUserState({ includeSessions: true, source: "auth.tabSessionEnded", dispatchEvent: false })
+  i znaczniki wczytanego pacjenta; znacznik pacjenta panelu HOMA-IR (vildaHomaIdentityRefV1) jest opróżniany,
+  nie usuwany — pusty nie pasuje do żadnego pacjenta, więc panel nadal czyści swoje pola przy zmianie pacjenta */ }
+function vildaEndTabSession(reason) { /* vildaClearTabWorkState(); dla "idle" i "manual": lock(reason)
+  w pozostałych odblokowanych dokumentach karty; "manual" zaczęte w ramce: VildaFrameSync.resync() dokumentu głównego */ }
+
+// vilda_auth_ui.js, część zminifikowana — dokładne ciągi, każdy występuje raz:
+// 1. nasłuch onLock w Ei
+//    było:  var n=dn;dn=null;try{qa("on-lock")}catch{}
+//    jest:  var n=dn;dn=null;try{qa("on-lock")}catch{}try{vildaEndTabSession(a)}catch{}
+// 2. start zablokowanej strony w Ei
+//    było:  if(Io()){Aa(!0,{skipReset:!0}),$t();return}Aa(!1);let Bkr_s=null;
+//    jest:  if(Io()){Aa(!0,{skipReset:!0}),$t();return}if(authNeedsCleanup)vildaClearTabWorkState();Aa(!1);let Bkr_s=null;
+// 3. publiczne API VildaAuthUI
+//    było:  recordActivity:vildaRecordActivity,
+//    jest:  recordActivity:vildaRecordActivity,recordPeerActivity:vildaRecordPeerActivity,
+
+// vilda_session_bridge.js — czytelny blok przed „var h=n.document;h&&(h.readyState==="loading"?”
+function relayTabActivity(event) { /* zaufane zdarzenie wejścia na stronie w ramce bez czynnego własnego
+  modułu konta → top.VildaAuthUI.recordActivity(); tylko gdy karta ma zapis sesji sejfu (l() mostu) */ }
+// nasłuch na document: mousedown, keydown, touchstart, scroll, pointerdown (passive)
+```
+
+Nazwy z artefaktu użyte w nowym kodzie: `i` — okno, `jt()` — sejf (`VildaVault`), `Bn` — znacznik ostatniej aktywności, `Ot` — zapis błędu modułu konta; w `vilda_session_bridge.js`: `n` — okno, `l()` — czy karta ma zapis sesji sejfu (`hasSessionKey`).
+
+**Granice.** Pomocnicy `vildaTabPeers`, `vildaClearTabWorkState` i `vildaEndTabSession` zostają w wycinku od `var authBootReady=false;` do `function uo(` — ten fragment wycinają uprzęże `tests/unit/auth-boot-readiness.test.mjs` i `tests/unit/sejf-usun-konto-karty-2.test.mjs`. Miejsca wywołań przypina `tests/unit/bezczynnosc-karta.test.mjs` („okablowanie końca sesji karty w plikach produkcyjnych”). `vilda_vault.js`, `vilda_frame_sync.js`, `vilda_shell.js` i kolejność skryptów bez zmian; `vilda_chrome.js` 299 → 300 i lista w `vilda_session_bridge.js` zmieniają tylko `?v=` wstrzykiwanego `vilda_auth_ui.js` (`npm run podbij-wersje`).
+
 ## Łatka P-OTYLOSC-WZROST — Kontynuacja bez wzrostu, data każdego punktu, ocena dziecka z ostatniego punktu ze wzrostem (`obesity_therapy_monitor.js` 27 → 28, `vilda_auth_ui.js` 566 → 567, `obesity_response_criteria.js` 4 → 5, 2026-11-18, decyzje właściciela)
 
 Opis działania i przypadki: `docs/clinical/ALGORITHMS.md`, „Leczenie otyłości — etap 1” (P-OTYLOSC-WZROST). Zmiany w czytelnych źródłach (`vilda_cykle_leczenia.js` VERSION 3 — R8, R9, `wzrostWymagany`; `docpro.html`; style w `inline_docpro_01.css`) nie wymagają opisu łatki. W trzech plikach zminifikowanych są podmiany dokładnych ciągów i wstawione czytelne bloki, bez ponownej minifikacji:
@@ -2343,3 +2384,34 @@ haków Przypomnień daje teraz SHA256
 `05788f1bac66edfb60c8069c45db4c98ebce30ba770a0626d6d022456386f1b1`;
 ponowne zastosowanie tych samych par odtwarza połączony artefakt bajtowo.
 Nie odtwarzano ani nie zmieniano obliczeń klinicznych przy scalaniu.
+
+## Dodatkowe narzędzia — prezentacja liczby oddechów, etap 7A
+
+Czytelny respiratory_module.js jest źródłem wykonywanym bez kompilacji.
+VildaRespiratory.buildResult(input, nativeEngine) zwraca html i severity.
+Przyjmuje kontekst wieku, wypełnienie pól wieku, rrRaw, temperaturę, stan,
+populację i tryb profesjonalny jako argumenty. Obliczenia deleguje do
+przekazanego vitalSigns. Nie odczytuje DOM, konta, pacjenta ani persistence.
+Jawny resolver silnika i leniwe gettery są używane wyłącznie przez natywny
+wrapper, aby zachować pierwotną kolejność odczytów i walidacji.
+
+Wspólny prywatny rdzeń zachowuje oryginalną prezentację. Funkcje classify,
+percText, sourceNote, resetTone, applyTone, setTrustedHtml, ageFieldsFilled
+i init są bajtowo identyczne z oryginałem. Natywny renderer zachowuje montaż,
+inicjalizację i efekty; nowe okno narzędzia nie jest w tym przyroście aktywowane.
+
+Oryginalny plik jest przypięty w tests/fixtures/respiratory-module-before-tools.js.txt,
+z pochodzeniem w pliku .origin.json: commit 7de34c337d65658572d6889fea118ba63d5dc2b4,
+Git blob bfff8fc89081ae1f12cbc5d12e352b30cf4fd980, SHA256
+a17c0e0ec94f5e9654c8007ec22bcce5efcc8ecc9829de748db2f582ab3fd09c.
+Fixture nie jest odtwarzany z nowej implementacji. Test
+tests/unit/respiratory-presentation-parity.test.mjs uruchamia obie wersje
+z rzeczywistym vitalSigns.js i porównuje wynik oraz uporządkowany ślad efektów.
+
+Przy włączeniu audyt 00ec793aed5979bee58280ba7c4dd507f470758d (PR991)
+zachowano dokładne zmiany natywnej obsługi bezczynności karty. Niezależne
+odtworzenie pięciu par AuthUI i jednej pary SessionBridge jest bajtowo zgodne
+z połączonym artefaktem. Haki B1 i Przypomnień oraz most prezentacji notatek
+pozostają zachowane. Baza po odwróceniu haków Przypomnień ma teraz SHA256
+f493d3850028758156fd78dbd96abef5a811b16324e5763afd8dc695838d5f50.
+Sejf, manifesty kliniczne i pakiet transportu UI nie zmieniły się przy tym scaleniu.
