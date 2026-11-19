@@ -58,10 +58,6 @@ test('home B1 shell: selected patient Leczenie opens its existing obesity Włąc
   page.on('pageerror', error => errors.push(error.message));
   await page.addInitScript(() => {
     window.__VILDA_HOME_WORKSPACE_PREVIEW__ = true;
-    // The shared account fixture writes PWZ0000000 at every document init.
-    // Set the native SK suite's explicitly fictional valid preference at DOM
-    // ready, before production boot, including a later reloaded DocPro pane.
-    document.addEventListener('DOMContentLoaded', () => localStorage.setItem('pwzNumber', '6000001'), { once: true });
   });
   await page.route('**/*', route => {
     const url = new URL(route.request().url());
@@ -70,7 +66,7 @@ test('home B1 shell: selected patient Leczenie opens its existing obesity Włąc
   });
   // This existing fixture creates a disposable native account and its legitimate
   // test PRO entitlement, then waits for account readiness before its one reload.
-  const fixture = await createFictionalVault(page, { shell: true, waitForAccountReadyBeforeReload: true });
+  const fixture = await createFictionalVault(page, { shell: true, waitForAccountReadyBeforeReload: true, pwzNumber: '6000001' });
   // Prepare the ordinary professional receiver before testing the handoff;
   // this case isolates B1 navigation rather than racing its ten-second boot.
   await page.evaluate(() => window.VildaShell.navigate('docpro'));
