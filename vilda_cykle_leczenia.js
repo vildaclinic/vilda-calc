@@ -807,6 +807,47 @@
     return (+Number(n).toFixed(miejsca == null ? 1 : miejsca)).toString().replace('.', ',');
   }
 
+  // ── Dawka (P-OTYLOSC-DAWKA, temat B; decyzja właściciela 2026-11-19: „Przecinek + podpowiedzi”) ─────────────
+  // Dawka jest wolnym tekstem z monitora DocPro („2,4”, „0.25”, „2,4 mg / tydz.”). Nic jej nie przelicza poza wykresem
+  // dawki w Karcie, który bierze pierwszą liczbę (przecinek albo kropka). Zapis zostaje, jak go wpisano; tylko WIDOK
+  // pokazuje przecinek dziesiętny. Jednostek nie dopisujemy — lekarz wpisuje je sam albo wybiera podpowiedź.
+
+  /** Dawka do pokazania: kropka dziesiętna między cyframi → przecinek („0.25” → „0,25”). Reszta tekstu bez zmian. */
+  function dawkaPL(dawka) {
+    return String(dawka == null ? '' : dawka).trim().replace(/(\d)\.(\d)/g, '$1,$2');
+  }
+
+  /**
+   * Podpowiedzi pod polem „Dawka” w monitorze: dawki z tabeli zwiększania dawki ChPL wybranego leku
+   * (obesity_therapy.js, products[…].dosing.escalation — to samo źródło co zalecenia w module leczenia otyłości).
+   * Wiersz z jedną dawką („0,25 mg”, „3,0 mg / dobę”, „2 tabl. rano + 1 tabl. wieczorem”) daje przycisk; lek podawany
+   * 1×/tydz. dostaje „ / tydz.”, jak w zapisie „2,4 mg / tydz.”. Wiersz bez jednej dawki („5, 10 lub 15 mg”,
+   * „+2,5 mg co ≥4 tyg.”) i uwaga przy dawce spoza zwykłego schematu („tylko dorośli…”) — jako zdanie pod przyciskami.
+   * Zwraca { dawki: [{ wartosc, etykieta, uwaga }], uwagi: [tekst] }.
+   */
+  function podpowiedziDawek(eskalacja, czestosc) {
+    var wynik = { dawki: [], uwagi: [] };
+    var tygodniowo = /1\s*×\s*\/\s*tydz/i.test(String(czestosc || ''));
+    var byly = {};
+    (Array.isArray(eskalacja) ? eskalacja : []).forEach(function (x) {
+      var dawka = dawkaPL(x && x.dose);
+      if (!dawka) return;
+      var etykieta = String((x && x.label) || '').trim();
+      var uwaga = String((x && x.note) || '').trim();
+      var jedna = /^\d+(?:,\d+)?\s*(?:mg|tabl)/i.test(dawka) && !/\s(?:lub|co)\s/i.test(dawka);
+      if (!jedna) {
+        wynik.uwagi.push((etykieta ? etykieta + ': ' : '') + dawka + (uwaga ? ' (' + uwaga + ')' : ''));
+        return;
+      }
+      var wartosc = dawka + (tygodniowo && dawka.indexOf('/') < 0 ? ' / tydz.' : '');
+      if (byly[wartosc]) return;
+      byly[wartosc] = true;
+      wynik.dawki.push({ wartosc: wartosc, etykieta: etykieta, uwaga: uwaga });
+      if (uwaga && !/^dawka\b/i.test(uwaga)) wynik.uwagi.push(wartosc + ' — ' + uwaga);
+    });
+    return wynik;
+  }
+
   function dzisISO(teraz) {
     var d = teraz instanceof Date ? teraz : new Date();
     return d.getFullYear() + '-' + dwieCyfry(d.getMonth() + 1) + '-' + dwieCyfry(d.getDate());
@@ -1464,6 +1505,8 @@
     opisDanych: opisDanych,
     dataPL: dataPL,
     liczbaPL: liczbaPL,
+    dawkaPL: dawkaPL,
+    podpowiedziDawek: podpowiedziDawek,
     dzisISO: dzisISO,
     wczytaj: wczytaj,
     zapisz: zapisz,
@@ -1809,7 +1852,8 @@
       pDose.value = punkt.dose || '';
       pNote.value = punkt.comment || '';
     } else if (ostatni) {
-      pDose.value = ostatni.dose || '';
+      // Nowy wpis: dawka z ostatniego wpisu z przecinkiem dziesiętnym (P-OTYLOSC-DAWKA). Poprawka zostawia tekst wpisu.
+      pDose.value = Dz().dawkaPL(ostatni.dose);
     }
 
     var lekTekst = lekPunkt ? nazwaLeku(lekPunkt) : '';
@@ -2008,7 +2052,7 @@
       ['Masa', liczbaPL(v.dane.weight, 1) + ' kg · ' + v.dane.weightSource],
       ['Wzrost', v.dane.height != null ? liczbaPL(v.dane.height, 1) + ' cm · ' + v.dane.heightSource : '—'],
       ['Data pomiaru', dataPL(v.dane.dateISO) || '—'],
-      ['Dawka', v.dane.dose || '—'],
+      ['Dawka', Dz().dawkaPL(v.dane.dose) || '—'],
       ['Komentarz', v.dane.comment || '—'],
       ['Stan', v.retracted ? 'usunięty' : 'w dzienniku']
     ];
@@ -2111,7 +2155,7 @@
       lista.appendChild(el('li', { class: 'vdo-item' + (x.stan === 'konflikt' ? ' vdo-item-conflict' : '') + (idx === 0 ? ' vdo-item-last' : ''), 'data-entry': x.entryId || '', 'data-date': p.dateISO || '' }, [
         el('div', { class: 'vdo-item-head' }, [
           el('span', { class: 'vdo-date', text: dataPL(p.dateISO) || 'bez daty' }),
-          el('span', { class: 'vdo-type', text: Dz().TYPY[p.type] + (p.dose ? ' · ' + p.dose : '') })
+          el('span', { class: 'vdo-type', text: Dz().TYPY[p.type] + (p.dose ? ' · ' + Dz().dawkaPL(p.dose) : '') })
         ]),
         el('div', { class: 'vdo-item-body' }, [
           el('span', { class: 'vdo-meas' }, [liczbaPL(p.weight, 1) + ' kg ', odznaka(p.weightSource)]),
