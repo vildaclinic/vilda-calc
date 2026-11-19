@@ -44286,7 +44286,7 @@ i pojawia się podpowiedź dawek z istniejącej tabeli ChPL.
 **Wdrożenie.** Od razu przy wydaniu; sejf bez zmian. **Cofnięcie** = rewert PR: dawka znów dokładnie jak wpisana,
 bez podpowiedzi.
 
-## Dziennik zdarzeń: odsyłanie wpisów Kosza po zastosowaniu zmiany z innego urządzenia — uśpione (P-ZBIEZNOSC-ZDARZEN, E3-PR0d, SW 1.1.558, `vilda_vault.js` 282, 2026-11-19)
+## Dziennik zdarzeń: odsyłanie wpisów Kosza po zastosowaniu zmiany z innego urządzenia — uśpione (P-ZBIEZNOSC-ZDARZEN, E3-PR0d, SW 1.1.559, `vilda_vault.js` 282, 2026-11-19)
 
 **Zmiana kliniczna: NIE (uśpiona).** Wzory, progi, jednostki, interpretacje, reguły scalania (`Le`), format kopii,
 serwer i `vilda_sync.js` bez zmian. Dla użytkownika dziś nic się nie zmienia: odsyłanie wpisów Kosza włącza ten sam
@@ -44881,7 +44881,7 @@ wiersze `stomb`; rewert cofa też skróty kontroli granicy).
 `kol.kosz`); część `Bem_` — `Bem_zastosujEcho` (10189–10197: drugie `Bem_zmiana`); komentarze: nagłówek bloku, opis
 `Bev_zastosuj`, opis odsyłania wersji, nagłówek części emisji, opis `Bem_zastosuj`. Poza blokiem bez zmian.
 
-**Wersje.** `vilda_vault.js` 281 → 282, `vilda_chrome.js` 308 → 309 i `vilda_session_bridge.js` 224 → 225 (wstrzykują
-sejf), SW 1.1.557 → 1.1.558 — `npm run podbij-wersje`; baza `origin/audyt` `aaa81c78` (po vildaclinic/vilda-calc#1005;
+**Wersje.** `vilda_vault.js` 281 → 282, `vilda_chrome.js` 309 → 310 i `vilda_session_bridge.js` 225 → 226 (wstrzykują
+sejf), SW 1.1.558 → 1.1.559 — `npm run podbij-wersje`; baza `origin/audyt` `af6a465c` (po vildaclinic/vilda-calc#1006;
 sejf, `vilda_sync.js` i testy synchronizacji bez zmian względem `4bff32aa`, na którym są pomiary).
 Bez nowego pliku w pamięci offline.
