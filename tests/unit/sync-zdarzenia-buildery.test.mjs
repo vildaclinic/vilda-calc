@@ -617,7 +617,11 @@ describe('B6/B7: bez zegara', () => {
     const PRZEGLAD = ['Bev_przeglad', 'Bev_ostatnieScalenie'];
     // E3-PR0c: odsyłanie poprawionych wizyt — kandydaci z ładunku, odczyt stanu wersji przez strzeżony adapter Bev_start
     // (odszyfrowanie i tożsamość wizyty tylko rekordów, które się zmieniły), reguła pola i porównanie; bez zegara i zapisów.
-    const ODSYLANIE = ['Bev_pole', 'Bev_bezPola', 'Bev_json', 'Bev_kandydaciEcha', 'Bev_stanEcha', 'Bev_wersjaEcha', 'Bev_echoT', 'Bev_echo'];
+    // E3-PR0d: odsyłanie wpisów Kosza — odczyt surowej listy Kosza kandydatów przez strzeżony adapter, postać wysyłkowa
+    // z Bev_wpisKosza (odszyfrowanie tylko wpisów, które się zmieniły), kanon, reguła pola i samo wygaśnięcie treści; bez
+    // zegara i zapisów.
+    const ODSYLANIE = ['Bev_pole', 'Bev_bezPola', 'Bev_json', 'Bev_kandydaciEcha', 'Bev_stanEcha', 'Bev_wersjaEcha', 'Bev_echoT', 'Bev_echo',
+      'Bev_kandydaciKosza', 'Bev_stanKosza', 'Bev_kanonKosza', 'Bev_samoWygasniecie', 'Bev_echoKoszaT', 'Bev_echoKosza'];
     const wBloku = [...dekl.keys()].filter((n) => n.startsWith('Bev_')).sort();
     expect(wBloku, 'każda funkcja Bev_ jest na liście czystych, szyfrowania/zastosowania, przeglądu kolejki albo odsyłania').toEqual([...CZYSTE, ...SZYFROWANIE_I_ZASTOSOWANIE, ...PRZEGLAD, ...ODSYLANIE].sort());
     const WYJATKI = {
