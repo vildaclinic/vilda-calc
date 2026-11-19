@@ -38,6 +38,16 @@
 // szyfrowania, blokad, baz i zmian pamięci), a w otwartym kroku importu hak H1 bramki nie czyta (warunek kroku przed
 // bramką); Bem_przegrane bramki nie czyta wcale (tylko pętla po ładunku w pamięci). setId zestawu pełnej karty
 // (Bob_zestawKarty) to funkcja czysta części Bob_; bez nowego klucza eksportu (38).
+// E3-PR0c (P-ZBIEZNOSC-ZDARZEN): odsyłanie poprawionych wizyt po zastosowaniu zdarzenia, uśpione przełącznikiem
+// odsyłania (pole okna VILDA_EVENT_ECHO === true albo klucz localStorage vilda-event-echo-v1 dokładnie '1'). Bez wstawek
+// poza blokiem (literał miejsc bez zmian: 35 wpisów): w literale Bev_EKSPORT `applyEncryptedEvent: Bem_zastosuj` (czwarty
+// identyfikator Bem_ części Bev_); w części Bob_ przełącznik Bob_bramkaEcha (pole okna VILDA_EVENT_ECHO i localStorage
+// tylko tam, każde dokładnie raz); w części Bem_ Bem_zastosuj — zwykła funkcja: pierwsza instrukcja
+// `if (!Bob_bramkaEcha()) return Bev_zastosuj(env);` (przy wyłączonym przełączniku ta sama obietnica co dziś), druga
+// `return Bem_zastosujEcho(env);`; Bem_zastosujEcho — async: bramka dziennika i warunek kolejki jako dwie pierwsze
+// instrukcje (odmowa — `return Bev_zastosuj(env);`), jedno await na Bev_zastosuj(env, kolektor), potem jedno
+// Bem_zmiana('snap', …). Przy wyłączonym przełączniku zastosowanie zdarzenia to jeden odczyt pola przełącznika i jeden
+// odczyt klucza (U1), bez odczytu bramki, IndexedDB i crypto; samokontrola form wariantami zła.
 // Testy źródła (vilda_vault.js, pliki produktu z git ls-files) i eksportu (prawdziwy sejf w oknie uprzęży, dane wyłącznie
 // fikcyjne).
 //
@@ -947,6 +957,49 @@ describe('U1: bramka zamknięta — każda chroniona operacja magazynu kończy s
       expect(m.wyw.slice(przed), `${stan}: wywołania magazynu sejfu`).toEqual([]);
     }
   });
+  // E3-PR0c: applyEncryptedEvent (niechronione) czyta przełącznik odsyłania przed zastosowaniem. Przy zablokowanym sejfie:
+  // wyłączony przełącznik — jeden odczyt pola VILDA_EVENT_ECHO i jeden odczyt localStorage (getItem klucza
+  // przełącznika), bez odczytu bramki, indexedDB i crypto, bez zegara i bez wywołań magazynu sejfu; klucz '1' — dodatkowo
+  // jeden odczyt pola bramki (bramka zamknięta: odczyt rzuca); pole true — bez odczytu localStorage.
+  it('U1 (E3-PR0c): applyEncryptedEvent przy zablokowanym sejfie — przełącznik wyłączony (brak, klucz \'0\', \'true\', \'1 \', pole \'true\' i 1): { status: \'locked\' }, jeden odczyt pola przełącznika i jeden odczyt klucza, bez bramki, indexedDB, crypto, zegara i magazynu sejfu; klucz \'1\' i pole true — dodatkowo jeden odczyt bramki', async () => {
+    const o = okno();
+    okna.push(o);
+    const v = o.win.VildaVault;
+    const m = magazynZRejestrem(v.createInMemoryAdapter());
+    v.setStorageAdapter(m.adapter);
+    await v.createUser('Fikcyjne#Bramka!2026aa', { label: 'Fikcyjna Lekarka Bramka', iterations: 1000 });
+    await makrozadania(50);
+    v.lock('manual');
+    const KLUCZ = 'vilda-event-echo-v1';
+    const WARIANTY = [
+      ['brak', {}, { echo: 1, klucz: 1, bramka: 0 }], ["klucz '0'", { klucz: '0' }, { echo: 1, klucz: 1, bramka: 0 }],
+      ["klucz 'true'", { klucz: 'true' }, { echo: 1, klucz: 1, bramka: 0 }], ["klucz '1 '", { klucz: '1 ' }, { echo: 1, klucz: 1, bramka: 0 }],
+      ["pole 'true'", { pole: 'true' }, { echo: 1, klucz: 1, bramka: 0 }], ['pole 1', { pole: 1 }, { echo: 1, klucz: 1, bramka: 0 }],
+      ["klucz '1'", { klucz: '1' }, { echo: 1, klucz: 1, bramka: 1 }], ['pole true', { pole: true }, { echo: 1, klucz: 0, bramka: 1 }],
+    ];
+    for (const [nazwa, w, oczek] of WARIANTY) {
+      const lsDane = w.klucz !== undefined ? { [KLUCZ]: w.klucz } : {};
+      const odczyty = { echo: 0, klucz: 0, ls: 0 };
+      const ls = { getItem(k) { if (k === KLUCZ) odczyty.klucz += 1; return k in lsDane ? lsDane[k] : null; } };
+      const stare = { echo: Object.getOwnPropertyDescriptor(o.win, 'VILDA_EVENT_ECHO'), ls: Object.getOwnPropertyDescriptor(o.win, 'localStorage') };
+      Object.defineProperty(o.win, 'VILDA_EVENT_ECHO', { get() { odczyty.echo += 1; return w.pole; }, configurable: true });
+      const przed = m.wyw.length;
+      let r;
+      try {
+        r = await bezDostepuAsync(o.win, () => {
+          Object.defineProperty(o.win, 'localStorage', { get() { odczyty.ls += 1; return ls; }, configurable: true });
+          return v._eventLog.applyEncryptedEvent({ iv: 'fikcyjneIV000001', data: 'Fikcyjny-szyfrogram' });
+        });
+      } finally {
+        for (const [k, d] of [['VILDA_EVENT_ECHO', stare.echo], ['localStorage', stare.ls]]) { if (d) Object.defineProperty(o.win, k, d); else delete o.win[k]; }
+      }
+      expect({ s: r.s, blad: r.blad, obietnica: r.obietnica, zegar: r.zegar, odczyty: { indexedDB: r.odczyty.indexedDB, crypto: r.odczyty.crypto, VILDA_EVENT_LOG: r.odczyty.VILDA_EVENT_LOG } }, nazwa)
+        .toEqual({ s: { status: 'locked' }, blad: null, obietnica: true, zegar: 0, odczyty: { indexedDB: 0, crypto: 0, VILDA_EVENT_LOG: oczek.bramka } });
+      expect({ echo: odczyty.echo, klucz: odczyty.klucz, localStorage: odczyty.ls }, `${nazwa}: odczyty przełącznika`).toEqual({ echo: oczek.echo, klucz: oczek.klucz, localStorage: oczek.klucz });
+      await makrozadania(20);
+      expect(m.wyw.slice(przed), `${nazwa}: wywołania magazynu sejfu`).toEqual([]);
+    }
+  });
 });
 
 describe('U2(a): identyfikatory Bev_, Bob_ i Bem_ tylko w bloku; _eventLog dokładnie raz', () => {
@@ -1295,13 +1348,13 @@ describe('U2(a): identyfikatory Bev_, Bob_ i Bem_ tylko w bloku; _eventLog dokł
     expect(bem.trim().length, 'część Bem_ nie jest pusta').toBeGreaterThan(1000);
   });
 
-  it('U2(a) (E2-PR3a2, E2-PR3a3, E2-PR3a4): w części Bev_ jedyne identyfikatory Bem_ to emissionsSettled: Bem_gotowe, onBulkChange: Bem_naPartie i sweepOutbox: Bem_przegladTeraz w literale Bev_EKSPORT; w części Bob_ brak Bem_', () => {
+  it('U2(a) (E2-PR3a2, E2-PR3a3, E2-PR3a4, E3-PR0c): w części Bev_ jedyne identyfikatory Bem_ to applyEncryptedEvent: Bem_zastosuj, emissionsSettled: Bem_gotowe, onBulkChange: Bem_naPartie i sweepOutbox: Bem_przegladTeraz w literale Bev_EKSPORT; w części Bob_ brak Bem_', () => {
     znacznikEmisjiRaz();
     const { a, bev, bob } = czesci();
     const lit = literalEksportu();
     const wBev = [...bev.matchAll(/(?<![A-Za-z0-9_$])Bem_[A-Za-z0-9_$]*/g)].map((m) => ({ poz: a + m.index, nazwa: m[0] }));
-    expect(wBev.map((x) => `${x.nazwa}${x.poz > lit.start && x.poz < lit.koniec ? ' w Bev_EKSPORT' : ''}`), 'Bem_ w części Bev_').toEqual(['Bem_gotowe w Bev_EKSPORT', 'Bem_naPartie w Bev_EKSPORT', 'Bem_przegladTeraz w Bev_EKSPORT']);
-    expect([...lit.tekst.matchAll(/(\w+)\s*:\s*(Bem_[A-Za-z0-9_$]*)/g)].map((m) => `${m[1]}: ${m[2]}`)).toEqual([`${KLUCZ_EMISJI}: Bem_gotowe`, `${KLUCZ_PARTII}: Bem_naPartie`, `${KLUCZ_PRZEGLADU}: Bem_przegladTeraz`]);
+    expect(wBev.map((x) => `${x.nazwa}${x.poz > lit.start && x.poz < lit.koniec ? ' w Bev_EKSPORT' : ''}`), 'Bem_ w części Bev_').toEqual(['Bem_zastosuj w Bev_EKSPORT', 'Bem_gotowe w Bev_EKSPORT', 'Bem_naPartie w Bev_EKSPORT', 'Bem_przegladTeraz w Bev_EKSPORT']);
+    expect([...lit.tekst.matchAll(/(\w+)\s*:\s*(Bem_[A-Za-z0-9_$]*)/g)].map((m) => `${m[1]}: ${m[2]}`)).toEqual(['applyEncryptedEvent: Bem_zastosuj', `${KLUCZ_EMISJI}: Bem_gotowe`, `${KLUCZ_PARTII}: Bem_naPartie`, `${KLUCZ_PRZEGLADU}: Bem_przegladTeraz`]);
     expect(bob.match(/(?<![A-Za-z0-9_$])Bem_[A-Za-z0-9_$]*/g), 'Bem_ w części Bob_').toBe(null);
   });
 
@@ -1332,8 +1385,10 @@ describe('U2(a): identyfikatory Bev_, Bob_ i Bem_ tylko w bloku; _eventLog dokł
 });
 
 describe('U2(b): pliki produktu poza sejfem nie znają nowego API', () => {
+  // E3-PR0c: przełącznik odsyłania (pole okna i klucz localStorage) — do E3-PR0g żaden plik produktu poza sejfem go nie zna.
   const NAZWY = ['_eventLog', 'applyEncryptedEvent', 'encryptEvent', ...BUILDERY, 'VILDA_EVENT_LOG', PRZEDROSTEK_URZADZENIA,
-    ...KLUCZE_MAGAZYNU.filter((k) => k !== 'enqueue' && k !== 'deleteDatabase'), KLUCZ_EMISJI, KLUCZ_PARTII, KLUCZ_PRZEGLADU];
+    ...KLUCZE_MAGAZYNU.filter((k) => k !== 'enqueue' && k !== 'deleteDatabase'), KLUCZ_EMISJI, KLUCZ_PARTII, KLUCZ_PRZEGLADU,
+    'VILDA_EVENT_ECHO', 'vilda-event-echo-v1'];
   // E2-PR4c: drenaż zdarzeń w vilda_sync.js woła sejf przez opakowanie konta (pole zdarzenia = _eventLog).
   const DRENAZ_SYNC = ['_eventLog', 'applyEncryptedEvent', 'quarantinePut', 'quarantineList', 'quarantineMinSeq', 'quarantineRelease',
     'resultSummary', KLUCZ_DOGONIONE,
@@ -1479,10 +1534,12 @@ describe('U2(c): wywołania zakazane i reguła domknięcia części magazynu', (
   const META_SCALENIA = 'Gw@Bob_dogonione,Gx@Bob_dogonione';
   // Pola okna i funkcje, w których wolno ich użyć (napis albo wzorzec nazwy funkcji). E2-PR3a4: localStorage także w odczycie
   // chwili ostatniej wysyłki (Bob_wysylka — pierwszy znacznik przeglądu, tylko getItem klucza integracji).
+  // E3-PR0c: przełącznik odsyłania — pole okna VILDA_EVENT_ECHO i localStorage (klucz przełącznika) w Bob_bramkaEcha.
   const POLA_V = {
     VILDA_EVENT_LOG: ['Bob_bramka'], VildaSync: ['Bob_bramka', 'Bob_przedTrybem'], indexedDB: ['Bob_idb'], crypto: ['Bob_urzadzenie'],
+    VILDA_EVENT_ECHO: ['Bob_bramkaEcha'],
     localStorage: ['Bob_urzadzenie', 'Bob_urzadzenieZapisz', 'Bob_urzadzenieUsun', /^Bob_znacznik[A-Za-z]*$/, 'Bob_poOdblokowaniu', 'Bob_kasujKonto',
-      'Bob_wysylka'],
+      'Bob_wysylka', 'Bob_bramkaEcha'],
     setTimeout: ['Bob_limit', 'Bob_podBlokada'], clearTimeout: ['Bob_limit', 'Bob_podBlokada'], navigator: ['Bob_blokady'],
     AbortController: ['Bob_podBlokada'],
   };
@@ -1549,7 +1606,9 @@ describe('U2(c): wywołania zakazane i reguła domknięcia części magazynu', (
     const bledy = [];
     const p = policz(uzycia.pola);
     // E2-PR4e2: VildaSync także raz w Bob_przedTrybem (wysyłka kolejki przed zmianą trybu przechowywania).
-    const raz = { 'VILDA_EVENT_LOG@Bob_bramka': 1, 'VildaSync@Bob_bramka': 1, 'VildaSync@Bob_przedTrybem': 1, 'indexedDB@Bob_idb': 1, 'crypto@Bob_urzadzenie': 1, 'setTimeout@Bob_limit': 1, 'clearTimeout@Bob_limit': 1 };
+    // E3-PR0c: przełącznik odsyłania — pole okna i localStorage w Bob_bramkaEcha, każde dokładnie raz.
+    const raz = { 'VILDA_EVENT_LOG@Bob_bramka': 1, 'VildaSync@Bob_bramka': 1, 'VildaSync@Bob_przedTrybem': 1, 'indexedDB@Bob_idb': 1, 'crypto@Bob_urzadzenie': 1, 'setTimeout@Bob_limit': 1, 'clearTimeout@Bob_limit': 1,
+      'VILDA_EVENT_ECHO@Bob_bramkaEcha': 1, 'localStorage@Bob_bramkaEcha': 1 };
     for (const [k, n] of Object.entries(raz)) if (p[k] !== n) bledy.push(`${k}: ${p[k] || 0} zamiast ${n}`);
     // Co najmniej raz i tylko tam (E2-PR3a1): navigator w Bob_blokady, AbortController w Bob_podBlokada.
     const conajmniej = ['navigator@Bob_blokady', 'AbortController@Bob_podBlokada'];
@@ -1587,6 +1646,8 @@ describe('U2(c): wywołania zakazane i reguła domknięcia części magazynu', (
       'function Bob_x() { return localStorage.getItem("k"); }', 'function Bob_urzadzenie() { return v.crypto.subtle; }', "function Bob_x(o) { return Object['keys'](o); }",
       'function Bob_x() { return window.VILDA_EVENT_LOG; }', 'function Bob_x() { return self.crypto; }',
       'function Bob_x() { return v.VildaSync; }', 'function Bob_idb() { return v.VildaSync.isEventLogEnabled(); }',
+      // E3-PR0c: pole przełącznika odsyłania poza Bob_bramkaEcha.
+      'function Bob_bramka() { return v.VILDA_EVENT_ECHO === true; }', 'function Bob_x() { return v.VILDA_EVENT_ECHO; }',
     ];
     for (const p of czerwone) expect(analizuj(p).naruszenia.length, p).toBeGreaterThan(0);
     const zielone = [
@@ -1596,6 +1657,8 @@ describe('U2(c): wywołania zakazane i reguła domknięcia części magazynu', (
       'function Bob_bramka() { try { if (v.VILDA_EVENT_LOG === true) return true; const s = v.VildaSync; return !!s && s.isEventLogEnabled() === true; } catch (x) { return false; } }',
       'function Bob_urzadzenie(u) { const b8 = v.crypto.getRandomValues(new Uint8Array(8)); return v.localStorage.getItem(u) || b8; }',
       'function Bob_x(o) { return Object.keys(o).map((k) => Bev_utf8(k)); }', 'async function Bob_konto(u) { return I().getRegistryEntry(u); }',
+      // E3-PR0c: przełącznik odsyłania.
+      "function Bob_bramkaEcha() { try { if (v.VILDA_EVENT_ECHO === true) return true; const s = v.localStorage; return !!s && s.getItem('vilda-event-echo-v1') === '1'; } catch (x) { return false; } }",
     ];
     for (const p of zielone) expect(analizuj(p).naruszenia, p).toEqual([]);
     // E2-PR3a1: navigator, AbortController i localStorage tylko w swoich funkcjach.
@@ -1723,9 +1786,11 @@ describe('U2(c): wywołania zakazane i reguła domknięcia części magazynu', (
   // w new Map() / new Set(); undefined — argument opcji dopisania). E2-PR3a4: silnik przeglądu kolejki, próg okna i doba
   // (część b — tam zegar), pary z ładunku scalania (część a, funkcja czysta). E2-PR3b: setId zestawu pełnej karty z haka H1
   // (Bob_zestawKarty — część b, funkcja czysta; w części c bez Math).
+  // E3-PR0c: odsyłanie poprawionych wizyt — zastosowanie zdarzenia z części a (Bev_zastosuj) i przełącznik odsyłania
+  // z części b (Bob_bramkaEcha).
   const WOLNE_BEM = new Set(['Bob_bramka', 'T', 'Bob_trybPrywatny', 'Bob_idb', 'Bob_wejscie', 'Bob_argumentyDopisania', 'Bob_dopiszZ',
     'Bses_opcje', 'Bses_zmieniona', 'Promise', 'Array', 'Object', 'String', 'Map', 'Set', 'undefined',
-    'Bob_przeglad', 'Bob_przegladProg', 'Bob_przegladNalezny', 'Bev_pary', 'Bob_zestawKarty']);
+    'Bob_przeglad', 'Bob_przegladProg', 'Bob_przegladNalezny', 'Bev_pary', 'Bob_zestawKarty', 'Bev_zastosuj', 'Bob_bramkaEcha']);
   // Zakazane w części Bem_ w każdym miejscu drzewa (wolne, lokalne i jako nazwy pól): okno, zegar, magazyny przeglądarki,
   // sieć, Web Locks, konsola.
   const ZAKAZANE_BEM = ['v', 'Date', 'setTimeout', 'localStorage', 'indexedDB', 'navigator', 'fetch', 'console'];
@@ -1734,11 +1799,60 @@ describe('U2(c): wywołania zakazane i reguła domknięcia części magazynu', (
   // E2-PR3a4: wstawki przeglądu kolejki (Bem_przeglad w odblokowaniu, Bem_zChmury w scalaniu), eksport sweepOutbox,
   // przegląd po bezczynności łańcucha i warunek kolejki. E2-PR3b: wstawki haków scalania (Bem_przegrane w Le, Bem_przegrany
   // w Le i Bsl_usunPacjenta, Bem_ratunek w Bnp_ratuj) i para ratunku po udanym dopisaniu (Bem_paraRatunku w łańcuchu).
+  // E3-PR0c: Bem_zastosuj (applyEncryptedEvent) — zwykła funkcja: przy wyłączonym przełączniku oddaje obietnicę
+  // Bev_zastosuj(env) bez dodatkowych mikrozadań; Bem_zastosujEcho jest async (poza listą).
   const SYNCHRONICZNE_BEM = ['Bem_hak', 'Bem_zHaka', 'Bem_zmiana', 'Bem_krokStart', 'Bem_krokKoniec', 'Bem_sekcje', 'Bem_partia', 'Bem_naPartie',
     'Bem_powiadom', 'Bem_zChmury', 'Bem_przeglad', 'Bem_przegladTeraz', 'Bem_poBezczynnosci', 'Bem_kolejka', 'Bem_brak', 'Bem_kluczEncji',
-    'Bem_przegrane', 'Bem_przegrany', 'Bem_ratunek', 'Bem_paraRatunku', 'Bem_wlasciciel'];
+    'Bem_przegrane', 'Bem_przegrany', 'Bem_ratunek', 'Bem_paraRatunku', 'Bem_wlasciciel', 'Bem_zastosuj'];
   // Warunek otwartego kroku w Bem_zChmury, Bem_przegrane i Bem_przegrany (przed bramką: importy w kroku nie czytają bramki).
   const WARUNEK_KROKU = "if ((Bem_kroki.get('n') || 0) > 0) return;";
+  // E3-PR0c: formy odsyłania poprawionych wizyt (lista naruszeń; dekl — deklaracje najwyższego poziomu części Bem_,
+  // gdzie — nazwa wolnego identyfikatora → funkcje, w których stoi).
+  // Bem_zastosuj(env): zwykła funkcja z dokładnie dwiema instrukcjami — `if (!Bob_bramkaEcha()) return Bev_zastosuj(env);`
+  // (argument = parametr, bez alternatywy) i `return Bem_zastosujEcho(env);`. Bem_zastosujEcho(env): async; pierwsza
+  // instrukcja `if (!Bob_bramka()) return Bev_zastosuj(env);`, druga `if (Bem_kolejka()) return Bev_zastosuj(env);`;
+  // w ciele trzy wywołania Bev_zastosuj — dwa z jednym argumentem (parametr) w tych instrukcjach i jedno z dwoma,
+  // jedyne await (wynik do stałej); jedno Bem_zmiana z literałem 'snap' jako pierwszym argumentem, w instrukcji po
+  // await. Bob_bramkaEcha — tylko w Bem_zastosuj, raz; Bev_zastosuj — tylko w tych dwóch funkcjach.
+  function formyOdsylania(dekl, gdzie) {
+    const n = [];
+    const wezlyF = (f) => { const l = []; const idz = (x) => { if (!x || typeof x.type !== 'string') return; l.push(x); for (const k of Object.keys(x)) { const y = x[k]; if (Array.isArray(y)) y.forEach(idz); else if (y && typeof y.type === 'string') idz(y); } }; idz(f.body); return l; };
+    const wywolanie = (x, nazwa) => !!x && x.type === 'CallExpression' && x.callee.type === 'Identifier' && x.callee.name === nazwa;
+    const zParametrem = (x, f) => x.arguments.length === 1 && x.arguments[0].type === 'Identifier' && !!f.params[0] && x.arguments[0].name === f.params[0].name;
+    const odmowa = (g, f, test) => !!g && g.type === 'IfStatement' && !g.alternate && test(g.test) && g.consequent.type === 'ReturnStatement'
+      && wywolanie(g.consequent.argument, 'Bev_zastosuj') && zParametrem(g.consequent.argument, f);
+    const nie = (nazwa) => (t) => t.type === 'UnaryExpression' && t.operator === '!' && wywolanie(t.argument, nazwa) && !t.argument.arguments.length;
+    const za = dekl.get('Bem_zastosuj');
+    if (!za) n.push('brak deklaracji Bem_zastosuj');
+    else {
+      if (za.async || za.generator) n.push('Bem_zastosuj: async albo generator');
+      const [i0, i1] = za.body.body;
+      if (za.body.body.length !== 2) n.push('Bem_zastosuj: nie dokładnie dwie instrukcje');
+      if (!odmowa(i0, za, nie('Bob_bramkaEcha'))) n.push('Bem_zastosuj: pierwsza instrukcja inna niż if (!Bob_bramkaEcha()) return Bev_zastosuj(env);');
+      if (!i1 || i1.type !== 'ReturnStatement' || !wywolanie(i1.argument, 'Bem_zastosujEcho') || !zParametrem(i1.argument, za)) n.push('Bem_zastosuj: druga instrukcja inna niż return Bem_zastosujEcho(env);');
+    }
+    const ze = dekl.get('Bem_zastosujEcho');
+    if (!ze) n.push('brak deklaracji Bem_zastosujEcho');
+    else {
+      if (!ze.async || ze.generator) n.push('Bem_zastosujEcho: nie async');
+      const [j0, j1] = ze.body.body;
+      if (!odmowa(j0, ze, nie('Bob_bramka'))) n.push('Bem_zastosujEcho: pierwsza instrukcja inna niż if (!Bob_bramka()) return Bev_zastosuj(env);');
+      if (!odmowa(j1, ze, (t) => wywolanie(t, 'Bem_kolejka') && !t.arguments.length)) n.push('Bem_zastosujEcho: druga instrukcja inna niż if (Bem_kolejka()) return Bev_zastosuj(env);');
+      const w = wezlyF(ze);
+      const zast = w.filter((x) => wywolanie(x, 'Bev_zastosuj'));
+      if (zast.length !== 3 || zast.filter((x) => x.arguments.length === 2).length !== 1 || zast.filter((x) => zParametrem(x, ze)).length !== 2) n.push('Bem_zastosujEcho: Bev_zastosuj nie dwa razy z parametrem i raz z dwoma argumentami');
+      const czekania = w.filter((x) => x.type === 'AwaitExpression');
+      if (czekania.length !== 1 || !wywolanie(czekania[0].argument, 'Bev_zastosuj') || czekania[0].argument.arguments.length !== 2) n.push('Bem_zastosujEcho: await inne niż jedno na Bev_zastosuj(env, kolektor)');
+      const zm = w.filter((x) => wywolanie(x, 'Bem_zmiana'));
+      if (zm.length !== 1 || !zm[0].arguments[0] || zm[0].arguments[0].type !== 'Literal' || zm[0].arguments[0].value !== 'snap') n.push("Bem_zastosujEcho: Bem_zmiana nie raz z literałem 'snap'");
+      else if (czekania.length && zm[0].start < czekania[0].end) n.push('Bem_zastosujEcho: Bem_zmiana przed await');
+    }
+    const be = (gdzie.Bob_bramkaEcha || []).join();
+    if (be !== 'Bem_zastosuj') n.push(`Bob_bramkaEcha: ${be || 'brak'} zamiast jednego odwołania w Bem_zastosuj`);
+    const bz = [...new Set(gdzie.Bev_zastosuj || [])].sort().join();
+    if (bz !== 'Bem_zastosuj,Bem_zastosujEcho') n.push(`Bev_zastosuj: ${bz || 'brak'} zamiast wyłącznie w Bem_zastosuj i Bem_zastosujEcho`);
+    return n;
+  }
   function analizujBem(zrodlo) {
     const ast = parse(zrodlo, { ecmaVersion: 'latest', sourceType: 'script', ranges: true });
     const sm = analyze(ast, { ecmaVersion: 2022, sourceType: 'script' });
@@ -1810,10 +1924,12 @@ describe('U2(c): wywołania zakazane i reguła domknięcia części magazynu', (
     const [g4, t4] = wl ? wl.body.body : [];
     if (!bramka(g4, false)) naruszenia.push('Bem_wlasciciel: pierwsza instrukcja inna niż if (!Bob_bramka()) return;');
     if (!wl || wl.body.body.length !== 2 || !tryZCatch(t4)) naruszenia.push('Bem_wlasciciel: po bramce inna instrukcja niż jedno try z catch');
+    // E3-PR0c: Bob_bramka także w Bem_zastosujEcho (pierwsza instrukcja, forma w formyOdsylania).
     const odwolania = (gdzie.Bob_bramka || []).slice().sort().join();
-    if (odwolania !== 'Bem_przeglad,Bem_przegrany,Bem_ratunek,Bem_wlasciciel,Bem_zChmury,Bem_zmiana') {
-      naruszenia.push(`Bob_bramka: ${odwolania || 'brak'} zamiast po jednym odwołaniu w Bem_zmiana, Bem_przeglad, Bem_zChmury, Bem_przegrany, Bem_ratunek i Bem_wlasciciel`);
+    if (odwolania !== 'Bem_przeglad,Bem_przegrany,Bem_ratunek,Bem_wlasciciel,Bem_zChmury,Bem_zastosujEcho,Bem_zmiana') {
+      naruszenia.push(`Bob_bramka: ${odwolania || 'brak'} zamiast po jednym odwołaniu w Bem_zmiana, Bem_przeglad, Bem_zChmury, Bem_przegrany, Bem_ratunek, Bem_wlasciciel i Bem_zastosujEcho`);
     }
+    naruszenia.push(...formyOdsylania(dekl, gdzie));
     for (const n of ['Bob_wejscie', 'Bob_dopiszZ']) {
       const w = gdzie[n] || [];
       if (!w.length || w.some((f) => f !== 'Bem_dopisz')) naruszenia.push(`${n}: ${w.join() || 'brak'} zamiast wyłącznie w Bem_dopisz`);
@@ -1945,9 +2061,24 @@ describe('U2(c): wywołania zakazane i reguła domknięcia części magazynu', (
       "function Bem_paraRatunku(z) { try { const m = Bem_pary.get(z.uid) || new Map(); const k = 'pnote|' + String(z.klucze); if (!m.get(k) || z.para > m.get(k)) m.set(k, z.para); Bem_pary.set(z.uid, m); } catch (x) { } }",
       // E2-PR3c4: hak karty notatki.
       "function Bem_wlasciciel(id, s) { if (!Bob_bramka()) return; try { Bem_zmiana('pnote', id, s && s.Bses_s ? s : Bses_opcje(null)); } catch (x) { } }",
+      // E3-PR0c: odsyłanie poprawionych wizyt.
+      'function Bem_zastosuj(env) { if (!Bob_bramkaEcha()) return Bev_zastosuj(env); return Bem_zastosujEcho(env); }',
+      "async function Bem_zastosujEcho(env) { if (!Bob_bramka()) return Bev_zastosuj(env); if (Bem_kolejka()) return Bev_zastosuj(env); const kol = {}; const w = await Bev_zastosuj(env, kol); if (Array.isArray(kol.echo) && kol.echo.length) Bem_zmiana('snap', kol.echo, kol.s); return w; }",
     ].join('\n');
     expect(analizujBem(DOBRA)).toEqual([]);
     const czerwone = [
+      // E3-PR0c: praca przed przełącznikiem, Bem_zastosuj async, bez bramki albo warunku kolejki w Bem_zastosujEcho,
+      // emisja przed await, drugie await, przełącznik w innej funkcji, Bev_zastosuj w innej funkcji, inny rodzaj emisji.
+      DOBRA.replace('function Bem_zastosuj(env) { if (!Bob_bramkaEcha())', 'function Bem_zastosuj(env) { Bem_kolejka(); if (!Bob_bramkaEcha())'),
+      DOBRA.replace('function Bem_zastosuj(env) {', 'async function Bem_zastosuj(env) {'),
+      DOBRA.replace('function Bem_zastosuj(env) { if (!Bob_bramkaEcha()) return Bev_zastosuj(env);', 'function Bem_zastosuj(env) { if (!Bob_bramkaEcha()) return Bev_zastosuj(env, {});'),
+      DOBRA.replace('async function Bem_zastosujEcho(env) { if (!Bob_bramka()) return Bev_zastosuj(env); ', 'async function Bem_zastosujEcho(env) { '),
+      DOBRA.replace(' if (Bem_kolejka()) return Bev_zastosuj(env); const kol', ' const kol'),
+      DOBRA.replace("const w = await Bev_zastosuj(env, kol); if (Array.isArray(kol.echo) && kol.echo.length) Bem_zmiana('snap', kol.echo, kol.s);", "Bem_zmiana('snap', kol.echo, kol.s); const w = await Bev_zastosuj(env, kol);"),
+      DOBRA.replace("Bem_zmiana('snap', kol.echo, kol.s); return w; }", "Bem_zmiana('snap', kol.echo, kol.s); await Bem_gotowe(); return w; }"),
+      DOBRA.replace("Bem_zmiana('snap', kol.echo, kol.s); return w; }", "Bem_zmiana('pnote', kol.echo, kol.s); return w; }"),
+      DOBRA.replace('function Bem_kolejka() { if (!T())', 'function Bem_kolejka() { if (!Bob_bramkaEcha()) return "x"; if (!T())'),
+      DOBRA.replace('function Bem_przegladTeraz() { return Bem_przeglad(false); }', 'function Bem_przegladTeraz() { Bev_zastosuj(null); return Bem_przeglad(false); }'),
       DOBRA.replace('if (!T() ||', 'if (!v.indexedDB || !T() ||'),
       DOBRA.replace('{ if (!Bob_bramka()) return; try {', '{ try { if (!Bob_bramka()) return;'),
       DOBRA.replace('{ if (!Bob_bramka()) return; try {', '{ if (!T()) return; if (!Bob_bramka()) return; try {'),
@@ -2109,7 +2240,9 @@ describe('U2(d): najwyższy poziom bloku — tylko deklaracje bez skutków przy 
     // E2-PR3b: haki scalania (pełna karta po przegranym nagrobku — zestawy w pamięci dokumentu, ratunek notatki i jego para).
     'Bem_przegrane', 'Bem_przegrany', 'Bem_ratunek', 'Bem_paraRatunku', 'Bem_pelne',
     // E2-PR3c4: hak karty notatki.
-    'Bem_wlasciciel'];
+    'Bem_wlasciciel',
+    // E3-PR0c: odsyłanie poprawionych wizyt (applyEncryptedEvent z przełącznikiem odsyłania).
+    'Bem_zastosuj', 'Bem_zastosujEcho'];
   it('U2(d) (E2-PR3a2): część Bem_ (^Bem_) — function / async function albo const z literałem, Object.freeze(…) z dozwolonymi typami, new Map() / new Set(); są nazwy wiążące części', () => {
     znacznikEmisjiRaz();
     const ast = parse(czesci().bem, { ecmaVersion: 'latest', sourceType: 'script' });
