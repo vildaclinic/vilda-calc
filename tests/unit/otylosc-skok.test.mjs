@@ -1,5 +1,10 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
+
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
 // P-OTYLOSC-SKOK (etap 2 projektu „Leczenie otyłości — wpisy poza wizytą”; decyzje właściciela 2026-11-19).
 // Karta pacjenta przenosi do monitora DocPro wpisem „vilda:gh-jump” (ta sama droga co skok do punktu GH). Tu: kształt
@@ -60,11 +65,12 @@ describe('powodKrotki — widoczny powód pod „Edytuj w DocPro →”', () => 
   });
 });
 
-describe('zmianaPrzebiegu z opcją lekPoNazwie — dopisek monitora o listach pacjentów', () => {
-  const { D } = moduly();
+describe('zmianaPrzebiegu — jedna reguła dla Karty i dopisku monitora o listach pacjentów (P-OTYLOSC-LEK)', () => {
+  const { D, U } = moduly();
   const wpis = (stan, id) => stan.wpisy.find((x) => x.punkt && x.punkt.id === id);
 
-  it('ten sam lek, uzupełniona substancja: Karta — zmiana leku (jak dotąd); listy (po nazwie) — bez zmiany', () => {
+  it('ten sam lek, uzupełniona substancja: Popraw/Usuń w Karcie (bez „Edytuj w DocPro”), w monitorze bez dopisku', () => {
+    // Dotąd Karta porównywała dosłowny tekst leku i substancji: „c” uchodziło za zmianę leku (vildaclinic/vilda-calc#1003).
     const bezSubstancji = { drug: WEGOVY.drug, substance: '' };
     const stan = D.zloz([], [
       pkt('a', 'start', '2026-01-12', 0, 80, bezSubstancji, '0,25 mg / tydz.'),
@@ -72,9 +78,15 @@ describe('zmianaPrzebiegu z opcją lekPoNazwie — dopisek monitora o listach pa
       pkt('c', 'continue', '2026-06-16', 5, 77, WEGOVY),
       pkt('d', 'continue', '2026-08-18', 7, 76, SAXENDA, '3,0 mg / dobę'),
     ]);
-    expect(D.zmianaPrzebiegu(stan, wpis(stan, 'c')), 'reguła Karty bez zmian').toBe('zmiana-leku');
-    expect(D.zmianaPrzebiegu(stan, wpis(stan, 'c'), { lekPoNazwie: true })).toBeNull();
-    expect(D.zmianaPrzebiegu(stan, wpis(stan, 'd'), { lekPoNazwie: true }), 'inny lek — zmiana').toBe('zmiana-leku');
-    expect(D.zmianaPrzebiegu(stan, wpis(stan, 'a'), { lekPoNazwie: true })).toBe('wlaczenie');
+    expect(D.zmianaPrzebiegu(stan, wpis(stan, 'c'))).toBeNull();
+    expect(U.powodKrotki({ stan }, wpis(stan, 'c')), 'bez powodu pod przyciskiem — zwykłe Popraw/Usuń').toBeNull();
+    expect(D.zmianaPrzebiegu(stan, wpis(stan, 'd')), 'inny lek — zmiana').toBe('zmiana-leku');
+    expect(D.zmianaPrzebiegu(stan, wpis(stan, 'a'))).toBe('wlaczenie');
+  });
+
+  it('monitor DocPro woła tę samą regułę bez opcji (dopisek „Listy pacjentów zobaczą zmianę…”)', () => {
+    const zrodlo = fs.readFileSync(path.join(ROOT, 'obesity_therapy_monitor.js'), 'utf8');
+    expect(zrodlo).toContain('return w ? D.zmianaPrzebiegu(Dzs, w) : null;');
+    expect(zrodlo).not.toContain('lekPoNazwie');
   });
 });

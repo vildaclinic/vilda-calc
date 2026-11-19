@@ -1237,14 +1237,13 @@
    * 2026-11-19: listy pacjentów bez zmiany sejfu). Listy „Leczenie otyłości: trwa / kiedykolwiek / lek X” liczy
    * sejf z zapisu ostatniej wizyty — z rodzaju ostatniego punktu i z leku punktów. W Karcie wolno więc poprawiać,
    * usuwać i przywracać tylko Kontynuację, która leku nie zmienia: poprzedni wpis (w kolejności tabeli) jest
-   * Włączeniem albo Kontynuacją z tym samym lekiem i substancją. Wtedy ani rodzaj ostatniego punktu, ani lek nie
+   * Włączeniem albo Kontynuacją z tym samym lekiem (kluczLeku). Wtedy ani rodzaj ostatniego punktu, ani lek nie
    * zmieniają się względem zapisu wizyty, więc listy zostają zgodne z dziennikiem. Włączenie, Zakończenie i zmianę
-   * leku poprawia się w DocPro — tak jak dotąd zmianę leku.
+   * leku poprawia się w DocPro — tak jak dotąd zmianę leku. Tej samej reguły używa monitor DocPro do dopisku
+   * „Listy pacjentów zobaczą zmianę po „Zapisz dane”” (P-OTYLOSC-SKOK).
    * Zwraca null (wolno) albo powód: 'wlaczenie' | 'zakonczenie' | 'pierwszy-wpis' | 'zmiana-leku'.
    */
-  /** opcje.lekPoNazwie — lek porównany samą nazwą (jak listy pacjentów, drugKey), bez substancji: dla komunikatu
-   *  monitora „Listy pacjentów zobaczą zmianę…” (P-OTYLOSC-SKOK). Bez opcji — reguła Karty jak dotąd (lek i substancja). */
-  function zmianaPrzebiegu(stan, wpis, opcje) {
+  function zmianaPrzebiegu(stan, wpis) {
     var d = wpis && (wpis.punkt || (wpis.biezaca && wpis.biezaca.dane));
     if (!d) return 'zmiana-leku';
     if (d.type === 'start') return 'wlaczenie';
@@ -1260,17 +1259,28 @@
     for (var k = 0; k < lista.length; k++) if (lista[k] && lista[k].id === '__vdo_ten__') { i = k; break; }
     var poprzedni = i > 0 ? lista[i - 1] : null;
     if (!poprzedni || poprzedni.type === 'end') return 'pierwszy-wpis';
-    var klucz = opcje && opcje.lekPoNazwie ? kluczNazwyLeku : kluczLeku;
-    return klucz(poprzedni) === klucz(d) ? null : 'zmiana-leku';
+    return kluczLeku(poprzedni) === kluczLeku(d) ? null : 'zmiana-leku';
   }
 
+  /**
+   * P-OTYLOSC-LEK (decyzja właściciela 2026-11-19, „zacznij od A”): lek punktu tak, jak go rozpoznają listy pacjentów
+   * „Leczenie otyłości” (sejf: drugKey) i ocena wg ChPL — ObesityResponseCriteria.resolveDrug(drug, substance).
+   * Dotąd Karta porównywała dosłowny tekst leku i substancji, więc Kontynuacja po starszym punkcie zapisanym bez
+   * substancji (ten sam lek) uchodziła za „zmianę leku” i odsyłała do DocPro. Lek spoza tabeli kryteriów — po nazwie
+   * (bez niej po substancji). Bez modułu kryteriów — ostrożnie, jak dotąd: każda różnica tekstu to zmiana leku.
+   */
   function kluczLeku(p) {
-    return (String((p && p.drug) || '').trim() + '|' + String((p && p.substance) || '').trim()).toLowerCase();
-  }
-
-  function kluczNazwyLeku(p) {
-    var nazwa = String((p && p.drug) || '').trim();
-    return (nazwa || String((p && p.substance) || '').trim()).toLowerCase();
+    var lek = tekst(p && p.drug);
+    var sub = tekst(p && p.substance);
+    try {
+      var K = w.ObesityResponseCriteria;
+      if (K && typeof K.resolveDrug === 'function') {
+        var r = K.resolveDrug(lek, sub);
+        if (r && typeof r.drugKey === 'string' && r.drugKey) return 'chpl:' + r.drugKey;
+        return 'nazwa:' + (lek || sub).toLowerCase();
+      }
+    } catch (_e) { /* jak bez modułu kryteriów */ }
+    return 'tekst:' + (lek + '|' + sub).toLowerCase();
   }
 
   var POWODY_DOCPRO = Object.freeze({

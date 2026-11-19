@@ -2172,6 +2172,20 @@ w PR vildaclinic/vilda-calc#1003 — do decyzji właściciela). Karta na innej s
 (`VildaAuthUI.hide`), a skok rusza po `popstate` z jej `history.back()` albo po 600 ms. Sejf i dziennik bez zmian;
 `window.obesityTherapyPoints` zmienia się tylko przez zapis lekarza w monitorze.
 
+## Łatka P-OTYLOSC-LEK — Karta porównuje lek jak listy pacjentów (`vilda_cykle_leczenia.js` 8 → 9, `obesity_therapy_monitor.js` 30 → 31, 2026-11-19, decyzja właściciela)
+
+Czytelne źródło: `vilda_cykle_leczenia.js` — `kluczLeku` rozpoznaje lek przez `ObesityResponseCriteria.resolveDrug`
+(jak `drugKey` list w sejfie i kryteria ChPL); bez modułu kryteriów — dawny tekst leku i substancji. `zmianaPrzebiegu`
+traci parametr `opcje` (i `kluczNazwyLeku`). Opis reguły: `docs/clinical/ALGORITHMS.md`, wpis P-OTYLOSC-LEK.
+
+```
+// obesity_therapy_monitor.js — czytelny blok P-OTYLOSC-DZIENNIK, funkcja Dzprzebieg(id)
+// było:  return w ? D.zmianaPrzebiegu(Dzs, w, { lekPoNazwie: true }) : null;
+// jest:  return w ? D.zmianaPrzebiegu(Dzs, w) : null;
+```
+
+**Granice.** Sejf, dziennik i zapis bez zmian. Wersje `?v=`, precache i `SW_VERSION` ustawił `npm run podbij-wersje`.
+
 ## Łatka P-E2-MENARCHE — estradiol poniżej 18 lat: zakresy dorosłych po 5 latach od menarche (`lab_units_data.js` 42 → 43, `lab_unit_converter.js` 10 → 11, `vilda_lab_packages.js` 10 → 11, `inline_przelicznik_jednostek_00.css` 17 → 18, `przelicznik-jednostek.html`, 2026-11-19, decyzje właściciela)
 
 Opis działania, przypadki, dowody i ograniczenia: `docs/clinical/ALGORITHMS.md`, wpis „LAB-E2-MENARCHE”. Zmiany wprowadzono wprost w artefaktach, czytelnymi blokami; żadnego pliku nie przebudowano z dawnych źródeł ani nie minifikowano ponownie.
