@@ -1344,7 +1344,82 @@
           throw blad;
         });
       });
-    }, Promise.resolve()).then(function () { return { zapisane: zapisane }; });
+    }, Promise.resolve()).then(function () {
+      if (!(opcje && opcje.vault)) odswiezWczytanego();
+      return { zapisane: zapisane };
+    });
+  }
+
+  // ── Dziennik pacjenta wczytanego na stronie (P-TRAJEKTORIA-DZIENNIK) ──────────────
+  //
+  // Decyzja właściciela 2026-11-19: „trajektoria i karta zbiorcza z dziennika”. Karta porównania z poprzednim
+  // pomiarem na Start i w Klirensie (vilda_summary_cards.js) buduje kontekst kliniczny (kursy leczenia otyłości dla
+  // werdyktu trajektorii) z window.obesityTherapyPoints — na Start to punkty z zapisu wizyty (applyLoadedData), bo
+  // monitora tam nie ma. Tu trzymamy projekcję dziennika pacjenta karty (sessionStorage vildaCurrentPatientId, jak
+  // bramka karty porównania), odczytaną po wczytaniu pacjenta i po zapisie wpisu. window.obesityTherapyPoints się
+  // NIE zmienia (to stan formularza wizyty i jej „Zapisz dane”). Bez wpisów w dzienniku punktyWczytanego() daje null —
+  // konsumenci zostają przy dotychczasowym źródle. Po zmianie punktów: vilda:therapy-points-changed
+  // {source:'obesity-dziennik'} (ten sam sygnał, którym monitory odświeżają kartę porównania; ten moduł go nie słucha).
+  var wczytany = { pid: null, punkty: null, odcisk: '', bilet: 0 };
+
+  function pacjentKarty() {
+    var pid;
+    try { pid = (w.sessionStorage && w.sessionStorage.getItem('vildaCurrentPatientId')) || w._vildaCurrentPatientId || null; } catch (_e) { pid = w._vildaCurrentPatientId || null; }
+    return typeof pid === 'string' && pid && pid.indexOf('__vilda') !== 0 ? pid : null;
+  }
+
+  function odswiezWczytanego() {
+    var bilet = ++wczytany.bilet;
+    var pid = pacjentKarty();
+    var v = w.VildaVault;
+    if (!pid || !sejf(v) || typeof v.getPatient !== 'function' || (typeof v.isUnlocked === 'function' && !v.isUnlocked())) {
+      wczytany.pid = null; wczytany.punkty = null; wczytany.odcisk = '';
+      return Promise.resolve(null);
+    }
+    return Promise.resolve(v.getPatient(pid)).then(function (pac) {
+      var snap = pac && pac.snapshots && pac.snapshots[0];
+      var migawka = snap && snap.payload && Array.isArray(snap.payload.obesityTherapyPoints) ? snap.payload.obesityTherapyPoints : [];
+      return wczytaj(pid, migawka, { vault: v });
+    }).then(function (stan) {
+      if (bilet !== wczytany.bilet || pacjentKarty() !== pid) return null;
+      var punkty = stan.maDziennik ? stan.punkty : null;
+      var odcisk;
+      try { odcisk = punkty ? JSON.stringify(punkty) : ''; } catch (_e) { odcisk = String(Math.random()); }
+      var byly = wczytany.pid === pid && !!wczytany.punkty;
+      var zmiana = wczytany.pid !== pid || wczytany.odcisk !== odcisk;
+      wczytany.pid = pid; wczytany.punkty = punkty; wczytany.odcisk = odcisk;
+      // Sygnał tylko wtedy, gdy dziennik jest albo był: pacjent bez wpisów nie wywołuje drugiego odczytu karty.
+      if (zmiana && (punkty || byly) && w.document && typeof w.CustomEvent === 'function') {
+        try { w.document.dispatchEvent(new w.CustomEvent('vilda:therapy-points-changed', { detail: { source: 'obesity-dziennik' } })); } catch (_e) { /* bez zdarzeń */ }
+      }
+      return stan;
+    }).catch(function () { return null; });
+  }
+
+  /** Punkty projekcji dziennika pacjenta karty (format monitora) albo null — bez wpisów w dzienniku, bez sejfu,
+   *  przed pierwszym odczytem albo gdy pacjent karty jest inny niż odczytany. */
+  function punktyWczytanego() {
+    var v = w.VildaVault;
+    if (v && typeof v.isUnlocked === 'function' && !v.isUnlocked()) return null;
+    var pid = pacjentKarty();
+    return pid && wczytany.pid === pid && wczytany.punkty ? wczytany.punkty : null;
+  }
+
+  if (w.document && typeof w.document.addEventListener === 'function' && typeof w.setTimeout === 'function') {
+    try {
+      // Wczytanie pacjenta i wpisy z innego urządzenia (synchronizacja) — odczyt od nowa; czyszczenie stanu,
+      // blokada i wylogowanie — pamięć pusta.
+      var wyczysc = function () { wczytany.bilet++; wczytany.pid = null; wczytany.punkty = null; wczytany.odcisk = ''; };
+      ['vilda:patient-loaded', 'vilda:sync-merged'].forEach(function (n) {
+        w.document.addEventListener(n, function () { w.setTimeout(odswiezWczytanego, 300); });
+      });
+      w.document.addEventListener('vilda:user-state-cleared', wyczysc);
+      if (typeof w.addEventListener === 'function') w.addEventListener('vilda:user-state-cleared', wyczysc);
+      // Zmiana sesji (blokada, wylogowanie, inne konto, odblokowanie) — pamięć pusta i odczyt od nowa; przy
+      // zablokowanym sejfie odczyt nic nie daje.
+      w.document.addEventListener('vilda:session-changed', function () { wyczysc(); w.setTimeout(odswiezWczytanego, 300); });
+      w.setTimeout(odswiezWczytanego, 1200);
+    } catch (_e) { /* bez dokumentu */ }
   }
 
   w.VildaDziennikOtylosci = Object.freeze({
@@ -1373,7 +1448,9 @@
     liczbaPL: liczbaPL,
     dzisISO: dzisISO,
     wczytaj: wczytaj,
-    zapisz: zapisz
+    zapisz: zapisz,
+    punktyWczytanego: punktyWczytanego,
+    odswiezWczytanego: odswiezWczytanego
   });
 }(typeof window !== 'undefined' ? window : this));
 

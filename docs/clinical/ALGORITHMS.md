@@ -43700,7 +43700,7 @@ nie podaje reguły odstawienia dla dorosłych). Karta przestaje pozwalać na pop
 to zawęża edycję, nie zmienia żadnej oceny.
 
 **Ograniczenia (znane).**
-- Analiza trajektorii i karta zbiorcza czytają jeszcze migawkę ostatniej wizyty.
+- Analiza trajektorii i karta zbiorcza czytają jeszcze migawkę ostatniej wizyty (od P-TRAJEKTORIA-DZIENNIK, niżej — z dziennika).
 - Wybór wersji przy konflikcie Włączenia albo Zakończenia (rzadki: dwie poprawki tego samego wpisu w DocPro na dwóch
   urządzeniach) może zmienić rodzaj albo lek punktu — lista wyrówna się po najbliższym „Zapisz dane” wizyty w DocPro.
 - Wpis dodany w Karcie trafia do zapisu wizyty (lustro listy) dopiero przy „Zapisz dane” w DocPro — listy tego nie
@@ -43716,3 +43716,54 @@ to zawęża edycję, nie zmienia żadnej oceny.
 
 **Wdrożenie.** Od razu przy wydaniu; sejf bez zmian. **Cofnięcie** = rewert PR: „Postępy” wracają do migawki, Karta
 znów pozwala poprawiać każdy wpis; dane dziennika bez zmian.
+
+## Analiza trajektorii i karta porównania z dziennika leczenia (P-TRAJEKTORIA-DZIENNIK, SW 1.1.554, `vilda_cykle_leczenia.js` 7, `vilda_auth_ui.js` 571, `vilda_summary_cards.js` 65, 2026-11-19)
+
+**Decyzja właściciela (2026-11-19).** „Zacznij kolejny etap — trajektoria i karta zbiorcza z dziennika”.
+
+**Stan przed zmianą.** Kursy leczenia otyłości (od Włączenia do Zakończenia, `VildaTrajectoryAnalysis.buildClinicalContext`
+→ `red`/`redKursy`) liczyły się z `obesityTherapyPoints` zapisu ostatniej wizyty:
+- w Karcie pacjenta — panel „Analiza trajektorii” (żetony kursów, znacznik ⬇ i werdykty odcinków), pas leczenia
+  „otyłość” na siatkach i kontekst panelu porównania;
+- na Start i w Klirensie — karta „Porównanie z poprzednim pomiarem” (`vilda_summary_cards.js`, punkty z formularza
+  wizyty, czyli z jej zapisu).
+Dziennik leczenia (etap 3) wyprzedza zapis wizyty wtedy, gdy monitor DocPro zapisał wpis od razu, a „Zapisz dane”
+jeszcze nie padło — np. Zakończenie. Kurs był wtedy „nadal”, a werdykt „redukcja w trakcie leczenia”, choć leczenie
+w dzienniku jest zakończone.
+
+**Zmiana.**
+- Karta pacjenta: pas leczenia i kontekst trajektorii z projekcji dziennika (`Ob_dzPunkty`, te same punkty co kafelek
+  „Leczenie otyłości” i „Postępy”).
+- Start, Klirens (i DocPro): karta porównania bierze punkty z `VildaDziennikOtylosci.punktyWczytanego()` — pamięci
+  projekcji dziennika pacjenta karty (identyfikator z `sessionStorage`, jak bramka tej karty), odczytanej po
+  `vilda:patient-loaded`, `vilda:sync-merged`, zmianie sesji i po zapisie wpisu. Bez wpisów w dzienniku — `null`
+  i dotychczasowe źródło. `window.obesityTherapyPoints` (formularz wizyty i jej „Zapisz dane”) się nie zmienia.
+  Po zmianie punktów leci `vilda:therapy-points-changed {source:'obesity-dziennik'}` — ten sam sygnał, którym monitory
+  odświeżają kartę porównania; pacjent bez dziennika go nie wywołuje. „Wyczyść”, blokada i inny pacjent karty —
+  pamięć pusta.
+- Reguły kursów, okien i werdyktów trajektorii bez zmian — zmienia się tylko źródło punktów.
+
+**Przypadki syntetyczne** (dane fikcyjne; dziewczynka ur. 15.11.2011; Saxenda 12 l. 1 mies. – 12 l. 6 mies., Wegovy od
+12 l. 8 mies.; Zakończenie Wegovy 13 l. 3 mies. tylko w dzienniku):
+
+| Przypadek | Wejście | Oczekiwany wynik |
+|---|---|---|
+| TR-1 | Karta pacjenta, panel „Analiza trajektorii” | żetony: „Saxenda · od 12 lat 1 mies. do 12 lat 6 mies.”, „Wegovy · od 12 lat 8 mies. do 13 lat 3 mies.” (bez dziennika: „… — nadal”) |
+| TR-2 | Start: wizyta 12 l. 6 mies. → bieżący pomiar 13 l. 5 mies. | Waga i BMI: „— w tym 7 mies. leczenia redukcyjnego”, bez paska „kontekst:” (odcinek tylko częściowo w kursie); z zapisu wizyty: „redukcja w trakcie leczenia”, „kontekst: leczenie otyłości (Wegovy) — 9 mies. w odcinku” |
+| pamięć | bez wpisów; Zakończenie w dzienniku; wpis z Karty; inny pacjent, „Wyczyść”, blokada | null bez sygnału; kursy `{a:152, b:161}` zamiast `{a:152, b:null}` i jeden sygnał; odświeżenie po zapisie; null |
+
+**Wpływ kliniczny.** Werdykt odcinka masy/BMI zależy od tego, czy odcinek leży w kursie leczenia otyłości (gałąź
+leczenia, „w trakcie leczenia”, „mimo leczenia redukcyjnego”, dopisek „w tym N mies. leczenia redukcyjnego”). Od tej
+zmiany granice kursu bierze się z dziennika: gdy dziennik ma Zakończenie, którego zapis wizyty jeszcze nie ma, odcinek
+po nim nie jest liczony jako leczenie. Wpisy z Karty (Kontynuacje bez zmiany leku) granic kursów nie ruszają.
+Progi i reguły werdyktów bez zmian.
+
+**Ograniczenia.** Pomiary z dziennika (np. masa od pacjenta) nie wchodzą do serii trajektorii ani na siatki centylowe —
+seria to nadal pomiary wizyt; ta zmiana dotyczy wyłącznie kontekstu leczenia.
+
+**Testy.** Dane wyłącznie fikcyjne.
+- `tests/unit/trajektoria-dziennik.test.mjs` (4) na prawdziwym sejfie: bez dziennika, Zakończenie w dzienniku
+  (`buildClinicalContext`), odświeżenie po zapisie wpisu, inny pacjent / „Wyczyść” / blokada.
+- e2e `tests/e2e/trajektoria-dziennik.spec.mjs` (TR-1, TR-2); oba padają na kodzie sprzed zmiany.
+
+**Wdrożenie.** Od razu przy wydaniu; sejf bez zmian. **Cofnięcie** = rewert PR: kursy znów z zapisu wizyty.

@@ -304,3 +304,58 @@ describe('current destructive-action save decision is synchronous and read-only'
     expect(h.api.isCurrentDecisionAfterSave(captured.scope,checked)).toBe(boundary==='unchanged');
   });
 });
+
+// P-WIZYTA-PRZYDZIAL (2026-11-19): autozapis i sprawdzenia stanu nadają formularzowi identyfikator wizyty
+// (VildaVisitContext.capture), a odczyt decyzji strażnika tego nie robi. Gdy nadanie wypadło przy otwartym oknie
+// „Niezapisane zmiany” (np. skok z Terminarza do punktu GH w DocPro), „Odrzuć” kończyło się komunikatem
+// „Formularz zmienił się” i anulowało skok, choć lekarz niczego nie zmienił.
+describe('first visit allocated while the unsaved-changes decision is open', () => {
+  const nowaWizyta = (patientId) => ({ version: 1, visitId: '0f1d7a52-3b0c-4c55-9a7e-2d4b8c6e1f30', patientId,
+    clinicalDateISO: '2026-10-31', createdAtISO: new Date().toISOString(), origin: 'explicit' });
+  function brudnyWczytany() {
+    const h = environment({ loaded: true }), value = patient(); value.user.weight = 41; h.setForm(value);
+    const decision = h.api.getCurrentDecision(); expect(decision).toMatchObject({ ready: true, state: 'dirty' });
+    vi.advanceTimersByTime(700);
+    return { h, value, decision };
+  }
+  it.each([
+    ['allocated', true], ['allocated-unbound', true], ['allocated-and-edited', false], ['loaded-older-visit', false], ['foreign-owner', false],
+    ['legacy-inferred', false], ['account-change', false],
+  ])('%s → current=%s', (boundary, expected) => {
+    const { h, value, decision } = brudnyWczytany();
+    value.visit = nowaWizyta('fictional-current-patient');
+    // Formularz niezwiązany jeszcze z wczytanym rekordem (np. DocPro po odtworzeniu sesji) dostaje wizytę bez pacjenta.
+    if (boundary === 'allocated-unbound') value.visit.patientId = null;
+    if (boundary === 'allocated-and-edited') value.user.height = 151;
+    if (boundary === 'loaded-older-visit') value.visit.createdAtISO = '2026-10-30T09:00:00.000Z';
+    if (boundary === 'foreign-owner') value.visit.patientId = 'fictional-other-patient';
+    if (boundary === 'legacy-inferred') value.visit.origin = 'legacy-inferred';
+    h.setForm(value);
+    if (boundary === 'account-change') h.account();
+    expect(h.api.isCurrentDecision(decision.scope)).toBe(expected);
+    expect(h.persist).not.toHaveBeenCalled(); expect(h.collect).not.toHaveBeenCalled();
+  });
+  it('a decision that already had a visit does not accept a different one', () => {
+    const h = environment({ loaded: true }), value = patient(); value.user.weight = 41;
+    value.visit = { ...nowaWizyta('fictional-current-patient'), visitId: 'a3c5e7f9-1b2d-4f60-8a1c-3e5f7a9b1c2d' }; h.setForm(value);
+    const decision = h.api.getCurrentDecision(); expect(decision.state).toBe('dirty');
+    vi.advanceTimersByTime(700); value.visit = nowaWizyta('fictional-current-patient'); h.setForm(value);
+    expect(h.api.isCurrentDecision(decision.scope)).toBe(false);
+  });
+  it('a new patient form accepts its own first visit (no patient id yet)', () => {
+    const h = environment(); h.setForm(patient());
+    const decision = h.api.getCurrentDecision(); expect(decision).toMatchObject({ ready: true, state: 'new_patient' });
+    vi.advanceTimersByTime(700); h.setForm({ ...patient(), visit: nowaWizyta(null) });
+    expect(h.api.isCurrentDecision(decision.scope)).toBe(true);
+    h.setForm({ ...patient(), visit: nowaWizyta('fictional-current-patient') });
+    expect(h.api.isCurrentDecision(decision.scope), 'wizyta z identyfikatorem pacjenta, którego formularz nie ma').toBe(false);
+  });
+  it('own save from the dialog after the allocation is still the decided content', async () => {
+    const { h, value, decision } = brudnyWczytany();
+    value.visit = nowaWizyta('fictional-current-patient'); h.setForm(value);
+    const receipt = await h.saved('fictional-current-patient'); expect(receipt.saved).toBe(true);
+    expect(h.api.isCurrentDecisionAfterSave(decision.scope, receipt)).toBe(true);
+    value.user.height = 151; h.setForm(value);
+    expect(h.api.isCurrentDecisionAfterSave(decision.scope, receipt), 'edycja po zapisie').toBe(false);
+  });
+});
