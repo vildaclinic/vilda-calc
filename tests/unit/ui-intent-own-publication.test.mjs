@@ -91,15 +91,17 @@ function environment({ emptyRead = false, rejectRead = false, accepted = false }
   let chromePick;
   win.VildaAuthUI.showPatientsList = vi.fn(callback => { chromePick = callback; });
   new Function(...Object.keys(binding), chromeFactory + ';i();')(...Object.values(binding));
-  const close = vi.fn(() => order.push(['close-card']));
+  const card = { isConnected: true }, modal = { contains: node => node === card && card.isConnected };
+  const quietHistory = vi.fn(options => { order.push(['quiet-history', options.quiet]); });
+  const close = vi.fn(() => { order.push(['close-card']); card.isConnected = false; });
   const after = vi.fn(() => order.push(['BdPo']));
   const errors = vi.fn();
   const context = vm.createContext({ i: win, jt: () => win.VildaVault, t: TARGET, o: vault, s: payload, c: snapshot,
-    l: { snapshotCount: 1 }, d: [snapshot], $t: close, Ot: errors, wo: (_id, _name, proceed) => proceed() });
+    l: { snapshotCount: 1 }, d: [snapshot], Eo: card, Rt: modal, Pa: 1, ye: true, ba: () => true, Qn: quietHistory, $t: close, Ot: errors, wo: (_id, _name, proceed) => proceed() });
   vm.runInContext(helpers + '\nvar BdWczytajPacjenta=' + auth.slice(loader.init.start, loader.init.end) + ';', context);
   const runs = [], nativeRun = context.patientLoadRun;
   context.patientLoadRun = (...args) => { const result = nativeRun(...args); runs.push({ args, result }); return result; };
-  return { win, document, values, vault, order, published, state, capture, prepare, encryption, discard, chromePick, close, after, errors, messages, runs, api, context,
+  return { win, document, values, vault, order, published, state, capture, prepare, encryption, discard, chromePick, card, modal, quietHistory, close, after, errors, messages, runs, api, context, nativeTransport,
     start: callback => context.BdWczytajPacjenta(callback || chromePick, after),
     commit() { encryption.resolve({ current: () => !!state.scope?.isCurrent(), discardExact: discard }); },
     rotate() { generation++; },
@@ -122,16 +124,18 @@ async function nativeEnvironment() {
 }
 
 describe('native no-form handoff after its own accepted patient publication', () => {
-  it('starts Chrome encryption after exact native publish→close→BdPo without yielding between publication and capture', async () => {
+  it('prepares after exact native publication with the original card mounted, then closes and navigates synchronously', async () => {
     const e = environment(); e.start(); await flush();
     expect(e.published).toHaveLength(1);
     expect(e.published[0]).toMatchObject({ patientId: TARGET, name: payload.name, savedAtISO: snapshot.savedAtISO, snapshotCount: 1, source: 'pick' });
     expect(e.published[0].acceptedLoadAuthority).toBeUndefined();
-    expect(e.order).toEqual([['published', TARGET], ['close-card'], ['BdPo'], ['capture-caller'], ['prepare', 'pending-patient-load', TARGET], ['publication-microtask']]);
+    expect(e.order).toEqual([['published', TARGET], ['capture-caller'], ['prepare', 'pending-patient-load', TARGET], ['publication-microtask']]);
+    expect(e.card.isConnected).toBe(true); expect(e.close).not.toHaveBeenCalled();
     expect(e.state.scope.isCurrent()).toBe(true);
     expect(e.prepare).toHaveBeenCalledExactlyOnceWith('pending-patient-load', { patientId: TARGET }, e.state.scope);
     expect(e.win.location.assign).not.toHaveBeenCalled();
     e.commit(); await flush(); expect(e.win.location.assign).toHaveBeenCalledExactlyOnceWith('index.html');
+    expect(e.order.slice(-4)).toEqual([['quiet-history', true], ['close-card'], ['BdPo'], ['navigate', 'index.html']]);
     expect(e.discard).not.toHaveBeenCalled();
     expect(e.messages).not.toHaveBeenCalled(); expect(e.errors).not.toHaveBeenCalled();
   });
@@ -166,7 +170,8 @@ describe('native no-form handoff after its own accepted patient publication', ()
     const e = environment(), first = vi.fn(), last = vi.fn(() => e.order.push(['activate-last']));
     e.start(optIn((_value, _patientId, publication) => { publication.afterPublished(first); publication.afterPublished(last); }));
     await flush(); expect(first).not.toHaveBeenCalled(); expect(last).toHaveBeenCalledOnce();
-    expect(e.order).toEqual([['published', TARGET], ['close-card'], ['BdPo'], ['activate-last'], ['publication-microtask']]);
+    expect(e.order).toEqual([['published', TARGET], ['activate-last'], ['publication-microtask']]);
+    expect(e.close).not.toHaveBeenCalled();
   });
 
   it('closes registration before an asynchronous callback continuation can arm a handoff', async () => {
@@ -247,11 +252,12 @@ describe('native no-form handoff after its own accepted patient publication', ()
     const e = await nativeEnvironment(), account = e.vault.getCurrentUser().userId;
     const before = e.vault.captureSyncOperationSession();
     e.after.mockImplementation(() => { e.order.push(['BdPo']); e.vault.setEphemeralMode(true); });
-    e.start(); await flush();
+    e.start(); await flush(); e.commit(); await flush();
     expect(e.vault.getCurrentUser().userId).toBe(account);
     expect(() => e.vault.assertSyncOperationSession(before)).toThrow();
     expect(e.published).toHaveLength(1); expect(e.close).toHaveBeenCalledOnce(); expect(e.after).toHaveBeenCalledOnce();
-    expect(e.capture).not.toHaveBeenCalled(); expect(e.prepare).not.toHaveBeenCalled(); expect(e.win.location.assign).not.toHaveBeenCalled();
+    expect(e.capture).toHaveBeenCalledOnce(); expect(e.prepare).toHaveBeenCalledOnce(); expect(e.win.location.assign).not.toHaveBeenCalled();
+    expect(e.discard).toHaveBeenCalledOnce();
   });
 
   it.each(['lock', 'ephemeral', 'account'])('rejects an old successful receipt after actual native %s changes the original publication authority', async boundary => {
@@ -286,5 +292,112 @@ describe('native no-form handoff after its own accepted patient publication', ()
     expect(e.state.scope.isCurrent()).toBe(false); e.commit(); await flush();
     expect(e.win.location.assign).not.toHaveBeenCalled(); expect(e.messages).not.toHaveBeenCalled(); expect(e.prepare).toHaveBeenCalledOnce();
     expect(e.discard).toHaveBeenCalledOnce();
+  });
+});
+
+
+function actualNativeClose(e, { shell = false } = {}) {
+  const noop = () => {};
+  Object.assign(e.modal, { style: { display: 'block' }, removeAttribute: noop });
+  e.document.body.classList = { remove: noop };
+  e.win.history.state.vildaNavSentinel = true;
+  e.win.history.replaceState = vi.fn(state => { e.win.history.state = state; });
+  e.win.history.back = vi.fn(() => { e.order.push(['history-back']); e.win.dispatchEvent({ type: 'popstate' }); });
+  const shellHistory = shell ? { releaseAuthHistory: vi.fn((_win, options) => {
+    e.order.push(['shell-release', options.quiet]);
+    if (!options.quiet) e.win.history.back();
+  }) } : null;
+  Object.assign(e.context, { patientsRememberView: noop, patientsDatabaseGeometry: noop,
+    remSearchCalendarTransferCurrent: () => true, remSearchDropReturn: noop, carePatientMount: null,
+    GdAnulujRender: noop, le: {}, xa: null, ee: [], ge: [], sn: false,
+    oe: () => { e.card.isConnected = false; }, Sn_shellHistory: () => shellHistory, xn: 0,
+    ba: () => shell || !!e.win.history.state.vildaNavSentinel });
+  for (const name of ['Qn', '$t']) {
+    const node = unique(find(authAst, item => item.type === 'FunctionDeclaration' && item.id?.name === name), name);
+    vm.runInContext(auth.slice(node.start, node.end), e.context);
+  }
+  return { shellHistory };
+}
+
+async function heldActualAES() {
+  const e = await nativeEnvironment(), gate = deferred(), entered = deferred();
+  const encrypt = e.vault.encryptPayloadForCurrentUser;
+  e.vault.encryptPayloadForCurrentUser = vi.fn(async function (plain) {
+    const cipher = await encrypt.call(this, plain); entered.resolve(plain); await gate.promise; return cipher;
+  });
+  e.win.VildaUiIntents = { ...e.nativeTransport, captureCallerScope: e.capture,
+    prepare: vi.fn((kind, value, scope) => {
+      e.state.scope = scope; e.order.push(['prepare-actual-AES', kind, value.patientId]);
+      return e.nativeTransport.prepare(kind, value, scope);
+    }) };
+  return { ...e, gate, entered };
+}
+
+describe('actual native modal history and delayed encrypted producer', () => {
+  it.each([false, true])('holds the exact card through real AES and quietly retires only its native history before navigation (shell=%s)', async shell => {
+    const e = await heldActualAES(), { shellHistory } = actualNativeClose(e, { shell });
+    e.start(); const plain = await e.entered.promise;
+    expect(plain.value).toEqual({ patientId: TARGET });
+    expect(e.published).toHaveLength(1); expect(e.card.isConnected).toBe(true);
+    expect(e.modal.style.display).toBe('block'); expect(e.after).not.toHaveBeenCalled();
+    expect(e.win.history.back).not.toHaveBeenCalled(); expect(e.nativeTransport.peek('pending-patient-load')).toBeNull();
+    expect(e.win.location.assign).not.toHaveBeenCalled();
+    e.gate.resolve(); await flush();
+    expect(e.modal.style.display).toBe('none'); expect(e.card.isConnected).toBe(false);
+    expect(e.after).toHaveBeenCalledOnce(); expect(e.win.location.assign).toHaveBeenCalledExactlyOnceWith('index.html');
+    expect(e.win.history.back).not.toHaveBeenCalled();
+    if (shell) expect(shellHistory.releaseAuthHistory).toHaveBeenCalledExactlyOnceWith(e.win, { quiet: true });
+    else { expect(e.win.history.state.vildaNavSentinel).toBeUndefined(); expect(e.win.history.replaceState).toHaveBeenCalledOnce(); }
+    const raw = e.nativeTransport.peek('pending-patient-load'), cipher = JSON.parse(raw);
+    expect(Object.keys(cipher).sort()).toEqual(['data', 'iv']); expect(raw).not.toContain(TARGET);
+    expect((await e.vault.decryptPayloadForCurrentUser(cipher.iv, cipher.data)).value).toEqual({ patientId: TARGET });
+  });
+
+  it('preserves generic external Back cancellation during actual AES and never removes a newer encrypted intent', async () => {
+    const e = await heldActualAES(); actualNativeClose(e);
+    e.start(); await e.entered.promise;
+    e.win.history.back(); expect(e.state.scope.isCurrent()).toBe(false);
+    // A new source actor may legitimately own the same slot after that Back.
+    const newerRaw = JSON.stringify({ iv: 'fictional-newer-iv', data: 'fictional-newer-ciphertext' });
+    e.values.set('vilda:ui-intent:pending-patient-load:v1', 'fictional-newer-reservation');
+    e.values.set('vilda:pendingPatientLoad', newerRaw);
+    e.gate.resolve(); await flush();
+    expect(e.win.history.back).toHaveBeenCalledOnce(); expect(e.modal.style.display).toBe('block');
+    expect(e.card.isConnected).toBe(true); expect(e.after).not.toHaveBeenCalled();
+    expect(e.win.location.assign).not.toHaveBeenCalled(); expect(e.messages).not.toHaveBeenCalled();
+    expect(e.values.get('vilda:pendingPatientLoad')).toBe(newerRaw);
+    expect(e.values.get('vilda:ui-intent:pending-patient-load:v1')).toBe('fictional-newer-reservation');
+  });
+
+  it.each(['replaced-card', 'replaced-root', 'history-generation', 'lost-sentinel', 'foreign-sentinel'])('discards a ready encrypted receipt when the original owned close refuses %s', async boundary => {
+    const e = await heldActualAES(); actualNativeClose(e);
+    e.start(); await e.entered.promise;
+    if (boundary === 'replaced-card') e.card.isConnected = false;
+    if (boundary === 'replaced-root') e.context.Rt = { contains: () => true };
+    if (boundary === 'history-generation') e.context.Pa++;
+    if (boundary === 'lost-sentinel') e.win.history.state = {};
+    if (boundary === 'foreign-sentinel') e.context.ye = false;
+    e.gate.resolve(); await flush();
+    expect(e.win.location.assign).not.toHaveBeenCalled(); expect(e.after).not.toHaveBeenCalled();
+    expect(e.win.history.back).not.toHaveBeenCalled(); expect(e.win.history.replaceState).not.toHaveBeenCalled();
+    expect(e.nativeTransport.peek('pending-patient-load')).toBeNull();
+  });
+
+  it('passes only a one-use close capability and retains exact native two-argument default callbacks', async () => {
+    const e = environment(); let finish;
+    e.start(optIn((_value, _id, publication) => publication.afterPublished(close => { finish = close; })));
+    await flush(); expect(typeof finish).toBe('function'); expect(e.close).not.toHaveBeenCalled();
+    expect(finish()).toBe(true); expect(finish()).toBe(false);
+    expect(e.quietHistory).toHaveBeenCalledExactlyOnceWith({ quiet: true });
+    expect(e.close).toHaveBeenCalledOnce(); expect(e.after).toHaveBeenCalledOnce();
+  });
+
+  it('fails closed against an older Auth activation that supplies no private owned-close capability', async () => {
+    const e = environment(); let activate;
+    e.chromePick(payload, TARGET, { version: 1, isCurrent: () => true, afterPublished: callback => { activate = callback; } });
+    await activate();
+    expect(e.capture).not.toHaveBeenCalled(); expect(e.prepare).not.toHaveBeenCalled();
+    expect(e.win.location.assign).not.toHaveBeenCalled();
+    expect(e.messages).toHaveBeenCalledExactlyOnceWith(expect.anything(), 'Odśwież stronę, aby bezpiecznie wczytać pacjenta.');
   });
 });

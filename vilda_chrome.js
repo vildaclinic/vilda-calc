@@ -1049,14 +1049,15 @@ var t=o.getElementById("addVisitNoteBtnSidebar");if(t&&!t._cfBound)try{t.setAttr
   if(!publication||publication.version!==1||typeof publication.afterPublished!=="function"||typeof publication.isCurrent!=="function"){
     F(a,"Od\u015bwie\u017c stron\u0119, aby bezpiecznie wczyta\u0107 pacjenta.");return;
   }
-  var activate=async function(){
+  var activate=async function(closeForNavigation){
   if(!publication.isCurrent())return;
+  if(typeof closeForNavigation!=="function"){F(a,"Odśwież stronę, aby bezpiecznie wczytać pacjenta.");return;}
   var transport=r.VildaUiIntents,scope=null,receipt=null;
   try{
     if(!transport||transport.version!==1)throw new Error("Modu\u0142 bezpiecznej nawigacji niedost\u0119pny. Od\u015bwie\u017c stron\u0119.");
     scope=transport.captureCallerScope();
     receipt=await transport.prepare("pending-patient-load",{patientId:String(v||"")},scope);
-    if(publication.isCurrent()&&receipt.current())r.location.assign("index.html");else receipt.discardExact();
+    if(publication.isCurrent()&&receipt.current()&&closeForNavigation()&&publication.isCurrent()&&receipt.current())r.location.assign("index.html");else receipt.discardExact();
   }catch(error){if(receipt)try{receipt.discardExact()}catch{}if(!scope||scope.isCurrent())F(a,error&&error.message||"Nie uda\u0142o si\u0119 przekaza\u0107 zamiaru. Spr\u00f3buj ponownie.")}
   finally{if(scope)scope.dispose()}
   };

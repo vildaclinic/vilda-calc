@@ -109,9 +109,21 @@ function Il(t,a,n){` },
     }
     return BdZastosuj(value,t);
   },function(operationDetail){` },
-  { label: "activate only after original-authorized native publication", before: String.raw`function(operationDetail){try{typeof i.CustomEvent=="function"&&i.document&&i.document.dispatchEvent(new i.CustomEvent("vilda:patient-loaded",{detail:Object.assign({patientId:t,savedAtISO:ke&&ke.savedAtISO||null,snapshotCount:Ne||null,name:Yt&&Yt.name||null,source:"pick"},operationDetail||{})}))}catch{}$t();if(typeof BdPo=="function")try{BdPo()}catch(BdBlad){Ot("BdWczytajPacjenta po wczytaniu",BdBlad)}})}function Lt()`, after: String.raw`function(operationDetail){try{typeof i.CustomEvent=="function"&&i.document&&(i.document.dispatchEvent(new i.CustomEvent("vilda:patient-loaded",{detail:Object.assign({patientId:t,savedAtISO:ke&&ke.savedAtISO||null,snapshotCount:Ne||null,name:Yt&&Yt.name||null,source:"pick"},operationDetail||{})})),published=true)}catch{}$t();if(typeof BdPo=="function")try{BdPo()}catch(BdBlad){Ot("BdWczytajPacjenta po wczytaniu",BdBlad)}
+  { label: "activate only after original-authorized native publication", before: String.raw`function(operationDetail){try{typeof i.CustomEvent=="function"&&i.document&&i.document.dispatchEvent(new i.CustomEvent("vilda:patient-loaded",{detail:Object.assign({patientId:t,savedAtISO:ke&&ke.savedAtISO||null,snapshotCount:Ne||null,name:Yt&&Yt.name||null,source:"pick"},operationDetail||{})}))}catch{}$t();if(typeof BdPo=="function")try{BdPo()}catch(BdBlad){Ot("BdWczytajPacjenta po wczytaniu",BdBlad)}})}function Lt()`, after: String.raw`function(operationDetail){try{typeof i.CustomEvent=="function"&&i.document&&(i.document.dispatchEvent(new i.CustomEvent("vilda:patient-loaded",{detail:Object.assign({patientId:t,savedAtISO:ke&&ke.savedAtISO||null,snapshotCount:Ne||null,name:Yt&&Yt.name||null,source:"pick"},operationDetail||{})})),published=true)}catch{}
   var activate=afterPublished;afterPublished=null;
-  if(activate&&published&&pickAuthority&&pickAuthority.isCurrent())try{activate()}catch(error){Ot("patient navigation after publication",error)}
+  function closeNative(){ $t();if(typeof BdPo=="function")try{BdPo()}catch(BdBlad){Ot("BdWczytajPacjenta po wczytaniu",BdBlad)} }
+  if(activate&&published&&pickAuthority&&pickAuthority.isCurrent()){
+    // Encrypt while this exact card still owns the native modal. Quietly retire
+    // only its own history sentinel once the ready receipt can navigate in the
+    // same turn; an unrelated Back remains a normal caller-scope boundary.
+    var pickCard=Eo,pickRoot=Rt,pickHistory=Pa,closeClaimed=false;
+    var closeForNavigation=function(){
+      if(closeClaimed||!pickAuthority.isCurrent()||Eo!==pickCard||!pickCard||!pickCard.isConnected
+        ||Rt!==pickRoot||!pickRoot||!pickRoot.contains(pickCard)||Pa!==pickHistory||!!ye!==!!ba())return false;
+      closeClaimed=true;Qn({quiet:true});closeNative();return true;
+    };
+    try{activate(closeForNavigation)}catch(error){Ot("patient navigation after publication",error)}
+  }else closeNative();
 })}function Lt()` },
 ]
 export function applyUiIntentAuthHooks(source) {

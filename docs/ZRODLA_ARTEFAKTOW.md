@@ -2810,7 +2810,7 @@ Auth pozostaje bajtowo identyczny; cały blok Bsc pozostaje identyczny bez
 żadnego przekształcenia. Istniejące 6 par Bsc, 16 par zabezpieczeń oraz
 haki Home/B1 zachowują dokładne odwracanie i ponowne odtwarzanie.
 
-Piny aktualnego artefaktu obliczone przez rzeczywiste odwrócenia wynoszą:
+Piny artefaktu `0ec46a2b`, obliczone przez rzeczywiste odwrócenia, wynoszą:
 
 - po odwróceniu Bsc: `615ee925876c5197f03187d3064d97e4168afd7b034230525a1fae0cfff40248`;
 - po odwróceniu zabezpieczeń i Bsc: `12c87b88789bb0e0de6f5ce31fa30adfe82d6952de12ae683e54f7bb4f517a2c`;
@@ -2821,3 +2821,55 @@ Historyczne skróty w poprzednich sekcjach opisują wskazane tam wcześniejsze
 artefakty. Ochrona historii precache wskazuje dokładny opublikowany worker
 `2fb15ce2` ze skrótem
 `df3cc614b1d687b33e46495cb5afe002c5366f5d6bb0374bddd9b0bf2dd6025c`.
+
+## Ponowienie siatki po Wyczyść i własne zamknięcie nawigacji
+
+W `vilda_centile_live_panel.js` siatka żądana w trakcie natywnej bariery
+po Wyczyść pozostaje ukryta do istniejącego absolutnego terminu
+`window.__vildaPersistClearUntil`. Dla przyczyny `cleared` panel ustawia
+jeden termin ponownego sprawdzenia i po jego upływie wywołuje zwykły,
+świeży odczyt niezmienionego adaptera Data. Nie zachowuje poprzedniego
+rysunku ani danych do późniejszego odtworzenia. Nie odpytuje cyklicznie,
+nie dodaje arbitralnej zwłoki i nie skraca bariery. Życie tego żądania
+sprawdza dotychczasową generację panelu, konto i opcjonalny natywny bilet,
+tryb przechowywania, widok, dokument, ramkę i termin bariery. Wyczyść,
+ukrycie, zmiana właściciela lub nawigacja unieważniają stare żądanie.
+Anonimowy formularz zachowuje dotychczasowe uprawnienie Data, również bez
+sejfu. Test wykonuje rzeczywiste Data i Panel: żądanie po 2400 ms przy
+natywnym terminie 2500 ms nie rysuje wcześniej, a po upływie bariery
+wykonuje jeden świeży odczyt nowego formularza bez dodatkowego zdarzenia.
+
+W Auth/Chrome odbiorca bez lokalnego formularza nadal używa pierwotnego
+zaakceptowanego wczytania i natywnego powiadomienia o pacjencie. Dopiero
+po tej publikacji opcjonalny aktor Chrome przygotowuje zaszyfrowany zamiar,
+gdy pierwotna karta wciąż jest zamontowana. Po potwierdzeniu szyfrogramu
+jednorazowa funkcja sprawdza tę samą kartę, korzeń, generację historii
+i uprawnienie konta, wywołuje istniejące `Qn({quiet:true})` oraz natywne
+zamknięcie i `BdPo`, po czym Chrome ponownie sprawdza oba uprawnienia
+i przechodzi dalej w tym samym obrocie. Zwykłe Wstecz nadal anuluje
+przygotowanie. Błąd lub odmowa zamknięcia odrzuca wyłącznie dokładny
+szyfrogram tego aktora, zachowując nowszy zamiar. Domyślne wywołanie
+z dwoma argumentami i jego kolejność pozostają natywne; starszy Auth
+bez prywatnej funkcji zamknięcia daje komunikat o odświeżeniu.
+
+Te zmiany nie modyfikują Data, ogólnego modułu zamiarów, Bsc, sejfu,
+obliczeń, norm, dokumentacji klinicznej pacjenta ani identyfikatorów.
+W testach trzech konkretnych wariantów przygotowanie fikcyjnego konta
+korzysta z istniejącego oczekiwania na rzeczywistą gotowość konta przed
+zaplanowanym przeładowaniem. Test gościa czeka na przycisk lub potwierdzony
+stan sesji. Zachowano wszystkie końcowe asercje i limity testów.
+
+Oficjalne narzędzie wersji nadało panelowi adres `?v=10`, zachowując
+wcześniejsze adresy cache i archiwa. Końcowe źródła Auth i Chrome są
+bajtowo identyczne z ocenionymi źródłami obu funkcjonalnych poprawek.
+Aktualne ścisłe piny po rzeczywistych odwróceniach wynoszą:
+
+- Bsc: `7c002007d18d95425c6b674182d82bcfa67ff003ea887e1538a4091c7352058f`;
+- zabezpieczenia i Bsc: `12c87b88789bb0e0de6f5ce31fa30adfe82d6952de12ae683e54f7bb4f517a2c`;
+- Przypomnienia i Bsc: `2cf61af7dc6ee9bf7fd83f717d6edbf72f46a427c33d9238b2860376b23ecf24`;
+- oba ostatnie zestawy i Bsc: `c2deeccd66218ec110fd56ddde619d96d45986ede4f27f47cdaa679540542744`.
+
+Zmiana pinu Bsc/Przypomnień wynika wyłącznie z jawnej, odwracalnej pary
+Auth obsługującej własne zamknięcie; odwrócenie 16 par zabezpieczeń nadal
+daje tę samą bazę natywną. Wszystkie sześć par Bsc oraz haki Home/B1
+odwracają się i odtwarzają dokładnie.

@@ -9,8 +9,8 @@ export const LAYOUT_ROUTES = [
 
 // Real production pages and one isolated, encrypted, fictional account. No
 // replaced layout, measured CSS variables or copied layout calculations.
-export async function prepareLayoutRoute(page, shell, route) {
-  const created = await createFictionalVault(page, { shell });
+export async function prepareLayoutRoute(page, shell, route, { waitForAccountReadyBeforeReload = false } = {}) {
+  const created = await createFictionalVault(page, { shell, waitForAccountReadyBeforeReload });
   let owner = created.frame;
   if (route.route !== 'start') {
     if (shell) {

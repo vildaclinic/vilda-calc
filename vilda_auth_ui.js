@@ -3692,9 +3692,21 @@ var BdWczytajPacjenta=function(BdZastosuj,BdPo){var patientLoad=patientLoadCaptu
       }}))}finally{registrationOpen=false}
     }
     return BdZastosuj(value,t);
-  },function(operationDetail){try{typeof i.CustomEvent=="function"&&i.document&&(i.document.dispatchEvent(new i.CustomEvent("vilda:patient-loaded",{detail:Object.assign({patientId:t,savedAtISO:ke&&ke.savedAtISO||null,snapshotCount:Ne||null,name:Yt&&Yt.name||null,source:"pick"},operationDetail||{})})),published=true)}catch{}$t();if(typeof BdPo=="function")try{BdPo()}catch(BdBlad){Ot("BdWczytajPacjenta po wczytaniu",BdBlad)}
+  },function(operationDetail){try{typeof i.CustomEvent=="function"&&i.document&&(i.document.dispatchEvent(new i.CustomEvent("vilda:patient-loaded",{detail:Object.assign({patientId:t,savedAtISO:ke&&ke.savedAtISO||null,snapshotCount:Ne||null,name:Yt&&Yt.name||null,source:"pick"},operationDetail||{})})),published=true)}catch{}
   var activate=afterPublished;afterPublished=null;
-  if(activate&&published&&pickAuthority&&pickAuthority.isCurrent())try{activate()}catch(error){Ot("patient navigation after publication",error)}
+  function closeNative(){ $t();if(typeof BdPo=="function")try{BdPo()}catch(BdBlad){Ot("BdWczytajPacjenta po wczytaniu",BdBlad)} }
+  if(activate&&published&&pickAuthority&&pickAuthority.isCurrent()){
+    // Encrypt while this exact card still owns the native modal. Quietly retire
+    // only its own history sentinel once the ready receipt can navigate in the
+    // same turn; an unrelated Back remains a normal caller-scope boundary.
+    var pickCard=Eo,pickRoot=Rt,pickHistory=Pa,closeClaimed=false;
+    var closeForNavigation=function(){
+      if(closeClaimed||!pickAuthority.isCurrent()||Eo!==pickCard||!pickCard||!pickCard.isConnected
+        ||Rt!==pickRoot||!pickRoot||!pickRoot.contains(pickCard)||Pa!==pickHistory||!!ye!==!!ba())return false;
+      closeClaimed=true;Qn({quiet:true});closeNative();return true;
+    };
+    try{activate(closeForNavigation)}catch(error){Ot("patient navigation after publication",error)}
+  }else closeNative();
 })}function Lt(){if(!patientLoadCurrent(patientLoad))return;Promise.resolve().then(function(){if(!patientLoadCurrent(patientLoad))return null;return o.getPatient(t)}).then(function(Yt){if(!patientLoadCurrent(patientLoad))return;var ke=Yt&&Array.isArray(Yt.snapshots)?Yt.snapshots:[],Ne=ke.length?ke[0]:patientLoad.api?null:c,ea=Ne&&Ne.payload||(!patientLoad.api?s:null);if(ea)ct(ea,Ne,Yt&&Yt.snapshotCount||d.length||null)}).catch(function(){if(!patientLoad.api&&patientLoadCurrent(patientLoad))ct(s,c,l&&l.snapshotCount||d.length||null)})}wo(t,s&&s.name||null,Lt)};
 var BdZastosujNaStronie=function(BdDane){
   if(BdDane)try{i.applyLoadedData(BdDane)}catch{}

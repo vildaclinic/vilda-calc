@@ -3383,6 +3383,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_centile_live_panel.js?v=7',
   '/vilda_centile_live_panel.js?v=8',
   '/vilda_centile_live_panel.js?v=9',
+  '/vilda_centile_live_panel.js?v=10',
 
   '/vilda_hormone_lifespan_data.js?v=1',
   '/vilda_hormone_lifespan_data.js?v=2',

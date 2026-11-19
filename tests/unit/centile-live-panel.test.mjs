@@ -117,7 +117,7 @@ function setup({ columns = '400px 400px', rects = true, lifecycle = false, eligi
   return { win, doc, data, pending, views, hosts, open, preview, render, snapshot, style, classes, mount, fieldset, doctor, form, puberty,
     get api() { return win.VildaCentileLivePanel; },
     startController: () => loadBrowserScript('vilda_centile_live_panel.js', win),
-    element, notice, noticeTitle, noticeMessage, retryButton, boundsJobs, prepareContentBounds, animations,
+    element, notice, noticeTitle, noticeMessage, retryButton, boundsJobs, prepareContentBounds, animations, timers,
     setEligibility: value => { eligibility = value; },
     emit: (event) => subscribers.forEach((fn) => fn(event)),
     replacePatient: (name = 'patient-b') => { currentToken = Object.freeze({ fictional: name, revision: 2 }); },
@@ -1490,5 +1490,134 @@ describe('standalone summary chart presentation', () => {
     e.pending[0].resolve({ status: 'ready', snapshot: e.snapshot() }); await flush();
     expect(e.classes.has('vilda-centile-live-reserved')).toBe(true);
     expect(e.views).toHaveLength(1);
+  });
+});
+
+// Exercise the real data adapter's clear quarantine with the production panel.
+// The view/renderer stay lightweight; no eligibility or snapshot rule is copied.
+function setupClearFence({ guest = false, selected = 'summary' } = {}) {
+  vi.useFakeTimers();
+  vi.setSystemTime(5000);
+  const presentation = { mode: 'summary', selected };
+  const e = setup({ deferStart: true, summaryPresentation: presentation });
+  const fields = Object.fromEntries(Object.entries({ age: '12', ageMonths: '0', height: '145', weight: '39', sex: 'F' })
+    .map(([id, value]) => [id, { id, value }]));
+  const originalField = e.doc.getElementById, originalQuery = e.doc.querySelector;
+  e.doc.getElementById = id => fields[id] || originalField(id);
+  e.doc.querySelector = selector => selector === 'input[name="dataSource"]:checked' ? { value: 'OLAF' } : originalQuery(selector);
+  const state = { userId: 'FICTIONAL-ACCOUNT', unlocked: true, mode: 'local', generation: 1, ephemeral: false, cloud: false };
+  const hooks = { lock: [], unlock: [] }, writes = vi.fn();
+  e.win.location = { href: 'https://fictional.invalid/index.html', pathname: '/index.html' };
+  e.win.sessionStorage = { getItem: () => null, setItem: writes, removeItem: writes };
+  e.win.VildaDataImportExport = { getApplyLoadedDataSequence: () => 1, isMainSessionRestorePending: () => false };
+  e.win.advancedGrowthData = { measurements: [] };
+  e.win.chartCreatorData = {};
+  e.win.collectUserData = writes; e.win.vildaPersistFlushNow = writes; e.win.debouncedUpdate = writes;
+  if (!guest) {
+    e.win.VildaPersistence = { isEphemeralMode: () => state.ephemeral, isCloudOnlyMode: () => state.cloud };
+    e.win.VildaVault = {
+      getCurrentUser: () => ({ userId: state.userId }), isUnlocked: () => state.unlocked,
+      getCurrentStorageModeSync: () => state.mode,
+      captureSyncOperationSession: () => ({ userId: state.userId, mode: state.mode, generation: state.generation }),
+      assertSyncOperationSession: ticket => {
+        if (ticket.userId !== state.userId || ticket.mode !== state.mode || ticket.generation !== state.generation) throw Error('FICTIONAL-STALE-OWNER');
+      },
+      getPatient: vi.fn(), onLock: callback => hooks.lock.push(callback), onUnlock: callback => hooks.unlock.push(callback),
+    };
+  }
+  delete e.win.VildaCentileLiveData;
+  loadBrowserScript('vilda_centile_live_data.js', e.win);
+  const actualData = e.win.VildaCentileLiveData;
+  const getResult = vi.fn(options => actualData.getResult(options));
+  e.win.VildaCentileLiveData = Object.freeze({ ...actualData, getResult });
+  e.startController();
+  function clearDraft() {
+    e.win.__vildaPersistClearUntil = Date.now() + 2500;
+    e.win.dispatchEvent({ type: 'vilda:user-state-cleared' });
+    fields.age.value = ''; fields.height.value = ''; fields.weight.value = '';
+  }
+  function fillDraft(height = '150') {
+    fields.age.value = '12'; fields.height.value = height; fields.weight.value = '40';
+    e.doc.dispatchEvent({ type: 'input', target: fields.height });
+  }
+  function chart() {
+    presentation.selected = 'chart';
+    e.doc.dispatchEvent({ type: 'vilda:summary-chart-state' });
+  }
+  return { ...e, actualData, getResult, state, fields, writes, presentation, hooks, clearDraft, fillDraft, chart };
+}
+
+describe('summary chart wakeup at the existing clear fence expiry', () => {
+  afterEach(() => { vi.useRealTimers(); });
+
+  it.each([false, true])('revalidates one fresh draft at native expiry without another event; guest=%s', async guest => {
+    const e = setupClearFence({ guest });
+    e.clearDraft(); e.fillDraft();
+    const until = e.win.__vildaPersistClearUntil;
+    vi.setSystemTime(7400); e.chart();
+    expect(e.actualData.getEligibility({ mode: 'summary' })).toEqual({ status: 'ineligible', reason: 'cleared' });
+    expect(e.mount.hidden).toBe(true); expect(e.getResult).not.toHaveBeenCalled(); expect(e.preview).not.toHaveBeenCalled();
+    expect([...e.timers.values()].map(timer => timer.due)).toEqual([until]);
+    vi.setSystemTime(until - 1); e.runDueTimers(); await flush();
+    expect(e.getResult).not.toHaveBeenCalled(); expect(e.preview).not.toHaveBeenCalled();
+    vi.setSystemTime(until); e.runDueTimers(); await flush();
+    expect(e.getResult).toHaveBeenCalledTimes(1); expect(e.getResult).toHaveBeenCalledWith({ mode: 'summary' });
+    expect(e.preview).toHaveBeenCalledTimes(1);
+    expect(e.preview).toHaveBeenCalledWith(expect.objectContaining({ patientId: null, currentHeight: 150, currentWeight: 40 }));
+    expect(e.api.getState()).toMatchObject({ eligible: true, status: 'ready', patientId: null });
+    expect(e.mount.hidden).toBe(false); expect(e.win.__vildaPersistClearUntil).toBe(until); expect(e.writes).not.toHaveBeenCalled();
+    vi.setSystemTime(until + 30000); e.runDueTimers(); await flush();
+    expect(e.getResult).toHaveBeenCalledTimes(1);
+  });
+
+  it('wakes the already selected chart after a fresh input schedules during quarantine', async () => {
+    const e = setupClearFence({ selected: 'chart' }); await flush();
+    e.getResult.mockClear(); e.preview.mockClear();
+    e.clearDraft(); vi.setSystemTime(7400); e.fillDraft('151');
+    expect(e.mount.hidden).toBe(true); expect(e.getResult).not.toHaveBeenCalled();
+    const until = e.win.__vildaPersistClearUntil;
+    expect([...e.timers.values()].map(timer => timer.due)).toEqual([until]);
+    vi.setSystemTime(until); e.runDueTimers(); await flush();
+    expect(e.getResult).toHaveBeenCalledTimes(1);
+    expect(e.preview).toHaveBeenCalledWith(expect.objectContaining({ patientId: null, currentHeight: 151 }));
+    expect(e.views).toHaveLength(2); expect(e.views[0].destroy).toHaveBeenCalledOnce();
+  });
+
+  it('also schedules the native expiry when an awaited read returns the real cleared result', async () => {
+    const e = setupClearFence(); e.clearDraft(); e.fillDraft();
+    vi.setSystemTime(e.win.__vildaPersistClearUntil);
+    let finish;
+    e.getResult.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+    e.chart();
+    e.win.__vildaPersistClearUntil = Date.now() + 2500;
+    finish(await e.actualData.getResult({ mode: 'summary' })); await flush();
+    expect(e.mount.hidden).toBe(true); expect(e.preview).not.toHaveBeenCalled();
+    const until = e.win.__vildaPersistClearUntil;
+    expect([...e.timers.values()].map(timer => timer.due)).toEqual([until]);
+    vi.setSystemTime(until); e.runDueTimers(); await flush();
+    expect(e.getResult).toHaveBeenCalledTimes(2); expect(e.preview).toHaveBeenCalledTimes(1);
+    expect(e.preview).toHaveBeenCalledWith(expect.objectContaining({ patientId: null, currentHeight: 150 }));
+  });
+
+  it.each(['clear', 'hide', 'lock', 'account', 'mode', 'native-session', 'navigation', 'removed-mount', 'pagehide'])('%s cancels the old expiry request and cannot revive the erased drawing', async reason => {
+    const e = setupClearFence({ selected: 'chart' }); await flush();
+    const oldView = e.views[0]; expect(oldView).toBeDefined();
+    e.getResult.mockClear(); e.preview.mockClear();
+    e.clearDraft(); e.fillDraft(); vi.setSystemTime(7400); e.chart();
+    expect(oldView.destroy).toHaveBeenCalledOnce(); expect(e.mount.hidden).toBe(true);
+    const until = e.win.__vildaPersistClearUntil, oldExpiry = [...e.timers.values()].find(timer => timer.due === until).fn;
+    if (reason === 'clear') e.clearDraft();
+    if (reason === 'hide') { e.presentation.selected = 'summary'; e.doc.dispatchEvent({ type: 'vilda:summary-chart-state' }); }
+    if (reason === 'lock') { e.state.unlocked = false; e.state.generation += 1; e.hooks.lock.forEach(callback => callback()); }
+    if (reason === 'account') e.state.userId = 'FICTIONAL-ACCOUNT-B';
+    if (reason === 'mode') { e.state.mode = 'cloud-only'; e.state.cloud = true; }
+    if (reason === 'native-session') e.state.generation += 1;
+    if (reason === 'navigation') e.win.location.href = 'https://fictional.invalid/index.html#/another-view';
+    if (reason === 'removed-mount') e.mount.isConnected = false;
+    if (reason === 'pagehide') e.win.dispatchEvent({ type: 'pagehide' });
+    vi.setSystemTime(until); oldExpiry(); e.runDueTimers(); await flush();
+    vi.setSystemTime(until + 10000); e.runDueTimers(); await flush();
+    expect(e.getResult).not.toHaveBeenCalled(); expect(e.preview).not.toHaveBeenCalled(); expect(e.views).toHaveLength(1);
+    expect(oldView.update).toHaveBeenCalledOnce(); expect(e.mount.hidden).toBe(true); expect(e.writes).not.toHaveBeenCalled();
   });
 });

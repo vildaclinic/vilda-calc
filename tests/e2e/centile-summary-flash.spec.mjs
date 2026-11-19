@@ -118,7 +118,7 @@ async function painted(page, count = 20) {
   }), count);
 }
 
-async function prepareDocPro(page, shell, { choice = 'new', route = 'docpro' } = {}) {
+async function prepareDocPro(page, shell, { choice = 'new', route = 'docpro', waitForAccountReadyBeforeReload = false } = {}) {
   await page.addInitScript(installSummaryProbe);
   // Publiczny hook wyłącznie fikcyjnego konta. Uprawnienie powstaje w rzeczywistym
   // dokumencie przed odtworzeniem; po reloadzie nie naprawiamy PRO ani wyników.
@@ -133,7 +133,7 @@ async function prepareDocPro(page, shell, { choice = 'new', route = 'docpro' } =
       grant();
     }.toString()})();` });
   });
-  const fixture = await createFictionalVault(page, { shell });
+  const fixture = await createFictionalVault(page, { shell, waitForAccountReadyBeforeReload });
   let owner;
   if (route === 'start') {
     owner = fixture.frame;
@@ -224,7 +224,7 @@ for (const route of ['start', 'docpro']) {
   for (const shell of [false, true]) {
     test(`${route} ${shell ? 'SPA' : 'samodzielne'}: opóźnione porównanie nie odsłania Podsumowania ani nie opóźnia siatki`, async ({ page }) => {
       await holdComparisonOnReload(page);
-      const { id } = await prepareDocPro(page, shell, { route });
+      const { id } = await prepareDocPro(page, shell, { route, waitForAccountReadyBeforeReload: shell && route === 'start' });
       await page.evaluate(() => sessionStorage.setItem('__e2eHoldComparison', 'true'));
       await page.reload({ waitUntil: 'load' });
       const owner = shell ? await shellFrame(page, route === 'start' ? 'Start' : 'DocPro') : page;
