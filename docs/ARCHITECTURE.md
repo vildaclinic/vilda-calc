@@ -488,6 +488,61 @@ kartę, epokę UI i tożsamość szyfrogramu. Opuszczenie dokumentu (`pagehide`)
 trwającą kryptografię, lecz zachowuje wcześniej zatwierdzony transport.
 Szczegóły zachowania i granic: `docs/REMINDERS_SEARCH.md`.
 
+### Szyfrowane zamiary GH i wczytania pacjenta
+
+`vilda_ui_intents.js` jest leniwym transportem UI: samo załadowanie nie czyta
+konta, nie odblokowuje sejfu ani nie uruchamia odtwarzania. Korzysta wyłącznie
+z publicznych `encryptPayloadForCurrentUser` / `decryptPayloadForCurrentUser`.
+Natywny zapis pacjentów, notatek, preferencji i synchronizacja pozostają poza
+transportem. Czytelny, odwracalny delta-hook Auth znajduje się w
+`tools/private-ui-intent-auth-hooks.mjs`; jego odwrócenie daje dokładny Auth
+po scaleniu #995 i zatwierdzonych zmian Home/B1. Hook prezentacji Przypomnień
+odwraca się niezależnie, także po tej zmianie bezpieczeństwa.
+
+| Klucz | Zawartość i właściciel | Zużycie |
+|---|---|---|
+| `vilda:gh-jump` | Natywny `sessionStorage` wspólny ramek tej karty; wyłącznie `{iv,data}`. W szyfrogramie: konto, karta, cel i oryginalny czas kliknięcia. | Natywne 60 sekund od kliknięcia, bez przedłużania przez kryptografię. Dokładny szyfrogram jest zużywany dopiero przed natywną decyzją o niezapisanych danych lub podświetleniem punktu; oczekiwanie na tę decyzję po zużyciu nie dostaje nowego TTL. |
+| `vilda:pendingPatientLoad` | Ten sam natywny backend i klucz, wyłącznie `{iv,data}`; identyfikator pacjenta zachowany bez normalizacji, także z importu. | Jak wcześniej: bez TTL. Odtworzenie starszej sesji głównej kończy się przed przechwyceniem nowej operacji zaakceptowanego wczytania; zużycie następuje przed natywnym odczytem pacjenta. |
+| `vilda:ui-intent-epoch:v1` | Wyłącznie publiczna losowa epoka UI, bez identyfikatorów i danych. | Granice konta/sesji unieważniają oba rodzaje zamiaru. |
+| `vilda:ui-intent:<kind>:v1` | Wyłącznie publiczny losowy nonce rezerwacji jednego rodzaju zamiaru. | Rezerwacja przed `await` ustala ostatnie kliknięcie między ramkami. Starsze zakończenie nie zastępuje ani nie usuwa nowszego. |
+
+Producent czeka na zatwierdzony szyfrogram i sprawdza właściciela przed tą samą
+natywną nawigacją. Konto, odblokowanie, referencja sejfu, jego nieprzenośny token
+sesji, dokument, backend, karta, epoka, publiczny tryb pamięci, rezerwacja oraz
+aktualność źródła są sprawdzane przed i po asynchronicznej kryptografii.
+Token sejfu i klucze nie są serializowane. Odczyt nie zużywa zamiaru; osobny
+synchroniczny CAS zużywa wyłącznie sprawdzony szyfrogram. Stary plaintext jest
+wycofywany przez CAS, nigdy migrowany ani zapisywany ponownie. Nie ma fallbacku
+z jawnymi identyfikatorami. Cel B przy pacjencie A lub pustym formularzu pozostaje
+prawidłowym przekazaniem; transport nie wymaga zgodności celu z formularzem.
+
+Auth czyści transport przy rzeczywistym `onLock`, świeżym `onUnlock` i zmianie
+poświadczeń; natywny trigger `restore` go zachowuje. Publiczny
+`Sync.onSyncStart({operation:'revoke'})`, istniejący między dokumentami znacznik
+`vilda-sync-revoked-v1:` oraz obsługiwany przełącznik trybu w Ustawieniach
+unieważniają epokę. Opcjonalny hook UI nie może zatrzymać natywnego ustawienia
+trybu ani obsługi logowania. `pagehide` anuluje wyłącznie lokalną trwającą
+operację, zachowując zatwierdzony zamiar do zwykłej nawigacji. Gotowość Auth
+pozostaje obowiązkiem konkretnego konsumenta; helper nie oczekuje globalnie na
+`isBootReady`, co wewnątrz boot mogłoby zablokować jego własne zakończenie.
+
+Granica gwarancji: świeży konsument porównuje publiczny bieżący tryb z kopertą,
+a obserwowane hooki UI unieważniają zatwierdzony zamiar. Bezpośredni publiczny
+`rotateSyncIdentity` oraz historia trybu A→B→A poza tymi obsługiwanymi hookami
+nie mają ogólnego publicznego zdarzenia; helper nie odczytuje prywatnego SIS
+ani nie obiecuje wykrycia takiej historii między dokumentami. Natywny token
+zatrzymuje takie zmiany w operacji trwającej. Przy całkowicie niedostępnej
+pamięci czyszczenie zwraca niepowodzenie i unieważnia stan lokalny; nie da się
+wtedy zagwarantować zapisu unieważnienia w innym dokumencie.
+
+Wspólny generator identyfikatorów Przypomnień zachowuje `crypto.randomUUID`;
+awaryjna ścieżka używa 128 bitów z `getRandomValues` i formatu UUIDv4. Nie ma
+`Math.random` ani zegara. Zmienia wyłącznie świeżo generowany identyfikator,
+bez przepisywania istniejących ID, prefiksów ani pól DTO. Natywne cykle retry
+pozostają: wynik zachowuje operationId dla tej samej sygnatury, zmiana żądania
+otrzymuje nowy ID, a nowe przypomnienie zachowuje noteId przez całe życie
+formularza. Brak WebCrypto kończy otwarcie formularza przed natywnym zapisem.
+
 **Aktualność Search (PR4).** `vilda_global_search.js` utrzymuje jeden rejestr
 hooków na sejf oraz refcount kontekstów okna/dokumentu. Aktywne usługi odbierają
 istniejące `vilda-notes`, `vilda-note-changed-ping-v1` i `vilda:sync-merged`.

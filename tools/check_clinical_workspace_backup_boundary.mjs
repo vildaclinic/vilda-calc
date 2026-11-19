@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const hashes = {
   'vilda_file_export.js': '9ec1ebe6cee9aafc3a8a7d9bfd6ab151070785e256d575e76980192b4523d15a',
-  'inline_ustawienia_04.js': '5061df580689c72a4f58b84e2383a48559813774dbb73fa246f03898cfa21e3a'
+  'inline_ustawienia_04.js': '40792466a5ee6ba69808b34e241f1978a16cc42cdfd68989ede9d7a78a571c2d'
 };
 const hash = value => createHash('sha256').update(value).digest('hex');
 export function verifyClinicalWorkspaceBackup(repository = root) {

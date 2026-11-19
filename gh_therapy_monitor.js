@@ -245,7 +245,7 @@ function ghJumpSourcePatient(){
   }catch(_){return null}
 }
 function ghJumpConsume(claim){
-  try{const storage=window.sessionStorage;if(storage&&storage.getItem("vilda:gh-jump")===claim.raw){storage.removeItem("vilda:gh-jump");claim.consumed=true;return true}}
+  try{if(claim.transportLease&&claim.transportLease.consumeExact()){claim.consumed=true;return true}}
   catch(_){}return false;
 }
 function ghJumpCleanup(claim){
@@ -258,14 +258,17 @@ function ghJumpFinish(claim){
   if(ghJumpAttemptLease===claim)ghJumpAttemptLease=null;
 }
 function ghJumpCancel(claim){
-  if(claim.finished)return;claim.cancelled=true;ghJumpConsume(claim);
+  if(claim.finished)return;claim.cancelled=true;
+  try{
+    if(claim.transportLease)claim.transportLease.discardExact();
+    else if(ghJumpRaw()===claim.raw)window.sessionStorage.removeItem("vilda:gh-jump");
+  }catch(_){}
   claim.abort.splice(0).forEach(function(fn){try{fn(false)}catch(_){}});
   ghJumpFinish(claim);
 }
-function ghJumpCurrent(claim,afterGuard){
+function ghJumpOwnerCurrent(claim,afterGuard){
   try{
     if(claim.finished||claim.cancelled||claim.serial!==ghJumpIntentSerial||window.document!==claim.document)return false;
-    const raw=ghJumpRaw();if(claim.consumed?raw!==null:raw!==claim.raw)return false;
     if(window.VildaVault!==claim.vault||!claim.vault.isUnlocked()||claim.vault.getCurrentUser().userId!==claim.userId)return false;
     claim.vault.assertSyncOperationSession(claim.ticket);
     if(!afterGuard){const source=ghJumpSourcePatient();if(!source||source.id!==claim.sourcePatientId)return false}
@@ -275,6 +278,10 @@ function ghJumpCurrent(claim,afterGuard){
     }else if(String(window.location.href)!==claim.href||claim.document.hidden===true)return false;
     return true;
   }catch(_){return false}
+}
+function ghJumpCurrent(claim,afterGuard){
+  const raw=ghJumpRaw();
+  return (claim.consumed?raw===null:raw===claim.raw)&&ghJumpOwnerCurrent(claim,afterGuard)&&(!claim.transportLease||claim.transportLease.current());
 }
 function ghJumpCapture(raw,intent){
   try{
@@ -298,7 +305,7 @@ function ghJumpCapture(raw,intent){
     if(frame&&typeof window.MutationObserver==="function"){
       const observer=new window.MutationObserver(cancel);observer.observe(frame,{attributes:true,attributeFilter:["hidden","src"]});claim.cleanup.push(function(){observer.disconnect()});
     }
-    if(typeof intent.ts==="number")claim.expiry=window.setTimeout(cancel,Math.max(0,Math.min(60000,60000-(Date.now()-intent.ts))));
+    if(intent&&typeof intent.ts==="number")claim.expiry=window.setTimeout(cancel,Math.max(0,Math.min(60000,60000-(Date.now()-intent.ts))));
     return claim;
   }catch(_){return null}
 }
@@ -322,16 +329,12 @@ function ghJumpWatchAttempt(claim){
 }
 async function N(){
   const e=ghJumpRaw();if(!e)return;
-  let n;try{n=JSON.parse(e)}catch(_){n=null}
-  const removeExact=function(){try{if(window.sessionStorage.getItem("vilda:gh-jump")===e)window.sessionStorage.removeItem("vilda:gh-jump")}catch(_){}};
-  if(!n||!n.ghPointId){removeExact();return}
-  if(typeof n.ts==="number"&&Date.now()-n.ts>60000){removeExact();return}
-  // Legacy point-only intents do not load or replace a patient.
-  if(!n.patientId){pe(n.ghPointId);removeExact();return}
+  const auth=window.VildaAuthUI;
+  if(auth&&typeof auth.isBootReady==="function"&&!auth.isBootReady())return;
   if(ghJumpPendingClaim&&ghJumpPendingClaim.raw===e)return;
   if(ghJumpPendingClaim)ghJumpCancel(ghJumpPendingClaim);
   if(ghJumpAttemptLease)ghJumpCancel(ghJumpAttemptLease);
-  const claim=ghJumpCapture(e,n);if(!claim){removeExact();return}
+  const claim=ghJumpCapture(e,null);if(!claim)return;
   ghJumpPendingClaim=claim;
   try{
     const api=window.VildaDataImportExport;
@@ -339,6 +342,14 @@ async function N(){
       const startup=await api.whenInitialMainSessionRestoreSettled();
       if(!startup||startup.ready!==true||startup.waited&&/^superseded-/.test(startup.reason)){ghJumpCancel(claim);return}
     }
+    const transport=window.VildaUiIntents;
+    if(!transport||transport.version!==1){ghJumpCancel(claim);return}
+    const lease=await transport.open("gh-jump",e,function(){return ghJumpOwnerCurrent(claim,claim.phase==="attempt")});
+    if(!lease||!ghJumpOwnerCurrent(claim,false)){ghJumpCancel(claim);return}
+    claim.transportLease=lease;const n=lease.value;claim.intent=n;
+    if(typeof n.ts==="number")claim.expiry=window.setTimeout(function(){ghJumpCancel(claim)},Math.max(0,Math.min(60000,60000-(Date.now()-n.ts))));
+    // Native point-only intents highlight without replacing the patient.
+    if(!n.patientId){if(ghJumpCurrent(claim,false)&&ghJumpConsume(claim))pe(n.ghPointId);ghJumpFinish(claim);return}
     while(ghJumpCurrent(claim,false)){
       if(!await ghJumpWaitForGuard(claim)||!ghJumpCurrent(claim,false)){ghJumpCancel(claim);return}
       const r=window._vildaCurrentPatientId||null;
@@ -396,4 +407,4 @@ try{window.VildaChrome&&typeof window.VildaChrome.refreshPatientChip=="function"
    o jego zmianie zdarzenie storage - zmierzone w Chromium: key "vilda:gh-jump", storageArea
    rowne sessionStorage. To jedyna droga, ktora dziala, gdy ramka docpro jest juz zamontowana
    (wtedy nie ma ani ladowania, ani hashchange). Podwojne wejscie w N() jest nieszkodliwe:
-   pierwsze kasuje wpis, drugie nie ma czego konsumowac. */if(o==="vilda:gh-jump"){setTimeout(N,700);return}/* P-GH-EDYCJA-PACJENT (2026-10-06): zmiana pacjenta sesji karty w innej ramce (vildaCurrentPatientId) od razu konczy edycje punktu GH otwarta przy innym pacjencie (P-GH-EDYCJA-LISTA: oba znaczniki niepuste i rozne), razem z nakladka "Edytujesz punkt leczenia" (w body, poza karta). Karte GH chowa przy tym P-TOZSAMOSC-RAMEK (docpro_state_persist.js), ale stan edycji monitora i nakladka zostawaly do najblizszego wczytania listy, zapisu albo usuniecia (zapis i tak byl odmawiany). Bez zmiany danych, modulu i kanalu. */if(o==="vildaCurrentPatientId"){try{Gea()||Gek()}catch(d){p("Zignorowany b\u0142\u0105d pomocniczy w monitorze terapii GH/IGF-1",d)}return}(o==null||/ghTherapyPoints/.test(String(o)))&&typeof window.refreshGHTherapyMonitor=="function"&&window.refreshGHTherapyMonitor()}catch{}}));function n(a,o){var d=document.getElementById("ghRetroDrug");if(d){for(;d.firstChild;)d.removeChild(d.firstChild);var l=a&&R[a]?R[a]:M.concat(V);l.forEach(function(s){var y=document.createElement("option");y.value=s,y.textContent=s,d.appendChild(y)}),o&&l.indexOf(o)>=0&&(d.value=o),t()}}function t(){var a=(document.getElementById("ghRetroDrug")||{}).value||"",o=/^Ngenla/.test(String(a)),p=Gmpod(a),d=document.getElementById("ghRetroDoseLabel");d&&(d.textContent=o?"Dawka podawana (mg/tydzie\u0144)":p?"Dawka na podanie, 2\xD7 na dob\u0119 (mg)":"Dawka podawana (mg/dob\u0119)");var l=document.getElementById("ghRetroDose");l&&l.setAttribute("placeholder",o?"np. 4,9":p?"np. 0,8":"np. 0,9"),Gmi("ghRetro")}window.ghRetroDoseLabelUpdate=t;function r(){var a=(document.getElementById("ghEditDrug")||{}).value||"",o=/^Ngenla/.test(String(a)),p=Gmpod(a),d=document.getElementById("ghEditDoseLabel");d&&(d.textContent=o?"Dawka podawana (mg/tydzie\u0144)":p?"Dawka na podanie, 2\xD7 na dob\u0119 (mg)":"Dawka podawana (mg/dob\u0119)");var l=document.getElementById("ghEditIgfDays");l&&l.setAttribute("placeholder",o?"4":"opc."),Gmsch(o?"t":p?"p":"d")}window.ghEditDoseLabelUpdate=r,window.ghEditDoseInfoUpdate=function(){Gmwpis("ghEdit")},window.ghRetroDoseInfoUpdate=function(){Gmwpis("ghRetro")},window.ghRetroProgramChanged=function(){var a=document.getElementById("ghRetroProg");n(a?a.value:"",null)};function i(){var a=document.getElementById("ghRetroType");if(a){try{D()}catch{}var o=window.ghTherapyPoints||[],d=o.some(function(s){return s&&s.type==="start"}),l=o.some(function(s){return s&&s.type==="end"});Array.prototype.forEach.call(a.options||[],function(s){s.value==="start"?s.disabled=d:s.value==="end"&&(s.disabled=l)}),a.value=d?"continue":"start"}}window.ghRetroSyncTypeOptions=i,window.ghOpenRetroForm=function(){var a=document.getElementById("ghTherapyRetroContainer");if(a){var o=document.getElementById("ghRetroProg"),d=document.getElementById("therProg");if(o&&d){for(;o.firstChild;)o.removeChild(o.firstChild);Array.prototype.forEach.call(d.options||[],function(s){var y=document.createElement("option");y.value=s.value,y.textContent=s.textContent,o.appendChild(y)}),o.value=d.value||""}var l=document.getElementById("therDrug");n(o?o.value:"",l?l.value:null),["ghRetroAge","ghRetroAgeMonths","ghRetroWeight","ghRetroHeight","ghRetroBoneAge","ghRetroDose"].forEach(function(s){var y=document.getElementById(s);y&&(y.value="")}),i(),a.style.display=""}},window.ghCancelRetroForm=function(){var a=document.getElementById("ghTherapyRetroContainer");a&&(a.style.display="none")},window.ghAddRetroPoint=function(){D();var a=document.getElementById("ghRetroType"),o=a?a.value:"continue";/* P-GH-PUNKTY-API rata 3 (D5) */var Gpk=Gpa();if(!Gpk){Gpn();return}/* P-GH-PUNKTY-USZKODZONE */if(Gpg(Gpk))return;{var Gpr=Gpk.sprawdzRodzaj(window.ghTherapyPoints,o);if(!Gpr.ok){B(Gpr.komunikat);return}var Gpw=Gpk.polaZPodawanej({typ:o,lata:(document.getElementById("ghRetroAge")||{}).value,miesiace:(document.getElementById("ghRetroAgeMonths")||{}).value,masa:(document.getElementById("ghRetroWeight")||{}).value,wzrost:(document.getElementById("ghRetroHeight")||{}).value,wiekKostny:(document.getElementById("ghRetroBoneAge")||{}).value,podawana:(document.getElementById("ghRetroDose")||{}).value,preparat:(document.getElementById("ghRetroDrug")||{}).value||null,program:(document.getElementById("ghRetroProg")||{}).value||null,igf1:(document.getElementById("ghRetroIgf1")||{}).value,dniIgf:(document.getElementById("ghRetroIgfDays")||{}).value},"wsteczny");if(!Gpw.ok){B(Gpw.komunikat);return}/* P-GH-NOWE-ID-MONITOR */window.ghTherapyPoints.push(Gpk.punkt(Gpk.noweId(),Gpw.pola)),L(),F(),J("gh-retro-point-added"),typeof window.ghCancelRetroForm=="function"&&window.ghCancelRetroForm()}},ge()||Ze()}function qe(){if(typeof window<"u"&&typeof window.vildaOnReady=="function"){window.vildaOnReady("gh-therapy-monitor:init",X);return}document.readyState==="loading"?document.addEventListener("DOMContentLoaded",X,{once:!0}):X()}qe();try{document.addEventListener("vilda:patient-loaded",function(){setTimeout(N,350)}),typeof window<"u"&&typeof window.vildaOnReady=="function"?window.vildaOnReady("gh-jump:consume",function(){setTimeout(N,700)}):document.readyState==="loading"?document.addEventListener("DOMContentLoaded",function(){setTimeout(N,700)},{once:!0}):setTimeout(N,700),window.addEventListener("hashchange",function(){try{String(location.hash||"").indexOf("docpro")>=0&&setTimeout(N,700)}catch{}})}catch{}})();
+   pierwsze kasuje wpis, drugie nie ma czego konsumowac. */if(o==="vilda:gh-jump"){setTimeout(N,700);return}/* P-GH-EDYCJA-PACJENT (2026-10-06): zmiana pacjenta sesji karty w innej ramce (vildaCurrentPatientId) od razu konczy edycje punktu GH otwarta przy innym pacjencie (P-GH-EDYCJA-LISTA: oba znaczniki niepuste i rozne), razem z nakladka "Edytujesz punkt leczenia" (w body, poza karta). Karte GH chowa przy tym P-TOZSAMOSC-RAMEK (docpro_state_persist.js), ale stan edycji monitora i nakladka zostawaly do najblizszego wczytania listy, zapisu albo usuniecia (zapis i tak byl odmawiany). Bez zmiany danych, modulu i kanalu. */if(o==="vildaCurrentPatientId"){try{Gea()||Gek()}catch(d){p("Zignorowany b\u0142\u0105d pomocniczy w monitorze terapii GH/IGF-1",d)}return}(o==null||/ghTherapyPoints/.test(String(o)))&&typeof window.refreshGHTherapyMonitor=="function"&&window.refreshGHTherapyMonitor()}catch{}}));function n(a,o){var d=document.getElementById("ghRetroDrug");if(d){for(;d.firstChild;)d.removeChild(d.firstChild);var l=a&&R[a]?R[a]:M.concat(V);l.forEach(function(s){var y=document.createElement("option");y.value=s,y.textContent=s,d.appendChild(y)}),o&&l.indexOf(o)>=0&&(d.value=o),t()}}function t(){var a=(document.getElementById("ghRetroDrug")||{}).value||"",o=/^Ngenla/.test(String(a)),p=Gmpod(a),d=document.getElementById("ghRetroDoseLabel");d&&(d.textContent=o?"Dawka podawana (mg/tydzie\u0144)":p?"Dawka na podanie, 2\xD7 na dob\u0119 (mg)":"Dawka podawana (mg/dob\u0119)");var l=document.getElementById("ghRetroDose");l&&l.setAttribute("placeholder",o?"np. 4,9":p?"np. 0,8":"np. 0,9"),Gmi("ghRetro")}window.ghRetroDoseLabelUpdate=t;function r(){var a=(document.getElementById("ghEditDrug")||{}).value||"",o=/^Ngenla/.test(String(a)),p=Gmpod(a),d=document.getElementById("ghEditDoseLabel");d&&(d.textContent=o?"Dawka podawana (mg/tydzie\u0144)":p?"Dawka na podanie, 2\xD7 na dob\u0119 (mg)":"Dawka podawana (mg/dob\u0119)");var l=document.getElementById("ghEditIgfDays");l&&l.setAttribute("placeholder",o?"4":"opc."),Gmsch(o?"t":p?"p":"d")}window.ghEditDoseLabelUpdate=r,window.ghEditDoseInfoUpdate=function(){Gmwpis("ghEdit")},window.ghRetroDoseInfoUpdate=function(){Gmwpis("ghRetro")},window.ghRetroProgramChanged=function(){var a=document.getElementById("ghRetroProg");n(a?a.value:"",null)};function i(){var a=document.getElementById("ghRetroType");if(a){try{D()}catch{}var o=window.ghTherapyPoints||[],d=o.some(function(s){return s&&s.type==="start"}),l=o.some(function(s){return s&&s.type==="end"});Array.prototype.forEach.call(a.options||[],function(s){s.value==="start"?s.disabled=d:s.value==="end"&&(s.disabled=l)}),a.value=d?"continue":"start"}}window.ghRetroSyncTypeOptions=i,window.ghOpenRetroForm=function(){var a=document.getElementById("ghTherapyRetroContainer");if(a){var o=document.getElementById("ghRetroProg"),d=document.getElementById("therProg");if(o&&d){for(;o.firstChild;)o.removeChild(o.firstChild);Array.prototype.forEach.call(d.options||[],function(s){var y=document.createElement("option");y.value=s.value,y.textContent=s.textContent,o.appendChild(y)}),o.value=d.value||""}var l=document.getElementById("therDrug");n(o?o.value:"",l?l.value:null),["ghRetroAge","ghRetroAgeMonths","ghRetroWeight","ghRetroHeight","ghRetroBoneAge","ghRetroDose"].forEach(function(s){var y=document.getElementById(s);y&&(y.value="")}),i(),a.style.display=""}},window.ghCancelRetroForm=function(){var a=document.getElementById("ghTherapyRetroContainer");a&&(a.style.display="none")},window.ghAddRetroPoint=function(){D();var a=document.getElementById("ghRetroType"),o=a?a.value:"continue";/* P-GH-PUNKTY-API rata 3 (D5) */var Gpk=Gpa();if(!Gpk){Gpn();return}/* P-GH-PUNKTY-USZKODZONE */if(Gpg(Gpk))return;{var Gpr=Gpk.sprawdzRodzaj(window.ghTherapyPoints,o);if(!Gpr.ok){B(Gpr.komunikat);return}var Gpw=Gpk.polaZPodawanej({typ:o,lata:(document.getElementById("ghRetroAge")||{}).value,miesiace:(document.getElementById("ghRetroAgeMonths")||{}).value,masa:(document.getElementById("ghRetroWeight")||{}).value,wzrost:(document.getElementById("ghRetroHeight")||{}).value,wiekKostny:(document.getElementById("ghRetroBoneAge")||{}).value,podawana:(document.getElementById("ghRetroDose")||{}).value,preparat:(document.getElementById("ghRetroDrug")||{}).value||null,program:(document.getElementById("ghRetroProg")||{}).value||null,igf1:(document.getElementById("ghRetroIgf1")||{}).value,dniIgf:(document.getElementById("ghRetroIgfDays")||{}).value},"wsteczny");if(!Gpw.ok){B(Gpw.komunikat);return}/* P-GH-NOWE-ID-MONITOR */window.ghTherapyPoints.push(Gpk.punkt(Gpk.noweId(),Gpw.pola)),L(),F(),J("gh-retro-point-added"),typeof window.ghCancelRetroForm=="function"&&window.ghCancelRetroForm()}},ge()||Ze()}function qe(){if(typeof window<"u"&&typeof window.vildaOnReady=="function"){window.vildaOnReady("gh-therapy-monitor:init",X);return}document.readyState==="loading"?document.addEventListener("DOMContentLoaded",X,{once:!0}):X()}qe();try{document.addEventListener("vilda:patient-loaded",function(){setTimeout(N,350)}),document.addEventListener("vilda:auth-boot-settled",function(){setTimeout(N,700)}),typeof window<"u"&&typeof window.vildaOnReady=="function"?window.vildaOnReady("gh-jump:consume",function(){setTimeout(N,700)}):document.readyState==="loading"?document.addEventListener("DOMContentLoaded",function(){setTimeout(N,700)},{once:!0}):setTimeout(N,700),window.addEventListener("hashchange",function(){try{String(location.hash||"").indexOf("docpro")>=0&&setTimeout(N,700)}catch{}})}catch{}})();

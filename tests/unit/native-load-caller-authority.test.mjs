@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { installUiIntentFixture } from '../fixtures/ui-intent-unit-fixture.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const source = name => fs.readFileSync(path.join(root, name), 'utf8');
@@ -69,7 +70,9 @@ function environment() {
   document.addEventListener('vilda:patient-loaded', event => { published.push(event.detail); window._vildaCurrentPatientId = event.detail.patientId; sessionStorage.setItem('vildaCurrentPatientId', event.detail.patientId); });
   const guard = [];
   window.VildaUnsavedGuard = { run: options => { guard.push(options); } };
+  const prepareIntent = installUiIntentFixture(window, vault);
   return { window, document, sessionStorage, vault, api, applied, published, guard, loadResults, records,
+    intent: patientId => prepareIntent('pending-patient-load', { patientId }),
     changeAccount: () => { account = 'fictional-next-account'; keyEpoch++; }, changeKey: () => { keyEpoch++; },
   };
 }
@@ -183,12 +186,12 @@ describe('native version restoration preserves accepted-load authority', () => {
 describe('native pending navigation retains the destination read operation', () => {
   it('captures only after the real startup apply advances its sequence, so the requested patient wins', async () => {
     const h = environment(), initial = deferred();
-    h.sessionStorage.setItem('vilda:pendingPatientLoad', OTHER_PID);
+    const raw = await h.intent(OTHER_PID);
     const capture = vi.spyOn(h.window.VildaDataImportExport, 'captureAcceptedPatientLoad');
     const run = pendingChrome(h, { settlement: initial.promise });
     expect(run()).toBe(false); await flush();
     expect(capture).not.toHaveBeenCalled(); expect(h.vault.getPatient).not.toHaveBeenCalled();
-    expect(h.sessionStorage.getItem('vilda:pendingPatientLoad')).toBe(OTHER_PID);
+    expect(h.sessionStorage.getItem('vilda:pendingPatientLoad')).toBe(raw);
     const sequence = h.api.getApplyLoadedDataSequence();
     expect(h.api.applyLoadedData(clone(payload), { isSessionRestore: true })).toBe(true);
     expect(h.api.getApplyLoadedDataSequence()).toBe(sequence + 1);
@@ -203,9 +206,9 @@ describe('native pending navigation retains the destination read operation', () 
 
   it('re-reads an overwritten intent after settlement without reading or applying the old target', async () => {
     const h = environment(), initial = deferred();
-    h.sessionStorage.setItem('vilda:pendingPatientLoad', OTHER_PID);
+    const raw = await h.intent(OTHER_PID);
     pendingChrome(h, { settlement: initial.promise })(); await flush();
-    h.sessionStorage.setItem('vilda:pendingPatientLoad', PID);
+    await h.intent(PID);
     initial.resolve({ ready: true, reason: 'restored' }); await flush();
     expect(h.vault.getPatient).toHaveBeenCalledExactlyOnceWith(PID);
     expect(h.applied).toHaveBeenCalledExactlyOnceWith(payload);
@@ -214,7 +217,7 @@ describe('native pending navigation retains the destination read operation', () 
 
   it('does nothing when the pending intent is removed during the startup wait', async () => {
     const h = environment(), initial = deferred();
-    h.sessionStorage.setItem('vilda:pendingPatientLoad', OTHER_PID);
+    const raw = await h.intent(OTHER_PID);
     pendingChrome(h, { settlement: initial.promise })(); await flush();
     h.sessionStorage.removeItem('vilda:pendingPatientLoad');
     initial.resolve({ ready: true, reason: 'restored' }); await flush();
@@ -224,7 +227,7 @@ describe('native pending navigation retains the destination read operation', () 
 
   it.each(['account', 'key', 'patient', 'visit', 'guest', 'auth-boot'])('cancels its same queued intent when %s changes during startup', async kind => {
     const h = environment(), initial = deferred();
-    h.sessionStorage.setItem('vilda:pendingPatientLoad', OTHER_PID);
+    const raw = await h.intent(OTHER_PID);
     pendingChrome(h, { settlement: initial.promise })(); await flush();
     if (kind === 'account') h.changeAccount();
     if (kind === 'key') h.changeKey();
@@ -240,12 +243,12 @@ describe('native pending navigation retains the destination read operation', () 
 
   it('rejects a replaced document without consuming the next document’s queued intent', async () => {
     const h = environment(), initial = deferred();
-    h.sessionStorage.setItem('vilda:pendingPatientLoad', OTHER_PID);
+    const raw = await h.intent(OTHER_PID);
     pendingChrome(h, { settlement: initial.promise })(); await flush();
     h.window.document = {};
     initial.resolve({ ready: true, reason: 'restored' }); await flush();
     expect(h.vault.getPatient).not.toHaveBeenCalled(); expect(h.applied).not.toHaveBeenCalled();
-    expect(h.sessionStorage.getItem('vilda:pendingPatientLoad')).toBe(OTHER_PID);
+    expect(h.sessionStorage.getItem('vilda:pendingPatientLoad')).toBe(raw);
   });
 
   it.each(['persistence', 'session-fallback'])('ignores foreign-tab load notifications using the existing %s tab identity', async identity => {
@@ -253,12 +256,12 @@ describe('native pending navigation retains the destination read operation', () 
     if (identity === 'persistence') h.window.VildaPersistence.getTabId = () => 'fictional-tab-a';
     else h.sessionStorage.setItem('vildaTabIdV1', 'fictional-tab-a');
     h.window.localStorage.setItem('vilda:sharedLoadSeq', 'fictional-tab-a:1');
-    h.sessionStorage.setItem('vilda:pendingPatientLoad', OTHER_PID);
+    const raw = await h.intent(OTHER_PID);
     pendingChrome(h, { settlement: initial.promise })(); await flush();
     for (const marker of ['fictional-tab-b:2', 'fictional-tab-c:3']) {
       h.window.localStorage.setItem('vilda:sharedLoadSeq', marker);
       h.window.dispatchEvent({ type: 'storage', key: 'vilda:sharedLoadSeq', newValue: marker });
-      expect(h.sessionStorage.getItem('vilda:pendingPatientLoad')).toBe(OTHER_PID);
+      expect(h.sessionStorage.getItem('vilda:pendingPatientLoad')).toBe(raw);
     }
     initial.resolve({ ready: true, reason: 'restored' }); await flush();
     expect(h.vault.getPatient).toHaveBeenCalledExactlyOnceWith(OTHER_PID);
@@ -272,7 +275,7 @@ describe('native pending navigation retains the destination read operation', () 
     const h = environment(), initial = deferred();
     h.window.VildaPersistence.getTabId = () => 'fictional-tab-a';
     h.window.localStorage.setItem('vilda:sharedLoadSeq', 'fictional-tab-a:1');
-    h.sessionStorage.setItem('vilda:pendingPatientLoad', OTHER_PID);
+    const raw = await h.intent(OTHER_PID);
     pendingChrome(h, { settlement: initial.promise })(); await flush();
     for (const marker of markers) {
       h.window.localStorage.setItem('vilda:sharedLoadSeq', marker);
@@ -292,9 +295,9 @@ describe('native pending navigation retains the destination read operation', () 
     ['malformed foreign marker', 'fictional-tab-a', 'fictional-tab-b:unknown'],
   ])('keeps conservative cancellation for %s without a storage notification', async (_label, tab, marker) => {
     const h = environment(), initial = deferred();
-    h.window.VildaPersistence.getTabId = () => tab;
     h.window.localStorage.setItem('vilda:sharedLoadSeq', 'fictional-tab-a:1');
-    h.sessionStorage.setItem('vilda:pendingPatientLoad', OTHER_PID);
+    await h.intent(OTHER_PID);
+    h.window.VildaPersistence.getTabId = () => tab;
     pendingChrome(h, { settlement: initial.promise })(); await flush();
     h.window.localStorage.setItem('vilda:sharedLoadSeq', marker);
     initial.resolve({ ready: true, reason: 'restored' }); await flush();
@@ -304,17 +307,17 @@ describe('native pending navigation retains the destination read operation', () 
 
   it('never removes a replacement intent when the waiting account/key is no longer current', async () => {
     const h = environment(), initial = deferred();
-    h.sessionStorage.setItem('vilda:pendingPatientLoad', OTHER_PID);
+    const raw = await h.intent(OTHER_PID);
     pendingChrome(h, { settlement: initial.promise })(); await flush();
-    h.changeKey(); h.sessionStorage.setItem('vilda:pendingPatientLoad', PID);
+    h.changeKey(); const replacementRaw = await h.intent(PID);
     initial.resolve({ ready: true, reason: 'restored' }); await flush();
     expect(h.vault.getPatient).not.toHaveBeenCalled(); expect(h.applied).not.toHaveBeenCalled();
-    expect(h.sessionStorage.getItem('vilda:pendingPatientLoad')).toBe(PID);
+    expect(h.sessionStorage.getItem('vilda:pendingPatientLoad')).toBe(replacementRaw);
   });
 
   it.each(['vilda:user-state-cleared', 'input', 'change'])('a newer user %s cancels the old intent and cannot resurrect it after settlement', async type => {
     const h = environment(), initial = deferred();
-    h.sessionStorage.setItem('vilda:pendingPatientLoad', OTHER_PID);
+    const raw = await h.intent(OTHER_PID);
     const run = pendingChrome(h, { settlement: initial.promise }); run(); await flush();
     h.document.dispatchEvent({ type, isTrusted: true });
     expect(h.sessionStorage.getItem('vilda:pendingPatientLoad')).toBeNull();
@@ -324,7 +327,7 @@ describe('native pending navigation retains the destination read operation', () 
 
   it('a newer accepted native load supersedes the queued cross-page target permanently', async () => {
     const h = environment(), initial = deferred();
-    h.sessionStorage.setItem('vilda:pendingPatientLoad', PID);
+    await h.intent(PID);
     pendingChrome(h, { settlement: initial.promise })(); await flush();
     const token = h.api.captureAcceptedPatientLoad({ patientId: OTHER_PID });
     expect(h.api.runAcceptedPatientLoad(token, h.records[OTHER_PID].snapshots[0].payload, {
@@ -340,27 +343,27 @@ describe('native pending navigation retains the destination read operation', () 
 
   it('pagehide retires the old document’s wait while retaining the intent for its next document', async () => {
     const h = environment(), initial = deferred();
-    h.sessionStorage.setItem('vilda:pendingPatientLoad', OTHER_PID);
+    const raw = await h.intent(OTHER_PID);
     pendingChrome(h, { settlement: initial.promise })(); await flush();
     h.window.dispatchEvent({ type: 'pagehide' });
     initial.resolve({ ready: true, reason: 'restored' }); await flush();
     expect(h.vault.getPatient).not.toHaveBeenCalled(); expect(h.applied).not.toHaveBeenCalled();
-    expect(h.sessionStorage.getItem('vilda:pendingPatientLoad')).toBe(OTHER_PID);
+    expect(h.sessionStorage.getItem('vilda:pendingPatientLoad')).toBe(raw);
   });
 
   it.each(['rejection', 'invalid-result'])('does not consume or load after settlement %s', async kind => {
     const h = environment(), initial = deferred();
-    h.sessionStorage.setItem('vilda:pendingPatientLoad', OTHER_PID);
+    const raw = await h.intent(OTHER_PID);
     const run = pendingChrome(h, { settlement: initial.promise }); run(); await flush();
     if (kind === 'rejection') initial.reject(new Error('fictional startup failure')); else initial.resolve(null);
     await flush(); run(); await flush();
     expect(h.vault.getPatient).not.toHaveBeenCalled(); expect(h.applied).not.toHaveBeenCalled();
-    expect(h.sessionStorage.getItem('vilda:pendingPatientLoad')).toBe(OTHER_PID);
+    expect(h.sessionStorage.getItem('vilda:pendingPatientLoad')).toBe(raw);
   });
 
   it('allows a fresh explicit load after a completed unsuccessful initial restore', async () => {
     const h = environment(), initial = deferred();
-    h.sessionStorage.setItem('vilda:pendingPatientLoad', OTHER_PID);
+    const raw = await h.intent(OTHER_PID);
     pendingChrome(h, { settlement: initial.promise })(); await flush();
     initial.resolve({ ready: false, reason: 'unsupported-session' }); await flush();
     expect(h.vault.getPatient).toHaveBeenCalledExactlyOnceWith(OTHER_PID);
@@ -369,11 +372,11 @@ describe('native pending navigation retains the destination read operation', () 
 
   it('actual late settlement resumes after the existing twelve-second polling window has ended', async () => {
     const h = environment(), initial = deferred();
-    h.sessionStorage.setItem('vilda:pendingPatientLoad', OTHER_PID);
+    const raw = await h.intent(OTHER_PID);
     pendingChrome(h, { settlement: initial.promise })(); await flush();
     await vi.advanceTimersByTimeAsync(13_000);
     expect(h.vault.getPatient).not.toHaveBeenCalled(); expect(h.applied).not.toHaveBeenCalled();
-    expect(h.sessionStorage.getItem('vilda:pendingPatientLoad')).toBe(OTHER_PID);
+    expect(h.sessionStorage.getItem('vilda:pendingPatientLoad')).toBe(raw);
     initial.resolve({ ready: true, reason: 'restored' }); await flush();
     expect(h.vault.getPatient).toHaveBeenCalledExactlyOnceWith(OTHER_PID);
     expect(h.loadResults).toEqual([true]);
@@ -382,7 +385,7 @@ describe('native pending navigation retains the destination read operation', () 
   it('actual late auth boot starts the wait after polling has ended, with the settled account key', async () => {
     const h = environment(); let boot = false;
     h.window.VildaAuthUI = { isBootReady: () => boot, isGuestMode: () => false };
-    h.sessionStorage.setItem('vilda:pendingPatientLoad', OTHER_PID);
+    const raw = await h.intent(OTHER_PID);
     pendingChrome(h)(); await vi.advanceTimersByTimeAsync(13_000);
     expect(h.vault.getPatient).not.toHaveBeenCalled();
     h.changeKey(); boot = true;
@@ -392,14 +395,14 @@ describe('native pending navigation retains the destination read operation', () 
   });
 
   it('uses the existing immediate path when the legacy initial-settlement API is absent', async () => {
-    const h = environment(); h.sessionStorage.setItem('vilda:pendingPatientLoad', PID);
+    const h = environment(); await h.intent(PID);
     expect(pendingChrome(h, { legacy: true })()).toBe(true); await flush();
     expect(h.vault.getPatient).toHaveBeenCalledExactlyOnceWith(PID);
     expect(h.loadResults).toEqual([true]); expect(h.published[0].acceptedLoadAuthority).toBeTruthy();
   });
 
   it('loads and publishes the exact requested patient after its original read', async () => {
-    const h = environment(); h.sessionStorage.setItem('vilda:pendingPatientLoad', PID);
+    const h = environment(); await h.intent(PID);
     expect(pendingChrome(h)()).toBe(false); await flush();
     expect(h.applied).toHaveBeenCalledWith(payload); expect(h.published).toHaveLength(1);
     expect(h.published[0].acceptedLoadAuthority).toBeTruthy(); expect(h.sessionStorage.getItem('vilda:pendingPatientLoad')).toBeNull();
@@ -407,24 +410,25 @@ describe('native pending navigation retains the destination read operation', () 
   });
   it.each(['account', 'key', 'document', 'replacement-intent'])('refuses the old completion after %s changes', async kind => {
     const h = environment(), read = deferred(); h.vault.getPatient.mockReturnValue(read.promise);
-    h.sessionStorage.setItem('vilda:pendingPatientLoad', PID); pendingChrome(h)(); await flush();
+    await h.intent(PID); pendingChrome(h)(); await flush();
     expect(h.vault.getPatient).toHaveBeenCalledOnce();
     if (kind === 'account') h.changeAccount();
     if (kind === 'key') h.changeKey();
     if (kind === 'document') h.window.document = {};
-    if (kind === 'replacement-intent') h.sessionStorage.setItem('vilda:pendingPatientLoad', 'fictional-newer-request');
+    let replacementRaw;
+    if (kind === 'replacement-intent') replacementRaw = await h.intent('fictional-newer-request');
     read.resolve({ snapshots: [snapshot], snapshotCount: 1 }); await flush();
     expect(h.applied).not.toHaveBeenCalled(); expect(h.published).toHaveLength(0);
-    if (kind === 'replacement-intent') expect(h.sessionStorage.getItem('vilda:pendingPatientLoad')).toBe('fictional-newer-request');
+    if (kind === 'replacement-intent') expect(h.sessionStorage.getItem('vilda:pendingPatientLoad')).toBe(replacementRaw);
   });
   it('does not publish identity after a failed read', async () => {
     const h = environment(); h.vault.getPatient.mockRejectedValue(new Error('fictional read failure'));
-    h.sessionStorage.setItem('vilda:pendingPatientLoad', PID); pendingChrome(h)(); await flush();
+    await h.intent(PID); pendingChrome(h)(); await flush();
     expect(h.applied).not.toHaveBeenCalled(); expect(h.published).toHaveLength(0);
   });
   it('refuses a null capability instead of taking the legacy path', async () => {
     const h = environment(); h.window.VildaPanelPacjent = null;
-    h.sessionStorage.setItem('vilda:pendingPatientLoad', PID); pendingChrome(h)(); await flush();
+    await h.intent(PID); pendingChrome(h)(); await flush();
     expect(h.vault.getPatient).not.toHaveBeenCalled(); expect(h.applied).not.toHaveBeenCalled(); expect(h.published).toHaveLength(0);
   });
 });
