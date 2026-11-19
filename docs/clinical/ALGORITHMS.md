@@ -44230,7 +44230,7 @@ tekstem — w Karcie zamiast w DocPro. Dopisek monitora o listach pojawia się r
 **Wdrożenie.** Od razu przy wydaniu; sejf bez zmian. **Cofnięcie** = rewert PR: Karta znów porównuje dosłowny tekst
 leku i substancji.
 
-## Dziennik zdarzeń: odsyłanie wpisów Kosza po zastosowaniu zmiany z innego urządzenia — uśpione (P-ZBIEZNOSC-ZDARZEN, E3-PR0d, SW 1.1.557, `vilda_vault.js` 282, 2026-11-19)
+## Dziennik zdarzeń: odsyłanie wpisów Kosza po zastosowaniu zmiany z innego urządzenia — uśpione (P-ZBIEZNOSC-ZDARZEN, E3-PR0d, SW 1.1.558, `vilda_vault.js` 282, 2026-11-19)
 
 **Zmiana kliniczna: NIE (uśpiona).** Wzory, progi, jednostki, interpretacje, reguły scalania (`Le`), format kopii,
 serwer i `vilda_sync.js` bez zmian. Dla użytkownika dziś nic się nie zmienia: odsyłanie wpisów Kosza włącza ten sam
@@ -44826,6 +44826,6 @@ wiersze `stomb`; rewert cofa też skróty kontroli granicy).
 `Bev_zastosuj`, opis odsyłania wersji, nagłówek części emisji, opis `Bem_zastosuj`. Poza blokiem bez zmian.
 
 **Wersje.** `vilda_vault.js` 281 → 282, `vilda_chrome.js` 308 → 309 i `vilda_session_bridge.js` 224 → 225 (wstrzykują
-sejf), SW 1.1.556 → 1.1.557 — `npm run podbij-wersje`; baza `origin/audyt` `bec8e182` (po vildaclinic/vilda-calc#1003;
+sejf), SW 1.1.557 → 1.1.558 — `npm run podbij-wersje`; baza `origin/audyt` `aaa81c78` (po vildaclinic/vilda-calc#1005;
 sejf, `vilda_sync.js` i testy synchronizacji bez zmian względem `4bff32aa`, na którym są pomiary).
 Bez nowego pliku w pamięci offline.
