@@ -68,6 +68,19 @@
 // w krokach scalania, importu i odtwarzania. Zapisy, wyniki, powiadomienia oraz
 // localStorage/sessionStorage pozostają identyczne; pierwotny opis i hash zachowano.
 //
+// E3-PR0c (odsyłanie poprawionych wizyt, uśpione przełącznikiem odsyłania): fikstura bez zmian. applyEncryptedEvent
+// czyta przełącznik (pole okna VILDA_EVENT_ECHO i klucz localStorage vilda-event-echo-v1) — odczyty te nie trafiają do
+// śladu (dziennik localStorage zapisuje tylko setItem, removeItem i clear). Nowe przebiegi tylko w wariancie
+// „Komputer prywatny” (jedyny, w którym odsyłanie może działać; pozostałe warianty sprawdza przebieg bez klucza): klucz
+// ustawiony w oknie przed załadowaniem skryptów (odcinek „ładowanie” liczony od wpisu po tym zapisie; ten wpis to
+// dokładnie set vilda-event-echo-v1) albo pole okna przed załadowaniem. Klucz '0', 'true', '1 ' i pole 'true' (napis) —
+// zapis przebiegu i odczyty bramki równe fiksturze. Klucz '1' i pole true przy zamkniętej bramce — zapis przebiegu równy
+// fiksturze poza odczytami bramki: fikstura + 1 (Bob_bramka w Bem_zastosujEcho przy jedynym applyEncryptedEvent
+// scenariusza, krok „koperta zdarzenia”), a w kopii sejfu z licznikiem l.zastosowania = 1 i l.odczyty() = odczyty bramki
+// (strażnik: jedno applyEncryptedEvent w źródle scenariusza). Czerwone na bazie (sejf bez odsyłania): dwa przebiegi
+// z włączonym przełącznikiem (odczyty bramki = fikstura, nie fikstura + 1; licznik zastosowań pusty); zielone z natury:
+// fikstura i przebiegi z wyłączonym przełącznikiem.
+//
 // WARIANTY (każde okno ma atrapę IndexedDB z tests/support/atrapa-indexeddb.mjs i moduły punktu odzyskiwania)
 //   Ze           sejf na adapterze w pamięci z rejestrem wywołań (magazynZRejestrem);
 //   prywatny     „Komputer prywatny”: adapter IndexedDB sejfu nad atrapą;
@@ -208,7 +221,10 @@ async function zObciazeniem(fn) {
 
 // zaladujSejf — funkcja (win) => void ładująca vilda_vault.js w miejsce pliku z repozytorium (kopia z licznikiem emisji,
 // sejf bez wstawek); bez niej — plik z repozytorium.
-async function przebieg(wariant, { przerwa = 0, zaladujSejf = null } = {}) {
+// E3-PR0c: klucz — wartość klucza przełącznika odsyłania w localStorage okna, pole — wartość pola okna
+// VILDA_EVENT_ECHO; oba ustawiane przed załadowaniem skryptów (bez nich — jak dotąd).
+const KLUCZ_ECHA = 'vilda-event-echo-v1';
+async function przebieg(wariant, { przerwa = 0, zaladujSejf = null, klucz = undefined, pole = undefined } = {}) {
   const inne = await obceKonto();
   vi.useFakeTimers({ toFake: ['Date'] });
   let zegar = START;
@@ -238,6 +254,12 @@ async function przebieg(wariant, { przerwa = 0, zaladujSejf = null } = {}) {
   const o = okno({ skrypty: [], krypto: { ...krypto, crypto: { ...krypto.crypto, subtle } }, dodatki: { indexedDB: idb } });
   let odczytyBramki = 0;
   Object.defineProperty(o.win, 'VILDA_EVENT_LOG', { get() { odczytyBramki += 1; return undefined; }, configurable: true });
+  if (klucz !== undefined) o.win.localStorage.setItem(KLUCZ_ECHA, klucz);
+  if (pole !== undefined) o.win.VILDA_EVENT_ECHO = pole;
+  const dz0 = o.dziennik.length;
+  if (klucz !== undefined && !(dz0 === 1 && o.dziennik[0].magazyn === 'localStorage' && o.dziennik[0].op === 'set' && o.dziennik[0].klucz === KLUCZ_ECHA)) {
+    throw new Error('zapis bazowy: przed załadowaniem skryptów w dzienniku inny wpis niż set vilda-event-echo-v1');
+  }
   for (const plik of SKRYPTY) {
     if (plik === 'vilda_vault.js' && zaladujSejf) zaladujSejf(o.win);
     else loadBrowserScript(plik, o.win);
@@ -285,7 +307,7 @@ async function przebieg(wariant, { przerwa = 0, zaladujSejf = null } = {}) {
     return wynik;
   };
 
-  const slad = { ladowanie: odcinek({ idb: 0, wyw: 0, dz: 0, kr: 0, zd: 0 }), kroki: [] };
+  const slad = { ladowanie: odcinek({ idb: 0, wyw: 0, dz: dz0, kr: 0, zd: 0 }), kroki: [] };
   const s = {};
   // odmowa: wariant, w którym sejf z założenia odrzuca operację (zapisywane jako wynik kroku); każdy inny wyjątek
   // przerywa scenariusz.
@@ -409,7 +431,7 @@ const bezOdczytow = ({ odczytyBramki, ...reszta }) => reszta;
 async function zLicznikiem(w, opcje = {}) {
   const l = licznikEmisji();
   const zapis = await przebieg(w, { ...opcje, zaladujSejf: l.zaladuj });
-  return { zapis, emisje: l.emisje.length, haki: [l.przegrane.length, l.ratunki.length], odczyty: l.odczyty() };
+  return { zapis, emisje: l.emisje.length, haki: [l.przegrane.length, l.ratunki.length], odczyty: l.odczyty(), zastosowania: l.zastosowania.length };
 }
 const ZRODLO_BEZ_WSTAWEK = bezWstawek();
 // Kroki, w których sejf sprawdza listę baz raz więcej niż sejf bez wstawek (sprawdzenie bazy kolejki przy usuwaniu konta).
@@ -495,6 +517,34 @@ describe.skipIf(NAGRANIE)('zapis bazowy „bramka wyłączona” (U3)', () => {
     porownaj(podObciazeniem, oczekiwany, `${w}, obciążenie`);
     expect(podObciazeniem.odczytyBramki).toBe(oczekiwany.odczytyBramki);
   }, 180_000);
+});
+
+// E3-PR0c: przełącznik odsyłania przy zamkniętej bramce — tylko wariant „Komputer prywatny” (nagłówek, E3-PR0c).
+describe.skipIf(NAGRANIE)('zapis bazowy z kluczem przełącznika odsyłania (E3-PR0c, wariant „Komputer prywatny”)', () => {
+  it('strażnik: scenariusz ma dokładnie jedno applyEncryptedEvent (krok „koperta zdarzenia”)', () => {
+    expect(String(przebieg).split('applyEncryptedEvent(').length - 1).toBe(1);
+  });
+  for (const [nazwa, opcje] of [["klucz '0'", { klucz: '0' }], ["klucz 'true'", { klucz: 'true' }], ["klucz '1 '", { klucz: '1 ' }], ["pole 'true' (napis)", { pole: 'true' }]]) {
+    it(`przełącznik wyłączony (${nazwa}): zapis przebiegu i odczyty bramki równe fiksturze`, async () => {
+      const oczekiwany = fikstura().warianty.prywatny;
+      const slad = await przebieg('prywatny', opcje);
+      porownaj(slad, oczekiwany, `prywatny, ${nazwa}`);
+      expect(slad.odczytyBramki, 'odczyty bramki').toBe(oczekiwany.odczytyBramki);
+    }, 120_000);
+  }
+  for (const [nazwa, opcje] of [["klucz '1'", { klucz: '1' }], ['pole true', { pole: true }]]) {
+    it(`przełącznik włączony (${nazwa}) przy zamkniętej bramce: zapis przebiegu równy fiksturze, odczyty bramki = fikstura + 1 (Bem_zastosujEcho w kroku „koperta zdarzenia”)`, async () => {
+      const oczekiwany = fikstura().warianty.prywatny;
+      const slad = await przebieg('prywatny', opcje);
+      porownaj(slad, oczekiwany, `prywatny, ${nazwa}`);
+      expect(slad.odczytyBramki, 'odczyty bramki').toBe(oczekiwany.odczytyBramki + 1);
+      if (nazwa === "klucz '1'") {
+        const k = await zLicznikiem('prywatny', opcje);
+        expect({ zastosowania: k.zastosowania, odczyty: k.odczyty }, 'kopia z licznikiem: jeden odczyt bramki w Bem_zastosujEcho, suma = odczyty bramki').toEqual({ zastosowania: 1, odczyty: k.zapis.odczytyBramki });
+        porownaj(k.zapis, oczekiwany, `prywatny, ${nazwa}, kopia z licznikiem`);
+      }
+    }, 240_000);
+  }
 });
 
 describe.runIf(NAGRANIE)('nagranie zapisu bazowego (bramka zamknięta)', () => {

@@ -2094,6 +2094,12 @@ Od 2c (P-DOWOD-KROKU, 2026-11-18: nowy blok natywny z repozytorium źródeł mod
 `vilda_vault.js` (`175fb1ab57b47cf4b58d19369536722edc1177c1c3d7f83311e63727298bff9b`). Bazę daje to
 samo odwrócenie delty co wyżej.
 
+Od E3-PR0c (P-ZBIEZNOSC-ZDARZEN, odsyłanie poprawionych wizyt; zmiana tylko w bloku P-DZIENNIK-ZDARZEN) bazą
+delty jest obraz sejfu po tej zmianie bez bloku trwałych wizyt: SHA-256
+`22f7d1f27f71ea7cb01304cc048b885159d04cc237431d842064ddd3d199e86f`, a wynikiem — bieżący `vilda_vault.js`
+(`4ca270bc7461e33d50b791242cd9298da710cfd651ffe1a099b059f80c4acd7a`). Baza z 2c (`fe4fad0b…`) odpowiada
+stanowi sprzed E3-PR0c (`audyt` `64fa29dc`); bieżącą bazę daje to samo odwrócenie delty co wyżej.
+
 Każdy punkt wpięcia musi występować dokładnie raz. Narzędzie odrzuca inne
 bajty bazy, zmianę źródła bez zgodnego manifestu, niejednoznaczny punkt wpięcia
 i wynik różniący się od zapisanego skrótu. Odwrócenie delty musi odtworzyć
@@ -2217,6 +2223,11 @@ repozytorium źródeł modułu (`vilda-source`). Czytelne źródła są tam w
 `077c76e943710aff8712b87921fd288d12b24d8a30a5c7787a53e89f45c8fb97`, archiwum
 `runtime/clinical-workspace-v1/0278bf7106c2/precache-3689c59590e5.json`. Baza sejfu bez zmian:
 `44d82633d45bf9db1e964457c69d07f2009b683848a00d21315fc63fdd542499`.
+
+Od E3-PR0c (P-ZBIEZNOSC-ZDARZEN; zmiana sejfu tylko poza blokiem natywnym, w bloku P-DZIENNIK-ZDARZEN) baza sejfu to
+`06ea023197d3e70fc30e965d5b2b57744fbbcbc0f638f5baa798e5ce3e209031`, a `integratedVaultSHA256` (obraz pośredni) —
+`76214599a49249fc762d29e4eb31f079440ef254149ffc8cde8ecf5e36b77bb2`. Blok natywny, haki natywne, rodzina modułów
+`0278bf7106c2`, `fragmentSHA256` i archiwum bez zmian; bieżące wartości są w `runtime/clinical-workspace-v1/manifest.json`.
 
 Warstwy `vilda_vault.js` od środka: baza → blok natywny i 16 haków natywnych (manifest,
 `nativeHooks`) → delta Kt/V (`tools/klirens-ktv-vault-delta.mjs`, poza blokiem) → delta trwałych
