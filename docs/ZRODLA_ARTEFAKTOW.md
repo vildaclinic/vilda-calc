@@ -2191,7 +2191,7 @@ Dla każdego badania poza estradiolem `selectRange` i `evaluate` dają wyniki id
 //    (nota R9 „…menarche przed ukończeniem 8 lat (3,0)…” wybierana po reference.not_qualified_reason; liczba 8 z odpowiedzi silnika)
 // renderPatientSummary: commitCyclePhaseAvailability() PRZED wcześniejszym powrotem dla badań z własnym formularzem
 //    (LH, FSH, inhibina B, testosteron) — poza odświeżeniem w trakcie wpisywania liczby
-// onOverrideChange(event): wpis pola — po obcięciu spacji /^\d+(?:[.,]\d{1,2})?$/, inaczej NaN; zdarzenie „input”
+// onOverrideChange(event): wpis pola — po obcięciu spacji /^\d+(?:[.,]\d{0,2})?$/ (sam separator na końcu = niedokończony zapis liczby całkowitej), inaczej NaN; zdarzenie „input”
 //    ustawia overrideNumberTyping na czas odświeżenia (zapamiętany wybór fazy i jego opcja zostają)
 // onOverrideNumberCommitted: „change” i „blur” pól wieku, miesięcy i wieku menarche → tylko renderPatientSummary()
 //    (zatwierdza wybór i odświeża opis; nie rysuje wyniku, żeby kliknięcie w wynik po wyjściu z pola nie ginęło)

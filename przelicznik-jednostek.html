@@ -3110,8 +3110,8 @@
       var note = '';
       if (rejected) {
         // Nota mówi wprost, że wpis nie działa — zamiast prosić o wpisanie wartości, która właśnie została wpisana.
-        note = 'Wpisany wiek menarche nie jest brany pod uwagę: podaj wartość od ' + plainNumber(reference.menarche_min_years)
-          + ' do ' + plainNumber(reference.menarche_max_years) + ' lat, nie większą niż wiek pacjentki.';
+        note = 'Wpisany wiek menarche nie jest brany pod uwagę: podaj liczbę od ' + plainNumber(reference.menarche_min_years)
+          + ' do ' + plainNumber(reference.menarche_max_years) + ' lat (najwyżej dwa miejsca po przecinku), nie większą niż wiek pacjentki.';
       } else if (show && reference.basis !== 'gynecological_age') {
         // Powód podaje silnik (not_qualified_reason); strona nie porównuje sama wieku menarche z granicą.
         note = reference.menarche_age_years == null
@@ -6166,11 +6166,13 @@
       if (tannerNum != null && (!isFinite(tannerNum) || tannerNum < 1 || tannerNum > 5)) tannerNum = null;
       // P-E2-MENARCHE (R6): wiek menarche wpisany tutaj — tylko dla tego sprawdzenia. Każdy niepusty wpis jest
       // nadpisaniem lokalnym. Liczbą jest wyłącznie zwykły zapis dziesiętny: cyfry i najwyżej jeden przecinek
-      // albo kropka z jednym lub dwoma miejscami (bez znaku, wykładnika, zapisu szesnastkowego i jednostek);
-      // inny wpis to NaN — wpis odrzucony. Czy liczba jest dopuszczalna, rozstrzyga silnik.
+      // albo kropka z najwyżej dwoma miejscami (bez znaku, wykładnika, zapisu szesnastkowego i jednostek).
+      // Sam separator na końcu („9,” w drodze do „9,5”) to niedokończony zapis tej samej liczby całkowitej,
+      // a nie błąd — inaczej każdy wpis z przecinkiem pokazywałby po drodze notę o odrzuceniu.
+      // Inny wpis to NaN — wpis odrzucony. Czy liczba jest dopuszczalna, rozstrzyga silnik.
       var menarcheText = overrideMenarcheEl ? String(overrideMenarcheEl.value).trim() : '';
       var menarcheNum = menarcheText === '' ? null
-        : /^\d+(?:[.,]\d{1,2})?$/.test(menarcheText) ? Number(menarcheText.replace(',', '.')) : NaN;
+        : /^\d+(?:[.,]\d{0,2})?$/.test(menarcheText) ? Number(menarcheText.replace(',', '.')) : NaN;
       localOverride.sex = sexVal;
       localOverride.age = ageNum;
       localOverride.cycle_phase = cycleVal;

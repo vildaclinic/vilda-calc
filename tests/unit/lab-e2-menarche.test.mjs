@@ -788,7 +788,7 @@ describe('strona: krok „Pacjent” — opis, selektor fazy, pole „Wiek menar
   const BEZ_POSTMENOPAUZY = WSZYSTKIE.filter((value) => value !== 'postmenopause');
   const FAZY_WYLACZONE = BEZ_POSTMENOPAUZY.map((value) => ['follicular', 'ovulation', 'luteal'].includes(value) ? value + '!' : value);
   const R2_BRAK = 'Fazy cyklu działają poniżej 18 lat dopiero po 5 latach od menarche. Wpisz „Wiek menarche” tutaj (tylko dla tego sprawdzenia) albo na stałe w „+ Dane pokwitaniowe” na stronie głównej.';
-  const ODRZUCONY = 'Wpisany wiek menarche nie jest brany pod uwagę: podaj wartość od 2 do 20 lat, nie większą niż wiek pacjentki.';
+  const ODRZUCONY = 'Wpisany wiek menarche nie jest brany pod uwagę: podaj liczbę od 2 do 20 lat (najwyżej dwa miejsca po przecinku), nie większą niż wiek pacjentki.';
   const ZMIEN = ' Jeśli faza cyklu jest znana, wybierz ją w „Zmień ▼".';
   const silnikWieku = loadBrowserScript('vilda_lab_puberty.js');
   // Wycinki brane dopiero w teście: na kodzie sprzed zmiany każdy test pada osobno, a nie cały plik przy wczytaniu.
@@ -918,7 +918,7 @@ describe('strona: krok „Pacjent” — opis, selektor fazy, pole „Wiek menar
 
   it.each([
     ['12,5,', 'przecinek na końcu'], ['12,5 lat', 'jednostka'], ['12;5', 'średnik'], ['1e1', 'wykładnik'], ['0x10', 'zapis szesnastkowy'],
-    ['-12', 'znak minus'], ['+12', 'znak plus'], ['12.555', 'trzy miejsca po kropce'], ['12,', 'sam separator'], [',5', 'bez cyfr przed separatorem'],
+    ['-12', 'znak minus'], ['+12', 'znak plus'], ['12.555', 'trzy miejsca po kropce'], [',', 'sam separator'], [',5', 'bez cyfr przed separatorem'],
     ['12 5', 'spacja w środku'], ['dwanaście', 'słowo'], ['12..5', 'dwie kropki'],
   ])('wpis „%s” (%s) nie jest zwykłą liczbą dziesiętną → wpis odrzucony: zastępuje wartość z danych, nota, oznaczenie pola', (wpis) => {
     // W danych menarche 10,0 (po progu u 16-latki): bez wpisu byłaby obsługa jak u dorosłej.
@@ -933,7 +933,8 @@ describe('strona: krok „Pacjent” — opis, selektor fazy, pole „Wiek menar
     expect(h.lokalne().menarche).toBeNull();
   });
 
-  it.each([['11', 11], ['11,0', 11], ['11.0', 11], [' 12,5 ', 12.5], ['12.25', 12.25], ['012', 12], ['9', 9]])('wpis „%s” jest liczbą %d', (wpis, liczba) => {
+  // „12,” i „9.” to niedokończony zapis liczby całkowitej (w drodze do „12,5”), nie wpis odrzucony.
+  it.each([['11', 11], ['11,0', 11], ['11.0', 11], [' 12,5 ', 12.5], ['12.25', 12.25], ['012', 12], ['9', 9], ['12,', 12], ['9.', 9]])('wpis „%s” jest liczbą %d', (wpis, liczba) => {
     const h = panel({ source: dziewczynka16() });
     h.wpisz('menarche', wpis);
     expect(h.lokalne().menarche).toBe(liczba);
@@ -944,7 +945,7 @@ describe('strona: krok „Pacjent” — opis, selektor fazy, pole „Wiek menar
     const h = panel({ source: dziewczynka16() });
     h.ctx.Conv = inne.LabUnitConverter;
     h.ctx.currentSubstance = inne.LabUnitConverter.find('estradiol');
-    expect(h.wpisz('menarche', '2,5').nota).toBe('Wpisany wiek menarche nie jest brany pod uwagę: podaj wartość od 3 do 19,5 lat, nie większą niż wiek pacjentki.');
+    expect(h.wpisz('menarche', '2,5').nota).toBe('Wpisany wiek menarche nie jest brany pod uwagę: podaj liczbę od 3 do 19,5 lat (najwyżej dwa miejsca po przecinku), nie większą niż wiek pacjentki.');
     // Nieprawidłowa wartość w DANYCH pacjenta (bez wpisu tutaj) to zwykły brak wpisu, nie „odrzucony wpis”.
     const zDanych = panel({ source: dziewczynka16(25) });
     expect(zDanych.odswiez()).toMatchObject({ nota: R2_BRAK, bledny: false, placeholder: 'np. 12,5' });

@@ -486,14 +486,15 @@ test('wpis, który nie jest zwykłą liczbą dziesiętną („12,5,”; „12,5 
   // W danych menarche 11,0 (po progu u 16-latki): każdy niepusty wpis je zastępuje — nierozpoznany nie wraca do danych.
   await start(page, { ...D, menarche: 11 }, 250);
   const pole = page.locator('#labOverrideMenarcheAge');
-  for (const wpis of ['12,5,', '12,5 lat', '12;5', '1e1', '0x10', '-12', '+11', '11,', ',5', '11,005', 'jedenaście']) {
+  for (const wpis of ['12,5,', '12,5 lat', '12;5', '1e1', '0x10', '-12', '+11', ',', ',5', '11,005', 'jedenaście']) {
     await pole.fill(wpis);
     expect(await stan(page), wpis).toMatchObject({
       opis: 'Kobieta · 16 lat · wiek dziecięcy/młodzieńczy · Th V · nadpisanie lokalne', wiersz: null, wpis,
       opcje: NIEZNANA_NIELETNIA_BEZ_FAZ, bledny: true, nota: WPIS_ODRZUCONY, reset: true, status: '✓ w zakresie normy', zakres: 'zakres: 0–290 pmol/L', warianty: [],
     });
   }
-  for (const [wpis, opis, wiersz] of [['11', 'menarche 11,0', R1_ZMIEN], ['11,0', 'menarche 11,0', R1_ZMIEN], [' 10.5 ', 'menarche 10,5', R1_ZMIEN.replace('5,0 lat', '5,5 lat')],
+  // „11,” to niedokończony zapis liczby 11 (w drodze do „11,5”): wpisywanie liczby z przecinkiem nie pokazuje po drodze noty o odrzuceniu.
+  for (const [wpis, opis, wiersz] of [['11', 'menarche 11,0', R1_ZMIEN], ['11,', 'menarche 11,0', R1_ZMIEN], ['11,0', 'menarche 11,0', R1_ZMIEN], [' 10.5 ', 'menarche 10,5', R1_ZMIEN.replace('5,0 lat', '5,5 lat')],
     ['10,25', 'menarche 10,25', R1_ZMIEN.replace('5,0 lat', '5,7 lat')]]) {
     await pole.fill(wpis);
     expect(await stan(page), wpis).toMatchObject({

@@ -2904,8 +2904,11 @@ i powyżej wyłączenia pierwszych 14 dni życia):
   samej osoby i „Wyczyść wszystkie pola”.
 - **Wpis w polu lokalnym.** Każdy niepusty tekst w polu jest nadpisaniem
   lokalnym i zastępuje wartość z danych. Przyjmowana jest wyłącznie zwykła
-  liczba dziesiętna: cyfry, opcjonalnie jeden przecinek albo kropka i jedna
-  lub dwie cyfry po nim (spacje na brzegach są pomijane). Znak, wykładnik,
+  liczba dziesiętna: cyfry, opcjonalnie jeden przecinek albo kropka
+  i najwyżej dwie cyfry po nim (spacje na brzegach są pomijane). Sam
+  separator na końcu („9,” w drodze do „9,5”) to niedokończony zapis liczby
+  całkowitej i jest czytany jako ta liczba — wpisywanie liczby z przecinkiem
+  nie pokazuje po drodze noty o odrzuceniu. Znak, wykładnik,
   zapis szesnastkowy, jednostka, drugi separator i każdy inny tekst („12,5,”,
   „12,5 lat”, „12;5”, „1e1”, „0x10”, „-12”) to **wpis odrzucony** — tak samo
   jak liczba spoza zakresu 2–20 albo większa niż wiek. Wpis odrzucony liczy
@@ -2958,9 +2961,9 @@ w „+ Dane pokwitaniowe” na stronie głównej.”, przy menarche przed
 ukończeniem 8 lat — „Fazy cyklu nie zmieniają zakresu estradiolu: menarche
 przed ukończeniem 8 lat (3,0) — zostaje zakres dziecięcy.” (w nawiasie wiek
 menarche zapisany jak w polu), a przy odrzuconym wpisie —
-„Wpisany wiek menarche nie jest brany pod uwagę: podaj wartość od 2 do 20
-lat, nie większą niż wiek pacjentki.” (nie dotyczy poprawnego wpisu poniżej
-8 lat).
+„Wpisany wiek menarche nie jest brany pod uwagę: podaj liczbę od 2 do 20
+lat (najwyżej dwa miejsca po przecinku), nie większą niż wiek pacjentki.”
+(nie dotyczy poprawnego wpisu poniżej 8 lat).
 
 **Przypadki `wejście → oczekiwany wynik`** (fikcyjne pacjentki, estradiol
 w pmol/L; scenariusze makiety A–G i granice):
@@ -2982,7 +2985,7 @@ w pmol/L; scenariusze makiety A–G i granice):
 | R9 | 7 lat, menarche 2,0 w danych (5 lat od menarche), E2 50 | zakres wieku jak dotąd (0–73,5), bez wiersza o menarche; nota „…(2,0)…” |
 | R9 | 16 lat, menarche 7,9 (8,1 roku od menarche) | zakres dziecięcy jak dotąd; nota „…(7,9)…” |
 | wpis odrzucony | pacjentka 16 lat (w danych menarche 11,0), wpis lokalny 25, 1 albo 16,5 | zakres jak bez wieku menarche (0–290); nota „Wpisany wiek menarche nie jest brany pod uwagę…”; opis „… · Th V · nadpisanie lokalne” bez „menarche 25,0” |
-| wpis nierozpoznany | jak wyżej, wpis „12,5,”, „12,5 lat”, „12;5”, „1e1”, „0x10” albo „-12” | jak wpis odrzucony; „11”, „11,0”, „ 10.5 ” są przyjmowane |
+| wpis nierozpoznany | jak wyżej, wpis „12,5,”, „12,5 lat”, „12;5”, „1e1”, „0x10” albo „-12” | jak wpis odrzucony; „11”, „11,”, „11,0”, „ 10.5 ” są przyjmowane („11,” to niedokończony zapis liczby 11) |
 | wpis nieużywany | pacjentka D, wpis 11, potem wiek w panelu 30 lat albo inne badanie | opis bez „menarche …”; po powrocie do estradiolu u 16-latki „… · menarche 11,0 · nadpisanie lokalne” |
 | wpisywanie liczby | dorosła 30 lat, prolaktyna, „Postmenopauza”; wiek „65” wpisywany przez „6” | przy „6”: opis „Kobieta · 6 lat · …” bez postmenopauzy, wybór w selektorze zostaje; przy „65”: „… · postmenopauza · nadpisanie lokalne”; zakończony wpis „15” → wybór „(domyślnie)”, opcji nie ma |
 | wpisywanie liczby | dorosła 30 lat, estradiol 450, faza lutealna; wiek „35” wpisywany przez „3” | przy „3”: zakres 0–73,5 i opis bez fazy, „Faza lutealna” dalej wybrana; przy „35”: 200–770, „w zakresie normy” |
