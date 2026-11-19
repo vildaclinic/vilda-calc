@@ -296,12 +296,24 @@
                         <option value="5">Tanner V — dojrzałość pełna</option>
                       </select>
                     </label>
+                    <!-- P-E2-MENARCHE (decyzje właściciela 2026-11-19): wiek menarche wpisany TUTAJ jest
+                         nadpisaniem lokalnym — obowiązuje tylko w tym sprawdzeniu i nie zapisuje się
+                         u pacjenta (na stałe wpisuje się go w „+ Dane pokwitaniowe” formularza głównego).
+                         Pole widać dla estradiolu u pacjentki w wieku na pewno poniżej granicy dorosłości;
+                         o tym, kiedy tak jest, i o dopuszczalnym zakresie wartości decyduje silnik
+                         (LabUnitConverter.referenceContext) na podstawie danych estradiolu. -->
+                    <label id="labOverrideMenarcheWrap" hidden>Wiek menarche [lata]
+                      <input type="text" id="labOverrideMenarcheAge" inputmode="decimal" autocomplete="off"
+                             placeholder="np. 12,5">
+                    </label>
                     <!-- Wybór stadium tutaj jest NADPISANIEM LOKALNYM: obowiązuje tylko w tym
                          przeliczniku i nie zapisuje się u pacjenta. Miejscem wpisu stadium jest
                          panel „Dane pokwitaniowe" formularza głównego (decyzja właściciela
                          2026-09-09), a tu jest ono tylko czytane — dlatego opcja domyślna
                          nazywa stadium z danych, a nadpisanie dostaje widoczną notę. -->
                     <p id="labOverrideTannerNote" class="lab-override-note" role="status" style="display:none;"></p>
+                    <!-- P-E2-MENARCHE: dlaczego zwykłe fazy cyklu są w estradiolu niedostępne (koniec panelu). -->
+                    <p id="labOverrideMenarcheNote" class="lab-override-note" role="status" hidden></p>
                     <button type="button" class="lab-override-reset" id="labOverrideReset">
                       Resetuj do danych pacjenta
                     </button>
@@ -601,6 +613,9 @@
     var overrideTannerEl = document.getElementById('labOverrideTanner');
     var overrideTannerDefaultEl = document.getElementById('labOverrideTannerDefault');
     var overrideTannerNoteEl = document.getElementById('labOverrideTannerNote');
+    var overrideMenarcheWrapEl = document.getElementById('labOverrideMenarcheWrap');
+    var overrideMenarcheEl = document.getElementById('labOverrideMenarcheAge');
+    var overrideMenarcheNoteEl = document.getElementById('labOverrideMenarcheNote');
     var overrideResetEl = document.getElementById('labOverrideReset');
     var clinicalHintEl  = document.getElementById('labClinicalHint');
     // Atrybuty pomiaru (cechy oznaczenia, nie pacjenta) — pora pobrania i test diagnostyczny.
@@ -712,6 +727,9 @@
       var suppliedPuberty = activePuberty || puberty || !identity && shared.puberty || {};
       var onsetYears = activePuberty ? activePuberty.onsetAgeYears : puberty ? puberty.wiekStartuPokwitaniaLat : suppliedPuberty.onsetAgeYears;
       var onsetSex = activePuberty ? activeAssessment.sex : identity ? source && source.sourceSex : sex;
+      // P-E2-MENARCHE: wiek menarche bieżącej osoby — ten sam nośnik i ta sama kolejność źródeł co początek
+      // pokwitania wyżej (żywy panel / sesja formularza, inaczej rekord pacjenta, bez pacjenta dane wspólne).
+      var menarcheYears = activePuberty ? activePuberty.menarcheAgeYears : puberty ? puberty.wiekMenarcheLat : suppliedPuberty.menarcheAgeYears;
       var onset = null;
       // Pole karty oznacza początek Th2 / osiągnięcie kryterium G, nie sam
       // numer Tannera. Nie odtwarzamy daty ani pozornej dokładności z ułamka lat.
@@ -758,6 +776,8 @@
         gnrhaStatus: suppliedPuberty.gnrhaStatus || null,
         testicularVolume: shared.advanced && shared.advanced.testicularVolume || pubertyState && pubertyState.jadra || null
       };
+      // Pole dochodzi tylko wtedy, gdy wiek menarche jest wpisany; o tym, czy wartość się liczy, decyduje silnik.
+      if (typeof menarcheYears === 'number' && Number.isFinite(menarcheYears)) context.menarcheAgeYears = menarcheYears;
       if (activeAssessment) {
         // A record can be displayed as an earlier observation without becoming
         // today's examination. A present invalid/future schema also blocks the
@@ -1120,10 +1140,12 @@
       }));
     }
     function resetLocalPatientOverride() {
-      localOverride = { sex: null, age: null, tanner: null, cycle_phase: null };
+      localOverride = { sex: null, age: null, tanner: null, cycle_phase: null, menarche: null };
       [overrideSexEl, overrideAgeEl, overrideAgeMonthsEl, overrideCycleEl, overrideTannerEl].forEach(function (node) {
         if (node) node.value = '';
       });
+      // P-E2-MENARCHE: lokalnie wpisany wiek menarche znika razem z pozostałymi nadpisaniami.
+      if (typeof overrideMenarcheEl !== 'undefined' && overrideMenarcheEl) overrideMenarcheEl.value = '';
     }
     function syncPatientIdentity() {
       var next = currentPatientIdentity();
@@ -1526,6 +1548,9 @@
           testosteroneMeasurementContext = {};
           localOverride.cycle_phase = null;
           if (overrideCycleEl) overrideCycleEl.value = '';
+          // P-E2-MENARCHE: lokalny wiek menarche należy do porzuconego kontekstu tak samo jak faza cyklu.
+          localOverride.menarche = null;
+          if (typeof overrideMenarcheEl !== 'undefined' && overrideMenarcheEl) overrideMenarcheEl.value = '';
           // The legacy E2 object was read before this reset. Re-read it so
           // the same render cannot retain the abandoned reproductive state.
           if (substance.id === 'estradiol') patient = getEffectivePatient();
@@ -2095,7 +2120,7 @@
     var testosteroneMeasurementContext = {};
 
     // Lokalne nadpisania – żyją tylko w pamięci tej karty, nie idą do sharedUserData.
-    var localOverride = { sex: null, age: null, tanner: null, cycle_phase: null };
+    var localOverride = { sex: null, age: null, tanner: null, cycle_phase: null, menarche: null };
     var localOverrideIdentity = currentPatientIdentity();
 
     /**
@@ -2375,6 +2400,7 @@
           p.ageUpperYears = e2Age.upperYears;
           p.ageUpperInclusive = e2Age.upperInclusive === true;
         }
+        applyMenarcheAge(p, e2Source, localOverride.menarche);
       }
       if (typeof currentSubstance !== 'undefined' && currentSubstance && currentSubstance.id === 'amh') {
         var amhSource = readPubertyPatientContext();
@@ -2389,6 +2415,24 @@
         }
       }
       return p;
+    }
+
+    /**
+     * P-E2-MENARCHE (decyzje właściciela 2026-11-19) — wiek menarche dla estradiolu. Strona tylko PRZEKAZUJE
+     * go silnikowi (pole `menarche_age_years`); o tym, czy wartość jest dopuszczalna i co z niej wynika
+     * (zakresy dorosłej po progu lat od menarche), decyduje LabUnitConverter na podstawie danych estradiolu.
+     * Pierwszeństwo: wartość wpisana lokalnie w panelu „zmień” (tylko to sprawdzenie; pakiet badań jej nie ma),
+     * inaczej wiek menarche z danych bieżącej osoby (readPubertyPatientContext). Niczego nie zapisuje.
+     */
+    function applyMenarcheAge(p, source, local) {
+      var fromData = source && source.sourceStatus === 'ready' && typeof source.menarcheAgeYears === 'number'
+        && isFinite(source.menarcheAgeYears) ? source.menarcheAgeYears : null;
+      var typed = typeof local === 'number' && isFinite(local) ? local : null;
+      p.menarche_age_years = typed != null ? typed : fromData;
+      // Dla opisu pacjenta i podpowiedzi pola: wartość z danych i to, czy ją tu nadpisano.
+      p._shared_menarche = fromData;
+      p._menarche_overridden = typed != null;
+      if (typed != null) p._has_override = true;
     }
 
     /**
@@ -2777,6 +2821,8 @@
           p.ageUpperYears = e2Age.upperYears;
           p.ageUpperInclusive = e2Age.upperInclusive === true;
         }
+        // P-E2-MENARCHE (R5): pakiet nie ma panelu nadpisań — wiek menarche wyłącznie z danych pacjenta.
+        applyMenarcheAge(p, e2Source, null);
       }
       return { patient: p, description: description };
     }
@@ -2809,6 +2855,18 @@
       }
     }
 
+    // Nazwy wyboru „Faza cyklu / ciąża” w opisie pacjenta. P-E2-MENARCHE (R7): ciąża słowami, nie kodem pola.
+    var CYCLE_PHASE_SUMMARY = {
+      follicular: 'faza folikularna', ovulation: 'pik owulacyjny', luteal: 'faza lutealna', postmenopause: 'postmenopauza',
+      pregnancy_t1: 'ciąża — I trymestr', pregnancy_t2: 'ciąża — II trymestr', pregnancy_t3: 'ciąża — III trymestr'
+    };
+    // Wiek menarche do wyświetlenia: przecinek, co najmniej jedno miejsce po przecinku, najwyżej dwa
+    // („10,0”, „12,5”, „11,25”) — wartość wpisana z dwoma miejscami nie jest pokazywana jako inna liczba.
+    function formatMenarcheAge(years) {
+      if (typeof years !== 'number' || !isFinite(years)) return '';
+      return years.toFixed(2).replace(/0$/, '').replace('.', ',');
+    }
+
     function describePatient(p) {
       if (!p || (!p.sex && p.age == null && p.tanner == null)) {
         if (typeof currentSubstance !== 'undefined' && currentSubstance && currentSubstance.id === 'amh') {
@@ -2837,11 +2895,9 @@
         }
         bits.push(tannerTxt);
       }
-      if (p.cycle_phase) {
-        var cyc = { follicular: 'faza folikularna', ovulation: 'pik owulacyjny',
-                    luteal: 'faza lutealna', postmenopause: 'postmenopauza' };
-        bits.push(cyc[p.cycle_phase] || p.cycle_phase);
-      }
+      // P-E2-MENARCHE (R6): wiek menarche wpisany lokalnie w panelu „zmień” — wzór jak inne nadpisania lokalne.
+      if (p._menarche_overridden) bits.push('menarche ' + formatMenarcheAge(p.menarche_age_years));
+      if (p.cycle_phase) bits.push(CYCLE_PHASE_SUMMARY[p.cycle_phase] || p.cycle_phase);
       var suffix = p._has_override ? ' · nadpisanie lokalne' : '';
       return { text: bits.join(' · ') + suffix, missing: false };
     }
@@ -2932,8 +2988,15 @@
           tannerMattersForPatient(currentSubstance, patient)) {
         hints.push('Określ etap Tannera w „Zmień ▼" — dla precyzyjniejszego zakresu (Mayo udostępnia tabele Tanner I–V dla tej substancji).');
       }
+      // P-E2-MENARCHE (R1): zakres dobrany jak u dorosłej na podstawie lat od menarche — wiersz mówi to wprost.
+      // Tekst z liczbami składa silnik z danych estradiolu; przy nieznanej fazie dochodzi wskazówka o „Zmień ▼".
+      var reference = referenceContextFor(patient);
+      var gynecological = !!(reference && reference.basis === 'gynecological_age' && reference.basis_pl);
+      if (gynecological) {
+        hints.push(reference.basis_pl + (patient.cycle_phase ? '' : ' Jeśli faza cyklu jest znana, wybierz ją w „Zmień ▼".'));
+      }
       // Analogicznie dla cykl/ciąża — pokaż tylko gdy fenotyp realnie wymaga.
-      if (cycleAware && patient.sex === 'F' && patient.life_stage === 'adult' && !patient.cycle_phase) {
+      if (cycleAware && patient.sex === 'F' && patient.life_stage === 'adult' && !patient.cycle_phase && !gynecological) {
         hints.push(currentSubstance.id === 'estradiol'
           ? 'Jeśli faza cyklu lub menopauza jest znana, wybierz ją w „Zmień ▼".'
           : 'Określ fazę cyklu / ciążę w „Zmień ▼" — domyślnie pokazujemy zakres folikularny.');
@@ -2947,6 +3010,86 @@
       return hints.join(' ');
     }
 
+    /* P-E2-MENARCHE (decyzje właściciela 2026-11-19) — widok reguły, bez jej kopii. O tym, na jakiej podstawie
+     * dobierany jest zakres, ile lat minęło od menarche i które wybory selektora „Faza cyklu / ciąża” są dostępne,
+     * strona pyta silnik (LabUnitConverter.referenceContext); próg, granica wieku i lista wyborów są w danych
+     * estradiolu (lab_units_data.js). Tutaj: opcje selektora, pole „Wiek menarche [lata]” i nota na końcu panelu. */
+    function referenceContextFor(patient) {
+      return currentSubstance && typeof Conv.referenceContext === 'function'
+        ? Conv.referenceContext(currentSubstance, patient) : null;
+    }
+    // Pełna lista opcji selektora, w kolejności ze strony (zapamiętana przy pierwszym rysowaniu); niedostępne
+    // opcje są z selektora wyjmowane, nie kasowane.
+    var cycleOptionNodes;
+    // Wybór, który dla tego badania i pacjenta nie jest dostępny, wraca do „nieznana”: lokalne nadpisanie znika,
+    // zamiast zostawać jako ukryta albo wyszarzona wartość (R3: postmenopauza poniżej granicy dorosłości;
+    // R2: zwykła faza cyklu w estradiolu przed progiem lat od menarche).
+    // Wyjątek na czas wpisywania liczby w panelu (zdarzenie „input” pól wieku i wieku menarche): wiek „35”
+    // przechodzi przez „3”, a „65” przez „6” — niedokończony wpis nie odbiera wybranej fazy. Zgodność wyboru
+    // z silnikiem jest sprawdzana po zakończeniu wpisu (zdarzenia „change” i „blur”) i przy każdym innym
+    // odświeżeniu; silnik i tak nie użyje dla estradiolu wyboru, który nie jest dostępny.
+    var cyclePhaseDropDeferred = false;
+    function dropUnavailableCyclePhase(reference) {
+      var phase = localOverride.cycle_phase;
+      if (!phase || !reference || !reference.phases[phase]) return false;
+      localOverride.cycle_phase = null;
+      if (overrideCycleEl) overrideCycleEl.value = '';
+      return true;
+    }
+    // „Nie dotyczy” — opcji nie ma na liście; „bez wpływu” — opcja jest, ale nie da się jej wybrać. Ruszane są
+    // wyłącznie opcje ze strony; lista zmienia się tylko wtedy, gdy zmienia się jej skład.
+    // kept: wybór zostawiony bez zmian na czas wpisywania liczby (patrz cyclePhaseDropDeferred).
+    function renderCyclePhaseOptions(reference, kept) {
+      if (!overrideCycleEl) return;
+      if (!cycleOptionNodes) cycleOptionNodes = Array.prototype.slice.call(overrideCycleEl.options);
+      var phases = reference && reference.phases || {};
+      cycleOptionNodes.forEach(function (option, index) {
+        if (kept && option.value === kept) return;
+        var state = phases[option.value] ? phases[option.value].state : '';
+        var listed = option.parentNode === overrideCycleEl;
+        if (state === 'not_applicable') {
+          if (listed) overrideCycleEl.removeChild(option);
+          return;
+        }
+        if (!listed) {
+          // Opcja wraca na swoje miejsce: przed najbliższą następną opcją strony, która jest na liście.
+          var next = null;
+          for (var after = index + 1; after < cycleOptionNodes.length && !next; after++) {
+            if (cycleOptionNodes[after].parentNode === overrideCycleEl) next = cycleOptionNodes[after];
+          }
+          overrideCycleEl.insertBefore(option, next);
+        }
+        option.disabled = state === 'no_effect';
+      });
+    }
+    function plainNumber(value) { return String(value).replace('.', ','); }
+    // Pole „Wiek menarche [lata]” i nota, dlaczego zwykłe fazy cyklu nie działają (R6, R2). Liczby w tekstach
+    // pochodzą z odpowiedzi silnika.
+    function renderMenarcheOverrideState(p, reference) {
+      var show = !!(reference && reference.menarche_applicable);
+      if (overrideMenarcheWrapEl) overrideMenarcheWrapEl.hidden = !show;
+      if (overrideMenarcheEl) {
+        // Bez wartości wpisanej tutaj silnik dostał wartość z danych; pokazujemy ją tylko, gdy ją przyjął.
+        var fromData = show && !p._menarche_overridden ? reference.menarche_age_years : null;
+        overrideMenarcheEl.placeholder = fromData != null ? '(z danych: ' + formatMenarcheAge(fromData) + ')' : 'np. 12,5';
+        // Wpisana wartość, której silnik nie przyjął (poza zakresem albo późniejsza niż wiek), liczy się jak brak wpisu.
+        var rejected = show && p._menarche_overridden && reference.menarche_age_years == null;
+        if (rejected) overrideMenarcheEl.setAttribute('aria-invalid', 'true');
+        else overrideMenarcheEl.removeAttribute('aria-invalid');
+      }
+      if (!overrideMenarcheNoteEl) return;
+      var note = '';
+      if (show && reference.basis !== 'gynecological_age') {
+        note = reference.menarche_age_years == null
+          ? 'Fazy cyklu działają poniżej ' + plainNumber(reference.adult_min_years) + ' lat dopiero po '
+            + plainNumber(reference.threshold_years) + ' latach od menarche. Wpisz „Wiek menarche” tutaj (tylko dla tego sprawdzenia) albo na stałe w „+ Dane pokwitaniowe” na stronie głównej.'
+          : 'Fazy cyklu nie zmieniają zakresu estradiolu: od menarche minęło mniej niż '
+            + plainNumber(reference.threshold_years) + ' lat (' + reference.years_since_menarche_text + ').';
+      }
+      overrideMenarcheNoteEl.textContent = note;
+      overrideMenarcheNoteEl.hidden = !note;
+    }
+
     function renderPatientSummary() {
       syncPatientIdentity();
       if (isPubertySubstance(currentSubstance)) {
@@ -2955,6 +3098,14 @@
         return;
       }
       var p = getEffectivePatient();
+      // P-E2-MENARCHE: najpierw zgodność wyboru fazy z tym, co silnik uznaje za dostępne — dopiero potem opis.
+      var reference = referenceContextFor(p);
+      if (!cyclePhaseDropDeferred && dropUnavailableCyclePhase(reference)) {
+        p = getEffectivePatient();
+        reference = referenceContextFor(p);
+      }
+      renderCyclePhaseOptions(reference, cyclePhaseDropDeferred ? localOverride.cycle_phase : null);
+      renderMenarcheOverrideState(p, reference);
       var d = describePatient(p);
       patientTextEl.textContent = d.text;
       patientTextEl.classList.toggle('is-missing', !!d.missing);
@@ -5958,7 +6109,7 @@
       });
     }
 
-    function onOverrideChange() {
+    function onOverrideChange(event) {
       var sexVal = overrideSexEl.value || null;
       // Wiek = lata + miesiące/12 (jak w sharedUserData). Pole miesięcy
       // wymaga, by lata były podane — w przeciwnym razie miesiące ignorujemy.
@@ -5976,10 +6127,14 @@
       var tannerRaw = overrideTannerEl ? overrideTannerEl.value : '';
       var tannerNum = (tannerRaw === '' || tannerRaw == null) ? null : parseInt(tannerRaw, 10);
       if (tannerNum != null && (!isFinite(tannerNum) || tannerNum < 1 || tannerNum > 5)) tannerNum = null;
+      // P-E2-MENARCHE (R6): wiek menarche wpisany tutaj — tylko dla tego sprawdzenia; przecinek albo kropka
+      // jak w polu wyniku. Czy wartość jest dopuszczalna, rozstrzyga silnik.
+      var menarcheNum = overrideMenarcheEl ? Conv.parseNumber(overrideMenarcheEl.value) : NaN;
       localOverride.sex = sexVal;
       localOverride.age = ageNum;
       localOverride.cycle_phase = cycleVal;
       localOverride.tanner = tannerNum;
+      localOverride.menarche = isFinite(menarcheNum) ? menarcheNum : null;
       // Jeśli efektywna płeć to mężczyzna (czy z override, czy z shared),
       // czyścimy fazę cyklu — bo selektor jest schowany dla M, a stale cycle
       // wpływałby na wybór zakresu (np. follicular u "M" złamałby logikę).
@@ -5988,7 +6143,15 @@
         localOverride.cycle_phase = null;
         if (overrideCycleEl) overrideCycleEl.value = '';
       }
-      refreshPatientContext();
+      // To samo dla lokalnego wieku menarche: pole jest dla mężczyzny schowane.
+      if (effectiveSex === 'M' && localOverride.menarche != null) {
+        localOverride.menarche = null;
+        if (overrideMenarcheEl) overrideMenarcheEl.value = '';
+      }
+      // P-E2-MENARCHE: w trakcie wpisywania liczby („input”) wybrana faza nie jest odrzucana — dopiero
+      // zakończony wpis („change”, „blur”) rozstrzyga, czy wybór jest dla pacjenta dostępny.
+      cyclePhaseDropDeferred = !!(event && event.type === 'input');
+      try { refreshPatientContext(); } finally { cyclePhaseDropDeferred = false; }
     }
 
     if (overrideSexEl) overrideSexEl.addEventListener('change', onOverrideChange);
@@ -5996,6 +6159,15 @@
     if (overrideAgeMonthsEl) overrideAgeMonthsEl.addEventListener('input', onOverrideChange);
     if (overrideCycleEl) overrideCycleEl.addEventListener('change', onOverrideChange);
     if (overrideTannerEl) overrideTannerEl.addEventListener('change', onOverrideChange);
+    if (overrideMenarcheEl) overrideMenarcheEl.addEventListener('input', onOverrideChange);
+    // Koniec wpisywania liczby — zatwierdzenie („change”: Enter albo wyjście z pola po zmianie) i każde wyjście
+    // z pola („blur”, także gdy wartość wróciła do tej sprzed wpisywania): wtedy sprawdzana jest dostępność
+    // wybranej fazy.
+    [overrideAgeEl, overrideAgeMonthsEl, overrideMenarcheEl].forEach(function (node) {
+      if (!node) return;
+      node.addEventListener('change', onOverrideChange);
+      node.addEventListener('blur', onOverrideChange);
+    });
 
     // Atrybuty pomiaru
     function onMeasurementChange(event) {

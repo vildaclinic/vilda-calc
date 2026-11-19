@@ -615,6 +615,11 @@
       // Silnik nie ocenia bez dodatkowego kontekstu próbki (np. estradiol u dorosłej kobiety bez fazy cyklu);
       // pakiet nie ma tych pól — karta wyniku odsyła do pojedynczego badania.
       if (!row.own && evaluation.reference_context_required === true) row.contextRequired = true;
+      // P-E2-MENARCHE (R5): silnik dobrał kontekst jak u dorosłej na podstawie lat od menarche — karta wyniku
+      // powtarza jego zdanie pod notą o kontekście badania. Tekst i liczby pochodzą z silnika (dane estradiolu).
+      if (row.contextRequired && typeof evaluation.reference_basis_pl === 'string' && evaluation.reference_basis_pl) {
+        row.contextBasis = evaluation.reference_basis_pl;
+      }
       var range = row.own ? undefined : captureRange(options, substance, evaluation, raw);
       if (range !== undefined) {
         row.range = range;
@@ -836,7 +841,7 @@
     }
 
     return Object.freeze({
-      version: '1.7.0',
+      version: '1.8.0',
       SETTINGS_KEY: SETTINGS_KEY,
       CUSTOM_KEY: CUSTOM_KEY,
       LIMITS: LIMITS,
@@ -1788,7 +1793,7 @@
         var assessed = row.status === 'ok' && !!row.assessment && !!row.view && row.view.puberty === true && !!assessmentUI();
         var otherDay = assessed && state.otherDay === true;
         var signature = JSON.stringify([row.status, row.error || '', row.shown || '', row.unit || '', row.converted || '', row.view || null, !!row.contextRequired,
-          assessed ? row.assessment.evaluation : null, otherDay, row.pendingStage || '']);
+          assessed ? row.assessment.evaluation : null, otherDay, row.pendingStage || '', row.contextBasis || '']);
         if (box.getAttribute('data-drawn') === signature) return;
         box.setAttribute('data-drawn', signature);
         box.textContent = '';
@@ -1855,6 +1860,8 @@
         var note = view.own && OWN_KINDS[view.own] ? OWN_KINDS[view.own].note : row.contextRequired ? CONTEXT_NOTE : '';
         if (note) {
           if (!view.lab) add(box, 'div', 'lab-pkg-card-note', note);
+          // P-E2-MENARCHE (R5): podstawa doboru kontekstu (lata od menarche) — ten sam wyciszony styl co nota wyżej.
+          if (!view.lab && !view.own && row.contextBasis) add(box, 'div', 'lab-pkg-card-note', row.contextBasis);
           // PR6: norma z wydruku zastąpiła ocenę pokwitaniową aplikacji.
           else if (view.replaced) add(box, 'div', 'lab-pkg-card-note', REPLACED_NOTE);
           button(box, 'lab-pkg-link lab-pkg-card-link', 'Oceń ' + definition.short + ' w pojedynczym badaniu →', function () { openSingle(definition.id); });
@@ -2804,7 +2811,7 @@
 
     var instance = null;
     return Object.freeze({
-      version: '1.9.0',
+      version: '1.10.0',
       start: function () {
         if (instance || !win || !win.document) return instance;
         instance = create(win);
