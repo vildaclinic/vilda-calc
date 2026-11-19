@@ -3938,24 +3938,30 @@ function Bsc5(B, live) {
     var request = locks.request('vilda:duplicate-groups:v2:' + scope.mode + ':' + (scope.ephemeral ? 'ephemeral:' : scope.cloud ? 'cloud:' : 'local:')
         + encodeURIComponent(scope.accountId) + (scope.tab ? ':tab:' + encodeURIComponent(scope.tab) : ''), { mode: 'exclusive', signal: abort.signal }, async function (lock) {
         if (!lock) throw BscError('BSC_LOCKS');
-        BscAssert(scope, current);
-        var latest = await BscRead(scope, current);
-        BscAssert(scope, current);
-        var groups = latest.groups;
-        if (groups.indexOf(signature) < 0) groups.push(signature);
-        groups = groups.slice(-200);
-        var payload = BscPayload(scope, groups); BscBound(payload);
-        var cipher = await scope.vault.encryptPayloadForCurrentUser(payload);
-        BscAssert(scope, current);
-        if (!cipher || typeof cipher.iv !== 'string' || !cipher.iv || typeof cipher.data !== 'string' || !cipher.data) throw BscError('BSC_CIPHER');
-        var raw = JSON.stringify({ iv: cipher.iv, data: cipher.data });
-        if (new TextEncoder().encode(raw).byteLength > BscMaxBytes * 2) throw BscError('BSC_CIPHER_SIZE');
-        // This is a defensive check within the real exclusive lock, not CAS.
-        if (scope.storage.getItem(scope.key) !== latest.raw) throw BscError('BSC_CHANGED');
-        BscAssert(scope, current); scope.storage.setItem(scope.key, raw);
-        if (scope.storage.getItem(scope.key) !== raw) throw BscError('BSC_COMMIT');
-        BscAssert(scope, current); BscReadId += 1;
-        BscCache = { scope: scope, raw: raw, groups: groups, error: false }; return true;
+        // A prior document's storage update can become visible after this
+        // lock is granted. Retry only a changed pre-commit read, under this
+        // same lock, owner and original click deadline; never retry a write.
+        for (var attempt = 0; attempt < 3; attempt += 1) {
+          BscAssert(scope, current);
+          var latest = await BscRead(scope, current);
+          BscAssert(scope, current);
+          var groups = latest.groups;
+          if (groups.indexOf(signature) < 0) groups.push(signature);
+          groups = groups.slice(-200);
+          var payload = BscPayload(scope, groups); BscBound(payload);
+          var cipher = await scope.vault.encryptPayloadForCurrentUser(payload);
+          BscAssert(scope, current);
+          if (!cipher || typeof cipher.iv !== 'string' || !cipher.iv || typeof cipher.data !== 'string' || !cipher.data) throw BscError('BSC_CIPHER');
+          var raw = JSON.stringify({ iv: cipher.iv, data: cipher.data });
+          if (new TextEncoder().encode(raw).byteLength > BscMaxBytes * 2) throw BscError('BSC_CIPHER_SIZE');
+          // This is a defensive check within the real exclusive lock, not CAS.
+          if (scope.storage.getItem(scope.key) !== latest.raw) continue;
+          BscAssert(scope, current); scope.storage.setItem(scope.key, raw);
+          if (scope.storage.getItem(scope.key) !== raw) throw BscError('BSC_COMMIT');
+          BscAssert(scope, current); BscReadId += 1;
+          BscCache = { scope: scope, raw: raw, groups: groups, error: false }; return true;
+        }
+        throw BscError('BSC_CHANGED');
       });
     var saved = await request;
     BscAssert(scope, current); return saved;

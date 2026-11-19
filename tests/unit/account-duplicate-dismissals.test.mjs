@@ -158,6 +158,61 @@ describe('account duplicate dismissal ciphertext boundary', () => {
     await expect(e.ctx.Bsc5(input, () => true)).rejects.toMatchObject({ code: 'BSC_SIZE' });
     expect(e.locks.calls).toHaveLength(0); expect(e.local.writes).toHaveLength(0); expect(e.ctx.Bsc4(input)).toBe(false);
   });
+  it('re-reads and merges delayed prior-document ciphertext before its only write under the same lock', async () => {
+    const e = await environment(); await e.ctx.BscHydrate(() => true);
+    const prior = JSON.stringify(await e.encrypt(e.payload(['fictional-Ewa']))), reads = [], attempts = [];
+    const nativeGet = e.local.getItem.bind(e.local);
+    e.local.getItem = key => { const value = nativeGet(key); if (key === e.key()) reads.push(value); return value; };
+    e.vault.encryptPayloadForCurrentUser = payload => { attempts.push([...payload.groups]); return e.encrypt(payload); };
+    const gate = deferred(); e.state.encryptGate = gate; e.state.encryptStarted = deferred();
+    const save = e.ctx.Bsc5(group('fictional-Ola'), () => true); await e.state.encryptStarted.promise;
+    // The observed WebKit schedule: the granted lock reads null twice, then
+    // the preceding writer's valid ciphertext arrives while real AES waits.
+    expect(reads).toEqual([null, null]); expect(attempts).toEqual([['fictional-Ola']]);
+    e.local.map.set(e.key(), prior); e.emit('storage', { key: e.key(), storageArea: e.local });
+    e.state.encryptGate = null; gate.resolve(); expect(await save).toBe(true);
+    expect(attempts).toEqual([['fictional-Ola'], ['fictional-Ewa', 'fictional-Ola']]);
+    expect(e.locks.calls).toHaveLength(1); expect(e.local.writes).toHaveLength(1);
+    const cipher = JSON.parse(e.local.map.get(e.key()));
+    expect(await e.decrypt(cipher.iv, cipher.data)).toEqual(e.payload(['fictional-Ewa', 'fictional-Ola']));
+    expect(e.ctx.Bsc4(group('fictional-Ewa'))).toBe(true); expect(e.ctx.Bsc4(group('fictional-Ola'))).toBe(true);
+    expect(e.refresh).toHaveBeenCalledOnce();
+  });
+  it('bounds repeated pre-commit visibility changes at three complete attempts without writing stale state', async () => {
+    const e = await environment(); await e.ctx.BscHydrate(() => true);
+    const incoming = [];
+    for (let index = 0; index < 3; index++) incoming.push(JSON.stringify(await e.encrypt(e.payload(['fictional-prior-' + index]))));
+    const attempts = [];
+    e.vault.encryptPayloadForCurrentUser = async payload => {
+      const cipher = await e.encrypt(payload), index = attempts.length;
+      attempts.push([...payload.groups]); e.local.map.set(e.key(), incoming[index]);
+      e.emit('storage', { key: e.key(), storageArea: e.local }); return cipher;
+    };
+    await expect(e.ctx.Bsc5(group('fictional-current'), () => true)).rejects.toMatchObject({ code: 'BSC_CHANGED' });
+    expect(attempts).toEqual([['fictional-current'], ['fictional-prior-0', 'fictional-current'], ['fictional-prior-1', 'fictional-current']]);
+    expect(e.locks.calls).toHaveLength(1); expect(e.local.writes).toHaveLength(0); expect(e.local.map.get(e.key())).toBe(incoming[2]);
+    expect(e.ctx.Bsc4(group('fictional-current'))).toBe(false);
+  });
+  it.each(['quota', 'invalid-cipher', 'readback'])('does not retry %s failure as a pre-commit visibility change', async failure => {
+    const e = await environment(); await e.ctx.BscHydrate(() => true);
+    const attempts = [];
+    e.vault.encryptPayloadForCurrentUser = async payload => {
+      attempts.push([...payload.groups]); const cipher = await e.encrypt(payload);
+      if (failure === 'invalid-cipher') e.local.map.set(e.key(), '{');
+      return cipher;
+    };
+    const nativeSet = e.local.setItem.bind(e.local), writeAttempts = [];
+    e.local.setItem = (key, value) => {
+      writeAttempts.push([key, value]);
+      if (failure === 'quota') throw Error('FICTIONAL_QUOTA');
+      nativeSet(key, value);
+      if (failure === 'readback') e.local.map.delete(key);
+    };
+    await expect(e.ctx.Bsc5(group('fictional-failure'), () => true)).rejects.toThrow();
+    expect(attempts).toHaveLength(1); expect(e.locks.calls).toHaveLength(1);
+    expect(writeAttempts).toHaveLength(failure === 'invalid-cipher' ? 0 : 1);
+    expect(e.ctx.Bsc4(group('fictional-failure'))).toBe(false);
+  });
   it('retries a ciphertext changed during decrypt and publishes only the latest groups', async () => {
     const e = await environment(); await e.seed(['fictional-before']);
     const replacement = JSON.stringify(await e.encrypt(e.payload(['fictional-after'])));

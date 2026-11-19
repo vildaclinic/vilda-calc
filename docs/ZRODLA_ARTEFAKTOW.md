@@ -2648,11 +2648,11 @@ a odwrócenie obu zestawów daje
 `98d90618b877cdc696020f7e726b5d16deeff201deebdaffbdd97afe7fd2c9f3`.
 
 Te skróty uwzględniają oficjalne wyrównanie wersji zasobów względem
-historii publikacji: jedyną zmianą w samym Auth po `75db10e2` jest
-`clcr_record_resources.js?v=27` → `?v=31`. Po zastąpieniu wyłącznie
-liczbowych tokenów `?v=` oba pliki są bajtowo identyczne, a cały blok
-`ACCOUNT DUPLICATE DISMISSALS V2` pozostaje bajtowo identyczny także bez
-tego przekształcenia. Skrót bazy po odwróceniu samej warstwy Bsc wynosi
+historii publikacji. Między `75db10e2` i `f652cd58` jedyną zmianą w samym
+Auth było `clcr_record_resources.js?v=27` → `?v=31`; po zastąpieniu wyłącznie
+liczbowych tokenów `?v=` te dwa historyczne pliki są bajtowo identyczne.
+Późniejsze ograniczone ponowienie zapisu opisane poniżej należy wyłącznie
+do odwracalnego bloku Bsc. Skrót bazy po odwróceniu samej warstwy Bsc wynosi
 `f22c3d7dd90990e02f5a527527857d3f207fe52a502e5fbdb8d310b39a873735`.
 
 Czytelny blok `ACCOUNT DUPLICATE DISMISSALS V2` w `vilda_auth_ui.js` oraz
@@ -2682,8 +2682,13 @@ Odczyt kończy się przed zbudowaniem natywnych grup listy. `Bsc4` pozostaje
 synchronicznym odczytem RAM z kontrolą konta, biletu sejfu, adaptera, trybu
 i życia dokumentu. Zapis pod rzeczywistym wyłącznym Web Lockiem odczytuje
 najnowszą kopertę, odszyfrowuje, dołącza jedną sygnaturę, szyfruje i sprawdza
-zapis w tym samym adapterze. Blokada obejmuje również oczekiwanie na
-kryptografię. Brak obsługi blokad, błąd zapisu i przekroczenie 8 sekund
+zapis w tym samym adapterze. Gdy przed pierwszym zapisem zmieni się surowa
+koperta (również przy opóźnionym dostarczeniu zdarzenia storage w WebKit),
+wykonuje cały odczyt, połączenie sygnatur i szyfrowanie najwyżej trzykrotnie
+pod tą samą przyznaną blokadą i w tym samym limicie czasu. Nie ponawia
+błędów odczytu, kryptografii, zapisu ani potwierdzenia po zapisie.
+Blokada obejmuje również oczekiwanie na kryptografię.
+Brak obsługi blokad, błąd zapisu i przekroczenie 8 sekund
 kończą się widocznym niepowodzeniem. Osiem sekund jest liczone od danego
 kliknięcia, łącznie z oczekiwaniem w kolejce dokumentu; zadanie przeterminowane
 w kolejce nie żąda blokady ani nie odczytuje danych. Spóźniona operacja nie może zapisać ani
