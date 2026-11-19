@@ -1247,6 +1247,15 @@ select.vilda-auth-input {
   align-items: center
 }
 
+/* P-OTYLOSC-SIATKI: pomiary od pacjenta (romb) — pozycja legendy tylko, gdy są na siatkach. */
+.vilda-patient-legend-item.vilda-legend-pac[hidden] {
+  display: none
+}
+
+.vilda-legend-pac svg {
+  margin-right: var(--space-4px)
+}
+
 .vilda-patient-legend-line {
   display: inline-block;
   width: 14px;
