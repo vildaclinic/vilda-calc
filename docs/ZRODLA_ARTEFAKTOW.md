@@ -2044,6 +2044,23 @@ Opis działania i przypadki: `docs/clinical/ALGORITHMS.md`, „Leczenie otyłoś
 
 **Granice.** Zmienia się tylko przypadek „puste pole przy zapisanym poprawnym PWZ” (PWZ trafia do `localStorage` dopiero po przyjęciu poprawnego numeru). Wpisywanie numeru, niepoprawny PWZ w polu i brak zapisanego PWZ działają jak dotąd.
 
+## Łatka P-POSTEPY-DZIENNIK — „Postępy” dorosłego z dziennika leczenia (`vilda_auth_ui.js` 569 → 570, 2026-11-19, decyzja właściciela)
+
+Opis działania i przypadki: `docs/clinical/ALGORITHMS.md`, „Postępy dorosłego i listy pacjentów zgodne z dziennikiem leczenia” (P-POSTEPY-DZIENNIK). Zmiany w czytelnych źródłach: `vilda_postepy_doroslego.js` (konflikt wersji wpisu wstrzymuje punkt oceny wg ChPL) i `vilda_cykle_leczenia.js` (`zmianaPrzebiegu`, `POWODY_DOCPRO`, „Poprawka w DocPro” w „Wpisy leczenia”).
+
+```js
+// vilda_auth_ui.js
+// 1. montaż panelu „Postępy”: punkty z dziennika i rysunek ponawiany po zapisie wpisu
+//    było:  …typeof _pdE.scalSerie=="function"){var _pdSer=_pdE.scalSerie({…,punktyLeczenia:s.obesityTherapyPoints}),_pdM=_pdE.analizuj({…,punktyLeczenia:s.obesityTherapyPoints});_pdOk=!!_pdU.renderPanel(Ct,_pdM,{…})}}catch(ct){…}
+//    jest:  …typeof _pdE.scalSerie=="function"){/* P-POSTEPY-DZIENNIK … */var _pdRys=function(_pdPkt){var _pdSer=_pdE.scalSerie({…,punktyLeczenia:_pdPkt}),_pdM=_pdE.analizuj({…,punktyLeczenia:_pdPkt});return _pdU.renderPanel(Ct,_pdM,{…})},_pdHost=_pdRys(typeof Ob_dzPunkty=="function"?Ob_dzPunkty(s,GdNotatki):s.obesityTherapyPoints);_pdOk=!!_pdHost;typeof Ob_dzPostepy=="function"&&Ob_dzPostepy(t,Ct,_pdHost,_pdRys)}}catch(ct){…}
+// 2. Ob_dz (czytelny blok P-OTYLOSC-DZIENNIK): po ponownym odczycie notatek — powiadomienie słuchaczy
+//    było:  rysuj(Dz.zloz(n, migawka));
+//    jest:  var nowy = Dz.zloz(n, migawka); rysuj(nowy); Ob_dzPowiadom(t, nowy);
+// 3. czytelny blok Ob_dzSluchacze, Ob_dzPunkty, Ob_dzPostepy, Ob_dzPowiadom — za Ob_dz, przed komentarzem Ob_dzk
+```
+
+**Granice.** Napisy `_pdE.scalSerie(` i `_pdU.renderPanel(Ct,_pdM,` zostają (pilnuje ich `postepy-doroslego-widok.test.mjs`). Słuchacze zamkniętej karty (kontener odpięty od dokumentu) wypadają przy następnym powiadomieniu. Lint: bez nowych naruszeń (`no-useless-assignment` w limicie).
+
 ## Trwała tożsamość wizyt — źródło i granica artefaktu sejfu
 
 Zmiana funkcjonalna `P-TRWALE-WIZYTY` ma bazę `audyt` z commita
@@ -2523,3 +2540,28 @@ moduł prezentacji B1 z `96c31d23` w `home-b1-before-diary-lifetime.js.txt`
 z pochodzeniem i SHA256 w sąsiednim pliku `.origin.json`. Sprawdza również
 bezpośrednie usunięcie i przywrócenie przy starszym koordynatorze, bez kopiowania
 silnika klinicznego ani formatu zapisu.
+
+## Zgodność B1 z Postępami z dziennika (#1000)
+
+Włączenie `audyt` `4bff32aaec358310987ef78936cba75cd0b61248` zachowuje
+natywną projekcję Postępów, flagi konfliktu i politykę poprawek w DocPro.
+W `formularz`, `usun` i `przywroc` kontrola życia B1 poprzedza tę politykę.
+Natywne wersje silnika i UI dziennika `2` są niezależne od kontraktu aktora
+Home `actorLifetimeVersion = 1`.
+
+`tools/patient_b1_auth_hooks.mjs` obejmuje nowe odświeżenie
+`Ob_dz`: po odczycie sprawdza właściciela Home przed rysowaniem i powiadomieniem.
+Nowy słuchacz Postępów sprawdza tego samego właściciela karty, a odbiorca Home
+przyjmuje tylko powiadomienie z nadal aktualnej pierwotnej karty źródłowej
+(`CareReadOwner` oraz jej `Eo`). Źródło nie przechwytuje nowego właściciela po
+odczycie. Domyślni odbiorcy zachowują natywne działanie. Przekazywane są
+oryginalne punkty dziennika, bez zmiany obliczeń, DTO i zapisu.
+
+Po tej adaptacji odwrócenie 16 par zabezpieczeń Auth daje SHA256
+`a87a1b6641f2077ebb37e388f6d48f962587bedf92fd283033c7dce2e4cc30a5`;
+odwrócenie samych haków Przypomnień daje
+`989b14df2fab607e390d3e45d230eb4b023103f51e182c5eb95ae64d4e97f5ab`.
+Po odwróceniu obu zestawów bazą jest
+`0d4e7c5f415c6dcaa07889969e971958b5dcb828367513a57622fc51da630c60`.
+Ponowne nałożenie odtwarza artefakt bajtowo; kontrola silnika dziennika odnosi
+się teraz do natywnego `4bff32aa`, a historyczna fikstura B1 pozostaje bez zmian.

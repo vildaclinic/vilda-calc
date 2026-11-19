@@ -43194,6 +43194,7 @@ zmian. Dorosły: ocena z masy (Saxenda, Mysimba) albo kliniczna — z ostatniego
 **Ograniczenia (znane).**
 - Zakładka „Postępy” dorosłego, lista pacjentów (filtr leku), analiza trajektorii i karta zbiorcza czytają jeszcze
   migawkę ostatniej wizyty — wpis z Karty widzą po najbliższym „Zapisz dane” wizyty w DocPro (lustro listy).
+  Od P-POSTEPY-DZIENNIK (niżej) „Postępy” liczą z dziennika, a listy pacjentów są z nim zgodne.
 - Starsze urządzenie (sprzed tej wersji) pokazuje wersje wpisów jako zwykłe notatki i nie widzi ich w monitorze; ręczna
   edycja takiej notatki na starszym urządzeniu (zmiana treści) czyni ją nieczytelną dla dziennika — dziennik pomija ją
   i zostawia w Notatkach.
@@ -43707,3 +43708,75 @@ scalania do kolejki i przełącznika). Poza blokiem bez zmian.
 (wstrzykują sejf), SW 1.1.551 → 1.1.552 — `npm run podbij-wersje`; baza `origin/audyt` `d99ec459` (po
 vildaclinic/vilda-calc#990, vildaclinic/vilda-calc#994, vildaclinic/vilda-calc#991 i vildaclinic/vilda-calc#997). Bez nowego
 pliku w pamięci offline.
+
+## Postępy dorosłego i listy pacjentów zgodne z dziennikiem leczenia (P-POSTEPY-DZIENNIK, SW 1.1.553, `vilda_postepy_doroslego.js` 8, `vilda_cykle_leczenia.js` 6, `vilda_auth_ui.js` 570, `vilda_auth_ui.css` 84, 2026-11-19)
+
+**Decyzje właściciela (2026-11-19).** „Zacznij kolejny etap — Postępy i lista pacjentów z dziennika”. Listy pacjentów
+liczy sejf (`vilda_vault.js`) z zapisu ostatniej wizyty; właściciel wybrał wariant **bez zmiany sejfu**: w Karcie
+„Popraw” i „Usuń” tylko przy Kontynuacji, a Włączenie i Zakończenie poprawia się w DocPro (tak jak dotąd zmianę leku).
+Odrzucone: zmiana sejfu (listy z notatek dziennika — zmiana obrazu sejfu i kolejka E3-PR0c…) i pozostawienie list
+bez zmian.
+
+**Stan przed zmianą.** Zakładka „Postępy” dorosłego (wykres redukcji masy, BMI, kamienie, punkt oceny wg ChPL) liczyła
+z `obesityTherapyPoints` migawki ostatniej wizyty — masy przysłanej przez pacjenta i dopisanej w „Wpisy leczenia” nie
+widziała, dopóki lekarz nie zapisał wizyty w DocPro. Listy pacjentów („Leczenie otyłości: trwa / kiedykolwiek / lek X”
+i lek wpisany z nazwy) liczy sejf z rodzaju ostatniego punktu i z leku punktów ostatniej wizyty; Karta pozwalała
+usunąć albo poprawić każdy wpis, także Włączenie i Zakończenie, więc lista mogła rozjechać się z dziennikiem.
+
+**Postępy z dziennika.** Karta (`vilda_auth_ui.js`, montaż panelu) podaje silnikowi `scalSerie` → `analizuj` punkty
+z projekcji dziennika (`Ob_dzPunkty`: `VildaDziennikOtylosci.zloz(notatki pacjenta, migawka).punkty` — te same, z których
+liczy kafelek „Leczenie otyłości”). Po zapisie wpisu w „Wpisy leczenia” panel rysuje się od nowa w tym samym miejscu
+(`Ob_dzPowiadom` → `Ob_dzPostepy`), bez ponownego otwierania karty. Bez modułu dziennika — jak dotąd z migawki.
+
+**Konflikt wersji w „Postępach”.** Wpis bieżącego cyklu z dwiema wersjami (poprawiony równolegle na dwóch urządzeniach
+albo w dwóch kartach) zdejmuje punkt oceny wg ChPL z wykresu (`punktDecyzyjny.bezOsi = 'konflikt-wersji-wpisu'`)
+i dodaje ostrzeżenie „Wpis z DD.MM.RRRR ma dwie wersje … Wybierz prawidłową w zakładce „Leczenie”, „Wpisy leczenia””.
+Ta sama reguła co werdykt w Karcie (decyzja z etapu 3): u dorosłego ocena wg ChPL liczy się z masy i nie ma okna
+z datą (`punktOceny` bez `oknoOdISO`), więc wstrzymuje ją każdy konflikt bieżącego cyklu. Konflikt we wcześniejszym,
+zakończonym cyklu nie zmienia oceny. Seria i pasma zostają (najnowsza nieusunięta wersja). Pierwszeństwo: niezgodny
+zapis cyklu (D5) przed konfliktem, konflikt przed brakiem punktu „Włączenie”.
+
+**Listy zgodne z dziennikiem bez zmiany sejfu.** `VildaDziennikOtylosci.zmianaPrzebiegu(stan, wpis)` mówi, czy zmiana
+wpisu w Karcie mogłaby zmienić to, z czego sejf liczy listy: zwraca `null` (wolno w Karcie) tylko dla Kontynuacji,
+której poprzedni wpis (w kolejności tabeli) jest Włączeniem albo Kontynuacją z tym samym lekiem i substancją; inaczej
+powód `wlaczenie` | `zakonczenie` | `pierwszy-wpis` | `zmiana-leku`. Wtedy ani rodzaj ostatniego punktu, ani lek nie
+różnią się od zapisu wizyty — po każdym dopuszczonym działaniu sejf liczy listy tak samo, jakby zapisem wizyty była
+projekcja dziennika (sprawdzone na prawdziwym sejfie, niżej). W „Wpisy leczenia” wiersz Włączenia, Zakończenia i
+Kontynuacji ze zmianą leku ma „Poprawka w DocPro” zamiast „Popraw”/„Usuń”; usunięty taki wpis — „Dodaj ponownie
+w DocPro” zamiast „Przywróć”; te same powody odrzucają działanie w kodzie (nie tylko w widoku). Podpis sekcji:
+„Włączenie, Zakończenie i zmianę leku dodajesz i poprawiasz w DocPro przy wizycie. Tu — Kontynuacje.” „Wybierz wersję”
+przy konflikcie zostaje dla każdego wpisu — monitor DocPro konfliktu nie rozstrzyga.
+
+**Przypadki syntetyczne** (dane fikcyjne; dorosły 47 l., 170 cm):
+
+| Przypadek | Wejście | Oczekiwany wynik |
+|---|---|---|
+| PD-1 | Saxenda: Włączenie 01.06.2026 112,0 kg, Kontynuacja 06.07.2026 108,0 kg; Karta „+ Kontynuacja” 10.11.2026 99,1 kg (pacjent) | „Postępy” bez ponownego otwierania karty: 99,1 kg na wykresie, jeden panel, punkt oceny wg ChPL na miejscu |
+| PD-2 | ten sam pacjent | wiersz Włączenia: „Poprawka w DocPro”, bez „Popraw”/„Usuń”; Kontynuacja z 06.07.2026: „Popraw” i „Usuń”; lista „Saxenda — trwa” z sejfu obejmuje pacjenta |
+| PD-3 | wpis 10.11.2026 poprawiony równolegle (98,6 i 99,4 kg) | „Postępy”: „Wpis z 10.11.2026 ma dwie wersje…”, bez punktu oceny wg ChPL; po wyborze wersji punkt wraca (test jednostkowy) |
+| listy | Wegovy (Włączenie 12.01.2026, Kontynuacja 14.04.2026): + Kontynuacja, poprawka, usunięcie dawnej Kontynuacji i cofnięcie, usunięcie ostatniego wpisu | po każdym kroku 7 reguł list (trwa/kiedykolwiek, Wegovy/Saxenda/dowolny, lek z nazwy) daje to samo dla pacjenta i dla „lustra” z zapisem wizyty = projekcja dziennika |
+| kontrola ujemna | usunięcie Zakończenia; usunięcie Kontynuacji, która zmieniła Saxendę na Wegovy | rozjazd list („trwa”, „Wegovy kiedykolwiek”) — dlatego `zmianaPrzebiegu` odsyła je do DocPro |
+
+**Wpływ kliniczny.** Zmienia się źródło danych zakładki „Postępy” (masy od pacjenta wchodzą do wykresu, kafelków
+i punktu oceny wg ChPL — jak w kafelku „Leczenie otyłości” od etapu 3) i dochodzi wstrzymanie punktu oceny przy
+konflikcie wersji. Progi, pasma, okna i kotwice ChPL bez zmian. Wegovy u dorosłego nadal bez punktu oceny (ChPL
+nie podaje reguły odstawienia dla dorosłych). Karta przestaje pozwalać na poprawkę Włączenia i Zakończenia —
+to zawęża edycję, nie zmienia żadnej oceny.
+
+**Ograniczenia (znane).**
+- Analiza trajektorii i karta zbiorcza czytają jeszcze migawkę ostatniej wizyty.
+- Wybór wersji przy konflikcie Włączenia albo Zakończenia (rzadki: dwie poprawki tego samego wpisu w DocPro na dwóch
+  urządzeniach) może zmienić rodzaj albo lek punktu — lista wyrówna się po najbliższym „Zapisz dane” wizyty w DocPro.
+- Wpis dodany w Karcie trafia do zapisu wizyty (lustro listy) dopiero przy „Zapisz dane” w DocPro — listy tego nie
+  potrzebują (lek i stan leczenia się nie zmieniają), historia wersji wizyty — bez zmian, jak w etapie 3.
+
+**Testy.** Dane wyłącznie fikcyjne.
+- `tests/unit/postepy-listy-dziennik.test.mjs` (10): `zmianaPrzebiegu` (Włączenie, Zakończenie, wpis z Karty, zmiana
+  leku, pierwszy wpis, usunięty wpis, zdania dla lekarza), „Postępy” z dziennika (wpis od pacjenta w serii, konflikt
+  wstrzymuje i wybór wersji przywraca punkt oceny, konflikt we wcześniejszym cyklu bez skutku), listy na prawdziwym
+  sejfie (5 działań Karty × 7 reguł, kontrola ujemna).
+- e2e `tests/e2e/postepy-dziennik.spec.mjs` (PD-1…PD-3) na prawdziwej stronie; PD-1 i PD-3 padają na kodzie sprzed
+  zmiany.
+
+**Wdrożenie.** Od razu przy wydaniu; sejf bez zmian. **Cofnięcie** = rewert PR: „Postępy” wracają do migawki, Karta
+znów pozwala poprawiać każdy wpis; dane dziennika bez zmian.
