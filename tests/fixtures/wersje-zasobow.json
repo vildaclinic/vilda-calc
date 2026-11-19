@@ -1968,8 +1968,8 @@
   "sha256": "5caeafa2dcc83cbaa98ce7add635ee15addfeec802d98065fe0877372c1f2af7"
  },
  "vilda_save_status_indicator.js": {
-  "v": 49,
-  "sha256": "873ceae3a99dd9ac02fcf0653ea4f82185d1f2dfc6d531b41b4508b60ccaf82b"
+  "v": 50,
+  "sha256": "5bfdfcbaff1aba2b32dbbc52f0ce6f3781d7b39796b539e1a819581b45eb001f"
  },
  "vilda_schowek.js": {
   "v": 5,
@@ -1985,7 +1985,7 @@
  },
  "vilda_session_bridge.js": {
   "v": 222,
-  "sha256": "dfbf59d52802501deaa9d517dd5db97e8da2ed803f3d961cf29ea8c93d36c20f"
+  "sha256": "9a88b75e40ddf91b2b78e29780efc327d5c287519fe7fb5a83157a4489e64e62"
  },
  "vilda_sga_catchup.js": {
   "v": 2,
