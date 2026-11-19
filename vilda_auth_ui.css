@@ -2657,6 +2657,13 @@ body.vilda-modal-alert-open #scrollTopBtn {
   gap: var(--space-6px);
 }
 
+/* P-POSTEPY-DZIENNIK: Włączenie, Zakończenie i zmiana leku — poprawka w DocPro, nie w Karcie. */
+.vdo-row-docpro {
+  align-self: center;
+  font-size: .78rem;
+  color: var(--text-muted);
+}
+
 .vdo-src {
   display: inline-block;
   border-radius: var(--radius-pill);

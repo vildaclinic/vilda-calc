@@ -1164,12 +1164,12 @@
   "sha256": "e277d8f3787228ed7bad34ebc873873d7be0147cd43ee7dc3c8f393377c83c5d"
  },
  "vilda_auth_ui.css": {
-  "v": 83,
-  "sha256": "c82c25e20237fdd13c647d45e4a38e223e125b40d396da8bad8e6c4bd5ff323f"
+  "v": 84,
+  "sha256": "6c81037af71848e1e04b91ae0aaf44509abd73229a3e0d247041f3cd914991fb"
  },
  "vilda_auth_ui.js": {
-  "v": 569,
-  "sha256": "4670a81e92b08afa3a50476545e2757b16dd8add350ad36d4b3bafb84997e233"
+  "v": 570,
+  "sha256": "1428a1553cebb8288b9e7cad018e92f33fbf1580b099d51de7cf83f2063a54e5"
  },
  "vilda_b64_checklist.js": {
   "v": 2,
@@ -1292,8 +1292,8 @@
   "sha256": "5ccc74dc9c7f6c7e5e86badbdf0bd4674eb37edf99527ccb6648b6bccb54ff7d"
  },
  "vilda_chrome.js": {
-  "v": 304,
-  "sha256": "3b05d509584bbf2777dc1488a7d70360de478d455c36561b924b96a0fc636b66"
+  "v": 305,
+  "sha256": "a2e86068321208d1759bcb27226d329dc723016c32cc7c6ba7949d80746c6f1a"
  },
  "vilda_clinical_crypto.js": {
   "v": 2,
@@ -1312,8 +1312,8 @@
   "sha256": "326ea4b7ce7710cc24181edcdff104a4d67d83ae56878a552448c30dff0b7e2b"
  },
  "vilda_cykle_leczenia.js": {
-  "v": 5,
-  "sha256": "56da93af78d476b67e3f9c0b3330d6eefcfdaa30f3c596b0ab78618a3842f887"
+  "v": 6,
+  "sha256": "1cefeb7a782a0517fe3b024ad82cb035e958b8889335ef90dc3d9191fc5e7527"
  },
  "vilda_data_import_export.js": {
   "v": 125,
@@ -1844,8 +1844,8 @@
   "sha256": "debd10a2d44d927215d1a07bb21997ca3580b102369e8d2f9e83aae9dfde6962"
  },
  "vilda_postepy_doroslego.js": {
-  "v": 7,
-  "sha256": "7e9cce6378b7ba493c597b4a73c35cf8328b20b98e151b64569580fe0ceb60e9"
+  "v": 8,
+  "sha256": "218d261273d91ea63efb96dc6532674e8461f07bb9ea58a13d7560a49d20215c"
  },
  "vilda_postepy_doroslego_dane.js": {
   "v": 4,
@@ -1984,8 +1984,8 @@
   "sha256": "59dfe0d72f1c56950e8bfa44036bd1d02bf6a6aea16ce6e77a2644921e1e45cf"
  },
  "vilda_session_bridge.js": {
-  "v": 220,
-  "sha256": "699ac0e2db8bd984bb1d23f202731a074474126e58f80d72b28e3e6096710b1e"
+  "v": 221,
+  "sha256": "7ad8bff4043b95885726488177dbc00d624a9e912d7660ac3410fbd9ef69d6b5"
  },
  "vilda_sga_catchup.js": {
   "v": 2,

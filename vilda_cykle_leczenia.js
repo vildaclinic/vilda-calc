@@ -749,7 +749,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '1';
+  var VERSION = '2';
   var KATEGORIA = 'leczenie-otylosci';
   var ZNACZNIK = '{"vildaOtylosc":';
   var FORMAT = 1;
@@ -1232,6 +1232,46 @@
 
   // ── Pomocnicze reguły formularza ─────────────────────────────────────────────────
 
+  /**
+   * Czy zmiana tego wpisu w Karcie mogłaby zmienić PRZEBIEG LECZENIA (P-POSTEPY-DZIENNIK, decyzja właściciela
+   * 2026-11-19: listy pacjentów bez zmiany sejfu). Listy „Leczenie otyłości: trwa / kiedykolwiek / lek X” liczy
+   * sejf z zapisu ostatniej wizyty — z rodzaju ostatniego punktu i z leku punktów. W Karcie wolno więc poprawiać,
+   * usuwać i przywracać tylko Kontynuację, która leku nie zmienia: poprzedni wpis (w kolejności tabeli) jest
+   * Włączeniem albo Kontynuacją z tym samym lekiem i substancją. Wtedy ani rodzaj ostatniego punktu, ani lek nie
+   * zmieniają się względem zapisu wizyty, więc listy zostają zgodne z dziennikiem. Włączenie, Zakończenie i zmianę
+   * leku poprawia się w DocPro — tak jak dotąd zmianę leku.
+   * Zwraca null (wolno) albo powód: 'wlaczenie' | 'zakonczenie' | 'pierwszy-wpis' | 'zmiana-leku'.
+   */
+  function zmianaPrzebiegu(stan, wpis) {
+    var d = wpis && (wpis.punkt || (wpis.biezaca && wpis.biezaca.dane));
+    if (!d) return 'zmiana-leku';
+    if (d.type === 'start') return 'wlaczenie';
+    if (d.type === 'end') return 'zakonczenie';
+    if (d.type !== 'continue') return 'zmiana-leku';
+    var wlasneId = wpis.punkt ? wpis.punkt.id : wpis.entryId;
+    var ten = punktZDanych(d, '__vdo_ten__', null);
+    var inne = (stan && Array.isArray(stan.punkty) ? stan.punkty : []).filter(function (p) {
+      return p && p.id !== wlasneId && (!wpis.entryId || p.id !== wpis.entryId);
+    });
+    var lista = uporzadkujPunkty(inne.concat([ten]));
+    var i = -1;
+    for (var k = 0; k < lista.length; k++) if (lista[k] && lista[k].id === '__vdo_ten__') { i = k; break; }
+    var poprzedni = i > 0 ? lista[i - 1] : null;
+    if (!poprzedni || poprzedni.type === 'end') return 'pierwszy-wpis';
+    return kluczLeku(poprzedni) === kluczLeku(d) ? null : 'zmiana-leku';
+  }
+
+  function kluczLeku(p) {
+    return (String((p && p.drug) || '').trim() + '|' + String((p && p.substance) || '').trim()).toLowerCase();
+  }
+
+  var POWODY_DOCPRO = Object.freeze({
+    wlaczenie: 'Włączenie leczenia poprawiasz w DocPro przy wizycie — od niego zależą cykl, ocena wg ChPL i listy pacjentów.',
+    zakonczenie: 'Zakończenie leczenia poprawiasz w DocPro przy wizycie — od niego zależą cykl i listy pacjentów.',
+    'pierwszy-wpis': 'To pierwszy wpis cyklu — poprawiasz go w DocPro przy wizycie (od niego zależą cykl i listy pacjentów).',
+    'zmiana-leku': 'Ten wpis zmienia lek — poprawiasz go w DocPro przy wizycie (od leku zależą ocena wg ChPL i listy pacjentów).'
+  });
+
   /** Możliwy duplikat: inny bieżący wpis z tą samą datą i masą (±0,05 kg). */
   function duplikat(stan, dane, pomijajEntryId) {
     var d = dataISO(dane && dane.dateISO), m = liczba(dane && dane.weight);
@@ -1325,6 +1365,8 @@
     planRozstrzygniecia: planRozstrzygniecia,
     planDzialania: planDzialania,
     duplikat: duplikat,
+    zmianaPrzebiegu: zmianaPrzebiegu,
+    POWODY_DOCPRO: POWODY_DOCPRO,
     wiekNaDzien: wiekNaDzien,
     opisDanych: opisDanych,
     dataPL: dataPL,
@@ -1352,7 +1394,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '1';
+  var VERSION = '2';
   var POKAZ_NA_START = 5;
   var rozwiniete = {};
   var usunieteRozwiniete = {};
@@ -1573,7 +1615,14 @@
 
   // ── Formularz wpisu (nowy / poprawka) ────────────────────────────────────────────
 
+  /** P-POSTEPY-DZIENNIK: Włączenie, Zakończenie i zmiana leku — tylko w DocPro (patrz zmianaPrzebiegu). */
+  function wDocPro(ctx, wpis) {
+    var powod = Dz().zmianaPrzebiegu(ctx.stan, wpis);
+    return powod ? (Dz().POWODY_DOCPRO[powod] || Dz().POWODY_DOCPRO['zmiana-leku']) : null;
+  }
+
   function formularz(ctx, wpis) {
+    if (wpis && wDocPro(ctx, wpis)) return;
     var popraw = !!wpis;
     var stan = ctx.stan;
     var punkt = popraw ? wpis.punkt : null;
@@ -1772,6 +1821,8 @@
   // ── Usunięcie, cofnięcie, konflikt ───────────────────────────────────────────────
 
   function usun(ctx, wpis) {
+    var docpro = wDocPro(ctx, wpis);
+    if (docpro) return Promise.reject(new Error(docpro));
     var c = Cy();
     var r = null;
     if (c && wpis.punkt) {
@@ -1790,6 +1841,9 @@
   }
 
   function przywroc(ctx, entryId) {
+    var wpisP = Dz().wpisPoId(ctx.stan, entryId);
+    var docpro = wpisP ? wDocPro(ctx, wpisP) : null;
+    if (docpro) return Promise.reject(new Error(docpro.replace('poprawiasz go', 'dodajesz go ponownie')));
     delete ostatnieUsuniecie[ctx.patientId];
     return zapiszPlan(ctx, Dz().planPrzywrocenia(ctx.stan, ctx.patientId, entryId));
   }
@@ -1890,6 +1944,8 @@
       var akcje = el('div', { class: 'vdo-row-actions' });
       if (x.stan === 'konflikt') {
         akcje.appendChild(el('button', { type: 'button', class: 'vilda-auth-btn vilda-auth-btn-small', text: 'Wybierz wersję', onclick: function () { konflikt(ctx, x); } }));
+      } else if (wDocPro(ctx, x)) {
+        akcje.appendChild(el('span', { class: 'vdo-row-docpro', text: 'Poprawka w DocPro', title: wDocPro(ctx, x) }));
       } else {
         akcje.appendChild(el('button', { type: 'button', class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small', text: 'Popraw', 'aria-label': 'Popraw wpis z ' + (dataPL(p.dateISO) || 'bez daty'), onclick: function () { formularz(ctx, x); } }));
         akcje.appendChild(el('button', { type: 'button', class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small', text: 'Usuń', 'aria-label': 'Usuń wpis z ' + (dataPL(p.dateISO) || 'bez daty'), onclick: function () { zBledem(usun(ctx, x)); } }));
@@ -1936,7 +1992,9 @@
           var d = x.biezaca.dane;
           return el('li', { class: 'vdo-item vdo-item-deleted' }, [
             el('span', { text: (dataPL(d.dateISO) || 'bez daty') + ' · ' + Dz().TYPY[d.type] + ' · ' + liczbaPL(d.weight, 1) + ' kg' }),
-            el('button', { type: 'button', class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small', text: 'Przywróć', onclick: function () { zBledem(przywroc(ctx, x.entryId)); } })
+            wDocPro(ctx, x)
+              ? el('span', { class: 'vdo-row-docpro', text: 'Dodaj ponownie w DocPro', title: wDocPro(ctx, x).replace('poprawiasz go', 'dodajesz go ponownie') })
+              : el('button', { type: 'button', class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small', text: 'Przywróć', onclick: function () { zBledem(przywroc(ctx, x.entryId)); } })
           ]);
         })));
       }
@@ -1977,7 +2035,7 @@
           aktywny ? null : el('span', { id: 'vdoAddWhy', class: 'vdo-hint', text: 'Brak aktywnego cyklu — Włączenie w DocPro.' })
         ])
       ]),
-      el('p', { class: 'vdo-hint', text: 'Włączenie i Zakończenie leczenia dodajesz w DocPro przy wizycie.' }),
+      el('p', { class: 'vdo-hint', text: 'Włączenie, Zakończenie i zmianę leku dodajesz i poprawiasz w DocPro przy wizycie. Tu — Kontynuacje.' }),
       konflikty,
       cofnij,
       msg,

@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.552';
+const SW_VERSION = '1.1.553';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -2238,6 +2238,7 @@ const CORE_SHELL_URLS = [
   '/vilda_chrome.js?v=302',
   '/vilda_chrome.js?v=303',
   '/vilda_chrome.js?v=304',
+  '/vilda_chrome.js?v=305',
   '/vilda_realtime.js?v=1',
   '/vilda_realtime.js?v=2',
   '/vilda_realtime.js?v=3',
@@ -2527,6 +2528,7 @@ const CORE_SHELL_URLS = [
   '/vilda_auth_ui.css?v=81',
   '/vilda_auth_ui.css?v=82',
   '/vilda_auth_ui.css?v=83',
+  '/vilda_auth_ui.css?v=84',
   '/vilda_urodzeniowe_rozbieznosc.css?v=1',
   '/vilda_file_export.js',
   '/vilda_file_export.js?v=4',
@@ -3144,6 +3146,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_auth_ui.js?v=567',
   '/vilda_auth_ui.js?v=568',
   '/vilda_auth_ui.js?v=569',
+  '/vilda_auth_ui.js?v=570',
   '/vilda_session_bridge.js?v=148',
   '/vilda_session_bridge.js?v=149',
   '/vilda_session_bridge.js?v=150',
@@ -3217,6 +3220,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_session_bridge.js?v=218',
   '/vilda_session_bridge.js?v=219',
   '/vilda_session_bridge.js?v=220',
+  '/vilda_session_bridge.js?v=221',
   '/vilda_sync.js?v=48',
   '/vilda_sync.js?v=49',
   '/vilda_sync.js?v=50',
@@ -4056,6 +4060,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_cykle_leczenia.js?v=3',
   '/vilda_cykle_leczenia.js?v=4',
   '/vilda_cykle_leczenia.js?v=5',
+  '/vilda_cykle_leczenia.js?v=6',
   '/growth-basic-module.js?v=14',
   '/vilda_advanced_growth.js?v=35',
   '/vilda_auth_ui.js?v=414',
@@ -4400,6 +4405,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_postepy_doroslego.js?v=5',
   '/vilda_postepy_doroslego.js?v=6',
   '/vilda_postepy_doroslego.js?v=7',
+  '/vilda_postepy_doroslego.js?v=8',
   '/vilda_postepy_doroslego_ui.js?v=1',
   '/vilda_postepy_doroslego_ui.js?v=2',
   '/vilda_postepy_doroslego_ui.js?v=3',

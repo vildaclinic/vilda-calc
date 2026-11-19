@@ -2044,6 +2044,23 @@ Opis działania i przypadki: `docs/clinical/ALGORITHMS.md`, „Leczenie otyłoś
 
 **Granice.** Zmienia się tylko przypadek „puste pole przy zapisanym poprawnym PWZ” (PWZ trafia do `localStorage` dopiero po przyjęciu poprawnego numeru). Wpisywanie numeru, niepoprawny PWZ w polu i brak zapisanego PWZ działają jak dotąd.
 
+## Łatka P-POSTEPY-DZIENNIK — „Postępy” dorosłego z dziennika leczenia (`vilda_auth_ui.js` 569 → 570, 2026-11-19, decyzja właściciela)
+
+Opis działania i przypadki: `docs/clinical/ALGORITHMS.md`, „Postępy dorosłego i listy pacjentów zgodne z dziennikiem leczenia” (P-POSTEPY-DZIENNIK). Zmiany w czytelnych źródłach: `vilda_postepy_doroslego.js` (konflikt wersji wpisu wstrzymuje punkt oceny wg ChPL) i `vilda_cykle_leczenia.js` (`zmianaPrzebiegu`, `POWODY_DOCPRO`, „Poprawka w DocPro” w „Wpisy leczenia”).
+
+```js
+// vilda_auth_ui.js
+// 1. montaż panelu „Postępy”: punkty z dziennika i rysunek ponawiany po zapisie wpisu
+//    było:  …typeof _pdE.scalSerie=="function"){var _pdSer=_pdE.scalSerie({…,punktyLeczenia:s.obesityTherapyPoints}),_pdM=_pdE.analizuj({…,punktyLeczenia:s.obesityTherapyPoints});_pdOk=!!_pdU.renderPanel(Ct,_pdM,{…})}}catch(ct){…}
+//    jest:  …typeof _pdE.scalSerie=="function"){/* P-POSTEPY-DZIENNIK … */var _pdRys=function(_pdPkt){var _pdSer=_pdE.scalSerie({…,punktyLeczenia:_pdPkt}),_pdM=_pdE.analizuj({…,punktyLeczenia:_pdPkt});return _pdU.renderPanel(Ct,_pdM,{…})},_pdHost=_pdRys(typeof Ob_dzPunkty=="function"?Ob_dzPunkty(s,GdNotatki):s.obesityTherapyPoints);_pdOk=!!_pdHost;typeof Ob_dzPostepy=="function"&&Ob_dzPostepy(t,Ct,_pdHost,_pdRys)}}catch(ct){…}
+// 2. Ob_dz (czytelny blok P-OTYLOSC-DZIENNIK): po ponownym odczycie notatek — powiadomienie słuchaczy
+//    było:  rysuj(Dz.zloz(n, migawka));
+//    jest:  var nowy = Dz.zloz(n, migawka); rysuj(nowy); Ob_dzPowiadom(t, nowy);
+// 3. czytelny blok Ob_dzSluchacze, Ob_dzPunkty, Ob_dzPostepy, Ob_dzPowiadom — za Ob_dz, przed komentarzem Ob_dzk
+```
+
+**Granice.** Napisy `_pdE.scalSerie(` i `_pdU.renderPanel(Ct,_pdM,` zostają (pilnuje ich `postepy-doroslego-widok.test.mjs`). Słuchacze zamkniętej karty (kontener odpięty od dokumentu) wypadają przy następnym powiadomieniu. Lint: bez nowych naruszeń (`no-useless-assignment` w limicie).
+
 ## Trwała tożsamość wizyt — źródło i granica artefaktu sejfu
 
 Zmiana funkcjonalna `P-TRWALE-WIZYTY` ma bazę `audyt` z commita

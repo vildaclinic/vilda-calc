@@ -68,7 +68,7 @@
 (function (w) {
   'use strict';
 
-  var WERSJA = '2';
+  var WERSJA = '3';
 
   var MS_TYDZIEN = 7 * 24 * 60 * 60 * 1000;
   var MIES_NA_TYDZ = 30.4375 / 7;   // średni miesiąc gregoriański w tygodniach
@@ -184,6 +184,9 @@
       typ: String(p.type == null ? '' : p.type) || null,
       lek: p.drug != null ? String(p.drug) : null,
       substancja: p.substance != null ? String(p.substance) : null,
+      /* P-POSTEPY-DZIENNIK: punkt z projekcji dziennika leczenia, którego wpis ma dwie wersje
+         (poprawiony równolegle na dwóch urządzeniach albo w dwóch kartach). */
+      konflikt: !!(p.dziennik && p.dziennik.konflikt),
     };
   }
 
@@ -597,6 +600,8 @@
       return p.typ === 'start' || p.typ === 'continue' || p.typ === 'end';
     });
     var niezgodnyZapis = !!(cyklB && Array.isArray(cyklB.niezgodnosci) && cyklB.niezgodnosci.length);
+    /* P-POSTEPY-DZIENNIK: wpis bieżącego cyklu z dwiema wersjami w dzienniku leczenia. */
+    var konfliktCyklu = punkty.filter(function (p) { return p.konflikt; });
     /* POMIAR WCZEŚNIEJSZEGO CYKLU NIGDY NIE JEST POSTĘPEM BIEŻĄCEGO (rata 4, poprawka po recenzji).
        Zwykle wystarcza ujemny tydzień, ale nie przy remisie: Zakończenie poprzedniego cyklu i
        Włączenie bieżącego bywają zapisane tego samego dnia (CY-8, poprawka dwukrokowa starego
@@ -818,6 +823,22 @@
         wynik.punktDecyzyjny.bezOsi = 'niezgodny-zapis-cyklu';
       }
       wynik.ostrzezenia.push('Zapis bieżącego cyklu leczenia wymaga uporządkowania w monitorze DocPro — punktu oceny wg ChPL nie postawiono (ocena wg ChPL tego cyklu jest wstrzymana, jak w Karcie pacjenta).');
+    } else if (konfliktCyklu.length) {
+      /* KONFLIKT WERSJI WPISU (P-POSTEPY-DZIENNIK, decyzja właściciela z etapu 3: „werdykt wstrzymany,
+         gdy w oknie oceny jest konflikt dwóch wersji”). U dorosłego ocena wg ChPL liczy się z masy i nie
+         ma okna z datą, więc — jak w Karcie pacjenta — wstrzymuje ją każdy konflikt bieżącego cyklu.
+         Seria i pasma zostają: wykres pokazuje najnowszą nieusuniętą wersję wpisu. */
+      if (wynik.punktDecyzyjny && wynik.punktDecyzyjny.jest) {
+        wynik.punktDecyzyjny.tydzienOdOdniesienia = null;
+        wynik.punktDecyzyjny.nominalna = false;
+        wynik.punktDecyzyjny.bezOsi = 'konflikt-wersji-wpisu';
+      }
+      var kDaty = konfliktCyklu.map(function (p) {
+        return p.dateISO ? p.dateISO.slice(8, 10) + '.' + p.dateISO.slice(5, 7) + '.' + p.dateISO.slice(0, 4) : 'bez daty';
+      });
+      wynik.ostrzezenia.push((kDaty.length === 1 ? 'Wpis z ' + kDaty[0] + ' ma' : 'Wpisy z ' + kDaty.join(', ') + ' mają')
+        + ' dwie wersje (poprawione równolegle na dwóch urządzeniach albo w dwóch kartach) — punktu oceny wg ChPL nie postawiono; '
+        + 'wykres pokazuje najnowszą wersję. Wybierz prawidłową w zakładce „Leczenie”, „Wpisy leczenia” (ocena wg ChPL jest wstrzymana, jak w Karcie pacjenta).');
     } else if (wynik.punktDecyzyjny && wynik.punktDecyzyjny.jest
         && wynik.punktOdniesienia.zrodlo !== 'start-leczenia') {
       wynik.punktDecyzyjny.tydzienOdOdniesienia = null;
