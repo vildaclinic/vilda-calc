@@ -44131,3 +44131,62 @@ ręcznego szukania) i treść komunikatu po zapisie (przypomnienie, że listy li
 
 **Wdrożenie.** Od razu przy wydaniu; sejf bez zmian. **Cofnięcie** = rewert PR: znów sam tekst „Poprawka w DocPro”
 i dawny wygląd sekcji.
+
+## Karta pacjenta porównuje lek tak jak listy pacjentów i ocena wg ChPL (P-OTYLOSC-LEK, SW 1.1.557, `vilda_cykle_leczenia.js` 9, `obesity_therapy_monitor.js` 31, 2026-11-19)
+
+**Decyzja właściciela** (2026-11-19, „zacznij od A”): Karta ma rozpoznawać „ten sam lek” tak jak listy pacjentów.
+
+**Problem.** Reguła Karty z P-POSTEPY-DZIENNIK (`zmianaPrzebiegu`) porównywała dosłowny tekst leku i substancji.
+Starsze punkty bywają zapisane bez substancji (albo z krótką nazwą z importu), a nowsze z nią. Zwykła Kontynuacja tego
+samego leku uchodziła wtedy za „zmianę leku”. Karta pokazywała „Edytuj w DocPro →” z powodem „Ten wpis zmienia lek”
+zamiast „Popraw” i „Usuń”.
+
+**Zmiana.** `kluczLeku` w `vilda_cykle_leczenia.js` rozpoznaje lek funkcją `ObesityResponseCriteria.resolveDrug(drug,
+substance)` — tą samą, z której sejf liczy `drugKey` list „Leczenie otyłości: trwa / kiedykolwiek / lek X” i z której
+Karta wybiera kryteria ChPL:
+- lek z tabeli kryteriów (Wegovy, Saxenda, Mysimba, Mounjaro) — po kluczu leku, niezależnie od tekstu nazwy i od tego,
+  czy zapisano substancję;
+- lek spoza tabeli — po nazwie (bez nazwy — po substancji), bez rozróżniania wielkości liter; lek spoza tabeli i lek
+  z tabeli to zawsze zmiana leku;
+- bez modułu kryteriów na stronie — ostrożnie, jak dotąd: każda różnica tekstu leku albo substancji to zmiana leku
+  (wpis zostaje do edycji w DocPro).
+
+Ta sama reguła (bez opcji) decyduje o dopisku monitora DocPro „Listy pacjentów zobaczą zmianę po „Zapisz dane”.”.
+Opcja `lekPoNazwie` z P-OTYLOSC-SKOK znika. Jej opis („lek po nazwie, jak listy pacjentów”) był nieścisły: listy
+„Leczenie otyłości” porównują lek kluczem z `resolveDrug`, nie tekstem nazwy.
+
+**Granica (do wiadomości właściciela).** Lista wpisana tekstem (reguła „lek”) szuka słowa w nazwie leku albo
+w substancji. Słowo, które jest tylko w etykiecie substancji (np. „agonista”, „GLP‑1”), może po „Usuń” najnowszej
+Kontynuacji w Karcie zgadzać się z dziennikiem dopiero po „Zapisz dane” przy wizycie. Tak samo jest już dziś przy każdym
+punkcie zapisanym bez substancji. Nazwa substancji jest też w nazwie opcji leku (np. „Wegovy (semaglutyd) – …”), więc
+lista „semaglutyd” zostaje zgodna. Sejf bez zmian.
+
+**Przypadki syntetyczne** (dane fikcyjne; lek A — punkt wcześniejszy, lek B — Kontynuacja):
+
+| Lek A | Lek B | Wynik `zmianaPrzebiegu` dla Kontynuacji |
+|---|---|---|
+| „Wegovy (semaglutyd) – s.c. 1×/tydz.”, bez substancji | ta sama nazwa, „Semaglutyd (agonista receptora GLP‑1)” | `null` — Popraw/Usuń w Karcie (dotąd `zmiana-leku`) |
+| „Wegovy”, bez substancji | pełna nazwa i substancja Wegovy | `null` |
+| bez nazwy, „semaglutyd” | pełna nazwa i substancja Wegovy | `null` |
+| Wegovy bez substancji | Saxenda | `zmiana-leku` |
+| „Orlistat” | „orlistat ”, „inhibitor lipazy” | `null` (spoza ChPL — po nazwie) |
+| „Orlistat” | „Metformina” | `zmiana-leku` |
+| „Inny lek” | Wegovy | `zmiana-leku` |
+| bez modułu kryteriów: Wegovy bez substancji | Wegovy z substancją | `zmiana-leku` (ostrożnie, jak dotąd) |
+
+**Wpływ kliniczny.** Oceny wg ChPL, okna, progi, cykle (R6 porównuje substancję tym samym `resolveDrug`) i listy
+pacjentów bez zmian. Zmienia się, które wpisy można poprawić w Karcie: Kontynuacja tego samego leku zapisanego innym
+tekstem — w Karcie zamiast w DocPro. Dopisek monitora o listach pojawia się rzadziej (tylko przy zmianie leku według
+`resolveDrug`).
+
+**Testy.** Dane wyłącznie fikcyjne.
+- `tests/unit/postepy-listy-dziennik.test.mjs`: tabela wyżej na produkcyjnym `zmianaPrzebiegu`; test negatywny bez
+  kryteriów ChPL; na prawdziwym sejfie (adapter pamięciowy) Popraw, Usuń i Cofnij Kontynuacji po punktach bez
+  substancji zostawiają listy „Leczenie otyłości” i „lek: wegovy/saxenda/semaglutyd” zgodne z dziennikiem, a granicę
+  „agonista” przypina jawna asercja.
+- `tests/unit/otylosc-skok.test.mjs`: ta sama reguła dla Karty i monitora; monitor woła `zmianaPrzebiegu(Dzs, w)` bez opcji.
+- e2e `tests/e2e/postepy-dziennik.spec.mjs` PD-4: Włączenie zapisane bez substancji, Kontynuacja Saxendy z substancją —
+  w Karcie „Popraw”/„Usuń”, bez „Edytuj w DocPro →” (na kodzie sprzed zmiany PD-4 nie przechodzi).
+
+**Wdrożenie.** Od razu przy wydaniu; sejf bez zmian. **Cofnięcie** = rewert PR: Karta znów porównuje dosłowny tekst
+leku i substancji.

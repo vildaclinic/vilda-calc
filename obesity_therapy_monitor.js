@@ -67,8 +67,8 @@ function Dzprzebieg(id) {
     var D = window.VildaDziennikOtylosci;
     if (!Dzs || id == null || !D || typeof D.wpisPoId != "function" || typeof D.zmianaPrzebiegu != "function") return null;
     var w = D.wpisPoId(Dzs, String(id));
-    // Lek po nazwie, jak listy pacjentów: samo uzupełnienie substancji przy tym samym leku list nie zmienia.
-    return w ? D.zmianaPrzebiegu(Dzs, w, { lekPoNazwie: true }) : null;
+    // Ta sama reguła co w Karcie: lek rozpoznany jak listy pacjentów i ocena wg ChPL (P-OTYLOSC-LEK).
+    return w ? D.zmianaPrzebiegu(Dzs, w) : null;
   } catch (e) {
     return null;
   }
