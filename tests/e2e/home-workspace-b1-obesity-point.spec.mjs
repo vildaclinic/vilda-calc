@@ -135,7 +135,8 @@ test('home B1 shell: selected patient Leczenie opens its existing obesity Włąc
   await expect(docpro.locator('#obesityWeight')).toHaveValue('80');
   await expect(docpro.locator('#obesityHeight')).toHaveValue('160');
   await expect(docpro.locator('#obesityDate')).toHaveValue('2026-04-14');
-  await expect(docpro.locator('#obesityMonDrug')).toHaveValue(DRUG);
+  await expect(docpro.locator('#obesityMonDrug')).toHaveValue('wegovy');
+  await expect(docpro.locator('#obesityMonDrug option:checked')).toHaveText(DRUG);
   await expect(docpro.locator('#obesityDose')).toHaveValue('0,25 mg / tydz.');
   await expect(docpro.locator('#vildaLoadChoiceModal')).toHaveCount(0);
   // Hidden frame visibility is insufficient: the exact original B1 node must
