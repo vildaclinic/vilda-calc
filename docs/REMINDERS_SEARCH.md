@@ -207,6 +207,12 @@ mają `noteId: null`; indeks Szukaj nie odczytuje pełnych snapshotów ani bibli
 osobistych szablonów. Próby sprawdzają tę granicę, bez dodawania fikcyjnych
 notatek lub rozszerzania modelu wyszukiwania.
 
+Od P-OTYLOSC-DZIENNIK (2026-11-18) wpisy dziennika leczenia otyłości są
+`PatientNote` kategorii `leczenie-otylosci` (każda wersja wpisu to osobna notatka,
+bez terminu). Szukaj je pomija (decyzja właściciela nr 3), przypomnienia i
+Terminarz ich nie widzą (brak `dueDateISO`); opis: `docs/clinical/ALGORITHMS.md`,
+„Leczenie otyłości — etapy 3 i 4”.
+
 Przeglądarkowa próba całego zestawu otwiera 111 rzeczywistych wpisów przy każdej
 z dwóch szerokości: 108 wyników Klirensu i trzy kontrole DocPro. Sprawdza
 niezmienność zapisanych notatek i danych pacjenta, brak nowych zasobów edytora

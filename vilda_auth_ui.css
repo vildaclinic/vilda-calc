@@ -2523,3 +2523,485 @@ body.vilda-modal-alert-open #scrollTopBtn {
   white-space: nowrap;
   cursor: pointer
 }
+
+/* ── Dziennik leczenia otyłości ──────────────────────────────────────────────────────────────────
+   „Wpisy leczenia” w Karcie pacjenta i okna dziennika (P-OTYLOSC-DZIENNIK, VildaDziennikOtylosciUI
+   w vilda_cykle_leczenia.js). Tokeny z style.css. */
+
+/* Opakowanie kafelka, sekcji i panelu otyłości w Karcie (Ob_dz w vilda_auth_ui.js) — bez własnego pudełka,
+   dzieci układają się jak dotąd bezpośrednio w Karcie. */
+.vilda-ob-dz {
+  display: contents;
+}
+
+.vdo {
+  margin: var(--space-12px) 0;
+  padding: var(--space-14px);
+  border: var(--border-hairline) solid var(--line);
+  border-radius: var(--radius-12);
+  background: var(--card);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-10px);
+}
+
+.vdo-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-12px);
+  flex-wrap: wrap;
+}
+
+.vdo-title {
+  margin: 0;
+  font-size: 1.05rem;
+  color: var(--text-strong);
+}
+
+.vdo-intro,
+.vdo-hint,
+.vdo-note {
+  margin: var(--space-4px) 0 0;
+  font-size: .82rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+.vdo-head-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-4px);
+}
+
+.vdo-add {
+  min-height: 44px;
+}
+
+.vdo-add[aria-disabled="true"] {
+  opacity: var(--opacity-disabled-label);
+}
+
+.vdo-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8px);
+}
+
+.vdo-item {
+  border: var(--border-hairline) solid var(--line);
+  border-radius: var(--radius-10);
+  padding: var(--space-10px) var(--space-12px);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4px);
+}
+
+.vdo-item-last {
+  border-color: var(--primary);
+}
+
+.vdo-item-conflict {
+  border-color: var(--danger);
+  background: var(--danger-bg);
+}
+
+.vdo-item-head,
+.vdo-item-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-6px) var(--space-12px);
+}
+
+.vdo-item-body {
+  justify-content: flex-start;
+}
+
+.vdo-date {
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.vdo-type,
+.vdo-bmi {
+  font-size: .82rem;
+  color: var(--text-muted);
+}
+
+.vdo-meas {
+  font-size: .9rem;
+  color: var(--text-strong);
+}
+
+.vdo-comment,
+.vdo-conflict-t {
+  margin: 0;
+  font-size: .82rem;
+  color: var(--text-soft);
+}
+
+.vdo-conflict-t {
+  color: var(--danger-strong);
+  font-weight: 600;
+}
+
+.vdo-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-6px);
+}
+
+.vdo-src {
+  display: inline-block;
+  border-radius: var(--radius-pill);
+  padding: 1px var(--space-6px);
+  font-size: .72rem;
+  font-weight: 600;
+  vertical-align: middle;
+  border: var(--border-hairline) solid var(--line);
+  color: var(--text-muted);
+}
+
+.vdo-src-pacjent {
+  background: var(--notice-orange-bg);
+  border-color: var(--notice-orange);
+  color: var(--text-strong);
+}
+
+.vdo-more {
+  align-self: flex-start;
+  min-height: 44px;
+  padding: 0 var(--space-4px);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.vdo-item-deleted {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--text-muted);
+}
+
+.vdo-msg {
+  border-radius: var(--radius-10);
+  padding: var(--space-8px) var(--space-12px);
+  font-size: .85rem;
+  line-height: 1.45;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6px);
+  border: var(--border-hairline) solid var(--line);
+}
+
+.vdo-msg[hidden] {
+  display: none;
+}
+
+.vdo-msg-err {
+  background: var(--danger-bg);
+  border-color: var(--danger);
+  color: var(--danger-strong);
+}
+
+.vdo-msg-warn {
+  background: var(--notice-orange-bg);
+  border-color: var(--notice-orange);
+  color: var(--text-strong);
+}
+
+.vdo-msg-info {
+  background: var(--card);
+  color: var(--text-strong);
+}
+
+.vdo-msg-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8px);
+}
+
+/* Okno dialogowe */
+
+.vdo-backdrop {
+  position: fixed;
+  inset: 0;
+  /* nad Kartą pacjenta (--z-auth-root), jak arkusze ekranu logowania i Karty */
+  z-index: var(--z-auth-sheet);
+  background: rgba(15, 43, 51, .45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-16px);
+}
+
+.vdo-dialog {
+  width: min(560px, 100%);
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  background: var(--card);
+  border-radius: var(--radius-12);
+  padding: var(--space-16px);
+  box-sizing: border-box;
+  color: var(--text-strong);
+}
+
+.vdo-dialog-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-10px);
+  margin-bottom: var(--space-12px);
+}
+
+.vdo-dialog-title {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.vdo-dialog-sub {
+  margin: var(--space-4px) 0 0;
+  font-size: .85rem;
+  color: var(--text-muted);
+}
+
+.vdo-x {
+  min-width: 44px;
+  min-height: 44px;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer
+}
+
+.vdo-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-14px);
+}
+
+.vdo-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4px);
+}
+
+.vdo-fieldset {
+  margin: 0;
+  padding: var(--space-10px) var(--space-12px);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8px);
+}
+
+.vdo-fieldset legend,
+.vdo-label {
+  font-size: .85rem;
+  font-weight: 600;
+  padding: 0 var(--space-4px);
+}
+
+.vdo-req {
+  color: var(--danger-strong);
+}
+
+.vdo-opt {
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.vdo-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6px);
+}
+
+.vdo-input {
+  min-height: 44px;
+  box-sizing: border-box;
+  border: var(--border-hairline) solid var(--line);
+  border-radius: var(--radius-10);
+  padding: 0 var(--space-12px);
+  font: inherit;
+  font-size: 16px;
+  color: var(--text-strong);
+  background: var(--card);
+}
+
+textarea.vdo-input {
+  padding: var(--space-8px) var(--space-12px);
+  resize: vertical;
+}
+
+.vdo-num {
+  width: 8rem;
+}
+
+.vdo-input[aria-invalid="true"] {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 1px var(--danger);
+}
+
+.vdo-unit {
+  color: var(--text-muted);
+}
+
+.vdo-err {
+  font-size: .8rem;
+  font-weight: 600;
+  color: var(--danger-strong);
+}
+
+.vdo-err[hidden],
+.vdo-info[hidden] {
+  display: none;
+}
+
+.vdo-info {
+  font-size: .8rem;
+  line-height: 1.45;
+  border-radius: var(--radius-10);
+  padding: var(--space-8px) var(--space-10px);
+  background: var(--notice-orange-bg);
+  border: var(--border-hairline) solid var(--notice-orange);
+  color: var(--text-strong);
+}
+
+.vdo-chips {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-8px);
+  max-width: 320px;
+}
+
+.vdo-chip {
+  min-height: 44px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Wybór widoczny nie tylko kolorem. */
+.vdo-chip[aria-checked="true"]::before {
+  content: "✓ ";
+}
+
+/* Wygląd iOS 26 nadaje każdemu przyciskowi szkło z !important (ios26-v2.css, `.liquid-ios26 button`) —
+   wybrane źródło musi zostać wyraźne, jak `.liquid-ios26 .btn-accent`. */
+.liquid-ios26 .vdo-chip[aria-checked="true"] {
+  background: var(--primary)!important;
+  border-color: var(--primary)!important;
+  color: var(--card)!important;
+}
+
+.vdo-grid2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-12px);
+}
+
+.vdo-value {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  font-size: .95rem;
+}
+
+.vdo-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-10px);
+}
+
+.vdo-actions .vilda-auth-btn {
+  min-height: 48px;
+}
+
+.vdo-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.vdo-versions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-12px);
+}
+
+.vdo-version {
+  border: var(--border-hairline) solid var(--line);
+  border-radius: var(--radius-12);
+  padding: var(--space-12px);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8px);
+}
+
+.vdo-version-h {
+  margin: 0;
+  font-size: .95rem;
+}
+
+.vdo-version-dl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-4px) var(--space-10px);
+  font-size: .85rem;
+}
+
+.vdo-version-dl dt {
+  color: var(--text-muted);
+}
+
+.vdo-version-dl dd {
+  margin: 0;
+}
+
+.vdo-diff {
+  font-weight: 700;
+  background: var(--notice-orange-bg);
+  border-radius: var(--radius-8);
+  padding: 0 var(--space-4px);
+}
+
+@media (max-width: 560px) {
+  .vdo-head-actions {
+    width: 100%;
+    align-items: stretch;
+  }
+
+  .vdo-add {
+    width: 100%;
+  }
+
+  .vdo-backdrop {
+    align-items: stretch;
+    padding: 0;
+  }
+
+  .vdo-dialog {
+    width: 100%;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+
+  .vdo-grid2,
+  .vdo-versions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .vdo-chips {
+    max-width: none;
+  }
+}

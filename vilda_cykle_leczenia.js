@@ -689,3 +689,1339 @@
     wzrostWymagany: wzrostWymagany
   };
 }(typeof window !== 'undefined' ? window : this));
+
+/* ═════════════════════════════════════════════════════════════════════════════════════════════════
+ * Dalej w tym samym pliku: dziennik leczenia otyłości (window.VildaDziennikOtylosci) i sekcja
+ * „Wpisy leczenia” Karty pacjenta (window.VildaDziennikOtylosciUI) — P-OTYLOSC-DZIENNIK.
+ * Jeden plik z modułem cykli (zamiast dwóch nowych), bo budżet instalacji PWA liczy żądania
+ * (≤ 600, tests/unit/sw-precache-stron.test.mjs), a wszystkie pary aliasów są już wykorzystane —
+ * jak „Pakiet badań” (vilda_lab_packages.js: dane, model i widok w jednym pliku). Style sekcji:
+ * vilda_auth_ui.css, rozdział „Dziennik leczenia otyłości”. Moduły są od siebie niezależne:
+ * dziennik czyta VildaCykleLeczenia tylko do porządku punktów, sekcja — oba w chwili wywołania.
+ * ═════════════════════════════════════════════════════════════════════════════════════════════════ */
+
+/*
+ * Dziennik leczenia otyłości (window.VildaDziennikOtylosci).
+ *
+ * P-OTYLOSC-DZIENNIK (etapy 3 i 4 projektu „Leczenie otyłości — wpisy poza wizytą”; decyzje
+ * właściciela 2026-11-17/18, makieta zaakceptowana 2026-11-18, „Etap 3 + 4 razem” 2026-11-18).
+ *
+ * Po co. Rodzic albo pacjent co miesiąc przysyła masę, a lekarz odsyła receptę. Punkty leczenia
+ * otyłości żyły dotąd w zapisie wizyty (`obesityTherapyPoints` w migawce pacjenta), więc każdy
+ * nowy punkt był nową wersją ostatniej wizyty — a masa przysłana miesiąc po wizycie nie może być
+ * wersją tej wizyty (decyzja właściciela nr 2). Dziennik oddziela monitorowanie leczenia od wizyt.
+ *
+ * Gdzie. Każda WERSJA wpisu to osobna, zaszyfrowana notatka pacjenta w istniejącym magazynie
+ * notatek, zapisana RAZ (`VildaVault.savePatientNoteOnce`) i nigdy nie nadpisywana:
+ *   • kategoria `leczenie-otylosci` (każda wersja aplikacji przepuszcza taki identyfikator),
+ *   • tytuł i pierwsza linia treści czytelne dla człowieka (starsza wersja aplikacji pokaże
+ *     zwykłą notatkę „Leczenie otyłości — Kontynuacja 10.11.2026 · masa 74,6 kg (pacjent)…”),
+ *   • ostatnia linia treści: dane wpisu w JSON `{"vildaOtylosc":1,…}`,
+ *   • `clinicalDateISO` = data pomiaru, `linkedAgeMonths` = wiek w miesiącach.
+ * Sejf zostaje bez zmian: tytuł, treść, kategoria i data kliniczna przechodzą przez zapis, eksport,
+ * scalanie i synchronizację każdej wersji aplikacji, a nowe pole w treści szyfrowanej ginęłoby
+ * w każdej z nich (biała lista pól w zapisie, odczycie i scalaniu).
+ *
+ * Model wpisu (decyzja właściciela nr 1: „poprawka to nowa wersja, usunięcie można cofnąć,
+ * przy równoległej poprawce wybierasz wersję ręcznie”):
+ *   • wpis ma stały `entryId` (= id jego pierwszej wersji),
+ *   • każda wersja wskazuje wersje, które zastępuje (`parents`),
+ *   • bieżąca wersja = jedyny „liść” (wersja, której nikt nie zastępuje),
+ *   • dwa liście = KONFLIKT (ten sam wpis poprawiony równolegle na dwóch urządzeniach albo
+ *     w dwóch kartach) — żadna wersja nie znika, lekarz wybiera; wybór to nowa wersja, która
+ *     zastępuje oba liście (odrzucona zostaje w historii wpisu),
+ *   • usunięcie = wersja `retracted: true`; „Cofnij” = nowa wersja z treścią sprzed usunięcia.
+ * Dwa nowe wpisy z dwóch urządzeń nigdy się nie nadpiszą — mają różne `entryId`. Możliwy
+ * duplikat (ta sama data i masa) jest wykrywany przed zapisem (`duplikat`).
+ *
+ * Dawne punkty z migawki (sprzed dziennika) widać w projekcji od razu jako wpisy ze źródłem
+ * „gabinet” (decyzja właściciela nr 4); do dziennika przenoszą się przy pierwszym zapisie wpisu
+ * tego pacjenta. Przeniesiona wersja ma identyfikator wyliczony z identyfikatora punktu i treść
+ * bez chwili ani urządzenia, więc dwa urządzenia przenoszące ten sam punkt zapisują tę samą
+ * notatkę (zapis jednorazowy uzna drugą próbę za powtórkę). Punkt migawki, który ma już wpis
+ * (po `legacyPointId` albo po id równym `entryId` — monitor zapisuje w migawce lustro dziennika),
+ * nie wraca jako drugi wpis.
+ *
+ * Moduł niczego nie liczy klinicznie: reguły cykli zna `VildaCykleLeczenia`, ocenę wg ChPL —
+ * `ObesityResponseCriteria`. Tu: zapis i odczyt wersji, składanie wpisów, konflikty, migracja,
+ * projekcja na punkty w formacie monitora (`obesityTherapyPoints`).
+ */
+(function (w) {
+  'use strict';
+
+  var VERSION = '1';
+  var KATEGORIA = 'leczenie-otylosci';
+  var ZNACZNIK = '{"vildaOtylosc":';
+  var FORMAT = 1;
+  var LINIA_OSTRZEZENIA = 'Wpis dziennika leczenia otyłości (Vilda) — nie edytuj tej notatki.';
+  var TYPY = { start: 'Włączenie', 'continue': 'Kontynuacja', end: 'Zakończenie' };
+  var ZRODLA = { gabinet: 1, pacjent: 1 };
+  var OPERACJE = { zapis: 1, poprawka: 1, wycofanie: 1, przywrocenie: 1, rozstrzygniecie: 1, migracja: 1 };
+
+  // ── Drobne narzędzia ─────────────────────────────────────────────────────────────
+
+  function liczba(v) {
+    if (v == null || v === '') return null;
+    var n = typeof v === 'number' ? v : Number(String(v).trim().replace(',', '.'));
+    return isFinite(n) ? n : null;
+  }
+
+  function tekst(v, max) {
+    var s = '';
+    var surowy = v == null ? '' : String(v);
+    for (var i = 0; i < surowy.length; i++) {
+      var c = surowy.charCodeAt(i);
+      if (c >= 32 || c === 10) s += surowy.charAt(i); // znaki sterujące (poza nową linią) odpadają
+    }
+    s = s.trim();
+    return max && s.length > max ? s.slice(0, max) : s;
+  }
+
+  function dataISO(v) {
+    var s = tekst(v);
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+    if (!m) return '';
+    var y = +m[1], mo = +m[2], d = +m[3];
+    if (y < 1900 || y > 2200) return '';
+    var dt = new Date(y, mo - 1, d);
+    return dt.getFullYear() === y && dt.getMonth() === mo - 1 && dt.getDate() === d ? s : '';
+  }
+
+  function dataMs(iso) {
+    var s = dataISO(iso);
+    if (!s) return null;
+    return new Date(+s.slice(0, 4), +s.slice(5, 7) - 1, +s.slice(8, 10)).getTime();
+  }
+
+  function dwieCyfry(n) {
+    return (n < 10 ? '0' : '') + n;
+  }
+
+  function dataPL(iso) {
+    var s = dataISO(iso);
+    return s ? s.slice(8, 10) + '.' + s.slice(5, 7) + '.' + s.slice(0, 4) : '';
+  }
+
+  function liczbaPL(n, miejsca) {
+    if (n == null || !isFinite(n)) return '—';
+    return (+Number(n).toFixed(miejsca == null ? 1 : miejsca)).toString().replace('.', ',');
+  }
+
+  function dzisISO(teraz) {
+    var d = teraz instanceof Date ? teraz : new Date();
+    return d.getFullYear() + '-' + dwieCyfry(d.getMonth() + 1) + '-' + dwieCyfry(d.getDate());
+  }
+
+  function nowyId() {
+    var losowe = '';
+    try {
+      if (w.crypto && typeof w.crypto.getRandomValues === 'function') {
+        var a = new Uint8Array(8);
+        w.crypto.getRandomValues(a);
+        for (var i = 0; i < a.length; i++) losowe += (a[i] % 36).toString(36);
+      }
+    } catch (_e) { losowe = ''; }
+    if (!losowe) losowe = Math.random().toString(36).slice(2, 10);
+    return 'otyl-' + Date.now().toString(36) + '-' + losowe;
+  }
+
+  // Krótki, stały skrót tekstu (FNV-1a 32-bit) — do identyfikatorów przeniesionych punktów.
+  function skrot(s) {
+    var h = 0x811c9dc5;
+    var t = String(s == null ? '' : s);
+    for (var i = 0; i < t.length; i++) {
+      h ^= t.charCodeAt(i);
+      h = Math.imul ? Math.imul(h, 0x01000193) : (h * 0x01000193) | 0;
+    }
+    return ('0000000' + (h >>> 0).toString(36)).slice(-7);
+  }
+
+  function urzadzenie() {
+    try {
+      var ua = String((w.navigator && w.navigator.userAgent) || '');
+      if (/iPad|Tablet/i.test(ua)) return 'tablet';
+      if (/Mobi|iPhone|Android/i.test(ua)) return 'telefon';
+    } catch (_e) { /* brak nawigatora */ }
+    return 'komputer';
+  }
+
+  function kopia(o) {
+    return JSON.parse(JSON.stringify(o));
+  }
+
+  // ── Dane wpisu ───────────────────────────────────────────────────────────────────
+
+  /**
+   * Normalizuje dane wpisu. Zwraca { ok, dane, bledy }. Reguły pól (R8/R9 — data, wzrost przy
+   * Włączeniu i Zakończeniu dziecka) sprawdza moduł cykli na całej liście; tu tylko format.
+   */
+  function normalizuj(d) {
+    var src = d || {};
+    var bledy = [];
+    var type = TYPY[src.type] ? src.type : null;
+    if (!type) bledy.push('rodzaj');
+    var date = dataISO(src.dateISO);
+    if (!date) bledy.push('data');
+    var weight = liczba(src.weight);
+    if (!(weight > 0) || weight > 500) { bledy.push('masa'); weight = null; }
+    var height = liczba(src.height);
+    var wzrostWpisany = src.height != null && String(src.height).trim() !== '';
+    if ((wzrostWpisany && height == null) || (height != null && (!(height > 0) || height > 260))) { bledy.push('wzrost'); height = null; }
+    var ageYears = liczba(src.ageYears);
+    var ageMonths = liczba(src.ageMonths);
+    if (ageYears == null || ageYears < 0) ageYears = 0;
+    if (ageMonths == null || ageMonths < 0) ageMonths = 0;
+    var wsrc = ZRODLA[src.weightSource] ? src.weightSource : 'gabinet';
+    var hsrc = height != null ? (ZRODLA[src.heightSource] ? src.heightSource : wsrc) : null;
+    var dane = {
+      type: type,
+      dateISO: date,
+      ageYears: Math.floor(ageYears),
+      ageMonths: Math.floor(ageMonths),
+      weight: weight,
+      weightSource: wsrc,
+      height: height,
+      heightSource: hsrc,
+      drug: tekst(src.drug, 200),
+      substance: tekst(src.substance, 200),
+      dose: tekst(src.dose, 80),
+      comment: tekst(src.comment, 500)
+    };
+    return { ok: bledy.length === 0, dane: dane, bledy: bledy };
+  }
+
+  function bmi(dane) {
+    var m = liczba(dane && dane.weight), h = liczba(dane && dane.height);
+    return m > 0 && h > 0 ? m / Math.pow(h / 100, 2) : null;
+  }
+
+  function opisDanych(dane) {
+    var czesci = [TYPY[dane.type] + ' ' + dataPL(dane.dateISO)];
+    czesci.push('masa ' + liczbaPL(dane.weight, 1) + ' kg (' + dane.weightSource + ')');
+    czesci.push(dane.height != null ? 'wzrost ' + liczbaPL(dane.height, 1) + ' cm (' + dane.heightSource + ')' : 'wzrost —');
+    var lek = [dane.drug ? String(dane.drug).split(' –')[0].split(' - ')[0].trim() : '', dane.dose].filter(Boolean).join(' ');
+    if (lek) czesci.push(lek);
+    return czesci.join(' · ');
+  }
+
+  // ── Zapis i odczyt wersji (notatka pacjenta) ─────────────────────────────────────
+
+  /**
+   * Wersja → ładunek `savePatientNoteOnce`. Pola wersji: id, entryId, parents, op, retracted,
+   * dane, createdAtISO, urzadzenie, legacyPointId.
+   */
+  function zakoduj(patientId, wersja) {
+    var dane = wersja.dane;
+    var meta = {
+      vildaOtylosc: FORMAT,
+      entryId: wersja.entryId,
+      parents: (wersja.parents || []).slice(),
+      op: wersja.op,
+      retracted: !!wersja.retracted,
+      dane: dane
+    };
+    if (wersja.createdAtISO) meta.createdAtISO = wersja.createdAtISO;
+    if (wersja.urzadzenie) meta.urzadzenie = wersja.urzadzenie;
+    if (wersja.legacyPointId) meta.legacyPointId = wersja.legacyPointId;
+    var tytul = 'Leczenie otyłości — ' + TYPY[dane.type] + ' ' + dataPL(dane.dateISO) + (wersja.retracted ? ' (usunięty)' : '');
+    var tresc = (wersja.retracted ? 'Usunięty z dziennika: ' : '') + opisDanych(dane) +
+      (dane.comment ? '\n' + dane.comment.replace(/\n/g, ' ') : '') + '\n' + LINIA_OSTRZEZENIA + '\n' + JSON.stringify(meta);
+    var wiekMies = Math.round((dane.ageYears || 0) * 12 + (dane.ageMonths || 0));
+    var out = {
+      id: wersja.id,
+      patientId: patientId,
+      category: KATEGORIA,
+      title: tytul,
+      body: tresc,
+      clinicalDateISO: dane.dateISO
+    };
+    if (wiekMies > 0) out.linkedAgeMonths = wiekMies;
+    return out;
+  }
+
+  /** Notatka → wersja albo null (nie wpis dziennika albo treść nieczytelna). */
+  function odkoduj(notatka) {
+    if (!notatka || notatka.category !== KATEGORIA || typeof notatka.body !== 'string') return null;
+    var linie = notatka.body.split('\n');
+    var json = null;
+    for (var i = linie.length - 1; i >= 0; i--) {
+      if (linie[i].indexOf(ZNACZNIK) === 0) { json = linie[i]; break; }
+    }
+    if (!json) return null;
+    var meta;
+    try { meta = JSON.parse(json); } catch (_e) { return null; }
+    if (!meta || meta.vildaOtylosc !== FORMAT || typeof meta.entryId !== 'string' || !meta.entryId) return null;
+    if (!OPERACJE[meta.op]) return null;
+    var n = normalizuj(meta.dane);
+    // Data jest obowiązkowa w nowych wpisach (R8), ale punkt przeniesiony z migawki mógł jej nie mieć.
+    if (!n.dane.type || n.dane.weight == null) return null;
+    var parents = Array.isArray(meta.parents) ? meta.parents.filter(function (p) { return typeof p === 'string' && p; }) : [];
+    return {
+      id: String(notatka.id),
+      patientId: notatka.patientId,
+      entryId: meta.entryId,
+      parents: parents,
+      op: meta.op,
+      retracted: meta.retracted === true,
+      dane: n.dane,
+      createdAtISO: typeof meta.createdAtISO === 'string' ? meta.createdAtISO : null,
+      urzadzenie: typeof meta.urzadzenie === 'string' ? meta.urzadzenie : null,
+      legacyPointId: typeof meta.legacyPointId === 'string' ? meta.legacyPointId : null,
+      zapisanoISO: notatka.createdAtISO || notatka.updatedAtISO || null
+    };
+  }
+
+  function jestWpisem(notatka) {
+    return !!(notatka && notatka.category === KATEGORIA);
+  }
+
+  // ── Składanie wpisów ─────────────────────────────────────────────────────────────
+
+  function chwilaWersji(v) {
+    var t = Date.parse(v.createdAtISO || v.zapisanoISO || '');
+    return isFinite(t) ? t : 0;
+  }
+
+  function punktZDanych(dane, id, dziennik) {
+    var p = {
+      id: id,
+      type: dane.type,
+      ageYears: dane.ageYears,
+      ageMonths: dane.ageMonths,
+      weight: dane.weight,
+      height: dane.height,
+      bmi: bmi(dane) != null ? +bmi(dane).toFixed(1) : null,
+      substance: dane.substance,
+      drug: dane.drug,
+      dose: dane.dose,
+      dateISO: dane.dateISO,
+      weightSource: dane.weightSource,
+      heightSource: dane.heightSource
+    };
+    if (dane.comment) p.comment = dane.comment;
+    if (dziennik) p.dziennik = dziennik;
+    return p;
+  }
+
+  function idPunktuMigawki(p, i) {
+    if (p && p.id != null && String(p.id) !== '') return String(p.id);
+    return 'bez-id-' + skrot(JSON.stringify([p && p.type, p && p.dateISO, p && p.weight, p && p.ageYears, p && p.ageMonths, i]));
+  }
+
+  function daneZPunktuMigawki(p) {
+    var h = liczba(p && p.height);
+    return normalizuj({
+      type: p && p.type,
+      dateISO: p && p.dateISO,
+      ageYears: p && p.ageYears,
+      ageMonths: p && p.ageMonths,
+      weight: p && p.weight,
+      weightSource: 'gabinet',
+      height: h > 0 ? h : null,
+      heightSource: 'gabinet',
+      drug: p && p.drug,
+      substance: p && p.substance,
+      dose: p && p.dose
+    });
+  }
+
+  function uporzadkujPunkty(punkty) {
+    var C = w.VildaCykleLeczenia;
+    if (C && typeof C.uporzadkuj === 'function') {
+      try { return C.uporzadkuj(punkty).punkty; } catch (_e) { /* niżej zapas */ }
+    }
+    var wszystkieZDatami = punkty.length > 0 && punkty.every(function (p) { return dataMs(p.dateISO) != null; });
+    return punkty.slice().sort(function (a, b) {
+      return wszystkieZDatami ? dataMs(a.dateISO) - dataMs(b.dateISO)
+        : ((a.ageYears || 0) * 12 + (a.ageMonths || 0)) - ((b.ageYears || 0) * 12 + (b.ageMonths || 0));
+    });
+  }
+
+  /**
+   * Składa dziennik pacjenta z notatek i punktów migawki.
+   * Zwraca { wpisy, punkty, konflikty, niezmigrowane, nieczytelne, maDziennik }:
+   *   wpisy[]   — { entryId, stan: 'ok'|'konflikt'|'usuniety'|'migawka', biezaca, liscie, wersje, punkt }
+   *   punkty[]  — projekcja w formacie monitora (bez usuniętych), uporządkowana jak tabela monitora
+   *   konflikty — wpisy w stanie 'konflikt'
+   */
+  function zloz(notatki, punktyMigawki) {
+    var wersje = [];
+    var nieczytelne = [];
+    (Array.isArray(notatki) ? notatki : []).forEach(function (n) {
+      if (!jestWpisem(n)) return;
+      var v = odkoduj(n);
+      if (v) wersje.push(v); else nieczytelne.push(n);
+    });
+    var grupy = {};
+    var kolejnosc = [];
+    wersje.forEach(function (v) {
+      if (!grupy[v.entryId]) { grupy[v.entryId] = []; kolejnosc.push(v.entryId); }
+      grupy[v.entryId].push(v);
+    });
+    var pokryte = {};
+    var wpisy = kolejnosc.map(function (entryId) {
+      var vs = grupy[entryId].slice().sort(function (a, b) { return chwilaWersji(a) - chwilaWersji(b) || (a.id < b.id ? -1 : 1); });
+      var zastapione = {};
+      vs.forEach(function (v) { v.parents.forEach(function (p) { zastapione[p] = true; }); });
+      var liscie = vs.filter(function (v) { return !zastapione[v.id]; });
+      if (!liscie.length) liscie = [vs[vs.length - 1]]; // cykl w danych — bierzemy najnowszą
+      vs.forEach(function (v) { if (v.legacyPointId) pokryte[v.legacyPointId] = true; });
+      pokryte[entryId] = true;
+      var biezaca = liscie[liscie.length - 1];
+      var stan = liscie.length > 1 ? 'konflikt' : biezaca.retracted ? 'usuniety' : 'ok';
+      var wpis = { entryId: entryId, stan: stan, biezaca: biezaca, liscie: liscie, wersje: vs, punkt: null };
+      if (stan !== 'usuniety') {
+        // Przy konflikcie projekcja bierze najnowszą nieusuniętą wersję, oznaczoną konfliktem.
+        var widoczna = biezaca;
+        if (stan === 'konflikt') {
+          var zywe = liscie.filter(function (v) { return !v.retracted; });
+          widoczna = zywe.length ? zywe[zywe.length - 1] : biezaca;
+        }
+        wpis.punkt = punktZDanych(widoczna.dane, entryId, {
+          entryId: entryId, versionId: widoczna.id, konflikt: stan === 'konflikt'
+        });
+      }
+      return wpis;
+    });
+    var niezmigrowane = [];
+    (Array.isArray(punktyMigawki) ? punktyMigawki : []).forEach(function (p, i) {
+      if (!p || typeof p !== 'object') return;
+      if (p.type !== 'start' && p.type !== 'continue' && p.type !== 'end') return;
+      var id = idPunktuMigawki(p, i);
+      if (pokryte[id]) return;
+      niezmigrowane.push({ id: id, punkt: p });
+    });
+    niezmigrowane.forEach(function (m) {
+      var n = daneZPunktuMigawki(m.punkt);
+      var p = kopia(m.punkt);
+      p.id = m.id;
+      if (n.dane.weightSource) p.weightSource = 'gabinet';
+      if (liczba(p.height) > 0) p.heightSource = 'gabinet';
+      p.dziennik = { entryId: null, versionId: null, konflikt: false, migawka: true };
+      wpisy.push({ entryId: null, stan: 'migawka', biezaca: null, liscie: [], wersje: [], punkt: p, migawka: m });
+    });
+    var punkty = uporzadkujPunkty(wpisy.filter(function (x) { return x.punkt; }).map(function (x) { return x.punkt; }));
+    return {
+      wpisy: wpisy,
+      punkty: punkty,
+      konflikty: wpisy.filter(function (x) { return x.stan === 'konflikt'; }),
+      niezmigrowane: niezmigrowane,
+      nieczytelne: nieczytelne,
+      maDziennik: wersje.length > 0
+    };
+  }
+
+  function wpisPoId(stan, entryId) {
+    var lista = stan && stan.wpisy ? stan.wpisy : [];
+    for (var i = 0; i < lista.length; i++) if (lista[i].entryId === entryId) return lista[i];
+    return null;
+  }
+
+  // ── Plany zapisu (czyste — zwracają wersje do zapisania) ─────────────────────────
+
+  function wersja(entryId, parents, op, dane, opcje) {
+    var o = opcje || {};
+    var id = o.id || nowyId();
+    return {
+      id: id,
+      entryId: entryId || id,
+      parents: parents || [],
+      op: op,
+      retracted: !!o.retracted,
+      dane: dane,
+      createdAtISO: o.bezChwili ? null : (o.teraz instanceof Date ? o.teraz : new Date()).toISOString(),
+      urzadzenie: o.bezChwili ? null : (o.urzadzenie || urzadzenie()),
+      legacyPointId: o.legacyPointId || null
+    };
+  }
+
+  /** Wersje przenoszące niezmigrowane punkty migawki (deterministyczne id i treść). */
+  function planMigracji(stan, patientId) {
+    var out = [];
+    (stan && stan.niezmigrowane ? stan.niezmigrowane : []).forEach(function (m) {
+      var n = daneZPunktuMigawki(m.punkt);
+      if (!n.dane.type || n.dane.weight == null) return; // punkt bez masy albo rodzaju — zostaje w migawce
+      var id = 'otylm-' + skrot(patientId) + '-' + String(m.id).replace(/[^A-Za-z0-9_-]/g, '_').slice(0, 60);
+      out.push(wersja(id, [], 'migracja', n.dane, { id: id, bezChwili: true, legacyPointId: m.id }));
+    });
+    return out;
+  }
+
+  function planNowego(stan, patientId, dane, opcje) {
+    var n = normalizuj(dane);
+    if (!n.ok) return { ok: false, bledy: n.bledy };
+    var plan = planMigracji(stan, patientId);
+    plan.push(wersja(null, [], 'zapis', n.dane, opcje));
+    return { ok: true, wersje: plan, entryId: plan[plan.length - 1].entryId };
+  }
+
+  function planPoprawki(stan, patientId, entryId, dane, opcje) {
+    var wpis = wpisPoId(stan, entryId);
+    if (!wpis || wpis.stan === 'migawka') return { ok: false, bledy: ['brak-wpisu'] };
+    if (wpis.stan === 'konflikt') return { ok: false, bledy: ['konflikt'] };
+    var n = normalizuj(dane);
+    if (!n.ok) return { ok: false, bledy: n.bledy };
+    var plan = planMigracji(stan, patientId);
+    plan.push(wersja(entryId, [wpis.biezaca.id], 'poprawka', n.dane, opcje));
+    return { ok: true, wersje: plan, entryId: entryId };
+  }
+
+  function planUsuniecia(stan, patientId, entryId, opcje) {
+    var wpis = wpisPoId(stan, entryId);
+    if (!wpis || wpis.stan !== 'ok') return { ok: false, bledy: [wpis && wpis.stan === 'konflikt' ? 'konflikt' : 'brak-wpisu'] };
+    var plan = planMigracji(stan, patientId);
+    var o = Object.assign({}, opcje || {}, { retracted: true });
+    plan.push(wersja(entryId, [wpis.biezaca.id], 'wycofanie', kopia(wpis.biezaca.dane), o));
+    return { ok: true, wersje: plan, entryId: entryId };
+  }
+
+  function planPrzywrocenia(stan, patientId, entryId, opcje) {
+    var wpis = wpisPoId(stan, entryId);
+    if (!wpis || wpis.stan !== 'usuniety') return { ok: false, bledy: ['brak-wpisu'] };
+    var plan = planMigracji(stan, patientId);
+    plan.push(wersja(entryId, [wpis.biezaca.id], 'przywrocenie', kopia(wpis.biezaca.dane), opcje));
+    return { ok: true, wersje: plan, entryId: entryId };
+  }
+
+  /** Rozstrzygnięcie konfliktu: nowa wersja z treścią wybranej, zastępuje wszystkie liście. */
+  function planRozstrzygniecia(stan, patientId, entryId, wybranaId, opcje) {
+    var wpis = wpisPoId(stan, entryId);
+    if (!wpis || wpis.stan !== 'konflikt') return { ok: false, bledy: ['brak-konfliktu'] };
+    var wybrana = null;
+    wpis.liscie.forEach(function (v) { if (v.id === wybranaId) wybrana = v; });
+    if (!wybrana) return { ok: false, bledy: ['brak-wersji'] };
+    var o = Object.assign({}, opcje || {}, { retracted: wybrana.retracted });
+    var plan = planMigracji(stan, patientId);
+    plan.push(wersja(entryId, wpis.liscie.map(function (v) { return v.id; }), 'rozstrzygniecie', kopia(wybrana.dane), o));
+    return { ok: true, wersje: plan, entryId: entryId };
+  }
+
+  /**
+   * Plan działania na punkt projekcji (monitor DocPro, Karta): { rodzaj: 'dodaj'|'popraw'|'usun', id, dane }.
+   * `id` to id punktu z projekcji: entryId wpisu dziennika albo id punktu migawki (jeszcze nieprzeniesionego) —
+   * wtedy plan najpierw przenosi dawne punkty, a działanie dotyczy przeniesionego wpisu.
+   */
+  function planDzialania(stan, patientId, akcja, opcje) {
+    var a = akcja || {};
+    if (a.rodzaj === 'dodaj') return planNowego(stan, patientId, a.dane, opcje);
+    var entryId = a.id;
+    var migracja = [];
+    if (!wpisPoId(stan, entryId)) {
+      migracja = planMigracji(stan, patientId);
+      var przeniesiony = null;
+      migracja.forEach(function (v) { if (v.legacyPointId === String(a.id)) przeniesiony = v; });
+      if (!przeniesiony) return { ok: false, bledy: ['brak-wpisu'] };
+      entryId = przeniesiony.entryId;
+      // Stan po przeniesieniu (bez zapisu) — żeby poprawka i usunięcie wskazały przeniesioną wersję.
+      var notatki = migracja.map(function (v) { return Object.assign(zakoduj(patientId, v), { createdAtISO: null }); });
+      stan = zloz(stan.wpisy.reduce(function (acc, x) {
+        (x.wersje || []).forEach(function (v) { acc.push(Object.assign(zakoduj(patientId, v), { createdAtISO: v.zapisanoISO })); });
+        return acc;
+      }, []).concat(notatki), stan.niezmigrowane.map(function (m) { return Object.assign({}, m.punkt, { id: m.id }); }));
+    }
+    var plan = a.rodzaj === 'popraw' ? planPoprawki(stan, patientId, entryId, a.dane, opcje)
+      : a.rodzaj === 'usun' ? planUsuniecia(stan, patientId, entryId, opcje)
+        : { ok: false, bledy: ['zla-akcja'] };
+    if (!plan.ok) return plan;
+    // planPoprawki/planUsuniecia dołożyły już migrację pozostałych punktów; przeniesienie tego punktu — na początek.
+    var ids = {};
+    plan.wersje.forEach(function (v) { ids[v.id] = true; });
+    var przed = migracja.filter(function (v) { return !ids[v.id]; });
+    return { ok: true, wersje: przed.concat(plan.wersje), entryId: entryId };
+  }
+
+  // ── Pomocnicze reguły formularza ─────────────────────────────────────────────────
+
+  /** Możliwy duplikat: inny bieżący wpis z tą samą datą i masą (±0,05 kg). */
+  function duplikat(stan, dane, pomijajEntryId) {
+    var d = dataISO(dane && dane.dateISO), m = liczba(dane && dane.weight);
+    if (!d || m == null) return null;
+    var lista = stan && stan.wpisy ? stan.wpisy : [];
+    for (var i = 0; i < lista.length; i++) {
+      var x = lista[i];
+      if (!x.punkt || (pomijajEntryId && x.entryId === pomijajEntryId)) continue;
+      if (x.punkt.dateISO === d && Math.abs(Number(x.punkt.weight) - m) < 0.05) return x;
+    }
+    return null;
+  }
+
+  /**
+   * Wiek w dniu pomiaru: z daty urodzenia, a bez niej z najbliższego wcześniejszego punktu
+   * z datą (jego wiek + pełne miesiące między datami). Zwraca { ageYears, ageMonths, zrodlo } albo null.
+   */
+  function wiekNaDzien(dateISO, opcje) {
+    var o = opcje || {};
+    var d = dataISO(dateISO);
+    if (!d) return null;
+    var y = +d.slice(0, 4), mo = +d.slice(5, 7), dd = +d.slice(8, 10);
+    var ur = dataISO(o.urodzenieISO);
+    if (ur) {
+      var uy = +ur.slice(0, 4), um = +ur.slice(5, 7), ud = +ur.slice(8, 10);
+      var mies = (y - uy) * 12 + (mo - um) - (dd < ud ? 1 : 0);
+      if (mies >= 0) return { ageYears: Math.floor(mies / 12), ageMonths: mies % 12, zrodlo: 'urodzenie' };
+    }
+    var punkty = (o.punkty || []).filter(function (p) { return p && dataISO(p.dateISO) && dataISO(p.dateISO) <= d; });
+    if (!punkty.length) return null;
+    punkty.sort(function (a, b) { return dataMs(a.dateISO) - dataMs(b.dateISO); });
+    var p = punkty[punkty.length - 1];
+    var pd = dataISO(p.dateISO);
+    var py = +pd.slice(0, 4), pm = +pd.slice(5, 7), pdd = +pd.slice(8, 10);
+    var roznica = (y - py) * 12 + (mo - pm) - (dd < pdd ? 1 : 0);
+    var baza = Math.round((liczba(p.ageYears) || 0) * 12 + (liczba(p.ageMonths) || 0));
+    var wynik = baza + Math.max(0, roznica);
+    return { ageYears: Math.floor(wynik / 12), ageMonths: wynik % 12, zrodlo: 'punkt' };
+  }
+
+  // ── Sejf ─────────────────────────────────────────────────────────────────────────
+
+  function sejf(v) {
+    var s = v || w.VildaVault;
+    if (!s || typeof s.listPatientNotesForPatient !== 'function' || typeof s.savePatientNoteOnce !== 'function') return null;
+    return s;
+  }
+
+  function wczytaj(patientId, punktyMigawki, opcje) {
+    var s = sejf(opcje && opcje.vault);
+    if (!s || !patientId) return Promise.resolve(zloz([], punktyMigawki));
+    return Promise.resolve(s.listPatientNotesForPatient(patientId)).then(function (notatki) {
+      return zloz(notatki, punktyMigawki);
+    });
+  }
+
+  /** Zapisuje wersje po kolei (zapis jednorazowy). Odrzuca, gdy którakolwiek nie weszła. */
+  function zapisz(patientId, wersje, opcje) {
+    var s = sejf(opcje && opcje.vault);
+    if (!s) return Promise.reject(new Error('Sejf niedostępny — zaloguj się, aby zapisać wpis leczenia.'));
+    var zapisane = [];
+    return (wersje || []).reduce(function (p, v) {
+      return p.then(function () {
+        return Promise.resolve(s.savePatientNoteOnce(zakoduj(patientId, v))).then(function (r) {
+          if (r && (r.saved || r.reused)) { zapisane.push(v.id); return; }
+          var blad = new Error(r && r.reason === 'deleted'
+            ? 'Tej wersji wpisu nie można zapisać — jej notatkę usunięto z sejfu.'
+            : 'Inna treść pod tym samym identyfikatorem wpisu — nic nie nadpisano.');
+          blad.kod = r && r.reason || 'odmowa';
+          throw blad;
+        });
+      });
+    }, Promise.resolve()).then(function () { return { zapisane: zapisane }; });
+  }
+
+  w.VildaDziennikOtylosci = Object.freeze({
+    VERSION: VERSION,
+    KATEGORIA: KATEGORIA,
+    TYPY: TYPY,
+    normalizuj: normalizuj,
+    zakoduj: zakoduj,
+    odkoduj: odkoduj,
+    jestWpisem: jestWpisem,
+    zloz: zloz,
+    wpisPoId: wpisPoId,
+    planMigracji: planMigracji,
+    planNowego: planNowego,
+    planPoprawki: planPoprawki,
+    planUsuniecia: planUsuniecia,
+    planPrzywrocenia: planPrzywrocenia,
+    planRozstrzygniecia: planRozstrzygniecia,
+    planDzialania: planDzialania,
+    duplikat: duplikat,
+    wiekNaDzien: wiekNaDzien,
+    opisDanych: opisDanych,
+    dataPL: dataPL,
+    liczbaPL: liczbaPL,
+    dzisISO: dzisISO,
+    wczytaj: wczytaj,
+    zapisz: zapisz
+  });
+}(typeof window !== 'undefined' ? window : this));
+
+/*
+ * „Wpisy leczenia” w Karcie pacjenta (window.VildaDziennikOtylosciUI).
+ *
+ * P-OTYLOSC-DZIENNIK, etap 4 projektu „Leczenie otyłości — wpisy poza wizytą” (decyzje właściciela
+ * 2026-11-17/18, makieta zaakceptowana 2026-11-18 z etykietą źródła „Pacjent”). Sekcja w Karcie
+ * pacjenta: lista wpisów dziennika (VildaDziennikOtylosci wyżej) ze źródłem masy i wzrostu, okno
+ * „+ Kontynuacja” (bez wczytywania pacjenta), poprawka, usunięcie z „Cofnij”, wybór wersji przy
+ * konflikcie. Reguły cykli (R1–R9) sprawdza VildaCykleLeczenia na liście z dziennika; okno oceny
+ * i potrzebę wzrostu podpowiada ObesityResponseCriteria.punktOceny. Moduł nie zapisuje niczego
+ * poza notatkami dziennika i nie dotyka zapisu wizyty.
+ *
+ * Wejście: sekcja({ patientId, stan, urodzenieISO, onZmiana }) — stan z VildaDziennikOtylosci.zloz;
+ * onZmiana() wołane po każdym udanym zapisie (Karta przelicza wtedy kafelki i ocenę).
+ */
+(function (w) {
+  'use strict';
+
+  var VERSION = '1';
+  var POKAZ_NA_START = 5;
+  var rozwiniete = {};
+  var usunieteRozwiniete = {};
+  var ostatnieUsuniecie = {};
+
+  function Dz() { return w.VildaDziennikOtylosci; }
+  function Cy() { var c = w.VildaCykleLeczenia; return c && typeof c.sprawdz === 'function' ? c : null; }
+  function Kr() { var k = w.ObesityResponseCriteria; return k && typeof k.getCriterion === 'function' ? k : null; }
+  function doc() { return w.document; }
+
+  // Optional Home owner: native clinical rules and the journal writer stay
+  // unchanged. A retained UI action may never borrow a replacement card.
+  function aktualny(ctx) {
+    if (!ctx.homeContext) return true;
+    try { return ctx.homeContext.isCurrent() === true; } catch (_e) { return false; }
+  }
+  function wymagajAktualnego(ctx) {
+    if (!aktualny(ctx)) throw new Error('Ta karta pacjenta jest już zamknięta.');
+  }
+
+  // ── DOM ──────────────────────────────────────────────────────────────────────────
+
+  function el(tag, attrs, dzieci) {
+    var n = doc().createElement(tag);
+    var a = attrs || {};
+    Object.keys(a).forEach(function (k) {
+      var v = a[k];
+      if (v == null || v === false) return;
+      if (k === 'text') n.textContent = v;
+      else if (k === 'class') n.className = v;
+      else if (k.indexOf('on') === 0 && typeof v === 'function') n.addEventListener(k.slice(2), v);
+      else n.setAttribute(k, v === true ? '' : String(v));
+    });
+    (dzieci || []).forEach(function (c) {
+      if (c == null || c === false) return;
+      n.appendChild(typeof c === 'string' ? doc().createTextNode(c) : c);
+    });
+    return n;
+  }
+
+  function wyczysc(n) {
+    if (!n) return;
+    while (n.firstChild) n.removeChild(n.firstChild);
+  }
+
+  function liczbaPL(n, m) { return Dz().liczbaPL(n, m); }
+  function dataPL(iso) { return Dz().dataPL(iso); }
+
+  function liczbaZPola(v) {
+    var s = String(v == null ? '' : v).trim().replace(',', '.');
+    if (s === '') return null;
+    var n = Number(s);
+    return isFinite(n) ? n : NaN;
+  }
+
+  function chwilaPL(iso) {
+    var t = Date.parse(iso || '');
+    if (!isFinite(t)) return '';
+    var d = new Date(t);
+    var p = function (x) { return (x < 10 ? '0' : '') + x; };
+    return p(d.getDate()) + '.' + p(d.getMonth() + 1) + '.' + d.getFullYear() + ', ' + p(d.getHours()) + ':' + p(d.getMinutes());
+  }
+
+  function nazwaLeku(p) {
+    var c = Cy();
+    var n;
+    try { n = c && typeof c.nazwaLeku === 'function' ? c.nazwaLeku(p) : ''; } catch (_e) { n = ''; }
+    if (n) return n;
+    var s = String((p && (p.drug || p.substance)) || '');
+    return s.split(' –')[0].split(' - ')[0].trim();
+  }
+
+  function odznaka(zrodlo) {
+    var z = zrodlo === 'pacjent' ? 'pacjent' : 'gabinet';
+    return el('span', { class: 'vdo-src vdo-src-' + z, text: z });
+  }
+
+  // ── Stan pomocniczy ──────────────────────────────────────────────────────────────
+
+  function cykle(stan) {
+    var c = Cy();
+    if (!c || typeof c.podziel !== 'function') return [];
+    try { return c.podziel(stan.punkty).cykle || []; } catch (_e) { return []; }
+  }
+
+  function aktywnyCykl(stan) {
+    var cs = cykle(stan);
+    var ost = cs[cs.length - 1];
+    return ost && ost.stan !== 'zakonczony' ? ost : null;
+  }
+
+  function ostatniPunkt(stan, przedISO) {
+    var pts = stan.punkty.filter(function (p) { return !przedISO || (p.dateISO && p.dateISO <= przedISO); });
+    return pts.length ? pts[pts.length - 1] : null;
+  }
+
+  /** Podpowiedź o oknie oceny ChPL i wzroście dla kandydata (null, gdy nic do powiedzenia). */
+  function podpowiedzOkna(stan, kandydat, pomijajEntryId) {
+    var K = Kr(), c = Cy();
+    if (!K || typeof K.punktOceny !== 'function' || !c || !kandydat || !kandydat.dateISO) return null;
+    if (kandydat.height > 0) return null;
+    var lista = stan.punkty.filter(function (p) { return p.id !== pomijajEntryId; }).concat([kandydat]);
+    var podzial;
+    try { podzial = c.podziel(lista); } catch (_e) { return null; }
+    var cykl = null;
+    (podzial.cykle || []).forEach(function (cc) { if (cc.punkty.indexOf(kandydat) >= 0) cykl = cc; });
+    if (!cykl || !cykl.wlaczenie) return null;
+    var pts = cykl.punkty.slice(cykl.punkty.indexOf(cykl.wlaczenie));
+    var start = cykl.wlaczenie;
+    var kryt = K.getCriterion(start.drug || kandydat.drug || '', start.substance || '', ((start.ageYears || 0) * 12 + (start.ageMonths || 0)) / 12);
+    if (!kryt) return null;
+    var r = K.punktOceny(kryt, pts);
+    if (!r || !r.metrykaBmi || r.punkt === kandydat) return null;
+    var zw = r.ostatniZeWzrostem;
+    var ostatni = zw && zw !== kandydat ? ' Ostatni wzrost: ' + liczbaPL(zw.height, 1) + ' cm z ' + dataPL(zw.dateISO) : '';
+    if (r.tryb === 'potrzebny-wzrost') {
+      return 'Trwa okno oceny ChPL' + (r.oknoOdISO ? ' (od ' + dataPL(r.oknoOdISO) + ')' : '') + '.' +
+        (ostatni ? ostatni + ' — przed oknem.' : ' Po Włączeniu nie zapisano wzrostu.') +
+        ' Wpisz wzrost, jeśli pacjent go zmierzył; bez niego ocena odpowiedzi poczeka.';
+    }
+    if (r.tryb === 'ostatni-ze-wzrostem' && r.punkt) {
+      return 'Ocena odpowiedzi wg ChPL liczy się z wpisu ' + dataPL(r.punkt.dateISO) + ' (ostatni ze wzrostem). Wpisz wzrost, jeśli pacjent go zmierzył.';
+    }
+    return null;
+  }
+
+  // ── Okno dialogowe ───────────────────────────────────────────────────────────────
+
+  function okno(tytul, podtytul, tresc, opcje) {
+    var o = opcje || {};
+    var zamkniete = false, zwolnij = null;
+    var poprzedni = doc().activeElement;
+    var tlo = el('div', { class: 'vdo-backdrop' });
+    var naglowekId = 'vdo-tytul-' + Date.now().toString(36);
+    var zamknij = el('button', { type: 'button', class: 'vdo-x', 'aria-label': 'Zamknij', text: '×' });
+    var panel = el('div', { class: 'vdo-dialog', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': naglowekId }, [
+      el('div', { class: 'vdo-dialog-head' }, [
+        el('div', {}, [
+          el('h2', { id: naglowekId, class: 'vdo-dialog-title', text: tytul }),
+          podtytul ? el('p', { class: 'vdo-dialog-sub', text: podtytul }) : null
+        ]),
+        zamknij
+      ]),
+      tresc
+    ]);
+    tlo.appendChild(panel);
+    function koniec() {
+      if (zamkniete) return;
+      zamkniete = true;
+      doc().removeEventListener('keydown', klawisz, true);
+      if (tlo.parentNode) tlo.parentNode.removeChild(tlo);
+      if (typeof zwolnij === 'function') zwolnij();
+      try { if (poprzedni && typeof poprzedni.focus === 'function' && (!o.homeContext || (poprzedni.isConnected && o.homeContext.isCurrent()))) poprzedni.focus(); } catch (_e) { /* brak fokusu */ }
+      if (typeof o.onZamkniecie === 'function') o.onZamkniecie();
+    }
+    function klawisz(ev) {
+      if (ev.key === 'Escape') { ev.stopPropagation(); koniec(); }
+      if (ev.key === 'Tab') {
+        var f = panel.querySelectorAll('button:not([disabled]), input:not([disabled]), textarea, select, [tabindex="0"]');
+        if (!f.length) return;
+        var pierwszy = f[0], ostatni = f[f.length - 1];
+        if (ev.shiftKey && doc().activeElement === pierwszy) { ev.preventDefault(); ostatni.focus(); }
+        else if (!ev.shiftKey && doc().activeElement === ostatni) { ev.preventDefault(); pierwszy.focus(); }
+      }
+    }
+    zamknij.addEventListener('click', koniec);
+    tlo.addEventListener('mousedown', function (ev) { if (ev.target === tlo) koniec(); });
+    doc().addEventListener('keydown', klawisz, true);
+    doc().body.appendChild(tlo);
+    if (o.homeContext && typeof o.homeContext.onDialog === 'function') {
+      zwolnij = o.homeContext.onDialog(panel, {
+        kind: 'obesity-diary', isOpen: function () { return !zamkniete && tlo.isConnected; },
+        requestClose: koniec, dispose: koniec
+      });
+    }
+    setTimeout(function () {
+      if (o.homeContext && (zamkniete || !tlo.isConnected || !o.homeContext.isCurrent())) return;
+      var f = o.fokus || panel.querySelector('input, textarea, button:not(.vdo-x)');
+      try { if (f) f.focus(); } catch (_e) { /* brak fokusu */ }
+    }, 0);
+    return { zamknij: koniec, panel: panel, isCurrent: function () { return !zamkniete && tlo.isConnected; } };
+  }
+
+  function komunikat(kontener, rodzaj, tekst, akcje) {
+    wyczysc(kontener);
+    if (!tekst) { kontener.hidden = true; return; }
+    kontener.className = 'vdo-msg vdo-msg-' + rodzaj;
+    kontener.appendChild(el('span', { class: 'vdo-msg-t', text: tekst }));
+    if (akcje && akcje.length) {
+      kontener.appendChild(el('div', { class: 'vdo-msg-actions' }, akcje.map(function (a) {
+        return el('button', { type: 'button', class: 'vilda-auth-btn ' + (a.glowny ? 'vilda-auth-btn-primary' : 'vilda-auth-btn-ghost'), text: a.etykieta, onclick: a.run });
+      })));
+    }
+    kontener.hidden = false;
+  }
+
+  function wyborZrodla(domyslne, etykieta) {
+    var wartosc = domyslne;
+    var grupa = el('div', { class: 'vdo-chips', role: 'radiogroup', 'aria-label': etykieta });
+    var przyciski = {};
+    ['gabinet', 'pacjent'].forEach(function (z) {
+      var b = el('button', { type: 'button', role: 'radio', class: 'vdo-chip', 'data-zrodlo': z, text: z === 'gabinet' ? 'Gabinet' : 'Pacjent' });
+      b.addEventListener('click', function () { ustaw(z); });
+      przyciski[z] = b;
+      grupa.appendChild(b);
+    });
+    function ustaw(z) {
+      wartosc = z;
+      Object.keys(przyciski).forEach(function (k) { przyciski[k].setAttribute('aria-checked', k === z ? 'true' : 'false'); });
+    }
+    ustaw(domyslne);
+    return { el: grupa, wartosc: function () { return wartosc; }, ustaw: ustaw };
+  }
+
+  // ── Zapis ────────────────────────────────────────────────────────────────────────
+
+  function zapiszPlan(ctx, plan) {
+    if (!aktualny(ctx)) return Promise.reject(new Error('Ta karta pacjenta jest już zamknięta.'));
+    if (!plan || !plan.ok) return Promise.reject(new Error('Nie udało się przygotować wpisu.'));
+    return Dz().zapisz(ctx.patientId, plan.wersje).then(function () {
+      if (aktualny(ctx) && typeof ctx.onZmiana === 'function') ctx.onZmiana();
+      return plan;
+    });
+  }
+
+  /** Wpis z migawki (sprzed dziennika) — najpierw przeniesienie, potem działanie na jego entryId. */
+  function zMigracja(ctx, wpis) {
+    if (!aktualny(ctx)) return Promise.reject(new Error('Ta karta pacjenta jest już zamknięta.'));
+    if (!wpis || wpis.stan !== 'migawka') return Promise.resolve({ stan: ctx.stan, entryId: wpis && wpis.entryId });
+    var plan = Dz().planMigracji(ctx.stan, ctx.patientId);
+    var przeniesiony = null;
+    plan.forEach(function (v) { if (v.legacyPointId === wpis.migawka.id) przeniesiony = v.entryId; });
+    if (!przeniesiony) return Promise.reject(new Error('Tego punktu nie da się przenieść do dziennika (brak masy albo rodzaju).'));
+    return Dz().zapisz(ctx.patientId, plan).then(function () {
+      wymagajAktualnego(ctx);
+      return Dz().wczytaj(ctx.patientId, ctx.migawka || []);
+    }).then(function (stan) {
+      wymagajAktualnego(ctx);
+      ctx.stan = stan;
+      return { stan: stan, entryId: przeniesiony };
+    });
+  }
+
+  // ── Formularz wpisu (nowy / poprawka) ────────────────────────────────────────────
+
+  function formularz(ctx, wpis) {
+    if (!aktualny(ctx)) return null;
+    var popraw = !!wpis;
+    var stan = ctx.stan;
+    var punkt = popraw ? wpis.punkt : null;
+    var typ = popraw ? punkt.type : 'continue';
+    var ostatni = ostatniPunkt(stan);
+    var lekPunkt = popraw ? punkt : ostatni;
+    var nazwaTypu = Dz().TYPY[typ];
+
+    var pDate = el('input', { type: 'date', id: 'vdoDate', class: 'vdo-input', 'aria-required': 'true', 'aria-describedby': 'vdoDateHint vdoDateErr' });
+    var dateErr = el('span', { id: 'vdoDateErr', class: 'vdo-err', hidden: true });
+    var pW = el('input', { type: 'text', inputmode: 'decimal', id: 'vdoW', class: 'vdo-input vdo-num', 'aria-required': 'true', 'aria-describedby': 'vdoWErr vdoWDelta' });
+    var wErr = el('span', { id: 'vdoWErr', class: 'vdo-err', hidden: true });
+    var wDelta = el('span', { id: 'vdoWDelta', class: 'vdo-hint' });
+    var zW = wyborZrodla(popraw ? punkt.weightSource || 'gabinet' : 'pacjent', 'Kto zmierzył masę');
+    var pH = el('input', { type: 'text', inputmode: 'decimal', id: 'vdoH', class: 'vdo-input vdo-num', placeholder: 'np. 163,5', 'aria-describedby': 'vdoHErr vdoHInfo' });
+    var hErr = el('span', { id: 'vdoHErr', class: 'vdo-err', hidden: true });
+    var hInfo = el('span', { id: 'vdoHInfo', class: 'vdo-info', hidden: true });
+    var zH = wyborZrodla(popraw ? punkt.heightSource || punkt.weightSource || 'gabinet' : 'pacjent', 'Kto zmierzył wzrost');
+    var pDose = el('input', { type: 'text', id: 'vdoDose', class: 'vdo-input' });
+    var pNote = el('textarea', { id: 'vdoNote', class: 'vdo-input', rows: '2', placeholder: 'np. recepta wysłana' });
+    var msg = el('div', { class: 'vdo-msg', role: 'status', 'aria-live': 'polite', hidden: true });
+    var zapisz = el('button', { type: 'submit', class: 'vilda-auth-btn vilda-auth-btn-primary', text: popraw ? 'Zapisz poprawkę' : 'Zapisz wpis' });
+    var anuluj = el('button', { type: 'button', class: 'vilda-auth-btn vilda-auth-btn-ghost', text: 'Anuluj' });
+
+    if (popraw) {
+      pDate.value = punkt.dateISO || '';
+      pW.value = punkt.weight != null ? String(punkt.weight).replace('.', ',') : '';
+      pH.value = punkt.height > 0 ? String(punkt.height).replace('.', ',') : '';
+      pDose.value = punkt.dose || '';
+      pNote.value = punkt.comment || '';
+    } else if (ostatni) {
+      pDose.value = ostatni.dose || '';
+    }
+
+    var lekTekst = lekPunkt ? nazwaLeku(lekPunkt) : '';
+    var forma = el('form', { class: 'vdo-form', novalidate: true }, [
+      el('div', { class: 'vdo-field' }, [
+        el('label', { for: 'vdoDate', class: 'vdo-label' }, ['Data pomiaru ', el('span', { class: 'vdo-req', 'aria-hidden': 'true', text: '*' })]),
+        pDate,
+        el('span', { id: 'vdoDateHint', class: 'vdo-hint', text: 'Dzień ważenia, nie dzień wpisu.' }),
+        dateErr
+      ]),
+      el('fieldset', { class: 'vdo-fieldset' }, [
+        el('legend', {}, ['Masa ciała ', el('span', { class: 'vdo-req', 'aria-hidden': 'true', text: '*' })]),
+        el('div', { class: 'vdo-row' }, [el('label', { for: 'vdoW', class: 'vdo-sr', text: 'Masa ciała w kg' }), pW, el('span', { class: 'vdo-unit', text: 'kg' })]),
+        zW.el, wDelta, wErr
+      ]),
+      el('fieldset', { class: 'vdo-fieldset' }, [
+        el('legend', {}, ['Wzrost ', el('span', { class: 'vdo-opt', text: '(opcjonalnie)' })]),
+        el('div', { class: 'vdo-row' }, [el('label', { for: 'vdoH', class: 'vdo-sr', text: 'Wzrost w cm' }), pH, el('span', { class: 'vdo-unit', text: 'cm' })]),
+        zH.el, hInfo, hErr
+      ]),
+      el('div', { class: 'vdo-grid2' }, [
+        el('div', { class: 'vdo-field' }, [
+          el('span', { class: 'vdo-label', text: 'Lek' }),
+          el('span', { class: 'vdo-value', text: lekTekst || '—' }),
+          el('span', { class: 'vdo-hint', text: popraw ? 'Zmiana leku — w DocPro.' : 'Z ostatniego wpisu. Zmiana leku — w DocPro.' })
+        ]),
+        el('div', { class: 'vdo-field' }, [
+          el('label', { for: 'vdoDose', class: 'vdo-label', text: 'Dawka' }),
+          pDose,
+          !popraw && ostatni ? el('span', { class: 'vdo-hint', text: 'Podpowiedziana z wpisu z ' + dataPL(ostatni.dateISO) + '.' }) : null
+        ])
+      ]),
+      el('div', { class: 'vdo-field' }, [
+        el('label', { for: 'vdoNote', class: 'vdo-label' }, ['Komentarz ', el('span', { class: 'vdo-opt', text: '(opcjonalnie)' })]),
+        pNote
+      ]),
+      el('p', { class: 'vdo-note', text: 'Wpis zapisuje się od razu w dzienniku leczenia, także na innych Twoich urządzeniach. Nie tworzy wizyty i nie zmienia pomiarów z gabinetu.' }),
+      msg,
+      el('div', { class: 'vdo-actions' }, [anuluj, zapisz])
+    ]);
+
+    var o = okno(popraw ? 'Popraw wpis — ' + nazwaTypu : 'Nowy wpis leczenia — Kontynuacja',
+      (ctx.nazwa ? ctx.nazwa + ' · ' : '') + (lekTekst || 'leczenie otyłości'), forma, { fokus: pDate, homeContext: ctx.homeContext });
+    anuluj.addEventListener('click', o.zamknij);
+
+    function kandydat() {
+      var date = pDate.value;
+      var wiek = Dz().wiekNaDzien(date, { urodzenieISO: ctx.urodzenieISO, punkty: stan.punkty.filter(function (p) { return !popraw || p.id !== punkt.id; }) });
+      if (!wiek && popraw) wiek = { ageYears: punkt.ageYears, ageMonths: punkt.ageMonths };
+      if (!wiek && ostatni) wiek = { ageYears: ostatni.ageYears, ageMonths: ostatni.ageMonths };
+      var h = liczbaZPola(pH.value);
+      return {
+        id: popraw ? punkt.id : 'vdo-kandydat',
+        type: typ,
+        dateISO: date,
+        ageYears: wiek ? wiek.ageYears : 0,
+        ageMonths: wiek ? wiek.ageMonths : 0,
+        weight: liczbaZPola(pW.value),
+        weightSource: zW.wartosc(),
+        height: h > 0 ? h : null,
+        heightSource: h > 0 ? zH.wartosc() : null,
+        drug: lekPunkt ? lekPunkt.drug || '' : '',
+        substance: lekPunkt ? lekPunkt.substance || '' : '',
+        dose: pDose.value.trim(),
+        comment: pNote.value.trim()
+      };
+    }
+
+    function odswiezPodpowiedzi() {
+      var k = kandydat();
+      var poprzedni = null;
+      stan.punkty.forEach(function (p) {
+        if (p.id === k.id || !p.dateISO || !k.dateISO || p.dateISO >= k.dateISO) return;
+        poprzedni = p;
+      });
+      wDelta.textContent = poprzedni && k.weight > 0
+        ? 'Od wpisu z ' + dataPL(poprzedni.dateISO) + ': ' + (k.weight - poprzedni.weight >= 0 ? '+' : '−') + liczbaPL(Math.abs(k.weight - poprzedni.weight), 1) + ' kg.'
+        : '';
+      var tekst = podpowiedzOkna(stan, k, popraw ? punkt.id : null);
+      hInfo.textContent = tekst || '';
+      hInfo.hidden = !tekst;
+    }
+    [pDate, pW, pH].forEach(function (p) { p.addEventListener('input', odswiezPodpowiedzi); p.addEventListener('change', odswiezPodpowiedzi); });
+    odswiezPodpowiedzi();
+
+    function blad(pole, span, tekst) {
+      span.textContent = tekst || '';
+      span.hidden = !tekst;
+      if (tekst) pole.setAttribute('aria-invalid', 'true'); else pole.removeAttribute('aria-invalid');
+    }
+
+    var potwierdzenia = {};
+    function proba(ev) {
+      if (ev) ev.preventDefault();
+      if (ctx.homeContext && (!aktualny(ctx) || !o.isCurrent() || zapisz.disabled)) return;
+      komunikat(msg, '', '');
+      var k = kandydat();
+      var ok = true;
+      blad(pDate, dateErr, k.dateISO ? '' : 'Podaj datę pomiaru, np. ' + dataPL(Dz().dzisISO()) + '.');
+      if (!k.dateISO) ok = false;
+      var w8 = k.weight;
+      blad(pW, wErr, w8 > 0 && w8 <= 500 ? '' : 'Podaj masę ciała w kg, np. 74,3.');
+      if (!(w8 > 0 && w8 <= 500)) ok = false;
+      var hRaw = liczbaZPola(pH.value);
+      var hZly = hRaw !== null && !(hRaw > 0 && hRaw <= 260);
+      blad(pH, hErr, hZly ? 'Wzrost: wpisz liczbę w cm (np. 163,5) albo zostaw pole puste.' : '');
+      if (hZly) ok = false;
+      if (!ok) {
+        var pierwszy = forma.querySelector('[aria-invalid="true"]');
+        try { if (pierwszy) pierwszy.focus(); } catch (_e) { /* brak fokusu */ }
+        return;
+      }
+      // Reguły cykli na liście z dziennika (R1–R9).
+      var c = Cy();
+      if (c) {
+        var r;
+        try {
+          r = popraw
+            ? c.sprawdz(stan.punkty, { rodzaj: 'edytuj', id: punkt.id, punkt: k })
+            : c.sprawdz(stan.punkty, { rodzaj: 'dodaj', punkt: k });
+        } catch (_e) { r = null; }
+        if (r && !r.ok) {
+          komunikat(msg, 'err', r.wybor
+            ? 'Ta data nie należy do aktywnego cyklu leczenia. Nowy cykl zaczyna się od Włączenia — dodaj je w DocPro przy wizycie.'
+            : r.komunikat || 'Tego wpisu nie da się zapisać w tym miejscu cyklu.');
+          return;
+        }
+      }
+      var dzis = Dz().dzisISO();
+      if (k.dateISO > dzis && !potwierdzenia.przyszlosc) {
+        komunikat(msg, 'warn', 'Data pomiaru (' + dataPL(k.dateISO) + ') jest z przyszłości. Zapisać mimo to?', [
+          { etykieta: 'Popraw datę', run: function () { komunikat(msg, '', ''); pDate.focus(); } },
+          { etykieta: 'Zapisz mimo to', glowny: true, run: function () { potwierdzenia.przyszlosc = true; proba(); } }
+        ]);
+        return;
+      }
+      var dup = Dz().duplikat(stan, k, popraw ? punkt.id : null);
+      if (dup && !potwierdzenia.duplikat) {
+        komunikat(msg, 'warn', 'Możliwy duplikat — ' + dataPL(dup.punkt.dateISO) + ' jest już wpis ' + liczbaPL(dup.punkt.weight, 1) +
+          ' kg (' + (dup.punkt.weightSource || 'gabinet') + '). Zapisać ' + (popraw ? 'poprawkę' : 'drugi') + '?', [
+          { etykieta: 'Nie zapisuj', run: o.zamknij },
+          { etykieta: 'Zapisz mimo to', glowny: true, run: function () { potwierdzenia.duplikat = true; proba(); } }
+        ]);
+        return;
+      }
+      zapisz.disabled = true;
+      anuluj.disabled = true;
+      zapisz.textContent = 'Zapisywanie…';
+      var droga = popraw
+        ? zMigracja(ctx, wpis).then(function (r2) { return zapiszPlan(ctx, Dz().planPoprawki(r2.stan, ctx.patientId, r2.entryId, k)); })
+        : zapiszPlan(ctx, Dz().planNowego(stan, ctx.patientId, k));
+      droga.then(function () {
+        o.zamknij();
+      }).catch(function (e) {
+        zapisz.disabled = false;
+        anuluj.disabled = false;
+        zapisz.textContent = popraw ? 'Zapisz poprawkę' : 'Zapisz wpis';
+        komunikat(msg, 'err', 'Nie zapisano wpisu: ' + (e && e.message ? e.message : 'błąd zapisu') + ' Spróbuj ponownie.');
+      });
+    }
+    forma.addEventListener('submit', proba);
+    return o;
+  }
+
+  // ── Usunięcie, cofnięcie, konflikt ───────────────────────────────────────────────
+
+  function usun(ctx, wpis) {
+    if (!aktualny(ctx)) return Promise.resolve(null);
+    var c = Cy();
+    var r = null;
+    if (c && wpis.punkt) {
+      try { r = c.sprawdz(ctx.stan.punkty, { rodzaj: 'usun', id: wpis.punkt.id }); } catch (_e) { r = null; }
+    }
+    if (r && !r.ok) return Promise.reject(new Error(r.komunikat || 'Tego wpisu nie da się usunąć.'));
+    var pytanie = r && r.potwierdz ? r.potwierdz : 'Usunąć wpis z ' + (dataPL(wpis.punkt.dateISO) || 'dziennika') + '? Usunięcie można cofnąć.';
+    var zgoda;
+    try { zgoda = w.confirm(pytanie); } catch (_e) { zgoda = true; }
+    if (!zgoda) return Promise.resolve(null);
+    return zMigracja(ctx, wpis).then(function (r2) {
+      var plan = Dz().planUsuniecia(r2.stan, ctx.patientId, r2.entryId);
+      ostatnieUsuniecie[ctx.patientId] = { entryId: r2.entryId, dateISO: wpis.punkt.dateISO };
+      return zapiszPlan(ctx, plan);
+    });
+  }
+
+  function przywroc(ctx, entryId) {
+    if (!aktualny(ctx)) return Promise.resolve(null);
+    delete ostatnieUsuniecie[ctx.patientId];
+    return zapiszPlan(ctx, Dz().planPrzywrocenia(ctx.stan, ctx.patientId, entryId));
+  }
+
+  function opisWersji(v) {
+    return [
+      ['Masa', liczbaPL(v.dane.weight, 1) + ' kg · ' + v.dane.weightSource],
+      ['Wzrost', v.dane.height != null ? liczbaPL(v.dane.height, 1) + ' cm · ' + v.dane.heightSource : '—'],
+      ['Data pomiaru', dataPL(v.dane.dateISO) || '—'],
+      ['Dawka', v.dane.dose || '—'],
+      ['Komentarz', v.dane.comment || '—'],
+      ['Stan', v.retracted ? 'usunięty' : 'w dzienniku']
+    ];
+  }
+
+  function konflikt(ctx, wpis) {
+    if (!aktualny(ctx)) return null;
+    var liscie = wpis.liscie;
+    var rozne = {};
+    var opisy = liscie.map(opisWersji);
+    opisy[0].forEach(function (_r, i) {
+      var wart = opisy.map(function (o) { return o[i][1]; });
+      if (wart.some(function (x) { return x !== wart[0]; })) rozne[i] = true;
+    });
+    var msg = el('div', { class: 'vdo-msg', role: 'status', 'aria-live': 'polite', hidden: true });
+    var karty = el('div', { class: 'vdo-versions' });
+    var tresc = el('div', {}, [
+      el('p', { class: 'vdo-note', text: 'Żadna wersja nie zniknęła. Wybierz, która jest prawidłowa. Do czasu wyboru ocena odpowiedzi wg ChPL czeka, jeśli wpis leży w oknie oceny.' }),
+      karty,
+      el('p', { class: 'vdo-hint', text: 'Różnice są zaznaczone. Odrzucona wersja zostaje w historii wpisu.' }),
+      msg
+    ]);
+    var o = okno('Wpis z ' + (dataPL(wpis.punkt && wpis.punkt.dateISO) || '—') + ' poprawiono na dwóch urządzeniach', ctx.nazwa || '', tresc, { homeContext: ctx.homeContext });
+    liscie.forEach(function (v, idx) {
+      var b = el('button', { type: 'button', class: 'vilda-auth-btn vilda-auth-btn-primary', text: 'Zostaw tę wersję' });
+      b.addEventListener('click', function () {
+        if (ctx.homeContext && (!aktualny(ctx) || !o.isCurrent() || b.disabled)) return;
+        Array.prototype.forEach.call(karty.querySelectorAll('button'), function (x) { x.disabled = true; });
+        zapiszPlan(ctx, Dz().planRozstrzygniecia(ctx.stan, ctx.patientId, wpis.entryId, v.id)).then(function () {
+          o.zamknij();
+        }).catch(function (e) {
+          Array.prototype.forEach.call(karty.querySelectorAll('button'), function (x) { x.disabled = false; });
+          komunikat(msg, 'err', 'Nie zapisano wyboru: ' + (e && e.message ? e.message : 'błąd zapisu'));
+        });
+      });
+      var kto = (v.urzadzenie ? v.urzadzenie.charAt(0).toUpperCase() + v.urzadzenie.slice(1) : 'Urządzenie') + (v.createdAtISO ? ' · ' + chwilaPL(v.createdAtISO) : '');
+      karty.appendChild(el('section', { class: 'vdo-version', 'aria-label': 'Wersja ' + (idx + 1) }, [
+        el('h3', { class: 'vdo-version-h', text: kto }),
+        el('dl', { class: 'vdo-version-dl' }, opisy[idx].reduce(function (acc, r, i) {
+          acc.push(el('dt', { text: r[0] }));
+          acc.push(el('dd', { class: rozne[i] ? 'vdo-diff' : null, text: r[1] }));
+          return acc;
+        }, [])),
+        b
+      ]));
+    });
+    return o;
+  }
+
+  // ── Sekcja w Karcie ──────────────────────────────────────────────────────────────
+
+  function sekcja(opcje) {
+    var o = opcje || {};
+    if (!Dz() || !o.stan || !o.patientId) return null;
+    var ctx = { patientId: o.patientId, stan: o.stan, urodzenieISO: o.urodzenieISO || '', nazwa: o.nazwa || '', migawka: o.migawka || [], onZmiana: o.onZmiana, homeContext: o.homeContext || null };
+    var stan = o.stan;
+    var widoczne = stan.wpisy.filter(function (x) { return x.punkt; });
+    var usuniete = stan.wpisy.filter(function (x) { return x.stan === 'usuniety'; });
+    if (!widoczne.length && !usuniete.length) return null;
+
+    var msg = el('div', { class: 'vdo-msg', role: 'status', 'aria-live': 'polite', hidden: true });
+    function zBledem(p) {
+      return Promise.resolve(p).catch(function (e) { komunikat(msg, 'err', (e && e.message) || 'Nie zapisano zmiany.'); });
+    }
+
+    var aktywny = aktywnyCykl(stan);
+    var dodaj = el('button', { type: 'button', class: 'vilda-auth-btn vilda-auth-btn-primary vdo-add', 'aria-describedby': aktywny ? null : 'vdoAddWhy' }, [
+      el('span', { 'aria-hidden': 'true', text: '+\u00a0' }), 'Kontynuacja'
+    ]);
+    if (!aktywny) dodaj.setAttribute('aria-disabled', 'true');
+    dodaj.addEventListener('click', function () {
+      if (!aktualny(ctx)) return;
+      if (!aktywnyCykl(ctx.stan)) {
+        komunikat(msg, 'warn', 'Brak aktywnego cyklu leczenia — nowy cykl zaczyna się od Włączenia, które dodajesz w DocPro przy wizycie.');
+        return;
+      }
+      formularz(ctx, null);
+    });
+
+    // Wiersze: najnowsze na górze.
+    var wiersze = widoczne.slice().sort(function (a, b) {
+      var da = a.punkt.dateISO || '', db = b.punkt.dateISO || '';
+      if (da !== db) return da < db ? 1 : -1;
+      return ((b.punkt.ageYears || 0) * 12 + (b.punkt.ageMonths || 0)) - ((a.punkt.ageYears || 0) * 12 + (a.punkt.ageMonths || 0));
+    });
+    var pokazWszystkie = !!rozwiniete[o.patientId];
+    var lista = el('ul', { class: 'vdo-list', 'aria-label': 'Wpisy leczenia, od najnowszego' });
+    wiersze.forEach(function (x, idx) {
+      if (!pokazWszystkie && idx >= POKAZ_NA_START) return;
+      var p = x.punkt;
+      var akcje = el('div', { class: 'vdo-row-actions' });
+      if (x.stan === 'konflikt') {
+        akcje.appendChild(el('button', { type: 'button', class: 'vilda-auth-btn vilda-auth-btn-small', text: 'Wybierz wersję', onclick: function () { konflikt(ctx, x); } }));
+      } else {
+        akcje.appendChild(el('button', { type: 'button', class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small', text: 'Popraw', 'aria-label': 'Popraw wpis z ' + (dataPL(p.dateISO) || 'bez daty'), onclick: function () { formularz(ctx, x); } }));
+        akcje.appendChild(el('button', { type: 'button', class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small', text: 'Usuń', 'aria-label': 'Usuń wpis z ' + (dataPL(p.dateISO) || 'bez daty'), onclick: function () { zBledem(usun(ctx, x)); } }));
+      }
+      var bmi = p.weight > 0 && p.height > 0 ? p.weight / Math.pow(p.height / 100, 2) : null;
+      lista.appendChild(el('li', { class: 'vdo-item' + (x.stan === 'konflikt' ? ' vdo-item-conflict' : '') + (idx === 0 ? ' vdo-item-last' : ''), 'data-entry': x.entryId || '', 'data-date': p.dateISO || '' }, [
+        el('div', { class: 'vdo-item-head' }, [
+          el('span', { class: 'vdo-date', text: dataPL(p.dateISO) || 'bez daty' }),
+          el('span', { class: 'vdo-type', text: Dz().TYPY[p.type] + (p.dose ? ' · ' + p.dose : '') })
+        ]),
+        el('div', { class: 'vdo-item-body' }, [
+          el('span', { class: 'vdo-meas' }, [liczbaPL(p.weight, 1) + ' kg ', odznaka(p.weightSource)]),
+          el('span', { class: 'vdo-meas' }, p.height > 0 ? [liczbaPL(p.height, 1) + ' cm ', odznaka(p.heightSource)] : ['wzrost —']),
+          bmi != null ? el('span', { class: 'vdo-bmi', text: 'BMI ' + liczbaPL(bmi, 1) }) : null
+        ]),
+        x.stan === 'konflikt' ? el('p', { class: 'vdo-conflict-t', text: 'Dwie wersje tego wpisu (poprawiony na dwóch urządzeniach albo w dwóch kartach). Wybierz prawidłową.' }) : null,
+        p.comment ? el('p', { class: 'vdo-comment', text: p.comment }) : null,
+        akcje
+      ]));
+    });
+
+    var dolne = [];
+    if (wiersze.length > POKAZ_NA_START) {
+      var t = el('button', { type: 'button', class: 'vdo-more', 'aria-expanded': pokazWszystkie ? 'true' : 'false', text: pokazWszystkie ? 'Pokaż mniej ▴' : 'Pokaż wszystkie wpisy (' + wiersze.length + ') ▾' });
+      t.addEventListener('click', function () {
+        if (!aktualny(ctx)) return;
+        rozwiniete[o.patientId] = !rozwiniete[o.patientId];
+        if (typeof o.onRysuj === 'function') o.onRysuj(); else if (typeof o.onZmiana === 'function') o.onZmiana();
+      });
+      dolne.push(t);
+    }
+    if (stan.wpisy.some(function (x) { return x.stan === 'migawka' || (x.wersje && x.wersje.some(function (v) { return v.op === 'migracja'; })); })) {
+      dolne.push(el('p', { class: 'vdo-hint', text: 'Wpisy z dawnych wizyt przeniesione ze źródłem „gabinet”.' }));
+    }
+    if (usuniete.length) {
+      var otwarte = !!usunieteRozwiniete[o.patientId];
+      var przyciskU = el('button', { type: 'button', class: 'vdo-more', 'aria-expanded': otwarte ? 'true' : 'false', text: 'Usunięte wpisy (' + usuniete.length + ') ' + (otwarte ? '▴' : '▾') });
+      przyciskU.addEventListener('click', function () {
+        if (!aktualny(ctx)) return;
+        usunieteRozwiniete[o.patientId] = !usunieteRozwiniete[o.patientId];
+        if (typeof o.onRysuj === 'function') o.onRysuj(); else if (typeof o.onZmiana === 'function') o.onZmiana();
+      });
+      dolne.push(przyciskU);
+      if (otwarte) {
+        dolne.push(el('ul', { class: 'vdo-list vdo-list-deleted' }, usuniete.map(function (x) {
+          var d = x.biezaca.dane;
+          return el('li', { class: 'vdo-item vdo-item-deleted' }, [
+            el('span', { text: (dataPL(d.dateISO) || 'bez daty') + ' · ' + Dz().TYPY[d.type] + ' · ' + liczbaPL(d.weight, 1) + ' kg' }),
+            el('button', { type: 'button', class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small', text: 'Przywróć', onclick: function () { zBledem(przywroc(ctx, x.entryId)); } })
+          ]);
+        })));
+      }
+    }
+
+    var cofnij = null;
+    var u = ostatnieUsuniecie[o.patientId];
+    if (u) {
+      var wpisU = Dz().wpisPoId(stan, u.entryId);
+      if (wpisU && wpisU.stan === 'usuniety') {
+        cofnij = el('div', { class: 'vdo-msg vdo-msg-info', role: 'status' }, [
+          el('span', { class: 'vdo-msg-t', text: 'Wpis z ' + (dataPL(u.dateISO) || 'dziennika') + ' usunięty z dziennika.' }),
+          el('div', { class: 'vdo-msg-actions' }, [
+            el('button', { type: 'button', class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small', text: 'Cofnij', onclick: function () { zBledem(przywroc(ctx, u.entryId)); } })
+          ])
+        ]);
+      } else {
+        delete ostatnieUsuniecie[o.patientId];
+      }
+    }
+
+    var konflikty = stan.konflikty.length
+      ? el('div', { class: 'vdo-msg vdo-msg-err', role: 'status' }, [
+        el('span', { class: 'vdo-msg-t', text: stan.konflikty.length === 1
+          ? 'Jeden wpis ma dwie wersje — wybierz prawidłową (przycisk „Wybierz wersję” przy wpisie).'
+          : stan.konflikty.length + ' wpisy mają po dwie wersje — wybierz prawidłowe.' })
+      ])
+      : null;
+
+    return el('section', { class: 'vdo', 'aria-labelledby': 'vdoTytul-' + o.patientId }, [
+      el('div', { class: 'vdo-head' }, [
+        el('div', {}, [
+          el('h3', { id: 'vdoTytul-' + o.patientId, class: 'vdo-title', text: 'Wpisy leczenia' }),
+          el('p', { class: 'vdo-intro', text: 'Dziennik leczenia jest oddzielony od wizyt w gabinecie. Wpis z masą od pacjenta nie tworzy wizyty i nie zmienia jej pomiarów.' })
+        ]),
+        el('div', { class: 'vdo-head-actions' }, [
+          dodaj,
+          aktywny ? null : el('span', { id: 'vdoAddWhy', class: 'vdo-hint', text: 'Brak aktywnego cyklu — Włączenie w DocPro.' })
+        ])
+      ]),
+      el('p', { class: 'vdo-hint', text: 'Włączenie i Zakończenie leczenia dodajesz w DocPro przy wizycie.' }),
+      konflikty,
+      cofnij,
+      msg,
+      lista
+    ].concat(dolne));
+  }
+
+  w.VildaDziennikOtylosciUI = Object.freeze({
+    VERSION: VERSION,
+    sekcja: sekcja,
+    _internal: Object.freeze({ podpowiedzOkna: podpowiedzOkna, aktywnyCykl: aktywnyCykl })
+  });
+}(typeof window !== 'undefined' ? window : this));

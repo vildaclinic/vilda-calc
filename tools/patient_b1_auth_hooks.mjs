@@ -3,6 +3,9 @@
 import {readFileSync, writeFileSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 const target = fileURLToPath(new URL('../vilda_auth_ui.js', import.meta.url));
+const compatibilityPairs = [
+  ['legacyPanels:Cs.slice(2,7).filter(Boolean),legacySummary:i.VildaHomePatientNative.describeLegacy(Cs.slice(2,7)),', 'legacyPanels:Cs.slice(2,Cs.indexOf(Ft)).filter(Boolean),legacySummary:i.VildaHomePatientNative.describeLegacy(Cs.slice(2,Cs.indexOf(Ft))),']
+];
 const pairs = [
   ['async function se(t,a,n,r){var o=jt();', 'async function se(t,a,n,r){var HomePatientPresentation=null,HomePatientRequested=!!(n&&n.homePatientPresentation===true&&i.__VILDA_HOME_WORKSPACE_PREVIEW__===true);var o=jt();'],
   ['var o=jt();if(!o||!o.isUnlocked())return;', `var o=jt();
@@ -27,7 +30,7 @@ if(HomePatientRequested&&i.VildaHomePatientNative&&typeof i.VildaHomePatientNati
     root:Eo,patientId:t,patientName:w,openerId:n&&n.homePatientOpenerId||"",ageLabel:Wt,measuredAtISO:m.measuredAtISO||s.visit&&s.visit.clinicalDateISO||null,
     tabs:Ft,panels:{antro:Nt,traj:Ct,notes:sa,timeline:ca,lab:GdLabHost,care:CarePatientHost},
     primaryMetrics:HomePatientMetrics,metricAssessments:HomePatientAssessments,measureNodes:At,growthNodes:ce,sgaNode:SgaTile,extraPanels:[BhPanel,Ce&&Ce.panel],
-    legacyPanels:Cs.slice(2,7).filter(Boolean),legacySummary:i.VildaHomePatientNative.describeLegacy(Cs.slice(2,7)),
+    legacyPanels:Cs.slice(2,Cs.indexOf(Ft)).filter(Boolean),legacySummary:i.VildaHomePatientNative.describeLegacy(Cs.slice(2,Cs.indexOf(Ft))),
     actions:{edit:B,newMeasure:U,visits:VisitHistoryButton,versions:So,load:Li,return:zo},
     backgroundRefresh:GdTlo,activeTab:r&&r.activeTab||"antro",focusNoteId:r&&r.treatmentFocusNoteId||null,registerBack:gr,resumeRefresh:Gd7,
     openNote:function(options){return ga(options)},
@@ -48,6 +51,7 @@ if(HomePatientRequested&&i.VildaHomePatientNative&&typeof i.VildaHomePatientNati
 /* END HOME PATIENT B1 NATIVE PRESENTATION */
 GdZakonczOdczyt(GdBilet);Zt(Eo,{noLogo:!0})`],
   ['remSearchBindReturn(Eo,SearchReturnToken),GdOdtworzPrzewiniecie(GdScrollKarty)', 'remSearchBindReturn(Eo,SearchReturnToken),HomePatientPresentation&&HomePatientPresentation.mounted(),GdOdtworzPrzewiniecie(GdScrollKarty)']
+  ,['Ob_dz(t,s,S,h,GdNotatki,m)', 'Ob_dz(t,s,S,h,GdNotatki,m,HomePatientRequested?{isCurrent:HomePatientIsCurrent,onDialog:HomePatientDialog}:null)']
   ,['Xo(sa,t,da,{focusNoteId:r&&r.focusNoteId})', 'Xo(sa,t,da,{focusNoteId:r&&r.focusNoteId,homePatientPresentation:HomePatientRequested,openEditor:HomePatientOpenNote})']
   ,['Xl(ca,t,Ue,a,n)', 'Xl(ca,t,Ue,a,n,{openEditor:HomePatientOpenNote})']
   ,['GdLabOnce=!1;function GdLabRender(){var GdModul=', 'GdLabOnce=!1,HomePatientLabView=null;function GdLabRender(){if(HomePatientRequested&&HomePatientLabView){var HomePatientPreviousLab=HomePatientLabView;HomePatientLabView=null;if(typeof HomePatientPreviousLab.destroy==="function")try{HomePatientPreviousLab.destroy()}catch(error){Ot("home patient lab destroy",error)}}var GdModul=']
@@ -56,6 +60,11 @@ GdZakonczOdczyt(GdBilet);Zt(Eo,{noLogo:!0})`],
   ,['module.mount(CarePatientHost,{full:true,patientId:t,vault:o,', 'module.mount(CarePatientHost,{full:true,patientId:t,vault:o,onDialog:HomePatientRequested?HomePatientDialog:void 0,']
 ];
 const outsidePairs = [
+  ['function Ob_dz(t, s, S, h, notatki, m) {', 'function Ob_dz(t, s, S, h, notatki, m, homeContext) {'],
+  ['patientId: t, stan: stan, urodzenieISO: (m && m.dobISO) || "", nazwa: (s && s.name) || "", migawka: migawka,', 'patientId: t, stan: stan, urodzenieISO: (m && m.dobISO) || "", nazwa: (s && s.name) || "", migawka: migawka, homeContext: homeContext,'],
+  ['function odswiez() {\n    var o = jt();', 'function odswiez() {\n    if (homeContext && !homeContext.isCurrent()) return;\n    var o = jt();'],
+  ['rysuj(Dz.zloz(n, migawka));', 'if (!homeContext || homeContext.isCurrent()) rysuj(Dz.zloz(n, migawka));'],
+  ["var zakladka = karta && karta.querySelector('button[data-tab=\"antro\"]');", "var zakladka = karta && karta.querySelector(i.__VILDA_HOME_WORKSPACE_PREVIEW__===true&&karta.classList.contains('vhome-native-patient-card')?'button[data-tab=\"treatment\"]':'button[data-tab=\"antro\"]');"],
   ['function GdMoznaWyswietlic(t){', 'function GdMoznaWyswietlic(t,homeBackground){'],
   ['if(GdSgaDeferRefresh()){GdZakonczOdczyt(t);return false}\n  if(i.document.querySelector', 'if(GdSgaDeferRefresh()){GdZakonczOdczyt(t);return false}\n  if(homeBackground&&i.VildaHomePatientNative&&i.VildaHomePatientNative.deferRefresh()){GdZakonczOdczyt(t);return false}\n  if(i.document.querySelector'],
   ['if(GdSgaDeferRefresh())return;if(i.document.querySelector(".vilda-auth-overlay-sheet")', 'if(GdSgaDeferRefresh())return;if(i.VildaHomePatientNative&&i.VildaHomePatientNative.deferRefresh())return;if(i.document.querySelector(".vilda-auth-overlay-sheet")'],
@@ -101,6 +110,10 @@ function applyPairs(input,replacements){
   }
   return input;
 }
+// Existing B1 exports already contain the presentation block. Adapt its old
+// node boundary before checking the complete hook; fresh native input gets it
+// from the block below.
+for(const [before,after] of compatibilityPairs)if(card.includes(before))card=applyPairs(card,[[before,after]]);
 card=applyPairs(card,pairs);
 const displayGuards=card.split('GdMoznaWyswietlic(GdBilet)').length-1;
 if(displayGuards){
