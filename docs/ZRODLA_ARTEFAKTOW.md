@@ -2186,6 +2186,38 @@ traci parametr `opcje` (i `kluczNazwyLeku`). Opis reguły: `docs/clinical/ALGORI
 
 **Granice.** Sejf, dziennik i zapis bez zmian. Wersje `?v=`, precache i `SW_VERSION` ustawił `npm run podbij-wersje`.
 
+## Łatka P-OTYLOSC-DAWKA — dawka z przecinkiem i podpowiedzi z ChPL (`vilda_cykle_leczenia.js` 9 → 10, `obesity_therapy_monitor.js` 31 → 32, `obesity_therapy.js` 12 → 13, `vilda_auth_ui.js` 572 → 573, `inline_docpro_01.css` 6 → 7, `docpro.html`, 2026-11-19, decyzja właściciela)
+
+Czytelne źródło: `vilda_cykle_leczenia.js` — `dawkaPL` i `podpowiedziDawek` (eksport `VildaDziennikOtylosci`),
+wiersze „Wpisy leczenia”, okno wersji i podstawienie dawki w oknie „+ Kontynuacja”. Opis: `docs/clinical/ALGORITHMS.md`,
+wpis P-OTYLOSC-DAWKA.
+
+```
+// obesity_therapy.js — fe() (lista leku w monitorze): opcja niesie tabelę zwiększania dawki i częstość
+// było:  d.setAttribute("data-substance",s.substanceLabel),g.appendChild(d)
+// jest:  d.setAttribute("data-substance",s.substanceLabel),d.setAttribute("data-dawki",JSON.stringify((r.dosing&&
+//        r.dosing.escalation||[]).map(function(x){return{label:x.label||"",dose:x.dose||"",note:x.note||""}}))),
+//        d.setAttribute("data-czestosc",r.frequency||""),g.appendChild(d)
+
+// obesity_therapy_monitor.js
+// 1. nowy czytelny blok P-OTYLOSC-DAWKA przed blokiem P-OTYLOSC-WZROST: Dwpl, Dwzaznacz, Dwinit, Dwpodp;
+// 2. było:  function CyS(){typeof Hl=="function"&&Hl();
+//    jest:  function CyS(){typeof Hl=="function"&&Hl();typeof Dwpodp=="function"&&Dwpodp();
+// 3. kolumna „Dawka” w tabeli punktów — było: P(i.dose?String(i.dose):"\u2014")  jest: P(i.dose?Dwpl(i.dose):"\u2014")
+
+// vilda_auth_ui.js — podsumowanie „Leczenie otyłości” (funkcja Cl)
+// 1. przed function Cl(t){…} nowa funkcja Ob_dawka(t) (VildaDziennikOtylosci.dawkaPL, bez modułu — tekst bez zmian);
+// 2. było:  p=d.dose!=null&&String(d.dose).trim()!==""?String(d.dose):"\u2014"
+//    jest:  p=d.dose!=null&&String(d.dose).trim()!==""?Ob_dawka(d.dose):"\u2014"
+```
+
+`docpro.html`: pod siatką pól monitora `<div id="obesityDoseHints" class="obm-dawki" role="group" aria-label="Podpowiedzi
+dawki" hidden>`. `inline_docpro_01.css`: reguły `.obm-dawki*` — przyciski z `!important` przy szczegółowości 1-2-0
+przeciw `.liquid-ios26 button {…!important}` i regułom przycisków na telefonie (≤ 560 px: 44 px).
+
+**Granice.** Zapis dawki, sejf i dziennik bez zmian; bez stylów ustawianych wprost na elementach (`hidden`, klasy,
+`aria-pressed`). Wersje `?v=`, precache i `SW_VERSION` ustawił `npm run podbij-wersje`.
+
 ## Łatka P-E2-MENARCHE — estradiol poniżej 18 lat: zakresy dorosłych po 5 latach od menarche (`lab_units_data.js` 42 → 43, `lab_unit_converter.js` 10 → 11, `vilda_lab_packages.js` 10 → 11, `inline_przelicznik_jednostek_00.css` 17 → 18, `przelicznik-jednostek.html`, 2026-11-19, decyzje właściciela)
 
 Opis działania, przypadki, dowody i ograniczenia: `docs/clinical/ALGORITHMS.md`, wpis „LAB-E2-MENARCHE”. Zmiany wprowadzono wprost w artefaktach, czytelnymi blokami; żadnego pliku nie przebudowano z dawnych źródeł ani nie minifikowano ponownie.
