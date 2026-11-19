@@ -97,6 +97,7 @@ test('home B1 shell: selected patient Leczenie opens its existing obesity Włąc
   const payload = fictionalPatient({ firstName: 'B1-Skok-Fikcyjna', sex: 'F', age: 13, height: 163.6, weight: 72.4 });
   Object.assign(payload.user, { ageMonths: 7, dobISO: '2013-04-11', measuredAtISO: '2026-11-18' });
   payload.obesityTherapyPoints = [START, CONTROL];
+  payload.doctor = { isDoctor: true, pwzNumber: '6000001' };
   const id = await start.evaluate(async value => (await window.VildaVault.savePatient(value, { dedup: false })).patientId, payload);
   await start.evaluate(patientId => window.VildaVault.savePatientNote({ patientId,
     title: 'Fikcyjna niezależna notatka B1', body: 'Ta notatka nie należy do skoku ani punktu leczenia.', category: 'observation' }), id);
