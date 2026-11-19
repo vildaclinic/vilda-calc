@@ -2534,12 +2534,15 @@ body.vilda-modal-alert-open #scrollTopBtn {
   display: contents;
 }
 
+/* P-OTYLOSC-SKOK (etap 2): sekcja jak na makiecie — białe tło i własne, małe przyciski. Klasy vilda-auth-btn
+   dostają w Karcie pacjenta (.vilda-auth-root) !important ze stylów ekranu konta: duże zaokrąglenie, wypełnienie
+   14×22 px i cień, więc sekcja ich nie używa (okna wpisu i wyboru wersji — tak, jak dotąd). */
 .vdo {
   margin: var(--space-12px) 0;
   padding: var(--space-14px);
   border: var(--border-hairline) solid var(--line);
   border-radius: var(--radius-12);
-  background: var(--card);
+  background: var(--bg);
   display: flex;
   flex-direction: column;
   gap: var(--space-10px);
@@ -2551,6 +2554,12 @@ body.vilda-modal-alert-open #scrollTopBtn {
   justify-content: space-between;
   gap: var(--space-12px);
   flex-wrap: wrap;
+}
+
+/* tytuł z opisem po lewej, przyciski po prawej (makieta etapu 2); na telefonie przyciski schodzą pod spód */
+.vdo-head > :first-child {
+  flex: 1 1 320px;
+  min-width: 0;
 }
 
 .vdo-title {
@@ -2575,8 +2584,63 @@ body.vilda-modal-alert-open #scrollTopBtn {
   gap: var(--space-4px);
 }
 
-.vdo-add {
-  min-height: 44px;
+.vdo-head-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-8px);
+}
+
+/* Motyw szklany (.liquid-ios26 button {…!important}) i Karta (.vilda-auth-root) nadpisują przyciski z !important;
+   tu ta sama broń co w przyciskach Karty: !important przy wyższej szczegółowości (.vdo .vdo-btn, 0-2-0 > 0-1-1). */
+.vdo .vdo-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4px);
+  min-height: 32px;
+  padding: 0 12px;
+  box-sizing: border-box;
+  background: var(--bg) !important;
+  color: var(--primary) !important;
+  border: var(--border-hairline) solid var(--line) !important;
+  border-radius: var(--radius-8) !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: border-color .15s ease, background-color .15s ease !important;
+}
+
+.vdo .vdo-btn:hover {
+  border-color: var(--primary) !important;
+  background: #f5fafb !important;
+}
+
+.vdo .vdo-btn:focus-visible {
+  outline: var(--border-emphasis) solid var(--primary);
+  outline-offset: 2px;
+}
+
+.vdo .vdo-btn-docpro {
+  border-color: var(--primary) !important;
+}
+
+.vdo .vdo-btn-add {
+  min-height: 34px;
+  font-size: 13px;
+  background: var(--primary) !important;
+  border-color: var(--primary) !important;
+  color: #fff !important;
+}
+
+.vdo .vdo-btn-add:hover {
+  background: #006d75 !important;
+  border-color: #006d75 !important;
 }
 
 .vdo-add[aria-disabled="true"] {
@@ -2593,6 +2657,7 @@ body.vilda-modal-alert-open #scrollTopBtn {
 }
 
 .vdo-item {
+  background: var(--bg);
   border: var(--border-hairline) solid var(--line);
   border-radius: var(--radius-10);
   padding: var(--space-10px) var(--space-12px);
@@ -2654,7 +2719,8 @@ body.vilda-modal-alert-open #scrollTopBtn {
 .vdo-row-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-6px);
+  align-items: center;
+  gap: var(--space-6px) var(--space-12px);
 }
 
 /* P-POSTEPY-DZIENNIK: Włączenie, Zakończenie i zmiana leku — poprawka w DocPro, nie w Karcie. */
@@ -2671,14 +2737,17 @@ body.vilda-modal-alert-open #scrollTopBtn {
   font-size: .72rem;
   font-weight: 600;
   vertical-align: middle;
-  border: var(--border-hairline) solid var(--line);
-  color: var(--text-muted);
+  /* „gabinet” — jak na makiecie: turkus na jasnym turkusie */
+  background: #e0f2f1;
+  border: var(--border-hairline) solid #b2dcd9;
+  color: #00626a;
 }
 
 .vdo-src-pacjent {
-  background: var(--notice-orange-bg);
-  border-color: var(--notice-orange);
-  color: var(--text-strong);
+  /* --notice-orange-bg jest w style.css białe (komunikat: biel + pomarańczowa ramka); odznaka — jak na makiecie */
+  background: #fff4e0;
+  border-color: #f0c38a;
+  color: #8a4b00;
 }
 
 .vdo-more {
@@ -2985,11 +3054,18 @@ textarea.vdo-input {
 @media (max-width: 560px) {
   .vdo-head-actions {
     width: 100%;
-    align-items: stretch;
+    align-items: flex-start;
   }
 
-  .vdo-add {
-    width: 100%;
+  .vdo-head-buttons {
+    justify-content: flex-start;
+  }
+
+  /* telefon: palcem — 40 px zamiast 32 */
+  .vdo .vdo-btn {
+    min-height: 40px;
+    padding: 0 14px;
+    font-size: 13px;
   }
 
   .vdo-backdrop {

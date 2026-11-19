@@ -1471,7 +1471,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '2';
+  var VERSION = '3';
   var POKAZ_NA_START = 5;
   var rozwiniete = {};
   var usunieteRozwiniete = {};
@@ -1696,6 +1696,68 @@
   function wDocPro(ctx, wpis) {
     var powod = Dz().zmianaPrzebiegu(ctx.stan, wpis);
     return powod ? (Dz().POWODY_DOCPRO[powod] || Dz().POWODY_DOCPRO['zmiana-leku']) : null;
+  }
+
+  // P-OTYLOSC-SKOK (etap 2 projektu „Leczenie otyłości — wpisy poza wizytą”, decyzje właściciela 2026-11-19).
+  // Włączenie, Zakończenie i zmianę leku edytuje się w monitorze DocPro, więc przycisk przy wpisie przenosi tam od razu.
+  // DocPro wczytuje pacjenta tą samą drogą co skok do punktu GH (gh_therapy_monitor.js czyta wpis sessionStorage
+  // „vilda:gh-jump”: strażnik niezapisanych zmian, ramki powłoki, „Odtwórz zapis” bez okna wyboru), a monitor
+  // (obesity_therapy_monitor.js, obesityTherapyMonitorSkok) otwiera punkt do edycji, wypełnia pola z usuniętego wpisu
+  // albo szykuje nowe Włączenie. Tylko „Włączenie w DocPro” pyta „Nowy pomiar / Odtwórz zapis” — nowy cykl zwykle
+  // zaczyna się na nowej wizycie. Sam przycisk niczego nie zapisuje. Powód widać pod przyciskiem (dawniej tylko dymek).
+  var POWODY_KROTKIE = Object.freeze({
+    wlaczenie: 'Od Włączenia zależą cykl, ocena wg ChPL i listy pacjentów.',
+    zakonczenie: 'Od Zakończenia zależą cykl i listy pacjentów.',
+    'pierwszy-wpis': 'To pierwszy wpis cyklu — od niego zależą cykl i listy pacjentów.',
+    'zmiana-leku': 'Ten wpis zmienia lek — od leku zależą ocena wg ChPL i listy pacjentów.'
+  });
+
+  function powodKrotki(ctx, wpis) {
+    var powod = Dz().zmianaPrzebiegu(ctx.stan, wpis);
+    return powod ? (POWODY_KROTKIE[powod] || POWODY_KROTKIE['zmiana-leku']) : null;
+  }
+
+  /** Cel skoku do monitora DocPro (format wpisu „vilda:gh-jump” z polem obesity zamiast ghPointId). */
+  function celSkoku(patientId, tryb, wpis) {
+    // Id punktu w monitorze = entryId wpisu dziennika; punkt z dawnej wizyty, jeszcze nieprzeniesiony, ma id z migawki.
+    var id = wpis ? (wpis.entryId || (wpis.punkt && wpis.punkt.id)) : null;
+    var cel = { tryb: tryb, entryId: id != null && id !== '' ? String(id) : null, dane: null };
+    if (tryb === 'ponownie' && wpis && wpis.biezaca && wpis.biezaca.dane) {
+      try { cel.dane = JSON.parse(JSON.stringify(wpis.biezaca.dane)); } catch (_e) { cel.dane = null; }
+    }
+    return { patientId: String(patientId), obesity: cel, ts: Date.now() };
+  }
+
+  /** Jak Gr() w vilda_auth_ui.js (skok do punktu GH): ta sama strona DocPro, mostek powłoki albo przejście na docpro.html. */
+  function doDocPro(ctx, tryb, wpis) {
+    try { w.sessionStorage.setItem('vilda:gh-jump', JSON.stringify(celSkoku(ctx.patientId, tryb, wpis))); } catch (_e) { return false; }
+    // Karta otwarta nad DocPro (samodzielna strona albo panel DocPro w powłoce): zamykamy ją, bo zasłania monitor.
+    // Zamknięcie cofa wpis historii, który Karta dodała przy otwarciu (history.back — przychodzi asynchronicznie),
+    // a skok anuluje każda późniejsza zmiana historii — dlatego uruchamiamy go dopiero po popstate (albo po chwili).
+    if (typeof w.vildaGhJumpConsumeSoon === 'function') {
+      var uruchomiony = false;
+      var uruchom = function () {
+        if (uruchomiony) return;
+        uruchomiony = true;
+        try { w.removeEventListener('popstate', uruchom); } catch (_e) { /* bez zdarzeń */ }
+        w.setTimeout(function () { try { w.vildaGhJumpConsumeSoon(); } catch (_e) { /* skok przepada */ } }, 50);
+      };
+      try { if (w.VildaAuthUI && typeof w.VildaAuthUI.hide === 'function') w.VildaAuthUI.hide(); } catch (_e) { /* Karta zostaje */ }
+      try { w.addEventListener('popstate', uruchom); } catch (_e) { /* bez zdarzeń */ }
+      w.setTimeout(uruchom, 600);
+      return true;
+    }
+    // Inna strona: Karta zostaje (jak przy skoku do punktu GH); DocPro skonsumuje wpis po pokazaniu albo wczytaniu.
+    var shell;
+    try {
+      var osadzona = w.document.documentElement.classList.contains('vilda-embedded');
+      shell = osadzona && w.parent && w.parent !== w ? w.parent.VildaShell : null;
+    } catch (_e) { shell = null; }
+    try {
+      if (shell && typeof shell.navigate === 'function') { shell.navigate('docpro', true); return true; }
+    } catch (_e) { /* niżej: samodzielna strona */ }
+    try { w.location.href = 'docpro.html'; } catch (_e) { return false; }
+    return true;
   }
 
   function formularz(ctx, wpis) {
@@ -1995,13 +2057,13 @@
     }
 
     var aktywny = aktywnyCykl(stan);
-    var dodaj = el('button', { type: 'button', class: 'vilda-auth-btn vilda-auth-btn-primary vdo-add', 'aria-describedby': aktywny ? null : 'vdoAddWhy' }, [
+    var dodaj = el('button', { type: 'button', class: 'vdo-btn vdo-btn-add vdo-add', 'aria-describedby': aktywny ? null : 'vdoAddWhy' }, [
       el('span', { 'aria-hidden': 'true', text: '+\u00a0' }), 'Kontynuacja'
     ]);
     if (!aktywny) dodaj.setAttribute('aria-disabled', 'true');
     dodaj.addEventListener('click', function () {
       if (!aktywnyCykl(ctx.stan)) {
-        komunikat(msg, 'warn', 'Brak aktywnego cyklu leczenia — nowy cykl zaczyna się od Włączenia, które dodajesz w DocPro przy wizycie.');
+        komunikat(msg, 'warn', 'Brak aktywnego cyklu leczenia — nowy cykl zaczyna się od Włączenia, które dodajesz w DocPro przy wizycie („Włączenie w DocPro →”).');
         return;
       }
       formularz(ctx, null);
@@ -2020,12 +2082,14 @@
       var p = x.punkt;
       var akcje = el('div', { class: 'vdo-row-actions' });
       if (x.stan === 'konflikt') {
-        akcje.appendChild(el('button', { type: 'button', class: 'vilda-auth-btn vilda-auth-btn-small', text: 'Wybierz wersję', onclick: function () { konflikt(ctx, x); } }));
+        akcje.appendChild(el('button', { type: 'button', class: 'vdo-btn', text: 'Wybierz wersję', onclick: function () { konflikt(ctx, x); } }));
       } else if (wDocPro(ctx, x)) {
-        akcje.appendChild(el('span', { class: 'vdo-row-docpro', text: 'Poprawka w DocPro', title: wDocPro(ctx, x) }));
+        var idPowodu = 'vdoWhy-' + o.patientId + '-' + idx;
+        akcje.appendChild(el('button', { type: 'button', class: 'vdo-btn vdo-btn-docpro', text: 'Edytuj w DocPro →', title: wDocPro(ctx, x), 'aria-describedby': idPowodu, onclick: function () { doDocPro(ctx, 'edytuj', x); } }));
+        akcje.appendChild(el('span', { id: idPowodu, class: 'vdo-row-docpro', text: powodKrotki(ctx, x) }));
       } else {
-        akcje.appendChild(el('button', { type: 'button', class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small', text: 'Popraw', 'aria-label': 'Popraw wpis z ' + (dataPL(p.dateISO) || 'bez daty'), onclick: function () { formularz(ctx, x); } }));
-        akcje.appendChild(el('button', { type: 'button', class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small', text: 'Usuń', 'aria-label': 'Usuń wpis z ' + (dataPL(p.dateISO) || 'bez daty'), onclick: function () { zBledem(usun(ctx, x)); } }));
+        akcje.appendChild(el('button', { type: 'button', class: 'vdo-btn', text: 'Popraw', 'aria-label': 'Popraw wpis z ' + (dataPL(p.dateISO) || 'bez daty'), onclick: function () { formularz(ctx, x); } }));
+        akcje.appendChild(el('button', { type: 'button', class: 'vdo-btn', text: 'Usuń', 'aria-label': 'Usuń wpis z ' + (dataPL(p.dateISO) || 'bez daty'), onclick: function () { zBledem(usun(ctx, x)); } }));
       }
       var bmi = p.weight > 0 && p.height > 0 ? p.weight / Math.pow(p.height / 100, 2) : null;
       lista.appendChild(el('li', { class: 'vdo-item' + (x.stan === 'konflikt' ? ' vdo-item-conflict' : '') + (idx === 0 ? ' vdo-item-last' : ''), 'data-entry': x.entryId || '', 'data-date': p.dateISO || '' }, [
@@ -2070,8 +2134,8 @@
           return el('li', { class: 'vdo-item vdo-item-deleted' }, [
             el('span', { text: (dataPL(d.dateISO) || 'bez daty') + ' · ' + Dz().TYPY[d.type] + ' · ' + liczbaPL(d.weight, 1) + ' kg' }),
             wDocPro(ctx, x)
-              ? el('span', { class: 'vdo-row-docpro', text: 'Dodaj ponownie w DocPro', title: wDocPro(ctx, x).replace('poprawiasz go', 'dodajesz go ponownie') })
-              : el('button', { type: 'button', class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small', text: 'Przywróć', onclick: function () { zBledem(przywroc(ctx, x.entryId)); } })
+              ? el('button', { type: 'button', class: 'vdo-btn vdo-btn-docpro', text: 'Dodaj ponownie w DocPro →', title: wDocPro(ctx, x).replace('poprawiasz go', 'dodajesz go ponownie'), onclick: function () { doDocPro(ctx, 'ponownie', x); } })
+              : el('button', { type: 'button', class: 'vdo-btn', text: 'Przywróć', onclick: function () { zBledem(przywroc(ctx, x.entryId)); } })
           ]);
         })));
       }
@@ -2085,7 +2149,7 @@
         cofnij = el('div', { class: 'vdo-msg vdo-msg-info', role: 'status' }, [
           el('span', { class: 'vdo-msg-t', text: 'Wpis z ' + (dataPL(u.dateISO) || 'dziennika') + ' usunięty z dziennika.' }),
           el('div', { class: 'vdo-msg-actions' }, [
-            el('button', { type: 'button', class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small', text: 'Cofnij', onclick: function () { zBledem(przywroc(ctx, u.entryId)); } })
+            el('button', { type: 'button', class: 'vdo-btn', text: 'Cofnij', onclick: function () { zBledem(przywroc(ctx, u.entryId)); } })
           ])
         ]);
       } else {
@@ -2108,11 +2172,14 @@
           el('p', { class: 'vdo-intro', text: 'Dziennik leczenia jest oddzielony od wizyt w gabinecie. Wpis z masą od pacjenta nie tworzy wizyty i nie zmienia jej pomiarów.' })
         ]),
         el('div', { class: 'vdo-head-actions' }, [
-          dodaj,
-          aktywny ? null : el('span', { id: 'vdoAddWhy', class: 'vdo-hint', text: 'Brak aktywnego cyklu — Włączenie w DocPro.' })
+          el('div', { class: 'vdo-head-buttons' }, [
+            dodaj,
+            aktywny ? null : el('button', { type: 'button', class: 'vdo-btn vdo-btn-docpro', text: 'Włączenie w DocPro →', onclick: function () { doDocPro(ctx, 'wlaczenie', null); } })
+          ]),
+          aktywny ? null : el('span', { id: 'vdoAddWhy', class: 'vdo-hint', text: 'Brak aktywnego cyklu — nowy cykl zaczyna się od Włączenia przy wizycie.' })
         ])
       ]),
-      el('p', { class: 'vdo-hint', text: 'Włączenie, Zakończenie i zmianę leku dodajesz i poprawiasz w DocPro przy wizycie. Tu — Kontynuacje.' }),
+      el('p', { class: 'vdo-hint', text: 'Włączenie, Zakończenie i zmianę leku edytujesz w monitorze DocPro — „Edytuj w DocPro →” przy wpisie otwiera go od razu na tym wpisie. Tu — Kontynuacje.' }),
       konflikty,
       cofnij,
       msg,
@@ -2123,6 +2190,6 @@
   w.VildaDziennikOtylosciUI = Object.freeze({
     VERSION: VERSION,
     sekcja: sekcja,
-    _internal: Object.freeze({ podpowiedzOkna: podpowiedzOkna, aktywnyCykl: aktywnyCykl })
+    _internal: Object.freeze({ podpowiedzOkna: podpowiedzOkna, aktywnyCykl: aktywnyCykl, celSkoku: celSkoku, powodKrotki: powodKrotki })
   });
 }(typeof window !== 'undefined' ? window : this));
