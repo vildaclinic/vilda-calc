@@ -108,9 +108,12 @@ describe('G27b — skok mówi reszcie aplikacji, że zmienił się pacjent', () 
     expect(timeout).toBeGreaterThan(dispatch);
   });
 
-  it('nie rusza zapisu obu magazynów z raty 1', () => {
-    expect(MONITOR).toContain('window.sessionStorage.setItem("vildaCurrentPatientId",n.patientId)');
-    expect(MONITOR).toContain('window._vildaCurrentPatientId=n.patientId');
+  it('korzysta z istniejącego synchronicznego wydawcy obu kontekstów pacjenta', () => {
+    expect(MONITOR).not.toContain('window.sessionStorage.setItem("vildaCurrentPatientId"');
+    expect(MONITOR).not.toContain('window._vildaCurrentPatientId=n.patientId');
+    expect(FIXES).toContain('window._vildaCurrentPatientId=c;try{window.sessionStorage.setItem("vildaCurrentPatientId",c)}');
+    expect(MONITOR).toContain('publisher.isInitialized.call(publisher.init,"custom-fixes:sidebar-menu")===true');
+    expect(MONITOR).toContain('window._vildaCurrentPatientId!==recordPatientId||window.sessionStorage.getItem("vildaCurrentPatientId")!==recordPatientId');
   });
 });
 

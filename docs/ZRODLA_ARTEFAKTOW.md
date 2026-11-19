@@ -3025,3 +3025,22 @@ niezmiennymi skrótami warstw `c2deeccd` i `6a9726ac`, a potem odtwarza źródł
 bajt w bajt. Wykonywany Auth zachowuje nową obsługę dawki. Trzy bieżące piny
 narzędzi wynikają z odwrócenia rzeczywistych warstw aktualnego pliku; nie
 zastępują historycznych punktów kontrolnych i nie ignorują innych zmian.
+
+
+## Jedna natywna publikacja wybranego pacjenta
+
+Odbiornik skoku GH i otyłości korzysta z istniejącego, synchronicznego
+`vilda:patient-loaded`, tak jak natywny wybór pacjenta. Nie powtarza już
+zapisu identyfikatora w oknie i sesji: oba konteksty ustawia dotychczasowy
+nasłuch w `custom-fixes.js`. Przed pracą asynchroniczną przechwytuje oryginalny
+dokument, moduł `VildaInit` i metodę `isInitialized`. Wczytanie innego pacjenta
+wymaga gotowego `custom-fixes:sidebar-menu`, a zmiana tych tożsamości lub utrata
+gotowości przed zastosowaniem i publikacją kończy próbę bez zastępczego zapisu.
+
+Rekord zwrócony przez sejf musi mieć niepusty tekstowy `patientId` dokładnie
+równy pierwotnemu celowi zamiaru. Po publikacji odbiornik sprawdza oba konteksty
+wybranego pacjenta. Nie zmienia nasłuchu, natywnego sejfu ani formatu zdarzenia
+z uprawnieniem zaakceptowanego wczytania. Regresja wykonuje rzeczywisty nasłuch
+wydawcy i rzeczywisty odbiornik, w tym utratę właściciela i obce importy.
+Istniejący klucz bieżącego pacjenta pozostaje jawnym, nieprzezroczystym
+identyfikatorem nawigacyjnym; ta zmiana go nie szyfruje.

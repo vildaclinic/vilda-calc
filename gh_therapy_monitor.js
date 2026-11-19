@@ -438,6 +438,17 @@ function ghJumpLandOwned(claim,loaded){
   }else land();
   return true;
 }
+function ghJumpPublisherCurrent(publisher){
+  try{return !!(publisher&&window.document===publisher.document&&document===publisher.document
+    &&window.VildaInit===publisher.init&&publisher.init.isInitialized===publisher.isInitialized
+    &&publisher.isInitialized.call(publisher.init,"custom-fixes:sidebar-menu")===true)}catch(_){return false}
+}
+function ghJumpCapturePublisher(){
+  try{
+    const init=window.VildaInit,publisher={document:document,init:init,isInitialized:init&&init.isInitialized};
+    return typeof publisher.isInitialized==="function"&&ghJumpPublisherCurrent(publisher)?publisher:null;
+  }catch(_){return null}
+}
 async function N(){
   const e=ghJumpRaw();if(!e)return;
   const auth=window.VildaAuthUI;
@@ -446,6 +457,7 @@ async function N(){
   if(ghJumpPendingClaim)ghJumpCancel(ghJumpPendingClaim);
   if(ghJumpAttemptLease)ghJumpCancel(ghJumpAttemptLease);
   const claim=ghJumpCapture(e,null);if(!claim)return;
+  const publisher=ghJumpCapturePublisher();
   ghJumpPendingClaim=claim;
   try{
     const api=window.VildaDataImportExport;
@@ -465,23 +477,27 @@ async function N(){
       if(!await ghJumpWaitForGuard(claim)||!ghJumpCurrent(claim,false)){ghJumpCancel(claim);return}
       const r=window._vildaCurrentPatientId||null;
       if(n.patientId&&r!==n.patientId&&typeof claim.vault.getPatient==="function"&&typeof window.applyLoadedData==="function"){
+        if(!ghJumpPublisherCurrent(publisher)){ghJumpCancel(claim);return}
+        const requestedPatientId=n.patientId;
         const loadApi=window.VildaDataImportExport;
         const scopedLoad=!!(loadApi&&typeof loadApi.captureAcceptedPatientLoad==="function");
         const acceptedLoad=scopedLoad?loadApi.captureAcceptedPatientLoad({patientId:n.patientId}):null;
         if(scopedLoad&&!acceptedLoad){ghJumpCancel(claim);return}
         const ownImport=ghJumpObesity(n)&&scopedLoad?ghJumpCaptureOwnImport(claim,loadApi,acceptedLoad):null;
         if(ghJumpObesity(n)&&!ownImport){ghJumpCancel(claim);return}
-        const i=await claim.vault.getPatient(n.patientId),a=i&&i.snapshots&&i.snapshots[0];
-        if(!ghJumpCurrent(claim,false)||scopedLoad&&!loadApi.isAcceptedPatientLoadCurrent(acceptedLoad)){ghJumpCancel(claim);return}
+        const i=await claim.vault.getPatient(requestedPatientId),a=i&&i.snapshots&&i.snapshots[0];
+        if(!ghJumpCurrent(claim,false)||!ghJumpPublisherCurrent(publisher)||scopedLoad&&!loadApi.isAcceptedPatientLoadCurrent(acceptedLoad)){ghJumpCancel(claim);return}
+        const recordPatientId=i&&i.patientId;
+        if(typeof recordPatientId!=="string"||!recordPatientId||recordPatientId!==requestedPatientId){ghJumpCancel(claim);return}
         // Another user dialog may have opened during I/O. This intent has not
         // had a guard decision yet; wait for that dialog, then fetch afresh.
         if(ghJumpOpenGuard())continue;
         if(a&&a.payload){
           const o=function(){
-            if(!ghJumpCurrent(claim,true)){ghJumpFinish(claim);return}
+            if(!ghJumpCurrent(claim,true)||!ghJumpPublisherCurrent(publisher)){ghJumpFinish(claim);return}
             try{
-const apply=function(){return window.applyLoadedData(a.payload)};
-const publish=function(operationDetail){if(ownImport)ghJumpRecordOwnImport(ownImport,operationDetail);try{window._vildaCurrentPatientId=n.patientId}catch{}/* P-NOTATKI-1 (G27, 2026-09-18): skok do punktu GH innego pacjenta ustawial tylko zmienna okna — sessionStorage zostawal przy poprzednim, wiec chip „Otworz karte", bramka notatki i inne strony w tej samej karcie pracowaly na dwoch roznych pacjentach. */try{window.sessionStorage.setItem("vildaCurrentPatientId",n.patientId)}catch{}/* P-NOTATKI-3 (G27b, odlozone z raty 1): skok wczytywal pacjenta do formularza, ale NIC o tym
+const apply=function(){if(!ghJumpCurrent(claim,true)||!ghJumpPublisherCurrent(publisher))throw new Error("Patient publisher changed before apply");return window.applyLoadedData(a.payload)};
+const publish=function(operationDetail){if(!ghJumpCurrent(claim,true)||!ghJumpPublisherCurrent(publisher))throw new Error("Patient publisher changed before publication");if(ownImport)ghJumpRecordOwnImport(ownImport,operationDetail);/* P-NOTATKI-3 (G27b, odlozone z raty 1): skok wczytywal pacjenta do formularza, ale NIC o tym
    nie mowil. Zdarzenia vilda:patient-loaded slucha 24 rejestracji w 21 plikach, z czego 19 jest
    aktywnych na docpro - m.in. cache sekcji okoloporodowej, zespolu Downa i pokwitania, korekta
    nazwiska, data urodzenia i wskaznik zapisu. Bez sygnalu zostawaly przy POPRZEDNIM dziecku,
@@ -493,7 +509,9 @@ const publish=function(operationDetail){if(ownImport)ghJumpRecordOwnImport(ownIm
    Rozgloszenie MUSI byc synchroniczne: setTimeout zepsulby okno wyciszenia vilda:json-imported
    we wskazniku zapisu. UWAGA: przycisk "Odtworz zapisany stan" zostaje po skoku widoczny -
    modal chowal go sam przy otwarciu, a tu modalu nie ma. To jest zamierzone: droga reczna
-   zostaje otwarta. */try{typeof window.CustomEvent=="function"&&document.dispatchEvent(new window.CustomEvent("vilda:patient-loaded",{detail:{patientId:n.patientId,savedAtISO:a&&a.savedAtISO||null,snapshotCount:i&&(i.snapshotCount||i.snapshots&&i.snapshots.length)||null,name:a&&a.payload&&a.payload.name||null,source:"pick",skipLoadChoice:!ghJumpAsksLoadChoice(n),...operationDetail}}))}catch{}};
+   zostaje otwarta. Canonical custom-fixes publisher synchronously selects both
+   current-patient contexts; this receiver never writes either context itself. */document.dispatchEvent(new window.CustomEvent("vilda:patient-loaded",{detail:{savedAtISO:a&&a.savedAtISO||null,snapshotCount:i&&(i.snapshotCount||i.snapshots&&i.snapshots.length)||null,name:a&&a.payload&&a.payload.name||null,source:"pick",skipLoadChoice:!ghJumpAsksLoadChoice(n),...operationDetail,patientId:recordPatientId}}));
+if(!ghJumpCurrent(claim,true)||!ghJumpPublisherCurrent(publisher)||window._vildaCurrentPatientId!==recordPatientId||window.sessionStorage.getItem("vildaCurrentPatientId")!==recordPatientId)throw new Error("Patient publication did not select the accepted record");};
 if(scopedLoad){
   if(ownImport&&(window.VildaDataImportExport!==loadApi||loadApi.getApplyLoadedDataSequence!==ownImport.getSequence||loadApi.runAcceptedPatientLoad!==ownImport.run)){ghJumpCancel(claim);return}
   const completed=loadApi.runAcceptedPatientLoad(acceptedLoad,a.payload,{apply:apply,publish:publish});
