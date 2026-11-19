@@ -748,11 +748,15 @@
       var am = num(m.ageMonths);
       if (am == null && num(m.ageYears) != null) am = Math.round(num(m.ageYears) * 12);
       if (am == null || am < 0) return;
+      // P-OTYLOSC-SIATKI (decyzja właściciela 2026-11-19, wariant B): pomiar z dziennika leczenia niesie źródło masy
+      // i wzrostu; „pacjent” podpisuje kartę metryki i żeton paska. Pomiary bez źródła (wizyty) — jak dotąd.
       pts.push({
         ageMonths: am,
         ageYears: num(m.ageYears) != null ? num(m.ageYears) : am / 12,
         height: num(m.height),
         weight: num(m.weight),
+        zrodloWzrostu: m.zrodloWzrostu === 'pacjent' ? 'pacjent' : null,
+        zrodloMasy: m.zrodloMasy === 'pacjent' ? 'pacjent' : null,
         isCurrent: false
       });
     });
@@ -763,6 +767,8 @@
         ageYears: num(input.currentAgeYears) != null ? num(input.currentAgeYears) : cam / 12,
         height: num(input.currentHeight),
         weight: num(input.currentWeight),
+        zrodloWzrostu: null,
+        zrodloMasy: null,
         isCurrent: true
       });
     }
@@ -772,8 +778,8 @@
     pts.forEach(function (p) {
       var last = out[out.length - 1];
       if (last && last.ageMonths === p.ageMonths) {
-        if (p.height != null) last.height = p.height;
-        if (p.weight != null) last.weight = p.weight;
+        if (p.height != null) { last.height = p.height; last.zrodloWzrostu = p.zrodloWzrostu || null; }
+        if (p.weight != null) { last.weight = p.weight; last.zrodloMasy = p.zrodloMasy || null; }
         last.isCurrent = last.isCurrent || p.isCurrent;
       } else {
         out.push(p);
@@ -900,7 +906,7 @@
       if (v == null) return;
       var st = statFor(met.param, v, sex, p.ageYears, source);
       if (!st) return;
-      series.push({ ageMonths: p.ageMonths, ageYears: p.ageYears, value: v, c: st.percentile, sd: st.sd, siatka: st.siatka || null, isCurrent: p.isCurrent });
+      series.push({ ageMonths: p.ageMonths, ageYears: p.ageYears, value: v, c: st.percentile, sd: st.sd, siatka: st.siatka || null, isCurrent: p.isCurrent, odPacjenta: odPacjenta(met.key, p) });
     });
     if (series.length < 2) return null;
 
@@ -1037,8 +1043,16 @@
       first: first, last: last, total: total, totalDopisek: totalDopisek, worst: worst, redFlag: redFlag, upFlag: upFlag,
       faza: faza,
       treatment: treatment,
-      tone: toneCent(met.key, last.c)
+      tone: toneCent(met.key, last.c),
+      odPacjenta: series.filter(function (x) { return x.odPacjenta; }).length
     };
+  }
+
+  // P-OTYLOSC-SIATKI: czy wartość metryki w punkcie pochodzi od pacjenta (masa, wzrost; BMI — gdy którekolwiek).
+  function odPacjenta(klucz, p) {
+    if (!p) return false;
+    var m = p.zrodloMasy === 'pacjent', h = p.zrodloWzrostu === 'pacjent';
+    return klucz === 'weight' ? m : klucz === 'height' ? h : klucz === 'bmi' ? (m || h) : false;
   }
 
   // ── Tempo wzrastania — liczy WYŁĄCZNIE vilda_tempo_wzrastania.js (P-TEMPO, 2026-09-15) ──
@@ -1702,6 +1716,10 @@
     // zawija tekst w sobie zamiast wystawać poza ucięty kontener; gdy się mieści, wygląda jak dotąd (nowrap zostaje na kluczu).
     '.vtap .vtap-mchip{display:inline-flex;align-items:center;gap:5px;background:#fff;border:1px solid #d9e8e8;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:600;color:#39555b;white-space:normal;max-width:100%}',
     '.vtap .vtap-mchip .k{font-size:9.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#7d979b;white-space:nowrap}',
+    // P-OTYLOSC-SIATKI: pomiary od pacjenta — kolory odznaki „pacjent” z „Wpisy leczenia”.
+    '.vtap .vtap-mchip.vtap-pac{background:#fff4e0;border-color:#f0c38a;color:#8a4b00}',
+    '.vtap .vtap-card.vtap-card-pac{border-top-color:#f0c38a;border-right-color:#f0c38a;border-bottom-color:#f0c38a}',
+    '.vtap .vtap-card .vtap-pac-l{align-self:flex-start;background:#fff4e0;border:1px solid #f0c38a;border-radius:999px;padding:1px 7px;font-size:10.5px;font-weight:700;color:#8a4b00}',
     '.vtap .vtap-flag{padding:9px 14px;background:#fdecea;border-bottom:1px solid #f6d4d0;font-size:12px;font-weight:700;color:#b71c1c;line-height:1.45}',
     '.vtap .vtap-flag.vw{background:#fdf1e5;border-bottom-color:#f6dfc6;color:#c75d00}',
     '.vtap .vtap-row{padding:9px 14px;border-top:1px solid #eef4f4}',
@@ -1777,6 +1795,12 @@
       mchip('okres', fmt(model.points[0].ageMonths / 12, 1) + ' → ' + fmt(model.points[n - 1].ageMonths / 12, 1) + ' r.ż.'),
       mchip('', n + ' pomiar' + (n === 1 ? '' : n < 5 ? 'y' : 'ów'))
     ];
+    // P-OTYLOSC-SIATKI: ile pomiarów analizy podał pacjent („Wpisy leczenia” w Karcie) — żeton w kolorze odznaki „pacjent”.
+    var nPac = model.points.filter(function (p) { return p.zrodloMasy === 'pacjent' || p.zrodloWzrostu === 'pacjent'; }).length;
+    if (nPac) {
+      items.push('<span class="vtap-mchip vtap-pac" title="masa lub wzrost z „Wpisy leczenia”, podane przez pacjenta">w tym '
+        + nPac + ' od pacjenta</span>');
+    }
     if (model.source) items.push(mchip('źródło', model.source));
     var ctx = model.context;
     if (ctx) {
@@ -1844,9 +1868,11 @@
   function patientMetricCardHtml(m) {
     var v = naglowekMetryki(m);
     var tCls = TEXT_CLS[v && v.t] || 'vt-s';
-    var html = '<div class="vtap-card ' + (STRIPE_CLS[v && v.t] || 'cs') + '">'
+    var html = '<div class="vtap-card ' + (STRIPE_CLS[v && v.t] || 'cs') + (m.odPacjenta ? ' vtap-card-pac' : '') + '">'
       + '<div class="top"><span class="nm">' + esc(m.title) + '</span>'
       + '<span class="sp">' + sparklineSvg(m.series, rowTone(m)) + '</span></div>'
+      // P-OTYLOSC-SIATKI: metryka liczona z wartościami od pacjenta — podpis na karcie (wariant B makiety).
+      + (m.odPacjenta ? '<div class="vtap-pac-l">z wpisami od pacjenta (' + m.odPacjenta + ')</div>' : '')
       + '<div class="big">' + esc(fmtC(m.first.c)) + 'c<span aria-hidden="true"> → </span>' + esc(fmtC(m.last.c)) + 'c'
       + '<span class="d ' + tCls + '">ΔSDS ' + esc(fmtP(m.last.sd - m.first.sd)) + '</span></div>'
       + '<div class="sub">' + esc(fmt(m.first.value, m.dec)) + ' → ' + esc(fmt(m.last.value, m.dec) + (m.unit ? ' ' + m.unit : ''))
