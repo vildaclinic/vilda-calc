@@ -1610,13 +1610,14 @@ function startBezSesji(w, status) {
   const od = src.indexOf('var authBootReady=false;');
   const doUo = src.indexOf('function uo(', od);
   if (od < 0 || doUo < 0) throw new Error('vilda_auth_ui.js: brak cyklu startu ekranu logowania');
+  const intentBootDependencies = ['UiIntentBoundary', 'UiIntentBindSync'].map(name => wytnijFunkcje(src, name)).join('\n');
   let przywroc;
   const przywracanie = new Promise((r) => { przywroc = r; });
   const sejfStartu = { onLock() {}, onUnlock() {}, tryRestoreSession: () => przywracanie, getStatus: status };
   const okno = { document: { dispatchEvent() {} }, CustomEvent: class { constructor(t, o) { this.type = t; this.detail = o && o.detail; } } };
   const nic = () => {};
   const api = new Function('i', 'jt', 'Ya', 'Xi', 'Aa', '$t', 'Io', 'me', 'ma', 'Ot', 'Bkr_sluchaj', 'Bkr_banerStartu',
-    `let Ni=false;${src.slice(od, doUo)};return {boot:Ei};`)(
+    `let Ni=false;${intentBootDependencies}\n${src.slice(od, doUo)};return {boot:Ei};`)(
     okno, () => sejfStartu, () => true, nic, nic, nic, () => false, w.me, nic, nic, nic, w.Bkr_banerStartu,
   );
   return { boot: api.boot, przywroc };

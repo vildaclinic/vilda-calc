@@ -62,6 +62,7 @@ function environment(missing = [], restoredSession = false) {
     } },
   };
   win.document = doc;
+  loadBrowserScript('vilda_ui_intents.js', win);
   return { win, doc, events, appended };
 }
 

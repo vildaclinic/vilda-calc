@@ -25,7 +25,7 @@ describe('current public Vault base for the next private workspace build', () =>
     const result = verifyClinicalWorkspaceCurrentBase(source);
     expect(digest(result.baseSource)).toBe(manifest.baseVaultSHA256);
     expect(result.publicVaultSHA256).toBe(digest(source));
-    expect(result.nativeIntegrationBaseVaultSHA256).toBe('44d82633d45bf9db1e964457c69d07f2009b683848a00d21315fc63fdd542499');
+    expect(result.nativeIntegrationBaseVaultSHA256).toBe('06ea023197d3e70fc30e965d5b2b57744fbbcbc0f638f5baa798e5ce3e209031');
     expect(result.baseSource).toContain('/* BEGIN VILDA PATIENT TREATMENT V1 */');
     expect(result.baseSource).toContain('/* BEGIN VILDA DURABLE VISITS V1 */');
     expect(result.baseSource).not.toContain('/* BEGIN VILDA CLINICAL WORKSPACE NATIVE V1 */');

@@ -7,7 +7,8 @@ const source = fs.readFileSync(new URL('../../vilda_auth_ui.js', import.meta.url
 const start = source.indexOf('var authBootReady=false;');
 const end = source.indexOf('function uo(', start);
 if (start < 0 || end < 0) throw new Error('Brak produkcyjnego cyklu auth boot');
-const code = source.slice(start, end);
+const intentBootDependencies = ['UiIntentBoundary', 'UiIntentBindSync'].map(name => wytnijFunkcje(source, name)).join('\n');
+const code = intentBootDependencies + '\n' + source.slice(start, end);
 const pending = () => {
   let resolve, reject;
   const promise = new Promise((yes, no) => { resolve = yes; reject = no; });

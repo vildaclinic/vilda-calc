@@ -39,6 +39,19 @@ html.vilda-home-workspace dialog.vhome-patient-native-dialog.vhome-b1-child-dial
   height: min(820px, calc(var(--vhome-dialog-viewport-height, 100dvh) - 32px));
   background: #fff;
 }
+html.vilda-home-workspace .vdo-dialog.vhome-b1-child-dialog {
+  position: fixed;
+  inset: calc(var(--vhome-dialog-viewport-height, 100dvh) / 2) auto auto 50vw;
+  margin: 0;
+  transform: translate(-50%, -50%);
+  width: min(1000px, calc(100vw - 32px));
+  height: min(820px, calc(var(--vhome-dialog-viewport-height, 100dvh) - 32px));
+  max-height: none;
+  border: var(--border-hairline) solid #dbe7e8;
+  border-radius: var(--radius-14);
+  background: #fff;
+  overscroll-behavior: contain;
+}
 html.vilda-home-workspace dialog.vhome-b1-child-dialog > .vhome-dialog-footer { background: #fff; }
 html.vilda-home-workspace .vilda-auth-card:has(> .vhome-native-patient-card) > .vilda-auth-brand { display: none !important; }
 html.vilda-home-workspace .vhome-native-patient-card {

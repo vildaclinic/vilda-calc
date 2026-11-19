@@ -9,7 +9,9 @@ test.setTimeout(150_000);
 // header-search-menu-mobile. These routes cover the other real form layouts.
 for (const shell of [false, true]) for (const route of LAYOUT_ROUTES.slice(1)) {
   test(`${shell ? 'shell' : 'standalone'} ${route.title}: neutral mobile actions and usable content through resize and rotation`, async ({ page }, testInfo) => {
-    const { owner, ids } = await prepareLayoutRoute(page, shell, route);
+    const { owner, ids } = await prepareLayoutRoute(page, shell, route, {
+      waitForAccountReadyBeforeReload: shell && route.route === 'docpro',
+    });
     const before = await owner.evaluate(id => window.VildaVault.getPatient(id), ids.a);
     const proof = [];
     for (const [width, height] of [[320, 852], [390, 852], [658, 1000], [860, 1000], [844, 390], [390, 852]]) {

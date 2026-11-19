@@ -7,6 +7,7 @@
   var d = w.document;
   var mount, form, fieldset, doctor, geometry, view, snapshot, rendered, fullscreen;
   var request = 0, timer = 0, pendingTimer = 0, layoutFrame = 0, started = false;
+  var clearFenceTimer = 0, clearFenceRetry = null;
   var boundsFrame = 0, boundsOwner = null, expansion = null, expansionRead = null, resumedExpansion = null;
   var scheduleFrame = 0, scheduledIdentity = false, scheduledReady = false;
   var notice, noticeTitle, noticeMessage, retryButton, slotStatus = 'ineligible', awaitingEdit = false;
@@ -97,6 +98,65 @@
     scheduleFrame = 0;
     scheduledIdentity = false;
     scheduledReady = false;
+  }
+
+  function stopClearFenceRetry() {
+    w.clearTimeout(clearFenceTimer);
+    clearFenceTimer = 0;
+    clearFenceRetry = null;
+  }
+
+  function clearFenceOwner(capture) {
+    var vault = w.VildaVault, persistence = w.VildaPersistence;
+    var user = vault && typeof vault.getCurrentUser === 'function' ? vault.getCurrentUser() : null;
+    return {
+      vault: vault, persistence: persistence, userId: user && user.userId || null,
+      unlocked: vault && typeof vault.isUnlocked === 'function' ? vault.isUnlocked() : null,
+      mode: vault && typeof vault.getCurrentStorageModeSync === 'function' ? vault.getCurrentStorageModeSync() : null,
+      ephemeral: persistence && typeof persistence.isEphemeralMode === 'function' ? persistence.isEphemeralMode() : null,
+      cloud: persistence && typeof persistence.isCloudOnlyMode === 'function' ? persistence.isCloudOnlyMode() : null,
+      ticket: capture && vault && typeof vault.captureSyncOperationSession === 'function'
+        && typeof vault.assertSyncOperationSession === 'function' ? vault.captureSyncOperationSession() : null
+    };
+  }
+
+  function deferClearFence(state) {
+    var until = Number(w.__vildaPersistClearUntil || 0);
+    if (!state || state.reason !== 'cleared' || !Number.isFinite(until) || until <= Date.now() || !displayable()) return;
+    try {
+      var owner = clearFenceOwner(true), selected = presentation();
+      var lease = { revision: request, until: until, owner: owner, data: data,
+        mode: selected.mode, tab: selected.selected, form: form, mount: mount,
+        href: String(w.location && w.location.href || ''), frame: w.frameElement || null };
+      clearFenceRetry = lease;
+      // The native clear fence owns this deadline. Wake once, then ask the
+      // unchanged data adapter for a fresh eligible snapshot; retain no image.
+      clearFenceTimer = w.setTimeout(function () {
+        if (clearFenceRetry !== lease) return;
+        clearFenceTimer = 0;
+        clearFenceRetry = null;
+        try {
+          var current = clearFenceOwner(false), nowSelected = presentation();
+          if (!started || lease.revision !== request || w.document !== d || w.VildaCentileLiveData !== lease.data
+            || form !== lease.form || mount !== lease.mount || d.getElementById('calcForm') !== form
+            || d.getElementById('vildaCentileLiveMount') !== mount || form.isConnected === false || mount.isConnected === false
+            || !displayable() || nowSelected.mode !== lease.mode || nowSelected.selected !== lease.tab
+            || String(w.location && w.location.href || '') !== lease.href || (w.frameElement || null) !== lease.frame
+            || lease.frame && (lease.frame.hidden || lease.frame.isConnected === false || lease.frame.contentWindow !== w)
+            || Number(w.__vildaPersistClearUntil || 0) !== lease.until || Date.now() < lease.until
+            || current.vault !== owner.vault || current.persistence !== owner.persistence || current.userId !== owner.userId
+            || current.unlocked !== owner.unlocked || current.mode !== owner.mode
+            || current.ephemeral !== owner.ephemeral || current.cloud !== owner.cloud) return;
+          if (owner.ticket) owner.vault.assertSyncOperationSession(owner.ticket);
+          refresh();
+        } catch (_) { /* an obsolete owner has no authority to request a read */ }
+      }, until - Date.now());
+    } catch (_) { /* a subsequent native event can revalidate an unavailable owner */ }
+  }
+
+  function hideIneligible(state, retryAfterClear) {
+    clear('stale');
+    if (retryAfterClear !== false) deferClearFence(state);
   }
 
   function expandState(target, state) {
@@ -226,6 +286,7 @@
 
   function clear(reason) {
     request += 1;
+    stopClearFenceRetry();
     stopRefresh();
     stopPending();
     stopNoticeDelay();
@@ -294,9 +355,10 @@
   }
 
   function prepare() {
+    stopClearFenceRetry();
     if (!displayable()) { clear('stale'); return false; }
     var state = eligibility();
-    if (state.status === 'ineligible') { clear('stale'); return false; }
+    if (state.status === 'ineligible') { hideIneligible(state); return false; }
     var firstReservation = slotStatus === 'ineligible';
     if (snapshot && !data.isCurrent(snapshot)) discardView('stale');
     if (state.status === 'error') {
@@ -499,7 +561,7 @@
       showError('Nie udało się wczytać siatki. Spróbuj ponownie.');
       return;
     }
-    if (result.status === 'ineligible') { clear('stale'); return; }
+    if (result.status === 'ineligible') { hideIneligible(result); return; }
     var next = result.snapshot;
     if (result.status === 'pending' || !next || !data.isCurrent(next)) {
       // A superseded read or temporary restore has no authority to show the
@@ -608,6 +670,7 @@
   function schedule(event) {
     // Cancel old promises immediately, before the debounced replacement starts.
     request += 1;
+    stopClearFenceRetry();
     suspendExpansion(true);
     if (event && event.reason === 'measurement-commit') awaitingEdit = false;
     var discarded = false;
@@ -623,7 +686,8 @@
     w.clearTimeout(timer);
     timer = 0;
     if (!started) return;
-    if (eligibility().status === 'ineligible') { clear('stale'); return; }
+    var state = eligibility();
+    if (state.status === 'ineligible') { hideIneligible(state, !(event && event.identityChanged)); return; }
     // Reserve a first applicable slot synchronously: another frame callback
     // may paint Reminders before our queued refresh. Once reserved, geometry
     // waits until the restoration's input/change burst ends, while erasing a

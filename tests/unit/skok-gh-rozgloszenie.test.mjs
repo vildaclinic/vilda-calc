@@ -39,24 +39,27 @@ describe('G27c — skok dociera tam, gdzie miał', () => {
   it('na samodzielnym docpro dokłada hashchange, gdy hash już był docelowy', () => {
     const i = AUTH_UI.indexOf('function Gr(t,a){');
     expect(i).toBeGreaterThan(0);
-    const gr = AUTH_UI.slice(i, i + 900);
+    const gr = AUTH_UI.slice(i, AUTH_UI.indexOf('function UiIntentBoundary(', i));
     expect(gr).toContain('Qgh==="#/docpro"&&typeof i.Event=="function"&&i.dispatchEvent(new i.Event("hashchange"))');
   });
 
   it('ze strony bez monitora przechodzi na docpro.html, zamiast ustawiać martwy hash', () => {
     const i = AUTH_UI.indexOf('function Gr(t,a){');
-    const gr = AUTH_UI.slice(i, i + 900);
+    const gr = AUTH_UI.slice(i, AUTH_UI.indexOf('function UiIntentBoundary(', i));
     expect(gr).toContain('typeof i.refreshGHTherapyMonitor=="function"');
     expect(gr).toContain('i.location.href="docpro.html"');
   });
 
   it('zapis zamiaru zostaje przed nawigacją — ramka docelowa czyta go z sessionStorage', () => {
     const i = AUTH_UI.indexOf('function Gr(t,a){');
-    const gr = AUTH_UI.slice(i, i + 900);
-    const zapis = gr.indexOf('sessionStorage.setItem("vilda:gh-jump"');
+    const gr = AUTH_UI.slice(i, AUTH_UI.indexOf('function UiIntentBoundary(', i));
+    const zapis = gr.indexOf('await transport.prepare("gh-jump"');
+    const zatwierdzenie = gr.indexOf('if(!receipt.current())');
+    expect(gr).toContain('if(!receipt.current()){receipt.discardExact();return;}');
     const nawigacja = gr.indexOf('Qgb.navigate("docpro",!0)');
     expect(zapis).toBeGreaterThan(0);
-    expect(nawigacja).toBeGreaterThan(zapis);
+    expect(zatwierdzenie).toBeGreaterThan(zapis);
+    expect(nawigacja).toBeGreaterThan(zatwierdzenie);
   });
 
   it('monitor konsumuje zamiar także ze zdarzenia storage z innej ramki', () => {

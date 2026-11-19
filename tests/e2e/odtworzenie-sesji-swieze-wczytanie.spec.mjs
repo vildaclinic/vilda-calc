@@ -193,7 +193,10 @@ test('zamiar wczytania z innej strony czeka na DOMContentLoaded i wygrywa z miga
     await route.continue();
   });
   // Wybór pacjenta Y na stronie bez formularza (np. Notatki) zapisuje zamiar i przechodzi na Start.
-  await page.evaluate((pid) => window.sessionStorage.setItem('vilda:pendingPatientLoad', pid), ids.y);
+  expect(await page.evaluate(async (pid) => {
+    const receipt = await window.VildaUiIntents.prepare('pending-patient-load', { patientId: pid });
+    return receipt.current();
+  }, ids.y), 'zaszyfrowany zamiar zatwierdzony przed przejściem na Start').toBe(true);
   await page.goto('/index.html', { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => !window.sessionStorage.getItem('vilda:pendingPatientLoad'),
     null, { polling: 100, timeout: 30_000 });

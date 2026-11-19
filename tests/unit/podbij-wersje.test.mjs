@@ -589,6 +589,12 @@ describe('P-WERSJE-CI: CI sprawdza wersje PR-a względem gałęzi docelowej', ()
     expect(kluczeNaWcieciu(checkout.linie, checkout.d + 4)).toEqual(['fetch-depth']);
     expect(wartosc(checkout.linie, 'fetch-depth'))
       .toBe("${{ github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/audyt' && '0' || '2' }}");
+    const przygotowanie = blokKroku(unit, 'Przygotuj dowód opublikowanej historii precache');
+    expect(przygotowanie, 'dowód przygotowany przed testem repozytorium i kontrolą offline').not.toBeNull();
+    expect(kluczeNaWcieciu(przygotowanie.linie, przygotowanie.d + 2)).toEqual(['name', 'run']);
+    expect(wartosc(przygotowanie.linie, 'run')).toBe('node tests/scripts/prepare-published-precache-history.mjs');
+    expect(unit.indexOf('- name: Przygotuj dowód opublikowanej historii precache'))
+      .toBeLessThan(unit.indexOf('- name: Uruchom kontrole bez przeglądarki'));
     // Krok: dokładnie name/if/env/run — bez continue-on-error, shell, working-directory; jedyny o tej nazwie.
     expect(CI.split(`- name: ${NAZWA_KROKU}\n`).length - 1).toBe(1);
     const krok = blokKroku(unit, NAZWA_KROKU);
@@ -771,6 +777,10 @@ describe('P-WATKI: skrypt rozumie prawdziwe repozytorium', () => {
     const p = zaplanuj({ katalog: korzen, baza: 'HEAD' });
     expect(p.baza.sw).toMatch(/^\d+\.\d+\.\d+$/);
     expect(p.bledy).toEqual([]);
+    expect(p.publishedHistory).toEqual({
+      commit: '2fb15ce2b4d5bb1724f8420d1588efd88f58b5f9',
+      workerSHA256: 'df3cc614b1d687b33e46495cb5afe002c5366f5d6bb0374bddd9b0bf2dd6025c',
+    });
   });
 
   it('CLI: --pomoc opisuje użycie, nieznana opcja kończy się kodem 2', () => {

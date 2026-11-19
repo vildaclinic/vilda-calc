@@ -267,7 +267,7 @@ describe('most sesji: aktywność strony bez czynnego modułu konta', () => {
 // Start zablokowanego dokumentu: prawdziwy cykl startu modułu konta (jak auth-boot-readiness.test.mjs).
 describe('start strony po zakończonej sesji', () => {
   const from = source.indexOf('var authBootReady=false;'), to = source.indexOf('function uo(', from);
-  const bootCode = source.slice(from, to);
+  const bootCode = ['UiIntentBoundary', 'UiIntentBindSync'].map(name => wytnijFunkcje(source, name)).join('\n') + '\n' + source.slice(from, to);
   async function boot({ guest = false, restored = false, sessionRecord = false, residue = true } = {}) {
     const local = storage(), session = storage();
     const win = { localStorage: local, sessionStorage: session, navigator: {}, name: '', dispatchEvent: () => {}, document: { dispatchEvent: () => {} },

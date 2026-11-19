@@ -81,6 +81,19 @@ describe('Global search uses the real encrypted patients and matters', () => {
     expect(writes).not.toHaveBeenCalled(); expect(snapshots).not.toHaveBeenCalled(); search.destroy();
   });
 
+  it('P-OTYLOSC-DZIENNIK: skips obesity-journal entry versions (decision 3), keeps an ordinary note with the same words', async () => {
+    const d = await device();
+    const wpis = await note(d, { title: 'Leczenie otyłości — Kontynuacja 10.11.2026', category: 'leczenie-otylosci', clinicalDateISO: '2026-11-10',
+      body: 'Kontynuacja 10.11.2026 · masa 74,6 kg (pacjent)\nWpis dziennika leczenia otyłości (Vilda) — nie edytuj tej notatki.\n{"vildaOtylosc":1}' });
+    const zwykla = await note(d, { title: 'Fikcyjna rozmowa o leczeniu otyłości', body: 'Masa 74,6 kg od pacjenta.' });
+    const search = create(d);
+    const wyniki = (await search.search('otyłości')).map(row => row.noteId);
+    expect(wyniki).toContain(zwykla.id);
+    expect(wyniki).not.toContain(wpis.id);
+    expect((await search.search('vildaOtylosc')).map(row => row.noteId)).toEqual([]);
+    search.destroy();
+  });
+
   it('keeps appointment, clinical and completion dates distinct and applies status independently of past/future filters', async () => {
     const d = await device();
     const completedFuture = await note(d, { dueDateISO: '2028-02-03', completedAtISO: '2026-10-29T10:00:00Z' });

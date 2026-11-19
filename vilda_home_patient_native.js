@@ -50,6 +50,8 @@
     try {
       if (!view || view.disposed || active !== view || view.vault !== w.VildaVault || !view.vault.isUnlocked()) return false;
       view.vault.assertSyncOperationSession(view.token);
+      if (w.VildaProAccess && !w.VildaProAccess.hasAccess()) return false;
+      if (view.homeOwner && view.homeOwner() !== true) return false;
       return view.ownerCurrent() === true && view.root.isConnected && loadedSequence() === view.loaded;
     } catch (_) { return false; }
   }
@@ -200,6 +202,7 @@
     if (!current(view) || !target) return null;
     target.classList.add('vhome-patient-native-dialog', 'vhome-b1-child-dialog');
     var closed = false, observer = null, release = null;
+    function isOpen() { return target.isConnected && (typeof metadata?.isOpen === 'function' ? metadata.isOpen() : target.open); }
     function fit() { w.VildaHomeWorkspace?.fitDialog?.(target); }
     function cleanup() {
       if (closed) return; closed = true;
@@ -207,18 +210,19 @@
       if (observer) observer.disconnect(); if (release) release();
       target.removeEventListener('close', sync); w.removeEventListener('resize', fit);
       w.visualViewport?.removeEventListener('resize', fit); view.dialogCleanups.delete(cleanup);
+      if (typeof metadata?.dispose === 'function') metadata.dispose();
       resumeRefresh(view);
     }
-    function sync() { if (!target.isConnected || !target.open) cleanup(); }
+    function sync() { if (!isOpen()) cleanup(); }
     if (!metadata?.historyHandled) release = view.registerBack(function () {
-        if (!current(view) || !target.isConnected || !target.open) { cleanup(); return; }
+        if (!current(view) || !isOpen()) { cleanup(); return; }
         if (metadata && typeof metadata.requestClose === 'function') metadata.requestClose();
         else target.dispatchEvent(new w.Event('cancel', {cancelable: true}));
       });
     target.addEventListener('close', sync); w.addEventListener('resize', fit); w.visualViewport?.addEventListener('resize', fit);
-    observer = new w.MutationObserver(function () { if (!target.isConnected || !current(view)) cleanup(); });
+    observer = new w.MutationObserver(function () { if (!isOpen() || !current(view)) cleanup(); });
     observer.observe(d.documentElement, {childList: true, subtree: true});
-    view.dialogCleanups.add(cleanup); fit(); return cleanup;
+    view.dialogCleanups.add(cleanup); fit(); cleanup.actorLifetimeVersion = 1; return cleanup;
   }
   function statusGroups(view, native) {
     var host = native.panels.antro;
@@ -289,6 +293,7 @@
     try { token = vault.captureSyncOperationSession(); } catch (_) { return null; }
     var root = native.root, view = {
       root: root, patientId: native.patientId, patientName: native.patientName || 'Pacjent', openerId: native.openerId || '', vault: vault, token: token, loaded: loadedSequence(), ownerCurrent: native.isCurrent,
+      homeOwner: w.VildaHomePatient?.captureOwner?.() || null,
       disposed: false, selected: native.activeTab || 'antro', close: native.close, changed: native.onChanged, disposeNativeViews: native.disposeNativeViews,
       registerBack: native.registerBack, legacy: native.legacyPanels.filter(Boolean), legacySummary: native.legacySummary || '',
       tabs: [], panels: [], treatment: null, note: null, treatmentFocus: native.focusNoteId || null, dialogCleanups: new Set(), menuBack: null, observer: null, back: null, mounted: false,
@@ -375,6 +380,7 @@
     });
     if (!boundVaults.has(vault)) { boundVaults.add(vault); vault.onLock(function () { if (active?.vault === vault) destroy(active); }); }
     return Object.freeze({
+      actorLifetimeVersion: typeof w.VildaHomePatient?.captureOwner === 'function' ? 1 : 0,
       select: function (key) { select(view, key); },
       onDialog: function (target, metadata) { return nativeDialog(view, target, metadata); },
       openNote: function (request) {

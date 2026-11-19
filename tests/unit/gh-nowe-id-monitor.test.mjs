@@ -41,10 +41,16 @@ describe('P-GH-NOWE-ID-MONITOR: monitor GH nadaje id nowym punktom przez VildaGh
     expect(tekst.split(ID_WSTECZNEGO).length - 1).toBe(1);
     expect(tekst).not.toContain('Math.random');
     // Oba odczyty zegara dotyczą wyłącznie ważności zamiaru GH, nie id punktu:
-    // sprawdzenia na wejściu i wygaśnięcia oczekiwania przed pierwszym guardem.
+    // czasu oczekiwania i zegara aktualnej odszyfrowanej dzierżawy. Transport
+    // sprawdza ten sam pierwotny znacznik czasu przed wydaniem dzierżawy.
     expect(tekst.split('Date.now()').length - 1).toBe(2);
-    expect(tekst.split('if(typeof n.ts==="number"&&Date.now()-n.ts>60000){removeExact();return}').length - 1).toBe(1);
-    expect(tekst.split('if(typeof intent.ts==="number")claim.expiry=window.setTimeout(cancel,Math.max(0,Math.min(60000,60000-(Date.now()-intent.ts))));').length - 1).toBe(1);
+    const transport = zrodlo('vilda_ui_intents.js');
+    expect(transport.split('GH_TTL = 60000').length - 1).toBe(1);
+    expect(transport.split("function expired(kind, value) { return kind === 'gh-jump' && typeof value.ts === 'number' && Date.now() - value.ts > GH_TTL; }").length - 1).toBe(1);
+    expect(transport.split("if (expired(kind, value)) { retire(owner, reservation, raw); return null; }").length - 1).toBe(1);
+    expect(tekst.split('claim.transportLease=lease;const n=lease.value;claim.intent=n;').length - 1).toBe(1);
+    expect(tekst.split('if(typeof n.ts==="number")claim.expiry=window.setTimeout(function(){ghJumpCancel(claim)},Math.max(0,Math.min(60000,60000-(Date.now()-n.ts))));').length - 1).toBe(1);
+    expect(tekst.split('if(intent&&typeof intent.ts==="number")claim.expiry=window.setTimeout(cancel,Math.max(0,Math.min(60000,60000-(Date.now()-intent.ts))));').length - 1).toBe(1);
   });
 
   it('k-ty nowy punkt (z karty albo wsteczny) ma id wydane w tej chwili przez noweId() modułu: idDeterministyczne(k)', () => {

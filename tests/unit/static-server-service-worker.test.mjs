@@ -9,6 +9,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const SCRIPT = 'tests/support/static-server.mjs';
 const EXPECTED_PATHS = [
+  '/vilda_ui_intents.js',
   '/vilda_visit_context.js', '/vilda_visit_history_ui.js', '/vilda_visit_history_ui.css',
   '/vilda_home_workspace.js', '/vilda_home_workspace.css',
   '/vilda_home_growth.js', '/vilda_home_growth_views.js', '/vilda_home_growth_views.css', '/vilda_home_growth_charts.js', '/vilda_home_perinatal.js', '/vilda_sga_birth_results.css',
@@ -54,7 +55,7 @@ afterEach(async () => {
 });
 
 describe('actual E2E static-server service-worker endpoint', () => {
-  it('serves all 32 exact versioned UI keys and continues serving the application afterwards', async () => {
+  it('serves all 33 exact versioned UI keys and continues serving the application afterwards', async () => {
     const { child, origin } = await startServer();
     const response = await fetch(origin + '/__test-service-worker-kalorii.js?wersja=fixture-8-ui');
     expect(response.status).toBe(200);
@@ -79,7 +80,7 @@ describe('actual E2E static-server service-worker endpoint', () => {
 
   it.each([
     ['missing member', config => config.files.pop()],
-    ['duplicate pathname with another version', config => { config.files[4] = { ...config.files[3], url: '/vilda_home_workspace.js?v=999' }; }],
+    ['duplicate pathname with another version', config => { config.files[4] = { ...config.files[3], url: config.files[3].url.replace(/\?v=[0-9]+$/, '?v=999') }; }],
     ['foreign member', config => { config.files[4].url = '/other.css?v=1'; }],
     ['unversioned member', config => { config.files[4].url = '/vilda_home_workspace.css'; }],
   ])('rejects %s with HTTP500 while the shared server stays alive', async (_name, mutate) => {
@@ -96,7 +97,7 @@ describe('actual E2E static-server service-worker endpoint', () => {
     const { child, origin } = await startServer(directory);
     const response = await fetch(origin + '/__test-service-worker-kalorii.js');
     expect(response.status).toBe(500);
-    expect(await response.text()).toContain('requires exactly the 32 versioned visit/home UI resources');
+    expect(await response.text()).toContain('requires exactly the 33 versioned UI resources');
     const page = await fetch(origin + '/index.html');
     expect(page.status).toBe(200);
     expect(await page.text()).toContain('Fictional server fixture');

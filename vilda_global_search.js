@@ -220,6 +220,8 @@
       // Plan and reminder helpers are represented by the canonical plan. Real
       // appointments, result narratives and patient notes remain independent.
       if (['plan', 'step', 'decision'].indexOf(role) >= 0 || note.category === 'care-plan') return;
+      // P-OTYLOSC-DZIENNIK (decyzja właściciela nr 3): wersje wpisów dziennika leczenia otyłości nie są notatkami do szukania.
+      if (note.category === 'leczenie-otylosci') return;
       var activity = note.patientId === vault.ACTIVITY_PATIENT_ID, legacyExternal = note.patientId === vault.EXTERNAL_PATIENT_ID;
       if (!activity && !legacyExternal && !names.has(note.patientId)) return;
       var name = names.get(note.patientId) || text(note.externalName) || (activity ? 'Zajęcie' : 'Pacjent spoza bazy');

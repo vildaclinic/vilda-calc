@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { installUiIntentFixture } from '../fixtures/ui-intent-unit-fixture.mjs';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
 const exporterSource=fs.readFileSync(path.join(root,'vilda_data_import_export.js'),'utf8');
@@ -48,7 +49,8 @@ function environment({session=X,sourcePatient=ID_X,initialPid=null}={}){
  win.VildaUnsavedGuard={run:vi.fn(opt=>{calls.push(opt);if(guardMode==='cancel')opt.onCancel();else if(guardMode==='proceed')opt.onProceed();else showModal()})};
  function showModal(){modal={isConnected:true,parentNode:body};mutate(body);return modal}
  function removeModal(){const m=modal;if(m){m.isConnected=false;m.parentNode=null;modal=null;mutate(body)}}
- function intent(id=ID_Y,point='fictional-point'){const raw=JSON.stringify({patientId:id,ghPointId:point,ts:Date.now()});ss.setItem('vilda:gh-jump',raw);return raw}
+ const prepareIntent=installUiIntentFixture(win,vault);
+ async function intent(id=ID_Y,point='fictional-point'){return prepareIntent('gh-jump',{patientId:id,ghPointId:point,ts:Date.now()})}
  async function finishBoot(){api.initMainSessionPersistence(options);for(const fn of appReady.splice(0))fn();while(frames.length){frames.shift()();await flush()}vi.advanceTimersByTime(0);await flush()}
  return {win,doc,host,frame,ss,vault,persistence,api,options,initialApply,applied,highlight,N,calls,frames,appReady,
  intent,showModal,removeModal,finishBoot,guardMode:value=>{guardMode=value},runFrame:()=>{const fn=frames.shift();if(!fn)throw new Error('No queued frame');fn()},
@@ -79,19 +81,19 @@ describe('producer startup settlement from actual Kt/Fe/Mt',()=>{
 });
 
 describe('actual GH N handles one intent before its first guard',()=>{
- it('does not fetch or capture a guard during queued or active bootstrap',async()=>{const h=environment();h.intent();const n=h.N();await flush();expect(h.vault.getPatient).not.toHaveBeenCalled();expect(h.calls).toHaveLength(0);await h.finishBoot();await n;expect(h.calls).toHaveLength(1);expect(h.vault.getPatient).toHaveBeenCalledTimes(1);expect(h.win.__vildaPersistRestoring).toBe(false);expect(h.ss.getItem('vilda:gh-jump')).toBeNull()});
- it('coalesces repeated 350/700 triggers for the same exact intent',async()=>{const h=environment();h.intent();const p=h.N(),q=h.N();await h.finishBoot();await Promise.all([p,q]);expect(h.vault.getPatient).toHaveBeenCalledTimes(1);expect(h.calls).toHaveLength(1)});
- it('does not consume a replacement from an old waiter',async()=>{const h=environment();h.intent(ID_Y);const p=h.N();const newer=h.intent(ID_Z,'fictional-new-point');const q=h.N();expect(h.ss.getItem('vilda:gh-jump')).toBe(newer);await h.finishBoot();await Promise.all([p,q]);expect(h.vault.getPatient).toHaveBeenCalledTimes(1);expect(h.vault.getPatient).toHaveBeenCalledWith(ID_Z);expect(h.calls).toHaveLength(1)});
- it.each(['account','patient','away-back'])('cancels a waiting intent after %s changes',async kind=>{const h=environment();h.intent();const p=h.N();if(kind==='account')h.switchAccount();if(kind==='patient')h.ss.setItem('vildaCurrentPatientId',ID_Z);if(kind==='away-back'){h.frame.hidden=true;h.frame.hidden=false;await flush()}await h.finishBoot();await p;expect(h.vault.getPatient).not.toHaveBeenCalled();expect(h.calls).toHaveLength(0);expect(h.ss.getItem('vilda:gh-jump')).toBeNull()});
- it('waits before its first guard while an unrelated real backdrop exists',async()=>{const h=environment({initialPid:ID_X});await h.finishBoot();h.showModal();const raw=h.intent(),p=h.N();await flush();expect(h.calls).toHaveLength(0);expect(h.vault.getPatient).not.toHaveBeenCalled();expect(h.ss.getItem('vilda:gh-jump')).toBe(raw);h.removeModal();await flush();await p;expect(h.calls).toHaveLength(1)});
- it('never applies an old attempt when a distinct new intent waits for its modal',async()=>{const h=environment({initialPid:ID_X});await h.finishBoot();h.guardMode('hold');h.intent(ID_Y);await h.N();const old=h.calls[0];h.intent(ID_Z,'fictional-new-point');const next=h.N();await flush();expect(h.calls).toHaveLength(1);old.onProceed();expect(h.applied).not.toHaveBeenCalled();h.guardMode('cancel');h.removeModal();await flush();await next;expect(h.calls).toHaveLength(2);expect(h.vault.getPatient).toHaveBeenLastCalledWith(ID_Z)});
- it('invalid Save removal without callbacks cannot strand the next intent',async()=>{const h=environment({initialPid:ID_X});await h.finishBoot();h.guardMode('hold');h.intent();await h.N();const old=h.calls[0];h.removeModal();await flush();h.guardMode('cancel');h.intent();await h.N();expect(h.calls).toHaveLength(2);old.onProceed();expect(h.applied).not.toHaveBeenCalled()});
- it('uses the existing 60s only before the first guard',async()=>{const h=environment();h.intent();const p=h.N();vi.advanceTimersByTime(60001);await h.finishBoot();await p;expect(h.calls).toHaveLength(0);expect(h.vault.getPatient).not.toHaveBeenCalled()});
- it('keeps a valid shown guard usable after that initial TTL',async()=>{const h=environment({initialPid:ID_X});await h.finishBoot();h.guardMode('hold');h.intent();await h.N();vi.advanceTimersByTime(61000);h.removeModal();h.calls[0].onProceed();expect(h.applied).toHaveBeenCalledTimes(1);expect(h.win._vildaCurrentPatientId).toBe(ID_Y)});
+ it('does not fetch or capture a guard during queued or active bootstrap',async()=>{const h=environment();await h.intent();const n=h.N();await flush();expect(h.vault.getPatient).not.toHaveBeenCalled();expect(h.calls).toHaveLength(0);await h.finishBoot();await n;expect(h.calls).toHaveLength(1);expect(h.vault.getPatient).toHaveBeenCalledTimes(1);expect(h.win.__vildaPersistRestoring).toBe(false);expect(h.ss.getItem('vilda:gh-jump')).toBeNull()});
+ it('coalesces repeated 350/700 triggers for the same exact intent',async()=>{const h=environment();await h.intent();const p=h.N(),q=h.N();await h.finishBoot();await Promise.all([p,q]);expect(h.vault.getPatient).toHaveBeenCalledTimes(1);expect(h.calls).toHaveLength(1)});
+ it('does not consume a replacement from an old waiter',async()=>{const h=environment();await h.intent(ID_Y);const p=h.N();const newer=await h.intent(ID_Z,'fictional-new-point');const q=h.N();expect(h.ss.getItem('vilda:gh-jump')).toBe(newer);await h.finishBoot();await Promise.all([p,q]);expect(h.vault.getPatient).toHaveBeenCalledTimes(1);expect(h.vault.getPatient).toHaveBeenCalledWith(ID_Z);expect(h.calls).toHaveLength(1)});
+ it.each(['account','patient','away-back'])('cancels a waiting intent after %s changes',async kind=>{const h=environment();await h.intent();const p=h.N();if(kind==='account')h.switchAccount();if(kind==='patient')h.ss.setItem('vildaCurrentPatientId',ID_Z);if(kind==='away-back'){h.frame.hidden=true;h.frame.hidden=false;await flush()}await h.finishBoot();await p;expect(h.vault.getPatient).not.toHaveBeenCalled();expect(h.calls).toHaveLength(0);expect(h.ss.getItem('vilda:gh-jump')).toBeNull()});
+ it('waits before its first guard while an unrelated real backdrop exists',async()=>{const h=environment({initialPid:ID_X});await h.finishBoot();h.showModal();const raw=await h.intent(),p=h.N();await flush();expect(h.calls).toHaveLength(0);expect(h.vault.getPatient).not.toHaveBeenCalled();expect(h.ss.getItem('vilda:gh-jump')).toBe(raw);h.removeModal();await flush();await p;expect(h.calls).toHaveLength(1)});
+ it('never applies an old attempt when a distinct new intent waits for its modal',async()=>{const h=environment({initialPid:ID_X});await h.finishBoot();h.guardMode('hold');await h.intent(ID_Y);await h.N();const old=h.calls[0];await h.intent(ID_Z,'fictional-new-point');const next=h.N();await flush();expect(h.calls).toHaveLength(1);old.onProceed();expect(h.applied).not.toHaveBeenCalled();h.guardMode('cancel');h.removeModal();await flush();await next;expect(h.calls).toHaveLength(2);expect(h.vault.getPatient).toHaveBeenLastCalledWith(ID_Z)});
+ it('invalid Save removal without callbacks cannot strand the next intent',async()=>{const h=environment({initialPid:ID_X});await h.finishBoot();h.guardMode('hold');await h.intent();await h.N();const old=h.calls[0];h.removeModal();await flush();h.guardMode('cancel');await h.intent();await h.N();expect(h.calls).toHaveLength(2);old.onProceed();expect(h.applied).not.toHaveBeenCalled()});
+ it('uses the existing 60s only before the first guard',async()=>{const h=environment();await h.intent();const p=h.N();vi.advanceTimersByTime(60001);await h.finishBoot();await p;expect(h.calls).toHaveLength(0);expect(h.vault.getPatient).not.toHaveBeenCalled()});
+ it('keeps a valid shown guard usable after that initial TTL',async()=>{const h=environment({initialPid:ID_X});await h.finishBoot();h.guardMode('hold');await h.intent();await h.N();vi.advanceTimersByTime(61000);h.removeModal();h.calls[0].onProceed();expect(h.applied).toHaveBeenCalledTimes(1);expect(h.win._vildaCurrentPatientId).toBe(ID_Y)});
  it('leaves a verified guard-authorized own-save PID handoff to that guard',async()=>{
   const h=environment({sourcePatient:null});await h.finishBoot();
   const name=events({value:X.name,style:{},dataset:{}});h.doc.getElementById=id=>id==='name'?name:null;
-  h.guardMode('hold');h.intent();await h.N();
+  h.guardMode('hold');await h.intent();await h.N();
   const result={patientId:'fictional-own-new-patient',snapshotId:'fictional-own-new-version',snapshotCount:1};
   h.vault.savePatient.mockResolvedValue(result);h.vault.getCommittedSavePayload=value=>value===result?clone(X):null;
   const receipt=await h.api.saveUserDataWithReceipt({collectUserData:()=>clone(X)});
@@ -99,12 +101,12 @@ describe('actual GH N handles one intent before its first guard',()=>{
   h.removeModal();h.calls[0].onProceed();expect(h.applied).toHaveBeenCalledTimes(1);expect(h.win._vildaCurrentPatientId).toBe(ID_Y);
  });
  it('refuses an unproved PID switch while the same guard is open',async()=>{
-  const h=environment({sourcePatient:null});await h.finishBoot();h.guardMode('hold');h.intent();await h.N();
+  const h=environment({sourcePatient:null});await h.finishBoot();h.guardMode('hold');await h.intent();await h.N();
   h.ss.setItem('vildaCurrentPatientId','fictional-unproved-patient');h.win._vildaCurrentPatientId='fictional-unproved-patient';
   h.removeModal();h.calls[0].onProceed();expect(h.applied).not.toHaveBeenCalled();expect(h.win._vildaCurrentPatientId).toBe('fictional-unproved-patient');
  });
- it('rejects a late onProceed after the actual session ticket changed',async()=>{const h=environment({initialPid:ID_X});await h.finishBoot();h.guardMode('hold');h.intent();await h.N();h.lock();h.removeModal();h.calls[0].onProceed();expect(h.applied).not.toHaveBeenCalled()});
- it('fails closed when the guard module is absent',async()=>{const h=environment({initialPid:ID_X});await h.finishBoot();delete h.win.VildaUnsavedGuard;h.intent();await h.N();expect(h.applied).not.toHaveBeenCalled();expect(h.ss.getItem('vilda:gh-jump')).toBeNull()});
+ it('rejects a late onProceed after the actual session ticket changed',async()=>{const h=environment({initialPid:ID_X});await h.finishBoot();h.guardMode('hold');await h.intent();await h.N();h.lock();h.removeModal();h.calls[0].onProceed();expect(h.applied).not.toHaveBeenCalled()});
+ it('fails closed when the guard module is absent',async()=>{const h=environment({initialPid:ID_X});await h.finishBoot();delete h.win.VildaUnsavedGuard;await h.intent();await h.N();expect(h.applied).not.toHaveBeenCalled();expect(h.ss.getItem('vilda:gh-jump')).toBeNull()});
 });
 
 

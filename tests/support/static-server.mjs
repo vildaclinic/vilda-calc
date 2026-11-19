@@ -38,11 +38,12 @@ function createE2eServiceWorker(source, wersja) {
   // Keep that exact block while trimming unrelated shell assets for these tests.
   const clinicalWorkspace = source.match(/  \/\/ BEGIN CLINICAL WORKSPACE PRECACHE V1[\s\S]*?  \/\/ END CLINICAL WORKSPACE PRECACHE V1/);
   if (!clinicalWorkspace) throw new Error('Test service worker requires the complete clinical workspace precache block.');
-  // The visit/home UI pack has the same production requirement: its 32 pinned
+  // The visit/home UI pack has the same production requirement: its 33 pinned
   // URLs must stay in CORE even when this fixture trims unrelated assets.
   const visitPack = source.match(/const VISIT_UI_PRECACHE_PACK = Object\.freeze\((\{[\s\S]*?\})\);/);
   if (!visitPack) throw new Error('Test service worker requires the visit UI precache configuration.');
   const expectedVisitPaths = new Set([
+    '/vilda_ui_intents.js',
     '/vilda_visit_context.js', '/vilda_visit_history_ui.js', '/vilda_visit_history_ui.css',
     '/vilda_home_workspace.js', '/vilda_home_workspace.css',
     '/vilda_home_perinatal.js', '/vilda_sga_birth_results.css',
@@ -60,7 +61,7 @@ function createE2eServiceWorker(source, wersja) {
     ? url.split('?')[0] : null);
   if (visitUrls.length !== expectedVisitPaths.size || new Set(visitPaths).size !== expectedVisitPaths.size
     || visitPaths.some(resource => !expectedVisitPaths.has(resource)))
-    throw new Error('Test service worker requires exactly the 32 versioned visit/home UI resources.');
+    throw new Error('Test service worker requires exactly the 33 versioned UI resources.');
   const visitCore = visitUrls.map(url => '  ' + JSON.stringify(url) + ',').join('\n');
   const zWersja = wersja && /^[0-9A-Za-z.-]{1,32}$/.test(wersja)
     ? source.replace(/const SW_VERSION = '[^']*';/, `const SW_VERSION = '${wersja}';`)

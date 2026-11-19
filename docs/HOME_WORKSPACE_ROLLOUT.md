@@ -455,3 +455,19 @@ Każdy kolejny adapter musi wykazać parytet z faktyczną kartą produkcyjną.
 Publiczny helper nie jest automatycznie równoważnym wejściem renderera.
 Pola szkicu wymagają osłony obejmującej natywne nasłuchy capture i planowanie
 autosave, nie tylko innych identyfikatorów i zatrzymania zdarzeń na polu.
+
+## Informacja do wydania: „To różne dzieci”
+
+Ukrycie grupy podobnych nazwisk jest teraz zapamiętywane osobno dla każdego
+konta, w tej samej przeglądarce na tym samym urządzeniu. Decyzja jest
+szyfrowana istniejącym sejfem i nie podlega synchronizacji ani kopiom
+zapasowym. W trybie jednorazowym oraz chmurowym obowiązuje tylko przez czas
+życia natywnej sesji przeglądarki. Brak obsługi zapisu w przeglądarce lub
+błąd zapisu pozostawia grupę widoczną z możliwością ponowienia.
+
+Wcześniej ukryte grupy mogą pojawić się ponownie: stare decyzje nie były
+przypisane do konta, więc zostały wyzerowane i można ponownie wybrać
+„To różne dzieci” na właściwym koncie. Rekordy pacjentów, ich identyfikatory,
+notatki, obliczenia, interpretacje kliniczne i pliki PDF pozostają bez zmian.
+Należy odświeżyć wszystkie otwarte karty aplikacji; karta ze starszą wersją
+może odtworzyć dawny wpis, gdy nie działa już żadna zaktualizowana karta.

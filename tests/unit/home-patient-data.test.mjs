@@ -54,6 +54,31 @@ function fixture(overrides = {}) {
 const read = (vault, isCurrent = () => true) => w.VildaHomePatientData.read({ vault, patientId: pid, isCurrent });
 
 describe('home patient: native saved documentation projection', () => {
+  it('matches native diary category exclusion for two real serialized versions and unreadable journal records', async () => {
+    vm.runInContext(source('vilda_cykle_leczenia.js'), vm.createContext(w));
+    const diary = w.VildaDziennikOtylosci;
+    const data = { type: 'continue', dateISO: '2026-11-10', ageYears: 13, ageMonths: 7,
+      weight: 74.6, weightSource: 'pacjent', height: null, drug: 'Wegovy', dose: '2,4 mg' };
+    const first = diary.planNowego(diary.zloz([], []), pid, data);
+    const notes = first.wersje.map(version => diary.zakoduj(pid, version));
+    const corrected = diary.planPoprawki(diary.zloz(notes, []), pid, first.entryId, { ...data, weight: 74.1 });
+    notes.push(...corrected.wersje.map(version => diary.zakoduj(pid, version)));
+    expect(notes).toHaveLength(2);
+    expect(diary.zloz(notes, []).wpisy).toHaveLength(1);
+    for (const note of notes) {
+      expect(note.treatmentContext).toBeUndefined();
+      note.updatedAtISO = '2026-12-01T12:00:00Z';
+    }
+    notes.push({ id: 'fictional-unreadable-journal', patientId: pid, category: 'leczenie-otylosci',
+      body: 'Fikcyjny nieczytelny wpis dziennika', updatedAtISO: '2026-12-02T12:00:00Z' });
+    const ordinary = baseNotes.slice(), baseline = await read(fixture());
+    baseNotes = notes.concat(ordinary);
+    const before = JSON.stringify(baseNotes), result = await read(fixture());
+    expect(result.currentNotes).toEqual(baseline.currentNotes);
+    expect(result.counts.notes).toBe(baseline.counts.notes);
+    expect(result.latestNote).toEqual(baseline.latestNote);
+    expect(JSON.stringify(baseNotes)).toBe(before);
+  });
   it('projects the first-open active treatment subtitle from saved documents without counting a closed episode', async () => {
     var therapy = w.VildaPatientTreatmentModel.normalize({ schemaVersion: 1, kind: 'therapy',
       title: 'Fikcyjne postępowanie aktywne', method: 'other', status: 'active', diagnosisIds: [], followups: [] });

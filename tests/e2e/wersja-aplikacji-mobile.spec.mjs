@@ -79,8 +79,12 @@ const KONTRAST = () => {
 };
 
 async function gosc(page) {
-  const przycisk = page.getByRole('button', { name: 'Korzystaj bez logowania', exact: true });
-  if ((await przycisk.count()) && (await przycisk.first().isVisible())) await przycisk.first().click();
+  const przycisk = page.getByRole('button', { name: 'Korzystaj bez logowania', exact: true }).first();
+  await expect.poll(async () => (await przycisk.isVisible()) || page.evaluate(() =>
+    !document.documentElement.classList.contains('vilda-auth-locked')
+      && Boolean(window.VildaAuthUI?.isGuestMode() || window.VildaVault?.isUnlocked())))
+    .toBe(true);
+  if (await przycisk.isVisible()) await przycisk.click();
   await page.waitForFunction(() => !document.documentElement.classList.contains('vilda-auth-locked'));
 }
 

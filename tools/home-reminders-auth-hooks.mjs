@@ -1,10 +1,11 @@
 // Optional presentation plumbing over the native reminders actor. The source
 // pairs preserve its readers, category/date rules, actions and native writers.
 import { createHash } from 'node:crypto';
+import { reverseBscAuthHooks } from './account-duplicate-dismissals-auth-hooks.mjs';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-export const HOME_REMINDERS_AUTH_BASE_SHA256 = 'f493d3850028758156fd78dbd96abef5a811b16324e5763afd8dc695838d5f50';
+export const HOME_REMINDERS_AUTH_BASE_SHA256 = '2cf61af7dc6ee9bf7fd83f717d6edbf72f46a427c33d9238b2860376b23ecf24';
 const target = fileURLToPath(new URL('../vilda_auth_ui.js', import.meta.url));
 const digest = value => createHash('sha256').update(value).digest('hex');
 const HELPERS = `/* BEGIN HOME REMINDERS PRESENTATION ELIGIBILITY
@@ -605,7 +606,7 @@ export function reverseHomeRemindersHooks(source) {
 export function verifyHomeRemindersHooks(source) {
   if (applyHomeRemindersHooks(source) !== source) throw new Error('Home reminders hooks are not applied.');
   const base = reverseHomeRemindersHooks(source);
-  if (digest(base) !== HOME_REMINDERS_AUTH_BASE_SHA256) throw new Error('Native AuthUI base differs after reversing only the presentation hooks.');
+  if (digest(base.includes('/* BEGIN ACCOUNT DUPLICATE DISMISSALS V2') ? reverseBscAuthHooks(base) : base) !== HOME_REMINDERS_AUTH_BASE_SHA256) throw new Error('Native AuthUI base differs after reversing only the presentation hooks.');
   if (applyHomeRemindersHooks(base) !== source) throw new Error('Home reminders replay differs.');
   return { source, base, sha256: digest(source) };
 }

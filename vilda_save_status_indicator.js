@@ -143,7 +143,7 @@ function decisionOwnSaveAutomaticPalReference(value,owner,reference,rawReference
   }catch{return reference}
 }
 function readCurrentDecision(afterSave){
-  var owner,generation=statusGeneration,state=i.HIDDEN,reference=null,fingerprint=null,ready=false;
+  var owner,generation=statusGeneration,state=i.HIDDEN,reference=null,fingerprint=null,ready=false,readAt=Date.now();
   try{
     owner=decisionOwner();
     if(owner.guest||!owner.unlocked){ready=true}
@@ -167,8 +167,32 @@ function readCurrentDecision(afterSave){
     }
   }catch{ready=false}
   var scope=Object.freeze({});
-  decisionScopes.set(scope,{owner:owner,generation:generation,reference:reference,fingerprint:fingerprint,ready:ready,state:state});
+  decisionScopes.set(scope,{owner:owner,generation:generation,reference:reference,fingerprint:fingerprint,ready:ready,state:state,readAt:readAt});
   return Object.freeze({ready:ready,state:state,scope:scope});
+}
+// P-WIZYTA-PRZYDZIAL (2026-11-19): the read-only decision never allocates an
+// encounter, but autosave and the status checks do (VildaVisitContext.capture)
+// as soon as the form holds patient data. If that first allocation lands while
+// the unsaved-changes dialog is open, the doctor changed nothing, yet the exact
+// comparison reported "Formularz zmienił się" and cancelled the action (e.g. the
+// Terminarz → DocPro GH jump). Only this one difference is accepted: the decision
+// had no visit, the live form now has a new explicit visit of the same patient,
+// created after the decision was read, and everything else is identical. A
+// loaded, replaced or foreign visit and any field edit stay a changed form.
+// "Same patient" includes an unbound visit (patientId still null), which the
+// collector allocates when the form is not tied to the loaded record yet.
+function decisionOnlyAllocatedVisit(original,current){
+  try{
+    if(typeof original.fingerprint!=="string"||typeof current.fingerprint!=="string")return false;
+    var before=JSON.parse(original.fingerprint),after=JSON.parse(current.fingerprint);
+    if(!before||!after||!before.core||!after.core||Object.prototype.hasOwnProperty.call(before.core,"visit"))return false;
+    var visit=decisionClinicalVisit(after.core);
+    // An unbound visit (no patient yet: the form is not tied to the loaded record) claims no patient.
+    if(!visit||visit.origin!=="explicit"||visit.patientId!=null&&visit.patientId!==(original.owner&&original.owner.patientId||null))return false;
+    if(!(typeof original.readAt==="number"&&Date.parse(visit.createdAtISO)>=original.readAt))return false;
+    delete after.core.visit;
+    return JSON.stringify(te(after))===JSON.stringify(te(before));
+  }catch{return false}
 }
 function getCurrentDecision(){return readCurrentDecision(false)}
 function isCurrentDecision(scope){
@@ -176,7 +200,7 @@ function isCurrentDecision(scope){
   if(!original||!original.ready)return false;
   var latest=readCurrentDecision(false),current=decisionScopes.get(latest.scope);
   return latest.ready&&sameDecisionOwner(original.owner,current.owner)&&original.generation===current.generation&&
-    original.reference===current.reference&&original.fingerprint===current.fingerprint;
+    original.reference===current.reference&&(original.fingerprint===current.fingerprint||decisionOnlyAllocatedVisit(original,current));
 }
 function isCurrentDecisionOwner(scope){
   var original=decisionScopes.get(scope);
@@ -184,7 +208,7 @@ function isCurrentDecisionOwner(scope){
   try{return sameDecisionOwner(original.owner,decisionOwner())}catch{return false}
 }
 function decisionContentAfterSave(original,current,receipt){
-  if(original.fingerprint===current.fingerprint&&current.reference===current.fingerprint)return true;
+  if((original.fingerprint===current.fingerprint||decisionOnlyAllocatedVisit(original,current))&&current.reference===current.fingerprint)return true;
   // The actual new-patient save binds this existing examination to its new PID.
   // Only that confirmed handoff may add its owner on detached comparisons.
   if(!receipt||receipt.saved!==true||original.owner.patientId!==null||original.state!==i.NEW_PATIENT)return false;

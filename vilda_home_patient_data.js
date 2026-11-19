@@ -55,6 +55,7 @@
     if (!Array.isArray(projected)) throw failure('HOME_PATIENT_NOTES_PROJECTION_INVALID');
     return projected.filter(function (note) { return note && note.patientId === patientId && !note.ghPointId
       && !Object.prototype.hasOwnProperty.call(note, 'treatmentContext')
+      && note.category !== 'leczenie-otylosci'
       && !labHistory.isResultNote(note) && !labHistory.isClcrResultNote(note); })
       .map(function (note) {
         return {

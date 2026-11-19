@@ -47,6 +47,8 @@ jobs:
           cache: npm
       - name: Zainstaluj zależności
         run: npm ci
+      - name: Przygotuj dowód opublikowanej historii precache
+        run: node tests/scripts/prepare-published-precache-history.mjs
       - name: Uruchom kontrole bez przeglądarki
         run: npm test
       # P-WERSJE-CI: dwa wątki mogą scalić ten sam SW_VERSION bez konfliktu (#591, #594, #595).

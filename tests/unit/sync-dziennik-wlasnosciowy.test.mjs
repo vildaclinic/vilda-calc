@@ -293,6 +293,10 @@ zaladowanieSejfu(zRejestrem); // urządzenia katalogu p. 5 (s4d7-wspolne.mjs)
 // E2_AB_WYROCZNIA=plik — naruszenia wyroczni (JSONL: punkty z naruszeniami i podsumowania ziaren); E2_AB_SCISLE=1 —
 // tryb ścisły (ręczny; TRYB ŚCISŁY w nagłówku). Czas wyroczni (zapis historii, widoki, ocena) — druk w afterAll.
 const WYR_PLIK = process.env.E2_AB_WYROCZNIA || '';
+// E3-PR0c (odsyłanie poprawionych wizyt): E2_AB_ECHO=1 — przełącznik odsyłania włączony na każdym urządzeniu każdego
+// świata (ręczne długie przebiegi; literały przebiegu domyślnego tylko bez niego); świat z S.echo — tylko ten świat.
+const ECHO_WSZYSTKIE = process.env.E2_AB_ECHO === '1';
+const zEchem = (S) => !!(S && (S.echo || ECHO_WSZYSTKIE));
 const SCISLE = process.env.E2_AB_SCISLE === '1';
 const WYR_CZAS = { zapis: 0, widoki: 0, ocena: 0, ocen: 0 };
 // Widoki urządzeń na żywo z własnym Math.random na czas odczytu (program ziarna bez zmian — jak kr_cicho, także
@@ -618,7 +622,7 @@ async function urzadzenie(S, nazwa, zBlizniaka = null, { dodatki = {}, app = nul
   let lancuch = null;
   const d = await utworzUrzadzenie({
     atrapa: S.atrapa, nazwa: `${nazwa}-${S.nrUrz}`, zBlizniaka: zBlizniaka ? zBlizniaka.d : undefined, sync: false,
-    rejestrMagazynu: false, haslo: HASLO_POCZATKOWE, dodatki: { crypto: kryptoZiarna(S.ziarno * 7919 + S.nrUrz), ...dodatki },
+    rejestrMagazynu: false, haslo: HASLO_POCZATKOWE, dodatki: { crypto: kryptoZiarna(S.ziarno * 7919 + S.nrUrz), ...(zEchem(S) ? { VILDA_EVENT_ECHO: true } : {}), ...dodatki },
     zrodla: sejf === 'N' ? { 'vilda_vault.js': (win) => { lancuch = zRejestrem(win); } } : zrodlaStarszej(sejf, { retencja: ret, lancuch: (l) => { lancuch = l; } }),
   });
   const U = { d, v: d.vault, ev: d.vault._eventLog, app: sejf, retencja: ret, nazwa, Q: [], setIds: new Set(), stan: null, usuniete: new Set(), znaneNotatki: new Map(), lancuch };
@@ -788,15 +792,16 @@ function porownaj(S, U, opis, model, emitery, wpisy) {
 // Karta notatki w kopercie pnote (model haków: hak karty notatki od E2-PR3c4); dla pozostałych kopert undefined.
 const kartaKoperty = (k) => (k.event.kind === 'pnote' && Array.isArray(k.patientNotes) && k.patientNotes[0] ? k.patientNotes[0].patientId : undefined);
 // Przy liczniku odsyłania (S.odsyl, E3-PR0b) wpis Q ma też jawną kopię koperty (jaw) — ładunek echa u odbiorcy.
-async function doKolejki(S, U, k) {
+// E3-PR0c: src — 'echo' dla koperty odsyłania poprawionej wizyty (wpis Q z polem src; jawna kopia także przy S.echo).
+async function doKolejki(S, U, k, src = null) {
   if (U.jawnie) { // katalog p. 5: osobne konta, koperta jawna (bez szyfrowania — szyfrowanie pokrywa W3)
     U.Q.push(Object.freeze({ kind: k.event.kind, key: k.event.key, atISO: k.event.atISO, pid: kartaKoperty(k), k: Object.freeze(json(k)) }));
     S.stat.zdarzen += 1;
     return;
   }
-  if (S.koalescencja === 'ogon') { await doKolejkiOgon(S, U, Array.isArray(k) ? k : [k]); return; }
+  if (S.koalescencja === 'ogon') { await doKolejkiOgon(S, U, Array.isArray(k) ? k : [k], src); return; }
   const { env } = await U.ev.encryptEvent(k);
-  U.Q.push(Object.freeze({ kind: k.event.kind, key: k.event.key, atISO: k.event.atISO, pid: kartaKoperty(k), env: Object.freeze(env), ...(S.odsyl ? { jaw: Object.freeze(json(k)) } : {}) }));
+  U.Q.push(Object.freeze({ kind: k.event.kind, key: k.event.key, atISO: k.event.atISO, pid: kartaKoperty(k), env: Object.freeze(env), ...(S.odsyl || zEchem(S) ? { jaw: Object.freeze(json(k)) } : {}), ...(src ? { src } : {}) }));
   S.stat.zdarzen += 1;
 }
 // Kolejka z łączeniem wpisów (S.koalescencja === 'ogon', E2-PR2b): wpisy nigdy niedostarczone (indeks ≥ U.wyslane) są
@@ -811,11 +816,11 @@ function zKoalescencja(S) {
   Object.assign(S.stat, { koal: 0, koalWierszy: 0, koalPominiete: 0 });
   return S;
 }
-async function doKolejkiOgon(S, U, koperty) {
+async function doKolejkiOgon(S, U, koperty, src = null) {
   const nowe = [];
   for (const k of koperty) {
     const { env } = await U.ev.encryptEvent(k);
-    nowe.push(Object.freeze({ kind: k.event.kind, key: k.event.key, atISO: k.event.atISO, pid: kartaKoperty(k), env: Object.freeze(env), setId: k.event.full ? k.event.full.setId : null, ...(S.odsyl ? { jaw: Object.freeze(json(k)) } : {}) }));
+    nowe.push(Object.freeze({ kind: k.event.kind, key: k.event.key, atISO: k.event.atISO, pid: kartaKoperty(k), env: Object.freeze(env), setId: k.event.full ? k.event.full.setId : null, ...(S.odsyl || zEchem(S) ? { jaw: Object.freeze(json(k)) } : {}), ...(src ? { src } : {}) }));
     S.stat.zdarzen += 1;
   }
   S.kolejkaLog.push([U.nazwa, nowe[0].kind, nowe[0].key, nowe.length, nowe[0].setId]);
@@ -996,20 +1001,31 @@ function porownajHaki(S, Y, partia, model, emitery, wpisy, po) {
 // po partii (null — bez koperty, wyjątek buildera — błąd testu), porównanie z modelem (AB7; stany — eksporty odbiorcy po
 // każdym zdarzeniu partii, dla H2 zdarzenie po zdarzeniu), do Q_Y — koperty emiterów (porcje zestawu pfull razem przy
 // łączeniu wpisów, jak jedno enqueue). Wynik — dopisane koperty (porcje po kolei).
-async function haki(S, Y, partia, przed, po, stany = null) {
+// E3-PR0c: przy włączonym przełączniku odsyłania (zEchem) wpisy snap rejestru z zastosowania partii to odsyłanie
+// poprawionych wizyt (echo) — poza modelem haków; ich koperty porównuje model odsyłania (porownajEcho), do Q_Y idą
+// z src 'echo' w kolejności rejestru (jak łańcuch konta). Przy wyłączonym — każdy wpis porównuje model haków (AB7), więc
+// wpis snap z zastosowania partii jest niezgodnością. stanyEcha — eksporty odbiorcy przed partią i po każdym zdarzeniu.
+// Odbiorca ze starszą aplikacją (sejf 276, flota) nie ma odsyłania — także przy włączonym przełączniku jego wpisy
+// porównuje model haków, jak przy wyłączonym.
+async function haki(S, Y, partia, przed, po, stany = null, stanyEcha = null) {
   const wpisy = Y.lancuch.splice(0).filter((z) => !z.znacznik && z.uid === po.userId);
+  const echo = zEchem(S) && Y.app === 'N';
+  const jestEcho = (z) => echo && z.kind === 'snap';
   const model = hakiModelu(Y, partia, przed, po, stany);
-  const emitery = [];
+  const zbudowane = [];
   for (const z of wpisy) {
     let k;
     try { k = await zbuduj(Y, encjaWpisu(z)); } catch (x) { throw new Error(`AB7: builder wpisu rejestru ${opisWpisu(z)} po partii na ${Y.nazwa} → wyjątek ${x && (x.code || x.message)}`); }
-    if (k && (!Array.isArray(k) || k.length)) emitery.push(k);
+    if (k && (!Array.isArray(k) || k.length)) zbudowane.push({ k, echo: jestEcho(z) });
   }
-  const w = porownajHaki(S, Y, partia, model, emitery, wpisy, po);
+  const emitery = zbudowane.filter((x) => !x.echo).map((x) => x.k);
+  const w = porownajHaki(S, Y, partia, model, emitery, wpisy.filter((z) => !jestEcho(z)), po);
   HAKI_PLIK.porownan += 1;
   HAKI_PLIK[w === 'rowne' ? 'zgodnych' : w] += 1;
+  if (echo) { S.partiaEcha = (S.partiaEcha || 0) + 1; porownajEcho(S, Y, partia, stanyEcha || [przed, po], po, zbudowane.filter((x) => x.echo).map((x) => x.k)); }
   const dodane = [];
-  for (const k of emitery) {
+  for (const { k, echo: e } of zbudowane) {
+    if (e) { await doKolejki(S, Y, k, 'echo'); dodane.push(k); S.stat.echo = (S.stat.echo || 0) + 1; zapiszWyslanieEcha(S, Y, k); continue; }
     if (Array.isArray(k)) {
       if (S.koalescencja) { await doKolejki(S, Y, k); dodane.push(...k); } // zestaw razem
       else for (const x of k) { await doKolejki(S, Y, x); dodane.push(x); }
@@ -1017,6 +1033,51 @@ async function haki(S, Y, partia, przed, po, stany = null) {
     } else { await doKolejki(S, Y, k); dodane.push(k); S.stat.h2 += 1; }
   }
   return dodane;
+}
+
+// ── Model haków i odsyłania (E3-PR0c) ── wiersze modelu odsyłania partii: LO.modelEcha zdarzenie po zdarzeniu (stany
+// partii; tylko koperty zdarzeń — z polem event), bez odejmowania haków, tylko wersja leżąca po całej partii pod kartą
+// wiersza (builder snap działa po partii, jak karty po partii przy H1). Porównanie z kopertami echa z rejestru: ten sam
+// ciąg kluczy (rodzaj:klucz) po posortowaniu; wiersz modelu spoza kandydatów ładunku — niezgodność (strażnik
+// kandydatów). Niezgodność — wyjątek z opisem i wpis w HAKI_NIEZGODNE (afterEach wymaga pustej listy). Przy liczniku
+// odsyłania (S.odsyl) — warstwa „odesłane” (L.zapiszOdeslane).
+function modelOdsylania(partia, stany, po) {
+  const karty = new Map();
+  for (const p of po.patients || []) for (const q of p.snapshots || []) karty.set(q.snapshotId, p.patientId);
+  const wiersze = [];
+  const spoza = [];
+  for (const [i, e] of partia.entries()) {
+    if (!e.jaw || !stany[i] || !stany[i + 1]) continue;
+    const m = LO.modelEcha(stany[i], stany[i + 1], e.jaw);
+    spoza.push(...m.spoza);
+    wiersze.push(...m.wiersze.filter((r) => karty.get(String(r.key).split('/')[1]) === r.pid));
+  }
+  return { wiersze, spoza };
+}
+function porownajEcho(S, Y, partia, stany, po, koperty) {
+  if (partia.length + 1 !== stany.length) throw new Error(`model odsyłania: ${stany.length} stanów na ${partia.length} zdarzeń partii (${Y.nazwa})`);
+  const { wiersze, spoza } = modelOdsylania(partia, stany, po);
+  const klucze = (l) => l.slice().sort();
+  const emit = klucze(koperty.map((k) => `${k.event.kind}:${k.event.key}`));
+  const mod = klucze(wiersze.map((r) => r.k));
+  if (!S.stat.odsylanie) S.stat.odsylanie = { porownan: 0, wierszy: 0 };
+  S.stat.odsylanie.porownan += 1;
+  S.stat.odsylanie.wierszy += wiersze.length;
+  if (S.odsyl) S.odsyl.zapiszOdeslane('zdarzenie', koperty, wiersze, `#${S.nrKroku || 0} ${Y.nazwa}`);
+  if (!spoza.length && JSON.stringify(emit) === JSON.stringify(mod)) return;
+  const tekst = `model haków i odsyłania: echo sejfu ≠ model — ${Y.nazwa} po partii [${partia.map((x) => `${x.kind} ${x.key}`).join(', ')}]${S.ziarno != null ? ` (ziarno ${S.ziarno}, krok ${S.nrKroku || 0})` : ''}\n  model: ${mod.join(', ') || '(pusty)'}\n  sejf: ${emit.join(', ') || '(pusty)'}${spoza.length ? `\n  spoza kandydatów: ${spoza.map((r) => r.k).join(', ')}` : ''}`;
+  HAKI_NIEZGODNE.push(tekst);
+  throw new Error(tekst);
+}
+// Ponowne wysłanie tej samej wartości przez to samo urządzenie (klucz encji i kanon 2a wersji) w późniejszej partii —
+// S.stat.echoPowtorzenia. W jednej partii dwa zdarzenia, które zmieniły tę samą wersję, dają dwa wpisy rejestru, a uprząż
+// buduje koperty po partii (obie z tą samą treścią; w sejfie łączy je Bob_plan) — to nie jest ponowne wysłanie.
+function zapiszWyslanieEcha(S, Y, k) {
+  if (!S.echoWyslane) S.echoWyslane = new Map();
+  const w = (((k.patients || [])[0] || {}).snapshots || [])[0];
+  const klucz = `${Y.nazwa}|${k.event.kind}:${k.event.key}|${JSON.stringify(sortuj(LO.kanon2a('snap', json(w || null))))}`;
+  if (S.echoWyslane.has(klucz) && S.echoWyslane.get(klucz) < S.partiaEcha) S.stat.echoPowtorzenia = (S.stat.echoPowtorzenia || 0) + 1;
+  if (!S.echoWyslane.has(klucz)) S.echoWyslane.set(klucz, S.partiaEcha);
 }
 
 // Dostawa X→Y: FIFO-prefiks od kursora (losowa tylko długość k), powtórka = cofnięcie kursora o r i ponowne
@@ -1040,10 +1101,11 @@ async function dostawa(S, X, Y, { k = Infinity, cofnij = 0, haki: zHakami = true
   // po każdym zdarzeniu (te same zastosowania, w tej samej kolejności; eksport nie zmienia stanu ani losowań).
   // E3-PR0b: licznik odsyłania liczy echo zdarzenie po zdarzeniu, więc przy S.odsyl stany są zawsze; model haków dostaje
   // je jak dotąd (tylko przy hakach i partii z więcej niż jednym zdarzeniem).
+  // E3-PR0c: przy włączonym przełączniku odsyłania stany po każdym zdarzeniu zawsze (model odsyłania zdarzenie po zdarzeniu).
   const stanyH = zHakami && partia.length > 1;
-  const stany = stanyH || S.odsyl ? [przed] : null;
+  const stany = stanyH || S.odsyl || zEchem(S) ? [przed] : null;
   // czas eksportów robionych tylko dla licznika (bez modelu haków) — S.odsyl.msDodatkowe (druk)
-  if (stany) for (const e of partia) { await zastosuj(Y, [e]); const t0 = performance.now(); stany.push(await eksport(Y)); if (!stanyH) S.odsyl.msDodatkowe.eksportyDostawy += performance.now() - t0; }
+  if (stany) for (const e of partia) { await zastosuj(Y, [e]); const t0 = performance.now(); stany.push(await eksport(Y)); if (!stanyH && S.odsyl) S.odsyl.msDodatkowe.eksportyDostawy += performance.now() - t0; }
   else await zastosuj(Y, partia);
   S.kursor.set(nazwa, c + partia.length);
   const wyslane = Math.max(X.wyslane || 0, c + partia.length);
@@ -1051,7 +1113,7 @@ async function dostawa(S, X, Y, { k = Infinity, cofnij = 0, haki: zHakami = true
   X.wyslane = wyslane;
   const po = stany ? stany[stany.length - 1] : await eksport(Y);
   let dodane = [];
-  if (zHakami) dodane = await haki(S, Y, partia, przed, po, stanyH ? stany : null);
+  if (zHakami) dodane = await haki(S, Y, partia, przed, po, stanyH ? stany : null, stany);
   else Y.lancuch.length = 0; // bez haków: wpisy haków tej partii pominięte
   ustawStan(Y, po);
   if (S.odsyl) await poPartiiOdsyl(S, X, Y, partia, stany, dodane);
@@ -1153,8 +1215,9 @@ async function kategorieW2s(Y, X, partia, e1, e2, k1, k2, profil, czytajKosz, do
 }
 
 // Punkt spoczynku: pełne dostawy w obie strony z hakami, aż obie kolejki są dostarczone i haki nic nie dodały (≤ 4 rundy).
+// E3-PR0c: przy włączonym przełączniku odsyłania limit 6 obiegów dostaw (echo i echo echa mają własne obiegi).
 async function spoczynek(S, A, B, { w2s = S.w2s !== false } = {}) {
-  for (let r = 1; r <= 4; r += 1) {
+  for (let r = 1; r <= (zEchem(S) ? 6 : 4); r += 1) {
     await dostawa(S, A, B, { w2s });
     await dostawa(S, B, A, { w2s });
     if (kursor(S, A, B) === A.Q.length && kursor(S, B, A) === B.Q.length) return r;
@@ -1605,7 +1668,15 @@ describe('A ≡ B, emitery i model: porównanie w mutacji, kopia z rejestrem ła
     expect([ile(ZRODLO_SEJFU, tryb), ile(ZRODLO_SEJFU, lancuch)], 'kotwice w sejfie: dokładnie raz').toEqual([1, 1]);
     expect([ile(ZRODLO_EMITEROW, tryb), ile(ZRODLO_EMITEROW, 'if (!T()) return;'), ile(ZRODLO_EMITEROW, `${lancuch} __testEmisji.lancuch(z); return;`)],
       'kopia: warunek trybu zdjęty, rejestr na początku Bem_doLancucha').toEqual([0, 1, 1]);
-    expect(ZRODLO_EMITEROW.replace('if (!T()) return;', tryb).replace(' __testEmisji.lancuch(z); return;', '') === ZRODLO_SEJFU, 'kopia = sejf poza dwoma miejscami').toBe(true);
+    // E3-PR0c: trzecie miejsce, gdy sejf ma odsyłanie poprawionych wizyt — warunek kolejki w Bem_zastosujEcho zdjęty jak
+    // warunek trybu w Bem_zmiana (urządzenia uprzęży nie są w trybie „Komputer prywatny”).
+    const kolejkaEcha = 'if (Bem_kolejka()) return Bev_zastosuj(env);';
+    const zEcha = ile(ZRODLO_SEJFU, kolejkaEcha) === 1;
+    expect([ile(ZRODLO_EMITEROW, kolejkaEcha), ile(ZRODLO_EMITEROW, 'if (!T()) return Bev_zastosuj(env);')], 'kopia: warunek kolejki odsyłania zdjęty (tylko w sejfie z odsyłaniem)').toEqual([0, zEcha ? 1 : 0]);
+    let odtworzona = ZRODLO_EMITEROW.replace('if (!T()) return;', tryb).replace(' __testEmisji.lancuch(z); return;', '');
+    if (zEcha) odtworzona = odtworzona.replace('if (!T()) return Bev_zastosuj(env);', kolejkaEcha);
+    expect(odtworzona === ZRODLO_SEJFU, `kopia = sejf poza ${zEcha ? 'trzema' : 'dwoma'} miejscami`).toBe(true);
+    if (zEcha) expect(() => zRejestremLancucha(ZRODLO_SEJFU.replace(kolejkaEcha, `${kolejkaEcha} ${kolejkaEcha}`)), 'kotwica odsyłania dwa razy').toThrow(/więcej niż raz/);
     expect(() => parse(ZRODLO_EMITEROW, { ecmaVersion: 'latest', sourceType: 'script' }), 'kopia parsuje się').not.toThrow();
     const sprzed = readFileSync(path.join(repoRoot, 'tests/fixtures/vilda_vault-221.js.txt'), 'utf8');
     expect(() => zRejestremLancucha(sprzed), 'sejf bez części emisji').toThrow(/kopia z rejestrem łańcucha/);
@@ -3910,7 +3981,7 @@ const START_ZIAREN = Number(process.env.E2_AB_START) || 1;
 const ZIARNA = Array.from({ length: ILE_ZIAREN }, (_, i) => START_ZIAREN + i);
 const KROKI = Number(process.env.E2_AB_KROKI) || 0;
 // E2_AB_WYNIKI=plik — wynik każdego ziarna (liczniki, różnice, dziennik operacji) dopisywany jako JSONL (pomiar).
-const WYNIKI = { podstawowy: [], pelny: [], 'podstawowy:ogon': [], 'pelny:ogon': [], 'bez-polaczenia': [], determinizm: [] };
+const WYNIKI = { podstawowy: [], pelny: [], 'podstawowy:ogon': [], 'pelny:ogon': [], 'bez-polaczenia': [], determinizm: [], odsylanie: [] };
 const wybierz = (los, lista) => lista[Math.floor(los() * lista.length)];
 const masa = (los) => 15 + Math.floor(los() * 300) / 10;
 // Mutacje profilu podstawowego (projekt.md 7.4): zapis karty i nowej wersji, poprawka w miejscu (preserveSavedAt),
@@ -4150,10 +4221,11 @@ async function punktSpoczynku(S, A, B, { ostatni = false } = {}) {
 // E3-PR0b: odsyl — licznik odsyłania (domyślnie ODSYL: włączony, E2_AB_ODSYL=0 wyłącza); kroki — liczba mutacji zamiast
 // liczby z ziarna (losowanie liczby z ziarna i tak się wykonuje, więc to początek tego samego programu); slad — zwrócony
 // wynik ma też dziennik operacji i eksporty końcowe (przebieg „determinizm”; ślad nie trafia do WYNIKI ani do JSONL).
-async function przebiegZiarna(ziarno, profil, { koalescencja = null, w2s = true, dostawa: pDostawy = 0.3, spoczynek: pSpoczynku = 1 / 25, nazwa = null, odsyl = ODSYL, kroki = 0, slad = false } = {}) {
+async function przebiegZiarna(ziarno, profil, { koalescencja = null, w2s = true, dostawa: pDostawy = 0.3, spoczynek: pSpoczynku = 1 / 25, nazwa = null, odsyl = ODSYL, kroki = 0, slad = false, echo = false } = {}) {
   const t0 = performance.now();
   const S = swiat(ziarno + (profil === 'pelny' ? 100000 : 0));
   S.profil = profil;
+  if (echo) S.echo = true; // E3-PR0c: przełącznik odsyłania na urządzeniach tego świata
   if (odsyl) S.odsyl = nowyLicznik();
   if (koalescencja) zKoalescencja(S);
   if (!w2s) S.w2s = false;
@@ -4457,7 +4529,7 @@ const ODSYL = process.env.E2_AB_ODSYL !== '0';
 const ODSYL_REGULA = process.env.E2_AB_ODSYL_REGULA || 'T';
 const WYK = 'wyk' + ODSYL_REGULA;
 const DEV_FIKCYJNY = 'abcdefgh';
-const ODSYL_WYNIKI = { podstawowy: [], pelny: [], 'podstawowy:ogon': [], 'pelny:ogon': [], 'bez-polaczenia': [], determinizm: [] };
+const ODSYL_WYNIKI = { podstawowy: [], pelny: [], 'podstawowy:ogon': [], 'pelny:ogon': [], 'bez-polaczenia': [], determinizm: [], odsylanie: [] };
 const nowyLicznik = () => LO.nowyLicznikOdsylania({ regula: ODSYL_REGULA, rekordZlozony });
 // Izolacja pomiaru licznika (wzór kr_cicho, ale bez S.nrPomiaru): własny Math.random (S.losAlt) i numery klonów od
 // 5 000 000 na czas fn; licznik urządzeń przywracany.
@@ -6486,6 +6558,44 @@ function ddUsunZwrocona(kolejnosc, app = 'N') {
     naprawa: 'do naprawy w E3-PR0e (decyzja właściciela 4a)',
   };
 }
+// „Usuń pacjenta” zwróconej starej karty na urządzeniu, które samo ją scaliło (ta sama rodzina; odtworzenie ciągu
+// operacji profilu pełnego, ziarno 8, przy włączonym przełączniku odsyłania — ten sam ciąg bez odsyłania daje to samo,
+// więc przyczyna nie leży w odsyłaniu). Baza ddDwieKarty (A — karta Y z wizytą a i karta X z wizytą v; B i C —
+// bliźniaki). B bez wiedzy o scaleniu zapisuje w X nową wizytę b; A scala X → Y, nie znając b; B, nadal bez wiedzy
+// o scaleniu, zapisuje w X nową wizytę w. Dostawa B → A: b jest starsza od nagrobka X ze scalenia (zostaje odrzucona),
+// w jest późniejsza, więc X wraca na A z w (D-4 A: duplikat karty). Dostawa A → B: nagrobek X przegrywa na B z w (karta
+// zostaje, hak H1 — pełna karta X z b i w). B daje b gwiazdkę; dostawa B → A wnosi pełną kartę X, więc A ma znów X z b
+// i w. A poprawia w (38,8 kg) i usuwa zwróconą kartę X („Usuń pacjenta”) — razem z b i w, których nie ma w karcie
+// scalonej Y. Wyrocznia: b i w (przez alias „Scal pacjentów” X → Y) mają żyć w Y; po nagrobku X nie ma ich na żadnym
+// urządzeniu („utrata” w W1 i W4).
+function ddUsunZwroconaScalajacy() {
+  return {
+    baza: (S) => ddDwieKarty(S),
+    kroki: async (u) => {
+      const { S, A, B, C } = u;
+      krok(60e3); u.b = (await mutacja(S, B, 'nowa wersja 5 → b (bez wiedzy o scaleniu)', () => B.d.zapiszKarte(5, { wzrost: 103, masa: 21.4, zapis: { patientId: u.X, forceNewSnapshot: true } }))).wynik.snapshotId;
+      u.n.set(u.b, 'b');
+      krok(60e3); await mutacja(S, A, 'Scal pacjentów 5 → 3', () => A.v.mergePatients(u.X, u.Y));
+      krok(60e3); u.w = (await mutacja(S, B, 'nowa wersja 5 → w (bez wiedzy o scaleniu)', () => B.d.zapiszKarte(5, { wzrost: 146, masa: 40.9, zapis: { patientId: u.X, forceNewSnapshot: true } }))).wynik.snapshotId;
+      u.n.set(u.w, 'w');
+      krok(60e3); await ddDo(u, B, A);
+      krok(60e3); await ddDo(u, A, B);
+      krok(60e3);
+      const sb = (await B.v.getPatient(u.X)).snapshots.find((q) => q.snapshotId === u.b);
+      await mutacja(S, B, 'gwiazdka 5/b', () => B.v.setSnapshotPinned(u.X, u.b, !sb.pinned));
+      krok(60e3); await ddDo(u, B, A);
+      krok(60e3);
+      const sw = (await A.v.getPatient(u.X)).snapshots.find((q) => q.snapshotId === u.w);
+      await mutacja(S, A, 'poprawka 5/w 38,8 kg', () => A.v.updateSnapshotPayload(u.X, u.w, { ...sw.payload, user: { ...sw.payload.user, weight: 38.8 } }, { preserveSavedAt: true }));
+      u.przedUsun = { b: ddPolozenie(u, u.b), w: ddPolozenie(u, u.w) };
+      krok(60e3); await mutacja(S, A, 'usuń pacjenta 5', () => A.v.removePatient(u.X));
+      krok(60e3); await ddDo(u, A, B); await ddDo(u, A, C); await ddDo(u, B, C);
+      await ddSpoczynek(u);
+    },
+    fakty: (u) => ({ przedUsun: u.przedUsun, koniec: { b: ddPolozenie(u, u.b), w: ddPolozenie(u, u.w) } }),
+    naprawa: 'do naprawy w E3-PR0e (decyzja właściciela 4a)',
+  };
+}
 // Notatka pacjenta zmieniona na dwóch urządzeniach (świat 880, nr 0) — od E3-PR0b2b test wejściowy w CI
 // (NOTATKA_POZNIEJSZA niżej). Numery światów pozostałych przypadków bez zmian (881–884).
 const ddNotatkaBaza = async (S) => {
@@ -6501,6 +6611,7 @@ const ZNANE_USTERKI = {
   '„Usuń pacjenta” zwróconej starej karty po „Scal pacjentów” — B zna tylko scalenie, nagrobek dochodzi do niego przed powrotem karty': { ...ddUsunZwrocona('B bez powrotu'), nr: 2 },
   '„Usuń pacjenta” zwróconej starej karty po „Scal pacjentów” — C dostaje scalenie dopiero po usunięciu': { ...ddUsunZwrocona('C bez scalenia'), nr: 3 },
   '„Usuń pacjenta” zwróconej starej karty po „Scal pacjentów” — B zna tylko scalenie; kontrola: C na 221 (ten sam wynik)': { ...ddUsunZwrocona('B bez powrotu', 'S221'), nr: 4 },
+  '„Usuń pacjenta” zwróconej starej karty po „Scal pacjentów” — usuwa urządzenie, które scaliło; karta wraca z nowymi wizytami zapisanymi bez wiedzy o scaleniu': { ...ddUsunZwroconaScalajacy(), nr: 5 },
 };
 async function ddSwiat(sc, tryb) {
   const nr = sc.nr;
@@ -6801,4 +6912,124 @@ describe.skipIf(!STRES || !ODSYL)('A ≡ B, flota ze starszą aplikacją: stres 
       if (STRES_DOMYSLNY && STRES_ODSYL[wariant]) expect.soft(w.literal, `STRES_ODSYL[„${wariant}”]`).toEqual(STRES_ODSYL[wariant]);
     }, 60_000);
   }
+});
+
+// ══ Odsyłanie poprawionych wizyt (E3-PR0c, P-ZBIEZNOSC-ZDARZEN): test wejściowy i ziarno z włączonym przełącznikiem ══
+// Test wejściowy (przykład 1 i 2 projektu E3-PR0c): świat swiat(930 + nr) i Math.random z rng(0x6930 + nr), nr — 2 ×
+// pozycja wariantu + (przełącznik włączony ? 1 : 0). Baza p6fBaza (A, B, C bieżące; karta P z wizytami v 20 kg
+// i w 21 kg). Program: 1. B poprawia v na 17,2 kg; 2. A daje v gwiazdkę; 3. dostawa B → A; 4. (wariant) retencja karty P
+// na B (recentHours: 0 — B nie zna gwiazdki, v trafia do Kosza wpisem retencji); 5. spoczynek: A–B (spoczynek, ≤ 4 obiegi,
+// przy włączonym przełączniku ≤ 6) albo trzy urządzenia (spoczynekWszystkich, ≤ 6 obiegów). Przełącznik: pole okna
+// VILDA_EVENT_ECHO = true na każdym urządzeniu świata (S.echo, dziedziczą klony). Fakty: v na każdym urządzeniu (masa,
+// gwiazdka, rev), wpis retencji v na B, treść wpisów Q każdego urządzenia (rodzaj, wersja, masa, gwiazdka, rev, echo),
+// liczba obiegów do spoczynku, W1 par. Model haków i odsyłania sprawdza każda partia (porownajEcho). Przy wyłączonym
+// przełączniku — dzisiejszy wynik (strażnik „bez zmian”; zielony z natury); przy włączonym — czerwony na sejfie bez
+// odsyłania (bez echa B zostaje z 20 kg).
+const ODSYLANIE_WARIANTY = [
+  ['z retencją, A–B', { retencja: true, trzy: false }],
+  ['bez retencji, A–B', { retencja: false, trzy: false }],
+  ['trzy urządzenia, z retencją', { retencja: true, trzy: true }],
+];
+async function odsylanieSwiat(nr, { retencja, trzy, echo }) {
+  ustaw(START);
+  const S = swiat(930 + nr);
+  const los = rng(0x6930 + nr);
+  vi.spyOn(Math, 'random').mockImplementation(() => (S.losAlt || los)());
+  S.w2s = false; S.nrKroku = 0; S.wyrSwiat = 'odsylanie';
+  if (echo) { S.echo = true; S.stat.echo = 0; }
+  const u = await p6fBaza(S, 'N');
+  u.S = S;
+  S.nrKroku = 1; await popraw(u, u.B, u.v, 17.2);
+  S.nrKroku = 2; await p6gwiazdka(u, u.A, u.v, true);
+  S.nrKroku = 3; krok(60e3); await dostawa(S, u.B, u.A, { w2s: false });
+  const poDostawie = faktyEcha(u, [u.A]);
+  if (retencja) { S.nrKroku = 4; krok(60e3); await mutacja(S, u.B, 'retencja P', () => u.B.v.pruneSnapshotsForPatient(u.P, { recentHours: 0 })); }
+  const retencjaB = (u.B.stan.snapshotTombstones || []).filter((e) => e.snapshotId === u.v && e.powod === 'retencja').map((e) => (e.payload ? 'z treścią' : 'bez treści'));
+  S.nrKroku = 5; krok(60e3);
+  const obiegi = trzy ? await spoczynekWszystkich(S, [u.A, u.B, u.C]) : await spoczynek(S, u.A, u.B, { w2s: false });
+  const urz = trzy ? [u.A, u.B, u.C] : [u.A, u.B];
+  for (const U of urz) ustawStan(U, await eksport(U));
+  const kolejki = {};
+  for (const U of urz) kolejki[U.nazwa] = await opisKolejki(u, U);
+  return { u, S, obiegi, poDostawie, retencjaB, koniec: faktyEcha(u, urz), kolejki, w1AB: !!(await w1(u.A, u.B)), echo: S.stat.echo || 0, powtorzenia: S.stat.echoPowtorzenia || 0 };
+}
+// Fakty v na urządzeniach: masa, gwiazdka, rev (albo „brak” — v poza kartami).
+function faktyEcha(u, urz) {
+  return Object.fromEntries(urz.map((U) => {
+    const p = gdzie(U, u.v);
+    const s = p && p.snapshots.find((q) => q.snapshotId === u.v);
+    return [U.nazwa, s ? `${s.payload.user.weight} kg${s.payload._pinned ? ' z gwiazdką' : ''}, rev ${s.rev}` : 'brak'];
+  }));
+}
+// Treść wpisów Q urządzenia (odszyfrowana): rodzaj, wersja (etykiety bazy), masa, gwiazdka, rev; echo — „(echo)”.
+async function opisKolejki(u, U) {
+  const et = (k) => String(k).split('/').map((x) => etykieta(u.n, x)).join('/');
+  const out = [];
+  for (const e of U.Q) {
+    const k = await U.v.decryptPayloadForCurrentUser(e.env.iv, e.env.data);
+    const zrodlo = e.src === 'echo' ? ' (echo)' : '';
+    if (k.event.kind === 'snap') {
+      const s = k.patients[0].snapshots[0];
+      out.push(`snap ${et(k.event.key)} ${s.payload.user.weight} kg${s.payload._pinned ? ' z gwiazdką' : ''} rev ${s.rev}${zrodlo}`);
+    } else out.push(`${k.event.kind} ${et(k.event.key)}${zrodlo}`);
+  }
+  return out;
+}
+describe('A ≡ B, odsyłanie poprawionych wizyt (E3-PR0c): test wejściowy — rekord złożony po jednej stronie', () => {
+  d1();
+  for (const [i, [nazwa, opcje]] of ODSYLANIE_WARIANTY.entries()) {
+    for (const echo of [false, true]) {
+      it(`${nazwa}, przełącznik ${echo ? 'włączony' : 'wyłączony'}`, async () => {
+        const r = await odsylanieSwiat(2 * i + (echo ? 1 : 0), { ...opcje, echo });
+        console.log(`E3-AB odsyłanie ${nazwa} ${echo ? 'z echem' : 'bez echa'}`, JSON.stringify({ obiegi: r.obiegi, poDostawie: r.poDostawie, retencjaB: r.retencjaB, koniec: r.koniec, kolejki: r.kolejki, w1AB: r.w1AB, echo: r.echo }));
+        expect(r.poDostawie, 'po dostawie B → A: rekord złożony na A').toEqual({ A: '17.2 kg z gwiazdką, rev 2' });
+        expect(r.retencjaB, 'wpis retencji v na B').toEqual(opcje.retencja ? ['bez treści'] : []);
+        expect(r.obiegi, 'spoczynek').not.toBe(null);
+        const OCZEK = ODSYLANIE_OCZEKIWANE[`${nazwa}|${echo ? 'z echem' : 'bez echa'}`];
+        expect({ koniec: r.koniec, w1AB: r.w1AB }, 'koniec: v na urządzeniach i W1 A–B').toEqual({ koniec: OCZEK.koniec, w1AB: OCZEK.w1AB });
+        expect(r.kolejki, 'treść wpisów Q każdego urządzenia').toEqual(OCZEK.kolejki);
+        expect([r.obiegi, r.echo, r.powtorzenia], 'obiegi do spoczynku, koperty echa, ponowne wysłania tej samej wartości').toEqual([OCZEK.obiegi, OCZEK.echo, 0]);
+      }, 60_000);
+    }
+  }
+});
+// Oczekiwane fakty testu wejściowego (klucz: wariant|przełącznik).
+// Przy wyłączonym przełączniku — dzisiejszy wynik (z retencją B zostaje z 20 kg i gwiazdką; W1 A–B z różnicą). Przy
+// włączonym — A odsyła rekord złożony zaraz po scaleniu (ostatni wpis Q_A, „(echo)”), B i C go przyjmują i niczego nie
+// odsyłają; bez retencji B składa ten sam rekord sam i też odsyła go raz (przykład 2: odbiorca ma już ten rekord).
+const ODSYLANIE_OCZEKIWANE = (() => {
+  const wlasne = { A: ['snap P/v 20 kg z gwiazdką rev 1'], B: ['snap P/v 17.2 kg rev 1'] };
+  const echoA = 'snap P/v 17.2 kg z gwiazdką rev 2 (echo)';
+  const zlozony = '17.2 kg z gwiazdką, rev 2';
+  return {
+    'z retencją, A–B|bez echa': { koniec: { A: zlozony, B: '20 kg z gwiazdką, rev 1' }, w1AB: true, kolejki: { A: wlasne.A, B: [...wlasne.B, 'stomb v'] }, obiegi: 1, echo: 0 },
+    'z retencją, A–B|z echem': { koniec: { A: zlozony, B: zlozony }, w1AB: false, kolejki: { A: [...wlasne.A, echoA], B: [...wlasne.B, 'stomb v'] }, obiegi: 1, echo: 1 },
+    'bez retencji, A–B|bez echa': { koniec: { A: zlozony, B: zlozony }, w1AB: false, kolejki: wlasne, obiegi: 1, echo: 0 },
+    'bez retencji, A–B|z echem': { koniec: { A: zlozony, B: zlozony }, w1AB: false, kolejki: { A: [...wlasne.A, echoA], B: [...wlasne.B, echoA] }, obiegi: 1, echo: 2 },
+    'trzy urządzenia, z retencją|bez echa': { koniec: { A: zlozony, B: '20 kg z gwiazdką, rev 1', C: zlozony }, w1AB: true, kolejki: { A: wlasne.A, B: [...wlasne.B, 'stomb v'], C: [] }, obiegi: 1, echo: 0 },
+    'trzy urządzenia, z retencją|z echem': { koniec: { A: zlozony, B: zlozony, C: zlozony }, w1AB: false, kolejki: { A: [...wlasne.A, echoA], B: [...wlasne.B, 'stomb v'], C: [] }, obiegi: 1, echo: 1 },
+  };
+})();
+
+// Jedno ziarno CI z włączonym przełącznikiem: profil podstawowy, ziarno 1 (nazwa 'odsylanie': poza podsumowaniami AB2,
+// AB7, ZNANE_* i ZNANE_ODSYL, jak determinizm). Model haków i odsyłania zgodny w każdej partii (afterEach), koperty echa
+// > 0, bez ponownego wysłania tej samej wartości przez to samo urządzenie, spoczynek w każdym punkcie, wyrocznia bez
+// naruszeń bez klasy, zieleń profilu; przy liczniku odsyłania — warstwa „odesłane” bez kopert ponad model i bez wierszy
+// nieodesłanych.
+describe('A ≡ B, odsyłanie poprawionych wizyt (E3-PR0c): ziarno profilu podstawowego z włączonym przełącznikiem', () => {
+  d1();
+  it('ziarno 1: model haków i odsyłania zgodny w każdej partii, koperty echa > 0, bez ponownego wysłania tej samej wartości, spoczynek, wyrocznia bez naruszeń bez klasy, zieleń profilu', async () => {
+    const w = await przebiegZiarna(1, 'podstawowy', { nazwa: 'odsylanie', echo: true });
+    console.log('E3-AB odsyłanie ziarno 1', JSON.stringify({ echo: w.echo, odsylanie: w.odsylanie, powtorzenia: w.echoPowtorzenia || 0, spoczynki: w.spoczynki, ms: w.ms }));
+    expect(w.spoczynki, 'co najmniej jeden punkt spoczynku').toBeGreaterThan(0);
+    expect(w.odsylanie && w.odsylanie.porownan, 'porównania modelu odsyłania').toBeGreaterThan(0);
+    expect(w.echo || 0, 'koperty echa').toBeGreaterThan(0);
+    expect(w.echoPowtorzenia || 0, 'ponowne wysłania tej samej wartości przez to samo urządzenie').toBe(0);
+    expect.soft(w.wyr.czerwone, 'wyrocznia: naruszenia bez klasy').toEqual([]);
+    expect.soft(zielenProfilu(w), opisBledow(w)).toEqual(ZIELEN);
+    if (ODSYL) {
+      const o = ODSYL_WYNIKI.odsylanie[ODSYL_WYNIKI.odsylanie.length - 1].odeslane;
+      expect({ ponadModel: o.ponadModel, nieodeslane: o.nieodeslane }, 'warstwa „odesłane”').toEqual({ ponadModel: 0, nieodeslane: 0 });
+    }
+  }, 180_000);
 });

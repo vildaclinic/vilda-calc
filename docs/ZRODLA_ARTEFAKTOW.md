@@ -1987,6 +1987,227 @@ Opis działania i przypadki: `docs/clinical/ALGORITHMS.md`, „Leczenie otyłoś
 
 **Granice.** Znaczniki wycinków testów bez zmian: w monitorze `function L(t,e)`, `var g=""`, `var ft="`, `function R(t)`, `function Ed(t,e,n)`, `function Q(t)`, `function Eh()`, `function Ee(t)`, `function Eo(t)`, `function Et(t)`, `function Ek(t,e)`, `function CyB(t)`, `function z()`, `function CyL(t)`, `function CyG(t,e)`; w Karcie `function Ye(`, `function An(`, `function Ob_ks(`, `function Ob_css(`, `if(Ob_m.bad&&Ob_m.bad.length){`, `/* Zakonczony cykl`. Czytelny blok `Ob_pkt` leży w wycinku `function Ob_ks(` … `function Ob_css(` testów Karty — tylko jako deklaracja, której te testy nie wołają. Bez nowych stylów ustawianych wprost na elementach. Sejf, eksport i import bez zmian.
 
+## Łatka P-OTYLOSC-DZIENNIK — dziennik leczenia otyłości w Karcie i monitorze (`vilda_auth_ui.js` 568 → 569 — po scaleniu z P-BEZCZYNNOSC-KARTA, które zajęło 568; `obesity_therapy_monitor.js` 28 → 29, 2026-11-18, decyzje właściciela)
+
+Opis działania i przypadki: `docs/clinical/ALGORITHMS.md`, „Leczenie otyłości — etapy 3 i 4” (P-OTYLOSC-DZIENNIK). Zmiany w czytelnych źródłach — moduły `VildaDziennikOtylosci` i `VildaDziennikOtylosciUI` dopisane do `vilda_cykle_leczenia.js`, styl sekcji w `vilda_auth_ui.css`, filtr w `vilda_global_search.js`, tekst w `docpro.html` — nie wymagają opisu łatki. **Sejf (`vilda_vault.js`) bez zmian.** W dwóch plikach zminifikowanych są podmiany dokładnych ciągów i wstawione czytelne bloki, bez ponownej minifikacji:
+
+```js
+// vilda_auth_ui.js
+// 1. Karta: kafelek, sekcja „Wpisy leczenia”, panel i porównanie z dziennika
+//    było:  function(){try{return Cl(s.obesityTherapyPoints)}catch{return null}}(),function(){try{return Ml(s.obesityTherapyPoints,S,h)}catch{return null}}(),function(){try{return jl(t,s.obesityTherapyPoints)}catch{return null}}()
+//    jest:  function(){try{return Ob_dz(t,s,S,h,GdNotatki,m)}catch(Ob_dzE){Ot("karta dziennik otylosci",Ob_dzE);return null}}()
+// 2. panel dostaje stan dziennika (konflikty)
+//    było:  function Ml(t,a,n){          jest:  function Ml(t,a,n,Ob_dzs){
+// 3. werdykt wstrzymany przy konflikcie w oknie oceny — za blokiem wstrzymania D5, przed zakończonym cyklem
+//    było:  /* Zakonczony cykl: … */if(Ob_m.end&&gt){
+//    jest:  /* Zakonczony cykl: … */Ob_dzs&&typeof Ob_dzk=="function"&&(gt=Ob_dzk(Ob_dzs,Ob_m,it)||gt);if(Ob_m.end&&gt){
+// 4. Notatki: wersje wpisów dziennika schowane za jedną linią
+//    po:    c=(c||[]).filter(function(S){return!(S&&S.ghPointId)||!!(options&&options.focusNoteId===S.id)});
+//    dochodzi linia:  if(typeof Ob_dzNotatki=="function")c=Ob_dzNotatki(t,c);
+// 5. Historia: wpisy „Leczenie otyłości” z dziennika zamiast z migawki
+//    było:  var S=[];try{S=await l.listPatientTimelineEvents(a)}catch(f){Ot("listPatientTimelineEvents",f)}
+//    jest:  …catch(f){Ot("listPatientTimelineEvents",f)}try{typeof Ob_dzOs=="function"&&(S=await Ob_dzOs(S,a,l))}catch(Ob_dzOsE){Ot("Historia: dziennik leczenia otylosci",Ob_dzOsE)}
+// 6. wiersz Historii: masa ze źródłem i podpis dziennika
+//    było:  return p&&d.appendChild(s("Dawka",p)),t._prevObDrug
+//    jest:  return p&&d.appendChild(s("Dawka",p)),t._obMasa&&d.appendChild(s("Masa",t._obMasa)),t._prevObDrug
+//    było:  text:"\u{1F512} z monitora DocPro \u2014 edycja w karcie monitorowania"
+//    jest:  text:t._obZDziennika?"\u{1F512} z dziennika leczenia \u2014 poprawka w \u201EWpisy leczenia\u201D":"\u{1F512} z monitora DocPro \u2014 edycja w karcie monitorowania"
+// 7. czytelne bloki: Ob_dz, Ob_dzk przed function Ob_pkt(; Ob_dzOs, Ob_dzNotatki przed function WbOtworzBadania(
+
+// obesity_therapy_monitor.js
+// 1. vt: po dodaniu punktu — wersja wpisu w dzienniku
+//    było:  …:I().push(Cp),T(),l(),q("obesity-point-added"),
+//    jest:  …:I().push(Cp),T(),l(),q("obesity-point-added"),typeof Dzz=="function"&&Dzz({rodzaj:"dodaj",dane:Cp}),
+// 2. Eb: po poprawce
+//    było:  window.obesityTherapyPoints=b.points;T();Ec();l();q("obesity-point-edited");return!0}
+//    jest:  …q("obesity-point-edited");typeof Dzz=="function"&&Dzz({rodzaj:"popraw",id:b.point.id,dane:b.point});return!0}
+// 3. Q: po usunięciu
+//    było:  q("obesity-point-deleted")}     jest:  q("obesity-point-deleted"),typeof Dzz=="function"&&Dzz({rodzaj:"usun",id:t})}
+// 4. CyW: masa od pacjenta oznaczona w tabeli
+//    było:  P(F(i.weight,1)),              jest:  P(F(i.weight,1)+(i.weightSource==="pacjent"?" (pacjent)":"")),
+// 5. czytelny blok Dzs, Dzpid, Dzmig, Dzp, Dzw, Dzstart, Dzdane, Dzz (+ słuchacz vilda:patient-loaded) przed blokiem P-OTYLOSC-WZROST
+```
+
+**Dlaczego strażnicy `typeof`.** Testy wycinają fragmenty `Ob_b`, monitora (`Ed`…`Q`, `CyS`) i Notatek; wywołania czytelnych bloków przez `typeof` nie zmieniają działania wycinków bez nich. Wstawka w `Ob_b` stoi za komentarzem „Zakonczony cykl”, czyli poza wycinkiem `if(Ob_m.bad&&Ob_m.bad.length){` … `/* Zakonczony cykl` (`karta-otylosc-r6`).
+
+**Granice.** Znaczniki wycinków testów bez zmian (lista w łatce P-OTYLOSC-WZROST). Nowe style ustawiane wprost na elementach: brak (wiersz Historii używa istniejącego pomocnika `s`). Lint: bez nowych naruszeń w `vilda_auth_ui.js` (limit `no-useless-assignment` z `eslint-suppressions.json` bez zmian).
+
+## Łatka P-PWZ-ODTWORZENIE — odtworzony pacjent nie chowa modułów profesjonalnych (`vilda_professional_module.js` 13 → 14, 2026-11-19)
+
+**Błąd (był już na `audyt` 04fbc4fc).** „Odtwórz zapis” w DocPro (`restoreLoadedStateImmediately`, `vilda_data_import_export.js`) wpisuje do pola PWZ wartość z zapisu (`doctor.pwzNumber`, zwykle `null` — PWZ lekarza leży w `localStorage`, a pole jest puste po jego przyjęciu) i wysyła na nim `input`. Obsługa pola (`Ke`) traktowała puste pole jak niepoprawny PWZ i chowała moduły profesjonalne, w tym pasek `#abxButtonWrapper`. Sekundowe sprawdzenie w `obesity_therapy.js` (`ne`; podobne w `hypertension_therapy.js`) zamykało wtedy otwartą kartę „Leczenie otyłości” — po wczytaniu pacjenta karta zamykała się sama w ciągu sekundy od otwarcia. Wykrył to test DZM-0 (`tests/e2e/otylosc-dziennik-monitor.spec.mjs`); te same kroki na `audyt` bez zmian: karta widoczna zaraz po kliknięciu, po 2,5 s — zamknięta.
+
+```js
+// vilda_professional_module.js
+//    było:  function Ke(){const n=j.value.trim();if(st(n)){
+//    jest:  function Ke(){const n=j.value.trim();/* P-PWZ-ODTWORZENIE … */if(!n&&st(String(fe(X.pwzNumber)||"").trim()))return;if(st(n)){
+```
+
+**Granice.** Zmienia się tylko przypadek „puste pole przy zapisanym poprawnym PWZ” (PWZ trafia do `localStorage` dopiero po przyjęciu poprawnego numeru). Wpisywanie numeru, niepoprawny PWZ w polu i brak zapisanego PWZ działają jak dotąd.
+
+## Łatka P-POSTEPY-DZIENNIK — „Postępy” dorosłego z dziennika leczenia (`vilda_auth_ui.js` 569 → 570, 2026-11-19, decyzja właściciela)
+
+Opis działania i przypadki: `docs/clinical/ALGORITHMS.md`, „Postępy dorosłego i listy pacjentów zgodne z dziennikiem leczenia” (P-POSTEPY-DZIENNIK). Zmiany w czytelnych źródłach: `vilda_postepy_doroslego.js` (konflikt wersji wpisu wstrzymuje punkt oceny wg ChPL) i `vilda_cykle_leczenia.js` (`zmianaPrzebiegu`, `POWODY_DOCPRO`, „Poprawka w DocPro” w „Wpisy leczenia”).
+
+```js
+// vilda_auth_ui.js
+// 1. montaż panelu „Postępy”: punkty z dziennika i rysunek ponawiany po zapisie wpisu
+//    było:  …typeof _pdE.scalSerie=="function"){var _pdSer=_pdE.scalSerie({…,punktyLeczenia:s.obesityTherapyPoints}),_pdM=_pdE.analizuj({…,punktyLeczenia:s.obesityTherapyPoints});_pdOk=!!_pdU.renderPanel(Ct,_pdM,{…})}}catch(ct){…}
+//    jest:  …typeof _pdE.scalSerie=="function"){/* P-POSTEPY-DZIENNIK … */var _pdRys=function(_pdPkt){var _pdSer=_pdE.scalSerie({…,punktyLeczenia:_pdPkt}),_pdM=_pdE.analizuj({…,punktyLeczenia:_pdPkt});return _pdU.renderPanel(Ct,_pdM,{…})},_pdHost=_pdRys(typeof Ob_dzPunkty=="function"?Ob_dzPunkty(s,GdNotatki):s.obesityTherapyPoints);_pdOk=!!_pdHost;typeof Ob_dzPostepy=="function"&&Ob_dzPostepy(t,Ct,_pdHost,_pdRys)}}catch(ct){…}
+// 2. Ob_dz (czytelny blok P-OTYLOSC-DZIENNIK): po ponownym odczycie notatek — powiadomienie słuchaczy
+//    było:  rysuj(Dz.zloz(n, migawka));
+//    jest:  var nowy = Dz.zloz(n, migawka); rysuj(nowy); Ob_dzPowiadom(t, nowy);
+// 3. czytelny blok Ob_dzSluchacze, Ob_dzPunkty, Ob_dzPostepy, Ob_dzPowiadom — za Ob_dz, przed komentarzem Ob_dzk
+```
+
+**Granice.** Napisy `_pdE.scalSerie(` i `_pdU.renderPanel(Ct,_pdM,` zostają (pilnuje ich `postepy-doroslego-widok.test.mjs`). Słuchacze zamkniętej karty (kontener odpięty od dokumentu) wypadają przy następnym powiadomieniu. Lint: bez nowych naruszeń (`no-useless-assignment` w limicie).
+
+## Łatka P-TRAJEKTORIA-DZIENNIK — kursy leczenia otyłości z dziennika (`vilda_auth_ui.js` 570 → 571, `vilda_summary_cards.js` 64 → 65, 2026-11-19, decyzja właściciela)
+
+Opis działania i przypadki: `docs/clinical/ALGORITHMS.md`, „Analiza trajektorii i karta porównania z dziennika leczenia” (P-TRAJEKTORIA-DZIENNIK). Czytelne źródło: `vilda_cykle_leczenia.js` (`VildaDziennikOtylosci.punktyWczytanego`, `odswiezWczytanego`, odświeżenie po `zapisz`).
+
+```js
+// vilda_auth_ui.js
+// 1. pas leczenia otyłości na siatkach Karty
+//    było:  ke=function(){var pe=Lt(s.obesityTherapyPoints,"oty\u0142o\u015B\u0107","#b5731a");if(!pe)return null;try{for(var Ga=s.obesityTherapyPoints.filter(
+//    jest:  ke=function(){/* P-TRAJEKTORIA-DZIENNIK … */var _dzP=typeof Ob_dzPunkty=="function"?Ob_dzPunkty(s,GdNotatki):s.obesityTherapyPoints,pe=Lt(_dzP,"oty\u0142o\u015B\u0107","#b5731a");if(!pe)return null;try{for(var Ga=_dzP.filter(
+// 2. kontekst trajektorii Karty (panel „Analiza trajektorii”, porównanie)
+//    było:  _J.buildClinicalContext({ghTherapyPoints:s.ghTherapyPoints,obesityTherapyPoints:s.obesityTherapyPoints,motherHeightCm:_adv.motherHeight
+//    jest:  _J.buildClinicalContext({ghTherapyPoints:s.ghTherapyPoints,obesityTherapyPoints:typeof Ob_dzPunkty=="function"?Ob_dzPunkty(s,GdNotatki):s.obesityTherapyPoints,motherHeightCm:_adv.motherHeight
+
+// vilda_summary_cards.js — karta „Porównanie z poprzednim pomiarem”
+//    było:  return J.buildClinicalContext({ghTherapyPoints:a.ghTherapyPoints,obesityTherapyPoints:a.obesityTherapyPoints,motherHeightCm:mh?parseFloat(mh.value):NaN,
+//    jest:  /* P-TRAJEKTORIA-DZIENNIK … */const _dzP=(function(){try{const Dz=a.VildaDziennikOtylosci;return Dz&&typeof Dz.punktyWczytanego=="function"?Dz.punktyWczytanego():null}catch(e){return null}})();return J.buildClinicalContext({ghTherapyPoints:a.ghTherapyPoints,obesityTherapyPoints:_dzP||a.obesityTherapyPoints,motherHeightCm:mh?parseFloat(mh.value):NaN,
+```
+
+**Granice.** `Ob_dzPunkty` i `GdNotatki` — z łatki P-POSTEPY-DZIENNIK (ta sama funkcja Karty). Wywołania przez strażników `typeof`. `window.obesityTherapyPoints` bez zmian.
+
+## Łatka P-WIZYTA-PRZYDZIAL — nadanie wizyty przy otwartym oknie „Niezapisane zmiany” nie jest zmianą formularza (`vilda_save_status_indicator.js` 49 → 50, 2026-11-19)
+
+**Objaw.** Skok z Terminarza do punktu GH pacjenta w DocPro (test `tests/e2e/powloka-panel-obcy-pacjent.spec.mjs`,
+„Start z X → skok GH do Y”) co kilka przebiegów kończył się bez wczytania pacjenta. Lekarz odpowiadał w oknie
+strażnika „Odrzuć”, a zamiast skoku dostawał „Formularz zmienił się. Wykonaj tę czynność ponownie.”, choć niczego
+nie zmieniał.
+
+**Przyczyna.** Decyzja strażnika (`readCurrentDecision`) czyta formularz bez skutków ubocznych
+(`captureCurrentUserDataReadOnly`) i nie nadaje wizyty. Autozapis sesji (`vilda_persist_runtime.js`) i sprawdzenia
+wskaźnika zapisu wołają zwykłe `collectUserData`, a ono przez `VildaVisitContext.capture` nadaje formularzowi
+z danymi pacjenta pierwszą wizytę (`payload.visit`). Gdy to nadanie wypadło po otwarciu okna, odcisk formularza
+przy kliknięciu miał dodatkowe `core.visit`. Dokładne porównanie w `isCurrentDecision` uznawało to za zmianę
+formularza i strażnik anulował czynność. W DocPro po odtworzeniu sesji nadana wizyta nie ma jeszcze
+`patientId`, bo formularz nie jest związany z wczytanym rekordem.
+
+**Zmiana** (czytelny blok, bez ponownej minifikacji): `readCurrentDecision` zapamiętuje chwilę odczytu (`readAt`).
+Nowa funkcja `decisionOnlyAllocatedVisit` przyjmuje jedną różnicę i tylko przy spełnieniu wszystkich warunków:
+
+- w decyzji nie było `core.visit`;
+- teraz jest wizyta o poprawnym kształcie, `origin: "explicit"`;
+- wizyta nie ma pacjenta albo ma pacjenta decyzji;
+- wizyta powstała nie wcześniej niż odczyt decyzji;
+- po jej usunięciu odcisk jest identyczny.
+
+Używają jej `isCurrentDecision` oraz pierwszy warunek `decisionContentAfterSave`. Pozostałe warunki obu funkcji są
+bez zmian: ten sam właściciel, generacja i referencja, a po zapisie — referencja równa bieżącemu odciskowi.
+Zmianą formularza pozostają:
+
+- wizyta wczytana (starsza niż decyzja) albo podmieniona;
+- wizyta innego pacjenta lub `legacy-inferred`;
+- każda edycja pola;
+- zmiana konta.
+
+Wyniki, zapis, sesja i sejf bez zmian. Zmienia się tylko to, czy kliknięcie w oknie strażnika jest wykonane, czy
+anulowane.
+
+**Regresje.** `tests/unit/save-status-current-decision.test.mjs` uruchamia produkcyjny moduł. Blok
+„first visit allocated while the unsaved-changes decision is open” sprawdza:
+
+- przyjęcie nowej wizyty, także bez pacjenta;
+- odrzucenie edycji, starszej, obcej i `legacy-inferred` wizyty, podmienionej wizyty, wizyty z pacjentem,
+  którego formularz nie ma, oraz zmiany konta;
+- zapis z okna po nadaniu.
+
+Bez zmiany trzy przypadki przyjęcia padają. `tests/e2e/powloka-panel-obcy-pacjent.spec.mjs` („skok GH do Y”)
+przeszedł lokalnie 48/48 przy 6 równoległych przebiegach. Przed zmianą 2–3 na 12 przebiegów kończyło się
+komunikatem „Formularz zmienił się”.
+
+## Łatka P-E2-MENARCHE — estradiol poniżej 18 lat: zakresy dorosłych po 5 latach od menarche (`lab_units_data.js` 42 → 43, `lab_unit_converter.js` 10 → 11, `vilda_lab_packages.js` 10 → 11, `inline_przelicznik_jednostek_00.css` 17 → 18, `przelicznik-jednostek.html`, 2026-11-19, decyzje właściciela)
+
+Opis działania, przypadki, dowody i ograniczenia: `docs/clinical/ALGORITHMS.md`, wpis „LAB-E2-MENARCHE”. Zmiany wprowadzono wprost w artefaktach, czytelnymi blokami; żadnego pliku nie przebudowano z dawnych źródeł ani nie minifikowano ponownie.
+
+`lab_units_data.js` — tylko czytelny blok polityki w deskryptorze estradiolu (plik poza nim pozostaje zminifikowany i bez zmian):
+
+```js
+reference_selection_policy: {
+  id: 'estradiol-matched-reference-only',
+  version: '2026-11-19.1',               // było '2026-10-28.1'
+  // require_matched, chronological_age, context_pl, adult_female_context — bez zmian
+  gynecological_age: {                    // nowy blok: próg, zakres wieku menarche, wybory i teksty jako dane
+    id: 'e2-gynecological-age-qualification', when: { sex: 'F' }, menarche_key: 'menarche_age_years',
+    menarche_min_years: 2, menarche_max_years: 20, adult_context_after_years: 5,
+    adult_context_min_menarche_years: 8,  // R9 (decyzja nr 5): najniższy wiek menarche, od którego reguła działa — osobno od zakresu wpisu 2–20
+    contexts_not_applicable_below_adult_age: ['postmenopause'],
+    pregnancy_contexts: ['pregnancy_t1', 'pregnancy_t2', 'pregnancy_t3'],
+    context_pl: '…', basis_pl: 'Od menarche: {years} lat (≥\u00a0{threshold}) — …', source_note: '…'
+  }
+}
+```
+
+Wiersze `reference_ranges_si`, jednostki, `default_range_si` i `LabUnitsData.version` (2.0.2) są nietknięte — pilnuje tego skrót danych w `tests/fixtures/lab-selection-inne-badania-baza.json`.
+
+`lab_unit_converter.js` — czytelne funkcje dopisane przed `copyContextReference` (część czytelna pliku): `listed`, `knownBelowAdultAge`, `yearsDownText`, `gynecologicalAge`, `gynecologicalBasisText`, `qualifyGynecologicalAge`, `markGynecologicalBasis`, `copyReferenceBasis`, `sharedPhasePolicy`, `referenceContext`; `selectContextReference` dostał trzeci argument `minor`. Stan reguły (`gynecologicalAge`) ma pole `early` — menarche poniżej `adult_context_min_menarche_years` nie kwalifikuje; `referenceContext` oddaje tę granicę i powód braku kwalifikacji (`not_qualified_reason`: `menarche_not_recorded`, `below_gynecological_age`, `menarche_before_min_age`). W zminifikowanym wierszu cztery wstawki:
+
+```js
+// U() = selectRange:
+//    było:  e=qualifiedAge.patient;var qualifiedContext=selectContextReference(r,e);
+//    jest:  e=qualifiedAge.patient;var gynecological=qualifyGynecologicalAge(r,e);e=gynecological.patient;var qualifiedContext=selectContextReference(r,e,gynecological.minor);
+// $() = evaluate:
+//    było:  copyContextReference(l,o);return o?(
+//    jest:  copyContextReference(l,o);copyReferenceBasis(l,o);return o?(
+// obiekt API:
+//    było:  selectRange:U,rangesForOverride:C,                       …version:"2.0.3"
+//    jest:  selectRange:U,referenceContext:referenceContext,rangesForOverride:C,   …version:"2.0.4"
+```
+
+Dla każdego badania poza estradiolem `selectRange` i `evaluate` dają wyniki identyczne jak przed zmianą (macierz 33 badań × 4992 kontekstów, `tests/unit/lab-e2-menarche.test.mjs`).
+
+`vilda_lab_packages.js` (czytelne źródło, model 1.7.0 → 1.8.0, widok 1.9.0 → 1.10.0): `evaluateRow` zapamiętuje w `row.contextBasis` zdanie silnika `evaluation.reference_basis_pl`, gdy wynik wymaga kontekstu badania; `drawCard` rysuje je drugą notą `.lab-pkg-card-note` pod zdaniem o kontekście i uwzględnia w podpisie przerysowania karty. Gałąź `if (!view.lab) { … }` dostała klamry, żeby `else if (view.replaced)` nadal należało do niej (nota o zastąpionym badaniu bez zmian).
+
+`przelicznik-jednostek.html` (czytelny skrypt strony):
+
+```js
+// markup panelu „zmień”: <label id="labOverrideMenarcheWrap" hidden>Wiek menarche [lata] <input type="text" id="labOverrideMenarcheAge" inputmode="decimal" …>
+//                        <p id="labOverrideMenarcheNote" class="lab-override-note" role="status" hidden>
+// readPubertyPatientContext: context.menarcheAgeYears — tylko gdy wiek menarche jest wpisany (ta sama kolejność źródeł co początek pokwitania)
+// applyMenarcheAge(p, source, local): p.menarche_age_years (pole lokalne > dane), p._shared_menarche, p._menarche_overridden;
+//    local: null = pole puste, liczba = wpis, NaN = wpis, który nie jest zwykłą liczbą dziesiętną (zastępuje dane, silnik go nie przyjmie);
+//    wołane w bloku estradiolu getEffectivePatient (z localOverride.menarche) i getPackagePatient (bez wpisu lokalnego)
+// referenceContextFor(pacjent) → LabUnitConverter.referenceContext(wybrane badanie, pacjent)
+// applyReferenceAvailability(p) — ostatni krok getEffectivePatient, jedno miejsce dla wszystkich odbiorców pacjenta:
+//    wybór fazy niedostępny wg silnika → p.cycle_phase = null (zapamiętany localOverride.cycle_phase zostaje);
+//    p._menarche_applied (wpis dotyczy badania i pacjentki i silnik go przyjął) oraz p._has_override
+// localOverride.menarche: czyszczone w resetLocalPatientOverride, przy zmianie płci w updateLifespan i dla płci M w onOverrideChange
+// describePatient: CYCLE_PHASE_SUMMARY (ciąża słowami); „menarche 11,0” (formatMenarcheAge) tylko przy p._menarche_applied
+// buildClinicalHint: wiersz reference.basis_pl (+ dopisek o „Zmień ▼" przy nieznanej fazie)
+// przed renderPatientSummary: overrideNumberTyping, commitCyclePhaseAvailability, renderCyclePhaseOptions, renderMenarcheOverrideState
+//    (nota R9 „…menarche przed ukończeniem 8 lat (3,0)…” wybierana po reference.not_qualified_reason; liczba 8 z odpowiedzi silnika)
+// renderPatientSummary: commitCyclePhaseAvailability() PRZED wcześniejszym powrotem dla badań z własnym formularzem
+//    (LH, FSH, inhibina B, testosteron) — poza odświeżeniem w trakcie wpisywania liczby
+// onOverrideChange(event): wpis pola — po obcięciu spacji /^\d+(?:[.,]\d{0,2})?$/ (sam separator na końcu = niedokończony zapis liczby całkowitej), inaczej NaN; zdarzenie „input”
+//    ustawia overrideNumberTyping na czas odświeżenia (zapamiętany wybór fazy i jego opcja zostają)
+// onOverrideNumberCommitted: „change” i „blur” pól wieku, miesięcy i wieku menarche → tylko renderPatientSummary()
+//    (zatwierdza wybór i odświeża opis; nie rysuje wyniku, żeby kliknięcie w wynik po wyjściu z pola nie ginęło)
+```
+
+Strona nie ma kopii reguły: próg, granicę wieku, zakres wieku menarche i listę niedostępnych wyborów bierze z odpowiedzi `LabUnitConverter.referenceContext`.
+
+`inline_przelicznik_jednostek_00.css` — jedna reguła, bo etykieta panelu ma własne `display`:
+
+```css
+.lab-patient-override label[hidden],
+.lab-patient-override .lab-override-note[hidden] { display: none; }
+```
+
+**Granice.** Bez nowych stylów ustawianych wprost na elementach (`tests/fixtures/style-elementow.json` bez zmian: nowe pole i nota chowają się atrybutem `hidden`). `vilda_lab_range_snapshot.js` i `vilda_vault.js` bez zmian — format zapisanego zakresu się nie zmienił, a dawne zapisy nie są przeliczane. Wersje `?v=`, precache i `SW_VERSION` ustawił `npm run podbij-wersje`.
+
 ## Trwała tożsamość wizyt — źródło i granica artefaktu sejfu
 
 Zmiana funkcjonalna `P-TRWALE-WIZYTY` ma bazę `audyt` z commita
@@ -2036,6 +2257,12 @@ Od 2c (P-DOWOD-KROKU, 2026-11-18: nowy blok natywny z repozytorium źródeł mod
 `fe4fad0b1119e4e6ee6fdaaca793f12d76614e4cac418328fc38756895c6fe2c`, a wynikiem — bieżący
 `vilda_vault.js` (`175fb1ab57b47cf4b58d19369536722edc1177c1c3d7f83311e63727298bff9b`). Bazę daje to
 samo odwrócenie delty co wyżej.
+
+Od E3-PR0c (P-ZBIEZNOSC-ZDARZEN, odsyłanie poprawionych wizyt; zmiana tylko w bloku P-DZIENNIK-ZDARZEN) bazą
+delty jest obraz sejfu po tej zmianie bez bloku trwałych wizyt: SHA-256
+`22f7d1f27f71ea7cb01304cc048b885159d04cc237431d842064ddd3d199e86f`, a wynikiem — bieżący `vilda_vault.js`
+(`4ca270bc7461e33d50b791242cd9298da710cfd651ffe1a099b059f80c4acd7a`). Baza z 2c (`fe4fad0b…`) odpowiada
+stanowi sprzed E3-PR0c (`audyt` `64fa29dc`); bieżącą bazę daje to samo odwrócenie delty co wyżej.
 
 Każdy punkt wpięcia musi występować dokładnie raz. Narzędzie odrzuca inne
 bajty bazy, zmianę źródła bez zgodnego manifestu, niejednoznaczny punkt wpięcia
@@ -2248,6 +2475,11 @@ repozytorium źródeł modułu (`vilda-source`). Czytelne źródła są tam w
 `runtime/clinical-workspace-v1/0278bf7106c2/precache-3689c59590e5.json`. Baza sejfu bez zmian:
 `44d82633d45bf9db1e964457c69d07f2009b683848a00d21315fc63fdd542499`.
 
+Od E3-PR0c (P-ZBIEZNOSC-ZDARZEN; zmiana sejfu tylko poza blokiem natywnym, w bloku P-DZIENNIK-ZDARZEN) baza sejfu to
+`06ea023197d3e70fc30e965d5b2b57744fbbcbc0f638f5baa798e5ce3e209031`, a `integratedVaultSHA256` (obraz pośredni) —
+`76214599a49249fc762d29e4eb31f079440ef254149ffc8cde8ecf5e36b77bb2`. Blok natywny, haki natywne, rodzina modułów
+`0278bf7106c2`, `fragmentSHA256` i archiwum bez zmian; bieżące wartości są w `runtime/clinical-workspace-v1/manifest.json`.
+
 Warstwy `vilda_vault.js` od środka: baza → blok natywny i 16 haków natywnych (manifest,
 `nativeHooks`) → delta Kt/V (`tools/klirens-ktv-vault-delta.mjs`, poza blokiem) → delta trwałych
 wizyt (`runtime/durable-visits-v1/`, `tools/visits-vault-delta.mjs`). Budowniczy zna tylko dwie
@@ -2415,3 +2647,229 @@ z połączonym artefaktem. Haki B1 i Przypomnień oraz most prezentacji notatek
 pozostają zachowane. Baza po odwróceniu haków Przypomnień ma teraz SHA256
 f493d3850028758156fd78dbd96abef5a811b16324e5763afd8dc695838d5f50.
 Sejf, manifesty kliniczne i pakiet transportu UI nie zmieniły się przy tym scaleniu.
+
+## Zgodność B1 z dziennikiem leczenia otyłości (#997)
+
+Włączenie `audyt` `d99ec4597824442f3e3917a3fb68d4e65fea7202` zachowuje
+dziewięć dokładnych zmian natywnego AuthUI względem `00ec793a`. Adaptacja B1
+kończy listę przenoszonych węzłów przed natywną nawigacją, a odnośnik dziennika
+z Notatek wybiera Leczenie wyłącznie na karcie B1. Czytelny skrypt
+`tools/patient_b1_auth_hooks.mjs` odtwarza opcjonalny kontekst Home w `Ob_dz`
+i przekazanie go do `VildaDziennikOtylosciUI.sekcja`. Odwrócenie samych haków
+Przypomnień daje SHA256
+`6bdd0fe8ff72b4a2c9199155b2274351a1e80f7379e6d0d2e5d661029f253e33`;
+ponowne nałożenie odtwarza artefakt bajtowo.
+
+`vilda_cykle_leczenia.js` pozostaje czytelnym źródłem natywnego dziennika.
+Opcjonalny `homeContext` wiąże wyłącznie jego aktora UI z dokładnym właścicielem
+karty Home. `VildaHomePatient.captureOwner()` zachowuje istniejący predykat
+konta, PRO, pacjenta, wczytania i wizyty; B1 sprawdza go synchronicznie.
+Zamknięcie formularza lub utrata właściciela unieważnia zachowane akcje przed
+nowym wywołaniem `Dz.zapisz`. Rozpoczęta partia może zakończyć zapis pierwotnego
+pacjenta, lecz nie odświeża zastępczej karty. Rzeczywisty panel DIV korzysta
+z B1 Back, zwalniania i rozmiaru 1000 × 820 przez jawne `isOpen`, `requestClose`
+i `dispose`; nie jest traktowany jak `HTMLDialogElement`. Koordynator potwierdza
+obsługę aktora przez `cleanup.actorLifetimeVersion = 1`; niepełny kontekst albo
+stary koordynator nie otwierają aktywnego formularza. Jawny kontekst Home
+wymaga też `actorLifetimeVersion = 1` przed każdą akcją sekcji, włącznie
+z usunięciem i przywróceniem bez okna. Auth przyjmuje tylko prezentację B1
+potwierdzającą ten kontrakt i obsługującą pełny odczyt właściciela Home.
+Starszy składnik nie może udostępnić słabszego `isCurrent` nowemu dziennikowi.
+Bez `homeContext`
+pozostaje natywny przepływ. Silnik dziennika, DTO, reguły kliniczne, monitor
+DocPro i sejf nie są zmienione przez tę adaptację.
+
+Podgląd Notatek Home wyklucza całą kategorię `leczenie-otylosci`, tak jak
+natywne `Ob_dzNotatki`; nie interpretuje treści JSON. Testy wywołują rzeczywiste
+kodowanie dwóch wersji wpisu i natywne argumenty konstruktora karty.
+Regresja `home-workspace-native-diary-lifetime.spec.mjs` zachowuje oryginalny
+moduł prezentacji B1 z `96c31d23` w `home-b1-before-diary-lifetime.js.txt`
+z pochodzeniem i SHA256 w sąsiednim pliku `.origin.json`. Sprawdza również
+bezpośrednie usunięcie i przywrócenie przy starszym koordynatorze, bez kopiowania
+silnika klinicznego ani formatu zapisu.
+
+## Zgodność B1 z Postępami z dziennika (#1000)
+
+Włączenie `audyt` `4bff32aaec358310987ef78936cba75cd0b61248` zachowuje
+natywną projekcję Postępów, flagi konfliktu i politykę poprawek w DocPro.
+W `formularz`, `usun` i `przywroc` kontrola życia B1 poprzedza tę politykę.
+Natywne wersje silnika i UI dziennika `2` są niezależne od kontraktu aktora
+Home `actorLifetimeVersion = 1`.
+
+`tools/patient_b1_auth_hooks.mjs` obejmuje nowe odświeżenie
+`Ob_dz`: po odczycie sprawdza właściciela Home przed rysowaniem i powiadomieniem.
+Nowy słuchacz Postępów sprawdza tego samego właściciela karty, a odbiorca Home
+przyjmuje tylko powiadomienie z nadal aktualnej pierwotnej karty źródłowej
+(`CareReadOwner` oraz jej `Eo`). Źródło nie przechwytuje nowego właściciela po
+odczycie. Domyślni odbiorcy zachowują natywne działanie. Przekazywane są
+oryginalne punkty dziennika, bez zmiany obliczeń, DTO i zapisu.
+
+Po tej adaptacji odwrócenie 16 par zabezpieczeń Auth daje SHA256
+`a87a1b6641f2077ebb37e388f6d48f962587bedf92fd283033c7dce2e4cc30a5`;
+odwrócenie samych haków Przypomnień daje
+`989b14df2fab607e390d3e45d230eb4b023103f51e182c5eb95ae64d4e97f5ab`.
+Po odwróceniu obu zestawów bazą jest
+`0d4e7c5f415c6dcaa07889969e971958b5dcb828367513a57622fc51da630c60`.
+Ponowne nałożenie odtwarza artefakt bajtowo; kontrola silnika dziennika odnosi
+się teraz do natywnego `4bff32aa`, a historyczna fikstura B1 pozostaje bez zmian.
+
+## Zgodność z trajektorią dziennika (#1002) i lokalne decyzje o grupach
+
+Scalenie `audyt` `fb98a88f0054a1299b417964b4025a04f26b924b` zachowuje
+natywne `Ob_dzPunkty(s,GdNotatki)` w obu konstruktorach kontekstu Auth oraz
+oryginalny silnik dziennika, karty podsumowania i regułę przypisania wizyty.
+Nie zmienia obliczeń ani źródeł danych klinicznych. Po tej aktualizacji,
+przed dołożeniem poniższego modułu, odwrócenie 16 par zabezpieczeń Auth daje
+`40fa4dc05fac4e239c6a2bb574009edd81b6ce441932f5b6b47d535422db42f4`,
+odwrócenie samych haków Przypomnień daje
+`91e29536418022446f5d5d9ad2b3933cf7eff8f4c6ab75bd95fe47593f7e486b`,
+a odwrócenie obu zestawów daje
+`98d90618b877cdc696020f7e726b5d16deeff201deebdaffbdd97afe7fd2c9f3`.
+
+Te skróty uwzględniają oficjalne wyrównanie wersji zasobów względem
+historii publikacji. Między `75db10e2` i `f652cd58` jedyną zmianą w samym
+Auth było `clcr_record_resources.js?v=27` → `?v=31`; po zastąpieniu wyłącznie
+liczbowych tokenów `?v=` te dwa historyczne pliki są bajtowo identyczne.
+Późniejsze ograniczone ponowienie zapisu opisane poniżej należy wyłącznie
+do odwracalnego bloku Bsc. Skrót bazy po odwróceniu samej warstwy Bsc wynosi
+`f22c3d7dd90990e02f5a527527857d3f207fe52a502e5fbdb8d310b39a873735`.
+
+Czytelny blok `ACCOUNT DUPLICATE DISMISSALS V2` w `vilda_auth_ui.js` oraz
+`tools/account-duplicate-dismissals-auth-hooks.mjs` stanowią źródło i dokładny
+odwracalny przepis na ograniczoną zmianę funkcji „To różne dzieci”. Kontrola
+`node tools/account-duplicate-dismissals-auth-hooks.mjs --check` odwraca
+wyłącznie ten blok i jego haki do dokładnego artefaktu sprzed tej zmiany,
+a następnie odtwarza wynik bajtowo. Dotychczasowe 16 par zabezpieczeń i haki
+B1/Przypomnień pozostają odwracalne; ich kontrole najpierw odejmują nową,
+niezależną warstwę. Nie ma nowego pliku ładowanego przez aplikację.
+
+To decyzja interfejsu osobna dla konta oraz tej przeglądarki na urządzeniu.
+Moduł używa wyłącznie publicznych `encryptPayloadForCurrentUser` i
+`decryptPayloadForCurrentUser` sejfu oraz przechwyconego
+`VildaPersistence.getStorage('local')`. Nie tworzy klucza szyfrującego i nie
+zmienia sejfu. Tryb lokalny daje lokalną trwałość, a natywny adapter trybu
+jednorazowego lub chmurowego daje tylko czas życia jego `sessionStorage`.
+Nie ma synchronizacji, kopii zapasowej ani zapasu w jawnym storage lub RAM
+udającym trwały zapis. Zewnętrzna wartość ma tylko `{iv,data}`; szyfrowany
+ładunek ma `schema:2`, `purpose:'duplicate-groups-dismissed'`, `accountId`
+i maksymalnie 200 oryginalnych sygnatur `Bsc3`. Nie normalizuje ani nie
+skraca identyfikatorów. Ładunek ma limit 262144 bajtów UTF-8, a koperta
+524288 bajtów; przekroczenie limitu pozostawia grupę widoczną i pokazuje
+błąd.
+
+Odczyt kończy się przed zbudowaniem natywnych grup listy. `Bsc4` pozostaje
+synchronicznym odczytem RAM z kontrolą konta, biletu sejfu, adaptera, trybu
+i życia dokumentu. Zapis pod rzeczywistym wyłącznym Web Lockiem odczytuje
+najnowszą kopertę, odszyfrowuje, dołącza jedną sygnaturę, szyfruje i sprawdza
+zapis w tym samym adapterze. Gdy przed pierwszym zapisem zmieni się surowa
+koperta (również przy opóźnionym dostarczeniu zdarzenia storage w WebKit),
+wykonuje cały odczyt, połączenie sygnatur i szyfrowanie najwyżej trzykrotnie
+pod tą samą przyznaną blokadą i w tym samym limicie czasu. Nie ponawia
+błędów odczytu, kryptografii, zapisu ani potwierdzenia po zapisie.
+Blokada obejmuje również oczekiwanie na kryptografię.
+Brak obsługi blokad, błąd zapisu i przekroczenie 8 sekund
+kończą się widocznym niepowodzeniem. Osiem sekund jest liczone od danego
+kliknięcia, łącznie z oczekiwaniem w kolejce dokumentu; zadanie przeterminowane
+w kolejce nie żąda blokady ani nie odczytuje danych. Spóźniona operacja nie może zapisać ani
+narysować wyniku; jej przyznana blokada pozostaje zajęta do rozstrzygnięcia
+rzeczywistej operacji. Nie ma porównania surowej wartości udającego atomowy
+CAS. Widok zmienia się dopiero po potwierdzonym zapisie, przez pełne
+natywne odświeżenie `Gd7`/`Gd9`/`Be`, z zachowaniem wyszukiwania, filtrów,
+przewinięcia oraz odraczania przy otwartych natywnych oknach. Generacja
+żywego widoku jest przechwytywana po `Zt`, które celowo kończy bilet odczytu.
+
+Dotychczasowe grupy nie mają wiarygodnego właściciela, więc zatwierdzona
+migracja je zeruje. Stary klucz jest tylko usuwany, bez odczytu wartości,
+importowania, haszowania, kopii lub logowania. Obsługiwane są też ponowne
+zapisy starej karty zauważone przez zdarzenie storage lub odzyskanie fokusu.
+Karta ze starą wersją aplikacji może ponownie utworzyć stary wpis po
+zamknięciu wszystkich zaktualizowanych kart; pełna aktualizacja wymaga
+normalnego odświeżenia wszystkich używanych kart. To ograniczenie mieszanych
+wersji, bez przenoszenia starych decyzji do bieżącego konta.
+
+Test `account-duplicate-dismissals.test.mjs` wykonuje rzeczywisty blok
+produkcyjny z AES-GCM, opóźnianiem kryptografii i kontrolowanymi granicami
+właściciela. Obejmuje błędne koperty i ładunki, zmianę konta i trybu,
+ponowne odblokowanie, pagehide, nieaktualny widok, kolejkę i limit czasu,
+limit 200, adapter sesyjny, brak Web Locks oraz rzeczywisty kod kliknięcia.
+Regresje przeglądarkowe `scalanie-duplikatow*.spec.mjs` sprawdzają natywny
+sejf, rzeczywiste Web Locks między dokumentami i pełną niezmienność rekordów
+oraz notatek. Wyniki wykonania podaje PR; samo istnienie testu nie oznacza
+jego przejścia.
+
+## Włączenie natywnej zmiany estradiolu (#1001)
+
+Scalenie `audyt` `2fb15ce2b4d5bb1724f8420d1588efd88f58b5f9` zachowuje
+opublikowany silnik, deskryptor, stronę i testy reguły menarche bez własnej
+zmiany obliczeń. W samym Auth jedyną zmianą względem `b0298129` jest
+aktualizacja leniwych adresów `lab_units_data.js?v=42` → `?v=44`
+i `lab_unit_converter.js?v=10` → `?v=12`: natywny PR wniósł wersje
+43 i 11, a oficjalne narzędzie wersji nadało nowe adresy ponad chronioną
+historią publikacji. Po usunięciu wyłącznie liczbowych tokenów `?v=`
+Auth pozostaje bajtowo identyczny; cały blok Bsc pozostaje identyczny bez
+żadnego przekształcenia. Istniejące 6 par Bsc, 16 par zabezpieczeń oraz
+haki Home/B1 zachowują dokładne odwracanie i ponowne odtwarzanie.
+
+Piny artefaktu `0ec46a2b`, obliczone przez rzeczywiste odwrócenia, wynoszą:
+
+- po odwróceniu Bsc: `615ee925876c5197f03187d3064d97e4168afd7b034230525a1fae0cfff40248`;
+- po odwróceniu zabezpieczeń i Bsc: `12c87b88789bb0e0de6f5ce31fa30adfe82d6952de12ae683e54f7bb4f517a2c`;
+- po odwróceniu Przypomnień i Bsc: `dd05327967e81a71b70fd4fc8a7913fa9598ed3de3b38756d4d34b7845c2f479`;
+- po odwróceniu obu ostatnich zestawów i Bsc: `c2deeccd66218ec110fd56ddde619d96d45986ede4f27f47cdaa679540542744`.
+
+Historyczne skróty w poprzednich sekcjach opisują wskazane tam wcześniejsze
+artefakty. Ochrona historii precache wskazuje dokładny opublikowany worker
+`2fb15ce2` ze skrótem
+`df3cc614b1d687b33e46495cb5afe002c5366f5d6bb0374bddd9b0bf2dd6025c`.
+
+## Ponowienie siatki po Wyczyść i własne zamknięcie nawigacji
+
+W `vilda_centile_live_panel.js` siatka żądana w trakcie natywnej bariery
+po Wyczyść pozostaje ukryta do istniejącego absolutnego terminu
+`window.__vildaPersistClearUntil`. Dla przyczyny `cleared` panel ustawia
+jeden termin ponownego sprawdzenia i po jego upływie wywołuje zwykły,
+świeży odczyt niezmienionego adaptera Data. Nie zachowuje poprzedniego
+rysunku ani danych do późniejszego odtworzenia. Nie odpytuje cyklicznie,
+nie dodaje arbitralnej zwłoki i nie skraca bariery. Życie tego żądania
+sprawdza dotychczasową generację panelu, konto i opcjonalny natywny bilet,
+tryb przechowywania, widok, dokument, ramkę i termin bariery. Wyczyść,
+ukrycie, zmiana właściciela lub nawigacja unieważniają stare żądanie.
+Anonimowy formularz zachowuje dotychczasowe uprawnienie Data, również bez
+sejfu. Test wykonuje rzeczywiste Data i Panel: żądanie po 2400 ms przy
+natywnym terminie 2500 ms nie rysuje wcześniej, a po upływie bariery
+wykonuje jeden świeży odczyt nowego formularza bez dodatkowego zdarzenia.
+
+W Auth/Chrome odbiorca bez lokalnego formularza nadal używa pierwotnego
+zaakceptowanego wczytania i natywnego powiadomienia o pacjencie. Dopiero
+po tej publikacji opcjonalny aktor Chrome przygotowuje zaszyfrowany zamiar,
+gdy pierwotna karta wciąż jest zamontowana. Po potwierdzeniu szyfrogramu
+jednorazowa funkcja sprawdza tę samą kartę, korzeń, generację historii
+i uprawnienie konta, wywołuje istniejące `Qn({quiet:true})` oraz natywne
+zamknięcie i `BdPo`, po czym Chrome ponownie sprawdza oba uprawnienia
+i przechodzi dalej w tym samym obrocie. Zwykłe Wstecz nadal anuluje
+przygotowanie. Błąd lub odmowa zamknięcia odrzuca wyłącznie dokładny
+szyfrogram tego aktora, zachowując nowszy zamiar. Domyślne wywołanie
+z dwoma argumentami i jego kolejność pozostają natywne; starszy Auth
+bez prywatnej funkcji zamknięcia daje komunikat o odświeżeniu.
+
+Te zmiany nie modyfikują Data, ogólnego modułu zamiarów, Bsc, sejfu,
+obliczeń, norm, dokumentacji klinicznej pacjenta ani identyfikatorów.
+W testach trzech konkretnych wariantów przygotowanie fikcyjnego konta
+korzysta z istniejącego oczekiwania na rzeczywistą gotowość konta przed
+zaplanowanym przeładowaniem. Test gościa czeka na przycisk lub potwierdzony
+stan sesji. Zachowano wszystkie końcowe asercje i limity testów.
+
+Oficjalne narzędzie wersji nadało panelowi adres `?v=10`, zachowując
+wcześniejsze adresy cache i archiwa. Końcowe źródła Auth i Chrome są
+bajtowo identyczne z ocenionymi źródłami obu funkcjonalnych poprawek.
+Aktualne ścisłe piny po rzeczywistych odwróceniach wynoszą:
+
+- Bsc: `7c002007d18d95425c6b674182d82bcfa67ff003ea887e1538a4091c7352058f`;
+- zabezpieczenia i Bsc: `12c87b88789bb0e0de6f5ce31fa30adfe82d6952de12ae683e54f7bb4f517a2c`;
+- Przypomnienia i Bsc: `2cf61af7dc6ee9bf7fd83f717d6edbf72f46a427c33d9238b2860376b23ecf24`;
+- oba ostatnie zestawy i Bsc: `c2deeccd66218ec110fd56ddde619d96d45986ede4f27f47cdaa679540542744`.
+
+Zmiana pinu Bsc/Przypomnień wynika wyłącznie z jawnej, odwracalnej pary
+Auth obsługującej własne zamknięcie; odwrócenie 16 par zabezpieczeń nadal
+daje tę samą bazę natywną. Wszystkie sześć par Bsc oraz haki Home/B1
+odwracają się i odtwarzają dokładnie.

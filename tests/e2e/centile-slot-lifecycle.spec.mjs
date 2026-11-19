@@ -407,7 +407,9 @@ for (const shell of [false, true]) {
   for (const route of ['start', 'docpro']) {
     for (const choice of ['new', 'restore']) {
       test(`${shell ? 'SPA' : 'Samodzielnie'} / ${route} / ${choice}: Wyczyść nie rezerwuje pustej siatki w oknie ochrony zapisu`, async ({ page }) => {
-        const fixture = await createFictionalVault(page, { shell });
+        const fixture = await createFictionalVault(page, {
+          shell, waitForAccountReadyBeforeReload: shell && route === 'start' && choice === 'restore',
+        });
         let owner = fixture.frame;
         if (route === 'docpro') {
           if (shell) {

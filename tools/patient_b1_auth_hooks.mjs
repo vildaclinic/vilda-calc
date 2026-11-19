@@ -3,12 +3,16 @@
 import {readFileSync, writeFileSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 const target = fileURLToPath(new URL('../vilda_auth_ui.js', import.meta.url));
+const compatibilityPairs = [
+  ["function HomePatientIsCurrent(){return !!(HomePatientPresentation&&HomePatientPresentation.isCurrent())}", "function HomePatientIsCurrent(){return !!(HomePatientPresentation&&HomePatientPresentation.actorLifetimeVersion===1&&HomePatientPresentation.isCurrent())}"],
+  ['legacyPanels:Cs.slice(2,7).filter(Boolean),legacySummary:i.VildaHomePatientNative.describeLegacy(Cs.slice(2,7)),', 'legacyPanels:Cs.slice(2,Cs.indexOf(Ft)).filter(Boolean),legacySummary:i.VildaHomePatientNative.describeLegacy(Cs.slice(2,Cs.indexOf(Ft))),']
+];
 const pairs = [
   ['async function se(t,a,n,r){var o=jt();', 'async function se(t,a,n,r){var HomePatientPresentation=null,HomePatientRequested=!!(n&&n.homePatientPresentation===true&&i.__VILDA_HOME_WORKSPACE_PREVIEW__===true);var o=jt();'],
   ['var o=jt();if(!o||!o.isUnlocked())return;', `var o=jt();
 function HomePatientOpenNote(options){return HomePatientPresentation?HomePatientPresentation.openNote(options):ga(options)}
 function HomePatientDialog(target,metadata){return HomePatientPresentation?HomePatientPresentation.onDialog(target,metadata):null}
-function HomePatientIsCurrent(){return !!(HomePatientPresentation&&HomePatientPresentation.isCurrent())}
+function HomePatientIsCurrent(){return !!(HomePatientPresentation&&HomePatientPresentation.actorLifetimeVersion===1&&HomePatientPresentation.isCurrent())}
 if(!o||!o.isUnlocked())return;`],
   ['Nt=e("div",{class:"vilda-patient-tab-content","data-tab":"antro"}),zt=null;var At=[];', 'Nt=e("div",{class:"vilda-patient-tab-content","data-tab":"antro"}),zt=null;var At=[],HomePatientMetrics={},HomePatientAssessments={bmi:Bo&&Bo.kategoria&&Bo.kategoria.etykieta||"",cole:Co&&Co.kategoria&&Co.kategoria.etykieta||""};'],
   ['At.push(xt("Wzrost",', 'At.push(HomePatientMetrics.height=xt("Wzrost",'],
@@ -27,7 +31,7 @@ if(HomePatientRequested&&i.VildaHomePatientNative&&typeof i.VildaHomePatientNati
     root:Eo,patientId:t,patientName:w,openerId:n&&n.homePatientOpenerId||"",ageLabel:Wt,measuredAtISO:m.measuredAtISO||s.visit&&s.visit.clinicalDateISO||null,
     tabs:Ft,panels:{antro:Nt,traj:Ct,notes:sa,timeline:ca,lab:GdLabHost,care:CarePatientHost},
     primaryMetrics:HomePatientMetrics,metricAssessments:HomePatientAssessments,measureNodes:At,growthNodes:ce,sgaNode:SgaTile,extraPanels:[BhPanel,Ce&&Ce.panel],
-    legacyPanels:Cs.slice(2,7).filter(Boolean),legacySummary:i.VildaHomePatientNative.describeLegacy(Cs.slice(2,7)),
+    legacyPanels:Cs.slice(2,Cs.indexOf(Ft)).filter(Boolean),legacySummary:i.VildaHomePatientNative.describeLegacy(Cs.slice(2,Cs.indexOf(Ft))),
     actions:{edit:B,newMeasure:U,visits:VisitHistoryButton,versions:So,load:Li,return:zo},
     backgroundRefresh:GdTlo,activeTab:r&&r.activeTab||"antro",focusNoteId:r&&r.treatmentFocusNoteId||null,registerBack:gr,resumeRefresh:Gd7,
     openNote:function(options){return ga(options)},
@@ -48,6 +52,8 @@ if(HomePatientRequested&&i.VildaHomePatientNative&&typeof i.VildaHomePatientNati
 /* END HOME PATIENT B1 NATIVE PRESENTATION */
 GdZakonczOdczyt(GdBilet);Zt(Eo,{noLogo:!0})`],
   ['remSearchBindReturn(Eo,SearchReturnToken),GdOdtworzPrzewiniecie(GdScrollKarty)', 'remSearchBindReturn(Eo,SearchReturnToken),HomePatientPresentation&&HomePatientPresentation.mounted(),GdOdtworzPrzewiniecie(GdScrollKarty)']
+  ,['Ob_dz(t,s,S,h,GdNotatki,m)', 'Ob_dz(t,s,S,h,GdNotatki,m,HomePatientRequested?{actorLifetimeVersion:1,isCurrent:HomePatientIsCurrent,onDialog:HomePatientDialog}:null,function(){return remReadCurrent(CareReadOwner)&&Eo&&Eo.isConnected&&(!HomePatientRequested||HomePatientIsCurrent())})']
+  ,['Ob_dzPostepy(t,Ct,_pdHost,_pdRys)', 'Ob_dzPostepy(t,Ct,_pdHost,_pdRys,HomePatientRequested?HomePatientIsCurrent:null)']
   ,['Xo(sa,t,da,{focusNoteId:r&&r.focusNoteId})', 'Xo(sa,t,da,{focusNoteId:r&&r.focusNoteId,homePatientPresentation:HomePatientRequested,openEditor:HomePatientOpenNote})']
   ,['Xl(ca,t,Ue,a,n)', 'Xl(ca,t,Ue,a,n,{openEditor:HomePatientOpenNote})']
   ,['GdLabOnce=!1;function GdLabRender(){var GdModul=', 'GdLabOnce=!1,HomePatientLabView=null;function GdLabRender(){if(HomePatientRequested&&HomePatientLabView){var HomePatientPreviousLab=HomePatientLabView;HomePatientLabView=null;if(typeof HomePatientPreviousLab.destroy==="function")try{HomePatientPreviousLab.destroy()}catch(error){Ot("home patient lab destroy",error)}}var GdModul=']
@@ -56,6 +62,25 @@ GdZakonczOdczyt(GdBilet);Zt(Eo,{noLogo:!0})`],
   ,['module.mount(CarePatientHost,{full:true,patientId:t,vault:o,', 'module.mount(CarePatientHost,{full:true,patientId:t,vault:o,onDialog:HomePatientRequested?HomePatientDialog:void 0,']
 ];
 const outsidePairs = [
+  ['function Ob_dz(t, s, S, h, notatki, m) {', 'function Ob_dz(t, s, S, h, notatki, m, homeContext, notificationIsCurrent) {'],
+  ['patientId: t, stan: stan, urodzenieISO: (m && m.dobISO) || "", nazwa: (s && s.name) || "", migawka: migawka,', 'patientId: t, stan: stan, urodzenieISO: (m && m.dobISO) || "", nazwa: (s && s.name) || "", migawka: migawka, homeContext: homeContext,'],
+  ['function odswiez() {\n    var o = jt();', 'function odswiez() {\n    if (homeContext && !homeContext.isCurrent()) return;\n    var o = jt();'],
+  ['      var nowy = Dz.zloz(n, migawka);\n      rysuj(nowy);\n      Ob_dzPowiadom(t, nowy);', '      if (homeContext && !homeContext.isCurrent()) return;\n      var nowy = Dz.zloz(n, migawka);\n      rysuj(nowy);\n      Ob_dzPowiadom(t, nowy, notificationIsCurrent);'],
+  ['function Ob_dzPostepy(t, Ct, host, rys) {', 'function Ob_dzPostepy(t, Ct, host, rys, isCurrent) {'],
+  ['  var biezacy = host || null;\n  Ob_dzSluchacze.push({', `  var biezacy = host || null;
+  function current() {
+    if (isCurrent == null) return true;
+    try { return typeof isCurrent === "function" && isCurrent() === true; } catch (_homeError) { return false; }
+  }
+  Ob_dzSluchacze.push({`],
+  ['    pid: t, ct: Ct, fn: function (stan) {\n      var nowy;', '    pid: t, ct: Ct, home: isCurrent != null, isCurrent: current, fn: function (stan) {\n      if (!current()) return;\n      var nowy;'],
+  ['Ob_dzSluchacze.filter(function (x) { return x.ct && x.ct.isConnected; })', 'Ob_dzSluchacze.filter(function (x) { return x.ct && x.ct.isConnected && (!x.isCurrent || x.isCurrent()); })'],
+  ['function Ob_dzPowiadom(t, stan) {', `function Ob_dzPowiadom(t, stan, notificationIsCurrent) {
+  function sourceCurrent() {
+    try { return typeof notificationIsCurrent === "function" && notificationIsCurrent() === true; } catch (_homeError) { return false; }
+  }`],
+  ['    if (x.pid === t) {\n      try { x.fn(stan); }', '    if (x.pid === t && (!x.home || sourceCurrent())) {\n      try { x.fn(stan); }'],
+  ["var zakladka = karta && karta.querySelector('button[data-tab=\"antro\"]');", "var zakladka = karta && karta.querySelector(i.__VILDA_HOME_WORKSPACE_PREVIEW__===true&&karta.classList.contains('vhome-native-patient-card')?'button[data-tab=\"treatment\"]':'button[data-tab=\"antro\"]');"],
   ['function GdMoznaWyswietlic(t){', 'function GdMoznaWyswietlic(t,homeBackground){'],
   ['if(GdSgaDeferRefresh()){GdZakonczOdczyt(t);return false}\n  if(i.document.querySelector', 'if(GdSgaDeferRefresh()){GdZakonczOdczyt(t);return false}\n  if(homeBackground&&i.VildaHomePatientNative&&i.VildaHomePatientNative.deferRefresh()){GdZakonczOdczyt(t);return false}\n  if(i.document.querySelector'],
   ['if(GdSgaDeferRefresh())return;if(i.document.querySelector(".vilda-auth-overlay-sheet")', 'if(GdSgaDeferRefresh())return;if(i.VildaHomePatientNative&&i.VildaHomePatientNative.deferRefresh())return;if(i.document.querySelector(".vilda-auth-overlay-sheet")'],
@@ -101,6 +126,10 @@ function applyPairs(input,replacements){
   }
   return input;
 }
+// Existing B1 exports already contain the presentation block. Adapt its old
+// node boundary before checking the complete hook; fresh native input gets it
+// from the block below.
+for(const [before,after] of compatibilityPairs)if(card.includes(before))card=applyPairs(card,[[before,after]]);
 card=applyPairs(card,pairs);
 const displayGuards=card.split('GdMoznaWyswietlic(GdBilet)').length-1;
 if(displayGuards){

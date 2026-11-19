@@ -2815,6 +2815,296 @@ sam wpis przez prawdziwy sejf do `buildHistoryView`. Na artefakcie sprzed
 łatki trzy nowe testy padają. Zielone testy nie są walidacją kliniczną;
 zmiana czeka na akceptację kliniczną właściciela (AGENTS.md § 3).
 
+### LAB-E2-MENARCHE — Estradiol poniżej 18 lat: zakresy dorosłych po 5 latach od menarche (P-E2-MENARCHE, 2026-11-19)
+
+**Zmiana kliniczna: TAK.** Zmienia się to, który zakres referencyjny
+estradiolu dostaje dziewczynka poniżej 18 lat i czy jej wynik dostaje ocenę.
+**Nie ma nowych stężeń, wierszy danych, jednostek ani przeliczników**: po
+progu używane są istniejące wiersze dorosłej kobiety, przed progiem —
+istniejące wiersze Tannera i wieku. Polityka
+`estradiol-matched-reference-only` `2026-11-19.1`, `LabUnitConverter` 2.0.4,
+`vilda_lab_packages.js` model 1.8.0 i widok 1.10.0; `LabUnitsData` zostaje
+przy 2.0.2. Akceptacja kliniczna wdrożenia: właściciel, przy przeglądzie PR.
+Zielone testy nie są walidacją kliniczną.
+
+**Decyzje właściciela z 2026-11-19** (endokrynolog dziecięcy; rozmowa
+i makieta zaakceptowana tego samego dnia):
+
+1. Próg: zakresy dorosłej kobiety obowiązują dziewczynkę poniżej 18 lat
+   po **5 latach od menarche**.
+2. Po progu, przy nieznanej fazie cyklu: warianty odniesienia **bez oceny**
+   wyniku — jak u dorosłej.
+3. „Postmenopauza” **nie jest proponowana poniżej 18 lat** — w każdym
+   badaniu, które używa selektora „Faza cyklu / ciąża”.
+4. Ciąża wybrana u nieletniej w estradiolu: **brak zakresu** i komunikat jak
+   u dorosłej.
+5. (Po przeglądzie kodu, tego samego dnia.) Reguła 5 lat od menarche działa
+   tylko wtedy, gdy menarche wystąpiła w wieku **co najmniej 8 lat**.
+   Menarche wpisana przed ukończeniem 8 lat pozostaje poprawnym wpisem, ale
+   nie uruchamia zakresów dorosłej — niezależnie od tego, ile lat minęło;
+   zostaje zakres dziecięcy jak dotąd.
+   Uzasadnienie przyjęte przy decyzji (kliniczne, nie wniosek z cytowanego
+   piśmiennictwa): krwawienie przed ukończeniem 8 lat nie jest traktowane
+   jako początek cykli owulacyjnych, a podwyższony estradiol ma być nadal
+   oznaczany zakresem dziecięcym.
+
+Z zaakceptowanej makiety: przed progiem zwykłe fazy cyklu są na liście
+wyszarzone, z wyjaśnieniem na końcu panelu „zmień”; lokalne pole „Wiek
+menarche [lata]”; trzy warianty odniesienia u nieletniej (bez „Po
+menopauzie”); karta estradiolu w pakiecie jak u dorosłej, z wierszem
+o menarche; ciąża w opisie pacjenta słowami („ciąża — I trymestr”) zamiast
+kodu pola — także u dorosłej.
+
+**Reguła** (tylko estradiol; płeć żeńska; cały znany wiek poniżej 18 lat
+i powyżej wyłączenia pierwszych 14 dni życia):
+
+- **Wiek menarche** liczy się, gdy jest liczbą od 2 do 20 lat i nie jest
+  większy niż wiek pacjentki. Inaczej jest traktowany jak brak wpisu.
+- **Lata od menarche** = dolna granica znanego wieku − wiek menarche. Liczy
+  się cały znany wiek, tak jak w [E2_AGE_QUALIFICATION.md](E2_AGE_QUALIFICATION.md):
+  wiek „15 lat” to przedział [15, 16) i do rachunku wchodzi 15,0; wiek
+  „15 lat 6 mies.” to [15,5; 15,583) i wchodzi 15,5.
+- **Próg: lata od menarche ≥ 5**, porównanie bez zaokrąglania (tolerancja
+  10⁻⁹ roku wyłącznie na szum odejmowania liczb zmiennoprzecinkowych).
+  Do wyświetlenia liczba lat jest zaokrąglana **w dół** do jednego miejsca
+  po przecinku (4,96 → „4,9”), żeby „5,0” nie pojawiło się przed progiem.
+- **Najniższy wiek menarche dla reguły (R9): wiek menarche ≥ 8 lat**,
+  porównanie bez zaokrąglania (7,99 — nie; 8,0 — tak). To osobny warunek,
+  a nie zmiana zakresu poprawności wpisu: menarche 2–7,99 jest wpisem
+  przyjętym (pole ją podpowiada, opis pacjenta ją wymienia), ale stan jest
+  taki jak przed progiem (R2) — zakres Tannera albo wieku, zwykłe fazy
+  cyklu wyszarzone, ciąża jak R4, postmenopauza jak R3, pakiet z oceną jak
+  dotąd.
+- **Po progu (R1)** estradiol jest obsługiwany jak u dorosłej kobiety:
+  wybrana faza folikularna, pik owulacyjny albo faza lutealna → istniejący
+  wiersz dorosłej (70–290, 380–1460, 200–770 pmol/L) i zwykła ocena;
+  faza nieznana → trzy warianty odniesienia bez oceny; stadium Tannera nie
+  dobiera już zakresu.
+- **Przed progiem, przy menarche przed ukończeniem 8 lat albo bez wpisanego
+  wieku menarche (R2, R9)** zakres jest taki jak dotąd (wiersz Tannera,
+  inaczej wiersz wieku). Zwykłe fazy cyklu nie zmieniają zakresu i nie da
+  się ich wybrać.
+- **„Postmenopauza” (R3)**: u pacjenta w wieku na pewno poniżej 18 lat opcji
+  nie ma na liście — w estradiolu i w pozostałych badaniach z tym selektorem
+  (17-OHP, androstendion, estron, progesteron, TSH, fT4, fT3, prolaktyna).
+  Silnik estradiolu traktuje przekazaną mu postmenopauzę nieletniej jak fazę
+  nieznaną; nigdy nie dobiera zakresu postmenopauzalnego. Dobór zakresów
+  innych badań nie został zmieniony.
+- **Ciąża u nieletniej w estradiolu (R4)**, z progiem albo bez: brak
+  zakresu i istniejący komunikat dorosłej.
+- **Pakiet badań (R5)**: dziewczynka po progu dostaje kartę estradiolu jak
+  dorosła (bez oceny, zdanie o kontekście badania, pod nim wiersz
+  o menarche). Pakiet nie ma panelu nadpisań: wiek menarche pochodzi
+  wyłącznie z danych pacjenta.
+- **Pierwszeństwo wartości**: pole lokalne „Wiek menarche [lata]” w panelu
+  „zmień” > dane bieżącej pacjentki (żywy panel „Dane pokwitaniowe” albo
+  sesja formularza, inaczej rekord pacjenta — ta sama kolejność co dla
+  początku pokwitania). Wpis lokalny obowiązuje tylko w tym sprawdzeniu
+  i nigdzie się nie zapisuje; znika po „Resetuj do danych pacjenta”,
+  zmianie pacjenta, wybraniu płci „Mężczyzna”, zmianie płci w danych tej
+  samej osoby i „Wyczyść wszystkie pola”.
+- **Wpis w polu lokalnym.** Każdy niepusty tekst w polu jest nadpisaniem
+  lokalnym i zastępuje wartość z danych. Przyjmowana jest wyłącznie zwykła
+  liczba dziesiętna: cyfry, opcjonalnie jeden przecinek albo kropka
+  i najwyżej dwie cyfry po nim (spacje na brzegach są pomijane). Sam
+  separator na końcu („9,” w drodze do „9,5”) to niedokończony zapis liczby
+  całkowitej i jest czytany jako ta liczba — wpisywanie liczby z przecinkiem
+  nie pokazuje po drodze noty o odrzuceniu. Znak, wykładnik,
+  zapis szesnastkowy, jednostka, drugi separator i każdy inny tekst („12,5,”,
+  „12,5 lat”, „12;5”, „1e1”, „0x10”, „-12”) to **wpis odrzucony** — tak samo
+  jak liczba spoza zakresu 2–20 albo większa niż wiek. Wpis odrzucony liczy
+  się jak brak wieku menarche (nie wraca do wartości z danych), pole jest
+  oznaczone jako błędne, a nota mówi wprost, że wpis nie jest brany pod
+  uwagę.
+- **Opis pacjenta** wymienia „menarche 11,0” tylko wtedy, gdy pole dotyczy
+  tego badania i tej pacjentki **i** silnik przyjął wpisaną wartość. Wpis
+  odrzucony nadal jest nadpisaniem lokalnym (dopisek „· nadpisanie lokalne”
+  i przycisk „Resetuj do danych pacjenta”), ale nie jest wypisywany jako
+  wartość. Wpis, którego pole nie dotyczy (inne badanie, wiek nadpisany na
+  dorosły), nie jest ani wartością w opisie, ani nadpisaniem.
+- **Wybór, który nie jest dostępny** (postmenopauza poniżej 18 lat; zwykła
+  faza w estradiolu przed progiem albo przy menarche przed ukończeniem
+  8 lat), **nie trafia do żadnego odbiorcy danych
+  pacjenta**: wyniku, opisu pacjenta, podpowiedzi, przypięcia ani karty
+  „Hormony w ciągu życia” (także LH i inhibiny B). Rozstrzyga to jedno
+  miejsce strony — odczyt pacjenta (`getEffectivePatient`), który o dostępność
+  pyta silnik. Zapamiętany wybór selektora jest przy tym kasowany (selektor
+  wraca do „nieznana” albo „domyślnie”, opcja znika z listy albo jest
+  wyszarzona) przy każdym odświeżeniu opisu pacjenta: po zmianie badania,
+  danych pacjenta, pola wyboru i po zakończeniu wpisu liczby — także
+  w badaniach z własnym formularzem (LH, FSH, inhibina B, testosteron),
+  w których selektor jest schowany.
+- **W trakcie wpisywania liczby** (pola „Wiek [lata]”, „Wiek [mies.]”, „Wiek
+  menarche [lata]”) zapamiętany wybór i jego opcja zostają nietknięte, ale
+  niedostępny wybór nie działa: wiek „65” wpisywany przez „6” daje przy „6”
+  wynik i opis bez postmenopauzy, a przy „65” wybór działa znowu bez
+  ponownego wybierania. Wpis kończy wyjście z pola albo Enter; dopiero wtedy
+  niedostępny wybór jest kasowany. Zakończenie wpisu **nie rysuje wyniku
+  ponownie** (wynik jest już policzony w trakcie wpisywania), więc pierwsze
+  kliknięcie w wynik zaraz po wyjściu z pola nie ginie.
+
+**Co się nie zmieniło.** Wiek od 18 lat (cztery warianty przy nieznanej
+fazie, postmenopauza do wyboru, komunikat dla ciąży), mężczyźni i chłopcy,
+płeć nieznana, brak wieku, pierwsze 14 dni życia i wiek przecinający granicę
+18 lat, zakresy wszystkich pozostałych badań, wszystkie stężenia
+i przeliczniki estradiolu, wiersze Tannera i wieku oraz kolejność ich doboru
+przed progiem. Zapisane (przypięte) wyniki nie są przeliczane.
+
+**Teksty** (liczby składa silnik z danych): pod opisem pacjenta — „Od
+menarche: 5,0 lat (≥ 5) — zakresy estradiolu jak u dorosłej.”, przy nieznanej
+fazie z dopiskiem „Jeśli faza cyklu jest znana, wybierz ją w „Zmień ▼".”;
+nagłówek wariantów nieletniej — „Zakres estradiolu zależy od fazy cyklu.
+Poniżej dostępne warianty odniesienia.”; na końcu panelu — „Fazy cyklu nie
+zmieniają zakresu estradiolu: od menarche minęło mniej niż 5 lat (1,0).”
+albo „Fazy cyklu działają poniżej 18 lat dopiero po 5 latach od menarche.
+Wpisz „Wiek menarche” tutaj (tylko dla tego sprawdzenia) albo na stałe
+w „+ Dane pokwitaniowe” na stronie głównej.”, przy menarche przed
+ukończeniem 8 lat — „Fazy cyklu nie zmieniają zakresu estradiolu: menarche
+przed ukończeniem 8 lat (3,0) — zostaje zakres dziecięcy.” (w nawiasie wiek
+menarche zapisany jak w polu), a przy odrzuconym wpisie —
+„Wpisany wiek menarche nie jest brany pod uwagę: podaj liczbę od 2 do 20
+lat (najwyżej dwa miejsca po przecinku), nie większą niż wiek pacjentki.”
+(nie dotyczy poprawnego wpisu poniżej 8 lat).
+
+**Przypadki `wejście → oczekiwany wynik`** (fikcyjne pacjentki, estradiol
+w pmol/L; scenariusze makiety A–G i granice):
+
+| | Wejście | Oczekiwany wynik |
+|---|---|---|
+| A | 15 lat, Th V, menarche 10,0 w danych, faza nieznana, E2 450 | wiersz „Od menarche: 5,0 lat (≥ 5)…” z dopiskiem o „Zmień ▼”; trzy warianty 70–290 / 380–1460 / 200–770, bez oceny; pole z podpowiedzią „(z danych: 10,0)”; lista bez „Postmenopauzy” (przed zmianą: 0–290, „powyżej normy”) |
+| B | jak A, faza lutealna | zakres 200–770, „w zakresie normy”; wiersz o menarche bez dopisku (przed zmianą: 0–290, „powyżej normy”) |
+| C | 13 lat, Th IV, menarche 12,0, E2 150 | bez zmian: 55,1–312, „w zakresie normy”; fazy cyklu wyszarzone; nota „…mniej niż 5 lat (1,0).” |
+| D | 16 lat, Th V, bez wieku menarche, E2 250 | bez zmian: 0–290, „w zakresie normy”; pole z podpowiedzią „np. 12,5”; nota o wpisaniu wieku menarche |
+| E | jak D, „Ciąża — I trymestr”, E2 3000 | brak zakresu i oceny, komunikat „Brak zakresu estradiolu dla wskazanego kontekstu cyklu lub ciąży…”; w opisie „ciąża — I trymestr” (przed zmianą: 0–290, „znacznie powyżej normy”) |
+| F | pakiet Estradiol + TSH, pacjentka A, E2 450 | karta estradiolu „bez oceny względem zakresu”, zdanie o kontekście badania, wiersz „Od menarche: 5,0 lat (≥ 5)…”, łącze do pojedynczego badania; wiersz „Pokwitanie” nie wymienia Estradiolu |
+| G | pacjentka D, w polu „Wiek menarche [lata]” wpisane 11,0 | jak A (trzy warianty), opis „… · Th V · menarche 11,0 · nadpisanie lokalne”, widoczne „Resetuj do danych pacjenta” |
+| granica | menarche 10,0; wiek 14 lat 11 mies. / 15 lat 0 mies. | 4,9 roku → zakres jak dotąd / 5,0 lat → jak u dorosłej |
+| granica | wiek [15, 16) / [15,5; 15,583), menarche 10,5 | 4,5 roku → jak dotąd / 5,0 lat → jak u dorosłej |
+| granica | 17 lat 11 mies. po progu / 18 lat, faza lutealna | ten sam zakres 200–770 — bez skoku w dniu 18. urodzin |
+| R9 | 16 lat, Th V, menarche 3,0 w danych, E2 450 | jak bez reguły: 0–290, „powyżej normy”; fazy cyklu wyszarzone; pole z podpowiedzią „(z danych: 3,0)”; nota „…menarche przed ukończeniem 8 lat (3,0) — zostaje zakres dziecięcy.”; karta pakietu z oceną zakresem Tannera V |
+| R9, granica | 13 lat 0 mies., Th IV, E2 150; menarche 7,99 / 8,0 (z danych albo wpisane w polu) | 7,99 → 55,1–312, „w zakresie normy”, nota „…(7,99)…”, przy wpisie opis „… · menarche 7,99 · nadpisanie lokalne” / 8,0 → „Od menarche: 5,0 lat (≥ 5)…”, trzy warianty |
+| R9 | 7 lat, menarche 2,0 w danych (5 lat od menarche), E2 50 | zakres wieku jak dotąd (0–73,5), bez wiersza o menarche; nota „…(2,0)…” |
+| R9 | 16 lat, menarche 7,9 (8,1 roku od menarche) | zakres dziecięcy jak dotąd; nota „…(7,9)…” |
+| wpis odrzucony | pacjentka 16 lat (w danych menarche 11,0), wpis lokalny 25, 1 albo 16,5 | zakres jak bez wieku menarche (0–290); nota „Wpisany wiek menarche nie jest brany pod uwagę…”; opis „… · Th V · nadpisanie lokalne” bez „menarche 25,0” |
+| wpis nierozpoznany | jak wyżej, wpis „12,5,”, „12,5 lat”, „12;5”, „1e1”, „0x10” albo „-12” | jak wpis odrzucony; „11”, „11,”, „11,0”, „ 10.5 ” są przyjmowane („11,” to niedokończony zapis liczby 11) |
+| wpis nieużywany | pacjentka D, wpis 11, potem wiek w panelu 30 lat albo inne badanie | opis bez „menarche …”; po powrocie do estradiolu u 16-latki „… · menarche 11,0 · nadpisanie lokalne” |
+| wpisywanie liczby | dorosła 30 lat, prolaktyna, „Postmenopauza”; wiek „65” wpisywany przez „6” | przy „6”: opis „Kobieta · 6 lat · …” bez postmenopauzy, wybór w selektorze zostaje; przy „65”: „… · postmenopauza · nadpisanie lokalne”; zakończony wpis „15” → wybór „(domyślnie)”, opcji nie ma |
+| wpisywanie liczby | dorosła 30 lat, estradiol 450, faza lutealna; wiek „35” wpisywany przez „3” | przy „3”: zakres 0–73,5 i opis bez fazy, „Faza lutealna” dalej wybrana; przy „35”: 200–770, „w zakresie normy” |
+| klik po polu | fokus w polu liczbowym panelu (z wpisem albo bez), potem klik w wartość w tabeli wyników | pierwszy klik kopiuje: „Skopiowano: 0,45 nmol/L” |
+| badanie z własnym formularzem | ta sama osoba: 40 lat, „Postmenopauza” wybrana w prolaktynie → Inhibina B → dane zmienione na 12 lat, wynik 40 ng/L | schowany wybór skasowany; karta „Hormony w ciągu życia” jak u świeżo otwartej 12-latki („40 ng/L Mediana ≈43 ng/L”), bez komunikatu o menopauzie |
+| zmiana płci w danych | 16 lat, wpis lokalny 11 i faza lutealna; płeć w danych K → M → K | pole puste, wybór „(nieznana)”, zakres jak bez wpisu (0–290) |
+| inne badanie | prolaktyna, 16 lat / 30 lat | lista bez „Postmenopauzy”, fazy do wyboru / osiem opcji jak dotąd |
+
+**Gdzie mieszka reguła.** Próg (5, `adult_context_after_years`), najniższy
+wiek menarche dla reguły (8, `adult_context_min_menarche_years` — osobne
+pole), dopuszczalny wiek menarche jako wpis (2–20), lista wyborów
+niedostępnych poniżej 18 lat, konteksty ciąży i oba teksty są danymi:
+blok `gynecological_age` w polityce deskryptora estradiolu
+(`lab_units_data.js`); granica 18 lat zostaje w `chronological_age`.
+Odpowiedź `referenceContext` podaje powód braku kwalifikacji
+(`not_qualified_reason`: brak wpisu, za mało lat albo menarche przed
+granicą wieku) i samą granicę, więc strona nie porównuje wieku menarche
+z liczbą 8 i nie ma jej w kodzie. Regułę
+stosuje silnik (`lab_unit_converter.js`: `selectRange`, `evaluate`). Strona
+i pakiet nie mają jej kopii: o podstawę doboru, lata od menarche i dostępne
+wybory pytają `LabUnitConverter.referenceContext(badanie, pacjent)`, a wiek
+menarche przekazują w polu pacjenta `menarche_age_years`. Wynik dobrany
+z lat od menarche niesie `reference_basis: 'gynecological_age'` i gotowe
+zdanie `reference_basis_pl`. Na stronie (`przelicznik-jednostek.html`):
+`applyMenarcheAge` (pierwszeństwo wartości), `applyReferenceAvailability`
+na końcu `getEffectivePatient` (niedostępny wybór fazy nie trafia do
+odbiorców; czy wpis jest nadpisaniem i czy jest wartością do pokazania),
+`commitCyclePhaseAvailability` na początku `renderPatientSummary` (kasowanie
+zapamiętanego wyboru, przed wcześniejszym powrotem dla badań z własnym
+formularzem), `onOverrideChange` (odczyt wpisu; zdarzenie „input” =
+wpisywanie) i `onOverrideNumberCommitted` (koniec wpisu: tylko opis
+pacjenta, bez rysowania wyniku).
+
+**Testy.** `tests/unit/lab-e2-menarche.test.mjs` (dane, silnik, pakiet,
+format zapisu oraz prawdziwe funkcje strony wycięte
+z `przelicznik-jednostek.html` i uruchomione na atrapach elementów: odczyt
+pacjenta, opis, selektor, pole, noty, zdarzenia panelu),
+z macierzą `tests/support/lab-selection-matrix.mjs` i wzorcem
+`tests/fixtures/lab-selection-inne-badania-baza.json` wygenerowanym z kodu
+`origin/audyt` (33 pozostałe badania × 4992 konteksty pacjentów oraz
+populacje estradiolu, których reguła nie dotyczy — wyniki identyczne jak
+przed zmianą). E2E: `tests/e2e/lab-e2-menarche.spec.mjs` (scenariusze A–G,
+granice, selektor w innym badaniu, czyszczenie, wpisywanie liczby przez
+wartość pośrednią w prolaktynie i estradiolu, klik w wynik po polu
+liczbowym, wpis odrzucony i nierozpoznany, opis pacjenta przy wpisie
+nieużywanym, zmiana płci w danych, LH i inhibina B, R9 z danych i z wpisu
+lokalnego z granicą 7,99 / 8,0, 390 px, pakiet, przypięcie i historia). Zmienione istniejące E2E, które zakładały
+postmenopauzę albo zwykłą fazę u nieletniej:
+`hormone-lifespan-female-e2-reference`, `hormone-lifespan-female-lh-result-only`,
+`lab-e2-phase-source`, `lab-female-lh-result-only-offline`; pole dopisane do
+list czyszczenia w `lab-session-reset*`.
+
+**Ograniczenia.**
+
+- Nie znaleziono opublikowanych zakresów referencyjnych estradiolu dla faz
+  cyklu u nastolatek; zakresy dla faz są publikowane dla dorosłych. Po progu
+  wiersze dorosłej są więc stosowane **decyzją właściciela**, a nie na
+  podstawie zwalidowanego źródła zakresów dla tej grupy wieku. Dolne granice
+  dorosłej mogą u nastolatki częściej dawać ocenę „poniżej”.
+- Część cykli pozostaje bezowulacyjna także po 5 latach od menarche. Dlatego
+  przy nieznanej fazie wynik nie dostaje oceny, a wybór fazy zostaje
+  u lekarza; aplikacja nie ustala fazy z wieku, wieku menarche ani stężenia.
+- Wczesna menarche skraca, a późna wydłuża czas do cykli owulacyjnych; jeden
+  próg 5 lat tego nie modeluje.
+- Wiek menarche jest daną wpisaną; aplikacja go nie weryfikuje. Bez wpisu
+  (w danych albo w polu lokalnym) reguła nie działa.
+- Rachunek jest konserwatywny: liczy się dolna granica znanego wieku, więc
+  przy wieku podanym w samych latach próg bywa spełniony później niż
+  w rzeczywistości.
+- Zapisany (przypięty) wynik niesie użyty zakres i wybraną fazę, ale **nie
+  zapisuje podstawy doboru** (lat od menarche); w historii widać „dziewczynka,
+  15 l” obok zakresu „Kobiety, faza lutealna”. Format zapisu nie został
+  zmieniony.
+- Reguła dotyczy wyłącznie estradiolu. Inne hormony zależne od cyklu to
+  osobna, przyszła decyzja.
+- Weryfikacja wiersza Tanner V i tabeli Mayo została przez właściciela
+  odłożona i nie jest częścią tej zmiany.
+
+**Dowody.** Źródła wspierają decyzję właściciela o progu danymi o częstości
+owulacji po menarche. **Nie są zwalidowanym źródłem zakresów referencyjnych**
+estradiolu u nastolatek.
+
+- Apter D. *Clin Endocrinol (Oxf)* 1980,
+  doi:[10.1111/j.1365-2265.1980.tb02125.x](https://doi.org/10.1111/j.1365-2265.1980.tb02125.x) —
+  około 80% cykli bezowulacyjnych w 1. roku po menarche, 50% w 3., 10% w 6.
+- Apter D, Vihko R. *J Clin Endocrinol Metab* 1983,
+  doi:[10.1210/jcem-57-1-82](https://doi.org/10.1210/jcem-57-1-82) — czas, po
+  którym 50% cykli jest owulacyjnych: około 1 roku, 3 i 4,5 roku dla menarche
+  przed 12,0, w wieku 12,0–12,9 oraz w wieku 13,0 lub później.
+- Metcalf MG i wsp. *J Endocrinol* 1983,
+  doi:[10.1677/joe.0.0970213](https://doi.org/10.1677/joe.0.0970213) — odsetek
+  dziewcząt i kobiet z owulacją w każdym zarejestrowanym cyklu według lat od
+  menarche: 22,9% (<1), 25,0% (1–<2), 44,8% (2–<3), 42,9% (3–<4), 63,2%
+  (4–<5), 71,8% (5–8), 82,6% (9–12); regularny wzorzec cykli owulacyjnych
+  ustala się w ciągu 5 lat od menarche.
+- Rosenfield RL. *J Clin Endocrinol Metab* 2013,
+  doi:[10.1210/jc.2013-1770](https://doi.org/10.1210/jc.2013-1770) — do 5.
+  roku ginekologicznego około 75% cykli jest owulacyjnych (wzorzec dojrzały:
+  około 80%).
+- Sun BZ i wsp. *J Clin Endocrinol Metab* 2019,
+  doi:[10.1210/jc.2018-00595](https://doi.org/10.1210/jc.2018-00595) —
+  dziewczęta 0,4–3,5 roku po menarche, wszystkie Tanner V: w prawidłowych
+  cyklach owulacyjnych estradiol niższy niż u dorosłych (wczesna faza
+  folikularna 16,9 vs 54,0 pg/mL; późna folikularna 51,2 vs 133,2; lutealna
+  59,2 vs 98,2; środek cyklu 123,5 vs 154,4 — różnica nieistotna). To powód,
+  dla którego samo stadium Tanner V nie uprawnia do zakresów dorosłej.
+- Peña AS i wsp. *BMC Med* 2025 (wytyczne PCOS),
+  doi:[10.1186/s12916-025-03901-w](https://doi.org/10.1186/s12916-025-03901-w) —
+  kryteria regularności cyklu jak u dorosłych od 3 lat po menarche; pełna
+  dojrzałość rozrodcza około 8 lat po menarche.
+
+Na podstawie artykułów pobranych z PubMed.
+
+Powiązane wpisy i dokumenty: LAB-E2-AGE-QUALIFICATION i LAB-E2-CYCLE-CONTEXT
+(niżej) z notami z 2026-11-19 w [E2_AGE_QUALIFICATION.md](E2_AGE_QUALIFICATION.md)
+i [E2_CYCLE_CONTEXT.md](E2_CYCLE_CONTEXT.md); zmiany w artefaktach:
+`docs/ZRODLA_ARTEFAKTOW.md`, „Łatka P-E2-MENARCHE”.
+
 ### LAB-E2-AGE-QUALIFICATION — wiek przed stadium, 2026-10-28
 
 **Wpływ kliniczny: tak.** Polityka `estradiol-matched-reference-only`
@@ -23268,7 +23558,8 @@ Przypadki `wejście → oczekiwany wynik`:
 **Ograniczenia.**
 - Komentarz bramki w `vilda_vault.js` (`Bob_bramka`) dalej opisuje flagę `'1'`; sam kod czyta włącznik synchronizacji,
   więc działa poprawnie. Komentarz do poprawy przy najbliższej zmianie sejfu (bez zmiany sejfu tutaj: bez przepinania
-  fragmentu sejfu).
+  fragmentu sejfu). *(2026-11-17, E3-PR0c, P-ZBIEZNOSC-ZDARZEN: komentarz poprawiony — włącznik dziennika domyślnie otwarty przy
+  „events” w health i pobieraniu stronami, flaga `vilda-event-log-v1` = `'0'` wyłącza dziennik na urządzeniu.)*
 - Bicie serca nadawcy, pierścień własnych zdarzeń i `appliedUpTo` nie są kasowane przy „Usuń konto” (identyfikatory
   i numery, bez treści); polityka prywatności mówi o tym wprost („po ręcznym wyczyszczeniu danych witryny”).
 - Strona otwarta samodzielnie (poza powłoką) zna „events” dopiero po health tej strony — przy pobieraniu na starcie
@@ -25044,6 +25335,8 @@ fragment natywny, haki, moduły i paczka bez zmian.
 - **E2-PR3c3, E2-PR3c4, E2-PR3c5.** Literały testu A ≡ B (p. 5, p. 6, lista zmian zachowania) i `kosz-po-kluczu`
   (`npret-kosz3-P`) — w postaci po tym PR.
 - **E3-PR0.** Echo zmian pochodnych scalania obejmuje też zmianę przyjętą tą regułą (bez nowego haka w etapie 2).
+  *(2026-11-17, E3-PR0c, P-ZBIEZNOSC-ZDARZEN: odsyłanie poprawionych wizyt obejmuje wersję pod kartą docelową „Scal pacjentów”, którą
+  zmieniło scalenie koperty starej karty — uśpione; wpis na końcu pliku.)*
 
 **Cofnięcie** = rewert PR (bez migracji: rekordy zapisane regułą to zwykłe rekordy wersji; rewert cofa też skróty
 kontroli granicy).
@@ -25150,7 +25443,9 @@ bazie (model jest w teście, haki sejfu te same).
   `oversize`); wpisy P-SYNC-SLAD liczbą.
 - **E2-PR5.** Licznik wierszy `oversize` w Ustawieniach obejmuje też takie koperty.
 - **E3-PR0.** Echo zmian pochodnych scalania (zbieżność bez pełnej wysyłki, także dla przypiętej wizyty na pozostałych
-  urządzeniach); R4n.
+  urządzeniach); R4n. *(2026-11-17, E3-PR0c, P-ZBIEZNOSC-ZDARZEN: wersje wizyt zapisane przez scalanie inaczej, niż przyszły (także
+  przypięta wizyta po retencji na drugim urządzeniu) — odsyłanie poprawionych wizyt, uśpione, wpis na końcu pliku;
+  wersje przeniesione pod kartę scaloną — E3-PR0f; R4n bez odsyłania — decyzja 2a z 2026-11-15.)*
 - **Etap 3.** Koniec pełnej wysyłki (decyzja 7) wymaga, żeby zdarzenie `ptomb` bez znanego celu albo wiersz `oversize`
   miały inny nośnik karty scalonej (punkt kontrolny).
 
@@ -25357,7 +25652,9 @@ Po scaleniu E2-PR3b warunek decyzji 10 („test właściciela po PR ze zmianami 
   dzielony na E2-PR3c1–E2-PR3c5 (decyzje z 2026-11-10): `ctx.pelny` bez zmian; K6 po pełnej wymianie, `npret-pin`
   i `npret-K` — wykonane w E2-PR3c1 (wpis wyżej); K6 w zdarzeniach — wykonane w E2-PR3c2 (wpis wyżej); R3-E1 i R3-E2 —
   wykonane w E2-PR3c3 (wpis wyżej).
-- **E3-PR0.** Echo zmian pochodnych scalania (pamięć par jako punkt wyjścia).
+- **E3-PR0.** Echo zmian pochodnych scalania (pamięć par jako punkt wyjścia). *(2026-11-17, E3-PR0c, P-ZBIEZNOSC-ZDARZEN: wersje wizyt —
+  bez pamięci par: sejf porównuje stan wersji z ładunku przed scaleniem i po nim; czwarta droga ze scalania do kolejki,
+  uśpiona; wpis na końcu pliku. Wpisy Kosza — E3-PR0d.)*
 - **Etap 3.** `partialSince` (odbiorca, znak w UI, lista w Ustawieniach, `pfull` ze scalania karty z `partialSince`).
 - Kolejne PR: nowe miejsce zapisu w scalaniu — emisja albo reguła „świadomie bez haka” (tabela wyżej) i przypadek
   w `sync-wskrzeszenie-calej-karty`; zmiana `vilda_vault.js` poza fragmentem natywnym — przeliczenie skrótów kontroli
@@ -25558,7 +25855,9 @@ i 4 e2e. Test A ≡ B (125) i test pokrycia (73) bez zmian, zielone.
   (wpis wyżej).
 - **E2-PR6.** Polityka prywatności, opisując bazę `vilda_sync_<userId>`, wymienia też znacznik przeglądu i pamięć par
   (identyfikatory encji i chwile, bez treści).
-- **E3-PR0.** Hak echa zmian pochodnych scalania (pamięć par jako punkt wyjścia); literał R2-E3.
+- **E3-PR0.** Hak echa zmian pochodnych scalania (pamięć par jako punkt wyjścia); literał R2-E3. *(2026-11-17, E3-PR0c, P-ZBIEZNOSC-ZDARZEN: odsyłanie
+  poprawionych wizyt bez pamięci par (porównanie stanu wersji przed scaleniem i po nim), uśpione; wiersz odsyłania
+  ma chwilę utworzenia z chwili dopisania, więc przegląd kolejki go nie dubluje; wpis na końcu pliku.)*
 - **Etap 3.** `rewind` cofa znacznik przeglądu i czyści pamięć par.
 - Kolejne PR: nowa chwila zegara w scaleniu — przypadek testu przeglądu (jak PG23); zmiana `vilda_vault.js` poza
   fragmentem natywnym — przeliczenie skrótów kontroli granicy; nowe miejsce zapisu — emisja w kroku albo reguła
@@ -27662,7 +27961,9 @@ przypadkach zastosowanie kończy się bez dalszych zapisów i bez klasyfikowania
 - **Odpowiedniki w dzisiejszym drenażu** (`Bdz_zastosuj`; podmiana w E2-PR4): `blokada` ↔ `locked`; `busy` ↔ `busy` i `session-changed`;
   `nieczytelne` ↔ `unreadable`; `blad` ↔ `apply-error`; `zmiana`/`ok` ↔ `applied`.
 - **Scalanie z chmury nie dopisuje do kolejki.** Kolejki jeszcze nie ma. Dwa wyjątki z decyzji 9 to haki E2-PR3b
-  (niżej; w kodzie od E2-PR3b, wpis wyżej).
+  (niżej; w kodzie od E2-PR3b, wpis wyżej). *(2026-11-17, E3-PR0c, P-ZBIEZNOSC-ZDARZEN: czwarta droga — odsyłanie poprawionych wizyt po
+  zastosowaniu koperty zdarzenia (`applyEncryptedEvent` = `Bem_zastosuj`), uśpione przełącznikiem odsyłania; wpis na
+  końcu pliku.)*
 
 **Zgodność ze starszą aplikacją.** Każda z 14 kopert przechodzi przez `mergeSyncPayload` starszego sejfu (wersja 221,
 fikstura testów) bez wyjątku. Stan jest taki jak po pełnym blobie dla tej encji (B13). Urządzenie bez aktualizacji
@@ -41387,6 +41688,9 @@ trwał w nim 200,8 s (przed scaleniem 161,9 s i 162,7 s, na bazie `4355e325` 127
   fakcie zapisu dałoby echo bez końca przez urządzenie 221). Reguła jest niezależna od źródła: nie odsyłać różnicy
   samych pól z `POLA_ZAWSZE`, których nie ma w encji ładunku, ani `h` przeliczonego z nich; `POLA_ZAWSZE` rośnie z każdą
   wersją, która zaczyna jakieś pole zapisywać zawsze (strażnik: pola zawsze obecne). Kanon 2a: bez R2, R4n i D7.
+  *(2026-11-17, E3-PR0c, P-ZBIEZNOSC-ZDARZEN: wykonane dla wersji wizyt — wpis na końcu pliku; zakres po decyzjach z 2026-11-17:
+  bez samego nagłówka karty, notatki i ich nagrobki bez odsyłania, tylko pomiar, tylko po pojedynczych zmianach, pełna
+  karta z haka H1 i osobne odesłanie tej samej wersji mogą wyjść obie; wpisy Kosza — E3-PR0d.)*
 - **Rozbicie zakresu**: `snap` w ładunku → E3-PR0c (CI: 20 wierszy w profilu podstawowym; ręcznie 67 / 34 / 91), w
   tym rekord złożony i gwiazdka; `stomb` w ładunku i spoza ładunku (R4a, R4a′, R5, inne) → E3-PR0d (CI 4; ręcznie
   32 / 30 / 61); nagłówek karty w ładunku i spoza ładunku (34 i 1 w profilu pełnym) i `snap` spoza ładunku (z gwiazdką
@@ -42221,7 +42525,10 @@ zmienił — przy następnej pracy w `vilda-source` weź nową bazę z `runtime/
   wskrzeszenie wobec nagrobka, którego wskrzeszające urządzenie nie zna, przegrywa jak dotąd (z kodu).
 
 **Wymagania dla następnych PR.** E3-PR0c: zapis samego `rev` i zapis samego oznaczenia nie są echem do odesłania
-(klasa „sam rev notatki”); `pnote` w ładunku — pomiar odsyłania na regule po E3-PR0b2b. Moduł planów z etapami
+(klasa „sam rev notatki”); `pnote` w ładunku — pomiar odsyłania na regule po E3-PR0b2b. *(2026-11-17, E3-PR0c,
+P-ZBIEZNOSC-ZDARZEN: notatek E3-PR0c nie odsyła — decyzja z 2026-11-17: notatki i ich nagrobki bez odsyłania, także
+w E3-PR0d tylko pomiar; „samo oznaczenie” licznik liczy jako `pnote|w ładunku|inne`, a klasa „sam rev notatki”
+obejmuje tylko sam `rev` — przypadek w `tests/unit/licznik-odsylania.test.mjs`.)* Moduł planów z etapami
 (repozytorium źródeł, przed E3-PR0c): chwila zapisu dowodu kroku i reguła notatek we fragmencie natywnym *(2026-11-17,
 2c, P-DOWOD-KROKU: dowód kroku w dwóch wydaniach — pierwsze w PR 2c, drugie osobnym PR po potwierdzeniu właściciela;
 decyzja właściciela z 2026-11-17: pole dowodu niesie chwilę zmiany treści dokumentu, nie chwilę zapisu; reguła notatek
@@ -43075,3 +43382,742 @@ z pustym BMI, a u dziecka „Za mało danych do oceny” — jak dotąd przy imp
 
 **Cofnięcie** = rewert PR, bez migracji (punkty bez wzrostu zostają poprawnymi rekordami; starsza wersja monitora
 wymaga wzrostu dopiero przy ich edycji).
+
+## Leczenie otyłości — etapy 3 i 4: dziennik wpisów poza wizytą i „+ Kontynuacja” w Karcie pacjenta (P-OTYLOSC-DZIENNIK, SW 1.1.551, `vilda_cykle_leczenia.js` 5, `vilda_auth_ui.js` 569, `vilda_auth_ui.css` 83, `obesity_therapy_monitor.js` 29, `vilda_global_search.js` 6, 2026-11-18)
+
+**Decyzje właściciela (2026-11-17/18).** Masa przysłana przez pacjenta albo rodzica miesiąc po wizycie **nie może być
+nową wersją ostatniej wizyty** (decyzja nr 2) — monitorowanie leczenia otyłości ma być oddzielone od wizyt w gabinecie.
+Przyjęte: (1) poprawka wpisu to nowa wersja, usunięcie można cofnąć, przy równoległej poprawce lekarz wybiera wersję;
+(2) wymagane pola jak w etapie 1 (Włączenie i Zakończenie dziecka ze wzrostem, Kontynuacja — data i masa), werdykt
+wstrzymany, gdy w oknie oceny jest konflikt dwóch wersji; (3) w Notatkach wpisy schowane za jedną linią „Wpisy leczenia
+otyłości (N) →”, w wyszukiwarce pominięte, w Historii jako „Leczenie otyłości”; (4) dawne punkty przeniesione ze źródłem
+„gabinet”; (5) etap 2 połączony z etapem 4; makieta zaakceptowana z etykietą źródła „Pacjent” (nie „Rodzic”);
+2026-11-18: „Etap 3 + 4 razem”.
+
+**Stan przed zmianą.** Punkty leczenia otyłości żyły tylko w zapisie wizyty (`obesityTherapyPoints` w migawce pacjenta):
+nowy punkt wymagał wczytania pacjenta w DocPro i „Zapisz dane”, czyli tworzył nową wersję wizyty. Równoległa praca na
+dwóch urządzeniach albo w dwóch kartach mogła zgubić punkt (zapis całej listy).
+
+**Gdzie zapisuje się wpis (sejf bez zmian).** Każda **wersja** wpisu to osobna notatka pacjenta zapisana raz
+(`VildaVault.savePatientNoteOnce`; ponowienie po zgubionym potwierdzeniu nic nie zmienia, inna treść pod tym samym
+identyfikatorem — odmowa): kategoria `leczenie-otylosci`, tytuł „Leczenie otyłości — Kontynuacja 10.11.2026”, pierwsza
+linia treści czytelna dla człowieka, linia ostrzeżenia, ostatnia linia — dane wpisu w JSON (`{"vildaOtylosc":1,…}`),
+`clinicalDateISO` = data pomiaru, `linkedAgeMonths` = wiek. Notatka nie ma terminu, więc nie trafia do przypomnień ani
+Terminarza. Mapa ścieżek sejfu pokazała, że tytuł, treść, kategoria i data kliniczna przechodzą przez zapis, eksport,
+scalanie i synchronizację **każdej** wersji aplikacji (także 221 i 276), a nowe pole w treści szyfrowanej ginęłoby w zapisie,
+odczycie i scalaniu każdej z nich (biała lista pól). Dlatego `vilda_vault.js` się nie zmienia: bez przeliczania skrótów
+obrazu sejfu i bez czekania na kolejkę E3-PR0c–E3-PR0i. Starsze urządzenie pokaże wpis jako zwykłą notatkę z czytelną
+pierwszą linią; po aktualizacji — jako wpis dziennika. Odstąpiono od zapowiadanego wcześniej przełącznika (ryzyko, przed
+którym miał chronić — utrata nowego pola na starszym urządzeniu — przy treści notatki nie występuje).
+
+**Wersje, konflikt, usunięcie (`VildaDziennikOtylosci`).** Wpis ma stały `entryId` (id pierwszej wersji); każda wersja
+wskazuje wersje, które zastępuje (`parents`). Bieżąca wersja = jedyny liść. Dwa liście = **konflikt** (ten sam wpis
+poprawiony równolegle na dwóch urządzeniach albo w dwóch kartach): żadna wersja nie znika, Karta pokazuje obie z
+zaznaczonymi różnicami, wybór lekarza to nowa wersja zastępująca oba liście (odrzucona zostaje w historii wpisu).
+Usunięcie = wersja `retracted`; „Cofnij” = nowa wersja z treścią sprzed usunięcia. Dwa nowe wpisy z dwóch urządzeń mają
+różne `entryId` — nigdy się nie nadpiszą; możliwy duplikat (ta sama data, masa ±0,05 kg) ostrzega przed zapisem.
+
+**Dawne punkty (decyzja nr 4).** Punkty migawki bez wpisu w dzienniku widać od razu w projekcji ze źródłem „gabinet”;
+przenoszą się do dziennika przy pierwszym zapisie wpisu tego pacjenta (z Karty albo z monitora). Przeniesiona wersja ma
+identyfikator `otylm-<skrót pacjenta>-<id punktu>` i treść bez chwili i urządzenia — dwa urządzenia przenoszące ten sam
+punkt zapisują tę samą notatkę (bez duplikatów). Punkt migawki z wpisem (po `legacyPointId` albo po id równym `entryId` —
+monitor zapisuje w migawce lustro dziennika) nie wraca drugi raz; usunięty po przeniesieniu też nie.
+
+**Projekcja.** Dziennik daje listę punktów w formacie monitora (`obesityTherapyPoints`) z `weightSource`/`heightSource`
+i `dziennik.konflikt`; przy konflikcie projekcja bierze najnowszą nieusuniętą wersję, oznaczoną konfliktem. Z projekcji
+liczą: kafelek „Leczenie otyłości” Karty, panel „Dane analityczne — otyłość” (redukcje, ocena wg ChPL — także punkt oceny
+z etapu 1 — i wykres), karta porównania, Historia oraz monitor DocPro wczytanego pacjenta.
+
+**Karta pacjenta — sekcja „Wpisy leczenia”** (między kafelkiem a panelem; `VildaDziennikOtylosciUI`): wpisy od najnowszego
+(5 + „Pokaż wszystkie”), masa i wzrost ze źródłem („gabinet”/„pacjent”), BMI, dawka, „Popraw”, „Usuń” (z „Cofnij” i listą
+usuniętych z „Przywróć”), „Wybierz wersję” przy konflikcie. Przycisk **„+ Kontynuacja”** otwiera okno bez wczytywania
+pacjenta: data pomiaru (obowiązkowa, pusta przy otwarciu), masa (obowiązkowa) ze źródłem (domyślnie „Pacjent”), wzrost
+opcjonalny ze źródłem, lek z ostatniego wpisu (zmiana leku — w DocPro), dawka podpowiedziana z ostatniego wpisu,
+komentarz. Pod masą zmiana od poprzedniego wpisu; przy wzroście — podpowiedź okna oceny ChPL u dziecka („Trwa okno oceny
+ChPL (od 27.10.2026). Ostatni wzrost: 162,9 cm z 13.10.2026 — przed oknem…”). Zapis sprawdza reguły cykli R1–R9 na liście
+z dziennika (Kontynuacja poza aktywnym cyklem — „nowy cykl zaczyna się od Włączenia w DocPro”), datę z przyszłości
+(pytanie) i duplikat (pytanie). Wiek w dniu pomiaru — z daty urodzenia, a bez niej z ostatniego wcześniejszego punktu
+i pełnych miesięcy między datami. Bez aktywnego cyklu przycisk ma `aria-disabled` z powodem pod spodem.
+
+**Werdykt przy konflikcie (decyzja nr 2).** Konflikt wpisu ocenianego cyklu w oknie oceny wg ChPL (od daty okna z
+`punktOceny`; bez okna albo bez dat — każdy konflikt cyklu) wstrzymuje werdykt: „Ocena wstrzymana — dwie wersje wpisu z
+10.11.2026”, z masami obu wersji i wskazaniem „Wybierz wersję”. Konflikt przed oknem nie zmienia oceny.
+
+**Monitor DocPro.** U wczytanego, zapisanego pacjenta lista monitora to projekcja dziennika (z masą od pacjenta oznaczoną
+„(pacjent)”), a dodanie, poprawka i usunięcie punktu zapisują od razu wersję wpisu (źródło „gabinet”, przy poprawce —
+źródło dotychczasowe); komunikat „Zapisano w dzienniku leczenia…”. Formularz wizyty zapisuje w migawce lustro listy, jak
+dotąd. Pacjent ramki to wyłącznie `window._vildaCurrentPatientId` zgodny z identyfikatorem karty w `sessionStorage` —
+nieaktualna ramka DocPro w tle nie czyta ani nie zapisuje dziennika innego pacjenta. Bez zapisanego pacjenta (nowy
+pacjent), bez odblokowanego sejfu albo bez modułu — monitor działa jak dotąd (punkty tylko w formularzu wizyty).
+
+**Notatki, wyszukiwarka, Historia (decyzja nr 3).** Notatki: wersje wpisów nie stoją na liście; jedna linia
+„Wpisy leczenia otyłości (N) — Leczenie →” prowadzi do sekcji. Wyszukiwarka pomija kategorię `leczenie-otylosci`.
+Historia: u pacjenta z dziennikiem wpisy „Leczenie otyłości” z bieżących wpisów dziennika (z masą i źródłem, podpis
+„z dziennika leczenia — poprawka w „Wpisy leczenia””) zamiast wpisów z migawki; surowe wersje nie stoją na osi.
+
+**PWA.** Kod dziennika i sekcji dopisany do `vilda_cykle_leczenia.js` (dwa niezależne moduły za modułem cykli), style —
+rozdział „Dziennik leczenia otyłości” w `vilda_auth_ui.css`: budżet instalacji liczy żądania (≤ 600,
+`sw-precache-stron`), a wszystkie pary aliasów są już wykorzystane — jak „Pakiet badań” (jeden plik). Wybrane źródło
+w oknie ma nadpisanie skórki iOS 26 (`.liquid-ios26 .vdo-chip[aria-checked="true"]`, powód „kaskada” w
+`tests/fixtures/skorka-nadpisania.json`) i znak „✓” (wybór nie tylko kolorem).
+
+**Przypadki syntetyczne** (dane fikcyjne; Testowa Zuzanna, 13 l., Wegovy; migawka: Włączenie 14.04.2026 80,0 kg
+160,0 cm, Kontynuacja 13.10.2026 75,2 kg 162,9 cm):
+
+| Przypadek | Wejście | Oczekiwany wynik |
+|---|---|---|
+| DZ-1 | Karta: „+ Kontynuacja” 10.11.2026, 74,6 kg, źródło Pacjent | trzy wpisy (dwa „gabinet” z migawki, nowy „pacjent”); liczba wersji wizyty bez zmian; w dzienniku trzy notatki; werdykt „Potrzebny pomiar wzrostu do oceny ChPL” |
+| DZ-2 | okno bez daty; wzrost „abc”; 13.10.2026 75,2 kg | „Podaj datę pomiaru…”; błąd wzrostu; „Możliwy duplikat — 13.10.2026 jest już wpis 75,2 kg (gabinet)” — „Nie zapisuj” nic nie zapisuje; 17.11.2026 74,3 kg 163,4 cm → „Odpowiedź wystarczająca” |
+| DZ-3 | poprawka 74,6 → 74,1 kg; usuń; „Cofnij” | ten sam wpis z 74,1 kg; po usunięciu dwa wpisy i komunikat z „Cofnij”; po cofnięciu trzy |
+| DZ-4 | dwie równoległe poprawki wpisu z 10.11.2026 (telefon 74,6 kg, komputer 74,1 kg) | wiersz w konflikcie, werdykt „Ocena wstrzymana — dwie wersje wpisu z 10.11.2026” z obiema masami; wybór „Komputer” → 74,1 kg, werdykt wraca |
+| DZ-5 | migawka z Zakończeniem 03.11.2026 | „+ Kontynuacja” z `aria-disabled`, „Brak aktywnego cyklu — Włączenie w DocPro.”; kliknięcie wyjaśnia, okno się nie otwiera |
+| DZ-6 | wpis + zwykła obserwacja | Notatki: jedna linia „Wpisy leczenia otyłości (3)…” i sama obserwacja; Historia: „Masa: 74,6 kg (pacjent)” i podpis dziennika |
+| DZM-1 | DocPro, wpis „od pacjenta” 10.11 w dzienniku; Kontynuacja z monitora 17.11.2026 74,3 kg 163,4 cm | monitor pokazuje 10.11 „74,6 (pacjent)”; nowy punkt w dzienniku jako „gabinet”; id punktów monitora = id wpisów |
+| DZM-2 | DocPro: usuń punkt 13.10.2026 | w dzienniku przeniesienie + wersja „(usunięty)”; monitor bez tego punktu |
+| flota | dwa urządzenia; równoległa poprawka; starsza aplikacja 221 i 276 przekazuje wpis i oznacza go „wykonane” | wpis widoczny na obu; konflikt na obu i rozstrzygnięcie wszędzie; urządzenie zasilane wyłącznie przez starszą aplikację składa ten sam wpis (masa, wzrost, źródło) |
+
+**Wpływ kliniczny.** Ocena wg ChPL, redukcje i wykres liczą się z dziennika, czyli także z mas (i wzrostów) zmierzonych
+przez pacjenta — tak jak zdecydował właściciel (etap 1: wzrost od pacjenta wolno użyć). Dotąd takie pomiary w ogóle nie
+wchodziły do oceny. Nowy stan: werdykt wstrzymany przy konflikcie wersji w oknie oceny. Progi, okna i kotwice ChPL bez
+zmian. Dorosły: ocena z masy (Saxenda, Mysimba) albo kliniczna — z ostatniego wpisu dziennika.
+
+**Ograniczenia (znane).**
+- Zakładka „Postępy” dorosłego, lista pacjentów (filtr leku), analiza trajektorii i karta zbiorcza czytają jeszcze
+  migawkę ostatniej wizyty — wpis z Karty widzą po najbliższym „Zapisz dane” wizyty w DocPro (lustro listy).
+  Od P-POSTEPY-DZIENNIK (niżej) „Postępy” liczą z dziennika, a listy pacjentów są z nim zgodne.
+- Starsze urządzenie (sprzed tej wersji) pokazuje wersje wpisów jako zwykłe notatki i nie widzi ich w monitorze; ręczna
+  edycja takiej notatki na starszym urządzeniu (zmiana treści) czyni ją nieczytelną dla dziennika — dziennik pomija ją
+  i zostawia w Notatkach.
+- Konflikt rozstrzyga się w Karcie; monitor DocPro przy próbie poprawki wpisu w konflikcie odsyła do Karty.
+
+**Testy.** Dane wyłącznie fikcyjne.
+- `tests/unit/dziennik-otylosci.test.mjs` (22): format notatki, wersje, konflikt, usunięcie i cofnięcie, migracja
+  (identyczne notatki z dwóch urządzeń, punkt bez daty, usunięty nie wraca), `planDzialania`, wiek w dniu pomiaru,
+  flota na prawdziwym sejfie (dwa urządzenia, starsza aplikacja 221 i 276).
+- e2e `tests/e2e/otylosc-dziennik-karta.spec.mjs` (DZ-1…DZ-6) i `tests/e2e/otylosc-dziennik-monitor.spec.mjs`
+  (DZM-0…DZM-2) na prawdziwych stronach. DZM-0 pilnuje łatki P-PWZ-ODTWORZENIE (`docs/ZRODLA_ARTEFAKTOW.md`): po
+  „Odtwórz zapis” w DocPro karta „Leczenie otyłości” zamykała się sama w ciągu sekundy (błąd był już na `audyt`).
+- Strażniki stylów: `css-skorka` (nowe nadpisanie w fixture), `css-szklo` (martwe deklaracje pod skórką usunięte
+  `usun-martwe-css.mjs`), `css-tokeny`.
+
+**Wdrożenie.** Od razu przy wydaniu. **Cofnięcie** = rewert PR: notatki dziennika zostają w sejfie jako zwykłe notatki
+kategorii `leczenie-otylosci` (widoczne w Notatkach), punkty w migawce — jak przed zmianą.
+
+## Dziennik zdarzeń: odsyłanie poprawionych wizyt po zastosowaniu zmiany z innego urządzenia — uśpione (P-ZBIEZNOSC-ZDARZEN, E3-PR0c, SW 1.1.552, `vilda_vault.js` 281, 2026-11-17)
+
+**Zmiana kliniczna: NIE (uśpiona).** Wzory, progi, jednostki, interpretacje, reguły scalania (`Le`), format kopii,
+serwer i `vilda_sync.js` bez zmian. Dla użytkownika dziś nic się nie zmienia: odsyłanie włącza tylko przełącznik
+odsyłania (klucz `localStorage` `vilda-event-echo-v1` dokładnie `'1'` albo pole okna `VILDA_EVENT_ECHO === true`),
+którego żaden ekran aplikacji nie ustawia. Przy wyłączonym przełączniku zastosowanie zmiany z innego urządzenia
+(`applyEncryptedEvent`) czyta przełącznik (jedno pole okna i jeden klucz) i idzie dokładnie jak dotąd: ta sama
+obietnica, te same zapisy, te same wiersze kolejki. Po włączeniu przełącznika zmienia się wynik synchronizacji na
+innych urządzeniach. Urządzenie, które scaliło zmianę z innego urządzenia i zapisało inny rekord wizyty, niż przyszedł
+(np. poprawkę masy z jednego urządzenia i gwiazdkę z drugiego), samo wyśle ten rekord pozostałym — dziś niesie go
+tylko pełna wysyłka. W przykładzie niżej na drugim urządzeniu zamiast 20 kg zostaje 17,2 kg (to cel). To rozszerzenie
+decyzji 9 z 2026-10-29 (czwarta droga ze scalania do kolejki) — do akceptacji właściciela przy PR (niżej).
+
+**Skąd.** Plan `docs/SYNC_PRZYROSTOWA_PLAN.md`, rozdział 5, „Etap 3”, tabela „Podział E3-PR0”, wiersz 3. Decyzje
+z 2026-11-15: 1a (odsyłanie uśpione osobną flagą do PR włączającego), 2a (bez odsyłania samego `rev`, R4n i D7).
+Decyzje z 2026-11-17 — odpowiedź właściciela na sześć pytań projektu E3-PR0c (we wszystkich przyjęta odpowiedź
+polecana); zapis w planie, rozdział 6, blok „Decyzje z 2026-11-17 (E3-PR0c, pytania 1–6 projektu)”, który dopisał PR
+poprawki modułu planów z etapami (wiersz 2c, vildaclinic/vilda-calc#990):
+- kolejność: najpierw poprawka modułu planów z etapami (wiersz 2c); E3-PR0c przygotowany równolegle, PR po jej
+  scaleniu;
+- bez osobnego odsyłania samego opisu karty;
+- notatki pacjenta i ich nagrobki bez odsyłania (ani w E3-PR0c, ani w E3-PR0d), tylko pomiar;
+- odsyłanie tylko po pojedynczych zmianach (`applyEncryptedEvent`), nie po pełnej kopii ani delcie;
+- dopuszczona podwójna wysyłka wizyty (pełna karta z haka H1 i osobne odesłanie), bez pomijania przy H1;
+- różnica „tylko lista usuniętych pacjentów” odłożona do E3-PR0e.
+
+Wejście z E3-PR0b (wpis P-ZBIEZNOSC-ZDARZEN, E3-PR0b, „Wejście do kolejnych PR”: reguła echa, rozbicie zakresu, bez
+podwójnego wysyłania) i z E3-PR0b2b (wpis P-NOTATKA-POZNIEJSZA, „Wymagania dla następnych PR”). *(2026-11-18, po
+scaleniu 2c:)* Wymaganie z wpisu P-DOWOD-KROKU („Wymagania dla następnych PR”: nowa droga zapisu notatki wchodzi do
+listy dróg niezmiennika chwili treści) tego PR nie dotyczy. Odsyłanie nie zapisuje notatek ani innych rekordów sejfu,
+tylko dopisuje wiersz `snap` do kolejki. Dowód kroku wskazuje tylko notatkę, więc chwila treści dowodu nie przechodzi
+przez odsyłanie. Sprawy, których projekt i decyzje nie rozstrzygały, rozstrzygnięto wariantem najbezpieczniejszym
+dla danych; są niżej, w punkcie „Do akceptacji właściciela przy PR”.
+
+### E3-PR0c
+
+**Co było** (`audyt` `4389d34a`; prawdziwy sejf, urządzenia A, B, C jednego fikcyjnego konta, test wejściowy A ≡ B
+niżej). Gdy urządzenie scala zmianę z innego urządzenia, czasem zapisuje inny rekord, niż przyszedł: rekord złożony
+(`Bgw_scal` — treść wizyty z jednego urządzenia, gwiazdka z drugiego). Taki rekord pochodny nie trafiał do kolejki.
+Scalanie z chmury dopisywało do kolejki tylko przez trzy haki: H1 (pełna karta po przegranym nagrobku), H2 (ratunek
+notatki D-21) i hak karty notatki (E2-PR3c4). Pozostałe urządzenia dostawały rekord pochodny dopiero pełną wysyłką
+(`PUT /blob`), którą etap 3 wyłączy. Zwykle drugie urządzenie składa ten sam rekord samo, bo reguły scalania są
+symetryczne (treść i gwiazdka liczone osobno). Nie zawsze:
+- karta „Testowy Jan1”, wizyta v z masą 20 kg. B bez sieci poprawia masę na 17,2 kg; A, nie wiedząc o poprawce, daje
+  v gwiazdkę. Dostawa B → A: A składa 17,2 kg z gwiazdką (`rev` 2, rekord złożony). Potem na B porządkowanie starych
+  wizyt (retencja) usuwa v wpisem bez treści, bo B nie zna gwiazdki. Do B dochodzi gwiazdka od A — koperta zbudowana
+  przed scaleniem, z 20 kg. Wersja z gwiazdką przeżywa porządkowanie, więc B przyjmuje 20 kg z gwiazdką;
+- po samych zdarzeniach: A i C — 17,2 kg z gwiazdką, B — 20 kg z gwiazdką (W1 A–B z różnicą). Poprawka B zginęła
+  na B i wracała dopiero po pełnej wymianie.
+
+**Reguła.** Po zastosowaniu pojedynczej zmiany z innego urządzenia (koperta zdarzenia) urządzenie dopisuje do kolejki
+każdą wersję wizyty z ładunku, którą scalanie zapisało inaczej, niż przyszła — z wyjątkiem samego `rev`, samej
+tożsamości wizyty dopisanej przez bieżącą wersję i wersji przeniesionej w tym scaleniu pod inną kartę.
+- **Kandydaci** — identyfikatory wersji z ładunku: `patients[].snapshots[].snapshotId` i
+  `snapshotTombstones[].snapshotId`, bez powtórzeń (`Bev_kandydaciEcha`). Każdy kandydat jest odczytany przed
+  scaleniem i po nim po samym `snapshotId`, pod dowolną kartą (`Bev_stanEcha`: strzeżony adapter `Bev_start(null)`,
+  sprawdzenie sesji po każdym odczycie, bez odszyfrowania i bez zapisów). Ładunek bez wersji (notatka, lista,
+  preferencja, hasło) — bez odczytów.
+- **Wersja idzie do kolejki, gdy zachodzi wszystko naraz** (`Bev_echo`):
+  - scalanie ruszyło w tej sesji: wynik `applied` albo wyjątek z `Le` zamieniony na `busy` lub `apply-error`. `Le`
+    zapisuje wersje przed fazą Kosza, a ta może jeszcze rzucić (`vildaMergeBusy`, `VISIT_IDENTITY_CONFLICT`);
+    ponowienie zdarzenia ma potem stan przed = po, więc odesłanie z pierwszej próby nie wróciłoby. Odmowa kontroli
+    przed scaleniem we fragmencie natywnym (opakowanie `Le`) to też wyjątek z `Le` (status jak dziś), ale przed
+    zapisem: stan przed = po, więc bez odesłania (wyjątek przy nieudanym całym odczycie „przed” —
+    „Ograniczenia”). Przy `locked` i `session-changed` — bez odsyłania;
+  - bez przeniesienia: po scaleniu v leży pod kartą p, a przed scaleniem leżała pod p albo pod żadną kartą (np. tylko
+    we wpisie Kosza). Wersja, która przed scaleniem leżała pod inną kartą, to przeniesienie (E3-PR0f);
+  - scalanie zapisało: rekord sklepu po ≠ rekord przed (JSON z posortowanymi kluczami, `Bev_json`, więc sama kolejność
+    kluczy nie jest różnicą). Ten sam rekord — bez odszyfrowania;
+  - nie sam `rev`: wersja po scaleniu w kształcie elementu pełnej kopii (`Bev_wersjaEcha` — `Bev_wersja` z treścią
+    przez `Bvisit_read`, czyli z tożsamością wizyty wyliczoną dla starych rekordów, jak w `exportSyncPayload`) bez
+    `rev` ≠ wersja przed scaleniem bez `rev` (kanon decyzji 2a z 2026-11-15);
+  - nie to, co przyszło: v nie ma w ładunku pod p albo po regule pola wersja po scaleniu ≠ wersja z ładunku (obie bez
+    `rev`). Reguła pola (`Bev_echoT`, niezależna od źródła ładunku): z wersji po scaleniu usuwa pola
+    z `Bev_ECHO_ZAWSZE` (dziś `payload.visit` — tożsamość wizyty), których nie ma w wersji z ładunku; gdy odcisk `h`
+    po scaleniu jest świeży (`Bgw_odcisk` treści), a odcisk treści bez tych pól równa się `h` z ładunku — podstawia
+    `h` z ładunku. `Bev_ECHO_ZAWSZE` = `POLA_ZAWSZE.snap` licznika odsyłania (strażnik w teście).
+- **Błędy odczytu — osobno dla każdej wersji.** Nieczytelna treść wersji przed scaleniem albo nieudany cały odczyt
+  stanu „przed”: dla tej wersji bez porównania treści przed i po; zostaje porównanie z ładunkiem, a gdy rekord sprzed
+  scalenia jest — także sprawdzenie przeniesienia i „ten sam rekord”. Nieczytelna treść wersji po scaleniu albo błąd
+  porównania: odesłanie tej wersji. Nieudany cały odczyt stanu „po”: odesłanie każdego kandydata z kartą z odczytu
+  „po”, inaczej „przed”, inaczej z ładunku. Wiersz buduje się ze stanu w chwili dopisania; klucz, pod którym wersji już
+  nie ma, nie daje wiersza (dopisanie kończy się „brak encji”). Wersja, którą reguła bez błędu by odesłała, jest
+  odesłana zawsze: błąd zdejmuje tylko porównanie, nigdy nie dokłada wersji spoza kandydatów.
+- **Sesja, blokada i usuwanie konta.** Odczyt stanu „przed” czeka na sklep, więc po nim jest kontrola sesji: zmiana
+  sesji albo zablokowany sejf (także gdy z tego powodu zawiódł odczyt) — wynik jak dziś po zmianie sesji, bez scalania
+  (zdarzenie zostaje do ponowienia); usuwanie konta w toku (`SYNC_DB_DELETED`) — `session-changed`, bez scalania;
+  strażnik tożsamości chronionego sejfu niedostępny (`PATIENT_AUTHORITY_UNAVAILABLE`) — `busy` z tym kodem, jak dziś
+  zwraca scalanie, które odmawia na wejściu; bez scalania. Inny błąd odczytu „przed” — scalanie jak dziś, porównanie
+  bez stanu „przed” (wyżej). Zmiana sesji w trakcie `Le` albo odczytu „po” i usuwanie konta w trakcie odczytu „po” —
+  wynik jak dziś, bez odsyłania.
+- **Droga.** Tylko `applyEncryptedEvent` z kopertą zdarzenia (ładunek z polem `event`): drenaż, ponowienie
+  kwarantanny i ramka na żywo w `vilda_sync.js` (bez zmian). Stara delta, którą drenaż stosuje tą samą funkcją
+  (urządzenie ze starszą aplikacją, urządzenie z wyłączonym dziennikiem) — bez odsyłania. Po pełnej kopii
+  (`mergeSyncPayload`) i po delcie (`applyEncryptedDelta`) — bez odsyłania (decyzja z 2026-11-17: odsyłanie tylko po
+  pojedynczych zmianach): `Le` i eksport `VildaVault` zostają bez zmian, więc poza blokiem P-DZIENNIK-ZDARZEN nie ma
+  nowego wywołania. Importy (karta z pliku, scalenie i odtworzenie kopii konta) bez zmian — dopisują to, co zapisały,
+  swoją partią.
+- **Wpięcie.** `VildaVault._eventLog.applyEncryptedEvent` wskazuje `Bem_zastosuj` (dotąd `Bev_zastosuj`; 38 kluczy
+  eksportu bez zmian). `Bem_zastosuj` jest zwykłą funkcją: pierwsza instrukcja czyta przełącznik (`Bob_bramkaEcha`);
+  wyłączony — zwraca tę samą obietnicę co `Bev_zastosuj(env)`, bez dodatkowych mikrozadań. Włączony —
+  `Bem_zastosujEcho`: bramka dziennika (`Bob_bramka`) i warunek kolejki (`Bem_kolejka`: „Komputer prywatny”,
+  IndexedDB); odmowa — zastosowanie jak dotąd; inaczej `Bev_zastosuj(env, kol)` z kolektorem, a przy niepustej liście
+  jedno `Bem_zmiana('snap', kol.echo, kol.s)` w sesji scalania. `Bev_zastosuj` bez kolektora albo z ładunkiem bez
+  pola `event` — kod bez zmian; z kolektorem i kopertą zdarzenia — `Bev_zastosujZEchem` (stan „przed”, `Le` jak dotąd,
+  stan „po”, lista wersji). Kolektor dostaje same identyfikatory wersji, bez treści.
+- **Bez czekania na wpis.** Wynik zastosowania nie czeka na dopisanie wiersza odsyłania. Czekanie nie dawało
+  trwałości (ponowienie zdarzenia ma stan przed = po), a mogło stać za krokiem przeglądu albo za blokadą konta do
+  20 s i spowalniać drenaż; kolejność „odesłanie przed przeglądem” daje łańcuch dopisań konta. W otwartym kroku
+  (import w tym samym dokumencie) `Bem_zmiana` odkłada wpis do końca kroku.
+- **Wiersz odsyłania** to zwykły wiersz `snap`, zbudowany ze stanu w chwili dopisania (`Bev_snap`), więc koperta niesie
+  też kartę (opis karty liczony z najnowszej wersji). Reguła łączenia wpisów kolejki (`Bob_plan`) bez zmian: odesłanie
+  po własnym czekającym wierszu tej wersji zastępuje go, własna zmiana po odesłaniu zastępuje odesłanie, a odesłanie
+  i wiersz innej encji między nimi — oba zostają (reguła ogona). Linia bazowa koalescencji przy wyłączonym
+  przełączniku bez zmian (literał `ZNANE_ODSYL`).
+
+**Bez podwójnego wysyłania.**
+- Przegląd kolejki rekordu złożonego sam nie wysyła: jego chwila zmiany nie jest późniejsza od pary z ładunku i od
+  wiersza własnej zmiany. Wiersz odsyłania ma chwilę utworzenia z chwili dopisania, więc późniejszy przegląd uznaje
+  encję za pokrytą, a odesłanie wchodzi do łańcucha konta przed przeglądem po drenażu (ten sam łańcuch).
+- H2 i hak karty notatki dotyczą notatek, których E3-PR0c nie odsyła — bez części wspólnej.
+- **H1 — świadomy wyjątek (decyzja z 2026-11-17: dopuszczona podwójna wysyłka wizyty).** Odsyłanie nie pomija
+  wersji karty, dla której H1 dał pełną kartę. H1 emituje się w `Le` przed fazą Kosza, a porcje pełnej karty buduje
+  dopisanie pod blokadą konta, a nie karty, pod którą faza Kosza zapisuje rekord złożony — pełna karta może więc nieść
+  wersję sprzed złożenia. Druga kopia u odbiorcy niczego nie zapisuje.
+- Dwa urządzenia, które złożyły ten sam rekord, odsyłają go po razie (test wejściowy bez retencji: 2 koperty);
+  odbiorca ma już ten rekord, nic nie zapisuje, więc echa echa nie ma. Odsiewanie „rekord równy ładunkowi z tej samej
+  strony dostawy” odrzucone: wymaga pamięci całej strony w dokumencie (ginie przy zamknięciu, a ramka na żywo nie ma
+  końca strony); koszt duplikatów — pomiar w E3-PR0h.
+
+**Zakres** (licznik odsyłania testu A ≡ B, warstwa wykonalna, źródło „zdarzenie”, rodzaj `snap`; pomiar przed kodem
+na `6876869d`; CI: profil podstawowy 8 ziaren, pełny 2, koalescencja 3; ręcznie: podstawowy 40, pełny 20, „dłuższa
+praca bez połączenia” 40 — ziarna 101–140).
+
+| Klasa | CI podst. | CI pełny | Ręcznie 40 / 20 / 40 | E3-PR0c | Dlaczego |
+|---|---|---|---|---|---|
+| wersja w ładunku, ta sama karta przed i po (gwiazdka / rekord złożony / inne) | 18 (9/1/8) | 2 (1/0/1) | 62 / 28 / 84 | odsyła | rdzeń wiersza 3 planu |
+| wersja wpisana z ładunku i od razu złożona z rejestrem gwiazdki tutejszego wpisu Kosza (przed scaleniem nie leżała pod żadną kartą) | 2 | 0 | 5 / 2 / 7 | odsyła | rekord pochodny scalania: wpis Kosza przegrywa z późniejszą wersją z ładunku i oddaje jej rejestr gwiazdki (`Bkz_pomin`, `Bgw_zloz` w `Bkz_scalKoniec`); drugie urządzenie składa ten sam rekord ze zdarzenia `stomb`, odesłanie bez szkody |
+| wersja zmieniona fazą Kosza (zdarzenie `stomb`: wpis Kosza z gwiazdką przegrywa z późniejszą tutejszą wersją; v tylko w `snapshotTombstones` ładunku) | 2 | 0 | 3 / 2 / 4 | odsyła | zapis wersji (`Bgw_zloz` w `Bkz_scalKoniec`); sam wpis Kosza — E3-PR0d |
+| wersja spoza ładunku pod inną kartą niż w ładunku (po „Scal pacjentów”; ta sama karta przed i po) | 0 | 0 | 0 / 6 / 0 | odsyła | wejście z E3-PR0b (wersja spoza ładunku z gwiazdką, tak samo bez gwiazdki) |
+| wersja przeniesiona w tym scaleniu pod inną kartę (`ptomb` z kartą docelową albo `snap`) | 0 | 0 | 0 / 4 / 0 | nie | E3-PR0f |
+| sam nagłówek karty (wizyta bez zmian, opis karty i data ostatniego zapisu inne niż w ładunku) | 0 | 2 | 0 / 35 / 0 (34 w ładunku, 1 spoza) | nie (decyzja z 2026-11-17: bez osobnego odsyłania samego opisu karty) | sejf liczy opis karty z najnowszej własnej wersji i opisu z ładunku nie przepisuje, więc odesłany opis nic u odbiorcy nie zmienia; każda koperta niesie całą najnowszą wizytę (32–45 KiB) |
+| notatka pacjenta (`pnote`) w ładunku, także „samo oznaczenie” | 0 | 0 | 0 / 5 / 0 | nie, pomiar (decyzja z 2026-11-17: notatki bez odsyłania) | W1 bez różnic notatek; część pokrywa hak karty notatki; rekord złączony +1 ms wysyła przegląd |
+| nagrobek notatki (`pnotetomb`) w ładunku | 0 | 0 | 4 / 2 / 0 | nie, pomiar (decyzja z 2026-11-17: notatki bez odsyłania) | krata `Bnp_zlacz`; W1 bez różnic |
+| notatka pacjenta spoza ładunku | 10 | 0 | 27 / 4 / 32 | nie | pokryta hakami |
+| sam `rev` wersji (R2); sam `rev` notatki | — | — | — | nie | decyzja 2a z 2026-11-15; wejście z E3-PR0b2b |
+| wpis Kosza (`stomb`: R4a, R4a′, R5, inne), R4n, D7 | 4 | 0 | 32 / 30 / 61 | nie | E3-PR0d |
+
+Razem w zakresie: CI 22 wiersze w profilu podstawowym, 2 w pełnym, 6 w koalescencji; ręcznie 70 / 38 / 95. Wszystkie
+wiersze `snap` warstwy wykonalnej mają `snapshotId` z ładunku (0 wyjątków w czterech przebiegach) — stąd zbiór
+kandydatów; strażnikiem na przyszłość jest model haków i odsyłania w teście A ≡ B (niżej). „Samo oznaczenie” notatki
+licznik liczy jako `pnote|w ładunku|inne` (klasa „sam rev notatki” obejmuje tylko sam `rev`; przypadek
+w `tests/unit/licznik-odsylania.test.mjs`).
+
+**Uśpienie.** `Bob_bramkaEcha` (część `Bob_` bloku P-DZIENNIK-ZDARZEN): pole okna `VILDA_EVENT_ECHO === true` (testy)
+albo klucz `localStorage` `vilda-event-echo-v1` (`Bob_KLUCZ_ECHA`) dokładnie `'1'`. Brak klucza, inna wartość (`'0'`,
+`'true'`, `'1 '`), pole inne niż `true` (np. napis `'true'`, liczba 1), brak pamięci przeglądarki albo wyjątek —
+wyłączony (wzór E2-PR4b). Przełącznik czyta wyłącznie część emisji, przed bramką dziennika; `vilda_sync.js` bez zmian
+(bez nowych pinów granicy synchronizacji). W E3-PR0c klucz ustawiają tylko testy. Przełącznik w Ustawieniach (obok
+„Wysyłaj zmiany pojedynczo”, tylko na tym urządzeniu) i instrukcja testu — E3-PR0g, razem z wpisem polityki
+prywatności (gdy użytkownik może ustawić klucz); E3-PR0i zmienia znaczenie na „brak klucza = włączone, `'0'` wyłącza”.
+
+**Przy wyłączonym przełączniku (co nowego).**
+
+| Skutek | Wartość | Dowód |
+|---|---|---|
+| odczyty przy `applyEncryptedEvent` | jedno pole okna `VILDA_EVENT_ECHO` i jeden `getItem('vilda-event-echo-v1')` (przy rzucającym getterze — jeden odczyt `localStorage`); 0 odczytów `VILDA_EVENT_LOG`, `indexedDB` i `crypto` ponad dziś | U1 (E3-PR0c) w teście uśpienia; przypadki „przełącznik wyłączony” w `sync-odsylanie` |
+| wynik, zapisy sklepu, wiersze kolejki, operacje `crypto.subtle`, odczyty bramki | te same co w kopii sejfu z `applyEncryptedEvent: Bev_zastosuj` (bliźniacze okna; rekord złożony, sam `rev`, wpis Kosza, ładunek nieczytelny, stara delta) | test równoważności w `sync-odsylanie` |
+| kolejność względem łańcucha dopisań w tle | ta sama obietnica (`Bem_zastosuj` jest zwykłą funkcją) | strażnik formy w teście uśpienia |
+| zapis bazowy (`tests/fixtures/dziennik-zapis-bazowy.json`) | fikstura bez zmian; klucz `'0'`, `'true'`, `'1 '` i pole `'true'` (napis) — zapis równy fiksturze; klucz `'1'` i pole `true` przy zamkniętej bramce — fikstura z jednym odczytem bramki więcej (`Bob_bramka` w `Bem_zastosujEcho` przy jedynym `applyEncryptedEvent` scenariusza) | `sync-dziennik-zapis-bazowy` |
+| test A ≡ B | wszystkie literały bajt w bajt (`ZNANE_ODSYL`, `ZNANE_W1`, `ZNANE_WYR`, floty, stres, AB2/AB7, determinizm) | przebieg CI |
+| literał miejsc poza blokiem P-DZIENNIK-ZDARZEN, KH6, HK1 | bez zmian (poza blokiem nic) | test uśpienia, test haków |
+
+**Bez pętli.**
+1. Odesłanie tylko przy różnicy (bez `rev`) wobec stanu przed scaleniem i wobec ładunku — nigdy na samym fakcie zapisu.
+2. Rekord pochodny dominuje oba wejścia: odbiorca bez nowszego składnika zapisuje dokładnie odesłany rekord albo nic
+   (`Bgw_scal`: rekord wobec siebie — brak zapisu; wobec starszego — cały rekord).
+3. Rekord pochodny jest deterministyczną funkcją dwóch wejść (`rev` = wyższy + 1, chwile tylko prawdziwe); dwa różne
+   rekordy złożone o tym samym `rev` i chwili — jednorazowo `rev` + 1, potem tylko R2, a R2 nie jest odsyłane.
+4. Bez odsyłania samego `rev` (decyzja 2a z 2026-11-15) — obrona przed obiegiem `rev` z aplikacją liczącą „najpierw
+   `rev`”.
+5. Reguła pola niezależna od źródła (`Bev_ECHO_ZAWSZE`, odcisk `h`).
+
+Każde odesłanie przenosi złączenie składników (treść według chwili treści, gwiazdka według rejestru); odbiorca
+z nowszym składnikiem wylicza złączenie ściśle większe i odsyła je raz. Łańcuch kończy się po liczbie niezależnych
+zmian. Sprawdzone w kodzie: powtórka partii (przed = po), zegar do przodu (tylko prawdziwe chwile), konflikt tożsamości
+wizyty (`Bvisit_sync` zostawia tutejszą, różnica to tylko `rev`). Test odbiorców: B bez nowszego składnika zapisuje
+rekord i nic nie odsyła; C z późniejszą poprawką składa nowe złączenie i odsyła je raz; A po złączeniu C nic nie odsyła.
+
+**Model haków i odsyłania w teście A ≡ B.** Przy włączonym przełączniku (pole świata `S.echo` albo `E2_AB_ECHO=1` dla
+wszystkich światów, ręcznie) urządzenia testu mają pole `VILDA_EVENT_ECHO = true` (dziedziczą je klony). Wpisy `snap`
+rejestru łańcucha z zastosowania partii to odsyłanie (wpis Q z polem `src: 'echo'`), a model haków dostaje model
+odsyłania z licznika (`modelEcha`: warstwa wykonalna rodzaju `snap`, liczona zdarzenie po zdarzeniu, tylko dla
+ładunku z polem `event`, bez wersji przeniesionych, bez odejmowania haków). Odsyłanie sejfu musi równać się modelowi
+w każdej partii; wiersz modelu dla wersji spoza kandydatów ładunku to niezgodność (strażnik kandydatów). Warstwa
+„odesłane” licznika porównuje koperty odsyłania z łańcucha sejfu z wierszami modelu (koperta bez wiersza — „ponad
+model”, wiersz bez koperty — „nieodesłane”). Urządzenie ze starszą aplikacją (276) odsyłania nie ma — jego wpisy
+porównuje model haków jak przy wyłączonym przełączniku. Limit spoczynku przy włączonym przełączniku — 6 obiegów dostaw
+(dotąd 4). Przy wyłączonym przełączniku model i warstwa są puste, a literały bez zmian. Literał „nowe” licznika
+(`ZNANE_ODSYL`) zostaje przy dzisiejszym odejmowaniu haków całej partii — to inna miara (pokrycie dziś).
+
+**Długie przebiegi** (ręcznie, 2026-11-17, przed scaleniem 2c, kod tego PR na kopii drzewa, każdy przy obu stanach
+przełącznika: `E2_AB_ECHO=1` i bez; czas przy CPU dzielonym z innym przebiegiem). Koperty odsyłania według klas
+licznika: w ładunku — gwiazdka / inne; spoza ładunku — gwiazdka / inne; tożsamość wizyty.
+
+| Przebieg (ziarna) | Przełącznik | Koperty odsyłania | Ponad model / nieodesłane | Ponowne wysłanie tej samej wartości | Brak spoczynku, W3, W4 | Punkty W1 z różnicą (wszystkie z klasą) | Wyrocznia: naruszenia bez klasy | Czerwone przypadki | Czas |
+|---|---|---|---|---|---|---|---|---|---|
+| profil pełny (1–20) | włączony | 37 (16 / 11; 5 / 4; 1) | 0 / 0 | 0 | 0, 0, 0 | 11 | 16 — tylko ziarno 8 (niżej) | ziarno 8 | 114 s |
+| profil pełny (1–20) | wyłączony | 0 | — | — | 0, 0, 1 | 13 | 0 | ziarno 5 (W4, tak samo na bazie) | 117 s |
+| profil podstawowy (1–40) | włączony | 66 (35 / 28; 3 / 0; 0) | 0 / 0 | 0 | 0, 0, 0 | 7 | 0 | ziarna 1 i 4 — tylko literał `ZNANE_W1` (opisuje przebieg bez przełącznika) | 196 s |
+| profil podstawowy (1–40) | wyłączony | 0 | — | — | 0, 0, 0 | 11 | 0 | — | 213 s |
+| „dłuższa praca bez połączenia” (101–140) | włączony | 95 (43 / 48; 4 / 0; 0) | 0 / 0 | 0 | 0, 0, 0 | 12 | 0 | 104, 123, 128, 132, 137 — R4a′ w W1 (E3-PR0d; tak samo bez przełącznika i na bazie) | 128 s |
+| „dłuższa praca bez połączenia” (101–140) | wyłączony | 0 | — | — | 0, 0, 0 | 19 | 0 | te same pięć | 127 s |
+| flota 221 (1–10) | włączony | 5 (5 / 0; 0 / 0; 0) | 0 / 0 | — | 0, —, 0 | — | 0 | ziarna 2 i 3 — tylko literały floty | 30 s |
+| flota 221 (1–10) | wyłączony | 0 | — | — | 0, —, 0 | — | 0 | — | 27 s |
+| flota 276 (1–10) | włączony | 26 (11 / 12; 3 / 0; 0) | 0 / 0 | — | 0, —, 0 | — | 0 | ziarno 2 — tylko literał floty | 43 s |
+| flota 276 (1–10) | wyłączony | 0 | — | — | 0, —, 0 | — | 0 | — | 45 s |
+
+Przy włączonym przełączniku historia losowania jest inna (koperty odsyłania zmieniają długość kolejek), więc punkty W1
+obu stanów nie odpowiadają sobie jeden do jednego; mniej różnic po samych zdarzeniach (pełny 13 → 11, podstawowy
+11 → 7, „dłuższa praca bez połączenia” 19 → 12) to spodziewany skutek odsyłania, ale nie dowód. Floty mierzą
+odsyłanie między bieżącymi urządzeniami świata z urządzeniem starszej aplikacji.
+
+**Profil pełny, ziarno 8, z włączonym przełącznikiem.** Wyrocznia „nie zginęła ostatnia zmiana” zgłasza utratę dwóch
+wizyt jednej karty na A i B (W1 i W4, kroki 78 i 109; 16 naruszeń bez klasy). Bez przełącznika to ziarno jest czyste,
+ale przebiega innym ciągiem operacji: koperty odsyłania wydłużają kolejki, więc losowanie długości dostaw i cały dalszy
+program idą inaczej (pierwsza różnica w kroku 13). Ten sam ciąg operacji odtworzony bez odsyłania (te same 103
+mutacje, te same dostawy bez kopert odsyłania, te same identyfikatory) gubi te same dwie wizyty w tych samych
+punktach, z tymi samymi klasami wyroczni; żadna koperta odsyłania nie bierze udziału w utracie. Przyczyna to znana
+usterka „Usuń pacjenta” zwróconej starej karty po „Scal pacjentów”: B zapisuje w karcie X dwie wizyty bez wiedzy
+o scaleniu X → Y na A, X wraca na A (D-4 A, klasa dozwolona), a A usuwa X razem z tymi wizytami (naprawa w E3-PR0e,
+decyzja 4a z 2026-11-15). Scenariusz deterministyczny (12 operacji z kroków 35–78 tego ziarna) jest w ręcznym bloku
+znanych usterek testu A ≡ B (`E2_AB_ZNANE_USTERKI=1`, świat 885): dziś czerwony w W1, W4 i przy samych pełnych
+kopiach, przy obu stanach przełącznika, z tymi samymi faktami i bez ani jednej koperty odsyłania. Bez klasy w tabeli
+wyjątków wyroczni i bez literału — nic nie zostaje ukryte. Skutek: ręczny przebieg profilu pełnego z włączonym
+przełącznikiem ma jedno czerwone ziarno (8) do czasu E3-PR0e. Kontrola w drugą stronę: czysty przebieg ziarna 8 bez
+przełącznika odtworzony z przełącznikiem — te same mutacje, 7 kopert odsyłania, 0 naruszeń bez klasy (odsyłanie usuwa
+przy tym jedyną różnicę W1 tego przebiegu, „retencja — przycięcie bez treści”).
+
+**Flota ze starszą aplikacją.**
+- 221 (bez dziennika zdarzeń): wysyła pełne kopie i delty. Delty idą u bieżącego urządzenia przez
+  `applyEncryptedEvent` bez pola `event`, więc bez odsyłania; po pełnej kopii — też bez. Obiegu przez 221 nie ma
+  z konstrukcji. Ręcznie (ziarna 1–10, z przełącznikiem): 5 kopert odsyłania między bieżącymi urządzeniami, model
+  zgodny w każdej partii, wyrocznia bez naruszeń bez klasy.
+- 276 (zdarzenia, SW 1.1.530–1.1.534): sam nie odsyła; odesłania od bieżących urządzeń często pomija jako „nie nowsze”
+  (w pomiarze E3-PR0b 154 ze 168 kopert wersji) — odsyłanie nie leczy różnicy z 276, ale jej nie zapętla. Ręcznie
+  (ziarna 1–10, z przełącznikiem): 26 kopert odsyłania między bieżącymi urządzeniami, model zgodny w każdej partii,
+  wyrocznia bez naruszeń bez klasy.
+- Znane ograniczenie (decyzja 2 z 2026-11-16): odczyt zmian starszej aplikacji (`Bgw_stan`) może złożyć rekord ze
+  starszą treścią, a odsyłanie rozniesie go szybciej niż pełna wysyłka; klasa „znane ograniczenie starszej wersji”
+  jak w E3-PR0b.
+- „R4a i R4a′ przez urządzenie ze starszą aplikacją dają jeden dodatkowy obieg echa” (plan, wiersz 4) przy odsyłaniu
+  tylko po zdarzeniach dotyczy urządzenia 276, nie 221.
+- Literały floty w CI opisują przebieg z wyłączonym przełącznikiem. Przy włączonym różnią się: ziarna 2 i 3 floty 221
+  (literał floty) i ziarno 2 (wyrocznia floty — dozwolona klasa „zmiana starszej aplikacji usunięta z kartą przed
+  wysłaniem”), ziarno 2 floty 276 (wiersz „nowe” 1 → 0, bo pokrywa go odesłanie). Przebiegi z przełącznikiem ocenia
+  wyrocznia, model odsyłania i zieleń profilu; literały przepisze E3-PR0i.
+
+**Budżety.** Odesłania jednego zdarzenia ≤ liczba kandydatów (`snap` — 1, porcja `pfull` — kilka, w granicy rozmiaru
+porcji). Model w zakresie E3-PR0c: 0 przekroczeń limitów (20 żądań na minutę na urządzenie, 600 zdarzeń i 4 MiB na
+minutę na slot). Najgorszy przypadek drogi zdarzeń (niemierzony): karta z dziesiątkami wersji, każda złożona — tyle
+kopert, ile wersji (ok. 90 kopert po 45 KiB to 4 MiB); serwer odpowie 429, a kolejka FIFO opóźni późniejsze zmiany
+lekarza o 1–2 minuty. Stres drogi zdarzeń i ewentualne rozkładanie odesłań w czasie — E3-PR0h.
+
+**Testy.** Dane wyłącznie fikcyjne („Testowy Jan…”, „Pacjent Testowy 1”, masy 15–45 kg), bez PESEL; prawdziwy
+`vilda_vault.js` i `vilda_sync.js` w uprzęży (okno `tests/support/okno-magazynu.mjs`, atrapa IndexedDB, bliźniaki
+na kopii baz atrapy, kopia sejfu z licznikiem odczytów bramki).
+- `tests/unit/sync-odsylanie.test.mjs` (nowy, 49 przypadków): przełącznik wyłączony (równoważność z kopią sejfu bez
+  odsyłania w bliźniaczych oknach, wartości klucza i pola, jeden odczyt przełącznika na zastosowanie); wersja zapisana
+  inaczej, niż przyszła (rekord złożony, gwiazdka z ładunku przy późniejszej tutejszej treści, sam `rev` w dwóch
+  odmianach, to samo zdarzenie drugi raz bez odszyfrowań w porównaniu, ładunek bez tożsamości wizyty, ładunek równy
+  stanowi, wersja z ładunku przyjęta bez zmian; strażniki źródła: kształt pełnej kopii, JSON z posortowanymi kluczami,
+  reguła pola ze świeżym i nieświeżym odciskiem, `Bev_ECHO_ZAWSZE` = licznik); kandydaci (zdarzenie `stomb`, wersja pod
+  inną kartą po „Scal pacjentów”, wersja tylko w Koszu, wersja w `snapshots` i `snapshotTombstones` jednego ładunku,
+  sam nagłówek karty — bez wiersza karty); hak H1 i odesłanie w jednym zdarzeniu (koperta `ptomb` z kartą docelową;
+  koperta spoza buildera z nagrobkiem karty starszym od karty — wiersze `pfull P` i `snap P/v`); notatki i ładunki bez
+  wersji (te same wiersze co bez odsyłania, także po przeglądzie); łańcuch dopisań (otwarty krok, wstrzymany wpis
+  w bazie kolejki, przegląd nie dubluje, odbiorcy, łączenie wpisów); `busy` i `apply-error` po zapisie wersji, błąd
+  przed zapisem, zmiana sesji w trakcie `Le`, odczytu „przed” (także blokada i ponowne odblokowanie tego samego konta)
+  i odczytu „po”, blokada przy pierwszym z trzech kandydatów, błędy odczytu treści osobno dla każdej wersji, nieudany
+  cały odczyt „przed” i „po”, usuwanie konta w trakcie odczytu „przed” i „po”, strażnik tożsamości niedostępny;
+  drogi bez odsyłania (wersja przeniesiona, pełna kopia, delta, stara delta przez `applyEncryptedEvent`); zamknięta
+  bramka dziennika i „Komputer w pracy”; wartownik treści przy włączonym przełączniku i samokontrola kopii bez
+  odsyłania. Zajęta blokada karty w fazie Kosza, konflikt tożsamości wizyty, nieudany cały odczyt stanu i odmowa
+  odczytu „po” przy usuwaniu konta — przez kopię sejfu tylko w pliku testu (jednorazowy fikcyjny błąd w opisanym
+  miejscu; prawdziwa droga wymaga limitu blokady 20 s).
+- `tests/unit/sync-dziennik-wlasnosciowy.test.mjs` (test A ≡ B, 197 przypadków, było 188; 21 pominiętych, było 20):
+  test wejściowy (światy 930–935; z retencją A–B, bez retencji A–B, trzy urządzenia z retencją — każdy przy obu
+  stanach przełącznika; fakty v na każdym urządzeniu, wpis retencji v na B, treść wpisów kolejki każdego urządzenia,
+  obiegi do spoczynku, koperty odsyłania, 0 ponownych wysłań tej samej wartości); jedno ziarno CI z włączonym
+  przełącznikiem (profil podstawowy, ziarno 1: model haków i odsyłania zgodny w każdej partii, koperty odsyłania > 0,
+  bez ponownego wysłania tej samej wartości, spoczynek, wyrocznia bez naruszeń bez klasy, zieleń profilu; lokalnie
+  3 koperty, ok. 6 s); model haków i odsyłania; warstwa „odesłane”; trzecia kotwica kopii z rejestrem łańcucha (AB5);
+  urządzenie ze starszą aplikacją bez modelu odsyłania; nowy przypadek ręcznego bloku znanych usterek (świat 885,
+  wyżej). Przy wyłączonym przełączniku wszystkie literały bajt w bajt.
+- `tests/unit/sync-dziennik-uspienie.test.mjs` (53): reguły części `Bev_`, `Bob_` i `Bem_` dla przełącznika
+  (`VILDA_EVENT_ECHO` i `localStorage` tylko w `Bob_bramkaEcha`, raz), formy `Bem_zastosuj` (zwykła funkcja, dwie
+  instrukcje: przełącznik, potem `Bem_zastosujEcho`) i `Bem_zastosujEcho` (bramka, warunek kolejki, jedno
+  `Bev_zastosuj` z dwoma argumentami, jedno `Bem_zmiana('snap', …)`) z samokontrolą wariantami zła; U1 przy wyłączonym
+  przełączniku; nazwy wiążące; literał miejsc poza blokiem bez zmian.
+- `tests/unit/sync-zdarzenia-buildery.test.mjs` (B7): funkcje odsyłania części `Bev_` sklasyfikowane (domknięcie przez
+  strzeżony adapter, bez zegara, bez `V`, `Le`, emiterów i zapisów; `Bev_zastosujZEchem` — szyfrowanie i zastosowanie).
+- `tests/unit/sync-dziennik-zapis-bazowy.test.mjs` (23, +1 pominięty; było 16): przebiegi z kluczem przełącznika
+  w wariancie „Komputer prywatny” i strażnik jednego `applyEncryptedEvent` w scenariuszu; fikstura bez zmian.
+- `tests/unit/licznik-odsylania.test.mjs` (29, było 23): model odsyłania (rekord złożony po kopercie zdarzenia, stara
+  delta pusto, wersja przeniesiona wykluczona, wersja tylko w Koszu — wiersz, wersja spoza kandydatów zgłoszona, sam
+  `rev` i tożsamość wizyty pusto), warstwa „odesłane”, „samo oznaczenie” notatki → `pnote|w ładunku|inne`.
+- Uprząż: `tests/support/sejf-bez-wstawek.mjs` (licznik odczytów bramki w `Bem_zastosujEcho`, opcjonalna trzecia
+  kotwica kopii z rejestrem łańcucha, kopia bez odsyłania `bezOdsylania`), `tests/support/licznik-odsylania.mjs`
+  (`kandydaciEcha`, `modelEcha`, `zapiszOdeslane`).
+- e2e `tests/e2e/sync-zdarzenia-drenaz.spec.mjs` (Chromium, 2 nowe): klucz `'1'` ustawiony przed załadowaniem —
+  prawdziwy drenaż `vilda_sync.js` z poprawką B składa na A rekord złożony i daje w kolejce A dokładnie jeden wiersz
+  `snap P/v` (17,2 kg z gwiazdką), a B przyjmuje go bez nowego wiersza; bez klucza — ten sam drenaż, rekord złożony
+  tylko na A, w kolejce A bez wiersza `snap`. Liczone są tylko wiersze wersji (wiersz hasła z przeglądu kolejki po
+  drenażu powstaje niezależnie od odsyłania).
+
+**Czerwone na bazie** (`4389d34a`, sejf bez odsyłania, testy i uprząż tego PR): `sync-odsylanie` 29 z 49 (zielone
+z natury: przełącznik wyłączony, sam `rev`, powtórka, reguła pola na prawdziwej drodze, ładunek równy stanowi, wersja
+przyjęta bez zmian, sam nagłówek karty, notatki i ładunki bez wersji, zmiana sesji w trakcie `Le` i odczytu „po”, drogi
+bez odsyłania, „Komputer w pracy”, samokontrola kopii — strażniki „bez zmian”), test uśpienia 5 (U1, U2(a), U2(c)
+części `Bob_` i `Bem_`, U2(d)), buildery 1 (B7), zapis bazowy 2 (klucz `'1'` i pole `true`: o jeden odczyt bramki
+mniej), test A ≡ B 4 (trzy warianty testu wejściowego z włączonym przełącznikiem i ziarno CI — „odsyłanie sejfu ≠
+model”; warianty z wyłączonym przełącznikiem i wszystkie dotychczasowe literały zielone), e2e drenażu 1 z 2 (klucz
+`'1'`), skrót bazy `visits-vault-boundary` 1. Licznik odsyłania — 0 (funkcje uprzęży). Pełny `vitest run` na sejfie
+bazy z testami napisanymi przed kodem: czerwone wyłącznie w plikach tego PR (33 przypadki; reszta 31 116 zielona).
+*(2026-11-18, po scaleniu 2c:)* na nowej bazie (`64fa29dc`, sejf `audyt` z 2c, testy i uprząż tego PR) te same
+liczby w tych samych plikach: `sync-odsylanie` 29 z 49, test uśpienia 5, buildery 1, zapis bazowy 2, test A ≡ B 4,
+e2e drenażu 1 z 2, `visits-vault-boundary` 1, licznik odsyłania 0.
+
+**Mutanty** (przed scaleniem 2c; kopia drzewa, jedna zmiana tekstu, pliki celu i test A ≡ B, część także w szerokim
+przebiegu i e2e):
+64 mutanty kodu odsyłania i jego otoczenia — 52 na kodzie przed poprawkami po przeglądzie i 12 nowych dla poprawek;
+na kodzie końcowym ponownie 30 mutantów porównania i zastosowania (części zmienionej poprawkami) i 12 nowych. Wynik:
+63 czerwieni co najmniej jeden test CI, 1 przeżywa. Rodziny: porównanie przed
+i po (bez porównania rekordów sklepu, bez porównania treści w kształcie pełnej kopii, decyzja po samym szyfrogramie,
+`rev` w porównaniu przed i po albo z ładunkiem, JSON bez sortowania kluczy, treść bez `Bvisit_read`); reguła pola
+(bez niej, bez podstawienia `h`, bez usuwania tożsamości wizyty, podstawienie bez warunku świeżości odcisku,
+`Bev_ECHO_ZAWSZE` puste albo z dodatkowym polem); kandydaci (bez `snapshotTombstones`, tylko wersje spod kart
+z ładunku, bez usuwania powtórzeń, bez przeniesienia jako wyjątku, przeniesienie jako „istniała przed scaleniem”);
+droga (odsyłanie także po starej delcie, po pełnej kopii i po delcie — dwa ostatnie tylko jako mutanty poza blokiem);
+sesja i błędy (odsyłanie przy zmianie sesji w trakcie `Le` z sesją scalania i bez niej, bez kontroli sesji po `Le`,
+bez kontroli sesji po odczycie „przed”, bez sprawdzenia sesji po każdym odczycie stanu, bez sprawdzenia strażnika
+tożsamości po odczycie, bez odsyłania przy `busy`/`apply-error` po zapisie, ścieżka błędu bez odsyłania, każda wersja
+przy błędzie odczytu „przed”, wszystkie wersje przy pierwszym błędzie, błąd „po” jako koniec bez wiersza, bez osobnych
+wyników przy usuwaniu konta i przy strażniku tożsamości); przełącznik i bramki (każda wartość klucza poza `'0'`
+włącza, luźna równość pola, klucz po obcięciu spacji, napis `'true'` w polu, przełącznik ignorowany, odsyłanie przy
+wyłączonym przełączniku, bramka dziennika przed przełącznikiem, `Bem_zastosujEcho` bez bramki albo bez warunku
+kolejki, `async function Bem_zastosuj`); emisja (odsyłanie notatek, pełnej karty każdej karty z ładunku, brak
+odsyłania rekordu złożonego, emisja usunięta, podwójna emisja, pomijanie przy H1 całego zdarzenia albo wersji karty
+z pełną kartą, emisja bez sesji scalania, czekanie na wpis przed wynikiem); poza blokiem tylko jako mutanty: rekord
+złożony z chwilą scalania zamiast prawdziwych chwil, reguła ogona w `Bob_plan` usunięta. Mutanty, które w pierwszym
+przebiegu przeżyły (bez porównania rekordów sklepu, podstawienie `h` bez warunku świeżości, odsyłanie przy zmianie
+sesji w trakcie `Le` w obu odmianach i po zmianie sesji w fazie „po”, bez kontroli sesji po odczycie „przed”, bez
+sprawdzenia sesji po każdym odczycie, bez usuwania powtórzeń kandydatów, pomijanie wersji karty z pełną kartą H1)
+oraz dwa łapane tylko strażnikiem formy (bez warunku kolejki, czekanie na wpis) dostały testy działania czerwone na
+mutancie; strażnikiem formy zostaje tylko `async function Bem_zastosuj` (przeplot mikrozadań). Przeżywa 1, w praktyce
+równoważny: kontrola sesji po odczycie „przed” tylko przy błędzie odczytu. Zmiana sesji po odczycie bez błędu jest
+niemożliwa do wywołania (odczyt sprawdza sesję po każdej wersji, a blokada między ostatnim sprawdzeniem a scalaniem
+kończy się odmową scalania przy zablokowanym sejfie); kontrola zostaje (wariant bezpieczniejszy). Jeden mutant
+łapał w szerokim przebiegu tylko niestabilny test spoza tego PR (`sync-zdarzenie-status`, „zły znacznik GCM”: zmiana
+trzeciego od końca znaku szyfrogramu trafia czasem w bity dopełnienia base64, ok. 1 przebieg na 12); dostał własny
+test.
+
+**Czas pliku A ≡ B** (lokalnie, sam plik w ustawieniach CI, CPU dzielone z innym przebiegiem): 132–143 s (197
+zielonych, 21 pominiętych); na bazie z testami tego PR 135 s, w pełnym `vitest run` na bazie 153 s; przed tym PR
+127 s sam (wpis P-NOTATKA-POZNIEJSZA). Dochodzi test wejściowy (6 × 0,15–0,4 s) i ziarno z przełącznikiem (ok. 6 s).
+Cel ok. 180 s w CI — zmierzyć w opisie PR. *(2026-11-18, po scaleniu 2c, lokalnie:)* sam plik 130,8 s, w pełnym
+`vitest run` 172,3 s.
+
+Długie przebiegi, mutanty i pierwszy pomiar czerwonych na bazie są sprzed scalenia 2c. Mierzony kod jest po scaleniu
+ten sam: 2c nie zmienił bloku P-DZIENNIK-ZDARZEN, `vilda_sync.js` ani plików testów tego PR; czerwone na bazie
+powtórzone po scaleniu (wyżej).
+
+**Kontrola granicy obrazu sejfu.** Zmiana stoi wyłącznie w bloku P-DZIENNIK-ZDARZEN (poza blokiem nic, także
+komentarze; literał miejsc poza blokiem bez zmian, 35 wpisów); fragment natywny i blok trwałych wizyt bez zmian.
+Przeliczone 7 skrótów w 5 plikach: baza trwałych wizyt (`runtime/durable-visits-v1/manifest.json` — baza i obraz,
+`tools/visits-vault-delta.mjs`, `tests/unit/visits-vault-boundary.test.mjs`) oraz `baseVaultSHA256`,
+`integratedVaultSHA256` i `BASE` natywnej przestrzeni klinicznej (`runtime/clinical-workspace-v1/manifest.json`,
+`tools/check_clinical_workspace_boundary.mjs`, z opisem E3-PR0c w komentarzu); `node tools/visits-vault-delta.mjs`
+i `node tools/check_clinical_workspace_boundary.mjs` — zielone. `vilda_sync.js` i jego piny bez zmian. Po scaleniu
+`audyt` z poprawką modułu planów z etapami (2c, vildaclinic/vilda-calc#990: nowy blok natywny, delta trwałych wizyt
+bez haka `40-visit-metadata` i z nową bazą) te same 7 skrótów przeliczone ponownie na sejfie po scaleniu: baza delty
+trwałych wizyt `22f7d1f2…`, obraz `4ca270bc…`; baza natywnej przestrzeni klinicznej `06ea0231…` (ta sama co przed
+scaleniem — 2c zmienił sejf tylko w bloku natywnym i w delcie trwałych wizyt), obraz pośredni `76214599…`; blok
+natywny bajt w bajt jak na `audyt`. Sejf się zmienił — przy następnej pracy w `vilda-source` weź nową bazę
+z `runtime/clinical-workspace-v1/manifest.json` na `audyt`.
+
+**Ograniczenia.**
+- **Zmiana sesji albo blokada sejfu w trakcie scalania** (`session-changed`, `locked`): wersje mogły się już zapisać,
+  odesłania nie ma. Zabezpieczenia jak niżej.
+- **Zamknięcie dokumentu między zapisem `Le` a dopisaniem wiersza odsyłania**: ponowienie zdarzenia ma stan przed =
+  po, więc odesłanie nie powstanie. Nieudane dopisanie w otwartym dokumencie (np. limit blokady konta 20 s) trafia do
+  pamięci braków, a przegląd kolejki dopisuje je bez względu na pokrycie; po zamknięciu dokumentu pamięć ginie.
+- **Ten sam stan najpierw pełnym pobraniem**: gdy rekord pochodny zapisze `Le` po pełnej kopii (do etapu 3 działa
+  pełna synchronizacja; wymuszone pobranie przy `ahead`, `base` i dziurze w numeracji), odesłania nie ma, a późniejsze
+  zdarzenie ma stan przed = po.
+- Zabezpieczenia do tego czasu: pełna wysyłka (do etapu 3); w etapie 3 porównanie z manifestem punktu kontrolnego
+  kolejkuje rekord złożony z inną treścią (plan, 3.3). Pomiar okien — E3-PR0h.
+- **Lokalna zmiana lekarza między odczytem „przed” a „po”** daje nadmiarowe odesłanie tej wersji — bez szkody (zmiana
+  ma własny wiersz, `Bob_plan` łączy je w jeden).
+- **Ścieżka błędu odczytu** może raz wysłać wersję, która różni się od ładunku tylko `rev` (odstępstwo od decyzji 2a
+  wyłącznie na tej ścieżce); jednorazowe, bez pętli (odbiorca odsyła tylko przy różnicy przed i po).
+- **Nieudany cały odczyt stanu „przed”** *(2026-11-18, po scaleniu 2c)*: porównanie idzie tylko z ładunkiem, więc
+  może raz wyjść tutejsza wersja, której scalanie nie zmieniło, a która różni się od ładunku (wygrała tutejsza treść
+  albo scalanie przerwało się przed zapisem, np. przy odmowie kontroli przed scaleniem we fragmencie natywnym).
+  Jednorazowe, bez pętli: odbiorca scala ją zwykłymi regułami, a ponowienie zdarzenia po odmowie scala i odsyła
+  właściwy rekord (`Bob_plan` łączy wiersze tej wersji).
+- **H1 i odesłanie tej samej wersji** mogą wyjść obie (decyzja z 2026-11-17: dopuszczona podwójna wysyłka wizyty;
+  wyżej); druga kopia u odbiorcy nic nie zapisuje.
+- **Granica z E3-PR0d.** Odesłanie wersji zmienionej fazą Kosza (zdarzenie `stomb`) jest w E3-PR0c, bo to zapis
+  wersji; sam wpis Kosza (R4a, R4a′, R5) — E3-PR0d.
+- **Notatki** (decyzja z 2026-11-17: notatki bez odsyłania): rekord złączony notatki (+1 ms, `Bnp_poObu`) E3-PR0c
+  nie odsyła; wysyła go przegląd kolejki, gdy chwila złączenia jest późniejsza od pary z ładunku i od wiersza encji.
+  Oba urządzenia liczą to samo złączenie, więc podwójna wysyłka, jeśli zajdzie, jest bez szkody. Komentarz „Bez
+  kolejki” w `Bnp_tutejszaZapis` (poza blokiem, bez zmian w tym PR) dotyczy samego zapisu — wiersz złączenia dokłada
+  przegląd.
+- **Starsza aplikacja** — „Flota ze starszą aplikacją” wyżej.
+- **Najgorszy przypadek drogi zdarzeń** — „Budżety” wyżej.
+
+**Do akceptacji właściciela przy PR** (rozstrzygnięcia spoza projektu i decyzji, wariant najbezpieczniejszy dla
+danych; alternatywy w opisie PR). Rekomendacja przy każdym punkcie: przyjąć.
+1. **Rozszerzenie decyzji 9 z 2026-10-29: czwarta droga ze scalania do kolejki.** Po włączeniu odsyłania urządzenie,
+   które zastosowało zmianę z innego urządzenia i zapisało inną wersję wizyty, niż przyszła, wyśle tę wersję
+   pozostałym urządzeniom (obok trzech haków: pełna karta po przegranym usunięciu, uratowana notatka, karta notatki).
+   Reguły scalania bez zmian.
+2. **Tylko po kopertach zdarzeń.** Drenaż stosuje tą samą funkcją także stare delty (urządzenie ze starszą aplikacją
+   albo z wyłączonym dziennikiem). Po starej delcie — bez odsyłania, także na tej drodze (zgodne z decyzją
+   z 2026-11-17 o odsyłaniu tylko po pojedynczych zmianach i z pomiarami: obiegu przez starszą aplikację nie ma).
+   Inna możliwość: odsyłać także po deltach.
+3. **Przy wyłączonym przełączniku ta sama obietnica co dziś** — funkcja wejścia jest zwykła, więc nie zmienia nawet
+   kolejności drobnych kroków względem zapisów w tle; część z odsyłaniem jest osobno.
+4. **Porównanie w kształcie pełnej kopii** (tożsamość wizyty wyliczona dla starych rekordów, jak w liczniku testu) —
+   dopisanie samej tożsamości wizyty do starego rekordu nie daje odesłania.
+5. **Zmiana sesji, blokada albo usuwanie konta w trakcie odczytu stanu „przed”** — scalanie nie rusza, wynik jak dziś
+   po zmianie sesji (zdarzenie zostaje do ponowienia); usuwanie konta w trakcie odczytu „po” — bez odsyłania; strażnik
+   tożsamości chronionego sejfu niedostępny przy odczycie „przed” — `busy` z tym kodem, jak dziś, bez scalania.
+6. **Błędy odczytu osobno dla każdej wersji** (odejście od projektu, który przy każdym błędzie odczytu kazał odesłać
+   wszystkie wersje z ładunku): jedna nieczytelna wersja nie wysyła całej karty, a nieudany cały odczyt „przed” —
+   wersji przeniesionych pod inną kartę bez różnicy wobec ładunku. Wersja, którą reguła bez błędu by odesłała, jest
+   odesłana zawsze. Inna możliwość: dosłownie projekt (jednorazowy nadmiar bez pętli).
+7. **Pełna karta z H1 i odesłanie wersji tej samej karty w jednym zdarzeniu** — koperta budowana przez bieżącą
+   aplikację tego nie daje (wersję spod karty docelowej scalanie przenosi, czyli bez odsyłania); daje to koperta spoza
+   buildera (jak od innej wersji aplikacji) — test pokazuje oba wiersze (decyzja z 2026-11-17 o podwójnej wysyłce
+   sprawdzona także dla tej samej karty).
+8. **Ziarno 8 profilu pełnego** jako przypadek ręcznego bloku znanych usterek (bez klasy w tabeli wyjątków, bez
+   literału), a nie wpis w tabeli wyjątków — usterka zostaje widoczna; ręczny przebieg profilu pełnego z włączonym
+   przełącznikiem ma jedno czerwone ziarno do E3-PR0e. Inna możliwość: wpis w tabeli wyjątków (przebieg zielony,
+   usterka mniej widoczna).
+9. **Literały ręcznych przebiegów** (floty, `ZNANE_W1`) opisują przebieg z wyłączonym przełącznikiem; przebiegi
+   z przełącznikiem ocenia wyrocznia, model odsyłania i zieleń profilu (przepisanie literałów — E3-PR0i).
+10. **Bez wpisu polityki prywatności** dla klucza `vilda-event-echo-v1` w tym PR (klucz ustawiają tylko testy; wpis
+    razem z przełącznikiem w Ustawieniach, E3-PR0g).
+
+**Wejście do kolejnych PR.**
+- **E3-PR0d** (wpisy Kosza): odsyłanie wpisu Kosza po scaleniu innego niż w ładunku (R4a, R4a′, R5); R4n i D7 bez
+  odsyłania; ta sama droga (`Bem_zastosujEcho`, kolektor), rodzaj `stomb` jako kandydat; odesłanie wersji zmienionej
+  fazą Kosza zostaje z E3-PR0c (bez podwójnego wysyłania tej samej wersji); notatki i nagrobki notatek dalej bez
+  odsyłania, tylko pomiar (decyzja z 2026-11-17); R4a i R4a′ przez urządzenie 276 — jeden dodatkowy obieg,
+  opisać; model haków i odsyłania w teście A ≡ B rozszerzony o `stomb`; warstwa „odesłane” jest gotowa.
+- **E3-PR0e**: „Usuń pacjenta” zwróconej starej karty po „Scal pacjentów” — scenariusz z ziarna 8 profilu pełnego
+  (świat 885 ręcznego bloku znanych usterek) obok czterech dotychczasowych; po naprawie ziarno 8 z włączonym
+  przełącznikiem ma być czyste; różnica „tylko lista usuniętych pacjentów” (odłożona tutaj decyzją z 2026-11-17).
+- **E3-PR0f**: wersje przeniesione pod inną kartę (dziś wykluczone z odsyłania) i wizyta nieznana urządzeniu
+  scalającemu; mutant „bez wyjątku przeniesienia” czerwieni dziś test wersji przeniesionej — po zmianie reguły
+  przepisać.
+- **E3-PR0g**: przełącznik odsyłania w Ustawieniach (zapis i usunięcie klucza `vilda-event-echo-v1`, obok „Wysyłaj
+  zmiany pojedynczo”, tylko na tym urządzeniu), instrukcja testu właściciela, wpis polityki prywatności.
+- **E3-PR0h**: koszt duplikatów (dwa urządzenia odsyłają ten sam rekord; H1 i odesłanie), stres drogi zdarzeń
+  (najgorszy przypadek z „Budżetów”), wyścig pełnej kopii ze zdarzeniem i przerwa między scaleniem a wpisem
+  odesłania (test), koalescencja z odsyłaniem, floty z odsyłaniem (221, 276, kontrola z trzema bieżącymi
+  urządzeniami), profil „dłuższa praca bez połączenia” z odsyłaniem jako pomiar, echo po scaleniu pełnej kopii i pół
+  wymiany — 0 z konstrukcji (odsyłanie tylko po pojedynczych zmianach), pomiar zostaje; wyniesienie uprzęży testu
+  A ≡ B do `tests/support/` i osobny plik przebiegów z przełącznikiem (równoległość plików w vitest).
+- **E3-PR0i**: znaczenie klucza odwrócone („brak klucza = włączone, `'0'` wyłącza”), literały A ≡ B, floty
+  i `ZNANE_W1` przepisane na wynik z odsyłaniem, ziarno 8 profilu pełnego po E3-PR0e.
+- Każdy PR: nowe miejsce zapisu wersji w scalaniu — sprawdzić, czy kandydat jest w ładunku (strażnik kandydatów
+  w modelu haków i odsyłania); nowe pole zapisywane zawsze przez bieżącą wersję — dopisać do `Bev_ECHO_ZAWSZE`
+  i `POLA_ZAWSZE.snap` licznika (test równości); zmiana `vilda_vault.js` poza fragmentem natywnym — przeliczenie
+  skrótów kontroli granicy.
+
+**Cofnięcie** = rewert PR, bez migracji (przy wyłączonym przełączniku nic nie powstaje; wiersze odsyłania to zwykłe
+wiersze `snap`; klucz przełącznika po rewercie nic nie znaczy; rewert cofa też skróty kontroli granicy).
+
+**Gdzie w kodzie.** `vilda_vault.js`, blok P-DZIENNIK-ZDARZEN (6686–10045): część `Bev_` — `Bev_zastosuj(env, kol)`
+(7324; jedna wstawka po kontroli kształtu), `Bev_ECHO_ZAWSZE`, `Bev_pole`, `Bev_bezPola`, `Bev_json`,
+`Bev_kandydaciEcha`, `Bev_stanEcha`, `Bev_wersjaEcha`, `Bev_echoT`, `Bev_echo`, `Bev_zastosujZEchem` (7476–7677),
+`Bev_EKSPORT` (`applyEncryptedEvent: Bem_zastosuj`, 7697); część `Bob_` — `Bob_KLUCZ_ECHA` (7781), poprawiony
+komentarz `Bob_bramka` (włącznik dziennika po E2-PR6: flaga `vilda-event-log-v1` = `'0'` wyłącza), `Bob_bramkaEcha`
+(7852); część `Bem_` — `Bem_zastosuj`, `Bem_zastosujEcho` (10022–10038); nagłówki części (opis czwartej drogi ze
+scalania do kolejki i przełącznika). Poza blokiem bez zmian.
+
+**Wersje.** `vilda_vault.js` 280 → 281, `vilda_chrome.js` 303 → 304 i `vilda_session_bridge.js` 219 → 220
+(wstrzykują sejf), SW 1.1.551 → 1.1.552 — `npm run podbij-wersje`; baza `origin/audyt` `d99ec459` (po
+vildaclinic/vilda-calc#990, vildaclinic/vilda-calc#994, vildaclinic/vilda-calc#991 i vildaclinic/vilda-calc#997). Bez nowego
+pliku w pamięci offline.
+
+## Postępy dorosłego i listy pacjentów zgodne z dziennikiem leczenia (P-POSTEPY-DZIENNIK, SW 1.1.553, `vilda_postepy_doroslego.js` 8, `vilda_cykle_leczenia.js` 6, `vilda_auth_ui.js` 570, `vilda_auth_ui.css` 84, 2026-11-19)
+
+**Decyzje właściciela (2026-11-19).** „Zacznij kolejny etap — Postępy i lista pacjentów z dziennika”. Listy pacjentów
+liczy sejf (`vilda_vault.js`) z zapisu ostatniej wizyty; właściciel wybrał wariant **bez zmiany sejfu**: w Karcie
+„Popraw” i „Usuń” tylko przy Kontynuacji, a Włączenie i Zakończenie poprawia się w DocPro (tak jak dotąd zmianę leku).
+Odrzucone: zmiana sejfu (listy z notatek dziennika — zmiana obrazu sejfu i kolejka E3-PR0c…) i pozostawienie list
+bez zmian.
+
+**Stan przed zmianą.** Zakładka „Postępy” dorosłego (wykres redukcji masy, BMI, kamienie, punkt oceny wg ChPL) liczyła
+z `obesityTherapyPoints` migawki ostatniej wizyty — masy przysłanej przez pacjenta i dopisanej w „Wpisy leczenia” nie
+widziała, dopóki lekarz nie zapisał wizyty w DocPro. Listy pacjentów („Leczenie otyłości: trwa / kiedykolwiek / lek X”
+i lek wpisany z nazwy) liczy sejf z rodzaju ostatniego punktu i z leku punktów ostatniej wizyty; Karta pozwalała
+usunąć albo poprawić każdy wpis, także Włączenie i Zakończenie, więc lista mogła rozjechać się z dziennikiem.
+
+**Postępy z dziennika.** Karta (`vilda_auth_ui.js`, montaż panelu) podaje silnikowi `scalSerie` → `analizuj` punkty
+z projekcji dziennika (`Ob_dzPunkty`: `VildaDziennikOtylosci.zloz(notatki pacjenta, migawka).punkty` — te same, z których
+liczy kafelek „Leczenie otyłości”). Po zapisie wpisu w „Wpisy leczenia” panel rysuje się od nowa w tym samym miejscu
+(`Ob_dzPowiadom` → `Ob_dzPostepy`), bez ponownego otwierania karty. Bez modułu dziennika — jak dotąd z migawki.
+
+**Konflikt wersji w „Postępach”.** Wpis bieżącego cyklu z dwiema wersjami (poprawiony równolegle na dwóch urządzeniach
+albo w dwóch kartach) zdejmuje punkt oceny wg ChPL z wykresu (`punktDecyzyjny.bezOsi = 'konflikt-wersji-wpisu'`)
+i dodaje ostrzeżenie „Wpis z DD.MM.RRRR ma dwie wersje … Wybierz prawidłową w zakładce „Leczenie”, „Wpisy leczenia””.
+Ta sama reguła co werdykt w Karcie (decyzja z etapu 3): u dorosłego ocena wg ChPL liczy się z masy i nie ma okna
+z datą (`punktOceny` bez `oknoOdISO`), więc wstrzymuje ją każdy konflikt bieżącego cyklu. Konflikt we wcześniejszym,
+zakończonym cyklu nie zmienia oceny. Seria i pasma zostają (najnowsza nieusunięta wersja). Pierwszeństwo: niezgodny
+zapis cyklu (D5) przed konfliktem, konflikt przed brakiem punktu „Włączenie”.
+
+**Listy zgodne z dziennikiem bez zmiany sejfu.** `VildaDziennikOtylosci.zmianaPrzebiegu(stan, wpis)` mówi, czy zmiana
+wpisu w Karcie mogłaby zmienić to, z czego sejf liczy listy: zwraca `null` (wolno w Karcie) tylko dla Kontynuacji,
+której poprzedni wpis (w kolejności tabeli) jest Włączeniem albo Kontynuacją z tym samym lekiem i substancją; inaczej
+powód `wlaczenie` | `zakonczenie` | `pierwszy-wpis` | `zmiana-leku`. Wtedy ani rodzaj ostatniego punktu, ani lek nie
+różnią się od zapisu wizyty — po każdym dopuszczonym działaniu sejf liczy listy tak samo, jakby zapisem wizyty była
+projekcja dziennika (sprawdzone na prawdziwym sejfie, niżej). W „Wpisy leczenia” wiersz Włączenia, Zakończenia i
+Kontynuacji ze zmianą leku ma „Poprawka w DocPro” zamiast „Popraw”/„Usuń”; usunięty taki wpis — „Dodaj ponownie
+w DocPro” zamiast „Przywróć”; te same powody odrzucają działanie w kodzie (nie tylko w widoku). Podpis sekcji:
+„Włączenie, Zakończenie i zmianę leku dodajesz i poprawiasz w DocPro przy wizycie. Tu — Kontynuacje.” „Wybierz wersję”
+przy konflikcie zostaje dla każdego wpisu — monitor DocPro konfliktu nie rozstrzyga.
+
+**Przypadki syntetyczne** (dane fikcyjne; dorosły 47 l., 170 cm):
+
+| Przypadek | Wejście | Oczekiwany wynik |
+|---|---|---|
+| PD-1 | Saxenda: Włączenie 01.06.2026 112,0 kg, Kontynuacja 06.07.2026 108,0 kg; Karta „+ Kontynuacja” 10.11.2026 99,1 kg (pacjent) | „Postępy” bez ponownego otwierania karty: 99,1 kg na wykresie, jeden panel, punkt oceny wg ChPL na miejscu |
+| PD-2 | ten sam pacjent | wiersz Włączenia: „Poprawka w DocPro”, bez „Popraw”/„Usuń”; Kontynuacja z 06.07.2026: „Popraw” i „Usuń”; lista „Saxenda — trwa” z sejfu obejmuje pacjenta |
+| PD-3 | wpis 10.11.2026 poprawiony równolegle (98,6 i 99,4 kg) | „Postępy”: „Wpis z 10.11.2026 ma dwie wersje…”, bez punktu oceny wg ChPL; po wyborze wersji punkt wraca (test jednostkowy) |
+| listy | Wegovy (Włączenie 12.01.2026, Kontynuacja 14.04.2026): + Kontynuacja, poprawka, usunięcie dawnej Kontynuacji i cofnięcie, usunięcie ostatniego wpisu | po każdym kroku 7 reguł list (trwa/kiedykolwiek, Wegovy/Saxenda/dowolny, lek z nazwy) daje to samo dla pacjenta i dla „lustra” z zapisem wizyty = projekcja dziennika |
+| kontrola ujemna | usunięcie Zakończenia; usunięcie Kontynuacji, która zmieniła Saxendę na Wegovy | rozjazd list („trwa”, „Wegovy kiedykolwiek”) — dlatego `zmianaPrzebiegu` odsyła je do DocPro |
+
+**Wpływ kliniczny.** Zmienia się źródło danych zakładki „Postępy” (masy od pacjenta wchodzą do wykresu, kafelków
+i punktu oceny wg ChPL — jak w kafelku „Leczenie otyłości” od etapu 3) i dochodzi wstrzymanie punktu oceny przy
+konflikcie wersji. Progi, pasma, okna i kotwice ChPL bez zmian. Wegovy u dorosłego nadal bez punktu oceny (ChPL
+nie podaje reguły odstawienia dla dorosłych). Karta przestaje pozwalać na poprawkę Włączenia i Zakończenia —
+to zawęża edycję, nie zmienia żadnej oceny.
+
+**Ograniczenia (znane).**
+- Analiza trajektorii i karta zbiorcza czytają jeszcze migawkę ostatniej wizyty (od P-TRAJEKTORIA-DZIENNIK, niżej — z dziennika).
+- Wybór wersji przy konflikcie Włączenia albo Zakończenia (rzadki: dwie poprawki tego samego wpisu w DocPro na dwóch
+  urządzeniach) może zmienić rodzaj albo lek punktu — lista wyrówna się po najbliższym „Zapisz dane” wizyty w DocPro.
+- Wpis dodany w Karcie trafia do zapisu wizyty (lustro listy) dopiero przy „Zapisz dane” w DocPro — listy tego nie
+  potrzebują (lek i stan leczenia się nie zmieniają), historia wersji wizyty — bez zmian, jak w etapie 3.
+
+**Testy.** Dane wyłącznie fikcyjne.
+- `tests/unit/postepy-listy-dziennik.test.mjs` (10): `zmianaPrzebiegu` (Włączenie, Zakończenie, wpis z Karty, zmiana
+  leku, pierwszy wpis, usunięty wpis, zdania dla lekarza), „Postępy” z dziennika (wpis od pacjenta w serii, konflikt
+  wstrzymuje i wybór wersji przywraca punkt oceny, konflikt we wcześniejszym cyklu bez skutku), listy na prawdziwym
+  sejfie (5 działań Karty × 7 reguł, kontrola ujemna).
+- e2e `tests/e2e/postepy-dziennik.spec.mjs` (PD-1…PD-3) na prawdziwej stronie; PD-1 i PD-3 padają na kodzie sprzed
+  zmiany.
+
+**Wdrożenie.** Od razu przy wydaniu; sejf bez zmian. **Cofnięcie** = rewert PR: „Postępy” wracają do migawki, Karta
+znów pozwala poprawiać każdy wpis; dane dziennika bez zmian.
+
+## Analiza trajektorii i karta porównania z dziennika leczenia (P-TRAJEKTORIA-DZIENNIK, SW 1.1.554, `vilda_cykle_leczenia.js` 7, `vilda_auth_ui.js` 571, `vilda_summary_cards.js` 65, 2026-11-19)
+
+**Decyzja właściciela (2026-11-19).** „Zacznij kolejny etap — trajektoria i karta zbiorcza z dziennika”.
+
+**Stan przed zmianą.** Kursy leczenia otyłości (od Włączenia do Zakończenia, `VildaTrajectoryAnalysis.buildClinicalContext`
+→ `red`/`redKursy`) liczyły się z `obesityTherapyPoints` zapisu ostatniej wizyty:
+- w Karcie pacjenta — panel „Analiza trajektorii” (żetony kursów, znacznik ⬇ i werdykty odcinków), pas leczenia
+  „otyłość” na siatkach i kontekst panelu porównania;
+- na Start i w Klirensie — karta „Porównanie z poprzednim pomiarem” (`vilda_summary_cards.js`, punkty z formularza
+  wizyty, czyli z jej zapisu).
+Dziennik leczenia (etap 3) wyprzedza zapis wizyty wtedy, gdy monitor DocPro zapisał wpis od razu, a „Zapisz dane”
+jeszcze nie padło — np. Zakończenie. Kurs był wtedy „nadal”, a werdykt „redukcja w trakcie leczenia”, choć leczenie
+w dzienniku jest zakończone.
+
+**Zmiana.**
+- Karta pacjenta: pas leczenia i kontekst trajektorii z projekcji dziennika (`Ob_dzPunkty`, te same punkty co kafelek
+  „Leczenie otyłości” i „Postępy”).
+- Start, Klirens (i DocPro): karta porównania bierze punkty z `VildaDziennikOtylosci.punktyWczytanego()` — pamięci
+  projekcji dziennika pacjenta karty (identyfikator z `sessionStorage`, jak bramka tej karty), odczytanej po
+  `vilda:patient-loaded`, `vilda:sync-merged`, zmianie sesji i po zapisie wpisu. Bez wpisów w dzienniku — `null`
+  i dotychczasowe źródło. `window.obesityTherapyPoints` (formularz wizyty i jej „Zapisz dane”) się nie zmienia.
+  Po zmianie punktów leci `vilda:therapy-points-changed {source:'obesity-dziennik'}` — ten sam sygnał, którym monitory
+  odświeżają kartę porównania; pacjent bez dziennika go nie wywołuje. „Wyczyść”, blokada i inny pacjent karty —
+  pamięć pusta.
+- Reguły kursów, okien i werdyktów trajektorii bez zmian — zmienia się tylko źródło punktów.
+
+**Przypadki syntetyczne** (dane fikcyjne; dziewczynka ur. 15.11.2011; Saxenda 12 l. 1 mies. – 12 l. 6 mies., Wegovy od
+12 l. 8 mies.; Zakończenie Wegovy 13 l. 3 mies. tylko w dzienniku):
+
+| Przypadek | Wejście | Oczekiwany wynik |
+|---|---|---|
+| TR-1 | Karta pacjenta, panel „Analiza trajektorii” | żetony: „Saxenda · od 12 lat 1 mies. do 12 lat 6 mies.”, „Wegovy · od 12 lat 8 mies. do 13 lat 3 mies.” (bez dziennika: „… — nadal”) |
+| TR-2 | Start: wizyta 12 l. 6 mies. → bieżący pomiar 13 l. 5 mies. | Waga i BMI: „— w tym 7 mies. leczenia redukcyjnego”, bez paska „kontekst:” (odcinek tylko częściowo w kursie); z zapisu wizyty: „redukcja w trakcie leczenia”, „kontekst: leczenie otyłości (Wegovy) — 9 mies. w odcinku” |
+| pamięć | bez wpisów; Zakończenie w dzienniku; wpis z Karty; inny pacjent, „Wyczyść”, blokada | null bez sygnału; kursy `{a:152, b:161}` zamiast `{a:152, b:null}` i jeden sygnał; odświeżenie po zapisie; null |
+
+**Wpływ kliniczny.** Werdykt odcinka masy/BMI zależy od tego, czy odcinek leży w kursie leczenia otyłości (gałąź
+leczenia, „w trakcie leczenia”, „mimo leczenia redukcyjnego”, dopisek „w tym N mies. leczenia redukcyjnego”). Od tej
+zmiany granice kursu bierze się z dziennika: gdy dziennik ma Zakończenie, którego zapis wizyty jeszcze nie ma, odcinek
+po nim nie jest liczony jako leczenie. Wpisy z Karty (Kontynuacje bez zmiany leku) granic kursów nie ruszają.
+Progi i reguły werdyktów bez zmian.
+
+**Ograniczenia.** Pomiary z dziennika (np. masa od pacjenta) nie wchodzą do serii trajektorii ani na siatki centylowe —
+seria to nadal pomiary wizyt; ta zmiana dotyczy wyłącznie kontekstu leczenia.
+
+**Testy.** Dane wyłącznie fikcyjne.
+- `tests/unit/trajektoria-dziennik.test.mjs` (4) na prawdziwym sejfie: bez dziennika, Zakończenie w dzienniku
+  (`buildClinicalContext`), odświeżenie po zapisie wpisu, inny pacjent / „Wyczyść” / blokada.
+- e2e `tests/e2e/trajektoria-dziennik.spec.mjs` (TR-1, TR-2); oba padają na kodzie sprzed zmiany.
+
+**Wdrożenie.** Od razu przy wydaniu; sejf bez zmian. **Cofnięcie** = rewert PR: kursy znów z zapisu wizyty.

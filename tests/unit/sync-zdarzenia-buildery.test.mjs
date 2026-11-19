@@ -610,11 +610,16 @@ describe('B6/B7: bez zegara', () => {
       'Bev_grupuj', 'Bev_porcje', 'Bev_wpisKosza', 'Bev_zListy', 'Bev_jako',
       // E2-PR3a4: chwila zmiany encji i pary z ładunku scalania (przegląd kolejki).
       'Bev_chwila', 'Bev_pary'];
-    const SZYFROWANIE_I_ZASTOSOWANIE = ['Bev_szyfruj', 'Bev_wynik', 'Bev_poSesji', 'Bev_kod', 'Bev_bladZastosowania', 'Bev_bladOdczytu', 'Bev_zastosuj'];
+    // E3-PR0c: zastosowanie zdarzenia z odsyłaniem poprawionych wizyt (stan przed, Le, stan po, kolektor).
+    const SZYFROWANIE_I_ZASTOSOWANIE = ['Bev_szyfruj', 'Bev_wynik', 'Bev_poSesji', 'Bev_kod', 'Bev_bladZastosowania', 'Bev_bladOdczytu', 'Bev_zastosuj',
+      'Bev_zastosujZEchem'];
     // E2-PR3a4: przegląd kolejki — odczyt sklepów bez odszyfrowania przez strzeżony adapter Bev_start.
     const PRZEGLAD = ['Bev_przeglad', 'Bev_ostatnieScalenie'];
+    // E3-PR0c: odsyłanie poprawionych wizyt — kandydaci z ładunku, odczyt stanu wersji przez strzeżony adapter Bev_start
+    // (odszyfrowanie i tożsamość wizyty tylko rekordów, które się zmieniły), reguła pola i porównanie; bez zegara i zapisów.
+    const ODSYLANIE = ['Bev_pole', 'Bev_bezPola', 'Bev_json', 'Bev_kandydaciEcha', 'Bev_stanEcha', 'Bev_wersjaEcha', 'Bev_echoT', 'Bev_echo'];
     const wBloku = [...dekl.keys()].filter((n) => n.startsWith('Bev_')).sort();
-    expect(wBloku, 'każda funkcja Bev_ jest na liście czystych, szyfrowania/zastosowania albo przeglądu kolejki').toEqual([...CZYSTE, ...SZYFROWANIE_I_ZASTOSOWANIE, ...PRZEGLAD].sort());
+    expect(wBloku, 'każda funkcja Bev_ jest na liście czystych, szyfrowania/zastosowania, przeglądu kolejki albo odsyłania').toEqual([...CZYSTE, ...SZYFROWANIE_I_ZASTOSOWANIE, ...PRZEGLAD, ...ODSYLANIE].sort());
     const WYJATKI = {
       Bkz_czytaj: 'Date.now() wyłącznie jako chwila filtra Bkz_czysc (treść kosza 30 dni, nagrobek 365 dni) — ten sam filtr co exportSyncPayload; chwila nie trafia do treści',
       Ct: 'Date.now() + 365 dni w normalizacji Ft: data kliniczna dalej niż rok od dziś → null — ta sama normalizacja co exportSyncPayload',
@@ -633,6 +638,15 @@ describe('B6/B7: bez zegara', () => {
     for (const zakazana of ['Bev_odszyfruj', 'Bev_szyfruj', 'Bev_zastosuj', 'is', 'us', 'ls', 'ds', 'cs', 'Qb0', 'Qb1', 'Gc5', 'Gc3', 'Bkz_eksport',
       'Bsw_deltaNagrobka', 'V', 'Le', 'ps', 'Vn', 'ws', 'Qr', 'qr', 'vs', 'Yn', 'Qe2', 'jn', 'Bmk_zmien', 'Bkz_zmienListe']) {
       expect(dp.has(zakazana), `${zakazana} w domknięciu przeglądu kolejki`).toBe(false);
+    }
+    // E3-PR0c: odsyłanie — domknięcie przez strzeżony adapter Bev_start, bez zegara, szyfrowania, scalania, eksportu,
+    // emiterów i zapisów (Le woła tylko Bev_zastosujZEchem, poza tą listą).
+    const de = domkniecie(ODSYLANIE);
+    expect(de.has('Bev_start'), 'odsyłanie przez strzeżony adapter Bev_start').toBe(true);
+    expect([...de].filter((n) => zegar(dekl.get(n)).length), 'funkcje z zegarem w domknięciu odsyłania').toEqual([]);
+    for (const zakazana of ['Bev_szyfruj', 'Bev_zastosuj', 'Bev_zastosujZEchem', 'is', 'us', 'ls', 'ds', 'cs', 'Qb0', 'Qb1', 'Gc5', 'Gc3', 'Bkz_eksport',
+      'Bsw_deltaNagrobka', 'V', 'Le', 'ps', 'Vn', 'ws', 'Qr', 'qr', 'vs', 'Yn', 'Qe2', 'jn', 'Bmk_zmien', 'Bkz_zmienListe']) {
+      expect(de.has(zakazana), `${zakazana} w domknięciu odsyłania`).toBe(false);
     }
     const lista = zIIFE.variables.find((z) => z.name === 'Bev_LISTY_PRZEGLADU');
     const d0 = lista && lista.defs[0];

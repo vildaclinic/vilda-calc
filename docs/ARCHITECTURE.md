@@ -488,6 +488,84 @@ kartę, epokę UI i tożsamość szyfrogramu. Opuszczenie dokumentu (`pagehide`)
 trwającą kryptografię, lecz zachowuje wcześniej zatwierdzony transport.
 Szczegóły zachowania i granic: `docs/REMINDERS_SEARCH.md`.
 
+### Szyfrowane zamiary GH i wczytania pacjenta
+
+`vilda_ui_intents.js` jest leniwym transportem UI: samo załadowanie nie czyta
+konta, nie odblokowuje sejfu ani nie uruchamia odtwarzania. Korzysta wyłącznie
+z publicznych `encryptPayloadForCurrentUser` / `decryptPayloadForCurrentUser`.
+Natywny zapis pacjentów, notatek, preferencji i synchronizacja pozostają poza
+transportem. Czytelny, odwracalny delta-hook Auth znajduje się w
+`tools/private-ui-intent-auth-hooks.mjs`; jego odwrócenie daje dokładny Auth
+po scaleniu #995 i zatwierdzonych zmian Home/B1. Hook prezentacji Przypomnień
+odwraca się niezależnie, także po tej zmianie bezpieczeństwa.
+
+| Klucz | Zawartość i właściciel | Zużycie |
+|---|---|---|
+| `vilda:gh-jump` | Natywny `sessionStorage` wspólny ramek tej karty; wyłącznie `{iv,data}`. W szyfrogramie: konto, karta, cel i oryginalny czas kliknięcia. | Natywne 60 sekund od kliknięcia, bez przedłużania przez kryptografię. Dokładny szyfrogram jest zużywany dopiero przed natywną decyzją o niezapisanych danych lub podświetleniem punktu; oczekiwanie na tę decyzję po zużyciu nie dostaje nowego TTL. |
+| `vilda:pendingPatientLoad` | Ten sam natywny backend i klucz, wyłącznie `{iv,data}`; identyfikator pacjenta zachowany bez normalizacji, także z importu. | Jak wcześniej: bez TTL. Odtworzenie starszej sesji głównej kończy się przed przechwyceniem nowej operacji zaakceptowanego wczytania; zużycie następuje przed natywnym odczytem pacjenta. |
+| `vilda:ui-intent-epoch:v1` | Wyłącznie publiczna losowa epoka UI, bez identyfikatorów i danych. | Granice konta/sesji unieważniają oba rodzaje zamiaru. |
+| `vilda:ui-intent:<kind>:v1` | Wyłącznie publiczny losowy nonce rezerwacji jednego rodzaju zamiaru. | Rezerwacja przed `await` ustala ostatnie kliknięcie między ramkami. Starsze zakończenie nie zastępuje ani nie usuwa nowszego. |
+
+Producent czeka na zatwierdzony szyfrogram i sprawdza właściciela przed tą samą
+natywną nawigacją. Konto, odblokowanie, referencja sejfu, jego nieprzenośny token
+sesji, dokument, backend, karta, epoka, publiczny tryb pamięci, rezerwacja oraz
+aktualność źródła są sprawdzane przed i po asynchronicznej kryptografii.
+Token sejfu i klucze nie są serializowane. `current()` pozostaje czystym
+sprawdzeniem. Gdy po zatwierdzeniu źródło przestaje być aktualne albo nawigacja
+się nie powiedzie, producent jawnie wycofuje własny szyfrogram przez
+`receipt.discardExact()`. Pomija to wyłącznie wygasły kontekst UI; wszystkie
+pozostałe strażniki właściciela, sesji, rezerwacji i dokładnego raw nadal
+obowiązują. Wycofanie nie usuwa nowszej intencji. Nie wykonuje się go w
+`finally` ani automatycznie przy `pagehide`.
+
+Lista pacjentów na stronie bez formularza jawnie wybiera opcjonalny protokół
+publikacji UI. Domyślne callbacki nadal otrzymują dokładnie dwa argumenty i
+zachowują zwracany wynik. Callback z protokołem rejestruje aktywację wyłącznie
+podczas swojego synchronicznego wywołania; okno rejestracji potem się zamyka.
+Po natywnym zdarzeniu wczytania, zamknięciu karty i istniejącym kroku `BdPo`
+może wystartować szyfrowanie, jeżeli pierwotny sejf, konto, nieprzenośny token,
+dokument i trasa wciąż są aktualne. Dopiero wtedy przechwytywany jest końcowy
+kontekst źródłowego UI. Brak protokołu kończy się istniejącą wskazówką
+odświeżenia, bez zastępczego zapisu. Nie ma oczekiwania pomiędzy publikacją a
+tym sprawdzeniem ani ogólnego wyjątku dla zdarzeń zmiany pacjenta.
+
+Prawidłowy odczyt nie zużywa zamiaru; osobny synchroniczny CAS zużywa
+wyłącznie sprawdzony szyfrogram. Jeżeli UI zostaje zastąpione podczas
+deszyfrowania lub tuż przed kontynuacją konsumenta, porzucony odczyt wycofuje
+wyłącznie swój dokładny szyfrogram. Nadal musi pasować pierwotny właściciel,
+token, epoka, generacja dokumentu, rezerwacja i raw; dlatego opuszczenie
+dokumentu oraz nowsze zastępstwo zachowują własne przekazanie. Stary plaintext jest
+wycofywany przez CAS, nigdy migrowany ani zapisywany ponownie. Nie ma fallbacku
+z jawnymi identyfikatorami. Cel B przy pacjencie A lub pustym formularzu pozostaje
+prawidłowym przekazaniem; transport nie wymaga zgodności celu z formularzem.
+
+Auth czyści transport przy rzeczywistym `onLock`, świeżym `onUnlock` i zmianie
+poświadczeń; natywny trigger `restore` go zachowuje. Publiczny
+`Sync.onSyncStart({operation:'revoke'})`, istniejący między dokumentami znacznik
+`vilda-sync-revoked-v1:` oraz obsługiwany przełącznik trybu w Ustawieniach
+unieważniają epokę. Opcjonalny hook UI nie może zatrzymać natywnego ustawienia
+trybu ani obsługi logowania. `pagehide` anuluje wyłącznie lokalną trwającą
+operację, zachowując zatwierdzony zamiar do zwykłej nawigacji. Gotowość Auth
+pozostaje obowiązkiem konkretnego konsumenta; helper nie oczekuje globalnie na
+`isBootReady`, co wewnątrz boot mogłoby zablokować jego własne zakończenie.
+
+Granica gwarancji: świeży konsument porównuje publiczny bieżący tryb z kopertą,
+a obserwowane hooki UI unieważniają zatwierdzony zamiar. Bezpośredni publiczny
+`rotateSyncIdentity` oraz historia trybu A→B→A poza tymi obsługiwanymi hookami
+nie mają ogólnego publicznego zdarzenia; helper nie odczytuje prywatnego SIS
+ani nie obiecuje wykrycia takiej historii między dokumentami. Natywny token
+zatrzymuje takie zmiany w operacji trwającej. Przy całkowicie niedostępnej
+pamięci czyszczenie zwraca niepowodzenie i unieważnia stan lokalny; nie da się
+wtedy zagwarantować zapisu unieważnienia w innym dokumencie.
+
+Wspólny generator identyfikatorów Przypomnień zachowuje `crypto.randomUUID`;
+awaryjna ścieżka używa 128 bitów z `getRandomValues` i formatu UUIDv4. Nie ma
+`Math.random` ani zegara. Zmienia wyłącznie świeżo generowany identyfikator,
+bez przepisywania istniejących ID, prefiksów ani pól DTO. Natywne cykle retry
+pozostają: wynik zachowuje operationId dla tej samej sygnatury, zmiana żądania
+otrzymuje nowy ID, a nowe przypomnienie zachowuje noteId przez całe życie
+formularza. Brak WebCrypto kończy otwarcie formularza przed natywnym zapisem.
+
 **Aktualność Search (PR4).** `vilda_global_search.js` utrzymuje jeden rejestr
 hooków na sejf oraz refcount kontekstów okna/dokumentu. Aktywne usługi odbierają
 istniejące `vilda-notes`, `vilda-note-changed-ping-v1` i `vilda:sync-merged`.
@@ -787,6 +865,8 @@ Projekt synchronizacji przyrostowej (urządzenie wysyła tylko własne zmiany ja
 **Przegląd kolejki (E2-PR3a4, uśpione, 2026-11-09).** Na początku odblokowania, raz na dobę i po limicie blokady konta sejf sprawdza (bez odszyfrowania, przez strzeżony adapter), czy każda encja zmieniona od ostatniego przeglądu (− 10 min) ma wiersz kolejki albo jest już w chmurze (pamięć par ze scalania z chmury i z wierszy przyjętych), i dokłada brakujące tym samym łańcuchem dopisań konta. Znacznik przeglądu i pamięć par leżą w sklepie `meta` bazy kolejki konta; bazy `vilda_sync_*` kont bez wpisu rejestru albo w innym trybie niż „Komputer prywatny” kasuje przy odblokowaniu to samo kasowanie kolejki konta (nigdy w trybie „Zaloguj jednorazowo”). `VildaVault._eventLog.sweepOutbox` (38 kluczy). Bramka jest zamknięta — jeden odczyt pola okna przy odblokowaniu i przy scaleniu z chmury. Szczegóły: `docs/clinical/ALGORITHMS.md`, wpis P-DZIENNIK-ZDARZEN.
 
 **Haki scalania (E2-PR3b, uśpione, 2026-11-10).** Scalanie z chmury dopisuje do kolejki tylko w dwóch sytuacjach, bez zmiany reguł scalania i bez nowego hooka. Przegrany nagrobek karty — w `Le` nagrobek z ładunku, który przegrał z chwilą karty, a w `Bsl_usunPacjenta` karta zapisana w trakcie scalania — daje pełną kartę (`pfull`: wszystkie wersje w porcjach, `setId` z karty i chwili nagrobka, bez powtórzeń w obrębie strony; tylko poza importem). Ratunek notatki D-21 (`Bnp_ratuj`) daje `pnote` zawsze, także w imporcie i gdy w tej samej partii przyszła własna koperta tej notatki. Karta idzie przed notatką. W przeglądzie kolejki wiersz z haka pokrywa encję (wiersz `pfull` — wersje karty, para ratunku — notatkę). Przy zamkniętej bramce — jeden odczyt pola na przegrany nagrobek karty i ratunek notatki; wynik `Le` i liczba operacji sklepu bez zmian. Opis: `docs/clinical/ALGORITHMS.md`, P-DZIENNIK-ZDARZEN, E2-PR3b.
+
+**Odsyłanie poprawionych wizyt (E3-PR0c, P-ZBIEZNOSC-ZDARZEN, uśpione, 2026-11-17).** `VildaVault._eventLog.applyEncryptedEvent` wskazuje funkcję części `Bem_` (`Bem_zastosuj`), która najpierw czyta przełącznik odsyłania (`Bob_bramkaEcha`: klucz `localStorage` `vilda-event-echo-v1` dokładnie `'1'` albo pole okna `VILDA_EVENT_ECHO === true`); wyłączony — zastosowanie zdarzenia jak dotąd, ta sama obietnica co `Bev_zastosuj`. Włączony, przy otwartej bramce dziennika i w trybie „Komputer prywatny”: sejf odczytuje przez strzeżony adapter stan wersji wizyt z ładunku koperty zdarzenia (`snapshots` kart i `snapshotTombstones`) przed scaleniem i po nim, a wersje, które scalanie zapisało inaczej, niż przyszły (bez samego `rev`, samej tożsamości wizyty i przeniesień pod inną kartę), dopisuje do kolejki jako `snap` w sesji scalania, bez czekania na wpis — czwarta droga ze scalania do kolejki obok haków. Po starej delcie, pełnej kopii, delcie i importach — bez odsyłania; notatek i samego opisu karty nie odsyła. `Le`, reguły scalania, `vilda_sync.js` i miejsca poza blokiem P-DZIENNIK-ZDARZEN bez zmian; przełącznik w Ustawieniach dojdzie w E3-PR0g. Opis: `docs/clinical/ALGORITHMS.md`, P-ZBIEZNOSC-ZDARZEN, E3-PR0c.
 
 **Zdarzenie usunięcia karty po „Scal pacjentów” (E2-PR3c1, uśpione, 2026-11-10).** Po „Scal pacjentów” X → Y w tej samej karcie przeglądarki koperta zdarzenia `ptomb(X)` niesie też kartę Y ze wszystkimi wersjami (jak delta nagrobka `Bsw_deltaNagrobka`), więc odbiorca ma nagrobek i kartę scaloną w jednym scaleniu: wersja X przypięta albo poprawiona u odbiorcy przechodzi pod Y zamiast zniknąć z X. Bez znanego celu — sam nagrobek; karta ponad limitem zdarzenia — wiersz `oversize` (pełna wysyłka). Reguły scalania bez zmian. Opis: `docs/clinical/ALGORITHMS.md`, P-DZIENNIK-ZDARZEN, E2-PR3c1.
 
