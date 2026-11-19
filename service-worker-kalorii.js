@@ -6859,9 +6859,13 @@ const CLINICAL_WORKSPACE_PRECACHE_PACK = Object.freeze({
 
 // BEGIN VISIT UI PACK CONFIG
 const VISIT_UI_PRECACHE_PACK = Object.freeze({
-  "url": "/runtime/visit-ui-precache/precache-ece2e936d03b.json",
-  "sha256": "ece2e936d03b666dd8ee8e19628ae1e824cd3e724a81eb3122f8f317003ee8da",
+  "url": "/runtime/visit-ui-precache/precache-79208f120c7e.json",
+  "sha256": "79208f120c7e5440768e5de7cd33c5435fd38168de9596f7d76b3f6394fc4f69",
   "files": [
+    {
+      "url": "/vilda_ui_intents.js?v=1",
+      "sha256": "9ac335b3410d83b7fdfccd4a5e760233ba33be2a54727f1dec8e9c95ff50bc1a"
+    },
     {
       "url": "/vilda_visit_context.js?v=1",
       "sha256": "6e40276d866ddc571404e5d3ed5acc2e5499391d4dc565c0cb23dd914c600edb"
@@ -7106,6 +7110,7 @@ function createClinicalWorkspacePrecacheState(config = CLINICAL_WORKSPACE_PRECAC
 
 function createVisitUIPrecacheState(config = VISIT_UI_PRECACHE_PACK) {
   const types = new Map([
+    ['/vilda_ui_intents.js', 'text/javascript; charset=utf-8'],
     ['/vilda_visit_context.js', 'text/javascript; charset=utf-8'],
     ['/vilda_visit_history_ui.js', 'text/javascript; charset=utf-8'],
     ['/vilda_visit_history_ui.css', 'text/css; charset=utf-8'],

@@ -151,7 +151,7 @@
       blocked[kind] = false;
       return Object.freeze({ raw: raw, current: function () {
         try { return !expired(kind, clean) && owns(owner, reservation, raw, true); } catch (_) { return false; }
-      } });
+      }, discardExact: function () { return retire(owner, reservation, raw); } });
     } catch (failure) {
       try { if (owns(owner, reservation, raw, false)) retire(owner, reservation, raw); } catch (_) {}
       throw failure;

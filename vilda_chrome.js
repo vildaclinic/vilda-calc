@@ -1045,16 +1045,25 @@ function Bt(){var e=o.getElementById("saveDataBtnSidebar");e&&e.addEventListener
    na stronach z formularzem pacjenta. Na terminarzu, w ustawieniach czy w modulach wisial tam tekst
    o polach, ktorych na tej stronie nie ma. Pozycja menu zostaje, ale mowi, gdzie z niej skorzystac. */
 function Qvn(){var e=r.VildaSession&&r.VildaSession.TOOLTIPS&&r.VildaSession.TOOLTIPS.visitNote||{};return o.getElementById("age")||o.getElementById("ageMonths")?e.noPatient||'Aby doda\u0107 notatk\u0119 do wizyty, najpierw wczytaj pacjenta z listy \u201EPacjenci\u201D lub zapisz nowego pacjenta (\u201EZapisz dane\u201D).':e.notOnThisPage||"Dodawanie notatki do wizyty jest dost\u0119pne na stronie Start i DocPro."}
-var t=o.getElementById("addVisitNoteBtnSidebar");if(t&&!t._cfBound)try{t.setAttribute("aria-disabled","true"),t.setAttribute("data-tip",Qvn())}catch{}t&&t.addEventListener("click",function(n){if(n.preventDefault(),!t._cfBound){F(t,t.getAttribute("data-tip")||Qvn())}});var a=o.getElementById("patientsListBtnSidebar");a&&a.addEventListener("click",function(n){if(n.preventDefault(),a._cfBound)return;var s=r.VildaVault;if(!(s&&typeof s.isUnlocked=="function"&&s.isUnlocked())){F(a,"Zaloguj si\u0119, aby przegl\u0105da\u0107 baz\u0119 pacjent\xF3w.");return}function i(){var c=r.VildaAuthUI;if(!c||typeof c.showPatientsList!="function"){F(a,"Modu\u0142 pacjent\xF3w niedost\u0119pny \u2014 od\u015Bwie\u017C stron\u0119.");return}var u=typeof r.applyLoadedData=="function";c.showPatientsList(async function(l,v){if(u){if(l)try{r.applyLoadedData(l)}catch{}var p=r.VildaChrome;p&&typeof p.refreshPatientChip=="function"&&p.refreshPatientChip()}else{
-  var transport=r.VildaUiIntents,scope=null;
+var t=o.getElementById("addVisitNoteBtnSidebar");if(t&&!t._cfBound)try{t.setAttribute("aria-disabled","true"),t.setAttribute("data-tip",Qvn())}catch{}t&&t.addEventListener("click",function(n){if(n.preventDefault(),!t._cfBound){F(t,t.getAttribute("data-tip")||Qvn())}});var a=o.getElementById("patientsListBtnSidebar");a&&a.addEventListener("click",function(n){if(n.preventDefault(),a._cfBound)return;var s=r.VildaVault;if(!(s&&typeof s.isUnlocked=="function"&&s.isUnlocked())){F(a,"Zaloguj si\u0119, aby przegl\u0105da\u0107 baz\u0119 pacjent\xF3w.");return}function i(){var c=r.VildaAuthUI;if(!c||typeof c.showPatientsList!="function"){F(a,"Modu\u0142 pacjent\xF3w niedost\u0119pny \u2014 od\u015Bwie\u017C stron\u0119.");return}var u=typeof r.applyLoadedData=="function";var patientPick=function(l,v,publication){if(u){if(l)try{r.applyLoadedData(l)}catch{}var p=r.VildaChrome;p&&typeof p.refreshPatientChip=="function"&&p.refreshPatientChip()}else{
+  if(!publication||publication.version!==1||typeof publication.afterPublished!=="function"||typeof publication.isCurrent!=="function"){
+    F(a,"Od\u015bwie\u017c stron\u0119, aby bezpiecznie wczyta\u0107 pacjenta.");return;
+  }
+  var activate=async function(){
+  if(!publication.isCurrent())return;
+  var transport=r.VildaUiIntents,scope=null,receipt=null;
   try{
-    if(!transport||transport.version!==1)throw new Error("Moduł bezpiecznej nawigacji niedostępny. Odśwież stronę.");
+    if(!transport||transport.version!==1)throw new Error("Modu\u0142 bezpiecznej nawigacji niedost\u0119pny. Od\u015bwie\u017c stron\u0119.");
     scope=transport.captureCallerScope();
-    var receipt=await transport.prepare("pending-patient-load",{patientId:String(v||"")},scope);
-    if(receipt.current())r.location.assign("index.html");
-  }catch(error){if(!scope||scope.isCurrent())F(a,error&&error.message||"Nie udało się przekazać zamiaru. Spróbuj ponownie.")}
+    receipt=await transport.prepare("pending-patient-load",{patientId:String(v||"")},scope);
+    if(publication.isCurrent()&&receipt.current())r.location.assign("index.html");else receipt.discardExact();
+  }catch(error){if(receipt)try{receipt.discardExact()}catch{}if(!scope||scope.isCurrent())F(a,error&&error.message||"Nie uda\u0142o si\u0119 przekaza\u0107 zamiaru. Spr\u00f3buj ponownie.")}
   finally{if(scope)scope.dispose()}
-}})}var d=r.VildaShell;if(d&&typeof d.openPatientsInStart=="function"){d.openPatientsInStart(i);return}i()})}
+  };
+  publication.afterPublished(activate);
+}};
+if(!u)patientPick.uiIntentPublicationVersion=1;
+c.showPatientsList(patientPick)}var d=r.VildaShell;if(d&&typeof d.openPatientsInStart=="function"){d.openPatientsInStart(i);return}i()})}
 /* P-NOTATKI-3 (G32): pozycje menu bocznego to <a href="#" role="button">. Enter dziala natywnie
    (aktywacja odnosnika), ale spacja tylko przewija strone - a dla role=button klawiatura i czytnik
    ekranu oczekuja OBU klawiszy. Skladamy wiec spacje w click(), tym samym wzorcem, co chip pacjenta.

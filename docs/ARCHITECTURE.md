@@ -510,7 +510,26 @@ Producent czeka na zatwierdzony szyfrogram i sprawdza właściciela przed tą sa
 natywną nawigacją. Konto, odblokowanie, referencja sejfu, jego nieprzenośny token
 sesji, dokument, backend, karta, epoka, publiczny tryb pamięci, rezerwacja oraz
 aktualność źródła są sprawdzane przed i po asynchronicznej kryptografii.
-Token sejfu i klucze nie są serializowane. Odczyt nie zużywa zamiaru; osobny
+Token sejfu i klucze nie są serializowane. `current()` pozostaje czystym
+sprawdzeniem. Gdy po zatwierdzeniu źródło przestaje być aktualne albo nawigacja
+się nie powiedzie, producent jawnie wycofuje własny szyfrogram przez
+`receipt.discardExact()`. Pomija to wyłącznie wygasły kontekst UI; wszystkie
+pozostałe strażniki właściciela, sesji, rezerwacji i dokładnego raw nadal
+obowiązują. Wycofanie nie usuwa nowszej intencji. Nie wykonuje się go w
+`finally` ani automatycznie przy `pagehide`.
+
+Lista pacjentów na stronie bez formularza jawnie wybiera opcjonalny protokół
+publikacji UI. Domyślne callbacki nadal otrzymują dokładnie dwa argumenty i
+zachowują zwracany wynik. Callback z protokołem rejestruje aktywację wyłącznie
+podczas swojego synchronicznego wywołania; okno rejestracji potem się zamyka.
+Po natywnym zdarzeniu wczytania, zamknięciu karty i istniejącym kroku `BdPo`
+może wystartować szyfrowanie, jeżeli pierwotny sejf, konto, nieprzenośny token,
+dokument i trasa wciąż są aktualne. Dopiero wtedy przechwytywany jest końcowy
+kontekst źródłowego UI. Brak protokołu kończy się istniejącą wskazówką
+odświeżenia, bez zastępczego zapisu. Nie ma oczekiwania pomiędzy publikacją a
+tym sprawdzeniem ani ogólnego wyjątku dla zdarzeń zmiany pacjenta.
+
+Odczyt nie zużywa zamiaru; osobny
 synchroniczny CAS zużywa wyłącznie sprawdzony szyfrogram. Stary plaintext jest
 wycofywany przez CAS, nigdy migrowany ani zapisywany ponownie. Nie ma fallbacku
 z jawnymi identyfikatorami. Cel B przy pacjencie A lub pustym formularzu pozostaje

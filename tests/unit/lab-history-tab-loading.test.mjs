@@ -118,6 +118,7 @@ function environment(missing) {
     } },
   };
   win.document = doc;
+  loadBrowserScript('vilda_ui_intents.js', win);
   return { win, appended };
 }
 

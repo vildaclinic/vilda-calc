@@ -54,7 +54,8 @@ describe('G27c — skok dociera tam, gdzie miał', () => {
     const i = AUTH_UI.indexOf('function Gr(t,a){');
     const gr = AUTH_UI.slice(i, AUTH_UI.indexOf('function UiIntentBoundary(', i));
     const zapis = gr.indexOf('await transport.prepare("gh-jump"');
-    const zatwierdzenie = gr.indexOf('if(!receipt.current())return;');
+    const zatwierdzenie = gr.indexOf('if(!receipt.current())');
+    expect(gr).toContain('if(!receipt.current()){receipt.discardExact();return;}');
     const nawigacja = gr.indexOf('Qgb.navigate("docpro",!0)');
     expect(zapis).toBeGreaterThan(0);
     expect(zatwierdzenie).toBeGreaterThan(zapis);

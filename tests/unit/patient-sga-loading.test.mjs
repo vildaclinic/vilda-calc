@@ -62,6 +62,7 @@ function environment(missing = SGA.map(([global]) => global), restoredSession = 
     } }
   };
   win.document = doc;
+  loadBrowserScript('vilda_ui_intents.js', win);
   for (const [global, file] of SGA) if (!missing.includes(global)) loadBrowserScript(file, win);
   return { win, doc, appended, releaseStylesheet() { pendingStylesheet.splice(0).forEach(finish => finish()); }, ready() { (events.get('DOMContentLoaded') || []).forEach(callback => callback({})); } };
 }

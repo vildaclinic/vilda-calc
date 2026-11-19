@@ -3395,20 +3395,41 @@ function Ob_css(){try{if(i.document.getElementById("vilda-ob-cykle-style"))retur
 /* Ciphertext handoff: commit under the source actor before native navigation. */
 async function Gr(t,a){
   remSearchDropReturn();
-  var transport=i.VildaUiIntents,scope=null;
+  var transport=i.VildaUiIntents,scope=null,receipt=null;
   try{
     if(!transport||transport.version!==1)throw new Error("Moduł bezpiecznej nawigacji niedostępny. Odśwież stronę.");
     scope=transport.captureCallerScope();
-    var receipt=await transport.prepare("gh-jump",{patientId:t,ghPointId:String(a),ts:Date.now()},scope);
-    if(!receipt.current())return;
-    var Qgj=!1;try{var Qgs=i.document.documentElement.classList.contains("vilda-embedded"),Qgb=Qgs&&i.parent&&i.parent!==i?i.parent.VildaShell:null;Qgb&&typeof Qgb.navigate=="function"&&(Qgb.navigate("docpro",!0),Qgj=!0)}catch{Qgj=!1}if(!Qgj)try{if(typeof i.refreshGHTherapyMonitor=="function"){var Qgh=String(i.location.hash||"");i.location.hash="#/docpro",Qgh==="#/docpro"&&typeof i.Event=="function"&&i.dispatchEvent(new i.Event("hashchange"))}else i.location.href="docpro.html"}catch{}
-  }catch(error){if(!scope||scope.isCurrent())pi(error&&error.message||"Nie udało się przekazać zamiaru. Spróbuj ponownie.")}
+    receipt=await transport.prepare("gh-jump",{patientId:t,ghPointId:String(a),ts:Date.now()},scope);
+    if(!receipt.current()){receipt.discardExact();return;}
+    var Qgj=!1;try{var Qgs=i.document.documentElement.classList.contains("vilda-embedded"),Qgb=Qgs&&i.parent&&i.parent!==i?i.parent.VildaShell:null;Qgb&&typeof Qgb.navigate=="function"&&(Qgb.navigate("docpro",!0),Qgj=!0)}catch{Qgj=!1}if(!Qgj)try{if(typeof i.refreshGHTherapyMonitor=="function"){var Qgh=String(i.location.hash||"");i.location.hash="#/docpro",Qgj=!0,Qgh==="#/docpro"&&typeof i.Event=="function"&&i.dispatchEvent(new i.Event("hashchange"))}else i.location.href="docpro.html",Qgj=!0}catch{}
+    if(!Qgj)receipt.discardExact();
+  }catch(error){if(receipt)try{receipt.discardExact()}catch{}if(!scope||scope.isCurrent())pi(error&&error.message||"Nie udało się przekazać zamiaru. Spróbuj ponownie.")}
   finally{if(scope)scope.dispose()}
 }
 function UiIntentBoundary(detail){try{var transport=i.VildaUiIntents;if(transport&&transport.version===1)transport.onBoundary(detail)}catch{}}
 function UiIntentBindSync(){
   try{var sync=i.VildaSync;if(sync&&typeof sync.onSyncStart==="function")sync.onSyncStart(function(detail){if(detail&&detail.operation==="revoke")UiIntentBoundary("revoke")})}catch{}
   try{i.addEventListener("storage",function(event){if(event&&typeof event.key==="string"&&event.key.indexOf("vilda-sync-revoked-v1:")===0)UiIntentBoundary("revoke")})}catch{}
+}
+function UiIntentPickAuthority(){
+  try{
+    var vault=jt(),user=vault&&typeof vault.getCurrentUser==="function"&&vault.getCurrentUser();
+    if(!vault||typeof vault.isUnlocked!=="function"||!vault.isUnlocked()||!user||!user.userId
+      ||typeof vault.captureSyncOperationSession!=="function"||typeof vault.assertSyncOperationSession!=="function")return null;
+    var userId=user.userId,ticket=vault.captureSyncOperationSession(),doc=i.document,frame=i.frameElement||null,host=frame?i.parent:i;
+    var hostDoc=host.document,href=String(i.location.href),hostHref=String(host.location.href),navId=(host.history&&host.history.state||{}).shellNavId;
+    function current(){
+      try{
+        var active=jt(),account=active&&active.getCurrentUser();
+        if(active!==vault||!active.isUnlocked()||!account||account.userId!==userId||i.document!==doc||doc.hidden===true
+          ||(i.frameElement||null)!==frame||host.document!==hostDoc||String(i.location.href)!==href
+          ||String(host.location.href)!==hostHref||(host.history&&host.history.state||{}).shellNavId!==navId
+          ||frame&&(frame.hidden||frame.isConnected===false))return false;
+        vault.assertSyncOperationSession(ticket);return true;
+      }catch(_){return false}
+    }
+    return current()?Object.freeze({isCurrent:current}):null;
+  }catch(_){return null}
 }
 function Il(t,a,n){/* P-SCHOWEK-HIS-2: tekst do schowka bez znaków spoza Windows-1250 — HIS zamieniał je w „?" (vilda_schowek.js) */t=(function(x){var S=i.VildaSchowek;return S&&typeof S.dlaSystemuSzpitalnego=="function"?S.dlaSystemuSzpitalnego(x):x})(t);function r(){try{var o=i.document,l=o.createElement("textarea");l.value=t,l.setAttribute("readonly",""),l.style.position="fixed",l.style.top="-1000px",l.style.left="0",l.style.opacity="0",o.body.appendChild(l),l.focus(),l.select();try{l.setSelectionRange(0,t.length)}catch{}var d=!1;try{d=o.execCommand("copy")}catch{d=!1}o.body.removeChild(l),d?a():n()}catch{n()}}try{i.navigator&&i.navigator.clipboard&&typeof i.navigator.clipboard.writeText=="function"?i.navigator.clipboard.writeText(t).then(a,r):r()}catch{r()}}function pi(t,a){try{var n=i.document,r=n.getElementById("vilda-copy-summary-toast");r&&r.parentNode&&r.parentNode.removeChild(r);var o=n.createElement("div");o.id="vilda-copy-summary-toast",o.className="vilda-copy-summary-toast"+(a?" ok":" err"),o.textContent=t,n.body.appendChild(o),i.setTimeout(function(){try{o.classList.add("show")}catch{}},10),i.setTimeout(function(){try{o.classList.remove("show")}catch{}i.setTimeout(function(){try{o.parentNode&&o.parentNode.removeChild(o)}catch{}},260)},2100)}catch{}}async function se(t,a,n,r){var HomePatientPresentation=null,HomePatientRequested=!!(n&&n.homePatientPresentation===true&&i.__VILDA_HOME_WORKSPACE_PREVIEW__===true);var o=jt();
 function HomePatientOpenNote(options){return HomePatientPresentation?HomePatientPresentation.openNote(options):ga(options)}
@@ -3595,7 +3616,26 @@ ae._vildaAgeWin=function(pe,Ga){if(!(isFinite(pe)&&isFinite(Ga)&&Ga>pe))return;_
    (BdPrzejdzPoWczytaniu). Karta otwarta bez funkcji listy (wyszukiwarka, Terminarz, chip) wpisuje dane tak jak
    listy pacjentow w vilda_chrome.js i custom-fixes.js: applyLoadedData i odswiezenie chipa pacjenta.
    Na stronie bez formularza (brak applyLoadedData) zakladka tej drogi nie dostaje i pokazuje sama podpowiedz. */
-var BdWczytajPacjenta=function(BdZastosuj,BdPo){var patientLoad=patientLoadCapture(t);if(!patientLoadCurrent(patientLoad))return;function ct(Yt,ke,Ne){return patientLoadRun(patientLoad,Yt,function(value){return BdZastosuj(value,t)},function(operationDetail){try{typeof i.CustomEvent=="function"&&i.document&&i.document.dispatchEvent(new i.CustomEvent("vilda:patient-loaded",{detail:Object.assign({patientId:t,savedAtISO:ke&&ke.savedAtISO||null,snapshotCount:Ne||null,name:Yt&&Yt.name||null,source:"pick"},operationDetail||{})}))}catch{}$t();if(typeof BdPo=="function")try{BdPo()}catch(BdBlad){Ot("BdWczytajPacjenta po wczytaniu",BdBlad)}})}function Lt(){if(!patientLoadCurrent(patientLoad))return;Promise.resolve().then(function(){if(!patientLoadCurrent(patientLoad))return null;return o.getPatient(t)}).then(function(Yt){if(!patientLoadCurrent(patientLoad))return;var ke=Yt&&Array.isArray(Yt.snapshots)?Yt.snapshots:[],Ne=ke.length?ke[0]:patientLoad.api?null:c,ea=Ne&&Ne.payload||(!patientLoad.api?s:null);if(ea)ct(ea,Ne,Yt&&Yt.snapshotCount||d.length||null)}).catch(function(){if(!patientLoad.api&&patientLoadCurrent(patientLoad))ct(s,c,l&&l.snapshotCount||d.length||null)})}wo(t,s&&s.name||null,Lt)};
+var BdWczytajPacjenta=function(BdZastosuj,BdPo){var patientLoad=patientLoadCapture(t);if(!patientLoadCurrent(patientLoad))return;function ct(Yt,ke,Ne){
+  // Only the explicitly opted-in UI handoff receives publication metadata.
+  // Default callbacks keep their exact two arguments and return value.
+  var afterPublished=null,pickAuthority=null,published=false,registrationOpen=false;
+  if(BdZastosuj.uiIntentPublicationVersion===1){
+    pickAuthority=UiIntentPickAuthority();if(!pickAuthority)return false;
+  }
+  return patientLoadRun(patientLoad,Yt,function(value){
+    if(pickAuthority){
+      registrationOpen=true;
+      try{return BdZastosuj(value,t,Object.freeze({version:1,isCurrent:pickAuthority.isCurrent,afterPublished:function(callback){
+        if(!registrationOpen||typeof callback!=="function")return false;
+        afterPublished=callback;return true;
+      }}))}finally{registrationOpen=false}
+    }
+    return BdZastosuj(value,t);
+  },function(operationDetail){try{typeof i.CustomEvent=="function"&&i.document&&(i.document.dispatchEvent(new i.CustomEvent("vilda:patient-loaded",{detail:Object.assign({patientId:t,savedAtISO:ke&&ke.savedAtISO||null,snapshotCount:Ne||null,name:Yt&&Yt.name||null,source:"pick"},operationDetail||{})})),published=true)}catch{}$t();if(typeof BdPo=="function")try{BdPo()}catch(BdBlad){Ot("BdWczytajPacjenta po wczytaniu",BdBlad)}
+  var activate=afterPublished;afterPublished=null;
+  if(activate&&published&&pickAuthority&&pickAuthority.isCurrent())try{activate()}catch(error){Ot("patient navigation after publication",error)}
+})}function Lt(){if(!patientLoadCurrent(patientLoad))return;Promise.resolve().then(function(){if(!patientLoadCurrent(patientLoad))return null;return o.getPatient(t)}).then(function(Yt){if(!patientLoadCurrent(patientLoad))return;var ke=Yt&&Array.isArray(Yt.snapshots)?Yt.snapshots:[],Ne=ke.length?ke[0]:patientLoad.api?null:c,ea=Ne&&Ne.payload||(!patientLoad.api?s:null);if(ea)ct(ea,Ne,Yt&&Yt.snapshotCount||d.length||null)}).catch(function(){if(!patientLoad.api&&patientLoadCurrent(patientLoad))ct(s,c,l&&l.snapshotCount||d.length||null)})}wo(t,s&&s.name||null,Lt)};
 var BdZastosujNaStronie=function(BdDane){
   if(BdDane)try{i.applyLoadedData(BdDane)}catch{}
   try{var BdChip=i.VildaChrome;BdChip&&typeof BdChip.refreshPatientChip=="function"&&BdChip.refreshPatientChip()}catch{}
@@ -3914,15 +3954,15 @@ var Qrm=[];try{Qrm=S&&S.removedMeasurementAgeMonths||[]}catch{}try{var D=(S||[])
    ta sama droga co klik w notatke (mt), ktora karta kieruje wynik do zakladki „Badania”. */
 try{typeof WbHistoriaGrupuj=="function"&&(S=WbHistoriaGrupuj(S,function(WbId){mt({type:"note",noteId:WbId})}))}catch(WbBlad){try{Ot("Historia: krotkie wpisy wynikow badan",WbBlad)}catch{}}
 function C(f){if(!f)return null;var K=String(f).length===10?f+"T00:00:00.000Z":f,P=Date.parse(K);return isNaN(P)?null:P}function N(f){if(z==null||typeof f!="number"||!isFinite(f))return null;try{return C(ti(new Date(z),Math.round(f)))}catch{return null}}try{var Z=(S||[]).filter(Pn);Z.sort(function(f,K){var P=typeof f.linkedAgeMonths=="number"?f.linkedAgeMonths:null,L=typeof K.linkedAgeMonths=="number"?K.linkedAgeMonths:null;if(P!=null&&L!=null)return P-L;if(P!=null)return-1;if(L!=null)return 1;var A=f.dueDateISO||f.anchorDateISO||f.dateISO||f.timestampISO||f.updatedAtISO||"",X=K.dueDateISO||K.anchorDateISO||K.dateISO||K.timestampISO||K.updatedAtISO||"";return A<X?-1:A>X?1:0});var H=null,V=null;Z.forEach(function(f){var K=Jr(f.body);f._ghInfo=K,H&&K.drug&&K.drug!==H&&(!K.program||!V||K.program===V)&&(f._prevGhDrug=H),K.drug&&(H=K.drug),K.program&&(V=K.program)})}catch{}try{var ut=(S||[]).filter(Xr);ut.sort(function(f,K){var P=typeof f.linkedAgeMonths=="number"?f.linkedAgeMonths:null,L=typeof K.linkedAgeMonths=="number"?K.linkedAgeMonths:null;return P!=null&&L!=null?P-L:P!=null?-1:L!=null?1:0});var wt=null;ut.forEach(function(f){var K=Qr(f.body);f._obInfo=K,wt&&K.drug&&K.drug!==wt&&(f._prevObDrug=wt),K.drug&&(wt=K.drug)})}catch{}var bt=e("div",{class:"vilda-patient-timeline-list",style:"position:relative;padding-left:28px;max-height:min(calc(100vh - 320px), 720px);min-height:280px;overflow-y:auto;overflow-x:hidden;padding-right:4px;-webkit-overflow-scrolling:touch;scrollbar-gutter:stable;"}),$=e("div",{style:"position:absolute;left:10px;top:4px;bottom:4px;width:2px;background:#d7e9ec;"});bt.appendChild($),t.appendChild(bt);function ot(f,K,P){var L=qr(f),A=e("div",{style:"position:relative;margin-bottom:"+(P==="nested"?"8px":"14px")+";"}),X=P==="nested"?10:14,lt=P==="nested"?-20:-22,ft=P==="nested"?6:4;A.appendChild(e("div",{style:"position:absolute;left:"+lt+"px;top:"+ft+"px;width:"+X+"px;height:"+X+"px;border-radius:50%;background:"+L.color+";border:2px solid #fff;box-shadow:0 0 0 1px "+L.color+";"})),K&&A.appendChild(e("div",{style:"font-size:0.7rem;color:#5b6672;font-weight:500;margin-bottom:3px;",text:K}));var st=e("div",{style:"background:#f5fafb;border-radius:10px;padding:"+(P==="nested"?"8px 12px":"10px 12px")+";display:flex;flex-direction:column;gap:6px;cursor:pointer;transition:background 0.15s;position:relative;",onmouseover:function(){st.style.background="#ebf3f5"},onmouseout:function(){st.style.background="#f5fafb"},onclick:function(){mt(f)}});if(st.appendChild((typeof WbHistoriaPigulka=="function"?WbHistoriaPigulka:function(x){return x})(e("span",{style:"display:inline-block;padding:2px 8px;font-size:0.7rem;font-weight:600;color:"+L.color+";background:"+L.bg+";border-radius:999px;align-self:flex-start;",text:L.label}),f)),st.appendChild($r(f)),f.type==="measurement"){var rt=e("button",{type:"button","aria-label":"Akcje dla pomiaru",title:"Akcje",style:"position:absolute;top:6px;right:8px;background:transparent;border:0;color:#5b6672;font-size:1.1rem;font-weight:700;padding:2px 8px;cursor:pointer;line-height:1;border-radius:6px;",text:"\u22EE",onmouseover:function(){rt.style.background="rgba(0,131,141,0.1)",rt.style.color="#00838d"},onmouseout:function(){rt.style.background="transparent",rt.style.color="#5b6672"},onclick:function(vt){vt.stopPropagation(),yt(f,rt)}});st.appendChild(rt)}return A.appendChild(st),A}async function gt(f){try{$t()}catch{}function K(){var P=i.document.getElementById("toggleAdvancedGrowth"),L=i.document.getElementById("advancedGrowthSection");if(!P||!L)return!1;var A="";try{A=L.style&&L.style.display||""}catch{}if(A===""||A==="none")try{P.click()}catch{}try{L.scrollIntoView({behavior:"smooth",block:"start"})}catch{}return!0}if(!K()){
-  var transport=i.VildaUiIntents,scope=null;
+  var transport=i.VildaUiIntents,scope=null,receipt=null;
   try{
     if(!transport||transport.version!==1)throw new Error("Moduł bezpiecznej nawigacji niedostępny. Odśwież stronę.");
     scope=transport.captureCallerScope();
-    var receipt=await transport.prepare("pending-patient-load",{patientId:f},scope);
-    if(!receipt.current())return;
+    receipt=await transport.prepare("pending-patient-load",{patientId:f},scope);
+    if(!receipt.current()){receipt.discardExact();return;}
     i.sessionStorage.setItem("vilda:postLoadScroll","advancedGrowth");
-    if(receipt.current())i.location.assign("index.html");
-  }catch(error){if(!scope||scope.isCurrent())pi(error&&error.message||"Nie udało się przekazać zamiaru. Spróbuj ponownie.")}
+    if(receipt.current())i.location.assign("index.html");else receipt.discardExact();
+  }catch(error){if(receipt)try{receipt.discardExact()}catch{}if(!scope||scope.isCurrent())pi(error&&error.message||"Nie udało się przekazać zamiaru. Spróbuj ponownie.")}
   finally{if(scope)scope.dispose()}
 }}function yt(f,K){
 function TimelineMenuDownloadClick(event) {

@@ -96,6 +96,7 @@ describe('ciphertext-only native UI intents', () => {
     const epoch = e.session.getItem(EPOCH);
     e.win.dispatchEvent(new Event('pagehide'));
     expect(receipt.current()).toBe(false); expect(e.api.peek(LOAD)).toBe(receipt.raw);
+    expect(receipt.discardExact()).toBe(false); // Source pagehide preserves the committed target handoff.
     const next = realm({ session: e.session, local: e.local, adapter: e.adapter });
     expect(await next.vault.tryRestoreSession()).toBe(true);
     next.api.onBoundary({ trigger: 'restore' });
@@ -105,6 +106,41 @@ describe('ciphertext-only native UI intents', () => {
     expect(lease.current()).toBe(true); expect(lease.consumeExact()).toBe(false);
     expect(next.api.peek(LOAD)).toBeNull();
     expect(await next.api.open(LOAD, receipt.raw)).toBeNull();
+  });
+
+  it('explicit producer abandonment retires a committed AES handoff after its UI scope ends', async () => {
+    const e = await fixture(), scope = e.api.captureCallerScope();
+    const receipt = await e.api.prepare(LOAD, { patientId: unusualId }, scope);
+    e.document.dispatchEvent(new Event('vilda:patient-loaded'));
+    expect(scope.isCurrent()).toBe(false); expect(receipt.current()).toBe(false);
+    // current() observes only. A fresh destination could still accept these
+    // committed bytes until the source explicitly abandons its exact receipt.
+    expect(e.api.peek(LOAD)).toBe(receipt.raw);
+    const oldDestination = await e.api.open(LOAD, receipt.raw);
+    expect(oldDestination.value.patientId).toBe(unusualId);
+    expect(receipt.discardExact()).toBe(true); expect(receipt.discardExact()).toBe(false);
+    expect(e.api.peek(LOAD)).toBeNull(); expect(oldDestination.current()).toBe(false);
+    expect(await e.api.open(LOAD, receipt.raw)).toBeNull();
+  });
+
+  it('an abandoned producer receipt cannot remove a newer same-account reservation or cipher', async () => {
+    const e = await fixture(), scope = e.api.captureCallerScope();
+    const old = await e.api.prepare(LOAD, { patientId: unusualId }, scope);
+    e.win.dispatchEvent(new Event('hashchange'));
+    const next = await e.api.prepare(LOAD, { patientId: 'fictional newer source choice' });
+    const nonce = e.session.getItem(e.api.reservationKey(LOAD));
+    expect(old.current()).toBe(false); expect(old.discardExact()).toBe(false);
+    expect(e.api.peek(LOAD)).toBe(next.raw); expect(e.session.getItem(e.api.reservationKey(LOAD))).toBe(nonce);
+    const lease = await e.api.open(LOAD, next.raw);
+    expect(lease.value.patientId).toBe('fictional newer source choice'); expect(lease.consumeExact()).toBe(true);
+  });
+
+  it('producer abandonment cannot borrow a freshly unlocked native session to delete old bytes', async () => {
+    const e = await fixture(), receipt = await e.api.prepare(LOAD, { patientId: unusualId });
+    e.vault.lock('fictional-receipt-owner-ended');
+    await e.vault.unlockUser(e.userId, PASSWORD);
+    expect(receipt.current()).toBe(false); expect(receipt.discardExact()).toBe(false);
+    expect(e.api.peek(LOAD)).toBe(receipt.raw);
   });
 
   it('does not consume on decrypt and two simultaneous readers obtain only one native claim', async () => {

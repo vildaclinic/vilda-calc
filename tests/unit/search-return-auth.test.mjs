@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { setImmediate as settle } from 'node:timers/promises';
 import { powloka } from '../support/powloka-harness.mjs';
+import { installUiIntentFixture } from '../fixtures/ui-intent-unit-fixture.mjs';
 import {
   authDeferred, authProductionFunction, authProductionReturnProgram,
   authProductionSource, authReturnEnvironment, authSurface,
@@ -296,19 +297,36 @@ describe('production AuthUI rejects explicitly stale Search patient targets', ()
   });
 
   it.each(['shell', 'hash', 'standalone'])('a GH route jump discards Search before navigating through %s', async route => {
-    const e = environment(program + '\n' + authProductionFunction(source, 'Gr'));
+    const report = vi.fn();
+    const e = environment(program + '\n' + authProductionFunction(source, 'Gr'), { pi: report });
     const token = e.context.remSearchCreateReturn(snapshot(), patientId), navigate = vi.fn(() => {
       expect(e.context.remSearchCurrentReturn(token)).toBeNull();
     });
     e.document.documentElement = { classList: { contains: () => route === 'shell' } };
-    e.win.sessionStorage = { setItem: vi.fn() };
+    const values = new Map();
+    e.win.sessionStorage = { getItem: key => values.get(key) ?? null,
+      setItem: (key, value) => values.set(key, String(value)), removeItem: key => values.delete(key) };
+    e.win.VildaPersistence = {};
+    e.vault.captureSyncOperationSession = () => ({ userId: e.state.userId });
+    e.vault.assertSyncOperationSession = ticket => {
+      if (!e.state.unlocked || ticket.userId !== e.state.userId) throw Error('Fictional changed Search account');
+    };
     e.win.parent = route === 'shell' ? { VildaShell: { navigate } } : e.win;
     e.win.location = route === 'hash'
       ? { get hash() { return ''; }, set hash(value) { navigate(value); } }
       : { set href(value) { navigate(value); } };
     if (route === 'hash') e.win.refreshGHTherapyMonitor = vi.fn();
-    e.context.Gr(patientId, 'fictional-gh-point');
+    installUiIntentFixture(e.win, e.vault);
+    const navigating = e.context.Gr(patientId, 'fictional-gh-point');
+    expect(e.context.remSearchCurrentReturn(token)).toBeNull();
+    expect(navigate).not.toHaveBeenCalled();
+    await navigating;
     expect(navigate).toHaveBeenCalledOnce();
+    if (route === 'shell') expect(navigate).toHaveBeenCalledExactlyOnceWith('docpro', true);
+    if (route === 'hash') expect(navigate).toHaveBeenCalledExactlyOnceWith('#/docpro');
+    if (route === 'standalone') expect(navigate).toHaveBeenCalledExactlyOnceWith('docpro.html');
+    expect(Object.keys(JSON.parse(values.get('vilda:gh-jump'))).sort()).toEqual(['data', 'iv']);
+    expect(report).not.toHaveBeenCalled();
     expect(await e.context.remSearchResume(token)).toBe(false);
     expect(e.open).not.toHaveBeenCalled();
   });

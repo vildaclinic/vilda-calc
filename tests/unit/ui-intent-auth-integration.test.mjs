@@ -82,7 +82,7 @@ function environment({ embedded = false, monitor = false, inlineGrowth = false, 
   const context = vm.createContext({ i: win, Date: { now: () => state.now },
     remSearchDropReturn: vi.fn(() => order.push(['drop-return'])), $t: vi.fn(() => order.push(['close-card'])), pi: report });
   vm.runInContext(ghProducer + '\n' + pendingProducer + '\n' + boundaryFunctions, context);
-  const receipt = { current: vi.fn(() => state.receipt && state.caller.isCurrent()) };
+  const receipt = { current: vi.fn(() => state.receipt && state.caller.isCurrent()), discardExact: vi.fn(() => true) };
   return { win, document, store, values, nativeTransport, context, order, state, scope, prepare, pending, receipt, report,
     navigate, assign, toggle, growth,
     run: kind => kind === 'gh' ? context.Gr(TARGET, 'fictional point / Ć') : context.gt(TARGET) };
@@ -99,6 +99,7 @@ describe('native Auth ciphertext handoff producers', () => {
     expect(e.navigate).toHaveBeenCalledExactlyOnceWith('docpro', true);
     expect(e.win.location.href).toBe('https://fictional.invalid/terminarz.html');
     expect(e.state.caller.dispose).toHaveBeenCalledOnce(); expect(e.report).not.toHaveBeenCalled();
+    expect(e.receipt.discardExact).not.toHaveBeenCalled();
   });
 
   it('keeps the native standalone monitor hash and repeated-point hashchange path', async () => {
@@ -128,6 +129,7 @@ describe('native Auth ciphertext handoff producers', () => {
     expect(e.order).toEqual([['close-card'], ['prepare', 'pending-patient-load'], ['store', 'vilda:postLoadScroll', 'advancedGrowth'], ['assign', 'index.html']]);
     expect(e.values.get('vildaCurrentPatientId') ?? null).toBe(mainPatient);
     expect(e.state.caller.dispose).toHaveBeenCalledOnce();
+    expect(e.receipt.discardExact).not.toHaveBeenCalled();
   });
 
   it('keeps the existing on-page growth expansion and scroll path free of handoff work', async () => {
@@ -147,6 +149,7 @@ describe('native Auth ciphertext handoff producers', () => {
     expect(e.navigate).not.toHaveBeenCalled(); expect(e.assign).not.toHaveBeenCalled();
     expect(e.store.setItem).not.toHaveBeenCalled(); expect(e.report).not.toHaveBeenCalled();
     expect(e.state.caller.dispose).toHaveBeenCalledOnce();
+    expect(e.receipt.discardExact).toHaveBeenCalledOnce();
   });
 
   it.each(['gh', 'pending'])('does not navigate from a superseded %s receipt even while its source remains current', async kind => {
@@ -155,6 +158,7 @@ describe('native Auth ciphertext handoff producers', () => {
     e.pending.resolve(e.receipt); await saving;
     expect(e.navigate).not.toHaveBeenCalled(); expect(e.assign).not.toHaveBeenCalled();
     expect(e.store.setItem).not.toHaveBeenCalled(); expect(e.report).not.toHaveBeenCalled();
+    expect(e.receipt.discardExact).toHaveBeenCalledOnce();
   });
 
   it('checks the pending receipt again after writing the native scroll marker', async () => {
@@ -163,6 +167,22 @@ describe('native Auth ciphertext handoff producers', () => {
     const saving = e.run('pending'); e.pending.resolve(e.receipt); await saving;
     expect(e.store.setItem).toHaveBeenCalledExactlyOnceWith('vilda:postLoadScroll', 'advancedGrowth');
     expect(e.receipt.current).toHaveBeenCalledTimes(2); expect(e.assign).not.toHaveBeenCalled();
+    expect(e.receipt.discardExact).toHaveBeenCalledOnce();
+  });
+
+  it('discards the GH receipt when every native document-navigation path fails', async () => {
+    const e = environment();
+    Object.defineProperty(e.win.location, 'href', { configurable: true, get: () => 'https://fictional.invalid/terminarz.html',
+      set: () => { throw Error('Fictional blocked native GH navigation'); } });
+    const saving = e.run('gh'); e.pending.resolve(e.receipt); await saving;
+    expect(e.receipt.discardExact).toHaveBeenCalledOnce(); expect(e.navigate).not.toHaveBeenCalled(); expect(e.assign).not.toHaveBeenCalled();
+  });
+
+  it('discards the timeline pending receipt and reports the existing error if native navigation throws', async () => {
+    const e = environment(); e.assign.mockImplementation(() => { throw Error('Fictional blocked timeline navigation'); });
+    const saving = e.run('pending'); e.pending.resolve(e.receipt); await saving;
+    expect(e.receipt.discardExact).toHaveBeenCalledOnce();
+    expect(e.report).toHaveBeenCalledExactlyOnceWith('Fictional blocked timeline navigation');
   });
 
   it.each(['gh', 'pending'])('surfaces a current %s crypto/storage failure through the existing native toast', async kind => {
@@ -340,8 +360,8 @@ describe('static and lazy native handoff dependencies', () => {
 });
 
 describe('exact reproducible Auth security delta', () => {
-  it('reverses all 13 unique pairs to the prior checkpoint, replays idempotently and commutes with unchanged Home hooks', () => {
-    expect(UI_INTENT_AUTH_PAIRS).toHaveLength(13);
+  it('reverses all 16 unique pairs to the prior checkpoint, replays idempotently and commutes with unchanged Home hooks', () => {
+    expect(UI_INTENT_AUTH_PAIRS).toHaveLength(16);
     for (const pair of UI_INTENT_AUTH_PAIRS) expect(auth.split(pair.after)).toHaveLength(2);
     const prior = reverseUiIntentAuthHooks(auth);
     // Exact Auth artifact from the accepted pre-security merge checkpoint 633ee436.

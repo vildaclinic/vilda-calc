@@ -8,14 +8,15 @@ export const UI_INTENT_AUTH_PAIRS = [
   { label: "GH producer + verified public boundaries", before: String.raw`function Gr(t,a){remSearchDropReturn();try{i.sessionStorage.setItem("vilda:gh-jump",JSON.stringify({patientId:t,ghPointId:String(a),ts:Date.now()}))}catch{}var Qgj=!1;try{var Qgs=i.document.documentElement.classList.contains("vilda-embedded"),Qgb=Qgs&&i.parent&&i.parent!==i?i.parent.VildaShell:null;Qgb&&typeof Qgb.navigate=="function"&&(Qgb.navigate("docpro",!0),Qgj=!0)}catch{Qgj=!1}if(!Qgj)try{if(typeof i.refreshGHTherapyMonitor=="function"){var Qgh=String(i.location.hash||"");i.location.hash="#/docpro",Qgh==="#/docpro"&&typeof i.Event=="function"&&i.dispatchEvent(new i.Event("hashchange"))}else i.location.href="docpro.html"}catch{}}`, after: String.raw`/* Ciphertext handoff: commit under the source actor before native navigation. */
 async function Gr(t,a){
   remSearchDropReturn();
-  var transport=i.VildaUiIntents,scope=null;
+  var transport=i.VildaUiIntents,scope=null,receipt=null;
   try{
     if(!transport||transport.version!==1)throw new Error("Moduł bezpiecznej nawigacji niedostępny. Odśwież stronę.");
     scope=transport.captureCallerScope();
-    var receipt=await transport.prepare("gh-jump",{patientId:t,ghPointId:String(a),ts:Date.now()},scope);
-    if(!receipt.current())return;
-    var Qgj=!1;try{var Qgs=i.document.documentElement.classList.contains("vilda-embedded"),Qgb=Qgs&&i.parent&&i.parent!==i?i.parent.VildaShell:null;Qgb&&typeof Qgb.navigate=="function"&&(Qgb.navigate("docpro",!0),Qgj=!0)}catch{Qgj=!1}if(!Qgj)try{if(typeof i.refreshGHTherapyMonitor=="function"){var Qgh=String(i.location.hash||"");i.location.hash="#/docpro",Qgh==="#/docpro"&&typeof i.Event=="function"&&i.dispatchEvent(new i.Event("hashchange"))}else i.location.href="docpro.html"}catch{}
-  }catch(error){if(!scope||scope.isCurrent())pi(error&&error.message||"Nie udało się przekazać zamiaru. Spróbuj ponownie.")}
+    receipt=await transport.prepare("gh-jump",{patientId:t,ghPointId:String(a),ts:Date.now()},scope);
+    if(!receipt.current()){receipt.discardExact();return;}
+    var Qgj=!1;try{var Qgs=i.document.documentElement.classList.contains("vilda-embedded"),Qgb=Qgs&&i.parent&&i.parent!==i?i.parent.VildaShell:null;Qgb&&typeof Qgb.navigate=="function"&&(Qgb.navigate("docpro",!0),Qgj=!0)}catch{Qgj=!1}if(!Qgj)try{if(typeof i.refreshGHTherapyMonitor=="function"){var Qgh=String(i.location.hash||"");i.location.hash="#/docpro",Qgj=!0,Qgh==="#/docpro"&&typeof i.Event=="function"&&i.dispatchEvent(new i.Event("hashchange"))}else i.location.href="docpro.html",Qgj=!0}catch{}
+    if(!Qgj)receipt.discardExact();
+  }catch(error){if(receipt)try{receipt.discardExact()}catch{}if(!scope||scope.isCurrent())pi(error&&error.message||"Nie udało się przekazać zamiaru. Spróbuj ponownie.")}
   finally{if(scope)scope.dispose()}
 }
 function UiIntentBoundary(detail){try{var transport=i.VildaUiIntents;if(transport&&transport.version===1)transport.onBoundary(detail)}catch{}}
@@ -25,15 +26,15 @@ function UiIntentBindSync(){
 }
 ` },
   { label: "timeline pending producer", before: String.raw`function gt(f){try{$t()}catch{}function K(){var P=i.document.getElementById("toggleAdvancedGrowth"),L=i.document.getElementById("advancedGrowthSection");if(!P||!L)return!1;var A="";try{A=L.style&&L.style.display||""}catch{}if(A===""||A==="none")try{P.click()}catch{}try{L.scrollIntoView({behavior:"smooth",block:"start"})}catch{}return!0}if(!K()){try{i.sessionStorage&&(f&&i.sessionStorage.setItem("vilda:pendingPatientLoad",f),i.sessionStorage.setItem("vilda:postLoadScroll","advancedGrowth"))}catch{}try{i.location.assign("index.html")}catch{}}}`, after: String.raw`async function gt(f){try{$t()}catch{}function K(){var P=i.document.getElementById("toggleAdvancedGrowth"),L=i.document.getElementById("advancedGrowthSection");if(!P||!L)return!1;var A="";try{A=L.style&&L.style.display||""}catch{}if(A===""||A==="none")try{P.click()}catch{}try{L.scrollIntoView({behavior:"smooth",block:"start"})}catch{}return!0}if(!K()){
-  var transport=i.VildaUiIntents,scope=null;
+  var transport=i.VildaUiIntents,scope=null,receipt=null;
   try{
     if(!transport||transport.version!==1)throw new Error("Moduł bezpiecznej nawigacji niedostępny. Odśwież stronę.");
     scope=transport.captureCallerScope();
-    var receipt=await transport.prepare("pending-patient-load",{patientId:f},scope);
-    if(!receipt.current())return;
+    receipt=await transport.prepare("pending-patient-load",{patientId:f},scope);
+    if(!receipt.current()){receipt.discardExact();return;}
     i.sessionStorage.setItem("vilda:postLoadScroll","advancedGrowth");
-    if(receipt.current())i.location.assign("index.html");
-  }catch(error){if(!scope||scope.isCurrent())pi(error&&error.message||"Nie udało się przekazać zamiaru. Spróbuj ponownie.")}
+    if(receipt.current())i.location.assign("index.html");else receipt.discardExact();
+  }catch(error){if(receipt)try{receipt.discardExact()}catch{}if(!scope||scope.isCurrent())pi(error&&error.message||"Nie udało się przekazać zamiaru. Spróbuj ponownie.")}
   finally{if(scope)scope.dispose()}
 }}` },
   { label: "shared secure identifier", before: String.raw`function operationId() { return i.crypto && i.crypto.randomUUID ? i.crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2); }`, after: String.raw`function operationId() {
@@ -69,6 +70,48 @@ function UiIntentBindSync(){
   { label: "lock boundary", before: String.raw`Xi();Bkr_sluchaj();try{jt().onLock(function(a){`, after: String.raw`Xi();Bkr_sluchaj();UiIntentBindSync();try{jt().onLock(function(a){UiIntentBoundary("lock");` },
   { label: "fresh unlock; preserve native restore", before: String.raw`jt().onUnlock(function(a){if(dn=`, after: String.raw`jt().onUnlock(function(a){UiIntentBoundary(a);if(dn=` },
   { label: "credential boundary", before: String.raw`a.onCredentialChanged(function(n){const r=`, after: String.raw`a.onCredentialChanged(function(n){UiIntentBoundary("credential");const r=` },
+  { label: "original native pick authority before publication", before: String.raw`function Il(t,a,n){`, after: String.raw`function UiIntentPickAuthority(){
+  try{
+    var vault=jt(),user=vault&&typeof vault.getCurrentUser==="function"&&vault.getCurrentUser();
+    if(!vault||typeof vault.isUnlocked!=="function"||!vault.isUnlocked()||!user||!user.userId
+      ||typeof vault.captureSyncOperationSession!=="function"||typeof vault.assertSyncOperationSession!=="function")return null;
+    var userId=user.userId,ticket=vault.captureSyncOperationSession(),doc=i.document,frame=i.frameElement||null,host=frame?i.parent:i;
+    var hostDoc=host.document,href=String(i.location.href),hostHref=String(host.location.href),navId=(host.history&&host.history.state||{}).shellNavId;
+    function current(){
+      try{
+        var active=jt(),account=active&&active.getCurrentUser();
+        if(active!==vault||!active.isUnlocked()||!account||account.userId!==userId||i.document!==doc||doc.hidden===true
+          ||(i.frameElement||null)!==frame||host.document!==hostDoc||String(i.location.href)!==href
+          ||String(host.location.href)!==hostHref||(host.history&&host.history.state||{}).shellNavId!==navId
+          ||frame&&(frame.hidden||frame.isConnected===false))return false;
+        vault.assertSyncOperationSession(ticket);return true;
+      }catch(_){return false}
+    }
+    return current()?Object.freeze({isCurrent:current}):null;
+  }catch(_){return null}
+}
+function Il(t,a,n){` },
+  { label: "optional native synchronous publication registration", before: String.raw`function ct(Yt,ke,Ne){return patientLoadRun(patientLoad,Yt,function(value){return BdZastosuj(value,t)},function(operationDetail){`, after: String.raw`function ct(Yt,ke,Ne){
+  // Only the explicitly opted-in UI handoff receives publication metadata.
+  // Default callbacks keep their exact two arguments and return value.
+  var afterPublished=null,pickAuthority=null,published=false,registrationOpen=false;
+  if(BdZastosuj.uiIntentPublicationVersion===1){
+    pickAuthority=UiIntentPickAuthority();if(!pickAuthority)return false;
+  }
+  return patientLoadRun(patientLoad,Yt,function(value){
+    if(pickAuthority){
+      registrationOpen=true;
+      try{return BdZastosuj(value,t,Object.freeze({version:1,isCurrent:pickAuthority.isCurrent,afterPublished:function(callback){
+        if(!registrationOpen||typeof callback!=="function")return false;
+        afterPublished=callback;return true;
+      }}))}finally{registrationOpen=false}
+    }
+    return BdZastosuj(value,t);
+  },function(operationDetail){` },
+  { label: "activate only after original-authorized native publication", before: String.raw`function(operationDetail){try{typeof i.CustomEvent=="function"&&i.document&&i.document.dispatchEvent(new i.CustomEvent("vilda:patient-loaded",{detail:Object.assign({patientId:t,savedAtISO:ke&&ke.savedAtISO||null,snapshotCount:Ne||null,name:Yt&&Yt.name||null,source:"pick"},operationDetail||{})}))}catch{}$t();if(typeof BdPo=="function")try{BdPo()}catch(BdBlad){Ot("BdWczytajPacjenta po wczytaniu",BdBlad)}})}function Lt()`, after: String.raw`function(operationDetail){try{typeof i.CustomEvent=="function"&&i.document&&(i.document.dispatchEvent(new i.CustomEvent("vilda:patient-loaded",{detail:Object.assign({patientId:t,savedAtISO:ke&&ke.savedAtISO||null,snapshotCount:Ne||null,name:Yt&&Yt.name||null,source:"pick"},operationDetail||{})})),published=true)}catch{}$t();if(typeof BdPo=="function")try{BdPo()}catch(BdBlad){Ot("BdWczytajPacjenta po wczytaniu",BdBlad)}
+  var activate=afterPublished;afterPublished=null;
+  if(activate&&published&&pickAuthority&&pickAuthority.isCurrent())try{activate()}catch(error){Ot("patient navigation after publication",error)}
+})}function Lt()` },
 ]
 export function applyUiIntentAuthHooks(source) {
   for (const pair of UI_INTENT_AUTH_PAIRS) {

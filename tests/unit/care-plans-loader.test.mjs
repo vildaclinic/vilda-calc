@@ -71,6 +71,7 @@ function environment(careReady = false, missingReminderModule = null) {
     },
   };
   DEPENDENCIES.forEach(key => { win[key] = {}; });
+  loadBrowserScript('vilda_ui_intents.js', win);
   if (missingReminderModule) delete win[missingReminderModule];
   if (careReady) {
     win.VildaCarePlans = { mount() {} };
