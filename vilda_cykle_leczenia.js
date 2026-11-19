@@ -749,7 +749,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '1';
+  var VERSION = '2';
   var KATEGORIA = 'leczenie-otylosci';
   var ZNACZNIK = '{"vildaOtylosc":';
   var FORMAT = 1;
@@ -1232,6 +1232,46 @@
 
   // ── Pomocnicze reguły formularza ─────────────────────────────────────────────────
 
+  /**
+   * Czy zmiana tego wpisu w Karcie mogłaby zmienić PRZEBIEG LECZENIA (P-POSTEPY-DZIENNIK, decyzja właściciela
+   * 2026-11-19: listy pacjentów bez zmiany sejfu). Listy „Leczenie otyłości: trwa / kiedykolwiek / lek X” liczy
+   * sejf z zapisu ostatniej wizyty — z rodzaju ostatniego punktu i z leku punktów. W Karcie wolno więc poprawiać,
+   * usuwać i przywracać tylko Kontynuację, która leku nie zmienia: poprzedni wpis (w kolejności tabeli) jest
+   * Włączeniem albo Kontynuacją z tym samym lekiem i substancją. Wtedy ani rodzaj ostatniego punktu, ani lek nie
+   * zmieniają się względem zapisu wizyty, więc listy zostają zgodne z dziennikiem. Włączenie, Zakończenie i zmianę
+   * leku poprawia się w DocPro — tak jak dotąd zmianę leku.
+   * Zwraca null (wolno) albo powód: 'wlaczenie' | 'zakonczenie' | 'pierwszy-wpis' | 'zmiana-leku'.
+   */
+  function zmianaPrzebiegu(stan, wpis) {
+    var d = wpis && (wpis.punkt || (wpis.biezaca && wpis.biezaca.dane));
+    if (!d) return 'zmiana-leku';
+    if (d.type === 'start') return 'wlaczenie';
+    if (d.type === 'end') return 'zakonczenie';
+    if (d.type !== 'continue') return 'zmiana-leku';
+    var wlasneId = wpis.punkt ? wpis.punkt.id : wpis.entryId;
+    var ten = punktZDanych(d, '__vdo_ten__', null);
+    var inne = (stan && Array.isArray(stan.punkty) ? stan.punkty : []).filter(function (p) {
+      return p && p.id !== wlasneId && (!wpis.entryId || p.id !== wpis.entryId);
+    });
+    var lista = uporzadkujPunkty(inne.concat([ten]));
+    var i = -1;
+    for (var k = 0; k < lista.length; k++) if (lista[k] && lista[k].id === '__vdo_ten__') { i = k; break; }
+    var poprzedni = i > 0 ? lista[i - 1] : null;
+    if (!poprzedni || poprzedni.type === 'end') return 'pierwszy-wpis';
+    return kluczLeku(poprzedni) === kluczLeku(d) ? null : 'zmiana-leku';
+  }
+
+  function kluczLeku(p) {
+    return (String((p && p.drug) || '').trim() + '|' + String((p && p.substance) || '').trim()).toLowerCase();
+  }
+
+  var POWODY_DOCPRO = Object.freeze({
+    wlaczenie: 'Włączenie leczenia poprawiasz w DocPro przy wizycie — od niego zależą cykl, ocena wg ChPL i listy pacjentów.',
+    zakonczenie: 'Zakończenie leczenia poprawiasz w DocPro przy wizycie — od niego zależą cykl i listy pacjentów.',
+    'pierwszy-wpis': 'To pierwszy wpis cyklu — poprawiasz go w DocPro przy wizycie (od niego zależą cykl i listy pacjentów).',
+    'zmiana-leku': 'Ten wpis zmienia lek — poprawiasz go w DocPro przy wizycie (od leku zależą ocena wg ChPL i listy pacjentów).'
+  });
+
   /** Możliwy duplikat: inny bieżący wpis z tą samą datą i masą (±0,05 kg). */
   function duplikat(stan, dane, pomijajEntryId) {
     var d = dataISO(dane && dane.dateISO), m = liczba(dane && dane.weight);
@@ -1304,7 +1344,82 @@
           throw blad;
         });
       });
-    }, Promise.resolve()).then(function () { return { zapisane: zapisane }; });
+    }, Promise.resolve()).then(function () {
+      if (!(opcje && opcje.vault)) odswiezWczytanego();
+      return { zapisane: zapisane };
+    });
+  }
+
+  // ── Dziennik pacjenta wczytanego na stronie (P-TRAJEKTORIA-DZIENNIK) ──────────────
+  //
+  // Decyzja właściciela 2026-11-19: „trajektoria i karta zbiorcza z dziennika”. Karta porównania z poprzednim
+  // pomiarem na Start i w Klirensie (vilda_summary_cards.js) buduje kontekst kliniczny (kursy leczenia otyłości dla
+  // werdyktu trajektorii) z window.obesityTherapyPoints — na Start to punkty z zapisu wizyty (applyLoadedData), bo
+  // monitora tam nie ma. Tu trzymamy projekcję dziennika pacjenta karty (sessionStorage vildaCurrentPatientId, jak
+  // bramka karty porównania), odczytaną po wczytaniu pacjenta i po zapisie wpisu. window.obesityTherapyPoints się
+  // NIE zmienia (to stan formularza wizyty i jej „Zapisz dane”). Bez wpisów w dzienniku punktyWczytanego() daje null —
+  // konsumenci zostają przy dotychczasowym źródle. Po zmianie punktów: vilda:therapy-points-changed
+  // {source:'obesity-dziennik'} (ten sam sygnał, którym monitory odświeżają kartę porównania; ten moduł go nie słucha).
+  var wczytany = { pid: null, punkty: null, odcisk: '', bilet: 0 };
+
+  function pacjentKarty() {
+    var pid;
+    try { pid = (w.sessionStorage && w.sessionStorage.getItem('vildaCurrentPatientId')) || w._vildaCurrentPatientId || null; } catch (_e) { pid = w._vildaCurrentPatientId || null; }
+    return typeof pid === 'string' && pid && pid.indexOf('__vilda') !== 0 ? pid : null;
+  }
+
+  function odswiezWczytanego() {
+    var bilet = ++wczytany.bilet;
+    var pid = pacjentKarty();
+    var v = w.VildaVault;
+    if (!pid || !sejf(v) || typeof v.getPatient !== 'function' || (typeof v.isUnlocked === 'function' && !v.isUnlocked())) {
+      wczytany.pid = null; wczytany.punkty = null; wczytany.odcisk = '';
+      return Promise.resolve(null);
+    }
+    return Promise.resolve(v.getPatient(pid)).then(function (pac) {
+      var snap = pac && pac.snapshots && pac.snapshots[0];
+      var migawka = snap && snap.payload && Array.isArray(snap.payload.obesityTherapyPoints) ? snap.payload.obesityTherapyPoints : [];
+      return wczytaj(pid, migawka, { vault: v });
+    }).then(function (stan) {
+      if (bilet !== wczytany.bilet || pacjentKarty() !== pid) return null;
+      var punkty = stan.maDziennik ? stan.punkty : null;
+      var odcisk;
+      try { odcisk = punkty ? JSON.stringify(punkty) : ''; } catch (_e) { odcisk = String(Math.random()); }
+      var byly = wczytany.pid === pid && !!wczytany.punkty;
+      var zmiana = wczytany.pid !== pid || wczytany.odcisk !== odcisk;
+      wczytany.pid = pid; wczytany.punkty = punkty; wczytany.odcisk = odcisk;
+      // Sygnał tylko wtedy, gdy dziennik jest albo był: pacjent bez wpisów nie wywołuje drugiego odczytu karty.
+      if (zmiana && (punkty || byly) && w.document && typeof w.CustomEvent === 'function') {
+        try { w.document.dispatchEvent(new w.CustomEvent('vilda:therapy-points-changed', { detail: { source: 'obesity-dziennik' } })); } catch (_e) { /* bez zdarzeń */ }
+      }
+      return stan;
+    }).catch(function () { return null; });
+  }
+
+  /** Punkty projekcji dziennika pacjenta karty (format monitora) albo null — bez wpisów w dzienniku, bez sejfu,
+   *  przed pierwszym odczytem albo gdy pacjent karty jest inny niż odczytany. */
+  function punktyWczytanego() {
+    var v = w.VildaVault;
+    if (v && typeof v.isUnlocked === 'function' && !v.isUnlocked()) return null;
+    var pid = pacjentKarty();
+    return pid && wczytany.pid === pid && wczytany.punkty ? wczytany.punkty : null;
+  }
+
+  if (w.document && typeof w.document.addEventListener === 'function' && typeof w.setTimeout === 'function') {
+    try {
+      // Wczytanie pacjenta i wpisy z innego urządzenia (synchronizacja) — odczyt od nowa; czyszczenie stanu,
+      // blokada i wylogowanie — pamięć pusta.
+      var wyczysc = function () { wczytany.bilet++; wczytany.pid = null; wczytany.punkty = null; wczytany.odcisk = ''; };
+      ['vilda:patient-loaded', 'vilda:sync-merged'].forEach(function (n) {
+        w.document.addEventListener(n, function () { w.setTimeout(odswiezWczytanego, 300); });
+      });
+      w.document.addEventListener('vilda:user-state-cleared', wyczysc);
+      if (typeof w.addEventListener === 'function') w.addEventListener('vilda:user-state-cleared', wyczysc);
+      // Zmiana sesji (blokada, wylogowanie, inne konto, odblokowanie) — pamięć pusta i odczyt od nowa; przy
+      // zablokowanym sejfie odczyt nic nie daje.
+      w.document.addEventListener('vilda:session-changed', function () { wyczysc(); w.setTimeout(odswiezWczytanego, 300); });
+      w.setTimeout(odswiezWczytanego, 1200);
+    } catch (_e) { /* bez dokumentu */ }
   }
 
   w.VildaDziennikOtylosci = Object.freeze({
@@ -1325,13 +1440,17 @@
     planRozstrzygniecia: planRozstrzygniecia,
     planDzialania: planDzialania,
     duplikat: duplikat,
+    zmianaPrzebiegu: zmianaPrzebiegu,
+    POWODY_DOCPRO: POWODY_DOCPRO,
     wiekNaDzien: wiekNaDzien,
     opisDanych: opisDanych,
     dataPL: dataPL,
     liczbaPL: liczbaPL,
     dzisISO: dzisISO,
     wczytaj: wczytaj,
-    zapisz: zapisz
+    zapisz: zapisz,
+    punktyWczytanego: punktyWczytanego,
+    odswiezWczytanego: odswiezWczytanego
   });
 }(typeof window !== 'undefined' ? window : this));
 
@@ -1352,7 +1471,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '1';
+  var VERSION = '2';
   var POKAZ_NA_START = 5;
   var rozwiniete = {};
   var usunieteRozwiniete = {};
@@ -1573,7 +1692,14 @@
 
   // ── Formularz wpisu (nowy / poprawka) ────────────────────────────────────────────
 
+  /** P-POSTEPY-DZIENNIK: Włączenie, Zakończenie i zmiana leku — tylko w DocPro (patrz zmianaPrzebiegu). */
+  function wDocPro(ctx, wpis) {
+    var powod = Dz().zmianaPrzebiegu(ctx.stan, wpis);
+    return powod ? (Dz().POWODY_DOCPRO[powod] || Dz().POWODY_DOCPRO['zmiana-leku']) : null;
+  }
+
   function formularz(ctx, wpis) {
+    if (wpis && wDocPro(ctx, wpis)) return;
     var popraw = !!wpis;
     var stan = ctx.stan;
     var punkt = popraw ? wpis.punkt : null;
@@ -1772,6 +1898,8 @@
   // ── Usunięcie, cofnięcie, konflikt ───────────────────────────────────────────────
 
   function usun(ctx, wpis) {
+    var docpro = wDocPro(ctx, wpis);
+    if (docpro) return Promise.reject(new Error(docpro));
     var c = Cy();
     var r = null;
     if (c && wpis.punkt) {
@@ -1790,6 +1918,9 @@
   }
 
   function przywroc(ctx, entryId) {
+    var wpisP = Dz().wpisPoId(ctx.stan, entryId);
+    var docpro = wpisP ? wDocPro(ctx, wpisP) : null;
+    if (docpro) return Promise.reject(new Error(docpro.replace('poprawiasz go', 'dodajesz go ponownie')));
     delete ostatnieUsuniecie[ctx.patientId];
     return zapiszPlan(ctx, Dz().planPrzywrocenia(ctx.stan, ctx.patientId, entryId));
   }
@@ -1890,6 +2021,8 @@
       var akcje = el('div', { class: 'vdo-row-actions' });
       if (x.stan === 'konflikt') {
         akcje.appendChild(el('button', { type: 'button', class: 'vilda-auth-btn vilda-auth-btn-small', text: 'Wybierz wersję', onclick: function () { konflikt(ctx, x); } }));
+      } else if (wDocPro(ctx, x)) {
+        akcje.appendChild(el('span', { class: 'vdo-row-docpro', text: 'Poprawka w DocPro', title: wDocPro(ctx, x) }));
       } else {
         akcje.appendChild(el('button', { type: 'button', class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small', text: 'Popraw', 'aria-label': 'Popraw wpis z ' + (dataPL(p.dateISO) || 'bez daty'), onclick: function () { formularz(ctx, x); } }));
         akcje.appendChild(el('button', { type: 'button', class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small', text: 'Usuń', 'aria-label': 'Usuń wpis z ' + (dataPL(p.dateISO) || 'bez daty'), onclick: function () { zBledem(usun(ctx, x)); } }));
@@ -1936,7 +2069,9 @@
           var d = x.biezaca.dane;
           return el('li', { class: 'vdo-item vdo-item-deleted' }, [
             el('span', { text: (dataPL(d.dateISO) || 'bez daty') + ' · ' + Dz().TYPY[d.type] + ' · ' + liczbaPL(d.weight, 1) + ' kg' }),
-            el('button', { type: 'button', class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small', text: 'Przywróć', onclick: function () { zBledem(przywroc(ctx, x.entryId)); } })
+            wDocPro(ctx, x)
+              ? el('span', { class: 'vdo-row-docpro', text: 'Dodaj ponownie w DocPro', title: wDocPro(ctx, x).replace('poprawiasz go', 'dodajesz go ponownie') })
+              : el('button', { type: 'button', class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small', text: 'Przywróć', onclick: function () { zBledem(przywroc(ctx, x.entryId)); } })
           ]);
         })));
       }
@@ -1977,7 +2112,7 @@
           aktywny ? null : el('span', { id: 'vdoAddWhy', class: 'vdo-hint', text: 'Brak aktywnego cyklu — Włączenie w DocPro.' })
         ])
       ]),
-      el('p', { class: 'vdo-hint', text: 'Włączenie i Zakończenie leczenia dodajesz w DocPro przy wizycie.' }),
+      el('p', { class: 'vdo-hint', text: 'Włączenie, Zakończenie i zmianę leku dodajesz i poprawiasz w DocPro przy wizycie. Tu — Kontynuacje.' }),
       konflikty,
       cofnij,
       msg,

@@ -2044,6 +2044,91 @@ Opis działania i przypadki: `docs/clinical/ALGORITHMS.md`, „Leczenie otyłoś
 
 **Granice.** Zmienia się tylko przypadek „puste pole przy zapisanym poprawnym PWZ” (PWZ trafia do `localStorage` dopiero po przyjęciu poprawnego numeru). Wpisywanie numeru, niepoprawny PWZ w polu i brak zapisanego PWZ działają jak dotąd.
 
+## Łatka P-POSTEPY-DZIENNIK — „Postępy” dorosłego z dziennika leczenia (`vilda_auth_ui.js` 569 → 570, 2026-11-19, decyzja właściciela)
+
+Opis działania i przypadki: `docs/clinical/ALGORITHMS.md`, „Postępy dorosłego i listy pacjentów zgodne z dziennikiem leczenia” (P-POSTEPY-DZIENNIK). Zmiany w czytelnych źródłach: `vilda_postepy_doroslego.js` (konflikt wersji wpisu wstrzymuje punkt oceny wg ChPL) i `vilda_cykle_leczenia.js` (`zmianaPrzebiegu`, `POWODY_DOCPRO`, „Poprawka w DocPro” w „Wpisy leczenia”).
+
+```js
+// vilda_auth_ui.js
+// 1. montaż panelu „Postępy”: punkty z dziennika i rysunek ponawiany po zapisie wpisu
+//    było:  …typeof _pdE.scalSerie=="function"){var _pdSer=_pdE.scalSerie({…,punktyLeczenia:s.obesityTherapyPoints}),_pdM=_pdE.analizuj({…,punktyLeczenia:s.obesityTherapyPoints});_pdOk=!!_pdU.renderPanel(Ct,_pdM,{…})}}catch(ct){…}
+//    jest:  …typeof _pdE.scalSerie=="function"){/* P-POSTEPY-DZIENNIK … */var _pdRys=function(_pdPkt){var _pdSer=_pdE.scalSerie({…,punktyLeczenia:_pdPkt}),_pdM=_pdE.analizuj({…,punktyLeczenia:_pdPkt});return _pdU.renderPanel(Ct,_pdM,{…})},_pdHost=_pdRys(typeof Ob_dzPunkty=="function"?Ob_dzPunkty(s,GdNotatki):s.obesityTherapyPoints);_pdOk=!!_pdHost;typeof Ob_dzPostepy=="function"&&Ob_dzPostepy(t,Ct,_pdHost,_pdRys)}}catch(ct){…}
+// 2. Ob_dz (czytelny blok P-OTYLOSC-DZIENNIK): po ponownym odczycie notatek — powiadomienie słuchaczy
+//    było:  rysuj(Dz.zloz(n, migawka));
+//    jest:  var nowy = Dz.zloz(n, migawka); rysuj(nowy); Ob_dzPowiadom(t, nowy);
+// 3. czytelny blok Ob_dzSluchacze, Ob_dzPunkty, Ob_dzPostepy, Ob_dzPowiadom — za Ob_dz, przed komentarzem Ob_dzk
+```
+
+**Granice.** Napisy `_pdE.scalSerie(` i `_pdU.renderPanel(Ct,_pdM,` zostają (pilnuje ich `postepy-doroslego-widok.test.mjs`). Słuchacze zamkniętej karty (kontener odpięty od dokumentu) wypadają przy następnym powiadomieniu. Lint: bez nowych naruszeń (`no-useless-assignment` w limicie).
+
+## Łatka P-TRAJEKTORIA-DZIENNIK — kursy leczenia otyłości z dziennika (`vilda_auth_ui.js` 570 → 571, `vilda_summary_cards.js` 64 → 65, 2026-11-19, decyzja właściciela)
+
+Opis działania i przypadki: `docs/clinical/ALGORITHMS.md`, „Analiza trajektorii i karta porównania z dziennika leczenia” (P-TRAJEKTORIA-DZIENNIK). Czytelne źródło: `vilda_cykle_leczenia.js` (`VildaDziennikOtylosci.punktyWczytanego`, `odswiezWczytanego`, odświeżenie po `zapisz`).
+
+```js
+// vilda_auth_ui.js
+// 1. pas leczenia otyłości na siatkach Karty
+//    było:  ke=function(){var pe=Lt(s.obesityTherapyPoints,"oty\u0142o\u015B\u0107","#b5731a");if(!pe)return null;try{for(var Ga=s.obesityTherapyPoints.filter(
+//    jest:  ke=function(){/* P-TRAJEKTORIA-DZIENNIK … */var _dzP=typeof Ob_dzPunkty=="function"?Ob_dzPunkty(s,GdNotatki):s.obesityTherapyPoints,pe=Lt(_dzP,"oty\u0142o\u015B\u0107","#b5731a");if(!pe)return null;try{for(var Ga=_dzP.filter(
+// 2. kontekst trajektorii Karty (panel „Analiza trajektorii”, porównanie)
+//    było:  _J.buildClinicalContext({ghTherapyPoints:s.ghTherapyPoints,obesityTherapyPoints:s.obesityTherapyPoints,motherHeightCm:_adv.motherHeight
+//    jest:  _J.buildClinicalContext({ghTherapyPoints:s.ghTherapyPoints,obesityTherapyPoints:typeof Ob_dzPunkty=="function"?Ob_dzPunkty(s,GdNotatki):s.obesityTherapyPoints,motherHeightCm:_adv.motherHeight
+
+// vilda_summary_cards.js — karta „Porównanie z poprzednim pomiarem”
+//    było:  return J.buildClinicalContext({ghTherapyPoints:a.ghTherapyPoints,obesityTherapyPoints:a.obesityTherapyPoints,motherHeightCm:mh?parseFloat(mh.value):NaN,
+//    jest:  /* P-TRAJEKTORIA-DZIENNIK … */const _dzP=(function(){try{const Dz=a.VildaDziennikOtylosci;return Dz&&typeof Dz.punktyWczytanego=="function"?Dz.punktyWczytanego():null}catch(e){return null}})();return J.buildClinicalContext({ghTherapyPoints:a.ghTherapyPoints,obesityTherapyPoints:_dzP||a.obesityTherapyPoints,motherHeightCm:mh?parseFloat(mh.value):NaN,
+```
+
+**Granice.** `Ob_dzPunkty` i `GdNotatki` — z łatki P-POSTEPY-DZIENNIK (ta sama funkcja Karty). Wywołania przez strażników `typeof`. `window.obesityTherapyPoints` bez zmian.
+
+## Łatka P-WIZYTA-PRZYDZIAL — nadanie wizyty przy otwartym oknie „Niezapisane zmiany” nie jest zmianą formularza (`vilda_save_status_indicator.js` 49 → 50, 2026-11-19)
+
+**Objaw.** Skok z Terminarza do punktu GH pacjenta w DocPro (test `tests/e2e/powloka-panel-obcy-pacjent.spec.mjs`,
+„Start z X → skok GH do Y”) co kilka przebiegów kończył się bez wczytania pacjenta. Lekarz odpowiadał w oknie
+strażnika „Odrzuć”, a zamiast skoku dostawał „Formularz zmienił się. Wykonaj tę czynność ponownie.”, choć niczego
+nie zmieniał.
+
+**Przyczyna.** Decyzja strażnika (`readCurrentDecision`) czyta formularz bez skutków ubocznych
+(`captureCurrentUserDataReadOnly`) i nie nadaje wizyty. Autozapis sesji (`vilda_persist_runtime.js`) i sprawdzenia
+wskaźnika zapisu wołają zwykłe `collectUserData`, a ono przez `VildaVisitContext.capture` nadaje formularzowi
+z danymi pacjenta pierwszą wizytę (`payload.visit`). Gdy to nadanie wypadło po otwarciu okna, odcisk formularza
+przy kliknięciu miał dodatkowe `core.visit`. Dokładne porównanie w `isCurrentDecision` uznawało to za zmianę
+formularza i strażnik anulował czynność. W DocPro po odtworzeniu sesji nadana wizyta nie ma jeszcze
+`patientId`, bo formularz nie jest związany z wczytanym rekordem.
+
+**Zmiana** (czytelny blok, bez ponownej minifikacji): `readCurrentDecision` zapamiętuje chwilę odczytu (`readAt`).
+Nowa funkcja `decisionOnlyAllocatedVisit` przyjmuje jedną różnicę i tylko przy spełnieniu wszystkich warunków:
+
+- w decyzji nie było `core.visit`;
+- teraz jest wizyta o poprawnym kształcie, `origin: "explicit"`;
+- wizyta nie ma pacjenta albo ma pacjenta decyzji;
+- wizyta powstała nie wcześniej niż odczyt decyzji;
+- po jej usunięciu odcisk jest identyczny.
+
+Używają jej `isCurrentDecision` oraz pierwszy warunek `decisionContentAfterSave`. Pozostałe warunki obu funkcji są
+bez zmian: ten sam właściciel, generacja i referencja, a po zapisie — referencja równa bieżącemu odciskowi.
+Zmianą formularza pozostają:
+
+- wizyta wczytana (starsza niż decyzja) albo podmieniona;
+- wizyta innego pacjenta lub `legacy-inferred`;
+- każda edycja pola;
+- zmiana konta.
+
+Wyniki, zapis, sesja i sejf bez zmian. Zmienia się tylko to, czy kliknięcie w oknie strażnika jest wykonane, czy
+anulowane.
+
+**Regresje.** `tests/unit/save-status-current-decision.test.mjs` uruchamia produkcyjny moduł. Blok
+„first visit allocated while the unsaved-changes decision is open” sprawdza:
+
+- przyjęcie nowej wizyty, także bez pacjenta;
+- odrzucenie edycji, starszej, obcej i `legacy-inferred` wizyty, podmienionej wizyty, wizyty z pacjentem,
+  którego formularz nie ma, oraz zmiany konta;
+- zapis z okna po nadaniu.
+
+Bez zmiany trzy przypadki przyjęcia padają. `tests/e2e/powloka-panel-obcy-pacjent.spec.mjs` („skok GH do Y”)
+przeszedł lokalnie 48/48 przy 6 równoległych przebiegach. Przed zmianą 2–3 na 12 przebiegów kończyło się
+komunikatem „Formularz zmienił się”.
+
 ## Łatka P-E2-MENARCHE — estradiol poniżej 18 lat: zakresy dorosłych po 5 latach od menarche (`lab_units_data.js` 42 → 43, `lab_unit_converter.js` 10 → 11, `vilda_lab_packages.js` 10 → 11, `inline_przelicznik_jednostek_00.css` 17 → 18, `przelicznik-jednostek.html`, 2026-11-19, decyzje właściciela)
 
 Opis działania, przypadki, dowody i ograniczenia: `docs/clinical/ALGORITHMS.md`, wpis „LAB-E2-MENARCHE”. Zmiany wprowadzono wprost w artefaktach, czytelnymi blokami; żadnego pliku nie przebudowano z dawnych źródeł ani nie minifikowano ponownie.

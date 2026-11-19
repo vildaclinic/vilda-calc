@@ -19,6 +19,7 @@ Nie powstaje nowy magazyn ani osobny nieszyfrowany indeks danych klinicznych. Me
 - Sesja formularza przenosi `visit` przez odświeżenie strony i przejście Start/DocPro. Sam identyfikator, bez danych pacjenta, nie tworzy niepustego formularza.
 - Nowy pomiar w karcie pacjenta tworzy osobną wizytę; edycja pomiaru zachowuje identyfikator. Dopisanie historycznego punktu wzrastania nie jest automatycznie nową bieżącą wizytą.
 - Powiązanie z `patientId` jest potwierdzane wynikiem zapisu w sejfie. Zmiana konta, czyszczenie i zmiana pacjenta nie mogą przenieść obcego kontekstu.
+- Pierwszą wizytę nadaje formularzowi zwykły odczyt danych: autozapis sesji albo sprawdzenie wskaźnika zapisu. Jeżeli wypadnie to przy otwartym oknie „Niezapisane zmiany”, strażnik nie uznaje tego za zmianę formularza. Wizyta musi być nowa, bez pacjenta albo pacjenta formularza, a reszta formularza bez zmian (P-WIZYTA-PRZYDZIAL, `docs/ZRODLA_ARTEFAKTOW.md`).
 
 `user.pubertyAssessmentVisit.visitId` pozostaje odrębnym znacznikiem oceny pokwitania. Nie wolno go traktować jako globalnego identyfikatora wizyty.
 
