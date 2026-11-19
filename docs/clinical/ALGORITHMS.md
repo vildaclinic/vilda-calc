@@ -25155,6 +25155,8 @@ bazie (model jest w teście, haki sejfu te same).
   urządzeniach); R4n. *(2026-11-17, E3-PR0c, P-ZBIEZNOSC-ZDARZEN: wersje wizyt zapisane przez scalanie inaczej, niż przyszły (także
   przypięta wizyta po retencji na drugim urządzeniu) — odsyłanie poprawionych wizyt, uśpione, wpis na końcu pliku;
   wersje przeniesione pod kartę scaloną — E3-PR0f; R4n bez odsyłania — decyzja 2a z 2026-11-15.)*
+  *(2026-11-19, E3-PR0d, P-ZBIEZNOSC-ZDARZEN: wpisy Kosza zapisane przez scalanie inaczej, niż były i niż przyszły — odsyłanie wpisów
+  Kosza, uśpione, wpis na końcu pliku; R4n i D7 nadal bez odsyłania.)*
 - **Etap 3.** Koniec pełnej wysyłki (decyzja 7) wymaga, żeby zdarzenie `ptomb` bez znanego celu albo wiersz `oversize`
   miały inny nośnik karty scalonej (punkt kontrolny).
 
@@ -25363,7 +25365,8 @@ Po scaleniu E2-PR3b warunek decyzji 10 („test właściciela po PR ze zmianami 
   wykonane w E2-PR3c3 (wpis wyżej).
 - **E3-PR0.** Echo zmian pochodnych scalania (pamięć par jako punkt wyjścia). *(2026-11-17, E3-PR0c, P-ZBIEZNOSC-ZDARZEN: wersje wizyt —
   bez pamięci par: sejf porównuje stan wersji z ładunku przed scaleniem i po nim; czwarta droga ze scalania do kolejki,
-  uśpiona; wpis na końcu pliku. Wpisy Kosza — E3-PR0d.)*
+  uśpiona; wpis na końcu pliku. Wpisy Kosza — E3-PR0d.)* *(2026-11-19, E3-PR0d: wpisy Kosza — tak samo bez pamięci
+  par, porównanie surowych wpisów przed scaleniem i po nim; wpis na końcu pliku.)*
 - **Etap 3.** `partialSince` (odbiorca, znak w UI, lista w Ustawieniach, `pfull` ze scalania karty z `partialSince`).
 - Kolejne PR: nowe miejsce zapisu w scalaniu — emisja albo reguła „świadomie bez haka” (tabela wyżej) i przypadek
   w `sync-wskrzeszenie-calej-karty`; zmiana `vilda_vault.js` poza fragmentem natywnym — przeliczenie skrótów kontroli
@@ -27672,7 +27675,8 @@ przypadkach zastosowanie kończy się bez dalszych zapisów i bez klasyfikowania
 - **Scalanie z chmury nie dopisuje do kolejki.** Kolejki jeszcze nie ma. Dwa wyjątki z decyzji 9 to haki E2-PR3b
   (niżej; w kodzie od E2-PR3b, wpis wyżej). *(2026-11-17, E3-PR0c, P-ZBIEZNOSC-ZDARZEN: czwarta droga — odsyłanie poprawionych wizyt po
   zastosowaniu koperty zdarzenia (`applyEncryptedEvent` = `Bem_zastosuj`), uśpione przełącznikiem odsyłania; wpis na
-  końcu pliku.)*
+  końcu pliku.)* *(2026-11-19, E3-PR0d, P-ZBIEZNOSC-ZDARZEN: tą samą drogą i za tym samym przełącznikiem — odsyłanie wpisów
+  Kosza, `stomb` po `snap`; wpis na końcu pliku.)*
 
 **Zgodność ze starszą aplikacją.** Każda z 14 kopert przechodzi przez `mergeSyncPayload` starszego sejfu (wersja 221,
 fikstura testów) bez wyjątku. Stan jest taki jak po pełnym blobie dla tej encji (B13). Urządzenie bez aktualizacji
@@ -27745,6 +27749,12 @@ Różnica bez klasy, nowa różnica i zniknięcie znanej różnicy w W1 albo W2r
   | R4n | inna postać gwiazdki w treści wpisu Kosza; Kosz i „Przywróć” dają to samo, wymiana tego nie uzgadnia (scalanie świadomie nie uzgadnia tej postaci, jak przy samych blobach — D7) |
   | R5 | wpis Kosza karty usuniętej tylko na jednym urządzeniu; Kosz takich wpisów nie pokazuje |
 
+  *(2026-11-19, E3-PR0d, P-ZBIEZNOSC-ZDARZEN: w tabeli brak wiersza R4a′ — inna treść wizyty we wpisie Kosza żywej karty, klasa testu
+  A ≡ B, p. 6 „R4-a′”. R4a, R4a′ i R5 z zapisem odsyła E3-PR0d (uśpione, wpis na końcu pliku); wpis karty usuniętej,
+  który zostaje tylko na jednym urządzeniu, gdy późniejsza wersja nie weszła — E3-PR0d2. Klasyfikator testu nazywa R4a
+  także sam opis wpisu żywej karty, który decyzja 2a nazywa D7 — w pomiarze takich różnic nie było; poprawka testu
+  w E3-PR0h.)*
+
 - **W2s** (odbiorca po zdarzeniach wobec odbiorcy po blobie). „Inne” = 0, kategorie:
   - 40 ziaren: K1 „karta częściowa do pełnej karty” 65, R2 21, K2 „ratunek D-21” 18, R4a 14, K1k 10, R3 8, R5 8, R4n 1;
   - ziarna domyślne: K1 34, R2 21, K2 8, K1k 3, R3 1.
@@ -27805,6 +27815,9 @@ literał na wynik zgodny.
   pełnej wysyłki — „ZNANA RÓŻNICA (zdarzenia; naprawa: E2-PR3c2)”; od E2-PR3c2 bez różnicy także po samych zdarzeniach.
 - **„ZNANA RÓŻNICA” R5-E1:** przy trzech urządzeniach wizyta jest w karcie na jednym, a w Koszu na drugim, do pełnej
   wysyłki; po niej jest w Koszu na wszystkich. Naprawa: E3-PR0.
+  *(2026-11-19, E3-PR0d, P-ZBIEZNOSC-ZDARZEN: z włączonym przełącznikiem odsyłania różnica zostaje — wpis Kosza zostaje tylko na jednym
+  urządzeniu, gdy późniejsza wersja nie weszła, bo karta jest tu usunięta; naprawa w E3-PR0d2, decyzja 1
+  z 2026-11-19.)*
 - **„ZNANA UTRATA” R3-E1:** po dwóch wskrzeszeniach tej samej notatki na dwóch urządzeniach późniejszy tekst ginie na
   obu; pełna wysyłka tego nie odwraca. Naprawa: E2-PR3c (od 2026-11-10: E2-PR3c3) — wykonane w E2-PR3c3 (wpis
   P-NOTATKI-1, E2-PR3c3, wyżej): bez utraty.
@@ -30135,6 +30148,9 @@ tak samo, od razu i na każdym urządzeniu (dotąd gwiazdka widoczna po imporcie
   Niezależne od kolejności (0 z 300): `deletedAtISO`, `przycietoISO`, `gwiazdka`, a dla wersji `updatedAtISO`, treść
   i rejestr. Widok i obecność wizyty są te same; fuzz praw G2 pełny 10/2/6/2 programów. Manifest (PD-17) nie może
   kolejkować ponownie wersji tylko z powodu `rev`, a nagrobka — z powodu opisu, `revPary`, `koszISO` ani treści.
+  *(2026-11-19, E3-PR0d, P-ZBIEZNOSC-ZDARZEN: odsyłanie wpisów Kosza trzyma się tej reguły — kanon porównania zdejmuje opis, `seq`,
+  `revPary`, `koszISO` i postać gwiazdki w treści (`_pinned`, `_pinnedState`); inną treść wizyty we wpisie (R4a′, np.
+  poprawioną masę) odsyła odsyłanie wpisów Kosza, nie manifest.)*
 - **Flota mieszana (D8 = a).**
   - ODP i T4d: urządzenie ze starszą aplikacją trzyma do aktualizacji starą kopię z gwiazdką, gdy pozostałe przyjęły
     świadome odpięcie albo usunięcie (rozjazd widoku 8/8/0 z 221), bez pętli zapisów; po aktualizacji — brak na wszystkich.
@@ -40758,7 +40774,7 @@ test w CI (ziarna domyślne trzech profili, p. 5, p. 6).
 | R4a | kosz na urządzeniu, które nie znało ostatniej gwiazdki wizyty | W1, bloby | klasa R4a; p. 6 R4-a |
 | R4a′ | kosz na urządzeniu, które nie znało ostatniej treści wizyty | W1, bloby | klasa R4a′; p. 6 R4-a′ |
 | karta częściowa (nagrobek przegrał lokalnie, bez haka H1) | „Usuń pacjenta”; karta wraca zmianą urządzenia, które o usunięciu nie wiedziało i wysłało tylko swoją zmianę (u odbiorców bez haka H1) | tylko W1 | P-DZIENNIK-ZDARZEN (E2-PR3b), „Świadomie bez haka H1”; p. 6 „R5-E1, C wysyła tylko zdarzenia” |
-| R5-E1 | „Przywróć” tej wizyty przed „Usuń pacjenta”; karta wraca późniejszą zmianą trzeciego urządzenia | W1, W4, bloby | p. 6 R5-E1; naprawa w E3-PR0 |
+| R5-E1 | „Przywróć” tej wizyty przed „Usuń pacjenta”; karta wraca późniejszą zmianą trzeciego urządzenia | W1, W4, bloby | p. 6 R5-E1; naprawa w E3-PR0 *(2026-11-19, E3-PR0d: w E3-PR0d2, decyzja 1 z 2026-11-19)* |
 
 Klasa nie zależy od nazwy przebiegu: przebieg Q8-obca-2 dostaje E1 (obecność) i P5 z mechanizmu. Zawsze bez klasy:
 „zniknięcie bez operacji” i „retencja usunęła ostatni stan wizyty”.
@@ -40934,6 +40950,9 @@ której nagrobek wygrał (1).
 - **R4a′ w profilu „dłuższa praca bez połączenia”** (ziarna 104, 123, 128, 132, 137): różnica widoczna — Kosz ma starszą
   treść niż późniejsza poprawka; profil ręczny zostaje czerwony. Naprawa w E3-PR0 (odsyłanie wpisów Kosza: pochodny wpis
   Kosza do kolejki albo pełna karta z haka H1 razem z wpisami Kosza).
+  *(2026-11-19, E3-PR0d, P-ZBIEZNOSC-ZDARZEN: wybrana droga „pochodny wpis Kosza do kolejki” — uśpiona, wpis na końcu pliku; pełna karta
+  z haka H1 niesie tylko karty, bez wpisów Kosza. Z włączonym przełącznikiem R4a′ w W1 tych ziaren znika; ziarna 104,
+  128, 132 i 137 zostają czerwone tylko przez W2s „inne” — zdarzenia nadawcy bogatsze niż jego pełna kopia.)*
 - **Do decyzji właściciela przy kolejnych PR E3-PR0:** czy różnicę „tylko nagrobki pacjentów” (p. 5, 5 przebiegów w
   trybie ścisłym) dopuścić jak R2, R4n i D7; czy R5 ma należeć do klas niewidocznych trybu ścisłego (dziś R5 czerwieni
   W1 w trybie ścisłym: profil podstawowy ziarno 31, pełny 3 i 16, „dłuższa praca bez połączenia” 104, 113 i 114; dowód
@@ -40941,6 +40960,11 @@ której nagrobek wygrał (1).
   tylko na B (przyszedł pełnym ładunkiem, nie z dziennika) — niewidoczny, ale w trybie ścisłym W1 jest bez klasy.
   *(2026-11-16, przydział z E3-PR0b: R5 i ten nagrobek retencji — E3-PR0d; „tylko nagrobki pacjentów” — decyzja
   właściciela przy E3-PR0c; plan, „Zakres” E3-PR0.)*
+  *(2026-11-19, decyzje z 2026-11-19 (plan, rozdział 6, „Decyzje z 2026-11-19 (E3-PR0d, pytania 1–2 projektu)”): R5
+  z zapisem odsyła E3-PR0d; wpis Kosza, który zostaje tylko na jednym urządzeniu, gdy późniejsza wersja nie weszła, bo
+  karta jest tu usunięta — odsyłanie w E3-PR0d2, nie klasa niewidoczna trybu ścisłego; nagrobek retencji bez treści
+  tylko na B z pełnej kopii — znane ograniczenie starszej wersji, w trybie ścisłym klasa ze statusem znanego
+  ograniczenia i dowodem; wpis P-ZBIEZNOSC-ZDARZEN, E3-PR0d.)*
 - E1/E1b (utrata wersji nieznanej urządzeniu scalającemu) — jawny wyjątek do naprawy w E3-PR0 (decyzja 9a, wpis
   P-SYNC-WLASCICIEL, „Ograniczenia”); do tego czasu zasada: „Scal pacjentów” dopiero wtedy, gdy każde urządzenie było w
   sieci po ostatnich zmianach.
@@ -41400,12 +41424,19 @@ trwał w nim 200,8 s (przed scaleniem 161,9 s i 162,7 s, na bazie `4355e325` 127
   *(2026-11-17, E3-PR0c, P-ZBIEZNOSC-ZDARZEN: wykonane dla wersji wizyt — wpis na końcu pliku; zakres po decyzjach z 2026-11-17:
   bez samego nagłówka karty, notatki i ich nagrobki bez odsyłania, tylko pomiar, tylko po pojedynczych zmianach, pełna
   karta z haka H1 i osobne odesłanie tej samej wersji mogą wyjść obie; wpisy Kosza — E3-PR0d.)*
+  *(2026-11-19, E3-PR0d, P-ZBIEZNOSC-ZDARZEN: wykonane dla wpisów Kosza — wpis na końcu pliku: warunek „scalanie zapisało” porównuje
+  surowe wpisy Kosza przed scaleniem i po nim, a samo wygaśnięcie treści po 30 dniach nie jest zapisem do odesłania
+  (ani względem stanu przed scaleniem, ani względem ładunku); kanon 2a bez R4n i D7; reguła pola dla `visitIdentity`
+  i `payload.visit` (`POLA_ZAWSZE.stomb`); wpis, który zostaje tylko na jednym urządzeniu, gdy późniejsza wersja nie
+  weszła, bo karta jest tu usunięta — E3-PR0d2, decyzja 1 z 2026-11-19.)*
 - **Rozbicie zakresu**: `snap` w ładunku → E3-PR0c (CI: 20 wierszy w profilu podstawowym; ręcznie 67 / 34 / 91), w
   tym rekord złożony i gwiazdka; `stomb` w ładunku i spoza ładunku (R4a, R4a′, R5, inne) → E3-PR0d (CI 4; ręcznie
   32 / 30 / 61); nagłówek karty w ładunku i spoza ładunku (34 i 1 w profilu pełnym) i `snap` spoza ładunku (z gwiazdką
   i bez; ręcznie 3 / 8 / 4) → propozycja E3-PR0c; `pnotetomb` w ładunku → E3-PR0c albo E3-PR0d; `pnote` w ładunku
   (ręcznie 0 / 3 / 0, nowe 1) → propozycja E3-PR0c albo E3-PR0d, jak `pnotetomb`, z pomiarem po E3-PR0b2 (reguła treści
-  notatki); R5 → E3-PR0d (plan, dopisek w „Zakresie”).
+  notatki); R5 → E3-PR0d (plan, dopisek w „Zakresie”). *(2026-11-19, E3-PR0d: `stomb` wykonane, także R5 z zapisem;
+  wpis Kosza, który zostaje tylko na jednym urządzeniu, gdy późniejsza wersja nie weszła, bo karta jest tu usunięta —
+  E3-PR0d2, decyzja 1 z 2026-11-19.)*
 - **Bez podwójnego wysyłania**: warstwa „nowe” odejmuje to, co dziś wychodzi samo — haki H1/H2/H3 i przegląd kolejki
   po drenażu, który coś scalił. Notatki pacjenta spoza ładunku pokrywają haki (wyk 10, nowe 0 w CI; ręcznie 27 / 4 /
   32, nowe 0), więc nie wymagają pracy. Przegląd nie pokrywa echa zdarzeń (nowe = noweOst we wszystkich profilach),
@@ -41413,7 +41444,11 @@ trwał w nim 200,8 s (przed scaleniem 161,9 s i 162,7 s, na bazie `4355e325` 127
 - **Starsza aplikacja**: echo do 276 nie leczy różnicy z bieżącą (w pomiarze przygotowawczym 276 pominęło 154 ze 168
   kopert wersji jako „nie nowsze”), a R4a i R4a′ przez 221 dają jeden dodatkowy obieg echa do starszego urządzenia
   (scenariusz „drugi rząd przez 221”: 1 wiersz do nadawcy, trzeci rząd 0; losowa flota 221, ziarno 3: drugi rząd 2) —
-  opisać, nie ukrywać (E3-PR0d). Stres: bez reguły pola jedna pełna kopia 221 dałaby minutę slotu ponad 4 MiB.
+  opisać, nie ukrywać (E3-PR0d).
+  *(2026-11-19, E3-PR0d, P-ZBIEZNOSC-ZDARZEN: odsyłanie tylko po zdarzeniach, więc przez 221 obiegu nie ma z konstrukcji (flota 221,
+  10 ziaren: 0 kopert odsyłania wpisów); dodatkowy obieg dotyczy 276 — z jednego zdarzenia 276 odsyłają oba bieżące
+  urządzenia (dwie koperty, jeden obieg), zmierzony w dwóch scenariuszach floty w CI i we flocie 276 ręcznie; wpis na
+  końcu pliku, „Flota ze starszą aplikacją”.)* Stres: bez reguły pola jedna pełna kopia 221 dałaby minutę slotu ponad 4 MiB.
 - **E3-PR0e**: „Usuń pacjenta” duplikatu karty po „Scal pacjentów” (decyzja 4a; sprawa niżej, scenariusz w bloku znanych
   usterek jako test wejściowy), propozycja: scenariusz dla luki mutantów po przegranym nagrobku karty, utrata bez
   nośnika (w 20 ziarnach profilu pełnego 30 kart opróżnionych po samych zdarzeniach, w pół wymiany 1 karta opróżniona
@@ -43560,6 +43595,8 @@ z `runtime/clinical-workspace-v1/manifest.json` na `audyt`.
   wyżej); druga kopia u odbiorcy nic nie zapisuje.
 - **Granica z E3-PR0d.** Odesłanie wersji zmienionej fazą Kosza (zdarzenie `stomb`) jest w E3-PR0c, bo to zapis
   wersji; sam wpis Kosza (R4a, R4a′, R5) — E3-PR0d.
+  *(2026-11-19, E3-PR0d, P-ZBIEZNOSC-ZDARZEN: wykonane — wpis na końcu pliku; bez wpisu, który zostaje tylko na jednym urządzeniu, gdy
+  późniejsza wersja nie weszła, bo karta jest tu usunięta (E3-PR0d2, decyzja 1 z 2026-11-19).)*
 - **Notatki** (decyzja z 2026-11-17: notatki bez odsyłania): rekord złączony notatki (+1 ms, `Bnp_poObu`) E3-PR0c
   nie odsyła; wysyła go przegląd kolejki, gdy chwila złączenia jest późniejsza od pary z ładunku i od wiersza encji.
   Oba urządzenia liczą to samo złączenie, więc podwójna wysyłka, jeśli zajdzie, jest bez szkody. Komentarz „Bez
@@ -43608,6 +43645,8 @@ danych; alternatywy w opisie PR). Rekomendacja przy każdym punkcie: przyjąć.
   fazą Kosza zostaje z E3-PR0c (bez podwójnego wysyłania tej samej wersji); notatki i nagrobki notatek dalej bez
   odsyłania, tylko pomiar (decyzja z 2026-11-17); R4a i R4a′ przez urządzenie 276 — jeden dodatkowy obieg,
   opisać; model haków i odsyłania w teście A ≡ B rozszerzony o `stomb`; warstwa „odesłane” jest gotowa.
+  *(2026-11-19, E3-PR0d, P-ZBIEZNOSC-ZDARZEN: wykonane, uśpione tym samym przełącznikiem — wpis na końcu pliku; bez części E3-PR0d2
+  (decyzja 1 z 2026-11-19); dodatkowy obieg zmierzony dla 276.)*
 - **E3-PR0e**: „Usuń pacjenta” zwróconej starej karty po „Scal pacjentów” — scenariusz z ziarna 8 profilu pełnego
   (świat 885 ręcznego bloku znanych usterek) obok czterech dotychczasowych; po naprawie ziarno 8 z włączonym
   przełącznikiem ma być czyste; różnica „tylko lista usuniętych pacjentów” (odłożona tutaj decyzją z 2026-11-17).
@@ -43716,3 +43755,598 @@ to zawęża edycję, nie zmienia żadnej oceny.
 
 **Wdrożenie.** Od razu przy wydaniu; sejf bez zmian. **Cofnięcie** = rewert PR: „Postępy” wracają do migawki, Karta
 znów pozwala poprawiać każdy wpis; dane dziennika bez zmian.
+
+## Dziennik zdarzeń: odsyłanie wpisów Kosza po zastosowaniu zmiany z innego urządzenia — uśpione (P-ZBIEZNOSC-ZDARZEN, E3-PR0d, SW 1.1.554, `vilda_vault.js` 282, 2026-11-19)
+
+**Zmiana kliniczna: NIE (uśpiona).** Wzory, progi, jednostki, interpretacje, reguły scalania (`Le`), format kopii,
+serwer i `vilda_sync.js` bez zmian. Dla użytkownika dziś nic się nie zmienia: odsyłanie wpisów Kosza włącza ten sam
+przełącznik co odsyłanie poprawionych wizyt (E3-PR0c: klucz `localStorage` `vilda-event-echo-v1` dokładnie `'1'` albo
+pole okna `VILDA_EVENT_ECHO === true`), którego żaden ekran aplikacji nie ustawia. Przy wyłączonym przełączniku
+zastosowanie zmiany z innego urządzenia (`applyEncryptedEvent`) idzie dokładnie jak dotąd: ta sama obietnica, te same
+zapisy, te same wiersze kolejki, bez odczytu metadanych konta. Po włączeniu przełącznika zmienia się wynik
+synchronizacji na innych urządzeniach. Urządzenie, które scaliło zmianę z innego urządzenia i zapisało wpis Kosza
+inaczej, niż był przed scaleniem i niż przyszedł (wpis dostał gwiazdkę albo nowszą treść wizyty z drugiego
+urządzenia), samo wyśle ten wpis pozostałym — dziś niesie go tylko pełna wysyłka. W przykładzie niżej Kosz na
+komputerze zamiast 20 kg pokazuje 40 kg, a „Przywróć” przywraca 40 kg (to cel). Odsyłanie wpisów Kosza jest częścią tej
+samej drogi ze scalania do kolejki co odsyłanie poprawionych wizyt — rozszerzenie decyzji 9 z 2026-10-29, do akceptacji
+właściciela przy PR (niżej).
+
+**Skąd.** Plan `docs/SYNC_PRZYROSTOWA_PLAN.md`, rozdział 5, „Etap 3”, tabela „Podział E3-PR0”, wiersz 4 (i nowy wiersz
+4a). Decyzje z 2026-11-15: 1a (odsyłanie uśpione ukrytym przełącznikiem do PR włączającego), 2a (bez odsyłania R2, R4n
+i D7, z dowodem, że widok, Kosz i „Przywróć” są na obu urządzeniach takie same). Decyzje z 2026-11-17 (blok „Decyzje
+z 2026-11-17 (E3-PR0c, pytania 1–6 projektu)”): notatki pacjenta i ich nagrobki bez odsyłania także tutaj, tylko
+pomiar; odsyłanie tylko po pojedynczych zmianach. Decyzje z 2026-11-19 — odpowiedź właściciela („1a, 2a”) na dwa
+pytania projektu E3-PR0d, obie zgodne z rekomendacją; zapis w planie, rozdział 6, blok „Decyzje z 2026-11-19 (E3-PR0d,
+pytania 1–2 projektu)” (dopisany w tym PR):
+- ukryty wpis Kosza, który zostaje tylko na jednym urządzeniu, gdy późniejsza wersja wizyty nie weszła, bo karta jest
+  tu usunięta, będzie odsyłany osobnym małym PR zaraz po E3-PR0d, po pomiarze (wiersz 4a, E3-PR0d2); E3-PR0d idzie bez
+  tej części;
+- niewidoczny nagrobek porządkowania bez treści wizyty tylko na jednym urządzeniu, który przyszedł pełną kopią od
+  starszej aplikacji, to znane ograniczenie starszej wersji — bez odsyłania; test A ≡ B oznacza go w ręcznym trybie
+  ścisłym klasą ze statusem znanego ograniczenia.
+
+Wejście z E3-PR0a (wpis P-ZBIEZNOSC-ZDARZEN, E3-PR0a, „Ograniczenia i sprawy otwarte”: R4a′ w profilu „dłuższa praca
+bez połączenia”, R5, nagrobek retencji tylko na B), z E3-PR0b („Wejście do kolejnych PR”: reguła echa, rozbicie
+zakresu, starsza aplikacja) i z E3-PR0c („Ograniczenia”, „Granica z E3-PR0d”; „Wejście do kolejnych PR”). Sprawy,
+których projekt i decyzje nie rozstrzygały, rozstrzygnięto wariantem najbezpieczniejszym dla danych — niżej, „Do
+akceptacji właściciela przy PR”.
+
+### E3-PR0d
+
+**Co było** (`audyt` `4bff32aa`; prawdziwy sejf, dwa urządzenia jednego fikcyjnego konta, test wejściowy A ≡ B niżej).
+Wpis Kosza leży na jednej liście w metadanych konta (`snapshotTombstones`). Zdarzenie `stomb` (wszystkie wpisy tej
+wersji i karta bez wizyt) wysyłają „Usuń do Kosza” i porządkowanie starych wizyt; scalanie zmiany z innego urządzenia
+`stomb` nie wysyła. Gdy scalanie zmieni wpis Kosza — dołoży gwiazdkę z tutejszego rejestru albo nowszą treść wizyty
+z innego urządzenia (`Bkz_pomin`, `Bkz_scalKoniec`) — pozostałe urządzenia dostają ten wpis tylko pełną wysyłką
+(`PUT /blob`), którą etap 3 wyłączy. E3-PR0c odsyła wersję wizyty zmienioną fazą Kosza, ale nie sam wpis. Przykład:
+komputer w gabinecie (A) i telefon (B), karta „Pacjent Testowy 1” z wizytą v (20 kg).
+- A poprawia masę v na 40 kg, potem robi „Usuń pacjenta”. B, bez sieci i bez wiedzy o obu zmianach, daje v do Kosza.
+- B dostaje poprawkę A: wersja przegrywa z późniejszym Koszem, ale jej treść jest nowsza, więc wpis Kosza na B ma
+  40 kg. A dostaje Kosz B (20 kg) z kartą bez wizyt — Kosz to zmiana w karcie, więc karta wraca na A z v w Koszu, 20 kg.
+- Po samych zdarzeniach: Kosz na A pokazuje 20 kg, na B 40 kg; „Przywróć” na A przywraca 20 kg — poprawka ginie na A aż
+  do pełnej wymiany (literał p. 6 „R4-a′”: różnica wpisu Kosza w W1, naruszenie wyroczni „R4a′ | W1”). To samo
+  z gwiazdką zamiast poprawki (p. 6 „R4-a”, „R4a | W1”): Kosz na A bez gwiazdki, „Przywróć” na A daje v bez gwiazdki.
+- Po E3-PR0d (przełącznik włączony): B zaraz po scaleniu poprawki dopisuje do kolejki swój wpis (40 kg); A go przyjmuje
+  i niczego nie odsyła. Na obu Kosz 40 kg, „Przywróć” daje 40 kg (test wejściowy: jedna koperta, jeden obieg).
+
+**Reguła.** Po zastosowaniu pojedynczej zmiany z innego urządzenia (koperta zdarzenia) urządzenie dopisuje do kolejki
+`stomb` każdej wersji z ładunku, której wpis Kosza scalanie zapisało inaczej, niż był przed scaleniem i niż przyszedł —
+z pominięciem opisu wpisu (D7), postaci gwiazdki w treści (R4n), samej tożsamości wizyty dopisanej przez bieżącą
+wersję i samego wygaśnięcia treści po 30 dniach.
+- **Kandydaci** — te same identyfikatory co w odsyłaniu wersji: `patients[].snapshots[].snapshotId`
+  i `snapshotTombstones[].snapshotId` ładunku (`Bev_kandydaciEcha`); wpisy Kosza z ładunku pogrupowane po `snapshotId`
+  (`Bev_kandydaciKosza`, funkcja czysta). Ładunek bez wersji (notatka, lista, preferencja, hasło) — bez odczytu
+  metadanych konta. W pomiarze każdy wiersz `stomb` modelu ma `snapshotId` wśród kandydatów (0 wyjątków).
+- **Stan wpisów** (`Bev_stanKosza`): kontrola sesji zastosowania, strzeżony adapter `Bev_start(null)` (od początku „Usuń
+  konto” tego konta każda metoda odmawia kodem `SYNC_DB_DELETED`), odczyt metadanych konta i znów kontrola sesji; kopie
+  surowych elementów listy Kosza kandydatów, bez odszyfrowania, bez zapisów i bez zegara. Lista na dysku trzyma pełny
+  szyfr treści, więc odczyt surowy wystarcza. Odczyt „przed” idzie po odczycie wersji i jego kontrolach, odczyt „po” —
+  po odczycie wersji „po”, każdy we własnym `try` i z tymi samymi kontrolami kodów.
+- **Wpis idzie do kolejki, gdy zachodzi wszystko naraz** (`Bev_echoKosza`):
+  - scalanie ruszyło w tej sesji (jak w E3-PR0c: wynik `applied` albo wyjątek z `Le` zamieniony na `busy` lub
+    `apply-error`). Faza Kosza zapisuje listę także wtedy, gdy przerwie ją błąd (np. zajęta blokada karty przy
+    wyszukiwaniu wersji pod innymi kartami) — wyjątek wychodzi dopiero po zapisie listy: ponowienie ma wtedy stan przed
+    = po, więc odesłanie wychodzi przy pierwszej próbie;
+  - po scaleniu jest wpis tej wersji. Wpis zdjęty scaleniem (przegrał z późniejszą wersją) nie idzie — wtedy zapisuje się
+    wersja i tę odsyła E3-PR0c;
+  - scalanie zapisało: surowe elementy listy z tym `snapshotId` przed i po scaleniu różnią się (JSON z posortowanymi
+    kluczami, `Bev_json`). Ten sam zapis — bez odszyfrowania i bez odesłania;
+  - różnica jest w postaci wysyłkowej: elementy w kształcie koperty `stomb` (`Bev_wpisKosza`: pola eksportu, tożsamość
+    wizyty i treść odszyfrowane) po kanonie (`Bev_kanonKosza`: bez `rev`, `updatedAtISO`, `zmianaISO`, `koszISO`,
+    `revPary`, `seq`, `payload._pinned` i `payload._pinnedState`, lista posortowana) przed ≠ po. Zmiana samych
+    składników lokalnych wpisu (`Bpk`, `trescISO`, `visitCipher`, `payloadCipher` — nie jadą w ładunku) albo samego opisu
+    nie daje odesłania;
+  - nie samo wygaśnięcie treści (`Bev_samoWygasniecie`): gdy element „po” nie ma treści tam, gdzie element „przed” tej
+    samej karty ją miał, a poza tym są równe (oba w kanonie) — jak „scalanie nie zapisało”;
+  - nie to, co przyszło: wpisu nie ma w ładunku (typowo zdarzenie `snap` tej wizyty) albo po regule pola wpis po
+    scaleniu ≠ wpis z ładunku (oba w kanonie) i nie jest to samo wygaśnięcie względem ładunku. Reguła pola
+    (`Bev_echoKoszaT`, niezależna od źródła ładunku): z elementu po scaleniu, który ma w ładunku element tej samej karty,
+    zdejmuje `visitIdentity` i `payload.visit`, gdy tamten ich nie ma (`Bev_ECHO_ZAWSZE_KOSZA` = `POLA_ZAWSZE.stomb`
+    licznika odsyłania — strażnik w teście). Element bez pary w ładunku (wpis innej karty) zostaje bez zmian.
+- **Kanon** = `POLA_D7` + `seq` + `POSTAC_GWIAZDKI` licznika (`Bev_KANON_KOSZA`, strażnik w teście) — ten sam co kanon
+  2a licznika dla `stomb`, więc licznik odsyłania testu A ≡ B jest wyrocznią. Reguła „każde pole nieobecne w ładunku”
+  odrzucona: tłumiłaby R4a w ładunku (wpis z koperty starszej strony nie ma pola `gwiazdka`, a scalanie dokłada je
+  z tutejszego rejestru — to właśnie różnica do odesłania).
+- **Wiersz odsyłania** to zwykły wiersz `stomb` z kluczem `snapshotId`, zbudowany ze stanu w chwili dopisania
+  (`Bev_stomb`), więc niesie wszystkie wpisy tej wersji i kartę bez wizyt, jak własny Kosz. Wpis, którego w chwili
+  dopisania już nie ma (np. wygasł), nie daje wiersza („brak encji”). Kolektor dostaje same identyfikatory wersji, bez
+  treści.
+
+**Kiedy nie odsyłamy.**
+
+| Przypadek | Dlaczego |
+|---|---|
+| sam opis wpisu (`rev`, `updatedAtISO`, `zmianaISO`, `koszISO`, `revPary`) i `seq` — D7 | zależy od kolejności scaleń, a manifest (PD-17) nie kolejkuje nagrobka z powodu opisu, `revPary` ani `koszISO` (wpis P-KOSZ-POLKRATA); decyzja 2a z 2026-11-15; dowód widoku w testach |
+| sama postać gwiazdki w treści wpisu (`payload._pinned`, `payload._pinnedState`) — R4n | scalanie świadomie jej nie uzgadnia; decyzja 2a. Widok gwiazdki w Koszu to późniejszy z rejestru wpisu (`gwiazdka`) i postaci w treści, więc kod nie wykluczał innego widoku przy równym polu `gwiazdka` — testy z kopertą starszej aplikacji (bez pola `gwiazdka`, treść bez rejestru albo z samym `_pinned: true`, przy przypiętym i przy odpiętym rejestrze, późniejsza chwila zmiany wpisu) pokazały okno Kosza i „Przywróć” takie same na obu urządzeniach; kanon bez zmian |
+| tożsamość wizyty dopisana przez bieżącą wersję (koperta od starszej aplikacji bez `visitIdentity` i `payload.visit`) | reguła pola |
+| tylko składniki lokalne wpisu | nie jadą w ładunku (`Bev_POLA_KOSZA`); porównanie w postaci wysyłkowej |
+| samo wygaśnięcie treści po 30 dniach — względem stanu przed scaleniem i względem ładunku | każde urządzenie czyści treść samo; porównanie bez zegara („Bez zegara”, „Wygasanie Kosza i okno nagrobków”) |
+| wpis zdjęty scaleniem (wersja wygrała) | wersję odsyła E3-PR0c; bez wpisu builder i tak nie daje koperty |
+| wpis wygasły (365 dni) | wpisu po scaleniu nie ma |
+| wpis Kosza zostaje tylko na jednym urządzeniu, gdy późniejsza wersja nie weszła, bo karta jest tu usunięta | decyzja 1 z 2026-11-19 — E3-PR0d2 („Ograniczenia”, „Wejście do kolejnych PR”) |
+| niewidoczny nagrobek porządkowania bez treści tylko na jednym urządzeniu, który przyszedł pełną kopią od starszej aplikacji | decyzja 2 z 2026-11-19 — znane ograniczenie starszej wersji; po pełnej kopii bez odsyłania (decyzja z 2026-11-17) |
+| notatki pacjenta i ich nagrobki | decyzja z 2026-11-17: notatki bez odsyłania, tylko pomiar; odsyłanie emituje tylko `snap` i `stomb` |
+| pełna kopia (`mergeSyncPayload`), delta (`applyEncryptedDelta`), stara delta (`applyEncryptedEvent` bez pola `event`) | jak w E3-PR0c: odsyłanie tylko po kopertach zdarzeń (decyzja z 2026-11-17); poza blokiem P-DZIENNIK-ZDARZEN bez nowego wywołania |
+| importy (karta z pliku, scalenie i odtworzenie kopii konta) | same dopisują to, co zapisały (`Bkz_poImporcie`) |
+| przeniesienie wersji pod inną kartę | koperta `stomb` niesie wszystkie wpisy tej wersji z każdą kartą; przeniesienie wersji (E3-PR0f) zostaje po stronie odsyłania wersji |
+
+**Błędy — spójnie z E3-PR0c.** Błąd zdejmuje tylko porównanie, nigdy nie dokłada wpisów spoza kandydatów; wpis, który
+reguła bez błędu by odesłała, jest odesłany zawsze. `Bev_echoKosza` nigdy nie rzuca.
+- Nieudany cały odczyt wpisów „przed” (inny błąd niż niżej) albo nieczytelna tożsamość elementu „przed”: dla tego
+  kandydata bez porównania z „przed”; zostaje porównanie z ładunkiem, więc kandydat spoza ładunku z wpisem po scaleniu
+  idzie zawsze (jednorazowy nadmiar bez pętli, jak w E3-PR0c).
+- Nieczytelna tożsamość elementu „po” (`INVALID_VISIT_IDENTITY`) albo błąd porównania: odesłanie tego kandydata.
+  Dopisanie buduje kopertę tym samym builderem co własny Kosz, a ten rzuca ten sam kod: odmowa z kodem, bez wiersza,
+  wpis w pamięci braków, przegląd kolejki ponawia — tak samo jak dziś przy własnym Koszu takiego wpisu. Pełna wysyłka
+  stoi z tym samym kodem (eksport też go rzuca), więc błąd jest widoczny w dzienniku, nie ukryty.
+- Nieczytelna treść elementu „po” — nie błąd: wpis bez treści, jak w eksporcie.
+- Nieudany cały odczyt wpisów „po”: odesłanie każdego kandydata (także zdarzenia `snap` bez wpisu w ładunku — inaczej
+  ginie R4a spoza ładunku, gdy zawiodą oba odczyty). Klucz bez wpisu w chwili dopisania daje „brak encji” i zdejmuje
+  wpis pamięci braków — bez śladu.
+
+**Sesja, blokada i usuwanie konta.** Jak w E3-PR0c, z dwiema świadomymi zmianami drogi E3-PR0c przy włączonym
+przełączniku:
+- zmiana sesji albo zablokowany sejf w trakcie odczytu „przed” (wersji albo wpisów, także gdy z tego powodu zawiódł
+  odczyt) — wynik jak dziś po zmianie sesji, bez scalania (zdarzenie zostaje do ponowienia); usuwanie konta w toku
+  (`SYNC_DB_DELETED`, także „Usuń konto” ruszone w trakcie odczytu wpisów) — `session-changed`, bez scalania; strażnik
+  tożsamości chronionego sejfu niedostępny (`PATIENT_AUTHORITY_UNAVAILABLE`) — `busy` z tym kodem, bez scalania.
+  **Zmiana 1:** te kody z odczytu wpisów zatrzymują scalanie także wtedy, gdy odczyt wersji się udał. Łagodne: te same
+  kody z odczytu wersji robią dziś to samo;
+- zmiana sesji w trakcie `Le` albo odczytu „po” — wynik jak dziś, bez odsyłania wersji i wpisów;
+- **zmiana 2:** usuwanie konta w odczycie „po” — wersji albo wpisów, także gdy „Usuń konto” ruszyło w trakcie ostatniego
+  odczytu (sprawdzenie strażnika po odczycie wpisów „po”) — zdejmuje całe odsyłanie (wersje i wpisy). W E3-PR0c ten kod
+  z odczytu wersji „po” zdejmował odesłanie wersji; nowe jest tylko to, że ten sam kod z odczytu wpisów zdejmuje też
+  wersje. Bez tej zmiany szkody by nie było (dopisanie sprawdza konto), ale reguła „konto usuwane — nic” jest prostsza;
+- lista wpisów do odesłania trafia do kolektora w tym samym warunku sesji co lista wersji, a emisja idzie z sesją
+  scalania (zmieniona sesja albo zablokowany sejf — bez wpisu). Operacje kolejki i kwarantanny sprawdzają sesję tak jak
+  zapis karty (P-SESJA-ZAPISU): zmiana sesji w trakcie kończy operację bez zapisu.
+
+**Bez zegara.** Porównanie nie czyści list chwilą zegara (reguła testu buduje odsyłanie bez zegara: domknięcie wywołań
+funkcji odsyłania bez `Date` w teście builderów). Lista na dysku traci treść dopiero przy pierwszym zapisie po granicy
+30 dni (odczyt czyści tylko kopię), a każde scalanie zapisuje listę wyczyszczoną chwilą zegara — dlatego lista „przed”
+może jeszcze mieć treść, której lista „po” już nie ma; tę różnicę zdejmuje filtr samego wygaśnięcia, też bez zegara. Ten
+sam filtr działa względem ładunku: odbiorca po granicy, który wpisu wcześniej nie miał, zapisuje wpis z ładunku bez
+treści i nie odsyła go tylko z tego powodu (nadawca i tak zachowuje swoją treść — treść z szyfrem wygrywa z brakiem
+treści). Odrzucone: wspólna chwila dla trzech stron (wymaga odczytu zegara w zastosowaniu i wyjątku w regule „bez
+zegara” testu builderów) i zostawienie zbędnego odesłania przy granicy (model testu A ≡ B, liczony z eksportów, nie
+mógłby się wtedy zgodzić z sejfem).
+
+**Bez podwójnego wysyłania.**
+- H1 (pełna karta po przegranym nagrobku, `pfull`) niesie tylko karty (`patients`), bez wpisów Kosza; z kopertą `stomb`
+  tej karty dzieli tylko nagłówek karty bez wersji — nieszkodliwe (odbiorca bierze późniejszą chwilę zapisu karty).
+  Dlatego z dwóch dróg z wpisu E3-PR0a („pochodny wpis Kosza do kolejki albo pełna karta z haka H1 razem z wpisami
+  Kosza”) wybrana jest pierwsza.
+- H2 i hak karty notatki dotyczą notatek — bez części wspólnej.
+- Karta w kopercie (decyzja z 2026-11-17: bez osobnego odsyłania samego opisu karty): odesłany `stomb` niesie kartę bez
+  wizyt tylko jako część koperty wpisu, zbudowanej tym samym builderem co własny Kosz, nigdy osobno.
+- Odesłanie wersji (E3-PR0c) to inna encja (`snap`, klucz `karta/wersja`). Oba wychodzą z jednego scalenia tylko, gdy
+  zmienią się i wersja, i wpis — dwie encje, nie duplikat (test: wersja w i wpis v w jednym scaleniu).
+- Przegląd kolejki tego nie wyśle: chwila encji `stomb` (`Bkz_ostatnie`) scalonego wpisu jest najwyżej późniejszą
+  z chwil obu stron, pokrytą parą z ładunku albo własnym wierszem. Wiersz odsyłania ma chwilę utworzenia z chwili
+  dopisania, więc późniejszy przegląd uznaje encję za pokrytą.
+- Łączenie wpisów kolejki (`Bob_plan`, bez zmian): odesłanie po własnym czekającym `stomb` tej wersji zastępuje go;
+  własny `stomb` po odesłaniu zastępuje odesłanie; odesłanie i wiersz innej encji między nimi — oba zostają (reguła
+  ogona).
+- Dwa urządzenia, które złożyły ten sam wpis, odsyłają go po razie (test wejściowy E3-PR0c z retencją: A i B odsyłają
+  wpis retencji po razie); odbiorca ma już ten wpis, nic nie zapisuje, więc echa echa nie ma. Odsiewanie po stronie
+  dostawy odrzucone z tego samego powodu co w E3-PR0c.
+
+**Wpięcie i kolejność.** W `Bem_zastosujEcho` po jedynym `await` dwa wywołania w sesji scalania: najpierw
+`Bem_zmiana('snap', kol.echo, kol.s)` (E3-PR0c), potem `Bem_zmiana('stomb', kol.kosz, kol.s)` — jak `Bem_RANGI`
+(`snap` przed `stomb`) poza krokiem i w kroku, więc odbiorca dostaje wersję przed wpisem. Bez nowego `await`, bez
+czekania na wpis łańcucha, bez drugiego odczytu przełącznika ani bramki. `Bev_zastosujZEchem` dostaje odczyt wpisów
+„przed” i „po”, flagę usuwania konta i listę `kol.kosz`; statusy bez zmian. Bez zmian: `Bev_zastosuj`, `Bem_zastosuj`,
+`Bob_bramkaEcha`, `Bev_kandydaciEcha`, `Bev_stanEcha`, `Bev_echo`, `Bev_stomb`, `Bem_zmiana`, `Bob_plan`, `Bev_EKSPORT`
+(38 kluczy). Nowe funkcje wołają siebie nawzajem i funkcje już wołane z części `Bev_` (`Bev_start`, `Bev_kopia`,
+`Bev_json`, `Bev_pole`, `Bev_bezPola`, `Bev_ma`, `Bev_id`, `Bev_obiekt`, `Bev_wpisKosza`, `Bses_pilnuj`).
+
+**Zakres** (licznik odsyłania testu A ≡ B, warstwa wykonalna rodzaju `stomb` po pojedynczym zdarzeniu od bieżącego
+urządzenia albo od 276; pomiar na `bdbfafcd`, bez przełącznika; w nawiasie — wpis w ładunku / spoza ładunku, spoza =
+zdarzenie `snap` tej wizyty; CI: profil podstawowy 8 ziaren, koalescencja 3, scenariusze floty; ręcznie: podstawowy 40,
+pełny 20, „dłuższa praca bez połączenia” 40 — ziarna 101–140).
+
+| Klasa | CI | Ręcznie: podstawowy / pełny / „bez połączenia” | E3-PR0d | Dlaczego |
+|---|---|---|---|---|
+| R4a (różni się gwiazdka) | 2 w profilu podstawowym (1/1), 2 w scenariuszu floty „Drugi rząd przez 221” (1/1) | 11 (4/7) / 4 (1/3) / 17 (6/11) | odsyła | wiersz 4 planu; przykład z gwiazdką |
+| R4a′ (inna treść wizyty) | 2 w profilu podstawowym (1/1), 4 w koalescencji (2/2) | 21 (9/12) / 19 (8/11) / 36 (13/23) | odsyła | wiersz 4 planu; przykład wyżej; w „bez połączenia” różnica widoczna |
+| R5 z zapisem (wpis karty nieżywej, który scalanie zmieniło) | 0 | 0 / 1 (1/0) / 6 (3/3) | odsyła | ten sam warunek co R4a |
+| inne (Kosz połączony z przycięciem: `przycietoISO`, `deletedAtISO`, `powod`) | 0 | 0 / 6 (5/1) / 2 (2/0) | odsyła | ten sam warunek |
+| R4a przez 276 (gwiazdka i tożsamość wizyty) | — | flota 276: 2 (ziarno 5) | odsyła | reguła pola zdejmuje tożsamość wizyty, zostaje gwiazdka („Flota ze starszą aplikacją”) |
+| **razem w zakresie** | **10** (podstawowy 4, koalescencja 4, flota 2) | **32 / 30 / 61** | | „w CI 4 wiersze” z wiersza 4 planu = profil podstawowy |
+| wpis Kosza zostaje tylko na jednym urządzeniu, gdy późniejsza wersja nie weszła, bo karta jest tu usunięta | — | różnice W1: podstawowy ziarno 31; pełny 3, 16; „bez połączenia” 113, 114 | nie — E3-PR0d2 | decyzja 1 z 2026-11-19 |
+| R4n samodzielnie | 0 | 0 / 0 / 0 | nie | decyzja 2a, dowód widoku |
+| D7 (sam opis, `koszISO`, `revPary`) | pełny 1 | 0 / 19 / 1 | nie | decyzja 2a, dowód widoku |
+| tożsamość wizyty nieobecna w ładunku | 0 | 0 | nie | reguła pola |
+| samo wygaśnięcie treści (30 dni) | 0 (bez skoku zegara) | 0 | nie | filtr samego wygaśnięcia; testy zegara |
+| nagrobek porządkowania bez treści tylko na jednym urządzeniu (pełna kopia od starszej aplikacji) | — | p. 6 „nagrobek retencji bez ochrony wizyt…” | nie | decyzja 2 z 2026-11-19 |
+| notatki (`pnote` spoza ładunku, `pnotetomb` w ładunku) | `pnote` 10 (podstawowy), 6 (koalescencja) | `pnote` 27 / 9 / 32; `pnotetomb` 4 / 2 / 0 | nie, pomiar | decyzja z 2026-11-17: notatki bez odsyłania |
+
+Z włączonym przełącznikiem na prawdziwym kodzie liczba kopert `stomb` jest inna (34 / 34 / 58, „Długie przebiegi”), bo
+koperty odsyłania zmieniają długość kolejek i całą dalszą historię losowania; miarą zgodności jest model odsyłania
+w uprzęży (0 kopert ponad model i 0 wierszy nieodesłanych w każdej partii).
+
+**Uśpienie.** Ten sam przełącznik co w E3-PR0c (`Bob_bramkaEcha`), czytany raz w `Bem_zastosuj`; odsyłanie wpisów
+siedzi wewnątrz `Bem_zastosujEcho` i `Bev_zastosujZEchem`, więc bez dodatkowego odczytu przełącznika ani bramki.
+Powód: decyzja 1a z 2026-11-15 — jeden ukryty przełącznik odsyłania (w Ustawieniach w E3-PR0g, dla wszystkich
+w E3-PR0i); drugi klucz dałby drugi przełącznik i drugi wpis polityki prywatności bez zysku. Polityka prywatności bez
+zmian (klucz ten sam; wpis razem z przełącznikiem w Ustawieniach, E3-PR0g).
+
+**Przy wyłączonym przełączniku (co nowego).**
+
+| Skutek | Wartość | Dowód |
+|---|---|---|
+| odczyty przy `applyEncryptedEvent` | jak po E3-PR0c: jedno pole okna `VILDA_EVENT_ECHO` i jeden `getItem('vilda-event-echo-v1')`; 0 odczytów metadanych konta, `VILDA_EVENT_LOG`, `indexedDB` i `crypto` ponad dziś | test „przełącznik wyłączony” przy kopertach wpisów (4 zastosowania, 4 odczyty pola i 4 klucza); test uśpienia (bramka przy wyłączonym przełączniku) |
+| wynik, zapisy sklepu, wiersze kolejki, operacje `crypto.subtle` | te same co w kopii sejfu bez odsyłania (koperty z gwiazdką i z poprawką, wpis w ładunku i spoza) | test równoważności w `sync-odsylanie` |
+| zapis bazowy (`tests/fixtures/dziennik-zapis-bazowy.json`) | fikstura i test bez zmian; przy zamkniętej bramce `Bem_zastosujEcho` kończy się przed odczytem metadanych | `sync-dziennik-zapis-bazowy` |
+| test A ≡ B | wszystkie literały bajt w bajt (`ZNANE_ODSYL`, `ZNANE_W1`, `ZNANE_WYR`, `P6_LITERALY`, `P6_WYR`, floty, stres, determinizm, test wejściowy E3-PR0c bez przełącznika) | przebieg CI |
+| program długich przebiegów | dziennik operacji każdego ziarna taki sam jak przed E3-PR0d: podstawowy 40/40, „bez połączenia” 40/40, pełny 20/20, floty 221 i 276 po 10/10 | porównanie z pomiarem na `bdbfafcd` |
+| literał miejsc poza blokiem P-DZIENNIK-ZDARZEN, test haków | bez zmian (poza blokiem nic, także komentarze) | test uśpienia, test haków |
+
+**Bez pętli.**
+1. Odesłanie tylko przy różnicy w kanonie wobec stanu przed scaleniem i wobec ładunku — nigdy na samym fakcie zapisu.
+2. Wpis po scaleniu to złączenie półkraty wpisu Kosza (`Bpk_polacz`: przemienne, łączne, idempotentne): odbiorca bez
+   nowego składnika zapisuje to, co przyszło, i nic nie odsyła; z nowym — odsyła raz złączenie ściśle większe. Łańcuch
+   kończy się po liczbie niezależnych zmian.
+3. Kanon wycina to, czego scalanie świadomie nie uzgadnia (opis D7, postać gwiazdki R4n) — w porównaniu odbijałoby się
+   bez końca.
+4. Reguła pola niezależna od źródła; filtr samego wygaśnięcia bez zegara.
+
+Testy wejściowe, testy zegara i test odbiorcy po „Usuń pacjenta” sprawdzają odbiorcę: odesłany wpis przyjmuje i nic
+nie odsyła (trzy urządzenia — C też nic).
+Długie przebiegi z przełącznikiem: brak spoczynku 0, ponowne wysłanie tej samej wartości 0.
+
+**Model haków i odsyłania w teście A ≡ B.** Przy włączonym przełączniku wpisy `stomb` rejestru łańcucha z zastosowania
+partii (odbiorca z bieżącą aplikacją) to odsyłanie wpisów (wpis Q z polem `src: 'echo'`). Model odsyłania z licznika
+(`modelEcha`) liczy też `stomb`: warstwa wykonalna, klucz = `snapshotId`, bez samego wygaśnięcia treści (ten sam filtr co
+w sejfie — tylko w modelu; warstwy licznika i ich literały bez zmian); w partii wiersz zostaje tylko, gdy po całej
+partii jest wpis tej wersji (builder działa po partii — test „wpis zmieniony i zdjęty w jednej partii”). Wartość dla
+„ponownego wysłania tej samej wartości” to kanon wpisów koperty bez `seq`. Warstwa „odesłane” porównuje koperty `stomb`
+z wierszami modelu. Sprawdzian `savedAtISO` (pole opisu, które zostaje w porównaniu, bo wersja zachowuje je przy
+poprawce i „Przywróć”): wiersze modelu `stomb`, które istnieją tylko przez `savedAtISO` — 0 w CI (ziarno 1 profilu
+podstawowego i ziarno 8 koalescencji z przełącznikiem) i 0 ręcznie (podstawowy: 1504 porównania, 105 wierszy modelu;
+pełny: 825 / 65; „bez połączenia”: 362 / 153). Przy wyłączonym przełączniku model jest pusty, a literały bez zmian.
+W ręcznym trybie ścisłym nowa klasa różnicy par: nagrobek porządkowania starszej aplikacji z pełnej kopii — status
+`WYR.OGRANICZENIE_STARSZEJ` (`tests/support/ostatnia-zmiana.mjs`), warunek kształtu starszej aplikacji (powód
+`retencja`, bez treści, bez `visitIdentity` w eksporcie i bez `visitCipher` w surowych metadanych), dowód (wpisu nie ma
+w oknie Kosza żadnej strony, wersja wizyty jest w karcie na obu). Klasa działa tylko w trybie ścisłym, więc literał
+p. 6 przy wyłączonym przełączniku się nie zmienia; test w CI woła sprawdzian trybu ścisłego wprost.
+
+**Długie przebiegi** (ręcznie, 2026-11-19, kod tego PR na kopii drzewa, każdy przy obu stanach przełącznika:
+`E2_AB_ECHO=1` i bez; CPU dzielone z drugim przebiegiem). Koperty `stomb` według klas licznika: w ładunku / spoza.
+
+| Przebieg (ziarna) | Przełącznik | Koperty `snap` | Koperty `stomb` | Ponad model / nieodesłane | Ponowne wysłanie | Brak spoczynku, W3, W4 | Punkty W1 z różnicą (klasy) | Wyrocznia: bez klasy | Czerwone przypadki | Czas |
+|---|---|---|---|---|---|---|---|---|---|---|
+| podstawowy (1–40) | włączony | 71 | 34 (R4a 3/7; R4a′ 11/13) | 0 / 0 | 0 | 0, 0, 0 | 3 (R4n 1; R5 2 — ziarno 31) | 0 | ziarna 1 i 4 — tylko literał `ZNANE_W1` (różnice R2 znikają) | 225 s |
+| podstawowy (1–40) | wyłączony | 0 | 0 | — | — | 0, 0, 0 | 11 (R2 4, R4a 4, R4n 1, R5 2) | 0 | — | 215 s |
+| pełny (1–20) | włączony | 31 | 34 (R4a 2/4; R4a′ 9/14; R5 3/0; inne 0/2) | 0 / 0 | 0 | 0, 0, 0 | 7 (R5 5 — ziarna 3 i 16; nagrobek karty opróżnionej 2) | 16 — tylko ziarno 8 (niżej) | ziarno 8 | 135 s |
+| pełny (1–20) | wyłączony | 0 | 0 | — | — | 0, 0, 1 | 13 (D7 7, R5 5, miejsce wizyty 1, rekord złożony 1) | 0 | ziarno 5 (W4, tak samo na bazie) | 125 s |
+| „dłuższa praca bez połączenia” (101–140) | włączony | 95 | 58 (R4a 8/13; R4a′ 11/18; R5 3/2; inne 3/0) | 0 / 0 | 0 | 0, 0, 0 | 3 (R5 2 — ziarna 113, 114; R4n 1 — ziarno 134, widok Kosza równy) | 0 | 104, 128, 132, 137 — tylko W2s „inne” R4a′ (niżej) | 130 s |
+| „dłuższa praca bez połączenia” (101–140) | wyłączony | 0 | 0 | — | — | 0, 0, 0 | 19 (R2 8, R4a′ 5, R5 4, D7 4) | 0 | 104, 123, 128, 132, 137 — R4a′ w W1 i W2s „inne” (tak samo na bazie) | 121 s |
+| flota 221 (1–10) | włączony | 5 | 0 | 0 / 0 | — | 0, —, 0 | — | 0 | ziarna 2 i 3 — tylko literały floty (jak po E3-PR0c) | 31 s |
+| flota 221 (1–10) | wyłączony | 0 | 0 | — | — | 0, —, 0 | — | 0 | — | 30 s |
+| flota 276 (1–10) | włączony | 26 | 2 (ziarno 5: R4a przez 276, od A i od B) | 0 / 0 | — | 0, —, 0 | — | 0 | ziarno 2 — tylko literał floty (jak po E3-PR0c) | 44 s |
+| flota 276 (1–10) | wyłączony | 0 | 0 | — | — | 0, —, 0 | — | 0 | — | 38 s |
+
+- R4a i R4a′ w W1 znikają: podstawowy R4a 4 → 0, „bez połączenia” R4a′ 5 → 0; naruszenia wyroczni „R4a | W1” 4 → 0
+  i „R4a′ | W1” 5 → 0. D7 w W1 też maleje (pełny 7 → 0, „bez połączenia” 4 → 0). Punkty W1 obu stanów nie odpowiadają
+  sobie jeden do jednego (inna historia losowania), więc to spodziewany skutek, nie dowód.
+- Zostają do E3-PR0d2 różnice „wpis Kosza tylko na jednym urządzeniu” po „Przywróć” na jednym urządzeniu i „Usuń
+  pacjenta” (albo „Scal pacjentów”) na drugim: podstawowy ziarno 31, pełny 3 i 16, „bez połączenia” 113 i 114.
+- R4n w W1 (podstawowy ziarno 21 przy obu stanach, „bez połączenia” ziarno 134 z przełącznikiem): klasa R4n wymaga
+  równego okna Kosza obu stron, a „Przywróć” na klonach daje ten sam wynik — widok taki sam.
+- Profil pełny, ziarna 21–40 (dodatkowo, oba stany): czerwone 37, 38, 39 przy obu stanach przełącznika (utrata dwóch
+  wizyt po „Scal pacjentów”, E4b w W4 z identycznym dziennikiem i bez kopert odsyłania, karta częściowa) — nie skutek
+  odsyłania; ziarno 21 czerwone tylko bez przełącznika.
+- Przebiegi szły na kodzie sprzed ostatniej poprawki (sprawdzenie usuwania konta po odczycie wpisów „po”); po niej
+  profile podstawowy, pełny i „bez połączenia” z przełącznikiem powtórzone: te same wiersze modelu (105 / 65 / 153) i te
+  same czerwone ziarna.
+
+**Diagnoza przed PR** (prawdziwy kod, oba stany przełącznika).
+- **Profil pełny, ziarno 8, z włączonym przełącznikiem:** 16 naruszeń wyroczni bez klasy — ta sama znana usterka co po
+  E3-PR0c („Usuń pacjenta” zwróconej starej karty po „Scal pacjentów”, naprawa w E3-PR0e; świat 885 ręcznego bloku
+  znanych usterek). Odtworzenie tego samego ciągu operacji bez kopert odsyłania (te same 103 mutacje, dostawy krótsze
+  tylko o koperty odsyłania) gubi te same dwie wizyty w tych samych punktach, z tymi samymi klasami wyroczni.
+- Przybliżenie z pomiaru (uprząż dopisywała koperty wpisu z modelu) dawało nowe czerwone ziarno 14 i E4b w W4 ziaren 5
+  i 14. Na prawdziwym kodzie ziarna 5 i 14 są zielone, a E4b w ziarnach 1–20 nie występuje — przybliżenie szło innym
+  ciągiem operacji (w ziarnie 14 od kroku 14: 1 koperta w przybliżeniu, 2 w sejfie, model uprzęży zgodny z sejfem).
+- **W2s w „dłuższej pracy bez połączenia”.** Sprawdzian widzi koperty odsyłania nadawcy jak zdarzenia: z przełącznikiem
+  punktów W2s „inne” jest 4 zamiast 9, ziarno 123 zielenieje. Zostają ziarna 104, 128, 132 i 137, wszystkie w tym
+  samym kształcie: nadawca poprawił wizytę, potem usunął jej kartę, a odbiorca bez wiedzy dał wizytę do Kosza.
+  Poprawka czeka w kolejce nadawcy, ale jego pełna kopia już jej nie ma (wizyta zniknęła z kartą), więc odbiorca po
+  zdarzeniach ma we wpisie Kosza nowszą treść niż odbiorca po pełnej kopii i W2s zgłasza różnicę. Zaraz potem odbiorca
+  odsyła wpis i po spoczynku oba urządzenia mają nowszą treść: W1 bez różnicy, wyrocznia bez naruszeń. Ta sama strata
+  przy samych pełnych kopiach jest już w literale p. 6 („R4a′ | bloby”). Sprawdzianu nie zmieniono — cztery czerwone
+  zostają widoczne (do akceptacji niżej).
+
+**Flota ze starszą aplikacją.**
+- 221 (bez dziennika zdarzeń): wysyła pełne kopie i delty; delta idzie u bieżącego urządzenia przez `applyEncryptedEvent`
+  bez pola `event`, a pełna kopia — z pominięciem tej funkcji, więc odesłania po nich nie ma i obiegu przez 221 nie ma
+  z konstrukcji. Ręcznie (ziarna 1–10, z przełącznikiem): 0 kopert `stomb`. W scenariuszu „Drugi rząd przez 221”
+  2 wiersze R4a powstają między bieżącymi urządzeniami; do 221 nic nie trafia (221 nie czyta zdarzeń).
+- 276 (zdarzenia, SW 1.1.530–1.1.534): wysyła własne `stomb` (Kosz, porządkowanie), ale nie odsyła. Dodatkowy obieg:
+  telefon ze starszą aplikacją (C) daje v do Kosza bez wiedzy o gwiazdce (albo poprawce), którą A dało v wcześniej, a B
+  już zna. A i B scalają `stomb` od C, każde składa wpis z tutejszą gwiazdką (albo treścią) i każde go odsyła — dwie
+  koperty z jednego zdarzenia 276. A dostaje kopertę B, B — kopertę A; obie nic nie zmieniają, więc nic nie odsyłają.
+  C scala obie swoimi regułami i nie odsyła. Nowe scenariusze floty w CI z przełącznikiem sejfu na A i B („R4a przez
+  276: gwiazdka na A, Kosz na 276”, „R4a′ przez 276: poprawka na A, Kosz na 276”): 2 koperty, 1 obieg wymiany A–B, Kosz
+  na A, B i C taki sam (20 kg z gwiazdką albo 40 kg), 0 ponownych wysłań; pary z C różnią się tylko tożsamością wizyty
+  (klasa floty „tożsamość wizyty nieznana starszej aplikacji”); w tych scenariuszach nie ma nagrobka karty, więc ani
+  hak H1, ani pełna karta. Ręcznie (ziarna 1–10): 2 koperty `stomb` (ziarno 5, od A i od B); punktów spoczynku
+  z drugim obiegiem wymiany 8 z 56 (bez przełącznika 2 z 53), bez punktów ponad limit.
+- Koperta od 276 nie ma `visitIdentity` we wpisie; reguła pola zdejmuje ją z porównania, zostaje różnica gwiazdki.
+- Odesłanie nie leczy różnicy z 276, gdy reguły 276 dają inny wynik. Każde nowe zdarzenie 276 może wywołać najwyżej
+  jedno odesłanie wpisu od każdego bieżącego urządzenia; odesłany wpis niesie kartę bez wersji, a gdy wywoła na 276
+  pełną kartę z haka H1, u bieżących urządzeń to zwykłe zastosowanie z najwyżej jednym odesłaniem — skończone, bez pętli.
+  Znane ograniczenie starszej wersji (decyzja 2 z 2026-11-16).
+- Literały floty w CI (poza dwoma nowymi scenariuszami) opisują przebieg z wyłączonym przełącznikiem; przepisze je
+  E3-PR0i.
+
+**Wygasanie Kosza i okno nagrobków.** Treść wpisu znika 30 dni od chwili Kosza (`BKZ_KOSZ_MS`), wpis (jak każdy nagrobek
+wersji) — 365 dni od późniejszej z chwil Kosza i przycięcia (`Bkz_ostatnie`); porównania są ostre (dokładnie na
+granicy treść i wpis zostają, 1 ms później znikają). „Okno nagrobków” z wiersza 4 planu to te 365 dni — jedyne okno
+nagrobka wersji w kodzie. Testy deterministyczne na sztucznym zegarze (gwiazdka spoza ładunku, chyba że napisano
+inaczej):
+
+| Przypadek | Wynik |
+|---|---|
+| Kosz + 30 d − 1 ms i dokładnie + 30 d | jeden wiersz `stomb` v z treścią i gwiazdką; odbiorca nic nie odsyła; okno Kosza i „Przywróć” takie same na obu |
+| Kosz + 30 d + 1 ms | jeden wiersz bez treści, z gwiazdką; odbiorca nic nie odsyła; okno Kosza i „Przywróć” takie same na obu (okno puste) |
+| wpis z treścią po granicy, zdarzenie z v bez nowości | scalanie zapisuje wpis bez treści, 0 wierszy (samo wygaśnięcie) |
+| odbiorca po granicy dostaje wpis z treścią, bez innej różnicy | zapis bez treści, 0 wierszy (samo wygaśnięcie względem ładunku) |
+| granica w trakcie scalania (zegar przestawiony przy szyfrowaniu treści z ładunku w fazie Kosza) | poprawka z gwiazdką: jeden wiersz bez treści, z gwiazdką; sama poprawka: 0 (treść wygasła przy zapisie) |
+| rozjazd zegarów: odbiorca (A) po granicy, nadawca (B) przed | A odsyła raz wpis bez treści, z gwiazdką; B zachowuje swoją treść i odsyła raz złączenie z gwiazdką; A nic; B po granicy przy kolejnym zdarzeniu z v — 0 |
+| Kosz połączony z późniejszym przycięciem (unieważnienie Kosza zmienia też powód i chwile) | jeden wiersz `stomb` — to nie samo wygaśnięcie |
+| ostatnia chwila + 365 d − 1 ms | jeden wiersz bez treści, z gwiazdką |
+| ostatnia chwila + 365 d + 1 ms | wpisu nie ma: 0 wierszy i 0 emisji `stomb`; v wraca do karty ze starej koperty (z gwiazdką), bez wiersza `snap` — dziś tak samo i przy pełnej wymianie |
+
+Wpis, który wygaśnie między scaleniem a dopisaniem, nie daje wiersza („brak encji”).
+
+Przy rozjeździe zegarów nadawca też odsyła raz (jego złączenie z gwiazdką jest nowe) — jedna wiadomość więcej, niż
+zakładał projekt, bez utraty i bez pętli; jej ukrycie wymagałoby zegara w porównaniu (do akceptacji niżej). Test A ≡ B
+z zegarem (bez wyroczni, bo wyrocznia nie zna wygasania Kosza): R4a — spoczynek tuż przed granicą (2 obiegi, 2 koperty,
+Kosz 20 kg z gwiazdką na obu), skok zegara tuż za granicę, drugi spoczynek — wpisy tracą treść bez odsyłania, okno
+Kosza puste na obu; R4a′ tuż po granicy — treść wygasła na obu, nic do odesłania; model zgodny w każdej partii, W1 bez
+różnic.
+
+**Testy.** Dane wyłącznie fikcyjne („Testowy Jan…”, „Pacjent Testowy 1”, masy 20–45 kg), bez PESEL; prawdziwy
+`vilda_vault.js` i `vilda_sync.js` w uprzęży (okno `tests/support/okno-magazynu.mjs`, atrapa IndexedDB, bliźniaki na
+kopii baz atrapy, kopia sejfu z licznikiem odczytów bramki).
+- `tests/unit/sync-odsylanie.test.mjs` (92 przypadki, było 49): wpis, który scalanie zapisało inaczej, niż był i niż
+  przyszedł (gwiazdka i poprawka, każda w ładunku i spoza ładunku — wpis złożony, jeden wiersz `stomb`); bez odsyłania
+  (sam opis wpisu z wyższym `rev` i innym `seq`, sama postać gwiazdki w treści, koperta starszej aplikacji bez pola
+  `gwiazdka` przy przypiętym i odpiętym rejestrze — z dowodem: okno Kosza i „Przywróć” takie same, koperta bez
+  tożsamości wizyty, powtórka zdarzenia bez odszyfrowania, ładunek równy stanowi, wpis z ładunku przyjęty bez zmian
+  także przy odwrotnej kolejności kluczy, same składniki lokalne, wpis zdjęty scaleniem); wersja i wpis w jednym
+  scaleniu (`snap`, potem `stomb`); łączenie wpisów kolejki; `busy` po zapisie listy Kosza (odesłanie przy pierwszej
+  próbie, ponowienie bez duplikatu); zmiana sesji, blokada, usuwanie konta i strażnik tożsamości w odczycie wpisów
+  „przed” i „po”, zmiana sesji w odczycie wersji „przed” (bez wejścia do odczytu wpisów), zmiana sesji w porównaniu
+  wpisów, „Usuń konto” tego konta ruszone w chwili wznowienia odczytu wpisów „przed” (`session-changed`, scalanie nie
+  rusza) i „po” (`applied`, bez odsyłania wersji i wpisów), strażnik formy odczytu; błędy osobno dla każdego kandydata
+  (nieczytelna tożsamość „po” i „przed”, cały odczyt „przed”, cały odczyt „po”, oba); stałe, kanon, reguła pola
+  (para po karcie, nie po kolejności) i samo wygaśnięcie wycięte z kodu sejfu; drogi bez odsyłania (notatka, stara
+  delta, delta, pełna kopia), przełącznik wyłączony przy kopertach wpisów (równoważność z kopią sejfu bez odsyłania),
+  zamknięta bramka i „Komputer w pracy”; wartownik treści (emisja odsyłania wpisu z samym identyfikatorem); odbiorca po
+  „Usuń pacjenta” (karta zostaje usunięta); samo wygaśnięcie a unieważnienie Kosza; zegar (tabela wyżej). Przypadek
+  „zdarzenie w otwartym kroku” ma dopisany wprost własny wiersz `stomb` z „Usuń do Kosza” (bez emisji odsyłania).
+  Kopia sejfu tylko w pliku testu ma nowe miejsca jednorazowego fikcyjnego błędu: początek wyszukiwania wersji pod
+  innymi kartami w fazie Kosza (`Bkz_obceKarty`; faza kończy się `busy` dopiero po zapisie listy) i początek odczytu
+  wpisów (`Bev_stanKosza`); wariant z listą błędów dla kolejnych wejść.
+- `tests/unit/sync-dziennik-wlasnosciowy.test.mjs` (test A ≡ B; 226 przypadków, było 197; 21 pominiętych): p. 6
+  z włączonym przełącznikiem (światy 942–949: R4-a i R4-a′ bez różnicy i bez naruszeń wyroczni, R4n z dowodem, różnice
+  „wpis Kosza tylko na jednym urządzeniu” w R5-0, R5-E1 i „R5-E1, C wysyła tylko zdarzenia” z polem naprawy E3-PR0d2,
+  „Kosz i Przywróć na B, porządkowanie i Scal pacjentów P → Q na A” bez różnicy, nagrobek retencji „tylko B”); test
+  wejściowy E3-PR0d (światy 936–941: gwiazdka A–B, poprawka A–B, poprawka przy trzech urządzeniach, każdy przy obu
+  stanach przełącznika; wpis Kosza na każdym urządzeniu, treść wierszy kolejki, obiegi, koperty, W1); wpis zmieniony
+  i zdjęty w jednej partii (świat 956); tryb ścisły — klasa nagrobka porządkowania starszej aplikacji (światy 952–955:
+  kształt starszej aplikacji — klasa z dowodem; ten sam nagrobek w kształcie bieżącej wersji, bez powodu porządkowania
+  albo bez dowodu — przyczyna W1; założenie klasy: porządkowanie bieżącej aplikacji zapisuje tożsamość wizyty także
+  wersji zapisanej bez niej); granica 30 dni (światy 950–951); ziarno 8 koalescencji z przełącznikiem; dwa scenariusze
+  floty z przełącznikiem sejfu (R4a i R4a′ przez 276); test wejściowy E3-PR0c z przełącznikiem — literał przepisany
+  (z retencją A i B odsyłają też wpis retencji: 3 koperty i 2 obiegi przy dwóch urządzeniach, 4 koperty przy trzech).
+  Przy wyłączonym przełączniku wszystkie literały bajt w bajt.
+- `tests/unit/sync-dziennik-uspienie.test.mjs` (53): forma `Bem_zastosujEcho` — po jedynym `await` dokładnie dwa
+  `Bem_zmiana`, najpierw `'snap'` z `kol.echo`, potem `'stomb'` z `kol.kosz`, oba z `kol.s`; samokontrola wariantami
+  zła (forma E3-PR0c, `'stomb'` przed `await`, dwa `'stomb'`, `'stomb'` przed `'snap'`, inny rodzaj, `kol.echo` zamiast
+  `kol.kosz`); literał miejsc poza blokiem bez zmian.
+- `tests/unit/sync-zdarzenia-buildery.test.mjs` (reguła „bez zegara”): sześć nowych funkcji części `Bev_`
+  sklasyfikowanych jako odsyłanie (domknięcie przez strzeżony adapter, bez zegara, szyfrowania, scalania, eksportu
+  i zapisów).
+- `tests/unit/licznik-odsylania.test.mjs` (38, było 29): model odsyłania wpisów (R4a w ładunku i spoza, R4a′, R5
+  z zapisem; R4n, D7, sama tożsamość wizyty, samo wygaśnięcie, stara delta i wpis zdjęty — pusto), warstwa „odesłane”
+  z kopertą `stomb`, sprawdzian wierszy tylko przez `savedAtISO`. Uprząż: `tests/support/licznik-odsylania.mjs`
+  (`modelEcha` dla `stomb`, `wierszeTylkoSavedAtISO`).
+- `tests/unit/sync-dziennik-zapis-bazowy.test.mjs` — bez zmian (zielony).
+- e2e `tests/e2e/sync-zdarzenia-drenaz.spec.mjs` (Chromium, 2 nowe): klucz `'1'` — drugi kontekst (B) daje v gwiazdkę,
+  A ma v w Koszu (później); prawdziwy drenaż `vilda_sync.js` na A daje w kolejce A dokładnie jeden wiersz `stomb` v
+  z gwiazdką i treścią, a B (klucz `'1'` sprawdzony) przyjmuje go bez nowego wiersza; bez klucza — ten sam drenaż,
+  gwiazdka wpisu tylko na A, w kolejce A bez wiersza `stomb`.
+
+**Czerwone na bazie** (`4bff32aa`, sejf bez odsyłania wpisów, testy i uprząż tego PR): `sync-odsylanie` 27 z 43 nowych
+(zielone z natury: drogi i przypadki „bez odsyłania”, przełącznik wyłączony, zamknięta bramka i „Komputer w pracy”,
+zmiana sesji w odczycie wpisów „przed” i w trakcie `Le`, samo wygaśnięcie przy kopercie bez nowości, odbiorca po
+granicy bez innej różnicy — strażniki „bez zmian”), test A ≡ B 14 (12 z 29 nowych — każdy z „echo sejfu ≠ model”
+albo z kontrolą „sejf odesłał wpis” — i 2 przypadki testu wejściowego E3-PR0c z przepisanym literałem; przypadki przy
+wyłączonym przełączniku, różnice do E3-PR0d2, nagrobek retencji i klasa trybu ścisłego — zielone), test uśpienia 1
+(forma `Bem_zastosujEcho`), buildery 1 (reguła „bez zegara”), e2e drenażu 1 z 2 (klucz `'1'`). Licznik odsyłania — 0
+(funkcje uprzęży).
+Pełny `vitest run` na sejfie bazy z testami sprzed poprawek po przeglądzie kodu: czerwone wyłącznie w czterech plikach
+tego PR (39 przypadków; reszta — 31 529 — zielona).
+
+**Mutanty** (kopia drzewa, jedna zmiana tekstu, pliki celu i test A ≡ B, część także e2e drenażu i pełny plik A ≡ B): 86
+mutantów kodu odsyłania wpisów i jego otoczenia (85 na kodzie przed poprawkami po przeglądzie i 1 nowy dla poprawki).
+Wynik: 80 czerwieni co najmniej jeden test CI, 6 przeżywa — wszystkie równoważne albo nieosiągalne. Rodziny: kanon (bez
+zdjęcia całego opisu D7 i każdego jego pola osobno, bez `seq`, bez postaci gwiazdki i każdego z jej dwóch pól, kanon
+zdejmuje też `gwiazdka`, bez sortowania elementów, JSON bez sortowania kluczy w całym sejfie i tylko w nowej części);
+reguła pola (bez niej, bez `payload.visit`, bez `visitIdentity`, „każde pole nieobecne w ładunku”, para po kolejności
+zamiast po karcie, zdejmowanie także z elementu bez pary); porównanie (bez warunku „przed”, bez porównania z ładunkiem,
+bez porównania surowych elementów, bez porównania postaci wysyłkowej, surowe zamiast postaci wysyłkowej, bez warunku
+„wpis jest po scaleniu”); samo wygaśnięcie (bez filtra w obu miejscach i w każdym osobno, filtr także przy innej zmianie
+pól, dopasowanie bez karty, warunek odwrócony); kandydaci (tylko `snapshotTombstones`, tylko `patients[].snapshots[]`);
+błędy (błąd „po” bez odsyłania albo tylko kandydatów z wpisem przed lub w ładunku, błąd „przed” jako koniec bez
+odsyłania, nieczytelna tożsamość „po” bez odsyłania, nieczytelny stan „przed” jako pominięcie zamiast porównania z
+ładunkiem); sesja i konto (odczyt wpisów bez każdej z dwóch kontroli sesji i bez obu, odczyt wpisów „przed” po zmianie
+sesji w odczycie wersji, bez kontroli sesji po odczycie wpisów „przed”, kody z odczytu wpisów „przed” ignorowane — oba i
+każdy osobno, bez sprawdzenia usuwania konta po odczycie wpisów „przed” i „po”, kod usuwania konta z odczytu wpisów „po”
+nie zdejmuje odesłania wersji, kod z odczytu wersji „po” nie zatrzymuje odczytu wpisów, lista wpisów przy zmienionej
+sesji — także z emisją bez sesji scalania, odsyłanie przy zmianie sesji w trakcie `Le`); bramki i przełącznik (odczyt
+metadanych przy ładunku bez kandydatów i przed bramką, drugi odczyt przełącznika albo bramki w części `Bem_` i drugi
+odczyt przełącznika w części `Bev_`); emisja (treść wpisu zamiast identyfikatora, `'stomb'` przed `'snap'`, `'stomb'` z
+listą wersji, bez sesji scalania, emisja usunięta, jako `'pnote'`, podwójna, czekanie na wpis łańcucha); drogi
+(odsyłanie po starej delcie i notatek; po pełnej kopii i po delcie — tylko jako mutanty poza blokiem); zegar (w
+porównaniu i w filtrze samego wygaśnięcia — reguła „bez zegara” testu builderów); uprząż i klasa trybu ścisłego (model
+bez `stomb`, `jestEcho` bez `stomb`, model bez warunku „wpis po całej partii”, klasa bez warunku kształtu starszej
+aplikacji, bez powodu porządkowania i braku treści, bez dowodu, dowód bez „wizyta w karcie na obu”). Drugi odczyt
+przełącznika albo bramki, zegar w porównaniu i odsyłanie po pełnej kopii albo delcie łapią też strażniki formy (test
+uśpienia: identyfikatory części bloku poza blokiem i reguła domknięcia części `Bem_`; reguła „bez zegara” testu
+builderów). Mutanty, które w pierwszym przebiegu przeżyły (nieczytelny stan „przed” jako pominięcie, JSON bez sortowania
+tylko w nowej części, para reguły pola po kolejności, bez sprawdzenia usuwania konta po odczycie wpisów „przed”,
+odsyłanie przy zmianie sesji w trakcie `Le`, trzy mutanty klasy trybu ścisłego i model bez warunku „wpis po całej
+partii”), dostały testy działania czerwone na mutancie. Przegląd kodu wskazał lukę: „Usuń konto” ruszone w trakcie
+odczytu wpisów „po” nie zdejmowało odsyłania (skutku dla danych nie było — dopisanie odmawiało); kod poprawiony
+(sprawdzenie strażnika po tym odczycie), test czerwony na kodzie sprzed poprawki i na nowym mutancie, który tę kontrolę
+usuwa. Przeżywa 6, równoważne: błąd poza porównaniem kandydata (poza `try` kandydata nic nie rzuca); odczyt wpisów „po”
+bez kontroli sesji przed nim (pierwsza instrukcja odczytu to kontrola sesji — strażnik formy przypina tę kolejność);
+porównanie surowych elementów bez sortowania (inna kolejność tych samych elementów kończy się porównaniem posortowanych
+kanonów, różni się tylko liczba odszyfrowań); klasa trybu ścisłego bez sprawdzenia `visitIdentity` w eksporcie albo bez
+sprawdzenia `visitCipher` w surowych metadanych (bez `visitCipher` tożsamość w eksporcie daje tylko czytelna treść,
+którą odrzuca warunek „bez treści”; nieczytelny `visitCipher` przerywa eksport) i dowód bez „poza oknem Kosza” (nagrobek
+porządkowania nie trafia do okna Kosza). Pierwsza kontrola sesji w odczycie wpisów (zmiana sesji dokładnie między
+odczytem wersji a odczytem wpisów jest prawdziwą drogą nieosiągalna) zostaje jako obrona; przypina ją strażnik formy.
+
+**Czas pliku A ≡ B** (lokalnie, sam plik, dwa przebiegi równolegle — baza i ten PR — w ustawieniach CI): 136 s
+(226 zdanych, 21 pominiętych) wobec 132 s na `4bff32aa` (197 zdanych, 21 pominiętych); wcześniejsza para przy większym
+obciążeniu, na kodzie sprzed poprawek po przeglądzie kodu: 159 s wobec 152 s. Dochodzi p. 6 z przełącznikiem
+(8 scenariuszy), test wejściowy (6 przebiegów), dwa scenariusze floty, zegar, ziarno koalescencji, tryb ścisły i jedna
+partia. Cel ok. 180 s w CI (w CI po E3-PR0c: 117,9 s) — zmierzyć w opisie PR.
+
+**Kontrola granicy obrazu sejfu.** Zmiana stoi wyłącznie w bloku P-DZIENNIK-ZDARZEN (poza blokiem nic, także komentarze;
+bez nowych wywołań `Bem_`/`Bob_` poza blokiem; literał miejsc poza blokiem bez zmian); fragment natywny i blok trwałych
+wizyt bez zmian, zero nazw `Bem_`/`Bob_`/`Bev_` we fragmencie natywnym. Przeliczone 7 skrótów w 5 plikach: baza
+trwałych wizyt `417ac2f4…` i obraz `ed2f7832…` (`runtime/durable-visits-v1/manifest.json`,
+`tools/visits-vault-delta.mjs`, `tests/unit/visits-vault-boundary.test.mjs`) oraz `baseVaultSHA256` `e0fdbf35…`,
+`integratedVaultSHA256` `d9f5b5e9…` i `BASE` natywnej przestrzeni klinicznej (`runtime/clinical-workspace-v1/manifest.json`,
+`tools/check_clinical_workspace_boundary.mjs`, z opisem E3-PR0d w komentarzu); `node tools/visits-vault-delta.mjs`
+i `node tools/check_clinical_workspace_boundary.mjs` — zielone. `vilda_sync.js` i jego piny bez zmian. Sejf się
+zmienił — przy następnej pracy w `vilda-source` weź nową bazę z `runtime/clinical-workspace-v1/manifest.json` na
+`audyt`.
+
+**Ograniczenia.**
+- **Wpis Kosza zostaje tylko na jednym urządzeniu, gdy późniejsza wersja nie weszła, bo karta jest tu usunięta**
+  (decyzja 1 z 2026-11-19; naprawa w E3-PR0d2). Na jednym urządzeniu „Przywróć” (albo gwiazdka) wizyty po Koszu, na
+  drugim — zanim ta zmiana doszła — „Usuń pacjenta” albo „Scal pacjentów”. Zmiana dochodzi, karta jest tu usunięta,
+  więc wersja nie wchodzi, a wpis zostaje: ukryty wpis tylko na jednym urządzeniu (okno Kosza go nie pokazuje). Gdy
+  karta wróci późniejszą zmianą trzeciego urządzenia, wizyta jest w Koszu na jednym urządzeniu, a w karcie na drugim —
+  do pełnej synchronizacji (R5-E1). Odsyłanie „scalanie zapisało inaczej” tego nie łapie, bo scalanie niczego nie
+  zapisało. W teście A ≡ B: p. 6 R5-0, R5-E1 i „R5-E1, C wysyła tylko zdarzenia” z włączonym przełącznikiem (pole
+  naprawy E3-PR0d2); długie przebiegi: podstawowy ziarno 31, pełny 3 i 16, „bez połączenia” 113 i 114. Pełna wysyłka
+  działa do etapu 3.
+- **Nagrobek porządkowania ze starszej aplikacji z pełnej kopii** (decyzja 2 z 2026-11-19): niewidoczny nagrobek bez
+  treści tylko na jednym urządzeniu zostaje (znane ograniczenie starszej wersji; naprawa — aktualizacja urządzeń);
+  wizyta jest w karcie na obu urządzeniach, okno Kosza go nie pokazuje; w etapie 3 kolejkuje go manifest. Zasięg klasy
+  w trybie ścisłym: bieżąca aplikacja zapisuje tożsamość wizyty w nagrobku porządkowania także dla starych zapisów bez
+  osobnej tożsamości (wylicza ją przy odczycie karty) — test przypina to założenie; ten sam kształt dałaby tylko wizyta
+  z nieczytelną treścią przycięta na trzecim urządzeniu, ze skutkiem jak w decyzji 2 (wizyta zostaje na obu). Klasa
+  działa tylko w ręcznym trybie ścisłym testu, nigdy na danych.
+- **Nieczytelna tożsamość wpisu** po scaleniu: odesłanie kończy się odmową z kodem i ponawia się w przeglądzie kolejki,
+  jak dziś przy własnym Koszu; pełna wysyłka stoi z tym samym kodem. Bez zmiany klinicznej.
+- **Bardzo stary wpis bez zapisanej tożsamości wizyty** (tożsamość liczona z treści): po 30 dniach tożsamość znika razem
+  z treścią, więc taki wpis może raz pojechać bez treści — jedna zbędna wiadomość bez skutku dla danych i bez pętli.
+  Filtr samego wygaśnięcia zostaje wąski (tylko treść), żeby nie ukryć prawdziwej różnicy.
+- **Kandydaci tylko z ładunku.** Wpisy, które scalanie zmienia bez ich identyfikatora w ładunku (tutejsze wersje karty
+  usuwanej zdarzeniem `ptomb`, wpisy ruszane wyszukiwaniem wersji pod innymi kartami przy kopercie `stomb`), nie są
+  kandydatami. W pomiarze i w długich przebiegach takich wierszy nie było; strażnikiem jest model w teście A ≡ B
+  (wiersz modelu spoza kandydatów = niezgodność).
+- **Koszt.** Zastosowanie koperty z kandydatami czyta metadane konta (z całą listą Kosza i szyframi treści) jeszcze
+  dwa razy, przed scaleniem i po nim: koperta `snap` bez wpisu Kosza — 8 transakcji sklepu metadanych zamiast 6
+  w sejfie bez odsyłania (+33 %). Skracanie odczytu „po”
+  odrzucone: scalanie może dodać wpis kandydata, którego przed nie było (wersja przegrywa z Koszem). Koperta `stomb`
+  z treścią niesie całą wizytę (32–45 KiB), a większość odesłań jest zbędna (drugie urządzenie składa ten sam wpis),
+  choć nieszkodliwa. Każda koperta `stomb` uruchamia u odbiorcy wyszukiwanie wersji pod innymi kartami, więc odesłania
+  robią to częściej (te same reguły co przy pełnej kopii). Pomiar w stresie drogi zdarzeń — E3-PR0h, przed włączeniem
+  dla wszystkich (E3-PR0i).
+- **Okna utraty jak w E3-PR0c:** zmiana sesji albo blokada w trakcie scalania, zamknięcie dokumentu między zapisem `Le`
+  a dopisaniem, ten sam stan najpierw pełnym pobraniem — odesłania nie ma; zabezpieczenie: pełna wysyłka do etapu 3,
+  potem manifest punktu kontrolnego.
+- **Rozjazd zegarów przy granicy 30 dni** — jedna wiadomość więcej (wyżej).
+- **Klasyfikator testu A ≡ B nazywa R4a także sam opis wpisu Kosza żywej karty**, który decyzja 2a nazywa D7. W pomiarze
+  takich różnic nie było; gdyby się pojawiły — poprawka testu (sam opis → D7) w E3-PR0h, bez odsyłania.
+- **Starsza aplikacja** — „Flota ze starszą aplikacją” wyżej.
+
+**Do akceptacji właściciela przy PR** (rozstrzygnięcia spoza projektu i decyzji, wariant najbezpieczniejszy dla
+danych). Rekomendacja przy każdym punkcie: przyjąć.
+1. **Rozszerzenie decyzji 9 z 2026-10-29.** Odsyłanie wpisów Kosza jest częścią tej samej czwartej drogi ze scalania do
+   kolejki co odsyłanie poprawionych wizyt: po włączeniu odsyłania urządzenie, które zastosowało zmianę z innego
+   urządzenia i zapisało inny wpis Kosza, niż był i niż przyszedł, wyśle ten wpis pozostałym urządzeniom. Reguły
+   scalania bez zmian.
+2. **Ten sam przełącznik co odsyłanie poprawionych wizyt** (decyzja 1a z 2026-11-15) — bez drugiego klucza i bez
+   drugiego wpisu polityki prywatności.
+3. **„Okno nagrobków” z planu = 365 dni** (jedyne okno nagrobka wersji w kodzie); treść wpisu znika po 30 dniach.
+4. **Samo wygaśnięcie treści po 30 dniach nie jest odsyłane** — ani względem stanu przed scaleniem, ani względem wpisu,
+   który właśnie przyszedł (urządzenie po granicy nie odsyła wpisu tylko dlatego, że u niego treść wygasła; nadawca
+   zachowuje swoją treść do swoich 30 dni). Każda inna różnica (np. gwiazdka) dalej idzie. Porównanie bez zegara.
+5. **Dwa zegary po obu stronach granicy 30 dni** — nadawca też odsyła raz swoje złączenie z gwiazdką (jedna wiadomość
+   więcej, bez utraty i bez pętli); ukrycie wymagałoby zegara w porównaniu.
+6. **Bardzo stary wpis bez zapisanej tożsamości wizyty** może po 30 dniach raz pojechać bez treści (wariant ostrożny;
+   reguła samego wygaśnięcia nie obejmuje tożsamości).
+7. **R4n i D7 bez odsyłania** (decyzja 2a) — dowód widoku wykonany: przy równym rejestrze gwiazdki okno Kosza
+   i „Przywróć” są na obu urządzeniach takie same (także koperta starszej aplikacji); kanon bez zmian, pytania nie ma.
+8. **Nieczytelna tożsamość wpisu po scaleniu — odsyłamy** (zasada E3-PR0c: błąd nie zdejmuje odesłania); skutek: odmowa
+   z kodem, bez wiersza, ponowienie w przeglądzie kolejki, jak dziś przy własnym Koszu.
+9. **Kody „konto usuwane” i „strażnik tożsamości niedostępny” z odczytu wpisów** zatrzymują scalanie jak te same kody
+   z odczytu wersji; „konto usuwane” w odczycie „po” (także ruszone w trakcie ostatniego odczytu) zdejmuje całe
+   odsyłanie — wersje i wpisy.
+10. **Dodatkowy obieg przez 276** opisany i zmierzony: z jednego zdarzenia 276 odsyłają oba bieżące urządzenia
+    (2 koperty, 1 obieg); 221 — 0 z konstrukcji.
+11. **Klasa nagrobka porządkowania starszej aplikacji tylko w ręcznym trybie ścisłym** (decyzja 2 z 2026-11-19), a nie
+    w zwykłym opisie różnic — inaczej zmieniłby się literał p. 6 przy wyłączonym przełączniku; w CI osobny test:
+    nagrobek w kształcie starszej aplikacji dostaje klasę, ten sam w kształcie bieżącej wersji — czerwień. Zasięg klasy
+    — „Ograniczenia”; klasy nie zawężono.
+12. **Cztery czerwone ziarna ręcznego profilu „dłuższa praca bez połączenia” z przełącznikiem** (104, 128, 132, 137 —
+    tylko W2s „inne” R4a′; W1 i wyrocznia czyste) zostają widoczne, bez wyjątku w sprawdzianie. Inna możliwość:
+    osobną zmianą testu wąska kategoria „nowsza treść wpisu Kosza tylko w zdarzeniach nadawcy” (różnica w drugą stronę
+    dalej czerwieni).
+13. **Kolejka ścisła:** E3-PR0d2 wchodzi zaraz po E3-PR0d, więc E3-PR0e czeka na niego (plan, wiersz 5).
+14. **Notatki i ich nagrobki bez odsyłania** (decyzja z 2026-11-17) — tylko pomiar.
+15. **Sprzeczność „karty częściowej”**: plan („Zakres” E3-PR0: między bieżącymi zamyka ją hak H1) a ALGORITHMS (wpis
+    P-DZIENNIK-ZDARZEN, E2-PR3b, „Świadomie bez haka H1”; naprawa w etapie 3) — poza E3-PR0d, do rozstrzygnięcia przed
+    odbiorem (E3-PR0h).
+
+**Wejście do kolejnych PR.**
+- **E3-PR0d2** (zaraz po E3-PR0d, decyzja 1 z 2026-11-19): odsyłanie wpisu Kosza, który zostaje tylko na jednym
+  urządzeniu, gdy późniejsza wersja nie weszła, bo karta jest tu usunięta. Szkic warunku: ładunek niesie wersję S tej
+  wizyty pod kartą P; po scaleniu wersji nie ma pod żadną kartą; po scaleniu jest wpis tej wersji, z którym S by
+  wygrała (`Bkz_wygrywa`, `Bkz_zmiana`, `Bgw_stan` — dopiero w tym PR); karty wpisu nie ma po scaleniu, a karta P
+  przegrała tutaj z nagrobkiem pacjenta (bez tego warunek łapie też `busy` przed zapisem wersji żywej karty i wpis pod
+  żywą kartą po „Scal pacjentów”). Reguła patrzy na stan, a nie na zapis scalania, więc każda powtórka zdarzenia z tą
+  wersją odeśle wpis jeszcze raz: w teście A ≡ B osobny licznik „odesłanie ze stanu”, wyłączony z „ponownego wysłania
+  tej samej wartości”, z górną granicą i literałem. Pomiar przed PR (podstawowy 40, „bez połączenia” 40, pełny 20,
+  z przełącznikiem): czy znikają różnice ziaren 31; 113, 114; 3, 16 (i w pełnym 21–40: 39, 40), ile kopert i odesłań
+  ze stanu, czy nowe czerwone; kolejność przy trzech urządzeniach i przy „Usuń pacjenta” w otwartym kroku (wpis `stomb`
+  przed nagrobkiem karty). Model w liczniku — z kodu wyciętego z sejfu ze strażnikiem „wycięte = sejf”. Testy: odesłanie
+  ukrytego wpisu i odbiorca po usunięciu karty, karta żywa, wersja wcześniejsza niż Kosz, `busy` przed zapisem wersji
+  żywej karty, wpis pod żywą kartą po „Scal pacjentów”, wstrzymane „Usuń pacjenta”; literały p. 6 R5-0, R5-E1 i „R5-E1,
+  C wysyła tylko zdarzenia” z przełącznikiem przepisane na wynik bez różnicy.
+- **E3-PR0e**: profil pełny z przełącznikiem — ziarno 8 (jak po E3-PR0c) i ziarna 37, 38 i 39 profilu pełnego 21–40
+  (czerwone przy obu stanach przełącznika: utrata po „Scal pacjentów”, E4b w W4, karta częściowa) jako wejście.
+- **E3-PR0h**: koszt dodatkowych odczytów metadanych (8 zamiast 6 transakcji na kopertę z kandydatami) i duplikatów
+  wpisów (dwa urządzenia odsyłają ten sam wpis), rozmiar kopert `stomb` z treścią, stres drogi zdarzeń z odsyłaniem
+  wpisów; klasyfikator testu A ≡ B: sam opis wpisu Kosza żywej karty jako D7, nie R4a; sprzeczność „karty częściowej”
+  (plan a ALGORITHMS) przed odbiorem; ewentualna kategoria W2s „nowsza treść wpisu Kosza tylko w zdarzeniach nadawcy”.
+- **E3-PR0i**: literały A ≡ B, floty i `ZNANE_W1` przepisane na wynik z odsyłaniem wersji i wpisów.
+- Każdy PR: nowe miejsce, w którym scalanie zmienia wpis Kosza bez jego identyfikatora w ładunku — sprawdzić model
+  w teście A ≡ B (strażnik kandydatów); nowe pole wpisu zapisywane zawsze przez bieżącą wersję — dopisać do
+  `Bev_ECHO_ZAWSZE_KOSZA` i `POLA_ZAWSZE.stomb` licznika; nowe pole opisu wpisu — do `Bev_KANON_KOSZA` i `POLA_D7`
+  (testy równości); zmiana `vilda_vault.js` poza fragmentem natywnym — przeliczenie skrótów kontroli granicy.
+
+**Cofnięcie** = rewert PR, bez migracji (przy wyłączonym przełączniku nic nie powstaje; wiersze odsyłania to zwykłe
+wiersze `stomb`; rewert cofa też skróty kontroli granicy).
+
+**Gdzie w kodzie.** `vilda_vault.js`, blok P-DZIENNIK-ZDARZEN (6686–10204): część `Bev_` — `Bev_ECHO_ZAWSZE_KOSZA`,
+`Bev_KANON_KOSZA`, `Bev_kandydaciKosza`, `Bev_stanKosza`, `Bev_kanonKosza`, `Bev_samoWygasniecie`, `Bev_echoKoszaT`,
+`Bev_echoKosza` (7627–7755), `Bev_zastosujZEchem` (7756–7830: odczyt wpisów „przed” i „po”, flaga usuwania konta,
+`kol.kosz`); część `Bem_` — `Bem_zastosujEcho` (10189–10197: drugie `Bem_zmiana`); komentarze: nagłówek bloku, opis
+`Bev_zastosuj`, opis odsyłania wersji, nagłówek części emisji, opis `Bem_zastosuj`. Poza blokiem bez zmian.
+
+**Wersje.** `vilda_vault.js` 281 → 282, `vilda_chrome.js` 305 → 306 i `vilda_session_bridge.js` 221 → 222 (wstrzykują
+sejf), SW 1.1.553 → 1.1.554 — `npm run podbij-wersje`; baza `origin/audyt` `4bff32aa` (po vildaclinic/vilda-calc#1000).
+Bez nowego pliku w pamięci offline.

@@ -192,9 +192,10 @@
 // gwiazdki w treści, samej tożsamości wizyty i samego wygaśnięcia treści; wiersz tylko, gdy po partii jest wpis tej
 // wersji). Bloki na końcu pliku: p. 6 z włączonym przełącznikiem (światy 942–949; R4-a, R4-a′ bez różnicy; różnica
 // „wpis Kosza tylko na jednym urządzeniu” po „Przywróć” i „Usuń pacjenta” zostaje do E3-PR0d2), test wejściowy (936–941),
-// tryb ścisły — nagrobek retencji starszej aplikacji z pełnej kopii (decyzja 2 z 2026-11-19; 952), granica 30 dni treści
-// wpisu (950–951, bez wyroczni) i ziarno koalescencji 8; dwa scenariusze floty z przełącznikiem sejfu (R4a i R4a′ przez
-// 276; światy 822, 823). Przy wyłączonym przełączniku wszystkie literały bez zmian.
+// tryb ścisły — nagrobek retencji starszej aplikacji z pełnej kopii (decyzja 2 z 2026-11-19; 952–955), wpis zmieniony
+// i zdjęty w jednej partii (956), granica 30 dni treści wpisu (950–951, bez wyroczni) i ziarno koalescencji 8; dwa
+// scenariusze floty z przełącznikiem sejfu (R4a i R4a′ przez 276; światy 824, 825). Przy wyłączonym przełączniku
+// wszystkie literały bez zmian.
 //
 // KOLEJNOŚĆ W KROKU (E2-PR3a2, sprawdzana na emiterach): snap (także wersje przeniesione pod kartę celu „Scal pacjentów”
 // i głowy scalenia), potem stomb, potem ptomb, potem pnote, pnotetomb, note, notetomb, plist, plisttomb, pref, pk, pktomb,
