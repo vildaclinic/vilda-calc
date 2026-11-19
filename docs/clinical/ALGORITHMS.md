@@ -44286,6 +44286,78 @@ i pojawia się podpowiedź dawek z istniejącej tabeli ChPL.
 **Wdrożenie.** Od razu przy wydaniu; sejf bez zmian. **Cofnięcie** = rewert PR: dawka znów dokładnie jak wpisana,
 bez podpowiedzi.
 
+## Pomiary z dziennika leczenia na siatkach i w analizie trajektorii Karty pacjenta (P-OTYLOSC-SIATKI, SW 1.1.559, `vilda_cykle_leczenia.js` 11, `vilda_trajectory_analysis.js` 46, `vilda_auth_ui.js` 574, `vilda_auth_ui.css` 86, 2026-11-19)
+
+**Decyzje właściciela** (2026-11-19, temat C, makieta „Leczenie otyłości — wpisy z dziennika na siatkach”):
+1. masa od pacjenta także w analizie trajektorii (wariant B), nie tylko na siatkach;
+2. wpis zmierzony w gabinecie, dodany bez wizyty — czerwona kropka jak pomiar z wizyty;
+3. romb można wybrać w „Porównaj 2 pomiary”;
+4. na razie tylko Karta pacjenta; później cała aplikacja (siatki ze strony głównej, „Podsumowanie wyników” i inne).
+
+**Stan przed zmianą.** Siatki centylowe, „Porównaj 2 pomiary” i „Analiza trajektorii” w Karcie liczyły się wyłącznie
+z pomiarów osi czasu (wizyty: historia pomiarów i bieżący pomiar ostatniego zapisu). Wpisy z dziennika leczenia — masa
+od pacjenta z „+ Kontynuacja”, wpisy z gabinetu i punkty monitora z wizyt, których nie było w historii pomiarów — nie
+pojawiały się nigdzie poza „Wpisy leczenia”, kafelkiem leczenia i „Postępami” dorosłego. Wpis P-TRAJEKTORIA-DZIENNIK
+wymieniał to jako ograniczenie; ta zmiana je zdejmuje (w Karcie).
+
+**Które wpisy** — `VildaDziennikOtylosci.pomiaryDoSiatek(osCzasu, punkty)` (czytelne źródło, `vilda_cykle_leczenia.js`):
+- z projekcji dziennika (`zloz().punkty`) Włączenie, Kontynuacja i Zakończenie z masą > 0 i wiekiem; wiek = pełne lata
+  i miesiące wpisu (`ageYears·12 + ageMonths`), czyli wiek pomiaru, nie dzisiejszy;
+- **wizyta wygrywa**: wpis pomijany, gdy pomiar osi czasu (albo bieżący pomiar Karty) jest w tym samym miesiącu życia,
+  z tą samą datą albo z tą samą masą (±0,05 kg) do 1 mies. obok (monitor zapisuje wiek w pełnych miesiącach, oś czasu —
+  dokładniej); dwa wpisy z tego samego miesiąca — zostaje późniejszy w kolejności tabeli;
+- wzrost tylko wpisany (> 0); źródło masy i wzrostu z wpisu: „pacjent” tylko, gdy wpis tak mówi, inaczej „gabinet”.
+
+**Widok (Karta pacjenta, zakładka „Siatki centylowe”):**
+- wartość od pacjenta — pomarańczowy romb (`#fff4e0` / `#b45f06`), wartość z gabinetu — kółko jak dotąd; linia
+  przebiegu łączy pomiary z gabinetu (romby leżą obok niej), oś Y obejmuje romby; pełne kółko — ostatni pomiar z gabinetu;
+- wpis bez wzrostu jest tylko na siatce wagi (BMI wyłącznie ze zmierzonego wzrostu);
+- legenda: „pomiary w gabinecie” (dawniej „pomiary pacjenta”) i — gdy są — „pomiary od pacjenta (Wpisy leczenia)”;
+- dymek przy rombie: nagłówek „◇ od pacjenta · wiek”, przy wartości odznaka „pacjent”;
+- „Porównaj 2 pomiary”: romb da się wybrać jako A lub B; panel dopisuje „◇ A/B: pomiar od pacjenta z „Wpisy leczenia””;
+  w punkcie od pacjenta metryka bez pomiaru (np. wzrost, BMI przy samej masie) ma „— brak pomiaru w tym punkcie”
+  zamiast wartości z linii między wizytami;
+- wiek bieżącego pomiaru Karty liczy się jak dotąd z pomiarów wizyt — późniejszy wpis z dziennika go nie przesuwa;
+- po zapisie wpisu w „Wpisy leczenia” siatki, porównanie i analiza rysują się od nowa (bez ponownego otwarcia Karty).
+
+**Analiza trajektorii (wariant B).** Seria analizy (`buildPoints`) dostaje te same pomiary ze źródłem masy i wzrostu.
+Centyle, odcinki, werdykty, okna i tempo liczą się z nimi tymi samymi regułami co dotąd (progi bez zmian). Pasek dostaje
+żeton „w tym N od pacjenta”, a karta metryki liczonej z wartościami od pacjenta — pomarańczowy obrys i podpis
+„z wpisami od pacjenta (N)”.
+
+**Poza zakresem (bez zmian, następny etap — cała aplikacja):** kafelek tempa wzrastania w zakładce „Status”, PDF
+„Pobierz PDF (pełne siatki)” z Karty, siatki i analiza na stronie głównej i w DocPro, karta „Porównanie z poprzednim
+pomiarem”, „Podsumowanie wyników”, Postępy dorosłego (już z dziennika od P-POSTEPY-DZIENNIK). Sejf bez zmian.
+
+**Przypadki syntetyczne** (dane fikcyjne; Testowa Zuzanna ur. 11.04.2013; wizyty 11 l. 63,0 kg / 150,2 cm, 12 l.
+70,5 / 155,0, 13 l. 80,0 / 160,0; bieżący pomiar 13 l. 6 mies. 75,2 / 162,9; Wegovy od 13 lat):
+
+| Przypadek | Wejście | Oczekiwany wynik |
+|---|---|---|
+| SI-1 | masy od pacjenta 10.07 (77,8), 12.08 (76,9); wpis z gabinetu 11.09 (76,0) | siatka wagi: romby w 159 i 160 mies., kółko w 161, bieżący pomiar raz (162); wzrost i BMI bez nowych punktów; legenda z rombem; żeton „w tym 2 od pacjenta”, karta wagi „z wpisami od pacjenta (2)” |
+| SI-2 | kursor na rombie 76,9 kg | „◇ od pacjenta · 13,3 r.ż.”, „Waga 76,9 kg … pacjent” |
+| SI-3 | porównanie: A = wizyta 13 l., B = romb 77,8 kg | „◇ B: pomiar od pacjenta z „Wpisy leczenia””; Wzrost i BMI w B — „brak pomiaru w tym punkcie” |
+| SI-4 | „+ Kontynuacja” 12.11.2026, 74,6 kg (pacjent) | romb w 163 mies. od razu; „w tym 3 od pacjenta” |
+| SI-5 | pacjent bez dziennika | siatki i analiza jak dotąd, bez rombów i podpisów; telefon bez poziomego przewijania |
+| reguła | Włączenie 13 l. 0 mies. (80 kg) przy wizycie 156,4 mies.; Kontynuacja 13 l. 6 mies. przy bieżącym 162 | pominięte (wizyta wygrywa) |
+| reguła | wpis z datą wizyty albo z jej masą miesiąc obok | pominięty |
+
+**Wpływ kliniczny.** Zmienia się wynik analizy trajektorii wagi (i BMI/wzrostu, gdy wpis ma wzrost) w Karcie pacjenta:
+do serii wchodzą wpisy z dziennika, w tym masa ważona przez pacjenta poza gabinetem, która bywa mniej dokładna (inna
+waga, ubranie, pora dnia). Centyl i SDS ostatniego punktu, werdykt odcinka, „najpoważniejszy odcinek” i chip okresu
+leczenia mogą się zmienić po wpisie od pacjenta — dlatego taka karta ma podpis „z wpisami od pacjenta (N)”, a punkt
+romb i odznakę „pacjent”. Na siatkach mogą też pojawić się czerwone kropki z punktów monitora z wizyt, których nie było
+w historii pomiarów (to pomiary z gabinetu). Progi i reguły werdyktów bez zmian. Decyzja kliniczna należy do lekarza.
+
+**Testy.** Dane wyłącznie fikcyjne.
+- `tests/unit/otylosc-siatki.test.mjs` (11): `pomiaryDoSiatek` (wizyta wygrywa, ta sama data/masa obok, ten sam
+  miesiąc, źródła, wzrost); czytelne funkcje Karty wycięte z `vilda_auth_ui.js` (`Ob_dzSiatki`, `Ob_zrMetryki`) na
+  prawdziwym module dziennika; analiza trajektorii (`analyze`, `buildPatientHtml`, `buildPoints`) ze źródłem punktów
+  i bez dziennika (jak dotąd).
+- e2e `tests/e2e/otylosc-siatki.spec.mjs` SI-1…SI-5.
+
+**Wdrożenie.** Od razu przy wydaniu; sejf bez zmian. **Cofnięcie** = rewert PR: siatki i analiza znów tylko z wizyt.
+
 ## Dziennik zdarzeń: odsyłanie wpisów Kosza po zastosowaniu zmiany z innego urządzenia — uśpione (P-ZBIEZNOSC-ZDARZEN, E3-PR0d, SW 1.1.559, `vilda_vault.js` 282, 2026-11-19)
 
 **Zmiana kliniczna: NIE (uśpiona).** Wzory, progi, jednostki, interpretacje, reguły scalania (`Le`), format kopii,

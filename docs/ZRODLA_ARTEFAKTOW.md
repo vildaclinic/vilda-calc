@@ -2218,6 +2218,40 @@ przeciw `.liquid-ios26 button {…!important}` i regułom przycisków na telefon
 **Granice.** Zapis dawki, sejf i dziennik bez zmian; bez stylów ustawianych wprost na elementach (`hidden`, klasy,
 `aria-pressed`). Wersje `?v=`, precache i `SW_VERSION` ustawił `npm run podbij-wersje`.
 
+## Łatka P-OTYLOSC-SIATKI — pomiary z dziennika na siatkach i w analizie trajektorii Karty (`vilda_cykle_leczenia.js` 10 → 11, `vilda_trajectory_analysis.js` 45 → 46, `vilda_auth_ui.js` 573 → 574, `vilda_auth_ui.css` 85 → 86, 2026-11-19, decyzje właściciela)
+
+Czytelne źródła: `vilda_cykle_leczenia.js` — `pomiaryDoSiatek` (eksport `VildaDziennikOtylosci`);
+`vilda_trajectory_analysis.js` — `buildPoints` (źródło masy i wzrostu punktu), `analyzeMetric` (`odPacjenta`),
+`metaStripHtml` (żeton), `patientMetricCardHtml` (podpis), style `.vtap-pac*`; `vilda_auth_ui.js` — czytelny blok
+P-OTYLOSC-SIATKI po `Ob_dzPowiadom`: `Ob_dzSiatki`, `Ob_zrMetryki`, `Ob_dzMaPacjenta`, `Ob_dzRysujPunkty`,
+`Ob_dzLegendaPac`, `Ob_dzLegenda`, `Ob_dzSiatkiSluchaj`. Opis: `docs/clinical/ALGORITHMS.md`, wpis P-OTYLOSC-SIATKI.
+
+```
+// vilda_auth_ui.js — showPatientCard (zakładka „Siatki centylowe”)
+// 1. po liście pomiarów H:  …H=(k.measurements||[]).filter(…)} + var GdHWizyty=H,GdDzPunktyAkt=null,GdHSiatki=H;
+// 2. było:  function we(){oe(ae),Ht=0;
+//    jest:  function we(){var H=…Ob_dzSiatki(GdHWizyty,GdDzPunktyAkt||Ob_dzPunkty(s,GdNotatki),{ageMonths:I,weight:M,
+//           height:D,sex:it})…;GdHSiatki=H;Ob_dzLegenda(Ct,H);oe(ae),Ht=0;      (lokalne H — wszystkie użycia w we())
+// 3. wiek bieżącego pomiaru: var On=(H||[]).map(…Ma…) → var On=(GdHWizyty||[]).map(…Ma…)
+// 4. przed ae._vildaAgeWin=…: Ob_dzSiatkiSluchaj(t,Ct,function(Gs){GdDzPunktyAkt=Gs.punkty;we()});
+// 5. _tjm (wejście analizy): …weight:pe.weight} → …weight:pe.weight,zrodloMasy:pe.zrodloMasy,zrodloWzrostu:pe.zrodloWzrostu}
+// 6. legenda: " pomiary pacjenta" → " pomiary w gabinecie" + Ob_dzLegendaPac(GdHSiatki)
+// vilda_auth_ui.js — yn (siatka)
+// 7. H.push({age:E,val:g}) → H.push({age:E,val:g,zr:Ob_zrMetryki(j,t)})
+// 8. var ut=Yo(H,y,x)… ut.forEach(zakres) → Yo(H bez „pacjent”)… ut.concat(wt).forEach(zakres)
+// 9. return wt.forEach(function(j,E){…circle…}) → return Ob_dzRysujPunkty(f,wt,Q,mt,u)
+// 10. _vildaScale.pts: {x,val} → {x,val,zr}
+// vilda_auth_ui.js — vildaSiatkaCrosshair (dymek i porównanie)
+// 11. po visitVal: nowe visitZr(it,vbx) i pacCmp(a,b); wiersz dymka + odznaka .vilda-tip-pac; nagłówek „◇ od pacjenta”
+// 12. statAt: punkt od pacjenta bez tej metryki → null („— brak pomiaru w tym punkcie”, bez wartości z linii)
+// 13. panel.innerHTML=head+ctxH+… → head+ctxH+pacCmp(a,b)+…; style .vilda-tip-pac, .vilda-cmp-ctx.vilda-cmp-pac
+```
+
+`vilda_auth_ui.css`: `.vilda-patient-legend-item.vilda-legend-pac[hidden]` i odstęp rombu w legendzie.
+
+**Granice.** `H` poza `we()` zostaje listą wizyt: kafelek tempa w „Status” (`hvSdsKafelek`) i PDF siatek bez zmian.
+Sejf, dziennik i zapis bez zmian. Wersje `?v=`, precache i `SW_VERSION` ustawił `npm run podbij-wersje`.
+
 ## Łatka P-E2-MENARCHE — estradiol poniżej 18 lat: zakresy dorosłych po 5 latach od menarche (`lab_units_data.js` 42 → 43, `lab_unit_converter.js` 10 → 11, `vilda_lab_packages.js` 10 → 11, `inline_przelicznik_jednostek_00.css` 17 → 18, `przelicznik-jednostek.html`, 2026-11-19, decyzje właściciela)
 
 Opis działania, przypadki, dowody i ograniczenia: `docs/clinical/ALGORITHMS.md`, wpis „LAB-E2-MENARCHE”. Zmiany wprowadzono wprost w artefaktach, czytelnymi blokami; żadnego pliku nie przebudowano z dawnych źródeł ani nie minifikowano ponownie.
