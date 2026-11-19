@@ -224,10 +224,13 @@ function yearsDownText(years) {
 // is the accepted value or null ("not recorded": absent, outside the accepted range or
 // later than the known age). Years are counted from the LOWER bound of the known age,
 // so the whole age interval lies past the threshold when `qualified` is true.
+// `early` (R9): the accepted menarche lies below the descriptor's floor age for the
+// rule (unrounded comparison) — a recorded value that never qualifies, however many
+// years have passed. A descriptor without the floor has no such state.
 function gynecologicalAge(substance, patient) {
   var selection = substance && substance.reference_selection_policy;
   var policy = selection && selection.gynecological_age;
-  var state = { policy: policy || null, applies: false, menarche: null, years: null, qualified: false };
+  var state = { policy: policy || null, applies: false, menarche: null, years: null, early: false, qualified: false };
   patient = patient || {};
   if (!policy || !N(policy.when, patient) || !knownBelowAdultAge(selection.chronological_age, patient)) return state;
   state.applies = true;
@@ -237,7 +240,10 @@ function gynecologicalAge(substance, patient) {
       menarche > policy.menarche_max_years || menarche > patient.age) return state;
   state.menarche = menarche;
   state.years = patient.age - menarche;
-  state.qualified = state.years >= policy.adult_context_after_years - GYNECOLOGICAL_AGE_NOISE_YEARS;
+  var floor = policy.adult_context_min_menarche_years;
+  // A floor that is stated but is not a number qualifies nobody.
+  state.early = floor != null && !(typeof floor === 'number' && menarche >= floor);
+  state.qualified = !state.early && state.years >= policy.adult_context_after_years - GYNECOLOGICAL_AGE_NOISE_YEARS;
   return state;
 }
 
@@ -352,6 +358,9 @@ function sharedPhasePolicy() {
 //   known_minor: the whole known age lies below adult_min_years.
 //   menarche_applicable: this analyte's rule reads menarche for this patient;
 //     menarche_age_years is the accepted value (null = not recorded).
+//   not_qualified_reason: why a girl the rule applies to keeps her Tanner/age rows:
+//     'menarche_not_recorded' | 'below_gynecological_age' (threshold_years not reached) |
+//     'menarche_before_min_age' (menarche below adult_context_min_menarche_years); else null.
 //   phases: selector values that are not available now, each { state, reason }:
 //     'not_applicable' (must not be offered) or 'no_effect' (offered but disabled).
 function referenceContext(substance, patient) {
@@ -361,6 +370,7 @@ function referenceContext(substance, patient) {
     policy_id: null, policy_version: null, life_stage: patient.life_stage || null, basis: null,
     known_minor: false, adult_min_years: null,
     menarche_applicable: false, menarche_age_years: null, menarche_min_years: null, menarche_max_years: null,
+    adult_context_min_menarche_years: null, not_qualified_reason: null,
     years_since_menarche: null, years_since_menarche_text: '', threshold_years: null, basis_pl: '',
     phases: {}
   };
@@ -388,6 +398,8 @@ function referenceContext(substance, patient) {
   context.menarche_age_years = state.menarche;
   context.menarche_min_years = policy.menarche_min_years;
   context.menarche_max_years = policy.menarche_max_years;
+  context.adult_context_min_menarche_years = typeof policy.adult_context_min_menarche_years === 'number' &&
+    isFinite(policy.adult_context_min_menarche_years) ? policy.adult_context_min_menarche_years : null;
   context.threshold_years = policy.adult_context_after_years;
   if (state.menarche != null) {
     context.years_since_menarche = state.years;
@@ -399,8 +411,10 @@ function referenceContext(substance, patient) {
     context.basis_pl = gynecologicalBasisText(state);
     return context;
   }
-  // R2: before the threshold the ordinary cycle phases do not change the range.
-  var reason = state.menarche == null ? 'menarche_not_recorded' : 'below_gynecological_age';
+  // R2 and R9: without the qualification the ordinary cycle phases do not change the range.
+  var reason = state.menarche == null ? 'menarche_not_recorded'
+    : state.early ? 'menarche_before_min_age' : 'below_gynecological_age';
+  context.not_qualified_reason = reason;
   var variants = selection.adult_female_context && selection.adult_female_context.variants;
   (Array.isArray(variants) ? variants : []).forEach(function (variant) {
     if (!context.phases[variant.cycle_phase]) context.phases[variant.cycle_phase] = { state: 'no_effect', reason: reason };

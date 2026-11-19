@@ -106,6 +106,11 @@
       menarche_min_years: 2,
       menarche_max_years: 20,
       adult_context_after_years: 5,
+      // Owner decision no. 5 of 2026-11-19 (R9). Menarche recorded below this age is a
+      // valid entry (menarche_min_years still applies) but never starts the count above:
+      // bleeding before this age is not taken as the start of ovulatory cycles, and the
+      // Tanner/age rows keep flagging an elevated estradiol.
+      adult_context_min_menarche_years: 8,
       // Contexts of the shared selector „Faza cyklu / ciąża” that do not apply below
       // adult_min_years — for every analyte that uses the selector, not only estradiol.
       contexts_not_applicable_below_adult_age: ['postmenopause'],

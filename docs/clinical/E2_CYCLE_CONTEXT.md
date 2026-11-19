@@ -25,9 +25,11 @@ i wieku zachowują dotychczasowe działanie.
 
 > **Uzupełnienie 2026-11-19 (P-E2-MENARCHE, decyzje właściciela).** Obsługa
 > opisana w tym dokumencie obejmuje odtąd także dziewczynkę poniżej 18 lat
-> po 5 latach od menarche: wybrana faza daje wiersz dorosłej, nieznana —
-> **trzy** warianty bez oceny (bez stanu po menopauzie), ciąża — brak
-> zakresu. Przed progiem pediatryczne wiersze stadium i wieku działają jak
+> po 5 latach od menarche, jeżeli menarche wystąpiła w wieku co najmniej
+> 8 lat: wybrana faza daje wiersz dorosłej, nieznana — **trzy** warianty
+> bez oceny (bez stanu po menopauzie), ciąża — brak zakresu. Przed progiem
+> i przy menarche wpisanej przed ukończeniem 8 lat (decyzja właściciela
+> nr 5 z 2026-11-19) pediatryczne wiersze stadium i wieku działają jak
 > dotąd, a zwykłych faz cyklu nie da się wybrać. „Postmenopauza” nie jest
 > proponowana poniżej 18 lat w żadnym badaniu z selektorem „Faza cyklu /
 > ciąża”; ciąża wybrana u nieletniej w estradiolu daje brak zakresu także

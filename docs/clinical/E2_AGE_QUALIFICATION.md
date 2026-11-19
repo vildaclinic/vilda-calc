@@ -29,10 +29,14 @@ Nie wykorzystujemy kolumny źródłowego „Mean age” jako progu wieku.
 > **Uzupełnienie 2026-11-19 (P-E2-MENARCHE, decyzje właściciela).** Granica
 > 18 lat zostaje, ale przestaje być jedyną drogą do zakresów dorosłej
 > kobiety: dziewczynka w wieku na pewno poniżej 18 lat dostaje je po
-> 5 latach od menarche (dolna granica znanego wieku − wiek menarche ≥ 5).
+> 5 latach od menarche (dolna granica znanego wieku − wiek menarche ≥ 5),
+> jeżeli menarche wystąpiła w wieku co najmniej 8 lat (decyzja właściciela
+> nr 5 z 2026-11-19; menarche wpisana przed ukończeniem 8 lat reguły nie
+> uruchamia, niezależnie od liczby lat).
 > Wtedy stadium Tannera nie dobiera jej zakresu, a przy nieznanej fazie
-> wynik ma trzy warianty bez oceny. Przed progiem i bez wpisanego wieku
-> menarche obowiązuje opis z tego dokumentu bez zmian. Poniżej 18 lat nie
+> wynik ma trzy warianty bez oceny. Przed progiem, przy menarche przed
+> ukończeniem 8 lat i bez wpisanego wieku menarche obowiązuje opis z tego
+> dokumentu bez zmian. Poniżej 18 lat nie
 > ma wyboru „Postmenopauza”, a wybrana ciąża daje brak zakresu. Reguła,
 > przypadki, dowody i ograniczenia: [ALGORITHMS.md](ALGORITHMS.md), wpis
 > „LAB-E2-MENARCHE”.
@@ -99,8 +103,8 @@ te wartości z deskryptora. Pozostałe substancje, wiersze stężeń i ich
 
 > **Uzupełnienie 2026-11-19.** Od wersji polityki `2026-11-19.1`
 > (`LabUnitConverter` 2.0.4) obok `chronological_age` jest blok
-> `gynecological_age` (próg lat od menarche); `chronological_age` nie
-> zmieniło się. Formularz dostał jedno lokalne pole „Wiek menarche [lata]”
+> `gynecological_age` (próg lat od menarche i najniższy wiek menarche, od
+> którego reguła działa); `chronological_age` nie zmieniło się. Formularz dostał jedno lokalne pole „Wiek menarche [lata]”
 > dla estradiolu u nieletniej — zdanie „Formularz nie wymaga nowych
 > odpowiedzi” dotyczy stanu z 28.10.2026; pole pozostaje nieobowiązkowe.
 

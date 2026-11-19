@@ -3113,11 +3113,17 @@
         note = 'Wpisany wiek menarche nie jest brany pod uwagę: podaj wartość od ' + plainNumber(reference.menarche_min_years)
           + ' do ' + plainNumber(reference.menarche_max_years) + ' lat, nie większą niż wiek pacjentki.';
       } else if (show && reference.basis !== 'gynecological_age') {
+        // Powód podaje silnik (not_qualified_reason); strona nie porównuje sama wieku menarche z granicą.
         note = reference.menarche_age_years == null
           ? 'Fazy cyklu działają poniżej ' + plainNumber(reference.adult_min_years) + ' lat dopiero po '
             + plainNumber(reference.threshold_years) + ' latach od menarche. Wpisz „Wiek menarche” tutaj (tylko dla tego sprawdzenia) albo na stałe w „+ Dane pokwitaniowe” na stronie głównej.'
-          : 'Fazy cyklu nie zmieniają zakresu estradiolu: od menarche minęło mniej niż '
-            + plainNumber(reference.threshold_years) + ' lat (' + reference.years_since_menarche_text + ').';
+          : reference.not_qualified_reason === 'menarche_before_min_age'
+            // R9 (decyzja właściciela nr 5 z 2026-11-19): menarche przed granicą wieku nie uruchamia reguły.
+            ? 'Fazy cyklu nie zmieniają zakresu estradiolu: menarche przed ukończeniem '
+              + plainNumber(reference.adult_context_min_menarche_years) + ' lat (' + formatMenarcheAge(reference.menarche_age_years)
+              + ') — zostaje zakres dziecięcy.'
+            : 'Fazy cyklu nie zmieniają zakresu estradiolu: od menarche minęło mniej niż '
+              + plainNumber(reference.threshold_years) + ' lat (' + reference.years_since_menarche_text + ').';
       }
       overrideMenarcheNoteEl.textContent = note;
       overrideMenarcheNoteEl.hidden = !note;

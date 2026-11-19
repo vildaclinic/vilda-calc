@@ -67,6 +67,9 @@ describe('dane estradiolu: reguła jest w polityce deskryptora, stężenia bez z
       context_pl: NAGLOWEK_NIELETNIA,
       basis_pl: 'Od menarche: {years} lat (≥ {threshold}) — zakresy estradiolu jak u dorosłej.',
     });
+    // R9 (decyzja właściciela nr 5): granica wieku menarche dla reguły to OSOBNE pole — zakres poprawności wpisu (2–20) zostaje.
+    expect(polityka.gynecological_age.adult_context_min_menarche_years).toBe(8);
+    expect([polityka.gynecological_age.menarche_min_years, polityka.gynecological_age.menarche_max_years]).toEqual([2, 20]);
   });
 
   it('stężenia, wiersze, jednostki i dotychczasowe części polityki są takie jak w bazie (origin/audyt)', () => {
@@ -138,8 +141,9 @@ describe('próg lat od menarche (liczony od dolnej granicy znanego wieku, bez za
     });
   });
 
-  it('granice dopuszczalnego wieku menarche należą do zakresu: 2 i 20 lat są przyjmowane', () => {
-    expect(kontekst(dziewczynka(8, { menarche_age_years: 2 }))).toMatchObject({ menarche_age_years: 2, basis: 'gynecological_age' });
+  it('granice dopuszczalnego wieku menarche należą do zakresu: 2 i 20 lat są przyjmowane (2,0 jako wpis — reguły nie uruchamia, R9)', () => {
+    expect(kontekst(dziewczynka(8, { menarche_age_years: 2 }))).toMatchObject({ menarche_age_years: 2, years_since_menarche: 6,
+      basis: 'chronological_age', not_qualified_reason: 'menarche_before_min_age' });
     expect(kontekst({ sex: 'F', age: 20, life_stage: 'adult', menarche_age_years: 20 })).toMatchObject({ menarche_applicable: false, basis: 'chronological_age' });
     expect(kontekst(dziewczynka(17.5, { menarche_age_years: 17.5 }))).toMatchObject({ menarche_age_years: 17.5, years_since_menarche: 0, years_since_menarche_text: '0,0' });
   });
@@ -238,6 +242,115 @@ describe('R2 i R4 — przed progiem albo bez wpisanej menarche', () => {
   });
 });
 
+describe('R9 — menarche przed ukończeniem 8 lat nie uruchamia reguły (decyzja właściciela nr 5 z 2026-11-19)', () => {
+  // Silnik bez bloku reguły daje wyniki bazy (origin/audyt) — wzorzec „zakres jak dotąd”.
+  const jakWBazie = fixture((d) => { delete d.reference_selection_policy.gynecological_age; }).LabUnitConverter;
+  const FAZY_BEZ_WPLYWU = Object.fromEntries(['follicular', 'ovulation', 'luteal'].map((faza) => [faza, { state: 'no_effect', reason: 'menarche_before_min_age' }]));
+
+  it('7 lat, menarche 2,0 (5 lat od menarche) → zakres jak w bazie przy każdym stadium, bez podstawy „lata od menarche”', () => {
+    for (const tanner of [undefined, 1, 2, 3]) {
+      const p = dziewczynka(7, { ageUpperYears: 8, ageUpperInclusive: false, tanner, menarche_age_years: 2 });
+      expect(kontekst(p), String(tanner)).toMatchObject({ menarche_age_years: 2, years_since_menarche: 5, basis: 'chronological_age', life_stage: 'pediatric', basis_pl: '' });
+      expect(wybierz(p), String(tanner)).toEqual(wybierz(p, jakWBazie));
+      expect(ocen(p, 150), String(tanner)).toEqual(ocen(p, 150, jakWBazie));
+      expect(wybierz(p)).not.toHaveProperty('reference_basis');
+    }
+    expect(wybierz(dziewczynka(7, { menarche_age_years: 2 }))).toMatchObject({ id: 'e2_F_prepubertal_age', matched: true });
+  });
+
+  it('13,0 lat, menarche 7,99 → zakres dziecięcy jak bez wieku menarche; wartość przyjęta, zwykłe fazy „bez wpływu” z własnym powodem', () => {
+    const p = dziewczynka(13, { ageUpperYears: 13 + miesiac, ageUpperInclusive: false, tanner: 4, menarche_age_years: 7.99 });
+    expect(wybierz(p)).toEqual(wybierz({ ...p, menarche_age_years: undefined }));
+    expect(wybierz(p)).toMatchObject({ id: 'e2_F_tanner4', low: 55.14, high: 312.46, matched: true });
+    const c = kontekst(p);
+    expect(c).toMatchObject({ menarche_applicable: true, menarche_age_years: 7.99, adult_context_min_menarche_years: 8, threshold_years: 5,
+      basis: 'chronological_age', life_stage: 'pediatric', basis_pl: '', not_qualified_reason: 'menarche_before_min_age', years_since_menarche_text: '5,0' });
+    expect(c.phases).toEqual({ postmenopause: { state: 'not_applicable', reason: 'below_adult_age' }, ...FAZY_BEZ_WPLYWU });
+  });
+
+  it('13,0 lat, menarche 8,0 → reguła R1: „Od menarche: 5,0 lat (≥ 5)…”, trzy warianty bez oceny; granica należy do reguły, porównanie bez zaokrąglania', () => {
+    const p = dziewczynka(13, { ageUpperYears: 13 + miesiac, ageUpperInclusive: false, tanner: 4, menarche_age_years: 8 });
+    oczekujWariantowNieletniej(wybierz(p));
+    expect(wybierz(p)).toMatchObject({ reference_basis: 'gynecological_age', reference_basis_pl: R1 });
+    expect(kontekst(p)).toMatchObject({ basis: 'gynecological_age', life_stage: 'adult', not_qualified_reason: null, basis_pl: R1,
+      phases: { postmenopause: { state: 'not_applicable', reason: 'below_adult_age' } } });
+    expect(wybierz({ ...p, cycle_phase: 'luteal' })).toMatchObject({ id: 'e2_female_luteal', low: 200, high: 770 });
+    // 7,999999 to nadal „przed ukończeniem 8 lat” — wartość nie jest zaokrąglana do granicy.
+    expect(kontekst({ ...p, menarche_age_years: 7.999999 })).toMatchObject({ basis: 'chronological_age', not_qualified_reason: 'menarche_before_min_age' });
+    expect(wybierz({ ...p, menarche_age_years: 7.999999 }).id).toBe('e2_F_tanner4');
+  });
+
+  it('16 lat, menarche 7,9 albo 3,0 (8,1 i 13 lat od menarche) → zakres dziecięcy; E2 450 pmol/L nadal „powyżej normy” 0–290', () => {
+    for (const menarche of [7.9, 3, 2]) {
+      const p = dziewczynka(16, { ageUpperYears: 17, ageUpperInclusive: false, tanner: 5, menarche_age_years: menarche });
+      expect(wybierz(p), String(menarche)).toEqual(wybierz({ ...p, menarche_age_years: undefined }));
+      expect(wybierz(p), String(menarche)).toEqual(wybierz(p, jakWBazie));
+      expect(ocen(p, 450), String(menarche)).toMatchObject({ status: 'above', low: 0, high: 290 });
+      expect(ocen(p, 450)).not.toHaveProperty('reference_basis');
+      expect(kontekst(p)).toMatchObject({ menarche_age_years: menarche, not_qualified_reason: 'menarche_before_min_age', phases: FAZY_BEZ_WPLYWU });
+    }
+    expect(kontekst(dziewczynka(16, { menarche_age_years: 7.9 })).years_since_menarche_text).toBe('8,1');
+  });
+
+  it('taka dziewczynka + zwykła faza albo postmenopauza → nic nie zmieniają (R2, R3); + ciąża → brak zakresu jak u dorosłej (R4)', () => {
+    const p = dziewczynka(16, { tanner: 5, menarche_age_years: 3 });
+    const bez = dziewczynka(16, { tanner: 5 });
+    for (const cycle_phase of ['follicular', 'ovulation', 'luteal', 'postmenopause']) {
+      expect(wybierz({ ...p, cycle_phase }), cycle_phase).toEqual(wybierz(p));
+      expect(wybierz({ ...p, cycle_phase }), cycle_phase).toEqual(wybierz({ ...bez, cycle_phase }));
+      expect(ocen({ ...p, cycle_phase }, 150), cycle_phase).toEqual(ocen(bez, 150));
+    }
+    for (const cycle_phase of CIAZA) {
+      const range = wybierz({ ...p, cycle_phase });
+      expect(range, cycle_phase).toEqual(wybierz({ ...bez, cycle_phase }));
+      expect(range).toEqual(wybierz({ sex: 'F', age: 30, life_stage: 'adult', cycle_phase }));
+      expect(range).toMatchObject({ id: 'estradiol-matched-reference-only', low: null, high: null, reference_context_required: false, context_pl: BRAK_DLA_KONTEKSTU });
+      expect(ocen({ ...p, cycle_phase }, 3000)).toMatchObject({ status: 'no_interpretation', low: null, high: null });
+    }
+    // Wpis poniżej zakresu poprawności (1,99) to nadal „brak wpisu”, nie R9.
+    expect(kontekst(dziewczynka(16, { menarche_age_years: 1.99 }))).toMatchObject({ menarche_age_years: null, not_qualified_reason: 'menarche_not_recorded' });
+  });
+
+  it('pakiet: 16 lat, menarche 3,0, E2 450 pmol/L → jak dotąd: ocena zakresem Tannera V, bez noty o kontekście i bez wiersza o menarche', () => {
+    const Model = win.VildaLabPackages;
+    const wiersz = (patient) => Model.evaluateRow({ converter: Conv, snapshot: win.VildaLabRangeSnapshot, data: win.LabUnitsData,
+      patient, capturedAtISO: '2026-06-17T10:00:00.000Z', analyteId: 'estradiol', raw: '450', unit: 'pmol/L' });
+    const zKarty = (extra) => ({ sex: 'F', age: 16, ageUpperYears: 17, ageUpperInclusive: false, tanner: 5, cycle_phase: null,
+      time_of_day: null, test_protocol: null, method: null, life_stage: 'pediatric', ...extra });
+    const row = wiersz(zKarty({ menarche_age_years: 3 }));
+    expect(row).not.toHaveProperty('contextRequired');
+    expect(row).not.toHaveProperty('contextBasis');
+    expect(row.view).toMatchObject({ text: 'powyżej normy', population: e2.reference_ranges_si.find((r) => r.id === 'e2_F_tanner5').context_pl });
+    expect(row.view).toEqual(wiersz(zKarty({})).view);
+    expect(row.range.range).toEqual(wiersz(zKarty({})).range.range);
+    // Dla porównania: ta sama dziewczynka z menarche 11,0 dostaje kartę jak dorosła.
+    expect(wiersz(zKarty({ menarche_age_years: 11 }))).toMatchObject({ contextRequired: true, contextBasis: R1 });
+  });
+
+  it('granica jest daną deskryptora: inna liczba przesuwa granicę, brak pola = brak granicy, pole nieliczbowe nie kwalifikuje nikogo', () => {
+    const z = (zmiana) => fixture((d) => { zmiana(d.reference_selection_policy.gynecological_age); }).LabUnitConverter;
+    const granica9 = z((g) => { g.adult_context_min_menarche_years = 9; });
+    const p85 = dziewczynka(14, { menarche_age_years: 8.5 });
+    expect(kontekst(p85)).toMatchObject({ basis: 'gynecological_age', years_since_menarche_text: '5,5' });
+    expect(kontekst(p85, 'estradiol', granica9)).toMatchObject({ basis: 'chronological_age', adult_context_min_menarche_years: 9, not_qualified_reason: 'menarche_before_min_age' });
+    expect(wybierz(p85, granica9).id).toBe('e2_F_latepubertal_age');
+    expect(kontekst(dziewczynka(14, { menarche_age_years: 9 }), 'estradiol', granica9).basis).toBe('gynecological_age');
+    const granica2 = z((g) => { g.adult_context_min_menarche_years = 2; });
+    const siedem = dziewczynka(7, { menarche_age_years: 2 });
+    expect(kontekst(siedem, 'estradiol', granica2)).toMatchObject({ basis: 'gynecological_age', adult_context_min_menarche_years: 2, not_qualified_reason: null });
+    const bezPola = z((g) => { delete g.adult_context_min_menarche_years; });
+    expect(kontekst(siedem, 'estradiol', bezPola)).toMatchObject({ basis: 'gynecological_age', adult_context_min_menarche_years: null });
+    for (const zla of ['8', Number.NaN, true, {}]) {
+      const zepsuta = z((g) => { g.adult_context_min_menarche_years = zla; });
+      const p = dziewczynka(15, { tanner: 5, menarche_age_years: 10 });
+      expect(kontekst(p, 'estradiol', zepsuta), String(zla)).toMatchObject({ basis: 'chronological_age', not_qualified_reason: 'menarche_before_min_age', adult_context_min_menarche_years: null });
+      expect(wybierz(p, zepsuta).id, String(zla)).toBe('e2_F_tanner5');
+    }
+    // Zakres poprawności wpisu jest niezależny od granicy reguły.
+    expect(kontekst(dziewczynka(16, { menarche_age_years: 1.99 }), 'estradiol', granica2).menarche_age_years).toBeNull();
+  });
+});
+
 describe('granica 18 lat i populacje, których reguła nie dotyczy (R8)', () => {
   it.each(FAZY)('faza %s: 17,99 roku po progu i 18,0 lat dają ten sam zakres — bez skoku w dniu 18. urodzin', (cycle_phase, id, low, high) => {
     const przed = wybierz(dziewczynka(17.99, { menarche_age_years: 12, cycle_phase }));
@@ -311,6 +424,7 @@ describe('LabUnitConverter.referenceContext — o regułę pyta strona', () => {
       policy_id: 'estradiol-matched-reference-only', policy_version: '2026-11-19.1',
       life_stage: 'adult', basis: 'gynecological_age', known_minor: true, adult_min_years: 18,
       menarche_applicable: true, menarche_age_years: 10, menarche_min_years: 2, menarche_max_years: 20,
+      adult_context_min_menarche_years: 8, not_qualified_reason: null,
       years_since_menarche: 5, years_since_menarche_text: '5,0', threshold_years: 5, basis_pl: R1,
       phases: { postmenopause: { state: 'not_applicable', reason: 'below_adult_age' } },
     });
@@ -320,6 +434,7 @@ describe('LabUnitConverter.referenceContext — o regułę pyta strona', () => {
     expect(kontekst(dziewczynka(13, { tanner: 4, menarche_age_years: 12 }))).toMatchObject({
       life_stage: 'pediatric', basis: 'chronological_age', known_minor: true, menarche_applicable: true,
       menarche_age_years: 12, years_since_menarche: 1, years_since_menarche_text: '1,0', threshold_years: 5, basis_pl: '',
+      not_qualified_reason: 'below_gynecological_age',
       phases: {
         postmenopause: { state: 'not_applicable', reason: 'below_adult_age' },
         follicular: { state: 'no_effect', reason: 'below_gynecological_age' },
@@ -331,7 +446,8 @@ describe('LabUnitConverter.referenceContext — o regułę pyta strona', () => {
 
   it('scenariusz D: brak wpisu — zwykłe fazy bez wpływu, powód „menarche nie wpisana”; ciąża zostaje dostępna', () => {
     const c = kontekst(dziewczynka(16, { tanner: 5 }));
-    expect(c).toMatchObject({ basis: 'chronological_age', menarche_applicable: true, menarche_age_years: null, years_since_menarche: null });
+    expect(c).toMatchObject({ basis: 'chronological_age', menarche_applicable: true, menarche_age_years: null, years_since_menarche: null,
+      not_qualified_reason: 'menarche_not_recorded' });
     expect(Object.keys(c.phases).sort()).toEqual(['follicular', 'luteal', 'ovulation', 'postmenopause']);
     for (const faza of ['follicular', 'ovulation', 'luteal']) expect(c.phases[faza]).toEqual({ state: 'no_effect', reason: 'menarche_not_recorded' });
     for (const faza of CIAZA) expect(c.phases).not.toHaveProperty(faza);
@@ -832,6 +948,54 @@ describe('strona: krok „Pacjent” — opis, selektor fazy, pole „Wiek menar
     // Nieprawidłowa wartość w DANYCH pacjenta (bez wpisu tutaj) to zwykły brak wpisu, nie „odrzucony wpis”.
     const zDanych = panel({ source: dziewczynka16(25) });
     expect(zDanych.odswiez()).toMatchObject({ nota: R2_BRAK, bledny: false, placeholder: 'np. 12,5' });
+  });
+
+  it('R9: menarche przed ukończeniem 8 lat (z danych 3,0; wpis lokalny 7,9) → nota „…menarche przed ukończeniem 8 lat (3,0) — zostaje zakres dziecięcy.”, fazy wyszarzone, zakres jak dotąd; wpis 8,0 → reguła', () => {
+    const r9 = (wiek) => `Fazy cyklu nie zmieniają zakresu estradiolu: menarche przed ukończeniem 8 lat (${wiek}) — zostaje zakres dziecięcy.`;
+    // 16 lat, w danych menarche 3,0 (13 lat od menarche): wartość przyjęta i podpowiadana, ale reguły nie uruchamia.
+    const zDanych = panel({ source: dziewczynka16(3) });
+    expect(zDanych.odswiez()).toMatchObject({ opis: 'Kobieta · 16 lat · wiek dziecięcy/młodzieńczy · Th V', wiersz: null, opcje: FAZY_WYLACZONE, pole: true,
+      placeholder: '(z danych: 3,0)', nota: r9('3,0'), bledny: false, reset: false, zakres: 'e2_F_tanner5' });
+    // Ciąża zostaje do wyboru i daje brak zakresu (R4); nota zostaje.
+    expect(zDanych.wybierz('faza', 'pregnancy_t1')).toMatchObject({ fazaDlaWyniku: 'pregnancy_t1', zakres: 'estradiol-matched-reference-only', nota: r9('3,0') });
+    // 13 lat, Th IV: wpis lokalny 7,9 jest poprawnym nadpisaniem (bez noty o odrzuceniu); 8,0 uruchamia regułę (5,0 lat).
+    const lokalnie = panel({ shared: { sex: 'F', age: 13, tanner: 4, tannerKind: 'Th', tannerCurrent: true }, source: { sourceStatus: 'ready', sex: 'F', ageYears: 13, ageMonths: null, menarcheAgeYears: 8 } });
+    expect(lokalnie.odswiez()).toMatchObject({ wiersz: R1 + ZMIEN, placeholder: '(z danych: 8,0)', nota: null, opcje: BEZ_POSTMENOPAUZY });
+    for (const [wpis, pokazany] of [['7,9', '7,9'], ['7.99', '7,99'], ['3', '3,0'], ['2', '2,0']]) {
+      expect(lokalnie.wpisz('menarche', wpis), wpis).toMatchObject({ opis: `Kobieta · 13 lat · wiek dziecięcy/młodzieńczy · Th IV · menarche ${pokazany} · nadpisanie lokalne`,
+        wiersz: null, opcje: FAZY_WYLACZONE, nota: r9(pokazany), bledny: false, reset: true, zakres: 'e2_F_tanner4' });
+    }
+    expect(lokalnie.wpisz('menarche', '8,0')).toMatchObject({ opis: 'Kobieta · 13 lat · wiek dziecięcy/młodzieńczy · Th IV · menarche 8,0 · nadpisanie lokalne',
+      wiersz: R1 + ZMIEN, opcje: BEZ_POSTMENOPAUZY, nota: null, bledny: false, zakres: 'estradiol-matched-reference-only' });
+    // Wpis poniżej zakresu poprawności (1) to nadal wpis odrzucony, nie R9.
+    expect(lokalnie.wpisz('menarche', '1')).toMatchObject({ nota: ODRZUCONY, bledny: true });
+    // Wybrana faza przestaje działać, gdy wpis schodzi poniżej granicy; zakończony wpis ją kasuje.
+    lokalnie.wpisz('menarche', '8');
+    lokalnie.zakoncz();
+    expect(lokalnie.wybierz('faza', 'luteal')).toMatchObject({ zakres: 'e2_female_luteal' });
+    expect(lokalnie.wpisz('menarche', '7')).toMatchObject({ zakres: 'e2_F_tanner4', fazaDlaWyniku: null, faza: 'luteal', nota: r9('7,0') });
+    expect(lokalnie.zakoncz()).toMatchObject({ faza: '', zapamietana: null, opcje: FAZY_WYLACZONE,
+      opis: 'Kobieta · 13 lat · wiek dziecięcy/młodzieńczy · Th IV · menarche 7,0 · nadpisanie lokalne' });
+  });
+
+  it('R9: liczba w nocie („8”) pochodzi z odpowiedzi silnika, a o powodzie rozstrzyga silnik', () => {
+    const granica9 = fixture((d) => { d.reference_selection_policy.gynecological_age.adult_context_min_menarche_years = 9; });
+    const h = panel({ source: dziewczynka16(8.5) });
+    expect(h.odswiez()).toMatchObject({ wiersz: 'Od menarche: 7,5 lat (≥ 5) — zakresy estradiolu jak u dorosłej.' + ZMIEN, nota: null });
+    h.ctx.Conv = granica9.LabUnitConverter;
+    h.ctx.currentSubstance = granica9.LabUnitConverter.find('estradiol');
+    expect(h.odswiez()).toMatchObject({ wiersz: null, opcje: FAZY_WYLACZONE, placeholder: '(z danych: 8,5)',
+      nota: 'Fazy cyklu nie zmieniają zakresu estradiolu: menarche przed ukończeniem 9 lat (8,5) — zostaje zakres dziecięcy.' });
+    // Strona nie porównuje sama wieku menarche z granicą: tekst wybiera pole not_qualified_reason odpowiedzi silnika.
+    const widok = wytnij('    function renderMenarcheOverrideState(p, reference) {', '\n    }\n');
+    expect(widok).toContain("reference.not_qualified_reason === 'menarche_before_min_age'");
+    expect(widok).toContain('plainNumber(reference.adult_context_min_menarche_years)');
+    expect(widok).not.toMatch(/menarche_age_years\s*[<>]/);
+    // Kod strony dla tej reguły (odczyt pacjenta i widok) nie ma własnej liczby 8.
+    for (const kod of [wytnij('    function applyMenarcheAge(p, source, local) {', '    function getPackagePatient('),
+      wytnij('    var cycleOptionNodes;', '    function renderPatientSummary() {')]) {
+      expect(kod).not.toMatch(/ukończeniem 8 lat|[<>]=?\s*8\b|\b8\s*[<>]/);
+    }
   });
 
   it('wpisywanie wieku przez wartość pośrednią (prolaktyna, dorosła z postmenopauzą): wynik i opis od razu bez niedostępnej fazy, zapamiętany wybór zostaje i wraca przy „65”', () => {

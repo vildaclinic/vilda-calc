@@ -2837,6 +2837,16 @@ i makieta zaakceptowana tego samego dnia):
    badaniu, które używa selektora „Faza cyklu / ciąża”.
 4. Ciąża wybrana u nieletniej w estradiolu: **brak zakresu** i komunikat jak
    u dorosłej.
+5. (Po przeglądzie kodu, tego samego dnia.) Reguła 5 lat od menarche działa
+   tylko wtedy, gdy menarche wystąpiła w wieku **co najmniej 8 lat**.
+   Menarche wpisana przed ukończeniem 8 lat pozostaje poprawnym wpisem, ale
+   nie uruchamia zakresów dorosłej — niezależnie od tego, ile lat minęło;
+   zostaje zakres dziecięcy jak dotąd.
+   Uzasadnienie właściciela (decyzja kliniczna, nie wniosek z cytowanego
+   piśmiennictwa): krwawienie przed 8. rokiem życia (np. izolowane
+   przedwczesne menarche, zespół McCune'a-Albrighta) nie jest traktowane
+   jako początek cykli owulacyjnych, a podwyższony estradiol ma być nadal
+   oznaczany zakresem dziecięcym.
 
 Z zaakceptowanej makiety: przed progiem zwykłe fazy cyklu są na liście
 wyszarzone, z wyjaśnieniem na końcu panelu „zmień”; lokalne pole „Wiek
@@ -2858,14 +2868,22 @@ i powyżej wyłączenia pierwszych 14 dni życia):
   10⁻⁹ roku wyłącznie na szum odejmowania liczb zmiennoprzecinkowych).
   Do wyświetlenia liczba lat jest zaokrąglana **w dół** do jednego miejsca
   po przecinku (4,96 → „4,9”), żeby „5,0” nie pojawiło się przed progiem.
+- **Najniższy wiek menarche dla reguły (R9): wiek menarche ≥ 8 lat**,
+  porównanie bez zaokrąglania (7,99 — nie; 8,0 — tak). To osobny warunek,
+  a nie zmiana zakresu poprawności wpisu: menarche 2–7,99 jest wpisem
+  przyjętym (pole ją podpowiada, opis pacjenta ją wymienia), ale stan jest
+  taki jak przed progiem (R2) — zakres Tannera albo wieku, zwykłe fazy
+  cyklu wyszarzone, ciąża jak R4, postmenopauza jak R3, pakiet z oceną jak
+  dotąd.
 - **Po progu (R1)** estradiol jest obsługiwany jak u dorosłej kobiety:
   wybrana faza folikularna, pik owulacyjny albo faza lutealna → istniejący
   wiersz dorosłej (70–290, 380–1460, 200–770 pmol/L) i zwykła ocena;
   faza nieznana → trzy warianty odniesienia bez oceny; stadium Tannera nie
   dobiera już zakresu.
-- **Przed progiem albo bez wpisanego wieku menarche (R2)** zakres jest taki
-  jak dotąd (wiersz Tannera, inaczej wiersz wieku). Zwykłe fazy cyklu nie
-  zmieniają zakresu i nie da się ich wybrać.
+- **Przed progiem, przy menarche przed ukończeniem 8 lat albo bez wpisanego
+  wieku menarche (R2, R9)** zakres jest taki jak dotąd (wiersz Tannera,
+  inaczej wiersz wieku). Zwykłe fazy cyklu nie zmieniają zakresu i nie da
+  się ich wybrać.
 - **„Postmenopauza” (R3)**: u pacjenta w wieku na pewno poniżej 18 lat opcji
   nie ma na liście — w estradiolu i w pozostałych badaniach z tym selektorem
   (17-OHP, androstendion, estron, progesteron, TSH, fT4, fT3, prolaktyna).
@@ -2902,7 +2920,8 @@ i powyżej wyłączenia pierwszych 14 dni życia):
   wartość. Wpis, którego pole nie dotyczy (inne badanie, wiek nadpisany na
   dorosły), nie jest ani wartością w opisie, ani nadpisaniem.
 - **Wybór, który nie jest dostępny** (postmenopauza poniżej 18 lat; zwykła
-  faza w estradiolu przed progiem), **nie trafia do żadnego odbiorcy danych
+  faza w estradiolu przed progiem albo przy menarche przed ukończeniem
+  8 lat), **nie trafia do żadnego odbiorcy danych
   pacjenta**: wyniku, opisu pacjenta, podpowiedzi, przypięcia ani karty
   „Hormony w ciągu życia” (także LH i inhibiny B). Rozstrzyga to jedno
   miejsce strony — odczyt pacjenta (`getEffectivePatient`), który o dostępność
@@ -2936,9 +2955,13 @@ Poniżej dostępne warianty odniesienia.”; na końcu panelu — „Fazy cyklu 
 zmieniają zakresu estradiolu: od menarche minęło mniej niż 5 lat (1,0).”
 albo „Fazy cyklu działają poniżej 18 lat dopiero po 5 latach od menarche.
 Wpisz „Wiek menarche” tutaj (tylko dla tego sprawdzenia) albo na stałe
-w „+ Dane pokwitaniowe” na stronie głównej.”, a przy odrzuconym wpisie —
+w „+ Dane pokwitaniowe” na stronie głównej.”, przy menarche przed
+ukończeniem 8 lat — „Fazy cyklu nie zmieniają zakresu estradiolu: menarche
+przed ukończeniem 8 lat (3,0) — zostaje zakres dziecięcy.” (w nawiasie wiek
+menarche zapisany jak w polu), a przy odrzuconym wpisie —
 „Wpisany wiek menarche nie jest brany pod uwagę: podaj wartość od 2 do 20
-lat, nie większą niż wiek pacjentki.”.
+lat, nie większą niż wiek pacjentki.” (nie dotyczy poprawnego wpisu poniżej
+8 lat).
 
 **Przypadki `wejście → oczekiwany wynik`** (fikcyjne pacjentki, estradiol
 w pmol/L; scenariusze makiety A–G i granice):
@@ -2955,6 +2978,10 @@ w pmol/L; scenariusze makiety A–G i granice):
 | granica | menarche 10,0; wiek 14 lat 11 mies. / 15 lat 0 mies. | 4,9 roku → zakres jak dotąd / 5,0 lat → jak u dorosłej |
 | granica | wiek [15, 16) / [15,5; 15,583), menarche 10,5 | 4,5 roku → jak dotąd / 5,0 lat → jak u dorosłej |
 | granica | 17 lat 11 mies. po progu / 18 lat, faza lutealna | ten sam zakres 200–770 — bez skoku w dniu 18. urodzin |
+| R9 | 16 lat, Th V, menarche 3,0 w danych, E2 450 | jak bez reguły: 0–290, „powyżej normy”; fazy cyklu wyszarzone; pole z podpowiedzią „(z danych: 3,0)”; nota „…menarche przed ukończeniem 8 lat (3,0) — zostaje zakres dziecięcy.”; karta pakietu z oceną zakresem Tannera V |
+| R9, granica | 13 lat 0 mies., Th IV, E2 150; menarche 7,99 / 8,0 (z danych albo wpisane w polu) | 7,99 → 55,1–312, „w zakresie normy”, nota „…(7,99)…”, przy wpisie opis „… · menarche 7,99 · nadpisanie lokalne” / 8,0 → „Od menarche: 5,0 lat (≥ 5)…”, trzy warianty |
+| R9 | 7 lat, menarche 2,0 w danych (5 lat od menarche), E2 50 | zakres wieku jak dotąd (0–73,5), bez wiersza o menarche; nota „…(2,0)…” |
+| R9 | 16 lat, menarche 7,9 (8,1 roku od menarche) | zakres dziecięcy jak dotąd; nota „…(7,9)…” |
 | wpis odrzucony | pacjentka 16 lat (w danych menarche 11,0), wpis lokalny 25, 1 albo 16,5 | zakres jak bez wieku menarche (0–290); nota „Wpisany wiek menarche nie jest brany pod uwagę…”; opis „… · Th V · nadpisanie lokalne” bez „menarche 25,0” |
 | wpis nierozpoznany | jak wyżej, wpis „12,5,”, „12,5 lat”, „12;5”, „1e1”, „0x10” albo „-12” | jak wpis odrzucony; „11”, „11,0”, „ 10.5 ” są przyjmowane |
 | wpis nieużywany | pacjentka D, wpis 11, potem wiek w panelu 30 lat albo inne badanie | opis bez „menarche …”; po powrocie do estradiolu u 16-latki „… · menarche 11,0 · nadpisanie lokalne” |
@@ -2965,10 +2992,16 @@ w pmol/L; scenariusze makiety A–G i granice):
 | zmiana płci w danych | 16 lat, wpis lokalny 11 i faza lutealna; płeć w danych K → M → K | pole puste, wybór „(nieznana)”, zakres jak bez wpisu (0–290) |
 | inne badanie | prolaktyna, 16 lat / 30 lat | lista bez „Postmenopauzy”, fazy do wyboru / osiem opcji jak dotąd |
 
-**Gdzie mieszka reguła.** Próg (5), dopuszczalny wiek menarche (2–20), lista
-wyborów niedostępnych poniżej 18 lat, konteksty ciąży i oba teksty są danymi:
+**Gdzie mieszka reguła.** Próg (5, `adult_context_after_years`), najniższy
+wiek menarche dla reguły (8, `adult_context_min_menarche_years` — osobne
+pole), dopuszczalny wiek menarche jako wpis (2–20), lista wyborów
+niedostępnych poniżej 18 lat, konteksty ciąży i oba teksty są danymi:
 blok `gynecological_age` w polityce deskryptora estradiolu
-(`lab_units_data.js`); granica 18 lat zostaje w `chronological_age`. Regułę
+(`lab_units_data.js`); granica 18 lat zostaje w `chronological_age`.
+Odpowiedź `referenceContext` podaje powód braku kwalifikacji
+(`not_qualified_reason`: brak wpisu, za mało lat albo menarche przed
+granicą wieku) i samą granicę, więc strona nie porównuje wieku menarche
+z liczbą 8 i nie ma jej w kodzie. Regułę
 stosuje silnik (`lab_unit_converter.js`: `selectRange`, `evaluate`). Strona
 i pakiet nie mają jej kopii: o podstawę doboru, lata od menarche i dostępne
 wybory pytają `LabUnitConverter.referenceContext(badanie, pacjent)`, a wiek
@@ -2996,8 +3029,8 @@ przed zmianą). E2E: `tests/e2e/lab-e2-menarche.spec.mjs` (scenariusze A–G,
 granice, selektor w innym badaniu, czyszczenie, wpisywanie liczby przez
 wartość pośrednią w prolaktynie i estradiolu, klik w wynik po polu
 liczbowym, wpis odrzucony i nierozpoznany, opis pacjenta przy wpisie
-nieużywanym, zmiana płci w danych, LH i inhibina B, 390 px, pakiet,
-przypięcie i historia). Zmienione istniejące E2E, które zakładały
+nieużywanym, zmiana płci w danych, LH i inhibina B, R9 z danych i z wpisu
+lokalnego z granicą 7,99 / 8,0, 390 px, pakiet, przypięcie i historia). Zmienione istniejące E2E, które zakładały
 postmenopauzę albo zwykłą fazę u nieletniej:
 `hormone-lifespan-female-e2-reference`, `hormone-lifespan-female-lh-result-only`,
 `lab-e2-phase-source`, `lab-female-lh-result-only-offline`; pole dopisane do

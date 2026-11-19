@@ -2058,6 +2058,7 @@ reference_selection_policy: {
   gynecological_age: {                    // nowy blok: próg, zakres wieku menarche, wybory i teksty jako dane
     id: 'e2-gynecological-age-qualification', when: { sex: 'F' }, menarche_key: 'menarche_age_years',
     menarche_min_years: 2, menarche_max_years: 20, adult_context_after_years: 5,
+    adult_context_min_menarche_years: 8,  // R9 (decyzja nr 5): najniższy wiek menarche, od którego reguła działa — osobno od zakresu wpisu 2–20
     contexts_not_applicable_below_adult_age: ['postmenopause'],
     pregnancy_contexts: ['pregnancy_t1', 'pregnancy_t2', 'pregnancy_t3'],
     context_pl: '…', basis_pl: 'Od menarche: {years} lat (≥\u00a0{threshold}) — …', source_note: '…'
@@ -2067,7 +2068,7 @@ reference_selection_policy: {
 
 Wiersze `reference_ranges_si`, jednostki, `default_range_si` i `LabUnitsData.version` (2.0.2) są nietknięte — pilnuje tego skrót danych w `tests/fixtures/lab-selection-inne-badania-baza.json`.
 
-`lab_unit_converter.js` — czytelne funkcje dopisane przed `copyContextReference` (część czytelna pliku): `listed`, `knownBelowAdultAge`, `yearsDownText`, `gynecologicalAge`, `gynecologicalBasisText`, `qualifyGynecologicalAge`, `markGynecologicalBasis`, `copyReferenceBasis`, `sharedPhasePolicy`, `referenceContext`; `selectContextReference` dostał trzeci argument `minor`. W zminifikowanym wierszu cztery wstawki:
+`lab_unit_converter.js` — czytelne funkcje dopisane przed `copyContextReference` (część czytelna pliku): `listed`, `knownBelowAdultAge`, `yearsDownText`, `gynecologicalAge`, `gynecologicalBasisText`, `qualifyGynecologicalAge`, `markGynecologicalBasis`, `copyReferenceBasis`, `sharedPhasePolicy`, `referenceContext`; `selectContextReference` dostał trzeci argument `minor`. Stan reguły (`gynecologicalAge`) ma pole `early` — menarche poniżej `adult_context_min_menarche_years` nie kwalifikuje; `referenceContext` oddaje tę granicę i powód braku kwalifikacji (`not_qualified_reason`: `menarche_not_recorded`, `below_gynecological_age`, `menarche_before_min_age`). W zminifikowanym wierszu cztery wstawki:
 
 ```js
 // U() = selectRange:
@@ -2102,6 +2103,7 @@ Dla każdego badania poza estradiolem `selectRange` i `evaluate` dają wyniki id
 // describePatient: CYCLE_PHASE_SUMMARY (ciąża słowami); „menarche 11,0” (formatMenarcheAge) tylko przy p._menarche_applied
 // buildClinicalHint: wiersz reference.basis_pl (+ dopisek o „Zmień ▼" przy nieznanej fazie)
 // przed renderPatientSummary: overrideNumberTyping, commitCyclePhaseAvailability, renderCyclePhaseOptions, renderMenarcheOverrideState
+//    (nota R9 „…menarche przed ukończeniem 8 lat (3,0)…” wybierana po reference.not_qualified_reason; liczba 8 z odpowiedzi silnika)
 // renderPatientSummary: commitCyclePhaseAvailability() PRZED wcześniejszym powrotem dla badań z własnym formularzem
 //    (LH, FSH, inhibina B, testosteron) — poza odświeżeniem w trakcie wpisywania liczby
 // onOverrideChange(event): wpis pola — po obcięciu spacji /^\d+(?:[.,]\d{1,2})?$/, inaczej NaN; zdarzenie „input”

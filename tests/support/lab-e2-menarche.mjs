@@ -16,6 +16,8 @@ export const NAGLOWEK_DOROSLA = 'Zakres estradiolu zależy od fazy cyklu lub men
 export const WSKAZOWKA_DOROSLA = 'Jeśli faza cyklu lub menopauza jest znana, wybierz ją w „Zmień ▼".';
 export const R2_BRAK = 'Fazy cyklu działają poniżej 18 lat dopiero po 5 latach od menarche. Wpisz „Wiek menarche” tutaj (tylko dla tego sprawdzenia) albo na stałe w „+ Dane pokwitaniowe” na stronie głównej.';
 export const r2Ponizej = (lata) => `Fazy cyklu nie zmieniają zakresu estradiolu: od menarche minęło mniej niż 5 lat (${lata}).`;
+// R9 (decyzja właściciela nr 5 z 2026-11-19): menarche przed ukończeniem 8 lat nie uruchamia reguły.
+export const r9 = (wiekMenarche) => `Fazy cyklu nie zmieniają zakresu estradiolu: menarche przed ukończeniem 8 lat (${wiekMenarche}) — zostaje zakres dziecięcy.`;
 export const WPIS_ODRZUCONY = 'Wpisany wiek menarche nie jest brany pod uwagę: podaj wartość od 2 do 20 lat, nie większą niż wiek pacjentki.';
 export const BRAK_DLA_KONTEKSTU = 'Brak zakresu estradiolu dla wskazanego kontekstu cyklu lub ciąży. Przeliczenie jednostek pozostaje dostępne.';
 export const WARIANTY_NIELETNIA = [['Faza folikularna wczesna', '70–290 pmol/L'], ['Pik owulacyjny', '380–1460 pmol/L'], ['Faza lutealna', '200–770 pmol/L']];

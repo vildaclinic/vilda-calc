@@ -1033,11 +1033,11 @@
  },
  "lab_unit_converter.js": {
   "v": 11,
-  "sha256": "011b90d8873b15669800198639e2c2f4ff11dc5d62fb0a1e2e3c3cd3240713b7"
+  "sha256": "8f1bf99e1a3bd02dbcfc613e43489902e6caba108bf13c434c359ba834e9b8b8"
  },
  "lab_units_data.js": {
   "v": 43,
-  "sha256": "687d8e54ea9960140d5de6aa9790f03cb33c287eefb5e2be242d5cd64853d767"
+  "sha256": "ca1eee0b661b365dd06715688a80317d7b1a113dfa3206b166c9f24582dee43d"
  },
  "lucide.min.js": {
   "v": 1,

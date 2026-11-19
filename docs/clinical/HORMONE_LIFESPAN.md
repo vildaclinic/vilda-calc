@@ -1277,7 +1277,8 @@ prawidłowości. Znana ciąża, menopauza i leczenie hormonalne wyłączają pun
 zgodnie z konserwatywną polityką aplikacji; OCP wykluczono w samym źródle.
 (Uzupełnienie 2026-11-19, P-E2-MENARCHE: „Postmenopauza” nie jest już
 proponowana poniżej 18 lat, a zwykłą fazę cyklu można wybrać dopiero po
-5 latach od menarche; polityka punktu się nie zmieniła.)
+5 latach od menarche (menarche w wieku co najmniej 8 lat); polityka punktu
+się nie zmieniła.)
 Metoda nieznana dopuszcza porównanie edukacyjne, znana niezgodna je blokuje.
 LLOQ 0,58 i 13 należą do dwóch metod; bez globalnej podłogi lub imputacji.
 

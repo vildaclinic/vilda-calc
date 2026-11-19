@@ -4,7 +4,7 @@ import { kartaPakietu, tekst, utworzPakiet } from '../support/lab-pakiet-dane.mj
 import {
   BRAK_DLA_KONTEKSTU, CIAZA, FAZY, NAGLOWEK_DOROSLA, NAGLOWEK_NIELETNIA, R1, R1_ZMIEN, R2_BRAK, WARIANTY_DOROSLA, WARIANTY_NIELETNIA,
   WPIS_ODRZUCONY, WSKAZOWKA_DOROSLA, bezPoziomegoPrzewijania, daneGoscia, otworzGoscia, otworzPanel, otworzPrzelicznik, r2Ponizej, stan,
-  wczytajOsobe, wybierzBadanie, wybierzEstradiol, wykresHormonow, zapisaneDane,
+  wczytajOsobe, wybierzBadanie, wybierzEstradiol, wykresHormonow, zapisaneDane, r9,
 } from '../support/lab-e2-menarche.mjs';
 
 // P-E2-MENARCHE (decyzje właściciela 2026-11-19): estradiol u dziewczynki poniżej 18 lat — zakresy dorosłej kobiety
@@ -157,6 +157,76 @@ test('granica: menarche 10,0 — 14 lat 11 mies. → zakres jak dotąd i nota �
     await expect(page.locator('#labPatientText')).toContainText(opis);
     expect(await stan(page), opis).toMatchObject({ status: '✓ w zakresie normy', zakres: 'zakres: 200–770 pmol/L' });
   }
+});
+
+test('R9, menarche z danych przed ukończeniem 8 lat: 16 lat, Th V, menarche 3,0, E2 450 pmol/L → zakres jak dotąd 0–290 i „powyżej normy”, fazy cyklu wyszarzone, nota „…menarche przed ukończeniem 8 lat (3,0) — zostaje zakres dziecięcy.”; także 390 px i pakiet', async ({ page }) => {
+  await start(page, { imie: 'Renata', lata: 16, th: 5, menarche: 3 }, 450);
+  expect(await stan(page)).toMatchObject({
+    opis: 'Kobieta · 16 lat · wiek dziecięcy/młodzieńczy · Th V', wiersz: null, opcje: NIEZNANA_NIELETNIA_BEZ_FAZ, faza: '',
+    pole: true, placeholder: '(z danych: 3,0)', wpis: '', bledny: false, nota: r9('3,0'), reset: false,
+    status: '↑ powyżej normy', zakres: 'zakres: 0–290 pmol/L', warianty: [],
+  });
+  await expect(page.locator('#labOverrideCycle option[value="luteal"]')).toHaveJSProperty('disabled', true);
+  // Ciąża zostaje do wyboru i daje brak zakresu jak u dorosłej (R4); nota zostaje.
+  await page.locator('#labOverrideCycle').selectOption('pregnancy_t2');
+  expect(await stan(page)).toMatchObject({ opis: 'Kobieta · 16 lat · wiek dziecięcy/młodzieńczy · Th V · ciąża — II trymestr · nadpisanie lokalne',
+    brakZakresu: BRAK_DLA_KONTEKSTU, zakres: '', status: '', nota: r9('3,0') });
+  await page.locator('#labOverrideCycle').selectOption('');
+  // Telefon 390 px: nota widoczna w całości, bez poziomego przewijania.
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.locator('#labOverrideMenarcheNote')).toBeVisible();
+  await expect(page.locator('#labOverrideMenarcheNote')).toHaveText(r9('3,0'));
+  expect(await bezPoziomegoPrzewijania(page)).toBe(true);
+  const [panel, nota] = [await page.locator('#labPatientOverride').boundingBox(), await page.locator('#labOverrideMenarcheNote').boundingBox()];
+  expect(nota.x).toBeGreaterThanOrEqual(panel.x);
+  expect(nota.x + nota.width).toBeLessThanOrEqual(panel.x + panel.width + 0.5);
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  // Pakiet: karta estradiolu tej pacjentki jak dotąd — ocena zakresem Tannera V, bez noty o kontekście.
+  await page.locator('#labModePackage').click();
+  await utworzPakiet(page, 'Kontrola (fikcyjna)', ['estradiol', 'tsh']);
+  await page.locator('#labPkgValue-estradiol').fill('450');
+  const karta = kartaPakietu(page).locator('.lab-pkg-card[data-analyte="estradiol"]');
+  expect(await tekst(karta)).toBe('Estradiol 450 pmol/L powyżej normy Norma · Dziewczynki Tanner V — domyślnie zakres premenopauzy fazy folikularnej '
+    + '(faza cyklu zmienia interpretację: owulacja 380–1460; lutealna 200–770 pmol/L): 0–290 pmol/L');
+  await expect(karta.locator('.lab-pkg-card-note')).toHaveCount(0);
+  await expect(page.locator('#labPkgPuberty')).toBeVisible();
+});
+
+test('R9, wpis lokalny i granica 8,0: 13 lat 0 mies., Th IV, E2 150 pmol/L — wpis 7,9 → zakres dziecięcy 55,1–312 i nota „…(7,9)…”, opis „… · menarche 7,9 · nadpisanie lokalne”; wpis 8,0 → „Od menarche: 5,0 lat (≥ 5)…” i trzy warianty; w danych 7,99 / 8,0 → to samo', async ({ page }) => {
+  await start(page, { imie: 'Sabina', lata: 13, miesiace: 0, th: 4, menarche: null }, 150);
+  const pole = page.locator('#labOverrideMenarcheAge');
+  expect(await stan(page)).toMatchObject({ opis: 'Kobieta · 13 lat · wiek dziecięcy/młodzieńczy · Th IV', nota: R2_BRAK, zakres: 'zakres: 55,1–312 pmol/L' });
+  // Wpis poniżej granicy jest poprawnym nadpisaniem: bez noty o odrzuceniu, bez oznaczenia pola.
+  for (const [wpis, pokazany] of [['7,9', '7,9'], ['7,99', '7,99'], ['3', '3,0']]) {
+    await pole.fill(wpis);
+    expect(await stan(page), wpis).toMatchObject({
+      opis: `Kobieta · 13 lat · wiek dziecięcy/młodzieńczy · Th IV · menarche ${pokazany} · nadpisanie lokalne`, wiersz: null,
+      opcje: NIEZNANA_NIELETNIA_BEZ_FAZ, bledny: false, nota: r9(pokazany), reset: true,
+      status: '✓ w zakresie normy', zakres: 'zakres: 55,1–312 pmol/L', warianty: [],
+    });
+  }
+  // 8,0 — granica należy do reguły: 13,0 − 8,0 = 5,0 lat.
+  await pole.fill('8,0');
+  expect(await stan(page)).toMatchObject({
+    opis: 'Kobieta · 13 lat · wiek dziecięcy/młodzieńczy · Th IV · menarche 8,0 · nadpisanie lokalne', wiersz: R1_ZMIEN,
+    opcje: NIEZNANA_NIELETNIA, bledny: false, nota: null, status: '', naglowek: NAGLOWEK_NIELETNIA, warianty: WARIANTY_NIELETNIA,
+  });
+  // To samo z danych pacjentki: 7,99 → zakres dziecięcy i nota; 8,0 → obsługa jak u dorosłej.
+  await wczytajOsobe(page, { imie: 'Sabina', lata: 13, miesiace: 0, th: 4, menarche: 7.99 });
+  await wybierzEstradiol(page, 150);
+  expect(await stan(page)).toMatchObject({ opis: 'Kobieta · 13 lat · wiek dziecięcy/młodzieńczy · Th IV', wiersz: null, opcje: NIEZNANA_NIELETNIA_BEZ_FAZ,
+    placeholder: '(z danych: 7,99)', wpis: '', nota: r9('7,99'), reset: false, status: '✓ w zakresie normy', zakres: 'zakres: 55,1–312 pmol/L' });
+  await wczytajOsobe(page, { imie: 'Sabina', lata: 13, miesiace: 0, th: 4, menarche: 8 });
+  await wybierzEstradiol(page, 150);
+  expect(await stan(page)).toMatchObject({ opis: 'Kobieta · 13 lat · wiek dziecięcy/młodzieńczy · Th IV', wiersz: R1_ZMIEN, opcje: NIEZNANA_NIELETNIA,
+    placeholder: '(z danych: 8,0)', nota: null, status: '', warianty: WARIANTY_NIELETNIA });
+  // 7 lat, menarche 2,0 w danych (5 lat od menarche): zakres wieku jak dotąd, bez wiersza o menarche.
+  await wczytajOsobe(page, { imie: 'Tola', lata: 7, miesiace: 0, th: null, menarche: 2 });
+  await wybierzEstradiol(page, 50);
+  const siedmiolatka = await stan(page);
+  expect(siedmiolatka).toMatchObject({ opis: 'Kobieta · 7 lat · wiek dziecięcy/młodzieńczy', placeholder: '(z danych: 2,0)', nota: r9('2,0'),
+    opcje: NIEZNANA_NIELETNIA_BEZ_FAZ, status: '✓ w zakresie normy', zakres: 'zakres: 0–73,5 pmol/L', warianty: [] });
+  expect(siedmiolatka.wiersz || '').not.toContain('Od menarche');
 });
 
 test('dane pokwitaniowe tylko w rekordzie sejfu (bez sesji formularza): 16 lat, menarche 10,5 → wiersz „Od menarche: 5,5 lat (≥ 5)…” i trzy warianty', async ({ page }) => {
