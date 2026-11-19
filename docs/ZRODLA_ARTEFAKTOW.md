@@ -2168,6 +2168,85 @@ wyboru i `pe(ghPointId)`. Karta na innej stronie niż DocPro zostaje otwarta (ja
 (`VildaAuthUI.hide`), a skok rusza po `popstate` z jej `history.back()` albo po 600 ms. Sejf i dziennik bez zmian;
 `window.obesityTherapyPoints` zmienia się tylko przez zapis lekarza w monitorze.
 
+## Łatka P-E2-MENARCHE — estradiol poniżej 18 lat: zakresy dorosłych po 5 latach od menarche (`lab_units_data.js` 42 → 43, `lab_unit_converter.js` 10 → 11, `vilda_lab_packages.js` 10 → 11, `inline_przelicznik_jednostek_00.css` 17 → 18, `przelicznik-jednostek.html`, 2026-11-19, decyzje właściciela)
+
+Opis działania, przypadki, dowody i ograniczenia: `docs/clinical/ALGORITHMS.md`, wpis „LAB-E2-MENARCHE”. Zmiany wprowadzono wprost w artefaktach, czytelnymi blokami; żadnego pliku nie przebudowano z dawnych źródeł ani nie minifikowano ponownie.
+
+`lab_units_data.js` — tylko czytelny blok polityki w deskryptorze estradiolu (plik poza nim pozostaje zminifikowany i bez zmian):
+
+```js
+reference_selection_policy: {
+  id: 'estradiol-matched-reference-only',
+  version: '2026-11-19.1',               // było '2026-10-28.1'
+  // require_matched, chronological_age, context_pl, adult_female_context — bez zmian
+  gynecological_age: {                    // nowy blok: próg, zakres wieku menarche, wybory i teksty jako dane
+    id: 'e2-gynecological-age-qualification', when: { sex: 'F' }, menarche_key: 'menarche_age_years',
+    menarche_min_years: 2, menarche_max_years: 20, adult_context_after_years: 5,
+    adult_context_min_menarche_years: 8,  // R9 (decyzja nr 5): najniższy wiek menarche, od którego reguła działa — osobno od zakresu wpisu 2–20
+    contexts_not_applicable_below_adult_age: ['postmenopause'],
+    pregnancy_contexts: ['pregnancy_t1', 'pregnancy_t2', 'pregnancy_t3'],
+    context_pl: '…', basis_pl: 'Od menarche: {years} lat (≥\u00a0{threshold}) — …', source_note: '…'
+  }
+}
+```
+
+Wiersze `reference_ranges_si`, jednostki, `default_range_si` i `LabUnitsData.version` (2.0.2) są nietknięte — pilnuje tego skrót danych w `tests/fixtures/lab-selection-inne-badania-baza.json`.
+
+`lab_unit_converter.js` — czytelne funkcje dopisane przed `copyContextReference` (część czytelna pliku): `listed`, `knownBelowAdultAge`, `yearsDownText`, `gynecologicalAge`, `gynecologicalBasisText`, `qualifyGynecologicalAge`, `markGynecologicalBasis`, `copyReferenceBasis`, `sharedPhasePolicy`, `referenceContext`; `selectContextReference` dostał trzeci argument `minor`. Stan reguły (`gynecologicalAge`) ma pole `early` — menarche poniżej `adult_context_min_menarche_years` nie kwalifikuje; `referenceContext` oddaje tę granicę i powód braku kwalifikacji (`not_qualified_reason`: `menarche_not_recorded`, `below_gynecological_age`, `menarche_before_min_age`). W zminifikowanym wierszu cztery wstawki:
+
+```js
+// U() = selectRange:
+//    było:  e=qualifiedAge.patient;var qualifiedContext=selectContextReference(r,e);
+//    jest:  e=qualifiedAge.patient;var gynecological=qualifyGynecologicalAge(r,e);e=gynecological.patient;var qualifiedContext=selectContextReference(r,e,gynecological.minor);
+// $() = evaluate:
+//    było:  copyContextReference(l,o);return o?(
+//    jest:  copyContextReference(l,o);copyReferenceBasis(l,o);return o?(
+// obiekt API:
+//    było:  selectRange:U,rangesForOverride:C,                       …version:"2.0.3"
+//    jest:  selectRange:U,referenceContext:referenceContext,rangesForOverride:C,   …version:"2.0.4"
+```
+
+Dla każdego badania poza estradiolem `selectRange` i `evaluate` dają wyniki identyczne jak przed zmianą (macierz 33 badań × 4992 kontekstów, `tests/unit/lab-e2-menarche.test.mjs`).
+
+`vilda_lab_packages.js` (czytelne źródło, model 1.7.0 → 1.8.0, widok 1.9.0 → 1.10.0): `evaluateRow` zapamiętuje w `row.contextBasis` zdanie silnika `evaluation.reference_basis_pl`, gdy wynik wymaga kontekstu badania; `drawCard` rysuje je drugą notą `.lab-pkg-card-note` pod zdaniem o kontekście i uwzględnia w podpisie przerysowania karty. Gałąź `if (!view.lab) { … }` dostała klamry, żeby `else if (view.replaced)` nadal należało do niej (nota o zastąpionym badaniu bez zmian).
+
+`przelicznik-jednostek.html` (czytelny skrypt strony):
+
+```js
+// markup panelu „zmień”: <label id="labOverrideMenarcheWrap" hidden>Wiek menarche [lata] <input type="text" id="labOverrideMenarcheAge" inputmode="decimal" …>
+//                        <p id="labOverrideMenarcheNote" class="lab-override-note" role="status" hidden>
+// readPubertyPatientContext: context.menarcheAgeYears — tylko gdy wiek menarche jest wpisany (ta sama kolejność źródeł co początek pokwitania)
+// applyMenarcheAge(p, source, local): p.menarche_age_years (pole lokalne > dane), p._shared_menarche, p._menarche_overridden;
+//    local: null = pole puste, liczba = wpis, NaN = wpis, który nie jest zwykłą liczbą dziesiętną (zastępuje dane, silnik go nie przyjmie);
+//    wołane w bloku estradiolu getEffectivePatient (z localOverride.menarche) i getPackagePatient (bez wpisu lokalnego)
+// referenceContextFor(pacjent) → LabUnitConverter.referenceContext(wybrane badanie, pacjent)
+// applyReferenceAvailability(p) — ostatni krok getEffectivePatient, jedno miejsce dla wszystkich odbiorców pacjenta:
+//    wybór fazy niedostępny wg silnika → p.cycle_phase = null (zapamiętany localOverride.cycle_phase zostaje);
+//    p._menarche_applied (wpis dotyczy badania i pacjentki i silnik go przyjął) oraz p._has_override
+// localOverride.menarche: czyszczone w resetLocalPatientOverride, przy zmianie płci w updateLifespan i dla płci M w onOverrideChange
+// describePatient: CYCLE_PHASE_SUMMARY (ciąża słowami); „menarche 11,0” (formatMenarcheAge) tylko przy p._menarche_applied
+// buildClinicalHint: wiersz reference.basis_pl (+ dopisek o „Zmień ▼" przy nieznanej fazie)
+// przed renderPatientSummary: overrideNumberTyping, commitCyclePhaseAvailability, renderCyclePhaseOptions, renderMenarcheOverrideState
+//    (nota R9 „…menarche przed ukończeniem 8 lat (3,0)…” wybierana po reference.not_qualified_reason; liczba 8 z odpowiedzi silnika)
+// renderPatientSummary: commitCyclePhaseAvailability() PRZED wcześniejszym powrotem dla badań z własnym formularzem
+//    (LH, FSH, inhibina B, testosteron) — poza odświeżeniem w trakcie wpisywania liczby
+// onOverrideChange(event): wpis pola — po obcięciu spacji /^\d+(?:[.,]\d{0,2})?$/ (sam separator na końcu = niedokończony zapis liczby całkowitej), inaczej NaN; zdarzenie „input”
+//    ustawia overrideNumberTyping na czas odświeżenia (zapamiętany wybór fazy i jego opcja zostają)
+// onOverrideNumberCommitted: „change” i „blur” pól wieku, miesięcy i wieku menarche → tylko renderPatientSummary()
+//    (zatwierdza wybór i odświeża opis; nie rysuje wyniku, żeby kliknięcie w wynik po wyjściu z pola nie ginęło)
+```
+
+Strona nie ma kopii reguły: próg, granicę wieku, zakres wieku menarche i listę niedostępnych wyborów bierze z odpowiedzi `LabUnitConverter.referenceContext`.
+
+`inline_przelicznik_jednostek_00.css` — jedna reguła, bo etykieta panelu ma własne `display`:
+
+```css
+.lab-patient-override label[hidden],
+.lab-patient-override .lab-override-note[hidden] { display: none; }
+```
+
+**Granice.** Bez nowych stylów ustawianych wprost na elementach (`tests/fixtures/style-elementow.json` bez zmian: nowe pole i nota chowają się atrybutem `hidden`). `vilda_lab_range_snapshot.js` i `vilda_vault.js` bez zmian — format zapisanego zakresu się nie zmienił, a dawne zapisy nie są przeliczane. Wersje `?v=`, precache i `SW_VERSION` ustawił `npm run podbij-wersje`.
+
 ## Trwała tożsamość wizyt — źródło i granica artefaktu sejfu
 
 Zmiana funkcjonalna `P-TRWALE-WIZYTY` ma bazę `audyt` z commita

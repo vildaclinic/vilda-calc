@@ -48,7 +48,7 @@ async function ownServer() {
 async function expectEmptyConverter(page) {
   for (const id of ['labSubstance', 'labValue', 'labUnit', 'labUnitTarget',
     'labOverrideSex', 'labOverrideAge', 'labOverrideAgeMonths', 'labOverrideCycle',
-    'labOverrideTanner', 'labMeasTime', 'labMeasProtocol', 'labMeasMethod']) {
+    'labOverrideTanner', 'labOverrideMenarcheAge', 'labMeasTime', 'labMeasProtocol', 'labMeasMethod']) {
     await expect(page.locator('#' + id), id).toHaveValue('');
   }
   expect(await page.evaluate(() => [
@@ -92,6 +92,13 @@ test('wyczyszczenie Jednostek lab. pozostaje puste po zimnym restarcie produkcyj
     await page.locator('#labPatientToggle').click();
     await page.locator('#labOverrideSex').selectOption('F');
     await page.locator('#labOverrideAge').fill('30');
+    // P-E2-MENARCHE: lokalny wiek menarche (pole widać tylko dla estradiolu u nieletniej) wpisany wprost w pole,
+    // żeby „Wyczyść wszystkie pola” miało co wyczyścić.
+    await page.locator('#labOverrideMenarcheAge').evaluate((pole) => {
+      pole.value = '11,5';
+      pole.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await expect(page.locator('#labOverrideMenarcheAge')).toHaveValue('11,5');
     expect(await page.evaluate(() => window.VildaPersistence.readPreferenceRaw('LAB_CONV_SUBSTANCE', null))).toBe('cortisol');
     expect(await page.evaluate(() => window.VildaPersistence.readPreferenceRaw('LAB_CONV_UNIT:cortisol', null))).toBeTruthy();
     expect(await page.evaluate(() => window.VildaPersistence.readPreferenceRaw('LAB_CONV_UNIT:target:cortisol', null))).toBeTruthy();

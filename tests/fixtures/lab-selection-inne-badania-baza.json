@@ -1,0 +1,176 @@
+{
+  "opis": "Stan bazy sprzed P-E2-MENARCHE: skróty doboru zakresu i oceny (LabUnitConverter.selectRange/evaluate) dla macierzy pacjentów × badania katalogu poza estradiolem, dla estradiolu w populacjach, których reguła nie dotyczy (R8), oraz skrót danych estradiolu (stężenia, wiersze, jednostki, dotychczasowa polityka). Generowane z plików `git show origin/audyt:lab_units_data.js` i `…:lab_unit_converter.js` kodem tests/support/lab-selection-matrix.mjs; nie edytować ręcznie.",
+  "baza": {
+    "galaz": "origin/audyt",
+    "commit": "bdbfafcd3ea69cc1ffcb14a0aa8e108fc3c6c9b9",
+    "silnik": "LabUnitConverter 2.0.3",
+    "dane": "LabUnitsData 2.0.2"
+  },
+  "wylaczone": "estradiol",
+  "pacjenci": 4992,
+  "badania": {
+    "cortisol": {
+      "wybory": 4992,
+      "skrot": "489e5e5d7ffdec95ede09bd6ab6741fef2cc8d23d783b5344ebc38d40f3e4330"
+    },
+    "acth": {
+      "wybory": 4992,
+      "skrot": "a1f20d3ad2d2f8a5668277b2db78d6bebec8202ff808c1ea3638154db587db0f"
+    },
+    "aldosterone": {
+      "wybory": 4992,
+      "skrot": "add868efff443bfb1a97e3641d4a8e90652ae801f8218d7bcacde91e3a47d297"
+    },
+    "deoxycortisol_11": {
+      "wybory": 4992,
+      "skrot": "cbe9bada78a25e26f8934a99f58d2aec2a757a5e88f37df512c6e8d122951edc"
+    },
+    "corticosterone": {
+      "wybory": 4992,
+      "skrot": "a8e274d7d3187968f6ca4f47dd308a2a87cd1cfb37967167f8655df768e40a90"
+    },
+    "oh17_progesterone": {
+      "wybory": 4992,
+      "skrot": "baafc129aa14aab8a740b212228fcad698781b5a9c5e9235d6ae2f120a031624"
+    },
+    "oh17_pregnenolone": {
+      "wybory": 4992,
+      "skrot": "7d0edfff3a57dc9305e57444fee43891de4f5f55ebb8f012f466c663a8cd631a"
+    },
+    "pregnenolone": {
+      "wybory": 4992,
+      "skrot": "e76edc40a3ecbfcbdd63a4c86fffaaea5a6b812bd2aac14543c44fc42f3fa271"
+    },
+    "dhea": {
+      "wybory": 4992,
+      "skrot": "61f12d694595c3057e4b2b13bd8b1ae4f04c8e9c9b19df966dba0e61b563a1cd"
+    },
+    "dhea_s": {
+      "wybory": 4992,
+      "skrot": "21b56a9cd1448d1fac6464099176166a8a4f18493482c0d37b58f7d1c2bb7e28"
+    },
+    "androstenedione": {
+      "wybory": 4992,
+      "skrot": "a6f5799cce7ba848015d8e7ea4648ed179ed4d21fd97a7ff13b82d5c063ace75"
+    },
+    "testosterone_total": {
+      "wybory": 4992,
+      "skrot": "a8a68807d53b2fa08b9cce3ce6cc453c2ec67a2535424859062fd83400fbdd16"
+    },
+    "testosterone_free": {
+      "wybory": 4992,
+      "skrot": "0b1d5ac2349ed40e7f2bc0bd1f61982c109cc9c67c7b1a042a1c55976f4f16b2"
+    },
+    "dht": {
+      "wybory": 4992,
+      "skrot": "8922b67fb7d5d73beef07949e1491d00b273ed980f43dbe1ff4c3462b98ee52f"
+    },
+    "estrone": {
+      "wybory": 4992,
+      "skrot": "d4d6de1670785efeb62e65520e6960bb418d8adaa0dc019a4c9d760d5cc8e429"
+    },
+    "progesterone": {
+      "wybory": 4992,
+      "skrot": "bd6dfbee3044853e352714506dac1966719b93b200da09687ef6ba2c9ba5755b"
+    },
+    "vit_d_25oh": {
+      "wybory": 4992,
+      "skrot": "33608d199cfbbcb2d5639483480435e1ec9e85e1e71f43a7fd1731defa8f5bd4"
+    },
+    "vit_d_1_25": {
+      "wybory": 4992,
+      "skrot": "d21dd3e014a6f1ce7834d1495c9c0137f31fa0c1b9b47202d1c3c563b509bdd7"
+    },
+    "vit_d3": {
+      "wybory": 4992,
+      "skrot": "b1adb9be6908e8270d04b3adf23ea8c47a0fae29aa1420af556e9d4b7f1995ab"
+    },
+    "tsh": {
+      "wybory": 4992,
+      "skrot": "7d14876930dfa88e3b8de8c0c881d10dc2b52d38f4411fd79abd7cfa834081b1"
+    },
+    "ft4": {
+      "wybory": 4992,
+      "skrot": "308c56a3523f00ad1026fa4d5184a18ef45d3d69bb44f02de8259ab5ebfaf58d"
+    },
+    "ft3": {
+      "wybory": 4992,
+      "skrot": "e38193575e2af9045d3f8f98fc04ee54da7f726340939482ba1ed68d312675b0"
+    },
+    "t4_total": {
+      "wybory": 4992,
+      "skrot": "a31150d55b8d06c45dab83c41b191835f3794f4b7bd4e473a96d4eaeff067b46"
+    },
+    "t3_total": {
+      "wybory": 4992,
+      "skrot": "d6cc5d004c1db043930e94b140f8687751dc5234bc55f49e56df266123229d31"
+    },
+    "thyroglobulin": {
+      "wybory": 4992,
+      "skrot": "5c06dff6ffe4c72625674e159f45de64f1b9e278c87b009fbdb8d65de46173c7"
+    },
+    "igf1": {
+      "wybory": 4992,
+      "skrot": "452a661fe85f82cad4c7b72c83e7875de0f8e6608ae27e233cce58f691eb5032"
+    },
+    "igfbp3": {
+      "wybory": 4992,
+      "skrot": "6e077945fdeae63b19f176bb5709ead2d780242f59e4bce6f453e7205bdf269b"
+    },
+    "prolactin": {
+      "wybory": 4992,
+      "skrot": "af75055f177dc32b931865878d8e6f0b27649f85c760586e2b86c7712598716b"
+    },
+    "lh": {
+      "wybory": 4992,
+      "skrot": "aa08c86c0d83f15aaba5a8010ad688e79da7689bb27f555e312456cfabed29d9"
+    },
+    "fsh": {
+      "wybory": 4992,
+      "skrot": "2200dbafdeed370ce0218184c3f35688003cac71763d7b01fdb144b43b1a28eb"
+    },
+    "inhibin_b": {
+      "wybory": 4992,
+      "skrot": "05af93eeb5cf832b067ce7c6976e3d04ba533f407e5bc8d52bd11122d6d1dd69"
+    },
+    "amh": {
+      "wybory": 4992,
+      "skrot": "8549c9c43d764be4a9726cbd0452cae081c1e581aa1f40ad9bcb9c3201b98fce"
+    },
+    "shbg": {
+      "wybory": 4992,
+      "skrot": "0afb6ed2d82bc63b49e4c458ceb473c8ad605216100eb1eddb21dea60c4cd979"
+    }
+  },
+  "estradiolBezZmian": {
+    "mezczyzni": {
+      "wybory": 1664,
+      "skrot": "9b1d789b29b876b840df3ac63d9fd70d763f166797647c2e59c3347bb78be698"
+    },
+    "plecNieznana": {
+      "wybory": 1664,
+      "skrot": "f72553e366799ac33cdd14435d2adb11704d0be85e1e517827cd11a0136c06d3"
+    },
+    "kobietyBezWieku": {
+      "wybory": 128,
+      "skrot": "f5afffffcf9d087047f5806e47d7bd74efc3c561818e5e8b9740228079eb1de1"
+    },
+    "kobietyOd18Lat": {
+      "wybory": 384,
+      "skrot": "16bf01f7f9f21e7decfa4292f87919ea3a99f5b1bf89156605a2fad880b289a9"
+    },
+    "dziewczynkiPierwszeDniZycia": {
+      "wybory": 128,
+      "skrot": "f5afffffcf9d087047f5806e47d7bd74efc3c561818e5e8b9740228079eb1de1"
+    },
+    "wiekPrzecinajacyGranice18Lat": {
+      "wybory": 48,
+      "skrot": "5f3ebde3c6b41496b5033ce35c1bfaee908fc943cd0c87dbe8f18eef53fb7870"
+    },
+    "dziewczynkiBezMenarcheIBezCiazy": {
+      "wybory": 320,
+      "skrot": "dbfbd7537069e1f29656181764630b3e2274175787dab13af947dbcd318c7528"
+    }
+  },
+  "daneEstradiolu": "6e501a8eef7adb990ba1c1277f894d6808e36fe17bbdf16a9c19c640064a3c29"
+}
