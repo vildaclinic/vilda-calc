@@ -320,14 +320,30 @@ function ghJumpWatchAttempt(claim){
   const parent=modal.parentNode,observer=new window.MutationObserver(function(){if(!modal.isConnected||modal.parentNode!==parent)ghJumpFinish(claim)});
   observer.observe(parent,{childList:true});claim.cleanup.push(function(){observer.disconnect()});
 }
+/* P-OTYLOSC-SKOK (2026-11-19, etap 2 projektu „Leczenie otyłości — wpisy poza wizytą”): ten sam wpis vilda:gh-jump
+   niesie skok z Karty pacjenta do monitora leczenia otyłości — {patientId, obesity:{tryb, entryId}, ts}, bez danych klinicznych
+   zamiast ghPointId (vilda_cykle_leczenia.js, celSkoku). Wczytanie pacjenta, strażnik niezapisanych zmian i ramki
+   powłoki — bez zmian, jak dla punktu GH. Różnice: na miejscu działa monitor otyłości (window.obesityTherapyMonitorSkok
+   w obesity_therapy_monitor.js), a tryb „wlaczenie” (nowy cykl) nie wycisza okna „Nowy pomiar / Odtwórz zapis” —
+   nowy cykl zwykle zaczyna się na nowej wizycie. „edytuj” i „ponownie” wczytują jak „Odtwórz zapis”, bez pytania. */
+function ghJumpObesity(n){const o=n&&n.obesity;return !!(o&&typeof o==="object"&&(o.tryb==="edytuj"||o.tryb==="ponownie"||o.tryb==="wlaczenie"))}
+function ghJumpAsksLoadChoice(n){return ghJumpObesity(n)&&n.obesity.tryb==="wlaczenie"}
+/* Na tej samej stronie DocPro (Karta pacjenta otwarta nad DocPro) skok nie ma zdarzenia, które by go uruchomiło:
+   ani ładowania, ani zdarzenia storage (ten sam dokument), a hash cofa zamknięcie Karty (history.back). Karta woła
+   to po zamknięciu i ustaleniu historii. */
+window.vildaGhJumpConsumeSoon=function(){try{setTimeout(N,700)}catch(_){}};
+function ghJumpLand(n,loaded){
+  if(ghJumpObesity(n)){try{typeof window.obesityTherapyMonitorSkok==="function"&&window.obesityTherapyMonitorSkok(Object.assign({},n.obesity,{patientId:n.patientId,poWczytaniu:!!loaded}))}catch(_){}return}
+  pe(n.ghPointId);
+}
 async function N(){
   const e=ghJumpRaw();if(!e)return;
   let n;try{n=JSON.parse(e)}catch(_){n=null}
   const removeExact=function(){try{if(window.sessionStorage.getItem("vilda:gh-jump")===e)window.sessionStorage.removeItem("vilda:gh-jump")}catch(_){}};
-  if(!n||!n.ghPointId){removeExact();return}
+  if(!n||!n.ghPointId&&!ghJumpObesity(n)){removeExact();return}
   if(typeof n.ts==="number"&&Date.now()-n.ts>60000){removeExact();return}
   // Legacy point-only intents do not load or replace a patient.
-  if(!n.patientId){pe(n.ghPointId);removeExact();return}
+  if(!n.patientId){if(n.ghPointId)pe(n.ghPointId);removeExact();return}
   if(ghJumpPendingClaim&&ghJumpPendingClaim.raw===e)return;
   if(ghJumpPendingClaim)ghJumpCancel(ghJumpPendingClaim);
   if(ghJumpAttemptLease)ghJumpCancel(ghJumpAttemptLease);
@@ -369,10 +385,10 @@ const publish=function(operationDetail){try{window._vildaCurrentPatientId=n.pati
    Rozgloszenie MUSI byc synchroniczne: setTimeout zepsulby okno wyciszenia vilda:json-imported
    we wskazniku zapisu. UWAGA: przycisk "Odtworz zapisany stan" zostaje po skoku widoczny -
    modal chowal go sam przy otwarciu, a tu modalu nie ma. To jest zamierzone: droga reczna
-   zostaje otwarta. */try{typeof window.CustomEvent=="function"&&document.dispatchEvent(new window.CustomEvent("vilda:patient-loaded",{detail:{patientId:n.patientId,savedAtISO:a&&a.savedAtISO||null,snapshotCount:i&&(i.snapshotCount||i.snapshots&&i.snapshots.length)||null,name:a&&a.payload&&a.payload.name||null,source:"pick",skipLoadChoice:!0,...operationDetail}}))}catch{}};
+   zostaje otwarta. */try{typeof window.CustomEvent=="function"&&document.dispatchEvent(new window.CustomEvent("vilda:patient-loaded",{detail:{patientId:n.patientId,savedAtISO:a&&a.savedAtISO||null,snapshotCount:i&&(i.snapshotCount||i.snapshots&&i.snapshots.length)||null,name:a&&a.payload&&a.payload.name||null,source:"pick",skipLoadChoice:!ghJumpAsksLoadChoice(n),...operationDetail}}))}catch{}};
 if(scopedLoad){if(!loadApi.runAcceptedPatientLoad(acceptedLoad,a.payload,{apply:apply,publish:publish}))return}
 else{try{apply()}catch{}publish({})}
-try{window.VildaChrome&&typeof window.VildaChrome.refreshPatientChip=="function"&&window.VildaChrome.refreshPatientChip()}catch{}setTimeout(function(){try{typeof window.refreshGHTherapyMonitor=="function"&&window.refreshGHTherapyMonitor()}catch{}pe(n.ghPointId)},450)
+try{window.VildaChrome&&typeof window.VildaChrome.refreshPatientChip=="function"&&window.VildaChrome.refreshPatientChip()}catch{}setTimeout(function(){try{typeof window.refreshGHTherapyMonitor=="function"&&window.refreshGHTherapyMonitor()}catch{}ghJumpLand(n,true)},450)
             }finally{ghJumpFinish(claim)}
           },d=window.VildaUnsavedGuard;
           claim.phase="attempt";
@@ -386,7 +402,7 @@ try{window.VildaChrome&&typeof window.VildaChrome.refreshPatientChip=="function"
           return;
         }
       }
-      if(ghJumpCurrent(claim,false))pe(n.ghPointId);
+      if(ghJumpCurrent(claim,false))ghJumpLand(n,false);
       ghJumpConsume(claim);ghJumpFinish(claim);return;
     }
     ghJumpCancel(claim);

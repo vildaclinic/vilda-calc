@@ -93,13 +93,15 @@ test.describe('Postępy dorosłego i „Wpisy leczenia” na dzienniku leczenia'
     await karta(page, pid);
     const start = wiersz(page, '2026-06-01');
     await expect(start).toContainText('Włączenie');
-    await expect(start.getByText('Poprawka w DocPro', { exact: true })).toBeVisible();
+    // P-OTYLOSC-SKOK (etap 2): zamiast samego tekstu — przycisk do monitora DocPro i widoczny powód.
+    await expect(start.getByRole('button', { name: 'Edytuj w DocPro →' })).toBeVisible();
+    await expect(start).toContainText('Od Włączenia zależą cykl, ocena wg ChPL i listy pacjentów.');
     await expect(start.getByRole('button', { name: /Popraw|Usuń/ })).toHaveCount(0);
     const kont = wiersz(page, '2026-07-06');
     await expect(kont.getByRole('button', { name: 'Popraw wpis z 06.07.2026' })).toBeVisible();
     await expect(kont.getByRole('button', { name: 'Usuń wpis z 06.07.2026' })).toBeVisible();
-    await expect(kont.getByText('Poprawka w DocPro')).toHaveCount(0);
-    await expect(page.locator('.vdo')).toContainText('Włączenie, Zakończenie i zmianę leku dodajesz i poprawiasz w DocPro przy wizycie.');
+    await expect(kont.getByRole('button', { name: 'Edytuj w DocPro →' })).toHaveCount(0);
+    await expect(page.locator('.vdo')).toContainText('Włączenie, Zakończenie i zmianę leku edytujesz w monitorze DocPro');
     // Sejf bez zmian: lista „Leczenie otyłości — Saxenda, trwa” liczy się jak dotąd z zapisu wizyty.
     const naLiscie = await page.evaluate(async (id) => (await window.VildaVault.previewPatientListRule({ type: 'obesity', drugKey: 'saxenda', scope: 'active' })).patientIds.includes(id), pid);
     expect(naLiscie).toBe(true);

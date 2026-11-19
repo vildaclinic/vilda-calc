@@ -317,6 +317,10 @@
       font-size: 0.82rem;
       cursor: pointer;
     }
+    /* P-E2-MENARCHE: pole „Wiek menarche [lata]” i nota o fazach cyklu chowają się atrybutem hidden —
+       musi on wygrać z display etykiety w siatce panelu. */
+    .lab-patient-override label[hidden],
+    .lab-patient-override .lab-override-note[hidden] { display: none; }
     /* Sekcja źródeł — przycisk + rozwijana lista cytowań aktualnej substancji. */
     .lab-sources-wrap {
       margin-top: var(--space-0-9);

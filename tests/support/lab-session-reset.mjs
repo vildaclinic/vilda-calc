@@ -64,6 +64,13 @@ export async function fillLabResetForm(frame) {
   await frame.locator('#labOverrideSex').selectOption('F');
   await frame.locator('#labOverrideAge').fill('30');
   await frame.locator('#labOverrideAgeMonths').fill('3');
+  // P-E2-MENARCHE: lokalny wiek menarche (pole widać tylko dla estradiolu u nieletniej) wpisany wprost w pole,
+  // żeby czyszczenie formularza miało co wyczyścić (expectLabReset sprawdza, że pole jest puste).
+  await frame.locator('#labOverrideMenarcheAge').evaluate((pole) => {
+    pole.value = '11,5';
+    pole.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  await expect(frame.locator('#labOverrideMenarcheAge')).toHaveValue('11,5');
   await expect(frame.locator('#labMeasTime')).toHaveValue('midnight');
   await expect(frame.locator('#labMeasProtocol')).toHaveValue('post_dst');
   await expect(frame.locator('#labResultSection')).not.toHaveClass(/is-empty/u);
@@ -72,7 +79,7 @@ export async function fillLabResetForm(frame) {
 
 export async function expectLabReset(frame) {
   for (const id of ['labSubstance', 'labValue', 'labOverrideSex', 'labOverrideAge', 'labOverrideAgeMonths',
-    'labOverrideCycle', 'labOverrideTanner']) {
+    'labOverrideCycle', 'labOverrideTanner', 'labOverrideMenarcheAge']) {
     await expect(frame.locator(`#${id}`), id).toHaveValue('');
   }
   expect(await frame.evaluate(() => ['labMeasTime', 'labMeasProtocol', 'labMeasMethod'].map(id => document.getElementById(id).value))).toEqual(['', '', '']);

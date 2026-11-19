@@ -2061,6 +2061,196 @@ Opis działania i przypadki: `docs/clinical/ALGORITHMS.md`, „Postępy dorosłe
 
 **Granice.** Napisy `_pdE.scalSerie(` i `_pdU.renderPanel(Ct,_pdM,` zostają (pilnuje ich `postepy-doroslego-widok.test.mjs`). Słuchacze zamkniętej karty (kontener odpięty od dokumentu) wypadają przy następnym powiadomieniu. Lint: bez nowych naruszeń (`no-useless-assignment` w limicie).
 
+## Łatka P-TRAJEKTORIA-DZIENNIK — kursy leczenia otyłości z dziennika (`vilda_auth_ui.js` 570 → 571, `vilda_summary_cards.js` 64 → 65, 2026-11-19, decyzja właściciela)
+
+Opis działania i przypadki: `docs/clinical/ALGORITHMS.md`, „Analiza trajektorii i karta porównania z dziennika leczenia” (P-TRAJEKTORIA-DZIENNIK). Czytelne źródło: `vilda_cykle_leczenia.js` (`VildaDziennikOtylosci.punktyWczytanego`, `odswiezWczytanego`, odświeżenie po `zapisz`).
+
+```js
+// vilda_auth_ui.js
+// 1. pas leczenia otyłości na siatkach Karty
+//    było:  ke=function(){var pe=Lt(s.obesityTherapyPoints,"oty\u0142o\u015B\u0107","#b5731a");if(!pe)return null;try{for(var Ga=s.obesityTherapyPoints.filter(
+//    jest:  ke=function(){/* P-TRAJEKTORIA-DZIENNIK … */var _dzP=typeof Ob_dzPunkty=="function"?Ob_dzPunkty(s,GdNotatki):s.obesityTherapyPoints,pe=Lt(_dzP,"oty\u0142o\u015B\u0107","#b5731a");if(!pe)return null;try{for(var Ga=_dzP.filter(
+// 2. kontekst trajektorii Karty (panel „Analiza trajektorii”, porównanie)
+//    było:  _J.buildClinicalContext({ghTherapyPoints:s.ghTherapyPoints,obesityTherapyPoints:s.obesityTherapyPoints,motherHeightCm:_adv.motherHeight
+//    jest:  _J.buildClinicalContext({ghTherapyPoints:s.ghTherapyPoints,obesityTherapyPoints:typeof Ob_dzPunkty=="function"?Ob_dzPunkty(s,GdNotatki):s.obesityTherapyPoints,motherHeightCm:_adv.motherHeight
+
+// vilda_summary_cards.js — karta „Porównanie z poprzednim pomiarem”
+//    było:  return J.buildClinicalContext({ghTherapyPoints:a.ghTherapyPoints,obesityTherapyPoints:a.obesityTherapyPoints,motherHeightCm:mh?parseFloat(mh.value):NaN,
+//    jest:  /* P-TRAJEKTORIA-DZIENNIK … */const _dzP=(function(){try{const Dz=a.VildaDziennikOtylosci;return Dz&&typeof Dz.punktyWczytanego=="function"?Dz.punktyWczytanego():null}catch(e){return null}})();return J.buildClinicalContext({ghTherapyPoints:a.ghTherapyPoints,obesityTherapyPoints:_dzP||a.obesityTherapyPoints,motherHeightCm:mh?parseFloat(mh.value):NaN,
+```
+
+**Granice.** `Ob_dzPunkty` i `GdNotatki` — z łatki P-POSTEPY-DZIENNIK (ta sama funkcja Karty). Wywołania przez strażników `typeof`. `window.obesityTherapyPoints` bez zmian.
+
+## Łatka P-WIZYTA-PRZYDZIAL — nadanie wizyty przy otwartym oknie „Niezapisane zmiany” nie jest zmianą formularza (`vilda_save_status_indicator.js` 49 → 50, 2026-11-19)
+
+**Objaw.** Skok z Terminarza do punktu GH pacjenta w DocPro (test `tests/e2e/powloka-panel-obcy-pacjent.spec.mjs`,
+„Start z X → skok GH do Y”) co kilka przebiegów kończył się bez wczytania pacjenta. Lekarz odpowiadał w oknie
+strażnika „Odrzuć”, a zamiast skoku dostawał „Formularz zmienił się. Wykonaj tę czynność ponownie.”, choć niczego
+nie zmieniał.
+
+**Przyczyna.** Decyzja strażnika (`readCurrentDecision`) czyta formularz bez skutków ubocznych
+(`captureCurrentUserDataReadOnly`) i nie nadaje wizyty. Autozapis sesji (`vilda_persist_runtime.js`) i sprawdzenia
+wskaźnika zapisu wołają zwykłe `collectUserData`, a ono przez `VildaVisitContext.capture` nadaje formularzowi
+z danymi pacjenta pierwszą wizytę (`payload.visit`). Gdy to nadanie wypadło po otwarciu okna, odcisk formularza
+przy kliknięciu miał dodatkowe `core.visit`. Dokładne porównanie w `isCurrentDecision` uznawało to za zmianę
+formularza i strażnik anulował czynność. W DocPro po odtworzeniu sesji nadana wizyta nie ma jeszcze
+`patientId`, bo formularz nie jest związany z wczytanym rekordem.
+
+**Zmiana** (czytelny blok, bez ponownej minifikacji): `readCurrentDecision` zapamiętuje chwilę odczytu (`readAt`).
+Nowa funkcja `decisionOnlyAllocatedVisit` przyjmuje jedną różnicę i tylko przy spełnieniu wszystkich warunków:
+
+- w decyzji nie było `core.visit`;
+- teraz jest wizyta o poprawnym kształcie, `origin: "explicit"`;
+- wizyta nie ma pacjenta albo ma pacjenta decyzji;
+- wizyta powstała nie wcześniej niż odczyt decyzji;
+- po jej usunięciu odcisk jest identyczny.
+
+Używają jej `isCurrentDecision` oraz pierwszy warunek `decisionContentAfterSave`. Pozostałe warunki obu funkcji są
+bez zmian: ten sam właściciel, generacja i referencja, a po zapisie — referencja równa bieżącemu odciskowi.
+Zmianą formularza pozostają:
+
+- wizyta wczytana (starsza niż decyzja) albo podmieniona;
+- wizyta innego pacjenta lub `legacy-inferred`;
+- każda edycja pola;
+- zmiana konta.
+
+Wyniki, zapis, sesja i sejf bez zmian. Zmienia się tylko to, czy kliknięcie w oknie strażnika jest wykonane, czy
+anulowane.
+
+**Regresje.** `tests/unit/save-status-current-decision.test.mjs` uruchamia produkcyjny moduł. Blok
+„first visit allocated while the unsaved-changes decision is open” sprawdza:
+
+- przyjęcie nowej wizyty, także bez pacjenta;
+- odrzucenie edycji, starszej, obcej i `legacy-inferred` wizyty, podmienionej wizyty, wizyty z pacjentem,
+  którego formularz nie ma, oraz zmiany konta;
+- zapis z okna po nadaniu.
+
+Bez zmiany trzy przypadki przyjęcia padają. `tests/e2e/powloka-panel-obcy-pacjent.spec.mjs` („skok GH do Y”)
+przeszedł lokalnie 48/48 przy 6 równoległych przebiegach. Przed zmianą 2–3 na 12 przebiegów kończyło się
+komunikatem „Formularz zmienił się”.
+
+## Łatka P-OTYLOSC-SKOK — z Karty pacjenta prosto do monitora DocPro (`gh_therapy_monitor.js` 63 → 64, `obesity_therapy_monitor.js` 29 → 30, `vilda_cykle_leczenia.js` 7 → 8, `vilda_auth_ui.css` 84 → 85, `inline_docpro_01.css` 5 → 6, 2026-11-19, decyzje właściciela)
+
+Opis działania i przypadki: `docs/clinical/ALGORITHMS.md`, „Leczenie otyłości — etap 2: z Karty pacjenta prosto do
+monitora DocPro” (P-OTYLOSC-SKOK). Czytelne źródło Karty: `vilda_cykle_leczenia.js` (`POWODY_KROTKIE`, `powodKrotki`,
+`celSkoku`, `doDocPro`; przyciski w `sekcja`). Bez ponownej minifikacji artefaktów.
+
+```js
+// gh_therapy_monitor.js — obsługa wpisu vilda:gh-jump (N), czytelne linie
+// 1. nowe funkcje przed async function N(): ghJumpObesity(n), ghJumpAsksLoadChoice(n), ghJumpLand(n,loaded)
+//    oraz window.vildaGhJumpConsumeSoon=function(){try{setTimeout(N,700)}catch(_){}};
+// 2. było:  if(!n||!n.ghPointId){removeExact();return}
+//    jest:  if(!n||!n.ghPointId&&!ghJumpObesity(n)){removeExact();return}
+// 3. było:  if(!n.patientId){pe(n.ghPointId);removeExact();return}
+//    jest:  if(!n.patientId){if(n.ghPointId)pe(n.ghPointId);removeExact();return}
+// 4. było:  source:"pick",skipLoadChoice:!0,...operationDetail}
+//    jest:  source:"pick",skipLoadChoice:!ghJumpAsksLoadChoice(n),...operationDetail}
+// 5. było:  refreshGHTherapyMonitor()}catch{}pe(n.ghPointId)},450)
+//    jest:  refreshGHTherapyMonitor()}catch{}ghJumpLand(n,true)},450)
+// 6. było:  if(ghJumpCurrent(claim,false))pe(n.ghPointId);
+//    jest:  if(ghJumpCurrent(claim,false))ghJumpLand(n,false);
+
+// obesity_therapy_monitor.js — czytelny blok P-OTYLOSC-DZIENNIK
+// 1. nowa funkcja Dzprzebieg(id) przed Dzz; w Dzz komunikat po zapisie:
+//    było:  Cm("", "Zapisano w dzienniku leczenia — wpis widać w Karcie pacjenta i na innych urządzeniach.");
+//    jest:  … + (listy ? " Listy pacjentów zobaczą zmianę po „Zapisz dane”." : "")
+// 2. nowy czytelny blok P-OTYLOSC-SKOK przed blokiem P-OTYLOSC-WZROST: Skotworz, Skczekaj, Skpodswietl, Skwypelnij
+//    i window.obesityTherapyMonitorSkok(cel) — używa Ee/Ec/Ek/Eg/Cm/Cc/CyS z tego samego zakresu.
+```
+
+CSS: w `vilda_auth_ui.css` sekcja `.vdo` (białe tło `--bg`, `.vdo-head > :first-child`, `.vdo .vdo-btn*` z `!important`
+przy szczegółowości 0-2-0 — ta sama broń co przyciski Karty przeciw `.liquid-ios26 button` i `.vilda-auth-root
+.vilda-auth-btn-*`; odznaki `.vdo-src` i `.vdo-src-pacjent`; telefon ≤ 560 px, przyciski 44 px). W `inline_docpro_01.css`
+reguły `.obm-msg.info` i `tr.obm-row-skok` (podświetlenie wiersza klasą, nie stylem na elemencie — P-STYLE krok 5b).
+Literały zastąpione tokenami (`--text-strong`, `--line-teal`, `--space-12px`, `--space-14px`; strażnik `css-tokeny`).
+
+**Granice.** Wpis „vilda:gh-jump” bez pola `obesity` działa dokładnie jak dotąd (skok do punktu GH): wyciszone okno
+wyboru i `pe(ghPointId)`. Pole `obesity` niesie wyłącznie `{tryb, entryId}` — bez danych klinicznych (zwykły
+`sessionStorage` nie przechowuje treści pacjenta; dane usuniętego wpisu monitor czyta z dziennika po `entryId`).
+Identyfikator pacjenta w tym wpisie — jak w dotychczasowym skoku do punktu GH (alert CodeQL „Clear text storage”
+w PR vildaclinic/vilda-calc#1003 — do decyzji właściciela). Karta na innej stronie niż DocPro zostaje otwarta (jak przy skoku GH); nad DocPro — zamyka się
+(`VildaAuthUI.hide`), a skok rusza po `popstate` z jej `history.back()` albo po 600 ms. Sejf i dziennik bez zmian;
+`window.obesityTherapyPoints` zmienia się tylko przez zapis lekarza w monitorze.
+
+## Łatka P-E2-MENARCHE — estradiol poniżej 18 lat: zakresy dorosłych po 5 latach od menarche (`lab_units_data.js` 42 → 43, `lab_unit_converter.js` 10 → 11, `vilda_lab_packages.js` 10 → 11, `inline_przelicznik_jednostek_00.css` 17 → 18, `przelicznik-jednostek.html`, 2026-11-19, decyzje właściciela)
+
+Opis działania, przypadki, dowody i ograniczenia: `docs/clinical/ALGORITHMS.md`, wpis „LAB-E2-MENARCHE”. Zmiany wprowadzono wprost w artefaktach, czytelnymi blokami; żadnego pliku nie przebudowano z dawnych źródeł ani nie minifikowano ponownie.
+
+`lab_units_data.js` — tylko czytelny blok polityki w deskryptorze estradiolu (plik poza nim pozostaje zminifikowany i bez zmian):
+
+```js
+reference_selection_policy: {
+  id: 'estradiol-matched-reference-only',
+  version: '2026-11-19.1',               // było '2026-10-28.1'
+  // require_matched, chronological_age, context_pl, adult_female_context — bez zmian
+  gynecological_age: {                    // nowy blok: próg, zakres wieku menarche, wybory i teksty jako dane
+    id: 'e2-gynecological-age-qualification', when: { sex: 'F' }, menarche_key: 'menarche_age_years',
+    menarche_min_years: 2, menarche_max_years: 20, adult_context_after_years: 5,
+    adult_context_min_menarche_years: 8,  // R9 (decyzja nr 5): najniższy wiek menarche, od którego reguła działa — osobno od zakresu wpisu 2–20
+    contexts_not_applicable_below_adult_age: ['postmenopause'],
+    pregnancy_contexts: ['pregnancy_t1', 'pregnancy_t2', 'pregnancy_t3'],
+    context_pl: '…', basis_pl: 'Od menarche: {years} lat (≥\u00a0{threshold}) — …', source_note: '…'
+  }
+}
+```
+
+Wiersze `reference_ranges_si`, jednostki, `default_range_si` i `LabUnitsData.version` (2.0.2) są nietknięte — pilnuje tego skrót danych w `tests/fixtures/lab-selection-inne-badania-baza.json`.
+
+`lab_unit_converter.js` — czytelne funkcje dopisane przed `copyContextReference` (część czytelna pliku): `listed`, `knownBelowAdultAge`, `yearsDownText`, `gynecologicalAge`, `gynecologicalBasisText`, `qualifyGynecologicalAge`, `markGynecologicalBasis`, `copyReferenceBasis`, `sharedPhasePolicy`, `referenceContext`; `selectContextReference` dostał trzeci argument `minor`. Stan reguły (`gynecologicalAge`) ma pole `early` — menarche poniżej `adult_context_min_menarche_years` nie kwalifikuje; `referenceContext` oddaje tę granicę i powód braku kwalifikacji (`not_qualified_reason`: `menarche_not_recorded`, `below_gynecological_age`, `menarche_before_min_age`). W zminifikowanym wierszu cztery wstawki:
+
+```js
+// U() = selectRange:
+//    było:  e=qualifiedAge.patient;var qualifiedContext=selectContextReference(r,e);
+//    jest:  e=qualifiedAge.patient;var gynecological=qualifyGynecologicalAge(r,e);e=gynecological.patient;var qualifiedContext=selectContextReference(r,e,gynecological.minor);
+// $() = evaluate:
+//    było:  copyContextReference(l,o);return o?(
+//    jest:  copyContextReference(l,o);copyReferenceBasis(l,o);return o?(
+// obiekt API:
+//    było:  selectRange:U,rangesForOverride:C,                       …version:"2.0.3"
+//    jest:  selectRange:U,referenceContext:referenceContext,rangesForOverride:C,   …version:"2.0.4"
+```
+
+Dla każdego badania poza estradiolem `selectRange` i `evaluate` dają wyniki identyczne jak przed zmianą (macierz 33 badań × 4992 kontekstów, `tests/unit/lab-e2-menarche.test.mjs`).
+
+`vilda_lab_packages.js` (czytelne źródło, model 1.7.0 → 1.8.0, widok 1.9.0 → 1.10.0): `evaluateRow` zapamiętuje w `row.contextBasis` zdanie silnika `evaluation.reference_basis_pl`, gdy wynik wymaga kontekstu badania; `drawCard` rysuje je drugą notą `.lab-pkg-card-note` pod zdaniem o kontekście i uwzględnia w podpisie przerysowania karty. Gałąź `if (!view.lab) { … }` dostała klamry, żeby `else if (view.replaced)` nadal należało do niej (nota o zastąpionym badaniu bez zmian).
+
+`przelicznik-jednostek.html` (czytelny skrypt strony):
+
+```js
+// markup panelu „zmień”: <label id="labOverrideMenarcheWrap" hidden>Wiek menarche [lata] <input type="text" id="labOverrideMenarcheAge" inputmode="decimal" …>
+//                        <p id="labOverrideMenarcheNote" class="lab-override-note" role="status" hidden>
+// readPubertyPatientContext: context.menarcheAgeYears — tylko gdy wiek menarche jest wpisany (ta sama kolejność źródeł co początek pokwitania)
+// applyMenarcheAge(p, source, local): p.menarche_age_years (pole lokalne > dane), p._shared_menarche, p._menarche_overridden;
+//    local: null = pole puste, liczba = wpis, NaN = wpis, który nie jest zwykłą liczbą dziesiętną (zastępuje dane, silnik go nie przyjmie);
+//    wołane w bloku estradiolu getEffectivePatient (z localOverride.menarche) i getPackagePatient (bez wpisu lokalnego)
+// referenceContextFor(pacjent) → LabUnitConverter.referenceContext(wybrane badanie, pacjent)
+// applyReferenceAvailability(p) — ostatni krok getEffectivePatient, jedno miejsce dla wszystkich odbiorców pacjenta:
+//    wybór fazy niedostępny wg silnika → p.cycle_phase = null (zapamiętany localOverride.cycle_phase zostaje);
+//    p._menarche_applied (wpis dotyczy badania i pacjentki i silnik go przyjął) oraz p._has_override
+// localOverride.menarche: czyszczone w resetLocalPatientOverride, przy zmianie płci w updateLifespan i dla płci M w onOverrideChange
+// describePatient: CYCLE_PHASE_SUMMARY (ciąża słowami); „menarche 11,0” (formatMenarcheAge) tylko przy p._menarche_applied
+// buildClinicalHint: wiersz reference.basis_pl (+ dopisek o „Zmień ▼" przy nieznanej fazie)
+// przed renderPatientSummary: overrideNumberTyping, commitCyclePhaseAvailability, renderCyclePhaseOptions, renderMenarcheOverrideState
+//    (nota R9 „…menarche przed ukończeniem 8 lat (3,0)…” wybierana po reference.not_qualified_reason; liczba 8 z odpowiedzi silnika)
+// renderPatientSummary: commitCyclePhaseAvailability() PRZED wcześniejszym powrotem dla badań z własnym formularzem
+//    (LH, FSH, inhibina B, testosteron) — poza odświeżeniem w trakcie wpisywania liczby
+// onOverrideChange(event): wpis pola — po obcięciu spacji /^\d+(?:[.,]\d{0,2})?$/ (sam separator na końcu = niedokończony zapis liczby całkowitej), inaczej NaN; zdarzenie „input”
+//    ustawia overrideNumberTyping na czas odświeżenia (zapamiętany wybór fazy i jego opcja zostają)
+// onOverrideNumberCommitted: „change” i „blur” pól wieku, miesięcy i wieku menarche → tylko renderPatientSummary()
+//    (zatwierdza wybór i odświeża opis; nie rysuje wyniku, żeby kliknięcie w wynik po wyjściu z pola nie ginęło)
+```
+
+Strona nie ma kopii reguły: próg, granicę wieku, zakres wieku menarche i listę niedostępnych wyborów bierze z odpowiedzi `LabUnitConverter.referenceContext`.
+
+`inline_przelicznik_jednostek_00.css` — jedna reguła, bo etykieta panelu ma własne `display`:
+
+```css
+.lab-patient-override label[hidden],
+.lab-patient-override .lab-override-note[hidden] { display: none; }
+```
+
+**Granice.** Bez nowych stylów ustawianych wprost na elementach (`tests/fixtures/style-elementow.json` bez zmian: nowe pole i nota chowają się atrybutem `hidden`). `vilda_lab_range_snapshot.js` i `vilda_vault.js` bez zmian — format zapisanego zakresu się nie zmienił, a dawne zapisy nie są przeliczane. Wersje `?v=`, precache i `SW_VERSION` ustawił `npm run podbij-wersje`.
+
 ## Trwała tożsamość wizyt — źródło i granica artefaktu sejfu
 
 Zmiana funkcjonalna `P-TRWALE-WIZYTY` ma bazę `audyt` z commita

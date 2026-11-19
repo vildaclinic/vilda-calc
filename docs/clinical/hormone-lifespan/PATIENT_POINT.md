@@ -172,6 +172,14 @@ metoda/materiał wyklucza punkt bez fallbacku. Doustna antykoncepcja była
 wykluczeniem źródłowym; znana ciąża, menopauza, leczenie hormonalne i stymulacja
 są konserwatywnymi wyłączeniami aplikacji. Brak odpowiedzi pozostaje nieznany.
 
+> Uzupełnienie 2026-11-19 (P-E2-MENARCHE): formularz nie proponuje już
+> „Postmenopauzy” poniżej 18 lat, więc w domenie tego profilu wyłączenie
+> „menopauza” nie jest osiągalne z formularza; polityka punktu i jej lista
+> wyłączeń pozostają bez zmian. Zwykłą fazę cyklu można wybrać dopiero po
+> 5 latach od menarche (menarche w wieku co najmniej 8 lat) — punkt
+> mediany nadal łączy fazy. Opis reguły:
+> `docs/clinical/ALGORITHMS.md`, wpis „LAB-E2-MENARCHE”.
+
 Cały możliwy wiek musi mieścić się w [6,18]. Dokładny węzeł 18 jest brzegiem
 modelu, nie grupą 18–<19 ani dowodem próbki w dniu 18. urodzin; wpis 18 lat
 0 miesięcy nie pasuje. Odrębne nieparametryczne RI 15–<18 z tabeli 2 nie

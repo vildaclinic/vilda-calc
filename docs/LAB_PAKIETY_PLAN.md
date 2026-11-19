@@ -150,6 +150,12 @@ Wyniki z oceną i normą można też od razu skopiować do dokumentacji przycisk
   u którego źródło ma zakresy dla stadium; pakiet z samym estradiolem bierze stadium z karty, jak dotąd.
 - PR6: estradiol u dorosłej kobiety nadal wymaga pojedynczego badania; wspólny wybór „Cykl / menopauza” także
   dla estradiolu — do decyzji.
+  - Uzupełnienie 2026-11-19 (P-E2-MENARCHE): to samo dotyczy odtąd dziewczynki poniżej 18 lat po 5 latach od
+    menarche, jeżeli menarche wystąpiła w wieku co najmniej 8 lat (wiek menarche z danych pacjenta — pakiet
+    nie ma pola nadpisania): karta estradiolu bez oceny, ze
+    zdaniem o kontekście badania i wierszem „Od menarche: … lat (≥ 5) — zakresy estradiolu jak u dorosłej.”;
+    stadium nie dobiera jej wtedy normy estradiolu, więc wiersz „Pokwitanie” go nie wymienia. Przed progiem
+    i przy menarche przed ukończeniem 8 lat pakiet działa jak dotąd. Opis: `docs/clinical/ALGORITHMS.md`, wpis „LAB-E2-MENARCHE”.
 - PR6: wynik z pakietu nie niesie odniesienia z wykresu hormonów (wykres jest w pojedynczym badaniu).
 - PR7: **pakiet bez LH, FSH i testosteronu** — rozstrzygnięte w PR8 (punkt 13): taki pakiet ma wiersz
   stadium i pytanie.

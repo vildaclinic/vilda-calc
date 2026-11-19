@@ -74,7 +74,11 @@ describe('G27b — skok mówi reszcie aplikacji, że zmienił się pacjent', () 
   };
 
   it('rozgłasza vilda:patient-loaded ze znacznikiem skipLoadChoice', () => {
-    expect(rozgloszenie()).toContain('source:"pick",skipLoadChoice:!0');
+    // P-OTYLOSC-SKOK: znacznik liczony z zamiaru — skok do punktu GH wycisza modal jak dotąd; nie wycisza go tylko
+    // skok „Włączenie w DocPro” z Karty (nowy cykl leczenia otyłości zwykle zaczyna się na nowej wizycie).
+    expect(rozgloszenie()).toContain('source:"pick",skipLoadChoice:!ghJumpAsksLoadChoice(n)');
+    expect(MONITOR).toContain('function ghJumpAsksLoadChoice(n){return ghJumpObesity(n)&&n.obesity.tryb==="wlaczenie"}');
+    expect(MONITOR).toContain('function ghJumpObesity(n){const o=n&&n.obesity;return !!(o&&typeof o==="object"&&(o.tryb==="edytuj"||o.tryb==="ponownie"||o.tryb==="wlaczenie"))}');
   });
 
   it('detal ma ten sam kształt, co istniejące ścieżki source:"pick"', () => {
@@ -90,7 +94,9 @@ describe('G27b — skok mówi reszcie aplikacji, że zmienił się pacjent', () 
 
   it('rozgłasza synchronicznie, przed setTimeout-em odświeżającym monitor', () => {
     const dispatch = MONITOR.indexOf('new window.CustomEvent("vilda:patient-loaded"');
-    const timeout = MONITOR.indexOf('typeof window.refreshGHTherapyMonitor=="function"&&window.refreshGHTherapyMonitor()}catch{}pe(n.ghPointId)');
+    const timeout = MONITOR.indexOf('typeof window.refreshGHTherapyMonitor=="function"&&window.refreshGHTherapyMonitor()}catch{}ghJumpLand(n,true)');
+    // ghJumpLand: skok do punktu GH kończy się jak dotąd na pe(ghPointId); zamiar otyłości — w monitorze otyłości.
+    expect(MONITOR).toMatch(/function ghJumpLand\(n,loaded\)\{\n  if\(ghJumpObesity\(n\)\)\{[^\n]*obesityTherapyMonitorSkok[^\n]*return\}\n  pe\(n\.ghPointId\);\n\}/);
     // Bez tej asercji test byłby zielony także wtedy, gdy rozgłoszenia nie ma wcale (indexOf → −1).
     expect(dispatch, 'rozgłoszenie istnieje').toBeGreaterThan(0);
     expect(timeout).toBeGreaterThan(dispatch);
