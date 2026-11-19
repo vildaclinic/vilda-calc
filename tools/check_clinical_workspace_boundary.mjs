@@ -31,7 +31,7 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 // arrived is queued again; dormant behind a hidden switch) and E3-PR0d (after a single change from another device is
 // applied, a trash entry the merge saved differently than before and than it arrived is queued again; dormant behind
 // the same hidden switch).
-const BASE = 'f035346d506cb4359da7734135d22082dd22bb8aaa41a9d13d1223de846d216a';
+const BASE = 'e0fdbf3504adef9db240a1584231e2f6b5e041172de3da9d39b37e90c9f0ea50';
 const START = '/* BEGIN VILDA CLINICAL WORKSPACE NATIVE V1 */\n';
 const END = '/* END VILDA CLINICAL WORKSPACE NATIVE V1 */\n';
 const digest = value => createHash('sha256').update(value).digest('hex');

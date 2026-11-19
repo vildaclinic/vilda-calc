@@ -382,6 +382,16 @@ describe('licznik odsyłania: model odsyłania wpisów Kosza (E3-PR0d)', () => {
     expect(m.spoza.map((r) => r.k), 'spoza kandydatów').toEqual(['stomb:v']);
     expect(modelK(przed, lad({ patients: karty(), snapshotTombstones: [wpis('P', 'v', { savedAtISO: T1 })] }), zd('snap', 'P/v', { patients: [karta('P', [wersja('v')])] })), 'savedAtISO').toEqual([['stomb:v', false, 'inne']]);
   });
+  it('sprawdzian długich przebiegów: wiersz stomb tylko przez savedAtISO (względem stanu przed albo względem ładunku po regule pola) → jego klucz; savedAtISO i gwiazdka inne → pusto; bez wierszy stomb → pusto', () => {
+    const przed = lad({ patients: karty(), snapshotTombstones: [wpis('P', 'v')] });
+    const P = { patients: [karta('P', [wersja('v')])] };
+    const tylko = (przedX, po, L) => LO.wierszeTylkoSavedAtISO(przedX, po, L, LO.modelEcha(przedX, po, L).wiersze);
+    expect(tylko(przed, lad({ patients: karty(), snapshotTombstones: [wpis('P', 'v', { savedAtISO: T1 })] }), zd('snap', 'P/v', P)), 'względem stanu przed').toEqual(['stomb:v']);
+    const { visitIdentity: _v, ...bezV } = wpis('P', 'v', { savedAtISO: T0 });
+    expect(tylko(lad({ patients: [karta('P', [wersja('w'), wersja('v')])] }), lad({ patients: karty(), snapshotTombstones: [wpis('P', 'v', { savedAtISO: T1 })] }), zd('stomb', 'v', { snapshotTombstones: [bezV] })), 'względem ładunku po regule pola').toEqual(['stomb:v']);
+    expect(tylko(przed, lad({ patients: karty(), snapshotTombstones: [wpis('P', 'v', { savedAtISO: T1, gwiazdka: gw })] }), zd('snap', 'P/v', P)), 'savedAtISO i gwiazdka').toEqual([]);
+    expect(tylko(przed, przed, zd('snap', 'P/v', P)), 'bez wierszy').toEqual([]);
+  });
   it('reguła pola i kanon wpisu: bez visitIdentity i payload.visit nieobecnych w elemencie ładunku tej samej karty; kanon bez opisu, seq i postaci gwiazdki, lista posortowana', () => {
     const e = wpis('P', 'v', { gwiazdka: gw });
     const { visitIdentity: _v, ...bezV } = e;

@@ -1057,31 +1057,36 @@ async function haki(S, Y, partia, przed, po, stany = null, stanyEcha = null) {
 // jest wpis Kosza tej wersji (builder stomb bez wpisu nie daje koperty). Porównanie z kopertami echa z rejestru: ten sam
 // ciąg kluczy (rodzaj:klucz) po posortowaniu; wiersz modelu spoza kandydatów ładunku — niezgodność (strażnik
 // kandydatów). Niezgodność — wyjątek z opisem i wpis w HAKI_NIEZGODNE (afterEach wymaga pustej listy). Przy liczniku
-// odsyłania (S.odsyl) — warstwa „odesłane” (L.zapiszOdeslane).
+// odsyłania (S.odsyl) — warstwa „odesłane” (L.zapiszOdeslane). S.stat.odsylanie.tylkoSavedAtISO — wiersze stomb modelu,
+// które są tylko przez savedAtISO (LO.wierszeTylkoSavedAtISO; sprawdzian długich przebiegów, oczekiwane 0).
 function modelOdsylania(partia, stany, po) {
   const karty = new Map();
   for (const p of po.patients || []) for (const q of p.snapshots || []) karty.set(q.snapshotId, p.patientId);
   const wiersze = [];
   const spoza = [];
+  const tylkoSavedAtISO = [];
   for (const [i, e] of partia.entries()) {
     if (!e.jaw || !stany[i] || !stany[i + 1]) continue;
     const m = LO.modelEcha(stany[i], stany[i + 1], e.jaw);
     spoza.push(...m.spoza);
-    wiersze.push(...m.wiersze.filter((r) => (r.kind === 'stomb'
+    const w = m.wiersze.filter((r) => (r.kind === 'stomb'
       ? (po.snapshotTombstones || []).some((x) => x.snapshotId === r.key)
-      : karty.get(String(r.key).split('/')[1]) === r.pid)));
+      : karty.get(String(r.key).split('/')[1]) === r.pid));
+    wiersze.push(...w);
+    tylkoSavedAtISO.push(...LO.wierszeTylkoSavedAtISO(stany[i], stany[i + 1], e.jaw, w));
   }
-  return { wiersze, spoza };
+  return { wiersze, spoza, tylkoSavedAtISO };
 }
 function porownajEcho(S, Y, partia, stany, po, koperty) {
   if (partia.length + 1 !== stany.length) throw new Error(`model odsyłania: ${stany.length} stanów na ${partia.length} zdarzeń partii (${Y.nazwa})`);
-  const { wiersze, spoza } = modelOdsylania(partia, stany, po);
+  const { wiersze, spoza, tylkoSavedAtISO } = modelOdsylania(partia, stany, po);
   const klucze = (l) => l.slice().sort();
   const emit = klucze(koperty.map((k) => `${k.event.kind}:${k.event.key}`));
   const mod = klucze(wiersze.map((r) => r.k));
-  if (!S.stat.odsylanie) S.stat.odsylanie = { porownan: 0, wierszy: 0 };
+  if (!S.stat.odsylanie) S.stat.odsylanie = { porownan: 0, wierszy: 0, tylkoSavedAtISO: 0 };
   S.stat.odsylanie.porownan += 1;
   S.stat.odsylanie.wierszy += wiersze.length;
+  S.stat.odsylanie.tylkoSavedAtISO += tylkoSavedAtISO.length;
   if (S.odsyl) S.odsyl.zapiszOdeslane('zdarzenie', koperty, wiersze, `#${S.nrKroku || 0} ${Y.nazwa}`);
   if (!spoza.length && JSON.stringify(emit) === JSON.stringify(mod)) return;
   const tekst = `model haków i odsyłania: echo sejfu ≠ model — ${Y.nazwa} po partii [${partia.map((x) => `${x.kind} ${x.key}`).join(', ')}]${S.ziarno != null ? ` (ziarno ${S.ziarno}, krok ${S.nrKroku || 0})` : ''}\n  model: ${mod.join(', ') || '(pusty)'}\n  sejf: ${emit.join(', ') || '(pusty)'}${spoza.length ? `\n  spoza kandydatów: ${spoza.map((r) => r.k).join(', ')}` : ''}`;
@@ -7119,6 +7124,7 @@ describe('A ≡ B, odsyłanie poprawionych wizyt (E3-PR0c): ziarno profilu podst
     console.log('E3-AB odsyłanie ziarno 1', JSON.stringify({ echo: w.echo, odsylanie: w.odsylanie, powtorzenia: w.echoPowtorzenia || 0, spoczynki: w.spoczynki, ms: w.ms }));
     expect(w.spoczynki, 'co najmniej jeden punkt spoczynku').toBeGreaterThan(0);
     expect(w.odsylanie && w.odsylanie.porownan, 'porównania modelu odsyłania').toBeGreaterThan(0);
+    expect(w.odsylanie.tylkoSavedAtISO, 'wiersze stomb modelu tylko przez savedAtISO').toBe(0);
     expect(w.echo || 0, 'koperty echa').toBeGreaterThan(0);
     expect(w.echoPowtorzenia || 0, 'ponowne wysłania tej samej wartości przez to samo urządzenie').toBe(0);
     expect.soft(w.wyr.czerwone, 'wyrocznia: naruszenia bez klasy').toEqual([]);
@@ -7241,11 +7247,49 @@ describe('A ≡ B, odsyłanie wpisów Kosza (E3-PR0d): test wejściowy — wpis 
   }
 });
 
+// Model odsyłania wpisów Kosza w partii (świat 956, rng(0x6956)): pierwsze zdarzenie partii zmienia wpis Kosza v (sejf
+// odsyła wpis), drugie — późniejsza poprawka v — zdejmuje go (wersja wygrywa z Koszem); builder stomb po partii nie daje
+// koperty, więc i model nie ma wiersza (wiersz stomb tylko przy wpisie po całej partii). Program: baza p6r4 z C; A daje
+// v gwiazdkę i dostarcza ją C (wiersz wysłany — następna zmiana v to nowy wiersz kolejki A); B (bez wiedzy) daje v do
+// Kosza; A poprawia v na 40 kg; dostawa A>B: partia [snap v z gwiazdką, snap v 40 kg]. Rejestr łańcucha B (wpisy z tej
+// partii) — przez kopię każdego splice rejestru w uprzęży.
+describe('A ≡ B, odsyłanie wpisów Kosza (E3-PR0d): wpis zmieniony i zdjęty w jednej partii', () => {
+  d1();
+  it('gwiazdka v sprzed Kosza B i poprawka v po Koszu B w jednej dostawie A>B — sejf odsyła wpis po pierwszym zdarzeniu, po partii wpisu nie ma: bez koperty odsyłania wpisu i bez wiersza modelu (model zgodny); v wraca do karty B z poprawką i gwiazdką', async () => {
+    ustaw(START);
+    const S = swiat(956);
+    const los = rng(0x6956);
+    vi.spyOn(Math, 'random').mockImplementation(() => (S.losAlt || los)());
+    S.w2s = false; S.echo = true; S.stat.echo = 0; S.nrKroku = 0; S.wyrSwiat = 'odsylanie kosza w partii';
+    const u = await p6r4(S, { zC: true });
+    u.S = S;
+    S.nrKroku = 1; await p6gwiazdka(u, u.A, u.v, true);
+    S.nrKroku = 2; krok(); await dostawa(S, u.A, u.C, { w2s: false });
+    S.nrKroku = 3; await doKosza(u, u.B, u.v);
+    S.nrKroku = 4; await popraw(u, u.A, u.v, 40);
+    S.nrKroku = 5; krok();
+    const rejestr = [];
+    u.B.lancuch.splice = function (...a) { const r = [].splice.apply(this, a); rejestr.push(...r); return r; };
+    const { partia, dodane } = await dostawa(S, u.A, u.B, { w2s: false });
+    delete u.B.lancuch.splice;
+    expect(partia.map((e) => `${e.kind} ${etykieta(u.n, String(e.key).split('/')[1])}`), 'kontrola: partia — dwa zdarzenia snap v').toEqual(['snap v', 'snap v']);
+    expect(rejestr.filter((z) => !z.znacznik && z.kind === 'stomb').map((z) => etykieta(u.n, String(z.klucze))), 'kontrola: sejf odesłał wpis Kosza v (rejestr łańcucha B)').toEqual(['v']);
+    expect(dodane.filter((k) => k.event.kind === 'stomb').map((k) => etykieta(u.n, k.event.key)), 'koperty odsyłania wpisów z tej partii (model zgodny — inaczej wyjątek dostawy)').toEqual([]);
+    expect(faktyKosza(u, [u.B]), 'v na B po partii').toEqual({ B: 'Kosz brak; w karcie P' });
+    expect((gdzie(u.B, u.v).snapshots.find((q) => q.snapshotId === u.v) || {}).payload.user.weight, 'masa v na B').toBe(40);
+    expect(HAKI_NIEZGODNE, 'model haków i odsyłania zgodny').toEqual([]);
+  }, 60_000);
+});
+
 // Tryb ścisły, klasa z decyzji 2 z 2026-11-19: scenariusz p. 6 „nagrobek retencji bez ochrony wizyt…” (ten sam świat co
 // w bloku p. 6, 600 + pozycja) — różnica „wpis Kosza tylko na B” dostaje klasę ze statusem znanego ograniczenia starszej
 // wersji i dowodem (poza oknem Kosza, wizyta w karcie na obu); świat 952: ten sam scenariusz, a potem nagrobek na B
 // w kształcie bieżącej wersji (zapisana tożsamość wizyty: visitCipher w surowych metadanych, visitIdentity w eksporcie)
-// — klasa nie pasuje, przyczyna W1.
+// — klasa nie pasuje, przyczyna W1. Świat 953: nagrobek bez powodu porządkowania (wpis Kosza bez treści, bez tożsamości
+// wizyty) — klasa nie pasuje; świat 954: kształt starszej aplikacji, ale v usunięta na A lokalnie (deleteSnapshot: bez
+// nagrobka i bez Kosza) — dowód nie przechodzi (wizyta nie w karcie na obu), przyczyna „W1 bez dowodu”. Świat 955:
+// założenie klasy — porządkowanie bieżącej aplikacji zapisuje tożsamość wizyty (visitCipher) także dla wersji zapisanej
+// bez payload.visit (tożsamość wyliczona przy odczycie karty), więc jej nagrobek ma kształt bieżącej wersji.
 describe('A ≡ B, tryb ścisły: nagrobek retencji starszej aplikacji z pełnej kopii (E3-PR0d, decyzja 2 z 2026-11-19)', () => {
   d1();
   const nazwa = 'nagrobek retencji bez ochrony wizyt dla jedynego stanu wizyty v na B';
@@ -7268,6 +7312,50 @@ describe('A ≡ B, tryb ścisły: nagrobek retencji starszej aplikacji z pełnej
     const db = await w1Klasy(ub.S, ub.A, ub.B, { tabela: 'p6' });
     expect((await scisleW1(ub.S, ub.A, ub.B, db)).map((x) => [x.przyczyna, x.klucz.split(' ')[0]]), 'kształt bieżącej wersji: przyczyna W1').toEqual([['W1', 'kosz']]);
   }, 120_000);
+
+  it('ten sam nagrobek bez powodu porządkowania (wpis Kosza bez treści w kształcie starszej aplikacji, świat 953) — klasa nie pasuje, przyczyna W1; kształt starszej aplikacji bez dowodu: v usunięta na A lokalnie z karty, bez nagrobka i bez Kosza (świat 954) — przyczyna „W1 bez dowodu”', async () => {
+    const kosz = (l) => l.filter((x) => x.klucz.startsWith('kosz ')).map((x) => x.przyczyna);
+    const ua = await p6swiat(353, P6[nazwa], 'zdarzenia');
+    await zmienMeta(ua.B, (m) => ({ ...m, snapshotTombstones: m.snapshotTombstones.map((e) => { if (e.snapshotId !== ua.v) return e; const { powod: _p, ...x } = e; return x; }) }));
+    ustawStan(ua.B, await eksport(ua.B));
+    expect((ua.B.stan.snapshotTombstones || []).filter((e) => e.snapshotId === ua.v).map((e) => [e.powod, 'payload' in e, 'visitIdentity' in e]), 'kontrola: wpis bez powodu porządkowania, bez treści i bez tożsamości wizyty').toEqual([[undefined, false, false]]);
+    const da = await w1Klasy(ua.S, ua.A, ua.B, { tabela: 'p6' });
+    expect(opisD(da, ua.n, 'A', 'B'), 'kontrola: różnica — wpis Kosza tylko na B').toEqual(['kosz v|P: tylko B']);
+    expect(kosz(await scisleW1(ua.S, ua.A, ua.B, da)), 'bez powodu porządkowania: przyczyna W1').toEqual(['W1']);
+    await sprzatnijUrzadzenia(); vi.restoreAllMocks();
+    const ub = await p6swiat(354, P6[nazwa], 'zdarzenia');
+    await ub.A.v.deleteSnapshot(ub.P, ub.v);
+    ustawStan(ub.A, await eksport(ub.A));
+    expect([!!gdzie(ub.A, ub.v), (await ub.A.v.listTrashedSnapshots()).some((e) => e.snapshotId === ub.v), !!gdzie(ub.B, ub.v)], 'kontrola: v nie ma w karcie ani w oknie Kosza A, v w karcie B').toEqual([false, false, true]);
+    const db = await w1Klasy(ub.S, ub.A, ub.B, { tabela: 'p6' });
+    ub.S.stat.dowody = [];
+    expect(kosz(await scisleW1(ub.S, ub.A, ub.B, db)), 'bez dowodu: przyczyna W1 bez dowodu').toEqual([`W1 bez dowodu (${NAGROBEK_RETENCJI_STARSZEJ})`]);
+  }, 120_000);
+
+  it('założenie klasy (świat 955): porządkowanie bieżącej aplikacji przycina wersję zapisaną bez payload.visit (jak stary rekord) z zaszyfrowaną tożsamością wizyty wyliczoną przy odczycie karty — nagrobek w kształcie bieżącej wersji (visitCipher, visitIdentity), więc klasa go nie obejmuje', async () => {
+    ustaw(START);
+    const S = swiat(955);
+    const los = rng(0x6955);
+    vi.spyOn(Math, 'random').mockImplementation(() => (S.losAlt || los)());
+    const u = await p6r4(S);
+    u.S = S;
+    const uid = u.A.d.konto.userId;
+    const tozsamosc = [];
+    for (const sid of [u.v, u.w]) {
+      const rec = await u.A.d.adapter.getSnapshotForUser(uid, sid);
+      const tresc = await u.A.v.decryptPayloadForCurrentUser(rec.payloadCipher.iv, rec.payloadCipher.data);
+      delete tresc.visit;
+      await u.A.d.adapter.putSnapshotForUser(uid, { ...rec, payloadCipher: await u.A.v.encryptPayloadForCurrentUser(tresc) });
+      const po = await u.A.d.adapter.getSnapshotForUser(uid, sid);
+      tozsamosc.push('visit' in (await u.A.v.decryptPayloadForCurrentUser(po.payloadCipher.iv, po.payloadCipher.data)));
+    }
+    expect(tozsamosc, 'kontrola: v i w zapisane bez payload.visit').toEqual([false, false]);
+    krok(60e3);
+    expect((await u.A.v.pruneSnapshotsForPatient(u.P, { recentHours: 0 })).prunedIds, 'kontrola: porządkowanie przycina v').toEqual([u.v]);
+    const m = await u.A.d.adapter.getUserMeta(uid);
+    const e = await eksport(u.A);
+    expect([(m.snapshotTombstones || []).map((x) => [etykieta(u.n, x.snapshotId), x.powod, !!x.visitCipher]), (e.snapshotTombstones || []).map((x) => [etykieta(u.n, x.snapshotId), 'visitIdentity' in x, 'payload' in x])], 'nagrobek porządkowania: surowo z visitCipher, w eksporcie z tożsamością wizyty, bez treści').toEqual([[['v', 'retencja', true]], [['v', true, false]]]);
+  }, 60_000);
 });
 
 // Zegar w A ≡ B (bez wyroczni: wyrocznia nie zna wygasania Kosza): światy swiat(950 + nr), rng(0x6950 + nr). Baza p6r4,
@@ -7322,6 +7410,7 @@ describe('A ≡ B, odsyłanie wpisów Kosza (E3-PR0d): ziarno koalescencji z wł
     console.log('E3-AB odsyłanie wpisów Kosza ziarno 8 koalescencji', JSON.stringify({ echo: w.echo, odsylanie: w.odsylanie, powtorzenia: w.echoPowtorzenia || 0, spoczynki: w.spoczynki, ms: w.ms }));
     expect(w.spoczynki, 'co najmniej jeden punkt spoczynku').toBeGreaterThan(0);
     expect(w.odsylanie && w.odsylanie.wierszy, 'wiersze modelu odsyłania').toBeGreaterThan(0);
+    expect(w.odsylanie.tylkoSavedAtISO, 'wiersze stomb modelu tylko przez savedAtISO').toBe(0);
     expect(w.echoPowtorzenia || 0, 'ponowne wysłania tej samej wartości przez to samo urządzenie').toBe(0);
     expect.soft(w.wyr.czerwone, 'wyrocznia: naruszenia bez klasy').toEqual([]);
     expect.soft(zielenProfilu(w), opisBledow(w)).toEqual(ZIELEN);

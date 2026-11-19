@@ -84,6 +84,8 @@
 //   pola) ją miał, a poza tym równy — każde urządzenie czyści treść po 30 dniach samo. spoza — wiersze, których
 //   snapshotId nie ma wśród kandydatów ładunku (kandydaciEcha: patients[].snapshots[] i snapshotTombstones[]); sejf ich
 //   nie odsyła, więc niepusta lista to niezgodność modelu z sejfem (strażnik kandydatów).
+//   wierszeTylkoSavedAtISO(przed, po, ladunek, wiersze) → klucze wierszy stomb z wiersze, które bez savedAtISO by
+//   zniknęły (wpis po = przed albo = ładunek po regule pola, w kanonie) — sprawdzian długich przebiegów, oczekiwane 0.
 //   L.zapiszOdeslane(zrodlo, koperty, wiersze) — warstwa „odesłane”: koperty echa z łańcucha sejfu (jawne, rodzaje snap
 //   i stomb) wobec wierszy modelu tego samego zdarzenia; para (klucz encji) → odeslane.literal[klucz literału wiersza];
 //   koperta bez wiersza modelu — ponadModel, wiersz bez koperty — nieodeslane (przykłady — druk). Przy wyłączonym
@@ -358,6 +360,22 @@ export function modelEcha(przed, po, ladunek, { rekordZlozony = null } = {}) {
       return !(qv && samoWygasniecie(qv, regulaPolaKosza(ev, qv)));
     });
   return { wiersze, spoza: wiersze.filter((r) => !kand.has(sidWiersza(r))) };
+}
+// E3-PR0d: wiersze stomb modelu jednego zdarzenia, które są tylko przez savedAtISO — pole opisu wpisu, które zostaje
+// w porównaniu (wersja zachowuje je przy poprawce i „Przywróć”): bez savedAtISO we wszystkich elementach wpis po
+// scaleniu równa się wpisowi przed scaleniem albo wpisowi z ładunku po regule pola (kanon wpisu, także przez samo
+// wygaśnięcie treści). Sprawdzian długich przebiegów (oczekiwane 0); wynik — klucze takich wierszy (funkcja czysta).
+export function wierszeTylkoSavedAtISO(przed, po, ladunek, wiersze) {
+  const a = encje(przed), p = encje(ladunek), b = encje(po);
+  const wpis = (m, k) => (m.has(k) ? JSON.parse(m.get(k).val).map((e) => bez(e, ['savedAtISO'])) : null);
+  return (wiersze || []).filter((r) => r.kind === 'stomb').filter((r) => {
+    const xv = wpis(a, r.k), qv = wpis(p, r.k), ev = wpis(b, r.k);
+    if (!ev) return false;
+    if (xv && (rowne(kanonKosza(xv), kanonKosza(ev)) || samoWygasniecie(xv, ev))) return true;
+    if (!qv) return false;
+    const t = regulaPolaKosza(ev, qv);
+    return rowne(kanonKosza(qv), kanonKosza(t)) || samoWygasniecie(qv, t);
+  }).map((r) => r.k);
 }
 
 // Usunięcia przez scalanie: encje przed ∪ ładunek, których po scaleniu nie ma, ze śladem w stanie po albo bez śladu.

@@ -7751,8 +7751,8 @@ async function Bev_echoKosza(ids, kk, przed, po) {
 // usuwanie konta albo niedostepny straznik tozsamosci chronionego sejfu w trakcie odczytu przed (wersji albo wpisow
 // Kosza) — koniec bez scalania (status jak po zmianie sesji, a przy strazniku — busy z kodem, jak dotad zwraca scalanie;
 // zdarzenie zostaje do ponowienia); inny blad odczytu przed — scalanie i porownanie bez tego stanu przed. W trakcie
-// scalania albo odczytu po — bez kolektora; usuwanie konta w odczycie po (wersji albo wpisow Kosza) — bez odsylania
-// wersji i wpisow. Statusy jak w Bev_zastosuj; nigdy wyjatek.
+// scalania albo odczytu po — bez kolektora; usuwanie konta w odczycie po (wersji albo wpisow Kosza, takze gdy ruszylo
+// w trakcie ostatniego odczytu) — bez odsylania wersji i wpisow. Statusy jak w Bev_zastosuj; nigdy wyjatek.
 async function Bev_zastosujZEchem(tresc, s, kol) {
   const k = Bev_kandydaciEcha(tresc);
   const kk = Bev_kandydaciKosza(tresc);
@@ -7805,6 +7805,7 @@ async function Bev_zastosujZEchem(tresc, s, kol) {
     if (!usuwane && !Bses_zmieniona(s)) {
       try {
         koszPo = await Bev_stanKosza(k.ids, s);
+        koszPo.c.strzez();
       } catch (x) {
         if (x && x.code === 'SYNC_DB_DELETED') usuwane = true;
         else koszPo = { m: null };

@@ -100,7 +100,7 @@
 //   busy z fazy Kosza po zapisie wersji — echo przy pierwszej próbie, ponowienie bez duplikatu (czerwony na bazie);
 //   apply-error z Le po zapisie wersji — echo (czerwony na bazie); błąd przed zapisem — 0 (zielony z natury);
 //   zmiana sesji w trakcie Le (blokada albo ponowne odblokowanie A) i zablokowany sejf — locked albo session-changed,
-//        bez emisji odsyłania, 0 (zielony z natury); w trakcie odczytu stanu „przed” (blokada albo ponowne odblokowanie
+//        bez emisji odsyłania wersji i wpisów Kosza, 0 (zielony z natury); w trakcie odczytu stanu „przed” (blokada albo ponowne odblokowanie
 //        A) — Le nie rusza ani w nowej sesji (czerwony na bazie); blokada przy odczycie pierwszego z trzech kandydatów
 //        — bez dalszych odczytów sklepu wersji (czerwony na bazie); w trakcie odczytu stanu „po” — applied, bez emisji
 //        odsyłania, 0 (zielony z natury);
@@ -126,17 +126,20 @@
 //   gwiazdka spoza ładunku (koperta snap z gwiazdką sprzed Kosza) i w ładunku (koperta stomb bez tutejszej gwiazdki),
 //        poprawka spoza ładunku i w ładunku — jeden wiersz stomb v z wpisem złożonym (czerwony na bazie);
 //   sam opis wpisu (wyższy rev, inne seq), sama postać gwiazdki w treści, koperta starszej aplikacji bez pola gwiazdka
-//        i bez rejestru w treści (dowód widoku: okno Kosza i „Przywróć” równe), koperta bez tożsamości wizyty, powtórka
-//        zdarzenia (bez odszyfrowania), ładunek równy stanowi, zmiana samych składników lokalnych wpisu, wpis zdjęty
-//        scaleniem — 0 wierszy stomb (zielony z natury);
+//        i bez rejestru w treści — bez _pinned albo z samym _pinned: true, przy przypiętym i przy odpiętym rejestrze
+//        wpisu (dowód widoku: okno Kosza i „Przywróć” równe), koperta bez tożsamości wizyty, powtórka zdarzenia (bez
+//        odszyfrowania), ładunek równy stanowi, wpis z ładunku przyjęty bez zmian także przy odwrotnej kolejności
+//        kluczy, zmiana samych składników lokalnych wpisu, wpis zdjęty scaleniem — 0 wierszy stomb (zielony z natury);
 //   wersja i wpis zmienione w jednym scaleniu — snap, potem stomb; łączenie wpisów kolejki; busy po zapisie listy Kosza
 //        (czerwony na bazie);
 //   zmiana sesji w odczycie wpisów „przed” (zielony z natury); zmiana sesji w odczycie wersji „przed” bez wejścia do
-//        odczytu wpisów, zmiana sesji w porównaniu „po”, kody z odczytu wpisów „przed” i „po”, strażnik formy odczytu
-//        (czerwony na bazie);
-//   błędy osobno dla każdego kandydata: nieczytelna tożsamość „po”, cały odczyt „przed”, cały odczyt „po”, oba
-//        (czerwony na bazie);
-//   stałe wpisu Kosza równe licznikowi; kanon, reguła pola i samo wygaśnięcie z kodu sejfu (czerwony na bazie);
+//        odczytu wpisów, zmiana sesji w porównaniu „po”, kody z odczytu wpisów „przed” i „po”, removeUser tego konta
+//        w toku w chwili wznowienia odczytu wpisów „przed” (session-changed, scalanie nie rusza) i „po” (applied, bez
+//        odsyłania wersji i wpisów), strażnik formy odczytu (czerwony na bazie);
+//   błędy osobno dla każdego kandydata: nieczytelna tożsamość „po”, nieczytelna tożsamość „przed” (porównanie tylko
+//        z ładunkiem), cały odczyt „przed”, cały odczyt „po”, oba (czerwony na bazie);
+//   stałe wpisu Kosza równe licznikowi; kanon, reguła pola (para elementów po karcie, nie po kolejności) i samo
+//        wygaśnięcie z kodu sejfu (czerwony na bazie);
 //   notatka, stara delta, delta, pełna kopia — 0 wierszy stomb; przełącznik wyłączony przy kopertach wpisów — jak
 //        sejf bez odsyłania; zamknięta bramka i „Komputer w pracy” (zielony z natury);
 //   wartownik treści — emisja odsyłania wpisu z samym identyfikatorem (czerwony na bazie);
@@ -147,7 +150,10 @@
 // Kopia sejfu tylko w tym pliku (busy, apply-error i błąd odczytu stanu): wstawka na początku Bkz_scalKoniec (faza Kosza,
 // po zapisie wersji w Le), na początku Le albo na początku Bev_stanEcha (odczyt stanu kandydatów) rzuca raz fikcyjny błąd
 // z pola okna — prawdziwą drogą zajęta blokada karty w fazie Kosza wymaga limitu blokady; strażnik osiągalności: Le
-// ponownie rzuca vildaMergeBusy i VISIT_IDENTITY_CONFLICT z fazy Kosza.
+// ponownie rzuca vildaMergeBusy i VISIT_IDENTITY_CONFLICT z fazy Kosza. E3-PR0d: ta sama wstawka także na początku
+// Bkz_obceKarty (wyszukanie wersji pod innymi kartami w fazie Kosza) i Bev_stanKosza (odczyt wpisów Kosza kandydatów);
+// wariant z listą window.__fikcyjneBledy rzuca przy kolejnych wejściach (null — wejście bez błędu; lista z własnym
+// shift() — znacznik wejścia bez błędu).
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SKRYPTY_PUNKTU, oknoMagazynu, przechwycZadaniaWTle } from '../support/okno-magazynu.mjs';
 import { naglowek } from './sesja-zapisu-uprzaz.mjs';
@@ -1102,7 +1108,7 @@ describe('busy, apply-error, zmiana sesji i błąd odczytu', () => {
     }
   }, 2 * CZAS);
 
-  it('zmiana sesji w trakcie Le (blokada sejfu albo ponowne odblokowanie A przy szyfrowaniu rekordu złożonego) i zablokowany sejf przed zastosowaniem — wynik jak dziś (locked, przy ponownym odblokowaniu session-changed), bez emisji odsyłania, 0 wierszy (także w nowej sesji)', async () => {
+  it('zmiana sesji w trakcie Le (blokada sejfu albo ponowne odblokowanie A przy szyfrowaniu rekordu złożonego) i zablokowany sejf przed zastosowaniem — wynik jak dziś (locked, przy ponownym odblokowaniu session-changed), bez emisji odsyłania wersji i wpisów Kosza, 0 wierszy (także w nowej sesji)', async () => {
     for (const [nazwa, oczek] of [['blokada w trakcie Le', 'locked'], ['ponowne odblokowanie A w trakcie Le', 'session-changed'], ['sejf zablokowany', 'locked']]) {
       const o = await okno({ bramka: true, echo: true });
       await o.zaloguj('A');
@@ -1125,6 +1131,7 @@ describe('busy, apply-error, zmiana sesji i błąd odczytu', () => {
       await o.cisza();
       expect(r, `${nazwa}: wynik`).toEqual({ status: oczek });
       expect(emisjeSnap(o, e0), `${nazwa}: emisje odsyłania`).toEqual([]);
+      expect(o.l.emisje.slice(e0).filter((x) => x.sesja), `${nazwa}: emisje odsyłania wersji i wpisów Kosza w sesji scalania`).toEqual([]);
       if (oczek === 'locked') await o.zaloguj('A');
       await o.gotowe();
       expect(wierszeOd(o, s0).map(opis), `${nazwa}: wiersze echa`).toEqual([]);
@@ -1463,6 +1470,8 @@ function odszKosza(o) {
 }
 // Transakcje atrapy na sklepie metadanych bazy sejfu od znacznika (odczyty listy Kosza).
 const txMeta = (o, z) => o.idb.__atrapa.log.slice(z.log).filter((w) => w[0] === 'tx' && w[1] === bazaSejfu(o) && String(w[2]).includes('meta') && w[4] === 'start').length;
+// Transakcje zapisu sklepu metadanych bazy sejfu od znacznika (zapis listy Kosza).
+const zapisyMeta = (o, z) => o.idb.__atrapa.log.slice(z.log).filter((w) => w[0] === 'tx' && w[1] === bazaSejfu(o) && w[3] === 'readwrite' && String(w[2]).includes('meta')).length;
 // Okno na niezależnej kopii baz atrapy okna X (to samo konto), bez emisji — do dowodu widoku i „Przywróć”.
 async function klonOkna(o, X) {
   const K = await oknoMagazynu({
@@ -1647,30 +1656,66 @@ describe('odsyłanie wpisów Kosza: bez odsyłania — opis wpisu, postać gwiaz
     expect(w.X, 'widok Kosza i „Przywróć”').toEqual(w.Y);
   }, CZAS);
 
-  it('koperta starszej aplikacji (wpis bez pola gwiazdka, treść bez rejestru i bez _pinned, późniejsza chwila zmiany wpisu, wyższy rev) przy równym rejestrze gwiazdki — 0 wierszy; zapisany widok Kosza i „Przywróć” obu urządzeń taki sam (gwiazdka widoczna na obu)', async () => {
-    const o = await okno({ bramka: true, echo: true });
-    await o.zaloguj('A');
-    await wpisZGwiazdka(o);
-    const [e0w] = await o.v.listTrashedSnapshots();
-    const s = { P: e0w.patientId, v: e0w.snapshotId };
-    const Y = await klonOkna(o, o);
-    const k = await kopertaKoszaZ(o, s.v, (e) => {
-      const p = { ...e.payload };
-      delete p._pinned; delete p._pinnedState;
-      const x = { ...e, payload: p, rev: (e.rev || 0) + 2, updatedAtISO: pozniej(e.deletedAtISO, -10_000) };
-      delete x.gwiazdka;
-      return x;
-    });
-    expect(k.k.snapshotTombstones.map((e) => [e.gwiazdka, e.payload._pinned, e.payload._pinnedState, e.updatedAtISO > e0w.deletedAtISO]), 'kontrola: koperta starszej aplikacji').toEqual([[undefined, undefined, undefined, false]]);
-    const s0 = ostatni(o);
-    expect((await zastosuj(o, k.env)).status).toBe('applied');
-    const [po] = await wpisyEksportu(o, s.v);
-    expect([!!(po.gwiazdka && po.gwiazdka.pin), po.payload._pinnedState === undefined], 'kontrola: rejestr wpisu bez zmian, treść bez rejestru').toEqual([true, true]);
-    expect(wierszeKosza(o, s0).map(opis), 'wiersze stomb').toEqual([]);
-    const w = await widokKoszaObu(o, o, Y, s.P, s.v);
-    expect(JSON.parse(w.X.wiersz).pinned, 'gwiazdka w oknie Kosza po scaleniu').toBe(true);
-    expect(w.X, 'widok Kosza i „Przywróć”: urządzenie po scaleniu = urządzenie bez scalenia').toEqual(w.Y);
-  }, CZAS);
+  it('koperta starszej aplikacji (wpis bez pola gwiazdka, treść bez rejestru — bez _pinned albo z samym _pinned: true; późniejsza chwila zmiany wpisu, wyższy rev) przy równym rejestrze gwiazdki — 0 wierszy; zapisany widok Kosza i „Przywróć” obu urządzeń taki sam (gwiazdka widoczna na obu)', async () => {
+    for (const przypieta of [false, true]) {
+      const nazwa = przypieta ? 'treść z _pinned: true' : 'treść bez _pinned';
+      const o = await okno({ bramka: true, echo: true });
+      await o.zaloguj('A');
+      await wpisZGwiazdka(o);
+      const [e0w] = await o.v.listTrashedSnapshots();
+      const s = { P: e0w.patientId, v: e0w.snapshotId };
+      const Y = await klonOkna(o, o);
+      const k = await kopertaKoszaZ(o, s.v, (e) => {
+        const p = { ...e.payload };
+        delete p._pinned; delete p._pinnedState;
+        if (przypieta) p._pinned = true;
+        const x = { ...e, payload: p, rev: (e.rev || 0) + 2, updatedAtISO: pozniej(e.deletedAtISO, -10_000) };
+        delete x.gwiazdka;
+        return x;
+      });
+      expect(k.k.snapshotTombstones.map((e) => [e.gwiazdka, e.payload._pinned, e.payload._pinnedState, e.updatedAtISO > e0w.deletedAtISO]), `${nazwa}: kontrola — koperta starszej aplikacji`).toEqual([[undefined, przypieta || undefined, undefined, false]]);
+      const s0 = ostatni(o);
+      expect((await zastosuj(o, k.env)).status, `${nazwa}: wynik`).toBe('applied');
+      const [po] = await wpisyEksportu(o, s.v);
+      expect([!!(po.gwiazdka && po.gwiazdka.pin), po.payload._pinnedState === undefined], `${nazwa}: kontrola — rejestr wpisu bez zmian, treść bez rejestru`).toEqual([true, true]);
+      expect(wierszeKosza(o, s0).map(opis), `${nazwa}: wiersze stomb`).toEqual([]);
+      const w = await widokKoszaObu(o, o, Y, s.P, s.v);
+      expect(JSON.parse(w.X.wiersz).pinned, `${nazwa}: gwiazdka w oknie Kosza po scaleniu`).toBe(true);
+      expect(w.X, `${nazwa}: widok Kosza i „Przywróć” — urządzenie po scaleniu = urządzenie bez scalenia`).toEqual(w.Y);
+    }
+  }, 2 * CZAS);
+
+  it('koperta starszej aplikacji z samym _pinned: true w treści (bez pola gwiazdka i bez rejestru w treści) przy odpiętym rejestrze wpisu (gwiazdka, potem „Odepnij i usuń” na A), chwila zmiany wpisu po chwili odpięcia albo przed nią — 0 wierszy; widok Kosza i „Przywróć” takie same jak bez scalenia (gwiazdka niewidoczna)', async () => {
+    for (const [nazwa, przes] of [['chwila zmiany wpisu po chwili odpięcia', 20_000], ['chwila zmiany wpisu przed chwilą odpięcia', -20_000]]) {
+      const o = await okno({ bramka: true, echo: true });
+      await o.zaloguj('A');
+      const s = await bazaKosza(o);
+      tik(MIN);
+      await gwiazdka(o, s.P, s.v);
+      tik(MIN);
+      await doKosza(o, s.P, s.v);
+      await o.gotowe();
+      tik(MIN);
+      const [e0w] = await wpisyEksportu(o, s.v);
+      expect(e0w.gwiazdka && e0w.gwiazdka.pin, `${nazwa}: kontrola — rejestr wpisu odpięty`).toBe(false);
+      const Y = await klonOkna(o, o);
+      const k = await kopertaKoszaZ(o, s.v, (e) => {
+        const p = { ...e.payload, _pinned: true };
+        delete p._pinnedState;
+        const x = { ...e, payload: p, rev: (e.rev || 0) + 2, updatedAtISO: pozniej(e.gwiazdka.at, przes) };
+        delete x.gwiazdka;
+        return x;
+      });
+      const s0 = ostatni(o);
+      expect((await zastosuj(o, k.env)).status, `${nazwa}: wynik`).toBe('applied');
+      const [po] = await wpisyEksportu(o, s.v);
+      expect(po.gwiazdka, `${nazwa}: kontrola — rejestr wpisu bez zmian`).toEqual(e0w.gwiazdka);
+      expect(wierszeKosza(o, s0).map(opis), `${nazwa}: wiersze stomb`).toEqual([]);
+      const w = await widokKoszaObu(o, o, Y, s.P, s.v);
+      expect([JSON.parse(w.X.wiersz).pinned, w.X.przywroc && w.X.przywroc.gwiazdka], `${nazwa}: gwiazdka w oknie Kosza i po „Przywróć”`).toEqual([false, false]);
+      expect(w.X, `${nazwa}: widok Kosza i „Przywróć” — urządzenie po scaleniu = urządzenie bez scalenia`).toEqual(w.Y);
+    }
+  }, 2 * CZAS);
 
   it('koperta stomb bez visitIdentity i payload.visit (jak od starszej aplikacji) — scalanie dopisuje oba: 0 wierszy (reguła pola)', async () => {
     const o = await okno({ bramka: true, echo: true });
@@ -1709,6 +1754,26 @@ describe('odsyłanie wpisów Kosza: bez odsyłania — opis wpisu, postać gwiaz
     expect((await zastosuj(X, k.env)).status).toBe('applied');
     expect(wierszeOd(X, s0).map(opis), 'wiersze').toEqual([]);
   }, CZAS);
+
+  it('wpis z ładunku przyjęty bez zmian (B: v gwiazdka, potem „Odepnij i usuń”) — koperta w kolejności kluczy buildera i ta sama koperta z odwrotną kolejnością kluczy elementu, treści, rejestru gwiazdki i tożsamości wizyty (jak od innej wersji aplikacji): 0 wierszy stomb w obu', async () => {
+    const odwroc = (x) => (Array.isArray(x) ? x.map(odwroc) : x && typeof x === 'object' ? Object.fromEntries(Object.entries(x).reverse().map(([n, w]) => [n, odwroc(w)])) : x);
+    for (const odwrocona of [false, true]) {
+      const o = await okno({ bramka: true, echo: true });
+      await o.zaloguj('A');
+      const s = await bazaKosza(o);
+      tik(MIN);
+      await gwiazdka(s.B, s.P, s.v);
+      tik(MIN);
+      await doKosza(s.B, s.P, s.v);
+      const k = await kopertaKoszaZ(s.B, s.v, (e) => (odwrocona ? odwroc(e) : e));
+      const [e] = k.k.snapshotTombstones;
+      expect([Object.keys(e).at(odwrocona ? -1 : 0), !!e.visitIdentity, !!e.gwiazdka], 'kontrola: kolejność kluczy elementu, tożsamość wizyty i rejestr gwiazdki w kopercie').toEqual(['patientId', true, true]);
+      const s0 = ostatni(o);
+      expect((await zastosuj(o, k.env)).status, `${odwrocona ? 'odwrotna' : 'zwykła'} kolejność: wynik`).toBe('applied');
+      expect([await wersja(o, s.P, s.v), (await wpisyEksportu(o, s.v)).map(faktWpisu)], `${odwrocona ? 'odwrotna' : 'zwykła'} kolejność: kontrola — v w Koszu A z wpisem z ładunku`).toEqual([null, [{ masa: 20, gwiazdka: false, tresc: true }]]);
+      expect(wierszeKosza(o, s0).map(opis), `${odwrocona ? 'odwrotna' : 'zwykła'} kolejność kluczy: wiersze stomb`).toEqual([]);
+    }
+  }, 2 * CZAS);
 
   it('zmiana samych składników lokalnych wpisu (koperta snap v bez nowości, wersja przegrywa z Koszem) — surowy zapis wpisu zmieniony, 0 wierszy', async () => {
     const o = await okno({ bramka: true, echo: true });
@@ -1921,6 +1986,71 @@ describe('odsyłanie wpisów Kosza: zmiana sesji, usuwanie konta, strażnik toż
     expect(wierszeOd(o, s0).map(opis), 'wiersze').toEqual([]);
   }, CZAS);
 
+  it('removeUser tego konta w toku (konto oznaczone, sejf jeszcze odblokowany) w chwili wznowienia odczytu wpisów Kosza „przed” — session-changed, scalanie nie rusza (bez zapisu metadanych i sklepu wersji, lista Kosza bez zmian), bez emisji odsyłania; potem konto usunięte', async () => {
+    const o = await okno({ bramka: true, echo: true });
+    await o.zaloguj('A');
+    const s = await gwiazdkaSpoza(o);
+    const przed = surowyKosz(o, s.v);
+    const e0 = o.l.emisje.length;
+    const hw = wstrzymaj(o, { przy: 'success', baza: bazaSejfu(o), sklep: 'snapshots', metoda: 'get' });
+    const p = o.ev.applyEncryptedEvent(s.kB.env);
+    expect(await Promise.race([hw.czeka.then(() => 'wstrzymane'), p.then(() => 'koniec')]), 'kontrola: odczyt wersji „przed” wstrzymany').toBe('wstrzymane');
+    const h = wstrzymaj(o, { przy: 'success', baza: bazaSejfu(o), sklep: 'meta', metoda: 'get' });
+    hw.zwolnij();
+    expect(await Promise.race([h.czeka.then(() => 'wstrzymane'), p.then(() => 'koniec')]), 'kontrola: odczyt wpisów Kosza „przed” wstrzymany').toBe('wstrzymane');
+    // removeUser oznacza konto przed pierwszym oczekiwaniem; wstrzymane na wyprowadzeniu powiązania lokalnego (przed blokadą sejfu).
+    const k = o.krypto.wstrzymaj((_metoda, _argumenty, stos) => String(stos).includes('deriveLocalBinding'));
+    const usuwanie = o.v.removeUser(o.A.userId, o.A.haslo).then(() => 'usunięte', (x) => `błąd ${x && x.code}`);
+    await k.osiagnieta;
+    expect(o.v.isUnlocked(), 'kontrola: sejf odblokowany w chwili wznowienia odczytu').toBe(true);
+    const z = o.znacznik();
+    h.zwolnij();
+    const r = await p;
+    const zapisy = [zapisyMeta(o, z), zapisyWersji(o, z).length, surowyKosz(o, s.v) === przed];
+    const emisje = o.l.emisje.slice(e0).filter((x) => x.sesja);
+    k.zwolnij();
+    expect(await usuwanie, 'removeUser').toBe('usunięte');
+    await o.cisza();
+    expect(r, 'wynik').toEqual({ status: 'session-changed' });
+    expect(zapisy, 'scalanie nie rusza: transakcje zapisu metadanych, transakcje zapisu sklepu wersji, lista Kosza bez zmian').toEqual([0, 0, true]);
+    expect(emisje, 'bez emisji odsyłania wersji i wpisów').toEqual([]);
+  }, CZAS);
+
+  it('removeUser tego konta w toku (konto oznaczone, sejf jeszcze odblokowany) w chwili wznowienia odczytu wpisów Kosza „po” — applied (scalanie skończone, lista Kosza zapisana), bez odsyłania wersji i wpisów; potem konto usunięte', async () => {
+    const o = await okno({ bramka: true, echo: true, zrodlo: zUsterkaKolejna(KOTWICA_STANU_KOSZA) });
+    await o.zaloguj('A');
+    const s = await gwiazdkaSpoza(o);
+    const przed = surowyKosz(o, s.v);
+    const e0 = o.l.emisje.length;
+    // Wstawka na początku Bev_stanKosza woła shift() listy przy każdym wejściu: przy drugim (odczyt „po”) — wstrzymanie
+    // następnego odczytu metadanych konta (getUserMeta tego odczytu), bez błędu.
+    let uzbrojone;
+    const wstrzymanie = new Promise((r) => { uzbrojone = r; });
+    o.win.__fikcyjneBledy = Object.assign([null, null], {
+      shift() {
+        if (this.length === 1) uzbrojone(wstrzymaj(o, { przy: 'success', baza: bazaSejfu(o), sklep: 'meta', metoda: 'get' }));
+        return [].shift.call(this);
+      },
+    });
+    const p = o.ev.applyEncryptedEvent(s.kB.env);
+    const h = await Promise.race([wstrzymanie, p.then(() => null)]);
+    expect(!!h, 'kontrola: drugie wejście do odczytu wpisów Kosza (odczyt „po”)').toBe(true);
+    expect(await Promise.race([h.czeka.then(() => 'wstrzymane'), p.then(() => 'koniec')]), 'kontrola: odczyt wpisów Kosza „po” wstrzymany').toBe('wstrzymane');
+    const k = o.krypto.wstrzymaj((_metoda, _argumenty, stos) => String(stos).includes('deriveLocalBinding'));
+    const usuwanie = o.v.removeUser(o.A.userId, o.A.haslo).then(() => 'usunięte', (x) => `błąd ${x && x.code}`);
+    await k.osiagnieta;
+    expect(o.v.isUnlocked(), 'kontrola: sejf odblokowany w chwili wznowienia odczytu').toBe(true);
+    h.zwolnij();
+    const r = await p;
+    const lista = surowyKosz(o, s.v) !== przed;
+    const emisje = o.l.emisje.slice(e0).filter((x) => x.sesja);
+    k.zwolnij();
+    expect(await usuwanie, 'removeUser').toBe('usunięte');
+    await o.cisza();
+    expect([r.status, lista, o.win.__fikcyjneBledy.length], 'wynik, lista Kosza zapisana scaleniem, oba wejścia do odczytu wpisów').toEqual(['applied', true, 0]);
+    expect(emisje, 'bez emisji odsyłania wersji i wpisów').toEqual([]);
+  }, CZAS);
+
   it('strażnik formy: odczyt wpisów Kosza kandydatów sprawdza sesję zastosowania przed strzeżonym adapterem i po odczycie metadanych konta', async () => {
     const { parse } = await import('acorn');
     const m = ZRODLO_SEJFU.match(/\nasync function Bev_stanKosza\(([^)]*)\) \{[\s\S]*?\n\}/);
@@ -1953,6 +2083,20 @@ describe('odsyłanie wpisów Kosza: błędy osobno dla każdego kandydata', () =
     await o.gotowe();
     expect(wierszeKosza(o, s0).map(opis), 'kontrola: własny Kosz takiego wpisu — też bez wiersza').toEqual([]);
     h.rozbroj();
+  }, CZAS);
+
+  it('nieczytelna tożsamość wpisu „przed” (odszyfrowanie tożsamości przy porównaniu stanu przed zawodzi, stan po czytelny) — bez porównania z przed, porównanie tylko z ładunkiem: koperta snap z gwiazdką spoza ładunku — jeden wiersz stomb v z gwiazdką', async () => {
+    const o = await okno({ bramka: true, echo: true });
+    await o.zaloguj('A');
+    const s = await gwiazdkaSpoza(o);
+    const s0 = ostatni(o);
+    // W porównaniu wpisów najpierw odszyfrowanie wpisu po scaleniu, potem wpisu przed — błąd przy drugim.
+    const h = o.krypto.blad({ metoda: 'decrypt', ktory: 2, gdy: (_m, _a, stos) => String(stos).includes('Bvisit_deletedIdentity') && String(stos).includes('Bev_echoKosza') }, { kod: 'OperationError' });
+    expect((await zastosuj(o, s.kB.env)).status, 'wynik').toBe('applied');
+    expect(h.zrobione, 'kontrola: odszyfrowanie tożsamości wpisu „przed” zawiodło').toBe(true);
+    const nowe = wierszeKosza(o, s0);
+    expect(nowe.map(opis), 'wiersze stomb').toEqual([['stomb', s.v, 'pending']]);
+    expect(await trescWierszaKosza(o, nowe[0]), 'treść wiersza stomb').toEqual({ kind: 'stomb', key: s.v, wpisy: [{ karta: s.P, masa: 20, gwiazdka: true, tresc: true }] });
   }, CZAS);
 
   it('cały odczyt wpisów Kosza „przed” zawodzi — porównanie tylko z ładunkiem: koperta stomb inna niż wpis po scaleniu — wiersz stomb v; koperta równa stanowi — 0', async () => {
@@ -2056,6 +2200,10 @@ describe('odsyłanie wpisów Kosza: stałe, kanon, reguła pola i samo wygaśni�
     expect(f.json(f.T(f.kanon([e('P')]), [bezTozsamosci(e('P'))])), 'ładunek bez tożsamości: równe ładunkowi').toBe(kl([bezTozsamosci(e('P'))]));
     expect(f.json(f.T(f.kanon([e('P')]), [e('P')])), 'ładunek z tożsamością: bez zmian').toBe(kl([e('P')]));
     expect(f.json(f.T(f.kanon([e('P'), e('Q')]), [bezTozsamosci(e('P'))])), 'element innej karty bez pary w ładunku — bez zmian').toBe(kl([bezTozsamosci(e('P')), e('Q')]));
+    // para po karcie (patientId), nie po kolejności elementów: ładunek w obu kolejnościach
+    for (const P of [[e('Q'), bezTozsamosci(e('P'))], [bezTozsamosci(e('P')), e('Q')]]) {
+      expect(f.json(f.T(f.kanon([e('P'), e('Q')]), P)), `para po karcie, ładunek ${P.map((x) => x.patientId).join(', ')}`).toBe(kl([bezTozsamosci(e('P')), e('Q')]));
+    }
     expect(f.json(f.T(f.kanon([e('P')]), [{ ...bezTozsamosci(e('P')), gwiazdka: null }])), 'inne pole nieobecne w ładunku zostaje').not.toBe(kl([{ ...bezTozsamosci(e('P')), gwiazdka: null }]));
   });
 });

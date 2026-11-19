@@ -25,8 +25,8 @@ import { podlaczAtrapeDoKontekstu } from '../support/atrapa-workera-route.mjs';
 // 5) E3-PR0d (odsyłanie wpisów Kosza, ten sam przełącznik): A — karta „Testowy Jan” z wizytami v (24 kg) i w (25 kg),
 //    rejestracja, rozruch drenażu; B (kopia profilu A, bez synchronizacji) daje v gwiazdkę — koperta snap B; A daje v do
 //    Kosza (później) i opróżnia kolejkę. Drenaż A z kluczem '1': w kolejce A dokładnie jeden wiersz stomb v pending
-//    (wpis Kosza z gwiazdką i treścią); A: v w Koszu z gwiazdką; B stosuje kopertę wpisu — v w Koszu B z gwiazdką, bez
-//    nowego wiersza stomb.
+//    (wpis Kosza z gwiazdką i treścią); A: v w Koszu z gwiazdką; B (klucz '1' z kopii profilu — sprawdzany) stosuje
+//    kopertę wpisu — v w Koszu B z gwiazdką, bez nowego wiersza stomb.
 // 6) Bez klucza: ten sam drenaż — gwiazdka wpisu Kosza tylko na A, w kolejce A bez wiersza stomb.
 // Własne, fikcyjne konto sejfu w efemerycznym profilu przeglądarki; dane wyłącznie FIKCYJNE.
 test.use({ serviceWorkers: 'block' });
@@ -337,9 +337,9 @@ test("E3-PR0d: vilda-event-echo-v1 = '1' — drenaż koperty z gwiazdką drugieg
       const r = await L.applyEncryptedEvent(env);
       await L.emissionsSettled();
       const kosz = (await window.VildaVault.listTrashedSnapshots()).filter((e) => e.snapshotId === v).map((e) => ({ masa: e.payload.user.weight, gwiazdka: e.pinned }));
-      return { status: r.status, kosz, nowe: (await stomby()) - przed };
+      return { klucz: window.localStorage.getItem('vilda-event-echo-v1'), status: r.status, kosz, nowe: (await stomby()) - przed };
     }, [a.wiersze[0].env, s.v]);
-    expect(b, 'B: v w Koszu z gwiazdką, bez odsyłania').toEqual({ status: 'applied', kosz: [{ masa: 24, gwiazdka: true }], nowe: 0 });
+    expect(b, 'B: przełącznik odsyłania włączony (klucz z profilu A), v w Koszu z gwiazdką, bez odsyłania').toEqual({ klucz: '1', status: 'applied', kosz: [{ masa: 24, gwiazdka: true }], nowe: 0 });
     expect(naruszenia(s.atrapa)).toEqual([]);
   } finally { await s.ctxB.close(); }
 });
