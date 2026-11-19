@@ -736,9 +736,32 @@ describe('strona: selektor „Faza cyklu / ciąża”, pole „Wiek menarche [la
     const a = atrapa({ override: { menarche: 11 } });
     expect(a.rysuj(dziewczynka(16, { tanner: 5, menarche_age_years: 11, _shared_menarche: null, _menarche_overridden: true })))
       .toMatchObject({ opcje: BEZ_POSTMENOPAUZY, pole: true, nota: null, attrs: {} });
-    const odrzucony = a.rysuj(dziewczynka(16, { tanner: 5, menarche_age_years: 25, _shared_menarche: 10, _menarche_overridden: true }));
-    expect(odrzucony).toMatchObject({ opcje: FAZY_WYLACZONE, placeholder: 'np. 12,5', attrs: { 'aria-invalid': 'true' } });
-    expect(odrzucony.nota).toMatch(/^Fazy cyklu działają poniżej 18 lat dopiero po 5 latach od menarche\./);
+  });
+
+  const ODRZUCONY = 'Wpisany wiek menarche nie jest brany pod uwagę: podaj wartość od 2 do 20 lat, nie większą niż wiek pacjentki.';
+  it.each([['poza zakresem (25)', 25], ['poniżej zakresu (1)', 1], ['późniejszy niż wiek (16,5 u 16-latki)', 16.5]])(
+    'wpis lokalny %s: silnik go nie przyjmuje — osobna nota, pole oznaczone, fazy wyszarzone', (_opis, wpis) => {
+      const odrzucony = atrapa({ override: { menarche: wpis } })
+        .rysuj(dziewczynka(16, { tanner: 5, menarche_age_years: wpis, _shared_menarche: 10, _menarche_overridden: true }));
+      expect(odrzucony).toMatchObject({ opcje: FAZY_WYLACZONE, pole: true, placeholder: 'np. 12,5', attrs: { 'aria-invalid': 'true' }, nota: ODRZUCONY });
+    });
+
+  it('granice w nocie o odrzuconym wpisie pochodzą z odpowiedzi silnika; poprawny wpis zdejmuje notę i oznaczenie', () => {
+    const inne = fixture((d) => { Object.assign(d.reference_selection_policy.gynecological_age, { menarche_min_years: 3, menarche_max_years: 19.5 }); });
+    const a = atrapa({ override: { menarche: 2.5 } });
+    a.ctx.Conv = inne.LabUnitConverter;
+    a.ctx.currentSubstance = inne.LabUnitConverter.find('estradiol');
+    expect(a.rysuj(dziewczynka(16, { menarche_age_years: 2.5, _menarche_overridden: true })).nota)
+      .toBe('Wpisany wiek menarche nie jest brany pod uwagę: podaj wartość od 3 do 19,5 lat, nie większą niż wiek pacjentki.');
+    const b = atrapa({ override: { menarche: 25 } });
+    expect(b.rysuj(dziewczynka(16, { menarche_age_years: 25, _menarche_overridden: true }))).toMatchObject({ nota: ODRZUCONY, attrs: { 'aria-invalid': 'true' } });
+    // Poprawny wpis przed progiem: zwykła nota R2 z liczbą lat; po progu — bez noty.
+    expect(b.rysuj(dziewczynka(16, { menarche_age_years: 12, _menarche_overridden: true })))
+      .toMatchObject({ nota: 'Fazy cyklu nie zmieniają zakresu estradiolu: od menarche minęło mniej niż 5 lat (4,0).', attrs: {} });
+    expect(b.rysuj(dziewczynka(16, { menarche_age_years: 11, _menarche_overridden: true }))).toMatchObject({ nota: null, attrs: {} });
+    // Nieprawidłowa wartość w DANYCH pacjenta (bez wpisu tutaj) to zwykły brak wpisu, nie „odrzucony wpis”.
+    expect(b.rysuj(dziewczynka(16, { menarche_age_years: 25, _shared_menarche: 25, _menarche_overridden: false })).nota)
+      .toMatch(/^Fazy cyklu działają poniżej 18 lat dopiero po 5 latach od menarche\./);
   });
 
   it('wybór niedostępny dla pacjenta wraca do „nieznana”: zwykła faza przed progiem i postmenopauza poniżej 18 lat', () => {

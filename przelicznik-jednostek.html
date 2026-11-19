@@ -3068,18 +3068,22 @@
     function renderMenarcheOverrideState(p, reference) {
       var show = !!(reference && reference.menarche_applicable);
       if (overrideMenarcheWrapEl) overrideMenarcheWrapEl.hidden = !show;
+      // Wpisana wartość, której silnik nie przyjął (poza zakresem albo późniejsza niż wiek), liczy się jak brak wpisu.
+      var rejected = show && !!p._menarche_overridden && reference.menarche_age_years == null;
       if (overrideMenarcheEl) {
         // Bez wartości wpisanej tutaj silnik dostał wartość z danych; pokazujemy ją tylko, gdy ją przyjął.
         var fromData = show && !p._menarche_overridden ? reference.menarche_age_years : null;
         overrideMenarcheEl.placeholder = fromData != null ? '(z danych: ' + formatMenarcheAge(fromData) + ')' : 'np. 12,5';
-        // Wpisana wartość, której silnik nie przyjął (poza zakresem albo późniejsza niż wiek), liczy się jak brak wpisu.
-        var rejected = show && p._menarche_overridden && reference.menarche_age_years == null;
         if (rejected) overrideMenarcheEl.setAttribute('aria-invalid', 'true');
         else overrideMenarcheEl.removeAttribute('aria-invalid');
       }
       if (!overrideMenarcheNoteEl) return;
       var note = '';
-      if (show && reference.basis !== 'gynecological_age') {
+      if (rejected) {
+        // Nota mówi wprost, że wpis nie działa — zamiast prosić o wpisanie wartości, która właśnie została wpisana.
+        note = 'Wpisany wiek menarche nie jest brany pod uwagę: podaj wartość od ' + plainNumber(reference.menarche_min_years)
+          + ' do ' + plainNumber(reference.menarche_max_years) + ' lat, nie większą niż wiek pacjentki.';
+      } else if (show && reference.basis !== 'gynecological_age') {
         note = reference.menarche_age_years == null
           ? 'Fazy cyklu działają poniżej ' + plainNumber(reference.adult_min_years) + ' lat dopiero po '
             + plainNumber(reference.threshold_years) + ' latach od menarche. Wpisz „Wiek menarche” tutaj (tylko dla tego sprawdzenia) albo na stałe w „+ Dane pokwitaniowe” na stronie głównej.'
