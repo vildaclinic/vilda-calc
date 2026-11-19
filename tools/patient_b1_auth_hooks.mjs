@@ -52,7 +52,7 @@ if(HomePatientRequested&&i.VildaHomePatientNative&&typeof i.VildaHomePatientNati
 /* END HOME PATIENT B1 NATIVE PRESENTATION */
 GdZakonczOdczyt(GdBilet);Zt(Eo,{noLogo:!0})`],
   ['remSearchBindReturn(Eo,SearchReturnToken),GdOdtworzPrzewiniecie(GdScrollKarty)', 'remSearchBindReturn(Eo,SearchReturnToken),HomePatientPresentation&&HomePatientPresentation.mounted(),GdOdtworzPrzewiniecie(GdScrollKarty)']
-  ,['Ob_dz(t,s,S,h,GdNotatki,m)', 'Ob_dz(t,s,S,h,GdNotatki,m,HomePatientRequested?{actorLifetimeVersion:1,isCurrent:HomePatientIsCurrent,onDialog:HomePatientDialog}:null,function(){return remReadCurrent(CareReadOwner)&&Eo&&Eo.isConnected&&(!HomePatientRequested||HomePatientIsCurrent())})']
+  ,['Ob_dz(t,s,S,h,GdNotatki,m)', 'Ob_dz(t,s,S,h,GdNotatki,m,HomePatientRequested?{actorLifetimeVersion:1,isCurrent:HomePatientIsCurrent,onDialog:HomePatientDialog}:null,function(){return remReadCurrent(CareReadOwner)&&Eo&&Eo.isConnected&&(!HomePatientRequested||HomePatientIsCurrent())},function(){var NavigationCard=Eo,NavigationOwner=CareReadOwner;return UiIntentCardNavigation(NavigationCard,function(){return Eo===NavigationCard&&CareReadOwner===NavigationOwner&&remReadCurrent(NavigationOwner)&&NavigationCard&&NavigationCard.isConnected&&(!HomePatientRequested||HomePatientIsCurrent())})})']
   ,['Ob_dzPostepy(t,Ct,_pdHost,_pdRys)', 'Ob_dzPostepy(t,Ct,_pdHost,_pdRys,HomePatientRequested?HomePatientIsCurrent:null)']
   ,['Xo(sa,t,da,{focusNoteId:r&&r.focusNoteId})', 'Xo(sa,t,da,{focusNoteId:r&&r.focusNoteId,homePatientPresentation:HomePatientRequested,openEditor:HomePatientOpenNote})']
   ,['Xl(ca,t,Ue,a,n)', 'Xl(ca,t,Ue,a,n,{openEditor:HomePatientOpenNote})']
@@ -62,8 +62,8 @@ GdZakonczOdczyt(GdBilet);Zt(Eo,{noLogo:!0})`],
   ,['module.mount(CarePatientHost,{full:true,patientId:t,vault:o,', 'module.mount(CarePatientHost,{full:true,patientId:t,vault:o,onDialog:HomePatientRequested?HomePatientDialog:void 0,']
 ];
 const outsidePairs = [
-  ['function Ob_dz(t, s, S, h, notatki, m) {', 'function Ob_dz(t, s, S, h, notatki, m, homeContext, notificationIsCurrent) {'],
-  ['patientId: t, stan: stan, urodzenieISO: (m && m.dobISO) || "", nazwa: (s && s.name) || "", migawka: migawka,', 'patientId: t, stan: stan, urodzenieISO: (m && m.dobISO) || "", nazwa: (s && s.name) || "", migawka: migawka, homeContext: homeContext,'],
+  ['function Ob_dz(t, s, S, h, notatki, m) {', 'function Ob_dz(t, s, S, h, notatki, m, homeContext, notificationIsCurrent, captureNavigation) {'],
+  ['patientId: t, stan: stan, urodzenieISO: (m && m.dobISO) || "", nazwa: (s && s.name) || "", migawka: migawka,', 'patientId: t, stan: stan, urodzenieISO: (m && m.dobISO) || "", nazwa: (s && s.name) || "", migawka: migawka, homeContext: homeContext, captureNavigation: captureNavigation,'],
   ['function odswiez() {\n    var o = jt();', 'function odswiez() {\n    if (homeContext && !homeContext.isCurrent()) return;\n    var o = jt();'],
   ['      var nowy = Dz.zloz(n, migawka);\n      rysuj(nowy);\n      Ob_dzPowiadom(t, nowy);', '      if (homeContext && !homeContext.isCurrent()) return;\n      var nowy = Dz.zloz(n, migawka);\n      rysuj(nowy);\n      Ob_dzPowiadom(t, nowy, notificationIsCurrent);'],
   ['function Ob_dzPostepy(t, Ct, host, rys) {', 'function Ob_dzPostepy(t, Ct, host, rys, isCurrent) {'],
@@ -112,7 +112,43 @@ try{return i.VildaHomePatientNative.describeLegacy([wl(payload.ghTherapyPoints),
   }
   var sequence =`]
 ];
-let source = readFileSync(target, 'utf8');
+// The optional navigation callback is a distinct, bounded extension of the
+// previously approved eight-argument B1 layer. Its reversal keeps that prior
+// layer's immutable source checkpoint available to the security reproducers.
+export const B1_NAVIGATION_PAIRS = Object.freeze([
+  Object.freeze({
+    before: 'Ob_dz(t,s,S,h,GdNotatki,m,HomePatientRequested?{actorLifetimeVersion:1,isCurrent:HomePatientIsCurrent,onDialog:HomePatientDialog}:null,function(){return remReadCurrent(CareReadOwner)&&Eo&&Eo.isConnected&&(!HomePatientRequested||HomePatientIsCurrent())})',
+    after: pairs.find(pair => pair[0] === 'Ob_dz(t,s,S,h,GdNotatki,m)')[1],
+  }),
+  Object.freeze({
+    before: 'function Ob_dz(t, s, S, h, notatki, m, homeContext, notificationIsCurrent) {',
+    after: outsidePairs.find(pair => pair[0] === 'function Ob_dz(t, s, S, h, notatki, m) {')[1],
+  }),
+  Object.freeze({
+    before: 'patientId: t, stan: stan, urodzenieISO: (m && m.dobISO) || "", nazwa: (s && s.name) || "", migawka: migawka, homeContext: homeContext,',
+    after: outsidePairs.find(pair => pair[0].startsWith('patientId: t, stan: stan,'))[1],
+  }),
+]);
+function once(source, before, after, label) {
+  if (source.split(before).length !== 2) throw new Error('Ambiguous B1 ' + label + ' anchor.');
+  return source.replace(before, after);
+}
+export function applyB1NavigationHooks(source) {
+  for (const pair of B1_NAVIGATION_PAIRS) {
+    if (source.includes(pair.after)) {
+      if (source.split(pair.after).length !== 2) throw new Error('Repeated B1 navigation extension.');
+    } else source = once(source, pair.before, pair.after, 'navigation extension');
+  }
+  return source;
+}
+export function reverseB1NavigationHooks(source) {
+  for (const pair of [...B1_NAVIGATION_PAIRS].reverse()) source = once(source, pair.after, pair.before, 'navigation reversal');
+  return source;
+}
+export function applyPatientB1AuthHooks(source, { check = false } = {}) {
+// Migrate only the exact old B1 callback shapes; fresh native input is handled
+// by the complete source pairs below.
+if (B1_NAVIGATION_PAIRS.some(pair => source.includes(pair.before))) source = applyB1NavigationHooks(source);
 const start = source.indexOf('async function se(t,a,n,r){');
 const end = source.indexOf('function jn()', start);
 if(start < 0 || end < 0) throw new Error('Native patient-card boundary unavailable.');
@@ -120,7 +156,7 @@ let card = source.slice(start, end);
 function applyPairs(input,replacements){
   for(const [before,after]of replacements){
     if(input.includes(after)){if(input.split(after).length!==2)throw new Error('Repeated B1 presentation hook.');continue;}
-    if(process.argv.includes('--check'))throw new Error('B1 native presentation hook missing: '+before.slice(0,70));
+    if(check)throw new Error('B1 native presentation hook missing: '+before.slice(0,70));
     if(input.split(before).length!==2)throw new Error('Native presentation anchor changed: '+before.slice(0,70));
     input=input.replace(before,after);
   }
@@ -133,14 +169,39 @@ for(const [before,after] of compatibilityPairs)if(card.includes(before))card=app
 card=applyPairs(card,pairs);
 const displayGuards=card.split('GdMoznaWyswietlic(GdBilet)').length-1;
 if(displayGuards){
- if(displayGuards!==4||process.argv.includes('--check'))throw new Error('Unexpected native patient display guard count.');
+ if(displayGuards!==4||check)throw new Error('Unexpected native patient display guard count.');
  card=card.replaceAll('GdMoznaWyswietlic(GdBilet)','GdMoznaWyswietlic(GdBilet,HomePatientRequested&&GdTlo)');
 }
 const noteCalls=card.split('ga({').length-1;
 if(noteCalls){
- if(noteCalls!==4||process.argv.includes('--check'))throw new Error('Unexpected native patient note call count.');
+ if(noteCalls!==4||check)throw new Error('Unexpected native patient note call count.');
  card=card.replaceAll('ga({','HomePatientOpenNote({');
 }
 source=applyPairs(source.slice(0,start)+card+source.slice(end),outsidePairs);
-if(!process.argv.includes('--check'))writeFileSync(target,source);
-process.stdout.write('Native patient B1 presentation hooks: complete; clinical builders preserved.\n');
+return source;
+}
+export function reversePatientB1AuthHooks(source) {
+  source = applyB1NavigationHooks(source);
+  for (const [before, after] of [...outsidePairs].reverse()) source = once(source, after, before, 'presentation reversal');
+  const start = source.indexOf('async function se(t,a,n,r){');
+  const end = source.indexOf('function jn()', start);
+  if (start < 0 || end < 0) throw new Error('Native patient-card boundary unavailable.');
+  let card = source.slice(start, end);
+  for (const [after, before, count] of [
+    ['GdMoznaWyswietlic(GdBilet,HomePatientRequested&&GdTlo)', 'GdMoznaWyswietlic(GdBilet)', 4],
+    ['HomePatientOpenNote({', 'ga({', 4],
+  ]) {
+    if (card.split(after).length !== count + 1) throw new Error('Unexpected B1 source request count.');
+    card = card.replaceAll(after, before);
+  }
+  for (const [before, after] of [...pairs].reverse()) card = once(card, after, before, 'patient-card reversal');
+  return source.slice(0, start) + card + source.slice(end);
+}
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const args = process.argv.slice(2);
+  const check = args.includes('--check');
+  const source = readFileSync(target, 'utf8'), result = applyPatientB1AuthHooks(source, { check });
+  if (check && result !== source) throw new Error('B1 native presentation hooks need regeneration.');
+  if (!check) writeFileSync(target, result);
+  process.stdout.write('Native patient B1 presentation hooks: complete; clinical builders preserved.\n');
+}

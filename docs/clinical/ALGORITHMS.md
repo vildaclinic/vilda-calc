@@ -44121,3 +44121,77 @@ seria to nadal pomiary wizyt; ta zmiana dotyczy wyłącznie kontekstu leczenia.
 - e2e `tests/e2e/trajektoria-dziennik.spec.mjs` (TR-1, TR-2); oba padają na kodzie sprzed zmiany.
 
 **Wdrożenie.** Od razu przy wydaniu; sejf bez zmian. **Cofnięcie** = rewert PR: kursy znów z zapisu wizyty.
+
+## Leczenie otyłości — etap 2: z Karty pacjenta prosto do monitora DocPro (P-OTYLOSC-SKOK, SW 1.1.556, `vilda_cykle_leczenia.js` 8, `gh_therapy_monitor.js` 64, `obesity_therapy_monitor.js` 30, `vilda_auth_ui.css` 85, `inline_docpro_01.css` 6, 2026-11-19)
+
+**Decyzje właściciela (2026-11-19, makieta etapu 2).**
+- Przycisk w Karcie ma od razu otworzyć punkt do edycji w monitorze DocPro, bez szukania go.
+- „Edytuj w DocPro” i „Dodaj ponownie w DocPro” nie tworzą nowej wizyty: wczytanie jak „Odtwórz zapis”, bez okna wyboru.
+- „Włączenie w DocPro” pokazuje okno „Nowy pomiar / Odtwórz zapis”, bo nowy cykl zwykle zaczyna się na nowej wizycie.
+- Po zapisie Włączenia, Zakończenia albo zmiany leku komunikat mówi, że listy pacjentów zobaczą zmianę po „Zapisz dane”.
+- Powód pod przyciskiem jest stale widoczny (dawniej tylko dymek, niewidoczny na telefonie).
+- Po zapisie lekarz zostaje w DocPro.
+- Sekcja „Wpisy leczenia” ma wyglądać jak na makiecie: mniejszy „+ Kontynuacja”, małe przyciski.
+
+**Stan przed zmianą.** Przy Włączeniu, Zakończeniu i zmianie leku Karta pokazywała sam tekst „Poprawka w DocPro”
+(powód w dymku), przy usuniętym takim wpisie „Dodaj ponownie w DocPro”, a bez aktywnego cyklu „Brak aktywnego cyklu —
+Włączenie w DocPro.”. Lekarz sam przechodził do DocPro, wczytywał pacjenta, otwierał kartę „Leczenie otyłości”,
+zakładkę monitora i szukał punktu. Sekcja wyglądała inaczej niż na makiecie etapu 3:
+- przyciski z klasą `vilda-auth-btn` w Karcie (`.vilda-auth-root`) dostawały z `!important` styl ekranu konta
+  (zaokrąglenie 14 px, wypełnienie 14×22 px, cień);
+- w DocPro motyw szklany (`.liquid-ios26 button {…!important}`) dokładał szkło i cień;
+- tło sekcji było szarozielone (`--card`), a odznaki „gabinet” szare;
+- odznaka „pacjent” była biała, bo `--notice-orange-bg` jest w `style.css` celowo białe (komunikat: biel z pomarańczową
+  ramką).
+
+**Zmiana.**
+- Karta pacjenta (`vilda_cykle_leczenia.js`):
+  - przyciski „Edytuj w DocPro →” (z widocznym powodem: `POWODY_KROTKIE`), „Dodaj ponownie w DocPro →” i —
+    bez aktywnego cyklu — „Włączenie w DocPro →” obok nieaktywnego „+ Kontynuacja”;
+  - kliknięcie zapisuje cel skoku `{patientId, obesity:{tryb, entryId}, ts}` — bez danych klinicznych — w tym samym wpisie
+    `sessionStorage` „vilda:gh-jump”, co skok do punktu GH, i przechodzi do DocPro tak samo (mostek powłoki albo
+    `docpro.html`; Karta otwarta nad DocPro zamyka się i skok rusza po ustaleniu historii przeglądarki).
+    Id punktu w monitorze = `entryId` wpisu dziennika, a dla punktu z dawnej wizyty (jeszcze nieprzeniesionego) —
+    id punktu z migawki.
+- DocPro (`gh_therapy_monitor.js`): ta sama obsługa skoku co dla punktu GH — po pierwszym odtworzeniu sesji, przez
+  strażnika niezapisanych zmian, wczytanie ostatniego zapisu pacjenta. Różnice: tryb „wlaczenie” nie wycisza okna
+  „Nowy pomiar / Odtwórz zapis”, a na miejscu działa monitor otyłości zamiast podświetlenia punktu GH.
+- Monitor (`obesity_therapy_monitor.js`, `obesityTherapyMonitorSkok`): otwiera kartę „Leczenie otyłości” na zakładce
+  monitora (czeka na moduł profesjonalny i projekcję dziennika tej pacjentki), a potem:
+  - „edytuj” — punkt w trybie edycji (pasek „Edytujesz punkt: …”), wiersz podświetlony;
+  - „ponownie” — pola wypełnione z usuniętego wpisu (dane z dziennika w sejfie, po `entryId`) i podpowiedź
+    z przyciskiem „Wyczyść pola”; zapis przyciskiem rodzaju wizyty dodaje nowy wpis do dziennika;
+  - „wlaczenie” — po wyborze w oknie pola pomiaru puste i podpowiedź „Nowy cykl leczenia otyłości…”.
+  Nic nie zapisuje się samo.
+- Komunikat po zapisie w dzienniku dostaje zdanie „Listy pacjentów zobaczą zmianę po „Zapisz dane”.”, gdy wpis przed
+  albo po zmianie jest Włączeniem, Zakończeniem, zmianą leku albo pierwszym wpisem cyklu (`zmianaPrzebiegu` z opcją
+  `lekPoNazwie`: lek po nazwie, jak listy pacjentów — samo uzupełnienie substancji przy tym samym leku list nie zmienia).
+- Na telefonie przyciski sekcji mają 44 px (cel dotyku), na komputerze 32 px („+ Kontynuacja” 34 px).
+- Wygląd (`vilda_auth_ui.css`, `inline_docpro_01.css`): białe tło sekcji i wpisów, własne klasy `vdo-btn`
+  (32 px; na telefonie 44 px), „+ Kontynuacja” 34 px bez cienia, przyciski obok tytułu, odznaki „gabinet” (turkus)
+  i „pacjent” (jasny pomarańcz), podpowiedź monitora `.obm-msg.info`. Okna wpisu i wyboru wersji — jak dotąd.
+
+**Przypadki syntetyczne** (dane fikcyjne; Testowa Zuzanna, 13 l., Wegovy; Włączenie 14.04.2026 80,0 kg 160,0 cm,
+Kontynuacja 13.10.2026 75,2 kg; Zakończenie 03.11.2026 72,4 kg 163,6 cm):
+
+| Przypadek | Wejście | Oczekiwany wynik |
+|---|---|---|
+| SK-1 | Karta nad DocPro: „Edytuj w DocPro →” przy Włączeniu; masa 79,6; „Włączenie leczenia” | pacjentka wczytana bez okna wyboru; pasek „Edytujesz punkt: Włączenie”, masa 80; po zapisie komunikat z „Listy pacjentów zobaczą zmianę po „Zapisz dane”.”; w dzienniku 79,6 kg; wersji wizyty nadal 1 |
+| SK-2 | usunięte Zakończenie: „Dodaj ponownie w DocPro →” | pola 72.4 / 163.6 / 2026-11-03, podpowiedź „Uzupełniono z usuniętego wpisu: Zakończenie, 03.11.2026…”; „Wyczyść pola” czyści |
+| SK-3 | bez aktywnego cyklu: „Włączenie w DocPro →” | okno „Co chcesz zrobić?”; po „Nowy pomiar” podpowiedź „Nowy cykl leczenia otyłości…”, pola pomiaru puste |
+| SK-5 | powłoka: Karta na Start, „Edytuj w DocPro →” | panel DocPro (`#/docpro`), pasek „Edytujesz punkt: Włączenie”, bez okna wyboru |
+| SK-4 | wygląd | białe tło; „+ Kontynuacja” ≤ 36 px bez cienia; przyciski wierszy ≤ 34 px, turkusowy tekst; odznaki rgb(224, 242, 241) i rgb(255, 244, 224); telefon: przyciski ≥ 44 px, bez poziomego przewijania |
+
+**Wpływ kliniczny.** Brak zmiany wyników, ocen, okien i progów. Zmienia się droga do edycji (przycisk zamiast
+ręcznego szukania) i treść komunikatu po zapisie (przypomnienie, że listy liczą się z zapisu wizyty).
+
+**Testy.** Dane wyłącznie fikcyjne.
+- `tests/unit/otylosc-skok.test.mjs` (4): kształt celu skoku (wpis dziennika, punkt z migawki; bez danych klinicznych
+  w `sessionStorage`), krótkie powody na produkcyjnym `zmianaPrzebiegu`, opcja `lekPoNazwie` (dopisek o listach tylko
+  przy zmianie leku po nazwie — jak listy pacjentów; reguła Karty bez opcji bez zmian).
+- `tests/unit/skok-gh-rozgloszenie.test.mjs`: strażniki źródła skoku GH (wyciszenie okna wyboru tylko poza trybem
+  „wlaczenie”, lądowanie GH bez zmian).
+- e2e `tests/e2e/otylosc-skok-docpro.spec.mjs` (SK-1…SK-5); DZ-5 i PD-2 — nowe przyciski i teksty.
+
+**Wdrożenie.** Od razu przy wydaniu; sejf bez zmian. **Cofnięcie** = rewert PR: znów sam tekst „Poprawka w DocPro”
+i dawny wygląd sekcji.

@@ -91,6 +91,54 @@ describe('ciphertext-only native UI intents', () => {
     for (const name of ['patients', 'patientNotes', 'userPreferences', 'notes']) expect(after[name]).toEqual(before[name]);
   });
 
+  it.each(['edytuj', 'ponownie', 'wlaczenie'])('carries the exact %s obesity destination only through public Vault AES', async tryb => {
+    const e = await fixture();
+    const value = { patientId: unusualId, obesity: { tryb, entryId: tryb === 'wlaczenie' ? null : 'fictional / " żółw entry' }, ts: Date.now() };
+    const before = await e.vault.exportSyncPayload();
+    const receipt = await e.api.prepare(GH, { ...value, weight: 73.6, body: 'Fikcyjna treść poza transportem' });
+    expect(Object.keys(JSON.parse(receipt.raw)).sort()).toEqual(['data', 'iv']);
+    for (const text of [value.patientId, value.obesity.entryId, tryb, '73.6', 'treść poza transportem'].filter(Boolean)) expect(receipt.raw).not.toContain(text);
+    const cipher = JSON.parse(receipt.raw), plain = await e.vault.decryptPayloadForCurrentUser(cipher.iv, cipher.data);
+    expect(plain.value).toEqual(value);
+    const lease = await e.api.open(GH, receipt.raw);
+    expect(lease.value).toEqual(value);
+    expect(Object.isFrozen(lease.value.obesity)).toBe(true);
+    expect(() => { lease.value.obesity.entryId = 'fictional replacement'; }).toThrow();
+    expect(lease.consumeExact()).toBe(true); expect(lease.current()).toBe(true);
+    const after = await e.vault.exportSyncPayload();
+    for (const name of ['patients', 'patientNotes', 'userPreferences', 'notes']) expect(after[name]).toEqual(before[name]);
+  });
+
+  it.each([
+    { ghPointId: 'fictional gh', obesity: { tryb: 'edytuj', entryId: 'fictional entry' } },
+    { ghPointId: 'fictional gh', obesity: undefined },
+    { obesity: [] },
+    { obesity: { tryb: 'edytuj', entryId: null } },
+    { obesity: { tryb: 'edytuj', entryId: 12 } },
+    { obesity: { tryb: 'ponownie', entryId: '' } },
+    { obesity: { tryb: 'wlaczenie', entryId: 'fictional entry' } },
+    { obesity: { tryb: 'unknown', entryId: 'fictional entry' } },
+    { obesity: { tryb: 'wlaczenie', entryId: null, weight: 73.6 } },
+    { patientId: '', obesity: { tryb: 'wlaczenie', entryId: null } },
+    { patientId: 12, obesity: { tryb: 'wlaczenie', entryId: null } },
+    { ts: null, obesity: { tryb: 'wlaczenie', entryId: null } },
+    { ts: NaN, obesity: { tryb: 'wlaczenie', entryId: null } }
+  ])('rejects an ambiguous or malformed obesity destination before AES: %j', async invalid => {
+    const e = await fixture(), encrypt = vi.spyOn(e.vault, 'encryptPayloadForCurrentUser');
+    const before = [...e.session.values];
+    await expect(e.api.prepare(GH, { patientId: unusualId, ts: Date.now(), ...invalid })).rejects.toMatchObject({ code: 'UI_INTENT_INVALID' });
+    expect(encrypt).not.toHaveBeenCalled(); expect([...e.session.values]).toEqual(before);
+  });
+
+  it('rejects a mixed target in an otherwise genuine encrypted handoff without a plaintext route', async () => {
+    const e = await fixture(), receipt = await e.api.prepare(GH, gh());
+    const cipher = JSON.parse(receipt.raw), plain = await e.vault.decryptPayloadForCurrentUser(cipher.iv, cipher.data);
+    plain.value.obesity = { tryb: 'edytuj', entryId: 'fictional entry' };
+    const altered = await e.vault.encryptPayloadForCurrentUser(plain), raw = JSON.stringify(altered);
+    e.session.setItem(KEY[GH], raw);
+    expect(await e.api.open(GH, raw)).toBeNull(); expect(e.api.peek(GH)).toBeNull();
+  });
+
   it.each(['local', 'cloud-only', 'ephemeral'])('committed metadata survives native restore in another document exactly once (%s)', async mode => {
     const e = await fixture(mode), value = { patientId: unusualId }, receipt = await e.api.prepare(LOAD, value);
     const epoch = e.session.getItem(EPOCH);

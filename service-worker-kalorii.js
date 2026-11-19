@@ -5273,6 +5273,7 @@ const OPTIONAL_ASSETS = [
   '/inline_docpro_01.css?v=3',
   '/inline_docpro_01.css?v=4',
   '/inline_docpro_01.css?v=5',
+  '/inline_docpro_01.css?v=6',
   '/inline_homa_ir_00.css?v=1',
   '/inline_index_00.css?v=1',
   '/inline_index_00.css?v=2',

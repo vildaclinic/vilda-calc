@@ -3,7 +3,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { reverseBscAuthHooks } from './account-duplicate-dismissals-auth-hooks.mjs';
 import { createHash } from 'node:crypto';
-export const UI_INTENT_AUTH_BASE_SHA256 = '12c87b88789bb0e0de6f5ce31fa30adfe82d6952de12ae683e54f7bb4f517a2c';
+export const UI_INTENT_AUTH_BASE_SHA256 = '56a4cc4b369d21979e6c5ce9208b8bee4f6504de81004a66633cfd07a50d7248';
 import { fileURLToPath } from 'node:url';
 export const UI_INTENT_AUTH_PAIRS = [
   { label: "GH producer + verified public boundaries", before: String.raw`function Gr(t,a){remSearchDropReturn();try{i.sessionStorage.setItem("vilda:gh-jump",JSON.stringify({patientId:t,ghPointId:String(a),ts:Date.now()}))}catch{}var Qgj=!1;try{var Qgs=i.document.documentElement.classList.contains("vilda-embedded"),Qgb=Qgs&&i.parent&&i.parent!==i?i.parent.VildaShell:null;Qgb&&typeof Qgb.navigate=="function"&&(Qgb.navigate("docpro",!0),Qgj=!0)}catch{Qgj=!1}if(!Qgj)try{if(typeof i.refreshGHTherapyMonitor=="function"){var Qgh=String(i.location.hash||"");i.location.hash="#/docpro",Qgh==="#/docpro"&&typeof i.Event=="function"&&i.dispatchEvent(new i.Event("hashchange"))}else i.location.href="docpro.html"}catch{}}`, after: String.raw`/* Ciphertext handoff: commit under the source actor before native navigation. */
@@ -125,6 +125,30 @@ function Il(t,a,n){` },
     try{activate(closeForNavigation)}catch(error){Ot("patient navigation after publication",error)}
   }else closeNative();
 })}function Lt()` },
+  { label: "private original-card DocPro navigation capability", before: String.raw`const zs={__vildaAuthUI:!0,`, after: String.raw`function UiIntentCardNavigation(card,sourceIsCurrent){
+  var authority=UiIntentPickAuthority(),root=Rt,history=Pa,sentinel=!!ye,sentinelCurrent=!!ba(),phase="open",disposed=false;
+  function current(){
+    try{
+      if(disposed||!authority||!authority.isCurrent()||Rt!==root||!root||!root.isConnected||Pa!==history)return false;
+      if(phase==="open")return !!(sentinel===sentinelCurrent&&card&&card.isConnected&&root.contains(card)&&!!ye===sentinel&&!!ba()===sentinelCurrent
+        &&typeof sourceIsCurrent==="function"&&sourceIsCurrent()===true);
+      return phase==="closedByMe"&&!ye&&!ba()&&root.style.display==="none"&&!root.contains(card)&&!root.firstChild;
+    }catch(_){return false}
+  }
+  function closeForNavigation(){
+    if(phase!=="open"||!current())return false;
+    phase="closing";
+    try{Qn({quiet:true});$t()}catch(_){disposed=true;return false}
+    // Qn and the unchanged native $t each retire their own history generation.
+    // A synchronous replacement or another close cannot become this capability.
+    if(Pa!==history+2){disposed=true;return false}
+    history=Pa;phase="closedByMe";
+    if(!current()){disposed=true;return false}
+    return true;
+  }
+  return current()?Object.freeze({isCurrent:current,closeForNavigation:closeForNavigation,dispose:function(){disposed=true}}):null;
+}
+const zs={__vildaAuthUI:!0,` },
 ]
 export function applyUiIntentAuthHooks(source) {
   for (const pair of UI_INTENT_AUTH_PAIRS) {

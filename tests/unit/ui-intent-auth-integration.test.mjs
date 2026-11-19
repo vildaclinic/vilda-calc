@@ -3,11 +3,14 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
+import { execFileSync } from 'node:child_process';
 import { describe, expect, it, vi } from 'vitest';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
 import { UI_INTENT_AUTH_PAIRS, applyUiIntentAuthHooks, reverseUiIntentAuthHooks } from '../../tools/private-ui-intent-auth-hooks.mjs';
 import { SETTINGS_UI_INTENT_PAIR, applySettingsUiIntentHook, reverseSettingsUiIntentHook } from '../../tools/private-ui-intent-settings-hooks.mjs';
 import { HOME_REMINDERS_AUTH_BASE_SHA256, reverseHomeRemindersHooks } from '../../tools/home-reminders-auth-hooks.mjs';
+import { B1_NAVIGATION_PAIRS, applyB1NavigationHooks, reverseB1NavigationHooks,
+  applyPatientB1AuthHooks, reversePatientB1AuthHooks } from '../../tools/patient_b1_auth_hooks.mjs';
 
 const { parse } = createRequire(import.meta.url)('espree');
 const auth = fs.readFileSync(new URL('../../vilda_auth_ui.js', import.meta.url), 'utf8');
@@ -361,19 +364,41 @@ describe('static and lazy native handoff dependencies', () => {
 });
 
 describe('exact reproducible Auth security delta', () => {
-  it('reverses all 16 unique pairs to the prior checkpoint, replays idempotently and commutes with unchanged Home hooks', () => {
-    expect(UI_INTENT_AUTH_PAIRS).toHaveLength(16);
+  it('reverses all 17 unique pairs to the prior checkpoint, replays idempotently and commutes with the explicit Home hooks', () => {
+    expect(UI_INTENT_AUTH_PAIRS).toHaveLength(17);
     for (const pair of UI_INTENT_AUTH_PAIRS) expect(auth.split(pair.after)).toHaveLength(2);
     const prior = reverseUiIntentAuthHooks(auth);
     // Prior checkpoint 633ee436 plus exact PR1000/PR1002 native delta and its optional B1 lifetime hooks.
-    expect(digest(reverseBscAuthHooks(prior))).toBe('12c87b88789bb0e0de6f5ce31fa30adfe82d6952de12ae683e54f7bb4f517a2c');
+    expect(digest(reverseBscAuthHooks(prior))).toBe('56a4cc4b369d21979e6c5ce9208b8bee4f6504de81004a66633cfd07a50d7248');
     expect(applyUiIntentAuthHooks(prior)).toBe(auth); expect(applyUiIntentAuthHooks(auth)).toBe(auth);
     const securedNative = reverseHomeRemindersHooks(auth);
     expect(digest(reverseBscAuthHooks(securedNative))).toBe(HOME_REMINDERS_AUTH_BASE_SHA256);
     const priorNative = reverseUiIntentAuthHooks(securedNative);
     expect(priorNative).toBe(reverseHomeRemindersHooks(prior));
-    expect(digest(reverseBscAuthHooks(priorNative))).toBe('c2deeccd66218ec110fd56ddde619d96d45986ede4f27f47cdaa679540542744');
+    const newB1Layer = reverseBscAuthHooks(priorNative);
+    expect(B1_NAVIGATION_PAIRS).toHaveLength(3);
+    for (const pair of B1_NAVIGATION_PAIRS) expect(newB1Layer.split(pair.after)).toHaveLength(2);
+    const oldApprovedB1Layer = reverseB1NavigationHooks(newB1Layer);
+    // This immutable checkpoint contains the previously approved eight-argument
+    // B1 layer. The three explicit navigation extensions are reversed separately.
+    expect(digest(oldApprovedB1Layer)).toBe('c2deeccd66218ec110fd56ddde619d96d45986ede4f27f47cdaa679540542744');
+    expect(applyB1NavigationHooks(oldApprovedB1Layer)).toBe(newB1Layer);
+    const availableLayerBase = reversePatientB1AuthHooks(newB1Layer);
+    // Older note-presentation hosting is outside these tools and is unchanged
+    // from the 4a checkpoint; this is not described as the raw native artifact.
+    expect(digest(availableLayerBase)).toBe('6a9726acbb580402a4cc00d85f673205f3bf0c3809396b121d8e411ac61cdec2');
+    expect(applyPatientB1AuthHooks(availableLayerBase)).toBe(newB1Layer);
+    expect(applyPatientB1AuthHooks(auth)).toBe(auth);
     expect(applyUiIntentAuthHooks(priorNative)).toBe(securedNative);
+  });
+
+  it('imports the B1 reproducer without executing its CLI or touching the Auth artifact', () => {
+    const target = new URL('../../vilda_auth_ui.js', import.meta.url);
+    const before = fs.statSync(target, { bigint: true }).mtimeNs;
+    expect(execFileSync(process.execPath, ['--input-type=module', '-e', "import './tools/patient_b1_auth_hooks.mjs'"],
+      { cwd: new URL('../../', import.meta.url), encoding: 'utf8' })).toBe('');
+    expect(fs.statSync(target, { bigint: true }).mtimeNs).toBe(before);
+    expect(fs.readFileSync(target, 'utf8')).toBe(auth);
   });
 
   it('reverses only the optional Settings boundary and replays it idempotently', () => {

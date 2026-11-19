@@ -91,8 +91,22 @@
       if (typeof value.patientId !== 'string' || !value.patientId) throw error('INVALID');
       return { patientId: value.patientId };
     }
-    if (typeof value.ghPointId !== 'string' || !value.ghPointId) throw error('INVALID');
-    var clean = { ghPointId: value.ghPointId };
+    var hasGh = Object.prototype.hasOwnProperty.call(value, 'ghPointId');
+    var hasObesity = Object.prototype.hasOwnProperty.call(value, 'obesity');
+    if (hasGh === hasObesity) throw error('INVALID');
+    var clean;
+    if (hasObesity) {
+      var target = value.obesity;
+      if (typeof value.patientId !== 'string' || !value.patientId || !target || typeof target !== 'object'
+        || Array.isArray(target) || Object.keys(target).sort().join(',') !== 'entryId,tryb'
+        || !['edytuj', 'ponownie', 'wlaczenie'].includes(target.tryb)
+        || (target.tryb === 'wlaczenie' ? target.entryId !== null : typeof target.entryId !== 'string' || !target.entryId)
+        || typeof value.ts !== 'number' || !Number.isFinite(value.ts)) throw error('INVALID');
+      clean = { patientId: value.patientId, obesity: Object.freeze({ tryb: target.tryb, entryId: target.entryId }), ts: value.ts };
+    } else {
+      if (typeof value.ghPointId !== 'string' || !value.ghPointId) throw error('INVALID');
+      clean = { ghPointId: value.ghPointId };
+    }
     if (Object.prototype.hasOwnProperty.call(value, 'patientId')) {
       if (value.patientId != null && typeof value.patientId !== 'string') throw error('INVALID');
       clean.patientId = value.patientId;

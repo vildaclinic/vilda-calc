@@ -114,6 +114,11 @@ test.describe('monitor DocPro na dzienniku leczenia', () => {
     await page.evaluate(() => {
       const set = (id, v) => { const e = document.getElementById(id); e.value = String(v); e.dispatchEvent(new Event('input', { bubbles: true })); };
       set('obesityAge', 13); set('obesityAgeMonths', 7); set('obesityWeight', '74,3'); set('obesityHeight', '163,4'); set('obesityDose', '2,4 mg / tydz.'); set('obesityDate', '2026-11-17');
+      // Lek tego cyklu — jak po „Uzupełnij z formularza” (P-LEK). Bez leku najnowszy punkt zmieniałby listy pacjentów
+      // i monitor dopisałby „Listy pacjentów zobaczą zmianę po „Zapisz dane”.” (P-OTYLOSC-SKOK).
+      const lek = document.getElementById('obesityMonDrug');
+      const opcja = [...lek.options].find((o) => /Wegovy/.test(o.textContent));
+      lek.value = opcja.value; lek.dispatchEvent(new Event('change', { bubbles: true }));
     });
     await przycisk(page, 'Kontynuacja leczenia').click();
     await expect(komunikat(page)).toHaveText('Zapisano w dzienniku leczenia — wpis widać w Karcie pacjenta i na innych urządzeniach.');

@@ -200,7 +200,9 @@ test.describe('Karta pacjenta — dziennik leczenia otyłości', () => {
     const pid = await pacjentka(page, [...MIGAWKA, P('p-end', 'end', '2026-11-03', 6, 74.9, 163)]);
     await karta(page, pid);
     await expect(page.getByRole('button', { name: 'Kontynuacja' })).toHaveAttribute('aria-disabled', 'true');
-    await expect(page.locator('#vdoAddWhy')).toHaveText('Brak aktywnego cyklu — Włączenie w DocPro.');
+    await expect(page.locator('#vdoAddWhy')).toHaveText('Brak aktywnego cyklu — nowy cykl zaczyna się od Włączenia przy wizycie.');
+    // P-OTYLOSC-SKOK (etap 2): obok — przycisk do monitora DocPro (nowy cykl zaczyna Włączenie przy wizycie).
+    await expect(page.getByRole('button', { name: 'Włączenie w DocPro →' })).toBeVisible();
     // aria-disabled: przycisk zostaje w kolejności klawiatury i po kliknięciu wyjaśnia powód (jak przyciski monitora).
     await page.getByRole('button', { name: 'Kontynuacja' }).click({ force: true });
     await expect(page.locator('.vdo .vdo-msg-warn')).toContainText('nowy cykl zaczyna się od Włączenia');

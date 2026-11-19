@@ -61,6 +61,18 @@ function Dzdane(p, poprzedni) {
     drug: p.drug || "", substance: p.substance || "", dose: p.dose || "", comment: (poprzedni && poprzedni.comment) || ""
   };
 }
+/** Czy wpis (po id) zmienia przebieg leczenia (Włączenie, Zakończenie, zmiana leku, pierwszy wpis cyklu). */
+function Dzprzebieg(id) {
+  try {
+    var D = window.VildaDziennikOtylosci;
+    if (!Dzs || id == null || !D || typeof D.wpisPoId != "function" || typeof D.zmianaPrzebiegu != "function") return null;
+    var w = D.wpisPoId(Dzs, String(id));
+    // Lek po nazwie, jak listy pacjentów: samo uzupełnienie substancji przy tym samym leku list nie zmienia.
+    return w ? D.zmianaPrzebiegu(Dzs, w, { lekPoNazwie: true }) : null;
+  } catch (e) {
+    return null;
+  }
+}
 function Dzz(akcja) {
   try {
     var pid = Dzp(), D = window.VildaDziennikOtylosci;
@@ -77,10 +89,14 @@ function Dzz(akcja) {
       Dzw();
       return;
     }
+    // P-OTYLOSC-SKOK: Włączenie, Zakończenie i zmiana leku zmieniają przebieg leczenia, a listy pacjentów liczą się
+    // z zapisu wizyty — zobaczą zmianę dopiero po „Zapisz dane” (decyzja właściciela 2026-11-19: mówimy to wprost).
+    var przebieg = Dzprzebieg(akcja.id);
     D.zapisz(pid, plan.wersje).then(function () {
       return Dzw();
     }).then(function () {
-      Cm("", "Zapisano w dzienniku leczenia — wpis widać w Karcie pacjenta i na innych urządzeniach.");
+      var listy = przebieg || Dzprzebieg(plan.entryId);
+      Cm("", "Zapisano w dzienniku leczenia — wpis widać w Karcie pacjenta i na innych urządzeniach." + (listy ? " Listy pacjentów zobaczą zmianę po „Zapisz dane”." : ""));
     }).catch(function (e) {
       Cm("err", "Nie zapisano w dzienniku leczenia: " + (e && e.message ? e.message : "błąd zapisu") + " Zmiana zostaje tylko w formularzu tej wizyty.");
     });
@@ -92,6 +108,231 @@ try {
   document.addEventListener("vilda:patient-loaded", function () { setTimeout(Dzstart, 450); });
   setTimeout(Dzstart, 900);
 } catch (e) { /* bez dokumentu (testy) */ }
+/* P-OTYLOSC-SKOK (etap 2 projektu „Leczenie otyłości — wpisy poza wizytą”, decyzje właściciela 2026-11-19):
+   skok z Karty pacjenta — „Edytuj w DocPro →”, „Dodaj ponownie w DocPro →”, „Włączenie w DocPro →”. Pacjenta wczytuje
+   gh_therapy_monitor.js (wpis vilda:gh-jump z polem obesity), potem woła tę funkcję. Tu: karta „Leczenie otyłości”
+   na zakładce monitora i
+   • edytuj — punkt w trybie edycji (jak ołówek ✎), gdy projekcja dziennika tej pacjentki już go ma;
+   • ponownie — pola wypełnione z usuniętego wpisu; zapis przyciskiem rodzaju wizyty dodaje nowy wpis do dziennika;
+   • wlaczenie — po oknie „Nowy pomiar / Odtwórz zapis” pola pomiaru puste i podpowiedź nowego cyklu.
+   Nic nie zapisuje się samo. Inny pacjent ramki niż cel skoku — nic się nie dzieje. */
+var Sk = 0;
+var SkclearAction = null;
+var SKTYP = { start: "Włączenie", "continue": "Kontynuacja", end: "Zakończenie" };
+function SkrouteCurrent(isCurrent) {
+  if (!isCurrent) return true;
+  try { return isCurrent() === true; } catch (_e) { return false; }
+}
+function Skwidoczny(el) {
+  try { return !!(el && el.offsetParent !== null && getComputedStyle(el).display !== "none"); } catch (e) { return false; }
+}
+function Skotworz(isCurrent) {
+  if (!SkrouteCurrent(isCurrent)) return;
+  var karta = c("obesityCard"), t = c("toggleObesityTherapy");
+  if (!Skwidoczny(karta) && t) t.click();
+  if (!SkrouteCurrent(isCurrent)) return;
+  var sek = c("obesityMonitorSection"), tab = c("obesityTabMonBtn");
+  if (!Skwidoczny(sek) && tab) tab.click();
+}
+function Skczekaj(warunek, ms, numer, isCurrent) {
+  return new Promise(function (gotowe) {
+    var koniec = Date.now() + ms;
+    (function krok() {
+      if (numer !== Sk || !SkrouteCurrent(isCurrent)) { gotowe(false); return; }
+      var w;
+      try { w = !!warunek(); } catch (e) { w = false; }
+      if (w || Date.now() >= koniec) { gotowe(w); return; }
+      setTimeout(krok, 150);
+    })();
+  });
+}
+function Skpodswietl(id) {
+  try {
+    var b = document.querySelector('#obesityTherapyTableWrap [data-id="' + String(id).replace(/["\\]/g, "") + '"]');
+    var tr = b && b.closest ? b.closest("tr") : null;
+    if (!tr) return;
+    if (typeof tr.scrollIntoView == "function") tr.scrollIntoView({ block: "center" });
+    // Klasa w arkuszu (inline_docpro_01.css), nie styl na elemencie (P-STYLE krok 5b).
+    tr.classList.add("obm-row-skok");
+    setTimeout(function () { try { tr.classList.remove("obm-row-skok"); } catch (e) { /* wiersz przerysowany */ } }, 2600);
+  } catch (e) {
+    d(e);
+  }
+}
+function Skwypelnij(dane, isCurrent) {
+  if (!SkrouteCurrent(isCurrent)) return;
+  Ec();
+  Ek("obesityAge", dane.ageYears == null ? "" : dane.ageYears);
+  Ek("obesityAgeMonths", dane.ageMonths == null ? "" : dane.ageMonths);
+  Ek("obesityWeight", dane.weight == null ? "" : dane.weight);
+  Ek("obesityHeight", Number(dane.height) > 0 ? dane.height : "");
+  Ek("obesityDose", dane.dose || "");
+  Ek("obesityDate", dane.dateISO || "");
+  Eg(dane.drug, dane.substance);
+  try { CyS(); } catch (e) { d(e); }
+}
+// A later, explicit Clear click owns its UI lifetime independently of the
+// completed route. Capture it only while that original route is still valid.
+function SkcaptureClearAction(cel, numer, routeCurrent) {
+  if (!SkrouteCurrent(routeCurrent)) return null;
+  var scope = null, observer = null, alive = true, used = false, bound = false, button = null, message = null, action, cleanup = [];
+  try {
+    var transport = window.VildaUiIntents, vault = window.VildaVault, monitor = window.obesityTherapyMonitorSkok;
+    if (!transport || typeof transport.captureCallerScope !== 'function' || typeof monitor !== 'function' || monitor.uiIntentLandingVersion !== 1 || !vault || !vault.isUnlocked()
+      || typeof vault.captureSyncOperationSession !== 'function' || typeof vault.assertSyncOperationSession !== 'function') return null;
+    var account = vault.getCurrentUser();
+    if (!account || !account.userId) return null;
+    var accountId = account.userId, ticket = vault.captureSyncOperationSession();
+    var storageMode = typeof vault.getCurrentStorageModeSync === 'function' ? vault.getCurrentStorageModeSync() : null;
+    var ephemeral = typeof vault.isEphemeralMode === 'function' ? vault.isEphemeralMode() : null;
+    if (typeof vault.getCurrentStorageModeSync === 'function' && typeof storageMode !== 'string'
+      || typeof vault.isEphemeralMode === 'function' && typeof ephemeral !== 'boolean') return null;
+    var visitContext = window.VildaVisitContext || null;
+    function visitId() {
+      if (!visitContext) return null;
+      if (typeof visitContext.currentFor !== 'function') throw new Error('visit-context-unavailable');
+      var visit = visitContext.currentFor(cel.patientId);
+      return visit && visit.visitId || null;
+    }
+    var visit = visitId(), editing = Es;
+    scope = transport.captureCallerScope();
+    function ownerCurrent() {
+      try {
+        var user = vault.getCurrentUser(), auth = window.VildaAuthUI;
+        if (!alive || numer !== Sk || window.obesityTherapyMonitorSkok !== monitor || monitor.uiIntentLandingVersion !== 1 || window.VildaUiIntents !== transport || window.VildaVault !== vault || !vault.isUnlocked()
+          || !user || user.userId !== accountId || window.VildaGuestMode === true || auth && typeof auth.isGuestMode === 'function' && auth.isGuestMode()
+          || !scope.isCurrent() || window._vildaCurrentPatientId !== cel.patientId || (window.VildaVisitContext || null) !== visitContext || visitId() !== visit
+          || Es !== editing || (typeof vault.getCurrentStorageModeSync === 'function' ? vault.getCurrentStorageModeSync() : null) !== storageMode
+          || (typeof vault.isEphemeralMode === 'function' ? vault.isEphemeralMode() : null) !== ephemeral) return false;
+        vault.assertSyncOperationSession(ticket);
+        return true;
+      } catch (_e) { return false; }
+    }
+    function dispose() {
+      if (!alive) return;
+      alive = false;
+      if (scope) scope.dispose();
+      if (observer) observer.disconnect();
+      cleanup.splice(0).forEach(function (remove) { try { remove(); } catch (_e) { /* retired action */ } });
+      if (SkclearAction === action) SkclearAction = null;
+    }
+    function listen(target, type, callback) {
+      if (!target || typeof target.addEventListener !== 'function') return;
+      target.addEventListener(type, callback, true);
+      cleanup.push(function () { target.removeEventListener(type, callback, true); });
+    }
+    function exactButton(target) {
+      return !!(target && target === button && target.isConnected && message && message.isConnected
+        && c('obesityTherapyActionMsg') === message && !message.hidden && message.contains(target));
+    }
+    action = {
+      dispose: dispose,
+      bind: function () {
+        if (bound) return false;
+        if (!SkrouteCurrent(routeCurrent) || !ownerCurrent() || typeof window.MutationObserver !== 'function') { dispose(); return false; }
+        message = c('obesityTherapyActionMsg');
+        var buttons = message && message.querySelectorAll('.obm-msg-actions > button');
+        if (!buttons || buttons.length !== 1) { dispose(); return false; }
+        button = buttons[0];
+        if (!exactButton(button) || !SkrouteCurrent(routeCurrent) || !ownerCurrent()) { dispose(); return false; }
+        if (!document.documentElement) { dispose(); return false; }
+        observer = new window.MutationObserver(function () { if (!exactButton(button) || !ownerCurrent()) dispose(); });
+        // Observe a persistent ancestor as well: removing the whole message or
+        // its card does not mutate the detached message's own subtree.
+        observer.observe(document.documentElement, { childList: true, subtree: true });
+        observer.observe(message, { attributes: true, attributeFilter: ['hidden'] });
+        listen(window, 'pagehide', dispose);
+        listen(window, 'vilda:user-state-cleared', dispose);
+        listen(document, 'visibilitychange', function () { if (!ownerCurrent()) dispose(); });
+        ['vilda:patient-loaded', 'vilda:json-imported', 'vilda:load-choice-applied', 'vilda:state-restored', 'vilda:user-state-cleared'].forEach(function (type) { listen(document, type, dispose); });
+        var host = window.frameElement ? window.parent : window;
+        listen(window, 'hashchange', dispose); listen(window, 'popstate', dispose);
+        if (host !== window) { listen(host, 'hashchange', dispose); listen(host, 'popstate', dispose); }
+        bound = true;
+        routeCurrent = null;
+        return true;
+      },
+      run: function (event) {
+        if (used || !event || !exactButton(event.currentTarget) || !ownerCurrent()) { dispose(); return; }
+        used = true;
+        try { Ec(); if (ownerCurrent()) Cc(); } finally { dispose(); }
+      }
+    };
+    if (!SkrouteCurrent(routeCurrent) || !ownerCurrent()) { dispose(); return null; }
+    if (SkclearAction) SkclearAction.dispose();
+    SkclearAction = action;
+    return action;
+  } catch (_e) {
+    if (scope) scope.dispose();
+    return null;
+  }
+}
+window.obesityTherapyMonitorSkok = function (cel, options) {
+  if (!cel || typeof cel != "object" || typeof cel.patientId != "string" || !cel.patientId) return false;
+  if (options != null && (typeof options.isCurrent !== 'function' || typeof options.onComplete !== 'function')) return false;
+  var scoped = !!(options && typeof options.isCurrent === 'function');
+  if (scoped && !SkrouteCurrent(options.isCurrent)) return false;
+  var numer = ++Sk;
+  if (SkclearAction) SkclearAction.dispose();
+  var tenPacjent = function () { return window._vildaCurrentPatientId === cel.patientId; };
+  var isCurrent = scoped ? function () { return numer === Sk && tenPacjent() && SkrouteCurrent(options.isCurrent); } : null;
+  var completed = false;
+  function complete() {
+    if (completed) return;
+    completed = true;
+    if (scoped && typeof options.onComplete === 'function') options.onComplete();
+  }
+  var bezOkna = function () { return !document.getElementById("vildaLoadChoiceModal"); };
+  var dziennik = function () { return tenPacjent() && Dzp() === cel.patientId && Dzpid === cel.patientId && !!Dzs; };
+  // Tylko „wlaczenie” po wczytaniu pokazuje okno wyboru wizyty — czekamy na decyzję lekarza (bez limitu praktycznego).
+  var okno = cel.tryb === "wlaczenie" && cel.poWczytaniu ? Skczekaj(bezOkna, 6 * 60 * 60 * 1000, numer, isCurrent) : Promise.resolve(true);
+  // Moduł otyłości w DocPro pokazuje się po potwierdzeniu dostępu PRO i trybu profesjonalnego — chwilę po starcie strony.
+  var modul = function () { return Skwidoczny(c("obesityCard")) || Skwidoczny(c("toggleObesityTherapy")); };
+  var work = okno.then(function () {
+    if (!SkrouteCurrent(isCurrent)) return false;
+    return Skczekaj(dziennik, 15000, numer, isCurrent);
+  }).then(function (jest) {
+    if (!SkrouteCurrent(isCurrent)) return false;
+    return Skczekaj(modul, 10000, numer, isCurrent).then(function () { return jest; });
+  }).then(function (jest) {
+    if (numer !== Sk || !tenPacjent() || !SkrouteCurrent(isCurrent)) return;
+    Skotworz(isCurrent);
+    if (!SkrouteCurrent(isCurrent)) return;
+    if (cel.tryb === "edytuj") {
+      return Skczekaj(function () { return I().some(function (p) { return p && String(p.id) === String(cel.entryId); }); }, jest ? 3000 : 0, numer, isCurrent).then(function (ma) {
+        if (numer !== Sk || !SkrouteCurrent(isCurrent)) return;
+        if (!ma) { Cm("warn", "Nie znaleziono tego wpisu w monitorze — sprawdź listę punktów albo odśwież Kartę pacjenta."); return; }
+        if (!SkrouteCurrent(isCurrent)) return;
+        Ee(String(cel.entryId));
+        if (!SkrouteCurrent(isCurrent)) return;
+        Skpodswietl(cel.entryId);
+      });
+    } else if (cel.tryb === "ponownie") {
+      // Dane usuniętego wpisu — z dziennika tej pacjentki (sejf), nie z wpisu skoku w sessionStorage.
+      var usuniety;
+      try { usuniety = jest && cel.entryId ? window.VildaDziennikOtylosci.wpisPoId(Dzs, String(cel.entryId)) : null; } catch (e) { usuniety = null; }
+      var dane = usuniety && usuniety.biezaca && usuniety.biezaca.dane;
+      if (!dane || typeof dane != "object") { Cm("warn", "Nie znaleziono usuniętego wpisu w dzienniku leczenia — wpisz punkt w monitorze."); return; }
+      if (!SkrouteCurrent(isCurrent)) return;
+      Skwypelnij(dane, isCurrent);
+      if (!SkrouteCurrent(isCurrent)) return;
+      var typ = SKTYP[dane.type] || "Kontynuacja", data = dane.dateISO ? String(dane.dateISO).split("-").reverse().join(".") : "";
+      var clearAction = scoped ? SkcaptureClearAction(cel, numer, isCurrent) : null;
+      Cm("info", "Uzupełniono z usuniętego wpisu: " + typ + (data ? ", " + data : "") + ". Sprawdź pola i zapisz przyciskiem „" + typ + " leczenia”.", [{ label: "Wyczyść pola", run: scoped ? clearAction ? clearAction.run : function () {} : function () { Ec(); Cc(); } }]);
+      if (clearAction) clearAction.bind();
+    } else if (cel.tryb === "wlaczenie") {
+      if (!SkrouteCurrent(isCurrent)) return;
+      Ec();
+      if (!SkrouteCurrent(isCurrent)) return;
+      Cm("info", "Nowy cykl leczenia otyłości. Wpisz pomiary z tej wizyty, lek, dawkę i datę, potem wybierz „Włączenie leczenia”.");
+    }
+    if (!SkrouteCurrent(isCurrent)) return;
+    try { var bar = c("obesityTherapyActionMsg"); bar && !bar.hidden && typeof bar.scrollIntoView == "function" && bar.scrollIntoView({ block: "nearest" }); } catch (e) { d(e); }
+  });
+  if (scoped) work.then(complete, function (error) { if (SkrouteCurrent(isCurrent)) d(error); complete(); });
+  return true;
+};
+Object.defineProperty(window.obesityTherapyMonitorSkok, 'uiIntentLandingVersion', { value: 1 });
 /* P-OTYLOSC-WZROST (etap 1 projektu „Leczenie otyłości — wpisy poza wizytą”, decyzje właściciela 2026-11-17/18).
    Rodzic co miesiąc przysyła masę dziecka, a wzrostu nie mierzy się co miesiąc (dorosły w ogóle nie rośnie), więc:
    • Kontynuacja zapisuje się bez wzrostu (BMI i BMI-SDS tego punktu zostają puste). Wzrost jest wymagany przy
