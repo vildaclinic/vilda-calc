@@ -79,6 +79,6 @@ describe('kontrakt strony i pakietu', () => {
   it('notka w kroku „Pacjent” nazywa badania, którym stadium dobiera normę', () => {
     expect(pakiety).toContain("var STAGE_CATALOG_NOTE = 'Stadium dobiera normę według Tannera: ';");
     expect(pakiety).toContain("if (stage) notes.push(catalog.length ? STAGE_CATALOG_NOTE + catalog.join(', ') + '.' : STAGE_NOTE);");
-    expect(Model.version).toBe('1.7.0');
+    expect(Model.version).toBe('1.8.0');
   });
 });

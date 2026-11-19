@@ -229,9 +229,24 @@ test('E2 phase source uses the whole age and clears its facts for chart, reprodu
   await expect(page.locator('dialog.vhl-fullscreen-dialog')).toHaveCount(0);
   await expectCard(page);
   await expect.poll(() => geometry(page)).toEqual(original);
-  for (const [age, months, eligible] of [[17, 11, false], [18, 0, true], [36, 11, true], [37, 0, false], [40, 0, false], [30, 0, true]]) {
+  const localAge = async (age, months) => {
     await page.locator('#labOverrideAge').fill(String(age));
     await page.locator('#labOverrideAgeMonths').fill(String(months));
+  };
+  await localAge(17, 11);
+  await expectCleared(page);
+  // P-E2-MENARCHE (owner decisions 2026-11-19): below 18 an ordinary cycle phase is available only 5 years
+  // after menarche. This patient has no menarche data, so the committed age of 17 y 11 m returns the selector
+  // to unknown and disables the phase; it is chosen again once the local age is adult.
+  await page.locator('#labOverrideAgeMonths').blur();
+  await expect(page.locator('#labOverrideCycle')).toHaveValue('');
+  await expect(page.locator('#labOverrideCycle option[value="follicular"]')).toHaveJSProperty('disabled', true);
+  await localAge(18, 0);
+  await expectCleared(page);
+  await phase(page, 'follicular');
+  await expectCard(page);
+  for (const [age, months, eligible] of [[36, 11, true], [37, 0, false], [40, 0, false], [30, 0, true]]) {
+    await localAge(age, months);
     if (eligible) await expectCard(page);
     else await expectCleared(page);
   }

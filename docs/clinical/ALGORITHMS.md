@@ -2814,6 +2814,296 @@ sam wpis przez prawdziwy sejf do `buildHistoryView`. Na artefakcie sprzed
 łatki trzy nowe testy padają. Zielone testy nie są walidacją kliniczną;
 zmiana czeka na akceptację kliniczną właściciela (AGENTS.md § 3).
 
+### LAB-E2-MENARCHE — Estradiol poniżej 18 lat: zakresy dorosłych po 5 latach od menarche (P-E2-MENARCHE, 2026-11-19)
+
+**Zmiana kliniczna: TAK.** Zmienia się to, który zakres referencyjny
+estradiolu dostaje dziewczynka poniżej 18 lat i czy jej wynik dostaje ocenę.
+**Nie ma nowych stężeń, wierszy danych, jednostek ani przeliczników**: po
+progu używane są istniejące wiersze dorosłej kobiety, przed progiem —
+istniejące wiersze Tannera i wieku. Polityka
+`estradiol-matched-reference-only` `2026-11-19.1`, `LabUnitConverter` 2.0.4,
+`vilda_lab_packages.js` model 1.8.0 i widok 1.10.0; `LabUnitsData` zostaje
+przy 2.0.2. Akceptacja kliniczna wdrożenia: właściciel, przy przeglądzie PR.
+Zielone testy nie są walidacją kliniczną.
+
+**Decyzje właściciela z 2026-11-19** (endokrynolog dziecięcy; rozmowa
+i makieta zaakceptowana tego samego dnia):
+
+1. Próg: zakresy dorosłej kobiety obowiązują dziewczynkę poniżej 18 lat
+   po **5 latach od menarche**.
+2. Po progu, przy nieznanej fazie cyklu: warianty odniesienia **bez oceny**
+   wyniku — jak u dorosłej.
+3. „Postmenopauza” **nie jest proponowana poniżej 18 lat** — w każdym
+   badaniu, które używa selektora „Faza cyklu / ciąża”.
+4. Ciąża wybrana u nieletniej w estradiolu: **brak zakresu** i komunikat jak
+   u dorosłej.
+5. (Po przeglądzie kodu, tego samego dnia.) Reguła 5 lat od menarche działa
+   tylko wtedy, gdy menarche wystąpiła w wieku **co najmniej 8 lat**.
+   Menarche wpisana przed ukończeniem 8 lat pozostaje poprawnym wpisem, ale
+   nie uruchamia zakresów dorosłej — niezależnie od tego, ile lat minęło;
+   zostaje zakres dziecięcy jak dotąd.
+   Uzasadnienie przyjęte przy decyzji (kliniczne, nie wniosek z cytowanego
+   piśmiennictwa): krwawienie przed ukończeniem 8 lat nie jest traktowane
+   jako początek cykli owulacyjnych, a podwyższony estradiol ma być nadal
+   oznaczany zakresem dziecięcym.
+
+Z zaakceptowanej makiety: przed progiem zwykłe fazy cyklu są na liście
+wyszarzone, z wyjaśnieniem na końcu panelu „zmień”; lokalne pole „Wiek
+menarche [lata]”; trzy warianty odniesienia u nieletniej (bez „Po
+menopauzie”); karta estradiolu w pakiecie jak u dorosłej, z wierszem
+o menarche; ciąża w opisie pacjenta słowami („ciąża — I trymestr”) zamiast
+kodu pola — także u dorosłej.
+
+**Reguła** (tylko estradiol; płeć żeńska; cały znany wiek poniżej 18 lat
+i powyżej wyłączenia pierwszych 14 dni życia):
+
+- **Wiek menarche** liczy się, gdy jest liczbą od 2 do 20 lat i nie jest
+  większy niż wiek pacjentki. Inaczej jest traktowany jak brak wpisu.
+- **Lata od menarche** = dolna granica znanego wieku − wiek menarche. Liczy
+  się cały znany wiek, tak jak w [E2_AGE_QUALIFICATION.md](E2_AGE_QUALIFICATION.md):
+  wiek „15 lat” to przedział [15, 16) i do rachunku wchodzi 15,0; wiek
+  „15 lat 6 mies.” to [15,5; 15,583) i wchodzi 15,5.
+- **Próg: lata od menarche ≥ 5**, porównanie bez zaokrąglania (tolerancja
+  10⁻⁹ roku wyłącznie na szum odejmowania liczb zmiennoprzecinkowych).
+  Do wyświetlenia liczba lat jest zaokrąglana **w dół** do jednego miejsca
+  po przecinku (4,96 → „4,9”), żeby „5,0” nie pojawiło się przed progiem.
+- **Najniższy wiek menarche dla reguły (R9): wiek menarche ≥ 8 lat**,
+  porównanie bez zaokrąglania (7,99 — nie; 8,0 — tak). To osobny warunek,
+  a nie zmiana zakresu poprawności wpisu: menarche 2–7,99 jest wpisem
+  przyjętym (pole ją podpowiada, opis pacjenta ją wymienia), ale stan jest
+  taki jak przed progiem (R2) — zakres Tannera albo wieku, zwykłe fazy
+  cyklu wyszarzone, ciąża jak R4, postmenopauza jak R3, pakiet z oceną jak
+  dotąd.
+- **Po progu (R1)** estradiol jest obsługiwany jak u dorosłej kobiety:
+  wybrana faza folikularna, pik owulacyjny albo faza lutealna → istniejący
+  wiersz dorosłej (70–290, 380–1460, 200–770 pmol/L) i zwykła ocena;
+  faza nieznana → trzy warianty odniesienia bez oceny; stadium Tannera nie
+  dobiera już zakresu.
+- **Przed progiem, przy menarche przed ukończeniem 8 lat albo bez wpisanego
+  wieku menarche (R2, R9)** zakres jest taki jak dotąd (wiersz Tannera,
+  inaczej wiersz wieku). Zwykłe fazy cyklu nie zmieniają zakresu i nie da
+  się ich wybrać.
+- **„Postmenopauza” (R3)**: u pacjenta w wieku na pewno poniżej 18 lat opcji
+  nie ma na liście — w estradiolu i w pozostałych badaniach z tym selektorem
+  (17-OHP, androstendion, estron, progesteron, TSH, fT4, fT3, prolaktyna).
+  Silnik estradiolu traktuje przekazaną mu postmenopauzę nieletniej jak fazę
+  nieznaną; nigdy nie dobiera zakresu postmenopauzalnego. Dobór zakresów
+  innych badań nie został zmieniony.
+- **Ciąża u nieletniej w estradiolu (R4)**, z progiem albo bez: brak
+  zakresu i istniejący komunikat dorosłej.
+- **Pakiet badań (R5)**: dziewczynka po progu dostaje kartę estradiolu jak
+  dorosła (bez oceny, zdanie o kontekście badania, pod nim wiersz
+  o menarche). Pakiet nie ma panelu nadpisań: wiek menarche pochodzi
+  wyłącznie z danych pacjenta.
+- **Pierwszeństwo wartości**: pole lokalne „Wiek menarche [lata]” w panelu
+  „zmień” > dane bieżącej pacjentki (żywy panel „Dane pokwitaniowe” albo
+  sesja formularza, inaczej rekord pacjenta — ta sama kolejność co dla
+  początku pokwitania). Wpis lokalny obowiązuje tylko w tym sprawdzeniu
+  i nigdzie się nie zapisuje; znika po „Resetuj do danych pacjenta”,
+  zmianie pacjenta, wybraniu płci „Mężczyzna”, zmianie płci w danych tej
+  samej osoby i „Wyczyść wszystkie pola”.
+- **Wpis w polu lokalnym.** Każdy niepusty tekst w polu jest nadpisaniem
+  lokalnym i zastępuje wartość z danych. Przyjmowana jest wyłącznie zwykła
+  liczba dziesiętna: cyfry, opcjonalnie jeden przecinek albo kropka
+  i najwyżej dwie cyfry po nim (spacje na brzegach są pomijane). Sam
+  separator na końcu („9,” w drodze do „9,5”) to niedokończony zapis liczby
+  całkowitej i jest czytany jako ta liczba — wpisywanie liczby z przecinkiem
+  nie pokazuje po drodze noty o odrzuceniu. Znak, wykładnik,
+  zapis szesnastkowy, jednostka, drugi separator i każdy inny tekst („12,5,”,
+  „12,5 lat”, „12;5”, „1e1”, „0x10”, „-12”) to **wpis odrzucony** — tak samo
+  jak liczba spoza zakresu 2–20 albo większa niż wiek. Wpis odrzucony liczy
+  się jak brak wieku menarche (nie wraca do wartości z danych), pole jest
+  oznaczone jako błędne, a nota mówi wprost, że wpis nie jest brany pod
+  uwagę.
+- **Opis pacjenta** wymienia „menarche 11,0” tylko wtedy, gdy pole dotyczy
+  tego badania i tej pacjentki **i** silnik przyjął wpisaną wartość. Wpis
+  odrzucony nadal jest nadpisaniem lokalnym (dopisek „· nadpisanie lokalne”
+  i przycisk „Resetuj do danych pacjenta”), ale nie jest wypisywany jako
+  wartość. Wpis, którego pole nie dotyczy (inne badanie, wiek nadpisany na
+  dorosły), nie jest ani wartością w opisie, ani nadpisaniem.
+- **Wybór, który nie jest dostępny** (postmenopauza poniżej 18 lat; zwykła
+  faza w estradiolu przed progiem albo przy menarche przed ukończeniem
+  8 lat), **nie trafia do żadnego odbiorcy danych
+  pacjenta**: wyniku, opisu pacjenta, podpowiedzi, przypięcia ani karty
+  „Hormony w ciągu życia” (także LH i inhibiny B). Rozstrzyga to jedno
+  miejsce strony — odczyt pacjenta (`getEffectivePatient`), który o dostępność
+  pyta silnik. Zapamiętany wybór selektora jest przy tym kasowany (selektor
+  wraca do „nieznana” albo „domyślnie”, opcja znika z listy albo jest
+  wyszarzona) przy każdym odświeżeniu opisu pacjenta: po zmianie badania,
+  danych pacjenta, pola wyboru i po zakończeniu wpisu liczby — także
+  w badaniach z własnym formularzem (LH, FSH, inhibina B, testosteron),
+  w których selektor jest schowany.
+- **W trakcie wpisywania liczby** (pola „Wiek [lata]”, „Wiek [mies.]”, „Wiek
+  menarche [lata]”) zapamiętany wybór i jego opcja zostają nietknięte, ale
+  niedostępny wybór nie działa: wiek „65” wpisywany przez „6” daje przy „6”
+  wynik i opis bez postmenopauzy, a przy „65” wybór działa znowu bez
+  ponownego wybierania. Wpis kończy wyjście z pola albo Enter; dopiero wtedy
+  niedostępny wybór jest kasowany. Zakończenie wpisu **nie rysuje wyniku
+  ponownie** (wynik jest już policzony w trakcie wpisywania), więc pierwsze
+  kliknięcie w wynik zaraz po wyjściu z pola nie ginie.
+
+**Co się nie zmieniło.** Wiek od 18 lat (cztery warianty przy nieznanej
+fazie, postmenopauza do wyboru, komunikat dla ciąży), mężczyźni i chłopcy,
+płeć nieznana, brak wieku, pierwsze 14 dni życia i wiek przecinający granicę
+18 lat, zakresy wszystkich pozostałych badań, wszystkie stężenia
+i przeliczniki estradiolu, wiersze Tannera i wieku oraz kolejność ich doboru
+przed progiem. Zapisane (przypięte) wyniki nie są przeliczane.
+
+**Teksty** (liczby składa silnik z danych): pod opisem pacjenta — „Od
+menarche: 5,0 lat (≥ 5) — zakresy estradiolu jak u dorosłej.”, przy nieznanej
+fazie z dopiskiem „Jeśli faza cyklu jest znana, wybierz ją w „Zmień ▼".”;
+nagłówek wariantów nieletniej — „Zakres estradiolu zależy od fazy cyklu.
+Poniżej dostępne warianty odniesienia.”; na końcu panelu — „Fazy cyklu nie
+zmieniają zakresu estradiolu: od menarche minęło mniej niż 5 lat (1,0).”
+albo „Fazy cyklu działają poniżej 18 lat dopiero po 5 latach od menarche.
+Wpisz „Wiek menarche” tutaj (tylko dla tego sprawdzenia) albo na stałe
+w „+ Dane pokwitaniowe” na stronie głównej.”, przy menarche przed
+ukończeniem 8 lat — „Fazy cyklu nie zmieniają zakresu estradiolu: menarche
+przed ukończeniem 8 lat (3,0) — zostaje zakres dziecięcy.” (w nawiasie wiek
+menarche zapisany jak w polu), a przy odrzuconym wpisie —
+„Wpisany wiek menarche nie jest brany pod uwagę: podaj liczbę od 2 do 20
+lat (najwyżej dwa miejsca po przecinku), nie większą niż wiek pacjentki.”
+(nie dotyczy poprawnego wpisu poniżej 8 lat).
+
+**Przypadki `wejście → oczekiwany wynik`** (fikcyjne pacjentki, estradiol
+w pmol/L; scenariusze makiety A–G i granice):
+
+| | Wejście | Oczekiwany wynik |
+|---|---|---|
+| A | 15 lat, Th V, menarche 10,0 w danych, faza nieznana, E2 450 | wiersz „Od menarche: 5,0 lat (≥ 5)…” z dopiskiem o „Zmień ▼”; trzy warianty 70–290 / 380–1460 / 200–770, bez oceny; pole z podpowiedzią „(z danych: 10,0)”; lista bez „Postmenopauzy” (przed zmianą: 0–290, „powyżej normy”) |
+| B | jak A, faza lutealna | zakres 200–770, „w zakresie normy”; wiersz o menarche bez dopisku (przed zmianą: 0–290, „powyżej normy”) |
+| C | 13 lat, Th IV, menarche 12,0, E2 150 | bez zmian: 55,1–312, „w zakresie normy”; fazy cyklu wyszarzone; nota „…mniej niż 5 lat (1,0).” |
+| D | 16 lat, Th V, bez wieku menarche, E2 250 | bez zmian: 0–290, „w zakresie normy”; pole z podpowiedzią „np. 12,5”; nota o wpisaniu wieku menarche |
+| E | jak D, „Ciąża — I trymestr”, E2 3000 | brak zakresu i oceny, komunikat „Brak zakresu estradiolu dla wskazanego kontekstu cyklu lub ciąży…”; w opisie „ciąża — I trymestr” (przed zmianą: 0–290, „znacznie powyżej normy”) |
+| F | pakiet Estradiol + TSH, pacjentka A, E2 450 | karta estradiolu „bez oceny względem zakresu”, zdanie o kontekście badania, wiersz „Od menarche: 5,0 lat (≥ 5)…”, łącze do pojedynczego badania; wiersz „Pokwitanie” nie wymienia Estradiolu |
+| G | pacjentka D, w polu „Wiek menarche [lata]” wpisane 11,0 | jak A (trzy warianty), opis „… · Th V · menarche 11,0 · nadpisanie lokalne”, widoczne „Resetuj do danych pacjenta” |
+| granica | menarche 10,0; wiek 14 lat 11 mies. / 15 lat 0 mies. | 4,9 roku → zakres jak dotąd / 5,0 lat → jak u dorosłej |
+| granica | wiek [15, 16) / [15,5; 15,583), menarche 10,5 | 4,5 roku → jak dotąd / 5,0 lat → jak u dorosłej |
+| granica | 17 lat 11 mies. po progu / 18 lat, faza lutealna | ten sam zakres 200–770 — bez skoku w dniu 18. urodzin |
+| R9 | 16 lat, Th V, menarche 3,0 w danych, E2 450 | jak bez reguły: 0–290, „powyżej normy”; fazy cyklu wyszarzone; pole z podpowiedzią „(z danych: 3,0)”; nota „…menarche przed ukończeniem 8 lat (3,0) — zostaje zakres dziecięcy.”; karta pakietu z oceną zakresem Tannera V |
+| R9, granica | 13 lat 0 mies., Th IV, E2 150; menarche 7,99 / 8,0 (z danych albo wpisane w polu) | 7,99 → 55,1–312, „w zakresie normy”, nota „…(7,99)…”, przy wpisie opis „… · menarche 7,99 · nadpisanie lokalne” / 8,0 → „Od menarche: 5,0 lat (≥ 5)…”, trzy warianty |
+| R9 | 7 lat, menarche 2,0 w danych (5 lat od menarche), E2 50 | zakres wieku jak dotąd (0–73,5), bez wiersza o menarche; nota „…(2,0)…” |
+| R9 | 16 lat, menarche 7,9 (8,1 roku od menarche) | zakres dziecięcy jak dotąd; nota „…(7,9)…” |
+| wpis odrzucony | pacjentka 16 lat (w danych menarche 11,0), wpis lokalny 25, 1 albo 16,5 | zakres jak bez wieku menarche (0–290); nota „Wpisany wiek menarche nie jest brany pod uwagę…”; opis „… · Th V · nadpisanie lokalne” bez „menarche 25,0” |
+| wpis nierozpoznany | jak wyżej, wpis „12,5,”, „12,5 lat”, „12;5”, „1e1”, „0x10” albo „-12” | jak wpis odrzucony; „11”, „11,”, „11,0”, „ 10.5 ” są przyjmowane („11,” to niedokończony zapis liczby 11) |
+| wpis nieużywany | pacjentka D, wpis 11, potem wiek w panelu 30 lat albo inne badanie | opis bez „menarche …”; po powrocie do estradiolu u 16-latki „… · menarche 11,0 · nadpisanie lokalne” |
+| wpisywanie liczby | dorosła 30 lat, prolaktyna, „Postmenopauza”; wiek „65” wpisywany przez „6” | przy „6”: opis „Kobieta · 6 lat · …” bez postmenopauzy, wybór w selektorze zostaje; przy „65”: „… · postmenopauza · nadpisanie lokalne”; zakończony wpis „15” → wybór „(domyślnie)”, opcji nie ma |
+| wpisywanie liczby | dorosła 30 lat, estradiol 450, faza lutealna; wiek „35” wpisywany przez „3” | przy „3”: zakres 0–73,5 i opis bez fazy, „Faza lutealna” dalej wybrana; przy „35”: 200–770, „w zakresie normy” |
+| klik po polu | fokus w polu liczbowym panelu (z wpisem albo bez), potem klik w wartość w tabeli wyników | pierwszy klik kopiuje: „Skopiowano: 0,45 nmol/L” |
+| badanie z własnym formularzem | ta sama osoba: 40 lat, „Postmenopauza” wybrana w prolaktynie → Inhibina B → dane zmienione na 12 lat, wynik 40 ng/L | schowany wybór skasowany; karta „Hormony w ciągu życia” jak u świeżo otwartej 12-latki („40 ng/L Mediana ≈43 ng/L”), bez komunikatu o menopauzie |
+| zmiana płci w danych | 16 lat, wpis lokalny 11 i faza lutealna; płeć w danych K → M → K | pole puste, wybór „(nieznana)”, zakres jak bez wpisu (0–290) |
+| inne badanie | prolaktyna, 16 lat / 30 lat | lista bez „Postmenopauzy”, fazy do wyboru / osiem opcji jak dotąd |
+
+**Gdzie mieszka reguła.** Próg (5, `adult_context_after_years`), najniższy
+wiek menarche dla reguły (8, `adult_context_min_menarche_years` — osobne
+pole), dopuszczalny wiek menarche jako wpis (2–20), lista wyborów
+niedostępnych poniżej 18 lat, konteksty ciąży i oba teksty są danymi:
+blok `gynecological_age` w polityce deskryptora estradiolu
+(`lab_units_data.js`); granica 18 lat zostaje w `chronological_age`.
+Odpowiedź `referenceContext` podaje powód braku kwalifikacji
+(`not_qualified_reason`: brak wpisu, za mało lat albo menarche przed
+granicą wieku) i samą granicę, więc strona nie porównuje wieku menarche
+z liczbą 8 i nie ma jej w kodzie. Regułę
+stosuje silnik (`lab_unit_converter.js`: `selectRange`, `evaluate`). Strona
+i pakiet nie mają jej kopii: o podstawę doboru, lata od menarche i dostępne
+wybory pytają `LabUnitConverter.referenceContext(badanie, pacjent)`, a wiek
+menarche przekazują w polu pacjenta `menarche_age_years`. Wynik dobrany
+z lat od menarche niesie `reference_basis: 'gynecological_age'` i gotowe
+zdanie `reference_basis_pl`. Na stronie (`przelicznik-jednostek.html`):
+`applyMenarcheAge` (pierwszeństwo wartości), `applyReferenceAvailability`
+na końcu `getEffectivePatient` (niedostępny wybór fazy nie trafia do
+odbiorców; czy wpis jest nadpisaniem i czy jest wartością do pokazania),
+`commitCyclePhaseAvailability` na początku `renderPatientSummary` (kasowanie
+zapamiętanego wyboru, przed wcześniejszym powrotem dla badań z własnym
+formularzem), `onOverrideChange` (odczyt wpisu; zdarzenie „input” =
+wpisywanie) i `onOverrideNumberCommitted` (koniec wpisu: tylko opis
+pacjenta, bez rysowania wyniku).
+
+**Testy.** `tests/unit/lab-e2-menarche.test.mjs` (dane, silnik, pakiet,
+format zapisu oraz prawdziwe funkcje strony wycięte
+z `przelicznik-jednostek.html` i uruchomione na atrapach elementów: odczyt
+pacjenta, opis, selektor, pole, noty, zdarzenia panelu),
+z macierzą `tests/support/lab-selection-matrix.mjs` i wzorcem
+`tests/fixtures/lab-selection-inne-badania-baza.json` wygenerowanym z kodu
+`origin/audyt` (33 pozostałe badania × 4992 konteksty pacjentów oraz
+populacje estradiolu, których reguła nie dotyczy — wyniki identyczne jak
+przed zmianą). E2E: `tests/e2e/lab-e2-menarche.spec.mjs` (scenariusze A–G,
+granice, selektor w innym badaniu, czyszczenie, wpisywanie liczby przez
+wartość pośrednią w prolaktynie i estradiolu, klik w wynik po polu
+liczbowym, wpis odrzucony i nierozpoznany, opis pacjenta przy wpisie
+nieużywanym, zmiana płci w danych, LH i inhibina B, R9 z danych i z wpisu
+lokalnego z granicą 7,99 / 8,0, 390 px, pakiet, przypięcie i historia). Zmienione istniejące E2E, które zakładały
+postmenopauzę albo zwykłą fazę u nieletniej:
+`hormone-lifespan-female-e2-reference`, `hormone-lifespan-female-lh-result-only`,
+`lab-e2-phase-source`, `lab-female-lh-result-only-offline`; pole dopisane do
+list czyszczenia w `lab-session-reset*`.
+
+**Ograniczenia.**
+
+- Nie znaleziono opublikowanych zakresów referencyjnych estradiolu dla faz
+  cyklu u nastolatek; zakresy dla faz są publikowane dla dorosłych. Po progu
+  wiersze dorosłej są więc stosowane **decyzją właściciela**, a nie na
+  podstawie zwalidowanego źródła zakresów dla tej grupy wieku. Dolne granice
+  dorosłej mogą u nastolatki częściej dawać ocenę „poniżej”.
+- Część cykli pozostaje bezowulacyjna także po 5 latach od menarche. Dlatego
+  przy nieznanej fazie wynik nie dostaje oceny, a wybór fazy zostaje
+  u lekarza; aplikacja nie ustala fazy z wieku, wieku menarche ani stężenia.
+- Wczesna menarche skraca, a późna wydłuża czas do cykli owulacyjnych; jeden
+  próg 5 lat tego nie modeluje.
+- Wiek menarche jest daną wpisaną; aplikacja go nie weryfikuje. Bez wpisu
+  (w danych albo w polu lokalnym) reguła nie działa.
+- Rachunek jest konserwatywny: liczy się dolna granica znanego wieku, więc
+  przy wieku podanym w samych latach próg bywa spełniony później niż
+  w rzeczywistości.
+- Zapisany (przypięty) wynik niesie użyty zakres i wybraną fazę, ale **nie
+  zapisuje podstawy doboru** (lat od menarche); w historii widać „dziewczynka,
+  15 l” obok zakresu „Kobiety, faza lutealna”. Format zapisu nie został
+  zmieniony.
+- Reguła dotyczy wyłącznie estradiolu. Inne hormony zależne od cyklu to
+  osobna, przyszła decyzja.
+- Weryfikacja wiersza Tanner V i tabeli Mayo została przez właściciela
+  odłożona i nie jest częścią tej zmiany.
+
+**Dowody.** Źródła wspierają decyzję właściciela o progu danymi o częstości
+owulacji po menarche. **Nie są zwalidowanym źródłem zakresów referencyjnych**
+estradiolu u nastolatek.
+
+- Apter D. *Clin Endocrinol (Oxf)* 1980,
+  doi:[10.1111/j.1365-2265.1980.tb02125.x](https://doi.org/10.1111/j.1365-2265.1980.tb02125.x) —
+  około 80% cykli bezowulacyjnych w 1. roku po menarche, 50% w 3., 10% w 6.
+- Apter D, Vihko R. *J Clin Endocrinol Metab* 1983,
+  doi:[10.1210/jcem-57-1-82](https://doi.org/10.1210/jcem-57-1-82) — czas, po
+  którym 50% cykli jest owulacyjnych: około 1 roku, 3 i 4,5 roku dla menarche
+  przed 12,0, w wieku 12,0–12,9 oraz w wieku 13,0 lub później.
+- Metcalf MG i wsp. *J Endocrinol* 1983,
+  doi:[10.1677/joe.0.0970213](https://doi.org/10.1677/joe.0.0970213) — odsetek
+  dziewcząt i kobiet z owulacją w każdym zarejestrowanym cyklu według lat od
+  menarche: 22,9% (<1), 25,0% (1–<2), 44,8% (2–<3), 42,9% (3–<4), 63,2%
+  (4–<5), 71,8% (5–8), 82,6% (9–12); regularny wzorzec cykli owulacyjnych
+  ustala się w ciągu 5 lat od menarche.
+- Rosenfield RL. *J Clin Endocrinol Metab* 2013,
+  doi:[10.1210/jc.2013-1770](https://doi.org/10.1210/jc.2013-1770) — do 5.
+  roku ginekologicznego około 75% cykli jest owulacyjnych (wzorzec dojrzały:
+  około 80%).
+- Sun BZ i wsp. *J Clin Endocrinol Metab* 2019,
+  doi:[10.1210/jc.2018-00595](https://doi.org/10.1210/jc.2018-00595) —
+  dziewczęta 0,4–3,5 roku po menarche, wszystkie Tanner V: w prawidłowych
+  cyklach owulacyjnych estradiol niższy niż u dorosłych (wczesna faza
+  folikularna 16,9 vs 54,0 pg/mL; późna folikularna 51,2 vs 133,2; lutealna
+  59,2 vs 98,2; środek cyklu 123,5 vs 154,4 — różnica nieistotna). To powód,
+  dla którego samo stadium Tanner V nie uprawnia do zakresów dorosłej.
+- Peña AS i wsp. *BMC Med* 2025 (wytyczne PCOS),
+  doi:[10.1186/s12916-025-03901-w](https://doi.org/10.1186/s12916-025-03901-w) —
+  kryteria regularności cyklu jak u dorosłych od 3 lat po menarche; pełna
+  dojrzałość rozrodcza około 8 lat po menarche.
+
+Na podstawie artykułów pobranych z PubMed.
+
+Powiązane wpisy i dokumenty: LAB-E2-AGE-QUALIFICATION i LAB-E2-CYCLE-CONTEXT
+(niżej) z notami z 2026-11-19 w [E2_AGE_QUALIFICATION.md](E2_AGE_QUALIFICATION.md)
+i [E2_CYCLE_CONTEXT.md](E2_CYCLE_CONTEXT.md); zmiany w artefaktach:
+`docs/ZRODLA_ARTEFAKTOW.md`, „Łatka P-E2-MENARCHE”.
+
 ### LAB-E2-AGE-QUALIFICATION — wiek przed stadium, 2026-10-28
 
 **Wpływ kliniczny: tak.** Polityka `estradiol-matched-reference-only`

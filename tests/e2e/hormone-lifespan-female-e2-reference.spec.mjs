@@ -12,13 +12,16 @@ const panel = page => page.locator('.vilda-hormone-lifespan');
 const point = page => panel(page).locator('[data-patient-concentration="e2"]');
 const note = page => panel(page).locator('[data-lifespan="scale-note"]');
 
-async function patient(page, age, ageMonths = 0) {
-  await page.evaluate(({ age, ageMonths }) => {
-    if (!window.VildaPersistence.writeShared({ name: 'Fikcyjna pacjentka mediany E2', sex: 'F', age, ageMonths }, { force: true })) {
+// menarche: age at menarche in years (the form's payload.puberty.menarcheAgeYears), or null.
+async function patient(page, age, ageMonths = 0, menarche = null) {
+  await page.evaluate(({ age, ageMonths, menarche }) => {
+    const user = { name: 'Fikcyjna pacjentka mediany E2', sex: 'F', age, ageMonths };
+    if (menarche != null) user.puberty = { menarcheAgeYears: menarche };
+    if (!window.VildaPersistence.writeShared(user, { force: true })) {
       throw new Error('Cannot seed fictional E2 patient');
     }
     document.dispatchEvent(new CustomEvent('vilda:session-changed'));
-  }, { age, ageMonths });
+  }, { age, ageMonths, menarche });
 }
 
 async function open(page, width = 1440) {
@@ -180,21 +183,34 @@ test('E2 age domain uses the whole reported interval, preserves source values be
   await expectPoint(page, 6, 1);
 });
 
-test('E2 pools known ordinary cycle phases but excludes known pregnancy/menopause and clears local facts for another person', async ({ page }) => {
+test('E2 pools known ordinary cycle phases but excludes known pregnancy (menopause is not offered below 18) and clears local facts for another person', async ({ page }) => {
   await open(page, 320);
   await page.locator('#labValue').fill('50');
   await expectPoint(page, 12, 50);
   const original = await geometry(page);
   await page.locator('#labPatientToggle').click();
-  for (const phase of ['follicular', 'ovulation', 'luteal', '', 'pregnancy_t1', 'pregnancy_t2', 'pregnancy_t3', 'postmenopause']) {
-    await page.locator('#labOverrideCycle').selectOption(phase);
-    if (phase.startsWith('pregnancy_') || phase === 'postmenopause') await expect(point(page)).toHaveCount(0);
-    else await expectPoint(page, 12, 50);
-    await expect.poll(() => geometry(page)).toEqual(original);
-    await page.evaluate(() => document.dispatchEvent(new CustomEvent('vilda:session-changed')));
-    if (phase.startsWith('pregnancy_') || phase === 'postmenopause') await expect(point(page)).toHaveCount(0);
-    else await expectPoint(page, 12, 50);
-  }
+  const cycle = page.locator('#labOverrideCycle');
+  // P-E2-MENARCHE (owner decisions 2026-11-19): below 18 the selector has no "Postmenopauza", and an ordinary
+  // cycle phase can be chosen only 5 years after menarche. The 12-year-old keeps the pregnancy exclusion; the
+  // pooling of ordinary phases is checked on a 17-year-old with menarche at 11.
+  await expect(cycle.locator('option[value="postmenopause"]')).toHaveCount(0);
+  for (const phase of ['follicular', 'ovulation', 'luteal']) await expect(cycle.locator(`option[value="${phase}"]`)).toHaveJSProperty('disabled', true);
+  const walk = async (age, phases) => {
+    for (const phase of phases) {
+      await cycle.selectOption(phase);
+      if (phase.startsWith('pregnancy_')) await expect(point(page)).toHaveCount(0);
+      else await expectPoint(page, age, 50);
+      await expect.poll(() => geometry(page)).toEqual(original);
+      await page.evaluate(() => document.dispatchEvent(new CustomEvent('vilda:session-changed')));
+      if (phase.startsWith('pregnancy_')) await expect(point(page)).toHaveCount(0);
+      else await expectPoint(page, age, 50);
+    }
+  };
+  await walk(12, ['', 'pregnancy_t1', 'pregnancy_t2', 'pregnancy_t3', '']);
+  await patient(page, 17, 0, 11);
+  await page.locator('#labValue').fill('50');
+  await expect(cycle.locator('option[value="postmenopause"]')).toHaveCount(0);
+  await walk(17, ['follicular', 'ovulation', 'luteal', '', 'pregnancy_t1', 'pregnancy_t2', 'pregnancy_t3']);
   await page.evaluate(() => {
     const id = 'fictional-new-female-e2-reference';
     window._vildaCurrentPatientId = id;

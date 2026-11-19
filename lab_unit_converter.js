@@ -187,15 +187,111 @@ function referenceRowAgeFits(substance, row, patient) {
     (patient.ageUpperYears > when.age_max || patient.ageUpperYears === when.age_max && patient.ageUpperInclusive !== false));
 }
 
+// P-E2-MENARCHE (owner decisions 2026-11-19). A descriptor may state that below
+// its adult age boundary a girl gets the adult cycle-phase handling once enough
+// years have passed since menarche (gynecological age). The threshold, the accepted
+// menarche range, the affected selector contexts and the texts are descriptor data;
+// the code below names no analyte and holds no number of the rule.
+// Roundoff of `age - menarche` only (about 0.03 s); the comparison itself is unrounded.
+var GYNECOLOGICAL_AGE_NOISE_YEARS = 1e-9;
+
+function listed(list, value) {
+  return Array.isArray(list) && typeof value === 'string' && list.indexOf(value) !== -1;
+}
+
+// The whole known age must lie below the adult boundary. A missing, invalid or
+// boundary-crossing age is not knowledge that the patient is a minor.
+function knownBelowAdultAge(agePolicy, patient) {
+  var low = patient.age, high = low, inclusive = true;
+  if (!agePolicy || !(agePolicy.adult_min_years > 0) || typeof low !== 'number' || !isFinite(low) || low < 0) return false;
+  if (Object.prototype.hasOwnProperty.call(patient, 'ageUpperYears')) {
+    high = patient.ageUpperYears;
+    inclusive = patient.ageUpperInclusive !== false;
+    if (typeof high !== 'number' || !isFinite(high) || high < low || high === low && !inclusive ||
+        patient.ageUpperInclusive != null && typeof patient.ageUpperInclusive !== 'boolean') return false;
+  }
+  return high < agePolicy.adult_min_years || high === agePolicy.adult_min_years && !inclusive;
+}
+
+// One decimal, comma, rounded down: 4.96 years must never read as the threshold "5,0".
+function yearsDownText(years) {
+  var tenths = Math.floor((years + GYNECOLOGICAL_AGE_NOISE_YEARS) * 10);
+  return Math.floor(tenths / 10) + ',' + tenths % 10;
+}
+
+// State of the gynecological-age rule for one patient. `applies`: the descriptor has
+// the rule and the patient is a girl known to be below the adult boundary. `menarche`
+// is the accepted value or null ("not recorded": absent, outside the accepted range or
+// later than the known age). Years are counted from the LOWER bound of the known age,
+// so the whole age interval lies past the threshold when `qualified` is true.
+// `early` (R9): the accepted menarche lies below the descriptor's floor age for the
+// rule (unrounded comparison) — a recorded value that never qualifies, however many
+// years have passed. A descriptor without the floor has no such state.
+function gynecologicalAge(substance, patient) {
+  var selection = substance && substance.reference_selection_policy;
+  var policy = selection && selection.gynecological_age;
+  var state = { policy: policy || null, applies: false, menarche: null, years: null, early: false, qualified: false };
+  patient = patient || {};
+  if (!policy || !N(policy.when, patient) || !knownBelowAdultAge(selection.chronological_age, patient)) return state;
+  state.applies = true;
+  var menarche = patient[policy.menarche_key];
+  if (!(policy.menarche_min_years <= policy.menarche_max_years) || !(policy.adult_context_after_years > 0) ||
+      typeof menarche !== 'number' || !isFinite(menarche) || menarche < policy.menarche_min_years ||
+      menarche > policy.menarche_max_years || menarche > patient.age) return state;
+  state.menarche = menarche;
+  state.years = patient.age - menarche;
+  var floor = policy.adult_context_min_menarche_years;
+  // A floor that is stated but is not a number qualifies nobody.
+  state.early = floor != null && !(typeof floor === 'number' && menarche >= floor);
+  state.qualified = !state.early && state.years >= policy.adult_context_after_years - GYNECOLOGICAL_AGE_NOISE_YEARS;
+  return state;
+}
+
+function gynecologicalBasisText(state) {
+  return String(state.policy.basis_pl || '')
+    .replace('{years}', yearsDownText(state.years))
+    .replace('{threshold}', String(state.policy.adult_context_after_years).replace('.', ','));
+}
+
+// Runs after chronological qualification. Returns the patient the adult context
+// policy should see and, in `minor`, the rule state when that policy is to handle a
+// girl below the adult boundary: once the threshold is met (R1) or, with or without
+// it, for a pregnancy context (R4: no range, as in an adult). Otherwise the patient
+// is returned untouched and the Tanner/age rows apply exactly as before (R2).
+function qualifyGynecologicalAge(substance, patient) {
+  var state = gynecologicalAge(substance, patient);
+  if (!state.applies) return { patient: patient };
+  var selection = substance.reference_selection_policy;
+  var context = selection.adult_female_context || {};
+  if (!state.qualified && !listed(state.policy.pregnancy_contexts, patient[context.context_key])) return { patient: patient };
+  return {
+    patient: Object.assign({}, patient, { life_stage: selection.chronological_age.adult_life_stage, tanner: null }),
+    minor: state
+  };
+}
+
+// Names the basis on a range chosen by gynecological age; chronological adults and
+// every other result stay without these fields.
+function markGynecologicalBasis(range, minor) {
+  if (!minor || !minor.qualified) return range;
+  range.reference_basis = 'gynecological_age';
+  range.reference_basis_pl = gynecologicalBasisText(minor);
+  return range;
+}
+
 // A data-owned adult context policy precedes legacy Tanner/default rows. A
 // list of possible contexts is not a selected patient range or one wide RI.
-function selectContextReference(substance, patient) {
+// `minor` (see qualifyGynecologicalAge) is set only for a girl below the adult
+// boundary: contexts that do not apply to minors are then neither selectable nor
+// listed, and such a context passed in counts as unknown.
+function selectContextReference(substance, patient, minor) {
   var selection = substance.reference_selection_policy;
   var policy = selection && selection.adult_female_context;
   patient = patient || {};
   if (!policy || selection.require_matched !== true || !N(policy.when, patient)) return null;
   var value = patient[policy.context_key];
-  var unknown = value == null || typeof value === 'string' &&
+  var notForMinors = minor ? minor.policy.contexts_not_applicable_below_adult_age : null;
+  var unknown = value == null || listed(notForMinors, value) || typeof value === 'string' &&
     Array.isArray(policy.unknown_values) && policy.unknown_values.some(function (item) {
       return item.trim().toLowerCase() === value.trim().toLowerCase();
     });
@@ -204,19 +300,20 @@ function selectContextReference(substance, patient) {
   var alternatives = [];
   for (var index = 0; index < definitions.length; index++) {
     var definition = definitions[index];
+    if (listed(notForMinors, definition.cycle_phase)) continue;
     var row = rows.find(function (candidate) { return candidate.id === definition.row_id && !candidate.default; });
     if (!row) continue;
     var nonCycleContext = Object.assign({}, row.when || {});
     delete nonCycleContext[policy.context_key];
     if (!N(nonCycleContext, patient)) continue;
     if (!unknown && value === definition.cycle_phase && N(row.when, patient)) {
-      return {
+      return markGynecologicalBasis({
         id: row.id, low: row.low, high: row.high,
         context_pl: row.context_pl || '',
         source_ids: Array.isArray(row.source_ids) ? row.source_ids.slice() : [],
         no_interpretation: !!row.no_interpretation,
         matched: true, is_default: false
-      };
+      }, minor);
     }
     if (unknown) {
       alternatives.push({
@@ -228,9 +325,101 @@ function selectContextReference(substance, patient) {
   }
   var result = unmatchedReference(substance);
   result.reference_context_required = unknown;
-  result.context_pl = unknown ? policy.context_pl : policy.unsupported_context_pl;
+  result.context_pl = unknown ? minor && minor.policy.context_pl || policy.context_pl : policy.unsupported_context_pl;
   if (unknown) result.reference_variants = alternatives;
-  return result;
+  return markGynecologicalBasis(result, minor);
+}
+
+function copyReferenceBasis(result, range) {
+  if (!range || !Object.prototype.hasOwnProperty.call(range, 'reference_basis')) return;
+  result.reference_basis = range.reference_basis;
+  result.reference_basis_pl = range.reference_basis_pl;
+}
+
+// R3: the selector „Faza cyklu / ciąża” is one control shared by the catalogue. Its
+// age limit and the contexts that do not apply below it are stated once, by the
+// descriptor that owns the gynecological-age rule; for any other analyte only these
+// two facts are read from it — that analyte's range selection is not touched.
+function sharedPhasePolicy() {
+  var all = s.list();
+  for (var index = 0; index < all.length; index++) {
+    var selection = all[index].reference_selection_policy;
+    if (selection && selection.gynecological_age && selection.chronological_age) return selection;
+  }
+  return null;
+}
+
+// What the engine would use for this patient — for the page's controls and
+// explanations, so that the page holds no copy of the rule. Pure: nothing is
+// selected or stored and the input is not modified.
+//   life_stage / basis: stage used to select this analyte's range and what decided it
+//     ('chronological_age' | 'gynecological_age'); null basis when this analyte has no
+//     such policy (life_stage is then the caller's own) or the age does not qualify.
+//   known_minor: the whole known age lies below adult_min_years.
+//   menarche_applicable: this analyte's rule reads menarche for this patient;
+//     menarche_age_years is the accepted value (null = not recorded).
+//   not_qualified_reason: why a girl the rule applies to keeps her Tanner/age rows:
+//     'menarche_not_recorded' | 'below_gynecological_age' (threshold_years not reached) |
+//     'menarche_before_min_age' (menarche below adult_context_min_menarche_years); else null.
+//   phases: selector values that are not available now, each { state, reason }:
+//     'not_applicable' (must not be offered) or 'no_effect' (offered but disabled).
+function referenceContext(substance, patient) {
+  if (typeof substance === 'string') substance = s.find(substance);
+  patient = patient || {};
+  var context = {
+    policy_id: null, policy_version: null, life_stage: patient.life_stage || null, basis: null,
+    known_minor: false, adult_min_years: null,
+    menarche_applicable: false, menarche_age_years: null, menarche_min_years: null, menarche_max_years: null,
+    adult_context_min_menarche_years: null, not_qualified_reason: null,
+    years_since_menarche: null, years_since_menarche_text: '', threshold_years: null, basis_pl: '',
+    phases: {}
+  };
+  var own = substance && substance.reference_selection_policy;
+  var owned = !!(own && own.gynecological_age && own.chronological_age);
+  var selection = owned ? own : sharedPhasePolicy();
+  if (!selection) return context;
+  var policy = selection.gynecological_age;
+  context.policy_id = selection.id || null;
+  context.policy_version = selection.version || null;
+  context.adult_min_years = selection.chronological_age.adult_min_years;
+  context.known_minor = knownBelowAdultAge(selection.chronological_age, patient);
+  if (context.known_minor) {
+    (policy.contexts_not_applicable_below_adult_age || []).forEach(function (phase) {
+      context.phases[phase] = { state: 'not_applicable', reason: 'below_adult_age' };
+    });
+  }
+  if (!owned) return context;
+  var age = qualifyReferenceAge(substance, patient);
+  context.life_stage = age.unavailable ? null : age.patient.life_stage;
+  context.basis = age.unavailable ? null : 'chronological_age';
+  var state = gynecologicalAge(substance, patient);
+  if (!state.applies) return context;
+  context.menarche_applicable = true;
+  context.menarche_age_years = state.menarche;
+  context.menarche_min_years = policy.menarche_min_years;
+  context.menarche_max_years = policy.menarche_max_years;
+  context.adult_context_min_menarche_years = typeof policy.adult_context_min_menarche_years === 'number' &&
+    isFinite(policy.adult_context_min_menarche_years) ? policy.adult_context_min_menarche_years : null;
+  context.threshold_years = policy.adult_context_after_years;
+  if (state.menarche != null) {
+    context.years_since_menarche = state.years;
+    context.years_since_menarche_text = yearsDownText(state.years);
+  }
+  if (state.qualified && !age.unavailable) {
+    context.life_stage = selection.chronological_age.adult_life_stage;
+    context.basis = 'gynecological_age';
+    context.basis_pl = gynecologicalBasisText(state);
+    return context;
+  }
+  // R2 and R9: without the qualification the ordinary cycle phases do not change the range.
+  var reason = state.menarche == null ? 'menarche_not_recorded'
+    : state.early ? 'menarche_before_min_age' : 'below_gynecological_age';
+  context.not_qualified_reason = reason;
+  var variants = selection.adult_female_context && selection.adult_female_context.variants;
+  (Array.isArray(variants) ? variants : []).forEach(function (variant) {
+    if (!context.phases[variant.cycle_phase]) context.phases[variant.cycle_phase] = { state: 'no_effect', reason: reason };
+  });
+  return context;
 }
 
 function copyContextReference(result, range) {
@@ -247,4 +436,4 @@ function copyContextReference(result, range) {
   }
 }
 
-function S(r){if(r==null)return"";try{return String(r).normalize("NFD").replace(/[̀-ͯ]/g,"")}catch{return String(r)}}function x(r){var e=S(String(r||"")).toLowerCase();return e.replace(/[^a-z0-9]+/g," ").replace(/\s+/g," ").trim()}function v(r,e){if(!r||!e)return null;for(var n=0;n<r.units.length;n++)if(r.units[n].symbol===e)return r.units[n];return null}function O(r,e){if(!isFinite(r))return r;if(r===0)return 0;var n=Math.max(1,e|0),i=Math.ceil(Math.log10(Math.abs(r))),t=n-i,u=Math.pow(10,t);return Math.round(r*u)/u}var d=3;function h(r,e){if(!isFinite(r))return"\u2014";var n=e==null?d:e|0,i=O(r,n);if(i!==0&&Math.abs(i)<1e-4){var t=i.toExponential(n-1);return t.replace(".",",")}var u=Math.abs(i),a;u>=100?a=Math.max(0,n-3):u>=10?a=Math.max(0,n-2):u>=1?a=Math.max(1,n-1):u>=.1?a=Math.max(2,n):u>=.01?a=Math.max(3,n+1):a=Math.max(4,n+2);var o=i.toFixed(a);o.indexOf(".")!==-1&&(o=o.replace(/0+$/,"").replace(/\.$/,""));var l=o.split(".");return Math.abs(parseInt(l[0],10))>=1e4&&(l[0]=l[0].replace(/\B(?=(\d{3})+(?!\d))/g,"\xA0")),l.join(",")}function _(r){if(r==null)return NaN;if(typeof r=="number")return r;var e=String(r).trim();if(!e)return NaN;e=e.replace(/[\s ]/g,""),e=e.replace(",",".");var n=Number(e);return isFinite(n)?n:NaN}function A(){var r=s.list();return r.map(function(e){return{id:e.id,label:e.label_pl,group:e.group}})}function W(){return s.groups()}function D(r){return s.find(r)}function B(r){var e=s.find(r);return e?e.units.slice():[]}function L(){for(var r=s.list(),e={},n=[],i=0;i<r.length;i++)for(var t=Array.isArray(r[i].clinical_indications)?r[i].clinical_indications:[],u=0;u<t.length;u++){var a=t[u];!a||e[a]||(e[a]=!0,n.push(a))}return n}function V(r){if(!r)return[];for(var e=s.list(),n=[],i=0;i<e.length;i++){var t=Array.isArray(e[i].clinical_indications)?e[i].clinical_indications:[];t.indexOf(r)!==-1&&n.push({id:e[i].id,label:e[i].label_pl,group:e[i].group})}return n}function N(r,e){if(!r)return!0;var n=e||{};return!(r.sex&&n.sex!==r.sex||r.life_stage&&n.life_stage!==r.life_stage||r.cycle_phase&&n.cycle_phase!==r.cycle_phase||r.tanner&&String(n.tanner)!==String(r.tanner)||r.time_of_day&&n.time_of_day!==r.time_of_day||r.test_protocol&&n.test_protocol!==r.test_protocol||r.method&&n.method!==r.method||typeof r.age_min=="number"&&(typeof n.age!="number"||!isFinite(n.age)||n.age<r.age_min)||typeof r.age_max=="number"&&(typeof n.age!="number"||!isFinite(n.age)||n.age>=r.age_max))}function U(r,e){if(!r)return null;if(r.id==="amh")return selectAmhReference(r,e);/* TT uses the source-qualified engine for every sex; never revive legacy adult/Tanner defaults through this public API. */if(r.id==="testosterone_total")return null;var qualifiedAge=qualifyReferenceAge(r,e);if(qualifiedAge.unavailable)return qualifiedAge.unavailable;e=qualifiedAge.patient;var qualifiedContext=selectContextReference(r,e);if(qualifiedContext)return qualifiedContext;var n=Array.isArray(r.reference_ranges_si)?r.reference_ranges_si:null;if(n&&n.length){for(var i=0;i<n.length;i++){var t=n[i];if(!t.default&&N(t.when,e)&&referenceRowAgeFits(r,t,e))return{id:t.id||null,low:t.low,high:t.high,context_pl:t.context_pl||"",source_ids:Array.isArray(t.source_ids)?t.source_ids.slice():[],no_interpretation:!!t.no_interpretation,matched:!0,is_default:!1}}}var blocked=unmatchedReference(r);if(blocked)return blocked;if(n&&n.length){for(var u=0;u<n.length;u++){var a=n[u];if(a.default)return{id:a.id||null,low:a.low,high:a.high,context_pl:a.context_pl||"",source_ids:Array.isArray(a.source_ids)?a.source_ids.slice():[],no_interpretation:!!a.no_interpretation,matched:!1,is_default:!0}}}if(r.default_range_si){var o=r.default_range_si;return{id:null,low:o.low,high:o.high,context_pl:o.context_pl||"",source_ids:[],matched:!1,is_default:!0}}return null}function C(r){if(!r)return[];for(var e=Array.isArray(r.reference_ranges_si)?r.reference_ranges_si:[],n=[],i=[],t=0;t<e.length;t++)e[t].default?i.push(e[t]):n.push(e[t]);return n.length?n:i}function R(r){var e=x(r);if(!e)return A();for(var n=e.split(" ").filter(Boolean),i=s.list(),t=[],u=0;u<i.length;u++){for(var a=i[u],o=[a.label_pl,a.label_en,a.id,a.group].concat(Array.isArray(a.aliases)?a.aliases:[]),l=[],c=0;c<o.length;c++){var k=x(o[c]);k&&l.push(k)}for(var z=l.join(" | "),q=z.replace(/\s+/g,""),I=!0,F=!1,M=!1,g=0;g<n.length;g++){var p=n[g],j=z.indexOf(p)!==-1,G=!j&&q.indexOf(p)!==-1;if(!j&&!G){I=!1;break}for(var m=0;m<l.length;m++){if(l[m]===p){F=!0;break}l[m].indexOf(p)===0&&(M=!0)}}if(I){var J=10+(M?40:0)+(F?50:0);t.push({s:a,score:J,idx:u})}}return t.sort(function(f,b){return f.score!==b.score?b.score-f.score:f.idx-b.idx}),t.map(function(f){return{id:f.s.id,label:f.s.label_pl,group:f.s.group}})}function T(r){r=r||{};var e=s.find(r.substanceId);if(!e)return{ok:!1,error:"Nie znaleziono substancji."};var n=typeof r.value=="number"?r.value:_(r.value);if(!isFinite(n))return{ok:!1,error:"Warto\u015B\u0107 nie jest liczb\u0105."};if(n<0)return{ok:!1,error:"Warto\u015B\u0107 nie mo\u017Ce by\u0107 ujemna."};var i=v(e,r.fromUnit),t=v(e,r.toUnit);if(!i)return{ok:!1,error:"Nieznana jednostka \u017Ar\xF3d\u0142owa: "+r.fromUnit};if(!t)return{ok:!1,error:"Nieznana jednostka docelowa: "+r.toUnit};var u=n*i.factor_to_si,a=u/t.factor_to_si,o=e.precision||d;return{ok:!0,value:a,formatted:h(a,o)+" "+t.symbol,siValue:u,siUnit:e.canonical_si,fromUnit:i.symbol,toUnit:t.symbol,precision:o}}function E(r){r=r||{};var e=s.find(r.substanceId);if(!e)return{ok:!1,error:"Nie znaleziono substancji."};var n=typeof r.value=="number"?r.value:_(r.value);if(!isFinite(n))return{ok:!1,error:"Warto\u015B\u0107 nie jest liczb\u0105."};if(n<0)return{ok:!1,error:"Warto\u015B\u0107 nie mo\u017Ce by\u0107 ujemna."};var i=v(e,r.fromUnit);if(!i)return{ok:!1,error:"Nieznana jednostka \u017Ar\xF3d\u0142owa."};for(var t=n*i.factor_to_si,u=e.precision||d,a=[],o=0;o<e.units.length;o++){var l=e.units[o];if(l.symbol!==i.symbol){var c=t/l.factor_to_si;a.push({unit:l.symbol,label:l.label,kind:l.kind,value:c,formatted:h(c,u)})}}return{ok:!0,substanceId:e.id,label:e.label_pl,fromUnit:i.symbol,value:n,siValue:t,siUnit:e.canonical_si,precision:u,results:a}}function $(r,e){e=e||{};var n=s.find(r);if(!n)return{ok:!1,error:"Nie znaleziono substancji."};var i=typeof e.value=="number"?e.value:_(e.value);if(!isFinite(i))return{ok:!1,error:"Warto\u015B\u0107 nie jest liczb\u0105."};if(i<0)return{ok:!1,error:"Warto\u015B\u0107 nie mo\u017Ce by\u0107 ujemna."};var t=v(n,e.unit);if(!t)return{ok:!1,error:"Nieznana jednostka: "+e.unit};var u=i*t.factor_to_si,a=n.precision||d,o=U(n,e.patient||{}),l={ok:!0,substanceId:n.id,label:n.label_pl,value:i,unit:t.symbol,siValue:u,siUnit:n.canonical_si,precision:a,low:null,high:null,lowInUnit:null,highInUnit:null,context_pl:"",source_ids:[],matched:!1,is_default:!1,status:"no_range"};if(n.id==="amh")return finishAmhEvaluation(l,o,t);copyContextReference(l,o);return o?(l.context_pl=o.context_pl||"",l.source_ids=Array.isArray(o.source_ids)?o.source_ids.slice():[],l.matched=!!o.matched,l.is_default=!!o.is_default,o.no_interpretation?(l.status="no_interpretation",l):o.low==null||o.high==null?(l.status="no_range",l):(l.low=o.low,l.high=o.high,l.lowInUnit=o.low/t.factor_to_si,l.highInUnit=o.high/t.factor_to_si,u>o.high*2?l.status="far_above":o.low>0&&u<o.low*.5?l.status="far_below":u<o.low?l.status="below":u>o.high?l.status="above":l.status="within",l)):l}var w={list:A,groups:W,find:D,units:B,search:R,convert:T,convertAll:E,evaluate:$,compareAmhReference:compareAmhReference,parseNumber:_,formatNumber:h,selectRange:U,rangesForOverride:C,matchesWhen:N,listIndications:L,findByIndication:V,findSource:function(r){return s&&typeof s.findSource=="function"?s.findSource(r):null},version:"2.0.3"};typeof module<"u"&&module.exports&&(module.exports=w),y.LabUnitConverter=w})(typeof window<"u"?window:this);
+function S(r){if(r==null)return"";try{return String(r).normalize("NFD").replace(/[̀-ͯ]/g,"")}catch{return String(r)}}function x(r){var e=S(String(r||"")).toLowerCase();return e.replace(/[^a-z0-9]+/g," ").replace(/\s+/g," ").trim()}function v(r,e){if(!r||!e)return null;for(var n=0;n<r.units.length;n++)if(r.units[n].symbol===e)return r.units[n];return null}function O(r,e){if(!isFinite(r))return r;if(r===0)return 0;var n=Math.max(1,e|0),i=Math.ceil(Math.log10(Math.abs(r))),t=n-i,u=Math.pow(10,t);return Math.round(r*u)/u}var d=3;function h(r,e){if(!isFinite(r))return"\u2014";var n=e==null?d:e|0,i=O(r,n);if(i!==0&&Math.abs(i)<1e-4){var t=i.toExponential(n-1);return t.replace(".",",")}var u=Math.abs(i),a;u>=100?a=Math.max(0,n-3):u>=10?a=Math.max(0,n-2):u>=1?a=Math.max(1,n-1):u>=.1?a=Math.max(2,n):u>=.01?a=Math.max(3,n+1):a=Math.max(4,n+2);var o=i.toFixed(a);o.indexOf(".")!==-1&&(o=o.replace(/0+$/,"").replace(/\.$/,""));var l=o.split(".");return Math.abs(parseInt(l[0],10))>=1e4&&(l[0]=l[0].replace(/\B(?=(\d{3})+(?!\d))/g,"\xA0")),l.join(",")}function _(r){if(r==null)return NaN;if(typeof r=="number")return r;var e=String(r).trim();if(!e)return NaN;e=e.replace(/[\s ]/g,""),e=e.replace(",",".");var n=Number(e);return isFinite(n)?n:NaN}function A(){var r=s.list();return r.map(function(e){return{id:e.id,label:e.label_pl,group:e.group}})}function W(){return s.groups()}function D(r){return s.find(r)}function B(r){var e=s.find(r);return e?e.units.slice():[]}function L(){for(var r=s.list(),e={},n=[],i=0;i<r.length;i++)for(var t=Array.isArray(r[i].clinical_indications)?r[i].clinical_indications:[],u=0;u<t.length;u++){var a=t[u];!a||e[a]||(e[a]=!0,n.push(a))}return n}function V(r){if(!r)return[];for(var e=s.list(),n=[],i=0;i<e.length;i++){var t=Array.isArray(e[i].clinical_indications)?e[i].clinical_indications:[];t.indexOf(r)!==-1&&n.push({id:e[i].id,label:e[i].label_pl,group:e[i].group})}return n}function N(r,e){if(!r)return!0;var n=e||{};return!(r.sex&&n.sex!==r.sex||r.life_stage&&n.life_stage!==r.life_stage||r.cycle_phase&&n.cycle_phase!==r.cycle_phase||r.tanner&&String(n.tanner)!==String(r.tanner)||r.time_of_day&&n.time_of_day!==r.time_of_day||r.test_protocol&&n.test_protocol!==r.test_protocol||r.method&&n.method!==r.method||typeof r.age_min=="number"&&(typeof n.age!="number"||!isFinite(n.age)||n.age<r.age_min)||typeof r.age_max=="number"&&(typeof n.age!="number"||!isFinite(n.age)||n.age>=r.age_max))}function U(r,e){if(!r)return null;if(r.id==="amh")return selectAmhReference(r,e);/* TT uses the source-qualified engine for every sex; never revive legacy adult/Tanner defaults through this public API. */if(r.id==="testosterone_total")return null;var qualifiedAge=qualifyReferenceAge(r,e);if(qualifiedAge.unavailable)return qualifiedAge.unavailable;e=qualifiedAge.patient;var gynecological=qualifyGynecologicalAge(r,e);e=gynecological.patient;var qualifiedContext=selectContextReference(r,e,gynecological.minor);if(qualifiedContext)return qualifiedContext;var n=Array.isArray(r.reference_ranges_si)?r.reference_ranges_si:null;if(n&&n.length){for(var i=0;i<n.length;i++){var t=n[i];if(!t.default&&N(t.when,e)&&referenceRowAgeFits(r,t,e))return{id:t.id||null,low:t.low,high:t.high,context_pl:t.context_pl||"",source_ids:Array.isArray(t.source_ids)?t.source_ids.slice():[],no_interpretation:!!t.no_interpretation,matched:!0,is_default:!1}}}var blocked=unmatchedReference(r);if(blocked)return blocked;if(n&&n.length){for(var u=0;u<n.length;u++){var a=n[u];if(a.default)return{id:a.id||null,low:a.low,high:a.high,context_pl:a.context_pl||"",source_ids:Array.isArray(a.source_ids)?a.source_ids.slice():[],no_interpretation:!!a.no_interpretation,matched:!1,is_default:!0}}}if(r.default_range_si){var o=r.default_range_si;return{id:null,low:o.low,high:o.high,context_pl:o.context_pl||"",source_ids:[],matched:!1,is_default:!0}}return null}function C(r){if(!r)return[];for(var e=Array.isArray(r.reference_ranges_si)?r.reference_ranges_si:[],n=[],i=[],t=0;t<e.length;t++)e[t].default?i.push(e[t]):n.push(e[t]);return n.length?n:i}function R(r){var e=x(r);if(!e)return A();for(var n=e.split(" ").filter(Boolean),i=s.list(),t=[],u=0;u<i.length;u++){for(var a=i[u],o=[a.label_pl,a.label_en,a.id,a.group].concat(Array.isArray(a.aliases)?a.aliases:[]),l=[],c=0;c<o.length;c++){var k=x(o[c]);k&&l.push(k)}for(var z=l.join(" | "),q=z.replace(/\s+/g,""),I=!0,F=!1,M=!1,g=0;g<n.length;g++){var p=n[g],j=z.indexOf(p)!==-1,G=!j&&q.indexOf(p)!==-1;if(!j&&!G){I=!1;break}for(var m=0;m<l.length;m++){if(l[m]===p){F=!0;break}l[m].indexOf(p)===0&&(M=!0)}}if(I){var J=10+(M?40:0)+(F?50:0);t.push({s:a,score:J,idx:u})}}return t.sort(function(f,b){return f.score!==b.score?b.score-f.score:f.idx-b.idx}),t.map(function(f){return{id:f.s.id,label:f.s.label_pl,group:f.s.group}})}function T(r){r=r||{};var e=s.find(r.substanceId);if(!e)return{ok:!1,error:"Nie znaleziono substancji."};var n=typeof r.value=="number"?r.value:_(r.value);if(!isFinite(n))return{ok:!1,error:"Warto\u015B\u0107 nie jest liczb\u0105."};if(n<0)return{ok:!1,error:"Warto\u015B\u0107 nie mo\u017Ce by\u0107 ujemna."};var i=v(e,r.fromUnit),t=v(e,r.toUnit);if(!i)return{ok:!1,error:"Nieznana jednostka \u017Ar\xF3d\u0142owa: "+r.fromUnit};if(!t)return{ok:!1,error:"Nieznana jednostka docelowa: "+r.toUnit};var u=n*i.factor_to_si,a=u/t.factor_to_si,o=e.precision||d;return{ok:!0,value:a,formatted:h(a,o)+" "+t.symbol,siValue:u,siUnit:e.canonical_si,fromUnit:i.symbol,toUnit:t.symbol,precision:o}}function E(r){r=r||{};var e=s.find(r.substanceId);if(!e)return{ok:!1,error:"Nie znaleziono substancji."};var n=typeof r.value=="number"?r.value:_(r.value);if(!isFinite(n))return{ok:!1,error:"Warto\u015B\u0107 nie jest liczb\u0105."};if(n<0)return{ok:!1,error:"Warto\u015B\u0107 nie mo\u017Ce by\u0107 ujemna."};var i=v(e,r.fromUnit);if(!i)return{ok:!1,error:"Nieznana jednostka \u017Ar\xF3d\u0142owa."};for(var t=n*i.factor_to_si,u=e.precision||d,a=[],o=0;o<e.units.length;o++){var l=e.units[o];if(l.symbol!==i.symbol){var c=t/l.factor_to_si;a.push({unit:l.symbol,label:l.label,kind:l.kind,value:c,formatted:h(c,u)})}}return{ok:!0,substanceId:e.id,label:e.label_pl,fromUnit:i.symbol,value:n,siValue:t,siUnit:e.canonical_si,precision:u,results:a}}function $(r,e){e=e||{};var n=s.find(r);if(!n)return{ok:!1,error:"Nie znaleziono substancji."};var i=typeof e.value=="number"?e.value:_(e.value);if(!isFinite(i))return{ok:!1,error:"Warto\u015B\u0107 nie jest liczb\u0105."};if(i<0)return{ok:!1,error:"Warto\u015B\u0107 nie mo\u017Ce by\u0107 ujemna."};var t=v(n,e.unit);if(!t)return{ok:!1,error:"Nieznana jednostka: "+e.unit};var u=i*t.factor_to_si,a=n.precision||d,o=U(n,e.patient||{}),l={ok:!0,substanceId:n.id,label:n.label_pl,value:i,unit:t.symbol,siValue:u,siUnit:n.canonical_si,precision:a,low:null,high:null,lowInUnit:null,highInUnit:null,context_pl:"",source_ids:[],matched:!1,is_default:!1,status:"no_range"};if(n.id==="amh")return finishAmhEvaluation(l,o,t);copyContextReference(l,o);copyReferenceBasis(l,o);return o?(l.context_pl=o.context_pl||"",l.source_ids=Array.isArray(o.source_ids)?o.source_ids.slice():[],l.matched=!!o.matched,l.is_default=!!o.is_default,o.no_interpretation?(l.status="no_interpretation",l):o.low==null||o.high==null?(l.status="no_range",l):(l.low=o.low,l.high=o.high,l.lowInUnit=o.low/t.factor_to_si,l.highInUnit=o.high/t.factor_to_si,u>o.high*2?l.status="far_above":o.low>0&&u<o.low*.5?l.status="far_below":u<o.low?l.status="below":u>o.high?l.status="above":l.status="within",l)):l}var w={list:A,groups:W,find:D,units:B,search:R,convert:T,convertAll:E,evaluate:$,compareAmhReference:compareAmhReference,parseNumber:_,formatNumber:h,selectRange:U,referenceContext:referenceContext,rangesForOverride:C,matchesWhen:N,listIndications:L,findByIndication:V,findSource:function(r){return s&&typeof s.findSource=="function"?s.findSource(r):null},version:"2.0.4"};typeof module<"u"&&module.exports&&(module.exports=w),y.LabUnitConverter=w})(typeof window<"u"?window:this);

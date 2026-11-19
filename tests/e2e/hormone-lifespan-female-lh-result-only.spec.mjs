@@ -212,10 +212,16 @@ test('female LH keeps the exact source endpoint, strict result-only age interval
   await expect(point(page)).not.toHaveAttribute('data-result-only');
 });
 
+// P-E2-MENARCHE (owner decisions 2026-11-19): "Postmenopauza" is not offered below 18 years, so a
+// 17-year-old can no longer carry a known menopause into the LH context. The pregnancy case keeps the
+// existing guard; the menopause case now checks that the state cannot be created — not even when the
+// value is forced into the control — and that the next patient still starts clean. The guard itself
+// stays covered for a forced adapter state in tests/unit/hormone-lifespan-female-lh-result-only.test.mjs.
 for (const [phase, name, message] of [
   ['pregnancy_t1', 'pregnancy', 'Dla tego kontekstu badania nie nanosimy wyniku'],
-  ['postmenopause', 'menopause', 'Brak odrębnego odniesienia dla ciąży lub okresu po menopauzie'],
-]) test(`known ${name} and a different patient cannot bypass the existing LH context guard`, async ({ page }) => {
+  ['postmenopause', 'menopause', null],
+]) test(message ? `known ${name} and a different patient cannot bypass the existing LH context guard`
+  : `${name} cannot be recorded for a 17-year-old, so it never reaches the LH context; a different patient starts clean`, async ({ page }) => {
   await prepare(page, 320);
   await converter(page);
   await patient(page);
@@ -223,12 +229,29 @@ for (const [phase, name, message] of [
   await expectResultOnly(page);
   await choose(page, 'estradiol', '200');
   await page.locator('#labPatientToggle').click();
-  await page.locator('#labOverrideCycle').selectOption(phase);
-  await choose(page);
-  await expect(point(page)).toHaveCount(0);
-  await expect(note(page)).toContainText(message);
-  await page.evaluate(() => document.dispatchEvent(new CustomEvent('vilda:session-changed')));
-  await expect(point(page)).toHaveCount(0);
+  const cycle = page.locator('#labOverrideCycle');
+  if (message) {
+    await cycle.selectOption(phase);
+    await choose(page);
+    await expect(point(page)).toHaveCount(0);
+    await expect(note(page)).toContainText(message);
+    await page.evaluate(() => document.dispatchEvent(new CustomEvent('vilda:session-changed')));
+    await expect(point(page)).toHaveCount(0);
+  } else {
+    await expect(cycle.locator(`option[value="${phase}"]`)).toHaveCount(0);
+    await cycle.evaluate((select, value) => {
+      const option = document.createElement('option');
+      option.value = value; option.textContent = 'Wymuszona wartość testowa';
+      select.appendChild(option);
+      select.value = value;
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+    }, phase);
+    await expect(cycle).toHaveValue('');
+    await choose(page);
+    await expectResultOnly(page);
+    await page.evaluate(() => document.dispatchEvent(new CustomEvent('vilda:session-changed')));
+    await expectResultOnly(page);
+  }
   await page.evaluate(() => {
     const patientId = 'fictional-next-female-lh-result-only';
     window._vildaCurrentPatientId = patientId;
