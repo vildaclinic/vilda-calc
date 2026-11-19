@@ -1275,6 +1275,9 @@ wynik 50 pmol/L ma odniesienie 52,46318409704675 pmol/L; przy 6 latach
 1,257681951881138, przy 18 dokładnie 185,45583618764735. Mediana nie ocenia
 prawidłowości. Znana ciąża, menopauza i leczenie hormonalne wyłączają punkt
 zgodnie z konserwatywną polityką aplikacji; OCP wykluczono w samym źródle.
+(Uzupełnienie 2026-11-19, P-E2-MENARCHE: „Postmenopauza” nie jest już
+proponowana poniżej 18 lat, a zwykłą fazę cyklu można wybrać dopiero po
+5 latach od menarche; polityka punktu się nie zmieniła.)
 Metoda nieznana dopuszcza porównanie edukacyjne, znana niezgodna je blokuje.
 LLOQ 0,58 i 13 należą do dwóch metod; bez globalnej podłogi lub imputacji.
 

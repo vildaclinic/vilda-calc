@@ -23,6 +23,21 @@ cyklu: nie może przywrócić pojedynczej normy przez wcześniejszy wiersz
 stadium. Jawny wybór fazy ma pierwszeństwo. Pediatryczne wiersze stadium
 i wieku zachowują dotychczasowe działanie.
 
+> **Uzupełnienie 2026-11-19 (P-E2-MENARCHE, decyzje właściciela).** Obsługa
+> opisana w tym dokumencie obejmuje odtąd także dziewczynkę poniżej 18 lat
+> po 5 latach od menarche: wybrana faza daje wiersz dorosłej, nieznana —
+> **trzy** warianty bez oceny (bez stanu po menopauzie), ciąża — brak
+> zakresu. Przed progiem pediatryczne wiersze stadium i wieku działają jak
+> dotąd, a zwykłych faz cyklu nie da się wybrać. „Postmenopauza” nie jest
+> proponowana poniżej 18 lat w żadnym badaniu z selektorem „Faza cyklu /
+> ciąża”; ciąża wybrana u nieletniej w estradiolu daje brak zakresu także
+> przed progiem. Zdanie „Wiek, wiek menarche i pojedyncze stężenie nie
+> ustalają fazy ani menopauzy” pozostaje prawdziwe: fazę wybiera lekarz,
+> a wiek menarche rozstrzyga tylko, czy zakresy faz są dostępne. W opisie
+> pacjenta ciąża jest podpisana słowami („ciąża — I trymestr”), nie kodem
+> `pregnancy_t1`. Szczegóły: [ALGORITHMS.md](ALGORITHMS.md), wpis
+> „LAB-E2-MENARCHE”.
+
 U dorosłej kobiety znana ciąża (`pregnancy_t1`, `pregnancy_t2`, `pregnancy_t3`) lub inna
 nieobsługiwana niepusta wartość kontekstu nie jest kontekstem nieznanym.
 Nie uruchamia ani normy folikularnej, ani czterech odniesień zwykłego

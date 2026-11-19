@@ -26,6 +26,17 @@ podany wiek musi być po jednej stronie: `[17,18)` pozostaje pediatryczny,
 `[17,18]` lub `[17,19)` nie wybiera jednego RI, a `[18,19)` jest dorosły.
 Nie wykorzystujemy kolumny źródłowego „Mean age” jako progu wieku.
 
+> **Uzupełnienie 2026-11-19 (P-E2-MENARCHE, decyzje właściciela).** Granica
+> 18 lat zostaje, ale przestaje być jedyną drogą do zakresów dorosłej
+> kobiety: dziewczynka w wieku na pewno poniżej 18 lat dostaje je po
+> 5 latach od menarche (dolna granica znanego wieku − wiek menarche ≥ 5).
+> Wtedy stadium Tannera nie dobiera jej zakresu, a przy nieznanej fazie
+> wynik ma trzy warianty bez oceny. Przed progiem i bez wpisanego wieku
+> menarche obowiązuje opis z tego dokumentu bez zmian. Poniżej 18 lat nie
+> ma wyboru „Postmenopauza”, a wybrana ciąża daje brak zakresu. Reguła,
+> przypadki, dowody i ograniczenia: [ALGORITHMS.md](ALGORITHMS.md), wpis
+> „LAB-E2-MENARCHE”.
+
 ## Pierwsze dni i precyzja
 
 Mayo opisuje 1–14 dni jako okres wysokiego E2 po urodzeniu i spadku
@@ -85,6 +96,13 @@ Polityka `estradiol-matched-reference-only` `2026-10-28.1` ma własne
 konwencję jednostki wieku i wymóg pełnego przedziału. Silnik bierze
 te wartości z deskryptora. Pozostałe substancje, wiersze stężeń i ich
 źródła pozostają bez zmian.
+
+> **Uzupełnienie 2026-11-19.** Od wersji polityki `2026-11-19.1`
+> (`LabUnitConverter` 2.0.4) obok `chronological_age` jest blok
+> `gynecological_age` (próg lat od menarche); `chronological_age` nie
+> zmieniło się. Formularz dostał jedno lokalne pole „Wiek menarche [lata]”
+> dla estradiolu u nieletniej — zdanie „Formularz nie wymaga nowych
+> odpowiedzi” dotyczy stanu z 28.10.2026; pole pozostaje nieobowiązkowe.
 
 Adapter E2 przekazuje pełny przedział przez istniejące
 `readPubertyPatientContext()` i `lifespanLegacyAge()`. Niedostępne dane

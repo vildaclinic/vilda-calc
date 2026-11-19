@@ -168,10 +168,22 @@ z niego nie korzysta. Nie usuwaj przez to istotnych obserwacji klinicznych,
 także u niemowlęcia. Stadium V nie jest automatycznie uprawnieniem do normy
 dorosłych.
 
+> Uzupełnienie 2026-11-19 (P-E2-MENARCHE): dla estradiolu uprawnieniem do
+> zakresów dorosłej kobiety poniżej 18 lat jest 5 lat od menarche, nie
+> stadium V. Wzorzec do naśladowania przy podobnych regułach: próg i listy
+> wyborów są danymi w deskryptorze badania, regułę stosuje silnik, a strona
+> pyta go przez `LabUnitConverter.referenceContext` i nie ma własnej kopii
+> reguły. Opis: `docs/clinical/ALGORITHMS.md`, wpis „LAB-E2-MENARCHE”.
+
 Przy LH/FSH dorosła kobieta ma jeden wybór „Cykl / menopauza”. Nie ustalaj
 fazy ani menopauzy z wieku lub pojedynczego FSH. Nieznany kontekst daje
 alternatywne zakresy bez wspólnego werdyktu. Nie dodawaj tego selektora
 do każdego hormonu, jeśli nie wynika to z jego danych referencyjnych.
+
+> Uzupełnienie 2026-11-19 (P-E2-MENARCHE): selektor „Faza cyklu / ciąża”
+> pojedynczego badania nie proponuje „Postmenopauzy” pacjentowi w wieku na
+> pewno poniżej 18 lat — w żadnym badaniu, które go używa. Wybór, który
+> przestaje być dostępny, wraca do „nieznana”.
 
 ## 6. Wynik: hierarchia informacji i istniejące osie
 

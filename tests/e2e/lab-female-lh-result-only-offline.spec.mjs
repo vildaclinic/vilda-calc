@@ -269,10 +269,13 @@ for (const upgrade of [false, true]) test(`female LH without a median survives $
     await page.locator('#labUnit').selectOption('pmol/L');
     await page.locator('#labValue').fill('200');
     await page.locator('#labPatientToggle').click();
-    await page.locator('#labOverrideCycle').selectOption('postmenopause');
+    // P-E2-MENARCHE (owner decisions 2026-11-19): "Postmenopauza" is not offered below 18 years, so the
+    // known reproductive state of this 17-year-old is a pregnancy — the state still selectable for her.
+    await expect(page.locator('#labOverrideCycle option[value="postmenopause"]')).toHaveCount(0);
+    await page.locator('#labOverrideCycle').selectOption('pregnancy_t1');
     await selectLh(page);
     await expect(point(page)).toHaveCount(0);
-    await expect(note(page)).toContainText('Brak odrębnego odniesienia dla ciąży lub okresu po menopauzie');
+    await expect(note(page)).toContainText('Dla tego kontekstu badania nie nanosimy wyniku');
     await page.evaluate(() => document.dispatchEvent(new CustomEvent('vilda:session-changed')));
     await expect(point(page)).toHaveCount(0);
     await page.evaluate(() => {
