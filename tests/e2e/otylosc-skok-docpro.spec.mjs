@@ -59,6 +59,7 @@ async function pacjentka(page, punkty = MIGAWKA) {
 async function karta(page, pid) {
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id), pid);
   await expect(page.locator('.vdo')).toBeVisible({ timeout: 15000 });
+  await page.waitForFunction(() => history.state?.vildaNavSentinel === true);
 }
 
 const wiersz = (page, dateISO) => page.locator(`.vdo-list:not(.vdo-list-deleted) > .vdo-item[data-date="${dateISO}"]`);

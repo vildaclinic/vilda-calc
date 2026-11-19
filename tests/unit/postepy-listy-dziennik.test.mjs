@@ -81,6 +81,34 @@ describe('Karta: co wolno poprawić w „Wpisy leczenia” (zmianaPrzebiegu)', (
     expect(D.zmianaPrzebiegu(s2, wpisPunktu(s2, 'w-kont2'))).toBeNull();
   });
 
+  it('P-OTYLOSC-LEK: ten sam lek zapisany innym tekstem — w Karcie; inny lek albo inny lek spoza ChPL — w DocPro', () => {
+    // Lek rozpoznany jak listy pacjentów „Leczenie otyłości” (drugKey) i ocena wg ChPL: resolveDrug(drug, substance).
+    const para = (lekA, lekB) => {
+      const s = D.zloz([], [pkt('a', 'start', '2026-01-12', 112, lekA, 0, '0,25 mg / tydz.'), pkt('b', 'continue', '2026-04-14', 104, lekB, 3)]);
+      return D.zmianaPrzebiegu(s, wpisPunktu(s, 'b'));
+    };
+    expect(para({ drug: WEGOVY.drug, substance: '' }, WEGOVY), 'starszy punkt bez substancji').toBeNull();
+    expect(para({ drug: 'Wegovy', substance: '' }, WEGOVY), 'krótka nazwa (import)').toBeNull();
+    expect(para({ drug: '', substance: 'semaglutyd' }, WEGOVY), 'tylko substancja').toBeNull();
+    expect(para(SAXENDA, { drug: SAXENDA.drug, substance: '' })).toBeNull();
+    expect(para({ drug: WEGOVY.drug, substance: '' }, SAXENDA), 'semaglutyd → liraglutyd').toBe('zmiana-leku');
+    expect(para({ drug: 'Orlistat', substance: '' }, { drug: 'orlistat ', substance: 'inhibitor lipazy' }), 'spoza ChPL — po nazwie').toBeNull();
+    expect(para({ drug: 'Orlistat', substance: '' }, { drug: 'Metformina', substance: '' })).toBe('zmiana-leku');
+    expect(para({ drug: 'Inny lek', substance: '' }, WEGOVY), 'spoza ChPL → Wegovy').toBe('zmiana-leku');
+  });
+
+  it('P-OTYLOSC-LEK, test negatywny: bez kryteriów ChPL — ostrożnie, każda różnica tekstu to zmiana leku (DocPro)', () => {
+    const g = loadBrowserScript('vilda_cykle_leczenia.js', {});
+    delete g.ObesityResponseCriteria;
+    const s = g.VildaDziennikOtylosci.zloz([], [
+      pkt('a', 'start', '2026-01-12', 112, { drug: WEGOVY.drug, substance: '' }, 0, '0,25 mg / tydz.'),
+      pkt('b', 'continue', '2026-04-14', 104, WEGOVY, 3),
+      pkt('c', 'continue', '2026-07-14', 100, WEGOVY, 6),
+    ]);
+    expect(g.VildaDziennikOtylosci.zmianaPrzebiegu(s, wpisPunktu(s, 'b'))).toBe('zmiana-leku');
+    expect(g.VildaDziennikOtylosci.zmianaPrzebiegu(s, wpisPunktu(s, 'c')), 'ten sam tekst — w Karcie').toBeNull();
+  });
+
   it('usunięty wpis: przywrócić w Karcie wolno tylko Kontynuację bez zmiany leku', () => {
     const z = [...MIGAWKA, pkt('w-koniec', 'end', '2026-10-06', 96, WEGOVY, 9)];
     let s = D.zloz([], z);
@@ -225,10 +253,10 @@ const REGULY = [
   { type: 'medication', value: 'saxenda', scope: 'ever' },
 ];
 
-async function zbiory(vault) {
+async function zbiory(vault, reguly = REGULY) {
   krok(10e3); // pamięć podręczna leczenia w sejfie żyje 5 s
   const out = [];
-  for (const r of REGULY) out.push(new Set((await vault.previewPatientListRule(r)).patientIds));
+  for (const r of reguly) out.push(new Set((await vault.previewPatientListRule(r)).patientIds));
   return out;
 }
 
@@ -236,12 +264,12 @@ async function zbiory(vault) {
  * Pacjent-lustro: jego zapis wizyty to projekcja dziennika pacjenta `pid`. Zwraca reguły, w których
  * pacjent i jego lustro różnią się przynależnością (pusta lista = listy zgodne z dziennikiem).
  */
-async function rozjazdy(U, pid, migawka, lustroId) {
+async function rozjazdy(U, pid, migawka, lustroId, reguly = REGULY) {
   const s = U.D.zloz(await U.vault.listPatientNotesForPatient(pid), migawka);
   krok();
   await U.vault.savePatient({ ...DOROSLY, name: 'Fikcyjne Lustro', obesityTherapyPoints: s.punkty }, { patientId: lustroId, dedup: false });
-  const z = await zbiory(U.vault);
-  return REGULY.filter((r, i) => z[i].has(pid) !== z[i].has(lustroId)).map((r) => `${r.type}:${r.drugKey ?? r.value}:${r.scope}`);
+  const z = await zbiory(U.vault, reguly);
+  return reguly.filter((r, i) => z[i].has(pid) !== z[i].has(lustroId)).map((r) => `${r.type}:${r.drugKey ?? r.value}:${r.scope}`);
 }
 
 async function zapisz(U, pid, plan) {
@@ -292,6 +320,46 @@ describe('listy pacjentów zgodne z dziennikiem bez zmiany sejfu', () => {
     s = await stan();
     await zapisz(U, pid, U.D.planUsuniecia(s, pid, nowy.entryId));
     expect(await rozjazdy(U, pid, MIGAWKA, lustro)).toEqual([]);
+  });
+
+  it('P-OTYLOSC-LEK: starsze punkty bez substancji — Popraw, Usuń i Cofnij nowszej Kontynuacji zostawiają listy zgodne', async () => {
+    const U = okno();
+    await U.vault.createUser('Fikcyjne#Listy!3', { label: 'Fikcyjny lekarz', iterations: 10000 });
+    const BEZ = { drug: WEGOVY.drug, substance: '' };
+    const mieszana = [
+      pkt('w-start', 'start', '2026-01-12', 112, BEZ, 0, '0,25 mg / tydz.'),
+      pkt('w-kwi', 'continue', '2026-04-14', 104, BEZ, 3),
+      pkt('w-lip', 'continue', '2026-07-14', 100, WEGOVY, 6),
+    ];
+    krok();
+    const pid = (await U.vault.savePatient({ ...DOROSLY, obesityTherapyPoints: mieszana }, { dedup: false })).patientId;
+    krok();
+    const lustro = (await U.vault.savePatient({ ...DOROSLY, name: 'Fikcyjne Lustro', obesityTherapyPoints: [] }, { dedup: false })).patientId;
+    const stan = async () => U.D.zloz(await U.vault.listPatientNotesForPatient(pid), mieszana);
+    expect(await rozjazdy(U, pid, mieszana, lustro)).toEqual([]);
+
+    let s = await stan();
+    const lip = s.wpisy.find((x) => x.punkt && x.punkt.id === 'w-lip');
+    expect(U.D.zmianaPrzebiegu(s, lip), 'dotąd: „zmiana-leku” (tekst substancji)').toBeNull();
+    await zapisz(U, pid, U.D.planDzialania(s, pid, { rodzaj: 'popraw', id: 'w-lip', dane: { ...lip.punkt, weight: 99.6 } }));
+    expect(await rozjazdy(U, pid, mieszana, lustro)).toEqual([]);
+
+    s = await stan();
+    const poprawiony = s.wpisy.find((x) => x.entryId && x.biezaca && x.biezaca.dane.dateISO === '2026-07-14');
+    await zapisz(U, pid, U.D.planUsuniecia(s, pid, poprawiony.entryId));
+    expect(await rozjazdy(U, pid, mieszana, lustro)).toEqual([]);
+    // Znane ograniczenie (do wiadomości właściciela): lista wpisana tekstem szuka słowa w nazwie leku albo w substancji.
+    // Słowo tylko z etykiety substancji („agonista”, „GLP‑1”) zgodzi się z dziennikiem dopiero po „Zapisz dane” — tak
+    // jak dziś przy każdym punkcie zapisanym bez substancji. Nazwa substancji jest też w nazwie leku, więc „semaglutyd” — zgodne.
+    expect(await rozjazdy(U, pid, mieszana, lustro, [
+      { type: 'medication', value: 'agonista', scope: 'active' },
+      { type: 'medication', value: 'semaglutyd', scope: 'active' },
+      { type: 'medication', value: 'semaglutyd', scope: 'ever' },
+    ])).toEqual(['medication:agonista:active']);
+
+    s = await stan();
+    await zapisz(U, pid, U.D.planPrzywrocenia(s, pid, s.wpisy.find((x) => x.stan === 'usuniety').entryId));
+    expect(await rozjazdy(U, pid, mieszana, lustro)).toEqual([]);
   });
 
   it('kontrola ujemna: usunięcie Zakończenia albo Kontynuacji ze zmianą leku rozjechałoby listy — dlatego tylko w DocPro', async () => {

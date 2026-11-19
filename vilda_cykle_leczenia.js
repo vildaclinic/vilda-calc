@@ -807,6 +807,47 @@
     return (+Number(n).toFixed(miejsca == null ? 1 : miejsca)).toString().replace('.', ',');
   }
 
+  // ── Dawka (P-OTYLOSC-DAWKA, temat B; decyzja właściciela 2026-11-19: „Przecinek + podpowiedzi”) ─────────────
+  // Dawka jest wolnym tekstem z monitora DocPro („2,4”, „0.25”, „2,4 mg / tydz.”). Nic jej nie przelicza poza wykresem
+  // dawki w Karcie, który bierze pierwszą liczbę (przecinek albo kropka). Zapis zostaje, jak go wpisano; tylko WIDOK
+  // pokazuje przecinek dziesiętny. Jednostek nie dopisujemy — lekarz wpisuje je sam albo wybiera podpowiedź.
+
+  /** Dawka do pokazania: kropka dziesiętna między cyframi → przecinek („0.25” → „0,25”). Reszta tekstu bez zmian. */
+  function dawkaPL(dawka) {
+    return String(dawka == null ? '' : dawka).trim().replace(/(\d)\.(\d)/g, '$1,$2');
+  }
+
+  /**
+   * Podpowiedzi pod polem „Dawka” w monitorze: dawki z tabeli zwiększania dawki ChPL wybranego leku
+   * (obesity_therapy.js, products[…].dosing.escalation — to samo źródło co zalecenia w module leczenia otyłości).
+   * Wiersz z jedną dawką („0,25 mg”, „3,0 mg / dobę”, „2 tabl. rano + 1 tabl. wieczorem”) daje przycisk; lek podawany
+   * 1×/tydz. dostaje „ / tydz.”, jak w zapisie „2,4 mg / tydz.”. Wiersz bez jednej dawki („5, 10 lub 15 mg”,
+   * „+2,5 mg co ≥4 tyg.”) i uwaga przy dawce spoza zwykłego schematu („tylko dorośli…”) — jako zdanie pod przyciskami.
+   * Zwraca { dawki: [{ wartosc, etykieta, uwaga }], uwagi: [tekst] }.
+   */
+  function podpowiedziDawek(eskalacja, czestosc) {
+    var wynik = { dawki: [], uwagi: [] };
+    var tygodniowo = /1\s*×\s*\/\s*tydz/i.test(String(czestosc || ''));
+    var byly = {};
+    (Array.isArray(eskalacja) ? eskalacja : []).forEach(function (x) {
+      var dawka = dawkaPL(x && x.dose);
+      if (!dawka) return;
+      var etykieta = String((x && x.label) || '').trim();
+      var uwaga = String((x && x.note) || '').trim();
+      var jedna = /^\d+(?:,\d+)?\s*(?:mg|tabl)/i.test(dawka) && !/\s(?:lub|co)\s/i.test(dawka);
+      if (!jedna) {
+        wynik.uwagi.push((etykieta ? etykieta + ': ' : '') + dawka + (uwaga ? ' (' + uwaga + ')' : ''));
+        return;
+      }
+      var wartosc = dawka + (tygodniowo && dawka.indexOf('/') < 0 ? ' / tydz.' : '');
+      if (byly[wartosc]) return;
+      byly[wartosc] = true;
+      wynik.dawki.push({ wartosc: wartosc, etykieta: etykieta, uwaga: uwaga });
+      if (uwaga && !/^dawka\b/i.test(uwaga)) wynik.uwagi.push(wartosc + ' — ' + uwaga);
+    });
+    return wynik;
+  }
+
   function dzisISO(teraz) {
     var d = teraz instanceof Date ? teraz : new Date();
     return d.getFullYear() + '-' + dwieCyfry(d.getMonth() + 1) + '-' + dwieCyfry(d.getDate());
@@ -1237,14 +1278,13 @@
    * 2026-11-19: listy pacjentów bez zmiany sejfu). Listy „Leczenie otyłości: trwa / kiedykolwiek / lek X” liczy
    * sejf z zapisu ostatniej wizyty — z rodzaju ostatniego punktu i z leku punktów. W Karcie wolno więc poprawiać,
    * usuwać i przywracać tylko Kontynuację, która leku nie zmienia: poprzedni wpis (w kolejności tabeli) jest
-   * Włączeniem albo Kontynuacją z tym samym lekiem i substancją. Wtedy ani rodzaj ostatniego punktu, ani lek nie
+   * Włączeniem albo Kontynuacją z tym samym lekiem (kluczLeku). Wtedy ani rodzaj ostatniego punktu, ani lek nie
    * zmieniają się względem zapisu wizyty, więc listy zostają zgodne z dziennikiem. Włączenie, Zakończenie i zmianę
-   * leku poprawia się w DocPro — tak jak dotąd zmianę leku.
+   * leku poprawia się w DocPro — tak jak dotąd zmianę leku. Tej samej reguły używa monitor DocPro do dopisku
+   * „Listy pacjentów zobaczą zmianę po „Zapisz dane”” (P-OTYLOSC-SKOK).
    * Zwraca null (wolno) albo powód: 'wlaczenie' | 'zakonczenie' | 'pierwszy-wpis' | 'zmiana-leku'.
    */
-  /** opcje.lekPoNazwie — lek porównany samą nazwą (jak listy pacjentów, drugKey), bez substancji: dla komunikatu
-   *  monitora „Listy pacjentów zobaczą zmianę…” (P-OTYLOSC-SKOK). Bez opcji — reguła Karty jak dotąd (lek i substancja). */
-  function zmianaPrzebiegu(stan, wpis, opcje) {
+  function zmianaPrzebiegu(stan, wpis) {
     var d = wpis && (wpis.punkt || (wpis.biezaca && wpis.biezaca.dane));
     if (!d) return 'zmiana-leku';
     if (d.type === 'start') return 'wlaczenie';
@@ -1260,17 +1300,28 @@
     for (var k = 0; k < lista.length; k++) if (lista[k] && lista[k].id === '__vdo_ten__') { i = k; break; }
     var poprzedni = i > 0 ? lista[i - 1] : null;
     if (!poprzedni || poprzedni.type === 'end') return 'pierwszy-wpis';
-    var klucz = opcje && opcje.lekPoNazwie ? kluczNazwyLeku : kluczLeku;
-    return klucz(poprzedni) === klucz(d) ? null : 'zmiana-leku';
+    return kluczLeku(poprzedni) === kluczLeku(d) ? null : 'zmiana-leku';
   }
 
+  /**
+   * P-OTYLOSC-LEK (decyzja właściciela 2026-11-19, „zacznij od A”): lek punktu tak, jak go rozpoznają listy pacjentów
+   * „Leczenie otyłości” (sejf: drugKey) i ocena wg ChPL — ObesityResponseCriteria.resolveDrug(drug, substance).
+   * Dotąd Karta porównywała dosłowny tekst leku i substancji, więc Kontynuacja po starszym punkcie zapisanym bez
+   * substancji (ten sam lek) uchodziła za „zmianę leku” i odsyłała do DocPro. Lek spoza tabeli kryteriów — po nazwie
+   * (bez niej po substancji). Bez modułu kryteriów — ostrożnie, jak dotąd: każda różnica tekstu to zmiana leku.
+   */
   function kluczLeku(p) {
-    return (String((p && p.drug) || '').trim() + '|' + String((p && p.substance) || '').trim()).toLowerCase();
-  }
-
-  function kluczNazwyLeku(p) {
-    var nazwa = String((p && p.drug) || '').trim();
-    return (nazwa || String((p && p.substance) || '').trim()).toLowerCase();
+    var lek = tekst(p && p.drug);
+    var sub = tekst(p && p.substance);
+    try {
+      var K = w.ObesityResponseCriteria;
+      if (K && typeof K.resolveDrug === 'function') {
+        var r = K.resolveDrug(lek, sub);
+        if (r && typeof r.drugKey === 'string' && r.drugKey) return 'chpl:' + r.drugKey;
+        return 'nazwa:' + (lek || sub).toLowerCase();
+      }
+    } catch (_e) { /* jak bez modułu kryteriów */ }
+    return 'tekst:' + (lek + '|' + sub).toLowerCase();
   }
 
   var POWODY_DOCPRO = Object.freeze({
@@ -1454,6 +1505,8 @@
     opisDanych: opisDanych,
     dataPL: dataPL,
     liczbaPL: liczbaPL,
+    dawkaPL: dawkaPL,
+    podpowiedziDawek: podpowiedziDawek,
     dzisISO: dzisISO,
     wczytaj: wczytaj,
     zapisz: zapisz,
@@ -1837,7 +1890,8 @@
       pDose.value = punkt.dose || '';
       pNote.value = punkt.comment || '';
     } else if (ostatni) {
-      pDose.value = ostatni.dose || '';
+      // Nowy wpis: dawka z ostatniego wpisu z przecinkiem dziesiętnym (P-OTYLOSC-DAWKA). Poprawka zostawia tekst wpisu.
+      pDose.value = Dz().dawkaPL(ostatni.dose);
     }
 
     var lekTekst = lekPunkt ? nazwaLeku(lekPunkt) : '';
@@ -2040,7 +2094,7 @@
       ['Masa', liczbaPL(v.dane.weight, 1) + ' kg · ' + v.dane.weightSource],
       ['Wzrost', v.dane.height != null ? liczbaPL(v.dane.height, 1) + ' cm · ' + v.dane.heightSource : '—'],
       ['Data pomiaru', dataPL(v.dane.dateISO) || '—'],
-      ['Dawka', v.dane.dose || '—'],
+      ['Dawka', Dz().dawkaPL(v.dane.dose) || '—'],
       ['Komentarz', v.dane.comment || '—'],
       ['Stan', v.retracted ? 'usunięty' : 'w dzienniku']
     ];
@@ -2148,7 +2202,7 @@
       lista.appendChild(el('li', { class: 'vdo-item' + (x.stan === 'konflikt' ? ' vdo-item-conflict' : '') + (idx === 0 ? ' vdo-item-last' : ''), 'data-entry': x.entryId || '', 'data-date': p.dateISO || '' }, [
         el('div', { class: 'vdo-item-head' }, [
           el('span', { class: 'vdo-date', text: dataPL(p.dateISO) || 'bez daty' }),
-          el('span', { class: 'vdo-type', text: Dz().TYPY[p.type] + (p.dose ? ' · ' + p.dose : '') })
+          el('span', { class: 'vdo-type', text: Dz().TYPY[p.type] + (p.dose ? ' · ' + Dz().dawkaPL(p.dose) : '') })
         ]),
         el('div', { class: 'vdo-item-body' }, [
           el('span', { class: 'vdo-meas' }, [liczbaPL(p.weight, 1) + ' kg ', odznaka(p.weightSource)]),

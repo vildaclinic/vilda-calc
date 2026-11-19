@@ -44195,3 +44195,118 @@ ręcznego szukania) i treść komunikatu po zapisie (przypomnienie, że listy li
 
 **Wdrożenie.** Od razu przy wydaniu; sejf bez zmian. **Cofnięcie** = rewert PR: znów sam tekst „Poprawka w DocPro”
 i dawny wygląd sekcji.
+
+## Karta pacjenta porównuje lek tak jak listy pacjentów i ocena wg ChPL (P-OTYLOSC-LEK, SW 1.1.557, `vilda_cykle_leczenia.js` 9, `obesity_therapy_monitor.js` 31, 2026-11-19)
+
+**Decyzja właściciela** (2026-11-19, „zacznij od A”): Karta ma rozpoznawać „ten sam lek” tak jak listy pacjentów.
+
+**Problem.** Reguła Karty z P-POSTEPY-DZIENNIK (`zmianaPrzebiegu`) porównywała dosłowny tekst leku i substancji.
+Starsze punkty bywają zapisane bez substancji (albo z krótką nazwą z importu), a nowsze z nią. Zwykła Kontynuacja tego
+samego leku uchodziła wtedy za „zmianę leku”. Karta pokazywała „Edytuj w DocPro →” z powodem „Ten wpis zmienia lek”
+zamiast „Popraw” i „Usuń”.
+
+**Zmiana.** `kluczLeku` w `vilda_cykle_leczenia.js` rozpoznaje lek funkcją `ObesityResponseCriteria.resolveDrug(drug,
+substance)` — tą samą, z której sejf liczy `drugKey` list „Leczenie otyłości: trwa / kiedykolwiek / lek X” i z której
+Karta wybiera kryteria ChPL:
+- lek z tabeli kryteriów (Wegovy, Saxenda, Mysimba, Mounjaro) — po kluczu leku, niezależnie od tekstu nazwy i od tego,
+  czy zapisano substancję;
+- lek spoza tabeli — po nazwie (bez nazwy — po substancji), bez rozróżniania wielkości liter; lek spoza tabeli i lek
+  z tabeli to zawsze zmiana leku;
+- bez modułu kryteriów na stronie — ostrożnie, jak dotąd: każda różnica tekstu leku albo substancji to zmiana leku
+  (wpis zostaje do edycji w DocPro).
+
+Ta sama reguła (bez opcji) decyduje o dopisku monitora DocPro „Listy pacjentów zobaczą zmianę po „Zapisz dane”.”.
+Opcja `lekPoNazwie` z P-OTYLOSC-SKOK znika. Jej opis („lek po nazwie, jak listy pacjentów”) był nieścisły: listy
+„Leczenie otyłości” porównują lek kluczem z `resolveDrug`, nie tekstem nazwy.
+
+**Granica (do wiadomości właściciela).** Lista wpisana tekstem (reguła „lek”) szuka słowa w nazwie leku albo
+w substancji. Słowo, które jest tylko w etykiecie substancji (np. „agonista”, „GLP‑1”), może po „Usuń” najnowszej
+Kontynuacji w Karcie zgadzać się z dziennikiem dopiero po „Zapisz dane” przy wizycie. Tak samo jest już dziś przy każdym
+punkcie zapisanym bez substancji. Nazwa substancji jest też w nazwie opcji leku (np. „Wegovy (semaglutyd) – …”), więc
+lista „semaglutyd” zostaje zgodna. Sejf bez zmian.
+
+**Przypadki syntetyczne** (dane fikcyjne; lek A — punkt wcześniejszy, lek B — Kontynuacja):
+
+| Lek A | Lek B | Wynik `zmianaPrzebiegu` dla Kontynuacji |
+|---|---|---|
+| „Wegovy (semaglutyd) – s.c. 1×/tydz.”, bez substancji | ta sama nazwa, „Semaglutyd (agonista receptora GLP‑1)” | `null` — Popraw/Usuń w Karcie (dotąd `zmiana-leku`) |
+| „Wegovy”, bez substancji | pełna nazwa i substancja Wegovy | `null` |
+| bez nazwy, „semaglutyd” | pełna nazwa i substancja Wegovy | `null` |
+| Wegovy bez substancji | Saxenda | `zmiana-leku` |
+| „Orlistat” | „orlistat ”, „inhibitor lipazy” | `null` (spoza ChPL — po nazwie) |
+| „Orlistat” | „Metformina” | `zmiana-leku` |
+| „Inny lek” | Wegovy | `zmiana-leku` |
+| bez modułu kryteriów: Wegovy bez substancji | Wegovy z substancją | `zmiana-leku` (ostrożnie, jak dotąd) |
+
+**Wpływ kliniczny.** Oceny wg ChPL, okna, progi, cykle (R6 porównuje substancję tym samym `resolveDrug`) i listy
+pacjentów bez zmian. Zmienia się, które wpisy można poprawić w Karcie: Kontynuacja tego samego leku zapisanego innym
+tekstem — w Karcie zamiast w DocPro. Dopisek monitora o listach pojawia się rzadziej (tylko przy zmianie leku według
+`resolveDrug`).
+
+**Testy.** Dane wyłącznie fikcyjne.
+- `tests/unit/postepy-listy-dziennik.test.mjs`: tabela wyżej na produkcyjnym `zmianaPrzebiegu`; test negatywny bez
+  kryteriów ChPL; na prawdziwym sejfie (adapter pamięciowy) Popraw, Usuń i Cofnij Kontynuacji po punktach bez
+  substancji zostawiają listy „Leczenie otyłości” i „lek: wegovy/saxenda/semaglutyd” zgodne z dziennikiem, a granicę
+  „agonista” przypina jawna asercja.
+- `tests/unit/otylosc-skok.test.mjs`: ta sama reguła dla Karty i monitora; monitor woła `zmianaPrzebiegu(Dzs, w)` bez opcji.
+- e2e `tests/e2e/postepy-dziennik.spec.mjs` PD-4: Włączenie zapisane bez substancji, Kontynuacja Saxendy z substancją —
+  w Karcie „Popraw”/„Usuń”, bez „Edytuj w DocPro →” (na kodzie sprzed zmiany PD-4 nie przechodzi).
+
+**Wdrożenie.** Od razu przy wydaniu; sejf bez zmian. **Cofnięcie** = rewert PR: Karta znów porównuje dosłowny tekst
+leku i substancji.
+
+## Dawka leczenia otyłości: przecinek dziesiętny i podpowiedzi z ChPL (P-OTYLOSC-DAWKA, SW 1.1.558, `vilda_cykle_leczenia.js` 10, `obesity_therapy_monitor.js` 32, `obesity_therapy.js` 13, `vilda_auth_ui.js` 573, `inline_docpro_01.css` 7, 2026-11-19)
+
+**Decyzja właściciela** (2026-11-19, temat B): „Przecinek + podpowiedzi”. Bez dopisywania jednostek do starych
+wpisów i bez obowiązkowej jednostki.
+
+**Problem.** Dawkę wpisuje się w monitorze DocPro jako wolny tekst (podpowiedź „np. 2,4 mg”). W zapisie bywa „2,4”,
+„0.25” albo „2,4 mg / tydz.”, a Karta pokazywała dokładnie wpisany tekst: raz z kropką, raz bez jednostki.
+
+**Zapis bez zmian.** Dawka zapisuje się tak, jak ją wpisano. Z tekstu dawki liczy tylko wykres dawki w Karcie (pierwsza
+liczba, przecinek albo kropka — `El` w `vilda_auth_ui.js`); ocena wg ChPL dawki nie czyta (kotwica dawki
+podtrzymującej nie jest podawana — okno liczy się od czasu nominalnego). Zmiana dotyczy tylko widoku i wpisywania.
+
+**Widok** — `VildaDziennikOtylosci.dawkaPL`: kropka dziesiętna między cyframi → przecinek („0.25” → „0,25”), reszta
+tekstu bez zmian. Używają jej:
+- Karta pacjenta: wiersze „Wpisy leczenia”, okno wyboru wersji wpisu, „Aktualna dawka” w podsumowaniu „Leczenie
+  otyłości”; okno „+ Kontynuacja” podstawia dawkę ostatniego wpisu z przecinkiem („Popraw” zostawia tekst wpisu);
+- monitor DocPro: kolumna „Dawka” w tabeli punktów.
+
+**Podpowiedzi** — `VildaDziennikOtylosci.podpowiedziDawek(eskalacja, czestosc)`: pod polami formularza monitora
+przyciski z dawkami z tabeli zwiększania dawki ChPL wybranego leku (`products[…].dosing.escalation` i `frequency`
+w `obesity_therapy.js` — to samo źródło co zalecenia w module leczenia otyłości; dane dawek bez zmian):
+- wiersz z jedną dawką („0,25 mg”, „3,0 mg / dobę”, „2 tabl. rano + 1 tabl. wieczorem”) — przycisk; lek
+  1×/tydz. dostaje „ / tydz.” (jak w zapisie „2,4 mg / tydz.”); kliknięcie wpisuje dawkę w pole „Dawka”, a pasujący
+  przycisk jest wciśnięty (`aria-pressed`);
+- wiersz bez jednej dawki („5, 10 lub 15 mg”, „+2,5 mg co ≥4 tyg.”) — zdanie pod przyciskami, z uwagą z tabeli;
+- uwaga przy dawce spoza zwykłego schematu (np. 7,2 mg: „tylko dorośli z wyjściowym BMI ≥30 kg/m²…”) — zdanie pod
+  przyciskami; zwykłe opisy („dawka początkowa”, „dawka podtrzymująca”) — w dymku przycisku;
+- pole zostaje wolnym tekstem („Kliknij, aby wpisać dawkę, albo wpisz inną w polu „Dawka””). Bez leku na liście —
+  nic się nie pokazuje. Monitor dokumentuje stan faktyczny, więc przyciski nie zależą od wieku (jak wybór leku).
+
+**Przypadki syntetyczne** (dane fikcyjne; Testowa Zuzanna, 13 l., Wegovy; dawki zapisane „0.25” i „2.4”):
+
+| Wejście | Oczekiwany wynik |
+|---|---|
+| tabela punktów w monitorze | „0,25”, „2,4” |
+| lista leku: Wegovy | przyciski 0,25 / 0,5 / 1,0 / 1,7 / 2,4 / 7,2 mg / tydz.; zdanie „7,2 mg / tydz. — tylko dorośli…” |
+| klik „1,7 mg / tydz.” | pole „Dawka” = „1,7 mg / tydz.”, przycisk wciśnięty; własny tekst — żaden wciśnięty |
+| Saxenda | 0,6 / 1,2 / 1,8 / 2,4 / 3,0 mg / dobę |
+| Mounjaro | 2,5 i 5 mg / tydz.; zdania „Dalej (w razie potrzeby): +2,5 mg co ≥4 tyg. (…)”, „Podtrzymująco: 5, 10 lub 15 mg (maks. 15 mg 1×/tydz.)” |
+| Mysimba | „1 tabl. rano” … bez „/ tydz.”; „… — maks. 4 tabl./dobę” |
+| bez leku | brak podpowiedzi |
+| Karta: „Wpisy leczenia”, „Aktualna dawka” | „Włączenie · 0,25”, „Kontynuacja · 2,4”, „2,4”; w sejfie nadal „0.25”, „2.4” |
+| telefon 390 px | przyciski ≥ 44 px, bez poziomego przewijania |
+
+**Wpływ kliniczny.** Brak zmiany wyników, ocen, progów i danych dawek. Zmienia się zapis liczby w widoku (przecinek)
+i pojawia się podpowiedź dawek z istniejącej tabeli ChPL.
+
+**Testy.** Dane wyłącznie fikcyjne.
+- `tests/unit/otylosc-dawka.test.mjs`: `dawkaPL`, `podpowiedziDawek` na produkcyjnym module (Wegovy, Saxenda,
+  Mounjaro, Mysimba, puste i powtórzone wiersze); tabele w teście = wiersze `dosing.escalation` w `obesity_therapy.js`.
+- e2e `tests/e2e/otylosc-dawka.spec.mjs`: DW-1 monitor (tabela, przyciski czterech leków, klik, edycja punktu),
+  DW-2 Karta (wiersze, podsumowanie, sejf bez zmian), DW-3 telefon.
+
+**Wdrożenie.** Od razu przy wydaniu; sejf bez zmian. **Cofnięcie** = rewert PR: dawka znów dokładnie jak wpisana,
+bez podpowiedzi.

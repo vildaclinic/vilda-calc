@@ -3,7 +3,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { reverseBscAuthHooks } from './account-duplicate-dismissals-auth-hooks.mjs';
 import { createHash } from 'node:crypto';
-export const UI_INTENT_AUTH_BASE_SHA256 = '56a4cc4b369d21979e6c5ce9208b8bee4f6504de81004a66633cfd07a50d7248';
+export const UI_INTENT_AUTH_BASE_SHA256 = '994abdea6b811f06eb0c667d4a260c3b70506e6acd6585ee0d00c295a1e52480';
 import { fileURLToPath } from 'node:url';
 export const UI_INTENT_AUTH_PAIRS = [
   { label: "GH producer + verified public boundaries", before: String.raw`function Gr(t,a){remSearchDropReturn();try{i.sessionStorage.setItem("vilda:gh-jump",JSON.stringify({patientId:t,ghPointId:String(a),ts:Date.now()}))}catch{}var Qgj=!1;try{var Qgs=i.document.documentElement.classList.contains("vilda-embedded"),Qgb=Qgs&&i.parent&&i.parent!==i?i.parent.VildaShell:null;Qgb&&typeof Qgb.navigate=="function"&&(Qgb.navigate("docpro",!0),Qgj=!0)}catch{Qgj=!1}if(!Qgj)try{if(typeof i.refreshGHTherapyMonitor=="function"){var Qgh=String(i.location.hash||"");i.location.hash="#/docpro",Qgh==="#/docpro"&&typeof i.Event=="function"&&i.dispatchEvent(new i.Event("hashchange"))}else i.location.href="docpro.html"}catch{}}`, after: String.raw`/* Ciphertext handoff: commit under the source actor before native navigation. */

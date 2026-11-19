@@ -796,8 +796,8 @@
   "sha256": "ad284b7291f9dbc0462009850e5b8ca8b7130ef9bfe0f715fd2e7c590143f690"
  },
  "inline_docpro_01.css": {
-  "v": 7,
-  "sha256": "218fc529143475cfbe6803be661a13bc20dd09a4f3df53768bb5cbe694bad6ad"
+  "v": 8,
+  "sha256": "324c959bc3f6b6dc516cf58b461a48613307839405ec448be56a581532b592fb"
  },
  "inline_docpro_03.js": {
   "v": 5,
@@ -1056,12 +1056,12 @@
   "sha256": "931af3aa748c09e427503462c1c808e99d2458a24a6631107024429b6ffa9e5b"
  },
  "obesity_therapy.js": {
-  "v": 12,
-  "sha256": "36d31d75d7d03d356d8cc37c087b42b05202af649999c01bf8e17862cc788f3b"
+  "v": 14,
+  "sha256": "8532a1bf7d7857ebe56f5155d0965865a620d6ce1e62c1e39bc8262dc471be1d"
  },
  "obesity_therapy_monitor.js": {
-  "v": 31,
-  "sha256": "720aeb0994b0d7757f14bd8e1d755104549e5d2f238118099ac47d3e0621d51f"
+  "v": 33,
+  "sha256": "a1b1c4c95be9f913fced309049bfd6195514acaf278c67accdc2298251f9c768"
  },
  "pdfmake.min.js": {
   "v": 1,
@@ -1169,7 +1169,7 @@
  },
  "vilda_auth_ui.js": {
   "v": 574,
-  "sha256": "72a2be8615eddc00458903770fef883faf4e84f92c6606af8bc973ff2139882b"
+  "sha256": "7e908ec4eb7876e7f8964d5f398f6e3a95b4c76ea6f60256e351ecb7ef743b72"
  },
  "vilda_b64_checklist.js": {
   "v": 2,
@@ -1292,7 +1292,7 @@
   "sha256": "5ccc74dc9c7f6c7e5e86badbdf0bd4674eb37edf99527ccb6648b6bccb54ff7d"
  },
  "vilda_chrome.js": {
-  "v": 309,
+  "v": 310,
   "sha256": "c699a80eaada3a0e9e0749863b07163676cf69fed03b10efef4305937779d0de"
  },
  "vilda_clinical_crypto.js": {
@@ -1312,8 +1312,8 @@
   "sha256": "326ea4b7ce7710cc24181edcdff104a4d67d83ae56878a552448c30dff0b7e2b"
  },
  "vilda_cykle_leczenia.js": {
-  "v": 9,
-  "sha256": "2c488575964523fbf4455a04584e981e5ae85a917a94feccb82a4d8ae1668121"
+  "v": 11,
+  "sha256": "9c264373932e8af7438aac41a55b34cb06c5648e31a95a8e175a2423da55b705"
  },
  "vilda_data_import_export.js": {
   "v": 126,
@@ -2096,7 +2096,7 @@
   "sha256": "59dfe0d72f1c56950e8bfa44036bd1d02bf6a6aea16ce6e77a2644921e1e45cf"
  },
  "vilda_session_bridge.js": {
-  "v": 225,
+  "v": 226,
   "sha256": "3feeeaa4afbfc28e28e403d735159dc6bfc183650d27e98a049d7fae71954390"
  },
  "vilda_sga_birth_results.css": {

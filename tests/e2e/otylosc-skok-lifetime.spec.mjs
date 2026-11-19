@@ -141,6 +141,7 @@ async function card(page, id) {
   await page.evaluate(pid => window.VildaAuthUI.showPatientCard(pid), id);
   await expect(page.locator('.vilda-auth-patient-card')).toBeVisible();
   await expect(page.locator('.vdo')).toBeVisible();
+  await page.waitForFunction(() => history.state?.vildaNavSentinel === true);
 }
 const edit = page => page.locator('.vdo-list:not(.vdo-list-deleted) > .vdo-item[data-date="2026-04-14"]')
   .getByRole('button', { name: 'Edytuj w DocPro →', exact: true });
@@ -192,7 +193,10 @@ async function assertNoEdit(page) {
 }
 async function openDeleted(page, id) {
   await card(page, id);
-  await page.getByRole('button', { name: /Usunięte wpisy \(1\)/ }).click();
+  const deleted = page.getByRole('button', { name: /Usunięte wpisy \(1\)/ });
+  // Native journal remembers this patient's expansion across card openings.
+  if (await deleted.getAttribute('aria-expanded') !== 'true') await deleted.click();
+  await expect(deleted).toHaveAttribute('aria-expanded', 'true');
   await page.getByRole('button', { name: 'Dodaj ponownie w DocPro →', exact: true }).click();
   await expect(message(page)).toContainText('Uzupełniono z usuniętego wpisu: Zakończenie, 03.11.2026.', { timeout: 20000 });
   await frames(page);
@@ -304,6 +308,11 @@ test('scoped obesity: replacing the captured monitor cannot run the actual held4
   await page.waitForFunction(() => window.__nativeObesityLanding?.held === 1);
   expect(await page.evaluate(() => sessionStorage.getItem('vildaCurrentPatientId'))).toBe(f.ids.b);
   await expect(page.locator('#obesityEditBar')).toBeHidden();
+  // Holding land also holds its UI opening. Open the ordinary native monitor
+  // through its actual controls before doctor input; no style/visibility patch.
+  if (!await page.locator('#obesityCard').isVisible()) await page.locator('#toggleObesityTherapy').click();
+  await page.locator('#obesityTabMonBtn').click();
+  await expect(page.locator('#obesityWeight')).toBeVisible();
   await page.evaluate(() => {
     window.__replacementObesityCalls = 0;
     const replacement = function (_target, _options) { window.__replacementObesityCalls++; return true; };
