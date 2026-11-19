@@ -43011,3 +43011,122 @@ z pustym BMI, a u dziecka „Za mało danych do oceny” — jak dotąd przy imp
 
 **Cofnięcie** = rewert PR, bez migracji (punkty bez wzrostu zostają poprawnymi rekordami; starsza wersja monitora
 wymaga wzrostu dopiero przy ich edycji).
+
+## Leczenie otyłości — etapy 3 i 4: dziennik wpisów poza wizytą i „+ Kontynuacja” w Karcie pacjenta (P-OTYLOSC-DZIENNIK, SW 1.1.551, `vilda_cykle_leczenia.js` 5, `vilda_auth_ui.js` 569, `vilda_auth_ui.css` 83, `obesity_therapy_monitor.js` 29, `vilda_global_search.js` 6, 2026-11-18)
+
+**Decyzje właściciela (2026-11-17/18).** Masa przysłana przez pacjenta albo rodzica miesiąc po wizycie **nie może być
+nową wersją ostatniej wizyty** (decyzja nr 2) — monitorowanie leczenia otyłości ma być oddzielone od wizyt w gabinecie.
+Przyjęte: (1) poprawka wpisu to nowa wersja, usunięcie można cofnąć, przy równoległej poprawce lekarz wybiera wersję;
+(2) wymagane pola jak w etapie 1 (Włączenie i Zakończenie dziecka ze wzrostem, Kontynuacja — data i masa), werdykt
+wstrzymany, gdy w oknie oceny jest konflikt dwóch wersji; (3) w Notatkach wpisy schowane za jedną linią „Wpisy leczenia
+otyłości (N) →”, w wyszukiwarce pominięte, w Historii jako „Leczenie otyłości”; (4) dawne punkty przeniesione ze źródłem
+„gabinet”; (5) etap 2 połączony z etapem 4; makieta zaakceptowana z etykietą źródła „Pacjent” (nie „Rodzic”);
+2026-11-18: „Etap 3 + 4 razem”.
+
+**Stan przed zmianą.** Punkty leczenia otyłości żyły tylko w zapisie wizyty (`obesityTherapyPoints` w migawce pacjenta):
+nowy punkt wymagał wczytania pacjenta w DocPro i „Zapisz dane”, czyli tworzył nową wersję wizyty. Równoległa praca na
+dwóch urządzeniach albo w dwóch kartach mogła zgubić punkt (zapis całej listy).
+
+**Gdzie zapisuje się wpis (sejf bez zmian).** Każda **wersja** wpisu to osobna notatka pacjenta zapisana raz
+(`VildaVault.savePatientNoteOnce`; ponowienie po zgubionym potwierdzeniu nic nie zmienia, inna treść pod tym samym
+identyfikatorem — odmowa): kategoria `leczenie-otylosci`, tytuł „Leczenie otyłości — Kontynuacja 10.11.2026”, pierwsza
+linia treści czytelna dla człowieka, linia ostrzeżenia, ostatnia linia — dane wpisu w JSON (`{"vildaOtylosc":1,…}`),
+`clinicalDateISO` = data pomiaru, `linkedAgeMonths` = wiek. Notatka nie ma terminu, więc nie trafia do przypomnień ani
+Terminarza. Mapa ścieżek sejfu pokazała, że tytuł, treść, kategoria i data kliniczna przechodzą przez zapis, eksport,
+scalanie i synchronizację **każdej** wersji aplikacji (także 221 i 276), a nowe pole w treści szyfrowanej ginęłoby w zapisie,
+odczycie i scalaniu każdej z nich (biała lista pól). Dlatego `vilda_vault.js` się nie zmienia: bez przeliczania skrótów
+obrazu sejfu i bez czekania na kolejkę E3-PR0c–E3-PR0i. Starsze urządzenie pokaże wpis jako zwykłą notatkę z czytelną
+pierwszą linią; po aktualizacji — jako wpis dziennika. Odstąpiono od zapowiadanego wcześniej przełącznika (ryzyko, przed
+którym miał chronić — utrata nowego pola na starszym urządzeniu — przy treści notatki nie występuje).
+
+**Wersje, konflikt, usunięcie (`VildaDziennikOtylosci`).** Wpis ma stały `entryId` (id pierwszej wersji); każda wersja
+wskazuje wersje, które zastępuje (`parents`). Bieżąca wersja = jedyny liść. Dwa liście = **konflikt** (ten sam wpis
+poprawiony równolegle na dwóch urządzeniach albo w dwóch kartach): żadna wersja nie znika, Karta pokazuje obie z
+zaznaczonymi różnicami, wybór lekarza to nowa wersja zastępująca oba liście (odrzucona zostaje w historii wpisu).
+Usunięcie = wersja `retracted`; „Cofnij” = nowa wersja z treścią sprzed usunięcia. Dwa nowe wpisy z dwóch urządzeń mają
+różne `entryId` — nigdy się nie nadpiszą; możliwy duplikat (ta sama data, masa ±0,05 kg) ostrzega przed zapisem.
+
+**Dawne punkty (decyzja nr 4).** Punkty migawki bez wpisu w dzienniku widać od razu w projekcji ze źródłem „gabinet”;
+przenoszą się do dziennika przy pierwszym zapisie wpisu tego pacjenta (z Karty albo z monitora). Przeniesiona wersja ma
+identyfikator `otylm-<skrót pacjenta>-<id punktu>` i treść bez chwili i urządzenia — dwa urządzenia przenoszące ten sam
+punkt zapisują tę samą notatkę (bez duplikatów). Punkt migawki z wpisem (po `legacyPointId` albo po id równym `entryId` —
+monitor zapisuje w migawce lustro dziennika) nie wraca drugi raz; usunięty po przeniesieniu też nie.
+
+**Projekcja.** Dziennik daje listę punktów w formacie monitora (`obesityTherapyPoints`) z `weightSource`/`heightSource`
+i `dziennik.konflikt`; przy konflikcie projekcja bierze najnowszą nieusuniętą wersję, oznaczoną konfliktem. Z projekcji
+liczą: kafelek „Leczenie otyłości” Karty, panel „Dane analityczne — otyłość” (redukcje, ocena wg ChPL — także punkt oceny
+z etapu 1 — i wykres), karta porównania, Historia oraz monitor DocPro wczytanego pacjenta.
+
+**Karta pacjenta — sekcja „Wpisy leczenia”** (między kafelkiem a panelem; `VildaDziennikOtylosciUI`): wpisy od najnowszego
+(5 + „Pokaż wszystkie”), masa i wzrost ze źródłem („gabinet”/„pacjent”), BMI, dawka, „Popraw”, „Usuń” (z „Cofnij” i listą
+usuniętych z „Przywróć”), „Wybierz wersję” przy konflikcie. Przycisk **„+ Kontynuacja”** otwiera okno bez wczytywania
+pacjenta: data pomiaru (obowiązkowa, pusta przy otwarciu), masa (obowiązkowa) ze źródłem (domyślnie „Pacjent”), wzrost
+opcjonalny ze źródłem, lek z ostatniego wpisu (zmiana leku — w DocPro), dawka podpowiedziana z ostatniego wpisu,
+komentarz. Pod masą zmiana od poprzedniego wpisu; przy wzroście — podpowiedź okna oceny ChPL u dziecka („Trwa okno oceny
+ChPL (od 27.10.2026). Ostatni wzrost: 162,9 cm z 13.10.2026 — przed oknem…”). Zapis sprawdza reguły cykli R1–R9 na liście
+z dziennika (Kontynuacja poza aktywnym cyklem — „nowy cykl zaczyna się od Włączenia w DocPro”), datę z przyszłości
+(pytanie) i duplikat (pytanie). Wiek w dniu pomiaru — z daty urodzenia, a bez niej z ostatniego wcześniejszego punktu
+i pełnych miesięcy między datami. Bez aktywnego cyklu przycisk ma `aria-disabled` z powodem pod spodem.
+
+**Werdykt przy konflikcie (decyzja nr 2).** Konflikt wpisu ocenianego cyklu w oknie oceny wg ChPL (od daty okna z
+`punktOceny`; bez okna albo bez dat — każdy konflikt cyklu) wstrzymuje werdykt: „Ocena wstrzymana — dwie wersje wpisu z
+10.11.2026”, z masami obu wersji i wskazaniem „Wybierz wersję”. Konflikt przed oknem nie zmienia oceny.
+
+**Monitor DocPro.** U wczytanego, zapisanego pacjenta lista monitora to projekcja dziennika (z masą od pacjenta oznaczoną
+„(pacjent)”), a dodanie, poprawka i usunięcie punktu zapisują od razu wersję wpisu (źródło „gabinet”, przy poprawce —
+źródło dotychczasowe); komunikat „Zapisano w dzienniku leczenia…”. Formularz wizyty zapisuje w migawce lustro listy, jak
+dotąd. Pacjent ramki to wyłącznie `window._vildaCurrentPatientId` zgodny z identyfikatorem karty w `sessionStorage` —
+nieaktualna ramka DocPro w tle nie czyta ani nie zapisuje dziennika innego pacjenta. Bez zapisanego pacjenta (nowy
+pacjent), bez odblokowanego sejfu albo bez modułu — monitor działa jak dotąd (punkty tylko w formularzu wizyty).
+
+**Notatki, wyszukiwarka, Historia (decyzja nr 3).** Notatki: wersje wpisów nie stoją na liście; jedna linia
+„Wpisy leczenia otyłości (N) — Leczenie →” prowadzi do sekcji. Wyszukiwarka pomija kategorię `leczenie-otylosci`.
+Historia: u pacjenta z dziennikiem wpisy „Leczenie otyłości” z bieżących wpisów dziennika (z masą i źródłem, podpis
+„z dziennika leczenia — poprawka w „Wpisy leczenia””) zamiast wpisów z migawki; surowe wersje nie stoją na osi.
+
+**PWA.** Kod dziennika i sekcji dopisany do `vilda_cykle_leczenia.js` (dwa niezależne moduły za modułem cykli), style —
+rozdział „Dziennik leczenia otyłości” w `vilda_auth_ui.css`: budżet instalacji liczy żądania (≤ 600,
+`sw-precache-stron`), a wszystkie pary aliasów są już wykorzystane — jak „Pakiet badań” (jeden plik). Wybrane źródło
+w oknie ma nadpisanie skórki iOS 26 (`.liquid-ios26 .vdo-chip[aria-checked="true"]`, powód „kaskada” w
+`tests/fixtures/skorka-nadpisania.json`) i znak „✓” (wybór nie tylko kolorem).
+
+**Przypadki syntetyczne** (dane fikcyjne; Testowa Zuzanna, 13 l., Wegovy; migawka: Włączenie 14.04.2026 80,0 kg
+160,0 cm, Kontynuacja 13.10.2026 75,2 kg 162,9 cm):
+
+| Przypadek | Wejście | Oczekiwany wynik |
+|---|---|---|
+| DZ-1 | Karta: „+ Kontynuacja” 10.11.2026, 74,6 kg, źródło Pacjent | trzy wpisy (dwa „gabinet” z migawki, nowy „pacjent”); liczba wersji wizyty bez zmian; w dzienniku trzy notatki; werdykt „Potrzebny pomiar wzrostu do oceny ChPL” |
+| DZ-2 | okno bez daty; wzrost „abc”; 13.10.2026 75,2 kg | „Podaj datę pomiaru…”; błąd wzrostu; „Możliwy duplikat — 13.10.2026 jest już wpis 75,2 kg (gabinet)” — „Nie zapisuj” nic nie zapisuje; 17.11.2026 74,3 kg 163,4 cm → „Odpowiedź wystarczająca” |
+| DZ-3 | poprawka 74,6 → 74,1 kg; usuń; „Cofnij” | ten sam wpis z 74,1 kg; po usunięciu dwa wpisy i komunikat z „Cofnij”; po cofnięciu trzy |
+| DZ-4 | dwie równoległe poprawki wpisu z 10.11.2026 (telefon 74,6 kg, komputer 74,1 kg) | wiersz w konflikcie, werdykt „Ocena wstrzymana — dwie wersje wpisu z 10.11.2026” z obiema masami; wybór „Komputer” → 74,1 kg, werdykt wraca |
+| DZ-5 | migawka z Zakończeniem 03.11.2026 | „+ Kontynuacja” z `aria-disabled`, „Brak aktywnego cyklu — Włączenie w DocPro.”; kliknięcie wyjaśnia, okno się nie otwiera |
+| DZ-6 | wpis + zwykła obserwacja | Notatki: jedna linia „Wpisy leczenia otyłości (3)…” i sama obserwacja; Historia: „Masa: 74,6 kg (pacjent)” i podpis dziennika |
+| DZM-1 | DocPro, wpis „od pacjenta” 10.11 w dzienniku; Kontynuacja z monitora 17.11.2026 74,3 kg 163,4 cm | monitor pokazuje 10.11 „74,6 (pacjent)”; nowy punkt w dzienniku jako „gabinet”; id punktów monitora = id wpisów |
+| DZM-2 | DocPro: usuń punkt 13.10.2026 | w dzienniku przeniesienie + wersja „(usunięty)”; monitor bez tego punktu |
+| flota | dwa urządzenia; równoległa poprawka; starsza aplikacja 221 i 276 przekazuje wpis i oznacza go „wykonane” | wpis widoczny na obu; konflikt na obu i rozstrzygnięcie wszędzie; urządzenie zasilane wyłącznie przez starszą aplikację składa ten sam wpis (masa, wzrost, źródło) |
+
+**Wpływ kliniczny.** Ocena wg ChPL, redukcje i wykres liczą się z dziennika, czyli także z mas (i wzrostów) zmierzonych
+przez pacjenta — tak jak zdecydował właściciel (etap 1: wzrost od pacjenta wolno użyć). Dotąd takie pomiary w ogóle nie
+wchodziły do oceny. Nowy stan: werdykt wstrzymany przy konflikcie wersji w oknie oceny. Progi, okna i kotwice ChPL bez
+zmian. Dorosły: ocena z masy (Saxenda, Mysimba) albo kliniczna — z ostatniego wpisu dziennika.
+
+**Ograniczenia (znane).**
+- Zakładka „Postępy” dorosłego, lista pacjentów (filtr leku), analiza trajektorii i karta zbiorcza czytają jeszcze
+  migawkę ostatniej wizyty — wpis z Karty widzą po najbliższym „Zapisz dane” wizyty w DocPro (lustro listy).
+- Starsze urządzenie (sprzed tej wersji) pokazuje wersje wpisów jako zwykłe notatki i nie widzi ich w monitorze; ręczna
+  edycja takiej notatki na starszym urządzeniu (zmiana treści) czyni ją nieczytelną dla dziennika — dziennik pomija ją
+  i zostawia w Notatkach.
+- Konflikt rozstrzyga się w Karcie; monitor DocPro przy próbie poprawki wpisu w konflikcie odsyła do Karty.
+
+**Testy.** Dane wyłącznie fikcyjne.
+- `tests/unit/dziennik-otylosci.test.mjs` (22): format notatki, wersje, konflikt, usunięcie i cofnięcie, migracja
+  (identyczne notatki z dwóch urządzeń, punkt bez daty, usunięty nie wraca), `planDzialania`, wiek w dniu pomiaru,
+  flota na prawdziwym sejfie (dwa urządzenia, starsza aplikacja 221 i 276).
+- e2e `tests/e2e/otylosc-dziennik-karta.spec.mjs` (DZ-1…DZ-6) i `tests/e2e/otylosc-dziennik-monitor.spec.mjs`
+  (DZM-0…DZM-2) na prawdziwych stronach. DZM-0 pilnuje łatki P-PWZ-ODTWORZENIE (`docs/ZRODLA_ARTEFAKTOW.md`): po
+  „Odtwórz zapis” w DocPro karta „Leczenie otyłości” zamykała się sama w ciągu sekundy (błąd był już na `audyt`).
+- Strażniki stylów: `css-skorka` (nowe nadpisanie w fixture), `css-szklo` (martwe deklaracje pod skórką usunięte
+  `usun-martwe-css.mjs`), `css-tokeny`.
+
+**Wdrożenie.** Od razu przy wydaniu. **Cofnięcie** = rewert PR: notatki dziennika zostają w sejfie jako zwykłe notatki
+kategorii `leczenie-otylosci` (widoczne w Notatkach), punkty w migawce — jak przed zmianą.
