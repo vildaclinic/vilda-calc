@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 test.use({ serviceWorkers: 'block', reducedMotion: 'reduce' });
 test.setTimeout(180_000);
 const nativeSource = readFileSync(new URL('../../vilda_cykle_leczenia.js', import.meta.url), 'utf8');
+const oldNativeSource = readFileSync(new URL('../fixtures/home-b1-before-diary-lifetime.js.txt', import.meta.url), 'utf8');
 const points = [
   { id:'fictional-start', type:'start', dateISO:'2026-04-14', ageYears:13, ageMonths:0, weight:80, height:160, drug:'Wegovy (semaglutyd) – s.c. 1×/tydz.', dose:'0,25 mg / tydz.' },
   { id:'fictional-control', type:'continue', dateISO:'2026-10-13', ageYears:13, ageMonths:6, weight:75.2, height:162.9, drug:'Wegovy (semaglutyd) – s.c. 1×/tydz.', dose:'2,4 mg / tydz.' },
@@ -26,7 +27,7 @@ async function setup(page, { guarded = true, pending = false, scenario = null } 
       },
     };
     state.points=points;
-    state.context={isCurrent:()=>state.current,onDialog:(panel,metadata)=>{
+    state.context={actorLifetimeVersion:1,isCurrent:()=>state.current,onDialog:(panel,metadata)=>{
       const actor={panel,metadata};state.dialogs.push(actor);
       const cleanup=()=>{state.closeNotifications++;};cleanup.actorLifetimeVersion=1;return cleanup;
     }};
@@ -121,12 +122,12 @@ test('real journal edit migration already submitted completes A batch without st
 });
 
 const NATIVE='.vhome-native-patient-card';
-async function setupB1(page,width,{shell=false}={}){
+async function setupB1(page,width,{shell=false,oldNative=false}={}){
   const context=page.context();
   await page.setViewportSize({width,height:1000});page.setDefaultTimeout(30_000);
   const errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.addInitScript(()=>{window.__VILDA_HOME_WORKSPACE_PREVIEW__=true;});
-  await page.route('**/*',r=>new URL(r.request().url()).hostname==='127.0.0.1'||/^(blob|data):/.test(r.request().url())?r.continue():r.abort());
+  await page.route('**/*',r=>{const u=new URL(r.request().url());if(oldNative&&u.pathname==='/vilda_home_patient_native.js')return r.fulfill({contentType:'text/javascript',body:oldNativeSource});return u.hostname==='127.0.0.1'||/^(blob|data):/.test(r.request().url())?r.continue():r.abort();});
   const fixture=await createFictionalVault(page,{shell,waitForAccountReadyBeforeReload:true});
   const frame=fixture.frame;
   const payload=fictionalPatient({firstName:'Dziennik-A',sex:'F',age:13,height:162.9,weight:75.2});
@@ -243,11 +244,13 @@ test('optional Home guard preserves every actual native note DTO byte except gen
  expect(normalize(await guarded.evaluate(()=>probe.writes))).toEqual(normalize(await legacy.evaluate(()=>probe.writes)));
 });
 
-for(const malformed of ['missing guard','throwing guard','missing coordinator','throwing coordinator','old coordinator','refused registration'])test('explicit malformed Home lifecycle fails closed: '+malformed,async({page})=>{
+for(const malformed of ['missing guard','throwing guard','missing context version','old context version','missing coordinator','throwing coordinator','old coordinator','refused registration'])test('explicit malformed Home lifecycle fails closed: '+malformed,async({page})=>{
  const errors=[];page.on('pageerror',error=>errors.push(error.message));await setup(page);
  await page.evaluate(mode=>{
   const c=probe.context;
   if(mode==='missing guard')delete c.isCurrent;
+  if(mode==='missing context version')delete c.actorLifetimeVersion;
+  if(mode==='old context version')c.actorLifetimeVersion=0;
   if(mode==='throwing guard')c.isCurrent=()=>{throw Error('fictional expired owner');};
   if(mode==='missing coordinator')delete c.onDialog;
   if(mode==='throwing coordinator')c.onDialog=()=>{throw Error('fictional missing coordinator');};
@@ -309,4 +312,42 @@ test('explicit null Home context preserves the native legacy continuation',async
   const p=probe;document.querySelector('#owner').replaceChildren(VildaDziennikOtylosciUI.sekcja({patientId:'fictional-A',stan:VildaDziennikOtylosci.zloz([],p.points),migawka:p.points,homeContext:null,onZmiana:()=>{p.changes++;}}));p.current=false;
  });
  await openForm(page);await submit(page);await page.waitForFunction(()=>probe.writes.length===3);expect((await summary(page)).changes).toBe(1);
+});
+
+for(const version of ['missing',0,2])for(const action of ['delete','restore'])test('direct journal '+action+' refuses explicit '+version+' context version without opening an actor',async({page})=>{
+ await setup(page,{scenario:action==='restore'?'deleted':'journal'});
+ let target;
+ if(action==='restore'){
+  await page.getByRole('button',{name:/^Usunięte wpisy/}).click();target=await page.getByRole('button',{name:'Przywróć',exact:true}).elementHandle();
+ }else target=await page.getByRole('button',{name:/Usuń wpis z 10.11.2026/}).elementHandle();
+ await page.evaluate(version=>{if(version==='missing')delete probe.context.actorLifetimeVersion;else probe.context.actorLifetimeVersion=version;window.confirm=()=>true;},version);
+ await target.evaluate(n=>n.dispatchEvent(new Event('click',{bubbles:true,cancelable:true})));
+ await page.waitForTimeout(50);expect((await summary(page)).writes).toEqual([]);await expect(page.locator('.vdo-backdrop')).toHaveCount(0);
+});
+for(const transition of ['PRO','visit'])for(const action of ['delete','restore'])test('actual old B1 coordinator with new journal refuses direct '+action+' after '+transition+' transition',async({page})=>{
+ const{id}=await setupB1(page,1440,{oldNative:true});await section(page,'treatment');
+ if(action==='restore'){
+  await page.evaluate(async id=>{
+   const D=VildaDziennikOtylosci,p=(await VildaVault.getPatient(id)).snapshots[0].payload.obesityTherapyPoints;
+   const data={type:'continue',dateISO:'2026-11-10',ageYears:13,ageMonths:6,weight:74.6,weightSource:'pacjent',drug:'Wegovy (semaglutyd) – s.c. 1×/tydz.',dose:'2,4 mg / tydz.'};
+   const plan=D.planNowego(await D.wczytaj(id,p),id,data);await D.zapisz(id,plan.wersje);
+   await D.zapisz(id,D.planUsuniecia(await D.wczytaj(id,p),id,plan.entryId).wersje);
+  },id);
+  await page.evaluate(id=>VildaAuthUI.showPatientCard(id),id);
+  await expect(page.locator('.vilda-auth-patient-card:not(.vhome-native-patient-card)')).toBeVisible();
+  await page.getByRole('button',{name:/^Usunięte wpisy/}).click();
+  await expect(page.getByRole('button',{name:'Przywróć',exact:true})).toBeVisible();
+  await page.evaluate(id=>VildaAuthUI.showPatientCard(id,null,{homePatientPresentation:true},{activeTab:'treatment'}),id);
+  await expect(page.getByRole('button',{name:'Przywróć',exact:true})).toBeVisible();
+ }
+ const writes=await page.evaluate(async({transition,action})=>{
+  const vault=VildaVault,real=vault.savePatientNoteOnce,writes=[];
+  vault.savePatientNoteOnce=function(payload){writes.push(payload.id);return Reflect.apply(real,this,arguments);};
+  const button=action==='delete'?document.querySelector('.vdo-list .vdo-row-actions button[aria-label^="Usuń"]'):[...document.querySelectorAll('.vdo button')].find(b=>b.textContent==='Przywróć');
+  window.confirm=()=>true;
+  if(transition==='PRO')VildaProAccess.setPlan('free');else VildaVisitContext.beginNew({patientId:sessionStorage.getItem('vildaCurrentPatientId')});
+  button.dispatchEvent(new Event('click',{bubbles:true,cancelable:true}));
+  await new Promise(resolve=>{setTimeout(resolve,100);});return writes;
+ },{transition,action});
+ expect(writes).toEqual([]);
 });

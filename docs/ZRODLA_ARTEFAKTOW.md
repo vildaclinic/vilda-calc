@@ -2482,7 +2482,7 @@ z Notatek wybiera Leczenie wyłącznie na karcie B1. Czytelny skrypt
 `tools/patient_b1_auth_hooks.mjs` odtwarza opcjonalny kontekst Home w `Ob_dz`
 i przekazanie go do `VildaDziennikOtylosciUI.sekcja`. Odwrócenie samych haków
 Przypomnień daje SHA256
-`7a00f819247d28a90dab9c39ebacc26b2b53d363d6b0f8f39ae29e1b98b0cc10`;
+`6bdd0fe8ff72b4a2c9199155b2274351a1e80f7379e6d0d2e5d661029f253e33`;
 ponowne nałożenie odtwarza artefakt bajtowo.
 
 `vilda_cykle_leczenia.js` pozostaje czytelnym źródłem natywnego dziennika.
@@ -2495,10 +2495,20 @@ pacjenta, lecz nie odświeża zastępczej karty. Rzeczywisty panel DIV korzysta
 z B1 Back, zwalniania i rozmiaru 1000 × 820 przez jawne `isOpen`, `requestClose`
 i `dispose`; nie jest traktowany jak `HTMLDialogElement`. Koordynator potwierdza
 obsługę aktora przez `cleanup.actorLifetimeVersion = 1`; niepełny kontekst albo
-stary koordynator nie otwierają aktywnego formularza. Bez `homeContext`
+stary koordynator nie otwierają aktywnego formularza. Jawny kontekst Home
+wymaga też `actorLifetimeVersion = 1` przed każdą akcją sekcji, włącznie
+z usunięciem i przywróceniem bez okna. Auth przyjmuje tylko prezentację B1
+potwierdzającą ten kontrakt i obsługującą pełny odczyt właściciela Home.
+Starszy składnik nie może udostępnić słabszego `isCurrent` nowemu dziennikowi.
+Bez `homeContext`
 pozostaje natywny przepływ. Silnik dziennika, DTO, reguły kliniczne, monitor
 DocPro i sejf nie są zmienione przez tę adaptację.
 
 Podgląd Notatek Home wyklucza całą kategorię `leczenie-otylosci`, tak jak
 natywne `Ob_dzNotatki`; nie interpretuje treści JSON. Testy wywołują rzeczywiste
 kodowanie dwóch wersji wpisu i natywne argumenty konstruktora karty.
+Regresja `home-workspace-native-diary-lifetime.spec.mjs` zachowuje oryginalny
+moduł prezentacji B1 z `96c31d23` w `home-b1-before-diary-lifetime.js.txt`
+z pochodzeniem i SHA256 w sąsiednim pliku `.origin.json`. Sprawdza również
+bezpośrednie usunięcie i przywrócenie przy starszym koordynatorze, bez kopiowania
+silnika klinicznego ani formatu zapisu.

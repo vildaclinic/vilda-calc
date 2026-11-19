@@ -1,0 +1,7 @@
+{
+  "sourceCommit": "96c31d23be6a00170ef18781c8b7ef3b923adeac",
+  "sourcePath": "vilda_home_patient_native.js",
+  "gitBlob": "53e45627ac671af3e7029d9bdb5fef0b03c7807b",
+  "sha256": "0355d77d71137b58249151e0fd8591d13325c55276f8aac0884d840164ad94e7",
+  "purpose": "Exact presentation-only predecessor used to verify new native diary context refuses old coordinator capabilities; no clinical engine copy"
+}

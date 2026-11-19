@@ -1367,7 +1367,7 @@
   // unchanged. A retained UI action may never borrow a replacement card.
   function aktualny(ctx) {
     if (ctx.homeContext == null) return true;
-    try { return typeof ctx.homeContext.isCurrent === 'function' && typeof ctx.homeContext.onDialog === 'function' && ctx.homeContext.isCurrent() === true; } catch (_e) { return false; }
+    try { return ctx.homeContext.actorLifetimeVersion === 1 && typeof ctx.homeContext.isCurrent === 'function' && typeof ctx.homeContext.onDialog === 'function' && ctx.homeContext.isCurrent() === true; } catch (_e) { return false; }
   }
   function wymagajAktualnego(ctx) {
     if (!aktualny(ctx)) throw new Error('Ta karta pacjenta jest już zamknięta.');

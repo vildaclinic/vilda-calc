@@ -380,6 +380,7 @@
     });
     if (!boundVaults.has(vault)) { boundVaults.add(vault); vault.onLock(function () { if (active?.vault === vault) destroy(active); }); }
     return Object.freeze({
+      actorLifetimeVersion: typeof w.VildaHomePatient?.captureOwner === 'function' ? 1 : 0,
       select: function (key) { select(view, key); },
       onDialog: function (target, metadata) { return nativeDialog(view, target, metadata); },
       openNote: function (request) {

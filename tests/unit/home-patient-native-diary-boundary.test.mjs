@@ -38,25 +38,27 @@ function option(name) {
 }
 const diaryNotes = text(one(tree, node => node.type === 'FunctionDeclaration' && node.id?.name === 'Ob_dzNotatki', 'diary Notes link'));
 
-function nativePanelArguments() {
+function nativePanelArguments(requested = false) {
   const node = kind => ({ kind });
+  let diaryArguments;
+  const nativeCurrent = () => true, nativeDialog = () => null;
   const expected = { ghSummary: node('native GH summary'), ghPanel: node('native GH panel'), diary: node('native obesity diary') };
   const context = vm.createContext({
     e: (tag, attrs, children) => ({ tag, attrs, children }),
     O: node('native patient heading'), s: { ghTherapyPoints: [], timestampISO: '2026-11-19T12:00:00Z' },
     S: {}, y: {}, h: {}, t: 'fictional-diary-patient', GdNotatki: [], m: {},
-    wl: () => expected.ghSummary, kl: () => expected.ghPanel, Ob_dz: () => expected.diary,
+    wl: () => expected.ghSummary, kl: () => expected.ghPanel, Ob_dz: (...args) => { diaryArguments = args; return expected.diary; },
     Ot: (_label, error) => { throw error; },
     Ft: node('native tab navigation'), Nt: node('native Status panel'), Ct: node('native trajectory panel'),
     sa: node('native Notes panel'), ca: node('native timeline panel'), GdLabHost: node('native lab panel'),
     CarePatientHost: node('native care panel'), Li: null, zo: node('native return action'),
-    HomePatientRequested: false,
+    HomePatientRequested: requested, HomePatientIsCurrent: nativeCurrent, HomePatientDialog: nativeDialog,
     VisitHistoryButton: node('native visit history action'), So: node('native versions action'), Co: null,
     i: { VildaHomePatientNative: { describeLegacy: nodes => nodes } }
   });
   vm.runInContext('var Cs = (' + text(nativeChildren) + ');', context);
   return {
-    expected, context,
+    expected, context, diaryArguments, nativeCurrent, nativeDialog,
     panels: vm.runInContext('(' + option('legacyPanels') + ')', context),
     summaryPanels: vm.runInContext('(' + option('legacySummary') + ')', context),
   };
@@ -102,6 +104,23 @@ function diaryLink({ preview, b1 }) {
 }
 
 describe('home patient B1: native obesity diary presentation boundary', () => {
+  it('supplies the explicit current Home lifetime contract only on the opted-in card', () => {
+    expect(nativePanelArguments().diaryArguments[6]).toBeNull();
+    const home = nativePanelArguments(true), scope = home.diaryArguments[6];
+    expect(scope.actorLifetimeVersion).toBe(1);
+    expect(scope.isCurrent).toBe(home.nativeCurrent);
+    expect(scope.onDialog).toBe(home.nativeDialog);
+  });
+
+  it.each([undefined, null, 0, 1, 2, '1'])('accepts a current presentation only with the exact supported actor capability: %s', version => {
+    const predicate = text(one(nativeCard, node => node.type === 'FunctionDeclaration' && node.id?.name === 'HomePatientIsCurrent', 'Home owner predicate'));
+    let calls = 0;
+    const context = vm.createContext({ HomePatientPresentation: { actorLifetimeVersion: version, isCurrent: () => { calls += 1; return true; } } });
+    vm.runInContext(predicate, context);
+    expect(context.HomePatientIsCurrent()).toBe(version === 1);
+    expect(calls).toBe(version === 1 ? 1 : 0);
+  });
+
   it('moves only the native treatment nodes and leaves navigation and Status outside Treatment', () => {
     const result = nativePanelArguments();
     const expected = [result.expected.ghSummary, result.expected.ghPanel, result.expected.diary];
