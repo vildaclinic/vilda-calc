@@ -50,6 +50,7 @@
     try {
       if (!view || view.disposed || active !== view || view.vault !== w.VildaVault || !view.vault.isUnlocked()) return false;
       view.vault.assertSyncOperationSession(view.token);
+      if (w.VildaProAccess && !w.VildaProAccess.hasAccess()) return false;
       if (view.homeOwner && view.homeOwner() !== true) return false;
       return view.ownerCurrent() === true && view.root.isConnected && loadedSequence() === view.loaded;
     } catch (_) { return false; }
@@ -221,7 +222,7 @@
     target.addEventListener('close', sync); w.addEventListener('resize', fit); w.visualViewport?.addEventListener('resize', fit);
     observer = new w.MutationObserver(function () { if (!isOpen() || !current(view)) cleanup(); });
     observer.observe(d.documentElement, {childList: true, subtree: true});
-    view.dialogCleanups.add(cleanup); fit(); return cleanup;
+    view.dialogCleanups.add(cleanup); fit(); cleanup.actorLifetimeVersion = 1; return cleanup;
   }
   function statusGroups(view, native) {
     var host = native.panels.antro;

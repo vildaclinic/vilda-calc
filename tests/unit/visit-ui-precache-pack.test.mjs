@@ -49,13 +49,13 @@ describe('thirty-two independent visit and home UI resources in one verified tra
     expect(urls).toContain('/vilda_home_diet_bmi.css?v=1');
     expect(urls).toContain('/vilda_home_diet.css?v=3');
     expect(urls).toContain('/vilda_home_dialog_history.js?v=1');
-    expect(urls).toContain('/vilda_home_patient_data.js?v=2');
+    expect(urls).toContain('/vilda_home_patient_data.js?v=3');
     expect(urls).toContain('/vilda_home_patient_note_host.js?v=1');
     expect(urls).toContain('/vilda_home_patient_note_host.css?v=1');
-    expect(urls).toContain('/vilda_home_patient.js?v=2');
+    expect(urls).toContain('/vilda_home_patient.js?v=3');
     expect(urls).toContain('/vilda_home_patient.css?v=2');
-    expect(urls).toContain('/vilda_home_patient_native.js?v=1');
-    expect(urls).toContain('/vilda_home_patient_native.css?v=1');
+    expect(urls).toContain('/vilda_home_patient_native.js?v=2');
+    expect(urls).toContain('/vilda_home_patient_native.css?v=2');
     expect(urls).toContain('/vilda_patient_treatment_ui.js?v=2');
     expect(urls).toContain('/vilda_patient_treatment_ui.css?v=1');
     expect(urls).toContain('/vilda_home_patient_native_note.js?v=1');

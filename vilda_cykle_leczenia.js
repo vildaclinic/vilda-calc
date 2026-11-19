@@ -1366,8 +1366,8 @@
   // Optional Home owner: native clinical rules and the journal writer stay
   // unchanged. A retained UI action may never borrow a replacement card.
   function aktualny(ctx) {
-    if (!ctx.homeContext) return true;
-    try { return ctx.homeContext.isCurrent() === true; } catch (_e) { return false; }
+    if (ctx.homeContext == null) return true;
+    try { return typeof ctx.homeContext.isCurrent === 'function' && typeof ctx.homeContext.onDialog === 'function' && ctx.homeContext.isCurrent() === true; } catch (_e) { return false; }
   }
   function wymagajAktualnego(ctx) {
     if (!aktualny(ctx)) throw new Error('Ta karta pacjenta jest już zamknięta.');
@@ -1504,7 +1504,7 @@
       zamkniete = true;
       doc().removeEventListener('keydown', klawisz, true);
       if (tlo.parentNode) tlo.parentNode.removeChild(tlo);
-      if (typeof zwolnij === 'function') zwolnij();
+      if (typeof zwolnij === 'function') { try { zwolnij(); } catch (_e) { /* niepełna aktualizacja koordynatora */ } }
       try { if (poprzedni && typeof poprzedni.focus === 'function' && (!o.homeContext || (poprzedni.isConnected && o.homeContext.isCurrent()))) poprzedni.focus(); } catch (_e) { /* brak fokusu */ }
       if (typeof o.onZamkniecie === 'function') o.onZamkniecie();
     }
@@ -1522,14 +1522,18 @@
     tlo.addEventListener('mousedown', function (ev) { if (ev.target === tlo) koniec(); });
     doc().addEventListener('keydown', klawisz, true);
     doc().body.appendChild(tlo);
-    if (o.homeContext && typeof o.homeContext.onDialog === 'function') {
-      zwolnij = o.homeContext.onDialog(panel, {
-        kind: 'obesity-diary', isOpen: function () { return !zamkniete && tlo.isConnected; },
-        requestClose: koniec, dispose: koniec
-      });
+    if (o.homeContext) {
+      try {
+        zwolnij = o.homeContext.onDialog(panel, {
+          kind: 'obesity-diary', isOpen: function () { return !zamkniete && tlo.isConnected; },
+          requestClose: koniec, dispose: koniec
+        });
+      } catch (_e) { koniec(); return null; }
+      // An older HTMLDialog-only coordinator cannot own this native DIV.
+      if (typeof zwolnij !== 'function' || zwolnij.actorLifetimeVersion !== 1) { koniec(); return null; }
     }
     setTimeout(function () {
-      if (o.homeContext && (zamkniete || !tlo.isConnected || !o.homeContext.isCurrent())) return;
+      if (o.homeContext && (zamkniete || !tlo.isConnected || !aktualny({ homeContext: o.homeContext }))) return;
       var f = o.fokus || panel.querySelector('input, textarea, button:not(.vdo-x)');
       try { if (f) f.focus(); } catch (_e) { /* brak fokusu */ }
     }, 0);
@@ -1675,6 +1679,7 @@
 
     var o = okno(popraw ? 'Popraw wpis — ' + nazwaTypu : 'Nowy wpis leczenia — Kontynuacja',
       (ctx.nazwa ? ctx.nazwa + ' · ' : '') + (lekTekst || 'leczenie otyłości'), forma, { fokus: pDate, homeContext: ctx.homeContext });
+    if (!o) return null;
     anuluj.addEventListener('click', o.zamknij);
 
     function kandydat() {
@@ -1852,6 +1857,7 @@
       msg
     ]);
     var o = okno('Wpis z ' + (dataPL(wpis.punkt && wpis.punkt.dateISO) || '—') + ' poprawiono na dwóch urządzeniach', ctx.nazwa || '', tresc, { homeContext: ctx.homeContext });
+    if (!o) return null;
     liscie.forEach(function (v, idx) {
       var b = el('button', { type: 'button', class: 'vilda-auth-btn vilda-auth-btn-primary', text: 'Zostaw tę wersję' });
       b.addEventListener('click', function () {
@@ -1883,7 +1889,7 @@
   function sekcja(opcje) {
     var o = opcje || {};
     if (!Dz() || !o.stan || !o.patientId) return null;
-    var ctx = { patientId: o.patientId, stan: o.stan, urodzenieISO: o.urodzenieISO || '', nazwa: o.nazwa || '', migawka: o.migawka || [], onZmiana: o.onZmiana, homeContext: o.homeContext || null };
+    var ctx = { patientId: o.patientId, stan: o.stan, urodzenieISO: o.urodzenieISO || '', nazwa: o.nazwa || '', migawka: o.migawka || [], onZmiana: o.onZmiana, homeContext: o.homeContext == null ? null : o.homeContext };
     var stan = o.stan;
     var widoczne = stan.wpisy.filter(function (x) { return x.punkt; });
     var usuniete = stan.wpisy.filter(function (x) { return x.stan === 'usuniety'; });

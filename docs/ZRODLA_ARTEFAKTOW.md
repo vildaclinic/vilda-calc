@@ -2493,7 +2493,9 @@ Zamknięcie formularza lub utrata właściciela unieważnia zachowane akcje prze
 nowym wywołaniem `Dz.zapisz`. Rozpoczęta partia może zakończyć zapis pierwotnego
 pacjenta, lecz nie odświeża zastępczej karty. Rzeczywisty panel DIV korzysta
 z B1 Back, zwalniania i rozmiaru 1000 × 820 przez jawne `isOpen`, `requestClose`
-i `dispose`; nie jest traktowany jak `HTMLDialogElement`. Bez `homeContext`
+i `dispose`; nie jest traktowany jak `HTMLDialogElement`. Koordynator potwierdza
+obsługę aktora przez `cleanup.actorLifetimeVersion = 1`; niepełny kontekst albo
+stary koordynator nie otwierają aktywnego formularza. Bez `homeContext`
 pozostaje natywny przepływ. Silnik dziennika, DTO, reguły kliniczne, monitor
 DocPro i sejf nie są zmienione przez tę adaptację.
 

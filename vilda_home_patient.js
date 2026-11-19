@@ -567,7 +567,7 @@
     refresh();
   }
   w.VildaHomePatient = Object.freeze({ open: open, close: close, refresh: requestRead,
-    captureOwner: function () { var view = active; return function () { return current(view); }; }
+    captureOwner: function () { var view = active; return view ? function () { return current(view); } : null; }
   });
   d.addEventListener('vilda:home-workspace-ready', start);
   if (d.readyState === 'loading') d.addEventListener('DOMContentLoaded', start, { once: true }); else start();

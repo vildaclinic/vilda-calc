@@ -40,6 +40,10 @@ html.vilda-home-workspace dialog.vhome-patient-native-dialog.vhome-b1-child-dial
   background: #fff;
 }
 html.vilda-home-workspace .vdo-dialog.vhome-b1-child-dialog {
+  position: fixed;
+  inset: calc(var(--vhome-dialog-viewport-height, 100dvh) / 2) auto auto 50vw;
+  margin: 0;
+  transform: translate(-50%, -50%);
   width: min(1000px, calc(100vw - 32px));
   height: min(820px, calc(var(--vhome-dialog-viewport-height, 100dvh) - 32px));
   max-height: none;
