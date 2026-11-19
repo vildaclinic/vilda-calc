@@ -2651,6 +2651,7 @@ const CORE_SHELL_URLS = [
   '/vilda_professional_module.js?v=11',
   '/vilda_professional_module.js?v=12',
   '/vilda_professional_module.js?v=13',
+  '/vilda_professional_module.js?v=14',
   '/vilda_persist_runtime.js',
   '/vilda_persist_runtime.js?v=2',
   '/vilda_persist_runtime.js?v=3',

@@ -18,7 +18,8 @@ async function docpro(page) {
   await page.addInitScript(() => {
     try {
       window.localStorage.setItem('vilda-terms-accepted-v1', JSON.stringify({ version: 1, acceptedAtISO: new Date().toISOString() }));
-      window.localStorage.setItem('pwzNumber', '0000000');
+      // Fikcyjny numer z poprawną cyfrą kontrolną — jak PWZ lekarza zapisany po jego przyjęciu (P-PWZ-ODTWORZENIE).
+      window.localStorage.setItem('pwzNumber', '6000001');
     } catch (_) { /* brak storage — pomiń */ }
   });
   await page.goto('/docpro.html', { waitUntil: 'load' });
@@ -66,12 +67,16 @@ async function wczytaj(page, pid) {
   await page.locator('#vildaLcmRestore').click();
   await page.waitForSelector('#vildaLoadChoiceModal', { state: 'detached', timeout: 10000 }).catch(() => {});
   await page.waitForFunction((id) => window._vildaCurrentPatientId === id, pid);
-  await page.evaluate(() => {
-    const karta = document.getElementById('obesityCard');
-    if (!karta || karta.style.display === 'none' || !karta.style.display) document.getElementById('toggleObesityTherapy').click();
-    document.getElementById('obesityTabMonBtn').click();
-  });
-  await expect(page.locator('#obesityMonitorSection')).toBeVisible({ timeout: 10000 });
+  // Klik jak lekarz, gdy przycisk modułu jest widoczny; karta ma zostać otwarta dłużej niż sekundowe sprawdzenie
+  // paska modułów w obesity_therapy.js (P-PWZ-ODTWORZENIE: wcześniej po „Odtwórz zapis” zamykała się sama).
+  const przelacznik = page.locator('#toggleObesityTherapy');
+  const wizyta = page.locator('#obesityMonitorSection .obm-visit button').first();
+  await expect(przelacznik).toBeVisible({ timeout: 20000 });
+  if (!(await page.locator('#obesityCard').isVisible())) await przelacznik.click();
+  if (!(await page.locator('#obesityMonitorSection').isVisible())) await page.locator('#obesityTabMonBtn').click();
+  await expect(wizyta).toBeVisible({ timeout: 10000 });
+  await page.waitForTimeout(1500);
+  await expect(wizyta).toBeVisible({ timeout: 100 });
 }
 
 const punkty = (page) => page.evaluate(() => (window.obesityTherapyPoints || []).map((p) => [p.type, p.dateISO, p.weight, p.weightSource || null]));
@@ -81,6 +86,20 @@ const przycisk = (page, nazwa) => page.locator('#obesityMonitorSection .obm-visi
 const komunikat = (page) => page.locator('#obesityTherapyActionMsg');
 
 test.describe('monitor DocPro na dzienniku leczenia', () => {
+  test('DZM-0: po „Odtwórz zapis” karta „Leczenie otyłości” zostaje otwarta, a moduły profesjonalne — widoczne (P-PWZ-ODTWORZENIE)', async ({ page }) => {
+    test.setTimeout(150_000);
+    await docpro(page);
+    const pid = await pacjentka(page);
+    await wczytaj(page, pid);
+    // Dotąd odtworzenie wysyłało „input” na pustym polu PWZ: moduł profesjonalny chował pasek modułów,
+    // a obesity_therapy.js co sekundę zamykał kartę. Teraz karta stoi otwarta dłużej niż kilka takich sprawdzeń.
+    await page.waitForTimeout(3500);
+    await expect(page.locator('#obesityCard')).toBeVisible();
+    await expect(page.locator('#obesityMonitorSection .obm-visit button', { hasText: 'Kontynuacja leczenia' })).toBeVisible();
+    expect(await page.evaluate(() => document.getElementById('abxButtonWrapper').style.display)).not.toBe('none');
+    await expect(page.locator('#toggleAbxTherapy')).toBeVisible();
+  });
+
   test('DZM-1: wpis od pacjenta z Karty widać w monitorze; Kontynuacja z monitora zapisuje się w dzienniku jako „gabinet”', async ({ page }) => {
     test.setTimeout(150_000);
     await docpro(page);

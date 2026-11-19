@@ -43096,7 +43096,8 @@ zmian. Dorosły: ocena z masy (Saxenda, Mysimba) albo kliniczna — z ostatniego
   (identyczne notatki z dwóch urządzeń, punkt bez daty, usunięty nie wraca), `planDzialania`, wiek w dniu pomiaru,
   flota na prawdziwym sejfie (dwa urządzenia, starsza aplikacja 221 i 276).
 - e2e `tests/e2e/otylosc-dziennik-karta.spec.mjs` (DZ-1…DZ-6) i `tests/e2e/otylosc-dziennik-monitor.spec.mjs`
-  (DZM-1, DZM-2) na prawdziwych stronach.
+  (DZM-0…DZM-2) na prawdziwych stronach. DZM-0 pilnuje łatki P-PWZ-ODTWORZENIE (`docs/ZRODLA_ARTEFAKTOW.md`): po
+  „Odtwórz zapis” w DocPro karta „Leczenie otyłości” zamykała się sama w ciągu sekundy (błąd był już na `audyt`).
 - Strażniki stylów: `css-skorka` (nowe nadpisanie w fixture), `css-szklo` (martwe deklaracje pod skórką usunięte
   `usun-martwe-css.mjs`), `css-tokeny`.
 

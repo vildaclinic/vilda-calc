@@ -1991,6 +1991,18 @@ Opis działania i przypadki: `docs/clinical/ALGORITHMS.md`, „Leczenie otyłoś
 
 **Granice.** Znaczniki wycinków testów bez zmian (lista w łatce P-OTYLOSC-WZROST). Nowe style ustawiane wprost na elementach: brak (wiersz Historii używa istniejącego pomocnika `s`). Lint: bez nowych naruszeń w `vilda_auth_ui.js` (limit `no-useless-assignment` z `eslint-suppressions.json` bez zmian).
 
+## Łatka P-PWZ-ODTWORZENIE — odtworzony pacjent nie chowa modułów profesjonalnych (`vilda_professional_module.js` 13 → 14, 2026-11-19)
+
+**Błąd (był już na `audyt` 04fbc4fc).** „Odtwórz zapis” w DocPro (`restoreLoadedStateImmediately`, `vilda_data_import_export.js`) wpisuje do pola PWZ wartość z zapisu (`doctor.pwzNumber`, zwykle `null` — PWZ lekarza leży w `localStorage`, a pole jest puste po jego przyjęciu) i wysyła na nim `input`. Obsługa pola (`Ke`) traktowała puste pole jak niepoprawny PWZ i chowała moduły profesjonalne, w tym pasek `#abxButtonWrapper`. Sekundowe sprawdzenie w `obesity_therapy.js` (`ne`; podobne w `hypertension_therapy.js`) zamykało wtedy otwartą kartę „Leczenie otyłości” — po wczytaniu pacjenta karta zamykała się sama w ciągu sekundy od otwarcia. Wykrył to test DZM-0 (`tests/e2e/otylosc-dziennik-monitor.spec.mjs`); te same kroki na `audyt` bez zmian: karta widoczna zaraz po kliknięciu, po 2,5 s — zamknięta.
+
+```js
+// vilda_professional_module.js
+//    było:  function Ke(){const n=j.value.trim();if(st(n)){
+//    jest:  function Ke(){const n=j.value.trim();/* P-PWZ-ODTWORZENIE … */if(!n&&st(String(fe(X.pwzNumber)||"").trim()))return;if(st(n)){
+```
+
+**Granice.** Zmienia się tylko przypadek „puste pole przy zapisanym poprawnym PWZ” (PWZ trafia do `localStorage` dopiero po przyjęciu poprawnego numeru). Wpisywanie numeru, niepoprawny PWZ w polu i brak zapisanego PWZ działają jak dotąd.
+
 ## Trwała tożsamość wizyt — źródło i granica artefaktu sejfu
 
 Zmiana funkcjonalna `P-TRWALE-WIZYTY` ma bazę `audyt` z commita
