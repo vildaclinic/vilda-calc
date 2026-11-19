@@ -2129,6 +2129,49 @@ Bez zmiany trzy przypadki przyjęcia padają. `tests/e2e/powloka-panel-obcy-pacj
 przeszedł lokalnie 48/48 przy 6 równoległych przebiegach. Przed zmianą 2–3 na 12 przebiegów kończyło się
 komunikatem „Formularz zmienił się”.
 
+## Łatka P-OTYLOSC-SKOK — z Karty pacjenta prosto do monitora DocPro (`gh_therapy_monitor.js` 63 → 64, `obesity_therapy_monitor.js` 29 → 30, `vilda_cykle_leczenia.js` 7 → 8, `vilda_auth_ui.css` 84 → 85, `inline_docpro_01.css` 5 → 6, 2026-11-19, decyzje właściciela)
+
+Opis działania i przypadki: `docs/clinical/ALGORITHMS.md`, „Leczenie otyłości — etap 2: z Karty pacjenta prosto do
+monitora DocPro” (P-OTYLOSC-SKOK). Czytelne źródło Karty: `vilda_cykle_leczenia.js` (`POWODY_KROTKIE`, `powodKrotki`,
+`celSkoku`, `doDocPro`; przyciski w `sekcja`). Bez ponownej minifikacji artefaktów.
+
+```js
+// gh_therapy_monitor.js — obsługa wpisu vilda:gh-jump (N), czytelne linie
+// 1. nowe funkcje przed async function N(): ghJumpObesity(n), ghJumpAsksLoadChoice(n), ghJumpLand(n,loaded)
+//    oraz window.vildaGhJumpConsumeSoon=function(){try{setTimeout(N,700)}catch(_){}};
+// 2. było:  if(!n||!n.ghPointId){removeExact();return}
+//    jest:  if(!n||!n.ghPointId&&!ghJumpObesity(n)){removeExact();return}
+// 3. było:  if(!n.patientId){pe(n.ghPointId);removeExact();return}
+//    jest:  if(!n.patientId){if(n.ghPointId)pe(n.ghPointId);removeExact();return}
+// 4. było:  source:"pick",skipLoadChoice:!0,...operationDetail}
+//    jest:  source:"pick",skipLoadChoice:!ghJumpAsksLoadChoice(n),...operationDetail}
+// 5. było:  refreshGHTherapyMonitor()}catch{}pe(n.ghPointId)},450)
+//    jest:  refreshGHTherapyMonitor()}catch{}ghJumpLand(n,true)},450)
+// 6. było:  if(ghJumpCurrent(claim,false))pe(n.ghPointId);
+//    jest:  if(ghJumpCurrent(claim,false))ghJumpLand(n,false);
+
+// obesity_therapy_monitor.js — czytelny blok P-OTYLOSC-DZIENNIK
+// 1. nowa funkcja Dzprzebieg(id) przed Dzz; w Dzz komunikat po zapisie:
+//    było:  Cm("", "Zapisano w dzienniku leczenia — wpis widać w Karcie pacjenta i na innych urządzeniach.");
+//    jest:  … + (listy ? " Listy pacjentów zobaczą zmianę po „Zapisz dane”." : "")
+// 2. nowy czytelny blok P-OTYLOSC-SKOK przed blokiem P-OTYLOSC-WZROST: Skotworz, Skczekaj, Skpodswietl, Skwypelnij
+//    i window.obesityTherapyMonitorSkok(cel) — używa Ee/Ec/Ek/Eg/Cm/Cc/CyS z tego samego zakresu.
+```
+
+CSS: w `vilda_auth_ui.css` sekcja `.vdo` (białe tło `--bg`, `.vdo-head > :first-child`, `.vdo .vdo-btn*` z `!important`
+przy szczegółowości 0-2-0 — ta sama broń co przyciski Karty przeciw `.liquid-ios26 button` i `.vilda-auth-root
+.vilda-auth-btn-*`; odznaki `.vdo-src` i `.vdo-src-pacjent`; telefon ≤ 560 px, przyciski 44 px). W `inline_docpro_01.css`
+reguły `.obm-msg.info` i `tr.obm-row-skok` (podświetlenie wiersza klasą, nie stylem na elemencie — P-STYLE krok 5b).
+Literały zastąpione tokenami (`--text-strong`, `--line-teal`, `--space-12px`, `--space-14px`; strażnik `css-tokeny`).
+
+**Granice.** Wpis „vilda:gh-jump” bez pola `obesity` działa dokładnie jak dotąd (skok do punktu GH): wyciszone okno
+wyboru i `pe(ghPointId)`. Pole `obesity` niesie wyłącznie `{tryb, entryId}` — bez danych klinicznych (zwykły
+`sessionStorage` nie przechowuje treści pacjenta; dane usuniętego wpisu monitor czyta z dziennika po `entryId`).
+Identyfikator pacjenta w tym wpisie — jak w dotychczasowym skoku do punktu GH (alert CodeQL „Clear text storage”
+w PR vildaclinic/vilda-calc#1003 — do decyzji właściciela). Karta na innej stronie niż DocPro zostaje otwarta (jak przy skoku GH); nad DocPro — zamyka się
+(`VildaAuthUI.hide`), a skok rusza po `popstate` z jej `history.back()` albo po 600 ms. Sejf i dziennik bez zmian;
+`window.obesityTherapyPoints` zmienia się tylko przez zapis lekarza w monitorze.
+
 ## Łatka P-E2-MENARCHE — estradiol poniżej 18 lat: zakresy dorosłych po 5 latach od menarche (`lab_units_data.js` 42 → 43, `lab_unit_converter.js` 10 → 11, `vilda_lab_packages.js` 10 → 11, `inline_przelicznik_jednostek_00.css` 17 → 18, `przelicznik-jednostek.html`, 2026-11-19, decyzje właściciela)
 
 Opis działania, przypadki, dowody i ograniczenia: `docs/clinical/ALGORITHMS.md`, wpis „LAB-E2-MENARCHE”. Zmiany wprowadzono wprost w artefaktach, czytelnymi blokami; żadnego pliku nie przebudowano z dawnych źródeł ani nie minifikowano ponownie.

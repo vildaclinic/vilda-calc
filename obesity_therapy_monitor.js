@@ -61,6 +61,18 @@ function Dzdane(p, poprzedni) {
     drug: p.drug || "", substance: p.substance || "", dose: p.dose || "", comment: (poprzedni && poprzedni.comment) || ""
   };
 }
+/** Czy wpis (po id) zmienia przebieg leczenia (Włączenie, Zakończenie, zmiana leku, pierwszy wpis cyklu). */
+function Dzprzebieg(id) {
+  try {
+    var D = window.VildaDziennikOtylosci;
+    if (!Dzs || id == null || !D || typeof D.wpisPoId != "function" || typeof D.zmianaPrzebiegu != "function") return null;
+    var w = D.wpisPoId(Dzs, String(id));
+    // Lek po nazwie, jak listy pacjentów: samo uzupełnienie substancji przy tym samym leku list nie zmienia.
+    return w ? D.zmianaPrzebiegu(Dzs, w, { lekPoNazwie: true }) : null;
+  } catch (e) {
+    return null;
+  }
+}
 function Dzz(akcja) {
   try {
     var pid = Dzp(), D = window.VildaDziennikOtylosci;
@@ -77,10 +89,14 @@ function Dzz(akcja) {
       Dzw();
       return;
     }
+    // P-OTYLOSC-SKOK: Włączenie, Zakończenie i zmiana leku zmieniają przebieg leczenia, a listy pacjentów liczą się
+    // z zapisu wizyty — zobaczą zmianę dopiero po „Zapisz dane” (decyzja właściciela 2026-11-19: mówimy to wprost).
+    var przebieg = Dzprzebieg(akcja.id);
     D.zapisz(pid, plan.wersje).then(function () {
       return Dzw();
     }).then(function () {
-      Cm("", "Zapisano w dzienniku leczenia — wpis widać w Karcie pacjenta i na innych urządzeniach.");
+      var listy = przebieg || Dzprzebieg(plan.entryId);
+      Cm("", "Zapisano w dzienniku leczenia — wpis widać w Karcie pacjenta i na innych urządzeniach." + (listy ? " Listy pacjentów zobaczą zmianę po „Zapisz dane”." : ""));
     }).catch(function (e) {
       Cm("err", "Nie zapisano w dzienniku leczenia: " + (e && e.message ? e.message : "błąd zapisu") + " Zmiana zostaje tylko w formularzu tej wizyty.");
     });
@@ -92,6 +108,102 @@ try {
   document.addEventListener("vilda:patient-loaded", function () { setTimeout(Dzstart, 450); });
   setTimeout(Dzstart, 900);
 } catch (e) { /* bez dokumentu (testy) */ }
+/* P-OTYLOSC-SKOK (etap 2 projektu „Leczenie otyłości — wpisy poza wizytą”, decyzje właściciela 2026-11-19):
+   skok z Karty pacjenta — „Edytuj w DocPro →”, „Dodaj ponownie w DocPro →”, „Włączenie w DocPro →”. Pacjenta wczytuje
+   gh_therapy_monitor.js (wpis vilda:gh-jump z polem obesity), potem woła tę funkcję. Tu: karta „Leczenie otyłości”
+   na zakładce monitora i
+   • edytuj — punkt w trybie edycji (jak ołówek ✎), gdy projekcja dziennika tej pacjentki już go ma;
+   • ponownie — pola wypełnione z usuniętego wpisu; zapis przyciskiem rodzaju wizyty dodaje nowy wpis do dziennika;
+   • wlaczenie — po oknie „Nowy pomiar / Odtwórz zapis” pola pomiaru puste i podpowiedź nowego cyklu.
+   Nic nie zapisuje się samo. Inny pacjent ramki niż cel skoku — nic się nie dzieje. */
+var Sk = 0;
+var SKTYP = { start: "Włączenie", "continue": "Kontynuacja", end: "Zakończenie" };
+function Skwidoczny(el) {
+  try { return !!(el && el.offsetParent !== null && getComputedStyle(el).display !== "none"); } catch (e) { return false; }
+}
+function Skotworz() {
+  var karta = c("obesityCard"), t = c("toggleObesityTherapy");
+  if (!Skwidoczny(karta) && t) t.click();
+  var sek = c("obesityMonitorSection"), tab = c("obesityTabMonBtn");
+  if (!Skwidoczny(sek) && tab) tab.click();
+}
+function Skczekaj(warunek, ms, numer) {
+  return new Promise(function (gotowe) {
+    var koniec = Date.now() + ms;
+    (function krok() {
+      if (numer !== Sk) { gotowe(false); return; }
+      var w;
+      try { w = !!warunek(); } catch (e) { w = false; }
+      if (w || Date.now() >= koniec) { gotowe(w); return; }
+      setTimeout(krok, 150);
+    })();
+  });
+}
+function Skpodswietl(id) {
+  try {
+    var b = document.querySelector('#obesityTherapyTableWrap [data-id="' + String(id).replace(/["\\]/g, "") + '"]');
+    var tr = b && b.closest ? b.closest("tr") : null;
+    if (!tr) return;
+    if (typeof tr.scrollIntoView == "function") tr.scrollIntoView({ block: "center" });
+    // Klasa w arkuszu (inline_docpro_01.css), nie styl na elemencie (P-STYLE krok 5b).
+    tr.classList.add("obm-row-skok");
+    setTimeout(function () { try { tr.classList.remove("obm-row-skok"); } catch (e) { /* wiersz przerysowany */ } }, 2600);
+  } catch (e) {
+    d(e);
+  }
+}
+function Skwypelnij(dane) {
+  Ec();
+  Ek("obesityAge", dane.ageYears == null ? "" : dane.ageYears);
+  Ek("obesityAgeMonths", dane.ageMonths == null ? "" : dane.ageMonths);
+  Ek("obesityWeight", dane.weight == null ? "" : dane.weight);
+  Ek("obesityHeight", Number(dane.height) > 0 ? dane.height : "");
+  Ek("obesityDose", dane.dose || "");
+  Ek("obesityDate", dane.dateISO || "");
+  Eg(dane.drug, dane.substance);
+  try { CyS(); } catch (e) { d(e); }
+}
+window.obesityTherapyMonitorSkok = function (cel) {
+  if (!cel || typeof cel != "object" || typeof cel.patientId != "string" || !cel.patientId) return false;
+  var numer = ++Sk;
+  var tenPacjent = function () { return window._vildaCurrentPatientId === cel.patientId; };
+  var bezOkna = function () { return !document.getElementById("vildaLoadChoiceModal"); };
+  var dziennik = function () { return tenPacjent() && Dzp() === cel.patientId && Dzpid === cel.patientId && !!Dzs; };
+  // Tylko „wlaczenie” po wczytaniu pokazuje okno wyboru wizyty — czekamy na decyzję lekarza (bez limitu praktycznego).
+  var okno = cel.tryb === "wlaczenie" && cel.poWczytaniu ? Skczekaj(bezOkna, 6 * 60 * 60 * 1000, numer) : Promise.resolve(true);
+  // Moduł otyłości w DocPro pokazuje się po potwierdzeniu dostępu PRO i trybu profesjonalnego — chwilę po starcie strony.
+  var modul = function () { return Skwidoczny(c("obesityCard")) || Skwidoczny(c("toggleObesityTherapy")); };
+  okno.then(function () {
+    return Skczekaj(dziennik, 15000, numer);
+  }).then(function (jest) {
+    return Skczekaj(modul, 10000, numer).then(function () { return jest; });
+  }).then(function (jest) {
+    if (numer !== Sk || !tenPacjent()) return;
+    Skotworz();
+    if (cel.tryb === "edytuj") {
+      Skczekaj(function () { return I().some(function (p) { return p && String(p.id) === String(cel.entryId); }); }, jest ? 3000 : 0, numer).then(function (ma) {
+        if (numer !== Sk) return;
+        if (!ma) { Cm("warn", "Nie znaleziono tego wpisu w monitorze — sprawdź listę punktów albo odśwież Kartę pacjenta."); return; }
+        Ee(String(cel.entryId));
+        Skpodswietl(cel.entryId);
+      });
+    } else if (cel.tryb === "ponownie") {
+      // Dane usuniętego wpisu — z dziennika tej pacjentki (sejf), nie z wpisu skoku w sessionStorage.
+      var usuniety;
+      try { usuniety = jest && cel.entryId ? window.VildaDziennikOtylosci.wpisPoId(Dzs, String(cel.entryId)) : null; } catch (e) { usuniety = null; }
+      var dane = usuniety && usuniety.biezaca && usuniety.biezaca.dane;
+      if (!dane || typeof dane != "object") { Cm("warn", "Nie znaleziono usuniętego wpisu w dzienniku leczenia — wpisz punkt w monitorze."); return; }
+      Skwypelnij(dane);
+      var typ = SKTYP[dane.type] || "Kontynuacja", data = dane.dateISO ? String(dane.dateISO).split("-").reverse().join(".") : "";
+      Cm("info", "Uzupełniono z usuniętego wpisu: " + typ + (data ? ", " + data : "") + ". Sprawdź pola i zapisz przyciskiem „" + typ + " leczenia”.", [{ label: "Wyczyść pola", run: function () { Ec(); Cc(); } }]);
+    } else if (cel.tryb === "wlaczenie") {
+      Ec();
+      Cm("info", "Nowy cykl leczenia otyłości. Wpisz pomiary z tej wizyty, lek, dawkę i datę, potem wybierz „Włączenie leczenia”.");
+    }
+    try { var bar = c("obesityTherapyActionMsg"); bar && !bar.hidden && typeof bar.scrollIntoView == "function" && bar.scrollIntoView({ block: "nearest" }); } catch (e) { d(e); }
+  });
+  return true;
+};
 /* P-OTYLOSC-WZROST (etap 1 projektu „Leczenie otyłości — wpisy poza wizytą”, decyzje właściciela 2026-11-17/18).
    Rodzic co miesiąc przysyła masę dziecka, a wzrostu nie mierzy się co miesiąc (dorosły w ogóle nie rośnie), więc:
    • Kontynuacja zapisuje się bez wzrostu (BMI i BMI-SDS tego punktu zostają puste). Wzrost jest wymagany przy
