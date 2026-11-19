@@ -3061,9 +3061,9 @@ textarea.vdo-input {
     justify-content: flex-start;
   }
 
-  /* telefon: palcem — 40 px zamiast 32 */
+  /* telefon: cel dotyku 44 px (standard aplikacji, pilnuje go otylosc-dziennik-karta-mobile) */
   .vdo .vdo-btn {
-    min-height: 40px;
+    min-height: 44px;
     padding: 0 14px;
     font-size: 13px;
   }

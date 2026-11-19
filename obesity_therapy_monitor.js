@@ -67,7 +67,8 @@ function Dzprzebieg(id) {
     var D = window.VildaDziennikOtylosci;
     if (!Dzs || id == null || !D || typeof D.wpisPoId != "function" || typeof D.zmianaPrzebiegu != "function") return null;
     var w = D.wpisPoId(Dzs, String(id));
-    return w ? D.zmianaPrzebiegu(Dzs, w) : null;
+    // Lek po nazwie, jak listy pacjentów: samo uzupełnienie substancji przy tym samym leku list nie zmienia.
+    return w ? D.zmianaPrzebiegu(Dzs, w, { lekPoNazwie: true }) : null;
   } catch (e) {
     return null;
   }
@@ -187,9 +188,14 @@ window.obesityTherapyMonitorSkok = function (cel) {
         Ee(String(cel.entryId));
         Skpodswietl(cel.entryId);
       });
-    } else if (cel.tryb === "ponownie" && cel.dane && typeof cel.dane == "object") {
-      Skwypelnij(cel.dane);
-      var typ = SKTYP[cel.dane.type] || "Kontynuacja", data = cel.dane.dateISO ? String(cel.dane.dateISO).split("-").reverse().join(".") : "";
+    } else if (cel.tryb === "ponownie") {
+      // Dane usuniętego wpisu — z dziennika tej pacjentki (sejf), nie z wpisu skoku w sessionStorage.
+      var usuniety;
+      try { usuniety = jest && cel.entryId ? window.VildaDziennikOtylosci.wpisPoId(Dzs, String(cel.entryId)) : null; } catch (e) { usuniety = null; }
+      var dane = usuniety && usuniety.biezaca && usuniety.biezaca.dane;
+      if (!dane || typeof dane != "object") { Cm("warn", "Nie znaleziono usuniętego wpisu w dzienniku leczenia — wpisz punkt w monitorze."); return; }
+      Skwypelnij(dane);
+      var typ = SKTYP[dane.type] || "Kontynuacja", data = dane.dateISO ? String(dane.dateISO).split("-").reverse().join(".") : "";
       Cm("info", "Uzupełniono z usuniętego wpisu: " + typ + (data ? ", " + data : "") + ". Sprawdź pola i zapisz przyciskiem „" + typ + " leczenia”.", [{ label: "Wyczyść pola", run: function () { Ec(); Cc(); } }]);
     } else if (cel.tryb === "wlaczenie") {
       Ec();

@@ -233,8 +233,8 @@ test.describe('Karta pacjenta → monitor leczenia otyłości w DocPro', () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.waitForTimeout(300);
     s = await styl();
-    expect(s.popraw.h, 'telefon: przycisk do palca').toBeGreaterThanOrEqual(40);
-    expect(s.dodaj.h).toBeLessThanOrEqual(42);
+    expect(s.popraw.h, 'telefon: cel dotyku').toBeGreaterThanOrEqual(44);
+    expect(s.dodaj.h, 'telefon: cel dotyku').toBeGreaterThanOrEqual(44);
     expect(s.przewijanie, 'telefon bez poziomego przewijania').toBe(false);
   });
 });

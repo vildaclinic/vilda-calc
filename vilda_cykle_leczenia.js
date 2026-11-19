@@ -1242,7 +1242,9 @@
    * leku poprawia się w DocPro — tak jak dotąd zmianę leku.
    * Zwraca null (wolno) albo powód: 'wlaczenie' | 'zakonczenie' | 'pierwszy-wpis' | 'zmiana-leku'.
    */
-  function zmianaPrzebiegu(stan, wpis) {
+  /** opcje.lekPoNazwie — lek porównany samą nazwą (jak listy pacjentów, drugKey), bez substancji: dla komunikatu
+   *  monitora „Listy pacjentów zobaczą zmianę…” (P-OTYLOSC-SKOK). Bez opcji — reguła Karty jak dotąd (lek i substancja). */
+  function zmianaPrzebiegu(stan, wpis, opcje) {
     var d = wpis && (wpis.punkt || (wpis.biezaca && wpis.biezaca.dane));
     if (!d) return 'zmiana-leku';
     if (d.type === 'start') return 'wlaczenie';
@@ -1258,11 +1260,17 @@
     for (var k = 0; k < lista.length; k++) if (lista[k] && lista[k].id === '__vdo_ten__') { i = k; break; }
     var poprzedni = i > 0 ? lista[i - 1] : null;
     if (!poprzedni || poprzedni.type === 'end') return 'pierwszy-wpis';
-    return kluczLeku(poprzedni) === kluczLeku(d) ? null : 'zmiana-leku';
+    var klucz = opcje && opcje.lekPoNazwie ? kluczNazwyLeku : kluczLeku;
+    return klucz(poprzedni) === klucz(d) ? null : 'zmiana-leku';
   }
 
   function kluczLeku(p) {
     return (String((p && p.drug) || '').trim() + '|' + String((p && p.substance) || '').trim()).toLowerCase();
+  }
+
+  function kluczNazwyLeku(p) {
+    var nazwa = String((p && p.drug) || '').trim();
+    return (nazwa || String((p && p.substance) || '').trim()).toLowerCase();
   }
 
   var POWODY_DOCPRO = Object.freeze({
@@ -1717,15 +1725,13 @@
     return powod ? (POWODY_KROTKIE[powod] || POWODY_KROTKIE['zmiana-leku']) : null;
   }
 
-  /** Cel skoku do monitora DocPro (format wpisu „vilda:gh-jump” z polem obesity zamiast ghPointId). */
+  /** Cel skoku do monitora DocPro (format wpisu „vilda:gh-jump” z polem obesity zamiast ghPointId).
+   *  Bez danych klinicznych: zwykły sessionStorage nie przechowuje treści pacjenta — tylko rodzaj skoku i id wpisu
+   *  (identyfikator pacjenta, jak dotychczasowy skok do punktu GH). Dane usuniętego wpisu monitor czyta z dziennika. */
   function celSkoku(patientId, tryb, wpis) {
     // Id punktu w monitorze = entryId wpisu dziennika; punkt z dawnej wizyty, jeszcze nieprzeniesiony, ma id z migawki.
     var id = wpis ? (wpis.entryId || (wpis.punkt && wpis.punkt.id)) : null;
-    var cel = { tryb: tryb, entryId: id != null && id !== '' ? String(id) : null, dane: null };
-    if (tryb === 'ponownie' && wpis && wpis.biezaca && wpis.biezaca.dane) {
-      try { cel.dane = JSON.parse(JSON.stringify(wpis.biezaca.dane)); } catch (_e) { cel.dane = null; }
-    }
-    return { patientId: String(patientId), obesity: cel, ts: Date.now() };
+    return { patientId: String(patientId), obesity: { tryb: tryb, entryId: id != null && id !== '' ? String(id) : null }, ts: Date.now() };
   }
 
   /** Jak Gr() w vilda_auth_ui.js (skok do punktu GH): ta sama strona DocPro, mostek powłoki albo przejście na docpro.html. */

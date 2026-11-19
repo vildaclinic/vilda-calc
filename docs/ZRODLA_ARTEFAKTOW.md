@@ -2164,7 +2164,10 @@ przy szczegółowości 0-2-0 — ta sama broń co przyciski Karty przeciw `.liqu
 `.obm-msg.info`.
 
 **Granice.** Wpis „vilda:gh-jump” bez pola `obesity` działa dokładnie jak dotąd (skok do punktu GH): wyciszone okno
-wyboru i `pe(ghPointId)`. Karta na innej stronie niż DocPro zostaje otwarta (jak przy skoku GH); nad DocPro — zamyka się
+wyboru i `pe(ghPointId)`. Pole `obesity` niesie wyłącznie `{tryb, entryId}` — bez danych klinicznych (zwykły
+`sessionStorage` nie przechowuje treści pacjenta; dane usuniętego wpisu monitor czyta z dziennika po `entryId`).
+Identyfikator pacjenta w tym wpisie — jak w dotychczasowym skoku do punktu GH (alert CodeQL „Clear text storage”
+w PR vildaclinic/vilda-calc#1003 — do decyzji właściciela). Karta na innej stronie niż DocPro zostaje otwarta (jak przy skoku GH); nad DocPro — zamyka się
 (`VildaAuthUI.hide`), a skok rusza po `popstate` z jej `history.back()` albo po 600 ms. Sejf i dziennik bez zmian;
 `window.obesityTherapyPoints` zmienia się tylko przez zapis lekarza w monitorze.
 

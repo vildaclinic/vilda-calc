@@ -321,7 +321,7 @@ function ghJumpWatchAttempt(claim){
   observer.observe(parent,{childList:true});claim.cleanup.push(function(){observer.disconnect()});
 }
 /* P-OTYLOSC-SKOK (2026-11-19, etap 2 projektu „Leczenie otyłości — wpisy poza wizytą”): ten sam wpis vilda:gh-jump
-   niesie skok z Karty pacjenta do monitora leczenia otyłości — {patientId, obesity:{tryb, entryId, dane}, ts}
+   niesie skok z Karty pacjenta do monitora leczenia otyłości — {patientId, obesity:{tryb, entryId}, ts}, bez danych klinicznych
    zamiast ghPointId (vilda_cykle_leczenia.js, celSkoku). Wczytanie pacjenta, strażnik niezapisanych zmian i ramki
    powłoki — bez zmian, jak dla punktu GH. Różnice: na miejscu działa monitor otyłości (window.obesityTherapyMonitorSkok
    w obesity_therapy_monitor.js), a tryb „wlaczenie” (nowy cykl) nie wycisza okna „Nowy pomiar / Odtwórz zapis” —
