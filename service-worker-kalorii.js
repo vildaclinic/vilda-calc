@@ -4018,6 +4018,7 @@ const OPTIONAL_ASSETS = [
   '/respiratory_module.js?v=6',
   '/bp_module.js?v=5',
   '/respiratory_module.js?v=7',
+  '/respiratory_module.js?v=8',
   '/bp_module.js?v=6',
   '/vitalSigns.js?v=6',
   '/bp_module.js?v=7',

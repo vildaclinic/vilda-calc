@@ -2384,3 +2384,34 @@ haków Przypomnień daje teraz SHA256
 `05788f1bac66edfb60c8069c45db4c98ebce30ba770a0626d6d022456386f1b1`;
 ponowne zastosowanie tych samych par odtwarza połączony artefakt bajtowo.
 Nie odtwarzano ani nie zmieniano obliczeń klinicznych przy scalaniu.
+
+## Dodatkowe narzędzia — prezentacja liczby oddechów, etap 7A
+
+Czytelny respiratory_module.js jest źródłem wykonywanym bez kompilacji.
+VildaRespiratory.buildResult(input, nativeEngine) zwraca html i severity.
+Przyjmuje kontekst wieku, wypełnienie pól wieku, rrRaw, temperaturę, stan,
+populację i tryb profesjonalny jako argumenty. Obliczenia deleguje do
+przekazanego vitalSigns. Nie odczytuje DOM, konta, pacjenta ani persistence.
+Jawny resolver silnika i leniwe gettery są używane wyłącznie przez natywny
+wrapper, aby zachować pierwotną kolejność odczytów i walidacji.
+
+Wspólny prywatny rdzeń zachowuje oryginalną prezentację. Funkcje classify,
+percText, sourceNote, resetTone, applyTone, setTrustedHtml, ageFieldsFilled
+i init są bajtowo identyczne z oryginałem. Natywny renderer zachowuje montaż,
+inicjalizację i efekty; nowe okno narzędzia nie jest w tym przyroście aktywowane.
+
+Oryginalny plik jest przypięty w tests/fixtures/respiratory-module-before-tools.js.txt,
+z pochodzeniem w pliku .origin.json: commit 7de34c337d65658572d6889fea118ba63d5dc2b4,
+Git blob bfff8fc89081ae1f12cbc5d12e352b30cf4fd980, SHA256
+a17c0e0ec94f5e9654c8007ec22bcce5efcc8ecc9829de748db2f582ab3fd09c.
+Fixture nie jest odtwarzany z nowej implementacji. Test
+tests/unit/respiratory-presentation-parity.test.mjs uruchamia obie wersje
+z rzeczywistym vitalSigns.js i porównuje wynik oraz uporządkowany ślad efektów.
+
+Przy włączeniu audyt 00ec793aed5979bee58280ba7c4dd507f470758d (PR991)
+zachowano dokładne zmiany natywnej obsługi bezczynności karty. Niezależne
+odtworzenie pięciu par AuthUI i jednej pary SessionBridge jest bajtowo zgodne
+z połączonym artefaktem. Haki B1 i Przypomnień oraz most prezentacji notatek
+pozostają zachowane. Baza po odwróceniu haków Przypomnień ma teraz SHA256
+f493d3850028758156fd78dbd96abef5a811b16324e5763afd8dc695838d5f50.
+Sejf, manifesty kliniczne i pakiet transportu UI nie zmieniły się przy tym scaleniu.

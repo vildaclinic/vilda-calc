@@ -1084,8 +1084,8 @@
   "sha256": "ce37c7e8c7a2745ad9fd475308e499d59c64b7dbf7ec136b88cb3e655bb6d914"
  },
  "respiratory_module.js": {
-  "v": 7,
-  "sha256": "a17c0e0ec94f5e9654c8007ec22bcce5efcc8ecc9829de748db2f582ab3fd09c"
+  "v": 8,
+  "sha256": "9cda11dc111bae8a00f160e637f4bdedd368da77bd891e68b5219552744a69d9"
  },
  "sga_birth_module.js": {
   "v": 15,

@@ -1,0 +1,10 @@
+{
+  "sourceRepository": "vildaclinic/vilda-calc",
+  "sourceCommit": "7de34c337d65658572d6889fea118ba63d5dc2b4",
+  "sourcePath": "respiratory_module.js",
+  "sourceGitBlob": "bfff8fc89081ae1f12cbc5d12e352b30cf4fd980",
+  "sourceSha256": "a17c0e0ec94f5e9654c8007ec22bcce5efcc8ecc9829de748db2f582ab3fd09c",
+  "fixturePath": "tests/fixtures/respiratory-module-before-tools.js.txt",
+  "captureCommand": "git show 7de34c337d65658572d6889fea118ba63d5dc2b4:respiratory_module.js > tests/fixtures/respiratory-module-before-tools.js.txt",
+  "purpose": "Immutable native presentation baseline before the shared result boundary; execute against the current real vitalSigns.js engine. Do not regenerate from the refactored implementation."
+}

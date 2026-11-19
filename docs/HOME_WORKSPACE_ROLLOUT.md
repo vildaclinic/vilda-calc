@@ -431,3 +431,27 @@ Testy `home-workspace-reminders-foundation.spec.mjs` oraz
 sejfu. Sprawdzają automatyczne umieszczenie karty, działanie natywnych akcji,
 powroty i błędy, historię z paginacją, granicę między pacjentami i globalnym
 dzwonkiem oraz geometrię desktopową i mobilną.
+
+## Etap 7A — przygotowanie prezentacji dodatkowych narzędzi
+
+Pierwszy przyrost udostępnia VildaRespiratory.buildResult(input, nativeEngine).
+Zwraca istniejący HTML wyniku oraz jego severity, korzystając z jawnie przekazanego
+silnika vitalSigns. Bieżąca karta oddechów deleguje do tego samego rdzenia.
+Następne okno narzędzia będzie mogło prezentować wynik szkicu bez chwilowego
+przepisywania pól formularza i bez uruchamiania efektów renderera.
+
+Przypięty oryginał sprzed refaktoryzacji oraz rzeczywisty vitalSigns.js sprawdzają
+dokładną zgodność HTML, tonów, kolejności odczytów, argumentów silnika,
+inicjalizacji i efektów pulsowania dotychczasowej karty. Wydzielenie nie zmienia
+wzorów, referencji, progów, jednostek, walidacji ani sposobu zapisu pacjenta.
+
+Katalog ośmiu narzędzi i pozostałe okna nadal należą do następnego przyrostu.
+Przed ich aktywacją trzeba doprecyzować w makiecie miejsce obecnych funkcji:
+pakietu PDF, opisu pacjenta, wyników DS i Cole'a, PDF obwodów, bazy produktów,
+MET oraz osobnego PAL i edytowalnych pomiarów spożycia. Nieobecność tych
+szczegółów w schematycznym podglądzie nie oznacza usunięcia ich z aplikacji.
+
+Każdy kolejny adapter musi wykazać parytet z faktyczną kartą produkcyjną.
+Publiczny helper nie jest automatycznie równoważnym wejściem renderera.
+Pola szkicu wymagają osłony obejmującej natywne nasłuchy capture i planowanie
+autosave, nie tylko innych identyfikatorów i zatrzymania zdarzeń na polu.
