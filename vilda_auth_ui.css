@@ -2599,7 +2599,7 @@ body.vilda-modal-alert-open #scrollTopBtn {
   justify-content: center;
   gap: var(--space-4px);
   min-height: 32px;
-  padding: 0 12px;
+  padding: 0 var(--space-12px);
   box-sizing: border-box;
   background: var(--bg) !important;
   color: var(--primary) !important;
@@ -3064,7 +3064,7 @@ textarea.vdo-input {
   /* telefon: cel dotyku 44 px (standard aplikacji, pilnuje go otylosc-dziennik-karta-mobile) */
   .vdo .vdo-btn {
     min-height: 44px;
-    padding: 0 14px;
+    padding: 0 var(--space-14px);
     font-size: 13px;
   }
 

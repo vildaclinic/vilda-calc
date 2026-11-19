@@ -2160,8 +2160,9 @@ monitora DocPro” (P-OTYLOSC-SKOK). Czytelne źródło Karty: `vilda_cykle_lecz
 
 CSS: w `vilda_auth_ui.css` sekcja `.vdo` (białe tło `--bg`, `.vdo-head > :first-child`, `.vdo .vdo-btn*` z `!important`
 przy szczegółowości 0-2-0 — ta sama broń co przyciski Karty przeciw `.liquid-ios26 button` i `.vilda-auth-root
-.vilda-auth-btn-*`; odznaki `.vdo-src` i `.vdo-src-pacjent`; telefon ≤ 560 px). W `inline_docpro_01.css` reguła
-`.obm-msg.info`.
+.vilda-auth-btn-*`; odznaki `.vdo-src` i `.vdo-src-pacjent`; telefon ≤ 560 px, przyciski 44 px). W `inline_docpro_01.css`
+reguły `.obm-msg.info` i `tr.obm-row-skok` (podświetlenie wiersza klasą, nie stylem na elemencie — P-STYLE krok 5b).
+Literały zastąpione tokenami (`--text-strong`, `--line-teal`, `--space-12px`, `--space-14px`; strażnik `css-tokeny`).
 
 **Granice.** Wpis „vilda:gh-jump” bez pola `obesity` działa dokładnie jak dotąd (skok do punktu GH): wyciszone okno
 wyboru i `pe(ghPointId)`. Pole `obesity` niesie wyłącznie `{tryb, entryId}` — bez danych klinicznych (zwykły

@@ -145,10 +145,9 @@ function Skpodswietl(id) {
     var tr = b && b.closest ? b.closest("tr") : null;
     if (!tr) return;
     if (typeof tr.scrollIntoView == "function") tr.scrollIntoView({ block: "center" });
-    var tlo = tr.style.background;
-    tr.style.transition = "background 0.3s";
-    tr.style.background = "rgba(0,131,141,0.16)";
-    setTimeout(function () { try { tr.style.background = tlo; } catch (e) { /* wiersz przerysowany */ } }, 2600);
+    // Klasa w arkuszu (inline_docpro_01.css), nie styl na elemencie (P-STYLE krok 5b).
+    tr.classList.add("obm-row-skok");
+    setTimeout(function () { try { tr.classList.remove("obm-row-skok"); } catch (e) { /* wiersz przerysowany */ } }, 2600);
   } catch (e) {
     d(e);
   }

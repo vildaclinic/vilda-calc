@@ -81,7 +81,9 @@
         #obesityMonitorSection .obm-msg.err{border:var(--border-emphasis) solid var(--danger);background:#ffeaea;color:#8e1c1c}
         #obesityMonitorSection .obm-msg.warn{border:var(--border-hairline) solid #EF9F27;background:#FAEEDA;color:#633806}
 /* P-OTYLOSC-SKOK: podpowiedź po skoku z Karty pacjenta (nowy cykl, wpis z usuniętego) — turkus jak na makiecie etapu 2 */
-.obm-msg.info{border:var(--border-hairline) solid var(--primary);background:#e0f2f1;color:#0f2b33}
+.obm-msg.info{border:var(--border-hairline) solid var(--primary);background:#e0f2f1;color:var(--text-strong)}
+/* P-OTYLOSC-SKOK: wiersz punktu otwartego z Karty pacjenta — chwilowe podświetlenie, jak przy skoku do punktu GH */
+#obesityTherapyTableWrap tr.obm-row-skok{background:var(--line-teal);transition:background .3s}
         #obesityMonitorSection .obm-msg-actions{display:flex;flex-wrap:wrap;gap:var(--space-6px)}
         #obesityMonitorSection .obm-msg-btn{font-size:.8rem;line-height:1.3;min-width:0;max-width:100%;white-space:normal;text-align:left;margin:0}
         #obesityMonitorSection .obm-msg-btn:focus-visible{outline:var(--border-emphasis) solid var(--primary);outline-offset:2px}

@@ -797,7 +797,7 @@
  },
  "inline_docpro_01.css": {
   "v": 6,
-  "sha256": "06a392284033f4a494f4bc80d1214d648b2a52991a9ab00e8d4c8f75e4baeba4"
+  "sha256": "218fc529143475cfbe6803be661a13bc20dd09a4f3df53768bb5cbe694bad6ad"
  },
  "inline_docpro_03.js": {
   "v": 5,
@@ -1061,7 +1061,7 @@
  },
  "obesity_therapy_monitor.js": {
   "v": 30,
-  "sha256": "60ae5f5589ef76ca8a4e287c8a152f455577bdd7b0d5dc63e2207a566a7b350e"
+  "sha256": "f5df6d3822e408e7841d69dcf56ca97b08cbf49c831e4de84f1de39fefd3d110"
  },
  "pdfmake.min.js": {
   "v": 1,
@@ -1165,7 +1165,7 @@
  },
  "vilda_auth_ui.css": {
   "v": 85,
-  "sha256": "0c7048578946e76889a7b8d674427c7a6d1c37ae4fade92c8176d1652bc53b35"
+  "sha256": "3d9bd43beb06ac4c9ceb37fdfe214304ce6126280b6f2d31293704a8f7a7438a"
  },
  "vilda_auth_ui.js": {
   "v": 572,
