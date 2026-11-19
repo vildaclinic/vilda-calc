@@ -166,7 +166,7 @@
       var cipher; try { cipher = JSON.parse(raw); } catch (_) { retire(owner, reservation, raw, false); return null; }
       if (!cipherValue(cipher) || typeof reservation !== 'string' || !reservation || typeof owner.epoch !== 'string' || !owner.epoch) { retire(owner, reservation, raw, false); return null; }
       var plain = await owner.vault.decryptPayloadForCurrentUser(cipher.iv, cipher.data);
-      if (!owns(owner, reservation, raw, true)) return null;
+      if (!owns(owner, reservation, raw, true)) { retire(owner, reservation, raw); return null; }
       if (!plain || plain.namespace !== PURPOSE || plain.version !== VERSION || plain.purpose !== kind
         || plain.accountId !== owner.account || plain.tabId !== owner.tab || plain.epoch !== owner.epoch
         || !sameMode(plain.mode, owner.mode) || plain.nonce !== reservation) {

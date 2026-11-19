@@ -529,8 +529,12 @@ kontekst źródłowego UI. Brak protokołu kończy się istniejącą wskazówką
 odświeżenia, bez zastępczego zapisu. Nie ma oczekiwania pomiędzy publikacją a
 tym sprawdzeniem ani ogólnego wyjątku dla zdarzeń zmiany pacjenta.
 
-Odczyt nie zużywa zamiaru; osobny
-synchroniczny CAS zużywa wyłącznie sprawdzony szyfrogram. Stary plaintext jest
+Prawidłowy odczyt nie zużywa zamiaru; osobny synchroniczny CAS zużywa
+wyłącznie sprawdzony szyfrogram. Jeżeli UI zostaje zastąpione podczas
+deszyfrowania lub tuż przed kontynuacją konsumenta, porzucony odczyt wycofuje
+wyłącznie swój dokładny szyfrogram. Nadal musi pasować pierwotny właściciel,
+token, epoka, generacja dokumentu, rezerwacja i raw; dlatego opuszczenie
+dokumentu oraz nowsze zastępstwo zachowują własne przekazanie. Stary plaintext jest
 wycofywany przez CAS, nigdy migrowany ani zapisywany ponownie. Nie ma fallbacku
 z jawnymi identyfikatorami. Cel B przy pacjencie A lub pustym formularzu pozostaje
 prawidłowym przekazaniem; transport nie wymaga zgodności celu z formularzem.

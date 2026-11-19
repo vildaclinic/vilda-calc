@@ -1293,7 +1293,7 @@
  },
  "vilda_chrome.js": {
   "v": 296,
-  "sha256": "66eb6767e955063b451e6c9103447c971aa8b0eccf60d970b0563c2562cffbdf"
+  "sha256": "cb30c8f896951f8ff2d9c7f13e948298110414e52e71cbac470e68dfe545c60e"
  },
  "vilda_clinical_crypto.js": {
   "v": 2,
@@ -2173,7 +2173,7 @@
  },
  "vilda_ui_intents.js": {
   "v": 1,
-  "sha256": "9ac335b3410d83b7fdfccd4a5e760233ba33be2a54727f1dec8e9c95ff50bc1a"
+  "sha256": "5fb1cb39afe1da32615a0a899c0df5e53083195796ca839292a593c7bcf02004"
  },
  "vilda_unsaved_guard.js": {
   "v": 10,

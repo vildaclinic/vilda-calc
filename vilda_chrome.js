@@ -1166,13 +1166,13 @@ function Ot(){
   function current(){return Gv_decrypting===stage&&stage.doc===r.document&&stage.api===r.VildaDataImportExport&&stage.apply===r.applyLoadedData&&(stage.accepted||scope.isCurrent())}
   Promise.resolve().then(async function(){
     var lease=await transport.open("pending-patient-load",raw,current);
-    if(!current())return;
+    if(!current()){if(lease)lease.discardExact();return;}
     if(!lease){re=true;return}
     stage.lease=lease;
     var t=lease.value.patientId;
     var scopedLoad=!!(loadApi&&typeof loadApi.captureAcceptedPatientLoad==="function"),acceptedLoad=scopedLoad?loadApi.captureAcceptedPatientLoad({patientId:t}):null;
     if(scopedLoad&&!acceptedLoad){lease.discardExact();re=true;return}
-    if(!lease.consumeExact()){re=true;return}
+    if(!lease.consumeExact()){try{lease.discardExact()}catch{}re=true;return}
     // From this point the accepted-load owner replaces the producer UI scope.
     stage.accepted=true;scope.dispose();
     re=!0;return a.getPatient(t).then(function(n){if(!lease.current()||scopedLoad&&(!loadApi.isAcceptedPatientLoadCurrent(acceptedLoad)||e.getItem("vilda:pendingPatientLoad")!==null))return;var s=n&&Array.isArray(n.snapshots)&&n.snapshots.length?n.snapshots[0]:null;if(!(!s||!s.payload)){var apply=function(){return r.applyLoadedData(s.payload)},publish=function(operationDetail){try{typeof r.CustomEvent=="function"&&o&&o.dispatchEvent(new r.CustomEvent("vilda:patient-loaded",{detail:{patientId:t,savedAtISO:s.savedAtISO||null,snapshotCount:n&&n.snapshotCount||n.snapshots.length||null,name:s.payload&&s.payload.name||null,source:"pick",...operationDetail}}))}catch{}};if(scopedLoad){if(!loadApi.runAcceptedPatientLoad(acceptedLoad,s.payload,{apply:apply,publish:publish}))return}else{try{apply()}catch{}publish({})}var i=r.VildaChrome;i&&typeof i.refreshPatientChip=="function"&&i.refreshPatientChip();try{var d=e.getItem("vilda:postLoadScroll");d==="advancedGrowth"&&(e.removeItem("vilda:postLoadScroll"),setTimeout(function(){var c=o.getElementById("toggleAdvancedGrowth"),u=o.getElementById("advancedGrowthSection");if(u){var l="";try{l=u.style&&u.style.display||""}catch{}if((l===""||l==="none")&&c)try{c.click()}catch{}try{u.scrollIntoView({behavior:"smooth",block:"start"})}catch{}}},300))}catch{}}}).catch(function(){});

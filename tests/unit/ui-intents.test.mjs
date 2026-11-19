@@ -241,6 +241,23 @@ describe('ciphertext-only native UI intents', () => {
     expect(e.api.peek(LOAD)).toBe(newer.raw);
   });
 
+  it('a native patient publication during real decrypt retires the abandoned intent before a fresh consumer can open it', async () => {
+    const e = await fixture(), receipt = await e.api.prepare(LOAD, { patientId: 'fictional queued patient B' });
+    const scope = e.api.captureCallerScope(), held = holdCrypto(e, 'decrypt');
+    const pending = e.api.open(LOAD, receipt.raw, scope);
+    await held.finished;
+    e.session.setItem('vildaCurrentPatientId', 'fictional selected patient C');
+    e.document.dispatchEvent(new CustomEvent('vilda:patient-loaded', { detail: { patientId: 'fictional selected patient C', source: 'pick' } }));
+    expect(scope.isCurrent()).toBe(false);
+    held.release();
+    expect(await pending).toBeNull();
+    held.restore();
+    expect(e.api.peek(LOAD)).toBeNull();
+    expect(e.session.getItem(e.api.reservationKey(LOAD))).toBeNull();
+    expect(await e.api.open(LOAD, receipt.raw)).toBeNull();
+    expect(e.session.getItem('vildaCurrentPatientId')).toBe('fictional selected patient C');
+  });
+
   it('a delayed decrypt cannot retire a newer intent or its reservation', async () => {
     const e = await fixture(), first = await e.api.prepare(LOAD, { patientId: 'fictional older' });
     const hold = holdCrypto(e, 'decrypt'), older = e.api.open(LOAD, first.raw);
