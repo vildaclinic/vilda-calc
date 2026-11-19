@@ -33,6 +33,26 @@ async function records(frame, ids) {
   }, ids);
 }
 
+async function assertProfessionalAvailable(frame) {
+  // The native success path hides the old informational #professionalModule.
+  // Verify the actual clinical controls and the native account/confirmation
+  // receipts instead; all queries here observe the ordinary prepared flow.
+  await expect(frame.locator('#professionalOverlay')).toBeHidden();
+  await expect(frame.locator('#abxButtonWrapper')).toBeVisible();
+  await expect(frame.locator('#toggleObesityTherapy')).toBeVisible();
+  await expect(frame.locator('#toggleObesityTherapy')).toBeEnabled();
+  expect(await frame.evaluate(() => ({
+    access: window.VildaProAccess.hasAccess(),
+    initialized: window.VildaInit.isInitialized('app:professional-module'),
+    persistenceReady: window.VildaDocproStatePersistence.isReady() && !window.VildaDocproStatePersistence.isRestoring(),
+    doctor: document.getElementById('isDoctor').checked,
+    verifiedUi: JSON.parse(sessionStorage.getItem('vildaChromeUiSnapV1') || '{}').docproPro === true,
+    pwz: localStorage.getItem('pwzNumber'),
+    confirmed: Number(localStorage.getItem('professionalConfirmedDate')) > 0,
+  }))).toEqual({ access: true, initialized: true, persistenceReady: true, doctor: true,
+    verifiedUi: true, pwz: '6000001', confirmed: true });
+}
+
 test('home B1 shell: selected patient Leczenie opens its existing obesity Włączenie in native DocPro without saving records', async ({ page }) => {
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
@@ -70,7 +90,7 @@ test('home B1 shell: selected patient Leczenie opens its existing obesity Włąc
   const nativePwz = preparedDocpro.locator('#pwzNumber');
   if (await nativePwz.isVisible()) await nativePwz.fill('6000001');
   await prepareDocProUserFlow(preparedDocpro);
-  await expect(preparedDocpro.locator('#professionalModule')).toBeVisible();
+  await assertProfessionalAvailable(preparedDocpro);
   await page.evaluate(() => window.VildaShell.navigate('start'));
   const start = await shellFrame(page, 'Start');
   await readyForPatient(start);
@@ -109,7 +129,7 @@ test('home B1 shell: selected patient Leczenie opens its existing obesity Włąc
   // No entitlement, professional-mode or authority changes after the tested
   // click. Native restore/readiness is observed in the actual destination.
   await readyClearPage(docpro);
-  await expect(docpro.locator('#professionalModule')).toBeVisible();
+  await assertProfessionalAvailable(docpro);
   await expect.poll(() => docpro.evaluate(() => window._vildaCurrentPatientId)).toBe(id);
   await expect(docpro.locator('#obesityEditBar')).toContainText('Edytujesz punkt: Włączenie', { timeout: 20_000 });
   await expect(docpro.locator('#obesityMonitorSection')).toBeVisible();
