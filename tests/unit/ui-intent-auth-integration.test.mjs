@@ -1,3 +1,4 @@
+import { reverseBscAuthHooks } from '../../tools/account-duplicate-dismissals-auth-hooks.mjs';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import { createHash } from 'node:crypto';
@@ -364,14 +365,14 @@ describe('exact reproducible Auth security delta', () => {
     expect(UI_INTENT_AUTH_PAIRS).toHaveLength(16);
     for (const pair of UI_INTENT_AUTH_PAIRS) expect(auth.split(pair.after)).toHaveLength(2);
     const prior = reverseUiIntentAuthHooks(auth);
-    // Prior checkpoint 633ee436 plus exact PR1000 native delta and its optional B1 lifetime hooks.
-    expect(digest(prior)).toBe('a87a1b6641f2077ebb37e388f6d48f962587bedf92fd283033c7dce2e4cc30a5');
+    // Prior checkpoint 633ee436 plus exact PR1000/PR1002 native delta and its optional B1 lifetime hooks.
+    expect(digest(reverseBscAuthHooks(prior))).toBe('d0690d64531415aed5ebfffe6b3fd19133e69b1cddfdb008ed94690527a1fdb4');
     expect(applyUiIntentAuthHooks(prior)).toBe(auth); expect(applyUiIntentAuthHooks(auth)).toBe(auth);
     const securedNative = reverseHomeRemindersHooks(auth);
-    expect(digest(securedNative)).toBe(HOME_REMINDERS_AUTH_BASE_SHA256);
+    expect(digest(reverseBscAuthHooks(securedNative))).toBe(HOME_REMINDERS_AUTH_BASE_SHA256);
     const priorNative = reverseUiIntentAuthHooks(securedNative);
     expect(priorNative).toBe(reverseHomeRemindersHooks(prior));
-    expect(digest(priorNative)).toBe('0d4e7c5f415c6dcaa07889969e971958b5dcb828367513a57622fc51da630c60');
+    expect(digest(reverseBscAuthHooks(priorNative))).toBe('71f92cf5e80ebcae42198fb6927644d9f17eba061e04be1b87bcdb45e01fc9ee');
     expect(applyUiIntentAuthHooks(priorNative)).toBe(securedNative);
   });
 

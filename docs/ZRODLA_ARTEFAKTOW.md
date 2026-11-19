@@ -2061,6 +2061,74 @@ Opis działania i przypadki: `docs/clinical/ALGORITHMS.md`, „Postępy dorosłe
 
 **Granice.** Napisy `_pdE.scalSerie(` i `_pdU.renderPanel(Ct,_pdM,` zostają (pilnuje ich `postepy-doroslego-widok.test.mjs`). Słuchacze zamkniętej karty (kontener odpięty od dokumentu) wypadają przy następnym powiadomieniu. Lint: bez nowych naruszeń (`no-useless-assignment` w limicie).
 
+## Łatka P-TRAJEKTORIA-DZIENNIK — kursy leczenia otyłości z dziennika (`vilda_auth_ui.js` 570 → 571, `vilda_summary_cards.js` 64 → 65, 2026-11-19, decyzja właściciela)
+
+Opis działania i przypadki: `docs/clinical/ALGORITHMS.md`, „Analiza trajektorii i karta porównania z dziennika leczenia” (P-TRAJEKTORIA-DZIENNIK). Czytelne źródło: `vilda_cykle_leczenia.js` (`VildaDziennikOtylosci.punktyWczytanego`, `odswiezWczytanego`, odświeżenie po `zapisz`).
+
+```js
+// vilda_auth_ui.js
+// 1. pas leczenia otyłości na siatkach Karty
+//    było:  ke=function(){var pe=Lt(s.obesityTherapyPoints,"oty\u0142o\u015B\u0107","#b5731a");if(!pe)return null;try{for(var Ga=s.obesityTherapyPoints.filter(
+//    jest:  ke=function(){/* P-TRAJEKTORIA-DZIENNIK … */var _dzP=typeof Ob_dzPunkty=="function"?Ob_dzPunkty(s,GdNotatki):s.obesityTherapyPoints,pe=Lt(_dzP,"oty\u0142o\u015B\u0107","#b5731a");if(!pe)return null;try{for(var Ga=_dzP.filter(
+// 2. kontekst trajektorii Karty (panel „Analiza trajektorii”, porównanie)
+//    było:  _J.buildClinicalContext({ghTherapyPoints:s.ghTherapyPoints,obesityTherapyPoints:s.obesityTherapyPoints,motherHeightCm:_adv.motherHeight
+//    jest:  _J.buildClinicalContext({ghTherapyPoints:s.ghTherapyPoints,obesityTherapyPoints:typeof Ob_dzPunkty=="function"?Ob_dzPunkty(s,GdNotatki):s.obesityTherapyPoints,motherHeightCm:_adv.motherHeight
+
+// vilda_summary_cards.js — karta „Porównanie z poprzednim pomiarem”
+//    było:  return J.buildClinicalContext({ghTherapyPoints:a.ghTherapyPoints,obesityTherapyPoints:a.obesityTherapyPoints,motherHeightCm:mh?parseFloat(mh.value):NaN,
+//    jest:  /* P-TRAJEKTORIA-DZIENNIK … */const _dzP=(function(){try{const Dz=a.VildaDziennikOtylosci;return Dz&&typeof Dz.punktyWczytanego=="function"?Dz.punktyWczytanego():null}catch(e){return null}})();return J.buildClinicalContext({ghTherapyPoints:a.ghTherapyPoints,obesityTherapyPoints:_dzP||a.obesityTherapyPoints,motherHeightCm:mh?parseFloat(mh.value):NaN,
+```
+
+**Granice.** `Ob_dzPunkty` i `GdNotatki` — z łatki P-POSTEPY-DZIENNIK (ta sama funkcja Karty). Wywołania przez strażników `typeof`. `window.obesityTherapyPoints` bez zmian.
+
+## Łatka P-WIZYTA-PRZYDZIAL — nadanie wizyty przy otwartym oknie „Niezapisane zmiany” nie jest zmianą formularza (`vilda_save_status_indicator.js` 49 → 50, 2026-11-19)
+
+**Objaw.** Skok z Terminarza do punktu GH pacjenta w DocPro (test `tests/e2e/powloka-panel-obcy-pacjent.spec.mjs`,
+„Start z X → skok GH do Y”) co kilka przebiegów kończył się bez wczytania pacjenta. Lekarz odpowiadał w oknie
+strażnika „Odrzuć”, a zamiast skoku dostawał „Formularz zmienił się. Wykonaj tę czynność ponownie.”, choć niczego
+nie zmieniał.
+
+**Przyczyna.** Decyzja strażnika (`readCurrentDecision`) czyta formularz bez skutków ubocznych
+(`captureCurrentUserDataReadOnly`) i nie nadaje wizyty. Autozapis sesji (`vilda_persist_runtime.js`) i sprawdzenia
+wskaźnika zapisu wołają zwykłe `collectUserData`, a ono przez `VildaVisitContext.capture` nadaje formularzowi
+z danymi pacjenta pierwszą wizytę (`payload.visit`). Gdy to nadanie wypadło po otwarciu okna, odcisk formularza
+przy kliknięciu miał dodatkowe `core.visit`. Dokładne porównanie w `isCurrentDecision` uznawało to za zmianę
+formularza i strażnik anulował czynność. W DocPro po odtworzeniu sesji nadana wizyta nie ma jeszcze
+`patientId`, bo formularz nie jest związany z wczytanym rekordem.
+
+**Zmiana** (czytelny blok, bez ponownej minifikacji): `readCurrentDecision` zapamiętuje chwilę odczytu (`readAt`).
+Nowa funkcja `decisionOnlyAllocatedVisit` przyjmuje jedną różnicę i tylko przy spełnieniu wszystkich warunków:
+
+- w decyzji nie było `core.visit`;
+- teraz jest wizyta o poprawnym kształcie, `origin: "explicit"`;
+- wizyta nie ma pacjenta albo ma pacjenta decyzji;
+- wizyta powstała nie wcześniej niż odczyt decyzji;
+- po jej usunięciu odcisk jest identyczny.
+
+Używają jej `isCurrentDecision` oraz pierwszy warunek `decisionContentAfterSave`. Pozostałe warunki obu funkcji są
+bez zmian: ten sam właściciel, generacja i referencja, a po zapisie — referencja równa bieżącemu odciskowi.
+Zmianą formularza pozostają:
+
+- wizyta wczytana (starsza niż decyzja) albo podmieniona;
+- wizyta innego pacjenta lub `legacy-inferred`;
+- każda edycja pola;
+- zmiana konta.
+
+Wyniki, zapis, sesja i sejf bez zmian. Zmienia się tylko to, czy kliknięcie w oknie strażnika jest wykonane, czy
+anulowane.
+
+**Regresje.** `tests/unit/save-status-current-decision.test.mjs` uruchamia produkcyjny moduł. Blok
+„first visit allocated while the unsaved-changes decision is open” sprawdza:
+
+- przyjęcie nowej wizyty, także bez pacjenta;
+- odrzucenie edycji, starszej, obcej i `legacy-inferred` wizyty, podmienionej wizyty, wizyty z pacjentem,
+  którego formularz nie ma, oraz zmiany konta;
+- zapis z okna po nadaniu.
+
+Bez zmiany trzy przypadki przyjęcia padają. `tests/e2e/powloka-panel-obcy-pacjent.spec.mjs` („skok GH do Y”)
+przeszedł lokalnie 48/48 przy 6 równoległych przebiegach. Przed zmianą 2–3 na 12 przebiegów kończyło się
+komunikatem „Formularz zmienił się”.
+
 ## Trwała tożsamość wizyt — źródło i granica artefaktu sejfu
 
 Zmiana funkcjonalna `P-TRWALE-WIZYTY` ma bazę `audyt` z commita
@@ -2565,3 +2633,74 @@ Po odwróceniu obu zestawów bazą jest
 `0d4e7c5f415c6dcaa07889969e971958b5dcb828367513a57622fc51da630c60`.
 Ponowne nałożenie odtwarza artefakt bajtowo; kontrola silnika dziennika odnosi
 się teraz do natywnego `4bff32aa`, a historyczna fikstura B1 pozostaje bez zmian.
+
+## Zgodność z trajektorią dziennika (#1002) i lokalne decyzje o grupach
+
+Scalenie `audyt` `fb98a88f0054a1299b417964b4025a04f26b924b` zachowuje
+natywne `Ob_dzPunkty(s,GdNotatki)` w obu konstruktorach kontekstu Auth oraz
+oryginalny silnik dziennika, karty podsumowania i regułę przypisania wizyty.
+Nie zmienia obliczeń ani źródeł danych klinicznych. Po tej aktualizacji,
+przed dołożeniem poniższego modułu, odwrócenie 16 par zabezpieczeń Auth daje
+`d0690d64531415aed5ebfffe6b3fd19133e69b1cddfdb008ed94690527a1fdb4`,
+odwrócenie samych haków Przypomnień daje
+`81519c4e5d7870699ba985cadcfe93cb9fa44fe9552669335a81c5e5b20ea6ab`,
+a odwrócenie obu zestawów daje
+`71f92cf5e80ebcae42198fb6927644d9f17eba061e04be1b87bcdb45e01fc9ee`.
+
+Czytelny blok `ACCOUNT DUPLICATE DISMISSALS V2` w `vilda_auth_ui.js` oraz
+`tools/account-duplicate-dismissals-auth-hooks.mjs` stanowią źródło i dokładny
+odwracalny przepis na ograniczoną zmianę funkcji „To różne dzieci”. Kontrola
+`node tools/account-duplicate-dismissals-auth-hooks.mjs --check` odwraca
+wyłącznie ten blok i jego haki do dokładnego artefaktu sprzed tej zmiany,
+a następnie odtwarza wynik bajtowo. Dotychczasowe 16 par zabezpieczeń i haki
+B1/Przypomnień pozostają odwracalne; ich kontrole najpierw odejmują nową,
+niezależną warstwę. Nie ma nowego pliku ładowanego przez aplikację.
+
+To decyzja interfejsu osobna dla konta oraz tej przeglądarki na urządzeniu.
+Moduł używa wyłącznie publicznych `encryptPayloadForCurrentUser` i
+`decryptPayloadForCurrentUser` sejfu oraz przechwyconego
+`VildaPersistence.getStorage('local')`. Nie tworzy klucza szyfrującego i nie
+zmienia sejfu. Tryb lokalny daje lokalną trwałość, a natywny adapter trybu
+jednorazowego lub chmurowego daje tylko czas życia jego `sessionStorage`.
+Nie ma synchronizacji, kopii zapasowej ani zapasu w jawnym storage lub RAM
+udającym trwały zapis. Zewnętrzna wartość ma tylko `{iv,data}`; szyfrowany
+ładunek ma `schema:2`, `purpose:'duplicate-groups-dismissed'`, `accountId`
+i maksymalnie 200 oryginalnych sygnatur `Bsc3`. Nie normalizuje ani nie
+skraca identyfikatorów. Ładunek ma limit 262144 bajtów UTF-8, a koperta
+524288 bajtów; przekroczenie limitu pozostawia grupę widoczną i pokazuje
+błąd.
+
+Odczyt kończy się przed zbudowaniem natywnych grup listy. `Bsc4` pozostaje
+synchronicznym odczytem RAM z kontrolą konta, biletu sejfu, adaptera, trybu
+i życia dokumentu. Zapis pod rzeczywistym wyłącznym Web Lockiem odczytuje
+najnowszą kopertę, odszyfrowuje, dołącza jedną sygnaturę, szyfruje i sprawdza
+zapis w tym samym adapterze. Blokada obejmuje również oczekiwanie na
+kryptografię. Brak obsługi blokad, błąd zapisu i przekroczenie 8 sekund
+kończą się widocznym niepowodzeniem. Osiem sekund jest liczone od danego
+kliknięcia, łącznie z oczekiwaniem w kolejce dokumentu; zadanie przeterminowane
+w kolejce nie żąda blokady ani nie odczytuje danych. Spóźniona operacja nie może zapisać ani
+narysować wyniku; jej przyznana blokada pozostaje zajęta do rozstrzygnięcia
+rzeczywistej operacji. Nie ma porównania surowej wartości udającego atomowy
+CAS. Widok zmienia się dopiero po potwierdzonym zapisie, przez pełne
+natywne odświeżenie `Gd7`/`Gd9`/`Be`, z zachowaniem wyszukiwania, filtrów,
+przewinięcia oraz odraczania przy otwartych natywnych oknach. Generacja
+żywego widoku jest przechwytywana po `Zt`, które celowo kończy bilet odczytu.
+
+Dotychczasowe grupy nie mają wiarygodnego właściciela, więc zatwierdzona
+migracja je zeruje. Stary klucz jest tylko usuwany, bez odczytu wartości,
+importowania, haszowania, kopii lub logowania. Obsługiwane są też ponowne
+zapisy starej karty zauważone przez zdarzenie storage lub odzyskanie fokusu.
+Karta ze starą wersją aplikacji może ponownie utworzyć stary wpis po
+zamknięciu wszystkich zaktualizowanych kart; pełna aktualizacja wymaga
+normalnego odświeżenia wszystkich używanych kart. To ograniczenie mieszanych
+wersji, bez przenoszenia starych decyzji do bieżącego konta.
+
+Test `account-duplicate-dismissals.test.mjs` wykonuje rzeczywisty blok
+produkcyjny z AES-GCM, opóźnianiem kryptografii i kontrolowanymi granicami
+właściciela. Obejmuje błędne koperty i ładunki, zmianę konta i trybu,
+ponowne odblokowanie, pagehide, nieaktualny widok, kolejkę i limit czasu,
+limit 200, adapter sesyjny, brak Web Locks oraz rzeczywisty kod kliknięcia.
+Regresje przeglądarkowe `scalanie-duplikatow*.spec.mjs` sprawdzają natywny
+sejf, rzeczywiste Web Locks między dokumentami i pełną niezmienność rekordów
+oraz notatek. Wyniki wykonania podaje PR; samo istnienie testu nie oznacza
+jego przejścia.

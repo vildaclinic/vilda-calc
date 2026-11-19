@@ -1,3 +1,4 @@
+import { reverseBscAuthHooks } from '../../tools/account-duplicate-dismissals-auth-hooks.mjs';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import { createHash } from 'node:crypto';
@@ -44,7 +45,7 @@ function environment() {
 
 describe('optional home reminders native presentation boundary', () => {
   it('reverses to the exact native B1 artifact and replays idempotently without changing writers', () => {
-    expect(createHash('sha256').update(baseline).digest('hex')).toBe(HOME_REMINDERS_AUTH_BASE_SHA256);
+    expect(createHash('sha256').update(reverseBscAuthHooks(baseline)).digest('hex')).toBe(HOME_REMINDERS_AUTH_BASE_SHA256);
     expect(applyHomeRemindersHooks(baseline)).toBe(source);
     expect(applyHomeRemindersHooks(source)).toBe(source);
     expect(verifyHomeRemindersHooks(source).base).toBe(baseline);

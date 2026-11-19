@@ -1,8 +1,9 @@
 // Security-only UI metadata/identifier delta over the existing native Auth artifact.
 // No clinical calculation, DTO schema, Vault writer or sync payload is changed.
 import { readFileSync, writeFileSync } from 'node:fs';
+import { reverseBscAuthHooks } from './account-duplicate-dismissals-auth-hooks.mjs';
 import { createHash } from 'node:crypto';
-export const UI_INTENT_AUTH_BASE_SHA256 = 'a87a1b6641f2077ebb37e388f6d48f962587bedf92fd283033c7dce2e4cc30a5';
+export const UI_INTENT_AUTH_BASE_SHA256 = 'd0690d64531415aed5ebfffe6b3fd19133e69b1cddfdb008ed94690527a1fdb4';
 import { fileURLToPath } from 'node:url';
 export const UI_INTENT_AUTH_PAIRS = [
   { label: "GH producer + verified public boundaries", before: String.raw`function Gr(t,a){remSearchDropReturn();try{i.sessionStorage.setItem("vilda:gh-jump",JSON.stringify({patientId:t,ghPointId:String(a),ts:Date.now()}))}catch{}var Qgj=!1;try{var Qgs=i.document.documentElement.classList.contains("vilda-embedded"),Qgb=Qgs&&i.parent&&i.parent!==i?i.parent.VildaShell:null;Qgb&&typeof Qgb.navigate=="function"&&(Qgb.navigate("docpro",!0),Qgj=!0)}catch{Qgj=!1}if(!Qgj)try{if(typeof i.refreshGHTherapyMonitor=="function"){var Qgh=String(i.location.hash||"");i.location.hash="#/docpro",Qgh==="#/docpro"&&typeof i.Event=="function"&&i.dispatchEvent(new i.Event("hashchange"))}else i.location.href="docpro.html"}catch{}}`, after: String.raw`/* Ciphertext handoff: commit under the source actor before native navigation. */
@@ -132,7 +133,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const target = fileURLToPath(new URL('../vilda_auth_ui.js', import.meta.url));
   const source = readFileSync(target, 'utf8'), result = applyUiIntentAuthHooks(source);
   const baseline = reverseUiIntentAuthHooks(result);
-  if (createHash('sha256').update(baseline).digest('hex') !== UI_INTENT_AUTH_BASE_SHA256) throw new Error('Native/Home Auth base differs outside the explicit security delta');
+  if (createHash('sha256').update(baseline.includes('/* BEGIN ACCOUNT DUPLICATE DISMISSALS V2') ? reverseBscAuthHooks(baseline) : baseline).digest('hex') !== UI_INTENT_AUTH_BASE_SHA256) throw new Error('Native/Home Auth base differs outside the explicit security delta');
   if (applyUiIntentAuthHooks(baseline) !== result) throw new Error('Auth security replay differs');
   if (process.argv.includes('--write')) writeFileSync(target, result);
   else if (source !== result) throw new Error('Auth security hooks need regeneration');

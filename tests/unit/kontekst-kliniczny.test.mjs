@@ -200,12 +200,16 @@ describe('karta porównania z poprzednim pomiarem: werdykty w kontekście', () =
 describe('strażnik: wszystkie karty biorą kontekst z jednego budowniczego', () => {
   it('Karta pacjenta nie liczy już kontekstu inline; strona główna (karta zaawansowana i podstawowa) i karta porównania wołają buildClinicalContext', () => {
     const auth = zrodlo('vilda_auth_ui.js');
-    expect(auth).toContain('_J.buildClinicalContext({ghTherapyPoints:s.ghTherapyPoints,obesityTherapyPoints:s.obesityTherapyPoints');
+    // P-TRAJEKTORIA-DZIENNIK (2026-11-19): kursy otyłości z projekcji dziennika leczenia (Ob_dzPunkty), bez modułu — z zapisu wizyty.
+    expect(auth).toContain('_J.buildClinicalContext({ghTherapyPoints:s.ghTherapyPoints,obesityTherapyPoints:typeof Ob_dzPunkty=="function"?Ob_dzPunkty(s,GdNotatki):s.obesityTherapyPoints');
+    expect(auth).toContain('function Ob_dzPunkty(s, notatki)');
     expect(auth).not.toContain('ae._vildaCmpCtx={mpSds:_cro');
     expect(zrodlo('vilda_advanced_growth.js')).toContain('J9.buildClinicalContext({ghTherapyPoints:window.ghTherapyPoints,obesityTherapyPoints:window.obesityTherapyPoints');
     expect(zrodlo('growth-basic-module.js')).toContain('J9.buildClinicalContext({ghTherapyPoints:window.ghTherapyPoints');
     const sc = zrodlo('vilda_summary_cards.js');
-    expect(sc).toContain('J.buildClinicalContext({ghTherapyPoints:a.ghTherapyPoints,obesityTherapyPoints:a.obesityTherapyPoints');
+    // P-TRAJEKTORIA-DZIENNIK: punkty z pamięci dziennika pacjenta karty, bez dziennika — z formularza jak dotąd.
+    expect(sc).toContain('J.buildClinicalContext({ghTherapyPoints:a.ghTherapyPoints,obesityTherapyPoints:_dzP||a.obesityTherapyPoints');
+    expect(sc).toContain('Dz.punktyWczytanego()');
     expect(sc).toContain('J.pairVerdictInContext(met,');
     expect(sc).toContain('id="porownanieKontekst"');
     const traj = zrodlo('vilda_trajectory_analysis.js');

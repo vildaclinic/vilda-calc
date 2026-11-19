@@ -1,4 +1,5 @@
 (function(i){"use strict";if(!i||i.VildaAuthUI&&i.VildaAuthUI.__vildaAuthUI)return;const _o="2.6.6",Ao="8R-15",Oi="vilda-auth-ui-root",Mo=["mousedown","keydown","touchstart","scroll","pointerdown"],ha="VildaGuestMode",Nn="vilda-trust-device-v1",Ti=7*24*60*60*1e3;let Ni=!1,Rt=null,sn=!1,te=null,ve=null,Bi=!1,Ri=!1,Bn=Date.now(),dn=null,Rn={userId:null,at:0},Ge=null,aa=null,Ea=new Set;const jo=2;function va(t,a){return"vilda:"+t+":"+a}function _a(){try{return i.localStorage||null}catch{return null}}function Wn(t){if(!t)return"on";const a=_a();if(!a)return"on";try{return a.getItem(va("biometricAutoTrigger",t))==="off"?"off":"on"}catch{return"on"}}function Wi(t,a){if(!t)return;const n=_a();if(n)try{n.setItem(va("biometricAutoTrigger",t),a==="off"?"off":"on")}catch{}}function Hi(t){if(!t)return 0;const a=_a();if(!a)return 0;try{const n=parseInt(a.getItem(va("biometricDismissCount",t))||"0",10);return Number.isFinite(n)&&n>=0?n:0}catch{return 0}}function Hn(t,a){if(!t)return;const n=_a();if(n)try{n.setItem(va("biometricDismissCount",t),String(Math.max(0,a|0)))}catch{}}function Po(t){if(!t)return!1;const a=_a();if(!a)return!1;try{return a.getItem(va("biometricAutoOffNotice",t))==="1"}catch{return!1}}function Ui(t,a){if(!t)return;const n=_a();if(n)try{a?n.setItem(va("biometricAutoOffNotice",t),"1"):n.removeItem(va("biometricAutoOffNotice",t))}catch{}}function Ki(t){if(!t)return;const a=Hi(t)+1;Hn(t,a),a>=jo&&Wn(t)==="on"&&(Wi(t,"off"),Ui(t,!0))}function Un(t){t&&Hn(t,0)}function Ze(){var t=(navigator.userAgent||"").toLowerCase(),a=(navigator.userAgentData&&navigator.userAgentData.platform||navigator.platform||"").toLowerCase();return/macintosh|mac os x/.test(t)&&!/iphone|ipad/.test(t)?"Touch ID":/iphone|ipad|ipod/.test(t)?"Face ID / Touch ID":/windows/.test(t)||/win/.test(a)?"Windows Hello":"dane biometryczne"}function Ya(){return i.VildaCrypto||null}function jt(){return i.VildaVault||null}function cn(){return i.VildaSyncIntegration||null}function ma(t){if(typeof i.vildaLogAppWarn=="function")try{i.vildaLogAppWarn("vilda_auth_ui",t);return}catch{}i.console&&typeof i.console.warn=="function"&&i.console.warn("[VildaAuthUI] "+t)}function Ot(t,a){if(typeof i.vildaLogAppError=="function")try{i.vildaLogAppError("vilda_auth_ui",t,a);return}catch{}i.console&&typeof i.console.error=="function"&&i.console.error("[VildaAuthUI] "+t,a)}function Vi(t){const a=t&&t.code;return a==="EPH_PRF_UNSUPPORTED"?{message:"Ta przegl\u0105darka nie obs\u0142uguje logowania biometrycznego. Zaloguj si\u0119 kodem QR \u2014 dzia\u0142a w ka\u017Cdej przegl\u0105darce.",offerQrFallback:!0}:a==="EPH_NO_ENVELOPE"?{message:"Ten klucz biometryczny nie jest skonfigurowany do logowania na cudzym komputerze. Aby to w\u0142\u0105czy\u0107, wejd\u017A na swoim telefonie w: Ustawienia \u2192 Synchronizacja \u2192 Skonfiguruj logowanie telefonem.",offerQrFallback:!1}:a==="EPH_CHALLENGE_FAILED"||a==="EPH_UNLOCK_NETWORK"?{message:"Nie mo\u017Cna po\u0142\u0105czy\u0107 si\u0119 z serwerem. Sprawd\u017A po\u0142\u0105czenie z internetem i spr\xF3buj ponownie.",offerQrFallback:!1}:a==="EPH_UNLOCK_REJECTED"?{message:"Uwierzytelnienie odrzucone. Upewnij si\u0119, \u017Ce u\u017Cywasz biometrii ze swojego telefonu (nie z tego komputera) i spr\xF3buj ponownie.",offerQrFallback:!0}:a==="EPH_DECRYPT_FAILED"?t&&t.diagnostic==="envelope-legacy-create-prf"?{message:"Logowanie telefonem wymaga aktualizacji. Na swoim telefonie wejd\u017A w Ustawienia \u2192 Synchronizacja, usu\u0144 je i skonfiguruj ponownie, a potem zaloguj si\u0119 jeszcze raz.",offerQrFallback:!0}:t&&t.diagnostic==="envelope-current-prf-mismatch"?{message:"Wybra\u0142e\u015B biometri\u0119 tego komputera \u2014 to nie zadzia\u0142a na cudzym urz\u0105dzeniu. Wybierz biometri\u0119 swojego telefonu i potwierd\u017A na nim.",offerQrFallback:!0}:{message:"Nie uda\u0142o si\u0119 zweryfikowa\u0107 to\u017Csamo\u015Bci. Spr\xF3buj ponownie lub zaloguj si\u0119 kodem QR.",offerQrFallback:!0}:t&&t.name==="AbortError"?{message:"Logowanie anulowane.",offerQrFallback:!1}:{message:t&&t.message?t.message:"Logowanie nie powiod\u0142o si\u0119. Spr\xF3buj ponownie lub u\u017Cyj kodu QR.",offerQrFallback:!0}}function e(t,a,n){const r=i.document.createElement(t);return a&&Object.keys(a).forEach(function(o){o==="class"?r.className=a[o]:o==="text"?r.textContent=a[o]:o==="html"?r.innerHTML=a[o]:o.indexOf("on")===0&&typeof a[o]=="function"?r.addEventListener(o.substring(2),a[o]):r.setAttribute(o,a[o])}),n&&(Array.isArray(n)?n:[n]).forEach(function(l){l!=null&&(typeof l=="string"?r.appendChild(i.document.createTextNode(l)):r.appendChild(l))}),r}function oe(t){for(;t&&t.firstChild;)t.removeChild(t.firstChild)}function un(t){const a=e("div",{class:"vilda-auth-pw-wrap"});a.style.cssText="position: relative; display: block; margin: inherit;",t.style.paddingRight="44px",a.appendChild(t);const n='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>',r='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg>',o=e("button",{type:"button",class:"vilda-auth-pw-toggle","aria-label":"Poka\u017C has\u0142o","aria-pressed":"false",title:"Poka\u017C has\u0142o"});return o.style.cssText=["position: absolute; right: 6px; top: 50%; transform: translateY(-50%);","width: 40px; height: 24px;","display: flex; align-items: center; justify-content: center;","background: transparent; border: 0; padding: 0; border-radius: 0;","color: #5b6672; cursor: pointer;","transition: color .15s ease;"].join(""),o.innerHTML=n,o.addEventListener("mouseenter",function(){o.style.color="#00838d"}),o.addEventListener("mouseleave",function(){o.style.color="#5b6672"}),o.addEventListener("click",function(){t.type==="password"?(t.type="text",o.innerHTML=r,o.setAttribute("aria-label","Ukryj has\u0142o"),o.setAttribute("aria-pressed","true"),o.setAttribute("title","Ukryj has\u0142o")):(t.type="password",o.innerHTML=n,o.setAttribute("aria-label","Poka\u017C has\u0142o"),o.setAttribute("aria-pressed","false"),o.setAttribute("title","Poka\u017C has\u0142o"));try{t.focus()}catch{}}),a.appendChild(o),a}function Kn(t){try{if(!i.sessionStorage)return;t?i.sessionStorage.setItem(ha,"1"):i.sessionStorage.removeItem(ha)}catch{}}function Io(){try{return i.sessionStorage?i.sessionStorage.getItem(ha)==="1":!1}catch{return!1}}function Aa(t,a){i[ha]=!!t,Kn(!!t);var n=a&&typeof a=="object"?a:{};if(t)n.skipReset||qa("enter-guest"),Gn(),Bo();else{var r=jt();r&&typeof r.isUnlocked=="function"&&r.isUnlocked()?qi():fn()}try{const o=new i.CustomEvent("vilda:guest-mode-changed",{detail:{guest:!!t}});i.document.dispatchEvent(o)}catch{}}function Vn(){return!!i[ha]}function Fo(){Aa(!1),me()}function Gt(t,a){t&&(t.textContent=a||"",t.style.display=a?"block":"none")}function Kt(t){Rt&&(t?Rt.setAttribute("data-busy","1"):Rt.removeAttribute("data-busy"))}function qa(t) {
+BscReset();
 var didResetMain = false;
 try {
   if (typeof i.clearAllData === "function") {
@@ -3647,7 +3648,7 @@ try{
     }
   }
 }catch(SgaError){Ot("showPatientCard SGA",SgaError)}
-if(ce.length>0&&(Nt.appendChild(e("p",{class:"vilda-patient-section-h vilda-patient-section-h--secondary",text:tt&&SgaTile&&ce.length===1?"Dane urodzeniowe":"Wzrastanie i genetyka rodzinna"})),Nt.appendChild(e("div",{class:"vilda-patient-stats-grid"},ce)),BhPanel&&Nt.appendChild(BhPanel),Ce&&Ce.panel&&Nt.appendChild(Ce.panel)),At.length===0&&ce.length===0&&Nt.appendChild(e("p",{class:"vilda-patient-empty-msg",text:"Brak danych do wy\u015Bwietlenia."})),(At.length>0||ce.length>0)&&i.VildaPatientSummaryCopy&&typeof i.VildaPatientSummaryCopy.buildSummaryTextFromPayload=="function"){var Fi=e("button",{class:"vilda-auth-btn vilda-copy-summary-btn",type:"button",text:"Skopiuj podsumowanie wynik\xF3w",onclick:function(){var ct="";try{ct=i.VildaPatientSummaryCopy.buildSummaryTextFromPayload(s)||""}catch(Lt){Ot("copy summary build",Lt),ct=""}if(!ct){pi("Brak danych do skopiowania.",!1);return}Il(ct,function(){pi("\u2713 Dane skopiowane do schowka",!0)},function(){pi("Nie uda\u0142o si\u0119 skopiowa\u0107 \u2014 spr\xF3buj ponownie.",!1)})}});Nt.appendChild(e("div",{class:"vilda-copy-summary-row"},[Fi]))}var Ct=e("div",{class:"vilda-patient-tab-content vilda-patient-tab-content--hidden","data-tab":"traj"});function Ut(ct,Lt,Yt){if(!Lt)return!1;var ke="vilda-patient-section-h"+(Yt?"":" vilda-patient-section-h--secondary");return ae.appendChild(e("p",{class:ke,text:ct})),ae.appendChild(e("div",{class:"vilda-patient-chart-wrap"},[Lt])),!0}var Ht=0,Qt=e("div",{class:"vilda-siatka-overlay-host"}),ae=e("div",{class:"vilda-siatka-charts"}),_e=null,_ew=null,_rp=null;function we(){oe(ae),Ht=0;var ct=lt?" \xB7 "+lt:"",Lt=function(pe,Ga,Tn){try{var Ke=(Array.isArray(pe)?pe:[]).filter(function(Ve){return Ve&&(Ve.type==="start"||Ve.type==="continue"||Ve.type==="end")});if(!Ke.length)return null;var Ca=function(Ve){return Math.round((Ve.ageYears||0)*12+(Ve.ageMonths||0))},fa=Ke.map(Ca).filter(function(Ve){return Ve>0});if(!fa.length)return null;for(var Za=null,Sa=null,he=0;he<Ke.length;he++)Ke[he].type==="start"&&!Za&&(Za=Ke[he]),Ke[he].type==="end"&&(Sa=Ke[he]);var Di=Za?Ca(Za):Math.min.apply(null,fa),As=Sa?Ca(Sa):Math.max(Math.max.apply(null,fa),I||0);return{startAgeM:Di,endAgeM:As,active:!Sa,label:Ga,color:Tn}}catch{return null}},Yt=Lt(s.ghTherapyPoints,"GH","#0F6E56"),ke=function(){var pe=Lt(s.obesityTherapyPoints,"oty\u0142o\u015B\u0107","#b5731a");if(!pe)return null;try{for(var Ga=s.obesityTherapyPoints.filter(function(he){return he&&(he.type==="start"||he.type==="continue"||he.type==="end")}),Tn=function(he){return Math.round((he.ageYears||0)*12+(he.ageMonths||0))},Ke=Ga.slice().sort(function(he,Di){return Tn(he)-Tn(Di)}).pop(),Ca=null,fa=0;fa<Ga.length;fa++)if(Ga[fa].type==="start"){Ca=Ga[fa];break}var Za=Fe(Ke&&Ke.drug)||Fe(Ca&&Ca.drug)||"",Sa=Vr(Za);Sa&&(pe.label=Sa)}catch{}return pe}(),Ne=[Yt,ke].filter(Boolean),ea=[ke].filter(Boolean),pa=I;try{var On=(H||[]).map(function(pe){return Ma(pe)}).filter(function(pe){return typeof pe=="number"&&isFinite(pe)});On.length&&(pa=Math.max.apply(null,On))}catch{}var _fx=null;try{var _ma=(H||[]).map(function(pe){return Ma(pe)}).filter(function(pe){return typeof pe=="number"&&isFinite(pe)});isFinite(pa)&&_ma.push(pa);if(_ma.length){var _vv=Math.min.apply(null,_ma),_mm=Math.max.apply(null,_ma),_cy,_cx;var _fy=Math.max(0,Math.floor((_vv-12)/12)*12),_fz=Math.min(216,Math.ceil((_mm+12)/12)*12);_fz-_fy<36&&(_fz=Math.min(216,_fy+36));try{ae._vildaFullWin={y:_fy,x:_fz}}catch{}if(_ew&&isFinite(_ew.y)&&isFinite(_ew.x)&&_ew.x>_ew.y){_cy=Math.max(_fy,_ew.y),_cx=Math.min(_fz,_ew.x);_cx-_cy<1&&(_cx=Math.min(_fz,_cy+1))}else if(typeof _e=="number"&&_e>0){var _k=_mm-_vv;if(_k<=_e){var _w0=(_vv+_mm)/2;_cy=_w0-_e/2,_cx=_w0+_e/2}else{_cx=_mm+_e*.1,_cy=_cx-_e}_cy<0&&(_cy=0,_cx=Math.min(216,_e));_cx>216&&(_cx=216,_cy=Math.max(0,_cx-_e))}else{_cy=_fy,_cx=_fz}_fx={y:_cy,x:_cx}}}catch{}try{var _adv=s&&s.advanced||{},_sx=s&&s.user&&s.user.sex||"",_csrc=i&&i.bmiSource&&/^(OLAF|WHO|PALCZEWSKA)$/.test(String(i.bmiSource).toUpperCase())?String(i.bmiSource).toUpperCase():typeof i.advHistoryGetPreferredSource=="function"?i.advHistoryGetPreferredSource():"OLAF",_J=i.VildaTrajectoryAnalysis;/* P-OSTATNI-2b: kontekst GH / MPH / redukcja buduje wspolny budowniczy w vilda_trajectory_analysis.js (te same reguly na stronie glownej i w karcie porownania z poprzednim pomiarem). */ae._vildaCmpCtx=_J&&typeof _J.buildClinicalContext=="function"?_J.buildClinicalContext({ghTherapyPoints:s.ghTherapyPoints,obesityTherapyPoints:s.obesityTherapyPoints,motherHeightCm:_adv.motherHeight!=null?parseFloat(_adv.motherHeight):NaN,fatherHeightCm:_adv.fatherHeight!=null?parseFloat(_adv.fatherHeight):NaN,sex:_sx,source:_csrc}):null}catch{try{ae._vildaCmpCtx=null}catch{}}
+if(ce.length>0&&(Nt.appendChild(e("p",{class:"vilda-patient-section-h vilda-patient-section-h--secondary",text:tt&&SgaTile&&ce.length===1?"Dane urodzeniowe":"Wzrastanie i genetyka rodzinna"})),Nt.appendChild(e("div",{class:"vilda-patient-stats-grid"},ce)),BhPanel&&Nt.appendChild(BhPanel),Ce&&Ce.panel&&Nt.appendChild(Ce.panel)),At.length===0&&ce.length===0&&Nt.appendChild(e("p",{class:"vilda-patient-empty-msg",text:"Brak danych do wy\u015Bwietlenia."})),(At.length>0||ce.length>0)&&i.VildaPatientSummaryCopy&&typeof i.VildaPatientSummaryCopy.buildSummaryTextFromPayload=="function"){var Fi=e("button",{class:"vilda-auth-btn vilda-copy-summary-btn",type:"button",text:"Skopiuj podsumowanie wynik\xF3w",onclick:function(){var ct="";try{ct=i.VildaPatientSummaryCopy.buildSummaryTextFromPayload(s)||""}catch(Lt){Ot("copy summary build",Lt),ct=""}if(!ct){pi("Brak danych do skopiowania.",!1);return}Il(ct,function(){pi("\u2713 Dane skopiowane do schowka",!0)},function(){pi("Nie uda\u0142o si\u0119 skopiowa\u0107 \u2014 spr\xF3buj ponownie.",!1)})}});Nt.appendChild(e("div",{class:"vilda-copy-summary-row"},[Fi]))}var Ct=e("div",{class:"vilda-patient-tab-content vilda-patient-tab-content--hidden","data-tab":"traj"});function Ut(ct,Lt,Yt){if(!Lt)return!1;var ke="vilda-patient-section-h"+(Yt?"":" vilda-patient-section-h--secondary");return ae.appendChild(e("p",{class:ke,text:ct})),ae.appendChild(e("div",{class:"vilda-patient-chart-wrap"},[Lt])),!0}var Ht=0,Qt=e("div",{class:"vilda-siatka-overlay-host"}),ae=e("div",{class:"vilda-siatka-charts"}),_e=null,_ew=null,_rp=null;function we(){oe(ae),Ht=0;var ct=lt?" \xB7 "+lt:"",Lt=function(pe,Ga,Tn){try{var Ke=(Array.isArray(pe)?pe:[]).filter(function(Ve){return Ve&&(Ve.type==="start"||Ve.type==="continue"||Ve.type==="end")});if(!Ke.length)return null;var Ca=function(Ve){return Math.round((Ve.ageYears||0)*12+(Ve.ageMonths||0))},fa=Ke.map(Ca).filter(function(Ve){return Ve>0});if(!fa.length)return null;for(var Za=null,Sa=null,he=0;he<Ke.length;he++)Ke[he].type==="start"&&!Za&&(Za=Ke[he]),Ke[he].type==="end"&&(Sa=Ke[he]);var Di=Za?Ca(Za):Math.min.apply(null,fa),As=Sa?Ca(Sa):Math.max(Math.max.apply(null,fa),I||0);return{startAgeM:Di,endAgeM:As,active:!Sa,label:Ga,color:Tn}}catch{return null}},Yt=Lt(s.ghTherapyPoints,"GH","#0F6E56"),ke=function(){/* P-TRAJEKTORIA-DZIENNIK: pas leczenia otylosci na siatce z dziennika (Ob_dzPunkty). */var _dzP=typeof Ob_dzPunkty=="function"?Ob_dzPunkty(s,GdNotatki):s.obesityTherapyPoints,pe=Lt(_dzP,"oty\u0142o\u015B\u0107","#b5731a");if(!pe)return null;try{for(var Ga=_dzP.filter(function(he){return he&&(he.type==="start"||he.type==="continue"||he.type==="end")}),Tn=function(he){return Math.round((he.ageYears||0)*12+(he.ageMonths||0))},Ke=Ga.slice().sort(function(he,Di){return Tn(he)-Tn(Di)}).pop(),Ca=null,fa=0;fa<Ga.length;fa++)if(Ga[fa].type==="start"){Ca=Ga[fa];break}var Za=Fe(Ke&&Ke.drug)||Fe(Ca&&Ca.drug)||"",Sa=Vr(Za);Sa&&(pe.label=Sa)}catch{}return pe}(),Ne=[Yt,ke].filter(Boolean),ea=[ke].filter(Boolean),pa=I;try{var On=(H||[]).map(function(pe){return Ma(pe)}).filter(function(pe){return typeof pe=="number"&&isFinite(pe)});On.length&&(pa=Math.max.apply(null,On))}catch{}var _fx=null;try{var _ma=(H||[]).map(function(pe){return Ma(pe)}).filter(function(pe){return typeof pe=="number"&&isFinite(pe)});isFinite(pa)&&_ma.push(pa);if(_ma.length){var _vv=Math.min.apply(null,_ma),_mm=Math.max.apply(null,_ma),_cy,_cx;var _fy=Math.max(0,Math.floor((_vv-12)/12)*12),_fz=Math.min(216,Math.ceil((_mm+12)/12)*12);_fz-_fy<36&&(_fz=Math.min(216,_fy+36));try{ae._vildaFullWin={y:_fy,x:_fz}}catch{}if(_ew&&isFinite(_ew.y)&&isFinite(_ew.x)&&_ew.x>_ew.y){_cy=Math.max(_fy,_ew.y),_cx=Math.min(_fz,_ew.x);_cx-_cy<1&&(_cx=Math.min(_fz,_cy+1))}else if(typeof _e=="number"&&_e>0){var _k=_mm-_vv;if(_k<=_e){var _w0=(_vv+_mm)/2;_cy=_w0-_e/2,_cx=_w0+_e/2}else{_cx=_mm+_e*.1,_cy=_cx-_e}_cy<0&&(_cy=0,_cx=Math.min(216,_e));_cx>216&&(_cx=216,_cy=Math.max(0,_cx-_e))}else{_cy=_fy,_cx=_fz}_fx={y:_cy,x:_cx}}}catch{}try{var _adv=s&&s.advanced||{},_sx=s&&s.user&&s.user.sex||"",_csrc=i&&i.bmiSource&&/^(OLAF|WHO|PALCZEWSKA)$/.test(String(i.bmiSource).toUpperCase())?String(i.bmiSource).toUpperCase():typeof i.advHistoryGetPreferredSource=="function"?i.advHistoryGetPreferredSource():"OLAF",_J=i.VildaTrajectoryAnalysis;/* P-OSTATNI-2b: kontekst GH / MPH / redukcja buduje wspolny budowniczy w vilda_trajectory_analysis.js (te same reguly na stronie glownej i w karcie porownania z poprzednim pomiarem). */ae._vildaCmpCtx=_J&&typeof _J.buildClinicalContext=="function"?_J.buildClinicalContext({ghTherapyPoints:s.ghTherapyPoints,obesityTherapyPoints:typeof Ob_dzPunkty=="function"?Ob_dzPunkty(s,GdNotatki):s.obesityTherapyPoints,motherHeightCm:_adv.motherHeight!=null?parseFloat(_adv.motherHeight):NaN,fatherHeightCm:_adv.fatherHeight!=null?parseFloat(_adv.fatherHeight):NaN,sex:_sx,source:_csrc}):null}catch{try{ae._vildaCmpCtx=null}catch{}}
 var _l=_ew&&_fx?_fx.x-_fx.y:_e;try{var Ss=yn("height",H,it,pa,D,_l,Ne,h,_fx);Ut("Siatka centylowa wzrostu"+ct,Ss,Ht===0)&&Ht++}catch(pe){Ot("buildPercentileChart(height)",pe)}try{var Es=yn("weight",H,it,pa,M,_l,Ne,h,_fx);Ut("Siatka centylowa wagi"+ct,Es,Ht===0)&&Ht++}catch(pe){Ot("buildPercentileChart(weight)",pe)}try{var _s=yn("bmi",H,it,pa,$,_l,ea,h,_fx);Ut("Siatka centylowa BMI"+ct,_s,Ht===0)&&Ht++}catch(pe){Ot("buildPercentileChart(bmi)",pe)}if(Ht>0)try{Kl(Qt,Ct,t,Ue,I).catch(function(){oe(Qt)})}catch{oe(Qt)}ae._vildaLiveWin=function(pe,Ga){try{
 if(!(isFinite(pe)&&isFinite(Ga)&&Ga>pe))return!1;
 var fw=ae._vildaFullWin;if(!fw)return!1;
@@ -3799,11 +3800,201 @@ function Gh2(t){return new Promise(function(a){var n=i.document&&i.document.body
  * dzieci o tym samym nazwisku), wiec lekarz wskazuje rekord, ktory ma ZOSTAC; pozostale z grupy sa
  * w niego scalane sejfem (mergePatients). „To rozne dzieci" chowa grupe na tym urzadzeniu — klucz
  * trzyma tylko identyfikatory, zadnych danych osobowych. */
-var Bsc7="vildaDuplikatyRozneV1";
-function Bsc8(){try{var t=i.localStorage&&i.localStorage.getItem(Bsc7),a=t?JSON.parse(t):[];return Array.isArray(a)?a:[]}catch{return[]}}
+/* BEGIN ACCOUNT DUPLICATE DISMISSALS V2
+ * UI decisions only. Bsc3 remains the native identity rule. The public Vault
+ * encrypts payloads; the native mode adapter owns their local/session lifetime.
+ */
+var BscLegacyKey = 'vildaDuplikatyRozneV1', BscPrefix = 'vildaDuplikatyRozneAccountV2:';
+var BscPurpose = 'duplicate-groups-dismissed', BscMaxBytes = 262144;
+var BscEpoch = 0, BscReadId = 0, BscCache = null, BscRetired = false;
+var BscVaults = new WeakSet(), BscQueue = Promise.resolve(), BscSaving = 0, BscRefreshPending = false;
+function BscReset() { BscEpoch += 1; BscReadId += 1; BscCache = null; }
+function BscCleanupLegacy() {
+  // Never read, parse, copy, hash or log the unowned legacy signatures.
+  try { if (i.localStorage) i.localStorage.removeItem(BscLegacyKey); } catch (_) {}
+  try { if (i.sessionStorage) i.sessionStorage.removeItem('veph:l:' + BscLegacyKey); } catch (_) {}
+}
+function BscError(code) {
+  var error = new Error('Nie udało się odczytać lub zapisać ukrytych grup. Spróbuj ponownie.');
+  error.code = code; return error;
+}
+function BscBindVault(vault) {
+  if (BscVaults.has(vault)) return;
+  if (typeof vault.onLock !== 'function' || typeof vault.onUnlock !== 'function') throw BscError('BSC_API');
+  vault.onLock(BscReset); vault.onUnlock(BscReset); BscVaults.add(vault);
+}
+function BscCapture() {
+  var vault = jt(), persistence = i.VildaPersistence, account = vault && vault.getCurrentUser();
+  if (BscRetired || Vn() || !vault || !vault.isUnlocked() || !account || typeof account.userId !== 'string' || !account.userId
+      || !persistence || typeof persistence.getStorage !== 'function'
+      || typeof vault.captureSyncOperationSession !== 'function' || typeof vault.assertSyncOperationSession !== 'function'
+      || typeof vault.encryptPayloadForCurrentUser !== 'function' || typeof vault.decryptPayloadForCurrentUser !== 'function') throw BscError('BSC_OWNER');
+  BscBindVault(vault);
+  var storage = persistence.getStorage('local'), mode = vault.getCurrentStorageModeSync();
+  var ephemeral = !!persistence.isEphemeralMode(), cloud = !!persistence.isCloudOnlyMode();
+  if (typeof vault.isEphemeralMode !== 'function' || !!vault.isEphemeralMode() !== ephemeral) throw BscError('BSC_MODE');
+  if (!storage || storage.__vildaMemoryStorage || typeof storage.getItem !== 'function' || typeof storage.setItem !== 'function') throw BscError('BSC_STORAGE');
+  var session = storage.__vildaEphemeralSessionStorage === true;
+  if (session !== (ephemeral || cloud)) throw BscError('BSC_MODE');
+  var tab = session ? persistence.getTabId() : '';
+  if (session && (typeof tab !== 'string' || !tab)) throw BscError('BSC_TAB');
+  var scope = { vault: vault, persistence: persistence, accountId: account.userId, storage: storage, mode: mode,
+    ephemeral: ephemeral, cloud: cloud, tab: tab, document: i.document, epoch: BscEpoch,
+    ticket: vault.captureSyncOperationSession(), key: BscPrefix + encodeURIComponent(account.userId) };
+  BscAssert(scope); return scope;
+}
+function BscCurrent(scope) {
+  try {
+    var vault = jt(), persistence = i.VildaPersistence, account = vault && vault.getCurrentUser();
+    if (!scope || BscRetired || Vn() || scope.epoch !== BscEpoch || i.document !== scope.document
+        || vault !== scope.vault || persistence !== scope.persistence || !vault.isUnlocked() || !account || account.userId !== scope.accountId
+        || persistence.getStorage('local') !== scope.storage || vault.getCurrentStorageModeSync() !== scope.mode
+        || !!vault.isEphemeralMode() !== scope.ephemeral || !!persistence.isEphemeralMode() !== scope.ephemeral || !!persistence.isCloudOnlyMode() !== scope.cloud
+        || scope.tab && persistence.getTabId() !== scope.tab) return false;
+    vault.assertSyncOperationSession(scope.ticket); return true;
+  } catch (_) { return false; }
+}
+function BscAssert(scope, live) {
+  if (!BscCurrent(scope) || live && live() !== true) throw BscError('BSC_CANCELLED');
+}
+function BscBound(value) {
+  var json = JSON.stringify(value);
+  if (typeof json !== 'string' || new TextEncoder().encode(json).byteLength > BscMaxBytes) throw BscError('BSC_SIZE');
+  return json;
+}
+function BscPayload(scope, groups) {
+  return { schema: 2, purpose: BscPurpose, accountId: scope.accountId, groups: groups };
+}
+function BscValidate(scope, payload) {
+  if (!payload || payload.schema !== 2 || payload.purpose !== BscPurpose || payload.accountId !== scope.accountId
+      || !Array.isArray(payload.groups) || payload.groups.length > 200
+      || payload.groups.some(function (signature) { return typeof signature !== 'string' || !signature; })
+      || new Set(payload.groups).size !== payload.groups.length) throw BscError('BSC_PAYLOAD');
+  BscBound(payload); return payload.groups.slice();
+}
+async function BscRead(scope, live) {
+  // Web Locks serialize writers. Readers additionally detect a writer that
+  // commits during decrypt; they retry the complete ciphertext at most 3 times.
+  for (var attempt = 0; attempt < 3; attempt += 1) {
+    BscAssert(scope, live);
+    var raw = scope.storage.getItem(scope.key), groups = [];
+    if (raw !== null) {
+      if (typeof raw !== 'string' || new TextEncoder().encode(raw).byteLength > BscMaxBytes * 2) throw BscError('BSC_CIPHER_SIZE');
+      var envelope;
+      try { envelope = JSON.parse(raw); } catch (_) { throw BscError('BSC_CIPHER'); }
+      if (!envelope || typeof envelope.iv !== 'string' || !envelope.iv || typeof envelope.data !== 'string' || !envelope.data
+          || Object.keys(envelope).sort().join(',') !== 'data,iv') throw BscError('BSC_CIPHER');
+      var payload = await scope.vault.decryptPayloadForCurrentUser(envelope.iv, envelope.data);
+      BscAssert(scope, live); groups = BscValidate(scope, payload);
+    }
+    BscAssert(scope, live);
+    if (scope.storage.getItem(scope.key) === raw) return { raw: raw, groups: groups };
+  }
+  throw BscError('BSC_CHANGED');
+}
+async function BscHydrate(live) {
+  BscCleanupLegacy();
+  var readId = ++BscReadId, scope = null, expired = false, timeout = null;
+  function current() { return !expired && (!live || live() === true); }
+  BscCache = null;
+  try {
+    scope = BscCapture();
+    var timedOut = new Promise(function (_, reject) { timeout = i.setTimeout(function () { expired = true; reject(BscError('BSC_TIMEOUT')); }, 8000); });
+    var result = await Promise.race([BscRead(scope, current), timedOut]);
+    BscAssert(scope, current);
+    if (readId !== BscReadId) return false;
+    BscCache = { scope: scope, raw: result.raw, groups: result.groups, error: false }; return true;
+  } catch (_) {
+    if (readId === BscReadId && (!scope || BscCurrent(scope))) BscCache = { scope: scope, groups: [], error: true };
+    return false;
+  } finally { if (timeout !== null) i.clearTimeout(timeout); }
+}
 function Bsc3(B){return(B&&B.bases||[]).map(function(g){return g.patientId}).sort().join("|")}
-function Bsc4(B){try{var t=Bsc3(B);return!!t&&Bsc8().indexOf(t)>=0}catch{return!1}}
-function Bsc5(B){try{var t=Bsc3(B),a=Bsc8();t&&a.indexOf(t)<0&&a.push(t),i.localStorage&&i.localStorage.setItem(Bsc7,JSON.stringify(a.slice(-200)))}catch{}}
+function Bsc4(B) {
+  try {
+    var cache = BscCache;
+    if (!cache || cache.error || !BscCurrent(cache.scope)) return false;
+    var signature = Bsc3(B); return !!signature && cache.groups.indexOf(signature) >= 0;
+  } catch (_) { return false; }
+}
+function BscReadFailed() { return !BscCache || BscCache.error || !BscCurrent(BscCache.scope); }
+function Bsc5(B, live) {
+  var scope, signature, deadline = Date.now() + 8000;
+  try { scope = BscCapture(); signature = Bsc3(B); if (!signature) throw BscError('BSC_GROUP'); BscBound(BscPayload(scope, [signature])); BscAssert(scope, live); }
+  catch (error) { return Promise.reject(error); }
+  var abort = null, expired = false, timeout = null;
+  // One deadline belongs to the click, including its in-realm queue wait.
+  var timedOut = new Promise(function (_, reject) {
+    timeout = i.setTimeout(function () { expired = true; if (abort) abort.abort(); reject(BscError('BSC_TIMEOUT')); }, Math.max(0, deadline - Date.now()));
+  });
+  function current() { return !expired && Date.now() < deadline && (!live || live() === true); }
+  async function save() {
+    // A task whose click expired in the queue never requests a lock or reads.
+    if (Date.now() >= deadline) throw BscError('BSC_TIMEOUT');
+    BscAssert(scope, current);
+    var locks = i.navigator && i.navigator.locks;
+    if (!locks || typeof locks.request !== 'function' || typeof i.AbortController !== 'function') throw BscError('BSC_LOCKS');
+    abort = new i.AbortController();
+    var request = locks.request('vilda:duplicate-groups:v2:' + scope.mode + ':' + (scope.ephemeral ? 'ephemeral:' : scope.cloud ? 'cloud:' : 'local:')
+        + encodeURIComponent(scope.accountId) + (scope.tab ? ':tab:' + encodeURIComponent(scope.tab) : ''), { mode: 'exclusive', signal: abort.signal }, async function (lock) {
+        if (!lock) throw BscError('BSC_LOCKS');
+        BscAssert(scope, current);
+        var latest = await BscRead(scope, current);
+        BscAssert(scope, current);
+        var groups = latest.groups;
+        if (groups.indexOf(signature) < 0) groups.push(signature);
+        groups = groups.slice(-200);
+        var payload = BscPayload(scope, groups); BscBound(payload);
+        var cipher = await scope.vault.encryptPayloadForCurrentUser(payload);
+        BscAssert(scope, current);
+        if (!cipher || typeof cipher.iv !== 'string' || !cipher.iv || typeof cipher.data !== 'string' || !cipher.data) throw BscError('BSC_CIPHER');
+        var raw = JSON.stringify({ iv: cipher.iv, data: cipher.data });
+        if (new TextEncoder().encode(raw).byteLength > BscMaxBytes * 2) throw BscError('BSC_CIPHER_SIZE');
+        // This is a defensive check within the real exclusive lock, not CAS.
+        if (scope.storage.getItem(scope.key) !== latest.raw) throw BscError('BSC_CHANGED');
+        BscAssert(scope, current); scope.storage.setItem(scope.key, raw);
+        if (scope.storage.getItem(scope.key) !== raw) throw BscError('BSC_COMMIT');
+        BscAssert(scope, current); BscReadId += 1;
+        BscCache = { scope: scope, raw: raw, groups: groups, error: false }; return true;
+      });
+    var saved = await request;
+    BscAssert(scope, current); return saved;
+  }
+  BscSaving += 1;
+  var task = Promise.race([BscQueue.then(save), timedOut]).finally(function () {
+    i.clearTimeout(timeout); BscSaving -= 1;
+    if (!BscSaving && BscRefreshPending) { BscRefreshPending = false; BscRefresh(); }
+  });
+  BscQueue = task.catch(function () {}); return task;
+}
+function BscRefresh() {
+  var state = bn();
+  if (!state || state.screen !== 'list') return;
+  if (BscSaving) { BscRefreshPending = true; return; }
+  Gd7();
+}
+function BscObserve(event) {
+  if (event && (event.key === BscLegacyKey || event.key === 'veph:l:' + BscLegacyKey)) { BscCleanupLegacy(); return; }
+  var scope;
+  try { scope = BscCache && BscCache.scope || BscCapture(); } catch (_) { return; }
+  if (!BscCurrent(scope)) return;
+  var key = scope.tab ? 'veph:l:' + scope.key : scope.key;
+  var nativeStorage;
+  try { nativeStorage = scope.tab ? i.sessionStorage : i.localStorage; } catch (_) { return; }
+  if (event && event.key !== null && event.key !== key || event && event.storageArea && event.storageArea !== nativeStorage) return;
+  BscReadId += 1; BscCache = null; BscRefresh();
+}
+BscCleanupLegacy();
+try {
+  i.addEventListener('storage', BscObserve);
+  i.addEventListener('focus', function () { BscCleanupLegacy(); BscObserve(null); });
+  i.addEventListener('pagehide', function () { BscRetired = true; BscReset(); });
+  i.addEventListener('pageshow', function () { BscRetired = false; BscReset(); BscCleanupLegacy(); BscRefresh(); });
+  i.document.addEventListener('vilda:guest-mode-changed', BscReset);
+  i.addEventListener('vilda:user-state-cleared', BscReset);
+  i.document.addEventListener('vilda:user-state-cleared', BscReset);
+} catch (_) {}
+/* END ACCOUNT DUPLICATE DISMISSALS V2 */
 function Bsc9(t){return new Promise(function(a){var n=i.document&&i.document.body;if(!n||!t||!t.cel||!Array.isArray(t.inne)||!t.inne.length){a(!1);return}var o=null,Gs_x=null;function l(w){Gs_x&&(Gs_x(),Gs_x=null);if(o){try{o.parentNode&&o.parentNode.removeChild(o)}catch{}o=null}try{n.classList.remove("vilda-modal-alert-open")}catch{}try{i.document.removeEventListener("keydown",d,!0)}catch{}a(w)}function d(w){w&&w.key==="Escape"&&(w.preventDefault(),l(!1))}function opis(g){var h=g.header||{};return Gz0({dobISO:h.dobISO,age:h.age,ageMonths:h.ageMonths,sex:h.sex==="K"?"F":h.sex,lastSavedAtISO:g.lastSavedAtISO,snapshotCount:g.snapshotCount})}var c=e("ul",{class:"vilda-auth-conflict-list"},[e("li",{text:"Zostaje: „"+((t.cel.header||{}).name||"")+"” — "+opis(t.cel)})].concat(t.inne.map(function(g){return e("li",{text:"Dołączony i usunięty: „"+((g.header||{}).name||"")+"” — "+opis(g)})}))),p=e("button",{class:"vilda-auth-btn vilda-auth-btn-primary",type:"button",text:"Scal w jeden rekord",onclick:function(){l(!0)}}),g=e("button",{class:"vilda-auth-btn vilda-auth-btn-ghost",type:"button",text:"Anuluj",onclick:function(){l(!1)}}),z=e("div",{class:"vilda-auth-sheet vilda-auth-sheet-conflict",role:"alertdialog","aria-modal":"true","aria-label":"Scalić w jeden rekord?"},[e("h3",{class:"vilda-auth-sheet-title",text:"Scalić w jeden rekord?"}),e("p",{class:"vilda-auth-sheet-body",text:"To ma być JEDNO dziecko. Do rekordu, który zostaje, przejdą wszystkie wersje, pomiary z historii wzrastania, punkty terapii, wpisy Terminarza i przynależność do list z pozostałych rekordów. Data urodzenia, płeć i części nazwiska zostają z rekordu docelowego, a gdy ich tam nie ma — z dołączanego."}),c,e("div",{class:"vilda-auth-password-warning"},[e("strong",{text:"Tej operacji nie można cofnąć."}),e("span",{text:" Jeżeli to różne dzieci o tym samym nazwisku — Anuluj i użyj „To różne dzieci”, a rozróżnij je datą urodzenia w „Edytuj”."})]),e("div",{class:"vilda-auth-sheet-actions"},[p,g])]);o=e("div",{class:"vilda-auth-overlay vilda-auth-overlay-sheet"},[z]),n.appendChild(o);try{n.classList.add("vilda-modal-alert-open")}catch{}try{i.document.addEventListener("keydown",d,!0)}catch{}Gs_x=Gs_przyBlokadzie(function(){l(!1)});try{g.focus()}catch{}})}
 function Gz1(t){const a=t%10,n=t%100;return t===1?"1"+" wersja":a>=2&&a<=4&&(n<12||n>14)?t+" wersje":t+" wersji"}
 function Gz0(t){const a=[];a.push(t&&t.dobISO?"ur. "+t.dobISO:"bez daty urodzenia");const n=[];return t&&t.age!=null&&n.push(t.age+" l"),t&&t.ageMonths&&n.push(t.ageMonths+" mies."),n.length&&a.push(n.join(" ")),t&&t.sex==="F"?a.push("dziewczynka"):t&&t.sex==="M"&&a.push("ch\u0142opiec"),t&&t.lastSavedAtISO&&a.push("ostatni zapis "+Gr4(t.lastSavedAtISO)),t&&t.snapshotCount&&a.push(Gz1(t.snapshotCount)),t&&t.shortId&&a.push("#"+t.shortId),a.join(" \xB7 ")}
@@ -4086,6 +4277,8 @@ Pacjenci pozostaj\u0105 w bazie \u2014 znika tylko lista.`)}catch{}rt&&n.deleteP
   catch(g){
   }
   if(!GdMoznaWyswietlic(GdBilet))return;
+  await BscHydrate(function () { return GdAktualnyOdczyt(GdBilet); });
+  if(!GdMoznaWyswietlic(GdBilet))return;
   let l=[],d=[],u=0,h=[],directoryFailed=false,legacyFailed=false;
   // Vault pins the unlocked account independently. Its per-record cancellation
   // check needs only the render token; DOM/modal checks belong to the UI commit.
@@ -4340,6 +4533,7 @@ function L(g,B){
   }
 function A(){
     f.innerHTML="";
+    if (BscReadFailed()) f.appendChild(e("div", { class: "vilda-auth-error pt-dup-preference-error", role: "status", text: "Nie udało się odczytać ukrytych grup. Grupy pozostają widoczne. Spróbuj ponownie." }, [e("button", { type: "button", class: "vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small", text: "Ponów odczyt", onclick: function () { Gd7(); } })]));
     var g=W().sort();
     if(!g.length){
       f.appendChild(e("div",{
@@ -4371,8 +4565,18 @@ function A(){
           class:"vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small pt-dup-rozne",type:"button",text:"To różne dzieci — ukryj grupę"
         }
         );
-        Bs9.addEventListener("click",function(){
-          Bsc5(U),A(),vt()
+        Bs9.disabled = BscReadFailed();
+        Bs9.addEventListener("click",async function(){
+          if (Bs9.disabled) return;
+          function current() { return BscViewGeneration === GdRenderId && remReadCurrent(owner) && le.listView === view && !!view.root.isConnected && !!Bs9.isConnected && y[B] === U; }
+          Bs9.disabled = true; Bs9.setAttribute("aria-busy", "true");
+          var status = e("div", { class: "vilda-auth-error pt-dup-save-error", role: "status" });
+          try {
+            await Bsc5(U, current);
+            if (current()) Gd7();
+          } catch (_) {
+            if (current()) { status.textContent = "Nie udało się zapisać ukrycia grupy. Grupa pozostaje widoczna. Spróbuj ponownie."; Bs9.parentNode.appendChild(status); }
+          } finally { if (current()) { Bs9.disabled = false; Bs9.removeAttribute("aria-busy"); } }
         }
         ),at.appendChild(e("div",{
           class:"pt-dup-rozne-wrap"
@@ -4511,6 +4715,8 @@ Dla ka\u017Cdego nazwiska powstanie rekord osoby (je\u015Bli nie istnieje), a wp
   }
   );
   le.listView = view;
+  // Zt intentionally retires the read token while mounting the completed view.
+  var BscViewGeneration = GdRenderId;
   if (typeof view.mount === 'function') view.mount();
 }
 function Ls(t,a,n){var r=e("div",{style:"display:flex;gap:4px;background:#EDF3F4;border-radius:999px;padding:3px;margin:0 auto 12px;width:fit-content;"});function o(l,d,c){var s=e("button",{type:"button",text:l,style:"border:0 !important;box-shadow:none !important;backdrop-filter:none !important;-webkit-backdrop-filter:none !important;cursor:pointer;font-size:0.82rem;font-weight:600;padding:6px 16px;border-radius:999px;width:auto;"+(d?"background:#00838d !important;color:#fff !important;":"background:transparent !important;color:#5b6672 !important;")});!d&&c&&s.addEventListener("click",c),r.appendChild(s)}return o("Z bazy",t==="base",function(){Be(a,n)}),o("Spoza bazy",t==="ext",function(){ze(a,n)}),r}function is(t){var a=[];return t&&(t.sex==="M"?a.push("M"):t.sex==="K"&&a.push("K"),typeof t.birthYear=="number"&&isFinite(t.birthYear)&&a.push("ur. "+t.birthYear),t.contact&&a.push(t.contact)),a.join(" \xB7 ")}async function ze(t,a,n){return Be(t,a,n)}function rs(t,a,n){const r=jt();if(!r||!r.isUnlocked())return;const o=a||{},l=!!(t&&t.patientId),d=t&&t.header||{};jn();function c(Z){var H=(Z==null?"":String(Z)).trim().replace(/\s+/g," ");if(!H)return{f:"",l:""};var V=H.split(" ");if(V.length===1)return{f:"",l:V[0]};var ut=V.shift();return{f:V.join(" "),l:ut}}var s={f:d.firstName||"",l:d.lastName||""};!s.f&&!s.l&&(s=c(d.name||""));function p(Z,H){return e("div",{class:"ve-lab"},[e("span",{text:Z}),H?e("span",{class:"ve-new",text:"nowe"}):null])}function u(Z,H,V){return e("div",{class:"ve-field"+(V?" ve-wide":"")},[Z,H])}const h=e("input",{type:"text",placeholder:"Nazwisko",value:s.l||"",maxlength:"80"}),v=e("input",{type:"text",placeholder:"Imi\u0119",value:s.f||"",maxlength:"80"}),m=e("input",{type:"number",placeholder:"np. 2014",inputmode:"numeric",value:typeof d.birthYear=="number"&&isFinite(d.birthYear)?String(d.birthYear):"",min:"1900",max:String(new Date().getFullYear())}),y=e("textarea",{placeholder:"np. telefon, e-mail, skierowanie, notatka organizacyjna",rows:"3"});d.contact&&(y.value=d.contact);var x=d.sex==="M"||d.sex==="K"?d.sex:null,k=e("button",{type:"button",text:"ch\u0142opiec","data-v":"M"}),w=e("button",{type:"button",text:"dziewczynka","data-v":"K"});function W(){k.classList.toggle("is-on",x==="M"),w.classList.toggle("is-on",x==="K")}k.addEventListener("click",function(){x=x==="M"?null:"M",W(),b()}),w.addEventListener("click",function(){x=x==="K"?null:"K",W(),b()});var F=e("div",{class:"ve-seg"},[k,w]);W();var S=e("div",{class:"ve-ava"}),D=e("div",{class:"ve-id-name"}),M=e("div",{class:"ve-id-meta"});function b(){var Z=(h.value||"").trim(),H=(v.value||"").trim(),V=(Z+" "+H).trim();D.textContent=V||"(bez nazwiska)",S.textContent=(Z||H||"?").charAt(0).toUpperCase();var ut=["spoza bazy"];x&&ut.push(x==="M"?"ch\u0142opiec":"dziewczynka");var wt=(m.value||"").trim();wt&&ut.push("ur. "+wt),M.textContent=ut.join(" \xB7 ")}[h,v,m].forEach(function(Z){Z.addEventListener("input",b)}),b();var z=e("div",{class:"vilda-auth-error",style:"margin:2px 0 0;"});const I=e("button",{class:"ve-btn ve-btn-primary",type:"button",text:l?"Zapisz":"Dodaj"}),R=e("button",{class:"ve-btn ve-btn-ghost",type:"button",text:"Anuluj",onclick:function(){ze(n,o)}});I.addEventListener("click",function(){var Z=(h.value||"").trim(),H=(v.value||"").trim();if(!Z){z.textContent="Podaj nazwisko.",h.focus();return}z.textContent="";var V={lastName:Z,firstName:H,sex:x,birthYear:m.value,contact:y.value};l&&(V.patientId=t.patientId),I.disabled=!0,Promise.resolve(r.saveExternalPatient(V)).then(function(){ze(n,o)}).catch(function(ut){I.disabled=!1,z.textContent="Nie uda\u0142o si\u0119 zapisa\u0107: "+(ut&&ut.message?ut.message:ut)})});function T(){var Z=((h.value||"").trim()+" "+(v.value||"").trim()).trim()||d.name||"t\u0119 osob\u0119",H=!0;try{H=i.confirm("Usun\u0105\u0107 osob\u0119 spoza bazy: "+Z+`?

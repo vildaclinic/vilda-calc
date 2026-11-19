@@ -10,6 +10,11 @@ test.use({ serviceWorkers: 'block' });
 const HASLO = 'E2e#Scalanie!26dd';
 
 async function otworzZKontem(page) {
+  await page.route('**/*', route => {
+    const url = new URL(route.request().url());
+    return ['127.0.0.1', 'localhost'].includes(url.hostname) || ['data:', 'blob:'].includes(url.protocol)
+      ? route.continue() : route.abort('blockedbyclient');
+  });
   await page.addInitScript(() => {
     try {
       window.localStorage.setItem('vilda-terms-accepted-v1',
@@ -20,7 +25,8 @@ async function otworzZKontem(page) {
   });
   await page.goto('/index.html', { waitUntil: 'load' });
   await page.waitForFunction(() => Boolean(window.VildaVault));
-  await page.evaluate(async (pw) => window.VildaVault.createUser(pw, { label: 'e2e', iterations: 10000 }), HASLO);
+  await page.evaluate(async (pw) => window.VildaVault.createUser(pw,
+    { label: 'Fikcyjny sejf scalania E2E', iterations: 10000, deferServerContact: true }), HASLO);
   await page.reload({ waitUntil: 'load' });
   await page.waitForFunction(() => Boolean(window.VildaVault) && window.VildaVault.isUnlocked());
   await page.waitForFunction(() => !document.documentElement.classList.contains('vilda-auth-locked'));
@@ -86,6 +92,19 @@ async function otworzDuplikaty(page) {
   await expect(page.locator('.pt-dupgrp')).toHaveCount(1);
 }
 
+// Całe publiczne rekordy, wersje i notatki; samo liczenie kart nie wykryje zmiany treści.
+const dokumentacja = (page) => page.evaluate(async () => {
+  const V = window.VildaVault;
+  const patients = await V.listPatients();
+  patients.sort((a, b) => a.patientId.localeCompare(b.patientId));
+  return {
+    patients,
+    records: await Promise.all(patients.map(p => V.getPatient(p.patientId))),
+    patientNotes: await Promise.all(patients.map(p => V.listPatientNotesForPatient(p.patientId))),
+    notes: await V.listNotes(),
+  };
+});
+
 test.describe('Duplikaty z bazy — scalanie na życzenie lekarza', () => {
   test('grupa pokazuje oba rekordy, a „Zostaw ten" scala pozostałe po potwierdzeniu', async ({ page }) => {
     test.setTimeout(120_000);
@@ -140,21 +159,65 @@ test.describe('Duplikaty z bazy — scalanie na życzenie lekarza', () => {
     expect((await pacjenci(page)).length).toBe(2);
   });
 
-  test('„To różne dzieci" ukrywa grupę na tym urządzeniu i nie rusza rekordów', async ({ page }) => {
+  test('„To różne dzieci" zapisuje wyłącznie szyfrogram konta, ukrywa grupę i nie rusza dokumentacji', async ({ page }) => {
     test.setTimeout(120_000);
     await otworzZKontem(page);
-    await paraDuplikatow(page);
+    const { stary, nowy } = await paraDuplikatow(page);
+    const before = await dokumentacja(page);
     await otworzDuplikaty(page);
+    await page.evaluate(() => {
+      const encrypt = SubtleCrypto.prototype.encrypt;
+      window.__duplicateEncryptAlgorithms = [];
+      SubtleCrypto.prototype.encrypt = function (algorithm, key, bytes) {
+        try {
+          const value = JSON.parse(new TextDecoder().decode(bytes));
+          if (value.purpose === 'duplicate-groups-dismissed') {
+            window.__duplicateEncryptAlgorithms.push({ name: algorithm.name, key: key.algorithm.name });
+          }
+        } catch (_) { /* Inne natywne szyfrowanie nie jest przedmiotem tej asercji. */ }
+        return encrypt.call(this, algorithm, key, bytes);
+      };
+    });
     await page.locator('.pt-dup-rozne').click();
     await expect(page.locator('.pt-dupgrp')).toHaveCount(0);
     await expect(page.locator('.pt-empty')).toContainText('Brak duplikatów');
-    expect((await pacjenci(page)).length).toBe(2);
+    expect(await dokumentacja(page)).toEqual(before);
     // Po ponownym otwarciu listy grupa nadal ukryta, a znacznik „możliwy duplikat" zniknął.
     await page.evaluate(() => window.VildaAuthUI.showPatientsList(() => {}));
     await expect(page.locator('.vilda-patients2')).toBeVisible();
     await expect(page.locator('.pt-dupbar')).toBeHidden();
     await expect(page.locator('.pt-row--dup')).toHaveCount(0);
-    const klucz = await page.evaluate(() => window.localStorage.getItem('vildaDuplikatyRozneV1'));
-    expect(klucz, 'pamięć trzyma tylko identyfikatory').not.toMatch(/Fikcyjna/);
+    const saved = await page.evaluate(async () => {
+      const userId = window.VildaVault.getCurrentUser().userId;
+      const key = 'vildaDuplikatyRozneAccountV2:' + encodeURIComponent(userId);
+      const raw = window.localStorage.getItem(key);
+      const envelope = JSON.parse(raw);
+      const value = await window.VildaVault.decryptPayloadForCurrentUser(envelope.iv, envelope.data);
+      const entries = [localStorage, sessionStorage].flatMap(storage => Object.keys(storage)
+        .filter(name => /vildaDuplikatyRozne/.test(name)).map(name => [name, storage.getItem(name)]));
+      return { userId, key, raw, envelope, value, entries,
+        algorithms: window.__duplicateEncryptAlgorithms,
+        legacy: localStorage.getItem('vildaDuplikatyRozneV1') };
+    });
+    expect(Object.keys(saved.envelope).sort()).toEqual(['data', 'iv']);
+    expect(Buffer.from(saved.envelope.iv, 'base64')).toHaveLength(12);
+    expect(Buffer.from(saved.envelope.data, 'base64').length).toBeGreaterThan(16);
+    expect(saved.algorithms).toEqual([{ name: 'AES-GCM', key: 'AES-GCM' }]);
+    expect(saved.value).toEqual({ schema: 2, purpose: 'duplicate-groups-dismissed',
+      accountId: saved.userId, groups: [[stary, nowy].sort().join('|')] });
+    expect(saved.entries).toEqual([[saved.key, saved.raw]]);
+    for (const id of [stary, nowy, [stary, nowy].sort().join('|')]) {
+      expect(JSON.stringify(saved.entries), 'identyfikatory grupy tylko wewnątrz szyfrogramu').not.toContain(id);
+    }
+    expect(saved.raw).not.toContain('Fikcyjna');
+    expect(saved.legacy).toBeNull();
+    // Nowy dokument odtwarza decyzję z prawdziwego AES sejfu, nie z pamięci poprzedniego widoku.
+    await page.reload({ waitUntil: 'load' });
+    await page.waitForFunction(() => window.VildaVault?.isUnlocked() && window.VildaAuthUI?.isBootReady());
+    await page.evaluate(() => window.VildaAuthUI.showPatientsList(() => {}));
+    await expect(page.locator('.vilda-patients2')).toBeVisible();
+    await expect(page.locator('.pt-dupbar')).toBeHidden();
+    await expect(page.locator('.pt-row--dup')).toHaveCount(0);
+    expect(await dokumentacja(page)).toEqual(before);
   });
 });

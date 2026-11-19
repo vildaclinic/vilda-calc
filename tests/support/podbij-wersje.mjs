@@ -10,16 +10,19 @@ import { czyZrodloWersji, korzen, skanujWersje, WZGLEDNY_PLIK_STANU, WZORZEC_WER
 // obie zmiany jednego pliku mogły zostać pod JEDNYM ?v=, które klient z zainstalowaną aplikacją ma już
 // w pamięci z treścią tylko pierwszej (service worker trzyma wpisy ?v= jako niezmienne, P-SW rata 1).
 //
-// Ten moduł wylicza wersje WYŁĄCZNIE z dwóch rzeczy: z gałęzi bazowej (domyślnie origin/audyt) i z treści
+// Ten moduł porównuje treść z gałęzią bazową (domyślnie origin/audyt). Opcjonalny, zweryfikowany pin
+// opublikowanego audyt chroni dodatkowo wydane klucze cache i wyznacza dolną granicę nowych numerów.
+// Bez pinu wylicza wersje wyłącznie z bazy i z treści
 // plików w drzewie roboczym. Plik o treści innej niż w bazie (tokeny ?v= innych plików liczone jak w bazie)
-// dostaje ?v= o jeden większe niż najwyższe ?v= tego pliku w bazie — na stronach i w tablicach SW; plik
+// dostaje ?v= o jeden większe niż najwyższe chronione ?v= tego pliku — na stronach i w tablicach SW; plik
 // niezmieniony — wersję z bazy. Skrypt, który wstrzykuje plik z nowym ?v=, zmienia przez to treść i też
-// dostaje nowe ?v=. SW_VERSION = wersja z bazy + 1, jeżeli zmienił się jakikolwiek zasób z pamięci service
+// dostaje nowe ?v=. SW_VERSION = najwyższa chroniona wersja + 1, jeżeli zmienił się jakikolwiek zasób z pamięci service
 // workera (albo sam SW), inaczej wersja z bazy. Wynik nie zależy od tego, co wątek wpisał wcześniej, więc
 // konflikt w liniach wersji rozwiązuje się mechanicznie, a potem skrypt uruchamia się ponownie
 // (npm run podbij-wersje). Procedura: docs/GITHUB_WORKFLOW.md, „Kilka wątków naraz”.
 //
-// Granice (celowo): wpisy precache obecne w bazie są nietykalne (append-only, AGENTS.md § 6) — ich brak jest
+// Granice (celowo): wpisy precache obecne w bazie albo zweryfikowanym opublikowanym pinie są nietykalne
+// (append-only, AGENTS.md § 6) — ich brak jest
 // błędem; skrypt dopisuje i poprawia tylko wpisy plików znanych z bazy, dodane na tej gałęzi. Nowego pliku
 // ani nowej strony nie dopisuje do tablic SW (wybór tablicy należy do autora) i nie zmienia pinów wersji
 // w testach poza pinem SW_VERSION — zgłasza je. Wersje nieliczbowe (np. edu-video-ui.css?v=20261003v4)
@@ -27,6 +30,8 @@ import { czyZrodloWersji, korzen, skanujWersje, WZGLEDNY_PLIK_STANU, WZORZEC_WER
 
 export const DOMYSLNA_BAZA = 'origin/audyt';
 export const PLIK_SW = 'service-worker-kalorii.js';
+export const PUBLISHED_PRECACHE_PIN = 'tests/fixtures/home-published-precache-history.json';
+const PUBLISHED_REF = 'refs/remotes/origin/audyt';
 const LINIA_SW_VERSION = /^const SW_VERSION = '(\d+)\.(\d+)\.(\d+)';\r?$/m;
 // Jeden wpis w linii; ostatni element tablicy nie ma przecinka, a po wpisie może stać komentarz.
 const WPIS_PRECACHE = /^(\s*)'\/([A-Za-z0-9_./-]+)\?v=(\d+)'(,?)[ \t]*(?:\/\/.*)?\r?$/;
@@ -152,6 +157,49 @@ function bazaWHistorii(katalog, rewizja) {
   return gitProbuj(katalog, ['rev-parse', '-q', '--verify', 'MERGE_HEAD']) !== null && przodek('MERGE_HEAD');
 }
 
+function publishedHistoryError(code, message) {
+  const error = new Error(`opublikowana historia precache: ${message}`);
+  error.code = code;
+  return error;
+}
+
+/** Pin jest danymi pochodzenia, a nie listą wyjątków podaną przez bieżący SW. */
+export function readPublishedPrecachePin({ katalog = korzen } = {}) {
+  const file = path.join(katalog, PUBLISHED_PRECACHE_PIN);
+  if (!fs.existsSync(file)) return null;
+  let pin;
+  try { pin = JSON.parse(fs.readFileSync(file, 'utf8')); }
+  catch { throw publishedHistoryError('PUBLISHED_HISTORY_PIN', `nieprawidłowy JSON w ${PUBLISHED_PRECACHE_PIN}`); }
+  if (!pin || pin.version !== 1 || typeof pin.commit !== 'string' || !/^[0-9a-f]{40}$/.test(pin.commit)
+    || typeof pin.workerSHA256 !== 'string' || !/^[0-9a-f]{64}$/.test(pin.workerSHA256)
+    || Object.keys(pin).sort().join(',') !== 'commit,version,workerSHA256') {
+    throw publishedHistoryError('PUBLISHED_HISTORY_PIN', `nieprawidłowy pin w ${PUBLISHED_PRECACHE_PIN}`);
+  }
+  return pin;
+}
+
+/** Tylko lokalne obiekty Git: kontrola --bez-sieci nie pobiera brakującego dowodu. */
+export function verifyPublishedPrecacheHistory({ katalog = korzen } = {}) {
+  const pin = readPublishedPrecachePin({ katalog });
+  if (!pin) return null;
+  if (gitProbuj(katalog, ['cat-file', '-e', `${pin.commit}^{commit}`]) === null) {
+    throw publishedHistoryError('PUBLISHED_HISTORY_MISSING_COMMIT', `brak commita ${pin.commit}; uruchom node tests/scripts/prepare-published-precache-history.mjs`);
+  }
+  const worker = czytajZRewizji(katalog, pin.commit, [PLIK_SW]).get(PLIK_SW);
+  if (!worker || skrot(worker) !== pin.workerSHA256) {
+    throw publishedHistoryError('PUBLISHED_HISTORY_SHA', `odcisk ${PLIK_SW} nie zgadza się z pinem ${pin.commit}`);
+  }
+  if (!bazaWHistorii(katalog, pin.commit)) {
+    throw publishedHistoryError('PUBLISHED_HISTORY_CANDIDATE', `${pin.commit} nie jest udowodnionym przodkiem HEAD ani MERGE_HEAD`);
+  }
+  const published = gitProbuj(katalog, ['rev-parse', '--verify', '--quiet', `${PUBLISHED_REF}^{commit}`]);
+  const ancestor = published && spawnSync('git', ['merge-base', '--is-ancestor', pin.commit, published], { cwd: katalog, stdio: 'ignore' }).status === 0;
+  if (!ancestor) {
+    throw publishedHistoryError('PUBLISHED_HISTORY_PUBLICATION', `${pin.commit} nie jest udowodnionym przodkiem ${PUBLISHED_REF}`);
+  }
+  return { ...pin, worker: worker.toString('utf8') };
+}
+
 /**
  * Porównuje lokalną referencję origin/<gałąź> z serwerem (`git ls-remote`). Zwraca
  * { sprawdzono: false, powod } bez sieci albo dla bazy spoza origin/, inaczej { sprawdzono: true, aktualna, lokalnie, zdalnie }.
@@ -257,6 +305,21 @@ export function zaplanuj({ katalog = korzen, baza = DOMYSLNA_BAZA } = {}) {
     liczBazy.set(w.klucz, (liczBazy.get(w.klucz) || 0) + 1);
     maksWSWBazy.set(w.plik, Math.max(maksWSWBazy.get(w.plik) || 0, w.v));
   }
+  const publishedHistory = verifyPublishedPrecacheHistory({ katalog });
+  const protectedCounts = new Map(liczBazy);
+  const maksWSWHistorii = new Map(maksWSWBazy);
+  let wersjaSWPodstawa = wersjaSWBazy;
+  if (publishedHistory) {
+    const counts = new Map();
+    for (const w of wpisyPrecache(publishedHistory.worker)) {
+      counts.set(w.klucz, (counts.get(w.klucz) || 0) + 1);
+      maksWSWHistorii.set(w.plik, Math.max(maksWSWHistorii.get(w.plik) || 0, w.v));
+    }
+    for (const [key, count] of counts) protectedCounts.set(key, Math.max(protectedCounts.get(key) || 0, count));
+    const publishedSW = wersjaSW(publishedHistory.worker, publishedHistory.commit);
+    const firstDifference = publishedSW.findIndex((part, index) => part !== wersjaSWBazy[index]);
+    if (firstDifference >= 0 && publishedSW[firstDifference] > wersjaSWBazy[firstDifference]) wersjaSWPodstawa = publishedSW;
+  }
 
   const wersjePrzed = skanujWersje(zrodlaTeraz, czytaj, istniejeTeraz);
   const nieliczboweTeraz = tokenyNieliczbowe(zrodlaTeraz.map(czytaj));
@@ -337,7 +400,7 @@ export function zaplanuj({ katalog = korzen, baza = DOMYSLNA_BAZA } = {}) {
     const vBazy = wersjeBazy.get(p);
     const zmieniony = zmienione.has(p);
     // Najwyższe ?v= w bazie liczy też tablice SW: klucz ?v= z precache bazy klient może już mieć w pamięci.
-    const najwyzsza = Math.max(vBazy, maksWSWBazy.get(p) || 0);
+    const najwyzsza = Math.max(vBazy, maksWSWHistorii.get(p) || 0);
     cele.set(p, {
       vBazy, cel: zmieniony ? najwyzsza + 1 : vBazy, zmieniony,
       przezWstrzykniecie: zmieniony && !zmienioneSame.has(p), zHistoriiSW: zmieniony && najwyzsza > vBazy ? najwyzsza : null,
@@ -360,9 +423,10 @@ export function zaplanuj({ katalog = korzen, baza = DOMYSLNA_BAZA } = {}) {
   const wpisyTeraz = wpisyPrecache(swTeraz);
   const liczTeraz = new Map();
   for (const w of wpisyTeraz) liczTeraz.set(w.klucz, (liczTeraz.get(w.klucz) || 0) + 1);
-  for (const [klucz, ile] of liczBazy) {
+  for (const [klucz, ile] of protectedCounts) {
     if ((liczTeraz.get(klucz) || 0) < ile) {
-      bledy.push(`usunięto historyczny wpis precache '/${klucz}' obecny w ${baza} (append-only, AGENTS.md § 6) — przywróć go`);
+      const source = liczBazy.has(klucz) && liczBazy.get(klucz) >= ile ? baza : `opublikowanym ${publishedHistory.commit}`;
+      bledy.push(`usunięto historyczny wpis precache '/${klucz}' obecny w ${source} (append-only, AGENTS.md § 6) — przywróć go`);
     }
   }
 
@@ -383,7 +447,7 @@ export function zaplanuj({ katalog = korzen, baza = DOMYSLNA_BAZA } = {}) {
     const kluczCelu = c ? `${plik}?v=${c.cel}` : null;
     // Wpis bieżącej wersji jest dozwolony także dla pliku bez zmian — tak dopisuje się brakujący wpis
     // (P-SW-LAB-PIN: lab_pin_result.js?v=4).
-    const dozwolone = (klucz) => (liczBazy.get(klucz) || 0) + (klucz === kluczCelu && !liczBazy.has(klucz) ? 1 : 0);
+    const dozwolone = (klucz) => (protectedCounts.get(klucz) || 0) + (klucz === kluczCelu && !protectedCounts.has(klucz) ? 1 : 0);
     const wlasne = wpisyTeraz.filter((w) => w.plik === plik);
     const widziane = new Map();
     for (const w of wlasne) {
@@ -425,7 +489,7 @@ export function zaplanuj({ katalog = korzen, baza = DOMYSLNA_BAZA } = {}) {
   // --- pliki spoza bazy ---
   for (const plik of [...wersjePo.keys()].filter((p) => !wersjeBazy.has(p)).sort()) {
     const v = wersjePo.get(plik);
-    const maks = maksWSWBazy.get(plik);
+    const maks = maksWSWHistorii.get(plik);
     if (maks !== undefined && v <= maks && skrot(czytaj(plik)) !== skrotBazy(plik)) {
       bledy.push(`${plik}?v=${v}: precache bazy ma już ten plik do ?v=${maks} z inną treścią — nadaj ?v=${maks + 1} lub wyższe`);
     }
@@ -447,7 +511,7 @@ export function zaplanuj({ katalog = korzen, baza = DOMYSLNA_BAZA } = {}) {
 
   // --- SW_VERSION ---
   const dodaneKlucze = new Set([...cele].filter(([, c]) => c.cel !== c.vBazy).map(([p, c]) => `${p}?v=${c.cel}`)
-    .filter((k) => !liczBazy.has(k)));
+    .filter((k) => !protectedCounts.has(k)));
   const bezWersji = (tekst) => tekst.split('\n')
     .filter((l) => {
       const m = WPIS_PRECACHE.exec(l);
@@ -466,7 +530,7 @@ export function zaplanuj({ katalog = korzen, baza = DOMYSLNA_BAZA } = {}) {
   const zmienioneBezPodbic = zmienioneZasoby.filter((p) => !podbite.includes(p));
   if (zmienioneBezPodbic.length) powody.push(`zmienione zasoby z pamięci SW: ${skrocListe(zmienioneBezPodbic)}`);
   if (swInaczej) powody.push(`zmieniony sam ${PLIK_SW}`);
-  const celSW = powody.length ? [wersjaSWBazy[0], wersjaSWBazy[1], wersjaSWBazy[2] + 1] : wersjaSWBazy;
+  const celSW = powody.length ? [wersjaSWPodstawa[0], wersjaSWPodstawa[1], wersjaSWPodstawa[2] + 1] : wersjaSWPodstawa;
   noweSW = noweSW.replace(LINIA_SW_VERSION, (linia) => linia.replace(/'[^']+'/, `'${tekstWersji(celSW)}'`));
   if (noweSW !== swTeraz) ustaw(PLIK_SW, noweSW);
 
@@ -515,6 +579,7 @@ export function zaplanuj({ katalog = korzen, baza = DOMYSLNA_BAZA } = {}) {
   return {
     baza: { nazwa: baza, rewizja, sw: tekstWersji(wersjaSWBazy) },
     bazaWHistorii: bazaWHistorii(katalog, rewizja),
+    publishedHistory: publishedHistory ? { commit: publishedHistory.commit, workerSHA256: publishedHistory.workerSHA256 } : null,
     pliki,
     sw: { przed: tekstWersji(wersjaSWPrzed), baza: tekstWersji(wersjaSWBazy), cel: tekstWersji(celSW), powody },
     precache: { dodane, usuniete },
@@ -534,13 +599,14 @@ export function zastosuj(plan, { katalog = korzen } = {}) {
 export function opiszPlan(plan) {
   const out = [];
   out.push(`Baza: ${plan.baza.nazwa} (${plan.baza.rewizja.slice(0, 7)}), SW ${plan.baza.sw}`);
+  if (plan.publishedHistory) out.push(`Chroniona opublikowana historia precache: ${plan.publishedHistory.commit} (zweryfikowane pochodzenie z origin/audyt).`);
   if (!plan.bazaWHistorii) out.push(`UWAGA: gałąź nie zawiera ${plan.baza.nazwa} — najpierw scal bazę (git merge ${plan.baza.nazwa}).`);
   if (plan.pliki.length) {
     out.push('Wersje plików:');
     for (const w of plan.pliki) {
       let opis = 'treść jak w bazie';
       if (w.zmieniony) opis = w.przezWstrzykniecie ? 'wstrzykuje plik z nowym ?v=' : 'treść zmieniona względem bazy';
-      if (w.zHistoriiSW) opis += `; precache bazy ma już ?v=${w.zHistoriiSW}`;
+      if (w.zHistoriiSW) opis += `; ${plan.publishedHistory ? 'chroniona historia precache' : 'precache bazy'} ma już ?v=${w.zHistoriiSW}`;
       const przed = w.vPrzed === w.cel ? 'bez zmian' : `było ${w.vPrzed}`;
       out.push(`  ${w.plik}: baza ${w.vBazy} → ${w.cel} (${opis}; ${przed})`);
     }
