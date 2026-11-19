@@ -2061,6 +2061,26 @@ Opis działania i przypadki: `docs/clinical/ALGORITHMS.md`, „Postępy dorosłe
 
 **Granice.** Napisy `_pdE.scalSerie(` i `_pdU.renderPanel(Ct,_pdM,` zostają (pilnuje ich `postepy-doroslego-widok.test.mjs`). Słuchacze zamkniętej karty (kontener odpięty od dokumentu) wypadają przy następnym powiadomieniu. Lint: bez nowych naruszeń (`no-useless-assignment` w limicie).
 
+## Łatka P-TRAJEKTORIA-DZIENNIK — kursy leczenia otyłości z dziennika (`vilda_auth_ui.js` 570 → 571, `vilda_summary_cards.js` 64 → 65, 2026-11-19, decyzja właściciela)
+
+Opis działania i przypadki: `docs/clinical/ALGORITHMS.md`, „Analiza trajektorii i karta porównania z dziennika leczenia” (P-TRAJEKTORIA-DZIENNIK). Czytelne źródło: `vilda_cykle_leczenia.js` (`VildaDziennikOtylosci.punktyWczytanego`, `odswiezWczytanego`, odświeżenie po `zapisz`).
+
+```js
+// vilda_auth_ui.js
+// 1. pas leczenia otyłości na siatkach Karty
+//    było:  ke=function(){var pe=Lt(s.obesityTherapyPoints,"oty\u0142o\u015B\u0107","#b5731a");if(!pe)return null;try{for(var Ga=s.obesityTherapyPoints.filter(
+//    jest:  ke=function(){/* P-TRAJEKTORIA-DZIENNIK … */var _dzP=typeof Ob_dzPunkty=="function"?Ob_dzPunkty(s,GdNotatki):s.obesityTherapyPoints,pe=Lt(_dzP,"oty\u0142o\u015B\u0107","#b5731a");if(!pe)return null;try{for(var Ga=_dzP.filter(
+// 2. kontekst trajektorii Karty (panel „Analiza trajektorii”, porównanie)
+//    było:  _J.buildClinicalContext({ghTherapyPoints:s.ghTherapyPoints,obesityTherapyPoints:s.obesityTherapyPoints,motherHeightCm:_adv.motherHeight
+//    jest:  _J.buildClinicalContext({ghTherapyPoints:s.ghTherapyPoints,obesityTherapyPoints:typeof Ob_dzPunkty=="function"?Ob_dzPunkty(s,GdNotatki):s.obesityTherapyPoints,motherHeightCm:_adv.motherHeight
+
+// vilda_summary_cards.js — karta „Porównanie z poprzednim pomiarem”
+//    było:  return J.buildClinicalContext({ghTherapyPoints:a.ghTherapyPoints,obesityTherapyPoints:a.obesityTherapyPoints,motherHeightCm:mh?parseFloat(mh.value):NaN,
+//    jest:  /* P-TRAJEKTORIA-DZIENNIK … */const _dzP=(function(){try{const Dz=a.VildaDziennikOtylosci;return Dz&&typeof Dz.punktyWczytanego=="function"?Dz.punktyWczytanego():null}catch(e){return null}})();return J.buildClinicalContext({ghTherapyPoints:a.ghTherapyPoints,obesityTherapyPoints:_dzP||a.obesityTherapyPoints,motherHeightCm:mh?parseFloat(mh.value):NaN,
+```
+
+**Granice.** `Ob_dzPunkty` i `GdNotatki` — z łatki P-POSTEPY-DZIENNIK (ta sama funkcja Karty). Wywołania przez strażników `typeof`. `window.obesityTherapyPoints` bez zmian.
+
 ## Trwała tożsamość wizyt — źródło i granica artefaktu sejfu
 
 Zmiana funkcjonalna `P-TRWALE-WIZYTY` ma bazę `audyt` z commita
