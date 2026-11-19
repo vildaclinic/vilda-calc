@@ -1051,7 +1051,7 @@ var t=o.getElementById("addVisitNoteBtnSidebar");if(t&&!t._cfBound)try{t.setAttr
   }
   var activate=async function(closeForNavigation){
   if(!publication.isCurrent())return;
-  if(typeof closeForNavigation!=="function"){F(a,"Odśwież stronę, aby bezpiecznie wczytać pacjenta.");return;}
+  if(typeof closeForNavigation!=="function"){F(a,"Od\u015bwie\u017c stron\u0119, aby bezpiecznie wczyta\u0107 pacjenta.");return;}
   var transport=r.VildaUiIntents,scope=null,receipt=null;
   try{
     if(!transport||transport.version!==1)throw new Error("Modu\u0142 bezpiecznej nawigacji niedost\u0119pny. Od\u015bwie\u017c stron\u0119.");
