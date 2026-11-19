@@ -2641,11 +2641,19 @@ natywne `Ob_dzPunkty(s,GdNotatki)` w obu konstruktorach kontekstu Auth oraz
 oryginalny silnik dziennika, karty podsumowania i regułę przypisania wizyty.
 Nie zmienia obliczeń ani źródeł danych klinicznych. Po tej aktualizacji,
 przed dołożeniem poniższego modułu, odwrócenie 16 par zabezpieczeń Auth daje
-`d0690d64531415aed5ebfffe6b3fd19133e69b1cddfdb008ed94690527a1fdb4`,
+`40fa4dc05fac4e239c6a2bb574009edd81b6ce441932f5b6b47d535422db42f4`,
 odwrócenie samych haków Przypomnień daje
-`81519c4e5d7870699ba985cadcfe93cb9fa44fe9552669335a81c5e5b20ea6ab`,
+`91e29536418022446f5d5d9ad2b3933cf7eff8f4c6ab75bd95fe47593f7e486b`,
 a odwrócenie obu zestawów daje
-`71f92cf5e80ebcae42198fb6927644d9f17eba061e04be1b87bcdb45e01fc9ee`.
+`98d90618b877cdc696020f7e726b5d16deeff201deebdaffbdd97afe7fd2c9f3`.
+
+Te skróty uwzględniają oficjalne wyrównanie wersji zasobów względem
+historii publikacji: jedyną zmianą w samym Auth po `75db10e2` jest
+`clcr_record_resources.js?v=27` → `?v=31`. Po zastąpieniu wyłącznie
+liczbowych tokenów `?v=` oba pliki są bajtowo identyczne, a cały blok
+`ACCOUNT DUPLICATE DISMISSALS V2` pozostaje bajtowo identyczny także bez
+tego przekształcenia. Skrót bazy po odwróceniu samej warstwy Bsc wynosi
+`f22c3d7dd90990e02f5a527527857d3f207fe52a502e5fbdb8d310b39a873735`.
 
 Czytelny blok `ACCOUNT DUPLICATE DISMISSALS V2` w `vilda_auth_ui.js` oraz
 `tools/account-duplicate-dismissals-auth-hooks.mjs` stanowią źródło i dokładny

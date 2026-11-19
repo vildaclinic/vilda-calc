@@ -252,13 +252,14 @@ bazy porównania treści. Jest potrzebny, gdy integracja ma starszą bazę niż
 włączony do niej opublikowany `audyt`. Zmianę pinu opieramy na rzeczywistym
 commicie publikacji, nie na bieżącym SW ani dowolnym numerze z gałęzi.
 
-- plik o treści innej niż w bazie dostaje `?v=` o jeden większe niż najwyższe `?v=` tego pliku w bazie i zweryfikowanej historii publikacji — na stronach i w tablicach SW, bo klient może już mieć ten klucz w pamięci; plik niezmieniony dostaje wersję z bazy (tokeny innych plików liczą się przy porównaniu jak w bazie);
+- plik o treści innej niż w bazie dostaje `?v=` o jeden większe niż najwyższe `?v=` tego pliku w bazie i zweryfikowanej historii publikacji — na stronach i w tablicach SW, bo klient może już mieć ten klucz w pamięci;
+- ten sam nowy klucz dostaje też plik bez zmiany własnej treści, gdy chroniona historia ma wyższą wersję niż aktywna baza. Natywny SW instaluje tylko najwyższy numer, więc powrót do niższego tokenu pozbawiłby stronę pliku offline. Gdy numer publikacji i bazy jest równy, a ich oryginalne bloby różne, skrypt również nadaje świeży klucz. Nie używa ponownie opublikowanego klucza do innej treści. Zmiana URI zależności podbija jej odbiorców, także w cyklach; raport nadal osobno pokazuje faktyczną zmianę treści względem wybranej bazy;
 - wersję przepisuje na wszystkich stronach, w skryptach i w liście smoke; skrypt, który wstrzykuje plik z nowym `?v=`, zmienia przez to treść i też dostaje nowe `?v=`;
 - dopisuje wpis precache zaraz po poprzedniej wersji pliku (także po ostatnim elemencie tablicy); zbędne wpisy dodane na tej gałęzi usuwa, także wpisy plików, których strony już nie ładują; ręcznie dopisany brakujący wpis bieżącej wersji zostawia (P-SW-LAB-PIN). Chroni większą liczność każdego URL z bazy i publikacji; brak chronionego wpisu jest błędem append-only;
 - `SW_VERSION` ustawia na większą wersję z bazy i publikacji + 1, gdy zmienił się którykolwiek zasób z pamięci service workera (strona, plik z tablic albo sam SW), inaczej zostawia tę większą wersję;
 - aktualizuje pin SW w `tests/unit/klirens-ui-model.test.mjs` i przepisuje `tests/fixtures/wersje-zasobow.json`.
 
-Wynik nie zależy od numerów wpisanych wcześniej, a drugie uruchomienie niczego nie zmienia. Pliki ignorowane przez git (np. makiety `makieta_klirens_*.html`) nie są liczone.
+Wynik nie zależy od numerów wpisanych wcześniej, a drugie uruchomienie niczego nie zmienia. Powód nadania nowego klucza z historii zależy od niezmiennych blobów Git i ich wersji, nie od ręcznie wpisanego tokenu w drzewie roboczym. Pliki ignorowane przez git (np. makiety `makieta_klirens_*.html`) nie są liczone.
 
 Skrypt przerywa liczenie, gdy scalanie ma nierozwiązane pliki, gdy w plikach, które przepisuje albo porównuje z bazą, zostały znaczniki konfliktu, i w kopii z `core.autocrlf=true`. Odmawia zapisu, gdy gałąź nie zawiera bazy, gdy lokalne `origin/audyt` jest starsze niż na serwerze (`git ls-remote`) albo gdy zniknął chroniony wpis precache.
 

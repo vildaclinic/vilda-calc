@@ -36,6 +36,25 @@ function harness(mode = 'normal', { memoryFallback = false } = {}) {
   return { win, api, local, session, active, prefix, events };
 }
 
+function authResetHarness(win) {
+  // qa resets both the lab session and the account preference RAM. Execute its
+  // real production dependency and declaration in the same closure as qa.
+  const duplicateState = authSource.match(/^var BscEpoch = [^\n]+;$/m)?.[0];
+  if (!duplicateState) throw new Error('Production duplicate preference state declaration missing');
+  return new Function('i', 'Ot', [duplicateState, wytnijFunkcje(authSource, 'BscReset'), wytnijFunkcje(authSource, 'qa'), `
+    return {
+      reset: qa,
+      seedDuplicateState: function () {
+        BscEpoch = 7; BscReadId = 11;
+        BscCache = { groups: ['FICTIONAL-DUPLICATE-GROUP'] };
+      },
+      readDuplicateState: function () {
+        return { epoch: BscEpoch, readId: BscReadId, cache: BscCache, retired: BscRetired };
+      }
+    };
+  `].join('\n'))(win, () => {});
+}
+
 function seed(api) {
   expect(api.writePreferenceRaw(selectionKey, 'cortisol')).toBe(true);
   unitKeys.forEach(key => expect(api.writePreferenceRaw(key, 'FICTIONAL-UNIT')).toBe(true));
@@ -109,11 +128,17 @@ describe.each(['normal', 'ephemeral', 'cloud-only'])('lab converter reset: %s', 
     };
     if (hasGlobalClear) h.win.clearAllData = () => h.api.clearUserState();
     else h.api.markClearInProgress(2500);
-    // Execute the production auth function, with only its error logger replaced.
-    const reset = new Function('i', 'Ot', wytnijFunkcje(authSource, 'qa') + ';return qa;')(h.win, () => {});
+    // Execute production qa and BscReset, with only the error logger replaced.
+    const auth = authResetHarness(h.win);
+    expect(auth.readDuplicateState()).toEqual({ epoch: 0, readId: 0, cache: null, retired: false });
+    auth.seedDuplicateState();
+    const before = auth.readDuplicateState();
+    expect(before.cache.groups).toEqual(['FICTIONAL-DUPLICATE-GROUP']);
 
-    reset('FICTIONAL-SESSION-RESET');
+    auth.reset('FICTIONAL-SESSION-RESET');
 
+    expect(auth.readDuplicateState()).toEqual({ epoch: before.epoch + 1, readId: before.readId + 1,
+      cache: null, retired: before.retired });
     expectEmpty(h.api);
     expect(h.api.isClearInProgress()).toBe(true);
     // The real lab DOM listens for this window event. Both paths announce the

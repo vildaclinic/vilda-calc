@@ -29,7 +29,7 @@ const digest = text => createHash('sha256').update(text).digest('hex');
 function worker(version = '1.1.10', entries = [2, 3]) {
   return `const SW_VERSION = '${version}';\nconst ROOT_DOCUMENT = '/index.html';\nconst CORE_SHELL_URLS = [\n  ROOT_DOCUMENT,\n${entries.map(v => `  '/engine.js?v=${v}',`).join('\n')}\n];\nconst OPTIONAL_DOCUMENTS = ['/app.html'];\nconst OPTIONAL_ASSETS = [];\n`;
 }
-function fixture() {
+function fixture(extraFiles = {}) {
   const directory = temporary();
   const git = (...args) => execFileSync('git', ['-c', 'commit.gpgsign=false', ...args], {
     cwd: directory, env: ENV, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'],
@@ -43,6 +43,7 @@ function fixture() {
   write('engine.js', 'window.fictionalEngine = 1;\n');
   write(WORKER, worker());
   write('tests/unit/klirens-ui-model.test.mjs', "const SW_VERSION = '1.1.10';\n");
+  for (const [relative, text] of Object.entries(extraFiles)) write(relative, text);
   const state = () => write('tests/fixtures/wersje-zasobow.json', JSON.stringify(biezaceWersje(directory), null, 1) + '\n');
   state(); git('init', '-q'); git('config', 'core.autocrlf', 'false'); git('checkout', '-q', '-b', 'integration');
   const commit = message => { git('add', '-A'); git('commit', '-q', '-m', message); return git('rev-parse', 'HEAD'); };
@@ -52,11 +53,13 @@ function fixture() {
   const apply = (baseRef = 'integration') => { const result = plan(baseRef); zastosuj(result, { katalog: directory }); return result; };
   return { directory, git, write, read, state, commit, base, plan, apply };
 }
-function published(r, entries = [2, 3, 4, 5, 7]) {
+function published(r, entries = [2, 3, 4, 5, 7], { engineBody = 'window.fictionalEngine = 2;\n', activeVersion = 7, additionalAssets = [] } = {}) {
   r.git('checkout', '-q', '-b', 'audyt', 'integration');
-  r.write('engine.js', 'window.fictionalEngine = 2;\n');
-  for (const relative of ['index.html', 'app.html']) r.write(relative, r.read(relative).replaceAll('engine.js?v=3', 'engine.js?v=7'));
-  const source = worker('1.1.14', entries); r.write(WORKER, source); r.state();
+  r.write('engine.js', engineBody);
+  for (const relative of ['index.html', 'app.html']) r.write(relative, r.read(relative).replaceAll('engine.js?v=3', `engine.js?v=${activeVersion}`));
+  const source = worker('1.1.14', entries).replace('const OPTIONAL_ASSETS = [];', additionalAssets.length
+    ? `const OPTIONAL_ASSETS = [\n${additionalAssets.map(asset => `  '/${asset}',`).join('\n')}\n];` : 'const OPTIONAL_ASSETS = [];');
+  r.write(WORKER, source); r.state();
   const commit = r.commit('fictional published worker');
   r.git('update-ref', 'refs/remotes/origin/audyt', commit);
   r.git('checkout', '-q', 'agent/feature'); r.git('merge', '-q', '--ff-only', 'audyt');
@@ -81,6 +84,91 @@ describe('published precache provenance and official version planning', () => {
     const result = r.read(WORKER);
     for (const version of [2, 3, 4, 5, 7, 8]) expect(result).toContain(`'/engine.js?v=${version}'`);
     expect(result.match(/'\/engine\.js\?v=4'/g)).toHaveLength(2);
+    expect(r.plan().zmiany.size).toBe(0);
+  });
+
+  it('gives an unchanged body a fresh URI above the protected published maximum', () => {
+    const r = fixture(), original = r.read('engine.js');
+    published(r, [2, 3, 4, 5, 7], { engineBody: original });
+    expect(r.read('engine.js')).toBe(original);
+    const plan = r.apply();
+    expect(plan.bledy).toEqual([]); expect(plan.precache.usuniete).toEqual([]);
+    expect(plan.pliki.find(entry => entry.plik === 'engine.js')).toMatchObject({ vBazy: 3, cel: 8, zmieniony: false, przezWstrzykniecie: false });
+    expect(r.read('engine.js')).toBe(original); expect(r.read('index.html')).toContain('engine.js?v=8');
+    expect(r.read(WORKER)).toContain("'/engine.js?v=7'"); expect(r.read(WORKER)).toContain("'/engine.js?v=8'");
+    expect(r.plan().zmiany.size).toBe(0);
+  });
+
+  it('propagates an unchanged child URI advance into the actual loader bytes and its fresh parent URI', () => {
+    const loaderBody = "window.fictionalLoader = 'engine.js?v=3';\n";
+    const r = fixture({
+      'loader.js': loaderBody,
+      'index.html': '<!doctype html>\n<script src="engine.js?v=3"></script>\n<script src="loader.js?v=2"></script>\n',
+      [WORKER]: worker().replace('const OPTIONAL_ASSETS = [];', "const OPTIONAL_ASSETS = [\n  '/loader.js?v=2',\n];"),
+    });
+    published(r, [2, 3, 4, 5, 7], { engineBody: r.read('engine.js'), additionalAssets: ['loader.js?v=2'] });
+    expect(r.read('loader.js')).toBe(loaderBody);
+    const plan = r.apply(); expect(plan.bledy).toEqual([]);
+    expect(plan.pliki.find(entry => entry.plik === 'engine.js')).toMatchObject({ cel: 8, zmieniony: false });
+    expect(plan.pliki.find(entry => entry.plik === 'loader.js')).toMatchObject({ vBazy: 2, cel: 3, zmieniony: true, przezWstrzykniecie: true });
+    expect(r.read('loader.js')).toBe("window.fictionalLoader = 'engine.js?v=8';\n");
+    expect(r.read('index.html')).toContain('loader.js?v=3'); expect(r.read(WORKER)).toContain("'/loader.js?v=3'");
+    expect(r.plan().zmiany.size).toBe(0);
+  });
+
+  it('does not reuse a tied published URI whose actual body differs from the reintroduced integration body', () => {
+    const r = fixture(), original = r.read('engine.js');
+    published(r, [2, 3], { activeVersion: 3 });
+    expect(r.read('engine.js')).not.toBe(original); r.write('engine.js', original);
+    const plan = r.apply(); expect(plan.bledy).toEqual([]);
+    expect(plan.pliki.find(entry => entry.plik === 'engine.js')).toMatchObject({ vBazy: 3, cel: 4, zmieniony: false });
+    expect(r.read('engine.js')).toBe(original); expect(r.read('index.html')).toContain('engine.js?v=4');
+    expect(r.read(WORKER)).toContain("'/engine.js?v=3'"); expect(r.read(WORKER)).toContain("'/engine.js?v=4'");
+    expect(r.plan().zmiany.size).toBe(0);
+  });
+
+  it('gives a deliberate return to the integration body a fresh URI above a different later published body', () => {
+    const r = fixture(), original = r.read('engine.js'); published(r);
+    expect(r.read('engine.js')).not.toBe(original); r.write('engine.js', original);
+    const plan = r.apply(); expect(plan.bledy).toEqual([]);
+    expect(plan.pliki.find(entry => entry.plik === 'engine.js')).toMatchObject({ vBazy: 3, cel: 8, zmieniony: false });
+    expect(r.read('engine.js')).toBe(original); expect(r.read('index.html')).toContain('engine.js?v=8');
+    expect(r.plan().zmiany.size).toBe(0);
+  });
+
+  it('reaches a stable fresh-URI fixed point for self references and a loader cycle seeded only by history', () => {
+    const engineBody = "window.fictionalSelf = 'engine.js?v=3';\nwindow.fictionalDependency = 'loader.js?v=2';\n";
+    const r = fixture({
+      'engine.js': engineBody, 'loader.js': "window.fictionalLoader = 'engine.js?v=3';\n",
+      'index.html': '<!doctype html>\n<script src="engine.js?v=3"></script>\n<script src="loader.js?v=2"></script>\n',
+      [WORKER]: worker().replace('const OPTIONAL_ASSETS = [];', "const OPTIONAL_ASSETS = [\n  '/loader.js?v=2',\n];"),
+    });
+    published(r, [2, 3, 4, 5, 7], { engineBody, additionalAssets: ['loader.js?v=2'] });
+    const plan = r.apply(); expect(plan.bledy).toEqual([]);
+    expect(plan.pliki.find(entry => entry.plik === 'engine.js')).toMatchObject({ cel: 8, zmieniony: true, przezWstrzykniecie: true });
+    expect(plan.pliki.find(entry => entry.plik === 'loader.js')).toMatchObject({ cel: 3, zmieniony: true, przezWstrzykniecie: true });
+    expect(r.read('engine.js')).toBe("window.fictionalSelf = 'engine.js?v=8';\nwindow.fictionalDependency = 'loader.js?v=3';\n");
+    expect(r.read('loader.js')).toBe("window.fictionalLoader = 'engine.js?v=8';\n");
+    expect(r.plan().zmiany.size).toBe(0);
+  });
+
+  it('restores mistaken manual reference numbers without inventing a published-body collision', () => {
+    const loaderBody = "window.fictionalLoader = 'engine.js?v=3';\n";
+    const r = fixture({
+      'loader.js': loaderBody,
+      'index.html': '<!doctype html>\n<script src="engine.js?v=3"></script>\n<script src="loader.js?v=2"></script>\n',
+      [WORKER]: worker().replace('const OPTIONAL_ASSETS = [];', "const OPTIONAL_ASSETS = [\n  '/loader.js?v=2',\n];"),
+    });
+    const engineBody = r.read('engine.js');
+    published(r, [2, 3], { engineBody, activeVersion: 3, additionalAssets: ['loader.js?v=2'] });
+    r.write('loader.js', loaderBody.replace('engine.js?v=3', 'engine.js?v=999'));
+    r.write('index.html', r.read('index.html').replace('engine.js?v=3', 'engine.js?v=999').replace('loader.js?v=2', 'loader.js?v=999'));
+    const plan = r.apply(); expect(plan.bledy).toEqual([]);
+    expect(plan.pliki.find(entry => entry.plik === 'engine.js')).toMatchObject({ cel: 3, zmieniony: false });
+    expect(plan.pliki.find(entry => entry.plik === 'loader.js')).toMatchObject({ cel: 2, zmieniony: false });
+    expect(r.read('engine.js')).toBe(engineBody); expect(r.read('loader.js')).toBe(loaderBody);
+    expect(r.read('index.html')).toContain('engine.js?v=3'); expect(r.read('index.html')).toContain('loader.js?v=2');
+    expect(r.read('index.html') + r.read('loader.js')).not.toContain('?v=999');
     expect(r.plan().zmiany.size).toBe(0);
   });
 

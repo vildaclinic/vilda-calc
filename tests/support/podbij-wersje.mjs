@@ -14,8 +14,8 @@ import { czyZrodloWersji, korzen, skanujWersje, WZGLEDNY_PLIK_STANU, WZORZEC_WER
 // opublikowanego audyt chroni dodatkowo wydane klucze cache i wyznacza dolną granicę nowych numerów.
 // Bez pinu wylicza wersje wyłącznie z bazy i z treści
 // plików w drzewie roboczym. Plik o treści innej niż w bazie (tokeny ?v= innych plików liczone jak w bazie)
-// dostaje ?v= o jeden większe niż najwyższe chronione ?v= tego pliku — na stronach i w tablicach SW; plik
-// niezmieniony — wersję z bazy. Skrypt, który wstrzykuje plik z nowym ?v=, zmienia przez to treść i też
+// dostaje ?v= o jeden większe niż najwyższe chronione ?v= tego pliku — na stronach i w tablicach SW.
+// Bez potrzeby nowego klucza zostaje wersja z bazy. Skrypt, który wstrzykuje plik z nowym ?v=, zmienia przez to treść i też
 // dostaje nowe ?v=. SW_VERSION = najwyższa chroniona wersja + 1, jeżeli zmienił się jakikolwiek zasób z pamięci service
 // workera (albo sam SW), inaczej wersja z bazy. Wynik nie zależy od tego, co wątek wpisał wcześniej, więc
 // konflikt w liniach wersji rozwiązuje się mechanicznie, a potem skrypt uruchamia się ponownie
@@ -308,12 +308,14 @@ export function zaplanuj({ katalog = korzen, baza = DOMYSLNA_BAZA } = {}) {
   const publishedHistory = verifyPublishedPrecacheHistory({ katalog });
   const protectedCounts = new Map(liczBazy);
   const maksWSWHistorii = new Map(maksWSWBazy);
+  const maksWSWPublikacji = new Map();
   let wersjaSWPodstawa = wersjaSWBazy;
   if (publishedHistory) {
     const counts = new Map();
     for (const w of wpisyPrecache(publishedHistory.worker)) {
       counts.set(w.klucz, (counts.get(w.klucz) || 0) + 1);
       maksWSWHistorii.set(w.plik, Math.max(maksWSWHistorii.get(w.plik) || 0, w.v));
+      maksWSWPublikacji.set(w.plik, Math.max(maksWSWPublikacji.get(w.plik) || 0, w.v));
     }
     for (const [key, count] of counts) protectedCounts.set(key, Math.max(protectedCounts.get(key) || 0, count));
     const publishedSW = wersjaSW(publishedHistory.worker, publishedHistory.commit);
@@ -366,32 +368,42 @@ export function zaplanuj({ katalog = korzen, baza = DOMYSLNA_BAZA } = {}) {
   // --- wersje: najmniejszy punkt stały ---
   // Plik zarządzany = ładowany z liczbowym ?v= i teraz, i w bazie. Zmieniony „sam z siebie”: treść różna od
   // bazy po ustawieniu tokenów plików zarządzanych na wersje z bazy — dzięki temu wynik nie zależy od numerów
-  // wpisanych wcześniej (także przy skryptach, które wstrzykują się nawzajem). Potem propagacja: skrypt, który
-  // wstrzykuje plik zmieniony, dostaje nowy token, więc też się zmienia.
+  // wpisanych wcześniej (także przy skryptach, które wstrzykują się nawzajem). Nowy klucz jest potrzebny też,
+  // gdy niezmieniony plik ma wyższą chronioną historię: natywny SW instaluje tylko najwyższe ?v=.
+  // Zmiana klucza i zmiana treści są osobne; zmiana URI zależności zmienia treść jej odbiorcy.
   const zarzadzane = [...wersjePrzed.keys()].filter((p) => wersjeBazy.has(p)).sort();
   const zarzadzaneZbior = new Set(zarzadzane);
   const wersjaBazyDla = (p) => (zarzadzaneZbior.has(p) ? wersjeBazy.get(p) : undefined);
+  const publishedTies = publishedHistory ? czytajZRewizji(katalog, publishedHistory.commit,
+    zarzadzane.filter((p) => maksWSWPublikacji.get(p) === wersjeBazy.get(p))) : new Map();
   const zmienioneSame = new Set();
+  const noweKluczeZHistorii = new Set();
   const odwolania = new Map();
   for (const p of zarzadzane) {
     const buf = czytaj(p);
     const tekstowy = doPrzepisaniaZbior.has(p);
     const znormalizowana = tekstowy ? Buffer.from(ustawTokeny(buf.toString('utf8'), wersjaBazyDla), 'utf8') : buf;
     if (skrot(znormalizowana) !== skrotBazy(p)) zmienioneSame.add(p);
+    const published = publishedTies.get(p);
+    // Oba porównywane obrazy są niezmiennymi blobami Git. Ręczny token w drzewie
+    // roboczym nie może stworzyć ani usunąć powodu nowego klucza w kolejnym przebiegu.
+    if ((maksWSWHistorii.get(p) || 0) > wersjeBazy.get(p)
+      || publishedTies.has(p) && (!published || skrot(published) !== skrotBazy(p))) noweKluczeZHistorii.add(p);
     if (tekstowy) {
       const cele = [...buf.toString('utf8').matchAll(new RegExp(WZORZEC_WERSJI.source, 'g'))]
         .map((m) => normalizuj(m[2]))
-        .filter((q) => q !== p && zarzadzaneZbior.has(q));
+        .filter((q) => zarzadzaneZbior.has(q));
       if (cele.length) odwolania.set(p, new Set(cele));
     }
   }
   const zmienione = new Set(zmienioneSame);
+  const noweKlucze = new Set([...zmienioneSame, ...noweKluczeZHistorii]);
   for (let zmiana = true; zmiana;) {
     zmiana = false;
     for (const [p, cele] of odwolania) {
-      if (!zmienione.has(p) && [...cele].some((q) => zmienione.has(q))) {
-        zmienione.add(p);
-        zmiana = true;
+      if ([...cele].some((q) => noweKlucze.has(q))) {
+        if (!zmienione.has(p)) { zmienione.add(p); zmiana = true; }
+        if (!noweKlucze.has(p)) { noweKlucze.add(p); zmiana = true; }
       }
     }
   }
@@ -399,11 +411,13 @@ export function zaplanuj({ katalog = korzen, baza = DOMYSLNA_BAZA } = {}) {
   for (const p of zarzadzane) {
     const vBazy = wersjeBazy.get(p);
     const zmieniony = zmienione.has(p);
-    // Najwyższe ?v= w bazie liczy też tablice SW: klucz ?v= z precache bazy klient może już mieć w pamięci.
+    // Chroniona historia liczy obie tablice SW: taki klucz klient może już mieć w pamięci.
     const najwyzsza = Math.max(vBazy, maksWSWHistorii.get(p) || 0);
+    const nowyKlucz = noweKlucze.has(p);
     cele.set(p, {
-      vBazy, cel: zmieniony ? najwyzsza + 1 : vBazy, zmieniony,
-      przezWstrzykniecie: zmieniony && !zmienioneSame.has(p), zHistoriiSW: zmieniony && najwyzsza > vBazy ? najwyzsza : null,
+      vBazy, cel: nowyKlucz ? najwyzsza + 1 : vBazy, zmieniony,
+      przezHistorie: noweKluczeZHistorii.has(p) && !zmienioneSame.has(p),
+      przezWstrzykniecie: zmieniony && !zmienioneSame.has(p), zHistoriiSW: nowyKlucz && najwyzsza > vBazy ? najwyzsza : null,
     });
   }
   for (const f of doPrzepisania) {
@@ -572,6 +586,7 @@ export function zaplanuj({ katalog = korzen, baza = DOMYSLNA_BAZA } = {}) {
     .map(([plik, c]) => ({
       plik, vBazy: c.vBazy, vPrzed: wersjePrzed.get(plik), cel: c.cel, zmieniony: c.zmieniony,
       przezWstrzykniecie: c.przezWstrzykniecie, zHistoriiSW: c.zHistoriiSW,
+      ...(c.przezHistorie ? { przezHistorie: true } : {}),
     }))
     .filter((w) => w.cel !== w.vBazy || w.vPrzed !== w.cel)
     .sort((a, b) => a.plik.localeCompare(b.plik));
@@ -606,6 +621,7 @@ export function opiszPlan(plan) {
     for (const w of plan.pliki) {
       let opis = 'treść jak w bazie';
       if (w.zmieniony) opis = w.przezWstrzykniecie ? 'wstrzykuje plik z nowym ?v=' : 'treść zmieniona względem bazy';
+      if (w.przezHistorie) opis += '; nowy klucz dla chronionej historii precache';
       if (w.zHistoriiSW) opis += `; ${plan.publishedHistory ? 'chroniona historia precache' : 'precache bazy'} ma już ?v=${w.zHistoriiSW}`;
       const przed = w.vPrzed === w.cel ? 'bez zmian' : `było ${w.vPrzed}`;
       out.push(`  ${w.plik}: baza ${w.vBazy} → ${w.cel} (${opis}; ${przed})`);

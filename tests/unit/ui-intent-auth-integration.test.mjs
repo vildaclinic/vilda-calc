@@ -366,13 +366,13 @@ describe('exact reproducible Auth security delta', () => {
     for (const pair of UI_INTENT_AUTH_PAIRS) expect(auth.split(pair.after)).toHaveLength(2);
     const prior = reverseUiIntentAuthHooks(auth);
     // Prior checkpoint 633ee436 plus exact PR1000/PR1002 native delta and its optional B1 lifetime hooks.
-    expect(digest(reverseBscAuthHooks(prior))).toBe('d0690d64531415aed5ebfffe6b3fd19133e69b1cddfdb008ed94690527a1fdb4');
+    expect(digest(reverseBscAuthHooks(prior))).toBe('40fa4dc05fac4e239c6a2bb574009edd81b6ce441932f5b6b47d535422db42f4');
     expect(applyUiIntentAuthHooks(prior)).toBe(auth); expect(applyUiIntentAuthHooks(auth)).toBe(auth);
     const securedNative = reverseHomeRemindersHooks(auth);
     expect(digest(reverseBscAuthHooks(securedNative))).toBe(HOME_REMINDERS_AUTH_BASE_SHA256);
     const priorNative = reverseUiIntentAuthHooks(securedNative);
     expect(priorNative).toBe(reverseHomeRemindersHooks(prior));
-    expect(digest(reverseBscAuthHooks(priorNative))).toBe('71f92cf5e80ebcae42198fb6927644d9f17eba061e04be1b87bcdb45e01fc9ee');
+    expect(digest(reverseBscAuthHooks(priorNative))).toBe('98d90618b877cdc696020f7e726b5d16deeff201deebdaffbdd97afe7fd2c9f3');
     expect(applyUiIntentAuthHooks(priorNative)).toBe(securedNative);
   });
 
