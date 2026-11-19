@@ -6,7 +6,9 @@ import { expect, test } from '../support/test-czas.mjs';
 //        na wykresie od razu, bez ponownego otwierania karty (panel rysuje się od nowa w tym samym miejscu);
 //   PD-2 w „Wpisy leczenia” Włączenie (i każdy wpis zmieniający przebieg leczenia) poprawia się w DocPro —
 //        Karta nie daje „Popraw”/„Usuń”; Kontynuacja tego samego leku — tak;
-//   PD-3 wpis bieżącego cyklu z dwiema wersjami zdejmuje punkt oceny wg ChPL z „Postępów” i mówi dlaczego.
+//   PD-3 wpis bieżącego cyklu z dwiema wersjami zdejmuje punkt oceny wg ChPL z „Postępów” i mówi dlaczego;
+//   PD-4 (P-OTYLOSC-LEK) lek porównany jak listy pacjentów: starszy punkt bez substancji nie robi z Kontynuacji
+//        „zmiany leku”.
 // Dane pacjentów wyłącznie FIKCYJNE; sejf zakładany na potrzeby testu.
 test.use({ serviceWorkers: 'block', chwila: '2026-11-18T12:00:00Z' });
 
@@ -36,12 +38,12 @@ async function otworz(page) {
     && Boolean(window.VildaPostepyDoroslego) && Boolean(window.VildaPostepyDoroslegoUI));
 }
 
-async function pacjent(page) {
+async function pacjent(page, punkty = MIGAWKA) {
   return page.evaluate(async (pts) => (await window.VildaVault.savePatient({
     name: 'Testowy Adam',
     user: { lastName: 'Testowy', firstName: 'Adam', sex: 'M', age: 47, ageMonths: 10, height: 170, weight: 108, dobISO: '1979-01-12' },
     obesityTherapyPoints: pts,
-  }, { dedup: false })).patientId, MIGAWKA);
+  }, { dedup: false })).patientId, punkty);
 }
 
 async function karta(page, pid) {
@@ -105,6 +107,20 @@ test.describe('Postępy dorosłego i „Wpisy leczenia” na dzienniku leczenia'
     // Sejf bez zmian: lista „Leczenie otyłości — Saxenda, trwa” liczy się jak dotąd z zapisu wizyty.
     const naLiscie = await page.evaluate(async (id) => (await window.VildaVault.previewPatientListRule({ type: 'obesity', drugKey: 'saxenda', scope: 'active' })).patientIds.includes(id), pid);
     expect(naLiscie).toBe(true);
+  });
+
+  test('PD-4: starsze Włączenie zapisane bez substancji — Kontynuacja tego samego leku nadal w Karcie (P-OTYLOSC-LEK)', async ({ page }) => {
+    test.setTimeout(120_000);
+    await otworz(page);
+    // Dotąd Karta porównywała dosłowny tekst leku i substancji, więc ta Kontynuacja dostawała „Edytuj w DocPro →”.
+    const pid = await pacjent(page, [{ ...MIGAWKA[0], substance: '' }, MIGAWKA[1]]);
+    await karta(page, pid);
+    await expect(wiersz(page, '2026-06-01').getByRole('button', { name: 'Edytuj w DocPro →' })).toBeVisible();
+    const kont = wiersz(page, '2026-07-06');
+    await expect(kont.getByRole('button', { name: 'Popraw wpis z 06.07.2026' })).toBeVisible();
+    await expect(kont.getByRole('button', { name: 'Usuń wpis z 06.07.2026' })).toBeVisible();
+    await expect(kont.getByRole('button', { name: 'Edytuj w DocPro →' })).toHaveCount(0);
+    await expect(kont).not.toContainText('Ten wpis zmienia lek');
   });
 
   test('PD-3: dwie wersje wpisu bieżącego cyklu zdejmują punkt oceny wg ChPL z „Postępów”', async ({ page }) => {
