@@ -2948,3 +2948,15 @@ odtwarzanie. Historyczny `c2deeccd` opisuje wcześniejszą zatwierdzoną
 warstwę z ośmioma argumentami B1, a nie surowy natywny Auth. Odwrócenie
 trzech nowych rozszerzeń nadal daje dokładnie ten skrót; starsza warstwa
 hostowania notatek pozostaje identyczna z `4a6eecc2`.
+
+Natywne wczytanie publikuje pacjenta synchronicznie, lecz jego własne
+`vilda:json-imported` trafia do kolejki 0 ms. Odbiornik otyłości wiąże
+wyłącznie to jedno zdarzenie z zakończonym zaakceptowanym wczytaniem:
+przechwytuje oryginalne API, metodę licznika i nieprzezroczyste uprawnienie
+panelu, a po potwierdzonym wyniku sprawdza ich tożsamość, numer operacji,
+konto, dokument oraz docelowego pacjenta. Uprawnienie zdarzenia jest
+jednorazowe i kończy się także przy pierwszym wywołaniu po 450 ms.
+Nie ma ogólnego wyjątku dla fazy oczekiwania: inny import, numer operacji,
+powtórzenie lub zmiana właściciela nadal anuluje stary zamiar. Data,
+Panel i sejf pozostają bez zmian; świadek istnieje tylko w pamięci tego
+oryginalnego odbioru.

@@ -253,6 +253,7 @@ function ghJumpCleanup(claim){
   claim.cleanup.splice(0).forEach(function(fn){try{fn()}catch(_){}});
 }
 function ghJumpFinish(claim){
+  claim.ownImport=null;
   claim.finished=true;ghJumpCleanup(claim);
   if(ghJumpPendingClaim===claim)ghJumpPendingClaim=null;
   if(ghJumpAttemptLease===claim)ghJumpAttemptLease=null;
@@ -283,6 +284,71 @@ function ghJumpCurrent(claim,afterGuard){
   const raw=ghJumpRaw();
   return (claim.consumed?raw===null:raw===claim.raw)&&ghJumpOwnerCurrent(claim,afterGuard)&&(!claim.transportLease||claim.transportLease.current());
 }
+// One native apply queues its JSON notification after synchronous publication.
+// Its opaque accepted-load authority, not the landing phase, owns this exception.
+function ghJumpImportProviderCurrent(context,provider){
+  try{return provider.holders.every(function(holder){return holder.root.document===holder.document
+    &&holder.root.VildaDataImportExport===context.api&&holder.root.VildaPanelPacjent===provider.panel})
+    &&provider.panel.isAcceptedLoadAuthorityApplied===provider.applied}catch(_){return false}
+}
+function ghJumpCaptureOwnImport(claim,api,token){
+  try{
+    if(!ghJumpObesity(claim.intent)||!token||window.VildaDataImportExport!==api
+      ||typeof api.getApplyLoadedDataSequence!=="function"||typeof api.runAcceptedPatientLoad!=="function")return null;
+    const providers=[],roots=[window];
+    try{if(window.parent&&window.parent!==window)roots.push(window.parent)}catch(_){}
+    roots.forEach(function(root){try{
+      if(root.VildaDataImportExport!==api)return;
+      const panel=root.VildaPanelPacjent,applied=panel&&panel.isAcceptedLoadAuthorityApplied;
+      if(!panel||typeof applied!=="function")return;
+      let provider=providers.find(function(value){return value.panel===panel&&value.applied===applied});
+      if(!provider){provider={panel:panel,applied:applied,holders:[]};providers.push(provider)}
+      provider.holders.push(Object.freeze({root:root,document:root.document}));
+    }catch(_){}});
+    if(!providers.length)return null;
+    return {claim:claim,api:api,getSequence:api.getApplyLoadedDataSequence,run:api.runAcceptedPatientLoad,
+      token:token,providers:providers,authority:null,sequence:null,published:false};
+  }catch(_){return null}
+}
+function ghJumpRecordOwnImport(context,detail){
+  try{
+    if(context.published||!detail||!detail.acceptedLoadAuthority
+      ||window.VildaDataImportExport!==context.api||context.api.getApplyLoadedDataSequence!==context.getSequence
+      ||context.api.runAcceptedPatientLoad!==context.run)return;
+    const sequence=context.getSequence.call(context.api);
+    if(!Number.isSafeInteger(sequence)||sequence<=0)return;
+    context.authority=detail.acceptedLoadAuthority;context.sequence=sequence;context.published=true;
+  }catch(_){}
+}
+function ghJumpArmOwnImport(claim,context,token){
+  try{
+    if(!context||context.claim!==claim||context.token!==token||!context.published
+      ||window.VildaDataImportExport!==context.api||context.api.getApplyLoadedDataSequence!==context.getSequence
+      ||context.api.runAcceptedPatientLoad!==context.run||context.getSequence.call(context.api)!==context.sequence
+      ||!ghJumpCurrent(claim,true)||window._vildaCurrentPatientId!==claim.intent.patientId
+      ||window.sessionStorage.getItem("vildaCurrentPatientId")!==claim.intent.patientId)return false;
+    const matches=context.providers.filter(function(provider){return ghJumpImportProviderCurrent(context,provider)
+      &&provider.applied.call(provider.panel,context.authority)===true});
+    if(matches.length!==1)return false;
+    claim.ownImport={context:context,provider:matches[0]};return true;
+  }catch(_){return false}
+}
+function ghJumpConsumeOwnImport(claim,event){
+  const own=claim.ownImport;
+  try{
+    if(!own||claim.phase!=="landing"||!event||event.target!==claim.document||event.currentTarget!==claim.document)return false;
+    const detail=event.detail,source=detail&&Object.getOwnPropertyDescriptor(detail,"source"),sequence=detail&&Object.getOwnPropertyDescriptor(detail,"applySequence");
+    if(!source||source.value!=="json-import"||!sequence||!Number.isSafeInteger(sequence.value)
+      ||sequence.value!==own.context.sequence)return false;
+    const context=own.context;
+    if(context.claim!==claim||window.VildaDataImportExport!==context.api
+      ||context.api.getApplyLoadedDataSequence!==context.getSequence||context.api.runAcceptedPatientLoad!==context.run
+      ||context.getSequence.call(context.api)!==context.sequence||!ghJumpImportProviderCurrent(context,own.provider)
+      ||own.provider.applied.call(own.provider.panel,context.authority)!==true||!ghJumpLandingCurrent(claim)
+      ||claim.ownImport!==own)return false;
+    claim.ownImport=null;return true;
+  }catch(_){return false}
+}
 function ghJumpCapture(raw,intent){
   try{
     const source=ghJumpSourcePatient(),vault=window.VildaVault;
@@ -294,14 +360,14 @@ function ghJumpCapture(raw,intent){
     const claim={raw:raw,intent:intent,serial:++ghJumpIntentSerial,vault:vault,userId:user.userId,ticket:vault.captureSyncOperationSession(),
       sourcePatientId:source.id,document:doc,frame:frame,host:host,hostDocument:host.document,
       hash:String(host.location.hash),navId:(host.history.state||{}).shellNavId,href:String(window.location.href),
-      consumed:false,cancelled:false,finished:false,phase:"waiting",cleanup:[],abort:[],expiry:null};
+      consumed:false,cancelled:false,finished:false,phase:"waiting",ownImport:null,cleanup:[],abort:[],expiry:null};
     function listen(target,type,fn){if(target&&typeof target.addEventListener==="function"){target.addEventListener(type,fn);claim.cleanup.push(function(){target.removeEventListener(type,fn)})}}
     const cancel=function(){ghJumpCancel(claim)};
     listen(window,"pagehide",cancel);listen(window,"vilda:user-state-cleared",cancel);
     listen(doc,"visibilitychange",function(){if(doc.hidden===true)cancel()});
     listen(host,"hashchange",cancel);listen(host,"popstate",cancel);
     listen(doc,"vilda:patient-loaded",function(){if(claim.phase!=="attempt")cancel()});
-    listen(doc,"vilda:json-imported",function(){if(claim.phase!=="attempt")cancel()});
+    listen(doc,"vilda:json-imported",function(event){if(claim.phase!=="attempt"&&!ghJumpConsumeOwnImport(claim,event))cancel()});
     if(frame&&typeof window.MutationObserver==="function"){
       const observer=new window.MutationObserver(cancel);observer.observe(frame,{attributes:true,attributeFilter:["hidden","src"]});claim.cleanup.push(function(){observer.disconnect()});
     }
@@ -356,6 +422,7 @@ function ghJumpLandOwned(claim,loaded){
   if(ghJumpPendingClaim===claim)ghJumpPendingClaim=null;
   ghJumpAttemptLease=claim;
   function land(){
+    claim.ownImport=null;
     if(!ghJumpLandingCurrent(claim)||window.obesityTherapyMonitorSkok!==monitor){ghJumpCancel(claim);return}
     try{
       if(loaded)try{typeof window.refreshGHTherapyMonitor==="function"&&window.refreshGHTherapyMonitor()}catch(_){}
@@ -402,6 +469,8 @@ async function N(){
         const scopedLoad=!!(loadApi&&typeof loadApi.captureAcceptedPatientLoad==="function");
         const acceptedLoad=scopedLoad?loadApi.captureAcceptedPatientLoad({patientId:n.patientId}):null;
         if(scopedLoad&&!acceptedLoad){ghJumpCancel(claim);return}
+        const ownImport=ghJumpObesity(n)&&scopedLoad?ghJumpCaptureOwnImport(claim,loadApi,acceptedLoad):null;
+        if(ghJumpObesity(n)&&!ownImport){ghJumpCancel(claim);return}
         const i=await claim.vault.getPatient(n.patientId),a=i&&i.snapshots&&i.snapshots[0];
         if(!ghJumpCurrent(claim,false)||scopedLoad&&!loadApi.isAcceptedPatientLoadCurrent(acceptedLoad)){ghJumpCancel(claim);return}
         // Another user dialog may have opened during I/O. This intent has not
@@ -412,7 +481,7 @@ async function N(){
             if(!ghJumpCurrent(claim,true)){ghJumpFinish(claim);return}
             try{
 const apply=function(){return window.applyLoadedData(a.payload)};
-const publish=function(operationDetail){try{window._vildaCurrentPatientId=n.patientId}catch{}/* P-NOTATKI-1 (G27, 2026-09-18): skok do punktu GH innego pacjenta ustawial tylko zmienna okna — sessionStorage zostawal przy poprzednim, wiec chip „Otworz karte", bramka notatki i inne strony w tej samej karcie pracowaly na dwoch roznych pacjentach. */try{window.sessionStorage.setItem("vildaCurrentPatientId",n.patientId)}catch{}/* P-NOTATKI-3 (G27b, odlozone z raty 1): skok wczytywal pacjenta do formularza, ale NIC o tym
+const publish=function(operationDetail){if(ownImport)ghJumpRecordOwnImport(ownImport,operationDetail);try{window._vildaCurrentPatientId=n.patientId}catch{}/* P-NOTATKI-1 (G27, 2026-09-18): skok do punktu GH innego pacjenta ustawial tylko zmienna okna — sessionStorage zostawal przy poprzednim, wiec chip „Otworz karte", bramka notatki i inne strony w tej samej karcie pracowaly na dwoch roznych pacjentach. */try{window.sessionStorage.setItem("vildaCurrentPatientId",n.patientId)}catch{}/* P-NOTATKI-3 (G27b, odlozone z raty 1): skok wczytywal pacjenta do formularza, ale NIC o tym
    nie mowil. Zdarzenia vilda:patient-loaded slucha 24 rejestracji w 21 plikach, z czego 19 jest
    aktywnych na docpro - m.in. cache sekcji okoloporodowej, zespolu Downa i pokwitania, korekta
    nazwiska, data urodzenia i wskaznik zapisu. Bez sygnalu zostawaly przy POPRZEDNIM dziecku,
@@ -425,7 +494,12 @@ const publish=function(operationDetail){try{window._vildaCurrentPatientId=n.pati
    we wskazniku zapisu. UWAGA: przycisk "Odtworz zapisany stan" zostaje po skoku widoczny -
    modal chowal go sam przy otwarciu, a tu modalu nie ma. To jest zamierzone: droga reczna
    zostaje otwarta. */try{typeof window.CustomEvent=="function"&&document.dispatchEvent(new window.CustomEvent("vilda:patient-loaded",{detail:{patientId:n.patientId,savedAtISO:a&&a.savedAtISO||null,snapshotCount:i&&(i.snapshotCount||i.snapshots&&i.snapshots.length)||null,name:a&&a.payload&&a.payload.name||null,source:"pick",skipLoadChoice:!ghJumpAsksLoadChoice(n),...operationDetail}}))}catch{}};
-if(scopedLoad){if(!loadApi.runAcceptedPatientLoad(acceptedLoad,a.payload,{apply:apply,publish:publish}))return}
+if(scopedLoad){
+  if(ownImport&&(window.VildaDataImportExport!==loadApi||loadApi.getApplyLoadedDataSequence!==ownImport.getSequence||loadApi.runAcceptedPatientLoad!==ownImport.run)){ghJumpCancel(claim);return}
+  const completed=loadApi.runAcceptedPatientLoad(acceptedLoad,a.payload,{apply:apply,publish:publish});
+  if(!completed)return;
+  if(ownImport&&(completed!==true||!ghJumpArmOwnImport(claim,ownImport,acceptedLoad))){ghJumpCancel(claim);return}
+}
 else{try{apply()}catch{}publish({})}
 try{window.VildaChrome&&typeof window.VildaChrome.refreshPatientChip==="function"&&window.VildaChrome.refreshPatientChip()}catch{}
 if(ghJumpObesity(n)){if(!ghJumpLandOwned(claim,true))ghJumpFinish(claim)}

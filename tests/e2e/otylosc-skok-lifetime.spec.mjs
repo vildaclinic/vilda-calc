@@ -202,9 +202,21 @@ async function openDeleted(page, id) {
 test('scoped obesity: external Back retires the original card during real AES without committing or navigating', async ({ page }) => {
   const f = await setup(page); const gate = await cipherGate(page);
   try {
-    const historyLength = await page.evaluate(() => history.length);
+    // Auth arms its real history sentinel after two frames and 220 ms. Card
+    // visibility alone is earlier; history.length can stay equal when a native
+    // push discards forward entries. Observe the actual native state instead.
+    const originalContext = await page.evaluate(() => ({
+      sentinel: history.state?.vildaNavSentinel === true,
+      patientId: sessionStorage.getItem('vildaCurrentPatientId'),
+      windowPatientId: window._vildaCurrentPatientId,
+      applySequence: window.VildaDataImportExport.getApplyLoadedDataSequence(),
+      fields: [...document.querySelectorAll('#height, #weight, #age, #ageMonths, #firstName, #lastName, #dobInput')]
+        .map(field => [field.id, field.value]),
+    }));
+    expect(originalContext.sentinel, 'fixture starts outside the native card history scope').toBe(false);
     await card(page, f.ids.b);
-    expect(await page.evaluate(() => history.length), 'real native card owns a history sentinel').toBeGreaterThan(historyLength);
+    await page.waitForFunction(() => history.state?.vildaNavSentinel === true);
+    expect(await page.evaluate(() => history.state?.vildaNavSentinel === true), 'real native card owns its history sentinel').toBe(true);
     await edit(page).click();
     expect(await gate.held).toMatchObject({ actualAesComplete: true, cipherKeys: ['data', 'iv'], cardOpen: true });
     await expect(page.locator('.vilda-auth-patient-card')).toBeVisible();
@@ -212,10 +224,19 @@ test('scoped obesity: external Back retires the original card during real AES wi
     expect(await page.evaluate(() => sessionStorage.getItem(window.VildaUiIntents.reservationKey('gh-jump')))).not.toBeNull();
     await page.evaluate(() => history.back());
     await expect(page.locator('.vilda-auth-patient-card')).toHaveCount(0);
+    expect(await page.evaluate(() => history.state?.vildaNavSentinel === true), 'native Back has left the original card history scope').toBe(false);
     await gate.release();
     await page.waitForFunction(() => sessionStorage.getItem(window.VildaUiIntents.reservationKey('gh-jump')) === null);
     await frames(page);
     expect(f.events.filter(e => e.type === 'cipher-commit')).toHaveLength(0);
+    expect(await page.evaluate(() => ({
+      sentinel: history.state?.vildaNavSentinel === true,
+      patientId: sessionStorage.getItem('vildaCurrentPatientId'),
+      windowPatientId: window._vildaCurrentPatientId,
+      applySequence: window.VildaDataImportExport.getApplyLoadedDataSequence(),
+      fields: [...document.querySelectorAll('#height, #weight, #age, #ageMonths, #firstName, #lastName, #dobInput')]
+        .map(field => [field.id, field.value]),
+    }))).toEqual(originalContext);
     expect(await page.evaluate(() => sessionStorage.getItem('vildaCurrentPatientId'))).toBe(f.ids.a);
     await expect(page).toHaveURL(/\/docpro\.html(?:[?#]|$)/u);
     await assertNoEdit(page);
