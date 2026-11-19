@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.555';
+const SW_VERSION = '1.1.556';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -2306,6 +2306,7 @@ const CORE_SHELL_URLS = [
   '/vilda_chrome.js?v=305',
   '/vilda_chrome.js?v=306',
   '/vilda_chrome.js?v=307',
+  '/vilda_chrome.js?v=308',
   '/vilda_realtime.js?v=1',
   '/vilda_realtime.js?v=2',
   '/vilda_realtime.js?v=3',
@@ -3234,6 +3235,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_auth_ui.js?v=570',
   '/vilda_auth_ui.js?v=571',
   '/vilda_auth_ui.js?v=572',
+  '/vilda_auth_ui.js?v=573',
   '/vilda_session_bridge.js?v=148',
   '/vilda_session_bridge.js?v=149',
   '/vilda_session_bridge.js?v=150',
@@ -3310,6 +3312,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_session_bridge.js?v=221',
   '/vilda_session_bridge.js?v=222',
   '/vilda_session_bridge.js?v=223',
+  '/vilda_session_bridge.js?v=224',
   '/vilda_sync.js?v=48',
   '/vilda_sync.js?v=49',
   '/vilda_sync.js?v=50',
@@ -3671,6 +3674,8 @@ const OPTIONAL_ASSETS = [
   '/lab_units_data.js?v=40',
   '/lab_units_data.js?v=41',
   '/lab_units_data.js?v=42',
+  '/lab_units_data.js?v=43',
+  '/lab_units_data.js?v=44',
   '/lab_unit_converter.js',
   '/lab_unit_converter.js?v=1',
   '/lab_unit_converter.js?v=4',
@@ -3680,6 +3685,8 @@ const OPTIONAL_ASSETS = [
   '/lab_unit_converter.js?v=8',
   '/lab_unit_converter.js?v=9',
   '/lab_unit_converter.js?v=10',
+  '/lab_unit_converter.js?v=11',
+  '/lab_unit_converter.js?v=12',
   '/lab_pin_result.js?v=4',
   '/lab_pin_result.js?v=5',
   '/lab_pin_result.js?v=6',
@@ -3716,6 +3723,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_lab_packages.js?v=9',
   '/vilda_lab_packages.js?v=10',
   '/vilda_lab_packages.js?v=11',
+  '/vilda_lab_packages.js?v=12',
   '/klirens.xlsx',
   '/zscore_przyklad_palczewska.xlsx',
   '/zscore_przyklad_olaf.xlsx',
@@ -5294,6 +5302,7 @@ const OPTIONAL_ASSETS = [
   '/inline_przelicznik_jednostek_00.css?v=16',
   '/inline_przelicznik_jednostek_00.css?v=17',
   '/inline_przelicznik_jednostek_00.css?v=18',
+  '/inline_przelicznik_jednostek_00.css?v=19',
   '/inline_regulamin_00.css?v=1',
   '/inline_steroidy_00.css?v=1',
   '/inline_subskrypcja_00.css?v=1',

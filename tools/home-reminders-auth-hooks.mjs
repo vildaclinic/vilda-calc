@@ -5,7 +5,7 @@ import { reverseBscAuthHooks } from './account-duplicate-dismissals-auth-hooks.m
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-export const HOME_REMINDERS_AUTH_BASE_SHA256 = '91e29536418022446f5d5d9ad2b3933cf7eff8f4c6ab75bd95fe47593f7e486b';
+export const HOME_REMINDERS_AUTH_BASE_SHA256 = 'dd05327967e81a71b70fd4fc8a7913fa9598ed3de3b38756d4d34b7845c2f479';
 const target = fileURLToPath(new URL('../vilda_auth_ui.js', import.meta.url));
 const digest = value => createHash('sha256').update(value).digest('hex');
 const HELPERS = `/* BEGIN HOME REMINDERS PRESENTATION ELIGIBILITY

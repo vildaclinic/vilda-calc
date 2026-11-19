@@ -2,7 +2,7 @@
 import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-export const BSC_AUTH_BASE_SHA256 = 'f22c3d7dd90990e02f5a527527857d3f207fe52a502e5fbdb8d310b39a873735';
+export const BSC_AUTH_BASE_SHA256 = '615ee925876c5197f03187d3064d97e4168afd7b034230525a1fae0cfff40248';
 export const BSC_AUTH_PAIRS = [
   {
     "label": "encrypted account UI state",

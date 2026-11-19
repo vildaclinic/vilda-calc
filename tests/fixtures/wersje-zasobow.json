@@ -928,8 +928,8 @@
   "sha256": "22c5b3ec86177c574023351c8d5a0576a49652efbc28df0df99288778cfc526d"
  },
  "inline_przelicznik_jednostek_00.css": {
-  "v": 18,
-  "sha256": "83a034b0c5a703a85352b039bb1e3b7933e7c19d698c1054cf1aabfe0ea29cde"
+  "v": 19,
+  "sha256": "16cc38aa188c45bf45d6451a5051fa06dd3cc6a50811cb7969b34199b4598bd9"
  },
  "inline_regulamin_00.css": {
   "v": 1,
@@ -1032,12 +1032,12 @@
   "sha256": "bbc062db59a25961bbba0c46c6116a169fbd2cb3783e218d97222b6bed6f2f89"
  },
  "lab_unit_converter.js": {
-  "v": 10,
-  "sha256": "924c7abe17a2dd84b642c35d670599634c20a935068350cbe8eaa14497416d11"
+  "v": 12,
+  "sha256": "8f1bf99e1a3bd02dbcfc613e43489902e6caba108bf13c434c359ba834e9b8b8"
  },
  "lab_units_data.js": {
-  "v": 42,
-  "sha256": "a2deb698fe78c1f7d05378aa3b070b81e035ec2720afccd0b9e6423777973bb9"
+  "v": 44,
+  "sha256": "ca1eee0b661b365dd06715688a80317d7b1a113dfa3206b166c9f24582dee43d"
  },
  "lucide.min.js": {
   "v": 1,
@@ -1168,8 +1168,8 @@
   "sha256": "6c81037af71848e1e04b91ae0aaf44509abd73229a3e0d247041f3cd914991fb"
  },
  "vilda_auth_ui.js": {
-  "v": 572,
-  "sha256": "44500b20e9660142b6cf6c66162c198179102d69a04eddc28165f8b710f6da7b"
+  "v": 573,
+  "sha256": "e4e3b8fcb56f4811a9228d107d94c13fc3e7157a509d495ec72267cfeca54fe2"
  },
  "vilda_b64_checklist.js": {
   "v": 2,
@@ -1292,8 +1292,8 @@
   "sha256": "5ccc74dc9c7f6c7e5e86badbdf0bd4674eb37edf99527ccb6648b6bccb54ff7d"
  },
  "vilda_chrome.js": {
-  "v": 307,
-  "sha256": "4ce50285cff0988c16b653ebb31381c57c7ef98599fefbce4034e76f7e954563"
+  "v": 308,
+  "sha256": "7e006ea95a017a13a1141095fb1026aa9f74f48c40b86e21afbf79fcdc6e2721"
  },
  "vilda_clinical_crypto.js": {
   "v": 2,
@@ -1756,8 +1756,8 @@
   "sha256": "5cc7f23b6c4e6f9f25331aeeded8fd5d58d64148bf8d9ab09177d7785963088c"
  },
  "vilda_lab_packages.js": {
-  "v": 11,
-  "sha256": "1f2503242e1aa2a1d0355dd085e4eab6722c68b991a6778698719119500cdd3b"
+  "v": 12,
+  "sha256": "2b3d6c6fb1ef2745cacfcf2e8d3434fb39c77e4c540f1fef9aee5d8c1495bc19"
  },
  "vilda_lab_profile_preferences.js": {
   "v": 1,
@@ -2096,8 +2096,8 @@
   "sha256": "59dfe0d72f1c56950e8bfa44036bd1d02bf6a6aea16ce6e77a2644921e1e45cf"
  },
  "vilda_session_bridge.js": {
-  "v": 223,
-  "sha256": "4249a29583423ada659ff5838ec96aa4575eade10601f72f3f230fe0af2d4044"
+  "v": 224,
+  "sha256": "642a250243fc09591d447efc8074056312c8614f3e0d2882f99e0c611c1b7ee3"
  },
  "vilda_sga_birth_results.css": {
   "v": 1,
