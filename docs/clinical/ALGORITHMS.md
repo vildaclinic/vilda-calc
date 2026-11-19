@@ -44349,10 +44349,13 @@ mógłby się wtedy zgodzić z sejfem).
 **Wpięcie i kolejność.** W `Bem_zastosujEcho` po jedynym `await` dwa wywołania w sesji scalania: najpierw
 `Bem_zmiana('snap', kol.echo, kol.s)` (E3-PR0c), potem `Bem_zmiana('stomb', kol.kosz, kol.s)` — jak `Bem_RANGI`
 (`snap` przed `stomb`) poza krokiem i w kroku, więc odbiorca dostaje wersję przed wpisem. Bez nowego `await`, bez
-czekania na wpis łańcucha, bez drugiego odczytu przełącznika ani bramki. `Bev_zastosujZEchem` dostaje odczyt wpisów
+czekania na wpis łańcucha; `Bem_zastosujEcho` nie czyta drugi raz przełącznika ani bramki, a każda emisja (`Bem_zmiana`)
+czyta bramkę jako pierwszą instrukcję, jak każda emisja — przy niepustym `kol.kosz` to jeden odczyt pola bramki więcej
+na zastosowanie niż po E3-PR0c; przy wyłączonym przełączniku albo zamkniętej bramce żadnego dodatkowego odczytu.
+`Bev_zastosujZEchem` dostaje odczyt wpisów
 „przed” i „po”, flagę usuwania konta i listę `kol.kosz`; statusy bez zmian. Bez zmian: `Bev_zastosuj`, `Bem_zastosuj`,
 `Bob_bramkaEcha`, `Bev_kandydaciEcha`, `Bev_stanEcha`, `Bev_echo`, `Bev_stomb`, `Bem_zmiana`, `Bob_plan`, `Bev_EKSPORT`
-(38 kluczy). Nowe funkcje wołają siebie nawzajem i funkcje już wołane z części `Bev_` (`Bev_start`, `Bev_kopia`,
+(39 kluczy). Nowe funkcje wołają siebie nawzajem i funkcje już wołane z części `Bev_` (`Bev_start`, `Bev_kopia`,
 `Bev_json`, `Bev_pole`, `Bev_bezPola`, `Bev_ma`, `Bev_id`, `Bev_obiekt`, `Bev_wpisKosza`, `Bses_pilnuj`).
 
 **Zakres** (licznik odsyłania testu A ≡ B, warstwa wykonalna rodzaju `stomb` po pojedynczym zdarzeniu od bieżącego
@@ -44381,7 +44384,8 @@ koperty odsyłania zmieniają długość kolejek i całą dalszą historię loso
 w uprzęży (0 kopert ponad model i 0 wierszy nieodesłanych w każdej partii).
 
 **Uśpienie.** Ten sam przełącznik co w E3-PR0c (`Bob_bramkaEcha`), czytany raz w `Bem_zastosuj`; odsyłanie wpisów
-siedzi wewnątrz `Bem_zastosujEcho` i `Bev_zastosujZEchem`, więc bez dodatkowego odczytu przełącznika ani bramki.
+siedzi wewnątrz `Bem_zastosujEcho` i `Bev_zastosujZEchem`, więc bez dodatkowego odczytu przełącznika; bramkę czyta
+tylko emisja wpisów (`Bem_zmiana`, jak każda emisja), gdy jest co odesłać.
 Powód: decyzja 1a z 2026-11-15 — jeden ukryty przełącznik odsyłania (w Ustawieniach w E3-PR0g, dla wszystkich
 w E3-PR0i); drugi klucz dałby drugi przełącznik i drugi wpis polityki prywatności bez zysku. Polityka prywatności bez
 zmian (klucz ten sam; wpis razem z przełącznikiem w Ustawieniach, E3-PR0g).
