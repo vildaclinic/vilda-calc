@@ -753,7 +753,7 @@
  },
  "gh_therapy_monitor.js": {
   "v": 65,
-  "sha256": "00a6be0d5fd3ed4af6fa43afbfcff0f6869c958393b01c2b05116f305ed0cea6"
+  "sha256": "fff8d06af5b8b59ddbbbed19021d1f7895cbc175546b2fcc9d85101dfe583576"
  },
  "gh_therapy_segments.js": {
   "v": 5,
@@ -1164,12 +1164,12 @@
   "sha256": "e277d8f3787228ed7bad34ebc873873d7be0147cd43ee7dc3c8f393377c83c5d"
  },
  "vilda_auth_ui.css": {
-  "v": 86,
-  "sha256": "3d9bd43beb06ac4c9ceb37fdfe214304ce6126280b6f2d31293704a8f7a7438a"
+  "v": 87,
+  "sha256": "1f325301ec0253d630b41ed51b75f5f5e584cedd4fca8e00923322437a421df8"
  },
  "vilda_auth_ui.js": {
-  "v": 574,
-  "sha256": "7e908ec4eb7876e7f8964d5f398f6e3a95b4c76ea6f60256e351ecb7ef743b72"
+  "v": 575,
+  "sha256": "b66b2992c59c353d32bb9aad48e83bb5ca0112fc3d9db6d72b95090d4cf5ff62"
  },
  "vilda_b64_checklist.js": {
   "v": 2,
@@ -1292,8 +1292,8 @@
   "sha256": "5ccc74dc9c7f6c7e5e86badbdf0bd4674eb37edf99527ccb6648b6bccb54ff7d"
  },
  "vilda_chrome.js": {
-  "v": 310,
-  "sha256": "c699a80eaada3a0e9e0749863b07163676cf69fed03b10efef4305937779d0de"
+  "v": 311,
+  "sha256": "b6c8be670ac9cd51ad4817eedf99d02576654b5ff026c57830eaef6118816648"
  },
  "vilda_clinical_crypto.js": {
   "v": 2,
@@ -1312,8 +1312,8 @@
   "sha256": "326ea4b7ce7710cc24181edcdff104a4d67d83ae56878a552448c30dff0b7e2b"
  },
  "vilda_cykle_leczenia.js": {
-  "v": 11,
-  "sha256": "9c264373932e8af7438aac41a55b34cb06c5648e31a95a8e175a2423da55b705"
+  "v": 12,
+  "sha256": "539d897bf81eb954baf69f0574ac6db5a9c1e10cc20d74563efff2c2aa4d7652"
  },
  "vilda_data_import_export.js": {
   "v": 126,
@@ -2096,8 +2096,8 @@
   "sha256": "59dfe0d72f1c56950e8bfa44036bd1d02bf6a6aea16ce6e77a2644921e1e45cf"
  },
  "vilda_session_bridge.js": {
-  "v": 226,
-  "sha256": "3feeeaa4afbfc28e28e403d735159dc6bfc183650d27e98a049d7fae71954390"
+  "v": 227,
+  "sha256": "47409e4007c2a8cfda7deef88997736de0fa2273a00ed5c9b61fc6ac4f516808"
  },
  "vilda_sga_birth_results.css": {
   "v": 1,
@@ -2164,8 +2164,8 @@
   "sha256": "872eda8f28b9c101af73ddecb52ad605d15678a0d1e168745be89ef558fb470e"
  },
  "vilda_trajectory_analysis.js": {
-  "v": 46,
-  "sha256": "0ab4bc39531e1d137567c26c836278e3fa42f436d22151a8de8818ce431dbc92"
+  "v": 47,
+  "sha256": "7c1882f22814708b50785119b885cfd81d45fa3e2953067eadfc5170389b2576"
  },
  "vilda_tw2_prediction.js": {
   "v": 4,

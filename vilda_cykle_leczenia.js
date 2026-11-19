@@ -1331,6 +1331,62 @@
     'zmiana-leku': 'Ten wpis zmienia lek — poprawiasz go w DocPro przy wizycie (od leku zależą ocena wg ChPL i listy pacjentów).'
   });
 
+  // ── Pomiary z dziennika na siatkach (P-OTYLOSC-SIATKI, temat C; decyzje właściciela 2026-11-19) ────────────────
+  /**
+   * Pomiary z dziennika leczenia do siatek centylowych, panelu „Porównaj 2 pomiary” i analizy trajektorii w Karcie
+   * pacjenta (wariant B: masa od pacjenta liczy się także w analizie). `osCzasu` — pomiary z osi czasu (wizyty)
+   * razem z bieżącym pomiarem Karty: {ageMonths, weight, height, dateISO}; `punkty` — projekcja dziennika
+   * (zloz().punkty: wpisy poza wizytą i dawne punkty monitora). Zwraca TYLKO pomiary do dopisania, w kształcie osi
+   * czasu: {ageMonths, ageYears, weight, height, dateISO, zrodloMasy, zrodloWzrostu, zDziennika: true}. Reguły:
+   *  • punkt bez masy > 0 albo bez wieku — pomijany (siatki i analiza mają wiek pomiaru, nie dzisiejszy);
+   *  • wizyta wygrywa: punkt z tego samego miesiąca życia co pomiar osi czasu, z tą samą datą albo z tą samą masą
+   *    (±0,05 kg) do 1 mies. obok (monitor zapisuje wiek w pełnych miesiącach) — pomijany;
+   *  • dwa wpisy z tego samego miesiąca — zostaje późniejszy w kolejności tabeli (jak w scaleniu punktów analizy);
+   *  • wzrost tylko wpisany (> 0); źródło z wpisu: 'pacjent' tylko, gdy wpis tak mówi, inaczej 'gabinet'
+   *    (decyzja właściciela: wpis z gabinetu rysuje się jak wizyta).
+   */
+  function pomiaryDoSiatek(osCzasu, punkty) {
+    var wizyty = (Array.isArray(osCzasu) ? osCzasu : []).map(function (m) {
+      if (!m) return null;
+      var am = Number(m.ageMonths);
+      if (!isFinite(am) && isFinite(Number(m.ageYears))) am = Number(m.ageYears) * 12;
+      if (!isFinite(am)) return null;
+      return { mies: am, masa: Number(m.weight) > 0 ? Number(m.weight) : null, data: dataISO(m.dateISO) || null };
+    }).filter(Boolean);
+    function zWizyta(mies, masa, data) {
+      return wizyty.some(function (m) {
+        if (Math.round(m.mies) === mies) return true;
+        if (data && m.data && m.data === data) return true;
+        return masa != null && m.masa != null && Math.abs(m.mies - mies) <= 1 && Math.abs(m.masa - masa) <= 0.05;
+      });
+    }
+    var poMiesiacu = {};
+    var miesiace = [];
+    uporzadkujPunkty((Array.isArray(punkty) ? punkty : []).filter(function (p) {
+      return p && (p.type === 'start' || p.type === 'continue' || p.type === 'end');
+    })).forEach(function (p) {
+      var masa = Number(p.weight);
+      if (!(masa > 0)) return;
+      var mies = Math.round((Number(p.ageYears) || 0) * 12 + (Number(p.ageMonths) || 0));
+      if (!(mies > 0)) return;
+      var data = dataISO(p.dateISO) || null;
+      if (zWizyta(mies, masa, data)) return;
+      var wzrost = Number(p.height) > 0 ? Number(p.height) : null;
+      if (!poMiesiacu[mies]) miesiace.push(mies);
+      poMiesiacu[mies] = {
+        ageMonths: mies,
+        ageYears: mies / 12,
+        weight: masa,
+        height: wzrost,
+        dateISO: data,
+        zrodloMasy: p.weightSource === 'pacjent' ? 'pacjent' : 'gabinet',
+        zrodloWzrostu: wzrost != null ? (p.heightSource === 'pacjent' ? 'pacjent' : 'gabinet') : null,
+        zDziennika: true
+      };
+    });
+    return miesiace.sort(function (a, b) { return a - b; }).map(function (k) { return poMiesiacu[k]; });
+  }
+
   /** Możliwy duplikat: inny bieżący wpis z tą samą datą i masą (±0,05 kg). */
   function duplikat(stan, dane, pomijajEntryId) {
     var d = dataISO(dane && dane.dateISO), m = liczba(dane && dane.weight);
@@ -1507,6 +1563,7 @@
     liczbaPL: liczbaPL,
     dawkaPL: dawkaPL,
     podpowiedziDawek: podpowiedziDawek,
+    pomiaryDoSiatek: pomiaryDoSiatek,
     dzisISO: dzisISO,
     wczytaj: wczytaj,
     zapisz: zapisz,
