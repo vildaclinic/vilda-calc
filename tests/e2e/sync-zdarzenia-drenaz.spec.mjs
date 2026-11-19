@@ -12,6 +12,16 @@ import { podlaczAtrapeDoKontekstu } from '../support/atrapa-workera-route.mjs';
 //    applyEncryptedEvent, nieczytelne w kwarantannie (IndexedDB), appliedUpTo = numer przed nim, markSyncCaughtUp.
 // 2) Flaga '0' (wyłącznik na urządzeniu; do E2-PR6 — brak klucza): ten sam dziennik — drenaż jak dotąd: applyEncryptedDelta nie zna pola z, więc oba wiersze są
 //    zastosowane; bez pól dziennika i nowych kluczy.
+// 3) E3-PR0c (odsyłanie poprawionych wizyt, uśpione przełącznikiem): klucz vilda-event-echo-v1 = '1' ustawiony przed
+//    załadowaniem, dziennik włączony (vilda-event-log-v1 = '1'). A: karta „Testowy Jan” z wizytą v 24 kg, rejestracja,
+//    rozruch drenażu; B — drugi kontekst z kopią profilu A (storageState z IndexedDB, bez synchronizacji) poprawia v na
+//    17,2 kg — koperta snap B (builder i szyfrowanie zdarzenia); A daje v gwiazdkę i opróżnia kolejkę (outboxTake,
+//    outboxAccept); koperta B w dzienniku atrapy; A: drenaż (syncPull z czekaniem na drenaż; prawdziwy kursor
+//    i kwarantanna) i emissionsSettled — w kolejce A dokładnie jeden wiersz snap P/v pending z rekordem złożonym
+//    (17,2 kg z gwiazdką); B stosuje kopertę echa (applyEncryptedEvent przy otwartej bramce i kluczu '1') — v na B
+//    17,2 kg z gwiazdką, kolejka B bez nowego wiersza.
+// 4) Bez klucza: ten sam przebieg — w kolejce A po drenażu bez wiersza snap (rekord złożony tylko na A, jak dziś).
+//    Wiersze innych encji, które przegląd kolejki po drenażu dokłada (np. cred), są poza tymi przypadkami.
 // Własne, fikcyjne konto sejfu w efemerycznym profilu przeglądarki; dane wyłącznie FIKCYJNE.
 test.use({ serviceWorkers: 'block' });
 
@@ -104,4 +114,122 @@ test("E2-PR4c: flaga '0' — ten sam dziennik: drenaż jak dotąd (applyEncrypte
   expect(w.klucze).toEqual([]);
   expect(w.kursor).toBe(String(zly.seq));
   expect(naruszenia(atrapa)).toEqual([]);
+});
+
+// ── E3-PR0c: odsyłanie poprawionych wizyt po drenażu ─────────────────────────────────────────────────────────────────
+async function przygotujOdsylanie(page, context, browser, klucz) {
+  const atrapa = utworzAtrapeWorkera({ tryb: 'v37a', eventsEnabled: true, originy: [ORIGIN], zegar: () => Date.now() });
+  await podlaczAtrapeDoKontekstu(context, atrapa);
+  await page.addInitScript((k) => {
+    try {
+      window.localStorage.setItem('vilda-terms-accepted-v1', JSON.stringify({ version: 1, acceptedAtISO: new Date().toISOString() }));
+      window.localStorage.setItem('vilda-sync-enabled-v1', 'false');
+      window.localStorage.setItem('vilda-event-log-v1', '1');
+      if (k !== null) window.localStorage.setItem('vilda-event-echo-v1', k);
+    } catch (_) { /* brak storage — pomiń */ }
+  }, klucz);
+  await page.goto('/index.html', { waitUntil: 'load' });
+  await page.waitForFunction(() => Boolean(window.VildaVault));
+  const userId = (await page.evaluate(async (pw) => window.VildaVault.createUser(pw, { label: 'e2e', iterations: 10000 }), HASLO)).userId;
+  await page.reload({ waitUntil: 'load' });
+  await page.waitForFunction(() => Boolean(window.VildaVault) && window.VildaVault.isUnlocked() && Boolean(window.VildaSync && window.VildaSync.detectApi));
+  const start = await page.evaluate(async () => {
+    window.VILDA_EVENT_LOG = true; // koperta rozruchu z kolejki tej strony (przed pierwszym health z „events”)
+    const r = await window.VildaVault.savePatient({
+      name: 'Testowy Jan',
+      user: { lastName: 'Testowy', firstName: 'Jan', sex: 'M', age: 6, ageMonths: 2, height: 127, weight: 24 },
+    }, { dedup: false });
+    const L = window.VildaVault._eventLog;
+    await L.emissionsSettled();
+    const take = await L.outboxTake();
+    const env = take.ok && take.wiersze.length ? take.wiersze[0].env : null;
+    if (take.ok) await L.outboxAccept(take.wiersze.map((w) => w.eid));
+    delete window.VILDA_EVENT_LOG;
+    const push = await window.VildaSync.syncPush();
+    const api = await window.VildaSync.detectApi();
+    return { env, P: r.patientId, v: r.snapshotId, push: push.action, features: api.features, log: window.VildaSync.isEventLogEnabled() };
+  });
+  expect(start.push).toBe('registered');
+  expect(start.features).toContain('events');
+  expect(start.log, 'A: dziennik włączony').toBe(true);
+  atrapa.dopisz({ src: 'ev', payload: { iv: start.env.iv, data: start.env.data } });
+  const r0 = await page.evaluate(async () => { const w = await window.VildaSync.syncPull({ czekajNaDrenaz: true }); return w.drain && w.drain.stop; });
+  expect(r0).toBe('since0-legacy');
+  // B: kopia profilu A po rozruchu (bez synchronizacji); poprawka v i koperta snap B.
+  const stan = await context.storageState({ indexedDB: true });
+  const ctxB = await browser.newContext({ storageState: stan, serviceWorkers: 'block' });
+  const pageB = await ctxB.newPage();
+  await pageB.goto('/index.html', { waitUntil: 'load' });
+  await pageB.waitForFunction(() => Boolean(window.VildaVault));
+  const envB = await pageB.evaluate(async ([u, pw, P, v]) => {
+    if (!window.VildaVault.isUnlocked()) await window.VildaVault.unlockUser(u, pw);
+    const s = (await window.VildaVault.getPatient(P)).snapshots.find((x) => x.snapshotId === v);
+    await window.VildaVault.updateSnapshotPayload(P, v, { ...s.payload, user: { ...s.payload.user, weight: 17.2 } }, { preserveSavedAt: true });
+    const L = window.VildaVault._eventLog;
+    return (await L.encryptEvent(await L.buildSnapshotEvent(P, v, null))).env;
+  }, [userId, HASLO, start.P, start.v]);
+  // A: gwiazdka v (wiersz gwiazdki z kolejki — wysłany), potem koperta B w dzienniku atrapy.
+  const pusta = await page.evaluate(async ([P, v]) => {
+    await window.VildaVault.setSnapshotPinned(P, v, true);
+    const L = window.VildaVault._eventLog;
+    await L.emissionsSettled();
+    const take = await L.outboxTake();
+    if (take.ok && take.wiersze.length) await L.outboxAccept(take.wiersze.map((w) => w.eid));
+    return (await L.outboxCount()).total;
+  }, [start.P, start.v]);
+  expect(pusta, 'A: kolejka pusta przed drenażem').toBe(0);
+  atrapa.dopisz({ src: 'ev', payload: { iv: envB.iv, data: envB.data } });
+  return { atrapa, ctxB, pageB, ...start };
+}
+async function drenazA(page, P, v) {
+  return page.evaluate(async ([pid, sid]) => {
+    const r = await window.VildaSync.syncPull({ czekajNaDrenaz: true });
+    const L = window.VildaVault._eventLog;
+    await L.emissionsSettled();
+    const lista = await L.outboxList();
+    const wiersze = [];
+    // wiersze snap (przegląd kolejki po drenażu dokłada też wiersze innych encji, np. cred — poza tym przypadkiem)
+    for (const w of lista.ok ? lista.wiersze.filter((x) => x.kind === 'snap') : []) {
+      const k = await window.VildaVault.decryptPayloadForCurrentUser(w.env.iv, w.env.data);
+      const s = k.patients && k.patients[0] && k.patients[0].snapshots[0];
+      wiersze.push({ kind: w.kind, klucz: w.entityKey === `${pid}/${sid}` ? 'P/v' : w.entityKey, stan: w.state, masa: s ? s.payload.user.weight : null, gwiazdka: !!(s && s.payload._pinned), env: { iv: w.env.iv, data: w.env.data } });
+    }
+    const s = (await window.VildaVault.getPatient(pid)).snapshots.find((x) => x.snapshotId === sid);
+    return { drain: r.drain, wiersze, v: { masa: s.payload.user.weight, gwiazdka: !!s.payload._pinned } };
+  }, [P, v]);
+}
+
+test("E3-PR0c: vilda-event-echo-v1 = '1' — drenaż zdarzenia z poprawką B składa rekord złożony na A: jeden wiersz snap P/v (17,2 kg z gwiazdką) w kolejce A; B przyjmuje go bez nowego wiersza", async ({ page, context, browser }) => {
+  test.setTimeout(120_000);
+  const s = await przygotujOdsylanie(page, context, browser, '1');
+  try {
+    const a = await drenazA(page, s.P, s.v);
+    expect(a.drain).toMatchObject({ tryb: 'strony', dziennik: true, zastosowane: 1 });
+    expect(a.v, 'A: rekord złożony').toEqual({ masa: 17.2, gwiazdka: true });
+    expect(a.wiersze.map(({ env: _e, ...w }) => w), 'kolejka A: wiersz echa').toEqual([{ kind: 'snap', klucz: 'P/v', stan: 'pending', masa: 17.2, gwiazdka: true }]);
+    const b = await s.pageB.evaluate(async ([env, P, v]) => {
+      window.VILDA_EVENT_LOG = true;
+      const L = window.VildaVault._eventLog;
+      const snapy = async () => { const l = await L.outboxList(); return l.ok ? l.wiersze.filter((x) => x.kind === 'snap').length : -1; };
+      const przed = await snapy();
+      const r = await L.applyEncryptedEvent(env);
+      await L.emissionsSettled();
+      const s = (await window.VildaVault.getPatient(P)).snapshots.find((x) => x.snapshotId === v);
+      return { status: r.status, v: { masa: s.payload.user.weight, gwiazdka: !!s.payload._pinned }, nowe: (await snapy()) - przed };
+    }, [a.wiersze[0].env, s.P, s.v]);
+    expect(b, 'B: przyjęty rekord złożony, bez echa').toEqual({ status: 'applied', v: { masa: 17.2, gwiazdka: true }, nowe: 0 });
+    expect(naruszenia(s.atrapa)).toEqual([]);
+  } finally { await s.ctxB.close(); }
+});
+
+test('E3-PR0c: bez klucza vilda-event-echo-v1 — ten sam drenaż: rekord złożony tylko na A, w kolejce A bez wiersza snap (jak dziś)', async ({ page, context, browser }) => {
+  test.setTimeout(120_000);
+  const s = await przygotujOdsylanie(page, context, browser, null);
+  try {
+    const a = await drenazA(page, s.P, s.v);
+    expect(a.drain).toMatchObject({ tryb: 'strony', dziennik: true, zastosowane: 1 });
+    expect(a.v, 'A: rekord złożony').toEqual({ masa: 17.2, gwiazdka: true });
+    expect(a.wiersze, 'kolejka A bez wierszy snap').toEqual([]);
+    expect(naruszenia(s.atrapa)).toEqual([]);
+  } finally { await s.ctxB.close(); }
 });

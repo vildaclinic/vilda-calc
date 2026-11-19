@@ -3157,6 +3157,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_vault.js?v=278',
   '/vilda_vault.js?v=279',
   '/vilda_vault.js?v=280',
+  '/vilda_vault.js?v=281',
   '/vilda_auth_ui.js?v=535',
   '/vilda_auth_ui.js?v=536',
   '/vilda_auth_ui.js?v=537',
