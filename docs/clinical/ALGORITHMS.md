@@ -33752,6 +33752,33 @@ raporcie dla właściciela (bez zmian w kodzie synchronizacji w tym PR).
 
 **Co pozostaje decyzją właściciela.** Scalenie i wdrożenie; decyzje o lukach synchronizacji z raportu.
 
+## Bezczynność i koniec sesji liczone dla całej karty (P-BEZCZYNNOSC-KARTA, SW 1.1.550, `vilda_auth_ui.js` 568, `vilda_session_bridge.js` 218, 2026-11-18)
+
+**Zmiana kliniczna: NIE (zmiana funkcjonalna); potwierdzenie klasyfikacji — właściciel.** Żaden wzór, próg, norma, jednostka, dawka ani interpretacja; formaty danych, zapis i synchronizacja bez zmian. Polecenie właściciela 2026-11-18 („licznik blokady i znikające stadium”).
+
+**Co było.** W powłoce `app.html` każdy dokument (powłoka i każda ramka panelu) ma własny sejf, własny licznik bezczynności i własny znacznik ostatniej aktywności, a aktywność liczyła się tylko w dokumencie, w którym zaszła. Ekran logowania pojawiał się więc po ustawionym czasie od ostatniej aktywności w najdawniej dotykanym dokumencie — także w trakcie pracy w innym panelu. Koniec sesji każdy dokument obsługiwał osobno, a przebieg po blokadzie rozpoczętej w panelu bez formularza wizyty zależał od kolejności ładowania skryptów.
+
+**Co jest.**
+- Aktywność: rzeczywiste wejście (mousedown, keydown, touchstart, scroll, pointerdown) w dowolnym dokumencie karty odświeża znacznik aktywności i licznik bezczynności wszystkich dokumentów tej karty — `VildaAuthUI.recordActivity` woła w pozostałych dokumentach drzewa ramek `recordPeerActivity` (odbiór bez dalszego rozsyłania i bez zapisu sesji). Zdarzenie wysłane skryptem (`isTrusted === false`) zostaje lokalne. Inne karty przeglądarki nie są sprzęgane. Limity bez zmian: 20 minut, tryb chmurowy 10 minut albo wybór z Ustawień, „zaufane urządzenie” 7 dni.
+- Strona w ramce bez czynnego własnego modułu konta (otwarta przed zalogowaniem: HOMA-IR, Steroidy, Cukrzyca, Materiały) przekazuje rzeczywiste wejście do dokumentu powłoki (`vilda_session_bridge.js`) — tylko dopóki karta ma zapis sesji sejfu; po końcu sesji karty wejście w panelu, który zaraz się przeładuje, niczego nie podtrzymuje.
+- Blokada z bezczynności i „Wyloguj się” obejmują w tym samym kroku wszystkie dokumenty karty; każdy przechodzi własną, dotychczasową obsługę blokady. Po blokadzie z bezczynności karta przechodzi na ekran logowania `index.html` (jak dotąd po blokadzie dokumentu powłoki i po „Wyloguj się”). Blokada ręczna rozpoczęta w panelu zostawia powłokę na dotychczasowej drodze (przeładowanie do własnego ekranu logowania).
+- Stan roboczy pacjenta jest po blokadzie czyszczony niezawodnie: przy każdej blokadzie w dokumencie, w którym się zaczęła — także bez formularza wizyty — oraz przy starcie zablokowanej strony, która zastała stan po zakończonej sesji (istniejący warunek `authNeedsCleanup`). Obejmuje sesje formularzy i stan modułów (`VildaPersistence.clearUserState`) oraz znaczniki wczytanego pacjenta; wykonuje się tylko wtedy, gdy karta nie ma zapisu sesji sejfu. Znacznik pacjenta panelu HOMA-IR (`vildaHomaIdentityRefV1`) jest opróżniany, a nie usuwany: pusty nie pasuje do żadnego pacjenta, więc panel nadal czyści swoje pola glukozy i insuliny, gdy zmieni się pacjent (bez znacznika panel ich nie czyści).
+- Bez zmian: tryb gościa i dane gościa przy logowaniu w powłoce, odświeżenie strony przy odblokowanym sejfie (pacjent i ocena pokwitania zostają), tryb chmurowy i jednorazowy (sprzątanie robi sejf), usuwanie konta, powiadomienia między kartami (`vilda_frame_sync.js`), `vilda_vault.js` (baza sejfu bez zmian), kolejność skryptów. Publiczne API: dochodzi `VildaAuthUI.recordPeerActivity`.
+
+**Ograniczenia.** Zmiana czasu w Ustawieniach obowiązuje od razu tylko w dokumencie Ustawień (jak dotąd) — kartę blokuje dokument z najkrótszym czasem. Aktywność w zagnieżdżonych ramkach podglądu wydruku nie jest liczona (jak dotąd). Blokady z innych powodów niż bezczynność i wylogowanie nie są rozsyłane do pozostałych dokumentów — te przeładowują się jak dotąd po powiadomieniu. Niezapisany stan roboczy wizyty nie przetrwa blokady. Gość, który kliknął „Zaloguj się” i przed zalogowaniem odświeżył stronę: wpisane dane są czyszczone zawsze (dotąd zależnie od kolejności ładowania).
+
+**Walidacja.**
+- `tests/unit/bezczynnosc-karta.test.mjs` (34 testy): produkcyjne funkcje modułu konta wycięte po nazwie, prawdziwy adapter zapisu i prawdziwy most sesji — czyszczenie stanu roboczego (z zapisem sesji w karcie i bez niego; znacznik panelu HOMA-IR opróżniany, nieobecny nie powstaje), aktywność w drzewie ramek (rozsyłanie bez echa, zdarzenie niezaufane, okno bez drzewa ramek i obca domena), koniec sesji karty dla każdego powodu blokady, przekazanie aktywności przez most (bez zapisu sesji w karcie nic nie jest przekazywane), start zablokowanej strony, przypięcie miejsc wywołań w plikach produkcyjnych.
+- `tests/e2e/bezczynnosc-karta.spec.mjs`, `bezczynnosc-karta-drogi.spec.mjs`, `bezczynnosc-karta-przeplywy.spec.mjs`, `bezczynnosc-karta-zasieg.spec.mjs` (20 testów; wspólne przygotowanie w `tests/support/bezczynnosc-karta.mjs`): prawdziwa powłoka, fikcyjne konto i fikcyjna pacjentka, czas biegnie normalnym tempem ze skróconym limitem. Praca w jednej ramce dłuższa niż trzy limity — sesja aktywna we wszystkich dokumentach, potem bezczynność — blokada całej karty po pełnym limicie od ostatniego wejścia; blokada z licznika ukrytej ramki — stan roboczy pusty już w chwili blokady (dwa widoczne panele i 5 powtórzeń); „Wyloguj się” (w chwili blokady żaden dokument karty nie zostaje odblokowany); blokada ręczna z ramki; inny powód blokady przy opóźnionym skrypcie formularza; panel HOMA-IR otwarty w sesji — jego znacznik pacjenta pusty już w chwili blokady (ten scenariusz pilnuje czyszczenia wykonywanego przy samej blokadzie, a nie dopiero przy starcie zablokowanych stron); blokada ręczna i z innego powodu zaczęta w panelu Start — przewinięcie tego panelu przed przeładowaniem powłoki nie przedłuża sesji karty; karta odświeżona po terminie sesji przy opóźnionym skrypcie formularza; odświeżenie przy odblokowanym sejfie; pojedyncze zdarzenie aktywności (każdy dokument raz); gość → logowanie (nasłuch czyszczenia także w dokumencie ramki wymienionym po zalogowaniu); strona bez modułu konta; dwie karty.
+- Testy e2e startują z ustalonej chwili (`tests/support/test-czas.mjs`, chwila domyślna przypięta także w przebiegach `VILDA_CHWILA`): ocena pokwitania fikcyjnej pacjentki podlega regule świeżości 12 miesięcy, więc przy prawdziwym zegarze asercja „Th IV” w „Jednostkach lab.” przestałaby przechodzić po tym terminie. Przy tym zegarze powłoka dociąga panele w tle od razu po starcie, dlatego wspólne przygotowanie najpierw czeka na pełny start Terminarza i „Jednostek lab.”, a dopiero potem wczytuje pacjentkę.
+- Kontrola negatywna na kodzie sprzed zmiany (`origin/audyt` `fe4f175`): test jednostkowy nie startuje (brak funkcji); z 20 testów e2e 16 czerwonych. Cztery pozostałe przechodzą także tam: odświeżenie przy odblokowanym sejfie i gość → logowanie (przepływy zachowywane) oraz dwa testy przewinięcia panelu po jego blokadzie (pilnują warunku nowego przekazywania aktywności; bez tego warunku są czerwone).
+- `tests/fixtures/czasy-e2e.json`: wagi odłamków e2e czterech nowych plików z pomiaru lokalnego (205,9 s, 98,5 s, 72,2 s, 66,9 s; opis pomiaru w polu `zrodlo`).
+- Istniejące testy bez zmiany asercji; w `tests/e2e/hormone-lifespan-activity.spec.mjs` zmieniony wyłącznie komentarz.
+
+**Wersje.** `vilda_auth_ui.js` 567 → 568 (8 stron), `vilda_session_bridge.js` 217 → 218 (22 strony), `vilda_chrome.js` 301 → 302 (22 strony; razem z listą w `vilda_session_bridge.js` wstrzykuje `vilda_auth_ui.js` z nowym `?v=`), wpisy precache (append-only), `SW_VERSION` 1.1.549 → 1.1.550 (+ pin w `tests/unit/klirens-ui-model.test.mjs`), `tests/fixtures/wersje-zasobow.json` — nadane przez `npm run podbij-wersje` po scaleniu `origin/audyt` (`04fbc4f`). „Do decyzji”: brak. `vilda_vault.js` bez zmian (`node tools/check_clinical_workspace_boundary.mjs`: bez zmiany manifestów).
+
+**Co pozostaje decyzją właściciela.** Potwierdzenie klasyfikacji; ekran logowania po blokadzie z bezczynności (teraz zawsze `index.html`, jak po „Wyloguj się”; pozostanie w powłoce wymagałoby zmiany nawigacji powłoki przy blokadzie — poza zakresem); dane gościa po „Zaloguj się” i odświeżeniu strony przed zalogowaniem (teraz czyszczone zawsze — patrz „Ograniczenia”; gdyby miały zostawać, to osobna zmiana z własnym testem); scalenie i wdrożenie.
+
 ## Tryb chmurowy: teksty zgodne z tym, co zostaje na komputerze (P-CHMURA-OPIS, SW 1.1.385, `vilda_vault.js` 227, `vilda_auth_ui.js` 507, `vilda_chrome.js` 175, 2026-10-26)
 
 **Zmiana kliniczna: NIE** — żaden wzór, próg, jednostka, dawka ani interpretacja. Nie zmieniają się format sejfu, kryptografia, reguły scalania ani limity czasu. Zmieniają się teksty o trybie chmurowym oraz sprzątanie danych sesji w sejfie przy wylogowaniu, blokadzie i po upływie sesji.
@@ -43002,7 +43029,126 @@ z pustym BMI, a u dziecka „Za mało danych do oceny” — jak dotąd przy imp
 **Cofnięcie** = rewert PR, bez migracji (punkty bez wzrostu zostają poprawnymi rekordami; starsza wersja monitora
 wymaga wzrostu dopiero przy ich edycji).
 
-## Dziennik zdarzeń: odsyłanie poprawionych wizyt po zastosowaniu zmiany z innego urządzenia — uśpione (P-ZBIEZNOSC-ZDARZEN, E3-PR0c, SW 1.1.550, `vilda_vault.js` 281, 2026-11-17)
+## Leczenie otyłości — etapy 3 i 4: dziennik wpisów poza wizytą i „+ Kontynuacja” w Karcie pacjenta (P-OTYLOSC-DZIENNIK, SW 1.1.551, `vilda_cykle_leczenia.js` 5, `vilda_auth_ui.js` 569, `vilda_auth_ui.css` 83, `obesity_therapy_monitor.js` 29, `vilda_global_search.js` 6, 2026-11-18)
+
+**Decyzje właściciela (2026-11-17/18).** Masa przysłana przez pacjenta albo rodzica miesiąc po wizycie **nie może być
+nową wersją ostatniej wizyty** (decyzja nr 2) — monitorowanie leczenia otyłości ma być oddzielone od wizyt w gabinecie.
+Przyjęte: (1) poprawka wpisu to nowa wersja, usunięcie można cofnąć, przy równoległej poprawce lekarz wybiera wersję;
+(2) wymagane pola jak w etapie 1 (Włączenie i Zakończenie dziecka ze wzrostem, Kontynuacja — data i masa), werdykt
+wstrzymany, gdy w oknie oceny jest konflikt dwóch wersji; (3) w Notatkach wpisy schowane za jedną linią „Wpisy leczenia
+otyłości (N) →”, w wyszukiwarce pominięte, w Historii jako „Leczenie otyłości”; (4) dawne punkty przeniesione ze źródłem
+„gabinet”; (5) etap 2 połączony z etapem 4; makieta zaakceptowana z etykietą źródła „Pacjent” (nie „Rodzic”);
+2026-11-18: „Etap 3 + 4 razem”.
+
+**Stan przed zmianą.** Punkty leczenia otyłości żyły tylko w zapisie wizyty (`obesityTherapyPoints` w migawce pacjenta):
+nowy punkt wymagał wczytania pacjenta w DocPro i „Zapisz dane”, czyli tworzył nową wersję wizyty. Równoległa praca na
+dwóch urządzeniach albo w dwóch kartach mogła zgubić punkt (zapis całej listy).
+
+**Gdzie zapisuje się wpis (sejf bez zmian).** Każda **wersja** wpisu to osobna notatka pacjenta zapisana raz
+(`VildaVault.savePatientNoteOnce`; ponowienie po zgubionym potwierdzeniu nic nie zmienia, inna treść pod tym samym
+identyfikatorem — odmowa): kategoria `leczenie-otylosci`, tytuł „Leczenie otyłości — Kontynuacja 10.11.2026”, pierwsza
+linia treści czytelna dla człowieka, linia ostrzeżenia, ostatnia linia — dane wpisu w JSON (`{"vildaOtylosc":1,…}`),
+`clinicalDateISO` = data pomiaru, `linkedAgeMonths` = wiek. Notatka nie ma terminu, więc nie trafia do przypomnień ani
+Terminarza. Mapa ścieżek sejfu pokazała, że tytuł, treść, kategoria i data kliniczna przechodzą przez zapis, eksport,
+scalanie i synchronizację **każdej** wersji aplikacji (także 221 i 276), a nowe pole w treści szyfrowanej ginęłoby w zapisie,
+odczycie i scalaniu każdej z nich (biała lista pól). Dlatego `vilda_vault.js` się nie zmienia: bez przeliczania skrótów
+obrazu sejfu i bez czekania na kolejkę E3-PR0c–E3-PR0i. Starsze urządzenie pokaże wpis jako zwykłą notatkę z czytelną
+pierwszą linią; po aktualizacji — jako wpis dziennika. Odstąpiono od zapowiadanego wcześniej przełącznika (ryzyko, przed
+którym miał chronić — utrata nowego pola na starszym urządzeniu — przy treści notatki nie występuje).
+
+**Wersje, konflikt, usunięcie (`VildaDziennikOtylosci`).** Wpis ma stały `entryId` (id pierwszej wersji); każda wersja
+wskazuje wersje, które zastępuje (`parents`). Bieżąca wersja = jedyny liść. Dwa liście = **konflikt** (ten sam wpis
+poprawiony równolegle na dwóch urządzeniach albo w dwóch kartach): żadna wersja nie znika, Karta pokazuje obie z
+zaznaczonymi różnicami, wybór lekarza to nowa wersja zastępująca oba liście (odrzucona zostaje w historii wpisu).
+Usunięcie = wersja `retracted`; „Cofnij” = nowa wersja z treścią sprzed usunięcia. Dwa nowe wpisy z dwóch urządzeń mają
+różne `entryId` — nigdy się nie nadpiszą; możliwy duplikat (ta sama data, masa ±0,05 kg) ostrzega przed zapisem.
+
+**Dawne punkty (decyzja nr 4).** Punkty migawki bez wpisu w dzienniku widać od razu w projekcji ze źródłem „gabinet”;
+przenoszą się do dziennika przy pierwszym zapisie wpisu tego pacjenta (z Karty albo z monitora). Przeniesiona wersja ma
+identyfikator `otylm-<skrót pacjenta>-<id punktu>` i treść bez chwili i urządzenia — dwa urządzenia przenoszące ten sam
+punkt zapisują tę samą notatkę (bez duplikatów). Punkt migawki z wpisem (po `legacyPointId` albo po id równym `entryId` —
+monitor zapisuje w migawce lustro dziennika) nie wraca drugi raz; usunięty po przeniesieniu też nie.
+
+**Projekcja.** Dziennik daje listę punktów w formacie monitora (`obesityTherapyPoints`) z `weightSource`/`heightSource`
+i `dziennik.konflikt`; przy konflikcie projekcja bierze najnowszą nieusuniętą wersję, oznaczoną konfliktem. Z projekcji
+liczą: kafelek „Leczenie otyłości” Karty, panel „Dane analityczne — otyłość” (redukcje, ocena wg ChPL — także punkt oceny
+z etapu 1 — i wykres), karta porównania, Historia oraz monitor DocPro wczytanego pacjenta.
+
+**Karta pacjenta — sekcja „Wpisy leczenia”** (między kafelkiem a panelem; `VildaDziennikOtylosciUI`): wpisy od najnowszego
+(5 + „Pokaż wszystkie”), masa i wzrost ze źródłem („gabinet”/„pacjent”), BMI, dawka, „Popraw”, „Usuń” (z „Cofnij” i listą
+usuniętych z „Przywróć”), „Wybierz wersję” przy konflikcie. Przycisk **„+ Kontynuacja”** otwiera okno bez wczytywania
+pacjenta: data pomiaru (obowiązkowa, pusta przy otwarciu), masa (obowiązkowa) ze źródłem (domyślnie „Pacjent”), wzrost
+opcjonalny ze źródłem, lek z ostatniego wpisu (zmiana leku — w DocPro), dawka podpowiedziana z ostatniego wpisu,
+komentarz. Pod masą zmiana od poprzedniego wpisu; przy wzroście — podpowiedź okna oceny ChPL u dziecka („Trwa okno oceny
+ChPL (od 27.10.2026). Ostatni wzrost: 162,9 cm z 13.10.2026 — przed oknem…”). Zapis sprawdza reguły cykli R1–R9 na liście
+z dziennika (Kontynuacja poza aktywnym cyklem — „nowy cykl zaczyna się od Włączenia w DocPro”), datę z przyszłości
+(pytanie) i duplikat (pytanie). Wiek w dniu pomiaru — z daty urodzenia, a bez niej z ostatniego wcześniejszego punktu
+i pełnych miesięcy między datami. Bez aktywnego cyklu przycisk ma `aria-disabled` z powodem pod spodem.
+
+**Werdykt przy konflikcie (decyzja nr 2).** Konflikt wpisu ocenianego cyklu w oknie oceny wg ChPL (od daty okna z
+`punktOceny`; bez okna albo bez dat — każdy konflikt cyklu) wstrzymuje werdykt: „Ocena wstrzymana — dwie wersje wpisu z
+10.11.2026”, z masami obu wersji i wskazaniem „Wybierz wersję”. Konflikt przed oknem nie zmienia oceny.
+
+**Monitor DocPro.** U wczytanego, zapisanego pacjenta lista monitora to projekcja dziennika (z masą od pacjenta oznaczoną
+„(pacjent)”), a dodanie, poprawka i usunięcie punktu zapisują od razu wersję wpisu (źródło „gabinet”, przy poprawce —
+źródło dotychczasowe); komunikat „Zapisano w dzienniku leczenia…”. Formularz wizyty zapisuje w migawce lustro listy, jak
+dotąd. Pacjent ramki to wyłącznie `window._vildaCurrentPatientId` zgodny z identyfikatorem karty w `sessionStorage` —
+nieaktualna ramka DocPro w tle nie czyta ani nie zapisuje dziennika innego pacjenta. Bez zapisanego pacjenta (nowy
+pacjent), bez odblokowanego sejfu albo bez modułu — monitor działa jak dotąd (punkty tylko w formularzu wizyty).
+
+**Notatki, wyszukiwarka, Historia (decyzja nr 3).** Notatki: wersje wpisów nie stoją na liście; jedna linia
+„Wpisy leczenia otyłości (N) — Leczenie →” prowadzi do sekcji. Wyszukiwarka pomija kategorię `leczenie-otylosci`.
+Historia: u pacjenta z dziennikiem wpisy „Leczenie otyłości” z bieżących wpisów dziennika (z masą i źródłem, podpis
+„z dziennika leczenia — poprawka w „Wpisy leczenia””) zamiast wpisów z migawki; surowe wersje nie stoją na osi.
+
+**PWA.** Kod dziennika i sekcji dopisany do `vilda_cykle_leczenia.js` (dwa niezależne moduły za modułem cykli), style —
+rozdział „Dziennik leczenia otyłości” w `vilda_auth_ui.css`: budżet instalacji liczy żądania (≤ 600,
+`sw-precache-stron`), a wszystkie pary aliasów są już wykorzystane — jak „Pakiet badań” (jeden plik). Wybrane źródło
+w oknie ma nadpisanie skórki iOS 26 (`.liquid-ios26 .vdo-chip[aria-checked="true"]`, powód „kaskada” w
+`tests/fixtures/skorka-nadpisania.json`) i znak „✓” (wybór nie tylko kolorem).
+
+**Przypadki syntetyczne** (dane fikcyjne; Testowa Zuzanna, 13 l., Wegovy; migawka: Włączenie 14.04.2026 80,0 kg
+160,0 cm, Kontynuacja 13.10.2026 75,2 kg 162,9 cm):
+
+| Przypadek | Wejście | Oczekiwany wynik |
+|---|---|---|
+| DZ-1 | Karta: „+ Kontynuacja” 10.11.2026, 74,6 kg, źródło Pacjent | trzy wpisy (dwa „gabinet” z migawki, nowy „pacjent”); liczba wersji wizyty bez zmian; w dzienniku trzy notatki; werdykt „Potrzebny pomiar wzrostu do oceny ChPL” |
+| DZ-2 | okno bez daty; wzrost „abc”; 13.10.2026 75,2 kg | „Podaj datę pomiaru…”; błąd wzrostu; „Możliwy duplikat — 13.10.2026 jest już wpis 75,2 kg (gabinet)” — „Nie zapisuj” nic nie zapisuje; 17.11.2026 74,3 kg 163,4 cm → „Odpowiedź wystarczająca” |
+| DZ-3 | poprawka 74,6 → 74,1 kg; usuń; „Cofnij” | ten sam wpis z 74,1 kg; po usunięciu dwa wpisy i komunikat z „Cofnij”; po cofnięciu trzy |
+| DZ-4 | dwie równoległe poprawki wpisu z 10.11.2026 (telefon 74,6 kg, komputer 74,1 kg) | wiersz w konflikcie, werdykt „Ocena wstrzymana — dwie wersje wpisu z 10.11.2026” z obiema masami; wybór „Komputer” → 74,1 kg, werdykt wraca |
+| DZ-5 | migawka z Zakończeniem 03.11.2026 | „+ Kontynuacja” z `aria-disabled`, „Brak aktywnego cyklu — Włączenie w DocPro.”; kliknięcie wyjaśnia, okno się nie otwiera |
+| DZ-6 | wpis + zwykła obserwacja | Notatki: jedna linia „Wpisy leczenia otyłości (3)…” i sama obserwacja; Historia: „Masa: 74,6 kg (pacjent)” i podpis dziennika |
+| DZM-1 | DocPro, wpis „od pacjenta” 10.11 w dzienniku; Kontynuacja z monitora 17.11.2026 74,3 kg 163,4 cm | monitor pokazuje 10.11 „74,6 (pacjent)”; nowy punkt w dzienniku jako „gabinet”; id punktów monitora = id wpisów |
+| DZM-2 | DocPro: usuń punkt 13.10.2026 | w dzienniku przeniesienie + wersja „(usunięty)”; monitor bez tego punktu |
+| flota | dwa urządzenia; równoległa poprawka; starsza aplikacja 221 i 276 przekazuje wpis i oznacza go „wykonane” | wpis widoczny na obu; konflikt na obu i rozstrzygnięcie wszędzie; urządzenie zasilane wyłącznie przez starszą aplikację składa ten sam wpis (masa, wzrost, źródło) |
+
+**Wpływ kliniczny.** Ocena wg ChPL, redukcje i wykres liczą się z dziennika, czyli także z mas (i wzrostów) zmierzonych
+przez pacjenta — tak jak zdecydował właściciel (etap 1: wzrost od pacjenta wolno użyć). Dotąd takie pomiary w ogóle nie
+wchodziły do oceny. Nowy stan: werdykt wstrzymany przy konflikcie wersji w oknie oceny. Progi, okna i kotwice ChPL bez
+zmian. Dorosły: ocena z masy (Saxenda, Mysimba) albo kliniczna — z ostatniego wpisu dziennika.
+
+**Ograniczenia (znane).**
+- Zakładka „Postępy” dorosłego, lista pacjentów (filtr leku), analiza trajektorii i karta zbiorcza czytają jeszcze
+  migawkę ostatniej wizyty — wpis z Karty widzą po najbliższym „Zapisz dane” wizyty w DocPro (lustro listy).
+- Starsze urządzenie (sprzed tej wersji) pokazuje wersje wpisów jako zwykłe notatki i nie widzi ich w monitorze; ręczna
+  edycja takiej notatki na starszym urządzeniu (zmiana treści) czyni ją nieczytelną dla dziennika — dziennik pomija ją
+  i zostawia w Notatkach.
+- Konflikt rozstrzyga się w Karcie; monitor DocPro przy próbie poprawki wpisu w konflikcie odsyła do Karty.
+
+**Testy.** Dane wyłącznie fikcyjne.
+- `tests/unit/dziennik-otylosci.test.mjs` (22): format notatki, wersje, konflikt, usunięcie i cofnięcie, migracja
+  (identyczne notatki z dwóch urządzeń, punkt bez daty, usunięty nie wraca), `planDzialania`, wiek w dniu pomiaru,
+  flota na prawdziwym sejfie (dwa urządzenia, starsza aplikacja 221 i 276).
+- e2e `tests/e2e/otylosc-dziennik-karta.spec.mjs` (DZ-1…DZ-6) i `tests/e2e/otylosc-dziennik-monitor.spec.mjs`
+  (DZM-0…DZM-2) na prawdziwych stronach. DZM-0 pilnuje łatki P-PWZ-ODTWORZENIE (`docs/ZRODLA_ARTEFAKTOW.md`): po
+  „Odtwórz zapis” w DocPro karta „Leczenie otyłości” zamykała się sama w ciągu sekundy (błąd był już na `audyt`).
+- Strażniki stylów: `css-skorka` (nowe nadpisanie w fixture), `css-szklo` (martwe deklaracje pod skórką usunięte
+  `usun-martwe-css.mjs`), `css-tokeny`.
+
+**Wdrożenie.** Od razu przy wydaniu. **Cofnięcie** = rewert PR: notatki dziennika zostają w sejfie jako zwykłe notatki
+kategorii `leczenie-otylosci` (widoczne w Notatkach), punkty w migawce — jak przed zmianą.
+
+## Dziennik zdarzeń: odsyłanie poprawionych wizyt po zastosowaniu zmiany z innego urządzenia — uśpione (P-ZBIEZNOSC-ZDARZEN, E3-PR0c, SW 1.1.552, `vilda_vault.js` 281, 2026-11-17)
 
 **Zmiana kliniczna: NIE (uśpiona).** Wzory, progi, jednostki, interpretacje, reguły scalania (`Le`), format kopii,
 serwer i `vilda_sync.js` bez zmian. Dla użytkownika dziś nic się nie zmienia: odsyłanie włącza tylko przełącznik
@@ -43493,6 +43639,7 @@ komentarz `Bob_bramka` (włącznik dziennika po E2-PR6: flaga `vilda-event-log-v
 (7852); część `Bem_` — `Bem_zastosuj`, `Bem_zastosujEcho` (10022–10038); nagłówki części (opis czwartej drogi ze
 scalania do kolejki i przełącznika). Poza blokiem bez zmian.
 
-**Wersje.** `vilda_vault.js` 280 → 281, `vilda_chrome.js` 301 → 302 i `vilda_session_bridge.js` 217 → 218
-(wstrzykują sejf), SW 1.1.549 → 1.1.550 — `npm run podbij-wersje`; baza `origin/audyt` `04fbc4fc` (po
-vildaclinic/vilda-calc#990 i vildaclinic/vilda-calc#994). Bez nowego pliku w pamięci offline.
+**Wersje.** `vilda_vault.js` 280 → 281, `vilda_chrome.js` 303 → 304 i `vilda_session_bridge.js` 219 → 220
+(wstrzykują sejf), SW 1.1.551 → 1.1.552 — `npm run podbij-wersje`; baza `origin/audyt` `d99ec459` (po
+vildaclinic/vilda-calc#990, vildaclinic/vilda-calc#994, vildaclinic/vilda-calc#991 i vildaclinic/vilda-calc#997). Bez nowego
+pliku w pamięci offline.

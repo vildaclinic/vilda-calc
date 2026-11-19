@@ -1880,6 +1880,47 @@ Opis: `docs/clinical/ALGORITHMS.md`, „LAB-HISTORIA 6.39”; `docs/LAB_HISTORIA
 
 Tekst jest ten sam co `PP_PIN_SUB` w czytelnym bloku, więc wiersz nie zmienia podpisu, zanim blok go odświeży. `tests/unit/lab-pin-pinned-state.test.mjs` pilnuje, że oba ciągi występują dokładnie raz, a dawnego tekstu nie ma. Bez nowych stylów ustawianych wprost na elementach (liczba dla `lab_pin_result.js` w `tests/fixtures/style-elementow.json` zostaje 17); znaczniki wycinków testów (`var Lh2AssessmentProvider=`, `var s=null;`, `async function A(`, `function I(){`) bez zmian.
 
+## Łatka P-BEZCZYNNOSC-KARTA — bezczynność i koniec sesji liczone dla całej karty (`vilda_auth_ui.js` 567 → 568, `vilda_session_bridge.js` 217 → 218, 2026-11-18, polecenie właściciela)
+
+Opis działania i walidacja: `docs/clinical/ALGORITHMS.md`, „Bezczynność i koniec sesji liczone dla całej karty”. Czytelne bloki wstawione wprost do artefaktów, bez ponownej minifikacji; w części zminifikowanej `vilda_auth_ui.js` zmieniają się trzy dokładne ciągi.
+
+```js
+// vilda_auth_ui.js — czytelny blok aktywności (nad „var authBootReady=false;”)
+function vildaRecordActivity(event) { /* jak dotąd: Bn = teraz, resetIdleTimer(), refreshPersistedSession();
+  nowe: zdarzenie niezaufane zostaje lokalne, a w pozostałych dokumentach karty wołane jest recordPeerActivity() */ }
+function vildaRecordPeerActivity() { /* Bn = teraz, resetIdleTimer(); bez zapisu sesji i bez dalszego rozsyłania */ }
+
+// vilda_auth_ui.js — między „function isAuthBootReady(){return authBootReady}” a „async function Ei(){”
+function vildaTabPeers() { /* dokument główny (i.top) i jego bezpośrednie ramki, bez własnego okna;
+  tylko ten sam origin, każdy dostęp w try/catch */ }
+function vildaClearTabWorkState() { /* gdy karta nie ma zapisu sesji sejfu:
+  VildaPersistence.clearUserState({ includeSessions: true, source: "auth.tabSessionEnded", dispatchEvent: false })
+  i znaczniki wczytanego pacjenta; znacznik pacjenta panelu HOMA-IR (vildaHomaIdentityRefV1) jest opróżniany,
+  nie usuwany — pusty nie pasuje do żadnego pacjenta, więc panel nadal czyści swoje pola przy zmianie pacjenta */ }
+function vildaEndTabSession(reason) { /* vildaClearTabWorkState(); dla "idle" i "manual": lock(reason)
+  w pozostałych odblokowanych dokumentach karty; "manual" zaczęte w ramce: VildaFrameSync.resync() dokumentu głównego */ }
+
+// vilda_auth_ui.js, część zminifikowana — dokładne ciągi, każdy występuje raz:
+// 1. nasłuch onLock w Ei
+//    było:  var n=dn;dn=null;try{qa("on-lock")}catch{}
+//    jest:  var n=dn;dn=null;try{qa("on-lock")}catch{}try{vildaEndTabSession(a)}catch{}
+// 2. start zablokowanej strony w Ei
+//    było:  if(Io()){Aa(!0,{skipReset:!0}),$t();return}Aa(!1);let Bkr_s=null;
+//    jest:  if(Io()){Aa(!0,{skipReset:!0}),$t();return}if(authNeedsCleanup)vildaClearTabWorkState();Aa(!1);let Bkr_s=null;
+// 3. publiczne API VildaAuthUI
+//    było:  recordActivity:vildaRecordActivity,
+//    jest:  recordActivity:vildaRecordActivity,recordPeerActivity:vildaRecordPeerActivity,
+
+// vilda_session_bridge.js — czytelny blok przed „var h=n.document;h&&(h.readyState==="loading"?”
+function relayTabActivity(event) { /* zaufane zdarzenie wejścia na stronie w ramce bez czynnego własnego
+  modułu konta → top.VildaAuthUI.recordActivity(); tylko gdy karta ma zapis sesji sejfu (l() mostu) */ }
+// nasłuch na document: mousedown, keydown, touchstart, scroll, pointerdown (passive)
+```
+
+Nazwy z artefaktu użyte w nowym kodzie: `i` — okno, `jt()` — sejf (`VildaVault`), `Bn` — znacznik ostatniej aktywności, `Ot` — zapis błędu modułu konta; w `vilda_session_bridge.js`: `n` — okno, `l()` — czy karta ma zapis sesji sejfu (`hasSessionKey`).
+
+**Granice.** Pomocnicy `vildaTabPeers`, `vildaClearTabWorkState` i `vildaEndTabSession` zostają w wycinku od `var authBootReady=false;` do `function uo(` — ten fragment wycinają uprzęże `tests/unit/auth-boot-readiness.test.mjs` i `tests/unit/sejf-usun-konto-karty-2.test.mjs`. Miejsca wywołań przypina `tests/unit/bezczynnosc-karta.test.mjs` („okablowanie końca sesji karty w plikach produkcyjnych”). `vilda_vault.js`, `vilda_frame_sync.js`, `vilda_shell.js` i kolejność skryptów bez zmian; `vilda_chrome.js` 299 → 300 i lista w `vilda_session_bridge.js` zmieniają tylko `?v=` wstrzykiwanego `vilda_auth_ui.js` (`npm run podbij-wersje`).
+
 ## Łatka P-OTYLOSC-WZROST — Kontynuacja bez wzrostu, data każdego punktu, ocena dziecka z ostatniego punktu ze wzrostem (`obesity_therapy_monitor.js` 27 → 28, `vilda_auth_ui.js` 566 → 567, `obesity_response_criteria.js` 4 → 5, 2026-11-18, decyzje właściciela)
 
 Opis działania i przypadki: `docs/clinical/ALGORITHMS.md`, „Leczenie otyłości — etap 1” (P-OTYLOSC-WZROST). Zmiany w czytelnych źródłach (`vilda_cykle_leczenia.js` VERSION 3 — R8, R9, `wzrostWymagany`; `docpro.html`; style w `inline_docpro_01.css`) nie wymagają opisu łatki. W trzech plikach zminifikowanych są podmiany dokładnych ciągów i wstawione czytelne bloki, bez ponownej minifikacji:
@@ -1945,6 +1986,63 @@ Opis działania i przypadki: `docs/clinical/ALGORITHMS.md`, „Leczenie otyłoś
 **Dlaczego `Ed` bez pomocników.** `tests/unit/otylosc-edycja-punktu.test.mjs` wycina `function Ed(t,e,n)` … `function Q(t)` razem z `L` i `f` — reguła wzrostu jest więc w samym `Ed` (moduł cykli z 4. argumentu albo z `window`, jak dotąd w `Cv`).
 
 **Granice.** Znaczniki wycinków testów bez zmian: w monitorze `function L(t,e)`, `var g=""`, `var ft="`, `function R(t)`, `function Ed(t,e,n)`, `function Q(t)`, `function Eh()`, `function Ee(t)`, `function Eo(t)`, `function Et(t)`, `function Ek(t,e)`, `function CyB(t)`, `function z()`, `function CyL(t)`, `function CyG(t,e)`; w Karcie `function Ye(`, `function An(`, `function Ob_ks(`, `function Ob_css(`, `if(Ob_m.bad&&Ob_m.bad.length){`, `/* Zakonczony cykl`. Czytelny blok `Ob_pkt` leży w wycinku `function Ob_ks(` … `function Ob_css(` testów Karty — tylko jako deklaracja, której te testy nie wołają. Bez nowych stylów ustawianych wprost na elementach. Sejf, eksport i import bez zmian.
+
+## Łatka P-OTYLOSC-DZIENNIK — dziennik leczenia otyłości w Karcie i monitorze (`vilda_auth_ui.js` 568 → 569 — po scaleniu z P-BEZCZYNNOSC-KARTA, które zajęło 568; `obesity_therapy_monitor.js` 28 → 29, 2026-11-18, decyzje właściciela)
+
+Opis działania i przypadki: `docs/clinical/ALGORITHMS.md`, „Leczenie otyłości — etapy 3 i 4” (P-OTYLOSC-DZIENNIK). Zmiany w czytelnych źródłach — moduły `VildaDziennikOtylosci` i `VildaDziennikOtylosciUI` dopisane do `vilda_cykle_leczenia.js`, styl sekcji w `vilda_auth_ui.css`, filtr w `vilda_global_search.js`, tekst w `docpro.html` — nie wymagają opisu łatki. **Sejf (`vilda_vault.js`) bez zmian.** W dwóch plikach zminifikowanych są podmiany dokładnych ciągów i wstawione czytelne bloki, bez ponownej minifikacji:
+
+```js
+// vilda_auth_ui.js
+// 1. Karta: kafelek, sekcja „Wpisy leczenia”, panel i porównanie z dziennika
+//    było:  function(){try{return Cl(s.obesityTherapyPoints)}catch{return null}}(),function(){try{return Ml(s.obesityTherapyPoints,S,h)}catch{return null}}(),function(){try{return jl(t,s.obesityTherapyPoints)}catch{return null}}()
+//    jest:  function(){try{return Ob_dz(t,s,S,h,GdNotatki,m)}catch(Ob_dzE){Ot("karta dziennik otylosci",Ob_dzE);return null}}()
+// 2. panel dostaje stan dziennika (konflikty)
+//    było:  function Ml(t,a,n){          jest:  function Ml(t,a,n,Ob_dzs){
+// 3. werdykt wstrzymany przy konflikcie w oknie oceny — za blokiem wstrzymania D5, przed zakończonym cyklem
+//    było:  /* Zakonczony cykl: … */if(Ob_m.end&&gt){
+//    jest:  /* Zakonczony cykl: … */Ob_dzs&&typeof Ob_dzk=="function"&&(gt=Ob_dzk(Ob_dzs,Ob_m,it)||gt);if(Ob_m.end&&gt){
+// 4. Notatki: wersje wpisów dziennika schowane za jedną linią
+//    po:    c=(c||[]).filter(function(S){return!(S&&S.ghPointId)||!!(options&&options.focusNoteId===S.id)});
+//    dochodzi linia:  if(typeof Ob_dzNotatki=="function")c=Ob_dzNotatki(t,c);
+// 5. Historia: wpisy „Leczenie otyłości” z dziennika zamiast z migawki
+//    było:  var S=[];try{S=await l.listPatientTimelineEvents(a)}catch(f){Ot("listPatientTimelineEvents",f)}
+//    jest:  …catch(f){Ot("listPatientTimelineEvents",f)}try{typeof Ob_dzOs=="function"&&(S=await Ob_dzOs(S,a,l))}catch(Ob_dzOsE){Ot("Historia: dziennik leczenia otylosci",Ob_dzOsE)}
+// 6. wiersz Historii: masa ze źródłem i podpis dziennika
+//    było:  return p&&d.appendChild(s("Dawka",p)),t._prevObDrug
+//    jest:  return p&&d.appendChild(s("Dawka",p)),t._obMasa&&d.appendChild(s("Masa",t._obMasa)),t._prevObDrug
+//    było:  text:"\u{1F512} z monitora DocPro \u2014 edycja w karcie monitorowania"
+//    jest:  text:t._obZDziennika?"\u{1F512} z dziennika leczenia \u2014 poprawka w \u201EWpisy leczenia\u201D":"\u{1F512} z monitora DocPro \u2014 edycja w karcie monitorowania"
+// 7. czytelne bloki: Ob_dz, Ob_dzk przed function Ob_pkt(; Ob_dzOs, Ob_dzNotatki przed function WbOtworzBadania(
+
+// obesity_therapy_monitor.js
+// 1. vt: po dodaniu punktu — wersja wpisu w dzienniku
+//    było:  …:I().push(Cp),T(),l(),q("obesity-point-added"),
+//    jest:  …:I().push(Cp),T(),l(),q("obesity-point-added"),typeof Dzz=="function"&&Dzz({rodzaj:"dodaj",dane:Cp}),
+// 2. Eb: po poprawce
+//    było:  window.obesityTherapyPoints=b.points;T();Ec();l();q("obesity-point-edited");return!0}
+//    jest:  …q("obesity-point-edited");typeof Dzz=="function"&&Dzz({rodzaj:"popraw",id:b.point.id,dane:b.point});return!0}
+// 3. Q: po usunięciu
+//    było:  q("obesity-point-deleted")}     jest:  q("obesity-point-deleted"),typeof Dzz=="function"&&Dzz({rodzaj:"usun",id:t})}
+// 4. CyW: masa od pacjenta oznaczona w tabeli
+//    było:  P(F(i.weight,1)),              jest:  P(F(i.weight,1)+(i.weightSource==="pacjent"?" (pacjent)":"")),
+// 5. czytelny blok Dzs, Dzpid, Dzmig, Dzp, Dzw, Dzstart, Dzdane, Dzz (+ słuchacz vilda:patient-loaded) przed blokiem P-OTYLOSC-WZROST
+```
+
+**Dlaczego strażnicy `typeof`.** Testy wycinają fragmenty `Ob_b`, monitora (`Ed`…`Q`, `CyS`) i Notatek; wywołania czytelnych bloków przez `typeof` nie zmieniają działania wycinków bez nich. Wstawka w `Ob_b` stoi za komentarzem „Zakonczony cykl”, czyli poza wycinkiem `if(Ob_m.bad&&Ob_m.bad.length){` … `/* Zakonczony cykl` (`karta-otylosc-r6`).
+
+**Granice.** Znaczniki wycinków testów bez zmian (lista w łatce P-OTYLOSC-WZROST). Nowe style ustawiane wprost na elementach: brak (wiersz Historii używa istniejącego pomocnika `s`). Lint: bez nowych naruszeń w `vilda_auth_ui.js` (limit `no-useless-assignment` z `eslint-suppressions.json` bez zmian).
+
+## Łatka P-PWZ-ODTWORZENIE — odtworzony pacjent nie chowa modułów profesjonalnych (`vilda_professional_module.js` 13 → 14, 2026-11-19)
+
+**Błąd (był już na `audyt` 04fbc4fc).** „Odtwórz zapis” w DocPro (`restoreLoadedStateImmediately`, `vilda_data_import_export.js`) wpisuje do pola PWZ wartość z zapisu (`doctor.pwzNumber`, zwykle `null` — PWZ lekarza leży w `localStorage`, a pole jest puste po jego przyjęciu) i wysyła na nim `input`. Obsługa pola (`Ke`) traktowała puste pole jak niepoprawny PWZ i chowała moduły profesjonalne, w tym pasek `#abxButtonWrapper`. Sekundowe sprawdzenie w `obesity_therapy.js` (`ne`; podobne w `hypertension_therapy.js`) zamykało wtedy otwartą kartę „Leczenie otyłości” — po wczytaniu pacjenta karta zamykała się sama w ciągu sekundy od otwarcia. Wykrył to test DZM-0 (`tests/e2e/otylosc-dziennik-monitor.spec.mjs`); te same kroki na `audyt` bez zmian: karta widoczna zaraz po kliknięciu, po 2,5 s — zamknięta.
+
+```js
+// vilda_professional_module.js
+//    było:  function Ke(){const n=j.value.trim();if(st(n)){
+//    jest:  function Ke(){const n=j.value.trim();/* P-PWZ-ODTWORZENIE … */if(!n&&st(String(fe(X.pwzNumber)||"").trim()))return;if(st(n)){
+```
+
+**Granice.** Zmienia się tylko przypadek „puste pole przy zapisanym poprawnym PWZ” (PWZ trafia do `localStorage` dopiero po przyjęciu poprawnego numeru). Wpisywanie numeru, niepoprawny PWZ w polu i brak zapisanego PWZ działają jak dotąd.
 
 ## Trwała tożsamość wizyt — źródło i granica artefaktu sejfu
 

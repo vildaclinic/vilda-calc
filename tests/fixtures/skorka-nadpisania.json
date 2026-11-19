@@ -2054,6 +2054,18 @@
    "powod": "kaskada"
   },
   {
+   "klucz": "vilda_auth_ui.css||.liquid-ios26 .vdo-chip[aria-checked=\"true\"]|background#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_auth_ui.css||.liquid-ios26 .vdo-chip[aria-checked=\"true\"]|border-color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_auth_ui.css||.liquid-ios26 .vdo-chip[aria-checked=\"true\"]|color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
    "klucz": "vilda_auth_ui.css||.liquid-ios26 .vilda-patient-hero-edit-pill:hover|background#0|część#0",
    "powod": "kaskada"
   },

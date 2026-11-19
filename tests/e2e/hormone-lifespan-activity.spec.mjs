@@ -97,7 +97,8 @@ async function expectActiveAfterResume(page, owner) {
     const elapsed = Date.now() - window.__chartActivityStart;
     const unlockedBefore = window.VildaVault.isUnlocked();
     const locksBefore = [...window.__chartActivityLocks];
-    // The shell and converter have separate timers AND last-activity values.
+    // Each document keeps its own timer and last-activity value; real input
+    // refreshes both in every document of the tab (P-BEZCZYNNOSC-KARTA).
     // Resetting only the timer is insufficient when either document resumes.
     document.dispatchEvent(new Event('visibilitychange'));
     dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }));
