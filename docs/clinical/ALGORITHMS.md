@@ -2883,15 +2883,43 @@ i powyżej wyłączenia pierwszych 14 dni życia):
   sesja formularza, inaczej rekord pacjenta — ta sama kolejność co dla
   początku pokwitania). Wpis lokalny obowiązuje tylko w tym sprawdzeniu
   i nigdzie się nie zapisuje; znika po „Resetuj do danych pacjenta”,
-  zmianie pacjenta, wybraniu płci „Mężczyzna” i „Wyczyść wszystkie pola”.
-  Wpis spoza zakresu albo większy niż wiek też zastępuje wartość z danych
-  i liczy się jak brak wpisu; nota mówi wtedy wprost, że wpis nie jest
-  brany pod uwagę.
-- **Wybór, który przestaje być dostępny** (postmenopauza poniżej 18 lat;
-  zwykła faza w estradiolu przed progiem), wraca do „nieznana”, zamiast
-  zostawać jako ukryta albo wyszarzona wartość. W trakcie wpisywania liczby
-  w polach wieku i wieku menarche wybór nie jest odbierany (wiek „65”
-  przechodzi przez „6”); rozstrzyga wpis zakończony wyjściem z pola.
+  zmianie pacjenta, wybraniu płci „Mężczyzna”, zmianie płci w danych tej
+  samej osoby i „Wyczyść wszystkie pola”.
+- **Wpis w polu lokalnym.** Każdy niepusty tekst w polu jest nadpisaniem
+  lokalnym i zastępuje wartość z danych. Przyjmowana jest wyłącznie zwykła
+  liczba dziesiętna: cyfry, opcjonalnie jeden przecinek albo kropka i jedna
+  lub dwie cyfry po nim (spacje na brzegach są pomijane). Znak, wykładnik,
+  zapis szesnastkowy, jednostka, drugi separator i każdy inny tekst („12,5,”,
+  „12,5 lat”, „12;5”, „1e1”, „0x10”, „-12”) to **wpis odrzucony** — tak samo
+  jak liczba spoza zakresu 2–20 albo większa niż wiek. Wpis odrzucony liczy
+  się jak brak wieku menarche (nie wraca do wartości z danych), pole jest
+  oznaczone jako błędne, a nota mówi wprost, że wpis nie jest brany pod
+  uwagę.
+- **Opis pacjenta** wymienia „menarche 11,0” tylko wtedy, gdy pole dotyczy
+  tego badania i tej pacjentki **i** silnik przyjął wpisaną wartość. Wpis
+  odrzucony nadal jest nadpisaniem lokalnym (dopisek „· nadpisanie lokalne”
+  i przycisk „Resetuj do danych pacjenta”), ale nie jest wypisywany jako
+  wartość. Wpis, którego pole nie dotyczy (inne badanie, wiek nadpisany na
+  dorosły), nie jest ani wartością w opisie, ani nadpisaniem.
+- **Wybór, który nie jest dostępny** (postmenopauza poniżej 18 lat; zwykła
+  faza w estradiolu przed progiem), **nie trafia do żadnego odbiorcy danych
+  pacjenta**: wyniku, opisu pacjenta, podpowiedzi, przypięcia ani karty
+  „Hormony w ciągu życia” (także LH i inhibiny B). Rozstrzyga to jedno
+  miejsce strony — odczyt pacjenta (`getEffectivePatient`), który o dostępność
+  pyta silnik. Zapamiętany wybór selektora jest przy tym kasowany (selektor
+  wraca do „nieznana” albo „domyślnie”, opcja znika z listy albo jest
+  wyszarzona) przy każdym odświeżeniu opisu pacjenta: po zmianie badania,
+  danych pacjenta, pola wyboru i po zakończeniu wpisu liczby — także
+  w badaniach z własnym formularzem (LH, FSH, inhibina B, testosteron),
+  w których selektor jest schowany.
+- **W trakcie wpisywania liczby** (pola „Wiek [lata]”, „Wiek [mies.]”, „Wiek
+  menarche [lata]”) zapamiętany wybór i jego opcja zostają nietknięte, ale
+  niedostępny wybór nie działa: wiek „65” wpisywany przez „6” daje przy „6”
+  wynik i opis bez postmenopauzy, a przy „65” wybór działa znowu bez
+  ponownego wybierania. Wpis kończy wyjście z pola albo Enter; dopiero wtedy
+  niedostępny wybór jest kasowany. Zakończenie wpisu **nie rysuje wyniku
+  ponownie** (wynik jest już policzony w trakcie wpisywania), więc pierwsze
+  kliknięcie w wynik zaraz po wyjściu z pola nie ginie.
 
 **Co się nie zmieniło.** Wiek od 18 lat (cztery warianty przy nieznanej
 fazie, postmenopauza do wyboru, komunikat dla ciąży), mężczyźni i chłopcy,
@@ -2927,7 +2955,14 @@ w pmol/L; scenariusze makiety A–G i granice):
 | granica | menarche 10,0; wiek 14 lat 11 mies. / 15 lat 0 mies. | 4,9 roku → zakres jak dotąd / 5,0 lat → jak u dorosłej |
 | granica | wiek [15, 16) / [15,5; 15,583), menarche 10,5 | 4,5 roku → jak dotąd / 5,0 lat → jak u dorosłej |
 | granica | 17 lat 11 mies. po progu / 18 lat, faza lutealna | ten sam zakres 200–770 — bez skoku w dniu 18. urodzin |
-| wpis odrzucony | pacjentka 16 lat, wpis lokalny 25, 1 albo 16,5 | zakres jak bez wpisu; nota „Wpisany wiek menarche nie jest brany pod uwagę…” |
+| wpis odrzucony | pacjentka 16 lat (w danych menarche 11,0), wpis lokalny 25, 1 albo 16,5 | zakres jak bez wieku menarche (0–290); nota „Wpisany wiek menarche nie jest brany pod uwagę…”; opis „… · Th V · nadpisanie lokalne” bez „menarche 25,0” |
+| wpis nierozpoznany | jak wyżej, wpis „12,5,”, „12,5 lat”, „12;5”, „1e1”, „0x10” albo „-12” | jak wpis odrzucony; „11”, „11,0”, „ 10.5 ” są przyjmowane |
+| wpis nieużywany | pacjentka D, wpis 11, potem wiek w panelu 30 lat albo inne badanie | opis bez „menarche …”; po powrocie do estradiolu u 16-latki „… · menarche 11,0 · nadpisanie lokalne” |
+| wpisywanie liczby | dorosła 30 lat, prolaktyna, „Postmenopauza”; wiek „65” wpisywany przez „6” | przy „6”: opis „Kobieta · 6 lat · …” bez postmenopauzy, wybór w selektorze zostaje; przy „65”: „… · postmenopauza · nadpisanie lokalne”; zakończony wpis „15” → wybór „(domyślnie)”, opcji nie ma |
+| wpisywanie liczby | dorosła 30 lat, estradiol 450, faza lutealna; wiek „35” wpisywany przez „3” | przy „3”: zakres 0–73,5 i opis bez fazy, „Faza lutealna” dalej wybrana; przy „35”: 200–770, „w zakresie normy” |
+| klik po polu | fokus w polu liczbowym panelu (z wpisem albo bez), potem klik w wartość w tabeli wyników | pierwszy klik kopiuje: „Skopiowano: 0,45 nmol/L” |
+| badanie z własnym formularzem | ta sama osoba: 40 lat, „Postmenopauza” wybrana w prolaktynie → Inhibina B → dane zmienione na 12 lat, wynik 40 ng/L | schowany wybór skasowany; karta „Hormony w ciągu życia” jak u świeżo otwartej 12-latki („40 ng/L Mediana ≈43 ng/L”), bez komunikatu o menopauzie |
+| zmiana płci w danych | 16 lat, wpis lokalny 11 i faza lutealna; płeć w danych K → M → K | pole puste, wybór „(nieznana)”, zakres jak bez wpisu (0–290) |
 | inne badanie | prolaktyna, 16 lat / 30 lat | lista bez „Postmenopauzy”, fazy do wyboru / osiem opcji jak dotąd |
 
 **Gdzie mieszka reguła.** Próg (5), dopuszczalny wiek menarche (2–20), lista
@@ -2939,17 +2974,30 @@ i pakiet nie mają jej kopii: o podstawę doboru, lata od menarche i dostępne
 wybory pytają `LabUnitConverter.referenceContext(badanie, pacjent)`, a wiek
 menarche przekazują w polu pacjenta `menarche_age_years`. Wynik dobrany
 z lat od menarche niesie `reference_basis: 'gynecological_age'` i gotowe
-zdanie `reference_basis_pl`.
+zdanie `reference_basis_pl`. Na stronie (`przelicznik-jednostek.html`):
+`applyMenarcheAge` (pierwszeństwo wartości), `applyReferenceAvailability`
+na końcu `getEffectivePatient` (niedostępny wybór fazy nie trafia do
+odbiorców; czy wpis jest nadpisaniem i czy jest wartością do pokazania),
+`commitCyclePhaseAvailability` na początku `renderPatientSummary` (kasowanie
+zapamiętanego wyboru, przed wcześniejszym powrotem dla badań z własnym
+formularzem), `onOverrideChange` (odczyt wpisu; zdarzenie „input” =
+wpisywanie) i `onOverrideNumberCommitted` (koniec wpisu: tylko opis
+pacjenta, bez rysowania wyniku).
 
 **Testy.** `tests/unit/lab-e2-menarche.test.mjs` (dane, silnik, pakiet,
-funkcje strony wycięte z `przelicznik-jednostek.html`, format zapisu),
+format zapisu oraz prawdziwe funkcje strony wycięte
+z `przelicznik-jednostek.html` i uruchomione na atrapach elementów: odczyt
+pacjenta, opis, selektor, pole, noty, zdarzenia panelu),
 z macierzą `tests/support/lab-selection-matrix.mjs` i wzorcem
 `tests/fixtures/lab-selection-inne-badania-baza.json` wygenerowanym z kodu
 `origin/audyt` (33 pozostałe badania × 4992 konteksty pacjentów oraz
 populacje estradiolu, których reguła nie dotyczy — wyniki identyczne jak
 przed zmianą). E2E: `tests/e2e/lab-e2-menarche.spec.mjs` (scenariusze A–G,
-granice, selektor w innym badaniu, czyszczenie, wpisywanie liczby, 390 px,
-pakiet, przypięcie i historia). Zmienione istniejące E2E, które zakładały
+granice, selektor w innym badaniu, czyszczenie, wpisywanie liczby przez
+wartość pośrednią w prolaktynie i estradiolu, klik w wynik po polu
+liczbowym, wpis odrzucony i nierozpoznany, opis pacjenta przy wpisie
+nieużywanym, zmiana płci w danych, LH i inhibina B, 390 px, pakiet,
+przypięcie i historia). Zmienione istniejące E2E, które zakładały
 postmenopauzę albo zwykłą fazę u nieletniej:
 `hormone-lifespan-female-e2-reference`, `hormone-lifespan-female-lh-result-only`,
 `lab-e2-phase-source`, `lab-female-lh-result-only-offline`; pole dopisane do

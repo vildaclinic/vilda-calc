@@ -3,8 +3,8 @@ import { otworzBadania, pasekHistorii, sekcjaBadan } from '../support/lab-histor
 import { kartaPakietu, tekst, utworzPakiet } from '../support/lab-pakiet-dane.mjs';
 import {
   BRAK_DLA_KONTEKSTU, CIAZA, FAZY, NAGLOWEK_DOROSLA, NAGLOWEK_NIELETNIA, R1, R1_ZMIEN, R2_BRAK, WARIANTY_DOROSLA, WARIANTY_NIELETNIA,
-  WPIS_ODRZUCONY, WSKAZOWKA_DOROSLA, bezPoziomegoPrzewijania, otworzPanel, otworzPrzelicznik, r2Ponizej, stan, wczytajOsobe,
-  wybierzBadanie, wybierzEstradiol, zapisaneDane,
+  WPIS_ODRZUCONY, WSKAZOWKA_DOROSLA, bezPoziomegoPrzewijania, daneGoscia, otworzGoscia, otworzPanel, otworzPrzelicznik, r2Ponizej, stan,
+  wczytajOsobe, wybierzBadanie, wybierzEstradiol, wykresHormonow, zapisaneDane,
 } from '../support/lab-e2-menarche.mjs';
 
 // P-E2-MENARCHE (decyzje właściciela 2026-11-19): estradiol u dziewczynki poniżej 18 lat — zakresy dorosłej kobiety
@@ -268,61 +268,130 @@ test('wybór fazy, który przestaje być dostępny, wraca do „nieznana”: faz
   expect(await stan(page)).toMatchObject({ opis: 'Kobieta · 30 lat', faza: '', opcje: WSZYSTKIE('(nieznana)'), warianty: WARIANTY_DOROSLA });
 });
 
-test('wpisywanie liczby: dorosła z postmenopauzą wpisuje wiek „65” (przez „6”) → wybór zostaje; wiek „15” zatwierdzony Tab → wybór wraca do „nieznana”, opcja znika', async ({ page }) => {
+test('wpisywanie wieku przez wartość pośrednią, prolaktyna: dorosła z postmenopauzą wpisuje „65” przez „6” → przy „6” opis bez postmenopauzy, wybór w selektorze zostaje i przy „65” działa znowu; zakończony wpis „15” → wybór „(domyślnie)”, opcja znika', async ({ page }) => {
   await otworzPrzelicznik(page);
   await wczytajOsobe(page, DOROSLA);
   await wybierzBadanie(page, 'prolactin', 'Prolaktyna', 300);
   await otworzPanel(page);
-  await page.locator('#labOverrideCycle').selectOption('postmenopause');
   const wiek = page.locator('#labOverrideAge'), faza = page.locator('#labOverrideCycle');
+  await faza.selectOption('postmenopause');
+  await expect(page.locator('#labPatientText')).toHaveText('Kobieta · 30 lat · postmenopauza · nadpisanie lokalne');
   await wiek.click();
   await page.keyboard.press('6');
-  // Niedokończony wpis („6” = sześciolatka): wybrana postmenopauza zostaje na liście i w wyborze.
-  await expect(page.locator('#labPatientText')).toContainText('Kobieta · 6 lat');
-  await expect(faza).toHaveValue('postmenopause');
-  await expect(faza.locator('option[value="postmenopause"]')).toHaveCount(1);
+  // Niedokończony wpis („6” = sześciolatka): opis od razu bez postmenopauzy; wybór i jego opcja zostają na liście.
+  expect(await stan(page)).toMatchObject({ opis: 'Kobieta · 6 lat · wiek dziecięcy/młodzieńczy · nadpisanie lokalne', faza: 'postmenopause', opcje: WSZYSTKIE('(domyślnie)'), reset: true });
   await page.keyboard.press('5');
+  // „65”: zapamiętany wybór działa znowu — bez ponownego wybierania i przed wyjściem z pola.
+  expect(await stan(page)).toMatchObject({ opis: 'Kobieta · 65 lat · postmenopauza · nadpisanie lokalne', faza: 'postmenopause' });
   await page.keyboard.press('Tab');
-  await expect(page.locator('#labPatientText')).toHaveText('Kobieta · 65 lat · postmenopauza · nadpisanie lokalne');
-  await expect(faza).toHaveValue('postmenopause');
-  // Zatwierdzony wiek 15 lat: postmenopauza nie dotyczy — wybór „(domyślnie)”, opcji nie ma.
+  expect(await stan(page)).toMatchObject({ opis: 'Kobieta · 65 lat · postmenopauza · nadpisanie lokalne', faza: 'postmenopause', opcje: WSZYSTKIE('(domyślnie)') });
+  // Wiek 15 lat: w trakcie wpisu jak wyżej; zakończony wpis (Tab) kasuje wybór i wyjmuje opcję z listy.
   await wiek.click();
   await page.keyboard.press('ControlOrMeta+A');
   await page.keyboard.type('15');
-  await expect(faza).toHaveValue('postmenopause');
+  expect(await stan(page)).toMatchObject({ opis: 'Kobieta · 15 lat · wiek dziecięcy/młodzieńczy · nadpisanie lokalne', faza: 'postmenopause', opcje: WSZYSTKIE('(domyślnie)') });
   await page.keyboard.press('Tab');
-  await expect(faza).toHaveValue('');
-  await expect(faza.locator('option[value="postmenopause"]')).toHaveCount(0);
-  await expect(page.locator('#labPatientText')).toHaveText('Kobieta · 15 lat · wiek dziecięcy/młodzieńczy · nadpisanie lokalne');
-  // Estradiol: faza lutealna u dorosłej, wiek „35” wpisywany przez „3” — wybór zostaje; zatwierdzone 13 lat — faza wyszarzona i odrzucona.
-  await page.locator('#labOverrideReset').click();
-  await wybierzEstradiol(page, 450);
+  expect(await stan(page)).toMatchObject({ opis: 'Kobieta · 15 lat · wiek dziecięcy/młodzieńczy · nadpisanie lokalne', faza: '', opcje: ['(domyślnie)', ...FAZY, ...CIAZA] });
+  // Odrzucony wybór nie wraca sam, gdy wiek znowu jest dorosły.
+  await wiek.fill('65');
+  await wiek.blur();
+  expect(await stan(page)).toMatchObject({ opis: 'Kobieta · 65 lat · nadpisanie lokalne', faza: '', opcje: WSZYSTKIE('(domyślnie)') });
+  // Ciąża nie jest wyborem zależnym od wieku: zostaje także przy wieku 15 lat i zmienia zakres jak dotąd.
+  await faza.selectOption('pregnancy_t3');
+  const ciaza = (await stan(page)).zakres;
+  await wiek.fill('15');
+  await wiek.blur();
+  expect(await stan(page)).toMatchObject({ opis: 'Kobieta · 15 lat · wiek dziecięcy/młodzieńczy · ciąża — III trymestr · nadpisanie lokalne', faza: 'pregnancy_t3', zakres: ciaza });
+});
+
+test('wpisywanie wieku i wieku menarche przez wartość pośrednią, estradiol: dorosła z fazą lutealną wpisuje „35” przez „3”; dziewczynka 16 lat poprawia menarche „11” na „10” przez „1” → w trakcie wynik bez fazy, wybór zostaje i po dokończeniu działa znowu', async ({ page }) => {
+  await start(page, DOROSLA, 450);
+  const wiek = page.locator('#labOverrideAge'), faza = page.locator('#labOverrideCycle'), menarche = page.locator('#labOverrideMenarcheAge');
   await faza.selectOption('luteal');
+  expect(await stan(page)).toMatchObject({ opis: 'Kobieta · 30 lat · faza lutealna · nadpisanie lokalne', zakres: 'zakres: 200–770 pmol/L' });
   await wiek.click();
   await page.keyboard.press('3');
-  await expect(page.locator('#labPatientText')).toContainText('Kobieta · 3 lat');
-  await expect(faza).toHaveValue('luteal');
+  // „3” (trzylatka): zakres dziecka, opis bez fazy; „Faza lutealna” zostaje wybrana, pozostałe zwykłe fazy są wyszarzone.
+  expect(await stan(page)).toMatchObject({ opis: 'Kobieta · 3 lat · wiek dziecięcy/młodzieńczy · nadpisanie lokalne', faza: 'luteal',
+    opcje: ['(nieznana)', 'Faza folikularna [wyłączona]', 'Pik owulacyjny [wyłączona]', 'Faza lutealna', ...CIAZA], status: 'Uwaga — znacznie powyżej normy', zakres: 'zakres: 0–73,5 pmol/L' });
   await page.keyboard.press('5');
+  expect(await stan(page)).toMatchObject({ opis: 'Kobieta · 35 lat · faza lutealna · nadpisanie lokalne', faza: 'luteal', opcje: WSZYSTKIE('(nieznana)'),
+    status: '✓ w zakresie normy', zakres: 'zakres: 200–770 pmol/L' });
   await page.keyboard.press('Tab');
   expect(await stan(page)).toMatchObject({ opis: 'Kobieta · 35 lat · faza lutealna · nadpisanie lokalne', faza: 'luteal', zakres: 'zakres: 200–770 pmol/L' });
+  // Zakończony wpis 13 lat (w danych menarche 12,0 → rok od menarche): faza skasowana i wyszarzona.
   await wiek.click();
   await page.keyboard.press('ControlOrMeta+A');
   await page.keyboard.type('13');
   await page.keyboard.press('Tab');
-  await expect(faza).toHaveValue('');
-  await expect(faza.locator('option[value="luteal"]')).toHaveJSProperty('disabled', true);
-  await expect(faza.locator('option[value="postmenopause"]')).toHaveCount(0);
+  expect(await stan(page)).toMatchObject({ faza: '', opcje: NIEZNANA_NIELETNIA_BEZ_FAZ, nota: r2Ponizej('1,0') });
+
+  // Dziewczynka 16 lat bez menarche w danych: wpis „11”, faza lutealna, potem poprawka wpisu na „10”.
+  await wczytajOsobe(page, D);
+  await wybierzEstradiol(page, 450);
+  await menarche.fill('11');
+  await menarche.blur();
+  await faza.selectOption('luteal');
+  expect(await stan(page)).toMatchObject({ opis: 'Kobieta · 16 lat · wiek dziecięcy/młodzieńczy · Th V · menarche 11,0 · faza lutealna · nadpisanie lokalne', zakres: 'zakres: 200–770 pmol/L' });
+  await menarche.click();
+  await page.keyboard.press('ControlOrMeta+A');
+  await page.keyboard.press('Backspace');
+  // Pole puste w trakcie poprawki: zakres jak bez menarche, opis bez fazy; wybór „Faza lutealna” zostaje.
+  expect(await stan(page)).toMatchObject({ opis: 'Kobieta · 16 lat · wiek dziecięcy/młodzieńczy · Th V', faza: 'luteal', wpis: '', nota: R2_BRAK,
+    status: '↑ powyżej normy', zakres: 'zakres: 0–290 pmol/L' });
+  await page.keyboard.press('1');
+  // „1” to wpis poza zakresem 2–20: nota o odrzuconym wpisie, dalej bez fazy.
+  expect(await stan(page)).toMatchObject({ opis: 'Kobieta · 16 lat · wiek dziecięcy/młodzieńczy · Th V · nadpisanie lokalne', faza: 'luteal', bledny: true,
+    nota: WPIS_ODRZUCONY, zakres: 'zakres: 0–290 pmol/L' });
+  await page.keyboard.press('0');
+  expect(await stan(page)).toMatchObject({ opis: 'Kobieta · 16 lat · wiek dziecięcy/młodzieńczy · Th V · menarche 10,0 · faza lutealna · nadpisanie lokalne', faza: 'luteal',
+    bledny: false, nota: null, wiersz: 'Od menarche: 6,0 lat (≥ 5) — zakresy estradiolu jak u dorosłej.', status: '✓ w zakresie normy', zakres: 'zakres: 200–770 pmol/L' });
+  await page.keyboard.press('Tab');
+  expect(await stan(page)).toMatchObject({ faza: 'luteal', zakres: 'zakres: 200–770 pmol/L', opcje: NIEZNANA_NIELETNIA });
 });
 
-test('wpis lokalny poza zakresem albo późniejszy niż wiek (25; 1; 16,5 u 16-latki) → nota „Wpisany wiek menarche nie jest brany pod uwagę…”, pole oznaczone, zakres jak bez wpisu; także na 390 px', async ({ page }) => {
+test('klik w wynik zaraz po polu liczbowym panelu („Wiek [lata]”, „Wiek [mies.]”, „Wiek menarche [lata]”; bez wpisu i po wpisie) → pierwszy klik kopiuje wartość: „Skopiowano: 0,45 nmol/L”', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.setViewportSize({ width: 1280, height: 3000 });
+  await start(page, A, 450);
+  const wszystkie = page.locator('#labShowAllToggle');
+  if (await wszystkie.isVisible()) await wszystkie.click();
+  const komorka = page.locator('#labResultsBody td.lab-value').first();
+  await expect(komorka).toBeVisible();
+  const powiadomienie = page.locator('#labToast');
+  // Prawdziwy klik myszą w miejscu komórki: naciśnięcie zabiera fokus polu (blur), puszczenie musi trafić w tę samą komórkę.
+  const kliknij = async (opis) => {
+    await page.evaluate(() => { document.getElementById('labToast').textContent = ''; });
+    const b = await komorka.boundingBox();
+    await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
+    await page.mouse.down();
+    await page.mouse.up();
+    await expect(powiadomienie, opis).toHaveText('Skopiowano: 0,45 nmol/L');
+  };
+  await kliknij('klik bez wcześniejszego fokusu w panelu');
+  for (const pole of ['#labOverrideAge', '#labOverrideAgeMonths', '#labOverrideMenarcheAge']) {
+    await page.locator(pole).focus();
+    await expect(page.locator(pole)).toBeFocused();
+    await kliknij(`fokus w ${pole}, bez wpisu`);
+  }
+  // Po wpisie: wynik przelicza się w trakcie wpisywania, a wyjście z pola (klik w wynik) już go nie rysuje ponownie.
+  for (const [pole, wpis] of [['#labOverrideAgeMonths', '3'], ['#labOverrideMenarcheAge', '10,2'], ['#labOverrideAge', '15']]) {
+    await page.locator(pole).focus();
+    await page.keyboard.type(wpis);
+    await kliknij(`wpis „${wpis}” w ${pole}`);
+  }
+  await expect(page.locator('#labPatientText')).toHaveText('Kobieta · 15.3 lat · wiek dziecięcy/młodzieńczy · Th V · menarche 10,2 · nadpisanie lokalne');
+});
+
+test('wpis lokalny poza zakresem albo późniejszy niż wiek (25; 1; 16,5 u 16-latki) → nota „Wpisany wiek menarche nie jest brany pod uwagę…”, pole oznaczone, zakres jak bez wpisu, opis „… · nadpisanie lokalne” bez „menarche 25,0”; także na 390 px', async ({ page }) => {
   await start(page, { ...D, menarche: 11 }, 250);
   const pole = page.locator('#labOverrideMenarcheAge');
   // W danych jest menarche 11,0 (po progu) — odrzucony wpis lokalny i tak zastępuje dane: liczy się jak brak wpisu.
   expect(await stan(page)).toMatchObject({ wiersz: R1_ZMIEN, placeholder: '(z danych: 11,0)' });
-  for (const [wpis, opis] of [['25', 'menarche 25,0'], ['1', 'menarche 1,0'], ['16,5', 'menarche 16,5']]) {
+  for (const wpis of ['25', '1', '16,5']) {
     await pole.fill(wpis);
     expect(await stan(page), wpis).toMatchObject({
-      opis: `Kobieta · 16 lat · wiek dziecięcy/młodzieńczy · Th V · ${opis} · nadpisanie lokalne`, wiersz: null,
+      opis: 'Kobieta · 16 lat · wiek dziecięcy/młodzieńczy · Th V · nadpisanie lokalne', wiersz: null,
       opcje: NIEZNANA_NIELETNIA_BEZ_FAZ, bledny: true, nota: WPIS_ODRZUCONY, reset: true, status: '✓ w zakresie normy', zakres: 'zakres: 0–290 pmol/L',
     });
   }
@@ -333,9 +402,125 @@ test('wpis lokalny poza zakresem albo późniejszy niż wiek (25; 1; 16,5 u 16-l
   await page.setViewportSize({ width: 1440, height: 1000 });
   // Poprawny wpis zdejmuje notę i oznaczenie; skasowany wpis wraca do wartości z danych.
   await pole.fill('12');
-  expect(await stan(page)).toMatchObject({ bledny: false, nota: r2Ponizej('4,0') });
+  expect(await stan(page)).toMatchObject({ opis: 'Kobieta · 16 lat · wiek dziecięcy/młodzieńczy · Th V · menarche 12,0 · nadpisanie lokalne', bledny: false, nota: r2Ponizej('4,0') });
   await pole.fill('');
-  expect(await stan(page)).toMatchObject({ bledny: false, nota: null, wiersz: R1_ZMIEN, placeholder: '(z danych: 11,0)', reset: false });
+  expect(await stan(page)).toMatchObject({ opis: 'Kobieta · 16 lat · wiek dziecięcy/młodzieńczy · Th V', bledny: false, nota: null, wiersz: R1_ZMIEN, placeholder: '(z danych: 11,0)', reset: false });
+  // „Resetuj do danych pacjenta” kasuje także odrzucony wpis.
+  await pole.fill('25');
+  await page.locator('#labOverrideReset').click();
+  await expect(pole).toHaveValue('');
+  expect(await stan(page)).toMatchObject({ bledny: false, nota: null, wiersz: R1_ZMIEN, reset: false });
+});
+
+test('wpis, który nie jest zwykłą liczbą dziesiętną („12,5,”; „12,5 lat”; „12;5”; „1e1”; „0x10”; „-12”) → wpis odrzucony: zastępuje wartość z danych, nota i oznaczenie pola; „11”, „11,0”, „ 10.5 ” → przyjęte', async ({ page }) => {
+  // W danych menarche 11,0 (po progu u 16-latki): każdy niepusty wpis je zastępuje — nierozpoznany nie wraca do danych.
+  await start(page, { ...D, menarche: 11 }, 250);
+  const pole = page.locator('#labOverrideMenarcheAge');
+  for (const wpis of ['12,5,', '12,5 lat', '12;5', '1e1', '0x10', '-12', '+11', '11,', ',5', '11,005', 'jedenaście']) {
+    await pole.fill(wpis);
+    expect(await stan(page), wpis).toMatchObject({
+      opis: 'Kobieta · 16 lat · wiek dziecięcy/młodzieńczy · Th V · nadpisanie lokalne', wiersz: null, wpis,
+      opcje: NIEZNANA_NIELETNIA_BEZ_FAZ, bledny: true, nota: WPIS_ODRZUCONY, reset: true, status: '✓ w zakresie normy', zakres: 'zakres: 0–290 pmol/L', warianty: [],
+    });
+  }
+  for (const [wpis, opis, wiersz] of [['11', 'menarche 11,0', R1_ZMIEN], ['11,0', 'menarche 11,0', R1_ZMIEN], [' 10.5 ', 'menarche 10,5', R1_ZMIEN.replace('5,0 lat', '5,5 lat')],
+    ['10,25', 'menarche 10,25', R1_ZMIEN.replace('5,0 lat', '5,7 lat')]]) {
+    await pole.fill(wpis);
+    expect(await stan(page), wpis).toMatchObject({
+      opis: `Kobieta · 16 lat · wiek dziecięcy/młodzieńczy · Th V · ${opis} · nadpisanie lokalne`, wiersz, bledny: false, nota: null, reset: true,
+      opcje: NIEZNANA_NIELETNIA, status: '', warianty: WARIANTY_NIELETNIA,
+    });
+  }
+});
+
+test('opis pacjenta przy wpisie, który nie jest używany: wiek nadpisany na 30 lat (pole schowane) i prolaktyna (pole nie dotyczy) → bez „menarche …”; powrót do estradiolu u 16-latki → „menarche 11,0 · nadpisanie lokalne”', async ({ page }) => {
+  await start(page, D, 250);
+  const pole = page.locator('#labOverrideMenarcheAge'), wiek = page.locator('#labOverrideAge');
+  await pole.fill('11');
+  await pole.blur();
+  expect(await stan(page)).toMatchObject({ opis: 'Kobieta · 16 lat · wiek dziecięcy/młodzieńczy · Th V · menarche 11,0 · nadpisanie lokalne', reset: true });
+  // Wiek 30 lat w panelu: dorosła — pole schowane, wpis nieużywany; nadpisaniem jest sam wiek.
+  await wiek.fill('30');
+  await wiek.blur();
+  const dorosla = await stan(page);
+  expect(dorosla).toMatchObject({ pole: false, nota: null, reset: true, wiersz: WSKAZOWKA_DOROSLA, naglowek: NAGLOWEK_DOROSLA, warianty: WARIANTY_DOROSLA });
+  expect(dorosla.opis).toMatch(/^Kobieta · 30 lat · .*nadpisanie lokalne$/);
+  expect(dorosla.opis).not.toContain('menarche');
+  // Wiek z danych wraca (pole wieku wyczyszczone): wpis menarche znowu działa i jest ogłaszany.
+  await wiek.fill('');
+  await wiek.blur();
+  expect(await stan(page)).toMatchObject({ opis: 'Kobieta · 16 lat · wiek dziecięcy/młodzieńczy · Th V · menarche 11,0 · nadpisanie lokalne', pole: true, wiersz: R1_ZMIEN });
+  // Prolaktyna: pole nie dotyczy badania — wpis nie jest ani wartością w opisie, ani nadpisaniem.
+  await wybierzBadanie(page, 'prolactin', 'Prolaktyna', 300);
+  expect(await stan(page)).toMatchObject({ opis: 'Kobieta · 16 lat · wiek dziecięcy/młodzieńczy · Th V', pole: false, reset: false });
+  await wybierzEstradiol(page, 250);
+  expect(await stan(page)).toMatchObject({ opis: 'Kobieta · 16 lat · wiek dziecięcy/młodzieńczy · Th V · menarche 11,0 · nadpisanie lokalne', pole: true, reset: true });
+});
+
+test('zmiana płci w danych tej samej osoby (K → M → K, bez sejfu): lokalny wiek menarche i wybrana faza porzuconego kontekstu nie wracają → pole puste, zakres jak bez wpisu', async ({ page }) => {
+  await otworzGoscia(page);
+  await daneGoscia(page, { lata: 16 });
+  await wybierzEstradiol(page, 250);
+  await otworzPanel(page);
+  const pole = page.locator('#labOverrideMenarcheAge');
+  expect(await stan(page)).toMatchObject({ opis: 'Kobieta · 16 lat · wiek dziecięcy/młodzieńczy', pole: true, nota: R2_BRAK, zakres: 'zakres: 0–290 pmol/L' });
+  await pole.fill('11');
+  await pole.blur();
+  await page.locator('#labOverrideCycle').selectOption('luteal');
+  expect(await stan(page)).toMatchObject({ opis: 'Kobieta · 16 lat · wiek dziecięcy/młodzieńczy · menarche 11,0 · faza lutealna · nadpisanie lokalne', zakres: 'zakres: 200–770 pmol/L' });
+  // Płeć poprawiona w danych na „M” (ta sama osoba): pole i selektor fazy znikają.
+  await daneGoscia(page, { lata: 16, plec: 'M' });
+  await expect(page.locator('#labPatientText')).toContainText('Mężczyzna · 16 lat · wiek dziecięcy/młodzieńczy');
+  await expect(page.locator('#labOverrideMenarcheWrap')).toBeHidden();
+  await expect(page.locator('#labOverrideCycleWrap')).toBeHidden();
+  await expect(pole).toHaveValue('');
+  await expect(page.locator('#labOverrideCycle')).toHaveValue('');
+  // Płeć wraca na „K”: nic z porzuconego kontekstu nie ożywa.
+  await daneGoscia(page, { lata: 16 });
+  await expect(page.locator('#labPatientText')).toHaveText('Kobieta · 16 lat · wiek dziecięcy/młodzieńczy');
+  await expect(pole).toHaveValue('');
+  expect(await stan(page)).toMatchObject({ faza: '', wpis: '', pole: true, nota: R2_BRAK, reset: false, opcje: NIEZNANA_NIELETNIA_BEZ_FAZ, zakres: 'zakres: 0–290 pmol/L' });
+});
+
+test('inhibina B i LH (własny formularz, selektor fazy schowany): postmenopauza wybrana u 40-latki w prolaktynie, potem dane tej samej osoby zmieniają się na 12 lat → schowany wybór skasowany; inhibina B 40 ng/L na karcie „Hormony w ciągu życia” jak u świeżo otwartej 12-latki', async ({ page }) => {
+  await otworzGoscia(page);
+  const gotowa = () => page.waitForFunction(() => window.VildaPersistence && window.LabUnitConverter && window.VildaHormoneLifespanRuntime);
+  const wybor = () => page.locator('#labOverrideCycle').inputValue();
+  // Ta sama osoba (tryb bez sejfu): 40 lat i postmenopauza wybrana w prolaktynie, potem badanie z własnym formularzem.
+  const poZmianieDanych = async (badanie, szukaj, wartosc) => {
+    await page.reload({ waitUntil: 'load' });
+    await gotowa();
+    await daneGoscia(page, { lata: 40 });
+    await wybierzBadanie(page, 'prolactin', 'Prolaktyna', 300);
+    await otworzPanel(page);
+    await page.locator('#labOverrideCycle').selectOption('postmenopause');
+    await expect(page.locator('#labPatientText')).toHaveText('Kobieta · 40 lat · postmenopauza · nadpisanie lokalne');
+    await wybierzBadanie(page, badanie, szukaj);
+    // U dorosłej wybór zostaje (selektor jest schowany, ale karta z niego korzysta).
+    expect(await wybor()).toBe('postmenopause');
+    await daneGoscia(page, { lata: 12 });
+    await page.locator('#labValue').fill(String(wartosc));
+    await expect.poll(() => wykresHormonow(page)).toContain('12 lat');
+  };
+  await poZmianieDanych('inhibin_b', 'Inhibina B', 40);
+  await expect.poll(() => wykresHormonow(page)).toContain('40 ng/L');
+  const poWyborze = await wykresHormonow(page);
+  expect(await wybor()).toBe('');
+  expect(poWyborze).toContain('40 ng/L Mediana ≈43 ng/L');
+  expect(poWyborze).not.toContain('Brak odrębnego odniesienia dla ciąży lub okresu po menopauzie');
+  // Świeżo otwarta 12-latka, bez wcześniejszych 40 lat i bez żadnego wyboru: ta sama karta.
+  await page.reload({ waitUntil: 'load' });
+  await gotowa();
+  await daneGoscia(page, { lata: 12 });
+  await wybierzBadanie(page, 'inhibin_b', 'Inhibina B', 40);
+  await expect.poll(() => wykresHormonow(page)).toContain('40 ng/L');
+  expect(await wykresHormonow(page)).toBe(poWyborze);
+  // LH: ten sam schowany wybór jest kasowany. (Karty LH nie porównujemy: zapamiętuje etap życia z pierwszego rysowania.)
+  await poZmianieDanych('lh', 'LH', 5);
+  expect(await wybor()).toBe('');
+  // Powrót do badania z widocznym selektorem: 12-latka nie ma ani wyboru, ani opcji „Postmenopauza”.
+  await wybierzBadanie(page, 'prolactin', 'Prolaktyna', 300);
+  expect(await stan(page)).toMatchObject({ opis: 'Kobieta · 12 lat · wiek dziecięcy/młodzieńczy', faza: '', opcje: ['(domyślnie)', ...FAZY, ...CIAZA], reset: false });
 });
 
 test('telefon 390 px: stan A (wiersz o menarche, pole, trzy warianty) i stan C (pole, nota) → wszystko widoczne, bez poziomego przewijania', async ({ page }) => {
@@ -373,7 +558,7 @@ test('F: pakiet Estradiol + TSH, pacjentka A (15 lat, menarche 10,0), E2 450 pmo
   await page.locator('#labPkgValue-tsh').fill('2,1');
   const karta = kartaPakietu(page).locator('.lab-pkg-card[data-analyte="estradiol"]');
   await expect(karta.locator('.lab-range-status')).toHaveText('bez oceny względem zakresu');
-  expect(await karta.locator('.lab-pkg-card-note').evaluateAll((noty) => noty.map((n) => n.textContent.replace(/ /g, ' ')))).toEqual([
+  expect(await karta.locator('.lab-pkg-card-note').evaluateAll((noty) => noty.map((n) => n.textContent.replace(/\u00a0/g, ' ')))).toEqual([
     'Ocena wymaga kontekstu badania (np. fazy cyklu) — wybierzesz go w pojedynczym badaniu.', R1,
   ]);
   expect(await tekst(karta)).toBe('Estradiol 450 pmol/L bez oceny względem zakresu Ocena wymaga kontekstu badania (np. fazy cyklu) — wybierzesz go w pojedynczym badaniu. '

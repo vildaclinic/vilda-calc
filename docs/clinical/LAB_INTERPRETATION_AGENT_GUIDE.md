@@ -183,7 +183,10 @@ do każdego hormonu, jeśli nie wynika to z jego danych referencyjnych.
 > Uzupełnienie 2026-11-19 (P-E2-MENARCHE): selektor „Faza cyklu / ciąża”
 > pojedynczego badania nie proponuje „Postmenopauzy” pacjentowi w wieku na
 > pewno poniżej 18 lat — w żadnym badaniu, które go używa. Wybór, który
-> przestaje być dostępny, wraca do „nieznana”.
+> nie jest dostępny, nie trafia do wyniku, opisu pacjenta ani kart
+> „Hormony w ciągu życia” (także LH i inhibiny B, gdzie selektor jest
+> schowany) i wraca do „nieznana”. Rozstrzyga to jedno miejsce strony:
+> odczyt pacjenta `getEffectivePatient`, który o dostępność pyta silnik.
 
 ## 6. Wynik: hierarchia informacji i istniejące osie
 

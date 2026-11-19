@@ -1859,9 +1859,11 @@
         // To samo łącze dostaje wynik, którego silnik nie ocenia bez kontekstu próbki (pakiet nie ma jego pól).
         var note = view.own && OWN_KINDS[view.own] ? OWN_KINDS[view.own].note : row.contextRequired ? CONTEXT_NOTE : '';
         if (note) {
-          if (!view.lab) add(box, 'div', 'lab-pkg-card-note', note);
-          // P-E2-MENARCHE (R5): podstawa doboru kontekstu (lata od menarche) — ten sam wyciszony styl co nota wyżej.
-          if (!view.lab && !view.own && row.contextBasis) add(box, 'div', 'lab-pkg-card-note', row.contextBasis);
+          if (!view.lab) {
+            add(box, 'div', 'lab-pkg-card-note', note);
+            // P-E2-MENARCHE (R5): podstawa doboru kontekstu (lata od menarche) — ten sam wyciszony styl co nota wyżej.
+            if (!view.own && row.contextBasis) add(box, 'div', 'lab-pkg-card-note', row.contextBasis);
+          }
           // PR6: norma z wydruku zastąpiła ocenę pokwitaniową aplikacji.
           else if (view.replaced) add(box, 'div', 'lab-pkg-card-note', REPLACED_NOTE);
           button(box, 'lab-pkg-link lab-pkg-card-link', 'Oceń ' + definition.short + ' w pojedynczym badaniu →', function () { openSingle(definition.id); });

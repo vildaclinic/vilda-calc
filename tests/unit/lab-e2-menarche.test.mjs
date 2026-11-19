@@ -426,9 +426,13 @@ describe('pakiet badań (R5): karta estradiolu jak u dorosłej + wiersz o menarc
 
   it('widok pakietu rysuje wiersz pod notą o kontekście tym samym wyciszonym stylem', () => {
     const pakiety = readFileSync(new URL('../../vilda_lab_packages.js', import.meta.url), 'utf8');
-    const od = pakiety.indexOf("if (!view.lab) add(box, 'div', 'lab-pkg-card-note', note);");
-    expect(od).toBeGreaterThan(-1);
-    expect(pakiety.slice(od, od + 400)).toContain("if (!view.lab && !view.own && row.contextBasis) add(box, 'div', 'lab-pkg-card-note', row.contextBasis);");
+    // Wiersz o menarche stoi w tej samej gałęzi co nota o kontekście (karta bez normy z wydruku); „else” noty
+    // o zastąpieniu oceny normą z wydruku należy — jak przed zmianą — do warunku „bez normy z wydruku”.
+    const rysowanie = pakiety.slice(pakiety.indexOf('        if (note) {'), pakiety.indexOf("button(box, 'lab-pkg-link lab-pkg-card-link', 'Oceń '"));
+    expect(rysowanie.replace(/\s*\/\/[^\n]*\n/g, '\n').replace(/\s+/g, ' ').trim()).toBe(
+      "if (note) { if (!view.lab) { add(box, 'div', 'lab-pkg-card-note', note); "
+      + "if (!view.own && row.contextBasis) add(box, 'div', 'lab-pkg-card-note', row.contextBasis); } "
+      + "else if (view.replaced) add(box, 'div', 'lab-pkg-card-note', REPLACED_NOTE);");
     expect(Model.version).toBe('1.8.0');
   });
 });
@@ -506,7 +510,7 @@ describe('strona: wiek menarche dociera do silnika (dane pacjenta i pole lokalne
   const silnikWieku = loadBrowserScript('vilda_lab_puberty.js');
   function strona({ source, shared = { sex: 'F', age: 16, tanner: 5 }, override = {}, wybrane = 'estradiol' }) {
     const ctx = {
-      window: silnikWieku, Conv, syncPatientIdentity() {}, readPatientFromShared: () => shared,
+      window: silnikWieku, Conv, syncPatientIdentity() {}, currentPatientIdentity: () => '', readPatientFromShared: () => shared,
       localOverride: { sex: null, age: null, tanner: null, cycle_phase: null, menarche: null, ...override },
       measurementCtx: {}, currentSubstance: Conv.find(wybrane),
       overrideAgeEl: { value: '' }, overrideAgeMonthsEl: { value: '' },
@@ -536,20 +540,60 @@ describe('strona: wiek menarche dociera do silnika (dane pacjenta i pole lokalne
     expect(wybierz(obie)).toMatchObject({ id: 'e2_F_tanner5' });
   });
 
-  it('wartość lokalna spoza zakresu nadal zastępuje dane i liczy się jak brak wpisu', () => {
-    const p = strona({ source: zrodlo({ menarcheAgeYears: 10 }), override: { menarche: 25 } }).getEffectivePatient();
-    expect(p).toMatchObject({ menarche_age_years: 25, _menarche_overridden: true });
-    expect(kontekst(p)).toMatchObject({ menarche_age_years: null, basis: 'chronological_age' });
-    expect(wybierz(p).id).toBe('e2_F_tanner5');
+  it('wpis lokalny, którego silnik nie przyjmuje (25; nieliczbowy = NaN), zastępuje dane i liczy się jak brak wpisu — nadpisanie, ale nie wartość do pokazania', () => {
+    for (const wpis of [25, 1, 16.5, Number.NaN]) {
+      const p = strona({ source: zrodlo({ menarcheAgeYears: 10 }), override: { menarche: wpis } }).getEffectivePatient();
+      expect(p, String(wpis)).toMatchObject({ menarche_age_years: wpis, _shared_menarche: 10, _menarche_overridden: true, _menarche_applied: false, _has_override: true });
+      expect(kontekst(p)).toMatchObject({ menarche_age_years: null, basis: 'chronological_age' });
+      expect(wybierz(p).id).toBe('e2_F_tanner5');
+    }
+    // Wpis przyjęty przez silnik jest wartością do pokazania w opisie pacjenta.
+    expect(strona({ source: zrodlo(), override: { menarche: 11 } }).getEffectivePatient()).toMatchObject({ _menarche_applied: true, _has_override: true });
+    expect(strona({ source: zrodlo({ menarcheAgeYears: 10 }) }).getEffectivePatient()).toMatchObject({ _menarche_applied: false, _has_override: false });
   });
 
-  it('bez gotowego źródła danych i dla nieliczbowych wartości pole jest puste', () => {
+  it('wpis lokalny u pacjentki, której pole nie dotyczy (wiek lokalny 30 lat; płeć M), nie jest ani nadpisaniem, ani wartością do pokazania', () => {
+    const dorosla = strona({ source: zrodlo(), override: { menarche: 9, age: 30 } });
+    dorosla.overrideAgeEl.value = '30';
+    expect(dorosla.getEffectivePatient()).toMatchObject({ age: 30, _menarche_overridden: true, _menarche_applied: false, _has_override: true });
+    // Samo nadpisanie wieku zostaje nadpisaniem; bez niego wpis menarche u dorosłej z danych nie liczy się wcale.
+    const zDanych = strona({ source: zrodlo({ ageYears: 30 }), shared: { sex: 'F', age: 30 }, override: { menarche: 9 } }).getEffectivePatient();
+    expect(zDanych).toMatchObject({ age: 30, _menarche_applied: false, _has_override: false });
+    const chlopiec = strona({ source: zrodlo({ sex: 'M' }), shared: { sex: 'M', age: 16 }, override: { menarche: 11 } }).getEffectivePatient();
+    expect(chlopiec).toMatchObject({ sex: 'M', _menarche_applied: false, _has_override: false });
+  });
+
+  it('bez gotowego źródła danych pole jest puste; wartość nieliczbowa w danych nie jest wiekiem menarche', () => {
     expect(strona({ source: { sourceStatus: 'loading', menarcheAgeYears: 11 } }).getEffectivePatient())
       .toMatchObject({ age: null, menarche_age_years: null, _shared_menarche: null, _menarche_overridden: false });
     for (const zla of ['11', Number.NaN, null, undefined]) {
-      expect(strona({ source: zrodlo({ menarcheAgeYears: zla }), override: { menarche: zla } }).getEffectivePatient())
+      expect(strona({ source: zrodlo({ menarcheAgeYears: zla }) }).getEffectivePatient())
         .toMatchObject({ menarche_age_years: null, _menarche_overridden: false, _has_override: false });
     }
+    // Stan pola: null = puste (brak nadpisania); napis nie jest stanem pola i nie liczy się.
+    for (const brak of [null, undefined, '11']) {
+      expect(strona({ source: zrodlo({ menarcheAgeYears: 10 }), override: { menarche: brak } }).getEffectivePatient())
+        .toMatchObject({ menarche_age_years: 10, _menarche_overridden: false, _has_override: false });
+    }
+  });
+
+  it('wybór fazy niedostępny dla badania i pacjenta nie trafia do odbiorców pacjenta — zapamiętany wybór zostaje nietknięty', () => {
+    // Estradiol, 16 lat bez menarche: faza lutealna nie działa; ciąża i brak wyboru przechodzą.
+    const e2 = strona({ source: zrodlo(), override: { cycle_phase: 'luteal' } });
+    expect(e2.getEffectivePatient()).toMatchObject({ cycle_phase: null, _has_override: false });
+    expect(vm.runInContext('localOverride.cycle_phase', e2)).toBe('luteal');
+    expect(strona({ source: zrodlo(), override: { cycle_phase: 'pregnancy_t1' } }).getEffectivePatient()).toMatchObject({ cycle_phase: 'pregnancy_t1', _has_override: true });
+    // Po progu faza przechodzi; postmenopauza nigdy poniżej 18 lat.
+    expect(strona({ source: zrodlo({ menarcheAgeYears: 11 }), override: { cycle_phase: 'luteal' } }).getEffectivePatient()).toMatchObject({ cycle_phase: 'luteal', _has_override: true });
+    expect(strona({ source: zrodlo({ menarcheAgeYears: 11 }), override: { cycle_phase: 'postmenopause' } }).getEffectivePatient().cycle_phase).toBeNull();
+    // Inne badania (prolaktyna, LH, inhibina B — ta sama funkcja podaje fazę wykresowi): postmenopauza tylko od 18 lat.
+    for (const wybrane of ['prolactin', 'lh', 'inhibin_b', 'tsh']) {
+      expect(strona({ source: zrodlo(), shared: { sex: 'F', age: 12 }, override: { cycle_phase: 'postmenopause' }, wybrane }).getEffectivePatient().cycle_phase, wybrane).toBeNull();
+      expect(strona({ source: zrodlo(), shared: { sex: 'F', age: 12 }, override: { cycle_phase: 'luteal' }, wybrane }).getEffectivePatient().cycle_phase, wybrane).toBe('luteal');
+      expect(strona({ source: zrodlo(), shared: { sex: 'F', age: 40 }, override: { cycle_phase: 'postmenopause' }, wybrane }).getEffectivePatient().cycle_phase, wybrane).toBe('postmenopause');
+    }
+    // Bez wieku nie wiadomo, że pacjentka jest nieletnia — wybór przechodzi jak dotąd.
+    expect(strona({ source: zrodlo(), shared: { sex: 'F' }, override: { cycle_phase: 'postmenopause' }, wybrane: 'prolactin' }).getEffectivePatient().cycle_phase).toBe('postmenopause');
   });
 
   it('inne badania nie dostają wieku menarche; wpis lokalny nie jest dla nich nadpisaniem', () => {
@@ -616,307 +660,370 @@ describe('strona: wiek menarche z danych bieżącej osoby (readPubertyPatientCon
   });
 });
 
-describe('strona: opis pacjenta (R6, R7)', () => {
-  const ctx = { currentSubstance: Conv.find('estradiol'), currentPatientIdentity: () => '' };
-  vm.createContext(ctx);
-  vm.runInContext(wytnij('    function stageLabel(stage, kind, current) {', '\n    }\n') + '\n    }\n'
-    + wytnij('    var RZYMSKIE', '    /**\n     * Sprawdza CZY Tanner realnie'), ctx);
-  const pacjentka = (extra = {}) => ({ sex: 'F', age: 16, life_stage: 'pediatric', tanner: 5, _shared_tanner: 5,
-    _shared_tanner_kind: 'Th', _shared_tanner_current: true, _has_override: false, ...extra });
 
-  it.each([
-    ['pregnancy_t1', 'ciąża — I trymestr'], ['pregnancy_t2', 'ciąża — II trymestr'], ['pregnancy_t3', 'ciąża — III trymestr'],
-    ['follicular', 'faza folikularna'], ['ovulation', 'pik owulacyjny'], ['luteal', 'faza lutealna'], ['postmenopause', 'postmenopauza'],
-  ])('wybór %s w opisie pacjenta to „%s”', (cycle_phase, nazwa) => {
-    expect(ctx.describePatient(pacjentka({ cycle_phase, _has_override: true })).text)
-      .toBe('Kobieta · 16 lat · wiek dziecięcy/młodzieńczy · Th V · ' + nazwa + ' · nadpisanie lokalne');
-    // Także u dorosłej (R7).
-    expect(ctx.describePatient({ sex: 'F', age: 19, life_stage: 'adult', cycle_phase, _has_override: true }).text)
-      .toBe('Kobieta · 19 lat · ' + nazwa + ' · nadpisanie lokalne');
-  });
-
-  it('wiek menarche wpisany lokalnie: „menarche 11,0 · nadpisanie lokalne”; z danych — bez wzmianki', () => {
-    expect(ctx.describePatient(pacjentka({ menarche_age_years: 11, _menarche_overridden: true, _has_override: true })).text)
-      .toBe('Kobieta · 16 lat · wiek dziecięcy/młodzieńczy · Th V · menarche 11,0 · nadpisanie lokalne');
-    expect(ctx.describePatient(pacjentka({ menarche_age_years: 10, _menarche_overridden: false })).text)
-      .toBe('Kobieta · 16 lat · wiek dziecięcy/młodzieńczy · Th V');
-    expect(ctx.describePatient(pacjentka({ menarche_age_years: 11, _menarche_overridden: true, _has_override: true, cycle_phase: 'luteal' })).text)
-      .toBe('Kobieta · 16 lat · wiek dziecięcy/młodzieńczy · Th V · menarche 11,0 · faza lutealna · nadpisanie lokalne');
-  });
-
-  it.each([[10, '10,0'], [12.5, '12,5'], [11.25, '11,25'], [12.3, '12,3'], [9.999, '10,0']])('wiek menarche %d → „%s”', (lata, tekst) => {
-    expect(ctx.formatMenarcheAge(lata)).toBe(tekst);
-  });
-  it('wartość nieliczbowa nie jest formatowana', () => {
-    for (const zla of [null, undefined, '11', Number.NaN]) expect(ctx.formatMenarcheAge(zla)).toBe('');
-  });
-});
-
-describe('strona: selektor „Faza cyklu / ciąża”, pole „Wiek menarche [lata]” i noty (R2, R3, R6)', () => {
+// Krok „Pacjent” strony na PRAWDZIWYCH funkcjach wyciętych z przelicznik-jednostek.html: getEffectivePatient
+// (z filtrem dostępności wyboru fazy), describePatient, buildClinicalHint, renderPatientSummary (z wcześniejszym
+// powrotem dla badań z własnym formularzem), onOverrideChange i onOverrideNumberCommitted. Elementy strony są
+// atrapami; kolejność kroków i reguły pochodzą wyłącznie z kodu strony i silnika.
+describe('strona: krok „Pacjent” — opis, selektor fazy, pole „Wiek menarche [lata]”, noty i zdarzenia panelu', () => {
   const OPCJE = [['', '(domyślnie)'], ['follicular', 'Faza folikularna'], ['ovulation', 'Pik owulacyjny'], ['luteal', 'Faza lutealna'],
     ['postmenopause', 'Postmenopauza'], ['pregnancy_t1', 'Ciąża — I trymestr'], ['pregnancy_t2', 'Ciąża — II trymestr'], ['pregnancy_t3', 'Ciąża — III trymestr']];
+  const WSZYSTKIE = OPCJE.map(([value]) => value);
+  const BEZ_POSTMENOPAUZY = WSZYSTKIE.filter((value) => value !== 'postmenopause');
+  const FAZY_WYLACZONE = BEZ_POSTMENOPAUZY.map((value) => ['follicular', 'ovulation', 'luteal'].includes(value) ? value + '!' : value);
+  const R2_BRAK = 'Fazy cyklu działają poniżej 18 lat dopiero po 5 latach od menarche. Wpisz „Wiek menarche” tutaj (tylko dla tego sprawdzenia) albo na stałe w „+ Dane pokwitaniowe” na stronie głównej.';
+  const ODRZUCONY = 'Wpisany wiek menarche nie jest brany pod uwagę: podaj wartość od 2 do 20 lat, nie większą niż wiek pacjentki.';
+  const ZMIEN = ' Jeśli faza cyklu jest znana, wybierz ją w „Zmień ▼".';
+  const silnikWieku = loadBrowserScript('vilda_lab_puberty.js');
   // Wycinki brane dopiero w teście: na kodzie sprzed zmiany każdy test pada osobno, a nie cały plik przy wczytaniu.
-  const widokKod = () => wytnij('    /* P-E2-MENARCHE (decyzje właściciela 2026-11-19) — widok reguły', '    function renderPatientSummary() {');
-  const formatKod = () => wytnij('    function formatMenarcheAge(years) {', '\n    }\n') + '\n    }\n';
+  const kodStrony = () => [
+    wytnij('    var CYCLE_AWARE = {', '    // Substancje z silnym rytmem dobowym'),
+    wytnij('    function isPubertySubstance(substance) {', '    function readPubertyPatientContext() {'),
+    wytnij('    function stageLabel(stage, kind, current) {', '\n    }\n') + '\n    }\n',
+    wytnij('    function lifespanLegacyAge(source)', '    function lifespanContraindicated(source'),
+    wytnij('    function getEffectivePatient()', '    var RZYMSKIE'),
+    wytnij('    var RZYMSKIE', '    /**\n     * Renderuje sekcję "Źródła"'),
+    wytnij('    function onOverrideChange(event) {', "    if (overrideSexEl) overrideSexEl.addEventListener('change', onOverrideChange);"),
+    wytnij('    function resetLocalPatientOverride() {', '\n    }\n') + '\n    }\n',
+  ].join('\n');
 
-  it('strona ma te same opcje selektora co atrapa testu i nowe pole za „Etapem Tannera”, notę przed „Resetuj”', () => {
-    const select = wytnij('<select id="labOverrideCycle">', '</select>');
-    expect([...select.matchAll(/<option value="([^"]*)">([^<]*)<\/option>/g)].map((m) => [m[1], m[2]])).toEqual(OPCJE);
-    const panel = wytnij('<div class="lab-patient-override" id="labPatientOverride"', '<!-- „Wyczyść” należy do formularza');
-    const kolejnosc = ['id="labOverrideTannerWrap"', 'id="labOverrideMenarcheWrap"', 'id="labOverrideMenarcheAge"', 'id="labOverrideTannerNote"',
-      'id="labOverrideMenarcheNote"', 'id="labOverrideReset"'].map((znacznik) => panel.indexOf(znacznik));
-    expect(kolejnosc.every((miejsce) => miejsce > -1)).toBe(true);
-    expect([...kolejnosc].sort((a, b) => a - b)).toEqual(kolejnosc);
-    // Pole i nota startują schowane atrybutem hidden (bez stylu na elemencie); arkusz strony pilnuje, żeby
-    // hidden wygrał z display etykiety w siatce panelu.
-    expect(panel).toMatch(/<label id="labOverrideMenarcheWrap" hidden>Wiek menarche \[lata\]\s*<input type="text" id="labOverrideMenarcheAge" inputmode="decimal"/);
-    expect(panel).toContain('<p id="labOverrideMenarcheNote" class="lab-override-note" role="status" hidden></p>');
-    const arkusz = readFileSync(new URL('../../inline_przelicznik_jednostek_00.css', import.meta.url), 'utf8');
-    expect(arkusz.replace(/\s+/g, ' ')).toContain('.lab-patient-override label[hidden], .lab-patient-override .lab-override-note[hidden] { display: none; }');
-  });
-
-  // Atrapa <select>: tylko to, czego używa funkcja strony (options, value, parentNode opcji, insertBefore, removeChild).
-  function atrapa({ wybrane = 'estradiol', override = {} } = {}) {
-    const select = { value: '', options: [],
-      removeChild(option) { this.options = this.options.filter((item) => item !== option); option.parentNode = null; },
+  function panel({ wybrane = 'estradiol', shared = { sex: 'F', age: 16, tanner: 5, tannerKind: 'Th', tannerCurrent: true }, source = null, override = {} } = {}) {
+    const el = (extra = {}) => ({ value: '', textContent: '', hidden: false, style: {}, attrs: {}, classList: { toggle() {} },
+      setAttribute(name, value) { this.attrs[name] = value; }, removeAttribute(name) { delete this.attrs[name]; }, ...extra });
+    // Atrapa <select>: opcje z parentNode, insertBefore/removeChild; wyjęcie wybranej opcji wybiera pierwszą (jak w przeglądarce).
+    const select = el({ options: [],
+      removeChild(option) { this.options = this.options.filter((item) => item !== option); option.parentNode = null; if (this.value === option.value) this.value = this.options[0].value; },
       insertBefore(option, next) {
         const miejsce = next ? this.options.indexOf(next) : this.options.length;
         this.options = [...this.options.slice(0, miejsce), option, ...this.options.slice(miejsce)];
         option.parentNode = this;
       },
-      appendChild(option) { this.insertBefore(option, null); } };
+      appendChild(option) { this.insertBefore(option, null); } });
     for (const [value, textContent] of OPCJE) select.appendChild({ value, textContent, disabled: false });
-    const attrs = {};
+    const licznik = { wynik: 0, formularz: 0 };
+    const stanDanych = { shared, source: source || { sourceStatus: 'ready', sex: shared.sex, ageYears: shared.age, ageMonths: null } };
     const ctx = {
-      Conv, currentSubstance: Conv.find(wybrane),
+      Conv, window: { LabUnitConverter: Conv, VildaLabPuberty: silnikWieku.VildaLabPuberty }, document: { getElementById: () => null },
+      currentSubstance: wybrane ? Conv.find(wybrane) : null, measurementCtx: {},
       localOverride: { sex: null, age: null, tanner: null, cycle_phase: null, menarche: null, ...override },
-      overrideCycleEl: select,
-      overrideMenarcheWrapEl: { hidden: true },
-      overrideMenarcheEl: { placeholder: 'np. 12,5', attrs, setAttribute(name, value) { attrs[name] = value; }, removeAttribute(name) { delete attrs[name]; } },
-      overrideMenarcheNoteEl: { textContent: '', hidden: true },
+      syncPatientIdentity() {}, currentPatientIdentity: () => '',
+      readPatientFromShared: () => stanDanych.shared, readPubertyPatientContext: () => stanDanych.source,
+      pubertyUI: { setPatientContext() { licznik.formularz += 1; } },
+      // Prawdziwe refreshPatientContext rysuje opis pacjenta, a potem wynik; licznik zastępuje rysowanie wyniku.
+      refreshPatientContext() { ctx.renderPatientSummary(); licznik.wynik += 1; },
+      patientTextEl: el(), patientCtxEl: el(), clinicalHintEl: el(), overrideResetEl: el(),
+      overrideSexEl: el(), overrideAgeEl: el(), overrideAgeMonthsEl: el(), overrideCycleWrapEl: el(), overrideCycleEl: select,
+      overrideTannerWrapEl: el(), overrideTannerEl: el(), overrideTannerDefaultEl: el(), overrideTannerNoteEl: el(),
+      overrideMenarcheWrapEl: el({ hidden: true }), overrideMenarcheEl: el({ placeholder: 'np. 12,5' }), overrideMenarcheNoteEl: el({ hidden: true }),
     };
     select.value = ctx.localOverride.cycle_phase || '';
     vm.createContext(ctx);
-    vm.runInContext(formatKod() + widokKod(), ctx);
-    // Ta sama kolejność co w renderPatientSummary strony; wTrakcieWpisu = zdarzenie „input” pola liczbowego.
-    const rysuj = (patient, { wTrakcieWpisu = false } = {}) => {
-      let reference = ctx.referenceContextFor(patient);
-      const odrzucono = !wTrakcieWpisu && ctx.dropUnavailableCyclePhase(reference);
-      if (odrzucono) { patient = { ...patient, cycle_phase: null }; reference = ctx.referenceContextFor(patient); }
-      ctx.renderCyclePhaseOptions(reference, wTrakcieWpisu ? ctx.localOverride.cycle_phase : null);
-      ctx.renderMenarcheOverrideState(patient, reference);
-      return { odrzucono, opcje: select.options.map((o) => o.value + (o.disabled ? '!' : '')), wybor: select.value,
+    vm.runInContext(kodStrony(), ctx);
+    const pola = { wiek: ctx.overrideAgeEl, miesiace: ctx.overrideAgeMonthsEl, menarche: ctx.overrideMenarcheEl, plec: ctx.overrideSexEl, faza: select };
+    const h = {
+      ctx, select, licznik, dane: stanDanych,
+      lokalne: () => vm.runInContext('localOverride', ctx),
+      // Zdarzenia strony: „input” w polu liczbowym, „change” w polu wyboru, koniec wpisu („blur”/„change” pola liczbowego).
+      wpisz(pole, tekst) { pola[pole].value = tekst; ctx.onOverrideChange({ type: 'input' }); return h.stan(); },
+      wybierz(pole, wartosc) { pola[pole].value = wartosc; ctx.onOverrideChange({ type: 'change' }); return h.stan(); },
+      zakoncz() { ctx.onOverrideNumberCommitted(); return h.stan(); },
+      odswiez() { ctx.renderPatientSummary(); return h.stan(); },
+      stan: () => ({
+        opis: ctx.patientTextEl.textContent,
+        wiersz: ctx.clinicalHintEl.style.display === 'none' ? null : ctx.clinicalHintEl.textContent || null,
+        opcje: select.options.map((o) => o.value + (o.disabled ? '!' : '')), faza: select.value, zapamietana: h.lokalne().cycle_phase,
         pole: ctx.overrideMenarcheWrapEl.hidden === false, placeholder: ctx.overrideMenarcheEl.placeholder,
-        nota: ctx.overrideMenarcheNoteEl.hidden === false ? ctx.overrideMenarcheNoteEl.textContent : null, attrs: { ...attrs } };
+        nota: ctx.overrideMenarcheNoteEl.hidden === false ? ctx.overrideMenarcheNoteEl.textContent : null,
+        bledny: ctx.overrideMenarcheEl.attrs['aria-invalid'] === 'true', reset: ctx.overrideResetEl.style.display !== 'none',
+        // To, co dostaje wynik, przypięcie i wykres: pacjent z getEffectivePatient i dobrany dla niego zakres.
+        fazaDlaWyniku: ctx.getEffectivePatient().cycle_phase,
+        zakres: ctx.currentSubstance ? (Conv.selectRange(ctx.currentSubstance, ctx.getEffectivePatient()) || {}).id || null : null,
+      }),
     };
-    return { ctx, select, rysuj };
+    return h;
   }
-  const WSZYSTKIE = OPCJE.map(([value]) => value);
-  const BEZ_POSTMENOPAUZY = WSZYSTKIE.filter((value) => value !== 'postmenopause');
-  const FAZY_WYLACZONE = BEZ_POSTMENOPAUZY.map((value) => ['follicular', 'ovulation', 'luteal'].includes(value) ? value + '!' : value);
+  const dziewczynka16 = (menarche) => ({ sourceStatus: 'ready', sex: 'F', ageYears: 16, ageMonths: null, ...(menarche == null ? {} : { menarcheAgeYears: menarche }) });
 
-  it('scenariusz A: po progu — bez Postmenopauzy, fazy do wyboru, placeholder „(z danych: 10,0)”, bez noty', () => {
-    const w = atrapa().rysuj(dziewczynka(15, { tanner: 5, menarche_age_years: 10, _shared_menarche: 10, _menarche_overridden: false }));
-    expect(w).toEqual({ odrzucono: false, opcje: BEZ_POSTMENOPAUZY, wybor: '', pole: true, placeholder: '(z danych: 10,0)', nota: null, attrs: {} });
+  it('strona ma te same opcje selektora co atrapa testu, nowe pole za „Etapem Tannera” i notę przed „Resetuj”', () => {
+    const select = wytnij('<select id="labOverrideCycle">', '</select>');
+    expect([...select.matchAll(/<option value="([^"]*)">([^<]*)<\/option>/g)].map((m) => [m[1], m[2]])).toEqual(OPCJE);
+    const markup = wytnij('<div class="lab-patient-override" id="labPatientOverride"', '<!-- „Wyczyść” należy do formularza');
+    const kolejnosc = ['id="labOverrideTannerWrap"', 'id="labOverrideMenarcheWrap"', 'id="labOverrideMenarcheAge"', 'id="labOverrideTannerNote"',
+      'id="labOverrideMenarcheNote"', 'id="labOverrideReset"'].map((znacznik) => markup.indexOf(znacznik));
+    expect(kolejnosc.every((miejsce) => miejsce > -1)).toBe(true);
+    expect([...kolejnosc].sort((a, b) => a - b)).toEqual(kolejnosc);
+    // Pole i nota startują schowane atrybutem hidden (bez stylu na elemencie); arkusz strony pilnuje, żeby
+    // hidden wygrał z display etykiety w siatce panelu.
+    expect(markup).toMatch(/<label id="labOverrideMenarcheWrap" hidden>Wiek menarche \[lata\]\s*<input type="text" id="labOverrideMenarcheAge" inputmode="decimal"/);
+    expect(markup).toContain('<p id="labOverrideMenarcheNote" class="lab-override-note" role="status" hidden></p>');
+    const arkusz = readFileSync(new URL('../../inline_przelicznik_jednostek_00.css', import.meta.url), 'utf8');
+    expect(arkusz.replace(/\s+/g, ' ')).toContain('.lab-patient-override label[hidden], .lab-patient-override .lab-override-note[hidden] { display: none; }');
   });
 
-  it('scenariusz C: przed progiem — fazy wyszarzone, nota z liczbą lat „(1,0)”', () => {
-    const w = atrapa().rysuj(dziewczynka(13, { tanner: 4, menarche_age_years: 12, _shared_menarche: 12, _menarche_overridden: false }));
-    expect(w).toMatchObject({ opcje: FAZY_WYLACZONE, pole: true, placeholder: '(z danych: 12,0)',
-      nota: 'Fazy cyklu nie zmieniają zakresu estradiolu: od menarche minęło mniej niż 5 lat (1,0).' });
+  it('scenariusz A: 15 lat, menarche 10,0 w danych → wiersz o menarche ze wskazówką, lista bez Postmenopauzy, pole z „(z danych: 10,0)”', () => {
+    const h = panel({ shared: { sex: 'F', age: 15, tanner: 5, tannerKind: 'Th', tannerCurrent: true }, source: { sourceStatus: 'ready', sex: 'F', ageYears: 15, ageMonths: null, menarcheAgeYears: 10 } });
+    expect(h.odswiez()).toMatchObject({ opis: 'Kobieta · 15 lat · wiek dziecięcy/młodzieńczy · Th V', wiersz: R1 + ZMIEN, opcje: ['', 'follicular', 'ovulation', 'luteal', 'pregnancy_t1', 'pregnancy_t2', 'pregnancy_t3'],
+      faza: '', pole: true, placeholder: '(z danych: 10,0)', nota: null, bledny: false, reset: false, zakres: 'estradiol-matched-reference-only' });
+    expect(h.select.options[0].textContent).toBe('(nieznana)');
+    // Scenariusz B: wybrana faza lutealna → wiersz bez wskazówki, zakres dorosłej.
+    expect(h.wybierz('faza', 'luteal')).toMatchObject({ opis: 'Kobieta · 15 lat · wiek dziecięcy/młodzieńczy · Th V · faza lutealna · nadpisanie lokalne',
+      wiersz: R1, faza: 'luteal', zapamietana: 'luteal', fazaDlaWyniku: 'luteal', zakres: 'e2_female_luteal', reset: true });
   });
 
-  it('scenariusz D: brak wpisu — fazy wyszarzone, placeholder „np. 12,5”, nota o wpisaniu wieku menarche', () => {
-    const w = atrapa().rysuj(dziewczynka(16, { tanner: 5, menarche_age_years: null, _shared_menarche: null, _menarche_overridden: false }));
-    expect(w).toMatchObject({ opcje: FAZY_WYLACZONE, pole: true, placeholder: 'np. 12,5',
-      nota: 'Fazy cyklu działają poniżej 18 lat dopiero po 5 latach od menarche. Wpisz „Wiek menarche” tutaj (tylko dla tego sprawdzenia) albo na stałe w „+ Dane pokwitaniowe” na stronie głównej.' });
+  it('scenariusze C i D: przed progiem albo bez wpisu → fazy wyszarzone, nota, zakres jak dotąd', () => {
+    const c = panel({ shared: { sex: 'F', age: 13, tanner: 4, tannerKind: 'Th', tannerCurrent: true }, source: { sourceStatus: 'ready', sex: 'F', ageYears: 13, ageMonths: null, menarcheAgeYears: 12 } });
+    expect(c.odswiez()).toMatchObject({ opis: 'Kobieta · 13 lat · wiek dziecięcy/młodzieńczy · Th IV', wiersz: null, opcje: FAZY_WYLACZONE, pole: true,
+      placeholder: '(z danych: 12,0)', nota: 'Fazy cyklu nie zmieniają zakresu estradiolu: od menarche minęło mniej niż 5 lat (1,0).', zakres: 'e2_F_tanner4' });
+    const d = panel({ source: dziewczynka16() });
+    expect(d.odswiez()).toMatchObject({ opis: 'Kobieta · 16 lat · wiek dziecięcy/młodzieńczy · Th V', wiersz: null, opcje: FAZY_WYLACZONE, pole: true,
+      placeholder: 'np. 12,5', nota: R2_BRAK, reset: false, zakres: 'e2_F_tanner5' });
+    // Scenariusz E: ciąża u nieletniej → faza przechodzi do wyniku, opis słowami.
+    expect(d.wybierz('faza', 'pregnancy_t1')).toMatchObject({ opis: 'Kobieta · 16 lat · wiek dziecięcy/młodzieńczy · Th V · ciąża — I trymestr · nadpisanie lokalne',
+      fazaDlaWyniku: 'pregnancy_t1', zakres: 'estradiol-matched-reference-only', nota: R2_BRAK });
   });
 
-  it('scenariusz G: wpis lokalny 11,0 — fazy do wyboru, nota znika; wpis odrzucony przez silnik jest oznaczony', () => {
-    const a = atrapa({ override: { menarche: 11 } });
-    expect(a.rysuj(dziewczynka(16, { tanner: 5, menarche_age_years: 11, _shared_menarche: null, _menarche_overridden: true })))
-      .toMatchObject({ opcje: BEZ_POSTMENOPAUZY, pole: true, nota: null, attrs: {} });
+  it('scenariusz G i opis pacjenta: wpis przyjęty przez silnik → „menarche 11,0 · nadpisanie lokalne”; wpis odrzucony albo nieużywany nie jest ogłaszany jako wartość', () => {
+    const h = panel({ source: dziewczynka16() });
+    h.odswiez();
+    expect(h.wpisz('menarche', '11,0')).toMatchObject({ opis: 'Kobieta · 16 lat · wiek dziecięcy/młodzieńczy · Th V · menarche 11,0 · nadpisanie lokalne',
+      wiersz: R1 + ZMIEN, opcje: BEZ_POSTMENOPAUZY, nota: null, bledny: false, reset: true });
+    expect(h.wpisz('menarche', '11.25').opis).toBe('Kobieta · 16 lat · wiek dziecięcy/młodzieńczy · Th V · menarche 11,25 · nadpisanie lokalne');
+    // Wpis odrzucony przez silnik: nadal nadpisanie lokalne (reset zostaje), ale nie „menarche 25,0”.
+    for (const wpis of ['25', '1', '16,5']) {
+      expect(h.wpisz('menarche', wpis), wpis).toMatchObject({ opis: 'Kobieta · 16 lat · wiek dziecięcy/młodzieńczy · Th V · nadpisanie lokalne',
+        wiersz: null, opcje: FAZY_WYLACZONE, nota: ODRZUCONY, bledny: true, reset: true, zakres: 'e2_F_tanner5' });
+    }
+    // Wiek nadpisany na 30 lat: pole schowane i nieużywane — opis nie wymienia menarche (nadpisaniem jest sam wiek).
+    h.wpisz('menarche', '9');
+    expect(h.wpisz('wiek', '30')).toMatchObject({ pole: false, nota: null, bledny: false, reset: true });
+    expect(h.stan().opis).toBe('Kobieta · 30 lat · Th V · nadpisanie lokalne');
+    expect(h.stan().opis).not.toContain('menarche');
   });
 
-  const ODRZUCONY = 'Wpisany wiek menarche nie jest brany pod uwagę: podaj wartość od 2 do 20 lat, nie większą niż wiek pacjentki.';
-  it.each([['poza zakresem (25)', 25], ['poniżej zakresu (1)', 1], ['późniejszy niż wiek (16,5 u 16-latki)', 16.5]])(
-    'wpis lokalny %s: silnik go nie przyjmuje — osobna nota, pole oznaczone, fazy wyszarzone', (_opis, wpis) => {
-      const odrzucony = atrapa({ override: { menarche: wpis } })
-        .rysuj(dziewczynka(16, { tanner: 5, menarche_age_years: wpis, _shared_menarche: 10, _menarche_overridden: true }));
-      expect(odrzucony).toMatchObject({ opcje: FAZY_WYLACZONE, pole: true, placeholder: 'np. 12,5', attrs: { 'aria-invalid': 'true' }, nota: ODRZUCONY });
-    });
+  it.each([
+    ['12,5,', 'przecinek na końcu'], ['12,5 lat', 'jednostka'], ['12;5', 'średnik'], ['1e1', 'wykładnik'], ['0x10', 'zapis szesnastkowy'],
+    ['-12', 'znak minus'], ['+12', 'znak plus'], ['12.555', 'trzy miejsca po kropce'], ['12,', 'sam separator'], [',5', 'bez cyfr przed separatorem'],
+    ['12 5', 'spacja w środku'], ['dwanaście', 'słowo'], ['12..5', 'dwie kropki'],
+  ])('wpis „%s” (%s) nie jest zwykłą liczbą dziesiętną → wpis odrzucony: zastępuje wartość z danych, nota, oznaczenie pola', (wpis) => {
+    // W danych menarche 10,0 (po progu u 16-latki): bez wpisu byłaby obsługa jak u dorosłej.
+    const h = panel({ source: dziewczynka16(10) });
+    expect(h.odswiez()).toMatchObject({ wiersz: 'Od menarche: 6,0 lat (≥ 5) — zakresy estradiolu jak u dorosłej.' + ZMIEN, zakres: 'estradiol-matched-reference-only' });
+    const stan = h.wpisz('menarche', wpis);
+    expect(Number.isNaN(h.lokalne().menarche)).toBe(true);
+    expect(stan).toMatchObject({ opis: 'Kobieta · 16 lat · wiek dziecięcy/młodzieńczy · Th V · nadpisanie lokalne', wiersz: null, opcje: FAZY_WYLACZONE,
+      nota: ODRZUCONY, bledny: true, reset: true, zakres: 'e2_F_tanner5' });
+    // Skasowanie wpisu wraca do wartości z danych.
+    expect(h.wpisz('menarche', '')).toMatchObject({ opis: 'Kobieta · 16 lat · wiek dziecięcy/młodzieńczy · Th V', nota: null, bledny: false, reset: false, zakres: 'estradiol-matched-reference-only' });
+    expect(h.lokalne().menarche).toBeNull();
+  });
 
-  it('granice w nocie o odrzuconym wpisie pochodzą z odpowiedzi silnika; poprawny wpis zdejmuje notę i oznaczenie', () => {
+  it.each([['11', 11], ['11,0', 11], ['11.0', 11], [' 12,5 ', 12.5], ['12.25', 12.25], ['012', 12], ['9', 9]])('wpis „%s” jest liczbą %d', (wpis, liczba) => {
+    const h = panel({ source: dziewczynka16() });
+    h.wpisz('menarche', wpis);
+    expect(h.lokalne().menarche).toBe(liczba);
+  });
+
+  it('granice w nocie o odrzuconym wpisie pochodzą z odpowiedzi silnika', () => {
     const inne = fixture((d) => { Object.assign(d.reference_selection_policy.gynecological_age, { menarche_min_years: 3, menarche_max_years: 19.5 }); });
-    const a = atrapa({ override: { menarche: 2.5 } });
-    a.ctx.Conv = inne.LabUnitConverter;
-    a.ctx.currentSubstance = inne.LabUnitConverter.find('estradiol');
-    expect(a.rysuj(dziewczynka(16, { menarche_age_years: 2.5, _menarche_overridden: true })).nota)
-      .toBe('Wpisany wiek menarche nie jest brany pod uwagę: podaj wartość od 3 do 19,5 lat, nie większą niż wiek pacjentki.');
-    const b = atrapa({ override: { menarche: 25 } });
-    expect(b.rysuj(dziewczynka(16, { menarche_age_years: 25, _menarche_overridden: true }))).toMatchObject({ nota: ODRZUCONY, attrs: { 'aria-invalid': 'true' } });
-    // Poprawny wpis przed progiem: zwykła nota R2 z liczbą lat; po progu — bez noty.
-    expect(b.rysuj(dziewczynka(16, { menarche_age_years: 12, _menarche_overridden: true })))
-      .toMatchObject({ nota: 'Fazy cyklu nie zmieniają zakresu estradiolu: od menarche minęło mniej niż 5 lat (4,0).', attrs: {} });
-    expect(b.rysuj(dziewczynka(16, { menarche_age_years: 11, _menarche_overridden: true }))).toMatchObject({ nota: null, attrs: {} });
+    const h = panel({ source: dziewczynka16() });
+    h.ctx.Conv = inne.LabUnitConverter;
+    h.ctx.currentSubstance = inne.LabUnitConverter.find('estradiol');
+    expect(h.wpisz('menarche', '2,5').nota).toBe('Wpisany wiek menarche nie jest brany pod uwagę: podaj wartość od 3 do 19,5 lat, nie większą niż wiek pacjentki.');
     // Nieprawidłowa wartość w DANYCH pacjenta (bez wpisu tutaj) to zwykły brak wpisu, nie „odrzucony wpis”.
-    expect(b.rysuj(dziewczynka(16, { menarche_age_years: 25, _shared_menarche: 25, _menarche_overridden: false })).nota)
-      .toMatch(/^Fazy cyklu działają poniżej 18 lat dopiero po 5 latach od menarche\./);
+    const zDanych = panel({ source: dziewczynka16(25) });
+    expect(zDanych.odswiez()).toMatchObject({ nota: R2_BRAK, bledny: false, placeholder: 'np. 12,5' });
   });
 
-  it('wybór niedostępny dla pacjenta wraca do „nieznana”: zwykła faza przed progiem i postmenopauza poniżej 18 lat', () => {
-    const faza = atrapa({ override: { cycle_phase: 'luteal' } });
-    expect(faza.rysuj(dziewczynka(16, { tanner: 5, cycle_phase: 'luteal' }))).toMatchObject({ odrzucono: true, wybor: '', opcje: FAZY_WYLACZONE });
-    expect(faza.ctx.localOverride.cycle_phase).toBeNull();
-    const post = atrapa({ wybrane: 'prolactin', override: { cycle_phase: 'postmenopause' } });
-    expect(post.rysuj({ sex: 'F', age: 16, life_stage: 'pediatric', cycle_phase: 'postmenopause' })).toMatchObject({ odrzucono: true, wybor: '', opcje: BEZ_POSTMENOPAUZY, pole: false, nota: null });
-    expect(post.ctx.localOverride.cycle_phase).toBeNull();
-    // Wybór dostępny zostaje: ciąża u nieletniej, faza po progu, postmenopauza u dorosłej.
-    const ciaza = atrapa({ override: { cycle_phase: 'pregnancy_t1' } });
-    expect(ciaza.rysuj(dziewczynka(16, { tanner: 5, cycle_phase: 'pregnancy_t1' }))).toMatchObject({ odrzucono: false, wybor: 'pregnancy_t1' });
-    const poProgu = atrapa({ override: { cycle_phase: 'luteal' } });
-    expect(poProgu.rysuj(dziewczynka(16, { menarche_age_years: 11, cycle_phase: 'luteal' }))).toMatchObject({ odrzucono: false, wybor: 'luteal' });
-    const dorosla = atrapa({ override: { cycle_phase: 'postmenopause' } });
-    expect(dorosla.rysuj({ sex: 'F', age: 55, life_stage: 'adult', cycle_phase: 'postmenopause' })).toMatchObject({ odrzucono: false, wybor: 'postmenopause', opcje: WSZYSTKIE, pole: false });
+  it('wpisywanie wieku przez wartość pośrednią (prolaktyna, dorosła z postmenopauzą): wynik i opis od razu bez niedostępnej fazy, zapamiętany wybór zostaje i wraca przy „65”', () => {
+    const h = panel({ wybrane: 'prolactin', shared: { sex: 'F', age: 40 } });
+    h.odswiez();
+    expect(h.wybierz('faza', 'postmenopause')).toMatchObject({ opis: 'Kobieta · 40 lat · postmenopauza · nadpisanie lokalne', fazaDlaWyniku: 'postmenopause', opcje: WSZYSTKIE });
+    // „6” (sześciolatka): wynik i opis bez postmenopauzy; wybór w selektorze i jego opcja zostają.
+    expect(h.wpisz('wiek', '6')).toMatchObject({ opis: 'Kobieta · 6 lat · wiek dziecięcy/młodzieńczy · nadpisanie lokalne', fazaDlaWyniku: null,
+      faza: 'postmenopause', zapamietana: 'postmenopause', opcje: WSZYSTKIE });
+    // „65”: wybór wraca do wyniku i opisu bez ponownego wybierania.
+    expect(h.wpisz('wiek', '65')).toMatchObject({ opis: 'Kobieta · 65 lat · postmenopauza · nadpisanie lokalne', fazaDlaWyniku: 'postmenopause', faza: 'postmenopause', opcje: WSZYSTKIE });
+    const rysowaniaWyniku = h.licznik.wynik;
+    expect(h.zakoncz()).toMatchObject({ faza: 'postmenopause', zapamietana: 'postmenopause', opcje: WSZYSTKIE });
+    // Wiek „15” w trakcie wpisu: jak wyżej; zakończony wpis kasuje wybór i wyjmuje opcję.
+    expect(h.wpisz('wiek', '15')).toMatchObject({ fazaDlaWyniku: null, faza: 'postmenopause', zapamietana: 'postmenopause', opcje: WSZYSTKIE });
+    const przedKoncem = h.licznik.wynik;
+    expect(h.zakoncz()).toMatchObject({ opis: 'Kobieta · 15 lat · wiek dziecięcy/młodzieńczy · nadpisanie lokalne', fazaDlaWyniku: null, faza: '', zapamietana: null, opcje: BEZ_POSTMENOPAUZY });
+    // Koniec wpisu nie rysuje wyniku ponownie (pierwsze kliknięcie w wynik po wyjściu z pola nie może zginąć).
+    expect(h.licznik.wynik).toBe(przedKoncem);
+    expect(przedKoncem).toBe(rysowaniaWyniku + 1);
+    // Odrzucony wybór nie wraca sam, gdy wiek znowu jest dorosły.
+    expect(h.wpisz('wiek', '65')).toMatchObject({ opis: 'Kobieta · 65 lat · nadpisanie lokalne', fazaDlaWyniku: null, faza: '', opcje: WSZYSTKIE });
   });
 
-  it('inne badanie z tym selektorem (prolaktyna): nieletnia bez Postmenopauzy, fazy do wyboru; dorosła — pełna lista', () => {
-    const a = atrapa({ wybrane: 'prolactin' });
-    expect(a.rysuj({ sex: 'F', age: 16, life_stage: 'pediatric' })).toMatchObject({ opcje: BEZ_POSTMENOPAUZY, pole: false, nota: null });
-    expect(a.rysuj({ sex: 'F', age: 30, life_stage: 'adult' })).toMatchObject({ opcje: WSZYSTKIE, pole: false, nota: null });
-    // Powrót do nieletniej i z powrotem zachowuje kolejność i te same elementy opcji.
-    expect(a.rysuj({ sex: 'F', age: 12, life_stage: 'pediatric' }).opcje).toEqual(BEZ_POSTMENOPAUZY);
-    expect(a.rysuj({ sex: 'F', life_stage: 'adult' }).opcje).toEqual(WSZYSTKIE);
+  it('wpisywanie wieku i wieku menarche w estradiolu: faza zapamiętana zostaje, wynik w trakcie liczony bez niej', () => {
+    const dorosla = panel({ shared: { sex: 'F', age: 40 }, source: { sourceStatus: 'ready', sex: 'F', ageYears: 40, ageMonths: null } });
+    dorosla.odswiez();
+    expect(dorosla.wybierz('faza', 'luteal')).toMatchObject({ zakres: 'e2_female_luteal', fazaDlaWyniku: 'luteal' });
+    // „3” (trzylatka): zakres dziecka, opis bez fazy; lutealna zostaje wybrana i dostępna na liście, pozostałe fazy wyszarzone.
+    expect(dorosla.wpisz('wiek', '3')).toMatchObject({ opis: 'Kobieta · 3 lat · wiek dziecięcy/młodzieńczy · nadpisanie lokalne', zakres: 'e2_F_prepubertal_age', fazaDlaWyniku: null,
+      faza: 'luteal', zapamietana: 'luteal', opcje: ['', 'follicular!', 'ovulation!', 'luteal', 'pregnancy_t1', 'pregnancy_t2', 'pregnancy_t3'] });
+    expect(dorosla.wpisz('wiek', '35')).toMatchObject({ opis: 'Kobieta · 35 lat · faza lutealna · nadpisanie lokalne', zakres: 'e2_female_luteal', faza: 'luteal', opcje: WSZYSTKIE });
+    expect(dorosla.zakoncz()).toMatchObject({ faza: 'luteal', zakres: 'e2_female_luteal' });
+    // Dziewczynka po progu z wybraną fazą poprawia wpis menarche z „11” na „10”: po skasowaniu („” → dane bez menarche) i po „1” faza nie ginie.
+    const nieletnia = panel({ source: dziewczynka16() });
+    nieletnia.odswiez();
+    nieletnia.wpisz('menarche', '11');
+    nieletnia.zakoncz();
+    expect(nieletnia.wybierz('faza', 'luteal')).toMatchObject({ zakres: 'e2_female_luteal', opis: 'Kobieta · 16 lat · wiek dziecięcy/młodzieńczy · Th V · menarche 11,0 · faza lutealna · nadpisanie lokalne' });
+    expect(nieletnia.wpisz('menarche', '')).toMatchObject({ opis: 'Kobieta · 16 lat · wiek dziecięcy/młodzieńczy · Th V', zakres: 'e2_F_tanner5', fazaDlaWyniku: null, faza: 'luteal', zapamietana: 'luteal', nota: R2_BRAK });
+    expect(nieletnia.wpisz('menarche', '1')).toMatchObject({ zakres: 'e2_F_tanner5', fazaDlaWyniku: null, faza: 'luteal', nota: ODRZUCONY });
+    expect(nieletnia.wpisz('menarche', '10')).toMatchObject({ zakres: 'e2_female_luteal', fazaDlaWyniku: 'luteal', faza: 'luteal', nota: null,
+      opis: 'Kobieta · 16 lat · wiek dziecięcy/młodzieńczy · Th V · menarche 10,0 · faza lutealna · nadpisanie lokalne' });
+    // Zakończony wpis 12 (4 lata od menarche): faza skasowana i wyszarzona.
+    nieletnia.wpisz('menarche', '12');
+    expect(nieletnia.zakoncz()).toMatchObject({ faza: '', zapamietana: null, opcje: FAZY_WYLACZONE, zakres: 'e2_F_tanner5',
+      opis: 'Kobieta · 16 lat · wiek dziecięcy/młodzieńczy · Th V · menarche 12,0 · nadpisanie lokalne' });
   });
 
-  it('w trakcie wpisywania liczby wybrana faza zostaje; zatwierdzony wpis rozstrzyga o jej dostępności', () => {
-    // Dorosła z wybraną postmenopauzą wpisuje wiek „65”: po pierwszej cyfrze („6”) pacjentka jest przez chwilę nieletnia.
-    const a = atrapa({ wybrane: 'prolactin', override: { cycle_phase: 'postmenopause' } });
-    const szesc = { sex: 'F', age: 6, life_stage: 'pediatric', cycle_phase: 'postmenopause' };
-    expect(a.rysuj(szesc, { wTrakcieWpisu: true })).toMatchObject({ odrzucono: false, wybor: 'postmenopause', opcje: WSZYSTKIE });
-    expect(a.ctx.localOverride.cycle_phase).toBe('postmenopause');
-    expect(a.rysuj({ sex: 'F', age: 65, life_stage: 'adult', cycle_phase: 'postmenopause' }, { wTrakcieWpisu: true }))
-      .toMatchObject({ odrzucono: false, wybor: 'postmenopause', opcje: WSZYSTKIE });
-    expect(a.rysuj({ sex: 'F', age: 65, life_stage: 'adult', cycle_phase: 'postmenopause' })).toMatchObject({ odrzucono: false, wybor: 'postmenopause' });
-    // Zatwierdzony wiek 6 lat: postmenopauza nie dotyczy — wybór wraca do „nieznana”, opcja znika.
-    expect(a.rysuj(szesc)).toMatchObject({ odrzucono: true, wybor: '', opcje: BEZ_POSTMENOPAUZY });
-    // Estradiol: faza lutealna u dorosłej, wpisywany wiek „35” przechodzi przez „3”.
-    const e = atrapa({ override: { cycle_phase: 'luteal' } });
-    expect(e.rysuj(dziewczynka(3, { cycle_phase: 'luteal' }), { wTrakcieWpisu: true }))
-      .toMatchObject({ odrzucono: false, wybor: 'luteal', opcje: ['', 'follicular!', 'ovulation!', 'luteal', 'pregnancy_t1', 'pregnancy_t2', 'pregnancy_t3'] });
-    // Silnik w tej chwili i tak nie używa niedostępnej fazy: zakres dziecka, nie zakres lutealny dorosłej.
-    expect(wybierz(dziewczynka(3, { cycle_phase: 'luteal' }))).toMatchObject({ id: 'e2_F_prepubertal_age' });
-    expect(e.rysuj({ sex: 'F', age: 35, life_stage: 'adult', cycle_phase: 'luteal' }, { wTrakcieWpisu: true })).toMatchObject({ wybor: 'luteal', opcje: WSZYSTKIE });
-    expect(e.ctx.localOverride.cycle_phase).toBe('luteal');
+  it('każde odświeżenie poza wpisywaniem liczby zatwierdza dostępność wyboru: zmiana badania, zmiana danych pacjenta', () => {
+    // Faza lutealna wybrana w prolaktynie; to samo badanie → estradiol u dziewczynki bez menarche.
+    const h = panel({ wybrane: 'prolactin', source: dziewczynka16() });
+    h.odswiez();
+    expect(h.wybierz('faza', 'luteal')).toMatchObject({ faza: 'luteal', fazaDlaWyniku: 'luteal' });
+    h.ctx.currentSubstance = Conv.find('estradiol');
+    expect(h.odswiez()).toMatchObject({ opis: 'Kobieta · 16 lat · wiek dziecięcy/młodzieńczy · Th V', faza: '', zapamietana: null, opcje: FAZY_WYLACZONE, reset: false });
+    // Postmenopauza dorosłej; dane pacjenta zmieniają się na dziewczynkę 12 lat (ta sama karta).
+    const zmiana = panel({ wybrane: 'prolactin', shared: { sex: 'F', age: 40 } });
+    zmiana.odswiez();
+    zmiana.wybierz('faza', 'postmenopause');
+    zmiana.dane.shared = { sex: 'F', age: 12 };
+    expect(zmiana.odswiez()).toMatchObject({ opis: 'Kobieta · 12 lat · wiek dziecięcy/młodzieńczy', faza: '', zapamietana: null, opcje: BEZ_POSTMENOPAUZY });
+    // Wybór dostępny zostaje: ciąża u nieletniej, postmenopauza u dorosłej.
+    const dorosla = panel({ wybrane: 'prolactin', shared: { sex: 'F', age: 55 } });
+    dorosla.wybierz('faza', 'postmenopause');
+    expect(dorosla.odswiez()).toMatchObject({ faza: 'postmenopause', zapamietana: 'postmenopause', opcje: WSZYSTKIE, pole: false });
+  });
+
+  it('LH, FSH, inhibina B, testosteron (własny formularz): zatwierdzenie przed wcześniejszym powrotem — postmenopauza nie zostaje u pacjentki poniżej 18 lat', () => {
+    for (const wybrane of ['lh', 'fsh', 'inhibin_b', 'testosterone_total']) {
+      const h = panel({ wybrane, shared: { sex: 'F', age: 40 } });
+      h.select.value = 'postmenopause';
+      h.lokalne().cycle_phase = 'postmenopause';
+      // Dorosła: wybór zostaje (wykres LH i inhibiny B czyta go przez getEffectivePatient).
+      expect(h.odswiez()).toMatchObject({ faza: 'postmenopause', zapamietana: 'postmenopause', fazaDlaWyniku: 'postmenopause' });
+      // Dane pacjenta zmieniają się na dziewczynkę 12 lat: wybór skasowany, choć opis pacjenta tej ścieżki nie jest rysowany.
+      h.dane.shared = { sex: 'F', age: 12 };
+      const przed = h.licznik.formularz;
+      expect(h.odswiez(), wybrane).toMatchObject({ faza: '', zapamietana: null, fazaDlaWyniku: null, opis: '' });
+      expect(h.licznik.formularz).toBe(przed + 1);
+      // Ciąża u nieletniej zostaje (testosteron czyta ją z lokalnego wyboru).
+      h.select.value = 'pregnancy_t1';
+      h.lokalne().cycle_phase = 'pregnancy_t1';
+      expect(h.odswiez()).toMatchObject({ faza: 'pregnancy_t1', zapamietana: 'pregnancy_t1', fazaDlaWyniku: 'pregnancy_t1' });
+    }
+  });
+
+  it('inne badanie z tym selektorem, dorosła, mężczyzna, brak wieku, brak badania: listy opcji', () => {
+    const prl = panel({ wybrane: 'prolactin', source: dziewczynka16() });
+    expect(prl.odswiez()).toMatchObject({ opcje: BEZ_POSTMENOPAUZY, pole: false, nota: null });
+    expect(prl.select.options[0].textContent).toBe('(domyślnie)');
+    prl.dane.shared = { sex: 'F', age: 30 };
+    expect(prl.odswiez()).toMatchObject({ opcje: WSZYSTKIE, pole: false });
+    prl.dane.shared = { sex: 'F', age: 12 };
+    expect(prl.odswiez().opcje).toEqual(BEZ_POSTMENOPAUZY);
+    // Postmenopauza wraca na swoje miejsce — przed opcjami ciąży.
+    prl.dane.shared = { sex: 'F' };
+    expect(prl.odswiez().opcje).toEqual(WSZYSTKIE);
+    for (const shared of [{ sex: 'F', age: 30 }, { sex: 'F' }]) {
+      const e2 = panel({ shared, source: { sourceStatus: 'ready', sex: 'F', ageYears: shared.age == null ? null : shared.age, ageMonths: null } });
+      expect(e2.odswiez()).toMatchObject({ opcje: WSZYSTKIE, pole: false, nota: null, placeholder: 'np. 12,5' });
+    }
+    const chlopiec = panel({ shared: { sex: 'M', age: 15 }, source: { sourceStatus: 'ready', sex: 'M', ageYears: 15, ageMonths: null } });
+    expect(chlopiec.odswiez()).toMatchObject({ opcje: BEZ_POSTMENOPAUZY, pole: false, nota: null });
+    // Bez wybranego badania: postmenopauza nieletniej też nie jest proponowana ani ogłaszana w opisie.
+    const bezBadania = panel({ wybrane: null, shared: { sex: 'F', age: 12 }, override: { cycle_phase: 'postmenopause' } });
+    expect(bezBadania.odswiez()).toMatchObject({ opis: 'Kobieta · 12 lat · wiek dziecięcy/młodzieńczy', faza: '', zapamietana: null, opcje: BEZ_POSTMENOPAUZY });
   });
 
   it('opcja spoza listy strony nie jest ruszana, a jej wybór zostaje', () => {
-    const a = atrapa({ override: { cycle_phase: 'fikcyjny-kontekst' } });
-    a.select.appendChild({ value: 'fikcyjny-kontekst', textContent: 'Fikcyjny kontekst', disabled: false });
-    a.select.value = 'fikcyjny-kontekst';
-    expect(a.rysuj({ sex: 'F', age: 35, life_stage: 'adult', cycle_phase: 'fikcyjny-kontekst' }))
-      .toMatchObject({ odrzucono: false, wybor: 'fikcyjny-kontekst', opcje: [...WSZYSTKIE, 'fikcyjny-kontekst'] });
-    expect(a.rysuj({ sex: 'F', age: 15, life_stage: 'pediatric', menarche_age_years: 10, cycle_phase: 'fikcyjny-kontekst' }))
-      .toMatchObject({ odrzucono: false, wybor: 'fikcyjny-kontekst', opcje: [...BEZ_POSTMENOPAUZY, 'fikcyjny-kontekst'] });
-    // Postmenopauza wraca na swoje miejsce — przed opcjami ciąży, nie na koniec listy.
-    expect(a.rysuj({ sex: 'F', age: 35, life_stage: 'adult', cycle_phase: 'fikcyjny-kontekst' }).opcje).toEqual([...WSZYSTKIE, 'fikcyjny-kontekst']);
+    const h = panel({ shared: { sex: 'F', age: 35 }, source: { sourceStatus: 'ready', sex: 'F', ageYears: 35, ageMonths: null } });
+    h.select.appendChild({ value: 'fikcyjny-kontekst', textContent: 'Fikcyjny kontekst', disabled: false });
+    expect(h.wybierz('faza', 'fikcyjny-kontekst')).toMatchObject({ faza: 'fikcyjny-kontekst', fazaDlaWyniku: 'fikcyjny-kontekst', opcje: [...WSZYSTKIE, 'fikcyjny-kontekst'] });
+    h.dane.shared = { sex: 'F', age: 15 };
+    h.dane.source = { sourceStatus: 'ready', sex: 'F', ageYears: 15, ageMonths: null, menarcheAgeYears: 10 };
+    expect(h.odswiez()).toMatchObject({ faza: 'fikcyjny-kontekst', opcje: [...BEZ_POSTMENOPAUZY, 'fikcyjny-kontekst'] });
   });
 
-  it('estradiol u dorosłej, u mężczyzny i bez wieku: pełna lista, bez pola i bez noty', () => {
-    for (const patient of [{ sex: 'F', age: 30, life_stage: 'adult' }, { sex: 'F', life_stage: 'adult' }]) {
-      expect(atrapa().rysuj(patient)).toMatchObject({ opcje: WSZYSTKIE, pole: false, nota: null, placeholder: 'np. 12,5' });
-    }
-    expect(atrapa().rysuj({ sex: 'M', age: 15, life_stage: 'pediatric' })).toMatchObject({ opcje: BEZ_POSTMENOPAUZY, pole: false, nota: null });
-  });
-});
-
-describe('strona: wiersz pod opisem pacjenta (R1) i reguły czyszczenia', () => {
-  const ctx = {
-    Conv, window: { LabUnitConverter: Conv }, document: { getElementById: () => null },
-    readPatientFromShared: () => ({ sex: 'F', age: 15, tanner: 5 }), currentSubstance: Conv.find('estradiol'),
-  };
-  vm.createContext(ctx);
-  vm.runInContext(wytnij('    var CYCLE_AWARE = {', '    // Substancje z silnym rytmem dobowym')
-    + wytnij('    function tannerMattersForPatient(substance, patient) {', '    function renderPatientSummary() {'), ctx);
-  const ZMIEN = ' Jeśli faza cyklu jest znana, wybierz ją w „Zmień ▼".';
-
-  it('po progu: wiersz R1; przy nieznanej fazie ze wskazówką o „Zmień ▼”, przy wybranej — sam wiersz', () => {
+  it('wiersz pod opisem pacjenta: po progu R1 (ze wskazówką przy nieznanej fazie); dorosła zachowuje dotychczasową wskazówkę', () => {
+    const h = panel({ source: dziewczynka16(11) });
+    const wiersz = (patient) => h.ctx.buildClinicalHint(patient);
     const p = dziewczynka(15, { tanner: 5, menarche_age_years: 10 });
-    expect(ctx.buildClinicalHint(p)).toBe(R1 + ZMIEN);
-    expect(ctx.buildClinicalHint({ ...p, cycle_phase: 'luteal' })).toBe(R1);
-    expect(ctx.buildClinicalHint({ ...p, cycle_phase: 'pregnancy_t1' })).toBe(R1);
+    expect(wiersz(p)).toBe(R1 + ZMIEN);
+    expect(wiersz({ ...p, cycle_phase: 'luteal' })).toBe(R1);
+    expect(wiersz({ ...p, cycle_phase: 'pregnancy_t1' })).toBe(R1);
     // Etap życia strony bywa „adult” (brak wieku w danych wspólnych) — wskazówka dorosłej o menopauzie nie dochodzi.
-    expect(ctx.buildClinicalHint({ ...p, life_stage: 'adult' })).toBe(R1 + ZMIEN);
+    expect(wiersz({ ...p, life_stage: 'adult' })).toBe(R1 + ZMIEN);
+    expect(wiersz(dziewczynka(13, { tanner: 4, menarche_age_years: 12 }))).toBe('');
+    expect(wiersz(dziewczynka(16, { tanner: 5 }))).toBe('');
+    expect(wiersz({ sex: 'F', age: 30, life_stage: 'adult' })).toBe('Jeśli faza cyklu lub menopauza jest znana, wybierz ją w „Zmień ▼".');
+    expect(wiersz({ sex: 'F', age: 30, life_stage: 'adult', cycle_phase: 'luteal' })).toBe('');
   });
 
-  it('przed progiem i bez wpisu: bez wiersza; dorosła zachowuje dotychczasową wskazówkę o fazie lub menopauzie', () => {
-    expect(ctx.buildClinicalHint(dziewczynka(13, { tanner: 4, menarche_age_years: 12 }))).toBe('');
-    expect(ctx.buildClinicalHint(dziewczynka(16, { tanner: 5 }))).toBe('');
-    expect(ctx.buildClinicalHint({ sex: 'F', age: 30, life_stage: 'adult' })).toBe('Jeśli faza cyklu lub menopauza jest znana, wybierz ją w „Zmień ▼".');
-    expect(ctx.buildClinicalHint({ sex: 'F', age: 30, life_stage: 'adult', cycle_phase: 'luteal' })).toBe('');
+  it.each([
+    ['pregnancy_t1', 'ciąża — I trymestr'], ['pregnancy_t2', 'ciąża — II trymestr'], ['pregnancy_t3', 'ciąża — III trymestr'],
+    ['follicular', 'faza folikularna'], ['ovulation', 'pik owulacyjny'], ['luteal', 'faza lutealna'], ['postmenopause', 'postmenopauza'],
+  ])('opis pacjenta: wybór %s to „%s” — także u dorosłej (R7)', (cycle_phase, nazwa) => {
+    const opis = panel().ctx.describePatient;
+    expect(opis({ sex: 'F', age: 16, life_stage: 'pediatric', tanner: 5, _shared_tanner: 5, _shared_tanner_kind: 'Th', _shared_tanner_current: true, cycle_phase, _has_override: true }).text)
+      .toBe('Kobieta · 16 lat · wiek dziecięcy/młodzieńczy · Th V · ' + nazwa + ' · nadpisanie lokalne');
+    expect(opis({ sex: 'F', age: 19, life_stage: 'adult', cycle_phase, _has_override: true }).text).toBe('Kobieta · 19 lat · ' + nazwa + ' · nadpisanie lokalne');
   });
 
-  it('lokalny wiek menarche znika z resetem, zmianą osoby i zmianą płci — razem z pozostałymi nadpisaniami', () => {
-    const reset = wytnij('    function resetLocalPatientOverride() {', '\n    }\n');
-    expect(reset).toContain('localOverride = { sex: null, age: null, tanner: null, cycle_phase: null, menarche: null };');
-    expect(reset).toContain("if (typeof overrideMenarcheEl !== 'undefined' && overrideMenarcheEl) overrideMenarcheEl.value = '';");
-    const srodowisko = { overrideSexEl: { value: 'F' }, overrideAgeEl: { value: '16' }, overrideAgeMonthsEl: { value: '' },
-      overrideCycleEl: { value: 'luteal' }, overrideTannerEl: { value: '5' }, overrideMenarcheEl: { value: '11,0' },
-      localOverride: { sex: 'F', age: 16, tanner: 5, cycle_phase: 'luteal', menarche: 11 } };
-    vm.createContext(srodowisko);
-    vm.runInContext(reset + '\n    }\n', srodowisko);
-    srodowisko.resetLocalPatientOverride();
-    expect(vm.runInContext('localOverride', srodowisko)).toEqual({ sex: null, age: null, tanner: null, cycle_phase: null, menarche: null });
-    expect(srodowisko.overrideMenarcheEl.value).toBe('');
-    // Ten sam reset wołają: „Resetuj do danych pacjenta”, zmiana tożsamości pacjenta i czyszczenie formularza.
+  it.each([[10, '10,0'], [12.5, '12,5'], [11.25, '11,25'], [12.3, '12,3'], [9.999, '10,0']])('wiek menarche %d → „%s”; wartość nieliczbowa nie jest formatowana', (lata, tekst) => {
+    const format = panel().ctx.formatMenarcheAge;
+    expect(format(lata)).toBe(tekst);
+    for (const zla of [null, undefined, '11', Number.NaN]) expect(format(zla)).toBe('');
+  });
+
+  it('czyszczenie: reset panelu i płeć „Mężczyzna” kasują lokalny wiek menarche i wybór fazy', () => {
+    const h = panel({ source: dziewczynka16() });
+    h.odswiez();
+    h.wpisz('menarche', '11');
+    h.wybierz('faza', 'luteal');
+    expect(h.lokalne()).toMatchObject({ menarche: 11, cycle_phase: 'luteal' });
+    expect(h.wybierz('plec', 'M')).toMatchObject({ pole: false, faza: '' });
+    expect(h.lokalne()).toMatchObject({ sex: 'M', menarche: null, cycle_phase: null });
+    expect(h.ctx.overrideMenarcheEl.value).toBe('');
+    // Wpis odrzucony (NaN) też jest kasowany dla płci „Mężczyzna”.
+    h.wybierz('plec', '');
+    h.wpisz('menarche', 'abc');
+    h.wybierz('plec', 'M');
+    expect(h.lokalne().menarche).toBeNull();
+    // „Resetuj do danych pacjenta”, zmiana pacjenta i „Wyczyść wszystkie pola” wołają resetLocalPatientOverride.
+    h.wybierz('plec', '');
+    h.wpisz('menarche', '11');
+    h.wybierz('faza', 'luteal');
+    h.ctx.resetLocalPatientOverride();
+    expect(h.lokalne()).toEqual({ sex: null, age: null, tanner: null, cycle_phase: null, menarche: null });
+    expect([h.ctx.overrideMenarcheEl.value, h.select.value]).toEqual(['', '']);
     expect(wytnij('    function syncPatientIdentity() {', '\n    }\n')).toContain('resetLocalPatientOverride();');
     expect(wytnij('    function resetLabForm() {', '\n    }\n')).toContain('resetLocalPatientOverride();');
     expect(wytnij("    if (overrideResetEl) overrideResetEl.addEventListener('click', function () {", '\n    });')).toContain('resetLocalPatientOverride();');
-    expect(html).toContain("if (overrideMenarcheEl) overrideMenarcheEl.addEventListener('input', onOverrideChange);");
-    // Przecinek albo kropka — ten sam parser co pole wyniku.
-    expect([Conv.parseNumber('11,0'), Conv.parseNumber('12.5'), Number.isNaN(Conv.parseNumber(''))]).toEqual([11, 12.5, true]);
+    // Zmiana płci w danych tej samej osoby (ścieżka wykresu): faza i wiek menarche porzuconego kontekstu znikają razem.
+    const zmianaPlci = wytnij('        if (lifespanCurrentSex && lifespanCurrentSex !== currentSex) {', '        lifespanCurrentSex = currentSex;');
+    expect(zmianaPlci).toContain('localOverride.cycle_phase = null;');
+    expect(zmianaPlci).toContain('localOverride.menarche = null;');
+    expect(zmianaPlci).toContain("if (typeof overrideMenarcheEl !== 'undefined' && overrideMenarcheEl) overrideMenarcheEl.value = '';");
   });
 
-  it('obsługa zmian panelu: wpis lokalny wieku menarche, płeć M czyści go, „input” odracza odrzucenie fazy do „change”', () => {
-    const odswiezenia = [];
-    const panel = {
-      Conv, overrideSexEl: { value: '' }, overrideAgeEl: { value: '' }, overrideAgeMonthsEl: { value: '' },
-      overrideCycleEl: { value: 'luteal' }, overrideTannerEl: { value: '' }, overrideMenarcheEl: { value: '11,5' },
-      localOverride: { sex: null, age: null, tanner: null, cycle_phase: null, menarche: null },
-      readPatientFromShared: () => ({ sex: 'F', age: 16 }), cyclePhaseDropDeferred: false,
-      refreshPatientContext() { odswiezenia.push(panel.cyclePhaseDropDeferred); },
-    };
-    vm.createContext(panel);
-    vm.runInContext(wytnij('    function onOverrideChange(event) {', '\n    }\n') + '\n    }\n', panel);
-    const stan = () => vm.runInContext('localOverride', panel);
-    panel.onOverrideChange({ type: 'input' });
-    expect(stan()).toEqual({ sex: null, age: null, tanner: null, cycle_phase: 'luteal', menarche: 11.5 });
-    panel.overrideMenarcheEl.value = '12.25';
-    panel.onOverrideChange({ type: 'change' });
-    expect(stan().menarche).toBe(12.25);
-    panel.onOverrideChange();
-    // Odroczenie tylko w trakcie odświeżenia wywołanego zdarzeniem „input”; po nim flaga wraca do zera.
-    expect(odswiezenia).toEqual([true, false, false]);
-    expect(panel.cyclePhaseDropDeferred).toBe(false);
-    for (const [wpis, wartosc] of [['', null], ['abc', null], ['11', 11], [' 10,5 ', 10.5]]) {
-      panel.overrideMenarcheEl.value = wpis;
-      panel.onOverrideChange({ type: 'input' });
-      expect(stan().menarche, wpis).toBe(wartosc);
-    }
-    panel.overrideMenarcheEl.value = '11';
-    panel.overrideSexEl.value = 'M';
-    panel.onOverrideChange({ type: 'change' });
-    expect(stan()).toMatchObject({ sex: 'M', cycle_phase: null, menarche: null });
-    expect([panel.overrideMenarcheEl.value, panel.overrideCycleEl.value]).toEqual(['', '']);
-    // Koniec wpisu w polach liczbowych („change”, „blur”) woła tę samą obsługę — już bez odroczenia.
-    panel.overrideSexEl.value = '';
-    panel.onOverrideChange({ type: 'blur' });
-    expect(odswiezenia[odswiezenia.length - 1]).toBe(false);
+  it('nasłuchy pól liczbowych: „input” przelicza, koniec wpisu („change”, „blur”) tylko zatwierdza wybór i odświeża opis — bez rysowania wyniku', () => {
+    expect(html).toContain("if (overrideMenarcheEl) overrideMenarcheEl.addEventListener('input', onOverrideChange);");
     const konce = wytnij('    [overrideAgeEl, overrideAgeMonthsEl, overrideMenarcheEl].forEach(function (node) {', '\n    });');
-    expect(konce).toContain("node.addEventListener('change', onOverrideChange);");
-    expect(konce).toContain("node.addEventListener('blur', onOverrideChange);");
-    const widok = wytnij('    function renderPatientSummary() {', '\n    }\n');
-    expect(widok).toContain('if (!cyclePhaseDropDeferred && dropUnavailableCyclePhase(reference)) {');
-    expect(widok).toContain('renderCyclePhaseOptions(reference, cyclePhaseDropDeferred ? localOverride.cycle_phase : null);');
+    expect(konce).toContain("node.addEventListener('change', onOverrideNumberCommitted);");
+    expect(konce).toContain("node.addEventListener('blur', onOverrideNumberCommitted);");
+    expect(konce).not.toContain('onOverrideChange');
+    const h = panel({ source: dziewczynka16() });
+    h.odswiez();
+    h.wpisz('miesiace', '3');
+    const rysowania = h.licznik.wynik;
+    for (let i = 0; i < 3; i += 1) h.zakoncz();
+    expect(h.licznik.wynik).toBe(rysowania);
+    expect(wytnij('    function onOverrideNumberCommitted() {', '\n    }\n')).not.toMatch(/refreshPatientContext|renderResults/);
   });
 });

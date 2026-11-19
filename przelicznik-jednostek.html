@@ -2414,25 +2414,54 @@
           p.ageUpperInclusive = amhAge.upperInclusive === true;
         }
       }
-      return p;
+      return applyReferenceAvailability(p);
     }
 
     /**
      * P-E2-MENARCHE (decyzje właściciela 2026-11-19) — wiek menarche dla estradiolu. Strona tylko PRZEKAZUJE
      * go silnikowi (pole `menarche_age_years`); o tym, czy wartość jest dopuszczalna i co z niej wynika
      * (zakresy dorosłej po progu lat od menarche), decyduje LabUnitConverter na podstawie danych estradiolu.
-     * Pierwszeństwo: wartość wpisana lokalnie w panelu „zmień” (tylko to sprawdzenie; pakiet badań jej nie ma),
-     * inaczej wiek menarche z danych bieżącej osoby (readPubertyPatientContext). Niczego nie zapisuje.
+     * Pierwszeństwo: wpis lokalny w panelu „zmień” (tylko to sprawdzenie; pakiet badań go nie ma), inaczej wiek
+     * menarche z danych bieżącej osoby (readPubertyPatientContext). Niczego nie zapisuje.
+     * local: null — pole puste; liczba — wpisana wartość; NaN — wpis, który nie jest zwykłą liczbą dziesiętną.
+     * Każdy niepusty wpis zastępuje wartość z danych; tego, którego silnik nie przyjmie, nie zastępuje nią z powrotem.
      */
     function applyMenarcheAge(p, source, local) {
       var fromData = source && source.sourceStatus === 'ready' && typeof source.menarcheAgeYears === 'number'
         && isFinite(source.menarcheAgeYears) ? source.menarcheAgeYears : null;
-      var typed = typeof local === 'number' && isFinite(local) ? local : null;
-      p.menarche_age_years = typed != null ? typed : fromData;
+      var typed = typeof local === 'number';
+      p.menarche_age_years = typed ? local : fromData;
       // Dla opisu pacjenta i podpowiedzi pola: wartość z danych i to, czy ją tu nadpisano.
       p._shared_menarche = fromData;
-      p._menarche_overridden = typed != null;
-      if (typed != null) p._has_override = true;
+      p._menarche_overridden = typed;
+    }
+
+    /**
+     * P-E2-MENARCHE — jedno miejsce, przez które lokalny wybór „Faza cyklu / ciąża” i lokalny wiek menarche
+     * trafiają do odbiorców pacjenta (wynik, opis, podpowiedzi, przypięcie, wykres — także LH i inhibina B).
+     * O dostępności rozstrzyga silnik (LabUnitConverter.referenceContext; jego lista niedostępnych wyborów nie
+     * zależy od wybranej fazy):
+     *  - wybór fazy niedostępny dla tego badania i pacjenta (postmenopauza poniżej granicy dorosłości; zwykła
+     *    faza w estradiolu przed progiem lat od menarche) NIE jest przekazywany — także w trakcie wpisywania
+     *    liczby, gdy zapamiętany wybór selektora jeszcze nie został skasowany (commitCyclePhaseAvailability);
+     *  - wpis lokalny wieku menarche liczy się jako nadpisanie tylko tam, gdzie pole dotyczy badania i pacjenta,
+     *    a jako wartość do pokazania („menarche 11,0”) tylko wtedy, gdy silnik go przyjął.
+     */
+    function referenceContextFor(patient) {
+      return typeof Conv !== 'undefined' && Conv && typeof Conv.referenceContext === 'function'
+        ? Conv.referenceContext(typeof currentSubstance !== 'undefined' && currentSubstance || null, patient) : null;
+    }
+    function applyReferenceAvailability(p) {
+      p._menarche_applied = false;
+      if (!p.cycle_phase && !p._menarche_overridden) return p;
+      var reference = referenceContextFor(p);
+      if (!reference) return p;
+      if (p.cycle_phase && reference.phases[p.cycle_phase]) p.cycle_phase = null;
+      var menarcheInUse = !!p._menarche_overridden && reference.menarche_applicable === true;
+      p._menarche_applied = menarcheInUse && reference.menarche_age_years != null;
+      p._has_override = !!(localOverride.sex || localOverride.age != null || localOverride.tanner != null
+        || p.cycle_phase || menarcheInUse);
+      return p;
     }
 
     /**
@@ -2896,7 +2925,8 @@
         bits.push(tannerTxt);
       }
       // P-E2-MENARCHE (R6): wiek menarche wpisany lokalnie w panelu „zmień” — wzór jak inne nadpisania lokalne.
-      if (p._menarche_overridden) bits.push('menarche ' + formatMenarcheAge(p.menarche_age_years));
+      // Tylko wpis, który dotyczy tego badania i pacjenta i który silnik przyjął (applyReferenceAvailability).
+      if (p._menarche_applied) bits.push('menarche ' + formatMenarcheAge(p.menarche_age_years));
       if (p.cycle_phase) bits.push(CYCLE_PHASE_SUMMARY[p.cycle_phase] || p.cycle_phase);
       var suffix = p._has_override ? ' · nadpisanie lokalne' : '';
       return { text: bits.join(' · ') + suffix, missing: false };
@@ -3012,33 +3042,32 @@
 
     /* P-E2-MENARCHE (decyzje właściciela 2026-11-19) — widok reguły, bez jej kopii. O tym, na jakiej podstawie
      * dobierany jest zakres, ile lat minęło od menarche i które wybory selektora „Faza cyklu / ciąża” są dostępne,
-     * strona pyta silnik (LabUnitConverter.referenceContext); próg, granica wieku i lista wyborów są w danych
-     * estradiolu (lab_units_data.js). Tutaj: opcje selektora, pole „Wiek menarche [lata]” i nota na końcu panelu. */
-    function referenceContextFor(patient) {
-      return currentSubstance && typeof Conv.referenceContext === 'function'
-        ? Conv.referenceContext(currentSubstance, patient) : null;
-    }
+     * strona pyta silnik (referenceContextFor → LabUnitConverter.referenceContext); próg, granica wieku i lista
+     * wyborów są w danych estradiolu (lab_units_data.js). Tutaj: opcje selektora, pole „Wiek menarche [lata]”
+     * i nota na końcu panelu. */
     // Pełna lista opcji selektora, w kolejności ze strony (zapamiętana przy pierwszym rysowaniu); niedostępne
     // opcje są z selektora wyjmowane, nie kasowane.
     var cycleOptionNodes;
-    // Wybór, który dla tego badania i pacjenta nie jest dostępny, wraca do „nieznana”: lokalne nadpisanie znika,
-    // zamiast zostawać jako ukryta albo wyszarzona wartość (R3: postmenopauza poniżej granicy dorosłości;
-    // R2: zwykła faza cyklu w estradiolu przed progiem lat od menarche).
-    // Wyjątek na czas wpisywania liczby w panelu (zdarzenie „input” pól wieku i wieku menarche): wiek „35”
-    // przechodzi przez „3”, a „65” przez „6” — niedokończony wpis nie odbiera wybranej fazy. Zgodność wyboru
-    // z silnikiem jest sprawdzana po zakończeniu wpisu (zdarzenia „change” i „blur”) i przy każdym innym
-    // odświeżeniu; silnik i tak nie użyje dla estradiolu wyboru, który nie jest dostępny.
-    var cyclePhaseDropDeferred = false;
-    function dropUnavailableCyclePhase(reference) {
+    // Zapamiętany wybór selektora, który dla tego badania i pacjenta nie jest dostępny, wraca do „nieznana”:
+    // lokalne nadpisanie znika, zamiast zostawać jako ukryta albo wyszarzona wartość (R3: postmenopauza poniżej
+    // granicy dorosłości; R2: zwykła faza cyklu w estradiolu przed progiem lat od menarche). Odbiorcy pacjenta
+    // i tak takiego wyboru nie dostają (applyReferenceAvailability). Zatwierdzenie robi każde odświeżenie opisu
+    // pacjenta POZA odświeżeniem w trakcie wpisywania liczby (zdarzenie „input” pól wieku i wieku menarche):
+    // wiek „65” przechodzi przez „6”, a „35” przez „3” — niedokończony wpis nie kasuje wybranej fazy, a dokończony
+    // do niej wraca. Wpis kończy wyjście z pola albo Enter („blur”, „change”).
+    var overrideNumberTyping = false;
+    function commitCyclePhaseAvailability() {
       var phase = localOverride.cycle_phase;
-      if (!phase || !reference || !reference.phases[phase]) return false;
+      if (!phase) return false;
+      var reference = referenceContextFor(getEffectivePatient());
+      if (!reference || !reference.phases[phase]) return false;
       localOverride.cycle_phase = null;
       if (overrideCycleEl) overrideCycleEl.value = '';
       return true;
     }
     // „Nie dotyczy” — opcji nie ma na liście; „bez wpływu” — opcja jest, ale nie da się jej wybrać. Ruszane są
     // wyłącznie opcje ze strony; lista zmienia się tylko wtedy, gdy zmienia się jej skład.
-    // kept: wybór zostawiony bez zmian na czas wpisywania liczby (patrz cyclePhaseDropDeferred).
+    // kept: zapamiętany wybór zostawiony na liście na czas wpisywania liczby (patrz overrideNumberTyping).
     function renderCyclePhaseOptions(reference, kept) {
       if (!overrideCycleEl) return;
       if (!cycleOptionNodes) cycleOptionNodes = Array.prototype.slice.call(overrideCycleEl.options);
@@ -3096,19 +3125,17 @@
 
     function renderPatientSummary() {
       syncPatientIdentity();
+      // P-E2-MENARCHE: najpierw zatwierdzenie dostępności zapamiętanego wyboru fazy — także dla badań z własnym
+      // formularzem (LH, FSH, inhibina B, testosteron), które wracają niżej przed opisem pacjenta.
+      if (!overrideNumberTyping) commitCyclePhaseAvailability();
       if (isPubertySubstance(currentSubstance)) {
         if (pubertyUI) pubertyUI.setPatientContext(readPubertyPatientContext());
         if (clinicalHintEl) { clinicalHintEl.textContent = ''; clinicalHintEl.style.display = 'none'; }
         return;
       }
       var p = getEffectivePatient();
-      // P-E2-MENARCHE: najpierw zgodność wyboru fazy z tym, co silnik uznaje za dostępne — dopiero potem opis.
       var reference = referenceContextFor(p);
-      if (!cyclePhaseDropDeferred && dropUnavailableCyclePhase(reference)) {
-        p = getEffectivePatient();
-        reference = referenceContextFor(p);
-      }
-      renderCyclePhaseOptions(reference, cyclePhaseDropDeferred ? localOverride.cycle_phase : null);
+      renderCyclePhaseOptions(reference, overrideNumberTyping ? localOverride.cycle_phase : null);
       renderMenarcheOverrideState(p, reference);
       var d = describePatient(p);
       patientTextEl.textContent = d.text;
@@ -6131,14 +6158,18 @@
       var tannerRaw = overrideTannerEl ? overrideTannerEl.value : '';
       var tannerNum = (tannerRaw === '' || tannerRaw == null) ? null : parseInt(tannerRaw, 10);
       if (tannerNum != null && (!isFinite(tannerNum) || tannerNum < 1 || tannerNum > 5)) tannerNum = null;
-      // P-E2-MENARCHE (R6): wiek menarche wpisany tutaj — tylko dla tego sprawdzenia; przecinek albo kropka
-      // jak w polu wyniku. Czy wartość jest dopuszczalna, rozstrzyga silnik.
-      var menarcheNum = overrideMenarcheEl ? Conv.parseNumber(overrideMenarcheEl.value) : NaN;
+      // P-E2-MENARCHE (R6): wiek menarche wpisany tutaj — tylko dla tego sprawdzenia. Każdy niepusty wpis jest
+      // nadpisaniem lokalnym. Liczbą jest wyłącznie zwykły zapis dziesiętny: cyfry i najwyżej jeden przecinek
+      // albo kropka z jednym lub dwoma miejscami (bez znaku, wykładnika, zapisu szesnastkowego i jednostek);
+      // inny wpis to NaN — wpis odrzucony. Czy liczba jest dopuszczalna, rozstrzyga silnik.
+      var menarcheText = overrideMenarcheEl ? String(overrideMenarcheEl.value).trim() : '';
+      var menarcheNum = menarcheText === '' ? null
+        : /^\d+(?:[.,]\d{1,2})?$/.test(menarcheText) ? Number(menarcheText.replace(',', '.')) : NaN;
       localOverride.sex = sexVal;
       localOverride.age = ageNum;
       localOverride.cycle_phase = cycleVal;
       localOverride.tanner = tannerNum;
-      localOverride.menarche = isFinite(menarcheNum) ? menarcheNum : null;
+      localOverride.menarche = menarcheNum;
       // Jeśli efektywna płeć to mężczyzna (czy z override, czy z shared),
       // czyścimy fazę cyklu — bo selektor jest schowany dla M, a stale cycle
       // wpływałby na wybór zakresu (np. follicular u "M" złamałby logikę).
@@ -6152,10 +6183,17 @@
         localOverride.menarche = null;
         if (overrideMenarcheEl) overrideMenarcheEl.value = '';
       }
-      // P-E2-MENARCHE: w trakcie wpisywania liczby („input”) wybrana faza nie jest odrzucana — dopiero
-      // zakończony wpis („change”, „blur”) rozstrzyga, czy wybór jest dla pacjenta dostępny.
-      cyclePhaseDropDeferred = !!(event && event.type === 'input');
-      try { refreshPatientContext(); } finally { cyclePhaseDropDeferred = false; }
+      // P-E2-MENARCHE: w trakcie wpisywania liczby („input”) zapamiętany wybór fazy i jego opcja zostają;
+      // wynik i opis już go nie używają, jeśli nie jest dostępny (applyReferenceAvailability).
+      overrideNumberTyping = !!(event && event.type === 'input');
+      try { refreshPatientContext(); } finally { overrideNumberTyping = false; }
+    }
+    // Koniec wpisywania liczby („change”: Enter albo wyjście z pola po zmianie; „blur”: każde wyjście z pola):
+    // zatwierdzenie dostępności zapamiętanego wyboru fazy i odświeżenie samego opisu pacjenta z selektorem.
+    // Wyniku nie trzeba — i nie wolno — rysować ponownie: pokazał właściwy stan już przy „input”, a wymiana jego
+    // węzłów między naciśnięciem a puszczeniem przycisku myszy gubiłaby pierwsze kliknięcie w wynik.
+    function onOverrideNumberCommitted() {
+      renderPatientSummary();
     }
 
     if (overrideSexEl) overrideSexEl.addEventListener('change', onOverrideChange);
@@ -6164,13 +6202,10 @@
     if (overrideCycleEl) overrideCycleEl.addEventListener('change', onOverrideChange);
     if (overrideTannerEl) overrideTannerEl.addEventListener('change', onOverrideChange);
     if (overrideMenarcheEl) overrideMenarcheEl.addEventListener('input', onOverrideChange);
-    // Koniec wpisywania liczby — zatwierdzenie („change”: Enter albo wyjście z pola po zmianie) i każde wyjście
-    // z pola („blur”, także gdy wartość wróciła do tej sprzed wpisywania): wtedy sprawdzana jest dostępność
-    // wybranej fazy.
     [overrideAgeEl, overrideAgeMonthsEl, overrideMenarcheEl].forEach(function (node) {
       if (!node) return;
-      node.addEventListener('change', onOverrideChange);
-      node.addEventListener('blur', onOverrideChange);
+      node.addEventListener('change', onOverrideNumberCommitted);
+      node.addEventListener('blur', onOverrideNumberCommitted);
     });
 
     // Atrybuty pomiaru

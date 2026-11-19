@@ -2083,7 +2083,7 @@ Wiersze `reference_ranges_si`, jednostki, `default_range_si` i `LabUnitsData.ver
 
 Dla każdego badania poza estradiolem `selectRange` i `evaluate` dają wyniki identyczne jak przed zmianą (macierz 33 badań × 4992 kontekstów, `tests/unit/lab-e2-menarche.test.mjs`).
 
-`vilda_lab_packages.js` (czytelne źródło, model 1.7.0 → 1.8.0, widok 1.9.0 → 1.10.0): `evaluateRow` zapamiętuje w `row.contextBasis` zdanie silnika `evaluation.reference_basis_pl`, gdy wynik wymaga kontekstu badania; `drawCard` rysuje je drugą notą `.lab-pkg-card-note` pod zdaniem o kontekście i uwzględnia w podpisie przerysowania karty.
+`vilda_lab_packages.js` (czytelne źródło, model 1.7.0 → 1.8.0, widok 1.9.0 → 1.10.0): `evaluateRow` zapamiętuje w `row.contextBasis` zdanie silnika `evaluation.reference_basis_pl`, gdy wynik wymaga kontekstu badania; `drawCard` rysuje je drugą notą `.lab-pkg-card-note` pod zdaniem o kontekście i uwzględnia w podpisie przerysowania karty. Gałąź `if (!view.lab) { … }` dostała klamry, żeby `else if (view.replaced)` nadal należało do niej (nota o zastąpionym badaniu bez zmian).
 
 `przelicznik-jednostek.html` (czytelny skrypt strony):
 
@@ -2092,12 +2092,22 @@ Dla każdego badania poza estradiolem `selectRange` i `evaluate` dają wyniki id
 //                        <p id="labOverrideMenarcheNote" class="lab-override-note" role="status" hidden>
 // readPubertyPatientContext: context.menarcheAgeYears — tylko gdy wiek menarche jest wpisany (ta sama kolejność źródeł co początek pokwitania)
 // applyMenarcheAge(p, source, local): p.menarche_age_years (pole lokalne > dane), p._shared_menarche, p._menarche_overridden;
+//    local: null = pole puste, liczba = wpis, NaN = wpis, który nie jest zwykłą liczbą dziesiętną (zastępuje dane, silnik go nie przyjmie);
 //    wołane w bloku estradiolu getEffectivePatient (z localOverride.menarche) i getPackagePatient (bez wpisu lokalnego)
+// referenceContextFor(pacjent) → LabUnitConverter.referenceContext(wybrane badanie, pacjent)
+// applyReferenceAvailability(p) — ostatni krok getEffectivePatient, jedno miejsce dla wszystkich odbiorców pacjenta:
+//    wybór fazy niedostępny wg silnika → p.cycle_phase = null (zapamiętany localOverride.cycle_phase zostaje);
+//    p._menarche_applied (wpis dotyczy badania i pacjentki i silnik go przyjął) oraz p._has_override
 // localOverride.menarche: czyszczone w resetLocalPatientOverride, przy zmianie płci w updateLifespan i dla płci M w onOverrideChange
-// describePatient: CYCLE_PHASE_SUMMARY (ciąża słowami), „menarche 11,0” przez formatMenarcheAge
+// describePatient: CYCLE_PHASE_SUMMARY (ciąża słowami); „menarche 11,0” (formatMenarcheAge) tylko przy p._menarche_applied
 // buildClinicalHint: wiersz reference.basis_pl (+ dopisek o „Zmień ▼" przy nieznanej fazie)
-// przed renderPatientSummary: referenceContextFor, dropUnavailableCyclePhase, cyclePhaseDropDeferred, renderCyclePhaseOptions, renderMenarcheOverrideState
-// onOverrideChange(event): wpis pola przez Conv.parseNumber; zdarzenie „input” odracza odrzucenie wybranej fazy do „change”/„blur”
+// przed renderPatientSummary: overrideNumberTyping, commitCyclePhaseAvailability, renderCyclePhaseOptions, renderMenarcheOverrideState
+// renderPatientSummary: commitCyclePhaseAvailability() PRZED wcześniejszym powrotem dla badań z własnym formularzem
+//    (LH, FSH, inhibina B, testosteron) — poza odświeżeniem w trakcie wpisywania liczby
+// onOverrideChange(event): wpis pola — po obcięciu spacji /^\d+(?:[.,]\d{1,2})?$/, inaczej NaN; zdarzenie „input”
+//    ustawia overrideNumberTyping na czas odświeżenia (zapamiętany wybór fazy i jego opcja zostają)
+// onOverrideNumberCommitted: „change” i „blur” pól wieku, miesięcy i wieku menarche → tylko renderPatientSummary()
+//    (zatwierdza wybór i odświeża opis; nie rysuje wyniku, żeby kliknięcie w wynik po wyjściu z pola nie ginęło)
 ```
 
 Strona nie ma kopii reguły: próg, granicę wieku, zakres wieku menarche i listę niedostępnych wyborów bierze z odpowiedzi `LabUnitConverter.referenceContext`.

@@ -66,6 +66,40 @@ export async function wczytajOsobe(page, dane, { sesja = true } = {}) {
   return patientId;
 }
 
+/**
+ * Przelicznik bez sejfu („Korzystaj bez logowania”): dane pacjenta są wyłącznie w danych wspólnych karty, a ta sama
+ * osoba (bez identyfikatora) może je zmienić — np. płeć albo wiek poprawione w formularzu głównym.
+ */
+export async function otworzGoscia(page) {
+  await bezBaneraZgody(page);
+  await page.route('**/*', (route) => route.request().url().startsWith('http://127.0.0.1:') ? route.continue() : route.abort());
+  await page.addInitScript(() => {
+    localStorage.setItem('vilda-terms-accepted-v1', JSON.stringify({ version: 1, acceptedAtISO: new Date().toISOString() }));
+    const d = new Date();
+    const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    for (const klucz of ['shown', 'closed']) localStorage.setItem(`vilda-reminders-${klucz}-v1`, `${iso}|${Date.now()}`);
+  });
+  await page.goto('/przelicznik-jednostek.html', { waitUntil: 'load' });
+  await page.waitForFunction(() => window.VildaPersistence && window.LabUnitConverter && window.VildaHormoneLifespanRuntime);
+}
+
+/** Dane wspólne karty w trybie bez sejfu: { plec = 'F', lata, miesiace = 0, menarche = null }. */
+export async function daneGoscia(page, dane) {
+  await page.evaluate((dane) => {
+    const user = { name: 'Fikcyjna Gościnna', sex: dane.plec || 'F', age: dane.lata, ageMonths: dane.miesiace || 0 };
+    if (dane.menarche != null) user.puberty = { menarcheAgeYears: dane.menarche };
+    if (!window.VildaPersistence.writeShared(user, { force: true })) throw new Error('Nie zapisano fikcyjnych danych wspólnych');
+    document.dispatchEvent(new CustomEvent('vilda:session-changed'));
+  }, dane);
+}
+
+/** Tekst karty „Hormony w ciągu życia” (to, co widać), albo null, gdy karta jest schowana. */
+export const wykresHormonow = (page) => page.evaluate(() => {
+  const karta = document.getElementById('labHormoneLifespan');
+  if (!karta || !karta.getClientRects().length) return null;
+  return karta.innerText.replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim();
+});
+
 export async function wybierzBadanie(page, id, szukaj, wartosc = null) {
   await page.locator('#labSubstance').fill(szukaj);
   await page.locator(`#labSubstanceDropdown .lab-substance-option[data-id="${id}"]`).click();
@@ -82,7 +116,7 @@ export async function otworzPanel(page) {
   await expect(page.locator('#labPatientOverride')).toBeVisible();
 }
 
-const czysty = (tekst) => String(tekst || '').replace(/ /g, ' ').replace(/\s+/g, ' ').trim();
+const czysty = (tekst) => String(tekst || '').replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim();
 
 /** Stan kroku „Pacjent” i wyniku — to, co widzi lekarz (twarde spacje jako zwykłe). */
 export async function stan(page) {
