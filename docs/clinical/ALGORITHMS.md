@@ -44230,6 +44230,62 @@ tekstem — w Karcie zamiast w DocPro. Dopisek monitora o listach pojawia się r
 **Wdrożenie.** Od razu przy wydaniu; sejf bez zmian. **Cofnięcie** = rewert PR: Karta znów porównuje dosłowny tekst
 leku i substancji.
 
+## Dawka leczenia otyłości: przecinek dziesiętny i podpowiedzi z ChPL (P-OTYLOSC-DAWKA, SW 1.1.558, `vilda_cykle_leczenia.js` 10, `obesity_therapy_monitor.js` 32, `obesity_therapy.js` 13, `vilda_auth_ui.js` 573, `inline_docpro_01.css` 7, 2026-11-19)
+
+**Decyzja właściciela** (2026-11-19, temat B): „Przecinek + podpowiedzi”. Bez dopisywania jednostek do starych
+wpisów i bez obowiązkowej jednostki.
+
+**Problem.** Dawkę wpisuje się w monitorze DocPro jako wolny tekst (podpowiedź „np. 2,4 mg”). W zapisie bywa „2,4”,
+„0.25” albo „2,4 mg / tydz.”, a Karta pokazywała dokładnie wpisany tekst: raz z kropką, raz bez jednostki.
+
+**Zapis bez zmian.** Dawka zapisuje się tak, jak ją wpisano. Z tekstu dawki liczy tylko wykres dawki w Karcie (pierwsza
+liczba, przecinek albo kropka — `El` w `vilda_auth_ui.js`); ocena wg ChPL dawki nie czyta (kotwica dawki
+podtrzymującej nie jest podawana — okno liczy się od czasu nominalnego). Zmiana dotyczy tylko widoku i wpisywania.
+
+**Widok** — `VildaDziennikOtylosci.dawkaPL`: kropka dziesiętna między cyframi → przecinek („0.25” → „0,25”), reszta
+tekstu bez zmian. Używają jej:
+- Karta pacjenta: wiersze „Wpisy leczenia”, okno wyboru wersji wpisu, „Aktualna dawka” w podsumowaniu „Leczenie
+  otyłości”; okno „+ Kontynuacja” podstawia dawkę ostatniego wpisu z przecinkiem („Popraw” zostawia tekst wpisu);
+- monitor DocPro: kolumna „Dawka” w tabeli punktów.
+
+**Podpowiedzi** — `VildaDziennikOtylosci.podpowiedziDawek(eskalacja, czestosc)`: pod polami formularza monitora
+przyciski z dawkami z tabeli zwiększania dawki ChPL wybranego leku (`products[…].dosing.escalation` i `frequency`
+w `obesity_therapy.js` — to samo źródło co zalecenia w module leczenia otyłości; dane dawek bez zmian):
+- wiersz z jedną dawką („0,25 mg”, „3,0 mg / dobę”, „2 tabl. rano + 1 tabl. wieczorem”) — przycisk; lek
+  1×/tydz. dostaje „ / tydz.” (jak w zapisie „2,4 mg / tydz.”); kliknięcie wpisuje dawkę w pole „Dawka”, a pasujący
+  przycisk jest wciśnięty (`aria-pressed`);
+- wiersz bez jednej dawki („5, 10 lub 15 mg”, „+2,5 mg co ≥4 tyg.”) — zdanie pod przyciskami, z uwagą z tabeli;
+- uwaga przy dawce spoza zwykłego schematu (np. 7,2 mg: „tylko dorośli z wyjściowym BMI ≥30 kg/m²…”) — zdanie pod
+  przyciskami; zwykłe opisy („dawka początkowa”, „dawka podtrzymująca”) — w dymku przycisku;
+- pole zostaje wolnym tekstem („Kliknij, aby wpisać dawkę, albo wpisz inną w polu „Dawka””). Bez leku na liście —
+  nic się nie pokazuje. Monitor dokumentuje stan faktyczny, więc przyciski nie zależą od wieku (jak wybór leku).
+
+**Przypadki syntetyczne** (dane fikcyjne; Testowa Zuzanna, 13 l., Wegovy; dawki zapisane „0.25” i „2.4”):
+
+| Wejście | Oczekiwany wynik |
+|---|---|
+| tabela punktów w monitorze | „0,25”, „2,4” |
+| lista leku: Wegovy | przyciski 0,25 / 0,5 / 1,0 / 1,7 / 2,4 / 7,2 mg / tydz.; zdanie „7,2 mg / tydz. — tylko dorośli…” |
+| klik „1,7 mg / tydz.” | pole „Dawka” = „1,7 mg / tydz.”, przycisk wciśnięty; własny tekst — żaden wciśnięty |
+| Saxenda | 0,6 / 1,2 / 1,8 / 2,4 / 3,0 mg / dobę |
+| Mounjaro | 2,5 i 5 mg / tydz.; zdania „Dalej (w razie potrzeby): +2,5 mg co ≥4 tyg. (…)”, „Podtrzymująco: 5, 10 lub 15 mg (maks. 15 mg 1×/tydz.)” |
+| Mysimba | „1 tabl. rano” … bez „/ tydz.”; „… — maks. 4 tabl./dobę” |
+| bez leku | brak podpowiedzi |
+| Karta: „Wpisy leczenia”, „Aktualna dawka” | „Włączenie · 0,25”, „Kontynuacja · 2,4”, „2,4”; w sejfie nadal „0.25”, „2.4” |
+| telefon 390 px | przyciski ≥ 44 px, bez poziomego przewijania |
+
+**Wpływ kliniczny.** Brak zmiany wyników, ocen, progów i danych dawek. Zmienia się zapis liczby w widoku (przecinek)
+i pojawia się podpowiedź dawek z istniejącej tabeli ChPL.
+
+**Testy.** Dane wyłącznie fikcyjne.
+- `tests/unit/otylosc-dawka.test.mjs`: `dawkaPL`, `podpowiedziDawek` na produkcyjnym module (Wegovy, Saxenda,
+  Mounjaro, Mysimba, puste i powtórzone wiersze); tabele w teście = wiersze `dosing.escalation` w `obesity_therapy.js`.
+- e2e `tests/e2e/otylosc-dawka.spec.mjs`: DW-1 monitor (tabela, przyciski czterech leków, klik, edycja punktu),
+  DW-2 Karta (wiersze, podsumowanie, sejf bez zmian), DW-3 telefon.
+
+**Wdrożenie.** Od razu przy wydaniu; sejf bez zmian. **Cofnięcie** = rewert PR: dawka znów dokładnie jak wpisana,
+bez podpowiedzi.
+
 ## Dziennik zdarzeń: odsyłanie wpisów Kosza po zastosowaniu zmiany z innego urządzenia — uśpione (P-ZBIEZNOSC-ZDARZEN, E3-PR0d, SW 1.1.558, `vilda_vault.js` 282, 2026-11-19)
 
 **Zmiana kliniczna: NIE (uśpiona).** Wzory, progi, jednostki, interpretacje, reguły scalania (`Le`), format kopii,
