@@ -44058,7 +44058,7 @@ seria to nadal pomiary wizyt; ta zmiana dotyczy wyłącznie kontekstu leczenia.
 
 **Wdrożenie.** Od razu przy wydaniu; sejf bez zmian. **Cofnięcie** = rewert PR: kursy znów z zapisu wizyty.
 
-## Leczenie otyłości — etap 2: z Karty pacjenta prosto do monitora DocPro (P-OTYLOSC-SKOK, SW 1.1.555, `vilda_cykle_leczenia.js` 8, `gh_therapy_monitor.js` 64, `obesity_therapy_monitor.js` 30, `vilda_auth_ui.css` 85, `inline_docpro_01.css` 6, 2026-11-19)
+## Leczenie otyłości — etap 2: z Karty pacjenta prosto do monitora DocPro (P-OTYLOSC-SKOK, SW 1.1.556, `vilda_cykle_leczenia.js` 8, `gh_therapy_monitor.js` 64, `obesity_therapy_monitor.js` 30, `vilda_auth_ui.css` 85, `inline_docpro_01.css` 6, 2026-11-19)
 
 **Decyzje właściciela (2026-11-19, makieta etapu 2).**
 - Przycisk w Karcie ma od razu otworzyć punkt do edycji w monitorze DocPro, bez szukania go.
