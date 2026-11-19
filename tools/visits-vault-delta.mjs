@@ -6,7 +6,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const BASE = '22f7d1f27f71ea7cb01304cc048b885159d04cc237431d842064ddd3d199e86f';
+const BASE = 'f2ed61ad644d3194223bc71841bb5a50c39c47ff978e69d26aca205081cf1974';
 const START = '/* BEGIN VILDA DURABLE VISITS V1 */\n';
 const END = '/* END VILDA DURABLE VISITS V1 */\n';
 const TOKEN = '{{VILDA_DURABLE_VISITS_FRAGMENT}}';

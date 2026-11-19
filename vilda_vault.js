@@ -6690,9 +6690,10 @@ async function Bsl_usunPacjenta(patientId, deletedAtISO, opcje, ctx) {const Pati
  * w emiterach hakow i miejscach zapisu oraz kroki operacji zlozonych; z czesci c takze przeglad kolejki na poczatku
  * odblokowania, pary encji scalanych z chmury w Le i haki scalania: przegrany nagrobek karty w Le i Bsl_usunPacjenta,
  * ratunek notatki w Bnp_ratuj), poza tym dostep tylko przez zamrozony obiekt
- * Bev_EKSPORT w eksporcie sejfu (testy i kolejne etapy). Zastosowanie zdarzenia z odsylaniem poprawionych wizyt (E3-PR0c):
- * applyEncryptedEvent w eksporcie wskazuje funkcje czesci c, uspiona przelacznikiem odsylania (klucz vilda-event-echo-v1
- * = "1" w pamieci przegladarki albo pole okna VILDA_EVENT_ECHO === true); przy wylaczonym — Bev_zastosuj jak dotad.
+ * Bev_EKSPORT w eksporcie sejfu (testy i kolejne etapy). Zastosowanie zdarzenia z odsylaniem poprawionych wizyt (E3-PR0c)
+ * i wpisow Kosza (E3-PR0d): applyEncryptedEvent w eksporcie wskazuje funkcje czesci c, uspiona przelacznikiem odsylania
+ * (klucz vilda-event-echo-v1 = "1" w pamieci przegladarki albo pole okna VILDA_EVENT_ECHO === true); przy wylaczonym —
+ * Bev_zastosuj jak dotad.
  * Bez bramki: sprzatanie po koncie, czesc a oraz kasowanie bazy i podsumowanie wyniku z czesci b; reszta
  * czesci b konczy sie na bramce — bez otwarcia bazy kolejki, szyfrowania i zadan sieci. Sprzatanie po koncie przy
  * zamknietej bramce konczy sie na liscie baz (bez listy — na kasowaniu bazy, ktorej nie ma, bez otwarcia; w trybie
@@ -6701,8 +6702,8 @@ async function Bsl_usunPacjenta(patientId, deletedAtISO, opcje, ctx) {const Pati
  * walidacja koperty (Bev_sprawdz), rozmiar szyfrogramu (Bev_bajty), 14 builderow czytajacych sklep (chwile tylko
  * z rekordow, nigdy z zegara), szyfrowanie kluczem glownym bez AAD i bez kompresji (Bev_szyfruj) oraz zastosowanie
  * zaszyfrowanego zdarzenia ze statusem (Bev_zastosuj; z kolektorem z czesci c — Bev_zastosujZEchem: odczyt stanu wersji
- * kandydatow z ladunku przed scaleniem i po nim przez strzezony adapter, bez zapisow, i lista wersji do odeslania). Bledy
- * bloku niosa kod i staly komunikat — nigdy tresci ani komunikatu bledu odszyfrowania.
+ * i wpisow Kosza kandydatow z ladunku przed scaleniem i po nim przez strzezony adapter, bez zapisow, oraz listy wersji
+ * i wpisow Kosza do odeslania). Bledy bloku niosa kod i staly komunikat — nigdy tresci ani komunikatu bledu odszyfrowania.
  * Czesc b (ponizej znacznika magazynu): magazyn kolejki i kwarantanny vilda_sync_<userId> (schemat wersji 1), za bramka
  * (pole okna VILDA_EVENT_LOG === true), tylko tryb prywatny, czyste podsumowanie wyniku zastosowania zdarzenia oraz
  * sprzatanie po koncie (kasowanie kolejki konta, identyfikatora urzadzenia i znacznika ponowienia; koordynacja kart
@@ -6710,8 +6711,9 @@ async function Bsl_usunPacjenta(patientId, deletedAtISO, opcje, ctx) {const Pati
  * Czesc c (ponizej znacznika emisji): emisja zmian do kolejki z miejsc zapisu — przy zamknietej bramce jeden odczyt
  * pola okna na zmiane i nic wiecej; przeglad kolejki (sweepOutbox) — przy zamknietej bramce jeden odczyt pola przy
  * odblokowaniu i jeden przy scaleniu z chmury; haki scalania — jeden odczyt pola na przegrany nagrobek karty i na ratunek
- * notatki; odsylanie poprawionych wizyt (applyEncryptedEvent, E3-PR0c) — przy wylaczonym przelaczniku odsylania jeden
- * odczyt przelacznika i nic wiecej, przy wlaczonym jeden odczyt pola bramki przed zastosowaniem.
+ * notatki; odsylanie poprawionych wizyt i wpisow Kosza (applyEncryptedEvent, E3-PR0c, E3-PR0d) — przy wylaczonym
+ * przelaczniku odsylania jeden odczyt przelacznika i nic wiecej, przy wlaczonym jeden odczyt pola bramki przed
+ * zastosowaniem.
  * Opis: docs/clinical/ALGORITHMS.md, wpis P-DZIENNIK-ZDARZEN. */
 const Bev_RODZAJE = Object.freeze(['snap', 'pfull', 'ptomb', 'stomb', 'pnote', 'pnotetomb', 'note', 'notetomb', 'plist',
   'plisttomb', 'pref', 'pk', 'pktomb', 'cred']);
@@ -7299,9 +7301,9 @@ async function Bev_szyfruj(koperta) {
 // scalanie co przy deltach (Le bez opcji); statusy: applied (result: liczniki scalania), unreadable (reason: envelope,
 // format — z albo aad rozne od 0, decrypt, shape; zero zapisow), locked, session-changed, busy (code), apply-error
 // (code; oryginalny wyjatek jako niewyliczalne pole error, do sladu — nie do zapisu). Zaden wynik nie niesie komunikatu
-// bledu ani tresci. Drugi argument Bev_zastosuj (kolektor odsylania, E3-PR0c) podaje wylacznie czesc emisji przy
-// wlaczonym przelaczniku odsylania: koperta zdarzenia (ladunek z polem event) idzie wtedy przez Bev_zastosujZEchem; bez
-// kolektora albo bez pola event (stara delta) — jak dotad.
+// bledu ani tresci. Drugi argument Bev_zastosuj (kolektor odsylania wersji i wpisow Kosza, E3-PR0c, E3-PR0d) podaje
+// wylacznie czesc emisji przy wlaczonym przelaczniku odsylania: koperta zdarzenia (ladunek z polem event) idzie wtedy
+// przez Bev_zastosujZEchem; bez kolektora albo bez pola event (stara delta) — jak dotad.
 function Bev_wynik(status) {
   return { status: status };
 }
@@ -7476,7 +7478,8 @@ function Bev_pary(t) {
 // ── Odsylanie poprawionych wizyt (E3-PR0c, P-ZBIEZNOSC-ZDARZEN) ── zastosowanie koperty zdarzenia z kolektorem z czesci
 // emisji: odczyt stanu wersji kandydatow z ladunku przed scaleniem i po nim przez strzezony adapter (bez zapisow i bez
 // zegara), porownanie w ksztalcie elementu eksportu i lista { patientId, snapshotId } wersji do odeslania (same
-// identyfikatory, bez tresci). Reguly scalania bez zmian.
+// identyfikatory, bez tresci). Reguly scalania bez zmian. Odsylanie wpisow Kosza tych samych kandydatow (E3-PR0d) — nizej,
+// po Bev_echo.
 // Pola zapisywane zawsze przez biezaca wersje, gdy jest ich rodzic (tozsamosc wizyty; ta sama lista co POLA_ZAWSZE.snap
 // licznika odsylania w testach).
 const Bev_ECHO_ZAWSZE = Object.freeze(['payload.visit']);
@@ -7621,16 +7624,140 @@ async function Bev_echo(k, przed, po) {
     return bledu();
   }
 }
-// Zastosowanie koperty zdarzenia z kolektorem kol: stan kandydatow przed, scalanie jak w Bev_zastosuj, stan po, potem
-// kol.echo (lista z Bev_echo) i kol.s (sesja scalania) — tylko gdy scalanie ruszylo w tej sesji (applied albo wyjatek
-// scalania zamieniony na busy lub apply-error). Zmiana sesji albo zablokowany sejf (takze gdy z tego powodu zawiodl
-// odczyt), usuwanie konta albo niedostepny straznik tozsamosci chronionego sejfu w trakcie odczytu przed — koniec bez
-// scalania (status jak po zmianie sesji, a przy strazniku — busy z kodem, jak dotad zwraca scalanie; zdarzenie zostaje
-// do ponowienia); inny blad odczytu przed — scalanie i porownanie bez stanu przed. W trakcie scalania albo odczytu po —
-// bez kolektora. Statusy jak w Bev_zastosuj; nigdy wyjatek.
+// ── Odsylanie wpisow Kosza (E3-PR0d, P-ZBIEZNOSC-ZDARZEN) ── po zastosowaniu koperty zdarzenia: odczyt surowych wpisow
+// Kosza kandydatow (te same identyfikatory co wersje) z metadanych konta przed scaleniem i po nim przez strzezony
+// adapter (bez zapisow i bez zegara), porownanie w postaci wysylkowej po kanonie i lista snapshotId wpisow do odeslania
+// (same identyfikatory, bez tresci). Pola wpisu zapisywane zawsze przez biezaca wersje, gdy jest ich rodzic (tozsamosc
+// wizyty; ta sama lista co POLA_ZAWSZE.stomb licznika odsylania w testach).
+const Bev_ECHO_ZAWSZE_KOSZA = Object.freeze(['visitIdentity', 'payload.visit']);
+// Sciezki zdejmowane w kanonie wpisu: opis zalezny od kolejnosci scalen (D7), seq i postac gwiazdki w tresci (R4n).
+const Bev_KANON_KOSZA = Object.freeze(['rev', 'updatedAtISO', 'zmianaISO', 'koszISO', 'revPary', 'seq',
+  'payload._pinned', 'payload._pinnedState']);
+// Wpisy Kosza z ladunku: snapshotId -> kopie elementow snapshotTombstones[] w kolejnosci ladunku (funkcja czysta).
+function Bev_kandydaciKosza(t) {
+  const m = new Map();
+  (Array.isArray(t.snapshotTombstones) ? t.snapshotTombstones : []).forEach(function (e) {
+    if (!Bev_obiekt(e) || !Bev_id(e.snapshotId)) return;
+    if (!m.has(e.snapshotId)) m.set(e.snapshotId, []);
+    m.get(e.snapshotId).push(Bev_kopia(e));
+  });
+  return m;
+}
+// Stan wpisow Kosza kandydatow: kopie surowych elementow listy Kosza z metadanych konta po snapshotId (bez odszyfrowania)
+// przez strzezony adapter (Bev_start: od poczatku removeUser tego konta — SYNC_DB_DELETED); sesja zastosowania s
+// sprawdzana przed adapterem i po odczycie.
+async function Bev_stanKosza(ids, s) {
+  Bses_pilnuj(s);
+  const c = Bev_start(null);
+  const meta = await c.a.getUserMeta(c.u);
+  Bses_pilnuj(s);
+  const lista = Bev_obiekt(meta) && Array.isArray(meta.snapshotTombstones) ? meta.snapshotTombstones : [];
+  const m = new Map();
+  ids.forEach(function (v) {
+    m.set(v, lista.filter(function (e) { return Bev_obiekt(e) && e.snapshotId === v; }).map(Bev_kopia));
+  });
+  return { c: c, m: m };
+}
+// Kanon listy wpisow: kazdy element bez sciezek Bev_KANON_KOSZA, lista posortowana po Bev_json (funkcja czysta).
+function Bev_kanonKosza(lista) {
+  return lista.map(function (e) {
+    let x = e;
+    Bev_KANON_KOSZA.forEach(function (s) { x = Bev_bezPola(x, s); });
+    return x;
+  }).sort(function (x, y) {
+    const a = Bev_json(x);
+    const b = Bev_json(y);
+    return a < b ? -1 : a > b ? 1 : 0;
+  });
+}
+// Samo wygasniecie tresci po 30 dniach (ref i po w kanonie): ref bez payload w elementach, ktorych odpowiednik po (ta
+// sama karta) tresci nie ma, a ref ma — rowne po; tylko gdy cos zdjeto (funkcja czysta). Lista Kosza na dysku trzyma
+// tresc do pierwszego zapisu po granicy, a kazde scalanie zapisuje liste wyczyszczona chwila zegara: samo zdjecie
+// tresci nie jest zmiana do odeslania — ani wzgledem stanu przed, ani wzgledem wpisu z ladunku; porownanie bez zegara.
+function Bev_samoWygasniecie(ref, po) {
+  let zdjete = false;
+  const r = ref.map(function (e) {
+    const b = po.find(function (x) { return x.patientId === e.patientId; });
+    if (!b || Bev_ma(b, 'payload') || !Bev_ma(e, 'payload')) return e;
+    zdjete = true;
+    return Bev_bezPola(e, 'payload');
+  });
+  return zdjete && Bev_json(Bev_kanonKosza(r)) === Bev_json(po);
+}
+// Regula pola dla wpisu: elementy po (w kanonie) bez sciezek Bev_ECHO_ZAWSZE_KOSZA nieobecnych w elemencie ladunku P tej
+// samej karty; element bez pary w P bez zmian; wynik w kanonie (funkcja czysta).
+function Bev_echoKoszaT(po, P) {
+  return Bev_kanonKosza(po.map(function (e) {
+    const p = P.find(function (x) { return Bev_obiekt(x) && x.patientId === e.patientId; });
+    if (!p) return e;
+    let x = e;
+    Bev_ECHO_ZAWSZE_KOSZA.forEach(function (s) {
+      if (Bev_pole(p, s) === undefined) x = Bev_bezPola(x, s);
+    });
+    return x;
+  }));
+}
+// Wpisy Kosza do odeslania (ids — kandydaci; kk — wpisy z ladunku; przed, po — stan wpisow): po scaleniu jest wpis tej
+// wersji; surowe elementy przed != po (inaczej bez odszyfrowania); postac wysylkowa w kanonie przed != po i nie samo
+// wygasniecie tresci; wpisu nie ma w ladunku albo po regule pola != wpis z ladunku (oba w kanonie) i nie samo
+// wygasniecie. Bledy osobno dla kazdego kandydata: stan przed nieznany albo nieczytelny — bez porownania z przed;
+// nieczytelna tozsamosc wpisu po albo blad porownania — odeslanie tego kandydata. Caly odczyt po zawiodl albo blad poza
+// kandydatem — kazdy kandydat (klucz bez wpisu nie daje wiersza przy dopisaniu). Nigdy nie rzuca.
+async function Bev_echoKosza(ids, kk, przed, po) {
+  if (!po || !po.m) return ids.slice();
+  try {
+    const out = [];
+    for (let i = 0; i < ids.length; i += 1) {
+      const v = ids[i];
+      const b = po.m.get(v) || [];
+      if (!b.length) continue;
+      const a = przed && przed.m ? przed.m.get(v) || [] : null;
+      if (a && Bev_json(a.map(Bev_json).sort()) === Bev_json(b.map(Bev_json).sort())) continue;
+      try {
+        const wb = [];
+        for (const e of b) wb.push(await Bev_wpisKosza(po.c, e));
+        const kb = Bev_kanonKosza(wb);
+        let ka = null;
+        if (a) {
+          try {
+            const wa = [];
+            for (const e of a) wa.push(await Bev_wpisKosza(przed.c, e));
+            ka = Bev_kanonKosza(wa);
+          } catch (x) {
+            ka = null;
+          }
+        }
+        if (ka && (Bev_json(ka) === Bev_json(kb) || Bev_samoWygasniecie(ka, kb))) continue;
+        const P = kk.get(v);
+        if (P) {
+          const kP = Bev_kanonKosza(P);
+          const kT = Bev_echoKoszaT(kb, P);
+          if (Bev_json(kT) === Bev_json(kP) || Bev_samoWygasniecie(kP, kT)) continue;
+        }
+      } catch (x) {
+        // nieczytelna tozsamosc wpisu po albo blad porownania — odeslanie tego kandydata
+      }
+      out.push(v);
+    }
+    return out;
+  } catch (x) {
+    return ids.slice();
+  }
+}
+// Zastosowanie koperty zdarzenia z kolektorem kol: stan kandydatow przed (wersje, potem wpisy Kosza), scalanie jak
+// w Bev_zastosuj, stan po (wersje, potem wpisy Kosza), potem kol.echo (lista z Bev_echo), kol.kosz (lista z
+// Bev_echoKosza) i kol.s (sesja scalania) — tylko gdy scalanie ruszylo w tej sesji (applied albo wyjatek scalania
+// zamieniony na busy lub apply-error). Zmiana sesji albo zablokowany sejf (takze gdy z tego powodu zawiodl odczyt),
+// usuwanie konta albo niedostepny straznik tozsamosci chronionego sejfu w trakcie odczytu przed (wersji albo wpisow
+// Kosza) — koniec bez scalania (status jak po zmianie sesji, a przy strazniku — busy z kodem, jak dotad zwraca scalanie;
+// zdarzenie zostaje do ponowienia); inny blad odczytu przed — scalanie i porownanie bez tego stanu przed. W trakcie
+// scalania albo odczytu po — bez kolektora; usuwanie konta w odczycie po (wersji albo wpisow Kosza) — bez odsylania
+// wersji i wpisow. Statusy jak w Bev_zastosuj; nigdy wyjatek.
 async function Bev_zastosujZEchem(tresc, s, kol) {
   const k = Bev_kandydaciEcha(tresc);
+  const kk = Bev_kandydaciKosza(tresc);
   let przed = null;
+  let koszPrzed = null;
   if (k.ids.length) {
     let bladOdczytu = null;
     try {
@@ -7644,6 +7771,18 @@ async function Bev_zastosujZEchem(tresc, s, kol) {
     const kod = bladOdczytu ? bladOdczytu.code : null;
     if (kod === 'SYNC_DB_DELETED') return Bev_wynik('session-changed');
     if (kod === 'PATIENT_AUTHORITY_UNAVAILABLE') return { status: 'busy', code: kod };
+    let bladKosza = null;
+    try {
+      koszPrzed = await Bev_stanKosza(k.ids, s);
+      koszPrzed.c.strzez();
+    } catch (x) {
+      bladKosza = x;
+      koszPrzed = { m: null };
+    }
+    if (Bses_zmieniona(s)) return Bev_poSesji();
+    const kodK = bladKosza ? bladKosza.code : null;
+    if (kodK === 'SYNC_DB_DELETED') return Bev_wynik('session-changed');
+    if (kodK === 'PATIENT_AUTHORITY_UNAVAILABLE') return { status: 'busy', code: kodK };
   }
   let wynik;
   let blad = null;
@@ -7654,16 +7793,29 @@ async function Bev_zastosujZEchem(tresc, s, kol) {
     blad = { x: x };
   }
   if (k.ids.length && !Bses_zmieniona(s)) {
-    let po;
+    let usuwane = false;
+    let po = null;
+    let koszPo = null;
     try {
       po = await Bev_stanEcha(k.ids, s);
     } catch (x) {
-      po = x && x.code === 'SYNC_DB_DELETED' ? null : { m: null };
+      if (x && x.code === 'SYNC_DB_DELETED') usuwane = true;
+      else po = { m: null };
     }
-    if (po && !Bses_zmieniona(s)) {
+    if (!usuwane && !Bses_zmieniona(s)) {
+      try {
+        koszPo = await Bev_stanKosza(k.ids, s);
+      } catch (x) {
+        if (x && x.code === 'SYNC_DB_DELETED') usuwane = true;
+        else koszPo = { m: null };
+      }
+    }
+    if (!usuwane && !Bses_zmieniona(s)) {
       const e = await Bev_echo(k, przed, po);
+      const ek = await Bev_echoKosza(k.ids, kk, koszPrzed, koszPo);
       if (!Bses_zmieniona(s)) {
         kol.echo = e;
+        kol.kosz = ek;
         kol.s = s;
       }
     }
@@ -9618,8 +9770,12 @@ function Bob_poOdblokowaniu() {
  * przelaczniku oddaje te sama obietnice co Bev_zastosuj(env); przy wlaczonym, otwartej bramce i warunku kolejki po
  * zastosowaniu koperty zdarzenia wersje z ladunku, ktore scalanie zapisalo inaczej, niz przyszly (bez samego rev, samej
  * tozsamosci wizyty i przeniesien pod inna karte), ida do lancucha jako snap w sesji scalania; wynik bez czekania na
- * wpis; pelna karta z haka H1 i osobne odeslanie tej samej wersji moga wyjsc obie. Opis: docs/clinical/ALGORITHMS.md
- * (wpis P-DZIENNIK-ZDARZEN, E2-PR3a2, E2-PR3a3, E2-PR3a4, E2-PR3b i E3-PR0c). */
+ * wpis; pelna karta z haka H1 i osobne odeslanie tej samej wersji moga wyjsc obie. Odsylanie wpisow Kosza (E3-PR0d,
+ * ten sam przelacznik) jest czescia tej samej czwartej drogi: po tym samym zastosowaniu wpisy Kosza wersji z ladunku,
+ * ktore scalanie zapisalo inaczej, niz byly przed scaleniem i niz przyszly (bez opisu wpisu, postaci gwiazdki w tresci,
+ * samej tozsamosci wizyty i samego wygasniecia tresci), ida do lancucha jako stomb w sesji scalania, po snap (jak
+ * Bem_RANGI); notatek nie odsyla. Opis: docs/clinical/ALGORITHMS.md (wpis P-DZIENNIK-ZDARZEN, E2-PR3a2, E2-PR3a3,
+ * E2-PR3a4, E2-PR3b, E3-PR0c i E3-PR0d). */
 const Bem_RANGI = Object.freeze({ snap: 0, pfull: 0, stomb: 1, ptomb: 2, pnote: 3, pnotetomb: 4, note: 5, notetomb: 6, plist: 7,
   plisttomb: 8, pref: 9, pk: 10, pktomb: 11, cred: 12 });
 // Lancuch dopisan konta: userId -> obietnica ostatniego dopisania (zdejmowana po rozstrzygnieciu, gdy nadal ostatnia).
@@ -10019,21 +10175,23 @@ function Bem_paraRatunku(z) {
     // bez pary; przeglad moze dolozyc wiersz drugi raz (bez skutku u odbiorcy)
   }
 }
-// ── Odsylanie poprawionych wizyt (E3-PR0c) ── applyEncryptedEvent: przelacznik odsylania jako pierwsza instrukcja;
-// wylaczony — ta sama obietnica co Bev_zastosuj(env), bez dodatkowych mikrozadan. Zwykla funkcja; nigdy nie rzuca.
+// ── Odsylanie poprawionych wizyt (E3-PR0c) i wpisow Kosza (E3-PR0d) ── applyEncryptedEvent: przelacznik odsylania jako
+// pierwsza instrukcja; wylaczony — ta sama obietnica co Bev_zastosuj(env), bez dodatkowych mikrozadan. Zwykla funkcja;
+// nigdy nie rzuca.
 function Bem_zastosuj(env) {
   if (!Bob_bramkaEcha()) return Bev_zastosuj(env);
   return Bem_zastosujEcho(env);
 }
 // Wlaczony przelacznik: bramka dziennika i warunek kolejki (odmowa — zastosowanie jak dotad), potem zastosowanie
-// z kolektorem i emisja wersji z kol.echo w sesji scalania; wynik bez czekania na wpis lancucha (w otwartym kroku
-// Bem_zmiana odklada wpisy do konca kroku).
+// z kolektorem i w sesji scalania emisja wersji z kol.echo, potem wpisow Kosza z kol.kosz (snap przed stomb, jak
+// Bem_RANGI); wynik bez czekania na wpis lancucha (w otwartym kroku Bem_zmiana odklada wpisy do konca kroku).
 async function Bem_zastosujEcho(env) {
   if (!Bob_bramka()) return Bev_zastosuj(env);
   if (Bem_kolejka()) return Bev_zastosuj(env);
   const kol = {};
   const w = await Bev_zastosuj(env, kol);
   if (Array.isArray(kol.echo) && kol.echo.length) Bem_zmiana('snap', kol.echo, kol.s);
+  if (Array.isArray(kol.kosz) && kol.kosz.length) Bem_zmiana('stomb', kol.kosz, kol.s);
   return w;
 }
 // emissionsSettled(): rozstrzyga sie, gdy lancuchy dopisan sa puste (takze dopisania dodane w trakcie czekania).
