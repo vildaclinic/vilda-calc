@@ -1,4 +1,4 @@
-name: Diagnostyka GH — sesja WebKit, wyłącznie fikcyjne dane
+name: Diagnostyka GH — 10 powtórzeń WebKit, wyłącznie fikcyjne dane
 
 on:
   push:
@@ -11,8 +11,10 @@ concurrency:
   group: gh-session-diagnostic-${{ github.ref }}
   cancel-in-progress: false
 
+# Diagnostic branch only. Never merge, publish or treat this as a release gate.
+# Full native WebKit88 with a32 failure-only capture runs separately in normal CI.
 jobs:
-  observe:
+  refusal-stress:
     if: github.repository == 'vildaclinic/vilda-calc' && github.ref == 'refs/heads/agent/diagnostyka-gh-sesja'
     runs-on: ubuntu-latest
     timeout-minutes: 50
@@ -38,23 +40,23 @@ jobs:
             sudo sed -i -E '\@^http://azure\.archive\.ubuntu\.com/ubuntu/([[:space:]]|$)@d' "$apt_mirror_list"
           fi
           npx playwright install --with-deps webkit
-      - name: Zweryfikuj źródło i przygotuj ograniczony obserwator
-        run: node tests/diagnostics/gh-session/prepare.mjs prepare
-      - name: Uruchom cały oryginalny zestaw 88 testów WebKit
+      - name: Zweryfikuj niezmienione źródło, odkryj testy i przygotuj obserwator samych odmów
+        run: node tests/diagnostics/gh-session/prepare.mjs prepare refusal
+      - name: Uruchom dokładnie 10 powtórzeń oryginalnego przypadku GH 390, bez retry
         shell: bash
         run: |
           set -o pipefail
-          npm run test:e2e -- --config playwright.lab-chart-webkit.config.mjs 2>&1 | tee "$RUNNER_TEMP/gh-session-diagnostic/runtime.log"
-      - name: Przywróć dokładny oryginalny plik testu i sprawdź niezmienność aplikacji
+          npm run test:e2e -- --config playwright.lab-chart-webkit.config.mjs --project home-workspace-webkit --grep 'home A2: native GH portal cancels purely and saves/imports the original therapy point · 390' --repeat-each 10 --retries 0 2>&1 | tee "$RUNNER_TEMP/gh-session-diagnostic-refusal/runtime.log"
+      - name: Przywróć oryginalny test i sprawdź wszystkie pliki aplikacji
         if: always()
-        run: node tests/diagnostics/gh-session/prepare.mjs restore
+        run: node tests/diagnostics/gh-session/prepare.mjs restore refusal
       - name: Zachowaj dowody diagnostyczne i oryginalne ślady
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: gh-session-webkit-diagnostic
+          name: gh-session-refusal-stress10-${{ github.sha }}
           path: |
-            ${{ runner.temp }}/gh-session-diagnostic/
+            ${{ runner.temp }}/gh-session-diagnostic-refusal/
             playwright-report/
             test-results/
           retention-days: 14

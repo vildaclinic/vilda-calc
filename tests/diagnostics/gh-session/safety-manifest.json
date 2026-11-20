@@ -9,20 +9,28 @@
     "framePath": "/index.html",
     "origin": "http://127.0.0.1:4173"
   },
-  "observerSHA256": "6161d3c8ef3d03ca1defb209dc94be0e90f88045763c93d130d60a77d4596359",
+  "observerSHA256": "5db9849ab73111e236de1b37f83b14a4a636a59316f84356e93b78a0230cd674",
   "canonicalNativeAST": "78e8ac32a235245dae0089439c2b992755fc79d6a414192c6cd381c5dd9ad33b",
   "addedFiles": [
     ".github/workflows/diagnostyka-gh-sesja.yml",
-    "tests/diagnostics/gh-session/prepare.mjs",
+    "tests/diagnostics/gh-session/README.md",
+    "tests/diagnostics/gh-session/build-harness.mjs",
     "tests/diagnostics/gh-session/build-observer.py",
     "tests/diagnostics/gh-session/diagnostic-hooks.mjs",
-    "tests/diagnostics/gh-session/safety-manifest.json"
+    "tests/diagnostics/gh-session/full-failure-insertion-blocks.json",
+    "tests/diagnostics/gh-session/prepare.mjs",
+    "tests/diagnostics/gh-session/safety-manifest.json",
+    "tests/diagnostics/gh-session/verify-observer.mjs"
   ],
   "diagnosticFiles": {
-    ".github/workflows/diagnostyka-gh-sesja.yml": "e767871825a0beb81942199e9edbfae0ebd96dc6cf72e76c812859c42a0fffff",
-    "tests/diagnostics/gh-session/prepare.mjs": "6f236d998db24fc9c553fddeb52c49806da1fb764e1994de4a0e093d7a7cf3f9",
-    "tests/diagnostics/gh-session/build-observer.py": "9527a34658e71c31dbf9c2d3609927599e6dd0e01d744fdb91129db2f6ff55e7",
-    "tests/diagnostics/gh-session/diagnostic-hooks.mjs": "d01e3d07ac052d46edc9b1179f1af86024d027d4f906d6c3c674fb2bed6c54e0"
+    ".github/workflows/diagnostyka-gh-sesja.yml": "c9bbe6f7b9c634bfa0acfa44fd063fc10f0310a8c99f795b9562eb24f01a857e",
+    "tests/diagnostics/gh-session/README.md": "471329b1ffd3f08ba1ad158e79342378f9d6d96b0429f2cd5c1366b2dcdc5b9d",
+    "tests/diagnostics/gh-session/build-harness.mjs": "5e6d5578f0bf7ac53f2e57ffee028ad162218441edc31014b2ab3662efef76b3",
+    "tests/diagnostics/gh-session/build-observer.py": "d5744c8bbea6b28dbc0d8471e604a6afc7f93f9089ef96542324d6e573c32f17",
+    "tests/diagnostics/gh-session/diagnostic-hooks.mjs": "45b976b99b7c38bdde5e3e130ba025e84fa266508a2a7bccd93c4d6ba7c3ef71",
+    "tests/diagnostics/gh-session/full-failure-insertion-blocks.json": "f2f4e6d66a4f687ad3d121bf61ec568ae3a6dc423c126b1bf9fc8d88e6273e04",
+    "tests/diagnostics/gh-session/prepare.mjs": "7cf66fee0c8c601c5efca0a956fb845541af37442253885101634fb84a30ab93",
+    "tests/diagnostics/gh-session/verify-observer.mjs": "066c4fced9d38ef67a2013c77576a093cf9acd6191da5b0dfc749db8125dcc9d"
   },
   "originalFiles": {
     "vilda_data_import_export.js": "0e805e7f0a95103176e3d46d30a3f747a6f16eef9fb7d81ee4893c6d60667c0c",
@@ -43,21 +51,35 @@
     "jobBudgetMinutes": 50,
     "fullOriginalCases": 88,
     "workers": 1,
-    "retries": "unchanged CI default1",
-    "originalCommand": "npm run test:e2e -- --config playwright.lab-chart-webkit.config.mjs",
+    "nativeRetries": "unchanged CI default1",
+    "stressRetries": 0,
+    "stressRepeatEach": 10,
+    "nativeCommand": "npm run test:e2e -- --config playwright.lab-chart-webkit.config.mjs",
+    "stressCommand": "npm run test:e2e -- --config playwright.lab-chart-webkit.config.mjs --project home-workspace-webkit --grep \"home A2: native GH portal cancels purely and saves/imports the original therapy point · 390\" --repeat-each 10 --retries 0",
     "nativeArtifactFilesModified": 0,
     "existingWorkflowConfigBaselineChanges": 0,
     "observerRAMEntryCap": 200,
     "fakeAccountLabel": "Fikcyjny sejf testu panelu siatek",
     "deployMergeOrPushCapabilities": false,
     "testExitPropagatedByExplicitPipefail": true,
-    "noRouteOrEmptyWriterLogClassification": "INCONCLUSIVE"
+    "successfulRefusalLogMayBeEmpty": true,
+    "missingVerifiedRouteLateEnableOrWriterSource": "INCONCLUSIVE",
+    "nativeCohort": "Existing unchanged standard CI on feature d54a1ce1ef6df775b7fc46b11b1e933571f79290; not duplicated by diagnostic workflow."
   },
   "evidenceBounds": [
-    "Instrumented diagnostic only; original be8 CI remains failed until its cause is understood and any concrete fix has separate checks.",
-    "A diagnostic PASS cannot refute the original uninstrumented CI failure.",
-    "Route interception, extra JSON allocation, target-only post-ack/pre-F5 harvest and inert test-hook checks alter timing. Critical dose-fill→actual-save sequence has no added Playwright round trip.",
-    "No public API wrapping after load, authority replacement, native guard changes, direct session writes or test assertion/time/budget reductions.",
-    "Only explicit fake-profile payload/session/primitive IDs and approved observer locals are added. Original traces retain their usual fictional fixture data. Branches/artifacts use normal repository access; a branch is not an access-private repository."
-  ]
+    "Two independent paths: full native WebKit88+a32 in unchanged standard feature CI and this finite isolated refusal stress10. Neither a green diagnostic nor repeated PASS fixes or refutes the original be8 failure.",
+    "Native full88 changes only the error helper after its original assertion has failed; no new successful-path hooks, routes, markers or native asset changes.",
+    "Refusal stress changes source load/parse/JIT layout; calls/allocations/JSON from added observer sites execute only after original refusal branches, catches or existing adapter-false ELSE. Observer effect remains possible.",
+    "RAM reset/enable stays in the existing pre-click frame.evaluate; no added critical pre-click round trip. Harvest before original F5 is AFTER native session/Vault acknowledgement and adds later diagnostic timing.",
+    "Zero refusal entries on pass are expected, provided the exact resource, late enable and current public writer function source were verified. Missing entries do not prove every guard passed; best-effort logger may drop entries.",
+    "Compound refusal labels preserve original short circuit order and do not re-evaluate guard operands. Some inner native helpers have callers other than oe, so an inner entry alone is not attribution to GH.",
+    "Full payload/session records retain timestamps and unknown keys only for this exact ephemeral fictional fixture. They are public read-only observations, not private writer candidates. No opaque account/session token, ticket, lease or adapter is captured.",
+    "Original normal CI, CodeQL, appearance workflow, baselines/configuration/application/native core remain byte exact. Dedicated diagnostic branch must never merge or deploy."
+  ],
+  "nativeFailureHarnessSHA256": "a32e54d2954d4fbfa6778688ea8841dac00147a20e343dc44c6aab40b9601210",
+  "original88SelectionSHA256": "1e7c9635eccfd4ce67717c3db8162d280bbdda6f5f12f5f8750268ab6cc8fff9",
+  "harnessSHA256": {
+    "native": "a32e54d2954d4fbfa6778688ea8841dac00147a20e343dc44c6aab40b9601210",
+    "refusal": "88800bc20ecfb5eeaae37d3ddac1ade09ab5276b8c16ea441340e44a4bd6d7de"
+  }
 }
