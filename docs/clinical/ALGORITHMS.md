@@ -44334,7 +44334,8 @@ i pełne zdania bez zmian; pozostałe zmiany to układ karty.** Plan i etapy: `d
   „Trendu leczenia GH” — etapy 2 i 3.
 - 2026-11-20 (przegląd PR): zaakceptowane zawijanie zakładek 5 + 2 przy 1025–1200 px, trzy linie paska zakończonego GH
   na telefonie i czas leczenia otyłości tylko z punktem „Włączenie”; brzmienie D1 bez zmian (także „20 tyg. · ⏳ oceń po
-  12 tyg.”); GH wznowione po przerwie (dziś „zakończone” przy jakimkolwiek „Zakończeniu”) — osobna poprawka.
+  12 tyg.”); GH wznowione po przerwie (dziś „zakończone” przy jakimkolwiek „Zakończeniu”) — osobna poprawka
+  (P-GH-WZNOWIENIE) z regułą „od wznowienia”: stan, „Włączenie”, czas, tempo i ΔhSDS od ostatniego „Włączenia”.
 
 **Stan przed zmianą.** Podsumowanie i „Dane analityczne” GH oraz grupa otyłości (podsumowanie → „Wpisy leczenia” →
 „Dane analityczne — otyłość” albo karta „wg notatek”) stały nad paskiem zakładek, przy każdej zakładce; GH zawsze przed

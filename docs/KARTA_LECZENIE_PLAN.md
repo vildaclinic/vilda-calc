@@ -58,7 +58,9 @@ Decyzje właściciela 2026-11-20 (po przeglądzie PR etapu 1):
 - **brzmienie D1 bez zmian** — także „20 tyg. · ⏳ oceń po 12 tyg.” (12 tygodni od dawki podtrzymującej wyjaśnia panel);
 - **GH wznowione po przerwie** — do osobnej poprawki (P-GH-WZNOWIENIE): dziś „leczenie zakończone” to każdy punkt
   „Zakończenie” w historii GH (warunek znacznika podsumowania), więc wznowione leczenie jest opisane i sortowane jako
-  zakończone, a czas liczy się od pierwszego „Włączenia”. Reguła poprawki do ustalenia z właścicielem.
+  zakończone, a czas liczy się od pierwszego „Włączenia”. Reguła wybrana przez właściciela (2026-11-20): **od
+  wznowienia** — stan „aktywne”, a „Włączenie”, czas leczenia, tempo i ΔhSDS liczone od ostatniego „Włączenia” po
+  „Zakończeniu” (jak nowy cykl leczenia otyłości); wcześniejszy kurs zostaje w punktach i trendzie. Osobny PR po etapie 1.
 
 Opis rozstrzygnięć:
 
