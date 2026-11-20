@@ -33,7 +33,7 @@
 
   var doc = w.document;
   var KLASA = 'adv-dz-row';
-  var NBSP = ' ';
+  var NBSP = '\u00a0';
   var podpis = '';
 
   function zglos(krok, blad) {
@@ -147,7 +147,7 @@
     b.setAttribute('data-origin', pac ? 'pacjent' : 'gabinet');
     b.setAttribute('data-age-months', String(am));
     if (p.dateISO) b.setAttribute('data-date', p.dateISO);
-    b.setAttribute('aria-label', (pac ? 'Pomiar od pacjenta' : 'Wpis leczenia z gabinetu') + ', wiek ' + wiekOpis(am).replace(/ /g, ' ')
+    b.setAttribute('aria-label', (pac ? 'Pomiar od pacjenta' : 'Wpis leczenia z gabinetu') + ', wiek ' + wiekOpis(am).replace(/\u00a0/g, ' ')
       + (data ? ', ' + data : '') + ' — tylko do odczytu, poprawiasz w Karcie pacjenta.');
     b.title = (pac ? 'Pomiar od pacjenta' : 'Wpis z gabinetu') + ' z „Wpisów leczenia”' + (data ? ' · ' + data : '') + ' · poprawiasz w Karcie pacjenta';
     var sep = doc.createElement('div');
