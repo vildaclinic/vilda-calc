@@ -8,6 +8,8 @@ import { fileURLToPath } from 'node:url';
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const FILES = ['vilda_ui_intents.js', 'vilda_visit_context.js', 'vilda_visit_history_ui.js', 'vilda_visit_history_ui.css',
   'vilda_home_workspace.js', 'vilda_home_workspace.css', 'vilda_home_perinatal.js', 'vilda_sga_birth_results.css', 'vilda_home_growth.js', 'vilda_home_growth_views.js', 'vilda_home_growth_views.css', 'vilda_home_growth_charts.js',
+  'vilda_home_tools.css', 'vilda_home_tools.js', 'vilda_home_tools_vitals.js',
+  'vilda_home_tools_anthropometry.js', 'vilda_home_tools_nutrition.js', 'vilda_home_tools_intake.js',
   'vilda_home_diet.js', 'vilda_home_diet_bmi.css', 'vilda_home_diet.css',
   'vilda_home_dialog_history.js', 'vilda_home_patient_data.js', 'vilda_home_patient_note_host.js', 'vilda_home_patient_note_host.css', 'vilda_home_patient.js', 'vilda_home_patient.css', 'vilda_home_patient_native.js', 'vilda_home_patient_native.css', 'vilda_patient_treatment_ui.js', 'vilda_patient_treatment_ui.css', 'vilda_home_patient_native_note.js',
   'vilda_icd10_pl_data.js', 'vilda_icd10_search.js', 'vilda_icd10_picker.js', 'vilda_icd10_picker.css',

@@ -34,18 +34,18 @@ function worker({ scope = '/', response, failPut = () => false } = {}) {
   return { api, cache, requests, writes, installUI };
 }
 
-describe('thirty-three independent UI resources in one verified transport', () => {
+describe('thirty-nine independent UI resources in one verified transport', () => {
   it.each(['/', '/vilda-calc/'])('caches every original body and MIME under its own offline URL in %s', async scope => {
     const w = worker({ scope }); await w.installUI();
     expect(w.api.VISIT_UI_PRECACHE_PACK).toEqual(config);
-    expect(urls).toHaveLength(33);
+    expect(urls).toHaveLength(39);
     expect(urls).toContain('/vilda_ui_intents.js?v=2');
     expect(urls).toContain('/vilda_home_perinatal.js?v=1');
-    expect(urls).toContain('/vilda_home_growth.js?v=5');
+    expect(urls).toContain('/vilda_home_growth.js?v=6');
     expect(urls).toContain('/vilda_sga_birth_results.css?v=1');
     expect(urls).toContain('/vilda_home_growth_views.js?v=5');
-    expect(urls).toContain('/vilda_home_growth_views.css?v=6');
-    expect(urls).toContain('/vilda_home_growth_charts.js?v=1');
+    expect(urls).toContain('/vilda_home_growth_views.css?v=7');
+    expect(urls).toContain('/vilda_home_growth_charts.js?v=2');
     expect(urls).toContain('/vilda_home_diet.js?v=2');
     expect(urls).toContain('/vilda_home_diet_bmi.css?v=1');
     expect(urls).toContain('/vilda_home_diet.css?v=3');
@@ -67,6 +67,12 @@ describe('thirty-three independent UI resources in one verified transport', () =
     expect(urls).toContain('/vilda_home_reminders.js?v=1');
     expect(urls).toContain('/vilda_home_reminders.css?v=1');
     expect(urls).toContain('/vilda_home_reminders_runtime.js?v=1');
+    expect(urls).toContain('/vilda_home_tools.css?v=1');
+    expect(urls).toContain('/vilda_home_tools.js?v=1');
+    expect(urls).toContain('/vilda_home_tools_vitals.js?v=1');
+    expect(urls).toContain('/vilda_home_tools_anthropometry.js?v=1');
+    expect(urls).toContain('/vilda_home_tools_nutrition.js?v=1');
+    expect(urls).toContain('/vilda_home_tools_intake.js?v=1');
     expect(urls).toContain('/vilda_home_workspace.js?v=6');
     expect(urls).toContain('/vilda_home_workspace.css?v=7');
     expect(w.requests).toHaveLength(1);

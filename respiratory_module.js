@@ -105,10 +105,30 @@
     return ageRaw !== '' || monthsRaw !== '';
   }
 
+  function readAgeYears() {
+    if (typeof getAgeDecimal === 'function') return getAgeDecimal();
+    var ageRaw = document.getElementById('age') ? document.getElementById('age').value : '';
+    return parseFloat(ageRaw) || 0;
+  }
+
+  function readProfessionalMode() {
+    return (typeof professionalMode !== 'undefined' && professionalMode) ||
+      (typeof window !== 'undefined' && window.professionalMode);
+  }
+
+  function readPreviewContext() {
+    return { ageYears: readAgeYears(), ageFieldsFilled: ageFieldsFilled(), professional: !!readProfessionalMode() };
+  }
+
   // Presentation only: all patient/UI context and the existing vital-signs
   // engine are supplied by the caller. A resolver keeps the native renderer's
   // engine lookup after validation; draft callers can pass the engine itself.
   function buildResult(input, nativeEngine) {
+    var preview = buildPreview(input, nativeEngine);
+    return { html: preview.html, severity: preview.severity };
+  }
+
+  function buildPreview(input, nativeEngine) {
     return buildResultFromRate(input, nativeEngine, parseFloat(input.rrRaw));
   }
 
@@ -117,16 +137,16 @@
     var rrRaw = input.rrRaw;
 
     if (rrRaw === '' || !isFinite(rr)) {
-      return { html: '<p class="bp-placeholder">Wpisz liczbę oddechów powyżej, aby zobaczyć wynik.</p>', severity: '' };
+      return { html: '<p class="bp-placeholder">Wpisz liczbę oddechów powyżej, aby zobaczyć wynik.</p>', severity: '', status: 'empty' };
     }
     if (!input.ageFieldsFilled) {
-      return { html: '<p>Wpisz wiek dziecka (pola „Wiek” u góry), aby obliczyć centyl liczby oddechów.</p>', severity: '' };
+      return { html: '<p>Wpisz wiek dziecka (pola „Wiek” u góry), aby obliczyć centyl liczby oddechów.</p>', severity: '', status: 'unavailable' };
     }
     if (age < 0 || isNaN(age) || age > 18) {
-      return { html: '<p>Normy liczby oddechów dostępne są dla wieku 0–18&nbsp;lat.</p>', severity: '' };
+      return { html: '<p>Normy liczby oddechów dostępne są dla wieku 0–18&nbsp;lat.</p>', severity: '', status: 'unavailable' };
     }
     if (rr < RR_MIN || rr > RR_MAX) {
-      return { html: '<p>Liczba oddechów poza zakresem ' + RR_MIN + '–' + RR_MAX + '&nbsp;/min — sprawdź wpisaną wartość.</p>', severity: '' };
+      return { html: '<p>Liczba oddechów poza zakresem ' + RR_MIN + '–' + RR_MAX + '&nbsp;/min — sprawdź wpisaną wartość.</p>', severity: '', status: 'unavailable' };
     }
 
     var vs = typeof nativeEngine === 'function' ? nativeEngine() : nativeEngine;
@@ -157,7 +177,7 @@
 
       if (assessment && assessment.sleepBeyondCoverage) {
         return { html: '<p>Normy liczby oddechów we śnie (Herbert et&nbsp;al.&nbsp;2020) obejmują wiek do 4,5&nbsp;roku życia. ' +
-          'U starszego dziecka oceń liczbę oddechów w czuwaniu.</p>', severity: '' };
+          'U starszego dziecka oceń liczbę oddechów w czuwaniu.</p>', severity: '', status: 'unavailable' };
       }
 
       var percentile = assessment ? assessment.percentile : NaN;
@@ -171,24 +191,18 @@
         var html = '<p>' + line + '</p>';
         if (cls.verdict) html += '<p><strong>' + cls.verdict + '</strong></p>';
         html += sourceNote(assessment, temperatureInfo);
-        return { html: html, severity: cls.severity };
+        return { html: html, severity: cls.severity, status: 'ready' };
       }
     }
 
-    return { html: '<p>Brak danych do obliczenia centyla.</p>', severity: '' };
+    return { html: '<p>Brak danych do obliczenia centyla.</p>', severity: '', status: 'unavailable' };
   }
 
   function render() {
     var resultEl = document.getElementById('respiratoryResult');
     if (!resultEl) return;
 
-    var age = 0;
-    if (typeof getAgeDecimal === 'function') {
-      age = getAgeDecimal();
-    } else {
-      var ageRaw = document.getElementById('age') ? document.getElementById('age').value : '';
-      age = parseFloat(ageRaw) || 0;
-    }
+    var age = readAgeYears();
 
     var input = document.getElementById('respiratoryRateInput');
     var rrRaw = input && input.value != null ? String(input.value).trim() : '';
@@ -213,10 +227,7 @@
       get state() { return readOptions().state; },
       get population() { return readOptions().population; },
       get temperatureRaw() { return readOptions().temperatureRaw; },
-      get professional() {
-        return (typeof professionalMode !== 'undefined' && professionalMode) ||
-          (typeof window !== 'undefined' && window.professionalMode);
-      }
+      get professional() { return readProfessionalMode(); }
     }, function () { return typeof window !== 'undefined' ? window.vitalSigns : null; }, rr);
     setTrustedHtml(resultEl, result.html, 'respiratory-module:resultEl');
     applyTone(resultEl, result.severity);
@@ -252,7 +263,7 @@
   }
 
   if (typeof window !== 'undefined') {
-    window.VildaRespiratory = Object.freeze({ buildResult: buildResult });
+    window.VildaRespiratory = Object.freeze({ buildResult: buildResult, buildPreview: buildPreview, readPreviewContext: readPreviewContext });
   }
 
   if (typeof window !== 'undefined' && typeof window.vildaOnReady === 'function') {

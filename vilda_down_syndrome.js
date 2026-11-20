@@ -259,32 +259,35 @@ function __ds_computeAndRender() {
   n.style.display = "block";
 }
 
+function __ds_buildHeadCircResult({ value, age, sex, pro }) {
+  const head = parseFloat(value);
+  if (!isFinite(head) || !isFinite(age) || !(age >= 0 && age <= 20)) return null;
+  if (head < 25 || head > 65) {
+    return { html: '<div><strong>Obw\xF3d głowy:</strong> <span class="muted">wartość poza wiarygodnym zakresem pomiaru — sprawdź, czy nie doszło do pomyłki.</span></div>' };
+  }
+  const percentile = __ds_percentile(sex, age, "HC", head);
+  if (percentile == null) return { html: "<div>Brak danych DS dla obwodu głowy w tym wieku.</div>" };
+  return {
+    html: __ds_lineHtml("Obw\xF3d głowy", __ds_round1(head) + " cm", percentile, __ds_zFor(sex, age, "HC", head), pro),
+    severity: __ds_classify(percentile) || "normal"
+  };
+}
+
 function __ds_updateHeadCirc() {
   const n = document.getElementById("headCircumResultDS"), e = document.getElementById("headCircumDS");
   if (!n || !e) return;
-  const t = __ds_readAgeYears(), i = __ds_readSex(), s = parseFloat(e.value);
-  if (!isFinite(s) || !isFinite(t) || !(t >= 0 && t <= 20)) {
+  const result = __ds_buildHeadCircResult({
+    value: e.value, age: __ds_readAgeYears(), sex: __ds_readSex(), pro: __ds_isPro()
+  });
+  if (!result) {
     n.style.display = "none";
     n.classList.remove("rr-warning", "rr-danger");
     vildaAppClearHtml(n);
     return;
   }
-  if (s < 25 || s > 65) {
-    n.style.display = "block";
-    __ds_applySeverity(n, "");
-    vildaAppSetTrustedHtml(n, '<div><strong>Obw\xF3d głowy:</strong> <span class="muted">wartość poza wiarygodnym zakresem pomiaru — sprawdź, czy nie doszło do pomyłki.</span></div>', "app:out");
-    return;
-  }
-  const d = __ds_percentile(i, t, "HC", s);
-  if (d == null) {
-    n.style.display = "block";
-    __ds_applySeverity(n, "");
-    vildaAppSetTrustedHtml(n, "<div>Brak danych DS dla obwodu głowy w tym wieku.</div>", "app:out");
-  } else {
-    n.style.display = "block";
-    vildaAppSetTrustedHtml(n, __ds_lineHtml("Obw\xF3d głowy", __ds_round1(s) + " cm", d, __ds_zFor(i, t, "HC", s), __ds_isPro()), "app:out");
-    __ds_applySeverity(n, __ds_classify(d));
-  }
+  n.style.display = "block";
+  vildaAppSetTrustedHtml(n, result.html, "app:out");
+  __ds_applySeverity(n, result.severity);
 }
 
 window.vildaAppOnReady("app:down-syndrome-module", function () {
@@ -328,6 +331,7 @@ window.vildaAppOnReady("app:down-syndrome-module", function () {
     percentile: typeof e.__ds_percentile == "function" ? e.__ds_percentile : null,
     wflPercentile: typeof e.__ds_wflPercentile == "function" ? e.__ds_wflPercentile : null,
     buildResultsHtml: typeof e.__ds_buildResultsHTML == "function" ? e.__ds_buildResultsHTML : null,
+    buildHeadCircResult: typeof e.__ds_buildHeadCircResult == "function" ? e.__ds_buildHeadCircResult : null,
     updateSectionVisibility: typeof e.__ds_updateSectionVisibility == "function" ? e.__ds_updateSectionVisibility : null,
     computeAndRender: typeof e.__ds_computeAndRender == "function" ? e.__ds_computeAndRender : null,
     updateHeadCirc: typeof e.__ds_updateHeadCirc == "function" ? e.__ds_updateHeadCirc : null

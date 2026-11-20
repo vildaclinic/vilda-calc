@@ -9,7 +9,16 @@
             <tbody>${a}</tbody>
           </table>
         </div>
-      </div>`}function _(t){return String(t||"").toUpperCase()==="AHA"?'<div class="adult-vitals-guideline-note"><strong>AHA</strong> \u2014 klasyfikacja nadci\u015Bnienia wg American Heart Association (AHA) i American College of Cardiology (ACC).</div>':'<div class="adult-vitals-guideline-note"><strong>ESC/PTK</strong> \u2014 klasyfikacja nadci\u015Bnienia wg European Society of Cardiology (ESC) i Polskiego Towarzystwa Kardiologicznego (PTK).</div>'}function G(t){const e=t||p(),a=e.guidelineKey,i=w(e.sbp,e.dbp,a),n=k(e.hr,{athlete:e.athlete,betaBlocker:e.betaBlocker}),s=C(i,n,a,T(e)),l=A(a,i.key),r=$(n,e),y=i.valueText?`<div class="adult-vitals-result-line adult-vitals-result-line--emphasis tone-${d(i.tone||"normal")}"><span class="adult-vitals-result-label">Ci\u015Bnienie:</span><span class="adult-vitals-result-value">${d(i.valueText)}</span><span class="adult-vitals-result-separator">\u2014</span><span class="adult-vitals-result-status">${d(i.shortStatus||"\u2014")}</span></div>`:'<div class="adult-vitals-result-line adult-vitals-result-line--emphasis"><span class="adult-vitals-result-label">Ci\u015Bnienie:</span><span class="adult-vitals-result-status">wpisz RR skurczowe i rozkurczowe.</span></div>',m=n.valueText?`<div class="adult-vitals-result-line adult-vitals-result-line--emphasis tone-${d(n.tone||"normal")}"><span class="adult-vitals-result-label">T\u0119tno:</span><span class="adult-vitals-result-value">${d(n.valueText)}</span><span class="adult-vitals-result-separator">\u2014</span><span class="adult-vitals-result-status">${d(n.shortStatus||"\u2014")}</span></div>`:'<div class="adult-vitals-result-line adult-vitals-result-line--emphasis"><span class="adult-vitals-result-label">T\u0119tno:</span><span class="adult-vitals-result-status">wpisz t\u0119tno spoczynkowe.</span></div>',c=!(i.hasCompleteMeasurement&&n.hasMeasurement)&&s.note?`<div class="adult-vitals-summary-note">${d(s.note)}</div>`:"",v=_(a);return`
+      </div>`}function _(t){return String(t||"").toUpperCase()==="AHA"?'<div class="adult-vitals-guideline-note"><strong>AHA</strong> \u2014 klasyfikacja nadci\u015Bnienia wg American Heart Association (AHA) i American College of Cardiology (ACC).</div>':'<div class="adult-vitals-guideline-note"><strong>ESC/PTK</strong> \u2014 klasyfikacja nadci\u015Bnienia wg European Society of Cardiology (ESC) i Polskiego Towarzystwa Kardiologicznego (PTK).</div>'}function G(t) { return buildAdultVitalsModel(t || p()).html; }
+function buildAdultVitalsModel(e, metric) {
+  const pressureVisible = metric !== "pulse", pulseVisible = metric !== "pressure";
+  const a = e.guidelineKey;
+  const i = w(pressureVisible ? e.sbp : NaN, pressureVisible ? e.dbp : NaN, a);
+  const n = k(pulseVisible ? e.hr : NaN, { athlete: e.athlete, betaBlocker: e.betaBlocker });
+  const s = C(i, n, a, i.hasMeasurement || n.hasMeasurement);
+  const l = A(a, i.key), r = $(n,e),
+  y=i.valueText?`<div class="adult-vitals-result-line adult-vitals-result-line--emphasis tone-${d(i.tone||"normal")}"><span class="adult-vitals-result-label">Ci\u015Bnienie:</span><span class="adult-vitals-result-value">${d(i.valueText)}</span><span class="adult-vitals-result-separator">\u2014</span><span class="adult-vitals-result-status">${d(i.shortStatus||"\u2014")}</span></div>`:'<div class="adult-vitals-result-line adult-vitals-result-line--emphasis"><span class="adult-vitals-result-label">Ci\u015Bnienie:</span><span class="adult-vitals-result-status">wpisz RR skurczowe i rozkurczowe.</span></div>',m=n.valueText?`<div class="adult-vitals-result-line adult-vitals-result-line--emphasis tone-${d(n.tone||"normal")}"><span class="adult-vitals-result-label">T\u0119tno:</span><span class="adult-vitals-result-value">${d(n.valueText)}</span><span class="adult-vitals-result-separator">\u2014</span><span class="adult-vitals-result-status">${d(n.shortStatus||"\u2014")}</span></div>`:'<div class="adult-vitals-result-line adult-vitals-result-line--emphasis"><span class="adult-vitals-result-label">T\u0119tno:</span><span class="adult-vitals-result-status">wpisz t\u0119tno spoczynkowe.</span></div>',c=!(i.hasCompleteMeasurement&&n.hasMeasurement)&&s.note?`<div class="adult-vitals-summary-note">${d(s.note)}</div>`:"",v=_(a);
+  const html = `
       <div class="adult-vitals-summary tone-${d(s.tone||"normal")}">
         <div class="adult-vitals-summary-top">
           <div>
@@ -19,13 +28,30 @@
           <div class="adult-vitals-summary-badge tone-${d(s.tone||"normal")}">${d(s.badge||"Informacyjnie")}</div>
         </div>
         <div class="adult-vitals-result-rows">
-          ${y}
-          ${m}
+          ${pressureVisible ? y : ""}
+          ${pulseVisible ? m : ""}
         </div>
         ${c}
         <div class="adult-vitals-mini-grid">
-          ${R("Ci\u015Bnienie t\u0119tnicze",l)}
-          ${R("T\u0119tno spoczynkowe",r)}
+          ${pressureVisible ? R("Ci\u015Bnienie t\u0119tnicze",l) : ""}
+          ${pulseVisible ? R("T\u0119tno spoczynkowe",r) : ""}
         </div>
         ${v}
-      </div>`}function z(){const t=u("adultVitalsCard"),e=u("adultVitalsResult"),a=typeof o.getAgeDecimal=="function"?o.getAgeDecimal():NaN,i=typeof o.patientReportIsAdultAge=="function"?o.patientReportIsAdultAge(a):Number.isFinite(a)&&a>=18;if(!(!t||!e)){if(t.style.display=i?"":"none",e.className="result-box adult-vitals-result-box",L(e),!i)N(e);else{const n=p();B(e,G(n),"adult-vitals:result");const s=w(n.sbp,n.dbp,n.guidelineKey),l=k(n.hr,{athlete:n.athlete,betaBlocker:n.betaBlocker}),r=C(s,l,n.guidelineKey,T(n));K(e,r.tone)}try{typeof o.updateProfessionalSummaryCard=="function"&&o.updateProfessionalSummaryCard()}catch(n){typeof globalThis<"u"&&typeof globalThis.vildaLogSwallowedCatch=="function"&&globalThis.vildaLogSwallowedCatch("adult_vitals.js",n,{line:767})}}}function U(){["adultBpGuidelineToggle","adultBpSystolic","adultBpDiastolic","adultHeartRate","adultHrAthlete","adultHrAthleteNo","adultHrBetaBlocker","adultHrBetaBlockerNo","age","ageMonths","sex","weight","height"].forEach(function(t){const e=u(t);e&&(e.addEventListener("input",z),e.addEventListener("change",z))})}function x(){u("adultVitalsCard")&&(U(),z())}o.adultVitalsApi={GUIDELINES:H,getState:p,hasAnyMeasurement:T,classifyBloodPressure:w,classifyHeartRate:k,buildSummaryLines:V,buildReportCardData:F,refresh:z,refreshVisibility:z},typeof o<"u"&&typeof o.vildaOnReady=="function"?o.vildaOnReady("adult-vitals:init",x):j.readyState==="loading"?j.addEventListener("DOMContentLoaded",x,{once:!0}):x()})(window,document);
+      </div>`;
+  const ready = i.hasCompleteMeasurement || n.hasMeasurement;
+  const status = ready ? "ready" : i.hasMeasurement ? "unavailable" : "empty";
+  const severity = s.tone === "warn" ? "warning" : s.tone === "danger" ? "danger" : "";
+  return { html, status, severity };
+}
+function buildAdultVitalsPreview(input, metric) {
+  const guideline = f(input.reference);
+  return buildAdultVitalsModel({
+    guidelineKey: guideline.key, sbp: b(input.sbpRaw), dbp: b(input.dbpRaw), hr: b(input.pulseRaw),
+    athlete: input.athlete, betaBlocker: input.betaBlocker
+  }, metric);
+}
+function adultVitalsUseAdultAge() {
+  const age = typeof o.getAgeDecimal === "function" ? o.getAgeDecimal() : NaN;
+  return typeof o.patientReportIsAdultAge === "function" ? o.patientReportIsAdultAge(age) : Number.isFinite(age) && age >= 18;
+}
+function z(){const t=u("adultVitalsCard"),e=u("adultVitalsResult"),i=adultVitalsUseAdultAge();if(!(!t||!e)){if(t.style.display=i?"":"none",e.className="result-box adult-vitals-result-box",L(e),!i)N(e);else{const n=p();B(e,G(n),"adult-vitals:result");const s=w(n.sbp,n.dbp,n.guidelineKey),l=k(n.hr,{athlete:n.athlete,betaBlocker:n.betaBlocker}),r=C(s,l,n.guidelineKey,T(n));K(e,r.tone)}try{typeof o.updateProfessionalSummaryCard=="function"&&o.updateProfessionalSummaryCard()}catch(n){typeof globalThis<"u"&&typeof globalThis.vildaLogSwallowedCatch=="function"&&globalThis.vildaLogSwallowedCatch("adult_vitals.js",n,{line:767})}}}function U(){["adultBpGuidelineToggle","adultBpSystolic","adultBpDiastolic","adultHeartRate","adultHrAthlete","adultHrAthleteNo","adultHrBetaBlocker","adultHrBetaBlockerNo","age","ageMonths","sex","weight","height"].forEach(function(t){const e=u(t);e&&(e.addEventListener("input",z),e.addEventListener("change",z))})}function x(){u("adultVitalsCard")&&(U(),z())}o.adultVitalsApi={GUIDELINES:H,getState:p,hasAnyMeasurement:T,classifyBloodPressure:w,classifyHeartRate:k,buildSummaryLines:V,buildReportCardData:F,buildPreview:buildAdultVitalsPreview,useAdultAge:adultVitalsUseAdultAge,refresh:z,refreshVisibility:z},typeof o<"u"&&typeof o.vildaOnReady=="function"?o.vildaOnReady("adult-vitals:init",x):j.readyState==="loading"?j.addEventListener("DOMContentLoaded",x,{once:!0}):x()})(window,document);

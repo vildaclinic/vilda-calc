@@ -232,6 +232,32 @@ describe('respiratory presentation — pinned native parity', () => {
     expect([...severities].sort()).toEqual(['', 'danger', 'warning']);
   });
 
+  it.each([
+    ['empty', { values: { respiratoryRateInput: '' } }],
+    ['unavailable', { values: { age: '', ageMonths: '' } }],
+    ['unavailable', { age: 19 }],
+    ['unavailable', { engine: 'missing' }],
+    ['ready', {}],
+    ['ready', { values: { respiratoryRateInput: '200' } }]
+  ])('marks the draft result %s without changing native presentation', (status, scenario) => {
+    const after = browser(current, scenario);
+    const { VildaRespiratory } = after.win;
+    const input = inputFor(scenario);
+    const engine = observedEngine(scenario.engine, []);
+    const readsStart = after.trace.length;
+    expect(plain(VildaRespiratory.readPreviewContext())).toEqual({
+      ageYears: input.ageYears,
+      ageFieldsFilled: input.ageFieldsFilled,
+      professional: !!input.professional
+    });
+    expect(after.trace.slice(readsStart).every(entry => ['get', 'value', 'age-function', 'window-professional'].includes(entry[0])))
+      .toBe(true);
+    expect(plain(VildaRespiratory.buildPreview(input, engine))).toEqual({
+      ...plain(VildaRespiratory.buildResult(input, engine)),
+      status
+    });
+  });
+
   it.each(['vilda-ready', 'dom-loading', 'immediate'])('keeps %s initialization and every native event binding', readyMode => {
     const before = browser(original, { readyMode }), after = browser(current, { readyMode });
     const changes = [
