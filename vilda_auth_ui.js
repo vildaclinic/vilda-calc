@@ -3258,7 +3258,9 @@ function Kl_leczenie(o) {
   }
   function uloz() {
     var kol = Kl_kolejnosc(lista);
-    kol.forEach(function (x) { tresc.appendChild(x.el); });
+    // Bloki przestawiane tylko przy zmianie kolejności (D2) — bez zbędnego odpinania grupy otyłości po każdym rysunku.
+    var jest = Array.prototype.slice.call(tresc.children);
+    if (kol.some(function (x, j) { return jest[j] !== x.el; })) kol.forEach(function (x) { tresc.appendChild(x.el); });
     oe(kontener);
     paski = [];
     kol.forEach(function (x) {
