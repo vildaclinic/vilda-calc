@@ -86,15 +86,27 @@ describe('Powłoka: aktualność asynchronicznego celu nawigacji', () => {
     expect(first.isCurrent()).toBe(false);
     expect(targets).toHaveLength(1);
     h.load('terminarz');
+    expect(frame.contentDocument).toBe(oldDocument);
+    expect(targets).toHaveLength(1);
+    expect(first.isCurrent()).toBe(false);
+    h.replaceDocument('terminarz');
+    expect(frame.contentDocument).not.toBe(oldDocument);
+    h.load('terminarz');
     expect(targets).toHaveLength(2);
     expect(first.isCurrent()).toBe(false);
     expect(targets[1].isCurrent()).toBe(true);
   });
 
-  it('niespodziewany load tej samej ramki unieważnia już dostarczony callback', () => {
-    const { h, targets } = calendarTarget();
+  it('niespodziewany nowy dokument tej samej ramki unieważnia już dostarczony callback', () => {
+    const { h, frame, targets } = calendarTarget();
     h.load('terminarz');
-    const first = targets[0];
+    const first = targets[0], oldDocument = frame.contentDocument;
+    h.load('terminarz');
+    expect(frame.contentDocument).toBe(oldDocument);
+    expect(first.isCurrent()).toBe(true);
+    h.replaceDocument('terminarz');
+    expect(h.ramki.get('terminarz.html')).toBe(frame);
+    expect(frame.contentDocument).not.toBe(oldDocument);
     h.load('terminarz');
     expect(first.isCurrent()).toBe(false);
   });

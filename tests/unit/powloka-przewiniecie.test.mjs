@@ -82,6 +82,7 @@ describe('vilda_shell.js — panel wraca tam, gdzie go zostawiono (P-PANEL-PRZEW
     if (state === 'loading') {
       expect(order).toEqual(['geometry']);
       order.length = 0;
+      p.replaceDocument('ustawienia');
       p.load('ustawienia');
     }
     expect(order).toEqual(['geometry', 'target']);
