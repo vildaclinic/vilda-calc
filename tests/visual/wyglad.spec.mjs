@@ -146,6 +146,16 @@ for (const strona of STRONY) {
       // dławiki odświeżania (odznaki, pasek statusu) kończą pracę w ułamku sekundy
       await page.waitForTimeout(600);
       const { okno, probki, fullPage } = await kadrCalejStrony(page, page.viewportSize().width);
+      if (strona.nazwa === 'terminarz' && info.project.name === 'mobile-chromium') {
+        // Natywna obsługa paska przeglądarki ustawia na telefonie początek kadru na 1 px.
+        // Utrzymujemy ten sam kadr po dopasowaniu wysokości okna.
+        await page.evaluate(() => window.scrollTo({ left: 0, top: 1, behavior: 'instant' }));
+        await expect.poll(() => page.evaluate(() => ({
+          x: window.scrollX, y: window.scrollY,
+          rootTop: document.documentElement.scrollTop,
+          viewportPageTop: window.visualViewport ? window.visualViewport.pageTop : window.scrollY,
+        }))).toEqual({ x: 0, y: 1, rootTop: 1, viewportPageTop: 1 });
+      }
       // ślad do logu CI: wysokości próbek i okno kadru (diagnostyka bez pobierania obrazów)
       console.log(`[wygląd] ${info.project.name} ${strona.nazwa}/${id}: wysokość ${probki.join('→')} px, okno ${okno} px, fullPage ${fullPage}`);
       await expect(page).toHaveScreenshot(`${strona.nazwa}--${id}.png`, { fullPage });

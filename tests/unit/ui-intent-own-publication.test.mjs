@@ -11,6 +11,8 @@ const chrome = fs.readFileSync(root + 'vilda_chrome.js', 'utf8');
 const { parse } = createRequire(root + 'package.json')('espree');
 const authAst = parse(auth, { ecmaVersion: 'latest' });
 const chromeAst = parse(chrome, { ecmaVersion: 'latest' });
+const cycles = fs.readFileSync(root + 'vilda_cykle_leczenia.js', 'utf8');
+const cyclesAst = parse(cycles, { ecmaVersion: 'latest' });
 const TARGET = 'fictional imported patient B / żółw';
 const payload = { version: 1, name: 'Fikcyjny Pacjent B Publikacji', user: { age: 11, ageMonths: 0, sex: 'F', height: 145, weight: 37 } };
 const snapshot = { snapshotId: 'fictional-own-publication-snapshot', savedAtISO: '2026-11-19T12:00:00Z', payload };
@@ -332,6 +334,111 @@ async function heldActualAES() {
     }) };
   return { ...e, gate, entered };
 }
+
+const navigationCapability = unique(find(authAst, node => node.type === 'FunctionDeclaration'
+  && node.id?.name === 'UiIntentCardNavigation'), 'private original-card navigation capability');
+const navigationFactory = unique(find(authAst, node => node.type === 'CallExpression'
+  && node.callee?.name === 'Ob_dz' && node.arguments.length === 9), 'native B1 ninth callback').arguments[8];
+const homeCurrent = unique(find(authAst, node => node.type === 'FunctionDeclaration'
+  && node.id?.name === 'HomePatientIsCurrent'), 'native Home current callback');
+const cycleNavigation = ['aktualny', 'celSkoku', 'doDocPro'].map(name => {
+  const node = unique(find(cyclesAst, item => item.type === 'FunctionDeclaration' && item.id?.name === name), name);
+  return cycles.slice(node.start, node.end);
+}).join('\n');
+
+async function obesityNavigation({ realAES = false, sameDocPro = true } = {}) {
+  const e = realAES ? await heldActualAES() : environment();
+  if (sameDocPro) e.win.location.href = 'https://fictional.invalid/docpro.html';
+  e.modal.isConnected = true; e.modal.firstChild = e.card;
+  actualNativeClose(e);
+  e.context.oe = () => { e.card.isConnected = false; e.modal.firstChild = null; };
+  const owner = Object.freeze({ fictional: 'original-card-read-owner' });
+  const authority = e.context.UiIntentPickAuthority();
+  let careCurrent = true;
+  Object.assign(e.context, { w: e.win, CareReadOwner: owner, HomePatientRequested: true,
+    remReadCurrent: value => value === owner && careCurrent,
+    HomePatientPresentation: { actorLifetimeVersion: 1, isCurrent: () => careCurrent && e.card.isConnected && authority.isCurrent() } });
+  vm.runInContext(auth.slice(navigationCapability.start, navigationCapability.end)
+    + '\n' + auth.slice(homeCurrent.start, homeCurrent.end)
+    + '\n' + cycleNavigation
+    + '\nvar navigationFactory=' + auth.slice(navigationFactory.start, navigationFactory.end) + ';', e.context);
+  const errors = vi.fn(), ctx = { patientId: TARGET,
+    homeContext: { actorLifetimeVersion: 1, isCurrent: e.context.HomePatientIsCurrent, onDialog() {} },
+    captureNavigation: e.context.navigationFactory, navigationError: errors };
+  const consume = vi.fn();
+  if (sameDocPro) e.win.vildaGhJumpConsumeSoon = consume;
+  return { ...e, ctx, consume, navigationErrors: errors,
+    retireCare() { careCurrent = false; },
+    run(mode = 'edytuj', entry = { entryId: 'fictional obesity point / Żółw' }) { return e.context.doDocPro(ctx, mode, entry); } };
+}
+
+describe('original native patient-card obesity navigation authority', () => {
+  it.each(['edytuj', 'ponownie', 'wlaczenie'])('encrypts the exact %s target before quietly closing only its own card', async mode => {
+    const e = await obesityNavigation({ realAES: true });
+    const entry = mode === 'wlaczenie' ? null : { entryId: 'fictional obesity point / Żółw' };
+    const result = e.run(mode, entry), plain = await e.entered.promise;
+    expect(plain.value).toEqual({ patientId: TARGET, obesity: { tryb: mode, entryId: entry?.entryId || null }, ts: expect.any(Number) });
+    expect(e.card.isConnected).toBe(true); expect(e.consume).not.toHaveBeenCalled();
+    expect(e.win.VildaUiIntents.peek('gh-jump')).toBeNull();
+    e.gate.resolve(); expect(await result).toBe(true);
+    expect(e.consume).toHaveBeenCalledOnce(); expect(e.card.isConnected).toBe(false);
+    expect(e.modal.style.display).toBe('none'); expect(e.win.history.back).not.toHaveBeenCalled();
+    expect(e.win.history.replaceState).toHaveBeenCalledOnce();
+    const raw = e.nativeTransport.peek('gh-jump'), cipher = JSON.parse(raw);
+    expect(Object.keys(cipher).sort()).toEqual(['data', 'iv']); expect(raw).not.toContain(TARGET);
+    expect((await e.vault.decryptPayloadForCurrentUser(cipher.iv, cipher.data)).value).toEqual(plain.value);
+    expect(e.navigationErrors).not.toHaveBeenCalled();
+  });
+
+  it('retains the current card for the existing cross-document DocPro route', async () => {
+    const e = await obesityNavigation({ realAES: true, sameDocPro: false });
+    const result = e.run(); await e.entered.promise; e.gate.resolve(); expect(await result).toBe(true);
+    expect(e.win.location.href).toBe('docpro.html'); expect(e.card.isConnected).toBe(true);
+    expect(e.win.history.replaceState).not.toHaveBeenCalled();
+    expect(e.nativeTransport.peek('gh-jump')).not.toBeNull();
+  });
+
+  it.each(['back', 'retired-card', 'replacement-card', 'replacement-read-owner', 'lock', 'newer-intent'])('does not close or navigate after %s during actual AES', async boundary => {
+    const e = await obesityNavigation({ realAES: true });
+    const result = e.run(); await e.entered.promise;
+    if (boundary === 'back') e.win.dispatchEvent({ type: 'popstate' });
+    if (boundary === 'retired-card') e.retireCare();
+    if (boundary === 'replacement-card') e.context.Eo = { isConnected: true };
+    if (boundary === 'replacement-read-owner') e.context.CareReadOwner = { fictional: 'newer-card-read-owner' };
+    if (boundary === 'lock') e.vault.lock('manual');
+    if (boundary === 'newer-intent') e.nativeTransport.clear('gh-jump');
+    e.gate.resolve(); expect(await result).toBe(false);
+    expect(e.consume).not.toHaveBeenCalled(); expect(e.card.isConnected).toBe(true);
+    expect(e.win.history.replaceState).not.toHaveBeenCalled();
+    expect(e.nativeTransport.peek('gh-jump')).toBeNull();
+  });
+
+  it.each([[true, false], [false, true]])('rejects a sentinel mismatch before capture: %j', async (ye, ba) => {
+    const e = await obesityNavigation(); e.context.ye = ye; e.context.ba = () => ba;
+    expect(e.ctx.captureNavigation()).toBeNull();
+    expect(e.win.history.replaceState).not.toHaveBeenCalled(); expect(e.card.isConnected).toBe(true);
+  });
+
+  it.each(['sentinel', 'history', 'card', 'read-owner', 'ticket'])('keeps the original capability bound after a %s change', async boundary => {
+    const e = await obesityNavigation(), capability = e.ctx.captureNavigation();
+    expect(capability.isCurrent()).toBe(true);
+    if (boundary === 'sentinel') e.context.ba = () => false;
+    if (boundary === 'history') e.context.Pa++;
+    if (boundary === 'card') e.context.Eo = { isConnected: true };
+    if (boundary === 'read-owner') e.context.CareReadOwner = { fictional: 'replacement' };
+    if (boundary === 'ticket') e.rotate();
+    expect(capability.isCurrent()).toBe(false); expect(capability.closeForNavigation()).toBe(false);
+    expect(e.win.history.replaceState).not.toHaveBeenCalled(); expect(e.card.isConnected).toBe(true);
+  });
+
+  it('permits only one verified native close and retires the resulting capability on disposal', async () => {
+    const e = await obesityNavigation(), capability = e.ctx.captureNavigation();
+    expect(capability.closeForNavigation()).toBe(true); expect(capability.isCurrent()).toBe(true);
+    expect(capability.closeForNavigation()).toBe(false);
+    expect(e.win.history.replaceState).toHaveBeenCalledOnce();
+    capability.dispose(); expect(capability.isCurrent()).toBe(false);
+  });
+});
 
 describe('actual native modal history and delayed encrypted producer', () => {
   it.each([false, true])('holds the exact card through real AES and quietly retires only its native history before navigation (shell=%s)', async shell => {

@@ -134,7 +134,7 @@ async function open(page, route, shell) {
       }.toString()})();` });
     });
   }
-  const fixture = await createFictionalVault(page, { shell });
+  const fixture = await createFictionalVault(page, { shell, waitForAccountReadyBeforeReload: true });
   let owner = fixture.frame;
   if (route === 'docpro') {
     if (shell) {

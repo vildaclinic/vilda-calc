@@ -2129,6 +2129,129 @@ Bez zmiany trzy przypadki przyjęcia padają. `tests/e2e/powloka-panel-obcy-pacj
 przeszedł lokalnie 48/48 przy 6 równoległych przebiegach. Przed zmianą 2–3 na 12 przebiegów kończyło się
 komunikatem „Formularz zmienił się”.
 
+## Łatka P-OTYLOSC-SKOK — z Karty pacjenta prosto do monitora DocPro (`gh_therapy_monitor.js` 63 → 64, `obesity_therapy_monitor.js` 29 → 30, `vilda_cykle_leczenia.js` 7 → 8, `vilda_auth_ui.css` 84 → 85, `inline_docpro_01.css` 5 → 6, 2026-11-19, decyzje właściciela)
+
+Opis działania i przypadki: `docs/clinical/ALGORITHMS.md`, „Leczenie otyłości — etap 2: z Karty pacjenta prosto do
+monitora DocPro” (P-OTYLOSC-SKOK). Czytelne źródło Karty: `vilda_cykle_leczenia.js` (`POWODY_KROTKIE`, `powodKrotki`,
+`celSkoku`, `doDocPro`; przyciski w `sekcja`). Bez ponownej minifikacji artefaktów.
+
+```js
+// gh_therapy_monitor.js — obsługa wpisu vilda:gh-jump (N), czytelne linie
+// 1. nowe funkcje przed async function N(): ghJumpObesity(n), ghJumpAsksLoadChoice(n), ghJumpLand(n,loaded)
+//    oraz window.vildaGhJumpConsumeSoon=function(){try{setTimeout(N,700)}catch(_){}};
+// 2. było:  if(!n||!n.ghPointId){removeExact();return}
+//    jest:  if(!n||!n.ghPointId&&!ghJumpObesity(n)){removeExact();return}
+// 3. było:  if(!n.patientId){pe(n.ghPointId);removeExact();return}
+//    jest:  if(!n.patientId){if(n.ghPointId)pe(n.ghPointId);removeExact();return}
+// 4. było:  source:"pick",skipLoadChoice:!0,...operationDetail}
+//    jest:  source:"pick",skipLoadChoice:!ghJumpAsksLoadChoice(n),...operationDetail}
+// 5. było:  refreshGHTherapyMonitor()}catch{}pe(n.ghPointId)},450)
+//    jest:  refreshGHTherapyMonitor()}catch{}ghJumpLand(n,true)},450)
+// 6. było:  if(ghJumpCurrent(claim,false))pe(n.ghPointId);
+//    jest:  if(ghJumpCurrent(claim,false))ghJumpLand(n,false);
+
+// obesity_therapy_monitor.js — czytelny blok P-OTYLOSC-DZIENNIK
+// 1. nowa funkcja Dzprzebieg(id) przed Dzz; w Dzz komunikat po zapisie:
+//    było:  Cm("", "Zapisano w dzienniku leczenia — wpis widać w Karcie pacjenta i na innych urządzeniach.");
+//    jest:  … + (listy ? " Listy pacjentów zobaczą zmianę po „Zapisz dane”." : "")
+// 2. nowy czytelny blok P-OTYLOSC-SKOK przed blokiem P-OTYLOSC-WZROST: Skotworz, Skczekaj, Skpodswietl, Skwypelnij
+//    i window.obesityTherapyMonitorSkok(cel) — używa Ee/Ec/Ek/Eg/Cm/Cc/CyS z tego samego zakresu.
+```
+
+CSS: w `vilda_auth_ui.css` sekcja `.vdo` (białe tło `--bg`, `.vdo-head > :first-child`, `.vdo .vdo-btn*` z `!important`
+przy szczegółowości 0-2-0 — ta sama broń co przyciski Karty przeciw `.liquid-ios26 button` i `.vilda-auth-root
+.vilda-auth-btn-*`; odznaki `.vdo-src` i `.vdo-src-pacjent`; telefon ≤ 560 px, przyciski 44 px). W `inline_docpro_01.css`
+reguły `.obm-msg.info` i `tr.obm-row-skok` (podświetlenie wiersza klasą, nie stylem na elemencie — P-STYLE krok 5b).
+Literały zastąpione tokenami (`--text-strong`, `--line-teal`, `--space-12px`, `--space-14px`; strażnik `css-tokeny`).
+
+**Granice.** Wpis „vilda:gh-jump” bez pola `obesity` działa dokładnie jak dotąd (skok do punktu GH): wyciszone okno
+wyboru i `pe(ghPointId)`. Pole `obesity` niesie wyłącznie `{tryb, entryId}` — bez danych klinicznych (zwykły
+`sessionStorage` nie przechowuje treści pacjenta; dane usuniętego wpisu monitor czyta z dziennika po `entryId`).
+Identyfikator pacjenta w tym wpisie — jak w dotychczasowym skoku do punktu GH (alert CodeQL „Clear text storage”
+w PR vildaclinic/vilda-calc#1003 — do decyzji właściciela). Karta na innej stronie niż DocPro zostaje otwarta (jak przy skoku GH); nad DocPro — zamyka się
+(`VildaAuthUI.hide`), a skok rusza po `popstate` z jej `history.back()` albo po 600 ms. Sejf i dziennik bez zmian;
+`window.obesityTherapyPoints` zmienia się tylko przez zapis lekarza w monitorze.
+
+## Łatka P-OTYLOSC-LEK — Karta porównuje lek jak listy pacjentów (`vilda_cykle_leczenia.js` 8 → 9, `obesity_therapy_monitor.js` 30 → 31, 2026-11-19, decyzja właściciela)
+
+Czytelne źródło: `vilda_cykle_leczenia.js` — `kluczLeku` rozpoznaje lek przez `ObesityResponseCriteria.resolveDrug`
+(jak `drugKey` list w sejfie i kryteria ChPL); bez modułu kryteriów — dawny tekst leku i substancji. `zmianaPrzebiegu`
+traci parametr `opcje` (i `kluczNazwyLeku`). Opis reguły: `docs/clinical/ALGORITHMS.md`, wpis P-OTYLOSC-LEK.
+
+```
+// obesity_therapy_monitor.js — czytelny blok P-OTYLOSC-DZIENNIK, funkcja Dzprzebieg(id)
+// było:  return w ? D.zmianaPrzebiegu(Dzs, w, { lekPoNazwie: true }) : null;
+// jest:  return w ? D.zmianaPrzebiegu(Dzs, w) : null;
+```
+
+**Granice.** Sejf, dziennik i zapis bez zmian. Wersje `?v=`, precache i `SW_VERSION` ustawił `npm run podbij-wersje`.
+
+## Łatka P-OTYLOSC-DAWKA — dawka z przecinkiem i podpowiedzi z ChPL (`vilda_cykle_leczenia.js` 9 → 10, `obesity_therapy_monitor.js` 31 → 32, `obesity_therapy.js` 12 → 13, `vilda_auth_ui.js` 572 → 573, `inline_docpro_01.css` 6 → 7, `docpro.html`, 2026-11-19, decyzja właściciela)
+
+Czytelne źródło: `vilda_cykle_leczenia.js` — `dawkaPL` i `podpowiedziDawek` (eksport `VildaDziennikOtylosci`),
+wiersze „Wpisy leczenia”, okno wersji i podstawienie dawki w oknie „+ Kontynuacja”. Opis: `docs/clinical/ALGORITHMS.md`,
+wpis P-OTYLOSC-DAWKA.
+
+```
+// obesity_therapy.js — fe() (lista leku w monitorze): opcja niesie tabelę zwiększania dawki i częstość
+// było:  d.setAttribute("data-substance",s.substanceLabel),g.appendChild(d)
+// jest:  d.setAttribute("data-substance",s.substanceLabel),d.setAttribute("data-dawki",JSON.stringify((r.dosing&&
+//        r.dosing.escalation||[]).map(function(x){return{label:x.label||"",dose:x.dose||"",note:x.note||""}}))),
+//        d.setAttribute("data-czestosc",r.frequency||""),g.appendChild(d)
+
+// obesity_therapy_monitor.js
+// 1. nowy czytelny blok P-OTYLOSC-DAWKA przed blokiem P-OTYLOSC-WZROST: Dwpl, Dwzaznacz, Dwinit, Dwpodp;
+// 2. było:  function CyS(){typeof Hl=="function"&&Hl();
+//    jest:  function CyS(){typeof Hl=="function"&&Hl();typeof Dwpodp=="function"&&Dwpodp();
+// 3. kolumna „Dawka” w tabeli punktów — było: P(i.dose?String(i.dose):"\u2014")  jest: P(i.dose?Dwpl(i.dose):"\u2014")
+
+// vilda_auth_ui.js — podsumowanie „Leczenie otyłości” (funkcja Cl)
+// 1. przed function Cl(t){…} nowa funkcja Ob_dawka(t) (VildaDziennikOtylosci.dawkaPL, bez modułu — tekst bez zmian);
+// 2. było:  p=d.dose!=null&&String(d.dose).trim()!==""?String(d.dose):"\u2014"
+//    jest:  p=d.dose!=null&&String(d.dose).trim()!==""?Ob_dawka(d.dose):"\u2014"
+```
+
+`docpro.html`: pod siatką pól monitora `<div id="obesityDoseHints" class="obm-dawki" role="group" aria-label="Podpowiedzi
+dawki" hidden>`. `inline_docpro_01.css`: reguły `.obm-dawki*` — przyciski z `!important` przy szczegółowości 1-2-0
+przeciw `.liquid-ios26 button {…!important}` i regułom przycisków na telefonie (≤ 560 px: 44 px).
+
+**Granice.** Zapis dawki, sejf i dziennik bez zmian; bez stylów ustawianych wprost na elementach (`hidden`, klasy,
+`aria-pressed`). Wersje `?v=`, precache i `SW_VERSION` ustawił `npm run podbij-wersje`.
+
+## Łatka P-OTYLOSC-SIATKI — pomiary z dziennika na siatkach i w analizie trajektorii Karty (`vilda_cykle_leczenia.js` 10 → 11, `vilda_trajectory_analysis.js` 45 → 46, `vilda_auth_ui.js` 573 → 574, `vilda_auth_ui.css` 85 → 86, 2026-11-19, decyzje właściciela)
+
+Czytelne źródła: `vilda_cykle_leczenia.js` — `pomiaryDoSiatek` (eksport `VildaDziennikOtylosci`);
+`vilda_trajectory_analysis.js` — `buildPoints` (źródło masy i wzrostu punktu), `analyzeMetric` (`odPacjenta`),
+`metaStripHtml` (żeton), `patientMetricCardHtml` (podpis), style `.vtap-pac*`; `vilda_auth_ui.js` — czytelny blok
+P-OTYLOSC-SIATKI po `Ob_dzPowiadom`: `Ob_dzSiatki`, `Ob_zrMetryki`, `Ob_dzMaPacjenta`, `Ob_dzRysujPunkty`,
+`Ob_dzLegendaPac`, `Ob_dzLegenda`, `Ob_dzSiatkiSluchaj`. Opis: `docs/clinical/ALGORITHMS.md`, wpis P-OTYLOSC-SIATKI.
+
+```
+// vilda_auth_ui.js — showPatientCard (zakładka „Siatki centylowe”)
+// 1. po liście pomiarów H:  …H=(k.measurements||[]).filter(…)} + var GdHWizyty=H,GdDzPunktyAkt=null,GdHSiatki=H;
+// 2. było:  function we(){oe(ae),Ht=0;
+//    jest:  function we(){var H=…Ob_dzSiatki(GdHWizyty,GdDzPunktyAkt||Ob_dzPunkty(s,GdNotatki),{ageMonths:I,weight:M,
+//           height:D,sex:it})…;GdHSiatki=H;Ob_dzLegenda(Ct,H);oe(ae),Ht=0;      (lokalne H — wszystkie użycia w we())
+// 3. wiek bieżącego pomiaru: var On=(H||[]).map(…Ma…) → var On=(GdHWizyty||[]).map(…Ma…)
+// 4. przed ae._vildaAgeWin=…: Ob_dzSiatkiSluchaj(t,Ct,function(Gs){GdDzPunktyAkt=Gs.punkty;we()});
+// 5. _tjm (wejście analizy): …weight:pe.weight} → …weight:pe.weight,zrodloMasy:pe.zrodloMasy,zrodloWzrostu:pe.zrodloWzrostu}
+// 6. legenda: " pomiary pacjenta" → " pomiary w gabinecie" + Ob_dzLegendaPac(GdHSiatki)
+// vilda_auth_ui.js — yn (siatka)
+// 7. H.push({age:E,val:g}) → H.push({age:E,val:g,zr:Ob_zrMetryki(j,t)})
+// 8. var ut=Yo(H,y,x)… ut.forEach(zakres) → Yo(H bez „pacjent”)… ut.concat(wt).forEach(zakres)
+// 9. return wt.forEach(function(j,E){…circle…}) → return Ob_dzRysujPunkty(f,wt,Q,mt,u)
+// 10. _vildaScale.pts: {x,val} → {x,val,zr}
+// vilda_auth_ui.js — vildaSiatkaCrosshair (dymek i porównanie)
+// 11. po visitVal: nowe visitZr(it,vbx) i pacCmp(a,b); wiersz dymka + odznaka .vilda-tip-pac; nagłówek „◇ od pacjenta”
+// 12. statAt: punkt od pacjenta bez tej metryki → null („— brak pomiaru w tym punkcie”, bez wartości z linii)
+// 13. panel.innerHTML=head+ctxH+… → head+ctxH+pacCmp(a,b)+…; style .vilda-tip-pac, .vilda-cmp-ctx.vilda-cmp-pac
+```
+
+`vilda_auth_ui.css`: `.vilda-patient-legend-item.vilda-legend-pac[hidden]` i odstęp rombu w legendzie.
+
+**Granice.** `H` poza `we()` zostaje listą wizyt: kafelek tempa w „Status” (`hvSdsKafelek`) i PDF siatek bez zmian.
+Sejf, dziennik i zapis bez zmian. Wersje `?v=`, precache i `SW_VERSION` ustawił `npm run podbij-wersje`.
+
 ## Łatka P-E2-MENARCHE — estradiol poniżej 18 lat: zakresy dorosłych po 5 latach od menarche (`lab_units_data.js` 42 → 43, `lab_unit_converter.js` 10 → 11, `vilda_lab_packages.js` 10 → 11, `inline_przelicznik_jednostek_00.css` 17 → 18, `przelicznik-jednostek.html`, 2026-11-19, decyzje właściciela)
 
 Opis działania, przypadki, dowody i ograniczenia: `docs/clinical/ALGORITHMS.md`, wpis „LAB-E2-MENARCHE”. Zmiany wprowadzono wprost w artefaktach, czytelnymi blokami; żadnego pliku nie przebudowano z dawnych źródeł ani nie minifikowano ponownie.
@@ -2873,3 +2996,118 @@ Zmiana pinu Bsc/Przypomnień wynika wyłącznie z jawnej, odwracalnej pary
 Auth obsługującej własne zamknięcie; odwrócenie 16 par zabezpieczeń nadal
 daje tę samą bazę natywną. Wszystkie sześć par Bsc oraz haki Home/B1
 odwracają się i odtwarzają dokładnie.
+
+## Zgodność nawigacji leczenia otyłości z #1003
+
+Zmiana `audyt` `bec8e182` jest włączona z zachowaniem natywnych pól,
+trybów `edytuj`, `ponownie`, `wlaczenie` oraz asercji SK1–5. Zamiar
+otwarcia wpisu korzysta z istniejącego szyfrowanego transportu `gh-jump`.
+Walidator przyjmuje rozłącznie dotychczasowy punkt GH albo dokładny cel
+otyłości. Identyfikatory pozostają niezmienione; nie ma powrotu do zapisu
+celu jawnym tekstem. Natywne wywołanie monitora z jednym argumentem
+zachowuje swój wynik logiczny i obsługę pól.
+
+Nawigację z karty wiąże dodatkowa, siedemnasta jawna para Auth i trzy
+odwracalne rozszerzenia dziewiątego argumentu B1. Oryginalna karta,
+lokalny właściciel, bilet konta oraz własne ciche zamknięcie są sprawdzane
+przez istniejące uprawnienie odbioru. Zwykłe Wstecz, zmiana pacjenta,
+wylogowanie, Wyczyść lub nowszy zamiar nadal unieważniają stare zadanie.
+Nowa gałąź otyłości zachowuje ten sam odebrany zamiar do zakończenia
+natywnego opóźnienia 450 ms i oczekiwania na formularz. Odbiorca wymaga
+znacznika `uiIntentLandingVersion: 1` na tej samej funkcji monitora;
+starsza funkcja ignorująca opcjonalne zabezpieczenia nie jest wywoływana.
+
+Przycisk „Wyczyść pola” po ponownym dodaniu leczenia jest osobnym,
+jawnym działaniem użytkownika. Przechwytuje właściciela podczas tworzenia
+komunikatu i kończy życie przy zmianie konta, wizyty, formularza lub DOM.
+Zwykłe wpisywanie danych nie unieważnia tego przycisku. Żadna z tych
+zmian nie dodaje zapisu pacjenta ani nie zmienia wzorów lub norm.
+
+Piny warstw pośrednich są liczone przez rzeczywiste odwracanie i ponowne
+odtwarzanie. Historyczny `c2deeccd` opisuje wcześniejszą zatwierdzoną
+warstwę z ośmioma argumentami B1, a nie surowy natywny Auth. Odwrócenie
+trzech nowych rozszerzeń nadal daje dokładnie ten skrót; starsza warstwa
+hostowania notatek pozostaje identyczna z `4a6eecc2`.
+
+Natywne wczytanie publikuje pacjenta synchronicznie, lecz jego własne
+`vilda:json-imported` trafia do kolejki 0 ms. Odbiornik otyłości wiąże
+wyłącznie to jedno zdarzenie z zakończonym zaakceptowanym wczytaniem:
+przechwytuje oryginalne API, metodę licznika i nieprzezroczyste uprawnienie
+panelu, a po potwierdzonym wyniku sprawdza ich tożsamość, numer operacji,
+konto, dokument oraz docelowego pacjenta. Uprawnienie zdarzenia jest
+jednorazowe i kończy się także przy pierwszym wywołaniu po 450 ms.
+Nie ma ogólnego wyjątku dla fazy oczekiwania: inny import, numer operacji,
+powtórzenie lub zmiana właściciela nadal anuluje stary zamiar. Data,
+Panel i sejf pozostają bez zmian; świadek istnieje tylko w pamięci tego
+oryginalnego odbioru.
+
+
+## Zgodność z natywną obsługą leków i dawek #1005–1006
+
+Scalenie `audyt` `af6a465c28c19c732d13d7d57dd4598d664c9b4f` zachowuje
+zmiany właściciela: wspólne rozpoznawanie leku, wyświetlanie przecinka w dawce
+oraz podpowiedzi z dotychczasowej tabeli ChPL. Dane produktów i schematy dawek
+pochodzą wprost z tej bazy; integracja nie zmienia ich wartości ani reguł.
+Zachowano również wszystkie zabezpieczenia pierwotnego odbioru, monitora
+i późniejszego przycisku „Wyczyść pola”. Dodatkowe funkcje podpowiedzi są
+umieszczone po niezmienionym eksporcie monitora i jego znaczniku wersji.
+
+`tests/fixtures/obesity-dose-auth-view-delta.json` opisuje dokładnie dwie
+natywne pary źródła Auth: komentarz z delegatem `Ob_dawka` i jedną gałąź
+wyświetlania dawki w `Cl`. Test odwraca je wyłącznie przy porównaniu z dawnymi,
+niezmiennymi skrótami warstw `c2deeccd` i `6a9726ac`, a potem odtwarza źródło
+bajt w bajt. Wykonywany Auth zachowuje nową obsługę dawki. Trzy bieżące piny
+narzędzi wynikają z odwrócenia rzeczywistych warstw aktualnego pliku; nie
+zastępują historycznych punktów kontrolnych i nie ignorują innych zmian.
+
+
+## Jedna natywna publikacja wybranego pacjenta
+
+Odbiornik skoku GH i otyłości korzysta z istniejącego, synchronicznego
+`vilda:patient-loaded`, tak jak natywny wybór pacjenta. Nie powtarza już
+zapisu identyfikatora w oknie i sesji: oba konteksty ustawia dotychczasowy
+nasłuch w `custom-fixes.js`. Przed pracą asynchroniczną przechwytuje oryginalny
+dokument, moduł `VildaInit` i metodę `isInitialized`. Wczytanie innego pacjenta
+wymaga gotowego `custom-fixes:sidebar-menu`, a zmiana tych tożsamości lub utrata
+gotowości przed zastosowaniem i publikacją kończy próbę bez zastępczego zapisu.
+
+Rekord zwrócony przez sejf musi mieć niepusty tekstowy `patientId` dokładnie
+równy pierwotnemu celowi zamiaru. Po publikacji odbiornik sprawdza oba konteksty
+wybranego pacjenta. Nie zmienia nasłuchu, natywnego sejfu ani formatu zdarzenia
+z uprawnieniem zaakceptowanego wczytania. Regresja wykonuje rzeczywisty nasłuch
+wydawcy i rzeczywisty odbiornik, w tym utratę właściciela i obce importy.
+Istniejący klucz bieżącego pacjenta pozostaje jawnym, nieprzezroczystym
+identyfikatorem nawigacyjnym; ta zmiana go nie szyfruje.
+
+
+## Zgodność siatek i trajektorii z #1008
+
+Natywna baza `dac2691f8bae57185898176107a1f3d49d0640d2` dodaje do karty
+pomiary z dziennika leczenia wraz z oznaczeniem ich pochodzenia. Funkcje
+siatek i trajektorii oraz projekcja dziennika są odziedziczone dokładnie
+z tej bazy, z zachowaniem lokalnych zabezpieczeń i istniejącego hostowania
+widoków. Odbiornik publikacji pacjenta pozostaje identyczny z zatwierdzoną
+poprawką i nie otrzymuje dodatkowego zapisu identyfikatora.
+
+`tests/fixtures/obesity-chart-auth-view-delta.json` zawiera siedem dokładnych
+par natywnego źródła: trzy funkcje i cztery fragmenty integracji. Ich zastosowanie
+do poprzedniego natywnego Auth odtwarza bazę #1008 bajt w bajt; zastosowanie do
+lokalnego Auth zachowuje wszystkie własne haki. Test odwraca siedem par przed
+dwiema wcześniejszymi parami obsługi dawki wyłącznie w porównaniach historycznych
+skrótów `c2deeccd` i `6a9726ac`. Aktualny kod wykonuje wszystkie nowe funkcje.
+
+## Identyfikator anonimowej wizyty po odświeżeniu
+
+W `vilda_data_import_export.js` pierwsze automatyczne odtworzenie sesji może
+pozostawić formularz, którego pola przywrócił już stan współdzielony. W tej
+gałęzi brakujący identyfikator wizyty przechodzi do `VisitContext` pod tym samym
+kontem, kluczem i uprawnieniem panelu, z tego samego nośnika sesji. Zmiana
+nośnika, istniejąca wizyta, edycja formularza, nowsze wczytanie lub zmiana
+właściciela unieważniają próbę.
+
+Porównanie oddzielnych kopii pomija techniczny czas zapisu, indeksy wierszy
+i pamięć obliczeń. W historii spożycia uznaje za równoważne tylko dokładne kopie
+bieżącego pomiaru lub pomiarów wzrastania. Odrębne pomiary i ich metadane
+pozostają w porównaniu. Odtworzenie identyfikatora nie zapisuje sesji ani nie
+wywołuje pełnego odtworzenia formularza. Testy wykonują produkcyjny kod
+odtwarzania i sprawdzają ten sam identyfikator po odświeżeniu w przeglądarce.

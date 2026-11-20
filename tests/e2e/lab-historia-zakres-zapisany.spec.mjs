@@ -124,7 +124,7 @@ test('prolaktyna u dziecka z zakresem ogólnym: okno i historia bez oceny, zapis
   const chip = pasek.locator('button.lab-strip-chip[data-note-id]').last();
   await expect(chip.locator('.lab-strip-chip-v')).toHaveText('35');
   await chip.click();
-  expect(bezTwardejSpacji(await chip.getAttribute('title'))).toBe('zapisano: 35 ng/mL · zakres ogólny — bez oceny dla dziecka 2–29 ng/mL · Dorośli, zakres ogólny · dziewczynka, 12 l 3 m · Mayo Test 85670 — Prolaktyna · wynik z formularza — już w karcie');
+  await expect.poll(async () => bezTwardejSpacji(await chip.getAttribute('title'))).toBe('zapisano: 35 ng/mL · zakres ogólny — bez oceny dla dziecka 2–29 ng/mL · Dorośli, zakres ogólny · dziewczynka, 12 l 3 m · Mayo Test 85670 — Prolaktyna · wynik z formularza — już w karcie');
 
   await otworzBadania(page, patientId);
   const badania = sekcjaBadan(page);

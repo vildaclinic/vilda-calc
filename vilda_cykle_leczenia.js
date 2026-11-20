@@ -807,6 +807,47 @@
     return (+Number(n).toFixed(miejsca == null ? 1 : miejsca)).toString().replace('.', ',');
   }
 
+  // ── Dawka (P-OTYLOSC-DAWKA, temat B; decyzja właściciela 2026-11-19: „Przecinek + podpowiedzi”) ─────────────
+  // Dawka jest wolnym tekstem z monitora DocPro („2,4”, „0.25”, „2,4 mg / tydz.”). Nic jej nie przelicza poza wykresem
+  // dawki w Karcie, który bierze pierwszą liczbę (przecinek albo kropka). Zapis zostaje, jak go wpisano; tylko WIDOK
+  // pokazuje przecinek dziesiętny. Jednostek nie dopisujemy — lekarz wpisuje je sam albo wybiera podpowiedź.
+
+  /** Dawka do pokazania: kropka dziesiętna między cyframi → przecinek („0.25” → „0,25”). Reszta tekstu bez zmian. */
+  function dawkaPL(dawka) {
+    return String(dawka == null ? '' : dawka).trim().replace(/(\d)\.(\d)/g, '$1,$2');
+  }
+
+  /**
+   * Podpowiedzi pod polem „Dawka” w monitorze: dawki z tabeli zwiększania dawki ChPL wybranego leku
+   * (obesity_therapy.js, products[…].dosing.escalation — to samo źródło co zalecenia w module leczenia otyłości).
+   * Wiersz z jedną dawką („0,25 mg”, „3,0 mg / dobę”, „2 tabl. rano + 1 tabl. wieczorem”) daje przycisk; lek podawany
+   * 1×/tydz. dostaje „ / tydz.”, jak w zapisie „2,4 mg / tydz.”. Wiersz bez jednej dawki („5, 10 lub 15 mg”,
+   * „+2,5 mg co ≥4 tyg.”) i uwaga przy dawce spoza zwykłego schematu („tylko dorośli…”) — jako zdanie pod przyciskami.
+   * Zwraca { dawki: [{ wartosc, etykieta, uwaga }], uwagi: [tekst] }.
+   */
+  function podpowiedziDawek(eskalacja, czestosc) {
+    var wynik = { dawki: [], uwagi: [] };
+    var tygodniowo = /1\s*×\s*\/\s*tydz/i.test(String(czestosc || ''));
+    var byly = {};
+    (Array.isArray(eskalacja) ? eskalacja : []).forEach(function (x) {
+      var dawka = dawkaPL(x && x.dose);
+      if (!dawka) return;
+      var etykieta = String((x && x.label) || '').trim();
+      var uwaga = String((x && x.note) || '').trim();
+      var jedna = /^\d+(?:,\d+)?\s*(?:mg|tabl)/i.test(dawka) && !/\s(?:lub|co)\s/i.test(dawka);
+      if (!jedna) {
+        wynik.uwagi.push((etykieta ? etykieta + ': ' : '') + dawka + (uwaga ? ' (' + uwaga + ')' : ''));
+        return;
+      }
+      var wartosc = dawka + (tygodniowo && dawka.indexOf('/') < 0 ? ' / tydz.' : '');
+      if (byly[wartosc]) return;
+      byly[wartosc] = true;
+      wynik.dawki.push({ wartosc: wartosc, etykieta: etykieta, uwaga: uwaga });
+      if (uwaga && !/^dawka\b/i.test(uwaga)) wynik.uwagi.push(wartosc + ' — ' + uwaga);
+    });
+    return wynik;
+  }
+
   function dzisISO(teraz) {
     var d = teraz instanceof Date ? teraz : new Date();
     return d.getFullYear() + '-' + dwieCyfry(d.getMonth() + 1) + '-' + dwieCyfry(d.getDate());
@@ -1237,9 +1278,10 @@
    * 2026-11-19: listy pacjentów bez zmiany sejfu). Listy „Leczenie otyłości: trwa / kiedykolwiek / lek X” liczy
    * sejf z zapisu ostatniej wizyty — z rodzaju ostatniego punktu i z leku punktów. W Karcie wolno więc poprawiać,
    * usuwać i przywracać tylko Kontynuację, która leku nie zmienia: poprzedni wpis (w kolejności tabeli) jest
-   * Włączeniem albo Kontynuacją z tym samym lekiem i substancją. Wtedy ani rodzaj ostatniego punktu, ani lek nie
+   * Włączeniem albo Kontynuacją z tym samym lekiem (kluczLeku). Wtedy ani rodzaj ostatniego punktu, ani lek nie
    * zmieniają się względem zapisu wizyty, więc listy zostają zgodne z dziennikiem. Włączenie, Zakończenie i zmianę
-   * leku poprawia się w DocPro — tak jak dotąd zmianę leku.
+   * leku poprawia się w DocPro — tak jak dotąd zmianę leku. Tej samej reguły używa monitor DocPro do dopisku
+   * „Listy pacjentów zobaczą zmianę po „Zapisz dane”” (P-OTYLOSC-SKOK).
    * Zwraca null (wolno) albo powód: 'wlaczenie' | 'zakonczenie' | 'pierwszy-wpis' | 'zmiana-leku'.
    */
   function zmianaPrzebiegu(stan, wpis) {
@@ -1261,8 +1303,25 @@
     return kluczLeku(poprzedni) === kluczLeku(d) ? null : 'zmiana-leku';
   }
 
+  /**
+   * P-OTYLOSC-LEK (decyzja właściciela 2026-11-19, „zacznij od A”): lek punktu tak, jak go rozpoznają listy pacjentów
+   * „Leczenie otyłości” (sejf: drugKey) i ocena wg ChPL — ObesityResponseCriteria.resolveDrug(drug, substance).
+   * Dotąd Karta porównywała dosłowny tekst leku i substancji, więc Kontynuacja po starszym punkcie zapisanym bez
+   * substancji (ten sam lek) uchodziła za „zmianę leku” i odsyłała do DocPro. Lek spoza tabeli kryteriów — po nazwie
+   * (bez niej po substancji). Bez modułu kryteriów — ostrożnie, jak dotąd: każda różnica tekstu to zmiana leku.
+   */
   function kluczLeku(p) {
-    return (String((p && p.drug) || '').trim() + '|' + String((p && p.substance) || '').trim()).toLowerCase();
+    var lek = tekst(p && p.drug);
+    var sub = tekst(p && p.substance);
+    try {
+      var K = w.ObesityResponseCriteria;
+      if (K && typeof K.resolveDrug === 'function') {
+        var r = K.resolveDrug(lek, sub);
+        if (r && typeof r.drugKey === 'string' && r.drugKey) return 'chpl:' + r.drugKey;
+        return 'nazwa:' + (lek || sub).toLowerCase();
+      }
+    } catch (_e) { /* jak bez modułu kryteriów */ }
+    return 'tekst:' + (lek + '|' + sub).toLowerCase();
   }
 
   var POWODY_DOCPRO = Object.freeze({
@@ -1271,6 +1330,62 @@
     'pierwszy-wpis': 'To pierwszy wpis cyklu — poprawiasz go w DocPro przy wizycie (od niego zależą cykl i listy pacjentów).',
     'zmiana-leku': 'Ten wpis zmienia lek — poprawiasz go w DocPro przy wizycie (od leku zależą ocena wg ChPL i listy pacjentów).'
   });
+
+  // ── Pomiary z dziennika na siatkach (P-OTYLOSC-SIATKI, temat C; decyzje właściciela 2026-11-19) ────────────────
+  /**
+   * Pomiary z dziennika leczenia do siatek centylowych, panelu „Porównaj 2 pomiary” i analizy trajektorii w Karcie
+   * pacjenta (wariant B: masa od pacjenta liczy się także w analizie). `osCzasu` — pomiary z osi czasu (wizyty)
+   * razem z bieżącym pomiarem Karty: {ageMonths, weight, height, dateISO}; `punkty` — projekcja dziennika
+   * (zloz().punkty: wpisy poza wizytą i dawne punkty monitora). Zwraca TYLKO pomiary do dopisania, w kształcie osi
+   * czasu: {ageMonths, ageYears, weight, height, dateISO, zrodloMasy, zrodloWzrostu, zDziennika: true}. Reguły:
+   *  • punkt bez masy > 0 albo bez wieku — pomijany (siatki i analiza mają wiek pomiaru, nie dzisiejszy);
+   *  • wizyta wygrywa: punkt z tego samego miesiąca życia co pomiar osi czasu, z tą samą datą albo z tą samą masą
+   *    (±0,05 kg) do 1 mies. obok (monitor zapisuje wiek w pełnych miesiącach) — pomijany;
+   *  • dwa wpisy z tego samego miesiąca — zostaje późniejszy w kolejności tabeli (jak w scaleniu punktów analizy);
+   *  • wzrost tylko wpisany (> 0); źródło z wpisu: 'pacjent' tylko, gdy wpis tak mówi, inaczej 'gabinet'
+   *    (decyzja właściciela: wpis z gabinetu rysuje się jak wizyta).
+   */
+  function pomiaryDoSiatek(osCzasu, punkty) {
+    var wizyty = (Array.isArray(osCzasu) ? osCzasu : []).map(function (m) {
+      if (!m) return null;
+      var am = Number(m.ageMonths);
+      if (!isFinite(am) && isFinite(Number(m.ageYears))) am = Number(m.ageYears) * 12;
+      if (!isFinite(am)) return null;
+      return { mies: am, masa: Number(m.weight) > 0 ? Number(m.weight) : null, data: dataISO(m.dateISO) || null };
+    }).filter(Boolean);
+    function zWizyta(mies, masa, data) {
+      return wizyty.some(function (m) {
+        if (Math.round(m.mies) === mies) return true;
+        if (data && m.data && m.data === data) return true;
+        return masa != null && m.masa != null && Math.abs(m.mies - mies) <= 1 && Math.abs(m.masa - masa) <= 0.05;
+      });
+    }
+    var poMiesiacu = {};
+    var miesiace = [];
+    uporzadkujPunkty((Array.isArray(punkty) ? punkty : []).filter(function (p) {
+      return p && (p.type === 'start' || p.type === 'continue' || p.type === 'end');
+    })).forEach(function (p) {
+      var masa = Number(p.weight);
+      if (!(masa > 0)) return;
+      var mies = Math.round((Number(p.ageYears) || 0) * 12 + (Number(p.ageMonths) || 0));
+      if (!(mies > 0)) return;
+      var data = dataISO(p.dateISO) || null;
+      if (zWizyta(mies, masa, data)) return;
+      var wzrost = Number(p.height) > 0 ? Number(p.height) : null;
+      if (!poMiesiacu[mies]) miesiace.push(mies);
+      poMiesiacu[mies] = {
+        ageMonths: mies,
+        ageYears: mies / 12,
+        weight: masa,
+        height: wzrost,
+        dateISO: data,
+        zrodloMasy: p.weightSource === 'pacjent' ? 'pacjent' : 'gabinet',
+        zrodloWzrostu: wzrost != null ? (p.heightSource === 'pacjent' ? 'pacjent' : 'gabinet') : null,
+        zDziennika: true
+      };
+    });
+    return miesiace.sort(function (a, b) { return a - b; }).map(function (k) { return poMiesiacu[k]; });
+  }
 
   /** Możliwy duplikat: inny bieżący wpis z tą samą datą i masą (±0,05 kg). */
   function duplikat(stan, dane, pomijajEntryId) {
@@ -1446,6 +1561,9 @@
     opisDanych: opisDanych,
     dataPL: dataPL,
     liczbaPL: liczbaPL,
+    dawkaPL: dawkaPL,
+    podpowiedziDawek: podpowiedziDawek,
+    pomiaryDoSiatek: pomiaryDoSiatek,
     dzisISO: dzisISO,
     wczytaj: wczytaj,
     zapisz: zapisz,
@@ -1471,7 +1589,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '2';
+  var VERSION = '3';
   var POKAZ_NA_START = 5;
   var rozwiniete = {};
   var usunieteRozwiniete = {};
@@ -1727,6 +1845,74 @@
     return powod ? (Dz().POWODY_DOCPRO[powod] || Dz().POWODY_DOCPRO['zmiana-leku']) : null;
   }
 
+  // P-OTYLOSC-SKOK (etap 2 projektu „Leczenie otyłości — wpisy poza wizytą”, decyzje właściciela 2026-11-19).
+  // Włączenie, Zakończenie i zmianę leku edytuje się w monitorze DocPro, więc przycisk przy wpisie przenosi tam od razu.
+  // DocPro wczytuje pacjenta tą samą drogą co skok do punktu GH (gh_therapy_monitor.js czyta wpis sessionStorage
+  // „vilda:gh-jump”: strażnik niezapisanych zmian, ramki powłoki, „Odtwórz zapis” bez okna wyboru), a monitor
+  // (obesity_therapy_monitor.js, obesityTherapyMonitorSkok) otwiera punkt do edycji, wypełnia pola z usuniętego wpisu
+  // albo szykuje nowe Włączenie. Tylko „Włączenie w DocPro” pyta „Nowy pomiar / Odtwórz zapis” — nowy cykl zwykle
+  // zaczyna się na nowej wizycie. Sam przycisk niczego nie zapisuje. Powód widać pod przyciskiem (dawniej tylko dymek).
+  var POWODY_KROTKIE = Object.freeze({
+    wlaczenie: 'Od Włączenia zależą cykl, ocena wg ChPL i listy pacjentów.',
+    zakonczenie: 'Od Zakończenia zależą cykl i listy pacjentów.',
+    'pierwszy-wpis': 'To pierwszy wpis cyklu — od niego zależą cykl i listy pacjentów.',
+    'zmiana-leku': 'Ten wpis zmienia lek — od leku zależą ocena wg ChPL i listy pacjentów.'
+  });
+
+  function powodKrotki(ctx, wpis) {
+    var powod = Dz().zmianaPrzebiegu(ctx.stan, wpis);
+    return powod ? (POWODY_KROTKIE[powod] || POWODY_KROTKIE['zmiana-leku']) : null;
+  }
+
+  /** Cel skoku do monitora DocPro, szyfrowany przez istniejący transport „gh-jump”.
+   *  Cel nie zawiera pomiarów; dane usuniętego wpisu monitor czyta z dziennika. */
+  function celSkoku(patientId, tryb, wpis) {
+    // Id punktu w monitorze = entryId wpisu dziennika; punkt z dawnej wizyty, jeszcze nieprzeniesiony, ma id z migawki.
+    var id = wpis ? (wpis.entryId || (wpis.punkt && wpis.punkt.id)) : null;
+    return { patientId: String(patientId), obesity: { tryb: tryb, entryId: id != null && id !== '' ? String(id) : null }, ts: Date.now() };
+  }
+
+  /** Encrypt while this exact native card still owns the action; only its private capability may close it. */
+  async function doDocPro(ctx, tryb, wpis) {
+    if (!aktualny(ctx)) return false;
+    var transport = w.VildaUiIntents, caller = null, card = null, receipt = null, closedByMe = false;
+    try {
+      if (!transport || transport.version !== 1 || typeof ctx.captureNavigation !== 'function') throw new Error('navigation-unavailable');
+      card = ctx.captureNavigation();
+      if (!card || typeof card.isCurrent !== 'function' || !card.isCurrent()) return false;
+      caller = transport.captureCallerScope();
+      var scope = Object.freeze({ isCurrent: function () { return card.isCurrent() && (closedByMe || caller.isCurrent()); } });
+      receipt = await transport.prepare('gh-jump', celSkoku(ctx.patientId, tryb, wpis), scope);
+      if (!aktualny(ctx) || !receipt.current()) { receipt.discardExact(); return false; }
+      if (typeof w.vildaGhJumpConsumeSoon === 'function') {
+        // Quietly retire only the captured card's sentinel. Generic Back and
+        // replacement-card cancellation remain normal caller-scope boundaries.
+        if (!card.closeForNavigation()) { receipt.discardExact(); return false; }
+        closedByMe = true;
+        if (!receipt.current()) { receipt.discardExact(); return false; }
+        w.vildaGhJumpConsumeSoon();
+        return true;
+      }
+      // Other pages keep the native card and follow the existing DocPro route.
+      if (!aktualny(ctx) || !receipt.current()) { receipt.discardExact(); return false; }
+      var shell = null;
+      try {
+        var osadzona = w.document.documentElement.classList.contains('vilda-embedded');
+        shell = osadzona && w.parent && w.parent !== w ? w.parent.VildaShell : null;
+      } catch (_e) { /* standalone page */ }
+      if (shell && typeof shell.navigate === 'function') shell.navigate('docpro', true);
+      else w.location.href = 'docpro.html';
+      return true;
+    } catch (_e) {
+      if (receipt) try { receipt.discardExact(); } catch (_ignored) { /* a newer intent owns the slot */ }
+      if (aktualny(ctx) && typeof ctx.navigationError === 'function') ctx.navigationError('Nie udało się otworzyć monitora. Odśwież stronę i spróbuj ponownie.');
+      return false;
+    } finally {
+      if (caller) caller.dispose();
+      if (card && typeof card.dispose === 'function') card.dispose();
+    }
+  }
+
   function formularz(ctx, wpis) {
     if (!aktualny(ctx)) return null;
     if (wpis && wDocPro(ctx, wpis)) return;
@@ -1761,7 +1947,8 @@
       pDose.value = punkt.dose || '';
       pNote.value = punkt.comment || '';
     } else if (ostatni) {
-      pDose.value = ostatni.dose || '';
+      // Nowy wpis: dawka z ostatniego wpisu z przecinkiem dziesiętnym (P-OTYLOSC-DAWKA). Poprawka zostawia tekst wpisu.
+      pDose.value = Dz().dawkaPL(ostatni.dose);
     }
 
     var lekTekst = lekPunkt ? nazwaLeku(lekPunkt) : '';
@@ -1964,7 +2151,7 @@
       ['Masa', liczbaPL(v.dane.weight, 1) + ' kg · ' + v.dane.weightSource],
       ['Wzrost', v.dane.height != null ? liczbaPL(v.dane.height, 1) + ' cm · ' + v.dane.heightSource : '—'],
       ['Data pomiaru', dataPL(v.dane.dateISO) || '—'],
-      ['Dawka', v.dane.dose || '—'],
+      ['Dawka', Dz().dawkaPL(v.dane.dose) || '—'],
       ['Komentarz', v.dane.comment || '—'],
       ['Stan', v.retracted ? 'usunięty' : 'w dzienniku']
     ];
@@ -2020,26 +2207,27 @@
   function sekcja(opcje) {
     var o = opcje || {};
     if (!Dz() || !o.stan || !o.patientId) return null;
-    var ctx = { patientId: o.patientId, stan: o.stan, urodzenieISO: o.urodzenieISO || '', nazwa: o.nazwa || '', migawka: o.migawka || [], onZmiana: o.onZmiana, homeContext: o.homeContext == null ? null : o.homeContext };
+    var ctx = { patientId: o.patientId, stan: o.stan, urodzenieISO: o.urodzenieISO || '', nazwa: o.nazwa || '', migawka: o.migawka || [], onZmiana: o.onZmiana, homeContext: o.homeContext == null ? null : o.homeContext, captureNavigation: o.captureNavigation };
     var stan = o.stan;
     var widoczne = stan.wpisy.filter(function (x) { return x.punkt; });
     var usuniete = stan.wpisy.filter(function (x) { return x.stan === 'usuniety'; });
     if (!widoczne.length && !usuniete.length) return null;
 
     var msg = el('div', { class: 'vdo-msg', role: 'status', 'aria-live': 'polite', hidden: true });
+    ctx.navigationError = function (message) { if (aktualny(ctx) && msg.isConnected) komunikat(msg, 'err', message); };
     function zBledem(p) {
       return Promise.resolve(p).catch(function (e) { komunikat(msg, 'err', (e && e.message) || 'Nie zapisano zmiany.'); });
     }
 
     var aktywny = aktywnyCykl(stan);
-    var dodaj = el('button', { type: 'button', class: 'vilda-auth-btn vilda-auth-btn-primary vdo-add', 'aria-describedby': aktywny ? null : 'vdoAddWhy' }, [
+    var dodaj = el('button', { type: 'button', class: 'vdo-btn vdo-btn-add vdo-add', 'aria-describedby': aktywny ? null : 'vdoAddWhy' }, [
       el('span', { 'aria-hidden': 'true', text: '+\u00a0' }), 'Kontynuacja'
     ]);
     if (!aktywny) dodaj.setAttribute('aria-disabled', 'true');
     dodaj.addEventListener('click', function () {
       if (!aktualny(ctx)) return;
       if (!aktywnyCykl(ctx.stan)) {
-        komunikat(msg, 'warn', 'Brak aktywnego cyklu leczenia — nowy cykl zaczyna się od Włączenia, które dodajesz w DocPro przy wizycie.');
+        komunikat(msg, 'warn', 'Brak aktywnego cyklu leczenia — nowy cykl zaczyna się od Włączenia, które dodajesz w DocPro przy wizycie („Włączenie w DocPro →”).');
         return;
       }
       formularz(ctx, null);
@@ -2058,18 +2246,20 @@
       var p = x.punkt;
       var akcje = el('div', { class: 'vdo-row-actions' });
       if (x.stan === 'konflikt') {
-        akcje.appendChild(el('button', { type: 'button', class: 'vilda-auth-btn vilda-auth-btn-small', text: 'Wybierz wersję', onclick: function () { konflikt(ctx, x); } }));
+        akcje.appendChild(el('button', { type: 'button', class: 'vdo-btn', text: 'Wybierz wersję', onclick: function () { konflikt(ctx, x); } }));
       } else if (wDocPro(ctx, x)) {
-        akcje.appendChild(el('span', { class: 'vdo-row-docpro', text: 'Poprawka w DocPro', title: wDocPro(ctx, x) }));
+        var idPowodu = 'vdoWhy-' + o.patientId + '-' + idx;
+        akcje.appendChild(el('button', { type: 'button', class: 'vdo-btn vdo-btn-docpro', text: 'Edytuj w DocPro →', title: wDocPro(ctx, x), 'aria-describedby': idPowodu, onclick: function () { if (aktualny(ctx)) doDocPro(ctx, 'edytuj', x); } }));
+        akcje.appendChild(el('span', { id: idPowodu, class: 'vdo-row-docpro', text: powodKrotki(ctx, x) }));
       } else {
-        akcje.appendChild(el('button', { type: 'button', class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small', text: 'Popraw', 'aria-label': 'Popraw wpis z ' + (dataPL(p.dateISO) || 'bez daty'), onclick: function () { formularz(ctx, x); } }));
-        akcje.appendChild(el('button', { type: 'button', class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small', text: 'Usuń', 'aria-label': 'Usuń wpis z ' + (dataPL(p.dateISO) || 'bez daty'), onclick: function () { zBledem(usun(ctx, x)); } }));
+        akcje.appendChild(el('button', { type: 'button', class: 'vdo-btn', text: 'Popraw', 'aria-label': 'Popraw wpis z ' + (dataPL(p.dateISO) || 'bez daty'), onclick: function () { formularz(ctx, x); } }));
+        akcje.appendChild(el('button', { type: 'button', class: 'vdo-btn', text: 'Usuń', 'aria-label': 'Usuń wpis z ' + (dataPL(p.dateISO) || 'bez daty'), onclick: function () { zBledem(usun(ctx, x)); } }));
       }
       var bmi = p.weight > 0 && p.height > 0 ? p.weight / Math.pow(p.height / 100, 2) : null;
       lista.appendChild(el('li', { class: 'vdo-item' + (x.stan === 'konflikt' ? ' vdo-item-conflict' : '') + (idx === 0 ? ' vdo-item-last' : ''), 'data-entry': x.entryId || '', 'data-date': p.dateISO || '' }, [
         el('div', { class: 'vdo-item-head' }, [
           el('span', { class: 'vdo-date', text: dataPL(p.dateISO) || 'bez daty' }),
-          el('span', { class: 'vdo-type', text: Dz().TYPY[p.type] + (p.dose ? ' · ' + p.dose : '') })
+          el('span', { class: 'vdo-type', text: Dz().TYPY[p.type] + (p.dose ? ' · ' + Dz().dawkaPL(p.dose) : '') })
         ]),
         el('div', { class: 'vdo-item-body' }, [
           el('span', { class: 'vdo-meas' }, [liczbaPL(p.weight, 1) + ' kg ', odznaka(p.weightSource)]),
@@ -2110,8 +2300,8 @@
           return el('li', { class: 'vdo-item vdo-item-deleted' }, [
             el('span', { text: (dataPL(d.dateISO) || 'bez daty') + ' · ' + Dz().TYPY[d.type] + ' · ' + liczbaPL(d.weight, 1) + ' kg' }),
             wDocPro(ctx, x)
-              ? el('span', { class: 'vdo-row-docpro', text: 'Dodaj ponownie w DocPro', title: wDocPro(ctx, x).replace('poprawiasz go', 'dodajesz go ponownie') })
-              : el('button', { type: 'button', class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small', text: 'Przywróć', onclick: function () { zBledem(przywroc(ctx, x.entryId)); } })
+              ? el('button', { type: 'button', class: 'vdo-btn vdo-btn-docpro', text: 'Dodaj ponownie w DocPro →', title: wDocPro(ctx, x).replace('poprawiasz go', 'dodajesz go ponownie'), onclick: function () { if (aktualny(ctx)) doDocPro(ctx, 'ponownie', x); } })
+              : el('button', { type: 'button', class: 'vdo-btn', text: 'Przywróć', onclick: function () { zBledem(przywroc(ctx, x.entryId)); } })
           ]);
         })));
       }
@@ -2125,7 +2315,7 @@
         cofnij = el('div', { class: 'vdo-msg vdo-msg-info', role: 'status' }, [
           el('span', { class: 'vdo-msg-t', text: 'Wpis z ' + (dataPL(u.dateISO) || 'dziennika') + ' usunięty z dziennika.' }),
           el('div', { class: 'vdo-msg-actions' }, [
-            el('button', { type: 'button', class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small', text: 'Cofnij', onclick: function () { zBledem(przywroc(ctx, u.entryId)); } })
+            el('button', { type: 'button', class: 'vdo-btn', text: 'Cofnij', onclick: function () { zBledem(przywroc(ctx, u.entryId)); } })
           ])
         ]);
       } else {
@@ -2148,11 +2338,14 @@
           el('p', { class: 'vdo-intro', text: 'Dziennik leczenia jest oddzielony od wizyt w gabinecie. Wpis z masą od pacjenta nie tworzy wizyty i nie zmienia jej pomiarów.' })
         ]),
         el('div', { class: 'vdo-head-actions' }, [
-          dodaj,
-          aktywny ? null : el('span', { id: 'vdoAddWhy', class: 'vdo-hint', text: 'Brak aktywnego cyklu — Włączenie w DocPro.' })
+          el('div', { class: 'vdo-head-buttons' }, [
+            dodaj,
+            aktywny ? null : el('button', { type: 'button', class: 'vdo-btn vdo-btn-docpro', text: 'Włączenie w DocPro →', onclick: function () { if (aktualny(ctx)) doDocPro(ctx, 'wlaczenie', null); } })
+          ]),
+          aktywny ? null : el('span', { id: 'vdoAddWhy', class: 'vdo-hint', text: 'Brak aktywnego cyklu — nowy cykl zaczyna się od Włączenia przy wizycie.' })
         ])
       ]),
-      el('p', { class: 'vdo-hint', text: 'Włączenie, Zakończenie i zmianę leku dodajesz i poprawiasz w DocPro przy wizycie. Tu — Kontynuacje.' }),
+      el('p', { class: 'vdo-hint', text: 'Włączenie, Zakończenie i zmianę leku edytujesz w monitorze DocPro — „Edytuj w DocPro →” przy wpisie otwiera go od razu na tym wpisie. Tu — Kontynuacje.' }),
       konflikty,
       cofnij,
       msg,
@@ -2163,6 +2356,6 @@
   w.VildaDziennikOtylosciUI = Object.freeze({
     VERSION: VERSION,
     sekcja: sekcja,
-    _internal: Object.freeze({ podpowiedzOkna: podpowiedzOkna, aktywnyCykl: aktywnyCykl })
+    _internal: Object.freeze({ podpowiedzOkna: podpowiedzOkna, aktywnyCykl: aktywnyCykl, celSkoku: celSkoku, powodKrotki: powodKrotki })
   });
 }(typeof window !== 'undefined' ? window : this));

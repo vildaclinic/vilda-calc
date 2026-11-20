@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "baseCommit": "bec8e182b0e63121a58dfcb26a79f8c05214dc9b",
+  "upstreamCommit": "af6a465c28c19c732d13d7d57dd4598d664c9b4f",
+  "scope": "Exact native dose-view delegate, comment and Cl display change; no security hook or dose-data change.",
+  "pairs": [
+    {
+      "before": "function Cl(t){",
+      "after": "/* P-OTYLOSC-DAWKA: dawka w podsumowaniu z przecinkiem dziesiętnym (VildaDziennikOtylosci.dawkaPL); zapis bez zmian. */function Ob_dawka(t){try{var D=i.VildaDziennikOtylosci;return D&&typeof D.dawkaPL==\"function\"?D.dawkaPL(t):String(t)}catch(_e){return String(t)}}function Cl(t){"
+    },
+    {
+      "before": "?String(d.dose):",
+      "after": "?Ob_dawka(d.dose):"
+    }
+  ]
+}

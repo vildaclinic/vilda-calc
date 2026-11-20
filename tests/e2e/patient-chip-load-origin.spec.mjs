@@ -171,7 +171,7 @@ async function saveFullPatientOnStart(start) {
 
 for (const choice of ['restore', 'new']) {
   test(`zapis Start → DocPro B → C (${choice}) → Start → F5 zachowuje wejścia i stan zapisany`, async ({ page }) => {
-    const fixture = await createFictionalVault(page, { shell: true });
+    const fixture = await createFictionalVault(page, { shell: true, waitForAccountReadyBeforeReload: true });
     const { patientId, original } = await saveFullPatientOnStart(fixture.frame);
     expect(patientId).not.toBe(fixture.ids.b);
     await page.evaluate(() => window.VildaShell.navigate('docpro'));

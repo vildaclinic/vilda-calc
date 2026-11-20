@@ -74,6 +74,9 @@ describe('production shell refreshes only the current calendar generation', () =
     const refresh = vi.fn(); calendar.contentWindow.__vildaSyncRefresh = refresh;
     p.tick(1300);
     expect(refresh).not.toHaveBeenCalled();
+    p.load('terminarz'); // Spóźnione zdarzenie starego dokumentu.
+    expect(refresh).not.toHaveBeenCalled();
+    p.replaceDocument('terminarz');
     p.load('terminarz');
     expect(refresh).toHaveBeenCalledTimes(1);
   });

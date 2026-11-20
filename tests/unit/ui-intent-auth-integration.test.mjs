@@ -3,11 +3,14 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
+import { execFileSync } from 'node:child_process';
 import { describe, expect, it, vi } from 'vitest';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
-import { UI_INTENT_AUTH_PAIRS, applyUiIntentAuthHooks, reverseUiIntentAuthHooks } from '../../tools/private-ui-intent-auth-hooks.mjs';
+import { UI_INTENT_AUTH_BASE_SHA256, UI_INTENT_AUTH_PAIRS, applyUiIntentAuthHooks, reverseUiIntentAuthHooks } from '../../tools/private-ui-intent-auth-hooks.mjs';
 import { SETTINGS_UI_INTENT_PAIR, applySettingsUiIntentHook, reverseSettingsUiIntentHook } from '../../tools/private-ui-intent-settings-hooks.mjs';
 import { HOME_REMINDERS_AUTH_BASE_SHA256, reverseHomeRemindersHooks } from '../../tools/home-reminders-auth-hooks.mjs';
+import { B1_NAVIGATION_PAIRS, applyB1NavigationHooks, reverseB1NavigationHooks,
+  applyPatientB1AuthHooks, reversePatientB1AuthHooks } from '../../tools/patient_b1_auth_hooks.mjs';
 
 const { parse } = createRequire(import.meta.url)('espree');
 const auth = fs.readFileSync(new URL('../../vilda_auth_ui.js', import.meta.url), 'utf8');
@@ -17,6 +20,28 @@ const settingsAst = parse(settings, { ecmaVersion: 'latest' });
 const TARGET = 'fictional target B / żółw ' + 'x'.repeat(300);
 const GH = 'vilda:gh-jump', LOAD = 'vilda:pendingPatientLoad';
 const digest = value => createHash('sha256').update(value).digest('hex');
+const ownerDoseViewDelta = JSON.parse(fs.readFileSync(new URL('../fixtures/obesity-dose-auth-view-delta.json', import.meta.url), 'utf8'));
+const ownerChartViewDelta = JSON.parse(fs.readFileSync(new URL('../fixtures/obesity-chart-auth-view-delta.json', import.meta.url), 'utf8'));
+function reverseOwnerChartView(source) {
+  // Only the seven exact owner-native PR #1008 source pairs are reversed for
+  // immutable historical checkpoints; running Auth keeps all chart changes.
+  expect(ownerChartViewDelta.pairs).toHaveLength(7);
+  for (const pair of [...ownerChartViewDelta.pairs].reverse()) {
+    expect(source.split(pair.after)).toHaveLength(2);
+    source = source.replace(pair.after, pair.before);
+  }
+  return source;
+}
+function reverseOwnerDoseView(source) {
+  // Retain historical security checkpoints while explicitly undoing only the
+  // owner's subsequent, byte-exact native display delta from PR #1006.
+  expect(ownerDoseViewDelta.pairs).toHaveLength(2);
+  for (const pair of [...ownerDoseViewDelta.pairs].reverse()) {
+    expect(source.split(pair.after)).toHaveLength(2);
+    source = source.replace(pair.after, pair.before);
+  }
+  return source;
+}
 
 function find(node, predicate, found = []) {
   if (!node || typeof node !== 'object') return found;
@@ -361,19 +386,53 @@ describe('static and lazy native handoff dependencies', () => {
 });
 
 describe('exact reproducible Auth security delta', () => {
-  it('reverses all 16 unique pairs to the prior checkpoint, replays idempotently and commutes with unchanged Home hooks', () => {
-    expect(UI_INTENT_AUTH_PAIRS).toHaveLength(16);
+  it('reverses all 17 unique pairs to the prior checkpoint, replays idempotently and commutes with the explicit Home hooks', () => {
+    let nativeChartReplay = reverseOwnerChartView(auth);
+    for (const pair of ownerChartViewDelta.pairs) {
+      expect(nativeChartReplay.split(pair.before)).toHaveLength(2);
+      nativeChartReplay = nativeChartReplay.replace(pair.before, pair.after);
+    }
+    expect(nativeChartReplay).toBe(auth);
+    let nativeDoseReplay = reverseOwnerDoseView(auth);
+    for (const pair of ownerDoseViewDelta.pairs) {
+      expect(nativeDoseReplay.split(pair.before)).toHaveLength(2);
+      nativeDoseReplay = nativeDoseReplay.replace(pair.before, pair.after);
+    }
+    expect(nativeDoseReplay).toBe(auth);
+    expect(UI_INTENT_AUTH_PAIRS).toHaveLength(17);
     for (const pair of UI_INTENT_AUTH_PAIRS) expect(auth.split(pair.after)).toHaveLength(2);
     const prior = reverseUiIntentAuthHooks(auth);
-    // Prior checkpoint 633ee436 plus exact PR1000/PR1002 native delta and its optional B1 lifetime hooks.
-    expect(digest(reverseBscAuthHooks(prior))).toBe('12c87b88789bb0e0de6f5ce31fa30adfe82d6952de12ae683e54f7bb4f517a2c');
+    // Current native source includes the owner's exact PR #1006 dose-view delta.
+    expect(digest(reverseBscAuthHooks(prior))).toBe(UI_INTENT_AUTH_BASE_SHA256);
     expect(applyUiIntentAuthHooks(prior)).toBe(auth); expect(applyUiIntentAuthHooks(auth)).toBe(auth);
     const securedNative = reverseHomeRemindersHooks(auth);
     expect(digest(reverseBscAuthHooks(securedNative))).toBe(HOME_REMINDERS_AUTH_BASE_SHA256);
     const priorNative = reverseUiIntentAuthHooks(securedNative);
     expect(priorNative).toBe(reverseHomeRemindersHooks(prior));
-    expect(digest(reverseBscAuthHooks(priorNative))).toBe('c2deeccd66218ec110fd56ddde619d96d45986ede4f27f47cdaa679540542744');
+    const newB1Layer = reverseBscAuthHooks(priorNative);
+    expect(B1_NAVIGATION_PAIRS).toHaveLength(3);
+    for (const pair of B1_NAVIGATION_PAIRS) expect(newB1Layer.split(pair.after)).toHaveLength(2);
+    const oldApprovedB1Layer = reverseB1NavigationHooks(newB1Layer);
+    // This immutable checkpoint contains the previously approved eight-argument
+    // B1 layer. The three explicit navigation extensions are reversed separately.
+    expect(digest(reverseOwnerDoseView(reverseOwnerChartView(oldApprovedB1Layer)))).toBe('c2deeccd66218ec110fd56ddde619d96d45986ede4f27f47cdaa679540542744');
+    expect(applyB1NavigationHooks(oldApprovedB1Layer)).toBe(newB1Layer);
+    const availableLayerBase = reversePatientB1AuthHooks(newB1Layer);
+    // Older note-presentation hosting is outside these tools and is unchanged
+    // from the 4a checkpoint; this is not described as the raw native artifact.
+    expect(digest(reverseOwnerDoseView(reverseOwnerChartView(availableLayerBase)))).toBe('6a9726acbb580402a4cc00d85f673205f3bf0c3809396b121d8e411ac61cdec2');
+    expect(applyPatientB1AuthHooks(availableLayerBase)).toBe(newB1Layer);
+    expect(applyPatientB1AuthHooks(auth)).toBe(auth);
     expect(applyUiIntentAuthHooks(priorNative)).toBe(securedNative);
+  });
+
+  it('imports the B1 reproducer without executing its CLI or touching the Auth artifact', () => {
+    const target = new URL('../../vilda_auth_ui.js', import.meta.url);
+    const before = fs.statSync(target, { bigint: true }).mtimeNs;
+    expect(execFileSync(process.execPath, ['--input-type=module', '-e', "import './tools/patient_b1_auth_hooks.mjs'"],
+      { cwd: new URL('../../', import.meta.url), encoding: 'utf8' })).toBe('');
+    expect(fs.statSync(target, { bigint: true }).mtimeNs).toBe(before);
+    expect(fs.readFileSync(target, 'utf8')).toBe(auth);
   });
 
   it('reverses only the optional Settings boundary and replays it idempotently', () => {

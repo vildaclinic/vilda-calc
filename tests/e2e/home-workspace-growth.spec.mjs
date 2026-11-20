@@ -264,6 +264,7 @@ async function ghAction(dialog) {
 async function expectGhPortalReturned(frame, dialog) {
   try { await expect(dialog.locator('.vhome-growth-tabs')).toBeVisible(); }
   catch (error) {
+    try {
     const diagnostic = await frame.evaluate(() => ({
       readiness: VildaDataImportExport.getSaveReadiness(),
       paused: VildaDataImportExport.isMainSessionAutosavePaused(),
@@ -273,8 +274,85 @@ async function expectGhPortalReturned(frame, dialog) {
       window: window.ghTherapyPoints,
       session: VildaPersistence.readMainSession()?.ghTherapyPoints,
       status: document.getElementById('vhomeGrowthDraftStatus')?.textContent,
+      failureObservation: (() => {
+        // This runs only after the original portal-return assertion has failed.
+        const expectedLabel = 'Fikcyjny sejf testu panelu siatek';
+        const read = reader => {
+          try { return { status: 'available', value: reader() }; }
+          catch (failure) {
+            return { status: 'read-error', error: {
+              name: typeof failure?.name === 'string' ? failure.name : 'Error',
+              message: typeof failure?.message === 'string' ? failure.message : 'Read unavailable',
+            } };
+          }
+        };
+        const primitive = reader => read(() => {
+          const value = reader();
+          if (value == null || ['string', 'number', 'boolean'].includes(typeof value)) return value ?? null;
+          throw new Error('Expected a primitive public observation');
+        });
+        const fullJSON = reader => {
+          const captured = read(reader);
+          if (captured.status !== 'available') return captured;
+          const serialized = read(() => JSON.stringify(captured.value));
+          return serialized.status === 'available'
+            ? { status: 'available', value: captured.value, json: serialized.value ?? null,
+              jsonType: typeof serialized.value }
+            : { status: 'serialization-error', error: serialized.error };
+        };
+        // Never serialize the Vault, a session token, a lease or an adapter.
+        const account = read(() => {
+          const current = VildaVault.getCurrentUser();
+          return { userId: typeof current?.userId === 'string' ? current.userId : null,
+            label: typeof current?.label === 'string' ? current.label : null };
+        });
+        const fictionalAccount = account.status === 'available' && account.value.label === expectedLabel;
+        const unavailable = { status: 'redacted', reason: 'Expected fictional account is unavailable' };
+        const observation = {
+          capturedAtISO: primitive(() => new Date().toISOString()),
+          performanceNow: primitive(() => performance.now()),
+          expectedAccountLabel: expectedLabel,
+          fictionalAccount,
+          account: fictionalAccount ? account : account.status === 'read-error' ? account : unavailable,
+          mainSession: unavailable,
+          publicReadOnlyUserSnapshot: {
+            meaning: 'Public read-only snapshot; not the private native writer candidate.',
+            ...unavailable,
+          },
+        };
+        if (!fictionalAccount) return observation;
+        observation.owner = {
+          accountOwnerId: account.value.userId,
+          actualPatientId: primitive(() => sessionStorage.getItem('vildaCurrentPatientId')),
+          documentPatientId: primitive(() => window._vildaCurrentPatientId),
+        };
+        // Keep every key, its order and all native metadata, including timestamps.
+        observation.mainSession = fullJSON(() => VildaPersistence.readMainSession());
+        observation.publicReadOnlyUserSnapshot = {
+          meaning: 'Public read-only snapshot; not the private native writer candidate.',
+          ...fullJSON(() => VildaDataImportExport.captureCurrentUserDataReadOnly()),
+        };
+        observation.state = {
+          persistRestoring: primitive(() => window.__vildaPersistRestoring),
+          mirrorWrite: primitive(() => window.__vildaLustroWpis),
+          mainSessionRestorePending: primitive(() => VildaDataImportExport.isMainSessionRestorePending()),
+          initialMainSessionRestore: read(() => {
+            const state = VildaDataImportExport.getInitialMainSessionRestoreState();
+            return state == null ? null : { ready: state.ready === true,
+              reason: typeof state.reason === 'string' ? state.reason : null };
+          }),
+          dobRestorePending: primitive(() => VildaDobAge.restorePending()),
+          persistenceRestoring: primitive(() => VildaPersistence.isRestoring()),
+          clearInProgress: primitive(() => VildaPersistence.isClearInProgress()),
+          saveStatus: primitive(() => VildaSaveStatusIndicator.getState()),
+        };
+        return observation;
+      })(),
     }));
     await test.info().attach('pending-native-gh-session', { body: JSON.stringify(diagnostic), contentType: 'application/json' });
+    } catch {
+      // Diagnostic read/serialization/attachment failures cannot replace the assertion.
+    }
     throw error;
   }
 }
@@ -500,5 +578,180 @@ test('home A2: long native trajectory stays compact and every historical measure
       await dialog.getByRole('tab', { name: tab, exact: true }).click();
       expect(await dialog.locator('.vhome-dialog-body').evaluate(node => node.scrollWidth <= node.clientWidth + 1)).toBe(true);
     }
+  }
+});
+
+// Component regressions use only the fictional vault created by setup. All
+// application modules, SSI validators, collectors and persistence remain real.
+async function anonymousGrowthBase(frame) {
+  await frame.evaluate(() => clearAllData());
+  await expect(frame.locator('#vhomeGrowthExpand')).toBeEnabled();
+  // Establish the existing native precondition before the controlled seed.
+  // This read-only setup proof is not retained or substituted for OPEN's scope.
+  await frame.waitForFunction(() => VildaDataImportExport.getSaveReadiness().ready
+    && !VildaDataImportExport.isMainSessionAutosavePaused()
+    && VildaSaveStatusIndicator.getCurrentDecision().ready);
+  expect(await frame.evaluate(() => sessionStorage.getItem('vildaCurrentPatientId'))).toBeNull();
+}
+
+test('home growth regression: first anonymous native allocation retains the draft and a second visit invalidates it', async ({ page }) => {
+  const { frame } = await setup(page); await anonymousGrowthBase(frame);
+  const dialog = frame.getByRole('dialog', { name: 'Zaawansowane obliczenia wzrostowe', exact: true });
+  // Keep original OPEN, the native producer and the first validation in one
+  // task. No native queued writer can allocate the visit before this actor.
+  const allocation = await frame.evaluate(() => {
+    for (const [id, value] of Object.entries({ age: '13', height: '158', weight: '46' })) document.getElementById(id).value = value;
+    const read = () => {
+      const payload = VildaDataImportExport.captureCurrentUserDataReadOnly(); delete payload.timestampISO;
+      const session = VildaPersistence.readMainSession(); if (session) delete session.timestampISO;
+      return { payload, session, activity: VildaPubertyAssessmentState.getActivityRevision() };
+    };
+    const before = read(), nativeMother = document.getElementById('advMotherHeight').value;
+    const opened = VildaHomeGrowth.open('data'), host = document.getElementById('vhomeGrowthDialog');
+    const afterOpen = read();
+    const visit = VildaVisitContext.capture(VildaDataImportExport.captureCurrentUserDataReadOnly(), { patientId: null });
+    if (opened) document.getElementById('vhomeGrowthTab-data').click();
+    return { opened, before, afterOpen, after: read(), nativeMother, visit,
+      nativeVisit: VildaVisitContext.capture({ user: {} }, { patientId: null, readOnly: true }), open: !!host?.open };
+  });
+  expect(allocation.opened).toBe(true); expect(allocation.before.payload).not.toHaveProperty('visit');
+  expect(allocation.afterOpen).toEqual(allocation.before);
+  expect(allocation.visit).toMatchObject({ version: 1, patientId: null, origin: 'explicit' });
+  expect(allocation.visit.visitId).toMatch(/^[0-9a-f-]{36}$/i);
+  expect(allocation.open).toBe(true); await expect(dialog).toBeVisible();
+  expect(allocation.nativeVisit).toEqual(allocation.visit);
+  expect(allocation.after.payload.visit).toEqual(allocation.visit);
+  // Compare the complete snapshots from the one controlled actor. Ordinary
+  // autosave may legitimately settle after this evaluate returns.
+  const after = structuredClone(allocation.after);
+  delete after.payload.visit; expect(after).toEqual(allocation.before);
+  await field(dialog, 'advMotherHeight').fill('169');
+  const replacement = await frame.evaluate(() => {
+    const visit = VildaVisitContext.beginNew({ patientId: null });
+    document.querySelector('#vhomeGrowthDialog .vhome-dialog-apply').click();
+    return visit;
+  });
+  expect(replacement.visitId).not.toBe(allocation.visit.visitId);
+  await expect(dialog).toBeHidden(); await expect(frame.locator('#advMotherHeight')).toHaveValue(allocation.nativeMother);
+  expect(await frame.evaluate(() => VildaVisitContext.capture({ user: {} }, { patientId: null, readOnly: true }))).toEqual(replacement);
+});
+
+test('home growth regression: blank family and history cancel purely; immediate anonymous Apply persists the complete draft', async ({ page }) => {
+  const { frame } = await setup(page); await anonymousGrowthBase(frame);
+  page.once('dialog', confirmation => confirmation.accept());
+  // Isolate the pure UI actor from unrelated queued native derivation/autosave.
+  // Use the same complete snapshot projection as snapshot(frame), without
+  // dropping clinical fields, calculation fingerprints, session or activity.
+  const cancelled = await frame.evaluate(() => {
+    const read = () => {
+      const payload = VildaDataImportExport.captureCurrentUserDataReadOnly(); delete payload.timestampISO;
+      const session = VildaPersistence.readMainSession(); if (session) delete session.timestampISO;
+      return { payload, session, activity: VildaPubertyAssessmentState.getActivityRevision() };
+    };
+    const before = read();
+    document.querySelector('[data-growth-open="data"]').click();
+    const host = document.getElementById('vhomeGrowthDialog'), opened = !!host?.open;
+    if (!opened) return { opened };
+    const closedFolds = host.querySelectorAll('.vhome-growth-fold[open]').length;
+    Array.from(host.querySelectorAll('.vhome-growth-fold > summary'))
+      .find(node => node.textContent.includes('Warunki interpretacji')).click();
+    const familyBeforeHistory = !!(host.querySelector('.vhome-growth-family')
+      .compareDocumentPosition(host.querySelector('.vhome-growth-history')) & Node.DOCUMENT_POSITION_FOLLOWING);
+    const afterOpen = read();
+    const edit = (node, value) => { node.value = value; node.dispatchEvent(new Event('input', { bubbles: true })); };
+    edit(host.querySelector('[data-growth-field="advMotherHeight"]'), '167');
+    host.querySelector('[data-growth-add]').click();
+    const row = host.querySelector('[data-growth-row^="new-"]');
+    for (const [index, value] of [[0, '12'], [1, '0'], [2, '153'], [3, '40']]) edit(row.querySelector(`[data-growth-history-field="${index}"]`), value);
+    const draft = { mother: host.querySelector('[data-growth-field="advMotherHeight"]').value,
+      history: [0, 1, 2, 3].map(index => row.querySelector(`[data-growth-history-field="${index}"]`).value),
+      applyEnabled: !host.querySelector('.vhome-dialog-apply').disabled };
+    const duringDraft = read();
+    host.querySelector('.vhome-dialog-cancel').click();
+    return { opened, closedFolds, familyBeforeHistory, before, afterOpen, draft, duringDraft,
+      openAfterCancel: host.open, afterCancel: read() };
+  });
+  expect(cancelled.opened).toBe(true); expect(cancelled.closedFolds).toBe(0); expect(cancelled.familyBeforeHistory).toBe(true);
+  expect(cancelled.before.payload).not.toHaveProperty('visit'); expect(cancelled.before.payload.user.age).toBeNull();
+  expect(cancelled.draft).toEqual({ mother: '167', history: ['12', '0', '153', '40'], applyEnabled: true });
+  expect(cancelled.afterOpen).toEqual(cancelled.before);
+  expect(cancelled.duringDraft).toEqual(cancelled.before);
+  expect(cancelled.openAfterCancel).toBe(false); expect(cancelled.afterCancel).toEqual(cancelled.before);
+  const fast = await frame.evaluate(() => {
+    for (const [id, value] of Object.entries({ age: '13', height: '158', weight: '46' })) document.getElementById(id).value = value;
+    // The controlled seed uses the same native constraint updater as the UI.
+    // It only projects the current main age onto native historical inputs.
+    updateAdvAgeMax();
+    const opened = VildaHomeGrowth.open('data'), host = document.getElementById('vhomeGrowthDialog');
+    const edit = (node, value) => { node.value = value; node.dispatchEvent(new Event('input', { bubbles: true })); };
+    if (!opened) return { opened };
+    edit(host.querySelector('[data-growth-field="advMotherHeight"]'), '167');
+    host.querySelector('[data-growth-add]').click();
+    const row = host.querySelector('[data-growth-row^="new-"]');
+    for (const [index, value] of [[0, '12'], [1, '0'], [2, '153'], [3, '40']]) edit(row.querySelector(`[data-growth-history-field="${index}"]`), value);
+    const copiedHistoryAgeMax = row.querySelector('[data-growth-history-field="0"]').max;
+    const invalidBeforeApply = Array.from(host.querySelectorAll('input:enabled, select:enabled'))
+      .filter(control => !control.checkValidity()).map(control => ({ field: control.getAttribute('aria-label'),
+        value: control.value, min: control.min, max: control.max, step: control.step, message: control.validationMessage }));
+    const beforeApplyVisit = VildaVisitContext.capture({ user: {} }, { patientId: null, readOnly: true });
+    let notifications = 0, firstNotificationVisit = null;
+    const observe = event => {
+      if (!document.getElementById('advancedGrowthSection').contains(event.target)) return;
+      notifications += 1;
+      if (notifications === 1) firstNotificationVisit = VildaVisitContext.capture({ user: {} }, { patientId: null, readOnly: true });
+    };
+    window.addEventListener('input', observe, true); window.addEventListener('change', observe, true);
+    try { host.querySelector('.vhome-dialog-apply').click(); }
+    finally { window.removeEventListener('input', observe, true); window.removeEventListener('change', observe, true); }
+    return { opened, open: host.open, copiedHistoryAgeMax, invalidBeforeApply, beforeApplyVisit, firstNotificationVisit, notifications,
+      visit: VildaVisitContext.capture({ user: {} }, { patientId: null, readOnly: true }) };
+  });
+  expect(fast.copiedHistoryAgeMax).toBe('13'); expect(fast.invalidBeforeApply).toEqual([]);
+  expect(fast).toMatchObject({ opened: true, open: false, beforeApplyVisit: null });
+  expect(fast.notifications).toBeGreaterThan(0); expect(fast.firstNotificationVisit).toEqual(fast.visit);
+  expect(fast.visit).toMatchObject({ patientId: null, origin: 'explicit' });
+  await expect(frame.locator('#advMotherHeight')).toHaveValue('167');
+  await expect.poll(() => frame.evaluate(() => {
+    const session = VildaPersistence.readMainSession();
+    return { mother: session?.advanced?.motherHeight, visit: session?.visit,
+      history: session?.advanced?.data?.measurements?.some(row => row.ageMonths === 144 && row.height === 153 && row.weight === 40) };
+  })).toEqual({ mother: 167, visit: fast.visit, history: true });
+  await page.reload({ waitUntil: 'load' }); await expect(frame.locator('#advMotherHeight')).toHaveValue('167');
+  // Shared controls can be restored before the native main-session producer.
+  const startup = await frame.evaluate(() => VildaDataImportExport.whenInitialMainSessionRestoreSettled());
+  expect(startup.ready).toBe(true);
+  expect(await frame.evaluate(() => VildaDataImportExport.captureCurrentUserDataReadOnly().visit)).toEqual(fast.visit);
+});
+
+test('home growth regression: clinical changes and native restore, choice or account boundaries reject the original draft', async ({ page }) => {
+  const { frame } = await setup(page);
+  for (const boundary of ['clinical-diff', 'vilda:state-restored', 'vilda:load-choice-applied', 'account-session-loss']) {
+    await test.step(boundary, async () => {
+      await anonymousGrowthBase(frame);
+      const result = await frame.evaluate(reason => {
+        for (const [id, value] of Object.entries({ age: '13', height: '158', weight: '46' })) document.getElementById(id).value = value;
+        const nativeMother = document.getElementById('advMotherHeight').value;
+        const opened = VildaHomeGrowth.open('data'), host = document.getElementById('vhomeGrowthDialog');
+        const beforeVisit = VildaVisitContext.capture({ user: {} }, { patientId: null, readOnly: true });
+        if (!opened) return { opened };
+        const draftMother = host.querySelector('[data-growth-field="advMotherHeight"]');
+        draftMother.value = '169'; draftMother.dispatchEvent(new Event('input', { bubbles: true }));
+        if (reason === 'clinical-diff') {
+          // Deliberately omit an event. Full clinical data must still be checked,
+          // including fields outside the short owner/basics comparison.
+          document.getElementById('advFatherHeight').value = '181';
+          VildaVisitContext.capture(VildaDataImportExport.captureCurrentUserDataReadOnly(), { patientId: null });
+          document.getElementById('vhomeGrowthTab-data').click();
+        } else if (reason === 'account-session-loss') VildaVault.lock();
+        else document.dispatchEvent(new CustomEvent(reason, { detail: { source: 'fictional-growth-component-boundary' } }));
+        return { opened, beforeVisit, nativeMother, open: host.open, mother: document.getElementById('advMotherHeight').value,
+          father: document.getElementById('advFatherHeight').value, unlocked: VildaVault.isUnlocked() };
+      }, boundary);
+      expect(result).toMatchObject({ opened: true, beforeVisit: null, open: false });
+      const dialog = frame.getByRole('dialog', { name: 'Zaawansowane obliczenia wzrostowe', exact: true }); await expect(dialog).toBeHidden();
+      expect(result.mother).toBe(boundary === 'account-session-loss' ? '' : result.nativeMother);
+      if (boundary === 'clinical-diff') expect(result.father).toBe('181');
+      if (boundary === 'account-session-loss') expect(result.unlocked).toBe(false);
+    });
   }
 });

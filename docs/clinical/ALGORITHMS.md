@@ -44121,3 +44121,264 @@ seria to nadal pomiary wizyt; ta zmiana dotyczy wyłącznie kontekstu leczenia.
 - e2e `tests/e2e/trajektoria-dziennik.spec.mjs` (TR-1, TR-2); oba padają na kodzie sprzed zmiany.
 
 **Wdrożenie.** Od razu przy wydaniu; sejf bez zmian. **Cofnięcie** = rewert PR: kursy znów z zapisu wizyty.
+
+## Leczenie otyłości — etap 2: z Karty pacjenta prosto do monitora DocPro (P-OTYLOSC-SKOK, SW 1.1.556, `vilda_cykle_leczenia.js` 8, `gh_therapy_monitor.js` 64, `obesity_therapy_monitor.js` 30, `vilda_auth_ui.css` 85, `inline_docpro_01.css` 6, 2026-11-19)
+
+**Decyzje właściciela (2026-11-19, makieta etapu 2).**
+- Przycisk w Karcie ma od razu otworzyć punkt do edycji w monitorze DocPro, bez szukania go.
+- „Edytuj w DocPro” i „Dodaj ponownie w DocPro” nie tworzą nowej wizyty: wczytanie jak „Odtwórz zapis”, bez okna wyboru.
+- „Włączenie w DocPro” pokazuje okno „Nowy pomiar / Odtwórz zapis”, bo nowy cykl zwykle zaczyna się na nowej wizycie.
+- Po zapisie Włączenia, Zakończenia albo zmiany leku komunikat mówi, że listy pacjentów zobaczą zmianę po „Zapisz dane”.
+- Powód pod przyciskiem jest stale widoczny (dawniej tylko dymek, niewidoczny na telefonie).
+- Po zapisie lekarz zostaje w DocPro.
+- Sekcja „Wpisy leczenia” ma wyglądać jak na makiecie: mniejszy „+ Kontynuacja”, małe przyciski.
+
+**Stan przed zmianą.** Przy Włączeniu, Zakończeniu i zmianie leku Karta pokazywała sam tekst „Poprawka w DocPro”
+(powód w dymku), przy usuniętym takim wpisie „Dodaj ponownie w DocPro”, a bez aktywnego cyklu „Brak aktywnego cyklu —
+Włączenie w DocPro.”. Lekarz sam przechodził do DocPro, wczytywał pacjenta, otwierał kartę „Leczenie otyłości”,
+zakładkę monitora i szukał punktu. Sekcja wyglądała inaczej niż na makiecie etapu 3:
+- przyciski z klasą `vilda-auth-btn` w Karcie (`.vilda-auth-root`) dostawały z `!important` styl ekranu konta
+  (zaokrąglenie 14 px, wypełnienie 14×22 px, cień);
+- w DocPro motyw szklany (`.liquid-ios26 button {…!important}`) dokładał szkło i cień;
+- tło sekcji było szarozielone (`--card`), a odznaki „gabinet” szare;
+- odznaka „pacjent” była biała, bo `--notice-orange-bg` jest w `style.css` celowo białe (komunikat: biel z pomarańczową
+  ramką).
+
+**Zmiana.**
+- Karta pacjenta (`vilda_cykle_leczenia.js`):
+  - przyciski „Edytuj w DocPro →” (z widocznym powodem: `POWODY_KROTKIE`), „Dodaj ponownie w DocPro →” i —
+    bez aktywnego cyklu — „Włączenie w DocPro →” obok nieaktywnego „+ Kontynuacja”;
+  - kliknięcie zapisuje cel skoku `{patientId, obesity:{tryb, entryId}, ts}` — bez danych klinicznych — w tym samym wpisie
+    `sessionStorage` „vilda:gh-jump”, co skok do punktu GH, i przechodzi do DocPro tak samo (mostek powłoki albo
+    `docpro.html`; Karta otwarta nad DocPro zamyka się i skok rusza po ustaleniu historii przeglądarki).
+    Id punktu w monitorze = `entryId` wpisu dziennika, a dla punktu z dawnej wizyty (jeszcze nieprzeniesionego) —
+    id punktu z migawki.
+- DocPro (`gh_therapy_monitor.js`): ta sama obsługa skoku co dla punktu GH — po pierwszym odtworzeniu sesji, przez
+  strażnika niezapisanych zmian, wczytanie ostatniego zapisu pacjenta. Różnice: tryb „wlaczenie” nie wycisza okna
+  „Nowy pomiar / Odtwórz zapis”, a na miejscu działa monitor otyłości zamiast podświetlenia punktu GH.
+- Monitor (`obesity_therapy_monitor.js`, `obesityTherapyMonitorSkok`): otwiera kartę „Leczenie otyłości” na zakładce
+  monitora (czeka na moduł profesjonalny i projekcję dziennika tej pacjentki), a potem:
+  - „edytuj” — punkt w trybie edycji (pasek „Edytujesz punkt: …”), wiersz podświetlony;
+  - „ponownie” — pola wypełnione z usuniętego wpisu (dane z dziennika w sejfie, po `entryId`) i podpowiedź
+    z przyciskiem „Wyczyść pola”; zapis przyciskiem rodzaju wizyty dodaje nowy wpis do dziennika;
+  - „wlaczenie” — po wyborze w oknie pola pomiaru puste i podpowiedź „Nowy cykl leczenia otyłości…”.
+  Nic nie zapisuje się samo.
+- Komunikat po zapisie w dzienniku dostaje zdanie „Listy pacjentów zobaczą zmianę po „Zapisz dane”.”, gdy wpis przed
+  albo po zmianie jest Włączeniem, Zakończeniem, zmianą leku albo pierwszym wpisem cyklu (`zmianaPrzebiegu` z opcją
+  `lekPoNazwie`: lek po nazwie, jak listy pacjentów — samo uzupełnienie substancji przy tym samym leku list nie zmienia).
+- Na telefonie przyciski sekcji mają 44 px (cel dotyku), na komputerze 32 px („+ Kontynuacja” 34 px).
+- Wygląd (`vilda_auth_ui.css`, `inline_docpro_01.css`): białe tło sekcji i wpisów, własne klasy `vdo-btn`
+  (32 px; na telefonie 44 px), „+ Kontynuacja” 34 px bez cienia, przyciski obok tytułu, odznaki „gabinet” (turkus)
+  i „pacjent” (jasny pomarańcz), podpowiedź monitora `.obm-msg.info`. Okna wpisu i wyboru wersji — jak dotąd.
+
+**Przypadki syntetyczne** (dane fikcyjne; Testowa Zuzanna, 13 l., Wegovy; Włączenie 14.04.2026 80,0 kg 160,0 cm,
+Kontynuacja 13.10.2026 75,2 kg; Zakończenie 03.11.2026 72,4 kg 163,6 cm):
+
+| Przypadek | Wejście | Oczekiwany wynik |
+|---|---|---|
+| SK-1 | Karta nad DocPro: „Edytuj w DocPro →” przy Włączeniu; masa 79,6; „Włączenie leczenia” | pacjentka wczytana bez okna wyboru; pasek „Edytujesz punkt: Włączenie”, masa 80; po zapisie komunikat z „Listy pacjentów zobaczą zmianę po „Zapisz dane”.”; w dzienniku 79,6 kg; wersji wizyty nadal 1 |
+| SK-2 | usunięte Zakończenie: „Dodaj ponownie w DocPro →” | pola 72.4 / 163.6 / 2026-11-03, podpowiedź „Uzupełniono z usuniętego wpisu: Zakończenie, 03.11.2026…”; „Wyczyść pola” czyści |
+| SK-3 | bez aktywnego cyklu: „Włączenie w DocPro →” | okno „Co chcesz zrobić?”; po „Nowy pomiar” podpowiedź „Nowy cykl leczenia otyłości…”, pola pomiaru puste |
+| SK-5 | powłoka: Karta na Start, „Edytuj w DocPro →” | panel DocPro (`#/docpro`), pasek „Edytujesz punkt: Włączenie”, bez okna wyboru |
+| SK-4 | wygląd | białe tło; „+ Kontynuacja” ≤ 36 px bez cienia; przyciski wierszy ≤ 34 px, turkusowy tekst; odznaki rgb(224, 242, 241) i rgb(255, 244, 224); telefon: przyciski ≥ 44 px, bez poziomego przewijania |
+
+**Wpływ kliniczny.** Brak zmiany wyników, ocen, okien i progów. Zmienia się droga do edycji (przycisk zamiast
+ręcznego szukania) i treść komunikatu po zapisie (przypomnienie, że listy liczą się z zapisu wizyty).
+
+**Testy.** Dane wyłącznie fikcyjne.
+- `tests/unit/otylosc-skok.test.mjs` (4): kształt celu skoku (wpis dziennika, punkt z migawki; bez danych klinicznych
+  w `sessionStorage`), krótkie powody na produkcyjnym `zmianaPrzebiegu`, opcja `lekPoNazwie` (dopisek o listach tylko
+  przy zmianie leku po nazwie — jak listy pacjentów; reguła Karty bez opcji bez zmian).
+- `tests/unit/skok-gh-rozgloszenie.test.mjs`: strażniki źródła skoku GH (wyciszenie okna wyboru tylko poza trybem
+  „wlaczenie”, lądowanie GH bez zmian).
+- e2e `tests/e2e/otylosc-skok-docpro.spec.mjs` (SK-1…SK-5); DZ-5 i PD-2 — nowe przyciski i teksty.
+
+**Wdrożenie.** Od razu przy wydaniu; sejf bez zmian. **Cofnięcie** = rewert PR: znów sam tekst „Poprawka w DocPro”
+i dawny wygląd sekcji.
+
+## Karta pacjenta porównuje lek tak jak listy pacjentów i ocena wg ChPL (P-OTYLOSC-LEK, SW 1.1.557, `vilda_cykle_leczenia.js` 9, `obesity_therapy_monitor.js` 31, 2026-11-19)
+
+**Decyzja właściciela** (2026-11-19, „zacznij od A”): Karta ma rozpoznawać „ten sam lek” tak jak listy pacjentów.
+
+**Problem.** Reguła Karty z P-POSTEPY-DZIENNIK (`zmianaPrzebiegu`) porównywała dosłowny tekst leku i substancji.
+Starsze punkty bywają zapisane bez substancji (albo z krótką nazwą z importu), a nowsze z nią. Zwykła Kontynuacja tego
+samego leku uchodziła wtedy za „zmianę leku”. Karta pokazywała „Edytuj w DocPro →” z powodem „Ten wpis zmienia lek”
+zamiast „Popraw” i „Usuń”.
+
+**Zmiana.** `kluczLeku` w `vilda_cykle_leczenia.js` rozpoznaje lek funkcją `ObesityResponseCriteria.resolveDrug(drug,
+substance)` — tą samą, z której sejf liczy `drugKey` list „Leczenie otyłości: trwa / kiedykolwiek / lek X” i z której
+Karta wybiera kryteria ChPL:
+- lek z tabeli kryteriów (Wegovy, Saxenda, Mysimba, Mounjaro) — po kluczu leku, niezależnie od tekstu nazwy i od tego,
+  czy zapisano substancję;
+- lek spoza tabeli — po nazwie (bez nazwy — po substancji), bez rozróżniania wielkości liter; lek spoza tabeli i lek
+  z tabeli to zawsze zmiana leku;
+- bez modułu kryteriów na stronie — ostrożnie, jak dotąd: każda różnica tekstu leku albo substancji to zmiana leku
+  (wpis zostaje do edycji w DocPro).
+
+Ta sama reguła (bez opcji) decyduje o dopisku monitora DocPro „Listy pacjentów zobaczą zmianę po „Zapisz dane”.”.
+Opcja `lekPoNazwie` z P-OTYLOSC-SKOK znika. Jej opis („lek po nazwie, jak listy pacjentów”) był nieścisły: listy
+„Leczenie otyłości” porównują lek kluczem z `resolveDrug`, nie tekstem nazwy.
+
+**Granica (do wiadomości właściciela).** Lista wpisana tekstem (reguła „lek”) szuka słowa w nazwie leku albo
+w substancji. Słowo, które jest tylko w etykiecie substancji (np. „agonista”, „GLP‑1”), może po „Usuń” najnowszej
+Kontynuacji w Karcie zgadzać się z dziennikiem dopiero po „Zapisz dane” przy wizycie. Tak samo jest już dziś przy każdym
+punkcie zapisanym bez substancji. Nazwa substancji jest też w nazwie opcji leku (np. „Wegovy (semaglutyd) – …”), więc
+lista „semaglutyd” zostaje zgodna. Sejf bez zmian.
+
+**Przypadki syntetyczne** (dane fikcyjne; lek A — punkt wcześniejszy, lek B — Kontynuacja):
+
+| Lek A | Lek B | Wynik `zmianaPrzebiegu` dla Kontynuacji |
+|---|---|---|
+| „Wegovy (semaglutyd) – s.c. 1×/tydz.”, bez substancji | ta sama nazwa, „Semaglutyd (agonista receptora GLP‑1)” | `null` — Popraw/Usuń w Karcie (dotąd `zmiana-leku`) |
+| „Wegovy”, bez substancji | pełna nazwa i substancja Wegovy | `null` |
+| bez nazwy, „semaglutyd” | pełna nazwa i substancja Wegovy | `null` |
+| Wegovy bez substancji | Saxenda | `zmiana-leku` |
+| „Orlistat” | „orlistat ”, „inhibitor lipazy” | `null` (spoza ChPL — po nazwie) |
+| „Orlistat” | „Metformina” | `zmiana-leku` |
+| „Inny lek” | Wegovy | `zmiana-leku` |
+| bez modułu kryteriów: Wegovy bez substancji | Wegovy z substancją | `zmiana-leku` (ostrożnie, jak dotąd) |
+
+**Wpływ kliniczny.** Oceny wg ChPL, okna, progi, cykle (R6 porównuje substancję tym samym `resolveDrug`) i listy
+pacjentów bez zmian. Zmienia się, które wpisy można poprawić w Karcie: Kontynuacja tego samego leku zapisanego innym
+tekstem — w Karcie zamiast w DocPro. Dopisek monitora o listach pojawia się rzadziej (tylko przy zmianie leku według
+`resolveDrug`).
+
+**Testy.** Dane wyłącznie fikcyjne.
+- `tests/unit/postepy-listy-dziennik.test.mjs`: tabela wyżej na produkcyjnym `zmianaPrzebiegu`; test negatywny bez
+  kryteriów ChPL; na prawdziwym sejfie (adapter pamięciowy) Popraw, Usuń i Cofnij Kontynuacji po punktach bez
+  substancji zostawiają listy „Leczenie otyłości” i „lek: wegovy/saxenda/semaglutyd” zgodne z dziennikiem, a granicę
+  „agonista” przypina jawna asercja.
+- `tests/unit/otylosc-skok.test.mjs`: ta sama reguła dla Karty i monitora; monitor woła `zmianaPrzebiegu(Dzs, w)` bez opcji.
+- e2e `tests/e2e/postepy-dziennik.spec.mjs` PD-4: Włączenie zapisane bez substancji, Kontynuacja Saxendy z substancją —
+  w Karcie „Popraw”/„Usuń”, bez „Edytuj w DocPro →” (na kodzie sprzed zmiany PD-4 nie przechodzi).
+
+**Wdrożenie.** Od razu przy wydaniu; sejf bez zmian. **Cofnięcie** = rewert PR: Karta znów porównuje dosłowny tekst
+leku i substancji.
+
+## Dawka leczenia otyłości: przecinek dziesiętny i podpowiedzi z ChPL (P-OTYLOSC-DAWKA, SW 1.1.558, `vilda_cykle_leczenia.js` 10, `obesity_therapy_monitor.js` 32, `obesity_therapy.js` 13, `vilda_auth_ui.js` 573, `inline_docpro_01.css` 7, 2026-11-19)
+
+**Decyzja właściciela** (2026-11-19, temat B): „Przecinek + podpowiedzi”. Bez dopisywania jednostek do starych
+wpisów i bez obowiązkowej jednostki.
+
+**Problem.** Dawkę wpisuje się w monitorze DocPro jako wolny tekst (podpowiedź „np. 2,4 mg”). W zapisie bywa „2,4”,
+„0.25” albo „2,4 mg / tydz.”, a Karta pokazywała dokładnie wpisany tekst: raz z kropką, raz bez jednostki.
+
+**Zapis bez zmian.** Dawka zapisuje się tak, jak ją wpisano. Z tekstu dawki liczy tylko wykres dawki w Karcie (pierwsza
+liczba, przecinek albo kropka — `El` w `vilda_auth_ui.js`); ocena wg ChPL dawki nie czyta (kotwica dawki
+podtrzymującej nie jest podawana — okno liczy się od czasu nominalnego). Zmiana dotyczy tylko widoku i wpisywania.
+
+**Widok** — `VildaDziennikOtylosci.dawkaPL`: kropka dziesiętna między cyframi → przecinek („0.25” → „0,25”), reszta
+tekstu bez zmian. Używają jej:
+- Karta pacjenta: wiersze „Wpisy leczenia”, okno wyboru wersji wpisu, „Aktualna dawka” w podsumowaniu „Leczenie
+  otyłości”; okno „+ Kontynuacja” podstawia dawkę ostatniego wpisu z przecinkiem („Popraw” zostawia tekst wpisu);
+- monitor DocPro: kolumna „Dawka” w tabeli punktów.
+
+**Podpowiedzi** — `VildaDziennikOtylosci.podpowiedziDawek(eskalacja, czestosc)`: pod polami formularza monitora
+przyciski z dawkami z tabeli zwiększania dawki ChPL wybranego leku (`products[…].dosing.escalation` i `frequency`
+w `obesity_therapy.js` — to samo źródło co zalecenia w module leczenia otyłości; dane dawek bez zmian):
+- wiersz z jedną dawką („0,25 mg”, „3,0 mg / dobę”, „2 tabl. rano + 1 tabl. wieczorem”) — przycisk; lek
+  1×/tydz. dostaje „ / tydz.” (jak w zapisie „2,4 mg / tydz.”); kliknięcie wpisuje dawkę w pole „Dawka”, a pasujący
+  przycisk jest wciśnięty (`aria-pressed`);
+- wiersz bez jednej dawki („5, 10 lub 15 mg”, „+2,5 mg co ≥4 tyg.”) — zdanie pod przyciskami, z uwagą z tabeli;
+- uwaga przy dawce spoza zwykłego schematu (np. 7,2 mg: „tylko dorośli z wyjściowym BMI ≥30 kg/m²…”) — zdanie pod
+  przyciskami; zwykłe opisy („dawka początkowa”, „dawka podtrzymująca”) — w dymku przycisku;
+- pole zostaje wolnym tekstem („Kliknij, aby wpisać dawkę, albo wpisz inną w polu „Dawka””). Bez leku na liście —
+  nic się nie pokazuje. Monitor dokumentuje stan faktyczny, więc przyciski nie zależą od wieku (jak wybór leku).
+
+**Przypadki syntetyczne** (dane fikcyjne; Testowa Zuzanna, 13 l., Wegovy; dawki zapisane „0.25” i „2.4”):
+
+| Wejście | Oczekiwany wynik |
+|---|---|
+| tabela punktów w monitorze | „0,25”, „2,4” |
+| lista leku: Wegovy | przyciski 0,25 / 0,5 / 1,0 / 1,7 / 2,4 / 7,2 mg / tydz.; zdanie „7,2 mg / tydz. — tylko dorośli…” |
+| klik „1,7 mg / tydz.” | pole „Dawka” = „1,7 mg / tydz.”, przycisk wciśnięty; własny tekst — żaden wciśnięty |
+| Saxenda | 0,6 / 1,2 / 1,8 / 2,4 / 3,0 mg / dobę |
+| Mounjaro | 2,5 i 5 mg / tydz.; zdania „Dalej (w razie potrzeby): +2,5 mg co ≥4 tyg. (…)”, „Podtrzymująco: 5, 10 lub 15 mg (maks. 15 mg 1×/tydz.)” |
+| Mysimba | „1 tabl. rano” … bez „/ tydz.”; „… — maks. 4 tabl./dobę” |
+| bez leku | brak podpowiedzi |
+| Karta: „Wpisy leczenia”, „Aktualna dawka” | „Włączenie · 0,25”, „Kontynuacja · 2,4”, „2,4”; w sejfie nadal „0.25”, „2.4” |
+| telefon 390 px | przyciski ≥ 44 px, bez poziomego przewijania |
+
+**Wpływ kliniczny.** Brak zmiany wyników, ocen, progów i danych dawek. Zmienia się zapis liczby w widoku (przecinek)
+i pojawia się podpowiedź dawek z istniejącej tabeli ChPL.
+
+**Testy.** Dane wyłącznie fikcyjne.
+- `tests/unit/otylosc-dawka.test.mjs`: `dawkaPL`, `podpowiedziDawek` na produkcyjnym module (Wegovy, Saxenda,
+  Mounjaro, Mysimba, puste i powtórzone wiersze); tabele w teście = wiersze `dosing.escalation` w `obesity_therapy.js`.
+- e2e `tests/e2e/otylosc-dawka.spec.mjs`: DW-1 monitor (tabela, przyciski czterech leków, klik, edycja punktu),
+  DW-2 Karta (wiersze, podsumowanie, sejf bez zmian), DW-3 telefon.
+
+**Wdrożenie.** Od razu przy wydaniu; sejf bez zmian. **Cofnięcie** = rewert PR: dawka znów dokładnie jak wpisana,
+bez podpowiedzi.
+
+## Pomiary z dziennika leczenia na siatkach i w analizie trajektorii Karty pacjenta (P-OTYLOSC-SIATKI, SW 1.1.559, `vilda_cykle_leczenia.js` 11, `vilda_trajectory_analysis.js` 46, `vilda_auth_ui.js` 574, `vilda_auth_ui.css` 86, 2026-11-19)
+
+**Decyzje właściciela** (2026-11-19, temat C, makieta „Leczenie otyłości — wpisy z dziennika na siatkach”):
+1. masa od pacjenta także w analizie trajektorii (wariant B), nie tylko na siatkach;
+2. wpis zmierzony w gabinecie, dodany bez wizyty — czerwona kropka jak pomiar z wizyty;
+3. romb można wybrać w „Porównaj 2 pomiary”;
+4. na razie tylko Karta pacjenta; później cała aplikacja (siatki ze strony głównej, „Podsumowanie wyników” i inne).
+
+**Stan przed zmianą.** Siatki centylowe, „Porównaj 2 pomiary” i „Analiza trajektorii” w Karcie liczyły się wyłącznie
+z pomiarów osi czasu (wizyty: historia pomiarów i bieżący pomiar ostatniego zapisu). Wpisy z dziennika leczenia — masa
+od pacjenta z „+ Kontynuacja”, wpisy z gabinetu i punkty monitora z wizyt, których nie było w historii pomiarów — nie
+pojawiały się nigdzie poza „Wpisy leczenia”, kafelkiem leczenia i „Postępami” dorosłego. Wpis P-TRAJEKTORIA-DZIENNIK
+wymieniał to jako ograniczenie; ta zmiana je zdejmuje (w Karcie).
+
+**Które wpisy** — `VildaDziennikOtylosci.pomiaryDoSiatek(osCzasu, punkty)` (czytelne źródło, `vilda_cykle_leczenia.js`):
+- z projekcji dziennika (`zloz().punkty`) Włączenie, Kontynuacja i Zakończenie z masą > 0 i wiekiem; wiek = pełne lata
+  i miesiące wpisu (`ageYears·12 + ageMonths`), czyli wiek pomiaru, nie dzisiejszy;
+- **wizyta wygrywa**: wpis pomijany, gdy pomiar osi czasu (albo bieżący pomiar Karty) jest w tym samym miesiącu życia,
+  z tą samą datą albo z tą samą masą (±0,05 kg) do 1 mies. obok (monitor zapisuje wiek w pełnych miesiącach, oś czasu —
+  dokładniej); dwa wpisy z tego samego miesiąca — zostaje późniejszy w kolejności tabeli;
+- wzrost tylko wpisany (> 0); źródło masy i wzrostu z wpisu: „pacjent” tylko, gdy wpis tak mówi, inaczej „gabinet”.
+
+**Widok (Karta pacjenta, zakładka „Siatki centylowe”):**
+- wartość od pacjenta — pomarańczowy romb (`#fff4e0` / `#b45f06`), wartość z gabinetu — kółko jak dotąd; linia
+  przebiegu łączy pomiary z gabinetu (romby leżą obok niej), oś Y obejmuje romby; pełne kółko — ostatni pomiar z gabinetu;
+- wpis bez wzrostu jest tylko na siatce wagi (BMI wyłącznie ze zmierzonego wzrostu);
+- legenda: „pomiary w gabinecie” (dawniej „pomiary pacjenta”) i — gdy są — „pomiary od pacjenta (Wpisy leczenia)”;
+- dymek przy rombie: nagłówek „◇ od pacjenta · wiek”, przy wartości odznaka „pacjent”;
+- „Porównaj 2 pomiary”: romb da się wybrać jako A lub B; panel dopisuje „◇ A/B: pomiar od pacjenta z „Wpisy leczenia””;
+  w punkcie od pacjenta metryka bez pomiaru (np. wzrost, BMI przy samej masie) ma „— brak pomiaru w tym punkcie”
+  zamiast wartości z linii między wizytami;
+- wiek bieżącego pomiaru Karty liczy się jak dotąd z pomiarów wizyt — późniejszy wpis z dziennika go nie przesuwa;
+- po zapisie wpisu w „Wpisy leczenia” siatki, porównanie i analiza rysują się od nowa (bez ponownego otwarcia Karty).
+
+**Analiza trajektorii (wariant B).** Seria analizy (`buildPoints`) dostaje te same pomiary ze źródłem masy i wzrostu.
+Centyle, odcinki, werdykty, okna i tempo liczą się z nimi tymi samymi regułami co dotąd (progi bez zmian). Pasek dostaje
+żeton „w tym N od pacjenta”, a karta metryki liczonej z wartościami od pacjenta — pomarańczowy obrys i podpis
+„z wpisami od pacjenta (N)”.
+
+**Poza zakresem (bez zmian, następny etap — cała aplikacja):** kafelek tempa wzrastania w zakładce „Status”, PDF
+„Pobierz PDF (pełne siatki)” z Karty, siatki i analiza na stronie głównej i w DocPro, karta „Porównanie z poprzednim
+pomiarem”, „Podsumowanie wyników”, Postępy dorosłego (już z dziennika od P-POSTEPY-DZIENNIK). Sejf bez zmian.
+
+**Przypadki syntetyczne** (dane fikcyjne; Testowa Zuzanna ur. 11.04.2013; wizyty 11 l. 63,0 kg / 150,2 cm, 12 l.
+70,5 / 155,0, 13 l. 80,0 / 160,0; bieżący pomiar 13 l. 6 mies. 75,2 / 162,9; Wegovy od 13 lat):
+
+| Przypadek | Wejście | Oczekiwany wynik |
+|---|---|---|
+| SI-1 | masy od pacjenta 10.07 (77,8), 12.08 (76,9); wpis z gabinetu 11.09 (76,0) | siatka wagi: romby w 159 i 160 mies., kółko w 161, bieżący pomiar raz (162); wzrost i BMI bez nowych punktów; legenda z rombem; żeton „w tym 2 od pacjenta”, karta wagi „z wpisami od pacjenta (2)” |
+| SI-2 | kursor na rombie 76,9 kg | „◇ od pacjenta · 13,3 r.ż.”, „Waga 76,9 kg … pacjent” |
+| SI-3 | porównanie: A = wizyta 13 l., B = romb 77,8 kg | „◇ B: pomiar od pacjenta z „Wpisy leczenia””; Wzrost i BMI w B — „brak pomiaru w tym punkcie” |
+| SI-4 | „+ Kontynuacja” 12.11.2026, 74,6 kg (pacjent) | romb w 163 mies. od razu; „w tym 3 od pacjenta” |
+| SI-5 | pacjent bez dziennika | siatki i analiza jak dotąd, bez rombów i podpisów; telefon bez poziomego przewijania |
+| reguła | Włączenie 13 l. 0 mies. (80 kg) przy wizycie 156,4 mies.; Kontynuacja 13 l. 6 mies. przy bieżącym 162 | pominięte (wizyta wygrywa) |
+| reguła | wpis z datą wizyty albo z jej masą miesiąc obok | pominięty |
+
+**Wpływ kliniczny.** Zmienia się wynik analizy trajektorii wagi (i BMI/wzrostu, gdy wpis ma wzrost) w Karcie pacjenta:
+do serii wchodzą wpisy z dziennika, w tym masa ważona przez pacjenta poza gabinetem, która bywa mniej dokładna (inna
+waga, ubranie, pora dnia). Centyl i SDS ostatniego punktu, werdykt odcinka, „najpoważniejszy odcinek” i chip okresu
+leczenia mogą się zmienić po wpisie od pacjenta — dlatego taka karta ma podpis „z wpisami od pacjenta (N)”, a punkt
+romb i odznakę „pacjent”. Na siatkach mogą też pojawić się czerwone kropki z punktów monitora z wizyt, których nie było
+w historii pomiarów (to pomiary z gabinetu). Progi i reguły werdyktów bez zmian. Decyzja kliniczna należy do lekarza.
+
+**Testy.** Dane wyłącznie fikcyjne.
+- `tests/unit/otylosc-siatki.test.mjs` (11): `pomiaryDoSiatek` (wizyta wygrywa, ta sama data/masa obok, ten sam
+  miesiąc, źródła, wzrost); czytelne funkcje Karty wycięte z `vilda_auth_ui.js` (`Ob_dzSiatki`, `Ob_zrMetryki`) na
+  prawdziwym module dziennika; analiza trajektorii (`analyze`, `buildPatientHtml`, `buildPoints`) ze źródłem punktów
+  i bez dziennika (jak dotąd).
+- e2e `tests/e2e/otylosc-siatki.spec.mjs` SI-1…SI-5.
+
+**Wdrożenie.** Od razu przy wydaniu; sejf bez zmian. **Cofnięcie** = rewert PR: siatki i analiza znów tylko z wizyt.

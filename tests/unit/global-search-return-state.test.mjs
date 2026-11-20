@@ -295,6 +295,72 @@ describe('Search UI return snapshots use the production view', () => {
     expect(e.options.openPatient).not.toHaveBeenCalled();
   });
 
+  it('keeps the unavailable-selection notice through separate automatic index invalidations', async () => {
+    const e = environment();
+    await e.view.request(restoredSnapshot());
+    e.service.search.mockResolvedValue(records().filter(row => row.id !== noteId(80)));
+    e.invalidate('data'); await e.flush();
+    expect(e.host.textContent).toContain('Wskazany wpis jest niedostępny lub nie pasuje do aktualnych filtrów.');
+    e.invalidate('data'); await e.flush();
+    expect(e.view.getContext()).toMatchObject({ query: 'Nowak', time: 'future', status: 'open', id: null, mode: 'list' });
+    expect(e.host.textContent).toContain('Wskazany wpis jest niedostępny lub nie pasuje do aktualnych filtrów.');
+    expect(e.host.querySelectorAll('[aria-current="true"]')).toHaveLength(0);
+    expect(e.detail().textContent).not.toContain('Fikcyjny długi opis 80.');
+  });
+
+  it('keeps a missing-selection notice and query focus through an ordinary refresh and hidden refresh', async () => {
+    const e = environment({ rows: records().filter(row => row.id !== noteId(80)) });
+    await e.view.request(restoredSnapshot());
+    const query = e.host.querySelector('.vgs-query'); query.focus();
+    await e.view.refresh();
+    expect(e.host.textContent).toContain('Wskazany wpis jest niedostępny lub nie pasuje do aktualnych filtrów.');
+    expect(e.doc.activeElement).toBe(query);
+    e.view.setVisible(false); e.invalidate('data'); e.view.setVisible(true); await settle();
+    expect(e.host.textContent).toContain('Wskazany wpis jest niedostępny lub nie pasuje do aktualnych filtrów.');
+    expect(e.doc.activeElement).toBe(query);
+    expect(e.view.getContext()).toMatchObject({ query: 'Nowak', time: 'future', status: 'open', id: null, mode: 'list' });
+  });
+
+  it('clears the notice on an explicit query, filter or replacement request', async () => {
+    for (const action of ['query', 'time', 'status', 'request']) {
+      const e = environment({ rows: records().filter(row => row.id !== noteId(80)) });
+      await e.view.request(restoredSnapshot());
+      expect(e.host.textContent).toContain('Wskazany wpis jest niedostępny lub nie pasuje do aktualnych filtrów.');
+      if (action === 'request') await e.view.request({ query: 'Nowak', time: 'future', status: 'open' });
+      else {
+        const control = action === 'query' ? e.host.querySelector('.vgs-query') : e.host.querySelectorAll('.vgs-select')[action === 'time' ? 0 : 1];
+        control.value = action === 'query' ? 'Nowsze hasło' : action === 'time' ? 'all' : 'completed';
+        control.dispatch(action === 'query' ? 'input' : 'change'); await e.flush();
+      }
+      expect(e.host.textContent).not.toContain('Wskazany wpis jest niedostępny lub nie pasuje do aktualnych filtrów.');
+      expect(e.view.getContext().id).toBeNull();
+      expect(e.host.querySelectorAll('[aria-current="true"]')).toHaveLength(0);
+    }
+  });
+
+  it('a valid new selection replaces the missing notice and never restores the removed detail', async () => {
+    const e = environment({ rows: records().filter(row => row.id !== noteId(80)) });
+    await e.view.request(restoredSnapshot());
+    e.view.select(noteId(0));
+    expect(e.host.textContent).not.toContain('Wskazany wpis jest niedostępny lub nie pasuje do aktualnych filtrów.');
+    expect(e.view.getContext()).toMatchObject({ query: 'Nowak', time: 'future', status: 'open', id: noteId(0), mode: 'detail' });
+    expect(e.detail().textContent).toContain('Fikcyjny długi opis 0.');
+    expect(e.detail().textContent).not.toContain('Fikcyjny długi opis 80.');
+  });
+
+  it('a lock clears a missing notice and a pending read cannot resurrect its previous owner', async () => {
+    const e = environment({ rows: records().filter(row => row.id !== noteId(80)) }), pending = deferred();
+    await e.view.request(restoredSnapshot());
+    e.service.search.mockImplementationOnce(() => pending.promise);
+    const refresh = e.view.refresh();
+    e.status.unlocked = false; e.status.epoch += 1; e.invalidate('lock');
+    expect(e.host.textContent).not.toContain('Wskazany wpis jest niedostępny lub nie pasuje do aktualnych filtrów.');
+    pending.resolve(records()); await refresh;
+    expect(e.view.getContext()).toMatchObject({ query: '', id: null, mode: 'list', origin: null });
+    expect(e.host.querySelectorAll('.vgs-row')).toHaveLength(0);
+    expect(e.host.textContent).not.toContain('Fikcyjny długi opis');
+  });
+
   it('lock clears pending restoration and a late result cannot revive the old owner context', async () => {
     const e = environment(), pending = deferred();
     e.service.search.mockImplementationOnce(() => pending.promise);

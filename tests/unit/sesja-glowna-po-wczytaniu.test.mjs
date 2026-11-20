@@ -270,10 +270,16 @@ describe('P-POWLOKA-PANELE — sesja główna po wczytaniu nie czeka na zdarzeni
     expect(sh).toMatch(/n\.vildaSession\.restore\(\)\}catch\{\}e\.sessionRestoreRequired=false\}\/\* P-SPOZYCIE-POWROT [^*]*\*\/try\{typeof n\.vildaPersistRestoreFinishNow=="function"&&n\.vildaPersistRestoreFinishNow\(\)\}catch\{\}Gp_u\(n\)\}/);
     expect(sh).toContain('function Gp_u(n){try{if(!n||typeof n.requestAnimationFrame!="function")return;n.requestAnimationFrame(function(){n.requestAnimationFrame(function(){try{typeof n.updateProfessionalSummaryCard=="function"&&n.updateProfessionalSummaryCard()}catch{}})})}catch{}}');
     const zaladujRamke = sh.match(/r\.addEventListener\("load",function\(\)\{([\s\S]*?)\}\),r\.src=/)?.[1] || '';
-    expect(zaladujRamke).toContain('if(!bt(r)){Tt(t,n);return}');
+    const sprawdzDokument = 'var doc=Sw_embeddedDocument(r);if(!doc){Tt(t,n);return}';
+    expect(zaladujRamke).toContain(sprawdzDokument);
+    expect(sh).toContain('doc.documentElement.classList.contains("vilda-embedded")?doc:null');
+    const blokadaDokumentu = zaladujRamke.indexOf('if(doc===n.writerBlockedDocument)return');
+    const zapamietanyDokument = zaladujRamke.indexOf('n.navigationGeneration=Sw_documentGeneration(n,doc),n.loadedDocument=doc');
     const gotowaRamka = zaladujRamke.indexOf('n.loaded=!0');
     const odciskSesji = zaladujRamke.indexOf('n.sessionStamp=c===t?Gp_s():null');
-    expect(gotowaRamka).toBeGreaterThan(zaladujRamke.indexOf('if(!bt(r)){Tt(t,n);return}'));
+    expect(blokadaDokumentu).toBeGreaterThan(zaladujRamke.indexOf(sprawdzDokument));
+    expect(zapamietanyDokument).toBeGreaterThan(blokadaDokumentu);
+    expect(gotowaRamka).toBeGreaterThan(zapamietanyDokument);
     expect(odciskSesji).toBeGreaterThan(gotowaRamka);
     expect(zaladujRamke.indexOf('Sn_deliverTarget()')).toBeGreaterThan(odciskSesji);
     // Odcisk nadal pomija czas zebrania; nie zastępuje dowodu świeżości dokumentu.

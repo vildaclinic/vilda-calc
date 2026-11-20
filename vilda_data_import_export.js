@@ -924,7 +924,7 @@ function jsonFileLoadScopeCurrent(scope){
 function Ye(e,t){const a=t&&typeof t=="object"?t:{},o=e&&e.target?e.target:null,n=vt(e,a);if(!n)return null;const i=gt(n,a);if(!i.ok)return i.message&&Me(i.message,a,new Error(i.reason||"Invalid JSON import file")),me(o),null;const s=A(a,"applyLoadedData","applyLoadedData"),fileScope=captureJsonFileLoadScope();return typeof s!="function"?(Me("Brak funkcji importu danych.",a,new Error("Missing applyLoadedData callback")),me(o),null):St(n,a,h=>{try{if(!jsonFileLoadScopeCurrent(fileScope))return null;const S=_t(h,a);nativeJsonFileLoads.set(S,{scope:fileScope,target:BdupId(S,r)});if(s(S)===false)return null;if(typeof a.onLoaded=="function")try{a.onLoaded(S,n)}catch(g){l("vilda_data_import_export:handleFile:onLoaded",g)}return S}catch(S){const g=a.invalidJsonMessage||"Nieprawid\u0142owy plik JSON.";if(Me(g,a,S),typeof a.onError=="function")try{a.onError(S,n)}catch(M){l("vilda_data_import_export:handleFile:onError",M)}return null}finally{me(o)}},h=>{if(!jsonFileLoadScopeCurrent(fileScope)){me(o);return null}const S=a.fileReadErrorMessage||"Nie uda\u0142o si\u0119 odczyta\u0107 pliku JSON.";if(Me(S,a,h),typeof a.onError=="function")try{a.onError(h,n)}catch(g){l("vilda_data_import_export:handleFile:onReadError",g)}return me(o),null})}function Je(e,t){if(!e||e.__vildaDataImportExportDisabledTooltipBound)return;e.__vildaDataImportExportDisabledTooltipBound="1";const a=t&&typeof t=="object"?t:{},o=()=>{if(!(e.disabled===!0||typeof e.hasAttribute=="function"&&e.hasAttribute("disabled")))return;const i=Se(e);i&&O(e,i,a,{dymek:!0})};e.addEventListener("mouseenter",o),e.addEventListener("touchstart",o,{passive:!0}),e.addEventListener("focus",o)}let wt=!1;function qt(e){if(wt)return;wt=!0;const t=e&&typeof e=="object"?e:{},a=f("loadDataBtn"),o=f("saveDataBtn"),n=f("fileInput"),i=A(t,"updateSaveBtnVisibility","updateSaveBtnVisibility"),s=A(t,"anyDataEntered","anyDataEntered"),d=A(t,"hideLoadDataMessage","hideLoadDataMessage"),p=typeof t.handleFile=="function"?t.handleFile:function(D){return Ye(D,t)},h=typeof t.saveUserData=="function"?t.saveUserData:function(){return qe(t)};le(a),le(o),a&&n&&(a.disabled=!1,a.removeAttribute("disabled"),a.removeAttribute("aria-disabled"),a.addEventListener("click",_=>{if(_.preventDefault(),a.disabled){const V=Se(a);V&&O(a,V,t,{dymek:!0});return}if(s?!!s():!1){O(a,"Wczytywanie danych jest mo\u017Cliwe tylko na pocz\u0105tku sesji (gdy formularz jest pusty).",t,{ton:"uwaga"});return}const G=r.VildaVault,H=r.VildaAuthUI;if(r.VildaGuestMode===!0){O(a,"Zaloguj si\u0119, aby wczyta\u0107 dane pacjent\xF3w.",t,{ton:"uwaga"});return}if(G&&typeof G.isUnlocked=="function"&&G.isUnlocked()){H&&typeof H.showPatientsList=="function"?H.showPatientsList(function(V){const Q=A(t,"applyLoadedData","applyLoadedData");if(typeof Q=="function"&&V)try{Q(V)}catch(te){l("vilda_data_import_export:loadFromVault:apply",te)}}):O(a,"Brak modu\u0142u listy pacjent\xF3w.",t,{ton:"blad"});return}O(a,"Zaloguj si\u0119, aby wczyta\u0107 dane pacjent\xF3w.",t,{ton:"uwaga"})}),p&&n.addEventListener("change",p)),o&&o.addEventListener("click",_=>{if(_.preventDefault(),o.disabled){const D=Se(o);D&&O(o,D,t,{dymek:!0});return}h()}),Je(o,t),Je(a,t);const S=f("name"),g=f("advName");S&&g&&(S.addEventListener("input",()=>we("name",{updateSaveBtnVisibility:i})),g.addEventListener("input",()=>we("adv",{updateSaveBtnVisibility:i})));const M=()=>{if(d)try{d()}catch(u){l("vilda_data_import_export:disableLoad:hideMessage",u)}const _=f("loadDataBtn");_&&(le(_),_.disabled=!0,_.setAttribute("disabled",""));const D=f("prevSummaryWrap"),G=f("prevSummaryCard");G&&(G.dataset&&G.dataset.loaded==="true"||D&&D.dataset&&D.dataset.loaded==="true"?(D&&(D.style.display="block"),G.style.display="block"):(D&&(D.style.display="none"),G.style.display="none"))};["name","advName","fullName","age","ageMonths","weight","height","advBoneAge","advMotherHeight","advFatherHeight","advTesticularVolume","advFamilyDelayedPuberty","advGrowthExclusion"].forEach(_=>{const D=f(_);D&&(D.addEventListener("input",M),D.addEventListener("change",M))});const C=f("clearBtn");if(C&&C.addEventListener("click",function(ev){if(!(ev&&ev.clcrClearPatient===!0))return;/* P-KLIRENS-WYCZYSC: przyciski wczytaj/zapisz zmieniają się tylko po pełnym czyszczeniu pacjenta. */const _=f("loadDataBtn");_&&(le(_),_.disabled=!1,_.removeAttribute("disabled"),_.removeAttribute("aria-disabled"));const D=f("loadDataBtnSidebar");D&&(D.disabled=!1,D.removeAttribute("disabled"),D.removeAttribute("aria-disabled"));const G=[],u=f("saveDataBtnSidebar");u&&G.push(u),G.forEach(V=>{V.disabled=!0,V.setAttribute("disabled",""),V.setAttribute("aria-disabled","true")})}),i)try{i()}catch(_){l("vilda_data_import_export:init:updateSaveBtnVisibility",_)}}const la="vildaMainSessionV1";let $=null,bt=!1,Ke=!1,ve=!1,ae=null,Ce={};
 // The first main-session restore includes app-ready and both queued frames.
 // Subscribers wait for the producer; this API never starts restore or reads data.
-let initialMainSessionRestoreResult=null,initialMainSessionRestoreAttempted=false,resolveInitialMainSessionRestore;
+let initialMainSessionRestoreResult=null,initialMainSessionRestoreAttempted=false,initialMainSessionFormEdited=false,resolveInitialMainSessionRestore;
 const initialMainSessionRestorePromise=new Promise(function(resolve){resolveInitialMainSessionRestore=resolve});
 // Presentation reads the native startup outcome without reopening restoration
 // or treating a partially restored form as an empty patient.
@@ -1671,6 +1671,51 @@ function explicitMainRestoreCurrent(source,options,basis){
     return currentMainRestoreFormBasis(options)===basis&&nativeRestoreCarrySourceCurrent(source);
   }catch(_){return false}
 }
+// Shared state can hydrate the form before the main session gets its turn.
+// Carry the saved encounter only for that initial, still unedited form, with
+// the original native owner and the exact session read by this restore.
+function restoreKeptFormVisit(source,options,basis,visitContext,storage){
+  try{
+    if(!basis||!visitContext||initialMainSessionRestoreResult||initialMainSessionFormEdited
+      ||pendingAcceptedPatientLoad||saveClearDepth||Bwczytany0()||!nativeRestoreCarrySourceCurrent(source))return;
+    const saved=JSON.parse(source.payloadJSON),current=JSON.parse(basis);
+    if(saved?.visit?.patientId!==null||saved.visit.origin!=="explicit"||current.visit
+      ||!sameKeptVisitForm(current,saved))return;
+    if(source.adapter.getStorage("session")!==storage||!explicitMainRestoreCurrent(source,options,basis)
+      ||r.VildaVisitContext!==visitContext||initialMainSessionRestoreResult||initialMainSessionFormEdited
+      ||pendingAcceptedPatientLoad||saveClearDepth||Bwczytany0()
+      ||visitContext.capture(current,{patientId:null,readOnly:true})
+      ||!nativeRestoreCarrySourceCurrent(source))return;
+    visitContext.load(saved);
+  }catch(error){l("vilda_data_import_export:kept-form-visit",error)}
+}
+function keptVisitFormFacts(payload){
+  // Work on a detached comparison only. Startup can calculate before the DOM
+  // has the same row indexes as at save time or before intake is paired.
+  const form=de(payload),growth=form.advanced?.data,user=form.user||{};
+  delete form.timestampISO;
+  delete form.visit;
+  const rows=Array.isArray(growth?.measurements)?growth.measurements:[];
+  if(growth)delete growth.calculationFingerprint;
+  for(const row of rows)if(row&&typeof row==="object")delete row.domIndex;
+  if(form.intake){
+    delete form.intake.estKcalPerDay;
+    const currentAge=user.age!=null?(user.age*12+(user.ageMonths||0)):user.ageMonths;
+    const observations=[...rows,{ageMonths:currentAge,height:user.height,weight:user.weight}];
+    // Intake's calculated model may duplicate current and growth observations.
+    // Keep any independent intake input, including rows with additional fields.
+    const isMirror=row=>row&&Object.keys(row).length===4
+      &&[row.ageMonths,row.ageYears,row.height,row.weight].every(Number.isFinite)
+      &&row.ageYears===row.ageMonths/12&&observations.some(point=>point
+        &&point.ageMonths===row.ageMonths&&point.height===row.height&&point.weight===row.weight);
+    const history=form.intake.history;
+    if(history===null||Array.isArray(history))form.intake.history=(history||[]).filter(row=>!isMirror(row));
+  }
+  return JSON.stringify(form);
+}
+function sameKeptVisitForm(current,saved){
+  return keptVisitFormFacts(current)===keptVisitFormFacts(saved);
+}
 // The opted-in birth editor has no DOM mirror in sharedUserData. Recover only
 // its never-initialized carry when anonymous startup keeps matching shared
 // fields. Native account/key/panel/shell tickets, the exact unchanged session,
@@ -1715,7 +1760,11 @@ function Fe(e){
     const n=Z();let i=null;
     if(!n||typeof n.readMainSession!=="function"){outcome={ready:false,reason:"missing-reader"};return!1}
     let carrySource=captureNativeRestoreCarrySource(n);
-    const localBasis=explicit?currentMainRestoreFormBasis(t):null;
+    const visitContext=!explicit&&!initialMainSessionRestoreResult&&!initialMainSessionFormEdited
+      &&carrySource?.scope.patientId===null&&!Bwczytany0()?r.VildaVisitContext:null;
+    let visitStorage=null;
+    if(visitContext)try{visitStorage=n.getStorage("session")}catch(_){/* No visit carry on an unavailable storage handle. */}
+    const localBasis=explicit||visitStorage?currentMainRestoreFormBasis(t):null;
     i=n.readMainSession();
     if(carrySource&&nativeRestoreCarrySourceCurrent(carrySource))carrySource.payloadJSON=JSON.stringify(i);else carrySource=null;
     if(!i){outcome={ready:true,reason:"empty"};return!1}
@@ -1726,6 +1775,7 @@ function Fe(e){
     if(protectOwnedForm&&!explicitCurrentRestore){
       /* P-POKWITANIE-KONTRAKT: shared fields may restore before the full guest session.
        * Only the never-initialized hidden carrier may recover; other fields stay put. */
+      restoreKeptFormVisit(carrySource,t,localBasis,visitContext,visitStorage);
       if(r.VildaPubertyAssessmentState)r.VildaPubertyAssessmentState.restoreSessionIfUninitialized(i);
       restoreHomeStartupBirth(i,carrySource,t);
       outcome={ready:true,reason:"kept-form"};return!1;
@@ -1766,7 +1816,10 @@ const authority=captureMainSessionWriteAuthority();if(!authority||t&&t.isSession
   const a=r.document;
   if(!a||typeof a.addEventListener!=="function"){settleInitialMainSessionRestore(false,"missing-document");return!1}
   try{
-    ["input","change"].forEach(i=>{a.addEventListener(i,s=>Pe(s,t),!0)});
+    ["input","change"].forEach(i=>{a.addEventListener(i,s=>{
+      if(!initialMainSessionRestoreResult&&s.isTrusted&&s.target?.matches?.("input, select, textarea"))initialMainSessionFormEdited=true;
+      Pe(s,t);
+    },!0)});
     try{r&&typeof r.addEventListener==="function"&&r.addEventListener("pagehide",()=>oe(Object.assign({},t,{force:!0})),{capture:!0})}catch(i){l("vilda_data_import_export:initMainSessionPersistence:pagehide",i)}
     try{a&&typeof a.addEventListener==="function"&&a.addEventListener("visibilitychange",()=>{try{(a.visibilityState==="hidden"||a.hidden===!0)&&oe(t)}catch(i){l("vilda_data_import_export:initMainSessionPersistence:visibilitychange",i)}},{capture:!0})}catch(i){l("vilda_data_import_export:initMainSessionPersistence:visibilitychange-attach",i)}
     const o=()=>{

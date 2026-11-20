@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { createFictionalVault, fictionalPatient, loadPatient, shellFrame, readyForPatient } from '../support/centile-live-fixture.mjs';
 
-test.use({ serviceWorkers: 'block', reducedMotion: 'reduce' });
+test.use({ serviceWorkers: 'block', contextOptions: { reducedMotion: 'reduce' } });
 test.setTimeout(240_000);
 const PERINATAL = { gestationalWeeks: 34, gestationalDays: 2, birthWeightG: 1650,
   birthLengthCm: 41, birthHeadCircCm: 29, gravidity: 2, parity: 1, retainedMetadata: 'fictional-retained' };

@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { installUiIntentFixture } from '../fixtures/ui-intent-unit-fixture.mjs';
@@ -8,6 +9,27 @@ const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
 const exporterSource=fs.readFileSync(path.join(root,'vilda_data_import_export.js'),'utf8');
 const panelSource=fs.readFileSync(path.join(root,'vilda_panel_pacjent.js'),'utf8');
 const consumerSource=fs.readFileSync(path.join(root,'gh_therapy_monitor.js'),'utf8');
+const initSource=fs.readFileSync(path.join(root,'vilda_init.js'),'utf8');
+const customSource=fs.readFileSync(path.join(root,'custom-fixes.js'),'utf8');
+const visitSource=fs.readFileSync(path.join(root,'vilda_visit_context.js'),'utf8');
+const {parse}=createRequire(import.meta.url)('espree');
+const canonicalCallbacks=[];
+function findCanonical(node,ancestors=[]){
+ if(!node||typeof node!=='object')return;
+ if(node.type==='CallExpression'&&node.callee?.object?.name==='document'
+  &&node.callee?.property?.name==='addEventListener'&&node.arguments[0]?.value==='vilda:patient-loaded'
+  &&ancestors.some(parent=>parent.type==='FunctionDeclaration'&&parent.id?.name==='S')){
+  const callback=node.arguments[1];
+  if(callback?.type==='FunctionExpression'&&customSource.slice(callback.start,callback.end).includes('window._vildaCurrentPatientId=c'))canonicalCallbacks.push(callback);
+ }
+ for(const value of Object.values(node)){
+  if(Array.isArray(value))value.forEach(child=>findCanonical(child,[...ancestors,node]));
+  else if(value&&typeof value==='object')findCanonical(value,[...ancestors,node]);
+ }
+}
+findCanonical(parse(customSource,{ecmaVersion:'latest'}));
+if(canonicalCallbacks.length!==1)throw new Error('Expected the actual canonical patient-loaded listener inside custom-fixes S');
+const canonicalCallback=customSource.slice(canonicalCallbacks[0].start,canonicalCallbacks[0].end);
 const clone=value=>value==null?value:JSON.parse(JSON.stringify(value));
 const X={version:1,name:'Fikcyjny Start',user:{age:8,ageMonths:0,sex:'M',height:126,weight:25}};
 const Y={version:1,name:'Fikcyjny Cel',user:{age:11,ageMonths:0,sex:'F',height:141,weight:36}};
@@ -19,7 +41,7 @@ function events(target={}){const map=new Map();return Object.assign(target,{
 })}
 function storage(){const map=new Map();return {getItem:key=>map.get(key)??null,setItem:(key,value)=>map.set(key,String(value)),removeItem:key=>map.delete(key),key:i=>[...map.keys()][i]??null,get length(){return map.size}}}
 async function flush(){for(let i=0;i<12;i++)await Promise.resolve()}
-function environment({session=X,sourcePatient=ID_X,initialPid=null}={}){
+function environment({session=X,sourcePatient=ID_X,initialPid=null,publisher=true}={}){
  const observers=new Set(),body={},frames=[],appReady=[],ss=storage(),ls=storage();let modal=null,current=clone(session),epoch=1,user='fictional-account',unlocked=true,authReady=true,frameHidden=false;
  const doc=events({readyState:'complete',hidden:false,body,documentElement:{classList:{contains:()=>false,add(){},remove(){}}},getElementById:()=>null,querySelector:s=>s==='.vug-backdrop'?modal:null,querySelectorAll:()=>[]});
  const host=events({document:{},history:{state:{shellNavId:7,shellView:'docpro'}},location:{hash:'#/docpro'}});
@@ -38,7 +60,13 @@ function environment({session=X,sourcePatient=ID_X,initialPid=null}={}){
  const persistence={getStorage:()=>ss,readMainSession:vi.fn(()=>clone(current)),writeMainSession:vi.fn(value=>{current=clone(value);return true}),clearMainSession:vi.fn(()=>{current=null;return true}),readClcrSession:()=>null};win.VildaPersistence=persistence;
  new Function('window','globalThis',panelSource)(win,win);
  new Function('window','globalThis',exporterSource)(win,win);const api=win.VildaDataImportExport;
- doc.addEventListener('vilda:patient-loaded',event=>{const id=event&&event.detail&&event.detail.patientId;if(id){win._vildaCurrentPatientId=id;ss.setItem('vildaCurrentPatientId',id)}});
+ // Use the real publisher and native registration lifecycle, rather than a
+ // synthetic setter that cannot establish the receiver's readiness contract.
+ new Function('window','globalThis',initSource)(win,win);
+ if(publisher===true)win.VildaInit.safeInit('custom-fixes:sidebar-menu',()=>{
+  doc.addEventListener('vilda:patient-loaded',new Function('window','a','return ('+canonicalCallback+');')(win,()=>{}));
+ });
+ if(publisher==='missing')delete win.VildaInit;
  const initialApply=vi.fn(()=>{win._vildaCurrentPatientId=sourcePatient;return true});
  const options={persistence,collectUserData:()=>clone(current||X),anyDataEntered:()=>false,applyLoadedData:initialApply,vildaAppOnReady:(_name,fn)=>appReady.push(fn)};
  const applied=vi.fn(value=>api.applyLoadedData(value)),highlight=vi.fn();win.applyLoadedData=applied;
@@ -80,7 +108,143 @@ describe('producer startup settlement from actual Kt/Fe/Mt',()=>{
  it('settles scheduling failure instead of leaving the consumer waiting',async()=>{const h=environment();h.win.requestAnimationFrame=()=>{throw new Error('fictional scheduling failure')};const p=h.api.whenInitialMainSessionRestoreSettled();h.api.initMainSessionPersistence(h.options);expect(()=>h.appReady.shift()()).toThrow('fictional scheduling failure');expect(await p).toEqual({ready:false,reason:'schedule-failed',waited:true})});
 });
 
+function anonymousVisitStartup(name = '', nativeState = {}) {
+  const h = environment({ sourcePatient: null });
+  h.win.crypto = { randomUUID: vi.fn(() => '61a61db1-cb49-4c6a-8197-72789ba6dd23') };
+  const fields = {
+    name, age: '13', ageMonths: '0', sex: 'M', height: '158', weight: '46', advMotherHeight: '167',
+  };
+  const inputs = new Map(Object.entries(fields).map(([id, value]) => [id, { id, value, tagName: 'INPUT' }]));
+  h.doc.getElementById = id => inputs.get(id) || null;
+  Object.assign(h.win, nativeState);
+  new Function('window', 'globalThis', visitSource)(h.win, h.win);
+  const context = h.win.VildaVisitContext;
+  const payload = h.api.captureCurrentUserDataReadOnly();
+  const visit = context.create({ patientId: null, clinicalDateISO: '2026-10-31' });
+  h.win.crypto.randomUUID.mockClear();
+  const session = { ...payload, visit };
+  h.setSession(session);
+  h.options.anyDataEntered = () => true;
+  const readVisit = () => context.capture(payload, { patientId: null, readOnly: true });
+  return { ...h, session, visit, context, inputs, readVisit };
+}
+
+describe('native startup of an unassigned visit with a populated form', () => {
+  it.each(['', 'Fikcyjny Niezapisany'])('continues the saved visit for name %j without full apply, field changes or new writes', async name => {
+    const h = anonymousVisitStartup(name);
+    const before = h.api.captureCurrentUserDataReadOnly();
+    expect(h.readVisit()).toBeNull();
+
+    await h.finishBoot();
+
+    expect(h.api.getInitialMainSessionRestoreState()).toEqual({ ready: true, reason: 'kept-form' });
+    expect(h.readVisit()).toEqual(h.visit);
+    expect(h.api.captureCurrentUserDataReadOnly()).toEqual({ ...before, visit: h.visit });
+    expect(h.initialApply).not.toHaveBeenCalled();
+    expect(h.persistence.writeMainSession).not.toHaveBeenCalled();
+    expect(h.win.crypto.randomUUID).not.toHaveBeenCalled();
+  });
+
+  it('keeps the active visit even when the saved form values match', async () => {
+    const h = anonymousVisitStartup();
+    const current = { ...h.visit, visitId: 'c1e2aea8-7e35-49be-b691-beda603793dc' };
+    h.context.load({ visit: current });
+    await h.finishBoot();
+    expect(h.readVisit()).toEqual(current);
+    expect(h.initialApply).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { name: 'only current and growth mirrors', independent: null },
+    { name: 'a nonmatching intake observation', independent: { ageMonths: 144, ageYears: 12, height: 153, weight: 41 } },
+    { name: 'an intake observation with metadata', independent: { ageMonths: 144, ageYears: 12, height: 153, weight: 40, annotation: 'fictional' } },
+  ])('compares the stored form against $name', async ({ independent }) => {
+    const historical = { ageMonths: 144, ageYears: 12, height: 153, weight: 40 };
+    const current = { ageMonths: 156, ageYears: 13, height: 158, weight: 46 };
+    const h = anonymousVisitStartup('', { advancedGrowthData: { measurements: [{ ...historical, domIndex: 0 }] } });
+    const history = [historical, current];
+    if (independent) history.push(independent);
+    h.setSession({ ...h.session, intake: { ...h.session.intake, history } });
+
+    await h.finishBoot();
+
+    expect(h.readVisit()).toEqual(independent ? null : h.visit);
+    expect(h.initialApply).not.toHaveBeenCalled();
+    expect(h.persistence.writeMainSession).not.toHaveBeenCalled();
+  });
+
+  it('does not attach saved visit metadata after a trusted edit even when final values match', async () => {
+    const h = anonymousVisitStartup();
+    const input = h.inputs.get('weight');
+    input.matches = () => true;
+    h.api.initMainSessionPersistence(h.options);
+    input.value = '47';
+    h.doc.dispatchEvent({ type: 'input', isTrusted: true, target: input });
+    input.value = '46';
+    h.doc.dispatchEvent({ type: 'input', isTrusted: true, target: input });
+
+    await h.finishBoot();
+
+    expect(h.readVisit()).toBeNull();
+    expect(h.initialApply).not.toHaveBeenCalled();
+    expect(h.persistence.writeMainSession).not.toHaveBeenCalled();
+  });
+
+  it.each(['changed form', 'changed form during read', 'changed form during storage check', 'changed carrier', 'account change', 'renewed key session', 'foreign patient', 'invalid visit'])(
+    'does not attach saved visit metadata after %s', async reason => {
+      const h = anonymousVisitStartup();
+      if (reason === 'changed form') h.inputs.get('height').value = '159';
+      if (reason === 'foreign patient') h.setSession({ ...h.session, visit: { ...h.visit, patientId: ID_Y } });
+      if (reason === 'invalid visit') h.setSession({ ...h.session, visit: { ...h.visit, visitId: 'fictional-invalid-uuid' } });
+      if (reason === 'changed form during read') h.persistence.readMainSession.mockImplementationOnce(() => {
+        h.inputs.get('advMotherHeight').value = '168';
+        return clone(h.session);
+      });
+      if (reason === 'changed form during storage check') h.persistence.getStorage = () => {
+        if (h.persistence.readMainSession.mock.calls.length) h.inputs.get('advMotherHeight').value = '168';
+        return h.ss;
+      };
+      if (reason === 'account change') h.persistence.readMainSession.mockImplementationOnce(() => {
+        h.switchAccount();
+        return clone(h.session);
+      });
+      if (reason === 'renewed key session') h.persistence.readMainSession.mockImplementationOnce(() => {
+        h.lock();
+        h.setAuth(true, true);
+        return clone(h.session);
+      });
+      if (reason === 'changed carrier') h.persistence.readMainSession.mockImplementationOnce(() => {
+        h.setSession({ ...h.session, visit: { ...h.visit, visitId: 'c1e2aea8-7e35-49be-b691-beda603793dc' } });
+        return clone(h.session);
+      });
+
+      await h.finishBoot();
+
+      if (reason === 'changed form during storage check') expect(h.inputs.get('advMotherHeight').value).toBe('168');
+      expect(h.readVisit()).toBeNull();
+      expect(h.initialApply).not.toHaveBeenCalled();
+      expect(h.persistence.writeMainSession).not.toHaveBeenCalled();
+      expect(h.win.crypto.randomUUID).not.toHaveBeenCalled();
+    },
+  );
+});
+
 describe('actual GH N handles one intent before its first guard',()=>{
+ it.each(['missing','unready'])('fails closed before fetching when the canonical publisher is %s',async publisher=>{
+  const h=environment({publisher});await h.finishBoot();h.guardMode('proceed');await h.intent();await h.N();
+  expect(h.vault.getPatient).not.toHaveBeenCalled();expect(h.calls).toHaveLength(0);
+  expect(h.applied).not.toHaveBeenCalled();expect(h.highlight).not.toHaveBeenCalled();
+  expect(h.win._vildaCurrentPatientId).toBe(ID_X);expect(h.ss.getItem('vildaCurrentPatientId')).toBe(ID_X);
+  expect(h.ss.getItem('vilda:gh-jump')).toBeNull();
+ });
+ it('rejects a replacement publisher module while bootstrap is still pending',async()=>{
+  const h=environment();await h.intent();const pending=h.N();await flush();
+  expect(h.win.VildaInit.isInitialized('custom-fixes:sidebar-menu')).toBe(true);
+  h.win.VildaInit={...h.win.VildaInit};await h.finishBoot();await pending;
+  expect(h.vault.getPatient).not.toHaveBeenCalled();expect(h.calls).toHaveLength(0);
+  expect(h.applied).not.toHaveBeenCalled();expect(h.highlight).not.toHaveBeenCalled();
+  expect(h.ss.getItem('vilda:gh-jump')).toBeNull();
+ });
  it('does not fetch or capture a guard during queued or active bootstrap',async()=>{const h=environment();await h.intent();const n=h.N();await flush();expect(h.vault.getPatient).not.toHaveBeenCalled();expect(h.calls).toHaveLength(0);await h.finishBoot();await n;expect(h.calls).toHaveLength(1);expect(h.vault.getPatient).toHaveBeenCalledTimes(1);expect(h.win.__vildaPersistRestoring).toBe(false);expect(h.ss.getItem('vilda:gh-jump')).toBeNull()});
  it('coalesces repeated 350/700 triggers for the same exact intent',async()=>{const h=environment();await h.intent();const p=h.N(),q=h.N();await h.finishBoot();await Promise.all([p,q]);expect(h.vault.getPatient).toHaveBeenCalledTimes(1);expect(h.calls).toHaveLength(1)});
  it('does not consume a replacement from an old waiter',async()=>{const h=environment();await h.intent(ID_Y);const p=h.N();const newer=await h.intent(ID_Z,'fictional-new-point');const q=h.N();expect(h.ss.getItem('vilda:gh-jump')).toBe(newer);await h.finishBoot();await Promise.all([p,q]);expect(h.vault.getPatient).toHaveBeenCalledTimes(1);expect(h.vault.getPatient).toHaveBeenCalledWith(ID_Z);expect(h.calls).toHaveLength(1)});

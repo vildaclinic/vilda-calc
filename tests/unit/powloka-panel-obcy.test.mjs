@@ -401,6 +401,7 @@ describe('powłoka (vilda_shell.js) — nieaktualny panel jest bezczynny w tle i
     expect(p.w.location.reload).toHaveBeenCalledTimes(1);
     expect(p.w.__events).toEqual([]);
     p.ustaw(false); // świeży dokument
+    p.replaceDocument('docpro');
     p.load('docpro');
     p.tick(50);
     expect(p.w.__events).toEqual(['/docpro.html#gh=gh-y0']);
@@ -423,6 +424,7 @@ describe('powłoka (vilda_shell.js) — nieaktualny panel jest bezczynny w tle i
     expect(w.location.reload).toHaveBeenCalledTimes(1);
     expect(w.VildaAuthUI.showPatientsList).toHaveBeenCalledTimes(1); // stary dokument nie dostaje żądania
     ustaw(false);
+    p.replaceDocument('start');
     p.load('start');
     p.tick(300);
     expect(w.VildaAuthUI.showPatientsList).toHaveBeenCalledTimes(2);

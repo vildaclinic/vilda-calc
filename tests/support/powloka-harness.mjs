@@ -90,6 +90,12 @@ export function powloka(chrome, beforeBoot) {
   if (beforeBoot) beforeBoot(okno, doc);
   vm.runInNewContext(kod, { window: okno, document: doc, navigator: okno.navigator, console, URL, Date, setTimeout: timer, clearTimeout, setInterval: okno.setInterval, clearInterval: okno.clearInterval }, { filename: 'vilda_shell.js' });
   doc.dispatchEvent({ type: 'DOMContentLoaded' });
+  function replaceDocument(route) {
+    const frame = ramki.get(okno.VildaShell.routes[route].src.split('?')[0]); expect(frame).toBeTruthy();
+    const next = dokument(true);
+    frame.contentDocument = next; frame.contentWindow.document = next;
+    return next;
+  }
   function load(route) { const frame = ramki.get(okno.VildaShell.routes[route].src.split('?')[0]); expect(frame).toBeTruthy(); frame.dispatchEvent({ type: 'load' }); return frame; }
-  return { shell: okno.VildaShell, win: okno, doc, history: historia, ramki, tick, load, timery, clearTimeout };
+  return { shell: okno.VildaShell, win: okno, doc, history: historia, ramki, tick, load, replaceDocument, timery, clearTimeout };
 }

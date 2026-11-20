@@ -42,11 +42,11 @@ export function fictionalPatient({ firstName = 'Antoni', sex = 'M', age = 13, he
   };
 }
 
-export async function fixturePreferences(page) {
-  await page.addInitScript(() => {
+export async function fixturePreferences(page, { pwzNumber = '0000000' } = {}) {
+  await page.addInitScript(fixturePwz => {
     localStorage.setItem('vilda-terms-accepted-v1', JSON.stringify({ version: 1, acceptedAtISO: new Date().toISOString() }));
     localStorage.setItem('analyticsConsent', 'denied');
-    localStorage.setItem('pwzNumber', '0000000');
+    localStorage.setItem('pwzNumber', fixturePwz);
     const proForFictionalAccount = () => {
       const access = window.VildaProAccess;
       if (!access) return;
@@ -77,7 +77,7 @@ export async function fixturePreferences(page) {
       if (String(text).startsWith('E2E-LIVE-')) window.__siatkaE2eTexts.push(String(text));
       return fillText.call(this, text, ...args);
     };
-  });
+  }, pwzNumber);
 }
 
 export async function shellFrame(page, title = 'Start') {
@@ -120,8 +120,8 @@ export async function readyForPatient(frame) {
     && !window.VildaDobAge.restorePending());
 }
 
-export async function createFictionalVault(page, { shell = false, waitForAccountReadyBeforeReload = false } = {}) {
-  await fixturePreferences(page);
+export async function createFictionalVault(page, { shell = false, waitForAccountReadyBeforeReload = false, pwzNumber = '0000000' } = {}) {
+  await fixturePreferences(page, { pwzNumber });
   await page.goto(shell ? '/app.html#/start' : '/index.html', { waitUntil: 'load' });
   let frame = shell ? await shellFrame(page) : page;
   await frame.waitForFunction(() => Boolean(window.VildaVault));

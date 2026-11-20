@@ -80,6 +80,23 @@
         #obesityMonitorSection .obm-msg[hidden]{display:none}
         #obesityMonitorSection .obm-msg.err{border:var(--border-emphasis) solid var(--danger);background:#ffeaea;color:#8e1c1c}
         #obesityMonitorSection .obm-msg.warn{border:var(--border-hairline) solid #EF9F27;background:#FAEEDA;color:#633806}
+/* P-OTYLOSC-SKOK: podpowiedź po skoku z Karty pacjenta (nowy cykl, wpis z usuniętego) — turkus jak na makiecie etapu 2 */
+.obm-msg.info{border:var(--border-hairline) solid var(--primary);background:#e0f2f1;color:var(--text-strong)}
+/* P-OTYLOSC-SKOK: wiersz punktu otwartego z Karty pacjenta — chwilowe podświetlenie, jak przy skoku do punktu GH */
+#obesityTherapyTableWrap tr.obm-row-skok{background:var(--line-teal);transition:background .3s}
+/* P-OTYLOSC-DAWKA: podpowiedzi dawki pod formularzem monitora (przyciski z tabeli ChPL). Motyw szklany
+   (.liquid-ios26 button {…!important}) i reguły przycisków na telefonie nadpisują wygląd — stąd !important przy
+   wyższej szczegółowości, jak przy przyciskach „Wpisy leczenia” w Karcie (P-OTYLOSC-SKOK). */
+#obesityMonitorSection .obm-dawki{display:flex;flex-direction:column;gap:var(--space-4px);margin:var(--space-8px) 0 0}
+#obesityMonitorSection .obm-dawki[hidden]{display:none}
+#obesityMonitorSection .obm-dawki-tyt{font-size:.75rem;font-weight:600;color:var(--text-muted)}
+#obesityMonitorSection .obm-dawki-lista{display:flex;flex-wrap:wrap;gap:var(--space-6px)}
+#obesityMonitorSection .obm-dawki .obm-dawka{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto!important;width:auto!important;min-width:0!important;min-height:30px!important;padding:0 var(--space-10px)!important;margin:0!important;box-sizing:border-box;background:#fff!important;color:var(--primary)!important;border:var(--border-hairline) solid #b2dcd9!important;border-radius:var(--radius-pill)!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;font-family:inherit;font-size:.8rem!important;font-weight:600!important;line-height:1.2;cursor:pointer;transform:none!important;transition:border-color .15s ease,background-color .15s ease!important}
+#obesityMonitorSection .obm-dawki .obm-dawka:hover{border-color:var(--primary)!important}
+#obesityMonitorSection .obm-dawki .obm-dawka:focus-visible{outline:var(--border-emphasis) solid var(--primary);outline-offset:2px}
+#obesityMonitorSection .obm-dawki .obm-dawka[aria-pressed="true"]{background:var(--primary)!important;border-color:var(--primary)!important;color:#fff!important}
+#obesityMonitorSection .obm-dawki-uw{display:block;font-size:.7rem;line-height:1.35;color:var(--text-muted)}
+@media(max-width:560px){#obesityMonitorSection .obm-dawki .obm-dawka{min-height:44px!important;padding:0 var(--space-14px)!important}}
         #obesityMonitorSection .obm-msg-actions{display:flex;flex-wrap:wrap;gap:var(--space-6px)}
         #obesityMonitorSection .obm-msg-btn{font-size:.8rem;line-height:1.3;min-width:0;max-width:100%;white-space:normal;text-align:left;margin:0}
         #obesityMonitorSection .obm-msg-btn:focus-visible{outline:var(--border-emphasis) solid var(--primary);outline-offset:2px}

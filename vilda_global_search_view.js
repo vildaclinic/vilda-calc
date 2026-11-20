@@ -93,7 +93,7 @@
     function listOrigin(value) { return { query: value.query, time: value.time, status: value.status, id: value.id, limit: value.limit, listScrollTop: value.listScrollTop }; }
     function reconcile(value) {
       var index = state.rows.findIndex(function (row) { return row.id === value.id; });
-      state.missing = !!value.id && index < 0;
+      if (value.id) state.missing = index < 0;
       if (state.missing) { value.id = null; value.mode = 'list'; value.detailScrollTop = 0; value.origin = null; value.focus = 'list'; }
       if (index >= 0) {
         value.limit = Math.max(value.limit, Math.ceil((index + 1) / 50) * 50);
