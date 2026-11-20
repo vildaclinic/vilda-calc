@@ -56,6 +56,8 @@ const norm = (t) => String(t || '').replace(/\s+/g, ' ').trim();
 
 async function karta(page, patientId) {
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id), patientId);
+  // P-KARTA-LECZENIE (etap 1): bloki leczenia stoją w zakładce „Leczenie” (druga, po „Status”).
+  await page.locator('.vilda-patient-tab[data-tab="leczenie"]').click();
   const podsumowanie = page.locator('.vilda-gh-summary', { hasText: 'Leczenie otyłości' }).first();
   await expect(podsumowanie).toBeVisible({ timeout: 15000 });
   await page.locator('.vilda-gha-btn', { hasText: 'otyłość' }).click();

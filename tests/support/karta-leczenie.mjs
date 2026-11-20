@@ -1,0 +1,95 @@
+import { expect } from '@playwright/test';
+
+/**
+ * P-KARTA-LECZENIE, etap 1 — wspólne dane i pomocnicy specyfikacji karta-leczenie.spec.mjs (komputer) i
+ * karta-leczenie-mobile.spec.mjs (telefon). Pacjenci jak na zaakceptowanej makiecie (dane wyłącznie FIKCYJNE):
+ * O1 — nastolatka na Wegovy, 2 punkty, przed oknem oceny; G1 — chłopiec na GH, 7 punktów od Włączenia;
+ * X1 — GH zakończone + Wegovy trwa; BEZ — pacjent bez leczenia.
+ */
+const HASLO = 'E2e#KartaLeczenie!26';
+const WEG = { drug: 'Wegovy (semaglutyd) – s.c. 1×/tydz.', substance: 'Semaglutyd (agonista receptora GLP‑1)' };
+const DOB_O1 = '2008-12-10';
+function wiek(dobISO, dateISO) {
+  const [y1, m1, d1] = dobISO.split('-').map(Number);
+  const [y2, m2, d2] = dateISO.split('-').map(Number);
+  let mies = (y2 - y1) * 12 + (m2 - m1);
+  if (d2 < d1) mies -= 1;
+  return { ageYears: Math.floor(mies / 12), ageMonths: mies % 12 };
+}
+const OB = (dob, id, type, dateISO, weight, height, dose) => ({
+  id, type, dateISO, ...wiek(dob, dateISO), weight, height, bmi: +(weight / Math.pow(height / 100, 2)).toFixed(1), ...WEG, dose,
+});
+export const O1 = {
+  name: 'Fikcyjna Zuzanna',
+  user: { lastName: 'Fikcyjna', firstName: 'Zuzanna', sex: 'F', age: 17, ageMonths: 11, height: 157, weight: 84, dobISO: DOB_O1 },
+  obesityTherapyPoints: [OB(DOB_O1, 'o1-start', 'start', '2026-06-23', 91.9, 157, '0,25 mg'), OB(DOB_O1, 'o1-k1', 'continue', '2026-11-10', 84, 157, '2,4 mg')],
+};
+const GH = (id, type, lata, mies, weight, height, boneAge, dose, drug = 'Genotropin 12 mg') => ({
+  id, type, ageYears: lata, ageMonths: mies, weight, height, boneAge, dose, doseUnit: 'mg/kg/d', drug, program: 'SNP', igf1: null,
+});
+export const G1 = {
+  name: 'Fikcyjny Antoni',
+  user: { lastName: 'Fikcyjny', firstName: 'Antoni', sex: 'M', age: 10, ageMonths: 0, height: 132.4, weight: 29.8 },
+  ghTherapyPoints: [GH('g1-s', 'start', 7, 0, 18, 110, 5.5, 0.025), GH('g1-c1', 'continue', 7, 6, 19.6, 114.6, null, 0.025),
+    GH('g1-c2', 'continue', 8, 0, 21.3, 118.7, 6.75, 0.028), GH('g1-c3', 'continue', 8, 6, 23.2, 122.5, null, 0.03),
+    GH('g1-c4', 'continue', 9, 0, 25.4, 126.1, 8, 0.03), GH('g1-c5', 'continue', 9, 6, 27.5, 129.3, null, 0.033),
+    GH('g1-c6', 'continue', 10, 0, 29.8, 132.4, 9, 0.033)],
+};
+const DOB_X1 = '2010-11-05';
+export const X1 = {
+  name: 'Fikcyjny Tomasz',
+  user: { lastName: 'Fikcyjny', firstName: 'Tomasz', sex: 'M', age: 16, ageMonths: 0, height: 168, weight: 92.5, dobISO: DOB_X1 },
+  ghTherapyPoints: [GH('x1-s', 'start', 9, 0, 24, 121, 7, 0.025, 'Omnitrope 10 mg'), GH('x1-c1', 'continue', 11, 0, 36, 137.5, null, 0.03, 'Omnitrope 10 mg'),
+    GH('x1-c2', 'continue', 13, 0, 55, 153, 13, 0.03, 'Omnitrope 10 mg'), GH('x1-e', 'end', 15, 0, 78, 166.5, 15.5, 0.025, 'Omnitrope 10 mg')],
+  obesityTherapyPoints: [OB(DOB_X1, 'x1-os', 'start', '2026-06-23', 99.4, 167.6, '0,25 mg'), OB(DOB_X1, 'x1-oc', 'continue', '2026-11-10', 92.5, 168, '2,4 mg')],
+};
+export const BEZ = { name: 'Fikcyjny Bez Leczenia', user: { lastName: 'Fikcyjny', firstName: 'Bez Leczenia', sex: 'M', age: 9, ageMonths: 0, height: 132, weight: 30 } };
+
+export async function otworz(page) {
+  await page.addInitScript(() => {
+    try {
+      window.localStorage.setItem('vilda-terms-accepted-v1', JSON.stringify({ version: 1, acceptedAtISO: new Date().toISOString() }));
+    } catch (_) { /* brak storage — pomiń */ }
+  });
+  await page.goto('/index.html', { waitUntil: 'load' });
+  await page.waitForFunction(() => Boolean(window.VildaVault));
+  await page.evaluate(async (pw) => window.VildaVault.createUser(pw, { label: 'e2e', iterations: 10000 }), HASLO);
+  await page.reload({ waitUntil: 'load' });
+  await page.waitForFunction(() => Boolean(window.VildaVault) && window.VildaVault.isUnlocked());
+  await page.waitForFunction(() => !document.documentElement.classList.contains('vilda-auth-locked'));
+  await page.waitForFunction(() => Boolean(window.VildaAuthUI) && Boolean(window.VildaDziennikOtylosciUI) && Boolean(window.ObesityResponseCriteria));
+}
+export const zapisz = (page, rekord) => page.evaluate(async (r) => (await window.VildaVault.savePatient(r, { dedup: false })).patientId, rekord);
+export async function karta(page, pid, opcje) {
+  await page.evaluate(({ id, o }) => window.VildaAuthUI.showPatientCard(id, null, null, o || undefined), { id: pid, o: opcje || null });
+  await expect(page.locator('.vilda-auth-patient-card .vilda-patient-tabs')).toBeVisible({ timeout: 15000 });
+}
+export const zakladki = (page) => page.locator('.vilda-patient-tabs > .vilda-patient-tab');
+export const aktywna = (page) => page.locator('.vilda-patient-tabs > .vilda-patient-tab--active');
+export const tresc = (page, tab) => page.locator(`.vilda-patient-tab-content[data-tab="${tab}"]`);
+export const paski = (page) => page.locator('.vilda-auth-patient-card > .vilda-kl-paski > .vilda-kl-pasek');
+/** Pasek: tekst odznaki, stanu, wartości i pigułki (null, gdy brak) oraz wysokość. */
+export const opisPaska = (pasek) => pasek.evaluate((b) => {
+  const t = (s) => { const el = b.querySelector(s); return el ? el.textContent : null; };
+  return { odznaka: t('.vilda-kl-pasek-odznaka'), stan: t('.vilda-kl-pasek-stan'), wartosci: t('.vilda-kl-pasek-t'),
+    pigulka: t('.vilda-kl-pigulka'), pominiete: b.getAttribute('data-pominiete'), wysokosc: Math.round(b.getBoundingClientRect().height) };
+});
+/** Położenie paska zakładek w Karcie (niezależne od przewinięcia) i na ekranie. */
+export const polozenieZakladek = (page) => page.evaluate(() => {
+  const k = document.querySelector('.vilda-auth-patient-card');
+  const z = k.querySelector('.vilda-patient-tabs');
+  return { wKarcie: Math.round(z.getBoundingClientRect().top - k.getBoundingClientRect().top), naEkranie: Math.round(z.getBoundingClientRect().top) };
+});
+/** Cel u góry widoku Karty: jego górna krawędź ≤ 40 px albo Karta przewinięta do końca (dalej się nie da), a cel cały widoczny. */
+export const uGory = (page, wybierz) => page.evaluate((kod) => {
+  const el = new Function(`return (${kod})()`)();
+  const r = document.getElementById('vilda-auth-ui-root');
+  const top = Math.round(el.getBoundingClientRect().top);
+  const doKonca = r.scrollTop > 0 && r.scrollTop >= r.scrollHeight - r.clientHeight - 1;
+  return top >= 0 && (top <= 40 || (doKonca && el.getBoundingClientRect().bottom <= r.clientHeight + 1));
+}, wybierz.toString());
+export const bezPrzewijaniaWBok = (page) => page.evaluate(() => {
+  const r = document.getElementById('vilda-auth-ui-root');
+  return r.scrollWidth <= r.clientWidth + 1 && document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1;
+});
+

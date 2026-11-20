@@ -58,6 +58,8 @@ async function pacjentka(page, punkty = MIGAWKA) {
 
 async function karta(page, pid) {
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id), pid);
+  // P-KARTA-LECZENIE (etap 1): bloki leczenia stoją w zakładce „Leczenie” (druga, po „Status”).
+  await page.locator('.vilda-patient-tab[data-tab="leczenie"]').click();
   await expect(page.locator('.vdo')).toBeVisible({ timeout: 15000 });
 }
 
@@ -179,6 +181,8 @@ test.describe('Karta pacjenta → monitor leczenia otyłości w DocPro', () => {
       obesityTherapyPoints: pts,
     }, { dedup: false })).patientId, MIGAWKA);
     await start.evaluate((id) => window.VildaAuthUI.showPatientCard(id), pid);
+    // P-KARTA-LECZENIE (etap 1): bloki leczenia stoją w zakładce „Leczenie” (druga, po „Status”).
+    await start.locator('.vilda-patient-tab[data-tab="leczenie"]').click();
     await expect(start.locator('.vdo')).toBeVisible({ timeout: 15000 });
     await start.locator('.vdo-item[data-date="2026-04-14"]').getByRole('button', { name: 'Edytuj w DocPro →' }).click();
 

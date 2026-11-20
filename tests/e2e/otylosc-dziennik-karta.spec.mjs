@@ -43,6 +43,8 @@ async function pacjentka(page, punkty = MIGAWKA) {
 
 async function karta(page, pid) {
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id), pid);
+  // P-KARTA-LECZENIE (etap 1): bloki leczenia stoją w zakładce „Leczenie” (druga, po „Status”).
+  await page.locator('.vilda-patient-tab[data-tab="leczenie"]').click();
   await expect(page.locator('.vdo')).toBeVisible({ timeout: 15000 });
 }
 const wiersze = (page) => page.locator('.vdo-list:not(.vdo-list-deleted) > .vdo-item');

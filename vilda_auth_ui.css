@@ -3097,3 +3097,237 @@ textarea.vdo-input {
     max-width: none;
   }
 }
+
+/* ── P-KARTA-LECZENIE, etap 1 — zakładka „Leczenie” i pasek leczenia nad zakładkami ─────────────────
+   Kl_* w vilda_auth_ui.js (decyzje właściciela 2026-11-19, docs/KARTA_LECZENIE_PLAN.md). Wygląd paska jak na
+   zaakceptowanej makiecie: miętowa karta (kolory podsumowania leczenia), znacznik i stan jak w podsumowaniu,
+   wartości, pigułka oceny w kolorach pola oceny i „Leczenie →” jak mały przycisk „w DocPro”. Komputer — jedna
+   linia; telefon (≤ 560 px) albo za wąsko — dwie linie i „›” (klasa vilda-kl-pasek--dwie ustawiana w JS). */
+
+/* Siedem zakładek: w wierszu (okno > 1024 px, kolumna Karty 675 albo 880 px) zakładki, które się nie mieszczą, schodzą
+   do drugiego rzędu zamiast ucinać etykiety; do 1024 px działa siatka 2 + 2 + 2 + 1 (reguła wyżej, bez zmian). */
+.vilda-patient-tabs:has(>.vilda-patient-tab[data-tab=leczenie]) {
+  flex-wrap: wrap;
+}
+
+/* Paski są dziećmi Karty (odstępy jak bloki, które stały tu wcześniej); zawartość zakładki układa bloki jak Karta. */
+.vilda-kl-paski,
+.vilda-kl-gh {
+  display: contents;
+}
+
+.vilda-kl-tresc:not(.vilda-patient-tab-content--hidden) {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-18px);
+}
+
+/* Przycisk Karty dostaje !important ze skórki szkła i z .vilda-auth-root button (szerokość auto);
+   ta sama broń co w .vilda-gha-btn: !important przy szczegółowości 0-2-0. */
+.vilda-auth-root .vilda-kl-pasek {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: var(--space-8px) !important;
+  width: 100% !important;
+  min-width: 0;
+  min-height: 0 !important;
+  height: auto !important;
+  box-sizing: border-box !important;
+  margin: var(--space-10px) 0 2px !important;
+  padding: 9px var(--space-14px) !important;
+  border: var(--border-hairline) solid #9fe1cb !important;
+  border-radius: var(--radius-14) !important;
+  background: #e1f5ee !important;
+  color: #08202c !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  font: inherit;
+  font-size: 1rem !important;
+  font-weight: 400 !important;
+  line-height: 1.5 !important;
+  letter-spacing: normal !important;
+  text-align: left !important;
+  text-transform: none !important;
+  cursor: pointer !important;
+  transform: none !important;
+  transition: background-color .15s ease, border-color .15s ease !important;
+}
+
+.vilda-auth-root .vilda-kl-pasek:hover {
+  background: #d9f2e9 !important;
+  border-color: #7fd3b8 !important;
+}
+
+.vilda-auth-root .vilda-kl-pasek:focus-visible {
+  outline: var(--border-emphasis) solid var(--primary) !important;
+  outline-offset: 2px !important;
+}
+
+.vilda-kl-pasek-main {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8px);
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.vilda-kl-pasek-l1,
+.vilda-kl-pasek-l2 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8px);
+  flex: 0 0 auto;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+/* znacznik leczenia i znacznik stanu — wartości .vilda-gh-summary-badge / -chip z podsumowania */
+.vilda-kl-pasek-odznaka {
+  display: inline-flex;
+  align-items: center;
+  background: #0f6e56;
+  color: #fff;
+  border-radius: var(--radius-20);
+  padding: var(--space-4px) var(--space-12px);
+  font-size: .8rem;
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.vilda-kl-pasek-stan {
+  font-size: .74rem;
+  color: #0f6e56;
+  background: #9fe1cb;
+  border-radius: var(--radius-20);
+  padding: 3px var(--space-10px);
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.vilda-kl-pasek-t {
+  margin-left: var(--space-4px);
+  font-size: .92rem;
+  font-weight: 600;
+  color: #04342c;
+  white-space: nowrap;
+}
+
+.vilda-kl-pasek--r1 .vilda-kl-pasek-t {
+  font-size: .88rem;
+}
+
+.vilda-kl-pasek--r2 .vilda-kl-pasek-t {
+  font-size: .84rem;
+}
+
+.vilda-kl-pasek--r3 .vilda-kl-pasek-t {
+  font-size: .8rem;
+}
+
+/* pigułka oceny wg ChPL (D1) — kolory wariantów pola oceny (.vilda-oba-verdict) */
+.vilda-kl-pigulka {
+  flex: 0 0 auto;
+  border-radius: var(--radius-pill);
+  padding: 3px var(--space-10px);
+  font-size: .74rem;
+  font-weight: 700;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.vilda-kl-pigulka--wait {
+  background: #fff7ed;
+  border: var(--border-hairline) dashed #f0c68a;
+  color: #b5731a;
+}
+
+.vilda-kl-pigulka--good {
+  background: rgba(26, 143, 92, .08);
+  border: var(--border-hairline) solid rgba(26, 143, 92, .35);
+  color: #1a8f5c;
+}
+
+.vilda-kl-pigulka--bad {
+  background: rgba(192, 69, 59, .07);
+  border: var(--border-hairline) solid rgba(192, 69, 59, .34);
+  color: #c0453b;
+}
+
+/* „Leczenie →” — wygląd małego przycisku „Edytuj w DocPro →” (.vdo .vdo-btn-docpro), bez własnej akcji */
+.vilda-kl-pasek-idz {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  box-sizing: border-box;
+  padding: 0 var(--space-12px);
+  background: var(--bg);
+  color: var(--primary);
+  border: var(--border-hairline) solid var(--primary);
+  border-radius: var(--radius-8);
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.vilda-kl-pasek-chev {
+  display: none;
+  flex: 0 0 auto;
+  padding-bottom: 3px;
+  font-size: 1.25rem;
+  line-height: 1;
+  color: #0f6e56;
+}
+
+/* dwie linie: 1) znacznik + stan, 2) wartości + pigułka; strzałka „›” wyśrodkowana w pionie */
+.vilda-auth-root .vilda-kl-pasek--dwie {
+  gap: var(--space-6px) !important;
+  padding: var(--space-10px) !important;
+  border-radius: var(--radius-12) !important;
+}
+
+.vilda-kl-pasek--dwie .vilda-kl-pasek-main {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-6px);
+}
+
+.vilda-kl-pasek--dwie .vilda-kl-pasek-l1 {
+  flex-wrap: wrap;
+  max-width: 100%;
+  gap: var(--space-6px) var(--space-8px);
+  white-space: normal;
+}
+
+.vilda-kl-pasek--dwie .vilda-kl-pasek-l2 {
+  width: 100%;
+  overflow: hidden;
+}
+
+/* jak podsumowanie na telefonie (.vilda-gh-summary-badge ≤ 480 px: 0,78 rem) i ciaśniej, żeby znacznik i stan
+   mieściły się w jednej linii */
+.vilda-kl-pasek--dwie .vilda-kl-pasek-odznaka {
+  padding: var(--space-4px) var(--space-10px);
+  font-size: .78rem;
+}
+
+.vilda-kl-pasek--dwie .vilda-kl-pasek-stan {
+  padding: 3px var(--space-8px);
+}
+
+.vilda-kl-pasek--dwie .vilda-kl-pasek-t {
+  margin-left: 0;
+}
+
+.vilda-kl-pasek--dwie .vilda-kl-pasek-idz {
+  display: none;
+}
+
+.vilda-kl-pasek--dwie .vilda-kl-pasek-chev {
+  display: inline;
+}

@@ -47,6 +47,8 @@ test('Karta pacjenta, warstwa GH: tempo z 5 mies. pokazane z oznaczeniem „kró
   await page.waitForTimeout(800);
   const pid = await page.evaluate(async () => (await window.VildaVault.listPatients())[0].patientId);
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id, () => {}, null), pid);
+  // P-KARTA-LECZENIE (etap 1): bloki leczenia stoją w zakładce „Leczenie” (druga, po „Status”).
+  await page.locator('.vilda-patient-tab[data-tab="leczenie"]').click();
 
   const btn = page.locator('.vilda-gha-btn').first();
   await expect(btn).toBeVisible({ timeout: 15000 });

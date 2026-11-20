@@ -221,6 +221,8 @@ async function pacjent(page, imie, plec, punktyTerapii) {
 
 async function panel(page, patientId) {
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id), patientId);
+  // P-KARTA-LECZENIE (etap 1): bloki leczenia stoją w zakładce „Leczenie” (druga, po „Status”).
+  await page.locator('.vilda-patient-tab[data-tab="leczenie"]').click();
   const przyciskPanelu = page.locator('.vilda-gha-btn', { hasText: 'Dane analityczne' });
   await expect(przyciskPanelu).toBeVisible();
   await przyciskPanelu.click();
