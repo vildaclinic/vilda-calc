@@ -717,6 +717,9 @@ test('home growth regression: blank family and history cancel purely; immediate 
       history: session?.advanced?.data?.measurements?.some(row => row.ageMonths === 144 && row.height === 153 && row.weight === 40) };
   })).toEqual({ mother: 167, visit: fast.visit, history: true });
   await page.reload({ waitUntil: 'load' }); await expect(frame.locator('#advMotherHeight')).toHaveValue('167');
+  // Shared controls can be restored before the native main-session producer.
+  const startup = await frame.evaluate(() => VildaDataImportExport.whenInitialMainSessionRestoreSettled());
+  expect(startup.ready).toBe(true);
   expect(await frame.evaluate(() => VildaDataImportExport.captureCurrentUserDataReadOnly().visit)).toEqual(fast.visit);
 });
 
