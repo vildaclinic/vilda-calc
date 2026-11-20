@@ -44332,6 +44332,9 @@ i pełne zdania bez zmian; pozostałe zmiany to układ karty.** Plan i etapy: `d
 - D5: hybryda powstaje w obecnej Karcie jako jeden moduł; karta B1 użyje później tych samych kart leczenia;
 - etap 1 do realizacji; przełączniki „Przegląd | Wpisy | Analiza” / „Przegląd | Trend dawki | Analiza” i przeniesienie
   „Trendu leczenia GH” — etapy 2 i 3.
+- 2026-11-20 (przegląd PR): zaakceptowane zawijanie zakładek 5 + 2 przy 1025–1200 px, trzy linie paska zakończonego GH
+  na telefonie i czas leczenia otyłości tylko z punktem „Włączenie”; brzmienie D1 bez zmian (także „20 tyg. · ⏳ oceń po
+  12 tyg.”); GH wznowione po przerwie (dziś „zakończone” przy jakimkolwiek „Zakończeniu”) — osobna poprawka.
 
 **Stan przed zmianą.** Podsumowanie i „Dane analityczne” GH oraz grupa otyłości (podsumowanie → „Wpisy leczenia” →
 „Dane analityczne — otyłość” albo karta „wg notatek”) stały nad paskiem zakładek, przy każdej zakładce; GH zawsze przed

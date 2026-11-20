@@ -50,7 +50,17 @@ Analiza”, dla GH „Przegląd | Trend dawki | Analiza”. Makiety (komputer i 
   i „Leczenie →”, telefon — dwie linie i „›”. Kliknięcie otwiera zakładkę i przewija do bloku leczenia.
 - „Notatki”: „Wpisy leczenia otyłości (N) — Leczenie →” otwiera zakładkę „Leczenie” i przewija do „Wpisy leczenia”.
 
-## Etap 1 — rozstrzygnięcia wykonawcy do akceptacji właściciela
+## Etap 1 — rozstrzygnięcia wykonawcy
+
+Decyzje właściciela 2026-11-20 (po przeglądzie PR etapu 1):
+- **zaakceptowane:** zawijanie siedmiu zakładek 5 + 2 przy 1025–1200 px, trzy linie paska zakończonego GH na telefonie,
+  czas leczenia otyłości na pasku tylko przy punkcie „Włączenie”;
+- **brzmienie D1 bez zmian** — także „20 tyg. · ⏳ oceń po 12 tyg.” (12 tygodni od dawki podtrzymującej wyjaśnia panel);
+- **GH wznowione po przerwie** — do osobnej poprawki (P-GH-WZNOWIENIE): dziś „leczenie zakończone” to każdy punkt
+  „Zakończenie” w historii GH (warunek znacznika podsumowania), więc wznowione leczenie jest opisane i sortowane jako
+  zakończone, a czas liczy się od pierwszego „Włączenia”. Reguła poprawki do ustalenia z właścicielem.
+
+Opis rozstrzygnięć:
 
 - Szerokość 1025–1200 px (kolumna Karty 675 px): siedem zakładek nie mieści się w jednym wierszu — zakładki, które się
   nie mieszczą, schodzą do drugiego rzędu (5 + 2) zamiast ucinać etykiety. Na komputerze 1280 px i szerszym — jeden wiersz.
