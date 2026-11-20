@@ -99,11 +99,14 @@ beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(new Date('2026-11-06T12:
 afterEach(() => { vi.clearAllTimers(); vi.useRealTimers(); vi.restoreAllMocks(); });
 
 describe('only the current clinical document can publish the shared main session', () => {
-  it('keeps the actual new document writer through its first iframe load', async () => {
+  it('keeps the actual new document writer and queued save through repeated iframe load events', async () => {
     const h = harness(), ticket = h.current.win.VildaPanelPacjent.captureWriteAuthority();
     const document = h.current.frame.contentDocument;
     expect(h.current.win.VildaPanelPacjent.isWriteAuthorityCurrent(ticket)).toBe(true);
     expect(h.current.schedule()).toBe(true);
+    h.load('start');
+    expect(h.current.frame.contentDocument).toBe(document);
+    expect(h.current.win.VildaPanelPacjent.isWriteAuthorityCurrent(ticket)).toBe(true);
     h.load('start');
     expect(h.current.frame.contentDocument).toBe(document);
     expect(h.current.win.VildaPanelPacjent.isWriteAuthorityCurrent(ticket)).toBe(true);
@@ -117,14 +120,24 @@ describe('only the current clinical document can publish the shared main session
     h.shell.reload('start');
     expect(h.shell.isSessionWriterCurrent(oldTicket, h.current.win)).toBe(false);
     expect(h.shell.captureSessionWriter(h.current.win)).toBeNull();
+    h.load('start');
+    expect(h.shell.captureSessionWriter(h.current.win)).toBeNull();
     const nextDocument = Object.assign({}, oldDocument);
     h.current.frame.contentDocument = nextDocument; h.current.win.document = nextDocument;
     const nextTicket = h.shell.captureSessionWriter(h.current.win);
     expect(nextTicket).not.toBeNull(); h.load('start');
     expect(h.shell.isSessionWriterCurrent(nextTicket, h.current.win)).toBe(true);
     expect(h.shell.isSessionWriterCurrent(oldTicket, h.current.win)).toBe(false);
+    // The browser can replace the document before notifying the shell of its
+    // next load, while the entry still reports its previous load as complete.
+    const laterDocument = Object.assign({}, nextDocument);
+    h.current.frame.contentDocument = laterDocument; h.current.win.document = laterDocument;
+    expect(h.shell.isSessionWriterCurrent(nextTicket, h.current.win)).toBe(false);
+    const laterTicket = h.shell.captureSessionWriter(h.current.win);
+    expect(laterTicket).not.toBeNull();
     h.load('start');
     expect(h.shell.isSessionWriterCurrent(nextTicket, h.current.win)).toBe(false);
+    expect(h.shell.isSessionWriterCurrent(laterTicket, h.current.win)).toBe(true);
   });
 
   it.each(['document', 'about:blank', 'route', 'account', 'key', 'visit'])('initial load cannot continue a writer after %s changes', async cause => {

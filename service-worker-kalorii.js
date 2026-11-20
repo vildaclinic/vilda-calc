@@ -3869,6 +3869,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_shell.js?v=82',
   '/vilda_shell.js?v=83',
   '/vilda_shell.js?v=84',
+  '/vilda_shell.js?v=85',
   '/vilda_shell.css',
   '/vilda_shell.css?v=1',
   '/vilda_shell.css?v=2',
