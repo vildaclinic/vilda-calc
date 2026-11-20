@@ -1,5 +1,5 @@
 import { expect, test } from '../support/test-czas.mjs';
-import { BEZ, G1, O1, X1, aktywna, bezPrzewijaniaWBok, karta, otworz, paski, polozenieZakladek, tresc, zakladki, zapisz } from '../support/karta-leczenie.mjs';
+import { BEZ, G1, O1, R1, X1, aktywna, bezPrzewijaniaWBok, karta, otworz, paski, pasyGh, polozenieZakladek, tresc, zakladki, zapisz } from '../support/karta-leczenie.mjs';
 
 // P-KARTA-LECZENIE, etap 1 — telefon (projekt mobile-chromium). D3: siedem zakładek w istniejącej siatce 2 + 2 + 2 + 1;
 // pasek leczenia w dwóch liniach (1: znacznik + stan; 2: wartości + pigułka), „›” po prawej, bez „Leczenie →”; gdy linia 2
@@ -108,6 +108,32 @@ test.describe('Karta pacjenta — zakładka „Leczenie” i pasek leczenia (tel
     await karta(page, bez);
     await expect(zakladki(page)).toHaveCount(6);
     await expect(page.locator('.vilda-kl-pasek, [data-tab="leczenie"]')).toHaveCount(0);
+    expect(await bezPrzewijaniaWBok(page)).toBe(true);
+  });
+
+  // P-GH-WZNOWIENIE, część 1: GR1 na telefonie — pasek aktywny w dwóch liniach, „kurs 2 z 2”, dwa pasy GH na siatkach.
+  test('KLM-4 R1 (GR1 wznowienie): pasek „aktywne” w dwóch liniach, „kurs 2 z 2” w zakładce, dwa pasy GH, bez przewijania w bok', async ({ page }) => {
+    test.setTimeout(150_000);
+    await otworz(page);
+    const pid = await zapisz(page, R1);
+    await karta(page, pid);
+    const pasek = page.getByRole('button', { name: 'Leczony hormonem wzrostu (rhGH): otwórz zakładkę Leczenie' });
+    await expect.poll(() => geometriaPaska(pasek).then((g) => g.dwieLinie)).toBe(true);
+    const g = await geometriaPaska(pasek);
+    expect(g).toEqual(expect.objectContaining({ pigulka: null, wylewa: false, strzalka: true, idz: false }));
+    expect(g.czcionka).toBeGreaterThanOrEqual(12.8);
+    const pelne = ['0,033 mg/kg/d', '12 mies.', 'tempo 7 cm/rok', 'ΔhSDS +0,37'];
+    expect(g.wartosci).toBe(pelne.slice(0, pelne.length - g.pominiete).join(' · '));
+    expect(g.pominiete).toBeLessThanOrEqual(2);
+    await expect(pasek.locator('.vilda-kl-pasek-stan')).toHaveText('aktywne');
+    expect(await bezPrzewijaniaWBok(page)).toBe(true);
+    await pasek.click();
+    await expect(aktywna(page)).toHaveText('Leczenie');
+    await expect(tresc(page, 'leczenie').locator('.vilda-gh-summary-head .vilda-gh-summary-chip')).toHaveText(['aktywne', 'kurs 2 z 2']);
+    expect(await bezPrzewijaniaWBok(page)).toBe(true);
+    await page.locator('.vilda-patient-tab[data-tab="traj"]').click();
+    await expect(page.locator('.vilda-siatka-charts svg.vilda-patient-chart').first()).toBeVisible();
+    expect((await pasyGh(page)).height).toEqual({ pasy: 2, etykiety: 2 });
     expect(await bezPrzewijaniaWBok(page)).toBe(true);
   });
 });

@@ -37099,14 +37099,15 @@ koduj” (wszystkie R1–R9 w jednej racie).
    punkt po „end” z przerwą < 3 mies. wraca do kursu, ≥ 3 mies. otwiera nowy. Kontekst niesie `ghKursy` / `redKursy`
    (etykieta kursu = preparat z jego ostatniego punktu) obok dotychczasowej koperty `gh` / `red`.
    **[ZASTĄPIONE dla leczenia otyłości — P-OTYLOSC-CYKLE rata 4, blok „Kursy leczenia otyłości = cykle” na końcu tej
-   sekcji; dla GH reguła obowiązuje bez zmian.]**
+   sekcji. ZASTĄPIONE dla GH — P-GH-WZNOWIENIE, część 1 (2026-11-20, wpis na końcu pliku): granicą kursu GH jest samo
+   Zakończenie, bez progu przerwy (`ghKursy`); dawna reguła została jako `kursyZPrzerwa`, tylko zapas kursów otyłości.]**
 2. *Okno w kursie* (`kursOkna`): start okna ≥ początek kursu − 6 mies., koniec ≤ koniec kursu (gdy zakończony), pokrycie
    leczeniem ≥ 50 % okna. Tylko takie okno dostaje werdykt odpowiedzi na leczenie. Okno mieszane dostaje werdykt
    populacyjny/MPH z dopiskiem „— w tym N mies. na GH” / „— w tym N mies. leczenia redukcyjnego” (dopisek jest
    ogonem etykiety; słowniki opisu i epikryzy odmieniają głowę, ogon wraca na koniec zdania).
    **[ZMIENIONE dla leczenia otyłości — P-OTYLOSC-CYKLE rata 4: dolna granica tolerancji startu = max(początek kursu
-   − 6 mies., koniec poprzedniego kursu otyłości); GH bez zmian. Blok „Kursy leczenia otyłości = cykle” na końcu tej
-   sekcji.]**
+   − 6 mies., koniec poprzedniego kursu otyłości). Blok „Kursy leczenia otyłości = cykle” na końcu tej sekcji. Od
+   P-GH-WZNOWIENIE, część 1 (2026-11-20) to samo przycięcie dla kursów GH.]**
 3. *Odpowiedź na GH na rok*: okno w kursie < 6 mies. → „za wcześnie na ocenę odpowiedzi na GH — N mies.”; ≥ 6 mies. →
    ΔhSDS × 12 / okno z progami ≥ +0,3 dobra, < +0,1 słaba (dotychczasowe liczby aplikacji, PR #63/v388; słaba
    odpowiedź w 1. roku < 0,3 wg konsensusu Bang 2012, doi:10.1111/j.1365-2265.2012.04420.x); okno 6–11 mies. z dopiskiem
@@ -37220,7 +37221,8 @@ drogą zapisu w monitorze, pozostałe tylko w starym zapisie albo w imporcie:
   je < 3 mies. — np. dopisek całości „w tym 13 mies.” → „w tym 12 mies.”). Wariant do decyzji właściciela (niżej).
 
 **Ścieżka bez modułu cykli.** Bez `VildaCykleLeczenia` (albo przy wyjątku w `podziel`) kursy otyłości liczy
-`therapyIntervals` (Zakończenie + przerwa ≥ 3 mies. = nowy kurs). NIE jest to jednak w pełni zachowanie sprzed raty 4 —
+`therapyIntervals` (Zakończenie + przerwa ≥ 3 mies. = nowy kurs; od P-GH-WZNOWIENIE, część 1, ta reguła nazywa się
+`kursyZPrzerwa`, a `therapyIntervals` liczy kursy GH bez progu przerwy — zapas otyłości bez zmian). NIE jest to jednak w pełni zachowanie sprzed raty 4 —
 kontekst nie niesie informacji, skąd pochodzą kursy (kształt `{a, b, label}` bez nowych pól), więc na każdej liście
 kursów otyłości działają: przycięcie tolerancji startu (zmienia wynik przy przerwie 3–6 mies.), żeton na każdy kurs
 w pasku meta, etykieta „otyłość” per kurs, a w Karcie pacjenta lista kursów w panelu „Analiza trajektorii” i suma pokryć
@@ -45068,3 +45070,135 @@ przy otwarciu Karty (gdy odczyt się nie udał, karty „wg notatek” nie ma �
 
 **Wdrożenie.** Od razu przy wydaniu; sejf, dziennik, zapis i synchronizacja bez zmian. **Cofnięcie** = rewert PR: bloki
 znów nad zakładkami, bez paska i zakładki.
+
+## P-GH-WZNOWIENIE, część 1 — kursy GH od wznowienia w Karcie i trajektorii (SW 1.1.562, `vilda_auth_ui.js` 576, `vilda_trajectory_analysis.js` 47, `growth-basic-module.js` 25, 2026-11-20)
+
+**Zmiana kliniczna: TAK** — stan, Włączenie, czas, przyrost, tempo i ΔhSDS leczenia GH wznowionego po Zakończeniu
+liczone od bieżącego kursu; granica kursu GH w trajektorii bez progu 3 mies. (zastępuje część P-WERDYKT rata 6). Progi
+werdyktów i odpowiedzi na GH, wzory tempa i hSDS, siatki, P-TEMPO-6, P-GH-BEZ-STARTU i P-GH-INCRELEX-KARTA bez zmian;
+zmienia się to, od którego punktu i w obrębie których punktów są liczone. Plan: `docs/KARTA_LECZENIE_PLAN.md`; łatki:
+`docs/ZRODLA_ARTEFAKTOW.md`, „Łatka P-GH-WZNOWIENIE, część 1”.
+
+**Decyzje właściciela (2026-11-20).**
+- **W1 „od wznowienia”**: GH (rhGH, także IGF-1/Increlex) z punktami Włączenie → … → Zakończenie → Włączenie → … ma stan
+  „aktywne”; „Włączenie”, czas leczenia, przyrost, tempo i ΔhSDS od ostatniego Włączenia (bieżący kurs), jak nowy cykl
+  leczenia otyłości; wcześniejszy kurs zostaje widoczny w punktach i trendzie.
+- **W2 Kontynuacja po Zakończeniu bez nowego Włączenia** (stare zapisy): „aktywne”, bez czasu leczenia, przyrostu i ΔhSDS,
+  z prośbą o dopisanie Włączenia w DocPro (w części 1 sama informacja o braku Włączenia — patrz niżej).
+- **W3 granica kursu = samo Zakończenie, wszędzie tak samo** (Karta i analiza trajektorii), bez progu 3 mies. przerwy
+  (`KURS_PRZERWA_MIN_M`) — jak cykle leczenia otyłości; zastępuje część reguły GH z P-WERDYKT rata 6 (2026-09-27).
+- **W4**: część 1 = odczyt (ten PR); część 2 = wpis w DocPro (drugie Włączenie, monitor, B.64, odcinki).
+
+**Stan przed zmianą.** Karta pacjenta: podsumowanie GH (`wl`) — „leczenie zakończone”, gdy w historii był jakikolwiek
+punkt „Zakończenie”, „Włączenie” = pierwsze „start” w kolejności tablicy; „Dane analityczne” (`kl`) — punkt bazowy, czas,
+przyrost i ΔhSDS od tego Włączenia (przerwa liczona jak leczenie), tempo i odcinki leków z całej historii; pasek i kolejność
+D2 z tych wartości (wznowione GH opisane i sortowane jako zakończone); trend — program z pierwszego Włączenia w kolejności
+tablicy, linia dawki ciągła przez przerwę; siatki — jeden pas od pierwszego Włączenia do Zakończenia, wznowione leczenie
+bez pasa; panel „Analiza trajektorii” Karty i strona podstawowa (`growth-basic-module.js`) dostawały tylko kopertę `gh`
+(przerwa = leczenie), „💉 GH w przedziale” panelu „Porównanie pomiarów” liczyło kopertę. Trajektoria: `therapyIntervals` —
+punkt po „end” z przerwą < 3 mies. wracał do kursu, ≥ 3 mies. otwierał nowy; okna GH bez przycięcia startu; jeden żeton
+„💉 GH” z koperty. Lista „aktualnie leczeni” w sejfie liczy po ostatnim punkcie wg wieku — bez zmian (przy W2 już „aktywne”).
+
+**Reguła — jedno źródło `VildaTrajectoryAnalysis.ghKursy(punkty)`** (`vilda_trajectory_analysis.js`, ładowany na tych
+samych 8 stronach co Karta):
+1. Punkty GH (`start` | `continue` | `end`) z wiekiem > 0, posortowane stabilnie po wieku w pełnych miesiącach
+   (`ageYears·12 + ageMonths`). Przy równym wieku (punkty nie mają daty): Kontynuacja, potem Zakończenie, potem
+   Włączenie, a w obrębie typu kolejność tablicy — Kontynuacja z miesiąca Zakończenia dopisana po nim (np. późny wynik
+   IGF-1; oba formularze monitora dokładają punkt na koniec tablicy) zostaje w zamykanym kursie, a Włączenie z miesiąca
+   Zakończenia otwiera nowy kurs. Wynik nie zależy od kolejności tablicy.
+2. Kurs zaczyna pierwszy punkt albo pierwszy punkt po „end”; „end” zamyka kurs; bez progu przerwy. Drugie „start”
+   w otwartym kursie nie dzieli kursu (Włączeniem jest pierwsze). Zakończenie tuż po Zakończeniu (zdublowany wpis, np. po
+   scaleniu) zostaje w zamkniętym kursie i NIE przesuwa jego końca — kurs kończy pierwsze Zakończenie, przerwa po nim nie
+   jest leczeniem (dotąd: kurs zerowej długości w miejscu drugiego Zakończenia, ta sama suma miesięcy leczenia).
+3. Kurs `{ numer, a, b, active, label, punkty, wlaczenie }`: `a` — wiek pierwszego punktu, `b` — wiek Zakończenia albo
+   null, `label` — preparat ostatniego punktu z preparatem, `wlaczenie` — pierwsze „start” w kursie albo null. Kurs bez
+   Włączenia po zamkniętym kursie = W2; jedyny kurs bez Włączenia = P-GH-BEZ-STARTU (bez zmian).
+4. `therapyIntervals` = kursy z `ghKursy` w kształcie `{a, b, label, active}` (kontekst `ghKursy` i koperta `gh`
+   z `buildClinicalContext` bez zmian kształtu). Okna werdyktu GH (`kursOkna`, pomiar startowy wariantu G flagi w dół)
+   dostają przycięcie startu do końca poprzedniego kursu (`dolnaGranicaStartu`), jak kursy otyłości; przy jednym kursie
+   granica = start − 6 mies., jak dotąd. Pasek meta analizy: żeton „💉 GH” na każdy kurs przy > 1 kursie.
+5. `KURS_PRZERWA_MIN_M` zostaje w `P`, ale nie dzieli kursów GH; dawna reguła jest `kursyZPrzerwa` — wyłącznie zapas
+   kursów otyłości na stronie bez modułu cykli (bez zmian). Próg nakładania redukcji ≥ 3 mies. bez zmian.
+
+**Karta pacjenta** (`vilda_auth_ui.js`; bieżący kurs = ostatni; przy jednym kursie albo bez modułu trajektorii Karta
+liczy dokładnie jak dotąd):
+- podsumowanie (`wl`): „leczenie zakończone” tylko przy zamkniętym bieżącym kursie (`Kl_wy.zakonczone` → pasek i kolejność
+  D2); przy > 1 kursie znacznik „kurs k z N” (wygląd „cykl k z N”) i „Punkty kontrolne: n w kursie (M łącznie)”;
+  „Włączenie”, program i preparat z bieżącego kursu; „Aktualna dawka” i „Ostatnia kontrola” — ostatni punkt wg wieku;
+  przy jednym kursie „Włączenie” = pierwsze „start” wg wieku (dotąd wg tablicy) — tak samo pas na siatkach (`Gw_pasy`)
+  i program trendu (`Gw_punktyProgramu`): przy jednym kursie dostają punkty wg wieku (różnica tylko przy dwóch
+  Włączeniach w jednym kursie);
+- W2: „Włączenie: brak punktu” i ramka (wygląd P-GH-BEZ-STARTU): „Kontynuacja po Zakończeniu bez nowego Włączenia
+  (Zakończenie w wieku …, pierwszy punkt kursu: w wieku …). Czas leczenia, przyrost i ΔhSDS od wznowienia liczymy od punktu
+  „Włączenie leczenia”, którego ten kurs nie ma.” — bez prośby o dopisanie w DocPro, bo monitor do części 2 nie przyjmuje
+  drugiego Włączenia (prośba wejdzie z częścią 2);
+- „Dane analityczne” (`kl`): nagłówek „Wzrastanie — kurs k z N”; wzrost przy włączeniu, przyrost i czas („przez N mies.”),
+  tempo (para ≥ 6 mies. albo „krótki odstęp” P-TEMPO-6 — w obrębie kursu), ΔhSDS i kafelki „Odpowiedź na leczenie wg
+  preparatu” z punktów bieżącego kursu; W2: „Przyrost od Włączenia —” i ΔhSDS „—” z podpisem „brak Włączenia po
+  Zakończeniu”, tempo z punktów kursu, gdy są ≥ 2; „Wiek kostny (ost.)” — ostatni z całej historii, jak dotąd;
+- pasek leczenia i kolejność D2 bez własnej logiki (wartości z `wl`/`kl`);
+- „Trend leczenia GH”: punkty wg wieku; linia dawki (mg/kg/d) i odcinki % dawki zalecanej bez odcinka Zakończenie →
+  kolejny kurs; program (typowy zakres dawki) z bieżącego kursu; IGF-1 i tabela bez zmian;
+- siatki: pas GH na kurs (od Włączenia kursu albo pierwszego punktu do Zakończenia; otwarty kurs — do ostatniego punktu
+  albo bieżącego wieku, jak dotąd);
+- panel „Analiza trajektorii” Karty dostaje `ghKursy`; „💉 GH w przedziale” = suma pokryć kursów (`ctxGhKursy`);
+- strona podstawowa (`growth-basic-module.js`) przekazuje `ghKursy` i `redKursy` (dotąd obie gubiła; karta zaawansowana
+  przekazywała je od raty 6). `vilda_advanced_growth.js`, `vilda_summary_cards.js` i epikryza (kontekst karty
+  zaawansowanej) już dostawały kursy — bez zmian.
+
+**Przypadki syntetyczne** (dane fikcyjne; wiek lata;miesiące, wzrost w cm; GH Genotropin, SNP, 0,025 → 0,033 mg/kg/d).
+Liczby hSDS w testach jednostkowych z atrapy liniowej siatki, w e2e — z OLAF (prawdziwa strona):
+
+| Przypadek | Wejście | Wynik (po zmianie) | Dotąd |
+|---|---|---|---|
+| GR1 wznowienie | W 7;0 (110) → K 8;0 (117) → Z 9;0 (123) → W 10;0 (130) → K 11;0 (137) | „aktywne”, „kurs 2 z 2”, Włączenie „w wieku 10 l. 0 mies.”, „2 w kursie (5 łącznie)”; „Wzrost przy włączeniu 130 cm”, „+7,0 cm przez 12 mies.”, tempo 7 cm/rok („ost. okres (z 12 mies.)”), ΔhSDS +0,18 (atrapa); pasek „0,033 mg/kg/d · 12 mies. · tempo 7 cm/rok · ΔhSDS +0,18”, e2e (OLAF, hSDS −1,77 → −1,40) „… · ΔhSDS +0,37”; GH aktywne przed trwającym leczeniem otyłości (D2) | „leczenie zakończone”, Włączenie 7 l. 0 mies., 48 mies., ΔhSDS od 7 l.; pasek po trwającej otyłości |
+| GR2 (W2) | W 7;0 → Z 9;0 → K 10;0 (130) | „aktywne”, „kurs 2 z 2”, Włączenie „brak punktu”, „1 w kursie (3 łącznie)”, ramka W2; przyrost i ΔhSDS „—” („brak Włączenia po Zakończeniu”); pasek „0,03 mg/kg/d”; z drugą Kontynuacją 11;0 (137) — tempo 7 cm/rok zostaje, pasek „0,033 mg/kg/d · tempo 7 cm/rok” | „leczenie zakończone”, czas i ΔhSDS od 7 l. |
+| GR3 bez wznowienia | W 7;0 → K 8;0 → Z 9;0 | „leczenie zakończone”, „0,03 mg/kg/d · 24 mies. · tempo 6 cm/rok · ΔhSDS +0,18” — rysunek identyczny (DOM) jak bez modułu kursów | bez zmian |
+| GR4 kolejność tablicy | punkty GR1 przemieszane / odwrócone | rysunek i pasek identyczne jak GR1 | zależne od kolejności tablicy |
+| GR5 krótka przerwa | W 7;0 → Z 9;0 → W 9;2 | dwa kursy [84, 108] i [110, —]; para wzrostu 8;9 → 9;8 nie jest „w kursie” (dolna granica startu 108): „wyrównywanie niedoboru wzrostu (catch-up) — w tym 9 mies. na GH” | jeden kurs [84, —]; „odpowiedź umiarkowana (GH) — wstępnie (11 mies.)” |
+| GR6 jeden kurs bez startu, Increlex | P-GH-BEZ-STARTU, Increlex, krótki odstęp, GH zakończone (pojedynczy kurs) | rysunek identyczny (DOM) jak bez modułu kursów | bez zmian |
+| GR7 siatki i trend | GR1 | dwa pasy GH: 84–108 (nieaktywny) i 120 → bieżący wiek (aktywny), na siatce wzrostu i masy; ścieżka dawki z „M” po Zakończeniu (bez odcinka 9 → 10 l.); trend % dawki: 3 odcinki zamiast 4; program trendu z bieżącego kursu; panel trajektorii: odcinek 9 → 10 l. bez GH, całość „— w tym 36 mies. na GH”, żetony „💉 GH od 7 lat do 9 lat”, „💉 GH od 10 lat — nadal” | jeden pas 84–108; linia ciągła; odcinek przerwy „odpowiedź … (GH)” |
+| GR8 porównanie pomiarów | GR1, przedział 8 → 11 l. | „💉 GH w przedziale (24 mies.)”; przedział 9 → 10 l. — bez GH | 36 mies. (koperta) |
+
+**Rozstrzygnięcia wykonawcy (do potwierdzenia przez właściciela).**
+- Zdublowane Zakończenie (Z tuż po Z, bez Włączenia ani Kontynuacji między nimi) nie otwiera kursu zerowej długości —
+  przesuwa koniec zamkniętego kursu (tak robiła dawna reguła przy przerwie < 3 mies.; przy ≥ 3 mies. dawała kurs zerowej
+  długości). Dosłowna reguła W3 dałaby „kurs 2 z 2” bez Włączenia, zakończony, u pacjenta po scaleniu duplikatów
+  (cykle otyłości mają tu „zakonczenie-bez-wizyt” — wariant do decyzji właściciela z raty 4).
+- Punkty z wiekiem 0 (bez wieku) nie należą do żadnego kursu (jak dotąd w `therapyIntervals`); przy jednym kursie Karta
+  liczy je jak dotąd, przy > 1 kursie liczą się tylko w „M łącznie”.
+- „Wiek kostny (ost.)” i „Preparaty (historia)” w podsumowaniu — z całej historii (nie są wartością kursu); odcinki leków
+  w „Danych analitycznych” — z bieżącego kursu.
+- W trajektorii kurs W2 jest zwykłym kursem (od pierwszej Kontynuacji), jak kurs bez Włączenia w cyklach otyłości
+  i jedyny kurs bez Włączenia (P-GH-BEZ-STARTU).
+- Zapas kursów otyłości bez modułu cykli (`kursyZPrzerwa`) zostaje przy progu 3 mies. (A.5: inne użycia stałej bez zmian).
+
+**Testy.** Dane wyłącznie fikcyjne; testy wołają kod produkcyjny.
+- `tests/unit/gh-wznowienie-kursy.test.mjs` (16, nowy): `ghKursy` (GR1–GR6, drugie Włączenie, zdublowane Zakończenie
+  z przerwą — koniec przy pierwszym, Kontynuacja i Włączenie z miesiąca Zakończenia, równy wiek, wiek 0), GR5 w werdykcie pary (przycięcie startu), GR1 w analizie (odcinek przerwy, dopisek, dwa żetony),
+  jeden kurs = koperta, `ctxGhKursy` wycięta z `vilda_auth_ui.js` (GR8), strażnik `growth-basic-module.js`.
+- `tests/unit/karta-leczenie.test.mjs` (36 → 49): prawdziwe `wl`, `kl`, `Pl`, `Kl_*`, `Gw_*` i `Lt` z `vilda_auth_ui.js`
+  z prawdziwym modułem trajektorii — GR1, GR1 + otyłość (D2), GR4, GR2 (dwa warianty), GR3/GR6 (DOM identyczny jak bez
+  modułu kursów, 7 zapisów), drugie Włączenie, GR7 (ścieżka dawki, % dawki, program, pasy), Kontynuacja z miesiąca
+  Zakończenia („leczenie zakończone”, bez kursu 2), pas jednego kursu z dwoma Włączeniami (od pierwszego wg wieku).
+- Zmienione oczekiwania (zamierzone): `werdykt-kursy-rata-6` — punkt po „end” z przerwą < 3 mies. otwiera nowy kurs
+  (dotąd wracał do kursu); `kursy-otylosci-cykle` — GH z punktami „K po Z” ma dwa kursy (dotąd jeden), strażnik Karty:
+  panel trajektorii dostaje `ghKursy`, `ghM` z `ctxGhKursy` (dotąd „nie ghKursy”, koperta); asercje „dotąd …” reguły
+  sprzed raty 4 wołają `kursyZPrzerwa` (dawne `therapyIntervals`, te same wartości); `karta-leczenie` — nazwa testu
+  warunku „zakończone” (GH: bieżący kurs zamknięty), asercje bez zmian.
+- e2e: `karta-leczenie.spec.mjs` KL-7 (komputer) i `karta-leczenie-mobile.spec.mjs` KLM-4 (telefon) — pacjent R1 (GR1)
+  wstrzyknięty do fikcyjnego sejfu: pasek, zakładka „Leczenie”, dwa pasy GH na siatkach, trend, żetony analizy.
+- Kontrola negatywna na `audyt` 119f022: nowe testy Karty (10) i trajektorii (14 z 15; test „jeden kurs = koperta”
+  przechodzi, bo pilnuje braku zmiany), zmienione oczekiwania oraz KL-7 i KLM-4 nie przechodzą.
+
+**Ograniczenia (część 2 i poza zakresem).** DocPro nadal przyjmuje najwyżej jedno Włączenie i jedno Zakończenie
+(`vilda_gh_punkty.js`), dlatego ramka W2 tylko informuje o braku Włączenia (prośba o dopisanie — z częścią 2); wznowienie
+powstaje dziś tylko przez
+scalenie duplikatów, import albo ręcznie. Monitor GH (tabela, metryki, B.64, przyciski, formularz wsteczny), odcinki
+leków (`gh_therapy_segments.js` — wznowienie tym samym lekiem to jeden odcinek przez przerwę), „Preparaty (historia)”,
+Terminarz, Historia, edytor notatki i sejf — bez zmian. Punkty w tym samym miesiącu porządkuje typ (Kontynuacja,
+Zakończenie, Włączenie); bezsensowny zapis „Włączenie i Zakończenie w tym samym miesiącu, bez wcześniejszych punktów”
+daje kurs z samym Zakończeniem i nowy kurs od Włączenia (punkty nie mają daty, by to rozstrzygnąć).
+
+**Wdrożenie.** Od razu przy wydaniu; dane, zapis, sejf i synchronizacja bez zmian. **Cofnięcie** = rewert PR: Karta
+i trajektoria wracają do reguły „jakiekolwiek Zakończenie” i progu 3 mies.

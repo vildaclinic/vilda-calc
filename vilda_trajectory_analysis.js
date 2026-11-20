@@ -22,8 +22,9 @@
  *    od raty 6 werdyktów także wariant G (aktywny kurs GH, od jego startu wzrost nadrabia ≥ +0,2 SDS);
  *  - KURSY leczenia (P-WERDYKT rata 6, audyt 2, decyzja właściciela 2026-09-27): kontekst niesie listę kursów
  *    GH i leczenia otyłości (dotąd jeden przedział od pierwszego „start" do ostatniego „end", z przerwą liczoną
- *    jako leczenie). Kursy GH: przerwa ≥ KURS_PRZERWA_MIN_M między „end" a kolejnym punktem = osobny kurs
- *    (therapyIntervals). Kursy OTYŁOŚCI od P-OTYLOSC-CYKLE rata 4 (decyzje właściciela 2026-09-30, D1/D6) = cykle
+ *    jako leczenie). Kursy GH od P-GH-WZNOWIENIE część 1 (decyzje właściciela 2026-11-20, W1–W3) = ghKursy: granicą
+ *    jest samo Zakończenie, bez progu przerwy (therapyIntervals liczone z ghKursy; dotąd przerwa ≥ KURS_PRZERWA_MIN_M
+ *    między „end" a kolejnym punktem). Kursy OTYŁOŚCI od P-OTYLOSC-CYKLE rata 4 (decyzje właściciela 2026-09-30, D1/D6) = cykle
  *    leczenia ze wspólnego modułu vilda_cykle_leczenia.js — granicą jest wyłącznie Zakończenie (i Włączenie po
  *    nim), bez progu przerwy; bez modułu cykli dawna reguła (kursyOtylosci). Werdykt
  *    odpowiedzi na leczenie dostaje WYŁĄCZNIE okno leżące w jednym kursie (start ≥ początek − KURS_START_TOL_M,
@@ -60,10 +61,12 @@
     // co najmniej w połowie (KURS_POKRYCIE_MIN) — odcinek start−5 → start+1 mies. nie jest oceną leczenia.
     // Kursy otyłości (P-OTYLOSC-CYKLE rata 4): tolerancja startu kończy się na końcu POPRZEDNIEGO kursu otyłości
     // (dolnaGranicaStartu) — cykle stykają się (Zakończenie i Włączenie tego samego dnia, R3), więc okno ani pomiar
-    // z poprzedniego cyklu nie liczy się jako „w kursie" następnego. GH bez tego przycięcia.
-    // KURS_PRZERWA_MIN_M dotyczy WYŁĄCZNIE kursów GH: przerwa krótsza między „end" a kolejnym punktem to ten sam
-    // kurs (zmiana dawki, wpis porządkowy), dłuższa — osobny kurs (ta sama liczba, co próg nakładania redukcji
-    // ≥ 3 mies.). Kursy otyłości dzieli moduł cykli (bez progu przerwy) — patrz kursyOtylosci.
+    // z poprzedniego cyklu nie liczy się jako „w kursie" następnego. Od P-GH-WZNOWIENIE część 1 (W3) to samo
+    // przycięcie dostają kursy GH — bez progu przerwy też mogą się stykać.
+    // KURS_PRZERWA_MIN_M nie dzieli już kursów GH (P-GH-WZNOWIENIE część 1, W3: granicą kursu GH jest samo
+    // Zakończenie — ghKursy). Zostaje w regule zapasowej kursów otyłości (kursyZPrzerwa, strona bez modułu cykli):
+    // przerwa krótsza między „end" a kolejnym punktem to ten sam kurs, dłuższa — osobny kurs (ta sama liczba, co próg
+    // nakładania redukcji ≥ 3 mies., który się nie zmienia).
     KURS_START_TOL_M: 6,
     KURS_POKRYCIE_MIN: 0.5,
     KURS_PRZERWA_MIN_M: 3,
@@ -429,9 +432,11 @@
   // bez przycięcia okno albo pomiar z poprzedniego cyklu (do 6 mies. przed startem) liczyłby się jako „w kursie"
   // następnego leku. Poprzedni kurs wyznacza posortowana po starcie lista kursów w miejscu użycia (kontekst spoza
   // normalizeContext nie musi być posortowany; lista w kontekście nie dostaje nowych pól). Koniec poprzedniego kursu
-  // późniejszy niż start (niespójne wieki punktów) przycina najwyżej do startu. GH tej granicy nie używa. Przycięcie
-  // dotyczy każdej listy kursów otyłości, także z reguły zapasowej (strona bez modułu cykli: kursy rozdziela tam
-  // przerwa ≥ KURS_PRZERWA_MIN_M, więc przycięcie zmienia wynik tylko przy przerwie krótszej niż KURS_START_TOL_M).
+  // późniejszy niż start (niespójne wieki punktów) przycina najwyżej do startu. Przycięcie dotyczy każdej listy kursów
+  // otyłości, także z reguły zapasowej (strona bez modułu cykli: kursy rozdziela tam przerwa ≥ KURS_PRZERWA_MIN_M, więc
+  // przycięcie zmienia wynik tylko przy przerwie krótszej niż KURS_START_TOL_M). Od P-GH-WZNOWIENIE część 1 (W3) także
+  // kursów GH: granicą jest samo Zakończenie, więc wznowienie po krótkiej przerwie styka się z poprzednim kursem; przy
+  // jednym kursie (brak poprzedniego) granica = start − KURS_START_TOL_M, jak dotąd.
   function dolnaGranicaStartu(k, kursy) {
     var dol = k.a - P.KURS_START_TOL_M;
     var srt = (Array.isArray(kursy) ? kursy : []).map(function (x, i) { return { k: x, i: i }; })
@@ -446,7 +451,8 @@
     return dol;
   }
   // Kurs, w którym okno [a0,b0] leży W CAŁOŚCI (parametry KURS_* w P). null = okno poza kursem albo mieszane.
-  // przytnij = true (kursy otyłości): tolerancja startu nie sięga przed koniec poprzedniego kursu (dolnaGranicaStartu).
+  // przytnij = true (kursy otyłości, od P-GH-WZNOWIENIE część 1 także GH): tolerancja startu nie sięga przed koniec
+  // poprzedniego kursu (dolnaGranicaStartu).
   function kursOkna(kursy, a0, b0, przytnij) {
     if (!(b0 > a0)) return null;
     for (var i = 0; i < kursy.length; i++) {
@@ -459,7 +465,8 @@
     return null;
   }
   // Pomiar na starcie kursu i ostatni pomiar w kursie (reguła KURS_START_TOL_M). null, gdy brak pomiaru startowego.
-  // kursy (kursy otyłości): lista, z której dolnaGranicaStartu bierze koniec poprzedniego kursu; bez niej (GH) — jak dotąd.
+  // kursy: lista, z której dolnaGranicaStartu bierze koniec poprzedniego kursu (otyłość; od P-GH-WZNOWIENIE część 1
+  // także GH); bez niej — tolerancja start − KURS_START_TOL_M, jak dotąd.
   function oknoKursu(kurs, series, kursy) {
     if (!kurs || !series || !series.length) return null;
     var tb = null, te = null, i;
@@ -483,8 +490,9 @@
   //  - odcinek terapii GH / leczenia otylosci z punktow monitora (typy start/continue/end; wiek punktu
   //    = ageYears*12 + ageMonths; start = pierwszy punkt „start" albo najmlodszy; koniec = ostatni
   //    „end", a bez „end" terapia trwa — b = null); od raty 6 werdyktow obok koperty lista KURSOW:
-  //    GH — therapyIntervals (Zakonczenie + przerwa >= KURS_PRZERWA_MIN_M), otylosc — od P-OTYLOSC-CYKLE
-  //    rata 4 cykle z VildaCykleLeczenia (kursyOtylosci; bez modulu cykli — therapyIntervals);
+  //    GH — therapyIntervals z ghKursy (od P-GH-WZNOWIENIE czesc 1 granica = samo Zakonczenie; dotad Zakonczenie
+  //    + przerwa >= KURS_PRZERWA_MIN_M), otylosc — od P-OTYLOSC-CYKLE rata 4 cykle z VildaCykleLeczenia
+  //    (kursyOtylosci; bez modulu cykli — kursyZPrzerwa, regula sprzed raty 4);
   //  - etykieta redukcji: nazwa preparatu z ostatniego punktu (lub pierwszego „start"), bez dopisku
   //    w nawiasie / po mysliniku; bez preparatu — „otyłość";
   //  - mpSDS: MPH z wzrostow rodzicow (Tanner 1970: dziewczeta (ojciec − 13 + matka)/2, chlopcy
@@ -496,12 +504,59 @@
       return p && (p.type === 'start' || p.type === 'continue' || p.type === 'end');
     });
   }
-  // Rata 6: KURSY leczenia z punktów monitora. Punkty posortowane po wieku; kurs otwiera pierwszy punkt
-  // (albo punkt po zamkniętym kursie z przerwą ≥ KURS_PRZERWA_MIN_M), zamyka punkt „end". Punkt po „end"
-  // z krótszą przerwą wraca do tego samego kursu. Etykieta kursu = preparat z jego ostatniego punktu.
-  // Od P-OTYLOSC-CYKLE rata 4 ta reguła liczy kursy GH; dla otyłości jest wyłącznie zapasem kursyOtylosci
-  // (strona bez modułu cykli) — zachowanie sprzed raty 4.
+  // P-GH-WZNOWIENIE, część 1 (decyzje właściciela 2026-11-20, W1–W3): KURSY leczenia GH — JEDNO źródło dla Karty
+  // pacjenta (vilda_auth_ui.js: podsumowanie, „Dane analityczne”, trend dawki, pas na siatkach, panele trajektorii
+  // i porównania) i analizy trajektorii (therapyIntervals). Punkty GH (start | continue | end) z wiekiem > 0 (punkt bez
+  // wieku nie ma miejsca na osi czasu — jak dotąd w therapyIntervals), posortowane po wieku w pełnych miesiącach
+  // (ageYears*12 + ageMonths) STABILNIE, więc wynik nie zależy od kolejności tablicy (scalone duplikaty i oba formularze
+  // monitora dopisują punkty na koniec). Przy RÓWNYM wieku (punkty GH nie mają daty — tylko pełne miesiące): najpierw
+  // Kontynuacja, potem Zakończenie, potem Włączenie, a w obrębie typu kolejność tablicy — Kontynuacja z miesiąca
+  // Zakończenia (np. późny wynik dopisany po Zakończeniu) zostaje w zamykanym kursie, a Włączenie z miesiąca Zakończenia
+  // otwiera nowy kurs. Granicą kursu jest SAMO Zakończenie (W3, bez progu przerwy
+  // KURS_PRZERWA_MIN_M — jak cykle leczenia otyłości): kurs zaczyna pierwszy punkt albo pierwszy punkt po „end", „end"
+  // zamyka kurs. Drugie „start" w otwartym kursie (np. scalone duplikaty) nie dzieli kursu; Włączeniem kursu jest
+  // pierwsze. Zakończenie tuż po Zakończeniu (bez Włączenia ani Kontynuacji między nimi — zdublowany wpis, np. po scaleniu
+  // dwóch rekordów) nie otwiera kursu zerowej długości i nie przesuwa końca: zostaje w kursie, który zamknęło pierwsze
+  // Zakończenie (przerwa po nim nie liczy się jako leczenie — jak dotąd w miesiącach kursów).
+  // Kurs: { numer: 1..N, a: wiek pierwszego punktu, b: wiek Zakończenia albo null, active: b == null, label: preparat
+  // z ostatniego punktu z preparatem (jak dotąd), punkty: [posortowane obiekty z tablicy], wlaczenie: pierwszy „start"
+  // w kursie albo null }. Kurs bez Włączenia po zamkniętym kursie = „Kontynuacja po Zakończeniu bez nowego Włączenia”
+  // (W2: Karta — stan „aktywne”, bez czasu, przyrostu i ΔhSDS; trajektoria — zwykły kurs, jak kurs bez Włączenia
+  // w cyklach otyłości). Jedyny kurs bez Włączenia = P-GH-BEZ-STARTU (bez zmian).
+  function ghKursy(punkty) {
+    try {
+      var RANGA = { 'continue': 0, 'end': 1, 'start': 2 };
+      var pts = therapyPointsOf(punkty).map(function (p, i) { return { p: p, i: i, m: therapyAgeM(p), r: RANGA[p.type] || 0 }; })
+        .filter(function (x) { return x.m > 0; })
+        .sort(function (x, y) { return x.m - y.m || x.r - y.r || x.i - y.i; });
+      var out = [], cur = null;
+      for (var j = 0; j < pts.length; j++) {
+        var p = pts[j].p, age = pts[j].m;
+        var zdublowaneZakonczenie = !!cur && cur.b != null && p.type === 'end';
+        if (!cur || (cur.b != null && !zdublowaneZakonczenie)) {
+          cur = { numer: out.length + 1, a: age, b: null, active: true, label: null, punkty: [], wlaczenie: null };
+          out.push(cur);
+        }
+        cur.punkty.push(p);
+        if (p.type === 'start' && !cur.wlaczenie) cur.wlaczenie = p;
+        if (p.type === 'end' && !zdublowaneZakonczenie) cur.b = age;
+        var d = drugShortName(p.drug);
+        if (d) cur.label = d;
+      }
+      out.forEach(function (k) { k.active = k.b == null; });
+      return out;
+    } catch (e) { return []; }
+  }
+  // Rata 6: KURSY leczenia GH w kontekście werdyktów — od P-GH-WZNOWIENIE część 1 liczone z ghKursy (granica = samo
+  // Zakończenie); kształt {a, b, label, active} dla dotychczasowych odbiorców bez zmian.
   function therapyIntervals(points) {
+    return ghKursy(points).map(function (k) { return { a: k.a, b: k.b, label: k.label, active: k.active }; });
+  }
+  // Reguła kursów sprzed P-GH-WZNOWIENIE (rata 6): punkty posortowane po wieku; kurs otwiera pierwszy punkt (albo punkt
+  // po zamkniętym kursie z przerwą ≥ KURS_PRZERWA_MIN_M), zamyka punkt „end". Punkt po „end" z krótszą przerwą wraca do
+  // tego samego kursu. Etykieta kursu = preparat z jego ostatniego punktu. Kursów GH już nie liczy (ghKursy); zostaje
+  // WYŁĄCZNIE jako zapas kursyOtylosci (strona bez modułu cykli) — zachowanie sprzed P-OTYLOSC-CYKLE rata 4, bez zmian.
+  function kursyZPrzerwa(points) {
     try {
       var pts = therapyPointsOf(points).filter(function (p) { return therapyAgeM(p) > 0; })
         .sort(function (x, y) { return therapyAgeM(x) - therapyAgeM(y); });
@@ -528,19 +583,19 @@
   // po Zakończeniu w starym zapisie — kurs bez Włączenia. Kolejność kursów = kolejność cykli (po datach, gdy datę
   // ma każdy punkt, inaczej po wieku — reguła modułu cykli). Kurs: a = wiek pierwszego punktu cyklu z wiekiem > 0;
   // b = zakończony cykl ? wiek Zakończenia (Zakończenie bez wieku → najstarszy wiek > 0 w cyklu) : null; cykl bez
-  // żadnego punktu z wiekiem > 0 pominięty (jak punkty z wiekiem 0 w therapyIntervals); etykieta = preparat
+  // żadnego punktu z wiekiem > 0 pominięty (jak punkty z wiekiem 0 w ghKursy); etykieta = preparat
   // ostatniego punktu cyklu z lekiem (bez leku null). Cykl bez Włączenia i cykl z niezgodnością zapisu (np. dwa
   // Włączenia) to ZWYKŁY kurs: werdykt BMI-SDS trajektorii nie jest oceną odpowiedzi wg ChPL (tę Karta pacjenta
   // wstrzymuje przy niezgodnym zapisie), więc tutaj nic nie jest wstrzymywane.
   // Moduł cykli czytany w chwili wywołania — na 6 z 8 stron ładuje się PO tym pliku. Bez modułu albo przy wyjątku
-  // w podziel: reguła sprzed raty 4 (therapyIntervals). GH zostaje na therapyIntervals.
+  // w podziel: reguła sprzed raty 4 (kursyZPrzerwa — dawne therapyIntervals). GH: ghKursy (P-GH-WZNOWIENIE).
   function kursyOtylosci(points) {
     var C;
     try { C = w.VildaCykleLeczenia || null; } catch (e0) { C = null; }
-    if (!C || typeof C.podziel !== 'function') return therapyIntervals(points);
+    if (!C || typeof C.podziel !== 'function') return kursyZPrzerwa(points);
     try {
       var podzial = C.podziel(therapyPointsOf(points));
-      if (!podzial || !Array.isArray(podzial.cykle)) return therapyIntervals(points);
+      if (!podzial || !Array.isArray(podzial.cykle)) return kursyZPrzerwa(points);
       var out = [];
       podzial.cykle.forEach(function (c) {
         var pts = c && Array.isArray(c.punkty) ? c.punkty : [];
@@ -563,7 +618,7 @@
         out.push({ a: a, b: b, label: label, active: b == null });
       });
       return out;
-    } catch (e) { return therapyIntervals(points); }
+    } catch (e) { return kursyZPrzerwa(points); }
   }
   // Przedział-koperta (pierwszy start → ostatni koniec) — zachowany dla starszych konsumentów; werdykty liczą
   // na kursach (od P-OTYLOSC-CYKLE rata 4 także pasek kontekstu panelu porównania w Karcie pacjenta).
@@ -683,8 +738,9 @@
     var mp = typeof cx.mpSds === 'number' && isFinite(cx.mpSds) ? cx.mpSds : null;
     var kursyGH = met === 'height' ? kursyZ(cx, 'gh') : [];
     var kursyRd = met !== 'height' ? kursyZ(cx, 'red') : [];
-    var kG = kursOkna(kursyGH, a.ageMonths, b.ageMonths);
     // P-OTYLOSC-CYKLE rata 4: kursy otyłości (cykle) mogą się stykać — tolerancja startu do końca poprzedniego kursu.
+    // P-GH-WZNOWIENIE część 1 (W3): kursy GH też (granica = samo Zakończenie) — to samo przycięcie.
+    var kG = kursOkna(kursyGH, a.ageMonths, b.ageMonths, true);
     var kR = kursOkna(kursyRd, a.ageMonths, b.ageMonths, true);
     var ghMix = !kG ? overlapKursy(kursyGH, a.ageMonths, b.ageMonths) : 0;
     var rdMix = !kR ? overlapKursy(kursyRd, a.ageMonths, b.ageMonths) : 0;
@@ -985,8 +1041,9 @@
           lastAgeMonths: last.ageMonths, lastC: last.c, lastSd: last.sd, siatka: last.siatka || null };
         if (redFlag) {
           // Rata 6: aktywny kurs GH, od którego startu wzrost nadrabia — wariant G kontekstu flagi.
+          // P-GH-WZNOWIENIE część 1: pomiar startowy nie z poprzedniego kursu GH (dolnaGranicaStartu z listy kursów).
           var kGH = kursyZ(ctx, 'gh'); var kA = kGH.length ? kGH[kGH.length - 1] : null;
-          var oG = kA && kA.b == null ? oknoKursu(kA, series) : null;
+          var oG = kA && kA.b == null ? oknoKursu(kA, series, kGH) : null;
           if (oG && oG.b === last && oG.a.ageMonths > base.ageMonths) {
             var dG = Math.round(100 * (last.sd - oG.a.sd)) / 100;
             if (dG >= P.REDFLAG_GH_NADRABIA_DSDS) redFlag.ghNadrabia = { odMies: oG.a.ageMonths, dSds: dG };
@@ -1805,7 +1862,12 @@
     var ctx = model.context;
     if (ctx) {
       if (typeof ctx.mpSds === 'number' && isFinite(ctx.mpSds)) items.push(mchip('🧬 MPH', 'SDS ' + fmtP(ctx.mpSds), 'kanał rodzicielski (MPH)'));
-      if (ctx.gh) items.push(mchip('💉 GH', 'od ' + fmtAgeM(ctx.gh.a) + (ctx.gh.b != null ? ' do ' + fmtAgeM(ctx.gh.b) : ' — nadal'), 'terapia GH (oznaczone odcinki: 💉)'));
+      // P-GH-WZNOWIENIE część 1: przy kilku kursach GH — żeton na KAŻDY kurs (jak kursy otyłości niżej); koperta
+      // zlewała kursy w jedno „od … — nadal”, z przerwą liczoną jak leczenie. Przy jednym kursie — z koperty, jak dotąd.
+      var kGh = kursyZ(ctx, 'gh');
+      var chipGh = function (k) { return mchip('💉 GH', 'od ' + fmtAgeM(k.a) + (k.b != null ? ' do ' + fmtAgeM(k.b) : ' — nadal'), 'terapia GH (oznaczone odcinki: 💉)'); };
+      if (kGh.length > 1) kGh.forEach(function (k) { items.push(chipGh(k)); });
+      else if (ctx.gh) items.push(chipGh(ctx.gh));
       // P-OTYLOSC-CYKLE rata 4: przy kilku kursach leczenia otyłości (cyklach) — żeton na KAŻDY kurs, w kolejności
       // listy kursów; koperta zlewała dwa cykle w jedno „Wegovy · od … — nadal". Przy jednym kursie żeton z koperty,
       // jak dotąd (ten sam przedział i ta sama etykieta).
@@ -2035,6 +2097,10 @@
     fazaOstatnia: fazaOstatnia,
     // P-WERDYKT rata 6: kursy leczenia i okno chipu (do testów na funkcji produkcyjnej)
     therapyIntervals: therapyIntervals,
+    // P-GH-WZNOWIENIE część 1: kursy GH — jedno źródło dla Karty pacjenta i analizy trajektorii
+    ghKursy: ghKursy,
+    // reguła sprzed P-GH-WZNOWIENIE (przerwa ≥ KURS_PRZERWA_MIN_M) — już tylko zapas kursów otyłości (do testów)
+    kursyZPrzerwa: kursyZPrzerwa,
     // P-OTYLOSC-CYKLE rata 4: kursy otyłości z cykli i dolna granica tolerancji startu (do testów)
     kursyOtylosci: kursyOtylosci,
     dolnaGranicaStartu: dolnaGranicaStartu,
