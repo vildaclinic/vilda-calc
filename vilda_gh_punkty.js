@@ -45,8 +45,9 @@
  * w całej liście” zastępuje reguła KURSÓW. Kursy liczy VildaTrajectoryAnalysis.ghKursy (vilda_trajectory_analysis.js,
  * ładowany na docpro.html i index.html obok tego pliku): punkty wg wieku, przy równym wieku Kontynuacja → Zakończenie →
  * Włączenie, kurs zamyka Zakończenie. Sprawdzenie symuluje listę bez edytowanego punktu (pomin) z nowym punktem
- * w wieku opcje.wiekM: Włączenie — pierwszy punkt kursu (nie później niż jego pierwszy punkt) i jedyne w kursie;
- * Zakończenie — po ostatnim punkcie kursu, jedyne w kursie, kurs ma wcześniejszy punkt; Kontynuacja — nie w kursie
+ * w wieku opcje.wiekM: Włączenie — jedyne w kursie, a w kursie po Zakończeniu także jego pierwszy punkt (w pierwszym
+ * kursie wolno wcześniejsze Kontynuacje — wizyty przed leczeniem); Zakończenie — ostatni punkt kursu, jedyne w kursie,
+ * kurs ma wcześniejszy punkt, a po nim nie powstaje nowy kurs bez Włączenia; Kontynuacja — nie w kursie
  * otwartym po Zakończeniu bez (wcześniejszego albo z tego samego miesiąca) Włączenia. Bez modułu kursów odmowa
  * z prośbą o odświeżenie strony (bez powrotu do dawnej reguły). Rejestr: docs/clinical/ALGORITHMS.md,
  * P-GH-WZNOWIENIE, część 2.
@@ -69,6 +70,7 @@
     wlaczeniePozniej: '„Włączenie leczenia” nie może być późniejsze niż pierwszy punkt tego kursu leczenia.',
     zakonczenieNieOstatnie: '„Zakończenie leczenia” musi być ostatnim punktem kursu.',
     zakonczenieBezKursu: '„Zakończenie leczenia” zamyka kurs leczenia — musi je poprzedzać co najmniej jeden punkt tego kursu.',
+    zakonczenieTenSamMiesiac: '„Zakończenie leczenia” nie może być w tym samym miesiącu co „Włączenie leczenia” tego kursu.',
     kontynuacjaPoZakonczeniu: 'Po „Zakończeniu leczenia” dodaj najpierw „Włączenie leczenia” (wznowienie leczenia).',
     wartosci: 'Upewnij się, że wprowadziłeś poprawne, dodatnie dane: wiek, wagę, wzrost oraz dawkę.',
     programKarta: 'Wybierz program i preparat w karcie „Leczenie hormonem wzrostu / IGF-1”.',
@@ -141,11 +143,14 @@
   // (wiekMiesZPol); bez wieku > 0 odmowa „wartosci” (ten sam tekst, którym odmówi sprawdzWartosci). opcje.pomin (obecny
   // klucz, także null) wyklucza punkt po String(id) — edycja w monitorze (String(c.id) !== String(x)); bez klucza nie
   // ma wykluczeń (punkt wsteczny, panel wiersza). Symulacja: lista bez wykluczonego punktu + nowy punkt N → ghKursy;
-  // K — kurs, do którego trafia N.
-  //   Włączenie: K bez innego Włączenia, a N nie później niż pierwszy punkt K (pierwszy punkt w ogóle, wznowienie po
-  //     Zakończeniu, dopisanie brakującego Włączenia na początku kursu bez Włączenia).
-  //   Zakończenie: N po ostatnim punkcie kursu, który zamyka (kurs poprzedniego punktu w liście bez N), ten kurs nie ma
-  //     Zakończenia i N ma przed sobą co najmniej jeden punkt.
+  // K — kurs, do którego trafia N. Edycja ocenia się na liście PO zmianie (punkt zastąpiony w miejscu), nie na liście bez
+  // punktu — usunięcie Zakończenia na chwilę scala kursy, a to nie jest stan, który powstanie.
+  //   Włączenie: K bez innego Włączenia; w kursie po Zakończeniu (numer > 1) N nie później niż pierwszy punkt K
+  //     (wznowienie, dopisanie brakującego Włączenia na początku kursu bez Włączenia). W pierwszym kursie wcześniejsze
+  //     Kontynuacje (wizyty przed leczeniem, które reguła Kontynuacji przyjmuje) nie blokują Włączenia ani jego edycji.
+  //   Zakończenie: N ostatnim punktem K (inne Zakończenie po N — zdublowane — zostaje w K), K bez innego Zakończenia
+  //     i z punktem przed N; punkt po N, który nie jest Włączeniem, otwierałby kurs bez Włączenia (W2) — odmowa, chyba
+  //     że ten kurs bez Włączenia istniał już przed zmianą (stary zapis: edycja jego Zakończenia nic nie pogarsza).
   //   Kontynuacja: odmowa, gdy K jest kursem po Zakończeniu (numer > 1) bez Włączenia wcześniejszego niż N albo z tego
   //     samego miesiąca (W2: Kontynuacja po Zakończeniu bez nowego Włączenia, także w przerwie przed wznowieniem).
   // Inny rodzaj niż start/continue/end — zgoda (jak dotąd). Bez reguły kursów — odmowa z prośbą o odświeżenie strony.
@@ -173,7 +178,7 @@
 
     if (typ === 'start') {
       if (ma('start')) return odmowa('drugie-wlaczenie', KOMUNIKATY.drugieWlaczenie);
-      if (K.a !== wiekM) return odmowa('wlaczenie-pozniej', KOMUNIKATY.wlaczeniePozniej);
+      if (K.numer > 1 && K.a !== wiekM) return odmowa('wlaczenie-pozniej', KOMUNIKATY.wlaczeniePozniej);
       return { ok: true };
     }
     if (typ === 'continue') {
@@ -185,13 +190,23 @@
       return { ok: true };
     }
     var i = kolejnosc.indexOf(N);
-    var poprzedni = i > 0 ? kolejnosc[i - 1] : null;
     var nastepny = i + 1 < kolejnosc.length ? kolejnosc[i + 1] : null;
-    if (!poprzedni) return odmowa('zakonczenie-bez-kursu', KOMUNIKATY.zakonczenieBezKursu);
-    var K0 = G.ghKursy(reszta).filter(function (k) { return k.punkty.indexOf(poprzedni) >= 0; })[0];
-    if (!K0) return odmowa('zakonczenie-bez-kursu', KOMUNIKATY.zakonczenieBezKursu);
-    if (K0.b != null) return odmowa('drugie-zakonczenie', KOMUNIKATY.drugieZakonczenie);
-    if (nastepny && K0.punkty.indexOf(nastepny) >= 0) return odmowa('zakonczenie-nie-ostatnie', KOMUNIKATY.zakonczenieNieOstatnie);
+    if (!inne.length) {
+      // Zakończenie jako pierwszy punkt kursu; Włączenie z tego samego miesiąca stoi za nim (reguła kursów przy równym wieku).
+      if (nastepny && nastepny.type === 'start' && wiekKursowy(G, nastepny) === wiekM) {
+        return odmowa('zakonczenie-ten-sam-miesiac', KOMUNIKATY.zakonczenieTenSamMiesiac);
+      }
+      return odmowa('zakonczenie-bez-kursu', KOMUNIKATY.zakonczenieBezKursu);
+    }
+    if (ma('end')) return odmowa('drugie-zakonczenie', KOMUNIKATY.drugieZakonczenie);
+    if (K.punkty[K.punkty.length - 1] !== N) return odmowa('zakonczenie-nie-ostatnie', KOMUNIKATY.zakonczenieNieOstatnie);
+    if (nastepny && nastepny.type !== 'start') {
+      // Kurs bez Włączenia za N — dozwolony tylko, gdy był już przed zmianą (stary zapis W2), inaczej Zakończenie wpada
+      // przed ostatni punkt kursu.
+      var przed = G.ghKursy(punktyListy(lista)).filter(function (k) { return k.punkty.indexOf(nastepny) >= 0; })[0];
+      var bylW2 = !!przed && przed.numer > 1 && !przed.wlaczenie && przed.punkty[0] === nastepny;
+      if (!bylW2) return odmowa('zakonczenie-nie-ostatnie', KOMUNIKATY.zakonczenieNieOstatnie);
+    }
     return { ok: true };
   }
 
