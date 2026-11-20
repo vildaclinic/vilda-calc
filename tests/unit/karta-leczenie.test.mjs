@@ -12,6 +12,9 @@ import { loadBrowserScript } from '../support/load-browser-script.mjs';
 // Kryteria ChPL i moduł cykli — prawdziwe (loader, zależności). Statystyka wzrostu (hSDS) podstawiona prostą funkcją
 // liniową: test porównuje pasek z kafelkiem z tego samego rysunku, a nie liczy hSDS. Lekka atrapa DOM (bez CSS),
 // więc dopasowanie szerokości pasków sprawdza e2e. Dane wyłącznie FIKCYJNE.
+// P-GH-WZNOWIENIE, część 1 (decyzje właściciela 2026-11-20, W1–W4): kursy GH z vilda_trajectory_analysis.js
+// (VildaTrajectoryAnalysis.ghKursy — ładowany na tych samych stronach co Karta, więc i tutaj) — bieżący kurs w wl/kl,
+// trend (Pl) i pas na siatkach (prawdziwe Lt wycięte z showPatientCard).
 
 const korzen = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const AUTH = fs.readFileSync(path.join(korzen, 'vilda_auth_ui.js'), 'utf8');
@@ -26,14 +29,18 @@ function fragment(od, doTekstu) {
 }
 
 // e() i oe() (budowa elementów), blok Karty od Tt() do Pl() (formatowanie, podsumowania i panele GH i otyłości,
-// grupa Ob_dz, karta „wg notatek” jl i blok Kl_*) oraz bi() (nazwa leku w karcie „wg notatek”).
+// grupa Ob_dz, karta „wg notatek” jl, blok Gw_* i blok Kl_*), Pl() („Trend leczenia GH”) oraz bi() (nazwa leku
+// w karcie „wg notatek”).
 const KOD = [
   fragment('function e(t,a,n){', 'function un('),
   fragment('function Tt(', 'function Pl('),
+  fragment('function Pl(', '/* P-NOTATKI-3 (G27c)'),
   fragment('function bi(', 'function ro('),
 ].join('\n');
+// Pas leczenia na siatkach Karty (lokalne Lt w showPatientCard; zależy tylko od wieku bieżącego pomiaru I).
+const pasLeczenia = (I) => new Function('I', `var ${fragment('Lt=function(pe,Ga,Tn){', ',Yt=')};return Lt;`)(I);
 
-function okno() {
+function okno(opcje = {}) {
   const doc = atrapaDokumentu();
   const proto = Object.getPrototypeOf(doc.createElement('div'));
   if (!Object.getOwnPropertyDescriptor(proto, 'firstElementChild')) {
@@ -44,13 +51,16 @@ function okno() {
   const w = { document: doc };
   loadBrowserScript('vilda_cykle_leczenia.js', w); // + obesity_response_criteria.js (zależność)
   loadBrowserScript('vilda_tempo_wzrastania.js', w);
+  if (opcje.bezTrajektorii !== true) loadBrowserScript('vilda_trajectory_analysis.js', w); // ghKursy (P-GH-WZNOWIENIE)
+  if (opcje.odcinki) loadBrowserScript('gh_therapy_segments.js', w); // % dawki zalecanej w trendzie i odcinki leków
   return w;
 }
 
 const bledy = [];
-function karta() {
-  return new Function('i', 'jt', 'Ot', 'oe', `${KOD}\nreturn { Kl_leczenie, Kl_zakladka, Kl_kolejnosc, Kl_daneOb, Kl_daneGh };`)(
-    okno(), () => null, (gdzie, blad) => bledy.push(`${gdzie}: ${blad && blad.message}`),
+function karta(opcje) {
+  return new Function('i', 'jt', 'Ot', 'oe', `${KOD}\nreturn { Kl_leczenie, Kl_zakladka, Kl_kolejnosc, Kl_daneOb, Kl_daneGh, wl, kl, Pl,
+    Gw_pasy: typeof Gw_pasy == 'function' ? Gw_pasy : null };`)(
+    okno(opcje), () => null, (gdzie, blad) => bledy.push(`${gdzie}: ${blad && blad.message}`),
     (t) => { if (!t) return; while (t.firstChild) t.removeChild(t.firstChild); });
 }
 
@@ -62,8 +72,8 @@ afterAll(() => { delete globalThis.calcPercentileStats; });
 
 const tekst = (el) => (el ? el.textContent : null);
 /** Karta z rekordu (migawka) i notatek; null — brak zakładki. */
-function zbuduj(rekord, notatki = []) {
-  const K = karta();
+function zbuduj(rekord, notatki = [], opcje) {
+  const K = karta(opcje);
   bledy.length = 0;
   const r = K.Kl_leczenie({
     patientId: 'pacjent-fikcyjny', rekord, plec: rekord.plec || 'F', zaawansowane: {}, siatka: null, notatki,
@@ -188,7 +198,9 @@ describe('P-KARTA-LECZENIE — kolejność (D2): trwające przed zakończonymi, 
     expect(oba.paski.map((p) => [p.id, p.stan])).toEqual([['gh', 'leczenie zakończone'], ['ob', 'leczenie zakończone']]);
   });
 
-  it('„zakończone” = ten sam warunek co znacznik podsumowania (GH: jakikolwiek punkt „Zakończenie”; otyłość: ostatni punkt)', () => {
+  // P-GH-WZNOWIENIE część 1 (W1): GH „zakończone” = bieżący (ostatni) kurs zamknięty Zakończeniem — dotąd jakikolwiek
+  // punkt „Zakończenie” w historii; GH wznowione po Zakończeniu jest aktywne (test „GR1 + O1” niżej). Zmiana zamierzona.
+  it('„zakończone” = ten sam warunek co znacznik podsumowania (GH: bieżący kurs zamknięty Zakończeniem; otyłość: ostatni punkt)', () => {
     const K = karta();
     const kol = K.Kl_kolejnosc([{ n: 'gh', dane: { zakonczone: true } }, { n: 'ob', dane: { zakonczone: false } }, { n: 'x', dane: null }]);
     expect(kol.map((x) => x.n)).toEqual(['ob', 'x', 'gh']);
@@ -382,5 +394,138 @@ describe('P-KARTA-LECZENIE — blok, który się nie narysował, nie zostawia wa
     const p = r.paski.children[0];
     expect(p._klCzesci).toEqual(['2,4 mg']);
     expect(p.querySelector('.vilda-kl-pigulka')).toBeNull();
+  });
+});
+
+// ── P-GH-WZNOWIENIE, część 1 (decyzje właściciela 2026-11-20, W1–W4; docs/clinical/ALGORITHMS.md) ────────────────
+// Leczenie GH wznowione po Zakończeniu: stan, „Włączenie”, czas, przyrost, tempo i ΔhSDS od bieżącego (ostatniego)
+// kursu; granica kursu = samo Zakończenie (VildaTrajectoryAnalysis.ghKursy). Wiek w latach;miesiącach, wzrost w cm.
+const GR1 = [GHP('r1-w1', 'start', 7, 0, 18, 110, 0.025), GHP('r1-k1', 'continue', 8, 0, 21, 117, 0.028), GHP('r1-z', 'end', 9, 0, 24, 123, 0.03),
+  GHP('r1-w2', 'start', 10, 0, 27, 130, 0.03), GHP('r1-k2', 'continue', 11, 0, 30, 137, 0.033)];
+const GR2 = [GHP('r2-w', 'start', 7, 0, 18, 110, 0.025), GHP('r2-z', 'end', 9, 0, 24, 123, 0.03), GHP('r2-k', 'continue', 10, 0, 27, 130, 0.03)];
+const GR3 = [GHP('r3-w', 'start', 7, 0, 18, 110, 0.025), GHP('r3-k', 'continue', 8, 0, 21, 117, 0.028), GHP('r3-z', 'end', 9, 0, 24, 123, 0.03)];
+const GR_PROGRAM = (p1, p2) => GR1.map((p, j) => ({ ...p, program: j < 3 ? p1 : p2 }));
+const znaczniki = (k) => k.r.tresc.querySelector('.vilda-gh-summary-head').querySelectorAll('.vilda-gh-summary-chip').map(tekst);
+const informacje = (k) => k.r.tresc.querySelector('.vilda-gh-summary').children.slice(2).map(tekst);
+/** Drzewo DOM jako napis (tag, klasa, atrybuty, tekst) — do porównania dwóch rysunków. */
+const drzewo = (el) => (!el ? 'null' : `<${el.tagName}.${el.className}[${[...el.atrybuty.entries()].sort().join(';')}]${el.wlasnyTekst}${el.children.map(drzewo).join('')}>`);
+const sciezkaDawki = (el) => el.querySelectorAll('path').map((p) => p.getAttribute('d'));
+
+describe('P-GH-WZNOWIENIE — podsumowanie i „Dane analityczne” GH od bieżącego kursu (B.1, B.2)', () => {
+  it('GR1 wznowienie: „aktywne”, „kurs 2 z 2”, Włączenie 10 l., „2 w kursie (5 łącznie)”, wartości od Włączenia kursu 2', () => {
+    const k = zbuduj({ plec: 'M', ghTherapyPoints: GR1 });
+    expect(znaczniki(k)).toEqual(['aktywne', 'kurs 2 z 2']);
+    expect(['Program', 'Preparat', 'Włączenie', 'Aktualna dawka', 'Punkty kontrolne', 'Ostatnia kontrola'].map(k.pole))
+      .toEqual(['SNP', 'Genotropin 12 mg', 'w wieku 10 l. 0 mies.', '0,033 mg/kg/d', '2 w kursie (5 łącznie)', 'w wieku 11 l. 0 mies.']);
+    expect(informacje(k)).toEqual([]);
+    expect(tekst(k.r.tresc.querySelector('.vilda-gha-sec'))).toBe('Wzrastanie — kurs 2 z 2A');
+    expect(k.kafel('Wzrost przy włączeniu')).toEqual({ v: '130 cm', sub: 'hSDS −1,27 · 10 l. 0 mies.' });
+    expect(k.kafel('Przyrost całkowity')).toEqual({ v: '+7,0 cm', sub: 'przez 12 mies.' });
+    expect(k.kafel('Tempo wzrastania')).toEqual({ v: '7 cm/rok', sub: 'ost. okres (z 12 mies.)' });
+    expect(k.kafel('Odpowiedź (ΔhSDS)')).toEqual({ v: '+0,18', sub: 'catch-up od włączenia' });
+    // dotąd: „leczenie zakończone”, Włączenie 7 l. 0 mies., 48 mies., ΔhSDS +0,55 (od pierwszego Włączenia, przerwa liczona)
+    expect(k.paski).toEqual([expect.objectContaining({ id: 'gh', stan: 'aktywne', czesci: ['0,033 mg/kg/d', '12 mies.', 'tempo 7 cm/rok', 'ΔhSDS +0,18'] })]);
+  });
+
+  it('GR1 + otyłość trwająca (D2): GH wznowione jest aktywne — pasek i blok GH przed otyłością (dotąd po niej)', () => {
+    const k = zbuduj({ plec: 'M', ghTherapyPoints: GR1, obesityTherapyPoints: O1 });
+    expect(k.paski.map((p) => [p.id, p.stan])).toEqual([['gh', 'aktywne'], ['ob', 'aktywne']]);
+    expect(k.bloki).toEqual(['vilda-kl-gh', 'vilda-ob-dz']);
+  });
+
+  it('GR4: punkty GR1 w innej kolejności tablicy → ten sam rysunek i ten sam pasek', () => {
+    const a = zbuduj({ plec: 'M', ghTherapyPoints: GR1 });
+    for (const pts of [[GR1[3], GR1[0], GR1[4], GR1[2], GR1[1]], GR1.slice().reverse()]) {
+      const b = zbuduj({ plec: 'M', ghTherapyPoints: pts });
+      expect(drzewo(b.r.tresc)).toBe(drzewo(a.r.tresc));
+      expect(b.paski).toEqual(a.paski);
+    }
+  });
+
+  it('GR2 (W2): Kontynuacja po Zakończeniu bez Włączenia — „aktywne”, bez czasu, przyrostu i ΔhSDS, informacja o braku Włączenia', () => {
+    const k = zbuduj({ plec: 'M', ghTherapyPoints: GR2 });
+    expect(znaczniki(k)).toEqual(['aktywne', 'kurs 2 z 2']);
+    expect(k.pole('Włączenie')).toBe('brak punktu');
+    expect(k.pole('Punkty kontrolne')).toBe('1 w kursie (3 łącznie)');
+    expect(informacje(k)).toEqual(['Kontynuacja po Zakończeniu bez nowego Włączenia (Zakończenie w wieku 9 l. 0 mies., pierwszy punkt '
+      + 'kursu: w wieku 10 l. 0 mies.). Czas leczenia, przyrost i ΔhSDS od wznowienia liczymy od punktu „Włączenie leczenia”, '
+      + 'którego ten kurs nie ma.']);
+    expect(k.kafel('Wzrost w 1. punkcie').v).toBe('130 cm');
+    expect(k.kafel('Przyrost od Włączenia')).toEqual({ v: '—', sub: 'brak Włączenia po Zakończeniu' });
+    expect(k.kafel('Odpowiedź (ΔhSDS)')).toEqual({ v: '—', sub: 'brak Włączenia po Zakończeniu' });
+    expect(k.paski).toEqual([expect.objectContaining({ id: 'gh', stan: 'aktywne', czesci: ['0,03 mg/kg/d'] })]);
+  });
+
+  it('W2 z dwiema Kontynuacjami po Zakończeniu: tempo z punktów kursu zostaje; pasek bez czasu i ΔhSDS', () => {
+    const k = zbuduj({ plec: 'M', ghTherapyPoints: [...GR2, GHP('r2-k2', 'continue', 11, 0, 30, 137, 0.033)] });
+    expect(k.kafel('Tempo wzrastania')).toEqual({ v: '7 cm/rok', sub: 'ost. okres (z 12 mies.)' });
+    expect(k.kafel('Odpowiedź (ΔhSDS)').v).toBe('—');
+    expect(k.paski[0].czesci).toEqual(['0,033 mg/kg/d', 'tempo 7 cm/rok']);
+  });
+
+  it('GR3 / GR6: jeden kurs (W → K → Z, bez startu, krótki odstęp, Increlex) — rysunek identyczny jak bez modułu kursów', () => {
+    const k = zbuduj({ plec: 'M', ghTherapyPoints: GR3 });
+    expect(znaczniki(k)).toEqual(['leczenie zakończone']);
+    expect(k.pole('Punkty kontrolne')).toBe('3');
+    expect(k.paski[0]).toEqual(expect.objectContaining({ stan: 'leczenie zakończone', czesci: ['0,03 mg/kg/d', '24 mies.', 'tempo 6 cm/rok', 'ΔhSDS +0,18'] }));
+    for (const pts of [GR3, GR3.slice().reverse(), G1, G_BEZ_STARTU, G_KROTKI, G_INCRELEX, G_ZAKONCZONE]) {
+      const z = zbuduj({ plec: 'M', ghTherapyPoints: pts });
+      const bez = zbuduj({ plec: 'M', ghTherapyPoints: pts }, [], { bezTrajektorii: true });
+      expect(drzewo(z.r.tresc)).toBe(drzewo(bez.r.tresc));
+      expect(z.paski).toEqual(bez.paski);
+    }
+  });
+
+  it('drugie Włączenie w otwartym kursie (scalone duplikaty, dopisane na koniec tablicy): Włączenie pierwsze wg wieku', () => {
+    const pts = [GHP('d-w2', 'start', 7, 6, 19.6, 114.6, 0.025), GHP('d-k', 'continue', 8, 0, 21.3, 118.7, 0.028),
+      GHP('d-k2', 'continue', 10, 0, 29.8, 132.4, 0.033), GHP('d-w1', 'start', 7, 0, 18, 110, 0.025)];
+    const k = zbuduj({ plec: 'M', ghTherapyPoints: pts });
+    expect(znaczniki(k)).toEqual(['aktywne']);
+    // dotąd pierwsze Włączenie w kolejności tablicy: 7 l. 6 mies. i 30 mies.
+    expect(k.pole('Włączenie')).toBe('w wieku 7 l. 0 mies.');
+    expect(k.kafel('Przyrost całkowity').sub).toBe('przez 36 mies.');
+  });
+});
+
+describe('P-GH-WZNOWIENIE — trend GH i pas na siatkach (B.4, B.5, GR7)', () => {
+  it('GR7 trend (mg/kg/d): linia dawki przerwana między Zakończeniem (9 l.) a ponownym Włączeniem (10 l.)', () => {
+    const K = karta();
+    const gr1 = sciezkaDawki(K.Pl('pacjent-fikcyjny', GR1));
+    expect(gr1).toEqual(['M 56.0 178.3 L 191.0 178.3 L 191.0 138.3 L 326.0 138.3 L 326.0 111.7 M 461.0 111.7 L 596.0 111.7 L 596.0 71.7']);
+    // jeden kurs — linia ciągła, jak dotąd
+    const g1 = sciezkaDawki(K.Pl('pacjent-fikcyjny', G1));
+    expect(g1).toHaveLength(1);
+    expect(g1[0]).not.toContain(' M ');
+    expect(sciezkaDawki(karta({ bezTrajektorii: true }).Pl('pacjent-fikcyjny', G1))).toEqual(g1);
+  });
+
+  it('GR7 trend (% dawki zalecanej): bez odcinka między kursami — 3 odcinki po 2 linie (dotąd 4)', () => {
+    const K = karta({ odcinki: true });
+    const linieDawki = (pts) => K.Pl('pacjent-fikcyjny', pts).querySelectorAll('line[stroke-width="3.2"]').length;
+    expect(linieDawki(GR1)).toBe(6);
+    expect(linieDawki(GR3)).toBe(4);
+  });
+
+  it('GR7 trend: program (typowy zakres dawki) z bieżącego kursu, nie z pierwszego Włączenia', () => {
+    const K = karta();
+    const przelacznik = (pts) => tekst(K.Pl('pacjent-fikcyjny', pts)).includes('Pokaż typowy zakres dawki');
+    expect(przelacznik(GR_PROGRAM('Inny', 'SNP'))).toBe(true);
+    expect(przelacznik(GR_PROGRAM('SNP', 'Inny'))).toBe(false);
+  });
+
+  it('GR7 pas na siatkach: jeden pas na kurs (drugi aktywny do bieżącego wieku); jeden kurs — ten sam pas co dotąd', () => {
+    const K = karta();
+    const Lt = pasLeczenia(133);
+    const gh = (pe) => Lt(pe, 'GH', '#0F6E56');
+    expect(K.Gw_pasy(GR1, gh)).toEqual([
+      { startAgeM: 84, endAgeM: 108, active: false, label: 'GH', color: '#0F6E56' },
+      { startAgeM: 120, endAgeM: 133, active: true, label: 'GH', color: '#0F6E56' },
+    ]);
+    // dotąd: jeden pas od pierwszego Włączenia do Zakończenia, „nieaktywny” — wznowione leczenie bez pasa
+    expect(gh(GR1)).toEqual({ startAgeM: 84, endAgeM: 108, active: false, label: 'GH', color: '#0F6E56' });
+    expect(K.Gw_pasy(G1, gh)).toEqual(gh(G1));
+    expect(K.Gw_pasy(GR3, gh)).toEqual(gh(GR3));
+    expect(AUTH).toContain('Yt=Gw_pasy(s.ghTherapyPoints,function(pe){return Lt(pe,"GH","#0F6E56")})');
+    expect(AUTH).toContain('Ne=[].concat(Yt||[],ke||[])');
   });
 });

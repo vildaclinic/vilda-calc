@@ -60,7 +60,8 @@ Decyzje właściciela 2026-11-20 (po przeglądzie PR etapu 1):
   „Zakończenie” w historii GH (warunek znacznika podsumowania), więc wznowione leczenie jest opisane i sortowane jako
   zakończone, a czas liczy się od pierwszego „Włączenia”. Reguła wybrana przez właściciela (2026-11-20): **od
   wznowienia** — stan „aktywne”, a „Włączenie”, czas leczenia, tempo i ΔhSDS liczone od ostatniego „Włączenia” po
-  „Zakończeniu” (jak nowy cykl leczenia otyłości); wcześniejszy kurs zostaje w punktach i trendzie. Osobny PR po etapie 1.
+  „Zakończeniu” (jak nowy cykl leczenia otyłości); wcześniejszy kurs zostaje w punktach i trendzie. Osobny PR po etapie 1
+  — stan niżej, „P-GH-WZNOWIENIE”.
 
 Opis rozstrzygnięć:
 
@@ -74,6 +75,18 @@ Opis rozstrzygnięć:
 - Przewinięcie: pierwsze leczenie w zakładce — pasek zakładek na górę widoku (pod nim początek zawartości), kolejne — jego
   pierwszy blok. Liczone na przewijanym kontenerze Karty, bo `custom-fixes.js` podmienia `Element.scrollIntoView` na
   stronie formularza (telefon: nic, komputer: przewinięcie okna) — także odnośnik z „Notatek” dotąd nie przewijał.
+
+## P-GH-WZNOWIENIE — GH wznowione po Zakończeniu
+
+Decyzje właściciela 2026-11-20 (W1–W4): stan „aktywne”, „Włączenie”, czas, przyrost, tempo i ΔhSDS od bieżącego kursu
+(od ostatniego Włączenia); Kontynuacja po Zakończeniu bez nowego Włączenia — „aktywne”, bez czasu i ΔhSDS, z prośbą
+o dopisanie Włączenia (w części 1 sama informacja o braku Włączenia — DocPro przyjmie drugie Włączenie w części 2); granica kursu = samo Zakończenie, w Karcie i w analizie trajektorii, bez progu 3 mies. Opis:
+`docs/clinical/ALGORITHMS.md`, wpis „P-GH-WZNOWIENIE, część 1”.
+
+| Część | Zakres | Stan |
+|---|---|---|
+| 1 — odczyt | Jedna reguła kursów GH (`VildaTrajectoryAnalysis.ghKursy`); Karta: podsumowanie („kurs k z N”, „n w kursie (M łącznie)”), „Dane analityczne”, pasek i kolejność D2, trend (linia przerwana), pas na siatkach na kurs, panele trajektorii i porównania; trajektoria: kursy bez progu przerwy, przycięcie startu, żeton na kurs | w tym PR (SW 1.1.562) |
+| 2 — wpis w DocPro | Drugie Włączenie po Zakończeniu (`vilda_gh_punkty.js`, monitor, formularz wsteczny, punkt z wiersza), metryki i tabela monitora per kurs, B.64, odcinki leków per kurs | do zrobienia |
 
 ## Uzgodnienie z kartą B1 (D5)
 

@@ -2396,6 +2396,58 @@ których szukają testy i moduły (`.vdo`, `.vilda-gha-btn`, `.vilda-gh-summary`
 bez zmian; pasek ma własne klasy (`.vilda-kl-*`), żeby lokatory bloków nie trafiały w pasek. Wersje `?v=`, precache
 i `SW_VERSION` ustawił `npm run podbij-wersje`.
 
+## Łatka P-GH-WZNOWIENIE, część 1 — kursy GH od wznowienia w Karcie (`vilda_auth_ui.js` 575 → 576, `growth-basic-module.js` 24 → 25, 2026-11-20, decyzje właściciela)
+
+Czytelne źródło reguły: `vilda_trajectory_analysis.js` — `ghKursy` (eksport `VildaTrajectoryAnalysis.ghKursy`; z niej
+`therapyIntervals`), `kursyZPrzerwa` (dawna reguła, już tylko zapas kursów otyłości). W `vilda_auth_ui.js` nowy czytelny
+blok P-GH-WZNOWIENIE zaraz po funkcji `jl` (przed blokiem P-KARTA-LECZENIE): `Gw_BEZ_WLACZENIA`, `Gw_kursy` (kursy
+z modułu trajektorii; bez modułu — null), `Gw_biezacy` (bieżący kurs przy > 1 kursie, inaczej null — Karta liczy jak
+dotąd), `Gw_znacznik` („kurs k z N”, wygląd „cykl k z N” z `Ob_css`), `Gw_infoW2` (treść ramki W2), `Gw_pasy` (pas
+na kurs), `Gw_numerKursu` (numer kursu punktu trendu), `Gw_punktyProgramu` (program trendu z bieżącego kursu). Opis:
+`docs/clinical/ALGORITHMS.md`, wpis P-GH-WZNOWIENIE, część 1.
+
+```
+// vilda_auth_ui.js — wl (podsumowanie GH)
+// 1. pętla Włączenia/Zakończenia po posortowanych n (było: po tablicy a); po niej:
+//    var Gw=Gw_biezacy(a),Gw_p=Gw?Gw.kurs.punkty:n;Gw&&(r=Gw.kurs.wlaczenie,o=Gw.kurs.b!=null?Gw_p[Gw_p.length-1]:null);
+//    var Gs=r;r||(r=Gw_p[0]);                                         (było: var Gs=r;r||(r=n[0]);)
+// 2. znacznik stanu: …text:Kl_st})]) → …text:Kl_st}),Gw?Gw_znacznik(Gw):null])
+// 3. h("Punkty kontrolne",String(a.length)) → h("Punkty kontrolne",Gw?Gw_p.length+" w kursie ("+a.length+" łącznie)":String(a.length))
+// 4. ramka P-GH-BEZ-STARTU: text:"Brak punktu włączenia…" → text:Gw?Gw_infoW2(Gw):"Brak punktu włączenia…"
+// vilda_auth_ui.js — kl (Dane analityczne GH)
+// 5. pętla Włączenia po posortowanych d (było: po tablicy l); po niej:
+//    var Gw=Gw_biezacy(l),Gw_d=d,Gw_w2=!!Gw&&Gw.bezWlaczenia;Gw&&(d=Gw.kurs.punkty.slice(),l=d,c=Gw.kurs.wlaczenie);
+// 6. var w=u!=null&&h!=null?h-u:null → var w=!Gw_w2&&u!=null&&h!=null?h-u:null; etykieta „Przyrost od Włączenia”
+//    i podpis Gw_BEZ_WLACZENIA przy W2
+// 7. var z=y!=null&&x!=null?x-y:null; → var z=!Gw_w2&&y!=null&&x!=null?x-y:null; podpis ΔhSDS Gw_BEZ_WLACZENIA przy W2
+// 8. „Wiek kostny (ost.)”: pętla po Gw_d (cała historia, jak dotąd) zamiast d
+// 9. createTextNode("Wzrastanie") → createTextNode("Wzrastanie"+(Gw?" — kurs "+Gw.numer+" z "+Gw.liczba:""))
+// vilda_auth_ui.js — Pl (Trend leczenia GH), ml i gl (wykresy)
+// 10. var l=[] → var l=[],Gw_nr=Gw_numerKursu(a); w punkcie trendu: var Gw_n=Gw_nr(u);Gw_n!==void 0&&(h.Gw_kurs=Gw_n)
+// 11. program: pętla po Gw_punktyProgramu(a) zamiast a
+// 12. ml: else if(P.Gw_kurs!==t[L-1].Gw_kurs)K+=" M "+… (linia dawki przerwana między kursami)
+// 13. gl: if(!(P==null||L==null)) → if(!(P==null||L==null||f.Gw_kurs!==K.Gw_kurs)) (bez odcinka między kursami)
+// vilda_auth_ui.js — showPatientCard (siatki)
+// 14. Yt=Lt(s.ghTherapyPoints,"GH","#0F6E56") → Yt=Gw_pasy(s.ghTherapyPoints,function(pe){return Lt(pe,"GH","#0F6E56")})
+// 15. Ne=[Yt,ke].filter(Boolean) → Ne=[].concat(Yt||[],ke||[])
+// 16. _cx9: …,redKursy:ae._vildaCmpCtx.redKursy} → …,redKursy:ae._vildaCmpCtx.redKursy,ghKursy:ae._vildaCmpCtx.ghKursy}
+// vilda_auth_ui.js — panel „Porównanie pomiarów” (renderPanel)
+// 17. nowa function ctxGhKursy(cx,ovlM) przed renderPanel (suma pokryć cx.ghKursy; bez listy — koperta cx.gh)
+// 18. var ghM=cx?ovlM(cx.gh):0, → var ghM=ctxGhKursy(cx,ovlM),
+
+// growth-basic-module.js — kontekst analizy trajektorii (z)
+//    było:  k9&&(k9.gh&&(c9.gh=k9.gh),k9.red&&(c9.red=k9.red),typeof k9.mpSds=="number"
+//    jest:  k9&&(k9.gh&&(c9.gh=k9.gh),k9.red&&(c9.red=k9.red),/* P-GH-WZNOWIENIE … */k9.ghKursy&&(c9.ghKursy=k9.ghKursy),
+//           k9.redKursy&&(c9.redKursy=k9.redKursy),typeof k9.mpSds=="number"      (jak vilda_advanced_growth.js)
+```
+
+**Granice.** Jeden kurs (albo brak `VildaTrajectoryAnalysis.ghKursy`) — `Gw_biezacy` daje null i wszystkie gałęzie liczą
+jak dotąd; jedyna zmiana przy jednym kursie: „Włączenie” = pierwsze „start” wg wieku, nie wg kolejności tablicy (wynik inny
+tylko przy dwóch Włączeniach w otwartym kursie — scalone duplikaty). Punkty trendu jednego kursu nie dostają pola
+`Gw_kurs`. Bez nowego pliku ładowanego przez strony i bez nowych stylów (znacznik i ramka mają dotychczasowy wygląd);
+DocPro (`gh_therapy_monitor.js`, `vilda_gh_punkty.js`, odcinki, B.64), sejf, Terminarz i Historia bez zmian (część 2).
+Wersje `?v=`, precache i `SW_VERSION` ustawił `npm run podbij-wersje`.
+
 ## Trwała tożsamość wizyt — źródło i granica artefaktu sejfu
 
 Zmiana funkcjonalna `P-TRWALE-WIZYTY` ma bazę `audyt` z commita
