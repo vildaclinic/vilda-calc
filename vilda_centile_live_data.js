@@ -491,7 +491,31 @@
       savedMeasurement: !!(dob && typeof dob.showsSavedMeasurement === 'function' && dob.showsSavedMeasurement()) };
   }
 
-  function makeSnapshot(scope, record, input, measurements) {
+  // P-OTYLOSC-STRONA (temat D): pomiary z dziennika leczenia pacjenta karty (masa od pacjenta, wpisy z gabinetu poza
+  // wizytą) przy przebiegu z wizyt — VildaDziennikOtylosci.pomiaryStrony; wizyta wygrywa w tym samym miesiącu.
+  // Odtworzenie dawnej wizyty (jest późniejszy pomiar) nie bierze wpisów po jej wieku; ostatnia wizyta — bierze
+  // także wpisy po niej („później od pacjenta”). Tylko do rysowania: nie trafia do measurements ani do zapisu.
+  function reportedMeasurements(scope, input, all) {
+    var journal = w.VildaDziennikOtylosci;
+    if (!scope.patientId || !journal || typeof journal.pomiaryStrony !== 'function') return [];
+    try {
+      var list = Array.isArray(all) ? all : [];
+      var timeline = list.concat(input.age === null ? [] : [{ ageMonths: input.age, weight: input.weight,
+        height: input.height, dateISO: input.measuredAtISO }]);
+      var later = input.age !== null && list.some(function (measurement) {
+        var measuredAge = number(measurement && measurement.ageMonths);
+        if (measuredAge === null) {
+          var years = number(measurement && measurement.ageYears);
+          measuredAge = years === null ? null : years * 12;
+        }
+        return measuredAge !== null && measuredAge > input.age;
+      });
+      var found = journal.pomiaryStrony(timeline, { patientId: scope.patientId, doWiekuMies: later ? input.age : null });
+      return Array.isArray(found) ? found : [];
+    } catch (_) { return []; }
+  }
+
+  function makeSnapshot(scope, record, input, measurements, reported) {
     var head = record ? record.snapshots[0] && record.snapshots[0].payload || {} : input.loaded || {};
     var growth = input.growth;
     var advanced = Object.assign({}, copy(head.advanced && head.advanced.data) || {},
@@ -517,7 +541,7 @@
     return freeze({ patientId: scope.patientId, patientToken: scope, sex: sex, ageMonths: age,
       exactAgeMonths: exactAge, currentHeight: height, currentWeight: weight,
       source: source, requestedSource: input.requestedSource, population: population, effectiveSourceByMetric: effectiveSource,
-      measurements: copy(measurements) || [], advanced: advanced, parents: parents,
+      measurements: copy(measurements) || [], reportedMeasurements: copy(reported) || [], advanced: advanced, parents: parents,
       chartCreatorData: copy(input.chartCreatorData) || {},
       professionalMode: input.professionalMode,
       standardChartStyle: input.standardChartStyle,
@@ -583,6 +607,7 @@
       // Historical restoration must not acquire measurements from a later visit.
       // Applied empty history is authoritative; one current measurement remains one point.
       if (!Array.isArray(measurements)) measurements = [];
+      var reported = reportedMeasurements(scope, input, measurements);
       if (scope.mode === 'summary' && scope.kind === 'restore' && input.savedMeasurement) {
         measurements = measurements.filter(function (measurement) {
           var measuredAge = number(measurement && measurement.ageMonths);
@@ -593,7 +618,7 @@
           return measuredAge === null || measuredAge <= input.age;
         });
       }
-      var snapshot = makeSnapshot(scope, record, input, measurements);
+      var snapshot = makeSnapshot(scope, record, input, measurements, reported);
       if (revision !== historyRevision || !ready(scope)) return interruptedResult(scope, revision);
       if (acceptedRevision !== measurementRevision) return snapshotResult(heldSnapshot(scope), 'measurement-commit');
       lastSnapshot = snapshot;
@@ -712,6 +737,10 @@
     listen(d, event, function () { invalidate(event, false); });
   });
   listen(d, 'vilda:ds-source-state', function () { invalidate('ds-source-state', false); });
+  // Nowy, poprawiony albo usunięty wpis w dzienniku leczenia (także z innego urządzenia) — rysunek od nowa (temat D).
+  listen(d, 'vilda:therapy-points-changed', function (event) {
+    if (event && event.detail && event.detail.source === 'obesity-dziennik') invalidate('obesity-journal', false);
+  });
   ['vilda:auth-hidden', 'vilda:auth-state-settled', 'vilda:auth-boot-settled', 'vilda:sync-status-changed'].forEach(function (event) {
     listen(d, event, function () { invalidate(event, false, true); });
   });

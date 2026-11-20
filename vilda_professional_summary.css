@@ -112,6 +112,28 @@
   font-size: .92em;
 }
 
+/* P-OTYLOSC-STRONA (temat D): masa od pacjenta po bieżącym pomiarze — linijka w wierszu „Waga”, romb jak na siatce. */
+#currentSummaryCard .professional-summary-reported {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  color: #8a4b00;
+  font-size: .86em;
+  font-weight: 500;
+}
+
+#currentSummaryCard .professional-summary-reported-key {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  margin: 0 1px;
+  box-sizing: border-box;
+  background: #fff4e0;
+  border: 1.4px solid #b45f06;
+  transform: rotate(45deg);
+}
+
 #currentSummaryCard .professional-summary-extra-body {
   padding: var(--space-6px);
 }

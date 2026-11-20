@@ -2252,6 +2252,62 @@ P-OTYLOSC-SIATKI po `Ob_dzPowiadom`: `Ob_dzSiatki`, `Ob_zrMetryki`, `Ob_dzMaPacj
 **Granice.** `H` poza `we()` zostaje listą wizyt: kafelek tempa w „Status” (`hvSdsKafelek`) i PDF siatek bez zmian.
 Sejf, dziennik i zapis bez zmian. Wersje `?v=`, precache i `SW_VERSION` ustawił `npm run podbij-wersje`.
 
+## Łatka P-OTYLOSC-STRONA — pomiary od pacjenta w całej aplikacji (temat D; `vilda_cykle_leczenia.js` 11 → 12, `vilda_centile_live_data.js` 8 → 9, `vilda_centile_live_render.js` 5 → 6, `vilda_centile_live_view.js` 5 → 6, `vilda_centile_live_colors.js` 2 → 3, `vilda_centile_live_preview.js` 3 → 4, `vilda_centile_live_panel.css` 7 → 8, `vilda_professional_summary.js` 2 → 3, `vilda_professional_summary.css` 3 → 4, `vilda_adv_history_collapse.js` 2 → 3, nowy `vilda_adv_dziennik.js` 1, `vilda_trajectory_analysis.js` 47 → 48, `vilda_advanced_growth.js` 82 → 83, `vilda_summary_cards.js` 65 → 66, `inline_index_04.js` 29 → 30, `inline_index_00.css` 3 → 4, `style.css` 96 → 97, `index.html`, 2026-11-20, makieta zaakceptowana przez właściciela)
+
+Opis działania, przypadki i wpływ kliniczny: `docs/clinical/ALGORITHMS.md`, wpis P-OTYLOSC-STRONA. Zmiany wprost
+w artefaktach; nic nie przebudowano ani nie minifikowano ponownie.
+
+Czytelne źródła:
+- `vilda_cykle_leczenia.js` (eksport `VildaDziennikOtylosci`): `pomiaryStrony` (dziennik pacjenta strony →
+  `pomiaryDoSiatek`, opcje `patientId`, `doWiekuMies`), `zrodloMetryki`, `pomiaryOdcinka`, `opisMasyOdPacjenta`,
+  `opisOdcinka`, `rysujPdf` (romby, kropki i legenda na stronie PDF);
+- `vilda_centile_live_data.js` — `reportedMeasurements` (pole migawki `reportedMeasurements`, tylko do rysowania),
+  nasłuch `vilda:therapy-points-changed` (`source: 'obesity-dziennik'`);
+- `vilda_centile_live_render.js` — `reportedFor` (pole `reported` siatki), `probe` czyta punkt z dziennika w jego wieku;
+- `vilda_centile_live_colors.js` — `drawReported`, warstwa pełnoekranowa (`fullLayer`) rysuje romby i omija je etykietą;
+- `vilda_centile_live_preview.js` — romby w podglądzie, przeszkody dla etykiety bieżącego pomiaru;
+- `vilda_centile_live_view.js` — legenda „dane z gabinetu” / „dane od pacjenta” (licznik ustępuje miejsca), dymek
+  „◇ od pacjenta · wiek”, „Waga 74,6 kg”, data; kursor i strzałki przeskakują także na pomiary z dziennika;
+- `vilda_professional_summary.js` — `laterPatientWeight`, `reportedWeightNode` (linijka w wierszu „Waga”), odświeżenie
+  karty po zmianie dziennika;
+- `vilda_adv_dziennik.js` (nowy, czytelny) — bloki tylko do odczytu `.adv-dz-row` w `#advMeasurements`;
+  `vilda_adv_history_collapse.js` — `blokiDziennika` (liczy bloki do nagłówka, ich nie tworzy);
+- `vilda_trajectory_analysis.js` — `zDziennikiemStrony`, `analyze` przy `input.dziennikStrony`.
+
+Wstawki w plikach zminifikowanych:
+
+```
+// vilda_advanced_growth.js — wejście analizy trajektorii karty zaawansowanej
+//    było:  TJ9=window.VildaTrajectoryAnalysis.analyze({measurements:or,
+//    jest:  TJ9=window.VildaTrajectoryAnalysis.analyze({dziennikStrony:!0,measurements:or,
+// vilda_summary_cards.js — karta „Porównanie z poprzednim pomiarem”
+// 1. żetony:  …'<span id="porownanieKontekst" …></span>');
+//      jest:  …'<span id="porownanieKontekst" …></span>','<span id="porownaniePacjent" class="porownanie-chip porownanie-chip--pacjent" hidden></span>');
+// 2. updatePrevSummaryDiff: kEl=…("porownanieKontekst"),pEl=…("porownaniePacjent"),…;pEl&&(pEl.hidden=!0,pEl.textContent="");
+// 3. po pasku „kontekst:”: const Sd_dzOdc=Dz.pomiaryOdcinka([{ageMonths:t.ageMonths,weight:t.weightKg},{ageMonths:A*12,weight:s}],t.ageMonths,A*12),
+//    Sd_romb=…; żeton: romb + Dz.opisOdcinka(n)
+// 4. wiersz: po podpisie „Dziś” — w.klucz==="masa": span.pt-s.pt-pacjent (romb + Dz.opisMasyOdPacjenta(ostatni))
+// inline_index_04.js — buildCentilePageCanvas / generateCentileChart
+// 1. parametry:  …legacyLayout:__legacyLayout}){  →  …legacyLayout:__legacyLayout,pomiaryDziennika:__dz04}){
+// 2. po serii wagi (przed „wagaiwzrost.pl”): (function(){if(__dz04!==!0)return;…Dz.rysujPdf(n,{minX:e,maxX:t,
+//    height:{px:220,py:me+80,pw:ce-220,ph:ue-160,minY:w,maxY:A},weight:{px:220,py:Ge+80,pw:ce-220,ph:Ae-160,minY:M,maxY:u},
+//    legend:{x:oe/2,y:le-24},current:{ageMonths:_,weight:X,height:ne},measurements:advancedGrowthData.measurements})})(),
+// 3. generateCentileChart: …suppressSummaryBox:!!t}) → …suppressSummaryBox:!!t,pomiaryDziennika:!t})
+//    (siatka „zewnętrzna” — inne dane niż pacjent strony — i producenci modelOnly nie rysują dziennika)
+```
+
+`index.html`: `<span id="advHistoryPatient" class="porownanie-chip adv-history-patient" hidden>` obok licznika
+„Poprzednich pomiarów” i `<script defer src="vilda_adv_dziennik.js?v=1">` po `vilda_adv_history_collapse.js`; wpis
+precache `'/vilda_adv_dziennik.js?v=1'` dopisany ręcznie. CSS: `vilda_centile_live_panel.css` (klucz kropki i rombu,
+data w dymku), `vilda_professional_summary.css` (`.professional-summary-reported`), `inline_index_00.css` (`.adv-dz-*`,
+`.adv-history-patient`, `#advResults .vtap-pac-l` schowany jak na makiecie), `style.css` (`.porownanie-chip--pacjent`,
+`.vilda-romb-pacjent`, `.pt-s.pt-pacjent`).
+
+**Granice.** Sejf, dziennik, zapis wizyty, autozapis i `collectAdvancedMeasurements()` bez zmian — pomiary z dziennika
+są tylko rysowane i pokazywane. Bez zmian: Karta pacjenta (temat C), DocPro, siatka Palczewskiej 1–18 lat i strona
+„standardowa” PDF, karta „Obliczenia wzrostowe” (tryb podstawowy). Wersje `?v=`, precache i `SW_VERSION` ustawił
+`npm run podbij-wersje`.
+
 ## Łatka P-E2-MENARCHE — estradiol poniżej 18 lat: zakresy dorosłych po 5 latach od menarche (`lab_units_data.js` 42 → 43, `lab_unit_converter.js` 10 → 11, `vilda_lab_packages.js` 10 → 11, `inline_przelicznik_jednostek_00.css` 17 → 18, `przelicznik-jednostek.html`, 2026-11-19, decyzje właściciela)
 
 Opis działania, przypadki, dowody i ograniczenia: `docs/clinical/ALGORITHMS.md`, wpis „LAB-E2-MENARCHE”. Zmiany wprowadzono wprost w artefaktach, czytelnymi blokami; żadnego pliku nie przebudowano z dawnych źródeł ani nie minifikowano ponownie.

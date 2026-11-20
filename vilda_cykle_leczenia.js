@@ -1520,6 +1520,127 @@
     return pid && wczytany.pid === pid && wczytany.punkty ? wczytany.punkty : null;
   }
 
+  // ── Pomiary z dziennika w całej aplikacji (P-OTYLOSC-STRONA, temat D; makieta zaakceptowana 2026-11-20) ────────
+  /**
+   * Pomiary z dziennika pacjenta wczytanego na stronie (punktyWczytanego) do dopisania przy pomiarach `osCzasu`
+   * (wizyty i bieżący pomiar formularza) — dla siatki i podsumowania „Podsumowanie wyników”, „Poprzednich pomiarów”
+   * obliczeń wzrostowych, analizy trajektorii, PDF siatek i karty „Porównanie z poprzednim pomiarem”. Te same reguły
+   * co w Karcie pacjenta (pomiaryDoSiatek: wizyta wygrywa w tym samym miesiącu). Opcje:
+   *  • patientId — pacjent, którego dane pokazuje konsument; inny niż odczytany dziennik → [];
+   *  • doWiekuMies — bez pomiarów po tym wieku (odtworzenie dawnej wizyty nie bierze danych z późniejszego okresu).
+   * Bez dziennika, bez sejfu albo przy innym pacjencie — [] (konsument zostaje przy samych wizytach).
+   */
+  function pomiaryStrony(osCzasu, opcje) {
+    var o = opcje || {};
+    var punkty = punktyWczytanego();
+    if (!punkty || !punkty.length) return [];
+    if (o.patientId && o.patientId !== wczytany.pid) return [];
+    var lista = pomiaryDoSiatek(osCzasu, punkty);
+    var doWieku = o.doWiekuMies == null ? NaN : Number(o.doWiekuMies);
+    return isFinite(doWieku) ? lista.filter(function (p) { return p.ageMonths <= doWieku + 1e-9; }) : lista;
+  }
+
+  /**
+   * Masy od pacjenta w odcinku między dwoma pomiarami (karta „Porównanie z poprzednim pomiarem”): wpisy dziennika
+   * pacjenta strony z masą od pacjenta, odMies < wiek ≤ doMies, rosnąco. `osCzasu` — pomiary wizyt (wizyta wygrywa
+   * w tym samym miesiącu). Liczy się tylko do pokazania; zmiana w tabeli zostaje liczona między wizytami.
+   */
+  function pomiaryOdcinka(osCzasu, odMies, doMies, opcje) {
+    var od = Number(odMies), dok = Number(doMies);
+    if (!isFinite(od) || !isFinite(dok) || dok <= od) return [];
+    return pomiaryStrony(osCzasu, opcje).filter(function (p) {
+      return p.zrodloMasy === 'pacjent' && Number(p.weight) > 0 && p.ageMonths > od + 1e-9 && p.ageMonths <= dok + 1e-9;
+    });
+  }
+
+  /** „od pacjenta 12.11.2026: 74,6 kg” (bez daty — „od pacjenta: 74,6 kg”). */
+  function opisMasyOdPacjenta(p) {
+    var d = dataPL(p && p.dateISO);
+    return 'od pacjenta' + (d ? ' ' + d : '') + ': ' + liczbaPL(p && p.weight, 1) + ' kg';
+  }
+
+  /** „w odcinku 1 pomiar od pacjenta”, „2 pomiary”, „5 pomiarów”. */
+  function opisOdcinka(n) {
+    var d = n % 10, s = n % 100;
+    var slowo = n === 1 ? 'pomiar' : d >= 2 && d <= 4 && !(s >= 12 && s <= 14) ? 'pomiary' : 'pomiarów';
+    return 'w odcinku ' + n + ' ' + slowo + ' od pacjenta';
+  }
+
+  /**
+   * PDF „Generuj siatkę OLAF” (buildCentilePageCanvas, temat D; makieta 2026-11-20): pomiary z dziennika pacjenta
+   * strony na siatce wzrostu i masy — masa (wzrost) od pacjenta pustym rombem, wpis z gabinetu poza wizytą czarną
+   * kropką jak wizyta, bez linii przebiegu. Pod siatkami legenda „● dane z gabinetu  ◇ dane od pacjenta” (tylko gdy
+   * jest romb). Ramka podsumowania na siatce — bez zmian. `g` — geometria strony:
+   * { minX, maxX, height|weight: {px, py, pw, ph, minY, maxY}, legend: {x, y}, current: {ageMonths, weight, height},
+   *   measurements }. Zwraca liczbę narysowanych rombów.
+   */
+  function rysujPdf(ctx, g) {
+    if (!ctx || !g) return 0;
+    var hist = Array.isArray(g.measurements) ? g.measurements : [];
+    var cur = g.current || {};
+    var cam = Number(cur.ageMonths);
+    var os = hist.concat(isFinite(cam) ? [{ ageMonths: cam, weight: cur.weight, height: cur.height }] : []);
+    var pozniej = isFinite(cam) && hist.some(function (m) {
+      var am = Number(m && m.ageMonths);
+      if (!isFinite(am) && m && isFinite(Number(m.ageYears))) am = Number(m.ageYears) * 12;
+      return isFinite(am) && am > cam + 1e-9;
+    });
+    var lista = pomiaryStrony(os, { doWiekuMies: pozniej ? cam : null });
+    if (!lista.length) return 0;
+    var romby = 0;
+    ['height', 'weight'].forEach(function (met) {
+      var p = g[met];
+      if (!p || !(g.maxX > g.minX) || !(p.maxY > p.minY)) return;
+      lista.forEach(function (x) {
+        var zr = zrodloMetryki(x, met);
+        var v = Number(x[met]);
+        if (!zr || x.ageMonths < g.minX || x.ageMonths > g.maxX || v < p.minY || v > p.maxY) return;
+        var px = p.px + (x.ageMonths - g.minX) * p.pw / (g.maxX - g.minX);
+        var py = p.py + p.ph - (v - p.minY) * p.ph / (p.maxY - p.minY);
+        ctx.save();
+        ctx.beginPath();
+        if (zr === 'pacjent') {
+          var r = 14;
+          ctx.moveTo(px, py - r); ctx.lineTo(px + r, py); ctx.lineTo(px, py + r); ctx.lineTo(px - r, py); ctx.closePath();
+          ctx.fillStyle = '#ffffff'; ctx.fill();
+          ctx.lineWidth = 4; ctx.strokeStyle = '#000000'; ctx.stroke();
+          romby++;
+        } else {
+          ctx.arc(px, py, 8, 0, 2 * Math.PI);
+          ctx.fillStyle = '#000000'; ctx.fill();
+        }
+        ctx.restore();
+      });
+    });
+    if (romby && g.legend) {
+      ctx.save();
+      ctx.font = '30px sans-serif';
+      ctx.fillStyle = '#333333';
+      ctx.textBaseline = 'middle';
+      ctx.textAlign = 'left';
+      var t1 = 'dane z gabinetu', t2 = 'dane od pacjenta';
+      var w1 = ctx.measureText(t1).width, w2 = ctx.measureText(t2).width;
+      var calosc = 16 + 14 + w1 + 60 + 28 + 14 + w2;
+      var x0 = g.legend.x - calosc / 2, y = g.legend.y;
+      ctx.beginPath(); ctx.arc(x0 + 8, y, 8, 0, 2 * Math.PI); ctx.fillStyle = '#000000'; ctx.fill();
+      ctx.fillStyle = '#333333'; ctx.fillText(t1, x0 + 30, y);
+      var xr = x0 + 30 + w1 + 60 + 14;
+      ctx.beginPath(); ctx.moveTo(xr, y - 12); ctx.lineTo(xr + 12, y); ctx.lineTo(xr, y + 12); ctx.lineTo(xr - 12, y); ctx.closePath();
+      ctx.fillStyle = '#ffffff'; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = '#000000'; ctx.stroke();
+      ctx.fillStyle = '#333333'; ctx.fillText(t2, xr + 28, y);
+      ctx.restore();
+    }
+    return romby;
+  }
+
+  /** Źródło wartości pomiaru dla metryki: 'pacjent' albo 'gabinet' (bez wartości — null). */
+  function zrodloMetryki(p, metryka) {
+    if (!p) return null;
+    if (metryka === 'height') return Number(p.height) > 0 ? (p.zrodloWzrostu === 'pacjent' ? 'pacjent' : 'gabinet') : null;
+    if (metryka === 'weight') return Number(p.weight) > 0 ? (p.zrodloMasy === 'pacjent' ? 'pacjent' : 'gabinet') : null;
+    return null;
+  }
+
   if (w.document && typeof w.document.addEventListener === 'function' && typeof w.setTimeout === 'function') {
     try {
       // Wczytanie pacjenta i wpisy z innego urządzenia (synchronizacja) — odczyt od nowa; czyszczenie stanu,
@@ -1568,7 +1689,13 @@
     wczytaj: wczytaj,
     zapisz: zapisz,
     punktyWczytanego: punktyWczytanego,
-    odswiezWczytanego: odswiezWczytanego
+    odswiezWczytanego: odswiezWczytanego,
+    pomiaryStrony: pomiaryStrony,
+    pomiaryOdcinka: pomiaryOdcinka,
+    rysujPdf: rysujPdf,
+    opisMasyOdPacjenta: opisMasyOdPacjenta,
+    opisOdcinka: opisOdcinka,
+    zrodloMetryki: zrodloMetryki
   });
 }(typeof window !== 'undefined' ? window : this));
 

@@ -161,6 +161,41 @@
     return { points: circles, segments: segments };
   }
 
+  // P-OTYLOSC-STRONA (temat D): pomiary z dziennika leczenia obok przebiegu, bez linii. Masa (wzrost) od pacjenta —
+  // pomarańczowy romb jak w Karcie pacjenta; wpis z gabinetu poza wizytą — kropka w kolorze centyla jak pomiar wizyty.
+  function drawReported(doc, opts) {
+    var group = opts.group, reported = opts.reported || [], mapped = opts.mapped || [];
+    var prefix = opts.prefix || 'vilda-centile-live-preview', radius = opts.radius || 5;
+    var nodes = [];
+    function node(tag, attrs, content) {
+      var result = doc.createElementNS(NS, tag);
+      Object.keys(attrs || {}).forEach(function (key) { result.setAttribute(key, String(attrs[key])); });
+      if (content !== undefined) result.textContent = content;
+      return result;
+    }
+    reported.forEach(function (point, index) {
+      var at = mapped[index];
+      if (!at || !finite(at.x) || !finite(at.y)) return;
+      var patient = point.origin === 'pacjent', item;
+      var common = { class: prefix + (patient ? '-reported-patient' : '-reported-office'), 'data-age-months': point.ageMonths,
+        'data-value': point.value, 'data-origin': patient ? 'pacjent' : 'gabinet', 'data-date': point.dateISO || '' };
+      if (patient) {
+        var r = radius * 1.05;
+        item = node('polygon', Object.assign(common, { points: [[at.x, at.y - r], [at.x + r, at.y], [at.x, at.y + r], [at.x - r, at.y]]
+          .map(function (q) { return q[0].toFixed(2) + ',' + q[1].toFixed(2); }).join(' '),
+          fill: '#fff4e0', stroke: '#b45f06', 'stroke-width': opts.strokeWidth || 1.6, 'stroke-linejoin': 'round' }));
+      } else {
+        item = node('circle', Object.assign(common, { cx: at.x, cy: at.y, r: radius * 0.8,
+          fill: color(tone(opts.metric, point.percentile)), stroke: '#fff', 'stroke-width': opts.strokeWidth || 2 }));
+      }
+      if (opts.vectorEffect !== false) item.setAttribute('vector-effect', 'non-scaling-stroke');
+      var label = (opts.metric === 'height' ? 'Wzrost' : 'Waga') + ' ' + Number(point.value).toLocaleString('pl-PL', { maximumFractionDigits: 1 })
+        + (opts.metric === 'height' ? ' cm' : ' kg') + (patient ? ' · od pacjenta' : ' · z gabinetu') + (point.dateISO ? ' · ' + point.dateISO.split('-').reverse().join('.') : '');
+      item.appendChild(node('title', {}, label));
+      group.appendChild(item); nodes.push(item);
+    });
+    return nodes;
+  }
   function fullLayer(image, asset) {
     var doc = image.ownerDocument || w.document;
     var scale = 1;
@@ -189,6 +224,13 @@
       x: plot.x + (point.ageMonths - plot.ageMin) / (plot.ageMax - plot.ageMin) * plot.w,
       y: plot.y + (plot.maxY - point.value) / (plot.maxY - plot.minY) * plot.h
     }; });
+    var reported = (asset.reported || []).filter(function (point) {
+      return Number.isFinite(point.ageMonths) && Number.isFinite(point.value);
+    });
+    var reportedMapped = reported.map(function (point) { return {
+      x: plot.x + (point.ageMonths - plot.ageMin) / (plot.ageMax - plot.ageMin) * plot.w,
+      y: plot.y + (plot.maxY - point.value) / (plot.maxY - plot.minY) * plot.h
+    }; });
     function paint() {
       defs.replaceChildren(); graph.replaceChildren(); labels.replaceChildren();
       var clip = node('clipPath', {id: id + '-clip'});
@@ -198,6 +240,8 @@
         idPrefix: id, prefix: 'vilda-centile-live-full', lineWidth: 3.2,
         haloWidth: 6.3, pointRadius: 4.6 / scale, lastRadius: 5.8 / scale,
         pointStrokeWidth: 2, vectorEffect: true});
+      drawReported(doc, {group: graph, metric: asset.metric, reported: reported, mapped: reportedMapped,
+        prefix: 'vilda-centile-live-full', radius: 5.6 / scale, vectorEffect: true});
       wrapper.dataset.valueLabel = 'hidden';
       if (!points.length || asset.valueLabelVisible === false) return;
       var currentIndex = points.findIndex(function (point) { return point.current; });
@@ -207,7 +251,8 @@
       var labelWidth = (value.length * 8 + 16) / scale, labelHeight = 23 / scale;
       var rect = placeLabel({ plot: plot, mapped: mapped, pointIndex: currentIndex,
         width: labelWidth, height: labelHeight, gap: 4 / scale,
-        pointRadius: 6.8 / scale, lineWidth: 6.3 / scale });
+        pointRadius: 6.8 / scale, lineWidth: 6.3 / scale,
+        obstacles: reportedMapped.map(function (item) { return { x: item.x - 7 / scale, y: item.y - 7 / scale, w: 14 / scale, h: 14 / scale }; }) });
       wrapper.dataset.valueLabel = rect ? 'placed' : 'header';
       if (!rect) return;
       var x = rect.x, y = rect.y;
@@ -227,5 +272,5 @@
     return wrapper;
   }
   w.VildaCentileLiveColors = Object.freeze({ tone: tone, color: color, colorAt: colorAt,
-    placeLabel: placeLabel, draw: draw, fullLayer: fullLayer, palette: palette });
+    placeLabel: placeLabel, draw: draw, drawReported: drawReported, fullLayer: fullLayer, palette: palette });
 })(typeof window !== 'undefined' ? window : globalThis);

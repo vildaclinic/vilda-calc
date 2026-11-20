@@ -3573,6 +3573,26 @@ fieldset.user-card {
   border-color: #d5def5
 }
 
+/* P-OTYLOSC-STRONA (temat D): pomiar od pacjenta (dziennik leczenia) — romb jak na siatkach. */
+.porownanie-chip--pacjent {
+  gap: 5px;
+  background: #fff4e0;
+  color: #8a4b00;
+  border-color: #f0c38a
+}
+
+.vilda-romb-pacjent {
+  display: inline-block;
+  flex: none;
+  width: 8px;
+  height: 8px;
+  margin: 0 1px;
+  box-sizing: border-box;
+  background: #fff4e0;
+  border: 1.4px solid #b45f06;
+  transform: rotate(45deg)
+}
+
 .porownanie-chip[hidden] {
   display: none
 }
@@ -3661,6 +3681,15 @@ fieldset.user-card {
   color: #6b7a7a;
   margin-top: .1rem;
   line-height: 1.3
+}
+
+/* P-OTYLOSC-STRONA (temat D): masa od pacjenta w odcinku — linijka pod „Dziś” w wierszu „Waga”. */
+.pt-s.pt-pacjent {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  color: #8a4b00
 }
 
 .pt-d {
