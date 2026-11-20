@@ -25,7 +25,7 @@
 | Karta „Zaawansowane obliczenia wzrostowe” | `index.html` (Start) | `vilda_advanced_growth.js`, `app.js` (`collectAdvancedMeasurements`) | Wiersze historii `#advMeasurements .measure-row`: `.adv-age-years`, `.adv-age-months`, `.adv-height`, `.adv-weight`, `.adv-bone-age`. **Nie mają daty.** `advancedGrowthData.measurements` to wyłącznie historia; bieżący pomiar pochodzi z formularza głównego (`#age`, `#ageMonths`, `#height`, `#weight`, `#sex`). |
 | Kopia karty zaawansowanej | `docpro.html` | ten sam moduł | `#advancedGrowthSection` leży w ukrytych kontenerach (`#results`, `.container`: `display:none`), a przycisk ma `disabled`. **[pomiar]** Lekarz jej nie widzi, ale ona działa: liczy `advancedGrowthData` (z niej monitor bierze MPH do mpSDS) i dostaje wiersze punktów GH (U3). |
 | Monitor leczenia GH | tylko `docpro.html` | `gh_therapy_monitor.js` | Lista punktów terapii `window.ghTherapyPoints`, tabela, hSDS / tempo / hSDS−mpSDS, segmenty wg preparatu. Punkty powstają przyciskami Włączenie / Kontynuacja / Zakończenie (`ghAddTherapyPoint`) z bieżącego formularza albo formularzem „Wsteczny punkt” (`ghAddRetroPoint`). |
-| Karta GH/IGF-1 | tylko `docpro.html` | `gh_igf_therapy.js` | Program, preparat, dawka (`#therProg`, `#therDrug`, `#therDailyDose`); czyta **ostatni element** listy punktów (kolejność wstawiania, nie wiek). |
+| Karta GH/IGF-1 | tylko `docpro.html` | `gh_igf_therapy.js` | Program, preparat, dawka (`#therProg`, `#therDrug`, `#therDailyDose`); wizyta kontrolna wiązała się z **ostatnim elementem** listy punktów (kolejność wstawiania, nie wiek) — od P-GH-WZNOWIENIE, część 2 z ostatnim punktem wg wieku (reguła kursów). |
 | Tabela „Szacowane spożycie energii” | `index.html` | `vilda_advanced_growth.js` (parowanie), `vilda_estimated_intake*.js` | Lustro wierszy karty zaawansowanej, **w tym wierszy punktów GH** (`data-gh-id`), plus zablokowany wiersz bieżącego pomiaru. |
 | Karta pacjenta, sejf | obie | `vilda_auth_ui.js`, `vilda_vault.js`, `vilda_growth_prediction_validation*.js` | Czytają rekord i **scalają** źródła historii, każde według własnej reguły (§3). |
 
@@ -40,12 +40,20 @@
   drug, program, igf1: ng/mL|null, igf1Unit: "ng/mL", igf1DaysSinceDose }
 ```
 
-Reguły monitora:
-- najwyżej jedno „Włączenie” i jedno „Zakończenie”;
+Reguły monitora (od P-GH-WZNOWIENIE, część 2, 2026-11-20 — jedno źródło `VildaGhPunkty.sprawdzRodzaj`, wersja 4):
+- reguła KURSÓW zamiast „najwyżej jedno „Włączenie” i jedno „Zakończenie”” w całej liście. Kursy liczy
+  `VildaTrajectoryAnalysis.ghKursy` (punkty wg wieku, przy równym wieku Kontynuacja → Zakończenie → Włączenie, kurs
+  zamyka „Zakończenie”), a sprawdzenie zna wiek nowego punktu: „Włączenie” — pierwszy punkt kursu (nie później niż jego
+  pierwszy punkt) i jedyne w kursie, więc wolno je dodać po „Zakończeniu” (wznowienie) i na początku kursu bez
+  „Włączenia”; „Zakończenie” — po ostatnim punkcie kursu, jedyne w kursie, z wcześniejszym punktem; „Kontynuacja” — nie
+  w kursie po „Zakończeniu” bez „Włączenia” (W2). Edycja — ta sama symulacja bez edytowanego punktu;
 - wiek > 0, a masa, wzrost i dawka muszą być dodatnie;
 - program i preparat są wymagane.
 
-Tabela sortuje najpierw według rodzaju wizyty, potem według wieku, więc „Kontynuacja” sprzed „Włączenia” pokazuje się za nim.
+Tabela sortuje według reguły kursów (wiek; przy równym wieku Kontynuacja → Zakończenie → Włączenie), z wierszem „Kurs k —
+…” przed każdym kursem od drugiego; dotąd sortowała najpierw według rodzaju wizyty, potem według wieku, więc „Kontynuacja”
+sprzed „Włączenia” pokazywała się za nim. Metryki, ocena B.64 i odcinki leków — osobno w każdym kursie. Opis:
+`docs/clinical/ALGORITHMS.md`, P-GH-WZNOWIENIE, część 2.
 
 **Dwie ścieżki tworzenia punktu przyjmują dawkę w różnych jednostkach [kod]:**
 - przyciski główne (`He()`) biorą **mg/kg/d** z karty GH;

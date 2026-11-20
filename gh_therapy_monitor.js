@@ -147,9 +147,10 @@ function ghWiekNowegoPunktu(A, edytowany) {
     : A.wiekMiesZPol((document.getElementById("age") || {}).value, (document.getElementById("ageMonths") || {}).value);
 }
 /** Formularz wstecznego punktu: rodzaje mozliwe w jakimkolwiek wieku (VildaGhPunkty.dostepneRodzaje, wsteczny);
-    false bez modulu punktow (wtedy dotychczasowe opcje, a zapis i tak odmowi). */
+    false bez zgodnego modulu punktow (wtedy dotychczasowe opcje, a zapis i tak odmowi). Bramka jak ostrzezenie
+    o uszkodzonych wpisach (Gpb): opcje formularza nie zaleza od modulu dawki (bez niego odmawia dopiero zapis, D6). */
 function ghRodzajeWsteczne(select, lista) {
-  const A = Gpa();
+  const A = Gpb();
   if (!A) return !1;
   const r = A.dostepneRodzaje(lista, { wsteczny: !0 });
   Array.prototype.forEach.call(select.options || [], (o) => {

@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { opcjePrzedApi, rodzaje, zrodlo } from '../support/gh-monitor-atrapa.mjs';
 import {
   KATEGORIE, KATEGORIE_ODMOW, LISTY, PLIK_WZORCA, PLIKI, idReprezentatywnych, kanon, korzen, pierwszaRoznica,
-  podsumowanieKategorii, siatka, wykonajNaSwiezej, wykonajPrzypadki,
+  podsumowanieKategorii, siatka, wplywRegulyKursow, wykonajNaSwiezej, wykonajPrzypadki,
 } from '../scripts/gh-punkty-wzorzec.mjs';
 
 // P-GH-PUNKTY-TESTY: złota siatka punktów terapii GH. Ok. 10 tys. kombinacji ścieżek Z1 (nowy punkt z karty), Z2 (edycja
@@ -23,6 +23,12 @@ import {
 // P-GH-NOWE-ID-MONITOR: id nowego punktu nadaje dzisiejszemu monitorowi VildaGhPunkty.noweId(), a monitorowi z BAZA
 // i wyroczni — sam monitor. Każdy przebieg zastępuje znacznikiem wzorca tylko swoją postać id (postać 'api' dla drzewa
 // roboczego, 'monitor' dla wyroczni); kontrole negatywne pokazują, że id nadane po dawnemu wywraca porównanie.
+// P-GH-WZNOWIENIE, część 2 (zmiana kliniczna, decyzje właściciela 2026-11-20, W2): reguła rodzaju punktu to reguła kursów
+// (VildaTrajectoryAnalysis.ghKursy) zamiast „najwyżej jedno Włączenie i jedno Zakończenie”. Przypadki, których wynik
+// reguła kursów zmienia (wplywRegulyKursow: każda odmowa „zajęty typ” — inny tekst; zapis albo odmowa na wartościach,
+// gdzie dziś odmawia reguła kursów), muszą dać odmowę z tekstem reguły kursów bez zapisu (edycja — każda na świeżej
+// atrapie, bo po odmowie formularz zostaje otwarty); pozostałe przypadki z modułem dawki porównujemy ze skrótami wzorca
+// policzonymi z BAZA tylko z nich (kategorieRegulaKursow).
 
 const wzorzec = JSON.parse(fs.readFileSync(path.join(korzen, PLIK_WZORCA), 'utf8'));
 const przypadki = siatka();
@@ -103,6 +109,20 @@ function naruszenieBezModuluDawki(p, w) {
   if (p.sciezka === 'Z4' && !w.wstecznyWidoczny) return 'formularz wsteczny zamknięty po odmowie';
   return null;
 }
+// P-GH-WZNOWIENIE, część 2: odmowa reguły kursów — [E, K] (wsteczny [E, E, K]), tekst reguły, bez zapisu, swój formularz
+// otwarty.
+function naruszenieRegulyKursow(p, w, wplyw) {
+  const r = rodzaje(w.dziennik).join(',');
+  if (r !== (p.sciezka === 'Z4' ? 'E,E,K' : 'E,K')) return `odmowa reguły kursów (${wplyw.kod}) z dziennikiem ${r}`;
+  if (w.komunikat !== wplyw.komunikat) return `odmowa reguły kursów (${wplyw.kod}) z komunikatem ${w.komunikat}`;
+  if (w.edycjaWidoczna !== (p.sciezka === 'Z2') || w.wstecznyWidoczny !== (p.sciezka === 'Z4')) return 'formularz po odmowie reguły kursów';
+  if (kanon(w.lista) !== kanon(w.modul)) return 'lista w oknie ≠ lista w pamięci modułu po odmowie reguły kursów';
+  return null;
+}
+const WPLYW = new Map(przypadki.map((p) => [p.id, wplywRegulyKursow(p)]));
+const zmienionaRegula = (p) => !!WPLYW.get(p.id);
+// Edycja zmieniona regułą kursów kończy się odmową z otwartym formularzem — na świeżej atrapie.
+const doWykonania = (lista) => lista.map((p) => (zmienionaRegula(p) && p.sciezka === 'Z2' && !p.swieza ? { ...p, swieza: true } : p));
 const zModulemDawki = (lista) => lista.filter((p) => p.modulDawki);
 const bezModuluDawki = (lista) => lista.filter((p) => !p.modulDawki).map((p) => ({ ...p, swieza: true }));
 
@@ -117,6 +137,8 @@ describe('Złota siatka punktów GH — budowa siatki i wzorca', () => {
     for (const k of KATEGORIE) {
       expect(wzorzec.kategorie[k].przypadki, k).toBe(przypadki.filter((p) => p.kategoria === k).length);
       expect(wzorzec.kategorieZModulemDawki[k].przypadki, k).toBe(przypadki.filter((p) => p.kategoria === k && p.modulDawki).length);
+      expect(wzorzec.kategorieRegulaKursow[k].przypadki, k)
+        .toBe(przypadki.filter((p) => p.kategoria === k && p.modulDawki && !zmienionaRegula(p)).length);
     }
     const zapisy = KATEGORIE.reduce((s, k) => s + wzorzec.kategorie[k].zapisy, 0);
     const odmowy = KATEGORIE_ODMOW.reduce((s, k) => s + wzorzec.kategorie[k].przypadki, 0);
@@ -128,6 +150,17 @@ describe('Złota siatka punktów GH — budowa siatki i wzorca', () => {
       else if (k === 'Z5') expect(b, k).toBe(przypadki.filter((p) => p.kategoria === k && p.anuluj).length);
       else expect(b, k).toBe(0);
     }
+  });
+
+  it('P-GH-WZNOWIENIE, część 2: reguła kursów zmienia każdą odmowę „zajęty typ” i część zapisów — wszystkimi rodzajami odmowy reguły', () => {
+    const zmienione = przypadki.filter(zmienionaRegula);
+    expect(przypadki.filter((p) => p.powod === 'typ' && p.modulDawki).every(zmienionaRegula)).toBe(true);
+    expect(new Set(zmienione.map((p) => WPLYW.get(p.id).kod))).toEqual(new Set(['drugie-wlaczenie', 'drugie-zakonczenie',
+      'wlaczenie-pozniej', 'zakonczenie-bez-kursu', 'zakonczenie-nie-ostatnie']));
+    for (const k of ['Z1-modul', 'Z2-modul', 'Z4-modul']) expect(zmienione.some((p) => p.kategoria === k), k).toBe(true);
+    expect(zmienione.some((p) => p.kategoria === 'Z5' || !p.modulDawki)).toBe(false);
+    // Większość przypadków bez zmian (skróty z BAZA).
+    expect(zmienione.length).toBeLessThan(przypadki.filter((p) => p.modulDawki).length / 4);
   });
 
   it('wzorzec ma te same listy punktów, pliki i przypadki reprezentatywne co siatka (ok. 200, wejście bez zmian)', () => {
@@ -147,19 +180,27 @@ describe('Złota siatka punktów GH — prawdziwy monitor daje wynik wzorca', ()
     it(OPISY[kategoria], () => {
       const czesc = przypadki.filter((p) => p.kategoria === kategoria);
       const zModulem = zModulemDawki(czesc);
-      const wyniki = wykonajPrzypadki(zModulem);
+      const wyniki = wykonajPrzypadki(doWykonania(zModulem));
 
       // Pełny wynik przypadków reprezentatywnych: najpierw czytelna różnica, potem kolejność kluczy i bity liczb.
       for (const r of reprezentatywne.filter((x) => x.wejscie.kategoria === kategoria && x.wejscie.modulDawki)) {
         const w = wyniki.get(r.wejscie.id);
+        if (zmienionaRegula(r.wejscie)) {
+          expect(naruszenieRegulyKursow(r.wejscie, w, WPLYW.get(r.wejscie.id)), r.wejscie.id).toBeNull();
+          continue;
+        }
         expect(w, r.wejscie.id).toEqual(r.wynik);
         expect(pierwszaRoznica(r.wynik, w), r.wejscie.id).toBeNull();
       }
-      // Niezmienniki czytelne bez wzorca, dla każdego przypadku kategorii z modułem dawki.
-      const naruszenia = zModulem.map((p) => [p.id, naruszenie(p, wyniki.get(p.id))]).filter(([, n]) => n);
+      // Niezmienniki czytelne bez wzorca, dla każdego przypadku kategorii z modułem dawki (P-GH-WZNOWIENIE, część 2:
+      // przypadki zmienione regułą kursów — odmowa z tekstem reguły kursów).
+      const naruszenia = zModulem.map((p) => [p.id, zmienionaRegula(p)
+        ? naruszenieRegulyKursow(p, wyniki.get(p.id), WPLYW.get(p.id)) : naruszenie(p, wyniki.get(p.id))]).filter(([, n]) => n);
       expect(naruszenia).toEqual([]);
-      // Całość części z modułem dawki: skrót SHA-256 po id, wejściu i wyniku kanonicznym każdego przypadku.
-      expect(podsumowanieKategorii(zModulem, wyniki)[kategoria], PODPOWIEDZ).toEqual(wzorzec.kategorieZModulemDawki[kategoria]);
+      // Całość części z modułem dawki bez przypadków zmienionych regułą kursów: skrót SHA-256 po id, wejściu i wyniku
+      // kanonicznym każdego przypadku; skróty z BAZA (kategorieRegulaKursow).
+      const bezZmiany = zModulem.filter((p) => !zmienionaRegula(p));
+      expect(podsumowanieKategorii(bezZmiany, wyniki)[kategoria], PODPOWIEDZ).toEqual(wzorzec.kategorieRegulaKursow[kategoria]);
 
       // D6: każdy przypadek bez modułu dawki — odmowa bez zapisu.
       const bez = bezModuluDawki(czesc);
@@ -176,8 +217,9 @@ describe('Złota siatka punktów GH — atrapa użyta ponownie nie przenosi stan
     for (const r of reprezentatywne) {
       const p = wedlugId.get(r.wejscie.id);
       const w = wykonajNaSwiezej(p);
-      // D6: bez modułu dawki odmowa zamiast wyniku wzorca.
+      // D6: bez modułu dawki odmowa zamiast wyniku wzorca; P-GH-WZNOWIENIE, część 2: odmowa reguły kursów.
       if (!p.modulDawki) expect(naruszenieBezModuluDawki(p, w), r.wejscie.id).toBeNull();
+      else if (zmienionaRegula(p)) expect(naruszenieRegulyKursow(p, w, WPLYW.get(p.id)), r.wejscie.id).toBeNull();
       else expect(pierwszaRoznica(r.wynik, w), r.wejscie.id).toBeNull();
     }
   }, 60_000);
@@ -242,8 +284,9 @@ const KONTROLE = [
     dotyczy: (p) => p.sciezka === 'Z1' || p.sciezka === 'Z4' },
   // Bramka raty 3: monitor bez zgodnego API odmawia każdego zapisu i usunięcia; „Anuluj” przy usuwaniu bez zmian.
   // Każdy przypadek na świeżej atrapie (atrapa użyta ponownie przyjmuje tylko edycje zakończone zapisem).
-  { nazwa: 'monitor: bramka odrzuca API (wersja 3 → 4)', plik: 'gh_therapy_monitor.js',
-    kotwica: 'A&&A.wersja===3&&', zamiana: 'A&&A.wersja===4&&', dotyczy: (p) => !p.anuluj, swieza: true },
+  // P-GH-WZNOWIENIE, część 2: monitor zna tylko API wersji 4 (reguła kursów).
+  { nazwa: 'monitor: bramka odrzuca API (wersja 4 → 5)', plik: 'gh_therapy_monitor.js',
+    kotwica: 'A&&A.wersja===4&&', zamiana: 'A&&A.wersja===5&&', dotyczy: (p) => !p.anuluj, swieza: true },
   // P-GH-PUNKTY-USZKODZONE: bramka uszkodzonych wpisów stoi na drodze każdego zapisu i usunięcia (siatka ma listy bez
   // takich wpisów, więc dziś zawsze przepuszcza; ta kopia odmawia zawsze).
   { nazwa: 'monitor: bramka uszkodzonych wpisów zawsze odmawia', plik: 'gh_therapy_monitor.js',
@@ -252,8 +295,9 @@ const KONTROLE = [
 ];
 
 describe('Złota siatka punktów GH — kontrole negatywne', () => {
-  // Przypadki reprezentatywne z modułem dawki (bez modułu monitor od D6 odmawia, zanim sięgnie po API).
-  const zModulemRepr = reprezentatywne.filter((r) => r.wejscie.modulDawki);
+  // Przypadki reprezentatywne z modułem dawki (bez modułu monitor od D6 odmawia, zanim sięgnie po API), bez przypadków
+  // zmienionych regułą kursów (P-GH-WZNOWIENIE, część 2 — ich wynik i tak różni się od wzorca).
+  const zModulemRepr = reprezentatywne.filter((r) => r.wejscie.modulDawki && !zmienionaRegula(r.wejscie));
   const wejscia = zModulemRepr.map((r) => wedlugId.get(r.wejscie.id));
 
   for (const k of KONTROLE) {

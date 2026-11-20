@@ -202,8 +202,10 @@ function porownaj(przypadek, { zrodla } = {}) {
     r.push(...roznice(listaPrzed, monitor.lista, 'lista po odmowie rodzaju'));
   } else {
     r.push(...roznice({ zapis: wynik.zapis, komunikat: wynik.komunikat, lista: wynik.lista }, monitor));
+    // Zamierzona nowa odmowa reguły kursów: monitor sprzed API zapisywał albo odmawiał dopiero na wartościach (reguła
+    // rodzaju idzie przed wartościami, więc dziś lekarz zobaczy najpierw ją).
     if (!rodzaj.ok) {
-      if (KODY_NOWYCH_ODMOW.has(rodzaj.kod) && monitor.zapis) zmianaReguly = rodzaj.kod;
+      if (KODY_NOWYCH_ODMOW.has(rodzaj.kod)) zmianaReguly = rodzaj.kod;
       else if (!(rodzaj.kod === 'wartosci' && wynik.kod === 'wartosci')) r.push(`reguła kursów: API odmawia ${rodzaj.kod}, monitor: ${monitor.zapis ? 'zapis' : monitor.komunikat}`);
     }
   }
@@ -630,8 +632,12 @@ const KONTROLE = [
   {
     nazwa: 'edycja: sprawdzenie drugiego Włączenia nie pomija edytowanego punktu',
     kotwica: 'c.type==="start"&&String(c.id)!==String(x)', zamiana: 'c.type==="start"',
+    // P-GH-WZNOWIENIE, część 2: tylko tam, gdzie reguła kursów to Włączenie przyjmuje albo nie ocenia go z braku
+    // poprawnego wieku (gdzie sama odmawia, np. Włączenie przesunięte za pierwszy punkt kursu, zmieniony monitor też
+    // odmawia i porównanie nie ma czego wykryć).
     dotyczy: (w) => w.sciezka === 'edycja' && w.klik.typ === 'start' && punktPrzed(w).type === 'start'
-      && !w.klik.lista.some((p) => p.type === 'start' && String(p.id) !== String(w.cel)),
+      && !w.klik.lista.some((p) => p.type === 'start' && String(p.id) !== String(w.cel))
+      && (w.rodzaj.ok || w.rodzaj.kod === 'wartosci'),
   },
 ];
 

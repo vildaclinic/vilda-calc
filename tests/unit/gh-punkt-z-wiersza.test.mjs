@@ -167,6 +167,63 @@ describe('przygotujPunkt — reguły punktu wstecznego z VildaGhPunkty (wejście
   });
 });
 
+// P-GH-WZNOWIENIE, część 2: rodzaj punktu z wiersza sprawdza reguła kursów z WIEKIEM pomiaru wiersza; radio pokazuje
+// rodzaje możliwe w tym wieku, przycisk w przerwie między kursami jest nieaktywny. Wiek lata;miesiące.
+describe('rodzajeWWieku, stanPrzycisku i przygotujPunkt — reguła kursów (P-GH-WZNOWIENIE, część 2)', () => {
+  const ZAKONCZENIE = punkt('fikc-z', 'end', { ageYears: 9, ageMonths: 6, weight: 30, height: 131, doseAbs: 0.9 });
+  const ZAMKNIETY = [WLACZENIE, KONTYNUACJA, ZAKONCZENIE];
+  const wiersz = (lata, mies) => M.pomiarWiersza({ ...WIERSZ, lata: String(lata), miesiace: String(mies) });
+  const ok = (r) => ({ start: r.start.ok, continue: r.continue.ok, end: r.end.ok, domyslny: r.domyslny });
+  const wybor = (z) => ({ typ: 'continue', program: 'SNP', preparat: 'Omnitrope 10 mg', podawana: '0.9', igf1: '', dniIgf: '', ...z });
+
+  it('po Zakończeniu (wiersz 10;0): tylko Włączenie (wznowienie), domyślne Włączenie; Kontynuacja i Zakończenie z powodem', () => {
+    const r = M.rodzajeWWieku(A, ZAMKNIETY, wiersz(10, 0));
+    expect(ok(r)).toEqual({ start: true, continue: false, end: false, domyslny: 'start' });
+    expect(r.continue.komunikat).toBe('Po „Zakończeniu leczenia” dodaj najpierw „Włączenie leczenia” (wznowienie leczenia).');
+    expect(r.end.komunikat).toBe('Ten kurs leczenia ma już punkt „Zakończenie leczenia”.');
+    expect(M.stanPrzycisku(ZAMKNIETY, wiersz(10, 0), true, r)).toEqual({ widoczny: true, aktywny: true, powod: null });
+    // Zapis: Włączenie przyjęte, Kontynuacja odrzucona tekstem reguły kursów.
+    expect(M.przygotujPunkt(A, ZAMKNIETY, wiersz(10, 0), wybor({ typ: 'start' })).punkt).toMatchObject({ type: 'start', ageYears: 10, ageMonths: 0 });
+    expect(M.przygotujPunkt(A, ZAMKNIETY, wiersz(10, 0), wybor())).toEqual({ ok: false, komunikat: r.continue.komunikat });
+  });
+
+  it('w środku zamkniętego kursu (wiersz 9;0): Kontynuacja jak dotąd; Włączenie i Zakończenie — nie', () => {
+    expect(ok(M.rodzajeWWieku(A, ZAMKNIETY, wiersz(9, 0)))).toEqual({ start: false, continue: true, end: false, domyslny: 'continue' });
+  });
+
+  it('kurs otwarty z Włączeniem (wiersz po ostatnim punkcie): Kontynuacja i Zakończenie, domyślnie Kontynuacja — jak dotąd', () => {
+    expect(ok(M.rodzajeWWieku(A, [WLACZENIE, KONTYNUACJA], wiersz(9, 0)))).toEqual({ start: false, continue: true, end: true, domyslny: 'continue' });
+    // Wiersz przed ostatnim punktem kursu: Zakończenie nie (musi być ostatnim punktem kursu).
+    expect(ok(M.rodzajeWWieku(A, [WLACZENIE, punkt('fikc-k10', 'continue', { ageYears: 10 })], wiersz(9, 0))))
+      .toEqual({ start: false, continue: true, end: false, domyslny: 'continue' });
+  });
+
+  it('przerwa między kursami (wiersz 10;0 przy Z 9;6 i wznowieniu 11;0): żaden rodzaj — przycisk nieaktywny z powodem', () => {
+    const L = [...ZAMKNIETY, punkt('fikc-w11', 'start', { ageYears: 11, height: 138 })];
+    const r = M.rodzajeWWieku(A, L, wiersz(10, 0));
+    expect(ok(r)).toEqual({ start: false, continue: false, end: false, domyslny: 'continue' });
+    expect(M.stanPrzycisku(L, wiersz(10, 0), true, r)).toEqual({ widoczny: true, aktywny: false, powod: M.TEKSTY.przerwa });
+    // Bez rodzajów (dotychczasowe wywołanie) — jak dotąd aktywny; zajęty miesiąc ma pierwszeństwo.
+    expect(M.stanPrzycisku(L, wiersz(10, 0), true)).toEqual({ widoczny: true, aktywny: true, powod: null });
+    expect(M.stanPrzycisku(L, wiersz(9, 6), true, M.rodzajeWWieku(A, L, wiersz(9, 6))).powod).toBe(M.TEKSTY.zajetyMiesiac);
+  });
+
+  it('stary zapis W2 (Kontynuacja po Zakończeniu): wiersz przed pierwszym punktem kursu — Włączenie (dopisanie), domyślne Włączenie', () => {
+    const W2 = [...ZAMKNIETY, punkt('fikc-k11', 'continue', { ageYears: 11, height: 138 })];
+    expect(ok(M.rodzajeWWieku(A, W2, wiersz(10, 6)))).toEqual({ start: true, continue: false, end: false, domyslny: 'start' });
+    expect(ok(M.rodzajeWWieku(A, W2, wiersz(11, 6)))).toEqual({ start: false, continue: false, end: true, domyslny: 'end' });
+  });
+
+  it('niekompletny pomiar albo brak API — bez rodzajów (null)', () => {
+    expect(M.rodzajeWWieku(A, ZAMKNIETY, M.pomiarWiersza({ ...WIERSZ, wzrost: '' }))).toBeNull();
+    expect(M.rodzajeWWieku(null, ZAMKNIETY, wiersz(10, 0))).toBeNull();
+  });
+
+  it('TEKSTY.przerwa', () => {
+    expect(M.TEKSTY.przerwa).toBe('W tym wieku nie można dodać punktu leczenia GH: to przerwa po „Zakończeniu leczenia”, przed kolejnym „Włączeniem leczenia”.');
+  });
+});
+
 describe('VildaGhProgramyDane', () => {
   it('sześć programów w kolejności pola „Program” karty; IGF-1 wyłącznie z mekaserminą; dane zamrożone', () => {
     expect(D.programy.map((p) => p.kod)).toEqual(['SNP', 'ZT', 'PWS', 'SGA', 'PNN', 'IGF-1']);

@@ -458,6 +458,24 @@ describe('P-GH-WZNOWIENIE — podsumowanie i „Dane analityczne” GH od bież�
     expect(k.paski).toEqual([expect.objectContaining({ id: 'gh', stan: 'aktywne', czesci: ['0,03 mg/kg/d'] })]);
   });
 
+  // P-GH-WZNOWIENIE, część 2, GW5: Włączenie dopisane w DocPro do starego zapisu W2 (w miesiącu pierwszego punktu kursu,
+  // 10 l. 0 mies., albo wcześniej — 9 l. 6 mies.) — kurs 2 ma Włączenie: czas, przyrost i ΔhSDS wracają, bez ramki W2.
+  it('GW5: stary zapis W2 + Włączenie z DocPro (10 l. 0 mies. albo 9 l. 6 mies.) — kurs 2 z Włączeniem, czas i ΔhSDS wracają, bez ramki W2', () => {
+    const w10 = zbuduj({ plec: 'M', ghTherapyPoints: [...GR2, GHP('gw5-w', 'start', 10, 0, 27, 130, 0.03)] });
+    expect(znaczniki(w10)).toEqual(['aktywne', 'kurs 2 z 2']);
+    expect(w10.pole('Włączenie')).toBe('w wieku 10 l. 0 mies.');
+    expect(w10.pole('Punkty kontrolne')).toBe('2 w kursie (4 łącznie)');
+    expect(informacje(w10)).toEqual([]);
+    expect(w10.kafel('Wzrost przy włączeniu')).toEqual({ v: '130 cm', sub: 'hSDS −1,27 · 10 l. 0 mies.' });
+    expect(w10.kafel('Przyrost od Włączenia')).toBeNull();
+    const w96 = zbuduj({ plec: 'M', ghTherapyPoints: [...GR2, GHP('gw5-w', 'start', 9, 6, 26, 127, 0.03), GHP('gw5-k', 'continue', 11, 0, 30, 137, 0.033)] });
+    expect(w96.pole('Włączenie')).toBe('w wieku 9 l. 6 mies.');
+    expect(informacje(w96)).toEqual([]);
+    expect(w96.kafel('Przyrost całkowity')).toEqual({ v: '+10,0 cm', sub: 'przez 18 mies.' });
+    expect(w96.kafel('Odpowiedź (ΔhSDS)').v).not.toBe('—');
+    expect(w96.paski[0].czesci).toEqual(expect.arrayContaining(['18 mies.']));
+  });
+
   it('W2 z dwiema Kontynuacjami po Zakończeniu: tempo z punktów kursu zostaje; pasek bez czasu i ΔhSDS', () => {
     const k = zbuduj({ plec: 'M', ghTherapyPoints: [...GR2, GHP('r2-k2', 'continue', 11, 0, 30, 137, 0.033)] });
     expect(k.kafel('Tempo wzrastania')).toEqual({ v: '7 cm/rok', sub: 'ost. okres (z 12 mies.)' });

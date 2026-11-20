@@ -2449,6 +2449,63 @@ tylko przy dwóch Włączeniach w otwartym kursie — scalone duplikaty). Punkty
 DocPro (`gh_therapy_monitor.js`, `vilda_gh_punkty.js`, odcinki, B.64), sejf, Terminarz i Historia bez zmian (część 2).
 Wersje `?v=`, precache i `SW_VERSION` ustawił `npm run podbij-wersje`.
 
+## Łatki P-GH-WZNOWIENIE, część 2 — wznowienie leczenia GH w DocPro (`gh_therapy_monitor.js` 64 → 65, `gh_therapy_segments.js` 5 → 6, `gh_igf_therapy.js` 33 → 34, `vilda_auth_ui.js` 576 → 577; czytelne `vilda_gh_punkty.js` 6 → 7, `vilda_gh_punkt_z_wiersza.js` 3 → 4; 2026-11-20, decyzje właściciela)
+
+Czytelne źródło reguły wpisu: `vilda_gh_punkty.js` (wersja 4: `sprawdzRodzaj` z `opcje.wiekM`, `dostepneRodzaje` z kluczem
+`continue` i wariantem `{ wsteczny: true }`, `wiekMiesZPol`, `gotowe({ kursy: true })`) i `vilda_gh_punkt_z_wiersza.js`
+(`rodzajeWWieku`, `stanPrzycisku` z rodzajami, `przygotujPunkt` z wiekiem wiersza). Reguła kursów: `ghKursy` w
+`vilda_trajectory_analysis.js` (część 1, bez zmian). Opis: `docs/clinical/ALGORITHMS.md`, P-GH-WZNOWIENIE, część 2.
+Zminifikowane pliki zmienione wprost w artefakcie kotwicami występującymi dokładnie raz (skrypty łatek odtwarzają wynik
+z `origin/audyt` 8350126); bez ponownej minifikacji.
+
+```
+// gh_therapy_monitor.js — czytelny blok przed function F() (renderGHTherapyTable): GH_PODPOWIEDZ_BEZ_STARTU,
+//   GH_PODPOWIEDZ_WZNOWIENIE, ghKursyMonitora (kursy z VildaTrajectoryAnalysis.ghKursy i wiersze tabeli w ich kolejności;
+//   wpis spoza kursów w miejscu wg wieku; null bez modułu), ghWiekKursuTekst, ghOpisKursu („Kurs k — wznowienie w wieku …”
+//   / „Kurs k — bez Włączenia (…)”), ghWierszKursu (tr.gh-kurs-row), ghSeparatorKursu, ghProgramKursu, ghKursProgramu
+//   (przy edycji — kurs edytowanego punktu), ghPodpowiedzKursu, ghGrupyKursow, ghOznaczKurs (Gw_kurs, Gw_naglowek),
+//   ghSeparatorMetryki, ghMetrykiBiezacegoKursu, ghWiekNowegoPunktu, ghRodzajeWsteczne (bramka Gpb)
+// 1. Gpb:   A&&A.wersja===3&&                      → A&&A.wersja===4&&
+// 2. He:    sprawdzRodzaj(window.ghTherapyPoints,e,{pomin:x})  → …,{pomin:x,wiekM:ghWiekNowegoPunktu(Gpk,x)})
+// 3. ghAddRetroPoint: sprawdzRodzaj(window.ghTherapyPoints,o) → …,o,{wiekM:Gpk.wiekMiesZPol(#ghRetroAge,#ghRetroAgeMonths)})
+// 4. ghRetroSyncTypeOptions (i): przed dawnymi opcjami if(ghRodzajeWsteczne(a,o))return;
+// 5. F(): const r={start:0,continue:1,end:2},i=Gpo().sort(…) → const Gwk=ghKursyMonitora(Gpo()),r=…,i=Gwk?Gwk.wiersze.map(…):Gpo().sort(…)
+// 6. F(): wiersz programu: …break}Gwk&&Gwk.wiele&&(o=ghProgramKursu(Gwk.biezacy));if(!o&&i[0]…
+// 7. F(): i.forEach(o=>{ghSeparatorKursu(t,Gwk,o)&&(a=null);if(a!=null&&o.drug…   (zmiana preparatu w obrębie kursu)
+// 8. F(): #therProg: …(l=i[0].program),Gwk&&Gwk.wiele&&(l=ghProgramKursu(ghKursProgramu(Gwk))||l),l&&(o.value=l)…
+// 9. F(): #ghTherapyStartHint: tekst i widoczność z ghPodpowiedzKursu (bez modułu — dawny warunek i dawny tekst)
+// 10. ae(): po sortowaniu const Gwk=ghKursyMonitora(e),Gwg=Gwk&&Gwk.wiele?ghGrupyKursow(Gwk):[e];
+//     baza (e.find start) i pętla metryk w for(const Gwe of Gwg){…Gwe.find…Gwe.forEach(…),Gwk&&Gwk.wiele&&ghOznaczKurs(n,Gwe)}
+//     (jeden kurs albo brak modułu — jedna grupa = cała lista, ta sama ścieżka co dotąd)
+// 11. de(): e.forEach((i,Gwi)=>{ghSeparatorMetryki(n,i,e[Gwi-1]);…   Bg1(e) → Bg1(ghMetrykiBiezacegoKursu(e))
+// 12. arkusz w znaczniku Re(): #ghTherapyMonitorCard tr.gh-kurs-row > td{…} (bez stylów wpisanych w elementy)
+
+// gh_therapy_segments.js — ghSegmentByDrug (_):
+//   po filtrze punktów: var Kw=e.poKursach===!1?null:kursyOdcinkow(a);if(Kw)return odcinkiKursow(Kw,r);
+//   dawna treść (sortowanie, grupowanie po pełnej nazwie preparatu, tempo z VildaTempoWzrastania.odcinek) przeniesiona
+//   bez zmian do function odcinkiPunktow(a,r); nowe kursyOdcinkow (≥ 2 kursy z ghKursy, punkty bez wieku na początek
+//   kursu 1) i odcinkiKursow (odcinki każdego kursu, pole kurs, zmiany preparatu w obrębie kursu)
+
+// gh_igf_therapy.js — Qe (wizyta kontrolna):
+//   było:  return Array.isArray(e)&&e.length?e[e.length-1]:null
+//   jest:  return Array.isArray(e)&&e.length?ghOstatniPunktWgWieku(e):null
+//   nowa function ghOstatniPunktWgWieku(e): ostatni punkt ostatniego kursu ghKursy; bez modułu albo kursów — e[e.length-1]
+
+// vilda_auth_ui.js — czytelny blok P-GH-WZNOWIENIE (część 1):
+//   Gw_infoW2: „… Czas leczenia, przyrost i ΔhSDS od wznowienia liczymy od punktu „Włączenie leczenia”, którego ten kurs
+//   nie ma.” → „… Dopisz punkt „Włączenie leczenia” w DocPro (monitor terapii), by liczyć czas leczenia, przyrost i ΔhSDS
+//   od wznowienia.”; komentarz bloku zaktualizowany
+//   wl (podsumowanie GH): x.ghSegmentByDrug(a) → x.ghSegmentByDrug(a,{poKursach:!1})  (łańcuch „Preparaty (historia)”
+//   z całej historii, jak dotąd)
+```
+
+**Granice.** Jeden kurs (albo brak `VildaTrajectoryAnalysis.ghKursy`): metryki, B.64, odcinki i program monitora idą dawną
+ścieżką kodu; bez modułu kursów tabela i podpowiedź jak dotąd, a `VildaGhPunkty.sprawdzRodzaj` odmawia zapisu z prośbą
+o odświeżenie strony (bez powrotu do dawnej reguły). Nowe pola: wiersze metryk przy ≥ 2 kursach (`Gw_kurs`, `Gw_naglowek`),
+odcinki przy ≥ 2 kursach (`kurs`). Bez nowego pliku ładowanego przez strony; style w arkuszu karty monitora (znacznik `Re`),
+bez nowych zapisów stylu w elementach. Sejf, Historia, edytor notatki i lista pacjentów bez zmian. Wersje `?v=`, precache
+i `SW_VERSION` ustawił `npm run podbij-wersje`.
+
 ## Trwała tożsamość wizyt — źródło i granica artefaktu sejfu
 
 Zmiana funkcjonalna `P-TRWALE-WIZYTY` ma bazę `audyt` z commita
