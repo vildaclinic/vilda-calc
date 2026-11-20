@@ -580,3 +580,144 @@ test('home A2: long native trajectory stays compact and every historical measure
     }
   }
 });
+
+// Component regressions use only the fictional vault created by setup. All
+// application modules, SSI validators, collectors and persistence remain real.
+async function anonymousGrowthBase(frame) {
+  await frame.evaluate(() => clearAllData());
+  await expect(frame.locator('#vhomeGrowthExpand')).toBeEnabled();
+  // Establish the existing native precondition before the controlled seed.
+  // This read-only setup proof is not retained or substituted for OPEN's scope.
+  await frame.waitForFunction(() => VildaDataImportExport.getSaveReadiness().ready
+    && !VildaDataImportExport.isMainSessionAutosavePaused()
+    && VildaSaveStatusIndicator.getCurrentDecision().ready);
+  expect(await frame.evaluate(() => sessionStorage.getItem('vildaCurrentPatientId'))).toBeNull();
+}
+
+test('home growth regression: first anonymous native allocation retains the draft and a second visit invalidates it', async ({ page }) => {
+  const { frame } = await setup(page); await anonymousGrowthBase(frame);
+  const dialog = frame.getByRole('dialog', { name: 'Zaawansowane obliczenia wzrostowe', exact: true });
+  // Keep original OPEN, the native producer and the first validation in one
+  // task. No native queued writer can allocate the visit before this actor.
+  const allocation = await frame.evaluate(() => {
+    for (const [id, value] of Object.entries({ age: '13', height: '158', weight: '46' })) document.getElementById(id).value = value;
+    const read = () => {
+      const payload = VildaDataImportExport.captureCurrentUserDataReadOnly(); delete payload.timestampISO;
+      const session = VildaPersistence.readMainSession(); if (session) delete session.timestampISO;
+      return { payload, session, activity: VildaPubertyAssessmentState.getActivityRevision() };
+    };
+    const before = read(), nativeMother = document.getElementById('advMotherHeight').value;
+    const opened = VildaHomeGrowth.open('data'), host = document.getElementById('vhomeGrowthDialog');
+    const afterOpen = read();
+    const visit = VildaVisitContext.capture(VildaDataImportExport.captureCurrentUserDataReadOnly(), { patientId: null });
+    if (opened) document.getElementById('vhomeGrowthTab-data').click();
+    return { opened, before, afterOpen, after: read(), nativeMother, visit,
+      nativeVisit: VildaVisitContext.capture({ user: {} }, { patientId: null, readOnly: true }), open: !!host?.open };
+  });
+  expect(allocation.opened).toBe(true); expect(allocation.before.payload).not.toHaveProperty('visit');
+  expect(allocation.afterOpen).toEqual(allocation.before);
+  expect(allocation.visit).toMatchObject({ version: 1, patientId: null, origin: 'explicit' });
+  expect(allocation.visit.visitId).toMatch(/^[0-9a-f-]{36}$/i);
+  expect(allocation.open).toBe(true); await expect(dialog).toBeVisible();
+  expect(allocation.nativeVisit).toEqual(allocation.visit);
+  expect(allocation.after.payload.visit).toEqual(allocation.visit);
+  // Compare the complete snapshots from the one controlled actor. Ordinary
+  // autosave may legitimately settle after this evaluate returns.
+  const after = structuredClone(allocation.after);
+  delete after.payload.visit; expect(after).toEqual(allocation.before);
+  await field(dialog, 'advMotherHeight').fill('169');
+  const replacement = await frame.evaluate(() => {
+    const visit = VildaVisitContext.beginNew({ patientId: null });
+    document.querySelector('#vhomeGrowthDialog .vhome-dialog-apply').click();
+    return visit;
+  });
+  expect(replacement.visitId).not.toBe(allocation.visit.visitId);
+  await expect(dialog).toBeHidden(); await expect(frame.locator('#advMotherHeight')).toHaveValue(allocation.nativeMother);
+  expect(await frame.evaluate(() => VildaVisitContext.capture({ user: {} }, { patientId: null, readOnly: true }))).toEqual(replacement);
+});
+
+test('home growth regression: blank family and history cancel purely; immediate anonymous Apply persists the complete draft', async ({ page }) => {
+  const { frame } = await setup(page); await anonymousGrowthBase(frame);
+  const before = await snapshot(frame); expect(before.payload).not.toHaveProperty('visit'); expect(before.payload.user.age).toBeNull();
+  const blank = await show(frame); await field(blank, 'advMotherHeight').fill('167');
+  await blank.getByRole('button', { name: '+ Dodaj pomiar', exact: true }).click();
+  const row = blank.locator('[data-growth-row^="new-"]').first();
+  for (const [index, value] of [[0, '12'], [1, '0'], [2, '153'], [3, '40']]) await row.locator(`[data-growth-history-field="${index}"]`).fill(value);
+  expect(await snapshot(frame)).toEqual(before);
+  page.once('dialog', confirmation => confirmation.accept()); await blank.getByRole('button', { name: 'Anuluj', exact: true }).click();
+  expect(await snapshot(frame)).toEqual(before);
+  const fast = await frame.evaluate(() => {
+    for (const [id, value] of Object.entries({ age: '13', height: '158', weight: '46' })) document.getElementById(id).value = value;
+    // The controlled seed uses the same native constraint updater as the UI.
+    // It only projects the current main age onto native historical inputs.
+    updateAdvAgeMax();
+    const opened = VildaHomeGrowth.open('data'), host = document.getElementById('vhomeGrowthDialog');
+    const edit = (node, value) => { node.value = value; node.dispatchEvent(new Event('input', { bubbles: true })); };
+    if (!opened) return { opened };
+    edit(host.querySelector('[data-growth-field="advMotherHeight"]'), '167');
+    host.querySelector('[data-growth-add]').click();
+    const row = host.querySelector('[data-growth-row^="new-"]');
+    for (const [index, value] of [[0, '12'], [1, '0'], [2, '153'], [3, '40']]) edit(row.querySelector(`[data-growth-history-field="${index}"]`), value);
+    const copiedHistoryAgeMax = row.querySelector('[data-growth-history-field="0"]').max;
+    const invalidBeforeApply = Array.from(host.querySelectorAll('input:enabled, select:enabled'))
+      .filter(control => !control.checkValidity()).map(control => ({ field: control.getAttribute('aria-label'),
+        value: control.value, min: control.min, max: control.max, step: control.step, message: control.validationMessage }));
+    const beforeApplyVisit = VildaVisitContext.capture({ user: {} }, { patientId: null, readOnly: true });
+    let notifications = 0, firstNotificationVisit = null;
+    const observe = event => {
+      if (!document.getElementById('advancedGrowthSection').contains(event.target)) return;
+      notifications += 1;
+      if (notifications === 1) firstNotificationVisit = VildaVisitContext.capture({ user: {} }, { patientId: null, readOnly: true });
+    };
+    window.addEventListener('input', observe, true); window.addEventListener('change', observe, true);
+    try { host.querySelector('.vhome-dialog-apply').click(); }
+    finally { window.removeEventListener('input', observe, true); window.removeEventListener('change', observe, true); }
+    return { opened, open: host.open, copiedHistoryAgeMax, invalidBeforeApply, beforeApplyVisit, firstNotificationVisit, notifications,
+      visit: VildaVisitContext.capture({ user: {} }, { patientId: null, readOnly: true }) };
+  });
+  expect(fast.copiedHistoryAgeMax).toBe('13'); expect(fast.invalidBeforeApply).toEqual([]);
+  expect(fast).toMatchObject({ opened: true, open: false, beforeApplyVisit: null });
+  expect(fast.notifications).toBeGreaterThan(0); expect(fast.firstNotificationVisit).toEqual(fast.visit);
+  expect(fast.visit).toMatchObject({ patientId: null, origin: 'explicit' });
+  await expect(frame.locator('#advMotherHeight')).toHaveValue('167');
+  await expect.poll(() => frame.evaluate(() => {
+    const session = VildaPersistence.readMainSession();
+    return { mother: session?.advanced?.motherHeight, visit: session?.visit,
+      history: session?.advanced?.data?.measurements?.some(row => row.ageMonths === 144 && row.height === 153 && row.weight === 40) };
+  })).toEqual({ mother: 167, visit: fast.visit, history: true });
+  await page.reload({ waitUntil: 'load' }); await expect(frame.locator('#advMotherHeight')).toHaveValue('167');
+  expect(await frame.evaluate(() => VildaDataImportExport.captureCurrentUserDataReadOnly().visit)).toEqual(fast.visit);
+});
+
+test('home growth regression: clinical changes and native restore, choice or account boundaries reject the original draft', async ({ page }) => {
+  const { frame } = await setup(page);
+  for (const boundary of ['clinical-diff', 'vilda:state-restored', 'vilda:load-choice-applied', 'account-session-loss']) {
+    await test.step(boundary, async () => {
+      await anonymousGrowthBase(frame);
+      const result = await frame.evaluate(reason => {
+        for (const [id, value] of Object.entries({ age: '13', height: '158', weight: '46' })) document.getElementById(id).value = value;
+        const nativeMother = document.getElementById('advMotherHeight').value;
+        const opened = VildaHomeGrowth.open('data'), host = document.getElementById('vhomeGrowthDialog');
+        const beforeVisit = VildaVisitContext.capture({ user: {} }, { patientId: null, readOnly: true });
+        if (!opened) return { opened };
+        const draftMother = host.querySelector('[data-growth-field="advMotherHeight"]');
+        draftMother.value = '169'; draftMother.dispatchEvent(new Event('input', { bubbles: true }));
+        if (reason === 'clinical-diff') {
+          // Deliberately omit an event. Full clinical data must still be checked,
+          // including fields outside the short owner/basics comparison.
+          document.getElementById('advFatherHeight').value = '181';
+          VildaVisitContext.capture(VildaDataImportExport.captureCurrentUserDataReadOnly(), { patientId: null });
+          document.getElementById('vhomeGrowthTab-data').click();
+        } else if (reason === 'account-session-loss') VildaVault.lock();
+        else document.dispatchEvent(new CustomEvent(reason, { detail: { source: 'fictional-growth-component-boundary' } }));
+        return { opened, beforeVisit, nativeMother, open: host.open, mother: document.getElementById('advMotherHeight').value,
+          father: document.getElementById('advFatherHeight').value, unlocked: VildaVault.isUnlocked() };
+      }, boundary);
+      expect(result).toMatchObject({ opened: true, beforeVisit: null, open: false });
+      const dialog = frame.getByRole('dialog', { name: 'Zaawansowane obliczenia wzrostowe', exact: true }); await expect(dialog).toBeHidden();
+      expect(result.mother).toBe(boundary === 'account-session-loss' ? '' : result.nativeMother);
+      if (boundary === 'clinical-diff') expect(result.father).toBe('181');
+      if (boundary === 'account-session-loss') expect(result.unlocked).toBe(false);
+    });
+  }
+});

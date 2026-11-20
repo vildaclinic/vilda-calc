@@ -41,7 +41,7 @@ describe('thirty-three independent UI resources in one verified transport', () =
     expect(urls).toHaveLength(33);
     expect(urls).toContain('/vilda_ui_intents.js?v=2');
     expect(urls).toContain('/vilda_home_perinatal.js?v=1');
-    expect(urls).toContain('/vilda_home_growth.js?v=4');
+    expect(urls).toContain('/vilda_home_growth.js?v=5');
     expect(urls).toContain('/vilda_sga_birth_results.css?v=1');
     expect(urls).toContain('/vilda_home_growth_views.js?v=5');
     expect(urls).toContain('/vilda_home_growth_views.css?v=6');

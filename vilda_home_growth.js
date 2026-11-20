@@ -5,7 +5,7 @@
 (function (w) {
   'use strict';
   if (!w || w.__VILDA_HOME_WORKSPACE_PREVIEW__ !== true || w.VildaHomeGrowth) return;
-  var d = w.document, started = false, card, dialog, draft = null, renderFrame = 0, sequence = 0, readinessTimer;
+  var d = w.document, started = false, card, dialog, draft = null, renderFrame = 0, sequence = 0, readinessTimer, ownerBoundary = 0;
   var rowKeys = new WeakMap(), inputChanges = new WeakMap(), inputInitials = new WeakMap(), historyTemplate;
   var ghView = null, resultView = null, selectedMetric = 'height';
   var fields = [
@@ -68,11 +68,72 @@
       source: d.querySelector('input[name="dataSource"]:checked')?.value,
       birth: w.vildaBirthData || null, gh: w.ghTherapyPoints || null, obesity: w.obesityTherapyPoints || null };
   }
+  // Keep the native read-only decision captured by this opening intent.
+  // Validation may re-read internally; this scope is never replaced later.
+  function openingDecision() {
+    try {
+      var indicator = w.VildaSaveStatusIndicator;
+      if (!indicator || typeof indicator.getCurrentDecision !== 'function') return null;
+      var decision = indicator.getCurrentDecision();
+      return decision?.ready && decision.scope ? { indicator: indicator, scope: decision.scope } : null;
+    } catch (_) { return null; }
+  }
+  function originalDecisionCurrent(item) {
+    try {
+      return !!(item.decision && item.decision.indicator === w.VildaSaveStatusIndicator
+        && typeof item.decision.indicator.isCurrentDecision === 'function'
+        && item.decision.indicator.isCurrentDecision(item.decision.scope) === true);
+    } catch (_) { return false; }
+  }
+  function continueFirstVisit(item, currentOwner) {
+    try {
+      if (item !== draft || ghView || item.visitContinued || item.boundary !== ownerBoundary
+        || !item.visitContext || item.visitContext !== w.VildaVisitContext || !currentOwner?.visit) return false;
+      var before = JSON.parse(item.fingerprint);
+      if (before.owner?.visit !== null || JSON.stringify(before.owner) !== item.ownerKey) return false;
+      var current = snapshot();
+      if (!current || JSON.stringify(current.owner) !== JSON.stringify(currentOwner)) return false;
+      var visit = current.owner.visit;
+      // Compare the complete original snapshot, changing only this one detached
+      // comparison field. Native clinical values and metadata remain untouched.
+      current.owner.visit = null;
+      if (JSON.stringify(current.owner) !== item.ownerKey || JSON.stringify(current) !== item.fingerprint
+        || !originalDecisionCurrent(item)) return false;
+      if (item.vault !== w.VildaVault || item.boundary !== ownerBoundary) return false;
+      if (item.token != null) item.vault.assertSyncOperationSession(item.token);
+      if (JSON.stringify(owner()) !== JSON.stringify(currentOwner) || !originalDecisionCurrent(item)) return false;
+      current.owner.visit = visit;
+      item.ownerKey = JSON.stringify(currentOwner);
+      item.fingerprint = JSON.stringify(current);
+      item.visitContinued = true;
+      return true;
+    } catch (_) { return false; }
+  }
   function tokenValid(item, waitingForImport) {
     try {
-      if (item.vault !== w.VildaVault) return false;
+      if (item.vault !== w.VildaVault || item.boundary !== ownerBoundary) return false;
       if (item.token != null) item.vault.assertSyncOperationSession(item.token);
-      return JSON.stringify(owner(waitingForImport)) === item.ownerKey;
+      var currentOwner = owner(waitingForImport);
+      return JSON.stringify(currentOwner) === item.ownerKey
+        || !waitingForImport && continueFirstVisit(item, currentOwner);
+    } catch (_) { return false; }
+  }
+  function prepareAnonymousApplyVisit(item) {
+    try {
+      var originalOwner = JSON.parse(item.ownerKey);
+      // Never infer a save target from a non-null ambient patient identifier.
+      // Existing assigned/legacy visits keep the original fail-closed behavior.
+      if (originalOwner.patient !== null || originalOwner.visit !== null || !item.visitContext) return true;
+      var api = w.VildaDataImportExport;
+      if (item !== draft || item.visitContext !== w.VildaVisitContext
+        || !originalDecisionCurrent(item) || !stillOwned()
+        || !api || typeof api.captureCurrentUserDataReadOnly !== 'function') return false;
+      var payload = api.captureCurrentUserDataReadOnly();
+      if (!originalDecisionCurrent(item) || !stillOwned()) return false;
+      // Explicit Apply may establish its original unassigned encounter before
+      // its own native control notifications. Opening and cancelling never do.
+      item.visitContext.capture(payload, { patientId: null });
+      return tokenValid(item) && stillOwned();
     } catch (_) { return false; }
   }
   function stillOwned() {
@@ -443,6 +504,7 @@
       return !control.disabled && control.value !== inputInitials.get(control) && !control.checkValidity();
     });
     if (invalid) { selectTab('data'); invalid.reportValidity(); return; }
+    if (!prepareAnonymousApplyVisit(draft)) { close(true); return; }
     var item = draft, oldRows = rows(), notifications = [];
     var factsChanged = fields.some(function (entry) {
       return (entry[0] === 'advTesticularVolume' || entry[0].indexOf('puberty') === 0)
@@ -499,6 +561,7 @@
     if (dialog?.open) { selectTab(tabs[tab] ? tab : 'analysis', true); return true; }
     if (d.querySelector('dialog[open]')) return false;
     var base = snapshot(); if (!base) return false;
+    var decision = base.owner.visit === null ? openingDecision() : null;
     if (!dialog) {
       dialog = w.VildaHomeWorkspace.createDialog({ id: 'vhomeGrowthDialog', titleId: 'vhomeGrowthTitle', title: 'Zaawansowane obliczenia wzrostowe',
         applyLabel: 'Zastosuj dane', onApply: apply, onClose: function () { close(false); } });
@@ -514,6 +577,7 @@
     var history = rows().map(function (node) { return { key: key(node), node: node, values: rowValues(node), protected: protectedRow(node) }; });
     draft = { values: values, rows: history, template: rows()[0] || historyTemplate, tab: 'data', vault: vault, token: token,
       fingerprint: JSON.stringify(base), ownerKey: JSON.stringify(base.owner),
+      decision: decision, visitContext: w.VildaVisitContext || null, visitContinued: false, boundary: ownerBoundary,
       historyToken: 'growth-' + Date.now(), initial: JSON.stringify([values, history.map(function (r) { return [r.key, r.values]; })]) };
     var body = dialog.querySelector('.vhome-dialog-body');
     body.appendChild(el('p', 'vhome-dialog-context', [value('firstName'), value('lastName')].filter(Boolean).join(' ') || 'Bieżący pomiar'));
@@ -645,11 +709,13 @@
     // During a PWA upgrade the host can finish restoring after this document's
     // first render. Re-read the native readiness gates on the settled lifecycle.
     w.addEventListener('pageshow', schedule);
-    ['vilda:user-state-cleared', 'vilda:patient-loaded', 'vilda:auth-loaded'].forEach(function (name) {
-      d.addEventListener(name, function () { close(true); schedule(); });
+    function retireOwner() { ownerBoundary += 1; close(true); schedule(); }
+    ['vilda:user-state-cleared', 'vilda:patient-loaded', 'vilda:auth-loaded',
+      'vilda:state-restored', 'vilda:load-choice-applied'].forEach(function (name) {
+      d.addEventListener(name, retireOwner);
     });
-    w.addEventListener('vilda:user-state-cleared', function () { close(true); schedule(); });
-    if (w.VildaVault?.onLock) w.VildaVault.onLock(function () { close(true); schedule(); });
+    w.addEventListener('vilda:user-state-cleared', retireOwner);
+    if (w.VildaVault?.onLock) w.VildaVault.onLock(retireOwner);
     w.addEventListener('popstate', function () {
       if (!draft || !dialog.open || w.history.state?.vildaHomeDialog === draft.historyToken) return;
       if (!close(false, true, true)) w.history.pushState(Object.assign({}, w.history.state, { vildaHomeDialog: draft.historyToken }), '', w.location.href);
@@ -658,7 +724,7 @@
   }
   function openCharts() {
     if (!canEdit() || !w.VildaHomeGrowthCharts || dialog?.open && (!stillOwned() || dirty() || ghView)) return false;
-    var vault = w.VildaVault, item = { vault: vault, token: vault.captureSyncOperationSession(), ownerKey: JSON.stringify(owner()) };
+    var vault = w.VildaVault, item = { vault: vault, token: vault.captureSyncOperationSession(), ownerKey: JSON.stringify(owner()), boundary: ownerBoundary };
     var handoff = !!dialog?.open;
     if (handoff) close(true, false, true);
     return w.VildaHomeGrowthCharts.open({ valid: function () { return tokenValid(item); }, snapshot: snapshot,
