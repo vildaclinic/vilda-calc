@@ -2452,6 +2452,12 @@ delty jest obraz sejfu po tej zmianie bez bloku trwałych wizyt: SHA-256
 (`4ca270bc7461e33d50b791242cd9298da710cfd651ffe1a099b059f80c4acd7a`). Baza z 2c (`fe4fad0b…`) odpowiada
 stanowi sprzed E3-PR0c (`audyt` `64fa29dc`); bieżącą bazę daje to samo odwrócenie delty co wyżej.
 
+Od E3-PR0d (P-ZBIEZNOSC-ZDARZEN, odsyłanie wpisów Kosza; zmiana tylko w bloku P-DZIENNIK-ZDARZEN) bazą delty jest
+obraz sejfu po tej zmianie bez bloku trwałych wizyt: SHA-256
+`417ac2f4df8debc5dcaa7b4cec452397a161f0803f9d4fdaf852ebf48d26115e`, a wynikiem — bieżący `vilda_vault.js`
+(`ed2f7832ac7a4c06df08d36029e5700c24603587eb5828311bdc65546c3fabd1`). Baza z E3-PR0c (`22f7d1f2…`) odpowiada
+stanowi sprzed E3-PR0d (`audyt` `4bff32aa`); bieżącą bazę daje to samo odwrócenie delty co wyżej.
+
 Każdy punkt wpięcia musi występować dokładnie raz. Narzędzie odrzuca inne
 bajty bazy, zmianę źródła bez zgodnego manifestu, niejednoznaczny punkt wpięcia
 i wynik różniący się od zapisanego skrótu. Odwrócenie delty musi odtworzyć
@@ -2580,6 +2586,12 @@ Od E3-PR0c (P-ZBIEZNOSC-ZDARZEN; zmiana sejfu tylko poza blokiem natywnym, w blo
 `06ea023197d3e70fc30e965d5b2b57744fbbcbc0f638f5baa798e5ce3e209031`, a `integratedVaultSHA256` (obraz pośredni) —
 `76214599a49249fc762d29e4eb31f079440ef254149ffc8cde8ecf5e36b77bb2`. Blok natywny, haki natywne, rodzina modułów
 `0278bf7106c2`, `fragmentSHA256` i archiwum bez zmian; bieżące wartości są w `runtime/clinical-workspace-v1/manifest.json`.
+
+Od E3-PR0d (P-ZBIEZNOSC-ZDARZEN; zmiana sejfu tylko poza blokiem natywnym, w bloku P-DZIENNIK-ZDARZEN) baza sejfu to
+`e0fdbf3504adef9db240a1584231e2f6b5e041172de3da9d39b37e90c9f0ea50`, a `integratedVaultSHA256` (obraz pośredni) —
+`d9f5b5e9dc36b0f87f172f925d0235e7c9455fb9aafff0dfbe738d88a8b7e0b0`. Baza z E3-PR0c (`06ea0231…`) odpowiada stanowi
+sprzed E3-PR0d (`audyt` `4bff32aa`). Blok natywny, haki natywne, rodzina modułów `0278bf7106c2`, `fragmentSHA256`
+i archiwum bez zmian; bieżące wartości są w `runtime/clinical-workspace-v1/manifest.json`.
 
 Warstwy `vilda_vault.js` od środka: baza → blok natywny i 16 haków natywnych (manifest,
 `nativeHooks`) → delta Kt/V (`tools/klirens-ktv-vault-delta.mjs`, poza blokiem) → delta trwałych

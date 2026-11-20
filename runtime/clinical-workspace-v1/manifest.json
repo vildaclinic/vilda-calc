@@ -1,11 +1,11 @@
 {
   "namespace": "vilda-clinical-workspace-runtime",
   "version": 1,
-  "baseVaultSHA256": "06ea023197d3e70fc30e965d5b2b57744fbbcbc0f638f5baa798e5ce3e209031",
+  "baseVaultSHA256": "e0fdbf3504adef9db240a1584231e2f6b5e041172de3da9d39b37e90c9f0ea50",
   "sourceFragmentSHA256": "db44a488a8d1f83174479e73a479b7b3f258ee899a74ea11b7a1cd70f7fdcae1",
   "fragmentSHA256": "f1605482c3466e86c9c7ff94e19859eeaea8a70b5e6ccb0fad4fa302f2101d78",
   "moduleTreeSHA256": "0278bf7106c27008499d80c14acf3e2d733cccb52f3b06debbd91c443874cb25",
-  "integratedVaultSHA256": "76214599a49249fc762d29e4eb31f079440ef254149ffc8cde8ecf5e36b77bb2",
+  "integratedVaultSHA256": "d9f5b5e9dc36b0f87f172f925d0235e7c9455fb9aafff0dfbe738d88a8b7e0b0",
   "nativeHooks": [
     {
       "before": "return PatientCheckpointRemoveUser(uid, '');",
