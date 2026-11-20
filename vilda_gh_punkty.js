@@ -47,7 +47,8 @@
  * Włączenie, kurs zamyka Zakończenie. Sprawdzenie symuluje listę bez edytowanego punktu (pomin) z nowym punktem
  * w wieku opcje.wiekM: Włączenie — jedyne w kursie, a w kursie po Zakończeniu także jego pierwszy punkt (w pierwszym
  * kursie wolno wcześniejsze Kontynuacje — wizyty przed leczeniem); Zakończenie — ostatni punkt kursu, jedyne w kursie,
- * kurs ma wcześniejszy punkt, a po nim nie powstaje nowy kurs bez Włączenia; Kontynuacja — nie w kursie
+ * kurs ma wcześniejszy punkt, a nowy podział kursu wymaga Włączenia za nim i w zamykanym kursie (istniejąca granica —
+ * zgoda); edycja oceniana na liście po zmianie, a zmiana, która nie pogarsza zapisu, przechodzi; Kontynuacja — nie w kursie
  * otwartym po Zakończeniu bez (wcześniejszego albo z tego samego miesiąca) Włączenia. Bez modułu kursów odmowa
  * z prośbą o odświeżenie strony (bez powrotu do dawnej reguły). Rejestr: docs/clinical/ALGORITHMS.md,
  * P-GH-WZNOWIENIE, część 2.
@@ -149,10 +150,17 @@
   //     (wznowienie, dopisanie brakującego Włączenia na początku kursu bez Włączenia). W pierwszym kursie wcześniejsze
   //     Kontynuacje (wizyty przed leczeniem, które reguła Kontynuacji przyjmuje) nie blokują Włączenia ani jego edycji.
   //   Zakończenie: N ostatnim punktem K (inne Zakończenie po N — zdublowane — zostaje w K), K bez innego Zakończenia
-  //     i z punktem przed N; punkt po N, który nie jest Włączeniem, otwierałby kurs bez Włączenia (W2) — odmowa, chyba
-  //     że ten kurs bez Włączenia istniał już przed zmianą (stary zapis: edycja jego Zakończenia nic nie pogarsza).
+  //     i z punktem przed N. Gdy za N jest punkt, a granica kursu przed nim nie istniała przed zmianą (nowy podział
+  //     kursu), za N musi stać Włączenie, a K musi mieć własne Włączenie — inaczej Zakończenie stoi przed ostatnim punktem
+  //     kursu (punkt bez Włączenia za nim otwierałby kurs W2, a Zakończenie przed Włączeniem kursu 1 zamykałoby same
+  //     wizyty przed leczeniem). Granica, która już była (edycja Zakończenia, także przy starym zapisie W2 i po dopisaniu
+  //     Włączenia w miesiącu pierwszego punktu kursu 2), niczego nie zmienia — zgoda.
   //   Kontynuacja: odmowa, gdy K jest kursem po Zakończeniu (numer > 1) bez Włączenia wcześniejszego niż N albo z tego
   //     samego miesiąca (W2: Kontynuacja po Zakończeniu bez nowego Włączenia, także w przerwie przed wznowieniem).
+  // Edycja Włączenia albo Kontynuacji bez zmiany rodzaju, która nie pogarsza zapisu (punkt już przed zmianą łamał tę samą
+  // regułę położenia w tym samym kursie: Kontynuacja starego zapisu W2 albo Włączenie z importu po pierwszym punkcie
+  // kursu 2) — zgoda: poprawka wzrostu czy dawki takiego punktu nie wymaga najpierw naprawy rodzaju. Drugie Włączenie
+  // w kursie (scalone duplikaty) — odmowa jak dotąd.
   // Inny rodzaj niż start/continue/end — zgoda (jak dotąd). Bez reguły kursów — odmowa z prośbą o odświeżenie strony.
   function sprawdzRodzaj(lista, typ, opcje) {
     if (typ !== 'start' && typ !== 'continue' && typ !== 'end') return { ok: true };
@@ -163,6 +171,22 @@
     if (!(wiekM > 0)) return odmowa('wartosci', KOMUNIKATY.wartosci);
     var pomija = Object.prototype.hasOwnProperty.call(o, 'pomin');
     var pomin = pomija ? String(o.pomin) : null;
+    var r = ocenRodzaj(G, lista, typ, wiekM, pomija, pomin);
+    if (r.ok || !pomija || (r.kod !== 'wlaczenie-pozniej' && r.kod !== 'kontynuacja-po-zakonczeniu')) return wynikRodzaju(r);
+    // Edycja bez pogorszenia: ten sam rodzaj, ta sama odmowa w tym samym kursie co punkt przed zmianą.
+    var P = punktyListy(lista).filter(function (c) { return String(c.id) === pomin; })[0];
+    var wiekP = P && P.type === typ ? wiekKursowy(G, P) : null;
+    if (wiekP > 0) {
+      var rp = ocenRodzaj(G, lista, typ, wiekP, true, pomin);
+      if (!rp.ok && rp.kod === r.kod && rp.numer === r.numer) return { ok: true };
+    }
+    return wynikRodzaju(r);
+  }
+  function wynikRodzaju(r) {
+    return r.ok ? { ok: true } : odmowa(r.kod, r.komunikat);
+  }
+  // Reguła kursów dla nowego punktu N (opis przy sprawdzRodzaj); odmowa niesie numer kursu N (numer).
+  function ocenRodzaj(G, lista, typ, wiekM, pomija, pomin) {
     var reszta = punktyListy(lista).filter(function (c) { return !pomija || String(c.id) !== pomin; });
     var N = { type: typ, ageYears: 0, ageMonths: wiekM };
     var kursy = G.ghKursy(reszta.concat([N]));
@@ -173,19 +197,20 @@
       if (k.punkty.indexOf(N) >= 0) K = k;
     });
     if (!K) return odmowa('wartosci', KOMUNIKATY.wartosci);
+    var nie = function (kod, komunikat) { return { ok: false, kod: kod, komunikat: komunikat, numer: K.numer }; };
     var inne = K.punkty.filter(function (p) { return p !== N; });
     var ma = function (t) { return inne.some(function (p) { return p.type === t; }); };
 
     if (typ === 'start') {
-      if (ma('start')) return odmowa('drugie-wlaczenie', KOMUNIKATY.drugieWlaczenie);
-      if (K.numer > 1 && K.a !== wiekM) return odmowa('wlaczenie-pozniej', KOMUNIKATY.wlaczeniePozniej);
+      if (ma('start')) return nie('drugie-wlaczenie', KOMUNIKATY.drugieWlaczenie);
+      if (K.numer > 1 && K.a !== wiekM) return nie('wlaczenie-pozniej', KOMUNIKATY.wlaczeniePozniej);
       return { ok: true };
     }
     if (typ === 'continue') {
       if (K.numer > 1) {
         var wl = K.wlaczenie;
         var wczesniej = !!wl && (K.punkty.indexOf(wl) < K.punkty.indexOf(N) || wiekKursowy(G, wl) === wiekM);
-        if (!wczesniej) return odmowa('kontynuacja-po-zakonczeniu', KOMUNIKATY.kontynuacjaPoZakonczeniu);
+        if (!wczesniej) return nie('kontynuacja-po-zakonczeniu', KOMUNIKATY.kontynuacjaPoZakonczeniu);
       }
       return { ok: true };
     }
@@ -194,18 +219,20 @@
     if (!inne.length) {
       // Zakończenie jako pierwszy punkt kursu; Włączenie z tego samego miesiąca stoi za nim (reguła kursów przy równym wieku).
       if (nastepny && nastepny.type === 'start' && wiekKursowy(G, nastepny) === wiekM) {
-        return odmowa('zakonczenie-ten-sam-miesiac', KOMUNIKATY.zakonczenieTenSamMiesiac);
+        return nie('zakonczenie-ten-sam-miesiac', KOMUNIKATY.zakonczenieTenSamMiesiac);
       }
-      return odmowa('zakonczenie-bez-kursu', KOMUNIKATY.zakonczenieBezKursu);
+      return nie('zakonczenie-bez-kursu', KOMUNIKATY.zakonczenieBezKursu);
     }
-    if (ma('end')) return odmowa('drugie-zakonczenie', KOMUNIKATY.drugieZakonczenie);
-    if (K.punkty[K.punkty.length - 1] !== N) return odmowa('zakonczenie-nie-ostatnie', KOMUNIKATY.zakonczenieNieOstatnie);
-    if (nastepny && nastepny.type !== 'start') {
-      // Kurs bez Włączenia za N — dozwolony tylko, gdy był już przed zmianą (stary zapis W2), inaczej Zakończenie wpada
-      // przed ostatni punkt kursu.
+    if (ma('end')) return nie('drugie-zakonczenie', KOMUNIKATY.drugieZakonczenie);
+    if (K.punkty[K.punkty.length - 1] !== N) return nie('zakonczenie-nie-ostatnie', KOMUNIKATY.zakonczenieNieOstatnie);
+    if (nastepny) {
+      // Granica kursu przed `nastepny` przed zmianą: był pierwszym punktem kursu po Zakończeniu (edycja Zakończenia).
       var przed = G.ghKursy(punktyListy(lista)).filter(function (k) { return k.punkty.indexOf(nastepny) >= 0; })[0];
-      var bylW2 = !!przed && przed.numer > 1 && !przed.wlaczenie && przed.punkty[0] === nastepny;
-      if (!bylW2) return odmowa('zakonczenie-nie-ostatnie', KOMUNIKATY.zakonczenieNieOstatnie);
+      var granicaByla = !!przed && przed.numer > 1 && przed.punkty[0] === nastepny;
+      // Nowy podział kursu: dalej Włączenie, a kurs zamykany przez N z własnym Włączeniem.
+      if (!granicaByla && (nastepny.type !== 'start' || !K.wlaczenie)) {
+        return nie('zakonczenie-nie-ostatnie', KOMUNIKATY.zakonczenieNieOstatnie);
+      }
     }
     return { ok: true };
   }

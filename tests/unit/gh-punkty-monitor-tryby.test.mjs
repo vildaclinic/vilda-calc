@@ -131,24 +131,31 @@ const TEKSTY_REGULY = [
   ['Punkt „Zakończenie leczenia” został już dodany.', 'Ten kurs leczenia ma już punkt „Zakończenie leczenia”.'],
 ];
 const ZAKONCZENIE_BEZ_KURSU = '„Zakończenie leczenia” zamyka kurs leczenia — musi je poprzedzać co najmniej jeden punkt tego kursu.';
-const WLACZENIE_POZNIEJ = '„Włączenie leczenia” nie może być późniejsze niż pierwszy punkt tego kursu leczenia.';
+const ZAKONCZENIE_TEN_SAM_MIESIAC = '„Zakończenie leczenia” nie może być w tym samym miesiącu co „Włączenie leczenia” tego kursu.';
+const ZAKONCZENIE_NIE_OSTATNIE = '„Zakończenie leczenia” musi być ostatnim punktem kursu.';
 function zRegulaKursow(zrzutWyroczni) {
   let t = kanon(zrzutWyroczni);
   for (const [dawny, nowy] of TEKSTY_REGULY) t = t.split(JSON.stringify(dawny)).join(JSON.stringify(nowy));
   return JSON.parse(t);
 }
-// Scenariusze z zamierzoną inną decyzją (odmowa — dawniej zapis) albo inną kolejnością wierszy tabeli (wg reguły
-// kursów: wiek, przy równym wieku Kontynuacja → Zakończenie → Włączenie; wpis bez wieku na początku).
+// Scenariusze z zamierzoną inną decyzją (odmowa — dawniej zapis), innym tekstem odmowy niż odpowiednik dawnego (tekst)
+// albo inną kolejnością wierszy tabeli (wg reguły kursów: wiek, przy równym wieku Kontynuacja → Zakończenie → Włączenie;
+// wpis bez wieku na początku). Po przeglądzie (2026-11-20) Włączenie w pierwszym kursie po wcześniejszej Kontynuacji jest
+// przyjmowane (dotąd w tej wersji odmowa „nie później niż pierwszy punkt”), a Zakończenie w miesiącu Włączenia ma
+// własny tekst.
 const ZMIANY_REGULY = {
-  // Włączenie (10 l. 3 mies.) później niż pierwszy punkt kursu bez Włączenia (Kontynuacja 9,5 l.).
-  'karta start, dawny format': { odmowa: WLACZENIE_POZNIEJ },
   // Zakończenie bez wcześniejszego punktu kursu.
   'karta end, pusta lista': { odmowa: ZAKONCZENIE_BEZ_KURSU },
   'wsteczny end, pusta lista': { odmowa: ZAKONCZENIE_BEZ_KURSU },
   // Włączenie 9 l. 0 mies. → Zakończenie 9 l. 0 mies. przed Kontynuacją 10 l. 0 mies. / w miesiącu Włączenia.
   'edycja end, Włączenie, masa': { odmowa: ZAKONCZENIE_BEZ_KURSU },
-  'edycja end, Ngenla, IGF-1 bez dni': { odmowa: ZAKONCZENIE_BEZ_KURSU },
-  // Włączenie z miesiąca Kontynuacji (9,5 l.) — za nią; Kontynuacja z miesiąca Włączenia (9 l. 0 mies.) — przed nim.
+  'edycja end, Ngenla, IGF-1 bez dni': { odmowa: ZAKONCZENIE_TEN_SAM_MIESIAC },
+  // Zakończenie 9 l. 6 mies. przed Kontynuacją 10 l. 0 mies. zamkniętego kursu: „musi być ostatnim punktem kursu”
+  // (dawniej „…został już dodany”, odpowiednik „ma już Zakończenie”).
+  'wsteczny end, pełny kurs': { tekst: ZAKONCZENIE_NIE_OSTATNIE },
+  // Włączenie (10 l. 3 mies.) po Kontynuacji 9,5 l. — za nią; Włączenie z miesiąca Kontynuacji (9,5 l.) — za nią;
+  // Kontynuacja z miesiąca Włączenia (9 l. 0 mies.) — przed nim.
+  'karta start, dawny format': { wiersze: (w) => [w[1], w[0]] },
   'wsteczny start, dawny format': { wiersze: (w) => [w[1], w[0]] },
   'edycja start, Ngenla, IGF-1 bez dni': { wiersze: (w) => [w[1], w[0]] },
   'edycja continue, Ngenla, IGF-1 bez dni': { wiersze: (w) => [w[1], w[0]] },
@@ -177,6 +184,11 @@ function porownaj(scenariusz) {
     const { api: _b, ...zbDawne } = b[i];
     const zb = zRegulaKursow(zbDawne);
     if (zmiana && zmiana.wiersze) zb.wiersze = zmiana.wiersze(zb.wiersze);
+    if (zmiana && zmiana.tekst) {
+      // Ta sama odmowa (bez zapisu), inny tekst reguły kursów: zrzut wyroczni dostaje ten tekst.
+      const dawny = zb.komunikat;
+      Object.assign(zb, JSON.parse(kanon(zb).split(JSON.stringify(dawny)).join(JSON.stringify(zmiana.tekst))));
+    }
     const { wynik, dawne } = idNaPostacSprzedApi(kanon(zm));
     expect(dawne, `${scenariusz.nazwa} — krok ${i + 1}: id nadane bez VildaGhPunkty.noweId()`).toEqual([]);
     expect(wynik, `${scenariusz.nazwa} — krok ${i + 1}`).toBe(kanon(zb));

@@ -155,8 +155,10 @@ describe('Złota siatka punktów GH — budowa siatki i wzorca', () => {
   it('P-GH-WZNOWIENIE, część 2: reguła kursów zmienia każdą odmowę „zajęty typ” i część zapisów — wszystkimi rodzajami odmowy reguły', () => {
     const zmienione = przypadki.filter(zmienionaRegula);
     expect(przypadki.filter((p) => p.powod === 'typ' && p.modulDawki).every(zmienionaRegula)).toBe(true);
+    // Po przeglądzie (2026-11-20) Włączenie w pierwszym kursie po wcześniejszej Kontynuacji jest przyjmowane — siatka (jeden
+    // kurs) nie ma już odmów „wlaczenie-pozniej”.
     expect(new Set(zmienione.map((p) => WPLYW.get(p.id).kod))).toEqual(new Set(['drugie-wlaczenie', 'drugie-zakonczenie',
-      'wlaczenie-pozniej', 'zakonczenie-bez-kursu', 'zakonczenie-nie-ostatnie']));
+      'zakonczenie-bez-kursu', 'zakonczenie-nie-ostatnie']));
     for (const k of ['Z1-modul', 'Z2-modul', 'Z4-modul']) expect(zmienione.some((p) => p.kategoria === k), k).toBe(true);
     expect(zmienione.some((p) => p.kategoria === 'Z5' || !p.modulDawki)).toBe(false);
     // Większość przypadków bez zmian (skróty z BAZA).

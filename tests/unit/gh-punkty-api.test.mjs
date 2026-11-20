@@ -36,6 +36,7 @@ const DRUGIE_ZAKONCZENIE = 'Ten kurs leczenia ma już punkt „Zakończenie lecz
 const WLACZENIE_POZNIEJ = '„Włączenie leczenia” nie może być późniejsze niż pierwszy punkt tego kursu leczenia.';
 const ZAKONCZENIE_NIE_OSTATNIE = '„Zakończenie leczenia” musi być ostatnim punktem kursu.';
 const ZAKONCZENIE_BEZ_KURSU = '„Zakończenie leczenia” zamyka kurs leczenia — musi je poprzedzać co najmniej jeden punkt tego kursu.';
+const ZAKONCZENIE_TEN_SAM_MIESIAC = '„Zakończenie leczenia” nie może być w tym samym miesiącu co „Włączenie leczenia” tego kursu.';
 const KONTYNUACJA_PO_ZAKONCZENIU = 'Po „Zakończeniu leczenia” dodaj najpierw „Włączenie leczenia” (wznowienie leczenia).';
 const ODSWIEZ = 'Nie zapisano: aplikacja nie wczytała się w całości. Odśwież stronę i spróbuj ponownie.';
 const DANE = 'Upewnij się, że wprowadziłeś poprawne, dodatnie dane: wiek, wagę, wzrost oraz dawkę.';
@@ -103,6 +104,7 @@ describe('Moduł i dane zamrożone', () => {
       wlaczeniePozniej: WLACZENIE_POZNIEJ,
       zakonczenieNieOstatnie: ZAKONCZENIE_NIE_OSTATNIE,
       zakonczenieBezKursu: ZAKONCZENIE_BEZ_KURSU,
+      zakonczenieTenSamMiesiac: ZAKONCZENIE_TEN_SAM_MIESIAC,
       kontynuacjaPoZakonczeniu: KONTYNUACJA_PO_ZAKONCZENIU,
       wartosci: DANE,
       programKarta: PROGRAM_KARTA,
@@ -122,7 +124,7 @@ describe('Moduł i dane zamrożone', () => {
     // Dawne teksty jednego Włączenia i Zakończenia na liście zniknęły z API; nowe teksty reguły kursów są tylko w API.
     for (const tekst of [DAWNE_DRUGIE_WLACZENIE, DAWNE_DRUGIE_ZAKONCZENIE]) expect(Object.values(A.KOMUNIKATY), tekst).not.toContain(tekst);
     for (const tekst of [DRUGIE_WLACZENIE, DRUGIE_ZAKONCZENIE, WLACZENIE_POZNIEJ, ZAKONCZENIE_NIE_OSTATNIE, ZAKONCZENIE_BEZ_KURSU,
-      KONTYNUACJA_PO_ZAKONCZENIU]) {
+      ZAKONCZENIE_TEN_SAM_MIESIAC, KONTYNUACJA_PO_ZAKONCZENIU]) {
       expect(przedApi, tekst).not.toContain(tekst);
       expect(monitor, tekst).not.toContain(tekst);
     }
@@ -313,6 +315,7 @@ const ODMOWY = {
   'drugie-zakonczenie': DRUGIE_ZAKONCZENIE,
   'zakonczenie-nie-ostatnie': ZAKONCZENIE_NIE_OSTATNIE,
   'zakonczenie-bez-kursu': ZAKONCZENIE_BEZ_KURSU,
+  'zakonczenie-ten-sam-miesiac': ZAKONCZENIE_TEN_SAM_MIESIAC,
   'kontynuacja-po-zakonczeniu': KONTYNUACJA_PO_ZAKONCZENIU,
 };
 
@@ -364,7 +367,9 @@ describe('sprawdzRodzaj — reguła kursów (P-GH-WZNOWIENIE, część 2)', () =
     const Z96 = G('gw-z96', 'end', 9, 6);
     expect(A.sprawdzRodzaj([...L, Z96], 'end', { wiekM: wiek(10, 0) }))
       .toEqual({ ok: false, kod: 'drugie-zakonczenie', komunikat: DRUGIE_ZAKONCZENIE });
-    expect(regula([...L, Z96], 'end', 8, 0)).toBe('drugie-zakonczenie');
+    // Wcześniejsze Zakończenie w zamkniętym kursie: N zamknąłby kurs przed K 9;0 (nowy podział, za N nie Włączenie).
+    // Po przeglądzie (edycja oceniana na liście po zmianie) — „musi być ostatnim punktem kursu”; dotąd „ma już Zakończenie”.
+    expect(regula([...L, Z96], 'end', 8, 0)).toBe('zakonczenie-nie-ostatnie');
     // Zakończenie jako pierwszy punkt kursu po Zakończeniu (przed wznowieniem albo w kursie W2) — odmowa.
     expect(regula([W7, Z9, W10], 'end', 9, 6)).toBe('drugie-zakonczenie');
     expect(regula([W7, Z9, K10], 'end', 9, 6)).toBe('drugie-zakonczenie');
@@ -372,8 +377,11 @@ describe('sprawdzRodzaj — reguła kursów (P-GH-WZNOWIENIE, część 2)', () =
     expect(A.sprawdzRodzaj([], 'end', { wiekM: wiek(9, 0) }))
       .toEqual({ ok: false, kod: 'zakonczenie-bez-kursu', komunikat: ZAKONCZENIE_BEZ_KURSU });
     expect(regula([W7, K8], 'end', 6, 0)).toBe('zakonczenie-bez-kursu');
-    // W miesiącu Włączenia (przy równym wieku Zakończenie przed Włączeniem) — bez wcześniejszego punktu.
-    expect(regula([W7], 'end', 7, 0)).toBe('zakonczenie-bez-kursu');
+    // W miesiącu Włączenia (przy równym wieku Zakończenie przed Włączeniem): od przeglądu osobny tekst (dotąd
+    // „zamyka kurs leczenia — musi je poprzedzać…”, mylący przy Włączeniu z tego samego miesiąca).
+    expect(A.sprawdzRodzaj([W7], 'end', { wiekM: wiek(7, 0) }))
+      .toEqual({ ok: false, kod: 'zakonczenie-ten-sam-miesiac', komunikat: ZAKONCZENIE_TEN_SAM_MIESIAC });
+    expect(regula([W7, Z9, W10], 'end', 10, 0)).toBe('drugie-zakonczenie');
     // Zakończenie wznowionego kursu po jego ostatnim punkcie — zgoda.
     expect(regula([W7, Z9, W10, K11], 'end', 11, 6)).toBe('ok');
     expect(regula([W7, Z9, W10, K11], 'end', 10, 6)).toBe('zakonczenie-nie-ostatnie');
@@ -388,10 +396,11 @@ describe('sprawdzRodzaj — reguła kursów (P-GH-WZNOWIENIE, część 2)', () =
     // Po dopisaniu Włączenia w miesiącu pierwszego punktu kursu Kontynuacja w tym kursie przechodzi.
     expect(regula([...L, W10], 'continue', 11, 0)).toBe('ok');
     expect(regula([...L, W10], 'continue', 10, 0)).toBe('ok');
-    // Jedyny kurs bez Włączenia (P-GH-BEZ-STARTU): Włączenie nie później niż pierwszy punkt — zgoda; później — odmowa.
+    // Pierwszy kurs: wcześniejsze Kontynuacje (wizyty przed leczeniem) nie blokują Włączenia — także po nich (po przeglądzie;
+    // dotąd 8;6 było odmową „nie później niż pierwszy punkt”, co blokowało też edycję takiego Włączenia).
     expect(regula([K8, K9], 'start', 7, 0)).toBe('ok');
     expect(regula([K8, K9], 'start', 8, 0)).toBe('ok');
-    expect(regula([K8, K9], 'start', 8, 6)).toBe('wlaczenie-pozniej');
+    expect(regula([K8, K9], 'start', 8, 6)).toBe('ok');
     expect(regula([], 'start', 9, 0)).toBe('ok');
   });
 
@@ -414,6 +423,50 @@ describe('sprawdzRodzaj — reguła kursów (P-GH-WZNOWIENIE, część 2)', () =
     expect(regula([W7, { ...W7, id: 'gw-w7-2' }], 'start', 7, 0, { pomin: W7.id })).toBe('drugie-wlaczenie');
   });
 
+  // Przegląd (2026-11-20): edycja oceniana na liście PO zmianie. Dotąd Zakończenie kursu 1 po wznowieniu nie dawało się
+  // edytować (usunięcie Zakończenia na chwilę scalało kursy), a Włączenie z wcześniejszą Kontynuacją w jedynym kursie — też.
+  it('przegląd: Zakończenie kursu 1 po wznowieniu, w starym zapisie W2 i po dopisaniu Włączenia — edycja i ponowne dodanie przyjęte', () => {
+    const L = [W7, K8, Z9, W10, K11];
+    expect(regula(L, 'end', 9, 0, { pomin: Z9.id })).toBe('ok');
+    expect(regula(L, 'end', 9, 6, { pomin: Z9.id })).toBe('ok');
+    // Usunięte i dodane znowu (punkt wsteczny 9;0): lista z dwoma Włączeniami w jednym kursie znów dzieli się na dwa kursy.
+    expect(regula([W7, K8, W10, K11], 'end', 9, 0)).toBe('ok');
+    // Przesunięcie Zakończenia za Włączenie 10;0 albo przed K 8;0 — odmowa (kurs bez Włączenia za nim).
+    expect(regula(L, 'end', 10, 6, { pomin: Z9.id })).toBe('zakonczenie-nie-ostatnie');
+    expect(regula(L, 'end', 7, 6, { pomin: Z9.id })).toBe('zakonczenie-nie-ostatnie');
+    // Stary zapis W2 i ten sam zapis z Włączeniem dopisanym w miesiącu pierwszego punktu kursu 2 (GW5).
+    expect(regula([W7, Z9, K10], 'end', 9, 0, { pomin: Z9.id })).toBe('ok');
+    expect(regula([W7, Z9, K10, W10], 'end', 9, 0, { pomin: Z9.id })).toBe('ok');
+  });
+
+  it('przegląd: Zakończenie nie dzieli kursu 1 przed jego Włączeniem (wizyty przed leczeniem) ani przed Kontynuacją', () => {
+    const K7 = G('gw-k7', 'continue', 7, 0);
+    const W8 = G('gw-w8', 'start', 8, 0);
+    expect(regula([K7, W8, K9], 'end', 7, 6)).toBe('zakonczenie-nie-ostatnie');
+    expect(regula([W7, K8, K9], 'end', 8, 6)).toBe('zakonczenie-nie-ostatnie');
+  });
+
+  it('przegląd: jedyny kurs z Kontynuacją przed Włączeniem (K 7;0 → W 8;0 → K 9;0) — edycja Włączenia przyjęta', () => {
+    const K7 = G('gw-k7', 'continue', 7, 0);
+    const W8 = G('gw-w8', 'start', 8, 0);
+    expect(regula([K7, W8, K9], 'start', 8, 0, { pomin: W8.id })).toBe('ok');
+    expect(regula([K7, W8, K9], 'start', 8, 6, { pomin: W8.id })).toBe('ok');
+    // Punkt wsteczny K 7;0 przed istniejącym Włączeniem — jak dotąd przyjęty.
+    expect(regula([W8, K9], 'continue', 7, 0)).toBe('ok');
+  });
+
+  it('przegląd: edycja bez zmiany rodzaju, która nie pogarsza zapisu (Kontynuacja W2, Włączenie z importu po pierwszym punkcie kursu 2) — zgoda; drugie Włączenie w kursie — dalej odmowa', () => {
+    expect(regula([W7, Z9, K10], 'continue', 10, 0, { pomin: K10.id })).toBe('ok');
+    expect(regula([W7, Z9, K10, K11], 'continue', 11, 0, { pomin: K11.id })).toBe('ok');
+    const W11 = G('gw-w11', 'start', 11, 0);
+    expect(regula([W7, Z9, K10, W11], 'start', 11, 0, { pomin: W11.id })).toBe('ok');
+    // Nowy punkt w tym samym miejscu albo zmiana rodzaju — odmowa jak dotąd.
+    expect(regula([W7, Z9, K10], 'continue', 11, 0)).toBe('kontynuacja-po-zakonczeniu');
+    expect(regula([W7, Z9, K10, W11], 'continue', 11, 0, { pomin: W11.id })).toBe('kontynuacja-po-zakonczeniu');
+    expect(regula([W7, K8, Z9, W10, K11], 'continue', 10, 0, { pomin: W10.id })).toBe('kontynuacja-po-zakonczeniu');
+    expect(regula([W7, { ...W7, id: 'gw-w7-2' }], 'start', 7, 0, { pomin: W7.id })).toBe('drugie-wlaczenie');
+  });
+
   it('pomin = null (nowy punkt z karty, x == null w monitorze) wyklucza punkt o id „null” — dziwactwo monitora, stan obecny', () => {
     expect(regula([{ ...W7, id: 'null' }], 'start', 8, 0, { pomin: null })).toBe('ok');
     expect(regula([W7], 'start', 8, 0, { pomin: null })).toBe('drugie-wlaczenie');
@@ -429,8 +482,8 @@ describe('sprawdzRodzaj — reguła kursów (P-GH-WZNOWIENIE, część 2)', () =
 
   it('każdy kod odmowy niesie swój tekst z KOMUNIKATY', () => {
     const przypadki = [
-      [[W7, K8], 'start', 9, 0], [[K8, K9], 'start', 8, 6], [[W7, Z9], 'end', 10, 0], [[W7, K8, K9], 'end', 8, 6],
-      [[], 'end', 9, 0], [[W7, Z9], 'continue', 10, 0],
+      [[W7, K8], 'start', 9, 0], [[W7, Z9, K10], 'start', 10, 6], [[W7, Z9], 'end', 10, 0], [[W7, K8, K9], 'end', 8, 6],
+      [[], 'end', 9, 0], [[W7], 'end', 7, 0], [[W7, Z9], 'continue', 10, 0],
     ];
     const kody = new Set();
     for (const [lista, typ, lata, mies] of przypadki) {

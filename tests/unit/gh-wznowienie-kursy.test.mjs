@@ -576,3 +576,61 @@ describe('P-GH-WZNOWIENIE, część 2 — wizyta kontrolna Terminarza z ostatnie
     expect(qe({ ghTherapyPoints: null })()).toBeNull();
   });
 });
+
+// Przegląd (2026-11-20): edycja punktu oceniana na liście PO zmianie. Dotąd po wznowieniu Zakończenia kursu 1 nie dało się
+// edytować ani dodać ponownie, w jedynym kursie z Kontynuacją przed Włączeniem nie dało się edytować Włączenia,
+// a Zakończenie w miesiącu Włączenia dawało mylący tekst. Prawdziwy monitor w atrapie.
+describe('P-GH-WZNOWIENIE, część 2 — monitor DocPro: edycja po wznowieniu (przegląd)', () => {
+  const RESTART = [M_W7, M_K8, M_Z9, M_W10, M_K11];
+  const kursy = (a) => wiersze(a).filter((w) => w.startsWith('#kurs'));
+
+  it('Zakończenie kursu 1 po wznowieniu: edycja (poprawka wzrostu, ten sam rodzaj i wiek) przyjęta, dwa kursy zostają', () => {
+    const a = monitorGh(RESTART);
+    a.edytuj('m-z9', { ghEditHeight: '123.5' }, 'end');
+    expect(a.stan().komunikat).toBeNull();
+    expect(zapisane(a)).toBe(true);
+    expect(a.stan().okno.find((p) => p.id === 'm-z9')).toMatchObject({ type: 'end', height: 123.5, ageYears: 9, ageMonths: 0 });
+    expect(kursy(a)).toEqual(['#kurs: Kurs 2 — wznowienie w wieku 10 l. 0 mies.']);
+  });
+
+  it('Zakończenie kursu 1 usunięte i dodane znowu wstecznie (9;0) — przyjęte, znów dwa kursy', () => {
+    const a = monitorGh(RESTART);
+    a.usun('m-z9');
+    expect(kursy(a)).toEqual([]);
+    a.dodajWsteczny(wsteczny('end', 9, 0, 123));
+    expect(a.stan().komunikat).toBeNull();
+    expect(zapisane(a)).toBe(true);
+    expect(kursy(a)).toEqual(['#kurs: Kurs 2 — wznowienie w wieku 10 l. 0 mies.']);
+  });
+
+  it('stary zapis W2 (W 7;0 → Z 9;0 → K 10;0) i ten sam z Włączeniem z miesiąca K 10;0: edycja Zakończenia przyjęta; edycja Kontynuacji W2 bez zmiany rodzaju — przyjęta', () => {
+    const a = monitorGh([M_W7, M_Z9, M_K10]);
+    a.edytuj('m-z9', { ghEditHeight: '123.5' }, 'end');
+    expect(a.stan().komunikat).toBeNull();
+    a.edytuj('m-k10', { ghEditHeight: '130.4' }, 'continue');
+    expect(a.stan().komunikat).toBeNull();
+    expect(a.stan().okno.find((p) => p.id === 'm-k10').height).toBe(130.4);
+    const b = monitorGh([M_W7, M_Z9, M_K10, MP('m-w10b', 'start', 10, 0, 130)]);
+    b.edytuj('m-z9', { ghEditHeight: '123.5' }, 'end');
+    expect(b.stan().komunikat).toBeNull();
+    expect(zapisane(b)).toBe(true);
+  });
+
+  it('jedyny kurs K 7;0 → W 8;0 → K 9;0 (wizyta przed leczeniem): edycja Włączenia przyjęta; Zakończenie między K 7;0 a W 8;0 — odmowa', () => {
+    const L = [MP('m-k7', 'continue', 7, 0, 110), MP('m-w8', 'start', 8, 0, 117), M_K9];
+    const a = monitorGh(L);
+    a.edytuj('m-w8', { ghEditHeight: '117.2' }, 'start');
+    expect(a.stan().komunikat).toBeNull();
+    expect(a.stan().okno.find((p) => p.id === 'm-w8').height).toBe(117.2);
+    const b = monitorGh(L);
+    b.dodajWsteczny(wsteczny('end', 7, 6, 113));
+    expect(b.stan().komunikat).toBe(TXT.zakonczenieNieOstatnie);
+  });
+
+  it('Włączenie i Zakończenie w tym samym miesiącu — osobny tekst odmowy', () => {
+    const a = monitorGh([M_W7]);
+    a.dodajZKarty('end', karta(7, 0, 110));
+    expect(a.stan().komunikat).toBe('„Zakończenie leczenia” nie może być w tym samym miesiącu co „Włączenie leczenia” tego kursu.');
+    expect(a.stan().okno).toEqual([M_W7]);
+  });
+});

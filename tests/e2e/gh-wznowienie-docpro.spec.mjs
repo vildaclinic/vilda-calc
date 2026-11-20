@@ -11,7 +11,7 @@ import { karta, tresc } from '../support/karta-leczenie.mjs';
 // Listę startową zasiewamy w pamięci modułu, jak inne testy GH. Dane wyłącznie FIKCYJNE; własne konto sejfu.
 test.use({ serviceWorkers: 'block' });
 
-test('GW-E1: wznowienie przyciskiem karty po Zakończeniu, odmowa Kontynuacji po Zakończeniu, tabela „Kurs 2”, metryki i B.64 z kursu 2, Karta pacjenta „kurs 2 z 2”', async ({ page }) => {
+test('GW-E1: wznowienie przyciskiem karty po Zakończeniu, odmowa Kontynuacji po Zakończeniu, tabela „Kurs 2”, metryki i B.64 z kursu 2, edycja Zakończenia kursu 1, Karta pacjenta „kurs 2 z 2”', async ({ page }) => {
   test.setTimeout(150_000);
   const bledy = [];
   page.on('pageerror', (e) => bledy.push(String(e && e.message)));
@@ -49,6 +49,20 @@ test('GW-E1: wznowienie przyciskiem karty po Zakończeniu, odmowa Kontynuacji po
   await expect(page.locator('#ghB64ResponseNote')).toContainText('wynosi 7,0 cm/rok (z 12 mies.)');
   const metryki = await page.evaluate(() => window.ghTherapyMetrics.map((m) => [m.Gw_kurs, m.gv_abs == null ? null : Math.round(m.gv_abs * 10) / 10]));
   expect(metryki).toEqual([[1, null], [1, 7], [1, 6], [2, null], [2, 7]]);
+
+  // Przegląd: Zakończenie kursu 1 po wznowieniu da się edytować (poprawka wzrostu) — kursy zostają dwa.
+  await page.click(`.edit-gh-pt-btn[data-id="${Z9.id}"]`);
+  await page.evaluate(() => {
+    const o = document.getElementById('ghEditOverlay');
+    const b = o && Array.from(o.querySelectorAll('button')).find((x) => x.textContent === 'Rozumiem');
+    if (b) b.click();
+  });
+  await page.fill('#ghEditHeight', '123.5');
+  await page.click('#btnGhEnd');
+  await expect(page.locator('#ghTherapyEditContainer')).toBeHidden();
+  await expect(page.locator('#ghInfoOverlay')).toHaveCount(0);
+  expect(await page.evaluate((id) => window.ghTherapyPoints.find((p) => p.id === id).height, Z9.id)).toBe(123.5);
+  await expect(page.locator('#ghTherapyTbody tr.gh-kurs-row')).toHaveText([KURS_2]);
 
   // Lista z monitora w rekordzie pacjenta → Karta pacjenta: kurs 2 z 2, Włączenie z kursu 2.
   const pid = await page.evaluate(async () => (await window.VildaVault.savePatient({

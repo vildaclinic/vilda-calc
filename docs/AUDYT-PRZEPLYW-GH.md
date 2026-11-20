@@ -43,10 +43,12 @@
 Reguły monitora (od P-GH-WZNOWIENIE, część 2, 2026-11-20 — jedno źródło `VildaGhPunkty.sprawdzRodzaj`, wersja 4):
 - reguła KURSÓW zamiast „najwyżej jedno „Włączenie” i jedno „Zakończenie”” w całej liście. Kursy liczy
   `VildaTrajectoryAnalysis.ghKursy` (punkty wg wieku, przy równym wieku Kontynuacja → Zakończenie → Włączenie, kurs
-  zamyka „Zakończenie”), a sprawdzenie zna wiek nowego punktu: „Włączenie” — pierwszy punkt kursu (nie później niż jego
-  pierwszy punkt) i jedyne w kursie, więc wolno je dodać po „Zakończeniu” (wznowienie) i na początku kursu bez
-  „Włączenia”; „Zakończenie” — po ostatnim punkcie kursu, jedyne w kursie, z wcześniejszym punktem; „Kontynuacja” — nie
-  w kursie po „Zakończeniu” bez „Włączenia” (W2). Edycja — ta sama symulacja bez edytowanego punktu;
+  zamyka „Zakończenie”), a sprawdzenie zna wiek nowego punktu: „Włączenie” — jedyne w kursie, a w kursie po
+  „Zakończeniu” nie później niż jego pierwszy punkt, więc wolno je dodać po „Zakończeniu” (wznowienie) i na początku kursu
+  bez „Włączenia” (w pierwszym kursie wolno wcześniejsze wizyty przed leczeniem); „Zakończenie” — ostatni punkt kursu,
+  jedyne w kursie, z wcześniejszym punktem, bez nowego podziału kursu przed punktem bez „Włączenia” albo przed
+  „Włączeniem” kursu 1 (istniejąca granica — zgoda); „Kontynuacja” — nie w kursie po „Zakończeniu” bez „Włączenia” (W2).
+  Edycja — na liście po zmianie (punkt zastąpiony); zmiana, która nie pogarsza zapisu, przechodzi;
 - wiek > 0, a masa, wzrost i dawka muszą być dodatnie;
 - program i preparat są wymagane.
 
