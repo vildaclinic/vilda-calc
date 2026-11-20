@@ -36,7 +36,7 @@
     "tests/diagnostics/gh-session/diagnostic-routes.mjs": "1d4bfa6e009e9587d8bba7c052841478371dca4e352c5b3a5727f77011c110fd",
     "tests/diagnostics/gh-session/full-failure-insertion-blocks.json": "f2f4e6d66a4f687ad3d121bf61ec568ae3a6dc423c126b1bf9fc8d88e6273e04",
     "tests/diagnostics/gh-session/prepare.mjs": "0db3e0236eed1690d52da230bb1226e27ec818f7f8c515ec70ec502f9f253ef0",
-    "tests/diagnostics/gh-session/verify-observer.mjs": "cf13be5b41052dc3a3e5a216652de9c3727f90dcd5c82657bcddb95575314da5",
+    "tests/diagnostics/gh-session/verify-observer.mjs": "df2cd60f2a31dec2ff4d082d36bab1813f28eafe767c6becbcfeaa94d0450f2d",
     "tests/diagnostics/gh-session/verify-panel-observer.mjs": "77e967794db641123bd05b336a3eddf2d9b58c14efb1be7a3937797931c77c99"
   },
   "originalFiles": {

@@ -96,6 +96,7 @@ const canonical=JSON.stringify(strip(nativeAST));assert.equal(JSON.stringify(str
 const proof=JSON.parse(fs.readFileSync(dir+'/proof.json'));proof.syntax={result:'PASS',parser:'acorn8.17.0',nativeRuntimeExecuted:false};proof.expressionASTProof={result:'PASS',functions:functionProof,
  method:'Compare original expression ASTs with generated expressions after removing only local scalar marker assignment sequences/result assignments. Native logical operator trees, native call/property AST traversal order and counts are identical. Verify added statements only store result, observe false/original catch, and return exact original result.'};
 proof.canonicalFullNativeASTSHA256=sha(canonical);proof.fullReverseToNative0e805ByteExact=true;
+proof.astEquivalence={result:'PASS',method:'Exact full source reversal recovers canonical native AST; original guard expression trees and native call/property order are recovered after removing only diagnostic scalar markers/result assignments.',canonicalNativeASTSHA256:sha(canonical)};
 const writer=find(cloneAST,'oe');proof.writerFunctionSourceSHA256=sha(clone.slice(writer.start,writer.end));
 assert.equal(proof.writerFunctionSourceSHA256,'f2f320a9bf257170d28df4f41f6d7e2340ea1d3699896ece0c6e50a8628e400c');
 proof.syntax.nodeCheck='PASS';let sites=0;visit(cloneAST,n=>{if(n.type==='CallExpression'&&n.callee.name==='ghWriterObservation')sites++;});assert.equal(sites,23);proof.observationCallSiteCount=sites;
