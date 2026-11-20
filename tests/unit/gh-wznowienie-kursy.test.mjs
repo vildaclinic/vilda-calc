@@ -96,12 +96,24 @@ describe('P-GH-WZNOWIENIE — ghKursy: jedna reguła kursów GH (A.1–A.3)', ()
     expect(opis(k)).toEqual([{ numer: 1, a: 84, b: null, active: true, label: null, punkty: ['w-wczesniej', 'w-pozniej', 'k'], wlaczenie: 'w-wczesniej' }]);
   });
 
-  it('zdublowane Zakończenie (Z tuż po Z) nie otwiera kursu zerowej długości — przesuwa koniec kursu', () => {
+  it('zdublowane Zakończenie (Z tuż po Z) nie otwiera kursu zerowej długości i nie przesuwa końca kursu', () => {
     const J = srodowisko();
     expect(opis(J.ghKursy([pkt('w', 'start', 84), pkt('z1', 'end', 108), pkt('z2', 'end', 108)])))
       .toEqual([{ numer: 1, a: 84, b: 108, active: false, label: null, punkty: ['w', 'z1', 'z2'], wlaczenie: 'w' }]);
-    expect(J.therapyIntervals([pkt('w', 'start', 84), pkt('z1', 'end', 108), pkt('z2', 'end', 113)]).map((x) => [x.a, x.b]))
-      .toEqual([[84, 113]]);
+    // W 5;3 → K 5;8 → Z 6;5 → Z 6;10: kurs kończy pierwsze Zakończenie — miesiące 77 → 82 nie są leczeniem GH
+    // (dotąd: [63, 77] i kurs zerowej długości [82, 82]; ta sama suma miesięcy leczenia).
+    expect(J.therapyIntervals([pkt('w', 'start', 63), pkt('k', 'continue', 68), pkt('z1', 'end', 77), pkt('z2', 'end', 82)]).map((x) => [x.a, x.b]))
+      .toEqual([[63, 77]]);
+  });
+
+  it('Kontynuacja z miesiąca Zakończenia (dopisana po nim) zostaje w zamykanym kursie — leczenie zakończone, bez kursu 2', () => {
+    const J = srodowisko();
+    // W 7;0 → K 8;0 → Z 9;0, potem dopisana K 9;0 (np. późny wynik IGF-1) — monitor dokłada punkt na koniec tablicy
+    const k = J.ghKursy([pkt('w', 'start', 84), pkt('k', 'continue', 96), pkt('z', 'end', 108), pkt('k2', 'continue', 108)]);
+    expect(opis(k)).toEqual([{ numer: 1, a: 84, b: 108, active: false, label: null, punkty: ['w', 'k', 'k2', 'z'], wlaczenie: 'w' }]);
+    // Włączenie z miesiąca Zakończenia nadal otwiera nowy kurs, niezależnie od kolejności w tablicy
+    expect(opis(J.ghKursy([pkt('w2', 'start', 108), pkt('w1', 'start', 84), pkt('z', 'end', 108)])).map((x) => x.punkty))
+      .toEqual([['w1', 'z'], ['w2']]);
   });
 
   it('równy wiek: kolejność tablicy (stabilnie); punkty bez wieku i innych typów pominięte; brak punktów → []', () => {

@@ -487,6 +487,23 @@ describe('P-GH-WZNOWIENIE — podsumowanie i „Dane analityczne” GH od bież�
   });
 });
 
+describe('P-GH-WZNOWIENIE — przypadki z przeglądu: ten sam miesiąc, dwa Włączenia w jednym kursie', () => {
+  it('Kontynuacja z miesiąca Zakończenia dopisana po nim: „leczenie zakończone”, bez „kurs 2 z 2” (jak dotąd)', () => {
+    const pts = [...GR3, GHP('r3-k2', 'continue', 9, 0, 24, 123, 0.03)];
+    const k = zbuduj({ plec: 'M', ghTherapyPoints: pts });
+    expect(znaczniki(k)).toEqual(['leczenie zakończone']);
+    expect(k.paski[0].stan).toBe('leczenie zakończone');
+  });
+
+  it('jeden kurs z dwoma Włączeniami w odwrotnej kolejności tablicy: pas na siatkach od pierwszego Włączenia wg wieku', () => {
+    const K = karta();
+    const Lt = pasLeczenia(120);
+    const gh = (pe) => Lt(pe, 'GH', '#0F6E56');
+    const pts = [GHP('d-w8', 'start', 8, 0, 21, 117, 0.03), GHP('d-w7', 'start', 7, 0, 18, 110, 0.025), GHP('d-k9', 'continue', 9, 0, 24, 123, 0.03)];
+    expect(K.Gw_pasy(pts, gh)).toEqual({ startAgeM: 84, endAgeM: 120, active: true, label: 'GH', color: '#0F6E56' });
+  });
+});
+
 describe('P-GH-WZNOWIENIE — trend GH i pas na siatkach (B.4, B.5, GR7)', () => {
   it('GR7 trend (mg/kg/d): linia dawki przerwana między Zakończeniem (9 l.) a ponownym Włączeniem (10 l.)', () => {
     const K = karta();

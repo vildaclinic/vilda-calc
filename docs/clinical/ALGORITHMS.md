@@ -45084,7 +45084,7 @@ zmienia się to, od którego punktu i w obrębie których punktów są liczone. 
   „aktywne”; „Włączenie”, czas leczenia, przyrost, tempo i ΔhSDS od ostatniego Włączenia (bieżący kurs), jak nowy cykl
   leczenia otyłości; wcześniejszy kurs zostaje widoczny w punktach i trendzie.
 - **W2 Kontynuacja po Zakończeniu bez nowego Włączenia** (stare zapisy): „aktywne”, bez czasu leczenia, przyrostu i ΔhSDS,
-  z prośbą o dopisanie Włączenia w DocPro.
+  z prośbą o dopisanie Włączenia w DocPro (w części 1 sama informacja o braku Włączenia — patrz niżej).
 - **W3 granica kursu = samo Zakończenie, wszędzie tak samo** (Karta i analiza trajektorii), bez progu 3 mies. przerwy
   (`KURS_PRZERWA_MIN_M`) — jak cykle leczenia otyłości; zastępuje część reguły GH z P-WERDYKT rata 6 (2026-09-27).
 - **W4**: część 1 = odczyt (ten PR); część 2 = wpis w DocPro (drugie Włączenie, monitor, B.64, odcinki).
@@ -45102,11 +45102,14 @@ punkt po „end” z przerwą < 3 mies. wracał do kursu, ≥ 3 mies. otwierał 
 **Reguła — jedno źródło `VildaTrajectoryAnalysis.ghKursy(punkty)`** (`vilda_trajectory_analysis.js`, ładowany na tych
 samych 8 stronach co Karta):
 1. Punkty GH (`start` | `continue` | `end`) z wiekiem > 0, posortowane stabilnie po wieku w pełnych miesiącach
-   (`ageYears·12 + ageMonths`; równy wiek — kolejność tablicy). Wynik nie zależy od kolejności tablicy.
+   (`ageYears·12 + ageMonths`). Przy równym wieku (punkty nie mają daty): Kontynuacja, potem Zakończenie, potem
+   Włączenie, a w obrębie typu kolejność tablicy — Kontynuacja z miesiąca Zakończenia dopisana po nim (np. późny wynik
+   IGF-1; oba formularze monitora dokładają punkt na koniec tablicy) zostaje w zamykanym kursie, a Włączenie z miesiąca
+   Zakończenia otwiera nowy kurs. Wynik nie zależy od kolejności tablicy.
 2. Kurs zaczyna pierwszy punkt albo pierwszy punkt po „end”; „end” zamyka kurs; bez progu przerwy. Drugie „start”
    w otwartym kursie nie dzieli kursu (Włączeniem jest pierwsze). Zakończenie tuż po Zakończeniu (zdublowany wpis, np. po
-   scaleniu) zostaje w zamkniętym kursie i przesuwa jego koniec — nie tworzy kursu zerowej długości (rozstrzygnięcie
-   wykonawcy, poniżej).
+   scaleniu) zostaje w zamkniętym kursie i NIE przesuwa jego końca — kurs kończy pierwsze Zakończenie, przerwa po nim nie
+   jest leczeniem (dotąd: kurs zerowej długości w miejscu drugiego Zakończenia, ta sama suma miesięcy leczenia).
 3. Kurs `{ numer, a, b, active, label, punkty, wlaczenie }`: `a` — wiek pierwszego punktu, `b` — wiek Zakończenia albo
    null, `label` — preparat ostatniego punktu z preparatem, `wlaczenie` — pierwsze „start” w kursie albo null. Kurs bez
    Włączenia po zamkniętym kursie = W2; jedyny kurs bez Włączenia = P-GH-BEZ-STARTU (bez zmian).
@@ -45122,7 +45125,9 @@ liczy dokładnie jak dotąd):
 - podsumowanie (`wl`): „leczenie zakończone” tylko przy zamkniętym bieżącym kursie (`Kl_wy.zakonczone` → pasek i kolejność
   D2); przy > 1 kursie znacznik „kurs k z N” (wygląd „cykl k z N”) i „Punkty kontrolne: n w kursie (M łącznie)”;
   „Włączenie”, program i preparat z bieżącego kursu; „Aktualna dawka” i „Ostatnia kontrola” — ostatni punkt wg wieku;
-  przy jednym kursie „Włączenie” = pierwsze „start” wg wieku (dotąd wg tablicy);
+  przy jednym kursie „Włączenie” = pierwsze „start” wg wieku (dotąd wg tablicy) — tak samo pas na siatkach (`Gw_pasy`)
+  i program trendu (`Gw_punktyProgramu`): przy jednym kursie dostają punkty wg wieku (różnica tylko przy dwóch
+  Włączeniach w jednym kursie);
 - W2: „Włączenie: brak punktu” i ramka (wygląd P-GH-BEZ-STARTU): „Kontynuacja po Zakończeniu bez nowego Włączenia
   (Zakończenie w wieku …, pierwszy punkt kursu: w wieku …). Czas leczenia, przyrost i ΔhSDS od wznowienia liczymy od punktu
   „Włączenie leczenia”, którego ten kurs nie ma.” — bez prośby o dopisanie w DocPro, bo monitor do części 2 nie przyjmuje
@@ -45169,12 +45174,13 @@ Liczby hSDS w testach jednostkowych z atrapy liniowej siatki, w e2e — z OLAF (
 - Zapas kursów otyłości bez modułu cykli (`kursyZPrzerwa`) zostaje przy progu 3 mies. (A.5: inne użycia stałej bez zmian).
 
 **Testy.** Dane wyłącznie fikcyjne; testy wołają kod produkcyjny.
-- `tests/unit/gh-wznowienie-kursy.test.mjs` (15, nowy): `ghKursy` (GR1–GR6, drugie Włączenie, zdublowane Zakończenie,
-  równy wiek, wiek 0), GR5 w werdykcie pary (przycięcie startu), GR1 w analizie (odcinek przerwy, dopisek, dwa żetony),
+- `tests/unit/gh-wznowienie-kursy.test.mjs` (16, nowy): `ghKursy` (GR1–GR6, drugie Włączenie, zdublowane Zakończenie
+  z przerwą — koniec przy pierwszym, Kontynuacja i Włączenie z miesiąca Zakończenia, równy wiek, wiek 0), GR5 w werdykcie pary (przycięcie startu), GR1 w analizie (odcinek przerwy, dopisek, dwa żetony),
   jeden kurs = koperta, `ctxGhKursy` wycięta z `vilda_auth_ui.js` (GR8), strażnik `growth-basic-module.js`.
-- `tests/unit/karta-leczenie.test.mjs` (36 → 47): prawdziwe `wl`, `kl`, `Pl`, `Kl_*`, `Gw_*` i `Lt` z `vilda_auth_ui.js`
+- `tests/unit/karta-leczenie.test.mjs` (36 → 49): prawdziwe `wl`, `kl`, `Pl`, `Kl_*`, `Gw_*` i `Lt` z `vilda_auth_ui.js`
   z prawdziwym modułem trajektorii — GR1, GR1 + otyłość (D2), GR4, GR2 (dwa warianty), GR3/GR6 (DOM identyczny jak bez
-  modułu kursów, 7 zapisów), drugie Włączenie, GR7 (ścieżka dawki, % dawki, program, pasy).
+  modułu kursów, 7 zapisów), drugie Włączenie, GR7 (ścieżka dawki, % dawki, program, pasy), Kontynuacja z miesiąca
+  Zakończenia („leczenie zakończone”, bez kursu 2), pas jednego kursu z dwoma Włączeniami (od pierwszego wg wieku).
 - Zmienione oczekiwania (zamierzone): `werdykt-kursy-rata-6` — punkt po „end” z przerwą < 3 mies. otwiera nowy kurs
   (dotąd wracał do kursu); `kursy-otylosci-cykle` — GH z punktami „K po Z” ma dwa kursy (dotąd jeden), strażnik Karty:
   panel trajektorii dostaje `ghKursy`, `ghM` z `ctxGhKursy` (dotąd „nie ghKursy”, koperta); asercje „dotąd …” reguły
@@ -45186,11 +45192,13 @@ Liczby hSDS w testach jednostkowych z atrapy liniowej siatki, w e2e — z OLAF (
   przechodzi, bo pilnuje braku zmiany), zmienione oczekiwania oraz KL-7 i KLM-4 nie przechodzą.
 
 **Ograniczenia (część 2 i poza zakresem).** DocPro nadal przyjmuje najwyżej jedno Włączenie i jedno Zakończenie
-(`vilda_gh_punkty.js`), więc prośbę z ramki W2 da się spełnić dopiero po części 2; wznowienie powstaje dziś tylko przez
+(`vilda_gh_punkty.js`), dlatego ramka W2 tylko informuje o braku Włączenia (prośba o dopisanie — z częścią 2); wznowienie
+powstaje dziś tylko przez
 scalenie duplikatów, import albo ręcznie. Monitor GH (tabela, metryki, B.64, przyciski, formularz wsteczny), odcinki
 leków (`gh_therapy_segments.js` — wznowienie tym samym lekiem to jeden odcinek przez przerwę), „Preparaty (historia)”,
-Terminarz, Historia, edytor notatki i sejf — bez zmian. Dwa punkty w tym samym miesiącu (Zakończenie i Włączenie) —
-o kolejności decyduje tablica (punkty nie mają daty).
+Terminarz, Historia, edytor notatki i sejf — bez zmian. Punkty w tym samym miesiącu porządkuje typ (Kontynuacja,
+Zakończenie, Włączenie); bezsensowny zapis „Włączenie i Zakończenie w tym samym miesiącu, bez wcześniejszych punktów”
+daje kurs z samym Zakończeniem i nowy kurs od Włączenia (punkty nie mają daty, by to rozstrzygnąć).
 
 **Wdrożenie.** Od razu przy wydaniu; dane, zapis, sejf i synchronizacja bez zmian. **Cofnięcie** = rewert PR: Karta
 i trajektoria wracają do reguły „jakiekolwiek Zakończenie” i progu 3 mies.

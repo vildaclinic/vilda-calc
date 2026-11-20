@@ -3114,10 +3114,16 @@ function Gw_infoW2(g) {
     + ra(g.kurs.punkty[0]) + "). Czas leczenia, przyrost i ΔhSDS od wznowienia liczymy od punktu „Włączenie leczenia”, "
     + "którego ten kurs nie ma.";
 }
-/** Pas GH na siatkach: jeden na kurs (rysuj — dotychczasowy pas z listy punktów); jeden kurs — jak dotąd. */
+/** Punkty wg wieku (stabilnie, z punktami bez wieku) — „pierwsze Włączenie” wg wieku, jak w podsumowaniu (wl). */
+function Gw_wgWieku(t) {
+  if (!Array.isArray(t)) return t;
+  return t.map(function (p, j) { return { p: p, j: j, m: p ? (p.ageYears || 0) * 12 + (p.ageMonths || 0) : 0 }; })
+    .sort(function (x, y) { return x.m - y.m || x.j - y.j; }).map(function (x) { return x.p; });
+}
+/** Pas GH na siatkach: jeden na kurs (rysuj — dotychczasowy pas z listy punktów); jeden kurs — punkty wg wieku. */
 function Gw_pasy(t, rysuj) {
   var k = Gw_kursy(t);
-  if (!k || k.length < 2) return rysuj(t);
+  if (!k || k.length < 2) return rysuj(Gw_wgWieku(t));
   return k.map(function (x) { return rysuj(x.punkty); }).filter(Boolean);
 }
 /** Trend GH: numer kursu punktu (linia dawki przerwana między kursami); jeden kurs — bez numerów (jak dotąd). */
@@ -3129,10 +3135,10 @@ function Gw_numerKursu(t) {
     return 0;
   };
 }
-/** Trend GH: punkty, z których brany jest program — bieżący kurs; jeden kurs — cała lista (jak dotąd). */
+/** Trend GH: punkty, z których brany jest program — bieżący kurs; jeden kurs — cała lista wg wieku. */
 function Gw_punktyProgramu(t) {
   var g = Gw_biezacy(t);
-  return g ? g.kurs.punkty : t;
+  return g ? g.kurs.punkty : Gw_wgWieku(t);
 }
 /* P-KARTA-LECZENIE, etap 1 (decyzje właściciela 2026-11-19, D1–D5; plan: docs/KARTA_LECZENIE_PLAN.md, opis:
    docs/clinical/ALGORITHMS.md). Bloki leczenia Karty — podsumowanie i „Dane analityczne” GH oraz grupa otyłości Ob_dz

@@ -508,13 +508,16 @@
   // pacjenta (vilda_auth_ui.js: podsumowanie, „Dane analityczne”, trend dawki, pas na siatkach, panele trajektorii
   // i porównania) i analizy trajektorii (therapyIntervals). Punkty GH (start | continue | end) z wiekiem > 0 (punkt bez
   // wieku nie ma miejsca na osi czasu — jak dotąd w therapyIntervals), posortowane po wieku w pełnych miesiącach
-  // (ageYears*12 + ageMonths) STABILNIE — przy równym wieku zostaje kolejność tablicy — więc wynik nie zależy od kolejności
-  // tablicy (scalone duplikaty dopisują punkty na koniec). Granicą kursu jest SAMO Zakończenie (W3, bez progu przerwy
+  // (ageYears*12 + ageMonths) STABILNIE, więc wynik nie zależy od kolejności tablicy (scalone duplikaty i oba formularze
+  // monitora dopisują punkty na koniec). Przy RÓWNYM wieku (punkty GH nie mają daty — tylko pełne miesiące): najpierw
+  // Kontynuacja, potem Zakończenie, potem Włączenie, a w obrębie typu kolejność tablicy — Kontynuacja z miesiąca
+  // Zakończenia (np. późny wynik dopisany po Zakończeniu) zostaje w zamykanym kursie, a Włączenie z miesiąca Zakończenia
+  // otwiera nowy kurs. Granicą kursu jest SAMO Zakończenie (W3, bez progu przerwy
   // KURS_PRZERWA_MIN_M — jak cykle leczenia otyłości): kurs zaczyna pierwszy punkt albo pierwszy punkt po „end", „end"
   // zamyka kurs. Drugie „start" w otwartym kursie (np. scalone duplikaty) nie dzieli kursu; Włączeniem kursu jest
   // pierwsze. Zakończenie tuż po Zakończeniu (bez Włączenia ani Kontynuacji między nimi — zdublowany wpis, np. po scaleniu
-  // dwóch rekordów) nie otwiera kursu zerowej długości: zostaje w kursie, który zamknęło poprzednie, i przesuwa jego
-  // koniec (dawna reguła robiła to samo przy przerwie < KURS_PRZERWA_MIN_M).
+  // dwóch rekordów) nie otwiera kursu zerowej długości i nie przesuwa końca: zostaje w kursie, który zamknęło pierwsze
+  // Zakończenie (przerwa po nim nie liczy się jako leczenie — jak dotąd w miesiącach kursów).
   // Kurs: { numer: 1..N, a: wiek pierwszego punktu, b: wiek Zakończenia albo null, active: b == null, label: preparat
   // z ostatniego punktu z preparatem (jak dotąd), punkty: [posortowane obiekty z tablicy], wlaczenie: pierwszy „start"
   // w kursie albo null }. Kurs bez Włączenia po zamkniętym kursie = „Kontynuacja po Zakończeniu bez nowego Włączenia”
@@ -522,9 +525,10 @@
   // w cyklach otyłości). Jedyny kurs bez Włączenia = P-GH-BEZ-STARTU (bez zmian).
   function ghKursy(punkty) {
     try {
-      var pts = therapyPointsOf(punkty).map(function (p, i) { return { p: p, i: i, m: therapyAgeM(p) }; })
+      var RANGA = { 'continue': 0, 'end': 1, 'start': 2 };
+      var pts = therapyPointsOf(punkty).map(function (p, i) { return { p: p, i: i, m: therapyAgeM(p), r: RANGA[p.type] || 0 }; })
         .filter(function (x) { return x.m > 0; })
-        .sort(function (x, y) { return x.m - y.m || x.i - y.i; });
+        .sort(function (x, y) { return x.m - y.m || x.r - y.r || x.i - y.i; });
       var out = [], cur = null;
       for (var j = 0; j < pts.length; j++) {
         var p = pts[j].p, age = pts[j].m;
@@ -535,7 +539,7 @@
         }
         cur.punkty.push(p);
         if (p.type === 'start' && !cur.wlaczenie) cur.wlaczenie = p;
-        if (p.type === 'end') cur.b = age;
+        if (p.type === 'end' && !zdublowaneZakonczenie) cur.b = age;
         var d = drugShortName(p.drug);
         if (d) cur.label = d;
       }

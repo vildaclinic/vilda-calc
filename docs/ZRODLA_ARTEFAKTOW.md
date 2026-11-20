@@ -2402,8 +2402,9 @@ Czytelne źródło reguły: `vilda_trajectory_analysis.js` — `ghKursy` (ekspor
 `therapyIntervals`), `kursyZPrzerwa` (dawna reguła, już tylko zapas kursów otyłości). W `vilda_auth_ui.js` nowy czytelny
 blok P-GH-WZNOWIENIE zaraz po funkcji `jl` (przed blokiem P-KARTA-LECZENIE): `Gw_BEZ_WLACZENIA`, `Gw_kursy` (kursy
 z modułu trajektorii; bez modułu — null), `Gw_biezacy` (bieżący kurs przy > 1 kursie, inaczej null — Karta liczy jak
-dotąd), `Gw_znacznik` („kurs k z N”, wygląd „cykl k z N” z `Ob_css`), `Gw_infoW2` (treść ramki W2), `Gw_pasy` (pas
-na kurs), `Gw_numerKursu` (numer kursu punktu trendu), `Gw_punktyProgramu` (program trendu z bieżącego kursu). Opis:
+dotąd), `Gw_znacznik` („kurs k z N”, wygląd „cykl k z N” z `Ob_css`), `Gw_infoW2` (treść ramki W2), `Gw_wgWieku`
+(punkty wg wieku, stabilnie), `Gw_pasy` (pas na kurs; jeden kurs — z punktów wg wieku), `Gw_numerKursu` (numer kursu
+punktu trendu), `Gw_punktyProgramu` (program trendu z bieżącego kursu; jeden kurs — z punktów wg wieku). Opis:
 `docs/clinical/ALGORITHMS.md`, wpis P-GH-WZNOWIENIE, część 1.
 
 ```
