@@ -1,0 +1,52 @@
+name: Diagnostyka natywnego zapisu GH — tylko fikcyjne dane
+on:
+  push:
+    branches: [agent/diagnostyka-gh-zapis]
+permissions:
+  contents: read
+concurrency:
+  group: gh-current-diagnostic-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  private-leaf:
+    if: github.repository == 'vildaclinic/vilda-calc' && github.ref == 'refs/heads/agent/diagnostyka-gh-zapis'
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Zainstaluj oryginalny Linux WebKit
+        run: |
+          apt_mirror_list=/etc/apt/apt-mirrors.txt
+          if [ -f "$apt_mirror_list" ] &&
+             grep -Eq '^https://archive\.ubuntu\.com/ubuntu/([[:space:]]|$)' "$apt_mirror_list" &&
+             grep -Eq '^https://security\.ubuntu\.com/ubuntu/([[:space:]]|$)' "$apt_mirror_list"; then
+            sudo sed -i -E '\@^http://azure\.archive\.ubuntu\.com/ubuntu/([[:space:]]|$)@d' "$apt_mirror_list"
+          fi
+          npx playwright install --with-deps webkit
+      - name: Przygotuj odwracalny obserwator wyłącznie w CI
+        run: python3 tests/diagnostics/gh-current/prepare.py prepare "$GITHUB_WORKSPACE" "$RUNNER_TEMP/gh-current-diag"
+      - name: Oryginalny przypadek — 10 powtórzeń, jeden worker, bez retry
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run test:e2e -- --config playwright.lab-chart-webkit.config.mjs --project home-workspace-webkit --grep 'home A2: native GH portal cancels purely and saves/imports the original therapy point · 390' --repeat-each 10 --workers 1 --retries 0 2>&1 | tee "$RUNNER_TEMP/gh-current-diag/runtime.log"
+      - name: Przywróć dokładne bajty źródeł i testu
+        if: always()
+        run: python3 tests/diagnostics/gh-current/prepare.py restore "$GITHUB_WORKSPACE" "$RUNNER_TEMP/gh-current-diag"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gh-current-native-private-leaf-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/gh-current-diag/
+            playwright-report/
+            test-results/
+          retention-days: 14
