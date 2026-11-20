@@ -191,11 +191,25 @@
 // LO.modelEcha także dla stomb — wpis Kosza zapisany scaleniem inaczej, niż był i niż przyszedł, bez opisu D7, postaci
 // gwiazdki w treści, samej tożsamości wizyty i samego wygaśnięcia treści; wiersz tylko, gdy po partii jest wpis tej
 // wersji). Bloki na końcu pliku: p. 6 z włączonym przełącznikiem (światy 942–949; R4-a, R4-a′ bez różnicy; różnica
-// „wpis Kosza tylko na jednym urządzeniu” po „Przywróć” i „Usuń pacjenta” zostaje do E3-PR0d2), test wejściowy (936–941),
-// tryb ścisły — nagrobek retencji starszej aplikacji z pełnej kopii (decyzja 2 z 2026-11-19; 952–955), wpis zmieniony
-// i zdjęty w jednej partii (956), granica 30 dni treści wpisu (950–951, bez wyroczni) i ziarno koalescencji 8; dwa
-// scenariusze floty z przełącznikiem sejfu (R4a i R4a′ przez 276; światy 824, 825). Przy wyłączonym przełączniku
-// wszystkie literały bez zmian.
+// „wpis Kosza tylko na jednym urządzeniu” po „Przywróć” i „Usuń pacjenta” — od E3-PR0d2 bez różnicy, niżej), test
+// wejściowy (936–941), tryb ścisły — nagrobek retencji starszej aplikacji z pełnej kopii (decyzja 2 z 2026-11-19;
+// 952–955), wpis zmieniony i zdjęty w jednej partii (956), granica 30 dni treści wpisu (950–951, bez wyroczni) i ziarno
+// koalescencji 8; dwa scenariusze floty z przełącznikiem sejfu (R4a i R4a′ przez 276; światy 824, 825). Przy wyłączonym
+// przełączniku wszystkie literały bez zmian.
+//
+// E3-PR0d2 (odsyłanie ukrytego wpisu Kosza karty usuniętej; ten sam przełącznik): po udanym zastosowaniu koperty
+// zdarzenia sejf odsyła wpis Kosza wersji, którą ładunek niósł pod kartą P, gdy po scaleniu wersji nie ma pod żadną
+// kartą, wersja wygrywa z każdym elementem wpisu, karty żadnego elementu nie ma, a karta P przegrała z nagrobkiem
+// pacjenta (wpis odesłany, bo stan po scaleniu tego wymaga, choć scalanie niczego nie zapisało). Model haków
+// i odsyłania: na zdarzenie wiersze LO.modelEcha i wiersze ze stanu (LO.modelStanu z rozstrzygnięciem „wersja wygrywa
+// z wpisem” z kodu wyciętego z sejfu, WYGRYWA) bez kluczy wierszy LO.modelEcha tego zdarzenia; przed porównaniem
+// z modelem — granica niezależna od modeli (LO.ponadGranica: na klucz liczba kopert stomb odsyłania ≤ liczba zdarzeń
+// partii, które wymieniają tę wersję). Koperty klucza najpierw do wierszy E3-PR0d (zapiszWyslanieEcha — „ponowne
+// wysłanie tej samej wartości”), reszta ze stanu (src 'stan', „(ze stanu)” w opisKolejki, licznik S.stat.zeStanu
+// { koperty, ponowne, retencja } poza „ponownym wysłaniem tej samej wartości”). Bloki: p. 6 z przełącznikiem — R5-0,
+// R5-E1 i wariant „C wysyła tylko zdarzenia” po samych zdarzeniach bez różnicy W1 (W4 i wyrocznia bez zmian: R5-E1 —
+// jawny wyjątek, decyzja z 2026-11-20; P6E_ZE_STANU), test wejściowy ukrytego wpisu (światy 990 + nr), ziarno 1
+// i koalescencja 8 — 0 odesłań ze stanu.
 //
 // KOLEJNOŚĆ W KROKU (E2-PR3a2, sprawdzana na emiterach): snap (także wersje przeniesione pod kartę celu „Scal pacjentów”
 // i głowy scalenia), potem stomb, potem ptomb, potem pnote, pnotetomb, note, notetomb, plist, plisttomb, pref, pk, pktomb,
@@ -279,7 +293,7 @@ import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vites
 import { utworzAtrapeWorkera, zegarSterowany } from '../support/atrapa-workera-sync.mjs';
 import { sprzatnijUrzadzenia, utworzUrzadzenie, eksportKanoniczny } from '../support/urzadzenie-sync.mjs';
 import { appendFileSync, readFileSync } from 'node:fs';
-import { naglowek, okno } from './sesja-zapisu-uprzaz.mjs';
+import { naglowek, okno, wytnijFunkcje } from './sesja-zapisu-uprzaz.mjs';
 import { createHash } from 'node:crypto';
 import { PRZYGOTOWANIA, repoRoot, sztucznyZegar, przesunZegar, zaladowanieSejfu, zegar } from './s4d7-wspolne.mjs';
 import { SCEN as KATALOG, RUNDY, pelnyStan, widok } from './kosz-po-kluczu-wspolne.mjs';
@@ -990,6 +1004,9 @@ const statHakow = () => ({ porownan: 0, zgodnych: 0, wRandze: 0, innaKolejnosc: 
 // łapie wyjątki operacji); afterEach wymaga pustej listy (AB7). Suma porównań partii w pliku — druk w afterAll.
 const HAKI_NIEZGODNE = [];
 const HAKI_PLIK = statHakow();
+// E3-PR0d2: rozstrzygnięcie „nagrobek wygrywa z wersją” z kodu wyciętego z sejfu (LO.wygrywaZKodu; strażnik „wycięte =
+// sejf” w tests/unit/licznik-odsylania.test.mjs) — wejście modelu odsyłania ukrytego wpisu Kosza (LO.modelStanu).
+const WYGRYWA = LO.wygrywaZKodu(readFileSync(path.join(repoRoot, 'vilda_vault.js'), 'utf8'), wytnijFunkcje);
 // Opis koperty haka (zestaw pfull — pierwsza porcja i jej setId).
 const opisHaka = (k) => { const x = Array.isArray(k) ? k[0] : k; return { kind: x.event.kind, key: x.event.key, ...(x.event.full ? { setId: x.event.full.setId } : {}) }; };
 // Porównanie haków partii (liczniki S.stat.haki); niezgodne — wyjątek z opisem i wpis w HAKI_NIEZGODNE.
@@ -1024,6 +1041,9 @@ function porownajHaki(S, Y, partia, model, emitery, wpisy, po) {
 // każdym zdarzeniu.
 // Odbiorca ze starszą aplikacją (sejf 276, flota) nie ma odsyłania — także przy włączonym przełączniku jego wpisy
 // porównuje model haków, jak przy wyłączonym.
+// E3-PR0d2: koperty odsyłania partii przypisane wierszom modelu (LO.przypiszKoperty): stomb klucza najpierw do wierszy
+// E3-PR0d (src 'echo', zapiszWyslanieEcha), reszta do wierszy ze stanu (src 'stan', zapiszZeStanu — bez rejestracji
+// w S.echoWyslane); każda liczy się w S.stat.echo.
 async function haki(S, Y, partia, przed, po, stany = null, stanyEcha = null) {
   const wpisy = Y.lancuch.splice(0).filter((z) => !z.znacznik && z.uid === po.userId);
   const echo = zEchem(S) && Y.app === 'N';
@@ -1039,10 +1059,21 @@ async function haki(S, Y, partia, przed, po, stany = null, stanyEcha = null) {
   const w = porownajHaki(S, Y, partia, model, emitery, wpisy.filter((z) => !jestEcho(z)), po);
   HAKI_PLIK.porownan += 1;
   HAKI_PLIK[w === 'rowne' ? 'zgodnych' : w] += 1;
-  if (echo) { S.partiaEcha = (S.partiaEcha || 0) + 1; porownajEcho(S, Y, partia, stanyEcha || [przed, po], po, zbudowane.filter((x) => x.echo).map((x) => x.k)); }
+  let przydzial = [];
+  if (echo) {
+    S.partiaEcha = (S.partiaEcha || 0) + 1;
+    const koperty = zbudowane.filter((x) => x.echo).map((x) => x.k);
+    const m = porownajEcho(S, Y, partia, stanyEcha || [przed, po], po, koperty);
+    przydzial = LO.przypiszKoperty(koperty, m.wiersze, m.zeStanu);
+  }
   const dodane = [];
   for (const { k, echo: e } of zbudowane) {
-    if (e) { await doKolejki(S, Y, k, 'echo'); dodane.push(k); S.stat.echo = (S.stat.echo || 0) + 1; zapiszWyslanieEcha(S, Y, k); continue; }
+    if (e) {
+      const p = przydzial.shift();
+      await doKolejki(S, Y, k, p.src); dodane.push(k); S.stat.echo = (S.stat.echo || 0) + 1;
+      if (p.src === 'stan') zapiszZeStanu(S, Y, k, p.retencja); else zapiszWyslanieEcha(S, Y, k);
+      continue;
+    }
     if (Array.isArray(k)) {
       if (S.koalescencja) { await doKolejki(S, Y, k); dodane.push(...k); } // zestaw razem
       else for (const x of k) { await doKolejki(S, Y, x); dodane.push(x); }
@@ -1060,10 +1091,14 @@ async function haki(S, Y, partia, przed, po, stany = null, stanyEcha = null) {
 // kandydatów). Niezgodność — wyjątek z opisem i wpis w HAKI_NIEZGODNE (afterEach wymaga pustej listy). Przy liczniku
 // odsyłania (S.odsyl) — warstwa „odesłane” (L.zapiszOdeslane). S.stat.odsylanie.tylkoSavedAtISO — wiersze stomb modelu,
 // które są tylko przez savedAtISO (LO.wierszeTylkoSavedAtISO; sprawdzian długich przebiegów, oczekiwane 0).
+// E3-PR0d2: zeStanu — wiersze odsyłania ukrytego wpisu Kosza (LO.modelStanu) zdarzenie po zdarzeniu, bez kluczy wierszy
+// LO.modelEcha tego zdarzenia (sejf: jedna lista bez powtórzeń), z tym samym filtrem „wpis po całej partii”.
 function modelOdsylania(partia, stany, po) {
   const karty = new Map();
   for (const p of po.patients || []) for (const q of p.snapshots || []) karty.set(q.snapshotId, p.patientId);
+  const wpisPo = (r) => (po.snapshotTombstones || []).some((x) => x.snapshotId === r.key);
   const wiersze = [];
+  const zeStanu = [];
   const spoza = [];
   const tylkoSavedAtISO = [];
   for (const [i, e] of partia.entries()) {
@@ -1075,21 +1110,32 @@ function modelOdsylania(partia, stany, po) {
       : karty.get(String(r.key).split('/')[1]) === r.pid));
     wiersze.push(...w);
     tylkoSavedAtISO.push(...LO.wierszeTylkoSavedAtISO(stany[i], stany[i + 1], e.jaw, w));
+    const kluczeEcha = new Set(m.wiersze.map((r) => r.k));
+    zeStanu.push(...LO.modelStanu(stany[i], stany[i + 1], e.jaw, { wygrywa: WYGRYWA }).filter((r) => !kluczeEcha.has(r.k) && wpisPo(r)));
   }
-  return { wiersze, spoza, tylkoSavedAtISO };
+  return { wiersze, zeStanu, spoza, tylkoSavedAtISO };
 }
+// E3-PR0d2: najpierw granica niezależna od modeli (koperty stomb odsyłania sejfu wobec ładunków partii), potem multizbiór
+// kluczy sejfu = wiersze modelu i wiersze ze stanu; wynik — wiersze obu rodzajów (przypisanie kopert w haki).
 function porownajEcho(S, Y, partia, stany, po, koperty) {
   if (partia.length + 1 !== stany.length) throw new Error(`model odsyłania: ${stany.length} stanów na ${partia.length} zdarzeń partii (${Y.nazwa})`);
-  const { wiersze, spoza, tylkoSavedAtISO } = modelOdsylania(partia, stany, po);
+  const granica = LO.ponadGranica(partia.map((e) => e.jaw || e.k || null), koperty);
+  if (granica.length) {
+    const tekst = `odesłanie ponad granicę: ${granica.map((x) => `${Y.nazwa} stomb:${x.v} ${x.n} > ${x.zdarzen}`).join('; ')} — po partii [${partia.map((x) => `${x.kind} ${x.key}`).join(', ')}]${S.ziarno != null ? ` (ziarno ${S.ziarno}, krok ${S.nrKroku || 0})` : ''}`;
+    HAKI_NIEZGODNE.push(tekst);
+    throw new Error(tekst);
+  }
+  const { wiersze, zeStanu, spoza, tylkoSavedAtISO } = modelOdsylania(partia, stany, po);
   const klucze = (l) => l.slice().sort();
   const emit = klucze(koperty.map((k) => `${k.event.kind}:${k.event.key}`));
-  const mod = klucze(wiersze.map((r) => r.k));
+  const mod = klucze([...wiersze, ...zeStanu].map((r) => r.k));
   if (!S.stat.odsylanie) S.stat.odsylanie = { porownan: 0, wierszy: 0, tylkoSavedAtISO: 0 };
+  if (!S.stat.zeStanu) S.stat.zeStanu = { koperty: 0, ponowne: 0, retencja: 0 };
   S.stat.odsylanie.porownan += 1;
   S.stat.odsylanie.wierszy += wiersze.length;
   S.stat.odsylanie.tylkoSavedAtISO += tylkoSavedAtISO.length;
-  if (S.odsyl) S.odsyl.zapiszOdeslane('zdarzenie', koperty, wiersze, `#${S.nrKroku || 0} ${Y.nazwa}`);
-  if (!spoza.length && JSON.stringify(emit) === JSON.stringify(mod)) return;
+  if (S.odsyl) S.odsyl.zapiszOdeslane('zdarzenie', koperty, [...wiersze, ...zeStanu], `#${S.nrKroku || 0} ${Y.nazwa}`);
+  if (!spoza.length && JSON.stringify(emit) === JSON.stringify(mod)) return { wiersze, zeStanu };
   const tekst = `model haków i odsyłania: echo sejfu ≠ model — ${Y.nazwa} po partii [${partia.map((x) => `${x.kind} ${x.key}`).join(', ')}]${S.ziarno != null ? ` (ziarno ${S.ziarno}, krok ${S.nrKroku || 0})` : ''}\n  model: ${mod.join(', ') || '(pusty)'}\n  sejf: ${emit.join(', ') || '(pusty)'}${spoza.length ? `\n  spoza kandydatów: ${spoza.map((r) => r.k).join(', ')}` : ''}`;
   HAKI_NIEZGODNE.push(tekst);
   throw new Error(tekst);
@@ -1106,6 +1152,19 @@ function zapiszWyslanieEcha(S, Y, k) {
   const klucz = `${Y.nazwa}|${k.event.kind}:${k.event.key}|${JSON.stringify(w)}`;
   if (S.echoWyslane.has(klucz) && S.echoWyslane.get(klucz) < S.partiaEcha) S.stat.echoPowtorzenia = (S.stat.echoPowtorzenia || 0) + 1;
   if (!S.echoWyslane.has(klucz)) S.echoWyslane.set(klucz, S.partiaEcha);
+}
+// E3-PR0d2: koperta odsyłania ukrytego wpisu Kosza (ze stanu) — S.stat.zeStanu: koperty, retencja (wiersz z elementem
+// porządkowania) i ponowne (ta sama wartość — klucz i kanon wpisów koperty bez seq — od tego samego urządzenia
+// w późniejszej partii; własna mapa S.zsWyslane, poza S.echoWyslane i S.stat.echoPowtorzenia).
+function zapiszZeStanu(S, Y, k, retencja) {
+  if (!S.zsWyslane) S.zsWyslane = new Map();
+  const Z = S.stat.zeStanu;
+  Z.koperty += 1;
+  if (retencja) Z.retencja += 1;
+  const w = LO.kanonKosza((k.snapshotTombstones || []).map((e) => { const { seq: _s, ...x } = e; return json(x); }));
+  const klucz = `${Y.nazwa}|stomb:${k.event.key}|${JSON.stringify(w)}`;
+  if (S.zsWyslane.has(klucz) && S.zsWyslane.get(klucz) < S.partiaEcha) Z.ponowne += 1;
+  if (!S.zsWyslane.has(klucz)) S.zsWyslane.set(klucz, S.partiaEcha);
 }
 
 // Dostawa X→Y: FIFO-prefiks od kursora (losowa tylko długość k), powtórka = cofnięcie kursora o r i ponowne
@@ -5513,7 +5572,7 @@ async function przebiegFloty(flota, ziarno, { profil = FLOTA_PROFIL, blobC = BLO
   const odsyl = S.odsyl ? { flota, ziarno, ...S.odsyl.podsumuj(), powtorka: S.odsylPowtorka || { partii: 0, zdarzen: 0 }, odcisk: wynik.odcisk } : null;
   WYNIKI_FLOTY[flota].push(wynik);
   if (odsyl) ODSYL_FLOTY[flota].push(odsyl);
-  if (process.env.E2_AB_WYNIKI) appendFileSync(process.env.E2_AB_WYNIKI, JSON.stringify({ typ: `flota${flota}`, ...wynik, ...(odsyl ? { odsyl } : {}), dziennik: S.dziennik }) + '\n');
+  if (process.env.E2_AB_WYNIKI) appendFileSync(process.env.E2_AB_WYNIKI, JSON.stringify({ typ: `flota${flota}`, ...wynik, ...(odsyl ? { odsyl } : {}), zeStanu: S.stat.zeStanu || null, dziennik: S.dziennik }) + '\n');
   if (WYR_PLIK) appendFileSync(WYR_PLIK, JSON.stringify({ typ: 'ziarno', swiat: S.wyrSwiat, ziarno, mutacji, spoczynki: S.stat.spoczynki, ...wynik.wyr }) + '\n');
   return { wynik, odsyl };
 }
@@ -7056,12 +7115,13 @@ function faktyKosza(u, urz) {
 }
 // Treść wpisów Q urządzenia (odszyfrowana): rodzaj, wersja (etykiety bazy), masa, gwiazdka, rev; echo — „(echo)”.
 // E3-PR0d: { kosz: true } — także wpisy koperty stomb (masa albo „bez treści”, gwiazdka rejestru wpisu).
+// E3-PR0d2: koperta odsyłania ukrytego wpisu Kosza — „(ze stanu)”.
 async function opisKolejki(u, U, { kosz = false } = {}) {
   const et = (k) => String(k).split('/').map((x) => etykieta(u.n, x)).join('/');
   const out = [];
   for (const e of U.Q) {
     const k = await U.v.decryptPayloadForCurrentUser(e.env.iv, e.env.data);
-    const zrodlo = e.src === 'echo' ? ' (echo)' : '';
+    const zrodlo = e.src === 'echo' ? ' (echo)' : e.src === 'stan' ? ' (ze stanu)' : '';
     if (k.event.kind === 'snap') {
       const s = k.patients[0].snapshots[0];
       out.push(`snap ${et(k.event.key)} ${s.payload.user.weight} kg${s.payload._pinned ? ' z gwiazdką' : ''} rev ${s.rev}${zrodlo}`);
@@ -7128,6 +7188,7 @@ describe('A ≡ B, odsyłanie poprawionych wizyt (E3-PR0c): ziarno profilu podst
     expect(w.odsylanie.tylkoSavedAtISO, 'wiersze stomb modelu tylko przez savedAtISO').toBe(0);
     expect(w.echo || 0, 'koperty echa').toBeGreaterThan(0);
     expect(w.echoPowtorzenia || 0, 'ponowne wysłania tej samej wartości przez to samo urządzenie').toBe(0);
+    expect(w.zeStanu, 'odesłania ukrytego wpisu Kosza ze stanu (E3-PR0d2)').toEqual({ koperty: 0, ponowne: 0, retencja: 0 });
     expect.soft(w.wyr.czerwone, 'wyrocznia: naruszenia bez klasy').toEqual([]);
     expect.soft(zielenProfilu(w), opisBledow(w)).toEqual(ZIELEN);
     if (ODSYL) {
@@ -7143,12 +7204,12 @@ describe('A ≡ B, odsyłanie poprawionych wizyt (E3-PR0c): ziarno profilu podst
 // swiat(942 + i) i Math.random z rng(0x6942 + i), i — pozycja w P6E_SCENARIUSZE (ziarna p. 6 bez zmian). Przełącznik:
 // S.echo na każdym urządzeniu świata. Literał P6E_LITERALY: D par po samych zdarzeniach (W1) i W4 (świat samych blobów
 // nie dotyczy przełącznika); P6E_WYR — naruszenia wyroczni W1 i W4. Model haków i odsyłania sprawdza każda partia;
-// ponowne wysłanie tej samej wartości — 0. Różnice „wpis Kosza tylko na jednym urządzeniu” po „Przywróć” na jednym
-// urządzeniu i „Usuń pacjenta” na drugim zostają (pole naprawa).
+// ponowne wysłanie tej samej wartości — 0. E3-PR0d2: wpis Kosza, który zostawał tylko na jednym urządzeniu po
+// „Przywróć” na jednym urządzeniu i „Usuń pacjenta” na drugim (karta tu usunięta, późniejsza wersja nie weszła), urządzenie
+// odsyła ze stanu — R5-0, R5-E1 i wariant „C wysyła tylko zdarzenia” po samych zdarzeniach bez różnicy W1; liczniki
+// odesłań ze stanu — P6E_ZE_STANU.
 const P6E_SCENARIUSZE = ['R4-a', 'R4-a′', 'R4n (R4-b)', 'R5-0', 'R5-E1', 'R5-E1, C wysyła tylko zdarzenia',
   'Kosz i Przywróć na B, porządkowanie i Scal pacjentów P → Q na A', 'nagrobek retencji bez ochrony wizyt dla jedynego stanu wizyty v na B'];
-const NAPRAWA_E3PR0D2 = 'wpis Kosza zostaje tylko na jednym urządzeniu, gdy późniejsza wersja nie weszła, bo karta jest tu usunięta (naprawa: E3-PR0d2)';
-const P6E_NAPRAWA = { 'R5-0': NAPRAWA_E3PR0D2, 'R5-E1': NAPRAWA_E3PR0D2, 'R5-E1, C wysyła tylko zdarzenia': NAPRAWA_E3PR0D2 };
 async function p6eSwiat(i, sc) {
   ustaw(START);
   const S = swiat(942 + i);
@@ -7166,7 +7227,7 @@ describe('A ≡ B, blok deterministyczny p. 6 z włączonym przełącznikiem ods
   d1();
   for (const [i, nazwa] of P6E_SCENARIUSZE.entries()) {
     const sc = P6[nazwa];
-    it(`${P6E_NAPRAWA[nazwa] ? `ZNANA RÓŻNICA (${P6E_NAPRAWA[nazwa]}) — ` : ''}${nazwa}`, async () => {
+    it(nazwa, async () => {
       const u = await p6eSwiat(i, sc);
       const wynik = { zdarzenia: await p6D(u, u.A, u.B) };
       u.S.wyrSwiat = `p6e ${nazwa} zdarzenia`;
@@ -7185,14 +7246,15 @@ describe('A ≡ B, blok deterministyczny p. 6 z włączonym przełącznikiem ods
         expect.soft(w.ok, 'W4\n' + JSON.stringify(w.warianty, null, 1)).toBe(true);
         wynik.w4 = { ...w.warianty[0].opis, r4n: w.r4n, w4p: w.w4p.map((x) => x.ok) };
       }
-      if (P6E_NAPRAWA[nazwa]) wynik.naprawa = P6E_NAPRAWA[nazwa];
       const wyr = u.S.wyrNaruszenia || [];
       P6E_WYNIKI[nazwa] = wynik;
-      console.log(`E3-AB p6e „${nazwa}”`, JSON.stringify({ wynik, wyr: zbiorWyr(wyr), echo: u.S.stat.echo || 0, powtorzenia: u.S.stat.echoPowtorzenia || 0 }));
+      const zeStanu = u.S.stat.zeStanu || { koperty: 0, ponowne: 0, retencja: 0 };
+      console.log(`E3-AB p6e „${nazwa}”`, JSON.stringify({ wynik, wyr: zbiorWyr(wyr), echo: u.S.stat.echo || 0, powtorzenia: u.S.stat.echoPowtorzenia || 0, zeStanu }));
       expect.soft(wyrCzerwone(wyr), `wyrocznia p. 6 z przełącznikiem (${nazwa}): naruszenia bez klasy`).toEqual([]);
       expect.soft(zbiorWyr(wyr), `wyrocznia p. 6 z przełącznikiem (${nazwa}): zbiór (klasa, świat)`).toEqual(P6E_WYR[nazwa] || []);
       expect.soft(wynik, `literał p. 6 z przełącznikiem: ${nazwa}`).toEqual(P6E_LITERALY[nazwa]);
       expect.soft(u.S.stat.echoPowtorzenia || 0, 'ponowne wysłania tej samej wartości').toBe(0);
+      expect.soft(zeStanu, `odesłania ukrytego wpisu Kosza ze stanu: ${nazwa}`).toEqual(P6E_ZE_STANU[nazwa] || { koperty: 0, ponowne: 0, retencja: 0 });
     }, 120_000);
   }
 });
@@ -7413,6 +7475,7 @@ describe('A ≡ B, odsyłanie wpisów Kosza (E3-PR0d): ziarno koalescencji z wł
     expect(w.odsylanie && w.odsylanie.wierszy, 'wiersze modelu odsyłania').toBeGreaterThan(0);
     expect(w.odsylanie.tylkoSavedAtISO, 'wiersze stomb modelu tylko przez savedAtISO').toBe(0);
     expect(w.echoPowtorzenia || 0, 'ponowne wysłania tej samej wartości przez to samo urządzenie').toBe(0);
+    expect(w.zeStanu, 'odesłania ukrytego wpisu Kosza ze stanu (E3-PR0d2)').toEqual({ koperty: 0, ponowne: 0, retencja: 0 });
     expect.soft(w.wyr.czerwone, 'wyrocznia: naruszenia bez klasy').toEqual([]);
     expect.soft(zielenProfilu(w), opisBledow(w)).toEqual(ZIELEN);
   }, 180_000);
@@ -7425,19 +7488,29 @@ describe('A ≡ B, odsyłanie wpisów Kosza (E3-PR0d): ziarno koalescencji z wł
 // z gwiazdką A albo z poprawką A), A i C go przyjmują i nic nie odsyłają. ZEGAR_KOSZA_OCZEKIWANE: przed granicą A i B
 // składają ten sam wpis z gwiazdką i odsyłają go po razie; po skoku zegara wpisy tracą treść bez odsyłania (samo
 // wygaśnięcie); R4a′ po granicy — treść wygasła na obu, nic do odesłania.
+// E3-PR0d2 (odsyłanie ukrytego wpisu Kosza karty usuniętej): R5-0, R5-E1 i „R5-E1, C wysyła tylko zdarzenia” po samych
+// zdarzeniach bez różnicy (dotąd „kosz v|P: tylko A” — wpis tylko na urządzeniu, które usunęło kartę); W4 bez zmian.
+// P6E_WYR bez zmian: R5-E1 (wizyta po „Przywróć” w Koszu na wszystkich, gdy kartę przywraca trzecie urządzenie) —
+// jawny wyjątek wyroczni „wynik taki jak po pełnej synchronizacji” (decyzja właściciela z 2026-11-20). P6E_ZE_STANU —
+// odesłania ze stanu w tych scenariuszach (pozostałe — zera).
 const P6E_LITERALY = {
   "R4-a": { "zdarzenia": [], "w4": { "A": "karty P[w:21] Q[#5bd0:30] | Kosz v@P:20* | notatki -", "B": "karty P[w:21] Q[#5bd0:30] | Kosz v@P:20* | notatki -", "r4n": 0, "w4p": [] } },
   "R4-a′": { "zdarzenia": [], "w4": { "A": "karty P[w:21] Q[#f23c:30] | Kosz v@P:40 | notatki -", "B": "karty P[w:21] Q[#f23c:30] | Kosz v@P:40 | notatki -", "r4n": 0, "w4p": [] } },
   "R4n (R4-b)": { "zdarzenia": [ "kosz v|P: payload._pinnedState.at, payload._pinnedState.pin, payload._pinnedState.zl, payload._pinned [R4n]" ], "w4": { "A": "karty P[w:21] Q[#96c2:30] | Kosz v@P:42.6 | notatki -", "B": "karty P[w:21] Q[#96c2:30] | Kosz v@P:42.6 | notatki -", "r4n": 2, "w4p": [ true, true ] } },
-  "R5-0": { "zdarzenia": [ "kosz v|P: tylko A [R5]" ], "w4": { "A": "karty Q[#6dfc:30] | Kosz v@P:20 (ukryty) | notatki -", "B": "karty Q[#6dfc:30] | Kosz v@P:20 (ukryty) | notatki -", "r4n": 0, "w4p": [] }, "naprawa": "wpis Kosza zostaje tylko na jednym urządzeniu, gdy późniejsza wersja nie weszła, bo karta jest tu usunięta (naprawa: E3-PR0d2)" },
-  "R5-E1": { "zdarzenia": [ "kosz v|P: tylko A", "wersja P/v: tylko B" ], "w4": { "rund": 2, "A": "karty P[w:21 #5559:25] Q[#33b2:30] | Kosz v@P:20 | notatki -", "B": "karty P[w:21 #5559:25] Q[#33b2:30] | Kosz v@P:20 | notatki -", "C": "karty P[w:21 #5559:25] Q[#33b2:30] | Kosz v@P:20 | notatki -" }, "naprawa": "wpis Kosza zostaje tylko na jednym urządzeniu, gdy późniejsza wersja nie weszła, bo karta jest tu usunięta (naprawa: E3-PR0d2)" },
-  "R5-E1, C wysyła tylko zdarzenia": { "zdarzenia": [ "kosz v|P: tylko A" ], "w4": { "rund": 2, "A": "karty P[w:21 #faba:25] Q[#b179:30] | Kosz v@P:20 | notatki -", "B": "karty P[w:21 #faba:25] Q[#b179:30] | Kosz v@P:20 | notatki -", "C": "karty P[w:21 #faba:25] Q[#b179:30] | Kosz v@P:20 | notatki -" }, "naprawa": "wpis Kosza zostaje tylko na jednym urządzeniu, gdy późniejsza wersja nie weszła, bo karta jest tu usunięta (naprawa: E3-PR0d2)" },
+  "R5-0": { "zdarzenia": [], "w4": { "A": "karty Q[#6dfc:30] | Kosz v@P:20 (ukryty) | notatki -", "B": "karty Q[#6dfc:30] | Kosz v@P:20 (ukryty) | notatki -", "r4n": 0, "w4p": [] } },
+  "R5-E1": { "zdarzenia": [], "w4": { "rund": 2, "A": "karty P[w:21 #5559:25] Q[#33b2:30] | Kosz v@P:20 | notatki -", "B": "karty P[w:21 #5559:25] Q[#33b2:30] | Kosz v@P:20 | notatki -", "C": "karty P[w:21 #5559:25] Q[#33b2:30] | Kosz v@P:20 | notatki -" } },
+  "R5-E1, C wysyła tylko zdarzenia": { "zdarzenia": [], "w4": { "rund": 2, "A": "karty P[w:21 #faba:25] Q[#b179:30] | Kosz v@P:20 | notatki -", "B": "karty P[w:21 #faba:25] Q[#b179:30] | Kosz v@P:20 | notatki -", "C": "karty P[w:21 #faba:25] Q[#b179:30] | Kosz v@P:20 | notatki -" } },
   "Kosz i Przywróć na B, porządkowanie i Scal pacjentów P → Q na A": { "zdarzenia": [], "w4": { "A": "karty Q[w:21 #ab77:30 #3797:30] | Kosz - | notatki -", "B": "karty Q[w:21 #ab77:30 #3797:30] | Kosz - | notatki -", "r4n": 0, "w4p": [] } },
   "nagrobek retencji bez ochrony wizyt dla jedynego stanu wizyty v na B": { "zdarzenia": [ "kosz v|P: tylko B" ], "w4": { "A": "karty P[v:20 w:23] | Kosz - | notatki -", "B": "karty P[v:20 w:23] | Kosz - | notatki -", "r4n": 0, "w4p": [] } },
 };
 const P6E_WYR = {
   "R5-E1": [ "R5-E1 | W1", "R5-E1 | W4" ],
   "R5-E1, C wysyła tylko zdarzenia": [ "R5-E1 | W1", "R5-E1 | W4", "karta częściowa (nagrobek przegrał lokalnie, bez haka H1) | W1" ],
+};
+const P6E_ZE_STANU = {
+  "R5-0": { "koperty": 1, "ponowne": 0, "retencja": 0 },
+  "R5-E1": { "koperty": 1, "ponowne": 0, "retencja": 0 },
+  "R5-E1, C wysyła tylko zdarzenia": { "koperty": 1, "ponowne": 0, "retencja": 0 },
 };
 const ODSYLANIE_KOSZA_OCZEKIWANE = {
   "gwiazdka, A–B|bez echa": { "koniec": { "A": "Kosz 20 kg", "B": "Kosz 20 kg z gwiazdką" }, "w1AB": true, "kolejki": { "A": [ "snap P/v 20 kg z gwiazdką rev 1", "ptomb P" ], "B": [ "stomb v: 20 kg", "pfull P" ] }, "obiegi": 1, "echo": 0 },
@@ -7450,4 +7523,167 @@ const ODSYLANIE_KOSZA_OCZEKIWANE = {
 const ZEGAR_KOSZA_OCZEKIWANE = {
   "R4a: spoczynek tuż przed granicą i tuż po niej": { "przed": { "obiegi": 2, "echo": 2, "kosz": { "A": "Kosz 20 kg z gwiazdką", "B": "Kosz 20 kg z gwiazdką" }, "okno": { "A": [ "20 kg z gwiazdką" ], "B": [ "20 kg z gwiazdką" ] }, "w1": [] }, "po": { "obiegi": 1, "echo": 2, "kosz": { "A": "Kosz bez treści z gwiazdką", "B": "Kosz bez treści z gwiazdką" }, "okno": { "A": [], "B": [] }, "w1": [] }, "powtorzenia": 0 },
   "R4a′: spoczynek tuż po granicy": { "po": { "obiegi": 1, "echo": 0, "kosz": { "A": "Kosz bez treści", "B": "Kosz bez treści" }, "okno": { "A": [], "B": [] }, "w1": [] }, "powtorzenia": 0 },
+};
+
+// ══ Odsyłanie ukrytego wpisu Kosza karty usuniętej (E3-PR0d2, P-ZBIEZNOSC-ZDARZEN): test wejściowy ═════════════════════
+// Wpis Kosza, który zostaje tylko na jednym urządzeniu, gdy późniejsza wersja nie weszła, bo karta jest tu usunięta:
+// po udanym zastosowaniu koperty z tą wersją urządzenie odsyła swój wpis (stomb „(ze stanu)”); odbiorca, który zna już
+// nagrobek karty, zapisuje go jako ukryty i nic nie odsyła. Światy swiat(990 + nr), Math.random z rng(0x6990 + nr), nr —
+// pozycja pary (wariant, przełącznik) w UKRYTY_WPIS_SWIATY. Baza p6r4 (karta P z wizytami v 20 kg i w 21 kg, karta Q
+// 30 kg; przy trzech urządzeniach C — kopia sprzed zmian). Fakty na urządzenie: wpis Kosza v (masa albo „bez treści”,
+// gwiazdka rejestru wpisu, karta wpisu, „(ukryty)” — karty wpisu nie ma), v w karcie, karta P jest albo usunięta; treść
+// wpisów Q (opisKolejki z wpisami Kosza), obiegi do spoczynku, koperty odsyłania (S.stat.echo), odesłania ze stanu
+// (S.stat.zeStanu), ponowne wysłania tej samej wartości (S.stat.echoPowtorzenia = 0) i W1 każdej pary (true — różnica).
+// Model haków i odsyłania (z granicą) sprawdza każdą partię (afterEach). Przy wyłączonym przełączniku — dzisiejszy wynik
+// (wpis tylko na części urządzeń, W1 z różnicą; zielony z natury); przy włączonym — bez różnicy, a na sejfie bez
+// odsyłania ukrytego wpisu czerwony z „echo sejfu ≠ model” (model ma wiersz ze stanu, sejf nie odsyła). Dwa przypadki
+// tylko z włączonym przełącznikiem pilnują, że reguła nie odpala: karta żywa (wersja wchodzi) i wersja wcześniejsza niż
+// Kosz (wpis odsyła odsyłanie wpisów E3-PR0d, „(echo)”).
+function faktyUkrytego(u, urz) {
+  return Object.fromEntries(urz.map((U) => {
+    const karty = new Set((U.stan.patients || []).map((p) => p.patientId));
+    const l = (U.stan.snapshotTombstones || []).filter((e) => e.snapshotId === u.v);
+    const kosz = l.length ? l.map((e) => `Kosz ${e.payload ? `${e.payload.user.weight} kg` : 'bez treści'}${e.gwiazdka && e.gwiazdka.pin ? ' z gwiazdką' : ''} pod ${etykieta(u.n, e.patientId)}${karty.has(e.patientId) ? '' : ' (ukryty)'}`).join(', ') : 'Kosz brak';
+    const p = gdzie(U, u.v);
+    const s = p && p.snapshots.find((q) => q.snapshotId === u.v);
+    const wk = p ? `; w karcie ${etykieta(u.n, p.patientId)} ${s.payload.user.weight} kg${s.payload._pinned ? ' z gwiazdką' : ''}` : '';
+    return [U.nazwa, `${kosz}${wk}; karta P ${karty.has(u.P) ? 'jest' : 'usunięta'}`];
+  }));
+}
+async function opisUkrytego(u, urz, obiegi) {
+  for (const U of urz) ustawStan(U, await eksport(U));
+  const kolejki = {};
+  for (const U of urz) kolejki[U.nazwa] = await opisKolejki(u, U, { kosz: true });
+  const w1p = {};
+  for (let i = 0; i < urz.length; i += 1) for (let j = i + 1; j < urz.length; j += 1) w1p[urz[i].nazwa + urz[j].nazwa] = !!(await w1(urz[i], urz[j]));
+  return { obiegi, koniec: faktyUkrytego(u, urz), kolejki, w1: w1p, echo: u.S.stat.echo || 0, zeStanu: u.S.stat.zeStanu ? { ...u.S.stat.zeStanu } : null, powtorzenia: u.S.stat.echoPowtorzenia || 0 };
+}
+// Wspólny początek: B daje v do Kosza (dostawa B → A: A ma wpis Kosza v pod P), potem B „Przywróć” v.
+async function koszIPrzywrocNaB(u) {
+  u.S.nrKroku = 1; await doKosza(u, u.B, u.v); krok(); await dostawa(u.S, u.B, u.A, { w2s: false });
+  u.S.nrKroku = 2; await p6przywroc(u, u.B, u.v);
+}
+const UKRYTY_KOLEJNOSCI = ['ABC', 'ACB', 'BAC', 'BCA', 'CAB', 'CBA'];
+const UKRYTY_WPIS_WARIANTY = [
+  { nazwa: '„Przywróć” na B, „Usuń pacjenta” na A; potem ta sama zmiana z B dostarczona drugi raz', program: async (u) => {
+    await koszIPrzywrocNaB(u);
+    u.S.nrKroku = 3; await p6usunPacjenta(u, u.A, u.P);
+    u.S.nrKroku = 4; krok(60e3);
+    const przed = await opisUkrytego(u, [u.A, u.B], await spoczynek(u.S, u.A, u.B, { w2s: false }));
+    // to samo zdarzenie snap P/v (z „Przywróć” na B) zastosowane u A drugi raz — kursor cofnięty
+    const i = u.B.Q.findIndex((e) => e.kind === 'snap' && String(e.key).endsWith('/' + u.v));
+    u.S.nrKroku = 5; krok(60e3);
+    await dostawa(u.S, u.B, u.A, { cofnij: u.B.Q.length - i, w2s: false });
+    return { przed, poPowtorce: await opisUkrytego(u, [u.A, u.B], await spoczynek(u.S, u.A, u.B, { w2s: false })) };
+  } },
+  ...['A', 'C'].flatMap((kto) => UKRYTY_KOLEJNOSCI.map((ord) => ({
+    nazwa: `trzy urządzenia: „Usuń pacjenta” na urządzeniu ${kto === 'A' ? 'z wpisem Kosza' : 'bez wiedzy o Koszu'}, spoczynek w kolejności ${ord}`,
+    trzy: true, tylkoWlaczony: ord !== 'ABC', program: async (u) => {
+      await koszIPrzywrocNaB(u);
+      u.S.nrKroku = 3; await p6usunPacjenta(u, u[kto], u.P);
+      u.S.nrKroku = 4; krok(60e3);
+      return opisUkrytego(u, [u.A, u.B, u.C], await spoczynekWszystkich(u.S, ord.split('').map((x) => u[x])));
+    },
+  }))),
+  { nazwa: 'trzy urządzenia: urządzenie z przywróconą wizytą dostaje odesłany wpis przed nagrobkiem karty', trzy: true, program: async (u) => {
+    await koszIPrzywrocNaB(u);
+    u.S.nrKroku = 3; await p6usunPacjenta(u, u.C, u.P);
+    u.S.nrKroku = 4; krok(60e3); await dostawa(u.S, u.C, u.A, { w2s: false });
+    u.S.nrKroku = 5; krok(60e3); await dostawa(u.S, u.B, u.A, { w2s: false });
+    u.S.nrKroku = 6; krok(60e3); await dostawa(u.S, u.A, u.B, { w2s: false });
+    const posrednio = await opisUkrytego(u, [u.A, u.B, u.C], null);
+    u.S.nrKroku = 7; krok(60e3);
+    return { posrednio, koniec: await opisUkrytego(u, [u.A, u.B, u.C], await spoczynekWszystkich(u.S, [u.A, u.B, u.C])) };
+  } },
+  { nazwa: '„Przywróć” na B, „Scal pacjentów” P → Q na A', program: async (u) => {
+    await koszIPrzywrocNaB(u);
+    u.S.nrKroku = 3; await scal(u, u.A, u.P, u.Q);
+    u.S.nrKroku = 4; krok(60e3);
+    return opisUkrytego(u, [u.A, u.B], await spoczynek(u.S, u.A, u.B, { w2s: false }));
+  } },
+  ...[['„Usuń pacjenta”', 'usun'], ['„Scal pacjentów” P → Q', 'scal']].map(([op, k]) => ({
+    nazwa: `gwiazdka po Koszu na urządzeniu bez wiedzy o Koszu, ${op} na drugim`, program: async (u) => {
+      u.S.nrKroku = 1; await doKosza(u, u.B, u.v);
+      u.S.nrKroku = 2; await p6gwiazdka(u, u.A, u.v, true);
+      u.S.nrKroku = 3; if (k === 'usun') await p6usunPacjenta(u, u.B, u.P); else await scal(u, u.B, u.P, u.Q);
+      u.S.nrKroku = 4; krok(60e3);
+      return opisUkrytego(u, [u.A, u.B], await spoczynek(u.S, u.A, u.B, { w2s: false }));
+    },
+  })),
+  { nazwa: 'karta żywa: „Przywróć” bez usunięcia karty', tylkoWlaczony: true, program: async (u) => {
+    await koszIPrzywrocNaB(u);
+    u.S.nrKroku = 3; krok(60e3);
+    return opisUkrytego(u, [u.A, u.B], await spoczynek(u.S, u.A, u.B, { w2s: false }));
+  } },
+  { nazwa: 'poprawka z trzeciego urządzenia sprzed Kosza dochodzi po „Usuń pacjenta”', trzy: true, tylkoWlaczony: true, program: async (u) => {
+    u.S.nrKroku = 1; await popraw(u, u.C, u.v, 40);
+    u.S.nrKroku = 2; await doKosza(u, u.B, u.v); krok(); await dostawa(u.S, u.B, u.A, { w2s: false });
+    u.S.nrKroku = 3; await p6usunPacjenta(u, u.A, u.P);
+    u.S.nrKroku = 4; krok(60e3); await dostawa(u.S, u.C, u.A, { w2s: false });
+    const poC = await opisKolejki(u, u.A, { kosz: true });
+    u.S.nrKroku = 5; krok(60e3);
+    return { kolejkaAPoDostawieC: poC, koniec: await opisUkrytego(u, [u.A, u.B, u.C], await spoczynekWszystkich(u.S, [u.A, u.B, u.C])) };
+  } },
+];
+const UKRYTY_WPIS_SWIATY = UKRYTY_WPIS_WARIANTY.flatMap((w) => (w.tylkoWlaczony ? [true] : [false, true]).map((echo) => ({ ...w, echo })));
+// Obiegi do spoczynku każdego etapu wyniku (stan pośredni bez spoczynku — pominięty).
+const obiegiUkrytego = (r) => [r, r.przed, r.poPowtorce, r.koniec].filter((x) => x && typeof x === 'object' && 'obiegi' in x).map((x) => x.obiegi);
+describe('A ≡ B, odsyłanie ukrytego wpisu Kosza karty usuniętej (E3-PR0d2): test wejściowy — późniejsza wersja wizyty nie weszła, bo karta jest tu usunięta', () => {
+  d1();
+  for (const [nr, w] of UKRYTY_WPIS_SWIATY.entries()) {
+    it(`${w.nazwa}, przełącznik ${w.echo ? 'włączony' : 'wyłączony'}`, async () => {
+      ustaw(START);
+      const S = swiat(990 + nr);
+      const los = rng(0x6990 + nr);
+      vi.spyOn(Math, 'random').mockImplementation(() => (S.losAlt || los)());
+      S.w2s = false; S.nrKroku = 0; S.wyrSwiat = 'odsylanie ukrytego wpisu';
+      if (w.echo) { S.echo = true; S.stat.echo = 0; }
+      const u = await p6r4(S, { zC: !!w.trzy });
+      u.S = S;
+      const r = await w.program(u);
+      console.log(`E3-AB ukryty wpis ${w.nazwa} ${w.echo ? 'z echem' : 'bez echa'}`, JSON.stringify(r));
+      expect(obiegiUkrytego(r).filter((x) => x === null), 'spoczynek').toEqual([]);
+      expect(r, 'fakty: wpis Kosza v i karta P na urządzeniach, kolejki, obiegi, koperty odsyłania, odesłania ze stanu, W1 par').toEqual(UKRYTY_WPIS_OCZEKIWANE[`${w.nazwa}|${w.echo ? 'z echem' : 'bez echa'}`]);
+      expect(S.stat.echoPowtorzenia || 0, 'ponowne wysłania tej samej wartości').toBe(0);
+    }, 60_000);
+  }
+});
+// Oczekiwane fakty testu wejściowego ukrytego wpisu (klucz: wariant|przełącznik; zmierzone na kodzie odsyłania
+// ukrytego wpisu). Przy wyłączonym przełączniku — dzisiejszy wynik: wpis Kosza v zostaje (ukryty) tylko na urządzeniu,
+// które usunęło kartę, albo tylko na części trzech urządzeń; W1 z różnicą. Przy włączonym: urządzenie z ukrytym wpisem
+// odsyła go po udanym zastosowaniu koperty z wersją v („stomb v: 20 kg (ze stanu)” za własnym ptomb P albo za
+// kopertą nagrobka, która do niego doszła), odbiorcy zapisują wpis jako ukryty i nic nie odsyłają; W1 bez różnicy we
+// wszystkich parach. Ta sama zmiana dostarczona drugi raz odsyła wpis jeszcze raz (druga koperta, zeStanu.ponowne = 1 —
+// przyjęte decyzją 1 z 2026-11-19), bez ponownego wysłania tej samej wartości w odsyłaniu E3-PR0c/E3-PR0d. Trzy
+// urządzenia: odsyła urządzenie z ukrytym wpisem i — w części kolejności — także trzecie, gdy po odesłaniu dostanie
+// jeszcze kopertę z wersją v. Urządzenie z przywróconą wizytą, które dostaje odesłany wpis przed nagrobkiem karty, zdejmuje
+// wpis; potem odsyła go urządzenie, które usunęło kartę, za swoim nagrobkiem. Karta żywa — 0 odesłań; wersja wcześniejsza
+// niż Kosz — wpis odsyła odsyłanie wpisów E3-PR0d („(echo)”), 0 ze stanu.
+const UKRYTY_WPIS_OCZEKIWANE = {
+  "„Przywróć” na B, „Usuń pacjenta” na A; potem ta sama zmiana z B dostarczona drugi raz|bez echa": { "przed": { "obiegi": 1, "koniec": { "A": "Kosz 20 kg pod P (ukryty); karta P usunięta", "B": "Kosz brak; karta P usunięta" }, "kolejki": { "A": [ "ptomb P" ], "B": [ "stomb v: 20 kg", "snap P/v 20 kg rev 1" ] }, "w1": { "AB": true }, "echo": 0, "zeStanu": null, "powtorzenia": 0 }, "poPowtorce": { "obiegi": 1, "koniec": { "A": "Kosz 20 kg pod P (ukryty); karta P usunięta", "B": "Kosz brak; karta P usunięta" }, "kolejki": { "A": [ "ptomb P" ], "B": [ "stomb v: 20 kg", "snap P/v 20 kg rev 1" ] }, "w1": { "AB": true }, "echo": 0, "zeStanu": null, "powtorzenia": 0 } },
+  "„Przywróć” na B, „Usuń pacjenta” na A; potem ta sama zmiana z B dostarczona drugi raz|z echem": { "przed": { "obiegi": 2, "koniec": { "A": "Kosz 20 kg pod P (ukryty); karta P usunięta", "B": "Kosz 20 kg pod P (ukryty); karta P usunięta" }, "kolejki": { "A": [ "ptomb P", "stomb v: 20 kg (ze stanu)" ], "B": [ "stomb v: 20 kg", "snap P/v 20 kg rev 1" ] }, "w1": { "AB": false }, "echo": 1, "zeStanu": { "koperty": 1, "ponowne": 0, "retencja": 0 }, "powtorzenia": 0 }, "poPowtorce": { "obiegi": 1, "koniec": { "A": "Kosz 20 kg pod P (ukryty); karta P usunięta", "B": "Kosz 20 kg pod P (ukryty); karta P usunięta" }, "kolejki": { "A": [ "ptomb P", "stomb v: 20 kg (ze stanu)", "stomb v: 20 kg (ze stanu)" ], "B": [ "stomb v: 20 kg", "snap P/v 20 kg rev 1" ] }, "w1": { "AB": false }, "echo": 2, "zeStanu": { "koperty": 2, "ponowne": 1, "retencja": 0 }, "powtorzenia": 0 } },
+  "trzy urządzenia: „Usuń pacjenta” na urządzeniu z wpisem Kosza, spoczynek w kolejności ABC|bez echa": { "obiegi": 1, "koniec": { "A": "Kosz 20 kg pod P (ukryty); karta P usunięta", "B": "Kosz brak; karta P usunięta", "C": "Kosz 20 kg pod P (ukryty); karta P usunięta" }, "kolejki": { "A": [ "ptomb P" ], "B": [ "stomb v: 20 kg", "snap P/v 20 kg rev 1" ], "C": [] }, "w1": { "AB": true, "AC": false, "BC": true }, "echo": 0, "zeStanu": null, "powtorzenia": 0 },
+  "trzy urządzenia: „Usuń pacjenta” na urządzeniu z wpisem Kosza, spoczynek w kolejności ABC|z echem": { "obiegi": 2, "koniec": { "A": "Kosz 20 kg pod P (ukryty); karta P usunięta", "B": "Kosz 20 kg pod P (ukryty); karta P usunięta", "C": "Kosz 20 kg pod P (ukryty); karta P usunięta" }, "kolejki": { "A": [ "ptomb P", "stomb v: 20 kg (ze stanu)" ], "B": [ "stomb v: 20 kg", "snap P/v 20 kg rev 1" ], "C": [ "stomb v: 20 kg (ze stanu)" ] }, "w1": { "AB": false, "AC": false, "BC": false }, "echo": 2, "zeStanu": { "koperty": 2, "ponowne": 0, "retencja": 0 }, "powtorzenia": 0 },
+  "trzy urządzenia: „Usuń pacjenta” na urządzeniu z wpisem Kosza, spoczynek w kolejności ACB|z echem": { "obiegi": 2, "koniec": { "A": "Kosz 20 kg pod P (ukryty); karta P usunięta", "B": "Kosz 20 kg pod P (ukryty); karta P usunięta", "C": "Kosz 20 kg pod P (ukryty); karta P usunięta" }, "kolejki": { "A": [ "ptomb P", "stomb v: 20 kg (ze stanu)" ], "B": [ "stomb v: 20 kg", "snap P/v 20 kg rev 1" ], "C": [ "stomb v: 20 kg (ze stanu)" ] }, "w1": { "AB": false, "AC": false, "BC": false }, "echo": 2, "zeStanu": { "koperty": 2, "ponowne": 0, "retencja": 0 }, "powtorzenia": 0 },
+  "trzy urządzenia: „Usuń pacjenta” na urządzeniu z wpisem Kosza, spoczynek w kolejności BAC|z echem": { "obiegi": 1, "koniec": { "A": "Kosz 20 kg pod P (ukryty); karta P usunięta", "B": "Kosz 20 kg pod P (ukryty); karta P usunięta", "C": "Kosz 20 kg pod P (ukryty); karta P usunięta" }, "kolejki": { "A": [ "ptomb P", "stomb v: 20 kg (ze stanu)" ], "B": [ "stomb v: 20 kg", "snap P/v 20 kg rev 1" ], "C": [] }, "w1": { "AB": false, "AC": false, "BC": false }, "echo": 1, "zeStanu": { "koperty": 1, "ponowne": 0, "retencja": 0 }, "powtorzenia": 0 },
+  "trzy urządzenia: „Usuń pacjenta” na urządzeniu z wpisem Kosza, spoczynek w kolejności BCA|z echem": { "obiegi": 1, "koniec": { "A": "Kosz 20 kg pod P (ukryty); karta P usunięta", "B": "Kosz 20 kg pod P (ukryty); karta P usunięta", "C": "Kosz 20 kg pod P (ukryty); karta P usunięta" }, "kolejki": { "A": [ "ptomb P", "stomb v: 20 kg (ze stanu)" ], "B": [ "stomb v: 20 kg", "snap P/v 20 kg rev 1" ], "C": [] }, "w1": { "AB": false, "AC": false, "BC": false }, "echo": 1, "zeStanu": { "koperty": 1, "ponowne": 0, "retencja": 0 }, "powtorzenia": 0 },
+  "trzy urządzenia: „Usuń pacjenta” na urządzeniu z wpisem Kosza, spoczynek w kolejności CAB|z echem": { "obiegi": 2, "koniec": { "A": "Kosz 20 kg pod P (ukryty); karta P usunięta", "B": "Kosz 20 kg pod P (ukryty); karta P usunięta", "C": "Kosz 20 kg pod P (ukryty); karta P usunięta" }, "kolejki": { "A": [ "ptomb P", "stomb v: 20 kg (ze stanu)" ], "B": [ "stomb v: 20 kg", "snap P/v 20 kg rev 1" ], "C": [ "stomb v: 20 kg (ze stanu)" ] }, "w1": { "AB": false, "AC": false, "BC": false }, "echo": 2, "zeStanu": { "koperty": 2, "ponowne": 0, "retencja": 0 }, "powtorzenia": 0 },
+  "trzy urządzenia: „Usuń pacjenta” na urządzeniu z wpisem Kosza, spoczynek w kolejności CBA|z echem": { "obiegi": 1, "koniec": { "A": "Kosz 20 kg pod P (ukryty); karta P usunięta", "B": "Kosz 20 kg pod P (ukryty); karta P usunięta", "C": "Kosz 20 kg pod P (ukryty); karta P usunięta" }, "kolejki": { "A": [ "ptomb P", "stomb v: 20 kg (ze stanu)" ], "B": [ "stomb v: 20 kg", "snap P/v 20 kg rev 1" ], "C": [] }, "w1": { "AB": false, "AC": false, "BC": false }, "echo": 1, "zeStanu": { "koperty": 1, "ponowne": 0, "retencja": 0 }, "powtorzenia": 0 },
+  "trzy urządzenia: „Usuń pacjenta” na urządzeniu bez wiedzy o Koszu, spoczynek w kolejności ABC|bez echa": { "obiegi": 1, "koniec": { "A": "Kosz brak; karta P usunięta", "B": "Kosz brak; karta P usunięta", "C": "Kosz 20 kg pod P (ukryty); karta P usunięta" }, "kolejki": { "A": [], "B": [ "stomb v: 20 kg", "snap P/v 20 kg rev 1" ], "C": [ "ptomb P" ] }, "w1": { "AB": false, "AC": true, "BC": true }, "echo": 0, "zeStanu": null, "powtorzenia": 0 },
+  "trzy urządzenia: „Usuń pacjenta” na urządzeniu bez wiedzy o Koszu, spoczynek w kolejności ABC|z echem": { "obiegi": 1, "koniec": { "A": "Kosz 20 kg pod P (ukryty); karta P usunięta", "B": "Kosz 20 kg pod P (ukryty); karta P usunięta", "C": "Kosz 20 kg pod P (ukryty); karta P usunięta" }, "kolejki": { "A": [], "B": [ "stomb v: 20 kg", "snap P/v 20 kg rev 1" ], "C": [ "ptomb P", "stomb v: 20 kg (ze stanu)" ] }, "w1": { "AB": false, "AC": false, "BC": false }, "echo": 1, "zeStanu": { "koperty": 1, "ponowne": 0, "retencja": 0 }, "powtorzenia": 0 },
+  "trzy urządzenia: „Usuń pacjenta” na urządzeniu bez wiedzy o Koszu, spoczynek w kolejności ACB|z echem": { "obiegi": 2, "koniec": { "A": "Kosz 20 kg pod P (ukryty); karta P usunięta", "B": "Kosz 20 kg pod P (ukryty); karta P usunięta", "C": "Kosz 20 kg pod P (ukryty); karta P usunięta" }, "kolejki": { "A": [ "stomb v: 20 kg (ze stanu)" ], "B": [ "stomb v: 20 kg", "snap P/v 20 kg rev 1" ], "C": [ "ptomb P", "stomb v: 20 kg (ze stanu)" ] }, "w1": { "AB": false, "AC": false, "BC": false }, "echo": 2, "zeStanu": { "koperty": 2, "ponowne": 0, "retencja": 0 }, "powtorzenia": 0 },
+  "trzy urządzenia: „Usuń pacjenta” na urządzeniu bez wiedzy o Koszu, spoczynek w kolejności BAC|z echem": { "obiegi": 1, "koniec": { "A": "Kosz 20 kg pod P (ukryty); karta P usunięta", "B": "Kosz 20 kg pod P (ukryty); karta P usunięta", "C": "Kosz 20 kg pod P (ukryty); karta P usunięta" }, "kolejki": { "A": [], "B": [ "stomb v: 20 kg", "snap P/v 20 kg rev 1" ], "C": [ "ptomb P", "stomb v: 20 kg (ze stanu)" ] }, "w1": { "AB": false, "AC": false, "BC": false }, "echo": 1, "zeStanu": { "koperty": 1, "ponowne": 0, "retencja": 0 }, "powtorzenia": 0 },
+  "trzy urządzenia: „Usuń pacjenta” na urządzeniu bez wiedzy o Koszu, spoczynek w kolejności BCA|z echem": { "obiegi": 1, "koniec": { "A": "Kosz 20 kg pod P (ukryty); karta P usunięta", "B": "Kosz 20 kg pod P (ukryty); karta P usunięta", "C": "Kosz 20 kg pod P (ukryty); karta P usunięta" }, "kolejki": { "A": [], "B": [ "stomb v: 20 kg", "snap P/v 20 kg rev 1" ], "C": [ "ptomb P", "stomb v: 20 kg (ze stanu)" ] }, "w1": { "AB": false, "AC": false, "BC": false }, "echo": 1, "zeStanu": { "koperty": 1, "ponowne": 0, "retencja": 0 }, "powtorzenia": 0 },
+  "trzy urządzenia: „Usuń pacjenta” na urządzeniu bez wiedzy o Koszu, spoczynek w kolejności CAB|z echem": { "obiegi": 2, "koniec": { "A": "Kosz 20 kg pod P (ukryty); karta P usunięta", "B": "Kosz 20 kg pod P (ukryty); karta P usunięta", "C": "Kosz 20 kg pod P (ukryty); karta P usunięta" }, "kolejki": { "A": [ "stomb v: 20 kg (ze stanu)" ], "B": [ "stomb v: 20 kg", "snap P/v 20 kg rev 1" ], "C": [ "ptomb P", "stomb v: 20 kg (ze stanu)" ] }, "w1": { "AB": false, "AC": false, "BC": false }, "echo": 2, "zeStanu": { "koperty": 2, "ponowne": 0, "retencja": 0 }, "powtorzenia": 0 },
+  "trzy urządzenia: „Usuń pacjenta” na urządzeniu bez wiedzy o Koszu, spoczynek w kolejności CBA|z echem": { "obiegi": 2, "koniec": { "A": "Kosz 20 kg pod P (ukryty); karta P usunięta", "B": "Kosz 20 kg pod P (ukryty); karta P usunięta", "C": "Kosz 20 kg pod P (ukryty); karta P usunięta" }, "kolejki": { "A": [ "stomb v: 20 kg (ze stanu)" ], "B": [ "stomb v: 20 kg", "snap P/v 20 kg rev 1" ], "C": [ "ptomb P", "stomb v: 20 kg (ze stanu)" ] }, "w1": { "AB": false, "AC": false, "BC": false }, "echo": 2, "zeStanu": { "koperty": 2, "ponowne": 0, "retencja": 0 }, "powtorzenia": 0 },
+  "trzy urządzenia: urządzenie z przywróconą wizytą dostaje odesłany wpis przed nagrobkiem karty|bez echa": { "posrednio": { "obiegi": null, "koniec": { "A": "Kosz 20 kg pod P (ukryty); karta P usunięta", "B": "Kosz brak; w karcie P 20 kg; karta P jest", "C": "Kosz brak; karta P usunięta" }, "kolejki": { "A": [], "B": [ "stomb v: 20 kg", "snap P/v 20 kg rev 1" ], "C": [ "ptomb P" ] }, "w1": { "AB": true, "AC": true, "BC": true }, "echo": 0, "zeStanu": null, "powtorzenia": 0 }, "koniec": { "obiegi": 1, "koniec": { "A": "Kosz 20 kg pod P (ukryty); karta P usunięta", "B": "Kosz brak; karta P usunięta", "C": "Kosz 20 kg pod P (ukryty); karta P usunięta" }, "kolejki": { "A": [], "B": [ "stomb v: 20 kg", "snap P/v 20 kg rev 1" ], "C": [ "ptomb P" ] }, "w1": { "AB": true, "AC": false, "BC": true }, "echo": 0, "zeStanu": null, "powtorzenia": 0 } },
+  "trzy urządzenia: urządzenie z przywróconą wizytą dostaje odesłany wpis przed nagrobkiem karty|z echem": { "posrednio": { "obiegi": null, "koniec": { "A": "Kosz 20 kg pod P (ukryty); karta P usunięta", "B": "Kosz brak; w karcie P 20 kg; karta P jest", "C": "Kosz brak; karta P usunięta" }, "kolejki": { "A": [ "stomb v: 20 kg (ze stanu)" ], "B": [ "stomb v: 20 kg", "snap P/v 20 kg rev 1" ], "C": [ "ptomb P" ] }, "w1": { "AB": true, "AC": true, "BC": true }, "echo": 1, "zeStanu": { "koperty": 1, "ponowne": 0, "retencja": 0 }, "powtorzenia": 0 }, "koniec": { "obiegi": 1, "koniec": { "A": "Kosz 20 kg pod P (ukryty); karta P usunięta", "B": "Kosz 20 kg pod P (ukryty); karta P usunięta", "C": "Kosz 20 kg pod P (ukryty); karta P usunięta" }, "kolejki": { "A": [ "stomb v: 20 kg (ze stanu)" ], "B": [ "stomb v: 20 kg", "snap P/v 20 kg rev 1" ], "C": [ "ptomb P", "stomb v: 20 kg (ze stanu)" ] }, "w1": { "AB": false, "AC": false, "BC": false }, "echo": 2, "zeStanu": { "koperty": 2, "ponowne": 0, "retencja": 0 }, "powtorzenia": 0 } },
+  "„Przywróć” na B, „Scal pacjentów” P → Q na A|bez echa": { "obiegi": 1, "koniec": { "A": "Kosz 20 kg pod P (ukryty); karta P usunięta", "B": "Kosz brak; karta P usunięta" }, "kolejki": { "A": [ "snap Q/w 21 kg rev 1", "snap Q/#8c45 30 kg rev 0", "ptomb P" ], "B": [ "stomb v: 20 kg", "snap P/v 20 kg rev 1" ] }, "w1": { "AB": true }, "echo": 0, "zeStanu": null, "powtorzenia": 0 },
+  "„Przywróć” na B, „Scal pacjentów” P → Q na A|z echem": { "obiegi": 2, "koniec": { "A": "Kosz 20 kg pod P (ukryty); karta P usunięta", "B": "Kosz 20 kg pod P (ukryty); karta P usunięta" }, "kolejki": { "A": [ "snap Q/w 21 kg rev 1", "snap Q/#d667 30 kg rev 0", "ptomb P", "stomb v: 20 kg (ze stanu)" ], "B": [ "stomb v: 20 kg", "snap P/v 20 kg rev 1" ] }, "w1": { "AB": false }, "echo": 1, "zeStanu": { "koperty": 1, "ponowne": 0, "retencja": 0 }, "powtorzenia": 0 },
+  "gwiazdka po Koszu na urządzeniu bez wiedzy o Koszu, „Usuń pacjenta” na drugim|bez echa": { "obiegi": 1, "koniec": { "A": "Kosz brak; karta P usunięta", "B": "Kosz 20 kg pod P (ukryty); karta P usunięta" }, "kolejki": { "A": [ "snap P/v 20 kg z gwiazdką rev 1" ], "B": [ "stomb v: 20 kg", "ptomb P" ] }, "w1": { "AB": true }, "echo": 0, "zeStanu": null, "powtorzenia": 0 },
+  "gwiazdka po Koszu na urządzeniu bez wiedzy o Koszu, „Usuń pacjenta” na drugim|z echem": { "obiegi": 1, "koniec": { "A": "Kosz 20 kg pod P (ukryty); karta P usunięta", "B": "Kosz 20 kg pod P (ukryty); karta P usunięta" }, "kolejki": { "A": [ "snap P/v 20 kg z gwiazdką rev 1" ], "B": [ "stomb v: 20 kg", "ptomb P", "stomb v: 20 kg (ze stanu)" ] }, "w1": { "AB": false }, "echo": 1, "zeStanu": { "koperty": 1, "ponowne": 0, "retencja": 0 }, "powtorzenia": 0 },
+  "gwiazdka po Koszu na urządzeniu bez wiedzy o Koszu, „Scal pacjentów” P → Q na drugim|bez echa": { "obiegi": 1, "koniec": { "A": "Kosz brak; karta P usunięta", "B": "Kosz 20 kg pod P (ukryty); karta P usunięta" }, "kolejki": { "A": [ "snap P/v 20 kg z gwiazdką rev 1" ], "B": [ "stomb v: 20 kg", "snap Q/w 21 kg rev 1", "snap Q/#d133 30 kg rev 0", "ptomb P" ] }, "w1": { "AB": true }, "echo": 0, "zeStanu": null, "powtorzenia": 0 },
+  "gwiazdka po Koszu na urządzeniu bez wiedzy o Koszu, „Scal pacjentów” P → Q na drugim|z echem": { "obiegi": 1, "koniec": { "A": "Kosz 20 kg pod P (ukryty); karta P usunięta", "B": "Kosz 20 kg pod P (ukryty); karta P usunięta" }, "kolejki": { "A": [ "snap P/v 20 kg z gwiazdką rev 1" ], "B": [ "stomb v: 20 kg", "snap Q/w 21 kg rev 1", "snap Q/#9292 30 kg rev 0", "ptomb P", "stomb v: 20 kg (ze stanu)" ] }, "w1": { "AB": false }, "echo": 1, "zeStanu": { "koperty": 1, "ponowne": 0, "retencja": 0 }, "powtorzenia": 0 },
+  "karta żywa: „Przywróć” bez usunięcia karty|z echem": { "obiegi": 1, "koniec": { "A": "Kosz brak; w karcie P 20 kg; karta P jest", "B": "Kosz brak; w karcie P 20 kg; karta P jest" }, "kolejki": { "A": [], "B": [ "stomb v: 20 kg", "snap P/v 20 kg rev 1" ] }, "w1": { "AB": false }, "echo": 0, "zeStanu": { "koperty": 0, "ponowne": 0, "retencja": 0 }, "powtorzenia": 0 },
+  "poprawka z trzeciego urządzenia sprzed Kosza dochodzi po „Usuń pacjenta”|z echem": { "kolejkaAPoDostawieC": [ "ptomb P", "stomb v: 40 kg (echo)" ], "koniec": { "obiegi": 1, "koniec": { "A": "Kosz 40 kg pod P (ukryty); karta P usunięta", "B": "Kosz 40 kg pod P (ukryty); karta P usunięta", "C": "Kosz 40 kg pod P (ukryty); karta P usunięta" }, "kolejki": { "A": [ "ptomb P", "stomb v: 40 kg (echo)" ], "B": [ "stomb v: 20 kg" ], "C": [ "snap P/v 40 kg rev 1" ] }, "w1": { "AB": false, "AC": false, "BC": false }, "echo": 1, "zeStanu": { "koperty": 0, "ponowne": 0, "retencja": 0 }, "powtorzenia": 0 } },
 };

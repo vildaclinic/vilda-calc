@@ -816,8 +816,8 @@ export const WYJATKI = Object.freeze({
   'R5-E1': Object.freeze({
     opis: '„Przywróć” przegrywa z „Usuń pacjenta”, gdy kartę przywraca trzecie urządzenie nową wizytą: wizyta jest w Koszu, a nie w karcie (treść widoczna)',
     mechanizm: '„Przywróć” tej wizyty przed „Usuń pacjenta”, karta wraca późniejszą zmianą na innym urządzeniu',
-    zrodlo: 'blok p. 6 R5-E1 („ZNANA RÓŻNICA (naprawa: E3-PR0)”)',
-    naprawa: 'naprawa: E3-PR0',
+    zrodlo: 'blok p. 6 R5-E1; jawny wyjątek kryterium odbioru E3-PR0 — wynik taki jak po pełnej synchronizacji (decyzja właściciela 1 z 2026-11-19 i decyzja z 2026-11-20)',
+    naprawa: 'bez naprawy: wynik taki jak po pełnej synchronizacji (decyzje właściciela z 2026-11-19 i 2026-11-20)',
     swiaty: Object.freeze(['W1', 'W4', 'bloby']),
   }),
   // E3-PR0b: klasa samych bieżących urządzeń (rodzina D-4 A i kosz-po-2); dopisana na końcu klasyfikacji (klasaWizyty), więc
