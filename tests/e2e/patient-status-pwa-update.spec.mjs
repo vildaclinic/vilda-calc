@@ -120,7 +120,7 @@ for (const { shell, trigger } of [
       const observations = {};
       let owner;
       try {
-        const fixture = await createFictionalVault(page, { shell });
+        const fixture = await createFictionalVault(page, { shell, waitForAccountReadyBeforeReload: true });
         owner = fixture.frame;
         await loadPatient(owner, fixture.ids.a, 'restore', { clear: true });
         await settled(owner);
