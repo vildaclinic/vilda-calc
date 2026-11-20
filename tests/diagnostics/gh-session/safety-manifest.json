@@ -1,5 +1,5 @@
 {
-  "kind": "ISOLATED_CI_V3_FIRST_REFUSING_GUARD_OPERANDS_NOT_RELEASE_OR_FIX",
+  "kind": "ISOLATED_CI_V4_TWO_EXISTING_POST_FALSE_DETAIL_CALLBACKS_NOT_FIX",
   "branch": "agent/diagnostyka-gh-sesja",
   "baseCommit": "be8bc23a51445a58b625132114d351df27411f9c",
   "target": {
@@ -10,7 +10,7 @@
     "origin": "http://127.0.0.1:4173",
     "panelResource": "/vilda_panel_pacjent.js?v=5"
   },
-  "observerSHA256": "ebaff321f97d7da5a8e48ab2a01ee5e981e31a6aea4e95884c7ea2587a88246a",
+  "observerSHA256": "3f19b549f4462847aa3f9b19466ebb0d1153350f2eb2365101596ed4188ac76d",
   "canonicalNativeAST": "78e8ac32a235245dae0089439c2b992755fc79d6a414192c6cd381c5dd9ad33b",
   "addedFiles": [
     ".github/workflows/diagnostyka-gh-sesja.yml",
@@ -28,15 +28,15 @@
   ],
   "diagnosticFiles": {
     ".github/workflows/diagnostyka-gh-sesja.yml": "c9bbe6f7b9c634bfa0acfa44fd063fc10f0310a8c99f795b9562eb24f01a857e",
-    "tests/diagnostics/gh-session/README.md": "c398930e041b89ae7694efb278af6c6a132e6e490edacea41cae955712fb5a33",
-    "tests/diagnostics/gh-session/build-harness.mjs": "3936e3e66f14ba1f017cb925ac362a22302afac5273cb19e0a4788ef7c11cbd0",
-    "tests/diagnostics/gh-session/build-observer.py": "10fdc5574ea6025a2d8e5ecec8cda0c42a78fbb4ebe3bd6cbfd4f6934fb2e374",
+    "tests/diagnostics/gh-session/README.md": "a5aca7c46d6f2f25f4b6679dcdc26f95b3015e68a9a03cd3f559136a2a8dfa27",
+    "tests/diagnostics/gh-session/build-harness.mjs": "9b86bd849436f4b0780e6f1180da2dca00497333b233fda861a49b6f3d54da31",
+    "tests/diagnostics/gh-session/build-observer.py": "4917abe7a4323881454449cd80fbdd80ab7db1775bb39ae2609f2972e0a164bd",
     "tests/diagnostics/gh-session/build-panel-observer.py": "f7cce34c2cd3375669f55e7b6c64e1f7db3c3714ef4a084118dadbb6f784983f",
-    "tests/diagnostics/gh-session/diagnostic-hooks.mjs": "b84d30ca8519398ada82bd821e97c4101e6b2863d758697af17f64610b278af7",
-    "tests/diagnostics/gh-session/diagnostic-routes.mjs": "1d4bfa6e009e9587d8bba7c052841478371dca4e352c5b3a5727f77011c110fd",
+    "tests/diagnostics/gh-session/diagnostic-hooks.mjs": "6a44b860e9261bcf2c39b0db6745e311c9a41dfb60c05f2aa200ff7ea8389ec2",
+    "tests/diagnostics/gh-session/diagnostic-routes.mjs": "1c3b54e20a99e602344d3339057317e575fd95e9318d1062880cb6014381e6e2",
     "tests/diagnostics/gh-session/full-failure-insertion-blocks.json": "f2f4e6d66a4f687ad3d121bf61ec568ae3a6dc423c126b1bf9fc8d88e6273e04",
-    "tests/diagnostics/gh-session/prepare.mjs": "0db3e0236eed1690d52da230bb1226e27ec818f7f8c515ec70ec502f9f253ef0",
-    "tests/diagnostics/gh-session/verify-observer.mjs": "df2cd60f2a31dec2ff4d082d36bab1813f28eafe767c6becbcfeaa94d0450f2d",
+    "tests/diagnostics/gh-session/prepare.mjs": "7cf66fee0c8c601c5efca0a956fb845541af37442253885101634fb84a30ab93",
+    "tests/diagnostics/gh-session/verify-observer.mjs": "64f9bce9ee242d710b15d49c5882296de4bd22b4a2f792ef6aa6e037bea45b2e",
     "tests/diagnostics/gh-session/verify-panel-observer.mjs": "77e967794db641123bd05b336a3eddf2d9b58c14efb1be7a3937797931c77c99"
   },
   "originalFiles": {
@@ -75,19 +75,23 @@
     "nativeCohort": "Existing unchanged standard CI on feature d54a1ce1ef6df775b7fc46b11b1e933571f79290; not duplicated by diagnostic workflow.",
     "guardFalseMayPrecedeLaterSuccessfulWrite": true,
     "noWholeSuccessfulWriteAbsenceOfLoggingGuarantee": true,
-    "sourcePins": 14
+    "sourcePins": 14,
+    "postFalseCallbacksOnly": 2,
+    "newObserverSites": 0,
+    "newSuccessPathMarkersOrNativeAPICalls": 0
   },
   "evidenceBounds": [
-    "Dedicated single50-minute stress10 job only; standard feature CI is independent. No diagnostic PASS or retry fixes/refutes earlier failed native runs.",
-    "Original native files0e805/703c, normal CI/CodeQL/appearance/config/baselines/app remain byte exact relativeBE8. Only diagnostic ADD files may differ.",
-    "Data scalar markers preserve every original guard/getter/call exactly once and in original short circuit order. Original false is determined before logging. Panel does the same for its one existing public authority guard.",
-    "A true-returning guard invocation performs scalar bookkeeping only, but a false guard can log before a later accepted fallback and successful write. There is no whole-successful-write absence-of-logging guarantee. DisabledRAM still permits falseData detail thunk/call overhead before opt-in.",
-    "Both asset routes are exact local-origin/index-frame/path/version/native-hash/clone-hash. Both method sources are hashed without invoking either function. Primary Data writer hash is unchanged from5db; exact full-resource hash plus fresh navigation is required for private helper identity.",
-    "SharedRAM cap200 best-effort can omit later labels. Some OR false alternatives are not terminal refusal; only original terminal false/catch emits stage. Scope/accountCurrent internals remain aggregated, with no tokens/tickets/accounts/adapters serialized.",
-    "Late RAM enable/reset stays inside existing original pre-click frame.evaluate. Extra harvest occurs only after original session/receipt/Vault acknowledgement before originalF5 or after a failure.",
-    "Full public read-only payload/session JSON retains timestamps/order/native metadata only for exact fictional fixture label. Original all actions/assertions/budgets stay intact.",
-    "Source restoration/upload are always() best effort; hard timeout/cancel may prevent completion. Require exact restoration-proof artifact.",
-    "Diagnostic branch must never merge/publish. Actual private refusal cause remains unestablished until the new observer records it in the relevant run."
+    "One unchanged50-minute diagnostic workflow/Node24/npmci/original installer/stress10, worker1/retry0/percase240s/config120s. Original8880 harness actions/assertions remain byte exact.",
+    "One exact Data0e805→3f19 route only. Native Panel703c remains unintercepted/unmodified; its original public method source can be read only in the already-existing late harvest without invoking it.",
+    "V4 changes ONLY two existing5db false-detail callback bodies. NativeSaveCarryCurrent and mainSessionWriteAuthorityCurrent bodies are byte-identical native0e805. Existing19 observer sites remain; no marker/helper/guard/API is added on success.",
+    "New observations occur only after existing original refusal and enabledRAM/cap checks. Existing detail fields/helpercalls and their order remain; only nullablebooleans/static availability strings are appended.",
+    "The same already-captured/validated authority/saveScope/i from this exactoe attempt is compared to witness. No latest authority, guard result, Z/getterAPI or capture is re-evaluated. Opaque token/source/credential fields are never read; opaque references remain local and are never output.",
+    "Private fields are scoped to the closed original fictional GH390 nativefactory/Pe/Gp_a and loaded public0/1-arg callsites. This is not universal provenance for foreign scheduledAuthority objects. Missing/unscoped expected shapes produce projectionUnavailable.",
+    "Equality/mismatch is not token validity or direct proof of a private rejecting condition. Account token/shell activation internals can remain unknown. Native records are plain, Panelticketfreeze shallow/accountmutable; no app repair depends on private shape.",
+    "Full fake-only public read-only payload/session JSON retainstimestamps/order/nativemetadata. BeforeF5harvest occurs only after originalmain/receipt/Vaultack; afterEachonfailure remains. Original pre-clickevaluate count1 and lateRAM enable unchanged.",
+    "Relative5db no new executable body work before selected existing false callback; parse/JIT/function size and after-false timing can still affect later retries. RAMcap200/best-effort may omit observations.",
+    "Normal application/config/workflows/CodeQL/baselines remain byte exact relativeBE8. ArchivedPanel generator/verifier stay diagnosticADD files but are never executed or routed byV4.",
+    "Actualroot committed prepare/list88_1_10/restore and peer required beforepush. Alwaysrestore/uploadbest effort underhardkill. Diagnosticbranchnevermerge/publish; no cause/fix/quality approval."
   ],
   "nativeFailureHarnessSHA256": "a32e54d2954d4fbfa6778688ea8841dac00147a20e343dc44c6aab40b9601210",
   "original88SelectionSHA256": "1e7c9635eccfd4ce67717c3db8162d280bbdda6f5f12f5f8750268ab6cc8fff9",
@@ -95,5 +99,8 @@
     "native": "a32e54d2954d4fbfa6778688ea8841dac00147a20e343dc44c6aab40b9601210",
     "refusal": "88800bc20ecfb5eeaae37d3ddac1ade09ab5276b8c16ea441340e44a4bd6d7de"
   },
-  "panelObserverSHA256": "85d535374ff13cb84f78e6d5f9bc81b616dc94025594f78b34317fc3e086745e"
+  "archivedPanelObserverSHA256": "85d535374ff13cb84f78e6d5f9bc81b616dc94025594f78b34317fc3e086745e",
+  "panelInterceptionOrModification": false,
+  "executedAssetRoutes": 1,
+  "originalPanelMethodSourceSHA256": "cf717e2ab3f2a1960922c61e96d4033de104a425b7b7c5acc7e114f87eaf7a03"
 }

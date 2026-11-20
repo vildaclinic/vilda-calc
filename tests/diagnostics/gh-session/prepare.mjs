@@ -99,9 +99,6 @@ function build(preview) {
     execFileSync('python3', [path.join(ownDirectory, 'build-observer.py'), root, output], { stdio: 'inherit' });
     check(sha(fs.readFileSync(path.join(output, 'observer.js'))) === manifest.observerSHA256, 'Refusal-only observer byte identity failed');
     execFileSync(process.execPath, [path.join(ownDirectory, 'verify-observer.mjs'), root, output], { stdio: 'inherit' });
-    execFileSync('python3', [path.join(ownDirectory, 'build-panel-observer.py'), root, output], { stdio: 'inherit' });
-    check(sha(fs.readFileSync(path.join(output, 'panel-observer.js'))) === manifest.panelObserverSHA256, 'Panel refusal-only clone drift');
-    execFileSync(process.execPath, [path.join(ownDirectory, 'verify-panel-observer.mjs'), root, output], { stdio: 'inherit' });
   }
   const originalFull = collection('original-full88-selection', 'full');
   const originalSingle = collection('original-target-selection', 'single');

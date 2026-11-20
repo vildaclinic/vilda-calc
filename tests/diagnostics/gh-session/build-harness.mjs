@@ -81,5 +81,5 @@ export function buildHarness(original, mode, target) {
     originalCriticalPreclickFrameEvaluateCalls: 1, diagnosticCriticalPreclickFrameEvaluateCalls: 1,
     allOriginalActionsAndAssertionsRetained: true, nativeWriterInvocationNotWrapped: true,
     target, noExtraAwaitBeforeRealPointSave: true,
-    bounds: 'V3 setup routes/source layout/scalar labels/after-acknowledgement harvest change timing. A false instrumented guard can log/allocate before a later accepted fallback and successful write; there is no whole-successful-write absence-of-observation guarantee. No runtime fix or release claim.' } };
+    bounds: 'V4 retains one Data route and two existing post-false detail callbacks; original native guard bodies and Panel are unchanged. Original8880 actions/assertions/critical round trip stay exact. Source parsing and post-false comparisons/logging can affect later retries; no guard cause/fix/release claim.' } };
 }

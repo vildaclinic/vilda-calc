@@ -95,19 +95,19 @@ export async function harvest(frame, phase, info) {
   delete value.writerFunctionSource;
   delete value.panelFunctionSource;
   const expectedWriterSHA256 = resources.find(resource => resource.file === 'vilda_data_import_export.js').methodSHA256;
-  const expectedPanelSHA256 = resources.find(resource => resource.file === 'vilda_panel_pacjent.js').methodSHA256;
+  const expectedPanelSHA256 = manifest.originalPanelMethodSourceSHA256;
   const verifiedCurrentPanelMethod = actualPanelSHA256 === expectedPanelSHA256;
   const hits = routeHits.get(key(info)) || [];
   const verifiedRoute = resources.every(resource => hits.some(hit => hit.file === resource.file && hit.fulfilled === true && hit.nativeStatus === 200 && hit.nativeSHA256 === resource.sourceSHA256 && hit.cloneSHA256 === resource.cloneSHA256));
   const verifiedCurrentWriter = actualWriterSHA256 === expectedWriterSHA256;
   const entries = value.entries.status === 'available' && Array.isArray(value.entries.value) ? value.entries.value : null;
   const captureValid = verifiedRoute && verifiedCurrentWriter && verifiedCurrentPanelMethod && value.enabled && entries !== null;
-  const evidenceStatus = captureValid ? entries.length ? 'GUARD_REFUSAL_ENTRIES_OBSERVED_NOT_FIX_PROOF' : 'VERIFIED_REFUSAL_ONLY_CAPTURE_ZERO_ENTRIES'
+  const evidenceStatus = captureValid ? entries.length ? 'POST_FALSE_COMPARISON_ENTRIES_OBSERVED_NOT_FIX_PROOF' : 'VERIFIED_REFUSAL_ONLY_CAPTURE_ZERO_ENTRIES'
     : phase === 'after-each' && !value.enabled ? 'POST_F5_RAM_RESET_OR_NOT_ENABLED_SEE_BEFORE_F5' : 'INCONCLUSIVE';
-  const result = { kind: 'V3_FIRST_FALSE_GUARD_FICTIONAL_DIAGNOSTIC_NOT_RELEASE_GATE', ...identity(info), phase, status: info.status,
+  const result = { kind: 'V4_EXISTING_POST_FALSE_COMPARISONS_NOT_FIX_OR_RELEASE', ...identity(info), phase, status: info.status,
     evidenceStatus, verifiedRoute, verifiedCurrentWriter, actualWriterSHA256, expectedWriterSHA256,
     verifiedCurrentPanelMethod, actualPanelSHA256, expectedPanelSHA256,
-    diagnosticBounds: 'A false guard can precede a later accepted fallback and successful write; labels/logger/source layout can affect timing. Data writer method hash alone does not identify private helpers; exact fulfilled resource hash and fresh navigation are required.',
+    diagnosticBounds: 'V4 changes only two existing post-false detail callbacks; native guard bodies and Panel stay unchanged. Comparisons use captured objects of this same attempt, not new authority/guard calls. Missing private shapes remain unavailable; equality is not token validity. Source/after-false logging timing effects remain.',
     lateEnableObserved: value.enabled, entryCount: entries?.length ?? null, entryCapReached: entries !== null && entries.length >= 200,
     frameURL: frame.url(), routeHits: hits, value };
   observedPhases.get(key(info))?.push({ phase, evidenceStatus, captureValid, entryCount: result.entryCount });
