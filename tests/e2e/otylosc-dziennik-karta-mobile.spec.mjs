@@ -34,6 +34,8 @@ test('telefon: „Wpisy leczenia” i okno „+ Kontynuacja” bez przewijania w
     obesityTherapyPoints: pts,
   }, { dedup: false })).patientId, [P('a', 'start', '2026-04-14', 0, 80, 160, '0,25 mg / tydz.'), P('b', 'continue', '2026-10-13', 6, 75.2, 162.9)]);
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id), pid);
+  // P-KARTA-LECZENIE (etap 1): bloki leczenia stoją w zakładce „Leczenie” (druga, po „Status”).
+  await page.locator('.vilda-patient-tab[data-tab="leczenie"]').click();
   const sekcja = page.locator('.vdo');
   await sekcja.scrollIntoViewIfNeeded();
   await expect(sekcja).toBeVisible();

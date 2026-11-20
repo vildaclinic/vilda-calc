@@ -48,6 +48,8 @@ test('telefon: Karta — „Potrzebny pomiar wzrostu do oceny ChPL” i kafelek 
     obesityTherapyPoints: pts,
   }, { dedup: false })).patientId, PUNKTY);
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id), pid);
+  // P-KARTA-LECZENIE (etap 1): bloki leczenia stoją w zakładce „Leczenie” (druga, po „Status”).
+  await page.locator('.vilda-patient-tab[data-tab="leczenie"]').click();
   const przycisk = page.locator('.vilda-gha-btn', { hasText: 'Dane analityczne' });
   await przycisk.scrollIntoViewIfNeeded();
   await przycisk.click();

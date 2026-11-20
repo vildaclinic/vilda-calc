@@ -2331,6 +2331,71 @@ Strona nie ma kopii reguły: próg, granicę wieku, zakres wieku menarche i list
 
 **Granice.** Bez nowych stylów ustawianych wprost na elementach (`tests/fixtures/style-elementow.json` bez zmian: nowe pole i nota chowają się atrybutem `hidden`). `vilda_lab_range_snapshot.js` i `vilda_vault.js` bez zmian — format zapisanego zakresu się nie zmienił, a dawne zapisy nie są przeliczane. Wersje `?v=`, precache i `SW_VERSION` ustawił `npm run podbij-wersje`.
 
+## Łatka P-KARTA-LECZENIE, etap 1 — zakładka „Leczenie” i pasek leczenia (`vilda_auth_ui.js` 574 → 575, `vilda_auth_ui.css` 86 → 87, 2026-11-20, decyzje właściciela)
+
+Czytelne źródło: `vilda_auth_ui.js` — nowy czytelny blok P-KARTA-LECZENIE zaraz po funkcji `jl` (przed `function Pl(`):
+`Kl_IKONA`, `Kl_zakladka` (biała lista: „leczenie” bez zakładki → „antro”), `Kl_daneGh`, `Kl_daneOb` (części paska
+z obiektów wyjściowych bloków), `Kl_kolejnosc` (D2), `Kl_ustaw`/`Kl_miesci`/`Kl_krok`/`Kl_dopasuj` (jedna/dwie linie,
+stopnie tekstu klasami `vilda-kl-pasek--r1…r3`, odrzucanie ostatnich części), `Kl_pasek` (przycisk), `Kl_przewin`
+(przewinięcie kontenera Karty) i `Kl_leczenie` (zakładka, treść, paski; obserwator rozmiaru pasków). Czytelna `Ob_dz`
+dostaje 7. argument `Kl_po`. Gdy blok rzuci wyjątek (`czesci` w `Ob_dz`, `wl`/`kl` w `Kl_leczenie`), jego obiekt
+wyjściowy jest czyszczony — pasek nie pokazuje wartości ani oceny bloku, który się nie narysował (`Ob_b` wypełnia
+wyjście przed wykresem). Opis: `docs/clinical/ALGORITHMS.md`, wpis P-KARTA-LECZENIE; plan: `docs/KARTA_LECZENIE_PLAN.md`.
+
+```
+// vilda_auth_ui.js — wl (podsumowanie GH): obiekt wyjściowy
+// 1. function wl(t){ → function wl(t,Kl_wy){
+// 2. przed v=e("div",{class:"vilda-gh-summary-head"},…): Kl_odz=s?"Leczony IGF-1 (mekasermina)":"Leczony hormonem wzrostu (rhGH)",
+//    Kl_st=o?"leczenie zako\u0144czone":"aktywne", — odznaka i znacznik stanu używają Kl_odz i Kl_st (teksty bez zmian)
+// 3. return e("div",{class:"vilda-gh-summary"},…) → return Kl_wy&&(Kl_wy.odznaka=Kl_odz,Kl_wy.stan=Kl_st,
+//    Kl_wy.zakonczone=!!o,Kl_wy.dawka=u==="\u2014"?"":u),e("div",{class:"vilda-gh-summary"},…)
+// vilda_auth_ui.js — kl (Dane analityczne GH)
+// 4. function kl(t,a,n,r,o){ → function kl(t,a,n,r,o,Kl_wy){
+// 5. po var z=y!=null&&x!=null?x-y:null; : Kl_wy&&(Kl_wy.czas=Gk&&W>0?W+" mies.":"",
+//    Kl_wy.tempo=F!=null&&!(Fo&&Fo.krotki)?qt(F,1)+" cm/rok":"",Kl_wy.dhsds=z!=null?be(z,"",2):"");
+// vilda_auth_ui.js — Cl (podsumowanie otyłości)
+// 6. function Cl(t){ → function Cl(t,Kl_wy){; Kl_odz/Kl_st przed y=e("div",{class:"vilda-gh-summary-head"},…) jak w 2.;
+//    return …[y,x,Ob_h,Ob_z,Ob_u]) → return Kl_wy&&(…,Kl_wy.dawka=p==="\u2014"?"":p),e(…)
+// vilda_auth_ui.js — Ml / Ob_b (Dane analityczne — otyłość)
+// 7. function Ml(t,a,n,Ob_dzs){ → function Ml(t,a,n,Ob_dzs,Kl_wy){; function Ob_b(Ob_m){var o=… →
+//    function Ob_b(Ob_m,Kl_out){var Kl_red=null,Kl_rv,Kl_k,o=…
+// 8. kafelek „Redukcja do oceny”: wartość zapamiętana (…"Redukcja do oceny",Kl_rv=K!=null?…), po nim
+//    ,Kl_red=ot[ot.length-1],ot.push(fe("","Pr\xF3g ChPL",… (liczba ot.push(fe( bez zmian — strażnik R6)
+// 9. werdykty „przed oknem”, „wystarczająca”, „niewystarczająca”: krotko:Kl_k="oce\u0144 po "+L,
+//    title:"Przed oknem oceny \u2014 "+Kl_k (analogicznie „kontynuowa\u0107 leczenie”,
+//    „wg ChPL odstawi\u0107 i ponownie oceni\u0107”) — tytuły bez zmian, budowane z krótkiej formy
+// 10. przed var lt=ot.slice(); : Kl_out&&(Kl_out.czas=Ob_g&&D!=="\u2014"?D+" "+M:"",
+//     Kl_out.redukcja=Kl_red&&ot.indexOf(Kl_red)>=0&&K!=null?{miara:P,tekst:Kl_rv}:null,
+//     Kl_out.ocena=!Ob_m.end&&gt&&gt.krotko?{cls:gt.cls,ic:gt.ic,tekst:gt.krotko}:null);
+// 11. Ob_b(Ob_C[Ob_C.length-1]) → Ob_b(Ob_C[Ob_C.length-1],Kl_wy) (przełącznik cykli woła Ob_b(l) bez wyjścia)
+// vilda_auth_ui.js — jl (karta „wg notatek”)
+// 12. function jl(t,a){ → function jl(t,a,Kl_n,Kl_wy){; z tablicą notatek Kl_n karta powstaje od razu (wewnętrzna
+//     Kl_buduj — dawne ciało .then(function(l){…})), bez niej — jak dotąd po odczycie notatek z sejfu;
+//     Kl_odz/Kl_st przed h=e("div",{class:"vilda-gh-summary-head"},…); wyjście: odznaka, stan, zakonczone=!p, dawka
+// vilda_auth_ui.js — showPatientCard (se)
+// 13. przed Ft=e("div",{class:"vilda-patient-tabs",…}): KlL=Kl_leczenie({patientId:t,rekord:s,plec:S,zaawansowane:y,
+//     siatka:h,notatki:GdNotatki,user:m,zakladka:at(Kl_IKONA,"Leczenie")}); lista zakładek [Et,KlL?KlL.zakladka:null,Bt,…]
+// 14. ua(): [Et,KlL&&KlL.zakladka,Bt,…].filter(Boolean) i [Nt,KlL&&KlL.tresc,Ct,…].filter(Boolean)
+// 15. przed CarePatientTab.addEventListener(…): KlL&&KlL.zakladka.addEventListener("click",function(){ua("leczenie");
+//     ia({screen:"card",patientId:t,tab:"leczenie"})});
+// 16. biała lista activeTab: …==="antro"||r.activeTab==="leczenie"&&KlL||…; Ka.tab: Kl_zakladka(r&&r.activeTab,KlL)||"antro";
+//     xa.restoreTab: ua(Kl_zakladka(ct,KlL)||"antro")
+// 17. Cs: trzy wywołania wl/kl/Ob_dz nad Ft → KlL?KlL.paski:null,Ft,Nt,KlL?KlL.tresc:null,Ct,…
+// vilda_auth_ui.js — Ob_dzNotatki (czytelne)
+// 18. button[data-tab="antro"] → button[data-tab="leczenie"] (zapas: "antro"); sekcja.scrollIntoView(…) → Kl_przewin(sekcja)
+```
+
+`vilda_auth_ui.css`: rozdział „P-KARTA-LECZENIE, etap 1” na końcu pliku — `.vilda-kl-paski`/`.vilda-kl-gh`
+(`display: contents`), `.vilda-kl-tresc` (kolumna z odstępem 18 px jak Karta), `.vilda-kl-pasek*` i `.vilda-kl-pigulka*`
+(kolory podsumowania i pola oceny; `!important` przy szczegółowości 0-2-0 jak `.vilda-gha-btn`), `--dwie` (dwie linie),
+`--r1…--r3` (stopnie tekstu), siedem zakładek z zawijaniem w wierszu (`.vilda-patient-tabs:has(>…[data-tab=leczenie])`).
+
+**Granice.** Bez nowego pliku ładowanego przez strony; `vilda_cykle_leczenia.js` i `obesity_response_criteria.js` bez
+zmian; sejf, dziennik, zapis i synchronizacja bez zmian; style tylko klasami (bez stylów wpisanych w elementy). Klasy,
+których szukają testy i moduły (`.vdo`, `.vilda-gha-btn`, `.vilda-gh-summary`, `.vilda-oba-verdict`, `.vilda-ob-dz`),
+bez zmian; pasek ma własne klasy (`.vilda-kl-*`), żeby lokatory bloków nie trafiały w pasek. Wersje `?v=`, precache
+i `SW_VERSION` ustawił `npm run podbij-wersje`.
+
 ## Trwała tożsamość wizyt — źródło i granica artefaktu sejfu
 
 Zmiana funkcjonalna `P-TRWALE-WIZYTY` ma bazę `audyt` z commita

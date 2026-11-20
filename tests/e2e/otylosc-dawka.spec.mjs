@@ -127,6 +127,8 @@ test.describe('Dawka leczenia otyłości: przecinek dziesiętny i podpowiedzi z 
     await docpro(page);
     const pid = await pacjentka(page);
     await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id), pid);
+    // P-KARTA-LECZENIE (etap 1): bloki leczenia stoją w zakładce „Leczenie” (druga, po „Status”).
+    await page.locator('.vilda-patient-tab[data-tab="leczenie"]').click();
     await expect(page.locator('.vdo')).toBeVisible({ timeout: 15000 });
     const wiersz = (d) => page.locator(`.vdo-list:not(.vdo-list-deleted) > .vdo-item[data-date="${d}"]`);
     await expect(wiersz('2026-04-14').locator('.vdo-type')).toHaveText('Włączenie · 0,25');

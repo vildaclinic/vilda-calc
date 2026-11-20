@@ -121,6 +121,8 @@ test('zmiana Genotropin → Increlex: segment Increlex w mg/kg na podanie, Genot
     inc('igf-w-1', 'continue', 7, 0, 106, 18, 0.2, 3.6),
     inc('igf-w-2', 'continue', 7, 6, 109, 19, 0.24, 4.56),
   ]);
+  // P-KARTA-LECZENIE (etap 1): „Dane analityczne” GH stoją w zakładce „Leczenie”.
+  await page.locator('.vilda-patient-tab[data-tab="leczenie"]').click();
   await page.locator('.vilda-gha-btn').first().click();
   const panel = page.locator('.vilda-gha-panel').first();
   await expect(panel).toContainText('wg preparatu', { ignoreCase: true });

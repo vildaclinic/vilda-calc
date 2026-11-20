@@ -44,6 +44,8 @@ async function kartaPacjenta(page, punkty) {
   await page.waitForTimeout(800);
   const pid = await page.evaluate(async () => (await window.VildaVault.listPatients())[0].patientId);
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id, () => {}, null), pid);
+  // P-KARTA-LECZENIE (etap 1): bloki leczenia stoją w zakładce „Leczenie” (druga, po „Status”).
+  await page.locator('.vilda-patient-tab[data-tab="leczenie"]').click();
 
   const karta = page.locator('.vilda-gh-summary').first();
   await expect(karta).toBeVisible({ timeout: 15000 });

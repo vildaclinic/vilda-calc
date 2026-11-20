@@ -44957,3 +44957,114 @@ wiersze `stomb`; rewert cofa też skróty kontroli granicy).
 sejf), SW 1.1.559 → 1.1.560 — `npm run podbij-wersje`; baza `origin/audyt` `dac2691f` (po vildaclinic/vilda-calc#1008;
 sejf, `vilda_sync.js` i testy synchronizacji bez zmian względem `4bff32aa`, na którym są pomiary).
 Bez nowego pliku w pamięci offline.
+
+## P-KARTA-LECZENIE, etap 1 — zakładka „Leczenie” i pasek leczenia (SW 1.1.561, `vilda_auth_ui.js` 575, `vilda_auth_ui.css` 87, 2026-11-20)
+
+**Zmiana kliniczna: TAK — wyłącznie nowa, skrócona forma istniejącej oceny wg ChPL na pasku (D1); progi, okna, warunki
+i pełne zdania bez zmian; pozostałe zmiany to układ karty.** Plan i etapy: `docs/KARTA_LECZENIE_PLAN.md`.
+
+**Decyzje właściciela** (2026-11-19, makieta hybrydy zaakceptowana — komputer i telefon):
+- D1: krótka ocena na pasku: „⏳ oceń po 12 tyg.”, „✓ kontynuować leczenie”, „✗ wg ChPL odstawić i ponownie ocenić”;
+- D2: trwające leczenie na górze, zakończone pod nim;
+- D3: siedem zakładek na telefonie 2 + 2 + 2 + 1 (istniejąca reguła siatki zakładek);
+- D4: pasek zakładek nie skacze przy przełączaniu zakładek — pasek leczenia stoi stale nad zakładkami;
+- D5: hybryda powstaje w obecnej Karcie jako jeden moduł; karta B1 użyje później tych samych kart leczenia;
+- etap 1 do realizacji; przełączniki „Przegląd | Wpisy | Analiza” / „Przegląd | Trend dawki | Analiza” i przeniesienie
+  „Trendu leczenia GH” — etapy 2 i 3.
+- 2026-11-20 (przegląd PR): zaakceptowane zawijanie zakładek 5 + 2 przy 1025–1200 px, trzy linie paska zakończonego GH
+  na telefonie i czas leczenia otyłości tylko z punktem „Włączenie”; brzmienie D1 bez zmian (także „20 tyg. · ⏳ oceń po
+  12 tyg.”); GH wznowione po przerwie (dziś „zakończone” przy jakimkolwiek „Zakończeniu”) — osobna poprawka
+  (P-GH-WZNOWIENIE) z regułą „od wznowienia”: stan, „Włączenie”, czas, tempo i ΔhSDS od ostatniego „Włączenia”.
+
+**Stan przed zmianą.** Podsumowanie i „Dane analityczne” GH oraz grupa otyłości (podsumowanie → „Wpisy leczenia” →
+„Dane analityczne — otyłość” albo karta „wg notatek”) stały nad paskiem zakładek, przy każdej zakładce; GH zawsze przed
+otyłością. Odnośnik z „Notatek” przełączał na „Status”.
+
+**Zakładka „Leczenie”** (`data-tab="leczenie"`, druga po „Status”): istnieje tylko, gdy Karta ma co najmniej jeden blok
+leczenia (GH, grupa otyłości, w tym karta „wg notatek” — rozpoznawana z notatek, które Karta już przeczytała, a nie
+osobnym odczytem po narysowaniu). W niej dzisiejsze bloki bez zmian wyglądu i działania, w kolejności D2: najpierw
+leczenia trwające, potem zakończone, przy równym stanie GH przed otyłością. „Zakończone” = warunek znacznika
+„leczenie zakończone” w podsumowaniu (GH: jakikolwiek punkt „Zakończenie”; otyłość: ostatni punkt to „Zakończenie”;
+karta „wg notatek”: „przerwane (wg notatek)”). Przebudowa grupy otyłości (zapis wpisu, „Pokaż wszystkie wpisy”,
+„Usunięte wpisy”) zostaje w zakładce i odświeża pasek; przełącznik cykli w panelu zostaje w zakładce, pasek bez zmian. Domyślnie „Status”; „leczenie” przyjmują opcja
+`activeTab`, `xa.restoreTab`, stan nawigacji i przebudowa po `vilda:sync-merged`; bez leczenia — „Status”.
+
+**Pasek leczenia** (jeden na leczenie, nad zakładkami, `<button>` „{znacznik}: otwórz zakładkę Leczenie”): znacznik
+i stan jak w podsumowaniu, wartości, pigułka oceny, „Leczenie →” (komputer) albo „›” (telefon ≤ 560 px, dwie linie).
+Wartości liczą **te same wywołania, które rysują bloki** (`wl`, `kl`, `Cl`, `Ml`, `jl` wypełniają obiekt wyjściowy),
+nigdy tekst z DOM; brak wartości — część pominięta, bez „—”:
+- otyłość: „{Aktualna dawka} · {Czas leczenia} · {miara} {Redukcja do oceny}” — dawka jak w podsumowaniu
+  (P-OTYLOSC-DAWKA), czas jak kafelek „Czas leczenia” (tylko z punktem „Włączenie”; „Czas od 1. punktu” pominięty),
+  redukcja jak kafelek „Redukcja do oceny” z miarą „BMI” (dzieci i młodzież) albo „masa” (dorośli, „masa ciała”);
+  kafelek zdjęty (brak Włączenia, zapis do uporządkowania) albo „—” → pominięta;
+- GH: „{Aktualna dawka} · {N mies.} · tempo {x,x cm/rok} · ΔhSDS {±x,xx}” — dawka jak w podsumowaniu (Increlex na
+  podanie, P-GH-INCRELEX-KARTA), czas jak „przez N mies.” kafelka przyrostu tylko z punktem „Włączenie”
+  (P-GH-BEZ-STARTU), tempo jak kafelek „Tempo wzrastania”, ale pominięte przy „krótki odstęp” (P-TEMPO-6), ΔhSDS jak
+  kafelek „Odpowiedź (ΔhSDS)”;
+- karta „wg notatek”: ostatnia dawka z notatki;
+- leczenie zakończone: te same wartości co jego podsumowanie i panel (stan na koniec), bez pigułki.
+Komputer: jedna linia — tekst wartości maleje 0,92 → 0,84 rem, potem odpadają ostatnie części; gdy nawet jedna część się
+nie mieści, pasek przechodzi na dwie linie. Telefon: dwie linie, tekst do 0,8 rem (12,8 px), potem odpadają ostatnie
+części — nigdy pigułka. Kliknięcie: zakładka „Leczenie” i przewinięcie (pierwsze leczenie — pasek zakładek u góry
+widoku; kolejne — jego pierwszy blok); położenie paska zakładek w Karcie się nie zmienia.
+
+**Pigułka oceny (D1)** — tylko otyłość, tylko bieżący trwający cykl, tylko trzy stany:
+
+| Stan oceny (`evaluate`) | Tytuł pola oceny (bez zmian) | Pigułka |
+|---|---|---|
+| `before-window` | „Przed oknem oceny — oceń po {N}” | „⏳ oceń po {N}” (bursztyn, przerywana ramka) |
+| `pass` | „Odpowiedź wystarczająca — kontynuować leczenie” | „✓ kontynuować leczenie” (zieleń) |
+| `fail-stop` | „Odpowiedź niewystarczająca — wg ChPL odstawić i ponownie ocenić” | „✗ wg ChPL odstawić i ponownie ocenić” (czerwień) |
+
+Krótka forma jest końcówką tytułu po „ — ” i powstaje w tym samym miejscu, które ustala stan i tytuł (`Ml`, `Ob_b`):
+tytuł składa się z części stałej i krótkiej formy (`krotko`), więc pole oceny i pigułka nie mogą się rozjechać, a N to
+ta sama liczba (`windowLabel`/`windowWeeks` grupy z `obesity_response_criteria.js`). Każdy stan, który podmienia pole
+oceny (ocena kliniczna, „clinical-zscore”, poniżej progu bez twardego stopu, za mało danych, potrzebny wzrost,
+brak Włączenia, zapis do uporządkowania, dwie wersje wpisu w oknie, cykl zakończony, brak dopasowania do progów,
+moduł niezaładowany) — bez pigułki. Progi, okna, kotwica, warunki i pełne zdania oceny bez zmian
+(`obesity_response_criteria.js` bez zmian).
+
+**Odnośniki.** „Notatki” — „Wpisy leczenia otyłości (N) — Leczenie →” otwiera zakładkę „Leczenie” i przewija do „Wpisy
+leczenia” (przewijanie liczone na kontenerze Karty: `custom-fixes.js` podmienia `Element.scrollIntoView` na stronie
+formularza, więc dotąd odnośnik nie przewijał). „Postępy” dorosłego: ostrzeżenie „w zakładce „Leczenie”, „Wpisy
+leczenia”” jest tekstem bez akcji — bez zmian (zakładka teraz istnieje). Inne miejsca z akcją do bloków leczenia
+w `audyt` nie istnieją: Historia („poprawka w „Wpisy leczenia””) i pole oceny („Wybierz prawidłową wersję w „Wpisy
+leczenia””) to teksty; „Wybierz wersję” działa w sekcji w zakładce; „Edytuj w DocPro →” prowadzi do DocPro; przyciski
+notatki GH „↗ Otwórz kartę pacjenta” / „↗ Siatki / punkt GH” otwierają „Status” / „Siatki centylowe” (trend GH zostaje
+tam do etapu 3); powłoka (`vilda_shell.js`) przekazuje `activeTab` bez zmian.
+
+**Przypadki syntetyczne** (dane fikcyjne; chwila 19.11.2026; komputer 1440 px, telefon 393 px):
+
+| Przypadek | Wejście | Oczekiwany wynik |
+|---|---|---|
+| O1 | nastolatka 17 l., Wegovy: Włączenie 23.06.2026 91,9 kg / 157 cm, Kontynuacja 10.11.2026 84 kg / 157 cm, 2,4 mg | 7 zakładek, „Status” aktywny; pasek „Leczenie otyłości — Wegovy · aktywne · 2,4 mg · 20 tyg. · BMI −8,6% · ⏳ oceń po 12 tyg.” (komputer 52 px; telefon dwie linie, 13,44 px, nic nie odpada) |
+| O1 + wpis | „+ Kontynuacja” 17.11.2026, 82,5 kg / 157 cm | grupa przebudowana w zakładce (3 wpisy); pasek „2,4 mg · 21 tyg. · BMI −10,2%”, pigułka bez zmian |
+| O2 | Włączenie 17.02.2026 91,9 kg, Kontynuacja 10.11.2026 79,4 kg / 157,4 cm (+ 3 wpisy od pacjenta) | „2,4 mg · 38 tyg. · BMI −14,0% · ✓ kontynuować leczenie”; telefon: „2,4 mg · 38 tyg.” + pigułka (BMI odpada) |
+| niewystarczająca | jak O2, 10.11.2026 90,5 kg / 157 cm | pigułka „✗ wg ChPL odstawić i ponownie ocenić” = końcówka tytułu |
+| dorosły | Saxenda 40 l., 104 → 97 kg po 17 tyg. | „3,0 mg · 17 tyg. · masa −6,7% · ✓ kontynuować leczenie”; Wegovy 47 l.: „masa −11,5%”, bez pigułki (ocena kliniczna) |
+| bez wzrostu | dziecko, okno trwa, w oknie brak wzrostu | „2,4 mg · 38 tyg.”, bez redukcji i bez pigułki („Potrzebny pomiar wzrostu do oceny ChPL”) |
+| G1 | chłopiec 10 l., GH od 7 l. 0 mies. (110 cm) do 10 l. 0 mies. (132,4 cm), 0,033 mg/kg/d | „Leczony hormonem wzrostu (rhGH) · aktywne · 0,033 mg/kg/d · 36 mies. · tempo 6,2 cm/rok · ΔhSDS +1,47”; telefon: dwie linie, 12,8 px, ΔhSDS odpada |
+| GH bez startu / krótki odstęp / Increlex | — | bez czasu / bez tempa / „2 × 2,4 mg na dobę (0,12 mg/kg na podanie)”, „Leczony IGF-1 (mekasermina)” |
+| X1 | GH zakończone (Omnitrope, 9–15 l.) + Wegovy trwa | najpierw pasek i blok otyłości („… BMI −7,4% · ⏳ oceń po 12 tyg.”), potem GH („leczenie zakończone · 0,025 mg/kg/d · 72 mies. · tempo 6,8 cm/rok”, ΔhSDS +1,73 odpada przy 880 px) |
+| bez leczenia | brak punktów i notatek o leku | 6 zakładek, bez paska; `activeTab: "leczenie"` → „Status” |
+
+**Ograniczenia.** Inne stany oceny niż trzy z D1 nie mają pigułki (pełne zdanie zostaje w „Danych analitycznych”).
+Wartości paska otyłości opisują bieżący (ostatni) cykl — jak panel w stanie domyślnym; przełącznik cykli w panelu nie
+zmienia paska. Pasek nie ma cyklu („cykl N z M”) ani „zmiany preparatu”. Karta „wg notatek” wymaga notatek odczytanych
+przy otwarciu Karty (gdy odczyt się nie udał, karty „wg notatek” nie ma — wcześniej czytała je ponownie sama).
+
+**Testy.** Dane wyłącznie fikcyjne.
+- `tests/unit/karta-leczenie.test.mjs` (36): prawdziwe funkcje Karty wycięte z `vilda_auth_ui.js` (od `Tt` do `Pl`:
+  `wl`, `kl`, `Cl`, `Ml`, `Ob_dz`, `jl`, `Kl_*`) z prawdziwymi kryteriami ChPL i modułem cykli — warunek zakładki,
+  kolejność D2, wartości paska wobec kafelków z tego samego rysunku (otyłość dziecko/dorosły, brak wzrostu, bez
+  Włączenia, zakończone; GH ze startem i bez, krótki odstęp, Increlex, zakończone), pigułka dla 3 stanów i brak dla 6
+  innych, zgodność pigułki z tytułem, biała lista zakładek i przywracanie; panel otyłości, który się nie narysował
+  (wyjątek wykresu), nie zostawia na pasku czasu, redukcji ani pigułki.
+- e2e `tests/e2e/karta-leczenie.spec.mjs` KL-1…KL-6 (komputer) i `tests/e2e/karta-leczenie-mobile.spec.mjs` KLM-1…KLM-3
+  (telefon: dwie linie, 7 zakładek 2 + 2 + 2 + 1, bez przewijania w bok).
+- 16 istniejących specyfikacji, które zakładały bloki nad zakładkami, otwiera zakładkę „Leczenie” (asercje bez zmian);
+  `otylosc-siatki.spec.mjs` czeka dłużej na koniec przewinięcia siatki: bez bloków nad zakładkami punkt siatki bywa
+  w oknie już przed przewinięciem, które `custom-fixes.js` zaczyna po 100 ms (punkt musi stać ≥ 300 ms w obu osiach).
+
+**Wdrożenie.** Od razu przy wydaniu; sejf, dziennik, zapis i synchronizacja bez zmian. **Cofnięcie** = rewert PR: bloki
+znów nad zakładkami, bez paska i zakładki.
