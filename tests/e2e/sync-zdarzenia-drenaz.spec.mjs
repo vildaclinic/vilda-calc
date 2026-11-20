@@ -22,6 +22,12 @@ import { podlaczAtrapeDoKontekstu } from '../support/atrapa-workera-route.mjs';
 //    17,2 kg z gwiazdką, kolejka B bez nowego wiersza.
 // 4) Bez klucza: ten sam przebieg — w kolejce A po drenażu bez wiersza snap (rekord złożony tylko na A, jak dziś).
 //    Wiersze innych encji, które przegląd kolejki po drenażu dokłada (np. cred), są poza tymi przypadkami.
+// 5) E3-PR0d (odsyłanie wpisów Kosza, ten sam przełącznik): A — karta „Testowy Jan” z wizytami v (24 kg) i w (25 kg),
+//    rejestracja, rozruch drenażu; B (kopia profilu A, bez synchronizacji) daje v gwiazdkę — koperta snap B; A daje v do
+//    Kosza (później) i opróżnia kolejkę. Drenaż A z kluczem '1': w kolejce A dokładnie jeden wiersz stomb v pending
+//    (wpis Kosza z gwiazdką i treścią); A: v w Koszu z gwiazdką; B (klucz '1' z kopii profilu — sprawdzany) stosuje
+//    kopertę wpisu — v w Koszu B z gwiazdką, bez nowego wiersza stomb.
+// 6) Bez klucza: ten sam drenaż — gwiazdka wpisu Kosza tylko na A, w kolejce A bez wiersza stomb.
 // Własne, fikcyjne konto sejfu w efemerycznym profilu przeglądarki; dane wyłącznie FIKCYJNE.
 test.use({ serviceWorkers: 'block' });
 
@@ -230,6 +236,123 @@ test('E3-PR0c: bez klucza vilda-event-echo-v1 — ten sam drenaż: rekord złoż
     expect(a.drain).toMatchObject({ tryb: 'strony', dziennik: true, zastosowane: 1 });
     expect(a.v, 'A: rekord złożony').toEqual({ masa: 17.2, gwiazdka: true });
     expect(a.wiersze, 'kolejka A bez wierszy snap').toEqual([]);
+    expect(naruszenia(s.atrapa)).toEqual([]);
+  } finally { await s.ctxB.close(); }
+});
+
+// ── E3-PR0d: odsyłanie wpisów Kosza po drenażu ────────────────────────────────────────────────────────────────────
+async function przygotujOdsylanieKosza(page, context, browser, klucz) {
+  const atrapa = utworzAtrapeWorkera({ tryb: 'v37a', eventsEnabled: true, originy: [ORIGIN], zegar: () => Date.now() });
+  await podlaczAtrapeDoKontekstu(context, atrapa);
+  await page.addInitScript((k) => {
+    try {
+      window.localStorage.setItem('vilda-terms-accepted-v1', JSON.stringify({ version: 1, acceptedAtISO: new Date().toISOString() }));
+      window.localStorage.setItem('vilda-sync-enabled-v1', 'false');
+      window.localStorage.setItem('vilda-event-log-v1', '1');
+      if (k !== null) window.localStorage.setItem('vilda-event-echo-v1', k);
+    } catch (_) { /* brak storage — pomiń */ }
+  }, klucz);
+  await page.goto('/index.html', { waitUntil: 'load' });
+  await page.waitForFunction(() => Boolean(window.VildaVault));
+  const userId = (await page.evaluate(async (pw) => window.VildaVault.createUser(pw, { label: 'e2e', iterations: 10000 }), HASLO)).userId;
+  await page.reload({ waitUntil: 'load' });
+  await page.waitForFunction(() => Boolean(window.VildaVault) && window.VildaVault.isUnlocked() && Boolean(window.VildaSync && window.VildaSync.detectApi));
+  const start = await page.evaluate(async () => {
+    window.VILDA_EVENT_LOG = true; // koperta rozruchu z kolejki tej strony (przed pierwszym health z „events”)
+    const naglowek = (masa) => ({ name: 'Testowy Jan', user: { lastName: 'Testowy', firstName: 'Jan', sex: 'M', age: 6, ageMonths: 2, height: 127, weight: masa } });
+    const r = await window.VildaVault.savePatient(naglowek(24), { dedup: false });
+    const r2 = await window.VildaVault.savePatient(naglowek(25), { dedup: false, patientId: r.patientId });
+    const L = window.VildaVault._eventLog;
+    await L.emissionsSettled();
+    const take = await L.outboxTake();
+    const env = take.ok && take.wiersze.length ? take.wiersze[0].env : null;
+    if (take.ok) await L.outboxAccept(take.wiersze.map((w) => w.eid));
+    delete window.VILDA_EVENT_LOG;
+    const push = await window.VildaSync.syncPush();
+    const api = await window.VildaSync.detectApi();
+    return { env, P: r.patientId, v: r.snapshotId, w: r2.snapshotId, push: push.action, features: api.features, log: window.VildaSync.isEventLogEnabled() };
+  });
+  expect(start.push).toBe('registered');
+  expect(start.features).toContain('events');
+  expect([start.log, start.v !== start.w], 'A: dziennik włączony, dwie wizyty karty').toEqual([true, true]);
+  atrapa.dopisz({ src: 'ev', payload: { iv: start.env.iv, data: start.env.data } });
+  const r0 = await page.evaluate(async () => { const w = await window.VildaSync.syncPull({ czekajNaDrenaz: true }); return w.drain && w.drain.stop; });
+  expect(r0).toBe('since0-legacy');
+  // B: kopia profilu A po rozruchu (bez synchronizacji); gwiazdka v i koperta snap B.
+  const stan = await context.storageState({ indexedDB: true });
+  const ctxB = await browser.newContext({ storageState: stan, serviceWorkers: 'block' });
+  const pageB = await ctxB.newPage();
+  await pageB.goto('/index.html', { waitUntil: 'load' });
+  await pageB.waitForFunction(() => Boolean(window.VildaVault));
+  const envB = await pageB.evaluate(async ([u, pw, P, v]) => {
+    if (!window.VildaVault.isUnlocked()) await window.VildaVault.unlockUser(u, pw);
+    await window.VildaVault.setSnapshotPinned(P, v, true);
+    const L = window.VildaVault._eventLog;
+    return (await L.encryptEvent(await L.buildSnapshotEvent(P, v, null))).env;
+  }, [userId, HASLO, start.P, start.v]);
+  // A: v do Kosza (później niż gwiazdka B; wiersz Kosza z kolejki — wysłany), potem koperta B w dzienniku atrapy.
+  const pusta = await page.evaluate(async ([P, v]) => {
+    await window.VildaVault.moveSnapshotToTrash(P, v);
+    const L = window.VildaVault._eventLog;
+    await L.emissionsSettled();
+    const take = await L.outboxTake();
+    if (take.ok && take.wiersze.length) await L.outboxAccept(take.wiersze.map((w) => w.eid));
+    return (await L.outboxCount()).total;
+  }, [start.P, start.v]);
+  expect(pusta, 'A: kolejka pusta przed drenażem').toBe(0);
+  atrapa.dopisz({ src: 'ev', payload: { iv: envB.iv, data: envB.data } });
+  return { atrapa, ctxB, pageB, ...start };
+}
+// Wiersze stomb kolejki strony (wpisy koperty: masa, gwiazdka rejestru, z treścią) i wiersz okna Kosza wersji v.
+async function koszStrony(page, v) {
+  return page.evaluate(async (sid) => {
+    const L = window.VildaVault._eventLog;
+    await L.emissionsSettled();
+    const lista = await L.outboxList();
+    const wiersze = [];
+    for (const w of lista.ok ? lista.wiersze.filter((x) => x.kind === 'stomb') : []) {
+      const k = await window.VildaVault.decryptPayloadForCurrentUser(w.env.iv, w.env.data);
+      const wpisy = (k.snapshotTombstones || []).map((e) => ({ masa: e.payload ? e.payload.user.weight : null, gwiazdka: !!(e.gwiazdka && e.gwiazdka.pin), tresc: !!e.payload }));
+      wiersze.push({ kind: w.kind, klucz: w.entityKey === sid ? 'v' : w.entityKey, stan: w.state, wpisy, env: { iv: w.env.iv, data: w.env.data } });
+    }
+    const kosz = (await window.VildaVault.listTrashedSnapshots()).filter((e) => e.snapshotId === sid).map((e) => ({ masa: e.payload.user.weight, gwiazdka: e.pinned }));
+    return { wiersze, kosz };
+  }, v);
+}
+
+test("E3-PR0d: vilda-event-echo-v1 = '1' — drenaż koperty z gwiazdką drugiego kontekstu przy wizycie w Koszu A: w kolejce A jeden wiersz stomb v z gwiazdką; B przyjmuje go bez nowego wiersza", async ({ page, context, browser }) => {
+  test.setTimeout(120_000);
+  const s = await przygotujOdsylanieKosza(page, context, browser, '1');
+  try {
+    const d = await page.evaluate(async () => (await window.VildaSync.syncPull({ czekajNaDrenaz: true })).drain);
+    expect(d).toMatchObject({ tryb: 'strony', dziennik: true, zastosowane: 1 });
+    const a = await koszStrony(page, s.v);
+    expect(a.kosz, 'A: v w Koszu z gwiazdką').toEqual([{ masa: 24, gwiazdka: true }]);
+    expect(a.wiersze.map(({ env: _e, ...w }) => w), 'kolejka A: wiersz odsyłania wpisu').toEqual([{ kind: 'stomb', klucz: 'v', stan: 'pending', wpisy: [{ masa: 24, gwiazdka: true, tresc: true }] }]);
+    const b = await s.pageB.evaluate(async ([env, v]) => {
+      window.VILDA_EVENT_LOG = true;
+      const L = window.VildaVault._eventLog;
+      const stomby = async () => { const l = await L.outboxList(); return l.ok ? l.wiersze.filter((x) => x.kind === 'stomb').length : -1; };
+      const przed = await stomby();
+      const r = await L.applyEncryptedEvent(env);
+      await L.emissionsSettled();
+      const kosz = (await window.VildaVault.listTrashedSnapshots()).filter((e) => e.snapshotId === v).map((e) => ({ masa: e.payload.user.weight, gwiazdka: e.pinned }));
+      return { klucz: window.localStorage.getItem('vilda-event-echo-v1'), status: r.status, kosz, nowe: (await stomby()) - przed };
+    }, [a.wiersze[0].env, s.v]);
+    expect(b, 'B: przełącznik odsyłania włączony (klucz z profilu A), v w Koszu z gwiazdką, bez odsyłania').toEqual({ klucz: '1', status: 'applied', kosz: [{ masa: 24, gwiazdka: true }], nowe: 0 });
+    expect(naruszenia(s.atrapa)).toEqual([]);
+  } finally { await s.ctxB.close(); }
+});
+
+test('E3-PR0d: bez klucza vilda-event-echo-v1 — ten sam drenaż: gwiazdka wpisu Kosza tylko na A, w kolejce A bez wiersza stomb (jak dziś)', async ({ page, context, browser }) => {
+  test.setTimeout(120_000);
+  const s = await przygotujOdsylanieKosza(page, context, browser, null);
+  try {
+    const d = await page.evaluate(async () => (await window.VildaSync.syncPull({ czekajNaDrenaz: true })).drain);
+    expect(d).toMatchObject({ tryb: 'strony', dziennik: true, zastosowane: 1 });
+    const a = await koszStrony(page, s.v);
+    expect(a.kosz, 'A: v w Koszu z gwiazdką').toEqual([{ masa: 24, gwiazdka: true }]);
+    expect(a.wiersze, 'kolejka A bez wierszy stomb').toEqual([]);
     expect(naruszenia(s.atrapa)).toEqual([]);
   } finally { await s.ctxB.close(); }
 });

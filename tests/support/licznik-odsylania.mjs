@@ -74,18 +74,23 @@
 //     zapiszBrakNosnika, zapiszStrone, zapiszPartie, wyslij, klony, zapiszOdeslane, podsumuj).
 //   kandydaciEcha(ladunek), modelEcha(przed, po, ladunek, { rekordZlozony }) — E3-PR0c, niżej.
 //
-// MODEL ODSYŁANIA (E3-PR0c, odsyłanie poprawionych wizyt; wyrocznia sejfu z włączonym przełącznikiem odsyłania)
+// MODEL ODSYŁANIA (E3-PR0c, odsyłanie poprawionych wizyt; E3-PR0d, odsyłanie wpisów Kosza; wyrocznia sejfu z włączonym
+// przełącznikiem odsyłania)
 //   modelEcha(przed, po, ladunek) → { wiersze, spoza } — wiersze echa, które sejf odsyła po zastosowaniu jednego zdarzenia:
 //   tylko ładunek z polem event (koperta zdarzenia; stara delta tą samą drogą — pusto), z echoScalenia warstwa wykonalna
-//   reguły pola (wykT) rodzaju snap, bez wersji przeniesionej w tym scaleniu (przed scaleniem pod inną kartą niż po), bez
-//   odejmowania haków. spoza — wiersze, których snapshotId nie ma wśród kandydatów ładunku (kandydaciEcha:
-//   patients[].snapshots[] i snapshotTombstones[]); sejf ich nie odsyła, więc niepusta lista to niezgodność modelu
-//   z sejfem (strażnik kandydatów).
-//   L.zapiszOdeslane(zrodlo, koperty, wiersze) — warstwa „odesłane”: koperty echa z łańcucha sejfu (jawne, rodzaj snap)
-//   wobec wierszy modelu tego samego zdarzenia; para (klucz encji) → odeslane.literal[klucz literału wiersza]; koperta bez
-//   wiersza modelu — ponadModel, wiersz bez koperty — nieodeslane (przykłady — druk). Przy wyłączonym przełączniku
-//   nikt jej nie woła: podsumowanie ma pustą warstwę.
-import { encje } from './encje-ladunku.mjs';
+//   reguły pola (wykT) rodzajów snap i stomb, bez odejmowania haków. snap — bez wersji przeniesionej w tym scaleniu (przed
+//   scaleniem pod inną kartą niż po). stomb (klucz = snapshotId) — bez samego wygaśnięcia treści (samoWygasniecie, na
+//   kanonie 2a po patientId): wpis po scaleniu bez treści tam, gdzie wpis przed scaleniem (albo wpis z ładunku po regule
+//   pola) ją miał, a poza tym równy — każde urządzenie czyści treść po 30 dniach samo. spoza — wiersze, których
+//   snapshotId nie ma wśród kandydatów ładunku (kandydaciEcha: patients[].snapshots[] i snapshotTombstones[]); sejf ich
+//   nie odsyła, więc niepusta lista to niezgodność modelu z sejfem (strażnik kandydatów).
+//   wierszeTylkoSavedAtISO(przed, po, ladunek, wiersze) → klucze wierszy stomb z wiersze, które bez savedAtISO by
+//   zniknęły (wpis po = przed albo = ładunek po regule pola, w kanonie) — sprawdzian długich przebiegów, oczekiwane 0.
+//   L.zapiszOdeslane(zrodlo, koperty, wiersze) — warstwa „odesłane”: koperty echa z łańcucha sejfu (jawne, rodzaje snap
+//   i stomb) wobec wierszy modelu tego samego zdarzenia; para (klucz encji) → odeslane.literal[klucz literału wiersza];
+//   koperta bez wiersza modelu — ponadModel, wiersz bez koperty — nieodeslane (przykłady — druk). Przy wyłączonym
+//   przełączniku nikt jej nie woła: podsumowanie ma pustą warstwę.
+import { encje, sortuj } from './encje-ladunku.mjs';
 
 export const LIMITY = Object.freeze({
   partiaZdarzen: 200, partiaBajtow: 1048576, zdarzenieBajtow: 262144,
@@ -314,16 +319,63 @@ export function kandydaciEcha(ladunek) {
   for (const e of (ladunek && ladunek.snapshotTombstones) || []) if (e && e.snapshotId) s.add(e.snapshotId);
   return s;
 }
-// Model odsyłania jednego zdarzenia (E3-PR0c; opis w nagłówku, MODEL ODSYŁANIA).
+// E3-PR0d: kanon wpisu Kosza (kanon 2a bez seq — jak encja wpisu — lista posortowana; ta sama lista ścieżek co w części
+// odsyłania sejfu), reguła pola wpisu (bez pól POLA_ZAWSZE.stomb nieobecnych w elemencie ładunku tej samej karty) i samo
+// wygaśnięcie treści: ref bez payload w elementach, których odpowiednik po (ta sama karta) treści nie ma, a ref ma —
+// równe po; tylko gdy coś zdjęto. Wejście — listy elementów wpisu (eksport).
+export const kanonKosza = (l) => kanon2a('stomb', l).map((e) => sortuj(bez(e, ['seq']))).sort((x, y) => (JSON.stringify(x) < JSON.stringify(y) ? -1 : JSON.stringify(x) > JSON.stringify(y) ? 1 : 0));
+export function regulaPolaKosza(po, P) {
+  return po.map((e) => {
+    const p = (P || []).find((x) => obiekt(x) && x.patientId === e.patientId);
+    return p ? POLA_ZAWSZE.stomb.filter((s) => wartosc(p, s) === undefined).reduce(usunSciezke, e) : e;
+  });
+}
+export function samoWygasniecie(ref, po) {
+  const a = kanonKosza(ref || []), b = kanonKosza(po || []);
+  let zdjete = false;
+  const r = a.map((e) => {
+    const x = b.find((q) => q.patientId === e.patientId);
+    if (!x || 'payload' in x || !('payload' in e)) return e;
+    zdjete = true;
+    return bez(e, ['payload']);
+  });
+  return zdjete && rowne(kanonKosza(r), b);
+}
+// Model odsyłania jednego zdarzenia (E3-PR0c, E3-PR0d; opis w nagłówku, MODEL ODSYŁANIA).
+const sidWiersza = (r) => (r.kind === 'stomb' ? String(r.key) : String(r.key).split('/')[1]);
 export function modelEcha(przed, po, ladunek, { rekordZlozony = null } = {}) {
   if (!ladunek || !obiekt(ladunek.event)) return { wiersze: [], spoza: [] };
   const kartaPrzed = new Map();
   for (const [, e] of encje(przed)) if (e.kind === 'snap') kartaPrzed.set(e.snapshotId, e.patientId);
   const kand = kandydaciEcha(ladunek);
+  const a = encje(przed), p = encje(ladunek), b = encje(po);
+  const wpis = (m, k) => (m.has(k) ? JSON.parse(m.get(k).val) : null);
   const wiersze = echoScalenia(przed, po, ladunek, { rekordZlozony })
-    .filter((r) => r.kind === 'snap' && r.wykT)
-    .filter((r) => { const sid = String(r.key).split('/')[1]; return !kartaPrzed.has(sid) || kartaPrzed.get(sid) === r.pid; });
-  return { wiersze, spoza: wiersze.filter((r) => !kand.has(String(r.key).split('/')[1])) };
+    .filter((r) => (r.kind === 'snap' || r.kind === 'stomb') && r.wykT)
+    .filter((r) => { if (r.kind !== 'snap') return true; const sid = sidWiersza(r); return !kartaPrzed.has(sid) || kartaPrzed.get(sid) === r.pid; })
+    .filter((r) => {
+      if (r.kind !== 'stomb') return true;
+      const xv = wpis(a, r.k), qv = wpis(p, r.k), ev = wpis(b, r.k);
+      if (xv && samoWygasniecie(xv, ev)) return false;
+      return !(qv && samoWygasniecie(qv, regulaPolaKosza(ev, qv)));
+    });
+  return { wiersze, spoza: wiersze.filter((r) => !kand.has(sidWiersza(r))) };
+}
+// E3-PR0d: wiersze stomb modelu jednego zdarzenia, które są tylko przez savedAtISO — pole opisu wpisu, które zostaje
+// w porównaniu (wersja zachowuje je przy poprawce i „Przywróć”): bez savedAtISO we wszystkich elementach wpis po
+// scaleniu równa się wpisowi przed scaleniem albo wpisowi z ładunku po regule pola (kanon wpisu, także przez samo
+// wygaśnięcie treści). Sprawdzian długich przebiegów (oczekiwane 0); wynik — klucze takich wierszy (funkcja czysta).
+export function wierszeTylkoSavedAtISO(przed, po, ladunek, wiersze) {
+  const a = encje(przed), p = encje(ladunek), b = encje(po);
+  const wpis = (m, k) => (m.has(k) ? JSON.parse(m.get(k).val).map((e) => bez(e, ['savedAtISO'])) : null);
+  return (wiersze || []).filter((r) => r.kind === 'stomb').filter((r) => {
+    const xv = wpis(a, r.k), qv = wpis(p, r.k), ev = wpis(b, r.k);
+    if (!ev) return false;
+    if (xv && (rowne(kanonKosza(xv), kanonKosza(ev)) || samoWygasniecie(xv, ev))) return true;
+    if (!qv) return false;
+    const t = regulaPolaKosza(ev, qv);
+    return rowne(kanonKosza(qv), kanonKosza(t)) || samoWygasniecie(qv, t);
+  }).map((r) => r.k);
 }
 
 // Usunięcia przez scalanie: encje przed ∪ ładunek, których po scaleniu nie ma, ze śladem w stanie po albo bez śladu.
