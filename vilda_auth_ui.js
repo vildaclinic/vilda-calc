@@ -2785,10 +2785,11 @@ function Ob_dz(t, s, S, h, notatki, m, Kl_po) {
   var Kl_n = Array.isArray(notatki) ? notatki : [];
   function czesci(punkty, stan, sekcja, wy) {
     var out = [];
-    try { out.push(Cl(punkty, wy.podsumowanie)); } catch (x) { Ot("karta otylosc kafelek", x); }
+    try { out.push(Cl(punkty, wy.podsumowanie)); } catch (x) { wy.podsumowanie = {}; Ot("karta otylosc kafelek", x); }
     if (sekcja) out.push(sekcja);
-    try { out.push(Ml(punkty, S, h, stan, wy.panel)); } catch (x) { Ot("karta otylosc panel", x); }
-    try { out.push(jl(t, punkty, Kl_n, wy.notatki)); } catch (x) { Ot("karta otylosc porownanie", x); }
+    // Blok, który się nie narysował, nie zostawia wartości na pasku (Ob_b wypełnia wyjście przed wykresem).
+    try { out.push(Ml(punkty, S, h, stan, wy.panel)); } catch (x) { wy.panel = {}; Ot("karta otylosc panel", x); }
+    try { out.push(jl(t, punkty, Kl_n, wy.notatki)); } catch (x) { wy.notatki = {}; Ot("karta otylosc porownanie", x); }
     return out.filter(Boolean);
   }
   // P-KARTA-LECZENIE: wartości paska leczenia z tego samego rysunku (Kl_daneOb), po każdym rysunku grupy.
@@ -3217,8 +3218,8 @@ function Kl_przewin(cel) {
 function Kl_leczenie(o) {
   var s = (o && o.rekord) || {}, lista = [], obWpis = null, gotowe = false, paski = [], ro = null, szer = null;
   var ghPods = {}, ghPanel = {}, ghS, ghA;
-  try { ghS = wl(s.ghTherapyPoints, ghPods); } catch (x) { ghS = null; }
-  try { ghA = kl(s.ghTherapyPoints, o.plec, o.zaawansowane, s.timestampISO, o.siatka, ghPanel); } catch (x) { ghA = null; }
+  try { ghS = wl(s.ghTherapyPoints, ghPods); } catch (x) { ghS = null; ghPods = {}; }
+  try { ghA = kl(s.ghTherapyPoints, o.plec, o.zaawansowane, s.timestampISO, o.siatka, ghPanel); } catch (x) { ghA = null; ghPanel = {}; }
   if (ghS || ghA) lista.push({ el: e("div", { class: "vilda-kl-gh" }, [ghS, ghA]), dane: Kl_daneGh(ghPods, ghPanel) });
   var obDane = null, obBox;
   try {

@@ -2338,7 +2338,9 @@ Czytelne źródło: `vilda_auth_ui.js` — nowy czytelny blok P-KARTA-LECZENIE z
 z obiektów wyjściowych bloków), `Kl_kolejnosc` (D2), `Kl_ustaw`/`Kl_miesci`/`Kl_krok`/`Kl_dopasuj` (jedna/dwie linie,
 stopnie tekstu klasami `vilda-kl-pasek--r1…r3`, odrzucanie ostatnich części), `Kl_pasek` (przycisk), `Kl_przewin`
 (przewinięcie kontenera Karty) i `Kl_leczenie` (zakładka, treść, paski; obserwator rozmiaru pasków). Czytelna `Ob_dz`
-dostaje 7. argument `Kl_po`. Opis: `docs/clinical/ALGORITHMS.md`, wpis P-KARTA-LECZENIE; plan: `docs/KARTA_LECZENIE_PLAN.md`.
+dostaje 7. argument `Kl_po`. Gdy blok rzuci wyjątek (`czesci` w `Ob_dz`, `wl`/`kl` w `Kl_leczenie`), jego obiekt
+wyjściowy jest czyszczony — pasek nie pokazuje wartości ani oceny bloku, który się nie narysował (`Ob_b` wypełnia
+wyjście przed wykresem). Opis: `docs/clinical/ALGORITHMS.md`, wpis P-KARTA-LECZENIE; plan: `docs/KARTA_LECZENIE_PLAN.md`.
 
 ```
 // vilda_auth_ui.js — wl (podsumowanie GH): obiekt wyjściowy

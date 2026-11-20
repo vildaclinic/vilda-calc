@@ -44,7 +44,8 @@ Analiza”, dla GH „Przegląd | Trend dawki | Analiza”. Makiety (komputer i 
 - Domyślnie „Status”. „leczenie” przyjmują opcja `activeTab` w `showPatientCard`, `xa.restoreTab` (powrót „wstecz”),
   stan nawigacji i przebudowa po `vilda:sync-merged`; prośba o „leczenie” u pacjenta bez leczenia → „Status”.
 - W zakładce dzisiejsze bloki bez zmian wyglądu i działania; kolejność D2. Przebudowa grupy otyłości (zapis wpisu,
-  „Pokaż wszystkie”, „Usunięte wpisy”, przełącznik cykli) zostaje w zakładce i odświeża pasek.
+  „Pokaż wszystkie”, „Usunięte wpisy”) zostaje w zakładce i odświeża pasek; przełącznik cykli w panelu nie zmienia paska
+  (pasek opisuje bieżący cykl).
 - Pasek: miętowy przycisk z odznaką i stanem jak w podsumowaniu, wartościami i pigułką oceny; komputer — jedna linia
   i „Leczenie →”, telefon — dwie linie i „›”. Kliknięcie otwiera zakładkę i przewija do bloku leczenia.
 - „Notatki”: „Wpisy leczenia otyłości (N) — Leczenie →” otwiera zakładkę „Leczenie” i przewija do „Wpisy leczenia”.

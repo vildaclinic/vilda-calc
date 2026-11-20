@@ -361,3 +361,26 @@ describe('P-KARTA-LECZENIE — biała lista zakładek i przywracanie (A.3)', () 
     expect(AUTH).toContain("karta.querySelector('button[data-tab=\"leczenie\"]')");
   });
 });
+
+describe('P-KARTA-LECZENIE — blok, który się nie narysował, nie zostawia wartości na pasku', () => {
+  // Ob_b wypełnia obiekt wyjściowy paska przed wykresem (Al). Gdy wykres rzuci wyjątek, panel otyłości nie powstaje
+  // (Ob_dz łapie błąd), więc pasek nie może pokazać czasu, redukcji ani oceny z tego panelu.
+  it('O1: wykres panelu otyłości rzuca wyjątek → bez panelu; pasek tylko z dawką z podsumowania, bez pigułki', () => {
+    const KOD_BLAD = KOD.replace('function Al(t,a,n,r){', 'function Al(t,a,n,r){throw new Error("wykres: błąd testowy");');
+    expect(KOD_BLAD).not.toBe(KOD);
+    const zgloszone = [];
+    const K = new Function('i', 'jt', 'Ot', 'oe', `${KOD_BLAD}\nreturn { Kl_leczenie };`)(
+      okno(), () => null, (gdzie) => zgloszone.push(gdzie),
+      (t) => { if (!t) return; while (t.firstChild) t.removeChild(t.firstChild); });
+    const r = K.Kl_leczenie({
+      patientId: 'pacjent-fikcyjny', rekord: { plec: 'F', obesityTherapyPoints: O1 }, plec: 'F', zaawansowane: {}, siatka: null,
+      notatki: [], user: {}, zakladka: '<span class="vilda-patient-tab-lbl">Leczenie</span>',
+    });
+    expect(zgloszone).toContain('karta otylosc panel');
+    const dz = r.tresc.children[0];
+    expect(dz.children.map((c) => c.className)).toEqual(['vilda-gh-summary', 'vdo']); // bez „Dane analityczne — otyłość”
+    const p = r.paski.children[0];
+    expect(p._klCzesci).toEqual(['2,4 mg']);
+    expect(p.querySelector('.vilda-kl-pigulka')).toBeNull();
+  });
+});

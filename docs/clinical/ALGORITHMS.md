@@ -44343,7 +44343,7 @@ osobnym odczytem po narysowaniu). W niej dzisiejsze bloki bez zmian wyglądu i d
 leczenia trwające, potem zakończone, przy równym stanie GH przed otyłością. „Zakończone” = warunek znacznika
 „leczenie zakończone” w podsumowaniu (GH: jakikolwiek punkt „Zakończenie”; otyłość: ostatni punkt to „Zakończenie”;
 karta „wg notatek”: „przerwane (wg notatek)”). Przebudowa grupy otyłości (zapis wpisu, „Pokaż wszystkie wpisy”,
-„Usunięte wpisy”, przełącznik cykli) zostaje w zakładce i odświeża pasek. Domyślnie „Status”; „leczenie” przyjmują opcja
+„Usunięte wpisy”) zostaje w zakładce i odświeża pasek; przełącznik cykli w panelu zostaje w zakładce, pasek bez zmian. Domyślnie „Status”; „leczenie” przyjmują opcja
 `activeTab`, `xa.restoreTab`, stan nawigacji i przebudowa po `vilda:sync-merged`; bez leczenia — „Status”.
 
 **Pasek leczenia** (jeden na leczenie, nad zakładkami, `<button>` „{znacznik}: otwórz zakładkę Leczenie”): znacznik
@@ -44411,11 +44411,12 @@ zmienia paska. Pasek nie ma cyklu („cykl N z M”) ani „zmiany preparatu”.
 przy otwarciu Karty (gdy odczyt się nie udał, karty „wg notatek” nie ma — wcześniej czytała je ponownie sama).
 
 **Testy.** Dane wyłącznie fikcyjne.
-- `tests/unit/karta-leczenie.test.mjs` (35): prawdziwe funkcje Karty wycięte z `vilda_auth_ui.js` (od `Tt` do `Pl`:
+- `tests/unit/karta-leczenie.test.mjs` (36): prawdziwe funkcje Karty wycięte z `vilda_auth_ui.js` (od `Tt` do `Pl`:
   `wl`, `kl`, `Cl`, `Ml`, `Ob_dz`, `jl`, `Kl_*`) z prawdziwymi kryteriami ChPL i modułem cykli — warunek zakładki,
   kolejność D2, wartości paska wobec kafelków z tego samego rysunku (otyłość dziecko/dorosły, brak wzrostu, bez
   Włączenia, zakończone; GH ze startem i bez, krótki odstęp, Increlex, zakończone), pigułka dla 3 stanów i brak dla 6
-  innych, zgodność pigułki z tytułem, biała lista zakładek i przywracanie.
+  innych, zgodność pigułki z tytułem, biała lista zakładek i przywracanie; panel otyłości, który się nie narysował
+  (wyjątek wykresu), nie zostawia na pasku czasu, redukcji ani pigułki.
 - e2e `tests/e2e/karta-leczenie.spec.mjs` KL-1…KL-6 (komputer) i `tests/e2e/karta-leczenie-mobile.spec.mjs` KLM-1…KLM-3
   (telefon: dwie linie, 7 zakładek 2 + 2 + 2 + 1, bez przewijania w bok).
 - 16 istniejących specyfikacji, które zakładały bloki nad zakładkami, otwiera zakładkę „Leczenie” (asercje bez zmian);
