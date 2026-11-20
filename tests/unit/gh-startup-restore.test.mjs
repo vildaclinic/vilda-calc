@@ -11,6 +11,7 @@ const panelSource=fs.readFileSync(path.join(root,'vilda_panel_pacjent.js'),'utf8
 const consumerSource=fs.readFileSync(path.join(root,'gh_therapy_monitor.js'),'utf8');
 const initSource=fs.readFileSync(path.join(root,'vilda_init.js'),'utf8');
 const customSource=fs.readFileSync(path.join(root,'custom-fixes.js'),'utf8');
+const visitSource=fs.readFileSync(path.join(root,'vilda_visit_context.js'),'utf8');
 const {parse}=createRequire(import.meta.url)('espree');
 const canonicalCallbacks=[];
 function findCanonical(node,ancestors=[]){
@@ -105,6 +106,127 @@ describe('producer startup settlement from actual Kt/Fe/Mt',()=>{
  it('marks real successful own save as supersession for old waiters only',async()=>{const h=environment();const p=h.api.whenInitialMainSessionRestoreSettled();expect((await h.api.saveUserDataWithReceipt({collectUserData:()=>clone(X)})).saved).toBe(true);expect(await p).toEqual({ready:true,reason:'superseded-save',waited:true});expect(await h.api.whenInitialMainSessionRestoreSettled()).toEqual({ready:true,reason:'superseded-save',waited:false})});
  it('settles actual full Clear and does not reopen after a later restore attempt',async()=>{const h=environment();const p=h.api.whenInitialMainSessionRestoreSettled();expect(h.api.clearAllData()).toBe(true);expect(await p).toEqual({ready:true,reason:'superseded-clear',waited:true});await h.finishBoot();expect(await h.api.whenInitialMainSessionRestoreSettled()).toEqual({ready:true,reason:'superseded-clear',waited:false})});
  it('settles scheduling failure instead of leaving the consumer waiting',async()=>{const h=environment();h.win.requestAnimationFrame=()=>{throw new Error('fictional scheduling failure')};const p=h.api.whenInitialMainSessionRestoreSettled();h.api.initMainSessionPersistence(h.options);expect(()=>h.appReady.shift()()).toThrow('fictional scheduling failure');expect(await p).toEqual({ready:false,reason:'schedule-failed',waited:true})});
+});
+
+function anonymousVisitStartup(name = '', nativeState = {}) {
+  const h = environment({ sourcePatient: null });
+  h.win.crypto = { randomUUID: vi.fn(() => '61a61db1-cb49-4c6a-8197-72789ba6dd23') };
+  const fields = {
+    name, age: '13', ageMonths: '0', sex: 'M', height: '158', weight: '46', advMotherHeight: '167',
+  };
+  const inputs = new Map(Object.entries(fields).map(([id, value]) => [id, { id, value, tagName: 'INPUT' }]));
+  h.doc.getElementById = id => inputs.get(id) || null;
+  Object.assign(h.win, nativeState);
+  new Function('window', 'globalThis', visitSource)(h.win, h.win);
+  const context = h.win.VildaVisitContext;
+  const payload = h.api.captureCurrentUserDataReadOnly();
+  const visit = context.create({ patientId: null, clinicalDateISO: '2026-10-31' });
+  h.win.crypto.randomUUID.mockClear();
+  const session = { ...payload, visit };
+  h.setSession(session);
+  h.options.anyDataEntered = () => true;
+  const readVisit = () => context.capture(payload, { patientId: null, readOnly: true });
+  return { ...h, session, visit, context, inputs, readVisit };
+}
+
+describe('native startup of an unassigned visit with a populated form', () => {
+  it.each(['', 'Fikcyjny Niezapisany'])('continues the saved visit for name %j without full apply, field changes or new writes', async name => {
+    const h = anonymousVisitStartup(name);
+    const before = h.api.captureCurrentUserDataReadOnly();
+    expect(h.readVisit()).toBeNull();
+
+    await h.finishBoot();
+
+    expect(h.api.getInitialMainSessionRestoreState()).toEqual({ ready: true, reason: 'kept-form' });
+    expect(h.readVisit()).toEqual(h.visit);
+    expect(h.api.captureCurrentUserDataReadOnly()).toEqual({ ...before, visit: h.visit });
+    expect(h.initialApply).not.toHaveBeenCalled();
+    expect(h.persistence.writeMainSession).not.toHaveBeenCalled();
+    expect(h.win.crypto.randomUUID).not.toHaveBeenCalled();
+  });
+
+  it('keeps the active visit even when the saved form values match', async () => {
+    const h = anonymousVisitStartup();
+    const current = { ...h.visit, visitId: 'c1e2aea8-7e35-49be-b691-beda603793dc' };
+    h.context.load({ visit: current });
+    await h.finishBoot();
+    expect(h.readVisit()).toEqual(current);
+    expect(h.initialApply).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { name: 'only current and growth mirrors', independent: null },
+    { name: 'a nonmatching intake observation', independent: { ageMonths: 144, ageYears: 12, height: 153, weight: 41 } },
+    { name: 'an intake observation with metadata', independent: { ageMonths: 144, ageYears: 12, height: 153, weight: 40, annotation: 'fictional' } },
+  ])('compares the stored form against $name', async ({ independent }) => {
+    const historical = { ageMonths: 144, ageYears: 12, height: 153, weight: 40 };
+    const current = { ageMonths: 156, ageYears: 13, height: 158, weight: 46 };
+    const h = anonymousVisitStartup('', { advancedGrowthData: { measurements: [{ ...historical, domIndex: 0 }] } });
+    const history = [historical, current];
+    if (independent) history.push(independent);
+    h.setSession({ ...h.session, intake: { ...h.session.intake, history } });
+
+    await h.finishBoot();
+
+    expect(h.readVisit()).toEqual(independent ? null : h.visit);
+    expect(h.initialApply).not.toHaveBeenCalled();
+    expect(h.persistence.writeMainSession).not.toHaveBeenCalled();
+  });
+
+  it('does not attach saved visit metadata after a trusted edit even when final values match', async () => {
+    const h = anonymousVisitStartup();
+    const input = h.inputs.get('weight');
+    input.matches = () => true;
+    h.api.initMainSessionPersistence(h.options);
+    input.value = '47';
+    h.doc.dispatchEvent({ type: 'input', isTrusted: true, target: input });
+    input.value = '46';
+    h.doc.dispatchEvent({ type: 'input', isTrusted: true, target: input });
+
+    await h.finishBoot();
+
+    expect(h.readVisit()).toBeNull();
+    expect(h.initialApply).not.toHaveBeenCalled();
+    expect(h.persistence.writeMainSession).not.toHaveBeenCalled();
+  });
+
+  it.each(['changed form', 'changed form during read', 'changed form during storage check', 'changed carrier', 'account change', 'renewed key session', 'foreign patient', 'invalid visit'])(
+    'does not attach saved visit metadata after %s', async reason => {
+      const h = anonymousVisitStartup();
+      if (reason === 'changed form') h.inputs.get('height').value = '159';
+      if (reason === 'foreign patient') h.setSession({ ...h.session, visit: { ...h.visit, patientId: ID_Y } });
+      if (reason === 'invalid visit') h.setSession({ ...h.session, visit: { ...h.visit, visitId: 'fictional-invalid-uuid' } });
+      if (reason === 'changed form during read') h.persistence.readMainSession.mockImplementationOnce(() => {
+        h.inputs.get('advMotherHeight').value = '168';
+        return clone(h.session);
+      });
+      if (reason === 'changed form during storage check') h.persistence.getStorage = () => {
+        if (h.persistence.readMainSession.mock.calls.length) h.inputs.get('advMotherHeight').value = '168';
+        return h.ss;
+      };
+      if (reason === 'account change') h.persistence.readMainSession.mockImplementationOnce(() => {
+        h.switchAccount();
+        return clone(h.session);
+      });
+      if (reason === 'renewed key session') h.persistence.readMainSession.mockImplementationOnce(() => {
+        h.lock();
+        h.setAuth(true, true);
+        return clone(h.session);
+      });
+      if (reason === 'changed carrier') h.persistence.readMainSession.mockImplementationOnce(() => {
+        h.setSession({ ...h.session, visit: { ...h.visit, visitId: 'c1e2aea8-7e35-49be-b691-beda603793dc' } });
+        return clone(h.session);
+      });
+
+      await h.finishBoot();
+
+      if (reason === 'changed form during storage check') expect(h.inputs.get('advMotherHeight').value).toBe('168');
+      expect(h.readVisit()).toBeNull();
+      expect(h.initialApply).not.toHaveBeenCalled();
+      expect(h.persistence.writeMainSession).not.toHaveBeenCalled();
+      expect(h.win.crypto.randomUUID).not.toHaveBeenCalled();
+    },
+  );
 });
 
 describe('actual GH N handles one intent before its first guard',()=>{

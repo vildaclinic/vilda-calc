@@ -638,14 +638,45 @@ test('home growth regression: first anonymous native allocation retains the draf
 
 test('home growth regression: blank family and history cancel purely; immediate anonymous Apply persists the complete draft', async ({ page }) => {
   const { frame } = await setup(page); await anonymousGrowthBase(frame);
-  const before = await snapshot(frame); expect(before.payload).not.toHaveProperty('visit'); expect(before.payload.user.age).toBeNull();
-  const blank = await show(frame); await field(blank, 'advMotherHeight').fill('167');
-  await blank.getByRole('button', { name: '+ Dodaj pomiar', exact: true }).click();
-  const row = blank.locator('[data-growth-row^="new-"]').first();
-  for (const [index, value] of [[0, '12'], [1, '0'], [2, '153'], [3, '40']]) await row.locator(`[data-growth-history-field="${index}"]`).fill(value);
-  expect(await snapshot(frame)).toEqual(before);
-  page.once('dialog', confirmation => confirmation.accept()); await blank.getByRole('button', { name: 'Anuluj', exact: true }).click();
-  expect(await snapshot(frame)).toEqual(before);
+  page.once('dialog', confirmation => confirmation.accept());
+  // Isolate the pure UI actor from unrelated queued native derivation/autosave.
+  // Use the same complete snapshot projection as snapshot(frame), without
+  // dropping clinical fields, calculation fingerprints, session or activity.
+  const cancelled = await frame.evaluate(() => {
+    const read = () => {
+      const payload = VildaDataImportExport.captureCurrentUserDataReadOnly(); delete payload.timestampISO;
+      const session = VildaPersistence.readMainSession(); if (session) delete session.timestampISO;
+      return { payload, session, activity: VildaPubertyAssessmentState.getActivityRevision() };
+    };
+    const before = read();
+    document.querySelector('[data-growth-open="data"]').click();
+    const host = document.getElementById('vhomeGrowthDialog'), opened = !!host?.open;
+    if (!opened) return { opened };
+    const closedFolds = host.querySelectorAll('.vhome-growth-fold[open]').length;
+    Array.from(host.querySelectorAll('.vhome-growth-fold > summary'))
+      .find(node => node.textContent.includes('Warunki interpretacji')).click();
+    const familyBeforeHistory = !!(host.querySelector('.vhome-growth-family')
+      .compareDocumentPosition(host.querySelector('.vhome-growth-history')) & Node.DOCUMENT_POSITION_FOLLOWING);
+    const afterOpen = read();
+    const edit = (node, value) => { node.value = value; node.dispatchEvent(new Event('input', { bubbles: true })); };
+    edit(host.querySelector('[data-growth-field="advMotherHeight"]'), '167');
+    host.querySelector('[data-growth-add]').click();
+    const row = host.querySelector('[data-growth-row^="new-"]');
+    for (const [index, value] of [[0, '12'], [1, '0'], [2, '153'], [3, '40']]) edit(row.querySelector(`[data-growth-history-field="${index}"]`), value);
+    const draft = { mother: host.querySelector('[data-growth-field="advMotherHeight"]').value,
+      history: [0, 1, 2, 3].map(index => row.querySelector(`[data-growth-history-field="${index}"]`).value),
+      applyEnabled: !host.querySelector('.vhome-dialog-apply').disabled };
+    const duringDraft = read();
+    host.querySelector('.vhome-dialog-cancel').click();
+    return { opened, closedFolds, familyBeforeHistory, before, afterOpen, draft, duringDraft,
+      openAfterCancel: host.open, afterCancel: read() };
+  });
+  expect(cancelled.opened).toBe(true); expect(cancelled.closedFolds).toBe(0); expect(cancelled.familyBeforeHistory).toBe(true);
+  expect(cancelled.before.payload).not.toHaveProperty('visit'); expect(cancelled.before.payload.user.age).toBeNull();
+  expect(cancelled.draft).toEqual({ mother: '167', history: ['12', '0', '153', '40'], applyEnabled: true });
+  expect(cancelled.afterOpen).toEqual(cancelled.before);
+  expect(cancelled.duringDraft).toEqual(cancelled.before);
+  expect(cancelled.openAfterCancel).toBe(false); expect(cancelled.afterCancel).toEqual(cancelled.before);
   const fast = await frame.evaluate(() => {
     for (const [id, value] of Object.entries({ age: '13', height: '158', weight: '46' })) document.getElementById(id).value = value;
     // The controlled seed uses the same native constraint updater as the UI.

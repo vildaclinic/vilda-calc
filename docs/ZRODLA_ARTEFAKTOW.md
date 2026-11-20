@@ -3095,3 +3095,19 @@ do poprzedniego natywnego Auth odtwarza bazę #1008 bajt w bajt; zastosowanie do
 lokalnego Auth zachowuje wszystkie własne haki. Test odwraca siedem par przed
 dwiema wcześniejszymi parami obsługi dawki wyłącznie w porównaniach historycznych
 skrótów `c2deeccd` i `6a9726ac`. Aktualny kod wykonuje wszystkie nowe funkcje.
+
+## Identyfikator anonimowej wizyty po odświeżeniu
+
+W `vilda_data_import_export.js` pierwsze automatyczne odtworzenie sesji może
+pozostawić formularz, którego pola przywrócił już stan współdzielony. W tej
+gałęzi brakujący identyfikator wizyty przechodzi do `VisitContext` pod tym samym
+kontem, kluczem i uprawnieniem panelu, z tego samego nośnika sesji. Zmiana
+nośnika, istniejąca wizyta, edycja formularza, nowsze wczytanie lub zmiana
+właściciela unieważniają próbę.
+
+Porównanie oddzielnych kopii pomija techniczny czas zapisu, indeksy wierszy
+i pamięć obliczeń. W historii spożycia uznaje za równoważne tylko dokładne kopie
+bieżącego pomiaru lub pomiarów wzrastania. Odrębne pomiary i ich metadane
+pozostają w porównaniu. Odtworzenie identyfikatora nie zapisuje sesji ani nie
+wywołuje pełnego odtworzenia formularza. Testy wykonują produkcyjny kod
+odtwarzania i sprawdzają ten sam identyfikator po odświeżeniu w przeglądarce.
