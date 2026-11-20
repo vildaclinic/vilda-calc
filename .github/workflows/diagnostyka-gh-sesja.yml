@@ -1,0 +1,60 @@
+name: Diagnostyka GH — sesja WebKit, wyłącznie fikcyjne dane
+
+on:
+  push:
+    branches: [agent/diagnostyka-gh-sesja]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gh-session-diagnostic-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  observe:
+    if: github.repository == 'vildaclinic/vilda-calc' && github.ref == 'refs/heads/agent/diagnostyka-gh-sesja'
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - name: Pobierz wyłącznie gałąź diagnostyczną
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Skonfiguruj Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Zainstaluj niezmienione zależności
+        run: npm ci
+      - name: Zainstaluj WebKit jak w oryginalnym CI
+        run: |
+          apt_mirror_list=/etc/apt/apt-mirrors.txt
+          if [ -f "$apt_mirror_list" ] &&
+             grep -Eq '^https://archive\.ubuntu\.com/ubuntu/([[:space:]]|$)' "$apt_mirror_list" &&
+             grep -Eq '^https://security\.ubuntu\.com/ubuntu/([[:space:]]|$)' "$apt_mirror_list"; then
+            sudo sed -i -E '\@^http://azure\.archive\.ubuntu\.com/ubuntu/([[:space:]]|$)@d' "$apt_mirror_list"
+          fi
+          npx playwright install --with-deps webkit
+      - name: Zweryfikuj źródło i przygotuj ograniczony obserwator
+        run: node tests/diagnostics/gh-session/prepare.mjs prepare
+      - name: Uruchom cały oryginalny zestaw 88 testów WebKit
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run test:e2e -- --config playwright.lab-chart-webkit.config.mjs 2>&1 | tee "$RUNNER_TEMP/gh-session-diagnostic/runtime.log"
+      - name: Przywróć dokładny oryginalny plik testu i sprawdź niezmienność aplikacji
+        if: always()
+        run: node tests/diagnostics/gh-session/prepare.mjs restore
+      - name: Zachowaj dowody diagnostyczne i oryginalne ślady
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gh-session-webkit-diagnostic
+          path: |
+            ${{ runner.temp }}/gh-session-diagnostic/
+            playwright-report/
+            test-results/
+          retention-days: 14
