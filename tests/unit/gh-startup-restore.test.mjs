@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { installUiIntentFixture } from '../fixtures/ui-intent-unit-fixture.mjs';
@@ -8,6 +9,26 @@ const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
 const exporterSource=fs.readFileSync(path.join(root,'vilda_data_import_export.js'),'utf8');
 const panelSource=fs.readFileSync(path.join(root,'vilda_panel_pacjent.js'),'utf8');
 const consumerSource=fs.readFileSync(path.join(root,'gh_therapy_monitor.js'),'utf8');
+const initSource=fs.readFileSync(path.join(root,'vilda_init.js'),'utf8');
+const customSource=fs.readFileSync(path.join(root,'custom-fixes.js'),'utf8');
+const {parse}=createRequire(import.meta.url)('espree');
+const canonicalCallbacks=[];
+function findCanonical(node,ancestors=[]){
+ if(!node||typeof node!=='object')return;
+ if(node.type==='CallExpression'&&node.callee?.object?.name==='document'
+  &&node.callee?.property?.name==='addEventListener'&&node.arguments[0]?.value==='vilda:patient-loaded'
+  &&ancestors.some(parent=>parent.type==='FunctionDeclaration'&&parent.id?.name==='S')){
+  const callback=node.arguments[1];
+  if(callback?.type==='FunctionExpression'&&customSource.slice(callback.start,callback.end).includes('window._vildaCurrentPatientId=c'))canonicalCallbacks.push(callback);
+ }
+ for(const value of Object.values(node)){
+  if(Array.isArray(value))value.forEach(child=>findCanonical(child,[...ancestors,node]));
+  else if(value&&typeof value==='object')findCanonical(value,[...ancestors,node]);
+ }
+}
+findCanonical(parse(customSource,{ecmaVersion:'latest'}));
+if(canonicalCallbacks.length!==1)throw new Error('Expected the actual canonical patient-loaded listener inside custom-fixes S');
+const canonicalCallback=customSource.slice(canonicalCallbacks[0].start,canonicalCallbacks[0].end);
 const clone=value=>value==null?value:JSON.parse(JSON.stringify(value));
 const X={version:1,name:'Fikcyjny Start',user:{age:8,ageMonths:0,sex:'M',height:126,weight:25}};
 const Y={version:1,name:'Fikcyjny Cel',user:{age:11,ageMonths:0,sex:'F',height:141,weight:36}};
@@ -19,7 +40,7 @@ function events(target={}){const map=new Map();return Object.assign(target,{
 })}
 function storage(){const map=new Map();return {getItem:key=>map.get(key)??null,setItem:(key,value)=>map.set(key,String(value)),removeItem:key=>map.delete(key),key:i=>[...map.keys()][i]??null,get length(){return map.size}}}
 async function flush(){for(let i=0;i<12;i++)await Promise.resolve()}
-function environment({session=X,sourcePatient=ID_X,initialPid=null}={}){
+function environment({session=X,sourcePatient=ID_X,initialPid=null,publisher=true}={}){
  const observers=new Set(),body={},frames=[],appReady=[],ss=storage(),ls=storage();let modal=null,current=clone(session),epoch=1,user='fictional-account',unlocked=true,authReady=true,frameHidden=false;
  const doc=events({readyState:'complete',hidden:false,body,documentElement:{classList:{contains:()=>false,add(){},remove(){}}},getElementById:()=>null,querySelector:s=>s==='.vug-backdrop'?modal:null,querySelectorAll:()=>[]});
  const host=events({document:{},history:{state:{shellNavId:7,shellView:'docpro'}},location:{hash:'#/docpro'}});
@@ -38,7 +59,13 @@ function environment({session=X,sourcePatient=ID_X,initialPid=null}={}){
  const persistence={getStorage:()=>ss,readMainSession:vi.fn(()=>clone(current)),writeMainSession:vi.fn(value=>{current=clone(value);return true}),clearMainSession:vi.fn(()=>{current=null;return true}),readClcrSession:()=>null};win.VildaPersistence=persistence;
  new Function('window','globalThis',panelSource)(win,win);
  new Function('window','globalThis',exporterSource)(win,win);const api=win.VildaDataImportExport;
- doc.addEventListener('vilda:patient-loaded',event=>{const id=event&&event.detail&&event.detail.patientId;if(id){win._vildaCurrentPatientId=id;ss.setItem('vildaCurrentPatientId',id)}});
+ // Use the real publisher and native registration lifecycle, rather than a
+ // synthetic setter that cannot establish the receiver's readiness contract.
+ new Function('window','globalThis',initSource)(win,win);
+ if(publisher===true)win.VildaInit.safeInit('custom-fixes:sidebar-menu',()=>{
+  doc.addEventListener('vilda:patient-loaded',new Function('window','a','return ('+canonicalCallback+');')(win,()=>{}));
+ });
+ if(publisher==='missing')delete win.VildaInit;
  const initialApply=vi.fn(()=>{win._vildaCurrentPatientId=sourcePatient;return true});
  const options={persistence,collectUserData:()=>clone(current||X),anyDataEntered:()=>false,applyLoadedData:initialApply,vildaAppOnReady:(_name,fn)=>appReady.push(fn)};
  const applied=vi.fn(value=>api.applyLoadedData(value)),highlight=vi.fn();win.applyLoadedData=applied;
@@ -81,6 +108,21 @@ describe('producer startup settlement from actual Kt/Fe/Mt',()=>{
 });
 
 describe('actual GH N handles one intent before its first guard',()=>{
+ it.each(['missing','unready'])('fails closed before fetching when the canonical publisher is %s',async publisher=>{
+  const h=environment({publisher});await h.finishBoot();h.guardMode('proceed');await h.intent();await h.N();
+  expect(h.vault.getPatient).not.toHaveBeenCalled();expect(h.calls).toHaveLength(0);
+  expect(h.applied).not.toHaveBeenCalled();expect(h.highlight).not.toHaveBeenCalled();
+  expect(h.win._vildaCurrentPatientId).toBe(ID_X);expect(h.ss.getItem('vildaCurrentPatientId')).toBe(ID_X);
+  expect(h.ss.getItem('vilda:gh-jump')).toBeNull();
+ });
+ it('rejects a replacement publisher module while bootstrap is still pending',async()=>{
+  const h=environment();await h.intent();const pending=h.N();await flush();
+  expect(h.win.VildaInit.isInitialized('custom-fixes:sidebar-menu')).toBe(true);
+  h.win.VildaInit={...h.win.VildaInit};await h.finishBoot();await pending;
+  expect(h.vault.getPatient).not.toHaveBeenCalled();expect(h.calls).toHaveLength(0);
+  expect(h.applied).not.toHaveBeenCalled();expect(h.highlight).not.toHaveBeenCalled();
+  expect(h.ss.getItem('vilda:gh-jump')).toBeNull();
+ });
  it('does not fetch or capture a guard during queued or active bootstrap',async()=>{const h=environment();await h.intent();const n=h.N();await flush();expect(h.vault.getPatient).not.toHaveBeenCalled();expect(h.calls).toHaveLength(0);await h.finishBoot();await n;expect(h.calls).toHaveLength(1);expect(h.vault.getPatient).toHaveBeenCalledTimes(1);expect(h.win.__vildaPersistRestoring).toBe(false);expect(h.ss.getItem('vilda:gh-jump')).toBeNull()});
  it('coalesces repeated 350/700 triggers for the same exact intent',async()=>{const h=environment();await h.intent();const p=h.N(),q=h.N();await h.finishBoot();await Promise.all([p,q]);expect(h.vault.getPatient).toHaveBeenCalledTimes(1);expect(h.calls).toHaveLength(1)});
  it('does not consume a replacement from an old waiter',async()=>{const h=environment();await h.intent(ID_Y);const p=h.N();const newer=await h.intent(ID_Z,'fictional-new-point');const q=h.N();expect(h.ss.getItem('vilda:gh-jump')).toBe(newer);await h.finishBoot();await Promise.all([p,q]);expect(h.vault.getPatient).toHaveBeenCalledTimes(1);expect(h.vault.getPatient).toHaveBeenCalledWith(ID_Z);expect(h.calls).toHaveLength(1)});

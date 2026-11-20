@@ -146,6 +146,14 @@ for (const strona of STRONY) {
       // dławiki odświeżania (odznaki, pasek statusu) kończą pracę w ułamku sekundy
       await page.waitForTimeout(600);
       const { okno, probki, fullPage } = await kadrCalejStrony(page, page.viewportSize().width);
+      // Natywna obsługa paska przeglądarki może przewinąć dokument o 1 px.
+      // Kadr wzorca zawsze zaczyna się w początku dokumentu, po zmianie okna.
+      await page.evaluate(() => window.scrollTo({ left: 0, top: 0, behavior: 'instant' }));
+      await expect.poll(() => page.evaluate(() => ({
+        x: window.scrollX, y: window.scrollY,
+        rootTop: document.documentElement.scrollTop,
+        viewportPageTop: window.visualViewport ? window.visualViewport.pageTop : window.scrollY,
+      }))).toEqual({ x: 0, y: 0, rootTop: 0, viewportPageTop: 0 });
       // ślad do logu CI: wysokości próbek i okno kadru (diagnostyka bez pobierania obrazów)
       console.log(`[wygląd] ${info.project.name} ${strona.nazwa}/${id}: wysokość ${probki.join('→')} px, okno ${okno} px, fullPage ${fullPage}`);
       await expect(page).toHaveScreenshot(`${strona.nazwa}--${id}.png`, { fullPage });

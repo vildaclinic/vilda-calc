@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { createRequire } from 'node:module';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
 import { zrodlo } from '../support/silnik-bmi.mjs';
 
@@ -338,9 +339,117 @@ describe('strażnik źródeł — interfejs (G7, G4, G27)', () => {
     expect(s).toContain('Qc===Qp&&I()');
   });
 
-  it('skok z monitora GH ustawia pacjenta także w sessionStorage', () => {
-    const s = zrodlo('gh_therapy_monitor.js');
-    expect(s).toContain('window.sessionStorage.setItem("vildaCurrentPatientId",n.patientId)');
+  it('skok GH publikuje zaakceptowany rekord przez kanoniczny nasłuch i weryfikuje oba konteksty', () => {
+    const { parse } = createRequire(import.meta.url)('espree');
+    const source = zrodlo('gh_therapy_monitor.js'), custom = zrodlo('custom-fixes.js');
+    const nodes = (root, predicate) => {
+      const found = [];
+      function visit(node, ancestors = []) {
+        if (!node || typeof node !== 'object') return;
+        if (predicate(node, ancestors)) found.push(node);
+        ancestors.push(node);
+        for (const [key, value] of Object.entries(node)) {
+          if (['range', 'loc', 'tokens', 'comments'].includes(key)) continue;
+          if (Array.isArray(value)) value.forEach(child => visit(child, ancestors));
+          else if (value && typeof value === 'object') visit(value, ancestors);
+        }
+        ancestors.pop();
+      }
+      visit(root);
+      return found;
+    };
+    const ast = parse(source, { ecmaVersion: 'latest', range: true });
+    const slice = (text, node) => text.slice(...node.range);
+    const member = (node, object, property) => node?.type === 'MemberExpression'
+      && !node.computed && node.object?.name === object && node.property?.name === property;
+    const call = (node, name, args) => node?.type === 'CallExpression' && node.callee?.name === name
+      && node.arguments.length === args.length && node.arguments.every((arg, index) =>
+        typeof args[index] === 'boolean' ? arg.value === args[index] : arg.name === args[index]);
+    const receiver = nodes(ast, node => node.type === 'FunctionDeclaration' && node.id?.name === 'N');
+    expect(receiver).toHaveLength(1);
+    const publishers = nodes(receiver[0], node => node.type === 'VariableDeclarator'
+      && node.id?.name === 'publish' && node.init?.type === 'FunctionExpression');
+    expect(publishers).toHaveLength(1);
+    const publish = publishers[0].init;
+    const dispatches = nodes(publish, node => node.type === 'CallExpression'
+      && member(node.callee, 'document', 'dispatchEvent'));
+    expect(dispatches).toHaveLength(1);
+    const event = dispatches[0].arguments[0];
+    expect(event.type).toBe('NewExpression');
+    expect(member(event.callee, 'window', 'CustomEvent')).toBe(true);
+    expect(event.arguments[0].value).toBe('vilda:patient-loaded');
+    const detail = event.arguments[1].properties.find(property => property.key?.name === 'detail').value;
+    const spread = detail.properties.findIndex(property => property.type === 'SpreadElement'
+      && property.argument?.name === 'operationDetail');
+    const acceptedId = detail.properties.findIndex(property => property.key?.name === 'patientId');
+    expect(spread).toBeGreaterThanOrEqual(0);
+    expect(acceptedId).toBe(detail.properties.length - 1);
+    expect(acceptedId).toBeGreaterThan(spread);
+    expect(detail.properties[acceptedId].value).toMatchObject({ type: 'Identifier', name: 'recordPatientId' });
+    const recordIds = nodes(receiver[0], node => node.type === 'VariableDeclarator'
+      && node.id?.name === 'recordPatientId');
+    expect(recordIds).toHaveLength(1);
+    expect(recordIds[0].init).toMatchObject({ type: 'LogicalExpression', operator: '&&',
+      left: { type: 'Identifier', name: 'i' } });
+    expect(member(recordIds[0].init.right, 'i', 'patientId')).toBe(true);
+    const before = publish.body.body[0], after = publish.body.body.at(-1);
+    for (const guard of [before, after]) {
+      expect(guard.type).toBe('IfStatement');
+      expect(guard.consequent.type).toBe('ThrowStatement');
+      expect(nodes(guard.test, node => call(node, 'ghJumpCurrent', ['claim', true]))).toHaveLength(1);
+      expect(nodes(guard.test, node => call(node, 'ghJumpPublisherCurrent', ['publisher']))).toHaveLength(1);
+    }
+    expect(before.range[1]).toBeLessThan(dispatches[0].range[0]);
+    expect(after.range[0]).toBeGreaterThan(dispatches[0].range[1]);
+    const postchecks = nodes(after.test, node => node.type === 'BinaryExpression'
+      && node.operator === '!==' && node.right?.name === 'recordPatientId');
+    expect(postchecks.some(node => member(node.left, 'window', '_vildaCurrentPatientId'))).toBe(true);
+    const storedId = node => node?.type === 'CallExpression' && node.callee?.type === 'MemberExpression'
+      && member(node.callee.object, 'window', 'sessionStorage')
+      && node.callee.property?.name === 'getItem' && node.arguments[0]?.value === 'vildaCurrentPatientId';
+    expect(postchecks.some(node => storedId(node.left))).toBe(true);
+    expect(nodes(receiver[0], node => node.type === 'AssignmentExpression'
+      && member(node.left, 'window', '_vildaCurrentPatientId'))).toHaveLength(0);
+    expect(nodes(receiver[0], node => node.type === 'CallExpression'
+      && ['setItem', 'removeItem'].includes(node.callee?.property?.name)
+      && member(node.callee.object, 'window', 'sessionStorage')
+      && node.arguments[0]?.value === 'vildaCurrentPatientId')).toHaveLength(0);
+
+    // Execute the production event expression and the actual canonical callback
+    // inside custom-fixes S. The full production N authority/cancellation paths
+    // are exercised separately by gh-obesity-owned-import.test.mjs.
+    const callbacks = nodes(parse(custom, { ecmaVersion: 'latest', range: true }), (node, ancestors) =>
+      node.type === 'CallExpression' && member(node.callee, 'document', 'addEventListener')
+      && node.arguments[0]?.value === 'vilda:patient-loaded'
+      && ancestors.some(parent => parent.type === 'FunctionDeclaration' && parent.id?.name === 'S')
+      && nodes(node.arguments[1], child => child.type === 'AssignmentExpression'
+        && member(child.left, 'window', '_vildaCurrentPatientId')).length === 1);
+    expect(callbacks).toHaveLength(1);
+    const patient = 'fikcyjny-pacjent-kanoniczny/Ć', storage = makeStorage(), writes = [], refreshed = [];
+    storage.setItem('vildaCurrentPatientId', 'fikcyjny-poprzedni-pacjent');
+    const setItem = storage.setItem;
+    storage.setItem = (key, value) => { writes.push([key, value]); setItem(key, value); };
+    const window = { _vildaCurrentPatientId: 'fikcyjny-poprzedni-pacjent', sessionStorage: storage,
+      CustomEvent: class extends Event { constructor(type, options) { super(type); this.detail = options.detail; } } };
+    const document = new EventTarget();
+    const refresh = () => refreshed.push([window._vildaCurrentPatientId, storage.getItem('vildaCurrentPatientId')]);
+    const listener = new Function('window', 'a', 'return (' + slice(custom, callbacks[0].arguments[1]) + ');')(window, refresh);
+    document.addEventListener('vilda:patient-loaded', listener);
+    const obesity = nodes(ast, node => node.type === 'FunctionDeclaration' && node.id?.name === 'ghJumpObesity');
+    const choice = nodes(ast, node => node.type === 'FunctionDeclaration' && node.id?.name === 'ghJumpAsksLoadChoice');
+    expect(obesity).toHaveLength(1); expect(choice).toHaveLength(1);
+    const build = new Function('window', 'a', 'i', 'n', 'operationDetail', 'recordPatientId',
+      slice(source, obesity[0]) + '\n' + slice(source, choice[0]) + '\nreturn (' + slice(source, event) + ');');
+    const published = build(window, { savedAtISO: '2026-11-03T10:00:00Z', payload: { name: 'Pacjent fikcyjny G27' } },
+      { snapshotCount: 1 }, { patientId: patient, ghPointId: 'fikcyjny-punkt-GH' },
+      { patientId: 'fikcyjny-obcy-identyfikator', acceptedLoadId: 'fikcyjny-zaakceptowany-odczyt' }, patient);
+    expect(published.detail).toMatchObject({ patientId: patient, source: 'pick', skipLoadChoice: true,
+      acceptedLoadId: 'fikcyjny-zaakceptowany-odczyt', snapshotCount: 1 });
+    document.dispatchEvent(published);
+    expect(window._vildaCurrentPatientId).toBe(patient);
+    expect(storage.getItem('vildaCurrentPatientId')).toBe(patient);
+    expect(writes).toEqual([['vildaCurrentPatientId', patient]]);
+    expect(refreshed).toEqual([[patient, patient]]);
   });
 
   it('sejf: nagrobek notatki niesie rev w obu adapterach', () => {
