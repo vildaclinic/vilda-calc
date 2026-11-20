@@ -264,6 +264,7 @@ async function ghAction(dialog) {
 async function expectGhPortalReturned(frame, dialog) {
   try { await expect(dialog.locator('.vhome-growth-tabs')).toBeVisible(); }
   catch (error) {
+    try {
     const diagnostic = await frame.evaluate(() => ({
       readiness: VildaDataImportExport.getSaveReadiness(),
       paused: VildaDataImportExport.isMainSessionAutosavePaused(),
@@ -273,8 +274,85 @@ async function expectGhPortalReturned(frame, dialog) {
       window: window.ghTherapyPoints,
       session: VildaPersistence.readMainSession()?.ghTherapyPoints,
       status: document.getElementById('vhomeGrowthDraftStatus')?.textContent,
+      failureObservation: (() => {
+        // This runs only after the original portal-return assertion has failed.
+        const expectedLabel = 'Fikcyjny sejf testu panelu siatek';
+        const read = reader => {
+          try { return { status: 'available', value: reader() }; }
+          catch (failure) {
+            return { status: 'read-error', error: {
+              name: typeof failure?.name === 'string' ? failure.name : 'Error',
+              message: typeof failure?.message === 'string' ? failure.message : 'Read unavailable',
+            } };
+          }
+        };
+        const primitive = reader => read(() => {
+          const value = reader();
+          if (value == null || ['string', 'number', 'boolean'].includes(typeof value)) return value ?? null;
+          throw new Error('Expected a primitive public observation');
+        });
+        const fullJSON = reader => {
+          const captured = read(reader);
+          if (captured.status !== 'available') return captured;
+          const serialized = read(() => JSON.stringify(captured.value));
+          return serialized.status === 'available'
+            ? { status: 'available', value: captured.value, json: serialized.value ?? null,
+              jsonType: typeof serialized.value }
+            : { status: 'serialization-error', error: serialized.error };
+        };
+        // Never serialize the Vault, a session token, a lease or an adapter.
+        const account = read(() => {
+          const current = VildaVault.getCurrentUser();
+          return { userId: typeof current?.userId === 'string' ? current.userId : null,
+            label: typeof current?.label === 'string' ? current.label : null };
+        });
+        const fictionalAccount = account.status === 'available' && account.value.label === expectedLabel;
+        const unavailable = { status: 'redacted', reason: 'Expected fictional account is unavailable' };
+        const observation = {
+          capturedAtISO: primitive(() => new Date().toISOString()),
+          performanceNow: primitive(() => performance.now()),
+          expectedAccountLabel: expectedLabel,
+          fictionalAccount,
+          account: fictionalAccount ? account : account.status === 'read-error' ? account : unavailable,
+          mainSession: unavailable,
+          publicReadOnlyUserSnapshot: {
+            meaning: 'Public read-only snapshot; not the private native writer candidate.',
+            ...unavailable,
+          },
+        };
+        if (!fictionalAccount) return observation;
+        observation.owner = {
+          accountOwnerId: account.value.userId,
+          actualPatientId: primitive(() => sessionStorage.getItem('vildaCurrentPatientId')),
+          documentPatientId: primitive(() => window._vildaCurrentPatientId),
+        };
+        // Keep every key, its order and all native metadata, including timestamps.
+        observation.mainSession = fullJSON(() => VildaPersistence.readMainSession());
+        observation.publicReadOnlyUserSnapshot = {
+          meaning: 'Public read-only snapshot; not the private native writer candidate.',
+          ...fullJSON(() => VildaDataImportExport.captureCurrentUserDataReadOnly()),
+        };
+        observation.state = {
+          persistRestoring: primitive(() => window.__vildaPersistRestoring),
+          mirrorWrite: primitive(() => window.__vildaLustroWpis),
+          mainSessionRestorePending: primitive(() => VildaDataImportExport.isMainSessionRestorePending()),
+          initialMainSessionRestore: read(() => {
+            const state = VildaDataImportExport.getInitialMainSessionRestoreState();
+            return state == null ? null : { ready: state.ready === true,
+              reason: typeof state.reason === 'string' ? state.reason : null };
+          }),
+          dobRestorePending: primitive(() => VildaDobAge.restorePending()),
+          persistenceRestoring: primitive(() => VildaPersistence.isRestoring()),
+          clearInProgress: primitive(() => VildaPersistence.isClearInProgress()),
+          saveStatus: primitive(() => VildaSaveStatusIndicator.getState()),
+        };
+        return observation;
+      })(),
     }));
     await test.info().attach('pending-native-gh-session', { body: JSON.stringify(diagnostic), contentType: 'application/json' });
+    } catch {
+      // Diagnostic read/serialization/attachment failures cannot replace the assertion.
+    }
     throw error;
   }
 }
