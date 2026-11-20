@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
+import { install as installV3Routes, resources } from './diagnostic-routes.mjs';
 
 const ownDirectory = path.dirname(fileURLToPath(import.meta.url));
 const manifest = JSON.parse(fs.readFileSync(path.join(ownDirectory, 'safety-manifest.json'), 'utf8'));
@@ -26,26 +27,8 @@ function write(info, phase, value) {
 }
 export async function install(page, info) {
   if (!isTarget(info)) throw Error('Diagnostic route requested for another case');
-  const observer = fs.readFileSync(path.join(output, 'observer.js'), 'utf8');
-  if (sha(observer) !== manifest.observerSHA256) throw Error('Approved refusal-only observer drift');
-  const hits = [];
-  routeHits.set(key(info), hits);
+  routeHits.set(key(info), await installV3Routes(page, info));
   observedPhases.set(key(info), []);
-  await page.route('**/vilda_data_import_export.js*', async route => {
-    const request = route.request(), url = new URL(request.url());
-    const frameURL = request.frame().url();
-    if (url.origin !== manifest.target.origin || url.pathname !== '/vilda_data_import_export.js'
-      || new URL(frameURL || 'about:blank').origin !== manifest.target.origin
-      || new URL(frameURL || 'about:blank').pathname !== manifest.target.framePath) return route.fallback();
-    if (url.search !== '?v=126') throw Error('Native diagnostic resource version drift');
-    const response = await route.fetch();
-    const nativeBody = await response.body();
-    const hit = { ...identity(info), url: request.url(), frameURL, nativeStatus: response.status(), nativeSHA256: sha(nativeBody), observerSHA256: sha(observer) };
-    hits.push(hit);
-    if (hit.nativeStatus !== 200 || hit.nativeSHA256 !== manifest.originalFiles['vilda_data_import_export.js']) throw Error('Native diagnostic response drift');
-    await route.fulfill({ response, body: observer });
-    hit.fulfilled = true;
-  });
 }
 
 export async function harvest(frame, phase, info) {
@@ -78,6 +61,7 @@ export async function harvest(frame, phase, info) {
       account: account.value,
       // This reads the current function source; it never invokes or wraps the writer.
       writerFunctionSource: read(() => Function.prototype.toString.call(data.saveMainSessionNow)),
+      panelFunctionSource: read(() => Function.prototype.toString.call(window.VildaPanelPacjent.isWriteAuthorityCurrent)),
       entries: read(() => window.__vildaGhWriterObservationEntries || []),
       enabled: window.__vildaGhWriterObservationEnabled === true,
       mainSession: fullJSON(() => persistence.readMainSession()),
@@ -104,19 +88,26 @@ export async function harvest(frame, phase, info) {
     };
   }, phase);
   const source = value.writerFunctionSource;
+  const panelSource = value.panelFunctionSource;
+  const actualPanelSHA256 = panelSource.status === 'available' && typeof panelSource.value === 'string' ? sha(panelSource.value) : null;
   const actualWriterSHA256 = source.status === 'available' && typeof source.value === 'string' ? sha(source.value) : null;
   // Persist the source hash, not a duplicate copy of the instrumented program.
   delete value.writerFunctionSource;
-  const expectedWriterSHA256 = JSON.parse(fs.readFileSync(path.join(output, 'proof.json'), 'utf8')).writerFunctionSourceSHA256;
+  delete value.panelFunctionSource;
+  const expectedWriterSHA256 = resources.find(resource => resource.file === 'vilda_data_import_export.js').methodSHA256;
+  const expectedPanelSHA256 = resources.find(resource => resource.file === 'vilda_panel_pacjent.js').methodSHA256;
+  const verifiedCurrentPanelMethod = actualPanelSHA256 === expectedPanelSHA256;
   const hits = routeHits.get(key(info)) || [];
-  const verifiedRoute = hits.some(hit => hit.fulfilled === true && hit.nativeStatus === 200 && hit.nativeSHA256 === manifest.originalFiles['vilda_data_import_export.js'] && hit.observerSHA256 === manifest.observerSHA256);
+  const verifiedRoute = resources.every(resource => hits.some(hit => hit.file === resource.file && hit.fulfilled === true && hit.nativeStatus === 200 && hit.nativeSHA256 === resource.sourceSHA256 && hit.cloneSHA256 === resource.cloneSHA256));
   const verifiedCurrentWriter = actualWriterSHA256 === expectedWriterSHA256;
   const entries = value.entries.status === 'available' && Array.isArray(value.entries.value) ? value.entries.value : null;
-  const captureValid = verifiedRoute && verifiedCurrentWriter && value.enabled && entries !== null;
-  const evidenceStatus = captureValid ? entries.length ? 'REFUSAL_ENTRIES_OBSERVED_NOT_FIX_PROOF' : 'VERIFIED_REFUSAL_ONLY_CAPTURE_ZERO_ENTRIES'
+  const captureValid = verifiedRoute && verifiedCurrentWriter && verifiedCurrentPanelMethod && value.enabled && entries !== null;
+  const evidenceStatus = captureValid ? entries.length ? 'GUARD_REFUSAL_ENTRIES_OBSERVED_NOT_FIX_PROOF' : 'VERIFIED_REFUSAL_ONLY_CAPTURE_ZERO_ENTRIES'
     : phase === 'after-each' && !value.enabled ? 'POST_F5_RAM_RESET_OR_NOT_ENABLED_SEE_BEFORE_F5' : 'INCONCLUSIVE';
-  const result = { kind: 'REFUSAL_ONLY_FICTIONAL_DIAGNOSTIC_NOT_RELEASE_GATE', ...identity(info), phase, status: info.status,
+  const result = { kind: 'V3_FIRST_FALSE_GUARD_FICTIONAL_DIAGNOSTIC_NOT_RELEASE_GATE', ...identity(info), phase, status: info.status,
     evidenceStatus, verifiedRoute, verifiedCurrentWriter, actualWriterSHA256, expectedWriterSHA256,
+    verifiedCurrentPanelMethod, actualPanelSHA256, expectedPanelSHA256,
+    diagnosticBounds: 'A false guard can precede a later accepted fallback and successful write; labels/logger/source layout can affect timing. Data writer method hash alone does not identify private helpers; exact fulfilled resource hash and fresh navigation are required.',
     lateEnableObserved: value.enabled, entryCount: entries?.length ?? null, entryCapReached: entries !== null && entries.length >= 200,
     frameURL: frame.url(), routeHits: hits, value };
   observedPhases.get(key(info))?.push({ phase, evidenceStatus, captureValid, entryCount: result.entryCount });

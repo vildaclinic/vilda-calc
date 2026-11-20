@@ -166,3 +166,46 @@ proof = {
 }
 (OUT / 'proof.json').write_text(json.dumps(proof, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
 print(json.dumps({'sourceSHA256': EXPECTED_NATIVE_SHA256, 'proposalSHA256': proof['proposalSHA256'], 'diffSHA256': proof['diffSHA256'], 'reverseByteIdentity': True}))
+
+# Portable CI-v3 refinement of the exact approved 5db refusal-only base.
+base_clone = clone_path.read_bytes()
+assert hashlib.sha256(base_clone).hexdigest() == '5db9849ab73111e236de1b37f83b14a4a636a59316f84356e93b78a0230cd674'
+base_changes = list(changes)
+v3_changes = [{'label': 'narrow-inherited-helper-timing-claim', 'old': '// No helper runs on a successful write. Opt-in, max 200 entries, browser RAM only.', 'new': '// Logging starts only after an original guard/branch has already refused.\n// A later fallback may still succeed; logging then affects that successful write.\n// Opt-in, max 200 entries, browser RAM only.', 'count': 1}, {'label': 'label-original-nativeSaveCarryCurrent-short-circuit-once', 'old': 'function nativeSaveCarryCurrent(witness,scope,adapter){\n  return !!(witness&&witness===nativeSaveCarryWitness&&witness.adapter===adapter\n    &&saveReceiptScopeCurrent(scope)&&saveReceiptScopeCurrent(witness.scope)\n    &&mainSessionWriteAuthorityCurrent(witness.authority));\n}', 'new': 'function nativeSaveCarryCurrent(witness,scope,adapter){\n  let ghCarryOperand="witness.present";\n  const ghCarryResult=!!(witness\n    &&(ghCarryOperand="witness.current-identity",witness===nativeSaveCarryWitness)\n    &&(ghCarryOperand="adapter.identity",witness.adapter===adapter)\n    &&(ghCarryOperand="scope.current",saveReceiptScopeCurrent(scope))\n    &&(ghCarryOperand="witness.scope.current",saveReceiptScopeCurrent(witness.scope))\n    &&(ghCarryOperand="witness.authority.current",mainSessionWriteAuthorityCurrent(witness.authority)));\n  if(!ghCarryResult)ghWriterObservation("carry.current-first-false",function(){return {operand:ghCarryOperand};});\n  return ghCarryResult;\n}', 'count': 1}, {'label': 'label-original-mainSessionWriteAuthorityCurrent-short-circuits-once', 'old': 'function mainSessionWriteAuthorityCurrent(authority){\n  try{\n    if(!authority||authority.sequence!==vildaApplyLoadedDataSequence||authority.generation!==saveScopeGeneration||mainSessionPanelIsStale())return false;\n    return !authority.scoped||r.VildaPanelPacjent===authority.panel&&authority.panel.isWriteAuthorityCurrent(authority.ticket);\n  }catch{return false}\n}', 'new': 'function mainSessionWriteAuthorityCurrent(authority){\n  let ghAuthorityOperand="authority.initial",ghPanelIdentityResult,ghPanelAuthorityResult,ghPanelAuthorityEvaluated=false;\n  try{\n    if((ghAuthorityOperand="authority.missing",!authority)\n      ||(ghAuthorityOperand="authority.sequence",authority.sequence!==vildaApplyLoadedDataSequence)\n      ||(ghAuthorityOperand="authority.generation",authority.generation!==saveScopeGeneration)\n      ||(ghAuthorityOperand="panel.stale",mainSessionPanelIsStale())){\n      ghWriterObservation("authority.initial-refusal",function(){return {operand:ghAuthorityOperand};});\n      return false;\n    }\n    const ghAuthorityResult=(ghAuthorityOperand="authority.unscoped",!authority.scoped)\n      ||(ghAuthorityOperand="panel.identity",ghPanelIdentityResult=r.VildaPanelPacjent===authority.panel)\n        &&(ghAuthorityOperand="panel.isWriteAuthorityCurrent",ghPanelAuthorityEvaluated=true,\n          ghPanelAuthorityResult=authority.panel.isWriteAuthorityCurrent(authority.ticket));\n    if(!ghAuthorityResult)ghWriterObservation("authority.scoped-refusal",function(){return {\n      operand:ghAuthorityOperand,panelIdentityEvaluated:typeof ghPanelIdentityResult==="boolean",\n      panelIdentityResult:typeof ghPanelIdentityResult==="boolean"?ghPanelIdentityResult:null,\n      panelAuthorityEvaluated:ghPanelAuthorityEvaluated,\n      panelAuthorityResult:ghPanelAuthorityResult==null?null:typeof ghPanelAuthorityResult==="boolean"?ghPanelAuthorityResult:null,\n      panelAuthorityResultType:typeof ghPanelAuthorityResult\n    };});\n    return ghAuthorityResult;\n  }catch{\n    ghWriterObservation("authority.original-catch",function(){return {\n      operand:ghAuthorityOperand,panelIdentityEvaluated:typeof ghPanelIdentityResult==="boolean",\n      panelIdentityResult:typeof ghPanelIdentityResult==="boolean"?ghPanelIdentityResult:null,\n      panelAuthorityEvaluated:ghPanelAuthorityEvaluated\n    };});\n    return false;\n  }\n}', 'count': 1}]
+source_v3 = base_clone.decode('utf-8')
+for item in v3_changes:
+    assert source_v3.count(item['old']) == item['count'], item['label']
+    source_v3 = source_v3.replace(item['old'], item['new'])
+assert hashlib.sha256(source_v3.encode()).hexdigest() == 'ebaff321f97d7da5a8e48ab2a01ee5e981e31a6aea4e95884c7ea2587a88246a'
+reversed_v3 = source_v3
+for item in reversed(v3_changes):
+    assert reversed_v3.count(item['new']) == item['count']
+    reversed_v3 = reversed_v3.replace(item['new'], item['old'])
+assert reversed_v3.encode() == base_clone
+for item in reversed(base_changes):
+    assert reversed_v3.count(item['new']) == item['count']
+    reversed_v3 = reversed_v3.replace(item['new'], item['old'])
+assert reversed_v3.encode() == original_bytes
+clone_path.write_text(source_v3, encoding='utf-8')
+(OUT / 'base-reversal-manifest.json').write_text(json.dumps(base_changes, ensure_ascii=False, indent=2) + '\n')
+(OUT / 'v3-reversal-manifest.json').write_text(json.dumps(v3_changes, ensure_ascii=False, indent=2) + '\n')
+(OUT / 'reversal-manifest.json').write_text(json.dumps(base_changes + v3_changes, ensure_ascii=False, indent=2) + '\n')
+full_diff = ''.join(difflib.unified_diff(original.splitlines(True), source_v3.splitlines(True), fromfile='native-0e805/vilda_data_import_export.js', tofile='EXTERNAL-CI-V3-PROPOSAL/vilda_data_import_export.js'))
+(OUT / 'proposal.diff').write_text(full_diff)
+proof.pop('normalSuccessPath', None)
+proof.update({
+    'kind': 'PORTABLE_CI_V3_FIRST_REFUSING_OPERANDS_DIAGNOSTIC_NOT_FIX',
+    'proposalSHA256': hashlib.sha256(source_v3.encode()).hexdigest(),
+    'cloneSHA256': hashlib.sha256(source_v3.encode()).hexdigest(),
+    'approvedRefusalOnlyBaseSHA256': hashlib.sha256(base_clone).hexdigest(),
+    'diffSHA256': hashlib.sha256(full_diff.encode()).hexdigest(),
+    'reverseToApproved5dbByteExact': True, 'reverseEntireSourceToNative0e805ByteExact': True,
+    'newFunctionsChanged': ['nativeSaveCarryCurrent', 'mainSessionWriteAuthorityCurrent'],
+    'perGuardTruePath': 'A successful true-returning invocation of either newly instrumented guard adds local scalar marker/result assignments and control flow over retained results, without an observation call/detail/JSON in that invocation. A false guard can precede a later successful fallback or native write, so no entire-successful-write absence-of-logging guarantee is made.',
+    'limitations': ['nativeSaveCarryCurrent does not gain a catch: original thrown exceptions still propagate.', 'mainSessionWriteAuthorityCurrent retains its original catch and exact return value, including any nonboolean guard result. Only scalar booleans/type labels can be logged; no guard is re-invoked.', 'Label and result assignments add success-path scalar work. No claim of unchanged timing or full AST byte identity for these two functions; original expression trees and evaluation order must be verified independently.', 'Existing5db19 refusal sites remain with200-entry RAM cap shared by Data observations. More detailed refusal entries can hit the cap sooner.', 'New guard-refusal logging happens after the original false operand, but can add timing/allocation before a later accepted fallback and successful writer outcome. This observer effect is explicitly permitted only for this bounded diagnostic proposal.', 'Scope currentness remains one unchanged native helper call; no private scope token is inspected or serialized.', 'No runtime test is authorized by this proposal. Root may later authorize exactly one original local GH390 after independent review.', 'A disabled RAM sink does not eliminate false-guard observer calls/detail thunk creation before opt-in.', 'No first rejecting private operand is inferred from a passing run. No guard is replayed.'],
+    'sourceStillExact': NATIVE.read_bytes() == original_bytes,
+    'runtimeExecuted': False, 'browserRuns': 0, 'ciRuns': 0,
+    'changeLabels': [item['label'] for item in base_changes + v3_changes],
+})
+(OUT / 'proof.json').write_text(json.dumps(proof, ensure_ascii=False, indent=2) + '\n')
+print(json.dumps({'kind': 'FINAL_PORTABLE_V3', 'proposalSHA256': proof['proposalSHA256'], 'reverseEntireSource': True}))

@@ -1,5 +1,5 @@
 {
-  "kind": "ISOLATED_DIAGNOSTIC_BRANCH_ONLY_NOT_RELEASE_OR_FIX",
+  "kind": "ISOLATED_CI_V3_FIRST_REFUSING_GUARD_OPERANDS_NOT_RELEASE_OR_FIX",
   "branch": "agent/diagnostyka-gh-sesja",
   "baseCommit": "be8bc23a51445a58b625132114d351df27411f9c",
   "target": {
@@ -7,30 +7,37 @@
     "title": "home A2: native GH portal cancels purely and saves/imports the original therapy point · 390",
     "nativeResource": "/vilda_data_import_export.js?v=126",
     "framePath": "/index.html",
-    "origin": "http://127.0.0.1:4173"
+    "origin": "http://127.0.0.1:4173",
+    "panelResource": "/vilda_panel_pacjent.js?v=5"
   },
-  "observerSHA256": "5db9849ab73111e236de1b37f83b14a4a636a59316f84356e93b78a0230cd674",
+  "observerSHA256": "ebaff321f97d7da5a8e48ab2a01ee5e981e31a6aea4e95884c7ea2587a88246a",
   "canonicalNativeAST": "78e8ac32a235245dae0089439c2b992755fc79d6a414192c6cd381c5dd9ad33b",
   "addedFiles": [
     ".github/workflows/diagnostyka-gh-sesja.yml",
     "tests/diagnostics/gh-session/README.md",
     "tests/diagnostics/gh-session/build-harness.mjs",
     "tests/diagnostics/gh-session/build-observer.py",
+    "tests/diagnostics/gh-session/build-panel-observer.py",
     "tests/diagnostics/gh-session/diagnostic-hooks.mjs",
+    "tests/diagnostics/gh-session/diagnostic-routes.mjs",
     "tests/diagnostics/gh-session/full-failure-insertion-blocks.json",
     "tests/diagnostics/gh-session/prepare.mjs",
     "tests/diagnostics/gh-session/safety-manifest.json",
-    "tests/diagnostics/gh-session/verify-observer.mjs"
+    "tests/diagnostics/gh-session/verify-observer.mjs",
+    "tests/diagnostics/gh-session/verify-panel-observer.mjs"
   ],
   "diagnosticFiles": {
     ".github/workflows/diagnostyka-gh-sesja.yml": "c9bbe6f7b9c634bfa0acfa44fd063fc10f0310a8c99f795b9562eb24f01a857e",
-    "tests/diagnostics/gh-session/README.md": "471329b1ffd3f08ba1ad158e79342378f9d6d96b0429f2cd5c1366b2dcdc5b9d",
-    "tests/diagnostics/gh-session/build-harness.mjs": "5e6d5578f0bf7ac53f2e57ffee028ad162218441edc31014b2ab3662efef76b3",
-    "tests/diagnostics/gh-session/build-observer.py": "d5744c8bbea6b28dbc0d8471e604a6afc7f93f9089ef96542324d6e573c32f17",
-    "tests/diagnostics/gh-session/diagnostic-hooks.mjs": "45b976b99b7c38bdde5e3e130ba025e84fa266508a2a7bccd93c4d6ba7c3ef71",
+    "tests/diagnostics/gh-session/README.md": "c398930e041b89ae7694efb278af6c6a132e6e490edacea41cae955712fb5a33",
+    "tests/diagnostics/gh-session/build-harness.mjs": "3936e3e66f14ba1f017cb925ac362a22302afac5273cb19e0a4788ef7c11cbd0",
+    "tests/diagnostics/gh-session/build-observer.py": "10fdc5574ea6025a2d8e5ecec8cda0c42a78fbb4ebe3bd6cbfd4f6934fb2e374",
+    "tests/diagnostics/gh-session/build-panel-observer.py": "f7cce34c2cd3375669f55e7b6c64e1f7db3c3714ef4a084118dadbb6f784983f",
+    "tests/diagnostics/gh-session/diagnostic-hooks.mjs": "b84d30ca8519398ada82bd821e97c4101e6b2863d758697af17f64610b278af7",
+    "tests/diagnostics/gh-session/diagnostic-routes.mjs": "1d4bfa6e009e9587d8bba7c052841478371dca4e352c5b3a5727f77011c110fd",
     "tests/diagnostics/gh-session/full-failure-insertion-blocks.json": "f2f4e6d66a4f687ad3d121bf61ec568ae3a6dc423c126b1bf9fc8d88e6273e04",
-    "tests/diagnostics/gh-session/prepare.mjs": "7cf66fee0c8c601c5efca0a956fb845541af37442253885101634fb84a30ab93",
-    "tests/diagnostics/gh-session/verify-observer.mjs": "066c4fced9d38ef67a2013c77576a093cf9acd6191da5b0dfc749db8125dcc9d"
+    "tests/diagnostics/gh-session/prepare.mjs": "0db3e0236eed1690d52da230bb1226e27ec818f7f8c515ec70ec502f9f253ef0",
+    "tests/diagnostics/gh-session/verify-observer.mjs": "cf13be5b41052dc3a3e5a216652de9c3727f90dcd5c82657bcddb95575314da5",
+    "tests/diagnostics/gh-session/verify-panel-observer.mjs": "77e967794db641123bd05b336a3eddf2d9b58c14efb1be7a3937797931c77c99"
   },
   "originalFiles": {
     "vilda_data_import_export.js": "0e805e7f0a95103176e3d46d30a3f747a6f16eef9fb7d81ee4893c6d60667c0c",
@@ -45,7 +52,8 @@
     ".github/workflows/codeql.yml": "09bdec64e03adfd92e604e3815ad44583e1aaad246eaf53f231873a138bb2533",
     ".github/workflows/wyglad.yml": "3233f86c57f804bbc857c09524ae24a907f86ebc306d4ab6cbbc7dbf89b9d532",
     "package.json": "482cb96735a6e56faf377d332efa33ef788656aa4da0cb56f3aaa4c59b546b06",
-    "package-lock.json": "0aa2e99d21770f3613ba911c771c2bf0fec400c63e389ca1f6de3799db02cea5"
+    "package-lock.json": "0aa2e99d21770f3613ba911c771c2bf0fec400c63e389ca1f6de3799db02cea5",
+    "vilda_panel_pacjent.js": "703c0fed15df985a3fd0716af17b5abb15527f82f080c1cbb2926ce4118e1f9f"
   },
   "invariants": {
     "jobBudgetMinutes": 50,
@@ -64,22 +72,28 @@
     "testExitPropagatedByExplicitPipefail": true,
     "successfulRefusalLogMayBeEmpty": true,
     "missingVerifiedRouteLateEnableOrWriterSource": "INCONCLUSIVE",
-    "nativeCohort": "Existing unchanged standard CI on feature d54a1ce1ef6df775b7fc46b11b1e933571f79290; not duplicated by diagnostic workflow."
+    "nativeCohort": "Existing unchanged standard CI on feature d54a1ce1ef6df775b7fc46b11b1e933571f79290; not duplicated by diagnostic workflow.",
+    "guardFalseMayPrecedeLaterSuccessfulWrite": true,
+    "noWholeSuccessfulWriteAbsenceOfLoggingGuarantee": true,
+    "sourcePins": 14
   },
   "evidenceBounds": [
-    "Two independent paths: full native WebKit88+a32 in unchanged standard feature CI and this finite isolated refusal stress10. Neither a green diagnostic nor repeated PASS fixes or refutes the original be8 failure.",
-    "Native full88 changes only the error helper after its original assertion has failed; no new successful-path hooks, routes, markers or native asset changes.",
-    "Refusal stress changes source load/parse/JIT layout; calls/allocations/JSON from added observer sites execute only after original refusal branches, catches or existing adapter-false ELSE. Observer effect remains possible.",
-    "RAM reset/enable stays in the existing pre-click frame.evaluate; no added critical pre-click round trip. Harvest before original F5 is AFTER native session/Vault acknowledgement and adds later diagnostic timing.",
-    "Zero refusal entries on pass are expected, provided the exact resource, late enable and current public writer function source were verified. Missing entries do not prove every guard passed; best-effort logger may drop entries.",
-    "Compound refusal labels preserve original short circuit order and do not re-evaluate guard operands. Some inner native helpers have callers other than oe, so an inner entry alone is not attribution to GH.",
-    "Full payload/session records retain timestamps and unknown keys only for this exact ephemeral fictional fixture. They are public read-only observations, not private writer candidates. No opaque account/session token, ticket, lease or adapter is captured.",
-    "Original normal CI, CodeQL, appearance workflow, baselines/configuration/application/native core remain byte exact. Dedicated diagnostic branch must never merge or deploy."
+    "Dedicated single50-minute stress10 job only; standard feature CI is independent. No diagnostic PASS or retry fixes/refutes earlier failed native runs.",
+    "Original native files0e805/703c, normal CI/CodeQL/appearance/config/baselines/app remain byte exact relativeBE8. Only diagnostic ADD files may differ.",
+    "Data scalar markers preserve every original guard/getter/call exactly once and in original short circuit order. Original false is determined before logging. Panel does the same for its one existing public authority guard.",
+    "A true-returning guard invocation performs scalar bookkeeping only, but a false guard can log before a later accepted fallback and successful write. There is no whole-successful-write absence-of-logging guarantee. DisabledRAM still permits falseData detail thunk/call overhead before opt-in.",
+    "Both asset routes are exact local-origin/index-frame/path/version/native-hash/clone-hash. Both method sources are hashed without invoking either function. Primary Data writer hash is unchanged from5db; exact full-resource hash plus fresh navigation is required for private helper identity.",
+    "SharedRAM cap200 best-effort can omit later labels. Some OR false alternatives are not terminal refusal; only original terminal false/catch emits stage. Scope/accountCurrent internals remain aggregated, with no tokens/tickets/accounts/adapters serialized.",
+    "Late RAM enable/reset stays inside existing original pre-click frame.evaluate. Extra harvest occurs only after original session/receipt/Vault acknowledgement before originalF5 or after a failure.",
+    "Full public read-only payload/session JSON retains timestamps/order/native metadata only for exact fictional fixture label. Original all actions/assertions/budgets stay intact.",
+    "Source restoration/upload are always() best effort; hard timeout/cancel may prevent completion. Require exact restoration-proof artifact.",
+    "Diagnostic branch must never merge/publish. Actual private refusal cause remains unestablished until the new observer records it in the relevant run."
   ],
   "nativeFailureHarnessSHA256": "a32e54d2954d4fbfa6778688ea8841dac00147a20e343dc44c6aab40b9601210",
   "original88SelectionSHA256": "1e7c9635eccfd4ce67717c3db8162d280bbdda6f5f12f5f8750268ab6cc8fff9",
   "harnessSHA256": {
     "native": "a32e54d2954d4fbfa6778688ea8841dac00147a20e343dc44c6aab40b9601210",
     "refusal": "88800bc20ecfb5eeaae37d3ddac1ade09ab5276b8c16ea441340e44a4bd6d7de"
-  }
+  },
+  "panelObserverSHA256": "85d535374ff13cb84f78e6d5f9bc81b616dc94025594f78b34317fc3e086745e"
 }

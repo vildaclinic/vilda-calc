@@ -81,5 +81,5 @@ export function buildHarness(original, mode, target) {
     originalCriticalPreclickFrameEvaluateCalls: 1, diagnosticCriticalPreclickFrameEvaluateCalls: 1,
     allOriginalActionsAndAssertionsRetained: true, nativeWriterInvocationNotWrapped: true,
     target, noExtraAwaitBeforeRealPointSave: true,
-    bounds: 'Setup route/source loading and after-acknowledgement harvest change diagnostic timing. Native success path has no new observation call/detail allocation/JSON. No runtime fix or release claim.' } };
+    bounds: 'V3 setup routes/source layout/scalar labels/after-acknowledgement harvest change timing. A false instrumented guard can log/allocate before a later accepted fallback and successful write; there is no whole-successful-write absence-of-observation guarantee. No runtime fix or release claim.' } };
 }
