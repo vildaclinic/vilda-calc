@@ -112,7 +112,10 @@
     var changed = dirty(record), dialog = record.dialog;
     var submit = dialog.querySelector('.vhome-dialog-apply');
     submit.hidden = record.stage === 'choose' || record.stage === 'creator' || record.stage === 'publication' && !record.settingsAvailable;
-    submit.textContent = record.stage === 'pdf' ? 'Generuj PDF' : 'Zastosuj ustawienia';
+    var submitLabel = record.stage === 'pdf' ? 'Generuj PDF' : 'Zastosuj ustawienia';
+    // WebKit commits a focused comment as the next mouse press begins.
+    // Keep the existing label node in place until that button click completes.
+    if (submit.textContent !== submitLabel) submit.textContent = submitLabel;
     var message = record.stage === 'pdf' ? familyBlock(record) : '';
     submit.disabled = record.stage === 'pdf' ? changed || !!message : !changed;
     var status = dialog.querySelector('[data-chart-status]');
