@@ -32,16 +32,25 @@
     return { product: node.querySelector('select'), quantity: node.querySelector('input[type="number"]') };
   }
 
+  function readFoodRow(node) {
+    var nativeId = node.dataset.id;
+    if (node.dataset.foodKind === 'custom') {
+      var item = w.VildaMacroPractice.readCustomFoodRow(node);
+      return item ? Object.assign({ kind: 'custom', nativeId: nativeId }, item) : null;
+    }
+    var controls = foodRowControls(node);
+    return { nativeId: nativeId, key: controls.product.value, qty: controls.quantity.value };
+  }
+
   function readFood() {
     var list = nativeFoodList(), practice = w.VildaMacroPractice, summary = w.VildaFoodSummary;
     var norms = w.VildaNutritionNorms;
-    if (!list || !practice?.createFoodRow || !summary || !norms?.buildCardModelReadOnly || !w.VildaActivityBurn || !w.VildaHtml) return null;
+    if (!list || !practice?.createCustomFoodRow || !summary?.buildCustomFoodItem || !norms?.buildCardModelReadOnly || !w.VildaActivityBurn || !w.VildaHtml) return null;
     if (typeof w.vildaPersistScheduleSave !== 'function' || !w.VildaDataImportExport?.scheduleMainSessionSave) return null;
+    var rows = nativeFoodRows(list).map(readFoodRow);
+    if (rows.includes(null)) return null;
     return {
-      rows: nativeFoodRows(list).map(function (node) {
-        var controls = foodRowControls(node);
-        return { id: node.dataset.id, key: controls.product.value, qty: controls.quantity.value };
-      }),
+      rows: rows,
       burnAge: summary.readAge(),
       burnWeight: summary.readWeight(),
       inputs: {
@@ -112,6 +121,43 @@
     } };
   }
 
+  function newCustomFoodId() {
+    if (w.crypto?.randomUUID) return 'food-' + w.crypto.randomUUID();
+    return 'food-' + Array.from(w.crypto.getRandomValues(new Uint8Array(16)), function (byte) {
+      return byte.toString(16).padStart(2, '0');
+    }).join('');
+  }
+
+  function customFoodFields(doc, original, onEdit) {
+    var fields = element(doc, 'div', 'vhome-tool-food-custom-fields');
+    var name = doc.createElement('input');
+    name.type = 'text';
+    name.value = original.name;
+    var grams = quantityControl(doc, original.grams);
+    var density = quantityControl(doc, original.kcalPer100g);
+    var energy = element(doc, 'p', 'vhome-tool-note vhome-tool-food-custom-energy');
+    var format = new Intl.NumberFormat('pl-PL', { maximumFractionDigits: 2 });
+    fields.append(labelled(doc, 'Produkt', name), labelled(doc, 'Porcja · g', grams),
+      labelled(doc, 'Energia · kcal/100 g', density), energy);
+
+    function read() {
+      return Object.assign({}, original, { name: name.value, grams: grams.valueAsNumber, kcalPer100g: density.valueAsNumber });
+    }
+    function refresh(notify) {
+      var value = read();
+      var item = w.VildaFoodSummary.buildCustomFoodItem(value);
+      energy.textContent = item ? 'Energia porcji: ' + format.format(item.kcal) + ' kcal' : '';
+      if (notify) onEdit(item ? Object.assign(value, w.VildaFoodSummary.normalizeCustomFood(value)) : value, item);
+      return item;
+    }
+    fields.addEventListener('input', function () { refresh(true); });
+    refresh(false);
+    return { fields: fields, name: name, read: read, clear: function () {
+      name.value = grams.value = density.value = '';
+      refresh(true);
+    } };
+  }
+
   function mountFood(view, draft, edit) {
     var doc = view.document;
     var rows = draft.rows.slice();
@@ -124,8 +170,17 @@
     var add = element(doc, 'button', 'vhome-tool-food-add', 'Dodaj do posiłku');
     add.type = 'button';
     picker.append(labelled(doc, 'Szukaj produktu w bazie', search), labelled(doc, 'Produkt', product), quantity.label, portion, add);
+    var manual = element(doc, 'details', 'vhome-tool-food-manual');
+    var addCustom = element(doc, 'button', 'vhome-tool-food-add', 'Dodaj własny produkt do posiłku');
+    addCustom.type = 'button';
+    addCustom.disabled = true;
+    var custom = customFoodFields(doc, { kind: 'custom', nativeId: null, id: 'draft', name: '', grams: '', kcalPer100g: '' }, function (_, item) {
+      addCustom.disabled = !item;
+    });
+    custom.fields.append(addCustom);
+    manual.append(element(doc, 'summary', '', 'Dodaj własny produkt'), custom.fields);
     var list = element(doc, 'div', 'vhome-tool-food-rows');
-    view.input.append(picker, list);
+    view.input.append(picker, manual, list);
 
     function updatePicker() {
       add.disabled = !product.value || !positiveQuantity(quantity.quantity());
@@ -136,29 +191,37 @@
 
     function drawRows(focusIndex) {
       list.replaceChildren();
-      if (rows.length === 0) list.append(message(doc, 'Dodaj produkt z bazy.'));
+      if (rows.length === 0) list.append(message(doc, 'Posiłek nie zawiera produktów.'));
       rows.forEach(function (row, index) {
         var item = element(doc, 'div', 'vhome-tool-food-row');
-        var key = productSelect(doc, row.key), qty = foodPortion(doc, row.key, row.qty);
         var remove = element(doc, 'button', 'vhome-tool-food-remove', 'Usuń');
         remove.type = 'button';
-        function updateRow() {
-          rows = rows.map(function (previous, i) {
-            return i === index ? { id: row.id, key: key.value, qty: qty.quantity() } : previous;
-          });
+        function updateRow(value) {
+          rows = rows.map(function (previous, i) { return i === index ? value : previous; });
           edit('rows', rows);
         }
-        key.addEventListener('change', function () { qty.show(key.value, rows[index].qty); updateRow(); });
-        qty.control.addEventListener('input', updateRow);
         remove.addEventListener('click', function () {
           rows = rows.filter(function (_, i) { return i !== index; });
           edit('rows', rows);
           drawRows(Math.min(index, rows.length - 1));
           if (rows.length === 0) product.focus();
         });
-        item.append(labelled(doc, 'Produkt', key), qty.label, remove);
+        var focus;
+        if (row.kind === 'custom') {
+          var editor = customFoodFields(doc, row, updateRow);
+          item.classList.add('vhome-tool-food-row--custom');
+          item.append(editor.fields, remove);
+          focus = editor.name;
+        } else {
+          var key = productSelect(doc, row.key), qty = foodPortion(doc, row.key, row.qty);
+          function updateCatalogueRow() { updateRow({ nativeId: row.nativeId, key: key.value, qty: qty.quantity() }); }
+          key.addEventListener('change', function () { qty.show(key.value, rows[index].qty); updateCatalogueRow(); });
+          qty.control.addEventListener('input', updateCatalogueRow);
+          item.append(labelled(doc, 'Produkt', key), qty.label, remove);
+          focus = key;
+        }
         list.append(item);
-        if (focusIndex === index) key.focus();
+        if (focusIndex === index) focus.focus();
       });
     }
 
@@ -183,8 +246,16 @@
     quantity.control.addEventListener('input', updatePicker);
     add.addEventListener('click', function () {
       if (add.disabled) return;
-      rows = rows.concat([{ id: null, key: product.value, qty: quantity.quantity() }]);
+      rows = rows.concat([{ nativeId: null, key: product.value, qty: quantity.quantity() }]);
       edit('rows', rows);
+      drawRows(rows.length - 1);
+    });
+    addCustom.addEventListener('click', function () {
+      var item = w.VildaFoodSummary.normalizeCustomFood(custom.read());
+      if (!item) return;
+      rows = rows.concat([Object.assign(item, { id: newCustomFoodId(), kind: 'custom', nativeId: null })]);
+      edit('rows', rows);
+      custom.clear();
       drawRows(rows.length - 1);
     });
     updatePicker();
@@ -203,22 +274,25 @@
 
   function renderFood(draft, view) {
     var doc = view.document, summary = w.VildaFoodSummary, practice = w.VildaMacroPractice;
-    if (draft.rows.some(function (row) { return row.key && !positiveQuantity(row.qty); })) {
-      return message(doc, 'Podaj wielkość porcji każdego produktu, aby obliczyć wynik posiłku.');
+    if (draft.rows.some(function (row) {
+      return row.kind === 'custom' ? !summary.normalizeCustomFood(row) : row.key && !positiveQuantity(row.qty);
+    })) {
+      return message(doc, 'Uzupełnij porcje i dane własnych produktów, aby obliczyć wynik posiłku.');
     }
     var goals = foodGoals(draft);
-    var items = draft.rows.filter(function (row) { return practice.foods[row.key] && positiveQuantity(row.qty); })
-      .map(function (row) {
-        var food = practice.foods[row.key], qty = Number(row.qty);
-        return {
-          key: row.key, qty: qty, name: practice.macroPracticeBuildSelectedFoodLabel(row.key, qty) || food.name,
-          foodGroup: food.foodGroup || practice.macroPracticeResolveFoodGroup(food), kcal: food.kcal * qty,
-          analysis: practice.macroPracticeAnalyzeFoodSelection(row.key, qty, goals)
-        };
-      });
+    var items = draft.rows.map(function (row) {
+      if (row.kind === 'custom') return summary.buildCustomFoodItem(row);
+      var food = practice.foods[row.key], qty = Number(row.qty);
+      if (!food || !positiveQuantity(qty)) return null;
+      return {
+        key: row.key, qty: qty, name: practice.macroPracticeBuildSelectedFoodLabel(row.key, qty) || food.name,
+        foodGroup: food.foodGroup || practice.macroPracticeResolveFoodGroup(food), kcal: (Number(food.kcal) || 0) * qty,
+        analysis: practice.macroPracticeAnalyzeFoodSelection(row.key, qty, goals)
+      };
+    }).filter(Boolean);
     if (!items.length) return message(doc, 'Wynik pojawi się po dodaniu produktu i porcji.');
     var state = summary.buildState({ foods: practice.foods, kcal: items.reduce(function (sum, item) {
-      return sum + (Number(practice.foods[item.key].kcal) || 0) * item.qty;
+      return sum + item.kcal;
     }, 0),
       items: items, nutritionGoalsForFoods: goals });
     var result = doc.createElement('div');
@@ -251,11 +325,12 @@
 
   function validFood(draft) {
     var nativeById = new Map(nativeFoodRows(nativeFoodList()).map(function (node) {
-      return [node.dataset.id, foodRowControls(node)];
+      return [node.dataset.id, readFoodRow(node)];
     }));
     return draft.rows.every(function (row) {
-      var controls = nativeById.get(row.id);
-      if (controls && row.key === controls.product.value && row.qty === controls.quantity.value) return true;
+      if (row.kind === 'custom') return !!w.VildaFoodSummary.normalizeCustomFood(row);
+      var saved = nativeById.get(row.nativeId);
+      if (saved && saved.kind !== 'custom' && row.key === saved.key && row.qty === saved.qty) return true;
       return Object.hasOwn(w.VildaMacroPractice.foods, row.key) && positiveQuantity(row.qty);
     });
   }
@@ -265,14 +340,27 @@
     if (!isCurrent() || !list || !validFood(draft)) return false;
     var original = nativeFoodRows(list);
     var originalById = new Map(original.map(function (node) { return [node.dataset.id, node]; }));
-    var wanted = new Set(), updates = [];
-    var additions = d.createDocumentFragment();
+    var usedNativeIds = new Set(), customIds = new Set(), updates = [], next = [];
 
     // Prepare native rows and check for disappearing products before touching the live visit.
     for (var row of draft.rows) {
-      var fresh = row.id === null;
-      if (!fresh && wanted.has(row.id)) return false;
-      var node = fresh ? practice.createFoodRow(row.key) : originalById.get(row.id);
+      var fresh = row.nativeId === null;
+      var existing = originalById.get(row.nativeId);
+      if (!fresh && (!existing || usedNativeIds.has(row.nativeId))) return false;
+      if (!fresh) usedNativeIds.add(row.nativeId);
+      if (row.kind === 'custom') {
+        var custom = w.VildaFoodSummary.normalizeCustomFood(row);
+        var previous = existing && practice.readCustomFoodRow(existing);
+        if (!custom || (!fresh && previous?.id !== custom.id) || customIds.has(custom.id)) return false;
+        var unchanged = previous && custom.name === previous.name && custom.grams === previous.grams && custom.kcalPer100g === previous.kcalPer100g;
+        var customNode = unchanged ? existing : practice.createCustomFoodRow(custom);
+        if (!customNode) return false;
+        customIds.add(custom.id);
+        next.push(customNode);
+        continue;
+      }
+      if (existing?.dataset.foodKind === 'custom') return false;
+      var node = existing || practice.createFoodRow(row.key);
       if (!node) return false;
       var controls = foodRowControls(node);
       if (row.key !== controls.product.value && !Array.from(controls.product.options).some(function (option) {
@@ -282,19 +370,17 @@
         controls.product.value = row.key;
         controls.quantity.value = row.qty;
         if (controls.quantity.value !== row.qty) return false;
-        additions.append(node);
       } else {
-        wanted.add(row.id);
         updates.push({ controls: controls, key: row.key, qty: row.qty });
       }
+      next.push(node);
     }
     if (!isCurrent()) return false;
     updates.forEach(function (update) {
       if (update.controls.product.value !== update.key) update.controls.product.value = update.key;
       if (update.controls.quantity.value !== update.qty) update.controls.quantity.value = update.qty;
     });
-    original.forEach(function (node) { if (!wanted.has(node.dataset.id)) node.remove(); });
-    list.append(additions);
+    list.replaceChildren(...next);
     w.VildaFoodSummary.refreshCardOnly({ preserveViewport: true });
     if (!isCurrent()) return false;
     w.vildaPersistScheduleSave();
@@ -303,7 +389,9 @@
   }
 
   function hasFood(values) {
-    return values?.rows.some(function (row) { return !!row.key && positiveQuantity(row.qty); }) === true;
+    return values?.rows.some(function (row) {
+      return row.kind === 'custom' ? !!w.VildaFoodSummary.normalizeCustomFood(row) : !!row.key && positiveQuantity(row.qty);
+    }) === true;
   }
 
   tools.register('food', { read: readFood, mount: mountFood, render: renderFood, validate: validFood, apply: applyFood,

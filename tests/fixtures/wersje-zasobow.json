@@ -1316,8 +1316,8 @@
   "sha256": "539d897bf81eb954baf69f0574ac6db5a9c1e10cc20d74563efff2c2aa4d7652"
  },
  "vilda_data_import_export.js": {
-  "v": 127,
-  "sha256": "d3bf8576a73eeccc3e2d408c17ddccb9da2c02b8815bfe2262d3b98a38296f3b"
+  "v": 128,
+  "sha256": "2fde16f893414f5f9bf20712767e93397a76ea1549d371f857634d24cc73cf29"
  },
  "vilda_data_safety_explainer.js": {
   "v": 5,
@@ -1448,8 +1448,8 @@
   "sha256": "fe1e3315f3edf27661be507a2edcb0dd372a506783dcc18f7186a37e2b94be35"
  },
  "vilda_food_summary.js": {
-  "v": 2,
-  "sha256": "6cee63ab224518b3e5ab3ddaf58427f25d37d98be2e477834ab44e9b5a122a52"
+  "v": 3,
+  "sha256": "e31c3a58726eb8cd8e90ef9782bce835ce5ae4b6c46c885209c766686cb277cf"
  },
  "vilda_frame_sync.js": {
   "v": 3,
@@ -1641,7 +1641,7 @@
  },
  "vilda_home_tools.css": {
   "v": 1,
-  "sha256": "2127bb0b057a0fd5f8cc6635cc5549f27761e3bc3d5d4c6fffda761d6c012ede"
+  "sha256": "cbe75132e02eaf602450956e1b01692f4e7b341f2e15836e46ad5a0aceb3fc71"
  },
  "vilda_home_tools.js": {
   "v": 1,
@@ -1657,7 +1657,7 @@
  },
  "vilda_home_tools_nutrition.js": {
   "v": 1,
-  "sha256": "c137d0ab90166f31ae8ae8466a8707e3732791af744ff5b899085e24a2621056"
+  "sha256": "da472c149d57776a4736ec69a7f544172b63aef58f642ca7b4b3a8a9ca3d4013"
  },
  "vilda_home_tools_vitals.js": {
   "v": 1,
@@ -1837,7 +1837,7 @@
  },
  "vilda_macro_practice.js": {
   "v": 3,
-  "sha256": "a9609c64475253143ed0a366bf4302f89404c29ce0eb542b03ff351b54edbaee"
+  "sha256": "89f4c3fca92b5feb0d841507b68a44cc0df7938c92807068b971abf85b409665"
  },
  "vilda_male_e2_age.js": {
   "v": 2,
@@ -1893,7 +1893,7 @@
  },
  "vilda_patient_documents.css": {
   "v": 3,
-  "sha256": "67310e21d2d3b67b999bb5ff7af76b166257b28cc0a51d78f2961f4f8c3e5dcc"
+  "sha256": "d5b492e7c5b7a713d8f98b1be44c1b40bfa26628aff6f48ca28769de97224faf"
  },
  "vilda_patient_documents.js": {
   "v": 6,
@@ -1956,8 +1956,8 @@
   "sha256": "2ad4d7199226f590720f0ac663d2dff03a9fcb999fb2843e5f265060c97f4e56"
  },
  "vilda_persist_runtime.js": {
-  "v": 31,
-  "sha256": "dc2798b5880662292966b3c4323bf67a9c5cc79b10374ba725934573b1274693"
+  "v": 32,
+  "sha256": "57c71db1e453f00b26a3829aa673cf0c414d14385eeb8d347d9ec4ef0e8fb052"
  },
  "vilda_persistence_adapter.js": {
   "v": 39,

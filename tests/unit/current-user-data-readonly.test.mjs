@@ -49,6 +49,71 @@ describe('synchronous current user capture without persistence or RAM anchoring'
     expect(h.writes).not.toHaveBeenCalled();
   });
 
+  it('captures validated custom food separately from the catalogue and drops it on Start clear', () => {
+    const h = environment(['name', 'age', 'ageMonths', 'sex', 'height', 'weight', 'foodRowsSection']);
+    loadBrowserScript('vilda_food_summary.js', h.win);
+    const item = { id: 'fictional-custom-1', name: 'Fikcyjny produkt', grams: 125.5, kcalPer100g: 80 };
+    const custom = { dataset: { foodKind: 'custom' }, item,
+      querySelector(selector) { return { value: selector === 'select' ? 'fictional-known' : '125.5' }; } };
+    const known = { dataset: {}, querySelector: selector => ({ value: selector === 'select' ? 'fictional-known' : '2' }) };
+    const rows = [known, custom, custom];
+    h.win.document.querySelectorAll = selector => selector.startsWith('.food-row')
+      ? rows.filter(row => selector === '.food-row' || row.dataset.foodKind === 'custom') : [];
+    h.win.VildaMacroPractice = { readCustomFoodRow: row => h.win.VildaFoodSummary.normalizeCustomFood(row.item) };
+    h.win.VildaFoodData = { snacks: { 'fictional-known': {} }, meals: {} };
+    expect(h.capture().foods).toEqual({ snacks: [{ key: 'fictional-known', qty: 2 }], meals: [], custom: [item] });
+    expect(h.api.hasMeaningfulMainSessionData({ version: 1, foods: { custom: [item] } })).toBe(true);
+    expect(h.api.hasMeaningfulMainSessionData({ version: 1, foods: { custom: [{ ...item, grams: -1 }] } })).toBe(false);
+    expect(h.writes).not.toHaveBeenCalled();
+    rows.length = 0;
+    expect(h.capture({ ...base(), foods: { snacks: [], meals: [], custom: [item] } }).foods).toEqual({ snacks: [], meals: [] });
+  });
+
+  it('carries a custom-only food draft through the ownerless renal form', () => {
+    const h = environment(['clcrForm']);
+    h.win.location.pathname = '/kalkulator-klirens.html';
+    h.win.VildaClcrSessionRuntime = { captureCurrentSessionReadOnly: () => ({ version: 2, inputs: { Scr: '1.25' } }) };
+    const foods = { snacks: [], meals: [], custom: [{ id: 'fictional-renal', name: 'Fikcyjny własny', grams: 53, kcalPer100g: 173 }] };
+    const result = h.capture({ ...base(), foods });
+    expect(result.foods).toEqual(foods);
+    expect(result.clcr.inputs.Scr).toBe('1.25');
+    expect(h.writes).not.toHaveBeenCalled();
+  });
+
+  it('replaces restored custom rows, drops duplicate IDs and leaves old payloads compatible', () => {
+    const h = environment(['name', 'age', 'ageMonths', 'sex', 'height', 'weight', 'foodRowsSection']);
+    loadBrowserScript('vilda_food_summary.js', h.win);
+    const item = { id: 'fictional-custom-2', name: 'Fikcyjny własny', grams: 15, kcalPer100g: 0 };
+    let rows = [];
+    const selectRows = selector => selector === '.food-row' ? rows.slice()
+      : selector === '.food-row[data-food-kind=custom]' ? rows.filter(row => row.dataset.foodKind === 'custom') : [];
+    const remove = function () { rows = rows.filter(row => row !== this); };
+    const addFoodRow = key => {
+      const product = { value: key }, quantity = { value: '1' };
+      rows.push({ dataset: {}, remove, querySelector: selector => selector === 'select' ? product : quantity });
+    };
+    h.fields.set('foodList', { appendChild: row => rows.push(row), querySelectorAll: selectRows });
+    h.win.document.querySelectorAll = selectRows;
+    h.win.VildaMacroPractice = {
+      readCustomFoodRow: row => h.win.VildaFoodSummary.normalizeCustomFood(row.item),
+      createCustomFoodRow: value => ({ dataset: { foodKind: 'custom' }, item: value, querySelector: () => null, remove }),
+    };
+    const food = { snacks: [{ key: 'fictional-known', qty: 2 }], meals: [] };
+    h.win.VildaFoodData = { snacks: { 'fictional-known': {} }, meals: {} };
+    const options = { addFoodRow, syncSharedUserDataFromLoadedData() {} };
+    expect(h.api.applyLoadedData({ ...base(), foods: { ...food, custom: [item, item, { ...item, grams: 0 }] } }, options)).toBe(true);
+    expect(h.capture().foods).toEqual({ ...food, custom: [item] });
+    // The persisted root may have already mounted both rows on page startup.
+    expect(h.api.applyLoadedData({ ...base(), foods: { ...food, custom: [item] } }, { ...options, isSessionRestore: true })).toBe(true);
+    expect(h.capture().foods).toEqual({ ...food, custom: [item] });
+    const revised = { ...item, grams: 20 };
+    h.api.restoreLoadedState({ ...options, data: { ...base(), foods: { ...food, custom: [revised] } }, anyDataEntered: () => false });
+    expect(h.capture().foods).toEqual({ ...food, custom: [revised] });
+    const empty = { snacks: [], meals: [] };
+    expect(h.api.applyLoadedData({ ...base(), foods: empty }, options)).toBe(true);
+    expect(h.capture().foods).toEqual(empty);
+  });
+
   it('captures a legacy puberty-only edit atomically instead of restoring its previous value', () => {
     const h = environment(['tannerStage', 'pubertyOnsetAge']); h.fields.get('tannerStage').value = '4'; h.fields.get('pubertyOnsetAge').value = '';
     const result = h.capture(); expect(result.user.tannerStage).toBe('4'); expect(result.puberty).toBeNull();

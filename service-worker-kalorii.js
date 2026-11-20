@@ -2662,6 +2662,7 @@ const CORE_SHELL_URLS = [
   '/vilda_activity_burn.js?v=1',
   '/vilda_food_summary.js',
   '/vilda_food_summary.js?v=2',
+  '/vilda_food_summary.js?v=3',
   '/vilda_data_import_export.js',
   '/vilda_data_import_export.js?v=18',
   '/vilda_data_import_export.js?v=19',
@@ -2776,6 +2777,7 @@ const CORE_SHELL_URLS = [
   '/vilda_persist_runtime.js?v=29',
   '/vilda_persist_runtime.js?v=30',
   '/vilda_persist_runtime.js?v=31',
+  '/vilda_persist_runtime.js?v=32',
   '/vilda_summary_cards.js',
   '/vilda_summary_cards.js?v=2',
   '/vilda_summary_cards.js?v=3',
@@ -4494,6 +4496,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_data_import_export.js?v=125',
   '/vilda_data_import_export.js?v=126',
   '/vilda_data_import_export.js?v=127',
+  '/vilda_data_import_export.js?v=128',
   '/vilda_baseline_pacjenta.js?v=1',
   '/vilda_baseline_pacjenta.js?v=2',
   '/vilda_baseline_pacjenta.js?v=3',
@@ -6999,8 +7002,8 @@ const CLINICAL_WORKSPACE_PRECACHE_PACK = Object.freeze({
 
 // BEGIN VISIT UI PACK CONFIG
 const VISIT_UI_PRECACHE_PACK = Object.freeze({
-  "url": "/runtime/visit-ui-precache/precache-eed6e5700a9e.json",
-  "sha256": "eed6e5700a9ee40d6d85e80f77cd04ab84df110861f83085791f7059c7a46776",
+  "url": "/runtime/visit-ui-precache/precache-a52274a89e8b.json",
+  "sha256": "a52274a89e8b687d4e8260880ec6f621b280480eab7884bf5c4f4ceec97667e1",
   "files": [
     {
       "url": "/vilda_ui_intents.js?v=2",
@@ -7052,7 +7055,7 @@ const VISIT_UI_PRECACHE_PACK = Object.freeze({
     },
     {
       "url": "/vilda_home_tools.css?v=1",
-      "sha256": "2127bb0b057a0fd5f8cc6635cc5549f27761e3bc3d5d4c6fffda761d6c012ede"
+      "sha256": "cbe75132e02eaf602450956e1b01692f4e7b341f2e15836e46ad5a0aceb3fc71"
     },
     {
       "url": "/vilda_home_tools.js?v=1",
@@ -7068,7 +7071,7 @@ const VISIT_UI_PRECACHE_PACK = Object.freeze({
     },
     {
       "url": "/vilda_home_tools_nutrition.js?v=1",
-      "sha256": "c137d0ab90166f31ae8ae8466a8707e3732791af744ff5b899085e24a2621056"
+      "sha256": "da472c149d57776a4736ec69a7f544172b63aef58f642ca7b4b3a8a9ca3d4013"
     },
     {
       "url": "/vilda_home_tools_intake.js?v=1",

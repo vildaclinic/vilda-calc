@@ -44382,3 +44382,17 @@ w historii pomiarów (to pomiary z gabinetu). Progi i reguły werdyktów bez zmi
 - e2e `tests/e2e/otylosc-siatki.spec.mjs` SI-1…SI-5.
 
 **Wdrożenie.** Od razu przy wydaniu; sejf bez zmian. **Cofnięcie** = rewert PR: siatki i analiza znów tylko z wizyt.
+
+### Energia porcji własnego produktu
+
+Lekarz wpisuje nazwę, masę porcji w gramach i wartość energetyczną z etykiety
+w kcal na 100 g. Energia porcji to masa w gramach podzielona przez 100 i
+pomnożona przez wartość z etykiety. Porcja musi mieć dodatnią skończoną masę,
+a wartość z etykiety może wynosić zero. Na przykład 75 g produktu o wartości
+160 kcal/100 g daje 120 kcal. Przeliczenie dotyczy wszystkich grup wieku
+i nie korzysta z populacji odniesienia ani norm zapotrzebowania.
+
+Energia łączna obejmuje produkty katalogowe i wpisy lekarza. Białko, tłuszcz
+i węglowodany dotyczą produktów z danymi w katalogu. Własny wpis ma podaną
+energię bez oszacowania makroskładników. Przeliczenia produktów katalogowych
+korzystają z ich dotychczasowych wartości i jednostek porcji.

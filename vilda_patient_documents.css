@@ -212,7 +212,7 @@ dialog.vilda-patient-documents button:is([data-patient-documents-package-back], 
   .vilda-patient-documents-home-groups { gap: var(--space-12px); }
   .vilda-patient-documents-home-group { padding: 17px var(--space-14px); }
 }
-@media (min-width: 681px) and (max-width: 800px) {
+@media (min-width: 681px) and (max-width: 780px) {
   .vilda-patient-documents-home-heading { min-height: 104px; }
 }
 @media (max-width: 680px) {

@@ -132,6 +132,29 @@ describe('main-session persistence respects partial-page ownership and the actua
     h.load(source); expect(h.main().foods).toEqual(previous.foods);
   });
 
+  it.each(['/docpro.html', '/kalkulator-klirens.html'])('carries a custom-only food draft from %s and preserves explicit Start removal', pathname => {
+    const source = record(), previous = record();
+    const empty = { snacks: [], meals: [] };
+    const item = { id: 'fictional-custom', name: 'Fikcyjna mieszanka', grams: 75, kcalPer100g: 45 };
+    source.foods = empty; previous.foods = { ...empty, custom: [item] };
+    const h = harness(previous);
+    h.win.location.pathname = pathname;
+    h.current({ ...partial(source), foods: empty });
+    h.load(source);
+    expect(h.main().foods).toEqual(previous.foods);
+
+    const newPatient = record('Fikcyjny Drugi');
+    newPatient.foods = { ...empty, custom: [{ ...item, id: 'fictional-custom-new' }] };
+    h.current({ ...partial(newPatient), foods: empty });
+    h.load(newPatient);
+    expect(h.main().foods).toEqual(newPatient.foods);
+
+    h.win.location.pathname = '/index.html';
+    h.fields.set('foodRowsSection', { id: 'foodRowsSection' });
+    h.load(newPatient);
+    expect(h.main().foods).toEqual(empty);
+  });
+
   it('meaningful incoming food data wins over the previous same-patient draft', () => {
     const source = record(), previous = record();
     source.foods = { snacks: [{ key: 'fictional-banana', qty: 1 }], meals: [] };

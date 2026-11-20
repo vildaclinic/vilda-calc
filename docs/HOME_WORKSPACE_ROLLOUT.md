@@ -472,6 +472,12 @@ i układ dotyczą generowanego pliku. Kreator i publikacja prowadzą do
 dotychczasowych funkcji, a raport wzrastania i pakiet dokumentów korzystają
 z istniejących generatorów PDF.
 
+„Energia posiłków” przyjmuje produkty z katalogu i własne wpisy z etykiety.
+Własny produkt zawiera nazwę, porcję w gramach i energię w kcal na 100 g.
+Opcjonalne pole `foods.custom` zapisuje te wpisy w tej samej sesji i wizycie
+co pozostałe produkty. Odczyt posiłków zapisanych przed dodaniem tego pola
+zachowuje dotychczasowy format i wartości.
+
 ## Informacja do wydania: „To różne dzieci”
 
 Ukrycie grupy podobnych nazwisk jest teraz zapamiętywane osobno dla każdego
