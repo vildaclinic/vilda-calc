@@ -25,8 +25,16 @@ import { LISTY, idReprezentatywnych, siatka } from '../scripts/gh-punkty-wzorzec
 // porównuje więc API z zamrożonym monitorem sprzed API (MONITOR_PRZED_API, gh_therapy_monitor.js 52; atrapa bez
 // VildaGhPunkty, a API ładowane do okna i zaraz z niego zdejmowane), inaczej porównywałby API z samym sobą. Równość
 // dzisiejszego monitora z monitorem sprzed API: gh-punkty-monitor-tryby.test.mjs.
+// P-GH-WZNOWIENIE, część 2 (decyzje właściciela 2026-11-20, W2): reguła rodzaju punktu jest CELOWO inna niż w monitorze
+// sprzed API — kursy (VildaTrajectoryAnalysis.ghKursy) zamiast „najwyżej jedno Włączenie i jedno Zakończenie”. Porównanie
+// rekordu (polaZPodawanej → punkt / zmienWMiejscu) idzie więc bez sprawdzenia rodzaju, a regułę rodzaju sprawdza się tak:
+// gdzie monitor sprzed API odmówił drugiego Włączenia albo Zakończenia, reguła kursów też odmawia (kodem reguły kursów);
+// gdzie monitor zapisał, reguła kursów przepuszcza albo odmawia jedną z zamierzonych nowych odmów (Włączenie później niż
+// pierwszy punkt kursu, Zakończenie bez wcześniejszego punktu albo przed ostatnim punktem kursu, Kontynuacja po
+// Zakończeniu bez Włączenia) — takie przypadki wynik niesie w zmianaReguly. Samą regułę sprawdzają przypadki GW1–GW7
+// w gh-punkty-api.test.mjs.
 
-// Komunikaty monitora dosłownie (nakładka #ghInfoOverlay, nagłówek „Informacja”).
+// Komunikaty monitora sprzed API dosłownie (nakładka #ghInfoOverlay, nagłówek „Informacja”).
 const DRUGIE_WLACZENIE = 'Punkt „Włączenie leczenia” został już dodany.';
 const DRUGIE_ZAKONCZENIE = 'Punkt „Zakończenie leczenia” został już dodany.';
 const DANE = 'Upewnij się, że wprowadziłeś poprawne, dodatnie dane: wiek, wagę, wzrost oraz dawkę.';
@@ -106,13 +114,25 @@ function wejscieApi(klik) {
   };
 }
 
-// Kolejność kroków jak w monitorze: rodzaj → wartości (z programem i preparatem) → rekord. Lista: klik.lista (kopia
-// z wczytaj(), zmieniana w miejscu tak, jak monitor zmienia window.ghTherapyPoints).
+// Rodzaj punktu regułą kursów (P-GH-WZNOWIENIE, część 2): wiek z pól formularza (wiekMiesZPol), edycja z pomin —
+// tak jak woła monitor (He, ghAddRetroPoint).
+function rodzajApi(api, klik, cel) {
+  const we = wejscieApi(klik);
+  const wiekM = api.wiekMiesZPol(we.lata, we.miesiace);
+  return klik.sciezka === 'wsteczny'
+    ? api.sprawdzRodzaj(klik.lista, klik.typ, { wiekM })
+    : api.sprawdzRodzaj(klik.lista, klik.typ, { pomin: cel, wiekM });
+}
+// Kody odmów reguły kursów: dawna odmowa drugiego Włączenia / Zakończenia i zamierzone nowe odmowy (opis wyżej).
+const KODY_DRUGIEGO = new Set(['drugie-wlaczenie', 'drugie-zakonczenie']);
+const KODY_NOWYCH_ODMOW = new Set(['wlaczenie-pozniej', 'zakonczenie-bez-kursu', 'zakonczenie-nie-ostatnie',
+  'kontynuacja-po-zakonczeniu']);
+
+// Kolejność kroków jak w monitorze: (rodzaj — osobno, rodzajApi) → wartości (z programem i preparatem) → rekord. Lista:
+// klik.lista (kopia z wczytaj(), zmieniana w miejscu tak, jak monitor zmienia window.ghTherapyPoints).
 function wynikApi(api, klik, cel, idNowego) {
   const lista = klik.lista;
   const wsteczny = klik.sciezka === 'wsteczny';
-  const rodzaj = wsteczny ? api.sprawdzRodzaj(lista, klik.typ) : api.sprawdzRodzaj(lista, klik.typ, { pomin: cel });
-  if (!rodzaj.ok) return { zapis: false, komunikat: rodzaj.komunikat, lista, kod: rodzaj.kod };
   const pola = api.polaZPodawanej(wejscieApi(klik), wsteczny ? 'wsteczny' : 'karta');
   if (!pola.ok) return { zapis: false, komunikat: pola.komunikat, lista, kod: pola.kod };
   if (wsteczny) {
@@ -170,8 +190,23 @@ function porownaj(przypadek, { zrodla } = {}) {
   r.push(...roznice(klik.lista, wpisy[0] && wpisy[0].rodzaj === 'E' ? wpisy[0].okno : '(brak E)', 'wczytaj()'));
   // Id nowego punktu nadaje monitor sprzed API (zegar atrapy, dawny wzór); API dostaje to samo id.
   const idNowego = s.okno.length === klik.lista.length + 1 ? s.okno.at(-1).id : idDawneMonitora(0);
+  // P-GH-WZNOWIENIE, część 2: reguła rodzaju (rodzajApi) przed rekordem; rekord bez sprawdzenia rodzaju.
+  const rodzaj = rodzajApi(api, { ...klik, lista: kopia(klik.lista) }, cel);
   const wynik = wynikApi(api, klik, cel, idNowego);
-  r.push(...roznice({ zapis: wynik.zapis, komunikat: wynik.komunikat, lista: wynik.lista }, monitor));
+  let zmianaReguly = null;
+  if (monitor.komunikat === DRUGIE_WLACZENIE || monitor.komunikat === DRUGIE_ZAKONCZENIE) {
+    // Monitor sprzed API odmówił drugiego Włączenia / Zakończenia: reguła kursów też odmawia, bez zapisu.
+    if (rodzaj.ok || !(KODY_DRUGIEGO.has(rodzaj.kod) || KODY_NOWYCH_ODMOW.has(rodzaj.kod))) {
+      r.push(`reguła kursów: monitor sprzed API odmówił („${monitor.komunikat}”), API: ${rodzaj.ok ? 'zgoda' : rodzaj.kod}`);
+    }
+    r.push(...roznice(listaPrzed, monitor.lista, 'lista po odmowie rodzaju'));
+  } else {
+    r.push(...roznice({ zapis: wynik.zapis, komunikat: wynik.komunikat, lista: wynik.lista }, monitor));
+    if (!rodzaj.ok) {
+      if (KODY_NOWYCH_ODMOW.has(rodzaj.kod) && monitor.zapis) zmianaReguly = rodzaj.kod;
+      else if (!(rodzaj.kod === 'wartosci' && wynik.kod === 'wartosci')) r.push(`reguła kursów: API odmawia ${rodzaj.kod}, monitor: ${monitor.zapis ? 'zapis' : monitor.komunikat}`);
+    }
+  }
   if (monitor.zapis) {
     if (rodzaje(wpisy).join() !== 'E,M,E,BC') r.push(`dziennik monitora przy zapisie: ${rodzaje(wpisy)}`);
     r.push(...roznice(wynik.lista, M.wartosc, 'lista zapisana do modułu'));
@@ -181,7 +216,7 @@ function porownaj(przypadek, { zrodla } = {}) {
     if (K && K.naglowek !== 'Informacja') r.push(`nagłówek komunikatu: ${K.naglowek}`);
     if (s.modulSurowy !== klik.modulSurowy) r.push('moduł zmieniony mimo odmowy');
   }
-  return { roznice: r, sciezka, modulDawki, cel, klik: { ...klik, lista: listaPrzed }, monitor, api: wynik };
+  return { roznice: r, sciezka, modulDawki, cel, klik: { ...klik, lista: listaPrzed }, monitor, api: wynik, rodzaj, zmianaReguly };
 }
 
 const rozbieznosci = (wyniki, przypadki) => wyniki
@@ -371,11 +406,11 @@ describe('VildaGhPunkty ↔ żywy monitor — okno atrapy', () => {
     expect(typeof dawka.preparat).toBe('function');
     loadBrowserScript('vilda_gh_punkty.js', z.win);
     expect(z.win.VildaGhDawka).toBe(dawka);
-    expect(z.win.VildaGhPunkty.wersja).toBe(3);
+    expect(z.win.VildaGhPunkty.wersja).toBe(4);
     // Monitor sprzed API w atrapie z API: API nie zostaje w oknie (dawny monitor i tak go nie zna).
     const zApi = atrapaZApi();
     expect(zApi.atrapa.win.VildaGhPunkty).toBeUndefined();
-    expect(zApi.api.wersja).toBe(3);
+    expect(zApi.api.wersja).toBe(4);
 
     const bez = atrapaZApi({ modulDawki: false });
     expect(bez.atrapa.win.VildaGhDawka).toBeUndefined();
@@ -400,6 +435,8 @@ for (const modulDawki of [true, false]) {
 
       expect(rozbieznosci(wyniki, przypadki)).toEqual([]);
       expect(pozaZamierzeniem(wyniki, przypadki)).toEqual([]);
+      // P-GH-WZNOWIENIE, część 2: żaden punkt wsteczny z tych przypadków nie zmienia decyzji reguły kursów.
+      expect(wyniki.filter((w) => w.zmianaReguly).map((w, i) => [przypadki[i].opis, w.zmianaReguly])).toEqual([]);
       // Pokrycie: każdy preparat zapisany, każdy rodzaj odmowy wystąpił.
       const zapisane = new Set(wyniki.filter((w) => w.monitor.zapis).map((w) => w.monitor.lista.at(-1).drug));
       for (const p of PREPARATY) expect(zapisane.has(p.drug), p.drug).toBe(true);
@@ -416,6 +453,12 @@ for (const modulDawki of [true, false]) {
 
       expect(rozbieznosci(wyniki, przypadki)).toEqual([]);
       expect(pozaZamierzeniem(wyniki, przypadki)).toEqual([]);
+      // P-GH-WZNOWIENIE, część 2: Kontynuacja przesunięta za Zakończenie (12 l. 0 mies.) — dziś odmowa reguły kursów
+      // (Kontynuacja po Zakończeniu bez Włączenia), monitor sprzed API zapisywał.
+      expect(przypadki.map((p, i) => [p.opis, wyniki[i].zmianaReguly]).filter(([, z]) => z)).toEqual([
+        [`edycja (${modulDawki ? 'z modułem dawki' : 'bez modułu dawki'}): wiek 11 l. „25” mies.`, 'kontynuacja-po-zakonczeniu'],
+        [`edycja (${modulDawki ? 'z modułem dawki' : 'bez modułu dawki'}): wiek 12.25 l. „” mies.`, 'kontynuacja-po-zakonczeniu'],
+      ]);
       // Pokrycie: każdy preparat zapisany w edytowanym punkcie, każdy rodzaj odmowy wystąpił.
       const edytowany = (w) => w.monitor.lista.find((x) => String(x.id) === String(w.cel));
       const zapisane = new Set(wyniki.filter((w) => w.monitor.zapis).map((w) => edytowany(w).drug));
@@ -435,6 +478,8 @@ describe('VildaGhPunkty ↔ żywy monitor — złota siatka (Z2 edycja, Z4 wstec
     const wyniki = REPREZENTATYWNE.map((p) => porownaj(p));
 
     expect(rozbieznosci(wyniki, REPREZENTATYWNE)).toEqual([]);
+    // P-GH-WZNOWIENIE, część 2: zamierzone nowe odmowy reguły kursów występują i są tylko tymi z KODY_NOWYCH_ODMOW.
+    for (const w of wyniki) if (w.zmianaReguly) expect(KODY_NOWYCH_ODMOW.has(w.zmianaReguly)).toBe(true);
   }, 60_000);
 
   it('co 10. przypadek siatki Z2 i Z4 (ok. 600: preparat × masa × dawka × IGF-1 × lista × typ)', () => {
@@ -444,23 +489,39 @@ describe('VildaGhPunkty ↔ żywy monitor — złota siatka (Z2 edycja, Z4 wstec
 
     expect(rozbieznosci(wyniki, probka)).toEqual([]);
     expect(wyniki.filter((w) => w.monitor.zapis).length).toBeGreaterThan(probka.length / 2);
+    // P-GH-WZNOWIENIE, część 2: część zapisów monitora sprzed API reguła kursów odrzuca (np. Zakończenie na pustej liście
+    // albo przed Włączeniem, Włączenie po pierwszym punkcie kursu bez Włączenia) — rekord i tak porównany wyżej.
+    const zmiany = wyniki.filter((w) => w.zmianaReguly);
+    expect(zmiany.length).toBeGreaterThan(0);
+    expect(new Set(zmiany.map((w) => w.zmianaReguly)).size).toBeGreaterThan(1);
   }, 60_000);
 });
 
 describe('VildaGhPunkty ↔ żywy monitor — pozostałe reguły formularzy', () => {
-  it('dostepneRodzaje(wczytaj()) = opcje formularza wstecznego po otwarciu (ghRetroSyncTypeOptions): aktywne Włączenie i Zakończenie oraz rodzaj wybrany', () => {
+  // P-GH-WZNOWIENIE, część 2: formularz wsteczny dzisiejszego monitora bierze rodzaje z dostepneRodzaje(…, {wsteczny:
+  // true}) — rodzaje możliwe w jakimkolwiek wieku, z Kontynuacją. Względem monitora sprzed API zamierzone różnice: po
+  // Zakończeniu Włączenie (wznowienie) jest aktywne, a przy pustej liście Zakończenie nie (kurs musi mieć punkt).
+  it('dostepneRodzaje(wczytaj(), {wsteczny}) = opcje formularza wstecznego dzisiejszego monitora; względem monitora sprzed API tylko zamierzone różnice', () => {
     const listy = [[], [WLACZENIE], [WLACZENIE, ZAKONCZENIE], [ZAKONCZENIE], [KONTYNUACJA], [WLACZENIE, WLACZENIE_2],
       [WLACZENIE, DAWNY]];
+    const ZMIANY = { pusta: { end: false }, 'start,end': { start: true } };
+    const opcjeFormularza = (atrapa) => {
+      atrapa.kliknij('btnGhRetro');
+      const sel = atrapa.pole('ghRetroType');
+      const opcja = (v) => sel.options.find((o) => o.value === v);
+      return { start: !opcja('start').disabled, continue: !opcja('continue').disabled, end: !opcja('end').disabled, domyslny: sel.value };
+    };
     for (const modulDawki of [true, false]) {
       for (const punkty of listy) {
-        const opis = `${modulDawki}: ${punkty.map((p) => p.type).join(',') || 'pusta'}`;
+        const nazwa = punkty.map((p) => p.type).join(',') || 'pusta';
+        const opis = `${modulDawki}: ${nazwa}`;
         const { atrapa, api } = atrapaZApi({ modulDawki, punkty });
-        atrapa.kliknij('btnGhRetro');
-        const sel = atrapa.pole('ghRetroType');
-        const opcja = (v) => sel.options.find((o) => o.value === v);
-        const monitor = { start: !opcja('start').disabled, end: !opcja('end').disabled, domyslny: sel.value };
-
-        expect(roznice(api.dostepneRodzaje(api.wczytaj()), monitor), opis).toEqual([]);
+        const dawny = opcjeFormularza(atrapa);
+        const wynik = api.dostepneRodzaje(api.wczytaj(), { wsteczny: true });
+        expect(roznice(wynik, { ...dawny, ...(ZMIANY[nazwa] || {}) }), opis).toEqual([]);
+        // Dzisiejszy monitor (z modułem punktów): formularz = API.
+        const dzis = utworzAtrapeMonitoraGh({ modulDawki, punkty });
+        expect(roznice(opcjeFormularza(dzis), dzis.win.VildaGhPunkty.dostepneRodzaje(punkty, { wsteczny: true })), `dziś ${opis}`).toEqual([]);
       }
     }
   });
@@ -486,8 +547,8 @@ describe('VildaGhPunkty ↔ żywy monitor — pozostałe reguły formularzy', ()
 
   // Pusty wpis (null) w pamięci modułu, który pojawił się po starcie monitora (P-GH-PUNKTY-API rata 2, decyzja
   // właściciela 2026-10-07: API ściśle jak monitor). Wyjątek rzucają oba tam, gdzie stary kod, a tam, gdzie stary kod
-  // zapisuje, API daje tę samą listę.
-  it('null na liście: API rzuca wyjątek tam, gdzie monitor, i zapisuje tam, gdzie monitor zapisuje', () => {
+  // zapisuje, API daje tę samą listę. Wyjątek: reguła rodzaju (od P-GH-WZNOWIENIE, część 2 reguła kursów pomija null).
+  it('null na liście: API rzuca wyjątek tam, gdzie monitor (poza regułą rodzaju), i zapisuje tam, gdzie monitor zapisuje', () => {
     const WSTECZNY = {
       ghRetroType: 'start', ghRetroProg: 'SNP', ghRetroDrug: 'Omnitrope 10 mg', ghRetroAge: '9', ghRetroAgeMonths: '6',
       ghRetroWeight: '32', ghRetroHeight: '133', ghRetroDose: '0.96',
@@ -502,7 +563,10 @@ describe('VildaGhPunkty ↔ żywy monitor — pozostałe reguły formularzy', ()
       expect(a.klikniecia).toHaveLength(1);
       expect(rodzaje(a.atrapa.dziennik.slice(a.klikniecia[0].od))).toEqual(['E']);
       expect(a.atrapa.stan().modul).toEqual([null]);
-      expect(() => wynikApi(a.api, a.klikniecia[0], null, 'fikc-nowy')).toThrow(TypeError);
+      // P-GH-WZNOWIENIE, część 2: reguła kursów pomija wpis niebędący obiektem (jak ghKursy), więc API nie rzuca;
+      // dzisiejszy monitor i tak zatrzymuje zapis bramką uszkodzonych wpisów (Gpg) przed regułami.
+      expect(rodzajApi(a.api, a.klikniecia[0], null)).toEqual({ ok: true });
+      expect(() => wynikApi(a.api, a.klikniecia[0], null, 'fikc-nowy')).not.toThrow();
 
       // (b) edycja Kontynuacji, gdy przed nią pojawił się null: oba TypeError, bez zapisu
       const b = atrapaZApi({ modulDawki, punkty: [KONTYNUACJA] });

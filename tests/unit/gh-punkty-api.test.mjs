@@ -17,15 +17,27 @@ import { loadBrowserScript } from '../support/load-browser-script.mjs';
 const korzen = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
 const w = loadBrowserScript('vilda_gh_punkty.js', {});
+// P-GH-WZNOWIENIE, część 2: reguła rodzaju punktu liczy kursy z VildaTrajectoryAnalysis.ghKursy (na docpro.html
+// i index.html ładowany obok tego modułu).
+loadBrowserScript('vilda_trajectory_analysis.js', w);
 const A = w.VildaGhPunkty;
 
 // 15 kluczy rekordu w kolejności zapisu monitora (mapa punktów GH, §1.1).
 const KLUCZE = ['id', 'type', 'ageYears', 'ageMonths', 'weight', 'height', 'boneAge', 'dose', 'doseUnit', 'drug',
   'program', 'igf1', 'igf1Unit', 'igf1DaysSinceDose', 'doseAbs'];
 
-// Komunikaty monitora dosłownie (nakładka #ghInfoOverlay, nagłówek „Informacja”).
-const DRUGIE_WLACZENIE = 'Punkt „Włączenie leczenia” został już dodany.';
-const DRUGIE_ZAKONCZENIE = 'Punkt „Zakończenie leczenia” został już dodany.';
+// Komunikaty monitora dosłownie (nakładka #ghInfoOverlay, nagłówek „Informacja”). Teksty rodzaju punktu od
+// P-GH-WZNOWIENIE, część 2 (reguła kursów); dawne „Punkt „Włączenie leczenia” / „Zakończenie leczenia” został już
+// dodany.” zostały tylko w monitorze sprzed API (wyrocznia testów różnicowych).
+const DAWNE_DRUGIE_WLACZENIE = 'Punkt „Włączenie leczenia” został już dodany.';
+const DAWNE_DRUGIE_ZAKONCZENIE = 'Punkt „Zakończenie leczenia” został już dodany.';
+const DRUGIE_WLACZENIE = 'Ten kurs leczenia ma już punkt „Włączenie leczenia”. Nowe Włączenie można dodać po „Zakończeniu leczenia”.';
+const DRUGIE_ZAKONCZENIE = 'Ten kurs leczenia ma już punkt „Zakończenie leczenia”.';
+const WLACZENIE_POZNIEJ = '„Włączenie leczenia” nie może być późniejsze niż pierwszy punkt tego kursu leczenia.';
+const ZAKONCZENIE_NIE_OSTATNIE = '„Zakończenie leczenia” musi być ostatnim punktem kursu.';
+const ZAKONCZENIE_BEZ_KURSU = '„Zakończenie leczenia” zamyka kurs leczenia — musi je poprzedzać co najmniej jeden punkt tego kursu.';
+const KONTYNUACJA_PO_ZAKONCZENIU = 'Po „Zakończeniu leczenia” dodaj najpierw „Włączenie leczenia” (wznowienie leczenia).';
+const ODSWIEZ = 'Nie zapisano: aplikacja nie wczytała się w całości. Odśwież stronę i spróbuj ponownie.';
 const DANE = 'Upewnij się, że wprowadziłeś poprawne, dodatnie dane: wiek, wagę, wzrost oraz dawkę.';
 const PROGRAM_KARTA = 'Wybierz program i preparat w karcie „Leczenie hormonem wzrostu / IGF-1”.';
 const PROGRAM_WSTECZNY = 'Wybierz program i preparat w formularzu wstecznego punktu.';
@@ -70,8 +82,8 @@ function oczekujRekordu(rzeczywisty, oczekiwany, opis) {
 }
 
 describe('Moduł i dane zamrożone', () => {
-  it('ładuje się z modułem dawki jako zależnością; wersja 3 (P-GH-PUNKTY-USZKODZONE)', () => {
-    expect(A.wersja).toBe(3);
+  it('ładuje się z modułem dawki jako zależnością; wersja 4 (P-GH-WZNOWIENIE, część 2: reguła kursów)', () => {
+    expect(A.wersja).toBe(4);
     // ZALEZNOSCI w load-browser-script.mjs: bez tego Increlex liczyłby się bez × 2.
     expect(w.VildaGhDawka.preparat('Increlex 40 mg').schemat).toBe('naPodanie');
   });
@@ -84,13 +96,18 @@ describe('Moduł i dane zamrożone', () => {
     expect(A.RODZAJE).toEqual(['start', 'continue', 'end']);
   });
 
-  it('KOMUNIKATY: 5 tekstów dosłownie jak w monitorze sprzed API', () => {
+  it('KOMUNIKATY: teksty wartości i programu dosłownie jak w monitorze sprzed API; teksty rodzaju punktu z reguły kursów (P-GH-WZNOWIENIE, część 2)', () => {
     expect(A.KOMUNIKATY).toEqual({
       drugieWlaczenie: DRUGIE_WLACZENIE,
       drugieZakonczenie: DRUGIE_ZAKONCZENIE,
+      wlaczeniePozniej: WLACZENIE_POZNIEJ,
+      zakonczenieNieOstatnie: ZAKONCZENIE_NIE_OSTATNIE,
+      zakonczenieBezKursu: ZAKONCZENIE_BEZ_KURSU,
+      kontynuacjaPoZakonczeniu: KONTYNUACJA_PO_ZAKONCZENIU,
       wartosci: DANE,
       programKarta: PROGRAM_KARTA,
       programWsteczny: PROGRAM_WSTECZNY,
+      odswiez: ODSWIEZ,
     });
     // Wzorem jest monitor sprzed API (tests/fixtures/gh-monitor-przed-api.js.txt): każdy tekst występuje w jego źródle
     // (po rozwinięciu \uXXXX). Od raty 3 (D5) dzisiejszy monitor nie ma już własnej kopii — teksty są tylko w API.
@@ -98,8 +115,15 @@ describe('Moduł i dane zamrożone', () => {
       .replace(/\\u([0-9a-fA-F]{4})/g, (_, h) => String.fromCharCode(parseInt(h, 16)));
     const przedApi = rozwin('tests/fixtures/gh-monitor-przed-api.js.txt');
     const monitor = rozwin('gh_therapy_monitor.js');
-    for (const tekst of [DRUGIE_WLACZENIE, DRUGIE_ZAKONCZENIE, DANE, PROGRAM_KARTA, PROGRAM_WSTECZNY]) {
+    for (const tekst of [DAWNE_DRUGIE_WLACZENIE, DAWNE_DRUGIE_ZAKONCZENIE, DANE, PROGRAM_KARTA, PROGRAM_WSTECZNY]) {
       expect(przedApi, tekst).toContain(tekst);
+      expect(monitor, tekst).not.toContain(tekst);
+    }
+    // Dawne teksty jednego Włączenia i Zakończenia na liście zniknęły z API; nowe teksty reguły kursów są tylko w API.
+    for (const tekst of [DAWNE_DRUGIE_WLACZENIE, DAWNE_DRUGIE_ZAKONCZENIE]) expect(Object.values(A.KOMUNIKATY), tekst).not.toContain(tekst);
+    for (const tekst of [DRUGIE_WLACZENIE, DRUGIE_ZAKONCZENIE, WLACZENIE_POZNIEJ, ZAKONCZENIE_NIE_OSTATNIE, ZAKONCZENIE_BEZ_KURSU,
+      KONTYNUACJA_PO_ZAKONCZENIU]) {
+      expect(przedApi, tekst).not.toContain(tekst);
       expect(monitor, tekst).not.toContain(tekst);
     }
   });
@@ -175,8 +199,10 @@ describe('Brak skutków przy ładowaniu', () => {
 
     P.normalizujWiek(10, 14);
     P.wiekLacznieMies(10, 2);
-    P.sprawdzRodzaj(lista, 'start', { pomin: null });
+    P.wiekMiesZPol('10', '2');
+    P.sprawdzRodzaj(lista, 'start', { pomin: null, wiekM: 122 });
     P.dostepneRodzaje(lista);
+    P.dostepneRodzaje(lista, { wsteczny: true });
     P.sprawdzWartosci({ lata: 9, miesiace: 6, masa: 32, wzrost: 133, dawka: 0.96, preparat: 'X', program: 'Y' }, 'karta');
     P.jednostkaDawki('Ngenla 60 mg');
     P.dniIgf(250, null, 'mg/kg/tydz');
@@ -209,7 +235,7 @@ describe('Brak skutków przy ładowaniu', () => {
 
 describe('Strażnik czystości (fn.toString())', () => {
   // Funkcje czyste z nagłówka modułu; noweId dopisane, bo też nie może sięgać do magazynu ani DOM.
-  const CZYSTE = ['normalizujWiek', 'wiekLacznieMies', 'sprawdzRodzaj', 'dostepneRodzaje', 'sprawdzWartosci',
+  const CZYSTE = ['normalizujWiek', 'wiekLacznieMies', 'wiekMiesZPol', 'sprawdzRodzaj', 'dostepneRodzaje', 'sprawdzWartosci',
     'jednostkaDawki', 'dniIgf', 'polaZPodawanej', 'punkt', 'zmienWMiejscu', 'noweId', 'uszkodzone', 'bezUszkodzonych',
     'komunikatyUszkodzonych'];
   const ZAKAZANE = ['document', 'sessionStorage', 'localStorage', 'VildaPersistence'];
@@ -263,74 +289,255 @@ describe('normalizujWiek i wiekLacznieMies', () => {
   });
 });
 
-describe('sprawdzRodzaj — najwyżej jedno Włączenie i jedno Zakończenie', () => {
-  const lista = [WLACZENIE, KONTYNUACJA, ZAKONCZENIE];
+// P-GH-WZNOWIENIE, część 2 (decyzje właściciela 2026-11-20, W2): reguła KURSÓW zastępuje „najwyżej jedno Włączenie
+// i jedno Zakończenie w całej liście”. Kursy liczy VildaTrajectoryAnalysis.ghKursy (punkty wg wieku, przy równym wieku
+// Kontynuacja → Zakończenie → Włączenie, kurs zamyka Zakończenie). Wiek nowego punktu: opcje.wiekM w pełnych miesiącach.
+// Przypadki GW1–GW7 ze specyfikacji (wiek lata;miesiące), wartości oczekiwane z reguły w ALGORITHMS.md.
+const G = (id, type, lata, mies) => punktFikcyjny(id, type, { ageYears: lata, ageMonths: mies });
+const W7 = G('gw-w7', 'start', 7, 0);
+const K8 = G('gw-k8', 'continue', 8, 0);
+const K9 = G('gw-k9', 'continue', 9, 0);
+const Z9 = G('gw-z9', 'end', 9, 0);
+const W10 = G('gw-w10', 'start', 10, 0);
+const K10 = G('gw-k10', 'continue', 10, 0);
+const K11 = G('gw-k11', 'continue', 11, 0);
+const wiek = (lata, mies) => lata * 12 + mies;
+// Wynik reguły: 'ok' albo kod odmowy.
+const regula = (lista, typ, lata, mies, opcje = {}) => {
+  const r = A.sprawdzRodzaj(lista, typ, { wiekM: wiek(lata, mies), ...opcje });
+  return r.ok ? 'ok' : r.kod;
+};
+const ODMOWY = {
+  'drugie-wlaczenie': DRUGIE_WLACZENIE,
+  'wlaczenie-pozniej': WLACZENIE_POZNIEJ,
+  'drugie-zakonczenie': DRUGIE_ZAKONCZENIE,
+  'zakonczenie-nie-ostatnie': ZAKONCZENIE_NIE_OSTATNIE,
+  'zakonczenie-bez-kursu': ZAKONCZENIE_BEZ_KURSU,
+  'kontynuacja-po-zakonczeniu': KONTYNUACJA_PO_ZAKONCZENIU,
+};
 
-  it('drugie Włączenie i drugie Zakończenie: odmowa z kodem i tekstem monitora; Kontynuacja zawsze przechodzi', () => {
-    expect(A.sprawdzRodzaj(lista, 'start')).toEqual({ ok: false, kod: 'drugie-wlaczenie', komunikat: DRUGIE_WLACZENIE });
-    expect(A.sprawdzRodzaj(lista, 'end')).toEqual({ ok: false, kod: 'drugie-zakonczenie', komunikat: DRUGIE_ZAKONCZENIE });
-    expect(A.sprawdzRodzaj(lista, 'continue')).toEqual({ ok: true });
+describe('sprawdzRodzaj — reguła kursów (P-GH-WZNOWIENIE, część 2)', () => {
+  it('GW1 wznowienie: W 7;0 → K 8;0 → Z 9;0 + W 10;0 przyjęte; potem K 10;0 i K 11;0 przyjęte', () => {
+    expect(regula([W7, K8, Z9], 'start', 10, 0)).toBe('ok');
+    expect(regula([W7, K8, Z9, W10], 'continue', 10, 0)).toBe('ok');
+    expect(regula([W7, K8, Z9, W10], 'continue', 11, 0)).toBe('ok');
+    expect(regula([W7, K8, Z9, W10, K10], 'continue', 11, 0)).toBe('ok');
+    // Włączenie w miesiącu Zakończenia otwiera nowy kurs (przy równym wieku Zakończenie przed Włączeniem).
+    expect(regula([W7, K8, Z9], 'start', 9, 0)).toBe('ok');
   });
 
-  it('pusta lista, lista bez danego rodzaju i brak listy: zgoda', () => {
-    expect(A.sprawdzRodzaj([], 'start')).toEqual({ ok: true });
-    expect(A.sprawdzRodzaj([ZAKONCZENIE], 'start')).toEqual({ ok: true });
-    expect(A.sprawdzRodzaj([WLACZENIE], 'end')).toEqual({ ok: true });
-    expect(A.sprawdzRodzaj(null, 'start')).toEqual({ ok: true });
-    expect(A.sprawdzRodzaj(undefined, 'end')).toEqual({ ok: true });
+  it('GW2 Kontynuacja po Zakończeniu bez nowego Włączenia: odmowa z prośbą o Włączenie; w miesiącu Zakończenia — w zamykanym kursie', () => {
+    expect(A.sprawdzRodzaj([W7, Z9], 'continue', { wiekM: wiek(10, 0) }))
+      .toEqual({ ok: false, kod: 'kontynuacja-po-zakonczeniu', komunikat: KONTYNUACJA_PO_ZAKONCZENIU });
+    // Przerwa przed wznowieniem (Kontynuacja między Zakończeniem a późniejszym Włączeniem) — też odmowa.
+    expect(regula([W7, Z9, W10], 'continue', 9, 6)).toBe('kontynuacja-po-zakonczeniu');
+    // Stary zapis W2 (W 7;0 → Z 9;0 → K 10;0): kolejna Kontynuacja w tym kursie — odmowa.
+    expect(regula([W7, Z9, K10], 'continue', 11, 0)).toBe('kontynuacja-po-zakonczeniu');
+    // Kontynuacja z miesiąca Zakończenia zostaje w zamykanym kursie (np. późny wynik IGF-1) — zgoda.
+    expect(regula([W7, Z9], 'continue', 9, 0)).toBe('ok');
+    // Kontynuacja w środku zamkniętego kursu i przed Włączeniem pierwszego kursu — zgoda (jak dotąd).
+    expect(regula([W7, Z9], 'continue', 8, 0)).toBe('ok');
+    expect(regula([W7], 'continue', 6, 0)).toBe('ok');
+    // Jedyny kurs bez Włączenia (P-GH-BEZ-STARTU) — zgoda.
+    expect(regula([K8], 'continue', 9, 0)).toBe('ok');
+    expect(regula([], 'continue', 9, 0)).toBe('ok');
   });
 
-  it('bez klucza pomin nie ma wykluczeń (punkt wsteczny): istniejące Włączenie blokuje, także o id „null”', () => {
-    expect(A.sprawdzRodzaj([WLACZENIE], 'start').ok).toBe(false);
-    expect(A.sprawdzRodzaj([WLACZENIE], 'start', {}).ok).toBe(false);
-    expect(A.sprawdzRodzaj([{ ...WLACZENIE, id: 'null' }], 'start').kod).toBe('drugie-wlaczenie');
+  it('GW3 drugie Włączenie w kursie: W 7;0 → K 8;0 + W 9;0 albo W 6;0 (przed pierwszym punktem kursu z Włączeniem) — odmowa', () => {
+    expect(A.sprawdzRodzaj([W7, K8], 'start', { wiekM: wiek(9, 0) }))
+      .toEqual({ ok: false, kod: 'drugie-wlaczenie', komunikat: DRUGIE_WLACZENIE });
+    expect(regula([W7, K8], 'start', 6, 0)).toBe('drugie-wlaczenie');
+    expect(regula([W7, K8], 'start', 7, 0)).toBe('drugie-wlaczenie');
+    // Wznowiony kurs ma już Włączenie: kolejne Włączenie w nim — odmowa.
+    expect(regula([W7, Z9, W10, K11], 'start', 10, 6)).toBe('drugie-wlaczenie');
+    // Włączenie w przerwie przed wznowieniem: trafia do kursu 2, który ma już Włączenie — odmowa.
+    expect(regula([W7, Z9, W10], 'start', 9, 6)).toBe('drugie-wlaczenie');
   });
 
-  it('pomin = id edytowanego punktu (edycja): sam punkt nie blokuje swojego rodzaju; porównanie po String(id)', () => {
-    expect(A.sprawdzRodzaj(lista, 'start', { pomin: 'fikc-start' })).toEqual({ ok: true });
-    expect(A.sprawdzRodzaj(lista, 'end', { pomin: 'fikc-koniec' })).toEqual({ ok: true });
-    // Edycja Kontynuacji na Włączenie dalej blokowana przez istniejące Włączenie.
-    expect(A.sprawdzRodzaj(lista, 'start', { pomin: 'fikc-kont' }).kod).toBe('drugie-wlaczenie');
-    // id liczbowe i napisowe są równe po String().
-    expect(A.sprawdzRodzaj([{ ...WLACZENIE, id: 123 }], 'start', { pomin: '123' })).toEqual({ ok: true });
-    expect(A.sprawdzRodzaj([{ ...WLACZENIE, id: '123' }], 'start', { pomin: 123 })).toEqual({ ok: true });
+  it('GW4 Zakończenie: przed ostatnim punktem kursu, drugie w kursie i jako pierwszy punkt kursu — odmowa; po ostatnim — zgoda', () => {
+    const L = [W7, K8, K9];
+    expect(A.sprawdzRodzaj(L, 'end', { wiekM: wiek(8, 6) }))
+      .toEqual({ ok: false, kod: 'zakonczenie-nie-ostatnie', komunikat: ZAKONCZENIE_NIE_OSTATNIE });
+    expect(regula(L, 'end', 9, 6)).toBe('ok');
+    // W miesiącu ostatniej Kontynuacji (przy równym wieku Kontynuacja przed Zakończeniem) — zgoda.
+    expect(regula(L, 'end', 9, 0)).toBe('ok');
+    const Z96 = G('gw-z96', 'end', 9, 6);
+    expect(A.sprawdzRodzaj([...L, Z96], 'end', { wiekM: wiek(10, 0) }))
+      .toEqual({ ok: false, kod: 'drugie-zakonczenie', komunikat: DRUGIE_ZAKONCZENIE });
+    expect(regula([...L, Z96], 'end', 8, 0)).toBe('drugie-zakonczenie');
+    // Zakończenie jako pierwszy punkt kursu po Zakończeniu (przed wznowieniem albo w kursie W2) — odmowa.
+    expect(regula([W7, Z9, W10], 'end', 9, 6)).toBe('drugie-zakonczenie');
+    expect(regula([W7, Z9, K10], 'end', 9, 6)).toBe('drugie-zakonczenie');
+    // Zakończenie bez wcześniejszego punktu: pusta lista albo przed pierwszym punktem.
+    expect(A.sprawdzRodzaj([], 'end', { wiekM: wiek(9, 0) }))
+      .toEqual({ ok: false, kod: 'zakonczenie-bez-kursu', komunikat: ZAKONCZENIE_BEZ_KURSU });
+    expect(regula([W7, K8], 'end', 6, 0)).toBe('zakonczenie-bez-kursu');
+    // W miesiącu Włączenia (przy równym wieku Zakończenie przed Włączeniem) — bez wcześniejszego punktu.
+    expect(regula([W7], 'end', 7, 0)).toBe('zakonczenie-bez-kursu');
+    // Zakończenie wznowionego kursu po jego ostatnim punkcie — zgoda.
+    expect(regula([W7, Z9, W10, K11], 'end', 11, 6)).toBe('ok');
+    expect(regula([W7, Z9, W10, K11], 'end', 10, 6)).toBe('zakonczenie-nie-ostatnie');
+  });
+
+  it('GW5 dopisanie Włączenia do starego zapisu W2 (W 7;0 → Z 9;0 → K 10;0): W 10;0 albo 9;6 przyjęte, W 10;6 — odmowa', () => {
+    const L = [W7, Z9, K10];
+    expect(regula(L, 'start', 10, 0)).toBe('ok');
+    expect(regula(L, 'start', 9, 6)).toBe('ok');
+    expect(A.sprawdzRodzaj(L, 'start', { wiekM: wiek(10, 6) }))
+      .toEqual({ ok: false, kod: 'wlaczenie-pozniej', komunikat: WLACZENIE_POZNIEJ });
+    // Po dopisaniu Włączenia w miesiącu pierwszego punktu kursu Kontynuacja w tym kursie przechodzi.
+    expect(regula([...L, W10], 'continue', 11, 0)).toBe('ok');
+    expect(regula([...L, W10], 'continue', 10, 0)).toBe('ok');
+    // Jedyny kurs bez Włączenia (P-GH-BEZ-STARTU): Włączenie nie później niż pierwszy punkt — zgoda; później — odmowa.
+    expect(regula([K8, K9], 'start', 7, 0)).toBe('ok');
+    expect(regula([K8, K9], 'start', 8, 0)).toBe('ok');
+    expect(regula([K8, K9], 'start', 8, 6)).toBe('wlaczenie-pozniej');
+    expect(regula([], 'start', 9, 0)).toBe('ok');
+  });
+
+  it('GW7 edycja (opcje.pomin): zmiana K → W w kursie z Włączeniem — odmowa; własny rodzaj edytowanego punktu nie blokuje; Z → K przy kursie 2 — ta sama symulacja', () => {
+    expect(regula([W7, K8], 'start', 8, 0, { pomin: K8.id })).toBe('drugie-wlaczenie');
+    expect(regula([W7, K8, Z9], 'start', 7, 0, { pomin: W7.id })).toBe('ok');
+    expect(regula([W7, K8, Z9], 'end', 9, 0, { pomin: Z9.id })).toBe('ok');
+    // Edycja wieku Zakończenia przed ostatnią Kontynuację — odmowa; Kontynuacji po Zakończeniu — odmowa.
+    expect(regula([W7, K8, K9, G('gw-z10', 'end', 10, 0)], 'end', 8, 6, { pomin: 'gw-z10' })).toBe('zakonczenie-nie-ostatnie');
+    expect(regula([W7, K8, Z9], 'continue', 9, 6, { pomin: K8.id })).toBe('kontynuacja-po-zakonczeniu');
+    // Z 9;0 → K 9;0, gdy po nim jest kurs 2 (W 10;0 → K 11;0): bez Zakończenia lista to jeden kurs z Włączeniem 7;0,
+    // więc Kontynuacja przechodzi (W 10;0 zostaje drugim Włączeniem w kursie, jak po scaleniu duplikatów).
+    expect(regula([W7, K8, Z9, W10, K11], 'continue', 9, 0, { pomin: Z9.id })).toBe('ok');
+    // W 10;0 → K 10;0 przy Z 9;0 — Kontynuacja po Zakończeniu bez Włączenia: odmowa.
+    expect(regula([W7, K8, Z9, W10, K11], 'continue', 10, 0, { pomin: W10.id })).toBe('kontynuacja-po-zakonczeniu');
+    // Porównanie po String(id): id liczbowe i napisowe są równe.
+    expect(regula([{ ...W7, id: 123 }], 'start', 7, 0, { pomin: '123' })).toBe('ok');
+    expect(regula([{ ...W7, id: '123' }], 'start', 7, 0, { pomin: 123 })).toBe('ok');
     // Dwa Włączenia (np. po scaleniu): pominięte jest tylko edytowane, drugie dalej blokuje.
-    expect(A.sprawdzRodzaj([WLACZENIE, { ...WLACZENIE, id: 'fikc-start-2' }], 'start', { pomin: 'fikc-start' }).kod)
-      .toBe('drugie-wlaczenie');
+    expect(regula([W7, { ...W7, id: 'gw-w7-2' }], 'start', 7, 0, { pomin: W7.id })).toBe('drugie-wlaczenie');
   });
 
   it('pomin = null (nowy punkt z karty, x == null w monitorze) wyklucza punkt o id „null” — dziwactwo monitora, stan obecny', () => {
-    // Monitor: String(c.id) !== String(x) przy x = null, czyli porównanie z napisem 'null'.
-    expect(A.sprawdzRodzaj([{ ...WLACZENIE, id: 'null' }], 'start', { pomin: null })).toEqual({ ok: true });
-    expect(A.sprawdzRodzaj([{ ...ZAKONCZENIE, id: 'null' }], 'end', { pomin: null })).toEqual({ ok: true });
-    // Inne id dalej blokuje.
-    expect(A.sprawdzRodzaj([WLACZENIE], 'start', { pomin: null })).toEqual({
-      ok: false, kod: 'drugie-wlaczenie', komunikat: DRUGIE_WLACZENIE,
-    });
+    expect(regula([{ ...W7, id: 'null' }], 'start', 8, 0, { pomin: null })).toBe('ok');
+    expect(regula([W7], 'start', 8, 0, { pomin: null })).toBe('drugie-wlaczenie');
+    // Bez klucza pomin nie ma wykluczeń (punkt wsteczny, panel wiersza), także punktu o id „null”.
+    expect(regula([{ ...W7, id: 'null' }], 'start', 8, 0)).toBe('drugie-wlaczenie');
   });
 
-  it('pusty wpis (null) na liście: wyjątek tam, gdzie monitor (some na c.type), i tylko przy Włączeniu i Zakończeniu (P-GH-PUNKTY-API rata 2)', () => {
-    expect(() => A.sprawdzRodzaj([null], 'start')).toThrow(TypeError);
-    expect(() => A.sprawdzRodzaj([KONTYNUACJA, null], 'end', { pomin: 'fikc-kont' })).toThrow(TypeError);
-    // Kontynuacja nie przegląda listy; Włączenie stojące przed null kończy przegląd odmową, zanim dojdzie do null.
-    expect(A.sprawdzRodzaj([null], 'continue')).toEqual({ ok: true });
-    expect(A.sprawdzRodzaj([WLACZENIE, null], 'start').kod).toBe('drugie-wlaczenie');
-    // Wpis niebędący obiektem nie rzuca (jak monitor): (5).type to undefined.
-    expect(A.sprawdzRodzaj([5, 'x', true], 'start')).toEqual({ ok: true });
+  it('wynik nie zależy od kolejności tablicy (punkty wg wieku)', () => {
+    expect(regula([Z9, K8, W7], 'start', 10, 0)).toBe('ok');
+    expect(regula([K9, W7, K8], 'end', 8, 6)).toBe('zakonczenie-nie-ostatnie');
+    expect(regula([K10, W7, Z9], 'start', 10, 6)).toBe('wlaczenie-pozniej');
+  });
+
+  it('każdy kod odmowy niesie swój tekst z KOMUNIKATY', () => {
+    const przypadki = [
+      [[W7, K8], 'start', 9, 0], [[K8, K9], 'start', 8, 6], [[W7, Z9], 'end', 10, 0], [[W7, K8, K9], 'end', 8, 6],
+      [[], 'end', 9, 0], [[W7, Z9], 'continue', 10, 0],
+    ];
+    const kody = new Set();
+    for (const [lista, typ, lata, mies] of przypadki) {
+      const r = A.sprawdzRodzaj(lista, typ, { wiekM: wiek(lata, mies) });
+      expect(r.ok).toBe(false);
+      expect(r.komunikat, r.kod).toBe(ODMOWY[r.kod]);
+      kody.add(r.kod);
+    }
+    expect([...kody].sort()).toEqual(Object.keys(ODMOWY).sort());
+  });
+
+  it('wiek nowego punktu: bez opcje.wiekM, wiek 0, ujemny albo NaN — odmowa „wartosci” (ten sam tekst, którym odmówi sprawdzWartosci); wiek ułamkowy zaokrąglony jak w ghKursy', () => {
+    expect(A.sprawdzRodzaj([], 'start')).toEqual(ODMOWA_DANE);
+    expect(A.sprawdzRodzaj([], 'continue', {})).toEqual(ODMOWA_DANE);
+    expect(A.sprawdzRodzaj([], 'end', { wiekM: 0 })).toEqual(ODMOWA_DANE);
+    expect(A.sprawdzRodzaj([], 'start', { wiekM: -6 })).toEqual(ODMOWA_DANE);
+    expect(A.sprawdzRodzaj([], 'start', { wiekM: NaN })).toEqual(ODMOWA_DANE);
+    expect(A.sprawdzRodzaj([], 'start', { wiekM: '100' })).toEqual(ODMOWA_DANE);
+    expect(A.sprawdzRodzaj([], 'start', { wiekM: 0.4 })).toEqual(ODMOWA_DANE);
+    expect(A.sprawdzRodzaj([], 'start', { wiekM: 0.6 })).toEqual({ ok: true });
+    // 9 l. 11,6 mies. = 119,6 → 120 (miesiąc Włączenia W 10;0 kursu 2 starego zapisu W2) — zgoda.
+    expect(A.sprawdzRodzaj([W7, Z9, K10], 'start', { wiekM: 119.6 })).toEqual({ ok: true });
+  });
+
+  it('rodzaj spoza start/continue/end — zgoda bez sprawdzania (jak dotąd)', () => {
+    expect(A.sprawdzRodzaj([W7], 'inny')).toEqual({ ok: true });
+    expect(A.sprawdzRodzaj([W7], undefined)).toEqual({ ok: true });
+  });
+
+  it('wpisy niebędące obiektem (null, liczba, napis) nie są punktami — pomijane jak w ghKursy (dotąd null rzucał wyjątek tam, gdzie monitor)', () => {
+    expect(regula([null], 'start', 9, 0)).toBe('ok');
+    expect(regula([W7, null, 5, 'x', true], 'start', 9, 0)).toBe('drugie-wlaczenie');
+    expect(regula([null, W7, Z9], 'continue', 10, 0, { pomin: 'gw-k8' })).toBe('kontynuacja-po-zakonczeniu');
+    expect(regula(null, 'start', 9, 0)).toBe('ok');
+    expect(regula(undefined, 'end', 9, 0)).toBe('zakonczenie-bez-kursu');
+  });
+
+  it('bez modułu kursów (VildaTrajectoryAnalysis.ghKursy) — odmowa z prośbą o odświeżenie strony, bez powrotu do dawnej reguły', () => {
+    const bez = oknoBezModuluDawki().VildaGhPunkty;
+    for (const typ of ['start', 'continue', 'end']) {
+      expect(bez.sprawdzRodzaj([], typ, { wiekM: 100 })).toEqual({ ok: false, kod: 'brak-modulu', komunikat: ODSWIEZ });
+    }
+    // Moduł bez funkcji ghKursy też się nie liczy.
+    const o = oknoBezModuluDawki();
+    o.VildaTrajectoryAnalysis = { therapyIntervals: () => [] };
+    expect(o.VildaGhPunkty.sprawdzRodzaj([], 'start', { wiekM: 100 }).kod).toBe('brak-modulu');
+    // Moduł czytany przy wywołaniu: dołożony później działa.
+    loadBrowserScript('vilda_trajectory_analysis.js', o);
+    expect(o.VildaGhPunkty.sprawdzRodzaj([], 'start', { wiekM: 100 })).toEqual({ ok: true });
   });
 });
 
-describe('dostepneRodzaje — formularz wstecznego punktu (ghRetroSyncTypeOptions)', () => {
+describe('wiekMiesZPol — wiek punktu z pól formularza jak w polaZPodawanej', () => {
   it.each([
-    ['pusta lista', [], { start: true, end: true, domyslny: 'start' }],
-    ['tylko Kontynuacja', [KONTYNUACJA], { start: true, end: true, domyslny: 'start' }],
-    ['jest Włączenie', [WLACZENIE, KONTYNUACJA], { start: false, end: true, domyslny: 'continue' }],
-    ['Włączenie i Zakończenie', [WLACZENIE, ZAKONCZENIE], { start: false, end: false, domyslny: 'continue' }],
-    ['samo Zakończenie', [ZAKONCZENIE], { start: true, end: false, domyslny: 'start' }],
-    ['brak listy', null, { start: true, end: true, domyslny: 'start' }],
-    ['puste wpisy w liście', [null, WLACZENIE, undefined], { start: false, end: true, domyslny: 'continue' }],
-  ])('%s', (_opis, lista, oczekiwany) => {
+    ['10', '14', 134], ['9', '11', 119], ['10.5', '3', 129], ['7', '2.6', 87], ['12.25', '', 147], ['10', 'x', 120],
+    ['0', '5', 5], ['11', '-3', 129], ['-0', '5', 5], [9, 6, 114], ['0', '0', 0], ['-1', '6', -6],
+  ])('lata „%s”, miesiące „%s” → %d mies.', (lata, mies, oczekiwany) => {
+    expect(A.wiekMiesZPol(lata, mies)).toBe(oczekiwany);
+    // Ten sam wiek zapisze polaZPodawanej (gdy reszta pól jest poprawna).
+    const r = A.polaZPodawanej({ ...POLA_FORMULARZA, lata, miesiace: mies }, 'wsteczny');
+    if (r.ok) expect(r.pola.ageYears * 12 + r.pola.ageMonths).toBe(oczekiwany);
+  });
+
+  it('lata puste albo nieliczbowe → NaN', () => {
+    expect(A.wiekMiesZPol('', '3')).toBeNaN();
+    expect(A.wiekMiesZPol('x', '3')).toBeNaN();
+    expect(A.wiekMiesZPol(undefined, undefined)).toBeNaN();
+  });
+});
+
+describe('dostepneRodzaje — rodzaje proponowane w formularzach (P-GH-WZNOWIENIE, część 2)', () => {
+  // Bez opcji: punkt po ostatnim istniejącym (ostatni kurs ghKursy).
+  it.each([
+    ['pusta lista', [], { start: true, continue: true, end: false, domyslny: 'start' }],
+    ['brak listy', null, { start: true, continue: true, end: false, domyslny: 'start' }],
+    ['ostatni kurs otwarty z Włączeniem', [WLACZENIE, KONTYNUACJA], { start: false, continue: true, end: true, domyslny: 'continue' }],
+    ['ostatni kurs otwarty bez Włączenia (P-GH-BEZ-STARTU)', [KONTYNUACJA], { start: true, continue: true, end: true, domyslny: 'start' }],
+    ['ostatni kurs zamknięty (GW2)', [WLACZENIE, ZAKONCZENIE], { start: true, continue: false, end: false, domyslny: 'start' }],
+    ['samo Zakończenie', [ZAKONCZENIE], { start: true, continue: false, end: false, domyslny: 'start' }],
+    ['wznowienie (kurs 2 z Włączeniem)', [W7, Z9, W10], { start: false, continue: true, end: true, domyslny: 'continue' }],
+    ['stary zapis W2 (kurs 2 bez Włączenia)', [W7, Z9, K10], { start: true, continue: true, end: true, domyslny: 'start' }],
+    ['puste wpisy w liście', [null, WLACZENIE, undefined], { start: false, continue: true, end: true, domyslny: 'continue' }],
+  ])('najnowszy punkt — %s', (_opis, lista, oczekiwany) => {
     expect(A.dostepneRodzaje(lista)).toEqual(oczekiwany);
+  });
+
+  // opcje.wsteczny (formularz wstecznego punktu): rodzaje możliwe w jakimkolwiek wieku. Przy jednym kursie jak dawne
+  // ghRetroSyncTypeOptions, poza Włączeniem po Zakończeniu (wznowienie) i Zakończeniem na pustej liście.
+  it.each([
+    ['pusta lista', [], { start: true, continue: true, end: false, domyslny: 'start' }],
+    ['tylko Kontynuacja', [KONTYNUACJA], { start: true, continue: true, end: true, domyslny: 'start' }],
+    ['jest Włączenie', [WLACZENIE, KONTYNUACJA], { start: false, continue: true, end: true, domyslny: 'continue' }],
+    ['Włączenie i Zakończenie', [WLACZENIE, ZAKONCZENIE], { start: true, continue: true, end: false, domyslny: 'continue' }],
+    ['samo Zakończenie', [ZAKONCZENIE], { start: true, continue: true, end: false, domyslny: 'start' }],
+    ['brak listy', null, { start: true, continue: true, end: false, domyslny: 'start' }],
+    ['puste wpisy w liście', [null, WLACZENIE, undefined], { start: false, continue: true, end: true, domyslny: 'continue' }],
+    ['wznowienie otwarte', [W7, Z9, W10], { start: false, continue: true, end: true, domyslny: 'continue' }],
+    ['wznowienie zakończone', [W7, Z9, W10, G('gw-z11', 'end', 11, 0)], { start: true, continue: true, end: false, domyslny: 'continue' }],
+    ['stary zapis W2', [W7, Z9, K10], { start: true, continue: true, end: true, domyslny: 'start' }],
+  ])('wsteczny — %s', (_opis, lista, oczekiwany) => {
+    expect(A.dostepneRodzaje(lista, { wsteczny: true })).toEqual(oczekiwany);
+  });
+
+  it('bez modułu kursów: wszystkie rodzaje z flagą brakModulu (zapis i tak odmówi z prośbą o odświeżenie)', () => {
+    const bez = oknoBezModuluDawki().VildaGhPunkty;
+    expect(bez.dostepneRodzaje([WLACZENIE])).toEqual({ start: true, continue: true, end: true, domyslny: 'continue', brakModulu: true });
+    expect(bez.dostepneRodzaje([], { wsteczny: true })).toEqual({ start: true, continue: true, end: true, domyslny: 'start', brakModulu: true });
   });
 });
 

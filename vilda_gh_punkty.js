@@ -11,8 +11,9 @@
  *   dose    = mg/kg/d (Ngenla: mg/kg/tydz) = dawka dobowa / masa ciała; Increlex: dobowa = 2 × dawka na podanie
  *   doseAbs = mg/d zawsze (Ngenla: dawka tygodniowa / 7)
  *
- * Funkcje czyste (bez DOM, magazynu i zdarzeń; jedyna zależność: VildaGhDawka do odczytu, wstrzykiwana przez
- * opcje.dawka): normalizujWiek, wiekLacznieMies, sprawdzRodzaj, dostepneRodzaje, sprawdzWartosci,
+ * Funkcje czyste (bez DOM, magazynu i zdarzeń; zależności czytane dopiero przy wywołaniu: VildaGhDawka, wstrzykiwana
+ * przez opcje.dawka, i reguła kursów VildaTrajectoryAnalysis.ghKursy w sprawdzRodzaj/dostepneRodzaje):
+ * normalizujWiek, wiekLacznieMies, wiekMiesZPol, sprawdzRodzaj, dostepneRodzaje, sprawdzWartosci,
  * jednostkaDawki, dniIgf, polaZPodawanej, noweId, punkt, zmienWMiejscu, uszkodzone, bezUszkodzonych,
  * komunikatyUszkodzonych. Przyjmują liczby, jak monitor po parseFloat (polaZPodawanej parsuje pola sama).
  * Wyjątek: noweId pamięta w module ostatnio wydane id (P-GH-NOWE-ID), żeby kolejne id nigdy się nie powtórzyło.
@@ -27,15 +28,28 @@
  * nowego punktu z karty (zostaje w monitorze); nie dotyka mostka, IndexedDB ghTherapyDB ani resetu monitora.
  * Bez VildaGhDawka liczy jak dawny monitor bez tego modułu (Increlex bez × 2) i zwraca bezModuluDawki: true; monitor od
  * D6 (P-GH-DAWKA-BEZ-MODULU) w tym stanie nie zapisuje punktu, tylko prosi o odświeżenie strony.
- * Pusty wpis (null) na liście: sprawdzRodzaj i zmienWMiejscu rzucają wyjątek tam, gdzie monitor (rata 2, decyzja
- * właściciela 2026-10-07: ściśle jak monitor); dostepneRodzaje go pomija, jak formularz wsteczny monitora.
+ * Pusty wpis (null) na liście: zmienWMiejscu rzuca wyjątek tam, gdzie monitor (rata 2, decyzja właściciela 2026-10-07:
+ * ściśle jak monitor); sprawdzRodzaj i dostepneRodzaje go pomijają (od P-GH-WZNOWIENIE część 2 liczą kursy z ghKursy,
+ * dla której wpis niebędący obiektem nie jest punktem). Wołający i tak wstrzymują zapis przy uszkodzonych wpisach.
  * Uszkodzony wpis listy (P-GH-PUNKTY-USZKODZONE, rata 4): wpis, który nie jest obiektem (null, brak wartości,
  * liczba, napis, true/false) — nie niesie danych punktu. uszkodzone(lista) podaje ich indeksy, bezUszkodzonych(lista)
  * — nową listę bez nich (te same obiekty, ta sama kolejność), komunikatyUszkodzonych(n) — teksty dla lekarza.
  * Pozostałe funkcje działają przy takim wpisie bez zmian: monitor wstrzymuje zapis, zanim sięgnie po reguły.
  * wersja: 1 — rata 1 (null pomijany, bez opcje.blad); 2 — rata 2 i 3; 3 — rata 4 (dochodzą funkcje uszkodzonych
- * wpisów, reszta bez zmian). Monitor korzysta tylko z wersji, którą zna; przy innej (np. plik z pamięci przeglądarki
- * przy niepełnej aktualizacji) odmawia zapisu.
+ * wpisów, reszta bez zmian); 4 — P-GH-WZNOWIENIE część 2 (reguła kursów w sprawdzRodzaj z wiekiem punktu opcje.wiekM,
+ * dostepneRodzaje z kluczem continue i wariantem wsteczny, wiekMiesZPol, gotowe({kursy:true})). Monitor i panel
+ * wiersza korzystają tylko z wersji, którą znają; przy innej (np. plik z pamięci przeglądarki przy niepełnej
+ * aktualizacji) odmawiają zapisu.
+ *
+ * P-GH-WZNOWIENIE część 2 (decyzje właściciela 2026-11-20, W2): regułę „najwyżej jedno Włączenie i jedno Zakończenie
+ * w całej liście” zastępuje reguła KURSÓW. Kursy liczy VildaTrajectoryAnalysis.ghKursy (vilda_trajectory_analysis.js,
+ * ładowany na docpro.html i index.html obok tego pliku): punkty wg wieku, przy równym wieku Kontynuacja → Zakończenie →
+ * Włączenie, kurs zamyka Zakończenie. Sprawdzenie symuluje listę bez edytowanego punktu (pomin) z nowym punktem
+ * w wieku opcje.wiekM: Włączenie — pierwszy punkt kursu (nie później niż jego pierwszy punkt) i jedyne w kursie;
+ * Zakończenie — po ostatnim punkcie kursu, jedyne w kursie, kurs ma wcześniejszy punkt; Kontynuacja — nie w kursie
+ * otwartym po Zakończeniu bez (wcześniejszego albo z tego samego miesiąca) Włączenia. Bez modułu kursów odmowa
+ * z prośbą o odświeżenie strony (bez powrotu do dawnej reguły). Rejestr: docs/clinical/ALGORITHMS.md,
+ * P-GH-WZNOWIENIE, część 2.
  * Rejestr: docs/clinical/ALGORITHMS.md, P-GH-PUNKTY-API.
  */
 (function (w) {
@@ -47,13 +61,19 @@
   var KLUCZE = Object.freeze(['id', 'type', 'ageYears', 'ageMonths', 'weight', 'height', 'boneAge', 'dose', 'doseUnit',
     'drug', 'program', 'igf1', 'igf1Unit', 'igf1DaysSinceDose', 'doseAbs']);
   var RODZAJE = Object.freeze(['start', 'continue', 'end']);
-  // Teksty dosłownie z monitora sprzed API (nakładka #ghInfoOverlay, nagłówek „Informacja”); od raty 3 jedyna kopia.
+  // Teksty dla lekarza (nakładka #ghInfoOverlay, nagłówek „Informacja”); od raty 3 jedyna kopia. wartosci, programKarta
+  // i programWsteczny dosłownie z monitora sprzed API; teksty rodzaju punktu od P-GH-WZNOWIENIE część 2 (reguła kursów).
   var KOMUNIKATY = Object.freeze({
-    drugieWlaczenie: 'Punkt „Włączenie leczenia” został już dodany.',
-    drugieZakonczenie: 'Punkt „Zakończenie leczenia” został już dodany.',
+    drugieWlaczenie: 'Ten kurs leczenia ma już punkt „Włączenie leczenia”. Nowe Włączenie można dodać po „Zakończeniu leczenia”.',
+    drugieZakonczenie: 'Ten kurs leczenia ma już punkt „Zakończenie leczenia”.',
+    wlaczeniePozniej: '„Włączenie leczenia” nie może być późniejsze niż pierwszy punkt tego kursu leczenia.',
+    zakonczenieNieOstatnie: '„Zakończenie leczenia” musi być ostatnim punktem kursu.',
+    zakonczenieBezKursu: '„Zakończenie leczenia” zamyka kurs leczenia — musi je poprzedzać co najmniej jeden punkt tego kursu.',
+    kontynuacjaPoZakonczeniu: 'Po „Zakończeniu leczenia” dodaj najpierw „Włączenie leczenia” (wznowienie leczenia).',
     wartosci: 'Upewnij się, że wprowadziłeś poprawne, dodatnie dane: wiek, wagę, wzrost oraz dawkę.',
     programKarta: 'Wybierz program i preparat w karcie „Leczenie hormonem wzrostu / IGF-1”.',
-    programWsteczny: 'Wybierz program i preparat w formularzu wstecznego punktu.'
+    programWsteczny: 'Wybierz program i preparat w formularzu wstecznego punktu.',
+    odswiez: 'Nie zapisano: aplikacja nie wczytała się w całości. Odśwież stronę i spróbuj ponownie.'
   });
 
   // ---- Funkcje czyste --------------------------------------------------------------------------------------------
@@ -91,27 +111,122 @@
     return (isFinite(lata) ? lata * 12 : NaN) + (isFinite(miesiace) ? miesiace : 0);
   }
 
-  // Najwyżej jedno Włączenie i jedno Zakończenie. opcje.pomin (obecny klucz, także null) wyklucza punkt po String(id)
-  // — jak edycja w monitorze (String(c.id) !== String(x)); bez klucza nie ma wykluczeń (punkt wsteczny).
+  // Wiek punktu w pełnych miesiącach z pól formularza tak, jak zapisze go polaZPodawanej (parseFloat, puste miesiące
+  // → 0, normalizujWiek, potem lata × 12 + miesiące) — wiek nowego punktu dla sprawdzRodzaj (opcje.wiekM). Lata
+  // nieliczbowe → NaN.
+  function wiekMiesZPol(lata, miesiace) {
+    var wiek = normalizujWiek(liczba(lata), liczba(miesiace) || 0);
+    return wiekLacznieMies(wiek.lata, wiek.miesiace);
+  }
+
+  // Reguła kursów (P-GH-WZNOWIENIE część 2): VildaTrajectoryAnalysis.ghKursy, czytana przy wywołaniu; brak → null.
+  function regulaKursow() {
+    var G = w.VildaTrajectoryAnalysis;
+    return G && typeof G.ghKursy === 'function' ? G : null;
+  }
+  // Wpisy listy będące obiektami (wpis niebędący obiektem nie jest punktem — jak w ghKursy).
+  function punktyListy(lista) {
+    return Array.isArray(lista) ? lista.filter(function (c) { return Object(c) === c; }) : [];
+  }
+  // Wiek punktu w pełnych miesiącach według reguły kursów: kurs złożony z samego punktu zaczyna się w jego wieku.
+  function wiekKursowy(G, p) {
+    var k = G.ghKursy([p]);
+    return k.length ? k[0].a : null;
+  }
+  function odmowa(kod, komunikat) {
+    return { ok: false, kod: kod, komunikat: komunikat };
+  }
+
+  // Rodzaj nowego (albo edytowanego) punktu według reguły kursów. opcje.wiekM — wiek punktu w pełnych miesiącach
+  // (wiekMiesZPol); bez wieku > 0 odmowa „wartosci” (ten sam tekst, którym odmówi sprawdzWartosci). opcje.pomin (obecny
+  // klucz, także null) wyklucza punkt po String(id) — edycja w monitorze (String(c.id) !== String(x)); bez klucza nie
+  // ma wykluczeń (punkt wsteczny, panel wiersza). Symulacja: lista bez wykluczonego punktu + nowy punkt N → ghKursy;
+  // K — kurs, do którego trafia N.
+  //   Włączenie: K bez innego Włączenia, a N nie później niż pierwszy punkt K (pierwszy punkt w ogóle, wznowienie po
+  //     Zakończeniu, dopisanie brakującego Włączenia na początku kursu bez Włączenia).
+  //   Zakończenie: N po ostatnim punkcie kursu, który zamyka (kurs poprzedniego punktu w liście bez N), ten kurs nie ma
+  //     Zakończenia i N ma przed sobą co najmniej jeden punkt.
+  //   Kontynuacja: odmowa, gdy K jest kursem po Zakończeniu (numer > 1) bez Włączenia wcześniejszego niż N albo z tego
+  //     samego miesiąca (W2: Kontynuacja po Zakończeniu bez nowego Włączenia, także w przerwie przed wznowieniem).
+  // Inny rodzaj niż start/continue/end — zgoda (jak dotąd). Bez reguły kursów — odmowa z prośbą o odświeżenie strony.
   function sprawdzRodzaj(lista, typ, opcje) {
-    var L = Array.isArray(lista) ? lista : [];
-    var pomija = !!opcje && Object.prototype.hasOwnProperty.call(opcje, 'pomin');
-    var pomin = pomija ? String(opcje.pomin) : null;
-    function jest(t) {
-      return L.some(function (c) { return c.type === t && (!pomija || String(c.id) !== pomin); });
+    if (typ !== 'start' && typ !== 'continue' && typ !== 'end') return { ok: true };
+    var G = regulaKursow();
+    if (!G) return odmowa('brak-modulu', KOMUNIKATY.odswiez);
+    var o = opcje || {};
+    var wiekM = typeof o.wiekM === 'number' ? Math.round(o.wiekM) : NaN;
+    if (!(wiekM > 0)) return odmowa('wartosci', KOMUNIKATY.wartosci);
+    var pomija = Object.prototype.hasOwnProperty.call(o, 'pomin');
+    var pomin = pomija ? String(o.pomin) : null;
+    var reszta = punktyListy(lista).filter(function (c) { return !pomija || String(c.id) !== pomin; });
+    var N = { type: typ, ageYears: 0, ageMonths: wiekM };
+    var kursy = G.ghKursy(reszta.concat([N]));
+    var kolejnosc = [];
+    var K = null;
+    kursy.forEach(function (k) {
+      k.punkty.forEach(function (p) { kolejnosc.push(p); });
+      if (k.punkty.indexOf(N) >= 0) K = k;
+    });
+    if (!K) return odmowa('wartosci', KOMUNIKATY.wartosci);
+    var inne = K.punkty.filter(function (p) { return p !== N; });
+    var ma = function (t) { return inne.some(function (p) { return p.type === t; }); };
+
+    if (typ === 'start') {
+      if (ma('start')) return odmowa('drugie-wlaczenie', KOMUNIKATY.drugieWlaczenie);
+      if (K.a !== wiekM) return odmowa('wlaczenie-pozniej', KOMUNIKATY.wlaczeniePozniej);
+      return { ok: true };
     }
-    if (typ === 'start' && jest('start')) return { ok: false, kod: 'drugie-wlaczenie', komunikat: KOMUNIKATY.drugieWlaczenie };
-    if (typ === 'end' && jest('end')) return { ok: false, kod: 'drugie-zakonczenie', komunikat: KOMUNIKATY.drugieZakonczenie };
+    if (typ === 'continue') {
+      if (K.numer > 1) {
+        var wl = K.wlaczenie;
+        var wczesniej = !!wl && (K.punkty.indexOf(wl) < K.punkty.indexOf(N) || wiekKursowy(G, wl) === wiekM);
+        if (!wczesniej) return odmowa('kontynuacja-po-zakonczeniu', KOMUNIKATY.kontynuacjaPoZakonczeniu);
+      }
+      return { ok: true };
+    }
+    var i = kolejnosc.indexOf(N);
+    var poprzedni = i > 0 ? kolejnosc[i - 1] : null;
+    var nastepny = i + 1 < kolejnosc.length ? kolejnosc[i + 1] : null;
+    if (!poprzedni) return odmowa('zakonczenie-bez-kursu', KOMUNIKATY.zakonczenieBezKursu);
+    var K0 = G.ghKursy(reszta).filter(function (k) { return k.punkty.indexOf(poprzedni) >= 0; })[0];
+    if (!K0) return odmowa('zakonczenie-bez-kursu', KOMUNIKATY.zakonczenieBezKursu);
+    if (K0.b != null) return odmowa('drugie-zakonczenie', KOMUNIKATY.drugieZakonczenie);
+    if (nastepny && K0.punkty.indexOf(nastepny) >= 0) return odmowa('zakonczenie-nie-ostatnie', KOMUNIKATY.zakonczenieNieOstatnie);
     return { ok: true };
   }
 
-  // Rodzaje dostępne w formularzu wstecznym (= ghRetroSyncTypeOptions): start/end — czy można jeszcze dodać,
-  // domyslny — „continue”, gdy Włączenie już jest, inaczej „start”.
-  function dostepneRodzaje(lista) {
-    var L = Array.isArray(lista) ? lista : [];
-    var maStart = L.some(function (s) { return s && s.type === 'start'; });
-    var maKoniec = L.some(function (s) { return s && s.type === 'end'; });
-    return { start: !maStart, end: !maKoniec, domyslny: maStart ? 'continue' : 'start' };
+  // Rodzaje do zaproponowania w formularzu (P-GH-WZNOWIENIE część 2; ostateczna decyzja i tak w sprawdzRodzaj z wiekiem).
+  // Bez opcji — dla punktu po ostatnim istniejącym, z ostatniego kursu ghKursy:
+  //   brak punktów → {start, continue, domyslny start}; ostatni kurs zamknięty → {start, domyslny start};
+  //   ostatni kurs otwarty z Włączeniem → {continue, end, domyslny continue};
+  //   ostatni kurs otwarty bez Włączenia → {start, continue, end, domyslny start} (jak dotąd lista bez Włączenia).
+  // opcje.wsteczny (formularz wstecznego punktu monitora — punkt w dowolnym wieku): rodzaje możliwe w JAKIMŚ wieku —
+  //   start, gdy lista jest pusta, ostatni kurs zamknięty albo któryś kurs nie ma Włączenia; continue zawsze; end, gdy
+  //   ostatni kurs jest otwarty; domyslny continue, gdy ostatni kurs ma Włączenie, inaczej start (przy jednym kursie
+  //   jak dawny ghRetroSyncTypeOptions: continue, gdy jest Włączenie).
+  // Bez reguły kursów: wszystkie rodzaje i brakModulu: true (zapis i tak odmówi z prośbą o odświeżenie strony).
+  function dostepneRodzaje(lista, opcje) {
+    var L = punktyListy(lista);
+    var G = regulaKursow();
+    if (!G) {
+      var maStart = L.some(function (s) { return s.type === 'start'; });
+      return { start: true, continue: true, end: true, domyslny: maStart ? 'continue' : 'start', brakModulu: true };
+    }
+    var kursy = G.ghKursy(L);
+    if (!kursy.length) return { start: true, continue: true, end: false, domyslny: 'start' };
+    var ost = kursy[kursy.length - 1];
+    var zamkniety = ost.b != null;
+    if (opcje && opcje.wsteczny) {
+      return {
+        start: zamkniety || kursy.some(function (k) { return !k.wlaczenie; }),
+        continue: true,
+        end: !zamkniety,
+        domyslny: ost.wlaczenie ? 'continue' : 'start'
+      };
+    }
+    if (zamkniety) return { start: true, continue: false, end: false, domyslny: 'start' };
+    if (ost.wlaczenie) return { start: false, continue: true, end: true, domyslny: 'continue' };
+    return { start: true, continue: true, end: true, domyslny: 'start' };
   }
 
   // Warunki i kolejność jak w monitorze: najpierw liczby (wiek > 0, masa, wzrost i dawka dodatnie), potem program
@@ -368,23 +483,26 @@
     return wynik;
   }
 
-  // Czy zależności są dostępne: braki blokują zapis przez API; kanał i tabId tylko informacyjnie.
+  // Czy zależności są dostępne: braki blokują zapis przez API; kanał i tabId tylko informacyjnie. opcje.kursy
+  // (P-GH-WZNOWIENIE część 2) — także reguła kursów VildaTrajectoryAnalysis.ghKursy (bez niej sprawdzRodzaj odmawia).
   function gotowe(opcje) {
     var braki = [];
     var P = persistence();
     if (!P || typeof P.readModuleJSON !== 'function') braki.push('VildaPersistence.readModuleJSON');
     if (!P || typeof P.writeModuleJSON !== 'function') braki.push('VildaPersistence.writeModuleJSON');
     if (opcje && opcje.dawka && !modulDawki(opcje)) braki.push('VildaGhDawka.preparat');
+    if (opcje && opcje.kursy && !regulaKursow()) braki.push('VildaTrajectoryAnalysis.ghKursy');
     return { ok: braki.length === 0, braki: braki, kanal: typeof w.BroadcastChannel === 'function', tabId: !!tabId() };
   }
 
   w.VildaGhPunkty = Object.freeze({
-    wersja: 3,
+    wersja: 4,
     KLUCZE: KLUCZE,
     RODZAJE: RODZAJE,
     KOMUNIKATY: KOMUNIKATY,
     normalizujWiek: normalizujWiek,
     wiekLacznieMies: wiekLacznieMies,
+    wiekMiesZPol: wiekMiesZPol,
     sprawdzRodzaj: sprawdzRodzaj,
     dostepneRodzaje: dostepneRodzaje,
     sprawdzWartosci: sprawdzWartosci,

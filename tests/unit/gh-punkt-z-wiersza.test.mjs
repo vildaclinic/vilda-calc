@@ -7,8 +7,10 @@ import { loadBrowserScript } from '../support/load-browser-script.mjs';
 // „wejście → oczekiwany wynik” liczą dawkę tak jak formularz wsteczny monitora DocPro. Dane wyłącznie FIKCYJNE.
 
 const w = { document: { readyState: 'complete', getElementById: () => null, addEventListener: () => {} } };
+// P-GH-WZNOWIENIE, część 2: reguła rodzaju punktu liczy kursy z VildaTrajectoryAnalysis.ghKursy (na index.html ładowany
+// obok vilda_gh_punkty.js), więc okno testu ma też moduł trajektorii.
 for (const plik of ['vilda_gh_opakowania_dane.js', 'vilda_gh_dawka_dane.js', 'vilda_gh_dawka.js', 'vilda_gh_punkty.js',
-  'vilda_gh_programy_dane.js', 'vilda_gh_punkt_z_wiersza.js']) loadBrowserScript(plik, w);
+  'vilda_trajectory_analysis.js', 'vilda_gh_programy_dane.js', 'vilda_gh_punkt_z_wiersza.js']) loadBrowserScript(plik, w);
 const M = w.VildaGhPunktZWiersza;
 const A = w.VildaGhPunkty;
 const E = w.VildaGhDawka;
@@ -139,8 +141,10 @@ describe('przygotujPunkt — reguły punktu wstecznego z VildaGhPunkty (wejście
     expect(w1.punkt.boneAge).toBe(8.5);
   });
 
+  // P-GH-WZNOWIENIE, część 2: odmowa drugiego Włączenia w kursie tekstem reguły kursów (dotąd „Punkt „Włączenie
+  // leczenia” został już dodany.”).
   it.each([
-    ['drugie Włączenie', { typ: 'start' }, 'Punkt „Włączenie leczenia” został już dodany.'],
+    ['drugie Włączenie', { typ: 'start' }, 'Ten kurs leczenia ma już punkt „Włączenie leczenia”. Nowe Włączenie można dodać po „Zakończeniu leczenia”.'],
     ['pusta dawka', { podawana: '' }, 'Upewnij się, że wprowadziłeś poprawne, dodatnie dane: wiek, wagę, wzrost oraz dawkę.'],
     ['dawka 0', { podawana: '0' }, 'Upewnij się, że wprowadziłeś poprawne, dodatnie dane: wiek, wagę, wzrost oraz dawkę.'],
     ['pusty preparat', { preparat: '' }, 'Wybierz program i preparat w formularzu wstecznego punktu.'],
@@ -148,9 +152,9 @@ describe('przygotujPunkt — reguły punktu wstecznego z VildaGhPunkty (wejście
     expect(M.przygotujPunkt(A, L, pomiar, wybor(z))).toEqual({ ok: false, komunikat });
   });
 
-  it('drugie Zakończenie — odmowa; pierwsze Zakończenie — punkt', () => {
+  it('drugie Zakończenie — odmowa (tekst reguły kursów, dotąd „Punkt „Zakończenie leczenia” został już dodany.”); pierwsze Zakończenie — punkt', () => {
     const koniec = punkt('fikc-9', 'end', { ageYears: 12 });
-    expect(M.przygotujPunkt(A, [...L, koniec], pomiar, wybor({ typ: 'end' }))).toEqual({ ok: false, komunikat: 'Punkt „Zakończenie leczenia” został już dodany.' });
+    expect(M.przygotujPunkt(A, [...L, koniec], pomiar, wybor({ typ: 'end' }))).toEqual({ ok: false, komunikat: 'Ten kurs leczenia ma już punkt „Zakończenie leczenia”.' });
     expect(M.przygotujPunkt(A, L, pomiar, wybor({ typ: 'end' })).punkt.type).toBe('end');
   });
 

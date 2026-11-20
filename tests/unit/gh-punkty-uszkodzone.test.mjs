@@ -106,10 +106,12 @@ describe('P-GH-PUNKTY-USZKODZONE: monitor przy uszkodzonej liście startuje, a d
 
 // Czynności lekarza: przygotowanie (przed zapisem), zapis, ponowienie po naprawie. `formularz` — który formularz ma
 // zostać otwarty po odmowie.
+// Włączenie z karty w wieku 9 l. 6 mies. — przed Kontynuacją 10 l. 0 mies.: od P-GH-WZNOWIENIE, część 2 reguła kursów
+// przyjmuje Włączenie nie później niż pierwszy punkt kursu (dotąd wiek wizyty z karty, 10 l. 3 mies., też przechodził).
 const CZYNNOSCI = [
   ...['start', 'continue', 'end'].map((typ) => ({
     nazwa: `karta: ${typ}`, lista: typ === 'start' ? [null, KONTYNUACJA] : [WLACZENIE, null, KONTYNUACJA],
-    zapis: (a) => a.dodajZKarty(typ), formularz: null,
+    zapis: (a) => a.dodajZKarty(typ, typ === 'start' ? { age: '9', ageMonths: '6' } : {}), formularz: null,
   })),
   { nazwa: 'edycja punktu z listy', lista: [WLACZENIE, KONTYNUACJA, null],
     przed: (a) => a.edytuj(KONTYNUACJA.id, { ghEditHeight: '139', ghEditWeight: '36.4' }),

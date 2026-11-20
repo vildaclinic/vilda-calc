@@ -442,14 +442,16 @@ describe('P-GH-WZNOWIENIE — podsumowanie i „Dane analityczne” GH od bież�
     }
   });
 
-  it('GR2 (W2): Kontynuacja po Zakończeniu bez Włączenia — „aktywne”, bez czasu, przyrostu i ΔhSDS, informacja o braku Włączenia', () => {
+  // P-GH-WZNOWIENIE, część 2: ramka W2 prosi o dopisanie Włączenia w DocPro (monitor przyjmuje już Włączenie po
+  // Zakończeniu); dotąd (część 1) tylko informowała, że kurs nie ma Włączenia.
+  it('GR2 (W2): Kontynuacja po Zakończeniu bez Włączenia — „aktywne”, bez czasu, przyrostu i ΔhSDS, prośba o dopisanie Włączenia w DocPro', () => {
     const k = zbuduj({ plec: 'M', ghTherapyPoints: GR2 });
     expect(znaczniki(k)).toEqual(['aktywne', 'kurs 2 z 2']);
     expect(k.pole('Włączenie')).toBe('brak punktu');
     expect(k.pole('Punkty kontrolne')).toBe('1 w kursie (3 łącznie)');
     expect(informacje(k)).toEqual(['Kontynuacja po Zakończeniu bez nowego Włączenia (Zakończenie w wieku 9 l. 0 mies., pierwszy punkt '
-      + 'kursu: w wieku 10 l. 0 mies.). Czas leczenia, przyrost i ΔhSDS od wznowienia liczymy od punktu „Włączenie leczenia”, '
-      + 'którego ten kurs nie ma.']);
+      + 'kursu: w wieku 10 l. 0 mies.). Dopisz punkt „Włączenie leczenia” w DocPro (monitor terapii), by liczyć czas leczenia, '
+      + 'przyrost i ΔhSDS od wznowienia.']);
     expect(k.kafel('Wzrost w 1. punkcie').v).toBe('130 cm');
     expect(k.kafel('Przyrost od Włączenia')).toEqual({ v: '—', sub: 'brak Włączenia po Zakończeniu' });
     expect(k.kafel('Odpowiedź (ΔhSDS)')).toEqual({ v: '—', sub: 'brak Włączenia po Zakończeniu' });
