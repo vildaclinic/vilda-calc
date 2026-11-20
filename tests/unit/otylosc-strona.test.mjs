@@ -270,9 +270,9 @@ describe('źródła łatek w artefaktach zminifikowanych (temat D)', () => {
   });
 });
 
-describe('vilda_adv_dziennik.js — bloki „pomiar od pacjenta” w „Poprzednich pomiarach” (czyste funkcje)', () => {
+describe('VildaAdvDziennik (vilda_cykle_leczenia.js) — bloki „pomiar od pacjenta” w „Poprzednich pomiarach” (czyste funkcje)', () => {
   const okno = { document: { readyState: 'complete', getElementById: () => null, addEventListener() {} } };
-  const I = loadBrowserScript('vilda_adv_dziennik.js', okno).VildaAdvDziennik.__internals;
+  const I = loadBrowserScript('vilda_cykle_leczenia.js', okno).VildaAdvDziennik.__internals;
 
   it('wiek wiersza jak collectAdvancedMeasurements; opis wieku; miejsce bloku między wierszami', () => {
     expect(I.wiekMies('13', '7')).toBe(163);

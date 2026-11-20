@@ -236,7 +236,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 .adv-dz-field {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-4px);
   min-width: 0;
   font-size: .95rem;
 }

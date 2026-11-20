@@ -813,7 +813,7 @@
  },
  "inline_index_00.css": {
   "v": 4,
-  "sha256": "4eb81f3b2a2fe8b403a5ba92e43e2b85be0063df061588d373aa1fc842552099"
+  "sha256": "c679afb42b6553f9bd870cddaf4f8b5ab419e3d3a3cf5f601d3a5b9834fe748b"
  },
  "inline_index_00.js": {
   "v": 1,
@@ -1119,13 +1119,9 @@
   "v": 1,
   "sha256": "7b316629332c6d99f9676fe0b0f779507d3eaab326ac671361cd68f4646f4fa9"
  },
- "vilda_adv_dziennik.js": {
-  "v": 1,
-  "sha256": "9392ed2d298a64edd71213f8a0c5ba337dc6723dfa942eca9511cd237421cfc3"
- },
  "vilda_adv_history_collapse.js": {
   "v": 3,
-  "sha256": "049ffb8a20ce5af9a2d50e59fcdbed1665f8b4880e2e1caffeabb041d21579ad"
+  "sha256": "41b71165f880cf5a5810da5629a86a6aef5b77471306e3e0719ef5073b5595c4"
  },
  "vilda_advanced_growth.js": {
   "v": 83,
@@ -1273,7 +1269,7 @@
  },
  "vilda_centile_live_panel.css": {
   "v": 8,
-  "sha256": "f043f33b0141e3265bf2b652ebb6451366057c503e283ccb3bbfe2e42746d906"
+  "sha256": "ce9eafae81872430d9d6703a52bd3099b0caa6b7ea73a3d6654238cbf61e5787"
  },
  "vilda_centile_live_panel.js": {
   "v": 9,
@@ -1317,7 +1313,7 @@
  },
  "vilda_cykle_leczenia.js": {
   "v": 12,
-  "sha256": "dce64bd071dd82788e85566d46bdd571e465c182806462095441980e47f1127d"
+  "sha256": "5e2b7eddd77403afa58dcf5a340b55d4550807c1a88c14f545d021e7cbd1edcd"
  },
  "vilda_data_import_export.js": {
   "v": 125,
@@ -1881,7 +1877,7 @@
  },
  "vilda_professional_summary.css": {
   "v": 4,
-  "sha256": "1bd40db1a11cb74c6411fe5e66db7245777dd9995467a04e3e95c788fcdd943d"
+  "sha256": "94f2203c73893b7d70fd63171d10120480844cba2ae85240c2ff8e90875dfda6"
  },
  "vilda_professional_summary.js": {
   "v": 3,

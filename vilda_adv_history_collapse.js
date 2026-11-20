@@ -368,7 +368,7 @@
   }
 
   /** P-OTYLOSC-STRONA (temat D): bloki pomiarów z dziennika leczenia, które między wiersze wstawia
-   *  vilda_adv_dziennik.js. Ten moduł ich nie tworzy ani nie przestawia — tylko liczy do nagłówka
+   *  VildaAdvDziennik (vilda_cykle_leczenia.js). Ten moduł ich nie tworzy ani nie przestawia — tylko liczy do nagłówka
    *  („6 pomiarów”, „3 od pacjenta”); zwinięta lista chowa je regułą CSS kontenera. */
   function blokiDziennika(lista) {
     if (!lista) return [];

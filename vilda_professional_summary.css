@@ -116,8 +116,8 @@
 #currentSummaryCard .professional-summary-reported {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-top: 4px;
+  gap: var(--space-6px);
+  margin-top: var(--space-4px);
   color: #8a4b00;
   font-size: .86em;
   font-weight: 500;

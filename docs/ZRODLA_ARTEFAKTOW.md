@@ -2252,7 +2252,7 @@ P-OTYLOSC-SIATKI po `Ob_dzPowiadom`: `Ob_dzSiatki`, `Ob_zrMetryki`, `Ob_dzMaPacj
 **Granice.** `H` poza `we()` zostaje listą wizyt: kafelek tempa w „Status” (`hvSdsKafelek`) i PDF siatek bez zmian.
 Sejf, dziennik i zapis bez zmian. Wersje `?v=`, precache i `SW_VERSION` ustawił `npm run podbij-wersje`.
 
-## Łatka P-OTYLOSC-STRONA — pomiary od pacjenta w całej aplikacji (temat D; `vilda_cykle_leczenia.js` 11 → 12, `vilda_centile_live_data.js` 8 → 9, `vilda_centile_live_render.js` 5 → 6, `vilda_centile_live_view.js` 5 → 6, `vilda_centile_live_colors.js` 2 → 3, `vilda_centile_live_preview.js` 3 → 4, `vilda_centile_live_panel.css` 7 → 8, `vilda_professional_summary.js` 2 → 3, `vilda_professional_summary.css` 3 → 4, `vilda_adv_history_collapse.js` 2 → 3, nowy `vilda_adv_dziennik.js` 1, `vilda_trajectory_analysis.js` 47 → 48, `vilda_advanced_growth.js` 82 → 83, `vilda_summary_cards.js` 65 → 66, `inline_index_04.js` 29 → 30, `inline_index_00.css` 3 → 4, `style.css` 96 → 97, `index.html`, 2026-11-20, makieta zaakceptowana przez właściciela)
+## Łatka P-OTYLOSC-STRONA — pomiary od pacjenta w całej aplikacji (temat D; `vilda_cykle_leczenia.js` 11 → 12, `vilda_centile_live_data.js` 8 → 9, `vilda_centile_live_render.js` 5 → 6, `vilda_centile_live_view.js` 5 → 6, `vilda_centile_live_colors.js` 2 → 3, `vilda_centile_live_preview.js` 3 → 4, `vilda_centile_live_panel.css` 7 → 8, `vilda_professional_summary.js` 2 → 3, `vilda_professional_summary.css` 3 → 4, `vilda_adv_history_collapse.js` 2 → 3, `vilda_trajectory_analysis.js` 47 → 48, `vilda_advanced_growth.js` 82 → 83, `vilda_summary_cards.js` 65 → 66, `inline_index_04.js` 29 → 30, `inline_index_00.css` 3 → 4, `style.css` 96 → 97, `index.html`, 2026-11-20, makieta zaakceptowana przez właściciela)
 
 Opis działania, przypadki i wpływ kliniczny: `docs/clinical/ALGORITHMS.md`, wpis P-OTYLOSC-STRONA. Zmiany wprost
 w artefaktach; nic nie przebudowano ani nie minifikowano ponownie.
@@ -2270,7 +2270,9 @@ Czytelne źródła:
   „◇ od pacjenta · wiek”, „Waga 74,6 kg”, data; kursor i strzałki przeskakują także na pomiary z dziennika;
 - `vilda_professional_summary.js` — `laterPatientWeight`, `reportedWeightNode` (linijka w wierszu „Waga”), odświeżenie
   karty po zmianie dziennika;
-- `vilda_adv_dziennik.js` (nowy, czytelny) — bloki tylko do odczytu `.adv-dz-row` w `#advMeasurements`;
+- `vilda_cykle_leczenia.js` — trzecia część pliku, `window.VildaAdvDziennik`: bloki tylko do odczytu `.adv-dz-row`
+  w `#advMeasurements` (tylko lista z nagłówkiem `#advHistoryToggle`, strona główna). Nie osobny plik: nowy wpis
+  precache przekroczyłby budżet instalacji SW (600 żądań, `tests/unit/sw-precache-stron.test.mjs`);
   `vilda_adv_history_collapse.js` — `blokiDziennika` (liczy bloki do nagłówka, ich nie tworzy);
 - `vilda_trajectory_analysis.js` — `zDziennikiemStrony`, `analyze` przy `input.dziennikStrony`.
 
@@ -2297,8 +2299,7 @@ Wstawki w plikach zminifikowanych:
 ```
 
 `index.html`: `<span id="advHistoryPatient" class="porownanie-chip adv-history-patient" hidden>` obok licznika
-„Poprzednich pomiarów” i `<script defer src="vilda_adv_dziennik.js?v=1">` po `vilda_adv_history_collapse.js`; wpis
-precache `'/vilda_adv_dziennik.js?v=1'` dopisany ręcznie. CSS: `vilda_centile_live_panel.css` (klucz kropki i rombu,
+„Poprzednich pomiarów”. CSS: `vilda_centile_live_panel.css` (klucz kropki i rombu,
 data w dymku), `vilda_professional_summary.css` (`.professional-summary-reported`), `inline_index_00.css` (`.adv-dz-*`,
 `.adv-history-patient`, `#advResults .vtap-pac-l` schowany jak na makiecie), `style.css` (`.porownanie-chip--pacjent`,
 `.vilda-romb-pacjent`, `.pt-s.pt-pacjent`).

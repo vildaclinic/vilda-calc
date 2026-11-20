@@ -4963,7 +4963,6 @@ const OPTIONAL_ASSETS = [
   '/vilda_adv_history_collapse.js?v=1',
   '/vilda_adv_history_collapse.js?v=2',
   '/vilda_adv_history_collapse.js?v=3',
-  '/vilda_adv_dziennik.js?v=1',
   '/vilda_spojnosc_zapisow.js?v=1',
   '/vilda_spojnosc_zapisow.js?v=2',
   '/vilda_spojnosc_zapisow.js?v=3',

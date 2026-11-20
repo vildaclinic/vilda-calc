@@ -44358,7 +44358,7 @@ w historii pomiarów (to pomiary z gabinetu). Progi i reguły werdyktów bez zmi
   i bez dziennika (jak dotąd).
 - e2e `tests/e2e/otylosc-siatki.spec.mjs` SI-1…SI-5.
 
-## Pomiary od pacjenta w całej aplikacji (P-OTYLOSC-STRONA, SW 1.1.563, `vilda_cykle_leczenia.js` 12, `vilda_centile_live_*`, `vilda_professional_summary.js` 3, `vilda_adv_dziennik.js` 1, `vilda_trajectory_analysis.js` 48, `vilda_summary_cards.js` 66, `inline_index_04.js` 30, 2026-11-20)
+## Pomiary od pacjenta w całej aplikacji (P-OTYLOSC-STRONA, SW 1.1.563, `vilda_cykle_leczenia.js` 12, `vilda_centile_live_*`, `vilda_professional_summary.js` 3, `vilda_trajectory_analysis.js` 48, `vilda_summary_cards.js` 66, `inline_index_04.js` 30, 2026-11-20)
 
 **Decyzje właściciela.** Temat D projektu „Leczenie otyłości — wpisy poza wizytą”: po Karcie pacjenta (P-OTYLOSC-SIATKI)
 pomiary od pacjenta mają być w całej aplikacji — w siatkach ze strony głównej i w karcie „Podsumowanie wyników”
@@ -44423,7 +44423,7 @@ i zmiana w „Porównaniu” liczą się jak dotąd z pomiarów wizyt. Progi bez
 **Testy.** Dane wyłącznie fikcyjne.
 - `tests/unit/otylosc-strona.test.mjs` (14): `pomiaryStrony` na prawdziwym sejfie (bez dziennika, inny pacjent,
   `doWiekuMies`, wpis z gabinetu), `pomiaryOdcinka` i opisy, `analyze` z flagą karty zaawansowanej i bez, podgląd
-  siatki z prawdziwymi producentami (`reported`, `probe`), źródła łatek, czyste funkcje `vilda_adv_dziennik.js`.
+  siatki z prawdziwymi producentami (`reported`, `probe`), źródła łatek, czyste funkcje `VildaAdvDziennik`.
 - e2e `tests/e2e/otylosc-strona.spec.mjs` ST-1…ST-5.
 
 **Wdrożenie.** Od razu przy wydaniu; sejf bez zmian. **Cofnięcie** = rewert PR: siatki i analiza znów tylko z wizyt.
