@@ -120,11 +120,6 @@
       "count": 1
     }
   },
-  "respiratory_module.js": {
-    "no-useless-assignment": {
-      "count": 1
-    }
-  },
   "sga_birth_module.js": {
     "no-useless-assignment": {
       "count": 4

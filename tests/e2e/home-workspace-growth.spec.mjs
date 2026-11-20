@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { createFictionalVault, fictionalPatient, loadPatient, readyForPatient, shellFrame } from '../support/centile-live-fixture.mjs';
+import { orientacja, wygenerujPdf } from '../support/siatka-poziomo.mjs';
 
 test.use({ serviceWorkers: 'block', reducedMotion: 'reduce' });
 test.setTimeout(240_000);
@@ -442,7 +443,9 @@ test('home A2: Generuj siatki shares native generators and keeps annotation/layo
   const before = await snapshot(frame); await show(frame);
   await frame.locator('[data-growth-document="charts"]').click();
   const charts = frame.getByRole('dialog', { name: 'Generuj siatki', exact: true }); await expect(charts).toBeVisible();
-  await expect(charts.locator('[data-chart-native]')).toHaveCount(4);
+  await expect(charts.locator('[data-chart-preset]')).toHaveCount(3);
+  const settings = charts.getByRole('button', { name: 'Ustawienia publikacji i komentarze', exact: true });
+  await settings.click();
   await charts.getByLabel('Układ PDF', { exact: true }).selectOption('landscape');
   await charts.getByLabel('Siatki do publikacji', { exact: true }).check();
   await charts.getByLabel('Komentarz ze strzałką · Bieżący pomiar', { exact: true }).check();
@@ -452,6 +455,7 @@ test('home A2: Generuj siatki shares native generators and keeps annotation/layo
   page.once('dialog', confirmation => confirmation.accept()); await charts.getByRole('button', { name: 'Anuluj', exact: true }).click();
   expect(await snapshot(frame)).toEqual(before);
   await frame.evaluate(() => VildaHomeGrowth.openCharts()); await expect(charts).toBeVisible();
+  await settings.click();
   await charts.getByLabel('Układ PDF', { exact: true }).selectOption('landscape');
   await charts.getByLabel('Siatki do publikacji', { exact: true }).check();
   await charts.getByLabel('Komentarz ze strzałką · Bieżący pomiar', { exact: true }).check();
@@ -471,6 +475,44 @@ test('home A2: Generuj siatki shares native generators and keeps annotation/layo
   await frame.evaluate(() => VildaVault.lock());
   await expect(page.getByRole('heading', { name: 'Kto się loguje?', exact: true })).toBeVisible();
   for (const remaining of page.frames()) await expect(remaining.locator('#vhomeGrowthChartsDialog:visible')).toHaveCount(0);
+});
+
+test('home charts: all three presets create native PDFs without changing the main reference or layout preference', async ({ page }) => {
+  const { frame } = await setup(page);
+  const source = frame.getByRole('combobox', { name: 'Siatki referencyjne', exact: true });
+  await source.selectOption('OLAF');
+  await frame.waitForFunction(() => VildaAdvancedGrowth.advGrowthPredictionsMatchCurrentInput());
+  const preferences = () => frame.evaluate(() => ({
+    layout: VildaCentileLandscape.readLayout(), source: getCentileChartState().source,
+  }));
+  const before = await preferences();
+  for (const [layout, expectedPages] of [['landscape', ['poziom']], ['portrait', ['pion', 'pion']]]) {
+    await frame.evaluate(() => VildaHomeGrowth.openCharts());
+    const chooser = frame.locator('#vhomeGrowthChartsDialog');
+    await chooser.locator(`[data-chart-preset="pal-${layout}"]`).click();
+    await expect(chooser.getByLabel('Układ PDF', { exact: true })).toHaveValue(layout);
+    expect(await preferences()).toEqual(before);
+    const pages = await wygenerujPdf(frame, () => document.querySelector('#vhomeGrowthChartsDialog .vhome-dialog-apply').click());
+    expect(pages.map(orientacja)).toEqual(expectedPages);
+    expect(await preferences()).toEqual(before);
+  }
+  await source.selectOption('PALCZEWSKA');
+  await frame.waitForFunction(() => VildaAdvancedGrowth.advGrowthPredictionsMatchCurrentInput());
+  const beforeOlaf = await preferences();
+  await frame.evaluate(() => {
+    const render = window.buildCentilePageCanvas;
+    window.__renderedChartSources = [];
+    window.buildCentilePageCanvas = function (options) {
+      window.__renderedChartSources.push(options.chartSource);
+      return render(options);
+    };
+    VildaHomeGrowth.openCharts();
+  });
+  await frame.locator('#vhomeGrowthChartsDialog [data-chart-preset="olaf"]').click();
+  const pages = await wygenerujPdf(frame, () => document.querySelector('#vhomeGrowthChartsDialog .vhome-dialog-apply').click());
+  expect(pages.map(orientacja)).toEqual(['pion']);
+  expect(await frame.evaluate(() => window.__renderedChartSources)).toEqual(['OLAF']);
+  expect(await preferences()).toEqual(beforeOlaf);
 });
 
 test('home A2: forecast graphics preserve native published values, clamps, exclusions and complete qualifications', async ({ page }) => {

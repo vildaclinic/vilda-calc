@@ -456,6 +456,28 @@ Publiczny helper nie jest automatycznie równoważnym wejściem renderera.
 Pola szkicu wymagają osłony obejmującej natywne nasłuchy capture i planowanie
 autosave, nie tylko innych identyfikatorów i zatrzymania zdarzeń na polu.
 
+## Etap 7B — pozostałe pomiary i dokumenty
+
+W podglądzie nowej strony głównej rozwijany katalog prowadzi do ośmiu
+modułów. Okna korzystają ze wspólnego rozmiaru, animacji i obsługi klawiszy.
+Pola szkicu są montowane w pustym dokumencie wewnątrz okna. Dzięki temu
+przeglądarka obsługuje edycję bez uruchamiania nasłuchów zapisu formularza
+w dokumencie Start. Wynik korzysta z tego samego modelu i prezentera co
+dotychczasowy moduł. „Zastosuj dane” przekazuje zmiany do właściwego modułu
+po sprawdzeniu konta, pacjenta, wizyty i stanu wyjściowego formularza.
+
+„Generuj siatki” pod podsumowaniem oraz „Dokumenty pacjenta” w menu otwierają
+wspólny wybór PDF OLAF / OLA i dwóch układów Palczewskiej. Wybrana siatka
+i układ dotyczą generowanego pliku. Kreator i publikacja prowadzą do
+dotychczasowych funkcji, a raport wzrastania i pakiet dokumentów korzystają
+z istniejących generatorów PDF.
+
+„Energia posiłków” przyjmuje produkty z katalogu i własne wpisy z etykiety.
+Własny produkt zawiera nazwę, porcję w gramach i energię w kcal na 100 g.
+Opcjonalne pole `foods.custom` zapisuje te wpisy w tej samej sesji i wizycie
+co pozostałe produkty. Odczyt posiłków zapisanych przed dodaniem tego pola
+zachowuje dotychczasowy format i wartości.
+
 ## Informacja do wydania: „To różne dzieci”
 
 Ukrycie grupy podobnych nazwisk jest teraz zapamiętywane osobno dla każdego

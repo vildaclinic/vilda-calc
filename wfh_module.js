@@ -314,46 +314,32 @@
     return res.perc < 3 ? '<3. centyla' : res.perc > 97 ? '>97. centyla' : fmtPl(res.perc, 1) + '. centyl';
   }
 
-  function update() {
-    var box = document.getElementById('wfhResult');
-    if (!box) return;
-    box.className = 'result-box';
-    box.classList.remove('rr-warning', 'rr-danger');
-    var w = parseFloat(document.getElementById('weight') && document.getElementById('weight').value);
-    var h = parseFloat(document.getElementById('height') && document.getElementById('height').value);
-    var sexEl = document.getElementById('sex');
-    var sex = sexEl ? sexEl.value : 'M';
-    var age = typeof getAgeDecimal === 'function' ? getAgeDecimal() : NaN;
-    var aE = document.getElementById('age'), aM = document.getElementById('ageMonths');
-    var ageEmpty = aE && String(aE.value).trim() === '' && (!aM || String(aM.value).trim() === '');
-    var srcRow = document.getElementById('wfhNormsRow');
-    if (srcRow) srcRow.style.display = !ageEmpty && whoAvailable(age) ? '' : 'none';
+  function buildResult(input) {
+    var w = parseFloat(input.weight), h = parseFloat(input.height);
+    var sex = input.sex, age = input.age;
+    var showSource = !input.ageEmpty && whoAvailable(age);
+    var html;
     if (!isFinite(w) || !isFinite(h)) {
-      clearGlobals();
-      setHtml(box, '<p class="circ-placeholder">Uzupełnij masę i wzrost w formularzu, aby zobaczyć wynik.</p>');
-      return;
+      return { html: '<p class="circ-placeholder">Uzupełnij masę i wzrost w formularzu, aby zobaczyć wynik.</p>', showSource: showSource };
     }
-    if (ageEmpty) {
-      clearGlobals();
-      setHtml(box, '<p class="circ-placeholder">Podaj wiek pacjenta, aby ocenić proporcję masy do wysokości (dla dziecka poniżej 1. miesiąca życia wielkość urodzeniową ocenia moduł SGA).</p>');
-      return;
+    if (input.ageEmpty) {
+      return { html: '<p class="circ-placeholder">Podaj wiek pacjenta, aby ocenić proporcję masy do wysokości (dla dziecka poniżej 1. miesiąca życia wielkość urodzeniową ocenia moduł SGA).</p>', showSource: showSource };
     }
-    var res = assess(w, h, sex, age, selectedSource());
+    var res = assess(w, h, sex, age, input.source);
     if (!res.ok) {
-      clearGlobals();
-      setHtml(box, '<p class="circ-placeholder">' + (res.message || 'Nie można ocenić proporcji masy do wysokości.') + '</p>');
-      return;
+      html = '<p class="circ-placeholder">' + (res.message || 'Nie można ocenić proporcji masy do wysokości.') + '</p>';
+      return { html: html, showSource: showSource };
     }
     var who = res.source === 'who';
-    var html = '<p><strong>Proporcja masy do ' + (who ? 'długości' : 'wysokości') + ':</strong> '
+    html = '<p><strong>Proporcja masy do ' + (who ? 'długości' : 'wysokości') + ':</strong> '
       + fmtPl(w, 1) + ' kg przy ' + (who ? 'długości ' : 'wzroście ')
       + fmtPl(h, 1) + ' cm – ' + percText(res);
-    if (isPro() && isFinite(res.zScore)) html += ' (Z‑score = ' + fmtPl(res.zScore, 2) + ')';
+    if (input.pro && isFinite(res.zScore)) html += ' (Z‑score = ' + fmtPl(res.zScore, 2) + ')';
     html += '.</p>';
     var msg = who ? MSG_WHO[res.cls.cat] : MSG[res.cls.cat];
     if (res.cls && res.cls.cat && msg) html += '<div class="circ-definition">' + msg + '</div>';
     // D1: porównanie źródeł w trybie PRO dla dzieci ≤2 lat — rozjazd WHO↔IMiD jest jawny.
-    if (isPro() && whoAvailable(age)) {
+    if (input.pro && showSource) {
       var other = assess(w, h, sex, age, who ? 'imid' : 'who');
       if (other.ok && other.source !== res.source) {
         var otherWho = other.source === 'who';
@@ -364,7 +350,35 @@
       }
     }
     html += res.sourceHtml;
-    setHtml(box, html);
+    return { html: html, showSource: showSource, assessment: res, severity: res.cls && res.cls.severity };
+  }
+
+  function readInput() {
+    var sexEl = document.getElementById('sex');
+    var aE = document.getElementById('age'), aM = document.getElementById('ageMonths');
+    return {
+      weight: document.getElementById('weight')?.value || '',
+      height: document.getElementById('height')?.value || '',
+      sex: sexEl ? sexEl.value : 'M',
+      age: typeof getAgeDecimal === 'function' ? getAgeDecimal() : NaN,
+      ageEmpty: !!(aE && String(aE.value).trim() === '' && (!aM || String(aM.value).trim() === '')),
+      source: selectedSource(),
+      pro: isPro()
+    };
+  }
+
+  function update() {
+    var box = document.getElementById('wfhResult');
+    if (!box) return;
+    box.className = 'result-box';
+    box.classList.remove('rr-warning', 'rr-danger');
+    var result = buildResult(readInput());
+    var srcRow = document.getElementById('wfhNormsRow');
+    if (srcRow) srcRow.style.display = result.showSource ? '' : 'none';
+    var res = result.assessment;
+    if (!res) clearGlobals();
+    setHtml(box, result.html);
+    if (!res) return;
     try {
       window.wfhPercentile = isFinite(res.perc) ? res.perc : undefined;
       window.wfhSD = isFinite(res.zScore) ? res.zScore : undefined;
@@ -408,7 +422,7 @@
 
   if (typeof window !== 'undefined') {
     window.VildaWfh = {
-      assess: assess, rowFor: rowFor, zFromRow: zFromRow, classify: classify,
+      assess: assess, readInput: readInput, buildResult: buildResult, rowFor: rowFor, zFromRow: zFromRow, classify: classify,
       whoLms: whoLms, whoZ: whoZ, classifyWho: classifyWho,
       tables: { male: BOYS, female: GIRLS }
     };

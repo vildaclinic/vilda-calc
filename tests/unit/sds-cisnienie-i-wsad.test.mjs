@@ -29,15 +29,17 @@ describe('Moduł ciśnienia (bp_module.js)', () => {
   it('re(): SDS wzrostu z silnika ze źródłem siatek aplikacji; bez silnika brak wyniku', () => {
     const i = src.indexOf('function re(t,n,e)');
     expect(i).toBeGreaterThan(-1);
+    const przedRe = src.slice(src.indexOf('function readPediatricSdsSource()'), i);
+    const zrodloRe = `${przedRe}${wytnij(src, i)}return re;`;
     const log = [];
-    const zSilnikiem = new Function('window', 'advHistoryGetPreferredSource', `${wytnij(src, i)}return re;`)(
+    const zSilnikiem = new Function('window', 'advHistoryGetPreferredSource', zrodloRe)(
       { VildaSdsWzrostu: { policz(o) { log.push(o); return { sds: -0.75 }; } } },
       () => 'PALCZEWSKA',
     );
     expect(zSilnikiem('M', 150, 155)).toBe(-0.75);
     expect(log).toEqual([{ wzrost: 155, plec: 'M', wiekMies: 150, zrodlo: 'PALCZEWSKA' }]);
     // P-SDS-5: bez silnika nie ma wyniku — zadnej kopii wzoru na getLMSHeightHybrid.
-    const bez = new Function('window', `${wytnij(src, i)}return re;`)({});
+    const bez = new Function('window', zrodloRe)({});
     expect(bez('M', 150, 155)).toBeUndefined();
     expect(src).not.toContain('getLMSHeightHybrid');
   });

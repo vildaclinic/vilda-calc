@@ -94,6 +94,7 @@
   function current(record) {
     try {
       return record.revision === revision && professional() && sameOwner(record.owner, owner())
+        && (!record.home || sameImportAccount(record.importAccount))
         && (!record.options.isCurrent || record.options.isCurrent());
     } catch (_) { return false; }
   }
@@ -235,6 +236,150 @@
     return typeof w.patientReportGetPdfChoiceOptions === 'function' ? w.patientReportGetPdfChoiceOptions() : [];
   }
 
+  function homeIcon(doc, className, drawing) {
+    var badge = element(doc, 'span', className);
+    badge.setAttribute('aria-hidden', 'true');
+    var svg = doc.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    var path = doc.createElementNS(svg.namespaceURI, 'path');
+    path.setAttribute('d', drawing);
+    svg.appendChild(path);
+    badge.appendChild(svg);
+    return badge;
+  }
+
+  function homeAction(doc, label, hint, attr) {
+    var action = button(doc, '', attr);
+    action.className = 'vilda-patient-documents-home-action';
+    var words = element(doc, 'span');
+    words.append(element(doc, 'strong', '', label), element(doc, 'small', '', hint));
+    var mark = homeIcon(doc, 'vilda-patient-documents-home-mark', 'M6 18 18 6M7 6h11v11');
+    action.append(words, mark);
+    return action;
+  }
+
+  function homeGroup(doc, title, description, drawing, actions) {
+    var group = element(doc, 'section', 'vilda-patient-documents-home-group');
+    var heading = element(doc, 'div', 'vilda-patient-documents-home-heading');
+    var badge = homeIcon(doc, 'vilda-patient-documents-home-icon', drawing);
+    heading.append(badge, element(doc, 'h3', '', title));
+    var buttons = element(doc, 'div', 'vilda-patient-documents-home-actions');
+    buttons.append.apply(buttons, actions);
+    group.append(heading, element(doc, 'p', 'vilda-patient-documents-home-description', description), buttons);
+    return group;
+  }
+
+  function homeVisitLabel() {
+    var iso = w.VildaDobAge?.readMeasuredAtISO?.();
+    return typeof iso === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(iso)
+      ? 'Bieżąca wizyta · ' + iso.split('-').reverse().join('.') : 'Bieżąca wizyta';
+  }
+
+  function showHomeCenter(record, ui) {
+    var doc = record.doc, dialog = record.dialog, options = record.options;
+    var center = element(doc, 'div', 'vilda-patient-documents-home-center');
+    var context = element(doc, 'div', 'vilda-patient-documents-home-context');
+    var patientName = ['firstName', 'lastName'].map(function (id) {
+      return d.getElementById(id)?.value.trim();
+    }).filter(Boolean).join(' ');
+    context.append(element(doc, 'strong', '', patientName || 'Bieżący pomiar'), element(doc, 'span', '', homeVisitLabel()));
+    var grid = element(doc, 'div', 'vilda-patient-documents-home-groups');
+    function launch(action) {
+      return function () {
+        if (!current(record) || record.closed || busy) return;
+        close(record, false);
+        if (!current(record)) return;
+        try {
+          Promise.resolve(action()).then(function (opened) {
+            if (opened === false && current(record)) focusOpener(record);
+          }).catch(function () { if (current(record)) focusOpener(record); });
+        } catch (_) { if (current(record)) focusOpener(record); }
+      };
+    }
+    function action(label, hint, attr, allowed, run) {
+      var control = homeAction(doc, label, hint, attr);
+      control.disabled = !allowed;
+      listen(record, control, 'click', function () {
+        if (!control.disabled && !record.closed && current(record) && !busy) run();
+      });
+      return control;
+    }
+    var growth = w.VildaHomeGrowth, patient = w.VildaHomePatient, diet = w.VildaHomeDiet;
+    var hasCharts = typeof growth?.openCharts === 'function' && (growth.canOpenCharts?.() ?? true);
+    var patientOwner = patient?.captureOwner?.();
+    var patientReady = !!(record.owner.id && typeof patient?.open === 'function' && patientOwner?.());
+    var summaryButton = d.getElementById('metabolicSummaryBtn');
+    var dietButton = d.getElementById('vhomeDietExpand');
+    function openCharts(mode) {
+      return launch(function () {
+        return growth.openCharts({ mode: mode, opener: options.opener, onBack: function () {
+          return current(record) ? open(options) : false;
+        } });
+      });
+    }
+    var chart = action('Generuj siatki', 'OLAF / OLA i Palczewska', 'data-patient-documents-charts', hasCharts,
+      openCharts('pdf'));
+    chart.classList.add('vilda-patient-documents-home-primary');
+    grid.appendChild(homeGroup(doc, 'Siatki centylowe', 'Gotowe siatki PDF oraz narzędzia do opracowania wykresu.',
+      'M5 3h10l4 4v14H5zM15 3v5h4M8 17l3-4 3 2 3-5', [chart,
+        action('Kreator siatek', 'Adnotacje i elementy wykresu', 'data-patient-documents-creator', hasCharts, openCharts('creator')),
+        action('Siatki do publikacji', 'Palczewska · wersja czarno-biała', 'data-patient-documents-publication', hasCharts, openCharts('publication'))]));
+    grid.appendChild(homeGroup(doc, 'Raporty i podsumowania', 'Podsumowanie wizyty i szczegółowa dokumentacja wyników.',
+      'M5 3h10l4 4v14H5zM15 3v5h4M8 11h8M8 15h8M8 18h5', [
+        action('Kopiuj podsumowanie', 'Bieżące wyniki do dokumentacji', 'data-patient-documents-summary', summaryButton && !summaryButton.hidden && !summaryButton.disabled,
+          launch(function () { if (!summaryButton.hidden && !summaryButton.disabled) summaryButton.click(); })),
+        action('Raport wzrastania', 'Analiza i historia pomiarów', 'data-patient-documents-growth',
+          ui.reportOptions.some(function (item) { return item.value === 'growth'; }), function () { ui.runPackage(['growth']); }),
+        action('Historia badań', 'Wyniki, daty i zapisane zakresy', 'data-patient-documents-labs', patientReady,
+          launch(function () { return patient.open('labs'); }))]));
+    grid.appendChild(homeGroup(doc, 'Zalecenia i opieka', 'Uzgodnione postępowanie oraz informacje dla pacjenta.',
+      'M8 4H5v17h14V4h-3M8 3h8v4H8zM8 13h8M12 9v8', [
+        action('Zalecenia dietetyczne', 'Założenia i raport dla pacjenta', 'data-patient-documents-diet',
+          typeof diet?.open === 'function' && dietButton && !dietButton.disabled && !d.getElementById('vhomeDietCard')?.hidden,
+          launch(function () { return diet.open('report'); })),
+        action('Plan opieki', 'Etapy, działania i ustalenia', 'data-patient-documents-care', patientReady,
+          launch(function () { return patient.open('care'); })),
+        action('Notatka z wizyty', 'Utwórz wpis w dokumentacji', 'data-patient-documents-note',
+          !!record.owner.id && typeof w.VildaHomePatientNoteHost?.open === 'function', launch(function () {
+            return w.VildaHomePatientNoteHost.open({ patientId: record.owner.id,
+              isCurrent: function () { return current(record); }, opener: options.opener,
+              openPlan: function (destination) { if (current(record)) patient?.open?.('care', destination); } }) || false;
+          }))]));
+    var extras = element(doc, 'div', 'vilda-patient-documents-home-extras');
+    var packageButton = action('Raporty PDF i pakiet', 'Jeden lub kilka dokumentów', 'data-patient-documents-package', true,
+      function () { select('package', packageBack); });
+    var descriptionButton = action('Kopiuj opis pacjenta', 'Opis z kartoteki i dokumentacji', 'data-patient-documents-description', true,
+      function () { select('description', descriptionBack); });
+    extras.append(packageButton, descriptionButton);
+    center.append(context, element(doc, 'p', 'vilda-patient-documents-home-intro', 'Wybierz dokument lub przejdź do powiązanej części dokumentacji.'),
+      grid, extras, element(doc, 'p', 'vilda-patient-documents-home-footnote', 'Dokumenty korzystają z danych pacjenta, pomiarów i historii zapisanych w aplikacji.'));
+    var packageBack = button(doc, 'Wróć do Dokumentów', 'data-patient-documents-package-back');
+    var descriptionBack = button(doc, 'Wróć do Dokumentów', 'data-patient-documents-description-back');
+    ui.pdf.prepend(packageBack);
+    if (ui.description.text) {
+      var preview = element(doc, 'textarea', 'vilda-patient-documents-home-preview');
+      preview.readOnly = true;
+      preview.value = ui.description.text;
+      preview.setAttribute('aria-label', 'Opis pacjenta do skopiowania');
+      ui.narrative.insertBefore(preview, ui.copy);
+    }
+    ui.narrative.prepend(descriptionBack);
+    ui.body.prepend(center);
+    function select(view, focus) {
+      center.hidden = view !== 'center';
+      ui.pdf.hidden = ui.footer.hidden = view !== 'package';
+      ui.narrative.hidden = view !== 'description';
+      ui.status.textContent = '';
+      ui.title.textContent = view === 'package' ? 'Raporty PDF' : view === 'description' ? 'Opis pacjenta' : 'Dokumenty pacjenta';
+      ui.body.scrollTop = 0;
+      if (focus) focus.focus({ preventScroll: true });
+    }
+    listen(record, packageBack, 'click', function () { select('center', packageButton); });
+    listen(record, descriptionBack, 'click', function () { select('center', descriptionButton); });
+    select('center');
+    dialog.dataset.patientDocumentsHome = '';
+  }
+
   function show(record) {
     var doc = record.doc;
     var dialog = element(doc, 'dialog', 'vilda-patient-documents');
@@ -244,12 +389,14 @@
     record.dialog = dialog;
     var header = element(doc, 'div', 'vilda-patient-documents-header');
     var heading = element(doc, 'div');
-    heading.appendChild(element(doc, 'p', 'vilda-patient-documents-eyebrow', 'DOKUMENTACJA'));
+    if (!record.home) heading.appendChild(element(doc, 'p', 'vilda-patient-documents-eyebrow', 'DOKUMENTACJA'));
     var title = element(doc, 'h2', '', 'Dokumenty pacjenta');
     title.id = 'patientDocumentsTitle';
     heading.appendChild(title);
-    var name = ['surname', 'name'].map(function (id) { var input = d.getElementById(id); return input && input.value.trim(); }).filter(Boolean).join(' ');
-    heading.appendChild(element(doc, 'p', '', name || 'Bieżący pomiar'));
+    if (!record.home) {
+      var name = ['surname', 'name'].map(function (id) { var input = d.getElementById(id); return input && input.value.trim(); }).filter(Boolean).join(' ');
+      heading.appendChild(element(doc, 'p', '', name || 'Bieżący pomiar'));
+    }
     var closeButton = button(doc, '×', 'data-patient-documents-close');
     closeButton.setAttribute('aria-label', 'Zamknij dokumenty pacjenta');
     header.append(heading, closeButton);
@@ -270,7 +417,7 @@
     narrative.append(copy, copyReason);
     body.appendChild(narrative);
 
-    if (w.VildaHomeGrowth && typeof w.VildaHomeGrowth.openCharts === 'function') {
+    if (!record.home && w.VildaHomeGrowth && typeof w.VildaHomeGrowth.openCharts === 'function') {
       var charts = element(doc, 'section', 'vilda-patient-documents-narrative');
       charts.appendChild(element(doc, 'h3', '', 'Siatki centylowe'));
       var openCharts = button(doc, 'Generuj siatki', 'data-patient-documents-charts');
@@ -345,8 +492,10 @@
     });
     listen(record, dialog, 'keydown', function (event) {
       if (event.key !== 'Tab') return;
-      var nodes = Array.from(dialog.querySelectorAll('button:not(:disabled), input:not(:disabled), [tabindex="0"]'));
+      var nodes = Array.from(dialog.querySelectorAll('button:not(:disabled), input:not(:disabled), [tabindex="0"], textarea:not(:disabled)'));
+      if (record.home) nodes = nodes.filter(function (node) { return node.getClientRects().length > 0; });
       var first = nodes[0], last = nodes[nodes.length - 1];
+      if (!first) return;
       if (event.shiftKey && doc.activeElement === first) { event.preventDefault(); last.focus(); }
       else if (!event.shiftKey && doc.activeElement === last) { event.preventDefault(); first.focus(); }
     });
@@ -373,9 +522,8 @@
         publish();
       });
     });
-    listen(record, generate, 'click', async function () {
+    async function runPackage(selectedValues, trigger) {
       if (!current(record) || busy) { if (!current(record)) close(record, false); return; }
-      var selectedValues = selected();
       if (!selectedValues.length) return;
       busy = true;
       copy.disabled = true;
@@ -387,13 +535,17 @@
       close(record);
       try {
         // Existing collectors, layout, document order and delivery remain native.
-        await w.generatePatientSelectedPdfPackage(generate, selectedValues, { isCurrent: function () { return current(record); } });
+        await w.generatePatientSelectedPdfPackage(trigger, selectedValues, { isCurrent: function () { return current(record); } });
         if (current(record) && !record.closed) close(record);
       } finally {
         busy = false;
         publish();
       }
-    });
+    }
+    listen(record, generate, 'click', function () { runPackage(selected(), generate); });
+    if (record.home) showHomeCenter(record, { body: body, title: title, footer: footer, narrative: narrative, pdf: pdf,
+      copy: copy, status: status, reportOptions: options, description: description || {},
+      runPackage: function (values) { runPackage(values, generate); } });
     ['pointerdown', 'keydown', 'touchstart', 'wheel'].forEach(function (name) {
       listen(record, dialog, name, function (event) {
         if (!event.isTrusted || !current(record)) return;
@@ -426,7 +578,9 @@
     var doc = options.hostDocument || d;
     // Legacy open calls also use the full shell viewport, not the clipped iframe.
     try { if (!options.hostDocument && w.parent !== w && w.parent.VildaShell) doc = w.parent.document; } catch (_) { /* standalone */ }
-    var record = { options: options, owner: owner(), importAccount: captureImportAccount(), revision: revision, doc: doc, dialog: null, listeners: [], scroll: [], closed: false };
+    var home = w.__VILDA_HOME_WORKSPACE_PREVIEW__ === true && d.documentElement.classList.contains('vilda-home-workspace')
+      && !/(?:^|\/)docpro\.html$/.test(w.location.pathname);
+    var record = { options: options, owner: owner(), importAccount: captureImportAccount(), home: home, revision: revision, doc: doc, dialog: null, listeners: [], scroll: [], closed: false };
     listen(record, doc, 'vilda:patient-documents-owner-change', invalidate);
     pendingRecord = record;
     busy = true;

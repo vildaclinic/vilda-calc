@@ -181,6 +181,54 @@
     });
     return copy;
   }
+  function hasConfirmedDownSyndrome() {
+    var patient = patientId();
+    var source = w.VildaDsSource?.getState?.();
+    return !!(patient && source?.patientId === patient && source.status === 'ready' && source.population === 'DS');
+  }
+  function appendManualDownSyndromeAction(panel) {
+    var section = byId('downSyndromeSection');
+    var native = byId('toggleDownSyndrome');
+    var nativeCard = byId('downSyndromeCard');
+    if (!section || !native || !nativeCard || w.getComputedStyle(section).display === 'none') return;
+    var button = el('button', 'vhome-growth-secondary', native.textContent.trim());
+    button.type = 'button';
+    button.addEventListener('click', function () {
+      if (!stillOwned() || dirty() || hasConfirmedDownSyndrome()) return;
+      var item = draft;
+      close(true);
+      if (!tokenValid(item) || !native.isConnected || w.getComputedStyle(section).display === 'none') return;
+      if (nativeCard.style.display !== 'block') native.click();
+      native.focus({ preventScroll: true });
+      native.scrollIntoView({ block: 'nearest' });
+    });
+    panel.appendChild(button);
+  }
+  function appendDownSyndromeAnalysis(panel) {
+    var api = w.VildaDownSyndrome;
+    if (!api?.buildResultsHtml) return;
+    if (!hasConfirmedDownSyndrome()) {
+      appendManualDownSyndromeAction(panel);
+      return;
+    }
+    var result = api.buildResultsHtml();
+    var section = el('section', 'vhome-growth-ds');
+    var box = el('div', 'result-box');
+    w.VildaHtml.setTrustedHtml(box, result.html, { context: 'home-growth:down-syndrome-analysis' });
+    if (result.severity) box.classList.add(result.severity === 'danger' ? 'rr-danger' : 'rr-warning');
+    section.append(el('h3', '', 'Ocena dla zespołu Downa'), box);
+    var native = byId('generateDsCentileChart');
+    if (native) {
+      var button = el('button', 'vhome-growth-secondary', native.textContent.trim());
+      button.type = 'button';
+      button.disabled = native.disabled;
+      button.addEventListener('click', function () {
+        if (stillOwned() && !dirty() && hasConfirmedDownSyndrome() && !native.disabled) native.click();
+      });
+      section.appendChild(button);
+    }
+    panel.appendChild(section);
+  }
   function renderResults(tab) {
     var panel = byId('vhomeGrowthPanel-' + tab); if (!panel) return;
     disposeResultView(); panel.replaceChildren();
@@ -188,13 +236,17 @@
       panel.appendChild(el('p', 'vhome-growth-empty', dirty()
         ? 'Masz niezastosowane dane. Zastosuj je, aby zobaczyć aktualną analizę i prognozy.'
         : 'Uzupełnij bieżący pomiar i dane w zakładce „Dane i pomiary”, aby zobaczyć aktualne wyniki.'));
+      if (tab === 'analysis' && !dirty()) appendDownSyndromeAnalysis(panel);
       return;
     }
     var native = byId('advResults');
     if (w.VildaHomeGrowthViews) {
       resultView = w.VildaHomeGrowthViews.render({ panel: panel, native: native, data: w.advancedGrowthData, tab: tab,
         copy: resultCopy, metric: selectedMetric, onMetric: function (name) { selectedMetric = name; }, onData: function () { selectTab('data', true); } });
-      if (resultView) return;
+      if (resultView) {
+        if (tab === 'analysis') appendDownSyndromeAnalysis(panel);
+        return;
+      }
     }
     if (tab === 'methods') {
       panel.appendChild(el('h3', '', 'Prognozy wzrostu ostatecznego'));
@@ -219,6 +271,7 @@
         var item = gcc.querySelector(selector); if (item) potential.appendChild(resultCopy(item));
       });
       panel.appendChild(potential);
+      appendDownSyndromeAnalysis(panel);
     }
   }
   function selectTab(tab, focus) {
@@ -689,6 +742,9 @@
       else if (draft && !ghView && !dirty() && draft.tab !== 'data') renderResults(draft.tab);
     })
       .observe(byId('advResults'), { childList: true });
+    d.addEventListener('vilda:ds-source-state', function () {
+      if (draft && draft.tab === 'analysis' && !ghView && stillOwned()) renderResults('analysis');
+    });
     ['input', 'change'].forEach(function (name) {
       w.addEventListener(name, function (event) {
         if (!dialog?.open || !dialog.contains(event.target)) return;
@@ -722,14 +778,17 @@
     });
     renderCard();
   }
-  function openCharts() {
-    if (!canEdit() || !w.VildaHomeGrowthCharts || dialog?.open && (!stillOwned() || dirty() || ghView)) return false;
+  function canOpenCharts() {
+    return !!(canEdit() && w.VildaHomeGrowthCharts && (!dialog?.open || stillOwned() && !dirty() && !ghView));
+  }
+  function openCharts(options) {
+    if (!canOpenCharts()) return false;
     var vault = w.VildaVault, item = { vault: vault, token: vault.captureSyncOperationSession(), ownerKey: JSON.stringify(owner()), boundary: ownerBoundary };
     var handoff = !!dialog?.open;
     if (handoff) close(true, false, true);
     return w.VildaHomeGrowthCharts.open({ valid: function () { return tokenValid(item); }, snapshot: snapshot,
-      opener: byId('vhomeGrowthExpand'), replaceHistory: handoff });
+      mode: options?.mode, onBack: options?.onBack, opener: options?.opener || byId('vhomeGrowthExpand'), replaceHistory: handoff });
   }
-  w.VildaHomeGrowth = Object.freeze({ open: open, openCharts: openCharts, refresh: schedule });
+  w.VildaHomeGrowth = Object.freeze({ open: open, openCharts: openCharts, canOpenCharts: canOpenCharts, refresh: schedule });
   if (d.readyState === 'loading') d.addEventListener('DOMContentLoaded', start, { once: true }); else start();
 })(typeof window !== 'undefined' ? window : globalThis);

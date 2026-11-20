@@ -271,9 +271,9 @@
 <script defer src="vilda_dymek.js?v=1"></script>
 <script defer src="vilda_app_helpers.js?v=3"></script>
 <script defer src="vilda_food_data.js?v=1"></script>
-<script defer src="vilda_macro_practice.js?v=2"></script>
+<script defer src="vilda_macro_practice.js?v=3"></script>
 <script defer src="vilda_activity_burn.js?v=1"></script>
-<script defer src="vilda_food_summary.js?v=2"></script>
+<script defer src="vilda_food_summary.js?v=3"></script>
 <script defer src="vilda_dob_age.js?v=12"></script>
 <script defer src="vilda_lab_neonatal_context.js?v=5"></script>
 <script defer src="vilda_status_bar.js?v=1"></script>
@@ -282,7 +282,7 @@
 <script defer src="vilda_puberty_assessment_context.js?v=1"></script>
 <script defer src="vilda_puberty_assessment_ui.js?v=2"></script>
 <script defer src="vilda_save_feedback.js?v=1"></script>
-<script defer src="vilda_data_import_export.js?v=127"></script>
+<script defer src="vilda_data_import_export.js?v=128"></script>
 <script defer src="vilda_baseline_pacjenta.js?v=4"></script>
 <script defer src="vilda_pola_tozsamosci.js?v=4"></script>
 <script defer src="vilda_imiona_plec_dane.js?v=1"></script>
@@ -362,7 +362,7 @@
 <script defer src="vilda_epicrisis_ui.js?v=30"></script>
 <script defer src="vilda_publication_creator.js?v=25"></script>
 <script defer src="vilda_estimated_intake.js?v=3"></script>
-<script src="vilda_update_prep.js?v=100" defer></script>
+<script src="vilda_update_prep.js?v=101" defer></script>
 
 <script defer src="inline_index_01.js?v=1"></script>
 <!-- PERF: jsPDF + html2canvas NIE są już ładowane synchronicznie (blokowały render).
@@ -459,7 +459,7 @@
 <link href="vilda_lab_history_tab.css?v=15" rel="stylesheet">
   <link rel="stylesheet" href="vilda_centile_live_panel.css?v=7">
   <link rel="stylesheet" href="vilda_professional_summary.css?v=3">
-  <link rel="stylesheet" href="vilda_patient_documents.css?v=2">
+  <link rel="stylesheet" href="vilda_patient_documents.css?v=3">
   <link rel="stylesheet" href="vilda_phone_landscape.css?v=2">
   <script src="vilda_phone_landscape.js?v=3"></script>
 </head>
@@ -1759,8 +1759,8 @@
 
 <!-- Load Down syndrome growth tables before app.js; these define DS datasets as global variables -->
 <script src="ds_lms.js?v=4" defer></script>
-<script defer src="vilda_down_syndrome.js?v=5"></script>
-<script defer src="vilda_anorexia_risk.js?v=4"></script>
+<script defer src="vilda_down_syndrome.js?v=6"></script>
+<script defer src="vilda_anorexia_risk.js?v=5"></script>
 <!-- Palczewska centile data (weight, height, BMI) for 0–18 years. Loaded before app.js so it attaches centileData to window. -->
 <script src="centile_data.js" defer></script>
 <!-- Wspólny interpolator PCHIP krzywych centylowych Palczewskiej (monotoniczny spline Hermite'a).
@@ -1779,17 +1779,17 @@
      wszystkich punktów centylowych pasma (Fleming 2011 / Bonafide 2013) z interpolacją
      między pasmami wieku; korekty temperatury i snu jak dotychczas. -->
 <script defer src="vitalSigns.js?v=6"></script>
-<script src="adult_vitals.js?v=5" defer></script>
+<script src="adult_vitals.js?v=6" defer></script>
 <script defer src="vilda_growth_reference_data.js?v=1"></script>
 <script defer src="vilda_professional_module.js?v=15"></script>
-<script defer src="vilda_persist_runtime.js?v=31"></script>
+<script defer src="vilda_persist_runtime.js?v=32"></script>
 <script defer src="vilda_schowek.js?v=5"></script>
 <script defer src="vilda_raport_naglowek.js?v=10"></script>
 <script defer src="vilda_summary_cards.js?v=66"></script>
 <script defer src="vilda_professional_summary_rules.js?v=1"></script>
 <script defer src="vilda_professional_summary.js?v=3"></script>
 <script defer src="vilda_ree_rownania_data.js?v=3"></script>
-<script defer src="vilda_diet_plan_ui.js?v=45"></script>
+<script defer src="vilda_diet_plan_ui.js?v=46"></script>
 <script defer src="vilda_bmi_journey.js?v=28"></script>
 <script defer src="vilda_estimated_intake_ui.js?v=3"></script>
 <script defer src="vilda_estimated_intake_runtime.js?v=1"></script>
@@ -1868,7 +1868,7 @@
   });
 })();
 </script>
-<script src="nutrition_norms.js?v=50" defer></script>
+<script src="nutrition_norms.js?v=51" defer></script>
 <!-- PERF-P2e2 cykl 6a (2026-06-07): mikroskładniki (296 KB — największy plik
      toru) ładowane LENIWIE: idle po load LUB pierwsza interakcja. Hook
      after-update rejestruje się przez rejestr (z fallbackiem w samym module),
@@ -1882,7 +1882,7 @@
 <script>
 (function () {
   'use strict';
-  var SRC_MICROS = 'nutrition_micros.js?v=28';
+  var SRC_MICROS = 'nutrition_micros.js?v=29';
   var started = false;
   function loadMicros() {
     if (started) return;
@@ -2176,7 +2176,7 @@
 <script defer src="inline_index_03.js?v=17"></script>
 
 <!-- Now override the default growth chart implementation to support infants (0–<3 lata) and older children (3–18 lat).  -->
-<script defer src="inline_index_04.js?v=29"></script>
+<script defer src="inline_index_04.js?v=30"></script>
 
 <!-- Skrypt generujący siatkę centylową DS (wzrost i waga) w formacie PDF -->
 <script defer src="inline_index_05.js?v=7"></script>
@@ -2190,7 +2190,7 @@
      wzrostu, płci oraz wprowadzonych wartości skurczowych i rozkurczowych.
      Skrypt ten powinien być ładowany po głównych plikach app.js i innych
      modułach, aby korzystał z istniejących funkcji pomocniczych (np. getAgeDecimal, getLMSHeightHybrid, applyPulse). -->
-<script src="bp_module.js?v=11" defer></script>
+<script src="bp_module.js?v=12" defer></script>
 
 <!-- Dane INTERGROWTH-21st wykorzystywane w module obwodu głowy u noworodków
      i dzieci w 1. miesiącu życia (odniesienie do wieku ciążowego z modułu SGA). -->
@@ -2208,14 +2208,14 @@
      aby mieć dostęp do funkcji pomocniczych jak applyPulse i do referencji noworodkowych.
      Określenie defer gwarantuje, że skrypt uruchomi się po załadowaniu struktury DOM. -->
 <script src="who_head_data.js" defer></script>
-<script src="circumference_module.js?v=16" defer></script>
-<script src="wfh_module.js?v=2" defer></script>
+<script src="circumference_module.js?v=17" defer></script>
+<script src="wfh_module.js?v=3" defer></script>
 
 <!-- Moduł liczby oddechów. Ładowany po module ciśnienia krwi i obwodów, aby
      móc korzystać z funkcji pomocniczych z app.js (np. getAgeDecimal).
      Skrypt ten obsługuje kartę „Liczba oddechów” i oblicza centyl
      częstotliwości oddechu w oparciu o dane z vitalSignsPercentiles.js. -->
-<script src="respiratory_module.js?v=8" defer></script>
+<script src="respiratory_module.js?v=9" defer></script>
 
 <!-- Prosta obsługa przycisku rozwijającego kartę obwodów głowy i klatki piersiowej.
      Po załadowaniu DOM przypinamy zdarzenie click do przycisku toggleCircSection,
@@ -2280,12 +2280,12 @@
   <!--  dynamiczne rozszerzanie zakresów osi Y w zależności od         -->
   <!--  wprowadzonych pomiarów.  Przycisk generujący jest ukryty na    -->
   <!--  stronie i może zostać włączony w późniejszej aktualizacji UI.  -->
-  <script defer src="inline_index_07.js?v=16"></script>
+  <script defer src="inline_index_07.js?v=17"></script>
   <!-- P-PAL-POZIOM: siatka 1–18 lat na jednej stronie A4 poziomo (składanie strony, przełącznik „Układ PDF”). -->
   <script defer src="vilda_centile_landscape.js?v=2"></script>
   <script defer src="vilda_centile_live_data.js?v=8"></script>
   <script defer src="vilda_centile_live_colors.js?v=2"></script>
-  <script defer src="vilda_patient_documents.js?v=5"></script>
+  <script defer src="vilda_patient_documents.js?v=6"></script>
   <script defer src="vilda_summary_layout.js?v=3"></script>
   <script defer src="vilda_summary_tabs.js?v=3"></script>
   <script defer src="vilda_centile_live_render.js?v=5"></script>
@@ -2491,10 +2491,16 @@
   <script defer src="vilda_home_dialog_history.js?v=1"></script>
   <link rel="stylesheet" href="vilda_sga_birth_results.css?v=1">
   <script defer src="vilda_home_perinatal.js?v=1"></script>
-  <link rel="stylesheet" href="vilda_home_growth_views.css?v=6">
+  <link rel="stylesheet" href="vilda_home_growth_views.css?v=7">
   <script defer src="vilda_home_growth_views.js?v=5"></script>
-  <script defer src="vilda_home_growth_charts.js?v=1"></script>
-  <script defer src="vilda_home_growth.js?v=5"></script>
+  <script defer src="vilda_home_growth_charts.js?v=2"></script>
+  <script defer src="vilda_home_growth.js?v=6"></script>
+  <link rel="stylesheet" href="vilda_home_tools.css?v=1">
+  <script defer src="vilda_home_tools.js?v=1"></script>
+  <script defer src="vilda_home_tools_vitals.js?v=1"></script>
+  <script defer src="vilda_home_tools_anthropometry.js?v=1"></script>
+  <script defer src="vilda_home_tools_nutrition.js?v=1"></script>
+  <script defer src="vilda_home_tools_intake.js?v=1"></script>
   <link rel="stylesheet" href="vilda_home_patient.css?v=2">
   <link rel="stylesheet" href="vilda_home_patient_note_host.css?v=1">
   <script defer src="vilda_home_patient_data.js?v=3"></script>

@@ -167,15 +167,47 @@ html.vilda-home-workspace #vhomeGrowthDialog .vhome-growth-remove { border: 0 !i
   #vhomeGrowthDialog .vhome-a2-range-axis { grid-column: 1 / -1; }
 }
 #vhomeGrowthChartsDialog .vhome-dialog-body { background: #f6f9fa; }
-#vhomeGrowthChartsDialog .vhome-charts-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-14px); margin: var(--space-18px) 0; }
-#vhomeGrowthChartsDialog .vhome-charts-actions section { background: var(--card, #fff); padding: var(--space-16px); border: var(--border-hairline) solid var(--line, #dce7eb); border-radius: var(--radius-12); min-width: 0; }
-#vhomeGrowthChartsDialog .vhome-charts-actions h3 { font-size: 17px; margin: 0 0 15px; }
+#vhomeGrowthChartsDialog .vhome-charts-context { margin: 0 0 var(--space-18px); }
+#vhomeGrowthChartsDialog .vhome-charts-context strong { color: var(--text); font-size: 18px; }
+#vhomeGrowthChartsDialog .vhome-charts-context p { margin: 0; }
+#vhomeGrowthChartsDialog .vhome-charts-panel {
+  min-width: 0; margin-bottom: var(--space-16px); padding: var(--space-16px);
+  border: var(--border-hairline) solid var(--line, #dce7eb); border-radius: var(--radius-12); background: var(--card, #fff);
+}
+#vhomeGrowthChartsDialog .vhome-charts-panel h3 { font-size: 18px; line-height: 1.4; margin: 0 0 var(--space-12px); }
+#vhomeGrowthChartsDialog .vhome-charts-presets,
+#vhomeGrowthChartsDialog .vhome-charts-fields,
+#vhomeGrowthChartsDialog .vhome-charts-extra { display: grid; gap: var(--space-12px); }
+#vhomeGrowthChartsDialog .vhome-charts-presets { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+#vhomeGrowthChartsDialog .vhome-charts-tools,
+#vhomeGrowthChartsDialog .vhome-charts-fields,
+#vhomeGrowthChartsDialog .vhome-charts-extra { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+#vhomeGrowthChartsDialog .vhome-charts-extra { margin-top: var(--space-12px); }
+html.vilda-home-workspace #vhomeGrowthChartsDialog .vhome-charts-tile {
+  display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: var(--space-4px);
+  min-height: 75px; min-width: 0; margin: 0; padding: var(--space-12px) var(--space-14px);
+  border: var(--border-hairline) solid var(--line) !important; border-radius: var(--radius-8) !important;
+  background: var(--card) !important; color: var(--text) !important; box-shadow: none !important;
+  text-align: left; line-height: 1.35; white-space: normal;
+}
+#vhomeGrowthChartsDialog .vhome-charts-tile strong { font-size: 16px; }
+#vhomeGrowthChartsDialog .vhome-charts-tile span { color: var(--muted); font-size: 14px; }
+html.vilda-home-workspace #vhomeGrowthChartsDialog .vhome-charts-tile:enabled:hover { border-color: var(--primary) !important; }
+html.vilda-home-workspace #vhomeGrowthChartsDialog .vhome-charts-back {
+  min-height: 44px; margin: 0 0 var(--space-8px); padding: var(--space-4px) 0;
+  border: 0 !important; background: transparent !important; color: var(--primary) !important; box-shadow: none !important;
+  text-align: left; font-size: 15px;
+}
+#vhomeGrowthChartsDialog .vhome-dialog-footer:has(> .vhome-dialog-apply[hidden]) { grid-template-columns: minmax(0, 1fr); }
 #vhomeGrowthChartsDialog .vhome-charts-select { display: flex; flex-direction: column; gap: var(--space-8px); font-size: 16px; }
 #vhomeGrowthChartsDialog :is(input[type=text], select) { width: 100%; min-width: 0; font-size: 16px; min-height: 46px; }
 #vhomeGrowthChartsDialog .vhome-charts-check { display: flex; align-items: center; gap: var(--space-12px); margin: var(--space-16px) 0; font-size: 16px; }
 #vhomeGrowthChartsDialog .vhome-charts-check input { width: 20px; height: 20px; flex-shrink: 0; margin: 0; }
 #vhomeGrowthChartsDialog .vhome-charts-point { padding: var(--space-8px) var(--space-14px) var(--space-14px); margin-bottom: var(--space-12px); border: var(--border-hairline) solid var(--line, #dce7eb); border-radius: var(--radius-10); background: var(--card, #fff); }
-@media (max-width: 680px) { #vhomeGrowthChartsDialog .vhome-charts-actions { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 680px) {
+  #vhomeGrowthChartsDialog :is(.vhome-charts-presets, .vhome-charts-fields, .vhome-charts-extra) { grid-template-columns: minmax(0, 1fr); }
+  html.vilda-home-workspace #vhomeGrowthChartsDialog .vhome-charts-tile { min-height: 58px; }
+}
 /* Same verdict palette as the native trajectory renderer, also for cards moved
    beside the raw plot. No second verdict or colour threshold is evaluated. */
 #vhomeGrowthDialog .vhome-a2 .vt-w { color: var(--notice-orange); }

@@ -22,8 +22,8 @@ function storage() {
 // Actual adapter, runtime and userData listeners. Only the DOM/storage platform
 // is modeled. A trusted fixture event represents a browser user edit; document
 // capture runs before the target listener, unlike a flat listener-list mock.
-async function harness({ missingFields = [], omitById = [] } = {}) {
-  const fields = {}, listeners = {};
+async function harness({ missingFields = [], omitById = [], foodRows = null } = {}) {
+  const fields = {}, listeners = {}, foods = [];
   const add = (map, type, callback, options) => {
     (map[type] ||= []).push({ callback, capture: options === true || options?.capture === true });
   };
@@ -35,7 +35,7 @@ async function harness({ missingFields = [], omitById = [] } = {}) {
     addEventListener(type, callback, options) { add(listeners, type, callback, options); },
     dispatchEvent(event) { invoke(listeners, event, true); invoke(listeners, event, false); return true; },
     getElementById: id => fields[id] || null,
-    getElementsByName: () => [], querySelectorAll: () => [],
+    getElementsByName: () => [], querySelectorAll: selector => selector === ".food-row" ? foods.slice() : [],
   };
   function dispatch(field, original, trusted) {
     const event = { type: original.type, target: field, isTrusted: trusted, detail: original.detail };
@@ -61,6 +61,25 @@ async function harness({ missingFields = [], omitById = [] } = {}) {
   });
   win.sessionStorage.setItem('vildaCurrentPatientId', 'fictional-shared-form');
   const load = file => new Function('window', 'globalThis', 'document', source(file))(win, win, document);
+  if (foodRows) {
+    const makeRow = value => ({
+      value, dataset: value.kind === 'custom' ? { foodKind: 'custom' } : {},
+      querySelector: selector => selector === 'select' ? value.keyControl : value.qtyControl,
+      remove() { foods.splice(foods.indexOf(this), 1); },
+    });
+    fields.foodRowsSection = {};
+    fields.foodList = { appendChild: row => foods.push(row) };
+    win.VildaFoodData = { foods: { fictional: {} } };
+    win.addFoodRow = key => fields.foodList.appendChild(makeRow({
+      keyControl: { value: key, dispatchEvent() {}, addEventListener() {} },
+      qtyControl: { value: '1', dispatchEvent() {}, addEventListener() {} },
+    }));
+    load('vilda_food_summary.js');
+    win.VildaMacroPractice = {
+      createCustomFoodRow: item => makeRow({ ...item, kind: 'custom' }),
+      readCustomFoodRow: row => win.VildaFoodSummary.normalizeCustomFood(row.value),
+    };
+  }
   load('vilda_persistence_adapter.js');
   const initial = { name: 'Fikcyjna Osoba E2 D3', age: '30', ageMonths: '0',
     sex: 'F', weight: '60', height: '165', unrelated: { keep: 'root' },
@@ -68,6 +87,7 @@ async function harness({ missingFields = [], omitById = [] } = {}) {
       byId: { age: '30', ageMonths: '0', sex: 'F', weight: '60', height: '165', absentControl: 'keep' },
       globals: { untouched: { keep: 'globals' } },
     } };
+  if (foodRows) initial._vildaPersist.globals.foodRows = foodRows;
   for (const id of omitById) delete initial._vildaPersist.byId[id];
   win.VildaPersistence.writeShared(initial, { force: true });
   load('vilda_persist_runtime.js');
@@ -78,7 +98,7 @@ async function harness({ missingFields = [], omitById = [] } = {}) {
   await vi.advanceTimersByTimeAsync(1000);
   expect(win.VildaPersistence.isRestoring()).toBe(false);
   expect(win.VildaPersistence.isAutosaveSuppressed()).toBe(false);
-  return { win, fields,
+  return { win, fields, foods,
     read: () => win.VildaPersistence.readShared(),
     edit(id, value) { fields[id].value = value; dispatch(fields[id], { type: 'input', bubbles: true }, true); },
     restore: () => win.vildaPersistRestoreAll(),
@@ -107,6 +127,23 @@ describe('shared form coherence before the persistence debounce', () => {
     expect({ age: h.fields.age.value, ageMonths: h.fields.ageMonths.value }).toEqual({ age, ageMonths });
     expect({ age: shared.age, ageMonths: shared.ageMonths }).toEqual({ age, ageMonths });
     expect({ age: shared._vildaPersist.byId.age, ageMonths: shared._vildaPersist.byId.ageMonths }).toEqual({ age, ageMonths });
+  });
+
+  it('round-trips mixed catalogue and custom entries through the shared Start form', async () => {
+    const item = { kind: 'custom', id: 'fictional-food-shared', name: 'Fikcyjna mieszanka', grams: 43, kcalPer100g: 117 };
+    const known = { key: 'fictional', qty: '2' };
+    const h = await harness({ foodRows: [item, known, item, { ...item, id: 'invalid-entry', grams: 0 }] });
+    expect(h.foods.map(row => row.dataset.foodKind ?? 'catalogue')).toEqual(['custom', 'catalogue']);
+    expect(h.foods[0].value).toEqual(item);
+    expect(h.foods[1].value.qtyControl.value).toBe('2');
+
+    h.win.vildaPersistFlushNow({ force: true });
+    expect(h.read()._vildaPersist.globals.foodRows).toEqual([item, known]);
+    h.foods[0].remove();
+    h.win.vildaPersistFlushNow({ force: true });
+    expect(h.read()._vildaPersist.globals.foodRows).toEqual([known]);
+    h.restore();
+    expect(h.foods.map(row => row.dataset.foodKind ?? 'catalogue')).toEqual(['catalogue']);
   });
 
   it('does not write shared data while the persistence guard suppresses autosave', async () => {

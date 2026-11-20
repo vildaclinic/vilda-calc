@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { createFictionalVault, loadPatient, readyForPatient } from '../support/centile-live-fixture.mjs';
 
 // Testy regresyjne zmiany U1 w karcie „Normy żywieniowe" (nutrition_norms.js):
 // nagłówkowa norma białka w g/d liczona jest od masy należnej przy BMI 22
@@ -50,6 +51,128 @@ function buildModel(page, input, ui) {
     { input, ui },
   );
 }
+
+test('HOME-NORMS-PARITY: modele podglądu zachowują obliczenia i stan kart źródłowych', async ({ page }) => {
+  await openIndex(page);
+  await page.waitForFunction(() => !!window.VildaNutritionMicros?.buildCardModelReadOnly);
+  const proof = await page.evaluate(async () => {
+    const macros = VildaNutritionNorms;
+    const original = { palSelector: 'inherit', bodyMode: 'actual', includeInSummary: true };
+    const fixtures = [
+      [{ ageYears: 0.67, ageMonthsOpt: 8, sex: 'M', weightKg: 8, heightCm: 70 }, {}],
+      [{ ageYears: 13, ageMonthsOpt: 0, sex: 'M', weightKg: 65, heightCm: 153, mainPal: 1.4 }, { palSelector: 'inherit' }],
+      [{ ageYears: 9, ageMonthsOpt: 0, sex: 'F', weightKg: 44, heightCm: 133, mainPal: 1.6 }, { palSelector: 'range' }],
+      [{ ageYears: 40, ageMonthsOpt: 0, sex: 'F', weightKg: 110, heightCm: 165, mainPal: 1.6 }, { bodyMode: 'reference', palSelector: '1.6' }],
+    ];
+    const macroProof = fixtures.map(([input, options]) => {
+      window.nutritionNormsUiState = { ...original };
+      const nativeModel = macros.buildCardModel(input, options);
+      const before = window.nutritionNormsUiState;
+      const draftModel = macros.buildCardModelReadOnly(input, options);
+      return {
+        sameModel: JSON.stringify(nativeModel) === JSON.stringify(draftModel),
+        stillOriginal: window.nutritionNormsUiState === before,
+        hasEnergy: draftModel.energy.available,
+      };
+    });
+
+    const micros = VildaNutritionMicros;
+    await micros.ensureData();
+    const profile = { ageYears: 11, ageMonths: 0, sex: 'F', weightKg: 40, heightCm: 143, dataSource: 'OLAF', physiology: 'default' };
+    const prior = window.nutritionMicrosLastModel;
+    const microProof = ['pre_menarche', 'post_menarche'].map(iron => {
+      const input = { ...profile, variantPreference: { iron } };
+      const expected = micros.buildCardModel(input);
+      const draft = micros.buildCardModelReadOnly(input);
+      return {
+        sameModel: JSON.stringify(expected) === JSON.stringify(draft),
+        stillOriginal: window.nutritionMicrosLastModel === prior,
+        controls: draft.controls.ironVariant.selected,
+        hasMicros: draft.vitamins.length > 0 && draft.minerals.length > 0,
+      };
+    });
+    return { macroProof, microProof };
+  });
+  expect(proof.macroProof).toEqual(Array(4).fill({ sameModel: true, stillOriginal: true, hasEnergy: true }));
+  expect(proof.microProof).toEqual(['pre_menarche', 'post_menarche'].map(controls => ({
+    sameModel: true, stillOriginal: true, controls, hasMicros: true,
+  })));
+});
+
+test('HOME-NUTRITION-DRAFT: porcja, makro i mikro korzystają ze źródłowych danych dopiero przy zastosowaniu', async ({ page }) => {
+  test.setTimeout(150_000);
+  await page.addInitScript(() => { window.__VILDA_HOME_WORKSPACE_PREVIEW__ = true; });
+  await page.route('**/*', route => new URL(route.request().url()).hostname === '127.0.0.1'
+    ? route.continue() : route.abort());
+  const { frame, ids } = await createFictionalVault(page, { shell: true, waitForAccountReadyBeforeReload: true });
+  await loadPatient(frame, ids.b, 'restore');
+  await readyForPatient(frame);
+  await frame.locator('#vhomeOtherToolsToggle').click();
+  const dialog = frame.locator('#vhomeToolDialog');
+  const draft = dialog.frameLocator('iframe[data-home-tool-draft]');
+  const apply = dialog.getByRole('button', { name: 'Zastosuj dane', exact: true });
+  const food = frame.locator('[data-home-tool="food"]');
+  const norms = frame.locator('[data-home-tool="nutrition"]');
+  const nativeFood = () => frame.evaluate(() => Array.from(document.querySelectorAll('#foodList > .food-row'), row => [
+    row.querySelector('select').value, row.querySelector('input').value,
+  ]));
+  const storedSnacks = () => frame.evaluate(() => VildaPersistence.readMainSession()?.foods?.snacks ?? []);
+  const nativeSettings = () => frame.evaluate(() => ({
+    macro: VildaNutritionNorms.readUiState(),
+    iron: VildaNutritionMicros.readProfileFromDom().variantPreference.iron ?? '',
+  }));
+
+  const beforeFood = await nativeFood();
+  const beforeSnacks = await storedSnacks();
+  await food.click();
+  await draft.getByRole('searchbox', { name: 'Szukaj produktu w bazie' }).fill('snickers');
+  const grams = draft.getByRole('spinbutton', { name: 'Porcja · g', exact: true });
+  await expect(grams).toHaveValue('50');
+  await grams.fill('75');
+  await draft.getByRole('button', { name: 'Dodaj do posiłku' }).click();
+  const kcal = draft.locator('.vhome-tool-food-total');
+  await expect(kcal).toContainText(/366\s*kcal/);
+  expect(await nativeFood()).toEqual(beforeFood);
+  expect(await storedSnacks()).toEqual(beforeSnacks);
+  page.once('dialog', confirmation => confirmation.accept());
+  await dialog.getByRole('button', { name: 'Anuluj', exact: true }).click();
+  await expect(dialog).toBeHidden();
+  expect(await nativeFood()).toEqual(beforeFood);
+  expect(await storedSnacks()).toEqual(beforeSnacks);
+
+  await food.click();
+  await draft.getByRole('searchbox', { name: 'Szukaj produktu w bazie' }).fill('snickers');
+  const picker = draft.locator('.vhome-tool-food-picker');
+  await picker.getByRole('spinbutton', { name: 'Porcja · g', exact: true }).fill('75');
+  await picker.getByRole('button', { name: 'Dodaj do posiłku' }).click();
+  await picker.getByRole('spinbutton', { name: 'Porcja · g', exact: true }).fill('25');
+  await picker.getByRole('button', { name: 'Dodaj do posiłku' }).click();
+  await expect(kcal).toContainText(/488\s*kcal/);
+  await apply.click();
+  await expect(dialog).toBeHidden();
+  expect(await nativeFood()).toEqual([...beforeFood, ['snickers', '1.5'], ['snickers', '0.5']]);
+  await expect(frame.locator('#foodTotalKcal')).toContainText(/488\s*kcal/);
+  await expect.poll(storedSnacks).toEqual([...beforeSnacks, { key: 'snickers', qty: 1.5 }, { key: 'snickers', qty: 0.5 }]);
+
+  await norms.click();
+  await expect(draft.getByRole('tab', { name: 'Makroskładniki' })).toHaveAttribute('aria-selected', 'true');
+  await expect(draft.locator('.nutrition-norms-grid')).toBeVisible();
+  const beforeNorms = await nativeSettings();
+  const pal = draft.getByLabel('Aktywność (PAL)', { exact: true });
+  await pal.selectOption(beforeNorms.macro.palSelector === '1.8' ? '2' : '1.8');
+  const chosenPal = await pal.inputValue();
+  await draft.getByRole('tab', { name: 'Witaminy i minerały' }).click();
+  await expect(draft.locator('.nutrition-micros-grid')).toBeVisible();
+  await draft.getByLabel('Zakres wyników').selectOption({ label: 'Bezpieczeństwo suplementacji' });
+  await expect(draft.locator('.nutrition-micros-details--safety')).toHaveAttribute('open', '');
+  const iron = draft.getByLabel('Żelazo 10–12 lat');
+  await iron.selectOption(beforeNorms.iron === 'post_menarche' ? 'pre_menarche' : 'post_menarche');
+  const chosenIron = await iron.inputValue();
+  expect(await nativeSettings()).toEqual(beforeNorms);
+  await apply.click();
+  await expect(dialog).toBeHidden();
+  expect(await nativeSettings()).toEqual({ macro: { ...beforeNorms.macro, palSelector: chosenPal }, iron: chosenIron });
+});
 
 test('NORM-PROT-U1-ADULT-OBESE: RDA od masy należnej BMI 22, masa aktualna w porównaniu', async ({ page }) => {
   test.setTimeout(90_000);

@@ -70,3 +70,166 @@ dialog.vilda-patient-documents button { width: auto; margin: 0; min-height: 44px
 
 /* The dialog keeps a stable viewport while retaining any existing scroll lock. */
 .vilda-patient-documents-scroll-lock { overflow: hidden !important; }
+
+/* The homepage center uses the same viewport geometry as its shared windows. */
+dialog.vilda-patient-documents[data-patient-documents-home] {
+  --documents-gap: 16px;
+  width: min(1000px, calc(100% - var(--documents-left) - var(--documents-right)));
+  height: min(820px, 90dvh);
+  border-radius: var(--radius-14);
+  box-shadow: 0 25px 100px #123a4a26;
+}
+.vilda-patient-documents[data-patient-documents-home][open] { animation: vilda-documents-enter 180ms ease-out both; }
+.vilda-patient-documents[data-patient-documents-home]::backdrop { background: #163b4b66; backdrop-filter: none; -webkit-backdrop-filter: none; }
+.vilda-patient-documents[data-patient-documents-home][open]::backdrop { animation: vilda-documents-backdrop 150ms ease-out both; }
+.vilda-patient-documents[data-patient-documents-home] [hidden] { display: none; }
+@keyframes vilda-documents-enter {
+  from { opacity: 0; transform: translate(-50%, calc(-50% + 6px)) scale(.99); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+@keyframes vilda-documents-backdrop {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vilda-patient-documents[data-patient-documents-home][open],
+  .vilda-patient-documents[data-patient-documents-home][open]::backdrop { animation: none; }
+}
+.vilda-patient-documents[data-patient-documents-home] .vilda-patient-documents-header { align-items: center; padding: 21px 25px; }
+.vilda-patient-documents[data-patient-documents-home] h2 { font-size: 21px; line-height: 1.4; font-weight: 600; }
+dialog.vilda-patient-documents[data-patient-documents-home] [data-patient-documents-close] { width: 40px; height: 40px; min-height: 40px; padding: 0; font-size: 26px; }
+.vilda-patient-documents[data-patient-documents-home] .vilda-patient-documents-body { padding: 22px 25px; }
+.vilda-patient-documents-home-context {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-16px);
+  margin-bottom: var(--space-16px);
+  padding-bottom: var(--space-16px);
+  border-bottom: var(--border-hairline) solid #dce7e9;
+  color: #31545e;
+}
+.vilda-patient-documents-home-context strong { min-width: 0; font-size: 18px; overflow-wrap: anywhere; }
+.vilda-patient-documents-home-context span { color: #587377; font-size: 14px; text-align: right; }
+.vilda-patient-documents p.vilda-patient-documents-home-intro { margin: 0 0 var(--space-20px); font-size: 15px; }
+.vilda-patient-documents-home-groups {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-16px);
+}
+.vilda-patient-documents-home-group {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: var(--space-20px) 17px;
+  border: var(--border-hairline) solid #d8e6e8;
+  border-radius: var(--radius-11);
+  background: #fff;
+  overflow-wrap: anywhere;
+}
+.vilda-patient-documents-home-heading { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-14px); }
+.vilda-patient-documents-home-heading h3 { margin: 0; font-size: 17px; font-weight: 600; }
+.vilda-patient-documents-home-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 42px;
+  height: 42px;
+  border: var(--border-hairline) solid #cce3e1;
+  border-radius: var(--radius-9);
+  background: #eef7f5;
+  color: #087e85;
+}
+.vilda-patient-documents-home-icon svg,
+.vilda-patient-documents-home-mark svg { display: block; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.vilda-patient-documents-home-icon svg { width: 25px; height: 25px; }
+.vilda-patient-documents p.vilda-patient-documents-home-description { min-height: 77px; margin: 11px 0 var(--space-20px); font-size: 14px; }
+.vilda-patient-documents-home-actions { display: grid; flex: 1; grid-auto-rows: 1fr; gap: var(--space-10px); margin-top: auto; }
+dialog.vilda-patient-documents button.vilda-patient-documents-home-action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8px);
+  min-width: 0;
+  width: 100%;
+  min-height: 88px;
+  padding: var(--space-12px);
+  border-color: #d3e3e6 !important;
+  background: #f8fbfb !important;
+  color: #315763 !important;
+  text-align: left;
+}
+.vilda-patient-documents-home-action strong,
+.vilda-patient-documents-home-action small { display: block; overflow-wrap: anywhere; }
+.vilda-patient-documents-home-action > span:first-child { min-width: 0; }
+.vilda-patient-documents-home-action strong { font-size: 15px; font-weight: 600; }
+.vilda-patient-documents-home-action small { margin-top: var(--space-4px); color: #587377; font-size: 14px; font-weight: 400; }
+.vilda-patient-documents-home-mark { flex: none; color: #587d86; }
+.vilda-patient-documents-home-mark svg { width: 18px; height: 18px; }
+dialog.vilda-patient-documents button.vilda-patient-documents-home-primary,
+dialog.vilda-patient-documents button.vilda-patient-documents-home-action:hover:not(:disabled) { background: #edf7f4 !important; border-color: #acd0ce !important; }
+.vilda-patient-documents-home-extras { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-16px); margin-top: var(--space-20px); padding-top: var(--space-20px); border-top: var(--border-hairline) solid #d9e5e8; }
+dialog.vilda-patient-documents .vilda-patient-documents-home-extras button.vilda-patient-documents-home-action {
+  justify-content: center;
+  min-height: 80px;
+  padding: var(--space-14px);
+  border-color: #cddfe3 !important;
+  background: #fff !important;
+  color: #087e85 !important;
+  text-align: center;
+}
+dialog.vilda-patient-documents .vilda-patient-documents-home-extras button.vilda-patient-documents-home-action:hover { background: #edf7f4 !important; border-color: #acd0ce !important; }
+.vilda-patient-documents-home-extras .vilda-patient-documents-home-action strong { font-size: 16px; }
+.vilda-patient-documents-home-extras .vilda-patient-documents-home-mark { display: none; }
+.vilda-patient-documents p.vilda-patient-documents-home-footnote { margin: var(--space-20px) 0 0; padding-top: var(--space-16px); border-top: var(--border-hairline) solid #dce7e9; font-size: 14px; }
+.vilda-patient-documents[data-patient-documents-home] .vilda-patient-documents-narrative { margin: 0; padding: 0; border: 0; }
+.vilda-patient-documents[data-patient-documents-home] .vilda-patient-documents-choices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-10px); }
+.vilda-patient-documents[data-patient-documents-home] .vilda-patient-documents-choice { min-width: 0; margin: 0; }
+.vilda-patient-documents[data-patient-documents-home] .vilda-patient-documents-choice small,
+.vilda-patient-documents[data-patient-documents-home] p.vilda-patient-documents-note,
+.vilda-patient-documents[data-patient-documents-home] .vilda-patient-documents-footer > span { font-size: 14px; }
+dialog.vilda-patient-documents button:is([data-patient-documents-package-back], [data-patient-documents-description-back]) {
+  display: block;
+  padding-inline: 0;
+  margin: 0 0 var(--space-10px);
+  border: 0 !important;
+  background: transparent !important;
+}
+.vilda-patient-documents-home-preview {
+  display: block;
+  width: 100%;
+  min-height: 180px;
+  margin: 0 0 var(--space-16px);
+  padding: var(--space-14px);
+  border: var(--border-hairline) solid #d3e3e6;
+  border-radius: var(--radius-9);
+  background: #fff;
+  color: #315763;
+  font: inherit;
+  line-height: 1.65;
+}
+@media (max-width: 900px) {
+  .vilda-patient-documents-home-groups { gap: var(--space-12px); }
+  .vilda-patient-documents-home-group { padding: 17px var(--space-14px); }
+}
+@media (min-width: 681px) and (max-width: 780px) {
+  .vilda-patient-documents-home-heading { min-height: 104px; }
+}
+@media (max-width: 680px) {
+  .vilda-patient-documents-home-groups,
+  .vilda-patient-documents-home-extras,
+  .vilda-patient-documents[data-patient-documents-home] .vilda-patient-documents-choices { grid-template-columns: minmax(0, 1fr); }
+  .vilda-patient-documents-home-group { padding: var(--space-18px) var(--space-16px); }
+  .vilda-patient-documents-home-context { align-items: flex-start; flex-direction: column; gap: var(--space-4px); }
+  .vilda-patient-documents-home-context span { text-align: left; }
+  .vilda-patient-documents-home-heading { flex-direction: row; align-items: center; }
+  .vilda-patient-documents p.vilda-patient-documents-home-description { min-height: 0; }
+  dialog.vilda-patient-documents button.vilda-patient-documents-home-action { min-height: 80px; }
+  .vilda-patient-documents-home-extras { gap: var(--space-10px); }
+}
+@media (max-width: 600px) {
+  dialog.vilda-patient-documents[data-patient-documents-home] { --documents-gap: 10px; height: calc(100dvh - 24px); }
+  .vilda-patient-documents[data-patient-documents-home] .vilda-patient-documents-header { padding: var(--space-14px) var(--space-16px); }
+  .vilda-patient-documents[data-patient-documents-home] h2 { font-size: 19px; }
+  .vilda-patient-documents[data-patient-documents-home] .vilda-patient-documents-body { padding: var(--space-16px); }
+}
