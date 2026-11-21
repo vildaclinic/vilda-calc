@@ -77,6 +77,7 @@ test('completion and next step survive reload and remain linked in the patient n
   await page.locator(DIALOG).getByRole('button', { name: 'Otwórz kolejny krok →', exact: true }).click();
   await expect(page.locator(`${DIALOG} .vb22-detail-title`)).toHaveText('Fikcyjne MR — sprawdzić wykonanie');
   await page.reload();
+  await page.waitForFunction(() => window.VildaVault?.isUnlocked() && window.VildaAuthUI?.isBootReady());
   const stored = await page.evaluate(async ({ patientId, id }) => ({ notes: await window.VildaVault.listPatientNotesForPatient(patientId), parent: await window.VildaVault.getPatientNote(id) }), { patientId: ids.a, id: notes[0] });
   expect(stored.parent.completedAtISO).toBeTruthy(); expect(stored.parent.body).toContain('Pierwotna fikcyjna treść.'); expect(stored.parent.body).toContain('02.02.2027');
   expect(stored.notes.find(n => n.id === stored.parent.reminderContext.nextId).reminderContext.parentId).toBe(notes[0]);
