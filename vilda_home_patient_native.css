@@ -873,7 +873,7 @@ html.vilda-home-workspace #vhomePatientOverview .vhome-b1-heading {
   overflow: visible;
 }
 html.vilda-home-workspace #vhomePatientOverview .vhome-b1-nav > [data-tab="reminders"] {
-  gap: 6px;
+  gap: var(--space-6px);
   padding-inline-end: 2px;
 }
 @media (min-width: 681px) and (max-width: 1000px) {

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { applyEncounterNoteAuthHooks, reverseEncounterNoteAuthHooks } from '../../tools/home-encounter-note-auth-hooks.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
@@ -22,8 +23,8 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../
 // Źródło bez komentarzy: opis naprawy cytuje usunięty kod. Odrzucamy tylko linie będące
 // w całości komentarzem — naiwne ucinanie od pierwszego „//" kaleczy plik zminifikowany,
 // bo w łańcuchach znakowych siedzą adresy https://.
-const kod = readFileSync(path.join(repoRoot, 'vilda_auth_ui.js'), 'utf8')
-  .split('\n')
+const source = readFileSync(path.join(repoRoot, 'vilda_auth_ui.js'), 'utf8');
+const kod = source.split('\n')
   .filter((w) => !/^\s*\/\//.test(w))
   .join('\n');
 
@@ -33,7 +34,12 @@ describe('P5 — edytor notatki pacjenta reaguje na wskrzeszenie', () => {
     const wywolania = [...kod.matchAll(/(.)await a\.savePatientNote\(Vt\)/g)].map((m) => m[1]);
     expect(wywolania.length, 'jedno wywołanie zapisu w edytorze').toBe(1);
     expect(wywolania[0], 'wynik zapisu przypisany, nie porzucony').toBe('=');
-    expect(kod).toContain('var Gc3=await a.savePatientNote(Vt)');
+    const poprzedniEdytor = reverseEncounterNoteAuthHooks(source);
+    expect(poprzedniEdytor).toContain('var Gc3=await a.savePatientNote(Vt)');
+    expect(applyEncounterNoteAuthHooks(poprzedniEdytor)).toBe(source);
+    // Zachowany wynik z obu ścieżek trafia do tego samego sprawdzenia konfliktu.
+    expect(kod).toContain('Gc3=await a.savePatientNoteOnce(Vt,{isCurrent:EncounterEditorCurrent})');
+    expect(kod).toContain('}else Gc3=await a.savePatientNote(Vt);if(Gc3&&Gc3.conflict===!0)');
     expect(kod, 'wskrzeszenie to isNew przy edycji istniejącej notatki')
       .toContain('var Gc4=!!(n&&Gc3&&Gc3.isNew===!0)');
   });

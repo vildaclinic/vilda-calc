@@ -1167,7 +1167,9 @@
         if (plan) { request.planId = plan.id; request.patientId = plan.patientId; request.baseRev = plan.rev; }
         setWorking(true);
         try {
-          var result = await vault.mutateCarePlan(request, model.visitBinding);
+          var result = model.visitBinding
+            ? await vault.mutateCarePlan(request, model.visitBinding)
+            : await vault.mutateCarePlan(request);
           if (!current() || editor !== model) return;
           if (!result || !result.saved) throw new Error(result && (result.needsRefresh || result.reason === 'operation-outcome-expired') ? 'Nie można potwierdzić wyniku wcześniejszego zapisu. Zachowaj wpisaną treść, anuluj formularz i sprawdź aktualny plan przed ponownym zapisem.' : result && result.conflict ? 'Plan zmienił się w innej karcie lub na innym urządzeniu. Zachowaj wpisaną treść, anuluj formularz i otwórz go ponownie.' : result && result.reason === 'deleted' ? 'Ten plan lub jego wpis został usunięty. Anuluj formularz i odśwież listę.' : 'Nie udało się zapisać planu. Anuluj formularz i odśwież listę.');
           resetRecord();

@@ -14,13 +14,13 @@ function EncounterEditorCurrent() {
   return !!(EncounterBinding && EncounterBinding.isCurrent() && d.isConnected && (!t.isCurrent || t.isCurrent()));
 }
 `],
+  ['Xt.checked=Bt==="date";', 'Xt.checked=!!EncounterOrigin||Bt==="date";'],
   ['Ee(),c.appendChild(pt);const Ie=',
    `Ee(),c.appendChild(pt);
 if(EncounterOrigin) {
   var encounterCaption=e("div",{text:"Wizyta z "+EncounterOrigin.clinicalDateISO.split("-").reverse().join(".")});
   var encounterDate=e("label",{},["Data badania lub zdarzenia (opcjonalnie)",ce]);
   pt.replaceChildren(encounterCaption,encounterDate);
-  ce.style.display="block";
 }
 const Ie=`],
   ['if(Xt.checked&&!(ce.value||"").trim())', 'if(!EncounterOrigin&&Xt.checked&&!(ce.value||"").trim())'],
