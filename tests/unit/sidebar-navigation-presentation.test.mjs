@@ -24,16 +24,47 @@ function account() {
     assertSyncOperationSession: token => { if (token.key !== state.key || !state.unlocked) throw Error('Old synthetic key'); } };
   return { state, vault };
 }
-function fixture() {
+function fixture({ lateStartChip = false } = {}) {
   const local = new Map([['vilda:sharedLoadSeq', 'fictional-tab:7']]);
+  const observers = [];
+  class MutationObserver {
+    constructor(callback) { this.callback = callback; this.targets = new Map(); this.records = []; observers.push(this); }
+    observe(target, options) { this.targets.set(target, options); }
+    disconnect() { this.targets.clear(); this.records = []; }
+    takeRecords() { const records = this.records; this.records = []; return records; }
+  }
+  function chip() {
+    const attrs = new Map();
+    const node = { getAttribute: key => attrs.get(key) ?? null,
+      setAttribute(key, value) {
+        if (attrs.get(key) === String(value)) return;
+        attrs.set(key, String(value));
+        for (const observer of observers) {
+          const options = observer.targets.get(node);
+          if (!options?.attributes || options.attributeFilter && !options.attributeFilter.includes(key)) continue;
+          observer.records.push({ type: 'attributes', target: node, attributeName: key });
+          if (observer.scheduled) continue;
+          observer.scheduled = true;
+          queueMicrotask(() => {
+            observer.scheduled = false;
+            const records = observer.takeRecords();
+            if (records.length) observer.callback(records, observer);
+          });
+        }
+      },
+      get className() { return attrs.get('class') || ''; },
+      set className(value) { node.setAttribute('class', value); } };
+    return node;
+  }
   let patient = 'fictional-patient-a';
   const hostAccount = account(), clear = button();
-  const host = { VildaVault: hostAccount.vault, localStorage: { getItem: key => local.get(key) ?? null } };
+  const host = { VildaVault: hostAccount.vault, localStorage: { getItem: key => local.get(key) ?? null }, MutationObserver };
   const document = { querySelector: () => clear };
   function pane(route, loaded = true) {
     const auth = account(), save = button(), scope = {};
     const state = { ready: true, decision: 'saved', cached: 'saved', reference: 'fictional-reference-46', documents: 'ready', decisionCurrent: true, stale: false };
-    const doc = events({ getElementById: id => id === 'saveDataBtnSidebar' ? save : null });
+    let statusChip = route === 'start' && lateStartChip ? null : chip();
+    const doc = events({ getElementById: id => id === 'saveDataBtnSidebar' ? save : id === 'vildaPatientChip' ? statusChip : null });
     const api = { getCurrentDecision: vi.fn(() => ({ ready: state.ready, state: state.decision, scope })),
       isCurrentDecisionOwner: value => value === scope && state.decisionCurrent,
       isReadyForSharedReference: () => state.ready, getState: vi.fn(() => state.cached),
@@ -45,7 +76,8 @@ function fixture() {
       VildaPatientDocuments: documents, VildaPanelPacjent: { nieaktualny: () => state.stale } });
     const frame = { contentWindow: win, contentDocument: doc, hidden: route !== 'start', isConnected: true };
     const entry = { frame, loaded, navigationGeneration: loaded ? 1 : 0, stale: false };
-    return { route, auth, save, doc, api, documents, win, frame, entry, state };
+    return { route, auth, save, doc, api, documents, win, frame, entry, state,
+      get chip() { return statusChip; }, mountChip() { statusChip = chip(); return statusChip; } };
   }
   const panes = { start: pane('start'), docpro: pane('docpro'), lab: pane('lab'), klirens: pane('klirens') };
   delete panes.lab.win.VildaSaveStatusIndicator;
@@ -58,7 +90,8 @@ function fixture() {
     panes[ctx.c].frame.hidden = true;
     ctx.c = route; panes[route].frame.hidden = false; ctx.Sp_target(panes[route].entry);
   }
-  return { ctx, panes, host, hostAccount, clear, local, navigate, view: () => ctx.Sp_presentation(), setPatient: value => { patient = value; } };
+  return { ctx, panes, host, hostAccount, clear, local, navigate, view: () => ctx.Sp_presentation(), setPatient: value => { patient = value; },
+    observersFor: node => observers.filter(observer => observer.targets.has(node)), flushMutations: () => Promise.resolve() };
 }
 
 describe('sidebar presentation: actual production handoff, without action authority', () => {
@@ -129,6 +162,79 @@ describe('sidebar presentation: actual production handoff, without action author
     expect(h.view().state).toBe(outcome);
     expect(source.api.getCurrentDecision).toHaveBeenCalledOnce();
     expect(source.save.click).not.toHaveBeenCalled();
+  });
+  it.each(['saved', 'dirty', 'error'])('binds a late same-document chip on frame load and follows pending Save to %s through its observer', async outcome => {
+    const h = fixture({ lateStartChip: true }), source = h.panes.start, originalDoc = source.doc;
+    expect(source.chip).toBeNull();
+    source.mountChip();
+    // The shell binds the loading document before Chrome mounts its header,
+    // then binds that same document again from the iframe's load listener.
+    h.ctx.Sp_bind(source.entry);
+    h.ctx.Sp_bind(source.entry);
+    expect(source.frame.contentDocument).toBe(originalDoc);
+    expect(h.observersFor(source.chip)).toHaveLength(1);
+    let pending = true;
+    source.state.ready = false; source.state.cached = 'saving';
+    source.win.VildaDataImportExport = { isSaveUserDataPending: () => pending };
+    h.navigate('lab'); expect(h.view().state).toBe('saving');
+    pending = false; source.state.ready = true; source.state.cached = outcome;
+    source.chip.className = 'vilda-save-state--' + outcome;
+    await h.flushMutations();
+    expect(h.view().state).toBe(outcome);
+    expect(source.api.getCurrentDecision).toHaveBeenCalledOnce();
+    expect(source.save.click).not.toHaveBeenCalled();
+  });
+  it('binds a newly mounted source chip at the navigation handoff without needing another frame load', async () => {
+    const h = fixture({ lateStartChip: true }), source = h.panes.start;
+    source.mountChip();
+    let pending = true;
+    source.state.ready = false; source.state.cached = 'saving';
+    source.win.VildaDataImportExport = { isSaveUserDataPending: () => pending };
+    h.navigate('lab'); expect(h.view().state).toBe('saving');
+    expect(h.observersFor(source.chip)).toHaveLength(1);
+    pending = false; source.state.ready = true; source.state.cached = 'error';
+    source.chip.setAttribute('title', 'Fictional late save failed'); await h.flushMutations();
+    expect(h.view().state).toBe('error');
+    expect(source.api.getCurrentDecision).toHaveBeenCalledOnce();
+  });
+  it('rebinds a replaced chip in the same document and disconnects its former observer', async () => {
+    const h = fixture(), source = h.panes.start, oldChip = source.chip, [oldObserver] = h.observersFor(oldChip);
+    source.mountChip(); h.ctx.Sp_bind(source.entry);
+    expect(oldObserver.targets.size).toBe(0);
+    expect(h.observersFor(source.chip)).toHaveLength(1);
+    let pending = true;
+    source.state.ready = false; source.state.cached = 'saving';
+    source.win.VildaDataImportExport = { isSaveUserDataPending: () => pending };
+    h.navigate('lab'); expect(h.view().state).toBe('saving');
+    pending = false; source.state.ready = true; source.state.cached = 'saved';
+    oldChip.className = 'vilda-save-state--saved'; await h.flushMutations();
+    expect(h.view().state).toBe('saving');
+    source.chip.className = 'vilda-save-state--saved'; await h.flushMutations();
+    expect(h.view().state).toBe('saved');
+  });
+  it.each(['patient', 'key', 'document'])('fences an already queued chip callback after the source %s boundary', boundary => {
+    const h = fixture(), source = h.panes.start, originalDoc = source.doc, [observer] = h.observersFor(source.chip);
+    source.state.ready = false; source.state.cached = 'saving';
+    source.win.VildaDataImportExport = { isSaveUserDataPending: () => true };
+    h.navigate('lab'); expect(h.view().state).toBe('saving');
+    if (boundary === 'patient') h.setPatient('fictional-patient-b');
+    if (boundary === 'key') source.auth.state.key++;
+    if (boundary === 'document') {
+      const replacement = events({ getElementById: () => null });
+      source.frame.contentDocument = source.win.document = replacement;
+      h.ctx.Sp_bind(source.entry);
+      expect(observer.targets.size).toBe(0);
+    }
+    source.state.cached = 'error'; source.api.getState.mockClear();
+    // A callback already delivered to the event loop may outlive disconnect.
+    // Exercise that callback, rather than calling the shell status reader.
+    const deliverOldCallback = () => observer.callback([{ type: 'attributes', target: source.chip, attributeName: 'class' }], observer);
+    deliverOldCallback();
+    expect(h.view()).toBeNull(); expect(source.api.getState).not.toHaveBeenCalled();
+    if (boundary === 'patient') h.setPatient('fictional-patient-a');
+    if (boundary === 'key') source.auth.state.key--;
+    if (boundary === 'document') source.frame.contentDocument = source.win.document = originalDoc;
+    deliverOldCallback(); expect(h.view()).toBeNull();
   });
   it.each(['missing', 'not-current'])('never treats a stale Saving label as a pending operation: %s', proof => {
     const h = fixture(), source = h.panes.start;
