@@ -2635,6 +2635,78 @@ i synchronizacja bez zmian; style tylko klasami (`tests/fixtures/style-elementow
 oceny (`.vilda-oba-verdict`) nie trafiały w „Przegląd”. GH, karta „wg notatek” (`jl`) i pacjent bez leczenia otyłości —
 bez zmian. Wersje `?v=`, precache i `SW_VERSION` ustawił `npm run podbij-wersje`.
 
+## Łatka P-KARTA-LECZENIE, etap 3 — karta leczenia GH z przełącznikiem (`vilda_auth_ui.js` 578 → 579, `vilda_auth_ui.css` 88 → 89, 2026-11-21, makieta zaakceptowana przez właściciela)
+
+Czytelne źródło: `vilda_auth_ui.js` — nowy czytelny blok P-KARTA-LECZENIE, etap 3 zaraz po bloku etapu 2 (po
+`Ko_karta`, przed `function Pl(`): `Kg_licznik`, `Kg_widoki` (wybrany widok karty GH per pacjent, osobno od `Ko_widoki`),
+`Kg_zapomnij`, `Kg_punktyTrendu` (filtr punktów trendu — jeden dla `Pl` i karty), `Kg_maTrend` (karta ma „Trend dawki”
+dokładnie wtedy, gdy `Pl` rysuje trend z punktów GH), `Kg_dawkaCz` (liczba, jednostka i podpis kafelka „Preparat
+i dawka” z gałęzi, z których `wl` składa „Aktualną dawkę”), `Kg_cichyNaglowek`, `Kg_cichaAnaliza`, `Kg_kolor`,
+`Kg_kafelki` (kafelki etapu 2: `Ko_kafel`, `Ko_podpisy`, `Ko_punkty`), `Kg_karta` (nagłówek, przełącznik, widoki,
+`pokaz(widok)`), `Kg_grupa` (karta albo — po wyjątku — bloki jak w etapie 1), `Kg_opcjeKarty` i `Kg_poOtwarciu` (otwarcie
+Karty z notatki GH). Czytelne `Kl_leczenie` zmienione w miejscu (opis niżej). Opis: `docs/clinical/ALGORITHMS.md`, wpis
+„P-KARTA-LECZENIE, etap 3”; plan: `docs/KARTA_LECZENIE_PLAN.md`. Zminifikowane miejsca zmienione kotwicami
+występującymi dokładnie raz; skrypty łatek (Python, `zamien` z licznikiem kotwicy: `patch_auth.py` + `kg_blok.js`,
+`patch_css.py` + `kg_style.css`) odtwarzają wynik z `origin/audyt` 19fd027e; bez ponownej minifikacji.
+
+```
+// vilda_auth_ui.js — Gwl_inc (Increlex, dawka na podanie): części tekstu dla kafelka (tekst bez zmian)
+// 1. function Gwl_inc(d){ → function Gwl_inc(d,Kg_cz){; przed return: Kg_cz&&(Kg_cz.dobowa=A!=null?"2 × "+qt(A/2,2)+" mg":"",
+//    Kg_cz.podanie=K||"",Kg_cz.podanieV=K?qt(d.dose/2,3):"")   (wszystkie dotychczasowe wywołania — jeden argument)
+// vilda_auth_ui.js — wl (podsumowanie GH): dane nagłówka, „Przeglądu” i „Analizy”; tryb karty bez siatki pól
+// 2. u=s&&!/tydz/i.test(p)?Gwl_inc(d):… → Kg_ib=s&&!/tydz/i.test(p),Kg_inc={},u=Kg_ib?Gwl_inc(d,Kg_inc):…
+// 3. return Kl_wy&&(…,Kl_wy.dawka=…),e("div",{class:"vilda-gh-summary"},[v,m,y,Gh].filter(Boolean))
+//    → …,Kl_wy.dawkaCz=Kg_dawkaCz(Kg_ib,Kg_inc,d,p),Kl_wy.program=c,Kl_wy.programPelny=c?bl(c):"",
+//      Kl_wy.preparat=d.drug||r.drug||"",Kl_wy.punkty=Gw?Gw_p.length:a.length,Kl_wy.punktyRazem=a.length,
+//      Kl_wy.kursy=Gw?Gw.liczba:1,Kl_wy.ostatnia=ra(d)==="—"?"":ra(d),Kl_wy.glowa=v),
+//      e("div",{class:"vilda-gh-summary"},[v,Kl_wy&&Kl_wy.karta?null:m,y,Gh].filter(Boolean))
+//    (te same zmienne co pola Program, Preparat, Aktualna dawka, Punkty kontrolne, Ostatnia kontrola)
+// vilda_auth_ui.js — kl (Dane analityczne GH)
+// 4. Kl_wy&&(Kl_wy.czas=…,Kl_wy.tempo=…,Kl_wy.dhsds=…); → …,Kl_wy.przeglad={czasK,czasV:W,czasJ:"mies.",czasOd:"od "+ra(c)
+//    (W2 — Gw_BEZ_WLACZENIA),tempoV:qt(F,1),tempoJ,tempoSub:S,tempoCls,dhsdsV:be(z,"",2),dhsdsCls,
+//    dhsdsSds:Ur(y)+" → "+Ur(x) bez „hSDS ”,dhsdsOd:!Gk,dhsdsSub}   (te same zmienne co kafelki „Przyrost…”, „Tempo
+//    wzrastania”, „Odpowiedź (ΔhSDS)”, „Wzrost przy włączeniu/w 1. punkcie”, „Wzrost ostatni”; liczba fe( bez zmian)
+// 5. it=e("div",{class:"vilda-gha-panel",style:"display:none;"},C) → it=e("div",Kl_wy&&Kl_wy.karta?{class:"vilda-gha-panel"}:{…},C)
+// 6. return ht.addEventListener(…),e("div",{style:"margin:2px 0 2px;"},[ht,it])} → return Kl_wy&&Kl_wy.karta?it:(…)}
+//    (tryb karty: panel bez belki, rozwinięty — widok „Analiza”)
+// vilda_auth_ui.js — Pl (Trend leczenia GH): tryb karty (trzeci argument, zgodnie wstecz) i nazwany filtr punktów
+// 7. function Pl(t,a){var n=e("div",{style:"margin-top:18px;"}),… → function Pl(t,a,Kg_o){var Kg_k=!!(Kg_o&&Kg_o.karta),
+//    n=e("div",Kg_k?{class:"vilda-kg-trend"}:{style:"margin-top:18px;"}),…
+// 8. n.appendChild(e("p",{class:"vilda-patient-section-h",text:"Trend leczenia GH"})); → Kg_k||n.appendChild(…);
+// 9. l=a.filter(function(u){return u&&(u.type==="start"||…)&&typeof u.dose=="number"&&isFinite(u.dose)}).map( → l=Kg_punktyTrendu(a).map(
+// 9a. koniec rysunku: S(),n.appendChild(W),n.appendChild(xl(u,h))} → …,n.appendChild(xl(u,h)),Kg_k&&typeof Kg_o.poRysunku=="function"&&Kg_o.poRysunku()}
+//     (tryb karty: zgłoszenie po narysowaniu — przewinięcie z notatki GH powtarza się, gdy trend czekał na odczyt notatek)
+// vilda_auth_ui.js — Kl_leczenie (czytelne)
+// 10. if (o && !o.tlo) Ko_zapomnij(…) → if (o && !o.tlo) { Ko_zapomnij(o.patientId); Kg_zapomnij(o.patientId); }
+// 11. ghPods/ghPanel + wl/kl + lista.push({el:div.vilda-kl-gh [wl, kl]}) → var gh = Kg_grupa(o, s); lista.push({el: gh.el, …})
+// 12. return {…} → {…, trendGh: !!(gh && gh.trend), pokazGh: gh && gh.pokaz ? gh.pokaz : null}
+// vilda_auth_ui.js — showPatientCard (se)
+// 13. Kl_leczenie({…,user:m,zakladka:…,tlo:GdTlo}) → Kl_leczenie({…,user:m,widokGh:r&&r.widokGh,zakladka:…,tlo:GdTlo}),
+//     Kg_opcje=r=Kg_opcjeKarty(r,KlL)   (widokGh „trend” bez karty GH z „Trendem dawki” → activeTab „traj”, jak dotąd)
+// 14. try{Ct.appendChild(Pl(t,s.ghTherapyPoints))}catch{} → try{KlL&&KlL.trendGh||Ct.appendChild(Pl(t,s.ghTherapyPoints))}catch{}
+//     (Siatki centylowe bez trendu, gdy ma go karta GH — Pl woła się raz)
+// 15. po xa={…restoreTab…}: Kg_poOtwarciu(KlL,r);   (przewinięcie do karty GH i fokus na „Trend dawki”, 60 ms po montażu)
+// vilda_auth_ui.js — arkusz notatki GH (CareOpenLegacyNoteEditor)
+// 16. text:"↗ Siatki / punkt GH" → text:"↗ Trend dawki / punkt GH";
+//     …:se(h,null,null,{activeTab:"traj"}) → …:se(h,null,null,{activeTab:"leczenie",widokGh:"trend"})  (z ghPointId — Gr, bez zmian)
+```
+
+`vilda_auth_ui.css`: rozdział „P-KARTA-LECZENIE, etap 3” na końcu pliku — cichy tekst nagłówka `.vilda-kg-cichy` (po
+prawej; telefon ≤ 560 px — w osobnej linii pod znacznikiem), odstępy przełącznika `.vilda-kg-seg` (wygląd
+`.vilda-oba-seg`), kolor wartości kafelków `.vilda-kg-kafel--good/--bad` (jak `.vilda-gha-tile.good/.bad`), biała ramka
+wykresu `.vilda-kg-ramka` (wartości `.vilda-oba-chartbox`), nagłówek tabeli trendu w ramce (przezroczyste tło zamiast
+`th { background: var(--secondary) }` motywu, ciemny tekst `var(--text-strong)` z `!important` wobec stylu wpisanego
+przez `Pl`), panel „Analizy” bez pudełka (`.vilda-kg-widok--analiza .vilda-gha-panel`). Kafelki — klasy etapu 2
+(`.vilda-ko-kafelki`, `.vilda-ko-kafel*`; komputer 1 × 4, telefon 2 × 2).
+
+**Granice.** Bez nowego pliku ładowanego przez strony; style tylko klasami (`tests/fixtures/style-elementow.json` bez
+zmian: widoki chowa atrybut `hidden`, `Pl` bez opcji ma ten sam atrybut `style`). Karta GH ma własne klasy (`.vilda-kg-*`),
+żeby lokatory karty otyłości (`.vilda-ko-karta`, `.vilda-ko-seg`) nie trafiały w kartę GH; karta otyłości, `Ko_*` i jej
+DOM bez zmian. `Pl` bez trzeciego argumentu rysuje jak dotąd (nagłówek i margines; także trend z wpisów Terminarza
+w „Siatkach”). Sejf, dane, obliczenia, progi, teksty kafelków panelu i DocPro bez zmian. Strażnik treści edytora notatki
+(`tests/unit/care-plan-auth-ui-boundary.test.mjs`) dostał nowy odcisk z opisem zmiany (etykieta i opcja otwarcia Karty).
+Wersje `?v=`, precache i `SW_VERSION` ustawił `npm run podbij-wersje`.
+
 ## Trwała tożsamość wizyt — źródło i granica artefaktu sejfu
 
 Zmiana funkcjonalna `P-TRWALE-WIZYTY` ma bazę `audyt` z commita

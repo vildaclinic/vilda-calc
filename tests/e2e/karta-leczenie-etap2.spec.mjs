@@ -260,23 +260,25 @@ test.describe('Karta pacjenta — karta leczenia otyłości z przełącznikiem (
     expect(await opisKarty(page)).toEqual(expect.objectContaining({ wybrany: 'Przegląd', widoczne: ['przeglad'] }));
   });
 
-  test('KO-9 bez zmian: GH (G1) bez przełącznika, z polami podsumowania; X1 — karta otyłości nad zakończonym GH; pasek klik → karta', async ({ page }) => {
+  // Etap 3 (zmiana zamierzona): GH ma własną kartę leczenia z przełącznikiem (.vilda-kg-karta) — dotąd bez przełącznika,
+  // z polami podsumowania i belką „📊 Dane analityczne”. Karta otyłości (.vilda-ko-*) i jej przełącznik bez zmian.
+  test('KO-9 GH (G1) bez karty otyłości (własna karta GH, etap 3); X1 — karta otyłości nad zakończonym GH; pasek klik → karta', async ({ page }) => {
     test.setTimeout(150_000);
     await otworz(page);
     const g1 = await zapisz(page, G1);
     await karta(page, g1);
     await zakladki(page).filter({ hasText: 'Leczenie' }).click();
-    await expect(tresc(page, 'leczenie').locator('.vilda-gh-summary-grid')).toBeVisible();
+    await expect(tresc(page, 'leczenie').locator('.vilda-kg-karta')).toBeVisible();
     await expect(page.locator('.vilda-ko-karta, .vilda-ko-seg')).toHaveCount(0);
-    await expect(tresc(page, 'leczenie').locator('.vilda-gha-btn')).toHaveCount(1);
+    await expect(tresc(page, 'leczenie').locator('.vilda-gha-btn')).toHaveCount(0);
 
     const x1 = await zapisz(page, X1);
     await karta(page, x1);
     await paski(page).nth(1).click(); // GH — drugi
     await expect(aktywna(page)).toHaveText('Leczenie');
     const bloki = await tresc(page, 'leczenie').evaluate((t) => [...t.children].map((c) => c.firstElementChild && c.firstElementChild.className));
-    expect(bloki).toEqual(['vilda-gh-summary vilda-ko-karta', 'vilda-gh-summary']);
-    await expect(tresc(page, 'leczenie').locator('.vilda-gha-btn')).toHaveCount(1); // tylko GH
+    expect(bloki).toEqual(['vilda-gh-summary vilda-ko-karta', 'vilda-gh-summary vilda-kg-karta']); // etap 3: GH — karta GH (dotąd 'vilda-gh-summary')
+    await expect(tresc(page, 'leczenie').locator('.vilda-gha-btn')).toHaveCount(0); // etap 3: bez belki GH (dotąd 1)
     await widokKarty(page, 'analiza').click();
     await paski(page).first().click(); // pasek leczenia: zakładka i przewinięcie, bez zmiany widoku karty
     await expect(widokKarty(page, 'analiza')).toHaveAttribute('aria-selected', 'true');

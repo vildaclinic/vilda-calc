@@ -3,7 +3,7 @@ import { expect, test } from '../support/test-czas.mjs';
 // P-TOZSAMOSC-RAMKI (2026-09-30): w powłoce app.html ramka DocPro po wczytaniu pacjenta B wracała do
 // poprzedniego pacjenta A. Regresja z P-WERDYKT rata 7 (#443).
 //
-// Mechanizm (zmierzony): kilkadziesiąt ms po wczytaniu B — zwykłym z listy albo skokiem „↗ Siatki / punkt GH"
+// Mechanizm (zmierzony): kilkadziesiąt ms po wczytaniu B — zwykłym z listy albo skokiem „↗ Trend dawki / punkt GH"
 // z notatki — powłoka odświeża ramkę (vildaPersistRestoreAll → refreshGHTherapyMonitor →
 // `vilda:therapy-points-changed`). Nasłuch karty porównania w vilda_summary_cards.js wołał wtedy Y()
 // z NIEAKTUALNEJ kotwicy `vildaPrevSummaryPid` (jeszcze A — odczyt B z sejfu trwa), a Y() zapisuje
@@ -68,7 +68,7 @@ const zalozPacjenta = (ctx, d) => ctx.evaluate(async (dane) => {
   return w.patientId;
 }, d);
 
-// Notatka, która renderuje przycisk „↗ Siatki / punkt GH" (wzorzec z skok-gh-rozgloszenie.spec.mjs).
+// Notatka, która renderuje przycisk „↗ Trend dawki / punkt GH" (wzorzec z skok-gh-rozgloszenie.spec.mjs).
 const zalozNotatkeGH = (ctx, patientId, ghPointId) => ctx.evaluate(async (d) => {
   const w = await window.VildaVault.savePatientNote({
     patientId: d.patientId, title: 'Somatropina', body: 'Dawka kontrolna.',
@@ -210,14 +210,14 @@ test('powłoka: po skoku z Terminarza do punktu GH pacjenta B karta SGA i ścią
 
   const docpro = await docproZPacjentemA(page, start, idA);
 
-  // Lekarz przechodzi do Terminarza, otwiera notatkę pacjenta B i klika „↗ Siatki / punkt GH".
+  // Lekarz przechodzi do Terminarza, otwiera notatkę pacjenta B i klika „↗ Trend dawki / punkt GH".
   await page.evaluate(() => window.VildaShell.navigate('terminarz'));
   const terminarz = await ramka(page, 'Terminarz');
   await terminarz.waitForFunction(() => window.VildaVault.isUnlocked() && Boolean(window.VildaAuthUI));
   await page.waitForTimeout(1500);
   await terminarz.evaluate((d) => window.VildaAuthUI.showPatientNoteEditor({ patientId: d.patientId, note: d.note }),
     { patientId: idB, note: notatkaB });
-  const przycisk = terminarz.locator('.vilda-pne button', { hasText: 'Siatki / punkt GH' });
+  const przycisk = terminarz.locator('.vilda-pne button', { hasText: 'Trend dawki / punkt GH' });
   await expect(przycisk, 'przycisk skoku jest w arkuszu notatki').toBeVisible();
   await przycisk.click();
 
@@ -343,7 +343,7 @@ test('kontrola: samodzielny docpro.html — skok do B czyści niepustą kartę S
 
   await page.evaluate((d) => window.VildaAuthUI.showPatientNoteEditor({ patientId: d.patientId, note: d.note }),
     { patientId: idB, note: notatkaB });
-  const przycisk = page.locator('.vilda-pne button', { hasText: 'Siatki / punkt GH' });
+  const przycisk = page.locator('.vilda-pne button', { hasText: 'Trend dawki / punkt GH' });
   await expect(przycisk).toBeVisible();
   await przycisk.click();
   await expect(page.locator('#lastName')).toHaveValue('Probny', { timeout: 15000 });

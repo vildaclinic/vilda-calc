@@ -1,6 +1,6 @@
 # Karta pacjenta: zakładka „Leczenie” — plan i decyzje (P-KARTA-LECZENIE)
 
-Stan na 2026-11-21. Dokument utrwala ustalenia właściciela i etapy pracy, żeby kolejne PR-y i inne wątki nie odtwarzały
+Stan na 2026-11-21 (etap 3). Dokument utrwala ustalenia właściciela i etapy pracy, żeby kolejne PR-y i inne wątki nie odtwarzały
 ich z rozmowy. Opis techniczny wdrożonych etapów: `docs/clinical/ALGORITHMS.md`, wpisy „P-KARTA-LECZENIE”; łatki
 zminifikowanego `vilda_auth_ui.js`: `docs/ZRODLA_ARTEFAKTOW.md`.
 
@@ -33,8 +33,8 @@ Analiza”, dla GH „Przegląd | Trend dawki | Analiza”. Makiety (komputer i 
 | Etap | Zakres | Stan |
 |---|---|---|
 | 1 | Zakładka „Leczenie” (druga, tylko przy leczeniu) z dzisiejszymi blokami bez zmian; pasek leczenia nad zakładkami (przycisk otwierający zakładkę, wartości z tych samych danych co bloki, pigułka oceny D1); odnośniki do „Leczenia” (Notatki) | wdrożony w tym PR (SW 1.1.561) |
-| 2 | Karta leczenia otyłości w zakładce: przełącznik „Przegląd \| Wpisy \| Analiza”, „Przegląd” z czterema liczbami i oceną w jednej linii | w tym PR (SW 1.1.565) |
-| 3 | Karta GH w zakładce: „Przegląd \| Trend dawki \| Analiza”; „Trend leczenia GH” przeniesiony z „Siatek centylowych” | do zrobienia |
+| 2 | Karta leczenia otyłości w zakładce: przełącznik „Przegląd \| Wpisy \| Analiza”, „Przegląd” z czterema liczbami i oceną w jednej linii | scalony (SW 1.1.565, #1017) |
+| 3 | Karta GH w zakładce: „Przegląd \| Trend dawki \| Analiza”; „Trend leczenia GH” przeniesiony z „Siatek centylowych” | w tym PR (SW 1.1.567) |
 | 4 | Uzgodnienie z kartą B1 nowej strony głównej (D5): te same karty leczenia w „Monitorowaniu leczenia” | do zrobienia, po scaleniu karty B1 |
 
 ## Etap 1 — co zrobiono
@@ -107,6 +107,52 @@ Decyzja właściciela: „zaczynaj etap 2” (2026-11-21), według makiety hybry
   nagłówkiem karty (w każdym widoku), bo dotąd stały w podsumowaniu widocznym zawsze.
 - Moduł progów ChPL niezaładowany — bez linii oceny (pole w „Analizie” zostaje). Telefon: „Szczegóły oceny” i „Jak
   działa…” z celem dotyku 44 px.
+
+## Etap 3 — co zrobiono
+
+Decyzja właściciela: „Etap 3, karta leczenia GH” (2026-11-21), według makiety hybrydy z 2026-11-19. Opis techniczny:
+`docs/clinical/ALGORITHMS.md`, wpis „P-KARTA-LECZENIE, etap 3”; łatki: `docs/ZRODLA_ARTEFAKTOW.md`.
+
+- Grupa GH w zakładce „Leczenie” jest jedną miętową kartą leczenia (kontener podsumowania): nagłówek ze znacznikiem,
+  stanem, „kurs k z N”, „🔄 zmiana preparatu” i cichym tekstem „Program SNP · 7 punktów kontrolnych” (z dymkiem pełnej
+  nazwy programu; telefon — pod znacznikiem), bez przycisków. „Preparaty (historia)”, ramka „Brak punktu włączenia…”
+  i informacja W2 zostają nad przełącznikiem.
+- Przełącznik „Przegląd | Trend dawki | Analiza”, domyślnie „Przegląd”; „Trend dawki” tylko wtedy, gdy trend rysuje się
+  z punktów GH (inaczej „Przegląd | Analiza”, a trend z Terminarza zostaje w „Siatkach centylowych”).
+- Przegląd: kafelki Preparat i dawka, Czas leczenia (bez Włączenia „Czas od 1. punktu”), Tempo wzrastania, Odpowiedź
+  (ΔhSDS) — z tych samych obliczeń co pola podsumowania i kafelki panelu (bieżący kurs), komputer 1 × 4, telefon 2 × 2.
+- Trend dawki: dzisiejszy „Trend leczenia GH” w białej ramce, bez własnego nagłówka; znika z „Siatek centylowych”, gdy
+  karta go pokazuje. Analiza: panel „Dane analityczne” rozwinięty, bez belki, z cichą linią „program · preparat ·
+  ostatnia kontrola”.
+- Widok zostaje po odświeżeniu po synchronizacji; nowe otwarcie Karty — „Przegląd”. Przycisk notatki GH: „↗ Trend dawki /
+  punkt GH” — bez punktu GH zakładka „Leczenie” z kartą na „Trendzie dawki” (bez karty z trendem — „Siatki centylowe”),
+  z punktem — DocPro jak dotąd. Karta otyłości, pasek leczenia i reszta Karty bez zmian.
+
+## Etap 3 — rozstrzygnięcia wykonawcy (do przeglądu właściciela)
+
+- Przycisk notatki GH: etykieta „↗ Siatki / punkt GH” → „↗ Trend dawki / punkt GH”, a bez punktu GH cel to karta GH na
+  „Trendzie dawki” (makieta tego nie obejmuje; wynika z przeniesienia trendu; zgłoszone właścicielowi 2026-11-21).
+
+- W2 (Kontynuacja po Zakończeniu bez Włączenia): kafelek ma etykietę „Czas leczenia” (nie „Czas od 1. punktu”), wartość
+  „—” i podpis „brak Włączenia po Zakończeniu” — jak kafelek panelu „Przyrost od Włączenia”, który też nie liczy od
+  pierwszego punktu kursu.
+- Gdy Włączenie jest jedynym punktem kursu (0 miesięcy), „Czas leczenia” ma „—” z podpisem „od {wiek}” — panel nie podaje
+  wtedy „przez N mies.”, a pasek pomija czas.
+- Increlex bez dawki dobowej w mg (stary punkt bez `doseAbs` i bez masy): kafelek „0,04” + „mg/kg na podanie”, podpis —
+  sam preparat (tekst pola „Aktualna dawka” to wtedy samo „0,04 mg/kg na podanie”). Brak dawki — „—” z preparatem
+  w podpisie (pole „Preparat” było zawsze).
+- Podpis ΔhSDS bez Włączenia ma dwie części („hSDS a → b” i „od 1. punktu”), które przy wąskim kafelku łamią się na
+  granicy części (`Ko_podpisy`), jak podpisy etapu 2; podpis tempa — jedna część, jak w panelu.
+- Notatka GH bez punktu: widok „Trend dawki” jest zapamiętany jak wybór lekarza (zostaje po odświeżeniu po
+  synchronizacji); karta przewija się na górę widoku, a fokus trafia na „Trend dawki” (jak „Notatki” → „Wpisy” w etapie 2).
+  Trend rysuje się po odczycie notatek (IGF-1) — gdy Karta była jeszcze za krótka, by przewinąć, przewinięcie powtarza się
+  po narysowaniu trendu (o ile lekarz nie zmienił w tym czasie widoku).
+- Nagłówek tabeli trendu w karcie: przezroczyste tło i kolor `--text-strong` (#0f2b33); w „Siatkach” bez zmian (trend
+  z Terminarza).
+- Ostatnia kontrola bez wieku (punkt z wiekiem 0) — część „ostatnia kontrola …” pominięta w cichej linii (pole
+  pokazywało „w wieku —”).
+- Na prawdziwej stronie trend Increlex z punktów pokazuje % dawki zalecanej (moduł odcinków jest załadowany) — jak dotąd;
+  legenda „dawka (mg/kg na podanie)” zostaje tam, gdzie % nie ma (bez zmian `Pl`).
 
 ## P-GH-WZNOWIENIE — GH wznowione po Zakończeniu
 
