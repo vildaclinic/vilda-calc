@@ -103,7 +103,7 @@ async function zapiszBeate(page) {
   await page.locator('#saveDataBtnSidebar').evaluate((b) => b.click());
   await expect.poll(() => page.evaluate(async () => (await window.VildaVault.listPatients()).length)).toBe(1);
   const id = await page.evaluate(async () => (await window.VildaVault.listPatients())[0].patientId);
-  // Notatka z punktem GH — daje prawdziwy przycisk „↗ Siatki / punkt GH" (wzorzec z skok-gh-rozgloszenie.spec.mjs).
+  // Notatka z punktem GH — daje prawdziwy przycisk „↗ Trend dawki / punkt GH" (wzorzec z skok-gh-rozgloszenie.spec.mjs).
   const notatka = await page.evaluate(async (pid) => {
     const w = await window.VildaVault.savePatientNote({
       patientId: pid, title: 'Somatropina', body: 'Dawka kontrolna.', category: 'treatment', ghPointId: 'gh-fikcja-b1',
@@ -116,11 +116,11 @@ async function zapiszBeate(page) {
   return { id, notatka };
 }
 
-/* Prawdziwy skok: arkusz notatki i przycisk „↗ Siatki / punkt GH". Przy niezapisanym formularzu okno
+/* Prawdziwy skok: arkusz notatki i przycisk „↗ Trend dawki / punkt GH". Przy niezapisanym formularzu okno
    niezapisanych zmian pyta, co zrobić — lekarz odrzuca dane (jego przycisk zaczyna się od „Odrzuć”). */
 async function skokDoPunktuGH(page, beata) {
   await page.evaluate((d) => window.VildaAuthUI.showPatientNoteEditor({ patientId: d.id, note: d.notatka }), beata);
-  const przycisk = page.locator('.vilda-pne button', { hasText: 'Siatki / punkt GH' });
+  const przycisk = page.locator('.vilda-pne button', { hasText: 'Trend dawki / punkt GH' });
   await expect(przycisk).toBeVisible();
   await przycisk.click();
   const odrzuc = page.getByRole('button', { name: /^Odrzuć/ });

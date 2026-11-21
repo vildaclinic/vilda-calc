@@ -3672,3 +3672,70 @@ textarea.vdo-input {
     font-size: 1.18rem;
   }
 }
+
+/* ── P-KARTA-LECZENIE, etap 3 — karta leczenia GH z przełącznikiem ──────────────────────────────────────────────
+   Kg_* w vilda_auth_ui.js; makieta hybrydy zaakceptowana 2026-11-19 (docs/KARTA_LECZENIE_PLAN.md). Kontener
+   podsumowania GH (.vilda-gh-summary) jest kartą: nagłówek z cichym tekstem „Program … · N punktów kontrolnych”
+   po prawej (telefon ≤ 560 px — pod znacznikiem), przełącznik „Przegląd | Trend dawki | Analiza” (wygląd
+   .vilda-oba-seg, własna klasa .vilda-kg-seg) i widoki. Kafelki „Przeglądu” — kafelki etapu 2 (.vilda-ko-kafel*,
+   komputer 1 × 4, telefon 2 × 2); trend dawki w białej ramce wykresu (wartości .vilda-oba-chartbox). */
+
+/* nagłówek: cichy tekst programu i punktów kontrolnych po prawej (kolor etykiet pól podsumowania) */
+.vilda-kg-cichy {
+  margin-left: auto;
+  font-size: .78rem;
+  line-height: 1.3;
+  color: #0f6e56;
+  text-align: right;
+}
+
+.vilda-kg-karta > .vilda-kg-seg {
+  margin: var(--space-10px) 0 var(--space-10px);
+}
+
+.vilda-kg-karta > .vilda-gh-summary-head + .vilda-kg-seg {
+  margin-top: 0;
+}
+
+/* Przegląd: kolor wartości jak kafelki panelu (.vilda-gha-tile.good / .bad); jednostka i podpis szare */
+.vilda-kg-kafel--good .vilda-ko-v {
+  color: #1a8f5c;
+}
+
+.vilda-kg-kafel--bad .vilda-ko-v {
+  color: #c0453b;
+}
+
+/* Trend dawki: blok „Trend leczenia GH” (Pl w trybie karty) w białej ramce wykresu */
+.vilda-kg-ramka {
+  min-width: 0;
+  border: var(--border-hairline) solid #d5e7e8;
+  border-radius: var(--radius-12);
+  padding: var(--space-10px) var(--space-10px) var(--space-6px);
+  background: linear-gradient(180deg, #ffffff, #f2faf9);
+}
+
+/* nagłówek tabeli Wiek | Dawka | IGF-1: motyw strony daje th turkusowe tło (th { background: var(--secondary) }),
+   a Pl — szary tekst w atrybucie; w karcie ciemny tekst na jasnym tle (makieta). !important — przeciw stylowi
+   wpisanemu w element przez Pl (bez zmiany Pl i tabeli w „Siatkach centylowych”). */
+.vilda-kg-ramka th {
+  background: transparent;
+  color: var(--text-strong) !important;
+}
+
+/* Analiza: panel „Dane analityczne” bez belki i bez własnego pudełka; cicha linia (.vilda-ko-cicha) nad nim */
+.vilda-kg-widok--analiza .vilda-gha-panel {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+@media (max-width: 560px) {
+  /* nagłówek: znacznik i stan (stan może zejść pod znacznik), cichy tekst w osobnej linii pod nimi */
+  .vilda-kg-cichy {
+    flex-basis: 100%;
+    margin-left: 0;
+    text-align: left;
+  }
+}

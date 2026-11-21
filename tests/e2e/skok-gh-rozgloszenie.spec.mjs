@@ -44,7 +44,7 @@ const zalozPacjenta = (page, dane) => page.evaluate(async (d) => {
   return w.patientId;
 }, dane);
 
-// Notatka, która renderuje przycisk „↗ Siatki / punkt GH": leczenie w mg/kg/d + ghPointId.
+// Notatka, która renderuje przycisk „↗ Trend dawki / punkt GH": leczenie w mg/kg/d + ghPointId.
 const zalozNotatkeGH = (page, patientId, ghPointId) => page.evaluate(async (d) => {
   const w = await window.VildaVault.savePatientNote({
     patientId: d.patientId, title: 'Somatropina', body: 'Dawka kontrolna.',
@@ -93,12 +93,12 @@ const nasluchuj = (page) => page.evaluate(() => {
   });
 });
 
-/* Otwiera arkusz notatki i klika prawdziwy przycisk „↗ Siatki / punkt GH". */
+/* Otwiera arkusz notatki i klika prawdziwy przycisk „↗ Trend dawki / punkt GH". */
 async function skocz(page, patientId, note) {
   await page.evaluate((d) => window.VildaAuthUI.showPatientNoteEditor({
     patientId: d.patientId, note: d.note,
   }), { patientId, note });
-  const przycisk = page.locator('.vilda-pne button', { hasText: 'Siatki / punkt GH' });
+  const przycisk = page.locator('.vilda-pne button', { hasText: 'Trend dawki / punkt GH' });
   await expect(przycisk, 'przycisk skoku jest w arkuszu notatki').toBeVisible();
   await przycisk.click();
 }

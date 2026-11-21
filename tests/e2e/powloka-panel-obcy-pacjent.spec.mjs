@@ -104,7 +104,7 @@ const zalozPacjentow = (start, wariant) => start.evaluate(async ({ x, y }) => {
   return { x: a.patientId, y: b.patientId };
 }, { x: X_PAY, y: yPay(wariant) });
 
-/* Wizyta Y w Terminarzu z przyciskiem „↗ Siatki / punkt GH” (pola jak ot() w gh_igf_therapy.js). */
+/* Wizyta Y w Terminarzu z przyciskiem „↗ Trend dawki / punkt GH” (pola jak ot() w gh_igf_therapy.js). */
 const zalozWizyteY = (start, idY) => start.evaluate(async (pid) => {
   const d = new Date();
   const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -161,13 +161,13 @@ async function wczytajWRamce(page, ctx, patientId, wybor) {
   await page.waitForTimeout(2000);
 }
 
-/* Terminarz → wizyta Y → „Edytuj” → „↗ Siatki / punkt GH” (skok do DocPro). */
+/* Terminarz → wizyta Y → „Edytuj” → „↗ Trend dawki / punkt GH” (skok do DocPro). */
 async function skokGHDoY(page, idY) {
   await page.locator('a.sidebar-link[href="terminarz.html"]').click();
   const t = await ramka(page, 'Terminarz', { formularz: false });
   await t.waitForSelector('.tz-row', { state: 'visible', timeout: 15000 });
   await t.locator('.tz-row', { hasText: 'Fikcyjna Druga' }).first().locator('button[data-act="edit"]').click();
-  const skok = t.locator('.vilda-pne button', { hasText: 'Siatki / punkt GH' });
+  const skok = t.locator('.vilda-pne button', { hasText: 'Trend dawki / punkt GH' });
   await skok.waitFor({ state: 'visible', timeout: 10000 });
   await skok.click();
   const docpro = await ramka(page, 'DocPro');

@@ -54,21 +54,37 @@ async function otworzKarte(page, punkty, notatki = []) {
   return pid;
 }
 
-// Tabela i legenda „Trend leczenia GH" (zakładka Siatki centylowe). Sekcja powstaje asynchronicznie.
+// Tabela i legenda „Trend leczenia GH”. Sekcja powstaje asynchronicznie. P-KARTA-LECZENIE, etap 3: trend z punktów GH
+// jest w widoku „Trend dawki” karty leczenia GH (zakładka „Leczenie”, bez nagłówka bloku); trend z samych wpisów
+// Terminarza (bez punktów) — jak dotąd w „Siatkach centylowych”. Tylko nawigacja; odczyt legendy, tabeli i wykresu bez zmian.
 async function trend(page, wierszy) {
-  await page.locator('.vilda-patient-tab[data-tab="traj"]').click();
-  const czytaj = () => page.evaluate(() => {
-    const sek = document.querySelector('.vilda-patient-tab-content[data-tab="traj"]');
-    const h = sek && Array.from(sek.querySelectorAll('p')).find((p) => /Trend leczenia GH/.test(p.textContent));
-    if (!h) return null;
-    const tab = Array.from(h.parentElement.querySelectorAll('table')).pop();
-    const svg = h.parentElement.querySelector('svg');
+  const wKarcie = await page.locator('.vilda-kg-karta .vilda-kg-seg [data-widok="trend"]').count() > 0;
+  if (wKarcie) {
+    await page.locator('.vilda-patient-tab[data-tab="leczenie"]').click();
+    await page.locator('.vilda-kg-karta .vilda-kg-seg [data-widok="trend"]').click();
+  } else {
+    await page.locator('.vilda-patient-tab[data-tab="traj"]').click();
+  }
+  const czytaj = () => page.evaluate((karta) => {
+    let blok, legenda;
+    if (karta) {
+      blok = document.querySelector('.vilda-kg-karta .vilda-kg-trend');
+      legenda = blok && blok.firstElementChild;
+    } else {
+      const sek = document.querySelector('.vilda-patient-tab-content[data-tab="traj"]');
+      const h = sek && Array.from(sek.querySelectorAll('p')).find((p) => /Trend leczenia GH/.test(p.textContent));
+      blok = h && h.parentElement;
+      legenda = h && h.nextElementSibling;
+    }
+    if (!blok) return null;
+    const tab = Array.from(blok.querySelectorAll('table')).pop();
+    const svg = blok.querySelector('svg');
     return {
-      legenda: h.nextElementSibling ? h.nextElementSibling.textContent.replace(/\s+/g, ' ').trim() : '',
+      legenda: legenda ? legenda.textContent.replace(/\s+/g, ' ').trim() : '',
       wiersze: tab ? Array.from(tab.querySelectorAll('tr')).slice(1).map((r) => r.children[1].textContent.trim()) : [],
       wykres: svg ? Array.from(svg.querySelectorAll('text')).map((t) => t.textContent) : [],
     };
-  });
+  }, wKarcie);
   await expect.poll(async () => ((await czytaj()) || { wiersze: [] }).wiersze.length, { timeout: 15000 }).toBe(wierszy);
   return czytaj();
 }
@@ -121,9 +137,9 @@ test('zmiana Genotropin → Increlex: segment Increlex w mg/kg na podanie, Genot
     inc('igf-w-1', 'continue', 7, 0, 106, 18, 0.2, 3.6),
     inc('igf-w-2', 'continue', 7, 6, 109, 19, 0.24, 4.56),
   ]);
-  // P-KARTA-LECZENIE (etap 1): „Dane analityczne” GH stoją w zakładce „Leczenie”.
+  // P-KARTA-LECZENIE (etap 1): „Dane analityczne” GH stoją w zakładce „Leczenie”; od etapu 3 — widok „Analiza” karty GH.
   await page.locator('.vilda-patient-tab[data-tab="leczenie"]').click();
-  await page.locator('.vilda-gha-btn').first().click();
+  await page.locator('.vilda-kg-seg [data-widok="analiza"]').click();
   const panel = page.locator('.vilda-gha-panel').first();
   await expect(panel).toContainText('wg preparatu', { ignoreCase: true });
   const tekst = String(await panel.textContent()).replace(/\s+/g, ' ');

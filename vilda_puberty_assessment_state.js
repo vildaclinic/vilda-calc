@@ -420,7 +420,7 @@
     if (typeof w.setTimeout === 'function') saveTimer = w.setTimeout(save, 300);
   }
 
-  function editObservation(axis, stage, options) {
+  function editObservation(axis, stage, options, commitSession) {
     if (['G', 'Th', 'P'].indexOf(axis) < 0 || stage !== null &&
         !(typeof stage === 'number' && Number.isInteger(stage) && stage >= 1 && stage <= 5)) {
       return { ok: false, reason: 'invalid-observation' };
@@ -453,30 +453,53 @@
     if (w.VildaPubertyAssessment.readUser({ pubertyAssessment: raw }).status !== 'ready') {
       return { ok: false, reason: 'invalid-context' };
     }
-    if (!state) load({ user: {} }, { restore: true });
-    state.present = true;
-    state.raw = raw;
+    if (!state && !commitSession) load({ user: {} }, { restore: true });
+    // A sibling's explicit edit is transported by the active panel. Prepare
+    // its candidate without exposing a change that the working session may
+    // reject; the hidden form never receives ordinary write authority.
+    var base = state || { present: false, raw: null, legacy: null, visitPresent: false,
+      visitRaw: null, visit: null, patientId: identity(), vault: ownerVault(identity()),
+      identityHandoff: null, pendingIdentity: false };
+    var next = Object.assign({}, base, { visit: clone(base.visit) });
+    next.present = true;
+    next.raw = raw;
     var reference = { sex: sourceSex, measuredAtISO: context.measuredAtISO, ageMonths: context.ageMonths };
-    if (!state.visit) state.visit = newVisit(reference);
-    else state.visit.reference = reference;
-    state.visit.currentAxes = state.visit.currentAxes.filter(function (key) {
+    if (!next.visit) next.visit = newVisit(reference);
+    else next.visit.reference = reference;
+    next.visit.currentAxes = next.visit.currentAxes.filter(function (key) {
       var observation = raw.observations[key];
       return observation && (owns(observation, 'sex') ? observation.sex : raw.sex) === sourceSex;
     });
-    if (stage !== null && state.visit.currentAxes.indexOf(axis) < 0) state.visit.currentAxes.push(axis);
-    if (stage === null) state.visit.currentAxes = state.visit.currentAxes.filter(function (key) { return key !== axis; });
-    state.visitPresent = true;
-    state.visitRaw = clone(state.visit);
-    state.mode = 'edited';
-    state.pendingIdentity = false;
+    if (stage !== null && next.visit.currentAxes.indexOf(axis) < 0) next.visit.currentAxes.push(axis);
+    if (stage === null) next.visit.currentAxes = next.visit.currentAxes.filter(function (key) { return key !== axis; });
+    next.visitPresent = true;
+    next.visitRaw = clone(next.visit);
+    next.mode = 'edited';
+    next.pendingIdentity = false;
+    if (commitSession) {
+      try {
+        if (commitSession({ patientId: next.patientId, raw: clone(next.raw), visitRaw: clone(next.visitRaw) }) !== true) {
+          return { ok: false, reason: 'session-write-rejected' };
+        }
+      } catch (_) { return { ok: false, reason: 'session-write-rejected' }; }
+    }
+    state = next;
+    initialized = true;
+    bootstrapSession = null;
+    bindVault();
     bumpActivityRevision();
     try { w.hasUserModifiedAfterLoad = true; } catch (_) { /* Optional existing flag. */ }
     try {
       if (typeof w.updateSaveBtnVisibility === 'function') w.updateSaveBtnVisibility();
     } catch (_) { /* Persistence does not depend on the sidebar button. */ }
     notify('edit');
-    scheduleSave();
+    if (!commitSession) scheduleSave();
     return { ok: true };
+  }
+
+  function editObservationToSession(axis, stage, options, commitSession) {
+    if (typeof commitSession !== 'function') return { ok: false, reason: 'session-write-rejected' };
+    return editObservation(axis, stage, options, commitSession);
   }
 
   function subscribe(listener) {
@@ -627,9 +650,9 @@
   } catch (_) { /* explicit collector/restore hooks still operate */ }
   bindVault();
 
-  w.VildaPubertyAssessmentState = Object.freeze({ VERSION: '3', load: load,
+  w.VildaPubertyAssessmentState = Object.freeze({ VERSION: '4', load: load,
     capture: capture, captureForUserReadOnly: captureForUserReadOnly, applyToUser: applyToUser, clear: clear, mergeSession: mergeSession,
-    read: read, subscribe: subscribe, editObservation: editObservation, visitContext: visitContext,
+    read: read, subscribe: subscribe, editObservation: editObservation, editObservationToSession: editObservationToSession, visitContext: visitContext,
     getActivityRevision: getActivityRevision,
     restoreSessionIfUninitialized: restoreSessionIfUninitialized });
 })(typeof window !== 'undefined' ? window : globalThis);

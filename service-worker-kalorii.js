@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.566';
+const SW_VERSION = '1.1.567';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -881,6 +881,7 @@ const CORE_SHELL_URLS = [
   '/vilda_persistence_adapter.js?v=37',
   '/vilda_persistence_adapter.js?v=38',
   '/vilda_persistence_adapter.js?v=39',
+  '/vilda_persistence_adapter.js?v=40',
   '/vilda_panel_pacjent.js?v=1',
   '/vilda_panel_pacjent.js?v=2',
   '/vilda_panel_pacjent.js?v=3',
@@ -2545,6 +2546,7 @@ const CORE_SHELL_URLS = [
   '/vilda_auth_ui.css?v=86',
   '/vilda_auth_ui.css?v=87',
   '/vilda_auth_ui.css?v=88',
+  '/vilda_auth_ui.css?v=89',
   '/vilda_urodzeniowe_rozbieznosc.css?v=1',
   '/vilda_file_export.js',
   '/vilda_file_export.js?v=4',
@@ -3050,7 +3052,9 @@ const CORE_SHELL_URLS = [
   '/vilda_puberty_assessment_state.js?v=2',
   '/vilda_puberty_assessment_state.js?v=3',
   '/vilda_puberty_assessment_state.js?v=4',
+  '/vilda_puberty_assessment_state.js?v=5',
   '/vilda_puberty_assessment_context.js?v=1',
+  '/vilda_puberty_assessment_context.js?v=2',
   '/vilda_puberty_assessment_ui.js?v=1',
   '/vilda_puberty_assessment_ui.css?v=1',
   // Wspólny układ telefonu w poziomie jest potrzebny przed pierwszym malowaniem.
@@ -3132,7 +3136,6 @@ const OPTIONAL_ASSETS = [
   '/vilda_vault.js?v=280',
   '/vilda_vault.js?v=281',
   '/vilda_vault.js?v=282',
-  '/vilda_vault.js?v=283',
   '/vilda_auth_ui.js?v=535',
   '/vilda_auth_ui.js?v=536',
   '/vilda_auth_ui.js?v=537',
@@ -3177,6 +3180,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_auth_ui.js?v=576',
   '/vilda_auth_ui.js?v=577',
   '/vilda_auth_ui.js?v=578',
+  '/vilda_auth_ui.js?v=579',
   '/vilda_session_bridge.js?v=148',
   '/vilda_session_bridge.js?v=149',
   '/vilda_session_bridge.js?v=150',
@@ -3801,6 +3805,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_shell.js?v=81',
   '/vilda_shell.js?v=82',
   '/vilda_shell.js?v=83',
+  '/vilda_shell.js?v=84',
   '/vilda_shell.css',
   '/vilda_shell.css?v=1',
   '/vilda_shell.css?v=2',

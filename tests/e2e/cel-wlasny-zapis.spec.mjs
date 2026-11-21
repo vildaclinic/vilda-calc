@@ -296,7 +296,7 @@ test.describe('Cel własny w rekordzie pacjenta', () => {
     await page.waitForTimeout(1200);
 
     await page.evaluate((d) => window.VildaAuthUI.showPatientNoteEditor({ patientId: d.id, note: d.notatka }), { id: beata.id, notatka });
-    await page.locator('.vilda-pne button', { hasText: 'Siatki / punkt GH' }).click();
+    await page.locator('.vilda-pne button', { hasText: 'Trend dawki / punkt GH' }).click();
     try { await page.getByRole('button', { name: /^Odrzuć/ }).first().click({ timeout: 3000 }); } catch { /* bez okna */ }
     await expect(page.locator('#firstName'), 'skok wczytał Beatę').toHaveValue('Beata', { timeout: 15000 });
     await page.waitForTimeout(2500);
