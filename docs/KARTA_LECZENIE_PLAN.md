@@ -130,6 +130,9 @@ Decyzja właściciela: „Etap 3, karta leczenia GH” (2026-11-21), według mak
 
 ## Etap 3 — rozstrzygnięcia wykonawcy (do przeglądu właściciela)
 
+- Przycisk notatki GH: etykieta „↗ Siatki / punkt GH” → „↗ Trend dawki / punkt GH”, a bez punktu GH cel to karta GH na
+  „Trendzie dawki” (makieta tego nie obejmuje; wynika z przeniesienia trendu; zgłoszone właścicielowi 2026-11-21).
+
 - W2 (Kontynuacja po Zakończeniu bez Włączenia): kafelek ma etykietę „Czas leczenia” (nie „Czas od 1. punktu”), wartość
   „—” i podpis „brak Włączenia po Zakończeniu” — jak kafelek panelu „Przyrost od Włączenia”, który też nie liczy od
   pierwszego punktu kursu.

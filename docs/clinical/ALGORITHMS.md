@@ -45594,7 +45594,9 @@ przeniesiony z „Siatek centylowych” do karty.** Plan i etapy: `docs/KARTA_LE
 `docs/ZRODLA_ARTEFAKTOW.md`, „Łatka P-KARTA-LECZENIE, etap 3”.
 
 **Decyzje właściciela.** Makieta hybrydy zaakceptowana 2026-11-19 (komputer i telefon: „Przegląd”, „Trend dawki”,
-„Analiza”, telefon „Przegląd”, oba leczenia); „Etap 3, karta leczenia GH” 2026-11-21.
+„Analiza”, telefon „Przegląd”, oba leczenia); „Etap 3, karta leczenia GH” 2026-11-21. Zmiana etykiety przycisku
+notatki GH na „↗ Trend dawki / punkt GH” i cel bez `ghPointId` (karta GH, „Trend dawki”) — decyzja wykonawcy wynikająca
+z przeniesienia trendu (makieta jej nie obejmuje), zgłoszona właścicielowi 2026-11-21.
 
 **Stan przed zmianą.** W zakładce „Leczenie” grupa GH (`div.vilda-kl-gh`) to podsumowanie `wl` (znacznik, stan,
 „kurs k z N”, „🔄 zmiana preparatu”, pola Program, Preparat, Włączenie, Aktualna dawka, Punkty kontrolne, Ostatnia
