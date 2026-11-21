@@ -49,6 +49,7 @@
   }
 
   const paths = {
+    clipboard: '<rect x="5" y="5" width="14" height="16" rx="2"/><rect x="8" y="2.5" width="8" height="5" rx="1.5"/>',
     calendar: '<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 3v4m10-4v4M3 11h18"/>',
     users: '<circle cx="9" cy="8" r="3.5"/><path d="M2 20c0-7 14-7 14 0M16 4a4 4 0 0 1 0 8m2 3c3 1 4 3 4 5"/>',
     search: '<circle cx="10.5" cy="10.5" r="6.7"/><path d="m16 16 5 5"/>',
@@ -128,16 +129,16 @@
     const root = scope.attachShadow({mode:'open'});
     const link = doc.querySelector('link[href*="vilda_home_gabinet_start.css"]');
     if (link) root.append(link.cloneNode(false));
-    const page = element('section','vgs');
+    const page = element('section','vgs-start');
     const now = new Date();
     let day = civilDay(now);
-    page.innerHTML = '<div class="vgs-heading"><h1>Gabinet</h1><time class="vgs-date"></time></div>' +
+    page.innerHTML = '<div class="vgs-heading"><h1>Gabinet</h1><div class="vgs-date">' + icon('calendar') + '<time></time></div></div>' +
       '<section class="vgs-box vgs-working" aria-label="Rozpoczęta wizyta" hidden></section>' +
-      '<section class="vgs-box vgs-search"><div class="vgs-heading-row"><span class="vgs-tile">' + icon('users') + '</span><h2>Znajdź pacjenta</h2></div>' +
-      '<div class="vgs-controls"><label class="vgs-search-field">' + icon('search') + '<input type="search" id="vgs-query" autocomplete="off" aria-label="Szukaj pacjenta po nazwisku lub dacie urodzenia" aria-controls="vgs-results" placeholder="Nazwisko, imię lub data urodzenia"></label>' +
+      '<section class="vgs-box vgs-search" aria-labelledby="vgs-search-title"><div class="vgs-heading-row"><span class="vgs-tile">' + icon('users') + '</span><h2 id="vgs-search-title">Znajdź pacjenta</h2></div>' +
+      '<div class="vgs-controls"><label class="vgs-search-field">' + icon('search') + '<input type="search" id="vgs-query" autocomplete="off" aria-label="Szukaj pacjenta po nazwisku, imieniu lub dacie urodzenia" aria-controls="vgs-results" placeholder="Nazwisko, imię lub data urodzenia"></label>' +
       '<button type="button" class="vgs-list-toggle" aria-controls="vgs-results" aria-expanded="false">Lista pacjentów</button>' +
       '<div class="vgs-results" id="vgs-results" role="region" aria-label="Wyniki wyszukiwania pacjentów" hidden></div></div><p class="vgs-feedback" role="status"></p></section>' +
-      '<section class="vgs-box vgs-schedule"><div class="vgs-heading-row"><span class="vgs-tile">' + icon('calendar') + '</span><h2>Dzisiejsze wizyty</h2></div>' +
+      '<section class="vgs-box vgs-schedule" aria-labelledby="vgs-schedule-title"><div class="vgs-heading-row"><span class="vgs-tile">' + icon('calendar') + '</span><h2 id="vgs-schedule-title">Dzisiejsze wizyty</h2></div>' +
       '<div class="vgs-schedule-body" aria-live="polite"></div></section><div><button type="button" class="vgs-quick">' + icon('calc') + 'Szybkie obliczenie</button></div>';
     const dialog = element('dialog','vgs-dialog');
     dialog.setAttribute('aria-labelledby','vgs-quick-title');
@@ -148,6 +149,13 @@
     const query = get('#vgs-query'), results = get('#vgs-results'), toggle = get('.vgs-list-toggle');
     const feedback = get('.vgs-feedback'), schedule = get('.vgs-schedule-body');
     const events = new AbortController(), listen = {signal:events.signal};
+    const compactQuery = w.matchMedia('(max-width: 440px)');
+    const fullPlaceholder = query.placeholder;
+    function sizePlaceholder() {
+      query.placeholder = compactQuery.matches ? 'Imię, nazwisko, data ur.' : fullPlaceholder;
+    }
+    compactQuery.addEventListener('change',sizePlaceholder,listen);
+    sizePlaceholder();
     let sequence = 0, busy = false, destroyed = false, patients = new Map(), reader = null, midnight;
     let directoryError = false;
     function current() {
@@ -183,10 +191,12 @@
       const patient = [...patients.values()].find(record => ['new','edit'].includes(w.VildaHomeEncounter?.state(record.id).mode));
       const encounter = patient && w.VildaHomeEncounter?.state(patient.id);
       if (!encounter || !['new','edit'].includes(encounter.mode)) return;
-      const identity = element('div');
+      const tile = element('span','vgs-tile');
+      tile.innerHTML = icon('clipboard');
+      const identity = element('div','vgs-working-identity');
       identity.append(element('small','',encounter.mode === 'edit' ? 'Edycja wizyty · ' + dateLabel(encounter.date) : 'Wizyta w toku'),
         action(patient,'overview',patient.name));
-      host.append(identity,visitAction(patient,true)); host.hidden = false;
+      host.append(tile,identity,visitAction(patient,true)); host.hidden = false;
     }
     function identity(record, full) {
       const cell = element('div','vgs-person'), value = element('div');
@@ -223,7 +233,7 @@
         const patient = patients.get(visit.patientId);
         const row = element('div','vgs-appointment');
         row.append(element('span','vgs-hour',visit.dueTime || 'Cały dzień'));
-        row.append(patient ? identity(patient,false) : element('strong','',visit.patientName || 'Pacjent spoza kartoteki'));
+        row.append(patient ? identity(patient,false) : element('strong','vgs-unlisted',visit.patientName || 'Pacjent spoza kartoteki'));
         row.append(element('span','vgs-reason',visit.title || ''));
         if (patient) row.append(visitAction(patient,false));
         schedule.append(row);
@@ -235,7 +245,7 @@
       const valid = () => current() && request === sequence;
       const now = new Date(), nextDay = new Date(now.getFullYear(),now.getMonth(),now.getDate()+1);
       day = civilDay(now);
-      const date = get('.vgs-date');
+      const date = get('.vgs-date time');
       date.dateTime = day;
       date.textContent = now.toLocaleDateString('pl-PL',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
       clearTimeout(midnight);

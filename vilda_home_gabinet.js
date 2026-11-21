@@ -13,10 +13,10 @@
     overview: '<rect x="5" y="4" width="14" height="17" rx="2"/><rect x="9" y="2" width="6" height="5" rx="1"/>',
     analysis: '<path d="M3 3v17h18M6 15l4-5 4 2 6-7"/>',
     history: '<path d="M3 11a9 9 0 1 1 2 7M2 4v7h7m3-4v5l4 2"/>',
-    start: '<path d="M12 5v14M5 12h14"/>', save: '<path d="m4 12 5 5L20 6"/>'
+    start: '<path d="M12 5v14M5 12h14"/>', save: '<path d="m4 12 5 5L20 6"/>', chevron: '<path d="m9 5 7 7-7 7"/>'
   };
   function icon(key) {
-    return '<svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7">' + paths[key] + '</svg>';
+    return '<svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.65">' + paths[key] + '</svg>';
   }
   function field(id) { return d.getElementById(id)?.value?.trim() || ''; }
   function access() {
@@ -72,6 +72,12 @@
   function detach(force) {
     return !w.VildaHomePatient?.isInlineOpen?.() || w.VildaHomePatient.closeInline(force) !== false;
   }
+  function setScreen(value) {
+    if (value) main.dataset.vhomeScreen = value;
+    else delete main.dataset.vhomeScreen;
+    const pane = w.frameElement;
+    if (pane?.classList.contains('app-pane')) pane.toggleAttribute('data-vhome-directory', value === 'start');
+  }
   function render() {
     if (!root) return;
     const nextAccount = access();
@@ -85,7 +91,7 @@
     }
     if (!account) {
       root.hidden = true;
-      delete main.dataset.vhomeScreen;
+      setScreen(null);
       return;
     }
     if (target && !selecting && selected() !== target) {
@@ -93,18 +99,18 @@
     }
     root.hidden = false;
     if (!target || screen === 'start') {
-      main.dataset.vhomeScreen = 'start';
+      setScreen('start');
       header.hidden = overview.hidden = true; landing.hidden = false;
       if (!picker) picker = w.VildaHomeGabinetStart.mount(landing, {onSelect: selectPatient});
       return;
     }
     if (!owns(target)) {
-      main.dataset.vhomeScreen = 'loading';
+      setScreen('loading');
       header.hidden = overview.hidden = landing.hidden = true;
       detach(true);
       return;
     }
-    main.dataset.vhomeScreen = screen;
+    setScreen(screen);
     if (picker) destroyPicker();
     header.hidden = false; landing.hidden = true; overview.hidden = screen !== 'overview';
     headerState();
@@ -189,13 +195,19 @@
     root = d.createElement('div'); root.id = 'vhomeGabinet'; root.hidden = true;
     root.innerHTML = '<div id="vhomeGabinetStart"></div><div id="vhomeGabinetHeader" hidden>' +
       '<div class="gb-header-top"><nav class="gb-breadcrumb" aria-label="Ścieżka nawigacji"><button type="button" data-start>' + icon('home') +
-      'Gabinet</button><span aria-hidden="true">›</span><span>Karta pacjenta</span></nav><span class="gb-encounter-state" role="status" hidden><span></span> <time></time></span></div>' +
+      'Gabinet</button>' + icon('chevron') + '<span>Karta pacjenta</span></nav><span class="gb-encounter-state" role="status" hidden><span></span> <time></time></span></div>' +
       '<div class="gb-person-line"><div class="gb-identity"><h1></h1><div class="gb-identity-meta"></div></div><div class="gb-card-actions"><button type="button" data-history>' +
       icon('history') + 'Historia wizyt</button><button type="button" class="gb-primary" data-home-encounter></button></div></div>' +
       '<div class="gb-patient-tabs" role="tablist" aria-label="Karta pacjenta"></div></div>' +
       '<div class="vhome-gabinet-message" role="status"></div><div id="vhomePatientOverview" hidden></div>';
     analysis.before(root);
     header = d.getElementById('vhomeGabinetHeader'); landing = d.getElementById('vhomeGabinetStart'); overview = d.getElementById('vhomePatientOverview');
+    if (w.frameElement?.classList.contains('app-pane')) {
+      const decorRail = w.parent.matchMedia('(min-width: 1400px)');
+      const syncHeaderWidth = () => header.toggleAttribute('data-decor-rail', decorRail.matches);
+      syncHeaderWidth();
+      w.addEventListener('resize', syncHeaderWidth);
+    }
     root.querySelector('[data-start]').onclick = showStart;
     root.querySelector('[data-history]').onclick = () => { if (owns(target)) w.VildaHomeEncounter.history(target, patientName()); };
     root.querySelector('[data-home-encounter]').onclick = async event => {
@@ -239,7 +251,7 @@
     'vilda:home-encounter-changed','vilda:user-state-cleared'].forEach(name => d.addEventListener(name, schedule));
   w.addEventListener('vilda:user-state-cleared', schedule);
   w.addEventListener('pageshow', schedule);
-  w.addEventListener('pagehide', () => { sequence++; selecting = false; detach(true); if (picker) destroyPicker(); });
+  w.addEventListener('pagehide', () => { if (main) setScreen(null); sequence++; selecting = false; detach(true); if (picker) destroyPicker(); });
   w.VildaHomeGabinet = Object.freeze({
     showStart, showAnalysis, selectPatient, prepareLabEntry, openOverview: () => showOverview('antro'),
     openReminders: () => screen !== 'start' && showOverview('reminders'),

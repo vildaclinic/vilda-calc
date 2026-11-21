@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.563';
+const SW_VERSION = '1.1.564';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -1971,11 +1971,15 @@ const CORE_SHELL_URLS = [
   '/vilda_home_reminders_runtime.js?v=1',
   '/vilda_home_reminders_runtime.js?v=2',
   '/vilda_home_gabinet.css?v=1',
+  '/vilda_home_gabinet.css?v=2',
   '/vilda_home_gabinet_start.css?v=1',
+  '/vilda_home_gabinet_start.css?v=2',
   '/vilda_home_gabinet_quick.js?v=1',
   '/vilda_home_gabinet_start.js?v=1',
+  '/vilda_home_gabinet_start.js?v=2',
   '/vilda_home_encounter.js?v=1',
   '/vilda_home_gabinet.js?v=1',
+  '/vilda_home_gabinet.js?v=2',
   '/vilda_home_workspace.js?v=1',
   '/vilda_home_workspace.js?v=2',
   '/vilda_home_workspace.js?v=3',
@@ -3172,6 +3176,7 @@ const CORE_SHELL_URLS = [
   '/vilda_home_patient_native.css?v=1',
   '/vilda_home_patient_native.css?v=2',
   '/vilda_home_patient_native.css?v=3',
+  '/vilda_home_patient_native.css?v=4',
   '/vilda_patient_treatment_ui.js?v=1',
   '/vilda_patient_treatment_ui.js?v=2',
   '/vilda_patient_treatment_ui.js?v=3',
@@ -3946,6 +3951,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_shell.css?v=22',
   '/vilda_shell.css?v=23',
   '/vilda_shell.css?v=24',
+  '/vilda_shell.css?v=25',
   '/vilda_save_status_indicator.css?v=4',
   '/vilda_save_status_indicator.css?v=5',
   '/vilda_save_status_indicator.css?v=6',
@@ -7038,8 +7044,8 @@ const CLINICAL_WORKSPACE_PRECACHE_PACK = Object.freeze({
 
 // BEGIN VISIT UI PACK CONFIG
 const VISIT_UI_PRECACHE_PACK = Object.freeze({
-  "url": "/runtime/visit-ui-precache/precache-206566305862.json",
-  "sha256": "20656630586239ed34acb14ecc00a53d5b7a3debd505a48a6c7e020b955f1b0d",
+  "url": "/runtime/visit-ui-precache/precache-178919f33ecb.json",
+  "sha256": "178919f33ecb3e34bc30cf12887958cb0f4339049d69dbc78892feedeb525d1e",
   "files": [
     {
       "url": "/vilda_ui_intents.js?v=2",
@@ -7154,8 +7160,8 @@ const VISIT_UI_PRECACHE_PACK = Object.freeze({
       "sha256": "22ed5f822c34dd599d81d1c08805bef04da1c926731eaa4af7894dfa9bab84b7"
     },
     {
-      "url": "/vilda_home_patient_native.css?v=3",
-      "sha256": "683447ebac885c78c240d652e0c6123a1faa0df84bfc1a732f16550db9748f2a"
+      "url": "/vilda_home_patient_native.css?v=4",
+      "sha256": "af1bc5ab0806de9148aa9690dcc085b3ba67b93cec8fbe8ef517d3557369a110"
     },
     {
       "url": "/vilda_patient_treatment_ui.js?v=3",
@@ -7198,28 +7204,28 @@ const VISIT_UI_PRECACHE_PACK = Object.freeze({
       "sha256": "177e98f3e7a6ea77d603fdfab360efec5b9693db19203b3f784c03f0ef32d31a"
     },
     {
-      "url": "/vilda_home_gabinet.css?v=1",
-      "sha256": "4845de300e245ef92c881d1d50a2d53d2636d4158b59b10489dec00011bf2476"
+      "url": "/vilda_home_gabinet.css?v=2",
+      "sha256": "18577db043473c39caea888f8384028d5267f1f4b7ea485b161c993cd2358ee6"
     },
     {
-      "url": "/vilda_home_gabinet_start.css?v=1",
-      "sha256": "5527f773d037befc19990e38715775b8402deb926474871ae4df0924afb8e292"
+      "url": "/vilda_home_gabinet_start.css?v=2",
+      "sha256": "b656728f08fc84e54cedc36b3cfbc4217b6a1dbee0c3bf51139dcd90ec31dd58"
     },
     {
       "url": "/vilda_home_gabinet_quick.js?v=1",
       "sha256": "87575cac6078f869b8ed5742c4d3ec4f9969b4bcaec2e1464758d83fa85464db"
     },
     {
-      "url": "/vilda_home_gabinet_start.js?v=1",
-      "sha256": "adb8a074d136b1055085cc80fe05cc5fe4a052b0c7b24cdde93a232acf2dac48"
+      "url": "/vilda_home_gabinet_start.js?v=2",
+      "sha256": "e679a4d07bc6a13fe08fe68203663737382d65ce6b500c0b1c109fe1f025369d"
     },
     {
       "url": "/vilda_home_encounter.js?v=1",
       "sha256": "525968a14e52f6525784f106ca244661eb273f767d199b28fb63b21d1fdc4271"
     },
     {
-      "url": "/vilda_home_gabinet.js?v=1",
-      "sha256": "03aaa7367cff62e5b66fd73628e8aeca3386cf7c6f2d4e40d452558b73867f12"
+      "url": "/vilda_home_gabinet.js?v=2",
+      "sha256": "09d77179bd7e3793bc448250acf0210abbdb3633c75b15642a23f46116a871a9"
     }
   ]
 });

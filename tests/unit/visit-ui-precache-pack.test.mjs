@@ -39,12 +39,12 @@ describe('forty-five independent UI resources in one verified transport', () => 
     const w = worker({ scope }); await w.installUI();
     expect(w.api.VISIT_UI_PRECACHE_PACK).toEqual(config);
     expect(urls).toHaveLength(45);
-    expect(urls).toContain('/vilda_home_gabinet.css?v=1');
-    expect(urls).toContain('/vilda_home_gabinet_start.css?v=1');
+    expect(urls).toContain('/vilda_home_gabinet.css?v=2');
+    expect(urls).toContain('/vilda_home_gabinet_start.css?v=2');
     expect(urls).toContain('/vilda_home_gabinet_quick.js?v=1');
-    expect(urls).toContain('/vilda_home_gabinet_start.js?v=1');
+    expect(urls).toContain('/vilda_home_gabinet_start.js?v=2');
     expect(urls).toContain('/vilda_home_encounter.js?v=1');
-    expect(urls).toContain('/vilda_home_gabinet.js?v=1');
+    expect(urls).toContain('/vilda_home_gabinet.js?v=2');
     expect(urls).toContain('/vilda_ui_intents.js?v=2');
     expect(urls).toContain('/vilda_home_perinatal.js?v=1');
     expect(urls).toContain('/vilda_home_growth.js?v=7');
@@ -62,7 +62,7 @@ describe('forty-five independent UI resources in one verified transport', () => 
     expect(urls).toContain('/vilda_home_patient.js?v=4');
     expect(urls).toContain('/vilda_home_patient.css?v=2');
     expect(urls).toContain('/vilda_home_patient_native.js?v=3');
-    expect(urls).toContain('/vilda_home_patient_native.css?v=3');
+    expect(urls).toContain('/vilda_home_patient_native.css?v=4');
     expect(urls).toContain('/vilda_patient_treatment_ui.js?v=3');
     expect(urls).toContain('/vilda_patient_treatment_ui.css?v=1');
     expect(urls).toContain('/vilda_home_patient_native_note.js?v=1');

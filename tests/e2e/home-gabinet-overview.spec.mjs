@@ -38,6 +38,31 @@ async function headerGeometry(frame) {
   });
 }
 
+async function expectHeaderAppearance(frame) {
+  const header = frame.locator('#vhomeGabinetHeader');
+  const active = header.getByRole('tab', { selected: true });
+  const inactive = header.getByRole('tab', { selected: false });
+  const breadcrumb = header.locator('[data-start]');
+  for (const button of [breadcrumb, active, inactive]) {
+    await expect(button).toHaveCSS('box-shadow', 'none');
+    await expect(button).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+  }
+  await expect(breadcrumb).toHaveCSS('color', 'rgb(0, 110, 117)');
+  await expect(active).toHaveCSS('color', 'rgb(0, 107, 114)');
+  await expect(active).toHaveCSS('border-bottom', '3px solid rgb(0, 131, 139)');
+  await expect(inactive).toHaveCSS('color', 'rgb(86, 111, 117)');
+  await expect(inactive).toHaveCSS('border-bottom-color', 'rgba(0, 0, 0, 0)');
+  await expect(header.locator('[data-history]')).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+  await expect(header.locator('[data-home-encounter]')).toHaveCSS('background-color', 'rgb(0, 124, 132)');
+}
+
+async function horizontalEdges(locator) {
+  return locator.evaluate(node => {
+    const { left, right } = node.getBoundingClientRect();
+    return { left, right };
+  });
+}
+
 test('Gabinet uses one patient header for overview and analysis and displays reminders only in the overview', async ({ page }) => {
   const { frame, ids } = await prepare(page);
   const today = new Date().toISOString().slice(0, 10);
@@ -52,19 +77,42 @@ test('Gabinet uses one patient header for overview and analysis and displays rem
   await choosePatient(frame, 'Antoni');
   const overview = frame.locator('#vhomeGabinetOverviewTab');
   const analysis = frame.locator('#vhomeGabinetAnalysisTab');
-  for (const width of [1440, 1920, 834, 390]) {
+  const patientCard = frame.locator('#vhomePatientOverview > .vilda-auth-card');
+  const measurements = frame.locator('#userSection fieldset.user-card');
+  const summary = frame.locator('#currentSummaryCard');
+  async function checkPatientLayout(width, rightEdge) {
     await page.setViewportSize({ width, height: 900 });
     await overview.click();
     await expect(overview).toHaveAttribute('aria-selected', 'true');
+    await expect(patientCard.locator(':scope > .vhome-native-patient-card')).toBeVisible();
+    await page.mouse.move(0, 0);
+    await expectHeaderAppearance(frame);
     const before = await headerGeometry(frame);
+    const cardEdges = await horizontalEdges(patientCard);
+
     await analysis.click();
     await expect(analysis).toHaveAttribute('aria-selected', 'true');
-    await expect(frame.locator('#currentSummaryCard')).toBeVisible();
+    await expect(measurements).toBeVisible();
+    await expect(rightEdge).toBeVisible();
     await expect(frame.locator('#vhomePatientCard')).toBeHidden();
     await expect(frame.locator('#vhomeAdultVitalsCard')).toBeHidden();
     await expect(frame.locator('#remindersInline')).toBeHidden();
+    await page.mouse.move(0, 0);
+    await expectHeaderAppearance(frame);
+    const formEdges = await horizontalEdges(measurements);
+    const analysisEdges = await horizontalEdges(rightEdge);
+    expect(Math.abs(formEdges.left - cardEdges.left), 'Lewa krawędź Pomiary / Karta pacjenta').toBeLessThanOrEqual(1);
+    expect(Math.abs(analysisEdges.right - cardEdges.right), 'Prawa krawędź Analiza / Karta pacjenta').toBeLessThanOrEqual(1);
     expect(await headerGeometry(frame)).toEqual(before);
   }
+  for (const width of [1440, 1920, 834, 390]) await checkPatientLayout(width, summary);
+
+  const header = frame.locator('#vhomeGabinetHeader');
+  await header.getByRole('button', { name: 'Rozpocznij wizytę', exact: true }).click();
+  await expect(header.getByRole('button', { name: 'Zapisz wizytę', exact: true })).toBeVisible();
+  // A visit can start without measurements. Its form grid is visible immediately.
+  await expect(frame.locator('#weight')).toHaveValue('');
+  for (const width of [1440, 390]) await checkPatientLayout(width, frame.locator('#calcForm'));
   await overview.click();
   await frame.locator('#vhomePatientOverview select.vhome-b1-mobile-select').selectOption('reminders');
   const slot = frame.locator('#vhomePatientRemindersSlot');
