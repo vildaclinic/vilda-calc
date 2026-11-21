@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.561';
+const SW_VERSION = '1.1.562';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -1984,6 +1984,7 @@ const CORE_SHELL_URLS = [
   '/vilda_home_growth.js?v=4',
   '/vilda_home_growth.js?v=5',
   '/vilda_home_growth.js?v=6',
+  '/vilda_home_growth.js?v=7',
   '/vilda_home_dialog_history.js?v=1',
   '/vilda_home_patient_data.js?v=1',
   '/vilda_home_patient_data.js?v=2',
@@ -2010,9 +2011,12 @@ const CORE_SHELL_URLS = [
   '/vilda_home_growth_charts.js?v=1',
   '/vilda_home_growth_charts.js?v=2',
   '/vilda_home_tools.css?v=1',
+  '/vilda_home_tools.css?v=2',
   '/vilda_home_tools.js?v=1',
+  '/vilda_home_tools.js?v=2',
   '/vilda_home_tools_vitals.js?v=1',
   '/vilda_home_tools_anthropometry.js?v=1',
+  '/vilda_home_tools_anthropometry.js?v=2',
   '/vilda_home_tools_nutrition.js?v=1',
   '/vilda_home_tools_intake.js?v=1',
   '/vilda_home_diet.js?v=1',
@@ -7002,8 +7006,8 @@ const CLINICAL_WORKSPACE_PRECACHE_PACK = Object.freeze({
 
 // BEGIN VISIT UI PACK CONFIG
 const VISIT_UI_PRECACHE_PACK = Object.freeze({
-  "url": "/runtime/visit-ui-precache/precache-55c47acbf619.json",
-  "sha256": "55c47acbf61965b5a90e48a5f3fd9caa6322d7503058e8656035866d903155ba",
+  "url": "/runtime/visit-ui-precache/precache-a671ddf8b84d.json",
+  "sha256": "a671ddf8b84d5c490196e38f00d9a289ff5893b0049422b4f81e624be1126f75",
   "files": [
     {
       "url": "/vilda_ui_intents.js?v=2",
@@ -7038,8 +7042,8 @@ const VISIT_UI_PRECACHE_PACK = Object.freeze({
       "sha256": "c89848f95e87bf79fc0ed79652cdd08c63b587facbb3e03756651d940b649d6f"
     },
     {
-      "url": "/vilda_home_growth.js?v=6",
-      "sha256": "14c81da199fee8314106136e1fdaa0414165f60f5eb49610638dc9b42a8c99d3"
+      "url": "/vilda_home_growth.js?v=7",
+      "sha256": "1aa781a6abb1f28341fa60db649a2c69344c5af6d31192f7faae2ac630d0d1f1"
     },
     {
       "url": "/vilda_home_growth_views.js?v=5",
@@ -7054,20 +7058,20 @@ const VISIT_UI_PRECACHE_PACK = Object.freeze({
       "sha256": "e03c9e1ca80bddc608ba1c1ce40025e1bb99815ce2859da7ce28afc4c916c6c9"
     },
     {
-      "url": "/vilda_home_tools.css?v=1",
-      "sha256": "cbe75132e02eaf602450956e1b01692f4e7b341f2e15836e46ad5a0aceb3fc71"
+      "url": "/vilda_home_tools.css?v=2",
+      "sha256": "157b71952e6fb445cd874a07694fe6311766229d08dfab2f03be2440eeccf850"
     },
     {
-      "url": "/vilda_home_tools.js?v=1",
-      "sha256": "628926e70aee4f7b6a2b3fdc0ec8e0d7d120a096a29471119b238fce12a38a7a"
+      "url": "/vilda_home_tools.js?v=2",
+      "sha256": "0f17153d0c9f2472bf89670da14978d5565d06688d4a60a6c07c57dd4b159c47"
     },
     {
       "url": "/vilda_home_tools_vitals.js?v=1",
       "sha256": "f7752822e42b50ebea6a9fbaba16cbc2918851b5c5bb1cfa88f3dc310aad3086"
     },
     {
-      "url": "/vilda_home_tools_anthropometry.js?v=1",
-      "sha256": "954d5ee8bdfa15743c111efb5cd21455e71cb04a9cdcba19077757730f1b5c21"
+      "url": "/vilda_home_tools_anthropometry.js?v=2",
+      "sha256": "ba67784374464de40194a06dac7c462d073801c9ac983eaf099aee0210198421"
     },
     {
       "url": "/vilda_home_tools_nutrition.js?v=1",

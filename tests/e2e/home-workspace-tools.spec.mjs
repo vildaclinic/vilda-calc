@@ -77,6 +77,13 @@ test('home tools: respiration stays in its own document until Apply and uses the
 test('home tools: eight equal tiles, shared dialog, and an obsolete draft cannot be applied', async ({ page }) => {
   const { frame, ids } = await setup(page);
   const toggle = frame.locator(TOGGLE), grid = frame.locator(GRID);
+  await expect(frame.locator('#currentSummaryCard')).toBeVisible();
+  await expect(frame.locator('#vhomeGrowthCard')).toBeVisible();
+  for (const id of ['bmiCard', 'growthCalculationsSection', 'downSyndromeSection']) {
+    const original = frame.locator('#' + id);
+    await expect(original).toBeAttached();
+    await expect(original).toBeHidden();
+  }
   await expect(toggle).toHaveAttribute('aria-expanded', 'false');
   await expect(grid).toBeHidden();
   await toggle.click();

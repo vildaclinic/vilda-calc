@@ -187,20 +187,12 @@
     return !!(patient && source?.patientId === patient && source.status === 'ready' && source.population === 'DS');
   }
   function appendManualDownSyndromeAction(panel) {
-    var section = byId('downSyndromeSection');
-    var native = byId('toggleDownSyndrome');
-    var nativeCard = byId('downSyndromeCard');
-    if (!section || !native || !nativeCard || w.getComputedStyle(section).display === 'none') return;
-    var button = el('button', 'vhome-growth-secondary', native.textContent.trim());
+    if (!w.VildaHomeTools?.canOpenDownSyndrome?.()) return;
+    var button = el('button', 'vhome-growth-secondary', 'Obliczenia dla dzieci z zespołem Downa');
     button.type = 'button';
+    button.setAttribute('aria-haspopup', 'dialog');
     button.addEventListener('click', function () {
-      if (!stillOwned() || dirty() || hasConfirmedDownSyndrome()) return;
-      var item = draft;
-      close(true);
-      if (!tokenValid(item) || !native.isConnected || w.getComputedStyle(section).display === 'none') return;
-      if (nativeCard.style.display !== 'block') native.click();
-      native.focus({ preventScroll: true });
-      native.scrollIntoView({ block: 'nearest' });
+      if (stillOwned() && !dirty() && !hasConfirmedDownSyndrome()) w.VildaHomeTools.openDownSyndrome(button);
     });
     panel.appendChild(button);
   }
