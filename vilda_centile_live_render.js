@@ -117,6 +117,23 @@
     });
   }
 
+  // P-OTYLOSC-STRONA (temat D): pomiary z dziennika leczenia (snapshot.reportedMeasurements, VildaDziennikOtylosci.
+  // pomiaryStrony) rysują się obok przebiegu — masa od pacjenta jako romb, wpis z gabinetu jako kropka — bez
+  // łączenia linią i bez wpływu na przebieg, bieżący pomiar i jego etykietę. Odczyt centyla tą samą funkcją co pomiary.
+  function reportedFor(model, metric, snapshot, plot) {
+    return (snapshot.reportedMeasurements || []).map(function (measurement) {
+      var value = measurement && Number(measurement[metric]);
+      var origin = metric === 'height' ? measurement && measurement.zrodloWzrostu : measurement && measurement.zrodloMasy;
+      var age = measurement && Number(measurement.ageMonths);
+      if (!positive(value) || !finite(age) || age < model.minX || age > model.maxX) return null;
+      var clinicalAge = age;
+      if (snapshot.population === 'DS' && typeof w.vildaWiekDoSiatek === 'function') clinicalAge = w.vildaWiekDoSiatek(age, age, 'DS');
+      return Object.assign({ ageMonths: age, value: value, current: false, exact: true, reported: true,
+        origin: origin === 'pacjent' ? 'pacjent' : 'gabinet', dateISO: measurement.dateISO || null, clinicalAgeMonths: clinicalAge },
+      statsFor(metric, value, clinicalAge, snapshot.sex, snapshot.source, snapshot.population), mappedPoint(plot, age, value));
+    }).filter(Boolean).sort(function (a, b) { return a.ageMonths - b.ageMonths; });
+  }
+
   function boneAgeItems(advanced, model, plot) {
     var items = [];
     var current = w.VildaBoneAge && typeof w.VildaBoneAge.chartBoneAgeMonths === 'function'
@@ -362,6 +379,7 @@
     var result = { canvas: canvas, width: canvas.width, height: canvas.height, plot: plot, metric: metric,
       source: snapshot.source, sex: snapshot.sex, population: snapshot.population, annotations: items,
       vectorPatient: vectorPatient, valueLabelVisible: enabled(metric === 'height' ? 'heightLabel' : 'weightLabel'), points: pointsFor(model, metric, snapshot, plot),
+      reported: reportedFor(model, metric, snapshot, plot),
       contentBounds: deferBounds ? null : contentBounds(canvas), mph: metric === 'height' ? mphFor(snapshot, advanced, plot, enabled('mph')) : null };
     result.probe = function (age) { return probe(result, age); };
     return result;
@@ -427,7 +445,7 @@
       source: input.source, sex: input.sex, population: input.population,
       curves: curves, percentiles: [3, 50, 97], sampleStepMonths: 1,
       officialMaxY: model.officialMaxY, units: model.units, title: model.title,
-      points: pointsFor(model, metric, input, plot), annotations: [], mph: null };
+      points: pointsFor(model, metric, input, plot), reported: reportedFor(model, metric, input, plot), annotations: [], mph: null };
     result.probe = function (age) { return probe(result, age); };
     return result;
   }
@@ -485,6 +503,9 @@
     var points = data.points;
     var exact = points.filter(function (point) { return Math.abs(point.ageMonths - age) < 0.000001; }).pop();
     if (exact) return Object.assign({}, exact);
+    // Pomiar z dziennika (temat D) czyta się tylko dokładnie w jego wieku; między pomiarami — jak dotąd, z wizyt.
+    var reported = (data.reported || []).filter(function (point) { return Math.abs(point.ageMonths - age) < 0.000001; }).pop();
+    if (reported) return Object.assign({}, reported);
     if (age < points[0].ageMonths || age > points[points.length - 1].ageMonths) return null;
     var right = points.findIndex(function (point) { return point.ageMonths > age; });
     if (right < 1) return null;

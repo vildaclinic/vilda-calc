@@ -1143,6 +1143,30 @@
     return T ? T.ocenWartosc(v, gapM, ageMonths, sex, ctx) : null;
   }
 
+  // P-OTYLOSC-STRONA (temat D, makieta zaakceptowana 2026-11-20): karta „Zaawansowane obliczenia wzrostowe” na stronie
+  // głównej (input.dziennikStrony) liczy analizę także z pomiarami z dziennika leczenia pacjenta wczytanego na stronie
+  // (VildaDziennikOtylosci.pomiaryStrony — wariant B jak w Karcie pacjenta; wizyta wygrywa w tym samym miesiącu).
+  // Odtworzenie dawnej wizyty (jest późniejszy pomiar) nie bierze wpisów po jej wieku. Karta pacjenta podaje pomiary
+  // z dziennika sama (Ob_dzSiatki) i flagi nie ustawia — inny pacjent Karty niż strony nie dostaje cudzych wpisów.
+  function zDziennikiemStrony(input) {
+    var D = w.VildaDziennikOtylosci;
+    if (!D || typeof D.pomiaryStrony !== 'function') return input;
+    try {
+      var lista = Array.isArray(input.measurements) ? input.measurements : [];
+      var cam = num(input.currentAgeMonths);
+      var os = lista.concat(cam != null ? [{ ageMonths: cam, weight: num(input.currentWeight), height: num(input.currentHeight) }] : []);
+      var pozniej = cam != null && lista.some(function (m) {
+        var am = m ? num(m.ageMonths) : null;
+        if (am == null && m && num(m.ageYears) != null) am = num(m.ageYears) * 12;
+        return am != null && am > cam + 1e-9;
+      });
+      var dodaj = D.pomiaryStrony(os, { doWiekuMies: pozniej ? cam : null });
+      return Array.isArray(dodaj) && dodaj.length ? Object.assign({}, input, { measurements: lista.concat(dodaj) }) : input;
+    } catch (e) {
+      return input;
+    }
+  }
+
   // ── Analiza całości ──
 
   function analyze(input) {
@@ -1150,7 +1174,7 @@
     var sex = sexMK(input.sex);
     var source = input.source != null ? input.source : (typeof w.bmiSource !== 'undefined' ? w.bmiSource : null);
     var ctx = normalizeContext(input.context, input.sex);
-    var pts = buildPoints(input);
+    var pts = buildPoints(input.dziennikStrony ? zDziennikiemStrony(input) : input);
     if (pts.length < 2) return null;
     // Świeżość etapu Tannera z rekordu pacjenta: starszy niż TANNER_FRESH_M — pomijany w ocenie
     // (pasek kontekstu pokazuje go jako nieaktualny). Tanner z bieżącego formularza (bez tannerAtAgeMonths)
