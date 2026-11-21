@@ -2916,6 +2916,12 @@ Od E3-PR0d2 (P-ZBIEZNOSC-ZDARZEN; zmiana sejfu tylko poza blokiem natywnym, w bl
 sprzed E3-PR0d2 (`audyt` `119f0225`). Blok natywny, haki natywne, rodzina modułów `0278bf7106c2`, `fragmentSHA256`
 i archiwum bez zmian; bieżące wartości są w `runtime/clinical-workspace-v1/manifest.json`.
 
+W Terminarzu operacja zamknięcia zwykłej listy oczekujących sprawdza jej aktualny skład i zapisuje
+usunięcie listy oraz terminu w metadanych sejfu. Przy ponownym budowaniu bloku natywnego należy
+zachować kopiowanie argumentów `addWaitlistList` i `completeWaitlistBooking` oraz wyłączną
+blokadę obszaru roboczego dla `completeWaitlistBooking` w ścieżce V1. Aktualne skróty obu warstw
+sejfu są zapisane w ich manifestach.
+
 Warstwy `vilda_vault.js` od środka: baza → blok natywny i 16 haków natywnych (manifest,
 `nativeHooks`) → delta Kt/V (`tools/klirens-ktv-vault-delta.mjs`, poza blokiem) → delta trwałych
 wizyt (`runtime/durable-visits-v1/`, `tools/visits-vault-delta.mjs`). Budowniczy zna tylko dwie

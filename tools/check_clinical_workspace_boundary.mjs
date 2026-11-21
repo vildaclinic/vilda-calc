@@ -33,7 +33,7 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 // the same hidden switch) and E3-PR0d2 (after a single change from another device is applied successfully, a hidden
 // trash entry of a deleted card is queued again when the change carried a later version of that visit under a card
 // that lost to the patient tombstone here; dormant behind the same hidden switch).
-const BASE = '8855e4a1ff4b5225e233ad1bb8b9ab2808b0df75d42dcd043d9245e5709d9ff4';
+const BASE = '1464cdf47d16a3e431992c64529979fe6b6c9ac7bd014042f930edb2a8110e32';
 const START = '/* BEGIN VILDA CLINICAL WORKSPACE NATIVE V1 */\n';
 const END = '/* END VILDA CLINICAL WORKSPACE NATIVE V1 */\n';
 const digest = value => createHash('sha256').update(value).digest('hex');
