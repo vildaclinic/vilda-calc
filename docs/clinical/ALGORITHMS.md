@@ -45612,7 +45612,7 @@ leku — kopia wartości katalogu `obesity_therapy.js` (ładowany tylko w DocPro
 **Wdrożenie.** Od razu przy wydaniu; dane, sejf, dziennik, zapis i synchronizacja bez zmian. **Cofnięcie** = rewert PR:
 grupa otyłości znów trzy bloki (etap 1).
 
-## Dziennik zdarzeń: odsyłanie ukrytego wpisu Kosza karty usuniętej po zastosowaniu zmiany z innego urządzenia — uśpione (P-ZBIEZNOSC-ZDARZEN, E3-PR0d2, SW 1.1.565, `vilda_vault.js` 283, 2026-11-20)
+## Dziennik zdarzeń: odsyłanie ukrytego wpisu Kosza karty usuniętej po zastosowaniu zmiany z innego urządzenia — uśpione (P-ZBIEZNOSC-ZDARZEN, E3-PR0d2, SW 1.1.566, `vilda_vault.js` 283, 2026-11-20)
 
 **Zmiana kliniczna: NIE (uśpiona).** Wzory, progi, jednostki, interpretacje, reguły scalania (`Le`), format kopii,
 serwer i `vilda_sync.js` bez zmian. Dla użytkownika dziś nic się nie zmienia: odsyłanie ukrytego wpisu włącza ten sam
@@ -46085,7 +46085,7 @@ odsyłania wpisów, opis `Bev_zastosujZEchem`, nagłówek części emisji, opis 
 `Bev_kandydaciEcha`, `Bev_stanEcha`, `Bev_echo`, `Bev_stanKosza`, `Bev_echoKosza`, `Bev_stomb`, `Bem_zastosujEcho`,
 `Bem_zmiana`, `Bem_RANGI`, `Bob_plan`, `Bob_bramkaEcha`. Poza blokiem bez zmian.
 
-**Wersje.** `vilda_vault.js` 282 → 283, `vilda_chrome.js` 314 → 315 i `vilda_session_bridge.js` 230 → 231 (wstrzykują
-sejf), SW 1.1.564 → 1.1.565 — `npm run podbij-wersje`; baza `origin/audyt` `e3efa991` (po vildaclinic/vilda-calc#1013;
+**Wersje.** `vilda_vault.js` 282 → 283, `vilda_chrome.js` 315 → 316 i `vilda_session_bridge.js` 231 → 232 (wstrzykują
+sejf), SW 1.1.565 → 1.1.566 — `npm run podbij-wersje`; baza `origin/audyt` `19fd027e` (po vildaclinic/vilda-calc#1017;
 sejf, `vilda_sync.js`, `runtime/`, `tools/` i testy synchronizacji bez zmian względem `bc2d88f8`, E3-PR0d; pomiary na
 `119f0225`). Bez nowego pliku w pamięci offline.
