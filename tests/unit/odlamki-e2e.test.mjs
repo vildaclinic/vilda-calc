@@ -1,4 +1,4 @@
-import { spawnSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -15,7 +15,8 @@ import {
   szacujCzasy,
   trescListy,
   uwagiDoRaportow,
-  wczytajCzasy
+  wczytajCzasy,
+  wybierzPlikiPR
 } from '../support/odlamki-e2e.mjs';
 
 // E2E-ODŁAMKI (zlecenie właściciela 2026-10-08): CI dzieli e2e na odłamki po zmierzonym czasie
@@ -293,6 +294,41 @@ describe('tabela czasów i ten zestaw e2e', () => {
   it('plik tabeli leży tam, gdzie go szuka skrypt', () => {
     expect(fs.existsSync(PLIK_CZASOW)).toBe(true);
   });
+
+  it('zestaw PR obejmuje podstawę i zmienione testy z Git, także po przeniesieniu pliku', () => {
+    const repo = fs.mkdtempSync(path.join(os.tmpdir(), 'e2e-pr-'));
+    const git = (...args) => execFileSync('git', args, { cwd: repo, encoding: 'utf8' });
+    const katalog = path.join(repo, 'tests/e2e');
+    const zapisz = (nazwa, tresc) => fs.writeFileSync(path.join(katalog, nazwa), tresc);
+    try {
+      git('init', '-q');
+      git('config', 'user.name', 'Test');
+      git('config', 'user.email', 'test@example.invalid');
+      fs.mkdirSync(katalog, { recursive: true });
+      zapisz('zmiana.spec.mjs', 'przed');
+      zapisz('przed.spec.mjs', 'test');
+      zapisz('pomin.spec.mjs', 'test');
+      git('add', '.');
+      git('commit', '-qm', 'Baza');
+      zapisz('zmiana.spec.mjs', 'po');
+      zapisz('nowy.spec.mjs', 'test');
+      zapisz('pomoc.mjs', 'test');
+      git('mv', 'tests/e2e/przed.spec.mjs', 'tests/e2e/po.spec.mjs');
+      git('add', '.');
+      git('commit', '-qm', 'Zmiana');
+
+      const nowe = ['nowy.spec.mjs', 'po.spec.mjs', 'zmiana.spec.mjs'];
+      const widziane = [...naDysku, 'pomin.spec.mjs', ...nowe].map((nazwa) => ({ plik: nazwa }));
+      const baza = wybierzPlikiPR(widziane, 'HEAD', repo).map((p) => p.plik);
+      expect(baza).toContain('application.spec.mjs');
+      expect(baza).toContain('pwa.spec.mjs');
+      expect(baza).not.toContain('pomin.spec.mjs');
+      expect(wybierzPlikiPR(widziane, 'HEAD^', repo).map((p) => p.plik)).toEqual([...baza, ...nowe]);
+      expect(() => wybierzPlikiPR(widziane.slice(0, -1), 'HEAD^', repo)).toThrow(/zmiana\.spec\.mjs/);
+    } finally {
+      fs.rmSync(repo, { recursive: true, force: true });
+    }
+  });
 });
 
 describe('CI dzieli e2e tym podziałem', () => {
@@ -300,18 +336,19 @@ describe('CI dzieli e2e tym podziałem', () => {
 
   it('odłamki biorą listę plików z odlamki-e2e.mjs przez --test-list, nie z --shard', () => {
     expect(ci).not.toMatch(/--shard=/);
-    expect(ci).toMatch(/node tests\/scripts\/odlamki-e2e\.mjs --odlamek=\$\{\{ matrix\.shard \}\}\/(\d+) --zapisz=/);
+    expect(ci).toContain('node tests/scripts/odlamki-e2e.mjs --odlamek=${{ matrix.shard }}/${{ strategy.job-total }} --zapisz=');
     expect(ci).toMatch(/npm run test:e2e -- --test-list=/);
   });
 
-  it('liczba odłamków w poleceniu zgadza się z macierzą', () => {
-    const macierz = ci.match(/shard: \[([\d,\s]+)\]/);
-    expect(macierz, 'macierz odłamków w ci.yml').not.toBeNull();
-    const numery = macierz[1].split(',').map((s) => Number(s.trim()));
-    const n = Number(ci.match(/--odlamek=\$\{\{ matrix\.shard \}\}\/(\d+)/)[1]);
-    expect(numery).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
-    expect(numery).toEqual(Array.from({ length: n }, (_, i) => i + 1));
-    expect(ci).toContain(`name: E2E odłamek \${{ matrix.shard }}/${n}`);
+  it('pełny przebieg ma osiem odłamków, a PR ma trzy i podaje bazę selekcji', () => {
+    const macierze = [...ci.matchAll(/'(\{"shard":\[[\d,]+\],"pelny":\[(?:true|false)\]\})'/g)];
+    expect(macierze.map((m) => JSON.parse(m[1]))).toEqual([
+      { shard: [1, 2, 3, 4, 5, 6, 7, 8], pelny: [true] },
+      { shard: [1, 2, 3], pelny: [false] }
+    ]);
+    expect(ci).toContain('name: E2E odłamek ${{ matrix.shard }}/${{ strategy.job-total }}');
+    expect(ci).toContain("BAZA_E2E: ${{ github.event_name == 'pull_request' && 'HEAD^1' || 'origin/audyt' }}");
+    expect(ci).toContain('if [ "$PELNY_E2E" = false ]; then\n            opcje+=(--baza="$BAZA_E2E")');
   });
 });
 
