@@ -118,13 +118,20 @@
     var colors = w.VildaCentileLiveColors;
     if (!colors) throw new Error('Brak prezentacji kolorów siatki.');
     colors.draw(doc, { defs: defs, group: graph, points: points, mapped: mapped, metric: data.metric, prefix: PREFIX });
+    // P-OTYLOSC-STRONA (temat D): pomiary z dziennika leczenia — romb (od pacjenta) / kropka (z gabinetu), bez linii.
+    var reported = (data.reported || []).filter(function (point) { return finite(point.ageMonths) && finite(point.value); });
+    var reportedMapped = reported.map(function (point) { return { x: sx(point.ageMonths), y: sy(point.value) }; });
+    if (reported.length && typeof colors.drawReported === 'function') {
+      colors.drawReported(doc, { group: graph, reported: reported, metric: data.metric, prefix: PREFIX, radius: 5, mapped: reportedMapped });
+    }
     if (points.length) {
       var currentIndex = points.findIndex(function (point) { return point.current; });
       if (currentIndex < 0) currentIndex = points.length - 1;
       var lastPoint = points[currentIndex];
       var reading = label(lastPoint.value) + ' ' + data.units;
       var chip = colors.placeLabel({ plot: plot, mapped: mapped, pointIndex: currentIndex,
-        width: reading.length * 8 + 16, height: 23 });
+        width: reading.length * 8 + 16, height: 23,
+        obstacles: reportedMapped.map(function (item) { return { x: item.x - 6, y: item.y - 6, w: 12, h: 12 }; }) });
       // Dense histories keep the reading above the preview, rather than hiding
       // any measurement or segment under an in-plot label.
       svg.setAttribute('data-value-label', chip ? 'placed' : 'header');

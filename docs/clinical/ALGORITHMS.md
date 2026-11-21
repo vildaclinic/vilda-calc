@@ -44358,6 +44358,74 @@ w historii pomiarów (to pomiary z gabinetu). Progi i reguły werdyktów bez zmi
   i bez dziennika (jak dotąd).
 - e2e `tests/e2e/otylosc-siatki.spec.mjs` SI-1…SI-5.
 
+## Pomiary od pacjenta w całej aplikacji (P-OTYLOSC-STRONA, SW 1.1.563, `vilda_cykle_leczenia.js` 12, `vilda_centile_live_*`, `vilda_professional_summary.js` 3, `vilda_trajectory_analysis.js` 48, `vilda_summary_cards.js` 66, `inline_index_04.js` 30, 2026-11-20)
+
+**Decyzje właściciela.** Temat D projektu „Leczenie otyłości — wpisy poza wizytą”: po Karcie pacjenta (P-OTYLOSC-SIATKI)
+pomiary od pacjenta mają być w całej aplikacji — w siatkach ze strony głównej i w karcie „Podsumowanie wyników”
+(2026-11-19). Makieta zaakceptowana 2026-11-20 („koduj”) po poprawkach właściciela:
+1. pomiary od pacjenta oznaczone w istniejących listach, siatkach i wierszach — bez osobnych tabel i ramek;
+2. legenda siatki: czerwona kropka „dane z gabinetu” i romb „dane od pacjenta”; licznik pomiarów ustępuje jej miejsca;
+3. dymek przy rombie: „◇ od pacjenta · wiek”, „Waga 74,6 kg”, data wpisu;
+4. „Poprzednie pomiary”: blok z odznaką „pomiar od pacjenta” (bez daty i odnośnika), liczniki „6 pomiarów” i
+   „3 od pacjenta”; w analizie trajektorii żeton „w tym 3 od pacjenta” i obramowanie karty „Waga” (bez podpisu);
+5. PDF siatki: romby na siatce, ramka podsumowania BEZ pomiarów od pacjenta, legenda pod siatkami „dane z gabinetu” /
+   „dane od pacjenta”;
+6. „Porównanie z poprzednim pomiarem”: żeton i linijka w wierszu „Waga” w tym samym brzmieniu co w podsumowaniu.
+
+**Które wpisy** — te same reguły co w Karcie: `VildaDziennikOtylosci.pomiaryDoSiatek` (wizyta wygrywa w tym samym
+miesiącu życia, z tą samą datą albo z tą samą masą ±0,05 kg miesiąc obok; źródło „pacjent” tylko z wpisu). Nowe
+`pomiaryStrony(osCzasu, {patientId, doWiekuMies})` bierze projekcję dziennika pacjenta wczytanego na stronie
+(`punktyWczytanego`, P-TRAJEKTORIA-DZIENNIK); inny pacjent niż odczytany dziennik albo brak dziennika — nic.
+Odtworzenie dawnej wizyty (w historii jest późniejszy pomiar) nie bierze wpisów po jej wieku — ta sama zasada co przy
+pomiarach wizyt („historyczne odtworzenie nie bierze danych z późniejszego okresu”). Ostatnia wizyta — bierze także
+wpisy po niej.
+
+**Gdzie i jak:**
+- **„Podsumowanie wyników” → „Siatka centylowa”** (podgląd i pełny ekran): masa (wzrost) od pacjenta — pomarańczowy
+  romb obok przebiegu, bez linii; wpis z gabinetu poza wizytą — kropka w kolorze centyla, bez linii. Przebieg, bieżący
+  pomiar, jego etykieta i nagłówek „OBECNY POMIAR” — bez zmian. Centyl punktu — ta sama funkcja co dla pomiarów
+  (`getCentilePercentileStatsForSource`). Odczyt między pomiarami nadal interpoluje tylko wizyty.
+- **„Podsumowanie wyników” → „Podsumowanie”**: w wierszu „Waga” linijka „◇ od pacjenta DD.MM.RRRR: X kg” — ostatnia
+  masa od pacjenta PO bieżącym pomiarze, tylko gdy bieżący pomiar jest ostatni w historii. Wiersz, centyl, SDS i ocena
+  — bez zmian (liczone z pomiaru wizyty).
+- **„Zaawansowane obliczenia wzrostowe” → „Poprzednie pomiary”**: bloki tylko do odczytu między wierszami (kolejność
+  wieku); nie są wierszami formularza — `collectAdvancedMeasurements()`, obliczenia wierszy (tempo, prognozy) i zapis
+  wizyty ich nie widzą. **Analiza trajektorii** tej karty liczy z nimi (wariant B, jak w Karcie).
+- **PDF „Generuj siatkę OLAF”** (strona profesjonalna OLAF/WHO/Palczewska 0–3): pusty romb (od pacjenta), czarna
+  kropka (z gabinetu), legenda pod siatkami; ramka podsumowania bez zmian.
+- **„Porównanie z poprzednim pomiarem”**: masy od pacjenta między poprzednim a dzisiejszym pomiarem (od wyłącznie, do
+  włącznie): żeton „◇ w odcinku N pomiar(y) od pacjenta” i linijka pod „Dziś” w wierszu „Waga” z ostatnią z nich.
+  **Zmiana w tabeli zostaje liczona między pomiarami z wizyt.**
+
+**Poza zakresem (bez zmian):** kafelek tempa w „Status” Karty, PDF z Karty, DocPro, siatka Palczewskiej 1–18 lat
+i strona „standardowa” PDF, karta „Obliczenia wzrostowe” (tryb podstawowy), „Analiza punktu pomiarowego” dla bloku
+z dziennika. Sejf i zapis bez zmian.
+
+**Przypadki syntetyczne** (dane fikcyjne; Testowa Zuzanna ur. 11.04.2013; wizyty 11 l. 63,0 kg, 12 l. 70,5, 13 l. 80,0;
+bieżący pomiar 13 l. 6 mies. 75,2 kg (13.10.2026); masy od pacjenta 10.07 (77,8), 12.08 (76,9), 12.11.2026 (74,6)):
+
+| Przypadek | Wejście | Oczekiwany wynik |
+|---|---|---|
+| ST-1 | odtworzenie ostatniej wizyty | wiersz Waga: „od pacjenta 12.11.2026: 74,6 kg”; siatka wagi: romby 159, 160, 163 mies., 4 kropki przebiegu; legenda „dane z gabinetu” / „dane od pacjenta”; dymek „◇ od pacjenta · 13 lat 7 mies.”, „Waga 74,6 kg”, „12.11.2026” |
+| ST-2 | karta zaawansowana | bloki 159, 160, 163 po wierszach 11, 12, 13 l.; „6 pomiarów”, „3 od pacjenta”; `collectAdvancedMeasurements()` — 3; analiza „w tym 3 od pacjenta”; PDF z legendą „dane od pacjenta” |
+| ST-3 | dziś 13 l. 9 mies. (73,5 kg), wpisy 12.11 (74,6) i 15.12.2026 (74,1) | „w odcinku 2 pomiary od pacjenta”; „od pacjenta 15.12.2026: 74,1 kg”; zmiana −1,7 kg (wizyta → dziś) |
+| ST-4 | telefon 390 px | romby i legenda; bez poziomego przewijania |
+| ST-5 | pacjent bez dziennika | wszystko jak dotąd („Przebieg pacjenta”, „Dziewczęta · 4 pomiary”) |
+| reguła | odtworzenie wizyty 13 l. 2 mies. (jest pomiar 13 l. 6 mies.) | bez wpisów po 158 mies. |
+| reguła | wpis z tego samego miesiąca życia co dzisiejszy pomiar | pominięty (wizyta wygrywa) |
+
+**Wpływ kliniczny.** Zmienia się analiza trajektorii w karcie „Zaawansowane obliczenia wzrostowe” na stronie głównej:
+do serii wchodzą wpisy z dziennika (masa ważona przez pacjenta bywa mniej dokładna) — jak w Karcie od tematu C;
+ostatni punkt, werdykt i „najpoważniejszy odcinek” wagi i BMI mogą się zmienić, a karta ma żeton „w tym N od pacjenta”
+i obramowanie. Pozostałe miejsca tylko POKAZUJĄ pomiary od pacjenta jako oznaczone: centyle, oceny, tempo, prognozy
+i zmiana w „Porównaniu” liczą się jak dotąd z pomiarów wizyt. Progi bez zmian. Decyzja kliniczna należy do lekarza.
+
+**Testy.** Dane wyłącznie fikcyjne.
+- `tests/unit/otylosc-strona.test.mjs` (14): `pomiaryStrony` na prawdziwym sejfie (bez dziennika, inny pacjent,
+  `doWiekuMies`, wpis z gabinetu), `pomiaryOdcinka` i opisy, `analyze` z flagą karty zaawansowanej i bez, podgląd
+  siatki z prawdziwymi producentami (`reported`, `probe`), źródła łatek, czyste funkcje `VildaAdvDziennik`.
+- e2e `tests/e2e/otylosc-strona.spec.mjs` ST-1…ST-5.
+
 **Wdrożenie.** Od razu przy wydaniu; sejf bez zmian. **Cofnięcie** = rewert PR: siatki i analiza znów tylko z wizyt.
 
 ## Dziennik zdarzeń: odsyłanie wpisów Kosza po zastosowaniu zmiany z innego urządzenia — uśpione (P-ZBIEZNOSC-ZDARZEN, E3-PR0d, SW 1.1.560, `vilda_vault.js` 282, 2026-11-19)
