@@ -620,8 +620,12 @@ describe('B6/B7: bez zegara', () => {
     // E3-PR0d: odsyłanie wpisów Kosza — odczyt surowej listy Kosza kandydatów przez strzeżony adapter, postać wysyłkowa
     // z Bev_wpisKosza (odszyfrowanie tylko wpisów, które się zmieniły), kanon, reguła pola i samo wygaśnięcie treści; bez
     // zegara i zapisów.
+    // E3-PR0d2: odsyłanie ukrytego wpisu Kosza karty usuniętej — kandydaci z kopii wersji ładunku, wstęp
+    // z rozstrzygnięciem „wersja wygrywa z wpisem” (Bkz_wygrywa, Bkz_zmiana, Bgw_stan), odczyt istnienia kart i nagrobków
+    // pacjentów przez strzeżony adapter; bez zegara i zapisów.
     const ODSYLANIE = ['Bev_pole', 'Bev_bezPola', 'Bev_json', 'Bev_kandydaciEcha', 'Bev_stanEcha', 'Bev_wersjaEcha', 'Bev_echoT', 'Bev_echo',
-      'Bev_kandydaciKosza', 'Bev_stanKosza', 'Bev_kanonKosza', 'Bev_samoWygasniecie', 'Bev_echoKoszaT', 'Bev_echoKosza'];
+      'Bev_kandydaciKosza', 'Bev_stanKosza', 'Bev_kanonKosza', 'Bev_samoWygasniecie', 'Bev_echoKoszaT', 'Bev_echoKosza',
+      'Bev_kandydaciUkrytych', 'Bev_wstepUkrytych', 'Bev_stanKart', 'Bev_echoUkrytych'];
     const wBloku = [...dekl.keys()].filter((n) => n.startsWith('Bev_')).sort();
     expect(wBloku, 'każda funkcja Bev_ jest na liście czystych, szyfrowania/zastosowania, przeglądu kolejki albo odsyłania').toEqual([...CZYSTE, ...SZYFROWANIE_I_ZASTOSOWANIE, ...PRZEGLAD, ...ODSYLANIE].sort());
     const WYJATKI = {

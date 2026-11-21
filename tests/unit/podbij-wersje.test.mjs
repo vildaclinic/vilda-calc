@@ -505,9 +505,9 @@ function poleceniaKroku(yml, nazwa) {
   return blok.map((l) => l.slice(w)).join('\n').trim();
 }
 
-/** Job `unit` z ci.yml (do następnego joba). */
-function jobUnit(yml) {
-  const m = /^ {2}unit:\n([\s\S]*?)(?=^ {2}[A-Za-z0-9_-]+:\n)/m.exec(yml);
+/** Job z ci.yml do następnego joba. */
+function blokJoba(yml, nazwa) {
+  const m = new RegExp(`^ {2}${nazwa}:\\n([\\s\\S]*?)(?=^ {2}[A-Za-z0-9_-]+:\\n)`, 'm').exec(yml);
   return m ? m[1] : '';
 }
 
@@ -549,7 +549,7 @@ function klonGaleziPR(r, galaz) {
 const bezPolecen = (wynik) => `${wynik.stdout}${wynik.stderr}`.replace(/^::/gm, '› ::');
 
 function uruchomKrokCI(klon, baza = 'HEAD^1') {
-  const polecenia = poleceniaKroku(jobUnit(CI), NAZWA_KROKU);
+  const polecenia = poleceniaKroku(blokJoba(CI, 'unit'), NAZWA_KROKU);
   // Domyślna powłoka kroku w Actions (bez `shell:`) to `bash -e {0}` — widać ją w logu joba;
   // BAZA ustawia `env:` kroku z wyrażenia na event (sprawdzane w teście statycznym).
   return spawnSync('bash', ['-e', '-c', polecenia], { cwd: klon, encoding: 'utf8', env: { ...SRODOWISKO, BAZA: baza } });
@@ -577,11 +577,19 @@ function kolizjaPoCzystymScaleniu() {
 }
 
 describe('P-WERSJE-CI: CI sprawdza wersje PR-a względem audyt', () => {
-  it('ci.yml: krok w wymaganym jobie unit, na pull_request i workflow_dispatch poza audyt, bez furtek', () => {
-    const unit = jobUnit(CI);
-    // Job bez własnego `if:` ani `continue-on-error` — inaczej wymagany status mógłby przejść bez kroku.
+  it('ci.yml: krok w jobie unit sprawdzanym przez wymagany status, na pull_request i workflow_dispatch poza audyt', () => {
+    const unit = blokJoba(CI, 'unit');
+    // Job bez własnego `if:` ani `continue-on-error` oraz podsumowanie odrzucające każdy wynik poza success.
     expect(kluczeNaWcieciu(unit.split('\n'), 4)).toEqual(['name', 'runs-on', 'timeout-minutes', 'steps']);
-    expect(wartosc(unit.split('\n'), 'name')).toBe('Lint, składnia i testy jednostkowe');
+    const podsumowanie = blokJoba(CI, 'unit-summary');
+    const linie = podsumowanie.split('\n');
+    expect(kluczeNaWcieciu(linie, 4)).toEqual(['name', 'runs-on', 'needs', 'if', 'steps']);
+    expect(wartosc(linie, 'name')).toBe('Lint, składnia i testy jednostkowe');
+    expect(wartosc(linie, 'needs')).toBe('[unit, vitest]');
+    expect(wartosc(linie, 'if')).toBe('always()');
+    expect(poleceniaKroku(podsumowanie, 'Sprawdź wyniki kontroli i testów jednostkowych')).toBe(
+      'test "${{ needs.unit.result }}" = "success"\ntest "${{ needs.vitest.result }}" = "success"',
+    );
     // Checkout: tylko fetch-depth (bez `ref:` itp.) — 2 na PR-ze (commit scalenia z rodzicami), 0 przy dispatch poza audyt.
     const checkout = blokKroku(unit, 'Pobierz repozytorium');
     expect(kluczeNaWcieciu(checkout.linie, checkout.d + 2)).toEqual(['name', 'uses', 'with']);

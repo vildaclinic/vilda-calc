@@ -2769,6 +2769,12 @@ obraz sejfu po tej zmianie bez bloku trwałych wizyt: SHA-256
 (`ed2f7832ac7a4c06df08d36029e5700c24603587eb5828311bdc65546c3fabd1`). Baza z E3-PR0c (`22f7d1f2…`) odpowiada
 stanowi sprzed E3-PR0d (`audyt` `4bff32aa`); bieżącą bazę daje to samo odwrócenie delty co wyżej.
 
+Od E3-PR0d2 (P-ZBIEZNOSC-ZDARZEN, odsyłanie ukrytego wpisu Kosza karty usuniętej; zmiana tylko w bloku
+P-DZIENNIK-ZDARZEN) bazą delty jest obraz sejfu po tej zmianie bez bloku trwałych wizyt: SHA-256
+`5318fe8f57be1ed3a7cb093cfa8affea151007195519e042a81b96dc754a8620`, a wynikiem — bieżący `vilda_vault.js`
+(`5f5ec15f783375b99066288f80bf653d825f4591255af5c0149c1838f0c0afde`). Baza z E3-PR0d (`417ac2f4…`) odpowiada
+stanowi sprzed E3-PR0d2 (`audyt` `119f0225`); bieżącą bazę daje to samo odwrócenie delty co wyżej.
+
 Każdy punkt wpięcia musi występować dokładnie raz. Narzędzie odrzuca inne
 bajty bazy, zmianę źródła bez zgodnego manifestu, niejednoznaczny punkt wpięcia
 i wynik różniący się od zapisanego skrótu. Odwrócenie delty musi odtworzyć
@@ -2902,6 +2908,12 @@ Od E3-PR0d (P-ZBIEZNOSC-ZDARZEN; zmiana sejfu tylko poza blokiem natywnym, w blo
 `e0fdbf3504adef9db240a1584231e2f6b5e041172de3da9d39b37e90c9f0ea50`, a `integratedVaultSHA256` (obraz pośredni) —
 `d9f5b5e9dc36b0f87f172f925d0235e7c9455fb9aafff0dfbe738d88a8b7e0b0`. Baza z E3-PR0c (`06ea0231…`) odpowiada stanowi
 sprzed E3-PR0d (`audyt` `4bff32aa`). Blok natywny, haki natywne, rodzina modułów `0278bf7106c2`, `fragmentSHA256`
+i archiwum bez zmian; bieżące wartości są w `runtime/clinical-workspace-v1/manifest.json`.
+
+Od E3-PR0d2 (P-ZBIEZNOSC-ZDARZEN; zmiana sejfu tylko poza blokiem natywnym, w bloku P-DZIENNIK-ZDARZEN) baza sejfu to
+`8855e4a1ff4b5225e233ad1bb8b9ab2808b0df75d42dcd043d9245e5709d9ff4`, a `integratedVaultSHA256` (obraz pośredni) —
+`a54d9c62a128bdf7031a5a54257b10872b0913f33963747604ad772e33432e8f`. Baza z E3-PR0d (`e0fdbf35…`) odpowiada stanowi
+sprzed E3-PR0d2 (`audyt` `119f0225`). Blok natywny, haki natywne, rodzina modułów `0278bf7106c2`, `fragmentSHA256`
 i archiwum bez zmian; bieżące wartości są w `runtime/clinical-workspace-v1/manifest.json`.
 
 Warstwy `vilda_vault.js` od środka: baza → blok natywny i 16 haków natywnych (manifest,

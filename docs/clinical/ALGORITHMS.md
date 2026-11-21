@@ -28047,6 +28047,8 @@ Różnica bez klasy, nowa różnica i zniknięcie znanej różnicy w W1 albo W2r
   który zostaje tylko na jednym urządzeniu, gdy późniejsza wersja nie weszła — E3-PR0d2. Klasyfikator testu nazywa R4a
   także sam opis wpisu żywej karty, który decyzja 2a nazywa D7 — w pomiarze takich różnic nie było; poprawka testu
   w E3-PR0h.)*
+  *(2026-11-20, E3-PR0d2, P-ZBIEZNOSC-ZDARZEN: wpis karty usuniętej, który zostaje tylko na jednym urządzeniu, gdy
+  późniejsza wersja nie weszła — odsyła E3-PR0d2 po udanym scaleniu (uśpione, wpis na końcu pliku).)*
 
 - **W2s** (odbiorca po zdarzeniach wobec odbiorcy po blobie). „Inne” = 0, kategorie:
   - 40 ziaren: K1 „karta częściowa do pełnej karty” 65, R2 21, K2 „ratunek D-21” 18, R4a 14, K1k 10, R3 8, R5 8, R4n 1;
@@ -28111,6 +28113,10 @@ literał na wynik zgodny.
   *(2026-11-19, E3-PR0d, P-ZBIEZNOSC-ZDARZEN: z włączonym przełącznikiem odsyłania różnica zostaje — wpis Kosza zostaje tylko na jednym
   urządzeniu, gdy późniejsza wersja nie weszła, bo karta jest tu usunięta; naprawa w E3-PR0d2, decyzja 1
   z 2026-11-19.)*
+  *(2026-11-20, E3-PR0d2, P-ZBIEZNOSC-ZDARZEN: z włączonym przełącznikiem po samych zdarzeniach bez różnicy — wizyta
+  w Koszu na wszystkich urządzeniach, jak po pełnej synchronizacji (wpis na końcu pliku). Nie jest to naprawa w sensie
+  „wizyta w karcie”: wyrocznia dalej zgłasza klasę R5-E1, która jest jawnym wyjątkiem „wynik taki jak po pełnej
+  synchronizacji” (decyzja 1 z 2026-11-19 i decyzja z 2026-11-20). Przy wyłączonym przełączniku bez zmian.)*
 - **„ZNANA UTRATA” R3-E1:** po dwóch wskrzeszeniach tej samej notatki na dwóch urządzeniach późniejszy tekst ginie na
   obu; pełna wysyłka tego nie odwraca. Naprawa: E2-PR3c (od 2026-11-10: E2-PR3c3) — wykonane w E2-PR3c3 (wpis
   P-NOTATKI-1, E2-PR3c3, wyżej): bez utraty.
@@ -41069,7 +41075,7 @@ test w CI (ziarna domyślne trzech profili, p. 5, p. 6).
 | R4a | kosz na urządzeniu, które nie znało ostatniej gwiazdki wizyty | W1, bloby | klasa R4a; p. 6 R4-a |
 | R4a′ | kosz na urządzeniu, które nie znało ostatniej treści wizyty | W1, bloby | klasa R4a′; p. 6 R4-a′ |
 | karta częściowa (nagrobek przegrał lokalnie, bez haka H1) | „Usuń pacjenta”; karta wraca zmianą urządzenia, które o usunięciu nie wiedziało i wysłało tylko swoją zmianę (u odbiorców bez haka H1) | tylko W1 | P-DZIENNIK-ZDARZEN (E2-PR3b), „Świadomie bez haka H1”; p. 6 „R5-E1, C wysyła tylko zdarzenia” |
-| R5-E1 | „Przywróć” tej wizyty przed „Usuń pacjenta”; karta wraca późniejszą zmianą trzeciego urządzenia | W1, W4, bloby | p. 6 R5-E1; naprawa w E3-PR0 *(2026-11-19, E3-PR0d: w E3-PR0d2, decyzja 1 z 2026-11-19)* |
+| R5-E1 | „Przywróć” tej wizyty przed „Usuń pacjenta”; karta wraca późniejszą zmianą trzeciego urządzenia | W1, W4, bloby | p. 6 R5-E1; jawny wyjątek: wynik taki jak po pełnej synchronizacji (decyzja 1 z 2026-11-19 i decyzja z 2026-11-20; E3-PR0d2) *(do 2026-11-20: „naprawa w E3-PR0”, od 2026-11-19 — w E3-PR0d2)* |
 
 Klasa nie zależy od nazwy przebiegu: przebieg Q8-obca-2 dostaje E1 (obecność) i P5 z mechanizmu. Zawsze bez klasy:
 „zniknięcie bez operacji” i „retencja usunęła ostatni stan wizyty”.
@@ -41260,6 +41266,10 @@ której nagrobek wygrał (1).
   karta jest tu usunięta — odsyłanie w E3-PR0d2, nie klasa niewidoczna trybu ścisłego; nagrobek retencji bez treści
   tylko na B z pełnej kopii — znane ograniczenie starszej wersji, w trybie ścisłym klasa ze statusem znanego
   ograniczenia i dowodem; wpis P-ZBIEZNOSC-ZDARZEN, E3-PR0d.)*
+  *(2026-11-20, E3-PR0d2, P-ZBIEZNOSC-ZDARZEN: odsyłanie wykonane, uśpione — wpis na końcu pliku. W trybie ścisłym
+  z przełącznikiem naruszenia R5 znikają: profil podstawowy 2 → 0 (ziarno 31 przestaje być czerwone), pełny 1–20 7 → 0
+  (ziarna 3 i 16), „dłuższa praca bez połączenia” 2 → 0 (ziarna 113 i 114); zostaje „nagrobek karty opróżnionej”
+  w pełnym ziarnie 5, tak samo na bazie.)*
 - E1/E1b (utrata wersji nieznanej urządzeniu scalającemu) — jawny wyjątek do naprawy w E3-PR0 (decyzja 9a, wpis
   P-SYNC-WLASCICIEL, „Ograniczenia”); do tego czasu zasada: „Scal pacjentów” dopiero wtedy, gdy każde urządzenie było w
   sieci po ostatnich zmianach.
@@ -41724,6 +41734,8 @@ trwał w nim 200,8 s (przed scaleniem 161,9 s i 162,7 s, na bazie `4355e325` 127
   (ani względem stanu przed scaleniem, ani względem ładunku); kanon 2a bez R4n i D7; reguła pola dla `visitIdentity`
   i `payload.visit` (`POLA_ZAWSZE.stomb`); wpis, który zostaje tylko na jednym urządzeniu, gdy późniejsza wersja nie
   weszła, bo karta jest tu usunięta — E3-PR0d2, decyzja 1 z 2026-11-19.)*
+  *(2026-11-20, E3-PR0d2, P-ZBIEZNOSC-ZDARZEN: ten wpis odsyła E3-PR0d2 — uśpione, wpis na końcu pliku; reguła patrzy
+  na stan po udanym scaleniu, nie na zapis scalania, z własnym dowodem braku pętli.)*
 - **Rozbicie zakresu**: `snap` w ładunku → E3-PR0c (CI: 20 wierszy w profilu podstawowym; ręcznie 67 / 34 / 91), w
   tym rekord złożony i gwiazdka; `stomb` w ładunku i spoza ładunku (R4a, R4a′, R5, inne) → E3-PR0d (CI 4; ręcznie
   32 / 30 / 61); nagłówek karty w ładunku i spoza ładunku (34 i 1 w profilu pełnym) i `snap` spoza ładunku (z gwiazdką
@@ -41732,6 +41744,7 @@ trwał w nim 200,8 s (przed scaleniem 161,9 s i 162,7 s, na bazie `4355e325` 127
   notatki); R5 → E3-PR0d (plan, dopisek w „Zakresie”). *(2026-11-19, E3-PR0d: `stomb` wykonane, także R5 z zapisem;
   wpis Kosza, który zostaje tylko na jednym urządzeniu, gdy późniejsza wersja nie weszła, bo karta jest tu usunięta —
   E3-PR0d2, decyzja 1 z 2026-11-19.)*
+  *(2026-11-20, E3-PR0d2: wykonane, uśpione — wpis na końcu pliku.)*
 - **Bez podwójnego wysyłania**: warstwa „nowe” odejmuje to, co dziś wychodzi samo — haki H1/H2/H3 i przegląd kolejki
   po drenażu, który coś scalił. Notatki pacjenta spoza ładunku pokrywają haki (wyk 10, nowe 0 w CI; ręcznie 27 / 4 /
   32, nowe 0), więc nie wymagają pracy. Przegląd nie pokrywa echa zdarzeń (nowe = noweOst we wszystkich profilach),
@@ -43892,6 +43905,7 @@ z `runtime/clinical-workspace-v1/manifest.json` na `audyt`.
   wersji; sam wpis Kosza (R4a, R4a′, R5) — E3-PR0d.
   *(2026-11-19, E3-PR0d, P-ZBIEZNOSC-ZDARZEN: wykonane — wpis na końcu pliku; bez wpisu, który zostaje tylko na jednym urządzeniu, gdy
   późniejsza wersja nie weszła, bo karta jest tu usunięta (E3-PR0d2, decyzja 1 z 2026-11-19).)*
+  *(2026-11-20, E3-PR0d2, P-ZBIEZNOSC-ZDARZEN: ten wpis odsyła E3-PR0d2 — uśpione, wpis na końcu pliku.)*
 - **Notatki** (decyzja z 2026-11-17: notatki bez odsyłania): rekord złączony notatki (+1 ms, `Bnp_poObu`) E3-PR0c
   nie odsyła; wysyła go przegląd kolejki, gdy chwila złączenia jest późniejsza od pary z ładunku i od wiersza encji.
   Oba urządzenia liczą to samo złączenie, więc podwójna wysyłka, jeśli zajdzie, jest bez szkody. Komentarz „Bez
@@ -43942,6 +43956,7 @@ danych; alternatywy w opisie PR). Rekomendacja przy każdym punkcie: przyjąć.
   opisać; model haków i odsyłania w teście A ≡ B rozszerzony o `stomb`; warstwa „odesłane” jest gotowa.
   *(2026-11-19, E3-PR0d, P-ZBIEZNOSC-ZDARZEN: wykonane, uśpione tym samym przełącznikiem — wpis na końcu pliku; bez części E3-PR0d2
   (decyzja 1 z 2026-11-19); dodatkowy obieg zmierzony dla 276.)*
+  *(2026-11-20, E3-PR0d2, P-ZBIEZNOSC-ZDARZEN: część E3-PR0d2 wykonana, uśpiona — wpis na końcu pliku.)*
 - **E3-PR0e**: „Usuń pacjenta” zwróconej starej karty po „Scal pacjentów” — scenariusz z ziarna 8 profilu pełnego
   (świat 885 ręcznego bloku znanych usterek) obok czterech dotychczasowych; po naprawie ziarno 8 z włączonym
   przełącznikiem ma być czyste; różnica „tylko lista usuniętych pacjentów” (odłożona tutaj decyzją z 2026-11-17).
@@ -44455,7 +44470,7 @@ pytania projektu E3-PR0d, obie zgodne z rekomendacją; zapis w planie, rozdział
 pytania 1–2 projektu)” (dopisany w tym PR):
 - ukryty wpis Kosza, który zostaje tylko na jednym urządzeniu, gdy późniejsza wersja wizyty nie weszła, bo karta jest
   tu usunięta, będzie odsyłany osobnym małym PR zaraz po E3-PR0d, po pomiarze (wiersz 4a, E3-PR0d2); E3-PR0d idzie bez
-  tej części;
+  tej części *(2026-11-20: wykonane w E3-PR0d2, uśpione — wpis na końcu pliku)*;
 - niewidoczny nagrobek porządkowania bez treści wizyty tylko na jednym urządzeniu, który przyszedł pełną kopią od
   starszej aplikacji, to znane ograniczenie starszej wersji — bez odsyłania; test A ≡ B oznacza go w ręcznym trybie
   ścisłym klasą ze statusem znanego ograniczenia.
@@ -44538,7 +44553,7 @@ wersję i samego wygaśnięcia treści po 30 dniach.
 | samo wygaśnięcie treści po 30 dniach — względem stanu przed scaleniem i względem ładunku | każde urządzenie czyści treść samo; porównanie bez zegara („Bez zegara”, „Wygasanie Kosza i okno nagrobków”) |
 | wpis zdjęty scaleniem (wersja wygrała) | wersję odsyła E3-PR0c; bez wpisu builder i tak nie daje koperty |
 | wpis wygasły (365 dni) | wpisu po scaleniu nie ma |
-| wpis Kosza zostaje tylko na jednym urządzeniu, gdy późniejsza wersja nie weszła, bo karta jest tu usunięta | decyzja 1 z 2026-11-19 — E3-PR0d2 („Ograniczenia”, „Wejście do kolejnych PR”) |
+| wpis Kosza zostaje tylko na jednym urządzeniu, gdy późniejsza wersja nie weszła, bo karta jest tu usunięta | decyzja 1 z 2026-11-19 — E3-PR0d2 („Ograniczenia”, „Wejście do kolejnych PR”) *(2026-11-20: wykonane w E3-PR0d2, uśpione — wpis na końcu pliku)* |
 | niewidoczny nagrobek porządkowania bez treści tylko na jednym urządzeniu, który przyszedł pełną kopią od starszej aplikacji | decyzja 2 z 2026-11-19 — znane ograniczenie starszej wersji; po pełnej kopii bez odsyłania (decyzja z 2026-11-17) |
 | notatki pacjenta i ich nagrobki | decyzja z 2026-11-17: notatki bez odsyłania, tylko pomiar; odsyłanie emituje tylko `snap` i `stomb` |
 | pełna kopia (`mergeSyncPayload`), delta (`applyEncryptedDelta`), stara delta (`applyEncryptedEvent` bez pola `event`) | jak w E3-PR0c: odsyłanie tylko po kopertach zdarzeń (decyzja z 2026-11-17); poza blokiem P-DZIENNIK-ZDARZEN bez nowego wywołania |
@@ -44631,7 +44646,7 @@ pełny 20, „dłuższa praca bez połączenia” 40 — ziarna 101–140).
 | inne (Kosz połączony z przycięciem: `przycietoISO`, `deletedAtISO`, `powod`) | 0 | 0 / 6 (5/1) / 2 (2/0) | odsyła | ten sam warunek |
 | R4a przez 276 (gwiazdka i tożsamość wizyty) | — | flota 276: 2 (ziarno 5) | odsyła | reguła pola zdejmuje tożsamość wizyty, zostaje gwiazdka („Flota ze starszą aplikacją”) |
 | **razem w zakresie** | **10** (podstawowy 4, koalescencja 4, flota 2) | **32 / 30 / 61** | | „w CI 4 wiersze” z wiersza 4 planu = profil podstawowy |
-| wpis Kosza zostaje tylko na jednym urządzeniu, gdy późniejsza wersja nie weszła, bo karta jest tu usunięta | — | różnice W1: podstawowy ziarno 31; pełny 3, 16; „bez połączenia” 113, 114 | nie — E3-PR0d2 | decyzja 1 z 2026-11-19 |
+| wpis Kosza zostaje tylko na jednym urządzeniu, gdy późniejsza wersja nie weszła, bo karta jest tu usunięta | — | różnice W1: podstawowy ziarno 31; pełny 3, 16; „bez połączenia” 113, 114 | nie — E3-PR0d2 *(2026-11-20: wykonane, uśpione)* | decyzja 1 z 2026-11-19 |
 | R4n samodzielnie | 0 | 0 / 0 / 0 | nie | decyzja 2a, dowód widoku |
 | D7 (sam opis, `koszISO`, `revPary`) | pełny 1 | 0 / 19 / 1 | nie | decyzja 2a, dowód widoku |
 | tożsamość wizyty nieobecna w ładunku | 0 | 0 | nie | reguła pola |
@@ -44711,6 +44726,8 @@ p. 6 przy wyłączonym przełączniku się nie zmienia; test w CI woła sprawdzi
   sobie jeden do jednego (inna historia losowania), więc to spodziewany skutek, nie dowód.
 - Zostają do E3-PR0d2 różnice „wpis Kosza tylko na jednym urządzeniu” po „Przywróć” na jednym urządzeniu i „Usuń
   pacjenta” (albo „Scal pacjentów”) na drugim: podstawowy ziarno 31, pełny 3 i 16, „bez połączenia” 113 i 114.
+  *(2026-11-20, E3-PR0d2: z odsyłaniem ukrytego wpisu znikają — punkty W1 z klasą R5 19 → 0, z pełnym 21–40 (ziarna 39
+  i 40); wpis na końcu pliku.)*
 - R4n w W1 (podstawowy ziarno 21 przy obu stanach, „bez połączenia” ziarno 134 z przełącznikiem): klasa R4n wymaga
   równego okna Kosza obu stron, a „Przywróć” na klonach daje ten sam wynik — widok taki sam.
 - Profil pełny, ziarna 21–40 (dodatkowo, oba stany): czerwone 37, 38, 39 przy obu stanach przełącznika (utrata dwóch
@@ -44823,6 +44840,8 @@ kopii baz atrapy, kopia sejfu z licznikiem odczytów bramki).
   floty z przełącznikiem sejfu (R4a i R4a′ przez 276); test wejściowy E3-PR0c z przełącznikiem — literał przepisany
   (z retencją A i B odsyłają też wpis retencji: 3 koperty i 2 obiegi przy dwóch urządzeniach, 4 koperty przy trzech).
   Przy wyłączonym przełączniku wszystkie literały bajt w bajt.
+  *(2026-11-20, E3-PR0d2: literały p. 6 R5-0, R5-E1 i „R5-E1, C wysyła tylko zdarzenia” z przełącznikiem przepisane na
+  wynik bez różnicy, pole naprawy usunięte; W4 i wyrocznia bez zmian — R5-E1 to jawny wyjątek, decyzja z 2026-11-20.)*
 - `tests/unit/sync-dziennik-uspienie.test.mjs` (53): forma `Bem_zastosujEcho` — po jedynym `await` dokładnie dwa
   `Bem_zmiana`, najpierw `'snap'` z `kol.echo`, potem `'stomb'` z `kol.kosz`, oba z `kol.s`; samokontrola wariantami
   zła (forma E3-PR0c, `'stomb'` przed `await`, dwa `'stomb'`, `'stomb'` przed `'snap'`, inny rodzaj, `kol.echo` zamiast
@@ -44850,6 +44869,7 @@ wyłączonym przełączniku, różnice do E3-PR0d2, nagrobek retencji i klasa tr
 (funkcje uprzęży).
 Pełny `vitest run` na sejfie bazy z testami sprzed poprawek po przeglądzie kodu: czerwone wyłącznie w czterech plikach
 tego PR (39 przypadków; reszta — 31 529 — zielona).
+*(2026-11-20, E3-PR0d2: „różnice do E3-PR0d2” — od E3-PR0d2 z przełącznikiem bez różnicy; wpis na końcu pliku.)*
 
 **Mutanty** (kopia drzewa, jedna zmiana tekstu, pliki celu i test A ≡ B, część także e2e drenażu i pełny plik A ≡ B): 86
 mutantów kodu odsyłania wpisów i jego otoczenia (85 na kodzie przed poprawkami po przeglądzie i 1 nowy dla poprawki).
@@ -44919,6 +44939,9 @@ zmienił — przy następnej pracy w `vilda-source` weź nową bazę z `runtime/
   zapisało. W teście A ≡ B: p. 6 R5-0, R5-E1 i „R5-E1, C wysyła tylko zdarzenia” z włączonym przełącznikiem (pole
   naprawy E3-PR0d2); długie przebiegi: podstawowy ziarno 31, pełny 3 i 16, „bez połączenia” 113 i 114. Pełna wysyłka
   działa do etapu 3.
+  *(2026-11-20, E3-PR0d2, P-ZBIEZNOSC-ZDARZEN: wykonane, uśpione — wpis na końcu pliku. Z przełącznikiem po samych
+  zdarzeniach wizyta jest w Koszu na wszystkich urządzeniach, jak po pełnej synchronizacji; R5-E1 w wyroczni nie jest
+  naprawiane — to jawny wyjątek „wynik taki jak po pełnej synchronizacji” (decyzja z 2026-11-20).)*
 - **Nagrobek porządkowania ze starszej aplikacji z pełnej kopii** (decyzja 2 z 2026-11-19): niewidoczny nagrobek bez
   treści tylko na jednym urządzeniu zostaje (znane ograniczenie starszej wersji; naprawa — aktualizacja urządzeń);
   wizyta jest w karcie na obu urządzeniach, okno Kosza go nie pokazuje; w etapie 3 kolejkuje go manifest. Zasięg klasy
@@ -44984,7 +45007,7 @@ danych). Rekomendacja przy każdym punkcie: przyjąć.
     tylko W2s „inne” R4a′; W1 i wyrocznia czyste) zostają widoczne, bez wyjątku w sprawdzianie. Inna możliwość:
     osobną zmianą testu wąska kategoria „nowsza treść wpisu Kosza tylko w zdarzeniach nadawcy” (różnica w drugą stronę
     dalej czerwieni).
-13. **Kolejka ścisła:** E3-PR0d2 wchodzi zaraz po E3-PR0d, więc E3-PR0e czeka na niego (plan, wiersz 5).
+13. **Kolejka ścisła:** E3-PR0d2 wchodzi zaraz po E3-PR0d, więc E3-PR0e czeka na niego (plan, wiersz 5). *(2026-11-20: E3-PR0d2 przygotowany; E3-PR0e może ruszać po jego scaleniu.)*
 14. **Notatki i ich nagrobki bez odsyłania** (decyzja z 2026-11-17) — tylko pomiar.
 15. **Sprzeczność „karty częściowej”**: plan („Zakres” E3-PR0: między bieżącymi zamyka ją hak H1) a ALGORITHMS (wpis
     P-DZIENNIK-ZDARZEN, E2-PR3b, „Świadomie bez haka H1”; naprawa w etapie 3) — poza E3-PR0d, do rozstrzygnięcia przed
@@ -45005,6 +45028,9 @@ danych). Rekomendacja przy każdym punkcie: przyjąć.
   ukrytego wpisu i odbiorca po usunięciu karty, karta żywa, wersja wcześniejsza niż Kosz, `busy` przed zapisem wersji
   żywej karty, wpis pod żywą kartą po „Scal pacjentów”, wstrzymane „Usuń pacjenta”; literały p. 6 R5-0, R5-E1 i „R5-E1,
   C wysyła tylko zdarzenia” z przełącznikiem przepisane na wynik bez różnicy.
+  *(2026-11-20, E3-PR0d2: wykonane — wpis na końcu pliku. Szkic warunku przyjęty bez zmiany wyrażenia, z dodatkowym
+  warunkiem „tylko po udanym scaleniu”; licznik „odesłanie ze stanu” z granicą niezależną od modeli; z kodu wyciętego
+  z sejfu w modelu jest tylko rozstrzygnięcie „nagrobek wygrywa z wersją”.)*
 - **E3-PR0e**: profil pełny z przełącznikiem — ziarno 8 (jak po E3-PR0c) i ziarna 37, 38 i 39 profilu pełnego 21–40
   (czerwone przy obu stanach przełącznika: utrata po „Scal pacjentów”, E4b w W4, karta częściowa) jako wejście.
 - **E3-PR0h**: koszt dodatkowych odczytów metadanych (8 zamiast 6 transakcji na kopertę z kandydatami) i duplikatów
@@ -45706,3 +45732,481 @@ Tabela trendu w ramce dziedziczy rozmiar tekstu komórek z motywu strony, jak w 
 
 **Wdrożenie.** Od razu przy wydaniu; dane, sejf, zapis i synchronizacja bez zmian. **Cofnięcie** = rewert PR: GH znów
 podsumowanie z polami i belka „Dane analityczne”, trend w „Siatkach centylowych”, przycisk notatki „↗ Siatki / punkt GH”.
+
+## Dziennik zdarzeń: odsyłanie ukrytego wpisu Kosza karty usuniętej po zastosowaniu zmiany z innego urządzenia — uśpione (P-ZBIEZNOSC-ZDARZEN, E3-PR0d2, SW 1.1.568, `vilda_vault.js` 283, 2026-11-20)
+
+**Zmiana kliniczna: NIE (uśpiona).** Wzory, progi, jednostki, interpretacje, reguły scalania (`Le`), format kopii,
+serwer i `vilda_sync.js` bez zmian. Dla użytkownika dziś nic się nie zmienia: odsyłanie ukrytego wpisu włącza ten sam
+przełącznik co odsyłanie poprawionych wizyt i wpisów Kosza (E3-PR0c, E3-PR0d: klucz `localStorage`
+`vilda-event-echo-v1` dokładnie `'1'` albo pole okna `VILDA_EVENT_ECHO === true`), którego żaden ekran aplikacji nie
+ustawia; przy wyłączonym przełączniku zastosowanie zmiany z innego urządzenia idzie dokładnie jak po E3-PR0d. Po
+włączeniu zmienia się wynik synchronizacji w jednej rzadkiej sytuacji. Przykład (fikcyjny): komputer w gabinecie (A),
+telefon (B), laptop ze starszą kopią (C), karta „Pacjent Testowy 1” z wizytą v z 3 marca (20 kg).
+- 10 listopada telefon daje v do Kosza; komputer to dostaje.
+- Telefon klika „Przywróć”. Komputer, zanim to dostanie, robi „Usuń pacjenta”: karta i jej wersje znikają, a wpis
+  Kosza v zostaje jako ukryty (okno Kosza go nie pokazuje, bo karty nie ma; „Przywróć” takiego wpisu odmawia).
+- Komputer dostaje „Przywróć”: karta przegrywa tu z nagrobkiem pacjenta, więc wersja nie wchodzi, a wpis zostaje.
+  Telefon dostaje „Usuń pacjenta” i traci v razem z kartą (swojego wpisu Kosza już nie ma).
+- Dziś: ukryty wpis jest tylko na komputerze. Gdy laptop dopisze do karty nową wizytę i karta wróci, v jest na
+  komputerze w Koszu, a na telefonie w karcie — do pełnej synchronizacji, która kładzie ją do Kosza wszędzie (R5-E1).
+- Po E3-PR0d2: komputer zaraz po udanym scaleniu „Przywróć” dopisuje do kolejki swój wpis (`stomb` v); telefon, który
+  zna już „Usuń pacjenta”, zapisuje go jako ukryty i nic nie odsyła. Po powrocie karty v jest w Koszu na wszystkich
+  trzech urządzeniach — tak jak dziś po pełnej synchronizacji. „Przywróć” działa 30 dni od chwili wrzucenia do Kosza
+  (tu do 10 grudnia), nie od daty wizyty; potem zostaje wpis bez treści, jak po pełnej synchronizacji.
+- Po „Scal pacjentów” zamiast „Usuń pacjenta” karta zwykle nie wraca, a okno Kosza karty docelowej nie pokazuje wpisu
+  z dawną kartą: wizyta jest niewidoczna na wszystkich urządzeniach, dopóki karta nie wróci — jak dziś (na drugim
+  urządzeniu znika razem z kartą).
+To samo, gdy zamiast „Przywróć” wizyta dostała po Koszu inną późniejszą zmianę (gwiazdkę, poprawkę) na urządzeniu, które
+o Koszu nie wiedziało. Odsyłanie ukrytego wpisu jest dalszą częścią tej samej drogi ze scalania do kolejki co odsyłanie
+poprawionych wizyt i wpisów Kosza — rozszerzenie decyzji 9 z 2026-10-29, do akceptacji właściciela przy PR (niżej).
+
+**Skąd.** Plan `docs/SYNC_PRZYROSTOWA_PLAN.md`, rozdział 5, „Etap 3”, tabela „Podział E3-PR0”, wiersz 4a. Decyzja 1
+z 2026-11-19 (plan, rozdział 6, blok „Decyzje z 2026-11-19 (E3-PR0d, pytania 1–2 projektu)”): ukryty wpis Kosza, który
+zostaje tylko na jednym urządzeniu, bo późniejsza wersja nie weszła przy karcie usuniętej tutaj, będzie odsyłany
+pozostałym urządzeniom — osobny mały PR zaraz po E3-PR0d, po sprawdzeniu skutków; zbędna druga wiadomość przy powtórce tej samej
+zmiany i różnica do pełnej synchronizacji przy trzech urządzeniach albo przy „Usuń pacjenta” w tej samej chwili są
+przyjęte. Decyzja z 2026-11-20 — odpowiedź właściciela („1a”) na pytanie projektu E3-PR0d2, zgodna z rekomendacją;
+zapis w planie, rozdział 6, blok „Decyzja z 2026-11-20 (E3-PR0d2, pytanie 1 projektu)” (dopisany w tym PR): wizyta
+przywrócona na jednym urządzeniu, a usunięta z kartą na drugim (R5-E1), należy do jawnych wyjątków wyroczni „nie
+zginęła ostatnia zmiana” w kryterium odbioru E3-PR0 jako „wynik taki jak po pełnej synchronizacji”; wyrocznia dalej ją
+zgłasza i opisuje jako znaną. Dalej obowiązują: decyzja 1a z 2026-11-15 (jeden ukryty przełącznik), decyzje z 2026-11-17
+(odsyłanie tylko po pojedynczych zmianach; notatki bez odsyłania). Wejście z E3-PR0d („Ograniczenia”, „Wejście do
+kolejnych PR”: szkic warunku). Wszystko, co wspólne z E3-PR0d — przełącznik, strzeżony adapter, zasada błędów, emisja,
+„Przy wyłączonym przełączniku” — opisuje wpis E3-PR0d wyżej; tu tylko to, co nowe. Sprawy, których projekt i decyzje nie
+rozstrzygały, rozstrzygnięto wariantem najbezpieczniejszym dla danych — „Do akceptacji właściciela przy PR”.
+
+### E3-PR0d2
+
+**Co było** (`audyt` `119f0225`). Odsyłanie E3-PR0c i E3-PR0d porównuje stan przed scaleniem i po nim. W przykładzie
+scalanie „Przywróć” niczego nie zapisuje: wersji po scaleniu nie ma (karta przegrała z nagrobkiem), a wpis Kosza przed =
+po (wersja jest późniejsza niż Kosz, więc scalanie wpisu nie rusza). Nic nie wychodzi — literał p. 6 z przełącznikiem
+„kosz v|P: tylko A [R5]” (R5-0) i dalszy ciąg R5-E1 („kosz v|P: tylko A”, „wersja P/v: tylko B”).
+
+**Reguła.** Po udanym zastosowaniu pojedynczej zmiany z innego urządzenia (koperta zdarzenia, scalanie bez wyjątku)
+urządzenie dopisuje do kolejki `stomb` każdej wersji, którą ładunek niósł pod kartą, a której po scaleniu nie ma pod
+żadną kartą, choć jest jej wpis Kosza, z którym ta wersja by wygrała; karty żadnego elementu tego wpisu nie ma, a karta
+z ładunku przegrała tu z nagrobkiem pacjenta. Reguła patrzy na stan po scaleniu, a nie na to, co scalanie zapisało —
+odchodzi od zasady E3-PR0c i E3-PR0d „nigdy na samym fakcie zapisu”, więc ma własny dowód braku pętli (niżej).
+Wszystkie warunki naraz, dla każdej wersji v z ładunku:
+- **tylko po udanym scaleniu** — `Le` bez wyjątku. Przy `busy` i `apply-error` reguła nie liczy kandydatów i nie czyta
+  kart. Powód: drenaż przy `busy` i `apply-error` zostawia kursor przed wierszem i stosuje go ponownie przy każdym
+  drenażu, bez limitu prób, a emisja odsyłania idzie bez względu na status — zdarzenie, które trwale nie wchodzi,
+  wysyłałoby ten sam wpis przy każdym drenażu. Z warunkiem: 0 wierszy po każdej nieudanej próbie, jeden po udanym
+  ponowieniu. Odsyłanie E3-PR0c i E3-PR0d po wyjątku bez zmian;
+- **ładunek niesie wersję S tej wizyty pod kartą P** (`patients[].snapshots[]`; `Bev_kandydaciUkrytych`: kopia wersji
+  z ładunku zrobiona przed scaleniem — ta sama lista kandydatów co w E3-PR0c, `Bev_kandydaciEcha` — i `lastSavedAtISO`
+  karty P z ładunku, pusty napis, gdy go nie ma). Koperta `stomb` wersji nie niesie (karta bez wizyt), więc odesłany
+  wpis sam tej reguły nie wywoła;
+- **wersji v nie ma pod żadną kartą po scaleniu** — odczyt wersji „po” z E3-PR0c, bez nowego odczytu. Gdy v leży pod
+  kartą, wpis albo przegrał, albo jest pod żywą kartą — to sprawa E3-PR0c i E3-PR0d;
+- **jest wpis v po scaleniu i S wygrywa z każdym jego elementem** — odczyt wpisów „po” z E3-PR0d; dla każdego elementu e
+  `!Bkz_wygrywa(e, Bkz_zmiana(S), Bgw_stan(S, S.payload))`, wywołanie wpisane wprost (`Bev_wstepUkrytych`). To samo
+  rozstrzygnięcie, którego scalanie używa dla wersji z ładunku pod kartą usuniętą przy ważnym Koszu (`Bsl_koszZLadunku`).
+  Wersja nie późniejsza niż Kosz przegrywa — scalanie wchłania ją we wpis, a gdy wpis się przy tym zmienił, odsyła go
+  E3-PR0d;
+- **karty żadnego elementu wpisu nie ma po scaleniu** — nowy odczyt istnienia rekordu karty, bez odszyfrowania. Wyklucza
+  wpis pod żywą kartą Q po „Scal pacjentów” (wpis widać w Koszu Q; rodzina E4b — E3-PR0e). Element bez poprawnego
+  `patientId` (buildery takiego nie tworzą) liczy się jak „karta jest”;
+- **karta P przegrała tu z nagrobkiem pacjenta** — rekordu karty P nie ma, a najpóźniejszy nagrobek P jest nie
+  wcześniejszy niż `lastSavedAtISO` karty P z ładunku (pusty zapis — jak spełnione): ta sama reguła co w `Le` (nagrobek
+  wygrywa z kartą, której zapis nie jest późniejszy). Wyklucza kartę, która tu wraca, i kartę bez nagrobka.
+Warunki o ładunku, wersji i wpisie są czyste i liczone najpierw (`Bev_kandydaciUkrytych`, `Bev_wstepUkrytych`); odczyt
+kart i nagrobków (`Bev_stanKart`) idzie tylko przy udanym scaleniu i niepustym wstępie, a decyzję daje funkcja czysta `Bev_echoUkrytych`. Zwykła koperta
+wersji żywej karty nie dostaje żadnej nowej transakcji.
+
+**Kiedy nie odsyłamy.**
+
+| Przypadek | Dlaczego |
+|---|---|
+| `busy` albo `apply-error` scalania, także przy ukrytym wpisie | tylko po udanym scaleniu; udane ponowienie odsyła raz |
+| karta żywa (wersja weszła) | wersja jest pod kartą po scaleniu; wpis i tak zdejmuje scalanie (Kosz przegrywa z późniejszą wersją) |
+| wersja nie późniejsza niż Kosz | wpis wygrywa; zmieniony wpis odsyła E3-PR0d („(echo)”) |
+| karta P, która tu wraca (nagrobek wcześniejszy niż zapis karty z ładunku), albo karta bez nagrobka | karta nie przegrała z nagrobkiem |
+| wpis pod żywą kartą Q po „Scal pacjentów” | karta wpisu jest, wpis widać w Koszu Q; gwiazdka z innego urządzenia ginie tam tak samo jak dziś — E3-PR0e |
+| wpis wygasły (365 dni) | builder wpisu nie daje koperty („brak encji”), bez wiersza i bez pamięci braków |
+| pełna kopia, delta, stara delta (bez pola `event`), importy | jak w E3-PR0c i E3-PR0d: tylko po kopertach zdarzeń (decyzja z 2026-11-17); testy wszystkich trzech dróg z „Przywróć” po „Usuń pacjenta” |
+| przełącznik wyłączony, zamknięta bramka dziennika, „Komputer w pracy” | jak w E3-PR0c: przed całą drogą |
+| notatki i ich nagrobki | decyzja z 2026-11-17: notatki bez odsyłania; reguła dotyczy tylko `stomb` |
+| odesłany wpis u odbiorcy | koperta `stomb` nie niesie wersji, więc u odbiorcy nie ma kandydata |
+
+**Wpisy porządkowania.** Reguła ich nie zawęża: obejmuje każdy element listy Kosza tej wersji, także nagrobek
+porządkowania, z którym S by wygrała. To szerzej niż zdejmowanie wpisu przy żywej karcie: przypięta wersja, nie
+późniejsza niż przycięcie, „wygrywa”, a przy żywej karcie nagrobek porządkowania przy niej zostaje — w tym rogu
+odesłanie niczego nie wyrównuje i powtarza się przy każdym udanym zdarzeniu z tą wersją. Wyrażenie zostaje: to szkic
+przyjęty we wpisie E3-PR0d i to samo rozstrzygnięcie co w scalaniu; skutek u odbiorców jest taki jak po pełnej
+synchronizacji (koperta niesie wszystkie elementy tej wersji); E3-PR0d też odsyła elementy porządkowania; w długich
+przebiegach takich odesłań nie było (licznik `retencja` = 0); koszt ogranicza granica (niżej). Zawężenie (wpis tylko
+wtedy, gdy przy żywej karcie zostałby zdjęty) zmieniałoby szkic i nie usuwa żadnej zaobserwowanej różnicy — odrzucone.
+Test w oknie przypina oba rogi: pod usuniętą kartą wpis porządkowania idzie bez zmian (bez treści); przy żywej karcie
+v wraca do karty, a wpis przy niej odsyła E3-PR0d.
+
+**Odczyty.** `Bev_stanKart(wstep, s)`: kontrola sesji zastosowania, strzeżony adapter `Bev_start(null)` (od początku
+„Usuń konto” tego konta każda metoda odmawia kodem `SYNC_DB_DELETED`), `getPatientForUser` dla kart elementów wpisu
+i kart P z ładunku (bez powtórzeń i bez niepoprawnych identyfikatorów), po każdym odczycie kontrola sesji; jeden
+`listTombstonesForUser` i kontrola sesji; na kartę najpóźniejszy nagrobek; po wyjściu sprawdzenie strażnika (`strzez`),
+jak po odczycie wpisów „po”. Bez odszyfrowania (istnienie rekordu karty i jawne pola nagrobka), bez zapisów, bez zegara.
+Odczyty wersji „po”, wpisów „po” i kart to osobne transakcje, po kolei, nie z jednej chwili: równoległa operacja może
+zmienić stan między nimi. Fałszywe trafienie daje najwyżej jeden zbędny `stomb`, zbudowany ze stanu w chwili dopisania;
+pominięcie — wynik jak dziś. Koszt: zwykła koperta — 0 nowych transakcji (test: transakcje sklepów `patients`
+i `tombstones` przy włączonym przełączniku = przy wyłączonym); ukryty wpis — odczyt kart (zwykle jedna — karta P jest
+kartą wpisu) i jedna transakcja listy nagrobków.
+
+**Błędy, sesja i usuwanie konta** — zasada E3-PR0c i E3-PR0d: błąd zdejmuje tylko porównanie, nigdy nie dokłada wpisów
+spoza kandydatów; wpis, który reguła bez błędu by odesłała, jest odesłany zawsze.
+
+| Błąd | Skutek | Dlaczego bezpieczne |
+|---|---|---|
+| scalanie rzuciło (`busy`, `apply-error`) | bez wstępu i bez odczytu kart — 0 odesłań ukrytego wpisu | stan bez udanego zapisu; udane ponowienie odsyła raz |
+| cały odczyt wersji „po” zawiódł | warunek „wersji nie ma pod kartą” jak spełniony | E3-PR0c odsyła wtedy każdego kandydata |
+| cały odczyt wpisów „po” zawiódł | wstęp pusty | E3-PR0d odsyła wtedy każdego kandydata, więc v i tak idzie |
+| wyjątek rozstrzygnięcia jednego elementu | jak „S wygrywa” | odesłanie własnego wpisu — najwyżej jeden zbędny wiersz |
+| odczyt kart albo nagrobków zawiódł z innym kodem (np. niedostępny strażnik tożsamości chronionego sejfu, błąd magazynu) | odesłanie każdego kandydata wstępu | kandydaci wstępu mają wpis po scaleniu, więc builder zbuduje kopertę; to własny stan urządzenia, który odbiorca scala tymi samymi regułami co pełną kopię |
+| zmiana sesji albo blokada w trakcie odczytu kart | bez kolektora — bez odsyłania; status `applied` jak dziś (scalanie się skończyło) | jak w E3-PR0c i E3-PR0d. Kod `VAULT_LOCKED` strzeżonego adaptera jest tu nieosiągalny: zablokowany sejf to zmiana sesji, więc kontrola sesji rzuca wcześniej |
+| `SYNC_DB_DELETED` w odczycie kart | bez odsyłania wersji i wpisów | jak „zmiana 2” E3-PR0d: konto usuwane — nic |
+
+Statusy zastosowania (`applied`, `busy`, `apply-error`, `session-changed`) bez zmian. Wiersz do kolejki buduje builder
+wpisu (`Bev_stomb`) ze stanu w chwili dopisania, z tym samym sprawdzeniem sesji i konta co w E3-PR0d. Operacje kolejki
+i kwarantanny sprawdzają sesję tak jak zapis karty (P-SESJA-ZAPISU): zmiana sesji w trakcie kończy operację bez zapisu.
+
+**Jedna lista, bez duplikatu.** `kol.kosz` = wpisy z odsyłania E3-PR0d, a za nimi ukryte wpisy bez kluczy, które już są
+na liście. `Bem_zastosujEcho` bez zmian (po jedynym `await` dokładnie dwa `Bem_zmiana`: `snap` z `kol.echo`, potem
+`stomb` z `kol.kosz`; forma przypięta w teście uśpienia), emisja w sesji scalania, kolejność jak `Bem_RANGI`. Osobna
+lista z trzecim `Bem_zmiana` — odrzucona (zmiana formy). W jednym zdarzeniu obie reguły praktycznie się wykluczają:
+E3-PR0d wymaga zapisu wpisu przez scalanie, a w gałęzi „karta usunięta” wpis zapisuje się tylko wtedy, gdy Kosz wygrywa.
+Ten sam klucz z obu reguł w jednym zdarzeniu daje tylko błąd odczytu wpisów przed scaleniem (E3-PR0d odsyła wtedy
+kandydata bez porównania z „przed”) — klucz idzie raz (test w oknie). W jednej
+partii dwóch zdarzeń ten sam klucz może mieć wiersz E3-PR0d i wiersz ukrytego wpisu (długie przebiegi, „bez połączenia”).
+
+**Bez pętli** (własny dowód):
+1. Odesłanie ukrytego wpisu wywołuje tylko koperta, która niesie wersję v pod kartą; koperta `stomb` wersji nie niesie,
+   więc odesłany wpis nie wywołuje tej reguły u nikogo.
+2. Urządzenie z ukrytym wpisem nie ma karty, więc samo nie wyśle `snap` tej wersji (E3-PR0c wymaga wersji pod kartą po
+   scaleniu).
+3. Nowe koperty z v pod kartą powstają tylko na urządzeniach z żywą v: z ich własnych zmian albo z odesłania E3-PR0c po
+   zapisie, który zapisuje tylko ściśle nowszy rejestr albo treść — skończenie wiele razy; każde takie urządzenie po
+   nagrobku P traci kartę i v.
+4. Nieudane zastosowania nie odsyłają, więc ponawiany w kółko wiersz drenażu nie mnoży wiadomości.
+5. Liczba odesłań ≤ (liczba udanych zastosowań kopert z v pod kartą) × (liczba urządzeń z ukrytym wpisem) — skończona.
+Długie przebiegi: brak spoczynku 0; testy deterministyczne: 1–2 obiegi.
+
+**Powtórki i granica.** Granica jest własnością reguły: na jedno udane zastosowanie koperty zdarzenia najwyżej jedno
+odesłanie danej wersji od danego urządzenia (wstęp przechodzi raz przez każdy `snapshotId` ładunku, a `kol.kosz` nie ma
+powtórzeń). Ta sama koperta zastosowana drugi raz z powodzeniem (np. kursor nie zapisał się po udanym zastosowaniu)
+odsyła wpis jeszcze raz — zbędna druga wiadomość przyjęta decyzją 1 z 2026-11-19 (w oknie drugi wiersz `stomb` v;
+w teście A ≡ B druga koperta, licznik `ponowne` 1, bez różnicy). Nieudane próby nie odsyłają nic; kolejne zdarzenia
+z tą wersją pod P odsyłają raz każde. Całość wygasa z wpisem (365 dni) albo gdy v wróci pod kartę. Pilnują: sprawdzian
+granicy w teście A ≡ B niezależny od modeli, porównanie model = sejf w każdej partii, brak spoczynku = 0 i test w oknie
+z `busy`, `busy`, `apply-error`. Długie przebiegi: najwyżej 1 odesłanie na udane zastosowanie.
+
+**Kolejność.**
+- **Własny krok.** „Usuń pacjenta” bierze blokadę karty, a scalanie karty P czeka na tę samą blokadę i dopiero pod nią
+  czyta świeży nagrobek; po zapisie nagrobka do końca kroku nie ma już `await`. W kolejce `ptomb` P, potem `stomb` v;
+  odbiorca z żywą v stosuje je w tej kolejności: karta usunięta, wpis ukryty, 0 wierszy (test w oknie z „Usuń pacjenta”
+  wstrzymanym na zatwierdzeniu nagrobka i na usunięciu karty).
+- **Cudzy otwarty krok.** Licznik kroków jest jeden na dokument: gdy trwa inny krok (np. „Usuń do Kosza” wizyty innej
+  karty czekające na odszyfrowanie), a w jego trakcie użytkownik zrobi „Usuń pacjenta” P i drenaż zastosuje zdarzenie
+  z v pod P, po końcu kroku wychodzi `stomb` v, `stomb` q, `ptomb` P (ranga). Odbiorca z żywą v najpierw zdejmuje wpis
+  (Kosz przegrywa), potem usuwa kartę razem z v — ukryty wpis zostaje tylko na A. Przy dwóch urządzeniach nikt nie ma
+  już żywej v, więc różnica zostaje do pełnej synchronizacji, jak dziś; wyrównać może ją tylko kolejne zdarzenie z v
+  z trzeciego urządzenia, które ma jeszcze żywą v. Znane ograniczenie, wprost dopuszczone decyzją 1 („przy usuwaniu
+  pacjenta w tej samej chwili”); test w oknie przypina wynik (A: ukryty wpis, B: bez wpisu). Naprawa (odsyłanie po
+  nagrobkach kart na końcu kroku) wymagałaby znacznika na wpisie i zmiany formy `Bem_zastosujEcho` — odrzucona.
+  W długich przebiegach nie wystąpiło (uprząż nie ma nakładających się kroków).
+- **Pozostałe wyjątki** — urządzenie zwykle odsyła ukryty wpis dopiero po zastosowaniu nagrobka P, więc odbiorca czyta
+  nagrobek pierwszy, ale nie zawsze; w każdym z tych przypadków skutek jak dziś (różnica do następnego zdarzenia z v
+  z urządzenia z żywą v albo do pełnej synchronizacji): nagrobek znany tylko z pełnej kopii (cudzy `ptomb` może wejść do
+  dziennika po odesłaniu); `ptomb` ponad limitem po „Scal pacjentów” (koperta niesie całą kartę docelową z wersjami;
+  wiersz ponad limitem pomija wysyłka, kartę dowozi pełna wysyłka) — `stomb` v idzie, `ptomb` nie; nieudane dopisanie
+  `ptomb` (limit blokady konta, brak miejsca, blokada sejfu, zmiana sesji, błąd zapisu) trafia do pamięci braków
+  i dopisuje je później przegląd kolejki — za `stomb` v; inna karta przeglądarki (blokada pacjenta działa między
+  kartami, ale łańcuchy dopisań są osobne w każdym dokumencie); „Scal pacjentów” we własnym kroku zamyka krok dopiero po
+  zwolnieniu obu blokad, więc scalanie czekające na blokadę P mogłoby wyemitować w jeszcze otwartym kroku (bardzo małe
+  okno); u odbiorcy kwarantanna albo przeskok dziury mogą pominąć `ptomb` przed `stomb` v.
+
+**Trzy urządzenia.** Test wejściowy A ≡ B, 12 kolejności spoczynku trzech urządzeń (kartę usuwa urządzenie z wpisem
+Kosza albo urządzenie bez wiedzy o Koszu, po 6 permutacji): każda bez różnicy W1, 1–2 obiegi, 1–2 koperty odsyłania
+ukrytego wpisu (przy części kolejności odsyła też drugie urządzenie, gdy po odesłaniu pierwszego dostanie jeszcze
+kopertę z v), 0 ponownych wysłań tej samej wartości; przy wyłączonym przełączniku — dzisiejsza różnica. Odbiorca z żywą
+v, który dostaje odesłany wpis przed nagrobkiem karty, zdejmuje wpis; zbieżność daje trzecie urządzenie, które po
+kopercie z v odsyła swój ukryty wpis za swoim `ptomb` P — na końcu bez różnicy, 2 koperty. Uprząż dostarcza kolejki
+parami (od jednego nadawcy po kolei), więc daje też kolejności niemożliwe w jednym dzienniku — mimo to wszystkie się
+zbiegają. Gwarancji ogólnej nie ma: gdy żadne urządzenie z ukrytym wpisem nie dostanie już koperty z v, różnica zostaje
+do pełnej synchronizacji (dopuszczone decyzją 1).
+
+**Przy wyłączonym przełączniku.** Nowy kod stoi tylko w `Bev_zastosujZEchem`, do której wchodzi się wyłącznie
+z kolektorem, czyli za przełącznikiem (`Bob_bramkaEcha`, bez zmian, czytany raz w `Bem_zastosuj`).
+
+| Skutek | Wartość | Dowód |
+|---|---|---|
+| odczyty przy `applyEncryptedEvent` | jak po E3-PR0d: jedno pole okna i jeden `getItem` przełącznika; 0 odczytów kart i nagrobków | test „przełącznik wyłączony” z kopertami ukrytego wpisu |
+| wynik, zapisy sklepu, wiersze kolejki, operacje `crypto.subtle` | te same co w kopii sejfu bez odsyłania („Przywróć” po „Usuń pacjenta”, poprawka pod kartą usuniętą) | test równoważności w `sync-odsylanie` |
+| zamknięta bramka, „Komputer w pracy” | 0 wierszy, bez odczytu kart i nagrobków ponad dziś | testy w `sync-odsylanie` |
+| zapis bazowy (`tests/fixtures/dziennik-zapis-bazowy.json`) | fikstura i test bez zmian | `sync-dziennik-zapis-bazowy` |
+| test A ≡ B | wszystkie literały bez przełącznika bajt w bajt | przebieg CI |
+| program długich przebiegów | każdy rekord wyniku ziarna taki sam jak przed E3-PR0d2: CI 45/45, podstawowy 40/40, „bez połączenia” 40/40, pełny 1–20 i 21–40 po 20/20, floty 221 i 276 po 10/10; plik wyników p. 6 bajt w bajt | porównanie z kodem `119f0225` |
+| literał miejsc poza blokiem P-DZIENNIK-ZDARZEN, forma `Bem_zastosujEcho` | bez zmian | test uśpienia |
+
+Z bloku (część `Bev_`) pierwszy raz wołane są `Bkz_wygrywa`, `Bkz_zmiana` i `Bgw_stan`, jak zapowiadał szkic E3-PR0d;
+w części `Bob_` dalej zakazane (test uśpienia). Poza blokiem P-DZIENNIK-ZDARZEN nic, także komentarze.
+
+**Model w teście A ≡ B.** Licznik (`tests/support/licznik-odsylania.mjs`) ma model odsyłania ukrytego wpisu na
+eksportach (`modelStanu`): jeden wiersz `stomb` na wersję i zdarzenie. Warunki „wersja pod kartą w ładunku”, „wersji
+nie ma pod kartą po scaleniu”, „kart elementów nie ma” i „karta P przegrała z nagrobkiem” są w liczniku napisane
+osobno; z kodu wyciętego z sejfu jest tylko rozstrzygnięcie „nagrobek wygrywa z wersją” (`wygrywaZKodu`: 25 funkcji
+domknięcia `Bkz_wygrywa`, `Bkz_zmiana` i `Bgw_stan` oraz stała `Bgw_czPam`). Strażnik „wycięte = sejf” (test licznika):
+domknięcie wywołań w bieżącym sejfie = lista licznika; jedyna zmienna modułu — `Bgw_czPam`; bez zegara; licznik nie
+deklaruje żadnej z tych funkcji; tekst każdego wycinka = tekst deklaracji z drzewa składni (jedna deklaracja na nazwę,
+stała — jedna deklaracja `const` z jednym deklaratorem); w bloku dokładnie jedno wywołanie `Bkz_wygrywa`,
+w `Bev_wstepUkrytych`, z drugim argumentem `Bkz_zmiana(X)` i trzecim `Bgw_stan(X, X.payload)`; próbki (Kosz przed
+i po wersji, retencja z gwiazdką i bez, rejestr wpisu przypięty). Zmiana reguły poza blokiem zmienia więc model i sejf
+naraz. Uprząż: na zdarzenie wiersze E3-PR0c i E3-PR0d oraz wiersze ukrytego wpisu bez kluczy tamtych (wiersz zostaje,
+gdy po całej partii jest wpis tej wersji); **najpierw** granica niezależna od modeli — w każdej partii i dla każdego
+klucza v liczba kopert `stomb` v odsyłania sejfu (E3-PR0d i ukryty wpis razem) ≤ liczba kopert zdarzeń partii, które
+wymieniają v (`patients[].snapshots[]` albo `snapshotTombstones[]`; koperta jawna katalogu się nie liczy), przekroczenie
+to osobny komunikat „odesłanie ponad granicę” przed porównaniem z modelem; **potem** multizbiór kluczy sejfu = model.
+Koperty klucza idą najpierw do wierszy E3-PR0d (sprawdzane jako „ponowne wysłanie tej samej wartości”), reszta do
+wierszy ukrytego wpisu — osobny licznik „odesłanie ze stanu” `S.stat.zeStanu { koperty, ponowne, retencja }`, wyłączony
+z „ponownego wysłania tej samej wartości” (`ponowne` = ta sama wartość od tego samego urządzenia w późniejszej partii);
+każda koperta liczy się w `S.stat.echo`; w opisie kolejki etykieta „(ze stanu)”. Warstwa „odesłane” licznika przy
+jednym kluczu z dwóch reguł w jednej partii daje kopertom klasę ostatniego wiersza — asercje odesłań ukrytego wpisu
+idą więc tylko na `S.stat.zeStanu`; poprawka krotności — E3-PR0h. Przy wyłączonym przełączniku model jest pusty.
+
+**R5-E1 w wyroczni.** Po E3-PR0d2 wizyta jest w Koszu na wszystkich urządzeniach, a ostatnią zmianą było „Przywróć”,
+więc wyrocznia „nie zginęła ostatnia zmiana” dalej zgłasza „R5-E1 | W1” i „R5-E1 | W4” (literał `P6E_WYR` bez zmian).
+Klasa R5-E1 (`tests/support/ostatnia-zmiana.mjs`) jest jawnym wyjątkiem „wynik taki jak po pełnej synchronizacji”
+(decyzja 1 z 2026-11-19 i decyzja z 2026-11-20), bez zapowiedzi naprawy: opis „bez naprawy: wynik taki jak po pełnej
+synchronizacji (decyzje właściciela z 2026-11-19 i 2026-11-20)”. Literały p. 6 z przełącznikiem R5-0, R5-E1 i „R5-E1,
+C wysyła tylko zdarzenia”: zdarzenia bez różnicy W1, W4 bez zmian, po jednej kopercie odsyłania ukrytego wpisu
+(`P6E_ZE_STANU`). Bloki p. 6 bez przełącznika: literały bez zmian, w tytule R5-E1 i wariantu C „ZNANA RÓŻNICA bez
+przełącznika odsyłania (z przełącznikiem po samych zdarzeniach bez różnicy, E3-PR0d2)”. „Karta częściowa” w wariancie
+C zostaje (E3-PR0h).
+
+**Flota ze starszą aplikacją.**
+- 221 (bez dziennika zdarzeń): wysyła pełne kopie i delty — po nich odsyłania nie ma, a zdarzeń nie czyta, więc do 221
+  nic nie trafia i obiegu przez 221 nie ma z konstrukcji. Długie przebiegi (ziarna 1–10): 2 odesłania między bieżącymi
+  urządzeniami (ziarna 4 i 5), przypadek zielony. W ziarnie 4 po odesłaniu program idzie inaczej i wyrocznia W1 floty
+  (tylko druk) ma 89 zamiast 85 naruszeń bez klasy; każda encja spoza wspólnego zestawu to zmiana zrobiona ostatnio na
+  urządzeniu 221, która nie dochodzi do pozostałych zdarzeniami — ta sama klasa jest na kodzie bazy, bez żadnego
+  odesłania. Znane ograniczenie starszej wersji (decyzja 2 z 2026-11-16).
+- 276 (zdarzenia, bez odsyłania): jego `snap` może wywołać odesłanie u bieżącego urządzenia z ukrytym wpisem; koperta 276
+  nie ma `lastSavedAtISO` karty, więc warunek nagrobka jest spełniony tak jak w `Le`. Odesłany `stomb` 276 scala swoimi
+  regułami i nie odsyła. Długie przebiegi (ziarna 1–10): 0 odesłań.
+- Literały floty w CI bez zmian: losowe ziarna floty idą bez przełącznika, a scenariusze floty z przełącznikiem mają
+  0 odesłań ukrytego wpisu; koperty liczą się w `S.stat.echo`, więc te literały pilnują też braku takich odesłań.
+
+**Długie przebiegi** (ręcznie, 2026-11-20, kod tego PR i kod bazy `119f0225` na kopiach drzewa, pary bazy i PR naraz,
+CPU dzielone z drugą parą). Z przełącznikiem (`E2_AB_ECHO=1`), baza → PR:
+
+| Przebieg (ziarna) | Koperty `stomb` | Odesłania ukrytego wpisu (ziarna) | Granica: przekroczenia | Ponowne wysłanie | Brak spoczynku, W3, W4 | Punkty W1 z różnicą (w tym R5) | Czerwone przypadki | Czas (s) |
+|---|---|---|---|---|---|---|---|---|
+| CI (cały plik) | 10 → 10 | 0 | 0 | 0 | 0, 0, 0 | 0 → 0 | 22 → 32 (niżej) | 159 / 163 |
+| podstawowy (1–40) | 34 → 35 | 1 (31) | 0 | 0 | 0, 0, 0 | 3 → 1 (2 → 0) | ziarna 1 i 4 / te same (`ZNANE_W1`) | 225 / 226 |
+| „bez połączenia” (101–140) | 58 → 71 | 13 (104: 2, 108: 2, 109: 3, 110, 113, 114, 122: 2, 132) | 0 | 0 | 0, 0, 0 | 3 → 1 (2 → 0) | 104, 128, 132, 137 / te same (W2s „inne”) | 134 / 136 |
+| pełny (1–20) | 34 → 37 | 3 (3: 2, 16) | 0 | 0 | 0, 0, 0 | 7 → 2 (5 → 0) | ziarno 8 / to samo | 135 / 136 |
+| pełny (21–40) | 17 → 19 | 2 (39, 40) | 0 | 0 | 0, 0, 0 | 17 → 7 (10 → 0) | 37, 38, 39 / te same | 138 / 139 |
+| flota 221 (1–10) | 0 → 2 | 2 (4, 5) | 0 | 0 | 0, —, 0 | — | 2, 3 / te same (literały floty) | 31 / 29 |
+| flota 276 (1–10) | 2 → 2 | 0 | 0 | 0 | 0, —, 0 | — | 2 / to samo (literał floty) | 39 / 41 |
+
+- Różnice „wpis Kosza tylko na jednym urządzeniu” znikają: punkty W1 z klasą R5 19 → 0 (ziarna 31; 113, 114; 3, 16;
+  39, 40). Zostają tylko klasy spoza E3-PR0d2 (R4n, nagrobek karty opróżnionej, D7, utrata po „Scal pacjentów”).
+- **Zastrzeżenie:** w każdym ziarnie z odesłaniem dziennik operacji rozchodzi się dokładnie w kroku pierwszego odesłania
+  (inna kolejka, dalej inny program), więc „19 → 0” i „ten sam zbiór czerwonych” porównują tam różne programy. Dowodem
+  zbieżności są testy deterministyczne (p. 6, test wejściowy); długie przebiegi to wsparcie. W ziarnach bez odesłania
+  dziennik jest identyczny z bazą.
+- Nowych naruszeń nie ma: klasy W1, klasy i liczby wyroczni, W3, W4 i brak spoczynku porównane ziarno po ziarnie; bloki
+  błędów czerwonych przypadków identyczne (bez numerów wierszy). W ziarnach z odesłaniem i czerwienią („bez połączenia”
+  104, 132; pełny 39) czerwień ta sama co na bazie, z tym samym zbiorem naruszeń.
+- Koszt: 21 kopert odsyłania ukrytego wpisu na 6 przebiegów długich, 3–18 % kopert `stomb` w profilach; najwyżej
+  1 odesłanie na udane zastosowanie; najwięcej 4 koperty `stomb` jednego klucza w partii („bez połączenia”), zawsze
+  ≤ liczba zdarzeń partii z tą wersją. Odesłania zdarzają się też w ziarnach bez widocznej różnicy W1 na bazie (108,
+  109, 110, 122, 132): ukryty wpis bywa chwilowy w środku partii, a późniejsze zdarzenie i tak by go wyrównało — to
+  część kosztu, nie błąd. Licznik `retencja` 0 wszędzie.
+- CI z `E2_AB_ECHO=1`: 22 czerwone przypadki na obu kodach to bloki opisujące stan bez przełącznika (jak po E3-PR0d);
+  na kodzie PR dochodzi 10 tego samego rodzaju (3 literały bloku p. 6 bez przełącznika, 7 wariantów „przełącznik
+  wyłączony” testu wejściowego — zmienna włącza przełącznik także w nich). W CI bez zmiennej: 0 czerwonych na obu.
+- Tryb ścisły z przełącznikiem (`E2_AB_ECHO=1 E2_AB_SCISLE=1`): naruszenia R5 znikają — podstawowy 2 → 0 (ziarno 31
+  przestaje być czerwone), pełny 1–20 7 → 0 (ziarna 3 i 16), „bez połączenia” 2 → 0 (ziarna 113 i 114); zostaje
+  „nagrobek karty opróżnionej” w pełnym ziarnie 5 (tak samo na bazie).
+- Bez przełącznika: każdy rekord wyniku ziarna identyczny z bazą (tabela wyżej), te same czerwone.
+- Po ostatniej poprawce uprzęży (granica liczy tylko koperty zdarzeń) „bez połączenia” i flota 221 z przełącznikiem
+  powtórzone: te same liczby kopert, 0 przekroczeń granicy, 0 „echo sejfu ≠ model”, te same czerwone.
+
+**Testy.** Dane wyłącznie fikcyjne („Pacjent Testowy 1”, „Testowy Jan”, masy 20–45 kg), bez PESEL; prawdziwy
+`vilda_vault.js` w uprzęży (okno z atrapą IndexedDB, bliźniaki, kopia sejfu bez odsyłania).
+- `tests/unit/sync-odsylanie.test.mjs` (121 przypadków, było 92): „Przywróć” po „Usuń pacjenta” — jeden wiersz `stomb` v
+  (wpis 20 kg z treścią, koperta bez kart, emisja z samym identyfikatorem); odbiorca z żywą v po nagrobku karty
+  i odbiorca z tym samym ukrytym wpisem — 0 wierszy; ta sama koperta drugi raz — drugi wiersz; `busy`, `busy`,
+  `apply-error` (między nimi inny wiersz) — 0 po każdej próbie, jeden po udanym ponowieniu; bez odsyłania: karta żywa,
+  wersja nie późniejsza niż Kosz, `busy` przy żywej karcie, wpis pod żywą kartą Q po „Scal pacjentów” (wynik świadomie
+  wpisany); wpis pod kartą Q po „Scal pacjentów” i „Usuń pacjenta” Q — jeden wiersz; nagrobek porządkowania przypiętej
+  wersji (oba rogi); drogi bez odsyłania (pełna kopia, delta, stara delta); „Usuń pacjenta” wstrzymane na zatwierdzeniu
+  nagrobka i na usunięciu karty (`ptomb` P, potem `stomb` v; przypadek czeka na warunek do 5 s, nie na stałą liczbę
+  obrotów — pod obciążeniem 4 pętlami CPU 12 z 12 zielonych); cudzy otwarty krok; błąd odczytu kart (odesłanie
+  kandydatów), błąd odczytu wpisów przed scaleniem przy ukrytym wpisie (klucz v raz), `SYNC_DB_DELETED` w odczycie kart,
+  zmiana sesji w odczycie kart, koszt odczytu kart; funkcje czyste wycięte z kodu sejfu (`Bev_kandydaciUkrytych`,
+  `Bev_wstepUkrytych` — także wersja wygrywająca z jednym elementem wpisu, a z drugim nie, `Bev_echoUkrytych`),
+  `Bev_stanKart` z kodu sejfu z atrapą strzeżonego adaptera (kolejność odczytów, kontrola sesji po każdym, najpóźniejszy
+  nagrobek, zmiana sesji — bez dalszych odczytów), strażnik formy odczytu kart (adapter strzeżony, kontrole sesji, odczyt
+  tylko przy udanym scaleniu); przełącznik wyłączony (równoważność), zamknięta bramka i „Komputer w pracy”. Kopia sejfu
+  tylko w pliku testu ma jednorazowy fikcyjny błąd na początku `Bev_stanKart` (jak dotąd na początku `Bev_stanKosza`).
+- `tests/unit/sync-dziennik-wlasnosciowy.test.mjs` (test A ≡ B; 256 przypadków, było 226; 21 pominiętych): p. 6
+  z przełącznikiem — R5-0, R5-E1, „R5-E1, C wysyła tylko zdarzenia” bez różnicy (`P6E_ZE_STANU`); test wejściowy
+  odsyłania ukrytego wpisu (światy 990 + nr: powtórka tej samej zmiany, trzy urządzenia w 12 kolejnościach, odbiorca
+  z żywą v przed nagrobkiem karty, „Scal pacjentów”, gwiazdka po Koszu z „Usuń pacjenta” i ze „Scal pacjentów”, karta
+  żywa, poprawka z trzeciego urządzenia sprzed Kosza; warianty z wyłączonym przełącznikiem — dzisiejszy wynik); wpis
+  zdjęty późniejszym zdarzeniem tej samej partii (świat 1020: model bez wiersza, sejf bez koperty) i granica w porównaniu
+  partii; ziarno 1 profilu podstawowego i ziarno 8 koalescencji z przełącznikiem — 0 odesłań ukrytego wpisu.
+- `tests/unit/licznik-odsylania.test.mjs` (50, było 38): model odsyłania ukrytego wpisu (wiersz; pusto przy karcie
+  żywej, wersji pod kartą, wersji nie późniejszej niż Kosz, wpisie z dwoma elementami, z których z jednym wersja
+  przegrywa, wpisie pod żywą kartą, elemencie bez poprawnego `patientId`, karcie P bez nagrobka, nagrobku wcześniejszym
+  niż zapis, starej delcie, kopercie `stomb`; retencja z gwiazdką i bez), granica i przypisanie kopert, strażnik
+  „wycięte = sejf”.
+- `tests/unit/sync-zdarzenia-buildery.test.mjs` (reguła „bez zegara”): cztery nowe funkcje części `Bev_`
+  sklasyfikowane jako odsyłanie.
+- `tests/unit/ostatnia-zmiana.test.mjs`: opis klasy R5-E1 bez zapowiedzi naprawy, światy klasy bez zmian.
+- `tests/unit/sync-dziennik-uspienie.test.mjs` i `tests/unit/sync-dziennik-zapis-bazowy.test.mjs` — bez zmian (zielone).
+- e2e `tests/e2e/sync-zdarzenia-drenaz.spec.mjs` (Chromium, 7, było 6): klucz `'1'` — drugi kontekst (B) daje v do Kosza
+  (A dostaje to drenażem), B klika „Przywróć”, A robi „Usuń pacjenta”; kopertę „Przywróć” A stosuje przez
+  `applyEncryptedEvent` (tę samą funkcję, którą woła drenaż; niżej, „Do akceptacji”, punkt 12): w kolejce A za nagrobkiem
+  karty dokładnie jeden wiersz `stomb` v z treścią; B przyjmuje nagrobek i ten wiersz — karta usunięta, wpis ukryty, bez
+  nowego wiersza.
+
+**Czerwone na bazie** (`119f0225`, sejf bez odsyłania ukrytego wpisu, testy i uprząż tego PR): test A ≡ B 20 (każdy
+przypadek z włączonym przełącznikiem, w którym sejf ma odesłać ukryty wpis — z „echo sejfu ≠ model”; zielone z natury:
+warianty z wyłączonym przełącznikiem, karta żywa i poprawka sprzed Kosza z włączonym, pozostałe scenariusze p. 6,
+ziarna 1 i 8, oba nowe przypadki partii — strażniki uprzęży); `sync-odsylanie` 19 z 29
+nowych (zielone z natury: karta żywa, wersja nie późniejsza niż Kosz, `busy` przy żywej karcie, wpis pod żywą kartą Q,
+trzy drogi bez odsyłania, błąd odczytu wpisów przed scaleniem — tam odsyła już E3-PR0d, przełącznik wyłączony, zamknięta
+bramka i „Komputer w pracy”); licznik odsyłania 1 (strażnik wywołania w bloku); buildery 1; e2e drenażu 1 z 1 nowego.
+Model licznika i opis klasy R5-E1 — zielone. Pełny `vitest run` na sejfie bazy z testami sprzed poprawek po przeglądzie: czerwone
+wyłącznie w czterech plikach tego PR (39 przypadków; reszta — 31 838 — zielona).
+
+**Mutanty** (kopia drzewa, jedna zmiana tekstu, pliki celu i test A ≡ B z filtrem, część także e2e drenażu): 65 mutantów
+kodu odsyłania ukrytego wpisu, jego otoczenia i uprzęży. Rodziny: warunek „tylko po udanym scaleniu” (bez niego, także
+przy niezmienionym tekście warunku); każdy warunek osobno (bez niego, z odwróconym kwantyfikatorem, z ostrą
+nierównością nagrobka, z pustym zapisem karty, bez wykluczenia żywej karty P, pierwszy zamiast najpóźniejszego
+nagrobka, karty elementów z powtórzeniami, z wersją z ładunku zamiast kopii sprzed scalania, z elementem bez
+`patientId` jak „karty nie ma”, z wyjątkiem rozstrzygnięcia jak „wersja przegrywa”); kandydaci; błędy (błąd odczytu kart
+jako pominięcie w dwóch miejscach, `SYNC_DB_DELETED` jak zwykły błąd, odczyt wersji „po” zawiódł jako pusto); sesja
+i adapter (każda kontrola sesji osobno i wszystkie, bez sprawdzenia strażnika, adapter niestrzeżony, odczyt kart zawsze,
+drugi odczyt przełącznika); bramka i tryb; lista i emisja (osobna lista z trzecim `Bem_zmiana`, kolejność list, bez
+filtra powtórzeń, podwójne odesłanie); zegar w funkcji czystej i w odczycie kart; drogi (stara delta, delta, pełna
+kopia — dwie ostatnie poza blokiem, tylko jako mutanty); uprząż i licznik (model bez reguły albo zawsze pusty, bez
+warunku wygranej, bez porównania z zapisem, bez filtra kluczy E3-PR0d, bez filtra „wpis po całej partii”, granica
+wyłączona albo o jeden za luźna, przypisanie kopert w odwrotnej kolejności, koperta liczona jako „ponowne wysłanie”
+albo poza `S.stat.echo`, licznik bez `ponowne`, opis kolejki bez etykiety, rozstrzygnięcie zawsze fałsz, lista domknięcia
+niepełna, własna deklaracja funkcji domknięcia w liczniku, obca wcześniejsza deklaracja w sejfie, odesłanie podwójne
+z modelem podwójnym i bez granicy). W pierwszym przebiegu przeżyło 8, 2 zabijał tylko przypadek, który okazał się
+niestabilny pod obciążeniem, a 2 tylko strażniki strukturalne — wszystkie dostały testy działania (wersja wygrywa
+z jednym elementem, a z drugim nie; karta P żywa przy wpisie pod inną usuniętą kartą; odczyt kart P z ładunku; adapter
+strzeżony; granica i filtr „wpis po całej partii” w uprzęży; filtr powtórzeń; drogi pełnej kopii i delty; umowa
+`Bev_stanKart` — pierwszy zamiast najpóźniejszego nagrobka, w prawdziwym sklepie równoważny, bo nagrobek pacjenta ma
+jeden rekord na kartę). Wynik: 63 czerwienią co najmniej jeden test CI, 2 przeżywają — oba równoważne: kolejność dwóch
+rozłącznych list w `kol.kosz` (różne encje; kolejność wierszy `stomb` różnych wersji w jednym kroku nie zmienia stanu
+u odbiorcy) i model w uprzęży bez filtra kluczy E3-PR0d (ten sam klucz z obu reguł w jednym zdarzeniu daje tylko błąd
+odczytu wpisów przed scaleniem, którego uprząż A ≡ B nie wywołuje; zachowanie sejfu w tym przypadku pilnuje test
+w oknie). Cztery mutanty strażników dodanych po przeglądzie (kwantyfikator w liczniku, drugi deklarator stałej
+`Bgw_czPam`, granica licząca kopertę jawną katalogu — czerwone z komunikatem testu; inicjalizator stałej ze średnikiem
+— plik testu licznika nie zbiera się do uruchomienia).
+
+**Czas pliku A ≡ B** (lokalnie, sam plik): 152 s na `119f0225` z testami sprzed PR wobec 158 s z kodem i testami tego PR
+(+5 s); para naraz w ustawieniach CI bez przełącznika: 139,7 s wobec 142,6 s (+2,1 %); po poprawkach testów 136,6 s
+wobec 135,4 s (bez różnicy). W CI po E3-PR0d: 114,9 s → szacunek ok. 117–120 s przy celu ok. 180 s.
+
+**Kontrola granicy obrazu sejfu.** Zmiana stoi wyłącznie w bloku P-DZIENNIK-ZDARZEN (poza blokiem nic, także komentarze;
+bez nowych wywołań `Bem_`/`Bob_` poza blokiem; literał miejsc poza blokiem bez zmian); fragment natywny i blok trwałych
+wizyt bez zmian, zero nazw `Bem_`/`Bob_`/`Bev_` we fragmencie natywnym. Przeliczone 7 skrótów w 5 plikach: baza
+trwałych wizyt `5318fe8f…` i obraz `5f5ec15f…` (`runtime/durable-visits-v1/manifest.json`,
+`tools/visits-vault-delta.mjs`, `tests/unit/visits-vault-boundary.test.mjs`) oraz `baseVaultSHA256` `8855e4a1…`,
+`integratedVaultSHA256` `a54d9c62…` i `BASE` natywnej przestrzeni klinicznej (`runtime/clinical-workspace-v1/manifest.json`,
+`tools/check_clinical_workspace_boundary.mjs`, z opisem E3-PR0d2 w komentarzu); `node tools/visits-vault-delta.mjs`
+i `node tools/check_clinical_workspace_boundary.mjs` — zielone. `vilda_sync.js` i jego piny bez zmian. Sejf się
+zmienił — przy następnej pracy w `vilda-source` weź nową bazę z `runtime/clinical-workspace-v1/manifest.json` na
+`audyt`.
+
+**Ograniczenia.**
+- **Cudzy otwarty krok** (wyżej, „Kolejność”): odesłanie wychodzi przed nagrobkiem karty, odbiorca z żywą wersją
+  zdejmuje wpis, potem traci wersję z kartą; przy dwóch urządzeniach różnica do pełnej synchronizacji, jak dziś.
+- **Pozostałe wyjątki kolejności** (wyżej) — w każdym skutek jak dziś. „Odbiorca zawsze czyta nagrobek pierwszy” nie
+  jest prawdą ogólną.
+- **Trzy urządzenia:** zbieżność bez gwarancji ogólnej (dopuszczone decyzją 1).
+- **Zbędne wiadomości:** każde udane powtórne zastosowanie zdarzenia z tą wersją odsyła wpis jeszcze raz (koperta
+  z treścią do ok. 45 KiB); nieudane próby — nic. Koszt duplikatów i rozmiaru — E3-PR0h.
+- **Zdarzenie, które trwale nie wchodzi** (`apply-error` bez końca): wpis nie jest odsyłany — różnica jak dziś, do
+  pełnej synchronizacji.
+- **R5-E1 w wyroczni** zostaje zgłaszany — jawny wyjątek „wynik taki jak po pełnej synchronizacji” (decyzja
+  z 2026-11-20).
+- **Wpis pod żywą kartą Q po „Scal pacjentów”:** reguła słusznie nie odsyła, ale gwiazdka z innego urządzenia ginie tam
+  tak samo jak dziś — E3-PR0e (rodzina E4b). Ziarno 39 profilu pełnego 21–40 zostaje czerwone dla E3-PR0e, choć jego
+  różnice R5 znikają.
+- **Po 30 dniach od Kosza** wpis nie ma już treści: wizyta, która dziś po powrocie karty jest jeszcze w karcie na
+  jednym urządzeniu, po E3-PR0d2 (i po pełnej synchronizacji) jest na wszystkich tylko wpisem bez treści. Po „Scal
+  pacjentów” wizyta jest niewidoczna wszędzie, dopóki karta nie wróci (dziś też).
+- **Nagrobek porządkowania przypiętej wersji pod usuniętą kartą** odsyłany przy każdym udanym zdarzeniu z tą wersją,
+  choć niczego nie wyrównuje; w długich przebiegach 0; koszt ograniczony granicą.
+- **Filtr powtórzeń** w jednym zdarzeniu jest obroną; kolejność dwóch list nie ma skutku (mutant równoważny).
+- **Model z eksportów a sejf z surowych rekordów** (lista nagrobków pacjentów, okno wieku) — rozjazd pokazuje porównanie
+  model = sejf w każdej partii.
+- **Program długich przebiegów** z przełącznikiem rozchodzi się w ziarnach z odesłaniem — porównanie z bazą tylko po
+  klasach i zbiorach czerwonych.
+- **Pełna wysyłka działa do etapu 3**; później takie różnice łapie manifest punktu kontrolnego.
+
+**Do akceptacji właściciela przy PR** (rozstrzygnięcia spoza projektu i decyzji, wariant najbezpieczniejszy dla
+danych). Rekomendacja przy każdym punkcie: przyjąć.
+1. **Rozszerzenie decyzji 9 z 2026-10-29.** Odsyłanie ukrytego wpisu Kosza jest dalszą częścią tej samej czwartej drogi
+   ze scalania do kolejki co odsyłanie poprawionych wizyt i wpisów Kosza: po włączeniu odsyłania urządzenie, które po
+   udanym scaleniu zmiany z innego urządzenia ma ukryty wpis Kosza wersji, która przegrała tu z nagrobkiem karty, wyśle
+   ten wpis pozostałym urządzeniom. Reguły scalania bez zmian.
+2. **Zakres:** „Przywróć” albo inna późniejsza zmiana wizyty po Koszu (gwiazdka, poprawka) na jednym urządzeniu,
+   „Usuń pacjenta” albo „Scal pacjentów” na drugim. Wiersz 4a planu wymieniał tylko „Przywróć”, gwiazdkę — „Ograniczenia”
+   wpisu E3-PR0d; skutek jest ten sam co po pełnej synchronizacji (decyzja 1).
+3. **Wynik długich przebiegów spełnia warunek decyzji 1** (różnice znikają, 21 kopert na 6 przebiegów, nowych czerwonych
+   brak, bez przełącznika bez zmian) — bez ponownego pytania.
+4. **Tylko po udanym scaleniu** — zawęża regułę wobec decyzji 1 (nieudane próby nic nie wysyłają), nie rozszerza.
+5. **Kolejność przy cudzym otwartym kroku, pozostałe wyjątki kolejności i trzy urządzenia** — znane ograniczenie,
+   przewidziane decyzją 1; testy przypinają wynik.
+6. **Zbędna druga wiadomość przy powtórce** — przewidziana decyzją 1; najwyżej jedna na udane zastosowanie.
+7. **Wpisy porządkowania pod usuniętą kartą** odsyłane tak samo jak wpisy Kosza, także w rogu „wersja przypięta, nie
+   późniejsza niż przycięcie” (0 takich odesłań w długich przebiegach).
+8. **Błędy odczytu kart:** inny błąd — odesłanie kandydatów wstępu (zasada E3-PR0c i E3-PR0d); usuwanie konta — bez
+   odsyłania; zmiana sesji albo blokada — bez odsyłania.
+9. **Jedna lista `kol.kosz`** i ten sam przełącznik (decyzja 1a z 2026-11-15); forma `Bem_zastosujEcho` bez zmian.
+10. **Krotność warstwy „odesłane” w liczniku** przy jednym kluczu z dwóch reguł w jednej partii — do E3-PR0h (narzędzie
+    testu, nie działanie aplikacji).
+11. **Opis klasy R5-E1 w wyroczni** zmieniony z „naprawa: E3-PR0” na „bez naprawy: wynik taki jak po pełnej
+    synchronizacji (decyzje właściciela z 2026-11-19 i 2026-11-20)”; działanie aplikacji, wynik testu i to, co test
+    zgłasza, bez zmian.
+12. **Test w prawdziwej przeglądarce stosuje kopertę „Przywróć” wprost** (`applyEncryptedEvent` na prawdziwej bazie
+    przeglądarki — ta sama funkcja, którą woła drenaż), bo po „Usuń pacjenta” pobieranie w tej uprzęży wraca do trybu
+    od zera (jedno pełne pobranie, bez listy zmian), także po wysłaniu zmian na serwer; pierwsza zmiana (Kosz) idzie
+    zwykłym drenażem. Samo to zachowanie pobierania jest dzisiejsze i niezależne od tego PR — do osobnego sprawdzenia,
+    czy jest zamierzone.
+13. **Kolejka ścisła:** E3-PR0e może ruszać po scaleniu tego PR (plan, wiersz 5).
+
+**Wejście do kolejnych PR.**
+- **E3-PR0e:** wpis pod żywą kartą Q po „Scal pacjentów” (gwiazdka z innego urządzenia ginie tak samo jak dziś) i ziarno
+  39 profilu pełnego 21–40 jako wejście, obok ziaren 8, 37 i 38 z wpisu E3-PR0d.
+- **E3-PR0h:** krotność warstwy „odesłane” licznika przy jednym kluczu z dwóch reguł w jednej partii (literały
+  `ZNANE_ODSYL`, `STRES_ODSYL`); koszt odesłań ukrytego wpisu w tabeli kosztów (rozmiar, duplikaty); „karta częściowa”
+  w wariancie „R5-E1, C wysyła tylko zdarzenia”.
+- **E3-PR0i:** literały A ≡ B, floty i `ZNANE_W1` przepisane na wynik z odsyłaniem.
+- Każda zmiana buildera `stomb` (np. karta z wizytami w kopercie wpisu) musi powtórzyć dowód braku pętli — opiera się on
+  na tym, że koperta `stomb` nie niesie wersji, że urządzenie z ukrytym wpisem nie wyśle `snap` tej wersji i że nieudane
+  zastosowania nie odsyłają.
+- Każda zmiana `Bkz_wygrywa`, `Bkz_zmiana`, `Bgw_stan` albo ich domknięcia zmienia model i sejf naraz; strażnik
+  „wycięte = sejf” wymaga jednej deklaracji każdej nazwy domknięcia i jednej deklaracji stałej `Bgw_czPam`.
+
+**Cofnięcie** = rewert PR, bez migracji (przy wyłączonym przełączniku nic nie powstaje; wiersze odsyłania to zwykłe
+wiersze `stomb`; rewert cofa też skróty kontroli granicy).
+
+**Gdzie w kodzie.** `vilda_vault.js`, blok P-DZIENNIK-ZDARZEN (6686–10322): część `Bev_` — `Bev_kandydaciUkrytych`,
+`Bev_wstepUkrytych`, `Bev_stanKart`, `Bev_echoUkrytych` (7751–7843), `Bev_zastosujZEchem` (7844–7946: kandydaci,
+wstęp i odczyt kart po udanym scaleniu, `kol.kosz` z ukrytymi wpisami bez powtórzeń); komentarze: nagłówek bloku, opis
+odsyłania wpisów, opis `Bev_zastosujZEchem`, nagłówek części emisji, opis `Bem_zastosuj`. Bez zmian: `Bev_zastosuj`,
+`Bev_kandydaciEcha`, `Bev_stanEcha`, `Bev_echo`, `Bev_stanKosza`, `Bev_echoKosza`, `Bev_stomb`, `Bem_zastosujEcho`,
+`Bem_zmiana`, `Bem_RANGI`, `Bob_plan`, `Bob_bramkaEcha`. Poza blokiem bez zmian.
+
+**Wersje.** `vilda_vault.js` 282 → 283, `vilda_chrome.js` 316 → 317 i `vilda_session_bridge.js` 232 → 233 (wstrzykują
+sejf), SW 1.1.567 → 1.1.568 — `npm run podbij-wersje`; baza `origin/audyt` `c78985fb` (po vildaclinic/vilda-calc#1019;
+sejf, `vilda_sync.js`, `runtime/`, `tools/` i testy synchronizacji bez zmian względem `bc2d88f8`, E3-PR0d; pomiary na
+`119f0225`). Bez nowego pliku w pamięci offline.

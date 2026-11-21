@@ -90,6 +90,26 @@
 //   i stomb) wobec wierszy modelu tego samego zdarzenia; para (klucz encji) → odeslane.literal[klucz literału wiersza];
 //   koperta bez wiersza modelu — ponadModel, wiersz bez koperty — nieodeslane (przykłady — druk). Przy wyłączonym
 //   przełączniku nikt jej nie woła: podsumowanie ma pustą warstwę.
+//
+// MODEL ODSYŁANIA UKRYTEGO WPISU KOSZA KARTY USUNIĘTEJ (E3-PR0d2; ten sam przełącznik)
+//   modelStanu(przed, po, ladunek, { nagrobekWygrywa }) → wiersze stomb, które sejf odsyła ze stanu po udanym
+//   zastosowaniu jednego zdarzenia (wpis odesłany, bo stan po scaleniu tego wymaga, choć scalanie niczego nie zapisało):
+//   ładunek z polem event niesie wersję S pod kartą P (patients[].snapshots[]); po scaleniu S nie ma pod żadną kartą;
+//   jest wpis Kosza tej wersji i S wygrywa z każdym jego elementem: nagrobekWygrywa(e, S) = Bkz_wygrywa(e, Bkz_zmiana(S),
+//   Bgw_stan(S, S.payload)) — prawda, gdy element e wpisu wygrywa z S; S wygrywa z wpisem, gdy dla każdego elementu e
+//   !nagrobekWygrywa(e, S) (wyjątek rozstrzygnięcia — jak wygrywa S). To JEDYNA część modelu z kodu wyciętego z sejfu
+//   (wygrywaZKodu, lista WYGRYWA_Z_SEJFU i stała STALE_WYGRYWA wycięta przez stalaZKodu); karty żadnego elementu wpisu
+//   nie ma po scaleniu (element bez poprawnego patientId — jak „karta jest”); karta P
+//   przegrała tu z nagrobkiem pacjenta (karty nie ma, najpóźniejszy nagrobek P po scaleniu nie wcześniejszy niż
+//   lastSavedAtISO karty P z ładunku; brak zapisu — jak spełnione). Pozostałe warunki są tu napisane osobno (na
+//   eksportach). Jeden wiersz na wersję i zdarzenie; klasa KLASA_ZE_STANU, przydział E3-PR0d2, pole retencja (wpis
+//   z elementem porządkowania). Stara delta (bez event) — pusto.
+//   ponadGranica(ladunki, koperty) — górna granica niezależna od modeli: na klucz v kopert stomb odsyłania sejfu w partii
+//   (E3-PR0d i ze stanu razem) liczba ≤ liczba ładunków partii, które wymieniają v (patients[].snapshots[] albo
+//   snapshotTombstones[]); wynik — lista naruszeń.
+//   przypiszKoperty(koperty, wiersze, zeStanu) — koperty odsyłania sejfu w partii (kolejność rejestru) → źródło: stomb
+//   klucza v najpierw do wierszy E3-PR0d tego klucza ('echo'), potem do wierszy ze stanu ('stan', z polem retencja);
+//   snap — 'echo'; koperta stomb bez wiersza — wyjątek.
 import { encje, sortuj } from './encje-ladunku.mjs';
 
 export const LIMITY = Object.freeze({
@@ -574,6 +594,9 @@ export function nowyLicznikOdsylania({ regula = 'T', rekordZlozony = null } = {}
   // Oś czasu wysyłek (okna przesuwne, druk): zrodlo — 'wlasne', 'haki', 'echo' (warstwa wyk), 'echo2a' (naiwna).
   L.wyslij = (dev, t, zrodlo, bajty) => { if (bajty.length) L.os.push({ t, dev, zrodlo, wiersze: bajty.length, bajty: bajty.reduce((a, b) => a + b, 0), zad: partie(bajty).zadan }); };
   // E3-PR0c: koperty echa sejfu (jawne) wobec wierszy modelu odsyłania jednego zdarzenia.
+  // E3-PR0d2: wiersze to wiersze E3-PR0c/E3-PR0d i wiersze ze stanu partii. Wiersze są tu zebrane po kluczu (jeden na
+  // klucz): przy wierszu E3-PR0d i wierszu ze stanu tego samego klucza w jednej partii wszystkie koperty klucza dostają
+  // klasę ostatniego (krotność — E3-PR0h); liczby odesłań ze stanu — z S.stat.zeStanu testu A ≡ B.
   L.zapiszOdeslane = (zrodlo, koperty, wiersze, opis = '') => {
     if (!ZRODLA.includes(zrodlo)) throw new Error(`licznik odsyłania: nieznane źródło ${zrodlo}`);
     const O = L.odeslane;
@@ -601,4 +624,96 @@ export function nowyLicznikOdsylania({ regula = 'T', rekordZlozony = null } = {}
     };
   };
   return L;
+}
+
+// ── Model odsyłania ukrytego wpisu Kosza karty usuniętej (E3-PR0d2; opis w nagłówku) ─────────────────────────────────
+// Domknięcie wywołań Bkz_wygrywa, Bkz_zmiana i Bgw_stan w vilda_vault.js (25 funkcji) i jedyna zmienna modułu w nim;
+// strażnik „wycięte = sejf” w tests/unit/licznik-odsylania.test.mjs.
+export const WYGRYWA_Z_SEJFU = Object.freeze(['Bm1', 'Bkz_pozniejsza', 'Bkz_chwilaKosza', 'Bkz_chwilaRetencji', 'Bkz_ostatnie', 'Bkz_zmiana',
+  'Bkz_znanaZmiana', 'Bkz_wygrywa', 'Bpk_przypieta', 'Bgw_rej', 'Bgw_g', 'Bgw_stan', 'Bgw_kanon', 'Bgw_odcisk', 'Bgw_porownaj', 'Bgw_pozniejszy',
+  'Bgw_zWpisu', 'Bpk_opis', 'Bpk_tr', 'Bpk_odcisk', 'Bgw_czKlucz', 'Bgw_czZTresci', 'Bpk_zWpisu', 'Bpk_revPary', 'mt']);
+export const STALE_WYGRYWA = Object.freeze(['Bgw_czPam']);
+// Tekst deklaracji stałej modułu n z tekstu sejfu (od „const” do pierwszego średnika; strażnik w teście licznika
+// porównuje go z deklaracją z drzewa składni) — jedno źródło wycinka stałych dla licznika i testów.
+export function stalaZKodu(src, n) {
+  const m = src.match(new RegExp(`\\n(const ${n} = [^;]*;)`));
+  if (!m) throw new Error(`licznik odsyłania: brak stałej ${n} w tekście sejfu`);
+  return m[1];
+}
+// Rozstrzygnięcie „nagrobek wygrywa z wersją S” z tekstu sejfu (src) i funkcji wycinającej (wytnij(src, nazwa) — tekst
+// deklaracji); moduł nie czyta plików. Wynik (e, S) → Bkz_wygrywa(e, Bkz_zmiana(S), Bgw_stan(S, S.payload)) — prawda,
+// gdy element e wpisu Kosza wygrywa z wersją S.
+export function wygrywaZKodu(src, wytnij) {
+  const stale = STALE_WYGRYWA.map((n) => stalaZKodu(src, n));
+  const kod = `${stale.join('\n')}\n${WYGRYWA_Z_SEJFU.map((n) => wytnij(src, n)).join('\n')}\nreturn function (e, S) { return Bkz_wygrywa(e, Bkz_zmiana(S), Bgw_stan(S, S.payload)); };`;
+  return new Function(kod)();
+}
+export const KLASA_ZE_STANU = 'ukryty wpis karty usuniętej, późniejsza wersja nie weszła';
+// nagrobekWygrywa(e, S) — z wygrywaZKodu; S wygrywa z wpisem, gdy z żadnym jego elementem nie przegrywa.
+export function modelStanu(przed, po, ladunek, { nagrobekWygrywa } = {}) {
+  if (!ladunek || !obiekt(ladunek.event) || typeof nagrobekWygrywa !== 'function') return [];
+  const zywe = new Set();
+  const karty = new Set();
+  for (const p of (po && po.patients) || []) { karty.add(p.patientId); for (const q of p.snapshots || []) zywe.add(q.snapshotId); }
+  const nagrobki = new Map();
+  for (const t of (po && po.tombstones) || []) {
+    if (!t || typeof t.patientId !== 'string' || !t.patientId || typeof t.deletedAtISO !== 'string' || !t.deletedAtISO) continue;
+    const n = nagrobki.get(t.patientId);
+    if (!n || t.deletedAtISO > n) nagrobki.set(t.patientId, t.deletedAtISO);
+  }
+  const wpisy = new Map();
+  for (const e of (po && po.snapshotTombstones) || []) {
+    if (!obiekt(e) || !e.snapshotId) continue;
+    if (!wpisy.has(e.snapshotId)) wpisy.set(e.snapshotId, []);
+    wpisy.get(e.snapshotId).push(e);
+  }
+  const kartaJest = (e) => typeof e.patientId !== 'string' || !e.patientId || karty.has(e.patientId);
+  const out = [];
+  const byly = new Set();
+  for (const p of ladunek.patients || []) {
+    if (!obiekt(p) || typeof p.patientId !== 'string' || !p.patientId) continue;
+    for (const S of p.snapshots || []) {
+      if (!obiekt(S) || !S.snapshotId) continue;
+      const v = S.snapshotId;
+      if (byly.has(v) || zywe.has(v)) continue;
+      const b = wpisy.get(v) || [];
+      if (!b.length) continue;
+      let wygr;
+      try { wygr = b.every((e) => !nagrobekWygrywa(e, S)); } catch { wygr = true; }
+      if (!wygr || b.some(kartaJest)) continue;
+      const n = nagrobki.get(p.patientId);
+      const zapis = typeof p.lastSavedAtISO === 'string' ? p.lastSavedAtISO : '';
+      if (karty.has(p.patientId) || !n || n < zapis) continue;
+      byly.add(v);
+      out.push({ k: 'stomb:' + v, kind: 'stomb', rodzaj: rodzajEncji('stomb'), key: v, pid: p.patientId, wLadunku: false, klasa: KLASA_ZE_STANU, przydzial: 'E3-PR0d2', zeStanu: true, retencja: b.some((e) => e.powod === 'retencja') });
+    }
+  }
+  return out;
+}
+// Ładunki partii, które wymieniają wersję v (patients[].snapshots[] albo snapshotTombstones[]).
+const wymienia = (l, v) => obiekt(l) && ((l.patients || []).some((p) => obiekt(p) && (p.snapshots || []).some((q) => obiekt(q) && q.snapshotId === v))
+  || (l.snapshotTombstones || []).some((e) => obiekt(e) && e.snapshotId === v));
+export function ponadGranica(ladunki, koperty) {
+  const n = new Map();
+  for (const k of koperty || []) if (k && k.event && k.event.kind === 'stomb') n.set(k.event.key, (n.get(k.event.key) || 0) + 1);
+  const out = [];
+  for (const [v, ile] of n) {
+    const zdarzen = (ladunki || []).filter((l) => wymienia(l, v)).length;
+    if (ile > zdarzen) out.push({ v, n: ile, zdarzen });
+  }
+  return out;
+}
+export function przypiszKoperty(koperty, wiersze, zeStanu) {
+  const echo = new Map();
+  for (const r of wiersze || []) if (r.kind === 'stomb') echo.set(r.key, (echo.get(r.key) || 0) + 1);
+  const stan = new Map();
+  for (const r of zeStanu || []) { if (!stan.has(r.key)) stan.set(r.key, []); stan.get(r.key).push(r); }
+  return (koperty || []).map((k) => {
+    if (k.event.kind !== 'stomb') return { src: 'echo' };
+    const v = k.event.key;
+    if ((echo.get(v) || 0) > 0) { echo.set(v, echo.get(v) - 1); return { src: 'echo' }; }
+    const r = (stan.get(v) || []).shift();
+    if (!r) throw new Error(`licznik odsyłania: koperta stomb ${String(v).slice(0, 8)} bez wiersza modelu`);
+    return { src: 'stan', retencja: !!r.retencja };
+  });
 }
