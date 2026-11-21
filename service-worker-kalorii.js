@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.565';
+const SW_VERSION = '1.1.566';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -881,6 +881,7 @@ const CORE_SHELL_URLS = [
   '/vilda_persistence_adapter.js?v=37',
   '/vilda_persistence_adapter.js?v=38',
   '/vilda_persistence_adapter.js?v=39',
+  '/vilda_persistence_adapter.js?v=40',
   '/vilda_panel_pacjent.js?v=1',
   '/vilda_panel_pacjent.js?v=2',
   '/vilda_panel_pacjent.js?v=3',
@@ -3049,7 +3050,9 @@ const CORE_SHELL_URLS = [
   '/vilda_puberty_assessment_state.js?v=2',
   '/vilda_puberty_assessment_state.js?v=3',
   '/vilda_puberty_assessment_state.js?v=4',
+  '/vilda_puberty_assessment_state.js?v=5',
   '/vilda_puberty_assessment_context.js?v=1',
+  '/vilda_puberty_assessment_context.js?v=2',
   '/vilda_puberty_assessment_ui.js?v=1',
   '/vilda_puberty_assessment_ui.css?v=1',
   // Wspólny układ telefonu w poziomie jest potrzebny przed pierwszym malowaniem.
@@ -3798,6 +3801,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_shell.js?v=81',
   '/vilda_shell.js?v=82',
   '/vilda_shell.js?v=83',
+  '/vilda_shell.js?v=84',
   '/vilda_shell.css',
   '/vilda_shell.css?v=1',
   '/vilda_shell.css?v=2',
