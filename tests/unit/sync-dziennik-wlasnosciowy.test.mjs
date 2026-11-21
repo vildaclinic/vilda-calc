@@ -201,15 +201,16 @@
 // zdarzenia sejf odsyła wpis Kosza wersji, którą ładunek niósł pod kartą P, gdy po scaleniu wersji nie ma pod żadną
 // kartą, wersja wygrywa z każdym elementem wpisu, karty żadnego elementu nie ma, a karta P przegrała z nagrobkiem
 // pacjenta (wpis odesłany, bo stan po scaleniu tego wymaga, choć scalanie niczego nie zapisało). Model haków
-// i odsyłania: na zdarzenie wiersze LO.modelEcha i wiersze ze stanu (LO.modelStanu z rozstrzygnięciem „wersja wygrywa
-// z wpisem” z kodu wyciętego z sejfu, WYGRYWA) bez kluczy wierszy LO.modelEcha tego zdarzenia; przed porównaniem
-// z modelem — granica niezależna od modeli (LO.ponadGranica: na klucz liczba kopert stomb odsyłania ≤ liczba zdarzeń
-// partii, które wymieniają tę wersję). Koperty klucza najpierw do wierszy E3-PR0d (zapiszWyslanieEcha — „ponowne
+// i odsyłania: na zdarzenie wiersze LO.modelEcha i wiersze ze stanu (LO.modelStanu z rozstrzygnięciem „nagrobek wygrywa
+// z wersją” z kodu wyciętego z sejfu, NAGROBEK_WYGRYWA) bez kluczy wierszy LO.modelEcha tego zdarzenia; przed porównaniem
+// z modelem — granica niezależna od modeli (LO.ponadGranica: na klucz liczba kopert stomb odsyłania ≤ liczba kopert
+// zdarzeń partii, które wymieniają tę wersję; koperta jawna katalogu p. 5 się nie liczy). Koperty klucza najpierw do wierszy E3-PR0d (zapiszWyslanieEcha — „ponowne
 // wysłanie tej samej wartości”), reszta ze stanu (src 'stan', „(ze stanu)” w opisKolejki, licznik S.stat.zeStanu
 // { koperty, ponowne, retencja } poza „ponownym wysłaniem tej samej wartości”). Bloki: p. 6 z przełącznikiem — R5-0,
 // R5-E1 i wariant „C wysyła tylko zdarzenia” po samych zdarzeniach bez różnicy W1 (W4 i wyrocznia bez zmian: R5-E1 —
-// jawny wyjątek, decyzja z 2026-11-20; P6E_ZE_STANU), test wejściowy ukrytego wpisu (światy 990 + nr), ziarno 1
-// i koalescencja 8 — 0 odesłań ze stanu.
+// jawny wyjątek, decyzja z 2026-11-20; P6E_ZE_STANU), test wejściowy ukrytego wpisu (światy 990 + nr), wpis zdjęty
+// późniejszym zdarzeniem tej samej partii (świat 1020; model bez wiersza ze stanu, sejf bez koperty) i granica
+// w porównaniu partii, ziarno 1 i koalescencja 8 — 0 odesłań ze stanu.
 //
 // KOLEJNOŚĆ W KROKU (E2-PR3a2, sprawdzana na emiterach): snap (także wersje przeniesione pod kartę celu „Scal pacjentów”
 // i głowy scalenia), potem stomb, potem ptomb, potem pnote, pnotetomb, note, notetomb, plist, plisttomb, pref, pk, pktomb,
@@ -1006,7 +1007,7 @@ const HAKI_NIEZGODNE = [];
 const HAKI_PLIK = statHakow();
 // E3-PR0d2: rozstrzygnięcie „nagrobek wygrywa z wersją” z kodu wyciętego z sejfu (LO.wygrywaZKodu; strażnik „wycięte =
 // sejf” w tests/unit/licznik-odsylania.test.mjs) — wejście modelu odsyłania ukrytego wpisu Kosza (LO.modelStanu).
-const WYGRYWA = LO.wygrywaZKodu(readFileSync(path.join(repoRoot, 'vilda_vault.js'), 'utf8'), wytnijFunkcje);
+const NAGROBEK_WYGRYWA = LO.wygrywaZKodu(readFileSync(path.join(repoRoot, 'vilda_vault.js'), 'utf8'), wytnijFunkcje);
 // Opis koperty haka (zestaw pfull — pierwsza porcja i jej setId).
 const opisHaka = (k) => { const x = Array.isArray(k) ? k[0] : k; return { kind: x.event.kind, key: x.event.key, ...(x.event.full ? { setId: x.event.full.setId } : {}) }; };
 // Porównanie haków partii (liczniki S.stat.haki); niezgodne — wyjątek z opisem i wpis w HAKI_NIEZGODNE.
@@ -1111,15 +1112,16 @@ function modelOdsylania(partia, stany, po) {
     wiersze.push(...w);
     tylkoSavedAtISO.push(...LO.wierszeTylkoSavedAtISO(stany[i], stany[i + 1], e.jaw, w));
     const kluczeEcha = new Set(m.wiersze.map((r) => r.k));
-    zeStanu.push(...LO.modelStanu(stany[i], stany[i + 1], e.jaw, { wygrywa: WYGRYWA }).filter((r) => !kluczeEcha.has(r.k) && wpisPo(r)));
+    zeStanu.push(...LO.modelStanu(stany[i], stany[i + 1], e.jaw, { nagrobekWygrywa: NAGROBEK_WYGRYWA }).filter((r) => !kluczeEcha.has(r.k) && wpisPo(r)));
   }
   return { wiersze, zeStanu, spoza, tylkoSavedAtISO };
 }
-// E3-PR0d2: najpierw granica niezależna od modeli (koperty stomb odsyłania sejfu wobec ładunków partii), potem multizbiór
-// kluczy sejfu = wiersze modelu i wiersze ze stanu; wynik — wiersze obu rodzajów (przypisanie kopert w haki).
+// E3-PR0d2: najpierw granica niezależna od modeli (koperty stomb odsyłania sejfu wobec ładunków kopert zdarzeń partii —
+// jawne kopie e.jaw; koperta jawna katalogu p. 5, e.k, idzie przez mergeSyncPayload bez odsyłania i się nie liczy), potem
+// multizbiór kluczy sejfu = wiersze modelu i wiersze ze stanu; wynik — wiersze obu rodzajów (przypisanie kopert w haki).
 function porownajEcho(S, Y, partia, stany, po, koperty) {
   if (partia.length + 1 !== stany.length) throw new Error(`model odsyłania: ${stany.length} stanów na ${partia.length} zdarzeń partii (${Y.nazwa})`);
-  const granica = LO.ponadGranica(partia.map((e) => e.jaw || e.k || null), koperty);
+  const granica = LO.ponadGranica(partia.map((e) => e.jaw || null), koperty);
   if (granica.length) {
     const tekst = `odesłanie ponad granicę: ${granica.map((x) => `${Y.nazwa} stomb:${x.v} ${x.n} > ${x.zdarzen}`).join('; ')} — po partii [${partia.map((x) => `${x.kind} ${x.key}`).join(', ')}]${S.ziarno != null ? ` (ziarno ${S.ziarno}, krok ${S.nrKroku || 0})` : ''}`;
     HAKI_NIEZGODNE.push(tekst);
@@ -3098,6 +3100,10 @@ const p6dostawa = async (u, X, Y, tryb) => {
   await Y.v.mergeSyncPayload(json(await X.v.exportSyncPayload())); ustawStan(Y, await eksport(Y));
   return null;
 };
+// R5-E1 i wariant „C wysyła tylko zdarzenia”: różnica po samych zdarzeniach bez przełącznika odsyłania; z przełącznikiem
+// (E3-PR0d2, blok p. 6 z włączonym przełącznikiem niżej) po samych zdarzeniach bez różnicy. Klasa wyroczni R5-E1 — jawny
+// wyjątek kryterium odbioru E3-PR0, wynik taki jak po pełnej synchronizacji (decyzja właściciela z 2026-11-20).
+const ZNANA_R5_E1 = 'ZNANA RÓŻNICA bez przełącznika odsyłania (z przełącznikiem po samych zdarzeniach bez różnicy, E3-PR0d2)';
 const p6blob = async (X, Y) => { await Y.v.mergeSyncPayload(json(await X.v.exportSyncPayload())); ustawStan(Y, await eksport(Y)); };
 const P6 = {
   'R2-0': { baza: p6r2, kroki: async (u, t) => { await p6gwiazdka(u, u.B, u.v, true); await popraw(u, u.B, u.v, 27); await popraw(u, u.A, u.v, 30); await p6spoczynek(u, t); } },
@@ -3115,7 +3121,7 @@ const P6 = {
     await p6gwiazdka(u, u.B, u.v, true); await popraw(u, u.B, u.v, 27); await popraw(u, u.A, u.v, 30); await p6spoczynek(u, t);
     await scal(u, u.A, u.P, u.Q); await p6spoczynek(u, t); // A (niższa rev) „Scal pacjentów” P → Q, id Q > id P
   } },
-  'R5-E1': { znana: 'ZNANA RÓŻNICA (naprawa: E3-PR0)', baza: (S) => p6r4(S, { zC: true }), kroki: async (u, t) => {
+  'R5-E1': { znana: ZNANA_R5_E1, baza: (S) => p6r4(S, { zC: true }), kroki: async (u, t) => {
     await doKosza(u, u.B, u.v); krok(); await p6dostawa(u, u.B, u.A, t);
     await p6przywroc(u, u.B, u.v); await p6usunPacjenta(u, u.A, u.P); await p6spoczynek(u, t);
     // trzecie urządzenie C (kopia sprzed kosza) zapisuje nową wizytę P i wysyła blob (etap 2)
@@ -3169,7 +3175,7 @@ const P6 = {
   // wyżej, które zostają). W świecie samych blobów te same kroki idą blobami. R5-E1: C (kopia sprzed kosza) zapisuje
   // nową wizytę P i dostarcza swoje zdarzenia A i B, potem spoczynek A ↔ B (haki po powrocie karty). R3-E2: C (kopia A
   // z „A3”) wraca po przerwie — dostaje zdarzenia B, potem A, i odsyła A i B tylko to, co ma w kolejce (haki scalania).
-  'R5-E1, C wysyła tylko zdarzenia': { znana: 'ZNANA RÓŻNICA (naprawa: E3-PR0)', baza: (S) => p6r4(S, { zC: true }), kroki: async (u, t) => {
+  'R5-E1, C wysyła tylko zdarzenia': { znana: ZNANA_R5_E1, baza: (S) => p6r4(S, { zC: true }), kroki: async (u, t) => {
     await doKosza(u, u.B, u.v); krok(); await p6dostawa(u, u.B, u.A, t);
     await p6przywroc(u, u.B, u.v); await p6usunPacjenta(u, u.A, u.P); await p6spoczynek(u, t);
     krok(60e3); await mutacja(u.S, u.C, 'C: nowa wizyta P', () => u.C.d.zapiszKarte(1, { wzrost: 130, masa: 25, zapis: { patientId: u.P, forceNewSnapshot: true } }));
@@ -7687,3 +7693,42 @@ const UKRYTY_WPIS_OCZEKIWANE = {
   "karta żywa: „Przywróć” bez usunięcia karty|z echem": { "obiegi": 1, "koniec": { "A": "Kosz brak; w karcie P 20 kg; karta P jest", "B": "Kosz brak; w karcie P 20 kg; karta P jest" }, "kolejki": { "A": [], "B": [ "stomb v: 20 kg", "snap P/v 20 kg rev 1" ] }, "w1": { "AB": false }, "echo": 0, "zeStanu": { "koperty": 0, "ponowne": 0, "retencja": 0 }, "powtorzenia": 0 },
   "poprawka z trzeciego urządzenia sprzed Kosza dochodzi po „Usuń pacjenta”|z echem": { "kolejkaAPoDostawieC": [ "ptomb P", "stomb v: 40 kg (echo)" ], "koniec": { "obiegi": 1, "koniec": { "A": "Kosz 40 kg pod P (ukryty); karta P usunięta", "B": "Kosz 40 kg pod P (ukryty); karta P usunięta", "C": "Kosz 40 kg pod P (ukryty); karta P usunięta" }, "kolejki": { "A": [ "ptomb P", "stomb v: 40 kg (echo)" ], "B": [ "stomb v: 20 kg" ], "C": [ "snap P/v 40 kg rev 1" ] }, "w1": { "AB": false, "AC": false, "BC": false }, "echo": 1, "zeStanu": { "koperty": 0, "ponowne": 0, "retencja": 0 }, "powtorzenia": 0 } },
 };
+
+// E3-PR0d2: dwa przypadki modelu odsyłania ukrytego wpisu w partii. Wiersz ze stanu pierwszego zdarzenia partii znika
+// z modelu, gdy po całej partii wpisu tej wersji już nie ma (sejf: builder stomb po partii nie daje koperty) — „Przywróć”
+// v na B, „Usuń pacjenta” na A, potem gwiazdka v na B (karta P zapisana na B później niż nagrobek A); obie koperty snap
+// P/v z B w jednej dostawie do A: pierwsza — karta P przegrywa z nagrobkiem, wpis zostaje ukryty (sejf odsyła go ze
+// stanu), druga — karta P wraca z v, wpis zdjęty. Świat swiat(1020), Math.random z rng(0x7020). Granica niezależna od
+// modeli w porównaniu odsyłania partii zatrzymuje porównanie przed modelem.
+describe('A ≡ B, odsyłanie ukrytego wpisu Kosza w partii (E3-PR0d2): wpis zdjęty późniejszym zdarzeniem partii i granica odsyłania', () => {
+  d1();
+  it('„Przywróć” v na B, „Usuń pacjenta” na A, potem gwiazdka v na B; obie koperty snap P/v z B w jednej dostawie do A — pierwsza odsyła ukryty wpis, druga przywraca kartę P z v: po partii bez wpisu i bez koperty odsyłania ze stanu, model haków i odsyłania zgodny', async () => {
+    ustaw(START);
+    const S = swiat(1020);
+    const los = rng(0x7020);
+    vi.spyOn(Math, 'random').mockImplementation(() => (S.losAlt || los)());
+    S.w2s = false; S.nrKroku = 0; S.wyrSwiat = 'odsylanie ukrytego wpisu w partii';
+    S.echo = true; S.stat.echo = 0;
+    const u = await p6r4(S, { zC: false });
+    u.S = S;
+    await koszIPrzywrocNaB(u);
+    u.S.nrKroku = 3; await p6usunPacjenta(u, u.A, u.P);
+    u.S.nrKroku = 4; await p6gwiazdka(u, u.B, u.v, true);
+    u.S.nrKroku = 5; krok(60e3);
+    const d = await dostawa(u.S, u.B, u.A, { w2s: false });
+    const r = await opisUkrytego(u, [u.A, u.B], null);
+    expect(d.partia.map((e) => e.kind), 'kontrola: obie koperty snap P/v z B w jednej partii').toEqual(['snap', 'snap']);
+    expect(r.koniec.A, 'A: karta P wróciła z v, wpisu nie ma').toBe('Kosz brak; w karcie P 20 kg z gwiazdką; karta P jest');
+    expect(r.kolejki.A, 'kolejka A: bez koperty odsyłania').toEqual(['ptomb P']);
+    expect({ echo: S.stat.echo, zeStanu: S.stat.zeStanu }, 'koperty odsyłania i odesłania ze stanu').toEqual({ echo: 0, zeStanu: { koperty: 0, ponowne: 0, retencja: 0 } });
+  }, 60_000);
+  it('granica odsyłania w porównaniu partii: dwie koperty stomb v odsyłania sejfu przy partii z jednym ładunkiem z v — „odesłanie ponad granicę” przed porównaniem z modelem; koperta jawna katalogu p. 5 (bez odsyłania) się nie liczy', () => {
+    const S = { stat: {}, ziarno: null };
+    const Y = { nazwa: 'A' };
+    const jaw = { event: { kind: 'snap', key: 'P/v' }, patients: [{ patientId: 'P', snapshots: [{ snapshotId: 'v' }] }] };
+    const stomb = { event: { kind: 'stomb', key: 'v' } };
+    expect(() => porownajEcho(S, Y, [{ kind: 'snap', key: 'P/v', jaw }], [{}, {}], {}, [stomb, stomb]), 'jeden ładunek z v').toThrow(/^odesłanie ponad granicę: A stomb:v 2 > 1/);
+    expect(() => porownajEcho(S, Y, [{ kind: 'snap', key: 'P/v', jaw }, { kind: 'snap', key: 'P/v', k: jaw }], [{}, {}, {}], {}, [stomb, stomb]), 'drugi ładunek z v tylko jako koperta jawna katalogu').toThrow(/^odesłanie ponad granicę: A stomb:v 2 > 1/);
+    expect(HAKI_NIEZGODNE.splice(0).length, 'niezgodności zapisane dla afterEach (AB7)').toBe(2);
+  });
+});

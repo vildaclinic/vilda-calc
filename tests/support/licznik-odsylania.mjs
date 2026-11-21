@@ -92,12 +92,14 @@
 //   przełączniku nikt jej nie woła: podsumowanie ma pustą warstwę.
 //
 // MODEL ODSYŁANIA UKRYTEGO WPISU KOSZA KARTY USUNIĘTEJ (E3-PR0d2; ten sam przełącznik)
-//   modelStanu(przed, po, ladunek, { wygrywa }) → wiersze stomb, które sejf odsyła ze stanu po udanym zastosowaniu
-//   jednego zdarzenia (wpis odesłany, bo stan po scaleniu tego wymaga, choć scalanie niczego nie zapisało): ładunek
-//   z polem event niesie wersję S pod kartą P (patients[].snapshots[]); po scaleniu S nie ma pod żadną kartą; jest wpis
-//   Kosza tej wersji i S wygrywa z każdym jego elementem (wygrywa(e, S) = !Bkz_wygrywa(e, Bkz_zmiana(S), Bgw_stan(S,
-//   S.payload)) — JEDYNA część modelu z kodu wyciętego z sejfu: wygrywaZKodu, lista WYGRYWA_Z_SEJFU i STALE_WYGRYWA);
-//   karty żadnego elementu wpisu nie ma po scaleniu (element bez poprawnego patientId — jak „karta jest”); karta P
+//   modelStanu(przed, po, ladunek, { nagrobekWygrywa }) → wiersze stomb, które sejf odsyła ze stanu po udanym
+//   zastosowaniu jednego zdarzenia (wpis odesłany, bo stan po scaleniu tego wymaga, choć scalanie niczego nie zapisało):
+//   ładunek z polem event niesie wersję S pod kartą P (patients[].snapshots[]); po scaleniu S nie ma pod żadną kartą;
+//   jest wpis Kosza tej wersji i S wygrywa z każdym jego elementem: nagrobekWygrywa(e, S) = Bkz_wygrywa(e, Bkz_zmiana(S),
+//   Bgw_stan(S, S.payload)) — prawda, gdy element e wpisu wygrywa z S; S wygrywa z wpisem, gdy dla każdego elementu e
+//   !nagrobekWygrywa(e, S) (wyjątek rozstrzygnięcia — jak wygrywa S). To JEDYNA część modelu z kodu wyciętego z sejfu
+//   (wygrywaZKodu, lista WYGRYWA_Z_SEJFU i stała STALE_WYGRYWA wycięta przez stalaZKodu); karty żadnego elementu wpisu
+//   nie ma po scaleniu (element bez poprawnego patientId — jak „karta jest”); karta P
 //   przegrała tu z nagrobkiem pacjenta (karty nie ma, najpóźniejszy nagrobek P po scaleniu nie wcześniejszy niż
 //   lastSavedAtISO karty P z ładunku; brak zapisu — jak spełnione). Pozostałe warunki są tu napisane osobno (na
 //   eksportach). Jeden wiersz na wersję i zdarzenie; klasa KLASA_ZE_STANU, przydział E3-PR0d2, pole retencja (wpis
@@ -631,20 +633,25 @@ export const WYGRYWA_Z_SEJFU = Object.freeze(['Bm1', 'Bkz_pozniejsza', 'Bkz_chwi
   'Bkz_znanaZmiana', 'Bkz_wygrywa', 'Bpk_przypieta', 'Bgw_rej', 'Bgw_g', 'Bgw_stan', 'Bgw_kanon', 'Bgw_odcisk', 'Bgw_porownaj', 'Bgw_pozniejszy',
   'Bgw_zWpisu', 'Bpk_opis', 'Bpk_tr', 'Bpk_odcisk', 'Bgw_czKlucz', 'Bgw_czZTresci', 'Bpk_zWpisu', 'Bpk_revPary', 'mt']);
 export const STALE_WYGRYWA = Object.freeze(['Bgw_czPam']);
+// Tekst deklaracji stałej modułu n z tekstu sejfu (od „const” do pierwszego średnika; strażnik w teście licznika
+// porównuje go z deklaracją z drzewa składni) — jedno źródło wycinka stałych dla licznika i testów.
+export function stalaZKodu(src, n) {
+  const m = src.match(new RegExp(`\\n(const ${n} = [^;]*;)`));
+  if (!m) throw new Error(`licznik odsyłania: brak stałej ${n} w tekście sejfu`);
+  return m[1];
+}
 // Rozstrzygnięcie „nagrobek wygrywa z wersją S” z tekstu sejfu (src) i funkcji wycinającej (wytnij(src, nazwa) — tekst
-// deklaracji); moduł nie czyta plików. Wynik (e, S) → Bkz_wygrywa(e, Bkz_zmiana(S), Bgw_stan(S, S.payload)).
+// deklaracji); moduł nie czyta plików. Wynik (e, S) → Bkz_wygrywa(e, Bkz_zmiana(S), Bgw_stan(S, S.payload)) — prawda,
+// gdy element e wpisu Kosza wygrywa z wersją S.
 export function wygrywaZKodu(src, wytnij) {
-  const stale = STALE_WYGRYWA.map((n) => {
-    const m = src.match(new RegExp(`\\nconst ${n} = [^;]*;`));
-    if (!m) throw new Error(`licznik odsyłania: brak stałej ${n} w tekście sejfu`);
-    return m[0];
-  });
+  const stale = STALE_WYGRYWA.map((n) => stalaZKodu(src, n));
   const kod = `${stale.join('\n')}\n${WYGRYWA_Z_SEJFU.map((n) => wytnij(src, n)).join('\n')}\nreturn function (e, S) { return Bkz_wygrywa(e, Bkz_zmiana(S), Bgw_stan(S, S.payload)); };`;
   return new Function(kod)();
 }
 export const KLASA_ZE_STANU = 'ukryty wpis karty usuniętej, późniejsza wersja nie weszła';
-export function modelStanu(przed, po, ladunek, { wygrywa } = {}) {
-  if (!ladunek || !obiekt(ladunek.event) || typeof wygrywa !== 'function') return [];
+// nagrobekWygrywa(e, S) — z wygrywaZKodu; S wygrywa z wpisem, gdy z żadnym jego elementem nie przegrywa.
+export function modelStanu(przed, po, ladunek, { nagrobekWygrywa } = {}) {
+  if (!ladunek || !obiekt(ladunek.event) || typeof nagrobekWygrywa !== 'function') return [];
   const zywe = new Set();
   const karty = new Set();
   for (const p of (po && po.patients) || []) { karty.add(p.patientId); for (const q of p.snapshots || []) zywe.add(q.snapshotId); }
@@ -672,7 +679,7 @@ export function modelStanu(przed, po, ladunek, { wygrywa } = {}) {
       const b = wpisy.get(v) || [];
       if (!b.length) continue;
       let wygr;
-      try { wygr = b.every((e) => !wygrywa(e, S)); } catch { wygr = true; }
+      try { wygr = b.every((e) => !nagrobekWygrywa(e, S)); } catch { wygr = true; }
       if (!wygr || b.some(kartaJest)) continue;
       const n = nagrobki.get(p.patientId);
       const zapis = typeof p.lastSavedAtISO === 'string' ? p.lastSavedAtISO : '';

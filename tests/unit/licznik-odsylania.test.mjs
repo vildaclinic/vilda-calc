@@ -411,12 +411,13 @@ describe('licznik odsyłania: model odsyłania wpisów Kosza (E3-PR0d)', () => {
 });
 
 // E3-PR0d2: model odsyłania ukrytego wpisu Kosza karty usuniętej — wpis Kosza wersji, którą ładunek zdarzenia niósł pod
-// kartą P, zostaje po scaleniu, choć wersji nie ma pod żadną kartą; wersja wygrywa z każdym elementem wpisu
-// (rozstrzygnięcie z kodu wyciętego z sejfu, LO.wygrywaZKodu); karty żadnego elementu wpisu nie ma; karta P przegrała
+// kartą P, zostaje po scaleniu, choć wersji nie ma pod żadną kartą; wersja wygrywa z każdym elementem wpisu (z żadnym
+// nie przegrywa w rozstrzygnięciu „nagrobek wygrywa z wersją” z kodu wyciętego z sejfu, LO.wygrywaZKodu); karty żadnego
+// elementu wpisu nie ma; karta P przegrała
 // z nagrobkiem pacjenta. Granica liczona z kopert i ładunków partii, przypisanie kopert klucza najpierw do odsyłania
 // wpisów E3-PR0d.
 describe('licznik odsyłania: model odsyłania ukrytego wpisu Kosza karty usuniętej (E3-PR0d2)', () => {
-  const wygrywa = LO.wygrywaZKodu(readFileSync(path.join(repo, 'vilda_vault.js'), 'utf8'), wytnijFunkcje);
+  const nagrobekWygrywa = LO.wygrywaZKodu(readFileSync(path.join(repo, 'vilda_vault.js'), 'utf8'), wytnijFunkcje);
   const T_PO = '2026-03-02T11:00:00.000Z'; // później niż T2
   const zd = (kind, key, o) => ({ event: { kind, key, atISO: T2, dev: null }, ...lad(o) });
   const nagrobek = (pid, at = T2) => ({ patientId: pid, deletedAtISO: at });
@@ -424,18 +425,22 @@ describe('licznik odsyłania: model odsyłania ukrytego wpisu Kosza karty usuni�
   const ukryty = (o = {}) => lad({ snapshotTombstones: [wpis('P', 'v')], tombstones: [nagrobek('P')], ...o });
   // Koperta snap P/v z wersją zmienioną po Koszu (T2) pod kartą P zapisaną o T1.
   const snapV = (w = {}, k = {}) => zd('snap', 'P/v', { patients: [karta('P', [wersja('v', { updatedAtISO: T2, ...w })], k)] });
-  const model = (przed, po, P) => LO.modelStanu(przed, po, P, { wygrywa }).map((r) => [r.k, r.retencja]);
+  const model = (przed, po, P) => LO.modelStanu(przed, po, P, { nagrobekWygrywa }).map((r) => [r.k, r.retencja]);
   it('ukryty wpis i późniejsza wersja pod kartą P przegraną z nagrobkiem pacjenta → jeden wiersz stomb v (klasa ukrytego wpisu, przydział E3-PR0d2, bez retencji)', () => {
-    const l = LO.modelStanu(ukryty(), ukryty(), snapV(), { wygrywa });
+    const l = LO.modelStanu(ukryty(), ukryty(), snapV(), { nagrobekWygrywa });
     expect(l.map((r) => ({ k: r.k, kind: r.kind, rodzaj: r.rodzaj, key: r.key, pid: r.pid, wLadunku: r.wLadunku, klasa: r.klasa, przydzial: r.przydzial, zeStanu: r.zeStanu, retencja: r.retencja })))
       .toEqual([{ k: 'stomb:v', kind: 'stomb', rodzaj: 'stomb', key: 'v', pid: 'P', wLadunku: false, klasa: LO.KLASA_ZE_STANU, przydzial: 'E3-PR0d2', zeStanu: true, retencja: false }]);
     expect(LO.modelStanu(ukryty(), ukryty(), snapV(), {}), 'bez rozstrzygnięcia — pusto').toEqual([]);
   });
-  it('karta P żywa, wersja pod kartą po scaleniu, wersja nie późniejsza niż Kosz → pusto', () => {
+  it('karta P żywa, wersja pod kartą po scaleniu, wersja nie późniejsza niż Kosz, wpis z dwoma elementami — wersja wygrywa z jednym, z drugim (Kosz później) nie → pusto', () => {
     expect(model(ukryty(), lad({ patients: [karta('P', [wersja('w')])], snapshotTombstones: [wpis('P', 'v')], tombstones: [nagrobek('P', T0)] }), snapV()), 'karta P żywa').toEqual([]);
     expect(model(ukryty(), ukryty({ patients: [karta('Q', [wersja('v')])] }), snapV()), 'wersja pod kartą Q po scaleniu').toEqual([]);
     expect(model(ukryty(), ukryty(), snapV({ updatedAtISO: T1 })), 'wersja w chwili Kosza').toEqual([]);
     expect(model(ukryty(), ukryty(), snapV({ updatedAtISO: T0 })), 'wersja przed Koszem').toEqual([]);
+    for (const wpisy of [[wpis('P', 'v'), wpis('R', 'v', { deletedAtISO: T_PO })], [wpis('R', 'v', { deletedAtISO: T_PO }), wpis('P', 'v')]]) {
+      const dwa = ukryty({ snapshotTombstones: wpisy });
+      expect(model(dwa, dwa, snapV()), `dwa elementy (pierwszy pod ${wpisy[0].patientId}): z elementem pod P wersja wygrywa, z elementem pod R (Kosz później) nie`).toEqual([]);
+    }
   });
   it('wpis porządkowania: wersja nie późniejsza niż przycięcie bez gwiazdki → pusto; z gwiazdką → wiersz z retencją', () => {
     const ret = ukryty({ snapshotTombstones: [wpis('P', 'v', { powod: 'retencja' })] });
@@ -494,7 +499,7 @@ describe('licznik odsyłania: model odsyłania ukrytego wpisu Kosza karty usuni�
 // wyżej. Strażnik „wycięte = sejf”: domknięcie wywołań w bieżącym sejfie = lista licznika, jedyna zmienna modułu,
 // bez zegara, licznik bez własnych kopii tych funkcji, tekst wycinka = tekst deklaracji, wywołanie w bloku
 // P-DZIENNIK-ZDARZEN (część odsyłania) z tymi samymi argumentami co w modelu, próbki.
-describe('licznik odsyłania: rozstrzygnięcie „wersja wygrywa z wpisem” z kodu sejfu (wycięte = sejf)', () => {
+describe('licznik odsyłania: rozstrzygnięcie „nagrobek wygrywa z wersją” z kodu sejfu (wycięte = sejf)', () => {
   const src = readFileSync(path.join(repo, 'vilda_vault.js'), 'utf8');
   const drzewo = async () => {
     const { parse } = await import('acorn');
@@ -504,7 +509,9 @@ describe('licznik odsyłania: rozstrzygnięcie „wersja wygrywa z wpisem” z k
     const zI = sm.acquire(ast.body[0].expression.callee);
     const dekl = new Map();
     const ile = new Map();
+    const zmienneModulu = new Map();
     for (const z of zI.variables) for (const d of z.defs) {
+      if (d.type === 'Variable') { if (!zmienneModulu.has(z.name)) zmienneModulu.set(z.name, []); zmienneModulu.get(z.name).push(d.parent); }
       if (d.type !== 'FunctionName') continue;
       ile.set(z.name, (ile.get(z.name) || 0) + 1);
       if (!dekl.has(z.name)) dekl.set(z.name, d.node);
@@ -514,7 +521,7 @@ describe('licznik odsyłania: rozstrzygnięcie „wersja wygrywa z wpisem” z k
     const funkcje = new Set();
     const zmienne = new Set();
     while (q.length) { const n = q.shift(); if (funkcje.has(n) || !dekl.has(n)) continue; funkcje.add(n); for (const w of refs(dekl.get(n))) { if (dekl.has(w)) q.push(w); else zmienne.add(w); } }
-    return { ast, dekl, ile, funkcje, zmienne };
+    return { ast, dekl, ile, funkcje, zmienne, zmienneModulu };
   };
   // Zegar w ciele funkcji (jak B7 w tests/unit/sync-zdarzenia-buildery.test.mjs).
   const zegar = (node) => {
@@ -538,12 +545,17 @@ describe('licznik odsyłania: rozstrzygnięcie „wersja wygrywa z wpisem” z k
     const tekstLO = readFileSync(path.join(repo, 'tests/support/licznik-odsylania.mjs'), 'utf8');
     expect([...LO.WYGRYWA_Z_SEJFU, ...LO.STALE_WYGRYWA].filter((n) => new RegExp(`(?:function\\s+${n}\\s*\\(|(?:const|let|var)\\s+${n}\\s*=)`).test(tekstLO)), 'deklaracje w liczniku').toEqual([]);
   });
-  it('tekst wycinka = tekst deklaracji: dla każdej funkcji domknięcia jedna deklaracja, a wytnijFunkcje daje dokładnie jej tekst; stała Bgw_czPam zadeklarowana raz', async () => {
-    const { dekl, ile, funkcje } = await drzewo();
+  it('tekst wycinka = tekst deklaracji: dla każdej funkcji domknięcia jedna deklaracja, a wytnijFunkcje daje dokładnie jej tekst; stała Bgw_czPam zadeklarowana raz, a LO.stalaZKodu daje dokładnie tekst jej deklaracji z drzewa składni', async () => {
+    const { dekl, ile, funkcje, zmienneModulu } = await drzewo();
     const zle = [...funkcje].filter((n) => ile.get(n) !== 1 || wytnijFunkcje(src, n) !== src.slice(dekl.get(n).start, dekl.get(n).end));
     expect(zle, 'funkcje z wieloma deklaracjami albo wycinkiem innym niż deklaracja').toEqual([]);
     expect(funkcje.size, 'kontrola: domknięcie niepuste').toBe(LO.WYGRYWA_Z_SEJFU.length);
-    for (const n of LO.STALE_WYGRYWA) expect((src.match(new RegExp(`\\nconst ${n} = `, 'g')) || []).length, `deklaracje stałej ${n}`).toBe(1);
+    for (const n of LO.STALE_WYGRYWA) {
+      expect((src.match(new RegExp(`\\nconst ${n} = `, 'g')) || []).length, `deklaracje stałej ${n} (tekst)`).toBe(1);
+      const d = zmienneModulu.get(n) || [];
+      expect(d.map((x) => [x.kind, x.declarations.length]), `deklaracje stałej ${n} w zasięgu modułu`).toEqual([['const', 1]]);
+      expect(LO.stalaZKodu(src, n), `wycinek stałej ${n} = deklaracja`).toBe(src.slice(d[0].start, d[0].end));
+    }
   });
   it('w bloku P-DZIENNIK-ZDARZEN dokładnie jedno wywołanie Bkz_wygrywa — w Bev_wstepUkrytych, z drugim argumentem Bkz_zmiana(X) i trzecim Bgw_stan(X, X.payload) dla tego samego X', async () => {
     const { ast } = await drzewo();
