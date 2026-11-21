@@ -316,4 +316,36 @@
       circumferenceAction('chest', 'generateChestCircChart', 'Siatka obwodu klatki PDF'),
     ] : [],
   });
+
+  function readDownSyndrome() {
+    const api = w.VildaDownSyndrome;
+    const ageYears = api.readAgeYears();
+    if (ageYears > 20 || !byId('headCircumDS')) return null;
+    return {
+      age: Number.isFinite(ageYears) ? ageYears : null,
+      sex: api.readSex(),
+      pro: w.__ds_isPro(),
+      headDs: value('headCircumDS'),
+    };
+  }
+  function renderDownSyndrome(draft, { document: doc }) {
+    const api = w.VildaDownSyndrome;
+    const root = element(doc, 'div', 'vhome-tool-anthropometry');
+    root.appendChild(resultBox(doc, api.buildResultsHtml(), 'down-syndrome'));
+    const head = api.buildHeadCircResult({
+      value: draft.headDs, age: draft.age ?? NaN, sex: draft.sex, pro: draft.pro,
+    });
+    if (head) root.appendChild(resultBox(doc, head, 'down-syndrome-head'));
+    return root;
+  }
+  const ds = w.VildaDownSyndrome;
+  if (ds?.buildResultsHtml && ds.buildHeadCircResult && ds.readAgeYears && ds.readSex && w.__ds_isPro) {
+    tools.register('down-syndrome', {
+      read: readDownSyndrome,
+      fields: [numberField('headDs', 'Obwód głowy · cm', 25, 60)],
+      render: renderDownSyndrome,
+      apply: (draft, isCurrent) => applyValues([['headCircumDS', draft.headDs]], isCurrent),
+      actions: () => [nativeAction('generateDsCentileChart', 'Generuj siatkę DS')],
+    });
+  }
 })(window);

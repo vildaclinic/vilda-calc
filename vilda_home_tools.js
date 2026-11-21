@@ -14,16 +14,20 @@
     ['food', 'Energia posiłków', 'Wiele produktów, wielkość porcji i łączna energia.', ['foodSection'], 'food'],
     ['intake', 'Szacowane spożycie energii', 'Historia pomiarów, analizowany okres i bilans energii.', ['intakeSection'], 'chart'],
   ];
+  const downSyndrome = ['down-syndrome', 'Obliczenia dla dzieci z zespołem Downa'];
   const iconPaths = {
     chart: 'M4 3v17h17M7 15l4-5 4 2 5-7',
     patient: 'M16 7a4 4 0 1 0-8 0 4 4 0 0 0 8 0M4 21v-2a8 8 0 0 1 16 0v2',
     food: 'M7 3v7m-3-7v5a3 3 0 0 0 6 0V3M7 11v10M19 3c-4 4-4 8 0 9v9m0-18v9',
   };
   const adapters = new Map();
-  let dialog, grid, trigger, chartButton, active, resizeParent, frame = 0;
+  let dialog, grid, trigger, chartButton, downShortcut, active, resizeParent, frame = 0;
+  let legacyReminder, summaryReminder;
   const byId = id => d.getElementById(id);
   const serialize = value => JSON.stringify(value);
   const detach = value => JSON.parse(serialize(value));
+  function entryFor(id) { return id === downSyndrome[0] ? downSyndrome : catalogue.find(entry => entry[0] === id); }
+  function doctorResults() { return d.documentElement.classList.contains('vhome-doctor-results'); }
   function element(doc, tag, className, text) {
     const node = doc.createElement(tag);
     if (className) node.className = className;
@@ -284,13 +288,13 @@
     });
   }
   function open(id, opener) {
-    if (active || !adapters.has(id)) return false;
+    if (!dialog || active || !adapters.has(id)) return false;
     try {
       const scope = owner();
       const adapter = adapters.get(id);
       const original = scope && adapter.read();
       if (!original) return false;
-      const title = catalogue.find(entry => entry[0] === id)[1];
+      const title = entryFor(id)[1];
       const item = active = { owner: scope, adapter, opener, values: detach(original), original: serialize(original) };
       byId('vhomeToolDialogTitle').textContent = title;
       dialog.querySelector('.vhome-dialog-close').setAttribute('aria-label', 'Zamknij ' + title.toLowerCase());
@@ -305,6 +309,13 @@
       dialog.querySelector('.vhome-dialog-close').focus({ preventScroll: true });
       return true;
     } catch (_) { close(true); return false; }
+  }
+  function canOpenDownSyndrome() {
+    try { return !!(dialog && doctorResults() && ready() && adapters.get(downSyndrome[0])?.read()); }
+    catch (_) { return false; }
+  }
+  function openDownSyndrome(opener) {
+    return canOpenDownSyndrome() && open(downSyndrome[0], opener);
   }
   function refresh() {
     frame = 0;
@@ -325,9 +336,20 @@
       state.dataset.state = hasData ? 'saved' : 'empty';
     });
     if (chartButton) chartButton.disabled = !w.VildaHomeGrowth?.canOpenCharts?.('pdf');
+    const growth = byId('vhomeGrowthCard');
+    downShortcut.hidden = !!(growth && !growth.hidden) || !canOpenDownSyndrome();
+    if (summaryReminder) {
+      const content = doctorResults() && legacyReminder.style.display !== 'none' ? legacyReminder.textContent : '';
+      summaryReminder.hidden = !content;
+      if (summaryReminder.textContent !== content) summaryReminder.textContent = content;
+    }
   }
   function schedule() { if (!frame) frame = w.requestAnimationFrame(refresh); }
   function hideNative(entry) {
+    if (entry === downSyndrome) {
+      byId('downSyndromeSection')?.classList.add('vhome-replaced-result');
+      return;
+    }
     entry[3].forEach(id => byId(id)?.classList.add('vhome-tool-original'));
   }
   function start() {
@@ -361,7 +383,12 @@
       trigger.setAttribute('aria-expanded', String(!content.hidden));
       if (!content.hidden) refresh();
     });
-    content.append(intro, grid);
+    downShortcut = element(d, 'button', 'vhome-generate-charts vhome-down-shortcut', downSyndrome[1]);
+    downShortcut.type = 'button'; downShortcut.hidden = true;
+    downShortcut.setAttribute('aria-haspopup', 'dialog');
+    downShortcut.setAttribute('data-home-down-syndrome', '');
+    downShortcut.addEventListener('click', () => openDownSyndrome(downShortcut));
+    content.append(intro, grid, downShortcut);
     host.append(trigger, content); cards.after(host);
     dialog = w.VildaHomeWorkspace.createDialog({ id: 'vhomeToolDialog', titleId: 'vhomeToolDialogTitle',
       title: 'Dane pomiaru', applyLabel: 'Zastosuj dane', onClose: () => close(false), onApply: apply });
@@ -372,7 +399,26 @@
       chartButton.id = 'vhomeGenerateCharts'; chartButton.type = 'button';
       chartButton.addEventListener('click', () => w.VildaHomeGrowth.openCharts({ mode: 'pdf', opener: chartButton }));
       summary.after(chartButton);
+      byId('bmiCard')?.classList.add('vhome-replaced-result');
+      legacyReminder = byId('wflReminderBMI');
+      if (legacyReminder) {
+        summaryReminder = element(d, 'div', 'wfl-reminder vhome-summary-reminder');
+        summaryReminder.hidden = true;
+        summary.after(summaryReminder);
+        new w.MutationObserver(schedule).observe(legacyReminder, { attributes: true, attributeFilter: ['style'], childList: true });
+      }
     }
+    const growth = byId('vhomeGrowthCard');
+    if (growth) {
+      byId('growthCalculationsSection')?.classList.add('vhome-replaced-result');
+      new w.MutationObserver(schedule).observe(growth, { attributes: true, attributeFilter: ['hidden'] });
+    }
+    if (adapters.has(downSyndrome[0])) hideNative(downSyndrome);
+    byId('toggleDownSyndrome')?.addEventListener('click', event => {
+      if (!doctorResults() || !adapters.has(downSyndrome[0])) return;
+      event.preventDefault(); event.stopImmediatePropagation();
+      openDownSyndrome(trigger);
+    }, true);
     ['input', 'change', 'vilda:data-applied', 'vilda:load-choice-applied', 'vilda:user-state-cleared', 'vilda:patient-loaded',
       'vilda:main-session-restored', 'vilda:auth-boot-settled', 'vildaProAccessChanged', 'vilda:professional-summary-updated']
       .forEach(name => d.addEventListener(name, schedule));
@@ -392,8 +438,8 @@
     w.VildaVault?.onLock?.(() => { close(true); schedule(); });
     refresh();
   }
-  w.VildaHomeTools = Object.freeze({ register(id, adapter) {
-    const entry = catalogue.find(module => module[0] === id);
+  w.VildaHomeTools = Object.freeze({ openDownSyndrome, canOpenDownSyndrome, register(id, adapter) {
+    const entry = entryFor(id);
     if (!entry || adapters.has(id)) return;
     adapters.set(id, adapter);
     if (grid) { hideNative(entry); schedule(); }

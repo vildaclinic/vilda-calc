@@ -1576,8 +1576,8 @@
   "sha256": "b0e200f45ae28d4bf016b2e8a1d3de3a58b3d0f6da5b6beea6c88297c0b6af33"
  },
  "vilda_home_growth.js": {
-  "v": 6,
-  "sha256": "14c81da199fee8314106136e1fdaa0414165f60f5eb49610638dc9b42a8c99d3"
+  "v": 7,
+  "sha256": "1aa781a6abb1f28341fa60db649a2c69344c5af6d31192f7faae2ac630d0d1f1"
  },
  "vilda_home_growth_charts.js": {
   "v": 2,
@@ -1640,16 +1640,16 @@
   "sha256": "c6f959850773f3296475d2cc1688b6fdd3088805a6f29c67afe014c147c0d33d"
  },
  "vilda_home_tools.css": {
-  "v": 1,
-  "sha256": "cbe75132e02eaf602450956e1b01692f4e7b341f2e15836e46ad5a0aceb3fc71"
+  "v": 2,
+  "sha256": "157b71952e6fb445cd874a07694fe6311766229d08dfab2f03be2440eeccf850"
  },
  "vilda_home_tools.js": {
-  "v": 1,
-  "sha256": "628926e70aee4f7b6a2b3fdc0ec8e0d7d120a096a29471119b238fce12a38a7a"
+  "v": 2,
+  "sha256": "0f17153d0c9f2472bf89670da14978d5565d06688d4a60a6c07c57dd4b159c47"
  },
  "vilda_home_tools_anthropometry.js": {
-  "v": 1,
-  "sha256": "954d5ee8bdfa15743c111efb5cd21455e71cb04a9cdcba19077757730f1b5c21"
+  "v": 2,
+  "sha256": "ba67784374464de40194a06dac7c462d073801c9ac983eaf099aee0210198421"
  },
  "vilda_home_tools_intake.js": {
   "v": 1,

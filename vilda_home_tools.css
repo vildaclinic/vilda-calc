@@ -63,7 +63,9 @@ html.vilda-home-workspace .vhome-other-tools .vhome-tools-toggle {
   gap: var(--space-14px);
 }
 .vilda-home-workspace .vhome-tools-content[hidden],
-.vilda-home-workspace .vhome-tool-original { display: none !important; }
+.vilda-home-workspace .vhome-tool-original,
+.vilda-home-workspace.vhome-doctor-results .vhome-replaced-result,
+.vilda-home-workspace :is(.vhome-summary-reminder, .vhome-down-shortcut)[hidden] { display: none !important; }
 html.vilda-home-workspace .vhome-other-tools .vhome-tool-tile {
   display: grid;
   grid-template-columns: var(--vhome-tool-icon-size) minmax(0, 1fr);
