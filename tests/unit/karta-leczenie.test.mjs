@@ -18,6 +18,9 @@ import { loadBrowserScript } from '../support/load-browser-script.mjs';
 // P-KARTA-LECZENIE, etap 2 (makieta hybrydy 2026-11-19, „zaczynaj etap 2” 2026-11-21): grupa otyłości jako jedna karta
 // leczenia z przełącznikiem „Przegląd | Wpisy (N) | Analiza” (Ko_karta) — kafelki i linia oceny z obiektów wyjściowych
 // Cl/Ml (te same obliczenia co panel), sekcja „Wpisy leczenia” z prawdziwego vilda_cykle_leczenia.js w układzie „karta”.
+// P-KARTA-LECZENIE, etap 3 (makieta hybrydy 2026-11-19, „Etap 3, karta leczenia GH” 2026-11-21): grupa GH jako jedna karta
+// leczenia GH z przełącznikiem „Przegląd | Trend dawki | Analiza” (Kg_karta) — kafelki z obiektów wyjściowych wl/kl (te
+// same obliczenia co pola podsumowania i kafelki panelu), trend dawki z prawdziwego Pl w trybie karty.
 
 const korzen = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const AUTH = fs.readFileSync(path.join(korzen, 'vilda_auth_ui.js'), 'utf8');
@@ -68,7 +71,8 @@ const bledy = [];
 function karta(opcje) {
   return new Function('i', 'jt', 'Ot', 'oe', `${KOD}\nreturn { Kl_leczenie, Kl_zakladka, Kl_kolejnosc, Kl_daneOb, Kl_daneGh, wl, kl, Pl,
     Gw_pasy: typeof Gw_pasy == 'function' ? Gw_pasy : null,
-    Ko_pierwszeZdanie: typeof Ko_pierwszeZdanie == 'function' ? Ko_pierwszeZdanie : null, Ko_CZESTOSC: typeof Ko_CZESTOSC == 'object' ? Ko_CZESTOSC : null };`)(
+    Ko_pierwszeZdanie: typeof Ko_pierwszeZdanie == 'function' ? Ko_pierwszeZdanie : null, Ko_CZESTOSC: typeof Ko_CZESTOSC == 'object' ? Ko_CZESTOSC : null,
+    Kg: typeof Kg_karta == 'function' ? { Kg_punktyTrendu, Kg_maTrend, Kg_opcjeKarty, Kg_dawkaCz, Gwl_inc } : null };`)(
     okno(opcje), () => null, (gdzie, blad) => bledy.push(`${gdzie}: ${blad && blad.message}`),
     (t) => { if (!t) return; while (t.firstChild) t.removeChild(t.firstChild); });
 }
@@ -81,12 +85,12 @@ afterAll(() => { delete globalThis.calcPercentileStats; });
 
 const tekst = (el) => (el ? el.textContent : null);
 /** Karta z rekordu (migawka) i notatek; null — brak zakładki. */
-function zbuduj(rekord, notatki = [], opcje) {
-  const K = karta(opcje);
+function zbuduj(rekord, notatki = [], opcje, opcjeKarty = {}) {
+  const K = (opcje && opcje.K) || karta(opcje);
   bledy.length = 0;
   const r = K.Kl_leczenie({
     patientId: 'pacjent-fikcyjny', rekord, plec: rekord.plec || 'F', zaawansowane: {}, siatka: null, notatki,
-    user: {}, zakladka: '<span class="vilda-patient-tab-lbl">Leczenie</span>',
+    user: {}, zakladka: '<span class="vilda-patient-tab-lbl">Leczenie</span>', ...opcjeKarty,
   });
   expect(bledy, 'Karta nie zgłasza błędów rysunku').toEqual([]);
   if (!r) return null;
@@ -111,7 +115,7 @@ function zbuduj(rekord, notatki = [], opcje) {
     return { v: tekst(t.querySelector('.vilda-gha-v')), sub: tekst(t.querySelector('.vilda-gha-sub')) };
   };
   return {
-    r, paski, pole, kafel, karta: kartaOtylosci(r.tresc),
+    r, paski, pole, kafel, karta: kartaOtylosci(r.tresc), gh: kartaGh(r.tresc),
     tytul: tekst(r.tresc.querySelector('.vilda-oba-vt')),
     bloki: r.tresc.children.map((c) => c.className),
   };
@@ -135,6 +139,32 @@ function kartaOtylosci(korzen) {
     })),
     linia: tekst(el.querySelector('.vilda-ko-werdykt')),
     liniaKlasa: (el.querySelector('.vilda-ko-werdykt') || { className: null }).className,
+    cicha: tekst(el.querySelector('.vilda-ko-cicha')),
+  };
+}
+
+/** P-KARTA-LECZENIE, etap 3: karta leczenia GH — nagłówek, przełącznik, widoki, kafelki „Przeglądu” i cicha linia. */
+function kartaGh(korzen) {
+  const el = korzen.querySelector('.vilda-kg-karta');
+  if (!el) return null;
+  const zakladki = el.querySelectorAll('.vilda-kg-seg button');
+  const widok = (id) => el.querySelector(`.vilda-kg-widok--${id}`);
+  const seg = el.querySelector('.vilda-kg-seg');
+  return {
+    el, zakladki, widok,
+    przelacznik: zakladki.map(tekst),
+    wybrany: (zakladki.find((b) => b.getAttribute('aria-selected') === 'true') || { getAttribute: () => null }).getAttribute('data-widok'),
+    widoczne: el.querySelectorAll('.vilda-kg-widok').filter((w) => !w.hidden).map((w) => w.className.replace('vilda-kg-widok vilda-kg-widok--', '')),
+    naglowek: el.children[0].children.map((c) => c.className),
+    znaczniki: el.children[0].querySelectorAll('.vilda-gh-summary-chip').map(tekst),
+    cichy: tekst(el.querySelector('.vilda-kg-cichy')),
+    dymek: (el.querySelector('.vilda-kg-program') || { getAttribute: () => null }).getAttribute('title'),
+    // bloki między nagłówkiem a przełącznikiem („Preparaty (historia)”, ramka P-GH-BEZ-STARTU / W2) — w każdym widoku
+    nad: el.children.slice(1, el.children.indexOf(seg)).map(tekst),
+    kafelki: el.querySelectorAll('.vilda-ko-kafel').map((t) => ({
+      k: tekst(t.querySelector('.vilda-ko-k')), v: tekst(t.querySelector('.vilda-ko-v')), sub: tekst(t.querySelector('.vilda-ko-sub')),
+      kolor: (/vilda-kg-kafel--(\w+)/.exec(t.className) || [])[1] || null,
+    })),
     cicha: tekst(el.querySelector('.vilda-ko-cicha')),
   };
 }
@@ -181,13 +211,16 @@ describe('P-KARTA-LECZENIE — warunek zakładki (A.2)', () => {
     expect(zbuduj({ ghTherapyPoints: [], obesityTherapyPoints: [] }, [{ patientId: 'pacjent-fikcyjny', title: 'Notatka', body: 'bez leku' }])).toBeNull();
   });
 
-  it('punkty GH → zakładka „Leczenie” (data-tab="leczenie") z podsumowaniem i „Dane analityczne” GH', () => {
+  // Etap 3: podsumowanie i „Dane analityczne” GH są JEDNĄ kartą leczenia GH z widokiem „Analiza” (dotąd belka
+  // „📊 Dane analityczne” — .vilda-gha-btn). Zmiana zamierzona.
+  it('punkty GH → zakładka „Leczenie” (data-tab="leczenie") z kartą leczenia GH (podsumowanie) i „Dane analityczne” w „Analizie”', () => {
     const k = zbuduj({ plec: 'M', ghTherapyPoints: G1 });
     expect(k.r.zakladka.getAttribute('data-tab')).toBe('leczenie');
     expect(k.r.tresc.getAttribute('data-tab')).toBe('leczenie');
     expect(k.r.tresc.className).toContain('vilda-patient-tab-content--hidden'); // domyślnie „Status”
     expect(k.r.tresc.querySelectorAll('.vilda-gh-summary')).toHaveLength(1);
-    expect(k.r.tresc.querySelectorAll('.vilda-gha-btn')).toHaveLength(1);
+    expect(k.gh.widok('analiza').querySelectorAll('.vilda-gha-panel')).toHaveLength(1);
+    expect(k.r.tresc.querySelectorAll('.vilda-gha-btn')).toHaveLength(0);
   });
 
   // Etap 2: podsumowanie, „Wpisy leczenia” i „Dane analityczne — otyłość” są widokami JEDNEJ karty leczenia
@@ -305,7 +338,8 @@ describe('P-KARTA-LECZENIE — wartości paska GH z tego samego rysunku co bloki
       id: 'gh', nazwa: 'Leczony hormonem wzrostu (rhGH): otwórz zakładkę Leczenie', odznaka: 'Leczony hormonem wzrostu (rhGH)', stan: 'aktywne',
       czesci: ['0,033 mg/kg/d', '36 mies.', 'tempo 6,9 cm/rok', 'ΔhSDS +0,80'], pigulka: null,
     }));
-    expect(k.pole('Aktualna dawka')).toBe('0,033 mg/kg/d');
+    // etap 3: „Aktualna dawka” (dotąd pole podsumowania) — kafelek „Preparat i dawka” karty GH (liczba i jednostka)
+    expect(k.gh.kafelki[0].v).toBe('0,033 mg/kg/d');
     expect(k.kafel('Przyrost całkowity').sub).toBe('przez 36 mies.');
     expect(k.kafel('Tempo wzrastania').v).toBe('6,9 cm/rok');
     expect(k.kafel('Odpowiedź (ΔhSDS)').v).toBe('+0,80');
@@ -329,7 +363,9 @@ describe('P-KARTA-LECZENIE — wartości paska GH z tego samego rysunku co bloki
     const k = zbuduj({ plec: 'M', ghTherapyPoints: G_INCRELEX });
     expect(k.paski[0].odznaka).toBe('Leczony IGF-1 (mekasermina)');
     expect(k.paski[0].czesci[0]).toBe('2 × 2,4 mg na dobę (0,12 mg/kg na podanie)');
-    expect(k.pole('Aktualna dawka')).toBe(k.paski[0].czesci[0]);
+    // etap 3: pole „Aktualna dawka” → kafelek „Preparat i dawka”: „2 × 2,4 mg” + „na dobę”, podpis „0,12 mg/kg na podanie · …”
+    const d = k.gh.kafelki[0];
+    expect(`${d.v} (${d.sub.split(' · ')[0]})`).toBe(k.paski[0].czesci[0]);
   });
 
   it('GH zakończone: wartości z podsumowania i panelu (stan na koniec), stan „leczenie zakończone”, bez pigułki', () => {
@@ -446,7 +482,8 @@ const GR2 = [GHP('r2-w', 'start', 7, 0, 18, 110, 0.025), GHP('r2-z', 'end', 9, 0
 const GR3 = [GHP('r3-w', 'start', 7, 0, 18, 110, 0.025), GHP('r3-k', 'continue', 8, 0, 21, 117, 0.028), GHP('r3-z', 'end', 9, 0, 24, 123, 0.03)];
 const GR_PROGRAM = (p1, p2) => GR1.map((p, j) => ({ ...p, program: j < 3 ? p1 : p2 }));
 const znaczniki = (k) => k.r.tresc.querySelector('.vilda-gh-summary-head').querySelectorAll('.vilda-gh-summary-chip').map(tekst);
-const informacje = (k) => k.r.tresc.querySelector('.vilda-gh-summary').children.slice(2).map(tekst);
+// Etap 3: informacje pod nagłówkiem karty GH, nad przełącznikiem (dotąd: pod siatką pól podsumowania — children.slice(2)).
+const informacje = (k) => (k.gh ? k.gh.nad : k.r.tresc.querySelector('.vilda-gh-summary').children.slice(2).map(tekst));
 /** Drzewo DOM jako napis (tag, klasa, atrybuty, tekst) — do porównania dwóch rysunków. */
 const drzewo = (el) => (!el ? 'null' : `<${el.tagName}.${el.className}[${[...el.atrybuty.entries()].sort().join(';')}]${el.wlasnyTekst}${el.children.map(drzewo).join('')}>`);
 const sciezkaDawki = (el) => el.querySelectorAll('path').map((p) => p.getAttribute('d'));
@@ -455,8 +492,12 @@ describe('P-GH-WZNOWIENIE — podsumowanie i „Dane analityczne” GH od bież�
   it('GR1 wznowienie: „aktywne”, „kurs 2 z 2”, Włączenie 10 l., „2 w kursie (5 łącznie)”, wartości od Włączenia kursu 2', () => {
     const k = zbuduj({ plec: 'M', ghTherapyPoints: GR1 });
     expect(znaczniki(k)).toEqual(['aktywne', 'kurs 2 z 2']);
-    expect(['Program', 'Preparat', 'Włączenie', 'Aktualna dawka', 'Punkty kontrolne', 'Ostatnia kontrola'].map(k.pole))
-      .toEqual(['SNP', 'Genotropin 12 mg', 'w wieku 10 l. 0 mies.', '0,033 mg/kg/d', '2 w kursie (5 łącznie)', 'w wieku 11 l. 0 mies.']);
+    // etap 3: pola podsumowania (Program, Preparat, Włączenie, Aktualna dawka, Punkty kontrolne, Ostatnia kontrola) →
+    // cichy tekst nagłówka, kafelki „Przeglądu” i cicha linia „Analizy” — te same wartości
+    expect(k.gh.cichy).toBe('Program SNP · 2 punkty kontrolne w kursie (5 łącznie)');
+    expect(k.gh.kafelki[0]).toEqual(expect.objectContaining({ v: '0,033 mg/kg/d', sub: 'Genotropin 12 mg' }));
+    expect(k.gh.kafelki[1]).toEqual(expect.objectContaining({ k: 'Czas leczenia', sub: 'od 10 l. 0 mies.' }));
+    expect(k.gh.cicha).toBe('SNP — somatotropinowa niedoczynność przysadki · Genotropin 12 mg · ostatnia kontrola w wieku 11 l. 0 mies.');
     expect(informacje(k)).toEqual([]);
     expect(tekst(k.r.tresc.querySelector('.vilda-gha-sec'))).toBe('Wzrastanie — kurs 2 z 2A');
     expect(k.kafel('Wzrost przy włączeniu')).toEqual({ v: '130 cm', sub: 'hSDS −1,27 · 10 l. 0 mies.' });
@@ -487,8 +528,9 @@ describe('P-GH-WZNOWIENIE — podsumowanie i „Dane analityczne” GH od bież�
   it('GR2 (W2): Kontynuacja po Zakończeniu bez Włączenia — „aktywne”, bez czasu, przyrostu i ΔhSDS, prośba o dopisanie Włączenia w DocPro', () => {
     const k = zbuduj({ plec: 'M', ghTherapyPoints: GR2 });
     expect(znaczniki(k)).toEqual(['aktywne', 'kurs 2 z 2']);
-    expect(k.pole('Włączenie')).toBe('brak punktu');
-    expect(k.pole('Punkty kontrolne')).toBe('1 w kursie (3 łącznie)');
+    // etap 3: „Włączenie: brak punktu” → kafelek „Czas leczenia” „—” z „brak Włączenia po Zakończeniu”; punkty → nagłówek
+    expect(k.gh.kafelki[1]).toEqual({ k: 'Czas leczenia', v: '—', sub: 'brak Włączenia po Zakończeniu', kolor: null });
+    expect(k.gh.cichy).toBe('Program SNP · 1 punkt kontrolny w kursie (3 łącznie)');
     expect(informacje(k)).toEqual(['Kontynuacja po Zakończeniu bez nowego Włączenia (Zakończenie w wieku 9 l. 0 mies., pierwszy punkt '
       + 'kursu: w wieku 10 l. 0 mies.). Dopisz punkt „Włączenie leczenia” w DocPro (monitor terapii), by liczyć czas leczenia, '
       + 'przyrost i ΔhSDS od wznowienia.']);
@@ -503,13 +545,13 @@ describe('P-GH-WZNOWIENIE — podsumowanie i „Dane analityczne” GH od bież�
   it('GW5: stary zapis W2 + Włączenie z DocPro (10 l. 0 mies. albo 9 l. 6 mies.) — kurs 2 z Włączeniem, czas i ΔhSDS wracają, bez ramki W2', () => {
     const w10 = zbuduj({ plec: 'M', ghTherapyPoints: [...GR2, GHP('gw5-w', 'start', 10, 0, 27, 130, 0.03)] });
     expect(znaczniki(w10)).toEqual(['aktywne', 'kurs 2 z 2']);
-    expect(w10.pole('Włączenie')).toBe('w wieku 10 l. 0 mies.');
-    expect(w10.pole('Punkty kontrolne')).toBe('2 w kursie (4 łącznie)');
+    expect(w10.gh.kafelki[1].sub).toBe('od 10 l. 0 mies.'); // etap 3: dotąd pole „Włączenie: w wieku 10 l. 0 mies.”
+    expect(w10.gh.cichy).toBe('Program SNP · 2 punkty kontrolne w kursie (4 łącznie)'); // dotąd „Punkty kontrolne: 2 w kursie (4 łącznie)”
     expect(informacje(w10)).toEqual([]);
     expect(w10.kafel('Wzrost przy włączeniu')).toEqual({ v: '130 cm', sub: 'hSDS −1,27 · 10 l. 0 mies.' });
     expect(w10.kafel('Przyrost od Włączenia')).toBeNull();
     const w96 = zbuduj({ plec: 'M', ghTherapyPoints: [...GR2, GHP('gw5-w', 'start', 9, 6, 26, 127, 0.03), GHP('gw5-k', 'continue', 11, 0, 30, 137, 0.033)] });
-    expect(w96.pole('Włączenie')).toBe('w wieku 9 l. 6 mies.');
+    expect(w96.gh.kafelki[1].sub).toBe('od 9 l. 6 mies.');
     expect(informacje(w96)).toEqual([]);
     expect(w96.kafel('Przyrost całkowity')).toEqual({ v: '+10,0 cm', sub: 'przez 18 mies.' });
     expect(w96.kafel('Odpowiedź (ΔhSDS)').v).not.toBe('—');
@@ -526,7 +568,7 @@ describe('P-GH-WZNOWIENIE — podsumowanie i „Dane analityczne” GH od bież�
   it('GR3 / GR6: jeden kurs (W → K → Z, bez startu, krótki odstęp, Increlex) — rysunek identyczny jak bez modułu kursów', () => {
     const k = zbuduj({ plec: 'M', ghTherapyPoints: GR3 });
     expect(znaczniki(k)).toEqual(['leczenie zakończone']);
-    expect(k.pole('Punkty kontrolne')).toBe('3');
+    expect(k.gh.cichy).toBe('Program SNP · 3 punkty kontrolne'); // etap 3: dotąd pole „Punkty kontrolne: 3”
     expect(k.paski[0]).toEqual(expect.objectContaining({ stan: 'leczenie zakończone', czesci: ['0,03 mg/kg/d', '24 mies.', 'tempo 6 cm/rok', 'ΔhSDS +0,18'] }));
     for (const pts of [GR3, GR3.slice().reverse(), G1, G_BEZ_STARTU, G_KROTKI, G_INCRELEX, G_ZAKONCZONE]) {
       const z = zbuduj({ plec: 'M', ghTherapyPoints: pts });
@@ -542,7 +584,7 @@ describe('P-GH-WZNOWIENIE — podsumowanie i „Dane analityczne” GH od bież�
     const k = zbuduj({ plec: 'M', ghTherapyPoints: pts });
     expect(znaczniki(k)).toEqual(['aktywne']);
     // dotąd pierwsze Włączenie w kolejności tablicy: 7 l. 6 mies. i 30 mies.
-    expect(k.pole('Włączenie')).toBe('w wieku 7 l. 0 mies.');
+    expect(k.gh.kafelki[1].sub).toBe('od 7 l. 0 mies.'); // etap 3: dotąd pole „Włączenie: w wieku 7 l. 0 mies.”
     expect(k.kafel('Przyrost całkowity').sub).toBe('przez 36 mies.');
   });
 });
@@ -943,10 +985,12 @@ describe('P-KARTA-LECZENIE, etap 2 — stan widoku i przebudowa grupy', () => {
     expect(k.karta.kafelki[1].v).toBe(k.paski[0].czesci[1]);
   });
 
-  it('GH i karta „wg notatek” — bez karty z przełącznikiem (bez zmian)', () => {
+  // Etap 3: GH ma własną kartę leczenia (.vilda-kg-karta, przełącznik .vilda-kg-seg) — nie kartę otyłości (.vilda-ko-*).
+  it('GH — bez karty otyłości (własna karta leczenia GH, etap 3); karta „wg notatek” — bez karty z przełącznikiem (bez zmian)', () => {
     const gh = zbuduj({ plec: 'M', ghTherapyPoints: G1 });
     expect(gh.karta).toBeNull();
     expect(gh.r.tresc.querySelectorAll('.vilda-ko-seg')).toHaveLength(0);
+    expect(gh.gh).not.toBeNull();
     const wg = zbuduj({}, [{ patientId: 'pacjent-fikcyjny', clinicalDateISO: '2026-05-01', medication: { name: 'Wegovy', dose: '0,5 mg', action: 'start' } }]);
     expect(wg.karta).toBeNull();
     expect(wg.r.tresc.querySelectorAll('.vilda-gh-summary-grid')).toHaveLength(1);
@@ -1022,5 +1066,379 @@ describe('P-KARTA-LECZENIE, etap 2 — poprawki po przeglądzie', () => {
     const dorosly = zbuduj({ obesityTherapyPoints: [...A_SAX, OB('s-k2', 'continue', '2026-06-09', 40, 6, 96, null, '3,0 mg', SAXENDA)] });
     expect(dorosly.karta.kafelki[3]).toEqual(expect.objectContaining({ k: 'BMI', v: '—', sub: null }));
     expect(dorosly.karta.kafelki[2].sub).toContain('próg ChPL ≥5%');
+  });
+});
+
+// ── P-KARTA-LECZENIE, etap 3 (makieta hybrydy 2026-11-19, „Etap 3, karta leczenia GH” 2026-11-21; docs/clinical/ALGORITHMS.md) ──
+// Karta leczenia GH z przełącznikiem „Przegląd | Trend dawki | Analiza”. Kafelki „Przeglądu” z obiektów wyjściowych wl i kl
+// (te same obliczenia co pola podsumowania i kafelki panelu) — testy porównują je z kafelkami panelu z tego samego rysunku;
+// „Trend dawki” — prawdziwy Pl w trybie karty. hSDS z atrapy liniowej (wyżej). Dane wyłącznie FIKCYJNE.
+const G2 = [GHP('g2-w', 'start', 7, 0, 18, 110, 0.025), GHP('g2-k1', 'continue', 8, 0, 21.3, 118.7, 0.028),
+  GHP('g2-k2', 'continue', 9, 0, 25.4, 126.1, 0.03, { drug: 'Omnitrope 10 mg' }), GHP('g2-k3', 'continue', 10, 0, 29.8, 132.4, 0.033, { drug: 'Omnitrope 10 mg' })];
+const G_NGENLA = [GHP('gn-w', 'start', 8, 0, 21, 118, 0.66, { drug: 'Ngenla 60 mg', doseUnit: 'mg/kg/tydz' }),
+  GHP('gn-k', 'continue', 9, 0, 24, 124, 0.66, { drug: 'Ngenla 60 mg', doseUnit: 'mg/kg/tydz' })];
+const G_BEZ_DAWKI = G1.map((p) => ({ ...p, dose: null }));
+const kafelekPanelu = (k, etykieta) => {
+  const t = k.gh.widok('analiza').querySelectorAll('.vilda-gha-k').find((x) => x.textContent === etykieta);
+  return t ? { v: tekst(t.parentNode.querySelector('.vilda-gha-v')), sub: tekst(t.parentNode.querySelector('.vilda-gha-sub')), tile: t.parentNode } : null;
+};
+const hsdsZPodpisu = (sub) => (/^(hSDS [−+]?\d+,\d+)/.exec(sub || '') || [])[1];
+
+describe('P-KARTA-LECZENIE, etap 3 — karta leczenia GH: nagłówek, przełącznik, widoki', () => {
+  it('G1: jedna karta (kontener podsumowania), nagłówek: znacznik, stan i cichy „Program SNP · 3 punkty kontrolne” z dymkiem; bez pól i przycisków', () => {
+    const k = zbuduj({ plec: 'M', ghTherapyPoints: G1 });
+    expect(k.bloki).toEqual(['vilda-kl-gh']);
+    expect(k.r.tresc.children[0].children.map((c) => c.className)).toEqual(['vilda-gh-summary vilda-kg-karta']);
+    expect(k.gh.naglowek).toEqual(['vilda-gh-summary-badge', 'vilda-gh-summary-chip', 'vilda-kg-cichy']);
+    expect(tekst(k.gh.el.querySelector('.vilda-gh-summary-badge'))).toBe('Leczony hormonem wzrostu (rhGH)');
+    expect(k.gh.znaczniki).toEqual(['aktywne']);
+    expect(k.gh.cichy).toBe('Program SNP · 3 punkty kontrolne');
+    expect(k.gh.dymek).toBe('SNP — somatotropinowa niedoczynność przysadki'); // ten sam dymek co pole „Program”
+    expect(k.gh.el.querySelectorAll('.vilda-gh-summary-grid')).toHaveLength(0);
+    expect(k.gh.el.querySelectorAll('.vilda-gha-btn')).toHaveLength(0);
+    expect(k.gh.el.children[0].querySelectorAll('button')).toHaveLength(0);
+    expect(k.gh.nad).toEqual([]);
+  });
+
+  it('G1: przełącznik „Przegląd | Trend dawki | Analiza” (tablist/tab, aria-selected, tabpanel), domyślnie „Przegląd”; klik zmienia widok', () => {
+    const k = zbuduj({ plec: 'M', ghTherapyPoints: G1 });
+    expect(k.gh.przelacznik).toEqual(['Przegląd', 'Trend dawki', 'Analiza']);
+    const seg = k.gh.el.querySelector('.vilda-kg-seg');
+    expect(seg.className).toBe('vilda-oba-seg vilda-kg-seg');
+    expect(seg.getAttribute('role')).toBe('tablist');
+    expect(seg.getAttribute('aria-label')).toBe('Leczony hormonem wzrostu (rhGH) — widok karty');
+    expect(k.gh.zakladki.map((b) => [b.getAttribute('role'), b.getAttribute('data-widok'), b.getAttribute('aria-selected')]))
+      .toEqual([['tab', 'przeglad', 'true'], ['tab', 'trend', 'false'], ['tab', 'analiza', 'false']]);
+    expect(k.gh.widoczne).toEqual(['przeglad']);
+    const trend = k.gh.widok('trend');
+    expect(trend.getAttribute('role')).toBe('tabpanel');
+    expect(trend.getAttribute('aria-labelledby')).toBe(k.gh.zakladki[1].id);
+    k.gh.zakladki[1].click();
+    expect(kartaGh(k.r.tresc)).toEqual(expect.objectContaining({ wybrany: 'trend', widoczne: ['trend'] }));
+    k.gh.zakladki[2].click();
+    expect(kartaGh(k.r.tresc)).toEqual(expect.objectContaining({ wybrany: 'analiza', widoczne: ['analiza'] }));
+  });
+
+  it('G1 Przegląd: 0,033 mg/kg/d · Genotropin 12 mg; 36 mies. · od 7 l. 0 mies.; 6,9 cm/rok · ost. okres (zielony); +0,80 · hSDS −1,64 → −0,84 (zielony)', () => {
+    const k = zbuduj({ plec: 'M', ghTherapyPoints: G1 });
+    expect(k.gh.kafelki).toEqual([
+      { k: 'Preparat i dawka', v: '0,033 mg/kg/d', sub: 'Genotropin 12 mg', kolor: null },
+      { k: 'Czas leczenia', v: '36 mies.', sub: 'od 7 l. 0 mies.', kolor: null },
+      { k: 'Tempo wzrastania', v: '6,9 cm/rok', sub: 'ost. okres (z 24 mies.)', kolor: 'good' },
+      { k: 'Odpowiedź (ΔhSDS)', v: '+0,80', sub: 'hSDS −1,64 → −0,84', kolor: 'good' },
+    ]);
+    expect(k.gh.el.querySelector('.vilda-ko-kafelki').children).toHaveLength(4);
+    // te same liczby co kafelki panelu z tego samego rysunku (i pasek leczenia)
+    expect(kafelekPanelu(k, 'Przyrost całkowity').sub).toBe(`przez ${k.gh.kafelki[1].v}`);
+    const tempo = kafelekPanelu(k, 'Tempo wzrastania');
+    expect([tempo.v, tempo.sub, tempo.tile.className]).toEqual([k.gh.kafelki[2].v, k.gh.kafelki[2].sub, 'vilda-gha-tile good']);
+    const odp = kafelekPanelu(k, 'Odpowiedź (ΔhSDS)');
+    expect([odp.v, odp.tile.className]).toEqual([k.gh.kafelki[3].v, 'vilda-gha-tile good']);
+    expect(k.gh.kafelki[3].sub).toBe(`${hsdsZPodpisu(kafelekPanelu(k, 'Wzrost przy włączeniu').sub)} → ${hsdsZPodpisu(kafelekPanelu(k, 'Wzrost ostatni').sub).slice(5)}`);
+    expect(k.paski[0].czesci).toEqual(['0,033 mg/kg/d', '36 mies.', 'tempo 6,9 cm/rok', 'ΔhSDS +0,80']);
+    // „od …” = pole „Włączenie” podsumowania poza kartą (wl bez trybu karty — rysunek etapu 1)
+    const K = karta();
+    const pods = K.wl(G1, {});
+    const wl = pods.querySelectorAll('.vilda-gh-summary-k').find((x) => x.textContent === 'Włączenie').parentNode.children[1].textContent;
+    expect(`od ${wl.replace('w wieku ', '')}`).toBe(k.gh.kafelki[1].sub);
+  });
+
+  it('G1 Trend dawki: blok Pl w białej ramce, bez nagłówka „Trend leczenia GH”; wykres i tabela (3 punkty); karta zgłasza trendGh', () => {
+    const k = zbuduj({ plec: 'M', ghTherapyPoints: G1 });
+    expect(k.r.trendGh).toBe(true);
+    const ramka = k.gh.widok('trend').children[0];
+    expect(ramka.className).toBe('vilda-kg-ramka');
+    const trend = ramka.children[0];
+    expect(trend.className).toBe('vilda-kg-trend');
+    expect(trend.getAttribute('style')).toBeNull();
+    expect(trend.querySelectorAll('.vilda-patient-section-h')).toHaveLength(0);
+    expect(tekst(trend)).not.toContain('Trend leczenia GH');
+    expect(trend.querySelectorAll('svg')).toHaveLength(1);
+    expect(sciezkaDawki(trend)).toHaveLength(1);
+    expect(trend.querySelectorAll('tr').map(tekst)).toEqual(['WiekDawkaIGF-1', '7 l. 0 mies.0,025 mg/kg/d—', '8 l. 0 mies.0,028 mg/kg/d—', '10 l. 0 mies.0,033 mg/kg/d—']);
+  });
+
+  it('Pl bez opcji rysuje jak dotąd (nagłówek „Trend leczenia GH”, margines 18 px); z opcją karty — ten sam blok bez nagłówka i marginesu', () => {
+    const K = karta({ odcinki: true });
+    for (const pts of [G1, G2, GR1, G_INCRELEX]) {
+      const dzis = K.Pl('pacjent-fikcyjny', pts);
+      expect(dzis.getAttribute('style')).toBe('margin-top:18px;');
+      expect(dzis.className).toBe('');
+      expect(dzis.children[0].className).toBe('vilda-patient-section-h');
+      expect(tekst(dzis.children[0])).toBe('Trend leczenia GH');
+      const wKarcie = K.Pl('pacjent-fikcyjny', pts, { karta: true });
+      expect(wKarcie.children.map(drzewo)).toEqual(dzis.children.slice(1).map(drzewo));
+    }
+  });
+
+  it('jeden filtr punktów trendu: Pl i karta (Kg_punktyTrendu) — Włączenie, Kontynuacja, Zakończenie z liczbową dawką', () => {
+    const { Kg } = karta();
+    const pts = [GHP('f1', 'start', 7, 0, 18, 110, 0.025), GHP('f2', 'continue', 8, 0, 21, 117, null), GHP('f3', 'continue', 8, 6, 22, 120, '0,03'),
+      GHP('f4', 'end', 9, 0, 24, 123, 0.03), { ...GHP('f5', 'inny', 9, 6, 25, 125, 0.03) }, null, GHP('f6', 'continue', 10, 0, 27, 130, Number.NaN)];
+    expect(Kg.Kg_punktyTrendu(pts).map((p) => p.id)).toEqual(['f1', 'f4']);
+    expect(Kg.Kg_punktyTrendu(null)).toEqual([]);
+    expect(Kg.Kg_maTrend('pacjent-fikcyjny', pts)).toBe(true);
+    expect(Kg.Kg_maTrend('pacjent-fikcyjny', G_BEZ_DAWKI)).toBe(false);
+    for (const pid of ['', '__vilda_activity__', '__vilda_external__']) expect(Kg.Kg_maTrend(pid, G1)).toBe(false); // jak warunek w Pl
+    expect(AUTH).toContain('Array.isArray(a)&&(l=Kg_punktyTrendu(a).map(');
+    expect(AUTH).not.toContain('typeof u.dose=="number"&&isFinite(u.dose)');
+  });
+
+  it('G1 Analiza: panel „Dane analityczne” rozwinięty, bez belki; cicha linia „SNP — … · Genotropin 12 mg · ostatnia kontrola w wieku 10 l. 0 mies.”; treść panelu bez zmian', () => {
+    const k = zbuduj({ plec: 'M', ghTherapyPoints: G1 });
+    const an = k.gh.widok('analiza');
+    expect(k.gh.cicha).toBe('SNP — somatotropinowa niedoczynność przysadki · Genotropin 12 mg · ostatnia kontrola w wieku 10 l. 0 mies.');
+    const panel = an.querySelector('.vilda-gha-panel');
+    expect(panel.getAttribute('style')).toBeNull();
+    expect(an.querySelectorAll('.vilda-gha-btn')).toHaveLength(0);
+    expect(an.querySelectorAll('.vilda-gha-sec').map(tekst)).toEqual(['WzrastanieA', 'Prognoza wzrostu ostatecznegoB']);
+    // treść panelu jak „📊 Dane analityczne” poza kartą (kl bez trybu karty — panel pod belką)
+    const K = karta();
+    const dzis = K.kl(G1, 'M', {}, undefined, null, {});
+    expect(dzis.children.map((c) => c.className)).toEqual(['vilda-gha-btn', 'vilda-gha-panel']);
+    expect(panel.children.map(drzewo)).toEqual(dzis.children[1].children.map(drzewo));
+  });
+});
+
+describe('P-KARTA-LECZENIE, etap 3 — przypadki karty leczenia GH (wartości z tych samych obliczeń co podsumowanie i panel)', () => {
+  it('G2 (zmiana preparatu): „🔄 zmiana preparatu”, „Preparaty (historia)” nad przełącznikiem, legenda dwóch preparatów, „Odpowiedź na leczenie wg preparatu” w „Analizie”', () => {
+    const k = zbuduj({ plec: 'M', ghTherapyPoints: G2 }, [], { odcinki: true });
+    expect(k.gh.znaczniki).toEqual(['aktywne', '🔄 zmiana preparatu']);
+    expect(k.gh.naglowek[k.gh.naglowek.length - 1]).toBe('vilda-kg-cichy');
+    expect(k.gh.nad).toHaveLength(1);
+    expect(k.gh.nad[0]).toMatch(/^Preparaty \(historia\)Genotropin 12 mg7 l\. 0 mies\. – .*→Omnitrope 10 mg9 l\. 0 mies\. · aktualny$/);
+    expect(k.gh.kafelki[0]).toEqual(expect.objectContaining({ v: '0,033 mg/kg/d', sub: 'Omnitrope 10 mg' }));
+    k.gh.zakladki[1].click();
+    expect(tekst(k.gh.widok('trend'))).toContain('Genotropin 12 mgOmnitrope 10 mg· % dawki zalecanej');
+    expect(k.gh.widok('analiza').querySelectorAll('.vilda-gha-sec').map(tekst)).toContain('Odpowiedź na leczenie wg preparatuA');
+  });
+
+  it('G3 (bez Włączenia): ramka P-GH-BEZ-STARTU nad przełącznikiem; „Czas od 1. punktu” 30 mies. · od 7 l. 6 mies.; ΔhSDS „… · od 1. punktu”', () => {
+    const k = zbuduj({ plec: 'M', ghTherapyPoints: G_BEZ_STARTU });
+    expect(k.gh.nad).toEqual(['Brak punktu włączenia leczenia (pierwszy zapisany punkt kontrolny: w wieku 7 l. 6 mies.). Dodaj punkt „Włączenie leczenia” w monitorze terapii (także wstecznie), aby zmiany liczyły się od startu.']);
+    expect(k.gh.kafelki[1]).toEqual({ k: 'Czas od 1. punktu', v: '30 mies.', sub: 'od 7 l. 6 mies.', kolor: null });
+    expect(kafelekPanelu(k, 'Przyrost od 1. punktu').sub).toBe('przez 30 mies.');
+    expect(k.gh.kafelki[3]).toEqual({ k: 'Odpowiedź (ΔhSDS)', v: '+0,51', sub: 'hSDS −1,35 → −0,84 · od 1. punktu', kolor: 'good' });
+    expect(kafelekPanelu(k, 'Wzrost w 1. punkcie').sub).toBe('hSDS −1,35 · 7 l. 6 mies.');
+    expect(k.gh.przelacznik).toEqual(['Przegląd', 'Trend dawki', 'Analiza']);
+  });
+
+  it('Increlex: znacznik IGF-1, kafelek „2 × 2,4 mg na dobę” · 0,12 mg/kg na podanie · Increlex 40 mg; trend „dawka (mg/kg na podanie)”', () => {
+    const k = zbuduj({ plec: 'M', ghTherapyPoints: G_INCRELEX });
+    expect(tekst(k.gh.el.querySelector('.vilda-gh-summary-badge'))).toBe('Leczony IGF-1 (mekasermina)');
+    expect(k.gh.cichy).toBe('Program IGF-1 · 2 punkty kontrolne');
+    expect(k.gh.dymek).toBe('IGF-1 — pierwotny niedobór IGF-1');
+    const d = k.gh.el.querySelector('.vilda-ko-kafel');
+    expect(tekst(d.querySelector('.vilda-ko-v small'))).toBe(' na dobę'); // jednostka mała
+    expect(k.gh.kafelki[0]).toEqual({ k: 'Preparat i dawka', v: '2 × 2,4 mg na dobę', sub: '0,12 mg/kg na podanie · Increlex 40 mg', kolor: null });
+    expect(tekst(k.gh.widok('trend'))).toContain('dawka (mg/kg na podanie)');
+    expect(k.gh.widok('trend').querySelectorAll('tr').map(tekst)[2]).toBe('8 l. 0 mies.2 × 2,4 mg na dobę (0,12 mg/kg na podanie)—');
+  });
+
+  it('Increlex — części kafelka z tych samych danych co tekst „Aktualnej dawki” (Gwl_inc); tekst Gwl_inc bez zmian', () => {
+    const { Kg } = karta();
+    const warianty = [
+      [{ dose: 0.24, doseAbs: 4.8, weight: 20 }, '2 × 2,4 mg na dobę (0,12 mg/kg na podanie)', { v: '2 × 2,4 mg', j: 'na dobę', sub: '0,12 mg/kg na podanie' }],
+      [{ dose: 0.08, weight: 13 }, '2 × 0,52 mg na dobę (0,04 mg/kg na podanie)', { v: '2 × 0,52 mg', j: 'na dobę', sub: '0,04 mg/kg na podanie' }],
+      [{ dose: 0.08 }, '0,04 mg/kg na podanie', { v: '0,04', j: 'mg/kg na podanie', sub: '' }],
+      [{}, '—', null],
+    ];
+    for (const [d, tekstDawki, czesci] of warianty) {
+      const cz = {};
+      expect(Kg.Gwl_inc(d)).toBe(tekstDawki);
+      expect(Kg.Gwl_inc(d, cz)).toBe(tekstDawki);
+      expect(Kg.Kg_dawkaCz(true, cz, d, 'mg/kg/d')).toEqual(czesci);
+    }
+    expect(Kg.Kg_dawkaCz(false, {}, { dose: 0.66 }, 'mg/kg/tydz')).toEqual({ v: '0,66', j: 'mg/kg/tydz', sub: '' });
+    expect(Kg.Kg_dawkaCz(false, {}, { dose: null }, 'mg/kg/d')).toBeNull();
+    // bez dawki dobowej w mg (bez doseAbs i masy) — kafelek „0,04 mg/kg na podanie” = tekst pola
+    const bez = zbuduj({ plec: 'M', ghTherapyPoints: G_INCRELEX.map((p) => ({ ...p, doseAbs: undefined, weight: null })) });
+    expect(bez.gh.kafelki[0]).toEqual(expect.objectContaining({ v: '0,12 mg/kg na podanie', sub: 'Increlex 40 mg' }));
+    expect(bez.paski[0].czesci[0]).toBe('0,12 mg/kg na podanie');
+  });
+
+  it('Ngenla (mg/kg/tydz): „0,66 mg/kg/tydz” · Ngenla 60 mg; brak dawki — „—” z preparatem', () => {
+    const k = zbuduj({ plec: 'M', ghTherapyPoints: G_NGENLA });
+    expect(k.gh.kafelki[0]).toEqual({ k: 'Preparat i dawka', v: '0,66 mg/kg/tydz', sub: 'Ngenla 60 mg', kolor: null });
+    expect(k.paski[0].czesci[0]).toBe('0,66 mg/kg/tydz');
+    const bez = zbuduj({ plec: 'M', ghTherapyPoints: G_BEZ_DAWKI });
+    expect(bez.gh.kafelki[0]).toEqual({ k: 'Preparat i dawka', v: '—', sub: 'Genotropin 12 mg', kolor: null });
+  });
+
+  it('zakończone: „leczenie zakończone”, ta sama karta i przełącznik; wartości na koniec leczenia', () => {
+    const k = zbuduj({ plec: 'M', ghTherapyPoints: G_ZAKONCZONE });
+    expect(k.gh.znaczniki).toEqual(['leczenie zakończone']);
+    expect(k.gh.przelacznik).toEqual(['Przegląd', 'Trend dawki', 'Analiza']);
+    expect(k.gh.kafelki.map((x) => [x.k, x.v])).toEqual([['Preparat i dawka', '0,025 mg/kg/d'], ['Czas leczenia', '72 mies.'],
+      ['Tempo wzrastania', kafelekPanelu(k, 'Tempo wzrastania').v], ['Odpowiedź (ΔhSDS)', kafelekPanelu(k, 'Odpowiedź (ΔhSDS)').v]]);
+    expect(k.gh.cicha).toBe('SNP — somatotropinowa niedoczynność przysadki · Genotropin 12 mg · ostatnia kontrola w wieku 15 l. 0 mies.');
+  });
+
+  it('wznowienie GR1 (2 kursy): „kurs 2 z 2”, „2 punkty kontrolne w kursie (5 łącznie)”, kafelki z bieżącego kursu, trend z przerwą linii', () => {
+    const k = zbuduj({ plec: 'M', ghTherapyPoints: GR1 });
+    expect(k.gh.znaczniki).toEqual(['aktywne', 'kurs 2 z 2']);
+    expect(k.gh.cichy).toBe('Program SNP · 2 punkty kontrolne w kursie (5 łącznie)');
+    expect(k.gh.kafelki).toEqual([
+      { k: 'Preparat i dawka', v: '0,033 mg/kg/d', sub: 'Genotropin 12 mg', kolor: null },
+      { k: 'Czas leczenia', v: '12 mies.', sub: 'od 10 l. 0 mies.', kolor: null },
+      { k: 'Tempo wzrastania', v: '7 cm/rok', sub: 'ost. okres (z 12 mies.)', kolor: 'good' },
+      { k: 'Odpowiedź (ΔhSDS)', v: '+0,18', sub: 'hSDS −1,27 → −1,09', kolor: 'good' },
+    ]);
+    expect(sciezkaDawki(k.gh.widok('trend'))[0]).toContain(' M 461.0 111.7 ');
+    expect(tekst(k.gh.widok('analiza').querySelector('.vilda-gha-sec'))).toBe('Wzrastanie — kurs 2 z 2A');
+  });
+
+  it('W2 (Kontynuacja po Zakończeniu bez Włączenia): Czas „—” z „brak Włączenia po Zakończeniu”, ΔhSDS „—”, informacja W2 nad przełącznikiem', () => {
+    const k = zbuduj({ plec: 'M', ghTherapyPoints: GR2 });
+    expect(k.gh.nad).toEqual(['Kontynuacja po Zakończeniu bez nowego Włączenia (Zakończenie w wieku 9 l. 0 mies., pierwszy punkt kursu: w wieku 10 l. 0 mies.). '
+      + 'Dopisz punkt „Włączenie leczenia” w DocPro (monitor terapii), by liczyć czas leczenia, przyrost i ΔhSDS od wznowienia.']);
+    expect(k.gh.kafelki.slice(1)).toEqual([
+      { k: 'Czas leczenia', v: '—', sub: 'brak Włączenia po Zakończeniu', kolor: null },
+      { k: 'Tempo wzrastania', v: '—', sub: null, kolor: null },
+      { k: 'Odpowiedź (ΔhSDS)', v: '—', sub: 'brak Włączenia po Zakończeniu', kolor: null },
+    ]);
+    expect(kafelekPanelu(k, 'Odpowiedź (ΔhSDS)')).toEqual(expect.objectContaining({ v: '—', sub: 'brak Włączenia po Zakończeniu' }));
+  });
+
+  it('punkty bez dawki: przełącznik „Przegląd | Analiza”, bez trendGh (trend — z Terminarza, jeśli jest — w „Siatkach centylowych”)', () => {
+    const k = zbuduj({ plec: 'M', ghTherapyPoints: G_BEZ_DAWKI });
+    expect(k.gh.przelacznik).toEqual(['Przegląd', 'Analiza']);
+    expect(k.gh.widok('trend')).toBeNull();
+    expect(k.r.trendGh).toBe(false);
+    expect(AUTH).toContain('try{KlL&&KlL.trendGh||Ct.appendChild(Pl(t,s.ghTherapyPoints))}catch{}');
+  });
+
+  it('GH + otyłość: dwie karty (GH przed trwającą otyłością, D2), paski bez zmian; widoki obu kart niezależne', () => {
+    const K = karta();
+    const k = zbuduj({ plec: 'M', ghTherapyPoints: G1, obesityTherapyPoints: O1 }, [], { K });
+    expect(k.bloki).toEqual(['vilda-kl-gh', 'vilda-ob-dz']);
+    expect(k.paski.map((p) => p.id)).toEqual(['gh', 'ob']);
+    expect(k.r.tresc.querySelectorAll('.vilda-kg-karta')).toHaveLength(1);
+    expect(k.r.tresc.querySelectorAll('.vilda-ko-karta')).toHaveLength(1);
+    k.gh.zakladki[1].click();
+    expect(kartaGh(k.r.tresc).wybrany).toBe('trend');
+    expect(kartaOtylosci(k.r.tresc).wybrany).toBe('przeglad');
+    kartaOtylosci(k.r.tresc).zakladki[2].click();
+    expect(kartaGh(k.r.tresc).wybrany).toBe('trend');
+    // odświeżenie po synchronizacji (tlo) — oba widoki zostają; nowe otwarcie — oba od „Przeglądu”
+    const tlo = zbuduj({ plec: 'M', ghTherapyPoints: G1, obesityTherapyPoints: O1 }, [], { K }, { tlo: true });
+    expect([tlo.gh.wybrany, tlo.karta.wybrany]).toEqual(['trend', 'analiza']);
+    const nowa = zbuduj({ plec: 'M', ghTherapyPoints: G1, obesityTherapyPoints: O1 }, [], { K });
+    expect([nowa.gh.wybrany, nowa.karta.wybrany]).toEqual(['przeglad', 'przeglad']);
+  });
+});
+
+describe('P-KARTA-LECZENIE, etap 3 — stan widoku, odnośniki i karta, która się nie składa', () => {
+  it('odświeżenie po synchronizacji (tlo) zostawia widok karty GH; nowe otwarcie Karty — „Przegląd”', () => {
+    const K = karta();
+    const a = zbuduj({ plec: 'M', ghTherapyPoints: G1 }, [], { K });
+    a.gh.zakladki[2].click();
+    expect(zbuduj({ plec: 'M', ghTherapyPoints: G1 }, [], { K }, { tlo: true }).gh.wybrany).toBe('analiza');
+    expect(zbuduj({ plec: 'M', ghTherapyPoints: G1 }, [], { K }).gh.wybrany).toBe('przeglad');
+    expect(AUTH).toContain('if (o && !o.tlo) { Ko_zapomnij(o.patientId); Kg_zapomnij(o.patientId); }');
+  });
+
+  it('opcja widokGh „trend” (notatka GH): karta na „Trendzie dawki” i pokazGh; bez „Trendu dawki” — „Przegląd” i Karta na „Siatkach centylowych”', () => {
+    const K = karta();
+    const k = zbuduj({ plec: 'M', ghTherapyPoints: G1 }, [], { K }, { widokGh: 'trend' });
+    expect([k.gh.wybrany, k.gh.widoczne]).toEqual(['trend', ['trend']]);
+    expect(typeof k.r.pokazGh).toBe('function');
+    // pamiętany jak wybór lekarza: odświeżenie po synchronizacji zostawia „Trend dawki”
+    expect(zbuduj({ plec: 'M', ghTherapyPoints: G1 }, [], { K }, { tlo: true }).gh.wybrany).toBe('trend');
+    const bez = zbuduj({ plec: 'M', ghTherapyPoints: G_BEZ_DAWKI }, [], undefined, { widokGh: 'trend' });
+    expect(bez.gh.wybrany).toBe('przeglad');
+    const { Kg } = K;
+    const opcje = { activeTab: 'leczenie', widokGh: 'trend', focusNoteId: null };
+    expect(Kg.Kg_opcjeKarty(opcje, { trendGh: true })).toBe(opcje);
+    expect(Kg.Kg_opcjeKarty(opcje, { trendGh: false })).toEqual({ activeTab: 'traj', widokGh: null, focusNoteId: null });
+    expect(Kg.Kg_opcjeKarty(opcje, null)).toEqual({ activeTab: 'traj', widokGh: null, focusNoteId: null });
+    for (const r of [undefined, { activeTab: 'notes' }, { activeTab: 'leczenie' }, { activeTab: 'traj' }]) expect(Kg.Kg_opcjeKarty(r, null)).toBe(r);
+  });
+
+  it('showPatientCard: widokGh do Kl_leczenie, Siatki bez trendu przy karcie z „Trendem dawki”, przewinięcie po otwarciu; notatka GH „↗ Trend dawki / punkt GH”', () => {
+    expect(AUTH).toContain('user:m,widokGh:r&&r.widokGh,zakladka:at(Kl_IKONA,"Leczenie"),tlo:GdTlo}),Kg_opcje=r=Kg_opcjeKarty(r,KlL),Ft=');
+    expect(AUTH).toContain('ua(Kl_zakladka(ct,KlL)||"antro")}};Kg_poOtwarciu(KlL,r);');
+    expect(AUTH).toContain('text:"\\u2197 Trend dawki / punkt GH"');
+    expect(AUTH).not.toContain('Siatki / punkt GH');
+    expect(AUTH).toContain('typeof Gr=="function"&&r.ghPointId?Gr(h,r.ghPointId):se(h,null,null,{activeTab:"leczenie",widokGh:"trend"})');
+  });
+
+  it('karta GH się nie składa (wyjątek Kg_karta) → bloki jak w etapie 1: podsumowanie z polami, „Dane analityczne” z belką; bez trendGh', () => {
+    const KOD_BLAD = KOD.replace('function Kg_karta(o) {', 'function Kg_karta(o) {throw new Error("karta: błąd testowy");');
+    expect(KOD_BLAD).not.toBe(KOD);
+    const zgloszone = [];
+    const K = new Function('i', 'jt', 'Ot', 'oe', `${KOD_BLAD}\nreturn { Kl_leczenie };`)(
+      okno(), () => null, (gdzie) => zgloszone.push(gdzie),
+      (t) => { if (!t) return; while (t.firstChild) t.removeChild(t.firstChild); });
+    const r = K.Kl_leczenie({ patientId: 'pacjent-fikcyjny', rekord: { plec: 'M', ghTherapyPoints: G1 }, plec: 'M', zaawansowane: {}, siatka: null,
+      notatki: [], user: {}, zakladka: '<span class="vilda-patient-tab-lbl">Leczenie</span>' });
+    expect(zgloszone).toEqual(['karta leczenie gh']);
+    const gh = r.tresc.children[0];
+    expect(gh.children.map((c) => c.className)).toEqual(['vilda-gh-summary', '']);
+    expect(gh.querySelectorAll('.vilda-gh-summary-grid')).toHaveLength(1);
+    expect(tekst(gh.querySelector('.vilda-gha-btn'))).toContain('Dane analityczne');
+    expect(gh.querySelector('.vilda-gha-panel').getAttribute('style')).toBe('display:none;');
+    expect(gh.querySelectorAll('.vilda-kg-seg, .vilda-kg-cichy')).toHaveLength(0);
+    expect(r.trendGh).toBe(false);
+    expect(r.paski.children[0]._klCzesci).toEqual(['0,033 mg/kg/d', '36 mies.', 'tempo 6,9 cm/rok', 'ΔhSDS +0,80']);
+  });
+
+  it('pacjent bez GH — bez karty GH (.vilda-kg-*); otyłość — karta etapu 2 bez zmian', () => {
+    const k = zbuduj({ obesityTherapyPoints: O1 });
+    expect(k.gh).toBeNull();
+    expect(k.r.tresc.querySelectorAll('.vilda-kg-karta, .vilda-kg-seg, .vilda-kg-cichy')).toHaveLength(0);
+    expect(k.r.trendGh).toBe(false);
+    expect(k.karta.przelacznik).toEqual(['Przegląd', 'Wpisy (2)', 'Analiza']);
+  });
+});
+
+describe('P-KARTA-LECZENIE, etap 3 — trend rysowany po odczycie notatek (asynchronicznie)', () => {
+  /** Karta z sejfem, którego odczyt notatek kończy się dopiero na żądanie testu (jak na stronie: Pl czeka na IGF-1). */
+  function kartaZNotatkami() {
+    let zakoncz;
+    const odczyt = new Promise((r) => { zakoncz = r; });
+    const w = okno();
+    const K = new Function('i', 'jt', 'Ot', 'oe', `${KOD}\nreturn { Kl_leczenie, Pl };`)(
+      w, () => ({ listPatientNotesForPatient: () => odczyt }), (gdzie, blad) => bledy.push(`${gdzie}: ${blad && blad.message}`),
+      (t) => { if (!t) return; while (t.firstChild) t.removeChild(t.firstChild); });
+    return { K, w, zakoncz: (n) => { zakoncz(n); return odczyt.then(() => new Promise((r) => { setTimeout(r, 0); })); } };
+  }
+  const opcjeKl = (o = {}) => ({ patientId: 'pacjent-fikcyjny', rekord: { plec: 'M', ghTherapyPoints: G1 }, plec: 'M', zaawansowane: {}, siatka: null,
+    notatki: [], user: {}, zakladka: '<span class="vilda-patient-tab-lbl">Leczenie</span>', ...o });
+
+  it('Pl w trybie karty zgłasza koniec rysunku (poRysunku) po odczycie notatek; IGF-1 z notatki trafia do tabeli', async () => {
+    bledy.length = 0;
+    const { K, zakoncz } = kartaZNotatkami();
+    const zgloszenia = [];
+    const trend = K.Pl('pacjent-fikcyjny', G1, { karta: true, poRysunku: () => zgloszenia.push(trend.children.length) });
+    expect(trend.children).toHaveLength(0); // karta nie czeka na trend
+    await zakoncz([{ ghPointId: 'g-k2', igf1: { value: 322 } }]);
+    expect(zgloszenia).toEqual([4]); // legenda, wykres, tabela … — zgłoszenie raz, po narysowaniu
+    expect(trend.querySelectorAll('tr').map(tekst)[3]).toBe('10 l. 0 mies.0,033 mg/kg/d322 ng/ml');
+    expect(bledy).toEqual([]);
+  });
+
+  it('notatka GH: pokazGh przed narysowaniem trendu — fokus na „Trend dawki” teraz i ponownie po rysunku; po zmianie widoku bez ponowienia', async () => {
+    bledy.length = 0;
+    const a = kartaZNotatkami();
+    const r = a.K.Kl_leczenie(opcjeKl({ widokGh: 'trend' }));
+    a.w.document.body.appendChild(r.tresc);
+    const tab = r.tresc.querySelector('.vilda-kg-seg [data-widok="trend"]');
+    r.pokazGh('trend');
+    expect(a.w.document.activeElement).toBe(tab);
+    a.w.document.activeElement = null;
+    await a.zakoncz([]);
+    expect(a.w.document.activeElement).toBe(tab); // drugie przewinięcie po narysowaniu trendu
+
+    const b = kartaZNotatkami();
+    const r2 = b.K.Kl_leczenie(opcjeKl({ widokGh: 'trend' }));
+    b.w.document.body.appendChild(r2.tresc);
+    r2.pokazGh('trend');
+    b.w.document.activeElement = null;
+    r2.tresc.querySelector('.vilda-kg-seg [data-widok="przeglad"]').click(); // lekarz zmienił widok, zanim trend się narysował
+    await b.zakoncz([]);
+    expect(b.w.document.activeElement).toBeNull();
+    expect(kartaGh(r2.tresc).wybrany).toBe('przeglad');
+    expect(bledy).toEqual([]);
   });
 });

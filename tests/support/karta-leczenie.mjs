@@ -81,7 +81,8 @@ export const zapiszZDziennikiem = (page, rekord, dziennik) => page.evaluate(asyn
 }, { r: rekord, wpisy: dziennik });
 /** Karta leczenia otyłości (etap 2): przełącznik, wybrany widok, kafelki „Przeglądu” i linia oceny — tekst z DOM do asercji. */
 export const kartaOtylosci = (page) => page.locator('.vilda-ko-karta');
-export const widokKarty = (page, id) => page.getByRole('tab', { name: id === 'przeglad' ? 'Przegląd' : id === 'analiza' ? 'Analiza' : /^Wpisy/ });
+// Etap 3: zakładki karty otyłości szukane w niej (karta leczenia GH ma też „Przegląd” i „Analiza”).
+export const widokKarty = (page, id) => page.locator('.vilda-ko-karta').getByRole('tab', { name: id === 'przeglad' ? 'Przegląd' : id === 'analiza' ? 'Analiza' : /^Wpisy/ });
 export const opisKarty = (page) => page.locator('.vilda-ko-karta').evaluate((k) => {
   const t = (el) => (el ? el.textContent : null);
   const tabs = [...k.querySelectorAll('.vilda-ko-seg [role="tab"]')];
@@ -163,3 +164,50 @@ export const bezPrzewijaniaWBok = (page) => page.evaluate(() => {
   return r.scrollWidth <= r.clientWidth + 1 && document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1;
 });
 
+
+/**
+ * P-KARTA-LECZENIE, etap 3 — karta leczenia GH z przełącznikiem „Przegląd | Trend dawki | Analiza” (dane wyłącznie
+ * FIKCYJNE). G2 — G1 ze zmianą preparatu (Genotropin → Omnitrope od 9 l.); G3 — G1 bez punktu „Włączenie”;
+ * INC — Increlex (program IGF-1, dawka dobowa w mg); W2 — Kontynuacje po Zakończeniu bez nowego Włączenia.
+ */
+export const G2 = {
+  ...G1, name: 'Fikcyjny Bogdan', user: { ...G1.user, firstName: 'Bogdan' },
+  ghTherapyPoints: G1.ghTherapyPoints.map((p, j) => (j >= 4 ? { ...p, drug: 'Omnitrope 10 mg' } : p)),
+};
+export const G3 = {
+  ...G1, name: 'Fikcyjny Cezary', user: { ...G1.user, firstName: 'Cezary' },
+  ghTherapyPoints: G1.ghTherapyPoints.slice(1),
+};
+const INC = (id, type, lata, mies, weight, height, dose, doseAbs) => ({
+  id, type, ageYears: lata, ageMonths: mies, weight, height, dose, doseAbs, doseUnit: 'mg/kg/d', drug: 'Increlex 40 mg', program: 'IGF-1', igf1: null,
+});
+export const INC_PACJENT = {
+  name: 'Fikcyjny Igor', user: { lastName: 'Fikcyjny', firstName: 'Igor', sex: 'M', age: 8, ageMonths: 0, height: 112, weight: 20 },
+  ghTherapyPoints: [INC('i-s', 'start', 7, 6, 19, 108, 1.6 / 19, 1.6), INC('i-c', 'continue', 8, 0, 20, 112, 0.24, 4.8)],
+};
+export const W2 = {
+  ...R1, name: 'Fikcyjny Dawid', user: { ...R1.user, firstName: 'Dawid' },
+  ghTherapyPoints: [GH('w2-s', 'start', 7, 0, 18, 110, null, 0.025), GH('w2-e', 'end', 9, 0, 24, 123, null, 0.03),
+    GH('w2-c1', 'continue', 10, 0, 27, 130, null, 0.03), GH('w2-c2', 'continue', 11, 0, 30, 137, null, 0.033)],
+};
+export const kartaGh = (page) => page.locator('.vilda-kg-karta');
+export const widokGh = (page, id) => kartaGh(page).locator(`.vilda-kg-seg [data-widok="${id}"]`);
+/** Karta GH: przełącznik, wybrany widok, cichy tekst nagłówka, bloki nad przełącznikiem, kafelki i cicha linia. */
+export const opisKartyGh = (page) => kartaGh(page).evaluate((k) => {
+  const t = (el) => (el ? el.textContent : null);
+  const tabs = [...k.querySelectorAll('.vilda-kg-seg [role="tab"]')];
+  const seg = k.querySelector('.vilda-kg-seg');
+  return {
+    przelacznik: tabs.map(t),
+    wybrany: (tabs.find((b) => b.getAttribute('aria-selected') === 'true') || { textContent: null }).textContent,
+    widoczne: [...k.querySelectorAll('.vilda-kg-widok')].filter((w) => !w.hidden).map((w) => w.className.replace('vilda-kg-widok vilda-kg-widok--', '')),
+    cichy: t(k.querySelector('.vilda-kg-cichy')),
+    nad: [...k.children].slice(1, [...k.children].indexOf(seg)).map(t),
+    kafelki: [...k.querySelectorAll('.vilda-ko-kafel')].map((x) => [t(x.querySelector('.vilda-ko-k')), t(x.querySelector('.vilda-ko-v')), t(x.querySelector('.vilda-ko-sub'))]),
+    kolory: [...k.querySelectorAll('.vilda-ko-kafel')].map((x) => getComputedStyle(x.querySelector('.vilda-ko-v')).color),
+    cicha: t(k.querySelector('.vilda-ko-cicha')),
+  };
+});
+/** „Trend leczenia GH” w „Siatkach centylowych” (nagłówek bloku Pl) — liczba wystąpień. */
+export const trendWSiatkach = (page) => page.evaluate(() => [...document.querySelectorAll('.vilda-patient-tab-content[data-tab="traj"] p')]
+  .filter((p) => /Trend leczenia GH/.test(p.textContent)).length);

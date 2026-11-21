@@ -97,12 +97,13 @@ test.describe('Karta pacjenta — zakładka „Leczenie” i pasek leczenia (kom
     await expect(aktywna(page)).toHaveText('Leczenie');
     const lecz = tresc(page, 'leczenie');
     await expect(lecz.locator('.vilda-gh-summary-badge')).toHaveText('Leczony hormonem wzrostu (rhGH)');
-    await lecz.locator('.vilda-gha-btn').click();
+    // Etap 3: „Dane analityczne” GH — widok „Analiza” karty leczenia GH (dotąd belka .vilda-gha-btn).
+    await lecz.locator('.vilda-kg-seg [data-widok="analiza"]').click();
     const panel = lecz.locator('.vilda-gha-panel');
     await expect(panel).toBeVisible();
     await expect(panel).toContainText('Tempo wzrastania6,2 cm/rok');
     await expect(panel).toContainText('Odpowiedź (ΔhSDS)+1,47');
-    // „Trend leczenia GH” zostaje w „Siatkach centylowych” (etap 3).
+    // Etap 3: trend dawki jest w widoku „Trend dawki” karty — bez własnego nagłówka „Trend leczenia GH”.
     await expect(lecz.getByText('Trend leczenia GH')).toHaveCount(0);
   });
 
@@ -217,25 +218,27 @@ test.describe('Karta pacjenta — zakładka „Leczenie” i pasek leczenia (kom
     await expect(aktywna(page)).toHaveText('Leczenie');
     const lecz = tresc(page, 'leczenie');
     await expect(lecz.locator('.vilda-gh-summary-head .vilda-gh-summary-chip')).toHaveText(['aktywne', 'kurs 2 z 2']);
-    await expect(lecz.locator('.vilda-gh-summary')).toContainText('Włączeniew wieku 10 l. 0 mies.');
-    await expect(lecz.locator('.vilda-gh-summary')).toContainText('Punkty kontrolne2 w kursie (5 łącznie)');
-    await lecz.locator('.vilda-gha-btn').click();
+    // Etap 3 (zmiana zamierzona): pola podsumowania zniknęły z karty — „Włączenie” jest podpisem kafelka „Czas leczenia”,
+    // „Punkty kontrolne” — cichym tekstem nagłówka (dotąd „Włączeniew wieku 10 l. 0 mies.”, „Punkty kontrolne2 w kursie (5 łącznie)”).
+    await expect(lecz.locator('.vilda-ko-kafel', { hasText: 'Czas leczenia' }).locator('.vilda-ko-sub')).toHaveText('od 10 l. 0 mies.');
+    await expect(lecz.locator('.vilda-kg-cichy')).toHaveText('Program SNP · 2 punkty kontrolne w kursie (5 łącznie)');
+    await lecz.locator('.vilda-kg-seg [data-widok="analiza"]').click(); // etap 3: „Analiza” zamiast belki „📊 Dane analityczne”
     const panel = lecz.locator('.vilda-gha-panel');
     await expect(panel).toContainText('Wzrastanie — kurs 2 z 2');
     await expect(panel).toContainText('Wzrost przy włączeniu130 cm');
     await expect(panel).toContainText('Przyrost całkowity+7,0 cmprzez 12 mies.');
     await expect(panel).toContainText('Odpowiedź (ΔhSDS)+0,37catch-up od włączenia');
 
-    // Siatki: pas GH na każdy kurs (wzrost i waga), trend dawki bez odcinka przez przerwę, dwa żetony „💉 GH” w analizie.
+    // Trend dawki bez odcinka przez przerwę — od etapu 3 w widoku „Trend dawki” karty GH (dotąd w „Siatkach centylowych”).
+    await lecz.locator('.vilda-kg-seg [data-widok="trend"]').click();
+    await expect.poll(() => page.evaluate(() => {
+      const svg = document.querySelector('.vilda-kg-karta .vilda-kg-trend svg');
+      return svg ? svg.querySelectorAll('line[stroke-width="3.2"]').length : null;
+    }), { message: 'trend % dawki: 3 odcinki w kursach (dotąd 4)' }).toBe(6);
+    // Siatki: pas GH na każdy kurs (wzrost i waga), dwa żetony „💉 GH” w analizie.
     await page.locator('.vilda-patient-tab[data-tab="traj"]').click();
     await expect(page.locator('.vilda-siatka-charts svg.vilda-patient-chart').first()).toBeVisible();
     expect(await pasyGh(page)).toEqual({ height: { pasy: 2, etykiety: 2 }, weight: { pasy: 2, etykiety: 2 }, bmi: { pasy: 0, etykiety: 0 } });
-    await expect.poll(() => page.evaluate(() => {
-      const sek = document.querySelector('.vilda-patient-tab-content[data-tab="traj"]');
-      const h = [...sek.querySelectorAll('p')].find((p) => /Trend leczenia GH/.test(p.textContent));
-      const svg = h && h.parentElement.querySelector('svg');
-      return svg ? svg.querySelectorAll('line[stroke-width="3.2"]').length : null;
-    }), { message: 'trend % dawki: 3 odcinki w kursach (dotąd 4)' }).toBe(6);
     await expect(page.locator('.vtap-meta .vtap-mchip', { hasText: '💉 GH' })).toHaveText(['💉 GHod 7 lat do 9 lat', '💉 GHod 10 lat — nadal']);
     expect(await bezPrzewijaniaWBok(page)).toBe(true);
   });

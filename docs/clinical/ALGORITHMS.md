@@ -12885,7 +12885,7 @@ Zostaje to zapisane tutaj, żeby podpunkt nie wracał co ratę jako „znane, ni
 
 ### P-NOTATKI rata 3d — skok z monitora GH dociera tam, gdzie miał, i zabiera ze sobą pacjenta (SW 1.0.991, 2026-09-18)
 
-**G27c — skok trafiał do celu przez przypadek (nowe znalezisko z rozpoznania G27b).** Przycisk „↗ Siatki / punkt GH" w arkuszu notatki woła `Gr(patientId, ghPointId)`, które zapisuje zamiar w `sessionStorage` pod kluczem `vilda:gh-jump` i ustawia `location.hash = "#/docpro"`. Konsumentem jest `N()` w `gh_therapy_monitor.js`, odpalane z trzech miejsc: start dokumentu (+700 ms), `hashchange` z „docpro" w hashu (+700 ms) i `vilda:patient-loaded` (+350 ms). Zmierzone i rozstrzygające:
+**G27c — skok trafiał do celu przez przypadek (nowe znalezisko z rozpoznania G27b).** Przycisk „↗ Siatki / punkt GH" [od P-KARTA-LECZENIE, etap 3 (2026-11-21): „↗ Trend dawki / punkt GH”; skok z punktem bez zmian] w arkuszu notatki woła `Gr(patientId, ghPointId)`, które zapisuje zamiar w `sessionStorage` pod kluczem `vilda:gh-jump` i ustawia `location.hash = "#/docpro"`. Konsumentem jest `N()` w `gh_therapy_monitor.js`, odpalane z trzech miejsc: start dokumentu (+700 ms), `hashchange` z „docpro" w hashu (+700 ms) i `vilda:patient-loaded` (+350 ms). Zmierzone i rozstrzygające:
 
 - **`gh_therapy_monitor.js` jest wpięty wyłącznie na `docpro.html`** — żadna inna strona go nie ładuje.
 - **Powłoka trzyma własny hash i montuje zakładki jako ramki:** `app.html` ma hash `#/start` i ramki `index.html?embedded=1`, `terminarz.html?embedded=1`, `przelicznik-jednostek.html?embedded=1`; `app.html` nie ładuje monitora w ogóle. `Gr` ustawiało hash **własnego okna**, czyli dokumentu w ramce, a nasłuch `hashchange` powłoki siedzi na oknie powłoki. Skok wywołany z ramki Terminarza (arkusz notatki otwiera się także stamtąd) ustawiał więc hash dokumentu terminarza i **nie robił nic** — zamiar leżał w `sessionStorage` do wygaśnięcia po 60 s.
@@ -45104,7 +45104,8 @@ leczenia”” jest tekstem bez akcji — bez zmian (zakładka teraz istnieje). 
 w `audyt` nie istnieją: Historia („poprawka w „Wpisy leczenia””) i pole oceny („Wybierz prawidłową wersję w „Wpisy
 leczenia””) to teksty; „Wybierz wersję” działa w sekcji w zakładce; „Edytuj w DocPro →” prowadzi do DocPro; przyciski
 notatki GH „↗ Otwórz kartę pacjenta” / „↗ Siatki / punkt GH” otwierają „Status” / „Siatki centylowe” (trend GH zostaje
-tam do etapu 3); powłoka (`vilda_shell.js`) przekazuje `activeTab` bez zmian.
+tam do etapu 3) [dopisek: od etapu 3 (2026-11-21, wpis „P-KARTA-LECZENIE, etap 3”) drugi przycisk to „↗ Trend dawki /
+punkt GH” — bez punktu GH otwiera zakładkę „Leczenie” z kartą GH na widoku „Trend dawki”, z punktem — DocPro jak dotąd]; powłoka (`vilda_shell.js`) przekazuje `activeTab` bez zmian.
 
 **Przypadki syntetyczne** (dane fikcyjne; chwila 19.11.2026; komputer 1440 px, telefon 393 px):
 
@@ -45585,3 +45586,121 @@ leku — kopia wartości katalogu `obesity_therapy.js` (ładowany tylko w DocPro
 
 **Wdrożenie.** Od razu przy wydaniu; dane, sejf, dziennik, zapis i synchronizacja bez zmian. **Cofnięcie** = rewert PR:
 grupa otyłości znów trzy bloki (etap 1).
+
+## P-KARTA-LECZENIE, etap 3 — karta leczenia GH z przełącznikiem (SW 1.1.566, `vilda_auth_ui.js` 579, `vilda_auth_ui.css` 89, 2026-11-21)
+
+**Zmiana kliniczna: NIE — prezentacja istniejących wartości (bez nowych obliczeń, progów ani zdań); trend dawki
+przeniesiony z „Siatek centylowych” do karty.** Plan i etapy: `docs/KARTA_LECZENIE_PLAN.md`; łatki:
+`docs/ZRODLA_ARTEFAKTOW.md`, „Łatka P-KARTA-LECZENIE, etap 3”.
+
+**Decyzje właściciela.** Makieta hybrydy zaakceptowana 2026-11-19 (komputer i telefon: „Przegląd”, „Trend dawki”,
+„Analiza”, telefon „Przegląd”, oba leczenia); „Etap 3, karta leczenia GH” 2026-11-21.
+
+**Stan przed zmianą.** W zakładce „Leczenie” grupa GH (`div.vilda-kl-gh`) to podsumowanie `wl` (znacznik, stan,
+„kurs k z N”, „🔄 zmiana preparatu”, pola Program, Preparat, Włączenie, Aktualna dawka, Punkty kontrolne, Ostatnia
+kontrola; „Preparaty (historia)”, ramka P-GH-BEZ-STARTU albo W2) i belka „📊 Dane analityczne” (`kl`, panel zwinięty).
+„Trend leczenia GH” (`Pl`: legenda, wykres % dawki zalecanej albo mg/kg, IGF-1, tabela Wiek | Dawka | IGF-1) stał na
+dole zakładki „Siatki centylowe”. Przycisk notatki GH „↗ Siatki / punkt GH” bez punktu GH otwierał „Siatki centylowe”.
+
+**Karta leczenia GH** (jedna miętowa karta — kontener podsumowania `.vilda-gh-summary`; `Kg_karta`):
+- **Nagłówek**: znacznik („Leczony hormonem wzrostu (rhGH)” / „Leczony IGF-1 (mekasermina)”), stan, „kurs k z N”
+  i „🔄 zmiana preparatu” — jak dotąd; po prawej (telefon ≤ 560 px — w osobnej linii pod znacznikiem) cichy tekst
+  „Program SNP · 7 punktów kontrolnych”: program jak pole „Program” z tym samym dymkiem pełnej nazwy (`bl`), punkty jak
+  pole „Punkty kontrolne” w odmianie `Ko_punkty` (przy > 1 kursie „N … w kursie (M łącznie)”); bez programu — same
+  punkty. Bez przycisków (wpis GH jest w DocPro). Siatka pól podsumowania znika; „Preparaty (historia)”, ramka
+  P-GH-BEZ-STARTU i informacja W2 zostają pod nagłówkiem, nad przełącznikiem (w każdym widoku), bez zmian treści i wyglądu.
+- **Przełącznik** „Przegląd | Trend dawki | Analiza” (wygląd `.vilda-oba-seg`, `tablist`/`tab`, `aria-selected`,
+  `tabpanel`; etykieta „{znacznik} — widok karty”), domyślnie „Przegląd”. „Trend dawki” jest tylko wtedy, gdy `Pl` rysuje
+  trend z punktów GH — co najmniej jeden punkt Włączenie / Kontynuacja / Zakończenie z liczbową dawką (`Kg_punktyTrendu`,
+  ten sam filtr, którego używa `Pl`); inaczej „Przegląd | Analiza”, a `Pl` zostaje w „Siatkach centylowych” jak dotąd
+  (rysuje tam ewentualny trend z wpisów Terminarza).
+- **Przegląd**: cztery kafelki (kafelki etapu 2 — `Ko_kafel`, `Ko_podpisy`; komputer 1 × 4, telefon 2 × 2). Wartości
+  z obiektów wyjściowych `wl` i `kl` — z tych samych zmiennych, z których powstają pola podsumowania i kafelki panelu
+  (bieżący kurs), nigdy z tekstu DOM; brak wartości — „—”; bez linii oceny (GH nie ma oceny ani progów):
+  - Preparat i dawka — „Aktualna dawka” rozbita z danych, z których `wl` składa jej tekst: liczba i jednostka punktu
+    („0,033” + „mg/kg/d”; Ngenla „0,66” + „mg/kg/tydz”); Increlex (P-GH-INCRELEX-KARTA) — części `Gwl_inc`: „2 × 1,2 mg”
+    + „na dobę”, podpis „0,04 mg/kg na podanie · {preparat}” (bez dawki dobowej w mg — „0,04” + „mg/kg na podanie”);
+    podpis — preparat jak pole „Preparat”; brak dawki — „—” z preparatem;
+  - Czas leczenia — ta sama liczba miesięcy co „przez N mies.” kafelka „Przyrost całkowity” (i pasek leczenia), podpis
+    „od {wiek Włączenia bieżącego kursu}” (jak pole „Włączenie”); bez Włączenia (P-GH-BEZ-STARTU) — etykieta „Czas od
+    1. punktu”, liczba z kafelka „Przyrost od 1. punktu”, podpis „od {wiek 1. punktu}”; W2 — „Czas leczenia” „—”
+    z podpisem „brak Włączenia po Zakończeniu”;
+  - Tempo wzrastania — wartość, jednostka, kolor i podpis kafelka panelu („6,2 cm/rok”, „ost. okres (z 6 mies.)”;
+    „krótki odstęp” bez koloru, P-TEMPO-6);
+  - Odpowiedź (ΔhSDS) — wartość i kolor kafelka panelu (zielony ≥ 0, czerwony < 0); podpis „hSDS −2,87 → −1,40” (hSDS
+    kafelków „Wzrost przy włączeniu”/„Wzrost w 1. punkcie” i „Wzrost ostatni”), bez Włączenia z „· od 1. punktu”; brak
+    wartości — „—” i podpis panelu („brak SDS start/teraz”, W2 „brak Włączenia po Zakończeniu”).
+- **Trend dawki**: blok `Pl` w trybie karty (trzeci argument `{ karta: true }`: bez nagłówka „Trend leczenia GH” i bez
+  górnego marginesu; legenda, wykres, „100% zalecana”, znacznik 🔄, „Pokaż typowy zakres dawki”, tabela, scalanie IGF-1
+  z notatek i przerwa linii między kursami bez zmian) w białej ramce wykresu; nagłówek tabeli w ramce — ciemny tekst na
+  jasnym tle (w „Siatkach” motyw dawał mu turkusowe tło; poprawka klasą tylko w karcie). `Pl` bez opcji rysuje jak
+  dotąd. Gdy karta ma „Trend dawki”, „Siatki centylowe” trendu nie rysują — `Pl` woła się raz, w karcie (asynchronicznie;
+  karta na niego nie czeka). Wykres to SVG z `viewBox` (szerokość 100%), więc rysuje się poprawnie także w widoku
+  ukrytym przy budowie karty i w ukrytej zakładce.
+- **Analiza**: panel „📊 Dane analityczne” rozwinięty, bez belki; nad nim cicha linia „SNP — somatotropinowa
+  niedoczynność przysadki · Genotropin 12 mg · ostatnia kontrola w wieku 10 l. 0 mies.” (pełna nazwa programu jak dymek
+  pola „Program”, preparat, ostatnia kontrola jak pole; brak części — bez niej). Sekcje „Wzrastanie”, „Odpowiedź na
+  leczenie wg preparatu”, „Prognoza wzrostu ostatecznego”, „Prognozy wg danych z …” i przypis — bez zmian treści.
+- **Stan widoku**: pamięć widoku per pacjent (`Kg_widoki`, osobna od karty otyłości) przetrwa odświeżenie Karty po
+  synchronizacji; nowe otwarcie Karty — „Przegląd” (czyszczona razem z `Ko_zapomnij`).
+- **Odnośniki**: pasek GH nad zakładkami — bez zmian (zakładka i przewinięcie do karty, widok bez zmian); arkusz
+  notatki GH — **„↗ Trend dawki / punkt GH”** (dotąd „↗ Siatki / punkt GH”): z `ghPointId` — DocPro jak dotąd (`Gr`);
+  bez `ghPointId` — Karta opcją `{ activeTab: "leczenie", widokGh: "trend" }`: zakładka „Leczenie”, karta GH na „Trendzie
+  dawki”, przewinięcie do karty i fokus na „Trend dawki” (gdy trend jeszcze czeka na odczyt notatek z IGF-1, a Karta jest
+  za krótka, by przewinąć — przewinięcie powtarza się po narysowaniu, o ile widok się nie zmienił); gdy karta GH nie ma
+  „Trendu dawki” albo Karta nie ma karty GH — „Siatki centylowe” jak dotąd (`Kg_opcjeKarty`). „↗ Otwórz kartę pacjenta” — bez zmian („Status”).
+- **Bez zmian**: karta otyłości (etap 2) i jej DOM, karta „wg notatek”, pasek leczenia (treść), kolejność kart (D2), pas
+  GH na siatkach, „Analiza trajektorii”, Status, Historia, Badania, DocPro, monitor, dane, sejf, obliczenia, progi, teksty
+  kafelków panelu. Pacjent bez GH — DOM jak dotąd. Gdy karta GH się nie złoży (wyjątek) — bloki jak w etapie 1 i trend
+  w „Siatkach”.
+
+**Przypadki syntetyczne** (dane fikcyjne; chwila 19.11.2026; komputer 1440 px, telefon 393 px; hSDS w e2e z OLAF —
+prawdziwa strona, w testach jednostkowych z atrapy liniowej):
+
+| Przypadek | Wejście | Oczekiwany wynik |
+|---|---|---|
+| G1 | chłopiec 10 l., SNP, Genotropin 12 mg, 7 punktów 7 l. 0 mies. (110 cm, 0,025) – 10 l. 0 mies. (132,4 cm, 0,033 mg/kg/d) | nagłówek „Program SNP · 7 punktów kontrolnych” (dymek „SNP — somatotropinowa niedoczynność przysadki”); Przegląd: „0,033 mg/kg/d” · Genotropin 12 mg; „36 mies.” · od 7 l. 0 mies.; „6,2 cm/rok” · ost. okres (z 6 mies.) (zielony); „+1,47” · hSDS −2,87 → −1,40 (zielony); Trend dawki — wykres (74% … 97%, „100% zalecana”) i tabela 7 wierszy; „Siatki centylowe” bez „Trend leczenia GH”; Analiza — cicha linia jak wyżej i dzisiejsze kafelki |
+| G2 | G1, od 9 l. 0 mies. Omnitrope 10 mg | „🔄 zmiana preparatu”, „Preparaty (historia)” nad przełącznikiem (w każdym widoku), legenda „Genotropin 12 mg”, „Omnitrope 10 mg”, znacznik 🔄 na wykresie, „Odpowiedź na leczenie wg preparatu” w Analizie |
+| G3 | G1 bez punktu Włączenie (6 punktów od 7 l. 6 mies.) | ramka P-GH-BEZ-STARTU nad przełącznikiem; „Czas od 1. punktu” „30 mies.” · od 7 l. 6 mies.; ΔhSDS „… · od 1. punktu” |
+| Increlex | IGF-1, Increlex 40 mg, 7 l. 6 mies. – 8 l. 0 mies., 4,8 mg/d przy 20 kg | „Leczony IGF-1 (mekasermina)”, „Program IGF-1 · 2 punkty kontrolne”; kafelek „2 × 2,4 mg” + „na dobę”, podpis „0,12 mg/kg na podanie · Increlex 40 mg”; trend — tabela „2 × 0,8 mg na dobę (0,042 mg/kg na podanie)”, „2 × 2,4 mg na dobę (0,12 mg/kg na podanie)” (legenda „dawka (mg/kg na podanie)” tam, gdzie nie ma % dawki zalecanej — bez zmian `Pl`) |
+| zakończone | X1: GH Omnitrope 9–15 l. zakończone + Wegovy trwa | „leczenie zakończone”, ta sama karta i przełącznik; „Program SNP · 4 punkty kontrolne”; „0,025 mg/kg/d”, „72 mies.” · od 9 l. 0 mies., „6,8 cm/rok”, „+1,73” · hSDS −2,54 → −0,81; karta otyłości nad kartą GH (D2) |
+| wznowienie | R1 (GR1): W 7;0 → K 8;0 → Z 9;0 → W 10;0 → K 11;0 | „kurs 2 z 2”, „Program SNP · 2 punkty kontrolne w kursie (5 łącznie)”; „12 mies.” · od 10 l. 0 mies., „7 cm/rok” · ost. okres (z 12 mies.), „+0,37” · hSDS −1,77 → −1,40; trend z przerwą linii (3 odcinki % dawki) |
+| W2 | W 7;0 → Z 9;0 → K 10;0 → K 11;0 | informacja W2 nad przełącznikiem; „Czas leczenia” „—” · brak Włączenia po Zakończeniu; ΔhSDS „—” · brak Włączenia po Zakończeniu; „2 punkty kontrolne w kursie (4 łącznie)” |
+| punkty bez dawki | G1 bez dawek + wpis Terminarza 0,033 mg/kg/d | „Przegląd \| Analiza”; „Trend leczenia GH” (z Terminarza) w „Siatkach centylowych” |
+| GH + otyłość | G1 + O1 / X1 | dwie karty, kolejność i paski bez zmian; widoki obu kart niezależne (także po odświeżeniu po synchronizacji) |
+| odświeżenie / nowe otwarcie / pasek | G1 na „Trendzie dawki” | `vilda:sync-merged` — „Trend dawki” zostaje; nowe otwarcie — „Przegląd”; pasek — zakładka i przewinięcie do karty, widok bez zmian |
+| notatka GH | bez `ghPointId` / z `ghPointId` | „Leczenie”, karta GH na „Trendzie dawki”, karta u góry widoku, fokus na „Trend dawki” / DocPro (`docpro.html`); bez punktów z dawką — „Siatki centylowe” |
+
+**Ograniczenia.** Kafelki opisują bieżący kurs, jak podsumowanie i panel. Podpis „od …” kafelka czasu to wiek (punkty GH
+nie mają daty). Gdy Włączenie jest jedynym punktem kursu, „Czas leczenia” ma „—” (panel nie podaje wtedy „przez N mies.”).
+Tabela trendu w ramce dziedziczy rozmiar tekstu komórek z motywu strony, jak w „Siatkach” (bez zmian).
+
+**Testy.** Dane wyłącznie fikcyjne.
+- `tests/unit/karta-leczenie.test.mjs` (80 → 104): prawdziwe `wl`, `kl`, `Pl`, `Kl_leczenie` i `Kg_*` — nagłówek,
+  dymek, przełącznik i widoki; kafelki wobec kafelków panelu z tego samego rysunku (G1, G2, G3, Increlex z trzema
+  wariantami dawki, Ngenla, zakończone, GR1, W2, bez dawki), `Pl` bez opcji jak dotąd i z opcją karty bez nagłówka
+  (to samo drzewo pozostałych węzłów), jeden filtr trendu, panel „Analizy” = panel spod belki, GH + otyłość z niezależnymi
+  widokami, stan widoku (`tlo`, nowe otwarcie), opcja `widokGh` i `Kg_opcjeKarty`, karta, która się nie składa (bloki
+  etapu 1), pacjent bez GH; trend rysowany po odczycie notatek (zgłoszenie `poRysunku`, IGF-1 z notatki w tabeli,
+  ponowne przewinięcie z notatki GH i jego brak po zmianie widoku). Zmienione oczekiwania (zamierzone): pola podsumowania GH → nagłówek, kafelki i cicha linia
+  (GR1, GR2, GW5, GR3, drugie Włączenie, „ze startem”, Increlex), belka GH → „Analiza”, informacje W2/P-GH-BEZ-STARTU
+  odczytywane nad przełącznikiem, „GH bez karty z przełącznikiem” → GH bez karty otyłości.
+- `tests/unit/care-plan-auth-ui-boundary.test.mjs`: nowy odcisk treści edytora notatki (etykieta i opcja otwarcia Karty).
+- e2e: nowe `tests/e2e/karta-leczenie-etap3.spec.mjs` KG-1…KG-10 (komputer) i `karta-leczenie-etap3-mobile.spec.mjs`
+  KGM-1…KGM-2 (telefon: cichy tekst pod znacznikiem, przełącznik w jednym wierszu, kafelki 2 × 2, trend i tabela bez
+  przewijania w bok). Istniejące specyfikacje — nawigacja do widoku: klik „Analiza” zamiast belki „📊 Dane analityczne”
+  (`karta-leczenie` KL-2, KL-7, `karta-gh-bez-punktu-wlaczenia`, `karta-gh-increlex-widoki`, `karta-gh-tempo-krotki-odstep`),
+  trend w widoku „Trend dawki” zamiast „Siatek” (`karta-leczenie` KL-7, `karta-gh-increlex-widoki` — trend z samego
+  Terminarza dalej w „Siatkach”), etykieta „Trend dawki / punkt GH” w lokatorach (`skok-gh-rozgloszenie`,
+  `sesja-bez-cudzych-danych`, `cel-wlasny-zapis`, `powloka-panel-obcy-pacjent`, `powloka-tozsamosc-ramki`,
+  `powloka-zmiana-pacjenta`), `widokKarty` (pomocnik etapu 2) szuka zakładek w karcie otyłości. Zmienione oczekiwania
+  (zamierzone, z tej zmiany): pola podsumowania GH zniknęły — „Włączenie” → podpis kafelka „Czas leczenia”/„Czas od
+  1. punktu”, „Punkty kontrolne” → cichy tekst nagłówka, „Ostatnia kontrola” → cicha linia „Analizy”, „Aktualna dawka” →
+  kafelek „Preparat i dawka” (`karta-leczenie` KL-7, `gh-wznowienie-docpro` i `-mobile`, `karta-gh-bez-punktu-wlaczenia`,
+  `karta-gh-increlex-dawka`); `karta-leczenie-etap2` KO-9 — GH ma własną kartę (dotąd „GH bez przełącznika, z polami”).
+- Kontrola negatywna na `origin/audyt` 19fd027e: nie przechodzi 34 testów jednostkowych (24 nowe, 9 zmienionych oczekiwań,
+  odcisk edytora notatki) i 34 testy e2e (12 nowych KG/KGM i 22 zmienione: nawigacja do widoku, etykieta przycisku,
+  pola podsumowania).
+
+**Wdrożenie.** Od razu przy wydaniu; dane, sejf, zapis i synchronizacja bez zmian. **Cofnięcie** = rewert PR: GH znów
+podsumowanie z polami i belka „Dane analityczne”, trend w „Siatkach centylowych”, przycisk notatki „↗ Siatki / punkt GH”.

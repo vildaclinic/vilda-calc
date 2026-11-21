@@ -50,7 +50,8 @@ test('Karta pacjenta, warstwa GH: tempo z 5 mies. pokazane z oznaczeniem „kró
   // P-KARTA-LECZENIE (etap 1): bloki leczenia stoją w zakładce „Leczenie” (druga, po „Status”).
   await page.locator('.vilda-patient-tab[data-tab="leczenie"]').click();
 
-  const btn = page.locator('.vilda-gha-btn').first();
+  // P-KARTA-LECZENIE, etap 3: „Dane analityczne” — widok „Analiza” karty leczenia GH (dotąd belka .vilda-gha-btn).
+  const btn = page.locator('.vilda-kg-seg [data-widok="analiza"]').first();
   await expect(btn).toBeVisible({ timeout: 15000 });
   await btn.click();
   const panel = page.locator('.vilda-gha-panel').first();

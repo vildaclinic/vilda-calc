@@ -34,6 +34,9 @@ test('GW-EM1: wznowienie przyciskiem karty na telefonie — odmowa Kontynuacji p
   await page.getByRole('button', { name: 'Leczony hormonem wzrostu (rhGH): otwórz zakładkę Leczenie' }).click();
   const lecz = tresc(page, 'leczenie');
   await expect(lecz.locator('.vilda-gh-summary-head .vilda-gh-summary-chip')).toHaveText(['aktywne', 'kurs 2 z 2']);
-  await expect(lecz.locator('.vilda-gh-summary')).toContainText('Włączeniew wieku 10 l. 0 mies.');
+  // P-KARTA-LECZENIE, etap 3 (zmiana zamierzona): pole „Włączenie” zniknęło z karty GH — wiek Włączenia kursu jest
+  // podpisem kafelka „Czas leczenia” (dotąd „Włączeniew wieku 10 l. 0 mies.”).
+  await expect(lecz.locator('.vilda-gh-summary')).toContainText('Czas leczenia');
+  await expect(lecz.locator('.vilda-ko-kafel', { hasText: 'Czas leczenia' }).locator('.vilda-ko-sub')).toHaveText('od 10 l. 0 mies.');
   expect(await bezPrzewijaniaWBok(page)).toBe(true);
 });
