@@ -912,12 +912,12 @@
   "sha256": "e1e45926fd9775e02302e9d3752c53926f6da39a0085e869ea9c3b6ce39637b2"
  },
  "inline_notatki_00.css": {
-  "v": 1,
-  "sha256": "6eb1aa3c6fbadb03b82b4ca3536fa0369f0c71d9692ef302a8e7d40751dadf58"
+  "v": 2,
+  "sha256": "2c0c1d195a060c55e9d3c881ad111e41ef3099e0dbcec751f242989ae0d923d7"
  },
  "inline_notatki_00.js": {
-  "v": 9,
-  "sha256": "c7937914cdb521fa76c845277fee42e9efac415982bc008b9c980bce1d96ac97"
+  "v": 10,
+  "sha256": "66b48b3b3f4c0137b8bc83367731b202ec9aec0db0fc504005a1c4f0c9fbe7cb"
  },
  "inline_o_aplikacji_00.css": {
   "v": 1,

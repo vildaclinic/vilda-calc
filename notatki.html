@@ -75,7 +75,7 @@
 })();
 </script>
 
-<link href="inline_notatki_00.css?v=1" rel="stylesheet">
+<link href="inline_notatki_00.css?v=2" rel="stylesheet">
 
   <script defer src="vilda_logger.js?v=2"></script>
 <script defer src="vilda_html.js?v=5"></script>
@@ -184,7 +184,7 @@
           <div class="notes-toolbar" id="notesToolbar" style="display:none;">
             <div class="notes-search">
               <span class="notes-search__icon"><i data-lucide="search"></i></span>
-              <input type="text" id="notesSearch" placeholder="Szukaj w notatkach…" autocomplete="off" />
+              <input type="text" id="notesSearch" aria-label="Szukaj w notatkach" placeholder="Szukaj w notatkach…" autocomplete="off" />
             </div>
             <div class="notes-filters" id="notesFilters">
               <button type="button" class="notes-filter is-active" data-cat="all">Wszystkie</button>
@@ -247,6 +247,14 @@
     </div>
   </div>
 
-<script defer src="inline_notatki_00.js?v=9"></script>
+  <dialog class="note-preview" id="notePreview" aria-labelledby="notePreviewTitle">
+    <div class="note-preview__head">
+      <h2 id="notePreviewTitle"></h2>
+      <button type="button" class="note-btn-ghost" id="notePreviewClose" autofocus>Zamknij</button>
+    </div>
+    <div class="note-preview__body" id="notePreviewBody" role="region" aria-label="Treść notatki" tabindex="0"></div>
+  </dialog>
+
+<script defer src="inline_notatki_00.js?v=10"></script>
 </body>
 </html>
