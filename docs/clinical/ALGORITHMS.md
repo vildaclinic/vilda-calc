@@ -45493,7 +45493,7 @@ i sejf — bez zmian.
 dopisać). **Cofnięcie** = rewert PR: DocPro wraca do reguły „jedno Włączenie i jedno Zakończenie w całej liście”, monitor
 do sortowania wg rodzaju i metryk z całej listy, Terminarz do ostatniego elementu tablicy.
 
-## Dziennik zdarzeń: odsyłanie ukrytego wpisu Kosza karty usuniętej po zastosowaniu zmiany z innego urządzenia — uśpione (P-ZBIEZNOSC-ZDARZEN, E3-PR0d2, SW 1.1.564, `vilda_vault.js` 283, 2026-11-20)
+## Dziennik zdarzeń: odsyłanie ukrytego wpisu Kosza karty usuniętej po zastosowaniu zmiany z innego urządzenia — uśpione (P-ZBIEZNOSC-ZDARZEN, E3-PR0d2, SW 1.1.565, `vilda_vault.js` 283, 2026-11-20)
 
 **Zmiana kliniczna: NIE (uśpiona).** Wzory, progi, jednostki, interpretacje, reguły scalania (`Le`), format kopii,
 serwer i `vilda_sync.js` bez zmian. Dla użytkownika dziś nic się nie zmienia: odsyłanie ukrytego wpisu włącza ten sam
@@ -45966,7 +45966,7 @@ odsyłania wpisów, opis `Bev_zastosujZEchem`, nagłówek części emisji, opis 
 `Bev_kandydaciEcha`, `Bev_stanEcha`, `Bev_echo`, `Bev_stanKosza`, `Bev_echoKosza`, `Bev_stomb`, `Bem_zastosujEcho`,
 `Bem_zmiana`, `Bem_RANGI`, `Bob_plan`, `Bob_bramkaEcha`. Poza blokiem bez zmian.
 
-**Wersje.** `vilda_vault.js` 282 → 283, `vilda_chrome.js` 313 → 314 i `vilda_session_bridge.js` 229 → 230 (wstrzykują
-sejf), SW 1.1.563 → 1.1.564 — `npm run podbij-wersje`; baza `origin/audyt` `fd555b6a` (po vildaclinic/vilda-calc#1014;
+**Wersje.** `vilda_vault.js` 282 → 283, `vilda_chrome.js` 314 → 315 i `vilda_session_bridge.js` 230 → 231 (wstrzykują
+sejf), SW 1.1.564 → 1.1.565 — `npm run podbij-wersje`; baza `origin/audyt` `e3efa991` (po vildaclinic/vilda-calc#1013;
 sejf, `vilda_sync.js`, `runtime/`, `tools/` i testy synchronizacji bez zmian względem `bc2d88f8`, E3-PR0d; pomiary na
 `119f0225`). Bez nowego pliku w pamięci offline.
