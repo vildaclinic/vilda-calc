@@ -1712,6 +1712,14 @@
  *
  * Wejście: sekcja({ patientId, stan, urodzenieISO, onZmiana }) — stan z VildaDziennikOtylosci.zloz;
  * onZmiana() wołane po każdym udanym zapisie (Karta przelicza wtedy kafelki i ocenę).
+ *
+ * P-KARTA-LECZENIE, etap 2 (makieta hybrydy zaakceptowana 2026-11-19): opcja uklad: 'karta' — sekcja w karcie
+ * leczenia otyłości (zakładka „Leczenie” Karty, widok „Wpisy”). Bez nagłówka: tytuł i „+ Kontynuacja” stoją
+ * w nagłówku karty. Akcje nagłówka (ten sam przycisk „+ Kontynuacja” z tą samą obsługą; bez aktywnego cyklu także
+ * „Włączenie w DocPro →” i wyjaśnienie), komunikat tego przycisku i liczbę wpisów (jak „Pokaż wszystkie wpisy (N)”)
+ * sekcja oddaje w opcji wyjscie: { akcje, komunikat, liczba }. Objaśnienia sekcji (wstęp i podpowiedzi) stoją pod
+ * łączem rozwijanym „Jak działa dziennik leczenia ⌄”. Wpisy, przyciski i komunikaty — bez zmian. Bez opcji uklad
+ * sekcja wygląda i działa dokładnie jak dotąd (DocPro, inne miejsca).
  */
 (function (w) {
   'use strict';
@@ -1720,6 +1728,7 @@
   var POKAZ_NA_START = 5;
   var rozwiniete = {};
   var usunieteRozwiniete = {};
+  var jakRozwiniete = {};
   var ostatnieUsuniecie = {};
 
   function Dz() { return w.VildaDziennikOtylosci; }
@@ -2294,8 +2303,13 @@
     var widoczne = stan.wpisy.filter(function (x) { return x.punkt; });
     var usuniete = stan.wpisy.filter(function (x) { return x.stan === 'usuniety'; });
     if (!widoczne.length && !usuniete.length) return null;
+    // P-KARTA-LECZENIE, etap 2: układ „karta” (opis wyżej, przy wejściu modułu).
+    var karta = o.uklad === 'karta';
 
     var msg = el('div', { class: 'vdo-msg', role: 'status', 'aria-live': 'polite', hidden: true });
+    // W karcie przycisk „+ Kontynuacja” stoi w nagłówku karty, widoczny w każdym widoku — jego wyjaśnienie (brak
+    // aktywnego cyklu) idzie do komunikatu oddanego razem z przyciskiem, a nie do komunikatu sekcji ukrytej w „Wpisach”.
+    var msgDodaj = karta ? el('div', { class: 'vdo-msg', role: 'status', 'aria-live': 'polite', hidden: true }) : msg;
     function zBledem(p) {
       return Promise.resolve(p).catch(function (e) { komunikat(msg, 'err', (e && e.message) || 'Nie zapisano zmiany.'); });
     }
@@ -2307,7 +2321,7 @@
     if (!aktywny) dodaj.setAttribute('aria-disabled', 'true');
     dodaj.addEventListener('click', function () {
       if (!aktywnyCykl(ctx.stan)) {
-        komunikat(msg, 'warn', 'Brak aktywnego cyklu leczenia — nowy cykl zaczyna się od Włączenia, które dodajesz w DocPro przy wizycie („Włączenie w DocPro →”).');
+        komunikat(msgDodaj, 'warn', 'Brak aktywnego cyklu leczenia — nowy cykl zaczyna się od Włączenia, które dodajesz w DocPro przy wizycie („Włączenie w DocPro →”).');
         return;
       }
       formularz(ctx, null);
@@ -2361,8 +2375,10 @@
       });
       dolne.push(t);
     }
+    var dawne = null;
     if (stan.wpisy.some(function (x) { return x.stan === 'migawka' || (x.wersje && x.wersje.some(function (v) { return v.op === 'migracja'; })); })) {
-      dolne.push(el('p', { class: 'vdo-hint', text: 'Wpisy z dawnych wizyt przeniesione ze źródłem „gabinet”.' }));
+      dawne = el('p', { class: 'vdo-hint', text: 'Wpisy z dawnych wizyt przeniesione ze źródłem „gabinet”.' });
+      if (!karta) dolne.push(dawne);
     }
     if (usuniete.length) {
       var otwarte = !!usunieteRozwiniete[o.patientId];
@@ -2409,26 +2425,64 @@
       ])
       : null;
 
+    var wstep = el('p', { class: 'vdo-intro', text: 'Dziennik leczenia jest oddzielony od wizyt w gabinecie. Wpis z masą od pacjenta nie tworzy wizyty i nie zmienia jej pomiarów.' });
+    var akcje = el('div', { class: 'vdo-head-actions' + (karta ? ' vdo-zewn' : '') }, [
+      el('div', { class: 'vdo-head-buttons' }, [
+        dodaj,
+        aktywny ? null : el('button', { type: 'button', class: 'vdo-btn vdo-btn-docpro', text: 'Włączenie w DocPro →', onclick: function () { doDocPro(ctx, 'wlaczenie', null); } })
+      ]),
+      aktywny ? null : el('span', { id: 'vdoAddWhy', class: 'vdo-hint', text: 'Brak aktywnego cyklu — nowy cykl zaczyna się od Włączenia przy wizycie.' })
+    ]);
+    var podpowiedz = el('p', { class: 'vdo-hint', text: 'Włączenie, Zakończenie i zmianę leku edytujesz w monitorze DocPro — „Edytuj w DocPro →” przy wpisie otwiera go od razu na tym wpisie. Tu — Kontynuacje.' });
+
+    if (karta) {
+      if (o.wyjscie && typeof o.wyjscie === 'object') {
+        o.wyjscie.akcje = akcje;
+        o.wyjscie.komunikat = msgDodaj;
+        o.wyjscie.liczba = widoczne.length;
+      }
+      return el('section', { class: 'vdo vdo-karta', 'aria-label': 'Wpisy leczenia' }, [
+        jakDziala(o.patientId, [wstep, podpowiedz, dawne]),
+        konflikty,
+        cofnij,
+        msg,
+        lista
+      ].concat(dolne));
+    }
     return el('section', { class: 'vdo', 'aria-labelledby': 'vdoTytul-' + o.patientId }, [
       el('div', { class: 'vdo-head' }, [
         el('div', {}, [
           el('h3', { id: 'vdoTytul-' + o.patientId, class: 'vdo-title', text: 'Wpisy leczenia' }),
-          el('p', { class: 'vdo-intro', text: 'Dziennik leczenia jest oddzielony od wizyt w gabinecie. Wpis z masą od pacjenta nie tworzy wizyty i nie zmienia jej pomiarów.' })
+          wstep
         ]),
-        el('div', { class: 'vdo-head-actions' }, [
-          el('div', { class: 'vdo-head-buttons' }, [
-            dodaj,
-            aktywny ? null : el('button', { type: 'button', class: 'vdo-btn vdo-btn-docpro', text: 'Włączenie w DocPro →', onclick: function () { doDocPro(ctx, 'wlaczenie', null); } })
-          ]),
-          aktywny ? null : el('span', { id: 'vdoAddWhy', class: 'vdo-hint', text: 'Brak aktywnego cyklu — nowy cykl zaczyna się od Włączenia przy wizycie.' })
-        ])
+        akcje
       ]),
-      el('p', { class: 'vdo-hint', text: 'Włączenie, Zakończenie i zmianę leku edytujesz w monitorze DocPro — „Edytuj w DocPro →” przy wpisie otwiera go od razu na tym wpisie. Tu — Kontynuacje.' }),
+      podpowiedz,
       konflikty,
       cofnij,
       msg,
       lista
     ].concat(dolne));
+  }
+
+  // P-KARTA-LECZENIE, etap 2: objaśnienia sekcji w karcie — pod łączem rozwijanym (stan per pacjent, jak „Pokaż
+  // wszystkie”, więc przebudowa karty po zapisie wpisu go nie zwija).
+  function jakDziala(patientId, akapity) {
+    var id = 'vdoJak-' + patientId;
+    var otwarte = !!jakRozwiniete[patientId];
+    var tresc = el('div', { id: id, class: 'vdo-jak-tresc' }, akapity);
+    tresc.hidden = !otwarte;
+    var przycisk = el('button', { type: 'button', class: 'vdo-jak', 'aria-expanded': otwarte ? 'true' : 'false', 'aria-controls': id }, [
+      'Jak działa dziennik leczenia',
+      el('span', { class: 'vdo-jak-chev', 'aria-hidden': 'true', text: '⌄' })
+    ]);
+    przycisk.addEventListener('click', function () {
+      var teraz = tresc.hidden;
+      tresc.hidden = !teraz;
+      jakRozwiniete[patientId] = teraz;
+      przycisk.setAttribute('aria-expanded', teraz ? 'true' : 'false');
+    });
+    return el('div', { class: 'vdo-jak-blok' }, [przycisk, tresc]);
   }
 
   w.VildaDziennikOtylosciUI = Object.freeze({

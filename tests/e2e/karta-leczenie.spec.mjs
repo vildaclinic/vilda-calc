@@ -44,15 +44,22 @@ test.describe('Karta pacjenta — zakładka „Leczenie” i pasek leczenia (kom
     await expect(aktywna(page)).toHaveText('Leczenie');
     await expect(tresc(page, 'leczenie')).toBeVisible();
     await expect(tresc(page, 'antro')).toBeHidden();
-    await expect.poll(async () => (await polozenieZakladek(page)).naEkranie, { message: 'pasek zakładek u góry widoku' }).toBeLessThan(40);
+    // P-KARTA-LECZENIE, etap 2: karta leczenia na „Przeglądzie” jest krótka — przy 1000 px cała zakładka mieści się
+    // w oknie i Karty nie da się przewinąć dalej; wtedy pasek zakładek zostaje tam, gdzie był (dotąd zawsze < 40 px).
+    await expect.poll(() => page.evaluate(() => {
+      const z = document.querySelector('.vilda-auth-patient-card .vilda-patient-tabs').getBoundingClientRect().top;
+      const r = document.getElementById('vilda-auth-ui-root');
+      return z < 40 || r.scrollTop >= r.scrollHeight - r.clientHeight - 1;
+    }), { message: 'pasek zakładek u góry widoku albo Karta przewinięta do końca' }).toBe(true);
     expect((await polozenieZakladek(page)).wKarcie, 'D4: pasek zakładek nie zmienia położenia w Karcie').toBe(przed.wKarcie);
     await expect(paski(page), 'pasek leczenia zostaje nad zakładkami').toHaveCount(1);
 
     // Bloki działają w zakładce: podsumowanie, „Wpisy leczenia”, „Dane analityczne — otyłość” z oceną.
+    // P-KARTA-LECZENIE, etap 2: panel otyłości to widok „Analiza” karty leczenia (dotąd belka „Dane analityczne — otyłość”).
     const lecz = tresc(page, 'leczenie');
     await expect(lecz.locator('.vilda-gh-summary-badge')).toHaveText('Leczenie otyłości — Wegovy');
     await expect(lecz.locator('.vdo-list:not(.vdo-list-deleted) > .vdo-item')).toHaveCount(2);
-    await lecz.locator('.vilda-gha-btn', { hasText: 'Dane analityczne — otyłość' }).click();
+    await lecz.getByRole('tab', { name: 'Analiza' }).click();
     await expect(lecz.locator('.vilda-oba-verdict .vilda-oba-vt')).toHaveText('Przed oknem oceny — oceń po 12 tyg.');
 
     // „+ Kontynuacja” otwiera okno; zapis wpisu przebudowuje grupę W ZAKŁADCE i odświeża pasek.
@@ -139,6 +146,8 @@ test.describe('Karta pacjenta — zakładka „Leczenie” i pasek leczenia (kom
     const pid = await zapisz(page, O1);
     await karta(page, pid, { activeTab: 'leczenie' });
     await expect(aktywna(page)).toHaveText('Leczenie');
+    // P-KARTA-LECZENIE, etap 2: „Wpisy leczenia” — widok „Wpisy” karty leczenia (domyślnie „Przegląd”).
+    await tresc(page, 'leczenie').getByRole('tab', { name: /^Wpisy/ }).click();
     await expect(tresc(page, 'leczenie').locator('.vdo')).toBeVisible();
 
     // Inna zakładka, potem „wstecz”: stan nawigacji Karty wraca do „Leczenie” (xa.restoreTab).
@@ -167,6 +176,9 @@ test.describe('Karta pacjenta — zakładka „Leczenie” i pasek leczenia (kom
     await expect(paski(page).locator('.vilda-kl-pasek-t')).toHaveText('2,4 mg · 20 tyg. · BMI −9,7%');
   });
 
+  // P-KARTA-LECZENIE, etap 2: odnośnik przełącza kartę leczenia na widok „Wpisy” i przewija do karty (nagłówek
+  // i przełącznik widoczne), fokus na „Wpisy” — sekcja w karcie nie ma własnego tytułu. Dotąd: przewinięcie do sekcji
+  // „Wpisy leczenia” i fokus na jej tytule.
   test('KL-6 Notatki: „Wpisy leczenia otyłości (N) — Leczenie →” otwiera zakładkę „Leczenie” i przewija do „Wpisy leczenia”', async ({ page }) => {
     test.setTimeout(150_000);
     await otworz(page);
@@ -186,8 +198,8 @@ test.describe('Karta pacjenta — zakładka „Leczenie” i pasek leczenia (kom
     await link.click();
     await expect(aktywna(page)).toHaveText('Leczenie');
     await expect(tresc(page, 'leczenie').locator('.vdo')).toBeVisible();
-    await expect.poll(() => uGory(page, () => document.querySelector('.vdo')), { message: '„Wpisy leczenia” u góry widoku' }).toBe(true);
-    await expect(page.locator('.vdo .vdo-title')).toBeFocused();
+    await expect.poll(() => uGory(page, () => document.querySelector('.vilda-ko-karta')), { message: 'karta z „Wpisami leczenia” u góry widoku' }).toBe(true);
+    await expect(tresc(page, 'leczenie').getByRole('tab', { name: /^Wpisy/ })).toBeFocused();
   });
 
   // P-GH-WZNOWIENIE, część 1 (decyzje właściciela 2026-11-20, W1–W3): GR1 — GH wznowione po Zakończeniu. Dotąd pasek

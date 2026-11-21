@@ -45,8 +45,12 @@ async function karta(page, pid) {
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id), pid);
   // P-KARTA-LECZENIE (etap 1): bloki leczenia stoją w zakładce „Leczenie” (druga, po „Status”).
   await page.locator('.vilda-patient-tab[data-tab="leczenie"]').click();
+  // P-KARTA-LECZENIE (etap 2): „Wpisy leczenia” to widok „Wpisy” karty leczenia (domyślnie „Przegląd”).
+  await widok(page, /^Wpisy/).click();
   await expect(page.locator('.vdo')).toBeVisible({ timeout: 15000 });
 }
+// P-KARTA-LECZENIE (etap 2): przełącznik karty leczenia otyłości; panel „Dane analityczne — otyłość” to widok „Analiza”.
+const widok = (page, nazwa) => page.locator('.vilda-ko-seg').getByRole('tab', { name: nazwa });
 const wiersze = (page) => page.locator('.vdo-list:not(.vdo-list-deleted) > .vdo-item');
 const wersjeWizyty = (page, pid) => page.evaluate(async (id) => {
   const p = await window.VildaVault.getPatient(id);
@@ -100,7 +104,7 @@ test.describe('Karta pacjenta — dziennik leczenia otyłości', () => {
       'Leczenie otyłości — Kontynuacja 10.11.2026', 'Leczenie otyłości — Kontynuacja 13.10.2026', 'Leczenie otyłości — Włączenie 14.04.2026',
     ]);
     // Ocena wg ChPL z dziennika: okno trwa, w oknie brak wzrostu — „Potrzebny pomiar wzrostu”.
-    await page.locator('.vilda-gha-btn', { hasText: 'Dane analityczne' }).click();
+    await widok(page, 'Analiza').click();
     await expect(page.locator('.vilda-oba-verdict .vilda-oba-vt')).toHaveText('Potrzebny pomiar wzrostu do oceny ChPL');
   });
 
@@ -130,7 +134,7 @@ test.describe('Karta pacjenta — dziennik leczenia otyłości', () => {
     await okno.getByRole('button', { name: 'Zapisz wpis' }).click();
     await expect(okno).toBeHidden();
     await expect(wiersze(page).first()).toContainText('163,4 cm');
-    await page.locator('.vilda-gha-btn', { hasText: 'Dane analityczne' }).click();
+    await widok(page, 'Analiza').click();
     await expect(page.locator('.vilda-oba-verdict .vilda-oba-vt')).toHaveText('Odpowiedź wystarczająca — kontynuować leczenie');
   });
 
@@ -180,10 +184,11 @@ test.describe('Karta pacjenta — dziennik leczenia otyłości', () => {
     await expect(page.locator('.vdo .vdo-msg-err')).toContainText('Jeden wpis ma dwie wersje');
     const konfl = page.locator('.vdo-item-conflict');
     await expect(konfl).toHaveCount(1);
-    await page.locator('.vilda-gha-btn', { hasText: 'Dane analityczne' }).click();
+    await widok(page, 'Analiza').click();
     await expect(page.locator('.vilda-oba-verdict .vilda-oba-vt')).toHaveText('Ocena wstrzymana — dwie wersje wpisu z 10.11.2026');
     await expect(page.locator('.vilda-oba-verdict .vilda-oba-vd')).toContainText(/\((74,6 kg i 74,1 kg|74,1 kg i 74,6 kg)\)/);
 
+    await widok(page, /^Wpisy/).click();
     await konfl.getByRole('button', { name: 'Wybierz wersję' }).click();
     const okno = page.getByRole('dialog', { name: /Wpis z 10.11.2026 poprawiono na dwóch urządzeniach/ });
     await expect(okno.locator('.vdo-version')).toHaveCount(2);
@@ -192,7 +197,7 @@ test.describe('Karta pacjenta — dziennik leczenia otyłości', () => {
     await expect(okno).toBeHidden();
     await expect(page.locator('.vdo-item-conflict')).toHaveCount(0);
     await expect(wiersze(page).first()).toContainText('74,1 kg');
-    await page.locator('.vilda-gha-btn', { hasText: 'Dane analityczne' }).click();
+    await widok(page, 'Analiza').click();
     await expect(page.locator('.vilda-oba-verdict .vilda-oba-vt')).toHaveText('Potrzebny pomiar wzrostu do oceny ChPL');
   });
 
@@ -207,7 +212,9 @@ test.describe('Karta pacjenta — dziennik leczenia otyłości', () => {
     await expect(page.getByRole('button', { name: 'Włączenie w DocPro →' })).toBeVisible();
     // aria-disabled: przycisk zostaje w kolejności klawiatury i po kliknięciu wyjaśnia powód (jak przyciski monitora).
     await page.getByRole('button', { name: 'Kontynuacja' }).click({ force: true });
-    await expect(page.locator('.vdo .vdo-msg-warn')).toContainText('nowy cykl zaczyna się od Włączenia');
+    // P-KARTA-LECZENIE (etap 2): „+ Kontynuacja” stoi w nagłówku karty leczenia (widoczny w każdym widoku), więc jego
+    // wyjaśnienie — w komunikacie pod nagłówkiem karty, nie w sekcji (dotąd: .vdo .vdo-msg-warn). Ten sam tekst.
+    await expect(page.locator('.vilda-ko-karta .vdo-msg-warn')).toContainText('nowy cykl zaczyna się od Włączenia');
     await expect(page.locator('.vdo-dialog')).toHaveCount(0);
   });
 

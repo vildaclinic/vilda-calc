@@ -60,6 +60,8 @@ async function karta(page, pid) {
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id), pid);
   // P-KARTA-LECZENIE (etap 1): bloki leczenia stoją w zakładce „Leczenie” (druga, po „Status”).
   await page.locator('.vilda-patient-tab[data-tab="leczenie"]').click();
+  // P-KARTA-LECZENIE (etap 2): „Wpisy leczenia” — widok „Wpisy” karty leczenia (domyślnie „Przegląd”).
+  await page.locator('.vilda-ko-seg').getByRole('tab', { name: /^Wpisy/ }).click();
   await expect(page.locator('.vdo')).toBeVisible({ timeout: 15000 });
 }
 
@@ -183,6 +185,8 @@ test.describe('Karta pacjenta → monitor leczenia otyłości w DocPro', () => {
     await start.evaluate((id) => window.VildaAuthUI.showPatientCard(id), pid);
     // P-KARTA-LECZENIE (etap 1): bloki leczenia stoją w zakładce „Leczenie” (druga, po „Status”).
     await start.locator('.vilda-patient-tab[data-tab="leczenie"]').click();
+    // P-KARTA-LECZENIE (etap 2): „Wpisy leczenia” — widok „Wpisy” karty leczenia (domyślnie „Przegląd”).
+    await start.locator('.vilda-ko-seg').getByRole('tab', { name: /^Wpisy/ }).click();
     await expect(start.locator('.vdo')).toBeVisible({ timeout: 15000 });
     await start.locator('.vdo-item[data-date="2026-04-14"]').getByRole('button', { name: 'Edytuj w DocPro →' }).click();
 
@@ -218,13 +222,16 @@ test.describe('Karta pacjenta → monitor leczenia otyłości w DocPro', () => {
       const q = (s) => document.querySelector(s);
       const cs = (el) => { const s = getComputedStyle(el); return { h: Math.round(el.getBoundingClientRect().height), bg: s.backgroundColor, color: s.color, shadow: s.boxShadow }; };
       return {
-        sekcja: cs(q('.vdo')), wiersz: cs(q('.vdo-item')), dodaj: cs(q('.vdo-add')), popraw: cs(q('.vdo-row-actions .vdo-btn')),
+        sekcja: cs(q('.vdo')), karta: cs(q('.vilda-ko-karta')), wiersz: cs(q('.vdo-item')), dodaj: cs(q('.vdo-add')), popraw: cs(q('.vdo-row-actions .vdo-btn')),
         docpro: cs(q('.vdo-btn-docpro')), gabinet: cs(q('.vdo-src-gabinet')), pacjent: cs(q('.vdo-src-pacjent')),
         przewijanie: document.documentElement.scrollWidth > document.documentElement.clientWidth,
       };
     });
     let s = await styl();
-    expect(s.sekcja.bg, 'białe tło sekcji').toBe('rgb(255, 255, 255)');
+    // P-KARTA-LECZENIE, etap 2 (makieta hybrydy 2026-11-19): w karcie leczenia sekcja nie ma własnego pudełka — białe
+    // wpisy stoją na miętowym tle karty (dotąd: białe tło sekcji). Wpisy i przyciski bez zmian.
+    expect(s.sekcja.bg, 'sekcja bez własnego tła').toBe('rgba(0, 0, 0, 0)');
+    expect(s.karta.bg, 'miętowe tło karty leczenia').toBe('rgb(225, 245, 238)');
     expect(s.wiersz.bg).toBe('rgb(255, 255, 255)');
     expect(s.dodaj.h, '„+ Kontynuacja” mniejszy niż przyciski ekranu konta').toBeLessThanOrEqual(36);
     expect(s.dodaj.shadow).toBe('none');

@@ -43,6 +43,56 @@ export const X1 = {
     GH('x1-c2', 'continue', 13, 0, 55, 153, 13, 0.03, 'Omnitrope 10 mg'), GH('x1-e', 'end', 15, 0, 78, 166.5, 15.5, 0.025, 'Omnitrope 10 mg')],
   obesityTherapyPoints: [OB(DOB_X1, 'x1-os', 'start', '2026-06-23', 99.4, 167.6, '0,25 mg'), OB(DOB_X1, 'x1-oc', 'continue', '2026-11-10', 92.5, 168, '2,4 mg')],
 };
+/**
+ * P-KARTA-LECZENIE, etap 2 — O2 (makieta „Wpisy (7)”): Wegovy od 17.02.2026, cztery wizyty i trzy wpisy dziennika od
+ * pacjentki (masa bez wzrostu) — 7 wpisów, odpowiedź wystarczająca. Wpisy dziennika: zapiszZDziennikiem.
+ */
+export const O2 = {
+  name: 'Fikcyjna Oliwia',
+  user: { lastName: 'Fikcyjna', firstName: 'Oliwia', sex: 'F', age: 17, ageMonths: 11, height: 157.4, weight: 79.4, dobISO: DOB_O1 },
+  obesityTherapyPoints: [OB(DOB_O1, 'o2-start', 'start', '2026-02-17', 91.9, 157, '0,25 mg'), OB(DOB_O1, 'o2-k2', 'continue', '2026-04-14', 88.4, 157, '1 mg'),
+    OB(DOB_O1, 'o2-k4', 'continue', '2026-06-09', 85.1, 157.2, '2,4 mg'), OB(DOB_O1, 'o2-k6', 'continue', '2026-11-10', 79.4, 157.4, '2,4 mg')],
+};
+export const O2_DZIENNIK = [{ dateISO: '2026-03-17', weight: 90.3, dose: '0,5 mg' }, { dateISO: '2026-05-12', weight: 86.8, dose: '1,7 mg' },
+  { dateISO: '2026-08-18', weight: 82.2, dose: '2,4 mg', comment: 'Masa podana telefonicznie; recepta wysłana.' }];
+/** Etap 2 (poprawka po przeglądzie): ostatni wpis bez wzrostu (masa od pacjentki) — ocena wg ChPL z wpisu 01.08.2026. */
+export const O_OSTATNI_BEZ_WZROSTU = {
+  ...O1, name: 'Fikcyjna Bez Wzrostu',
+  obesityTherapyPoints: [OB(DOB_O1, 't-w', 'start', '2026-01-05', 95, 160, '0,25 mg'), OB(DOB_O1, 't-k1', 'continue', '2026-08-01', 88, 160, '2,4 mg'),
+    { ...OB(DOB_O1, 't-k2', 'continue', '2026-11-10', 85, 160, '2,4 mg'), height: null, bmi: null }],
+};
+/** Pacjent z wpisami dziennika od pacjenta (masa bez wzrostu), zapisanymi tak jak „+ Kontynuacja” (planNowego → zapisz). */
+export const zapiszZDziennikiem = (page, rekord, dziennik) => page.evaluate(async ({ r, wpisy }) => {
+  const id = (await window.VildaVault.savePatient(r, { dedup: false })).patientId;
+  const D = window.VildaDziennikOtylosci;
+  const migawka = (await window.VildaVault.getPatient(id)).snapshots[0].payload.obesityTherapyPoints;
+  const wzor = migawka[0], dob = r.user.dobISO.split('-').map(Number);
+  for (const w of wpisy) {
+    const d = w.dateISO.split('-').map(Number);
+    let mies = (d[0] - dob[0]) * 12 + (d[1] - dob[1]);
+    if (d[2] < dob[2]) mies -= 1;
+    const dane = { type: 'continue', dateISO: w.dateISO, ageYears: Math.floor(mies / 12), ageMonths: mies % 12, weight: w.weight, weightSource: 'pacjent',
+      height: null, heightSource: null, drug: wzor.drug, substance: wzor.substance, dose: w.dose, comment: w.comment || '' };
+    const plan = D.planNowego(await D.wczytaj(id, migawka), id, dane);
+    if (!plan || !plan.ok) throw new Error('plan dziennika');
+    await D.zapisz(id, plan.wersje);
+  }
+  return id;
+}, { r: rekord, wpisy: dziennik });
+/** Karta leczenia otyłości (etap 2): przełącznik, wybrany widok, kafelki „Przeglądu” i linia oceny — tekst z DOM do asercji. */
+export const kartaOtylosci = (page) => page.locator('.vilda-ko-karta');
+export const widokKarty = (page, id) => page.getByRole('tab', { name: id === 'przeglad' ? 'Przegląd' : id === 'analiza' ? 'Analiza' : /^Wpisy/ });
+export const opisKarty = (page) => page.locator('.vilda-ko-karta').evaluate((k) => {
+  const t = (el) => (el ? el.textContent : null);
+  const tabs = [...k.querySelectorAll('.vilda-ko-seg [role="tab"]')];
+  return {
+    przelacznik: tabs.map(t),
+    wybrany: (tabs.find((b) => b.getAttribute('aria-selected') === 'true') || { textContent: null }).textContent,
+    widoczne: [...k.querySelectorAll('.vilda-ko-widok')].filter((w) => !w.hidden).map((w) => w.className.replace('vilda-ko-widok vilda-ko-widok--', '')),
+    kafelki: [...k.querySelectorAll('.vilda-ko-kafel')].map((x) => [t(x.querySelector('.vilda-ko-k')), t(x.querySelector('.vilda-ko-v')), t(x.querySelector('.vilda-ko-sub'))]),
+    linia: t(k.querySelector('.vilda-ko-werdykt')),
+  };
+});
 export const BEZ = { name: 'Fikcyjny Bez Leczenia', user: { lastName: 'Fikcyjny', firstName: 'Bez Leczenia', sex: 'M', age: 9, ageMonths: 0, height: 132, weight: 30 } };
 /**
  * P-GH-WZNOWIENIE, część 1 — GR1 (wznowienie): W 7;0 (110) → K 8;0 (117) → Z 9;0 (123) → W 10;0 (130) → K 11;0 (137).

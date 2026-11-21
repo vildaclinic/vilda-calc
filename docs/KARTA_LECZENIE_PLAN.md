@@ -1,6 +1,6 @@
 # Karta pacjenta: zakładka „Leczenie” — plan i decyzje (P-KARTA-LECZENIE)
 
-Stan na 2026-11-20. Dokument utrwala ustalenia właściciela i etapy pracy, żeby kolejne PR-y i inne wątki nie odtwarzały
+Stan na 2026-11-21. Dokument utrwala ustalenia właściciela i etapy pracy, żeby kolejne PR-y i inne wątki nie odtwarzały
 ich z rozmowy. Opis techniczny wdrożonych etapów: `docs/clinical/ALGORITHMS.md`, wpisy „P-KARTA-LECZENIE”; łatki
 zminifikowanego `vilda_auth_ui.js`: `docs/ZRODLA_ARTEFAKTOW.md`.
 
@@ -33,7 +33,7 @@ Analiza”, dla GH „Przegląd | Trend dawki | Analiza”. Makiety (komputer i 
 | Etap | Zakres | Stan |
 |---|---|---|
 | 1 | Zakładka „Leczenie” (druga, tylko przy leczeniu) z dzisiejszymi blokami bez zmian; pasek leczenia nad zakładkami (przycisk otwierający zakładkę, wartości z tych samych danych co bloki, pigułka oceny D1); odnośniki do „Leczenia” (Notatki) | wdrożony w tym PR (SW 1.1.561) |
-| 2 | Karta leczenia otyłości w zakładce: przełącznik „Przegląd \| Wpisy \| Analiza”, „Przegląd” z czterema liczbami i oceną w jednej linii | do zrobienia |
+| 2 | Karta leczenia otyłości w zakładce: przełącznik „Przegląd \| Wpisy \| Analiza”, „Przegląd” z czterema liczbami i oceną w jednej linii | w tym PR (SW 1.1.565) |
 | 3 | Karta GH w zakładce: „Przegląd \| Trend dawki \| Analiza”; „Trend leczenia GH” przeniesiony z „Siatek centylowych” | do zrobienia |
 | 4 | Uzgodnienie z kartą B1 nowej strony głównej (D5): te same karty leczenia w „Monitorowaniu leczenia” | do zrobienia, po scaleniu karty B1 |
 
@@ -75,6 +75,38 @@ Opis rozstrzygnięć:
 - Przewinięcie: pierwsze leczenie w zakładce — pasek zakładek na górę widoku (pod nim początek zawartości), kolejne — jego
   pierwszy blok. Liczone na przewijanym kontenerze Karty, bo `custom-fixes.js` podmienia `Element.scrollIntoView` na
   stronie formularza (telefon: nic, komputer: przewinięcie okna) — także odnośnik z „Notatek” dotąd nie przewijał.
+
+## Etap 2 — co zrobiono
+
+Decyzja właściciela: „zaczynaj etap 2” (2026-11-21), według makiety hybrydy z 2026-11-19. Opis techniczny:
+`docs/clinical/ALGORITHMS.md`, wpis „P-KARTA-LECZENIE, etap 2”; łatki: `docs/ZRODLA_ARTEFAKTOW.md`.
+
+- Grupa otyłości w zakładce „Leczenie” jest jedną miętową kartą leczenia (kontener podsumowania): nagłówek ze
+  znacznikiem, stanem i „+ Kontynuacja” (ten sam przycisk i ta sama obsługa co w „Wpisach leczenia”; po Zakończeniu —
+  wyjaśnienie DZ-5 pod nagłówkiem), przełącznik „Przegląd | Wpisy (N) | Analiza”, domyślnie „Przegląd”.
+- Przegląd: kafelki Aktualna dawka, Czas leczenia, Masa, BMI (komputer 1 × 4, telefon 2 × 2) i linia oceny wg ChPL
+  (tytuł i pierwsze zdanie tej samej oceny co pole oceny) z „Szczegóły oceny” → „Analiza”. Wartości z tych samych
+  obliczeń co „Dane analityczne”, bez nowych progów i zdań.
+- Wpisy: sekcja bez nagłówka, objaśnienia pod „Jak działa dziennik leczenia ⌄” (opcja `uklad: 'karta'` w
+  `VildaDziennikOtylosciUI.sekcja`; bez opcji sekcja jak dotąd). Analiza: panel rozwinięty, bez belki, z cichą linią
+  „lek · substancja · punkty kontrolne”.
+- Wybrany widok zostaje po zapisie wpisu, „Pokaż wszystkie”, „Usunięte wpisy” i odświeżeniu po synchronizacji; nowe
+  otwarcie Karty — „Przegląd”. „Notatki” → widok „Wpisy”. GH, karta „wg notatek” i pasek leczenia — bez zmian.
+
+## Etap 2 — rozstrzygnięcia wykonawcy (do przeglądu właściciela)
+
+- Pierwsze zdanie opisu oceny kończy kropka (także „.)”) przed wielką literą; separator „ · ” nie kończy zdania, więc
+  przy odpowiedzi wystarczającej/niewystarczającej linia zawiera też regułę ChPL (2 linie na komputerze). Tekst bez zmian.
+- Częstość leku w podpisie dawki: lek rozpoznany jak w ocenie ChPL, wartość jak w katalogu leków `obesity_therapy.js`
+  (Wegovy, Mounjaro „1×/tydz.”, Saxenda „1×/dobę”); Mysimba („wg titracji”) bez częstości; bez dawki — bez podpisu.
+- „od” dawki — porównanie tekstu dawki (jak w podsumowaniu): inny zapis tej samej dawki przerywa ciąg (podpis nie
+  zawyża czasu stosowania dawki).
+- „Czas od 1. punktu” (bez Włączenia) — bez podpisu (podpis „od … (wiek)” tylko z punktu Włączenia).
+- BMI w „Przeglądzie” bez jednostki i z szarym podpisem (jak makieta); kolor good/bad tylko w podpisie „Masy”.
+- „Poprzednie cykle”, ramka „Brak punktu „Włączenie”” i nota „Zapis cyklu wymaga uporządkowania” zostają pod
+  nagłówkiem karty (w każdym widoku), bo dotąd stały w podsumowaniu widocznym zawsze.
+- Moduł progów ChPL niezaładowany — bez linii oceny (pole w „Analizie” zostaje). Telefon: „Szczegóły oceny” i „Jak
+  działa…” z celem dotyku 44 px.
 
 ## P-GH-WZNOWIENIE — GH wznowione po Zakończeniu
 
