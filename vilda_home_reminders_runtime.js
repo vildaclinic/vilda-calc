@@ -9,6 +9,7 @@
   var originalMarker = null, originalHidden = false, registration = null, active = null, generation = 0;
   var frame = 0, timer = null, readRequested = true, listeners = [], frameObserver = null;
   var subscribed = new WeakSet();
+  var overviewSlot = null, parking = null;
 
   function byId(id) { return d.getElementById(id); }
   function value(id) { var node = byId(id); return node ? node.value : ''; }
@@ -20,7 +21,7 @@
     try { return !suspended && (!w.frameElement || w.frameElement.isConnected && !w.frameElement.hidden); }
     catch (_) { return false; }
   }
-  function ownerSnapshot() {
+  function ownerSnapshot(verifiedSave) {
     try {
       var vault = w.VildaVault, importer = w.VildaDataImportExport, panel = w.VildaPanelPacjent;
       var id = patientId(), user = vault && vault.getCurrentUser();
@@ -28,10 +29,14 @@
         || !w.VildaProAccess?.hasAccess() || !importer || typeof importer.getApplyLoadedDataSequence !== 'function'
         || !panel || panel.nieaktualny() || panel.wlasciciel() !== id
         || w.__vildaPersistRestoring || w.__vildaLustroWpis || w.__vildaSuspendIntakeUserReset
-        || importer.isMainSessionRestorePending() || w.VildaDobAge?.restorePending?.()
+        || importer.isMainSessionRestorePending() || (!verifiedSave && w.VildaDobAge?.restorePending?.())
         || w.VildaPersistence?.isClearInProgress?.() || Number(w.__vildaPersistClearUntil || 0) > Date.now()) return null;
       var measured = w.VildaDobAge?.readMeasuredAtISO();
-      return { account: user.userId, patientId: id, load: importer.getApplyLoadedDataSequence(),
+      var encounter = integrated() && w.VildaHomeEncounter?.state(id);
+      if (encounter && encounter.busy) return null;
+      var binding = encounter && (encounter.mode === 'new' || encounter.mode === 'edit')
+        && encounter.visitId && encounter.date ? Object.freeze({ mode: encounter.mode, visitId: encounter.visitId, date: encounter.date }) : null;
+      return { account: user.userId, patientId: id, encounter: binding, load: importer.getApplyLoadedDataSequence(),
         identity: ['firstName', 'lastName', 'sex', 'dobInput'].map(value),
         visit: w.VildaVisitContext?.capture({ user: { measuredAtISO: measured } }, { patientId: id, readOnly: true }) || null };
     } catch (_) { return null; }
@@ -39,9 +44,10 @@
   function current(view) {
     try {
       if (!started || !view || view !== active || view.generation !== generation || view.vault !== w.VildaVault
-        || !host?.isConnected || host.closest('#vhomeMainCards') !== byId('vhomeMainCards')) return false;
+        || !host?.isConnected || (integrated() ? !ownsOverviewHost(host)
+          : host.parentNode !== byId('vhomeMainCards'))) return false;
       view.vault.assertSyncOperationSession(view.token);
-      return JSON.stringify(ownerSnapshot()) === view.key;
+      return (!view.binding || view.binding.isCurrent()) && JSON.stringify(ownerSnapshot(view.savedDobPending === true)) === view.key;
     } catch (_) { return false; }
   }
   function disposeRegistration() {
@@ -50,6 +56,7 @@
       generation += 1;
       var previous = registration, oldView = active; registration = null; active = null; readRequested = true;
       if (host) host.hidden = true;
+      if (oldView?.cancelDobWait) oldView.cancelDobWait();
       if (oldView?.note) { oldView.note.destroy(); oldView.note = null; }
       if (previous && host && typeof previous.api.disposeHomeReminders === 'function') {
         previous.api.disposeHomeReminders(host, previous.options);
@@ -88,13 +95,52 @@
   function placeHost() {
     var grid = byId('vhomeMainCards'), diet = byId('vhomeDietCard');
     if (!grid || !host) return false;
+    if (integrated()) {
+      if (!parking) {
+        parking = d.createElement('div');
+        parking.hidden = true;
+        grid.appendChild(parking);
+      }
+      var destination = validSlot(overviewSlot) ? overviewSlot : parking;
+      if (host.parentNode !== destination) destination.appendChild(host);
+      return true;
+    }
     if (diet && diet.parentNode === grid) {
       if (diet.nextElementSibling !== host) diet.after(host);
     } else if (grid.lastElementChild !== host) grid.appendChild(host);
     return host.parentNode === grid;
   }
+  function integrated() { return w.__VILDA_HOME_GABINET_PREVIEW__ === true; }
+  function validSlot(slot) {
+    var overview = byId('vhomePatientOverview');
+    return !!(slot && overview && overview.contains(slot) && slot === byId('vhomePatientRemindersSlot')
+      && slot.dataset.homePatientId && slot.dataset.homePatientId === patientId());
+  }
+  function ownsOverviewHost(candidate) {
+    return !!(integrated() && host && host === candidate && candidate === byId('remindersInline')
+      && validSlot(overviewSlot) && host.parentNode === overviewSlot);
+  }
+  function mountOverview(slot, id) {
+    if (!integrated() || !validSlot(slot) || slot.dataset.homePatientId !== id) return false;
+    if (overviewSlot !== slot) {
+      disposeRegistration();
+      overviewSlot = slot;
+    }
+    if (!started) start(); else refresh();
+    return ownsOverviewHost(host);
+  }
+  function unmountOverview(slot) {
+    if (!slot || overviewSlot !== slot) return;
+    disposeRegistration();
+    overviewSlot = null;
+    if (started) refresh();
+  }
   function openPatient(view, id, noteId) {
     if (!current(view) || id !== view.owner.patientId || typeof w.VildaAuthUI?.showPatientCard !== 'function') return false;
+    if (integrated()) {
+      if (noteId && w.VildaHomePatient?.focusInlineNote?.(noteId)) return true;
+      if (!noteId && w.VildaHomeGabinet?.openOverview?.()) return true;
+    }
     return w.VildaAuthUI.showPatientCard(id, null,
       { homePatientPresentation: true, homePatientOpenerId: 'vhomePatientExpand' },
       { activeTab: noteId ? 'notes' : 'antro', focusNoteId: noteId || null });
@@ -119,6 +165,7 @@
       },
       onCancel: function () {
         view.note = null; if (!current(view)) return;
+        if (integrated()) w.VildaHomePatient?.refresh?.();
         if (typeof caller.onCancel === 'function') caller.onCancel();
       }
     });
@@ -133,22 +180,50 @@
       if (released) return;
       released = true; target.removeEventListener('close', release);
       cleanup(); view.dialogs.delete(release);
+      if (integrated() && !view.dialogs.size && current(view)) w.VildaHomePatient?.refresh?.();
     }
     // The shared coordinator dispatches the native cancel event on Back.
     // It respects each actor's dirty/busy refusal and never calls .close().
     target.addEventListener('close', release); view.dialogs.add(release);
     return release;
   }
+  function waitForRecordedDate(view) {
+    if (!view.savedDobPending || !w.VildaDobAge.restorePending()) return Promise.resolve(true);
+    return new Promise(function (resolve) {
+      // Saving the first snapshot triggers the native DOB reader. Keep the
+      // originating editor until its verified own record has been restored.
+      function finish(ready) {
+        d.removeEventListener('vilda:dob-restored', restored);
+        w.clearTimeout(timer); view.cancelDobWait = null; resolve(ready);
+      }
+      function restored() { if (!w.VildaDobAge.restorePending()) finish(true); }
+      var timer = w.setTimeout(function () { finish(false); }, 8000);
+      view.cancelDobWait = function () { finish(false); };
+      d.addEventListener('vilda:dob-restored', restored);
+      restored();
+    });
+  }
   function register(owner) {
     var api = w.VildaAuthUI, view = null;
     if (owner) {
       try {
-        view = { owner: owner, key: JSON.stringify(owner), vault: w.VildaVault,
+        var binding = owner.encounter ? w.VildaHomeEncounter.captureBinding(owner.patientId) : null;
+        view = { owner: owner, binding: binding, key: JSON.stringify(owner), vault: w.VildaVault,
           token: w.VildaVault.captureSyncOperationSession(), generation: generation, note: null, dialogs: new Set() };
       } catch (_) { view = null; }
     }
+    if (owner?.encounter && !view?.binding) view = null;
     active = view;
     var options = Object.freeze({ homePresentation: true, patientId: view ? owner.patientId : null,
+      encounter: view ? owner.encounter : null,
+      visitContext: view?.binding?.visitContext || null,
+      ensureRecorded: async function () {
+        if (!view?.binding || !current(view)) return false;
+        const recorded = await view.binding.ensureRecorded();
+        var settled = recorded && current(view) && await waitForRecordedDate(view);
+        view.savedDobPending = false;
+        return settled && current(view);
+      },
       contextLabel: view ? [value('firstName'), value('lastName')].filter(Boolean).join(' ') || value('name') || 'Wybrany pacjent' : '',
       showPatientName: false, isCurrent: function () { return !!view && current(view); },
       openPatient: function (id, noteId) { return openPatient(view, id, noteId); },
@@ -163,12 +238,13 @@
     frame = 0; if (!started) return;
     subscribe(w.VildaVault);
     if (!placeHost()) { disposeRegistration(); return; }
-    var owner = ownerSnapshot();
+    var owner = !integrated() || ownsOverviewHost(host) ? ownerSnapshot() : null;
     if (registration && (registration.api !== w.VildaAuthUI || active && !current(active))) disposeRegistration();
     if (!registration || !active && owner) register(owner);
     host.hidden = !active;
     var grid = byId('vhomeMainCards'), heading = byId('vhomeAnalysisHeading');
     if (grid && heading) heading.hidden = grid.hidden = Array.from(grid.children).every(function (node) { return node.hidden; });
+    if (active?.savedDobPending && w.VildaDobAge?.restorePending?.()) return;
     if (readRequested && registration) {
       readRequested = false;
       // Native read failures keep their original visible retry UI. This
@@ -181,7 +257,7 @@
     if (!started) return;
     subscribe(w.VildaVault);
     if (active && !current(active)) invalidated();
-    else if (!active && ownerSnapshot()) schedule();
+    else if (!active && (!integrated() || validSlot(overviewSlot)) && ownerSnapshot()) schedule();
   }
   function start() {
     if (started || !w.VildaHomeWorkspace || !w.VildaHomeRemindersPresentation || !byId('vhomeMainCards')
@@ -192,7 +268,20 @@
     host.setAttribute('data-home-reminders-presentation', 'true');
     started = true; suspended = false; placeHost();
     ['vilda:user-state-cleared', 'vilda:data-applied', 'vilda:patient-loaded', 'vilda:auth-loaded', 'vilda:session-changed']
-      .forEach(function (name) { listen(d, name, invalidated); });
+      .forEach(function (name) { listen(d, name, function (event) {
+        if (name === 'vilda:patient-loaded' && integrated() && active?.binding?.isCurrent()
+          && w.VildaHomePatient?.ownsSavePublication?.(event, active.owner.patientId)) {
+          active.savedDobPending = !!w.VildaDobAge?.restorePending?.();
+          requestRead(); return;
+        }
+        invalidated();
+      }); });
+    if (integrated()) {
+      listen(d, 'vilda:home-encounter-changed', checkOwner);
+      listen(d, 'vilda:dob-restored', function () {
+        if (active && !w.VildaDobAge?.restorePending?.()) { active.savedDobPending = false; requestRead(); }
+      });
+    }
     listen(w, 'vilda:user-state-cleared', invalidated);
     ['vilda:auth-boot-settled', 'vilda:auth-hidden', 'vilda:main-session-restored', 'vilda:initial-main-session-restore-settled',
       'vilda:state-restored', 'vildaProAccessChanged', 'vilda:sync-merged'].forEach(function (name) { listen(d, name, requestRead); });
@@ -223,9 +312,12 @@
       host.hidden = originalHidden;
       if (origin?.parentNode) origin.parentNode.insertBefore(host, origin);
     }
+    if (parking) parking.remove(); parking = null; overviewSlot = null;
     if (origin) origin.remove(); origin = null; host = null;
   }
-  w.VildaHomeRemindersRuntime = Object.freeze({ start: start, refresh: requestRead, destroy: destroy });
+  w.VildaHomeRemindersRuntime = Object.freeze({ start: start, refresh: requestRead, destroy: destroy,
+    mountOverview: mountOverview, unmountOverview: unmountOverview, ownsOverviewHost: ownsOverviewHost,
+    overviewIsEditing: function () { return integrated() && current(active) && !!(active.note || active.dialogs.size); } });
   d.addEventListener('vilda:home-workspace-ready', start);
   if (d.readyState === 'loading') d.addEventListener('DOMContentLoaded', start, { once: true }); else start();
 })(typeof window !== 'undefined' ? window : null);

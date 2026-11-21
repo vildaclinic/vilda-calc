@@ -290,3 +290,43 @@ html.vilda-home-workspace .vhome-tools-grid[data-columns='4'] .vhome-tool-tile {
 @media (max-width: 380px) {
   .vhome-tool-fields { grid-template-columns: minmax(0, 1fr); }
 }
+
+.vilda-home-workspace .vhome-adult-vitals {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12px);
+  min-width: 0;
+  padding: var(--space-20px);
+  border: var(--border-hairline) solid var(--line);
+  border-radius: var(--radius-13);
+  background: var(--card);
+  color: var(--text);
+}
+.vilda-home-workspace .vhome-adult-vitals[hidden],
+.vilda-home-workspace .vhome-adult-vitals [hidden] { display: none; }
+.vhome-adult-vitals h2 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-10px);
+  margin: 0;
+  font-size: 1.1rem;
+  text-align: start;
+}
+.vhome-adult-vitals h2 svg { width: 22px; height: 22px; color: var(--primary); }
+.vhome-adult-vitals .vhome-adult-bp { font-size: 1.45rem; line-height: 1.4; }
+.vhome-adult-vitals p { margin: 0; }
+.vhome-adult-vitals .vhome-adult-note { color: var(--text-muted); font-size: .95rem; }
+.vhome-adult-vitals [data-tone="warn"] { color: var(--warning-text, #8b5400); }
+.vhome-adult-vitals [data-tone="danger"] { color: var(--danger, #b3261e); }
+.vhome-adult-vitals .vhome-adult-open {
+  align-self: flex-start;
+  min-height: 44px;
+  margin: auto 0 0;
+  padding: var(--space-8px) 0;
+  background: transparent !important;
+  border: 0 !important;
+  color: var(--primary) !important;
+  box-shadow: none !important;
+  font-weight: 600;
+}

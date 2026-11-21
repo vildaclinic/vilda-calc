@@ -2212,6 +2212,7 @@
         var sample = syncSample();
         drawPuberty();
         var rows = evaluate();
+        var visitBinding = w.VildaLabVisitBinding?.capture(ctx.pid);
         var plan = m.planSave({
           rows: rows, patientId: ctx.pid, dateISO: parts.date.value, todayISO: today(), comment: parts.comment.value,
           linkedAgeMonths: m.linkedAgeMonths(ctx.sessionPatient), snapshot: snapshot(), assessmentSnapshot: assessmentSnapshot(),
@@ -2232,7 +2233,10 @@
             if (!patient) throw fail('Nie znalazłem pacjenta w bazie — wczytaj go ponownie z Bazy pacjentów.');
             if (patientId() !== ctx.pid) throw fail('W trakcie zapisu zmienił się pacjent — sprawdź wyniki i zapisz ponownie.');
             return plan.notes.reduce(function (chain, note, index) {
-              return chain.then(function () { return vault.savePatientNote(note); }).then(function () { saved.push(plan.rows[index]); });
+              return chain.then(function () {
+                if (visitBinding) return visitBinding.save(vault, note);
+                return vault.savePatientNote(note);
+              }).then(function () { saved.push(plan.rows[index]); });
             }, Promise.resolve());
           });
         }).then(function () {

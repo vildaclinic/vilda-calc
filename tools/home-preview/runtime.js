@@ -11,6 +11,7 @@
   const ACCOUNT_LABEL = 'Podgląd — wyłącznie fikcyjni pacjenci';
   const ACCOUNT_GUIDANCE = 'Podgląd nie może użyć tego konta. Otwórz adres podglądu w nowym oknie prywatnym przeglądarki. Nie zakładaj konta w aplikacji — konto demonstracyjne uruchomi się automatycznie. Nie usuwaj dotychczasowego konta ani jego danych.';
   Object.defineProperty(window, '__VILDA_HOME_WORKSPACE_PREVIEW__', { value: true, writable: false });
+  Object.defineProperty(window, '__VILDA_HOME_GABINET_PREVIEW__', { value: true, writable: false });
   Object.defineProperty(window, 'VILDA_SYNC_WORKER_URL', { value: 'https://vilda-preview-disabled.invalid', writable: false });
   const state = { status: 'starting', phase: 'account', fictional: true, doctorAccess: false, error: null };
   window.VildaHomePreview = Object.freeze({ getState: () => ({ ...state }) });
@@ -304,7 +305,8 @@
         ? await window.navigator.locks.request('vilda-home-preview-bootstrap', seed) : await seed();
       if (ownerWindow() !== owner || !ownedFictionalAccount()) throw new Error('Widok podglądu zmienił się podczas uruchamiania. Odśwież stronę.');
       owner.VildaHomeWorkspace?.start?.();
-      offerExample(owner, patientId, marker.userId);
+      if (owner.VildaHomeGabinet) owner.VildaHomeGabinet.refreshStart();
+      else offerExample(owner, patientId, marker.userId);
       state.status = 'ready'; state.phase = 'ready'; showBadge(); boot.screen.remove();
     } catch (error) {
       state.status = 'error'; state.error = String(error?.message || 'Nie można przygotować podglądu.');

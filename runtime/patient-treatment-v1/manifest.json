@@ -3,20 +3,20 @@
   "version": 1,
   "sourceRef": "992bf3c5fbc056b348dcfd4bcd83d4a48b961efd",
   "baseVaultSHA256": "4ca270bc7461e33d50b791242cd9298da710cfd651ffe1a099b059f80c4acd7a",
-  "integratedVaultSHA256": "97d5d8788aad2a2cfd7313c7c400601c08f946b8ba3dd615bcc0223d096fa852",
-  "fragmentSHA256": "83656ce16801fa2d042926a6126a08a9d6045f42d99fe721506c0378740cf699",
+  "integratedVaultSHA256": "5e86db49d4a42f3b587748e6ddaabf4b4ab3fac1cf0c34920476651d53707b2c",
+  "fragmentSHA256": "f9e2d8ac67c5311838090a6ec2f9957929d3b5bb4c69b5bd6e457f085e7cc4a7",
   "sources": [
     {
       "path": "runtime/patient-treatment-v1/model.js",
-      "sha256": "1ef9f5abf9f4cdd5c20f240afc53b4f5b531838dab433c32de633651e7807f51"
+      "sha256": "99263de59eb10c027eaa400d944d4569dea67ade68e9da6d394bcee07a46e89d"
     },
     {
       "path": "runtime/patient-treatment-v1/store.js",
-      "sha256": "171002338d6348dc667f3c57b0374f60ea111f5cb020a781335560f1863f37fc"
+      "sha256": "aead57476639f54dbff61fc1d3fb372bd185841b71996633d0b9d397ad9a09e6"
     },
     {
       "path": "runtime/patient-treatment-v1/vault-fragment.js",
-      "sha256": "deb7359c4c9afcc7aea66ec3c5b8e40ec100104bc50e692409fecbc05892a611"
+      "sha256": "e95132f4fe9396ac71d5bdf1a6f5af8aa12bff348af07d0128804e8b2bf19acb"
     }
   ],
   "hooks": [
@@ -113,8 +113,8 @@
     },
     {
       "name": "existing-owner-precommit",
-      "before": "throw new Error(\"Sesja sejfu zmieni\u0142a si\u0119. Otw\u00f3rz wynik ponownie.\");\n    }\n  }\n  return Ac(next.id",
-      "after": "throw new Error(\"Sesja sejfu zmieni\u0142a si\u0119. Otw\u00f3rz wynik ponownie.\");\n    }\n    TreatmentOperationAssert(treatmentCurrent);\n  }\n  return Ac(next.id",
+      "before": "throw new Error(\"Sesja sejfu zmieniła się. Otwórz wynik ponownie.\");\n    }\n  }\n  return Ac(next.id",
+      "after": "throw new Error(\"Sesja sejfu zmieniła się. Otwórz wynik ponownie.\");\n    }\n    TreatmentOperationAssert(treatmentCurrent);\n  }\n  return Ac(next.id",
       "beforeSHA256": "673e59af7671206bb77b019b2c7d361b8403150202c3ee4856bb6c50a2f06e5f",
       "afterSHA256": "5af91fa0dd2851d97a19ab8080f20ec8cc39d61dd9a653acb5b5d2496f92784b"
     },
@@ -134,8 +134,8 @@
     },
     {
       "name": "once-owner-precommit",
-      "before": "throw new Error(\"Sesja sejfu zmieni\u0142a si\u0119. Pon\u00f3w zapis po odblokowaniu.\");\n    }\n  }\n  return Ac(next.id",
-      "after": "throw new Error(\"Sesja sejfu zmieni\u0142a si\u0119. Pon\u00f3w zapis po odblokowaniu.\");\n    }\n    TreatmentOperationAssert(treatmentCurrent);\n  }\n  return Ac(next.id",
+      "before": "throw new Error(\"Sesja sejfu zmieniła się. Ponów zapis po odblokowaniu.\");\n    }\n  }\n  return Ac(next.id",
+      "after": "throw new Error(\"Sesja sejfu zmieniła się. Ponów zapis po odblokowaniu.\");\n    }\n    TreatmentOperationAssert(treatmentCurrent);\n  }\n  return Ac(next.id",
       "beforeSHA256": "8bd74ca2ca1259594631db84740706805e0148e1ebf00848aa988070329a62d1",
       "afterSHA256": "1a5e01742b2c6685e8a16a11452f0e23fd344f0350e853eeef0752e9c77d2797"
     },
@@ -145,6 +145,153 @@
       "after": "{{PATIENT_TREATMENT_FRAGMENT}}const $s={",
       "beforeSHA256": "008a9480e584c023af8870967800dd91bd17595a239e655357ceaafa50566b1e",
       "afterSHA256": "b81eee120f6040f720b88ef9a21580fbe3dce3cd15fe3101c6f170bee255cc0d"
+    },
+    {
+      "name": "encounter-conditional-revision",
+      "before": "  return Bzw_podBlokada(t, function () { return Bzw_aktualizujWersje(t, e, n, r); }, r);",
+      "after": "  if (r && r.expectedVisit) {\n    const scope = CareTplCaptureNetworkSession(), expected = r.expectedVisit;\n    return Bzw_podBlokada(t, async function () {\n      CareTplAssertNetworkSession(scope);\n      const rows = await Bvisit_list(t);\n      CareTplAssertNetworkSession(scope);\n      const head = rows.find(function (row) { return row.visitId === expected.visitId; });\n      if (!head || head.snapshotId !== e || head.rev !== expected.revision ||\n          !n.visit || n.visit.patientId !== t || n.visit.visitId !== expected.visitId ||\n          typeof expected.isCurrent !== 'function' || !expected.isCurrent()) {\n        const error = new Error('Wizyta uległa zmianie. Otwórz ją ponownie z historii.');\n        error.code = 'VISIT_REVISION_CHANGED'; throw error;\n      }\n      return Bzw_aktualizujWersje(t, e, n, { preserveSavedAt: true, encounterCommitScope: scope });\n    }, r);\n  }\n  return Bzw_podBlokada(t, function () { return Bzw_aktualizujWersje(t, e, n, r); }, r);",
+      "beforeSHA256": "2905d8e14f1b3651443a5bc0a7b80f1ec3f8c72a7350ec07df0fe71ca810f7e4",
+      "afterSHA256": "9533512d79ac2801ceb05bc7b0414c8e86fc4746c0126f15be2c3325dcaf673f"
+    },
+    {
+      "name": "encounter-revision-encryption-witness",
+      "before": "n=Bgw_z.tresc;const i=await V(n);",
+      "after": "n=Bgw_z.tresc;let encounterJSON;const i=await V(n,r&&r.encounterCommitScope?function(json){encounterJSON=json}:null);",
+      "beforeSHA256": "78ec312a644ef5e9ce06e19b127129f524af593f992e7262bedfd9b24ff01191",
+      "afterSHA256": "03a40b5603f372cadcac025dba0a7cd45c6f9414d27c195deac6173d2bf2e62f"
+    },
+    {
+      "name": "encounter-revision-receipt",
+      "before": "r&&r.promoted&&(w.promoted=!0);return PatientClinicalWriteValue",
+      "after": "if(r&&r.encounterCommitScope){w.visitRevision=mt(a)+1;Bcommit_remember(w,encounterJSON,r.encounterCommitScope)}r&&r.promoted&&(w.promoted=!0);return PatientClinicalWriteValue",
+      "beforeSHA256": "d59652d4b7c80b84d96dc33a2157659151cb5286cc172edd61185100b4fa27b0",
+      "afterSHA256": "8e1101b18a41e49eb75cc8ea2e954c88f0fc574572f6fb12994b778c30961961"
+    },
+    {
+      "name": "encounter-note-origin-validation",
+      "before": "function RemB22Context(value) {",
+      "after": "// Origin of an encounter-created document, independent of the date of a lab\n// sample or the effective date of a treatment. It lives in the encrypted body.\nfunction EncounterNoteFields(note) {\n  if (!note || !Object.prototype.hasOwnProperty.call(note, 'visitContext')) return {};\n  const value = note.visitContext;\n  if (!value || typeof value !== 'object' || Array.isArray(value)\n      || Object.keys(value).length !== 3 || !Bvisit_date(value.clinicalDateISO)\n      || !Bvisit_identityValid({version:value.version,visitId:value.visitId})) {\n    throw new Error('Nieprawidłowe powiązanie wpisu z wizytą.');\n  }\n  return {visitContext:{version:1,visitId:value.visitId,clinicalDateISO:value.clinicalDateISO}};\n}\nfunction EncounterNoteOrigin(note, previous, creating) {\n  const incoming = EncounterNoteFields(note), original = EncounterNoteFields(previous);\n  if (!incoming.visitContext) return original;\n  if (creating && !original.visitContext) return incoming;\n  if (!original.visitContext || incoming.visitContext.visitId !== original.visitContext.visitId\n      || incoming.visitContext.clinicalDateISO !== original.visitContext.clinicalDateISO) {\n    throw new Error('Nie można zmienić wizyty źródłowej tego wpisu.');\n  }\n  return original;\n}\nfunction RemB22Context(value) {",
+      "beforeSHA256": "46d2fcd46f43c6747b8e28f1704c434d708616066918dc1f88797ea9af91d41e",
+      "afterSHA256": "6cce05192335054bbab3448a59d8a43ebff62edfe04e6daa76488ab6c2e3c859"
+    },
+    {
+      "name": "encounter-note-origin-compare",
+      "before": "'reminderContext', 'careContext', 'treatmentContext'];",
+      "after": "'reminderContext', 'careContext', 'treatmentContext', 'visitContext'];",
+      "beforeSHA256": "3790bf447a7aa8c194d73b2b776c2e2979739b05e92134e5e168cd3152c63390",
+      "afterSHA256": "98148a62c3d810e49ff3d9b3c5635a5601cb970b8fe90b6464fb11afea67cbb0"
+    },
+    {
+      "name": "encounter-note-origin-read",
+      "before": "RemB22Context(e.reminderContext)}:{},TreatmentContextField(TreatmentContextState(e))",
+      "after": "RemB22Context(e.reminderContext)}:{},TreatmentContextField(TreatmentContextState(e)),EncounterNoteFields(e)",
+      "beforeSHA256": "143230bcea021bf2fac629278240daa0a71e1e8ba11bbd01e62ea35b7a04ed41",
+      "afterSHA256": "d719cda62d1eed1ac86a3241629e90838b8e56b91cf67410348cc6184c17edaf"
+    },
+    {
+      "name": "encounter-note-origin-once",
+      "before": "    TreatmentContextState(note),",
+      "after": "    TreatmentContextState(note),\n    ...(note.visitContext ? [EncounterNoteFields(note).visitContext] : []),",
+      "beforeSHA256": "1956c99505d4f4194310e07a6050af6675880c1727db6a1a3650f716fbfd47b6",
+      "afterSHA256": "9e3a820652cdc3ff0d77b7207eb4813e0753990cdac37f39dc994d8477f9347e"
+    },
+    {
+      "name": "encounter-note-origin-current",
+      "before": "let TreatmentExistingContext={present:false};let n=",
+      "after": "let EncounterPrevious=null;let TreatmentExistingContext={present:false};let n=",
+      "beforeSHA256": "4b7c90ec34c47c9ea9ddfc4cc30563faac39b8165152a1eefab83e22e89a4733",
+      "afterSHA256": "55b1b175ee1f99d1a8568bc4dc55b1c966f43437ed0a9ce97881bc0c95edb48a"
+    },
+    {
+      "name": "encounter-note-origin-read-current",
+      "before": "TreatmentExistingContext=TreatmentContextState(g);Qnp_t=",
+      "after": "EncounterPrevious=g;TreatmentExistingContext=TreatmentContextState(g);Qnp_t=",
+      "beforeSHA256": "8479607fd5ea5e36cb143eecd7fb26cc850f7584375e12c41d924b4a9aefa183",
+      "afterSHA256": "0347d0d98bab6c67c01a051eb8a235dccb121d8923215535017a5a93dd5eece0"
+    },
+    {
+      "name": "encounter-note-origin-write",
+      "before": "TreatmentContextField(TreatmentNextContext))),nt=",
+      "after": "TreatmentContextField(TreatmentNextContext),EncounterNoteOrigin(t,EncounterPrevious,i))),nt=",
+      "beforeSHA256": "d578c63ecc096458b494b3d5b4b12ab54836733d8202bf654f7c582788d1981e",
+      "afterSHA256": "03c6a1ed41032f493f216f8805ab29e958e575f45a69b6393909342a97db7d2f"
+    },
+    {
+      "name": "encounter-note-origin-merge-state",
+      "before": "let TreatmentMergedContext={present:false};let Lt=",
+      "after": "let EncounterMerged=null;let TreatmentMergedContext={present:false};let Lt=",
+      "beforeSHA256": "21b3f82efbe570c6725da188f7afde98bfd9dd2da3a56a18da80c8929a12b141",
+      "afterSHA256": "e3821b4fbac8f091aae9853a2f2d71a131e2d7d40602faf80eff12a7c113718e"
+    },
+    {
+      "name": "encounter-note-origin-merge-current",
+      "before": "TreatmentMergedContext=TreatmentContextState(z);",
+      "after": "EncounterMerged=z;TreatmentMergedContext=TreatmentContextState(z);",
+      "beforeSHA256": "de06bd50a15d8554e139dbaa65033d6eeeae14a0f5ec9fd1914baf5a6e70288f",
+      "afterSHA256": "e742ea8aafa59ea22590a8f4bb94ebaa3c6c2d95763d926417c013e2a4b59c2b"
+    },
+    {
+      "name": "encounter-note-origin-merge",
+      "before": "if(RemB22IncomingContext)ze.reminderContext=RemB22IncomingContext;",
+      "after": "Object.assign(ze,EncounterNoteOrigin(g,EncounterMerged,true));if(RemB22IncomingContext)ze.reminderContext=RemB22IncomingContext;",
+      "beforeSHA256": "95ca8487d82d5ed3413ed88803a2d7d48be7446b619716c046e38a763257b868",
+      "afterSHA256": "2ae1ae16e07616610cd5ab0cb96885a6b67ddd5d2bca88640a4f24a955864005"
+    },
+    {
+      "name": "visit-care-authority",
+      "before": "async function CareMvpMutate(input) {",
+      "after": "// Plan services may use native or portable storage. Carry the explicit editor's\n// visit only for its own in-flight operation and release it on every outcome.\nconst EncounterPlanBindings = new Map();\nfunction EncounterPlanCheck(binding, patientId) {\n  if (!binding) return;\n  const current = v.VildaHomeEncounter && v.VildaHomeEncounter.captureBinding(patientId);\n  if (!current || !binding.isCurrent() || current.visitContext.visitId !== binding.visitContext.visitId\n      || current.visitContext.clinicalDateISO !== binding.visitContext.clinicalDateISO) throw new Error('Zmieniono wizytę. Otwórz formularz ponownie.');\n}\nasync function EncounterPlanRun(request, binding, action) {\n  if (!binding) return action();\n  EncounterPlanCheck(binding,request.patientId);\n  if (!await binding.ensureRecorded()) throw new Error('Nie udało się zapisać wizyty. Spróbuj ponownie.');\n  EncounterPlanCheck(binding,request.patientId);\n  if (EncounterPlanBindings.has(request.operationId)) throw new Error('Trwa zapis tej pozycji.');\n  const entry={binding,patientId:request.patientId,planId:request.planId || (request.action==='create'?'care-plan-'+request.operationId:null)};\n  EncounterPlanBindings.set(request.operationId,entry);\n  try {\n    const result=await action();\n    EncounterPlanCheck(binding,request.patientId);\n    return result;\n  } finally { if (EncounterPlanBindings.get(request.operationId)===entry) EncounterPlanBindings.delete(request.operationId); }\n}\nfunction EncounterPlanOperation(id, patientId) {\n  const entry=EncounterPlanBindings.get(id);\n  if (!entry) return null;\n  if (patientId && patientId!==entry.patientId) throw new Error('Zmieniono pacjenta.');\n  EncounterPlanCheck(entry.binding,entry.patientId);\n  return entry.binding.visitContext;\n}\nfunction EncounterInstallCare(api) {\n  // The native model is loaded lazily on several routes. Adapt it at the same\n  // synchronous registration point regardless of which route loaded it first.\n  const install = model => model && EncounterDecoratePlanModel(model,function(id,patientId,planId){\n    const visit=EncounterPlanOperation(id,patientId);\n    if(visit) EncounterPlanBindings.get(id).planId = planId;\n    return visit;\n  });\n  let model = install(v.VildaCarePlanMutation);\n  Object.defineProperty(v,'VildaCarePlanMutation',{configurable:true,enumerable:true,\n    get:function(){return model},set:function(native){model=install(native)}});\n  const provider = api.getCarePlanApplicationProvider, mutate = api.mutateStagedCarePlan;\n  api.getCarePlanApplicationProvider = function () {\n    const service=provider.apply(this,arguments);\n    if (!service) return service;\n    return Object.freeze(Object.assign({},service,{\n      commit: function(request,binding){return EncounterPlanRun(request,binding,function(){return service.commit(request)})}\n    }));\n  };\n  api.mutateStagedCarePlan = function(request,binding) {\n    return EncounterPlanRun(request,binding,function(){return mutate.call(api,request)});\n  };\n}\nasync function CareMvpMutate(input, binding) {\n  if (binding) return EncounterPlanRun(input,binding,function(){return CareMvpMutate(input)});",
+      "beforeSHA256": "b731b138827e306d40b992a62c0bb03185aebd9b2f3953440195f1f7c221acaa",
+      "afterSHA256": "91a5dfac39459a17cbbb187ce9a45ecda316655d6a9bf81b077c17cd7184a175"
+    },
+    {
+      "name": "visit-care-precommit",
+      "before": "const assertSession = function () { if (!T() || b !== account || ot !== session || I() !== adapter) throw new Error('Sesja zmieniła się. Otwórz plan ponownie.'); };",
+      "after": "const visitOrigin = EncounterPlanOperation(request.operationId,request.patientId);\n  if (visitOrigin) request.visitContext = visitOrigin; else delete request.visitContext;\n  const assertSession = function () { if(visitOrigin)EncounterPlanOperation(request.operationId,request.patientId); if (!T() || b !== account || ot !== session || I() !== adapter) throw new Error('Sesja zmieniła się. Otwórz plan ponownie.'); };",
+      "beforeSHA256": "91ee7abd165a56344f19412215ac1e5cede8a5f2b096d157d53c3593ddaf1d0d",
+      "afterSHA256": "6297b1c3c1416a5d8eb5cafdf0be4bce58e68005d35a2f5dfc65f416b009a4c2"
+    },
+    {
+      "name": "visit-care-log-origin",
+      "before": "const item = { dateISO: dateISO || CareMvpToday(), text }; if (noteId) item.noteId = noteId; context.log.push(item);",
+      "after": "const item = Object.assign({ dateISO: dateISO || CareMvpToday(), text }, EncounterNoteFields(request)); if (noteId) item.noteId = noteId; context.log.push(item);",
+      "beforeSHA256": "bfa6f2517f7d14f0998b89d2208f496ec87ef8411ec106e16b9549806877e150",
+      "afterSHA256": "057b535532711cad968695eae5f6d71346a6b715beb6aaa803fb84cf5dd053b2"
+    },
+    {
+      "name": "visit-care-read-log",
+      "before": "const log = { dateISO: CareMvpDate(entry.dateISO), text: CareMvpText(entry.text, 22000) };",
+      "after": "const log = Object.assign({ dateISO: CareMvpDate(entry.dateISO), text: CareMvpText(entry.text, 22000) }, EncounterNoteFields(entry));",
+      "beforeSHA256": "0fba2550dfd901b0bcb859880072ca359dcd825ff24c0a015431cae5f5185d4e",
+      "afterSHA256": "70d720c8dba95d5496fbc604a16c2bc03bc538c4b978a4999319416c207ba4af"
+    },
+    {
+      "name": "visit-care-parent-preserve",
+      "before": "const parent = await Ad({ id: planId, patientId: request.patientId, title, body: context.goal, category: 'care-plan', dueDateISO: null, completedAtISO: null, noShowAtISO: null, careContext: context }, guard);",
+      "after": "const parent = await Ad(Object.assign({ id: planId, patientId: request.patientId, title, body: context.goal, category: 'care-plan', dueDateISO: null, completedAtISO: null, noShowAtISO: null, careContext: context }, EncounterNoteFields(current || request)), guard);",
+      "beforeSHA256": "56a5311e4750fa7a91470d2028a479db38a0f6e9390ef1a2f88c284dee4d3e6b",
+      "afterSHA256": "5a412a4a1601ae24ea07235d773562b2628f86adff39708a53904daef4e1e007"
+    },
+    {
+      "name": "visit-care-parent-read",
+      "before": "  const syncReview = CareMvpReview(context, note.title); if (syncReview) plan.syncReview = syncReview;",
+      "after": "  Object.assign(plan,EncounterNoteFields(note));\n  const syncReview = CareMvpReview(context, note.title); if (syncReview) plan.syncReview = syncReview;",
+      "beforeSHA256": "9794f4cbf18b08cd943791a19f62c006c4b6a375f72a7bff8aa6e7d8e8478732",
+      "afterSHA256": "b791473f9c796306e5bdbedac1d9cb64d123e254d04e2e6e14496058e1954fb9"
+    },
+    {
+      "name": "visit-public-plan-writers",
+      "before": "const $s={__vildaVault:!0,",
+      "after": "// Add the encounter-aware entry points after the native provider is installed.\nif(typeof PatientWorkspaceInstall==='function'){\n  const installNativeWorkspace=PatientWorkspaceInstall;\n  PatientWorkspaceInstall=function(api){installNativeWorkspace(api);EncounterInstallCare(api)};\n}\nconst $s={__vildaVault:!0,",
+      "beforeSHA256": "417fe9c122b3d102e14491f344181cb92e3f4da91295980a88eea191d432a0c4",
+      "afterSHA256": "3e9ebae4971b8f6fb7a7a27e82478dea1d7f02cff48449977c14bfac176134d1"
+    },
+    {
+      "name": "visit-care-cas",
+      "before": "function CareMvpCheckCommit(change, parent, existing, deleted, patient) {",
+      "after": "function CareMvpCheckCommit(change, parent, existing, deleted, patient) {\n  for(const entry of EncounterPlanBindings.values()){\n    if(entry.planId===change.parent.id && entry.patientId===change.parent.patientId) EncounterPlanCheck(entry.binding,entry.patientId);\n  }",
+      "beforeSHA256": "dff9f278470d71ab745ab9b03271011db78eafe69710c4d1c733b669b19ada81",
+      "afterSHA256": "3f992127b40e3a88ddf9e7890258573835e2227b8e98007a1322acc1c47979be"
     }
   ]
 }

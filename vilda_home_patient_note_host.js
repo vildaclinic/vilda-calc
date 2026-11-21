@@ -298,7 +298,10 @@
     } catch (_) { unavailable(view, 'open-failed'); controller.ready = Promise.resolve(false); }
     return controller;
   }
-  lifetimeEvents.forEach(function (name) { d.addEventListener(name, function () { if (active) finish(active, false); }); });
+  lifetimeEvents.forEach(function (name) { d.addEventListener(name, function (event) {
+    if (!active || name === 'vilda:patient-loaded' && w.VildaHomePatient?.ownsSavePublication?.(event,active.patientId)) return;
+    finish(active, false);
+  }); });
   ['pointerdown', 'focusin', 'keydown'].forEach(function (name) {
     d.addEventListener(name, function () { if (active && !actorCurrent(active)) finish(active, false); }, true);
   });

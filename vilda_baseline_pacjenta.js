@@ -374,6 +374,10 @@
       var payload = snap && snap.payload;
       if (!payload || typeof payload !== 'object') return false;
       if (biezacyPacjent() !== patientId) return false;
+      // The canonical head belongs to the latest visit. An explicitly selected
+      // historical editor keeps its own baseline through native vault events.
+      if (w.__VILDA_HOME_GABINET_PREVIEW__ === true && w.VildaHomeEncounter &&
+          w.VildaHomeEncounter.state(patientId).mode === 'edit') return false;
 
       var stara = w.lastLoadedData;
       var tenSam = formularzOpisujeTegoPacjenta(stara);

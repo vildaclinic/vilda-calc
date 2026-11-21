@@ -22,7 +22,7 @@
   };
   const adapters = new Map();
   let dialog, grid, trigger, chartButton, downShortcut, active, resizeParent, frame = 0;
-  let legacyReminder, summaryReminder;
+  let legacyReminder, summaryReminder, adultCard, adultHistory;
   const byId = id => d.getElementById(id);
   const serialize = value => JSON.stringify(value);
   const detach = value => JSON.parse(serialize(value));
@@ -317,6 +317,66 @@
   function openDownSyndrome(opener) {
     return canOpenDownSyndrome() && open(downSyndrome[0], opener);
   }
+  function setupAdultCard(growth) {
+    const card = element(d, 'section', 'vhome-adult-vitals');
+    card.id = 'vhomeAdultVitalsCard'; card.hidden = true;
+    const heading = element(d, 'h2', '', 'Ciśnienie i tętno');
+    heading.id = 'vhomeAdultVitalsTitle'; card.setAttribute('aria-labelledby', heading.id);
+    const icon = tileIcon('chart'); icon.querySelector('path').setAttribute('d', 'M2 12h5l3-8 4 16 3-8h5');
+    heading.prepend(icon);
+    const bp = element(d, 'strong', 'vhome-adult-bp');
+    const pulse = element(d, 'p', 'vhome-adult-pulse'), note = element(d, 'p', 'vhome-adult-note');
+    const button = element(d, 'button', 'vhome-adult-open', 'Przejrzyj pomiary');
+    button.type = 'button'; button.addEventListener('click', () => open('pressure', button));
+    card.append(heading, bp, pulse, note, button);
+    growth.after(card);
+    adultCard = { card, bp, pulse, note, button };
+    new w.MutationObserver(schedule).observe(d.documentElement, { attributes: true, subtree: true, attributeFilter: ['data-vhome-screen'] });
+  }
+  function clearAdultCard() {
+    if (!adultCard) return;
+    adultHistory = null; adultCard.card.hidden = true;
+    adultCard.bp.textContent = adultCard.pulse.textContent = adultCard.note.textContent = '';
+  }
+  function refreshAdultCard(enabled, values) {
+    if (!adultCard) return;
+    const screen = adultCard.card.closest('[data-vhome-screen]')?.dataset.vhomeScreen;
+    const id = w.sessionStorage.getItem('vildaCurrentPatientId');
+    const encounter = id && w.VildaHomeEncounter?.state(id);
+    if (!enabled || screen !== 'analysis' || !values?.adult || !id || !encounter || encounter.busy
+      || w.VildaPanelPacjent?.nieaktualny() || w.VildaPanelPacjent?.wlasciciel() !== id) {
+      clearAdultCard(); return;
+    }
+    const {card, bp, pulse, note} = adultCard, adapter = adapters.get('pressure');
+    card.hidden = false;
+    let data = adapter.summarizeAdult(values);
+    let date = encounter.date || w.VildaDobAge?.readMeasuredAtISO?.(), label = 'Data pomiaru';
+    let empty = 'Brak zapisanej pary pomiarów ciśnienia.';
+    if (!data.pressure && !data.pulse) {
+      let guard;
+      try { guard = owner(); } catch (_) { clearAdultCard(); return; }
+      if (!guard) { clearAdultCard(); return; }
+      const key = serialize([guard.identity, encounter, date]);
+      if (!adultHistory || adultHistory.key !== key || !owned(adultHistory)) {
+        const request = adultHistory = { key, owner: guard, pending: true };
+        guard.vault.getPatientVisits(id).then(visits => {
+          if (adultHistory === request && owned(request)) request.data = adapter.previousAdultMeasurement(visits, {...encounter, date});
+        }).catch(() => { request.failed = true; }).finally(() => {
+          if (adultHistory === request) { request.pending = false; schedule(); }
+        });
+      }
+      data = adultHistory.data || {};
+      if (adultHistory.pending) empty = 'Wczytywanie wcześniejszych pomiarów…';
+      if (adultHistory.failed) empty = 'Nie udało się wczytać wcześniejszych pomiarów.';
+      date = data.date; label = 'Ostatni zapisany pomiar';
+    } else adultHistory = null;
+    bp.hidden = !data.pressure; bp.textContent = data.pressure || ''; bp.dataset.tone = data.pressureTone || '';
+    pulse.hidden = !data.pulse; pulse.textContent = data.pulse ? 'Tętno · ' + data.pulse : ''; pulse.dataset.tone = data.pulseTone || '';
+    const details = [];
+    if (!data.complete) details.push(data.pressure ? 'Niepełny pomiar ciśnienia.' : empty);
+    if (date && (data.pressure || data.pulse)) details.push(label + ' · ' + date.split('-').reverse().join('.'));
+    note.textContent = details.join(' ');
+  }
   function refresh() {
     frame = 0;
     if (active && !active.busy && !current(active)) close(true);
@@ -327,6 +387,7 @@
       const adapter = adapters.get(button.dataset.homeTool);
       let values = null;
       try { if (enabled && adapter) values = adapter.read(); } catch (_) { /* Native form still settling. */ }
+      if (button.dataset.homeTool === 'pressure') refreshAdultCard(enabled, values);
       button.disabled = !values;
       const state = button.querySelector('.vhome-tool-tile-state');
       const hasData = values && adapter?.hasData?.(values);
@@ -410,6 +471,7 @@
     }
     const growth = byId('vhomeGrowthCard');
     if (growth) {
+      if (w.__VILDA_HOME_GABINET_PREVIEW__ === true) setupAdultCard(growth);
       byId('growthCalculationsSection')?.classList.add('vhome-replaced-result');
       new w.MutationObserver(schedule).observe(growth, { attributes: true, attributeFilter: ['hidden'] });
     }
@@ -425,6 +487,10 @@
     ['vilda:user-state-cleared', 'vilda:patient-loaded', 'vilda:auth-loaded'].forEach(name => {
       d.addEventListener(name, () => { if (active && !owned(active)) close(true); });
     });
+    if (adultCard) {
+      d.addEventListener('vilda:home-encounter-changed', schedule);
+      w.VildaVault?.onPatientSaved?.(() => { adultHistory = null; schedule(); });
+    }
     w.addEventListener('resize', schedule);
     w.addEventListener('nutritionMicrosDataReady', schedule);
     try {
@@ -435,7 +501,7 @@
     } catch (_) { /* This page can also be shown on its own. */ }
     w.addEventListener('pagehide', () => { resizeParent?.removeEventListener('resize', schedule); close(true); });
     w.addEventListener('pageshow', () => { resizeParent?.addEventListener('resize', schedule); schedule(); });
-    w.VildaVault?.onLock?.(() => { close(true); schedule(); });
+    w.VildaVault?.onLock?.(() => { clearAdultCard(); close(true); schedule(); });
     refresh();
   }
   w.VildaHomeTools = Object.freeze({ openDownSyndrome, canOpenDownSyndrome, register(id, adapter) {

@@ -13,6 +13,7 @@
     if (w.__VILDA_HOME_WORKSPACE_PREVIEW__ !== true || !root || !root.ownerDocument || typeof commands.isCurrent !== 'function') return inactive;
     if (instances.has(root)) return instances.get(root);
     var d = root.ownerDocument, host = options.host || root, full = options.full === true;
+    var overview = !full && w.__VILDA_HOME_GABINET_PREVIEW__ === true && w.VildaHomeRemindersRuntime?.ownsOverviewHost(host) === true;
     var stopped = false, bindings = [], classes = [], attributes = [], created = [], restoreRows = [], children = [];
     var originalTabs = null, tabButtons = [], count = null, footerLabel = null, id = 'vhome-reminders-' + (++serial);
     function make(tag, cls, text) {
@@ -178,7 +179,7 @@
       clearRows(); nodes.list.replaceChildren();
       var asFullList = full && Array.isArray(snapshot.entries); root.classList.toggle('vhome-reminders-list-view', asFullList);
       var suppliedMessages = nativeMessages(snapshot.feedbackNodes);
-      (full ? entries : entries.slice(0, 2)).forEach(function (entry) {
+      (full || overview ? entries : entries.slice(0, 2)).forEach(function (entry) {
         var row = full ? fullRow(entry, snapshot.showPatientName) : previewRow(entry, snapshot.showPatientName);
         if (row) nodes.list.appendChild(row);
       });
@@ -216,7 +217,14 @@
       // The approved compact card has one expand action. The full native
       // window retains Add and the privacy control with their own listeners.
       var addZone = nodes.addButton && nodes.addButton.closest('.vb22-action-zone');
-      attribute(addZone || nodes.addButton, 'hidden', '');
+      if (overview) {
+        mark(root, 'vhome-reminders-overview');
+        attribute(nodes.exitButton, 'hidden', '');
+        if (nodes.addButton) {
+          var addText = make('span', 'vhome-reminders-add-text', 'Dodaj przypomnienie');
+          nodes.addButton.appendChild(addText); created.push(addText);
+        }
+      } else attribute(addZone || nodes.addButton, 'hidden', '');
       attribute(nodes.privacyButton, 'hidden', '');
       // This decorative counter is guarded from its very first paint by the
       // native privacy class. It adds no accessible-name reference to data.
@@ -232,7 +240,7 @@
       }
     }
     newTabs();
-    var api = Object.freeze({ render: render, onDialog: onDialog, destroy: destroy }); instances.set(root, api);
+    var api = Object.freeze({ overview: overview, render: render, onDialog: onDialog, destroy: destroy }); instances.set(root, api);
     if (options.compact === true || options.compact === false) compact({ compact: options.compact });
     return api;
   }

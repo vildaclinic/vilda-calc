@@ -31,6 +31,7 @@ function setup(rows = [visit('visit-1', '2026-11-03')]) {
       if (!state.unlocked || token.userId !== state.userId || token.generation !== state.generation) throw new Error('stale fictional owner');
     },
     onLock: vi.fn(fn => locks.push(fn)),
+    listCarePlans: vi.fn(async () => []),
     getPatientVisits: vi.fn(async () => structuredClone(rows)),
     loadPatient: vi.fn(), restoreSnapshot: vi.fn(), saveSnapshot: vi.fn(),
   };
@@ -109,6 +110,60 @@ describe('Historia wizyt — canonical read-only patient state', () => {
     expect(env.detail().textContent).not.toContain('VISIT-LINKED');
     expect(env.dialog().querySelectorAll('script, img')).toHaveLength(0);
     expect(env.detail().textContent).not.toContain('BMI');
+  });
+
+  it('shows documents linked to the exact visit even for two encounters on the same day', async () => {
+    const env = setup([visit('first', '2026-11-03'), visit('second', '2026-11-03')]);
+    env.win.__VILDA_HOME_GABINET_PREVIEW__ = true;
+    env.vault.listPatientNotesForPatient = vi.fn(async () => [
+      {patientId: PID, title: 'Tylko pierwsza', visitContext: {visitId: 'first'}},
+      {patientId: PID, title: 'Tylko druga', visitContext: {visitId: 'second'}, reminderContext: {version: 1}},
+      {patientId: PID, title: 'Ogólna notatka', clinicalDateISO: '2026-11-03'},
+      {patientId: 'foreign', title: 'Inna osoba', visitContext: {visitId: 'first'}},
+      {patientId: PID, title: 'Leczenie', treatmentContext: {followups: [
+        {visitContext: {visitId: 'first'}, body: 'Kontrola pierwsza'},
+        {visitContext: {visitId: 'second'}, body: 'Kontrola druga'}
+      ]}}
+    ]);
+    await env.open({onEdit: vi.fn()});
+    expect(env.detail().textContent).toContain('Tylko pierwsza');
+    expect(env.detail().textContent).toContain('Kontrola pierwsza');
+    expect(env.detail().textContent).not.toMatch(/Tylko druga|Kontrola druga|Ogólna notatka|Inna osoba/);
+    env.buttons()[1].click();
+    expect(env.detail().textContent).toContain('Tylko druga');
+    expect(env.detail().textContent).toContain('Kontrola druga');
+    expect(env.detail().textContent).not.toMatch(/Tylko pierwsza|Kontrola pierwsza/);
+  });
+
+  it('shows only care-plan entries recorded at the selected visit, once, from either native representation', async () => {
+    const env = setup([visit('first', '2026-10-01'), visit('second', '2026-09-01')]);
+    env.win.__VILDA_HOME_GABINET_PREVIEW__ = true;
+    const first = {visitId: 'first'}, second = {visitId: 'second'};
+    env.vault.listPatientNotesForPatient = vi.fn(async () => [
+      {id: 'parent', patientId: PID, title: 'Plan kontroli', visitContext: first, careContext: {role: 'plan'}, body: 'Późniejszy opis planu'},
+      {id: 'linked', patientId: PID, title: 'Ustalenie z wizyty', visitContext: first, careContext: {role: 'note'}}
+    ]);
+    env.vault.listCarePlans.mockResolvedValue([
+      {id: 'parent', patientId: PID, title: 'Plan kontroli', visitContext: first, log: [
+        {visitContext: first, noteId: 'linked', text: 'Ustalenie z wizyty'},
+        {visitContext: second, text: 'Zamknięto krok'},
+        {text: 'Wpis poza wizytą'}
+      ]},
+      {state: {record: {id: 'staged', patientId: PID, title: 'Plan żywienia', careContext: {log: [
+        {visitContext: first, text: 'Omówiono plan żywienia'}
+      ]}}}},
+      {id: 'foreign', patientId: 'another', title: 'Inny pacjent', visitContext: first}
+    ]);
+    await env.open({onEdit: vi.fn()});
+    expect(env.vault.listCarePlans).toHaveBeenCalledWith({patientId: PID});
+    const detail = env.detail().textContent;
+    expect(detail.match(/Plan kontroli/g)).toHaveLength(1);
+    expect(detail.match(/Ustalenie z wizyty/g)).toHaveLength(1);
+    expect(detail).toContain('Omówiono plan żywienia');
+    expect(detail).not.toMatch(/Późniejszy opis planu|Zamknięto krok|Wpis poza wizytą|Inny pacjent/);
+    env.buttons()[1].click();
+    expect(env.detail().textContent).toContain('Zamknięto krok');
+    expect(env.detail().textContent).not.toMatch(/Omówiono plan żywienia|Ustalenie z wizyty/);
   });
 
   it('handles empty visits and filters a defensive foreign-patient row', async () => {

@@ -314,7 +314,7 @@
     view.error.hidden = true; view.error.textContent = ''; setWorking(view, true);
     try {
       if (!editorCurrent(view)) { if (activeEditor === view) closeEditor(view, true, false); return; }
-      var result = await view.submit(values);
+      var result = await view.submit(values, view.visitBinding);
       if (!editorCurrent(view)) { if (activeEditor === view) closeEditor(view, true, false); return; }
       var owner = view.owner; owner.restoreHint = view.hint; owner.pendingRefresh = false;
       if (view.kind === 'therapy' || view.kind === 'followup') owner.selected = result.id;
@@ -338,6 +338,7 @@
     var opener = d.activeElement, view = { owner: owner, dialog: dialog, kind: options.kind, dto: options.dto || null,
       opener: opener, hint: { action: opener && opener.dataset.treatmentAction, id: opener && opener.dataset.treatmentId },
       dirty: false, saving: false, uncertain: false, closed: false, beforeUnload: null, submit: options.submit, read: options.read, releaseBack: null, releaseDialog: null, history: null, picker: null };
+    view.visitBinding = owner.options.captureVisitBinding?.(owner.patientId) || null;
     activeEditor = view;
     dialog.querySelector('#vhomePatientTreatmentTitle').textContent = options.title;
     var ownerLabel = dialog.querySelector('.vpt-editor-owner');
@@ -405,7 +406,7 @@
           isCurrent: function () { return editorCurrent(editor) && !editor.saving && !editor.uncertain; },
           onCommit: function () { if (editorCurrent(editor) && !editor.saving && !editor.uncertain) { editor.dirty = true; syncEditor(editor); } } });
       }, read: function (data) { return { name: data.get('name').trim(), code: data.get('code').trim(), status: data.get('status'), dateISO: data.get('dateISO') }; },
-      submit: function (values) { return dto ? view.scope.updateDiagnosis(dto, values) : view.scope.createDiagnosis(values); } });
+      submit: function (values, binding) { return dto ? view.scope.updateDiagnosis(dto, values) : view.scope.createDiagnosis(values, binding); } });
   }
   function episodeEditor(view, dto) {
     var context = dto && dto.context || {}, originalIds = context.diagnosisIds || [];
@@ -430,7 +431,7 @@
       }, read: function (data) {
         return { title: data.get('title').trim(), method: data.get('method'), status: data.get('status'), startDateISO: data.get('startDateISO'), endDateISO: data.get('endDateISO'), nextDateISO: data.get('nextDateISO'),
           diagnosisIds: data.getAll('diagnosisIds').concat(missingIds), medication: data.get('medication').trim(), dose: data.get('dose').trim(), notes: data.get('notes').trim(), followups: context.followups || [] };
-      }, submit: function (values) { return dto ? view.scope.updateEpisode(dto, values) : view.scope.createEpisode(values); } });
+      }, submit: function (values, binding) { return dto ? view.scope.updateEpisode(dto, values) : view.scope.createEpisode(values, binding); } });
   }
   function followupEditor(view, dto, entry) {
     entry = entry || null;
@@ -441,7 +442,7 @@
           select('Rodzaj wpisu', 'kind', [['Kontrola', 'Kontrola'], ['Ustalenia', 'Ustalenia'], ['Zmiana leczenia', 'Zmiana leczenia']], entry ? entry.kind : 'Kontrola'));
         form.append(grid, field('Przebieg i ustalenia', 'body', entry ? entry.body : '', 'textarea', true, 3000));
       }, read: function (data) { return { dateISO: data.get('dateISO'), kind: data.get('kind'), body: data.get('body').trim() }; },
-      submit: function (values) { return entry ? view.scope.updateFollowup(dto, entry.id, values) : view.scope.addFollowup(dto, values); } });
+      submit: function (values, binding) { return entry ? view.scope.updateFollowup(dto, entry.id, values) : view.scope.addFollowup(dto, values, binding); } });
   }
   // Native persistence captures arbitrary document-level input names. These
   // fields belong solely to note actors, so intercept only this editor before

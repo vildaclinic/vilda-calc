@@ -2,6 +2,7 @@
 // No clinical calculation, DTO schema, Vault writer or sync payload is changed.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { reverseBscAuthHooks } from './account-duplicate-dismissals-auth-hooks.mjs';
+import { gabinetAuthLayers } from './home-gabinet-auth-hooks.mjs';
 import { createHash } from 'node:crypto';
 export const UI_INTENT_AUTH_BASE_SHA256 = '0a192d130cdb3b43b84678e886470008d984be3828ef0150cec21825a4c380c1';
 import { fileURLToPath } from 'node:url';
@@ -168,9 +169,10 @@ export function reverseUiIntentAuthHooks(source) {
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const target = fileURLToPath(new URL('../vilda_auth_ui.js', import.meta.url));
   const source = readFileSync(target, 'utf8'), result = applyUiIntentAuthHooks(source);
-  const baseline = reverseUiIntentAuthHooks(result);
+  const layers = gabinetAuthLayers(result);
+  const baseline = reverseUiIntentAuthHooks(layers.base);
   if (createHash('sha256').update(baseline.includes('/* BEGIN ACCOUNT DUPLICATE DISMISSALS V2') ? reverseBscAuthHooks(baseline) : baseline).digest('hex') !== UI_INTENT_AUTH_BASE_SHA256) throw new Error('Native/Home Auth base differs outside the explicit security delta');
-  if (applyUiIntentAuthHooks(baseline) !== result) throw new Error('Auth security replay differs');
+  if (layers.replay(applyUiIntentAuthHooks(baseline)) !== result) throw new Error('Auth security replay differs');
   if (process.argv.includes('--write')) writeFileSync(target, result);
   else if (source !== result) throw new Error('Auth security hooks need regeneration');
 }

@@ -1,4 +1,5 @@
 import { reverseBscAuthHooks } from '../../tools/account-duplicate-dismissals-auth-hooks.mjs';
+import { applyGabinetAuthHooks, gabinetAuthLayers } from '../../tools/home-gabinet-auth-hooks.mjs';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import { createHash } from 'node:crypto';
@@ -9,7 +10,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { applyHomeRemindersHooks, reverseHomeRemindersHooks, verifyHomeRemindersHooks, HOME_REMINDERS_AUTH_BASE_SHA256 } from '../../tools/home-reminders-auth-hooks.mjs';
 
 const source = fs.readFileSync(new URL('../../vilda_auth_ui.js', import.meta.url), 'utf8');
-const baseline = reverseHomeRemindersHooks(source);
+const beforeGabinet = gabinetAuthLayers(source).base;
+const baseline = reverseHomeRemindersHooks(beforeGabinet);
 const functions = [];
 const stack = [[parse(source, { ecmaVersion: 'latest', range: true }), null]];
 while (stack.length) {
@@ -46,11 +48,23 @@ function environment() {
 describe('optional home reminders native presentation boundary', () => {
   it('reverses to the exact native B1 artifact and replays idempotently without changing writers', () => {
     expect(createHash('sha256').update(reverseBscAuthHooks(baseline)).digest('hex')).toBe(HOME_REMINDERS_AUTH_BASE_SHA256);
-    expect(applyHomeRemindersHooks(baseline)).toBe(source);
-    expect(applyHomeRemindersHooks(source)).toBe(source);
+    expect(applyHomeRemindersHooks(baseline)).toBe(beforeGabinet);
+    expect(applyHomeRemindersHooks(beforeGabinet)).toBe(beforeGabinet);
+    expect(applyGabinetAuthHooks(beforeGabinet)).toBe(source);
     expect(verifyHomeRemindersHooks(source).base).toBe(baseline);
     const cwd = fileURLToPath(new URL('../..', import.meta.url));
     expect(execFileSync(process.execPath, ['tools/patient_b1_auth_hooks.mjs', '--check'], { cwd, encoding: 'utf8' })).toContain('clinical builders preserved');
+  });
+  it('accepts the moved original host only while its registered overview slot owns it', () => {
+    const e = environment();
+    e.state.moved = false;
+    e.win.VildaHomeRemindersRuntime = { ownsOverviewHost: candidate => candidate === e.host };
+    expect(e.context.HomeRemindersInlineEnabled(e.host)).toBe(false);
+    e.win.__VILDA_HOME_GABINET_PREVIEW__ = true;
+    expect(e.context.HomeRemindersInlineEnabled(e.host)).toBe(true);
+    expect(e.context.HomeRemindersInlineEnabled({ ...e.host })).toBe(false);
+    e.win.VildaHomeRemindersRuntime = { ownsOverviewHost: () => false };
+    expect(e.context.HomeRemindersInlineEnabled(e.host)).toBe(false);
   });
   it('keeps placement gates unless the exact original host is explicitly moved and the presentation is available', () => {
     const e = environment();

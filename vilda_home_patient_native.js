@@ -7,7 +7,7 @@
   if (!w || w.__VILDA_HOME_WORKSPACE_PREVIEW__ !== true || w.VildaHomePatientNative) return;
   var d = w.document, active = null, serial = 0, boundVaults = new WeakSet();
   var order = ['antro', 'treatment', 'traj', 'notes', 'timeline', 'lab', 'care'];
-  var names = { antro: 'Status', treatment: 'Leczenie', traj: 'Siatki centylowe', notes: 'Notatki', timeline: 'Historia', lab: 'Badania', care: 'Plany opieki' };
+  var names = { antro: 'Status', treatment: 'Leczenie', traj: 'Siatki centylowe', notes: 'Notatki', timeline: 'Historia', lab: 'Badania', care: 'Plany opieki', reminders: 'Przypomnienia' };
   var focusActions = new Set(['new-diagnosis', 'edit-diagnosis', 'new-therapy', 'edit-therapy', 'show-therapy', 'new-followup', 'edit-followup']);
 
   function node(tag, className, value) {
@@ -32,7 +32,10 @@
         return entry[1] + (state?.textContent ? ' · ' + state.textContent.trim() : '');
       }).join(' · ');
   }
-  function blocked(view) { return !!(view.treatment?.isEditing?.() || view.note?.isEditing?.() || view.dialogCleanups.size); }
+  function blocked(view) {
+    return !!(view.treatment?.isEditing?.() || view.note?.isEditing?.() || view.dialogCleanups.size
+      || view.inline && w.VildaHomeRemindersRuntime?.overviewIsEditing?.());
+  }
   function resumeRefresh(view) {
     if (!view || !view.deferred || view.resumeQueued) return;
     view.resumeQueued = true;
@@ -123,6 +126,7 @@
     d.removeEventListener('vilda:user-state-cleared', view.ownerChanged);
     w.removeEventListener('vilda:user-state-cleared', view.ownerChanged);
     if (active === view) active = null;
+    if (view.reminderSlot) w.VildaHomeRemindersRuntime?.unmountOverview?.(view.reminderSlot);
     wipe(view.root);
     view.root = null; view.panels = null; view.tabs = null; view.treatment = null;
   }
@@ -161,7 +165,7 @@
       return;
     }
     view.treatment = module.mount(view.treatmentBody, {
-      patientId: view.patientId, patientLabel: view.patientName, vault: view.vault, isCurrent: function () { return current(view); },
+      patientId: view.patientId, patientLabel: view.patientName, vault: view.vault, captureVisitBinding: view.inline?.captureVisitBinding, isCurrent: function () { return current(view); },
       titleNode: view.treatmentTitle,
       focusNoteId: view.treatmentFocus || null,
       legacyPanels: view.legacy, registerBack: view.registerBack,
@@ -174,8 +178,9 @@
     });
   }
   function select(view, key) {
-    if (!view || view.disposed || order.indexOf(key) === -1) return;
+    if (!view || view.disposed || !view.tabs.some(function (tab) { return tab.dataset.tab === key; })) return;
     hideMenu(view, false); view.selected = key;
+    if (view.inline) view.inline.selected = key;
     view.tabs.forEach(function (tab) {
       var selected = tab.dataset.tab === key;
       tab.classList.toggle('vilda-patient-tab--active', selected);
@@ -268,7 +273,8 @@
       var head = node('div', 'vhome-b1-section-heading'); head.appendChild(node('h3', '', 'Wzrastanie i dane rodzinne'));
       var analysis = button('Pełna analiza', function () {
         if (!current(view)) return;
-        view.close(); w.VildaHomeGrowth?.open?.('analysis');
+        if (view.inline) view.inline.onAnalysis();
+        else { view.close(); w.VildaHomeGrowth?.open?.('analysis'); }
       }, 'vhome-b1-text-button'); head.appendChild(analysis); growth.appendChild(head);
       var grid = node('div', 'vilda-patient-stats-grid'); growthNodes.forEach(function (item) { grid.appendChild(item); });
       growth.appendChild(grid); groups.push(growth);
@@ -293,7 +299,7 @@
     try { token = vault.captureSyncOperationSession(); } catch (_) { return null; }
     var root = native.root, view = {
       root: root, patientId: native.patientId, patientName: native.patientName || 'Pacjent', openerId: native.openerId || '', vault: vault, token: token, loaded: loadedSequence(), ownerCurrent: native.isCurrent,
-      homeOwner: w.VildaHomePatient?.captureOwner?.() || null,
+      homeOwner: w.VildaHomePatient?.captureOwner?.() || null, inline: native.inline || null,
       disposed: false, selected: native.activeTab || 'antro', close: native.close, changed: native.onChanged, disposeNativeViews: native.disposeNativeViews,
       registerBack: native.registerBack, legacy: native.legacyPanels.filter(Boolean), legacySummary: native.legacySummary || '',
       tabs: [], panels: [], treatment: null, note: null, treatmentFocus: native.focusNoteId || null, dialogCleanups: new Set(), menuBack: null, observer: null, back: null, mounted: false,
@@ -309,6 +315,7 @@
     view.menu = node('div', 'vhome-b1-action-menu'); view.menu.id = 'vhomePatientNativeActions-' + suffix;
     view.menu.hidden = true; view.menu.setAttribute('role', 'menu'); view.menuToggle.setAttribute('aria-controls', view.menu.id);
     [['edit','Edytuj pacjenta'],['newMeasure','Nowy pomiar'],['visits','Historia wizyt'],['versions','Historia wersji'],['load',null],['return',null]].forEach(function (entry) {
+      if (view.inline && (entry[0] === 'load' || entry[0] === 'return')) return;
       var item = native.actions[entry[0]]; if (!item) return;
       if (entry[1]) { item.replaceChildren(d.createTextNode(entry[1])); item.setAttribute('aria-label', entry[1]); }
       item.setAttribute('role', 'menuitem'); item.dataset.homePatientAction = entry[0];
@@ -328,15 +335,27 @@
     view.treatmentBody = node('div', 'vhome-b1-treatment-body'); treatmentPanel.appendChild(view.treatmentBody);
     var tabMap = Object.create(null); Array.from(nav.children).forEach(function (item) { if (item.dataset.tab) tabMap[item.dataset.tab] = item; }); tabMap.treatment = treatmentTab;
     var panels = Object.assign({}, native.panels, { treatment: treatmentPanel });
+    var sectionOrder = order;
+    if (view.inline) {
+      var reminders = button(names.reminders, function () { if (current(view)) select(view, 'reminders'); }, 'vilda-patient-tab');
+      reminders.dataset.tab = 'reminders';
+      tabMap.reminders = reminders;
+      var reminderPanel = node('section', 'vilda-patient-tab-content');
+      reminderPanel.dataset.tab = 'reminders';
+      view.reminderSlot = node('div'); view.reminderSlot.id = 'vhomePatientRemindersSlot';
+      view.reminderSlot.dataset.homePatientId = view.patientId;
+      reminderPanel.appendChild(view.reminderSlot); panels.reminders = reminderPanel; sectionOrder = order.concat('reminders');
+    }
     view.scroller = node('div', 'vhome-b1-panels');
-    order.forEach(function (key) {
+    sectionOrder.forEach(function (key) {
       var tab = tabMap[key], panel = panels[key]; if (!tab || !panel) return;
-      if (['treatment','care'].indexOf(key) !== -1 && !tab.querySelector('svg')) {
+      if (['treatment','care','reminders'].indexOf(key) !== -1 && !tab.querySelector('svg')) {
         var icon = d.createElementNS('http://www.w3.org/2000/svg', 'svg');
         icon.setAttribute('class', 'vilda-patient-tab-ico'); icon.setAttribute('width', '20'); icon.setAttribute('height', '20'); icon.setAttribute('viewBox', '0 0 24 24');
         icon.setAttribute('fill', 'none'); icon.setAttribute('stroke', 'currentColor'); icon.setAttribute('stroke-width', '1.6'); icon.setAttribute('stroke-linecap', 'round'); icon.setAttribute('stroke-linejoin', 'round'); icon.setAttribute('aria-hidden', 'true');
         var path = d.createElementNS('http://www.w3.org/2000/svg', 'path');
         path.setAttribute('d', key === 'care' ? 'M5 4h14v17H5zM9 4V2h6v2M8 11l2 2 4-4M8 17h8' : 'M5 3v5a4 4 0 0 0 8 0V3M3 3h4M11 3h4M9 12v3a5 5 0 0 0 10 0v-3M22 9a3 3 0 1 1-6 0 3 3 0 0 1 6 0');
+        if (key === 'reminders') path.setAttribute('d', 'M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4');
         icon.appendChild(path); var text = tab.textContent; tab.replaceChildren(icon, node('span', 'vilda-patient-tab-lbl', text));
       }
       tab.id = 'vhomePatientNativeTab-' + suffix + '-' + key; tab.setAttribute('role', 'tab');
@@ -399,6 +418,7 @@
         var shell = root.parentElement, heading = header.querySelector('h2');
         heading.id = 'vhomePatientNativeHeading-' + suffix;
         if (shell?.classList.contains('vilda-auth-card')) shell.setAttribute('aria-labelledby', heading.id);
+        if (view.reminderSlot) w.VildaHomeRemindersRuntime?.mountOverview?.(view.reminderSlot, view.patientId);
         view.fit = function () {
           if (!shell?.isConnected) return;
           w.VildaHomeWorkspace?.fitDialog?.(shell);
@@ -407,7 +427,7 @@
           // height; CSS cannot read its intersection with the parent viewport.
           if (height && shell.parentElement) shell.parentElement.style.setProperty('--vhome-dialog-viewport-height', height);
         };
-        view.fit(); w.addEventListener('resize', view.fit); w.visualViewport?.addEventListener('resize', view.fit);
+        if (!view.inline) { view.fit(); w.addEventListener('resize', view.fit); w.visualViewport?.addEventListener('resize', view.fit); }
         view.observer = new w.MutationObserver(function () { if (!current(view)) destroy(view); });
         view.observer.observe(d.documentElement, { childList: true, subtree: true });
       },
@@ -416,6 +436,12 @@
     });
   }
   w.VildaHomePatientNative = Object.freeze({ decorate: decorate, describeLegacy: describeLegacy,
+    selectInline: function (key) { return !!active?.inline && choose(active, key); },
+    releaseInline: function (force) {
+      if (!active?.inline) return true;
+      if (!force && blocked(active)) return false;
+      destroy(active); return true;
+    },
     deferRefresh: function () { if (!active || !current(active) || !blocked(active)) return false; active.deferred = true; return true; },
     close: function (force) { if (!active) return true; if (force) { var view = active; destroy(view); view.close(); return true; } return close(active); },
     isOpen: function () { return !!(active && current(active)); }

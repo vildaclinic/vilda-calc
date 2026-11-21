@@ -438,3 +438,28 @@ describe('Klirens — create-once acknowledgement without an unsafe upsert retry
     expect(await dev.adapter.getPatientNoteForUser(dev.uid, payload.id)).toBeUndefined();
   });
 });
+
+describe('source visit of a clinical note or result', () => {
+  it('keeps the source visit encrypted, immutable and distinct from the sample date, including after transport', async () => {
+    const first = await device(), second = await device();
+    const legacy = await measurement(first);
+    const origin = {version:1,visitId:globalThis.crypto.randomUUID(),clinicalDateISO:'2026-11-03'};
+    const other = {...origin,visitId:globalThis.crypto.randomUUID()};
+    const payload = newOncePayload(legacy,{category:'wynik-badania',visitContext:origin});
+    const {id} = await first.vault.savePatientNoteOnce(payload);
+    expect((await first.vault.getPatientNote(id)).visitContext).toEqual(origin);
+    expect(JSON.stringify(await first.adapter.getPatientNoteForUser(first.uid,id))).not.toContain(origin.visitId);
+    expect(await first.vault.savePatientNoteOnce({...payload,visitContext:other})).toMatchObject({saved:false,reason:'conflict'});
+    await expect(first.vault.savePatientNote({...payload,visitContext:other})).rejects.toThrow(/wizyty/);
+    await expect(first.vault.savePatientNote({...legacy,visitContext:origin})).rejects.toThrow(/wizyty/);
+    await expect(first.vault.savePatientNoteOnce({...payload,id:id+'-other',visitContext:{...origin,clinicalDateISO:'2026-02-30'}})).rejects.toThrow(/powiązanie/);
+    await first.vault.savePatientNote({id,patientId:legacy.patientId,body:'Uzupełniono wynik.'});
+    await sync(second,first);
+    expect(await second.vault.getPatientNote(id)).toMatchObject({visitContext:origin,clinicalDateISO:payload.clinicalDateISO});
+    const portable = await first.vault.exportPatientEnvelope(legacy.patientId);
+    await first.vault.removePatientNote(id);
+    await first.vault.importPatientFromEnvelope(portable);
+    expect(await first.vault.getPatientNote(id)).toMatchObject({visitContext:origin,clinicalDateISO:payload.clinicalDateISO});
+    expect(await first.vault.getPatientNote(legacy.id)).not.toHaveProperty('visitContext');
+  });
+});

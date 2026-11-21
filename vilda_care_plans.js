@@ -38,7 +38,7 @@
       .then(function () { return templateAsset('vilda_care_template_transfer.js?v=1', function () { return !!win.VildaCareTemplateTransfer; }); })
       .then(function () { return Promise.all([
       templateAsset('vilda_care_templates.css?v=4', null, true),
-      templateAsset('vilda_care_templates.js?v=6', function () { return !!win.VildaCareTemplates; })
+      templateAsset('vilda_care_templates.js?v=7', function () { return !!win.VildaCareTemplates; })
     ]); }).catch(function (error) { templateUiPromise = null; throw error; });
     return templateUiPromise;
   }
@@ -1145,6 +1145,7 @@
       var body = node('div', 'vcp-form-body'), errors = node('div', 'vcp-form-errors'); body.appendChild(errors); form.appendChild(body);
       var footer = node('footer', 'vcp-form-actions'), cancelButton = button('Anuluj', 'vcp-outline', cancel), saveButton = node('button', 'vcp-primary', saveLabel); saveButton.type = 'submit'; footer.appendChild(cancelButton); footer.appendChild(saveButton); form.appendChild(footer); dialog.appendChild(form);
       var model = { dialog: dialog, form: form, body: body, errors: errors, save: saveButton, cancel: cancel, plan: plan, operationId: operationId() };
+      model.visitBinding = options.captureVisitBinding?.(options.patientId) || null;
       editor = model; busy(false, true); doc.body.appendChild(dialog);
       function cancel() {
         if (state.busy) return;
@@ -1166,7 +1167,7 @@
         if (plan) { request.planId = plan.id; request.patientId = plan.patientId; request.baseRev = plan.rev; }
         setWorking(true);
         try {
-          var result = await vault.mutateCarePlan(request);
+          var result = await vault.mutateCarePlan(request, model.visitBinding);
           if (!current() || editor !== model) return;
           if (!result || !result.saved) throw new Error(result && (result.needsRefresh || result.reason === 'operation-outcome-expired') ? 'Nie można potwierdzić wyniku wcześniejszego zapisu. Zachowaj wpisaną treść, anuluj formularz i sprawdź aktualny plan przed ponownym zapisem.' : result && result.conflict ? 'Plan zmienił się w innej karcie lub na innym urządzeniu. Zachowaj wpisaną treść, anuluj formularz i otwórz go ponownie.' : result && result.reason === 'deleted' ? 'Ten plan lub jego wpis został usunięty. Anuluj formularz i odśwież listę.' : 'Nie udało się zapisać planu. Anuluj formularz i odśwież listę.');
           resetRecord();
@@ -1196,6 +1197,7 @@
       var footer = node('footer', 'vcp-form-actions'), cancelButton = button('Anuluj', 'vcp-outline', cancel), checkButton = button('Sprawdź zapis', 'vcp-outline', checkOutcome), saveButton = node('button', 'vcp-primary', saveLabel); saveButton.type = 'submit'; checkButton.hidden = true;
       footer.appendChild(cancelButton); footer.appendChild(checkButton); footer.appendChild(saveButton); form.appendChild(footer); dialog.appendChild(form);
       var model = { dialog: dialog, form: form, body: body, errors: errors, save: saveButton, cancel: cancel, plan: plan, pending: null, uncertain: false, submitted: false };
+      model.visitBinding = options.captureVisitBinding?.(options.patientId) || null;
       editor = model; busy(false, true); doc.body.appendChild(dialog);
       function cancel() {
         if (state.busy) return;
@@ -1245,7 +1247,7 @@
             model.pending = immutable(Object.assign({}, request, { operationId: operationId(), planId: plan.id, patientId: plan.patientId, expectedRevision: plan.rev }));
           }
           model.submitted = true;
-          var result = await vault.mutateStagedCarePlan(model.pending);
+          var result = await vault.mutateStagedCarePlan(model.pending, model.visitBinding);
           if (!current() || editor !== model) return;
           if (await accept(result)) return;
           if (!result || result.saved === true || result.outcome === 'unknown' || result.outcome === 'pending') unknown(result && result.message);
@@ -1682,7 +1684,7 @@
       try {
         var application = typeof vault.getCarePlanApplicationProvider === 'function' ? vault.getCarePlanApplicationProvider() : null;
         var view = await openTemplates({ vault: vault, sourcePlanId: sourcePlanId || null, patientId: options.patientId || null,
-          initialPatientId: settings.initialPatientId || null, navigationContext: settings.navigationContext || null, application: application, isCurrent: current, remindersLayout: remindersLayout,
+          initialPatientId: settings.initialPatientId || null, navigationContext: settings.navigationContext || null, application: application, captureVisitBinding: options.captureVisitBinding, isCurrent: current, remindersLayout: remindersLayout,
           onDialog: options.onDialog,
           onBusy: function (working) { if (current()) busy(working, true); },
           onApplied: function (result, context) {

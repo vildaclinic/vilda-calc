@@ -88,38 +88,60 @@
       var projected = model.project([note], { patientId: patientId });
       return (kind === 'diagnosis' ? projected.diagnoses : projected.episodes)[0];
     }
-    async function create(kind, values) {
+    function checkVisit(binding) {
+      check();
+      if (binding && !binding.isCurrent()) throw failure('TREATMENT_STALE', 'Zmieniono wizytę. Otwórz formularz ponownie.');
+      return true;
+    }
+    async function recordVisit(binding) {
+      checkVisit(binding);
+      if (binding && !await binding.ensureRecorded()) throw failure('TREATMENT_VISIT_MISSING', 'Nie udało się zapisać wizyty. Spróbuj ponownie.');
+      checkVisit(binding);
+    }
+    async function create(kind, values, binding) {
       check(); var next = context(kind, values), id = newId();
       if (kind === 'therapy') await links(next, null); else await read();
-      var result = await guarded(function () { return vault.savePatientNoteOnce(payload(id, next), { isCurrent: function () { check(); return true; } }); });
+      await recordVisit(binding);
+      var note = payload(id, next);
+      if (binding) note.visitContext = clone(binding.visitContext);
+      var result = await guarded(function () { return vault.savePatientNoteOnce(note, { isCurrent: function () { return checkVisit(binding); } }); });
+      checkVisit(binding);
       if (!result || result.conflict || result.saved === false) throw failure('TREATMENT_CONFLICT', 'Nie zapisano leczenia. Odśwież kartę i sprawdź aktualny zapis.');
       return reread(id, kind);
     }
-    async function update(kind, dto, values) {
+    async function update(kind, dto, values, binding) {
       check(); var original = captured(dto, kind), next = context(kind, values, original.context);
       if (kind === 'therapy') await links(next, original.context); else await read();
       var request = Object.assign(payload(original.id, next), { baseRev: original.rev,
         baseUpdatedAtISO: original.updatedAtISO, baseNote: original.baseNote });
-      var result = await guarded(function () { return vault.updateExistingPatientNote(request, { isCurrent: function () { check(); return true; } }); });
+      checkVisit(binding);
+      var result = await guarded(function () { return vault.updateExistingPatientNote(request, { isCurrent: function () { return checkVisit(binding); } }); });
+      checkVisit(binding);
       if (!result || result.updated !== true) throw failure('TREATMENT_CONFLICT', 'Zapis zmienił się albo został usunięty. Odśwież kartę przed ponowną edycją.');
       return reread(original.id, kind);
     }
-    async function followup(dto, id, values) {
+    async function followup(dto, id, values, binding) {
       check(); var original = captured(dto, 'therapy'), next = clone(values || {}), entries = clone(original.context.followups);
+      // An existing entry keeps the visit where it was originally recorded.
+      delete next.visitContext;
       if (id) {
         var index = entries.findIndex(function (entry) { return entry.id === id; });
         if (index < 0) throw failure('TREATMENT_CONFLICT', 'Wpis kontroli nie jest już dostępny.');
         entries[index] = Object.assign({}, entries[index], next, { id: id });
-      } else entries.push(Object.assign({}, next, { id: newId() }));
-      return update('therapy', original, { followups: entries });
+      } else {
+        await recordVisit(binding);
+        if (binding) next.visitContext = clone(binding.visitContext);
+        entries.push(Object.assign({}, next, { id: newId() }));
+      }
+      return update('therapy', original, { followups: entries }, binding);
     }
     return Object.freeze({
       read: read,
-      createDiagnosis: function (values) { return create('diagnosis', values); },
+      createDiagnosis: function (values, binding) { return create('diagnosis', values, binding); },
       updateDiagnosis: function (dto, values) { return update('diagnosis', dto, values); },
-      createEpisode: function (values) { return create('therapy', values); },
+      createEpisode: function (values, binding) { return create('therapy', values, binding); },
       updateEpisode: function (dto, values) { return update('therapy', dto, values); },
-      addFollowup: function (dto, values) { return followup(dto, null, values); },
+      addFollowup: function (dto, values, binding) { return followup(dto, null, values, binding); },
       updateFollowup: function (dto, id, values) { return followup(dto, id, values); },
       dispose: function () { disposed = true; }
     });

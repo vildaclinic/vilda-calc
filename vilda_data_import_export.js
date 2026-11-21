@@ -832,7 +832,11 @@ const savePayloadKey=BsavePayloadKey(a);
 const collectedReadiness=getSaveReadiness(EXPLICIT_SAVE_READINESS);
 if(!collectedReadiness.ready||saveReceiptScope&&!saveReceiptScopeCurrent(saveReceiptScope)){O(o,saveReadinessMessage(collectedReadiness.reason||"owner-unavailable"),t,{ton:"uwaga"});return null}
 if(t.__vildaSaveFeedbackScope&&savePayloadKey!==null&&BsaveInFlight&&BsaveInFlight.payloadKey===savePayloadKey&&(!BsaveInFlight.scope||saveReceiptScopeCurrent(BsaveInFlight.scope))&&BsaveFeedbackCurrent(BsaveInFlight.options))return BsaveInFlight.promise;
-const Bb=Bbraki(a);if(Bb.length)return O(o,Bkomunikat(Bb),t,{ton:"blad",pola:Bb}),Bwskaz(Bb),null;const n=r.VildaVault;if(r.VildaGuestMode===!0)return O(o,"Zaloguj si\u0119, aby zapisywa\u0107 dane pacjent\xF3w.",t,{ton:"uwaga"}),null;if(!n||typeof n.isUnlocked!="function")return O(o,"Brak modu\u0142u zapisu \u2014 od\u015Bwie\u017C stron\u0119.",t,{ton:"blad"}),null;if(!n.isUnlocked())return O(o,"Zaloguj si\u0119, aby zapisa\u0107 dane pacjent\xF3w.",t,{ton:"uwaga"}),null;try{et(a)}catch(s){typeof globalThis<"u"&&typeof globalThis.vildaLogSwallowedCatch=="function"&&globalThis.vildaLogSwallowedCatch("vilda_data_import_export",s,{module:"saveUserData:k1v2-strip"})}if(t.__vildaSaveFeedbackScope)O(o,"Zapisywanie danych…",t,{ton:"info",pending:!0});
+const homeEncounter=r.__VILDA_HOME_GABINET_PREVIEW__===true&&r.VildaHomeEncounter;
+let visitEdit;
+try{visitEdit=homeEncounter&&homeEncounter.revisionTarget(a)}
+catch(error){O(o,error.message,t,{ton:"uwaga"});return null}
+const Bb=Bbraki(a).filter(function(field){return !homeEncounter||!homeEncounter.optionalField(a,field.id)});if(Bb.length)return O(o,Bkomunikat(Bb),t,{ton:"blad",pola:Bb}),Bwskaz(Bb),null;const n=r.VildaVault;if(r.VildaGuestMode===!0)return O(o,"Zaloguj si\u0119, aby zapisywa\u0107 dane pacjent\xF3w.",t,{ton:"uwaga"}),null;if(!n||typeof n.isUnlocked!="function")return O(o,"Brak modu\u0142u zapisu \u2014 od\u015Bwie\u017C stron\u0119.",t,{ton:"blad"}),null;if(!n.isUnlocked())return O(o,"Zaloguj si\u0119, aby zapisa\u0107 dane pacjent\xF3w.",t,{ton:"uwaga"}),null;try{et(a)}catch(s){typeof globalThis<"u"&&typeof globalThis.vildaLogSwallowedCatch=="function"&&globalThis.vildaLogSwallowedCatch("vilda_data_import_export",s,{module:"saveUserData:k1v2-strip"})}if(t.__vildaSaveFeedbackScope)O(o,"Zapisywanie danych…",t,{ton:"info",pending:!0});
 const operationSequence=++saveOperationSequence;
 let submittedSaveFailure=null;
 let saveReceipt={saved:false,reason:saveReceiptScope?"not-confirmed":"scope-unavailable"};
@@ -846,7 +850,10 @@ var Bb0={};
 // TRESC wczytana do formularza. Sejf porownuje ja z glowa rekordu i pyta tylko wtedy,
 // gdy w bazie siedzi pomiar, ktorego nie bylo ani w tej kopii, ani w zapisie.
 try{r.lastLoadedData&&typeof r.lastLoadedData=="object"&&(Bb0=r.lastLoadedData)}catch(Bb1){l("vilda_data_import_export:saveUserData:baseline",Bb1)}
-var Be3=BdupId(a,r),Be4={baselinePayload:Bb0,przyjeteZBazy:{patientId:Bb4,wiersze:Bb5},/* P-ZAPISY-DWIE-KARTY: zapis tego pacjenta trwa w innej karcie (albo panelu powloki) - sejf czeka na niego najwyzej 30 s */onLockWait:function(){if(saveReceiptScope&&!saveReceiptScopeCurrent(saveReceiptScope))return;O(o,"Czekam \u2014 ten pacjent jest zapisywany w innej karcie",t,{ton:"uwaga"})}};/* P-ZAPIS-USUNIETEJ (A13): ponowienie po odmowie (ta sama baza formularza) — do karty docelowej scalenia z dopisaniem jej wierszy, bez pytania; po usunieciu albo przy nieznanym celu bez id odrzuconej karty; przy innej tozsamosci karty docelowej bez zapisu. Wersja z wlasnego ostatniego zapisu pomaga sejfowi wskazac karte docelowa. */var Bzu_k=Bzu_odm&&Bzu_odm.lld===r.lastLoadedData?Bzu_odm:null;if(Bzu_k){if(Bzu_k.y&&!Bzu_k.tenSam)throw Bzu_k.blad;Bzu_k.y?(Be3=Bzu_k.y,Be4.dolaczPoScaleniu=Bzu_k.x):Be3===Bzu_k.x&&(Be3=null)}try{var Bzu_w=r.__vildaOstatniWlasnyZapis;Be3&&Bzu_w&&Bzu_w.patientId===Be3&&typeof Bzu_w.snapshotId=="string"&&Bzu_w.snapshotId&&(Be4.znaneWersje=[Bzu_w.snapshotId])}catch(Bzu_x){}Be3&&(Be4.patientId=Be3);try{return Promise.resolve(n.savePatient(a,Be4)).catch(function(error){submittedSaveFailure={error:error,patientId:Be3};throw error})}catch(error){submittedSaveFailure={error:error,patientId:Be3};throw error}}).then(function(s){
+var Be3=BdupId(a,r),Be4={baselinePayload:Bb0,przyjeteZBazy:{patientId:Bb4,wiersze:Bb5},/* P-ZAPISY-DWIE-KARTY: zapis tego pacjenta trwa w innej karcie (albo panelu powloki) - sejf czeka na niego najwyzej 30 s */onLockWait:function(){if(saveReceiptScope&&!saveReceiptScopeCurrent(saveReceiptScope))return;O(o,"Czekam \u2014 ten pacjent jest zapisywany w innej karcie",t,{ton:"uwaga"})}};/* P-ZAPIS-USUNIETEJ (A13): ponowienie po odmowie (ta sama baza formularza) — do karty docelowej scalenia z dopisaniem jej wierszy, bez pytania; po usunieciu albo przy nieznanym celu bez id odrzuconej karty; przy innej tozsamosci karty docelowej bez zapisu. Wersja z wlasnego ostatniego zapisu pomaga sejfowi wskazac karte docelowa. */var Bzu_k=Bzu_odm&&Bzu_odm.lld===r.lastLoadedData?Bzu_odm:null;if(Bzu_k){if(Bzu_k.y&&!Bzu_k.tenSam)throw Bzu_k.blad;Bzu_k.y?(Be3=Bzu_k.y,Be4.dolaczPoScaleniu=Bzu_k.x):Be3===Bzu_k.x&&(Be3=null)}try{var Bzu_w=r.__vildaOstatniWlasnyZapis;Be3&&Bzu_w&&Bzu_w.patientId===Be3&&typeof Bzu_w.snapshotId=="string"&&Bzu_w.snapshotId&&(Be4.znaneWersje=[Bzu_w.snapshotId])}catch(Bzu_x){}Be3&&(Be4.patientId=Be3);try{
+if(visitEdit&&(!visitEdit.isCurrent()||visitEdit.patientId!==Be3))throw new Error("Kontekst edytowanej wizyty uległ zmianie.");
+const write=visitEdit?n.updateSnapshotPayload(Be3,visitEdit.snapshotId,a,{expectedVisit:visitEdit,onLockWait:Be4.onLockWait}):n.savePatient(a,Be4);
+return Promise.resolve(write).catch(function(error){submittedSaveFailure={error:error,patientId:Be3};throw error})}catch(error){submittedSaveFailure={error:error,patientId:Be3};throw error}}).then(function(s){
 try{
 // Durable completion from a previous owner must not publish into the new UI.
 if(saveReceiptScope&&!saveReceiptScopeCurrent(saveReceiptScope,s))return;
@@ -860,7 +867,10 @@ if(s&&s.patientId&&saveReceiptScopeCurrent(saveReceiptScope,s)){
     const committed=JSON.parse(committedSaveWitness.payloadJSON);
     committedVisitPublication={scope:saveReceiptScope,result:s,payload:committed};
     const visit=r.VildaVisitContext.commit(committed,s.patientId);
-    if(visit)a.visit=visit;
+    if(visit){
+      a.visit=visit;
+      if(homeEncounter)homeEncounter.saved(s.patientId,s.snapshotId,visit.visitId,s.visitRevision);
+    }
   }
   if(nativeSave&&saveReceipt.referenceVerified)continueNativeWriterAfterOwnSave(saveReceiptScope,s,saveWriterAuthority,nativeSaveCarryFence);
 }

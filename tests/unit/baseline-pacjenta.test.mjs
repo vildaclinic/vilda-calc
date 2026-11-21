@@ -64,6 +64,18 @@ describe('Linia bazowa podąża za rekordem', () => {
     expect(s.win.flushe, 'kopia w persistence odświeżona').toBe(1);
   });
 
+  it('zachowuje bazę wybranej wizyty historycznej podczas zapisu korekty', async () => {
+    const older = { name: 'Fikcyjna Ola', user: { weight: 31 } };
+    const latest = { name: 'Fikcyjna Ola', user: { weight: 42 } };
+    const s = srodowisko({ pid: 'p1', name: 'Fikcyjna Ola', baza: older, rekordy: { p1: REKORD(latest) } });
+    s.win.__VILDA_HOME_GABINET_PREVIEW__ = true;
+    s.win.VildaHomeEncounter = { state: () => ({ mode: 'edit' }) };
+    s.win.VildaBaselinePacjenta.mount();
+    await s.powiadom({ patientId: 'p1', snapshotId: 'historyczna', isUpdate: true });
+    await tick();
+    expect(s.win.lastLoadedData).toEqual(older);
+  });
+
   it('nie reaguje na zmianę INNEGO pacjenta niż wczytany', async () => {
     const s = srodowisko({ pid: 'p1', baza: { name: 'A' }, rekordy: { p2: REKORD({ name: 'B', user: { dobISO: '2020-01-01' } }) } });
     await s.powiadom({ patientId: 'p2', snapshotId: 's2', isUpdate: true });

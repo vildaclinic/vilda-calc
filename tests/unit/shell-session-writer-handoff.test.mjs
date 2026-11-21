@@ -10,6 +10,22 @@ const CURRENT = { ...clone(OLD), user: { ...OLD.user, ageMonths: 4, measuredAtIS
   advanced: { data: { measurements: [...OLD.advanced.data.measurements, { ageMonths: 156, height: 158, weight: 46 }] } } };
 
 describe('shell authorizes the actual restored document on handoff', () => {
+  it.each([true, false])('keeps Start active until the first lab visit snapshot is confirmed (%s)', async confirmed => {
+    const p = powloka();
+    p.shell.navigate('start');
+    const frame = p.load('start'), home = frame.contentWindow;
+    let finish;
+    const pending = new Promise(resolve => { finish = resolve; });
+    home.__VILDA_HOME_GABINET_PREVIEW__ = true;
+    home.VildaHomeGabinet = {prepareLabEntry: vi.fn().mockReturnValueOnce(pending).mockReturnValue(null)};
+    p.shell.navigate('lab', true);
+    expect(p.shell.getCurrentRoute()).toBe('start');
+    expect(p.shell.captureSessionWriter(home)).toBeTruthy();
+    finish(confirmed);
+    await pending;
+    await vi.waitFor(() => expect(p.shell.getCurrentRoute()).toBe(confirmed ? 'lab' : 'start'));
+  });
+
   it('restores the latest visit after a hidden frame finishes loading an older same-patient visit', () => {
     const p = powloka();
     const docpro = p.ramki.get(p.shell.routes.docpro.src.split('?')[0]);

@@ -10,7 +10,7 @@
   var diagnosisKeys = ['schemaVersion', 'kind', 'name', 'code', 'codingSystem', 'status', 'dateISO'];
   var therapyKeys = ['schemaVersion', 'kind', 'title', 'method', 'status', 'startDateISO', 'endDateISO',
     'diagnosisIds', 'medication', 'dose', 'notes', 'nextDateISO', 'followups'];
-  var followupKeys = ['id', 'dateISO', 'kind', 'body'];
+  var followupKeys = ['id', 'dateISO', 'kind', 'body', 'visitContext'];
   var methods = ['pharmacological', 'nonpharmacological', 'other'];
   var followupKinds = ['Kontrola', 'Ustalenia', 'Zmiana leczenia'];
 
@@ -103,6 +103,13 @@
       var next = { id: id(value(keys, 'id'), field + '.id'), dateISO: date(value(keys, 'dateISO'), field + '.dateISO', true),
         kind: enumeration(value(keys, 'kind'), followupKinds, field + '.kind'),
         body: string(value(keys, 'body'), 3000, field + '.body', true) };
+      if (own.call(keys, 'visitContext')) {
+        var origin = fields(value(keys, 'visitContext'), ['version', 'visitId', 'clinicalDateISO'], field + '.visitContext');
+        var visitId = value(origin, 'visitId');
+        if (value(origin, 'version') !== 1 || typeof visitId !== 'string'
+          || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(visitId)) invalid(field + '.visitContext');
+        next.visitContext = { version: 1, visitId: visitId, clinicalDateISO: date(value(origin, 'clinicalDateISO'), field + '.visitContext.clinicalDateISO', true) };
+      }
       if (seen.has(next.id)) invalid(field + '.id');
       seen.add(next.id); return next;
     });
