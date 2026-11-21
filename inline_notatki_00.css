@@ -76,6 +76,10 @@
   position: absolute; left: .8rem; top: 50%; transform: translateY(-50%);
   color: #8aa3a6; pointer-events: none; font-size: 1rem;
 }
+@media (max-width: 600px), (any-pointer: coarse) {
+  /* Safari on iOS zooms to focused controls below 16px. */
+  .notes-search input { font-size: max(16px, 1rem); }
+}
 .notes-filters { display: flex; gap: var(--space-0-45); flex-wrap: wrap; }
 .notes-filter {
  
@@ -139,6 +143,36 @@
 .notes-empty__icon { font-size: 2.6rem; opacity: var(--opacity-disabled-label); margin-bottom: var(--space-0-6); }
 .notes-empty__title { font-size: 1.05rem; font-weight: 600; color: var(--text, #0f2b33); margin: 0 0 var(--space-0-3); }
 .notes-empty__desc { font-size: .9rem; margin: 0; }
+
+.note-preview {
+  width: min(42rem, calc(100% - 2rem));
+  max-height: calc(100dvh - 2rem);
+  box-sizing: border-box;
+  padding: 0;
+  border: var(--border-hairline) solid var(--chrome-glass-border, rgba(0,131,141,.16));
+  border-radius: var(--chrome-radius-card, 14px);
+  background: var(--card-bg, #fff);
+  color: var(--text, #0f2b33);
+  box-shadow: var(--shadow-card-hover);
+  overflow: hidden;
+}
+.note-preview[open] { display: flex; flex-direction: column; }
+.note-preview::backdrop { background: rgba(8,30,35,.42); }
+.note-preview__head {
+  display: flex; align-items: flex-start; gap: var(--space-0-6);
+  padding: var(--space-1) var(--space-1-25);
+  border-bottom: var(--border-hairline) solid var(--chrome-glass-border, rgba(0,131,141,.12));
+}
+.note-preview__head h2 {
+  flex: 1; min-width: 0; margin: 0; align-self: center;
+  font-size: 1.1rem; font-weight: 700; overflow-wrap: anywhere;
+}
+.note-preview__head .note-btn-ghost { flex-shrink: 0; min-height: 44px; }
+.note-preview__body {
+  min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+  padding: var(--space-1-25);
+  font-size: 1rem; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere;
+}
 
 /* Editor — slide-in panel (overlay) */
 .note-editor-overlay {
