@@ -3,7 +3,7 @@
   "version": 1,
   "sourceRef": "992bf3c5fbc056b348dcfd4bcd83d4a48b961efd",
   "baseVaultSHA256": "4ca270bc7461e33d50b791242cd9298da710cfd651ffe1a099b059f80c4acd7a",
-  "integratedVaultSHA256": "5e86db49d4a42f3b587748e6ddaabf4b4ab3fac1cf0c34920476651d53707b2c",
+  "integratedVaultSHA256": "9084797cddb81bce90112482bccf8a80e8730d3d1b9ac5f6001c260faab0adbb",
   "fragmentSHA256": "f9e2d8ac67c5311838090a6ec2f9957929d3b5bb4c69b5bd6e457f085e7cc4a7",
   "sources": [
     {
@@ -282,9 +282,9 @@
     {
       "name": "visit-public-plan-writers",
       "before": "const $s={__vildaVault:!0,",
-      "after": "// Add the encounter-aware entry points after the native provider is installed.\nif(typeof PatientWorkspaceInstall==='function'){\n  const installNativeWorkspace=PatientWorkspaceInstall;\n  PatientWorkspaceInstall=function(api){installNativeWorkspace(api);EncounterInstallCare(api)};\n}\nconst $s={__vildaVault:!0,",
+      "after": "// Retain the canonical native install/publish sequence for the private builder.\nfunction EncounterPublishVault(api){\n  const $s=api;PatientWorkspaceInstall($s);v.VildaVault=$s}\nconst $s={__vildaVault:!0,",
       "beforeSHA256": "417fe9c122b3d102e14491f344181cb92e3f4da91295980a88eea191d432a0c4",
-      "afterSHA256": "3e9ebae4971b8f6fb7a7a27e82478dea1d7f02cff48449977c14bfac176134d1"
+      "afterSHA256": "89e773bc0a80f43f67817581cb50082f09dfc8c910b95c9ef06c4a9024ff7efa"
     },
     {
       "name": "visit-care-cas",
@@ -292,6 +292,13 @@
       "after": "function CareMvpCheckCommit(change, parent, existing, deleted, patient) {\n  for(const entry of EncounterPlanBindings.values()){\n    if(entry.planId===change.parent.id && entry.patientId===change.parent.patientId) EncounterPlanCheck(entry.binding,entry.patientId);\n  }",
       "beforeSHA256": "dff9f278470d71ab745ab9b03271011db78eafe69710c4d1c733b669b19ada81",
       "afterSHA256": "3f992127b40e3a88ddf9e7890258573835e2227b8e98007a1322acc1c47979be"
+    },
+    {
+      "name": "visit-install-care-after-publication",
+      "before": ";PatientWorkspaceInstall($s);v.VildaVault=$s})(typeof window",
+      "after": ";EncounterPublishVault($s);EncounterInstallCare($s)})(typeof window",
+      "beforeSHA256": "e481e0ec58ec270015bf075d1cefb30a0427ab891467f9aa0569de1a0a9478a7",
+      "afterSHA256": "27a402c21039f1511f035b4bacfe6e18a6dc10a9646343a662d6f9e00e5bda1f"
     }
   ]
 }
