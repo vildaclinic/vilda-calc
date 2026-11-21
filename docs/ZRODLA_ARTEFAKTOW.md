@@ -2570,6 +2570,7 @@ Czytelne źródło: `vilda_auth_ui.js` — nowy czytelny blok P-KARTA-LECZENIE, 
 (częstość leku jak `products[…].frequency` katalogu `obesity_therapy.js`), `Ko_zapomnij`, `Ko_czestosc` (lek rozpoznany
 przez `ObesityResponseCriteria.resolveDrug`), `Ko_dawkaOd` („od DD.MM.RRRR” dawki), `Ko_pierwszeZdanie` (pierwsze zdanie
 opisu oceny), `Ko_punkty`, `Ko_kafel`, `Ko_podpisy` (łamanie podpisu kafelka na granicy części), `Ko_kafelki`,
+`Ko_bezBmi` (ostatni wpis bez wzrostu przy ocenie z BMI/ΔbmiSDS),
 `Ko_werdykt` (linia oceny) i `Ko_karta` (nagłówek z akcjami sekcji, przełącznik, widoki, „Szczegóły oceny”). Czytelne
 `Ob_dz`, `Kl_leczenie` i `Ob_dzNotatki` zmienione w miejscu (opis niżej). `vilda_cykle_leczenia.js` (czytelny):
 `sekcja(opcje)` z opcją `uklad: 'karta'` i `wyjscie` — addytywnie, bez opcji ten sam DOM co dotąd. Opis:
@@ -2592,12 +2593,17 @@ wynik z `origin/audyt` e3efa99; bez ponownej minifikacji.
 //    redMasa:C!=null&&N!=null?be(C,"",1)+" kg ("+be(N,"%",1)+")":"",redMasaCls:z(C),od:Ob_g?"od włączenia":"od 1. punktu",
 //    bmiV:v!=null?qt(v,1):"—",redBmi:Ko_H!=null?be(Ko_H,"%",1):"",
 //    prog:Ko_prog&&ot.indexOf(Ko_prog)>=0&&ht.thresholdPct!=null?{miara:P,tekst:"≥"+ht.thresholdPct+"%"}:null,
-//    werdykt:$&&gt?{cls:gt.cls,ic:gt.ic,tytul:gt.title,opis:gt.desc||""}:null});var lt=ot.slice();
+//    werdykt:$&&gt?{cls:gt.cls,ic:gt.ic,tytul:gt.title,opis:gt.desc||""}:null,miara:P||"",bmiBrak:v==null,
+//    ocena:Kl_out.redukcja,ocenaZ:Ob_po&&Ob_po.inny&&Ob_po.punkt?_n(Ob_po.punkt.dateISO)||"z wiekiem "+Ye(Ob_po.punkt)+" mies.":""});
+//    var lt=ot.slice();   (ocenaZ — wpis z kafelka „Wzrost do oceny”, gdy ocena idzie z wpisu innego niż ostatni)
 //    (te same zmienne, z których powstają kafelki i pole oceny; liczba ot.push(fe( bez zmian — strażnik R6)
 // 6. st=e("div",{class:"vilda-gha-panel",style:"display:none;"},…) → st=e("div",Kl_wy&&Kl_wy.karta?{class:"vilda-gha-panel"}
 //    :{class:"vilda-gha-panel",style:"display:none;"},…)
 // 7. return rt.addEventListener(…),e("div",{style:"margin:2px 0 2px;"},[rt,st])} → return Kl_wy&&Kl_wy.karta?st:(…)}
 //    (tryb karty: panel bez belki, rozwinięty — widok „Analiza”; przełącznik cykli bez zmian)
+// vilda_auth_ui.js — Ob_seg (przełącznik cykli panelu)
+// 7a. "aria-selected":l===o?"true":"false",text:"Cykl "… → …,"data-biezacy":l===o?"true":"false",text:"Cykl "…
+//     („Szczegóły oceny” wraca nim do bieżącego cyklu, który opisuje linia „Przeglądu”)
 // vilda_auth_ui.js — Ob_dz (czytelne)
 // 8. Ko_uklad, Ko_jest(punkty); czesci(): Cl i Ml z flagą karta, Ko_karta({podsumowanie,sekcja,panel,wy,patientId});
 //    karta się nie złożyła (wyjątek, podsumowanie bez rysunku) → null → Ko_uklad=false i rysunek jak w etapie 1

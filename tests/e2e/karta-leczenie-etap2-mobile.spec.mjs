@@ -1,5 +1,5 @@
 import { expect, test } from '../support/test-czas.mjs';
-import { O1, O2, O2_DZIENNIK, bezPrzewijaniaWBok, karta, kartaOtylosci, opisKarty, otworz, widokKarty, zakladki, zapisz, zapiszZDziennikiem } from '../support/karta-leczenie.mjs';
+import { O1, O2, O2_DZIENNIK, O_OSTATNI_BEZ_WZROSTU, bezPrzewijaniaWBok, karta, kartaOtylosci, opisKarty, otworz, widokKarty, zakladki, zapisz, zapiszZDziennikiem } from '../support/karta-leczenie.mjs';
 
 // P-KARTA-LECZENIE, etap 2 — telefon (projekt mobile-chromium; makieta hybrydy 2026-11-19). Nagłówek karty: znacznik
 // i stan po lewej (stan pod znacznikiem), „+ Kontynuacja” 44 px po prawej; przełącznik w jednym wierszu, bez przewijania
@@ -84,6 +84,21 @@ test.describe('Karta pacjenta — karta leczenia otyłości (telefon)', () => {
     await expect(widokKarty(page, 'wpisy')).toHaveText('Wpisy (8)');
     expect(await opisKarty(page)).toEqual(expect.objectContaining({ wybrany: 'Wpisy (8)', widoczne: ['wpisy'] }));
     await expect(k.locator('.vdo-jak')).toHaveAttribute('aria-expanded', 'true');
+    expect(await bezPrzewijaniaWBok(page)).toBe(true);
+  });
+
+  test('KOM-3 ostatni wpis bez wzrostu: podpis kafelka BMI łamie się na części, bez wylewania i przewijania w bok', async ({ page }) => {
+    test.setTimeout(150_000);
+    await otworz(page);
+    const pid = await zapisz(page, O_OSTATNI_BEZ_WZROSTU);
+    await karta(page, pid);
+    await zakladki(page).filter({ hasText: 'Leczenie' }).click();
+    const bmi = kartaOtylosci(page).locator('.vilda-ko-kafel').nth(3);
+    await expect(bmi.locator('.vilda-ko-sub')).toHaveText('brak wzrostu w ostatnim wpisie · ocena: −7,4% (z wpisu 01.08.2026) · próg ChPL ≥5%');
+    await expect(bmi.locator('.vilda-ko-sub')).toHaveClass(/vilda-ko-sub--stos/);
+    const wylewa = await bmi.evaluate((t) => t.scrollWidth > t.clientWidth + 1 || [...t.querySelectorAll('.vilda-ko-cz')]
+      .some((c) => c.getBoundingClientRect().right > t.getBoundingClientRect().right + 1));
+    expect(wylewa, 'podpis mieści się w kafelku').toBe(false);
     expect(await bezPrzewijaniaWBok(page)).toBe(true);
   });
 });

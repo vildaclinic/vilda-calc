@@ -1,6 +1,6 @@
 import { expect, test } from '../support/test-czas.mjs';
 import {
-  G1, O1, O2, O2_DZIENNIK, X1, aktywna, bezPrzewijaniaWBok, karta, kartaOtylosci, opisKarty, otworz, paski, tresc, uGory, widokKarty, zakladki,
+  G1, O1, O2, O2_DZIENNIK, O_OSTATNI_BEZ_WZROSTU, X1, aktywna, bezPrzewijaniaWBok, karta, kartaOtylosci, opisKarty, otworz, paski, tresc, uGory, widokKarty, zakladki,
   zapisz, zapiszZDziennikiem,
 } from '../support/karta-leczenie.mjs';
 
@@ -199,6 +199,13 @@ test.describe('Karta pacjenta — karta leczenia otyłości z przełącznikiem (
     await cykle.nth(1).click();
     await expect(k.locator('.vilda-oba-verdict .vilda-oba-vt')).toHaveText(/^Cykl zakończony/);
     expect(await opisKarty(page)).toEqual(expect.objectContaining({ wybrany: 'Analiza', kafelki: O1_PRZEGLAD, linia: O1_LINIA }));
+    // „Szczegóły oceny” z „Przeglądu” (linia opisuje cykl 2) — panel wraca do bieżącego cyklu
+    await widokKarty(page, 'przeglad').click();
+    await k.getByRole('button', { name: 'Szczegóły oceny' }).click();
+    await expect(widokKarty(page, 'analiza')).toHaveAttribute('aria-selected', 'true');
+    await expect(cykle.nth(0)).toHaveAttribute('aria-selected', 'true');
+    await expect(k.locator('.vilda-oba-verdict .vilda-oba-vt')).toHaveText('Przed oknem oceny — oceń po 12 tyg.');
+    await expect(k.locator('.vilda-oba-verdict')).toBeFocused();
   });
 
   test('KO-7 dorosły (Saxenda, ocena z masy): „próg ChPL ≥5%” w kafelku Masa; bez Włączenia — „Czas od 1. punktu”', async ({ page }) => {
@@ -273,5 +280,19 @@ test.describe('Karta pacjenta — karta leczenia otyłości z przełącznikiem (
     await widokKarty(page, 'analiza').click();
     await paski(page).first().click(); // pasek leczenia: zakładka i przewinięcie, bez zmiany widoku karty
     await expect(widokKarty(page, 'analiza')).toHaveAttribute('aria-selected', 'true');
+  });
+
+  test('KO-10 ostatni wpis bez wzrostu (ocena z BMI): kafelek BMI „—” z wpisem oceny i tymi samymi liczbami co pasek', async ({ page }) => {
+    test.setTimeout(150_000);
+    await otworz(page);
+    const pid = await zapisz(page, O_OSTATNI_BEZ_WZROSTU);
+    await karta(page, pid);
+    await leczenie(page);
+    const opis = await opisKarty(page);
+    expect(opis.kafelki[3]).toEqual(['BMI', '—', 'brak wzrostu w ostatnim wpisie · ocena: −7,4% (z wpisu 01.08.2026) · próg ChPL ≥5%']);
+    await expect(paski(page).locator('.vilda-kl-pasek-t')).toContainText('BMI −7,4%');
+    await widokKarty(page, 'analiza').click();
+    await expect(kartaOtylosci(page).locator('.vilda-gha-tile', { hasText: 'Wzrost do oceny' }).locator('.vilda-gha-sub')).toHaveText('pomiar z 01.08.2026 · ostatni wpis bez wzrostu');
+    await expect(kartaOtylosci(page).locator('.vilda-gha-tile', { hasText: 'Redukcja do oceny' }).locator('.vilda-gha-v')).toHaveText('−7,4%');
   });
 });

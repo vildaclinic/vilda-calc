@@ -55,6 +55,12 @@ export const O2 = {
 };
 export const O2_DZIENNIK = [{ dateISO: '2026-03-17', weight: 90.3, dose: '0,5 mg' }, { dateISO: '2026-05-12', weight: 86.8, dose: '1,7 mg' },
   { dateISO: '2026-08-18', weight: 82.2, dose: '2,4 mg', comment: 'Masa podana telefonicznie; recepta wysłana.' }];
+/** Etap 2 (poprawka po przeglądzie): ostatni wpis bez wzrostu (masa od pacjentki) — ocena wg ChPL z wpisu 01.08.2026. */
+export const O_OSTATNI_BEZ_WZROSTU = {
+  ...O1, name: 'Fikcyjna Bez Wzrostu',
+  obesityTherapyPoints: [OB(DOB_O1, 't-w', 'start', '2026-01-05', 95, 160, '0,25 mg'), OB(DOB_O1, 't-k1', 'continue', '2026-08-01', 88, 160, '2,4 mg'),
+    { ...OB(DOB_O1, 't-k2', 'continue', '2026-11-10', 85, 160, '2,4 mg'), height: null, bmi: null }],
+};
 /** Pacjent z wpisami dziennika od pacjenta (masa bez wzrostu), zapisanymi tak jak „+ Kontynuacja” (planNowego → zapisz). */
 export const zapiszZDziennikiem = (page, rekord, dziennik) => page.evaluate(async ({ r, wpisy }) => {
   const id = (await window.VildaVault.savePatient(r, { dedup: false })).patientId;

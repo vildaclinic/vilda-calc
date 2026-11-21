@@ -49,6 +49,10 @@ function okno(opcje = {}) {
   if (!Object.getOwnPropertyDescriptor(proto, 'firstElementChild')) {
     Object.defineProperty(proto, 'firstElementChild', { get() { return this.children[0] || null; } });
   }
+  // przełącznik cykli panelu otyłości (Ob_seg) czyta childNodes
+  if (!Object.getOwnPropertyDescriptor(proto, 'childNodes')) {
+    Object.defineProperty(proto, 'childNodes', { get() { return this.children; } });
+  }
   doc.createTextNode = (t) => { const n = doc.createElement('#text'); n.textContent = t; return n; };
   doc.head = doc.documentElement;
   const w = { document: doc };
@@ -970,5 +974,53 @@ describe('P-KARTA-LECZENIE, etap 2 — sekcja „Wpisy leczenia” bez opcji uk�
     expect(tekst(glowa.querySelector('.vdo-add'))).toBe('+ Kontynuacja');
     expect(s.querySelectorAll('.vdo-jak')).toHaveLength(0);
     expect(wyjscie).toEqual({});
+  });
+});
+
+// ── P-KARTA-LECZENIE, etap 2 — poprawki po przeglądzie (2026-11-21) ──────────────────────────────────────────────
+// Nastolatka, Wegovy: ostatni wpis bez wzrostu (masa od pacjentki) — ocena wg ChPL z ostatniego wpisu ze wzrostem.
+const O_OSTATNI_BEZ_WZROSTU = [OB('t-w', 'start', '2026-01-05', 17, 0, 95, 160, '0,25 mg'), OB('t-k1', 'continue', '2026-08-01', 17, 7, 88, 160, '2,4 mg'),
+  OB('t-k2', 'continue', '2026-11-10', 17, 10, 85, null, '2,4 mg')];
+
+describe('P-KARTA-LECZENIE, etap 2 — poprawki po przeglądzie', () => {
+  it('„Szczegóły oceny” po wyborze cyklu 1 w „Analizie” → panel wraca do bieżącego cyklu (tego, który opisuje linia)', () => {
+    const k = zbuduj({ obesityTherapyPoints: O_DWA_CYKLE });
+    const c = k.karta;
+    c.zakladki[2].click();
+    const cykle = () => c.widok('analiza').querySelectorAll('.vilda-ob-seg button');
+    expect(cykle().map((b) => [b.textContent, b.getAttribute('data-biezacy')])).toEqual([['Cykl 2 · Wegovy · bieżący', 'true'], ['Cykl 1 · Wegovy', 'false']]);
+    cykle()[1].click();
+    expect(tytulPola(k)).toMatch(/^Cykl zakończony/);
+    c.zakladki[0].click();
+    expect(tekst(c.el.querySelector('.vilda-ko-werdykt-t'))).toBe('Przed oknem oceny — oceń po 12 tyg.');
+    c.el.querySelector('.vilda-ko-werdykt-link').click();
+    expect(kartaOtylosci(k.r.tresc).wybrany).toBe('analiza');
+    expect(tytulPola(k)).toBe('Przed oknem oceny — oceń po 12 tyg.');
+    expect(cykle().map((b) => b.getAttribute('aria-selected'))).toEqual(['true', 'false']);
+    const pole = c.widok('analiza').querySelector('.vilda-oba-verdict');
+    expect(pole.ownerDocument.activeElement).toBe(pole);
+  });
+
+  it('ostatni wpis bez wzrostu, ocena z BMI: kafelek BMI „—” z „brak wzrostu w ostatnim wpisie · ocena: −7,4% (z wpisu 01.08.2026) · próg ChPL ≥5%”', () => {
+    const k = zbuduj({ obesityTherapyPoints: O_OSTATNI_BEZ_WZROSTU });
+    expect(k.karta.kafelki[3]).toEqual({ k: 'BMI', v: '—', sub: 'brak wzrostu w ostatnim wpisie · ocena: −7,4% (z wpisu 01.08.2026) · próg ChPL ≥5%', kolor: null });
+    // te same liczby co pasek leczenia i panel („Redukcja do oceny”, „Wzrost do oceny”)
+    expect(k.paski[0].czesci).toContain('BMI −7,4%');
+    expect(kafelPanelu(k, 'Redukcja do oceny').v).toBe('−7,4%');
+    expect(kafelPanelu(k, 'Wzrost do oceny').sub).toBe('pomiar z 01.08.2026 · ostatni wpis bez wzrostu');
+    expect(k.karta.kafelki[2]).toEqual(expect.objectContaining({ k: 'Masa', v: '85 kg' }));
+  });
+
+  it('ostatni wpis bez wzrostu i bez wzrostu w oknie (ocena wstrzymana): „brak wzrostu w ostatnim wpisie · próg ChPL ≥5%”, bez wartości oceny', () => {
+    const k = zbuduj({ obesityTherapyPoints: O_BEZ_WZROSTU });
+    expect(k.karta.kafelki[3]).toEqual({ k: 'BMI', v: '—', sub: 'brak wzrostu w ostatnim wpisie · próg ChPL ≥5%', kolor: null });
+    expect(kafelPanelu(k, 'Redukcja do oceny').v).toBe('—');
+  });
+
+  it('ostatni wpis ze wzrostem albo ocena z masy — kafelek BMI bez zmian', () => {
+    expect(zbuduj({ obesityTherapyPoints: O1 }).karta.kafelki[3].sub).toBe('−8,6% od włączenia · próg ChPL ≥5%');
+    const dorosly = zbuduj({ obesityTherapyPoints: [...A_SAX, OB('s-k2', 'continue', '2026-06-09', 40, 6, 96, null, '3,0 mg', SAXENDA)] });
+    expect(dorosly.karta.kafelki[3]).toEqual(expect.objectContaining({ k: 'BMI', v: '—', sub: null }));
+    expect(dorosly.karta.kafelki[2].sub).toContain('próg ChPL ≥5%');
   });
 });
