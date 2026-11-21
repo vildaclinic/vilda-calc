@@ -1,4 +1,5 @@
 import { reverseBscAuthHooks } from '../../tools/account-duplicate-dismissals-auth-hooks.mjs';
+import { applyGabinetAuthHooks, gabinetAuthLayers } from '../../tools/home-gabinet-auth-hooks.mjs';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import { createHash } from 'node:crypto';
@@ -401,11 +402,14 @@ describe('exact reproducible Auth security delta', () => {
     expect(nativeDoseReplay).toBe(auth);
     expect(UI_INTENT_AUTH_PAIRS).toHaveLength(17);
     for (const pair of UI_INTENT_AUTH_PAIRS) expect(auth.split(pair.after)).toHaveLength(2);
-    const prior = reverseUiIntentAuthHooks(auth);
+    const beforeGabinet = gabinetAuthLayers(auth).base;
+    expect(digest(beforeGabinet)).toBe('b66b2992c59c353d32bb9aad48e83bb5ca0112fc3d9db6d72b95090d4cf5ff62');
+    expect(applyGabinetAuthHooks(beforeGabinet)).toBe(auth);
+    const prior = reverseUiIntentAuthHooks(beforeGabinet);
     // Current native source includes the owner's exact PR #1006 dose-view delta.
     expect(digest(reverseBscAuthHooks(prior))).toBe(UI_INTENT_AUTH_BASE_SHA256);
-    expect(applyUiIntentAuthHooks(prior)).toBe(auth); expect(applyUiIntentAuthHooks(auth)).toBe(auth);
-    const securedNative = reverseHomeRemindersHooks(auth);
+    expect(applyUiIntentAuthHooks(prior)).toBe(beforeGabinet); expect(applyUiIntentAuthHooks(auth)).toBe(auth);
+    const securedNative = reverseHomeRemindersHooks(beforeGabinet);
     expect(digest(reverseBscAuthHooks(securedNative))).toBe(HOME_REMINDERS_AUTH_BASE_SHA256);
     const priorNative = reverseUiIntentAuthHooks(securedNative);
     expect(priorNative).toBe(reverseHomeRemindersHooks(prior));
@@ -422,7 +426,7 @@ describe('exact reproducible Auth security delta', () => {
     // from the 4a checkpoint; this is not described as the raw native artifact.
     expect(digest(reverseOwnerDoseView(reverseOwnerChartView(availableLayerBase)))).toBe('6a9726acbb580402a4cc00d85f673205f3bf0c3809396b121d8e411ac61cdec2');
     expect(applyPatientB1AuthHooks(availableLayerBase)).toBe(newB1Layer);
-    expect(applyPatientB1AuthHooks(auth)).toBe(auth);
+    expect(applyGabinetAuthHooks(applyPatientB1AuthHooks(beforeGabinet))).toBe(auth);
     expect(applyUiIntentAuthHooks(priorNative)).toBe(securedNative);
   });
 

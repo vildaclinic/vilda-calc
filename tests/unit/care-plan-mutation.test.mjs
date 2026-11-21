@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { loadBrowserScript } from '../support/load-browser-script.mjs';
 import { webcrypto } from 'node:crypto';
 import vm from 'node:vm';
 import { describe, expect, it, vi } from 'vitest';
@@ -561,4 +562,36 @@ describe('optional document content instant in step evidence', () => {
       .toEqual([{ code: 'CARE_MODEL_UNSUPPORTED_FIELD', path: (action === 'associate' ? 'associations[0].' : 'facts[0].evidence.') + FORMER }]);
     failed(f.api.prepareTransaction(altered, command(f, 'activateStage', { stageId: ids.first, effectiveDateISO: day }), clock));
   });
+});
+
+it('persists the origin of a staged plan separately from subsequent visit actions', async () => {
+  const origin = id => ({version:1, visitId:'fceacbed-3cbb-4fca-baca-eabbfdaaabc' + id, clinicalDateISO:'2026-10-01'});
+  const first = origin(1), second = origin(2);
+  const f = await fixture();
+  // Run the actual public-vault installer around the unchanged private v3 model.
+  const win = {crypto:webcrypto, TextEncoder, TextDecoder, setTimeout, clearTimeout,
+    document:{addEventListener(){}}, addEventListener(){}, removeEventListener(){}};
+  win.window = win; win.self = win; win.top = win;
+  for (const source of ['vilda_crypto.js','vilda_vault.js', ...files]) loadBrowserScript(source,win);
+  f.api = win.VildaCarePlanMutation;
+  const created = f.api.prepareTransaction(null, {...f.command, visitContext:first}, clock);
+  expect(created.ok).toBe(true);
+  f.state = created.state;
+  const next = change(f, 'activateStage', {stageId:ids.first, effectiveDateISO:day, visitContext:second});
+  expect(next.ok).toBe(true);
+  expect(f.state.record.visitContext).toEqual(first);
+  expect(f.state.record.careContext.log.map(item => item.visitContext)).toEqual([first,second]);
+  const manifest = JSON.parse(readFileSync(new URL('../../runtime/clinical-workspace-v1/manifest.json', import.meta.url)));
+  const prefix = '../../runtime/clinical-workspace-v1/' + manifest.moduleTreeSHA256.slice(0,12) + '/';
+  const codec = await import(new URL(prefix + 'client/patient-clinical-workspace-native/portable-plan.mjs', import.meta.url));
+  const options = {mutationModel: f.api};
+  const packed = codec.encodePortablePlan(f.state, options);
+  expect(packed.visitContext).toEqual(first);
+  expect(codec.decodePortablePlan(packed, options).state.record.careContext.log[1].visitContext).toEqual(second);
+  const replay = f.api.prepareTransaction(f.state, next.input, clock);
+  expect(replay.reused).toBe(true);
+  expect(f.api.prepareTransaction(f.state, {...next.input, visitContext:first}, clock).ok).toBe(false);
+  const changed = JSON.parse(JSON.stringify(f.state));
+  changed.record.visitContext = second;
+  expect(f.api.validateState(changed).ok).toBe(false);
 });

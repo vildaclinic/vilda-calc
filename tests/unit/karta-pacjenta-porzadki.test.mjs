@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { applyInlinePatientHooks, reverseInlinePatientHooks } from '../../tools/home-inline-patient-auth-hooks.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
@@ -42,8 +43,13 @@ describe('P1 — nasłuch zmian z zewnątrz', () => {
 
 describe('P4 — pamięć podręczna karty', () => {
   it('porównuje dane przy synchronizacji i unieważnia cache przy odroczonym renderze pod modalem', () => {
+    const source = readFileSync(path.join(repoRoot, 'vilda_auth_ui.js'), 'utf8');
+    const poprzedniaKarta = reverseInlinePatientHooks(source);
+    expect(applyInlinePatientHooks(poprzedniaKarta)).toBe(source);
+    expect(kod).toContain('if(GdTlo&&GdOdcisk!==null&&xa&&xa.odcisk===GdOdcisk){HomeEndRead(GdBilet);return}');
+    expect(kod).toContain('function HomeEndRead(ticket){if(!HomeInline)GdZakonczOdczyt(ticket)}');
     expect({
-      odczytPrzedZachowaniemDom: kod.includes('if(GdTlo&&GdOdcisk!==null&&xa&&xa.odcisk===GdOdcisk){GdZakonczOdczyt(GdBilet);return}'),
+      odczytPrzedZachowaniemDom: poprzedniaKarta.includes('if(GdTlo&&GdOdcisk!==null&&xa&&xa.odcisk===GdOdcisk){GdZakonczOdczyt(GdBilet);return}'),
       odroczonyRenderKasujeCache: kod.includes('if(i.document.querySelector(".vilda-auth-overlay-sheet")||i.document.querySelector(".vilda-pl-overlay")){xa=null;patientsDeferPickerRefresh();return}'),
     }, 'dynamiczne regresje sprawdzają także wymianę DOM po rzeczywistej zmianie notatki')
       .toEqual({ odczytPrzedZachowaniemDom: true, odroczonyRenderKasujeCache: true });

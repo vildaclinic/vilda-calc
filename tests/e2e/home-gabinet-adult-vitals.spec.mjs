@@ -1,0 +1,51 @@
+import { expect, test } from '@playwright/test';
+import { createFictionalVault, fictionalPatient, readyForPatient, shellFrame } from '../support/centile-live-fixture.mjs';
+
+test.use({serviceWorkers: 'block', reducedMotion: 'reduce'});
+test.setTimeout(180_000);
+
+test('adult analysis projects the native pressure and pulse and opens the same measurement editor', async ({page}) => {
+  await page.addInitScript(() => {
+    window.__VILDA_HOME_WORKSPACE_PREVIEW__ = true;
+    window.__VILDA_HOME_GABINET_PREVIEW__ = true;
+  });
+  await page.route('**/*', route => {
+    const url = new URL(route.request().url());
+    return url.hostname === '127.0.0.1' || ['data:', 'blob:'].includes(url.protocol) ? route.continue() : route.abort();
+  });
+  const {frame: source} = await createFictionalVault(page, {shell: true, waitForAccountReadyBeforeReload: true});
+  const patient = fictionalPatient({firstName: 'Joanna', age: 42, sex: 'F', height: 165, weight: 64});
+  patient.adultVitals = {systolic: 124, diastolic: 79, heartRate: 76, guideline: 'ESC'};
+  await source.evaluate(payload => window.VildaVault.savePatient(payload, {dedup: false}), patient);
+  await page.reload({waitUntil: 'load'});
+  const frame = await shellFrame(page);
+  await readyForPatient(frame);
+  const start = frame.locator('#vhomeGabinetStart'), header = frame.locator('#vhomeGabinetHeader');
+  await expect(start).toBeVisible();
+  await start.getByRole('searchbox').fill('Joanna');
+  await start.locator('#vgs-results').getByRole('button', {name: /Joanna/}).click();
+  await expect(frame.locator('#vhomePatientOverview')).toBeVisible();
+  await header.getByRole('tab', {name: 'Analiza', exact: true}).click();
+  const card = frame.locator('#vhomeAdultVitalsCard');
+  await expect(card).toBeVisible();
+  await expect(card).toContainText('124/79');
+  await expect(card).toContainText('76 ud./min');
+  await card.getByRole('button', {name: 'Przejrzyj pomiary'}).click();
+  const dialog = frame.locator('#vhomeToolDialog');
+  await expect(dialog).toBeVisible();
+  const inputs = dialog.frameLocator('iframe');
+  await expect(inputs.locator('[data-home-tool-field="sbpRaw"]')).toHaveValue('124');
+  await inputs.locator('[data-home-tool-field="dbpRaw"]').fill('');
+  await dialog.locator('.vhome-dialog-apply').click();
+  await expect(card).toContainText('Niepełny pomiar ciśnienia.');
+  await header.getByRole('button', {name: 'Rozpocznij wizytę'}).click();
+  const guard = frame.getByRole('dialog', {name: /^Zapisać (wpisane dane|zmiany) przed wczytaniem/});
+  const newVisit = header.getByRole('button', {name: 'Zapisz wizytę', exact: true});
+  await expect(guard.or(newVisit)).toBeVisible();
+  if (await guard.isVisible()) await guard.getByRole('button', {name: /^Odrzuć (dane|zmiany) i wczytaj$/}).click();
+  await expect(newVisit).toBeVisible();
+  await header.getByRole('tab', {name: 'Analiza', exact: true}).click();
+  await expect(card).toContainText('Ostatni zapisany pomiar');
+  await expect(card).toContainText('17.06.2026');
+  await expect(card).toContainText('124/79');
+});

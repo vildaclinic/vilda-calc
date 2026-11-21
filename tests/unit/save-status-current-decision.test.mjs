@@ -85,6 +85,19 @@ beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(new Date('2026-10-31T12:
 afterEach(() => { vi.clearAllTimers(); vi.useRealTimers(); });
 
 describe('current destructive-action save decision is synchronous and read-only', () => {
+  it('porównuje przesłany formularz, odrzucając późniejszy pomiar lub zmianę pacjenta', () => {
+    const h = environment({ loaded: true });
+    const submitted = h.api.getCurrentDecision();
+    expect(h.api.isSubmittedFormCurrent(submitted.scope)).toBe(true);
+    const changed = h.form();
+    changed.user.weight = 43;
+    h.setForm(changed);
+    expect(h.api.isSubmittedFormCurrent(submitted.scope)).toBe(false);
+    h.setForm(patient());
+    h.patientId('inny-pacjent');
+    expect(h.api.isSubmittedFormCurrent(submitted.scope)).toBe(false);
+  });
+
   it('protects an edit before the400ms cached indicator debounce without flushing or publishing anything', () => {
     const h = environment(); expect(h.api.getState()).toBe('hidden'); h.setForm(patient()); h.edit(); vi.advanceTimersByTime(227);
     const raw = [...h.storage], session = h.session(), timers = vi.getTimerCount(), reference = h.api.getReferenceFingerprint();

@@ -29,6 +29,22 @@ function scope(e) {
 }
 
 describe('selected-patient reminders reuse native data boundaries', () => {
+  it('shows only reminders recorded by the historical visit and keeps the patient boundary', () => {
+    const e = base();
+    e.options.encounter = { mode: 'edit', visitId: 'chosen', date: '2026-07-04' };
+    scope(e);
+    const linked = (id, date, visitId, patient = 'A') => note(patient, id, {
+      clinicalDateISO: date, reminderContext: { kind: 'reminder' }, visitContext: { version: 1, clinicalDateISO: date, visitId }
+    });
+    const records = [
+      linked('earlier', '2026-07-03', 'older'), linked('same', '2026-07-04', 'chosen'),
+      linked('different', '2026-07-04', 'another'), linked('later', '2026-07-05', 'newer'),
+      linked('foreign', '2026-07-04', 'chosen', 'B'),
+      note('A', 'patient-wide', { createdAtISO: '2026-06-01T12:00:00Z' }),
+      note('A', 'future-patient-wide', { createdAtISO: '2026-08-01T12:00:00Z' })
+    ];
+    expect(records.filter(e.ctx.HomeRemindersOwnNote).map(record => record.id)).toEqual(['earlier', 'same', 'patient-wide']);
+  });
   it('snapshots the patient, shares an origin-frame lifetime, and retains an inactive tombstone until Home mode ends', () => {
     const e = base(), context = scope(e);
     e.options.patientId = 'B';

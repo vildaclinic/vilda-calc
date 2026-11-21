@@ -209,8 +209,28 @@
     select('pressure');
   }
 
+  function summarizeAdult(values) {
+    const native = w.adultVitalsApi;
+    const pressure = native.classifyBloodPressure(Number(values.sbpRaw), Number(values.dbpRaw), values.reference);
+    const pulse = native.classifyHeartRate(Number(values.pulseRaw), { athlete: values.athlete, betaBlocker: values.betaBlocker });
+    return { complete: pressure.hasCompleteMeasurement, pressure: pressure.valueText,
+      pressureTone: pressure.tone, pulse: pulse.valueText, pulseTone: pulse.tone };
+  }
+  function previousAdultMeasurement(visits, encounter) {
+    // Native visit heads are ordered by clinical date, newest first.
+    for (const visit of visits) {
+      if (!visit.clinicalDateISO || !visit.payload?.adultVitals || visit.visitId === encounter.visitId
+        || (encounter.date && visit.clinicalDateISO >= encounter.date)) continue;
+      const saved = visit.payload.adultVitals;
+      const summary = summarizeAdult({ sbpRaw: saved.systolic, dbpRaw: saved.diastolic, pulseRaw: saved.heartRate,
+        reference: saved.guideline, athlete: saved.athlete, betaBlocker: saved.betaBlocker });
+      if (summary.complete) return { ...summary, date: visit.clinicalDateISO };
+    }
+    return null;
+  }
   tools.register('pressure', {
     read: readPressure,
+    summarizeAdult, previousAdultMeasurement,
     hasData: values => [values.sbpRaw, values.dbpRaw, values.pulseRaw].some(value => value.trim() !== ''),
     mount: mountPressure,
     render(draft, view) {

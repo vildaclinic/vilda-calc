@@ -45,6 +45,28 @@ describe('durable encrypted visit identity', () => {
     expect(raw.every(row => !('visit' in row) && !('visitId' in row) && !('clinicalDateISO' in row))).toBe(true);
     expect(JSON.stringify(raw)).not.toContain(firstVisit.visitId);
   });
+  it('corrects only the selected visit revision, preserves the latest visit and refuses stale edits', async () => {
+    clock();
+    const { vault } = await device();
+    const older = await save(vault, visit()); next('2026-02-01T12:00:00Z');
+    const latest = await save(vault, visit('2026-02-01'), older.patientId, 141);
+    const target = (await vault.getPatientVisits(older.patientId)).find(row => row.snapshotId === older.snapshotId);
+    const update = copy(target.payload);
+    update.user.weight = 31;
+    const expectedVisit = { visitId: target.visitId, revision: target.rev, isCurrent: () => true };
+    const receipt = await vault.updateSnapshotPayload(older.patientId, older.snapshotId, update, { expectedVisit });
+    expect(receipt.visitRevision).toBe(target.rev + 1);
+    expect(vault.getCommittedSavePayload(receipt).user.weight).toBe(31);
+    expect((await vault.getPatient(older.patientId)).snapshots[0].snapshotId).toBe(latest.snapshotId);
+    await expect(vault.updateSnapshotPayload(older.patientId, older.snapshotId, update, { expectedVisit }))
+      .rejects.toMatchObject({ code: 'VISIT_REVISION_CHANGED' });
+    const rows = await vault.getPatientVisits(older.patientId);
+    expect(rows).toHaveLength(2);
+    expect(rows.find(row => row.visitId === target.visitId)).toMatchObject({ snapshotId: older.snapshotId, rev: target.rev + 1 });
+    const switched = { ...expectedVisit, revision: target.rev + 1, isCurrent: () => false };
+    await expect(vault.updateSnapshotPayload(older.patientId, older.snapshotId, update, { expectedVisit: switched }))
+      .rejects.toMatchObject({ code: 'VISIT_REVISION_CHANGED' });
+  });
   it('preserves identity on restore and on an old writer in-place edit; explicit date correction keeps UUID', async () => {
     clock(); const { vault } = await device(), metadata = visit();
     const first = await save(vault, metadata); next('2026-02-01T10:00:00Z');

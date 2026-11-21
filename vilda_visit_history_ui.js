@@ -55,6 +55,7 @@
     var canRestore = restoreFocus !== false && sameOwner(state);
     state.closed = true;
     state.rows = [];
+    state.documents = null; state.plans = null;
     state.request += 1;
     if (active === state) active = null;
     if (state.timer) w.clearInterval(state.timer);
@@ -82,6 +83,65 @@
     item.appendChild(element('dt', '', label));
     item.appendChild(element('dd', '', value));
     grid.appendChild(item);
+  }
+  function visitDocuments(state, row) {
+    if (!state.gabinet) return;
+    if (!state.documents || !state.plans) {
+      var missing = element('p', 'vvisit-muted', 'Nie udało się odczytać dokumentacji tej wizyty.');
+      var retry = element('button', 'vvisit-retry', 'Ponów odczyt');
+      retry.type = 'button'; retry.addEventListener('click', function () { read(state); });
+      state.detail.append(missing, retry);
+    }
+    var groups = new Map();
+    function add(category, entry) {
+      if (!groups.has(category)) groups.set(category, []);
+      groups.get(category).push(entry);
+    }
+    var documentIds = new Set(), planIds = new Set();
+    var documents = state.documents || [];
+    documents.forEach(function (entry) {
+      if (entry.visitContext?.visitId === row.visitId && entry.id && entry.careContext?.role !== 'plan') documentIds.add(entry.id);
+    });
+    (state.plans || []).forEach(function (plan) {
+      var record = plan.state?.record || plan;
+      if (record.patientId !== state.patientId || plan.patientId && plan.patientId !== state.patientId) return;
+      var id = record.id || plan.id, title = record.title || plan.title;
+      if (!id || planIds.has(id)) return;
+      planIds.add(id);
+      var log = record.careContext?.log || plan.log || [];
+      var origin = record.visitContext || plan.visitContext;
+      var items = log.filter(function (item) {
+        return item.visitContext?.visitId === row.visitId && !documentIds.has(item.noteId) && text(item.text);
+      });
+      if (origin?.visitId === row.visitId || items.length)
+        add('Plany opieki', {title: title, body: items.map(function (item) { return item.text; }).join('\n')});
+    });
+    documents.forEach(function (entry) {
+      if (entry.patientId !== state.patientId) return;
+      var controls = entry.treatmentContext?.followups;
+      if (Array.isArray(controls)) controls.forEach(function (control) {
+        if (control?.visitContext?.visitId === row.visitId) add('Kontrole leczenia', {title: entry.title, body: control.body});
+      });
+      var link = entry.visitContext;
+      if (!link || link.visitId !== row.visitId) return;
+      if (entry.careContext?.role === 'plan' && planIds.has(entry.id)) return;
+      var lab = w.VildaLabHistory;
+      var category = entry.reminderContext ? 'Przypomnienia' : entry.careContext ? 'Plany opieki' :
+        entry.treatmentContext ? 'Leczenie' : lab && (lab.isResultNote(entry) || lab.isClcrResultNote(entry)) ? 'Wyniki badań' : 'Notatki';
+      add(category, entry.treatmentContext || entry.careContext?.role === 'plan' ? {title: entry.title} : entry);
+    });
+    groups.forEach(function (entries, category) {
+      var section = element('section', 'vvisit-documents'), list = element('ul');
+      section.appendChild(element('h4', '', category));
+      entries.forEach(function (entry) {
+        var item = element('li');
+        if (text(entry.title)) item.appendChild(element('strong', '', text(entry.title)));
+        if (text(entry.body)) item.appendChild(element('p', '', text(entry.body)));
+        if (category === 'Przypomnienia' && civilDate(entry.dueDateISO)) item.appendChild(element('span', '', 'Termin · ' + civilDate(entry.dueDateISO)));
+        if (item.children.length) list.appendChild(item);
+      });
+      if (list.children.length) { section.appendChild(list); state.detail.appendChild(section); }
+    });
   }
   function showDetail(state, index) {
     if (!scopeCheck(state)) return;
@@ -117,10 +177,21 @@
     if (text(advanced.motherHeight)) field(extras, 'Wzrost matki', measurement(advanced.motherHeight, 'cm'));
     if (text(advanced.fatherHeight)) field(extras, 'Wzrost ojca', measurement(advanced.fatherHeight, 'cm'));
     if (extras.children.length) detail.appendChild(extras);
+    visitDocuments(state, row);
     var meta = element('div', 'vvisit-save-meta');
     meta.appendChild(element('p', '', 'Ostatni zapis tej wizyty: ' + savedTime(row.updatedAtISO || row.savedAtISO)));
     if (Number.isInteger(row.revisionCount) && row.revisionCount > 1) meta.appendChild(element('p', '', 'Zachowane wersje tej wizyty: ' + row.revisionCount));
     detail.appendChild(meta);
+    if (typeof state.options.onEdit === 'function') {
+      const edit = element('button', 'vvisit-close', 'Edytuj wizytę');
+      edit.type = 'button';
+      edit.addEventListener('click', function () {
+        if (!scopeCheck(state)) return;
+        close(state, false);
+        state.options.onEdit(row);
+      });
+      detail.appendChild(edit);
+    }
     state.announcement.textContent = 'Wybrana wizyta: ' + (civilDate(row.clinicalDateISO) || 'data nieznana') + '. Wiek: ' + age(user) + '.';
   }
   function showRows(state, rows) {
@@ -165,8 +236,18 @@
     state.detail.textContent = '';
     state.detail.appendChild(element('p', 'vvisit-empty', 'Odczytywanie historii wizyt…'));
     try {
-      var rows = await state.vault.getPatientVisits(state.patientId);
+      var values = await Promise.all([
+        state.vault.getPatientVisits(state.patientId),
+        state.gabinet ? state.vault.listPatientNotesForPatient(state.patientId).catch(function () { return null; }) : null,
+        state.gabinet ? state.vault.listCarePlans({ patientId: state.patientId }).catch(function () { return null; }) : null
+      ]);
       if (!scopeCheck(state) || request !== state.request) return false;
+      var rows = values[0];
+      state.plans = Array.isArray(values[2]) ? values[2] : null;
+      state.documents = Array.isArray(values[1]) ? values[1].filter(function (entry) {
+        return entry && entry.patientId === state.patientId && (entry.visitContext?.visitId ||
+          (Array.isArray(entry.treatmentContext?.followups) && entry.treatmentContext.followups.some(control => control?.visitContext?.visitId)));
+      }) : null;
       if (!Array.isArray(rows)) throw new Error('Invalid visit list');
       return showRows(state, rows);
     } catch (_) {
@@ -198,7 +279,9 @@
     dialog.setAttribute('aria-labelledby', id + '-title');
     dialog.setAttribute('aria-describedby', id + '-description');
     var state = { vault: vault, userId: owner.userId, token: token, patientId: patientId, options: options,
-      dialog: dialog, opener: d.activeElement, rows: [], request: 0, closed: false };
+      dialog: dialog, opener: d.activeElement, rows: [], request: 0, closed: false,
+      gabinet: w.__VILDA_HOME_GABINET_PREVIEW__ === true && typeof options.onEdit === 'function' };
+    if (state.gabinet) dialog.classList.add('vvisit-gabinet');
     active = state;
     // App chrome intentionally styles every <header>; this is local dialog
     // layout, with its accessible title supplied by aria-labelledby above.

@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { applyEncounterNoteEditorHooks, reverseEncounterNoteEditorHooks } from '../../tools/home-encounter-note-auth-hooks.mjs';
 import { createHash } from 'node:crypto';
 import { parse } from 'espree';
 import { describe, expect, it, vi } from 'vitest';
@@ -78,7 +79,10 @@ describe('native notes and staged evidence respect the same document boundary', 
     // o zmianie z innego urządzenia pokazuje się tylko, gdy wersja w sejfie różni się od otwartej (Qshow czyta ją
     // i porównuje polami odczytu, Qpokaz — dawna treść banera). Jedyna zmiana w treści edytora: te instrukcje, trzy małe
     // funkcje przy banerze i komentarz; bramka dostępu i zapis bez zmian. Działanie: tests/unit/notatka-pozniejsza-zapis.test.mjs.
-    expect(createHash('sha256').update(source.slice(...body.range)).digest('hex')).toBe('60dd540af147f7b4c2fec361bdf6758e899c66b4e20a6b87714061ac2399183d');
+    const currentEditor = source.slice(...body.range);
+    const legacyEditor = reverseEncounterNoteEditorHooks(currentEditor);
+    expect(applyEncounterNoteEditorHooks(legacyEditor)).toBe(currentEditor);
+    expect(createHash('sha256').update(legacyEditor).digest('hex')).toBe('60dd540af147f7b4c2fec361bdf6758e899c66b4e20a6b87714061ac2399183d');
   });
 
   it('opens a genuinely new note synchronously without a needless patient-plan read', () => {

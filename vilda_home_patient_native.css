@@ -852,3 +852,33 @@ html.vilda-home-workspace .vilda-pne.vhome-b1-native-note :is(button, a, input, 
 @media (prefers-reduced-motion: reduce) {
   html.vilda-home-workspace .vilda-pne.vhome-b1-native-note { animation: none; }
 }
+
+/* The Overview uses the same B1 card inside the patient workspace. Only the
+ * modal frame changes: the document provides scrolling and responsive width. */
+html.vilda-home-workspace #vhomePatientOverview > .vilda-auth-card {
+  position: relative;
+  width: min(100%, 1000px) !important;
+  height: auto !important;
+  margin-inline: auto !important;
+  animation: none;
+}
+html.vilda-home-workspace #vhomePatientOverview .vhome-native-patient-card {
+  height: auto;
+  min-height: 0;
+}
+html.vilda-home-workspace #vhomePatientOverview .vhome-b1-workspace { flex: 0 1 auto; }
+html.vilda-home-workspace #vhomePatientOverview .vhome-b1-panels { overflow: visible; }
+html.vilda-home-workspace #vhomePatientOverview .vhome-b1-heading {
+  position: relative;
+  overflow: visible;
+}
+html.vilda-home-workspace #vhomePatientOverview .vhome-b1-nav > [data-tab="reminders"] {
+  gap: var(--space-6px);
+  padding-inline-end: 2px;
+}
+@media (min-width: 681px) and (max-width: 1000px) {
+  html.vilda-home-workspace #vhomePatientOverview .vhome-b1-nav > [data-tab="reminders"] {
+    gap: 3px;
+    padding-inline: 3px 0;
+  }
+}

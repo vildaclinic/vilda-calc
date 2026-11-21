@@ -9,6 +9,7 @@
   var started = false, frame = 0, refreshRequested = true, generation = 0, readGeneration = 0;
   var nativeView = null, noteView = null, modal = null, selectedTab = 'notes';
   var previewState = null;
+  var inline = null;
   var subscribed = new WeakSet();
   var tabNames = [['labs', 'Badania'], ['care', 'Plany'], ['notes', 'Notatki']];
   var lifecycle = ['vilda:user-state-cleared', 'vilda:data-applied', 'vilda:patient-loaded', 'vilda:auth-loaded', 'vilda:session-changed'];
@@ -100,6 +101,7 @@
   function clearDecrypted() {
     generation += 1; readGeneration += 1; model = null; active = null; refreshRequested = true;
     previewState = null;
+    closeInline(true);
     close(true, false);
     if (card) {
       card.querySelectorAll('.vhome-patient-tabpanel').forEach(function (panel) { panel.replaceChildren(); });
@@ -109,7 +111,104 @@
       card.removeAttribute('aria-busy');
     }
   }
-  function requestRead() { refreshRequested = true; schedule(); }
+  function requestRead() { refreshRequested = true; if (inline) inline.needsRead = true; schedule(); }
+  function historicalId(id) {
+    var encounter = w.VildaHomeEncounter?.state?.(id);
+    return encounter?.mode === 'edit' ? encounter.snapshotId : null;
+  }
+  function ownsInline(scope, id) {
+    return !!(scope && inline === scope && scope.patientId === id && scope.host.isConnected
+      && scope.host === byId('vhomePatientOverview') && !scope.host.hidden
+      && historicalId(id) === scope.snapshotId && current(scope.owner));
+  }
+  function closeInline(force) {
+    if (!inline) return true;
+    if (w.VildaHomePatientNative?.releaseInline?.(force) === false) return false;
+    var scope = inline; inline = null; scope.host.replaceChildren();
+    return true;
+  }
+  function inlineIssue(scope) {
+    if (!ownsInline(scope, scope.patientId)) return;
+    var message = el('p', 'vhome-patient-empty', 'Nie udało się odczytać zapisanej karty tej wizyty.');
+    var retry = button('Spróbuj ponownie', function () { if (ownsInline(scope, scope.patientId)) requestRead(); });
+    scope.shell.replaceChildren(message, retry);
+  }
+  function inlineBack(scope, callback) {
+    var live = true;
+    var handle = w.VildaHomeDialogHistory.create({
+      group: scope.owner,
+      isOpen: function () { return live && ownsInline(scope, scope.patientId); },
+      requestClose: function () { return callback(); }
+    });
+    handle.enter();
+    return function () { live = false; handle.release(); };
+  }
+  async function refreshInline() {
+    var scope = inline;
+    if (!scope || !scope.needsRead || scope.pending || !ownsInline(scope, scope.patientId)) return;
+    var auth = byId('vilda-auth-ui-root');
+    if (auth?.getClientRects().length || w.VildaHomePatientNative?.deferRefresh?.()) return;
+    scope.needsRead = false; scope.pending = true;
+    try {
+      await w.VildaAuthUI.renderHomePatientInline(scope);
+      if (ownsInline(scope, scope.patientId) && !scope.shell.querySelector('.vilda-auth-screen,button')) inlineIssue(scope);
+    } catch (_) { inlineIssue(scope); }
+    finally { scope.pending = false; if (inline === scope && scope.needsRead) schedule(); }
+  }
+  function openInline(host, options) {
+    if (!host || host !== byId('vhomePatientOverview') || !host.isConnected || host.hidden) return false;
+    if (!current(active) || typeof w.VildaAuthUI?.renderHomePatientInline !== 'function') return false;
+    var id = active.owner.patientId; options = options || {};
+    if (inline && ownsInline(inline, id)) {
+      if (options.activeTab && inline.selected !== options.activeTab) selectInline(options.activeTab);
+      return true;
+    }
+    closeInline(true);
+    var shell = el('div', 'vilda-auth-card');
+    shell.setAttribute('role', 'region'); shell.setAttribute('aria-label', 'Karta pacjenta');
+    var waiting = el('p', 'vhome-patient-empty', 'Wczytywanie karty pacjenta…');
+    waiting.setAttribute('role', 'status'); shell.appendChild(waiting); host.replaceChildren(shell);
+    inline = { host: host, shell: shell, owner: active, patientId: id, snapshotId: historicalId(id),
+      selected: options.activeTab || 'antro', needsRead: true, pending: false,
+      onClose: options.onClose, onAnalysis: options.onAnalysis, showError: function () { inlineIssue(this); } };
+    var scope = inline;
+    scope.captureVisitBinding = function (patientId) {
+      if (!ownsInline(scope, patientId)) return null;
+      return w.VildaHomeEncounter?.captureBinding?.(patientId) || null;
+    };
+    scope.registerBack = function (callback) { return inlineBack(scope, callback); };
+    // Status uses the saved values and measurement age from the selected visit.
+    // Other native tabs retain their own dated, patient-wide record lists.
+    scope.historicalSnapshots = function (records) {
+      return records.filter(function (record) { return record.snapshotId === scope.snapshotId; });
+    };
+    refreshInline(); return true;
+  }
+  // Recording the first document of an encounter also persists its patient
+  // snapshot. Keep the live editor only for that same verified owner and load.
+  function ownsSavePublication(event, patientId) {
+    const detail = event && event.detail, scope = inline;
+    if (!scope || !detail || detail.source !== 'save' || detail.referenceVerified !== true ||
+        !detail.snapshotId || detail.patientId !== patientId || detail.applySequence !== scope.owner.owner.load ||
+        !ownsInline(scope,patientId)) return false;
+    const encounter = w.VildaHomeEncounter.state(patientId);
+    return (encounter.mode === 'new' || encounter.mode === 'edit') && !!encounter.visitId &&
+      encounter.visitId === scope.owner.owner.visit?.visitId;
+  }
+  function selectInline(key) {
+    if (!inline || !ownsInline(inline, inline.patientId)) return false;
+    if (w.VildaHomePatientNative?.selectInline?.(key)) return true;
+    if (inline.pending) { inline.selected = key; return true; }
+    return false;
+  }
+  function focusInlineNote(id) {
+    var scope = inline;
+    if (typeof id !== 'string' || !id || !scope || !ownsInline(scope, scope.patientId)) return false;
+    scope.focusNoteId = id;
+    scope.selected = 'notes';
+    requestRead();
+    return true;
+  }
   function subscribe(vault) {
     if (!vault || subscribed.has(vault)) return;
     subscribed.add(vault);
@@ -518,9 +617,11 @@
           token: w.VildaVault.captureSyncOperationSession(), generation: generation };
       } catch (_) { active = null; renderPreview(); return; }
       refreshRequested = true;
+      d.dispatchEvent(new w.CustomEvent('vilda:home-patient-inline-ready'));
     }
     if (refreshRequested) { refreshRequested = false; load(active, 0); }
     renderPreview();
+    refreshInline();
   }
   function schedule() { if (!frame) frame = w.requestAnimationFrame(refresh); }
   function start() {
@@ -554,7 +655,10 @@
     // Real DOM order is also the single-column and keyboard order.
     var growth = byId('vhomeGrowthCard'), diet = byId('vhomeDietCard');
     if (growth) growth.after(card); else if (diet) diet.before(card); else grid.appendChild(card);
-    lifecycle.forEach(function (name) { d.addEventListener(name, function () { clearDecrypted(); schedule(); }); });
+    lifecycle.forEach(function (name) { d.addEventListener(name, function (event) {
+      if (name === 'vilda:patient-loaded' && ownsSavePublication(event,inline?.patientId)) { requestRead(); return; }
+      clearDecrypted(); schedule();
+    }); });
     // Native Clear is dispatched on window, not always on document.
     w.addEventListener('vilda:user-state-cleared', function () { clearDecrypted(); schedule(); });
     ['vilda:auth-boot-settled', 'vilda:auth-hidden', 'vilda:main-session-restored', 'vilda:initial-main-session-restore-settled',
@@ -567,6 +671,9 @@
     refresh();
   }
   w.VildaHomePatient = Object.freeze({ open: open, close: close, refresh: requestRead,
+    openInline: openInline, closeInline: closeInline, selectInline: selectInline, ownsInline: ownsInline, focusInlineNote: focusInlineNote,
+    ownsSavePublication: ownsSavePublication,
+    isInlineOpen: function () { return !!inline && ownsInline(inline, inline.patientId); },
     captureOwner: function () { var view = active; return view ? function () { return current(view); } : null; }
   });
   d.addEventListener('vilda:home-workspace-ready', start);

@@ -140,6 +140,27 @@ describe('main save feeds the approved overlay without changing its public retur
     expect(env.fallback).toEqual([]);
   });
 
+  it('an open visit with optional anthropometry still explains other missing fields and accepts a complete identity', async () => {
+    const env = environment();
+    env.win.__VILDA_HOME_GABINET_PREVIEW__ = true;
+    env.win.VildaHomeEncounter = {
+      revisionTarget: () => null,
+      optionalField: (_payload, id) => id === 'weight' || id === 'height',
+    };
+    env.setPayload({ name: '', user: { age: 9 } });
+    expect(env.save()).toBeNull();
+    expect(env.messages).toContainEqual(expect.objectContaining({
+      ton: 'blad', tekst: 'Nie zapisano — uzupełnij: imię i nazwisko.',
+      pola: [{ id: 'lastName', etykieta: 'imię i nazwisko' }],
+    }));
+    expect(env.focused).toEqual(['lastName']);
+    expect(env.saveOperation).not.toHaveBeenCalled();
+
+    env.setPayload({ name: 'Fikcyjny Integracyjny', user: { age: 9 } });
+    expect(await env.save()).toBe(env.payload);
+    expect(env.saveOperation).toHaveBeenCalledTimes(1);
+  });
+
   it.each(['/index.html', '/docpro.html'])('%s confirms success only after the real save Promise settles', async route => {
     const env = environment({ route }), pending = deferred();
     env.saveOperation.mockReturnValue(pending.promise);

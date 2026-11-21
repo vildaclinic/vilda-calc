@@ -240,3 +240,26 @@ describe('patient treatment through the real encrypted vault', () => {
     expect((await scope(d).read()).diagnoses[0].context.status).toBe('active');
   });
 });
+
+it('records the creating visit separately on diagnoses, episodes and later follow-ups', async () => {
+  const dev = await device(), actor = scope(dev);
+  const visit = (id, date) => ({
+    visitContext: {version: 1, visitId: id, clinicalDateISO: date},
+    isCurrent: () => true, ensureRecorded: async () => true
+  });
+  const first = visit('fceacbed-3cbb-4fca-baca-eabbfdaaabc1', '2026-10-01');
+  const second = visit('fceacbed-3cbb-4fca-baca-eabbfdaaabc2', '2026-10-27');
+  const problem = await actor.createDiagnosis(diagnosis(), first);
+  const started = await actor.createEpisode(episode(), first);
+  const checked = await actor.addFollowup(started, {dateISO: DAY, kind: 'Kontrola', body: 'Fikcyjny wpis'}, second);
+  expect((await dev.vault.getPatientNote(problem.id)).visitContext).toEqual(first.visitContext);
+  const saved = await dev.vault.getPatientNote(checked.id);
+  expect(saved.visitContext).toEqual(first.visitContext);
+  expect(saved.treatmentContext.followups[0]).toMatchObject({dateISO: DAY, visitContext: second.visitContext});
+  const updated = await actor.updateFollowup(checked, checked.context.followups[0].id, {body:'Korekta opisu'});
+  expect(updated.context.followups[0].visitContext).toEqual(second.visitContext);
+  let current = true;
+  const replaced = {...second, isCurrent: () => current, ensureRecorded: async () => { current = false; return true; }};
+  await expect(actor.createDiagnosis(diagnosis(), replaced)).rejects.toThrow();
+  expect(await contextRows(dev)).toHaveLength(2);
+});

@@ -3,6 +3,7 @@ import { createHash, webcrypto } from 'node:crypto';
 import vm from 'node:vm';
 import { describe, expect, it, vi } from 'vitest';
 import { applyBscAuthHooks, reverseBscAuthHooks, verifyBscAuthHooks, BSC_AUTH_BASE_SHA256 } from '../../tools/account-duplicate-dismissals-auth-hooks.mjs';
+import { applyGabinetAuthHooks, gabinetAuthLayers } from '../../tools/home-gabinet-auth-hooks.mjs';
 
 const source = readFileSync(new URL('../../vilda_auth_ui.js', import.meta.url), 'utf8');
 const production = source.slice(source.indexOf('/* BEGIN ACCOUNT DUPLICATE DISMISSALS V2'), source.indexOf('/* END ACCOUNT DUPLICATE DISMISSALS V2 */'));
@@ -78,9 +79,11 @@ async function environment({ local = storage(), locks = lockManager() } = {}) {
 // Web Locks boundary, with AES-GCM ciphertext and controllable owner lifetimes.
 describe('account duplicate dismissal ciphertext boundary', () => {
   it('reverses exactly to the PR1002 native/Home/security artifact and replays idempotently', () => {
-    const base = reverseBscAuthHooks(source);
+    const beforeGabinet = gabinetAuthLayers(source).base;
+    const base = reverseBscAuthHooks(beforeGabinet);
     expect(createHash('sha256').update(base).digest('hex')).toBe(BSC_AUTH_BASE_SHA256);
-    expect(verifyBscAuthHooks(source)).toBe(base); expect(applyBscAuthHooks(base)).toBe(source); expect(applyBscAuthHooks(source)).toBe(source);
+    expect(verifyBscAuthHooks(source)).toBe(base); expect(applyBscAuthHooks(base)).toBe(beforeGabinet); expect(applyBscAuthHooks(source)).toBe(source);
+    expect(applyGabinetAuthHooks(beforeGabinet)).toBe(source);
     expect(source).toContain('function Bsc3(B){return(B&&B.bases||[]).map(function(g){return g.patientId}).sort().join("|")}');
   });
   it('commits only AES ciphertext and retains arbitrary native ID signatures without normalization', async () => {

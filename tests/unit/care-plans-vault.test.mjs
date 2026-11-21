@@ -1128,3 +1128,24 @@ describe('care-plan flow repairs preserve independent calendar and clinical fact
     expect((await d.vault.getCarePlan(plan.id)).steps[0].state).toBe(kind === 'result' ? 'done' : 'waiting');
   });
 });
+
+it('keeps the origin visit of a care plan and the visit of each subsequent action', async () => {
+  const d = await device();
+  const binding = (visitId, date) => ({
+    visitContext: {version:1, visitId, clinicalDateISO:date}, isCurrent: () => true, ensureRecorded: async () => true
+  });
+  const first = binding('fceacbed-3cbb-4fca-baca-eabbfdaaabc1', '2026-10-01');
+  const second = binding('fceacbed-3cbb-4fca-baca-eabbfdaaabc2', '2026-10-02');
+  let active = first;
+  d.win.VildaHomeEncounter = {captureBinding: patientId => patientId === d.patientId ? active : null};
+  const created = await d.vault.mutateCarePlan({patientId:d.patientId, operationId:operation(), action:'create', title:'Fikcyjny plan', goal:''}, first);
+  expect(created.saved).toBe(true);
+  active = second;
+  const changed = await d.vault.mutateCarePlan({patientId:d.patientId, planId:created.planId, baseRev:created.plan.rev, operationId:operation(), action:'edit', title:'Uzupełniony plan', goal:''}, second);
+  expect(changed.saved).toBe(true);
+  const result = await d.vault.getCarePlan(created.planId);
+  expect(result.visitContext).toEqual(first.visitContext);
+  expect(result.log.map(item => item.visitContext)).toEqual([first.visitContext,second.visitContext]);
+  active = null;
+  await expect(d.vault.mutateCarePlan({patientId:d.patientId, operationId:operation(), action:'create', title:'Nieaktualny kontekst'}, first)).rejects.toThrow();
+});

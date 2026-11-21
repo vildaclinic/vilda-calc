@@ -188,3 +188,41 @@ html dialog.vb22.vb22--stable.vhome-reminders-dialog:is(.vhome-reminders-inline-
 html dialog.vb22.vb22--stable.vhome-reminders-dialog:is(.vhome-reminders-inline-editing, .vhome-reminders-detached-detail) .vb22-list-pane { display: none; }
 html dialog.vb22.vb22--stable.vhome-reminders-dialog:is(.vhome-reminders-inline-editing, .vhome-reminders-detached-detail) .vb22-detail { display: block; width: 100%; }
 html dialog.vb22.vb22--stable.vhome-reminders-dialog.vhome-reminders-detached-detail .vb22-detail > .vb22-back { display: block; min-height: 44px; }
+
+#vhomePatientRemindersSlot .vhome-reminders-slot,
+#vhomePatientRemindersSlot .vhome-reminders-overview {
+  height: auto;
+  min-height: 0;
+  max-height: none;
+}
+#vhomePatientRemindersSlot .vhome-reminders-overview {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+#vhomePatientRemindersSlot .vb22-head {
+  flex-basis: auto;
+  height: auto;
+  flex-wrap: wrap;
+  padding: 0 0 var(--space-12px);
+}
+#vhomePatientRemindersSlot .vb22-head h2 { font-size: 20px; }
+#vhomePatientRemindersSlot .vb22-mini-list {
+  display: flex;
+  flex-direction: column;
+  max-height: none;
+}
+#vhomePatientRemindersSlot .vhome-reminders-entry { margin-inline: 0; }
+#vhomePatientRemindersSlot .vhome-reminders-empty { margin-inline: 0; }
+#vhomePatientRemindersSlot .vb22-tools .vb22-primary-create {
+  width: auto;
+  min-height: 44px;
+  gap: var(--space-6px);
+  padding: var(--space-8px) var(--space-12px);
+  border-radius: var(--radius-9);
+  background: var(--vhr-accent) !important;
+  color: #fff !important;
+  line-height: 1.35;
+}
+#vhomePatientRemindersSlot .vb22-tools [hidden] { display: none !important; }
+#vhomePatientRemindersSlot .vb22-foot { padding-inline: 0; }

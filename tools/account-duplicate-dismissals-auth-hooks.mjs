@@ -2,6 +2,7 @@
 import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { gabinetAuthLayers } from './home-gabinet-auth-hooks.mjs';
 export const BSC_AUTH_BASE_SHA256 = '3585aafe6ddd6fdd66c71394c3255c5ca2ce07417e146b86bf3d1a83b4c96121';
 export const BSC_AUTH_PAIRS = [
   {
@@ -51,9 +52,10 @@ export function reverseBscAuthHooks(source) {
   return source;
 }
 export function verifyBscAuthHooks(source) {
-  const base = reverseBscAuthHooks(source);
+  const layers = gabinetAuthLayers(source);
+  const base = reverseBscAuthHooks(layers.base);
   if (createHash('sha256').update(base).digest('hex') !== BSC_AUTH_BASE_SHA256) throw new Error('Auth changed outside duplicate-dismissal hooks');
-  if (applyBscAuthHooks(base) !== source || applyBscAuthHooks(source) !== source) throw new Error('Duplicate-dismissal replay differs');
+  if (layers.replay(applyBscAuthHooks(base)) !== source || applyBscAuthHooks(source) !== source) throw new Error('Duplicate-dismissal replay differs');
   return base;
 }
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

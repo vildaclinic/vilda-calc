@@ -1,0 +1,96 @@
+/* Shared header for the two tabs. Native form nodes stay in their original
+ * container so the clinical, persistence and chart owners keep their identity. */
+html:has([data-vhome-screen]) { scrollbar-gutter: stable; }
+[data-vhome-screen] #vhomeGabinet[hidden],
+#vhomeGabinet [hidden],
+[data-vhome-screen]:not([data-vhome-screen="analysis"]) > #vhomeGabinetAnalysis,
+[data-vhome-screen] .vhome-visit-heading,
+[data-vhome-screen] #vhomeAnalysisHeading,
+[data-vhome-screen] #vhomePatientCard { display: none !important; }
+
+#vildaLoadChoiceModal[hidden] { display: none !important; }
+
+#vhomeGabinet { color: #23444c; font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; min-width: 0; }
+#vhomeGabinetHeader, #vhomePatientOverview { width: min(100%,88rem); margin-inline: auto; box-sizing: border-box; }
+#vhomeGabinetHeader { margin-bottom: 1.15rem; }
+#vhomeGabinetHeader :is(.gb-header-top,.gb-person-line,.gb-breadcrumb,.gb-patient-tabs,button) { display: flex; align-items: center; }
+#vhomeGabinetHeader .gb-header-top { justify-content: space-between; gap: var(--space-0-5); margin-bottom: var(--space-0-55); }
+#vhomeGabinetHeader .gb-breadcrumb { gap: var(--space-0-45); margin: 0; padding: 0; background: transparent; color: #557078; font-size: .91rem; }
+#vhomeGabinetHeader button {
+  box-sizing: border-box; width: auto; margin: 0; padding: var(--space-0-5) var(--space-1); gap: var(--space-0-45);
+  font: inherit; font-weight: 630; line-height: 1.2; cursor: pointer;
+}
+#vhomeGabinetHeader button svg { flex: 0 0 18px; }
+#vhomeGabinetHeader button:is(:hover,:active) { transform: none; }
+#vhomeGabinetHeader .gb-breadcrumb button { min-height: var(--brand-logo-size); padding: 0 .12rem; }
+#vhomeGabinetHeader .gb-person-line { flex-wrap: wrap; justify-content: space-between; gap: var(--space-0-85) var(--space-1-25); }
+#vhomeGabinetHeader .gb-identity { flex: 1 1 12rem; min-width: 0; overflow-wrap: anywhere; }
+#vhomeGabinetHeader h1 { margin: 0; color: #183f47; font-size: clamp(1.55rem,2.1vw,2.1rem); font-weight: 690; line-height: 1.15; letter-spacing: -.037em; text-align: start; }
+#vhomeGabinetHeader .gb-identity-meta { margin-top: var(--space-0-4); font-size: .95rem; color: #526b73; }
+#vhomeGabinetHeader .gb-encounter-state { display: flex; gap: var(--space-0-4); padding: .15rem var(--space-0-5); border-radius: .4rem; background: #fff4d7; color: #664b13; font-size: .875rem; font-weight: 620; }
+#vhomeGabinetHeader .gb-card-actions { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: var(--space-0-55); width: min(100%,26rem); }
+#vhomeGabinetHeader .gb-card-actions button { width: 100%; min-height: 44px; justify-content: center; padding: var(--space-0-6) var(--space-0-9); }
+#vhomeGabinetHeader .gb-card-actions button:disabled { opacity: var(--opacity-slider-tick); cursor: default; }
+#vhomeGabinetHeader .gb-patient-tabs { gap: var(--space-0-5); margin-top: var(--space-1); border-bottom: var(--border-hairline) solid #cbdcde; }
+#vhomeGabinetHeader .gb-patient-tabs button { min-height: 46px; justify-content: center; }
+#vhomeGabinetHeader button:focus-visible { outline: var(--border-pro) solid #00727b; outline-offset: 2px; }
+#vhomeGabinet .vhome-gabinet-message:empty { display: none; }
+#vhomeGabinet .vhome-gabinet-message { padding: var(--space-0-6); margin-block: var(--space-0-5); }
+.vvisit-gabinet .vvisit-body { display: flex; flex-direction: column; }
+.vvisit-gabinet .vvisit-list {
+  display: flex; align-items: center; flex: 0 0 auto; gap: 0; max-height: none;
+  padding: var(--space-1) 1.15rem var(--space-0-8); border: 0; border-bottom: var(--border-hairline) solid var(--vvisit-line);
+  isolation: isolate; overflow: auto hidden; scrollbar-width: thin;
+}
+.vvisit-dialog.vvisit-gabinet .vvisit-list .vvisit-visit {
+  position: relative; flex: 0 0 10.25rem; align-items: flex-start; justify-content: center;
+  min-height: 5.25rem; margin: 0 -.3rem 0 0; padding: var(--space-0-65) 1.05rem;
+  border: var(--border-hairline) solid #cadadc !important; border-radius: var(--radius-4) var(--radius-11) var(--radius-6) var(--radius-6) !important;
+  background: linear-gradient(105deg,#fff 70%,#f0f5f4) !important;
+  box-shadow: 1px 3px 5px #1a495019 !important;
+  transform: perspective(850px) rotateY(-10deg) scale(var(--paper-scale,.952));
+  transform-origin: left bottom;
+  transition: transform 300ms cubic-bezier(.2,.75,.22,1), box-shadow 300ms, border-color 300ms !important;
+}
+.vvisit-gabinet .vvisit-visit:first-child { --paper-scale: 1; }
+.vvisit-gabinet .vvisit-visit:nth-child(2) { --paper-scale: .988; }
+.vvisit-gabinet .vvisit-visit:nth-child(3) { --paper-scale: .976; }
+.vvisit-gabinet .vvisit-visit:nth-child(4) { --paper-scale: .964; }
+.vvisit-gabinet .vvisit-visit::after {
+  content: ''; position: absolute; inset: 0 0 auto auto; width: .8rem; height: .8rem;
+  border-radius: 0 var(--radius-9) 0 3px; background: linear-gradient(45deg,#d9e6e6 48%,#fff 52%);
+}
+.vvisit-dialog.vvisit-gabinet .vvisit-list .vvisit-visit[aria-pressed="true"] {
+  z-index: 2; transform: translateY(-3px); border-color: #5aa7aa !important;
+  box-shadow: inset 0 -2px #007c82,1px 4px 8px #1a495020 !important;
+}
+@media (hover: hover) {
+  .vvisit-dialog.vvisit-gabinet .vvisit-list .vvisit-visit:hover { z-index: var(--z-range-marker); transform: translateY(-5px); }
+}
+.vvisit-gabinet .vvisit-detail { flex: 1 1 auto; }
+.vvisit-gabinet .vvisit-documents { margin-block: var(--space-1-25); }
+.vvisit-gabinet .vvisit-documents h4 { margin: 0 0 var(--space-0-4); }
+.vvisit-gabinet .vvisit-documents ul { padding-inline-start: 1.35rem; margin: 0; }
+.vvisit-gabinet .vvisit-documents li { margin-block: var(--space-0-4); overflow-wrap: anywhere; }
+.vvisit-gabinet .vvisit-documents li p { white-space: pre-line; }
+@media (prefers-reduced-motion: reduce) {
+  .vvisit-dialog.vvisit-gabinet .vvisit-list .vvisit-visit { transition: none !important; }
+}
+@media (max-width: 640px) {
+  #vhomeGabinetHeader { margin-bottom: var(--space-0-85); }
+  #vhomeGabinetHeader .gb-header-top { margin-bottom: var(--space-0-35); }
+  #vhomeGabinetHeader .gb-person-line { gap: var(--space-0-7); }
+  #vhomeGabinetHeader .gb-identity-meta { font-size: .875rem; }
+  #vhomeGabinetHeader .gb-encounter-state { flex-direction: column; align-items: flex-end; gap: 0; line-height: 1.15; }
+  #vhomeGabinetHeader .gb-card-actions { width: 100%; gap: var(--space-0-45); }
+  #vhomeGabinetHeader .gb-card-actions button { font-size: .91rem; gap: var(--space-0-35); padding-inline: var(--space-0-4); }
+  #vhomeGabinetHeader .gb-patient-tabs { margin-top: var(--space-0-55); gap: 0; }
+  #vhomeGabinetHeader .gb-patient-tabs button { flex: 1; }
+}
+@media (max-width: 380px) {
+  #vhomeGabinetHeader .gb-header-top { gap: var(--space-0-25); min-height: 2.8rem; }
+  #vhomeGabinetHeader .gb-breadcrumb { gap: .2rem; }
+  #vhomeGabinetHeader .gb-breadcrumb button svg { display: none; }
+  #vhomeGabinetHeader .gb-encounter-state { flex: none; white-space: nowrap; padding-inline: var(--space-0-3); }
+  #vhomeGabinetHeader .gb-card-actions button { min-height: 3.6rem; }
+}

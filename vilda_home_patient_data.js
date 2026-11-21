@@ -45,8 +45,7 @@
   }
   function noteDate(note) {
     // Same general/clinical distinction and date precedence as native Notes.
-    return note.linkedAgeMonths == null && !note.clinicalDateISO
-      ? text(note.updatedAtISO) : text(note.clinicalDateISO) || text(note.updatedAtISO);
+    return text(note.clinicalDateISO) || text(note.visitContext?.clinicalDateISO) || text(note.updatedAtISO);
   }
   function noteProjection(notes, plans, patientId, care, labHistory) {
     if (!care || typeof care.projectPatientNotes !== 'function' || typeof care.resolveNoteDestination !== 'function') throw failure('HOME_PATIENT_NOTES_MODEL_UNAVAILABLE');
@@ -64,7 +63,7 @@
           title: text(note.title),
           body: text(note.body),
           category: note.category,
-          scope: note.linkedAgeMonths == null && !note.clinicalDateISO ? 'general' : 'clinical',
+          scope: note.linkedAgeMonths == null && !note.clinicalDateISO && !note.visitContext ? 'general' : 'clinical',
           linkedAgeMonths: note.linkedAgeMonths,
           clinicalDateISO: note.clinicalDateISO,
           updatedAtISO: note.updatedAtISO,

@@ -420,6 +420,7 @@
       if (!application || !service || state.busy || application.phase !== 'review') return;
       if (application.pending && !retry) return;
       if (!retry) {
+        application.visitBinding = options.captureVisitBinding?.(application.patient.patientId) || null;
         var definition = applicationDefinition(application); if (!definition) { renderFeedback(); return; }
         application.pending = Object.freeze({ operationId: id(), token: application.token, patientId: application.patient.patientId,
           templateId: application.templateId, revisionId: application.expectedRevisionId, definition: freezeApplicationDefinition(definition) });
@@ -427,7 +428,7 @@
       var request = application.pending; if (!request) return;
       var ticket = ++sequence; busy(true); state.error = null; render();
       try {
-        var result = await service.commit(request);
+        var result = await service.commit(request, application.visitBinding);
         if (!applicationCurrent(application, ticket)) return;
         if (applicationSaved(application, result)) return;
         if (result && result.saved === false && result.outcome !== 'unknown' && (result.conflict || result.reason)) {

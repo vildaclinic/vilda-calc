@@ -2,6 +2,7 @@
 // No clinical formula, source table, rounding or native writer is replaced.
 import {readFileSync, writeFileSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
+import { gabinetAuthLayers } from './home-gabinet-auth-hooks.mjs';
 const target = fileURLToPath(new URL('../vilda_auth_ui.js', import.meta.url));
 const compatibilityPairs = [
   ["function HomePatientIsCurrent(){return !!(HomePatientPresentation&&HomePatientPresentation.isCurrent())}", "function HomePatientIsCurrent(){return !!(HomePatientPresentation&&HomePatientPresentation.actorLifetimeVersion===1&&HomePatientPresentation.isCurrent())}"],
@@ -200,7 +201,8 @@ export function reversePatientB1AuthHooks(source) {
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const args = process.argv.slice(2);
   const check = args.includes('--check');
-  const source = readFileSync(target, 'utf8'), result = applyPatientB1AuthHooks(source, { check });
+  const source = readFileSync(target, 'utf8'), layers = gabinetAuthLayers(source);
+  const result = layers.replay(applyPatientB1AuthHooks(layers.base, { check }));
   if (check && result !== source) throw new Error('B1 native presentation hooks need regeneration.');
   if (!check) writeFileSync(target, result);
   process.stdout.write('Native patient B1 presentation hooks: complete; clinical builders preserved.\n');

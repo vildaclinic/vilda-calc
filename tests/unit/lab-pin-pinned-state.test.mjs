@@ -70,6 +70,7 @@ function strona(opcje = {}) {
     addEventListener: () => {},
     VildaVault: opcje.vault,
     VildaSession: { getPatient: () => ({ name: 'Fikcyjna Przypinana' }) },
+    ...opcje.gabinet,
   };
   doc.defaultView = win;
   doc.addEventListener('vilda:lab-pin-state-changed', (event) => zmiany.push(event.detail));
@@ -78,6 +79,24 @@ function strona(opcje = {}) {
 }
 
 afterEach(() => { vi.useRealTimers(); });
+
+it('łączy wynik z wizytą aktywnego lekarza, zachowując datę pobrania i pilnując zmiany pacjenta', async () => {
+  const visitContext = {version: 1, visitId: 'visit-a', clinicalDateISO: '2026-11-14'};
+  const binding = {visitContext, isCurrent: vi.fn(() => true), ensureRecorded: vi.fn(async () => true)};
+  const vault = {...sejf(), captureSyncOperationSession: () => ({}), assertSyncOperationSession: () => {},
+    getCurrentUser: () => ({userId: 'doctor-a'}), savePatientNoteOnce: vi.fn(async () => ({saved: true}))};
+  const home = {VildaVault: vault, VildaHomeGabinet: {captureVisitBinding: () => binding}};
+  const labPane = {}, homePane = {contentWindow: home};
+  const shell = {document: {querySelector: s => s.includes('title=') ? homePane : labPane}};
+  const {win} = strona({vault, gabinet: {__VILDA_HOME_GABINET_PREVIEW__: true, parent: shell, frameElement: labPane}});
+  const capture = win.VildaLabVisitBinding.capture(PID);
+  const note = {id: 'lab-a', patientId: PID, clinicalDateISO: '2026-10-05'};
+  await capture.save(vault, note);
+  expect(vault.savePatientNoteOnce).toHaveBeenCalledWith({...note, visitContext}, {isCurrent: expect.any(Function)});
+  binding.isCurrent.mockReturnValue(false);
+  await expect(capture.save(vault, note)).rejects.toThrow();
+  expect(vault.savePatientNoteOnce).toHaveBeenCalledTimes(1);
+});
 
 describe('VildaLabPinResult._internal.resolve: stan „przypięty” wyniku formularza', () => {
   const { resolve } = strona().api._internal;
@@ -381,7 +400,7 @@ describe('lab_pin_result.js: wywołania reguły w minifikowanej części (kontra
   });
 
   it('zapis (A) sprawdza kartę tuż przed savePatientNote i przerywa z komunikatem — dokładnie raz', () => {
-    expect(ile('n&&(p.linkedAgeMonths=n);var Pb=typeof PpBlocked=="function"?await PpBlocked(r,p):null;if(Pb){h(Pb);return}await r.savePatientNote(p),g();')).toBe(1);
+    expect(ile('n&&(p.linkedAgeMonths=n);var Pb=typeof PpBlocked=="function"?await PpBlocked(r,p):null;if(Pb){h(Pb);return}if(visitBinding){await visitBinding.save(r,p);g()}else await r.savePatientNote(p),g();')).toBe(1);
   });
 
   it('czytelny blok zaczyna się po I() i kończy przed uruchomieniem I(); znaczniki wycinków A i I nadal jednoznaczne', () => {
