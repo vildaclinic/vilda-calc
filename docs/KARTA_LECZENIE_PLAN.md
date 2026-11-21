@@ -34,7 +34,7 @@ Analiza”, dla GH „Przegląd | Trend dawki | Analiza”. Makiety (komputer i 
 |---|---|---|
 | 1 | Zakładka „Leczenie” (druga, tylko przy leczeniu) z dzisiejszymi blokami bez zmian; pasek leczenia nad zakładkami (przycisk otwierający zakładkę, wartości z tych samych danych co bloki, pigułka oceny D1); odnośniki do „Leczenia” (Notatki) | wdrożony w tym PR (SW 1.1.561) |
 | 2 | Karta leczenia otyłości w zakładce: przełącznik „Przegląd \| Wpisy \| Analiza”, „Przegląd” z czterema liczbami i oceną w jednej linii | scalony (SW 1.1.565, #1017) |
-| 3 | Karta GH w zakładce: „Przegląd \| Trend dawki \| Analiza”; „Trend leczenia GH” przeniesiony z „Siatek centylowych” | w tym PR (SW 1.1.566) |
+| 3 | Karta GH w zakładce: „Przegląd \| Trend dawki \| Analiza”; „Trend leczenia GH” przeniesiony z „Siatek centylowych” | w tym PR (SW 1.1.567) |
 | 4 | Uzgodnienie z kartą B1 nowej strony głównej (D5): te same karty leczenia w „Monitorowaniu leczenia” | do zrobienia, po scaleniu karty B1 |
 
 ## Etap 1 — co zrobiono

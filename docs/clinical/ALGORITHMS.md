@@ -45587,7 +45587,7 @@ leku — kopia wartości katalogu `obesity_therapy.js` (ładowany tylko w DocPro
 **Wdrożenie.** Od razu przy wydaniu; dane, sejf, dziennik, zapis i synchronizacja bez zmian. **Cofnięcie** = rewert PR:
 grupa otyłości znów trzy bloki (etap 1).
 
-## P-KARTA-LECZENIE, etap 3 — karta leczenia GH z przełącznikiem (SW 1.1.566, `vilda_auth_ui.js` 579, `vilda_auth_ui.css` 89, 2026-11-21)
+## P-KARTA-LECZENIE, etap 3 — karta leczenia GH z przełącznikiem (SW 1.1.567, `vilda_auth_ui.js` 579, `vilda_auth_ui.css` 89, 2026-11-21)
 
 **Zmiana kliniczna: NIE — prezentacja istniejących wartości (bez nowych obliczeń, progów ani zdań); trend dawki
 przeniesiony z „Siatek centylowych” do karty.** Plan i etapy: `docs/KARTA_LECZENIE_PLAN.md`; łatki:
