@@ -431,8 +431,9 @@ describe('P-KARTA-LECZENIE — biała lista zakładek i przywracanie (A.3)', () 
     expect(AUTH).toContain('r.activeTab==="antro"||r.activeTab==="leczenie"&&KlL||r.activeTab==="traj"');
     expect(AUTH).toContain('var Ka={screen:"card",patientId:t,tab:Kl_zakladka(r&&r.activeTab,KlL)||"antro"}');
     expect(AUTH).toMatch(/restoreTab:function\(ct\)\{[^}]*ua\(Kl_zakladka\(ct,KlL\)\|\|"antro"\)\}/);
-    expect(AUTH).toContain('function ua(ct){[Et,KlL&&KlL.zakladka,Bt,pt,kt,GdLabTab,CarePatientTab].filter(Boolean)');
-    expect(AUTH).toContain('[Nt,KlL&&KlL.tresc,Ct,sa,ca,GdLabHost,CarePatientHost].filter(Boolean)');
+    const przelacznik = fragment('function ua(ct)', 'KlL&&KlL.zakladka.addEventListener("click"');
+    expect(przelacznik).toContain('[Et,KlL&&KlL.zakladka,Bt,pt,kt,GdLabTab,CarePatientTab].filter(Boolean)');
+    expect(przelacznik).toContain('[Nt,KlL&&KlL.tresc,Ct,sa,ca,GdLabHost,CarePatientHost].filter(Boolean)');
     expect(AUTH).toContain('KlL&&KlL.zakladka.addEventListener("click",function(){ua("leczenie");ia({screen:"card",patientId:t,tab:"leczenie"})})');
   });
 
