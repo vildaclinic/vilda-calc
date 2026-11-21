@@ -409,3 +409,187 @@ describe('licznik odsyłania: model odsyłania wpisów Kosza (E3-PR0d)', () => {
     expect({ literal: o.literal, ponadModel: o.ponadModel, nieodeslane: o.nieodeslane }).toEqual({ literal: { 'zdarzenie|stomb|spoza|R4a': 1 }, ponadModel: 0, nieodeslane: 0 });
   });
 });
+
+// E3-PR0d2: model odsyłania ukrytego wpisu Kosza karty usuniętej — wpis Kosza wersji, którą ładunek zdarzenia niósł pod
+// kartą P, zostaje po scaleniu, choć wersji nie ma pod żadną kartą; wersja wygrywa z każdym elementem wpisu (z żadnym
+// nie przegrywa w rozstrzygnięciu „nagrobek wygrywa z wersją” z kodu wyciętego z sejfu, LO.wygrywaZKodu); karty żadnego
+// elementu wpisu nie ma; karta P przegrała
+// z nagrobkiem pacjenta. Granica liczona z kopert i ładunków partii, przypisanie kopert klucza najpierw do odsyłania
+// wpisów E3-PR0d.
+describe('licznik odsyłania: model odsyłania ukrytego wpisu Kosza karty usuniętej (E3-PR0d2)', () => {
+  const nagrobekWygrywa = LO.wygrywaZKodu(readFileSync(path.join(repo, 'vilda_vault.js'), 'utf8'), wytnijFunkcje);
+  const T_PO = '2026-03-02T11:00:00.000Z'; // później niż T2
+  const zd = (kind, key, o) => ({ event: { kind, key, atISO: T2, dev: null }, ...lad(o) });
+  const nagrobek = (pid, at = T2) => ({ patientId: pid, deletedAtISO: at });
+  // Stan po „Usuń pacjenta” na tym urządzeniu: wpis Kosza v pod P (Kosz o T1), nagrobek P (T2), bez karty P.
+  const ukryty = (o = {}) => lad({ snapshotTombstones: [wpis('P', 'v')], tombstones: [nagrobek('P')], ...o });
+  // Koperta snap P/v z wersją zmienioną po Koszu (T2) pod kartą P zapisaną o T1.
+  const snapV = (w = {}, k = {}) => zd('snap', 'P/v', { patients: [karta('P', [wersja('v', { updatedAtISO: T2, ...w })], k)] });
+  const model = (przed, po, P) => LO.modelStanu(przed, po, P, { nagrobekWygrywa }).map((r) => [r.k, r.retencja]);
+  it('ukryty wpis i późniejsza wersja pod kartą P przegraną z nagrobkiem pacjenta → jeden wiersz stomb v (klasa ukrytego wpisu, przydział E3-PR0d2, bez retencji)', () => {
+    const l = LO.modelStanu(ukryty(), ukryty(), snapV(), { nagrobekWygrywa });
+    expect(l.map((r) => ({ k: r.k, kind: r.kind, rodzaj: r.rodzaj, key: r.key, pid: r.pid, wLadunku: r.wLadunku, klasa: r.klasa, przydzial: r.przydzial, zeStanu: r.zeStanu, retencja: r.retencja })))
+      .toEqual([{ k: 'stomb:v', kind: 'stomb', rodzaj: 'stomb', key: 'v', pid: 'P', wLadunku: false, klasa: LO.KLASA_ZE_STANU, przydzial: 'E3-PR0d2', zeStanu: true, retencja: false }]);
+    expect(LO.modelStanu(ukryty(), ukryty(), snapV(), {}), 'bez rozstrzygnięcia — pusto').toEqual([]);
+  });
+  it('karta P żywa, wersja pod kartą po scaleniu, wersja nie późniejsza niż Kosz, wpis z dwoma elementami — wersja wygrywa z jednym, z drugim (Kosz później) nie → pusto', () => {
+    expect(model(ukryty(), lad({ patients: [karta('P', [wersja('w')])], snapshotTombstones: [wpis('P', 'v')], tombstones: [nagrobek('P', T0)] }), snapV()), 'karta P żywa').toEqual([]);
+    expect(model(ukryty(), ukryty({ patients: [karta('Q', [wersja('v')])] }), snapV()), 'wersja pod kartą Q po scaleniu').toEqual([]);
+    expect(model(ukryty(), ukryty(), snapV({ updatedAtISO: T1 })), 'wersja w chwili Kosza').toEqual([]);
+    expect(model(ukryty(), ukryty(), snapV({ updatedAtISO: T0 })), 'wersja przed Koszem').toEqual([]);
+    for (const wpisy of [[wpis('P', 'v'), wpis('R', 'v', { deletedAtISO: T_PO })], [wpis('R', 'v', { deletedAtISO: T_PO }), wpis('P', 'v')]]) {
+      const dwa = ukryty({ snapshotTombstones: wpisy });
+      expect(model(dwa, dwa, snapV()), `dwa elementy (pierwszy pod ${wpisy[0].patientId}): z elementem pod P wersja wygrywa, z elementem pod R (Kosz później) nie`).toEqual([]);
+    }
+  });
+  it('wpis porządkowania: wersja nie późniejsza niż przycięcie bez gwiazdki → pusto; z gwiazdką → wiersz z retencją', () => {
+    const ret = ukryty({ snapshotTombstones: [wpis('P', 'v', { powod: 'retencja' })] });
+    expect(model(ret, ret, snapV({ updatedAtISO: T0 })), 'bez gwiazdki').toEqual([]);
+    expect(model(ret, ret, snapV({ updatedAtISO: T0, payload: { _pinned: true } })), 'z gwiazdką').toEqual([['stomb:v', true]]);
+  });
+  it('wpis pod żywą kartą Q, wpis z dwoma elementami — jeden pod żywą kartą Q, element bez poprawnego patientId → pusto', () => {
+    const zQ = (wpisy) => ukryty({ patients: [karta('Q', [wersja('q')])], snapshotTombstones: wpisy });
+    expect(model(zQ([wpis('Q', 'v')]), zQ([wpis('Q', 'v')]), snapV()), 'wpis pod żywą Q').toEqual([]);
+    expect(model(zQ([wpis('P', 'v'), wpis('Q', 'v')]), zQ([wpis('P', 'v'), wpis('Q', 'v')]), snapV()), 'dwa elementy, jeden pod żywą Q').toEqual([]);
+    expect(model(zQ([wpis('P', 'v'), wpis('R', 'v')]), zQ([wpis('P', 'v'), wpis('R', 'v')]), snapV()), 'kontrola: dwa elementy, karty żadnego nie ma').toEqual([['stomb:v', false]]);
+    const { patientId: _p, ...bezKarty } = wpis('P', 'v');
+    for (const e of [bezKarty, { ...bezKarty, patientId: '' }, { ...bezKarty, patientId: 7 }]) {
+      expect(model(ukryty({ snapshotTombstones: [wpis('P', 'v'), e] }), ukryty({ snapshotTombstones: [wpis('P', 'v'), e] }), snapV()), `element z patientId ${JSON.stringify(e.patientId)}`).toEqual([]);
+    }
+  });
+  it('karta P bez nagrobka, nagrobek wcześniejszy niż zapis karty P z ładunku → pusto; nagrobek równy zapisowi, brak zapisu, najpóźniejszy z dwóch nagrobków → wiersz', () => {
+    expect(model(ukryty({ tombstones: [] }), ukryty({ tombstones: [] }), snapV()), 'bez nagrobka').toEqual([]);
+    expect(model(ukryty({ tombstones: [nagrobek('Q', T_PO)] }), ukryty({ tombstones: [nagrobek('Q', T_PO)] }), snapV()), 'nagrobek innej karty').toEqual([]);
+    expect(model(ukryty(), ukryty(), snapV({}, { lastSavedAtISO: T_PO })), 'nagrobek przed zapisem karty P').toEqual([]);
+    expect(model(ukryty(), ukryty(), snapV({}, { lastSavedAtISO: T2 })), 'nagrobek równy zapisowi').toEqual([['stomb:v', false]]);
+    const bezZapisu = snapV();
+    delete bezZapisu.patients[0].lastSavedAtISO;
+    expect(model(ukryty(), ukryty(), bezZapisu), 'brak zapisu karty P').toEqual([['stomb:v', false]]);
+    const dwa = ukryty({ tombstones: [nagrobek('P', T1), nagrobek('P', T_PO)] });
+    expect(model(dwa, dwa, snapV({}, { lastSavedAtISO: T2 })), 'najpóźniejszy z dwóch nagrobków').toEqual([['stomb:v', false]]);
+  });
+  it('stara delta bez event, koperta stomb (karta bez wersji) → pusto; ta sama wersja pod dwiema kartami ładunku → jeden wiersz', () => {
+    const { event: _e, ...delta } = snapV();
+    expect(model(ukryty(), ukryty(), delta), 'stara delta').toEqual([]);
+    expect(model(ukryty(), ukryty(), zd('stomb', 'v', { snapshotTombstones: [wpis('P', 'v')], patients: [karta('P', [])] })), 'koperta stomb').toEqual([]);
+    const dwie = ukryty({ tombstones: [nagrobek('P'), nagrobek('R')] });
+    expect(model(dwie, dwie, zd('snap', 'P/v', { patients: [karta('P', [wersja('v', { updatedAtISO: T2 })]), karta('R', [wersja('v', { updatedAtISO: T2 })])] })), 'dwie karty').toEqual([['stomb:v', false]]);
+  });
+  it('granica z kopert i ładunków partii: dwie koperty stomb v przy jednym ładunku z v → naruszenie; przy dwóch → brak; ładunek z v tylko w snapshotTombstones liczy się; koperty snap poza granicą', () => {
+    const k = (kind, key) => ({ event: { kind, key } });
+    expect(LO.ponadGranica([snapV()], [k('stomb', 'v'), k('stomb', 'v')]), 'jeden ładunek').toEqual([{ v: 'v', n: 2, zdarzen: 1 }]);
+    expect(LO.ponadGranica([snapV(), snapV()], [k('stomb', 'v'), k('stomb', 'v')]), 'dwa ładunki').toEqual([]);
+    expect(LO.ponadGranica([zd('stomb', 'v', { snapshotTombstones: [wpis('P', 'v')] })], [k('stomb', 'v')]), 'v tylko w snapshotTombstones').toEqual([]);
+    expect(LO.ponadGranica([zd('snap', 'P/w', { patients: [karta('P', [wersja('w')])] })], [k('stomb', 'v')]), 'ładunek bez v').toEqual([{ v: 'v', n: 1, zdarzen: 0 }]);
+    expect(LO.ponadGranica([null, undefined], [k('snap', 'P/v'), k('snap', 'P/v')]), 'koperty snap').toEqual([]);
+  });
+  it('przypisanie kopert: klucz z wierszem odsyłania wpisów E3-PR0d i wierszem ze stanu w jednej partii — pierwsza koperta do E3-PR0d, druga ze stanu (z retencją wiersza); snap — E3-PR0d; koperta stomb bez wiersza → wyjątek', () => {
+    const k = (kind, key) => ({ event: { kind, key } });
+    const wiersz = { k: 'stomb:v', kind: 'stomb', key: 'v' };
+    const zs = (retencja) => ({ k: 'stomb:v', kind: 'stomb', key: 'v', zeStanu: true, retencja });
+    expect(LO.przypiszKoperty([k('snap', 'P/w'), k('stomb', 'v'), k('stomb', 'v')], [{ k: 'snap:P/w', kind: 'snap', key: 'P/w' }, wiersz], [zs(true)]))
+      .toEqual([{ src: 'echo' }, { src: 'echo' }, { src: 'stan', retencja: true }]);
+    expect(LO.przypiszKoperty([k('stomb', 'v')], [], [zs(false)]), 'tylko wiersz ze stanu').toEqual([{ src: 'stan', retencja: false }]);
+    expect(() => LO.przypiszKoperty([k('stomb', 'v'), k('stomb', 'v')], [wiersz], []), 'koperta bez wiersza').toThrow(/bez wiersza modelu/);
+  });
+});
+
+// E3-PR0d2: model ze stanu bierze z sejfu wyłącznie rozstrzygnięcie „nagrobek wygrywa z wersją” (Bkz_wygrywa z chwilą
+// zmiany i stanem gwiazdki wersji) — kod wycięty z vilda_vault.js (LO.wygrywaZKodu), wzór „odcisk z kodu wyciętego”
+// wyżej. Strażnik „wycięte = sejf”: domknięcie wywołań w bieżącym sejfie = lista licznika, jedyna zmienna modułu,
+// bez zegara, licznik bez własnych kopii tych funkcji, tekst wycinka = tekst deklaracji, wywołanie w bloku
+// P-DZIENNIK-ZDARZEN (część odsyłania) z tymi samymi argumentami co w modelu, próbki.
+describe('licznik odsyłania: rozstrzygnięcie „nagrobek wygrywa z wersją” z kodu sejfu (wycięte = sejf)', () => {
+  const src = readFileSync(path.join(repo, 'vilda_vault.js'), 'utf8');
+  const drzewo = async () => {
+    const { parse } = await import('acorn');
+    const { analyze } = await import('eslint-scope');
+    const ast = parse(src, { ecmaVersion: 'latest', sourceType: 'script', ranges: true });
+    const sm = analyze(ast, { ecmaVersion: 2022, sourceType: 'script' });
+    const zI = sm.acquire(ast.body[0].expression.callee);
+    const dekl = new Map();
+    const ile = new Map();
+    const zmienneModulu = new Map();
+    for (const z of zI.variables) for (const d of z.defs) {
+      if (d.type === 'Variable') { if (!zmienneModulu.has(z.name)) zmienneModulu.set(z.name, []); zmienneModulu.get(z.name).push(d.parent); }
+      if (d.type !== 'FunctionName') continue;
+      ile.set(z.name, (ile.get(z.name) || 0) + 1);
+      if (!dekl.has(z.name)) dekl.set(z.name, d.node);
+    }
+    const refs = (node) => { const out = new Set(); const odw = (z) => { for (const r of z.references) if (r.resolved && r.resolved.scope === zI) out.add(r.resolved.name); for (const c of z.childScopes) odw(c); }; odw(sm.acquire(node)); return out; };
+    const q = ['Bkz_wygrywa', 'Bkz_zmiana', 'Bgw_stan'];
+    const funkcje = new Set();
+    const zmienne = new Set();
+    while (q.length) { const n = q.shift(); if (funkcje.has(n) || !dekl.has(n)) continue; funkcje.add(n); for (const w of refs(dekl.get(n))) { if (dekl.has(w)) q.push(w); else zmienne.add(w); } }
+    return { ast, dekl, ile, funkcje, zmienne, zmienneModulu };
+  };
+  // Zegar w ciele funkcji (jak B7 w tests/unit/sync-zdarzenia-buildery.test.mjs).
+  const zegar = (node) => {
+    const z = [];
+    const idz = (n) => {
+      if (!n || typeof n.type !== 'string') return;
+      if (n.type === 'NewExpression' && n.callee.type === 'Identifier' && n.callee.name === 'Date' && n.arguments.length === 0) z.push('new Date()');
+      if (n.type === 'CallExpression' && n.callee.type === 'Identifier' && n.callee.name === 'Date') z.push('Date()');
+      if (n.type === 'MemberExpression' && n.object.type === 'Identifier' && ['Date', 'performance'].includes(n.object.name)) z.push(n.object.name + '.…');
+      for (const k of Object.keys(n)) { const x = n[k]; if (Array.isArray(x)) x.forEach(idz); else if (x && typeof x.type === 'string') idz(x); }
+    };
+    idz(node.body);
+    return z;
+  };
+  it('domknięcie wywołań Bkz_wygrywa, Bkz_zmiana i Bgw_stan w sejfie = lista licznika; jedyna zmienna modułu w nim — Bgw_czPam; bez zegara; licznik bez własnych deklaracji tych funkcji', async () => {
+    const { dekl, funkcje, zmienne } = await drzewo();
+    expect([...funkcje].sort(), 'domknięcie = WYGRYWA_Z_SEJFU').toEqual([...LO.WYGRYWA_Z_SEJFU].sort());
+    expect([...zmienne].sort(), 'zmienne modułu w domknięciu = STALE_WYGRYWA').toEqual([...LO.STALE_WYGRYWA].sort());
+    expect([...funkcje].filter((n) => zegar(dekl.get(n)).length), 'funkcje z zegarem w domknięciu').toEqual([]);
+    expect(zegar({ body: (await import('acorn')).parse('function f() { return Date.now(); }', { ecmaVersion: 'latest' }).body[0].body }), 'samokontrola wykrywacza zegara').toEqual(['Date.…']);
+    const tekstLO = readFileSync(path.join(repo, 'tests/support/licznik-odsylania.mjs'), 'utf8');
+    expect([...LO.WYGRYWA_Z_SEJFU, ...LO.STALE_WYGRYWA].filter((n) => new RegExp(`(?:function\\s+${n}\\s*\\(|(?:const|let|var)\\s+${n}\\s*=)`).test(tekstLO)), 'deklaracje w liczniku').toEqual([]);
+  });
+  it('tekst wycinka = tekst deklaracji: dla każdej funkcji domknięcia jedna deklaracja, a wytnijFunkcje daje dokładnie jej tekst; stała Bgw_czPam zadeklarowana raz, a LO.stalaZKodu daje dokładnie tekst jej deklaracji z drzewa składni', async () => {
+    const { dekl, ile, funkcje, zmienneModulu } = await drzewo();
+    const zle = [...funkcje].filter((n) => ile.get(n) !== 1 || wytnijFunkcje(src, n) !== src.slice(dekl.get(n).start, dekl.get(n).end));
+    expect(zle, 'funkcje z wieloma deklaracjami albo wycinkiem innym niż deklaracja').toEqual([]);
+    expect(funkcje.size, 'kontrola: domknięcie niepuste').toBe(LO.WYGRYWA_Z_SEJFU.length);
+    for (const n of LO.STALE_WYGRYWA) {
+      expect((src.match(new RegExp(`\\nconst ${n} = `, 'g')) || []).length, `deklaracje stałej ${n} (tekst)`).toBe(1);
+      const d = zmienneModulu.get(n) || [];
+      expect(d.map((x) => [x.kind, x.declarations.length]), `deklaracje stałej ${n} w zasięgu modułu`).toEqual([['const', 1]]);
+      expect(LO.stalaZKodu(src, n), `wycinek stałej ${n} = deklaracja`).toBe(src.slice(d[0].start, d[0].end));
+    }
+  });
+  it('w bloku P-DZIENNIK-ZDARZEN dokładnie jedno wywołanie Bkz_wygrywa — w Bev_wstepUkrytych, z drugim argumentem Bkz_zmiana(X) i trzecim Bgw_stan(X, X.payload) dla tego samego X', async () => {
+    const { ast } = await drzewo();
+    const a = src.indexOf('/* P-DZIENNIK-ZDARZEN: poczatek bloku */');
+    const b = src.indexOf('/* P-DZIENNIK-ZDARZEN: koniec bloku */');
+    expect(a > 0 && b > a, 'kontrola: znaczniki bloku').toBe(true);
+    const wyw = [];
+    const idz = (n, f) => {
+      if (!n || typeof n.type !== 'string') return;
+      const g = n.type === 'FunctionDeclaration' && n.id ? n.id.name : f;
+      if (n.type === 'CallExpression' && n.callee.type === 'Identifier' && n.callee.name === 'Bkz_wygrywa' && n.start > a && n.end < b) wyw.push({ f: g, n });
+      for (const k of Object.keys(n)) { const x = n[k]; if (Array.isArray(x)) x.forEach((y) => idz(y, g)); else if (x && typeof x.type === 'string') idz(x, g); }
+    };
+    idz(ast, null);
+    const t = (n) => src.slice(n.start, n.end);
+    const forma = wyw.map(({ f, n }) => {
+      const [, z, s] = n.arguments;
+      const ok = n.arguments.length === 3 && z.type === 'CallExpression' && t(z.callee) === 'Bkz_zmiana' && z.arguments.length === 1
+        && s.type === 'CallExpression' && t(s.callee) === 'Bgw_stan' && s.arguments.length === 2
+        && t(s.arguments[0]) === t(z.arguments[0]) && t(s.arguments[1]) === `${t(z.arguments[0])}.payload`;
+      return { funkcja: f, forma: ok };
+    });
+    expect(forma, 'wywołania Bkz_wygrywa w bloku').toEqual([{ funkcja: 'Bev_wstepUkrytych', forma: true }]);
+  });
+  it('próbki: Kosz przed wersją — wersja wygrywa; wersja nie późniejsza niż Kosz — Kosz; przycięcie bez gwiazdki — przycięcie; przycięcie przy gwiazdce wersji albo przypiętym rejestrze wpisu — wersja; przypięty rejestr wpisu przy wersji wcześniejszej niż Kosz — Kosz', () => {
+    const rozstrzygnij = LO.wygrywaZKodu(src, wytnijFunkcje);
+    const S = (o = {}) => wersja('v', o);
+    const gw = { pin: true, at: T0 };
+    expect(rozstrzygnij(wpis('P', 'v'), S({ updatedAtISO: T2 })), 'Kosz przed wersją').toBe(false);
+    expect(rozstrzygnij(wpis('P', 'v'), S({ updatedAtISO: T1 })), 'wersja w chwili Kosza').toBe(true);
+    expect(rozstrzygnij(wpis('P', 'v', { powod: 'retencja' }), S()), 'przycięcie bez gwiazdki').toBe(true);
+    expect(rozstrzygnij(wpis('P', 'v', { powod: 'retencja' }), S({ payload: { _pinned: true } })), 'przycięcie przy gwiazdce wersji').toBe(false);
+    expect(rozstrzygnij(wpis('P', 'v', { powod: 'retencja', gwiazdka: gw }), S()), 'przycięcie przy przypiętym rejestrze wpisu').toBe(false);
+    expect(rozstrzygnij(wpis('P', 'v', { gwiazdka: gw }), S()), 'przypięty rejestr wpisu, wersja przed Koszem').toBe(true);
+    expect(() => rozstrzygnij(wpis('P', 'v'), null), 'wersja null — wyjątek (sejf: jak wersja wygrywa)').toThrow();
+  });
+});

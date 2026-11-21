@@ -28,10 +28,12 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 // the same value keeps only its change time; moving the date of an open entry confirms it open; the same visible
 // version shown to the doctor is not a save conflict; care plans and patient lists keep the earlier rule), E3-PR0c
 // (after a single change from another device is applied, a visit version the merge saved differently than it
-// arrived is queued again; dormant behind a hidden switch) and E3-PR0d (after a single change from another device is
+// arrived is queued again; dormant behind a hidden switch), E3-PR0d (after a single change from another device is
 // applied, a trash entry the merge saved differently than before and than it arrived is queued again; dormant behind
-// the same hidden switch).
-const BASE = 'e0fdbf3504adef9db240a1584231e2f6b5e041172de3da9d39b37e90c9f0ea50';
+// the same hidden switch) and E3-PR0d2 (after a single change from another device is applied successfully, a hidden
+// trash entry of a deleted card is queued again when the change carried a later version of that visit under a card
+// that lost to the patient tombstone here; dormant behind the same hidden switch).
+const BASE = '8855e4a1ff4b5225e233ad1bb8b9ab2808b0df75d42dcd043d9245e5709d9ff4';
 const START = '/* BEGIN VILDA CLINICAL WORKSPACE NATIVE V1 */\n';
 const END = '/* END VILDA CLINICAL WORKSPACE NATIVE V1 */\n';
 const digest = value => createHash('sha256').update(value).digest('hex');
