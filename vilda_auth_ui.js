@@ -1309,17 +1309,27 @@ function GdOdciskKarty(t,a){
   if(!t||!Array.isArray(a))return null;
   try{return JSON.stringify([t,a,_i()])}catch{return null}
 }
-// A shorter panel or its loading state can clamp the auth root's scrollTop.
+// Extend the scroll range from the bottom of the scrollport so a shorter panel
+// or its loading state cannot clamp the current position.
 function GdZachowajPrzewiniecieZakladek(tabs){
   const overlay=tabs.closest(".vilda-auth-overlay");
   if(!Rt||!overlay||overlay.parentElement!==Rt||Rt.scrollTop<=0)return;
-  overlay.style.setProperty("--vilda-patient-tabs-min-height","calc(100% + "+Math.ceil(Rt.scrollTop)+"px)");
+  const height=Math.ceil(Rt.scrollTop);
+  let spacer=overlay.querySelector(".vilda-patient-tabs-scroll-spacer");
+  if(!spacer){
+    spacer=i.document.createElementNS("http://www.w3.org/2000/svg","svg");
+    spacer.setAttribute("class","vilda-patient-tabs-scroll-spacer");
+    spacer.setAttribute("width","1");
+    spacer.setAttribute("aria-hidden","true");
+    overlay.appendChild(spacer);
+  }
+  spacer.setAttribute("height",String(height));
 }
 function GdZwolnijPrzewiniecieZakladek(event){
   const root=event.currentTarget;
   if(root.scrollTop>0)return;
-  const overlay=root.querySelector(":scope > .vilda-auth-overlay");
-  if(overlay)overlay.style.removeProperty("--vilda-patient-tabs-min-height");
+  const spacer=root.querySelector(".vilda-patient-tabs-scroll-spacer");
+  if(spacer)spacer.remove();
 }
 function GdPrzewiniecieKarty(){
   return [Rt,Rt&&Rt.querySelector('.vilda-auth-overlay'),Rt&&Rt.querySelector('.vilda-auth-card')].map(function(t){return t?t.scrollTop:0})
