@@ -17,6 +17,13 @@
 // P-GH-NOWE-ID-MONITOR (2026-10-21): dzisiejszy monitor bierze id nowego punktu z VildaGhPunkty.noweId(), więc nowe id
 // ma inną postać niż w BAZA; wynik kanoniczny zastępuje je tym samym znacznikiem (NOWE_ID, POSTACI_ID niżej), a wzorzec
 // zostaje bez zmian.
+// P-GH-WZNOWIENIE, część 2 (decyzje właściciela 2026-11-20, W2): reguła rodzaju punktu to reguła KURSÓW
+// (VildaGhPunkty.sprawdzRodzaj z VildaTrajectoryAnalysis.ghKursy) zamiast „najwyżej jedno Włączenie i jedno Zakończenie”.
+// wplywRegulyKursow(p) mówi, czy reguła kursów zmienia wynik przypadku względem BAZA (każda odmowa „zajęty typ” ma inny
+// tekst; część zapisów i odmów na wartościach jest dziś odmową reguły kursów). Pole kategorieRegulaKursow to skróty
+// kategorii policzone z BAZA tylko z przypadków z modułem dawki, których reguła kursów nie zmienia; test porównuje z nim
+// drzewo robocze, a przypadki zmienione sprawdza jako odmowy z tekstem reguły kursów. Klasyfikacja woła API z drzewa
+// roboczego (vilda_gh_punkty.js i vilda_trajectory_analysis.js), nie kopię reguły.
 // Siatkę, wykonanie przypadku i postać kanoniczną wyniku eksportuje ten plik. Test używa tych samych funkcji, ale na
 // plikach z drzewa roboczego. Dane wyłącznie FIKCYJNE.
 import { createHash } from 'node:crypto';
@@ -27,6 +34,7 @@ import { fileURLToPath } from 'node:url';
 import {
   ZEGAR_KROK, ZEGAR_START, idDawneMonitora, idDeterministyczne, utworzAtrapeMonitoraGh,
 } from '../support/gh-monitor-atrapa.mjs';
+import { loadBrowserScript } from '../support/load-browser-script.mjs';
 
 export const korzen = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 export const PLIK_WZORCA = 'tests/fixtures/gh-punkty-wzorzec.json';
@@ -363,6 +371,54 @@ export function siatka() {
   return wynik.sort((a, b) => kolejnosc.get(a.kategoria) - kolejnosc.get(b.kategoria));
 }
 
+/* ---------- Reguła kursów (P-GH-WZNOWIENIE, część 2) ---------- */
+
+let apiKursow = null;
+function api() {
+  if (!apiKursow) {
+    const w = {};
+    loadBrowserScript('vilda_gh_punkty.js', w);
+    loadBrowserScript('vilda_trajectory_analysis.js', w);
+    apiKursow = w.VildaGhPunkty;
+  }
+  return apiKursow;
+}
+// Wartość pola liczbowego tak, jak zobaczy ją monitor (type="number": tylko liczba HTML, inaczej pusty tekst).
+const LICZBA_POLA = /^-?(?:\d+(?:\.\d+)?|\.\d+)(?:[eE][+-]?\d+)?$/;
+const polePliczbowe = (v) => {
+  const t = v === null || v === undefined ? '' : String(v);
+  return LICZBA_POLA.test(t) ? t : '';
+};
+/** Rodzaj, wiek (pola formularza) i wykluczenie punktu, z którymi monitor woła regułę rodzaju w tym przypadku. */
+export function rodzajPrzypadku(p) {
+  if (p.sciezka === 'Z1') return { typ: p.typ, lata: p.pola.age, miesiace: p.pola.ageMonths, opcje: { pomin: null } };
+  if (p.sciezka === 'Z4') return { typ: p.pola.ghRetroType, lata: p.pola.ghRetroAge, miesiace: p.pola.ghRetroAgeMonths, opcje: {} };
+  if (p.sciezka === 'Z2') {
+    // Formularz edycji: wiek z pól przypadku, a bez nich — z edytowanego punktu (O() wpisuje ageYears i ageMonths).
+    const punkt = LISTY[p.lista].find((x) => idTekst(x) === String(p.cel)) || {};
+    const lata = 'ghEditAge' in p.pola ? p.pola.ghEditAge : punkt.ageYears;
+    const miesiace = 'ghEditAgeMonths' in p.pola ? p.pola.ghEditAgeMonths : punkt.ageMonths;
+    return { typ: p.typ, lata, miesiace, opcje: { pomin: p.cel } };
+  }
+  return null;
+}
+/**
+ * Czy reguła kursów zmienia wynik przypadku względem BAZA: null — bez zmian; { kod, komunikat } — dziś odmowa reguły
+ * kursów (dotąd: odmowa „zajęty typ” z innym tekstem, zapis albo odmowa na wartościach). Odmowa „wartosci” (wiek bez
+ * wartości) daje ten sam tekst co dotąd sprawdzenie wartości — bez zmiany.
+ */
+export function wplywRegulyKursow(p) {
+  const r = rodzajPrzypadku(p);
+  if (!r || !p.modulDawki) return null;
+  const A = api();
+  const wynik = A.sprawdzRodzaj(LISTY[p.lista], r.typ, {
+    ...r.opcje, wiekM: A.wiekMiesZPol(polePliczbowe(r.lata), polePliczbowe(r.miesiace)),
+  });
+  if (p.powod === 'typ' && wynik.ok) throw new Error(`${p.id}: reguła kursów przyjmuje punkt, którego dawna reguła nie przyjmowała`);
+  if (wynik.ok || wynik.kod === 'wartosci') return null;
+  return { kod: wynik.kod, komunikat: wynik.komunikat };
+}
+
 /* ---------- Wynik kanoniczny ---------- */
 
 // Nowe id na zegarze atrapy. Numer wywołania zegara zależy od tego, ile punktów dodano wcześniej na tej samej atrapie,
@@ -571,6 +627,7 @@ export function zbudujWzorzec(zrodla = zrodlaBazy(), postacId = 'monitor') {
     listy: LISTY,
     kategorie: podsumowanieKategorii(przypadki, wyniki),
     kategorieZModulemDawki: podsumowanieKategorii(przypadki.filter((p) => p.modulDawki), wyniki),
+    kategorieRegulaKursow: podsumowanieKategorii(przypadki.filter((p) => p.modulDawki && !wplywRegulyKursow(p)), wyniki),
     przypadki: przypadki.filter((p) => reprezentatywne.has(p.id)).map((p) => ({ wejscie: p, wynik: wyniki.get(p.id) })),
   };
 }
@@ -593,9 +650,11 @@ export function zapiszTekst(wzorzec) {
   };
   const kategorie = Object.entries(wzorzec.kategorie).map(([k, v]) => `    ${j(k)}: ${j(v)}`).join(',\n');
   const zModulem = Object.entries(wzorzec.kategorieZModulemDawki).map(([k, v]) => `    ${j(k)}: ${j(v)}`).join(',\n');
+  const kursy = Object.entries(wzorzec.kategorieRegulaKursow).map(([k, v]) => `    ${j(k)}: ${j(v)}`).join(',\n');
   const listy = Object.entries(wzorzec.listy).map(([k, v]) => `    ${j(k)}: ${lista(v, '    ')}`).join(',\n');
   return `{\n  "opis": ${lista(wzorzec.opis, '  ')},\n  "baza": ${j(wzorzec.baza)},\n  "pliki": ${j(wzorzec.pliki)},\n`
     + `  "listy": {\n${listy}\n  },\n  "kategorie": {\n${kategorie}\n  },\n  "kategorieZModulemDawki": {\n${zModulem}\n  },\n`
+    + `  "kategorieRegulaKursow": {\n${kursy}\n  },\n`
     + `  "przypadki": [\n${wzorzec.przypadki.map(przypadek).join(',\n')}\n  ]\n}\n`;
 }
 

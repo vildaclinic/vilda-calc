@@ -7,8 +7,10 @@ import { loadBrowserScript } from '../support/load-browser-script.mjs';
 // „wejście → oczekiwany wynik” liczą dawkę tak jak formularz wsteczny monitora DocPro. Dane wyłącznie FIKCYJNE.
 
 const w = { document: { readyState: 'complete', getElementById: () => null, addEventListener: () => {} } };
+// P-GH-WZNOWIENIE, część 2: reguła rodzaju punktu liczy kursy z VildaTrajectoryAnalysis.ghKursy (na index.html ładowany
+// obok vilda_gh_punkty.js), więc okno testu ma też moduł trajektorii.
 for (const plik of ['vilda_gh_opakowania_dane.js', 'vilda_gh_dawka_dane.js', 'vilda_gh_dawka.js', 'vilda_gh_punkty.js',
-  'vilda_gh_programy_dane.js', 'vilda_gh_punkt_z_wiersza.js']) loadBrowserScript(plik, w);
+  'vilda_trajectory_analysis.js', 'vilda_gh_programy_dane.js', 'vilda_gh_punkt_z_wiersza.js']) loadBrowserScript(plik, w);
 const M = w.VildaGhPunktZWiersza;
 const A = w.VildaGhPunkty;
 const E = w.VildaGhDawka;
@@ -139,8 +141,10 @@ describe('przygotujPunkt — reguły punktu wstecznego z VildaGhPunkty (wejście
     expect(w1.punkt.boneAge).toBe(8.5);
   });
 
+  // P-GH-WZNOWIENIE, część 2: odmowa drugiego Włączenia w kursie tekstem reguły kursów (dotąd „Punkt „Włączenie
+  // leczenia” został już dodany.”).
   it.each([
-    ['drugie Włączenie', { typ: 'start' }, 'Punkt „Włączenie leczenia” został już dodany.'],
+    ['drugie Włączenie', { typ: 'start' }, 'Ten kurs leczenia ma już punkt „Włączenie leczenia”. Nowe Włączenie można dodać po „Zakończeniu leczenia”.'],
     ['pusta dawka', { podawana: '' }, 'Upewnij się, że wprowadziłeś poprawne, dodatnie dane: wiek, wagę, wzrost oraz dawkę.'],
     ['dawka 0', { podawana: '0' }, 'Upewnij się, że wprowadziłeś poprawne, dodatnie dane: wiek, wagę, wzrost oraz dawkę.'],
     ['pusty preparat', { preparat: '' }, 'Wybierz program i preparat w formularzu wstecznego punktu.'],
@@ -148,9 +152,9 @@ describe('przygotujPunkt — reguły punktu wstecznego z VildaGhPunkty (wejście
     expect(M.przygotujPunkt(A, L, pomiar, wybor(z))).toEqual({ ok: false, komunikat });
   });
 
-  it('drugie Zakończenie — odmowa; pierwsze Zakończenie — punkt', () => {
+  it('drugie Zakończenie — odmowa (tekst reguły kursów, dotąd „Punkt „Zakończenie leczenia” został już dodany.”); pierwsze Zakończenie — punkt', () => {
     const koniec = punkt('fikc-9', 'end', { ageYears: 12 });
-    expect(M.przygotujPunkt(A, [...L, koniec], pomiar, wybor({ typ: 'end' }))).toEqual({ ok: false, komunikat: 'Punkt „Zakończenie leczenia” został już dodany.' });
+    expect(M.przygotujPunkt(A, [...L, koniec], pomiar, wybor({ typ: 'end' }))).toEqual({ ok: false, komunikat: 'Ten kurs leczenia ma już punkt „Zakończenie leczenia”.' });
     expect(M.przygotujPunkt(A, L, pomiar, wybor({ typ: 'end' })).punkt.type).toBe('end');
   });
 
@@ -160,6 +164,63 @@ describe('przygotujPunkt — reguły punktu wstecznego z VildaGhPunkty (wejście
       podawana: '0.9', preparat: 'Omnitrope 10 mg', program: 'SNP', igf1: '310', dniIgf: '2' }, 'wsteczny');
     const { id: _id, ...bezId } = w1.punkt;
     expect(bezId).toEqual(wsteczny.pola);
+  });
+});
+
+// P-GH-WZNOWIENIE, część 2: rodzaj punktu z wiersza sprawdza reguła kursów z WIEKIEM pomiaru wiersza; radio pokazuje
+// rodzaje możliwe w tym wieku, przycisk w przerwie między kursami jest nieaktywny. Wiek lata;miesiące.
+describe('rodzajeWWieku, stanPrzycisku i przygotujPunkt — reguła kursów (P-GH-WZNOWIENIE, część 2)', () => {
+  const ZAKONCZENIE = punkt('fikc-z', 'end', { ageYears: 9, ageMonths: 6, weight: 30, height: 131, doseAbs: 0.9 });
+  const ZAMKNIETY = [WLACZENIE, KONTYNUACJA, ZAKONCZENIE];
+  const wiersz = (lata, mies) => M.pomiarWiersza({ ...WIERSZ, lata: String(lata), miesiace: String(mies) });
+  const ok = (r) => ({ start: r.start.ok, continue: r.continue.ok, end: r.end.ok, domyslny: r.domyslny });
+  const wybor = (z) => ({ typ: 'continue', program: 'SNP', preparat: 'Omnitrope 10 mg', podawana: '0.9', igf1: '', dniIgf: '', ...z });
+
+  it('po Zakończeniu (wiersz 10;0): tylko Włączenie (wznowienie), domyślne Włączenie; Kontynuacja i Zakończenie z powodem', () => {
+    const r = M.rodzajeWWieku(A, ZAMKNIETY, wiersz(10, 0));
+    expect(ok(r)).toEqual({ start: true, continue: false, end: false, domyslny: 'start' });
+    expect(r.continue.komunikat).toBe('Po „Zakończeniu leczenia” dodaj najpierw „Włączenie leczenia” (wznowienie leczenia).');
+    expect(r.end.komunikat).toBe('Ten kurs leczenia ma już punkt „Zakończenie leczenia”.');
+    expect(M.stanPrzycisku(ZAMKNIETY, wiersz(10, 0), true, r)).toEqual({ widoczny: true, aktywny: true, powod: null });
+    // Zapis: Włączenie przyjęte, Kontynuacja odrzucona tekstem reguły kursów.
+    expect(M.przygotujPunkt(A, ZAMKNIETY, wiersz(10, 0), wybor({ typ: 'start' })).punkt).toMatchObject({ type: 'start', ageYears: 10, ageMonths: 0 });
+    expect(M.przygotujPunkt(A, ZAMKNIETY, wiersz(10, 0), wybor())).toEqual({ ok: false, komunikat: r.continue.komunikat });
+  });
+
+  it('w środku zamkniętego kursu (wiersz 9;0): Kontynuacja jak dotąd; Włączenie i Zakończenie — nie', () => {
+    expect(ok(M.rodzajeWWieku(A, ZAMKNIETY, wiersz(9, 0)))).toEqual({ start: false, continue: true, end: false, domyslny: 'continue' });
+  });
+
+  it('kurs otwarty z Włączeniem (wiersz po ostatnim punkcie): Kontynuacja i Zakończenie, domyślnie Kontynuacja — jak dotąd', () => {
+    expect(ok(M.rodzajeWWieku(A, [WLACZENIE, KONTYNUACJA], wiersz(9, 0)))).toEqual({ start: false, continue: true, end: true, domyslny: 'continue' });
+    // Wiersz przed ostatnim punktem kursu: Zakończenie nie (musi być ostatnim punktem kursu).
+    expect(ok(M.rodzajeWWieku(A, [WLACZENIE, punkt('fikc-k10', 'continue', { ageYears: 10 })], wiersz(9, 0))))
+      .toEqual({ start: false, continue: true, end: false, domyslny: 'continue' });
+  });
+
+  it('przerwa między kursami (wiersz 10;0 przy Z 9;6 i wznowieniu 11;0): żaden rodzaj — przycisk nieaktywny z powodem', () => {
+    const L = [...ZAMKNIETY, punkt('fikc-w11', 'start', { ageYears: 11, height: 138 })];
+    const r = M.rodzajeWWieku(A, L, wiersz(10, 0));
+    expect(ok(r)).toEqual({ start: false, continue: false, end: false, domyslny: 'continue' });
+    expect(M.stanPrzycisku(L, wiersz(10, 0), true, r)).toEqual({ widoczny: true, aktywny: false, powod: M.TEKSTY.przerwa });
+    // Bez rodzajów (dotychczasowe wywołanie) — jak dotąd aktywny; zajęty miesiąc ma pierwszeństwo.
+    expect(M.stanPrzycisku(L, wiersz(10, 0), true)).toEqual({ widoczny: true, aktywny: true, powod: null });
+    expect(M.stanPrzycisku(L, wiersz(9, 6), true, M.rodzajeWWieku(A, L, wiersz(9, 6))).powod).toBe(M.TEKSTY.zajetyMiesiac);
+  });
+
+  it('stary zapis W2 (Kontynuacja po Zakończeniu): wiersz przed pierwszym punktem kursu — Włączenie (dopisanie), domyślne Włączenie', () => {
+    const W2 = [...ZAMKNIETY, punkt('fikc-k11', 'continue', { ageYears: 11, height: 138 })];
+    expect(ok(M.rodzajeWWieku(A, W2, wiersz(10, 6)))).toEqual({ start: true, continue: false, end: false, domyslny: 'start' });
+    expect(ok(M.rodzajeWWieku(A, W2, wiersz(11, 6)))).toEqual({ start: false, continue: false, end: true, domyslny: 'end' });
+  });
+
+  it('niekompletny pomiar albo brak API — bez rodzajów (null)', () => {
+    expect(M.rodzajeWWieku(A, ZAMKNIETY, M.pomiarWiersza({ ...WIERSZ, wzrost: '' }))).toBeNull();
+    expect(M.rodzajeWWieku(null, ZAMKNIETY, wiersz(10, 0))).toBeNull();
+  });
+
+  it('TEKSTY.przerwa', () => {
+    expect(M.TEKSTY.przerwa).toBe('W tym wieku nie można dodać punktu leczenia GH: to przerwa po „Zakończeniu leczenia”, przed kolejnym „Włączeniem leczenia”.');
   });
 });
 
