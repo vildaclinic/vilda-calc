@@ -86,7 +86,7 @@ o dopisanie Włączenia (w części 1 sama informacja o braku Włączenia; od cz
 | Część | Zakres | Stan |
 |---|---|---|
 | 1 — odczyt | Jedna reguła kursów GH (`VildaTrajectoryAnalysis.ghKursy`); Karta: podsumowanie („kurs k z N”, „n w kursie (M łącznie)”), „Dane analityczne”, pasek i kolejność D2, trend (linia przerwana), pas na siatkach na kurs, panele trajektorii i porównania; trajektoria: kursy bez progu przerwy, przycięcie startu, żeton na kurs | scalona (SW 1.1.562, #1011) |
-| 2 — wpis w DocPro | Reguła kursów we wpisie (`vilda_gh_punkty.js` wersja 4: Włączenie po Zakończeniu, bez Kontynuacji po Zakończeniu bez Włączenia; monitor — przyciski, formularz wsteczny, edycja; panel wiersza), tabela monitora wg wieku z wierszem „Kurs k — …”, metryki, B.64 i odcinki leków per kurs, wizyta kontrolna Terminarza z ostatniego punktu wg wieku, ramka W2 z prośbą o DocPro | w tym PR (SW 1.1.563) |
+| 2 — wpis w DocPro | Reguła kursów we wpisie (`vilda_gh_punkty.js` wersja 4: Włączenie po Zakończeniu, bez Kontynuacji po Zakończeniu bez Włączenia; monitor — przyciski, formularz wsteczny, edycja; panel wiersza), tabela monitora wg wieku z wierszem „Kurs k — …”, metryki, B.64 i odcinki leków per kurs, wizyta kontrolna Terminarza z ostatniego punktu wg wieku, ramka W2 z prośbą o DocPro | w tym PR (SW 1.1.564) |
 
 ## Uzgodnienie z kartą B1 (D5)
 

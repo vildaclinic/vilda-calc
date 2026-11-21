@@ -45276,7 +45276,7 @@ daje kurs z samym Zakończeniem i nowy kurs od Włączenia (punkty nie mają dat
 **Wdrożenie.** Od razu przy wydaniu; dane, zapis, sejf i synchronizacja bez zmian. **Cofnięcie** = rewert PR: Karta
 i trajektoria wracają do reguły „jakiekolwiek Zakończenie” i progu 3 mies.
 
-## P-GH-WZNOWIENIE, część 2 — wznowienie leczenia GH w DocPro (SW 1.1.563, `vilda_gh_punkty.js` 7, `gh_therapy_monitor.js` 65, `gh_therapy_segments.js` 6, `gh_igf_therapy.js` 34, `vilda_gh_punkt_z_wiersza.js` 4, `vilda_auth_ui.js` 577, 2026-11-20)
+## P-GH-WZNOWIENIE, część 2 — wznowienie leczenia GH w DocPro (SW 1.1.564, `vilda_gh_punkty.js` 7, `gh_therapy_monitor.js` 65, `gh_therapy_segments.js` 6, `gh_igf_therapy.js` 34, `vilda_gh_punkt_z_wiersza.js` 4, `vilda_auth_ui.js` 577, 2026-11-20)
 
 **Zmiana kliniczna: TAK** — DocPro przyjmuje Włączenie po Zakończeniu i nie przyjmuje Kontynuacji po Zakończeniu bez
 Włączenia; metryki monitora, B.64 i odcinki leków liczone per kurs; wizyta kontrolna Terminarza z ostatniego punktu wg
