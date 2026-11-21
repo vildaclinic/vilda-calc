@@ -15,6 +15,9 @@ import { loadBrowserScript } from '../support/load-browser-script.mjs';
 // P-GH-WZNOWIENIE, część 1 (decyzje właściciela 2026-11-20, W1–W4): kursy GH z vilda_trajectory_analysis.js
 // (VildaTrajectoryAnalysis.ghKursy — ładowany na tych samych stronach co Karta, więc i tutaj) — bieżący kurs w wl/kl,
 // trend (Pl) i pas na siatkach (prawdziwe Lt wycięte z showPatientCard).
+// P-KARTA-LECZENIE, etap 2 (makieta hybrydy 2026-11-19, „zaczynaj etap 2” 2026-11-21): grupa otyłości jako jedna karta
+// leczenia z przełącznikiem „Przegląd | Wpisy (N) | Analiza” (Ko_karta) — kafelki i linia oceny z obiektów wyjściowych
+// Cl/Ml (te same obliczenia co panel), sekcja „Wpisy leczenia” z prawdziwego vilda_cykle_leczenia.js w układzie „karta”.
 
 const korzen = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const AUTH = fs.readFileSync(path.join(korzen, 'vilda_auth_ui.js'), 'utf8');
@@ -46,6 +49,10 @@ function okno(opcje = {}) {
   if (!Object.getOwnPropertyDescriptor(proto, 'firstElementChild')) {
     Object.defineProperty(proto, 'firstElementChild', { get() { return this.children[0] || null; } });
   }
+  // przełącznik cykli panelu otyłości (Ob_seg) czyta childNodes
+  if (!Object.getOwnPropertyDescriptor(proto, 'childNodes')) {
+    Object.defineProperty(proto, 'childNodes', { get() { return this.children; } });
+  }
   doc.createTextNode = (t) => { const n = doc.createElement('#text'); n.textContent = t; return n; };
   doc.head = doc.documentElement;
   const w = { document: doc };
@@ -53,13 +60,15 @@ function okno(opcje = {}) {
   loadBrowserScript('vilda_tempo_wzrastania.js', w);
   if (opcje.bezTrajektorii !== true) loadBrowserScript('vilda_trajectory_analysis.js', w); // ghKursy (P-GH-WZNOWIENIE)
   if (opcje.odcinki) loadBrowserScript('gh_therapy_segments.js', w); // % dawki zalecanej w trendzie i odcinki leków
+  if (opcje.bezKryteriow) delete w.ObesityResponseCriteria; // „Moduł progów ChPL niezaładowany”
   return w;
 }
 
 const bledy = [];
 function karta(opcje) {
   return new Function('i', 'jt', 'Ot', 'oe', `${KOD}\nreturn { Kl_leczenie, Kl_zakladka, Kl_kolejnosc, Kl_daneOb, Kl_daneGh, wl, kl, Pl,
-    Gw_pasy: typeof Gw_pasy == 'function' ? Gw_pasy : null };`)(
+    Gw_pasy: typeof Gw_pasy == 'function' ? Gw_pasy : null,
+    Ko_pierwszeZdanie: typeof Ko_pierwszeZdanie == 'function' ? Ko_pierwszeZdanie : null, Ko_CZESTOSC: typeof Ko_CZESTOSC == 'object' ? Ko_CZESTOSC : null };`)(
     okno(opcje), () => null, (gdzie, blad) => bledy.push(`${gdzie}: ${blad && blad.message}`),
     (t) => { if (!t) return; while (t.firstChild) t.removeChild(t.firstChild); });
 }
@@ -102,9 +111,31 @@ function zbuduj(rekord, notatki = [], opcje) {
     return { v: tekst(t.querySelector('.vilda-gha-v')), sub: tekst(t.querySelector('.vilda-gha-sub')) };
   };
   return {
-    r, paski, pole, kafel,
+    r, paski, pole, kafel, karta: kartaOtylosci(r.tresc),
     tytul: tekst(r.tresc.querySelector('.vilda-oba-vt')),
     bloki: r.tresc.children.map((c) => c.className),
+  };
+}
+/** P-KARTA-LECZENIE, etap 2: karta leczenia otyłości — przełącznik, widoki, kafelki „Przeglądu” i linia oceny. */
+function kartaOtylosci(korzen) {
+  const el = korzen.querySelector('.vilda-ko-karta');
+  if (!el) return null;
+  const zakladki = el.querySelectorAll('.vilda-ko-seg button');
+  const widok = (id) => el.querySelector(`.vilda-ko-widok--${id}`);
+  return {
+    el, zakladki,
+    przelacznik: zakladki.map(tekst),
+    wybrany: (zakladki.find((b) => b.getAttribute('aria-selected') === 'true') || { getAttribute: () => null }).getAttribute('data-widok'),
+    widoczne: el.querySelectorAll('.vilda-ko-widok').filter((w) => !w.hidden).map((w) => w.className.replace('vilda-ko-widok vilda-ko-widok--', '')),
+    widok,
+    naglowek: el.children[0].children.map((c) => c.className),
+    kafelki: el.querySelectorAll('.vilda-ko-kafel').map((t) => ({
+      k: tekst(t.querySelector('.vilda-ko-k')), v: tekst(t.querySelector('.vilda-ko-v')), sub: tekst(t.querySelector('.vilda-ko-sub')),
+      kolor: (t.querySelector('.vilda-ko-cz--good, .vilda-ko-cz--bad') || { className: null }).className,
+    })),
+    linia: tekst(el.querySelector('.vilda-ko-werdykt')),
+    liniaKlasa: (el.querySelector('.vilda-ko-werdykt') || { className: null }).className,
+    cicha: tekst(el.querySelector('.vilda-ko-cicha')),
   };
 }
 
@@ -159,12 +190,15 @@ describe('P-KARTA-LECZENIE — warunek zakładki (A.2)', () => {
     expect(k.r.tresc.querySelectorAll('.vilda-gha-btn')).toHaveLength(1);
   });
 
-  it('punkty otyłości → zakładka z grupą Ob_dz: podsumowanie, „Wpisy leczenia” (.vdo), „Dane analityczne — otyłość”', () => {
+  // Etap 2: podsumowanie, „Wpisy leczenia” i „Dane analityczne — otyłość” są widokami JEDNEJ karty leczenia
+  // (dotąd trzy bloki: ['vilda-gh-summary', 'vdo', ''] z belką „Dane analityczne — otyłość”). Zmiana zamierzona.
+  it('punkty otyłości → zakładka z grupą Ob_dz: jedna karta leczenia (podsumowanie) z widokami „Wpisy” (.vdo) i „Analiza” (panel)', () => {
     const k = zbuduj({ obesityTherapyPoints: O1 });
     expect(k.bloki).toEqual(['vilda-ob-dz']);
     const dz = k.r.tresc.children[0];
-    expect(dz.children.map((c) => c.className)).toEqual(['vilda-gh-summary', 'vdo', '']);
-    expect(tekst(dz.children[2].querySelector('.vilda-gha-btn'))).toContain('Dane analityczne — otyłość');
+    expect(dz.children.map((c) => c.className)).toEqual(['vilda-gh-summary vilda-ko-karta']);
+    expect(k.karta.widok('wpisy').querySelectorAll('.vdo')).toHaveLength(1);
+    expect(k.karta.widok('analiza').querySelectorAll('.vilda-gha-panel')).toHaveLength(1);
   });
 
   it('tylko notatka z lekiem na otyłość (bez punktów) → zakładka z kartą „wg notatek” i paskiem z ostatnią dawką', () => {
@@ -220,7 +254,8 @@ describe('P-KARTA-LECZENIE — wartości paska otyłości z tego samego rysunku 
       id: 'ob', nazwa: 'Leczenie otyłości — Wegovy: otwórz zakładkę Leczenie', odznaka: 'Leczenie otyłości — Wegovy', stan: 'aktywne',
       czesci: ['2,4 mg', '20 tyg.', 'BMI −8,6%'], wartosci: '2,4 mg · 20 tyg. · BMI −8,6%',
     }));
-    expect(k.pole('Aktualna dawka')).toBe(p.czesci[0]);
+    // Etap 2: pola podsumowania zniknęły z góry karty — „Aktualna dawka” jest kafelkiem „Przeglądu” (dotąd pole siatki).
+    expect(k.karta.kafelki[0]).toEqual(expect.objectContaining({ k: 'Aktualna dawka', v: p.czesci[0] }));
     expect(k.kafel('Czas leczenia').v).toBe(p.czesci[1]);
     expect(k.kafel('Redukcja do oceny')).toEqual({ v: '−8,6%', sub: 'BMI · okno 12 tyg.' });
   });
@@ -256,7 +291,8 @@ describe('P-KARTA-LECZENIE — wartości paska otyłości z tego samego rysunku 
   it('leczenie zakończone: stan „leczenie zakończone”, wartości na koniec (dawka punktu „Zakończenie” pusta → pominięta), bez pigułki', () => {
     const k = zbuduj({ obesityTherapyPoints: O_ZAKONCZONE });
     expect(k.paski[0]).toEqual(expect.objectContaining({ stan: 'leczenie zakończone', czesci: ['39 tyg.', 'BMI −13,8%'], pigulka: null }));
-    expect(k.pole('Aktualna dawka')).toBe('—');
+    // Etap 2: „Aktualna dawka” — kafelek „Przeglądu” (dotąd pole siatki podsumowania), ta sama wartość „—”.
+    expect(k.karta.kafelki[0]).toEqual(expect.objectContaining({ k: 'Aktualna dawka', v: '—', sub: null }));
     expect(k.tytul).toBe('Cykl zakończony — odpowiedź była wystarczająca wg ChPL');
   });
 });
@@ -389,8 +425,12 @@ describe('P-KARTA-LECZENIE — blok, który się nie narysował, nie zostawia wa
       notatki: [], user: {}, zakladka: '<span class="vilda-patient-tab-lbl">Leczenie</span>',
     });
     expect(zgloszone).toContain('karta otylosc panel');
-    const dz = r.tresc.children[0];
-    expect(dz.children.map((c) => c.className)).toEqual(['vilda-gh-summary', 'vdo']); // bez „Dane analityczne — otyłość”
+    // Etap 2: karta bez widoku „Analiza” (dotąd: podsumowanie i sekcja bez „Dane analityczne — otyłość”); kafelki
+    // z panelu — „—”, bez linii oceny.
+    const k = kartaOtylosci(r.tresc);
+    expect(k.przelacznik).toEqual(['Przegląd', 'Wpisy (2)']);
+    expect(k.kafelki.map((x) => [x.k, x.v])).toEqual([['Aktualna dawka', '2,4 mg'], ['Czas leczenia', '—'], ['Masa', '—'], ['BMI', '—']]);
+    expect(k.linia).toBeNull();
     const p = r.paski.children[0];
     expect(p._klCzesci).toEqual(['2,4 mg']);
     expect(p.querySelector('.vilda-kl-pigulka')).toBeNull();
@@ -564,5 +604,423 @@ describe('P-GH-WZNOWIENIE — trend GH i pas na siatkach (B.4, B.5, GR7)', () =>
     expect(K.Gw_pasy(GR3, gh)).toEqual(gh(GR3));
     expect(AUTH).toContain('Yt=Gw_pasy(s.ghTherapyPoints,function(pe){return Lt(pe,"GH","#0F6E56")})');
     expect(AUTH).toContain('Ne=[].concat(Yt||[],ke||[])');
+  });
+});
+
+
+// ── P-KARTA-LECZENIE, etap 2 (makieta hybrydy 2026-11-19, „zaczynaj etap 2” 2026-11-21; docs/clinical/ALGORITHMS.md) ──
+// Karta leczenia otyłości z przełącznikiem „Przegląd | Wpisy (N) | Analiza”. Kafelki i linia oceny „Przeglądu” z obiektów
+// wyjściowych Cl i Ml/Ob_b (te same obliczenia co panel) — testy porównują je z kafelkami i polem oceny panelu z tego
+// samego rysunku. Dane wyłącznie FIKCYJNE.
+const OB2 = (id, type, dateISO, lata, mies, weight, height, dose) => OB(id, type, dateISO, lata, mies, weight, height, dose);
+// Dwa cykle: Wegovy 06–12.2025 zakończony, nowy cykl od 23.06.2026 (jak O1).
+const O_DWA_CYKLE = [OB2('c1-w', 'start', '2025-06-10', 16, 6, 95, 156, '0,25 mg'), OB2('c1-k', 'continue', '2025-10-14', 16, 10, 92, 156.5, '1 mg'),
+  OB2('c1-z', 'end', '2025-12-09', 17, 0, 92.5, 156.5, ''), ...O1];
+// Sześć wpisów (sekcja pokazuje 5, „Pokaż wszystkie wpisy (6)” przebudowuje grupę).
+const O_SZESC = [OB2('s6-w', 'start', '2026-02-17', 17, 2, 91.9, 157, '0,25 mg'), OB2('s6-k1', 'continue', '2026-03-17', 17, 3, 90.3, 157, '0,5 mg'),
+  OB2('s6-k2', 'continue', '2026-04-14', 17, 4, 88.4, 157, '1 mg'), OB2('s6-k3', 'continue', '2026-06-09', 17, 6, 85.1, 157.2, '2,4 mg'),
+  OB2('s6-k4', 'continue', '2026-08-18', 17, 8, 82.2, 157.2, '2,4 mg'), OB2('s6-k5', 'continue', '2026-11-10', 17, 11, 79.4, 157.4, '2,4 mg')];
+const opisPola = (k) => tekst(k.karta.widok('analiza').querySelector('.vilda-oba-vd'));
+const tytulPola = (k) => tekst(k.karta.widok('analiza').querySelector('.vilda-oba-vt'));
+const ikonaPola = (k) => tekst(k.karta.widok('analiza').querySelector('.vilda-oba-vic'));
+const kafelPanelu = (k, etykieta) => {
+  const t = k.karta.widok('analiza').querySelectorAll('.vilda-gha-k').find((x) => x.textContent === etykieta);
+  return t ? { v: tekst(t.parentNode.querySelector('.vilda-gha-v')), sub: tekst(t.parentNode.querySelector('.vilda-gha-sub')) } : null;
+};
+
+describe('P-KARTA-LECZENIE, etap 2 — karta leczenia otyłości: nagłówek, przełącznik, widoki', () => {
+  it('O1: jedna karta (kontener podsumowania), nagłówek: znacznik, stan i „+ Kontynuacja”; bez pól siatki podsumowania', () => {
+    const k = zbuduj({ obesityTherapyPoints: O1 });
+    const c = k.karta;
+    expect(c.naglowek).toEqual(['vilda-gh-summary-badge', 'vilda-gh-summary-chip', 'vdo-head-actions vdo-zewn']);
+    expect(tekst(c.el.querySelector('.vilda-gh-summary-badge'))).toBe('Leczenie otyłości — Wegovy');
+    expect(tekst(c.el.querySelector('.vilda-gh-summary-chip'))).toBe('aktywne');
+    const dodaj = c.el.children[0].querySelector('.vdo-add');
+    expect(tekst(dodaj)).toBe('+ Kontynuacja');
+    expect(dodaj.getAttribute('aria-disabled')).toBeNull();
+    expect(c.el.querySelectorAll('.vdo-add')).toHaveLength(1); // ten sam przycisk — nie kopia
+    expect(c.el.querySelectorAll('.vilda-gh-summary-grid')).toHaveLength(0);
+    for (const pole of ['Lek', 'Substancja', 'Włączenie', 'Punkty kontrolne', 'Ostatnia kontrola', 'Aktualna dawka']) expect(k.pole(pole)).toBeNull();
+  });
+
+  it('O1: przełącznik „Przegląd | Wpisy (2) | Analiza” (tablist/tab, aria-selected), domyślnie „Przegląd”; klik zmienia widok', () => {
+    const k = zbuduj({ obesityTherapyPoints: O1 });
+    const c = k.karta;
+    expect(c.el.querySelector('.vilda-ko-seg').getAttribute('role')).toBe('tablist');
+    expect(c.zakladki.map((b) => b.getAttribute('role'))).toEqual(['tab', 'tab', 'tab']);
+    expect(c.przelacznik).toEqual(['Przegląd', 'Wpisy (2)', 'Analiza']);
+    expect([c.wybrany, c.widoczne]).toEqual(['przeglad', ['przeglad']]);
+    for (const b of c.zakladki) expect(c.el.querySelector(`#${b.getAttribute('aria-controls')}`).getAttribute('aria-labelledby')).toBe(b.id);
+    c.zakladki[1].click();
+    expect(kartaOtylosci(k.r.tresc)).toEqual(expect.objectContaining({ wybrany: 'wpisy', widoczne: ['wpisy'] }));
+    c.zakladki[2].click();
+    expect(kartaOtylosci(k.r.tresc)).toEqual(expect.objectContaining({ wybrany: 'analiza', widoczne: ['analiza'] }));
+  });
+
+  it('O1 Przegląd: 2,4 mg (1×/tydz. · od 10.11.2026), 20 tyg. (od 23.06.2026 (17 l. 6 mies.)), 84 kg (−7,9 kg (−8,6%) od włączenia), BMI 34,1 (−8,6% od włączenia · próg ChPL ≥5%)', () => {
+    const k = zbuduj({ obesityTherapyPoints: O1 });
+    expect(k.karta.kafelki).toEqual([
+      { k: 'Aktualna dawka', v: '2,4 mg', sub: '1×/tydz. · od 10.11.2026', kolor: null },
+      { k: 'Czas leczenia', v: '20 tyg.', sub: 'od 23.06.2026 (17 l. 6 mies.)', kolor: null },
+      { k: 'Masa', v: '84 kg', sub: '−7,9 kg (−8,6%) od włączenia', kolor: 'vilda-ko-cz vilda-ko-cz--good' },
+      { k: 'BMI', v: '34,1', sub: '−8,6% od włączenia · próg ChPL ≥5%', kolor: null },
+    ]);
+    // te same obliczenia co kafelki panelu z tego samego rysunku
+    expect(kafelPanelu(k, 'Czas leczenia').v).toBe('20 tyg.');
+    expect(kafelPanelu(k, 'Masa ostatnia').v).toBe('84 kg');
+    expect(kafelPanelu(k, 'Masa ostatnia').sub).toContain('BMI 34,1 kg/m² · 17 l. 11 mies. · 10.11.2026');
+    expect(kafelPanelu(k, 'Redukcja masy')).toEqual({ v: '−7,9 kg', sub: '−8,6% od włączenia' });
+    expect(kafelPanelu(k, 'Redukcja BMI').sub).toBe('−8,6% od włączenia');
+    expect(kafelPanelu(k, 'Próg ChPL')).toEqual({ v: '≥5 %', sub: 'Wegovy 12–17 l.' });
+  });
+
+  it('O1 linia oceny: „⏳ Przed oknem oceny — oceń po 12 tyg. Obecnie 4. tydz. stosowania dawki podtrzymującej. Szczegóły oceny” = tytuł i 1. zdanie pola oceny', () => {
+    const k = zbuduj({ obesityTherapyPoints: O1 });
+    const linia = k.karta.el.querySelector('.vilda-ko-werdykt');
+    expect(k.karta.liniaKlasa).toBe('vilda-ko-werdykt vilda-ko-werdykt--wait');
+    expect([tekst(linia.children[0]), tekst(linia.children[1].children[0]), tekst(linia.children[1].children[1]), tekst(linia.children[2])])
+      .toEqual(['⏳', 'Przed oknem oceny — oceń po 12 tyg.', 'Obecnie 4. tydz. stosowania dawki podtrzymującej.', 'Szczegóły oceny']);
+    expect([ikonaPola(k), tytulPola(k)]).toEqual(['⏳', 'Przed oknem oceny — oceń po 12 tyg.']);
+    expect(opisPola(k).startsWith('Obecnie 4. tydz. stosowania dawki podtrzymującej. Próg (Wegovy 12–17 l.): ')).toBe(true);
+    expect(linia.children[2].tagName).toBe('BUTTON');
+  });
+
+  it('„Szczegóły oceny” → widok „Analiza”, fokus na polu oceny (to samo pole, które opisuje linia)', () => {
+    const k = zbuduj({ obesityTherapyPoints: O1 });
+    k.karta.el.querySelector('.vilda-ko-werdykt-link').click();
+    const c = kartaOtylosci(k.r.tresc);
+    expect([c.wybrany, c.widoczne]).toEqual(['analiza', ['analiza']]);
+    const pole = c.widok('analiza').querySelector('.vilda-oba-verdict');
+    expect(pole.ownerDocument.activeElement).toBe(pole);
+    expect(pole.getAttribute('tabindex')).toBe('-1');
+  });
+
+  it('O1 Wpisy: sekcja bez nagłówka (bez tytułu i przycisków), „Jak działa dziennik leczenia ⌄” rozwija dzisiejsze akapity objaśnień', () => {
+    const k = zbuduj({ obesityTherapyPoints: O1 });
+    const sekcja = k.karta.widok('wpisy').querySelector('.vdo');
+    expect(sekcja.className).toBe('vdo vdo-karta');
+    expect(sekcja.getAttribute('aria-label')).toBe('Wpisy leczenia');
+    expect(sekcja.querySelectorAll('.vdo-head')).toHaveLength(0);
+    expect(sekcja.querySelectorAll('.vdo-title')).toHaveLength(0);
+    expect(sekcja.querySelectorAll('.vdo-add')).toHaveLength(0);
+    expect(sekcja.querySelectorAll('.vdo-list .vdo-item')).toHaveLength(2);
+    const jak = sekcja.querySelector('.vdo-jak');
+    const tresc = sekcja.querySelector('.vdo-jak-tresc');
+    expect(tekst(jak)).toBe('Jak działa dziennik leczenia⌄');
+    expect([jak.getAttribute('aria-expanded'), jak.getAttribute('aria-controls'), tresc.hidden]).toEqual(['false', tresc.id, true]);
+    expect(tresc.children.map(tekst)).toEqual([
+      'Dziennik leczenia jest oddzielony od wizyt w gabinecie. Wpis z masą od pacjenta nie tworzy wizyty i nie zmienia jej pomiarów.',
+      'Włączenie, Zakończenie i zmianę leku edytujesz w monitorze DocPro — „Edytuj w DocPro →” przy wpisie otwiera go od razu na tym wpisie. Tu — Kontynuacje.',
+      'Wpisy z dawnych wizyt przeniesione ze źródłem „gabinet”.',
+    ]);
+    jak.click();
+    expect([jak.getAttribute('aria-expanded'), tresc.hidden]).toEqual(['true', false]);
+    jak.click();
+    expect([jak.getAttribute('aria-expanded'), tresc.hidden]).toEqual(['false', true]);
+  });
+
+  it('O1 Analiza: panel „Dane analityczne — otyłość” rozwinięty, bez belki; cicha linia „lek · substancja · 2 punkty kontrolne”', () => {
+    const k = zbuduj({ obesityTherapyPoints: O1 });
+    const a = k.karta.widok('analiza');
+    expect(a.querySelectorAll('.vilda-gha-btn')).toHaveLength(0);
+    const panel = a.querySelector('.vilda-gha-panel');
+    expect(panel.getAttribute('style')).toBeNull();
+    expect(a.children[0].children.map((c) => c.className)).toEqual(['vilda-ko-cicha', 'vilda-gha-panel']);
+    expect(k.karta.cicha).toBe('Wegovy (semaglutyd) – s.c. 1×/tydz. · Semaglutyd (agonista receptora GLP‑1) · 2 punkty kontrolne');
+    expect(panel.querySelectorAll('.vilda-gha-sec').map(tekst)).toEqual(['Przebieg leczenia otyłościA', 'Odpowiedź na leczenieB', 'Dawka a przebieg leczeniaA']);
+    expect(panel.querySelectorAll('.vilda-oba-verdict')).toHaveLength(1);
+  });
+});
+
+describe('P-KARTA-LECZENIE, etap 2 — przypadki „Przeglądu” (wartości z tych samych obliczeń co panel)', () => {
+  it('O2 (wystarczająca): linia „✓ Odpowiedź wystarczająca — kontynuować leczenie” + 1. zdanie pola oceny; 38 tyg., BMI −14,0%', () => {
+    const k = zbuduj({ obesityTherapyPoints: O_PASS });
+    expect(k.karta.liniaKlasa).toBe('vilda-ko-werdykt vilda-ko-werdykt--good');
+    expect(k.karta.linia).toBe('✓Odpowiedź wystarczająca — kontynuować leczenie'
+      + 'Osiągnięto −14,0% (BMI) po 22 tyg. stosowania dawki podtrzymującej · próg ChPL: redukcja BMI ≥5% po 12 tyg. dawki 2,4 mg/tydz. (lub maks. tolerowanej) — inaczej odstawić i ponownie ocenić.'
+      + 'Szczegóły oceny');
+    expect(k.karta.kafelki.map((x) => [x.v, x.sub])).toEqual([['2,4 mg', '1×/tydz. · od 10.11.2026'], ['38 tyg.', 'od 17.02.2026 (17 l. 2 mies.)'],
+      ['79,4 kg', '−12,5 kg (−13,6%) od włączenia'], ['32', '−14,0% od włączenia · próg ChPL ≥5%']]);
+  });
+
+  it('niewystarczająca: linia czerwona „✗ Odpowiedź niewystarczająca — wg ChPL odstawić i ponownie ocenić”', () => {
+    const k = zbuduj({ obesityTherapyPoints: O_FAIL });
+    expect(k.karta.liniaKlasa).toBe('vilda-ko-werdykt vilda-ko-werdykt--bad');
+    expect(k.karta.linia.startsWith('✗Odpowiedź niewystarczająca — wg ChPL odstawić i ponownie ocenićOsiągnięto −1,5% (BMI) po 22 tyg.')).toBe(true);
+  });
+
+  it('dorosły, Saxenda (ocena z masy): „próg ChPL ≥5%” w kafelku Masa, nie BMI; 3,0 mg (1×/dobę · od 12.05.2026)', () => {
+    const k = zbuduj({ obesityTherapyPoints: A_SAX });
+    expect(k.karta.kafelki).toEqual([
+      { k: 'Aktualna dawka', v: '3,0 mg', sub: '1×/dobę · od 12.05.2026', kolor: null },
+      { k: 'Czas leczenia', v: '17 tyg.', sub: 'od 12.01.2026 (40 l. 1 mies.)', kolor: null },
+      { k: 'Masa', v: '97 kg', sub: '−7,0 kg (−6,7%) od włączenia · próg ChPL ≥5%', kolor: 'vilda-ko-cz vilda-ko-cz--good' },
+      { k: 'BMI', v: '33,6', sub: '−6,7% od włączenia', kolor: null },
+    ]);
+    expect(kafelPanelu(k, 'Redukcja do oceny').sub).toBe('masa ciała · okno 12 tyg.');
+  });
+
+  it('dorosły, Wegovy (ocena kliniczna, „Próg ChPL: —”): bez progu w kafelkach; linia „ℹ️ Ocena kliniczna — brak twardego progu SmPC” + 1. zdanie', () => {
+    const k = zbuduj({ obesityTherapyPoints: A_WEG });
+    expect(kafelPanelu(k, 'Próg ChPL').v).toBe('—');
+    expect(k.karta.kafelki.map((x) => x.sub).join(' ')).not.toContain('próg');
+    expect(k.karta.linia).toBe('ℹ️Ocena kliniczna — brak twardego progu SmPC'
+      + 'ChPL nie podaje dla dorosłych progu skuteczności ani terminu oceny — o kontynuacji decyduje ocena kliniczna.Szczegóły oceny');
+  });
+
+  it('bez punktu „Włączenie”: kafelek „Czas od 1. punktu” (jak panel, bez podpisu z Włączenia), redukcje „od 1. punktu”, linia jak pole oceny', () => {
+    const k = zbuduj({ obesityTherapyPoints: O_BEZ_STARTU });
+    expect(k.karta.kafelki[1]).toEqual({ k: 'Czas od 1. punktu', v: '38 tyg.', sub: null, kolor: null });
+    expect(kafelPanelu(k, 'Czas od 1. punktu').v).toBe('38 tyg.');
+    expect(k.karta.kafelki[2].sub).toBe('−12,5 kg (−13,6%) od 1. punktu');
+    expect(k.karta.kafelki[3].sub).toBe('−14,0% od 1. punktu · próg ChPL ≥5%');
+    expect(k.karta.linia).toBe(`ℹ️${tytulPola(k)}ChPL ocenia odpowiedź od początkowej masy ciała i od włączenia leczenia (albo od osiągnięcia dawki `
+      + 'podtrzymującej); pierwszy zapisany punkt tego nie zastępuje.Szczegóły oceny');
+    // ostrzeżenie „Brak punktu „Włączenie”…” z podsumowania zostaje widoczne nad przełącznikiem (w każdym widoku)
+    const ostrzezenie = k.karta.el.children.find((c) => tekst(c).startsWith('Brak punktu „Włączenie” (pierwszy zapisany punkt'));
+    expect(k.karta.el.children.indexOf(ostrzezenie)).toBeLessThan(k.karta.el.children.indexOf(k.karta.el.querySelector('.vilda-ko-seg')));
+  });
+
+  it('zakończone: ta sama karta i przełącznik; „+ Kontynuacja” (aria-disabled) z wyjaśnieniem DZ-5 nad przełącznikiem — w każdym widoku', () => {
+    const k = zbuduj({ obesityTherapyPoints: O_ZAKONCZONE });
+    const c = k.karta;
+    expect(tekst(c.el.querySelector('.vilda-gh-summary-chip'))).toBe('leczenie zakończone');
+    expect(c.przelacznik).toEqual(['Przegląd', 'Wpisy (3)', 'Analiza']);
+    const glowa = c.el.children[0];
+    const dodaj = glowa.querySelector('.vdo-add');
+    expect(dodaj.getAttribute('aria-disabled')).toBe('true');
+    expect(dodaj.getAttribute('aria-describedby')).toBe('vdoAddWhy');
+    expect(tekst(glowa.querySelector('#vdoAddWhy'))).toBe('Brak aktywnego cyklu — nowy cykl zaczyna się od Włączenia przy wizycie.');
+    expect(glowa.querySelectorAll('.vdo-btn-docpro').map(tekst)).toEqual(['Włączenie w DocPro →']);
+    const komunikat = c.el.children[1];
+    expect([komunikat.className, komunikat.getAttribute('hidden')]).toEqual(['vdo-msg', '']);
+    dodaj.click(); // w „Przeglądzie”
+    expect([komunikat.className, komunikat.hidden]).toEqual(['vdo-msg vdo-msg-warn', false]);
+    expect(tekst(komunikat)).toBe('Brak aktywnego cyklu leczenia — nowy cykl zaczyna się od Włączenia, które dodajesz w DocPro przy wizycie („Włączenie w DocPro →”).');
+    expect(k.r.tresc.ownerDocument.body.querySelectorAll('.vdo-dialog')).toHaveLength(0);
+    expect(c.widok('wpisy').querySelector('.vdo-msg-warn')).toBeNull(); // nie w ukrytym widoku „Wpisy”
+    expect(c.kafelki[0]).toEqual({ k: 'Aktualna dawka', v: '—', sub: null, kolor: null });
+    expect(c.linia).toBe('✓Cykl zakończony — odpowiedź była wystarczająca wg ChPLCykl zakończony 17.11.2026 — ocena na dzień Zakończenia, bez zaleceń na dziś.Szczegóły oceny');
+  });
+
+  it('dwa cykle: Przegląd z bieżącego cyklu (jak O1), „cykl 2 z 2” w nagłówku, przełącznik cykli w „Analizie”, „2 punkty kontrolne w cyklu (5 łącznie)”', () => {
+    const k = zbuduj({ obesityTherapyPoints: O_DWA_CYKLE });
+    const jeden = zbuduj({ obesityTherapyPoints: O1 });
+    expect(k.karta.kafelki).toEqual(jeden.karta.kafelki);
+    expect(k.karta.linia).toBe(jeden.karta.linia);
+    expect(k.karta.el.children[0].querySelectorAll('.vilda-gh-summary-chip').map(tekst)).toEqual(['aktywne', 'cykl 2 z 2']);
+    expect(k.karta.widok('analiza').querySelectorAll('.vilda-ob-seg button').map(tekst)).toEqual(['Cykl 2 · Wegovy · bieżący', 'Cykl 1 · Wegovy']);
+    expect(k.karta.widok('przeglad').querySelectorAll('.vilda-ob-seg')).toHaveLength(0);
+    expect(k.karta.cicha).toBe('Wegovy (semaglutyd) – s.c. 1×/tydz. · Semaglutyd (agonista receptora GLP‑1) · 2 punkty kontrolne w cyklu (5 łącznie)');
+    expect(tekst(k.karta.el.querySelector('.vilda-ob-hist'))).toContain('Poprzednie cykle');
+  });
+
+  it('dawka „od”: najwcześniejszy punkt cyklu z tą samą dawką ciągle do ostatniego (2,4 mg od 09.06.2026 przy 3 wpisach z 2,4 mg)', () => {
+    const k = zbuduj({ obesityTherapyPoints: O_SZESC });
+    expect(k.karta.kafelki[0]).toEqual(expect.objectContaining({ v: '2,4 mg', sub: '1×/tydz. · od 09.06.2026' }));
+  });
+
+  it('linia oceny dla każdego stanu = ikona, tytuł pola oceny i jego 1. zdanie (bez zmiany tekstu); kolor jak pole oceny', () => {
+    const stany = [
+      [O_BEZ_WZROSTU, 'Potrzebny pomiar wzrostu do oceny ChPL', 'Wegovy 12–17 l. ocenia odpowiedź z BMI.'],
+      [O_DWA_WLACZENIA, 'Zapis cyklu wymaga uporządkowania — ocena wg ChPL wstrzymana', null],
+      [O_NIEZNANY_LEK, 'Brak dopasowania do progów ChPL', 'Nie rozpoznano leku (Wegovy/Saxenda/Mysimba/Mounjaro) albo wiek przy włączeniu jest poza wskazaniem — ocena automatyczna niedostępna.'],
+    ];
+    for (const pts of [O1, O_PASS, O_FAIL, A_SAX, A_WEG, O_BEZ_STARTU, O_ZAKONCZONE, O_DWA_CYKLE, ...stany.map((x) => x[0])]) {
+      const k = zbuduj({ obesityTherapyPoints: pts });
+      const pole = k.karta.widok('analiza').querySelector('.vilda-oba-verdict');
+      const linia = k.karta.el.querySelector('.vilda-ko-werdykt');
+      const zdanie = tekst(linia.querySelector('.vilda-ko-werdykt-d'));
+      expect(tekst(linia.querySelector('.vilda-ko-werdykt-t'))).toBe(tytulPola(k));
+      expect(tekst(linia.querySelector('.vilda-ko-werdykt-ic'))).toBe(ikonaPola(k));
+      expect(linia.className.replace('vilda-ko-werdykt vilda-ko-werdykt--', '')).toBe(pole.className.replace('vilda-oba-verdict ', ''));
+      expect(opisPola(k).startsWith(zdanie)).toBe(true);
+      expect(/[.!?]\)?$/.test(zdanie)).toBe(true);
+    }
+    for (const [pts, tytul, zdanie] of stany) {
+      const k = zbuduj({ obesityTherapyPoints: pts });
+      expect(tytulPola(k)).toBe(tytul);
+      if (zdanie) expect(tekst(k.karta.el.querySelector('.vilda-ko-werdykt-d'))).toBe(zdanie);
+    }
+  });
+
+  it('Ko_pierwszeZdanie: skróty („4.”, „tyg.”, „l.”, „~mies.)”) nie kończą zdania przed małą literą; kończą przed wielką', () => {
+    const { Ko_pierwszeZdanie: z } = karta();
+    expect(z('Obecnie 4. tydz. stosowania dawki podtrzymującej. Próg (Wegovy 12–17 l.): redukcja.')).toBe('Obecnie 4. tydz. stosowania dawki podtrzymującej.');
+    expect(z('Obecnie 18. tydz. (z delty wieku, dokładność ~mies.) Próg (X): r.')).toBe('Obecnie 18. tydz. (z delty wieku, dokładność ~mies.)');
+    expect(z('Obecnie 14. tydz. Próg (Mysimba): r.')).toBe('Obecnie 14. tydz.');
+    expect(z('Cykl zakończony 17.11.2026 — ocena na dzień Zakończenia, bez zaleceń na dziś. Osiągnięto')).toBe('Cykl zakończony 17.11.2026 — ocena na dzień Zakończenia, bez zaleceń na dziś.');
+    expect(z('brak dat wizyt (tygodnie od włączenia nieznane). Uzupełnij daty.')).toBe('brak dat wizyt (tygodnie od włączenia nieznane).');
+    expect(z('Jedno zdanie bez końca')).toBe('Jedno zdanie bez końca');
+    expect(z('')).toBe('');
+  });
+
+  it('moduł progów ChPL niezaładowany: pole oceny w „Analizie” zostaje, w „Przeglądzie” bez linii i bez częstości', () => {
+    const k = zbuduj({ obesityTherapyPoints: O1 }, [], { bezKryteriow: true });
+    expect(tytulPola(k)).toBe('Moduł progów ChPL niezaładowany');
+    expect(k.karta.linia).toBeNull();
+    expect(k.karta.kafelki[0]).toEqual(expect.objectContaining({ v: '2,4 mg', sub: 'od 10.11.2026' }));
+    expect(k.karta.kafelki[3].sub).toBe('−8,6% od włączenia');
+  });
+
+  it('częstość podania: lek rozpoznany jak w ocenie ChPL, wartości jak products[…].frequency w katalogu obesity_therapy.js', () => {
+    const { Ko_CZESTOSC } = karta();
+    const katalog = fs.readFileSync(path.join(korzen, 'obesity_therapy.js'), 'utf8');
+    const czestosc = (klucz) => {
+      const m = new RegExp(`${klucz}:\\{key:"${klucz}",label:"[^"]*",route:"[^"]*",frequency:("[^"]*")`).exec(katalog);
+      return m ? JSON.parse(m[1].replace(/\\x([0-9A-Fa-f]{2})/g, '\\u00$1')) : null;
+    };
+    expect(Object.keys(Ko_CZESTOSC).sort()).toEqual(['mounjaro', 'saxenda', 'wegovy']);
+    for (const lek of Object.keys(Ko_CZESTOSC)) expect(Ko_CZESTOSC[lek]).toBe(czestosc(lek));
+    expect(czestosc('mysimba')).toBe('wg titracji'); // bez jednej częstości — bez części w podpisie
+  });
+});
+
+describe('P-KARTA-LECZENIE, etap 2 — stan widoku i przebudowa grupy', () => {
+  function otworzKarte(K, rekord, opcje = {}) {
+    bledy.length = 0;
+    const r = K.Kl_leczenie({ patientId: 'pacjent-fikcyjny', rekord, plec: 'F', zaawansowane: {}, siatka: null, notatki: [], user: {},
+      zakladka: '<span class="vilda-patient-tab-lbl">Leczenie</span>', ...opcje });
+    expect(bledy).toEqual([]);
+    return r;
+  }
+
+  it('przebudowa grupy („Pokaż wszystkie wpisy (6)”) zostawia „Wpisy”; nowe otwarcie Karty — „Przegląd”; odświeżenie po synchronizacji (tlo) — „Wpisy”', () => {
+    const K = karta();
+    const r = otworzKarte(K, { obesityTherapyPoints: O_SZESC });
+    let c = kartaOtylosci(r.tresc);
+    expect(c.przelacznik).toEqual(['Przegląd', 'Wpisy (6)', 'Analiza']);
+    c.zakladki[1].click();
+    const stara = c.el;
+    const wiecej = c.widok('wpisy').querySelector('.vdo-more');
+    expect(tekst(wiecej)).toBe('Pokaż wszystkie wpisy (6) ▾');
+    wiecej.click();
+    c = kartaOtylosci(r.tresc);
+    expect(c.el).not.toBe(stara); // grupa przebudowana
+    expect([c.wybrany, c.widoczne]).toEqual(['wpisy', ['wpisy']]);
+    expect(c.widok('wpisy').querySelectorAll('.vdo-list .vdo-item')).toHaveLength(6);
+    // odświeżenie Karty po synchronizacji (ta sama Karta) — widok zostaje
+    expect(kartaOtylosci(otworzKarte(K, { obesityTherapyPoints: O_SZESC }, { tlo: true }).tresc).wybrany).toBe('wpisy');
+    // nowe otwarcie Karty — „Przegląd”
+    expect(kartaOtylosci(otworzKarte(K, { obesityTherapyPoints: O_SZESC }).tresc).wybrany).toBe('przeglad');
+    expect(kartaOtylosci(otworzKarte(K, { obesityTherapyPoints: O_SZESC }, { tlo: true }).tresc).wybrany).toBe('przeglad');
+  });
+
+  it('„Jak działa dziennik leczenia” rozwinięte zostaje rozwinięte po przebudowie grupy', () => {
+    const K = karta();
+    const r = otworzKarte(K, { obesityTherapyPoints: O_SZESC });
+    let c = kartaOtylosci(r.tresc);
+    c.widok('wpisy').querySelector('.vdo-jak').click();
+    c.widok('wpisy').querySelector('.vdo-more').click();
+    c = kartaOtylosci(r.tresc);
+    expect(c.widok('wpisy').querySelector('.vdo-jak').getAttribute('aria-expanded')).toBe('true');
+    expect(c.widok('wpisy').querySelector('.vdo-jak-tresc').hidden).toBe(false);
+  });
+
+  it('karta się nie składa (wyjątek Ko_karta) → grupa jak w etapie 1: podsumowanie z polami, sekcja z nagłówkiem, panel z belką', () => {
+    const KOD_BLAD = KOD.replace('function Ko_karta(o) {', 'function Ko_karta(o) {throw new Error("karta: błąd testowy");');
+    expect(KOD_BLAD).not.toBe(KOD);
+    const zgloszone = [];
+    const K = new Function('i', 'jt', 'Ot', 'oe', `${KOD_BLAD}\nreturn { Kl_leczenie };`)(
+      okno(), () => null, (gdzie) => zgloszone.push(gdzie),
+      (t) => { if (!t) return; while (t.firstChild) t.removeChild(t.firstChild); });
+    const r = K.Kl_leczenie({ patientId: 'pacjent-fikcyjny', rekord: { obesityTherapyPoints: O1 }, plec: 'F', zaawansowane: {}, siatka: null,
+      notatki: [], user: {}, zakladka: '<span class="vilda-patient-tab-lbl">Leczenie</span>' });
+    expect(zgloszone).toEqual(['karta leczenie karta']);
+    const dz = r.tresc.children[0];
+    expect(dz.children.map((c) => c.className)).toEqual(['vilda-gh-summary', 'vdo', '']);
+    expect(dz.querySelectorAll('.vilda-gh-summary-grid')).toHaveLength(1);
+    expect(tekst(dz.querySelector('.vdo-title'))).toBe('Wpisy leczenia');
+    expect(tekst(dz.querySelector('.vilda-gha-btn'))).toContain('Dane analityczne — otyłość');
+    expect(dz.querySelector('.vilda-gha-panel').getAttribute('style')).toBe('display:none;');
+    expect(r.paski.children[0]._klCzesci).toEqual(['2,4 mg', '20 tyg.', 'BMI −8,6%']);
+  });
+
+  it('pasek leczenia (etap 1) liczony z tego samego rysunku co karta — bez zmian treści', () => {
+    const k = zbuduj({ obesityTherapyPoints: O1 });
+    expect(k.paski[0]).toEqual(expect.objectContaining({ wartosci: '2,4 mg · 20 tyg. · BMI −8,6%', pigulka: WAIT }));
+    expect(k.karta.kafelki[0].v).toBe(k.paski[0].czesci[0]);
+    expect(k.karta.kafelki[1].v).toBe(k.paski[0].czesci[1]);
+  });
+
+  it('GH i karta „wg notatek” — bez karty z przełącznikiem (bez zmian)', () => {
+    const gh = zbuduj({ plec: 'M', ghTherapyPoints: G1 });
+    expect(gh.karta).toBeNull();
+    expect(gh.r.tresc.querySelectorAll('.vilda-ko-seg')).toHaveLength(0);
+    const wg = zbuduj({}, [{ patientId: 'pacjent-fikcyjny', clinicalDateISO: '2026-05-01', medication: { name: 'Wegovy', dose: '0,5 mg', action: 'start' } }]);
+    expect(wg.karta).toBeNull();
+    expect(wg.r.tresc.querySelectorAll('.vilda-gh-summary-grid')).toHaveLength(1);
+  });
+
+  it('showPatientCard przekazuje „tlo” (odświeżenie po synchronizacji tej samej Karty); Notatki przełączają kartę na „Wpisy”', () => {
+    expect(AUTH).toContain('zakladka:at(Kl_IKONA,"Leczenie"),tlo:GdTlo})');
+    expect(AUTH).toContain("karta.querySelector('.vilda-ko-seg [data-widok=\"wpisy\"]')");
+  });
+});
+
+describe('P-KARTA-LECZENIE, etap 2 — sekcja „Wpisy leczenia” bez opcji układu: jak dotąd', () => {
+  it('sekcja bez uklad: nagłówek z tytułem, wstępem i „+ Kontynuacja”, podpowiedź DocPro pod nagłówkiem; wyjscie nietknięte', () => {
+    const w = okno();
+    const D = w.VildaDziennikOtylosci;
+    const stan = D.zloz([], O1);
+    const wyjscie = {};
+    const s = w.VildaDziennikOtylosciUI.sekcja({ patientId: 'pacjent-fikcyjny', stan, migawka: O1, wyjscie });
+    expect(s.className).toBe('vdo');
+    expect(s.getAttribute('aria-labelledby')).toBe('vdoTytul-pacjent-fikcyjny');
+    expect(s.children.map((c) => c.className)).toEqual(['vdo-head', 'vdo-hint', 'vdo-msg', 'vdo-list', 'vdo-hint']);
+    const glowa = s.children[0];
+    expect(glowa.children[0].children.map((c) => c.className)).toEqual(['vdo-title', 'vdo-intro']);
+    expect(glowa.children[1].className).toBe('vdo-head-actions');
+    expect(tekst(glowa.querySelector('.vdo-add'))).toBe('+ Kontynuacja');
+    expect(s.querySelectorAll('.vdo-jak')).toHaveLength(0);
+    expect(wyjscie).toEqual({});
+  });
+});
+
+// ── P-KARTA-LECZENIE, etap 2 — poprawki po przeglądzie (2026-11-21) ──────────────────────────────────────────────
+// Nastolatka, Wegovy: ostatni wpis bez wzrostu (masa od pacjentki) — ocena wg ChPL z ostatniego wpisu ze wzrostem.
+const O_OSTATNI_BEZ_WZROSTU = [OB('t-w', 'start', '2026-01-05', 17, 0, 95, 160, '0,25 mg'), OB('t-k1', 'continue', '2026-08-01', 17, 7, 88, 160, '2,4 mg'),
+  OB('t-k2', 'continue', '2026-11-10', 17, 10, 85, null, '2,4 mg')];
+
+describe('P-KARTA-LECZENIE, etap 2 — poprawki po przeglądzie', () => {
+  it('„Szczegóły oceny” po wyborze cyklu 1 w „Analizie” → panel wraca do bieżącego cyklu (tego, który opisuje linia)', () => {
+    const k = zbuduj({ obesityTherapyPoints: O_DWA_CYKLE });
+    const c = k.karta;
+    c.zakladki[2].click();
+    const cykle = () => c.widok('analiza').querySelectorAll('.vilda-ob-seg button');
+    expect(cykle().map((b) => [b.textContent, b.getAttribute('data-biezacy')])).toEqual([['Cykl 2 · Wegovy · bieżący', 'true'], ['Cykl 1 · Wegovy', 'false']]);
+    cykle()[1].click();
+    expect(tytulPola(k)).toMatch(/^Cykl zakończony/);
+    c.zakladki[0].click();
+    expect(tekst(c.el.querySelector('.vilda-ko-werdykt-t'))).toBe('Przed oknem oceny — oceń po 12 tyg.');
+    c.el.querySelector('.vilda-ko-werdykt-link').click();
+    expect(kartaOtylosci(k.r.tresc).wybrany).toBe('analiza');
+    expect(tytulPola(k)).toBe('Przed oknem oceny — oceń po 12 tyg.');
+    expect(cykle().map((b) => b.getAttribute('aria-selected'))).toEqual(['true', 'false']);
+    const pole = c.widok('analiza').querySelector('.vilda-oba-verdict');
+    expect(pole.ownerDocument.activeElement).toBe(pole);
+  });
+
+  it('ostatni wpis bez wzrostu, ocena z BMI: kafelek BMI „—” z „brak wzrostu w ostatnim wpisie · ocena: −7,4% (z wpisu 01.08.2026) · próg ChPL ≥5%”', () => {
+    const k = zbuduj({ obesityTherapyPoints: O_OSTATNI_BEZ_WZROSTU });
+    expect(k.karta.kafelki[3]).toEqual({ k: 'BMI', v: '—', sub: 'brak wzrostu w ostatnim wpisie · ocena: −7,4% (z wpisu 01.08.2026) · próg ChPL ≥5%', kolor: null });
+    // te same liczby co pasek leczenia i panel („Redukcja do oceny”, „Wzrost do oceny”)
+    expect(k.paski[0].czesci).toContain('BMI −7,4%');
+    expect(kafelPanelu(k, 'Redukcja do oceny').v).toBe('−7,4%');
+    expect(kafelPanelu(k, 'Wzrost do oceny').sub).toBe('pomiar z 01.08.2026 · ostatni wpis bez wzrostu');
+    expect(k.karta.kafelki[2]).toEqual(expect.objectContaining({ k: 'Masa', v: '85 kg' }));
+  });
+
+  it('ostatni wpis bez wzrostu i bez wzrostu w oknie (ocena wstrzymana): „brak wzrostu w ostatnim wpisie · próg ChPL ≥5%”, bez wartości oceny', () => {
+    const k = zbuduj({ obesityTherapyPoints: O_BEZ_WZROSTU });
+    expect(k.karta.kafelki[3]).toEqual({ k: 'BMI', v: '—', sub: 'brak wzrostu w ostatnim wpisie · próg ChPL ≥5%', kolor: null });
+    expect(kafelPanelu(k, 'Redukcja do oceny').v).toBe('—');
+  });
+
+  it('ostatni wpis ze wzrostem albo ocena z masy — kafelek BMI bez zmian', () => {
+    expect(zbuduj({ obesityTherapyPoints: O1 }).karta.kafelki[3].sub).toBe('−8,6% od włączenia · próg ChPL ≥5%');
+    const dorosly = zbuduj({ obesityTherapyPoints: [...A_SAX, OB('s-k2', 'continue', '2026-06-09', 40, 6, 96, null, '3,0 mg', SAXENDA)] });
+    expect(dorosly.karta.kafelki[3]).toEqual(expect.objectContaining({ k: 'BMI', v: '—', sub: null }));
+    expect(dorosly.karta.kafelki[2].sub).toContain('próg ChPL ≥5%');
   });
 });
