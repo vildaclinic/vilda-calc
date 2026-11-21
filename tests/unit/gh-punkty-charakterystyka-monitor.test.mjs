@@ -14,9 +14,10 @@ import {
 const KLUCZE = ['id', 'type', 'ageYears', 'ageMonths', 'weight', 'height', 'boneAge', 'dose', 'doseUnit', 'drug',
   'program', 'igf1', 'igf1Unit', 'igf1DaysSinceDose', 'doseAbs'];
 
-// Komunikaty monitora dosłownie (nakładka #ghInfoOverlay, nagłówek „Informacja”).
-const DRUGIE_WLACZENIE = 'Punkt „Włączenie leczenia” został już dodany.';
-const DRUGIE_ZAKONCZENIE = 'Punkt „Zakończenie leczenia” został już dodany.';
+// Komunikaty monitora dosłownie (nakładka #ghInfoOverlay, nagłówek „Informacja”). Teksty rodzaju punktu od
+// P-GH-WZNOWIENIE, część 2 — reguła kursów (dotąd „Punkt „Włączenie leczenia” / „Zakończenie leczenia” został już dodany.”).
+const DRUGIE_WLACZENIE = 'Ten kurs leczenia ma już punkt „Włączenie leczenia”. Nowe Włączenie można dodać po „Zakończeniu leczenia”.';
+const DRUGIE_ZAKONCZENIE = 'Ten kurs leczenia ma już punkt „Zakończenie leczenia”.';
 const DANE = 'Upewnij się, że wprowadziłeś poprawne, dodatnie dane: wiek, wagę, wzrost oraz dawkę.';
 const PROGRAM_KARTA = 'Wybierz program i preparat w karcie „Leczenie hormonem wzrostu / IGF-1”.';
 const PROGRAM_WSTECZNY = 'Wybierz program i preparat w formularzu wstecznego punktu.';
@@ -57,9 +58,11 @@ describe('Nowy punkt z karty (ghAddTherapyPoint, przyciski W/K/Z)', () => {
         pola: { therDrug: 'Genotropin 12 mg', advBoneAge: '9.5' },
         oczekiwany: { weight: 32, boneAge: 9.5, dose: 0.0234375, doseUnit: 'mg/kg/d', drug: 'Genotropin 12 mg', program: 'SNP', doseAbs: 0.75 },
       },
-      // Ngenla 60 mg: dose = 21 mg/tydz / 32 kg = 0,65625 mg/kg/tydz, doseAbs = 3 mg/d (zawsze mg/d).
+      // Ngenla 60 mg: dose = 21 mg/tydz / 32 kg = 0,65625 mg/kg/tydz, doseAbs = 3 mg/d (zawsze mg/d). Zakończenie po
+      // Włączeniu 9 l. 0 mies. — od P-GH-WZNOWIENIE, część 2 Zakończenie na pustej liście jest odmową (kurs musi mieć
+      // wcześniejszy punkt), dotąd zapisywało się jako jedyny punkt.
       {
-        typ: 'end', calc: { drug: 'Ngenla 60 mg', weight: 32, perDayMg: 3, perWeekMg: 21 },
+        typ: 'end', lista: [WLACZENIE], calc: { drug: 'Ngenla 60 mg', weight: 32, perDayMg: 3, perWeekMg: 21 },
         pola: { therDrug: 'Ngenla 60 mg', therDailyDose: '0.66' },
         oczekiwany: { weight: 32, boneAge: null, dose: 0.65625, doseUnit: 'mg/kg/tydz', drug: 'Ngenla 60 mg', program: 'SNP', doseAbs: 3 },
       },
@@ -70,15 +73,16 @@ describe('Nowy punkt z karty (ghAddTherapyPoint, przyciski W/K/Z)', () => {
         oczekiwany: { weight: 25, boneAge: null, dose: 0.08, doseUnit: 'mg/kg/d', drug: 'Increlex 40 mg', program: 'IGF-1', doseAbs: 2 },
       },
     ];
-    for (const { typ, calc, pola, oczekiwany } of przypadki) {
-      const atrapa = utworzAtrapeMonitoraGh({ ghTherapyCalc: calc });
+    for (const { typ, lista = [], calc, pola, oczekiwany } of przypadki) {
+      const atrapa = utworzAtrapeMonitoraGh({ ghTherapyCalc: calc, punkty: lista });
 
       const wpisy = atrapa.dodajZKarty(typ, pola);
 
       expect(rodzaje(wpisy), oczekiwany.drug).toEqual(['E', 'M', 'E', 'BC']);
       const { okno, modul, komunikat: tekst } = atrapa.stan();
-      expect(okno, oczekiwany.drug).toHaveLength(1);
-      const [p] = okno;
+      expect(okno, oczekiwany.drug).toHaveLength(lista.length + 1);
+      expect(okno.slice(0, lista.length), oczekiwany.drug).toEqual(lista);
+      const p = okno.at(-1);
       expect(Object.keys(p), oczekiwany.drug).toEqual(KLUCZE);
       expect(p, oczekiwany.drug).toEqual({
         id: idDeterministyczne(0), type: typ, ageYears: 10, ageMonths: 3, height: 141, igf1: null, igf1Unit: 'ng/mL',
@@ -472,8 +476,11 @@ describe('Edycja istniejącego punktu', () => {
     igf1: 310, igf1Unit: 'ng/mL', igf1DaysSinceDose: null,
   };
 
+  // Trzeci punkt (Kontynuacja 8 l. 6 mies.) jest młodszy niż edytowany: od P-GH-WZNOWIENIE, część 2 Zakończenie musi być
+  // ostatnim punktem kursu (dotąd ten test brał Kontynuację 10 l. 0 mies., po której zapis Zakończenia też przechodził).
+  const WCZESNIEJSZA = punkt('fikc-kont-8', 'continue', { ageYears: 8, ageMonths: 6, weight: 30, height: 127, doseAbs: 0.75 });
   it('program z #therProg, czyli z punktu Włączenia (R9) — stan obecny — do decyzji (pytanie 17); typ z przycisku; id, pozycja, obce pole i kolejność kluczy zostają, doseAbs dopisane na końcu', () => {
-    const atrapa = utworzAtrapeMonitoraGh({ punkty: [WLACZENIE, SRODKOWY, KONTYNUACJA] });
+    const atrapa = utworzAtrapeMonitoraGh({ punkty: [WLACZENIE, SRODKOWY, WCZESNIEJSZA] });
 
     atrapa.edytuj(SRODKOWY.id);
     // O() wpisuje program punktu, ale F() zaraz nadpisuje #therProg programem Włączenia i blokuje pole.
@@ -488,9 +495,9 @@ describe('Edycja istniejącego punktu', () => {
 
     expect(rodzaje(atrapa.dziennik.slice(od))).toEqual(['E', 'M', 'E', 'BC']);
     const s = atrapa.stan();
-    expect(s.okno.map((p) => p.id)).toEqual([WLACZENIE.id, SRODKOWY.id, KONTYNUACJA.id]);
+    expect(s.okno.map((p) => p.id)).toEqual([WLACZENIE.id, SRODKOWY.id, WCZESNIEJSZA.id]);
     expect(s.okno[0]).toEqual(WLACZENIE);
-    expect(s.okno[2]).toEqual(KONTYNUACJA);
+    expect(s.okno[2]).toEqual(WCZESNIEJSZA);
     expect(Object.keys(s.okno[1])).toEqual([...Object.keys(SRODKOWY), 'doseAbs']);
     expect(s.okno[1]).toEqual({
       ...SRODKOWY, type: 'end', weight: 32, dose: 0.03, program: 'SNP', doseAbs: 0.96,
@@ -517,7 +524,7 @@ describe('Edycja istniejącego punktu', () => {
     }]);
   });
 
-  it('bez punktu Włączenia program pochodzi z pierwszego punktu po sortowaniu (typ, potem wiek) — stan obecny — do decyzji (pytanie 17)', () => {
+  it('bez punktu Włączenia program pochodzi z pierwszego punktu po sortowaniu (od P-GH-WZNOWIENIE, część 2 wg wieku; dotąd typ, potem wiek — przy samych Kontynuacjach ta sama kolejność) — stan obecny — do decyzji (pytanie 17)', () => {
     const mlodszy = punkt('fikc-mlodszy', 'continue', { ageYears: 8, program: 'PWS' });
     const starszy = punkt('fikc-starszy', 'continue', { ageYears: 10, program: 'SNP' });
     // Kolejność w tablicy: starszy przed młodszym; F() sortuje po wieku.

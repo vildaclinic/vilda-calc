@@ -13,6 +13,11 @@ import { loadBrowserScript } from './load-browser-script.mjs';
 // testów równoważności (tests/unit/gh-punkty-monitor-tryby.test.mjs i testy różnicowe API). Jeden dziennik zapisuje
 // w kolejności to, co monitor robi na zewnątrz: zapis modułu, zdarzenie dokumentu, komunikat kanału i komunikat dla
 // lekarza.
+// Reguła kursów GH (P-GH-WZNOWIENIE część 2): VildaGhPunkty sprawdza rodzaj punktu kursami z
+// VildaTrajectoryAnalysis.ghKursy, a monitor liczy z nich tabelę, metryki i B.64 — atrapa ładuje więc
+// vilda_trajectory_analysis.js (z zależnościami z load-browser-script.mjs), jak docpro.html; opcja modulKursow:false
+// daje stronę bez tego modułu. Opcja metryki:true dokłada silnik tempa, odcinki leków i próg B.64
+// (vilda_tempo_wzrastania.js, gh_therapy_segments.js, vilda_gh_response_b64.js) dla testów metryk monitora.
 //
 // Co jest prawdziwe, a co atrapą:
 // - Karta monitora (formularz edycji, formularz wstecznego punktu, przyciski, tabela) powstaje z
@@ -580,6 +585,8 @@ export function utworzAtrapeMonitoraGh(opcje = {}) {
     modulDawki = true,
     modulPunktow = true,
     modulWiekuKostnego = true,
+    modulKursow = true,
+    metryki = false,
     punkty,
     pola = {},
     getTabId = TAB_ID_DOMYSLNY,
@@ -756,6 +763,9 @@ export function utworzAtrapeMonitoraGh(opcje = {}) {
     new Function('window', 'globalThis', 'Date', 'Math', tekst)(win, win, Data, Matematyka);
   };
   if (modulPunktow) zaladujModulPunktow(typeof zrodla['vilda_gh_punkty.js'] === 'string' ? zrodla['vilda_gh_punkty.js'] : undefined);
+  // P-GH-WZNOWIENIE część 2: reguła kursów (jak docpro.html: po vilda_gh_punkty.js, przed monitorem).
+  if (modulKursow) wykonaj('vilda_trajectory_analysis.js');
+  if (metryki) for (const plik of ['vilda_tempo_wzrastania.js', 'gh_therapy_segments.js', 'vilda_gh_response_b64.js']) wykonaj(plik);
   let monitor;
   if (typeof zrodla['gh_therapy_monitor.js'] === 'string') monitor = kompiluj(zrodla['gh_therapy_monitor.js']);
   else monitor = monitorSkompilowany || (monitorSkompilowany = kompiluj(zrodlo('gh_therapy_monitor.js')));

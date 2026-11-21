@@ -12732,6 +12732,7 @@ Monitor terapii GH pokazywał tempo wzrastania w cm/rok **bez żadnego odniesien
 - *Wpięcie:* monitor zapamiętuje teraz przy każdym punkcie długość okna, z którego policzono tempo (`gvOknoLat`), a `Bg1` renderuje notę do `#ghTherapyMetricsSection`. Nota **znika razem z danymi** i **nie wypuszcza wyjątku silnika na renderowanie tabeli**.
 - *Strażnicy:* `tests/unit/gh-odpowiedz-b64.test.mjs` (12) — próg co do liczby, granica 2,0 vs 1,99, tempo ujemne, okno krótsze niż 180 dni (nazwane, ale nieoceniające), kontrola pozytywna na równo pół roku, ton w obu kierunkach i brak zdania przy braku tempa. Plus `tests/unit/gh-odpowiedz-b64-wpiecie.test.mjs` (5) — **prawdziwa funkcja `Bg1` wycięta z pliku produkcyjnego** i uruchomiona na atrapie DOM: nota powstaje, oznacza stronę progu, znika po wyczyszczeniu monitora, przeżywa brak silnika i brak sekcji, a wyjątek silnika jest zgłaszany i połykany. **Zmierzone czerwone:** przeciwko naiwnemu silnikowi z czterema pomyłkami (`<=` zamiast `<`, brak zastrzeżenia, brak flagi krótkiego okna, ostatni punkt bez sprawdzenia tempa) — **4 z 12**; przeciwko naiwnemu wpięciu z trzema (nota nie znika, wyjątek przepuszczony, brak oznaczenia strony progu) — **3 z 5**.
 - *Świadoma luka:* nie ma strażnika w przeglądarce dla samej noty. Monitor terapii GH wymaga punktów terapii i chromu modułu lekarskiego, a ta ścieżka pochłonęła już jedną ratę przy przycisku ściągi; wpięcie pokrywa test na wyciętej funkcji z atrapą DOM. Do dopisania, gdyby nota kiedyś przestała się pokazywać w praktyce.
+- **Dopisek P-GH-WZNOWIENIE, część 2 (2026-11-20):** przy leczeniu wznowionym po Zakończeniu `ocenOstatni` dostaje tylko wiersze metryk BIEŻĄCEGO kursu (`ghKursy`), a pierwszy wiersz kursu nie ma tempa pary — przerwa Zakończenie → Włączenie nigdy nie jest oceniana jako „tempo w trakcie leczenia”, a tempo poprzedniego kursu nie jest oceniane jako bieżące. Próg, okno 180 dni i teksty bez zmian; przy jednym kursie — jak dotąd. Nota pojawia się w przeglądarce w e2e `gh-wznowienie-docpro.spec.mjs` (GW-E1). Wpis na końcu pliku.
 
 ### GROWTH-SGA-CU — utrwalona niskorosłość po urodzeniu jako SGA, etap 4b (SW 1.0.863, 2026-09-08, wariant A wybrany przez właściciela)
 
@@ -22515,7 +22516,9 @@ racie **nikt go nie woła** — monitor działa jak dotąd. Kolejne raty przenio
   doseUnit, drug, program, igf1, igf1Unit, igf1DaysSinceDose, doseAbs`), `RODZAJE`, `KOMUNIKATY` (5 tekstów odmów
   dosłownie z monitora);
 - funkcje czyste (bez DOM, magazynu i zdarzeń; `VildaGhDawka` tylko do odczytu): `normalizujWiek` (10 l. 14 mies. →
-  11 l. 2 mies.), `wiekLacznieMies`, `sprawdzRodzaj` (najwyżej jedno Włączenie i jedno Zakończenie; `pomin` jak edycja),
+  11 l. 2 mies.), `wiekLacznieMies`, `sprawdzRodzaj` (najwyżej jedno Włączenie i jedno Zakończenie; `pomin` jak edycja —
+  **ZASTĄPIONE** przez P-GH-WZNOWIENIE, część 2, 2026-11-20, wersja 4: reguła kursów z wiekiem punktu, wpis na końcu
+  pliku),
   `dostepneRodzaje` (formularz wsteczny), `sprawdzWartosci` (warunki i kolejność odmów jak w monitorze, formularz
   „karta” albo „wsteczny”), `jednostkaDawki`, `dniIgf`, `polaZPodawanej`, `noweId`, `punkt`, `zmienWMiejscu`;
 - funkcje z efektami: `wczytaj` (pamięć modułu `GH_THERAPY_POINTS`), `zapisz` (= `L()` monitora: `window.ghTherapyPoints`
@@ -45259,7 +45262,9 @@ Liczby hSDS w testach jednostkowych z atrapy liniowej siatki, w e2e — z OLAF (
 - Kontrola negatywna na `audyt` 119f022: nowe testy Karty (10) i trajektorii (14 z 15; test „jeden kurs = koperta”
   przechodzi, bo pilnuje braku zmiany), zmienione oczekiwania oraz KL-7 i KLM-4 nie przechodzą.
 
-**Ograniczenia (część 2 i poza zakresem).** DocPro nadal przyjmuje najwyżej jedno Włączenie i jedno Zakończenie
+**Ograniczenia (część 2 i poza zakresem).** [Dopisek: część 2 (2026-11-20, wpis „P-GH-WZNOWIENIE, część 2” na końcu
+pliku) — DocPro przyjmuje Włączenie po Zakończeniu, monitor, B.64, odcinki i Terminarz liczą per kurs, ramka W2 prosi
+o dopisanie Włączenia w DocPro.] DocPro nadal przyjmuje najwyżej jedno Włączenie i jedno Zakończenie
 (`vilda_gh_punkty.js`), dlatego ramka W2 tylko informuje o braku Włączenia (prośba o dopisanie — z częścią 2); wznowienie
 powstaje dziś tylko przez
 scalenie duplikatów, import albo ręcznie. Monitor GH (tabela, metryki, B.64, przyciski, formularz wsteczny), odcinki
@@ -45270,3 +45275,194 @@ daje kurs z samym Zakończeniem i nowy kurs od Włączenia (punkty nie mają dat
 
 **Wdrożenie.** Od razu przy wydaniu; dane, zapis, sejf i synchronizacja bez zmian. **Cofnięcie** = rewert PR: Karta
 i trajektoria wracają do reguły „jakiekolwiek Zakończenie” i progu 3 mies.
+
+## P-GH-WZNOWIENIE, część 2 — wznowienie leczenia GH w DocPro (SW 1.1.564, `vilda_gh_punkty.js` 7, `gh_therapy_monitor.js` 65, `gh_therapy_segments.js` 6, `gh_igf_therapy.js` 34, `vilda_gh_punkt_z_wiersza.js` 4, `vilda_auth_ui.js` 577, 2026-11-20)
+
+**Zmiana kliniczna: TAK** — DocPro przyjmuje Włączenie po Zakończeniu i nie przyjmuje Kontynuacji po Zakończeniu bez
+Włączenia; metryki monitora, B.64 i odcinki leków liczone per kurs; wizyta kontrolna Terminarza z ostatniego punktu wg
+wieku. Wzory hSDS, tempa, hSDS−mpSDS, dawki, próg B.64 (2 cm/rok, 180 dni), P-TEMPO-6 i reguła kursów z części 1
+(`VildaTrajectoryAnalysis.ghKursy`) bez zmian; zmienia się, który punkt wolno dopisać i w obrębie których punktów monitor
+liczy. Łatki: `docs/ZRODLA_ARTEFAKTOW.md`, „Łatki P-GH-WZNOWIENIE, część 2”; plan: `docs/KARTA_LECZENIE_PLAN.md`.
+
+**Decyzje właściciela (2026-11-20).** W1 „od wznowienia” (część 1, odczyt). **W2**: po Zakończeniu DocPro proponuje
+i przyjmuje tylko nowe Włączenie (wznowienie); Kontynuacji po Zakończeniu bez nowego Włączenia nie da się już dodać; stare
+takie zapisy w Karcie — „aktywne”, bez czasu i ΔhSDS, z prośbą o dopisanie Włączenia w DocPro. W3 granica kursu = samo
+Zakończenie (część 1). W4: część 2 = wpis w DocPro i liczenie w monitorze per kurs.
+
+**Stan przed zmianą.** `VildaGhPunkty.sprawdzRodzaj`: najwyżej jedno Włączenie i jedno Zakończenie w CAŁEJ liście, bez
+wieku punktu — drugie Włączenie (wznowienie) odrzucone („Punkt „Włączenie leczenia” został już dodany.”), Kontynuacja
+zawsze przyjęta (także po Zakończeniu), Zakończenie przyjęte w dowolnym wieku (przed ostatnim punktem, na pustej liście).
+Wznowienie powstawało tylko przez scalenie duplikatów, import albo ręcznie. Monitor: tabela sortowana wg rodzaju (wszystkie
+Włączenia, Kontynuacje, Zakończenia), potem wieku; program (wiersz i blokada `#therProg`) z pierwszego Włączenia;
+metryki z bazą w pierwszym Włączeniu listy i parami punktów przez przerwę (Zakończenie → Włączenie liczone jak tempo
+w trakcie leczenia, także w ocenie B.64); jeden odcinek leku przez przerwę przy wznowieniu tym samym lekiem; podpowiedź
+tylko przy braku jakiegokolwiek Włączenia. Formularz wsteczny: własna kopia reguły (Włączenie/Zakończenie wyłączone, gdy
+są na liście). Panel wiersza na Start: Włączenie/Zakończenie wyłączone, gdy są na liście, domyślnie Kontynuacja. Terminarz
+(`gh_igf_therapy.js` `Qe`): wizyta kontrolna wiązana z OSTATNIM ELEMENTEM tablicy (punkt wsteczny dopisany na koniec
+przejmował powiązanie). Karta, ramka W2: tylko informacja o braku Włączenia.
+
+**Reguła wpisu — jedno źródło `vilda_gh_punkty.js` (`wersja: 4`).** `sprawdzRodzaj(lista, typ, { wiekM, pomin })`:
+lista bez edytowanego punktu (`pomin`, jak dotąd po `String(id)`) + nowy punkt N w wieku `wiekM` (pełne miesiące,
+`wiekMiesZPol` — ta sama normalizacja co zapis punktu) → `VildaTrajectoryAnalysis.ghKursy` (czytany przy wywołaniu; bez niego
+odmowa „Nie zapisano: aplikacja nie wczytała się w całości. Odśwież stronę i spróbuj ponownie.”, bez powrotu do dawnej
+reguły). Edycja ocenia się więc na liście PO zmianie (punkt zastąpiony), nie na liście bez punktu — usunięcie Zakończenia
+na chwilę scaliłoby kursy, a tego stanu zmiana nie tworzy (poprawka po przeglądzie, niżej). K — kurs, do którego trafia N
+(punkty wg wieku, przy równym wieku Kontynuacja → Zakończenie → Włączenie):
+- **Włączenie** — K bez innego Włączenia; w kursie po Zakończeniu (numer > 1) N nie później niż pierwszy punkt K
+  (wznowienie, dopisanie brakującego Włączenia na początku kursu bez Włączenia — także w miesiącu jego pierwszego punktu).
+  W pierwszym kursie wcześniejsze Kontynuacje (wizyty przed leczeniem) nie blokują Włączenia ani jego edycji;
+- **Zakończenie** — N ostatnim punktem K, K bez innego Zakończenia i z punktem przed N (Zakończenie w miesiącu Włączenia
+  bez wcześniejszego punktu — osobny tekst). Gdy za N jest punkt, a granica kursu przed nim nie istniała przed zmianą
+  (nowy podział kursu), za N musi stać Włączenie, a K musi mieć własne Włączenie — inaczej odmowa „musi być ostatnim
+  punktem kursu” (punkt bez Włączenia za N otwierałby kurs W2; Zakończenie przed Włączeniem kursu 1 zamykałoby same
+  wizyty przed leczeniem). Granica, która już była (edycja Zakończenia kursu 1 po wznowieniu, w starym zapisie W2, także
+  po dopisaniu Włączenia w miesiącu pierwszego punktu kursu 2) — zgoda;
+- **Kontynuacja** — odmowa, gdy K jest kursem po Zakończeniu (numer > 1) bez Włączenia wcześniejszego niż N albo z tego
+  samego miesiąca (W2; także Kontynuacja w przerwie między Zakończeniem a późniejszym Włączeniem). W środku kursu (także
+  zamkniętego, także w miesiącu Zakończenia), przed Włączeniem pierwszego kursu i w jedynym kursie bez Włączenia
+  (P-GH-BEZ-STARTU) — jak dotąd przyjęta;
+- edycja Włączenia albo Kontynuacji bez zmiany rodzaju, która nie pogarsza zapisu (punkt już przed zmianą łamał tę samą
+  regułę położenia w tym samym kursie: Kontynuacja starego zapisu W2, Włączenie z importu po pierwszym punkcie kursu 2) —
+  zgoda (poprawka wzrostu czy dawki nie wymaga najpierw naprawy rodzaju); drugie Włączenie w kursie — odmowa jak dotąd;
+- bez wieku > 0 — odmowa „wartości” (ten sam tekst, którym odmówiłoby sprawdzenie wartości); wpis niebędący obiektem nie
+  jest punktem (jak w `ghKursy`; wołający i tak wstrzymują zapis przy uszkodzonych wpisach).
+Teksty: „Ten kurs leczenia ma już punkt „Włączenie leczenia”. Nowe Włączenie można dodać po „Zakończeniu leczenia”.”,
+„„Włączenie leczenia” nie może być późniejsze niż pierwszy punkt tego kursu leczenia.”, „Ten kurs leczenia ma już punkt
+„Zakończenie leczenia”.”, „„Zakończenie leczenia” musi być ostatnim punktem kursu.”, „„Zakończenie leczenia” zamyka kurs
+leczenia — musi je poprzedzać co najmniej jeden punkt tego kursu.”, „„Zakończenie leczenia” nie może być w tym samym
+miesiącu co „Włączenie leczenia” tego kursu.”, „Po „Zakończeniu leczenia” dodaj najpierw „Włączenie leczenia” (wznowienie
+leczenia).”. Reguła rodzaju idzie jak dotąd przed sprawdzeniem wartości.
+
+**Poprawki po przeglądzie (2026-11-20, przed scaleniem).** Pierwsza wersja oceniała Zakończenie na liście bez
+edytowanego punktu: po wznowieniu (W 7;0 → K 8;0 → Z 9;0 → W 10;0 → K 11;0) Zakończenia kursu 1 nie dało się edytować
+(nawet poprawka wzrostu) ani usunąć i dodać ponownie, tak samo w starym zapisie W2; a w jedynym kursie Włączenia
+z wcześniejszą Kontynuacją (wizyta przed leczeniem: K 7;0 → W 8;0) nie dało się edytować („nie później niż pierwszy
+punkt”). Teraz: edycja na liście po zmianie, „nie później niż pierwszy punkt” tylko w kursie po Zakończeniu, warunek
+granicy kursu dla Zakończenia (wyżej), osobny tekst dla Zakończenia w miesiącu Włączenia, edycja bez pogorszenia.
+Pierwotna poprawka przyjmowała też Zakończenie między wizytą przed leczeniem a Włączeniem kursu 1 (K 7;0 → Z 7;6 → W 8;0)
+i odrzucała edycję Zakończenia kursu 1 po dopisaniu Włączenia w miesiącu pierwszego punktu kursu 2 (W 7;0 → Z 9;0 →
+K 10;0 + W 10;0) — stąd warunek granicy: nowy podział kursu wymaga Włączenia za N i w K, istniejąca granica — zgoda.
+
+`dostepneRodzaje(lista)` (punkt po ostatnim istniejącym): brak punktów → Włączenie, Kontynuacja (domyślnie Włączenie);
+ostatni kurs zamknięty → tylko Włączenie; otwarty z Włączeniem → Kontynuacja, Zakończenie (domyślnie Kontynuacja);
+otwarty bez Włączenia → wszystkie (domyślnie Włączenie). `dostepneRodzaje(lista, { wsteczny: true })` (formularz
+wsteczny monitora — punkt w dowolnym wieku): rodzaje możliwe w JAKIMŚ wieku — Włączenie, gdy lista pusta, ostatni kurs
+zamknięty albo któryś kurs nie ma Włączenia; Kontynuacja zawsze; Zakończenie, gdy ostatni kurs otwarty; domyślnie
+Kontynuacja, gdy ostatni kurs ma Włączenie (przy jednym kursie jak dawne opcje), inaczej Włączenie.
+
+Wołający przekazują wiek: przyciski karty i zapis edycji (`He`: wiek z `#age`/`#ageMonths` albo z formularza edycji),
+formularz wsteczny (`ghAddRetroPoint`: `#ghRetroAge`/`#ghRetroAgeMonths`; opcje `ghRetroSyncTypeOptions` z
+`dostepneRodzaje(…, {wsteczny})`), panel wiersza (`przygotujPunkt`: wiek wiersza). Monitor i panel wiersza przyjmują tylko
+API wersji 4 (inna — odmowa z prośbą o odświeżenie strony, jak dotąd). Panel wiersza: radio pokazuje rodzaje możliwe w wieku
+wiersza (`rodzajeWWieku` = `sprawdzRodzaj` dla każdego rodzaju) — po Zakończeniu tylko Włączenie (wybrane), w środku kursu
+jak dotąd Kontynuacja; przycisk w wierszu nieaktywny w przerwie między kursami („W tym wieku nie można dodać punktu leczenia
+GH: to przerwa po „Zakończeniu leczenia”, przed kolejnym „Włączeniem leczenia”.”); widoczność (punkt Włączenia na liście,
+D8) i zakaz punktu w zajętym miesiącu bez zmian.
+
+**Monitor GH (`gh_therapy_monitor.js`).** Kursy z `ghKursy` (czytelny blok w artefakcie, opis w ZRODLA_ARTEFAKTOW):
+- tabela punktów wg reguły kursów (wiek; przy równym wieku Kontynuacja → Zakończenie → Włączenie; wpis bez wieku na
+  początku), przed pierwszym wierszem kursu k ≥ 2 wiersz „Kurs k — wznowienie w wieku L l. M mies.” albo „Kurs k — bez
+  Włączenia (pierwszy punkt w wieku …)”; zmiana preparatu tylko w obrębie kursu; ten sam wiersz-separator w tabeli metryk;
+- program (wiersz i blokada `#therProg`) z Włączenia bieżącego (ostatniego) kursu, a bez niego z pierwszego punktu kursu;
+  przy edycji — z kursu edytowanego punktu;
+- podpowiedź `#ghTherapyStartHint`: jeden kurs bez Włączenia — dawny tekst; bieżący kurs bez Włączenia po Zakończeniu
+  (W2) — „Kurs k (po „Zakończeniu leczenia”) nie ma punktu „Włączenie leczenia”. Dodaj go (także wstecznie) — w wieku nie
+  późniejszym niż pierwszy punkt tego kursu (…) — aby czas leczenia, tempo i zmiany liczyły się od wznowienia.”; po
+  Zakończeniu — „Aby wznowić leczenie, dodaj „Włączenie leczenia”.”; pusta lista — bez podpowiedzi (jak dotąd). Przyciski
+  nie są wyłączane (służą też do zapisu edycji) — Kontynuację i Zakończenie po Zakończeniu odrzuca reguła, jak dotąd drugie
+  Włączenie;
+- metryki (`ae`): przy ≥ 2 kursach każdy kurs osobno tą samą pętlą — baza = Włączenie kursu (albo pierwszy punkt kursu bez
+  Włączenia), pierwszy wiersz kursu ≥ 2 bez metryk pary (tempo, „vs poprzednia”), wiersze niosą numer kursu (`Gw_kurs`);
+- B.64: `ocenOstatni` dostaje tylko wiersze bieżącego kursu — przerwa Zakończenie → Włączenie nigdy nie jest „tempem
+  w trakcie leczenia”, a tempo poprzedniego kursu nie jest oceniane jako bieżące;
+- odcinki leków: `gh_therapy_segments.js` przy ≥ 2 kursach dzieli odcinki na granicy kursu (odcinek niesie `kurs`);
+  opcja `poKursach: false` — dawny łańcuch (Karta pacjenta, „Preparaty (historia)” w podsumowaniu); „Dane analityczne”
+  Karty wołają moduł już z punktami bieżącego kursu (bez zmian).
+Jeden kurs: metryki, B.64, odcinki i program liczone dokładnie jak dotąd (ta sama ścieżka kodu); zmienia się tylko
+kolejność wierszy tabeli, gdy sortowanie wg rodzaju różniło się od wieku (Kontynuacja sprzed Włączenia albo z jego miesiąca
+jest teraz przed nim; dla zapisu W → K → … → Z kolejność ta sama), oraz nowa podpowiedź po Zakończeniu. Bez modułu
+trajektorii — tabela, metryki i podpowiedź jak dotąd, a zapis punktu odmawia.
+
+**Terminarz (`gh_igf_therapy.js` `Qe`).** Wizyta kontrolna wiąże się z ostatnim punktem wg reguły kursów (ostatni punkt
+ostatniego kursu `ghKursy`); bez modułu kursów albo bez punktu z wiekiem — ostatni element tablicy, jak dotąd.
+
+**Karta (`vilda_auth_ui.js`, `Gw_infoW2`).** Ramka W2: „Kontynuacja po Zakończeniu bez nowego Włączenia (Zakończenie
+w wieku …, pierwszy punkt kursu: w wieku …). Dopisz punkt „Włączenie leczenia” w DocPro (monitor terapii), by liczyć czas
+leczenia, przyrost i ΔhSDS od wznowienia.” Bez innych zmian Karty.
+
+**Przypadki syntetyczne** (dane fikcyjne; wiek lata;miesiące, wzrost w cm; hSDS w testach jednostkowych z atrapy liniowej
+siatki (wzrost − (77 + 6·wiek)) / 5,5):
+
+| Przypadek | Wejście | Wynik (po zmianie) | Dotąd |
+|---|---|---|---|
+| GW1 wznowienie | W 7;0 (110) → K 8;0 (117) → Z 9;0 (123); + W 10;0 (130) wstecznie albo przyciskiem karty; + K 11;0 (137) z karty; osobno + K 10;0 | wszystkie przyjęte; tabela „Program terapeutyczny: ZT” (program Włączenia kursu 2), W 7;0, K 8;0, Z 9;0, „Kurs 2 — wznowienie w wieku 10 l. 0 mies.”, W 10;0, K 11;0 (K 10;0 — przed W 10;0); `#therProg` = ZT, K 11;0 z programem ZT; metryki: kurs 1 tempo 7 i 6 cm/rok, kurs 2 — W 10;0 bez tempa, ΔhSDS 0; K 11;0 7 cm/rok (z 12 mies.), ΔhSDS +0,18, ΔTempo 0; B.64 przed K 11;0 — brak noty, potem „7,0 cm/rok (z 12 mies.)”; odcinki 84–108 (6,5 cm/rok) i 120–132 (7 cm/rok) | Włączenie 10;0 odrzucone („Punkt „Włączenie leczenia” został już dodany.”); lista W→Z→W z importu: tabela W 7;0, W 10;0, K…, Z; metryki od W 7;0 i para Z 9;0 → W 10;0 (7 cm/rok w B.64); jeden odcinek 84–132 |
+| GW2 K po Z | W 7;0 → Z 9;0; + K 10;0 (karta, wstecznie) | odmowa „Po „Zakończeniu leczenia” dodaj najpierw „Włączenie leczenia” (wznowienie leczenia).”; Z 10;0 — „Ten kurs leczenia ma już punkt „Zakończenie leczenia”.”; `dostepneRodzaje` → tylko Włączenie (domyślne); formularz wsteczny: Włączenie, Kontynuacja (przeszłość — K 8;0 przyjęta), bez Zakończenia | przyjęte; formularz bez Włączenia |
+| GW3 drugie W w kursie | W 7;0 → K 8;0; + W 9;0 albo 6;0 | odmowa „Ten kurs leczenia ma już punkt „Włączenie leczenia”. Nowe Włączenie można dodać po „Zakończeniu leczenia”.” | odmowa „Punkt „Włączenie leczenia” został już dodany.” |
+| GW4 Zakończenie | W 7;0 → K 8;0 → K 9;0; Z 8;6; Z 9;6; potem Z 10;0 i Z 8;0; Z po Z (W 7;0 → Z 9;0 → W 10;0 + Z 9;6); Z na pustej liście; Z 7;0 przy W 7;0; K 7;0 → W 8;0 → K 9;0 + Z 7;6 | Z 8;6 — „„Zakończenie leczenia” musi być ostatnim punktem kursu.”; Z 9;6 (i 9;0) przyjęte; Z 10;0 i Z po Z — „Ten kurs leczenia ma już punkt „Zakończenie leczenia”.”, Z 8;0 (przed K 9;0 zamkniętego kursu) i Z 7;6 (przed Włączeniem kursu 1) — „…musi być ostatnim punktem kursu.”; pusta lista / przed pierwszym punktem — „„Zakończenie leczenia” zamyka kurs leczenia — musi je poprzedzać co najmniej jeden punkt tego kursu.”; Z w miesiącu jedynego Włączenia — „„Zakończenie leczenia” nie może być w tym samym miesiącu co „Włączenie leczenia” tego kursu.” | Z 8;6, Z 7;6 i Z na pustej liście przyjęte; drugie Z — „…został już dodany.” |
+| GW5 stary zapis W2 | W 7;0 → Z 9;0 → K 10;0; + W 10;0 albo 9;6; + W 10;6; edycja Z 9;0 i K 10;0 | W 10;0 / 9;6 przyjęte, W 10;6 — „„Włączenie leczenia” nie może być późniejsze niż pierwszy punkt tego kursu leczenia.”; edycja Z 9;0 (przed i po dopisaniu W 10;0) i K 10;0 bez zmiany rodzaju — przyjęte; przed — podpowiedź W2, wiersz „Kurs 2 — bez Włączenia (pierwszy punkt w wieku 10 l. 0 mies.)”, K 11;0 odrzucona; po — „Kurs 2 — wznowienie w wieku 10 l. 0 mies.”, K 11;0 przyjęta; Karta: „kurs 2 z 2”, Włączenie „w wieku 10 l. 0 mies.” (z 9;6 i K 11;0: „+10,0 cm przez 18 mies.”), bez ramki W2 | Włączenie odrzucone („…został już dodany.”); Karta — ramka W2 bez prośby o DocPro |
+| GW6 jeden kurs | testy monitora, API, panelu wiersza, złotej siatki; K 7;0 → W 8;0 → K 9;0 | metryki, odcinki, B.64, program i wiersze tabeli identyczne jak bez modułu kursów (6 list); Włączenie po wcześniejszej Kontynuacji (dodanie i edycja) przyjęte jak dotąd; złota siatka: z 5128 przypadków z modułem dawki 4266 bez zmiany reguły — skróty z BAZA (monitor sprzed API) bez zmian; 862 zmienione regułą kursów (Zakończenie bez wcześniejszego punktu albo przed ostatnim punktem kursu, nowe teksty odmowy drugiego Włączenia/Zakończenia) — odmowa tekstem reguły, bez zapisu | — |
+| GW7 edycja | W 7;0 → K 8;0 → Z 9;0 → W 10;0 → K 11;0: K 8;0 → W; Z 9;0 → K; W 10;0 → K; Z 9;0 bez zmiany (poprawka wzrostu) albo na 9;6; Z 9;0 usunięte i dodane wstecznie; Z 9;0 → 10;6 albo 7;6 | K → W — „Ten kurs leczenia ma już punkt „Włączenie leczenia”…”; Z → K przyjęte (jeden kurs, W 10;0 drugim Włączeniem jak po scaleniu, bez separatora); W 10;0 → K — „Po „Zakończeniu leczenia” dodaj najpierw…”; edycja Z 9;0 (także 9;6) i ponowne dodanie — przyjęte, dwa kursy zostają; Z na 10;6 albo 7;6 — „…musi być ostatnim punktem kursu.” | K → W odrzucone („…został już dodany.”); Z → K, W → K i edycja Z przyjęte |
+| GW8 Terminarz | tablica [W 10;0, W 7;0, Z 9;0]; [W 9;0, K 8;6] (punkt wsteczny dopisany na koniec) | wizyta kontrolna z W 10;0; z W 9;0 (108 mies., „start”) | z Z 9;0; z K 8;6 (102 mies., „change”) |
+| GW9 odcinki | W 7;0 → K 8;0 → Z 9;0 → W 10;0 → K 11;0, ten sam lek | dwa odcinki: 84–108 (6,5 cm/rok), 120–132 (+7 cm, 7 cm/rok); `poKursach: false` — jeden 84–132 | jeden odcinek 84–132 (6,75 cm/rok) |
+
+**Rozstrzygnięcia wykonawcy (do potwierdzenia przez właściciela).**
+- Formularz wsteczny proponuje rodzaje możliwe w jakimkolwiek wieku (`dostepneRodzaje(…, {wsteczny})`), nie tylko dla
+  punktu po ostatnim istniejącym: po Zakończeniu zostaje Kontynuacja (dopisanie pominiętej wizyty w środku zamkniętego
+  kursu), a domyślna przy jednym kursie jak dotąd. Panel wiersza sprawdza każdy rodzaj w wieku wiersza (wiersz bywa
+  historyczny). Wariant bez opcji (`dostepneRodzaje(lista)`) zgodny z tabelą specyfikacji.
+- „Włączenie nie później niż pierwszy punkt kursu” (kurs po Zakończeniu) przyjmuje Włączenie w MIESIĄCU pierwszego punktu
+  (punkty nie mają daty; przy równym wieku Kontynuacja stoi przed Włączeniem).
+- Edycja Włączenia albo Kontynuacji, która nie pogarsza zapisu, jest przyjmowana (poprawka po przeglądzie, wyżej); „ten
+  sam kurs” = ten sam numer kursu przed i po zmianie.
+- Kontynuacja w przerwie przed późniejszym Włączeniem kursu 2 (W 7;0 → Z 9;0 → W 10;0 + K 9;6) — odmowa (dosłowny skrót
+  „przed N Zakończenie, w K brak Włączenia” by ją przyjął; pierwsze zdanie reguły W2 — kurs otwarty Kontynuacją po
+  zamkniętym kursie — ją wyklucza).
+- Zakończenie na pustej liście i przed pierwszym punktem — odmowa (wynika z reguły; dotąd przyjęte).
+- Edycja Z → K przy istniejącym kursie 2 — przyjęta (ta sama symulacja: lista bez Zakończenia to jeden kurs z Włączeniem);
+  wynik jak po scaleniu duplikatów (drugie Włączenie wewnątrz kursu); odmowa zablokowałaby poprawkę omyłkowego
+  Zakończenia.
+- `#therProg` przy edycji z programu kursu edytowanego punktu (inaczej edycja punktu kursu 1 przejęłaby program kursu 2).
+- Podpowiedź przy pustej liście — bez zmian (ukryta); separator kursu także w tabeli metryk.
+- Łańcuch „Preparaty (historia)” w podsumowaniu Karty bez podziału na kursy (`poKursach: false`), bo specyfikacja nie
+  zmienia Karty poza ramką W2.
+- Opcje formularza wstecznego biorą API przez bramkę wersji bez modułu dawki (bez modułu dawki odmawia dopiero zapis, D6).
+
+**Testy.** Dane wyłącznie fikcyjne; testy wołają kod produkcyjny.
+- `tests/unit/gh-punkty-api.test.mjs` (139 → 177): reguła kursów (GW1–GW5, GW7, kolejność tablicy, wiek, null, brak modułu,
+  edycja po przeglądzie), `wiekMiesZPol`, `dostepneRodzaje` (oba warianty), teksty, wersja 4.
+- `tests/unit/gh-wznowienie-kursy.test.mjs` (+28): monitor w atrapie z metrykami (GW1–GW5, GW7, jeden kurs = bez modułu
+  kursów na 6 listach, kolejność wierszy, podpowiedzi, brak modułu kursów, edycja po wznowieniu i ponowne dodanie
+  Zakończenia, stary zapis W2, Włączenie po wizycie przed leczeniem, Zakończenie w miesiącu Włączenia), odcinki (GW9), `Qe`
+  wycięte z `gh_igf_therapy.js` (GW8).
+- `tests/unit/gh-punkt-z-wiersza.test.mjs` (+7): `rodzajeWWieku`, `stanPrzycisku` z rodzajami, `przygotujPunkt` po
+  Zakończeniu; `tests/unit/karta-leczenie.test.mjs` (+1): GW5 w Karcie.
+- Złota siatka (`gh-punkty-siatka`, generator `tests/scripts/gh-punkty-wzorzec.mjs`): nowe pole wzorca
+  `kategorieRegulaKursow` — skróty z BAZA tylko z przypadków bez zmiany reguły (`wplywRegulyKursow` woła API z drzewa
+  roboczego); dawne pola bez zmian (+1 test pokrycia). `gh-punkty-monitor-tryby` (48 → 55): API wersji 3 odrzucane
+  (6 czynności), strażnik nazw zmian reguły. `wiek-kostny-zapis-wizyty`: okno z modułem trajektorii (jak docpro.html).
+- Zmienione oczekiwania (zamierzone, reguła „jedno Włączenie/Zakończenie” albo kolejność wg rodzaju): teksty odmowy rodzaju
+  w `gh-punkty-api`, `gh-punkty-charakterystyka-monitor`, `gh-punkt-z-wiersza`; `gh-punkty-monitor-tryby` — tłumaczenie
+  tekstów wyroczni i jawne zmiany 10 scenariuszy (5 decyzji, 5 kolejności wierszy), API wersji 3 odrzucane, wiekMiesZPol
+  w sekwencji wywołań; `gh-punkty-api-roznicowy` — rekord porównywany bez reguły rodzaju, reguła: odmowa drugiego
+  Włączenia/Zakończenia wyroczni = odmowa reguły kursów, zamierzone nowe odmowy wypisane; `gh-punkty-charakterystyka-monitor`
+  — Zakończenie Ngenli po Włączeniu (dotąd na pustej liście), edycja Zakończenia z młodszym trzecim punktem;
+  `karta-leczenie` GR2 — ramka W2 z prośbą o DocPro; e2e `gh-punkty-charakterystyka` G — wizyta kontrolna z ostatniego
+  punktu wg wieku. Po przeglądzie: `gh-punkty-uszkodzone` wrócił do wersji z `audyt` (Włączenie po Kontynuacji w kursie 1
+  znów przyjęte); `gh-punkty-monitor-tryby` — „karta start, dawny format” już nie odmowa, tylko kolejność wierszy,
+  „wsteczny end, pełny kurs” — tekst „musi być ostatnim punktem kursu”, „edycja end, Ngenla” — tekst „w tym samym miesiącu”;
+  `gh-punkty-api` — Z 8;0 przed K 9;0 zamkniętego kursu: „musi być ostatnim punktem kursu” (było „ma już Zakończenie”),
+  Z w miesiącu Włączenia: nowy tekst, Włączenie 8;6 w kursie [K 8;0, K 9;0]: zgoda (było odmową); wzorzec siatki
+  (`kategorieRegulaKursow`) policzony na nowo z BAZA.
+- e2e: nowe `gh-wznowienie-docpro.spec.mjs` (komputer: wznowienie przyciskiem karty i odmowa K po Z, B.64, edycja
+  Zakończenia kursu 1 po wznowieniu i Karta „kurs 2 z 2”; zapis W2 i Włączenie wsteczne; panel wiersza po Zakończeniu)
+  i `gh-wznowienie-docpro-mobile.spec.mjs` (telefon).
+
+**Ograniczenia.** Punkty nie mają daty: kolejność w jednym miesiącu ustala rodzaj (Kontynuacja → Zakończenie → Włączenie),
+więc Kontynuacja z miesiąca Włączenia stoi w tabeli przed nim. Przyciski karty nie są wyłączane — po Zakończeniu odmowę
+daje zapis. `#therProg` po Zakończeniu zostaje zablokowany programem zamkniętego kursu: wznowienie innym programem — przez
+formularz wsteczny (program wybierany w formularzu). Lista pacjentów sejfu, Historia, Terminarz poza `Qe`, edytor notatki
+i sejf — bez zmian.
+
+**Wdrożenie.** Od razu przy wydaniu; dane, zapis, sejf i synchronizacja bez zmian (zmienia się tylko, które punkty wolno
+dopisać). **Cofnięcie** = rewert PR: DocPro wraca do reguły „jedno Włączenie i jedno Zakończenie w całej liście”, monitor
+do sortowania wg rodzaju i metryk z całej listy, Terminarz do ostatniego elementu tablicy.

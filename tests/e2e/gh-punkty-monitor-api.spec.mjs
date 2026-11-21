@@ -25,7 +25,9 @@ const P2 = {
   dose: 0.8 / 27, doseUnit: 'mg/kg/d', drug: 'Omnitrope 10 mg', program: 'SNP',
   igf1: null, igf1Unit: 'ng/mL', igf1DaysSinceDose: null, doseAbs: 0.8,
 };
+// Odmowa drugiego Włączenia: monitor sprzed API — dawny tekst; dzisiejszy — tekst reguły kursów (P-GH-WZNOWIENIE, część 2).
 const DRUGIE_WLACZENIE = 'Punkt „Włączenie leczenia” został już dodany.';
+const DRUGIE_WLACZENIE_KURSU = 'Ten kurs leczenia ma już punkt „Włączenie leczenia”. Nowe Włączenie można dodać po „Zakończeniu leczenia”.';
 
 async function zaloguj(page) {
   await page.addInitScript(() => {
@@ -117,7 +119,7 @@ const zamknijKomunikat = (page) => page.evaluate(() => {
   if (b) b.click();
 });
 
-async function czynnosciLekarza(page) {
+async function czynnosciLekarza(page, tekstDrugiegoWlaczenia) {
   const kroki = [];
   // 1. Punkt wsteczny „Kontynuacja”.
   await page.click('#btnGhRetro');
@@ -148,7 +150,7 @@ async function czynnosciLekarza(page) {
   kroki.push({ stan: await stan(page), api: await wywolania(page) });
   // 4. Drugie Włączenie z karty: odmowa z komunikatem.
   await page.click('#btnGhStart');
-  await expect(page.locator('#ghInfoOverlay')).toContainText(DRUGIE_WLACZENIE);
+  await expect(page.locator('#ghInfoOverlay')).toContainText(tekstDrugiegoWlaczenia);
   kroki.push({ stan: await stan(page), api: await wywolania(page) });
   await zamknijKomunikat(page);
   // 5. Usunięcie P1 z potwierdzeniem.
@@ -178,26 +180,29 @@ test('ten sam ciąg czynności lekarza daje ten sam wynik na dzisiejszym monitor
       return (await fetch(s.src)).text();
     });
     expect(tekstMonitora.includes('Gpn()'), wariant).toBe(wariant === 'teraz');
-    wyniki[wariant] = await czynnosciLekarza(page);
+    wyniki[wariant] = await czynnosciLekarza(page, wariant === 'teraz' ? DRUGIE_WLACZENIE_KURSU : DRUGIE_WLACZENIE);
     expect(bledy, `pageerror (${wariant})`).toEqual([]);
     await kontekst.close();
   }
 
   const z = wyniki.teraz;
   const b = wyniki.przedApi;
-  expect(z.map((k) => k.stan)).toEqual(b.map((k) => k.stan));
+  // Ta sama odmowa drugiego Włączenia, dziś tekstem reguły kursów (P-GH-WZNOWIENIE, część 2).
+  const tekstKursow = (k) => (k.stan.komunikat === DRUGIE_WLACZENIE ? { ...k.stan, komunikat: DRUGIE_WLACZENIE_KURSU } : k.stan);
+  expect(z.map((k) => k.stan)).toEqual(b.map(tekstKursow));
   // Sens kroków: wsteczny dopisał punkt, edycja nie zmieniła długości, karta dopisała, odmowa bez zmian, usunięcie.
   expect(z.map((k) => JSON.parse(k.stan.modul).length)).toEqual([3, 3, 4, 4, 3]);
-  expect(z[3].stan.komunikat).toBe(DRUGIE_WLACZENIE);
+  expect(z[3].stan.komunikat).toBe(DRUGIE_WLACZENIE_KURSU);
   expect(JSON.parse(z[1].stan.modul)[1]).toMatchObject({ id: P2.id, weight: 27.6, height: 126 });
 
   // Każda ścieżka zaczyna od bramki uszkodzonych wpisów (P-GH-PUNKTY-USZKODZONE). Id nowego punktu (wsteczny, karta)
-  // z noweId() (P-GH-NOWE-ID-MONITOR).
+  // z noweId() (P-GH-NOWE-ID-MONITOR). P-GH-WZNOWIENIE, część 2: otwarcie formularza wstecznego bierze rodzaje
+  // z dostepneRodzaje, a przed regułą rodzaju monitor liczy wiek punktu (wiekMiesZPol).
   expect(z.map((k) => k.api)).toEqual([
-    ['uszkodzone', 'sprawdzRodzaj', 'polaZPodawanej', 'noweId', 'punkt', 'zapisz'],
-    ['uszkodzone', 'sprawdzRodzaj', 'polaZPodawanej', 'zmienWMiejscu', 'zapisz'],
-    ['uszkodzone', 'sprawdzRodzaj', 'jednostkaDawki', 'dniIgf', 'normalizujWiek', 'sprawdzWartosci', 'noweId', 'zapisz'],
-    ['uszkodzone', 'sprawdzRodzaj'],
+    ['dostepneRodzaje', 'uszkodzone', 'wiekMiesZPol', 'sprawdzRodzaj', 'polaZPodawanej', 'noweId', 'punkt', 'zapisz'],
+    ['uszkodzone', 'wiekMiesZPol', 'sprawdzRodzaj', 'polaZPodawanej', 'zmienWMiejscu', 'zapisz'],
+    ['uszkodzone', 'wiekMiesZPol', 'sprawdzRodzaj', 'jednostkaDawki', 'dniIgf', 'normalizujWiek', 'sprawdzWartosci', 'noweId', 'zapisz'],
+    ['uszkodzone', 'wiekMiesZPol', 'sprawdzRodzaj'],
     ['uszkodzone', 'zapisz'],
   ]);
   expect(b.flatMap((k) => k.api)).toEqual([]);

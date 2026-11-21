@@ -184,7 +184,7 @@
 <script defer src="vilda_persistence_adapter.js?v=39"></script>
 <script src="vilda_reminders_privacy.js?v=1"></script>
 <script defer src="vilda_panel_pacjent.js?v=5"></script>
-<script defer src="vilda_session_bridge.js?v=229"></script>
+<script defer src="vilda_session_bridge.js?v=230"></script>
 <script defer src="vilda_init.js?v=5"></script>
 <script defer src="vilda_crypto.js?v=15"></script>
 <script defer src="vilda_retention.js?v=2"></script>
@@ -215,16 +215,16 @@
 <script defer src="vilda_nowe_urzadzenie.js?v=2"></script>
 <script defer src="qrcode.min.js?v=1"></script>
 <script defer src="obesity_response_criteria.js?v=5"></script>
-<script defer src="gh_therapy_segments.js?v=5"></script>
+<script defer src="gh_therapy_segments.js?v=6"></script>
 <!-- P-GH-WAZNOSC: dane i licznik opakowan GH/IGF-1 (waznosc po otwarciu, ChPL 6.3); czyta je karta gh_igf_therapy.js -->
 <script defer src="vilda_gh_opakowania_dane.js?v=1"></script>
 <script defer src="vilda_gh_opakowania.js?v=1"></script>
 <!-- P-GH-DAWKA-PODAWANA, P-GH-INCRELEX-PODANIE: kroki i limity jednego wstrzykniecia GH, dawka podawana, Increlex - dawka na podanie (0,04-0,12 mg/kg); czyta je karta gh_igf_therapy.js i monitor gh_therapy_monitor.js -->
 <script defer src="vilda_gh_dawka_dane.js?v=2"></script>
 <script defer src="vilda_gh_dawka.js?v=3"></script>
-<script defer src="vilda_gh_punkty.js?v=6"></script>
+<script defer src="vilda_gh_punkty.js?v=7"></script>
 <script defer src="vilda_gh_programy_dane.js?v=1"></script>
-<script defer src="vilda_gh_punkt_z_wiersza.js?v=3"></script>
+<script defer src="vilda_gh_punkt_z_wiersza.js?v=4"></script>
 <script defer src="vilda_growth_prediction_lines.js?v=1"></script>
 <script defer src="vilda_birth_assessment.js?v=1"></script>
 <script defer src="vilda_patient_sga_model.js?v=1"></script>
@@ -246,7 +246,7 @@
 <script defer src="vilda_search_navigation.js?v=1"></script>
 <script defer src="vilda_patients_list.js?v=5"></script>
 <script defer src="vilda_visit_context.js?v=1"></script>
-<script defer src="vilda_auth_ui.js?v=576"></script>
+<script defer src="vilda_auth_ui.js?v=577"></script>
 <script defer src="vilda_urodzeniowe_rozbieznosc.js?v=1"></script>
 <script defer src="vilda_cykle_leczenia.js?v=12"></script>
 <script defer src="vilda_name_fix.js?v=6"></script>
@@ -451,7 +451,7 @@
         ]
       }
       </script>
-<script defer src="vilda_chrome.js?v=313"></script>
+<script defer src="vilda_chrome.js?v=314"></script>
 <link href="vilda_lab_assessment_ui.css?v=13" rel="stylesheet">
 <link href="vilda_lab_history_tab.css?v=14" rel="stylesheet">
   <link rel="stylesheet" href="vilda_centile_live_panel.css?v=8">
@@ -1919,7 +1919,7 @@
 <script>
 (function () {
   'use strict';
-  var SRC_GHIGF = 'gh_igf_therapy.js?v=33';
+  var SRC_GHIGF = 'gh_igf_therapy.js?v=34';
   var started = false;
   function loadGhIgf() {
     if (started) return;
