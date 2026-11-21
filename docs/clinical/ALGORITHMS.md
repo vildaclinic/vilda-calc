@@ -45297,7 +45297,7 @@ daje kurs z samym Zakończeniem i nowy kurs od Włączenia (punkty nie mają dat
 **Wdrożenie.** Od razu przy wydaniu; dane, zapis, sejf i synchronizacja bez zmian. **Cofnięcie** = rewert PR: Karta
 i trajektoria wracają do reguły „jakiekolwiek Zakończenie” i progu 3 mies.
 
-## Dziennik zdarzeń: odsyłanie ukrytego wpisu Kosza karty usuniętej po zastosowaniu zmiany z innego urządzenia — uśpione (P-ZBIEZNOSC-ZDARZEN, E3-PR0d2, SW 1.1.562, `vilda_vault.js` 283, 2026-11-20)
+## Dziennik zdarzeń: odsyłanie ukrytego wpisu Kosza karty usuniętej po zastosowaniu zmiany z innego urządzenia — uśpione (P-ZBIEZNOSC-ZDARZEN, E3-PR0d2, SW 1.1.564, `vilda_vault.js` 283, 2026-11-20)
 
 **Zmiana kliniczna: NIE (uśpiona).** Wzory, progi, jednostki, interpretacje, reguły scalania (`Le`), format kopii,
 serwer i `vilda_sync.js` bez zmian. Dla użytkownika dziś nic się nie zmienia: odsyłanie ukrytego wpisu włącza ten sam
@@ -45770,7 +45770,7 @@ odsyłania wpisów, opis `Bev_zastosujZEchem`, nagłówek części emisji, opis 
 `Bev_kandydaciEcha`, `Bev_stanEcha`, `Bev_echo`, `Bev_stanKosza`, `Bev_echoKosza`, `Bev_stomb`, `Bem_zastosujEcho`,
 `Bem_zmiana`, `Bem_RANGI`, `Bob_plan`, `Bob_bramkaEcha`. Poza blokiem bez zmian.
 
-**Wersje.** `vilda_vault.js` 282 → 283, `vilda_chrome.js` 312 → 313 i `vilda_session_bridge.js` 228 → 229 (wstrzykują
-sejf), SW 1.1.561 → 1.1.562 — `npm run podbij-wersje`; baza `origin/audyt` `119f0225` (po vildaclinic/vilda-calc#1010;
-sejf, `vilda_sync.js`, `runtime/`, `tools/` i testy synchronizacji bez zmian względem `bc2d88f8`, E3-PR0d). Bez nowego
-pliku w pamięci offline.
+**Wersje.** `vilda_vault.js` 282 → 283, `vilda_chrome.js` 313 → 314 i `vilda_session_bridge.js` 229 → 230 (wstrzykują
+sejf), SW 1.1.563 → 1.1.564 — `npm run podbij-wersje`; baza `origin/audyt` `fd555b6a` (po vildaclinic/vilda-calc#1014;
+sejf, `vilda_sync.js`, `runtime/`, `tools/` i testy synchronizacji bez zmian względem `bc2d88f8`, E3-PR0d; pomiary na
+`119f0225`). Bez nowego pliku w pamięci offline.
