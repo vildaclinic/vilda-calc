@@ -50,7 +50,8 @@ test('telefon: Karta — „Potrzebny pomiar wzrostu do oceny ChPL” i kafelek 
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id), pid);
   // P-KARTA-LECZENIE (etap 1): bloki leczenia stoją w zakładce „Leczenie” (druga, po „Status”).
   await page.locator('.vilda-patient-tab[data-tab="leczenie"]').click();
-  const przycisk = page.locator('.vilda-gha-btn', { hasText: 'Dane analityczne' });
+  // P-KARTA-LECZENIE (etap 2): panel „Dane analityczne — otyłość” to widok „Analiza” karty leczenia (dotąd belka).
+  const przycisk = page.locator('.vilda-ko-seg').getByRole('tab', { name: 'Analiza' });
   await przycisk.scrollIntoViewIfNeeded();
   await przycisk.click();
   const werdykt = page.locator('.vilda-oba-verdict');

@@ -45466,3 +45466,108 @@ i sejf — bez zmian.
 **Wdrożenie.** Od razu przy wydaniu; dane, zapis, sejf i synchronizacja bez zmian (zmienia się tylko, które punkty wolno
 dopisać). **Cofnięcie** = rewert PR: DocPro wraca do reguły „jedno Włączenie i jedno Zakończenie w całej liście”, monitor
 do sortowania wg rodzaju i metryk z całej listy, Terminarz do ostatniego elementu tablicy.
+
+## P-KARTA-LECZENIE, etap 2 — karta leczenia otyłości z przełącznikiem (SW 1.1.565, `vilda_auth_ui.js` 578, `vilda_auth_ui.css` 88, `vilda_cykle_leczenia.js` 13, 2026-11-21)
+
+**Zmiana kliniczna: NIE — prezentacja istniejących wartości i oceny wg ChPL (bez nowych obliczeń, progów ani zdań;
+linia oceny w Przeglądzie = tytuł i pierwsze zdanie tej samej oceny).** Plan i etapy: `docs/KARTA_LECZENIE_PLAN.md`;
+łatki: `docs/ZRODLA_ARTEFAKTOW.md`, „Łatka P-KARTA-LECZENIE, etap 2”.
+
+**Decyzje właściciela.** Makieta hybrydy zaakceptowana 2026-11-19 (komputer i telefon: „Przegląd”, „Wpisy”, „Wpisy (7)”,
+„Analiza”); „zaczynaj etap 2” 2026-11-21. GH (przełącznik „Przegląd | Trend dawki | Analiza”) — etap 3.
+
+**Stan przed zmianą.** W zakładce „Leczenie” grupa otyłości (`Ob_dz`) to trzy bloki jeden pod drugim: podsumowanie
+(`Cl`: znacznik, stan, pola Lek, Substancja, Włączenie, Aktualna dawka, Punkty kontrolne, Ostatnia kontrola), sekcja
+„Wpisy leczenia” (`VildaDziennikOtylosciUI.sekcja`: tytuł, wstęp, „+ Kontynuacja”, podpowiedź, wpisy) i belka „Dane
+analityczne — otyłość” (`Ml`, panel zwinięty).
+
+**Karta leczenia** (jedna miętowa karta — kontener podsumowania `.vilda-gh-summary`; `Ko_karta`):
+- **Nagłówek**: znacznik leku i stan (jak dotąd, także „cykl k z N”), po prawej „+ Kontynuacja” — ten sam przycisk i ta
+  sama obsługa co w nagłówku sekcji (sekcja w układzie „karta” oddaje akcje swojego nagłówka; bez aktywnego cyklu także
+  „Włączenie w DocPro →”, „Brak aktywnego cyklu — …” i po kliknięciu wyjaśnienie DZ-5 — w komunikacie pod nagłówkiem),
+  widoczny w każdym widoku. Pola siatki podsumowania znikają z góry; „Poprzednie cykle”, ramka „Brak punktu
+  „Włączenie”” i nota „Zapis cyklu wymaga uporządkowania” zostają pod nagłówkiem (w każdym widoku).
+- **Przełącznik** „Przegląd | Wpisy (N) | Analiza” (wygląd `.vilda-oba-seg`, `tablist`/`tab`, `aria-selected`,
+  `tabpanel`), domyślnie „Przegląd”. N = liczba widocznych wpisów dziennika bieżącego zapisu (ta sama liczba co
+  „Pokaż wszystkie wpisy (N)”, oddana przez sekcję z danych dziennika).
+- **Przegląd**: cztery kafelki (komputer 1 × 4, telefon ≤ 560 px 2 × 2) i linia oceny. Wartości z obiektów wyjściowych
+  `Cl` i `Ml`/`Ob_b` — z tych samych zmiennych, z których powstają kafelki i pole oceny panelu (bieżący cykl), nigdy
+  z tekstu DOM; brak wartości — „—”:
+  - Aktualna dawka — wartość jak dotąd w podsumowaniu (P-OTYLOSC-DAWKA); podpis: częstość leku i „od DD.MM.RRRR”.
+    Częstość: lek rozpoznany jak w ocenie (`ObesityResponseCriteria.resolveDrug`), wartość jak `products[…].frequency`
+    katalogu `obesity_therapy.js` (Wegovy, Mounjaro „1×/tydz.”, Saxenda „1×/dobę”; Mysimba „wg titracji” i lek
+    nierozpoznany — bez częstości). „od” — najwcześniejszy punkt bieżącego cyklu z tą samą dawką (tekst jak w podsumowaniu)
+    ciągle do ostatniego punktu; punkt bez dawki albo z inną przerywa ciąg; bez dawki — bez podpisu;
+  - Czas leczenia — kafelek „Czas leczenia” panelu (bez Włączenia „Czas od 1. punktu”, wtedy ta etykieta i bez podpisu);
+    podpis „od DD.MM.RRRR (wiek)” z punktu Włączenia (bez daty — „w wieku …”);
+  - Masa — „Masa ostatnia”; podpis jak „Redukcja masy”: „−X kg (−Y%) od włączenia” (kolor good/bad kafelka; bez
+    Włączenia „od 1. punktu”);
+  - BMI — BMI ostatniego punktu (jak w podpisie „Masa ostatnia”); podpis jak „Redukcja BMI”: „−Y% od włączenia”;
+  - „próg ChPL ≥ …” (wartość kafelka „Próg ChPL”, tylko gdy kafelek stoi w panelu i ma próg) w podpisie kafelka miary
+    oceny: Masa przy „masa ciała” (dorośli), BMI przy „BMI” i „ΔbmiSDS” (dzieci i młodzież);
+  - linia oceny — ikona, tytuł i pierwsze zdanie opisu pola oceny panelu (każdy stan; kolory pola: oczekiwanie —
+    bursztyn przerywany, wystarczająca — zieleń, niewystarczająca — czerwień), na końcu „Szczegóły oceny” (→ „Analiza”,
+    przewinięcie do pola oceny i fokus na nim). Pierwsze zdanie: tekst opisu do pierwszej kropki (wykrzyknika, pytajnika,
+    także „.)”), po której stoi odstęp i wielka litera — skróty („4. tydz.”, „tyg.”, „l.”) nie kończą zdania; tekst bez
+    zmian (separator „ · ” nie kończy zdania). Brak oceny (moduł progów niezaładowany, panel bez rysunku) — bez linii.
+- **Wpisy**: sekcja bez nagłówka; objaśnienia (wstęp, podpowiedź o DocPro, „Wpisy z dawnych wizyt…”) pod łączem
+  rozwijanym „Jak działa dziennik leczenia ⌄” (stan łącza per pacjent, jak „Pokaż wszystkie”). Wpisy, przyciski,
+  „Pokaż wszystkie wpisy”, „Usunięte wpisy”, konflikt wersji, „Cofnij” — bez zmian.
+- **Analiza**: panel „Dane analityczne — otyłość” rozwinięty, bez belki; nad nim cicha linia „{lek} · {substancja} ·
+  N punktów kontrolnych” (przy > 1 cyklu „N … w cyklu (M łącznie)”, jak dotąd pole „Punkty kontrolne”). Kafelki, pole
+  oceny, przełącznik cykli i wykres z Masa / BMI / ΔBMI-SDS — bez zmian.
+- **Stan widoku**: przebudowa grupy (zapis wpisu, „Pokaż wszystkie”, „Usunięte wpisy”, odświeżenie Karty po
+  synchronizacji) zostawia wybrany widok; „Przegląd”, N i pasek leczenia są przeliczone. Przełącznik cykli zmienia tylko
+  panel. Nowe otwarcie Karty (także powrót „wstecz” rysujący Kartę od nowa) — „Przegląd”.
+- **Odnośniki**: pasek leczenia nad zakładkami — zakładka i przewinięcie do karty, bez zmiany widoku; „Notatki”
+  („Wpisy leczenia otyłości (N) — Leczenie →”) — zakładka, widok „Wpisy”, przewinięcie do karty, fokus na „Wpisy”;
+  „Wybierz wersję”, „Edytuj w DocPro →” — w „Wpisach”; zdania z tekstem „w „Wpisy leczenia”” (pole oceny przy konflikcie,
+  Historia, ostrzeżenie „Postępów”) — bez zmian (tekst; sekcja ma etykietę „Wpisy leczenia”).
+- **Bez zmian**: karta „wg notatek” (`jl`), GH, pacjent bez leczenia otyłości; pasek leczenia (etap 1); dane, sejf,
+  dziennik, progi, zdania oceny, skoki do DocPro. Gdy karta się nie złoży (wyjątek) — grupa jak w etapie 1.
+
+**Przypadki syntetyczne** (dane fikcyjne; chwila 19.11.2026; komputer 1440 px, telefon 393 px):
+
+| Przypadek | Wejście | Oczekiwany wynik |
+|---|---|---|
+| O1 | nastolatka 17 l., Wegovy: Włączenie 23.06.2026 91,9 kg / 157 cm (0,25 mg), Kontynuacja 10.11.2026 84 kg (2,4 mg) | Przegląd: „2,4 mg” (1×/tydz. · od 10.11.2026), „20 tyg.” (od 23.06.2026 (17 l. 6 mies.)), „84 kg” (−7,9 kg (−8,6%) od włączenia), „BMI 34,1” (−8,6% od włączenia · próg ChPL ≥5%); linia „⏳ Przed oknem oceny — oceń po 12 tyg. Obecnie 4. tydz. stosowania dawki podtrzymującej. Szczegóły oceny”; „Wpisy (2)”; Analiza — kafelki, pole oceny i wykres jak dotąd |
+| O1 + wpis z „Wpisów” | „+ Kontynuacja” 17.11.2026 82,5 kg / 157 cm | zostaje „Wpisy”, „Wpisy (3)”; Przegląd „21 tyg.”, „82,5 kg” (−9,4 kg (−10,2%)), BMI 33,5 (−10,2%); pasek „2,4 mg · 21 tyg. · BMI −10,2%”; zapis z „Przeglądu” — zostaje „Przegląd” |
+| O2 | 4 wizyty + 3 wpisy od pacjentki (7 wpisów), 79,4 kg / 157,4 cm 10.11.2026 | „Wpisy (7)”, „Pokaż wszystkie wpisy (7)” zostawia „Wpisy”; dawka „od 09.06.2026”; linia „✓ Odpowiedź wystarczająca — kontynuować leczenie Osiągnięto −14,0% (BMI) po 22 tyg. stosowania dawki podtrzymującej · próg ChPL: … ocenić.” |
+| dorosły | Saxenda 40 l., 104 → 97 kg / 170 cm, 17 tyg. | „3,0 mg” (1×/dobę · od 12.05.2026); Masa „97 kg” (−7,0 kg (−6,7%) od włączenia · próg ChPL ≥5%), BMI bez progu; Wegovy 47 l. (ocena kliniczna, „Próg ChPL: —”) — bez progu |
+| bez Włączenia | O1, oba punkty „Kontynuacja” | kafelek „Czas od 1. punktu” „20 tyg.” bez podpisu, redukcje „od 1. punktu”; linia „ℹ️ Brak punktu „Włączenie” — ocena wg ChPL niedostępna ChPL ocenia odpowiedź … nie zastępuje.” |
+| zakończone | O1 + Zakończenie 17.11.2026 | ta sama karta i przełącznik („Wpisy (3)”); „+ Kontynuacja” z `aria-disabled`, „Włączenie w DocPro →”, wyjaśnienie po kliknięciu w „Przeglądzie”; „Aktualna dawka” „—”; linia „⏳ Cykl zakończony przed oknem oceny Cykl zakończony 17.11.2026 — ocena na dzień Zakończenia, bez zaleceń na dziś.” |
+| dwa cykle | cykl 1 06–12.2025 zakończony, cykl 2 = O1 | Przegląd jak O1; „cykl 2 z 2”; Analiza: „2 punkty kontrolne w cyklu (5 łącznie)”, przełącznik cykli (cykl 1 zmienia panel, nie Przegląd) |
+| moduł progów niezaładowany | O1 bez `obesity_response_criteria.js` | pole „Moduł progów ChPL niezaładowany” w Analizie; Przegląd bez linii i bez częstości |
+
+**Ograniczenia.** Pierwsze zdanie wyznacza reguła interpunkcji (powyżej): opis zaczynający się od wielkiej litery po
+skrócie z kropką skróciłby zdanie — dziś takich opisów nie ma (test na wszystkich stanach z testów). Porównanie dawek
+w „od” jest tekstowe: „2,4 mg” i „2,4 mg / tydz.” to różne zapisy (podpis nie zawyża czasu stosowania dawki). Częstość
+leku — kopia wartości katalogu `obesity_therapy.js` (ładowany tylko w DocPro); zgodność pilnuje test jednostkowy.
+
+**Testy.** Dane wyłącznie fikcyjne.
+- `tests/unit/karta-leczenie.test.mjs` (50 → 76): prawdziwe `Cl`, `Ml`, `Ob_dz`, `Ko_*` i `vilda_cykle_leczenia.js`
+  — nagłówek, przełącznik i widoki; kafelki i linia wobec kafelków i pola oceny panelu z tego samego rysunku (O1, O2,
+  niewystarczająca, dorosły Saxenda/Wegovy, bez Włączenia, zakończone, dwa cykle, dawka „od”); linia dla każdego stanu
+  oceny; `Ko_pierwszeZdanie`; moduł progów niezaładowany; częstość wobec katalogu; stan widoku po przebudowie, po
+  odświeżeniu po synchronizacji i po nowym otwarciu; „Jak działa…” po przebudowie; karta, która się nie składa — grupa
+  jak w etapie 1; GH i „wg notatek” bez karty; sekcja bez opcji jak dotąd. Zmienione oczekiwania (zamierzone): struktura
+  grupy (jedna karta zamiast trzech bloków), „Aktualna dawka” jako kafelek (dawniej pole podsumowania — O1 i zakończone),
+  panel z wyjątkiem wykresu — karta bez „Analizy”.
+- e2e: nowe `tests/e2e/karta-leczenie-etap2.spec.mjs` KO-1…KO-9 (komputer) i `karta-leczenie-etap2-mobile.spec.mjs`
+  KOM-1…KOM-2 (telefon: „+ Kontynuacja” 44 px po prawej, przełącznik w jednym wierszu, kafelki 2 × 2, linia w kolumnie,
+  „Jak działa…”, zapis z „Wpisów”). Istniejące specyfikacje — tylko nawigacja do widoku, asercje treści bez zmian:
+  klik „Wpisy” przed czekaniem na `.vdo` (`otylosc-dziennik-karta` — pomocnik i DZ-4 przed „Wybierz wersję”,
+  `otylosc-dziennik-karta-mobile`, `otylosc-siatki`, `otylosc-skok-docpro` ×2, `postepy-dziennik` ×2, `otylosc-dawka`,
+  `karta-leczenie` KL-5); klik „Analiza” zamiast belki „Dane analityczne — otyłość” (`otylosc-dziennik-karta` ×4,
+  `otylosc-wzrost-etap-1` i `-mobile`, `kotwica-okna-chpl`, `karta-otylosc-bez-punktu-wlaczenia`,
+  `karta-otylosc-cykle-rata-3`, `-rata-4`, `karta-leczenie` KL-1). Zmienione oczekiwania (zamierzone, z tej zmiany):
+  pola podsumowania zniknęły z góry karty — `otylosc-dawka` DW-2 „Aktualna dawka” jako kafelek „Przeglądu”,
+  `karta-otylosc-cykle-rata-3` „Włączenie” → podpis kafelka „Czas leczenia”, „Punkty kontrolne” → cicha linia „Analizy”,
+  `karta-otylosc-bez-punktu-wlaczenia` „Włączenie: brak punktu” → kafelek „Czas od 1. punktu”, „Włączenie w wieku …” →
+  podpis „od DD.MM.RRRR (wiek)”; DZ-5 — wyjaśnienie „+ Kontynuacja” pod nagłówkiem karty (`.vilda-ko-karta
+  .vdo-msg-warn`, dotąd `.vdo .vdo-msg-warn`); KL-6 — przewinięcie do karty i fokus na „Wpisy” (dotąd do sekcji i na jej
+  tytuł, którego w karcie nie ma); KL-1 — pasek zakładek u góry albo Karta przewinięta do końca (krótka zakładka mieści
+  się w oknie 1000 px); SK-4 — sekcja bez własnego tła, miętowe tło karty (makieta; wpisy i przyciski bez zmian).
+
+**Wdrożenie.** Od razu przy wydaniu; dane, sejf, dziennik, zapis i synchronizacja bez zmian. **Cofnięcie** = rewert PR:
+grupa otyłości znów trzy bloki (etap 1).

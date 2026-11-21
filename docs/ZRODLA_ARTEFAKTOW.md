@@ -2563,6 +2563,72 @@ odcinki przy ≥ 2 kursach (`kurs`). Bez nowego pliku ładowanego przez strony; 
 bez nowych zapisów stylu w elementach. Sejf, Historia, edytor notatki i lista pacjentów bez zmian. Wersje `?v=`, precache
 i `SW_VERSION` ustawił `npm run podbij-wersje`.
 
+## Łatka P-KARTA-LECZENIE, etap 2 — karta leczenia otyłości z przełącznikiem (`vilda_auth_ui.js` 577 → 578, `vilda_auth_ui.css` 87 → 88, czytelne `vilda_cykle_leczenia.js` 12 → 13, 2026-11-21, makieta zaakceptowana przez właściciela)
+
+Czytelne źródło: `vilda_auth_ui.js` — nowy czytelny blok P-KARTA-LECZENIE, etap 2 zaraz po bloku etapu 1 (po
+`Kl_leczenie`, przed `function Pl(`): `Ko_licznik`, `Ko_widoki` (wybrany widok karty per pacjent), `Ko_CZESTOSC`
+(częstość leku jak `products[…].frequency` katalogu `obesity_therapy.js`), `Ko_zapomnij`, `Ko_czestosc` (lek rozpoznany
+przez `ObesityResponseCriteria.resolveDrug`), `Ko_dawkaOd` („od DD.MM.RRRR” dawki), `Ko_pierwszeZdanie` (pierwsze zdanie
+opisu oceny), `Ko_punkty`, `Ko_kafel`, `Ko_podpisy` (łamanie podpisu kafelka na granicy części), `Ko_kafelki`,
+`Ko_werdykt` (linia oceny) i `Ko_karta` (nagłówek z akcjami sekcji, przełącznik, widoki, „Szczegóły oceny”). Czytelne
+`Ob_dz`, `Kl_leczenie` i `Ob_dzNotatki` zmienione w miejscu (opis niżej). `vilda_cykle_leczenia.js` (czytelny):
+`sekcja(opcje)` z opcją `uklad: 'karta'` i `wyjscie` — addytywnie, bez opcji ten sam DOM co dotąd. Opis:
+`docs/clinical/ALGORITHMS.md`, wpis „P-KARTA-LECZENIE, etap 2”; plan: `docs/KARTA_LECZENIE_PLAN.md`. Zminifikowane
+miejsca zmienione kotwicami występującymi dokładnie raz; skrypty łatek (Python, `zamien` z licznikiem kotwicy) odtwarzają
+wynik z `origin/audyt` e3efa99; bez ponownej minifikacji.
+
+```
+// vilda_auth_ui.js — Cl (podsumowanie otyłości): dane „Przeglądu” i „Analizy”; tryb karty bez siatki pól
+// 1. return Kl_wy&&(…,Kl_wy.dawka=p==="—"?"":p),e("div",{class:"vilda-gh-summary"},[y,x,Ob_h,Ob_z,Ob_u])
+//    → …,Kl_wy.dawka=…,Kl_wy.lek=c,Kl_wy.substancja=s,Kl_wy.punkty=Ob_k.pts.length,Kl_wy.punktyRazem=a.length,
+//      Kl_wy.cykle=Ob_C.length,Kl_wy.dawkaOd=Ko_dawkaOd(Ob_k.pts),Kl_wy.glowa=y),
+//      e("div",{class:"vilda-gh-summary"},[y,Kl_wy&&Kl_wy.karta?null:x,Ob_h,Ob_z,Ob_u])
+// vilda_auth_ui.js — Ml / Ob_b (Dane analityczne — otyłość)
+// 2. function Ob_b(Ob_m,Kl_out){var Kl_red=null,Kl_rv,Kl_k,o=… → …Kl_k,Ko_H,Ko_prog=null,o=…
+// 3. H=Z!=null&&h>0?Z/h*100:null;T.push( → …:null;Ko_H=H;T.push(   („Redukcja BMI” z kafelka — H nadpisuje potem Ob_pkt)
+// 4. ot.push(fe("","Pr\xF3g ChPL",…,ht.label)), → …,ht.label)),Ko_prog=ot[ot.length-1],
+// 5. Kl_out.ocena=…:null);var lt=ot.slice(); → Kl_out.ocena=…:null,Kl_out.przeglad={czasK,czasV:D,czasJ:M,
+//    wlData:Ob_g?_n(l.dateISO):"",wlWiek:Ob_g?ra(l):"",masaV:u!=null?qt(u,1):"—",masaJ,
+//    redMasa:C!=null&&N!=null?be(C,"",1)+" kg ("+be(N,"%",1)+")":"",redMasaCls:z(C),od:Ob_g?"od włączenia":"od 1. punktu",
+//    bmiV:v!=null?qt(v,1):"—",redBmi:Ko_H!=null?be(Ko_H,"%",1):"",
+//    prog:Ko_prog&&ot.indexOf(Ko_prog)>=0&&ht.thresholdPct!=null?{miara:P,tekst:"≥"+ht.thresholdPct+"%"}:null,
+//    werdykt:$&&gt?{cls:gt.cls,ic:gt.ic,tytul:gt.title,opis:gt.desc||""}:null});var lt=ot.slice();
+//    (te same zmienne, z których powstają kafelki i pole oceny; liczba ot.push(fe( bez zmian — strażnik R6)
+// 6. st=e("div",{class:"vilda-gha-panel",style:"display:none;"},…) → st=e("div",Kl_wy&&Kl_wy.karta?{class:"vilda-gha-panel"}
+//    :{class:"vilda-gha-panel",style:"display:none;"},…)
+// 7. return rt.addEventListener(…),e("div",{style:"margin:2px 0 2px;"},[rt,st])} → return Kl_wy&&Kl_wy.karta?st:(…)}
+//    (tryb karty: panel bez belki, rozwinięty — widok „Analiza”; przełącznik cykli bez zmian)
+// vilda_auth_ui.js — Ob_dz (czytelne)
+// 8. Ko_uklad, Ko_jest(punkty); czesci(): Cl i Ml z flagą karta, Ko_karta({podsumowanie,sekcja,panel,wy,patientId});
+//    karta się nie złożyła (wyjątek, podsumowanie bez rysunku) → null → Ko_uklad=false i rysunek jak w etapie 1
+// 9. rysuj(): wy.sekcja; Ui.sekcja({…, uklad: ko ? "karta" : void 0, wyjscie: ko ? wy.sekcja : void 0})
+// vilda_auth_ui.js — Kl_leczenie (czytelne): if (o && !o.tlo) Ko_zapomnij(o.patientId);
+// vilda_auth_ui.js — showPatientCard (se): Kl_leczenie({…,zakladka:at(Kl_IKONA,"Leczenie")}) → …,tlo:GdTlo})
+//    (odświeżenie po synchronizacji tej samej Karty zostawia widok karty leczenia)
+// vilda_auth_ui.js — Ob_dzNotatki (czytelne): przed przewinięciem do .vdo — klik „Wpisy” karty leczenia
+//    (.vilda-ko-seg [data-widok="wpisy"]), Kl_przewin(karta), fokus na „Wpisy”; bez karty — jak dotąd
+
+// vilda_cykle_leczenia.js — sekcja(opcje), uklad: 'karta' (czytelne, addytywnie)
+//    jakRozwiniete (stan łącza per pacjent); msgDodaj (komunikat „+ Kontynuacja”; bez opcji = msg); dawne (akapit
+//    „Wpisy z dawnych wizyt…” — w karcie pod łączem); wstep / akcje / podpowiedz jako zmienne (ten sam DOM);
+//    karta: o.wyjscie = { akcje (.vdo-head-actions.vdo-zewn), komunikat, liczba }, sekcja .vdo.vdo-karta
+//    (aria-label „Wpisy leczenia”) bez .vdo-head, z jakDziala(patientId, [wstep, podpowiedz, dawne]) na początku
+```
+
+`vilda_auth_ui.css`: reguły przycisków sekcji (`.vdo .vdo-btn`, `:hover`, `:focus-visible`, `-docpro`, `-add`,
+`-add:hover`, telefon 44 px) dostają drugi selektor `.vdo-zewn .vdo-btn…` (akcje nagłówka sekcji oddane karcie stoją
+poza `.vdo`); rozdział „P-KARTA-LECZENIE, etap 2” na końcu pliku — nagłówek karty, przełącznik (`.vilda-ko-seg`, wygląd
+`.vilda-oba-seg`), kafelki `.vilda-ko-kafel*` (wartości stylu `.vilda-gha-tile`; komputer 1 × 4, telefon ≤ 560 px 2 × 2),
+podpisy (`.vilda-ko-sub--stos`), linia oceny `.vilda-ko-werdykt*` (kolory pola oceny), przyciski-łącza `.vilda-ko-link`
+i `.vdo-jak` (`!important` przy szczegółowości 0-2-0 jak `.vilda-gha-btn`; telefon — cel dotyku 44 px), `.vdo.vdo-karta`
+(sekcja bez własnego pudełka), `.vdo-jak*`, `.vilda-ko-cicha`, panel w „Analizie” bez pudełka.
+
+**Granice.** Bez nowego pliku ładowanego przez strony; `obesity_response_criteria.js`, sejf, dziennik, zapis
+i synchronizacja bez zmian; style tylko klasami (`tests/fixtures/style-elementow.json` bez zmian: widoki chowa atrybut
+`hidden`). Kafelki i linia mają własne klasy (`.vilda-ko-*`), żeby lokatory kafelków panelu (`.vilda-gha-tile`) i pola
+oceny (`.vilda-oba-verdict`) nie trafiały w „Przegląd”. GH, karta „wg notatek” (`jl`) i pacjent bez leczenia otyłości —
+bez zmian. Wersje `?v=`, precache i `SW_VERSION` ustawił `npm run podbij-wersje`.
+
 ## Trwała tożsamość wizyt — źródło i granica artefaktu sejfu
 
 Zmiana funkcjonalna `P-TRWALE-WIZYTY` ma bazę `audyt` z commita

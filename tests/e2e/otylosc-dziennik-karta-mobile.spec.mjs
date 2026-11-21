@@ -36,6 +36,8 @@ test('telefon: „Wpisy leczenia” i okno „+ Kontynuacja” bez przewijania w
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id), pid);
   // P-KARTA-LECZENIE (etap 1): bloki leczenia stoją w zakładce „Leczenie” (druga, po „Status”).
   await page.locator('.vilda-patient-tab[data-tab="leczenie"]').click();
+  // P-KARTA-LECZENIE (etap 2): „Wpisy leczenia” — widok „Wpisy” karty leczenia (domyślnie „Przegląd”).
+  await page.locator('.vilda-ko-seg').getByRole('tab', { name: /^Wpisy/ }).click();
   const sekcja = page.locator('.vdo');
   await sekcja.scrollIntoViewIfNeeded();
   await expect(sekcja).toBeVisible();

@@ -129,12 +129,17 @@ test.describe('Dawka leczenia otyłości: przecinek dziesiętny i podpowiedzi z 
     await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id), pid);
     // P-KARTA-LECZENIE (etap 1): bloki leczenia stoją w zakładce „Leczenie” (druga, po „Status”).
     await page.locator('.vilda-patient-tab[data-tab="leczenie"]').click();
+    // P-KARTA-LECZENIE (etap 2): „Wpisy leczenia” — widok „Wpisy” karty leczenia (domyślnie „Przegląd”).
+    await page.locator('.vilda-ko-seg').getByRole('tab', { name: /^Wpisy/ }).click();
     await expect(page.locator('.vdo')).toBeVisible({ timeout: 15000 });
     const wiersz = (d) => page.locator(`.vdo-list:not(.vdo-list-deleted) > .vdo-item[data-date="${d}"]`);
     await expect(wiersz('2026-04-14').locator('.vdo-type')).toHaveText('Włączenie · 0,25');
     await expect(wiersz('2026-10-13').locator('.vdo-type')).toHaveText('Kontynuacja · 2,4');
-    const dawka = page.locator('.vilda-gh-summary-grid > div').filter({ has: page.locator('.vilda-gh-summary-k', { hasText: /^Aktualna dawka$/ }) });
-    await expect(dawka.locator('.vilda-gh-summary-v')).toHaveText('2,4');
+    // P-KARTA-LECZENIE (etap 2): pola podsumowania zniknęły z góry karty leczenia — „Aktualna dawka” to kafelek
+    // „Przeglądu” (dotąd pole .vilda-gh-summary-grid); ta sama wartość z przecinkiem.
+    await page.locator('.vilda-ko-seg').getByRole('tab', { name: 'Przegląd' }).click();
+    const dawka = page.locator('.vilda-ko-kafel').filter({ has: page.locator('.vilda-ko-k', { hasText: /^Aktualna dawka$/ }) });
+    await expect(dawka.locator('.vilda-ko-v')).toHaveText('2,4');
     const zapis = await page.evaluate(async (id) => (await window.VildaVault.getPatient(id)).snapshots[0].payload.obesityTherapyPoints.map((p) => p.dose), pid);
     expect(zapis, 'sejf bez zmian — tylko widok').toEqual(['0.25', '2.4']);
   });

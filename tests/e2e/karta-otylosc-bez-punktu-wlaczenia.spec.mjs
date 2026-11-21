@@ -60,7 +60,8 @@ async function karta(page, patientId) {
   await page.locator('.vilda-patient-tab[data-tab="leczenie"]').click();
   const podsumowanie = page.locator('.vilda-gh-summary', { hasText: 'Leczenie otyłości' }).first();
   await expect(podsumowanie).toBeVisible({ timeout: 15000 });
-  const przycisk = page.locator('.vilda-gha-btn', { hasText: 'otyłość' });
+  // P-KARTA-LECZENIE (etap 2): panel „Dane analityczne — otyłość” to widok „Analiza” karty leczenia (dotąd belka).
+  const przycisk = page.locator('.vilda-ko-seg').getByRole('tab', { name: 'Analiza' });
   await przycisk.click();
   const panel = page.locator('.vilda-gha-panel', { has: page.locator('.vilda-oba-verdict') }).first();
   await expect(panel).toBeVisible();
@@ -96,7 +97,8 @@ test.describe('P-OTYLOSC-BEZ-STARTU — Karta pacjenta', () => {
     const w = await karta(page, pid);
     bezWerdyktuChpl(w);
     expect(w.werdykt.opis, 'reguła ChPL grupy jest pokazana').toContain('Saxenda dorośli');
-    expect(w.karta).toContain('Włączeniebrak punktu');
+    // P-KARTA-LECZENIE (etap 2): bez pola „Włączenie: brak punktu” u góry karty — „Przegląd” ma kafelek „Czas od 1. punktu”.
+    expect(w.karta).toContain('Czas od 1. punktu');
     expect(w.karta).toContain('Brak punktu „Włączenie” (pierwszy zapisany punkt: w wieku 40 l. 0 mies.)');
     expect(w.karta).toContain('aktywne');
     expect(w.panel).toContain('Masa w 1. punkcie100 kg');
@@ -112,7 +114,7 @@ test.describe('P-OTYLOSC-BEZ-STARTU — Karta pacjenta', () => {
     expect(w.werdykt.tytul).toContain('odstawić');
     expect(w.werdykt.klasa).toContain('bad');
     expect(w.werdykt.opis).toContain('nominalnego czasu zwiększania dawki');
-    expect(w.karta).toContain('Włączeniew wieku 40 l. 0 mies. (05.01.2026)');
+    expect(w.karta).toContain('od 05.01.2026 (40 l. 0 mies.)'); // etap 2: podpis kafelka „Czas leczenia” (dotąd pole „Włączenie”)
     expect(w.karta).not.toContain('Brak punktu');
     expect(w.panel).toContain('Masa przy włączeniu100 kg');
     expect(w.panel).toContain('Redukcja do oceny');
@@ -170,7 +172,7 @@ test.describe('P-OTYLOSC-BEZ-STARTU — Karta pacjenta', () => {
     bezWerdyktuChpl(w);
     expect(w.karta, 'leczenie trwa — nowy kurs po „Zakończeniu”').toContain('aktywne');
     expect(w.karta).not.toContain('leczenie zakończone');
-    expect(w.karta).toContain('Włączeniebrak punktu');
+    expect(w.karta).toContain('Czas od 1. punktu'); // etap 2: kafelek „Przeglądu” (dotąd pole „Włączenie: brak punktu”)
     // P-OTYLOSC-CYKLE rata 3: słownictwo jak w monitorze — „cykl”, nie „kurs”.
     expect(w.karta).toContain('Bieżący cykl leczenia (po punkcie „Zakończenie”) nie ma punktu „Włączenie” (pierwszy zapisany punkt cyklu: w wieku 40 l. 0 mies.)');
     expect(w.panel, 'redukcja od 1. punktu bieżącego kursu (108 kg), nie od 100 kg z 2025-01').toContain('Masa w 1. punkcie108 kg');
@@ -186,7 +188,7 @@ test.describe('P-OTYLOSC-BEZ-STARTU — Karta pacjenta', () => {
     const w = await karta(page, pid);
     expect(w.werdykt.tytul, 'od 108 kg: −6,5% po 21 tyg. dawki podtrzymującej').toContain('kontynuować');
     expect(w.werdykt.klasa).toContain('good');
-    expect(w.karta).toContain('Włączeniew wieku 40 l. 0 mies. (03.11.2025)');
+    expect(w.karta).toContain('od 03.11.2025 (40 l. 0 mies.)'); // etap 2: podpis kafelka „Czas leczenia” (dotąd pole „Włączenie”)
     expect(w.karta).toContain('aktywne');
     expect(w.panel).toContain('Masa przy włączeniu108 kg');
   });

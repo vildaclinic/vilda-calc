@@ -60,7 +60,8 @@ async function karta(page, patientId) {
   await page.locator('.vilda-patient-tab[data-tab="leczenie"]').click();
   const podsumowanie = page.locator('.vilda-gh-summary', { hasText: 'Leczenie otyłości' }).first();
   await expect(podsumowanie).toBeVisible({ timeout: 15000 });
-  await page.locator('.vilda-gha-btn', { hasText: 'otyłość' }).click();
+  // P-KARTA-LECZENIE (etap 2): panel „Dane analityczne — otyłość” to widok „Analiza” karty leczenia (dotąd belka).
+  await page.locator('.vilda-ko-seg').getByRole('tab', { name: 'Analiza' }).click();
   const panel = page.locator('.vilda-gha-panel', { has: page.locator('.vilda-oba-verdict') }).first();
   await expect(panel).toBeVisible();
   return { podsumowanie, panel };
