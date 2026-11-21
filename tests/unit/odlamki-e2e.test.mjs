@@ -333,22 +333,23 @@ describe('tabela czasów i ten zestaw e2e', () => {
 
 describe('CI dzieli e2e tym podziałem', () => {
   const ci = fs.readFileSync(path.join(korzen, '.github/workflows/ci.yml'), 'utf8');
+  const browser = ci.split('\n  browser:\n')[1]?.split('\n  lab_chart_webkit:\n')[0];
 
   it('odłamki biorą listę plików z odlamki-e2e.mjs przez --test-list, nie z --shard', () => {
-    expect(ci).not.toMatch(/--shard=/);
-    expect(ci).toContain('node tests/scripts/odlamki-e2e.mjs --odlamek=${{ matrix.shard }}/${{ strategy.job-total }} --zapisz=');
-    expect(ci).toMatch(/npm run test:e2e -- --test-list=/);
+    expect(browser).not.toMatch(/--shard=/);
+    expect(browser).toContain('node tests/scripts/odlamki-e2e.mjs --odlamek=${{ matrix.shard }}/${{ strategy.job-total }} --zapisz=');
+    expect(browser).toMatch(/npm run test:e2e -- --test-list=/);
   });
 
   it('pełny przebieg ma osiem odłamków, a PR ma trzy i podaje bazę selekcji', () => {
-    const macierze = [...ci.matchAll(/'(\{"shard":\[[\d,]+\],"pelny":\[(?:true|false)\]\})'/g)];
+    const macierze = [...browser.matchAll(/'(\{"shard":\[[\d,]+\],"pelny":\[(?:true|false)\]\})'/g)];
     expect(macierze.map((m) => JSON.parse(m[1]))).toEqual([
       { shard: [1, 2, 3, 4, 5, 6, 7, 8], pelny: [true] },
       { shard: [1, 2, 3], pelny: [false] }
     ]);
-    expect(ci).toContain('name: E2E odłamek ${{ matrix.shard }}/${{ strategy.job-total }}');
-    expect(ci).toContain("BAZA_E2E: ${{ github.event_name == 'pull_request' && 'HEAD^1' || 'origin/audyt' }}");
-    expect(ci).toContain('if [ "$PELNY_E2E" = false ]; then\n            opcje+=(--baza="$BAZA_E2E")');
+    expect(browser).toContain('name: E2E odłamek ${{ matrix.shard }}/${{ strategy.job-total }}');
+    expect(browser).toContain("BAZA_E2E: ${{ github.event_name == 'pull_request' && 'HEAD^1' || 'origin/audyt' }}");
+    expect(browser).toContain('if [ "$PELNY_E2E" = false ]; then\n            opcje+=(--baza="$BAZA_E2E")');
   });
 });
 

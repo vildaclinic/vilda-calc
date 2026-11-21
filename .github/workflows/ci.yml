@@ -50,7 +50,7 @@ jobs:
       # sprawia, że ten krok widzi audyt sprzed scalenia PR-a. „Wygląd” wypycha wzorce commitem
       # bota i uruchamia ten workflow przez workflow_dispatch na gałęzi PR-a — ten przebieg też
       # daje wymagany status, więc krok idzie i tam, z bazą origin/audyt (gałąź musi go zawierać).
-      # Na push do audyt krok pomijamy.
+      # Krok porównania z bazą dotyczy PR-ów i dispatchu na gałęzi PR-a.
       - name: Sprawdź wersje względem audyt
         if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/audyt')
         env:
