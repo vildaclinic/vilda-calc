@@ -1,5 +1,5 @@
 import { expect, test } from '../support/test-czas.mjs';
-import { BEZ, G1, O1, X1, aktywna, bezPrzewijaniaWBok, karta, opisPaska, otworz, paski, polozenieZakladek, tresc, uGory, zakladki, zapisz } from '../support/karta-leczenie.mjs';
+import { BEZ, G1, O1, R1, X1, aktywna, bezPrzewijaniaWBok, karta, opisPaska, otworz, paski, pasyGh, polozenieZakladek, tresc, uGory, zakladki, zapisz } from '../support/karta-leczenie.mjs';
 
 // P-KARTA-LECZENIE, etap 1 (decyzje właściciela 2026-11-19, D1–D5; docs/KARTA_LECZENIE_PLAN.md). Karta pacjenta na
 // PRAWDZIWEJ stronie (komputer): bloki leczenia w zakładce „Leczenie” (druga, po „Status”), nad paskiem zakładek pasek
@@ -188,5 +188,43 @@ test.describe('Karta pacjenta — zakładka „Leczenie” i pasek leczenia (kom
     await expect(tresc(page, 'leczenie').locator('.vdo')).toBeVisible();
     await expect.poll(() => uGory(page, () => document.querySelector('.vdo')), { message: '„Wpisy leczenia” u góry widoku' }).toBe(true);
     await expect(page.locator('.vdo .vdo-title')).toBeFocused();
+  });
+
+  // P-GH-WZNOWIENIE, część 1 (decyzje właściciela 2026-11-20, W1–W3): GR1 — GH wznowione po Zakończeniu. Dotąd pasek
+  // „leczenie zakończone · … · 48 mies. …”, Włączenie 7 l. 0 mies., jeden pas GH 7–9 lat i linia trendu przez przerwę.
+  test('KL-7 R1 (GR1 wznowienie): pasek „aktywne · 12 mies.”, „kurs 2 z 2” w zakładce, dwa pasy GH na siatkach, trend przerwany', async ({ page }) => {
+    test.setTimeout(150_000);
+    await otworz(page);
+    const pid = await zapisz(page, R1);
+    await karta(page, pid);
+    await expect(paski(page)).toHaveCount(1);
+    const pasek = page.getByRole('button', { name: 'Leczony hormonem wzrostu (rhGH): otwórz zakładkę Leczenie' });
+    expect(await opisPaska(pasek)).toEqual(expect.objectContaining({ odznaka: 'Leczony hormonem wzrostu (rhGH)', stan: 'aktywne',
+      wartosci: '0,033 mg/kg/d · 12 mies. · tempo 7 cm/rok · ΔhSDS +0,37', pigulka: null, pominiete: '0' }));
+    await pasek.click();
+    await expect(aktywna(page)).toHaveText('Leczenie');
+    const lecz = tresc(page, 'leczenie');
+    await expect(lecz.locator('.vilda-gh-summary-head .vilda-gh-summary-chip')).toHaveText(['aktywne', 'kurs 2 z 2']);
+    await expect(lecz.locator('.vilda-gh-summary')).toContainText('Włączeniew wieku 10 l. 0 mies.');
+    await expect(lecz.locator('.vilda-gh-summary')).toContainText('Punkty kontrolne2 w kursie (5 łącznie)');
+    await lecz.locator('.vilda-gha-btn').click();
+    const panel = lecz.locator('.vilda-gha-panel');
+    await expect(panel).toContainText('Wzrastanie — kurs 2 z 2');
+    await expect(panel).toContainText('Wzrost przy włączeniu130 cm');
+    await expect(panel).toContainText('Przyrost całkowity+7,0 cmprzez 12 mies.');
+    await expect(panel).toContainText('Odpowiedź (ΔhSDS)+0,37catch-up od włączenia');
+
+    // Siatki: pas GH na każdy kurs (wzrost i waga), trend dawki bez odcinka przez przerwę, dwa żetony „💉 GH” w analizie.
+    await page.locator('.vilda-patient-tab[data-tab="traj"]').click();
+    await expect(page.locator('.vilda-siatka-charts svg.vilda-patient-chart').first()).toBeVisible();
+    expect(await pasyGh(page)).toEqual({ height: { pasy: 2, etykiety: 2 }, weight: { pasy: 2, etykiety: 2 }, bmi: { pasy: 0, etykiety: 0 } });
+    await expect.poll(() => page.evaluate(() => {
+      const sek = document.querySelector('.vilda-patient-tab-content[data-tab="traj"]');
+      const h = [...sek.querySelectorAll('p')].find((p) => /Trend leczenia GH/.test(p.textContent));
+      const svg = h && h.parentElement.querySelector('svg');
+      return svg ? svg.querySelectorAll('line[stroke-width="3.2"]').length : null;
+    }), { message: 'trend % dawki: 3 odcinki w kursach (dotąd 4)' }).toBe(6);
+    await expect(page.locator('.vtap-meta .vtap-mchip', { hasText: '💉 GH' })).toHaveText(['💉 GHod 7 lat do 9 lat', '💉 GHod 10 lat — nadal']);
+    expect(await bezPrzewijaniaWBok(page)).toBe(true);
   });
 });

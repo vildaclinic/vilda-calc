@@ -2252,6 +2252,63 @@ P-OTYLOSC-SIATKI po `Ob_dzPowiadom`: `Ob_dzSiatki`, `Ob_zrMetryki`, `Ob_dzMaPacj
 **Granice.** `H` poza `we()` zostaje listą wizyt: kafelek tempa w „Status” (`hvSdsKafelek`) i PDF siatek bez zmian.
 Sejf, dziennik i zapis bez zmian. Wersje `?v=`, precache i `SW_VERSION` ustawił `npm run podbij-wersje`.
 
+## Łatka P-OTYLOSC-STRONA — pomiary od pacjenta w całej aplikacji (temat D; `vilda_cykle_leczenia.js` 11 → 12, `vilda_centile_live_data.js` 8 → 9, `vilda_centile_live_render.js` 5 → 6, `vilda_centile_live_view.js` 5 → 6, `vilda_centile_live_colors.js` 2 → 3, `vilda_centile_live_preview.js` 3 → 4, `vilda_centile_live_panel.css` 7 → 8, `vilda_professional_summary.js` 2 → 3, `vilda_professional_summary.css` 3 → 4, `vilda_adv_history_collapse.js` 2 → 3, `vilda_trajectory_analysis.js` 47 → 48, `vilda_advanced_growth.js` 82 → 83, `vilda_summary_cards.js` 65 → 66, `inline_index_04.js` 29 → 30, `inline_index_00.css` 3 → 4, `style.css` 96 → 97, `index.html`, 2026-11-20, makieta zaakceptowana przez właściciela)
+
+Opis działania, przypadki i wpływ kliniczny: `docs/clinical/ALGORITHMS.md`, wpis P-OTYLOSC-STRONA. Zmiany wprost
+w artefaktach; nic nie przebudowano ani nie minifikowano ponownie.
+
+Czytelne źródła:
+- `vilda_cykle_leczenia.js` (eksport `VildaDziennikOtylosci`): `pomiaryStrony` (dziennik pacjenta strony →
+  `pomiaryDoSiatek`, opcje `patientId`, `doWiekuMies`), `zrodloMetryki`, `pomiaryOdcinka`, `opisMasyOdPacjenta`,
+  `opisOdcinka`, `rysujPdf` (romby, kropki i legenda na stronie PDF);
+- `vilda_centile_live_data.js` — `reportedMeasurements` (pole migawki `reportedMeasurements`, tylko do rysowania),
+  nasłuch `vilda:therapy-points-changed` (`source: 'obesity-dziennik'`);
+- `vilda_centile_live_render.js` — `reportedFor` (pole `reported` siatki), `probe` czyta punkt z dziennika w jego wieku;
+- `vilda_centile_live_colors.js` — `drawReported`, warstwa pełnoekranowa (`fullLayer`) rysuje romby i omija je etykietą;
+- `vilda_centile_live_preview.js` — romby w podglądzie, przeszkody dla etykiety bieżącego pomiaru;
+- `vilda_centile_live_view.js` — legenda „dane z gabinetu” / „dane od pacjenta” (licznik ustępuje miejsca), dymek
+  „◇ od pacjenta · wiek”, „Waga 74,6 kg”, data; kursor i strzałki przeskakują także na pomiary z dziennika;
+- `vilda_professional_summary.js` — `laterPatientWeight`, `reportedWeightNode` (linijka w wierszu „Waga”), odświeżenie
+  karty po zmianie dziennika;
+- `vilda_cykle_leczenia.js` — trzecia część pliku, `window.VildaAdvDziennik`: bloki tylko do odczytu `.adv-dz-row`
+  w `#advMeasurements` (tylko lista z nagłówkiem `#advHistoryToggle`, strona główna). Nie osobny plik: nowy wpis
+  precache przekroczyłby budżet instalacji SW (600 żądań, `tests/unit/sw-precache-stron.test.mjs`);
+  `vilda_adv_history_collapse.js` — `blokiDziennika` (liczy bloki do nagłówka, ich nie tworzy);
+- `vilda_trajectory_analysis.js` — `zDziennikiemStrony`, `analyze` przy `input.dziennikStrony`.
+
+Wstawki w plikach zminifikowanych:
+
+```
+// vilda_advanced_growth.js — wejście analizy trajektorii karty zaawansowanej
+//    było:  TJ9=window.VildaTrajectoryAnalysis.analyze({measurements:or,
+//    jest:  TJ9=window.VildaTrajectoryAnalysis.analyze({dziennikStrony:!0,measurements:or,
+// vilda_summary_cards.js — karta „Porównanie z poprzednim pomiarem”
+// 1. żetony:  …'<span id="porownanieKontekst" …></span>');
+//      jest:  …'<span id="porownanieKontekst" …></span>','<span id="porownaniePacjent" class="porownanie-chip porownanie-chip--pacjent" hidden></span>');
+// 2. updatePrevSummaryDiff: kEl=…("porownanieKontekst"),pEl=…("porownaniePacjent"),…;pEl&&(pEl.hidden=!0,pEl.textContent="");
+// 3. po pasku „kontekst:”: const Sd_dzOdc=Dz.pomiaryOdcinka([{ageMonths:t.ageMonths,weight:t.weightKg},{ageMonths:A*12,weight:s}],t.ageMonths,A*12),
+//    Sd_romb=…; żeton: romb + Dz.opisOdcinka(n)
+// 4. wiersz: po podpisie „Dziś” — w.klucz==="masa": span.pt-s.pt-pacjent (romb + Dz.opisMasyOdPacjenta(ostatni))
+// inline_index_04.js — buildCentilePageCanvas / generateCentileChart
+// 1. parametry:  …legacyLayout:__legacyLayout}){  →  …legacyLayout:__legacyLayout,pomiaryDziennika:__dz04}){
+// 2. po serii wagi (przed „wagaiwzrost.pl”): (function(){if(__dz04!==!0)return;…Dz.rysujPdf(n,{minX:e,maxX:t,
+//    height:{px:220,py:me+80,pw:ce-220,ph:ue-160,minY:w,maxY:A},weight:{px:220,py:Ge+80,pw:ce-220,ph:Ae-160,minY:M,maxY:u},
+//    legend:{x:oe/2,y:le-24},current:{ageMonths:_,weight:X,height:ne},measurements:advancedGrowthData.measurements})})(),
+// 3. generateCentileChart: …suppressSummaryBox:!!t}) → …suppressSummaryBox:!!t,pomiaryDziennika:!t})
+//    (siatka „zewnętrzna” — inne dane niż pacjent strony — i producenci modelOnly nie rysują dziennika)
+```
+
+`index.html`: `<span id="advHistoryPatient" class="porownanie-chip adv-history-patient" hidden>` obok licznika
+„Poprzednich pomiarów”. CSS: `vilda_centile_live_panel.css` (klucz kropki i rombu,
+data w dymku), `vilda_professional_summary.css` (`.professional-summary-reported`), `inline_index_00.css` (`.adv-dz-*`,
+`.adv-history-patient`, `#advResults .vtap-pac-l` schowany jak na makiecie), `style.css` (`.porownanie-chip--pacjent`,
+`.vilda-romb-pacjent`, `.pt-s.pt-pacjent`).
+
+**Granice.** Sejf, dziennik, zapis wizyty, autozapis i `collectAdvancedMeasurements()` bez zmian — pomiary z dziennika
+są tylko rysowane i pokazywane. Bez zmian: Karta pacjenta (temat C), DocPro, siatka Palczewskiej 1–18 lat i strona
+„standardowa” PDF, karta „Obliczenia wzrostowe” (tryb podstawowy). Wersje `?v=`, precache i `SW_VERSION` ustawił
+`npm run podbij-wersje`.
+
 ## Łatka P-E2-MENARCHE — estradiol poniżej 18 lat: zakresy dorosłych po 5 latach od menarche (`lab_units_data.js` 42 → 43, `lab_unit_converter.js` 10 → 11, `vilda_lab_packages.js` 10 → 11, `inline_przelicznik_jednostek_00.css` 17 → 18, `przelicznik-jednostek.html`, 2026-11-19, decyzje właściciela)
 
 Opis działania, przypadki, dowody i ograniczenia: `docs/clinical/ALGORITHMS.md`, wpis „LAB-E2-MENARCHE”. Zmiany wprowadzono wprost w artefaktach, czytelnymi blokami; żadnego pliku nie przebudowano z dawnych źródeł ani nie minifikowano ponownie.
@@ -2395,6 +2452,59 @@ zmian; sejf, dziennik, zapis i synchronizacja bez zmian; style tylko klasami (be
 których szukają testy i moduły (`.vdo`, `.vilda-gha-btn`, `.vilda-gh-summary`, `.vilda-oba-verdict`, `.vilda-ob-dz`),
 bez zmian; pasek ma własne klasy (`.vilda-kl-*`), żeby lokatory bloków nie trafiały w pasek. Wersje `?v=`, precache
 i `SW_VERSION` ustawił `npm run podbij-wersje`.
+
+## Łatka P-GH-WZNOWIENIE, część 1 — kursy GH od wznowienia w Karcie (`vilda_auth_ui.js` 575 → 576, `growth-basic-module.js` 24 → 25, 2026-11-20, decyzje właściciela)
+
+Czytelne źródło reguły: `vilda_trajectory_analysis.js` — `ghKursy` (eksport `VildaTrajectoryAnalysis.ghKursy`; z niej
+`therapyIntervals`), `kursyZPrzerwa` (dawna reguła, już tylko zapas kursów otyłości). W `vilda_auth_ui.js` nowy czytelny
+blok P-GH-WZNOWIENIE zaraz po funkcji `jl` (przed blokiem P-KARTA-LECZENIE): `Gw_BEZ_WLACZENIA`, `Gw_kursy` (kursy
+z modułu trajektorii; bez modułu — null), `Gw_biezacy` (bieżący kurs przy > 1 kursie, inaczej null — Karta liczy jak
+dotąd), `Gw_znacznik` („kurs k z N”, wygląd „cykl k z N” z `Ob_css`), `Gw_infoW2` (treść ramki W2), `Gw_wgWieku`
+(punkty wg wieku, stabilnie), `Gw_pasy` (pas na kurs; jeden kurs — z punktów wg wieku), `Gw_numerKursu` (numer kursu
+punktu trendu), `Gw_punktyProgramu` (program trendu z bieżącego kursu; jeden kurs — z punktów wg wieku). Opis:
+`docs/clinical/ALGORITHMS.md`, wpis P-GH-WZNOWIENIE, część 1.
+
+```
+// vilda_auth_ui.js — wl (podsumowanie GH)
+// 1. pętla Włączenia/Zakończenia po posortowanych n (było: po tablicy a); po niej:
+//    var Gw=Gw_biezacy(a),Gw_p=Gw?Gw.kurs.punkty:n;Gw&&(r=Gw.kurs.wlaczenie,o=Gw.kurs.b!=null?Gw_p[Gw_p.length-1]:null);
+//    var Gs=r;r||(r=Gw_p[0]);                                         (było: var Gs=r;r||(r=n[0]);)
+// 2. znacznik stanu: …text:Kl_st})]) → …text:Kl_st}),Gw?Gw_znacznik(Gw):null])
+// 3. h("Punkty kontrolne",String(a.length)) → h("Punkty kontrolne",Gw?Gw_p.length+" w kursie ("+a.length+" łącznie)":String(a.length))
+// 4. ramka P-GH-BEZ-STARTU: text:"Brak punktu włączenia…" → text:Gw?Gw_infoW2(Gw):"Brak punktu włączenia…"
+// vilda_auth_ui.js — kl (Dane analityczne GH)
+// 5. pętla Włączenia po posortowanych d (było: po tablicy l); po niej:
+//    var Gw=Gw_biezacy(l),Gw_d=d,Gw_w2=!!Gw&&Gw.bezWlaczenia;Gw&&(d=Gw.kurs.punkty.slice(),l=d,c=Gw.kurs.wlaczenie);
+// 6. var w=u!=null&&h!=null?h-u:null → var w=!Gw_w2&&u!=null&&h!=null?h-u:null; etykieta „Przyrost od Włączenia”
+//    i podpis Gw_BEZ_WLACZENIA przy W2
+// 7. var z=y!=null&&x!=null?x-y:null; → var z=!Gw_w2&&y!=null&&x!=null?x-y:null; podpis ΔhSDS Gw_BEZ_WLACZENIA przy W2
+// 8. „Wiek kostny (ost.)”: pętla po Gw_d (cała historia, jak dotąd) zamiast d
+// 9. createTextNode("Wzrastanie") → createTextNode("Wzrastanie"+(Gw?" — kurs "+Gw.numer+" z "+Gw.liczba:""))
+// vilda_auth_ui.js — Pl (Trend leczenia GH), ml i gl (wykresy)
+// 10. var l=[] → var l=[],Gw_nr=Gw_numerKursu(a); w punkcie trendu: var Gw_n=Gw_nr(u);Gw_n!==void 0&&(h.Gw_kurs=Gw_n)
+// 11. program: pętla po Gw_punktyProgramu(a) zamiast a
+// 12. ml: else if(P.Gw_kurs!==t[L-1].Gw_kurs)K+=" M "+… (linia dawki przerwana między kursami)
+// 13. gl: if(!(P==null||L==null)) → if(!(P==null||L==null||f.Gw_kurs!==K.Gw_kurs)) (bez odcinka między kursami)
+// vilda_auth_ui.js — showPatientCard (siatki)
+// 14. Yt=Lt(s.ghTherapyPoints,"GH","#0F6E56") → Yt=Gw_pasy(s.ghTherapyPoints,function(pe){return Lt(pe,"GH","#0F6E56")})
+// 15. Ne=[Yt,ke].filter(Boolean) → Ne=[].concat(Yt||[],ke||[])
+// 16. _cx9: …,redKursy:ae._vildaCmpCtx.redKursy} → …,redKursy:ae._vildaCmpCtx.redKursy,ghKursy:ae._vildaCmpCtx.ghKursy}
+// vilda_auth_ui.js — panel „Porównanie pomiarów” (renderPanel)
+// 17. nowa function ctxGhKursy(cx,ovlM) przed renderPanel (suma pokryć cx.ghKursy; bez listy — koperta cx.gh)
+// 18. var ghM=cx?ovlM(cx.gh):0, → var ghM=ctxGhKursy(cx,ovlM),
+
+// growth-basic-module.js — kontekst analizy trajektorii (z)
+//    było:  k9&&(k9.gh&&(c9.gh=k9.gh),k9.red&&(c9.red=k9.red),typeof k9.mpSds=="number"
+//    jest:  k9&&(k9.gh&&(c9.gh=k9.gh),k9.red&&(c9.red=k9.red),/* P-GH-WZNOWIENIE … */k9.ghKursy&&(c9.ghKursy=k9.ghKursy),
+//           k9.redKursy&&(c9.redKursy=k9.redKursy),typeof k9.mpSds=="number"      (jak vilda_advanced_growth.js)
+```
+
+**Granice.** Jeden kurs (albo brak `VildaTrajectoryAnalysis.ghKursy`) — `Gw_biezacy` daje null i wszystkie gałęzie liczą
+jak dotąd; jedyna zmiana przy jednym kursie: „Włączenie” = pierwsze „start” wg wieku, nie wg kolejności tablicy (wynik inny
+tylko przy dwóch Włączeniach w otwartym kursie — scalone duplikaty). Punkty trendu jednego kursu nie dostają pola
+`Gw_kurs`. Bez nowego pliku ładowanego przez strony i bez nowych stylów (znacznik i ramka mają dotychczasowy wygląd);
+DocPro (`gh_therapy_monitor.js`, `vilda_gh_punkty.js`, odcinki, B.64), sejf, Terminarz i Historia bez zmian (część 2).
+Wersje `?v=`, precache i `SW_VERSION` ustawił `npm run podbij-wersje`.
 
 ## Trwała tożsamość wizyt — źródło i granica artefaktu sejfu
 

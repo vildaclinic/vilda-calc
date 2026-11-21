@@ -202,6 +202,64 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 #advMeasurements.adv-history-collapsed > .measure-row[data-adv-history="ukryty"] {
   display: none;
 }
+/* P-OTYLOSC-STRONA (temat D): pomiar z dziennika leczenia między wierszami — tylko do odczytu, odznaka
+   „pomiar od pacjenta”; zwinięta lista chowa go razem z wierszami (vilda_adv_history_collapse.js). */
+#advMeasurements > .adv-dz-row {
+  display: block;
+  margin: var(--space-0-5) 0 0;
+}
+#advMeasurements.adv-history-collapsed > .adv-dz-row {
+  display: none;
+}
+.adv-dz-row .adv-dz-sep {
+  background: #f0c38a;
+}
+.adv-dz-row[data-origin="gabinet"] .adv-dz-sep {
+  background: #00767e40;
+}
+.adv-dz-badge {
+  display: inline-block;
+  margin: 0 0 var(--space-0-35);
+  padding: 1px var(--space-8px);
+  border: var(--border-hairline) solid #f0c38a;
+  border-radius: var(--radius-pill);
+  background: #fff4e0;
+  color: #8a4b00;
+  font-size: .78rem;
+  font-weight: 700;
+}
+.adv-dz-row[data-origin="gabinet"] .adv-dz-badge {
+  border-color: #cfe2e5;
+  background: #e6f4f5;
+  color: #0a6b73;
+}
+.adv-dz-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4px);
+  min-width: 0;
+  font-size: .95rem;
+}
+.adv-dz-value {
+  display: flex;
+  align-items: center;
+  min-height: 2.6em;
+  padding: 0 var(--space-12px);
+  box-sizing: border-box;
+  border: var(--border-hairline) solid #ecdcc4;
+  border-radius: var(--radius-10);
+  background: #fffaf2;
+  color: #4d6466;
+}
+.adv-history-patient {
+  background: #fff4e0;
+  color: #8a4b00;
+}
+/* Makieta D (2026-11-20): w karcie zaawansowanej karta „Waga” analizy ma tylko obramowanie, bez podpisu
+   „z wpisami od pacjenta (N)” — podpis zostaje w Karcie pacjenta. */
+#advResults .vtap-pac-l {
+  display: none;
+}
 #advMeasurements.adv-history-collapsed > .measure-row[data-adv-history="nowy"]::before {
   content: "Nowy pomiar";
   display: block;

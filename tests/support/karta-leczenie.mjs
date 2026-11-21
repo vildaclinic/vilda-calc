@@ -44,6 +44,20 @@ export const X1 = {
   obesityTherapyPoints: [OB(DOB_X1, 'x1-os', 'start', '2026-06-23', 99.4, 167.6, '0,25 mg'), OB(DOB_X1, 'x1-oc', 'continue', '2026-11-10', 92.5, 168, '2,4 mg')],
 };
 export const BEZ = { name: 'Fikcyjny Bez Leczenia', user: { lastName: 'Fikcyjny', firstName: 'Bez Leczenia', sex: 'M', age: 9, ageMonths: 0, height: 132, weight: 30 } };
+/**
+ * P-GH-WZNOWIENIE, część 1 — GR1 (wznowienie): W 7;0 (110) → K 8;0 (117) → Z 9;0 (123) → W 10;0 (130) → K 11;0 (137).
+ * DocPro nie pozwala jeszcze wpisać drugiego Włączenia (część 2), więc punkty idą wprost do rekordu, jak po scaleniu
+ * duplikatów. Pomiary wizyt z tych samych wieków — siatki pokazują oba kursy.
+ */
+export const R1 = {
+  name: 'Fikcyjny Bartosz',
+  user: { lastName: 'Fikcyjny', firstName: 'Bartosz', sex: 'M', age: 11, ageMonths: 0, height: 137, weight: 30 },
+  advanced: { data: { measurements: [{ ageMonths: 84, height: 110, weight: 18 }, { ageMonths: 96, height: 117, weight: 21 },
+    { ageMonths: 108, height: 123, weight: 24 }, { ageMonths: 120, height: 130, weight: 27 }] } },
+  ghTherapyPoints: [GH('r1-s1', 'start', 7, 0, 18, 110, null, 0.025), GH('r1-c1', 'continue', 8, 0, 21, 117, null, 0.028),
+    GH('r1-e', 'end', 9, 0, 24, 123, null, 0.03), GH('r1-s2', 'start', 10, 0, 27, 130, null, 0.03),
+    GH('r1-c2', 'continue', 11, 0, 30, 137, null, 0.033)],
+};
 
 export async function otworz(page) {
   await page.addInitScript(() => {
@@ -88,6 +102,12 @@ export const uGory = (page, wybierz) => page.evaluate((kod) => {
   const doKonca = r.scrollTop > 0 && r.scrollTop >= r.scrollHeight - r.clientHeight - 1;
   return top >= 0 && (top <= 40 || (doKonca && el.getBoundingClientRect().bottom <= r.clientHeight + 1));
 }, wybierz.toString());
+/** Siatki Karty: pasy leczenia GH (prostokąty #0F6E56, krycie 0,08) i ich etykiety „GH” na każdej siatce. */
+export const pasyGh = (page) => page.evaluate(() => Object.fromEntries([...document.querySelectorAll('.vilda-siatka-charts svg.vilda-patient-chart')]
+  .filter((s) => s._vildaScale).map((s) => [s._vildaScale.metric, {
+    pasy: [...s.querySelectorAll('rect')].filter((r) => r.getAttribute('fill') === '#0F6E56' && r.getAttribute('opacity') === '0.08').length,
+    etykiety: [...s.querySelectorAll('text')].filter((t) => t.textContent === 'GH').length,
+  }])));
 export const bezPrzewijaniaWBok = (page) => page.evaluate(() => {
   const r = document.getElementById('vilda-auth-ui-root');
   return r.scrollWidth <= r.clientWidth + 1 && document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1;
