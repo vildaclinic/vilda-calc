@@ -13,6 +13,17 @@
   -moz-osx-font-smoothing: grayscale
 }
 
+.vilda-auth-root:has(.vilda-auth-patient-card) {
+  scrollbar-gutter: stable;
+  overflow-anchor: none
+}
+
+@media(min-width:992px) {
+  .vilda-auth-root:has(.vilda-auth-patient-card) {
+    scrollbar-gutter: stable both-edges
+  }
+}
+
 /* Only the patient database shares the application's global navigation.
    Login, unlock and the patient card retain their full-screen auth boundary. */
 html:not(.vilda-embedded) .vilda-auth-root.vilda-auth-database {
@@ -53,6 +64,10 @@ html.vilda-patient-database-open:not(.vilda-embedded) body > .desktop-layout > .
   padding: 56px var(--space-24px) 48px;
   box-sizing: border-box;
   background: radial-gradient(circle at top right,rgba(0,131,141,.05),transparent 70%),radial-gradient(circle at bottom left,rgba(0,131,141,.04),transparent 60%),#fff
+}
+
+.vilda-auth-overlay:has(.vilda-auth-patient-card) {
+  min-height: max(100vh, var(--vilda-patient-tabs-min-height, 0px))
 }
 
 .vilda-auth-card {
@@ -1986,6 +2001,9 @@ body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contr
   .vilda-embedded .vilda-auth-overlay {
     padding-bottom: var(--space-24px);
     min-height: 100%
+  }
+  .vilda-embedded .vilda-auth-overlay:has(.vilda-auth-patient-card) {
+    min-height: max(100%, var(--vilda-patient-tabs-min-height, 0px))
   }
 }
 
