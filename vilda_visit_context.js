@@ -86,6 +86,9 @@
   }
   function capture(payload, options) {
     const settings = options || {}, patientId = patient(settings.patientId);
+    // Loading only the identity of a patient with no active visits may trigger
+    // the native autosave collector. A consultation starts with beginNew.
+    if (root.__VILDA_HOME_GABINET_PREVIEW__ === true && patientId && root.VildaHomeEncounter?.isIdentityOnly?.(patientId)) return null;
     if (settings.readOnly) {
       if (currentOwner !== owner()) return null;
     } else checkOwner();

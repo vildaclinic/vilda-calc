@@ -44406,3 +44406,5 @@ Dla dziecka każdy pomiar ma własny wiek i zapisaną siatkę. Wzrost oblicza `V
 Tempo wzrastania wymaga dwóch potwierdzonych dat pomiarów i co najmniej sześciu ukończonych miesięcy odstępu według progu silnika. `VildaTempoWzrastania` wylicza prędkość z rzeczywistej liczby dni przeliczonej na miesiące przez `VildaDobAge`. Dla populacji DS karta prezentuje tempo opisowo. Daty technicznego zapisu nie służą do obliczania tempa.
 
 Implementacja w `vilda_home_comparison_clinical.js`. Regresje w `tests/unit/home-visit-comparison-clinical.test.mjs` obejmują wizytę z samą masą, BMI i SDS w wieku obu pomiarów, przejście między siatkami, populację DS po 18. roku życia, daty pomiarów i okres leczenia.
+
+Po przeniesieniu wizyty do kosza karta wybiera poprzednią dostępną wizytę według tej samej chronologii klinicznej. W przykładzie z trzema kolejnymi pomiarami 46, 50 i 54 kg usunięcie środkowej wizyty zmienia porównanie ostatniej z +4 kg na +8 kg. Przywrócenie wizyty odtwarza porównanie z pomiarem 50 kg. Regresja obejmuje również dwie wersje zapisu środkowej wizyty (`tests/e2e/home-gabinet-visit-trash.spec.mjs`).

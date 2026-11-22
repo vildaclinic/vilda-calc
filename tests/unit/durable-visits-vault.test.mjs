@@ -370,4 +370,78 @@ describe('durable encrypted visit identity', () => {
     const backup = await a.vault.exportVaultBackup(); await c.vault.mergeVaultBackup(backup, PASSWORD);
     expect((await c.vault.getPatientVisits(first.patientId))[0].visitId).toBe(metadata.visitId);
   });
+  it('retains independently stored patient documents and their exact visit links through trash and restore', async () => {
+    clock();
+    const { vault, win } = await device();
+    const target = visit(), sameDay = visit(target.clinicalDateISO);
+    const { patientId } = await save(vault, target);
+    await save(vault, sameDay, patientId);
+    const linkTo = ({ visitId, clinicalDateISO }) => ({ version: 1, visitId, clinicalDateISO });
+    const reminder = await vault.savePatientNote({
+      patientId, title: 'Fikcyjna kontrola', category: 'followup', dueDateISO: '2026-01-15', visitContext: linkTo(target),
+    });
+    const lab = await vault.savePatientNote({
+      patientId, title: 'Fikcyjny ACR', category: 'wynik-klirens', clinicalDateISO: '2025-12-30',
+      labResult: { test: 'ACR', value: '18', valueNum: 18, unit: 'mg/g' }, visitContext: linkTo(target),
+    });
+    const general = await vault.savePatientNote({ patientId, title: 'Fikcyjna notatka ogólna' });
+    const other = await vault.savePatientNote({ patientId, title: 'Druga wizyta tego dnia', visitContext: linkTo(sameDay) });
+    const binding = { visitContext: linkTo(target), isCurrent: () => true, ensureRecorded: async () => true };
+    win.VildaHomeEncounter = { captureBinding: id => id === patientId ? binding : null };
+    const treatment = win.VildaPatientTreatmentStore.createScope({ vault, patientId, isCurrent: () => true });
+    const diagnosis = await treatment.createDiagnosis({
+      name: 'Fikcyjne rozpoznanie', code: 'I10', status: 'active', dateISO: target.clinicalDateISO,
+    }, binding);
+    const plan = await vault.mutateCarePlan({
+      patientId, action: 'create', operationId: 'fixture-trash-plan', title: 'Fikcyjny plan',
+    }, binding);
+    expect(plan.saved).toBe(true);
+    const readDocuments = () => Promise.all([reminder, lab, general, other, diagnosis].map(({ id }) => vault.getPatientNote(id)));
+    const original = await readDocuments();
+    expect(original[1]).toMatchObject({ visitContext: linkTo(target), clinicalDateISO: '2025-12-30' });
+    expect(original[3].visitContext).toEqual(linkTo(sameDay));
+    expect(original[4]).toMatchObject({ treatmentContext: { code: 'I10' }, visitContext: linkTo(target) });
+    const care = await vault.getCarePlan(plan.planId);
+    expect(care.visitContext).toEqual(linkTo(target));
+    const row = (await vault.getPatientVisits(patientId)).find(item => item.visitId === target.visitId);
+    win.__VILDA_HOME_GABINET_PREVIEW__ = true;
+    const { trashId } = await vault.moveVisitToTrash(patientId, target.visitId, {
+      snapshotId: row.snapshotId, revision: row.rev, isCurrent: () => true,
+    });
+    expect((await vault.getPatientVisits(patientId)).map(item => item.visitId)).toEqual([sameDay.visitId]);
+    expect(await readDocuments()).toEqual(original);
+    expect(await vault.getCarePlan(plan.planId)).toEqual(care);
+
+    next('2026-01-02T12:00:00Z');
+    await vault.savePatientNote({ id: reminder.id, patientId, body: 'Kontrola telefonicznie potwierdzona.' });
+    const updated = await readDocuments();
+    expect(updated[0]).toMatchObject({ visitContext: linkTo(target), body: 'Kontrola telefonicznie potwierdzona.' });
+    await vault.restoreTrashedVisit(patientId, target.visitId, { trashId, isCurrent: () => true });
+    expect((await vault.getPatientVisits(patientId)).map(item => item.visitId).sort())
+      .toEqual([target.visitId, sameDay.visitId].sort());
+    expect(await readDocuments()).toEqual(updated);
+    expect(await vault.getCarePlan(plan.planId)).toEqual(care);
+  });
+  it('keeps the external directory, birth year and contact after syncing a chart with every visit in trash', async () => {
+    clock();
+    const sender = await device(), recipient = await device();
+    sender.win.__VILDA_HOME_GABINET_PREVIEW__ = true;
+    const contact = 'test@example.invalid';
+    const { patientId } = await sender.vault.saveExternalPatient({
+      firstName: 'Jan', lastName: 'Fikcyjny', sex: 'M', birthYear: 1978, contact,
+    });
+    const [row] = await sender.vault.getPatientVisits(patientId);
+    await sender.vault.moveVisitToTrash(patientId, row.visitId, {
+      snapshotId: row.snapshotId, revision: row.rev, isCurrent: () => true,
+    });
+    await recipient.vault.mergeSyncPayload(copy(await sender.vault.exportSyncPayload()));
+    for (const { vault } of [sender, recipient]) {
+      expect((await vault.getPatient(patientId)).header).toMatchObject({
+        firstName: 'Jan', lastName: 'Fikcyjny', external: true, birthYear: 1978, contact,
+      });
+      expect(await vault.getPatientVisits(patientId)).toEqual([]);
+      expect((await vault.listExternalPatients()).map(patient => patient.patientId)).toContain(patientId);
+      expect((await vault.listPatients()).map(patient => patient.patientId)).not.toContain(patientId);
+    }
+  });
 });

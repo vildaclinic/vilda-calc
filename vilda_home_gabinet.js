@@ -32,9 +32,22 @@
       w.VildaPanelPacjent?.wlasciciel() === id && !w.__vildaPersistRestoring &&
       !w.VildaDataImportExport?.isMainSessionRestorePending();
   }
+  function capturePatientScreen(id) {
+    if (!owns(id)) return () => false;
+    const ticket = sequence;
+    return () => !!root && !!account && account === access() && sequence === ticket &&
+      screen !== 'start' && target === id && selected() === id &&
+      (!w.frameElement?.classList.contains('app-pane') || w.parent.VildaShell?.getCurrentRoute() === 'start');
+  }
   function showMessage(text) { root.querySelector('.vhome-gabinet-message').textContent = text; }
   function patientName() {
     return [field('firstName'), field('lastName')].filter(Boolean).join(' ') || field('name') || 'Pacjent';
+  }
+  function setVisitMenu(open) {
+    const toggle = header.querySelector('[data-visit-actions]');
+    if (toggle.getAttribute('aria-expanded') === String(open)) return;
+    toggle.setAttribute('aria-expanded', String(open));
+    header.querySelector('#gbVisitActions').hidden = !open;
   }
   function visitMeasurementsReadOnly() {
     if (!root || !target || screen === 'start') return false;
@@ -85,6 +98,10 @@
       caption.innerHTML = icon(action) + '<span>' + actionLabel + '</span>';
     }
     button.disabled = !!status.busy || selecting;
+    const visitActions = header.querySelector('.gb-visit-actions');
+    visitActions.hidden = status.mode !== 'edit' || !status.snapshotId;
+    visitActions.querySelector('[data-visit-actions]').disabled = !!status.busy || selecting;
+    if (visitActions.hidden || status.busy || selecting) setVisitMenu(false);
     header.querySelectorAll('[role="tab"]').forEach(tab => {
       const active = screen === tab.dataset.screen;
       tab.setAttribute('aria-selected', String(active));
@@ -122,8 +139,9 @@
       return true;
     }
     historyHost.hidden = false;
+    const inPatientScreen = capturePatientScreen(id);
     historyView = w.VildaHomeVisitHistory.mount(historyHost, {
-      ...options, patientId: id, isCurrent: () => owns(id) && target === id && options.isCurrent(),
+      ...options, patientId: id, isCurrent: () => inPatientScreen() && owns(id) && options.isCurrent(),
       backLabel: screen === 'analysis' ? 'Wróć do analizy' : 'Wróć do przeglądu',
       onBack: back,
       onEdit(row) {
@@ -298,7 +316,9 @@
       '<div class="gb-person-line"><div class="gb-identity"><h1></h1><div class="gb-identity-meta"></div></div><div class="gb-card-actions"><button type="button" data-history>' +
       icon('history') + 'Historia wizyt</button><button type="button" class="gb-primary" data-home-encounter>' +
       '<span class="gb-action-copy" data-action-caption></span><span class="gb-action-copy gb-action-reserve" aria-hidden="true" data-longest="' + startVisitLabel + '"></span></button></div></div>' +
-      '<div class="gb-patient-tabs" role="tablist" aria-label="Karta pacjenta"></div></div>' +
+      '<div class="gb-patient-nav"><div class="gb-patient-tabs" role="tablist" aria-label="Karta pacjenta"></div>' +
+      '<div class="gb-visit-actions" role="group" aria-label="Działania wizyty" hidden><button type="button" data-visit-actions aria-expanded="false" aria-controls="gbVisitActions">Działania <span aria-hidden="true">⌄</span></button>' +
+      '<div id="gbVisitActions" hidden><button type="button" data-trash-visit>Przenieś wizytę do kosza</button></div></div></div></div>' +
       '<div class="vhome-gabinet-message" role="status"></div><div id="vhomePatientOverview" hidden></div><section id="vhomeVisitHistory" hidden aria-label="Historia wizyt"></section>';
     analysis.before(root);
     header = d.getElementById('vhomeGabinetHeader'); landing = d.getElementById('vhomeGabinetStart'); overview = d.getElementById('vhomePatientOverview');
@@ -318,6 +338,27 @@
       const status = w.VildaHomeEncounter.state(target);
       if (owns(target) && status.mode === 'browse' && status.visitId && !status.busy && !selecting)
         w.VildaHomeEncounter.history(target, patientName(), status.visitId);
+    };
+    const visitActions = header.querySelector('.gb-visit-actions'), toggle = visitActions.querySelector('[data-visit-actions]');
+    toggle.onclick = () => setVisitMenu(toggle.getAttribute('aria-expanded') !== 'true');
+    visitActions.onkeydown = event => {
+      if (event.key === 'Escape' && toggle.getAttribute('aria-expanded') === 'true') {
+        event.preventDefault(); event.stopPropagation(); setVisitMenu(false); toggle.focus();
+      }
+    };
+    d.addEventListener('pointerdown', event => { if (!visitActions.contains(event.target)) setVisitMenu(false); });
+    visitActions.onfocusout = event => { if (!visitActions.contains(event.relatedTarget)) setVisitMenu(false); };
+    header.querySelector('[data-trash-visit]').onclick = async () => {
+      const id = target, capture = owns(id) && w.VildaHomeEncounter.captureVisitTrash(id);
+      setVisitMenu(false);
+      if (!capture) return;
+      const current = () => target === id && !header.hidden && owns(id) && capture.isCurrent();
+      const confirmed = await w.VildaHomeVisitHistory.confirmRemoval(capture, current, toggle);
+      if (!confirmed || !current()) return;
+      try {
+        if (await capture.moveToTrash()) return;
+      } catch (_) { /* Preserve the edit and let the clinician reopen the current revision. */ }
+      if (target === id && owns(id)) showMessage('Nie przeniesiono wizyty do kosza. Otwórz ponownie wizytę i sprawdź jej aktualny zapis.');
     };
     root.querySelector('[data-home-encounter]').onclick = async event => {
       if (!owns(target)) return;
@@ -362,6 +403,7 @@
   w.addEventListener('pageshow', schedule);
   w.addEventListener('pagehide', () => { dismissHistory(); if (main) setScreen(null); sequence++; selecting = false; detach(true); if (picker) destroyPicker(); });
   w.VildaHomeGabinet = Object.freeze({
+    capturePatientScreen,
     showStart, showAnalysis, selectPatient, openPatient, prepareLabEntry, visitMeasurementsReadOnly, openVisitHistory, openOverview: (key = 'antro') => showOverview(key),
     openReminders: () => screen !== 'start' && showOverview('reminders'),
     captureVisitBinding: patientId => screen !== 'start' && target === patientId && owns(patientId)

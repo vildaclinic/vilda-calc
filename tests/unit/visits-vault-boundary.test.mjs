@@ -1,3 +1,4 @@
+import { restoreVisitTrashBaseline } from '../../tools/visit-trash-vault-delta.mjs';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
@@ -6,7 +7,7 @@ import { restorePatientTreatmentBaseline } from '../../tools/patient-treatment-v
 import { reduceClinicalWorkspaceVault } from '../../tools/check_clinical_workspace_boundary.mjs';
 
 const deployed = readFileSync(new URL('../../vilda_vault.js', import.meta.url), 'utf8');
-const source = restorePatientTreatmentBaseline(deployed);
+const source = restorePatientTreatmentBaseline(restoreVisitTrashBaseline(deployed));
 const fragment = readFileSync(new URL('../../runtime/durable-visits-v1/vault-fragment.js', import.meta.url), 'utf8');
 const manifest = JSON.parse(readFileSync(new URL('../../runtime/durable-visits-v1/manifest.json', import.meta.url), 'utf8'));
 const native = JSON.parse(readFileSync(new URL('../../runtime/clinical-workspace-v1/manifest.json', import.meta.url), 'utf8'));

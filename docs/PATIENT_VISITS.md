@@ -37,6 +37,16 @@ Przypisanie musi być stabilne pomiędzy urządzeniami i utrwalone przed scaleni
 
 Notatki ogólne, plany opieki, wyniki badań i historia leczenia zachowują dotychczasowe zasady. Nie przypisujemy ich do wizyty wyłącznie na podstawie takiej samej daty. Nowy identyfikator daje podstawę do późniejszych jednoznacznych powiązań i prezentacji stanu leczenia na dzień wizyty.
 
+### Dokumentacja po przeniesieniu wizyty do kosza
+
+W edycji historycznej wizyty w nowym Gabinecie lekarz może przenieść do kosza zapisane wersje wybranej wizyty. Historia i porównanie w Analizie korzystają z pozostałych wizyt tego pacjenta. Dwa spotkania zapisane pod tą samą datą mają odrębne identyfikatory.
+
+Karta pacjenta przechowuje badania, notatki, plany opieki, rozpoznania z kodem ICD-10, epizody leczenia i przypomnienia jako samodzielne wpisy. Lekarz ma do nich dostęp również po przeniesieniu ostatniej wizyty do kosza. Każdy taki wpis zachowuje swój identyfikator oraz pierwotne powiązanie `visitContext`, jeśli zostało zapisane. Może to obejmować pojedynczą czynność w planie lub kontrolę w przebiegu leczenia. Data pobrania próbki, data kontroli i termin przypomnienia zachowują własne znaczenie.
+
+Pomiary oraz dane zapisane w wersji wizyty trafiają do kosza razem z nią. Dotyczy to m.in. danych okołoporodowych, wzrostu rodziców, oznaczenia zespołu Downa w formularzu i punktów terapii GH z DocPro. Jeśli te wartości zapisano także podczas innej wizyty, jej wersje zachowują swoją treść. Po przeniesieniu ostatniej wizyty zakładka Status pokazuje „Brak zapisanych wizyt”. Ze strony tej samej kartoteki można rozpocząć nową wizytę lub otworzyć historię i przywrócić poprzednią.
+
+Przywrócona wizyta ma ten sam `visitId`. Jej szczegóły ponownie odczytują dokumenty dla tej pary `patientId` i `visitId`, łącznie z późniejszymi poprawkami wpisanymi w Karcie pacjenta. Ogólne notatki oraz wpisy dotyczące innego spotkania zachowują własny zakres.
+
 ## Zgodność i wycofanie
 
 Eksport, import, synchronizacja i scalanie pacjentów muszą przenosić `payload.visit` razem z pełnym stanem. Przy zapisie poprawki z klienta bez metadanych trzeba zachować rozpoznaną tożsamość; nie wolno usuwać ostatniego stanu wizyty wyłącznie z powodu synchronizowanej automatycznej retencji. Nie zmieniamy kryptografii ani norm klinicznych.

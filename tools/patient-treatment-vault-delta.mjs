@@ -58,7 +58,8 @@ export function restorePatientTreatmentBaseline(source, repository = ROOT) {
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const args = process.argv.slice(2);
   if (!args.length) {
-    const source = readFileSync(resolve(ROOT, 'vilda_vault.js'), 'utf8');
+    const { restoreVisitTrashBaseline } = await import('./visit-trash-vault-delta.mjs');
+    const source = restoreVisitTrashBaseline(readFileSync(resolve(ROOT, 'vilda_vault.js'), 'utf8'));
     if (applyPatientTreatmentDelta(restorePatientTreatmentBaseline(source)) !== source) fail('round trip differs');
     process.stdout.write('Patient treatment: readable model, scoped actors and exact vault delta verified.\n');
   } else if (args.length === 3 && args[0] === '--rebuild') {

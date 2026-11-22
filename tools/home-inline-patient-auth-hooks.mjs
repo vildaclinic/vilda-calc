@@ -28,8 +28,16 @@ const bodyHooks = [
   ['GdZakonczOdczyt(GdBilet)', 'HomeEndRead(GdBilet)', 3],
   ['GdOdcisk=GdOdciskKarty(l,GdNotatki);', 'if(HomeInlineFocus)HomeInline.selected=r.activeTab||"notes";GdOdcisk=GdOdciskKarty(l,GdNotatki);'],
   ['var d=l&&Array.isArray(l.snapshots)?l.snapshots:[],c=d.length?d[0]:null;',
-   'var d=l&&Array.isArray(l.snapshots)?l.snapshots:[];if(HomeInline&&HomeInline.snapshotId)d=HomeInline.historicalSnapshots(d);var c=d.length?d[0]:null;'],
-  ['if(!c||!c.payload){HomeEndRead(GdBilet);Zt(', 'if(!c||!c.payload){HomeEndRead(GdBilet);if(HomeInline){HomeInline.showError();return}Zt('],
+   `var d=l&&Array.isArray(l.snapshots)?l.snapshots:[];
+// A patient may have only documents. The public vault omits the storage
+// identity marker; a missing specifically requested snapshot is still an error.
+var HomeIdentity=l&&l.patientId===t&&l.snapshotCount===0&&Array.isArray(l.snapshots)&&!d.length&&!(HomeInline&&HomeInline.snapshotId)?l.header:null;
+if(HomeInline&&HomeInline.snapshotId)d=HomeInline.historicalSnapshots(d);var c=d.length?d[0]:null;`],
+  ['if(!c||!c.payload){HomeEndRead(GdBilet);Zt(', 'if((!c||!c.payload)&&!HomeIdentity){HomeEndRead(GdBilet);if(HomeInline){HomeInline.showError();return}Zt('],
+  ['var s=c.payload,p=typeof i.bmiSource', 'var s=HomeIdentity?{name:HomeIdentity.name,user:{sex:HomeIdentity.sex,dobISO:HomeIdentity.dobISO}}:c.payload,p=typeof i.bmiSource'],
+  ['c.savedAtISO||c.lastSavedAtISO','c?.savedAtISO||c?.lastSavedAtISO',3],
+  ['[B,U])]);function J(ct)', '[B,U])]);if(HomeIdentity){B.disabled=true;B.title="Edycja danych będzie dostępna po zapisaniu wizyty."}function J(ct)'],
+  ['text:"Brak danych do wy\\u015Bwietlenia."', 'text:HomeIdentity?"Brak zapisanych wizyt.":"Brak danych do wy\\u015Bwietlenia."'],
   ['if(Ia(),le.onPick=a,le.listOptions=n,!(r&&r._navRestore))','if(!HomeInline){if(Ia(),le.onPick=a,le.listOptions=n,!(r&&r._navRestore))'],
   ['}Xn=t;var Vt=null;', '}Xn=t;}var Vt=null;'],
   ['ia({screen:"card",patientId:t,tab:', 'HomeTab({screen:"card",patientId:t,tab:', 7],

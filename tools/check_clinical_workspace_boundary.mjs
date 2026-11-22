@@ -1,5 +1,6 @@
 import { restoreKtvVaultBaseline } from './klirens-ktv-vault-delta.mjs';
 import { restoreDurableVisitsBaseline } from './visits-vault-delta.mjs';
+import { restoreVisitTrashBaseline } from './visit-trash-vault-delta.mjs';
 import { restorePatientTreatmentBaseline } from './patient-treatment-vault-delta.mjs';
 // Verify the exact generated native-workspace delta before the original V1
 // authority proof runs. This reduction never strips arbitrary new functions.
@@ -58,6 +59,7 @@ function reverseOnce(text, before, after) {
   return text.replace(after, before);
 }
 export function reduceClinicalWorkspaceVault(source, repository = ROOT) {
+  source = restoreVisitTrashBaseline(source, repository);
   source = restorePatientTreatmentBaseline(source, repository);
   source = restoreDurableVisitsBaseline(source, repository);
   source = restoreKtvVaultBaseline(source);
