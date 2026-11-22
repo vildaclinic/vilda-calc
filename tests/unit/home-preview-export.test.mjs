@@ -410,7 +410,7 @@ describe('fictional preview patient selection remains inside the native vault', 
     expect((await vault.listPatients()).map(patient => patient.header.name)).toContain('Demonstracyjna Klara');
   });
 
-  test('simultaneous first Gabinet tabs seed Antoni and five separate visits for Klara only once', async () => {
+  test('simultaneous first Gabinet tabs seed the fictional visits, appointments, reminders and plans only once', async () => {
     const { vault, storage } = await nativePreviewVault();
     let pending = Promise.resolve();
     const locks = { request(_name, callback) { const result = pending.then(callback); pending = result.catch(() => {}); return result; } };
@@ -418,10 +418,33 @@ describe('fictional preview patient selection remains inside the native vault', 
     expect((await Promise.all(tabs.map(tab => previewFinished(tab.window)))).map(state => state.status)).toEqual(['ready', 'ready']);
     const patients = await vault.listPatients();
     expect(patients).toHaveLength(2);
-    expect(patients.find(patient => patient.header.name === 'Przykładowy Antoni').snapshotCount).toBe(1);
+    const original = patients.find(patient => patient.header.name === 'Przykładowy Antoni');
+    expect(original.snapshotCount).toBe(1);
     const sample = patients.find(patient => patient.header.name === 'Demonstracyjna Klara');
     expect(sample.snapshotCount).toBe(5);
-    expect(await vault.listPatientNotesForPatient(sample.patientId)).toHaveLength(1);
+    const now = new Date();
+    const localDay = date => [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');
+    const day = localDay(now);
+    const reader = vault.createCalendarReader({});
+    const appointments = await reader.listPatientNotesInRange(day, day + 'T23:59:59.999Z');
+    reader.dispose();
+    expect(appointments.filter(note => note.category === 'followup').map(note => [note.patientId, note.dueTime]).sort()).toEqual([
+      [original.patientId, '09:00'], [sample.patientId, '09:30'],
+    ].sort());
+    now.setDate(now.getDate() - 2);
+    for (const [patient, dueDateISO] of [[original, day], [sample, localDay(now)]]) {
+      const notes = await vault.listPatientNotesForPatient(patient.patientId);
+      expect(notes.filter(note => note.category === 'reminder-task' && !note.careContext)
+        .map(note => note.dueDateISO.slice(0, 10))).toEqual([dueDateISO]);
+    }
+    expect((await vault.listCarePlans({})).map(plan => [plan.patientId, plan.status]).sort()).toEqual([
+      [original.patientId, 'active'], [sample.patientId, 'active'],
+    ].sort());
+    const savePatientNoteOnce = vi.fn(vault.savePatientNoteOnce), mutateCarePlan = vi.fn(vault.mutateCarePlan);
+    const reopened = bootPreview({ storage, vault: { ...vault, savePatientNoteOnce, mutateCarePlan }, locks, gabinet: true });
+    expect((await previewFinished(reopened.window)).status).toBe('ready');
+    expect(savePatientNoteOnce).not.toHaveBeenCalled();
+    expect(mutateCarePlan).not.toHaveBeenCalled();
   });
 
   test('an interrupted upgrade resumes the fictional visit series without modifying the open chart or recreating a removed example', async () => {
@@ -452,7 +475,7 @@ describe('fictional preview patient selection remains inside the native vault', 
     expect(visits.every(visit => visit.revisionCount === 1 && visit.origin === 'explicit')).toBe(true);
     expect(visits[1].payload.user.height).toBeUndefined();
     expect(visits[0].payload.bp).toEqual({ systolic: 108, diastolic: 68, heartRate: 76 });
-    const notes = await vault.listPatientNotesForPatient(sample.patientId);
+    const notes = (await vault.listPatientNotesForPatient(sample.patientId)).filter(note => note.category === 'observation');
     expect(notes).toHaveLength(1);
     expect(notes[0]).toMatchObject({ title: 'Konsultacja telefoniczna', patientId: sample.patientId,
       visitContext: { version: 1, visitId: visits[1].visitId, clinicalDateISO: visits[1].clinicalDateISO } });

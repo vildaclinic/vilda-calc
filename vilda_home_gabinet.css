@@ -13,40 +13,71 @@ html:has([data-vhome-screen]) { scrollbar-gutter: stable; }
 
 #vhomeGabinet { color: #23444c; font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; min-width: 0; }
 #vhomeGabinetHeader, #vhomePatientOverview, #vhomeVisitHistory { width: 100%; min-width: 0; box-sizing: border-box; }
-[data-vhome-screen]:not([data-vhome-screen="start"]) > #vhomeGabinet {
+.main-content[data-vhome-screen] {
+  --gb-inset-start: max(var(--mobile-dock-side-gap,.75rem),calc(env(safe-area-inset-left,0px) + .35rem));
+  --gb-inset-end: max(var(--mobile-dock-side-gap,.75rem),calc(env(safe-area-inset-right,0px) + .35rem));
+}
+[data-vhome-screen]:not([data-vhome-screen="start"]) > #vhomeGabinet,
+[data-vhome-screen] > #gbEntryHeader {
   box-sizing: border-box;
-  padding-inline: max(var(--mobile-dock-side-gap,.75rem),calc(env(safe-area-inset-left,0px) + .35rem)) max(var(--mobile-dock-side-gap,.75rem),calc(env(safe-area-inset-right,0px) + .35rem));
+  padding-inline: var(--gb-inset-start) var(--gb-inset-end);
 }
 @media (min-width: 992px) {
-  html.vilda-form-layout:not(.vilda-embedded):not(.vilda-shell-embedded):not(.vilda-phone) .main-content[data-vhome-screen]:not([data-vhome-screen="start"]) > :is(#vhomeGabinet, #vhomeGabinetAnalysis) {
-    padding-inline: var(--space-4px);
+  html.vilda-form-layout:not(.vilda-embedded):not(.vilda-shell-embedded):not(.vilda-phone) .main-content[data-vhome-screen] {
+    --gb-inset-start: var(--space-4px);
+    --gb-inset-end: var(--space-4px);
+  }
+  html.vilda-form-layout:not(.vilda-embedded):not(.vilda-shell-embedded):not(.vilda-phone) .main-content[data-vhome-screen] > #vhomeGabinetAnalysis {
+    padding-inline: var(--gb-inset-start) var(--gb-inset-end);
   }
 }
 /* The desktop shell already reserves the right gutter outside the frame. */
-html.vilda-form-host-desktop .main-content[data-vhome-screen]:not([data-vhome-screen="start"],[data-vhome-screen="registration"]) > :is(#vhomeGabinet, #vhomeGabinetAnalysis) {
-  padding-inline: calc(var(--chrome-form-gap) + var(--space-4px)) var(--space-4px) !important;
+html.vilda-form-host-desktop .main-content[data-vhome-screen] {
+  --gb-inset-start: calc(var(--chrome-form-gap) + var(--space-4px));
+  --gb-inset-end: var(--space-4px);
+}
+html.vilda-form-host-desktop .main-content[data-vhome-screen] > #vhomeGabinetAnalysis {
+  padding-inline: var(--gb-inset-start) var(--gb-inset-end) !important;
 }
 [data-vhome-screen] :is(#calcForm, #vhomeMainCards) { gap: var(--space-12px); }
 [data-vhome-screen] :is(#vhomeMainCards, #vhomeVisitComparison, #vhomeOtherTools) { margin-block: var(--space-12px); }
-#vhomeGabinetHeader { margin-bottom: 1.15rem; font: 1rem/1.52 Inter, system-ui, -apple-system, "Segoe UI", sans-serif; }
-#vhomeGabinetHeader :is(.gb-header-top,.gb-person-line,.gb-breadcrumb,.gb-patient-tabs,button) { display: flex; align-items: center; }
-#vhomeGabinetHeader .gb-header-top { justify-content: space-between; gap: var(--space-0-5); margin-bottom: var(--space-0-55); }
-#vhomeGabinetHeader .gb-breadcrumb { gap: var(--space-0-45); margin: 0; padding: 0; background: transparent; color: #557078; font-size: .91rem; }
-#vhomeGabinetHeader button {
+#gbEntryHeader[hidden] { display: none !important; }
+:is(#vhomeGabinetHeader,#gbEntryHeader) { font: 1rem/1.52 Inter, system-ui, -apple-system, "Segoe UI", sans-serif; }
+#vhomeGabinetHeader { margin-bottom: 1.15rem; }
+#vhomeGabinetHeader :is(.gb-header-top,.gb-person-line,.gb-patient-tabs,button),
+:is(#vhomeGabinetHeader,#gbEntryHeader) .gb-breadcrumb { display: flex; align-items: center; }
+:is(#vhomeGabinetHeader .gb-header-top,#gbEntryHeader) {
+  justify-content: space-between; gap: var(--space-0-5); margin-bottom: var(--space-0-55);
+}
+#gbEntryHeader { display: flex; align-items: center; min-height: var(--brand-logo-size); }
+#gbEntryHeader .gb-breadcrumb { width: 100%; min-height: var(--brand-logo-size); }
+:is(#gbEntryHeader,#vhomeGabinetHeader) .gb-breadcrumb { align-self: start; }
+:is(#vhomeGabinetHeader,#gbEntryHeader) .gb-breadcrumb { gap: var(--space-0-45); margin: 0; padding: 0; background: transparent; color: #557078; font-size: .91rem; }
+:is(#vhomeGabinetHeader,#gbEntryHeader) button {
   box-sizing: border-box; width: auto; margin: 0; padding: var(--space-0-5) var(--space-1); gap: var(--space-0-45);
   font: inherit; font-weight: 630; cursor: pointer;
   -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
   transition: none !important;
 }
-#vhomeGabinetHeader button svg { flex: 0 0 18px; }
-#vhomeGabinetHeader button:is(:hover,:active,._pressed) { transform: none !important; }
-#vhomeGabinetHeader :is(.gb-breadcrumb,.gb-patient-tabs) button {
+:is(#vhomeGabinetHeader,#gbEntryHeader) button svg { flex: 0 0 18px; }
+:is(#vhomeGabinetHeader,#gbEntryHeader) button:is(:hover,:active,._pressed) { transform: none !important; }
+:is(#vhomeGabinetHeader,#gbEntryHeader) :is(.gb-breadcrumb,.gb-patient-tabs) button {
   background: transparent !important; border: 0 !important; border-radius: 0 !important;
   box-shadow: none !important;
 }
-#vhomeGabinetHeader .gb-breadcrumb button { min-height: var(--brand-logo-size); padding: 0 .12rem; gap: var(--space-0-4); color: #006e75 !important; font-weight: 620; }
-#vhomeGabinetHeader .gb-breadcrumb button svg { width: 16px; height: 20px; flex-basis: 16px; }
-#vhomeGabinetHeader .gb-breadcrumb > svg { width: 14px; height: 20px; flex-shrink: 0; }
+:is(#vhomeGabinetHeader,#gbEntryHeader) .gb-breadcrumb button {
+  display: inline-flex; align-items: center; min-height: var(--brand-logo-size);
+  padding: 0 .12rem; gap: var(--space-0-4); color: #006e75 !important; font-weight: 620;
+}
+:is(#vhomeGabinetHeader,#gbEntryHeader) .gb-breadcrumb button svg { width: 16px; height: 20px; flex-basis: 16px; }
+:is(#vhomeGabinetHeader,#gbEntryHeader) .gb-breadcrumb > svg, #gbEntryHeader [data-entry-separator] svg { width: 14px; height: 20px; flex-shrink: 0; }
+#gbEntryHeader [data-entry-separator] { display: inline-flex; align-items: center; }
+#gbEntryHeader .gb-breadcrumb [hidden] { display: none !important; }
+#vhomePatientOverview #remindersInline button[data-note-id][aria-current="true"] {
+  outline: var(--border-pro) solid var(--primary);
+  outline-offset: -2px;
+}
+
 #vhomeGabinetHeader .gb-person-line { flex-wrap: wrap; justify-content: space-between; gap: var(--space-0-85) var(--space-1-25); }
 #vhomeGabinetHeader .gb-identity { flex: 1 1 12rem; min-width: 0; overflow-wrap: anywhere; }
 /* In an app pane, vw excludes the shell's rails. The title scales with the
@@ -95,7 +126,7 @@ html.vilda-embedded.vilda-form-host-desktop #vhomeGabinetHeader[data-decor-rail]
 #vhomeGabinetHeader [data-trash-visit]:hover { background: var(--danger-bg) !important; }
 #vhomeGabinetHeader .gb-patient-tabs button { min-height: 46px; justify-content: center; color: #566f75 !important; border-bottom: var(--border-pro) solid transparent !important; }
 #vhomeGabinetHeader .gb-patient-tabs button[aria-selected="true"] { color: #006b72 !important; border-bottom-color: #00838b !important; }
-#vhomeGabinetHeader button:focus-visible { outline: var(--border-pro) solid #00727b; outline-offset: 2px; }
+:is(#vhomeGabinetHeader,#gbEntryHeader) button:focus-visible { outline: var(--border-pro) solid #00727b; outline-offset: 2px; }
 #vhomeGabinet .vhome-gabinet-message:empty { display: none; }
 #vhomeGabinet .vhome-gabinet-message { padding: var(--space-0-6); margin-block: var(--space-0-5); }
 .vvisit-gabinet .vvisit-body { display: flex; flex-direction: column; }
@@ -140,7 +171,7 @@ html.vilda-embedded.vilda-form-host-desktop #vhomeGabinetHeader[data-decor-rail]
 }
 @media (max-width: 640px) {
   #vhomeGabinetHeader { margin-bottom: var(--space-0-85); }
-  #vhomeGabinetHeader .gb-header-top { margin-bottom: var(--space-0-35); }
+  :is(#vhomeGabinetHeader .gb-header-top,#gbEntryHeader) { margin-bottom: var(--space-0-35); }
   #vhomeGabinetHeader .gb-person-line { gap: var(--space-0-7); }
   #vhomeGabinetHeader .gb-identity-meta { font-size: .875rem; }
   #vhomeGabinetHeader .gb-encounter-state { flex-direction: column; justify-content: center; align-items: flex-end; min-height: 2.6rem; gap: 0; line-height: 1.2; }
@@ -153,13 +184,13 @@ html.vilda-embedded.vilda-form-host-desktop #vhomeGabinetHeader[data-decor-rail]
 }
 @media (max-width: 380px) {
   #vhomeGabinetHeader .gb-card-actions button { min-height: 3.6rem; }
-  #vhomeGabinetHeader .gb-header-top { gap: var(--space-0-25); }
-  #vhomeGabinetHeader .gb-breadcrumb { gap: .2rem; }
-  #vhomeGabinetHeader .gb-breadcrumb button svg { display: none; }
+  :is(#vhomeGabinetHeader .gb-header-top,#gbEntryHeader) { gap: var(--space-0-25); }
+  :is(#vhomeGabinetHeader,#gbEntryHeader) .gb-breadcrumb { gap: .2rem; }
+  :is(#vhomeGabinetHeader,#gbEntryHeader) .gb-breadcrumb button svg { display: none; }
   #vhomeGabinetHeader .gb-encounter-state { flex: none; white-space: nowrap; padding-inline: var(--space-0-3); }
 }
 @media (max-width: 340px) {
-  #vhomeGabinetHeader .gb-header-top { min-height: 2.8rem; }
+  :is(#vhomeGabinetHeader .gb-header-top,#gbEntryHeader) { min-height: 2.8rem; }
 }
 
 .vilda-home-workspace #vhomeVisitTrashConfirm { width: min(35rem, calc(100% - 1.25rem)); height: auto; max-height: calc(var(--vhome-dialog-viewport-height, 100dvh) - 1.5rem); }
@@ -175,11 +206,6 @@ html.vilda-home-workspace #vhomeVisitTrashConfirm .vhome-dialog-apply { backgrou
 #vhomeVisitTrash .vht-list button { width: auto; min-height: 44px; margin: 0; padding: var(--space-8px) var(--space-14px); color: var(--primary) !important; background: var(--bg) !important; border: var(--border-hairline) solid var(--line) !important; border-radius: var(--radius-8) !important; box-shadow: none !important; }
 
 /* Rapid intake uses the same clinical form and result cards as a saved visit. */
-.gb-rapid-crumb { display: flex; align-items: center; gap: var(--space-8px); margin: 0; color: var(--text-muted); font-size: .94rem; }
-#gbRapidHeader .gb-rapid-crumb button {
-  display: inline-flex; align-items: center; gap: var(--space-6px); width: auto; min-height: 44px; margin: 0; padding: 0;
-  font: inherit; font-weight: 630; color: var(--primary) !important; background: transparent !important; border: 0 !important; box-shadow: none !important;
-}
 #gbRapidHeader h1 { margin: var(--space-4px) 0 var(--space-16px); color: var(--text-heading); font: 680 clamp(1.5rem,2.1vw,2rem)/1.18 Inter,system-ui,sans-serif; text-align: start; }
 [data-rapid-save], [data-rapid-receipt][hidden], [data-vhome-screen="rapid"] #userSection :is(.vhome-form-actions, label:has(#dobInput), #dobClear),
 [data-vhome-screen="rapid"] #userSection label:has(#firstName,#lastName) > span[style],
@@ -219,10 +245,9 @@ html.vilda-home-workspace #vhomeVisitTrashConfirm .vhome-dialog-apply { backgrou
 /* Registration uses the directory's form in the main workspace. */
 [data-vhome-screen="registration"] > #vhomeGabinet {
   box-sizing: border-box;
-  padding-block: var(--space-16px) var(--space-2-5);
+  padding-block: var(--space-4px) var(--space-2-5);
 }
 html.vilda-form-host-desktop [data-vhome-screen="registration"] > #vhomeGabinet {
-  padding-block-start: 1.8rem;
   padding-inline: clamp(var(--space-1-5),3.5vw,4rem);
 }
 #vhomeGabinetRegistration {
@@ -242,8 +267,7 @@ html.vilda-embedded.vilda-form-host-desktop #vhomeGabinetRegistration {
 }
 #vhomeGabinetRegistration *, #vhomeGabinetRegistration *::before, #vhomeGabinetRegistration *::after { box-sizing: border-box; }
 #vhomeGabinetRegistration .gb-registration-heading { margin-block-end: 1.15rem; }
-#vhomeGabinetRegistration .gb-registration-crumb { margin: 0; padding: 0; background: transparent; }
-#vhomeGabinetRegistration :is(.gb-registration-crumb button,.gb-registration-form button) {
+#vhomeGabinetRegistration .gb-registration-form button {
   width: auto;
   appearance: none;
   color: var(--gb-registration-ink) !important;
@@ -256,22 +280,6 @@ html.vilda-embedded.vilda-form-host-desktop #vhomeGabinetRegistration {
   font: inherit;
   font-weight: 600;
 }
-#vhomeGabinetRegistration .gb-registration-crumb button {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-0-45);
-  min-height: 44px;
-  margin: 0 0 .15rem;
-  padding: 0 .15rem;
-  border: 0 !important;
-  border-radius: var(--radius-4) !important;
-  background: transparent !important;
-  color: #076c73 !important;
-}
-#vhomeGabinetRegistration .gb-registration-crumb svg {
-  flex: 0 0 18px; width: 18px; height: 18px;
-}
-#vhomeGabinetRegistration .gb-registration-crumb button:hover { text-decoration: underline; text-underline-offset: .18em; }
 #gbRegistrationTitle {
   margin: 0;
   color: var(--text-heading);
