@@ -53,7 +53,7 @@
 }
 #vhomeVisitComparison .vcomp-action:is(:hover,:focus-visible) { border-color: var(--primary) !important; }
 #vhomeVisitComparison .vcomp-action:focus-visible {
-  outline: 3px solid var(--primary);
+  outline: var(--border-pro) solid var(--primary);
   outline-offset: 2px;
 }
 #vhomeVisitComparison > .vcomp-action { margin-top: var(--space-12px); }

@@ -6,8 +6,9 @@
 
   function day(value) {
     if (typeof value !== 'string' || !/^\d{4}-\d\d-\d\d$/.test(value)) return null;
-    const time = Date.parse(value + 'T00:00:00Z');
-    return Number.isFinite(time) && new Date(time).toISOString().slice(0, 10) === value ? value : null;
+    const midnight = value + 'T00:00:00.000Z';
+    const time = Date.parse(midnight);
+    return Number.isFinite(time) && new Date(time).toISOString() === midnight ? value : null;
   }
 
   function clinicalDate(row) {
