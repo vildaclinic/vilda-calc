@@ -211,7 +211,7 @@ html.vilda-embedded.vilda-form-host-desktop [data-vhome-screen="office"]:has(#vh
   gap: var(--space-6px) var(--space-14px);
 }
 .vgs-office .vgs-date-short { display: none; }
-.vgs-office .vgs-quick { color: var(--vgs-link); white-space: normal; }
+:host > .vgs-office .vgs-quick { color: var(--vgs-link); white-space: normal; }
 .vgs-office-grid {
   display: grid;
   grid-template-columns: repeat(2,minmax(0,1fr));
@@ -358,7 +358,7 @@ html.vilda-embedded.vilda-form-host-desktop [data-vhome-screen="office"]:has(#vh
 }
 .vgs-office .vgs-when[data-tone="overdue"] { color: #9b3340; }
 .vgs-office .vgs-when[data-tone="today"] { color: #875615; }
-.vgs-office .vgs-related-footer {
+:host > .vgs-office .vgs-related-footer {
   align-self: flex-start;
   margin-top: auto;
   min-height: 44px;
@@ -390,7 +390,7 @@ html.vilda-embedded.vilda-form-host-desktop [data-vhome-screen="office"]:has(#vh
   .vgs-office .vgs-date-short { display: inline; }
   .vgs-office .vgs-heading-row { min-height: 57px; padding-block: var(--space-10px); }
   .vgs-office .vgs-controls { display: grid; grid-template-columns: minmax(0,1fr); gap: 3px; }
-  .vgs-office .vgs-list-toggle { justify-self: start; min-height: 44px; border: 0; background: transparent; color: var(--vgs-link); padding-inline: 0; }
+  :host > .vgs-office .vgs-list-toggle { justify-self: start; min-height: 44px; border: 0; background: transparent; color: var(--vgs-link); padding-inline: 0; }
   .vgs-recent { padding-top: var(--space-4px); }
 }
 @container vgs-office (max-width: 420px) {
