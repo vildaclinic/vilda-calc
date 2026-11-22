@@ -23,8 +23,8 @@
     return row.dateCertain === false && !!row.dateISO;
   }
 
-  function displayDate(row) {
-    return savedDate(row) ? 'Zapis z ' + row.dateLabel : row.dateLabel;
+  function displayDate(row, label = row.dateLabel) {
+    return savedDate(row) ? 'Zapis z ' + label : label;
   }
 
   function measurement(doc, label, value) {
@@ -104,6 +104,12 @@
     const reduced = w.matchMedia('(prefers-reduced-motion: reduce)');
     const lifecycle = new w.AbortController();
     const listen = { signal: lifecycle.signal };
+    // In the application shell the sidebars sit outside the patient iframe.
+    const viewport = w.frameElement?.classList.contains('app-pane') ? w.parent : w;
+    const wide = viewport.matchMedia('(min-width: 1700px)');
+    const updateWidth = () => panel.toggleAttribute('data-wide', wide.matches);
+    updateWidth();
+    wide.addEventListener('change', updateWidth);
 
     title.id = id + '-title';
     caption.id = id + '-caption';
@@ -210,7 +216,8 @@
       tick.setAttribute('aria-selected', 'true');
       list.children[selected].setAttribute('aria-current', 'true');
       caption.setAttribute('aria-labelledby', tick.id);
-      caption.firstElementChild.textContent = [displayDate(row), row.ordinal].filter(Boolean).join(' · ');
+      const longDate = row.dateISO && w.VildaVersionHistory?.dayLabelPL?.(row.dateISO);
+      caption.firstElementChild.textContent = [displayDate(row, longDate || row.dateLabel), row.ordinal].filter(Boolean).join(' · ');
       caption.lastElementChild.textContent = row.ageLabel;
       counter.textContent = (selected + 1) + ' z ' + length;
       newer.disabled = selected === 0;
@@ -326,6 +333,7 @@
         destroyed = true;
         cancelHover();
         cancelTouch();
+        wide.removeEventListener('change', updateWidth);
         lifecycle.abort();
         nodes.clear();
         panel.remove();

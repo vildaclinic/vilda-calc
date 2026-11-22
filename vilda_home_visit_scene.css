@@ -171,6 +171,13 @@
 .vhs-list small { display: block; color: var(--vhs-muted); font-size: .8125rem; margin-top: 3px; }
 .vhs-arrow { color: var(--vhs-accent); }
 
+@media (min-width: 851px) {
+  .vhs-scene[data-wide] .vhs-stage { height: 440px; }
+  .vhs-scene[data-wide] .vhs-paper { top: 47px; width: 290px; height: 349px; padding: 25px; }
+  .vhs-scene[data-wide] .vhs-paper-foot { left: 25px; right: 25px; }
+  .vhs-scene[data-wide] .vhs-paper h3 { font-size: 22px; }
+  .vhs-scene[data-wide] .vhs-paper .vhs-note { font-size: 13px; }
+}
 @media (max-width: 850px) {
   .vhs-total > span { display: none; }
 }
@@ -182,7 +189,7 @@
   .vhs-stage { --vhs-inset: 57px; height: 389px; margin: var(--space-10px) -8px 0; }
   .vhs-paper {
     --vhs-lift: 18px; --vhs-perspective: 900px; --vhs-yaw: -59deg; --vhs-pitch: 8deg; --vhs-roll: -3deg;
-    top: 35px; width: 248px; height: 315px; padding: var(--space-20px) 19px 17px;
+    top: 35px; width: 248px; height: 315px; padding: 21px 19px 17px;
   }
   .vhs-paper[data-active] { --vhs-offset: 0px; --vhs-lift: -4px; --vhs-yaw: -3deg; --vhs-pitch: 1deg; --vhs-roll: -1deg; }
   .vhs-paper-foot { left: 19px; right: 19px; bottom: 14px; }
