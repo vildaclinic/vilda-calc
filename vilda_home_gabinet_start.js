@@ -548,7 +548,7 @@
         const next = idx + (event.key === 'ArrowDown' ? 1 : -1);
         (next < 0 ? query : buttons[Math.min(next,buttons.length - 1)])?.focus();
       }
-    });
+    },listen);
     function offSearch(event) {
       if (!results.hidden && !event.composedPath().includes(get('.vgs-controls'))) closeSearch();
     }
