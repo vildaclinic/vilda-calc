@@ -5,6 +5,7 @@
   if (w.__VILDA_HOME_WORKSPACE_PREVIEW__ !== true || w.__VILDA_HOME_GABINET_PREVIEW__ !== true || w.VildaHomeGabinetStart) return;
   const doc = w.document;
   const watched = new WeakSet();
+  const surfaces = new WeakMap();
   let active = null;
 
   function element(tag, className, text) {
@@ -88,7 +89,7 @@
   function card(entry) {
     return '<button class="vgs-launch-tile" type="button" data-entry="' + entry.action +
       '" aria-labelledby="vgs-title-' + entry.action + '" aria-describedby="vgs-detail-' + entry.action + '">' +
-      '<span class="vgs-launch-symbol" aria-hidden="true"><svg viewBox="0 0 30 28" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' +
+      '<span class="vgs-launch-symbol" aria-hidden="true"><svg viewBox="0 0 30 28" width="30" height="28" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' +
       entry.drawing + '</svg></span><span class="vgs-launch-name" id="vgs-title-' + entry.action + '">' +
       entry.title + '</span><span class="vgs-launch-detail" id="vgs-detail-' + entry.action + '">' + entry.description + '</span></button>';
   }
@@ -204,15 +205,32 @@
     return rows.sort((a,b) => b.order.localeCompare(a.order));
   }
 
+  function landingSurface(host) {
+    const existing = surfaces.get(host);
+    if (existing) return existing;
+    const scope = element('div','vhome-gabinet-start');
+    const root = scope.attachShadow({mode:'open'});
+    const stylesheet = doc.querySelector('link[href*="vilda_home_gabinet_start.css"]')?.cloneNode(false);
+    if (stylesheet) {
+      // A stylesheet inside a shadow root does not block the first paint.
+      scope.hidden = true;
+      const reveal = () => { scope.hidden = false; };
+      stylesheet.addEventListener('load',reveal,{once:true});
+      stylesheet.addEventListener('error',reveal,{once:true});
+      root.append(stylesheet);
+    }
+    host.replaceChildren(scope);
+    surfaces.set(host,scope);
+    return scope;
+  }
+
   function mount(host, options) {
     if (active) active.destroy();
     const vault = w.VildaVault;
     if (!host || !vault?.isUnlocked() || !w.VildaProAccess?.hasAccess() || !w.VildaAuthUI?.isBootReady() || !vault.getCurrentUser()?.userId) return null;
     const session = vault.captureSyncOperationSession();
-    const scope = element('div','vhome-gabinet-start');
-    const root = scope.attachShadow({mode:'open'});
-    const link = doc.querySelector('link[href*="vilda_home_gabinet_start.css"]');
-    if (link) root.append(link.cloneNode(false));
+    const scope = landingSurface(host);
+    const root = scope.shadowRoot;
     const launcher = element('section','vgs-start vgs-launch');
     launcher.setAttribute('aria-labelledby','vgs-launch-title');
     launcher.innerHTML = '<div class="vgs-heading"><h1 id="vgs-launch-title">Rozpocznij pracę</h1><div class="vgs-date">' + icon('calendar') + '<time></time></div></div>' +
@@ -235,7 +253,6 @@
     dialog.setAttribute('aria-labelledby','vgs-quick-title');
     dialog.innerHTML = quickForm();
     root.append(launcher,page,dialog);
-    host.replaceChildren(scope);
     const get = s => root.querySelector(s);
     const query = get('#vgs-query'), results = get('#vgs-results'), toggle = get('.vgs-list-toggle');
     const feedback = get('.vgs-feedback'), schedule = get('.vgs-schedule-body');
@@ -510,7 +527,8 @@
       destroyed = true; sequence++; events.abort(); clearTimeout(midnight);
       unsubscribePrivacy?.(); recentCache.clear();
       reader?.dispose(); reader = null; patients.clear(); if (dialog.open) dialog.close();
-      scope.remove();
+      // Keep the stylesheet attached across views and discard the session DOM.
+      launcher.remove(); page.remove(); dialog.remove();
       if (active?.scope === scope) active = null;
     }
     query.oninput = () => query.value.trim() ? search() : closeSearch();

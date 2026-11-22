@@ -72,6 +72,26 @@ test('the four equal launcher tiles open an isolated calculator for adults and c
   expect(await listPatients(frame)).toEqual(before);
 });
 
+test('returning from rapid intake reuses the already styled launcher', async ({ page }) => {
+  const { frame } = await prepareGabinet(page);
+  const home = launch(frame);
+  const grid = home.locator('.vgs-launch-tiles');
+  await expect(grid).toHaveCSS('display', 'grid');
+  const stylesheet = await home.locator('link[rel="stylesheet"]').elementHandle();
+  const icons = home.locator('.vgs-launch-symbol svg');
+  const widths = await icons.evaluateAll(items => items.map(icon => icon.getBoundingClientRect().width));
+
+  await home.locator('[data-entry="rapid"]').click();
+  await expect(frame.locator('#gbRapidTitle')).toBeVisible();
+  await expect(grid).toHaveCount(0);
+  expect(await stylesheet.evaluate(link => link.isConnected && Boolean(link.sheet))).toBe(true);
+
+  await button(frame.locator('#gbEntryHeader'), 'Ekran startowy').click();
+  await expect(grid).toBeVisible();
+  expect(await stylesheet.evaluate(link => link.isConnected && Boolean(link.sheet))).toBe(true);
+  expect(await icons.evaluateAll(items => items.map(icon => icon.getBoundingClientRect().width))).toEqual(widths);
+});
+
 test('rapid intake stores one visit per save, starts the next patient clean and preserves homonyms across reload', async ({ page }) => {
   const { frame, ids } = await prepareGabinet(page);
   const home = launch(frame);

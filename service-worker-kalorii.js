@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.570';
+const SW_VERSION = '1.1.571';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -1986,12 +1986,14 @@ const CORE_SHELL_URLS = [
   '/vilda_home_gabinet_start.css?v=2',
   '/vilda_home_gabinet_start.css?v=3',
   '/vilda_home_gabinet_start.css?v=4',
+  '/vilda_home_gabinet_start.css?v=5',
   '/vilda_home_gabinet_quick.js?v=1',
   '/vilda_home_gabinet_start.js?v=1',
   '/vilda_home_gabinet_start.js?v=2',
   '/vilda_home_gabinet_start.js?v=3',
   '/vilda_home_gabinet_start.js?v=4',
   '/vilda_home_gabinet_start.js?v=5',
+  '/vilda_home_gabinet_start.js?v=6',
   '/vilda_home_encounter.js?v=1',
   '/vilda_home_encounter.js?v=2',
   '/vilda_home_encounter.js?v=3',
@@ -7138,8 +7140,8 @@ const CLINICAL_WORKSPACE_PRECACHE_PACK = Object.freeze({
 
 // BEGIN VISIT UI PACK CONFIG
 const VISIT_UI_PRECACHE_PACK = Object.freeze({
-  "url": "/runtime/visit-ui-precache/precache-ca025a921eb2.json",
-  "sha256": "ca025a921eb24238d63032970527fc02f9294e6d2fdd8fe20a1ef39cde5e6c9d",
+  "url": "/runtime/visit-ui-precache/precache-51238ef8a93a.json",
+  "sha256": "51238ef8a93a91b6da52bafe0c554ed12c77eec30164d41deb8fe5882edade03",
   "files": [
     {
       "url": "/vilda_ui_intents.js?v=2",
@@ -7302,16 +7304,16 @@ const VISIT_UI_PRECACHE_PACK = Object.freeze({
       "sha256": "2aa85262895ffbd588895685a0ec2e0c45da3d51d8f201500fef99b5c9db1fc3"
     },
     {
-      "url": "/vilda_home_gabinet_start.css?v=4",
-      "sha256": "8992712b47459f589968043113156ca8ecb8364cc622adc97ecc58f89d0d1fa0"
+      "url": "/vilda_home_gabinet_start.css?v=5",
+      "sha256": "67da45866cccafed4085ac1736b2af22015b1512a4df7591b9d53fee23a29874"
     },
     {
       "url": "/vilda_home_gabinet_quick.js?v=1",
       "sha256": "87575cac6078f869b8ed5742c4d3ec4f9969b4bcaec2e1464758d83fa85464db"
     },
     {
-      "url": "/vilda_home_gabinet_start.js?v=5",
-      "sha256": "e5965be95b79aed4dfdd3df9e349245a1381ebe9a03ca36cee445dea3769d25a"
+      "url": "/vilda_home_gabinet_start.js?v=6",
+      "sha256": "fa1deb7dd866292b9ae443d4c28ee5bd2b4a519f88f2a89dfb3793c35d290a31"
     },
     {
       "url": "/vilda_home_encounter.js?v=6",

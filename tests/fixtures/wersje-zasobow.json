@@ -1596,12 +1596,12 @@
   "sha256": "87575cac6078f869b8ed5742c4d3ec4f9969b4bcaec2e1464758d83fa85464db"
  },
  "vilda_home_gabinet_start.css": {
-  "v": 4,
-  "sha256": "8992712b47459f589968043113156ca8ecb8364cc622adc97ecc58f89d0d1fa0"
+  "v": 5,
+  "sha256": "67da45866cccafed4085ac1736b2af22015b1512a4df7591b9d53fee23a29874"
  },
  "vilda_home_gabinet_start.js": {
-  "v": 5,
-  "sha256": "e5965be95b79aed4dfdd3df9e349245a1381ebe9a03ca36cee445dea3769d25a"
+  "v": 6,
+  "sha256": "fa1deb7dd866292b9ae443d4c28ee5bd2b4a519f88f2a89dfb3793c35d290a31"
  },
  "vilda_home_growth.js": {
   "v": 8,
