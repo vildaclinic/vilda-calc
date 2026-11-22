@@ -6,6 +6,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import vm from 'node:vm';
 import { createHash } from 'node:crypto';
+import { loadBrowserScript } from '../support/load-browser-script.mjs';
 import {
   exportPreview, isPreviewAsset, isolateDocument, isolateText, isolateWorker, readRegularAsset, demoAccessDocument,
   PREVIEW_WORKER_NETWORK_GUARD,
@@ -275,7 +276,7 @@ function fictionalNativeVault(patients = []) {
 }
 
 function bootPreview({ storage, vault, locks, pathname = '/index.html', hash = '', opened = true, hasAuth = true, authReady = () => true, hostedFrame = false, sameOriginWrapper = false,
-  hasPatientCard = true, heading = true, clinicalData = {}, sessionEntries = {} }) {
+  hasPatientCard = true, heading = true, gabinet = false, declaresGabinet = gabinet, clinicalData = {}, sessionEntries = {} }) {
   const listeners = new Map(), classes = new Set(['vilda-pro-inactive']);
   const calls = { reload: 0, timers: 0, animationFrames: 0, syntheticClicks: 0, patientCards: [], applied: [], collected: 0 };
   const node = (tagName = 'div') => {
@@ -314,7 +315,8 @@ function bootPreview({ storage, vault, locks, pathname = '/index.html', hash = '
     removeEventListener(type, callback) { listeners.set(type, (listeners.get(type) || []).filter(entry => entry !== callback)); },
     createElement: node,
     documentElement: { classList: { toggle(name, value) { if (value) classes.add(name); else classes.delete(name); } } },
-    getElementById: id => body.querySelector(`#${id}`), querySelector: selector => body.querySelector(selector), body,
+    getElementById: id => body.querySelector(`#${id}`),
+    querySelector: selector => selector === 'script[src*="vilda_home_gabinet.js"]' && declaresGabinet ? {} : body.querySelector(selector), body,
   };
   const window = {
     document, location: { hostname: 'preview.example.invalid', origin: 'https://preview.example.invalid', pathname, hash, reload() { calls.reload++; } },
@@ -324,6 +326,7 @@ function bootPreview({ storage, vault, locks, pathname = '/index.html', hash = '
     VildaVault: hasAuth ? vault : undefined, VildaAuthUI: hasAuth ? { isBootReady: authReady,
       ...(hasPatientCard ? { async showPatientCard(...args) { calls.patientCards.push(args); } } : {}) } : undefined,
     VildaPersistRuntime: { getSnapshot: () => ({ initialized: true }) },
+    ...(gabinet ? { VildaHomeGabinet: { refreshStart() {} } } : {}),
     VildaDataImportExport: { isMainSessionRestorePending: () => false, isMainSessionAutosavePaused: () => false },
     VildaPersistence: { isAutosaveSuppressed: () => false }, VildaDobAge: { restorePending: () => false },
     VildaProAccess: { __setTokenModeForTest() {}, setPlan() {}, hasAccess: () => true },
@@ -355,7 +358,95 @@ async function previewFinished(window) {
   throw new Error('Preview fixture did not finish.');
 }
 
+async function nativePreviewVault() {
+  const storage = previewStorage(), native = {
+    crypto: globalThis.crypto, TextEncoder, TextDecoder, btoa, atob, localStorage: storage, sessionStorage: previewStorage(),
+    setTimeout, clearTimeout, addEventListener() {}, removeEventListener() {},
+    document: { addEventListener() {}, removeEventListener() {}, hidden: false },
+  };
+  native.window = native; native.top = native; native.self = native;
+  loadBrowserScript('vilda_crypto.js', native); loadBrowserScript('vilda_vault.js', native);
+  const vault = native.VildaVault;
+  vault.setStorageAdapter(vault.createInMemoryAdapter());
+  const account = await vault.createUser('Fictional#Visits!2026Aa', { label: ACCOUNT_LABEL, iterations: 10000 });
+  storage.setItem(ACCOUNT_KEY, JSON.stringify({ userId: account.userId }));
+  return { vault, storage };
+}
+
 describe('fictional preview patient selection remains inside the native vault', () => {
+  test('a deferred Gabinet script seeds the sample and finishes the directory refresh before signaling ready', async () => {
+    const { vault, storage } = await nativePreviewVault();
+    const finishRead = Promise.withResolvers(), readStarted = Promise.withResolvers(), seeded = Promise.withResolvers();
+    const originalSetItem = storage.setItem.bind(storage);
+    storage.setItem = (key, value) => {
+      originalSetItem(key, value);
+      if (key.startsWith('vilda-home-preview-visit-sample-') && value === 'done') seeded.resolve();
+    };
+    const { window } = bootPreview({ vault, storage, declaresGabinet: true });
+    await seeded.promise;
+    expect(window.VildaHomeGabinet).toBeUndefined();
+    expect(window.VildaHomePreview.getState().status).toBe('starting');
+    window.VildaHomeGabinet = { refreshStart() { readStarted.resolve(); return finishRead.promise; } };
+    await readStarted.promise;
+    expect(window.VildaHomePreview.getState().status).toBe('starting');
+    finishRead.resolve();
+    expect((await previewFinished(window)).status).toBe('ready');
+    expect((await vault.listPatients()).map(patient => patient.header.name)).toContain('Demonstracyjna Klara');
+  });
+
+  test('simultaneous first Gabinet tabs seed Antoni and five separate visits for Klara only once', async () => {
+    const { vault, storage } = await nativePreviewVault();
+    let pending = Promise.resolve();
+    const locks = { request(_name, callback) { const result = pending.then(callback); pending = result.catch(() => {}); return result; } };
+    const tabs = [0, 1].map(() => bootPreview({ vault, storage, locks, gabinet: true }));
+    expect((await Promise.all(tabs.map(tab => previewFinished(tab.window)))).map(state => state.status)).toEqual(['ready', 'ready']);
+    const patients = await vault.listPatients();
+    expect(patients).toHaveLength(2);
+    expect(patients.find(patient => patient.header.name === 'Przykładowy Antoni').snapshotCount).toBe(1);
+    const sample = patients.find(patient => patient.header.name === 'Demonstracyjna Klara');
+    expect(sample.snapshotCount).toBe(5);
+    expect(await vault.listPatientNotesForPatient(sample.patientId)).toHaveLength(1);
+  });
+
+  test('an interrupted upgrade resumes the fictional visit series without modifying the open chart or recreating a removed example', async () => {
+    const { vault, storage } = await nativePreviewVault();
+    const original = await vault.savePatient({ name: 'Przykładowy Antoni', user: { firstName: 'Antoni', lastName: 'Przykładowy', height: 158, weight: 46 } }, { dedup: false });
+    const originalRecord = await vault.getPatient(original.patientId);
+    const sessionEntries = { vildaCurrentPatientId: original.patientId, vildaMainSessionV1: '{"fictionalDraft":true}' };
+    const settings = { storage, gabinet: true, sessionEntries };
+    let writes = 0;
+    const first = bootPreview({ ...settings, vault: { ...vault, savePatient: async (...args) => {
+      const result = await vault.savePatient(...args);
+      if (++writes === 2) throw new Error('Fictional interruption after write');
+      return result;
+    } } });
+    expect((await previewFinished(first.window)).error).toBe('Fictional interruption after write');
+    const second = bootPreview({ ...settings, vault });
+    expect((await previewFinished(second.window)).status).toBe('ready');
+    expect(second.window.sessionStorage.getItem('vildaCurrentPatientId')).toBe(original.patientId);
+    expect(second.window.sessionStorage.getItem('vildaMainSessionV1')).toBe(sessionEntries.vildaMainSessionV1);
+    expect(second.calls).toMatchObject({ applied: [], collected: 0, patientCards: [] });
+    expect(await vault.getPatient(original.patientId)).toEqual(originalRecord);
+    const patients = await vault.listPatients();
+    expect(patients).toHaveLength(2);
+    const sample = patients.find(patient => patient.header.name === 'Demonstracyjna Klara');
+    const visits = await vault.getPatientVisits(sample.patientId);
+    expect(visits).toHaveLength(5);
+    expect(visits.map(visit => visit.clinicalDateISO)).toEqual(['2026-10-12','2025-09-12','2025-03-12','2024-03-12','2023-03-12']);
+    expect(visits.every(visit => visit.revisionCount === 1 && visit.origin === 'explicit')).toBe(true);
+    expect(visits[1].payload.user.height).toBeUndefined();
+    expect(visits[0].payload.bp).toEqual({ systolic: 108, diastolic: 68, heartRate: 76 });
+    const notes = await vault.listPatientNotesForPatient(sample.patientId);
+    expect(notes).toHaveLength(1);
+    expect(notes[0]).toMatchObject({ title: 'Konsultacja telefoniczna', patientId: sample.patientId,
+      visitContext: { version: 1, visitId: visits[1].visitId, clinicalDateISO: visits[1].clinicalDateISO } });
+    await vault.removePatient(sample.patientId);
+    const third = bootPreview({ ...settings, vault });
+    expect((await previewFinished(third.window)).status).toBe('ready');
+    expect(await vault.getPatient(sample.patientId)).toBeNull();
+    expect(await vault.getPatient(original.patientId)).toEqual(originalRecord);
+  });
+
   test('legacy patient ID is removed only for the verified fictional account without replacing the session', async () => {
     const vault = fictionalNativeVault([{ patientId: 'fictional-original-patient', createdAtISO: '2026-11-03T12:00:00Z' }]);
     const storage = previewStorage({ [ACCOUNT_KEY]: JSON.stringify({ userId: vault.account.userId, patientId: 'fictional-original-patient' }) });

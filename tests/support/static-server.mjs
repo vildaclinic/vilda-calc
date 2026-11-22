@@ -56,6 +56,8 @@ function createE2eServiceWorker(source, wersja) {
     '/vilda_home_reminders.js', '/vilda_home_reminders.css', '/vilda_home_reminders_runtime.js',
     '/vilda_home_gabinet.css', '/vilda_home_gabinet_start.css', '/vilda_home_gabinet_quick.js',
     '/vilda_home_gabinet_start.js', '/vilda_home_encounter.js', '/vilda_home_gabinet.js',
+    '/vilda_home_visit_scene.css', '/vilda_home_visit_detail.css', '/vilda_home_visit_projection.js',
+    '/vilda_home_visit_scene.js', '/vilda_home_visit_detail.js', '/vilda_home_visit_history.js',
     '/vilda_home_tools.css', '/vilda_home_tools.js', '/vilda_home_tools_vitals.js',
     '/vilda_home_tools_anthropometry.js', '/vilda_home_tools_nutrition.js', '/vilda_home_tools_intake.js',
   ]);

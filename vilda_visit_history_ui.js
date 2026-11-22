@@ -84,13 +84,12 @@
     item.appendChild(element('dd', '', value));
     grid.appendChild(item);
   }
-  function visitDocuments(state, row) {
-    if (!state.gabinet) return;
-    if (!state.documents || !state.plans) {
+  function appendDocuments(container, row, patientId, documents, plans, retryRead) {
+    if (!documents || !plans) {
       var missing = element('p', 'vvisit-muted', 'Nie udało się odczytać dokumentacji tej wizyty.');
       var retry = element('button', 'vvisit-retry', 'Ponów odczyt');
-      retry.type = 'button'; retry.addEventListener('click', function () { read(state); });
-      state.detail.append(missing, retry);
+      retry.type = 'button'; retry.addEventListener('click', retryRead);
+      container.append(missing, retry);
     }
     var groups = new Map();
     function add(category, entry) {
@@ -98,13 +97,13 @@
       groups.get(category).push(entry);
     }
     var documentIds = new Set(), planIds = new Set();
-    var documents = state.documents || [];
+    documents = (documents || []).filter(function (entry) { return entry && entry.patientId === patientId; });
     documents.forEach(function (entry) {
       if (entry.visitContext?.visitId === row.visitId && entry.id && entry.careContext?.role !== 'plan') documentIds.add(entry.id);
     });
-    (state.plans || []).forEach(function (plan) {
+    (plans || []).forEach(function (plan) {
       var record = plan.state?.record || plan;
-      if (record.patientId !== state.patientId || plan.patientId && plan.patientId !== state.patientId) return;
+      if (record.patientId !== patientId || plan.patientId && plan.patientId !== patientId) return;
       var id = record.id || plan.id, title = record.title || plan.title;
       if (!id || planIds.has(id)) return;
       planIds.add(id);
@@ -117,7 +116,7 @@
         add('Plany opieki', {title: title, body: items.map(function (item) { return item.text; }).join('\n')});
     });
     documents.forEach(function (entry) {
-      if (entry.patientId !== state.patientId) return;
+      if (entry.patientId !== patientId) return;
       var controls = entry.treatmentContext?.followups;
       if (Array.isArray(controls)) controls.forEach(function (control) {
         if (control?.visitContext?.visitId === row.visitId) add('Kontrole leczenia', {title: entry.title, body: control.body});
@@ -140,7 +139,7 @@
         if (category === 'Przypomnienia' && civilDate(entry.dueDateISO)) item.appendChild(element('span', '', 'Termin · ' + civilDate(entry.dueDateISO)));
         if (item.children.length) list.appendChild(item);
       });
-      if (list.children.length) { section.appendChild(list); state.detail.appendChild(section); }
+      if (list.children.length) { section.appendChild(list); container.appendChild(section); }
     });
   }
   function showDetail(state, index) {
@@ -177,7 +176,7 @@
     if (text(advanced.motherHeight)) field(extras, 'Wzrost matki', measurement(advanced.motherHeight, 'cm'));
     if (text(advanced.fatherHeight)) field(extras, 'Wzrost ojca', measurement(advanced.fatherHeight, 'cm'));
     if (extras.children.length) detail.appendChild(extras);
-    visitDocuments(state, row);
+    if (state.gabinet) appendDocuments(detail, row, state.patientId, state.documents, state.plans, function () { read(state); });
     var meta = element('div', 'vvisit-save-meta');
     meta.appendChild(element('p', '', 'Ostatni zapis tej wizyty: ' + savedTime(row.updatedAtISO || row.savedAtISO)));
     if (Number.isInteger(row.revisionCount) && row.revisionCount > 1) meta.appendChild(element('p', '', 'Zachowane wersje tej wizyty: ' + row.revisionCount));
@@ -343,5 +342,5 @@
     if (typeof w.setInterval === 'function') state.timer = w.setInterval(function () { scopeCheck(state); }, 250);
     return read(state);
   }
-  w.VildaVisitHistory = Object.freeze({ open: open, close: function () { close(); } });
+  w.VildaVisitHistory = Object.freeze({ open: open, appendDocuments: appendDocuments, close: function () { close(); } });
 })(typeof window !== 'undefined' ? window : globalThis);

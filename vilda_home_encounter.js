@@ -225,10 +225,13 @@
   function history(patientId, patientName) {
     const scope = owner(patientId);
     if (!scope || !w.VildaVisitHistory) return false;
-    return w.VildaVisitHistory.open(patientId, {patientName, isCurrent: () => current(scope) && selected() === patientId,
+    const options = {patientName, isCurrent: () => current(scope) && selected() === patientId,
       onEdit: row => load(patientId, 'edit', row).then(ok => {
         if (!ok && current(scope) && selected() === patientId) w.alert('Nie otwarto wizyty do edycji.');
-      })});
+        return ok;
+      })};
+    if (w.VildaHomeGabinet?.openVisitHistory) return w.VildaHomeGabinet.openVisitHistory(patientId, options);
+    return w.VildaVisitHistory.open(patientId, options);
   }
   d.addEventListener('vilda:patient-loaded', event => {
     const detail = event.detail;

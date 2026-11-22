@@ -1,0 +1,106 @@
+/* The workspace provides the same dialog frame and viewport fitting as the
+ * clinical tools. The visit browser owns just its read-only contents. */
+#vhomeVisitDetail {
+  --vd-ink: #29484f;
+  --vd-muted: #566f77;
+  --vd-line: #dce7e7;
+  --vd-accent: #087b80;
+  color: var(--vd-ink);
+  background: #fff;
+  font: 15px/1.55 Inter, system-ui, -apple-system, sans-serif;
+  text-align: start;
+}
+#vhomeVisitDetail[open] { animation-duration: 300ms; }
+#vhomeVisitDetail * { box-sizing: border-box; }
+#vhomeVisitDetail [hidden] { display: none !important; }
+#vhomeVisitDetail .vhome-dialog-heading { background: #fff; }
+#vhomeVisitDetail .vhome-dialog-body { background: #fff; font-size: 15px; scrollbar-gutter: stable; }
+#vhomeVisitDetail .vhome-dialog-body :is(h3,h4,dt,dd,p) { text-align: start; }
+#vhomeVisitDetail .vhome-dialog-body button {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 44px; min-width: 0; width: auto; margin: 0; padding: var(--space-8px) var(--space-14px);
+  border: var(--border-hairline) solid #ccdedf !important; border-radius: var(--radius-8) !important;
+  background: #fff !important; color: #30666e !important;
+  box-shadow: none !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
+  font: inherit; font-size: 14px; font-weight: 550; line-height: 1.35; text-align: center; cursor: pointer;
+}
+#vhomeVisitDetail .vhome-dialog-body button:is(:hover,:active,._pressed) { transform: none !important; }
+#vhomeVisitDetail .vhome-dialog-body button:hover:not(:disabled) { border-color: #aacacd !important; background: #f3f8f7 !important; }
+#vhomeVisitDetail .vhome-dialog-body button:disabled { color: #81979c !important; background: #f8faf9 !important; cursor: default; }
+#vhomeVisitDetail :is(button,[role=tabpanel]):focus-visible { outline: var(--border-emphasis) solid var(--vd-accent); outline-offset: 2px; }
+#vhomeVisitDetail .vd-topbar { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-20px); margin-bottom: var(--space-18px); }
+#vhomeVisitDetail .vd-identity { min-width: 0; overflow-wrap: anywhere; }
+#vhomeVisitDetail .vd-identity h3 { margin: 5px 0 3px; font-size: 21px; font-weight: 600; line-height: 1.35; color: var(--vd-ink); }
+#vhomeVisitDetail .vd-identity p { margin: 0; color: var(--vd-muted); font-size: 14px; }
+#vhomeVisitDetail .vd-pill { display: inline-block; padding: var(--space-4px) var(--space-10px); border: var(--border-hairline) solid #d6e3e4; border-radius: 7px; background: #f4f8f8; color: #567077; font-size: 13px; }
+#vhomeVisitDetail .vd-navigation { display: grid; grid-template-columns: repeat(3,minmax(44px,auto)); align-items: center; gap: var(--space-6px); }
+#vhomeVisitDetail .vd-navigation button { font-size: 19px; }
+#vhomeVisitDetail .vd-page-count { font-size: 13px; text-align: center; white-space: nowrap; color: var(--vd-muted); font-variant-numeric: tabular-nums; }
+#vhomeVisitDetail :is(.vd-tabs,.vd-summary-tabs,.vd-chart-select) { display: grid; gap: 5px; padding: 5px; background: #f2f7f6; border: var(--border-hairline) solid var(--vd-line); border-radius: var(--radius-10); }
+#vhomeVisitDetail .vd-tabs { position: sticky; top: -22px; z-index: var(--z-range-marker); grid-template-columns: repeat(3,minmax(0,1fr)); margin-bottom: var(--space-20px); box-shadow: 0 3px 0 3px #fff; }
+#vhomeVisitDetail :is(.vd-summary-tabs,.vd-chart-select) { grid-template-columns: repeat(2,minmax(0,1fr)); margin-bottom: var(--space-14px); }
+#vhomeVisitDetail :is(.vd-tabs,.vd-summary-tabs,.vd-chart-select) button { background: transparent !important; border-color: transparent !important; color: var(--vd-muted) !important; }
+#vhomeVisitDetail button:is([aria-selected=true],[aria-pressed=true]) {
+  background: #fff !important; border-color: #d2e3e1 !important; color: var(--vd-accent) !important;
+  box-shadow: 0 1px 3px #21474b08 !important;
+}
+#vhomeVisitDetail .vd-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: var(--space-18px); align-items: start; }
+#vhomeVisitDetail .vd-panel { min-width: 0; }
+#vhomeVisitDetail .vd-wide { grid-column: 1 / -1; }
+#vhomeVisitDetail :is(.vd-card,.vvisit-documents) { min-width: 0; margin: 0; padding: 19px var(--space-20px); border: var(--border-hairline) solid var(--vd-line); border-radius: var(--radius-11); background: #fff; overflow-wrap: anywhere; }
+#vhomeVisitDetail :is(.vd-card h3,.vvisit-documents h4) { margin: 0 0 15px; color: var(--vd-ink); font-size: 17px; font-weight: 600; line-height: 1.4; }
+#vhomeVisitDetail .vd-result-row {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--space-16px); min-height: 65px;
+  margin: 9px 0 0; padding: var(--space-10px) var(--space-12px); border: var(--border-hairline) solid #e1e9e9; border-left: var(--border-pro) solid #c9d9db; border-radius: var(--radius-8); background: #fbfcfc;
+}
+#vhomeVisitDetail .vd-result-row > div { font-size: 14px; }
+#vhomeVisitDetail .vd-result-row strong { font-size: 21px; font-weight: 650; white-space: nowrap; font-variant-numeric: tabular-nums; }
+#vhomeVisitDetail .vd-result-row small { color: var(--vd-muted); font-size: 13px; font-weight: 450; }
+#vhomeVisitDetail .vd-result-row > div small { display: block; }
+#vhomeVisitDetail .vd-result-row[data-tone=normal] { border-left-color: #16858a; background: #f0f8f6; }
+#vhomeVisitDetail .vd-result-row[data-tone=warn] { border-left-color: #b57a27; background: #fff8ed; }
+#vhomeVisitDetail .vd-result-row[data-tone=danger] { border-left-color: #b94a55; background: #fff4f4; }
+#vhomeVisitDetail .vd-facts { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: var(--space-16px); margin: 0; }
+#vhomeVisitDetail .vd-facts dt { margin: 0 0 3px; color: var(--vd-muted); font-size: 13px; }
+#vhomeVisitDetail .vd-facts dd { margin: 0; font-size: 15px; font-weight: 550; }
+#vhomeVisitDetail .vd-chart { min-width: 0; margin: var(--space-12px) 0; }
+#vhomeVisitDetail .vd-chart svg { display: block; width: 100%; height: auto; }
+#vhomeVisitDetail .vd-record-actions { display: flex; flex-wrap: wrap; gap: var(--space-0-5); }
+#vhomeVisitDetail .vd-grid + .vd-card { margin-top: var(--space-18px); }
+#vhomeVisitDetail .vd-footer { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-10px); margin-top: var(--space-20px); }
+#vhomeVisitDetail button[data-vd-action=compare] { border-color: var(--vd-accent) !important; background: var(--vd-accent) !important; color: white !important; }
+#vhomeVisitDetail button[data-vd-action=compare]:hover:not(:disabled) { background: #00676c !important; }
+#vhomeVisitDetail button[data-vd-action=collapse] { margin-bottom: var(--space-14px); }
+#vhomeVisitDetail .vd-meta { margin: var(--space-10px) 0 0; color: var(--vd-muted); font-size: 13px; }
+#vhomeVisitDetail .vd-notice { margin: 0 0 var(--space-18px); padding: var(--space-12px) 15px; color: #406269; background: #f0f7f6; border: var(--border-hairline) solid #d8e7e5; border-radius: var(--radius-8); }
+#vhomeVisitDetail .vd-notice p { margin: 3px 0 0; }
+#vhomeVisitDetail .vd-empty { margin: var(--space-12px) 0; font-size: 14px; color: var(--vd-muted); }
+#vhomeVisitDetail :is(.vd-record,.vvisit-documents li) + :is(.vd-record,li) { margin-top: var(--space-12px); padding-top: var(--space-12px); border-top: var(--border-hairline) solid var(--vd-line); }
+#vhomeVisitDetail .vvisit-documents ul { list-style: none; padding: 0; margin: 0; }
+#vhomeVisitDetail :is(.vd-record,.vvisit-documents li) p { margin: var(--space-4px) 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+#vhomeVisitDetail :is(.vd-record small,.vvisit-documents li span) { color: var(--vd-muted); font-size: 13px; }
+#vhomeVisitDetail .vd-compare-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+#vhomeVisitDetail .vd-compare-table caption { margin-bottom: var(--space-10px); font-size: 17px; font-weight: 600; text-align: start; }
+#vhomeVisitDetail .vd-compare-table :is(th,td) { padding: 13px var(--space-10px); border: 0; border-bottom: var(--border-hairline) solid var(--vd-line); background: #fff; text-align: start; vertical-align: top; }
+#vhomeVisitDetail .vd-compare-table th { font-weight: 550; }
+#vhomeVisitDetail .vd-compare-table thead th { color: var(--vd-muted); font-size: 14px; }
+#vhomeVisitDetail .vd-compare-table small { display: block; margin-top: 3px; color: var(--vd-muted); font-size: 13px; font-weight: 450; }
+@media (max-width: 700px) {
+  #vhomeVisitDetail .vd-grid { grid-template-columns: minmax(0,1fr); }
+  #vhomeVisitDetail .vd-tabs { top: -14px; }
+  #vhomeVisitDetail .vhome-dialog-body { padding: var(--space-14px); scrollbar-gutter: auto; }
+}
+@media (max-width: 480px) {
+  #vhomeVisitDetail .vhome-dialog-body { padding: var(--space-12px); }
+  #vhomeVisitDetail .vd-tabs { top: -12px; }
+  #vhomeVisitDetail .vd-navigation { grid-template-columns: 44px auto 44px; gap: 2px; }
+  #vhomeVisitDetail .vd-topbar { gap: var(--space-8px); }
+  #vhomeVisitDetail .vd-navigation button { padding: var(--space-6px); }
+  #vhomeVisitDetail :is(.vd-tabs,.vd-summary-tabs) button { padding: var(--space-6px) 3px; font-size: 13px; }
+  #vhomeVisitDetail :is(.vd-card,.vvisit-documents) { padding: 13px; }
+  #vhomeVisitDetail .vd-compare-table :is(th,td) { padding: 9px 3px; font-size: 14px; }
+  #vhomeVisitDetail .vd-footer button { width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #vhomeVisitDetail[open], #vhomeVisitDetail[open]::backdrop { animation: none; }
+}

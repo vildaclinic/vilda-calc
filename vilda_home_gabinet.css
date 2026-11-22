@@ -1,6 +1,7 @@
 /* Shared header for the two tabs. Native form nodes stay in their original
  * container so the clinical, persistence and chart owners keep their identity. */
 html:has([data-vhome-screen]) { scrollbar-gutter: stable; }
+[data-vhome-screen="history"] #vhomePatientOverview,
 [data-vhome-screen] #vhomeGabinet[hidden],
 #vhomeGabinet [hidden],
 [data-vhome-screen]:not([data-vhome-screen="analysis"]) > #vhomeGabinetAnalysis,
@@ -13,14 +14,14 @@ html:has([data-vhome-screen]) { scrollbar-gutter: stable; }
 #vhomeGabinet { color: #23444c; font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; min-width: 0; }
 /* The form in the neighbouring Analysis panel takes its gutter from the
  * outer shell. Its desktop rail can leave a narrow embedded viewport. */
-.main-content:is([data-vhome-screen="overview"],[data-vhome-screen="analysis"]) { background: #f4f7f8 !important; }
-#vhomeGabinetHeader, #vhomePatientOverview { width: 100%; min-width: 0; box-sizing: border-box; }
+.main-content:is([data-vhome-screen="overview"],[data-vhome-screen="analysis"],[data-vhome-screen="history"]) { background: #f4f7f8 !important; }
+#vhomeGabinetHeader, #vhomePatientOverview, #vhomeVisitHistory { width: 100%; min-width: 0; box-sizing: border-box; }
 @media (max-width: 991.98px) {
-  :is([data-vhome-screen="overview"],[data-vhome-screen="analysis"]) > #vhomeGabinet {
+  :is([data-vhome-screen="overview"],[data-vhome-screen="analysis"],[data-vhome-screen="history"]) > #vhomeGabinet {
     padding-inline: max(var(--mobile-dock-side-gap,.75rem),calc(env(safe-area-inset-left,0px) + .35rem)) max(var(--mobile-dock-side-gap,.75rem),calc(env(safe-area-inset-right,0px) + .35rem));
   }
 }
-html.vilda-form-host-desktop :is([data-vhome-screen="overview"],[data-vhome-screen="analysis"]) > #vhomeGabinet { padding-inline: var(--chrome-form-gap) 0; }
+html.vilda-form-host-desktop :is([data-vhome-screen="overview"],[data-vhome-screen="analysis"],[data-vhome-screen="history"]) > #vhomeGabinet { padding-inline: var(--chrome-form-gap) 0; }
 #vhomeGabinetHeader { margin-bottom: 1.15rem; font: 1rem/1.52 Inter, system-ui, -apple-system, "Segoe UI", sans-serif; }
 #vhomeGabinetHeader :is(.gb-header-top,.gb-person-line,.gb-breadcrumb,.gb-patient-tabs,button) { display: flex; align-items: center; }
 #vhomeGabinetHeader .gb-header-top { justify-content: space-between; gap: var(--space-0-5); margin-bottom: var(--space-0-55); }
