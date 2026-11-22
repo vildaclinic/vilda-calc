@@ -1,3 +1,7 @@
+html:not([data-home-file-restore]) :is(#restoreStateBtn, #prevSummaryWrap) {
+  display: none !important;
+}
+
 #vildaHomePreviewBadge {
   position: fixed;
   bottom: max(12px, env(safe-area-inset-bottom));

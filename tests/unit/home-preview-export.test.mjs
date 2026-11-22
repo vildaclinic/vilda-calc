@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from 'vitest';
+import { afterEach, describe, expect, test, vi } from 'vitest';
 import { execFileSync } from 'node:child_process';
 import { mkdtemp, mkdir, readFile, writeFile, rm, symlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -251,6 +251,22 @@ describe('separate homepage preview export', () => {
 const ACCOUNT_KEY = 'vilda-home-preview-fictional-account-v1';
 const ACCOUNT_LABEL = 'Podgląd — wyłącznie fikcyjni pacjenci';
 const RUNTIME_SOURCE = await readFile(new URL('../../tools/home-preview/runtime.js', import.meta.url), 'utf8');
+
+test.each([
+  ['terminarz.html', 'terminarz', undefined],
+  ['terminarz.html?embedded=1#vilda-event=fikcyjny', 'terminarz', '/test/terminarz.html#vilda-event=fikcyjny'],
+  ['przelicznik-jednostek.html?wskazanie=obesity_kids', 'lab', '/test/przelicznik-jednostek.html?wskazanie=obesity_kids']
+])('a direct module URL enters its shell before boot: %s', (path, route, target) => {
+  const address = new URL(path, 'https://preview.example.invalid/test/');
+  const window = {document:{readyState:'loading'},location:{href:address.href,pathname:address.pathname,
+    hostname:address.hostname,reload:vi.fn()},history:{replaceState:vi.fn()}};
+  window.top = window;
+  vm.runInNewContext(RUNTIME_SOURCE, {window, URL});
+  const [state,,url] = window.history.replaceState.mock.calls[0];
+  expect(url).toBe('https://preview.example.invalid/test/app.html#/' + route);
+  expect(state.shellView).toBe(route); expect(state.homePreviewPaneTarget).toBe(target);
+  expect(window.location.reload).toHaveBeenCalledOnce();
+});
 const NATIVE_PRO_ACCESS_SOURCE = await readFile(new URL('../../vilda_pro_access.js', import.meta.url), 'utf8');
 
 function previewStorage(entries = {}) {

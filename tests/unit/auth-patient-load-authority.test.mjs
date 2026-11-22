@@ -107,7 +107,8 @@ function environment({ guard = 'hold' } = {}) {
     make(cardLoader, 'function(){BdWczytajPacjenta(a,after)}', { ...cardBindings(target, apply), after });
   const quick = make(quickMeasure, 'hi'), pick = make(autocomplete, 'ks');
   const helperApi = make('', '({capture:patientLoadCapture,current:patientLoadCurrent,run:patientLoadRun})');
-  return { win, api, vault, read, save, trace, applied, published, runs, nodes, fields, restore, hidden, card, cardThen, quick, pick, helperApi,
+  const openHome = root => make('', 'openPatientInHome', { Rt: root, Pa: 1, $t: hidden });
+  return { win, api, vault, read, save, trace, applied, published, runs, nodes, fields, restore, hidden, card, cardThen, quick, pick, helperApi, openHome,
     proceed: () => proceed?.(), main: () => clone(main), rotate: () => { generation++; }, lock: () => { unlocked = false; generation++; },
     setPatient(id) { values.set('vildaCurrentPatientId', id); win._vildaCurrentPatientId = id; },
     resolveRead(value = initial) { read.resolve({ snapshots: [{ snapshotId: 'fictional-snapshot', payload: value }], snapshotCount: 1 }); },
@@ -243,5 +244,63 @@ describe('quick measurement updates the live same-patient form through its origi
     const h = environment(), opening = h.quick(PID); h.rotate(); h.resolveRead(); await opening;
     h.enterMeasurement(); const saving = h.measurementButton().click(); h.save.resolve({ patientId: PID }); await saving;
     expect(h.applied).toEqual([]); expect(h.restore).not.toHaveBeenCalled(); expect(h.published).toEqual([]);
+  });
+});
+
+describe('opted-in navigation from native patient surfaces', () => {
+  function prepare() {
+    const e = environment();
+    const root = { firstElementChild: {}, style: { display: 'block' }, classList: { contains: name => name === 'vilda-auth-database' } };
+    const result = deferred();
+    const openPatient = vi.fn(() => result.promise);
+    const claimHomeDirectory = vi.fn();
+    e.win.__VILDA_HOME_GABINET_PREVIEW__ = true;
+    e.win.VildaHomeGabinet = { openPatient };
+    e.win.parent = { VildaShell: { claimHomeDirectory } };
+    return { ...e, root, openPatient, claimHomeDirectory, result, visit: e.openHome(root) };
+  }
+
+  it('retains a document destination and releases only the initiating directory on success', async () => {
+    const e = prepare();
+    const opening = e.visit(NEXT, 'browse', 'notes', 'fictional-note');
+    const [id, options] = e.openPatient.mock.calls[0];
+    expect(id).toBe(NEXT);
+    expect(options).toMatchObject({ intent: 'browse', section: 'notes', focusNoteId: 'fictional-note' });
+    expect(options.isCurrent()).toBe(true);
+    expect(e.hidden).not.toHaveBeenCalled();
+    e.result.resolve(true);
+    expect(await opening).toBe(true);
+    expect(e.claimHomeDirectory).toHaveBeenCalledWith(e.win);
+    expect(e.hidden).toHaveBeenCalledWith({ shellNavigation: true });
+  });
+
+  it('finishes after its own accepted publication retires the initiating card, without closing its replacement', async () => {
+    const e = prepare();
+    const opening = e.visit(NEXT, 'new', 'antro');
+    const options = e.openPatient.mock.calls[0][1];
+    options.onApply();
+    e.root.firstElementChild = null;
+    e.root.style.display = 'none';
+    expect(options.isCurrent()).toBe(true);
+    e.root.firstElementChild = {};
+    expect(options.isCurrent()).toBe(false);
+    e.result.resolve(true);
+    expect(await opening).toBe(true);
+    expect(e.hidden).not.toHaveBeenCalled();
+    e.lock();
+    expect(options.isCurrent()).toBe(false);
+  });
+
+  it.each(['cancel', 'replace', 'lock'])('leaves the surface alone on %s during a transition', async cause => {
+    const e = prepare();
+    const opening = e.visit(NEXT, 'new', 'antro');
+    const options = e.openPatient.mock.calls[0][1];
+    if (cause === 'replace') e.root.firstElementChild = {};
+    if (cause === 'lock') e.lock();
+    expect(options.isCurrent()).toBe(cause === 'cancel');
+    e.result.resolve(false);
+    expect(await opening).toBe(false);
+    expect(e.claimHomeDirectory).not.toHaveBeenCalled();
+    expect(e.hidden).not.toHaveBeenCalled();
   });
 });

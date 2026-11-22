@@ -22,7 +22,7 @@ function eventTarget() {
   };
 }
 
-function environment({ controls = true, visible = true, presentation = true, ticketAccepted = true, dix = true } = {}) {
+function environment({ controls = true, visible = true, presentation = true, ticketAccepted = true, dix = true, homeSave = false } = {}) {
   const order = [], timers = [], store = new Map(), ticket = Object.freeze({});
   let wrapped = false;
   function node(tagName = 'div', id = '') {
@@ -53,6 +53,7 @@ function environment({ controls = true, visible = true, presentation = true, tic
     getElementById(id) { return find(this.body, id); },
   };
   const restore = node('button', 'restoreStateBtn'); restore.style.display = visible ? 'inline-block' : 'none';
+  if (homeSave) document.body.appendChild(node('button', 'saveDataBtnSidebar'));
   if (controls) { document.body.appendChild(restore); document.body.appendChild(node('div', 'prevSummaryWrap')); }
   for (const id of ['age', 'ageMonths']) {
     const field = node('input', id); field.value = '13'; field.readOnly = true; field.disabled = true;
@@ -80,11 +81,12 @@ function environment({ controls = true, visible = true, presentation = true, tic
   });
   if (presentation) Object.assign(api, {
     capturePatientLoadChoicePresentation: capture,
+    isPatientLoadChoicePresentationCurrent: vi.fn(value => ticketAccepted && value === ticket),
     finishPatientLoadChoicePresentation: finish,
     runPatientLoadChoiceRestorePresentation: runRestore,
   });
   const originalConfirm = vi.fn(() => false);
-  const win = { ...eventTarget(), document, lastLoadedData: payload, confirm: originalConfirm,
+  const win = { ...eventTarget(), document, lastLoadedData: payload, confirm: originalConfirm, __VILDA_HOME_GABINET_PREVIEW__: homeSave,
     sessionStorage: { getItem: key => store.get(key) ?? null,
       setItem: (key, value) => store.set(key, String(value)), removeItem: key => store.delete(key) },
     VildaSession: { isLoggedIn: () => true },
@@ -117,6 +119,92 @@ function environment({ controls = true, visible = true, presentation = true, tic
 }
 
 describe('actual native visit chooser presentation lifecycle', () => {
+  it('enables the native sidebar Save for a ready Gabinet visit even when measurements are empty', () => {
+    const h = environment({ homeSave: true });
+    const save = h.document.getElementById('saveDataBtnSidebar');
+    expect(save.disabled).toBe(true);
+    expect(save.getAttribute('data-tip')).toBe('Trwa przygotowywanie wizyty.');
+    h.api.getHomeVisitSaveAction = vi.fn(() => ({ reason: null }));
+    h.win.vildaExport = { saveUserData: vi.fn() };
+    h.win.VildaSaveFeedback = { capture() {} };
+    h.document.dispatchEvent({ type: 'vilda:home-encounter-changed' });
+    expect(save.disabled).toBe(false); expect(save.hasAttribute('disabled')).toBe(false);
+    save.click();
+    expect(h.win.vildaExport.saveUserData).toHaveBeenCalledOnce();
+    h.api.getHomeVisitSaveAction.mockReturnValue({ reason: 'Brak aktywnej wizyty.' });
+    h.document.dispatchEvent({ type: 'vilda:home-encounter-changed' });
+    expect(save.disabled).toBe(true); expect(save.getAttribute('data-tip')).toBe('Brak aktywnej wizyty.');
+  });
+
+  function gabinet(options = {}) {
+    const h = environment(options);
+    const consumeChoice = vi.fn(() => true);
+    h.win.__VILDA_HOME_GABINET_PREVIEW__ = true;
+    h.win.VildaHomeEncounter = { consumeChoice };
+    h.win.VildaVisitContext = { beginNew: vi.fn(({ patientId }) => ({ patientId, visitId: 'fictional-new', origin: 'explicit' })) };
+    const appended = vi.spyOn(h.document.body, 'appendChild');
+    return { ...h, consumeChoice, appended };
+  }
+
+  it('executes an accepted Gabinet New without rendering or requiring legacy controls', () => {
+    const h = gabinet({ controls: false }); h.load();
+    expect(h.consumeChoice).toHaveBeenCalledOnce();
+    const [detail, newVisit, , isCurrent] = h.consumeChoice.mock.calls[0];
+    expect(detail).toBe(h.detail); expect(isCurrent()).toBe(true);
+    expect(h.choices).toEqual([]);
+    expect(newVisit()).toBe(true);
+    expect(h.win.VildaVisitContext.beginNew).toHaveBeenCalledExactlyOnceWith({ patientId: PATIENT });
+    expect(h.api._ensureCurrentMeasurementInHistory).toHaveBeenCalledExactlyOnceWith(h.payload);
+    expect(h.finish).toHaveBeenCalledExactlyOnceWith(h.ticket);
+    expect(h.choices).toEqual([{ choice: 'new', patientId: PATIENT, applySequence: SEQUENCE }]);
+    expect(h.appended).not.toHaveBeenCalled();
+  });
+
+  it('acknowledges Gabinet Restore only on native completion for the same operation', () => {
+    const h = gabinet({ visible: false }); h.load();
+    const restore = h.consumeChoice.mock.calls[0][2];
+    h.restore.addEventListener('click', () => h.document.dispatchEvent({ type: 'vilda:state-restored', detail: { source: 'restoreLoadedState' } }));
+    expect(restore()).toBe(true); expect(h.runRestore).toHaveBeenCalledOnce();
+    expect(h.restored[0]).toMatchObject({ wrapped: true, confirmed: true });
+    expect(h.win.confirm).toBe(h.originalConfirm);
+    expect(h.restore.style.display).toBe('none');
+    expect(h.appended).not.toHaveBeenCalled();
+  });
+
+  it.each(['silent', 'other-source', 'changed-patient', 'pending-native-load'])('rejects an incomplete Gabinet Restore (%s)', failure => {
+    const h = gabinet(); h.load();
+    const restore = h.consumeChoice.mock.calls[0][2];
+    if (failure === 'other-source') h.restore.addEventListener('click', () => h.document.dispatchEvent({ type: 'vilda:state-restored', detail: { source: 'other' } }));
+    if (failure === 'changed-patient') h.store.set('vildaCurrentPatientId', 'another-fictional-patient');
+    if (failure === 'pending-native-load') h.win.__vildaLoadInFlightUntil = Date.now() + 60000;
+    expect(restore()).toBe(false);
+    expect(h.store.has('vildaLoadChoiceV1')).toBe(false);
+    expect(h.appended).not.toHaveBeenCalled();
+  });
+
+  it('rejects a retired native presentation before either direct action, even for the same patient and apply sequence', () => {
+    const h = gabinet(); h.load();
+    const [, start, restore, isCurrent] = h.consumeChoice.mock.calls[0];
+    h.api.isPatientLoadChoicePresentationCurrent.mockReturnValue(false);
+    expect(isCurrent()).toBe(false); expect(start()).toBe(false); expect(restore()).toBe(false);
+    expect(h.win.VildaVisitContext.beginNew).not.toHaveBeenCalled(); expect(h.runRestore).not.toHaveBeenCalled();
+    expect(h.choices).toEqual([]); expect(h.appended).not.toHaveBeenCalled();
+  });
+
+  it.each(['refused-ticket', 'refused-by-router', 'router-absent'])('never mounts a legacy chooser on a refused Gabinet handoff (%s)', failure => {
+    const h = gabinet({ ticketAccepted: failure !== 'refused-ticket' });
+    h.store.set('vildaLoadChoiceV1', 'new');
+    if (failure === 'refused-by-router') h.consumeChoice.mockReturnValue(false);
+    if (failure === 'router-absent') delete h.win.VildaHomeEncounter;
+    h.load();
+    if (failure === 'refused-ticket') {
+      expect(h.consumeChoice).not.toHaveBeenCalled();
+      expect(h.store.get('vildaLoadChoiceV1')).toBe('new');
+    } else expect(h.finish).toHaveBeenCalledExactlyOnceWith(h.ticket);
+    expect(h.appended).not.toHaveBeenCalled(); expect(h.timers).toHaveLength(0);
+    expect(h.restored).toEqual([]); expect(h.choices).toEqual([]);
+  });
+
   it('mounts the exact accepted native choice in the publication task before queued background work', () => {
     const h = environment(); h.load();
     expect(h.capture).toHaveBeenCalledExactlyOnceWith(h.detail);

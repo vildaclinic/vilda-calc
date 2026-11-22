@@ -31,7 +31,8 @@
   function state(patientId) {
     const item = active(patientId) ? working : {};
     return {mode: item.mode || 'browse', visitId: item.visitId || null, snapshotId: item.snapshotId || null,
-      date: item.date || null, busy: !!(loading || saving)};
+      date: item.date || null, busy: !!(loading || saving),
+      requiresLatest: !item.mode && selected() === patientId && w.sessionStorage.getItem(historicalFlag) === '1'};
   }
 
   function guardLeave() {
@@ -43,39 +44,59 @@
     });
   }
 
-  // Called only by the native chooser, with the very same event detail we published.
-  // Let its accepted-load publication finish and DOB reconciliation settle before
-  // applying the original New/Restore callback.
+  // The native loader supplies an operation-bound presentation and the original
+  // form actions. A pick from another native tool can only open the saved data.
   function consumeChoice(detail, newVisit, restore, isCurrent, abandon) {
-    const request = choiceRequest;
-    if (!request || request.detail !== detail) return false;
+    let request = choiceRequest;
+    if (request) {
+      if (request.detail !== detail) return false;
+    } else {
+      if (loading || saving || detail?.source !== 'pick' || selected() !== detail.patientId) return false;
+      const scope = owner(detail.patientId);
+      if (!scope || !isCurrent()) return false;
+      request = {scope, choice: 'restore', deadline: Date.now() + 12000,
+        valid: () => !choiceRequest && !loading && !saving,
+        finish(ok) {
+          if (ok && current(scope) && selected() === scope.patientId) {
+            w.sessionStorage.removeItem(historicalFlag);
+            notify();
+          }
+        }};
+    }
     const run = () => {
-      if (choiceRequest !== request || !current(request.scope) || !isCurrent() || Date.now() > request.deadline) {
+      if (!request.valid() || !current(request.scope) || !isCurrent() || Date.now() > request.deadline) {
         abandon(); request.finish(false); return;
       }
-      if (w.VildaDobAge && w.VildaDobAge.restorePending()) { w.setTimeout(run, 25); return; }
+      if (w.VildaDobAge?.restorePending() || Number(w.__vildaLoadInFlightUntil) > Date.now()) {
+        w.setTimeout(run, 25); return;
+      }
       try {
-        (request.choice === 'new' ? newVisit : restore)();
-        request.finish(true);
+        const ok = (request.choice === 'new' ? newVisit : restore)() === true;
+        if (!ok) abandon();
+        request.finish(ok);
       } catch (_) { abandon(); request.finish(false); }
     };
     w.setTimeout(run, 0);
     return true;
   }
 
-  function load(patientId, choice = 'restore', snapshot) {
-    return loadVisit(patientId, choice, snapshot, null);
+  function load(patientId, choice = 'restore', snapshot, isCurrent, onApply) {
+    return loadVisit(patientId, choice, snapshot, null, isCurrent, {onApply});
   }
-  async function loadVisit(patientId, choice, snapshot, afterOwnSave) {
-    if (!patientId || loading || saving || !['new','restore','edit'].includes(choice)) return false;
+  async function loadVisit(patientId, choice, snapshot, afterOwnSave, isCurrent = () => true, transition) {
+    if (!patientId || loading || saving || !isCurrent() || !['new','restore','edit'].includes(choice)) return false;
     const scope = owner(patientId), api = w.VildaDataImportExport;
     if (!scope || !api || !w.VildaVisitContext) return false;
     const token = api.captureAcceptedPatientLoad({patientId});
     if (!token) return false;
-    const allowed = () => current(scope) && loading === scope && api.isAcceptedPatientLoadCurrent(token);
+    const allowed = () => isCurrent() && current(scope) && loading === scope && api.isAcceptedPatientLoadCurrent(token);
     loading = scope; notify();
     try {
-      if (!(afterOwnSave ? afterOwnSave() : await guardLeave()) || !allowed()) return false;
+      if (!(afterOwnSave ? afterOwnSave() : await guardLeave())) {
+        transition?.onCancel?.();
+        return false;
+      }
+      if (!allowed()) return false;
       const patient = await scope.vault.getPatient(patientId);
       if (!allowed() || afterOwnSave && !afterOwnSave() || !patient || !patient.snapshots || !patient.snapshots.length) return false;
       let row = patient.snapshots[0];
@@ -86,15 +107,23 @@
         row = rows.find(item => item.snapshotId === snapshot.snapshotId && item.visitId === snapshot.visitId && item.rev === snapshot.rev);
       }
       if (!row || !row.payload || !row.payload.visit) return false;
+      if (transition?.beforeApply && (!transition.beforeApply() || !allowed())) return false;
       let finish;
       const done = new Promise(resolve => { finish = resolve; });
-      const request = {choice, scope, finish, deadline: Date.now() + 12000};
+      const request = {choice, scope, finish, deadline: Date.now() + 12000,
+        valid: () => isCurrent() && choiceRequest === request && loading === scope};
       choiceRequest = request;
       const timeout = w.setTimeout(() => finish(false), 12000);
       let chosen = false;
       try {
         const applied = api.runAcceptedPatientLoad(token, row.payload, {
-          apply: value => w.applyLoadedData(value),
+          apply(value) {
+            // Applying this record can dismiss the native surface that requested
+            // it. Retire that surface check only at the accepted-load boundary.
+            transition?.onApply?.();
+            if (!allowed()) throw new Error('Zmienił się kontekst otwieranej wizyty.');
+            return w.applyLoadedData(value);
+          },
           publish(authority) {
             request.detail = Object.assign({patientId, savedAtISO: row.savedAtISO, name: row.payload.name,
               snapshotCount: patient.snapshots.length, source: 'pick'}, authority);
@@ -105,7 +134,7 @@
         if (!applied) return false;
         chosen = await done;
       } finally { w.clearTimeout(timeout); if (choiceRequest === request) choiceRequest = null; }
-      if (!chosen || !current(scope) || selected() !== patientId) return false;
+      if (!chosen || !isCurrent() || !current(scope) || selected() !== patientId) return false;
       const visit = w.VildaVisitContext.capture(null, {patientId,readOnly:true});
       if (!visit || (choice === 'new' ? visit.visitId === row.payload.visit.visitId : visit.visitId !== row.payload.visit.visitId)) return false;
       if (snapshot) w.sessionStorage.setItem(historicalFlag, '1');
@@ -119,12 +148,18 @@
   }
   function start(patientId) { return load(patientId, 'new'); }
 
+  function canSave(patientId) {
+    if (!active(patientId) || working.mode === 'browse') return false;
+    const visit = w.VildaVisitContext.capture(null, {patientId, readOnly: true});
+    return !!visit && visit.patientId === patientId && visit.visitId === working.visitId;
+  }
+
   // Native validation still rejects malformed, negative or zero values. Only
   // an intentionally empty control is optional on a known visit of this owner.
-  function optionalField(payload, id) {
+  function optionalField(payload, id, formDocument = d) {
     if (!['height','weight'].includes(id) || !payload || !payload.visit ||
         !active(payload.visit.patientId) || working.mode === 'browse' || payload.visit.visitId !== working.visitId) return false;
-    const field = d.getElementById(id);
+    const field = formDocument.getElementById(id);
     return !!field && String(field.value).trim() === '' && !(field.validity && field.validity.badInput);
   }
   function revisionTarget(payload) {
@@ -190,48 +225,67 @@
     try { return await promise; }
     finally { if (recording === operation) recording = null; }
   }
-  async function save(patientId) {
-    if (!active(patientId) || working.mode === 'browse' || loading || saving) return false;
-    const scope = working; saving = scope; notify();
+  async function save(patientId, sourceWindow) {
+    if (!canSave(patientId) || loading || saving) return false;
+    // Only the shell can attest the current DocPro pane, its native save API,
+    // its visit and both unlocked accounts. Never accept a caller's receipt.
+    const shell = w.parent?.VildaShell;
+    const writer = sourceWindow && shell?.captureHomeVisitWriter(sourceWindow);
+    if (sourceWindow && (!writer || writer.home !== w || !writer.isCurrent())) return false;
+    const source = writer ? writer.win : w, sourceDocument = source.document;
+    const scope = working;
+    const currentWriter = () => active(patientId) && working === scope && (!writer || writer.isCurrent());
+    function changed() {
+      notify();
+      if (writer && source.document === sourceDocument) sourceDocument.dispatchEvent(new source.CustomEvent('vilda:home-encounter-changed'));
+    }
+    saving = scope; changed();
     try {
       if (recording && (recording.scope !== scope || !await recording.promise)) return false;
-      const status = w.VildaSaveStatusIndicator;
+      if (!currentWriter()) return false;
+      const status = source.VildaSaveStatusIndicator;
       let result = scope.artifactReceipt, submitted = scope.artifactSubmission;
       const decision = status.getCurrentDecision();
-      // Completing a consultation whose sole item was just saved need not add
-      // another technical version. Subsequent clinical edits still use Save.
-      if (!verified(scope, result) || !status.isSubmittedFormCurrent(submitted) && !(decision.ready && decision.state === 'saved')) {
+      // An independently saved artifact can complete a consultation without
+      // another version. A different pane must submit its own live form.
+      if (writer || !verified(scope, result) || !status.isSubmittedFormCurrent(submitted) && !(decision.ready && decision.state === 'saved')) {
         submitted = decision.scope;
-        result = await w.VildaDataImportExport.saveUserDataWithReceipt({});
+        result = await source.VildaDataImportExport.saveUserDataWithReceipt({});
       }
-      if (!verified(scope, result)) return false;
-      if (working.mode === 'edit') {
-        // The disk correction is complete. Restore the latest clinical context
-        // before presenting a neutral patient overview again.
-        saving = null;
-        const unchanged = () => verified(scope, result) && status.isSubmittedFormCurrent(submitted);
-        // Allow native Save's own calculations to settle. A concurrent edit or
-        // owner change cancels automatic navigation and retains the live form.
-        for (let turn = 0; turn < 20 && !unchanged() && active(patientId); turn++) {
+      if (!verified(scope, result) || !currentWriter()) return false;
+      if (scope.mode === 'edit' || writer) {
+        const unchanged = () => currentWriter() && verified(scope, result) && status.isSubmittedFormCurrent(submitted);
+        // Allow the verified writer's calculations to settle. New edits keep
+        // their open encounter and update the same committed snapshot later.
+        for (let turn = 0; turn < 20 && !unchanged() && currentWriter(); turn++) {
           await new Promise(resolve => { w.setTimeout(resolve, 50); });
         }
-        if (unchanged()) await loadVisit(patientId, 'restore', null, unchanged);
-      } else {
-        working.mode = 'browse';
+        if (!unchanged()) {
+          if (scope.mode === 'new') { scope.artifactReceipt = result; scope.artifactSubmission = submitted; }
+          return true;
+        }
+        if (scope.mode === 'edit') {
+          saving = null;
+          if (writer) await writer.showSavedHistory(result, submitted);
+          else await loadVisit(patientId, 'restore', null, unchanged);
+          return true;
+        }
       }
+      scope.mode = 'browse';
       return true;
-    } finally { saving = null; notify(); }
+    } finally { if (saving === scope) saving = null; changed(); }
   }
   function history(patientId, patientName) {
     const scope = owner(patientId);
-    if (!scope || !w.VildaVisitHistory) return false;
-    const options = {patientName, isCurrent: () => current(scope) && selected() === patientId,
-      onEdit: row => load(patientId, 'edit', row).then(ok => {
-        if (!ok && current(scope) && selected() === patientId) w.alert('Nie otwarto wizyty do edycji.');
-        return ok;
-      })};
-    if (w.VildaHomeGabinet?.openVisitHistory) return w.VildaHomeGabinet.openVisitHistory(patientId, options);
-    return w.VildaVisitHistory.open(patientId, options);
+    if (!scope || selected() !== patientId || !w.VildaHomeGabinet?.openVisitHistory) return false;
+    const isCurrent = () => current(scope) && selected() === patientId;
+    const options = {patientName, isCurrent, async onEdit(row, beforeApply) {
+      let declined = false;
+      const ok = await loadVisit(patientId, 'edit', row, null, isCurrent, {beforeApply, onCancel: () => { declined = true; }});
+      if (!ok && !declined && isCurrent()) w.alert('Nie otwarto wizyty do edycji. Otwórz ponownie historię i wybierz aktualny zapis.');
+      return ok;
+    }};
+    return w.VildaHomeGabinet.openVisitHistory(patientId, options);
   }
   d.addEventListener('vilda:patient-loaded', event => {
     const detail = event.detail;
@@ -240,5 +294,5 @@
     }
   });
   d.addEventListener('vilda:user-state-cleared', () => { working = null; notify(); });
-  w.VildaHomeEncounter = Object.freeze({load, start, state, save, history, guardLeave, consumeChoice, optionalField, revisionTarget, saved, captureBinding, ensureRecorded});
+  w.VildaHomeEncounter = Object.freeze({load, start, state, save, canSave, history, guardLeave, consumeChoice, optionalField, revisionTarget, saved, captureBinding, ensureRecorded});
 })(window, document);

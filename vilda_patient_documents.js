@@ -310,6 +310,11 @@
     var patientReady = !!(record.owner.id && typeof patient?.open === 'function' && patientOwner?.());
     var summaryButton = d.getElementById('metabolicSummaryBtn');
     var dietButton = d.getElementById('vhomeDietExpand');
+    function openRecord(section, classicSection) {
+      const gabinet = w.__VILDA_HOME_GABINET_PREVIEW__ === true && w.VildaHomeGabinet;
+      if (gabinet) return gabinet.openPatient(record.owner.id, {intent: 'browse', section, isCurrent: () => current(record)});
+      return patient.open(classicSection);
+    }
     function openCharts(mode) {
       return launch(function () {
         return growth.openCharts({ mode: mode, opener: options.opener, onBack: function () {
@@ -331,14 +336,14 @@
         action('Raport wzrastania', 'Analiza i historia pomiarów', 'data-patient-documents-growth',
           ui.reportOptions.some(function (item) { return item.value === 'growth'; }), function () { ui.runPackage(['growth']); }),
         action('Historia badań', 'Wyniki, daty i zapisane zakresy', 'data-patient-documents-labs', patientReady,
-          launch(function () { return patient.open('labs'); }))]));
+          launch(function () { return openRecord('lab', 'labs'); }))]));
     grid.appendChild(homeGroup(doc, 'Zalecenia i opieka', 'Uzgodnione postępowanie oraz informacje dla pacjenta.',
       'M8 4H5v17h14V4h-3M8 3h8v4H8zM8 13h8M12 9v8', [
         action('Zalecenia dietetyczne', 'Założenia i raport dla pacjenta', 'data-patient-documents-diet',
           typeof diet?.open === 'function' && dietButton && !dietButton.disabled && !d.getElementById('vhomeDietCard')?.hidden,
           launch(function () { return diet.open('report'); })),
         action('Plan opieki', 'Etapy, działania i ustalenia', 'data-patient-documents-care', patientReady,
-          launch(function () { return patient.open('care'); })),
+          launch(function () { return openRecord('care', 'care'); })),
         action('Notatka z wizyty', 'Utwórz wpis w dokumentacji', 'data-patient-documents-note',
           !!record.owner.id && typeof w.VildaHomePatientNoteHost?.open === 'function', launch(function () {
             return w.VildaHomePatientNoteHost.open({ patientId: record.owner.id,

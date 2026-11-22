@@ -13,6 +13,25 @@
   Object.defineProperty(window, '__VILDA_HOME_WORKSPACE_PREVIEW__', { value: true, writable: false });
   Object.defineProperty(window, '__VILDA_HOME_GABINET_PREVIEW__', { value: true, writable: false });
   Object.defineProperty(window, 'VILDA_SYNC_WORKER_URL', { value: 'https://vilda-preview-disabled.invalid', writable: false });
+  // This export script is the first executable in <head>. A direct link to a
+  // module enters its normal shell before the form or an editor can exist.
+  // A Start URL remains a supported standalone entry.
+  if (document.readyState === 'loading' && !nativeAppPane() && typeof window.history?.replaceState === 'function') {
+    const routes = { 'docpro.html': 'docpro', 'terminarz.html': 'terminarz', 'notatki.html': 'notatki',
+      'przelicznik-jednostek.html': 'lab', 'kalkulator-klirens.html': 'klirens', 'homa-ir.html': 'homa',
+      'steroidy.html': 'steroidy', 'cukrzyca.html': 'cukrzyca', 'materialy-edukacyjne.html': 'edu', 'ustawienia.html': 'ustawienia' };
+    const route = routes[window.location.pathname.split('/').pop()];
+    if (typeof route === 'string') {
+      const target = new URL(window.location.href);
+      target.searchParams.delete('embedded');
+      const shell = new URL('app.html#/' + route, target);
+      const state = { shellView: route };
+      if (target.search || target.hash) state.homePreviewPaneTarget = target.pathname + target.search + target.hash;
+      window.history.replaceState(state, '', shell.href);
+      window.location.reload();
+      return;
+    }
+  }
   const state = { status: 'starting', phase: 'account', fictional: true, doctorAccess: false, error: null };
   window.VildaHomePreview = Object.freeze({ getState: () => ({ ...state }) });
   try {
