@@ -43,6 +43,19 @@ function importFile(h, data, options = {}) {
 }
 
 describe('persistent working encounter context', () => {
+  it('collects an empty patient chart without inventing a consultation before the clinician starts one', () => {
+    const h = environment({homePreview: true}), identity = {name: 'Fikcyjny Pacjent Wizyty'};
+    let empty = true;
+    h.win.VildaHomeEncounter = {isIdentityOnly: id => empty && id === patientId};
+    expect(h.api.capture(identity, {patientId})).toBeNull();
+    expect(h.api.capture(identity, {patientId, readOnly: true})).toBeNull();
+    expect(h.win.crypto.randomUUID).not.toHaveBeenCalled();
+    empty = false;
+    const visit = h.api.beginNew({patientId});
+    expect(h.api.capture(identity, {patientId})).toEqual(visit);
+    expect(h.win.crypto.randomUUID).toHaveBeenCalledOnce();
+  });
+
   it('allocates once, keeps ID on date correction, and does not alter the separate puberty marker', () => {
     const h = environment(), data = source(); data.user.pubertyAssessmentVisit = { visitId: 'separate-examination-marker' };
     const first = h.api.capture(data, { patientId: null }), original = clone(data);

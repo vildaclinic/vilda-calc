@@ -64,7 +64,8 @@
     panel.innerHTML = `
       <div class="vhs-heading">
         <div><span class="vhs-eyebrow">Karta pacjenta · Przebieg opieki</span><h1 tabindex="-1">Wizyty pacjenta</h1><p class="vhs-patient"></p></div>
-        <button type="button" class="vhs-back"><span aria-hidden="true">←</span> <span></span></button>
+        <div class="vhs-heading-actions"><button type="button" class="vhs-trash" hidden>Kosz wizyt</button>
+          <button type="button" class="vhs-back"><span aria-hidden="true">←</span> <span></span></button></div>
       </div>
       <div class="vhs-surface">
         <div class="vhs-toolbar">
@@ -117,6 +118,7 @@
     rail.setAttribute('aria-describedby', help.id);
     find('.vhs-patient').textContent = patientName || '';
     find('.vhs-back span:last-child').textContent = backLabel || 'Wróć do karty pacjenta';
+    find('.vhs-trash').hidden = !options.onTrash;
     find('.vhs-total strong').textContent = countLabel(length);
     find('.vhs-empty').hidden = !!length;
     modes.hidden = help.hidden = papers.hidden = find('.vhs-controls').hidden = !length;
@@ -270,6 +272,7 @@
       const button = event.target.closest('button');
       if (!button || !panel.contains(button)) return;
       if (button.matches('.vhs-back')) onBack();
+      else if (button.matches('.vhs-trash')) options.onTrash?.(button);
       else if (button.parentElement === modes) setMode(button.dataset.mode);
       else if (button === newer) select(selected - 1);
       else if (button === older) select(selected + 1);

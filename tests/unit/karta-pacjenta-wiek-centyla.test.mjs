@@ -1,7 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { runInNewContext } from 'node:vm';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
@@ -39,9 +40,26 @@ describe('P3 — wiek, w którym karta pacjenta liczy centyle', () => {
     expect(kod, 'wiek pomiaru wygrywa z datą urodzenia').toContain('var I=b!=null?b:Gb0');
   });
 
-  it('gdy rekord nie ma wieku, liczy go na datę pomiaru — nie na dziś', () => {
-    expect(kod).toContain('m.measuredAtISO?m.measuredAtISO:c.savedAtISO||c.lastSavedAtISO');
-    expect(kod).toContain('o.calcAgeFromDOB(m.dobISO,Gb1)');
+  it.each([
+    ['data pomiaru', '2026-01-10', { savedAtISO: '2026-02-01' }, '2026-01-10'],
+    ['data zapisu wersji', null, { savedAtISO: '2026-02-01', lastSavedAtISO: '2026-04-15' }, '2026-02-01'],
+    ['dawny zapis z samym lastSavedAtISO', null, { lastSavedAtISO: '2026-04-15' }, '2026-04-15'],
+    ['kartoteka bez wizyt', null, null, null],
+  ])('wybór daty przy braku zapisanego wieku (%s)', (_przypadek, measuredAtISO, snapshot, expectedDate) => {
+    const fragment = kod.match(/var Gb0=null;[\s\S]*?var I=b!=null\?b:Gb0\b/);
+    expect(fragment, 'fragment wybierający wiek pomiaru').not.toBeNull();
+    const dobISO = '2016-01-10';
+    const calcAgeFromDOB = vi.fn(() => ({ totalMonths: 120 }));
+    const age = runInNewContext(fragment[0] + '; I', {
+      b: null, m: { dobISO, measuredAtISO }, c: snapshot, o: { calcAgeFromDOB },
+    });
+    if (expectedDate) {
+      expect(calcAgeFromDOB).toHaveBeenCalledExactlyOnceWith(dobISO, expectedDate);
+      expect(age).toBe(120);
+    } else {
+      expect(calcAgeFromDOB).not.toHaveBeenCalled();
+      expect(age).toBeNull();
+    }
   });
 
   it('nie zostaje ani jeden przypis o przeliczaniu na dziś', () => {

@@ -3111,3 +3111,12 @@ bieżącego pomiaru lub pomiarów wzrastania. Odrębne pomiary i ich metadane
 pozostają w porównaniu. Odtworzenie identyfikatora nie zapisuje sesji ani nie
 wywołuje pełnego odtworzenia formularza. Testy wykonują produkcyjny kod
 odtwarzania i sprawdzają ten sam identyfikator po odświeżeniu w przeglądarce.
+
+## Kosz całych wizyt
+
+Czytelne źródło znajduje się w `runtime/visit-trash-v1/vault-fragment.js`.
+Polecenie `node tools/visit-trash-vault-delta.mjs` sprawdza kod sejfu bajt po
+bajcie. Opcja `--rebuild PLIK_BAZY PLIK_WYNIKOWY` odtwarza go z obrazu sejfu
+sprzed dodania kosza. Weryfikator porównuje skróty wejścia, czytelnego źródła
+i całego wynikowego pliku. Polecenie `node tools/check_clinical_workspace_boundary.mjs`
+sprawdza również historyczny fragment natywny i aktualny skrót bazy publicznej.

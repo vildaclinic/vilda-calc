@@ -100,6 +100,12 @@ zatwierdza korektę wybranej wizyty. „Rozpocznij nową wizytę” otwiera
 dzisiejszą konsultację z oddzielnym identyfikatorem. „Zapisz wizytę”
 pozwala ją zakończyć także bez nowego pomiaru masy i wzrostu.
 
+Podczas edycji zapisanej wizyty menu „Działania” udostępnia „Przenieś wizytę
+do kosza”. Potwierdzenie wskazuje pacjenta i datę wizyty. W „Historii wizyt”
+przycisk „Kosz wizyt” pozwala przywrócić wizytę razem z jej zapisanymi wersjami.
+Osobno zapisane badania, notatki, plany opieki i przypomnienia nadal są dostępne
+w Karcie pacjenta.
+
 W Analizie karta „Zmiana od poprzedniej wizyty” pokazuje daty obu wizyt
 i różnice dla dostępnych pomiarów. Po konsultacji bez pomiarów można wybrać
 wcześniejszy pomiar po jego dacie. Szczegóły otwierają się w osobnym oknie.

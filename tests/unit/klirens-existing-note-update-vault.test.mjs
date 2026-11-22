@@ -1,3 +1,4 @@
+import { restoreVisitTrashBaseline } from '../../tools/visit-trash-vault-delta.mjs';
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
@@ -299,7 +300,7 @@ describe('Klirens — conditional update of one existing canonical note', () => 
   });
 
   it('reproduces the narrow artifact addition and is idempotent', () => {
-    const deployed = readFileSync(new URL('../../vilda_vault.js', import.meta.url), 'utf8');
+    const deployed = restoreVisitTrashBaseline(readFileSync(new URL('../../vilda_vault.js', import.meta.url), 'utf8'));
     // Treatment adds reviewed owner guards to these same actors. Its exact
     // hash-pinned layer must round-trip before the original generator proves
     // the unchanged historical note mutation; arbitrary changes still fail.

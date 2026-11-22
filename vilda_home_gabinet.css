@@ -80,7 +80,13 @@ html.vilda-embedded.vilda-form-host-desktop #vhomeGabinetHeader[data-decor-rail]
 #vhomeGabinetHeader .gb-card-actions button:hover { border-color: #41888b !important; }
 #vhomeGabinetHeader .gb-card-actions .gb-primary:hover { background: #006a72 !important; }
 #vhomeGabinetHeader .gb-card-actions button:disabled { opacity: var(--opacity-slider-tick); cursor: default; }
-#vhomeGabinetHeader .gb-patient-tabs { gap: var(--space-0-5); margin-top: var(--space-1); border-bottom: var(--border-hairline) solid #cbdcde; }
+#vhomeGabinetHeader .gb-patient-nav { display: grid; grid-template-columns: minmax(0, 1fr) 7rem; align-items: center; margin-top: var(--space-1); border-bottom: var(--border-hairline) solid #cbdcde; }
+#vhomeGabinetHeader .gb-patient-tabs { min-width: 0; gap: var(--space-0-5); }
+#vhomeGabinetHeader .gb-visit-actions { position: relative; justify-self: end; }
+#vhomeGabinetHeader [data-visit-actions] { min-height: 44px; padding: var(--space-0-5); border: 0 !important; background: transparent !important; box-shadow: none !important; color: var(--text-muted) !important; }
+#gbVisitActions { position: absolute; inset-inline-end: 0; top: 100%; z-index: var(--z-dropdown); width: max-content; max-width: calc(100vw - 2rem); padding: var(--space-4px); background: var(--bg); border: var(--border-hairline) solid var(--line); border-radius: var(--radius-8); box-shadow: var(--shadow); }
+#vhomeGabinetHeader [data-trash-visit] { min-height: 44px; background: var(--bg) !important; color: var(--danger-strong) !important; border: 0 !important; box-shadow: none !important; }
+#vhomeGabinetHeader [data-trash-visit]:hover { background: var(--danger-bg) !important; }
 #vhomeGabinetHeader .gb-patient-tabs button { min-height: 46px; justify-content: center; color: #566f75 !important; border-bottom: var(--border-pro) solid transparent !important; }
 #vhomeGabinetHeader .gb-patient-tabs button[aria-selected="true"] { color: #006b72 !important; border-bottom-color: #00838b !important; }
 #vhomeGabinetHeader button:focus-visible { outline: var(--border-pro) solid #00727b; outline-offset: 2px; }
@@ -134,8 +140,10 @@ html.vilda-embedded.vilda-form-host-desktop #vhomeGabinetHeader[data-decor-rail]
   #vhomeGabinetHeader .gb-encounter-state { flex-direction: column; justify-content: center; align-items: flex-end; min-height: 2.6rem; gap: 0; line-height: 1.2; }
   #vhomeGabinetHeader .gb-card-actions { width: 100%; gap: var(--space-0-45); }
   #vhomeGabinetHeader .gb-card-actions button { font-size: .91rem; gap: var(--space-0-35); padding-inline: var(--space-0-4); }
-  #vhomeGabinetHeader .gb-patient-tabs { margin-top: var(--space-0-55); gap: 0; }
-  #vhomeGabinetHeader .gb-patient-tabs button { flex: 1; }
+  #vhomeGabinetHeader .gb-patient-nav { grid-template-columns: minmax(0, 1fr) 6rem; margin-top: var(--space-0-55); }
+  #vhomeGabinetHeader .gb-patient-tabs { gap: 0; }
+  #vhomeGabinetHeader .gb-patient-tabs button { flex: 1; padding-inline: var(--space-0-35); }
+  #vhomeGabinetHeader [data-visit-actions] { padding-inline: var(--space-4px); gap: var(--space-4px); font-size: .93rem; }
 }
 @media (max-width: 380px) {
   #vhomeGabinetHeader .gb-card-actions button { min-height: 3.6rem; }
@@ -147,3 +155,15 @@ html.vilda-embedded.vilda-form-host-desktop #vhomeGabinetHeader[data-decor-rail]
 @media (max-width: 340px) {
   #vhomeGabinetHeader .gb-header-top { min-height: 2.8rem; }
 }
+
+.vilda-home-workspace #vhomeVisitTrashConfirm { width: min(35rem, calc(100% - 1.25rem)); height: auto; max-height: calc(var(--vhome-dialog-viewport-height, 100dvh) - 1.5rem); }
+html.vilda-home-workspace #vhomeVisitTrashConfirm .vhome-dialog-apply { background: var(--danger-strong) !important; color: var(--bg) !important; }
+:is(#vhomeVisitTrashConfirm,#vhomeVisitTrash) .vhome-dialog-body { overflow-wrap: anywhere; }
+:is(#vhomeVisitTrashConfirm,#vhomeVisitTrash) .vhome-dialog-body h3 { margin: 0; color: var(--text-heading); }
+:is(#vhomeVisitTrashConfirm,#vhomeVisitTrash) .vht-meta { color: var(--text-muted); }
+#vhomeVisitTrashConfirm .vht-visit { margin: var(--space-4px) 0; font-weight: 600; }
+#vhomeVisitTrash .vht-list { margin: var(--space-16px) 0 0; padding: 0; list-style: none; }
+#vhomeVisitTrash .vht-list li { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: var(--space-12px); padding: var(--space-14px) 0; border-top: var(--border-hairline) solid var(--line); }
+#vhomeVisitTrash .vht-list li div { display: grid; gap: var(--space-4px); }
+#vhomeVisitTrash .vht-list span { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+#vhomeVisitTrash .vht-list button { width: auto; min-height: 44px; margin: 0; padding: var(--space-8px) var(--space-14px); color: var(--primary) !important; background: var(--bg) !important; border: var(--border-hairline) solid var(--line) !important; border-radius: var(--radius-8) !important; box-shadow: none !important; }

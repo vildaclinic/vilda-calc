@@ -1,9 +1,10 @@
+import { restoreVisitTrashBaseline } from '../../tools/visit-trash-vault-delta.mjs';
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { applyPatientTreatmentDelta, restorePatientTreatmentBaseline } from '../../tools/patient-treatment-vault-delta.mjs';
 
-const source = readFileSync(new URL('../../vilda_vault.js', import.meta.url), 'utf8');
+const source = restoreVisitTrashBaseline(readFileSync(new URL('../../vilda_vault.js', import.meta.url), 'utf8'));
 const manifest = JSON.parse(readFileSync(new URL('../../runtime/patient-treatment-v1/manifest.json', import.meta.url), 'utf8'));
 const digest = value => createHash('sha256').update(value).digest('hex');
 function nativePart(value) {
