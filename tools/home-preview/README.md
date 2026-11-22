@@ -93,13 +93,18 @@ Po przygotowaniu konta otwiera się Gabinet. Wpisz „Antoni” w polu wyszukiwa
 i wybierz nazwisko przykładowego pacjenta. Otworzy się Przegląd jego kartoteki,
 z zakładką Przypomnienia. Przełączenie na Analizę pokazuje formularz, wyniki
 i narzędzia kliniczne. Wspólny nagłówek zachowuje położenie na obu ekranach.
-Przycisk „Rozpocznij wizytę” pozwala zacząć konsultację także bez nowego pomiaru
-masy i wzrostu. Po wpisaniu danych można wybrać „Zapisz wizytę”.
+Po wybraniu nazwiska nagłówek pokazuje datę ostatniej klinicznej wizyty.
+Jej pomiary można odczytać w Analizie. Kliknięcie daty otwiera kartkę,
+a „Edytuj wizytę” udostępnia jej pomiary do korekty. „Zapisz zmiany”
+zatwierdza korektę wybranej wizyty. „Rozpocznij nową wizytę” otwiera
+dzisiejszą konsultację z oddzielnym identyfikatorem. „Zapisz wizytę”
+pozwala ją zakończyć także bez nowego pomiaru masy i wzrostu.
 
-W Bazie pacjentów wybór nazwiska otwiera ten sam Przegląd. „Historia wizyt”
-pozwala odczytać zapisaną wizytę. Dopiero „Edytuj wizytę” otwiera wskazany
-zapis do korekty. W trakcie wizyty przycisk „Zapisz wizytę” i skrót Ctrl+S
-(na Macu ⌘S) odnoszą się do otwartej wizyty.
+W Analizie karta „Zmiana od poprzedniej wizyty” pokazuje daty obu wizyt
+i różnice dla dostępnych pomiarów. Po konsultacji bez pomiarów można wybrać
+wcześniejszy pomiar po jego dacie. Szczegóły otwierają się w osobnym oknie.
+Przy korekcie historycznej punktem odniesienia jest poprzedniczka edytowanej
+wizyty według chronologii klinicznej.
 
 Wybór pacjenta należy do użytkownika. Przy zmianie pacjenta aplikacja sprawdza
 stan niezapisanych danych. Zakładanie konta i dodanie przykładu są serializowane

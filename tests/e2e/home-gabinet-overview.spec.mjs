@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { visibleChromeMenu } from '../support/chrome-menu-fixture.mjs';
-import { createFictionalVault, readyForPatient, shellFrame } from '../support/centile-live-fixture.mjs';
+import { createFictionalVault, fictionalPatient, readyForPatient, shellFrame } from '../support/centile-live-fixture.mjs';
 
 test.use({ serviceWorkers: 'block', contextOptions: { reducedMotion: 'reduce' } });
 test.setTimeout(180_000);
@@ -106,10 +106,31 @@ test('Gabinet uses one patient header for overview and analysis and displays rem
     expect(Math.abs(analysisEdges.right - cardEdges.right), 'Prawa krawędź Analiza / Karta pacjenta').toBeLessThanOrEqual(1);
     expect(await headerGeometry(frame)).toEqual(before);
   }
-  for (const width of [1440, 1920, 834, 390]) await checkPatientLayout(width, summary);
+  for (const width of [1440, 1920, 834, 390]) {
+    await checkPatientLayout(width, summary);
+    const comparison = frame.locator('#vhomeVisitComparison');
+    await expect(comparison).toBeVisible();
+    const positions = await comparison.evaluate(card => {
+      const rect = selector => document.querySelector(selector).getBoundingClientRect();
+      const form = rect('#userSection fieldset.user-card'), summary = rect('#currentSummaryCard');
+      const growth = rect('#vhomeGrowthCard'), bounds = card.getBoundingClientRect();
+      return {
+        below: bounds.top >= Math.max(summary.bottom, form.bottom) - 1,
+        beforeGrowth: !growth.height || bounds.bottom <= growth.top + 1,
+        left: Math.abs(bounds.left - form.left),
+        right: Math.abs(bounds.right - summary.right),
+        overflow: bounds.left < -1 || bounds.right > document.documentElement.clientWidth + 1,
+      };
+    });
+    expect(positions.below).toBe(true);
+    expect(positions.beforeGrowth).toBe(true);
+    expect(positions.left).toBeLessThanOrEqual(1);
+    expect(positions.right).toBeLessThanOrEqual(1);
+    expect(positions.overflow).toBe(false);
+  }
 
   const header = frame.locator('#vhomeGabinetHeader');
-  await header.getByRole('button', { name: 'Rozpocznij wizytę', exact: true }).click();
+  await header.getByRole('button', { name: 'Rozpocznij nową wizytę', exact: true }).click();
   await expect(header.getByRole('button', { name: 'Zapisz wizytę', exact: true })).toBeVisible();
   // A visit can start without measurements. Its form grid is visible immediately.
   await expect(frame.locator('#weight')).toHaveValue('');
@@ -127,7 +148,7 @@ async function saveReminderOnly(page) {
   const before = await frame.evaluate(id => window.VildaVault.getPatient(id), ids.a);
   await choosePatient(frame, 'Antoni');
   const header = frame.locator('#vhomeGabinetHeader');
-  await header.getByRole('button', { name: 'Rozpocznij wizytę', exact: true }).click();
+  await header.getByRole('button', { name: 'Rozpocznij nową wizytę', exact: true }).click();
   const save = header.getByRole('button', { name: 'Zapisz wizytę', exact: true });
   await expect(save).toBeVisible();
   const visit = await frame.evaluate(() => window.collectUserData().visit);
@@ -166,7 +187,7 @@ test('a consultation containing only a reminder saves its own visit and leaves t
   const save = page.locator('#saveDataBtnSidebar');
   await expect(save).toHaveAccessibleName('Zapisz wizytę');
   await save.click();
-  await expect(frame.locator('#vhomeGabinetHeader').getByRole('button', { name: 'Rozpocznij wizytę', exact: true })).toBeVisible();
+  await expect(frame.locator('#vhomeGabinetHeader').getByRole('button', { name: 'Rozpocznij nową wizytę', exact: true })).toBeVisible();
   expect(await revisions()).toBe(1);
 
   await page.reload({ waitUntil: 'load' });
@@ -282,8 +303,97 @@ test('Edytuj wizytę corrects only the chosen historical record and returns to t
     const edited = patient.snapshots.find(item => item.snapshotId === snapshotId);
     return [patient.snapshots[0].snapshotId, edited.rev, edited.payload.user.weight];
   }, { pid: ids.a, snapshotId: seed.targetSnapshot })).toEqual([seed.latestSnapshot, seed.revision + 1, 44]);
-  await expect(header.getByRole('button', { name: 'Rozpocznij wizytę' })).toBeVisible();
+  await expect(header.getByRole('button', { name: 'Rozpocznij nową wizytę' })).toBeVisible();
   await expect(frame.locator('#weight')).toHaveValue('55');
+});
+
+test('comparison follows clinical visit dates, offers an explicit measured baseline and corrects only the chosen visit', async ({ page }) => {
+  const { frame } = await prepare(page);
+  const adult = fictionalPatient({ firstName: 'Łucja', sex: 'F', age: 46, height: null, weight: 94 });
+  const seed = await frame.evaluate(async ({ version, name, user }) => {
+    const vault = window.VildaVault;
+    const record = { version, name, user: { ...user, measuredAtISO: '2025-09-18' } };
+    const { patientId } = await vault.savePatient(record, { dedup: false });
+    // The blank October consultation is imported last, after the November visit.
+    for (const [day, weight] of [['2025-11-15', 91.5], ['2025-10-12', null]]) {
+      const payload = { ...record, visit: window.VildaVisitContext.create({ patientId, clinicalDateISO: day }),
+        user: { ...record.user, measuredAtISO: weight === null ? null : day, weight } };
+      await vault.savePatient(payload, { patientId, dedup: false });
+    }
+    const [november, october, september] = await vault.getPatientVisits(patientId);
+    const technical = (await vault.getPatient(patientId)).snapshots[0];
+    return { patientId, november: november.visitId, october: october.visitId, september: september.visitId,
+      octoberRevision: october.rev, lastSaved: technical.payload.visit.visitId };
+  }, adult);
+  expect(seed.lastSaved).toBe(seed.october);
+  await choosePatient(frame, 'Łucja');
+  const header = frame.locator('#vhomeGabinetHeader');
+  const analysis = header.getByRole('tab', { name: 'Analiza', exact: true });
+  const card = frame.locator('#vhomeVisitComparison');
+  const weight = frame.locator('#weight'), metric = card.locator('[data-comparison-metric="weight"]');
+  const date = header.getByRole('button', { name: 'Otwórz wizytę z 15.11.2025', exact: true });
+  const visitIds = () => frame.evaluate(async patientId =>
+    (await window.VildaVault.getPatientVisits(patientId)).map(row => row.visitId), seed.patientId);
+  await expect(date).toBeVisible();
+  await analysis.click();
+  await expect(weight).toHaveValue('91.5');
+  await expect(weight).not.toBeEditable();
+  await expect(card.getByRole('heading', { name: 'Zmiana od poprzedniej wizyty' })).toBeVisible();
+  await expect(card).toContainText('12.10.2025');
+  await expect(card).toContainText('15.11.2025');
+  await card.getByRole('button', { name: 'Porównaj z pomiarem z 18.09.2025' }).click();
+  await expect(metric).toContainText(/[-−]\s*2,5/);
+  await expect(metric).toContainText('94');
+  await expect(metric).toContainText('91,5');
+  await expect(card.locator('[data-comparison-metric="bmi"]').filter({ hasText: /\d/ })).toHaveCount(0);
+  await card.getByRole('button', { name: 'Szczegóły porównania' }).click();
+  const modal = frame.locator('#vhomeVisitComparisonDialog');
+  await expect(modal).toBeVisible();
+  await expect(modal).toContainText('18.09.2025');
+  await expect(modal).toContainText('15.11.2025');
+  await modal.press('Escape');
+  await expect(modal).toBeHidden();
+  await card.getByRole('button', { name: 'Wróć do poprzedniej wizyty' }).click();
+  await expect(card).toContainText('12.10.2025');
+  expect(await visitIds()).toEqual([seed.november, seed.october, seed.september]);
+
+  await date.click();
+  const sheet = frame.locator('#vhomeVisitDetail');
+  const novemberHeading = sheet.getByRole('heading', { name: 'Wizyta z 15.11.2025', exact: true });
+  await expect(novemberHeading).toBeVisible();
+  await sheet.getByRole('button', { name: 'Zamknij podgląd wizyty', exact: true }).click();
+  await expect(analysis).toHaveAttribute('aria-selected', 'true');
+  await expect(date).toBeFocused();
+  await date.click();
+  await expect(novemberHeading).toBeVisible();
+  await sheet.getByRole('button', { name: 'Starsza wizyta', exact: true }).click();
+  await expect(sheet.getByRole('heading', { name: 'Wizyta z 12.10.2025', exact: true })).toBeVisible();
+  await sheet.getByRole('button', { name: 'Edytuj wizytę', exact: true }).click();
+  await expect(header).toContainText('Edycja wizyty');
+  await analysis.click();
+  await expect(weight).toBeEditable();
+  await expect(weight).toHaveValue('');
+  await weight.fill('92.5');
+  await expect(card).toContainText('18.09.2025');
+  await expect(card).not.toContainText('15.11.2025');
+  await expect(metric).toContainText(/[-−]\s*1,5/);
+  await header.getByRole('button', { name: 'Zapisz zmiany', exact: true }).click();
+  await expect(date).toBeVisible();
+  await expect(weight).toHaveValue('91.5');
+  await analysis.click();
+  await expect(weight).not.toBeEditable();
+  await expect(card).toContainText('12.10.2025');
+  await expect(metric).toContainText('92,5');
+  await expect(metric).toContainText(/[-−]\s*1(?:,0)?(?:\s|$)/);
+  const values = await frame.evaluate(async patientId =>
+    (await window.VildaVault.getPatientVisits(patientId)).map(row =>
+      ({ visitId: row.visitId, weight: row.payload.user.weight, revision: row.rev, measured: row.payload.user.measuredAtISO || null })), seed.patientId);
+  expect(values.map(row => [row.visitId, row.weight])).toEqual([
+    [seed.november, 91.5], [seed.october, 92.5], [seed.september, 94],
+  ]);
+  expect(values[1].revision).toBe(seed.octoberRevision + 1);
+  // The date of this measurement was unknown when the visit was recorded.
+  expect(values[1].measured).toBeNull();
 });
 
 test('browsing visit history from Analysis on a phone preserves the open visit and its unsaved measurements', async ({ page }) => {
@@ -300,7 +410,7 @@ test('browsing visit history from Analysis on a phone preserves the open visit a
   await page.setViewportSize({ width: 390, height: 844 });
   await choosePatient(frame, 'Antoni');
   const header = frame.locator('#vhomeGabinetHeader');
-  await header.getByRole('button', { name: 'Rozpocznij wizytę' }).click();
+  await header.getByRole('button', { name: 'Rozpocznij nową wizytę' }).click();
   await expect(header.getByRole('button', { name: 'Zapisz wizytę' })).toBeVisible();
   const analysis = header.getByRole('tab', { name: 'Analiza', exact: true });
   await analysis.click();
@@ -355,7 +465,7 @@ test('a new note in Overview keeps the active encounter and an independent clini
   const { frame, ids } = await prepare(page);
   await choosePatient(frame,'Antoni');
   const header = frame.locator('#vhomeGabinetHeader');
-  await header.getByRole('button',{name:'Rozpocznij wizytę',exact:true}).click();
+  await header.getByRole('button',{name:'Rozpocznij nową wizytę',exact:true}).click();
   await expect(header.getByRole('button',{name:'Zapisz wizytę',exact:true})).toBeVisible();
   const visit = await frame.evaluate(() => window.collectUserData().visit);
   const overview = frame.locator('#vhomePatientOverview');
@@ -383,7 +493,7 @@ test('the native patient card starts a full visit and the embedded card keeps on
   const overview = frame.locator('#vhomePatientOverview');
   await overview.getByRole('button', { name: /Działania/ }).click();
   const inlineMenu = overview.getByRole('menu');
-  await expect(inlineMenu.getByRole('menuitem', { name: /Nowy pomiar|Rozpocznij wizytę/ })).toHaveCount(0);
+  await expect(inlineMenu.getByRole('menuitem', { name: /Nowy pomiar|Rozpocznij nową wizytę/ })).toHaveCount(0);
   await expect(inlineMenu.getByRole('menuitem', { name: 'Historia wersji', exact: true })).toBeVisible();
   await inlineMenu.press('Escape');
   const header = frame.locator('#vhomeGabinetHeader');
@@ -391,7 +501,7 @@ test('the native patient card starts a full visit and the embedded card keeps on
   await frame.evaluate(id => window.VildaAuthUI.showPatientCard(id, null, { homePatientPresentation: true }), ids.a);
   const full = frame.locator('.vilda-auth-card[role="dialog"]:has(.vhome-native-patient-card)');
   await full.getByRole('button', { name: /Działania/ }).click();
-  await full.getByRole('menuitem', { name: 'Rozpocznij wizytę', exact: true }).click();
+  await full.getByRole('menuitem', { name: 'Rozpocznij nową wizytę', exact: true }).click();
   await expect(full).toBeHidden();
   await expect(header.getByRole('button', { name: 'Zapisz wizytę', exact: true })).toBeVisible();
   await expect(frame.locator('#vildaLoadChoiceModal')).toBeHidden();
@@ -416,7 +526,7 @@ test('mobile DocPro saves its own changed form into the open visit', async ({ pa
   const { frame, ids } = await prepare(page);
   await choosePatient(frame, 'Antoni');
   const header = frame.locator('#vhomeGabinetHeader');
-  await header.getByRole('button', { name: 'Rozpocznij wizytę' }).click();
+  await header.getByRole('button', { name: 'Rozpocznij nową wizytę' }).click();
   await expect(header.getByRole('button', { name: 'Zapisz wizytę' })).toBeVisible();
   await header.getByRole('tab', { name: 'Analiza', exact: true }).click();
   await frame.locator('#height').fill('159');
@@ -450,7 +560,13 @@ test('DocPro corrects the chosen historical visit and returns to the current pat
     return { snapshotId: earlier.snapshotId, visitId: earlier.visitId, rev: earlier.rev };
   }, ids.a);
   await choosePatient(frame, 'Antoni');
-  expect(await frame.evaluate(({ id, target }) => window.VildaHomeEncounter.load(id, 'edit', target), { id: ids.a, target })).toBe(true);
+  const header = frame.locator('#vhomeGabinetHeader');
+  await header.getByRole('button', { name: 'Otwórz wizytę z 16.10.2026', exact: true }).click();
+  const sheet = frame.locator('#vhomeVisitDetail');
+  await sheet.getByRole('button', { name: 'Starsza wizyta', exact: true }).click();
+  await expect(sheet.getByRole('heading', { name: 'Wizyta z 17.06.2026', exact: true })).toBeVisible();
+  await sheet.getByRole('button', { name: 'Edytuj wizytę', exact: true }).click();
+  await expect(header.getByRole('button', { name: 'Zapisz zmiany', exact: true })).toBeVisible();
   const docpro = await openDocProForVisit(page);
   await docpro.locator('#weight').fill('47');
   await docpro.locator('#weight').press('Meta+s');
@@ -464,13 +580,13 @@ test('DocPro corrects the chosen historical visit and returns to the current pat
   await expect(frame.locator('#weight')).toHaveValue('58', { timeout: 15_000 });
 });
 
-test('a saved consultation without measurements stays clean until the clinician edits the form', async ({ page }) => {
+test('a saved consultation without measurements stays read-only until a new visit is opened', async ({ page }) => {
   const { frame, ids } = await prepare(page);
   await choosePatient(frame, 'Antoni');
   const header = frame.locator('#vhomeGabinetHeader');
-  await header.getByRole('button', { name: 'Rozpocznij wizytę' }).click();
+  await header.getByRole('button', { name: 'Rozpocznij nową wizytę' }).click();
   await header.getByRole('button', { name: 'Zapisz wizytę' }).click();
-  await expect(header.getByRole('button', { name: 'Rozpocznij wizytę' })).toBeVisible();
+  await expect(header.getByRole('button', { name: 'Rozpocznij nową wizytę' })).toBeVisible();
   const decision = () => frame.evaluate(() => {
     const state = window.VildaSaveStatusIndicator.getCurrentDecision();
     return state.ready ? state.state : 'pending';
@@ -484,12 +600,36 @@ test('a saved consultation without measurements stays clean until the clinician 
   expect(persisted.measured).toBeNull();
 
   await header.getByRole('tab', { name: 'Analiza', exact: true }).click();
-  await frame.locator('#weight').fill('43');
+  const weight = frame.locator('#weight');
+  await expect(weight).not.toBeEditable();
+  await expect(frame.locator('#height')).not.toBeEditable();
+  await expect(weight).toHaveValue('');
+  await expect(header).toContainText('Ostatnia wizyta');
+  expect(await decision()).toBe('saved');
+
+  await frame.locator('#vhomeGrowthExpand').click();
+  const growth = frame.getByRole('dialog', { name: 'Zaawansowane obliczenia wzrostowe', exact: true });
+  await growth.getByRole('tab', { name: 'Dane i pomiary', exact: true }).click();
+  await expect(growth.locator('[data-growth-field="advMotherHeight"]')).toBeDisabled();
+  await page.keyboard.press('Escape');
+  await expect(growth).toBeHidden();
+  await frame.locator('#tannerToggleBtn').click();
+  const puberty = frame.getByRole('dialog', { name: 'Dane pokwitaniowe', exact: true });
+  await expect(puberty.locator('[data-puberty-select-axis]').first()).toBeDisabled();
+  await page.keyboard.press('Escape');
+  await expect(puberty).toBeHidden();
+
+  await header.getByRole('button', { name: 'Rozpocznij nową wizytę', exact: true }).click();
+  await expect(header).toContainText('Nowa wizyta');
+  await expect(weight).toBeEditable();
+  await weight.fill('43');
   await expect.poll(decision).toBe('dirty');
-  await header.getByRole('button', { name: 'Rozpocznij wizytę' }).click();
+  await frame.locator('#clearAllDataBtn').click();
   const guard = frame.locator('.vug[role="dialog"]');
   await expect(guard).toBeVisible();
-  await expect(guard.locator('.vug-primary')).toHaveCSS('display', 'none');
   await guard.getByRole('button', { name: 'Anuluj', exact: true }).click();
-  await expect(frame.locator('#weight')).toHaveValue('43');
+  await expect(weight).toHaveValue('43');
+  const after = await frame.evaluate(id => window.VildaVault.getPatientVisits(id), ids.a);
+  expect(after[0].clinicalDateISO).toBe(persisted.date);
+  expect(after[0].payload.user.weight || null).toBeNull();
 });

@@ -112,14 +112,14 @@
     }
   }
   function requestRead() { refreshRequested = true; if (inline) inline.needsRead = true; schedule(); }
-  function historicalId(id) {
+  function statusSnapshotId(id) {
     var encounter = w.VildaHomeEncounter?.state?.(id);
-    return encounter?.mode === 'edit' ? encounter.snapshotId : null;
+    return encounter?.sourceSnapshotId || encounter?.snapshotId || null;
   }
   function ownsInline(scope, id) {
     return !!(scope && inline === scope && scope.patientId === id && scope.host.isConnected
       && scope.host === byId('vhomePatientOverview') && !scope.host.hidden
-      && historicalId(id) === scope.snapshotId && current(scope.owner));
+      && statusSnapshotId(id) === scope.snapshotId && current(scope.owner));
   }
   function closeInline(force) {
     if (!inline) return true;
@@ -169,7 +169,7 @@
     shell.setAttribute('role', 'region'); shell.setAttribute('aria-label', 'Karta pacjenta');
     var waiting = el('p', 'vhome-patient-empty', 'Wczytywanie karty pacjenta…');
     waiting.setAttribute('role', 'status'); shell.appendChild(waiting); host.replaceChildren(shell);
-    inline = { host: host, shell: shell, owner: active, patientId: id, snapshotId: historicalId(id),
+    inline = { host: host, shell: shell, owner: active, patientId: id, snapshotId: statusSnapshotId(id),
       selected: options.activeTab || 'antro', needsRead: true, pending: false,
       onClose: options.onClose, onAnalysis: options.onAnalysis, showError: function () { inlineIssue(this); } };
     var scope = inline;

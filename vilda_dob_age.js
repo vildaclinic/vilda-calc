@@ -583,9 +583,16 @@
 
   /* Wiek pomiaru, gdy formularz pokazuje odtworzony zapis; inaczej null i działa wiek na dziś. */
   function pomiarOdtworzony(iso) {
-    if (!trybPomiaru()) return null;
     var rekord = rekordWczytany();
-    if (!pomiarNiezmieniony(rekord)) return null;
+    var encounter = w.VildaVisitContext?.homeEncounterState?.();
+    if (encounter) {
+      if (encounter.mode === 'new' || rekord?.visit?.visitId !== encounter.visitId) return null;
+      // Changing an old height or weight corrects that same measurement. Keep
+      // the recorded age; its technical save timestamp cannot establish age in days.
+      var user = Object.assign({}, rekord.user, {measuredAtISO: encounter.sourceMeasurementDate});
+      return wiekPomiaru({user: user}, iso);
+    }
+    if (!trybPomiaru() || !pomiarNiezmieniony(rekord)) return null;
     return wiekPomiaru(rekord, iso);
   }
 
@@ -612,6 +619,18 @@
        z konstrukcji). Wiek wpisany ręcznie daty nie dostaje — mógł opisywać inny dzień. */
   function readMeasuredAtISO(teraz) {
     var dzis = dzisLokalnie(teraz || null);
+    var encounter = w.VildaVisitContext?.homeEncounterState?.();
+    if (encounter) {
+      var hasMeasurement = ['weight', 'height', 'waistCm', 'hipCm'].some(function (id) {
+        return liczbaZZapisu(wartoscPola(id)) > 0;
+      });
+      if (!hasMeasurement) return null;
+      // Correcting an older visit cannot date a measurement with today's date.
+      // A previously undocumented day stays unknown, even with a known DOB.
+      if (encounter.mode !== 'new') return encounter.sourceMeasurementDate;
+      if (!ageFromDobISO(readISO(), dzis)) return null;
+      return doISO(dzis.getFullYear(), dzis.getMonth() + 1, dzis.getDate());
+    }
     var rekord = trybPomiaru() ? rekordWczytany() : null;
     if (rekord && pomiarNiezmieniony(rekord)) {
       var zrodlo = zrodloDobyPomiaru(rekord);

@@ -239,7 +239,7 @@
     pubertyFields.forEach(function (entry) { fields[entry[0]] = byId(entry[0]).value; });
     var user = vault.getCurrentUser();
     var measured = w.VildaDobAge ? w.VildaDobAge.readMeasuredAtISO() : null;
-    return { account: user && user.userId, patientId: currentPatientId(), context: context, fields: fields,
+    return { account: user && user.userId, patientId: currentPatientId(), readOnly: w.VildaHomeGabinet?.visitMeasurementsReadOnly?.() === true, context: context, fields: fields,
       demographic: ['sex', 'age', 'ageMonths', 'ageWeeks', 'dobInput', 'height', 'weight'].map(function (id) {
         return byId(id) ? byId(id).value : null;
       }), visit: w.VildaVisitContext ? w.VildaVisitContext.capture({ user: { measuredAtISO: measured } },
@@ -275,7 +275,7 @@
     // Temporary controls never reach document-level autosave/activity listeners.
     // Handle their input here before stopping the event's native propagation.
     event.stopImmediatePropagation();
-    if (!pubertyDraft) return;
+    if (!pubertyDraft || pubertyDraft.readOnly) return;
     if (event.target.hasAttribute('data-puberty-select-axis')) {
       if (event.type === 'change') pubertyDraft.editor.handleSelect(event);
       return;
@@ -290,6 +290,7 @@
   function applyPuberty() {
     if (!pubertyDraft || !samePubertyOwner()) { closePuberty(true); return; }
     var draft = pubertyDraft;
+    if (draft.readOnly) return;
     var owner = pubertyCommitOwner(pubertySnapshot());
     var stillOwned = function () {
       try { return pubertyDraft === draft && pubertyCommitOwner(pubertySnapshot()) === owner; }
@@ -393,7 +394,7 @@
     // A handled but not-ready request must not fall through to the live editor.
     if (!snapshot || !w.VildaPubertyAssessmentUI) return true;
     if (!pubertyDialog) pubertyDialog = createPubertyDialog();
-    pubertyDraft = { fingerprint: JSON.stringify(snapshot), context: snapshot.context, fields: Object.assign({}, snapshot.fields),
+    pubertyDraft = { fingerprint: JSON.stringify(snapshot), readOnly: snapshot.readOnly, context: snapshot.context, fields: Object.assign({}, snapshot.fields),
       axes: {}, changedFields: {}, sex: byId('sex').value, dirty: false, editor: null, timer: null };
     var body = pubertyDialog.querySelector('.vhome-dialog-body');
     var name = [byId('firstName').value, byId('lastName').value].filter(Boolean).join(' ');
@@ -408,7 +409,7 @@
       idPrefix: 'vhomePubertyDraft', controlType: 'select', sex: function () { return pubertyDraft.sex; },
       read: function () { return pubertyDraft.context; },
       onEdit: function (axis, stage) {
-        if (!samePubertyOwner() || ['ready', 'absent'].indexOf(pubertyDraft.context.status) < 0) return { ok: false };
+        if (pubertyDraft.readOnly || !samePubertyOwner() || ['ready', 'absent'].indexOf(pubertyDraft.context.status) < 0) return { ok: false };
         var model = w.VildaPubertyAssessment;
         var raw = pubertyDraft.context.assessment ? model.clone(pubertyDraft.context.assessment)
           : { version: 1, sex: pubertyDraft.sex, observations: { G: null, Th: null, P: null } };
@@ -429,6 +430,11 @@
     var dateInput = d.createElement('input'); dateInput.type = 'text'; dateInput.readOnly = true;
     dateInput.setAttribute('aria-label', 'Data oceny — data bieżącej wizyty');
     dateInput.value = context.measuredAtISO ? context.measuredAtISO.slice(8, 10) + '.' + context.measuredAtISO.slice(5, 7) + '.' + context.measuredAtISO.slice(0, 4) : ''; dateLabel.appendChild(dateInput); editor.appendChild(dateLabel);
+    pubertyDialog.querySelector('.vhome-dialog-apply').hidden = snapshot.readOnly;
+    pubertyDialog.querySelector('.vhome-dialog-cancel').textContent = snapshot.readOnly ? 'Zamknij' : 'Anuluj';
+    if (snapshot.readOnly) {
+      editor.querySelectorAll('input, select, button').forEach(function (control) { control.disabled = true; });
+    }
     fitDetailDialog(pubertyDialog);
     pubertyDialog.setAttribute('aria-modal', 'true');
     pubertyDialog.showModal();
@@ -437,7 +443,8 @@
     byId('tannerToggleBtn').setAttribute('aria-expanded', 'true');
     pubertyDraft.timer = w.setInterval(function () { if (!samePubertyOwner()) closePuberty(true); }, 250);
     var first = editor.querySelector('[data-puberty-select-axis]');
-    if (first) first.focus({ preventScroll: true });
+    if (first && !first.disabled) first.focus({ preventScroll: true });
+    else pubertyDialog.querySelector('.vhome-dialog-close').focus({ preventScroll: true });
     return true;
   }
 
@@ -475,14 +482,23 @@
     heading.appendChild(element('h2', '', 'Dane pacjenta'));
     heading.appendChild(element('span', '', 'Bieżąca wizyta'));
     content.appendChild(heading);
-    fieldGroup(content, 'Pacjent', ['firstName', 'lastName']);
-    appendExisting(content, ['tozsamoscNote']);
-    var demographics = fieldGroup(content, '', ['dobInput', 'sex']);
+    // A separate fieldset can lock the saved visit without changing native
+    // disabled states or disabling read-only tools and document actions.
+    var fieldsHost = content;
+    if (w.__VILDA_HOME_GABINET_PREVIEW__ === true) {
+      fieldsHost = element('fieldset', 'gb-visit-fields');
+      fieldsHost.id = 'vhomeVisitFields';
+      fieldsHost.setAttribute('aria-label', 'Dane z wizyty');
+      content.appendChild(fieldsHost);
+    }
+    fieldGroup(fieldsHost, 'Pacjent', ['firstName', 'lastName']);
+    appendExisting(fieldsHost, ['tozsamoscNote']);
+    var demographics = fieldGroup(fieldsHost, '', ['dobInput', 'sex']);
     appendExisting(demographics, ['dobNote', 'dobError', 'dobClear', 'plecZImieniaNote']);
     var age = d.querySelector('.vild-age-row');
-    if (age) { age.classList.add('vhome-fields'); content.appendChild(age); }
-    appendExisting(content, ['ageWeeksRow']);
-    fieldGroup(content, 'Pomiary z wizyty', ['weight', 'height']);
+    if (age) { age.classList.add('vhome-fields'); fieldsHost.appendChild(age); }
+    appendExisting(fieldsHost, ['ageWeeksRow']);
+    fieldGroup(fieldsHost, 'Pomiary z wizyty', ['weight', 'height']);
     referenceToggle = byId('dataToggleContainer');
     if (referenceToggle) {
       referenceSection = element('div', 'vhome-reference');
@@ -506,7 +522,7 @@
       nativeReference.hidden = true;
       nativeReference.appendChild(referenceToggle);
       referenceSection.appendChild(nativeReference);
-      content.appendChild(referenceSection);
+      fieldsHost.appendChild(referenceSection);
       new w.MutationObserver(schedule).observe(referenceToggle, {
         attributes: true, subtree: true,
         attributeFilter: ['style', 'hidden', 'disabled', 'checked', 'class', 'data-manual', 'data-preferred-source']

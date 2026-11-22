@@ -238,8 +238,11 @@
     var groups = [title];
     if (grids[0] && native.measureNodes.length) {
       var measure = node('section', 'vhome-b1-status-measure');
-      var context = node('div', 'vhome-b1-status-context'), date = dateLabel(native.measuredAtISO);
-      context.appendChild(node('strong', '', date ? 'Pomiar · ' + date : 'Zapisany pomiar'));
+      var encounter = native.inline && w.VildaHomeEncounter?.state(native.patientId);
+      var date = dateLabel(encounter?.visitId ? encounter.sourceMeasurementDate : native.measuredAtISO);
+      var label = encounter?.mode === 'new' ? 'Ostatni pomiar' : 'Pomiar';
+      var context = node('div', 'vhome-b1-status-context');
+      context.appendChild(node('strong', '', date ? label + ' · ' + date : 'Zapisany pomiar'));
       if (native.ageLabel) context.appendChild(node('span', '', native.ageLabel));
       measure.appendChild(context);
       var ageNote = original.find(function (item) { return item.classList.contains('vilda-patient-age-note'); });
@@ -314,7 +317,7 @@
     view.menuToggle.setAttribute('aria-haspopup', 'menu'); view.menuToggle.setAttribute('aria-expanded', 'false');
     view.menu = node('div', 'vhome-b1-action-menu'); view.menu.id = 'vhomePatientNativeActions-' + suffix;
     view.menu.hidden = true; view.menu.setAttribute('role', 'menu'); view.menuToggle.setAttribute('aria-controls', view.menu.id);
-    [['edit','Edytuj pacjenta'],['newMeasure',native.homeNavigation ? 'Rozpocznij wizytę' : 'Nowy pomiar'],['visits','Historia wizyt'],['versions','Historia wersji'],['load',null],['return',null]].forEach(function (entry) {
+    [['edit','Edytuj pacjenta'],['newMeasure',native.homeNavigation ? 'Rozpocznij nową wizytę' : 'Nowy pomiar'],['visits','Historia wizyt'],['versions','Historia wersji'],['load',null],['return',null]].forEach(function (entry) {
       if (view.inline && (entry[0] === 'load' || entry[0] === 'return' || (native.homeNavigation && entry[0] === 'newMeasure'))) return;
       var item = native.actions[entry[0]]; if (!item) return;
       if (view.inline && entry[0] === 'visits' && w.VildaHomeGabinet?.openVisitHistory) {

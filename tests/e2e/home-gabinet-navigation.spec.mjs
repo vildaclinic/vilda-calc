@@ -82,7 +82,7 @@ async function expectOverview(start, id, name, weight) {
   await expect(header.getByRole('heading', { name: new RegExp(name) })).toBeVisible({ timeout: 15_000 });
   await expect(start.locator('.vilda-patient-database')).toBeHidden();
   await expect(header.getByRole('tab', { name: 'Przegląd', exact: true })).toHaveAttribute('aria-selected', 'true');
-  await expect(header.getByRole('button', { name: 'Rozpocznij wizytę', exact: true })).toBeVisible();
+  await expect(header.getByRole('button', { name: 'Rozpocznij nową wizytę', exact: true })).toBeVisible();
   await expect(start.locator('#vhomePatientOverview > .vilda-auth-card')).toBeVisible();
   await expect(start.locator('#vildaLoadChoiceModal')).toBeHidden();
   await expect(start.locator('#weight')).toHaveValue(weight);
@@ -106,6 +106,8 @@ test('Gabinet opens the selected patient in Overview from the sidebar database o
   const menu = await visibleChromeMenu(page);
   await menu.locator('a[href="przelicznik-jednostek.html"]').click();
   await expect(page.locator('iframe.app-pane[title="Jednostki laboratoryjne"]')).toBeVisible();
+  const lab = await shellFrame(page, 'Jednostki laboratoryjne');
+  await lab.waitForFunction(() => window.VildaVault.isUnlocked() && window.VildaAuthUI?.isBootReady());
   await selectFromDatabase(page, 'Antoni');
   await expectOverview(start, ids.a, 'Antoni', '46');
   expect(await savedVisits(start, ids.a)).toEqual(beforeA);
@@ -118,7 +120,7 @@ test('DocPro keeps an active visit on cancellation and saves its local measureme
   await selectFromLanding(start, 'Antoni');
   const beforeA = await savedVisits(start, ids.a), beforeB = await savedVisits(start, ids.b);
   const header = start.locator('#vhomeGabinetHeader');
-  await header.getByRole('button', { name: 'Rozpocznij wizytę', exact: true }).click();
+  await header.getByRole('button', { name: 'Rozpocznij nową wizytę', exact: true }).click();
   await expect(header.getByRole('button', { name: 'Zapisz wizytę', exact: true })).toBeVisible();
   const { visitId } = await start.evaluate(id => window.VildaHomeEncounter.state(id), ids.a);
   expect(visitId).toBeTruthy();
@@ -160,14 +162,15 @@ for (const visitKind of ['new', 'edit']) {
     await selectFromLanding(start, 'Antoni');
     const beforeA = await savedVisits(start, ids.a), beforeB = await savedVisits(start, ids.b);
     const header = start.locator('#vhomeGabinetHeader');
+    const saveLabel = visitKind === 'new' ? 'Zapisz wizytę' : 'Zapisz zmiany';
     if (visitKind === 'new') {
-      await header.getByRole('button', { name: 'Rozpocznij wizytę', exact: true }).click();
+      await header.getByRole('button', { name: 'Rozpocznij nową wizytę', exact: true }).click();
     } else {
       await header.getByRole('button', { name: 'Historia wizyt' }).click();
       await start.locator('#vhomeVisitHistory').getByRole('button', { name: 'Otwórz podgląd wizyty' }).click();
       await start.locator('#vhomeVisitDetail').getByRole('button', { name: 'Edytuj wizytę' }).click();
     }
-    await expect(header.getByRole('button', { name: 'Zapisz wizytę', exact: true })).toBeVisible();
+    await expect(header.getByRole('button', { name: saveLabel, exact: true })).toBeVisible();
     await header.getByRole('tab', { name: 'Analiza', exact: true }).click();
     await start.locator('#height').fill('159');
     await start.locator('#weight').fill('47');
@@ -198,7 +201,7 @@ for (const visitKind of ['new', 'edit']) {
     await expect(start.locator('#vhomePatientOverview > .vilda-auth-card')).toBeVisible({ timeout: 15_000 });
     await expect(start.locator('.vilda-patient-database')).toBeHidden();
     await expect(header.getByRole('tab', { name: 'Przegląd', exact: true })).toHaveAttribute('aria-selected', 'true');
-    await expect(header.getByRole('button', { name: 'Zapisz wizytę', exact: true })).toBeVisible();
+    await expect(header.getByRole('button', { name: saveLabel, exact: true })).toBeVisible();
     expect(await current()).toEqual(working);
     await selectFromDatabase(page, 'Beata');
     const guard = start.getByRole('dialog', { name: /^Zapisać (wpisane dane|zmiany) przed wczytaniem/ });

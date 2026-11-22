@@ -8,6 +8,7 @@
   let account = null, screen = 'start', target = null, section = 'antro';
   let sequence = 0, selecting = false, frame = 0, pendingNote = null;
   const labels = {overview: 'Przegląd', analysis: 'Analiza'};
+  const startVisitLabel = 'Rozpocznij nową wizytę';
   const paths = {
     home: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
     overview: '<rect x="5" y="4" width="14" height="17" rx="2"/><rect x="9" y="2" width="6" height="5" rx="1"/>',
@@ -35,6 +36,11 @@
   function patientName() {
     return [field('firstName'), field('lastName')].filter(Boolean).join(' ') || field('name') || 'Pacjent';
   }
+  function visitMeasurementsReadOnly() {
+    if (!root || !target || screen === 'start') return false;
+    const mode = w.VildaHomeEncounter.state(target).mode;
+    return !owns(target) || (mode !== 'new' && mode !== 'edit');
+  }
   function headerState() {
     const status = w.VildaHomeEncounter.state(target);
     const shell = w.parent?.VildaShell, route = shell?.peekPatientReturnRoute?.();
@@ -50,17 +56,33 @@
     header.querySelector('h1').textContent = patientName();
     header.querySelector('.gb-identity-meta').textContent = [ageText, birth && 'ur. ' + birth.split('-').reverse().join('.')].filter(Boolean).join(' · ');
     const badge = header.querySelector('.gb-encounter-state');
-    badge.hidden = !draft;
-    if (draft) {
-      badge.firstElementChild.textContent = status.mode === 'edit' ? 'Edycja wizyty' : 'Wizyta w toku';
-      badge.lastElementChild.dateTime = status.date || '';
-      badge.lastElementChild.textContent = (status.date || '').split('-').reverse().join('.');
-    }
+    badge.hidden = false;
+    badge.dataset.mode = status.mode;
+    const stateLabel = draft ? (status.mode === 'edit' ? 'Edycja wizyty' : 'Nowa wizyta') :
+      status.visitId ? 'Ostatnia wizyta' : 'Karta pacjenta';
+    badge.querySelector('[data-state-label]').textContent = stateLabel;
+    const date = status.dateCertain && status.date ? status.date : '';
+    const formatted = date.split('-').reverse().join('.');
+    const dateButton = badge.querySelector('[data-home-visit-date]');
+    const canOpen = !draft && !!status.visitId && !!status.snapshotId;
+    dateButton.hidden = !canOpen;
+    dateButton.disabled = status.busy || selecting;
+    dateButton.setAttribute('aria-label', formatted ? 'Otwórz wizytę z ' + formatted : 'Otwórz wizytę bez potwierdzonej daty');
+    const savedTime = dateButton.querySelector('time'), plainTime = badge.querySelector('[data-state-date]');
+    plainTime.hidden = canOpen || !status.visitId;
+    [savedTime, plainTime].forEach(time => {
+      if (date) time.dateTime = date; else time.removeAttribute('datetime');
+      time.textContent = formatted || 'Data nieustalona';
+    });
+    const formLabel = analysis.querySelector('.vhome-card-heading > span');
+    if (formLabel) formLabel.textContent = stateLabel;
     const button = header.querySelector('[data-home-encounter]');
     const action = draft ? 'save' : 'start';
-    if (button.dataset.homeEncounter !== action) {
+    const actionLabel = status.mode === 'edit' ? 'Zapisz zmiany' : draft ? 'Zapisz wizytę' : startVisitLabel;
+    const caption = button.querySelector('[data-action-caption]');
+    if (caption.textContent !== actionLabel) {
       button.dataset.homeEncounter = action;
-      button.innerHTML = icon(action) + (draft ? 'Zapisz wizytę' : 'Rozpocznij wizytę');
+      caption.innerHTML = icon(action) + '<span>' + actionLabel + '</span>';
     }
     button.disabled = !!status.busy || selecting;
     header.querySelectorAll('[role="tab"]').forEach(tab => {
@@ -87,8 +109,8 @@
   function openVisitHistory(id, options) {
     if (!root || !owns(id) || target !== id || screen === 'start' || !options.isCurrent()) return false;
     if (historyView) return true;
-    const focus = d.activeElement?.closest('[role="menuitem"]')
-      ? overview.querySelector('.vhome-b1-menu-toggle') : header.querySelector('[data-history]');
+    const focus = options.initialVisitId ? header.querySelector('[data-home-visit-date]') :
+      d.activeElement?.closest('[role="menuitem"]') ? overview.querySelector('.vhome-b1-menu-toggle') : header.querySelector('[data-history]');
     const scroll = w.scrollY;
     function back(restore = true) {
       dismissHistory();
@@ -120,6 +142,8 @@
     return true;
   }
   function setScreen(value) {
+    const fields = d.getElementById('vhomeVisitFields');
+    if (fields) fields.disabled = visitMeasurementsReadOnly();
     if (value) main.dataset.vhomeScreen = value;
     else delete main.dataset.vhomeScreen;
     const pane = w.frameElement;
@@ -240,7 +264,7 @@
     const encounter = w.VildaHomeEncounter.state(id);
     // A restored tab has no authority to present a historical form as the
     // latest visit. A normal directory pick reads the latest record again.
-    const load = !same || encounter.requiresLatest || options.restoreLatest === true || intent === 'new' && encounter.mode === 'browse';
+    const load = !same || encounter.mode === 'browse' || options.restoreLatest === true;
     if (load && !detach(false)) return false;
     const generation = ++sequence, vault = w.VildaVault, session = vault.captureSyncOperationSession();
     const current = () => generation === sequence && isCurrent() && account === access();
@@ -270,9 +294,10 @@
     root = d.createElement('div'); root.id = 'vhomeGabinet'; root.hidden = true;
     root.innerHTML = '<div id="vhomeGabinetStart"></div><div id="vhomeGabinetHeader" hidden>' +
       '<div class="gb-header-top"><nav class="gb-breadcrumb" aria-label="Ścieżka nawigacji"><button type="button" data-start>' + icon('home') +
-      '<span>Gabinet</span></button>' + icon('chevron') + '<span>Karta pacjenta</span></nav><span class="gb-encounter-state" role="status" hidden><span></span> <time></time></span></div>' +
+      '<span>Gabinet</span></button>' + icon('chevron') + '<span>Karta pacjenta</span></nav><div class="gb-encounter-state" hidden><span data-state-label></span><button type="button" data-home-visit-date hidden><time></time></button><time data-state-date></time></div></div>' +
       '<div class="gb-person-line"><div class="gb-identity"><h1></h1><div class="gb-identity-meta"></div></div><div class="gb-card-actions"><button type="button" data-history>' +
-      icon('history') + 'Historia wizyt</button><button type="button" class="gb-primary" data-home-encounter></button></div></div>' +
+      icon('history') + 'Historia wizyt</button><button type="button" class="gb-primary" data-home-encounter>' +
+      '<span class="gb-action-copy" data-action-caption></span><span class="gb-action-copy gb-action-reserve" aria-hidden="true" data-longest="' + startVisitLabel + '"></span></button></div></div>' +
       '<div class="gb-patient-tabs" role="tablist" aria-label="Karta pacjenta"></div></div>' +
       '<div class="vhome-gabinet-message" role="status"></div><div id="vhomePatientOverview" hidden></div><section id="vhomeVisitHistory" hidden aria-label="Historia wizyt"></section>';
     analysis.before(root);
@@ -282,10 +307,18 @@
       const decorRail = w.parent.matchMedia('(min-width: 1400px)');
       const syncHeaderWidth = () => header.toggleAttribute('data-decor-rail', decorRail.matches);
       syncHeaderWidth();
-      w.addEventListener('resize', syncHeaderWidth);
+      decorRail.addEventListener('change', syncHeaderWidth);
+      w.addEventListener('pagehide', event => {
+        if (!event.persisted) decorRail.removeEventListener('change', syncHeaderWidth);
+      });
     }
     root.querySelector('[data-start]').onclick = closePatientCard;
     root.querySelector('[data-history]').onclick = () => { if (owns(target)) w.VildaHomeEncounter.history(target, patientName()); };
+    root.querySelector('[data-home-visit-date]').onclick = () => {
+      const status = w.VildaHomeEncounter.state(target);
+      if (owns(target) && status.mode === 'browse' && status.visitId && !status.busy && !selecting)
+        w.VildaHomeEncounter.history(target, patientName(), status.visitId);
+    };
     root.querySelector('[data-home-encounter]').onclick = async event => {
       if (!owns(target)) return;
       const id = target, button = event.currentTarget;
@@ -329,7 +362,7 @@
   w.addEventListener('pageshow', schedule);
   w.addEventListener('pagehide', () => { dismissHistory(); if (main) setScreen(null); sequence++; selecting = false; detach(true); if (picker) destroyPicker(); });
   w.VildaHomeGabinet = Object.freeze({
-    showStart, showAnalysis, selectPatient, openPatient, prepareLabEntry, openVisitHistory, openOverview: (key = 'antro') => showOverview(key),
+    showStart, showAnalysis, selectPatient, openPatient, prepareLabEntry, visitMeasurementsReadOnly, openVisitHistory, openOverview: (key = 'antro') => showOverview(key),
     openReminders: () => screen !== 'start' && showOverview('reminders'),
     captureVisitBinding: patientId => screen !== 'start' && target === patientId && owns(patientId)
       ? w.VildaHomeEncounter.captureBinding(patientId) : null,

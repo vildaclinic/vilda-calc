@@ -58,6 +58,8 @@ function createE2eServiceWorker(source, wersja) {
     '/vilda_home_gabinet_start.js', '/vilda_home_encounter.js', '/vilda_home_gabinet.js',
     '/vilda_home_visit_scene.css', '/vilda_home_visit_detail.css', '/vilda_home_visit_projection.js',
     '/vilda_home_visit_scene.js', '/vilda_home_visit_detail.js', '/vilda_home_visit_history.js',
+    '/vilda_home_visit_comparison_model.js', '/vilda_home_comparison_clinical.js',
+    '/vilda_home_visit_comparison.js', '/vilda_home_visit_comparison.css',
     '/vilda_home_tools.css', '/vilda_home_tools.js', '/vilda_home_tools_vitals.js',
     '/vilda_home_tools_anthropometry.js', '/vilda_home_tools_nutrition.js', '/vilda_home_tools_intake.js',
   ]);

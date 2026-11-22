@@ -56,7 +56,7 @@ onSaved:function(){try{window.VildaDymek&&typeof window.VildaDymek.pokaz=="funct
    startuje (F przechwytuje autora, zanim sesja wskaże nowego pacjenta — panel jest wtedy „nieaktualny”),
    więc wiek nie trafiał tam wcale. „Odtwórz zapisany stan” zapisuje te pola od razu; „Nowy pomiar” robi
    teraz to samo. Te same klucze i ta sama postać (tekst z pola), które zapisuje userData.js: najwyższy
-   poziom i — gdy już istnieje — kopia byId. Tylko cztery pola wizyty; nazwisko i płeć zapisało wczytanie.
+   poziom i — gdy już istnieje — kopia byId. Gabinet czyści również obwody nowej wizyty.
    force: zapis jest częścią wczytania, jak syncSharedUserDataFromLoadedData; trwa jeszcze pauza autozapisu. */
 function publishNewVisitFields(){
   try{
@@ -65,7 +65,9 @@ function publishNewVisitFields(){
     store.updateShared(function(shared,persisted){
       var byId=persisted&&typeof persisted=="object"&&!Array.isArray(persisted)
         &&persisted.byId&&typeof persisted.byId=="object"&&!Array.isArray(persisted.byId)?persisted.byId:null;
-      ["age","ageMonths","weight","height"].forEach(function(id){
+      var fields=["age","ageMonths","weight","height"];
+      if(window.__VILDA_HOME_GABINET_PREVIEW__===true)fields.push("waistCm","hipCm");
+      fields.forEach(function(id){
         var field=document.getElementById(id);
         if(!field)return;
         var value=field.value==null?"":String(field.value);
@@ -86,6 +88,17 @@ function statusChoiceCurrent(){try{return statusChoicePatientId===window.session
   Number.isSafeInteger(statusChoiceSequence)&&statusChoiceSequence===window.VildaDataImportExport.getApplyLoadedDataSequence()}catch{return false}}
 function hideChoiceRestore(){if(c)c.style.display="none"}
 function newVisit(){if(!statusChoiceCurrent()){if(!direct)p();finishLoadChoicePresentation(presentationTicket);return false}try{var U=window.VildaDataImportExport,Z=window.lastLoadedData,te=Z&&Z.user;if(U&&typeof U._ensureCurrentMeasurementInHistory=="function"&&te&&(typeof te.weight=="number"&&te.weight>0||typeof te.height=="number"&&te.height>0)&&(U._ensureCurrentMeasurementInHistory(Z),Z.advanced&&Z.advanced.data&&Array.isArray(Z.advanced.data.measurements)&&((!window.advancedGrowthData||typeof window.advancedGrowthData!="object")&&(window.advancedGrowthData={}),window.advancedGrowthData.measurements=Z.advanced.data.measurements.map(function(ne){return Object.assign({},ne)})),Z.growthBasic&&Z.growthBasic.data&&Array.isArray(Z.growthBasic.data.measurements)&&((!window.basicGrowthData||typeof window.basicGrowthData!="object")&&(window.basicGrowthData={}),window.basicGrowthData.measurements=Z.growthBasic.data.measurements.map(function(ne){return Object.assign({},ne)})),typeof window.vildaRehydrateAdvancedFromState=="function"))try{window.vildaRehydrateAdvancedFromState({advancedGrowthData:window.advancedGrowthData})}catch{}}catch{}try{var Ge=window.VildaDataImportExport;Ge&&typeof Ge._reimportGhTherapyPoints=="function"&&Ge._reimportGhTherapyPoints()}catch{}var visit=window.VildaVisitContext&&window.VildaVisitContext.beginNew({patientId:statusChoicePatientId});try{window.sessionStorage.setItem("vildaLoadChoiceV1","new")}catch{}L(),p();
+// Circumferences are visit measurements as well. Clear the live fields before
+// publishing the new visit to the other tools in the shell.
+if(direct&&visit&&statusChoiceCurrent()){
+  ["waistCm","hipCm"].forEach(function(id){
+    var field=document.getElementById(id);
+    if(!field||field.value==="")return;
+    field.value="";
+    field.dispatchEvent(new Event("input",{bubbles:true}));
+    field.dispatchEvent(new Event("change",{bubbles:true}));
+  });
+}
 // P-WIEK-NOWY-POMIAR: pola nowej wizyty od razu w sesji wspólnej (opis przy publishNewVisitFields).
 publishNewVisitFields();
 // A queued replay may have exposed Restore while the chooser was open.

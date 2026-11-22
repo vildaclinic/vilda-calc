@@ -70,7 +70,11 @@
       if (!check() || !rows[index] || detail) return;
       detail = w.VildaHomeVisitDetail.open({
         rows, index, patientName, opener, isCurrent: current,
-        onSelect: i => scene.select(i), onClose: () => { detail = null; },
+        onSelect: i => scene.select(i),
+        onClose(restoreFocus) {
+          detail = null;
+          if (restoreFocus && options.initialVisitId && !closed) onBack();
+        },
         onEdit: options.onEdit, onOpenRecord: options.onOpenRecord,
         getGeneral: general, getComparison: projection.getComparison,
         renderChart: (container, row, metric, expanded) => projection.renderChart(container, row, rows, metric, expanded),
@@ -123,6 +127,16 @@
           return result;
         });
         scene = w.VildaHomeVisitScene.mount(host, {rows, patientName, onOpen: open, onBack, backLabel: options.backLabel});
+        if (options.initialVisitId) {
+          const index = rows.findIndex(row => row.visitId === options.initialVisitId);
+          if (index >= 0) {
+            scene.select(index);
+            open(index, host.querySelector('.vhs-open'));
+          } else {
+            scene.destroy(); scene = null;
+            message('Wybrana wizyta jest już niedostępna.', false);
+          }
+        }
       } catch (_) {
         if (check()) message('Nie udało się odczytać historii wizyt.', true);
       } finally { if (!closed) host.removeAttribute('aria-busy'); }

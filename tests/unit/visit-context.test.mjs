@@ -65,6 +65,26 @@ describe('persistent working encounter context', () => {
     expect(h.writes).not.toHaveBeenCalled();
   });
 
+  it('keeps the selected consultation day separate from measuredAt for its owner and exact visit', () => {
+    const h = environment({homePreview: true}), data = source();
+    const visit = h.api.beginNew({patientId, clinicalDateISO: '2026-10-20'});
+    const state = {mode: 'edit', visitId: visit.visitId, date: '2026-10-20', sourceMeasurementDate: '2026-10-17'};
+    const encounter = {state: id => id === patientId ? state : {}};
+    // DocPro can consult the home state only when the shell attests its active writer.
+    h.win.parent = {VildaShell: {captureHomeVisitWriter: win => win === h.win ? {encounter} : null}};
+    data.user.measuredAtISO = '2026-10-17';
+    expect(h.api.capture(data, {patientId, readOnly: true})).toEqual(visit);
+    expect(h.api.capture(data, {patientId})).toEqual(visit);
+    h.win.VildaHomeEncounter = encounter;
+    state.date = null;
+    expect(h.api.capture(data, {patientId}).clinicalDateISO).toBeNull();
+    state.visitId = 'another-visit';
+    expect(h.api.homeEncounterState()).toBeNull();
+    state.visitId = visit.visitId;
+    h.changeOwner('another-account');
+    expect(h.api.homeEncounterState()).toBeNull();
+  });
+
   it('explicit New allocates a second visit on the same day, Restore and session reload keep the saved identity', () => {
     const h = environment(), data = source();
     data.visit = h.api.beginNew({ patientId, clinicalDateISO: data.user.measuredAtISO });

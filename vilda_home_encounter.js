@@ -31,7 +31,10 @@
   function state(patientId) {
     const item = active(patientId) ? working : {};
     return {mode: item.mode || 'browse', visitId: item.visitId || null, snapshotId: item.snapshotId || null,
-      date: item.date || null, busy: !!(loading || saving),
+      date: item.date || null, dateCertain: item.dateCertain === true, revision: item.revision ?? null,
+      sourceSnapshotId: item.sourceSnapshotId || null, sourceMeasurementDate: item.sourceMeasurementDate || null,
+      sourceDownSyndrome: item.sourceDownSyndrome === true,
+      busy: !!(loading || saving),
       requiresLatest: !item.mode && selected() === patientId && w.sessionStorage.getItem(historicalFlag) === '1'};
   }
 
@@ -97,16 +100,16 @@
         return false;
       }
       if (!allowed()) return false;
-      const patient = await scope.vault.getPatient(patientId);
-      if (!allowed() || afterOwnSave && !afterOwnSave() || !patient || !patient.snapshots || !patient.snapshots.length) return false;
-      let row = patient.snapshots[0];
+      const rows = await scope.vault.getPatientVisits(patientId);
+      if (!allowed() || afterOwnSave && !afterOwnSave()) return false;
+      const model = w.VildaHomeVisitComparisonModel;
+      let row = model.latest(patientId, rows);
       if (choice === 'edit' || snapshot) {
         if (!snapshot) return false;
-        const rows = await scope.vault.getPatientVisits(patientId);
-        if (!allowed()) return false;
-        row = rows.find(item => item.snapshotId === snapshot.snapshotId && item.visitId === snapshot.visitId && item.rev === snapshot.rev);
+        row = rows.find(item => item.patientId === patientId && item.snapshotId === snapshot.snapshotId &&
+          item.visitId === snapshot.visitId && item.rev === snapshot.rev);
       }
-      if (!row || !row.payload || !row.payload.visit) return false;
+      if (!row || row.payload?.visit?.patientId !== patientId || row.payload.visit.visitId !== row.visitId) return false;
       if (transition?.beforeApply && (!transition.beforeApply() || !allowed())) return false;
       let finish;
       const done = new Promise(resolve => { finish = resolve; });
@@ -126,7 +129,7 @@
           },
           publish(authority) {
             request.detail = Object.assign({patientId, savedAtISO: row.savedAtISO, name: row.payload.name,
-              snapshotCount: patient.snapshots.length, source: 'pick'}, authority);
+              snapshotCount: rows.reduce((count, item) => count + item.revisionCount, 0), source: 'pick'}, authority);
             working = null;
             d.dispatchEvent(new w.CustomEvent('vilda:patient-loaded', {detail: request.detail}));
           }
@@ -140,7 +143,10 @@
       if (snapshot) w.sessionStorage.setItem(historicalFlag, '1');
       else w.sessionStorage.removeItem(historicalFlag);
       working = Object.assign(scope, {mode: choice === 'new' ? 'new' : (snapshot ? 'edit' : 'browse'),
-        visitId: visit.visitId, date: visit.clinicalDateISO, snapshotId: choice === 'new' ? null : row.snapshotId,
+        visitId: visit.visitId, date: choice === 'new' ? visit.clinicalDateISO : row.clinicalDateISO, snapshotId: choice === 'new' ? null : row.snapshotId,
+        dateCertain: choice === 'new' || !!model.clinicalDate(row),
+        sourceSnapshotId: row.snapshotId, sourceMeasurementDate: model.measurementDate(row),
+        sourceDownSyndrome: row.payload.clinical?.downSyndrome === true,
         revision: choice === 'new' ? null : row.rev || 0});
       return true;
     } catch (_) { return false; }
@@ -253,33 +259,39 @@
         result = await source.VildaDataImportExport.saveUserDataWithReceipt({});
       }
       if (!verified(scope, result) || !currentWriter()) return false;
-      if (scope.mode === 'edit' || writer) {
-        const unchanged = () => currentWriter() && verified(scope, result) && status.isSubmittedFormCurrent(submitted);
-        // Allow the verified writer's calculations to settle. New edits keep
-        // their open encounter and update the same committed snapshot later.
-        for (let turn = 0; turn < 20 && !unchanged() && currentWriter(); turn++) {
-          await new Promise(resolve => { w.setTimeout(resolve, 50); });
-        }
-        if (!unchanged()) {
-          if (scope.mode === 'new') { scope.artifactReceipt = result; scope.artifactSubmission = submitted; }
-          return true;
-        }
-        if (scope.mode === 'edit') {
-          saving = null;
-          if (writer) await writer.showSavedHistory(result, submitted);
-          else await loadVisit(patientId, 'restore', null, unchanged);
+      if (scope.mode === 'new') { scope.artifactReceipt = result; scope.artifactSubmission = submitted; }
+      const unchanged = () => currentWriter() && verified(scope, result) && status.isSubmittedFormCurrent(submitted);
+      // Do not lock a form that received another edit while the vault was saving.
+      // Its next submission updates the same committed snapshot.
+      for (let turn = 0; turn < 20 && !unchanged() && currentWriter(); turn++) {
+        await new Promise(resolve => { w.setTimeout(resolve, 50); });
+      }
+      if (!unchanged()) return true;
+      if (scope.mode === 'new') {
+        const model = w.VildaHomeVisitComparisonModel;
+        const rows = await scope.vault.getPatientVisits(patientId);
+        if (!unchanged()) return true;
+        const latest = model.latest(patientId, rows);
+        if (latest?.snapshotId === scope.snapshotId && latest.visitId === scope.visitId && latest.rev === scope.revision) {
+          Object.assign(scope, {mode: 'browse', date: latest.clinicalDateISO, dateCertain: !!model.clinicalDate(latest),
+            sourceSnapshotId: latest.snapshotId, sourceMeasurementDate: model.measurementDate(latest),
+            sourceDownSyndrome: latest.payload.clinical?.downSyndrome === true});
           return true;
         }
       }
-      scope.mode = 'browse';
+      saving = null;
+      if (writer) await writer.showSavedHistory(result, submitted);
+      else await loadVisit(patientId, 'restore', null, unchanged);
       return true;
     } finally { if (saving === scope) saving = null; changed(); }
   }
-  function history(patientId, patientName) {
+  function history(patientId, patientName, initialVisitId = null) {
     const scope = owner(patientId);
     if (!scope || selected() !== patientId || !w.VildaHomeGabinet?.openVisitHistory) return false;
+    if (initialVisitId && (!active(patientId) || working.mode !== 'browse' ||
+        working.visitId !== initialVisitId || !working.snapshotId || loading || saving)) return false;
     const isCurrent = () => current(scope) && selected() === patientId;
-    const options = {patientName, isCurrent, async onEdit(row, beforeApply) {
+    const options = {patientName, initialVisitId, isCurrent, async onEdit(row, beforeApply) {
       let declined = false;
       const ok = await loadVisit(patientId, 'edit', row, null, isCurrent, {beforeApply, onCancel: () => { declined = true; }});
       if (!ok && !declined && isCurrent()) w.alert('Nie otwarto wizyty do edycji. Otwórz ponownie historię i wybierz aktualny zapis.');

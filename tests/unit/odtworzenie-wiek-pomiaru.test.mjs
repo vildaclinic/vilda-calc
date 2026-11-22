@@ -321,6 +321,28 @@ describe('P-ODTWORZ-WIEK — przegląd: ponowny zapis i nowy pomiar w odtworzone
     expect(D.readMeasuredAtISO()).toBe('2026-06-17');
   });
 
+  it('korekta w Gabinecie zachowuje wiek z rekordu i odrębny dzień pomiaru albo brak tego dnia', () => {
+    vi.setSystemTime(new Date(2026, 6, 10, 12));
+    const rekord = rekordNastolatka({measuredAtISO: '2026-06-17'});
+    rekord.visit = {visitId: 'fikcyjna-wizyta', clinicalDateISO: '2026-06-19'};
+    const {win, pola, D, wyslij} = srodowisko({wybor: 'restore', rekord, pomiar: {weight: 60, height: 172}});
+    const state = {mode: 'edit', visitId: rekord.visit.visitId, sourceMeasurementDate: '2026-06-17'};
+    win.VildaVisitContext = {homeEncounterState: () => state};
+    wyslij('vilda:state-restored');
+    pola.height.value = '174';
+    pola.height.dispatchEvent({type: 'input'});
+    expect(D.readMeasuredAtISO()).toBe('2026-06-17');
+    expect(D.readExactAge()?.totalMonths).toBe(202);
+    expect(pola.ageMonths.value).toBe('10');
+    state.sourceMeasurementDate = null;
+    expect(D.readMeasuredAtISO()).toBeNull();
+    expect(D.readExactAge()).toBeNull();
+    state.mode = 'new';
+    expect(D.readMeasuredAtISO()).toBe('2026-07-10');
+    pola.weight.value = ''; pola.height.value = '';
+    expect(D.readMeasuredAtISO()).toBeNull();
+  });
+
   it('nowa masa albo wzrost w odtworzonej wizycie to nowy pomiar: wiek i data pomiaru na dziś', () => {
     vi.setSystemTime(new Date(2026, 6, 10, 12, 0)); // 10-07-2026
     const { pola, D, wyslij } = srodowisko({ wybor: 'restore', rekord: rekordNastolatka(), pomiar: { weight: '60', height: '172' } });
