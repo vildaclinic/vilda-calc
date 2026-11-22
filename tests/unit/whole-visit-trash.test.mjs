@@ -87,6 +87,32 @@ describe('whole-visit trash in the encrypted vault', () => {
     expect(await v.listTrashedVisits(pid)).toEqual([]);
   });
 
+  it('requires restoring the visit before a separately trashed older revision can rejoin it', async () => {
+    const { v } = await urzadzenie(), id = appointment(firstDay);
+    const first = await save(v, id, null, 63), pid = first.patientId;
+    const second = await save(v, id, pid, 64), other = appointment(laterDay);
+    await save(v, other, pid, 65);
+    const before = await history(v, pid);
+    advance();
+    await v.moveSnapshotToTrash(pid, first.snapshotId);
+    const target = (await active(v, pid)).find(row => row.visitId === id.visitId);
+    expect(target).toMatchObject({ snapshotId: second.snapshotId, revisionCount: 1 });
+    advance();
+    const group = await move(v, target);
+    await expect(v.restoreTrashedSnapshot(pid, first.snapshotId)).rejects.toMatchObject({ code: 'VISIT_TRASH_GROUP' });
+    expect((await active(v, pid)).map(row => row.visitId)).toEqual([other.visitId]);
+    expect(await v.listTrashedVisits(pid)).toMatchObject([{ trashId: group.trashId, revisionCount: 1 }]);
+
+    advance();
+    await restore(v, group);
+    expect((await active(v, pid)).find(row => row.visitId === id.visitId).sourceSnapshotIds).toEqual([second.snapshotId]);
+    advance();
+    await v.restoreTrashedSnapshot(pid, first.snapshotId);
+    expect(await history(v, pid)).toEqual(before);
+    const recovered = (await active(v, pid)).find(row => row.visitId === id.visitId);
+    expect(recovered.sourceSnapshotIds.sort()).toEqual([first.snapshotId, second.snapshotId].sort());
+  });
+
   it('keeps the last patient chart searchable, makes a distinct new visit and can still restore the first one', async () => {
     const { v } = await urzadzenie(), visit = appointment(firstDay);
     const first = await save(v, visit, null, 69), pid = first.patientId;
