@@ -167,6 +167,25 @@ const currentCheckVariants = new Map(
     }
   ]
 ]);
+// The preview adds two statements to the same native apply handler so an
+// independent JSON file keeps its restore control until the next chart load.
+// Reverse this complete pair only when checking the original session anchor.
+const fileRestorePresentationChanges = [
+  [`  const restoreOwner=t&&t.isSessionRestore===true?mainSessionRestoreOwner:null;
+  const nextApplySequence=vildaApplyLoadedDataSequence+1;
+  if(fileVisit&&explicit&&fileLoad.target===fileLoad.scope.patientId)e.visit=fileVisit;`,
+  `  const restoreOwner=t&&t.isSessionRestore===true?mainSessionRestoreOwner:null;
+  if(fileVisit&&explicit&&fileLoad.target===fileLoad.scope.patientId)e.visit=fileVisit;`],
+  [`  if(result===true&&explicit){
+    if(vildaApplyLoadedDataSequence===nextApplySequence)homeFileRestorePresentation(!!fileLoad);
+    settleInitialMainSessionRestore(true,"superseded-load");
+  }`, '  if(result===true&&explicit)settleInitialMainSessionRestore(true,"superseded-load");'],
+];
+function sourceForCurrentAnchor(source, label) {
+  if (label !== 'Scope only main-session apply; normal loads retain immediate presentation'
+      || !fileRestorePresentationChanges.every(([added]) => source.split(added).length === 2)) return source;
+  return fileRestorePresentationChanges.reduce((result, [added, original]) => result.replace(added, original), source);
+}
 const pending = new Map();
 for (const patch of patches) {
   const source = pending.get(patch.file) ?? await fs.readFile(path.join(root, patch.file), 'utf8');
@@ -174,7 +193,7 @@ for (const patch of patches) {
   if (count(patch.after) === 1) { pending.set(patch.file, source); continue; }
   const currentVariant = process.argv.includes('--check') && currentCheckVariants.get(patch.label);
   if (currentVariant && currentVariant.file === patch.file && count(patch.before) === 0 &&
-      count(patch.after) === 0 && count(currentVariant.anchor) === 1) {
+      count(patch.after) === 0 && sourceForCurrentAnchor(source, patch.label).split(currentVariant.anchor).length === 2) {
     pending.set(patch.file, source); continue;
   }
   if (count(patch.before) !== 1 || count(patch.after) !== 0) throw new Error(`Ambiguous artifact anchor: ${patch.file}: ${patch.label}`);

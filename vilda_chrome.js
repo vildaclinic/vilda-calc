@@ -330,11 +330,11 @@ function Ch_saveShortcut(event){
   // A modal may hold uncommitted draft fields. Its own submit remains in charge.
   for(const doc of new Set([menu,context?.doc].filter(Boolean))){
     if(Array.from(doc.querySelectorAll('dialog[open],[role="dialog"][aria-modal="true"]')).some(dialog=>dialog.getClientRects().length)){
-      F(button,"Dokończ lub zamknij otwarte okno przed zapisaniem wizyty.");return;
+      F(button,"Doko\u0144cz lub zamknij otwarte okno przed zapisaniem wizyty.");return;
     }
   }
   if(button.hasAttribute("disabled")||button.getAttribute("aria-disabled")==="true"){
-    F(button,button.getAttribute("data-tip")||"Aby zapisać dane, rozpocznij wizytę lub otwórz wizytę do edycji.");return;
+    F(button,button.getAttribute("data-tip")||"Aby zapisa\u0107 dane, rozpocznij wizyt\u0119 lub otw\u00F3rz wizyt\u0119 do edycji.");return;
   }
   button.click();
 }
@@ -569,7 +569,7 @@ function Cm_menuNavigation(mobile){
 function Cm_menuActions(mobile){
   var html='<div class="chrome-menu-actions">'+Cm_patientMarkup(mobile)+'<button type="button" class="chrome-menu-save-status" data-menu-save-status data-save-state="hidden" aria-haspopup="dialog" aria-expanded="false"><span class="chrome-menu-save-dot" aria-hidden="true"></span><span data-menu-save-label aria-live="polite">Brak danych</span></button><div class="chrome-menu-action-buttons">';
   [["saveDataBtnSidebar","Zapisz dane","save","chrome-menu-save","Zapisz dane bie\u017c\u0105cego formularza"],["patientDocumentsBtnSidebar","Dokumenty","files","chrome-menu-documents","Dokumenty pacjenta z bie\u017c\u0105cego formularza"]].forEach(function(item){
-    if(item[0]==="saveDataBtnSidebar"&&r.__VILDA_HOME_GABINET_PREVIEW__===true)item[1]=item[4]="Zapisz wizytę";
+    if(item[0]==="saveDataBtnSidebar"&&r.__VILDA_HOME_GABINET_PREVIEW__===true)item[1]=item[4]="Zapisz wizyt\u0119";
     var attrs=mobile?'type="button" data-drawer-btn="'+item[0]+'"':'id="'+item[0]+'" href="#" role="button"';
     html+='<'+(mobile?'button':'a')+' '+attrs+' class="'+item[3]+' '+(mobile?'chrome-drawer-btn':'sidebar-link')+'" aria-label="'+item[4]+'" aria-disabled="true"><span class="'+(mobile?'chrome-drawer-icon':'sidebar-icon')+'" data-lucide="'+item[2]+'" aria-hidden="true"></span><span>'+item[1]+'</span></'+(mobile?'button':'a')+'>';
   });
@@ -1078,7 +1078,7 @@ function Cm_documentsBind(){
   o.addEventListener("vilda:patient-documents-state",Cm_documentsRefresh);
   Cm_documentsRefresh();
 }
-function Bt(){var e=o.getElementById("saveDataBtnSidebar");e&&e.addEventListener("click",function(n){if(n.preventDefault(),!e._cfBound){var s=r.VildaVault,i=!!(s&&typeof s.isUnlocked=="function"&&s.isUnlocked());F(e,r.__VILDA_HOME_GABINET_PREVIEW__===true?"Zapis wizyty jest dostępny w Gabinecie.":i?"Zapisywanie danych jest dost\u0119pne na stronie g\u0142\xF3wnej pacjenta.":"Zapisywanie danych jest zarezerwowane dla zalogowanych u\u017Cytkownik\xF3w.")}});/* P-NOTATKI-2 (G20, decyzja wlasciciela D11): custom-fixes.js (bramka notatki) jest wpiety tylko
+function Bt(){var e=o.getElementById("saveDataBtnSidebar");e&&e.addEventListener("click",function(n){if(n.preventDefault(),!e._cfBound){var s=r.VildaVault,i=!!(s&&typeof s.isUnlocked=="function"&&s.isUnlocked());F(e,r.__VILDA_HOME_GABINET_PREVIEW__===true?"Zapis wizyty jest dost\u0119pny w Gabinecie.":i?"Zapisywanie danych jest dost\u0119pne na stronie g\u0142\xF3wnej pacjenta.":"Zapisywanie danych jest zarezerwowane dla zalogowanych u\u017Cytkownik\xF3w.")}});/* P-NOTATKI-2 (G20, decyzja wlasciciela D11): custom-fixes.js (bramka notatki) jest wpiety tylko
    na stronach z formularzem pacjenta. Na terminarzu, w ustawieniach czy w modulach wisial tam tekst
    o polach, ktorych na tej stronie nie ma. Pozycja menu zostaje, ale mowi, gdzie z niej skorzystac. */
 function Qvn(){var e=r.VildaSession&&r.VildaSession.TOOLTIPS&&r.VildaSession.TOOLTIPS.visitNote||{};return o.getElementById("age")||o.getElementById("ageMonths")?e.noPatient||'Aby doda\u0107 notatk\u0119 do wizyty, najpierw wczytaj pacjenta z listy \u201EPacjenci\u201D lub zapisz nowego pacjenta (\u201EZapisz dane\u201D).':e.notOnThisPage||"Dodawanie notatki do wizyty jest dost\u0119pne na stronie Start i DocPro."}
@@ -1110,7 +1110,7 @@ c.showPatientsList(patientPick)}var d=r.VildaShell;if(d&&typeof d.openPatientsIn
    przy najechaniu i przy fokusie - z tego samego tekstu, co klik, zadnych nowych napisow.
    Dla "Zapisz dane" na stronach bez bramki (custom-fixes.js jest tylko na Start i DocPro) statyczny
    data-tip z menu mowi o polach, ktorych tam nie ma - liczymy wiec ten sam tekst, co handler kliku. */
-function Qg32t(k){if(!k)return"";var d=k.id||"";if(!k._cfBound){if(d==="saveDataBtnSidebar"){var v=r.VildaVault,u=!!(v&&typeof v.isUnlocked=="function"&&v.isUnlocked());return r.__VILDA_HOME_GABINET_PREVIEW__===true?"Zapis wizyty jest dostępny w Gabinecie.":u?"Zapisywanie danych jest dost\u0119pne na stronie g\u0142\xF3wnej pacjenta.":"Zapisywanie danych jest zarezerwowane dla zalogowanych u\u017Cytkownik\xF3w."}if(d==="addVisitNoteBtnSidebar")return Qvn()}return k.getAttribute("data-tip")||""}
+function Qg32t(k){if(!k)return"";var d=k.id||"";if(!k._cfBound){if(d==="saveDataBtnSidebar"){var v=r.VildaVault,u=!!(v&&typeof v.isUnlocked=="function"&&v.isUnlocked());return r.__VILDA_HOME_GABINET_PREVIEW__===true?"Zapis wizyty jest dost\u0119pny w Gabinecie.":u?"Zapisywanie danych jest dost\u0119pne na stronie g\u0142\xF3wnej pacjenta.":"Zapisywanie danych jest zarezerwowane dla zalogowanych u\u017Cytkownik\xF3w."}if(d==="addVisitNoteBtnSidebar")return Qvn()}return k.getAttribute("data-tip")||""}
 function Qg32h(k){if(k.getAttribute("aria-disabled")!=="true"&&!k.hasAttribute("disabled"))return;var q=Qg32t(k);q&&F(k,q)}
 try{["saveDataBtnSidebar","addVisitNoteBtnSidebar","patientDocumentsBtnSidebar","patientsListBtnSidebar"].forEach(function(id){var k=o.getElementById(id);if(!k||k._g32||k.getAttribute("role")!=="button")return;k._g32=!0;k.addEventListener("keydown",function(n){n.repeat||(n.key!==" "&&n.key!=="Spacebar"||(n.preventDefault(),k.click()))});k.addEventListener("mouseenter",function(){Qg32h(k)});k.addEventListener("focus",function(){Qg32h(k)})})}catch{}/* P-SWIEZE-WCZYTANIE (2026-10-05): zamiar wczytania pacjenta z innej strony (vilda:pendingPatientLoad) wykonujemy dopiero po zakonczeniu DOMContentLoaded. Wczesniej (wolne pobranie app.js, vilda:auth-hidden przed DCL) pacjent trafial do formularza, zanim strona zarejestrowala sluchacze vilda:patient-loaded i zanim inicjalizacja przy DCL odtworzyla identyfikator pacjenta z sessionStorage - formularz pokazywal nowego pacjenta, a identyfikator zostawal po poprzednim. Proby przed DCL nie zuzywaja limitu ponowien. Rejestr: docs/clinical/ALGORITHMS.md, P-SWIEZE-WCZYTANIE. */function Gv_dclDone(){try{var e=r.performance&&typeof r.performance.getEntriesByType=="function"?r.performance.getEntriesByType("navigation")[0]:null;if(e&&typeof e.domContentLoadedEventEnd=="number")return e.domContentLoadedEventEnd>0}catch{}try{return!o||o.readyState==="complete"}catch{return!0}}var re=!1,Gv_initialWait=null,Gv_initialSettledApi=null;
 // The cross-page intent is older than this document's startup restoration.

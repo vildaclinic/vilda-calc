@@ -388,7 +388,9 @@ describe('P-SESJA-ZAPISU: rejestr okien zapisu w UI', () => {
 });
 
 // ── Ekrany „Dodaj pacjenta”, „Dodaj do bazy” i „Importuj pacjentów” ───────────────────────────────────────────────────
-const KOTWICE_EKRANOW = ['function ss(t,a,n){', 'function ds(t,a,n){', 'function zi(t,a){'];
+const KOTWICE_EKRANOW = [
+  'function homePatientRoute() {', 'function ss(t,a,n){', 'function ds(t,a,n){', 'function zi(t,a){',
+];
 const TYTUL_DUPLIKATU = /Ten pacjent może już być w bazie/;
 
 // Dokument UI z polami formularzy (style, value), węzłami tekstu i fragmentem dokumentu.
