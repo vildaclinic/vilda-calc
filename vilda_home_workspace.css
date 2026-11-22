@@ -63,6 +63,15 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-16px);
 }
+/* The native form and summary inherit glass from the general application.
+ * Give the workspace cards an opaque surface and retain high-contrast borders. */
+.vilda-home-workspace #calcForm :is(#userSection > fieldset.user-card, #currentSummaryCard, #vhomeRawSummary, #prevSummaryCard) {
+  background: var(--bg) !important;
+  border-color: var(--hc-border, var(--line)) !important;
+  box-shadow: var(--hc-shadow, 0 2px 8px #244d5505) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
 .vilda-home-workspace #userSection fieldset.user-card {
   min-width: 0;
   padding: 0;

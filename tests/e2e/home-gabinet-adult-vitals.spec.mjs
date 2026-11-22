@@ -27,6 +27,7 @@ test('adult analysis projects the native pressure and pulse and opens the same m
   await header.getByRole('tab', {name: 'Analiza', exact: true}).click();
   const card = frame.locator('#vhomeAdultVitalsCard');
   await expect(card).toBeVisible();
+  await expect(card).toHaveCSS('background-color', 'rgb(255, 255, 255)');
   await expect(card).toContainText('124/79');
   await expect(card).toContainText('76 ud./min');
   await expect(frame.locator('#waistCm')).toHaveValue('82');

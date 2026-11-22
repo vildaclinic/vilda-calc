@@ -14,6 +14,7 @@ test('rapid intake shows unclassified BMI for unspecified sex and preserves it t
     await expect(owner.locator('#sex')).toHaveValue('');
     await expect(owner.locator('#vhomeRawBmi')).toBeVisible();
     await expect(owner.locator('#vhomeRawBmi')).toHaveText('BMI 19,0 kg/m²');
+    await expect(owner.locator('#vhomeRawSummary')).toHaveCSS('background-color', 'rgb(255, 255, 255)');
     await expect(owner.locator('#currentSummaryWrap')).toBeHidden();
     await expect(owner.locator('#metabolicSummaryBtn')).toBeHidden();
     await expect(owner.locator('#vhomeGrowthCard')).toBeHidden();

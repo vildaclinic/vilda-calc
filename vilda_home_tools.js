@@ -474,7 +474,8 @@
     if (summary) {
       summaryActions = element(d, 'div', 'vhome-summary-actions');
       summaryActions.hidden = true;
-      chartButton = element(d, 'button', '', 'Generuj siatki');
+      chartButton = element(d, 'button');
+      chartButton.append(tileIcon('chart'), element(d, 'span', '', 'Generuj siatki'));
       chartButton.id = 'vhomeGenerateCharts'; chartButton.type = 'button';
       chartButton.setAttribute('aria-haspopup', 'dialog');
       chartButton.addEventListener('click', () => w.VildaHomeGrowth.openCharts({ mode: 'pdf', opener: chartButton }));
