@@ -14,10 +14,10 @@ html:has([data-vhome-screen]) { scrollbar-gutter: stable; }
 #vhomeGabinet { color: #23444c; font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; min-width: 0; }
 /* The form in the neighbouring Analysis panel takes its gutter from the
  * outer shell. Its desktop rail can leave a narrow embedded viewport. */
-.main-content:is([data-vhome-screen="overview"],[data-vhome-screen="analysis"],[data-vhome-screen="rapid"],[data-vhome-screen="history"]) { background: #f4f7f8 !important; }
+.main-content:is([data-vhome-screen="overview"],[data-vhome-screen="analysis"],[data-vhome-screen="rapid"],[data-vhome-screen="history"],[data-vhome-screen="registration"]) { background: #f4f7f8 !important; }
 #vhomeGabinetHeader, #vhomePatientOverview, #vhomeVisitHistory { width: 100%; min-width: 0; box-sizing: border-box; }
 @media (max-width: 991.98px) {
-  :is([data-vhome-screen="overview"],[data-vhome-screen="analysis"],[data-vhome-screen="rapid"],[data-vhome-screen="history"]) > #vhomeGabinet {
+  :is([data-vhome-screen="overview"],[data-vhome-screen="analysis"],[data-vhome-screen="rapid"],[data-vhome-screen="history"],[data-vhome-screen="registration"]) > #vhomeGabinet {
     padding-inline: max(var(--mobile-dock-side-gap,.75rem),calc(env(safe-area-inset-left,0px) + .35rem)) max(var(--mobile-dock-side-gap,.75rem),calc(env(safe-area-inset-right,0px) + .35rem));
   }
 }
@@ -209,3 +209,210 @@ html.vilda-home-workspace #vhomeVisitTrashConfirm .vhome-dialog-apply { backgrou
 .gb-match-list { display: grid; gap: var(--space-6px); margin-bottom: var(--space-18px); }
 #gbRapidMatches .gb-match-list button { width: 100%; text-align: start; overflow-wrap: anywhere; }
 .gb-match-list small { display: block; margin-top: var(--space-4px); color: var(--text-muted); font-weight: 440; }
+
+/* Registration uses the directory's form in the main workspace. */
+[data-vhome-screen="registration"] > #vhomeGabinet {
+  box-sizing: border-box;
+  padding-block: var(--space-16px) var(--space-2-5);
+}
+html.vilda-form-host-desktop [data-vhome-screen="registration"] > #vhomeGabinet {
+  padding-block-start: 1.8rem;
+  padding-inline: clamp(var(--space-1-5),3.5vw,4rem);
+}
+#vhomeGabinetRegistration {
+  --gb-registration-ink: var(--hc-text,#1c4148);
+  --gb-registration-muted: var(--hc-muted,#516b72);
+  --gb-registration-line: var(--hc-border,#d4e2e4);
+  --gb-registration-brand: #007c84;
+  width: 100%;
+  max-width: 75rem;
+  min-width: 0;
+  margin-inline: auto;
+  color: var(--gb-registration-ink);
+  font: 1rem/1.52 Inter,system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+html.vilda-embedded.vilda-form-host-desktop #vhomeGabinetRegistration {
+  --gb-registration-viewport: calc(100vw + var(--chrome-sidebar-width));
+}
+#vhomeGabinetRegistration *, #vhomeGabinetRegistration *::before, #vhomeGabinetRegistration *::after { box-sizing: border-box; }
+#vhomeGabinetRegistration .gb-registration-heading { margin-block-end: 1.15rem; }
+#vhomeGabinetRegistration .gb-registration-crumb { margin: 0; padding: 0; background: transparent; }
+#vhomeGabinetRegistration :is(.gb-registration-crumb button,.gb-registration-form button) {
+  width: auto;
+  appearance: none;
+  color: var(--gb-registration-ink) !important;
+  background: var(--bg) !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  transform: none !important;
+  transition: none !important;
+  font: inherit;
+  font-weight: 600;
+}
+#vhomeGabinetRegistration .gb-registration-crumb button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-0-45);
+  min-height: 44px;
+  margin: 0 0 .15rem;
+  padding: 0 .15rem;
+  border: 0 !important;
+  border-radius: var(--radius-4) !important;
+  background: transparent !important;
+  color: #076c73 !important;
+}
+#vhomeGabinetRegistration .gb-registration-crumb svg {
+  flex: 0 0 18px; width: 18px; height: 18px;
+}
+#vhomeGabinetRegistration .gb-registration-crumb button:hover { text-decoration: underline; text-underline-offset: .18em; }
+#gbRegistrationTitle {
+  margin: 0;
+  color: var(--text-heading);
+  font-size: clamp(1.5rem,calc(var(--gb-registration-viewport,100vw) * .021),2rem);
+  font-weight: 660;
+  line-height: 1.17;
+  letter-spacing: -.035em;
+  text-align: start;
+}
+#vhomeGabinetRegistration .gb-registration-form { display: grid; gap: var(--space-1); margin: 0; }
+#vhomeGabinetRegistration .gb-registration-type-line {
+  display: flex; flex-wrap: wrap; align-items: end; gap: var(--space-0-6) var(--space-1-2);
+}
+#vhomeGabinetRegistration .gb-registration-choice {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+#vhomeGabinetRegistration :is(.gb-registration-label,.gb-registration-field > span) {
+  width: auto;
+  margin: 0 0 var(--space-0-4);
+  padding: 0;
+  color: var(--gb-registration-ink);
+  font-size: .9375rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+#vhomeGabinetRegistration .gb-registration-label { position: static; background: transparent; }
+#vhomeGabinetRegistration .gb-registration-options {
+  display: inline-flex; gap: .22rem; max-width: 100%; padding: .2rem;
+  border: var(--border-hairline) solid var(--gb-registration-line); border-radius: .65rem;
+  background: #edf4f4;
+}
+#vhomeGabinetRegistration .gb-registration-options button {
+  display: grid;
+  place-items: center;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 44px;
+  margin: 0;
+  padding: var(--space-0-35) 1.05rem;
+  border: var(--border-hairline) solid transparent !important;
+  border-radius: .45rem !important;
+  background: transparent !important;
+  color: var(--gb-registration-muted) !important;
+  white-space: nowrap;
+}
+#vhomeGabinetRegistration .gb-registration-options button[aria-pressed="true"] {
+  border-color: var(--hc-module-btn-active-border,#b7d1d4) !important;
+  background: var(--bg) !important;
+  color: #006d73 !important;
+  box-shadow: 0 1px 3px #16394012 !important;
+}
+#vhomeGabinetRegistration .gb-registration-hint {
+  margin: var(--space-0-6) 0 0;
+  color: var(--gb-registration-muted);
+  font-size: .9375rem;
+  line-height: 1.5;
+}
+#vhomeGabinetRegistration .gb-registration-type-line > .gb-registration-hint {
+  margin: 0;
+  padding-block-end: var(--space-0-65);
+  font-size: 1rem;
+}
+#vhomeGabinetRegistration .gb-registration-grid {
+  display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: var(--space-1);
+}
+#vhomeGabinetRegistration .gb-registration-card {
+  min-width: 0;
+  padding: clamp(var(--space-1),2.25vw,var(--space-1-5));
+  border: var(--hc-card-border-width,var(--border-hairline)) solid var(--gb-registration-line);
+  border-radius: var(--radius-16);
+  background: var(--bg);
+  box-shadow: 0 2px 8px #23484b06;
+}
+#vhomeGabinetRegistration .gb-registration-card h2 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: .28rem var(--space-0-7);
+  margin: 0 0 var(--space-1);
+  color: var(--gb-registration-ink);
+  font-size: 1.22rem;
+  font-weight: 660;
+  line-height: 1.35;
+  letter-spacing: -.025em;
+}
+#vhomeGabinetRegistration .gb-registration-card h2 small {
+  color: var(--gb-registration-muted); font-size: .875rem; font-weight: 450; letter-spacing: normal;
+}
+#vhomeGabinetRegistration .gb-registration-fields {
+  display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: var(--space-0-9);
+}
+#vhomeGabinetRegistration :is(.gb-registration-wide,[data-external="true"] .gb-registration-contact) {
+  grid-column: 1 / -1;
+}
+#vhomeGabinetRegistration .gb-registration-field { display: flex; flex-direction: column; min-width: 0; margin: 0; }
+#vhomeGabinetRegistration .gb-registration-field :is(input,textarea) {
+  width: 100%; min-width: 0; min-height: 44px; margin: 0; padding: .58rem .72rem;
+  border: var(--hc-card-border-width,var(--border-hairline)) solid var(--hc-input-border,#b9cdd1) !important;
+  border-radius: var(--radius-8) !important;
+  background: var(--bg) !important;
+  color: var(--gb-registration-ink) !important;
+  box-shadow: none !important;
+  font: inherit; line-height: 1.4;
+}
+#vhomeGabinetRegistration .gb-registration-field textarea { resize: vertical; }
+#vhomeGabinetRegistration .gb-registration-field [aria-invalid="true"] { border-color: #a43830 !important; }
+#vhomeGabinetRegistration :is(input,textarea,button):focus-visible {
+  outline: var(--hc-focus-width,var(--border-pro)) solid var(--hc-focus-color,#21878c);
+  outline-offset: 3px;
+}
+#vhomeGabinetRegistration .gb-registration-actions {
+  display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-0-65);
+}
+#vhomeGabinetRegistration .gb-registration-actions button {
+  min-width: 7rem; min-height: 2.8rem; margin: 0; padding: .57rem var(--space-1-1);
+  border: var(--border-hairline) solid var(--hc-module-btn-border,#c4d6d8) !important;
+  border-radius: var(--radius-10) !important;
+}
+#vhomeGabinetRegistration .gb-registration-actions button:hover:not(:disabled) { border-color: #41888b !important; }
+#vhomeGabinetRegistration .gb-registration-actions .gb-registration-primary {
+  border-color: var(--gb-registration-brand) !important;
+  background: var(--gb-registration-brand) !important;
+  color: var(--bg) !important;
+}
+#vhomeGabinetRegistration .gb-registration-actions .gb-registration-primary:hover:not(:disabled) {
+  background: #006a72 !important;
+}
+#vhomeGabinetRegistration .gb-registration-error { margin: 0; color: #9d342f; font-weight: 550; }
+#vhomeGabinetRegistration .gb-registration-error:empty { display: none; }
+@media (max-width: 760px) {
+  #vhomeGabinetRegistration .gb-registration-grid { grid-template-columns: 1fr; gap: var(--space-0-7); }
+  #vhomeGabinetRegistration .gb-registration-type-line { align-items: start; flex-direction: column; }
+  #vhomeGabinetRegistration .gb-registration-type-line > .gb-registration-hint { padding: 0; }
+}
+@media (max-width: 450px) {
+  #vhomeGabinetRegistration .gb-registration-fields { gap: var(--space-0-7) var(--space-0-55); }
+  #vhomeGabinetRegistration .gb-registration-contact .gb-registration-field { grid-column: 1 / -1; }
+  #vhomeGabinetRegistration .gb-registration-actions button { flex: 1 1 0; }
+  #vhomeGabinetRegistration .gb-registration-options { min-width: min(12rem,100%); }
+}
+@media (forced-colors: active) {
+  #vhomeGabinetRegistration .gb-registration-options button[aria-pressed="true"] { border-color: Highlight !important; }
+}

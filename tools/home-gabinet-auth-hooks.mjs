@@ -9,8 +9,8 @@ function applyOverviewHooks(source) {
   return applyEncounterNoteAuthHooks(applyInlinePatientHooks(applyOverviewRemindersHooks(source)));
 }
 
-function applyRegistration(source) {
-  return applyRegistrationAuthHooks(applyPatientNavigationHooks(applyOverviewHooks(source)));
+function applyRegistration(source, inline = true) {
+  return applyRegistrationAuthHooks(applyPatientNavigationHooks(applyOverviewHooks(source)), inline);
 }
 
 // The chart knows the recorded sex even when a rapid intake left that field empty.
@@ -21,8 +21,8 @@ function chartReferenceSex(source, reverse = false) {
   if (source.split(before).length !== 2) throw new Error('Missing or repeated patient chart reference sex hook.');
   return source.replace(before, reverse ? previousChart : chartWithReferenceSex);
 }
-export function applyGabinetAuthHooks(source) {
-  return chartReferenceSex(applyRegistration(source));
+export function applyGabinetAuthHooks(source, inline = true) {
+  return chartReferenceSex(applyRegistration(source, inline));
 }
 
 // The older reproducers also accept their historical inputs. Reapply exactly
@@ -34,11 +34,12 @@ export function gabinetAuthLayers(source) {
   const hasReferenceSex = source.includes(chartWithReferenceSex);
   const registration = hasReferenceSex ? chartReferenceSex(source, true) : source;
   const hasRegistration = registration.includes('function showGabinetNewPatient(');
+  const inline = registration.includes('function homeRegistrationForm(');
   const navigation = hasRegistration ? reverseRegistrationAuthHooks(registration) : registration;
   const hasNavigation = navigation.includes('function openPatientInHome(');
   const overview = hasNavigation ? reversePatientNavigationHooks(navigation) : navigation;
   const base = reverseOverviewRemindersHooks(reverseInlinePatientHooks(reverseEncounterNoteAuthHooks(overview)));
-  const replay = hasReferenceSex ? applyGabinetAuthHooks : hasRegistration ? applyRegistration
+  const replay = hasReferenceSex ? value => applyGabinetAuthHooks(value, inline) : hasRegistration ? value => applyRegistration(value, inline)
     : hasNavigation ? value => applyPatientNavigationHooks(applyOverviewHooks(value)) : applyOverviewHooks;
   if (replay(base) !== source) throw new Error('Gabinet AuthUI layers do not reproduce the current artifact.');
   return { base, replay };

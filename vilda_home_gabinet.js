@@ -8,6 +8,7 @@
   let account = null, screen = 'start', target = null, section = 'antro';
   let sequence = 0, selecting = false, frame = 0, pendingNote = null;
   let rapid = null, rapidHeader, entryView = 'launch';
+  let registration = null, registrationHost;
   const labels = {overview: 'Przegląd', analysis: 'Analiza'};
   const startVisitLabel = 'Rozpocznij nową wizytę';
   const paths = {
@@ -168,13 +169,17 @@
     if (value) main.dataset.vhomeScreen = value;
     else delete main.dataset.vhomeScreen;
     const pane = w.frameElement;
-    if (pane?.classList.contains('app-pane')) pane.toggleAttribute('data-vhome-directory', value === 'start');
+    if (pane?.classList.contains('app-pane')) {
+      const directory = value === 'registration' ? 'registration' : value === 'start' ? '' : null;
+      if (directory === null) pane.removeAttribute('data-vhome-directory');
+      else if (pane.getAttribute('data-vhome-directory') !== directory) pane.setAttribute('data-vhome-directory', directory);
+    }
   }
   function render() {
     if (!root) return;
     const nextAccount = access();
     if (account !== nextAccount) {
-      sequence++; selecting = false; pendingNote = null; dismissHistory(); detach(true); destroyPicker(); clearRapidUI(); entryView = 'launch';
+      sequence++; selecting = false; pendingNote = null; dismissHistory(); detach(true); clearRegistration(true); destroyPicker(); clearRapidUI(); entryView = 'launch';
       target = null; screen = 'start'; section = 'antro'; account = nextAccount;
       header.querySelector('h1').textContent = '';
       header.querySelector('.gb-identity-meta').textContent = '';
@@ -190,6 +195,12 @@
       dismissHistory(); detach(true); target = null; screen = 'start';
     }
     root.hidden = false;
+    if (registration) {
+      setScreen('registration');
+      header.hidden = overview.hidden = landing.hidden = rapidHeader.hidden = true;
+      registrationHost.hidden = false;
+      return;
+    }
     if (isRapidIntake() && selected()) { clearRapidUI(); screen = 'start'; }
     if (isRapidIntake()) {
       installRapid(); setScreen('rapid');
@@ -205,9 +216,7 @@
       header.hidden = overview.hidden = true; landing.hidden = false;
       if (!picker) picker = w.VildaHomeGabinetStart.mount(landing, {onSelect:selectPatient,
         initialView:entryView, onViewChange: view => { entryView = view; },
-        onRapid:enterRapid, onNewPatient: () => w.VildaAuthUI.showGabinetNewPatient({
-          onPatient: id => openPatient(id), onReturn: () => picker?.refresh()
-        })});
+        onRapid:enterRapid, onNewPatient:showRegistration});
       return;
     }
     if (!owns(target)) {
@@ -241,11 +250,64 @@
   }
   function showStart(view = 'launch') {
     if (!account || !leaveRapidIntake() || !detach(false)) return false;
+    clearRegistration();
     entryView = view === 'office' ? 'office' : 'launch';
     if (picker) picker.showView(entryView);
     dismissHistory();
     sequence++; selecting = false; pendingNote = null; target = null; section = 'antro'; screen = 'start';
     showMessage(''); render();
+    return true;
+  }
+  function clearRegistration(quiet = false) {
+    const item = registration;
+    if (!item) return;
+    registration = null;
+    registrationHost.hidden = true;
+    item.dispose?.();
+    item.releaseHistory?.(quiet);
+  }
+  function closeRegistration(launch = false) {
+    const item = registration;
+    if (!item) return;
+    clearRegistration();
+    render();
+    if (launch) picker?.showView('launch', true);
+    else if (item.opener?.getClientRects().length) item.opener.focus({preventScroll:true});
+    else if (entryView === 'office') picker?.focusSearch();
+    picker?.refresh();
+  }
+  function showRegistration() {
+    if (!account || account !== access() || !picker || registration) return false;
+    const opener = d.activeElement?.shadowRoot?.activeElement || d.activeElement;
+    const item = registration = {opener};
+    const embedded = w.frameElement?.classList.contains('app-pane');
+    const shell = embedded && w.parent.VildaShell;
+    const current = () => registration === item && account === access() && (!embedded || shell?.getCurrentRoute() === 'start');
+    render();
+    w.scrollTo(0, 0);
+    item.dispose = w.VildaAuthUI.showGabinetNewPatient({
+      host: registrationHost.querySelector('[data-registration-form]'), isCurrent: current,
+      onPatient(id) { clearRegistration(); render(); openPatient(id); },
+      onReturn() { closeRegistration(); }
+    });
+    if (!item.dispose) { closeRegistration(); return false; }
+
+    function shellBack() {
+      if (!current()) return;
+      if (item.dispose.closeDuplicate()) shell.ensureAuthHistory(w, shellBack, d);
+      else closeRegistration();
+    }
+    if (shell?.ensureAuthHistory(w, shellBack, d)) {
+      item.releaseHistory = quiet => shell.releaseAuthHistory(w, {quiet});
+    } else {
+      const handle = w.VildaHomeDialogHistory.create({isOpen:current, requestClose() {
+        if (item.dispose.closeDuplicate()) return false;
+        closeRegistration();
+        return true;
+      }});
+      handle.enter();
+      item.releaseHistory = () => handle.release();
+    }
     return true;
   }
   function closePatientCard() {
@@ -298,6 +360,7 @@
     const isCurrent = options.isCurrent || (() => true);
     if (!id || selecting || !account || !['browse','new'].includes(intent) || !isCurrent()) return false;
     if (!leaveRapidIntake()) return false;
+    clearRegistration();
     const same = owns(id);
     const encounter = w.VildaHomeEncounter.state(id);
     // A restored tab has no authority to present a historical form as the
@@ -514,11 +577,16 @@
       '<div id="gbVisitActions" hidden><button type="button" data-trash-visit>Przenieś wizytę do kosza</button></div></div></div></div>' +
       '<div id="gbRapidHeader" hidden><nav class="gb-rapid-crumb" aria-label="Ścieżka nawigacji"><button type="button" data-rapid-start>' + icon('home') +
         'Start</button>' + icon('chevron') + '<span>Szybka ścieżka</span></nav><h1 id="gbRapidTitle">Analiza</h1></div>' +
+      '<section id="vhomeGabinetRegistration" hidden aria-labelledby="gbRegistrationTitle"><div class="gb-registration-heading">' +
+      '<nav class="gb-registration-crumb" aria-label="Ścieżka nawigacji"><button type="button" data-registration-back>' + icon('home') +
+      '<span>Ekran startowy</span></button></nav><h1 id="gbRegistrationTitle">Dodaj pacjenta</h1></div><div data-registration-form></div></section>' +
       '<dialog id="gbRapidMatches" aria-labelledby="gbRapidMatchTitle"></dialog><div class="vhome-gabinet-message" role="status"></div><div id="vhomePatientOverview" hidden></div><section id="vhomeVisitHistory" hidden aria-label="Historia wizyt"></section>';
     analysis.before(root);
     header = d.getElementById('vhomeGabinetHeader'); landing = d.getElementById('vhomeGabinetStart'); overview = d.getElementById('vhomePatientOverview');
     historyHost = d.getElementById('vhomeVisitHistory');
     rapidHeader = d.getElementById('gbRapidHeader');
+    registrationHost = d.getElementById('vhomeGabinetRegistration');
+    registrationHost.querySelector('[data-registration-back]').onclick = () => closeRegistration(true);
     rapidHeader.querySelector('[data-rapid-start]').onclick = () => showStart();
     installRapid();
     d.addEventListener('vilda:home-workspace-ready', installRapid);
@@ -607,7 +675,7 @@
     render();
   }
   d.addEventListener('vilda:patient-loaded', event => {
-    if (!account || selecting || !root) return;
+    if (!account || selecting || !root || registration) return;
     const id = event.detail?.patientId || selected();
     if (!id) return;
     if (isRapidIntake()) clearRapidUI();
@@ -616,12 +684,13 @@
     }
     schedule();
   });
+  d.addEventListener('vilda:auth-hidden', () => clearRegistration(true));
   ['vilda:auth-boot-settled','vilda:auth-hidden','vilda:session-changed','vilda:auth-loaded','vildaProAccessChanged',
     'vilda:main-session-restored','vilda:initial-main-session-restore-settled','vilda:data-applied','vilda:home-patient-inline-ready',
     'vilda:home-encounter-changed','vilda:user-state-cleared'].forEach(name => d.addEventListener(name, schedule));
   w.addEventListener('vilda:user-state-cleared', schedule);
   w.addEventListener('pageshow', schedule);
-  w.addEventListener('pagehide', () => { dismissHistory(); if (main) setScreen(null); sequence++; selecting = false; detach(true); if (picker) destroyPicker(); });
+  w.addEventListener('pagehide', () => { dismissHistory(); clearRegistration(true); if (main) setScreen(null); sequence++; selecting = false; detach(true); if (picker) destroyPicker(); });
   w.VildaHomeGabinet = Object.freeze({
     isRapidIntake, hasRapidDraft, leaveRapidIntake, saveRapid,
     capturePatientScreen,
