@@ -256,6 +256,9 @@ const ID_BEV_BOB = /(?<![A-Za-z0-9_$])B(?:ev|ob|em)_[A-Za-z0-9_$]*/g;
 // if (Qwp !== g.patientId) tuż po zapisie notatki — 34 wpisy, 49 wywołań Bem_. Zmiana trybu przechowywania (E2-PR4e2,
 // P-SYNC-NADAWCA-WPIECIA): w Js const Bst_k = await Bob_przedTrybem(…) przed zmianą wpisu rejestru i await Bob_poTrybie(Bst_k)
 // jako element wyrażenia przecinkowego po niej — 35 wpisów.
+// P-TERMINARZ-LISTY-STALE: atomowy create i cleanup zapisują wllists/wlsched jednym zapisem metadanych.
+// Dwie emisje pref w Jo i dwie w completeWaitlistBooking następują po zatwierdzeniu i sprawdzeniu sesji;
+// duplikat albo zachowana lista niczego nie emituje — 37 miejsc, 53 wywołania Bem_.
 const MIEJSCA_POZA_BLOKIEM = Object.freeze({
   Js: { Bob_przedTrybem: 1, Bob_poTrybie: 1 },
   PatientCheckpointRemoveUser: { Bob_oznacz: 1, Bob_odznacz: 1 },
@@ -275,6 +278,8 @@ const MIEJSCA_POZA_BLOKIEM = Object.freeze({
   Qe2: { Bem_hak: 1 },
   Ps: { Bem_zmiana: 1 },
   Aj: { Bem_zmiana: 1 },
+  Jo: { Bem_zmiana: 2 },
+  completeWaitlistBooking: { Bem_zmiana: 2 },
   Bnp_poZapisie: { Bem_zmiana: 1 },
   Bsc_podBlokada: { Bem_zmiana: 1 },
   Bkz_poImporcie: { Bem_zmiana: 1 },
@@ -1031,6 +1036,40 @@ describe('U2(a): identyfikatory Bev_, Bob_ i Bem_ tylko w bloku; _eventLog dokł
     expect(miejscaPozaBlokiem(poza)).toEqual({ miejsca: MIEJSCA_POZA_BLOKIEM, bledy: [] });
   });
 
+  it('U2(a): emisje atomowych list i terminów są warunkowe, po zapisie metadanych i sprawdzeniu sesji', () => {
+    const calls = node => {
+      if (!node || typeof node.type !== 'string') return [];
+      const own = node.type === 'CallExpression' && node.callee.type === 'Identifier' && node.callee.name === 'Bem_zmiana' ? [node] : [];
+      return own.concat(Object.values(node).flatMap(value => Array.isArray(value) ? value.flatMap(calls) : calls(value)));
+    };
+    const shape = source => {
+      const statements = parse(source, { ecmaVersion: 'latest', sourceType: 'script' }).body[0].body.body;
+      const commit = statements.findIndex(node => node.type === 'ExpressionStatement' && node.expression.type === 'AwaitExpression'
+        && node.expression.argument.type === 'CallExpression' && node.expression.argument.callee.name === 'Bmk_zmien');
+      const fence = statements.findIndex((node, index) => index > commit && node.type === 'ExpressionStatement'
+        && node.expression.type === 'CallExpression' && node.expression.callee.type === 'MemberExpression'
+        && node.expression.callee.object.name === 'state' && node.expression.callee.property.name === 'assertCurrent');
+      const guards = statements.flatMap((node, index) => {
+        if (node.type !== 'IfStatement' || !calls(node.consequent).length) return [];
+        return [{ afterCommitAndFence: commit >= 0 && fence > commit && index > fence,
+          condition: source.slice(node.test.start, node.test.end),
+          arguments: calls(node.consequent).map(call => call.arguments.map(argument => argument.type === 'Literal' ? argument.value : null)) }];
+      });
+      return guards;
+    };
+    const variants = [
+      ['Jo', [{ afterCommitAndFence: true, condition: 'changed', arguments: [['pref', 'wllists']] },
+        { afterCommitAndFence: true, condition: 'scheduleChanged', arguments: [['pref', 'wlsched']] }]],
+      ['completeWaitlistBooking', [{ afterCommitAndFence: true, condition: 'result.removed.length', arguments: [['pref', 'wllists'], ['pref', 'wlsched']] }]],
+    ];
+    for (const [name, expected] of variants) {
+      const source = wytnijFunkcje(ZRODLO, name);
+      expect(shape(source), name).toEqual(expected);
+      expect(shape(source.replace('await Bmk_zmien(', 'Bmk_zmien(')), `${name}: samokontrola bez await`).not.toEqual(expected);
+      expect(shape(source.replace(`if (${expected[0].condition})`, 'if (true)')), `${name}: samokontrola emisji bez warunku zmiany`).not.toEqual(expected);
+    }
+  });
+
   // Formy z literału miejsc w małych funkcjach (kształt jak w sejfie): sprzątanie po koncie (E2-PR3a1), emisja (E2-PR3a2),
   // importy (E2-PR3a3), przegląd kolejki (E2-PR3a4: He z Bem_przeglad(true) na początku, Le z Bem_zChmury(t)) i haki
   // scalania (E2-PR3b: Le z Bem_przegrane(t,N,e) po pętli nagrobków kart, Bsl_usunPacjenta z Bem_przegrany w gałęzi karty
@@ -1054,6 +1093,8 @@ describe('U2(a): identyfikatory Bev_, Bob_ i Bem_ tylko w bloku; _eventLog dokł
     'function Qe2(t){Bem_hak("onCredentialChanged",t);Qe0.forEach(function(e){try{e(t)}catch{}})}',
     'async function Ps(t,e,P){try{if(!T()||!b)return null;const o=new Date().toISOString();return M(P,await Bmk_zmien(b,function(n){return n},P))?(Bem_zmiana("pref",t),o):null}catch(x){return null}}',
     'async function Aj(t,e){return W(A,(await Bmk_zmien(b,function(n){return n},O(null,b)),Bem_zmiana("pref",t),a))}',
+    "async function Jo(label,options){await Bmk_zmien(account,function(meta){return meta});state.assertCurrent();if(changed)Bem_zmiana('pref','wllists');if(scheduleChanged)Bem_zmiana('pref','wlsched');return result;}",
+    "async function completeWaitlistBooking(request){await Bmk_zmien(account,function(meta){return meta});state.assertCurrent();if(result.removed.length){Bem_zmiana('pref','wllists');Bem_zmiana('pref','wlsched');}return result;}",
     "async function Bnp_poZapisie(id, kiedy, rev, patientId, o) {\n  if (k) {\n    await h.putPatientNoteTombstoneForUser(b, n);\n    Bem_zmiana('pnotetomb', id, o);\n    return undefined;\n  }\n}",
     'async function Bsc_podBlokada(t,e,Bsc_s){for(let d=0;d<o.length;d+=1)await I().putSnapshotForUser(b,W(b,o[d])),Bpz_pilnuj(Bsc_s),Bem_zmiana("snap",{patientId:e,snapshotId:o[d].snapshotId},Bsc_s),a+=1;}',
     "async function Bkz_poImporcie(snapshotIds) {\n  const przepisane = [];\n  await Bkz_zmienListe([], t);\n  if (przepisane.length) Bem_zmiana('snap', przepisane);\n  return 1;\n}",
