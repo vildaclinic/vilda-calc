@@ -5,6 +5,8 @@ on:
     branches: [audyt, agent/nowa-strona-glowna]
   pull_request:
     branches: [audyt, agent/nowa-strona-glowna]
+  schedule:
+    - cron: '17 2 * * *'
   workflow_dispatch:
     inputs:
       baza_pr:
@@ -14,21 +16,23 @@ on:
           - audyt
           - agent/nowa-strona-glowna
         default: audyt
+      pelny_e2e:
+        description: 'Uruchom pełny zestaw Playwright także na gałęzi PR-a'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
 
 concurrency:
-  group: vilda-calc-ci-${{ github.workflow }}-${{ github.ref }}
+  group: vilda-calc-ci-${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'schedule' && 'noc' || 'zmiana' }}
   cancel-in-progress: true
 
 jobs:
   unit:
-    name: Lint, składnia i testy jednostkowe
+    name: Polityka repozytorium, lint, składnia i wersje
     runs-on: ubuntu-latest
-    # Zwykle około 10 min. Na wolniejszej maszynie CI (2026-11-15: wszystkie kroki około 1,6 raza wolniej,
-    # także lint i kontrola składni) przekraczało 15 min, także na audyt; 25 min daje zapas.
-    timeout-minutes: 25
+    timeout-minutes: 10
     steps:
       - name: Pobierz repozytorium
         uses: actions/checkout@v4
@@ -36,10 +40,6 @@ jobs:
           # PR: commit scalenia z rodzicami, HEAD^1 to dokładna gałąź docelowa PR-a.
           # workflow_dispatch poza audyt: pełna historia, z wybraną bazą z origin/.
           fetch-depth: ${{ github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/audyt' && '0' || '2' }}
-      - name: Pobierz przypięty historyczny klient do testu zgodności planów
-        run: |
-          git cat-file -e 'b461364002cbd3f652728b7db38dce0f1f0d9264^{commit}' || git fetch --no-tags --depth=1 origin b461364002cbd3f652728b7db38dce0f1f0d9264
-          git cat-file -e 'ae903d3e0ab2f0a1c1972b877a9862436b1e2603^{commit}' || git fetch --no-tags --depth=1 origin ae903d3e0ab2f0a1c1972b877a9862436b1e2603
       - name: Skonfiguruj Node.js
         uses: actions/setup-node@v4
         with:
@@ -49,8 +49,8 @@ jobs:
         run: npm ci
       - name: Przygotuj dowód opublikowanej historii precache
         run: node tests/scripts/prepare-published-precache-history.mjs
-      - name: Uruchom kontrole bez przeglądarki
-        run: npm test
+      - name: Sprawdź politykę repozytorium, lint, składnię i dostęp PRO
+        run: npm run test:repo && npm run lint && npm run test:syntax && npm run test:pro
       # P-WERSJE-CI: dwa wątki mogą scalić ten sam SW_VERSION bez konfliktu (#591, #594, #595).
       # HEAD^1 jest dokładną bazą PR-a: audyt albo gałęzią integracyjną nowego interfejsu.
       # „Wygląd” przekazuje tę samą bazę po wypchnięciu wzorców przez bota. Ręczny przebieg
@@ -91,41 +91,54 @@ jobs:
           fi
           exit "$kod"
 
-  browser:
-    # Nazwa jest widoczna dla właściciela jako odłamek, a wymagany status w regułach gałęzi
-    # to job „Testy przeglądarkowe i PWA" niżej, który zbiera wyniki wszystkich odłamków.
-    name: E2E odłamek ${{ matrix.shard }}/8
+  vitest:
+    name: Vitest ${{ matrix.shard }}/${{ strategy.job-total }}
     runs-on: ubuntu-latest
-    # Po „Squash and merge" e2e nie idą drugi raz. Reguła gałęzi „Require branches to be
-    # up to date before merging" gwarantuje, że drzewo po squashu jest tym samym drzewem,
-    # które przeszło testy na PR-ze — drugi, 15-minutowy przebieg niczego nie dokładał.
-    # Lint i testy jednostkowe (job wyżej) na push zostają: kosztują minutę i dają gałęzi
-    # własną historię zielone/czerwone. Pełny zestaw na audyt: ręcznie (workflow_dispatch).
-    if: github.event_name != 'push'
-    # Osiem runnerów naraz, każdy z czterema workerami — dla repozytorium publicznego minuty
-    # Actions nic nie kosztują, a zestaw dzieli się plikami między maszyny. Nie czeka na
-    # job jednostkowy: ten i tak kończy się po minucie, a czekanie dokładało tę minutę do
-    # każdego PR-a; przy czerwonym lincie e2e idą na darmo, ale nic nie kosztują.
+    timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4, 5, 6, 7, 8]
-    # W PR #793 limit 40 min przerwał aktywny przebieg przy 699/722 uruchomionych
-    # testach bez zgłoszonych błędów; pozostałe odłamki potrzebowały ok. 39 min.
-    # W PR #802 limit 45 min przerwał odłamek 2/3 przy 753/769 testach,
-    # nadal regularnie wykonywanych, bez błędów asercji przed anulowaniem.
-    # W PR #823 limit 50 min przerwał odłamek 3/3 przy 807/810 testach
-    # z ciągłym postępem i bez błędu asercji; pozostałe trwały 43,2 i 47,4 min.
-    # W PR #826 limit 50 min przerwał odłamek 1/3 przy 901/915 testach.
-    # W PR #841 limit 60 min przerwał odłamek 1/3 przy liczniku 759/888 uruchomionych testów,
-    # z ciągłym postępem i bez błędu asercji. Zestaw 2670 testów dzielimy na
-    # cztery części; nie zwiększamy limitu joba ani limitów pojedynczych testów.
-    # PR #847: pełne 2728 przypadków zajęło 41,4–43,3 min samych testów na czterech
-    # równomiernie obciążonych runnerach. Osiem części zwiększa równoległość między
-    # maszynami; na każdym runnerze nadal cztery workery, a wewnątrz plików ta sama
-    # kolejność i izolacja.
-    # Budżet obejmuje instalację Chromium, testy i raport. Limity pojedynczych
-    # testów, liczba workerów i wymagane asercje pozostają bez zmian.
+        shard: [1, 2, 3, 4]
+    steps:
+      - name: Pobierz repozytorium
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: ${{ github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/audyt' && '0' || '2' }}
+      - name: Pobierz przypięty historyczny klient do testu zgodności planów
+        run: |
+          git cat-file -e 'b461364002cbd3f652728b7db38dce0f1f0d9264^{commit}' || git fetch --no-tags --depth=1 origin b461364002cbd3f652728b7db38dce0f1f0d9264
+          git cat-file -e 'ae903d3e0ab2f0a1c1972b877a9862436b1e2603^{commit}' || git fetch --no-tags --depth=1 origin ae903d3e0ab2f0a1c1972b877a9862436b1e2603
+      - name: Skonfiguruj Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Zainstaluj zależności
+        run: npm ci
+      - name: Przygotuj dowód opublikowanej historii precache
+        run: node tests/scripts/prepare-published-precache-history.mjs
+      - name: Uruchom część testów jednostkowych
+        run: npm run test:unit -- --shard=${{ matrix.shard }}/${{ strategy.job-total }}
+
+  unit-summary:
+    name: Lint, składnia i testy jednostkowe
+    runs-on: ubuntu-latest
+    needs: [unit, vitest]
+    if: always()
+    steps:
+      - name: Sprawdź wyniki kontroli i testów jednostkowych
+        run: |
+          test "${{ needs.unit.result }}" = "success"
+          test "${{ needs.vitest.result }}" = "success"
+
+  browser:
+    name: E2E odłamek ${{ matrix.shard }}/${{ strategy.job-total }}
+    runs-on: ubuntu-latest
+    if: github.event_name != 'push'
+    strategy:
+      fail-fast: false
+      # Audyt w nocy lub na żądanie sprawdza całość. Dispatch z „Wyglądu” na gałęzi PR-a używa zestawu PR.
+      matrix: ${{ fromJSON((github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && (github.ref == 'refs/heads/audyt' || inputs.pelny_e2e))) && '{"shard":[1,2,3,4,5,6,7,8],"pelny":[true]}' || '{"shard":[1,2,3],"pelny":[false]}') }}
     timeout-minutes: 60
     steps:
       - name: Pobierz repozytorium
@@ -145,7 +158,15 @@ jobs:
       # projekt mobilny. Każdy runner liczy ten sam deterministyczny podział i bierze swoją
       # część; skrypt sam sprawdza, że Playwright z tą listą widzi dokładnie te pliki.
       - name: Wybierz pliki odłamka
-        run: node tests/scripts/odlamki-e2e.mjs --odlamek=${{ matrix.shard }}/8 --zapisz="$RUNNER_TEMP/odlamek-e2e.txt"
+        env:
+          PELNY_E2E: ${{ matrix.pelny }}
+          BAZA_E2E: ${{ github.event_name == 'pull_request' && 'HEAD^1' || format('origin/{0}', inputs.baza_pr || 'audyt') }}
+        run: |
+          opcje=()
+          if [ "$PELNY_E2E" = false ]; then
+            opcje+=(--baza="$BAZA_E2E")
+          fi
+          node tests/scripts/odlamki-e2e.mjs --odlamek=${{ matrix.shard }}/${{ strategy.job-total }} --zapisz="$RUNNER_TEMP/odlamek-e2e.txt" "${opcje[@]}"
       - name: Zainstaluj Chromium
         run: |
           # HTTP Azure potrafi wyczerpać limit joba podczas pobierania pakietów.
@@ -172,14 +193,12 @@ jobs:
     name: Geometria wykresów — Safari/WebKit
     runs-on: ubuntu-latest
     if: github.event_name != 'push'
-    # 2026-11-18: all 88 cases progressed without assertion failures, but the
-    # 35-minute job cap cancelled the last case ~15 s after it started (33m42s
-    # in tests, ~2m setup). Keep every case and its individual timeout; allow
-    # the full single-worker suite to finish with room for slower runners.
     timeout-minutes: 50
     steps:
       - name: Pobierz repozytorium
         uses: actions/checkout@v4
+        with:
+          fetch-depth: ${{ github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/audyt' && '0' || '2' }}
       - name: Skonfiguruj Node.js
         uses: actions/setup-node@v4
         with:
@@ -197,7 +216,14 @@ jobs:
           fi
           npx playwright install --with-deps webkit
       - name: Sprawdź narysowane punkty i otwieranie zapisów
-        run: npm run test:e2e -- --config playwright.lab-chart-webkit.config.mjs
+        env:
+          PELNY_E2E: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && (github.ref == 'refs/heads/audyt' || inputs.pelny_e2e)) }}
+          BAZA_E2E: ${{ github.event_name == 'pull_request' && 'HEAD^1' || format('origin/{0}', inputs.baza_pr || 'audyt') }}
+        run: |
+          if [ "$PELNY_E2E" = false ]; then
+            export BAZA_WEBKIT_PR="$BAZA_E2E"
+          fi
+          npm run test:e2e -- --config playwright.lab-chart-webkit.config.mjs
       - name: Zachowaj raport geometrii
         if: always()
         uses: actions/upload-artifact@v4

@@ -64,6 +64,7 @@
     if (!handlesPage()) { reason = 'Dokumenty pacjenta są dostępne na stronie głównej i DocPro.'; phase = 'unavailable'; }
     else if (!professional()) { reason = 'Dokumenty pacjenta są dostępne w trybie PRO lub DocPro.'; phase = 'unavailable'; }
     else if (!(current = owner())) { reason = 'Poczekaj na wczytanie danych pacjenta.'; phase = 'preparing'; }
+    else if (w.VildaHomeWorkspace?.hasUnspecifiedSex?.()) { reason = 'Wybierz płeć, aby przygotować dokumenty z wynikami.'; phase = 'unavailable'; }
     else if (!summary && !(w.VildaPatientReportLoader && typeof w.VildaPatientReportLoader.ensure === 'function')) { reason = 'Przygotowywanie dokumentów pacjenta…'; phase = 'preparing'; }
     else if (summary && !sameOwner(summaryOwner, current)) { reason = 'Uzupełnij dane, aby przygotować dokumenty pacjenta.'; phase = 'preparing'; }
     else if (summary && !summary.shouldShow) { reason = 'Uzupełnij dane, aby przygotować dokumenty pacjenta.'; phase = 'unavailable'; }

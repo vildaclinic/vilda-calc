@@ -249,9 +249,11 @@ html.vilda-pane-auth-open .desktop-layout>.sidebar {
     display: block
   }
   /* On the clinic start screen, give the unused summary column to the directory. */
+  html.vilda-route-start:not(.vilda-pane-auth-open) .desktop-layout:has(.app-pane[data-vhome-directory="registration"]:not([hidden])),
   html.vilda-route-start:not(.vilda-pane-auth-open) .desktop-layout:has(.app-pane[data-vhome-directory]:not([hidden])):has(> #vildaShellDecor:not(.decor-sidebar--has-content)) {
     grid-template-columns: var(--chrome-sidebar-width) minmax(0, 1fr)
   }
+  html.vilda-route-start .desktop-layout:has(.app-pane[data-vhome-directory="registration"]:not([hidden])) > #vildaShellDecor,
   html.vilda-route-start .desktop-layout:has(.app-pane[data-vhome-directory]:not([hidden])) > #vildaShellDecor:not(.decor-sidebar--has-content) {
     display: none
   }

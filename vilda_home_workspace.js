@@ -57,6 +57,46 @@
     try { return w.sessionStorage.getItem('vildaCurrentPatientId') || null; }
     catch (_) { return null; }
   }
+  // The optional blank value is explicit on this workspace. Existing pages
+  // and records without an explicit unknown retain their native defaults.
+  function hasUnspecifiedSex() {
+    var select = byId('sex');
+    return w.__VILDA_HOME_GABINET_PREVIEW__ === true && !!select && select.value === '' &&
+      !!select.querySelector?.('option[data-vhome-unspecified-sex]');
+  }
+  function setupUnspecifiedSex() {
+    var select = byId('sex'), doctor = byId('doctorSection');
+    if (w.__VILDA_HOME_GABINET_PREVIEW__ !== true || !select || !doctor) return;
+    var wasBlank = select.selectedIndex < 0;
+    var option = element('option', '', 'Nie podano');
+    option.value = '';
+    option.dataset.vhomeUnspecifiedSex = '';
+    select.appendChild(option);
+    if (wasBlank) select.value = '';
+    var summary = element('section', 'card vhome-raw-bmi');
+    summary.id = 'vhomeRawSummary';
+    summary.setAttribute('aria-labelledby', 'vhomeRawHeading');
+    var heading = element('h3', '', 'Podsumowanie wyników');
+    heading.id = 'vhomeRawHeading';
+    var result = element('p', 'vhome-raw-value');
+    result.id = 'vhomeRawBmi';
+    result.setAttribute('aria-live', 'polite');
+    summary.append(heading, result, element('p', '', 'Wybierz płeć, aby wyświetlić wyniki zależne od płci.'));
+    byId('currentSummaryWrap').before(summary);
+  }
+  function refreshUnspecifiedSex() {
+    var result = byId('vhomeRawBmi');
+    if (!result) return;
+    if (!hasUnspecifiedSex()) {
+      if (result.textContent) result.textContent = '';
+      return;
+    }
+    var mass = byId('weight'), height = byId('height');
+    var value = mass.validity.valid && height.validity.valid && w.VildaBmi
+      ? w.VildaBmi.bmi({masaKg:mass.valueAsNumber, wzrostCm:height.valueAsNumber}) : null;
+    var label = value == null ? '' : 'BMI ' + w.VildaBmi.fmtBmi(value) + ' kg/m²';
+    if (result.textContent !== label) result.textContent = label;
+  }
   function appendExisting(host, ids, label) {
     ids.forEach(function (id) {
       var node = byId(id);
@@ -113,7 +153,7 @@
     // The native button can be unavailable while the shared section remains
     // visible for dietary advice. Its original inline visibility is therefore
     // part of eligibility even though the empty form shows a disabled action.
-    var disabled = !allowed || copyButton.style.display === 'none' || copySource.hidden
+    var disabled = hasUnspecifiedSex() || !allowed || copyButton.style.display === 'none' || copySource.hidden
       || w.getComputedStyle(copySource).display === 'none';
     if (copyButton.disabled !== disabled) copyButton.disabled = disabled;
   }
@@ -171,6 +211,7 @@
     historyButton.title = available ? 'Otwórz zapisane wizyty pacjenta' : 'Wczytaj zapisanego pacjenta, aby zobaczyć jego wizyty';
     refreshActions();
     refreshReference();
+    refreshUnspecifiedSex();
   }
   function schedule() {
     if (frame) return;
@@ -453,6 +494,7 @@
     var form = byId('calcForm'), card = d.querySelector('#userSection fieldset.user-card');
     if (!form || !card || !byId('clearAllDataBtn')) return;
     started = true;
+    setupUnspecifiedSex();
     d.documentElement.classList.add('vilda-home-workspace');
     refreshDeviceLayout();
 
@@ -574,7 +616,7 @@
     refresh();
     if (w.VildaSummaryLayout) w.VildaSummaryLayout.refresh();
   }
-  w.VildaHomeWorkspace = Object.freeze({ start: start, refresh: refresh, openPuberty: openPuberty,
+  w.VildaHomeWorkspace = Object.freeze({ start: start, refresh: refresh, hasUnspecifiedSex: hasUnspecifiedSex, openPuberty: openPuberty,
     refreshPubertyShortcut: refreshPubertyShortcut, createDialog: createDetailDialog, fitDialog: fitDetailDialog,
     decorateShortcut: decorateShortcut, getDeviceViewportWidth: getDeviceViewportWidth });
   if (d.readyState === 'loading') d.addEventListener('DOMContentLoaded', start, { once: true });

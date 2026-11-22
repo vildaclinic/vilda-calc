@@ -236,6 +236,26 @@
     var title = node('div', 'vhome-b1-section-heading'); title.appendChild(node('h3', '', 'Status'));
     title.appendChild(node('p', '', 'Zapisane wyniki i kontekst pacjenta.'));
     var groups = [title];
+    var missingSex = native.referenceSex === '';
+    if (missingSex) {
+      // Native legacy cards contain classifications even for an empty sex.
+      // Expose only measurements and their units from this saved record.
+      var rawGrid = node('div', 'vilda-patient-stats-grid');
+      [['height','Wzrost'], ['weight','Masa'], ['bmi','BMI']].forEach(function (entry) {
+        var raw = native.primaryMetrics[entry[0]]?.querySelector('.vilda-patient-stat-value');
+        if (!raw) return;
+        var tile = node('div', 'vilda-patient-stat');
+        tile.dataset.homePatientMetric = entry[0];
+        tile.dataset.tone = 'neutral';
+        var number = node('div', 'vilda-patient-stat-value', raw.textContent);
+        number.dataset.homePatientMetricValue = '';
+        tile.append(node('div','vilda-patient-stat-label',entry[1]), number);
+        rawGrid.appendChild(tile);
+      });
+      if (rawGrid.childElementCount) grids[0] = rawGrid;
+      native.panels.traj.replaceChildren(node('p','vilda-patient-empty-msg',
+        'Uzupełnij płeć w kartotece, aby wyświetlić siatki centylowe.'));
+    }
     if (grids[0] && native.measureNodes.length) {
       var measure = node('section', 'vhome-b1-status-measure');
       var encounter = native.inline && w.VildaHomeEncounter?.state(native.patientId);
@@ -248,7 +268,9 @@
       var ageNote = original.find(function (item) { return item.classList.contains('vilda-patient-age-note'); });
       if (ageNote) measure.appendChild(ageNote);
       measure.appendChild(grids[0]); groups.push(measure);
-      ['height', 'weight', 'bmi', 'cole'].forEach(function (key) {
+      if (missingSex) measure.appendChild(node('p', 'vilda-patient-empty-msg',
+        'Uzupełnij płeć w kartotece, aby wyświetlić wyniki zależne od płci.'));
+      else ['height', 'weight', 'bmi', 'cole'].forEach(function (key) {
         var item = native.primaryMetrics[key]; if (!item) return;
         item.dataset.homePatientMetric = key;
         if (key === 'weight') item.querySelector('.vilda-patient-stat-label').textContent = 'Masa';
@@ -271,7 +293,7 @@
       });
     }
     var growthNodes = native.growthNodes.filter(function (item) { return item && item !== native.sgaNode; });
-    if (growthNodes.length) {
+    if (!missingSex && growthNodes.length) {
       var growth = node('section', 'vhome-b1-status-growth');
       var head = node('div', 'vhome-b1-section-heading'); head.appendChild(node('h3', '', 'Wzrastanie i dane rodzinne'));
       var analysis = button('Pełna analiza', function () {
@@ -282,12 +304,12 @@
       var grid = node('div', 'vilda-patient-stats-grid'); growthNodes.forEach(function (item) { grid.appendChild(item); });
       growth.appendChild(grid); groups.push(growth);
     }
-    if (native.sgaNode) {
+    if (!missingSex && native.sgaNode) {
       native.sgaNode.classList.add('vhome-b1-sga-summary'); groups.push(native.sgaNode);
     }
-    native.extraPanels.filter(Boolean).forEach(function (item) { groups.push(item); });
+    if (!missingSex) native.extraPanels.filter(Boolean).forEach(function (item) { groups.push(item); });
     original.forEach(function (item) {
-      if (item.classList.contains('vilda-patient-empty-msg') || item.classList.contains('vilda-copy-summary-row')) groups.push(item);
+      if (item.classList.contains('vilda-patient-empty-msg') || !missingSex && item.classList.contains('vilda-copy-summary-row')) groups.push(item);
     });
     view.summary = node('div', 'vhome-b1-treatment-summary');
     view.summary.appendChild(node('strong', '', view.legacySummary || 'Dokumentacja leczenia pacjenta'));

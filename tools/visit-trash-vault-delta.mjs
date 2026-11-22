@@ -1,5 +1,6 @@
 // Apply this public layer to the exact reviewed patient-treatment image. This
 // keeps the older native integration seals independently reproducible.
+import { restoreRapidVisitBaseline } from './rapid-visit-vault-delta.mjs';
 import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
@@ -71,6 +72,7 @@ export function applyVisitTrashDelta(source, root = ROOT) {
   return source;
 }
 export function restoreVisitTrashBaseline(source, root = ROOT) {
+  source = restoreRapidVisitBaseline(source, root);
   if (!source.includes('/* BEGIN VILDA WHOLE VISIT TRASH V1 */')) return source;
   if (digest(source) !== RESULT) fail('unexpected published image');
   for (const [before, after] of hooks(root).reverse()) source = change(source, after, before);
@@ -82,7 +84,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   if (args.length === 3 && args[0] === '--rebuild') {
     writeFileSync(resolve(args[2]), applyVisitTrashDelta(readFileSync(resolve(args[1]), 'utf8')));
   } else if (!args.length) {
-    const source = readFileSync(resolve(ROOT, 'vilda_vault.js'), 'utf8');
+    const source = restoreRapidVisitBaseline(readFileSync(resolve(ROOT, 'vilda_vault.js'), 'utf8'));
     if (applyVisitTrashDelta(restoreVisitTrashBaseline(source)) !== source) fail('round trip differs');
     process.stdout.write('Whole visit trash: readable source and exact vault revision verified.\n');
   } else fail('usage: node tools/visit-trash-vault-delta.mjs [--rebuild BASE_FILE OUTPUT_FILE]');

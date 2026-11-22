@@ -274,12 +274,14 @@ test('Edytuj wizytę corrects only the chosen historical record and returns to t
   await expect(frame.locator('#weight')).toHaveValue('54');
   await frame.locator('#weight').fill('44');
   await frame.locator('#weight').press('Control+s');
-  await expect.poll(() => frame.evaluate(async ({ pid, snapshotId }) => {
+  // Browse mode returns after the native save and reload of the latest visit.
+  await expect(header.getByRole('button', { name: 'Rozpocznij nową wizytę', exact: true })).toBeVisible({ timeout: 30_000 });
+  const saved = await frame.evaluate(async ({ pid, snapshotId }) => {
     const patient = await window.VildaVault.getPatient(pid);
     const edited = patient.snapshots.find(item => item.snapshotId === snapshotId);
     return [patient.snapshots[0].snapshotId, edited.rev, edited.payload.user.weight];
-  }, { pid: ids.a, snapshotId: seed.targetSnapshot })).toEqual([seed.latestSnapshot, seed.revision + 1, 44]);
-  await expect(header.getByRole('button', { name: 'Rozpocznij nową wizytę' })).toBeVisible();
+  }, { pid: ids.a, snapshotId: seed.targetSnapshot });
+  expect(saved).toEqual([seed.latestSnapshot, seed.revision + 1, 44]);
   await expect(frame.locator('#weight')).toHaveValue('55');
 });
 

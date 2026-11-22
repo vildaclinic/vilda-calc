@@ -142,15 +142,29 @@ test('home tools: eight equal tiles, shared dialog, and an obsolete draft cannot
 
 test('home documents: sidebar and summary open the same chart chooser and preserve the PDF package', async ({ page }) => {
   const { frame } = await setup(page);
+  const summary = frame.locator('#currentSummaryCard');
+  const shortcut = summary.getByRole('button', { name: 'Generuj siatki', exact: true });
   const charts = frame.locator(CHARTS);
   const expectPresets = async () => {
     await expect(charts).toBeVisible();
     for (const preset of PRESETS) await expect(charts.locator(`[data-chart-preset="${preset}"]`)).toBeVisible();
   };
-  await frame.locator('#vhomeGenerateCharts').click();
+  await expect(frame.locator('#userSection fieldset.user-card')).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+  await expect(summary).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+  await expect(shortcut).toHaveCSS('box-shadow', 'none');
+  await summary.getByRole('tab', { name: 'Siatka centylowa', exact: true }).click();
+  await shortcut.scrollIntoViewIfNeeded();
+  await expect(shortcut).toBeInViewport({ ratio: 1 });
+  await expect.poll(() => shortcut.evaluate(button => {
+    const action = button.getBoundingClientRect();
+    const tabs = button.closest('#currentSummaryCard').querySelector('.vilda-summary-tabs').getBoundingClientRect();
+    return Math.max(Math.abs(action.left - tabs.left), Math.abs(action.right - tabs.right));
+  })).toBeLessThanOrEqual(1);
+  await shortcut.click();
   await expectPresets();
   await charts.getByRole('button', { name: 'Anuluj', exact: true }).click();
   await expect(charts).toBeHidden();
+  await expect(shortcut).toBeFocused();
 
   const docs = await openPatientDocuments(page);
   await expect(docs).toHaveAttribute('data-patient-documents-home', '');

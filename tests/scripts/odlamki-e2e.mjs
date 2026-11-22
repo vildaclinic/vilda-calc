@@ -15,7 +15,8 @@ import {
   szacujCzasy,
   trescListy,
   uwagiDoRaportow,
-  wczytajCzasy
+  wczytajCzasy,
+  wybierzPlikiPR
 } from '../support/odlamki-e2e.mjs';
 
 const POMOC = `Użycie: node tests/scripts/odlamki-e2e.mjs <tryb>
@@ -24,6 +25,8 @@ const POMOC = `Użycie: node tests/scripts/odlamki-e2e.mjs <tryb>
                   zapisuje listę plików odłamka k z n (dla playwright test --test-list=<plik>)
                   i sprawdza, że Playwright z tą listą widzi dokładnie te pliki i tyle testów
   --plan[=<n>]    pokazuje podział na n odłamków (domyślnie 3): pliki, testy, szacowany czas
+  --baza=<ref>    w trybie --odlamek lub --plan wybiera podstawowe E2E i pliki testowe zmienione
+                  między bazą PR-a a HEAD; bez tej opcji wybiera pełny zestaw
   --czasy-z=<raport.json>[,<raport2.json>...]
                   odświeża ${WZGLEDNY_PLIK_CZASOW} z raportów JSON PEŁNYCH przebiegów, np.:
                     PLAYWRIGHT_WORKERS=4 PLAYWRIGHT_JSON_OUTPUT_NAME=raport.json \\
@@ -34,7 +37,7 @@ const POMOC = `Użycie: node tests/scripts/odlamki-e2e.mjs <tryb>
 const argumenty = process.argv.slice(2);
 const opcja = (nazwa) => argumenty.find((a) => a === `--${nazwa}` || a.startsWith(`--${nazwa}=`));
 const wartosc = (nazwa) => opcja(nazwa)?.split('=').slice(1).join('=');
-const znane = ['odlamek', 'zapisz', 'plan', 'czasy-z', 'pomoc'];
+const znane = ['odlamek', 'zapisz', 'plan', 'baza', 'czasy-z', 'pomoc'];
 if (opcja('pomoc') || argumenty.includes('-h') || argumenty.includes('--help')) {
   console.log(POMOC);
   process.exit(0);
@@ -84,10 +87,12 @@ function przydzial(liczba) {
   if (!pliki.length) throw new Error('Playwright nie widzi żadnego pliku testów');
   const czasy = wczytajCzasy();
   const zCzasami = szacujCzasy(pliki, czasy.pliki);
-  return { odlamki: podziel(zCzasami, { odlamki: liczba }), zCzasami, czasy };
+  const wybrane = opcja('baza') ? wybierzPlikiPR(zCzasami, wartosc('baza')) : zCzasami;
+  return { odlamki: podziel(wybrane, { odlamki: liczba }), zCzasami: wybrane };
 }
 
 try {
+  if (opcja('baza') && !wartosc('baza')) throw new Error('--baza wymaga wskazania commita lub gałęzi');
   if (opcja('czasy-z')) {
     const raporty = wartosc('czasy-z').split(',').filter(Boolean).map((p) => JSON.parse(fs.readFileSync(path.resolve(p), 'utf8')));
     const { niepelne, nieudane } = uwagiDoRaportow(raporty);

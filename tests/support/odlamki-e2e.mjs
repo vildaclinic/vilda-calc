@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -26,6 +27,55 @@ export const PLIK_CZASOW = path.join(korzen, WZGLEDNY_PLIK_CZASOW);
 export const WORKERY_NA_ODLAMEK = 4;
 // Szacunek dla pliku bez pomiaru, gdy w tabeli nie ma żadnego pomiaru (pusta tabela).
 const SEKUNDY_NA_TEST_BEZ_POMIAROW = 5;
+
+const PODSTAWOWE_E2E = [
+  // Uruchomienie aplikacji i nawigacja na komputerze i telefonie.
+  'application.spec.mjs',
+  'mobile.spec.mjs',
+  // Szybka ścieżka i bezpieczna obsługa zapisanych wizyt w nowym Gabinecie.
+  'home-gabinet-rapid.spec.mjs',
+  'home-gabinet-overview.spec.mjs',
+  'home-gabinet-visit-trash.spec.mjs',
+  // Obliczenia i interpretacja kliniczna w rzeczywistym interfejsie.
+  'klirens-stage1-egfr.spec.mjs',
+  'lab-puberty-clinical-context.spec.mjs',
+  'sds-wzrostu-rdzen.spec.mjs',
+  // Zapis, izolacja kont, kopia i synchronizacja danych pacjenta.
+  'care-plans-sync.spec.mjs',
+  'care-templates-vault-indexeddb.spec.mjs',
+  'karta-pacjenta-zapis.spec.mjs',
+  'kopia-konta-dane-konta.spec.mjs',
+  'patient-clinical-checkpoint-store.spec.mjs',
+  'save-commit-reference.spec.mjs',
+  'synchronizacja-straznik.spec.mjs',
+  // Instalacja, aktualizacja i ponowne uruchomienie offline.
+  'pwa.spec.mjs',
+  'pwa-pierwsza-wizyta.spec.mjs',
+  'pwa-precache-migracja.spec.mjs',
+  'pwa-strony-offline.spec.mjs'
+];
+
+/** Pliki spec dodane lub zmienione względem dokładnej bazy uruchomienia. */
+export function zmienionePlikiE2E(baza, katalogRepozytorium = korzen) {
+  const git = (args) => execFileSync('git', args, {
+    cwd: katalogRepozytorium, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe']
+  });
+  const commit = git(['rev-parse', '--verify', '--end-of-options', `${baza}^{commit}`]).trim();
+  const katalog = 'tests/e2e/';
+  return git(['diff', '--name-only', '--no-renames', '--diff-filter=ACMRT', '-z', commit, 'HEAD', '--', katalog])
+    .split('\0')
+    .filter((plik) => plik.endsWith('.spec.mjs'))
+    .map((plik) => plik.slice(katalog.length));
+}
+
+/** Stałe scenariusze i pliki testowe dodane lub zmienione względem bazy PR-a. */
+export function wybierzPlikiPR(pliki, baza, katalogRepozytorium = korzen) {
+  const wybrane = new Set([...PODSTAWOWE_E2E, ...zmienionePlikiE2E(baza, katalogRepozytorium)]);
+  const widziane = new Set(pliki.map((p) => p.plik));
+  const brak = [...wybrane].filter((plik) => !widziane.has(plik));
+  if (brak.length) throw new Error(`Playwright nie widzi wybranych plików E2E: ${brak.join(', ')}`);
+  return pliki.filter((p) => wybrane.has(p.plik));
+}
 
 /**
  * Przechodzi raport JSON Playwrighta (--list albo przebieg) i zbiera każdy test z plikiem, który

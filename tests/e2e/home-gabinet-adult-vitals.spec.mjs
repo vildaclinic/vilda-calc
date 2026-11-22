@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { createFictionalVault, fictionalPatient, readyForPatient, shellFrame } from '../support/centile-live-fixture.mjs';
+import { choosePatient } from '../support/gabinet-patient-fixture.mjs';
 
 test.use({serviceWorkers: 'block', reducedMotion: 'reduce'});
 test.setTimeout(180_000);
@@ -21,14 +22,12 @@ test('adult analysis projects the native pressure and pulse and opens the same m
   await page.reload({waitUntil: 'load'});
   const frame = await shellFrame(page);
   await readyForPatient(frame);
-  const start = frame.locator('#vhomeGabinetStart'), header = frame.locator('#vhomeGabinetHeader');
-  await expect(start).toBeVisible();
-  await start.getByRole('searchbox').fill('Joanna');
-  await start.locator('#vgs-results').getByRole('button', {name: /Joanna/}).click();
-  await expect(frame.locator('#vhomePatientOverview')).toBeVisible({timeout: 15_000});
+  const header = frame.locator('#vhomeGabinetHeader');
+  await choosePatient(frame, 'Joanna');
   await header.getByRole('tab', {name: 'Analiza', exact: true}).click();
   const card = frame.locator('#vhomeAdultVitalsCard');
   await expect(card).toBeVisible();
+  await expect(card).toHaveCSS('background-color', 'rgb(255, 255, 255)');
   await expect(card).toContainText('124/79');
   await expect(card).toContainText('76 ud./min');
   await expect(frame.locator('#waistCm')).toHaveValue('82');

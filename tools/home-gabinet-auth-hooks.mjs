@@ -3,12 +3,26 @@ import { applyInlinePatientHooks, reverseInlinePatientHooks } from './home-inlin
 import { applyOverviewRemindersHooks, reverseOverviewRemindersHooks } from './home-overview-reminders-auth-hooks.mjs';
 import { applyPatientNavigationHooks, reversePatientNavigationHooks } from './home-patient-navigation-auth-hooks.mjs';
 
+import { applyRegistrationAuthHooks, reverseRegistrationAuthHooks } from './home-registration-auth-hooks.mjs';
+
 function applyOverviewHooks(source) {
   return applyEncounterNoteAuthHooks(applyInlinePatientHooks(applyOverviewRemindersHooks(source)));
 }
 
-export function applyGabinetAuthHooks(source) {
-  return applyPatientNavigationHooks(applyOverviewHooks(source));
+function applyRegistration(source, inline = true) {
+  return applyRegistrationAuthHooks(applyPatientNavigationHooks(applyOverviewHooks(source)), inline);
+}
+
+// The chart knows the recorded sex even when a rapid intake left that field empty.
+const previousChart = 'root:Eo,patientId:t,patientName:w,openerId:';
+const chartWithReferenceSex = 'root:Eo,patientId:t,patientName:w,referenceSex:m.sex,openerId:';
+function chartReferenceSex(source, reverse = false) {
+  const before = reverse ? chartWithReferenceSex : previousChart;
+  if (source.split(before).length !== 2) throw new Error('Missing or repeated patient chart reference sex hook.');
+  return source.replace(before, reverse ? previousChart : chartWithReferenceSex);
+}
+export function applyGabinetAuthHooks(source, inline = true) {
+  return chartReferenceSex(applyRegistration(source, inline));
 }
 
 // The older reproducers also accept their historical inputs. Reapply exactly
@@ -17,10 +31,16 @@ export function gabinetAuthLayers(source) {
   if (!source.includes('/* BEGIN HOME PATIENT INLINE ADAPTER */') && !source.includes('i.VildaHomeRemindersRuntime?.ownsOverviewHost(host)')) {
     return { base: source, replay: value => value };
   }
-  const hasNavigation = source.includes('function openPatientInHome(');
-  const overview = hasNavigation ? reversePatientNavigationHooks(source) : source;
+  const hasReferenceSex = source.includes(chartWithReferenceSex);
+  const registration = hasReferenceSex ? chartReferenceSex(source, true) : source;
+  const hasRegistration = registration.includes('function showGabinetNewPatient(');
+  const inline = registration.includes('function homeRegistrationForm(');
+  const navigation = hasRegistration ? reverseRegistrationAuthHooks(registration) : registration;
+  const hasNavigation = navigation.includes('function openPatientInHome(');
+  const overview = hasNavigation ? reversePatientNavigationHooks(navigation) : navigation;
   const base = reverseOverviewRemindersHooks(reverseInlinePatientHooks(reverseEncounterNoteAuthHooks(overview)));
-  const replay = hasNavigation ? applyGabinetAuthHooks : applyOverviewHooks;
+  const replay = hasReferenceSex ? value => applyGabinetAuthHooks(value, inline) : hasRegistration ? value => applyRegistration(value, inline)
+    : hasNavigation ? value => applyPatientNavigationHooks(applyOverviewHooks(value)) : applyOverviewHooks;
   if (replay(base) !== source) throw new Error('Gabinet AuthUI layers do not reproduce the current artifact.');
   return { base, replay };
 }

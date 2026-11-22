@@ -49,6 +49,7 @@
   }
 
   const paths = {
+    grid: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
     clipboard: '<rect x="5" y="5" width="14" height="16" rx="2"/><rect x="8" y="2.5" width="8" height="5" rx="1.5"/>',
     calendar: '<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 3v4m10-4v4M3 11h18"/>',
     users: '<circle cx="9" cy="8" r="3.5"/><path d="M2 20c0-7 14-7 14 0M16 4a4 4 0 0 1 0 8m2 3c3 1 4 3 4 5"/>',
@@ -58,6 +59,37 @@
 
   function icon(key) {
     return '<svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round">' + paths[key] + '</svg>';
+  }
+
+  const entries = [
+    {
+      action: 'office', title: 'Gabinet',
+      description: 'Wyszukaj pacjenta i prowadź wizyty.',
+      drawing: '<path d="M7 4.5v2.8a5.5 5.5 0 0 0 11 0V4.5m-11 0h1.6m7.8 0H18M12.5 13v3.9a5.8 5.8 0 0 0 11.6 0v-2.3"/><circle cx="24.1" cy="12" r="2.4"/>'
+    },
+    {
+      action: 'new', title: 'Nowy pacjent',
+      description: 'Załóż kartotekę pacjenta.',
+      drawing: '<circle cx="12" cy="9" r="4.2"/><path d="M4.5 23v-2c0-3 3.4-5.5 7.5-5.5 1.2 0 2.4.2 3.5.7M21.5 15.2v9m-4.5-4.5h9"/>'
+    },
+    {
+      action: 'rapid', title: 'Szybka ścieżka',
+      description: 'Wpisz pomiary w Analizie i zapisz pacjenta.',
+      drawing: '<path d="M3.5 9.5h6m-7.3 5h5.4m-3 5h3m5-15v18.7h14.6m-11.8-7.4 3.6-4.6 3.3 2 4.3-5.3"/>'
+    },
+    {
+      action: 'quick', title: 'Szybkie obliczenie',
+      description: 'Sprawdź wyniki bez zakładania kartoteki.',
+      drawing: '<rect x="6.5" y="3" width="16" height="22" rx="2.5"/><path d="M10.1 7h8.8v4.1h-8.8zM10.6 15.4h2.2m3.7 0h2.2m-8.1 4.7h2.2m3.7 0h2.2"/>'
+    }
+  ];
+
+  function card(entry) {
+    return '<button class="vgs-launch-tile" type="button" data-entry="' + entry.action +
+      '" aria-labelledby="vgs-title-' + entry.action + '" aria-describedby="vgs-detail-' + entry.action + '">' +
+      '<span class="vgs-launch-symbol" aria-hidden="true"><svg viewBox="0 0 30 28" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' +
+      entry.drawing + '</svg></span><span class="vgs-launch-name" id="vgs-title-' + entry.action + '">' +
+      entry.title + '</span><span class="vgs-launch-detail" id="vgs-detail-' + entry.action + '">' + entry.description + '</span></button>';
   }
 
   function quickForm() {
@@ -129,10 +161,13 @@
     const root = scope.attachShadow({mode:'open'});
     const link = doc.querySelector('link[href*="vilda_home_gabinet_start.css"]');
     if (link) root.append(link.cloneNode(false));
-    const page = element('section','vgs-start');
-    const now = new Date();
-    let day = civilDay(now);
-    page.innerHTML = '<div class="vgs-heading"><h1>Gabinet</h1><div class="vgs-date">' + icon('calendar') + '<time></time></div></div>' +
+    const launcher = element('section','vgs-start vgs-launch');
+    launcher.setAttribute('aria-labelledby','vgs-launch-title');
+    launcher.innerHTML = '<div class="vgs-heading"><h1 id="vgs-launch-title">Rozpocznij pracę</h1><div class="vgs-date">' + icon('calendar') + '<time></time></div></div>' +
+      '<div class="vgs-launch-tiles">' + entries.map(card).join('') + '</div><p class="vgs-launch-status" role="status"></p>';
+    const page = element('section','vgs-start vgs-office');
+    let day = civilDay(new Date());
+    page.innerHTML = '<button type="button" class="vgs-back">' + icon('grid') + 'Ekran startowy</button><div class="vgs-heading"><h1>Gabinet</h1><div class="vgs-date">' + icon('calendar') + '<time></time></div></div>' +
       '<section class="vgs-box vgs-working" aria-label="Rozpoczęta wizyta" hidden></section>' +
       '<section class="vgs-box vgs-search" aria-labelledby="vgs-search-title"><div class="vgs-heading-row"><span class="vgs-tile">' + icon('users') + '</span><h2 id="vgs-search-title">Znajdź pacjenta</h2></div>' +
       '<div class="vgs-controls"><label class="vgs-search-field">' + icon('search') + '<input type="search" id="vgs-query" autocomplete="off" aria-label="Szukaj pacjenta po nazwisku, imieniu lub dacie urodzenia" aria-controls="vgs-results" placeholder="Nazwisko, imię lub data urodzenia"></label>' +
@@ -143,7 +178,7 @@
     const dialog = element('dialog','vgs-dialog');
     dialog.setAttribute('aria-labelledby','vgs-quick-title');
     dialog.innerHTML = quickForm();
-    root.append(page,dialog);
+    root.append(launcher,page,dialog);
     host.replaceChildren(scope);
     const get = s => root.querySelector(s);
     const query = get('#vgs-query'), results = get('#vgs-results'), toggle = get('.vgs-list-toggle');
@@ -158,6 +193,8 @@
     sizePlaceholder();
     let sequence = 0, busy = false, destroyed = false, patients = new Map(), reader = null, midnight;
     let directoryError = false;
+    let view = options.initialView === 'office' ? 'office' : 'launch';
+    const launchStatus = get('.vgs-launch-status');
     function current() {
       if (destroyed || !scope.isConnected || w.VildaVault !== vault || !w.VildaProAccess?.hasAccess() || !w.VildaAuthUI?.isBootReady()) return false;
       try { vault.assertSyncOperationSession(session); return true; } catch (_) { return false; }
@@ -207,6 +244,11 @@
       cell.firstElementChild.setAttribute('aria-hidden','true');
       return cell;
     }
+    const createAction = element('button','vgs-add','Dodaj pacjenta');
+    createAction.type = 'button';
+    createAction.onclick = () => openEntry(options.onNewPatient);
+    const searchFooter = element('div','vgs-results-footer');
+    searchFooter.append(createAction);
     function search() {
       results.replaceChildren();
       const terms = normalized(query.value).split(/\s+/).filter(Boolean);
@@ -217,6 +259,7 @@
         results.append(row);
       }
       if (!items.length) results.append(element('p','vgs-empty',directoryError ? 'Nie udało się wczytać listy pacjentów.' : 'Brak pacjentów spełniających kryteria wyszukiwania.'));
+      if (options.onNewPatient) results.append(searchFooter);
       results.hidden = false;
       toggle.setAttribute('aria-expanded','true');
     }
@@ -245,13 +288,17 @@
       const valid = () => current() && request === sequence;
       const now = new Date(), nextDay = new Date(now.getFullYear(),now.getMonth(),now.getDate()+1);
       day = civilDay(now);
-      const date = get('.vgs-date time');
-      date.dateTime = day;
-      date.textContent = now.toLocaleDateString('pl-PL',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+      const label = now.toLocaleDateString('pl-PL',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+      for (const date of root.querySelectorAll('.vgs-date time')) {
+        date.dateTime = day;
+        date.textContent = label;
+      }
       clearTimeout(midnight);
       midnight = w.setTimeout(refresh, nextDay.getTime() - now.getTime() + 100);
-      const dateForRead = day;
       reader?.dispose();
+      reader = null;
+      if (view !== 'office') return;
+      const dateForRead = day;
       let ownReader;
       const directory = vault.listPatients({strict:true,isCurrent:valid});
       const calendar = Promise.resolve().then(() => {
@@ -307,9 +354,43 @@
     doc.addEventListener('pointerdown',offSearch,listen);
     doc.addEventListener('focusin',offSearch,listen);
     doc.addEventListener('vilda:home-encounter-changed',refresh,listen);
-    get('.vgs-quick').onclick = () => { if (current()) { closeSearch(); dialog.showModal(); } };
+    function showView(next, focus = false) {
+      if (!current()) return;
+      view = next === 'office' ? 'office' : 'launch';
+      closeSearch();
+      launcher.hidden = view !== 'launch';
+      page.hidden = view !== 'office';
+      launchStatus.textContent = '';
+      if (focus) {
+        const nextFocus = view === 'office' ? query : get('[data-entry="office"]');
+        nextFocus.focus({preventScroll:true});
+      }
+      options.onViewChange?.(view);
+      return refresh();
+    }
+    function openQuick() {
+      if (!current() || dialog.open) return;
+      closeSearch();
+      dialog.showModal();
+    }
+    async function openEntry(handler) {
+      if (busy || !current()) return;
+      busy = true;
+      const status = view === 'office' ? feedback : launchStatus;
+      status.textContent = '';
+      try {
+        await handler();
+      } catch (_) {
+        if (current()) status.textContent = 'Nie udało się otworzyć formularza. Spróbuj ponownie.';
+      } finally { busy = false; }
+    }
+    get('.vgs-back').onclick = () => showView('launch',true);
+    get('[data-entry="office"]').onclick = () => showView('office',true);
+    get('[data-entry="new"]').onclick = () => openEntry(options.onNewPatient);
+    get('[data-entry="rapid"]').onclick = () => openEntry(options.onRapid);
+    get('[data-entry="quick"]').onclick = get('.vgs-quick').onclick = openQuick;
     bindQuick(dialog,current);
-    active = {scope,vault,destroy,refresh,focusSearch:()=>query.focus()};
+    active = {scope,vault,destroy,refresh,showView,focusSearch:()=>showView('office',true)};
     if (!watched.has(vault)) {
       watched.add(vault);
       vault.onLock(() => { if (active?.vault === vault) active.destroy(); });
@@ -318,7 +399,7 @@
       }
     }
     schedule.append(element('p','vgs-empty','Wczytywanie terminarza…'));
-    refresh();
+    showView(view);
     return active;
   }
   w.VildaHomeGabinetStart = Object.freeze({mount});

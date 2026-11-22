@@ -120,6 +120,50 @@ html.vilda-home-workspace .vhome-other-tools .vhome-tool-tile:enabled:hover {
   background: var(--card);
   font-size: 15px;
 }
+.vilda-home-workspace #currentSummaryCard { --vhome-chart-button-height: 3rem; }
+.vilda-home-workspace .vhome-summary-actions { margin-block-start: var(--space-8px); }
+html.vilda-home-workspace .main-content #vhomeGenerateCharts {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-10px);
+  min-height: var(--vhome-chart-button-height);
+  width: 100%;
+  margin: 0;
+  padding: var(--space-10px) var(--space-16px);
+  color: var(--hc-text, #087780) !important;
+  background: var(--hc-module-btn-bg, #f5fbfa) !important;
+  border: var(--hc-card-border-width, var(--border-hairline)) solid var(--hc-module-btn-border, #c6dde0) !important;
+  border-radius: var(--radius-9) !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  font: inherit;
+  font-size: .9375rem;
+  font-weight: 600;
+  line-height: 1.4;
+  text-align: center;
+  transform: none;
+}
+.vilda-home-workspace #vhomeGenerateCharts svg { flex: 0 0 19px; width: 19px; height: 19px; }
+html.vilda-home-workspace .main-content #vhomeGenerateCharts:hover:not(:disabled) {
+  background: var(--hc-module-btn-hover-bg, #edf7f5) !important;
+  border-color: var(--hc-module-btn-active-border, #99c6c7) !important;
+}
+.vilda-home-workspace #vhomeGenerateCharts:focus-visible { outline: var(--border-emphasis) solid var(--primary); outline-offset: 2px; }
+@media (min-width: 851px) {
+  /* Both summary tabs fit their contents against the card's bottom padding. */
+  .vilda-home-workspace #currentSummaryCard.vilda-summary-height-matched:has(> .vhome-summary-actions:not([hidden])) {
+    padding-block-end: calc(var(--space-1) + var(--vhome-chart-button-height) + var(--space-8px));
+  }
+  .vilda-home-workspace #currentSummaryCard.vilda-summary-height-matched > .vhome-summary-actions {
+    position: absolute;
+    inset-inline: var(--space-1);
+    inset-block-end: var(--space-1);
+    margin: 0;
+  }
+}
 .vilda-home-workspace #vhomeToolDialog .vhome-dialog-body { display: flex; overflow: hidden; padding: 0; }
 .vilda-home-workspace .vhome-tool-frame { display: block; flex: 1; width: 100%; min-width: 0; min-height: 0; border: 0; }
 .vhome-tool-draft-document { color-scheme: inherit; }
@@ -301,7 +345,7 @@ html.vilda-home-workspace .vhome-tools-grid[data-columns='4'] .vhome-tool-tile {
   padding: var(--space-20px);
   border: var(--border-hairline) solid var(--line);
   border-radius: var(--radius-13);
-  background: var(--card);
+  background: var(--bg);
   color: var(--text);
 }
 .vilda-home-workspace .vhome-adult-vitals[hidden],
