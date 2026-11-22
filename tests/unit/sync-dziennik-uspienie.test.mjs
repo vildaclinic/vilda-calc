@@ -203,6 +203,7 @@ import { fileURLToPath } from 'node:url';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { parse } from 'acorn';
 import { analyze } from 'eslint-scope';
+import { restoreVisitTrashBaseline } from '../../tools/visit-trash-vault-delta.mjs';
 import { magazynZRejestrem, naglowek, okno, wytnijFunkcje } from './sesja-zapisu-uprzaz.mjs';
 import { PRZEDROSTEK_URZADZENIA, SKRYPTY_PUNKTU, ZNACZNIK_MAGAZYNU, oknoMagazynu, przechwycZadaniaWTle } from '../support/okno-magazynu.mjs';
 
@@ -283,6 +284,8 @@ const MIEJSCA_POZA_BLOKIEM = Object.freeze({
   Bpu_usun: { Bem_krokStart: 1, Bem_krokKoniec: 1 },
   Ad: { Bem_krokStart: 1, Bem_krokKoniec: 1 },
   Bkz_doKosza: { Bem_krokStart: 1, Bem_krokKoniec: 1 },
+  VisitTrashChange: { Bem_krokStart: 1, Bem_krokKoniec: 1 },
+  'VisitTrashChange/(funkcja zagnieżdżona)': { Bem_zmiana: 2 },
   qa: { Bem_krokStart: 1, Bem_krokKoniec: 1 },
   ns: { Bem_krokStart: 1, Bem_krokKoniec: 1, Bem_sekcje: 1, Bem_partia: 1 },
   'ns/(funkcja zagnieżdżona)': { Bem_zmiana: 1 },
@@ -637,7 +640,7 @@ function sejfBezWstawek() {
   return { zrodlo, wstawki: wywolania.length };
 }
 function plikiProdukcyjne() {
-  return execFileSync('git', ['ls-files', '-z', '--', '*.js', '*.mjs', '*.cjs', '*.html', '*.htm'], { cwd: KORZEN, encoding: 'utf8' })
+  return execFileSync('git', ['ls-files', '-z', '--', '*.js', '*.mjs', '*.cjs', '*.html', '*.htm'], { cwd: KORZEN, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] })
     .split('\0')
     .filter((p) => p && !p.startsWith('tests/') && !p.startsWith('docs/') && p !== SEJF);
 }
@@ -1061,6 +1064,7 @@ describe('U2(a): identyfikatory Bev_, Bob_ i Bem_ tylko w bloku; _eventLog dokł
     'async function $a(t,e){const Bme_s=Bses_opcje(null);Bem_krokStart();try{return await f()}catch(Bme_x){throw Bpz_zamien(Bme_s,Bme_x)}finally{Bem_krokKoniec()}}',
     'async function Bpu_usun(t,Bpu_s){Bem_krokStart();try{const A=b;return W(A,!0)}finally{Bem_krokKoniec()}}',
     'async function Ad(t,e){Bem_krokStart();try{const A=b;return W(A,U)}finally{Bem_krokKoniec()}}',
+    "async function VisitTrashChange(patientId,visitId,options,restore){Bem_krokStart();try{return await Ap(patientId,async function(){await commit();if(change.removes.length)Bem_zmiana('stomb',change.removes,session);if(change.writes.length)Bem_zmiana('snap',change.writes.map(row=>({patientId,snapshotId:row.snapshotId})),session)})}finally{Bem_krokKoniec()}}",
     'async function qa(){Bem_krokStart();try{if(!T())throw new Error("x");return{persons:a,notes:s}}finally{Bem_krokKoniec()}}',
     'async function ns(t,e,Bpb_o){const Bpi_s=Bses_opcje(null);Bem_krokStart();try{const O=[],N=[];await Bzw_podBlokada(k,async function(){await Bkz_poImporcie(O);if(O.length)Bem_zmiana("snap",O.map(function(Bq){return{patientId:i,snapshotId:Bq.snapshotId}}),Bpi_s)});if(N.length){try{const C=await Le({patientNotes:N});_=C.n;Bem_sekcje({patientNotes:N},Bpi_s)}catch(Bpi_x){g()}}Bem_partia("importPatientFromEnvelope");return W(A,{patientId:i})}catch(Bpi_x){throw Bpz_zamien(Bpi_s,Bpi_x)}finally{Bem_krokKoniec()}}',
     'async function ss(t,e,Bpb_o){Bem_krokStart();try{const A=b;for(const u of m)await Bzw_podBlokada(k,async function(){if(A>0){Bem_zmiana("snap",Bng_zs.map(function(Bq){return{patientId:u.patientId,snapshotId:Bq.snapshotId}}));y++}else{d++;if(Bng_zn.length)Bem_zmiana("snap",Bng_zn.map(function(Bq){return{patientId:u.patientId,snapshotId:Bq.snapshotId}}))}});await Le(a);Bem_sekcje(a);Bem_partia("mergeVaultBackup");return W(A,{mergedPatientCount:y})}finally{Bem_krokKoniec()}}',
@@ -1405,6 +1409,16 @@ describe('U2(b): pliki produktu poza sejfem nie znają nowego API', () => {
     const winne = [];
     for (const plik of plikiProdukcyjne()) {
       let tresc = fs.readFileSync(path.join(KORZEN, plik), 'utf8');
+      if (plik === 'runtime/visit-trash-v1/vault-fragment.js') {
+        // This source is compiled verbatim into the hash-pinned vault. The same
+        // four call sites are checked on the AST above. Every other name here
+        // remains subject to the product-wide scan below.
+        expect(() => restoreVisitTrashBaseline(ZRODLO)).not.toThrow();
+        expect(ile(ZRODLO, tresc), 'czytelne źródło kosza dokładnie raz w sejfie').toBe(1);
+        const calls = /\bBem_(?:krokStart|krokKoniec|zmiana)(?=\()/g;
+        expect(tresc.match(calls)).toEqual(['Bem_krokStart', 'Bem_zmiana', 'Bem_zmiana', 'Bem_krokKoniec']);
+        tresc = tresc.replace(calls, '');
+      }
       // E2-PR6: polityka prywatności opisuje bazę kolejki (nazwa w tekście, dokładnie raz) — wycięta przed sprawdzeniem.
       if (plik === 'polityka-prywatnosci.html') {
         const OPIS_BAZY = '<code>vilda_sync_&lt;userId&gt;</code>';
