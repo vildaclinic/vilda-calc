@@ -79,6 +79,7 @@ test('rapid intake stores one visit per save, starts the next patient clean and 
   const unchanged = await visitsOf(frame, ids.a);
   await home.locator('[data-entry="rapid"]').click();
   await fillPatient(frame, 'Alicja', 'Testowa', '10', '6', 'F', '33.5', '140');
+  await expect(button(frame.locator('#currentSummaryCard'), 'Generuj siatki')).toBeVisible();
   await frame.locator('[data-growth-open="data"]').click();
   const growth = frame.getByRole('dialog', { name: 'Zaawansowane obliczenia wzrostowe', exact: true });
   await growth.locator('[data-growth-field="advMotherHeight"]').fill('166');

@@ -23,6 +23,7 @@
   const adapters = new Map();
   let dialog, grid, trigger, chartButton, downShortcut, active, resizeParent, frame = 0;
   let legacyReminder, summaryReminder, adultCard, adultHistory;
+  let summaryActions;
   const byId = id => d.getElementById(id);
   const serialize = value => JSON.stringify(value);
   const detach = value => JSON.parse(serialize(value));
@@ -408,7 +409,10 @@
           : hasData ? 'Zapisano dane modułu' : 'Bez zapisanego pomiaru');
       state.dataset.state = hasData ? 'saved' : 'empty';
     });
-    if (chartButton) chartButton.disabled = !w.VildaHomeGrowth?.canOpenCharts?.('pdf');
+    if (chartButton) {
+      summaryActions.hidden = summaryActions.parentElement.dataset.isChild !== 'true';
+      chartButton.disabled = !w.VildaHomeGrowth?.canOpenCharts?.('pdf');
+    }
     const growth = byId('vhomeGrowthCard');
     downShortcut.hidden = !!(growth && !growth.hidden) || !canOpenDownSyndrome();
     if (summaryReminder) {
@@ -468,10 +472,14 @@
     dialog.addEventListener('keydown', parentKey);
     const summary = byId('currentSummaryCard');
     if (summary) {
-      chartButton = element(d, 'button', 'vhome-generate-charts', 'Generuj siatki');
+      summaryActions = element(d, 'div', 'vhome-summary-actions');
+      summaryActions.hidden = true;
+      chartButton = element(d, 'button', '', 'Generuj siatki');
       chartButton.id = 'vhomeGenerateCharts'; chartButton.type = 'button';
+      chartButton.setAttribute('aria-haspopup', 'dialog');
       chartButton.addEventListener('click', () => w.VildaHomeGrowth.openCharts({ mode: 'pdf', opener: chartButton }));
-      summary.after(chartButton);
+      summaryActions.append(chartButton);
+      summary.append(summaryActions);
       byId('bmiCard')?.classList.add('vhome-replaced-result');
       legacyReminder = byId('wflReminderBMI');
       if (legacyReminder) {

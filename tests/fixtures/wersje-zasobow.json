@@ -1668,12 +1668,12 @@
   "sha256": "177e98f3e7a6ea77d603fdfab360efec5b9693db19203b3f784c03f0ef32d31a"
  },
  "vilda_home_tools.css": {
-  "v": 4,
-  "sha256": "b398af04985b07e7d62e35cd8a278a188a9e2a8988df4432b57207453c7d41f6"
+  "v": 5,
+  "sha256": "d759161195361673ef6e174af19f075a3fa5585df619369bdec9727148a0b4cb"
  },
  "vilda_home_tools.js": {
-  "v": 4,
-  "sha256": "4f8b5db342857fd017ebb47be705353495905a8b4e29d3e9ff80a637e195fff9"
+  "v": 5,
+  "sha256": "5f468b39b5febe504a3cf1690adfd34969479dbbf0bdffb036c3ca27c5139801"
  },
  "vilda_home_tools_anthropometry.js": {
   "v": 2,
