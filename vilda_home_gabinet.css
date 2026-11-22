@@ -187,7 +187,7 @@ html.vilda-home-workspace #vhomeVisitTrashConfirm .vhome-dialog-apply { backgrou
   border-radius: var(--radius-8) !important; font: 620 1rem/1.3 Inter,system-ui,sans-serif; box-shadow: none !important;
 }
 .gb-rapid-button.gb-rapid-primary { background: var(--primary) !important; border-color: var(--primary) !important; color: white !important; }
-.gb-rapid-button:focus-visible, #gbRapidMatches button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.gb-rapid-button:focus-visible, #gbRapidMatches button:focus-visible { outline: var(--border-emphasis) solid var(--primary); outline-offset: 2px; }
 [data-rapid-receipt] { padding: var(--space-20px); color: var(--text); }
 [data-rapid-receipt] :is(h2,h3,dd) { margin: 0; color: var(--text-heading); text-align: start; }
 [data-rapid-receipt] h2 { font-size: 1.22rem; }

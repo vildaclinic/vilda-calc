@@ -1585,7 +1585,7 @@
  },
  "vilda_home_gabinet.css": {
   "v": 6,
-  "sha256": "c9ed4fe3a85bc13a47e49079bb8d9fc3e6ca87807dc81f4790037a871ae67952"
+  "sha256": "ec0588b38a875e58e67c51840b625645742e01f10ed65c4dc9d634727f00ec41"
  },
  "vilda_home_gabinet.js": {
   "v": 7,
@@ -1597,7 +1597,7 @@
  },
  "vilda_home_gabinet_start.css": {
   "v": 3,
-  "sha256": "2006235ae761d5182b2adf40f26d6a500a10c3e4405c88969f556dd03e845214"
+  "sha256": "12b9f3a7b5f212bb419725523ac470753fd9ac927413b410d3c5127b3ee94b74"
  },
  "vilda_home_gabinet_start.js": {
   "v": 4,
@@ -2185,7 +2185,7 @@
  },
  "vilda_session_bridge.js": {
   "v": 233,
-  "sha256": "aade3c6b7ecb7f12a5da61e7ad042f662805cf00e204e4aa8c8ac9eabd0d6eb9"
+  "sha256": "f9a35b5b5ef29aaa4df848a0a33be01c5ffefe28a5221e287c1b87dd2f470a53"
  },
  "vilda_sga_birth_results.css": {
   "v": 1,

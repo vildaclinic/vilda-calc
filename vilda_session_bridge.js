@@ -72,7 +72,7 @@ var h=n.document;h&&(h.readyState==="loading"?h.addEventListener("DOMContentLoad
 (function (w) {
   'use strict';
   if (w.__VILDA_HOME_GABINET_PREVIEW__ !== true || w.__VILDA_HOME_WORKSPACE_PREVIEW__ !== true) return;
-  const notice = 'Uzupełnij płeć w Karcie pacjenta (Działania → Edytuj pacjenta), aby użyć tego narzędzia.';
+  const notice = 'Uzupe\u0142nij p\u0142e\u0107 w Karcie pacjenta (Dzia\u0142ania \u2192 Edytuj pacjenta), aby u\u017cy\u0107 tego narz\u0119dzia.';
   function blocked(route, source) {
     if (route !== 'docpro' && route !== 'klirens') return false;
     const id = w.sessionStorage.getItem('vildaCurrentPatientId');

@@ -44,6 +44,7 @@
 // Czerwone na audycie sprzed zmiany (sprawdzone na 2af9de53 i c209fa6b): P0, P1, P4, P7, P8, P10, P11, P12, P13 oraz S1 i S2.
 // Zielone na audycie sprzed zmiany: K (każdy punkt).
 import { afterEach, describe, expect, it } from 'vitest';
+import { restoreRapidVisitBaseline } from '../../tools/rapid-visit-vault-delta.mjs';
 import { naglowek, sprzatnij, urzadzenie, wynik, wytnijFunkcje, zrodlo } from './sesja-zapisu-uprzaz.mjs';
 
 afterEach(() => sprzatnij());
@@ -261,7 +262,9 @@ describe('P-SESJA-ZAPISU: strażnik źródła sejfu (vilda_vault.js)', () => {
 
   it('S2: rdzeń Bpz_zapisWSesji — Bpz_pilnuj(Bpz_s) przy każdym await I().put…, po Bz1 i nadaniu tożsamości wizyty, na początku Bpz_sekcja i przed Bcommit_remember → Bzu_zapamietaj; 12 wstawek', () => {
     expect(src.includes('async function Bpz_zapisWSesji('), 'rdzeń zapisu Bpz_zapisWSesji w vilda_vault.js').toBe(true);
-    const rdzen = wytnijFunkcje(src, 'Bpz_zapisWSesji');
+    // The ordinary save retains its original guard at every write. Reverse only
+    // the hash-verified rapid-intake hooks to check that branch independently.
+    const rdzen = wytnijFunkcje(restoreRapidVisitBaseline(src), 'Bpz_zapisWSesji');
 
     const zapisy = wszystkie(rdzen, /await\s+I\(\)\.(put\w*)\(\s*b\s*,\s*PatientClinicalWriteValue\(\s*b\s*,[^)]*\)\s*\)\s*;/);
     expect(zapisy.map((m) => m[1]), 'zapisy magazynu w rdzeniu').toEqual(expect.arrayContaining(['putSnapshotForUser', 'putPatientForUser']));
@@ -296,5 +299,19 @@ describe('P-SESJA-ZAPISU: strażnik źródła sejfu (vilda_vault.js)', () => {
     expect(rdzen, 'po asynchronicznym ustaleniu tożsamości wizyty ponownie sprawdzamy sesję przed szyfrowaniem i zapisem')
       .toContain('t=await Bvisit_save(t,s,Bc0,new Date().toISOString());Bpz_pilnuj(Bpz_s);');
     expect(wszystkie(rdzen, /Bpz_pilnuj\(\s*Bpz_s\s*\)\s*;/).length, 'liczba sprawdzeń sesji w rdzeniu').toBe(12);
+  });
+
+  it('S3: zapis z Szybkiej ścieżki jest otoczony tymi samymi strażnikami sesji', () => {
+    const rdzen = wytnijFunkcje(src, 'Bpz_zapisWSesji');
+    expect(rdzen).toContain(PILNUJ + 'if(!n.rapidVisit)await I().putSnapshotForUser(b,PatientClinicalWriteValue(b,w));' + PILNUJ);
+    const warunek = PILNUJ + 'if(n.rapidVisit){';
+    const poczatek = rdzen.indexOf(warunek);
+    expect(poczatek).toBeGreaterThan(-1);
+    const otwarcie = poczatek + warunek.length - 1;
+    const koniec = domknijKlamre(rdzen, otwarcie);
+    const transakcja = rdzen.slice(otwarcie + 1, koniec);
+    expect(wszystkie(transakcja, /\bawait\b/)).toHaveLength(1);
+    expect(transakcja.trimEnd()).toMatch(/await adapter\.commitRapidVisitForUser\(b,PatientClinicalWriteValue\(b,\{[^{}]*assertCurrent:n\.rapidVisit\.assertCurrent\}\)\);$/);
+    expect(rdzen.slice(koniec + 1)).toMatch(/^else await I\(\)\.putPatientForUser\(b,PatientClinicalWriteValue\(b,u\)\);Bpz_pilnuj\(Bpz_s\);/);
   });
 });
