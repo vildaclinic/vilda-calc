@@ -87,6 +87,24 @@ describe('Gabinet: ramka właściciela i powrót do modułu', () => {
     h.shell.navigate('start');
     expect(h.shell.peekPatientReturnRoute()).toBeNull();
   });
+  it('lekki kalkulator bez sejfu otwiera Kartę przez zalogowaną powłokę; zablokowana sesja odmawia', async () => {
+    const {h, start, account} = preview();
+    h.shell.navigate('homa');
+    const lightweight = h.load('homa').contentWindow;
+    delete lightweight.VildaVault;
+    let guest = false;
+    lightweight.VildaSession = {hasSessionKey: () => true, isLoggedIn: () => !guest, isGuestMode: () => guest};
+    const opened = h.shell.openHomePatient('fikcyjny', {sourceWindow:lightweight});
+    start(); h.tick(150); await expect(opened).resolves.toBe(true);
+    expect(h.shell.returnFromPatientCard()).toBe(true);
+    expect(h.shell.getCurrentRoute()).toBe('homa');
+    guest = true;
+    await expect(h.shell.openHomePatient('fikcyjny', {sourceWindow:lightweight})).resolves.toBe(false);
+    guest = false;
+    lightweight.VildaVault = account('inne-konto');
+    await expect(h.shell.openHomePatient('fikcyjny', {sourceWindow:lightweight})).resolves.toBe(false);
+    expect(h.shell.getCurrentRoute()).toBe('homa');
+  });
   it('kolejna nawigacja lub inne konto w docelowej ramce anuluje przekazanie', async () => {
     const {h, source, start, account} = preview();
     const stale = h.shell.openHomePatient('fikcyjny', {sourceWindow:source});

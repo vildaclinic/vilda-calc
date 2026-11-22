@@ -1132,18 +1132,27 @@ function Sn_keepDirectoryHere(win){
 function Sn_homePatient(kind,id,options,ownSaveCurrent){
   options=options||{};
   if(!Sn_hasHomeNavigation()||kind!=="list"&&(typeof id!=="string"||!id))return Promise.resolve(false);
-  var source=Gp_w(c),owner=Sp_account(a),sourceAccount=source&&Sp_account(source),writer=source&&Sw_capture(source);
-  if(!writer||!owner||sourceAccount?.userId!==owner.userId||options.sourceWindow&&options.sourceWindow!==a&&options.sourceWindow!==source){
+  var sourceRoute=c,source=Gp_w(c),owner=Sp_account(a),sourceAccount=source&&Sp_account(source),writer=source&&Sw_capture(source);
+  // These four embedded tools use the session bridge without a native vault.
+  // Only the authenticated host may navigate; Start verifies its own account
+  // before opening any record. A present, locked or foreign vault never falls back.
+  var bridge=!source?.VildaVault&&["homa","steroidy","edu","cukrzyca"].includes(sourceRoute)&&source?.VildaSession;
+  function sourceCurrent(){
+    if(sourceAccount)return sourceAccount.userId===owner.userId&&Sp_sameAccount(source,sourceAccount);
+    return !!(bridge&&source.VildaSession===bridge&&!source.VildaVault&&bridge.hasSessionKey?.()&&
+      bridge.isLoggedIn?.()&&!Sp_sessionUnavailable(source));
+  }
+  if(!writer||!owner||!sourceCurrent()||options.sourceWindow&&options.sourceWindow!==a&&options.sourceWindow!==source){
     Sn_homeNotice("Nie można potwierdzić aktywnego konta i formularza.");
     return Promise.resolve(false);
   }
-  var origin=c==="start"?b:c,sourceRoute=c;
+  var origin=c==="start"?b:c;
   Sn_cancelRequest();
   return new Promise(function(resolve){
     var request={origin:origin,timer:0,elapsed:0,activationReady:false,resolve:resolve,homeSource:sourceRoute!=="start"?{route:sourceRoute,owner:owner}:null};
     Sn_request=request;
     function current(){
-      return Sn_request===request&&Sp_sameAccount(a,owner)&&Sp_sameAccount(source,sourceAccount)&&
+      return Sn_request===request&&Sp_sameAccount(a,owner)&&sourceCurrent()&&
         (!options.isCurrent||options.isCurrent()===true);
     }
     function finish(ok){
@@ -1191,7 +1200,7 @@ function Sn_homePatient(kind,id,options,ownSaveCurrent){
       activate();
     }
     try{
-      if(kind==="list"&&Sn_keepDirectoryHere(source)){
+      if(kind==="list"&&source.VildaAuthUI?.showPatientsList&&Sn_keepDirectoryHere(source)){
         source.VildaAuthUI.showPatientsList();finish(true);return;
       }
       if(!ownSaveCurrent&&sourceRoute!=="start"&&kind!=="list"&&

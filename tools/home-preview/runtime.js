@@ -59,8 +59,10 @@
       classes.toggle('vilda-pro-inactive', !active);
     }
     presentedDoctorAccess = active;
-    const badge = document.getElementById?.('vildaHomePreviewBadge');
-    if (badge) badge.textContent = active ? 'Podgląd lekarski aktywny · fikcyjne dane' : 'Podgląd · fikcyjne dane';
+    for (const id of ['vildaHomePreviewBadge', 'vildaHomePreviewDrawerBadge']) {
+      const badge = document.getElementById?.(id);
+      if (badge) badge.textContent = active ? 'Podgląd lekarski aktywny · fikcyjne dane' : 'Podgląd · fikcyjne dane';
+    }
     const status = document.getElementById?.('vildaHomePreviewAccessStatus');
     if (status) status.textContent = active ? 'Funkcje lekarskie są aktywne w podglądzie.'
       : state.status === 'error' ? 'Nie można potwierdzić konta demonstracyjnego.' : 'Przygotowywanie dostępu do funkcji lekarskich…';
@@ -144,12 +146,35 @@
   }
 
   function showBadge() {
-    if (!document.getElementById('vildaHomePreviewBadge')) {
-      const badge = document.createElement('a'); badge.id = 'vildaHomePreviewBadge';
-      badge.href = 'subskrypcja.html'; badge.setAttribute('aria-label', 'Sprawdź dostęp demonstracyjny');
-      document.body.append(badge);
+    function place(id, host) {
+      let badge = document.getElementById(id);
+      if (!badge) {
+        badge = document.createElement('a'); badge.id = id; badge.className = 'vilda-home-preview-badge';
+        badge.href = 'subskrypcja.html'; badge.setAttribute('aria-label', 'Sprawdź dostęp demonstracyjny');
+      }
+      if (badge.parentNode !== host) host.append(badge);
     }
-    refreshAccessPresentation();
+    const sidebarSlot = 'aside.sidebar-v2 .chrome-menu-scroll';
+    const drawerSlot = '[data-vilda-chrome-drawer-body] .chrome-menu-scroll';
+    function mount() {
+      const sidebar = document.querySelector(sidebarSlot);
+      const drawer = document.querySelector(drawerSlot);
+      place('vildaHomePreviewBadge', sidebar || document.body);
+      if (drawer) place('vildaHomePreviewDrawerBadge', drawer);
+      refreshAccessPresentation();
+      return Boolean(sidebar && drawer);
+    }
+    // Both menus are built once by native chrome. On a cold start it may
+    // still be mounting them when the export finishes preparing its account.
+    if (!mount() && window.MutationObserver && /\/app\.html$/.test(window.location.pathname)) {
+      const observer = new window.MutationObserver(() => {
+        if (document.querySelector(sidebarSlot) && document.querySelector(drawerSlot)) {
+          observer.disconnect();
+          mount();
+        }
+      });
+      observer.observe(document.body, {childList: true, subtree: true});
+    }
   }
 
   function waitFor(read, label, timeout = 45000) {
