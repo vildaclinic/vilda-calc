@@ -74,6 +74,16 @@
     return !!(payload && typeof payload.name === "string" && payload.name.trim())
       || ["age", "weight", "height", "dobISO"].some(key => user[key] != null && user[key] !== "");
   }
+  // Start owns the selected consultation. DocPro can read that state only as
+  // the current shell-attested writer for this same account, patient and visit.
+  function homeEncounterState() {
+    if (root.__VILDA_HOME_GABINET_PREVIEW__ !== true || !current?.patientId || currentOwner !== owner()) return null;
+    try {
+      const encounter = root.VildaHomeEncounter || root.parent?.VildaShell?.captureHomeVisitWriter(root)?.encounter;
+      const state = encounter?.state(current.patientId);
+      return state?.visitId === current.visitId ? state : null;
+    } catch (_) { return null; }
+  }
   function capture(payload, options) {
     const settings = options || {}, patientId = patient(settings.patientId);
     if (settings.readOnly) {
@@ -82,13 +92,16 @@
     // The caller resolves patient authority using the same guard as Save.
     // A renamed/cleared form cannot borrow a previous patient's encounter.
     const candidate = current && current.patientId === patientId ? current : null;
-    const clinicalDateISO = day(payload && payload.user && payload.user.measuredAtISO);
-    if (settings.readOnly) return candidate ? Object.assign(copy(candidate), clinicalDateISO ? { clinicalDateISO } : {}) : null;
+    // Never derive the day of a selected consultation from the day of one of
+    // its measurements. Null-payload calls are also used to attest the writer.
+    const bound = candidate && payload && homeEncounterState();
+    const clinicalDateISO = bound ? bound.date : day(payload && payload.user && payload.user.measuredAtISO);
+    if (settings.readOnly) return candidate ? Object.assign(copy(candidate), bound || clinicalDateISO ? { clinicalDateISO } : {}) : null;
     if (!candidate) {
       current = null;
       if (settings.allowCreate === false || !hasPatientData(payload)) return null;
       current = create({ patientId, clinicalDateISO });
-    } else if (clinicalDateISO) current.clinicalDateISO = clinicalDateISO;
+    } else if (bound || clinicalDateISO) current.clinicalDateISO = clinicalDateISO;
     return copy(current);
   }
   function commit(payload, patientId) {
@@ -120,5 +133,5 @@
     }
     return null; // The vault supplies legacy inference; never invent a visit while editing.
   }
-  root.VildaVisitContext = Object.freeze({ create, beginNew, load, forImportedFile, capture, commit, currentFor, clear, forMeasurement });
+  root.VildaVisitContext = Object.freeze({ create, beginNew, load, forImportedFile, capture, homeEncounterState, commit, currentFor, clear, forMeasurement });
 })(typeof window !== "undefined" ? window : globalThis);

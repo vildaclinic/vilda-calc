@@ -487,6 +487,8 @@ html.vilda-home-workspace .vhome-detail-dialog .vhome-dialog-close { flex: 0 0 4
 .vilda-home-workspace .vhome-dialog-footer { display: grid; grid-template-columns: minmax(120px, 1fr) minmax(0, 2fr); flex: 0 0 auto; gap: var(--space-12px); padding: var(--space-16px) 25px; border-top: var(--border-hairline) solid var(--line); background: var(--bg); }
 html.vilda-home-workspace .vhome-detail-dialog .vhome-dialog-footer button { min-width: 0; min-height: 46px; margin: 0; padding: var(--space-10px) var(--space-14px); font-size: 16px; line-height: 1.45; border-radius: var(--radius-8) !important;  box-shadow: none !important;}
 html.vilda-home-workspace .vhome-detail-dialog .vhome-dialog-cancel { border: var(--border-hairline) solid var(--line) !important; color: var(--text) !important; background: var(--card) !important; }
+html.vilda-home-workspace .vhome-detail-dialog .vhome-dialog-apply[hidden] { display: none; }
+.vilda-home-workspace .vhome-dialog-footer:has(.vhome-dialog-apply[hidden]) .vhome-dialog-cancel { grid-column: 1 / -1; }
 html.vilda-home-workspace .vhome-detail-dialog .vhome-dialog-apply { background: var(--primary) !important; color: #fff !important; }
 @media (max-width: 600px) {
   .vilda-home-workspace .vhome-detail-dialog,

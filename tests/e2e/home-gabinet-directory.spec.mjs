@@ -43,7 +43,7 @@ test('Gabinet isolates search and quick inputs, and drops delayed records on vau
   const search = page.getByRole('searchbox');
   await search.fill('zuk');
   const results = page.getByRole('region',{name:'Wyniki wyszukiwania pacjentów'});
-  await results.getByRole('button',{name:'Rozpocznij wizytę'}).click();
+  await results.getByRole('button',{name:'Rozpocznij nową wizytę'}).click();
   expect(await page.evaluate(()=>window.picked)).toEqual(['fictional-patient','start']);
   await page.evaluate(async () => {
     window.VildaHomeEncounter = {state:()=>({mode:'new'})};

@@ -194,7 +194,7 @@
         const selected = returnTo.hasAttribute('data-index') ? returnTo.parentElement?.children[index] : returnTo;
         (selected || returnTo).focus({ preventScroll: true });
       }
-      options.onClose?.();
+      options.onClose?.(restoreFocus);
     }
 
     function current() {

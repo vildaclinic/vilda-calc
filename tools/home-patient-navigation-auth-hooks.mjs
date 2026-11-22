@@ -42,9 +42,9 @@ if (!HomePatientRequested && !SearchReturnToken && !(r && (r._syncRefresh || r._
 }
 if(SearchReturnToken&&!ee.s`],
   ["-pill\",type:\"button\",title:\"Dodaj nowy pomiar (waga, wzrost)\",\"aria-label\":\"Dodaj nowy pomiar\",oncli",
-   "-pill\",type:\"button\",title:homePatientRoute()?\"Rozpocznij wizytę\":\"Dodaj nowy pomiar (waga, wzrost)\",\"aria-label\":homePatientRoute()?\"Rozpocznij wizytę\":\"Dodaj nowy pomiar\",oncli"],
+   "-pill\",type:\"button\",title:homePatientRoute()?\"Rozpocznij nową wizytę\":\"Dodaj nowy pomiar (waga, wzrost)\",\"aria-label\":homePatientRoute()?\"Rozpocznij nową wizytę\":\"Dodaj nowy pomiar\",oncli"],
   ["ass:\"vilda-pill-label\",text:\"Nowy pomiar\"})]),O=e(\"div",
-   "ass:\"vilda-pill-label\",text:homePatientRoute()?\"Rozpocznij wizytę\":\"Nowy pomiar\"})]),O=e(\"div"],
+   "ass:\"vilda-pill-label\",text:homePatientRoute()?\"Rozpocznij nową wizytę\":\"Nowy pomiar\"})]),O=e(\"div"],
   ["turnToList(a,n)}}),Li=null;typeof a==\"function\"&&(Li=e",
    `turnToList(a,n)}}),Li=null;
 if (homePatientRoute()) {
@@ -62,9 +62,9 @@ if (homePatientRoute()) {
    `ce(2,Cs.indexOf(Ft))),
     homeNavigation:!!homePatientRoute(),actions:{edit:B,newMeasure:`],
   ["e(\"p\",{class:\"ve-sub\",text:'Dane sta\\u0142e pacjenta. ",
-   "e(\"p\",{class:\"ve-sub\",text:homePatientRoute()?\"Dane stałe pacjenta. Wybierz „Rozpocznij wizytę”, aby w razie potrzeby wpisać pomiary w zakładce Analiza.\":'Dane sta\\u0142e pacjenta. "],
+   "e(\"p\",{class:\"ve-sub\",text:homePatientRoute()?\"Dane stałe pacjenta. Wybierz „Rozpocznij nową wizytę”, aby w razie potrzeby wpisać pomiary w zakładce Analiza.\":'Dane sta\\u0142e pacjenta. "],
   ["139\\uFE0F\"}),e(\"span\",{text:'Pomiary (wzrost, masa, wi",
-   "139\\uFE0F\"}),e(\"span\",{text:homePatientRoute()?\"Po wybraniu „Rozpocznij wizytę” możesz uzupełnić pomiary w zakładce Analiza. Wcześniejszą wizytę możesz edytować w Historii wizyt. Dane okołoporodowe zasilają moduł SGA i epikryzę. Wiek początku pokwitania i menarche służą do oceny tempa wzrastania.\":'Pomiary (wzrost, masa, wi"],
+   "139\\uFE0F\"}),e(\"span\",{text:homePatientRoute()?\"Po wybraniu „Rozpocznij nową wizytę” możesz uzupełnić pomiary w zakładce Analiza. Wcześniejszą wizytę możesz edytować w Historii wizyt. Dane okołoporodowe zasilają moduł SGA i epikryzę. Wiek początku pokwitania i menarche służą do oceny tempa wzrastania.\":'Pomiary (wzrost, masa, wi"],
   [`;
 }
 async function hi(t,a){a=a||{};var quickEncounter=`,
@@ -107,11 +107,11 @@ function D(g) {
 function M(g,B){
     v`],
   ["I)]),e(\"div\",{class:\"ve-hint\",text:'Sta\\u0142e warto\\u015Bci d",
-   "I)]),e(\"div\",{class:\"ve-hint\",text:homePatientRoute()?\"Wzrost rodziców służy do oceny potencjału genetycznego wzrostu (MPH). Po wybraniu „Rozpocznij wizytę” możesz uzupełnić pomiary dziecka w zakładce Analiza.\":'Sta\\u0142e warto\\u015Bci d"],
+   "I)]),e(\"div\",{class:\"ve-hint\",text:homePatientRoute()?\"Wzrost rodziców służy do oceny potencjału genetycznego wzrostu (MPH). Po wybraniu „Rozpocznij nową wizytę” możesz uzupełnić pomiary dziecka w zakładce Analiza.\":'Sta\\u0142e warto\\u015Bci d"],
   ["35c;line-height:1.45;\",html:'\\u{1F4CF} <b>Pomiary dzie",
-   "35c;line-height:1.45;\",html:homePatientRoute()?\"Po wybraniu „Rozpocznij wizytę” możesz wpisać <b>pomiary dziecka</b> w zakładce Analiza.\":'\\u{1F4CF} <b>Pomiary dzie"],
+   "35c;line-height:1.45;\",html:homePatientRoute()?\"Po wybraniu „Rozpocznij nową wizytę” możesz wpisać <b>pomiary dziecka</b> w zakładce Analiza.\":'\\u{1F4CF} <b>Pomiary dzie"],
   ["R)]),e(\"div\",{class:\"ve-hint\",text:'Sta\\u0142e warto\\u015Bci ",
-   "R)]),e(\"div\",{class:\"ve-hint\",text:homePatientRoute()?\"Wzrost rodziców służy do oceny potencjału genetycznego wzrostu (MPH). Po wybraniu „Rozpocznij wizytę” możesz uzupełnić pomiary dziecka w zakładce Analiza.\":'Sta\\u0142e warto\\u015Bci "],
+   "R)]),e(\"div\",{class:\"ve-hint\",text:homePatientRoute()?\"Wzrost rodziców służy do oceny potencjału genetycznego wzrostu (MPH). Po wybraniu „Rozpocznij nową wizytę” możesz uzupełnić pomiary dziecka w zakładce Analiza.\":'Sta\\u0142e warto\\u015Bci "],
   [`  catch(_){return false}
 }
 function patientLoadRun(loa`,

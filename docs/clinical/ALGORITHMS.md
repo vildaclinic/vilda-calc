@@ -44396,3 +44396,13 @@ Energia łączna obejmuje produkty katalogowe i wpisy lekarza. Białko, tłuszcz
 i węglowodany dotyczą produktów z danymi w katalogu. Własny wpis ma podaną
 energię bez oszacowania makroskładników. Przeliczenia produktów katalogowych
 korzystają z ich dotychczasowych wartości i jednostek porcji.
+
+## Porównanie dwóch wizyt w zakładce Analiza nowej strony głównej
+
+Karta „Zmiana od poprzedniej wizyty” zestawia wspólne pomiary dwóch odrębnych wizyt jednego pacjenta. Masa, wzrost i obwody są niezależne. BMI wymaga wzrostu i masy z każdej wizyty, a WHR obu obwodów. Różnica masy w procentach odnosi się do masy początkowej. Kategorie BMI dorosłych wyznacza `VildaBmi.kategoriaDorosly`.
+
+Dla dziecka każdy pomiar ma własny wiek i zapisaną siatkę. Wzrost oblicza `VildaSdsWzrostu`, masę funkcja `advHistoryCalcAnthroStatsForSource`, BMI i wskaźnik Cole’a silnik `VildaBmi`. ΔSDS wymaga zgodnej płci, populacji, wybranej siatki i rzeczywistego źródła obu wyników. Werdykt wykorzystuje `VildaTrajectoryAnalysis.pairVerdictInContext` i nakładkę waga–BMI. Kontekst leczenia pochodzi z punktów GH i leczenia otyłości zapisanych w ocenianej wizycie. Kanał rodzicielski wymaga zgodnej siatki wzrostu.
+
+Tempo wzrastania wymaga dwóch potwierdzonych dat pomiarów i co najmniej sześciu ukończonych miesięcy odstępu według progu silnika. `VildaTempoWzrastania` wylicza prędkość z rzeczywistej liczby dni przeliczonej na miesiące przez `VildaDobAge`. Dla populacji DS karta prezentuje tempo opisowo. Daty technicznego zapisu nie służą do obliczania tempa.
+
+Implementacja w `vilda_home_comparison_clinical.js`. Regresje w `tests/unit/home-visit-comparison-clinical.test.mjs` obejmują wizytę z samą masą, BMI i SDS w wieku obu pomiarów, przejście między siatkami, populację DS po 18. roku życia, daty pomiarów i okres leczenia.

@@ -1,0 +1,129 @@
+/* The comparison occupies the full content track after the visit form. */
+#vhomeVisitComparison {
+  box-sizing: border-box;
+  min-width: 0;
+  width: 100%;
+  margin: var(--space-16px) 0;
+  padding: clamp(1rem, 2.2vw, 1.5rem);
+  background: var(--bg);
+  border: var(--border-hairline) solid var(--line);
+  border-radius: var(--radius-14);
+  color: var(--text-strong);
+}
+#vhomeVisitComparison[hidden],
+#vhomeVisitComparison [hidden],
+[data-vhome-screen="analysis"]:has(#vhomeVisitComparison:not([hidden])) #prevSummaryWrap { display: none !important; }
+#vhomeVisitComparison .vcomp-heading {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-8px) var(--space-16px);
+}
+#vhomeVisitComparison h2 {
+  margin: 0;
+  color: var(--text-heading);
+  font-size: 1.15rem;
+  line-height: 1.42;
+  text-align: start;
+}
+#vhomeVisitComparison :is(.vcomp-subtitle,.vcomp-state),
+#vhomeVisitComparisonDialog .vcomp-note {
+  margin: var(--space-6px) 0 0;
+  color: var(--text-muted);
+  font-size: .95rem;
+  line-height: 1.5;
+}
+#vhomeVisitComparison :is(.vcomp-subtitle,.vcomp-state,.vcomp-metrics,.vcomp-velocity):empty { display: none; }
+#vhomeVisitComparison .vcomp-action {
+  min-height: 44px;
+  width: auto;
+  max-width: 100%;
+  margin: 0;
+  padding: var(--space-8px) var(--space-12px);
+  border: var(--border-hairline) solid var(--line) !important;
+  border-radius: var(--radius-8) !important;
+  background: var(--bg) !important;
+  box-shadow: none !important;
+  color: var(--text-heading) !important;
+  font: inherit;
+  font-weight: 600;
+  line-height: 1.45;
+  text-align: start;
+}
+#vhomeVisitComparison .vcomp-action:is(:hover,:focus-visible) { border-color: var(--primary) !important; }
+#vhomeVisitComparison .vcomp-action:focus-visible {
+  outline: var(--border-pro) solid var(--primary);
+  outline-offset: 2px;
+}
+#vhomeVisitComparison > .vcomp-action { margin-top: var(--space-12px); }
+.vcomp-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
+  gap: var(--space-12px);
+  margin: var(--space-16px) 0 0;
+}
+.vcomp-metric {
+  min-width: 0;
+  padding: var(--space-12px) var(--space-14px);
+  border: var(--border-hairline) solid var(--line);
+  border-radius: var(--radius-8);
+}
+.vcomp-metric dt,.vcomp-source dt,.vcomp-detail-values dt {
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: .95rem;
+  line-height: 1.45;
+}
+.vcomp-metric dd,.vcomp-sources dd,.vcomp-detail-values dd {
+  margin: var(--space-4px) 0 0;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.45;
+}
+.vcomp-metric .vcomp-values { font-size: 1.12rem; }
+.vcomp-arrow,.vcomp-delta,.vcomp-muted { color: var(--text-muted); }
+.vcomp-delta { font-size: .93rem; }
+.vcomp-interpretation { display: inline-block; margin: var(--space-8px) var(--space-6px) 0 0; line-height: 1.5; }
+.vcomp-interpretation[data-tone] { padding: var(--space-4px) var(--space-10px); border-radius: var(--radius-8); font-weight: 600; }
+.vcomp-interpretation[data-tone="ok"] { background: var(--tint-teal); color: var(--text-heading); }
+.vcomp-interpretation[data-tone="warn"] { background: var(--warning-bg); color: var(--warning); }
+.vcomp-interpretation[data-tone="alert"] { background: var(--danger-bg); color: var(--danger-strong); }
+#vhomeVisitComparisonDialog .vhome-dialog-footer { display: flex; justify-content: flex-end; }
+#vhomeVisitComparisonDialog .vhome-dialog-footer > button { width: auto; min-width: 9rem; }
+.vcomp-sources,.vcomp-detail-values {
+  display: grid;
+  gap: var(--space-8px) var(--space-16px);
+  margin: 0;
+}
+.vcomp-sources {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: var(--space-14px);
+  border: var(--border-hairline) solid var(--line);
+  border-radius: var(--radius-8);
+}
+.vcomp-source dd:not(.vcomp-muted) { color: var(--text-strong); font-size: 1.05rem; font-weight: 650; }
+.vcomp-detail-metric { padding: var(--space-16px) 0; border-bottom: var(--border-hairline) solid var(--line); }
+.vcomp-detail-metric h3 { margin: 0 0 var(--space-8px); font-size: 1.03rem; text-align: start; }
+.vcomp-detail-values { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.vcomp-detail-values dd { color: var(--text-strong); overflow-wrap: break-word; }
+@media (max-width: 600px) {
+  .vcomp-metrics { grid-template-columns: 1fr; gap: 0; }
+  .vcomp-metric {
+    display: grid;
+    grid-template-columns: minmax(5rem, 1fr) minmax(0, auto);
+    align-items: baseline;
+    gap: var(--space-4px) var(--space-8px);
+    padding: var(--space-10px) 0;
+    border: 0;
+    border-top: var(--border-hairline) solid var(--line);
+    border-radius: 0;
+  }
+  .vcomp-metric dd { margin: 0; text-align: end; }
+  .vcomp-metric .vcomp-delta { grid-column: 1 / -1; }
+  #vhomeVisitComparisonDialog .vhome-dialog-footer > button { width: 100%; }
+}
+.vilda-home-workspace #vhomeVisitComparisonDialog[open] { animation-duration: 300ms; }
+@media (prefers-reduced-motion: reduce) {
+  .vilda-home-workspace #vhomeVisitComparisonDialog[open],
+  .vilda-home-workspace #vhomeVisitComparisonDialog[open]::backdrop { animation: none; }
+}

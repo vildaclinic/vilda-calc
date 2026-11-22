@@ -41,12 +41,13 @@
         && !(w.VildaPanelPacjent && w.VildaPanelPacjent.nieaktualny()));
     } catch (_) { return false; }
   }
+  function measurementsReadOnly() { return w.VildaHomeGabinet?.visitMeasurementsReadOnly?.() === true; }
   function owner(waitingForImport) {
     if (!canEdit() && !(waitingForImport && w.VildaVault?.isUnlocked() && w.VildaProAccess?.hasAccess()
       && (!w.VildaPanelPacjent || (w.VildaPanelPacjent.wlasciciel() || null) === patientId()))) return null;
     var measured = w.VildaDobAge ? w.VildaDobAge.readMeasuredAtISO() : null;
     return { account: w.VildaVault.getCurrentUser().userId, patient: patientId(),
-      load: w.VildaDataImportExport.getApplyLoadedDataSequence(),
+      load: w.VildaDataImportExport.getApplyLoadedDataSequence(), readOnly: measurementsReadOnly(),
       basics: ['firstName', 'lastName', 'sex', 'age', 'ageMonths', 'ageWeeks', 'dobInput', 'height', 'weight'].map(value),
       visit: w.VildaVisitContext ? w.VildaVisitContext.capture({ user: { measuredAtISO: measured } },
         { patientId: patientId(), readOnly: true }) : null };
@@ -286,6 +287,7 @@
   function refreshFooter() {
     if (!draft) return;
     var applyButton = dialog.querySelector('.vhome-dialog-apply'), cancelButton = dialog.querySelector('.vhome-dialog-cancel');
+    applyButton.hidden = measurementsReadOnly() && !ghView;
     if (ghView) {
       setText(applyButton, ghView.phase === 'point' ? 'Przejdź do DocPro' : 'Zapisz punkt leczenia');
       setText(cancelButton, ghView.phase === 'point' ? 'Wróć do pomiarów' : 'Anuluj punkt');
@@ -295,15 +297,15 @@
       return;
     }
     cancelButton.disabled = false;
-    setText(applyButton, 'Zastosuj dane'); setText(cancelButton, 'Anuluj');
+    setText(applyButton, 'Zastosuj dane'); setText(cancelButton, measurementsReadOnly() ? 'Zamknij' : 'Anuluj');
     var changed = dirty();
     dialog.querySelector('.vhome-dialog-apply').disabled = !changed;
-    setText(byId('vhomeGrowthDraftStatus'), changed ? 'Masz niezastosowane dane.' : 'Wspólne pomiary · zmiany pozostają szkicem do zatwierdzenia.');
+    setText(byId('vhomeGrowthDraftStatus'), measurementsReadOnly() ? 'Odczyt zapisanych pomiarów.' : changed ? 'Masz niezastosowane dane.' : 'Wspólne pomiary · zmiany pozostają szkicem do zatwierdzenia.');
     dialog.querySelectorAll('[data-growth-document]').forEach(function (button) { button.disabled = changed || !fresh(); });
     dialog.querySelectorAll('[data-growth-gh]').forEach(function (button) {
       var row = draft.rows.find(function (r) { return r.key === button.dataset.growthGh; });
       var nativeButton = row?.node?.querySelector('.gh-z-wiersza-btn');
-      button.disabled = changed || !(row?.protected || nativeButton && !nativeButton.disabled);
+      button.disabled = changed || !(row?.protected || !measurementsReadOnly() && nativeButton && !nativeButton.disabled);
       button.title = changed ? 'Najpierw zastosuj zmiany pomiarów.' : '';
     });
   }
@@ -315,7 +317,7 @@
     if (original.tagName === 'SELECT') Array.from(original.options).forEach(function (choice) {
       var option = el('option', '', choice.textContent); option.value = choice.value; option.disabled = choice.disabled; control.appendChild(option);
     });
-    control.disabled = !!disabled; control.readOnly = false; control.value = initial;
+    control.disabled = !!disabled || measurementsReadOnly(); control.readOnly = false; control.value = initial;
     control.setAttribute('aria-label', labelText); control.setAttribute('autocomplete', 'off');
     inputChanges.set(control, onChange);
     inputInitials.set(control, initial);
@@ -369,7 +371,7 @@
         inputInitials.set(control, row.node ? original.value : index === 1 ? '0' : '');
       });
       var actions = el('td', 'vhome-growth-row-remove');
-      var remove = el('button', 'vhome-growth-remove', '×'); remove.type = 'button'; remove.disabled = row.protected;
+      var remove = el('button', 'vhome-growth-remove', '×'); remove.type = 'button'; remove.disabled = row.protected || measurementsReadOnly();
       remove.setAttribute('aria-label', 'Usuń pomiar'); remove.title = row.protected ? 'Punkt GH jest edytowany w DocPro.' : 'Usuń pomiar';
       remove.addEventListener('click', function () { draft.rows = draft.rows.filter(function (item) { return item !== row; }); renderRows(); refreshFooter(); });
       actions.appendChild(remove); node.appendChild(actions); body.appendChild(node);
@@ -407,7 +409,9 @@
     history.appendChild(el('p', 'vhome-growth-current-measurement', 'Bieżący pomiar: ' + value('height') + ' cm · ' + value('weight') + ' kg · z formularza głównego'));
     var list = el('div', 'vhome-growth-table-wrap'); list.id = 'vhomeGrowthRows'; history.appendChild(list);
     var empty = el('p', 'vhome-growth-empty', 'Brak wcześniejszych pomiarów.'); empty.id = 'vhomeGrowthRowsEmpty'; history.appendChild(empty);
+    add.disabled = measurementsReadOnly();
     add.addEventListener('click', function () {
+      if (measurementsReadOnly()) return;
       if (!stillOwned()) { close(true); return; }
       var row = { key: 'new-' + (++sequence), node: null, values: ['', '0', '', '', ''], protected: false };
       draft.rows.push(row); renderRows(); refreshFooter();
@@ -500,7 +504,7 @@
     returnFromGh();
   }
   function openGh(row) {
-    if (!stillOwned() || dirty() || !row.node || row.protected || !w.VildaGhPunktZWiersza) return;
+    if (measurementsReadOnly() || !stillOwned() || dirty() || !row.node || row.protected || !w.VildaGhPunktZWiersza) return;
     var before = pointIds(), host = ghShell();
     ghView = { phase: 'edit', host: host, initial: '', before: before };
     host.addEventListener('click', function (event) {
@@ -543,7 +547,7 @@
       return;
     }
     if (!stillOwned()) { close(true); return; }
-    if (!dirty()) return;
+    if (measurementsReadOnly() || !dirty()) return;
     var controls = Array.from(dialog.querySelectorAll('[data-growth-field], [data-growth-history-field]'));
     var invalid = controls.find(function (control) {
       return !control.disabled && control.value !== inputInitials.get(control) && !control.checkValidity();
@@ -748,7 +752,7 @@
         event.stopImmediatePropagation();
         if (!stillOwned()) { close(true); return; }
         var change = inputChanges.get(event.target);
-        if (change) { change(event.target.value); refreshFooter(); }
+        if (change && !measurementsReadOnly()) { change(event.target.value); refreshFooter(); }
       }, true);
     });
     ['input', 'change', 'vilda:data-applied', 'vilda:professional-summary-updated', 'vilda:main-session-restored',

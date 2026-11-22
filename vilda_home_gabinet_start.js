@@ -183,7 +183,7 @@
       const encounter = w.VildaHomeEncounter?.state(record.id);
       if (encounter?.mode === 'new') return action(record,'overview','Kontynuuj wizytę',true);
       if (encounter?.mode === 'edit') return action(record,'overview','Kontynuuj edycję',true);
-      return action(record,'start',full ? 'Rozpocznij wizytę' : 'Rozpocznij');
+      return action(record,'start',full ? 'Rozpocznij nową wizytę' : 'Rozpocznij');
     }
     function workingVisit() {
       const host = get('.vgs-working');
@@ -194,7 +194,7 @@
       const tile = element('span','vgs-tile');
       tile.innerHTML = icon('clipboard');
       const identity = element('div','vgs-working-identity');
-      identity.append(element('small','',encounter.mode === 'edit' ? 'Edycja wizyty · ' + dateLabel(encounter.date) : 'Wizyta w toku'),
+      identity.append(element('small','',(encounter.mode === 'edit' ? 'Edycja wizyty' : 'Nowa wizyta') + ' · ' + dateLabel(encounter.date)),
         action(patient,'overview',patient.name));
       host.append(tile,identity,visitAction(patient,true)); host.hidden = false;
     }
