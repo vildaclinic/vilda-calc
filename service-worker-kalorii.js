@@ -167,6 +167,7 @@ const CORE_SHELL_URLS = [
   '/style.css?v=94',
   '/style.css?v=95',
   '/style.css?v=96',
+  '/style.css?v=97',
   '/lab_clinical_panels.js?v=141',
   '/lab_clinical_panels.js?v=143',
   // DEFER-P1c: bloki inline wyniesione do plików defer (39 szt.)
@@ -2404,6 +2405,7 @@ const CORE_SHELL_URLS = [
   '/vilda_chrome.js?v=315',
   '/vilda_chrome.js?v=316',
   '/vilda_chrome.js?v=317',
+  '/vilda_chrome.js?v=318',
   '/vilda_realtime.js?v=1',
   '/vilda_realtime.js?v=2',
   '/vilda_realtime.js?v=3',
@@ -3239,6 +3241,7 @@ const CORE_SHELL_URLS = [
   '/vilda_home_patient_native.css?v=2',
   '/vilda_home_patient_native.css?v=3',
   '/vilda_home_patient_native.css?v=4',
+  '/vilda_home_patient_native.css?v=5',
   '/vilda_patient_treatment_ui.js?v=1',
   '/vilda_patient_treatment_ui.js?v=2',
   '/vilda_patient_treatment_ui.js?v=3',
@@ -7132,8 +7135,8 @@ const CLINICAL_WORKSPACE_PRECACHE_PACK = Object.freeze({
 
 // BEGIN VISIT UI PACK CONFIG
 const VISIT_UI_PRECACHE_PACK = Object.freeze({
-  "url": "/runtime/visit-ui-precache/precache-7bd432ef0c79.json",
-  "sha256": "7bd432ef0c7956d55ed361a056472d937539a4b1e63cb8660323e23454389b9e",
+  "url": "/runtime/visit-ui-precache/precache-4357bd1b9a4a.json",
+  "sha256": "4357bd1b9a4a764690f137230fc97d0ba89957d093b6607fb6def37cb91309f5",
   "files": [
     {
       "url": "/vilda_ui_intents.js?v=2",
@@ -7248,8 +7251,8 @@ const VISIT_UI_PRECACHE_PACK = Object.freeze({
       "sha256": "b571f2386552667c832f0264a3f671e355c09e8297e87b66304a4622982b8503"
     },
     {
-      "url": "/vilda_home_patient_native.css?v=4",
-      "sha256": "af1bc5ab0806de9148aa9690dcc085b3ba67b93cec8fbe8ef517d3557369a110"
+      "url": "/vilda_home_patient_native.css?v=5",
+      "sha256": "df87ba548059922ceae94dba3d78526184e55ea6bced006d72f137174be9895a"
     },
     {
       "url": "/vilda_patient_treatment_ui.js?v=3",

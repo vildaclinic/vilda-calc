@@ -57,6 +57,10 @@ test('Gabinet uses one patient header for overview and analysis and displays rem
   const patientCard = frame.locator('#vhomePatientOverview > .vilda-auth-card');
   const measurements = frame.locator('#userSection fieldset.user-card');
   const summary = frame.locator('#currentSummaryCard');
+  const toolbar = page.locator('#vildaHeaderSearchBtn, #vildaRemindersBtn');
+  const toolbarPositions = () => toolbar.evaluateAll(buttons => buttons.map(button => button.getBoundingClientRect().left));
+  const overviewPanels = patientCard.locator('.vhome-b1-panels');
+  const workspaceBackground = () => frame.locator('body').evaluate(body => getComputedStyle(body).backgroundColor);
   async function checkPatientLayout(width, rightEdge) {
     await page.setViewportSize({ width, height: 900 });
     await overview.click();
@@ -66,10 +70,17 @@ test('Gabinet uses one patient header for overview and analysis and displays rem
     await expectHeaderAppearance(frame);
     const before = await headerGeometry(frame);
     const cardEdges = await horizontalEdges(patientCard);
+    const canvas = await workspaceBackground();
+    const cardShadow = await patientCard.evaluate(card => getComputedStyle(card).boxShadow);
+    await expect(overviewPanels).toHaveCSS('background-color', canvas);
+    await expect(overviewPanels.locator(':scope > .vilda-patient-tab-content:visible')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+    const toolbarBefore = await toolbarPositions();
+    expect(toolbarBefore).toHaveLength(2);
 
     await analysis.click();
     await expect(analysis).toHaveAttribute('aria-selected', 'true');
     await expect(measurements).toBeVisible();
+    await expect(measurements).toHaveCSS('box-shadow', cardShadow);
     await expect(rightEdge).toBeVisible();
     await expect(frame.locator('#vhomePatientCard')).toBeHidden();
     await expect(frame.locator('#vhomeAdultVitalsCard')).toBeHidden();
@@ -81,6 +92,8 @@ test('Gabinet uses one patient header for overview and analysis and displays rem
     expect(Math.abs(formEdges.left - cardEdges.left), 'Lewa krawędź Pomiary / Karta pacjenta').toBeLessThanOrEqual(1);
     expect(Math.abs(analysisEdges.right - cardEdges.right), 'Prawa krawędź Analiza / Karta pacjenta').toBeLessThanOrEqual(1);
     expect(await headerGeometry(frame)).toEqual(before);
+    expect(await workspaceBackground()).toBe(canvas);
+    expect(await toolbarPositions()).toEqual(toolbarBefore);
   }
   for (const width of [1440, 1920, 834, 390]) {
     await checkPatientLayout(width, summary);

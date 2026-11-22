@@ -2713,7 +2713,8 @@ html.vilda-form-layout {
  * both gutters and the clearance before the pane's own footer. */
 html.vilda-form-layout:has(.main-content[data-vhome-screen]) body,
 html.vilda-shell-host.vilda-route-start:not(.vilda-pane-auth-open):has(.app-pane[data-vhome-workspace]:not([hidden])) body {
-  background-color: color-mix(in srgb,var(--bg) 40%,var(--card))
+  --vhome-workspace-background: var(--appearance-page-background,color-mix(in srgb,var(--bg) 40%,var(--card)));
+  background-color: var(--vhome-workspace-background)
 }
 html.vilda-form-layout body.has-sidebar>.desktop-layout {
   column-gap: var(--chrome-form-gap);

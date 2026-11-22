@@ -1092,8 +1092,8 @@
   "sha256": "6445f99da0d8541dde67c2240b63b3fab214cb44e2b4eaace67efdcdb583c69a"
  },
  "style.css": {
-  "v": 96,
-  "sha256": "1992e13b09c44a3ec488db68f56e7e67cf0c777d8c967eb7062a9cfc07a4f39c"
+  "v": 97,
+  "sha256": "605e3781d706bd18b4b922ad788ad1463410e68a263a55f3ceae0bad991b8448"
  },
  "thyroid_cancer_kids.js": {
   "v": 5,
@@ -1289,11 +1289,11 @@
  },
  "vilda_chrome.css": {
   "v": 60,
-  "sha256": "8e3db12bcc3d0611b5c87c4b9989416bcf7c896037e2524d978c63918ca47470"
+  "sha256": "8d42008e7b657f2e3013158ab9221cf543371ae6d7784711c785993af91b0542"
  },
  "vilda_chrome.js": {
-  "v": 317,
-  "sha256": "dc4caf79ea264c8feb51996dddb0201e4c0a2e96bb3c5148cd2e588a527db740"
+  "v": 318,
+  "sha256": "dcd4b9b5e98aed00ce68caf6896590c97832533f4257ee8ea99df29abeb3fbc1"
  },
  "vilda_clinical_crypto.js": {
   "v": 2,
@@ -1632,8 +1632,8 @@
   "sha256": "3c9fd01e39a396b42ac41874d3f30855139c1d1837a221d3571f9975b57556e4"
  },
  "vilda_home_patient_native.css": {
-  "v": 4,
-  "sha256": "af1bc5ab0806de9148aa9690dcc085b3ba67b93cec8fbe8ef517d3557369a110"
+  "v": 5,
+  "sha256": "df87ba548059922ceae94dba3d78526184e55ea6bced006d72f137174be9895a"
  },
  "vilda_home_patient_native.js": {
   "v": 7,

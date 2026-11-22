@@ -861,6 +861,7 @@ html.vilda-home-workspace #vhomePatientOverview > .vilda-auth-card {
   max-width: none !important;
   height: auto !important;
   margin-inline: 0 !important;
+  box-shadow: var(--hc-shadow, 0 2px 8px #244d5505);
   animation: none;
 }
 html.vilda-home-workspace #vhomePatientOverview .vhome-native-patient-card {
@@ -868,7 +869,16 @@ html.vilda-home-workspace #vhomePatientOverview .vhome-native-patient-card {
   min-height: 0;
 }
 html.vilda-home-workspace #vhomePatientOverview .vhome-b1-workspace { flex: 0 1 auto; }
-html.vilda-home-workspace #vhomePatientOverview .vhome-b1-panels { overflow: visible; }
+html.vilda-home-workspace #vhomePatientOverview .vhome-b1-panels {
+  overflow: visible;
+  background: var(--vhome-workspace-background, var(--bg));
+}
+html.vilda-home-workspace body:is(.dark-bg-level-1,.dark-bg-level-2) #vhomePatientOverview .vhome-b1-panels {
+  --vhome-b1-muted: var(--hc-muted, var(--text-2));
+}
+html.vilda-home-workspace #vhomePatientOverview .vhome-b1-panels > .vilda-patient-tab-content {
+  background: transparent;
+}
 html.vilda-home-workspace #vhomePatientOverview .vhome-b1-heading {
   position: relative;
   overflow: visible;
