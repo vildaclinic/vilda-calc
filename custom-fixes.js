@@ -88,10 +88,10 @@ function statusChoiceCurrent(){try{return statusChoicePatientId===window.session
   Number.isSafeInteger(statusChoiceSequence)&&statusChoiceSequence===window.VildaDataImportExport.getApplyLoadedDataSequence()}catch{return false}}
 function hideChoiceRestore(){if(c)c.style.display="none"}
 function newVisit(){if(!statusChoiceCurrent()){if(!direct)p();finishLoadChoicePresentation(presentationTicket);return false}try{var U=window.VildaDataImportExport,Z=window.lastLoadedData,te=Z&&Z.user;if(U&&typeof U._ensureCurrentMeasurementInHistory=="function"&&te&&(typeof te.weight=="number"&&te.weight>0||typeof te.height=="number"&&te.height>0)&&(U._ensureCurrentMeasurementInHistory(Z),Z.advanced&&Z.advanced.data&&Array.isArray(Z.advanced.data.measurements)&&((!window.advancedGrowthData||typeof window.advancedGrowthData!="object")&&(window.advancedGrowthData={}),window.advancedGrowthData.measurements=Z.advanced.data.measurements.map(function(ne){return Object.assign({},ne)})),Z.growthBasic&&Z.growthBasic.data&&Array.isArray(Z.growthBasic.data.measurements)&&((!window.basicGrowthData||typeof window.basicGrowthData!="object")&&(window.basicGrowthData={}),window.basicGrowthData.measurements=Z.growthBasic.data.measurements.map(function(ne){return Object.assign({},ne)})),typeof window.vildaRehydrateAdvancedFromState=="function"))try{window.vildaRehydrateAdvancedFromState({advancedGrowthData:window.advancedGrowthData})}catch{}}catch{}try{var Ge=window.VildaDataImportExport;Ge&&typeof Ge._reimportGhTherapyPoints=="function"&&Ge._reimportGhTherapyPoints()}catch{}var visit=window.VildaVisitContext&&window.VildaVisitContext.beginNew({patientId:statusChoicePatientId});try{window.sessionStorage.setItem("vildaLoadChoiceV1","new")}catch{}L(),p();
-// Circumferences are visit measurements as well. Clear the live fields before
-// publishing the new visit to the other tools in the shell.
+// The classic adult load keeps height. A new consultation starts with all four
+// measurements blank before any current fields are published to other panes.
 if(direct&&visit&&statusChoiceCurrent()){
-  ["waistCm","hipCm"].forEach(function(id){
+  ["weight","height","waistCm","hipCm"].forEach(function(id){
     var field=document.getElementById(id);
     if(!field||field.value==="")return;
     field.value="";

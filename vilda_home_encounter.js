@@ -249,6 +249,13 @@
     try {
       if (recording && (recording.scope !== scope || !await recording.promise)) return false;
       if (!currentWriter()) return false;
+      // A keyboard save leaves the edited native input focused. Commit its
+      // pending change before taking the submission and accepted-load receipts:
+      // disabling that field during the subsequent restore would otherwise send
+      // a trusted change belonging to the old form to the new load.
+      const focused = sourceDocument.activeElement;
+      if (focused?.matches('input, select, textarea') && sourceDocument.getElementById('calcForm')?.contains(focused)) focused.blur();
+      if (!currentWriter()) return false;
       const status = source.VildaSaveStatusIndicator;
       let result = scope.artifactReceipt, submitted = scope.artifactSubmission;
       const decision = status.getCurrentDecision();

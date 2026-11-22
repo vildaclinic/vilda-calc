@@ -17,7 +17,7 @@ test('adult analysis projects the native pressure and pulse and opens the same m
   const patient = fictionalPatient({firstName: 'Joanna', age: 42, sex: 'F', height: 165, weight: 64});
   Object.assign(patient.user, {waist: 82, hip: 95});
   patient.adultVitals = {systolic: 124, diastolic: 79, heartRate: 76, guideline: 'ESC'};
-  await source.evaluate(payload => window.VildaVault.savePatient(payload, {dedup: false}), patient);
+  const {patientId} = await source.evaluate(payload => window.VildaVault.savePatient(payload, {dedup: false}), patient);
   await page.reload({waitUntil: 'load'});
   const frame = await shellFrame(page);
   await readyForPatient(frame);
@@ -25,7 +25,7 @@ test('adult analysis projects the native pressure and pulse and opens the same m
   await expect(start).toBeVisible();
   await start.getByRole('searchbox').fill('Joanna');
   await start.locator('#vgs-results').getByRole('button', {name: /Joanna/}).click();
-  await expect(frame.locator('#vhomePatientOverview')).toBeVisible();
+  await expect(frame.locator('#vhomePatientOverview')).toBeVisible({timeout: 15_000});
   await header.getByRole('tab', {name: 'Analiza', exact: true}).click();
   const card = frame.locator('#vhomeAdultVitalsCard');
   await expect(card).toBeVisible();
@@ -44,13 +44,29 @@ test('adult analysis projects the native pressure and pulse and opens the same m
   await header.getByRole('button', {name: 'Rozpocznij nową wizytę'}).click();
   await expect(header.getByRole('button', {name: 'Zapisz wizytę', exact: true})).toBeVisible();
   await header.getByRole('tab', {name: 'Analiza', exact: true}).click();
-  await expect(frame.locator('#waistCm')).toHaveValue('');
-  await expect(frame.locator('#hipCm')).toHaveValue('');
+  for (const id of ['height', 'weight', 'waistCm', 'hipCm']) {
+    await expect(frame.locator('#' + id)).toHaveValue('');
+  }
   const draft = await frame.evaluate(() => window.VildaDataImportExport.captureCurrentUserDataReadOnly().user);
-  expect(draft.measuredAtISO || null).toBeNull();
+  const measures = user => [user.height, user.weight, user.waist, user.hip, user.measuredAtISO].map(value => value ?? null);
+  expect(measures(draft)).toEqual([null, null, null, null, null]);
   await expect(card).toContainText('Ostatni zapisany pomiar');
   await expect(card).toContainText('17.06.2026');
   await expect(card).toContainText('124/79');
+  const visitId = await frame.evaluate(id => window.VildaHomeEncounter.state(id).visitId, patientId);
+  await header.getByRole('button', {name: 'Zapisz wizytę', exact: true}).click();
+  const startVisit = header.getByRole('button', {name: 'Rozpocznij nową wizytę', exact: true});
+  await expect(startVisit).toBeEnabled();
+  const saved = await frame.evaluate(async id => (await window.VildaVault.getPatientVisits(id)).map(row => ({
+    id: row.visitId, user: row.payload.user,
+  })), patientId);
+  expect(saved).toHaveLength(2);
+  expect(saved[0].id).toBe(visitId);
+  expect(measures(saved[0].user)).toEqual([null, null, null, null, null]);
+  expect(measures(saved[1].user)).toEqual([165, 64, 82, 95, '2026-06-17']);
+
+  await startVisit.click();
+  await header.getByRole('tab', {name: 'Analiza', exact: true}).click();
   await card.getByRole('button', {name: 'Przejrzyj pomiary'}).click();
   const systolic = inputs.locator('[data-home-tool-field="sbpRaw"]');
   await expect(systolic).toBeEditable();
