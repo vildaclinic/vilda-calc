@@ -170,6 +170,7 @@
     else delete main.dataset.vhomeScreen;
     const pane = w.frameElement;
     if (pane?.classList.contains('app-pane')) {
+      pane.toggleAttribute('data-vhome-workspace', Boolean(value));
       const directory = value === 'registration' ? 'registration' : value === 'start' ? '' : null;
       if (directory === null) pane.removeAttribute('data-vhome-directory');
       else if (pane.getAttribute('data-vhome-directory') !== directory) pane.setAttribute('data-vhome-directory', directory);

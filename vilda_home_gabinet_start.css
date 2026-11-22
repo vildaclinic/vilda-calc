@@ -1,7 +1,7 @@
 /* The native page already stacks its desktop layout, footer and optional
    mobile dock spacer in one flex column. Grow only the directory's workspace
    into the spare height, including when the keyboard reduces the viewport. */
-body > .desktop-layout:has(> [data-vhome-screen="start"]) { flex: 1 0 auto; background: #f4f7f8; }
+body > .desktop-layout:has(> [data-vhome-screen="start"]) { flex: 1 0 auto; }
 [data-vhome-screen="start"] #vhomeGabinetStart { padding: var(--space-14px) clamp(1.5rem,3.5vw,4.25rem) var(--space-20px); }
 @media (max-width: 640px) {
   [data-vhome-screen="start"] #vhomeGabinetStart { padding: var(--space-8px) var(--space-12px) var(--space-12px); }

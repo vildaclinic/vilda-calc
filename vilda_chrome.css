@@ -2709,6 +2709,12 @@ body.vilda-header-menu #appShellScrollTop {
 html.vilda-form-layout {
   --chrome-form-gap: 12px
 }
+/* The shell and its active Gabinet pane paint the same workspace, including
+ * both gutters and the clearance before the pane's own footer. */
+html.vilda-form-layout:has(.main-content[data-vhome-screen]) body,
+html.vilda-shell-host.vilda-route-start:not(.vilda-pane-auth-open):has(.app-pane[data-vhome-workspace]:not([hidden])) body {
+  background-color: color-mix(in srgb,var(--bg) 40%,var(--card))
+}
 html.vilda-form-layout body.has-sidebar>.desktop-layout {
   column-gap: var(--chrome-form-gap);
   padding-top: var(--chrome-form-gap)!important;
