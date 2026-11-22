@@ -3916,7 +3916,7 @@ if (homePatientRoute()) {
  */
 if(HomePatientRequested&&i.VildaHomePatientNative&&typeof i.VildaHomePatientNative.decorate==="function"){
   HomePatientPresentation=i.VildaHomePatientNative.decorate({
-    root:Eo,patientId:t,patientName:w,openerId:n&&n.homePatientOpenerId||"",ageLabel:Wt,measuredAtISO:m.measuredAtISO||s.visit&&s.visit.clinicalDateISO||null,
+    root:Eo,patientId:t,patientName:w,referenceSex:m.sex,openerId:n&&n.homePatientOpenerId||"",ageLabel:Wt,measuredAtISO:m.measuredAtISO||s.visit&&s.visit.clinicalDateISO||null,
     tabs:Ft,panels:{antro:Nt,traj:Ct,notes:sa,timeline:ca,lab:GdLabHost,care:CarePatientHost},
     primaryMetrics:HomePatientMetrics,metricAssessments:HomePatientAssessments,measureNodes:At,growthNodes:ce,sgaNode:SgaTile,extraPanels:[BhPanel,Ce&&Ce.panel],
     legacyPanels:Cs.slice(2,Cs.indexOf(Ft)).filter(Boolean),legacySummary:i.VildaHomePatientNative.describeLegacy(Cs.slice(2,Cs.indexOf(Ft))),

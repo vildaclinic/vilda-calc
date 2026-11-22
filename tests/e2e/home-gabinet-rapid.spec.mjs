@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { prepareGabinet, choosePatient } from '../support/gabinet-patient-fixture.mjs';
 import { readyForPatient, shellFrame } from '../support/centile-live-fixture.mjs';
+import { visibleChromeMenu } from '../support/chrome-menu-fixture.mjs';
 
 test.use({ serviceWorkers: 'block', reducedMotion: 'reduce', actionTimeout: 15_000 });
 test.setTimeout(180_000);
@@ -139,4 +140,35 @@ test('rapid intake stores one visit per save, starts the next patient clean and 
   await choosePatient(reloaded, 'Alicja');
   expect(await visitsOf(reloaded, child.id)).toEqual(followups);
   expect(await visitsOf(reloaded, adult.id)).toEqual(adultVisits);
+});
+
+test('an explicitly unspecified sex stays unknown when the clinician opens a legacy clinical tool', async ({ page }) => {
+  const { frame } = await prepareGabinet(page);
+  await launch(frame).locator('[data-entry="rapid"]').click();
+  await fillPatient(frame, 'Alicja', 'Kontrolna', '11', '4', '', '31.5', '140');
+  await button(frame, 'Zapisz pacjenta').click();
+  await button(frame, 'Otwórz kartę pacjenta').click();
+  await expect(frame.locator('#vhomePatientOverview')).toBeVisible();
+  const id = await frame.evaluate(() => sessionStorage.getItem('vildaCurrentPatientId'));
+  const assertStart = async () => {
+    await expect(page).toHaveURL(/app\.html[^#]*#\/start$/);
+    await expect(page.locator('iframe.app-pane[title="Start"]')).toBeVisible();
+  };
+  await (await visibleChromeMenu(page)).locator('a[href="docpro.html"]').click();
+  await assertStart();
+  await page.evaluate(() => window.VildaShell.navigate('klirens'));
+  await assertStart();
+  await page.evaluate(() => { window.location.hash = '/docpro'; });
+  await assertStart();
+  const visits = await visitsOf(frame, id);
+  expect(visits).toHaveLength(1);
+  expect(visits[0].sex).toBeNull();
+  await page.goto('/app.html?deep=1#/klirens', { waitUntil:'load' });
+  await assertStart();
+  await page.goto('/docpro.html', { waitUntil:'domcontentloaded' }).catch(error => {
+    // Engines may report the interrupted document navigation before the redirect.
+    if (!/interrupted|aborted/i.test(error.message)) throw error;
+  });
+  await assertStart();
+  await expect(page.frameLocator('iframe.app-pane[title="Start"]').locator('#vhomeGabinetStart')).toBeVisible({timeout:30_000});
 });

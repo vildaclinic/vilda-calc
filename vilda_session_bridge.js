@@ -66,3 +66,44 @@ if(n.document&&typeof n.document.addEventListener==="function")
     try{n.document.addEventListener(type,relayTabActivity,{passive:true})}catch(_){}
   });
 var h=n.document;h&&(h.readyState==="loading"?h.addEventListener("DOMContentLoaded",function(){I();initPageSaveStatus()},{once:!0}):(I(),initPageSaveStatus())),n.VildaSession={VERSION:1,TOOLTIPS:c,isLoggedIn:v,isGuestMode:E,getCurrentUser:L,hasSessionKey:l,getPatient:p,getSaveButtonState:P,getPatientsButtonState:_,notifySessionChanged:g,fireEvent:y,ensureAuthLoaded:w}})(typeof window<"u"?window:this);
+
+/* The redesign allows a named chart with expressly unspecified sex. Two older
+ * clinical editors cannot safely interpret or round-trip that chart yet. */
+(function (w) {
+  'use strict';
+  if (w.__VILDA_HOME_GABINET_PREVIEW__ !== true || w.__VILDA_HOME_WORKSPACE_PREVIEW__ !== true) return;
+  const notice = 'Uzupełnij płeć w Karcie pacjenta (Działania → Edytuj pacjenta), aby użyć tego narzędzia.';
+  function blocked(route, source) {
+    if (route !== 'docpro' && route !== 'klirens') return false;
+    const id = w.sessionStorage.getItem('vildaCurrentPatientId');
+    if (!id) return false;
+    // A loaded chart takes precedence over a delayed main-session flush;
+    // on a cold deep link only a session bound to this exact patient counts.
+    const bound = record => (record?.visit?.patientId || record?.patientId) === id && !!record?.user;
+    const loaded = source?.lastLoadedData;
+    if (bound(loaded)) return loaded.user.sex === '';
+    const session = w.VildaPersistence?.readMainSession?.();
+    return bound(session) && session.user.sex === '';
+  }
+  function explain(source) {
+    const toast = source?.VildaDymek || w.VildaDymek;
+    if (toast?.pokaz) toast.pokaz(notice, {ton:'uwaga'});
+    else w.alert(notice);
+  }
+  w.VildaHomeLegacyClinical = Object.freeze({blocked, explain});
+  const file = w.location.pathname.split('/').pop();
+  const route = {'docpro.html':'docpro','kalkulator-klirens.html':'klirens'}[file];
+  if (!route || w.parent !== w) return;
+  let redirecting = false;
+  function guardStandalone() {
+    if (redirecting || !blocked(route, w)) return;
+    redirecting = true;
+    // A direct document link has no shell route to intercept.
+    w.document.documentElement.hidden = true;
+    w.alert(notice);
+    w.location.replace('app.html#/start');
+  }
+  guardStandalone();
+  w.document.addEventListener('vilda:data-applied', guardStandalone);
+  w.document.addEventListener('vilda:main-session-restored', guardStandalone);
+})(window);

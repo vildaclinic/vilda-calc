@@ -9,8 +9,20 @@ function applyOverviewHooks(source) {
   return applyEncounterNoteAuthHooks(applyInlinePatientHooks(applyOverviewRemindersHooks(source)));
 }
 
-export function applyGabinetAuthHooks(source) {
+function applyRegistration(source) {
   return applyRegistrationAuthHooks(applyPatientNavigationHooks(applyOverviewHooks(source)));
+}
+
+// The chart knows the recorded sex even when a rapid intake left that field empty.
+const previousChart = 'root:Eo,patientId:t,patientName:w,openerId:';
+const chartWithReferenceSex = 'root:Eo,patientId:t,patientName:w,referenceSex:m.sex,openerId:';
+function chartReferenceSex(source, reverse = false) {
+  const before = reverse ? chartWithReferenceSex : previousChart;
+  if (source.split(before).length !== 2) throw new Error('Missing or repeated patient chart reference sex hook.');
+  return source.replace(before, reverse ? previousChart : chartWithReferenceSex);
+}
+export function applyGabinetAuthHooks(source) {
+  return chartReferenceSex(applyRegistration(source));
 }
 
 // The older reproducers also accept their historical inputs. Reapply exactly
@@ -19,12 +31,14 @@ export function gabinetAuthLayers(source) {
   if (!source.includes('/* BEGIN HOME PATIENT INLINE ADAPTER */') && !source.includes('i.VildaHomeRemindersRuntime?.ownsOverviewHost(host)')) {
     return { base: source, replay: value => value };
   }
-  const hasRegistration = source.includes('function showGabinetNewPatient(');
-  const navigation = hasRegistration ? reverseRegistrationAuthHooks(source) : source;
+  const hasReferenceSex = source.includes(chartWithReferenceSex);
+  const registration = hasReferenceSex ? chartReferenceSex(source, true) : source;
+  const hasRegistration = registration.includes('function showGabinetNewPatient(');
+  const navigation = hasRegistration ? reverseRegistrationAuthHooks(registration) : registration;
   const hasNavigation = navigation.includes('function openPatientInHome(');
   const overview = hasNavigation ? reversePatientNavigationHooks(navigation) : navigation;
   const base = reverseOverviewRemindersHooks(reverseInlinePatientHooks(reverseEncounterNoteAuthHooks(overview)));
-  const replay = hasRegistration ? applyGabinetAuthHooks
+  const replay = hasReferenceSex ? applyGabinetAuthHooks : hasRegistration ? applyRegistration
     : hasNavigation ? value => applyPatientNavigationHooks(applyOverviewHooks(value)) : applyOverviewHooks;
   if (replay(base) !== source) throw new Error('Gabinet AuthUI layers do not reproduce the current artifact.');
   return { base, replay };

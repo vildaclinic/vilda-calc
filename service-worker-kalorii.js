@@ -3228,6 +3228,7 @@ const CORE_SHELL_URLS = [
   '/vilda_home_patient_native.js?v=4',
   '/vilda_home_patient_native.js?v=5',
   '/vilda_home_patient_native.js?v=6',
+  '/vilda_home_patient_native.js?v=7',
   '/vilda_home_patient_native.css?v=1',
   '/vilda_home_patient_native.css?v=2',
   '/vilda_home_patient_native.css?v=3',
@@ -7124,8 +7125,8 @@ const CLINICAL_WORKSPACE_PRECACHE_PACK = Object.freeze({
 
 // BEGIN VISIT UI PACK CONFIG
 const VISIT_UI_PRECACHE_PACK = Object.freeze({
-  "url": "/runtime/visit-ui-precache/precache-3d05874fc391.json",
-  "sha256": "3d05874fc39111c5d2181ad77b45126659e1ff41d551467211ac067899a728bc",
+  "url": "/runtime/visit-ui-precache/precache-b4dd8bf793db.json",
+  "sha256": "b4dd8bf793db5bff9bc85d452b7ce36dadec0fe85ac3ec73e0632f5e1d8eaee2",
   "files": [
     {
       "url": "/vilda_ui_intents.js?v=2",
@@ -7236,8 +7237,8 @@ const VISIT_UI_PRECACHE_PACK = Object.freeze({
       "sha256": "4d53f179f8ae5629b88b21f4682b768881ee395a69b295777ad37d0e3f398a36"
     },
     {
-      "url": "/vilda_home_patient_native.js?v=6",
-      "sha256": "f471ff00ad9bad7040ad4d01cbdf740b5a2b0dc8fbaac4c357b8e734dc82c990"
+      "url": "/vilda_home_patient_native.js?v=7",
+      "sha256": "b571f2386552667c832f0264a3f671e355c09e8297e87b66304a4622982b8503"
     },
     {
       "url": "/vilda_home_patient_native.css?v=4",

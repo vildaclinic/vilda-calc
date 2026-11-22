@@ -46,6 +46,16 @@ test('rapid intake shows unclassified BMI for unspecified sex and preserves it t
   await expect(review.or(discard).filter({visible:true})).toBeVisible();
   if (await discard.isVisible()) await discard.click();
   await expect(review).toBeVisible();
+  const status = review.locator('.vhome-b1-status-measure');
+  await expect(status).toContainText('19,0 kg/m²');
+  await expect(status).not.toContainText(/centyl|Cole|SDS|prawidłowe/i);
+  await expect(review.getByRole('button',{name:/skopiuj podsumowanie/i})).toHaveCount(0);
+  const tabs = review.getByRole('tab',{name:'Siatki centylowe'});
+  if (await tabs.isVisible()) await tabs.click();
+  else await review.locator('.vhome-b1-mobile-select').selectOption('traj');
+  const charts = review.locator('[role=tabpanel][data-tab=traj]');
+  await expect(charts).toContainText('Uzupełnij płeć');
+  await expect(charts.locator('svg, button')).toHaveCount(0);
   await reloaded.getByRole('tab',{name:'Analiza',exact:true}).click();
   await checkRaw(reloaded);
   await expect(page.locator('#vildaShellDecor .ms-chip-badge:visible')).toHaveCount(0);

@@ -1169,7 +1169,7 @@
  },
  "vilda_auth_ui.js": {
   "v": 580,
-  "sha256": "89230598b262e66985a5dd9c678c1ef2035869373a542a51a7b3a44ffd067242"
+  "sha256": "a15fa98b81373dd850c4e0d27556887675e6c69d348eeb335e0339421170f678"
  },
  "vilda_b64_checklist.js": {
   "v": 2,
@@ -1636,8 +1636,8 @@
   "sha256": "af1bc5ab0806de9148aa9690dcc085b3ba67b93cec8fbe8ef517d3557369a110"
  },
  "vilda_home_patient_native.js": {
-  "v": 6,
-  "sha256": "f471ff00ad9bad7040ad4d01cbdf740b5a2b0dc8fbaac4c357b8e734dc82c990"
+  "v": 7,
+  "sha256": "b571f2386552667c832f0264a3f671e355c09e8297e87b66304a4622982b8503"
  },
  "vilda_home_patient_native_note.js": {
   "v": 1,
@@ -2185,7 +2185,7 @@
  },
  "vilda_session_bridge.js": {
   "v": 233,
-  "sha256": "437924715c26b5fafe02bba685b15acd86993df6f673baacf37a87334a29f632"
+  "sha256": "aade3c6b7ecb7f12a5da61e7ad042f662805cf00e204e4aa8c8ac9eabd0d6eb9"
  },
  "vilda_sga_birth_results.css": {
   "v": 1,
@@ -2201,7 +2201,7 @@
  },
  "vilda_shell.js": {
   "v": 88,
-  "sha256": "b03f340b1a70f0d89d52118d7b449a5261d754428cb63a4e9423fb649a726ba9"
+  "sha256": "e3efd3406834da6d377881473d5eda2df1a6e1fb15a4d3ca340ed6094838724a"
  },
  "vilda_spojnosc_zapisow.js": {
   "v": 3,
