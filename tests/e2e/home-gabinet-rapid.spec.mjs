@@ -170,5 +170,14 @@ test('an explicitly unspecified sex stays unknown when the clinician opens a leg
     if (!/interrupted|aborted/i.test(error.message)) throw error;
   });
   await assertStart();
-  await expect(page.frameLocator('iframe.app-pane[title="Start"]').locator('#vhomeGabinetStart')).toBeVisible({timeout:30_000});
+  const active = page.frameLocator('iframe.app-pane[title="Start"]:visible');
+  await expect(active.locator('#calcForm')).toBeAttached();
+  await expect(page.locator('iframe.app-pane:is([title="DocPro"], [title="Kalkulator klirensu"]):visible')).toHaveCount(0);
+  await expect.poll(() => page.evaluate(patientId => {
+    const session = window.VildaPersistence?.readMainSession();
+    return window.VildaShell?.getCurrentRoute() === 'start' &&
+      sessionStorage.getItem('vildaCurrentPatientId') === patientId &&
+      session?.visit?.patientId === patientId && session.user.sex === '';
+  }, id)).toBe(true);
+  await expect(active.locator('#currentSummaryCard')).toBeHidden();
 });
