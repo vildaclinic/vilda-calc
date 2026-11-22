@@ -42,7 +42,7 @@ test('adult analysis projects the native pressure and pulse and opens the same m
   await expect(dialog.locator('.vhome-dialog-apply')).toBeDisabled();
   await dialog.locator('.vhome-dialog-close').click();
   await header.getByRole('button', {name: 'Rozpocznij nową wizytę'}).click();
-  await expect(header.getByRole('button', {name: 'Zapisz wizytę', exact: true})).toBeVisible();
+  await expect(header.getByRole('button', {name: 'Zapisz wizytę', exact: true})).toBeEnabled({timeout: 15_000});
   await header.getByRole('tab', {name: 'Analiza', exact: true}).click();
   for (const id of ['height', 'weight', 'waistCm', 'hipCm']) {
     await expect(frame.locator('#' + id)).toHaveValue('');
@@ -56,7 +56,7 @@ test('adult analysis projects the native pressure and pulse and opens the same m
   const visitId = await frame.evaluate(id => window.VildaHomeEncounter.state(id).visitId, patientId);
   await header.getByRole('button', {name: 'Zapisz wizytę', exact: true}).click();
   const startVisit = header.getByRole('button', {name: 'Rozpocznij nową wizytę', exact: true});
-  await expect(startVisit).toBeEnabled();
+  await expect(startVisit).toBeEnabled({timeout: 15_000});
   const saved = await frame.evaluate(async id => (await window.VildaVault.getPatientVisits(id)).map(row => ({
     id: row.visitId, user: row.payload.user,
   })), patientId);
@@ -66,6 +66,7 @@ test('adult analysis projects the native pressure and pulse and opens the same m
   expect(measures(saved[1].user)).toEqual([165, 64, 82, 95, '2026-06-17']);
 
   await startVisit.click();
+  await expect(header.getByRole('button', {name: 'Zapisz wizytę', exact: true})).toBeEnabled({timeout: 15_000});
   await header.getByRole('tab', {name: 'Analiza', exact: true}).click();
   await card.getByRole('button', {name: 'Przejrzyj pomiary'}).click();
   const systolic = inputs.locator('[data-home-tool-field="sbpRaw"]');

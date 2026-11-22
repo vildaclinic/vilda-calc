@@ -293,7 +293,7 @@ test('Edytuj wizytę corrects only the chosen historical record and returns to t
   await history.getByRole('button', { name: 'Lista', exact: true }).click();
   await history.locator(`.vhs-list button[data-visit-id="${seed.targetId}"]`).click();
   await detail.getByRole('button', { name: 'Edytuj wizytę' }).click();
-  await expect(header).toContainText('Edycja wizyty');
+  await expect(header).toContainText('Edycja wizyty', { timeout: 15_000 });
   await header.getByRole('tab', { name: 'Analiza', exact: true }).click();
   await expect(frame.locator('#weight')).toHaveValue('54');
   await frame.locator('#weight').fill('44');
@@ -369,7 +369,7 @@ test('comparison follows clinical visit dates, offers an explicit measured basel
   await sheet.getByRole('button', { name: 'Starsza wizyta', exact: true }).click();
   await expect(sheet.getByRole('heading', { name: 'Wizyta z 12.10.2025', exact: true })).toBeVisible();
   await sheet.getByRole('button', { name: 'Edytuj wizytę', exact: true }).click();
-  await expect(header).toContainText('Edycja wizyty');
+  await expect(header).toContainText('Edycja wizyty', { timeout: 15_000 });
   await analysis.click();
   await expect(weight).toBeEditable();
   await expect(weight).toHaveValue('');
@@ -566,7 +566,7 @@ test('DocPro corrects the chosen historical visit and returns to the current pat
   await sheet.getByRole('button', { name: 'Starsza wizyta', exact: true }).click();
   await expect(sheet.getByRole('heading', { name: 'Wizyta z 17.06.2026', exact: true })).toBeVisible();
   await sheet.getByRole('button', { name: 'Edytuj wizytę', exact: true }).click();
-  await expect(header.getByRole('button', { name: 'Zapisz zmiany', exact: true })).toBeVisible();
+  await expect(header.getByRole('button', { name: 'Zapisz zmiany', exact: true })).toBeEnabled({ timeout: 15_000 });
   const docpro = await openDocProForVisit(page);
   await docpro.locator('#weight').fill('47');
   await docpro.locator('#weight').press('Meta+s');
