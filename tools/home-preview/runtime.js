@@ -190,6 +190,88 @@
     };
   }
 
+  // Five independently authored encounters in a second, fictional chart.
+  // Technical snapshots are written by the native vault just as for a visit.
+  const HISTORY_PATIENT_ID = '4b89c835-57b9-4933-b083-00bc694ef103';
+  const HISTORY_VISITS = [
+    { day: '2023-03-12', years: 9, months: 0, height: 132, weight: 27.5 },
+    { day: '2024-03-12', years: 10, months: 0, height: 137.5, weight: 30.4 },
+    { day: '2025-03-12', years: 11, months: 0, height: 143, weight: 34.2 },
+    { day: '2025-09-12', years: 11, months: 6,
+      note: { title: 'Konsultacja telefoniczna', body: 'Omówiono z rodzicem dotychczasowy przebieg wzrastania i ustalono termin kolejnego pomiaru.' } },
+    { day: '2026-10-12', years: 12, months: 7, height: 154, weight: 41.8,
+      bp: { systolic: 108, diastolic: 68, heartRate: 76 } },
+  ];
+  function historyExamplePayload(row) {
+    const patientName = 'Demonstracyjna Klara';
+    const user = { lastName: 'Demonstracyjna', firstName: 'Klara', sex: 'F', dobISO: '2014-03-12',
+      age: row.years, ageMonths: row.months };
+    if (row.height != null) Object.assign(user, { height: row.height, weight: row.weight, measuredAtISO: row.day });
+    const visitId = '1aaf33bb-eb8e-453b-8bb5-0000' + row.day.replaceAll('-', '');
+    return { version: 1, name: patientName, user, ...(row.bp ? { bp: row.bp } : {}), zscore: { resultsMode: true, dataSource: 'OLAF' },
+      visit: { version: 1, origin: 'explicit', visitId, patientId: HISTORY_PATIENT_ID,
+        clinicalDateISO: row.day, createdAtISO: row.day + 'T10:00:00.000Z' } };
+  }
+
+  async function ensureHistoryExample(owner, userId, isCurrent) {
+    const vault = owner.VildaVault, storage = window.localStorage;
+    // No clinical data or patient identifiers are kept outside the encrypted vault.
+    const key = 'vilda-home-preview-visit-sample-v1:' + userId;
+    const installation = storage.getItem(key);
+    if (installation === 'done') return;
+    const session = vault.captureSyncOperationSession();
+    function check() {
+      vault.assertSyncOperationSession(session);
+      if (!isCurrent() || !ownedFictionalAccount() || ownerWindow() !== owner) throw new Error('Konto podglądu zmieniło się podczas uruchamiania.');
+    }
+    check();
+    const saved = await vault.getPatient(HISTORY_PATIENT_ID);
+    check();
+    if ((saved && installation !== 'installing') || owner.sessionStorage.getItem('vildaCurrentPatientId') === HISTORY_PATIENT_ID) {
+      storage.setItem(key, 'done');
+      return;
+    }
+    const examples = HISTORY_VISITS.map(historyExamplePayload);
+    const snapshots = saved?.snapshots || [], present = new Set();
+    for (const snapshot of snapshots) {
+      const payload = snapshot.payload, expected = examples.find(item => item.visit.visitId === payload?.visit?.visitId);
+      // An existing chart, a correction, or a working copy belongs to its user.
+      // Resume only an untouched prefix of records created by this bootstrap.
+      if (!expected || present.has(expected.visit.visitId) || snapshot.rev !== 0
+        || payload.name !== expected.name || payload.visit.clinicalDateISO !== expected.visit.clinicalDateISO) {
+        storage.setItem(key, 'done');
+        return;
+      }
+      present.add(expected.visit.visitId);
+    }
+    if ((saved && !snapshots.length) || examples.slice(0, present.size).some(example => !present.has(example.visit.visitId))) {
+      storage.setItem(key, 'done');
+      return;
+    }
+    storage.setItem(key, 'installing');
+    for (const example of examples.slice(present.size)) {
+      check();
+      try { await vault.savePatient(example, { patientId: HISTORY_PATIENT_ID, dedup: false }); }
+      catch (error) {
+        check();
+        if (error?.code !== 'PATIENT_DELETED') throw error;
+        storage.setItem(key, 'done');
+        return;
+      }
+    }
+    const visitWithNote = HISTORY_VISITS.find(row => row.note);
+    const noteId = '46038ef5-7f3d-402a-b36c-99ea032436e2';
+    check();
+    if (!await vault.getPatientNote(noteId, { strict: true })) {
+      check();
+      const visit = historyExamplePayload(visitWithNote).visit;
+      await vault.savePatientNote({ ...visitWithNote.note, id: noteId, patientId: HISTORY_PATIENT_ID, category: 'observation',
+        visitContext: { version: 1, visitId: visit.visitId, clinicalDateISO: visit.clinicalDateISO } });
+    }
+    check();
+    storage.setItem(key, 'done');
+  }
+
   async function ensureAccount() {
     await waitForAuthReady();
     const vault = window.VildaVault;
@@ -281,6 +363,10 @@
       state.phase = 'form'; boot.message.textContent = 'Konto demonstracyjne jest gotowe. Uruchamiam formularz i funkcje lekarskie.';
       const owner = await waitFor(() => { const target = ownerWindow(); return ready(target) && target; }, 'Nie ukończono uruchamiania formularza.');
       await waitFor(() => owner.VildaProAccess?.hasAccess() && ready(owner), 'Nie można uruchomić widoku lekarskiego.');
+      // Native auth and vault restoration can finish before the deferred
+      // Gabinet script executes. Its declaration identifies the landing page.
+      const gabinetPage = owner.__VILDA_HOME_GABINET_PREVIEW__ === true && Boolean(
+        owner.document.querySelector('script[src*="vilda_home_gabinet.js"]') || owner.VildaHomeGabinet);
       state.phase = 'example'; boot.message.textContent = 'Przygotowuję kartę fikcyjnego pacjenta. Twoja bieżąca sesja formularza pozostaje zachowana.';
       const seed = async () => {
         const current = JSON.parse(window.localStorage.getItem(ACCOUNT_KEY) || 'null');
@@ -298,14 +384,19 @@
         if (!isCurrent()) throw new Error('Konto podglądu zmieniło się podczas uruchamiania.');
         patients.sort((left, right) => String(left.createdAtISO || '').localeCompare(String(right.createdAtISO || ''))
           || left.patientId.localeCompare(right.patientId));
-        if (patients.length) return patients[0].patientId;
-        return (await vault.savePatient(fictionalPayload(), { dedup: false })).patientId;
+        const example = patients[0] || await vault.savePatient(fictionalPayload(), { dedup: false });
+        if (gabinetPage) await ensureHistoryExample(owner, marker.userId, isCurrent);
+        return example.patientId;
       };
       const patientId = window.navigator.locks?.request
         ? await window.navigator.locks.request('vilda-home-preview-bootstrap', seed) : await seed();
       if (ownerWindow() !== owner || !ownedFictionalAccount()) throw new Error('Widok podglądu zmienił się podczas uruchamiania. Odśwież stronę.');
       owner.VildaHomeWorkspace?.start?.();
-      if (owner.VildaHomeGabinet) owner.VildaHomeGabinet.refreshStart();
+      if (gabinetPage) {
+        const gabinet = await waitFor(() => owner.VildaHomeGabinet, 'Nie ukończono uruchamiania Gabinetu.');
+        if (ownerWindow() !== owner || !ownedFictionalAccount()) throw new Error('Widok podglądu zmienił się podczas uruchamiania. Odśwież stronę.');
+        await gabinet.refreshStart();
+      }
       else offerExample(owner, patientId, marker.userId);
       state.status = 'ready'; state.phase = 'ready'; showBadge(); boot.screen.remove();
     } catch (error) {

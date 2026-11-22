@@ -719,8 +719,17 @@ test('home growth regression: blank family and history cancel purely; immediate 
   expect(cancelled.afterOpen).toEqual(cancelled.before);
   expect(cancelled.duringDraft).toEqual(cancelled.before);
   expect(cancelled.openAfterCancel).toBe(false); expect(cancelled.afterCancel).toEqual(cancelled.before);
-  const fast = await frame.evaluate(() => {
-    for (const [id, value] of Object.entries({ age: '13', height: '158', weight: '46' })) document.getElementById(id).value = value;
+  const measurements = { age: '13', height: '158', weight: '46' };
+  const fast = await frame.evaluate(measurements => {
+    // Notify the native shared-form writer exactly as a field edit does.
+    // Keep these events, opening and Apply in one turn so a queued autosave
+    // cannot allocate the anonymous visit before Apply is exercised.
+    for (const [id, value] of Object.entries(measurements)) {
+      const field = document.getElementById(id);
+      field.value = value;
+      field.dispatchEvent(new Event('input', { bubbles: true }));
+      field.dispatchEvent(new Event('change', { bubbles: true }));
+    }
     // The controlled seed uses the same native constraint updater as the UI.
     // It only projects the current main age onto native historical inputs.
     updateAdvAgeMax();
@@ -747,7 +756,7 @@ test('home growth regression: blank family and history cancel purely; immediate 
     finally { window.removeEventListener('input', observe, true); window.removeEventListener('change', observe, true); }
     return { opened, open: host.open, copiedHistoryAgeMax, invalidBeforeApply, beforeApplyVisit, firstNotificationVisit, notifications,
       visit: VildaVisitContext.capture({ user: {} }, { patientId: null, readOnly: true }) };
-  });
+  }, measurements);
   expect(fast.copiedHistoryAgeMax).toBe('13'); expect(fast.invalidBeforeApply).toEqual([]);
   expect(fast).toMatchObject({ opened: true, open: false, beforeApplyVisit: null });
   expect(fast.notifications).toBeGreaterThan(0); expect(fast.firstNotificationVisit).toEqual(fast.visit);
@@ -755,14 +764,19 @@ test('home growth regression: blank family and history cancel purely; immediate 
   await expect(frame.locator('#advMotherHeight')).toHaveValue('167');
   await expect.poll(() => frame.evaluate(() => {
     const session = VildaPersistence.readMainSession();
-    return { mother: session?.advanced?.motherHeight, visit: session?.visit,
+    const shared = VildaPersistence.readShared();
+    return { shared: { age: shared?.age, height: shared?.height, weight: shared?.weight },
+      mother: session?.advanced?.motherHeight, visit: session?.visit,
       history: session?.advanced?.data?.measurements?.some(row => row.ageMonths === 144 && row.height === 153 && row.weight === 40) };
-  })).toEqual({ mother: 167, visit: fast.visit, history: true });
+  })).toEqual({ shared: measurements, mother: 167, visit: fast.visit, history: true });
   await page.reload({ waitUntil: 'load' }); await expect(frame.locator('#advMotherHeight')).toHaveValue('167');
   // Shared controls can be restored before the native main-session producer.
   const startup = await frame.evaluate(() => VildaDataImportExport.whenInitialMainSessionRestoreSettled());
   expect(startup.ready).toBe(true);
-  expect(await frame.evaluate(() => VildaDataImportExport.captureCurrentUserDataReadOnly().visit)).toEqual(fast.visit);
+  const restored = await frame.evaluate(() => VildaDataImportExport.captureCurrentUserDataReadOnly());
+  expect(restored.visit).toEqual(fast.visit);
+  expect(restored.user).toMatchObject({ age: 13, height: 158, weight: 46 });
+  expect(restored.advanced.data.measurements).toContainEqual(expect.objectContaining({ ageMonths: 144, height: 153, weight: 40 }));
 });
 
 test('home growth regression: clinical changes and native restore, choice or account boundaries reject the original draft', async ({ page }) => {

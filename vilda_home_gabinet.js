@@ -4,7 +4,7 @@
   'use strict';
   if (!w || w.__VILDA_HOME_GABINET_PREVIEW__ !== true || w.VildaHomeGabinet) return;
   const d = w.document;
-  let root, main, header, landing, overview, analysis, picker;
+  let root, main, header, landing, overview, analysis, picker, historyHost, historyView;
   let account = null, screen = 'start', target = null, section = 'antro';
   let sequence = 0, selecting = false, frame = 0;
   const labels = {overview: 'Przegląd', analysis: 'Analiza'};
@@ -72,6 +72,46 @@
   function detach(force) {
     return !w.VildaHomePatient?.isInlineOpen?.() || w.VildaHomePatient.closeInline(force) !== false;
   }
+  function dismissHistory() {
+    if (!historyView) return;
+    const previous = historyView;
+    historyView = null;
+    previous.destroy();
+    historyHost.hidden = true;
+  }
+  function openVisitHistory(id, options) {
+    if (!root || !owns(id) || target !== id || screen === 'start' || !options.isCurrent()) return false;
+    if (historyView) return true;
+    const focus = d.activeElement?.closest('[role="menuitem"]')
+      ? overview.querySelector('.vhome-b1-menu-toggle') : header.querySelector('[data-history]');
+    const scroll = w.scrollY;
+    function back(restore = true) {
+      dismissHistory();
+      render();
+      if (restore && owns(id)) {
+        w.scrollTo(0, scroll);
+        focus?.focus({preventScroll: true});
+      }
+      return true;
+    }
+    historyHost.hidden = false;
+    historyView = w.VildaHomeVisitHistory.mount(historyHost, {
+      ...options, patientId: id, isCurrent: () => owns(id) && target === id && options.isCurrent(),
+      backLabel: screen === 'analysis' ? 'Wróć do analizy' : 'Wróć do przeglądu',
+      onBack: back,
+      onEdit(row) {
+        if (!owns(id)) return;
+        back();
+        return options.onEdit(row);
+      },
+      onOpenRecord(key) {
+        if (owns(id)) { back(false); showOverview(key); }
+      }
+    });
+    render();
+    w.scrollTo(0, 0);
+    return true;
+  }
   function setScreen(value) {
     if (value) main.dataset.vhomeScreen = value;
     else delete main.dataset.vhomeScreen;
@@ -82,7 +122,7 @@
     if (!root) return;
     const nextAccount = access();
     if (account !== nextAccount) {
-      sequence++; selecting = false; detach(true); destroyPicker();
+      sequence++; selecting = false; dismissHistory(); detach(true); destroyPicker();
       target = null; screen = 'start'; section = 'antro'; account = nextAccount;
       header.querySelector('h1').textContent = '';
       header.querySelector('.gb-identity-meta').textContent = '';
@@ -95,7 +135,7 @@
       return;
     }
     if (target && !selecting && selected() !== target) {
-      detach(true); target = null; screen = 'start';
+      dismissHistory(); detach(true); target = null; screen = 'start';
     }
     root.hidden = false;
     if (!target || screen === 'start') {
@@ -105,9 +145,15 @@
       return;
     }
     if (!owns(target)) {
-      setScreen('loading');
+      dismissHistory(); setScreen('loading');
       header.hidden = overview.hidden = landing.hidden = true;
       detach(true);
+      return;
+    }
+    if (historyView) {
+      // The native chart uses host.hidden to invalidate its owner during a
+      // read. Cover the overview visually while retaining its live editor.
+      setScreen('history'); header.hidden = landing.hidden = true;
       return;
     }
     setScreen(screen);
@@ -127,13 +173,14 @@
   }
   function showStart() {
     if (!account || !detach(false)) return false;
+    dismissHistory();
     sequence++; selecting = false; target = null; section = 'antro'; screen = 'start';
     showMessage(''); render();
     return true;
   }
   function showAnalysis() {
     if (!owns(target) || !detach(false)) return false;
-    screen = 'analysis'; showMessage(''); render(); w.VildaHomeWorkspace.refresh();
+    dismissHistory(); screen = 'analysis'; showMessage(''); render(); w.VildaHomeWorkspace.refresh();
     return true;
   }
   let labEntry = null;
@@ -156,9 +203,10 @@
   function showOverview(key) {
     const id = selected();
     if (!owns(id)) return false;
+    dismissHistory();
     if (key && target === id && screen === 'overview' && w.VildaHomePatient.isInlineOpen()) {
       if (!w.VildaHomePatient.selectInline(key)) return false;
-      section = key;
+      section = key; render();
       return true;
     }
     if (key || target !== id) section = key || 'antro';
@@ -167,6 +215,7 @@
   }
   async function selectPatient(id, mode) {
     if (!id || selecting || !account || !detach(false)) return false;
+    dismissHistory();
     const generation = ++sequence, vault = w.VildaVault, session = vault.captureSyncOperationSession();
     selecting = true; showMessage('');
     try {
@@ -199,9 +248,10 @@
       '<div class="gb-person-line"><div class="gb-identity"><h1></h1><div class="gb-identity-meta"></div></div><div class="gb-card-actions"><button type="button" data-history>' +
       icon('history') + 'Historia wizyt</button><button type="button" class="gb-primary" data-home-encounter></button></div></div>' +
       '<div class="gb-patient-tabs" role="tablist" aria-label="Karta pacjenta"></div></div>' +
-      '<div class="vhome-gabinet-message" role="status"></div><div id="vhomePatientOverview" hidden></div>';
+      '<div class="vhome-gabinet-message" role="status"></div><div id="vhomePatientOverview" hidden></div><section id="vhomeVisitHistory" hidden aria-label="Historia wizyt"></section>';
     analysis.before(root);
     header = d.getElementById('vhomeGabinetHeader'); landing = d.getElementById('vhomeGabinetStart'); overview = d.getElementById('vhomePatientOverview');
+    historyHost = d.getElementById('vhomeVisitHistory');
     if (w.frameElement?.classList.contains('app-pane')) {
       const decorRail = w.parent.matchMedia('(min-width: 1400px)');
       const syncHeaderWidth = () => header.toggleAttribute('data-decor-rail', decorRail.matches);
@@ -242,7 +292,7 @@
     const id = event.detail?.patientId || selected();
     if (!id) return;
     if (id !== target || screen === 'start') {
-      detach(true); target = id; screen = 'overview'; section = 'antro';
+      dismissHistory(); detach(true); target = id; screen = 'overview'; section = 'antro';
     }
     schedule();
   });
@@ -251,13 +301,13 @@
     'vilda:home-encounter-changed','vilda:user-state-cleared'].forEach(name => d.addEventListener(name, schedule));
   w.addEventListener('vilda:user-state-cleared', schedule);
   w.addEventListener('pageshow', schedule);
-  w.addEventListener('pagehide', () => { if (main) setScreen(null); sequence++; selecting = false; detach(true); if (picker) destroyPicker(); });
+  w.addEventListener('pagehide', () => { dismissHistory(); if (main) setScreen(null); sequence++; selecting = false; detach(true); if (picker) destroyPicker(); });
   w.VildaHomeGabinet = Object.freeze({
-    showStart, showAnalysis, selectPatient, prepareLabEntry, openOverview: () => showOverview('antro'),
+    showStart, showAnalysis, selectPatient, prepareLabEntry, openVisitHistory, openOverview: () => showOverview('antro'),
     openReminders: () => screen !== 'start' && showOverview('reminders'),
     captureVisitBinding: patientId => screen !== 'start' && target === patientId && owns(patientId)
       ? w.VildaHomeEncounter.captureBinding(patientId) : null,
-    refreshStart: () => { install(); render(); picker?.refresh(); }
+    refreshStart: () => { install(); render(); return picker?.refresh(); }
   });
   if (d.readyState === 'loading') d.addEventListener('DOMContentLoaded', install, {once:true}); else install();
 })(typeof window !== 'undefined' ? window : null);

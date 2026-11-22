@@ -317,6 +317,11 @@
     [['edit','Edytuj pacjenta'],['newMeasure','Nowy pomiar'],['visits','Historia wizyt'],['versions','Historia wersji'],['load',null],['return',null]].forEach(function (entry) {
       if (view.inline && (entry[0] === 'load' || entry[0] === 'return')) return;
       var item = native.actions[entry[0]]; if (!item) return;
+      if (view.inline && entry[0] === 'visits' && w.VildaHomeGabinet?.openVisitHistory) {
+        item = button(entry[1], function () {
+          if (current(view)) w.VildaHomeEncounter.history(view.patientId, view.patientName);
+        }, item.className);
+      }
       if (entry[1]) { item.replaceChildren(d.createTextNode(entry[1])); item.setAttribute('aria-label', entry[1]); }
       item.setAttribute('role', 'menuitem'); item.dataset.homePatientAction = entry[0];
       item.addEventListener('click', function () { hideMenu(view, false); }); view.menu.appendChild(item);
