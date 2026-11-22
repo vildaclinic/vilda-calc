@@ -207,7 +207,7 @@
       showMessage('');
     }
     if (!account) {
-      root.hidden = true;
+      root.hidden = header.hidden = true;
       setScreen(null);
       return;
     }
@@ -608,6 +608,7 @@
     main = analysis.parentElement;
     analysis.id ||= 'vhomeGabinetAnalysis';
     root = d.createElement('div'); root.id = 'vhomeGabinet'; root.hidden = true;
+    const workspaceHeader = d.createElement('div'); workspaceHeader.id = 'gbWorkspaceHeader';
     entryHeader = d.createElement('div');
     entryHeader.id = 'gbEntryHeader'; entryHeader.className = 'gb-header-top'; entryHeader.hidden = true;
     entryHeader.innerHTML = '<nav class="gb-breadcrumb" aria-label="Ścieżka nawigacji">' +
@@ -631,8 +632,13 @@
       '<section id="vhomeGabinetRegistration" hidden aria-labelledby="gbRegistrationTitle"><div class="gb-registration-heading">' +
       '<h1 id="gbRegistrationTitle">Dodaj pacjenta</h1></div><div data-registration-form></div></section>' +
       '<dialog id="gbRapidMatches" aria-labelledby="gbRapidMatchTitle"></dialog><div class="vhome-gabinet-message" role="status"></div><div id="vhomePatientOverview" hidden></div><section id="vhomeVisitHistory" hidden aria-label="Historia wizyt"></section>';
-    analysis.before(entryHeader, root);
-    header = d.getElementById('vhomeGabinetHeader'); landing = d.getElementById('vhomeGabinetStart'); overview = d.getElementById('vhomePatientOverview');
+    header = root.querySelector('#vhomeGabinetHeader');
+    workspaceHeader.append(entryHeader, header);
+    analysis.before(workspaceHeader, root);
+    landing = d.getElementById('vhomeGabinetStart'); overview = d.getElementById('vhomePatientOverview');
+    if (w.ResizeObserver) new w.ResizeObserver(() => {
+      d.documentElement.style.setProperty('--gb-workspace-header-height', workspaceHeader.offsetHeight + 'px');
+    }).observe(workspaceHeader);
     historyHost = d.getElementById('vhomeVisitHistory');
     rapidHeader = d.getElementById('gbRapidHeader');
     registrationHost = d.getElementById('vhomeGabinetRegistration');
@@ -667,9 +673,9 @@
         if (!event.persisted) decorRail.removeEventListener('change', syncHeaderWidth);
       });
     }
-    root.querySelector('[data-start]').onclick = closePatientCard;
-    root.querySelector('[data-history]').onclick = () => { if (owns(target)) w.VildaHomeEncounter.history(target, patientName()); };
-    root.querySelector('[data-home-visit-date]').onclick = () => {
+    header.querySelector('[data-start]').onclick = closePatientCard;
+    header.querySelector('[data-history]').onclick = () => { if (owns(target)) w.VildaHomeEncounter.history(target, patientName()); };
+    header.querySelector('[data-home-visit-date]').onclick = () => {
       const status = w.VildaHomeEncounter.state(target);
       if (owns(target) && status.mode === 'browse' && status.visitId && !status.busy && !selecting)
         w.VildaHomeEncounter.history(target, patientName(), status.visitId);
@@ -695,7 +701,7 @@
       } catch (_) { /* Preserve the edit and let the clinician reopen the current revision. */ }
       if (target === id && owns(id)) showMessage('Nie przeniesiono wizyty do kosza. Otwórz ponownie wizytę i sprawdź jej aktualny zapis.');
     };
-    root.querySelector('[data-home-encounter]').onclick = async event => {
+    header.querySelector('[data-home-encounter]').onclick = async event => {
       if (!owns(target)) return;
       const id = target, button = event.currentTarget;
       button.disabled = true;

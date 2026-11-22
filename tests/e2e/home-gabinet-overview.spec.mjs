@@ -40,6 +40,80 @@ async function horizontalEdges(locator) {
   });
 }
 
+test('the outer header stays visible and aligned while switching or scrolling Gabinet screens', async ({ page }) => {
+  const { frame } = await prepare(page);
+  const start = frame.locator('#vhomeGabinetStart');
+  const entryBack = frame.locator('#gbEntryHeader').getByRole('button', { name: 'Ekran startowy' });
+  const patientBack = frame.locator('#vhomeGabinetHeader [data-start]');
+  const analysis = frame.locator('#vhomeGabinetAnalysisTab');
+
+  for (const { width, height } of [{ width: 1600, height: 800 }, { width: 390, height: 480 }]) {
+    await page.setViewportSize({ width, height });
+    const leading = width > 991 ? '.chrome-brand-logo' : '[data-vilda-chrome-menu-btn]';
+    const controls = page.locator('.chrome-strip').locator(leading + ', #vildaHeaderSearchBtn, #vildaRemindersBtn');
+    await expect(controls).toHaveCount(3);
+    for (const control of await controls.all()) await expect(control).toBeInViewport({ ratio: 1 });
+    const positions = locator => locator.evaluateAll(nodes => nodes.map(node => {
+      const { left, top, right, bottom } = node.getBoundingClientRect();
+      const hit = document.elementFromPoint((left + right) / 2, (top + bottom) / 2);
+      const target = node.closest('a,button') || node;
+      return { left, top, visible: right > left && bottom > top && left >= 0 && top >= 0 &&
+        right <= innerWidth && bottom <= innerHeight && target.contains(hit) };
+    }));
+    const baseline = await positions(controls);
+    expect(baseline.every(box => box.visible)).toBe(true);
+
+    async function expectAnchored(screen) {
+      await expect.poll(async () => {
+        const current = await positions(controls);
+        return current.map((box, i) => ({ visible:box.visible,
+          dx:Math.round(box.left - baseline[i].left), dy:Math.round(box.top - baseline[i].top) }));
+      }, { message: 'Położenie i widoczność globalnego nagłówka przy szerokości ' + width + ' px · ' + screen })
+        .toEqual(baseline.map(() => ({ visible:true, dx:0, dy:0 })));
+    }
+    async function checkScroll(screen, requireOverflow = false, pinned) {
+      await expectAnchored(screen);
+      await frame.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
+      const beforeScroll = pinned ? await positions(pinned) : [];
+      const moved = await frame.evaluate(async () => {
+        const scroller = document.scrollingElement;
+        scroller.scrollTo({ top: 420, behavior: 'instant' });
+        await new Promise(resolve => { requestAnimationFrame(resolve); });
+        return scroller.scrollTop;
+      });
+      if (requireOverflow) expect(moved, 'Przewinięta treść · ' + screen).toBeGreaterThan(100);
+      if (pinned) {
+        expect(beforeScroll.every(box => box.visible)).toBe(true);
+        expect(await positions(pinned), 'Przypięta nawigacja · ' + screen).toEqual(beforeScroll);
+      }
+      // The browser can also hand scrolling to the outer document at the pane boundary.
+      await page.evaluate(() => window.scrollTo({ top: 180, behavior: 'instant' }));
+      await expectAnchored(screen + ' po przewinięciu');
+      await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
+      await frame.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
+    }
+
+    await expect(start.locator('[data-entry="office"]')).toBeVisible();
+    await checkScroll('Ekran startowy');
+    await start.locator('[data-entry="rapid"]').click();
+    await expect(frame.locator('#gbRapidTitle')).toBeVisible();
+    await checkScroll('Szybka ścieżka', width < 500, entryBack);
+    await entryBack.click();
+    await start.locator('[data-entry="office"]').click();
+    await expect(start.locator('.vgs-office-grid')).toBeVisible();
+    await checkScroll('Gabinet', width < 500);
+    await choosePatient(frame, 'Antoni');
+    await checkScroll('Przegląd');
+    await analysis.click();
+    await expect(analysis).toHaveAttribute('aria-selected', 'true');
+    await checkScroll('Analiza', true, patientBack.or(analysis));
+    await patientBack.click();
+    await entryBack.click();
+    await expect(start.locator('[data-entry="office"]')).toBeVisible();
+    await expectAnchored('Powrót na ekran startowy');
+  }
+});
+
 test('Gabinet A keeps its navigation fixed and opens the chosen patient record', async ({ page }) => {
   const { frame, ids } = await prepare(page);
   const reminderTitle = 'Fikcyjne przypomnienie o wynikach';

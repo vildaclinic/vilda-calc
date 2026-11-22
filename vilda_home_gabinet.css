@@ -4,6 +4,7 @@ html:has([data-vhome-screen]) { scrollbar-gutter: stable; }
 [data-vhome-screen="history"] #vhomePatientOverview,
 [data-vhome-screen] #vhomeGabinet[hidden],
 #vhomeGabinet [hidden],
+#gbWorkspaceHeader [hidden],
 [data-vhome-screen]:not([data-vhome-screen="analysis"],[data-vhome-screen="rapid"]) > #vhomeGabinetAnalysis,
 [data-vhome-screen] .vhome-visit-heading,
 [data-vhome-screen] #vhomeAnalysisHeading,
@@ -11,16 +12,28 @@ html:has([data-vhome-screen]) { scrollbar-gutter: stable; }
 
 #vildaLoadChoiceModal[hidden] { display: none !important; }
 
-#vhomeGabinet { color: #23444c; font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; min-width: 0; }
+#vhomeGabinet, #gbWorkspaceHeader { color: #23444c; font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; min-width: 0; }
 #vhomeGabinetHeader, #vhomePatientOverview, #vhomeVisitHistory { width: 100%; min-width: 0; box-sizing: border-box; }
 .main-content[data-vhome-screen] {
   --gb-inset-start: max(var(--mobile-dock-side-gap,.75rem),calc(env(safe-area-inset-left,0px) + .35rem));
   --gb-inset-end: max(var(--mobile-dock-side-gap,.75rem),calc(env(safe-area-inset-right,0px) + .35rem));
 }
 [data-vhome-screen]:not([data-vhome-screen="start"]) > #vhomeGabinet,
-[data-vhome-screen] > #gbEntryHeader {
+[data-vhome-screen] > #gbWorkspaceHeader {
   box-sizing: border-box;
   padding-inline: var(--gb-inset-start) var(--gb-inset-end);
+}
+#gbWorkspaceHeader { display: flow-root; }
+html.vilda-embedded [data-vhome-screen] > #gbWorkspaceHeader {
+  position: sticky;
+  top: var(--chrome-form-gap,12px);
+  z-index: var(--z-dropdown);
+  background: var(--vhome-workspace-background,var(--bg));
+  box-shadow: 0 calc(-1 * var(--chrome-form-gap,12px)) var(--vhome-workspace-background,var(--bg));
+}
+/* Keep focused fields and anchor targets clear of the pinned navigation. */
+html.vilda-embedded:has(.main-content[data-vhome-screen]) {
+  scroll-padding-top: calc(var(--chrome-form-gap,12px) + var(--gb-workspace-header-height,0px));
 }
 @media (min-width: 992px) {
   html.vilda-form-layout:not(.vilda-embedded):not(.vilda-shell-embedded):not(.vilda-phone) .main-content[data-vhome-screen] {
@@ -41,7 +54,6 @@ html.vilda-form-host-desktop .main-content[data-vhome-screen] > #vhomeGabinetAna
 }
 [data-vhome-screen] :is(#calcForm, #vhomeMainCards) { gap: var(--space-12px); }
 [data-vhome-screen] :is(#vhomeMainCards, #vhomeVisitComparison, #vhomeOtherTools) { margin-block: var(--space-12px); }
-#gbEntryHeader[hidden] { display: none !important; }
 :is(#vhomeGabinetHeader,#gbEntryHeader) { font: 1rem/1.52 Inter, system-ui, -apple-system, "Segoe UI", sans-serif; }
 #vhomeGabinetHeader { margin-bottom: 1.15rem; }
 #vhomeGabinetHeader :is(.gb-header-top,.gb-person-line,.gb-patient-tabs,button),

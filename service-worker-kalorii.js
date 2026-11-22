@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.571';
+const SW_VERSION = '1.1.572';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -1982,6 +1982,7 @@ const CORE_SHELL_URLS = [
   '/vilda_home_gabinet.css?v=5',
   '/vilda_home_gabinet.css?v=6',
   '/vilda_home_gabinet.css?v=7',
+  '/vilda_home_gabinet.css?v=8',
   '/vilda_home_gabinet_start.css?v=1',
   '/vilda_home_gabinet_start.css?v=2',
   '/vilda_home_gabinet_start.css?v=3',
@@ -2009,6 +2010,7 @@ const CORE_SHELL_URLS = [
   '/vilda_home_gabinet.js?v=7',
   '/vilda_home_gabinet.js?v=8',
   '/vilda_home_gabinet.js?v=9',
+  '/vilda_home_gabinet.js?v=10',
   '/vilda_home_visit_scene.css?v=1',
   '/vilda_home_visit_scene.css?v=2',
   '/vilda_home_visit_detail.css?v=1',
@@ -4014,6 +4016,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_shell.js?v=86',
   '/vilda_shell.js?v=87',
   '/vilda_shell.js?v=88',
+  '/vilda_shell.js?v=89',
   '/vilda_shell.css',
   '/vilda_shell.css?v=1',
   '/vilda_shell.css?v=2',
@@ -4039,6 +4042,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_shell.css?v=24',
   '/vilda_shell.css?v=25',
   '/vilda_shell.css?v=26',
+  '/vilda_shell.css?v=27',
   '/vilda_save_status_indicator.css?v=4',
   '/vilda_save_status_indicator.css?v=5',
   '/vilda_save_status_indicator.css?v=6',
@@ -7141,8 +7145,8 @@ const CLINICAL_WORKSPACE_PRECACHE_PACK = Object.freeze({
 
 // BEGIN VISIT UI PACK CONFIG
 const VISIT_UI_PRECACHE_PACK = Object.freeze({
-  "url": "/runtime/visit-ui-precache/precache-a3104ff8571a.json",
-  "sha256": "a3104ff8571ac3ab24b568ad3d8a1d2405128e74249bc96da086487f0c1022f2",
+  "url": "/runtime/visit-ui-precache/precache-66a33c8d9d25.json",
+  "sha256": "66a33c8d9d25bd0d406f0e3f732eef750442a5eb5b3419118897162cb8306212",
   "files": [
     {
       "url": "/vilda_ui_intents.js?v=2",
@@ -7301,8 +7305,8 @@ const VISIT_UI_PRECACHE_PACK = Object.freeze({
       "sha256": "177e98f3e7a6ea77d603fdfab360efec5b9693db19203b3f784c03f0ef32d31a"
     },
     {
-      "url": "/vilda_home_gabinet.css?v=7",
-      "sha256": "2aa85262895ffbd588895685a0ec2e0c45da3d51d8f201500fef99b5c9db1fc3"
+      "url": "/vilda_home_gabinet.css?v=8",
+      "sha256": "80b9771c0d3c6b0cc6c29c80a3389e34ee30a4d1e1a4b100f74a4e03c9519649"
     },
     {
       "url": "/vilda_home_gabinet_start.css?v=5",
@@ -7321,8 +7325,8 @@ const VISIT_UI_PRECACHE_PACK = Object.freeze({
       "sha256": "fec69f9d1515304840064807be122549908d2c785187f5f6f16a970be8d51b81"
     },
     {
-      "url": "/vilda_home_gabinet.js?v=9",
-      "sha256": "dfb93577745334971453926c98c907d887d36e6155de26738e860a90a0ff4bbf"
+      "url": "/vilda_home_gabinet.js?v=10",
+      "sha256": "49f9284d1a7dd79a71f846451e87f25f3cce0ad911b10b7de275b20ec6117666"
     },
     {
       "url": "/vilda_home_visit_scene.css?v=2",
