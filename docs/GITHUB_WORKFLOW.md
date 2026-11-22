@@ -65,9 +65,8 @@ aplikacją nadal celują w `audyt`. Nie zmieniamy gałęzi publikowanej przez Gi
 Pages. Dopiero końcowy PR z integracji do `audyt`, po odbiorze właściciela,
 może opublikować nowy interfejs w aplikacji.
 
-CI, Wygląd i CodeQL obsługują PR-y do obu gałęzi. Nazwy wymaganych kontroli,
-pełny zestaw Chromium, Safari/WebKit i kontrola design systemu pozostają takie
-same. Docelowa ochrona integracji powinna obejmować te same wymagane kontrole,
+CI, Wygląd i CodeQL obsługują PR-y do obu gałęzi. Zakres Chromium i Safari/WebKit
+przed scaleniem oraz sposób uruchomienia pełnego przebiegu opisuje „Zakres i czas CI”. Docelowa ochrona integracji powinna obejmować te same wymagane kontrole,
 aktualną gałąź przed scaleniem, zakaz force push i usuwania. Sam plik workflow
 nie ustanawia ochrony — jej stan w ustawieniach GitHuba trzeba sprawdzić osobno.
 
@@ -113,42 +112,32 @@ samo utworzenie gałęzi ani zielone CI nie aktualizuje adresu podglądu.
 
 Zielone CI nie zatwierdza medycznie wzoru. Potwierdza jedynie to, co test został zaprojektowany sprawdzić.
 
-## Czas pełnego E2E
+## Zakres i czas CI
 
-Pełny zestaw jest dzielony po plikach na **osiem runnerów**, po cztery workery
-Playwrighta na każdym. Każdy runner wyznacza ten sam deterministyczny podział
-z `tests/fixtures/czasy-e2e.json`. Skrypt sprawdza listę przez rzeczywiste
-`playwright test --list`; testy jednostkowe pilnują pełnego, rozłącznego pokrycia.
-Wymagany status `Testy przeglądarkowe i PWA` przechodzi dopiero po wszystkich częściach.
+Przed scaleniem Chromium uruchamia na trzech runnerach podstawowe scenariusze
+aplikacji, obliczeń klinicznych, zapisu, kopii, synchronizacji i PWA oraz wszystkie
+pliki `tests/e2e/*.spec.mjs` dodane lub zmienione w PR-ze. Stała lista jest w
+`tests/support/odlamki-e2e.mjs`. Selekcja porównuje testowane drzewo z pierwszym
+rodzicem commita scalenia (`HEAD^1`). Przy ręcznym uruchomieniu na gałęzi PR-a,
+w tym po odświeżeniu zrzutów przez „Wygląd”, wybór `baza_pr` wskazuje aktualną gałąź docelową.
+Lista podstawowa obejmuje również Szybką ścieżkę, korektę historycznej wizyty i kosz wizyt.
 
-Geometria punktów wyników ma dodatkowy, krótki job Safari/WebKit. Instaluje WebKit
-raz i uruchamia scenariusze geometrii i podglądu M1 oraz mobilne regresje
-docka, wyszukiwania i odstępu pod wynikami z `playwright.lab-chart-webkit.config.mjs`:
-komputer oraz ekrany 390 i 320 px.
-Sprawdzają również piksele zrzutu ekranu, ponieważ WebKit potrafił rysować punkt
-w innym miejscu niż wskazywały jego współrzędne DOM. Wynik tego joba należy do
-wymaganego statusu `Testy przeglądarkowe i PWA`; osiem części Chromium zachowuje
-dotychczasowy zakres i sposób uruchamiania.
+Status `Testy przeglądarkowe i PWA` czeka również na Safari/WebKit. Ten job
+sprawdza geometrię wykresów na komputerze i telefonie, podgląd nowego ekranu
+głównego oraz zmienione testy należące do projektu WebKit.
+Status `Lint, składnia i testy jednostkowe` czeka na cztery części Vitest oraz
+kontrole polityki repozytorium, lint, składnię, dostęp PRO i wersje zasobów.
 
-Punkt odniesienia: [CI PR #847](https://github.com/vildaclinic/vilda-calc/actions/runs/41332488215),
-head PR `a873c1f2`, testowany merge commit `e11e505a`, 2728 przypadków.
-Na czterech runnerach same testy trwały
-42,18 / 41,37 / 43,27 / 41,60 min. Przygotowanie zajmowało 51–63 s,
-a raport i sprzątanie około 4 s. Obciążenie było wyrównane; główne ograniczenie
-stanowiła liczba maszyn wykonujących testy równolegle.
+Pełna regresja Chromium na ośmiu runnerach jest uruchamiana codziennie na
+`audyt` o 02:17 UTC. Można ją też wywołać w **Actions → Kontrola jakości → Run
+workflow**. Na `audyt` uruchamia się automatycznie w tym trybie. Na gałęzi PR-a
+zaznacz `pelny_e2e`, aby sprawdzić pełną regresję Chromium i WebKit przed scaleniem.
+GitHub uruchamia harmonogram na gałęzi domyślnej. Pełny przebieg integracji
+można zlecić ręcznie, wybierając jej gałąź.
 
-Zmiana czterech części na osiem zachowuje wszystkie przypadki, projekty desktop/mobile,
-izolację kontekstów i sejfów, kolejność wewnątrz plików, asercje, limity,
-ponowienia i ślady pierwszego błędu. Szacunek 22–25 min wymaga potwierdzenia
-pełnym CI; zmierzony wynik i liczbę przypadków zapisujemy w opisie PR.
-Porównujemy najdłuższy job, czas samych testów, oczekiwanie na runner,
-powtórki i pokrycie zestawu. Jeden przebieg daje obserwację, a nie gwarancję czasu
-każdego kolejnego PR-a.
-
-Większa równoległość wymaga większej liczby dostępnych runnerów; przy limicie konta
-części mogą czekać w kolejce. Aktualizacja tabeli czasów z pełnych raportów CI
-poprawia dalsze planowanie. Zmiana cache, nagrywania śladów lub przygotowania kont
-testowych wymaga osobnego pomiaru i sprawdzenia zachowania izolacji oraz PWA.
+W obu trybach Chromium podział wykorzystuje czasy z `tests/fixtures/czasy-e2e.json`,
+a każda lista jest sprawdzana przez `playwright test --list`. Historyczny punkt
+odniesienia to 40 min w [CI PR #1015](https://github.com/vildaclinic/vilda-calc/actions/runs/44931200133).
 
 ## Kilka wątków naraz
 
@@ -186,7 +175,7 @@ git commit                      # kończy też scalanie, jeżeli było w toku
 git push
 ```
 
-Bez `git add` i `git commit` poprawki skryptu zostają tylko na dysku, a PR na GitHubie dalej ma zderzone numery. `npm test` przechodzi wtedy na zielono, bo wypchnięte drzewo jest wewnętrznie spójne. Zderzenie wykrywa dopiero krok CI „Sprawdź wersje względem gałęzi docelowej” (niżej). Testy przeglądarkowe po scaleniu uruchamia CI (wymagany status „Testy przeglądarkowe i PWA”).
+Bez `git add` i `git commit` poprawki skryptu zostają tylko na dysku, a PR na GitHubie dalej ma zderzone numery. `npm test` przechodzi wtedy na zielono, bo wypchnięte drzewo jest wewnętrznie spójne. Zderzenie wykrywa dopiero krok CI „Sprawdź wersje względem gałęzi docelowej” (niżej). Przed scaleniem GitHub sprawdza wymagany status „Testy przeglądarkowe i PWA”.
 
 | Konflikt w | Jak rozwiązać |
 |---|---|
@@ -213,7 +202,7 @@ Symulacja na kodzie z 2026-09-30 (`audyt` `567597c`, otwarte #503 i #504):
 
 ### Strażnik w CI
 
-Wymagany job „Lint, składnia i testy jednostkowe” ma krok **„Sprawdź wersje względem gałęzi docelowej”**:
+Job z krokiem **„Sprawdź wersje względem gałęzi docelowej”** musi przejść, aby zaliczyć status „Lint, składnia i testy jednostkowe”:
 
 ```bash
 node tests/scripts/podbij-wersje.mjs --sprawdz --bez-sieci --baza="$BAZA"
