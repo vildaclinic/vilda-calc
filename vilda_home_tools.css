@@ -157,7 +157,7 @@ html.vilda-home-workspace .vhome-other-tools .vhome-tool-tile:enabled:hover {
 }
 .vhome-tool-box h3 { margin: 0 0 var(--space-16px); font-size: 17px; font-weight: 650; line-height: 1.4; }
 .vhome-tool-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-16px) var(--space-12px); }
-.vhome-tool-draft-document fieldset.vhome-tool-fields { min-width: 0; margin: 0; padding: 0; border-width: 0; }
+.vhome-tool-draft-document fieldset.vhome-tool-box { margin: 0; }
 .vhome-tool-field { display: flex; flex-direction: column; min-width: 0; gap: var(--space-6px); font-size: 14px; font-weight: 500; }
 .vhome-tool-draft-document :is(input:not([type='checkbox']), select, textarea) { box-sizing: border-box; width: 100%; min-width: 0; min-height: 46px; font-size: 16px; font-variant-numeric: tabular-nums; }
 .vhome-tool-actions { display: grid; gap: var(--space-8px); }

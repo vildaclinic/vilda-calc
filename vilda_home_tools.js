@@ -258,12 +258,12 @@
       doc.head.appendChild(link);
     });
     const layout = element(doc, 'div', 'vhome-tool-layout');
-    const inputCard = element(doc, 'section', 'vhome-tool-box');
+    const inputCard = element(doc, item.readOnly ? 'fieldset' : 'section', 'vhome-tool-box');
     const resultCard = element(doc, 'section', 'vhome-tool-box');
-    const input = element(doc, item.readOnly ? 'fieldset' : 'div', 'vhome-tool-fields');
+    const input = element(doc, 'div', 'vhome-tool-fields');
     if (item.readOnly) {
-      input.disabled = true;
-      input.setAttribute('aria-label', 'Zapisane pomiary');
+      inputCard.disabled = true;
+      inputCard.setAttribute('aria-label', 'Zapisane pomiary');
     }
     const result = element(doc, 'div', 'vhome-tool-result');
     const actions = element(doc, 'div', 'vhome-tool-actions');
