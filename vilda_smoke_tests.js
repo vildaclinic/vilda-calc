@@ -101,7 +101,7 @@
     'vilda_macro_practice.js?v=3',
     'vilda_data_import_export.js?v=130',
     'vilda_baseline_pacjenta.js?v=5',
-    'vilda_dob_age.js?v=12',
+    'vilda_dob_age.js?v=13',
     'vilda_food_summary.js?v=3',
     'vilda_estimated_intake.js?v=3',
     'vilda_update_prep.js?v=101',

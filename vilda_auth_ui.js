@@ -1283,8 +1283,12 @@ function patientsReadHome() {
   if (!saved || !remReadCurrent(saved.owner)) return null;
   return { read: function () { return saved.state; } };
 }
+// A background reread remounts the list while keeping the directory open.
+let homeDirectorySession = null;
 function patientsDatabaseGeometry(enabled) {
   if (!Rt) return;
+  if (!enabled) homeDirectorySession = null;
+  else if (!homeDirectorySession) homeDirectorySession = {};
   Rt.classList.toggle('vilda-auth-database', !!enabled);
   i.document.documentElement.classList.toggle('vilda-patient-database-open', !!enabled);
 }
@@ -4434,6 +4438,7 @@ Pacjenci pozostaj\u0105 w bazie \u2014 znika tylko lista.`)}catch{}rt&&n.deleteP
 (Lista automatyczna \u2014 zapiszemy wykluczenie, regu\u0142a nie doda pacjenta ponownie.)`:"Zdj\u0105\u0107 pacjenta z listy \u201E"+s.name+"\u201D?")}catch{}u&&r.removePatientFromList(s.id,a).then(l).catch(function(){})}),t.appendChild(p)});var c=e("button",{type:"button",class:"vilda-pl-chip add",title:"Dodaj pacjenta do listy",text:d&&d.length?"+":"+ Dodaj do listy"});c.addEventListener("click",function(){Ql(a,n||"",{onChanged:l})}),t.appendChild(c)}function l(){r.listPatientListsForPatient(a).then(o).catch(function(){o([])})}o([]),l()}var oo="vilda:patients-sort",ts=[{id:"recent-desc",label:"Ostatnio zapisany",sub:"od najnowszego"},{id:"name-asc",label:"Imi\u0119 A \u2192 Z",sub:null},{id:"name-desc",label:"Imi\u0119 Z \u2192 A",sub:null}];function es(){try{return i.localStorage&&i.localStorage.getItem(oo)||"recent-desc"}catch{return"recent-desc"}}function as(t){try{i.localStorage&&i.localStorage.setItem(oo,t)}catch{}}function ki(t,a){const n=t.slice();return a==="name-asc"?n.sort(function(r,o){const l=r.header&&r.header.name||"",d=o.header&&o.header.name||"";return l.localeCompare(d,"pl")}):a==="name-desc"?n.sort(function(r,o){const l=r.header&&r.header.name||"";return(o.header&&o.header.name||"").localeCompare(l,"pl")}):a==="visits-desc"?n.sort(function(r,o){return(o.snapshotCount||0)-(r.snapshotCount||0)}):n.sort(function(r,o){const l=r.lastSavedAtISO?Date.parse(r.lastSavedAtISO):0;return((o.lastSavedAtISO?Date.parse(o.lastSavedAtISO):0)||0)-(l||0)}),n}function on(t){for(var a=String(t||""),n=0,r=0;r<a.length;r++)n=(n*31+a.charCodeAt(r))%360;return"background:linear-gradient(140deg,hsl("+n+",38%,52%),hsl("+(n+34)%360+",40%,44%));"}async function Be(t,a,n){
   const r=jt();
   if(!r||!r.isUnlocked())return;
+  if (!n) homeDirectorySession = null;
   const o=a||{
   }
   ;
@@ -5129,8 +5134,10 @@ function openPatientInHome(patientId, intent, section, focusNoteId) {
   if (!route) return null;
   const local = route === i.VildaHomeGabinet;
   const nativeRoot = Rt, surface = nativeRoot?.firstElementChild, sentinel = Pa;
-  const fromDirectory = !!nativeRoot?.classList?.contains('vilda-auth-database');
-  const ownsSurface = () => !surface || nativeRoot === Rt && nativeRoot.firstElementChild === surface && Pa === sentinel;
+  const directory = nativeRoot?.classList?.contains('vilda-auth-database') ? homeDirectorySession : null;
+  const ownsSurface = () => !surface || nativeRoot === Rt && Pa === sentinel &&
+    (directory ? directory === homeDirectorySession && !!nativeRoot.firstElementChild && nativeRoot.classList.contains('vilda-auth-database')
+      : nativeRoot.firstElementChild === surface);
   const vault = jt();
   if (!vault?.isUnlocked()) return Promise.resolve(false);
   const session = vault.captureSyncOperationSession();
@@ -5156,7 +5163,7 @@ function openPatientInHome(patientId, intent, section, focusNoteId) {
   const navigation = local ? route.openPatient(patientId, options) : route.openHomePatient(patientId, options);
   return Promise.resolve(navigation).then(function (opened) {
     if (opened && surface && current() && ownsSurface()) {
-      if (local && fromDirectory) {
+      if (local && directory) {
         try { i.parent?.VildaShell?.claimHomeDirectory?.(i); } catch (_) { /* standalone */ }
       }
       $t({ shellNavigation: true });

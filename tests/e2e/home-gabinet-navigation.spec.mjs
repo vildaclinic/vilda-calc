@@ -71,8 +71,9 @@ async function savedVisits(start, patientId) {
 }
 
 async function expectNoLegacyChooser(page) {
-  for (const frame of page.frames()) {
-    expect(await frame.evaluate(() => window.nativeVisitChooserCount)).toBe(0);
+  const origin = new URL(page.url()).origin;
+  for (const frame of page.frames().filter(panel => new URL(panel.url()).origin === origin)) {
+    expect(await frame.evaluate(() => window.nativeVisitChooserCount), frame.url()).toBe(0);
   }
 }
 

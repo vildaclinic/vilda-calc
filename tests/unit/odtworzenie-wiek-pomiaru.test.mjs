@@ -297,6 +297,30 @@ describe('P-ODTWORZ-WIEK — przegląd: ponowny zapis i nowy pomiar w odtworzone
     expect(pola.ageWeeks.value).toBe('1');
   });
 
+  it('w Gabinecie pusta konsultacja zachowuje datę wizyty bez dopisywania daty pomiaru', () => {
+    vi.setSystemTime(new Date(2026, 5, 17, 16));
+    const rekord = rekordNastolatka({weight: null, height: null});
+    rekord.visit = {visitId: 'fikcyjna-wizyta', clinicalDateISO: '2026-06-17'};
+    const {win, pola, D, wyslij, sesja} = srodowisko({wybor: 'new', rekord, pomiar: {}});
+    win.__VILDA_HOME_GABINET_PREVIEW__ = true;
+    pola.age.value = '16'; pola.ageMonths.value = '10';
+    wyslij('vilda:state-restored');
+    expect(D.readMeasuredAtISO()).toBeNull();
+    sesja.set('vildaDobAgeZapisV1', '1');
+    expect(D.readMeasuredAtISO()).toBeNull();
+    expect(rekord.visit.clinicalDateISO).toBe('2026-06-17');
+
+    rekord.user.measuredAtISO = '2026-06-16';
+    expect(D.readMeasuredAtISO()).toBe('2026-06-16');
+    delete rekord.user.measuredAtISO;
+    win.__VILDA_HOME_GABINET_PREVIEW__ = false;
+    expect(D.readMeasuredAtISO()).toBe('2026-06-17');
+    win.__VILDA_HOME_GABINET_PREVIEW__ = true;
+    pola.height.value = '172';
+    pola.height.dispatchEvent({type: 'input'});
+    expect(D.readMeasuredAtISO()).toBe('2026-06-17');
+  });
+
   it('nowa masa albo wzrost w odtworzonej wizycie to nowy pomiar: wiek i data pomiaru na dziś', () => {
     vi.setSystemTime(new Date(2026, 6, 10, 12, 0)); // 10-07-2026
     const { pola, D, wyslij } = srodowisko({ wybor: 'restore', rekord: rekordNastolatka(), pomiar: { weight: '60', height: '172' } });

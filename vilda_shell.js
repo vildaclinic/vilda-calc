@@ -1168,7 +1168,7 @@ function Sn_homePatient(kind,id,options,ownSaveCurrent){
       var isCurrent=function(){return current()&&Sw_current(pane,win)&&Sp_sameAccount(win,scope)};
       if(!isCurrent()){finish(false);return}
       if(kind==="list"){
-        Sn_watchHomeDirectory(win);
+        if(sourceRoute!=="start")Sn_watchHomeDirectory(win);
         win.VildaAuthUI.showPatientsList();finish(true);return;
       }
       Promise.resolve(win.VildaHomeGabinet.openPatient(id,{intent:options.intent==="new"?"new":"browse",

@@ -463,3 +463,33 @@ test('DocPro corrects the chosen historical visit and returns to the current pat
   await expect(frame.locator('#vhomeGabinetOverviewTab')).toHaveAttribute('aria-selected', 'true', { timeout: 15_000 });
   await expect(frame.locator('#weight')).toHaveValue('58', { timeout: 15_000 });
 });
+
+test('a saved consultation without measurements stays clean until the clinician edits the form', async ({ page }) => {
+  const { frame, ids } = await prepare(page);
+  await choosePatient(frame, 'Antoni');
+  const header = frame.locator('#vhomeGabinetHeader');
+  await header.getByRole('button', { name: 'Rozpocznij wizytę' }).click();
+  await header.getByRole('button', { name: 'Zapisz wizytę' }).click();
+  await expect(header.getByRole('button', { name: 'Rozpocznij wizytę' })).toBeVisible();
+  const decision = () => frame.evaluate(() => {
+    const state = window.VildaSaveStatusIndicator.getCurrentDecision();
+    return state.ready ? state.state : 'pending';
+  });
+  await expect.poll(decision).toBe('saved');
+  const persisted = await frame.evaluate(async id => {
+    const [latest] = await window.VildaVault.getPatientVisits(id);
+    return { date: latest.clinicalDateISO, measured: latest.payload.user.measuredAtISO || null };
+  }, ids.a);
+  expect(persisted.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  expect(persisted.measured).toBeNull();
+
+  await header.getByRole('tab', { name: 'Analiza', exact: true }).click();
+  await frame.locator('#weight').fill('43');
+  await expect.poll(decision).toBe('dirty');
+  await header.getByRole('button', { name: 'Rozpocznij wizytę' }).click();
+  const guard = frame.locator('.vug[role="dialog"]');
+  await expect(guard).toBeVisible();
+  await expect(guard.locator('.vug-primary')).toHaveCSS('display', 'none');
+  await guard.getByRole('button', { name: 'Anuluj', exact: true }).click();
+  await expect(frame.locator('#weight')).toHaveValue('43');
+});

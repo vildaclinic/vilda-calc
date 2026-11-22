@@ -157,7 +157,8 @@
   }
   function openInline(host, options) {
     if (!host || host !== byId('vhomePatientOverview') || !host.isConnected || host.hidden) return false;
-    if (!current(active) || typeof w.VildaAuthUI?.renderHomePatientInline !== 'function') return false;
+    if (typeof w.VildaAuthUI?.renderHomePatientInline !== 'function') return false;
+    if (!current(active)) { schedule(); return false; }
     var id = active.owner.patientId; options = options || {};
     if (inline && ownsInline(inline, id)) {
       if (options.activeTab && inline.selected !== options.activeTab) selectInline(options.activeTab);
@@ -667,7 +668,15 @@
     w.addEventListener('pageshow', requestRead);
     // The native APIs have no generic account-change subscription. This small
     // owner check also covers direct same-tab session changes between events.
-    w.setInterval(function () { if (active && !current(active)) { clearDecrypted(); schedule(); } }, 250);
+    w.setInterval(function () {
+      if (active && !current(active)) { clearDecrypted(); schedule(); }
+      else if (!active) {
+        // A shell pane may finish restoring after its last data event. Resume
+        // a requested overview only when its owner can be verified again.
+        var host = byId('vhomePatientOverview');
+        if (host && !host.hidden && ownerSnapshot()) schedule();
+      }
+    }, 250);
     refresh();
   }
   w.VildaHomePatient = Object.freeze({ open: open, close: close, refresh: requestRead,

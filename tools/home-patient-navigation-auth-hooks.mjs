@@ -1,5 +1,21 @@
 // Reproduce the opted-in patient navigation on the published native AuthUI artifact.
 const pairs = [
+  [`return saved.state; } };
+}
+function patientsDatabaseGe`,
+   `return saved.state; } };
+}
+// A background reread remounts the list while keeping the directory open.
+let homeDirectorySession = null;
+function patientsDatabaseGe`],
+  [`bled) {
+  if (!Rt) return;
+  Rt.classList.toggle('vild`,
+   `bled) {
+  if (!Rt) return;
+  if (!enabled) homeDirectorySession = null;
+  else if (!homeDirectorySession) homeDirectorySession = {};
+  Rt.classList.toggle('vild`],
   [`d: state.selected });
     close(); setTimeout(function () { se(row.g.patientId, null, `,
    `d: state.selected });
@@ -62,6 +78,17 @@ async function hi(t,a){
   a=a||{};var quickEncounter=`],
   ["f(!dt){ft.appendChild(rt(A,\"Edytuj w kalkulatorze\",function(){gt(f.patientId)})),vt(),st(",
    "f(!dt){ft.appendChild(rt(A,homePatientRoute()?\"Otwórz przegląd pacjenta\":\"Edytuj w kalkulatorze\",function(){return openPatientInHome(f.patientId,'browse','antro')||gt(f.patientId)})),vt(),st("],
+  [`r||!r.isUnlocked())return;
+  const o=a||{
+  }
+  ;
+  va`,
+   `r||!r.isUnlocked())return;
+  if (!n) homeDirectorySession = null;
+  const o=a||{
+  }
+  ;
+  va`],
   [`  }
     )
   }
@@ -106,8 +133,10 @@ function openPatientInHome(patientId, intent, section, focusNoteId) {
   if (!route) return null;
   const local = route === i.VildaHomeGabinet;
   const nativeRoot = Rt, surface = nativeRoot?.firstElementChild, sentinel = Pa;
-  const fromDirectory = !!nativeRoot?.classList?.contains('vilda-auth-database');
-  const ownsSurface = () => !surface || nativeRoot === Rt && nativeRoot.firstElementChild === surface && Pa === sentinel;
+  const directory = nativeRoot?.classList?.contains('vilda-auth-database') ? homeDirectorySession : null;
+  const ownsSurface = () => !surface || nativeRoot === Rt && Pa === sentinel &&
+    (directory ? directory === homeDirectorySession && !!nativeRoot.firstElementChild && nativeRoot.classList.contains('vilda-auth-database')
+      : nativeRoot.firstElementChild === surface);
   const vault = jt();
   if (!vault?.isUnlocked()) return Promise.resolve(false);
   const session = vault.captureSyncOperationSession();
@@ -133,7 +162,7 @@ function openPatientInHome(patientId, intent, section, focusNoteId) {
   const navigation = local ? route.openPatient(patientId, options) : route.openHomePatient(patientId, options);
   return Promise.resolve(navigation).then(function (opened) {
     if (opened && surface && current() && ownsSurface()) {
-      if (local && fromDirectory) {
+      if (local && directory) {
         try { i.parent?.VildaShell?.claimHomeDirectory?.(i); } catch (_) { /* standalone */ }
       }
       $t({ shellNavigation: true });

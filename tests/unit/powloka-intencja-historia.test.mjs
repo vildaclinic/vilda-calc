@@ -70,6 +70,15 @@ describe('Gabinet: ramka właściciela i powrót do modułu', () => {
     expect(h.shell.getCurrentRoute()).toBe(selected ? 'start' : 'docpro');
     expect(h.shell.peekPatientReturnRoute()).toBe(selected ? 'docpro' : null);
   });
+  it('zamknięcie ponownie otwartej Bazy pozostawia bieżącą kartę i jej powrót', async () => {
+    const {h, start} = preview();
+    const opened = h.shell.openHomePatient('fikcyjny');
+    const target = start(); h.tick(150); await opened;
+    await expect(h.shell.openPatientsInStart()).resolves.toBe(true);
+    target.document.dispatchEvent({type:'vilda:auth-hidden'});
+    expect(h.shell.getCurrentRoute()).toBe('start');
+    expect(h.shell.peekPatientReturnRoute()).toBe('docpro');
+  });
   it('ręczny wybór Start usuwa powrót przypisany do poprzedniej karty', async () => {
     const {h, start} = preview();
     const opened = h.shell.openHomePatient('fikcyjny');
