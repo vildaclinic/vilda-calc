@@ -1413,12 +1413,21 @@ function Mt(){try{o.addEventListener("click",Pt,!0)}catch{}}function jt(){try{le
       '.main-content:is([data-vhome-screen="overview"],[data-vhome-screen="analysis"]) #vhomeGabinetHeader',
       '.main-content[data-vhome-screen="office"] #gbEntryHeader .gb-breadcrumb'
     ]);
+    // The pane's sticky navigation reserves only the portion that stays fixed.
+    // On compact screens the full patient header has no box of its own.
+    var pinnedNavigation=owner!==doc&&!authTarget&&firstVisible(owner,[
+      '.main-content[data-vhome-screen] > #gbWorkspaceHeader',
+      '.main-content[data-vhome-screen] #vhomeGabinetHeader > .gb-header-top'
+    ]);
+    if(pinnedNavigation||owner.documentElement.style.getPropertyValue("--gb-workspace-header-height")){
+      property("--gb-workspace-header-height",pixels(pinnedNavigation?pinnedNavigation.getBoundingClientRect().height:0),owner);
+    }
     var target=authTarget||firstVisible(owner,["#userSection fieldset.user-card","#clcrActivePanel","#clcrForm>.patient-card","#clcrForm","#userSection"]);
     var second=authTarget?null:firstVisible(owner,["#doctorSection","#clcrResultRail"]);
     var workspace=authTarget||firstVisible(owner,["#calcForm","#clcrWorkspace","#clcrForm"]);
     var fallback=firstVisible(owner,["#proGateBanner",".main-content>.container",".main-content","main"]);
     var footer=owner.querySelector("footer.site-footer"),footerInner=footer&&footer.querySelector(".site-footer__inner");
-    watchSizes([workspaceHeader,target,second,workspace,fallback,footer,footerInner,frame,header,strip,actions]);
+    watchSizes([workspaceHeader,pinnedNavigation,target,second,workspace,fallback,footer,footerInner,frame,header,strip,actions]);
     var footerBox=rect(footer),innerBox=rect(footerInner);
     syncFooterRail(owner,frame?frameBox:null,footer,footerBox,authVisible);
     if(footerBox&&!compact())property("--chrome-menu-footer-height",pixels(Math.max(96,footerBox.height)));

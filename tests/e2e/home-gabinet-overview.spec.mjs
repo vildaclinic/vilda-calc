@@ -109,6 +109,7 @@ test('the outer header stays visible and aligned while switching or scrolling Ga
     await checkScroll('Analiza', true, width > 991 ? patientBack.or(analysis) : patientBack);
     if (width < 500) {
       const stickyHeight = await frame.evaluate(() => parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop));
+      expect(stickyHeight).toBeGreaterThan(40);
       expect(stickyHeight, 'Na telefonie pozostaje miejsce na pomiary').toBeLessThan(100);
     }
     await patientBack.click();
