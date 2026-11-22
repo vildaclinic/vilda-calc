@@ -55,7 +55,7 @@ html.vilda-form-host-desktop .main-content[data-vhome-screen] > #vhomeGabinetAna
 [data-vhome-screen] :is(#calcForm, #vhomeMainCards) { gap: var(--space-12px); }
 [data-vhome-screen] :is(#vhomeMainCards, #vhomeVisitComparison, #vhomeOtherTools) { margin-block: var(--space-12px); }
 :is(#vhomeGabinetHeader,#gbEntryHeader) { font: 1rem/1.52 Inter, system-ui, -apple-system, "Segoe UI", sans-serif; }
-#vhomeGabinetHeader { margin-bottom: 1.15rem; }
+#vhomeGabinetHeader { --gb-patient-header-end: 1.15rem; margin-bottom: var(--gb-patient-header-end); }
 #vhomeGabinetHeader :is(.gb-header-top,.gb-person-line,.gb-patient-tabs,button),
 :is(#vhomeGabinetHeader,#gbEntryHeader) .gb-breadcrumb { display: flex; align-items: center; }
 :is(#vhomeGabinetHeader .gb-header-top,#gbEntryHeader) {
@@ -182,7 +182,7 @@ html.vilda-embedded.vilda-form-host-desktop #vhomeGabinetHeader[data-decor-rail]
   .vvisit-dialog.vvisit-gabinet .vvisit-list .vvisit-visit { transition: none !important; }
 }
 @media (max-width: 640px) {
-  #vhomeGabinetHeader { margin-bottom: var(--space-0-85); }
+  #vhomeGabinetHeader { --gb-patient-header-end: var(--space-0-85); }
   :is(#vhomeGabinetHeader .gb-header-top,#gbEntryHeader) { margin-bottom: var(--space-0-35); }
   #vhomeGabinetHeader .gb-person-line { gap: var(--space-0-7); }
   #vhomeGabinetHeader .gb-identity-meta { font-size: .875rem; }
@@ -193,6 +193,24 @@ html.vilda-embedded.vilda-form-host-desktop #vhomeGabinetHeader[data-decor-rail]
   #vhomeGabinetHeader .gb-patient-tabs { gap: 0; }
   #vhomeGabinetHeader .gb-patient-tabs button { flex: 1; padding-inline: var(--space-0-35); }
   #vhomeGabinetHeader [data-visit-actions] { padding-inline: var(--space-4px); gap: var(--space-4px); font-size: .93rem; }
+}
+/* Keep the breadcrumb and visit state visible in a compact pane while the
+ * rest of the patient header uses the original order and scrolls normally. */
+@media (max-width: 640px), (max-height: 500px) {
+  html.vilda-embedded #gbWorkspaceHeader:has(> #vhomeGabinetHeader:not([hidden])),
+  html.vilda-embedded #vhomeGabinetHeader:not([hidden]) { display: contents; }
+  html.vilda-embedded #vhomeGabinetHeader > .gb-header-top {
+    position: sticky;
+    top: var(--chrome-form-gap,12px);
+    z-index: var(--z-dropdown);
+    padding-inline: var(--gb-inset-start) var(--gb-inset-end);
+    background: var(--vhome-workspace-background,var(--bg));
+    box-shadow: 0 calc(-1 * var(--chrome-form-gap,12px)) var(--vhome-workspace-background,var(--bg));
+  }
+  html.vilda-embedded #vhomeGabinetHeader > :is(.gb-person-line,.gb-patient-nav) {
+    margin-inline: var(--gb-inset-start) var(--gb-inset-end);
+  }
+  html.vilda-embedded #vhomeGabinetHeader > .gb-patient-nav { margin-bottom: var(--gb-patient-header-end); }
 }
 @media (max-width: 380px) {
   #vhomeGabinetHeader .gb-card-actions button { min-height: 3.6rem; }

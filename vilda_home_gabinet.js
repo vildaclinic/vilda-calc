@@ -636,9 +636,15 @@
     workspaceHeader.append(entryHeader, header);
     analysis.before(workspaceHeader, root);
     landing = d.getElementById('vhomeGabinetStart'); overview = d.getElementById('vhomePatientOverview');
-    if (w.ResizeObserver) new w.ResizeObserver(() => {
-      d.documentElement.style.setProperty('--gb-workspace-header-height', workspaceHeader.offsetHeight + 'px');
-    }).observe(workspaceHeader);
+    if (w.ResizeObserver) {
+      const patientTrail = header.querySelector('.gb-header-top');
+      const observer = new w.ResizeObserver(() => {
+        const height = workspaceHeader.offsetHeight || patientTrail.offsetHeight;
+        d.documentElement.style.setProperty('--gb-workspace-header-height', height + 'px');
+      });
+      observer.observe(workspaceHeader);
+      observer.observe(patientTrail);
+    }
     historyHost = d.getElementById('vhomeVisitHistory');
     rapidHeader = d.getElementById('gbRapidHeader');
     registrationHost = d.getElementById('vhomeGabinetRegistration');
