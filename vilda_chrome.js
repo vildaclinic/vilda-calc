@@ -1409,12 +1409,16 @@ function Mt(){try{o.addEventListener("click",Pt,!0)}catch{}}function jt(){try{le
     // Route markers and the scrollbar compensation can move the iframe.
     // Read its origin only after those writes, also on synchronous navigation.
     if(frame){var frameBox=frame.getBoundingClientRect();offset=frameBox.left;verticalOffset=frameBox.top}
+    var workspaceHeader=authTarget?null:firstVisible(owner,[
+      '.main-content:is([data-vhome-screen="overview"],[data-vhome-screen="analysis"]) #vhomeGabinetHeader',
+      '.main-content[data-vhome-screen="office"] #gbEntryHeader .gb-breadcrumb'
+    ]);
     var target=authTarget||firstVisible(owner,["#userSection fieldset.user-card","#clcrActivePanel","#clcrForm>.patient-card","#clcrForm","#userSection"]);
     var second=authTarget?null:firstVisible(owner,["#doctorSection","#clcrResultRail"]);
     var workspace=authTarget||firstVisible(owner,["#calcForm","#clcrWorkspace","#clcrForm"]);
     var fallback=firstVisible(owner,["#proGateBanner",".main-content>.container",".main-content","main"]);
     var footer=owner.querySelector("footer.site-footer"),footerInner=footer&&footer.querySelector(".site-footer__inner");
-    watchSizes([target,second,workspace,fallback,footer,footerInner,frame,header,strip,actions]);
+    watchSizes([workspaceHeader,target,second,workspace,fallback,footer,footerInner,frame,header,strip,actions]);
     var footerBox=rect(footer),innerBox=rect(footerInner);
     syncFooterRail(owner,frame?frameBox:null,footer,footerBox,authVisible);
     if(footerBox&&!compact())property("--chrome-menu-footer-height",pixels(Math.max(96,footerBox.height)));
@@ -1431,7 +1435,9 @@ function Mt(){try{o.addEventListener("click",Pt,!0)}catch{}}function jt(){try{le
     var secondBox=rect(second),workspaceBox=rect(workspace)||rect(fallback)||box;
     var twoColumns=!!(target&&box&&secondBox&&secondBox.left>=box.right-2&&secondBox.left>box.left+1);
     var left=box?offset+box.left:stripBox.left+Math.min(300,win.innerWidth*.3);
-    var right=twoColumns?offset+secondBox.right:workspaceBox?offset+workspaceBox.right:stripBox.right-16;
+    // Gabinet and the patient workspace use the same edge, even when the form is hidden.
+    var workspaceHeaderBox=rect(workspaceHeader);
+    var right=workspaceHeaderBox?offset+workspaceHeaderBox.right:twoColumns?offset+secondBox.right:workspaceBox?offset+workspaceBox.right:stripBox.right-16;
     // The centered patient card can start before the desktop brand at tablet
     // widths. Keep both live controls usable while the bell follows the card.
     if(authTarget){var brandBox=rect(doc.querySelector(".chrome-brand"));if(brandBox)left=Math.max(left,brandBox.right+12)}

@@ -4,12 +4,17 @@
   'use strict';
   if (!w || w.__VILDA_HOME_GABINET_PREVIEW__ !== true || w.VildaHomeGabinet) return;
   const d = w.document;
-  let root, main, header, landing, overview, analysis, picker, historyHost, historyView;
+  let root, main, header, entryHeader, landing, overview, analysis, picker, historyHost, historyView;
   let account = null, screen = 'start', target = null, section = 'antro';
-  let sequence = 0, selecting = false, frame = 0, pendingNote = null;
+  let sequence = 0, selecting = false, frame = 0, pendingNote = null, pendingOfficeRecord = null;
   let rapid = null, rapidHeader, entryView = 'launch';
   let registration = null, registrationHost;
   const labels = {overview: 'Przegląd', analysis: 'Analiza'};
+  const entryTrails = {
+    start: [null,'Ekran startowy'], office: ['Ekran startowy','Gabinet'],
+    registration: ['Ekran startowy','Dodaj pacjenta'], rapid: ['Ekran startowy','Szybka ścieżka'],
+    history: ['Karta pacjenta','Historia wizyt']
+  };
   const startVisitLabel = 'Rozpocznij nową wizytę';
   const paths = {
     home: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
@@ -143,7 +148,7 @@
     }
     historyHost.hidden = false;
     const inPatientScreen = capturePatientScreen(id);
-    historyView = w.VildaHomeVisitHistory.mount(historyHost, {
+    const view = w.VildaHomeVisitHistory.mount(historyHost, {
       ...options, patientId: id, isCurrent: () => inPatientScreen() && owns(id) && options.isCurrent(),
       backLabel: screen === 'analysis' ? 'Wróć do analizy' : 'Wróć do przeglądu',
       onBack: back,
@@ -158,19 +163,35 @@
         if (owns(id)) { back(false); showOverview(key); }
       }
     });
+    historyView = {destroy: view.destroy, back};
     render();
     w.scrollTo(0, 0);
     return true;
+  }
+  function renderEntryTrail(view) {
+    const labels = entryTrails[view];
+    entryHeader.hidden = !labels;
+    if (!labels || entryHeader.dataset.screen === view) return;
+    entryHeader.dataset.screen = view;
+    const [parent, current] = labels;
+    const button = entryHeader.querySelector('button');
+    button.hidden = !parent;
+    if (parent) button.querySelector('span').textContent = parent;
+    entryHeader.querySelector('[data-entry-separator]').hidden = !parent;
+    entryHeader.querySelector('[aria-current="page"]').textContent = current;
   }
   function setScreen(value) {
     const fields = d.getElementById('vhomeVisitFields');
     if (fields) fields.disabled = visitMeasurementsReadOnly();
     analysis.setAttribute('aria-labelledby', value === 'rapid' ? 'gbRapidTitle' : 'vhomeGabinetAnalysisTab');
-    if (value) main.dataset.vhomeScreen = value;
+    const view = value === 'start' && entryView === 'office' ? 'office' : value;
+    if (view) main.dataset.vhomeScreen = view;
     else delete main.dataset.vhomeScreen;
+    renderEntryTrail(view);
     const pane = w.frameElement;
     if (pane?.classList.contains('app-pane')) {
-      const directory = value === 'registration' ? 'registration' : value === 'start' ? '' : null;
+      pane.toggleAttribute('data-vhome-workspace', Boolean(value));
+      const directory = view === 'registration' ? 'registration' : view === 'start' ? '' : null;
       if (directory === null) pane.removeAttribute('data-vhome-directory');
       else if (pane.getAttribute('data-vhome-directory') !== directory) pane.setAttribute('data-vhome-directory', directory);
     }
@@ -179,7 +200,7 @@
     if (!root) return;
     const nextAccount = access();
     if (account !== nextAccount) {
-      sequence++; selecting = false; pendingNote = null; dismissHistory(); detach(true); clearRegistration(true); destroyPicker(); clearRapidUI(); entryView = 'launch';
+      sequence++; selecting = false; pendingNote = pendingOfficeRecord = null; dismissHistory(); detach(true); clearRegistration(true); destroyPicker(); clearRapidUI(); entryView = 'launch';
       target = null; screen = 'start'; section = 'antro'; account = nextAccount;
       header.querySelector('h1').textContent = '';
       header.querySelector('.gb-identity-meta').textContent = '';
@@ -215,8 +236,11 @@
       setScreen('start');
       header.hidden = overview.hidden = true; landing.hidden = false;
       if (!picker) picker = w.VildaHomeGabinetStart.mount(landing, {onSelect:selectPatient,
-        initialView:entryView, onViewChange: view => { entryView = view; },
-        onRapid:enterRapid, onNewPatient:showRegistration});
+        initialView:entryView, onViewChange: view => {
+          entryView = view;
+          if (['start','office'].includes(main.dataset.vhomeScreen)) setScreen('start');
+        },
+        onAll:openOfficeList, onRapid:enterRapid, onNewPatient:showRegistration});
       return;
     }
     if (!owns(target)) {
@@ -244,6 +268,11 @@
     }
     if (screen === 'overview' && pendingNote && pendingNote.patientId === target &&
         w.VildaHomePatient.focusInlineNote(pendingNote.id)) pendingNote = null;
+    if (screen === 'overview' && pendingOfficeRecord?.patientId === target && pendingOfficeRecord.section === section) {
+      const {id} = pendingOfficeRecord;
+      const focused = section === 'care' ? w.VildaHomePatient.focusInlineCarePlan(id) : w.VildaHomePatient.focusInlineReminder(id);
+      if (focused) pendingOfficeRecord = null;
+    }
   }
   function schedule() {
     if (!frame) frame = w.requestAnimationFrame(() => { frame = 0; render(); });
@@ -254,7 +283,7 @@
     entryView = view === 'office' ? 'office' : 'launch';
     if (picker) picker.showView(entryView);
     dismissHistory();
-    sequence++; selecting = false; pendingNote = null; target = null; section = 'antro'; screen = 'start';
+    sequence++; selecting = false; pendingNote = pendingOfficeRecord = null; target = null; section = 'antro'; screen = 'start';
     showMessage(''); render();
     return true;
   }
@@ -318,7 +347,7 @@
   }
   function showAnalysis() {
     if (!owns(target) || !detach(false)) return false;
-    pendingNote = null; dismissHistory(); screen = 'analysis'; showMessage(''); render(); w.VildaHomeWorkspace.refresh();
+    pendingNote = pendingOfficeRecord = null; dismissHistory(); screen = 'analysis'; showMessage(''); render(); w.VildaHomeWorkspace.refresh();
     return true;
   }
   let labEntry = null;
@@ -352,14 +381,28 @@
     target = id; screen = 'overview'; showMessage(''); render();
     return true;
   }
-  function selectPatient(id, mode) {
-    return openPatient(id, {intent: mode === 'start' ? 'new' : 'browse'});
+  async function selectPatient(id, mode, context) {
+    const section = context?.section;
+    const opened = await openPatient(id, {intent: mode === 'start' ? 'new' : 'browse', section});
+    const recordId = section === 'care' ? context.planId : section === 'reminders' ? context.noteId : null;
+    if (opened && recordId && target === id && owns(id)) {
+      pendingOfficeRecord = {patientId:id, section, id:recordId};
+      render();
+    }
+    return opened;
+  }
+  function openOfficeList(section, context = {}) {
+    if (!account || account !== access() || main.dataset.vhomeScreen !== 'office') return false;
+    if (section === 'reminders') return w.VildaAuthUI.maybeShowReminders({force:true, noteId:context.noteId});
+    if (section === 'care') return w.VildaAuthUI.showCarePlans({planId:context.planId});
+    return false;
   }
   async function openPatient(id, options = {}) {
     const intent = options.intent || 'browse', key = options.section || 'antro';
     const isCurrent = options.isCurrent || (() => true);
     if (!id || selecting || !account || !['browse','new'].includes(intent) || !isCurrent()) return false;
     if (!leaveRapidIntake()) return false;
+    pendingOfficeRecord = null;
     clearRegistration();
     const same = owns(id);
     const encounter = w.VildaHomeEncounter.state(id);
@@ -566,28 +609,34 @@
     main = analysis.parentElement;
     analysis.id ||= 'vhomeGabinetAnalysis';
     root = d.createElement('div'); root.id = 'vhomeGabinet'; root.hidden = true;
+    entryHeader = d.createElement('div');
+    entryHeader.id = 'gbEntryHeader'; entryHeader.className = 'gb-header-top'; entryHeader.hidden = true;
+    entryHeader.innerHTML = '<nav class="gb-breadcrumb" aria-label="Ścieżka nawigacji">' +
+      '<button type="button">' + icon('home') + '<span></span></button>' +
+      '<span data-entry-separator>' + icon('chevron') + '</span><span aria-current="page"></span></nav>';
+    entryHeader.querySelector('button').onclick = () => {
+      if (main.dataset.vhomeScreen === 'history') return historyView?.back();
+      if (registration) return closeRegistration(true);
+      return showStart();
+    };
     root.innerHTML = '<div id="vhomeGabinetStart"></div><div id="vhomeGabinetHeader" hidden>' +
       '<div class="gb-header-top"><nav class="gb-breadcrumb" aria-label="Ścieżka nawigacji"><button type="button" data-start>' + icon('home') +
-      '<span>Gabinet</span></button>' + icon('chevron') + '<span>Karta pacjenta</span></nav><div class="gb-encounter-state" hidden><span data-state-label></span><button type="button" data-home-visit-date hidden><time></time></button><time data-state-date></time></div></div>' +
+      '<span>Gabinet</span></button>' + icon('chevron') + '<span aria-current="page">Karta pacjenta</span></nav><div class="gb-encounter-state" hidden><span data-state-label></span><button type="button" data-home-visit-date hidden><time></time></button><time data-state-date></time></div></div>' +
       '<div class="gb-person-line"><div class="gb-identity"><h1></h1><div class="gb-identity-meta"></div></div><div class="gb-card-actions"><button type="button" data-history>' +
       icon('history') + 'Historia wizyt</button><button type="button" class="gb-primary" data-home-encounter>' +
       '<span class="gb-action-copy" data-action-caption></span><span class="gb-action-copy gb-action-reserve" aria-hidden="true" data-longest="' + startVisitLabel + '"></span></button></div></div>' +
       '<div class="gb-patient-nav"><div class="gb-patient-tabs" role="tablist" aria-label="Karta pacjenta"></div>' +
       '<div class="gb-visit-actions" role="group" aria-label="Działania wizyty" hidden><button type="button" data-visit-actions aria-expanded="false" aria-controls="gbVisitActions">Działania <span aria-hidden="true">⌄</span></button>' +
       '<div id="gbVisitActions" hidden><button type="button" data-trash-visit>Przenieś wizytę do kosza</button></div></div></div></div>' +
-      '<div id="gbRapidHeader" hidden><nav class="gb-rapid-crumb" aria-label="Ścieżka nawigacji"><button type="button" data-rapid-start>' + icon('home') +
-        'Start</button>' + icon('chevron') + '<span>Szybka ścieżka</span></nav><h1 id="gbRapidTitle">Analiza</h1></div>' +
+      '<div id="gbRapidHeader" hidden><h1 id="gbRapidTitle">Analiza</h1></div>' +
       '<section id="vhomeGabinetRegistration" hidden aria-labelledby="gbRegistrationTitle"><div class="gb-registration-heading">' +
-      '<nav class="gb-registration-crumb" aria-label="Ścieżka nawigacji"><button type="button" data-registration-back>' + icon('home') +
-      '<span>Ekran startowy</span></button></nav><h1 id="gbRegistrationTitle">Dodaj pacjenta</h1></div><div data-registration-form></div></section>' +
+      '<h1 id="gbRegistrationTitle">Dodaj pacjenta</h1></div><div data-registration-form></div></section>' +
       '<dialog id="gbRapidMatches" aria-labelledby="gbRapidMatchTitle"></dialog><div class="vhome-gabinet-message" role="status"></div><div id="vhomePatientOverview" hidden></div><section id="vhomeVisitHistory" hidden aria-label="Historia wizyt"></section>';
-    analysis.before(root);
+    analysis.before(entryHeader, root);
     header = d.getElementById('vhomeGabinetHeader'); landing = d.getElementById('vhomeGabinetStart'); overview = d.getElementById('vhomePatientOverview');
     historyHost = d.getElementById('vhomeVisitHistory');
     rapidHeader = d.getElementById('gbRapidHeader');
     registrationHost = d.getElementById('vhomeGabinetRegistration');
-    registrationHost.querySelector('[data-registration-back]').onclick = () => closeRegistration(true);
-    rapidHeader.querySelector('[data-rapid-start]').onclick = () => showStart();
     installRapid();
     d.addEventListener('vilda:home-workspace-ready', installRapid);
     const onRapidEdit = event => {

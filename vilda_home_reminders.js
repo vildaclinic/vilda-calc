@@ -189,6 +189,7 @@
         restoreRows.push(function () { empty.textContent = ''; empty.remove(); });
       }
       attribute(nodes.list, 'aria-busy', String(snapshot.phase === 'loading'));
+      if (overview && snapshot.phase === 'ready') w.VildaHomePatient?.applyInlineReminderFocus?.(host);
       return true;
     }
     function onDialog(dialog) {

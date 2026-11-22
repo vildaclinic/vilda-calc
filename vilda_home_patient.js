@@ -150,7 +150,16 @@
     if (auth?.getClientRects().length || w.VildaHomePatientNative?.deferRefresh?.()) return;
     scope.needsRead = false; scope.pending = true;
     try {
-      await w.VildaAuthUI.renderHomePatientInline(scope);
+      const planId = scope.focusCarePlanId;
+      scope.focusCarePlanId = null;
+      if (planId && scope.selected === 'care') {
+        // An explicit directory link uses the same patient-scoped plan mount as
+        // the native chart. It also works for staged plans stored outside Notes.
+        await w.VildaAuthUI.showPatientCard(scope.patientId, null, {homePatientPresentation: true, homePatientInline: scope},
+          {_homeInlineRender: true, activeTab: 'care', carePlanId: planId, careDetail: true});
+      } else {
+        await w.VildaAuthUI.renderHomePatientInline(scope);
+      }
       if (ownsInline(scope, scope.patientId) && !scope.shell.querySelector('.vilda-auth-screen,button')) inlineIssue(scope);
     } catch (_) { inlineIssue(scope); }
     finally { scope.pending = false; if (inline === scope && scope.needsRead) schedule(); }
@@ -209,6 +218,36 @@
     scope.selected = 'notes';
     requestRead();
     return true;
+  }
+  function focusInlineCarePlan(id) {
+    const scope = inline;
+    if (!scope || scope.selected !== 'care' || typeof id !== 'string' || !id || !ownsInline(scope, scope.patientId)) return false;
+    scope.focusCarePlanId = id;
+    scope.needsRead = true;
+    schedule();
+    return true;
+  }
+  function focusInlineReminder(id) {
+    const scope = inline;
+    if (!scope || scope.selected !== 'reminders' || typeof id !== 'string' || !id || !ownsInline(scope, scope.patientId)) return false;
+    scope.reminderTarget?.button?.removeAttribute('aria-current');
+    scope.reminderTarget = {id, button: null};
+    applyInlineReminderFocus(byId('remindersInline'));
+    return true;
+  }
+  function applyInlineReminderFocus(host) {
+    const scope = inline, target = scope?.reminderTarget;
+    if (!target || !ownsInline(scope, scope.patientId) || scope.selected !== 'reminders' || !scope.shell.contains(host)
+        || !w.VildaHomeRemindersRuntime?.ownsOverviewHost(host)) return;
+    const ready = host.querySelector('.vhome-reminders-overview[data-home-reminders-phase="ready"]');
+    if (!ready) return;
+    const row = Array.from(ready.querySelectorAll('button[data-note-id]')).find(button => button.dataset.noteId === target.id);
+    if (!row) { scope.reminderTarget = null; return; }
+    row.setAttribute('aria-current', 'true');
+    // A native list refresh may replace the focused button. Preserve that
+    // position while respecting focus moved to another control or editor.
+    if (!target.button || !target.button.isConnected && d.activeElement === d.body) row.focus();
+    target.button = row;
   }
   function subscribe(vault) {
     if (!vault || subscribed.has(vault)) return;
@@ -681,7 +720,7 @@
   }
   w.VildaHomePatient = Object.freeze({ open: open, close: close, refresh: requestRead,
     openInline: openInline, closeInline: closeInline, selectInline: selectInline, ownsInline: ownsInline, focusInlineNote: focusInlineNote,
-    ownsSavePublication: ownsSavePublication,
+    focusInlineCarePlan, focusInlineReminder, applyInlineReminderFocus, ownsSavePublication: ownsSavePublication,
     isInlineOpen: function () { return !!inline && ownsInline(inline, inline.patientId); },
     captureOwner: function () { var view = active; return view ? function () { return current(view); } : null; }
   });

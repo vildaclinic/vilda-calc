@@ -218,9 +218,12 @@
     return { screen, panel, message };
   }
 
+  const EXAMPLE_PATIENT_NAME = 'Przykładowy Antoni';
+  const HISTORY_PATIENT_NAME = 'Demonstracyjna Klara';
+
   function fictionalPayload() {
     return {
-      version: 1, name: 'Przykładowy Antoni',
+      version: 1, name: EXAMPLE_PATIENT_NAME,
       user: { lastName: 'Przykładowy', firstName: 'Antoni', sex: 'M', age: 13, ageMonths: 0,
         height: 158, weight: 46, dobISO: '2013-11-03', measuredAtISO: '2026-11-03' },
       advanced: { name: 'Przykładowy Antoni', motherHeight: 165, fatherHeight: 180,
@@ -247,7 +250,7 @@
       bp: { systolic: 108, diastolic: 68, heartRate: 76 } },
   ];
   function historyExamplePayload(row) {
-    const patientName = 'Demonstracyjna Klara';
+    const patientName = HISTORY_PATIENT_NAME;
     const user = { lastName: 'Demonstracyjna', firstName: 'Klara', sex: 'F', dobISO: '2014-03-12',
       age: row.years, ageMonths: row.months };
     if (row.height != null) Object.assign(user, { height: row.height, weight: row.weight, measuredAtISO: row.day });
@@ -311,6 +314,74 @@
       const visit = historyExamplePayload(visitWithNote).visit;
       await vault.savePatientNote({ ...visitWithNote.note, id: noteId, patientId: HISTORY_PATIENT_ID, category: 'observation',
         visitContext: { version: 1, visitId: visit.visitId, clinicalDateISO: visit.clinicalDateISO } });
+    }
+    check();
+    storage.setItem(key, 'done');
+  }
+
+  function localDay(date) {
+    return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');
+  }
+
+  async function ensureGabinetExample(owner, userId, isCurrent, examplePatientId) {
+    const vault = owner.VildaVault, storage = window.localStorage;
+    const key = 'vilda-home-preview-gabinet-sample-v1:' + userId;
+    const installation = storage.getItem(key);
+    if (installation === 'done') return;
+    const session = vault.captureSyncOperationSession();
+    const current = () => isCurrent() && ownedFictionalAccount() && ownerWindow() === owner;
+    function check() {
+      vault.assertSyncOperationSession(session);
+      if (!current()) throw new Error('Konto podglądu zmieniło się podczas uruchamiania.');
+    }
+    check();
+    const history = await vault.getPatient(HISTORY_PATIENT_ID, { strict: true, isCurrent: current });
+    check();
+    // Keep the original installation day if any of the native writes need a retry.
+    const day = installation || localDay(new Date());
+    const overdue = new Date(day + 'T12:00:00');
+    overdue.setDate(overdue.getDate() - 2);
+    const entries = [
+      {
+        patientId: examplePatientId,
+        appointment: { id: 'e5d47d29-0762-4d10-bea3-06558dc04d1e', title: 'Kontrola wzrastania', dueTime: '09:00' },
+        reminder: { id: '8925c855-1a3c-4d85-bfc8-eb3af628824d', title: 'Potwierdzić pomiary z domu', dueDateISO: day },
+        plan: { operationId: 'preview-gabinet-growth-antoni-v1', title: 'Obserwacja wzrastania', goal: 'Porównać pomiary z kolejnych wizyt.' },
+      },
+      {
+        patientId: history?.header?.name === HISTORY_PATIENT_NAME ? HISTORY_PATIENT_ID : null,
+        appointment: { id: '0103e9f2-bb39-43bd-ad5d-1fe47376720b', title: 'Omówienie wyników badań', dueTime: '09:30' },
+        reminder: { id: 'c8b2803f-42d3-4e87-bef3-b3e5b5615d2d', title: 'Sprawdzić dzienniczek pomiarów', dueDateISO: localDay(overdue) },
+        plan: { operationId: 'preview-gabinet-measurements-klara-v1', title: 'Monitorowanie pomiarów domowych', goal: 'Omówić z rodzicem dotychczasowe zapisy.' },
+      },
+    ];
+    storage.setItem(key, day);
+    for (const { patientId, appointment, reminder, plan } of entries) {
+      if (!patientId) continue;
+      const notes = [
+        { ...appointment, patientId, category: 'followup', dueDateISO: day },
+        { ...reminder, patientId, category: 'reminder-task' },
+      ];
+      try {
+        for (const note of notes) {
+          check();
+          // An existing record, edit or tombstone always wins over the fixture.
+          await vault.savePatientNoteOnce(note, { isCurrent: current });
+        }
+      } catch (error) {
+        check();
+        if (error?.code === 'PATIENT_DELETED') continue;
+        throw error;
+      }
+      check();
+      const savedPlan = await vault.getPatientNote('care-plan-' + plan.operationId, { strict: true, isCurrent: current });
+      check();
+      if (!savedPlan) {
+        const result = await vault.mutateCarePlan({ ...plan, action: 'create', patientId });
+        if (!result?.saved && !result?.conflict && result?.reason !== 'deleted') {
+          throw new Error('Nie można przygotować przykładowego planu opieki.');
+        }
+      }
     }
     check();
     storage.setItem(key, 'done');
@@ -429,7 +500,11 @@
         patients.sort((left, right) => String(left.createdAtISO || '').localeCompare(String(right.createdAtISO || ''))
           || left.patientId.localeCompare(right.patientId));
         const example = patients[0] || await vault.savePatient(fictionalPayload(), { dedup: false });
-        if (gabinetPage) await ensureHistoryExample(owner, marker.userId, isCurrent);
+        if (gabinetPage) {
+          const fixture = patients.length ? patients.find(patient => patient.header?.name === EXAMPLE_PATIENT_NAME) : example;
+          await ensureHistoryExample(owner, marker.userId, isCurrent);
+          await ensureGabinetExample(owner, marker.userId, isCurrent, fixture?.patientId);
+        }
         return example.patientId;
       };
       const patientId = window.navigator.locks?.request

@@ -40,6 +40,80 @@ async function horizontalEdges(locator) {
   });
 }
 
+test('Gabinet A keeps its navigation fixed and opens the chosen patient record', async ({ page }) => {
+  const { frame, ids } = await prepare(page);
+  const reminderTitle = 'Fikcyjne przypomnienie o wynikach';
+  const planTitle = 'Fikcyjny plan obserwacji';
+  await frame.evaluate(async ({ ids, reminderTitle, planTitle }) => {
+    const today = new Date().toLocaleDateString('sv-SE');
+    await window.VildaVault.savePatientNote({
+      patientId: ids.a, category: 'followup', title: 'Fikcyjna wizyta kontrolna', dueDateISO: today, dueTime: '09:00',
+    });
+    await window.VildaVault.savePatientNote({
+      patientId: ids.a, category: 'reminder-contact', title: reminderTitle, dueDateISO: today,
+    });
+    const result = await window.VildaVault.mutateCarePlan({
+      patientId: ids.b, action: 'create', operationId: crypto.randomUUID(), title: planTitle, goal: 'Fikcyjny cel',
+    });
+    if (!result.saved) throw new Error('Nie zapisano testowego planu.');
+  }, { ids, reminderTitle, planTitle });
+
+  const start = frame.locator('#vhomeGabinetStart');
+  await start.locator('[data-entry="office"]').click();
+  const grid = start.locator('.vgs-office-grid');
+  await expect(grid.locator('h2')).toHaveText(['Znajdź pacjenta', 'Dzisiejsze wizyty', 'Przypomnienia', 'Plany opieki']);
+  await expect(grid.locator('.vgs-schedule .vgs-appointment')).toHaveCount(1);
+  await expect(grid.locator('.vgs-schedule')).toContainText('09:00');
+  const reminder = grid.locator('.vgs-reminders').getByRole('button', { name: new RegExp(reminderTitle) });
+  const plan = grid.locator('.vgs-care').getByRole('button', { name: new RegExp(planTitle) });
+  await expect(reminder).toBeVisible();
+  await expect(plan).toBeVisible();
+  const officeCrumb = frame.locator('#gbEntryHeader .gb-breadcrumb');
+  const patientCrumb = frame.locator('#vhomeGabinetHeader .gb-breadcrumb');
+  const breadcrumbPosition = locator => locator.evaluate(node => {
+    const { x, y } = node.getBoundingClientRect();
+    return { x, y };
+  });
+  const cards = () => grid.locator(':scope > section').evaluateAll(nodes =>
+    nodes.map(node => {
+      const { x, y, width, height } = node.getBoundingClientRect();
+      return { x, y, width, height };
+    }));
+  const desktop = await cards();
+  expect(desktop.every(card => card.width === desktop[0].width && card.height === desktop[0].height)).toBe(true);
+  expect(desktop[1].x).toBeGreaterThan(desktop[0].x);
+  expect(desktop[2].x).toBe(desktop[0].x);
+  expect(desktop[2].y).toBeGreaterThan(desktop[0].y);
+  const search = start.getByRole('searchbox');
+  await search.fill('Antoni');
+  await expect(start.locator('#vgs-results')).toBeVisible();
+  expect(await cards()).toEqual(desktop);
+  await search.press('Escape');
+  await expect(start.locator('#vgs-results')).toBeHidden();
+  const before = await breadcrumbPosition(officeCrumb);
+  const edges = await horizontalEdges(grid);
+
+  await reminder.click();
+  await expect(frame.locator('#vhomePatientOverview #remindersInline [aria-current="true"]')).toContainText(reminderTitle);
+  expect(await breadcrumbPosition(patientCrumb)).toEqual(before);
+  expect(await horizontalEdges(frame.locator('#vhomePatientOverview'))).toEqual(edges);
+
+  await patientCrumb.getByRole('button').click();
+  await expect(plan).toBeVisible();
+  await plan.click();
+  await expect(frame.locator('#vhomePatientOverview .vcp-detail .vcp-title')).toHaveText(planTitle);
+  expect(await breadcrumbPosition(patientCrumb)).toEqual(before);
+
+  await page.setViewportSize({ width:390, height:844 });
+  const phone = await breadcrumbPosition(patientCrumb);
+  await patientCrumb.getByRole('button').click();
+  await expect(officeCrumb).toBeVisible();
+  expect(await breadcrumbPosition(officeCrumb)).toEqual(phone);
+  const stacked = await cards();
+  expect(stacked.every(card => card.x === stacked[0].x)).toBe(true);
+  expect(stacked.map(card => card.y)).toEqual(stacked.map(card => card.y).sort((a,b) => a-b));
+});
+
 test('Gabinet uses one patient header for overview and analysis and displays reminders only in the overview', async ({ page }) => {
   const { frame, ids } = await prepare(page);
   const today = new Date().toISOString().slice(0, 10);
@@ -57,6 +131,10 @@ test('Gabinet uses one patient header for overview and analysis and displays rem
   const patientCard = frame.locator('#vhomePatientOverview > .vilda-auth-card');
   const measurements = frame.locator('#userSection fieldset.user-card');
   const summary = frame.locator('#currentSummaryCard');
+  const toolbar = page.locator('#vildaHeaderSearchBtn, #vildaRemindersBtn');
+  const toolbarPositions = () => toolbar.evaluateAll(buttons => buttons.map(button => button.getBoundingClientRect().left));
+  const overviewPanels = patientCard.locator('.vhome-b1-panels');
+  const workspaceBackground = () => frame.locator('body').evaluate(body => getComputedStyle(body).backgroundColor);
   async function checkPatientLayout(width, rightEdge) {
     await page.setViewportSize({ width, height: 900 });
     await overview.click();
@@ -66,10 +144,17 @@ test('Gabinet uses one patient header for overview and analysis and displays rem
     await expectHeaderAppearance(frame);
     const before = await headerGeometry(frame);
     const cardEdges = await horizontalEdges(patientCard);
+    const canvas = await workspaceBackground();
+    const cardShadow = await patientCard.evaluate(card => getComputedStyle(card).boxShadow);
+    await expect(overviewPanels).toHaveCSS('background-color', canvas);
+    await expect(overviewPanels.locator(':scope > .vilda-patient-tab-content:visible')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+    const toolbarBefore = await toolbarPositions();
+    expect(toolbarBefore).toHaveLength(2);
 
     await analysis.click();
     await expect(analysis).toHaveAttribute('aria-selected', 'true');
     await expect(measurements).toBeVisible();
+    await expect(measurements).toHaveCSS('box-shadow', cardShadow);
     await expect(rightEdge).toBeVisible();
     await expect(frame.locator('#vhomePatientCard')).toBeHidden();
     await expect(frame.locator('#vhomeAdultVitalsCard')).toBeHidden();
@@ -81,6 +166,8 @@ test('Gabinet uses one patient header for overview and analysis and displays rem
     expect(Math.abs(formEdges.left - cardEdges.left), 'Lewa krawędź Pomiary / Karta pacjenta').toBeLessThanOrEqual(1);
     expect(Math.abs(analysisEdges.right - cardEdges.right), 'Prawa krawędź Analiza / Karta pacjenta').toBeLessThanOrEqual(1);
     expect(await headerGeometry(frame)).toEqual(before);
+    expect(await workspaceBackground()).toBe(canvas);
+    expect(await toolbarPositions()).toEqual(toolbarBefore);
   }
   for (const width of [1440, 1920, 834, 390]) {
     await checkPatientLayout(width, summary);

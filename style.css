@@ -6144,11 +6144,13 @@ body.thy-modal-open {
 }
 
 body.dark-bg-level-1 {
-  background-color: #f5f5f5!important
+  --appearance-page-background: #f5f5f5;
+  background-color: var(--appearance-page-background)!important
 }
 
 body.dark-bg-level-2 {
-  background-color: #e0e0e0!important
+  --appearance-page-background: #e0e0e0;
+  background-color: var(--appearance-page-background)!important
 }
 
 body.glass-level-0.liquid-ios26 {

@@ -40,7 +40,7 @@
     const header = record.header || {};
     const name = header.name || [header.lastName, header.firstName].filter(Boolean).join(' ') || 'Pacjent bez nazwiska';
     const dob = header.dobISO || '';
-    return {id: record.patientId, name, dob, query: normalized([name, header.firstName, header.lastName, dob, dateLabel(dob)].filter(Boolean).join(' '))};
+    return {id: record.patientId, name, dob, saved:record.lastSavedAtISO, count:record.snapshotCount, query: normalized([name, header.firstName, header.lastName, dob, dateLabel(dob)].filter(Boolean).join(' '))};
   }
 
   function initials(name) {
@@ -49,7 +49,8 @@
   }
 
   const paths = {
-    grid: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
+    clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    chevron: '<path d="m9 5 7 7-7 7"/>',
     clipboard: '<rect x="5" y="5" width="14" height="16" rx="2"/><rect x="8" y="2.5" width="8" height="5" rx="1.5"/>',
     calendar: '<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 3v4m10-4v4M3 11h18"/>',
     users: '<circle cx="9" cy="8" r="3.5"/><path d="M2 20c0-7 14-7 14 0M16 4a4 4 0 0 1 0 8m2 3c3 1 4 3 4 5"/>',
@@ -152,6 +153,57 @@
     update();
   }
 
+  // The Terminarz uses these five categories for patient appointments.
+  const appointmentCategories = new Set(['followup','observation','treatment','wynik-badania','procedura']);
+  function isAppointment(entry) {
+    return entry && appointmentCategories.has(entry.category) &&
+      (entry.careContext?.role === 'calendar' || entry.reminderContext?.kind !== 'reminder');
+  }
+  const sections = {
+    reminders: {name: 'Przypomnienia', symbol: 'clock', all: 'Wszystkie przypomnienia', empty: 'Brak przypomnień na dziś i zaległych.'},
+    care: {name: 'Plany opieki', symbol: 'clipboard', all: 'Wszystkie plany opieki', empty: 'Brak otwartych planów opieki.'}
+  };
+
+  function relatedCard(key) {
+    const info = sections[key];
+    return '<section class="vgs-box vgs-related vgs-' + key + '" aria-labelledby="vgs-' + key + '-title">' +
+      '<div class="vgs-heading-row"><span class="vgs-tile">' + icon(info.symbol) + '</span><h2 id="vgs-' + key + '-title">' +
+      info.name + '</h2><span class="vgs-count" hidden></span></div><div class="vgs-related-body" aria-live="polite"></div>' +
+      '<button type="button" class="vgs-related-footer" data-all="' + key + '">' + info.all + icon('chevron') + '</button></section>';
+  }
+
+  function reminderRows(groups, day) {
+    const rows = [];
+    for (const group of groups) {
+      for (const note of group.notes || []) {
+        const due = String(note.dueDateISO || '').slice(0,10);
+        if (!dateLabel(due) || due > day || note.category === 'absence' || note.careContext?.role === 'decision' ||
+            due === day && !group.isActivity && isAppointment(note)) continue;
+        const late = Math.round((Date.parse(day) - Date.parse(due)) / 86400000);
+        rows.push({patientId: group.patientId, name: group.patientName || (group.isActivity ? 'Aktywność' : 'Osoba spoza kartoteki'),
+          global: group.isActivity || group.isExternal, title: note.title || 'Przypomnienie',
+          context: {section:'reminders', noteId:note.id}, due, time:note.dueTime || '',
+          status: late ? late === 1 ? '1 dzień po terminie' : late + ' dni po terminie' : 'Dziś',
+          tone: late ? 'overdue' : 'today'});
+      }
+    }
+    return rows.sort((a,b) => a.due.localeCompare(b.due) || a.time.localeCompare(b.time));
+  }
+
+  function planRows(plans) {
+    const rows = [];
+    for (const plan of plans) {
+      const status = plan.careContext?.version === 2 ? plan.careContext.status : plan.status;
+      if (status !== 'active') continue;
+      const summary = w.VildaCarePlans?.describeSummary(plan);
+      const date = String(plan.createdAtISO || '').slice(0,10);
+      rows.push({patientId:plan.patientId, name:plan.patientName, title:plan.title || 'Plan opieki',
+        context:{section:'care',planId:plan.id}, status:summary?.stateLabel || 'Otwarty',
+        tone:'neutral', date:dateLabel(date) && date, order:plan.createdAtISO || ''});
+    }
+    return rows.sort((a,b) => b.order.localeCompare(a.order));
+  }
+
   function mount(host, options) {
     if (active) active.destroy();
     const vault = w.VildaVault;
@@ -167,14 +219,18 @@
       '<div class="vgs-launch-tiles">' + entries.map(card).join('') + '</div><p class="vgs-launch-status" role="status"></p>';
     const page = element('section','vgs-start vgs-office');
     let day = civilDay(new Date());
-    page.innerHTML = '<button type="button" class="vgs-back">' + icon('grid') + 'Ekran startowy</button><div class="vgs-heading"><h1>Gabinet</h1><div class="vgs-date">' + icon('calendar') + '<time></time></div></div>' +
-      '<section class="vgs-box vgs-working" aria-label="Rozpoczęta wizyta" hidden></section>' +
+    page.innerHTML = '<div class="vgs-heading"><h1>Gabinet</h1><div class="vgs-heading-actions"><div class="vgs-date">' + icon('calendar') +
+      '<time><span class="vgs-date-long"></span><span class="vgs-date-short"></span></time></div><button type="button" class="vgs-quick">' +
+      icon('calc') + 'Szybkie obliczenie</button></div></div><div class="vgs-office-grid">' +
       '<section class="vgs-box vgs-search" aria-labelledby="vgs-search-title"><div class="vgs-heading-row"><span class="vgs-tile">' + icon('users') + '</span><h2 id="vgs-search-title">Znajdź pacjenta</h2></div>' +
-      '<div class="vgs-controls"><label class="vgs-search-field">' + icon('search') + '<input type="search" id="vgs-query" autocomplete="off" aria-label="Szukaj pacjenta po nazwisku, imieniu lub dacie urodzenia" aria-controls="vgs-results" placeholder="Nazwisko, imię lub data urodzenia"></label>' +
+      '<div class="vgs-controls"><label class="vgs-search-field">' + icon('search') + '<input type="search" id="vgs-query" autocomplete="off" aria-label="Szukaj pacjenta po nazwisku, imieniu lub dacie urodzenia" aria-controls="vgs-results" placeholder="Imię, nazwisko, data ur."></label>' +
       '<button type="button" class="vgs-list-toggle" aria-controls="vgs-results" aria-expanded="false">Lista pacjentów</button>' +
-      '<div class="vgs-results" id="vgs-results" role="region" aria-label="Wyniki wyszukiwania pacjentów" hidden></div></div><p class="vgs-feedback" role="status"></p></section>' +
-      '<section class="vgs-box vgs-schedule" aria-labelledby="vgs-schedule-title"><div class="vgs-heading-row"><span class="vgs-tile">' + icon('calendar') + '</span><h2 id="vgs-schedule-title">Dzisiejsze wizyty</h2></div>' +
-      '<div class="vgs-schedule-body" aria-live="polite"></div></section><div><button type="button" class="vgs-quick">' + icon('calc') + 'Szybkie obliczenie</button></div>';
+      '<div class="vgs-results" id="vgs-results" role="region" aria-label="Wyniki wyszukiwania pacjentów" hidden></div></div>' +
+      '<div class="vgs-feedback" role="status"></div><section class="vgs-working" aria-label="Rozpoczęta wizyta" hidden></section>' +
+      '<div class="vgs-recent" hidden><h3>Ostatnio przyjęci</h3><ul></ul></div></section>' +
+      '<section class="vgs-box vgs-schedule" aria-labelledby="vgs-schedule-title"><div class="vgs-heading-row"><span class="vgs-tile">' + icon('calendar') +
+      '</span><h2 id="vgs-schedule-title">Dzisiejsze wizyty</h2><span class="vgs-count" hidden></span></div>' +
+      '<div class="vgs-schedule-body" aria-live="polite"></div></section>' + relatedCard('reminders') + relatedCard('care') + '</div>';
     const dialog = element('dialog','vgs-dialog');
     dialog.setAttribute('aria-labelledby','vgs-quick-title');
     dialog.innerHTML = quickForm();
@@ -184,13 +240,6 @@
     const query = get('#vgs-query'), results = get('#vgs-results'), toggle = get('.vgs-list-toggle');
     const feedback = get('.vgs-feedback'), schedule = get('.vgs-schedule-body');
     const events = new AbortController(), listen = {signal:events.signal};
-    const compactQuery = w.matchMedia('(max-width: 440px)');
-    const fullPlaceholder = query.placeholder;
-    function sizePlaceholder() {
-      query.placeholder = compactQuery.matches ? 'Imię, nazwisko, data ur.' : fullPlaceholder;
-    }
-    compactQuery.addEventListener('change',sizePlaceholder,listen);
-    sizePlaceholder();
     let sequence = 0, busy = false, destroyed = false, patients = new Map(), reader = null, midnight;
     let directoryError = false;
     let view = options.initialView === 'office' ? 'office' : 'launch';
@@ -203,17 +252,18 @@
       results.hidden = true;
       toggle.setAttribute('aria-expanded','false');
     }
+    async function select(record, mode, context) {
+      if (busy || !current() || !patients.has(record.id)) return;
+      closeSearch();
+      busy = true;
+      try { await options.onSelect(record.id,mode,context); }
+      catch (_) { if (current()) feedback.textContent = 'Nie udało się otworzyć pacjenta. Spróbuj ponownie.'; }
+      finally { busy = false; }
+    }
     function action(record, mode, label, primary = mode === 'start') {
       const button = element('button',primary ? 'vgs-primary' : 'vgs-name',label);
       button.type = 'button';
-      button.onclick = async () => {
-        if (busy || !current() || !patients.has(record.id)) return;
-        closeSearch();
-        busy = true;
-        try { await options.onSelect(record.id,mode); }
-        catch (_) { if (current()) feedback.textContent = 'Nie udało się otworzyć pacjenta. Spróbuj ponownie.'; }
-        finally { busy = false; }
-      };
+      button.onclick = () => select(record,mode);
       return button;
     }
     function visitAction(record, full) {
@@ -234,6 +284,60 @@
       identity.append(element('small','',(encounter.mode === 'edit' ? 'Edycja wizyty' : 'Nowa wizyta') + ' · ' + dateLabel(encounter.date)),
         action(patient,'overview',patient.name));
       host.append(tile,identity,visitAction(patient,true)); host.hidden = false;
+    }
+    const recentCache = new Map();
+    let recentTask = Promise.resolve();
+    function recentVisits(valid) {
+      const host = get('.vgs-recent'), list = host.querySelector('ul');
+      const model = w.VildaHomeVisitComparisonModel;
+      list.replaceChildren(); host.hidden = true;
+      if (!get('.vgs-working').hidden || !vault.getPatientVisits || !model?.clinicalDate) return;
+      for (const id of recentCache.keys()) if (!patients.has(id)) recentCache.delete(id);
+      // Only the vault's clinical dates describe visits. The directory's save
+      // timestamp can be advanced by editing or restoring an older record.
+      // Limit decryptions, reuse only derived days in this unlocked workspace.
+      const records = [...patients.values()].filter(person => person.count !== 0);
+      recentTask = recentTask.then(async () => {
+        const dated = [];
+        let index = 0, failed = false;
+        async function read() {
+          while (valid() && index < records.length) {
+            const person = records[index++];
+            let cached = recentCache.get(person.id);
+            if (!person.saved || !cached || cached.saved !== person.saved || cached.count !== person.count || cached.day !== day) {
+              try {
+                const visits = await vault.getPatientVisits(person.id);
+                if (!valid()) return;
+                let latest = '';
+                for (const visit of visits) {
+                  if (visit.patientId !== person.id) continue;
+                  const date = model.clinicalDate(visit);
+                  if (date && date <= day && date > latest) latest = date;
+                }
+                cached = {saved:person.saved,count:person.count,day,latest};
+                recentCache.set(person.id,cached);
+              } catch (_) { failed = true; continue; }
+            }
+            if (cached.latest) dated.push({person,date:cached.latest});
+          }
+        }
+        await Promise.all([read(),read()]);
+        if (!valid()) return;
+        if (failed) {
+          const item = element('li');
+          item.append(retryMessage('Nie udało się wczytać ostatnich wizyt.'));
+          list.append(item); host.hidden = false; return;
+        }
+        dated.sort((a,b) => b.date.localeCompare(a.date) || a.person.name.localeCompare(b.person.name,'pl'));
+        for (const {person,date} of dated.slice(0,2)) {
+          const item = element('li'), button = action(person,'overview','');
+          button.className = 'vgs-recent-row';
+          const time = element('time','',dateLabel(date)); time.dateTime = date;
+          button.append(element('span','',person.name),time); button.insertAdjacentHTML('beforeend',icon('chevron'));
+          item.append(button); list.append(item);
+        }
+        host.hidden = !list.childElementCount;
+      });
     }
     function identity(record, full) {
       const cell = element('div','vgs-person'), value = element('div');
@@ -263,15 +367,69 @@
       results.hidden = false;
       toggle.setAttribute('aria-expanded','true');
     }
+    function showCount(section, value) {
+      const badge = get('.vgs-' + section + ' .vgs-count');
+      badge.textContent = value == null ? '' : String(value);
+      badge.hidden = value == null;
+    }
+    function retryMessage(text) {
+      const message = element('p','vgs-empty',text + ' ');
+      const button = element('button','vgs-retry','Spróbuj ponownie');
+      button.type = 'button';
+      button.onclick = refresh;
+      message.append(button);
+      return message;
+    }
+    function openAll(key, context) {
+      if (!current() || busy || !options.onAll) return;
+      return openEntry(() => options.onAll(key,context));
+    }
+    for (const button of page.querySelectorAll('[data-all]')) {
+      button.onclick = () => openAll(button.dataset.all);
+      button.disabled = !options.onAll;
+    }
+    function renderRelated(key, result) {
+      const body = get('.vgs-' + key + ' .vgs-related-body');
+      body.replaceChildren();
+      if (w.VildaRemindersPrivacy?.isHidden()) {
+        showCount(key,null);
+        body.append(element('p','vgs-empty','Treść jest ukryta.'));
+        return;
+      }
+      if (result.status !== 'fulfilled') {
+        showCount(key,null);
+        body.append(retryMessage(key === 'care' ? 'Nie udało się wczytać planów opieki.' : 'Nie udało się wczytać przypomnień.'));
+        return;
+      }
+      const rows = key === 'care' ? planRows(result.value) : reminderRows(result.value,day);
+      showCount(key,rows.length);
+      if (!rows.length) { body.append(element('p','vgs-empty',sections[key].empty)); return; }
+      const list = element('ul','vgs-related-list');
+      for (const row of rows.slice(0,2)) {
+        const item = element('li'), record = !row.global && patients.get(row.patientId);
+        const button = element('button','vgs-related-row');
+        button.type = 'button';
+        button.disabled = !record && !options.onAll;
+        button.onclick = () => record ? select(record,'overview',row.context) : openAll(key,row.context);
+        const top = element('span','vgs-row-top'), badge = element('span','vgs-when',row.status);
+        badge.dataset.tone = row.tone;
+        top.append(element('span','vgs-who',record?.name || row.name || 'Pacjent'),badge);
+        button.append(top,element('span','vgs-row-title',row.title));
+        if (row.date) {
+          const date = element('time','vgs-row-meta','Wpis z ' + dateLabel(row.date));
+          date.dateTime = row.date;
+          button.append(date);
+        }
+        item.append(button); list.append(item);
+      }
+      body.append(list);
+    }
     function renderSchedule(rows) {
       schedule.replaceChildren();
-      const visits = rows.filter(row => row && !row.isActivity && row.category !== 'absence' && String(row.dueDateISO).slice(0,10) === day);
+      const visits = rows.filter(row => isAppointment(row) && !row.isActivity && String(row.dueDateISO).slice(0,10) === day);
+      showCount('schedule',visits.length);
       visits.sort((a,b) => (a.dueTime || '99:99').localeCompare(b.dueTime || '99:99'));
       if (!visits.length) { schedule.append(element('p','vgs-empty','Brak wizyt zaplanowanych na dziś.')); return; }
-      const labels = element('div','vgs-schedule-labels');
-      labels.setAttribute('aria-hidden','true');
-      for (const label of ['Godzina','Pacjent','Powód wizyty','']) labels.append(element('span','',label));
-      schedule.append(labels);
       for (const visit of visits) {
         const patient = patients.get(visit.patientId);
         const row = element('div','vgs-appointment');
@@ -291,41 +449,66 @@
       const label = now.toLocaleDateString('pl-PL',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
       for (const date of root.querySelectorAll('.vgs-date time')) {
         date.dateTime = day;
-        date.textContent = label;
+        if (date.firstElementChild) {
+          date.querySelector('.vgs-date-long').textContent = label;
+          date.querySelector('.vgs-date-short').textContent = dateLabel(day);
+        } else date.textContent = label;
       }
       clearTimeout(midnight);
       midnight = w.setTimeout(refresh, nextDay.getTime() - now.getTime() + 100);
       reader?.dispose();
       reader = null;
-      if (view !== 'office') return;
+      if (view !== 'office') {
+        patients.clear(); recentCache.clear(); get('.vgs-recent ul').replaceChildren(); get('.vgs-recent').hidden = true;
+        results.replaceChildren(); get('.vgs-working').replaceChildren(); get('.vgs-working').hidden = true;
+        schedule.replaceChildren(); feedback.replaceChildren(); query.value = '';
+        for (const key of Object.keys(sections)) { get('.vgs-' + key + ' .vgs-related-body').replaceChildren(); showCount(key,null); }
+        showCount('schedule',null); return;
+      }
       const dateForRead = day;
       let ownReader;
-      const directory = vault.listPatients({strict:true,isCurrent:valid});
+      const directory = (async () => vault.listPatients({strict:true,isCurrent:valid}))();
       const calendar = Promise.resolve().then(() => {
-        if (!valid()) return [];
+        if (!valid()) return null;
         reader = ownReader = vault.createCalendarReader({isCurrent:valid});
-        return reader.listPatientNotesInRange(dateForRead,dateForRead + 'T23:59:59.999Z');
+        return reader;
       });
-      const [people, appointments] = await Promise.allSettled([directory,calendar]);
-      ownReader?.dispose();
-      if (reader === ownReader) reader = null;
-      if (!valid()) return;
-      directoryError = people.status !== 'fulfilled';
-      patients = new Map((directoryError ? [] : people.value).map(patientRow).sort((a,b)=>a.name.localeCompare(b.name,'pl')).map(record=>[record.id,record]));
-      workingVisit();
-      feedback.replaceChildren();
-      if (directoryError) feedback.textContent = 'Nie udało się wczytać kartoteki.';
-      if (!results.hidden) search();
-      if (appointments.status === 'fulfilled') renderSchedule(appointments.value);
-      else schedule.replaceChildren(element('p','vgs-empty','Nie udało się wczytać dzisiejszych wizyt.'));
-      if (directoryError || appointments.status !== 'fulfilled') {
-        const retry = element('button','vgs-retry','Spróbuj ponownie');
-        retry.type = 'button'; retry.onclick = refresh; feedback.append(retry);
-      }
+      const until = dateForRead + 'T23:59:59.999Z';
+      const appointments = calendar.then(source => source && source.listPatientNotesInRange(dateForRead,until));
+      const reminders = calendar.then(source => source && !w.VildaRemindersPrivacy?.isHidden()
+        ? source.listPatientNotesDueByDate(until) : []);
+      const plans = Promise.resolve().then(() => valid() && !w.VildaRemindersPrivacy?.isHidden() ?
+        vault.listCarePlans({strict:true,isCurrent:valid}) : []);
+      const people = Promise.allSettled([directory]).then(([result]) => {
+        if (!valid()) return;
+        directoryError = result.status !== 'fulfilled';
+        patients = new Map((directoryError ? [] : result.value).map(patientRow).sort((a,b)=>a.name.localeCompare(b.name,'pl')).map(record=>[record.id,record]));
+        workingVisit();
+        recentVisits(valid);
+        feedback.replaceChildren();
+        if (directoryError) feedback.append(retryMessage('Nie udało się wczytać kartoteki.'));
+        if (!results.hidden) search();
+      });
+      const scheduleRead = Promise.allSettled([people,appointments]).then(([,result]) => {
+        if (!valid()) return;
+        if (result.status === 'fulfilled') renderSchedule(result.value);
+        else { showCount('schedule',null); schedule.replaceChildren(retryMessage('Nie udało się wczytać dzisiejszych wizyt.')); }
+      });
+      const related = (key, promise) => Promise.allSettled([people,promise]).then(([,result]) => {
+        if (valid()) renderRelated(key,result);
+      });
+      try { await Promise.all([scheduleRead,related('reminders',reminders),related('care',plans)]); }
+      finally { ownReader?.dispose(); if (reader === ownReader) reader = null; }
     }
+    const unsubscribePrivacy = w.VildaRemindersPrivacy?.subscribe(hidden => {
+      if (!current() || view !== 'office') return;
+      if (hidden) for (const key of Object.keys(sections)) renderRelated(key,{status:'fulfilled',value:[]});
+      refresh();
+    });
     function destroy() {
       if (destroyed) return;
       destroyed = true; sequence++; events.abort(); clearTimeout(midnight);
+      unsubscribePrivacy?.(); recentCache.clear();
       reader?.dispose(); reader = null; patients.clear(); if (dialog.open) dialog.close();
       scope.remove();
       if (active?.scope === scope) active = null;
@@ -354,6 +537,7 @@
     doc.addEventListener('pointerdown',offSearch,listen);
     doc.addEventListener('focusin',offSearch,listen);
     doc.addEventListener('vilda:home-encounter-changed',refresh,listen);
+    doc.addEventListener('vilda:sync-merged',refresh,listen);
     function showView(next, focus = false) {
       if (!current()) return;
       view = next === 'office' ? 'office' : 'launch';
@@ -361,6 +545,12 @@
       launcher.hidden = view !== 'launch';
       page.hidden = view !== 'office';
       launchStatus.textContent = '';
+      if (view === 'office' && !schedule.hasChildNodes()) {
+        schedule.append(element('p','vgs-empty','Wczytywanie terminarza…'));
+        for (const key of Object.keys(sections)) {
+          get('.vgs-' + key + ' .vgs-related-body').append(element('p','vgs-empty','Wczytywanie…'));
+        }
+      }
       if (focus) {
         const nextFocus = view === 'office' ? query : get('[data-entry="office"]');
         nextFocus.focus({preventScroll:true});
@@ -384,7 +574,6 @@
         if (current()) status.textContent = 'Nie udało się otworzyć formularza. Spróbuj ponownie.';
       } finally { busy = false; }
     }
-    get('.vgs-back').onclick = () => showView('launch',true);
     get('[data-entry="office"]').onclick = () => showView('office',true);
     get('[data-entry="new"]').onclick = () => openEntry(options.onNewPatient);
     get('[data-entry="rapid"]').onclick = () => openEntry(options.onRapid);
@@ -398,7 +587,6 @@
         vault[key]?.(()=>{ if (active?.vault === vault) active.refresh(); });
       }
     }
-    schedule.append(element('p','vgs-empty','Wczytywanie terminarza…'));
     showView(view);
     return active;
   }
