@@ -314,8 +314,8 @@
     view.menuToggle.setAttribute('aria-haspopup', 'menu'); view.menuToggle.setAttribute('aria-expanded', 'false');
     view.menu = node('div', 'vhome-b1-action-menu'); view.menu.id = 'vhomePatientNativeActions-' + suffix;
     view.menu.hidden = true; view.menu.setAttribute('role', 'menu'); view.menuToggle.setAttribute('aria-controls', view.menu.id);
-    [['edit','Edytuj pacjenta'],['newMeasure','Nowy pomiar'],['visits','Historia wizyt'],['versions','Historia wersji'],['load',null],['return',null]].forEach(function (entry) {
-      if (view.inline && (entry[0] === 'load' || entry[0] === 'return')) return;
+    [['edit','Edytuj pacjenta'],['newMeasure',native.homeNavigation ? 'Rozpocznij wizytę' : 'Nowy pomiar'],['visits','Historia wizyt'],['versions','Historia wersji'],['load',null],['return',null]].forEach(function (entry) {
+      if (view.inline && (entry[0] === 'load' || entry[0] === 'return' || (native.homeNavigation && entry[0] === 'newMeasure'))) return;
       var item = native.actions[entry[0]]; if (!item) return;
       if (view.inline && entry[0] === 'visits' && w.VildaHomeGabinet?.openVisitHistory) {
         item = button(entry[1], function () {

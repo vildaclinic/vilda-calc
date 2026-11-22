@@ -3,7 +3,7 @@
  * Inspect only the current document and same-origin panels of this shell.
  * No clinical values or patient data leave their owning document.
  */
-R += ".vug--klirens .vug-btn{min-height:48px;font-size:16px;line-height:1.4;white-space:normal}.vug--klirens .vug-btn[hidden]{display:none!important}";
+R += ".vug--klirens .vug-btn{min-height:48px;font-size:16px;line-height:1.4;white-space:normal}.vug .vug-btn[hidden]{display:none!important}";
 function VildaKlirensGuardHasPending() {
   var root = f, windows = [f], seen = [];
   try {
@@ -112,6 +112,13 @@ function VildaGuardRunDecision(options, decision) {
   var isNew = !clcrOnly && state === "new_patient", copy = N(reason, isNew), patient = J(options.patientLabel);
   var mainDirty = !clcrOnly && k(state);
   if (clcrPending) copy = VildaKlirensGuardCopy(reason, mainDirty, copy);
+  if (mainDirty && f.__VILDA_HOME_GABINET_PREVIEW__ === true) {
+    const action = f.VildaDataImportExport?.getHomeVisitSaveAction?.();
+    // Loading the next patient is pending while this guard runs. The current
+    // working visit may still be saved using the guard's operation-bound receipt.
+    if (!action?.visitId) copy = Object.assign({}, copy, {primary: "",
+      body: "Formularz zawiera zmiany. " + (action?.reason || "Zapis wizyty jest dostępny w Gabinecie.")});
+  }
   var note = [options.extraNote, clcrPending && mainDirty ? VildaKlirensGuardNote(reason) : ""].filter(Boolean).join(" ");
   P(); b = true;
   var error = n("div", { class: "vug-err", role: "alert" });

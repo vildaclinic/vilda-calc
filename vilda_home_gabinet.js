@@ -6,7 +6,7 @@
   const d = w.document;
   let root, main, header, landing, overview, analysis, picker, historyHost, historyView;
   let account = null, screen = 'start', target = null, section = 'antro';
-  let sequence = 0, selecting = false, frame = 0;
+  let sequence = 0, selecting = false, frame = 0, pendingNote = null;
   const labels = {overview: 'Przegląd', analysis: 'Analiza'};
   const paths = {
     home: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
@@ -37,6 +37,11 @@
   }
   function headerState() {
     const status = w.VildaHomeEncounter.state(target);
+    const shell = w.parent?.VildaShell, route = shell?.peekPatientReturnRoute?.();
+    const parentLabel = shell?.routes?.[route]?.title || 'Gabinet';
+    const breadcrumb = header.querySelector('[data-start]');
+    breadcrumb.querySelector('span').textContent = parentLabel;
+    breadcrumb.setAttribute('aria-label', 'Wróć do: ' + parentLabel);
     const draft = status.mode === 'new' || status.mode === 'edit';
     const birth = w.VildaDobAge?.readISO(), day = draft && status.date ? new Date(status.date + 'T12:00:00') : new Date();
     const age = birth && w.VildaDobAge.ageFromDobISO(birth, day);
@@ -100,9 +105,11 @@
       backLabel: screen === 'analysis' ? 'Wróć do analizy' : 'Wróć do przeglądu',
       onBack: back,
       onEdit(row) {
-        if (!owns(id)) return;
-        back();
-        return options.onEdit(row);
+        if (!owns(id)) return false;
+        const editing = historyView;
+        // Keep the history visible while the clinician decides about a draft.
+        // The native form must be available when the verified revision loads.
+        return options.onEdit(row, () => historyView === editing && owns(id) && back());
       },
       onOpenRecord(key) {
         if (owns(id)) { back(false); showOverview(key); }
@@ -122,7 +129,7 @@
     if (!root) return;
     const nextAccount = access();
     if (account !== nextAccount) {
-      sequence++; selecting = false; dismissHistory(); detach(true); destroyPicker();
+      sequence++; selecting = false; pendingNote = null; dismissHistory(); detach(true); destroyPicker();
       target = null; screen = 'start'; section = 'antro'; account = nextAccount;
       header.querySelector('h1').textContent = '';
       header.querySelector('.gb-identity-meta').textContent = '';
@@ -163,10 +170,12 @@
     if (screen === 'overview' && !w.VildaHomePatient.isInlineOpen()) {
       w.VildaHomePatient.openInline(overview, {
         activeTab: section,
-        onClose: showStart,
+        onClose: closePatientCard,
         onAnalysis: () => { if (showAnalysis()) w.VildaHomeGrowth?.open('analysis'); }
       });
     }
+    if (screen === 'overview' && pendingNote && pendingNote.patientId === target &&
+        w.VildaHomePatient.focusInlineNote(pendingNote.id)) pendingNote = null;
   }
   function schedule() {
     if (!frame) frame = w.requestAnimationFrame(() => { frame = 0; render(); });
@@ -174,13 +183,19 @@
   function showStart() {
     if (!account || !detach(false)) return false;
     dismissHistory();
-    sequence++; selecting = false; target = null; section = 'antro'; screen = 'start';
+    sequence++; selecting = false; pendingNote = null; target = null; section = 'antro'; screen = 'start';
     showMessage(''); render();
+    return true;
+  }
+  function closePatientCard() {
+    if (!showStart()) return false;
+    const shell = w.parent?.VildaShell;
+    if (shell?.peekPatientReturnRoute?.()) shell.returnFromPatientCard();
     return true;
   }
   function showAnalysis() {
     if (!owns(target) || !detach(false)) return false;
-    dismissHistory(); screen = 'analysis'; showMessage(''); render(); w.VildaHomeWorkspace.refresh();
+    pendingNote = null; dismissHistory(); screen = 'analysis'; showMessage(''); render(); w.VildaHomeWorkspace.refresh();
     return true;
   }
   let labEntry = null;
@@ -200,37 +215,48 @@
     labEntry = record().finally(() => { labEntry = null; });
     return labEntry;
   }
-  function showOverview(key) {
+  function showOverview(key, focusNoteId) {
     const id = selected();
     if (!owns(id)) return false;
     dismissHistory();
     if (key && target === id && screen === 'overview' && w.VildaHomePatient.isInlineOpen()) {
       if (!w.VildaHomePatient.selectInline(key)) return false;
-      section = key; render();
+      section = key; pendingNote = focusNoteId ? {patientId: id, id: focusNoteId} : null; render();
       return true;
     }
     if (key || target !== id) section = key || 'antro';
+    pendingNote = focusNoteId ? {patientId: id, id: focusNoteId} : null;
     target = id; screen = 'overview'; showMessage(''); render();
     return true;
   }
-  async function selectPatient(id, mode) {
-    if (!id || selecting || !account || !detach(false)) return false;
-    dismissHistory();
+  function selectPatient(id, mode) {
+    return openPatient(id, {intent: mode === 'start' ? 'new' : 'browse'});
+  }
+  async function openPatient(id, options = {}) {
+    const intent = options.intent || 'browse', key = options.section || 'antro';
+    const isCurrent = options.isCurrent || (() => true);
+    if (!id || selecting || !account || !['browse','new'].includes(intent) || !isCurrent()) return false;
+    const same = owns(id);
+    const encounter = w.VildaHomeEncounter.state(id);
+    // A restored tab has no authority to present a historical form as the
+    // latest visit. A normal directory pick reads the latest record again.
+    const load = !same || encounter.requiresLatest || options.restoreLatest === true || intent === 'new' && encounter.mode === 'browse';
+    if (load && !detach(false)) return false;
     const generation = ++sequence, vault = w.VildaVault, session = vault.captureSyncOperationSession();
+    const current = () => generation === sequence && isCurrent() && account === access();
     selecting = true; showMessage('');
     try {
-      if (!owns(id)) {
-        const loaded = await w.VildaHomeEncounter.load(id, mode === 'start' ? 'new' : 'restore');
-        vault.assertSyncOperationSession(session);
-        if (loaded === false || generation !== sequence || !owns(id)) return false;
-      } else if (mode === 'start' && w.VildaHomeEncounter.state(id).mode === 'browse') {
-        const started = await w.VildaHomeEncounter.start(id);
-        vault.assertSyncOperationSession(session);
-        if (started === false || generation !== sequence || !owns(id)) return false;
+      if (load) {
+        const loaded = await w.VildaHomeEncounter.load(id, intent === 'new' ? 'new' : 'restore', null, current, options.onApply);
+        if (!loaded) return false;
       }
-      return showOverview('antro');
+      vault.assertSyncOperationSession(session);
+      if (!current() || !owns(id)) return false;
+      if (!showOverview(key === 'visits' ? 'antro' : key, options.focusNoteId)) return false;
+      if (key === 'visits') return w.VildaHomeEncounter.history(id, patientName());
+      return true;
     } catch (_) {
-      if (generation === sequence) showMessage('Nie udało się otworzyć wizyty. Spróbuj ponownie.');
+      if (current()) showMessage('Nie udało się otworzyć wizyty. Spróbuj ponownie.');
       return false;
     } finally {
       if (generation === sequence) { selecting = false; schedule(); }
@@ -244,7 +270,7 @@
     root = d.createElement('div'); root.id = 'vhomeGabinet'; root.hidden = true;
     root.innerHTML = '<div id="vhomeGabinetStart"></div><div id="vhomeGabinetHeader" hidden>' +
       '<div class="gb-header-top"><nav class="gb-breadcrumb" aria-label="Ścieżka nawigacji"><button type="button" data-start>' + icon('home') +
-      'Gabinet</button>' + icon('chevron') + '<span>Karta pacjenta</span></nav><span class="gb-encounter-state" role="status" hidden><span></span> <time></time></span></div>' +
+      '<span>Gabinet</span></button>' + icon('chevron') + '<span>Karta pacjenta</span></nav><span class="gb-encounter-state" role="status" hidden><span></span> <time></time></span></div>' +
       '<div class="gb-person-line"><div class="gb-identity"><h1></h1><div class="gb-identity-meta"></div></div><div class="gb-card-actions"><button type="button" data-history>' +
       icon('history') + 'Historia wizyt</button><button type="button" class="gb-primary" data-home-encounter></button></div></div>' +
       '<div class="gb-patient-tabs" role="tablist" aria-label="Karta pacjenta"></div></div>' +
@@ -258,7 +284,7 @@
       syncHeaderWidth();
       w.addEventListener('resize', syncHeaderWidth);
     }
-    root.querySelector('[data-start]').onclick = showStart;
+    root.querySelector('[data-start]').onclick = closePatientCard;
     root.querySelector('[data-history]').onclick = () => { if (owns(target)) w.VildaHomeEncounter.history(target, patientName()); };
     root.querySelector('[data-home-encounter]').onclick = async event => {
       if (!owns(target)) return;
@@ -292,7 +318,7 @@
     const id = event.detail?.patientId || selected();
     if (!id) return;
     if (id !== target || screen === 'start') {
-      dismissHistory(); detach(true); target = id; screen = 'overview'; section = 'antro';
+      dismissHistory(); detach(true); pendingNote = null; target = id; screen = 'overview'; section = 'antro';
     }
     schedule();
   });
@@ -303,7 +329,7 @@
   w.addEventListener('pageshow', schedule);
   w.addEventListener('pagehide', () => { dismissHistory(); if (main) setScreen(null); sequence++; selecting = false; detach(true); if (picker) destroyPicker(); });
   w.VildaHomeGabinet = Object.freeze({
-    showStart, showAnalysis, selectPatient, prepareLabEntry, openVisitHistory, openOverview: () => showOverview('antro'),
+    showStart, showAnalysis, selectPatient, openPatient, prepareLabEntry, openVisitHistory, openOverview: (key = 'antro') => showOverview(key),
     openReminders: () => screen !== 'start' && showOverview('reminders'),
     captureVisitBinding: patientId => screen !== 'start' && target === patientId && owns(patientId)
       ? w.VildaHomeEncounter.captureBinding(patientId) : null,

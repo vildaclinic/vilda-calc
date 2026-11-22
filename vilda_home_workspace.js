@@ -526,7 +526,7 @@
     appendExisting(content, ['loadDataMessage']);
     actions = element('div', 'vhome-form-actions');
     var clear = byId('clearAllDataBtn'), oldActions = clear.parentElement;
-    buttonLabel(clear, 'Wyczyść formularz', 'Rozpocznij nowy pomiar', 'Wyczyść');
+    buttonLabel(clear, 'Wyczyść formularz', w.__VILDA_HOME_GABINET_PREVIEW__ === true ? 'Wróć do Gabinetu' : 'Rozpocznij nowy pomiar', 'Wyczyść');
     actions.appendChild(clear);
     copyButton = byId('metabolicSummaryBtn');
     copySource = byId('metabolicSummarySection');

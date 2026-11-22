@@ -134,7 +134,11 @@ describe('G32 — pozycje menu bocznego pod klawiaturą', () => {
   it('„Zapisz dane" na stronach bez bramki liczy ten sam tekst, co handler kliknięcia', () => {
     // custom-fixes.js jest wpięty tylko na Start i DocPro; gdzie indziej statyczny data-tip
     // z menu mówi o polach, których na tej stronie nie ma.
-    expect(chrom).toContain('if(d==="saveDataBtnSidebar"){var v=r.VildaVault,u=!!(v&&typeof v.isUnlocked=="function"&&v.isUnlocked());return u?"Zapisywanie danych jest dost\\u0119pne na stronie g\\u0142\\xF3wnej pacjenta."');
+    const tekstBramki = (odblokowany) => 'r.__VILDA_HOME_GABINET_PREVIEW__===true?"Zapis wizyty jest dost\\u0119pny w Gabinecie.":' +
+      odblokowany + '?"Zapisywanie danych jest dost\\u0119pne na stronie g\\u0142\\xF3wnej pacjenta.":' +
+      '"Zapisywanie danych jest zarezerwowane dla zalogowanych u\\u017Cytkownik\\xF3w."';
+    expect(chrom).toContain('if(d==="saveDataBtnSidebar"){var v=r.VildaVault,u=!!(v&&typeof v.isUnlocked=="function"&&v.isUnlocked());return ' + tekstBramki('u'));
+    expect(chrom).toContain('var s=r.VildaVault,i=!!(s&&typeof s.isUnlocked=="function"&&s.isUnlocked());F(e,' + tekstBramki('i') + ')');
   });
 
   it('pliki bramki zostają czystym ASCII', () => {

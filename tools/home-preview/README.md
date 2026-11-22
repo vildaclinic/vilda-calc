@@ -96,6 +96,11 @@ i narzędzia kliniczne. Wspólny nagłówek zachowuje położenie na obu ekranac
 Przycisk „Rozpocznij wizytę” pozwala zacząć konsultację także bez nowego pomiaru
 masy i wzrostu. Po wpisaniu danych można wybrać „Zapisz wizytę”.
 
+W Bazie pacjentów wybór nazwiska otwiera ten sam Przegląd. „Historia wizyt”
+pozwala odczytać zapisaną wizytę. Dopiero „Edytuj wizytę” otwiera wskazany
+zapis do korekty. W trakcie wizyty przycisk „Zapisz wizytę” i skrót Ctrl+S
+(na Macu ⌘S) odnoszą się do otwartej wizyty.
+
 Wybór pacjenta należy do użytkownika. Przy zmianie pacjenta aplikacja sprawdza
 stan niezapisanych danych. Zakładanie konta i dodanie przykładu są serializowane
 między kartami przez Web Locks. Dane tego konta pozostają w lokalnym podglądzie.

@@ -1233,6 +1233,16 @@ describe('native patient-load menu presentation', () => {
     h.finish(); expect(h.view()).toBeNull();
   });
 
+  it.each(['trusted-edit', 'new-capture', 'finished'])('retires the exact direct visit choice on %s', cause => {
+    const h = setup(); expect(h.apply()).toBe(true);
+    const ticket = h.ticket(), current = h.api.isPatientLoadChoicePresentationCurrent;
+    expect(current(ticket)).toBe(true); expect(current({})).toBe(false);
+    if (cause === 'trusted-edit') h.win.document.dispatchEvent({ type: 'input', isTrusted: true });
+    if (cause === 'new-capture') h.api.captureAcceptedPatientLoad({ patientId: h.storage.get('vildaCurrentPatientId') });
+    if (cause === 'finished') h.finish();
+    expect(current(ticket)).toBe(false);
+  });
+
   it.each(['key', 'foreign-pid', 'publication-error'])('still retires after %s inside the exact publication boundary', cause => {
     const h = setup({ beforeIdentity(value) {
       expect(value.api.getPatientLoadPresentation()).toBeNull();

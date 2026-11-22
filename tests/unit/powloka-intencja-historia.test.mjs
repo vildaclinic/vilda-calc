@@ -4,6 +4,119 @@ import { describe, expect, it, vi } from 'vitest';
 import { nasluchy, powloka } from '../support/powloka-harness.mjs';
 import { authProductionReturnProgram } from '../support/search-return-auth-harness.mjs';
 
+describe('Gabinet: ramka właściciela i powrót do modułu', () => {
+  it('przekazuje jawny adres otwartego modułu tylko raz do właściwej ramki', () => {
+    const h = powloka(null, win => {
+      win.__VILDA_HOME_GABINET_PREVIEW__ = true;
+      win.history.replaceState({shellView:'lab',homePreviewPaneTarget:'/przelicznik-jednostek.html?wskazanie=obesity_kids'},'', '/app.html#/lab');
+    });
+    const frame = [...h.ramki.values()].find(item => item.title === 'Jednostki laboratoryjne');
+    const url = new URL(frame.src,h.win.location.href);
+    expect(url.pathname).toBe('/przelicznik-jednostek.html');
+    expect(url.searchParams.get('wskazanie')).toBe('obesity_kids');
+    expect(url.searchParams.get('embedded')).toBe('1');
+    expect(h.history.state.homePreviewPaneTarget).toBeUndefined();
+  });
+  function preview() {
+    const h = powloka();
+    const account = (userId = 'fikcyjne-konto') => ({ isUnlocked: () => true, getCurrentUser: () => ({userId}),
+      captureSyncOperationSession: () => userId, assertSyncOperationSession: token => { if (token !== userId) throw Error(); } });
+    h.win.__VILDA_HOME_GABINET_PREVIEW__ = true;
+    h.win.VildaVault = account();
+    const source = h.load('docpro').contentWindow;
+    source.VildaVault = account();
+    function start() {
+      const win = h.load('start').contentWindow;
+      win.VildaVault = account();
+      win.document.querySelector = selector => selector === '[data-vhome-screen]' ? {} : null;
+      win.VildaHomeGabinet = {openPatient: vi.fn(async (_id, options) => options.isCurrent())};
+      return win;
+    }
+    return {h, source, start, account};
+  }
+  it('otwiera pacjenta na wskazanej zakładce i zachowuje ciepły moduł źródłowy', async () => {
+    const {h, source, start} = preview();
+    const opened = h.shell.openHomePatient('fikcyjny', {intent:'browse', section:'notes', focusNoteId:'fikcyjna-notatka', sourceWindow:source});
+    const target = start(); h.tick(150);
+    await expect(opened).resolves.toBe(true);
+    expect(target.VildaHomeGabinet.openPatient).toHaveBeenCalledWith('fikcyjny', expect.objectContaining({section:'notes',focusNoteId:'fikcyjna-notatka'}));
+    expect(h.shell.peekPatientReturnRoute()).toBe('docpro');
+    expect(h.shell.returnFromPatientCard()).toBe(true);
+    expect(h.shell.getCurrentRoute()).toBe('docpro');
+    expect(h.shell.peekPatientReturnRoute()).toBe(null);
+  });
+  it('czeka na odtworzenie aktywnej edycji w ciepłej ramce Start', async () => {
+    const {h, start} = preview();
+    const opened = h.shell.openHomePatient('fikcyjny', {intent:'browse'});
+    const target = start();
+    target.__vildaPersistRestoring = true;
+    h.tick(150);
+    expect(target.VildaHomeGabinet.openPatient).not.toHaveBeenCalled();
+    target.__vildaPersistRestoring = false;
+    target.VildaDataImportExport = {isMainSessionRestorePending: () => true};
+    h.tick(150);
+    expect(target.VildaHomeGabinet.openPatient).not.toHaveBeenCalled();
+    target.VildaDataImportExport.isMainSessionRestorePending = () => false;
+    h.tick(150);
+    await expect(opened).resolves.toBe(true);
+    expect(target.VildaHomeGabinet.openPatient).toHaveBeenCalledOnce();
+  });
+  it.each([false,true])('tylko udany wybór z Bazy zachowuje cel powrotu (wybrano=%s)', async selected => {
+    const {h, start} = preview();
+    const opened = h.shell.openPatientsInStart();
+    const target = start(); h.tick(150); await opened;
+    if (selected) expect(h.shell.claimHomeDirectory(target)).toBe(true);
+    target.document.dispatchEvent({type:'vilda:auth-hidden'});
+    expect(h.shell.getCurrentRoute()).toBe(selected ? 'start' : 'docpro');
+    expect(h.shell.peekPatientReturnRoute()).toBe(selected ? 'docpro' : null);
+  });
+  it('zamknięcie ponownie otwartej Bazy pozostawia bieżącą kartę i jej powrót', async () => {
+    const {h, start} = preview();
+    const opened = h.shell.openHomePatient('fikcyjny');
+    const target = start(); h.tick(150); await opened;
+    await expect(h.shell.openPatientsInStart()).resolves.toBe(true);
+    target.document.dispatchEvent({type:'vilda:auth-hidden'});
+    expect(h.shell.getCurrentRoute()).toBe('start');
+    expect(h.shell.peekPatientReturnRoute()).toBe('docpro');
+  });
+  it('ręczny wybór Start usuwa powrót przypisany do poprzedniej karty', async () => {
+    const {h, start} = preview();
+    const opened = h.shell.openHomePatient('fikcyjny');
+    start(); h.tick(150); await expect(opened).resolves.toBe(true);
+    expect(h.shell.peekPatientReturnRoute()).toBe('docpro');
+    h.shell.navigate('start');
+    expect(h.shell.peekPatientReturnRoute()).toBeNull();
+  });
+  it('lekki kalkulator bez sejfu otwiera Kartę przez zalogowaną powłokę; zablokowana sesja odmawia', async () => {
+    const {h, start, account} = preview();
+    h.shell.navigate('homa');
+    const lightweight = h.load('homa').contentWindow;
+    delete lightweight.VildaVault;
+    let guest = false;
+    lightweight.VildaSession = {hasSessionKey: () => true, isLoggedIn: () => !guest, isGuestMode: () => guest};
+    const opened = h.shell.openHomePatient('fikcyjny', {sourceWindow:lightweight});
+    start(); h.tick(150); await expect(opened).resolves.toBe(true);
+    expect(h.shell.returnFromPatientCard()).toBe(true);
+    expect(h.shell.getCurrentRoute()).toBe('homa');
+    guest = true;
+    await expect(h.shell.openHomePatient('fikcyjny', {sourceWindow:lightweight})).resolves.toBe(false);
+    guest = false;
+    lightweight.VildaVault = account('inne-konto');
+    await expect(h.shell.openHomePatient('fikcyjny', {sourceWindow:lightweight})).resolves.toBe(false);
+    expect(h.shell.getCurrentRoute()).toBe('homa');
+  });
+  it('kolejna nawigacja lub inne konto w docelowej ramce anuluje przekazanie', async () => {
+    const {h, source, start, account} = preview();
+    const stale = h.shell.openHomePatient('fikcyjny', {sourceWindow:source});
+    h.shell.navigate('docpro'); await expect(stale).resolves.toBe(false);
+    const other = h.shell.openHomePatient('fikcyjny', {sourceWindow:source});
+    const target = start(); target.VildaVault = account('inne-konto'); h.tick(150);
+    await expect(other).resolves.toBe(false);
+    expect(target.VildaHomeGabinet.openPatient).not.toHaveBeenCalled();
+    expect(h.shell.getCurrentRoute()).toBe('docpro');
+  });
+});
+
 describe('Powłoka: aktualna intencja listy i karty', () => {
   it('odblokowany Start czeka na koniec auth boot i dostarcza tylko najnowszą kartę', () => {
     const h = powloka(); h.shell.openPatientCardInStart('fikcyjny-a');

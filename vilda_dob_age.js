@@ -618,6 +618,10 @@
       if (!zrodlo || zrodlo.doba.getTime() > dzis.getTime()) return null;
       var dobaISO = doISO(zrodlo.doba.getFullYear(), zrodlo.doba.getMonth() + 1, zrodlo.doba.getDate());
       if (zrodlo.zMiary) return dobaISO;
+      // The visit already has its own clinical date. A save timestamp cannot
+      // date a measurement when neither height nor weight was recorded.
+      if (w.__VILDA_HOME_GABINET_PREVIEW__ === true &&
+          liczbaZZapisu(rekord.user.weight) === null && liczbaZZapisu(rekord.user.height) === null) return null;
       var dataRekordu = parseDobInput(rekord.user && rekord.user.dobISO, teraz || null);
       var dataUr = readISO() || (dataRekordu.status === 'ok' ? dataRekordu.iso : null);
       var pomiar = dataUr ? wiekPomiaru(rekord, dataUr, teraz) : null;

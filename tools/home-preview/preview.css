@@ -1,20 +1,22 @@
-#vildaHomePreviewBadge {
-  position: fixed;
-  bottom: max(12px, env(safe-area-inset-bottom));
-  left: 12px;
-  z-index: 2147483645;
-  max-width: calc(100vw - 24px);
-  padding: 8px 13px;
+html:not([data-home-file-restore]) :is(#restoreStateBtn, #prevSummaryWrap) {
+  display: none !important;
+}
+
+.vilda-home-preview-badge {
+  display: block;
+  box-sizing: border-box;
+  width: fit-content;
+  max-width: calc(100% - 24px);
+  margin: 12px;
+  padding: 8px 12px;
   border: 1px solid #b5d9d7;
-  border-radius: 10px;
+  border-radius: 8px;
   background: #f4fbfa;
   color: #185f60;
-  box-shadow: 0 2px 9px rgb(18 74 73 / 8%);
   font: 500 13px/1.4 system-ui, sans-serif;
   text-decoration: none;
 }
-
-#vildaHomePreviewBadge:focus-visible { outline: 3px solid #087f82; outline-offset: 3px; }
+.vilda-home-preview-badge:focus-visible { outline: 3px solid #087f82; outline-offset: 3px; }
 
 #vildaHomePreviewExample {
   display: flex;
@@ -90,9 +92,5 @@
 #vildaHomePreviewBoot button { margin-top: 18px; padding: 10px 16px; border: 0; border-radius: 8px; background: #087f82; color: white; font: inherit; cursor: pointer; }
 @media (max-width: 600px) {
   #vildaHomePreviewExample { flex-direction: column; align-items: stretch; gap: 12px; padding: 14px; }
-  #vildaHomePreviewBadge { bottom: max(74px, calc(env(safe-area-inset-bottom) + 66px)); font-size: 11px; padding: 5px 9px; }
   .vilda-preview-access__actions { grid-template-columns: 1fr; }
 }
-
-/* The parent preview label must not cover an embedded clinical dialog footer. */
-html.vilda-pane-modal-open #vildaHomePreviewBadge { visibility: hidden; pointer-events: none; }

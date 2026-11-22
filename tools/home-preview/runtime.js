@@ -13,6 +13,25 @@
   Object.defineProperty(window, '__VILDA_HOME_WORKSPACE_PREVIEW__', { value: true, writable: false });
   Object.defineProperty(window, '__VILDA_HOME_GABINET_PREVIEW__', { value: true, writable: false });
   Object.defineProperty(window, 'VILDA_SYNC_WORKER_URL', { value: 'https://vilda-preview-disabled.invalid', writable: false });
+  // This export script is the first executable in <head>. A direct link to a
+  // module enters its normal shell before the form or an editor can exist.
+  // A Start URL remains a supported standalone entry.
+  if (document.readyState === 'loading' && !nativeAppPane() && typeof window.history?.replaceState === 'function') {
+    const routes = { 'docpro.html': 'docpro', 'terminarz.html': 'terminarz', 'notatki.html': 'notatki',
+      'przelicznik-jednostek.html': 'lab', 'kalkulator-klirens.html': 'klirens', 'homa-ir.html': 'homa',
+      'steroidy.html': 'steroidy', 'cukrzyca.html': 'cukrzyca', 'materialy-edukacyjne.html': 'edu', 'ustawienia.html': 'ustawienia' };
+    const route = routes[window.location.pathname.split('/').pop()];
+    if (typeof route === 'string') {
+      const target = new URL(window.location.href);
+      target.searchParams.delete('embedded');
+      const shell = new URL('app.html#/' + route, target);
+      const state = { shellView: route };
+      if (target.search || target.hash) state.homePreviewPaneTarget = target.pathname + target.search + target.hash;
+      window.history.replaceState(state, '', shell.href);
+      window.location.reload();
+      return;
+    }
+  }
   const state = { status: 'starting', phase: 'account', fictional: true, doctorAccess: false, error: null };
   window.VildaHomePreview = Object.freeze({ getState: () => ({ ...state }) });
   try {
@@ -40,8 +59,10 @@
       classes.toggle('vilda-pro-inactive', !active);
     }
     presentedDoctorAccess = active;
-    const badge = document.getElementById?.('vildaHomePreviewBadge');
-    if (badge) badge.textContent = active ? 'Podgląd lekarski aktywny · fikcyjne dane' : 'Podgląd · fikcyjne dane';
+    for (const id of ['vildaHomePreviewBadge', 'vildaHomePreviewDrawerBadge']) {
+      const badge = document.getElementById?.(id);
+      if (badge) badge.textContent = active ? 'Podgląd lekarski aktywny · fikcyjne dane' : 'Podgląd · fikcyjne dane';
+    }
     const status = document.getElementById?.('vildaHomePreviewAccessStatus');
     if (status) status.textContent = active ? 'Funkcje lekarskie są aktywne w podglądzie.'
       : state.status === 'error' ? 'Nie można potwierdzić konta demonstracyjnego.' : 'Przygotowywanie dostępu do funkcji lekarskich…';
@@ -125,12 +146,35 @@
   }
 
   function showBadge() {
-    if (!document.getElementById('vildaHomePreviewBadge')) {
-      const badge = document.createElement('a'); badge.id = 'vildaHomePreviewBadge';
-      badge.href = 'subskrypcja.html'; badge.setAttribute('aria-label', 'Sprawdź dostęp demonstracyjny');
-      document.body.append(badge);
+    function place(id, host) {
+      let badge = document.getElementById(id);
+      if (!badge) {
+        badge = document.createElement('a'); badge.id = id; badge.className = 'vilda-home-preview-badge';
+        badge.href = 'subskrypcja.html'; badge.setAttribute('aria-label', 'Sprawdź dostęp demonstracyjny');
+      }
+      if (badge.parentNode !== host) host.append(badge);
     }
-    refreshAccessPresentation();
+    const sidebarSlot = 'aside.sidebar-v2 .chrome-menu-scroll';
+    const drawerSlot = '[data-vilda-chrome-drawer-body] .chrome-menu-scroll';
+    function mount() {
+      const sidebar = document.querySelector(sidebarSlot);
+      const drawer = document.querySelector(drawerSlot);
+      place('vildaHomePreviewBadge', sidebar || document.body);
+      if (drawer) place('vildaHomePreviewDrawerBadge', drawer);
+      refreshAccessPresentation();
+      return Boolean(sidebar && drawer);
+    }
+    // Both menus are built once by native chrome. On a cold start it may
+    // still be mounting them when the export finishes preparing its account.
+    if (!mount() && window.MutationObserver && /\/app\.html$/.test(window.location.pathname)) {
+      const observer = new window.MutationObserver(() => {
+        if (document.querySelector(sidebarSlot) && document.querySelector(drawerSlot)) {
+          observer.disconnect();
+          mount();
+        }
+      });
+      observer.observe(document.body, {childList: true, subtree: true});
+    }
   }
 
   function waitFor(read, label, timeout = 45000) {

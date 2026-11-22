@@ -62,7 +62,7 @@ class BrowserCustomEvent extends Event {
   constructor(type, options = {}) { super(type, options); this.detail = options.detail; }
 }
 
-function fixture({ samePatient = false, legacy = false, framed = false, queueImport = true,
+function fixture({ samePatient = false, legacy = false, framed = false, queueImport = true, obesityMode = 'edytuj',
   runResult = true, missing = null, parentProvider = false, publisher = true,
   deferFetch = false, deferGuard = false, deferStartup = false, unscoped = false } = {}) {
   vi.useFakeTimers();
@@ -106,7 +106,7 @@ function fixture({ samePatient = false, legacy = false, framed = false, queueImp
   // VildaUiIntents supplies an immutable typed value at this native boundary.
   const intent = Object.freeze({ patientId: TARGET_PID, ts: Date.now(), ...(legacy
     ? { ghPointId: 'fictional GH point' }
-    : { obesity: Object.freeze({ tryb: 'edytuj', entryId: 'fictional obesity entry' }) }) });
+    : { obesity: Object.freeze({ tryb: obesityMode, entryId: 'fictional obesity entry' }) }) });
   const leases = [];
   const transport = { version: 1, open: vi.fn(async (_kind, raw, isOwnerCurrent) => {
     const lease = { value: intent, current: () => state.transportCurrent && isOwnerCurrent(),
@@ -218,6 +218,17 @@ async function advance(ms) { await vi.advanceTimersByTimeAsync(ms); }
 afterEach(() => { vi.clearAllTimers(); vi.useRealTimers(); });
 
 describe('production GH receiver: the accepted obesity load owns one queued JSON notification', () => {
+  it.each([true, false])('keeps the obesity initiation landing and delegates visit choice only outside the Gabinet model (preview=%s)', async preview => {
+    const f = fixture({ obesityMode: 'wlaczenie' });
+    f.window.__VILDA_HOME_GABINET_PREVIEW__ = preview;
+    await f.run();
+    expect(f.publicationObservers[0].event.detail).toMatchObject({ patientId: TARGET_PID, skipLoadChoice: preview });
+    await advance(450);
+    expect(f.monitor).toHaveBeenCalledOnce();
+    expect(f.monitorCalls[0].target).toMatchObject({ tryb: 'wlaczenie', patientId: TARGET_PID, poWczytaniu: true });
+    expect(f.monitorCalls[0].options.isCurrent()).toBe(true);
+  });
+
   it('keeps its actual owned 0 ms notification and invokes the captured monitor once at 450 ms', async () => {
     const f = fixture();
     await f.run();

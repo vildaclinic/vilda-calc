@@ -510,7 +510,7 @@ const publish=function(operationDetail){if(!ghJumpCurrent(claim,true)||!ghJumpPu
    we wskazniku zapisu. UWAGA: przycisk "Odtworz zapisany stan" zostaje po skoku widoczny -
    modal chowal go sam przy otwarciu, a tu modalu nie ma. To jest zamierzone: droga reczna
    zostaje otwarta. Canonical custom-fixes publisher synchronously selects both
-   current-patient contexts; this receiver never writes either context itself. */document.dispatchEvent(new window.CustomEvent("vilda:patient-loaded",{detail:{savedAtISO:a&&a.savedAtISO||null,snapshotCount:i&&(i.snapshotCount||i.snapshots&&i.snapshots.length)||null,name:a&&a.payload&&a.payload.name||null,source:"pick",skipLoadChoice:!ghJumpAsksLoadChoice(n),...operationDetail,patientId:recordPatientId}}));
+   current-patient contexts; this receiver never writes either context itself. */document.dispatchEvent(new window.CustomEvent("vilda:patient-loaded",{detail:{savedAtISO:a&&a.savedAtISO||null,snapshotCount:i&&(i.snapshotCount||i.snapshots&&i.snapshots.length)||null,name:a&&a.payload&&a.payload.name||null,source:"pick",skipLoadChoice:!ghJumpAsksLoadChoice(n)||window.__VILDA_HOME_GABINET_PREVIEW__===true,...operationDetail,patientId:recordPatientId}}));
 if(!ghJumpCurrent(claim,true)||!ghJumpPublisherCurrent(publisher)||window._vildaCurrentPatientId!==recordPatientId||window.sessionStorage.getItem("vildaCurrentPatientId")!==recordPatientId)throw new Error("Patient publication did not select the accepted record");};
 if(scopedLoad){
   if(ownImport&&(window.VildaDataImportExport!==loadApi||loadApi.getApplyLoadedDataSequence!==ownImport.getSequence||loadApi.runAcceptedPatientLoad!==ownImport.run)){ghJumpCancel(claim);return}

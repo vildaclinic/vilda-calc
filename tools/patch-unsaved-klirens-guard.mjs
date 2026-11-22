@@ -10,7 +10,7 @@ export const pendingKlirensSource = `
  * Inspect only the current document and same-origin panels of this shell.
  * No clinical values or patient data leave their owning document.
  */
-R += ".vug--klirens .vug-btn{min-height:48px;font-size:16px;line-height:1.4;white-space:normal}.vug--klirens .vug-btn[hidden]{display:none!important}";
+R += ".vug--klirens .vug-btn{min-height:48px;font-size:16px;line-height:1.4;white-space:normal}.vug .vug-btn[hidden]{display:none!important}";
 function VildaKlirensGuardHasPending() {
   var root = f, windows = [f], seen = [];
   try {

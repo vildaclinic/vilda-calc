@@ -140,15 +140,47 @@ describe('main save feeds the approved overlay without changing its public retur
     expect(env.fallback).toEqual([]);
   });
 
-  it('an open visit with optional anthropometry still explains other missing fields and accepts a complete identity', async () => {
-    const env = environment();
+  it('routes public Save to the open encounter, and refuses writes from browsing or a different form', async () => {
+    const env = environment(), id = 'fictional-first', visitId = 'fictional-visit';
+    env.win.__VILDA_HOME_GABINET_PREVIEW__ = true;
+    env.win.VildaVault.normalizePatientName = name => name.trim().toLowerCase();
+    const receipt = () => env.win.VildaDataImportExport.saveUserDataWithReceipt({ collectUserData: () => env.payload });
+    const api = env.win.VildaDataImportExport;
+    expect(api.getHomeVisitSaveAction().reason).toBeTruthy();
+    expect(env.save()).toBeNull();
+    expect((await receipt()).saved).toBe(false);
+    let active = true;
+    const save = vi.fn().mockResolvedValue(true);
+    env.win.VildaHomeEncounter = { canSave: patientId => active && patientId === id,
+      state: () => ({visitId}), save, revisionTarget: () => null, optionalField: () => false };
+    expect(api.getHomeVisitSaveAction()).toMatchObject({label: 'Zapisz wizytę', patientId: id, visitId, reason: null});
+    expect(await env.save()).toBe(true);
+    expect(save).toHaveBeenCalledExactlyOnceWith(id);
+    expect((await receipt()).saved).toBe(false);
+    for (const visit of [{patientId: 'other', visitId}, {patientId: id, visitId: 'other'}]) {
+      env.setPayload({...payload(), visit});
+      expect((await receipt()).saved).toBe(false);
+    }
+    env.setPayload({...payload(), visit: {patientId: id, visitId}});
+    const queued = receipt();
+    active = false;
+    expect((await queued).saved).toBe(false);
+    expect(env.save()).toBeNull();
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(env.saveOperation).not.toHaveBeenCalled();
+  });
+
+  it('the native receipt for an open visit accepts optional anthropometry and retains identity validation', async () => {
+    const env = environment(), id = 'fictional-first', visit = {patientId: id, visitId: 'fictional-visit'};
     env.win.__VILDA_HOME_GABINET_PREVIEW__ = true;
     env.win.VildaHomeEncounter = {
-      revisionTarget: () => null,
-      optionalField: (_payload, id) => id === 'weight' || id === 'height',
+      canSave: patientId => patientId === id, state: () => ({visitId: visit.visitId, busy: true}),
+      revisionTarget: () => null, optionalField: (_payload, field) => field === 'weight' || field === 'height',
     };
-    env.setPayload({ name: '', user: { age: 9 } });
-    expect(env.save()).toBeNull();
+    env.win.VildaVault.normalizePatientName = name => name.trim().toLowerCase();
+    const receipt = () => env.win.VildaDataImportExport.saveUserDataWithReceipt({ collectUserData: () => env.payload });
+    env.setPayload({ name: '', user: { age: 9 }, visit });
+    expect((await receipt()).saved).toBe(false);
     expect(env.messages).toContainEqual(expect.objectContaining({
       ton: 'blad', tekst: 'Nie zapisano — uzupełnij: imię i nazwisko.',
       pola: [{ id: 'lastName', etykieta: 'imię i nazwisko' }],
@@ -156,8 +188,8 @@ describe('main save feeds the approved overlay without changing its public retur
     expect(env.focused).toEqual(['lastName']);
     expect(env.saveOperation).not.toHaveBeenCalled();
 
-    env.setPayload({ name: 'Fikcyjny Integracyjny', user: { age: 9 } });
-    expect(await env.save()).toBe(env.payload);
+    env.setPayload({ name: 'Fikcyjny Integracyjny', user: { age: 9 }, visit });
+    expect(await receipt()).toMatchObject({saved: true, patientId: id});
     expect(env.saveOperation).toHaveBeenCalledTimes(1);
   });
 

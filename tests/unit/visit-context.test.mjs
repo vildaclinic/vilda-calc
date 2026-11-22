@@ -6,12 +6,13 @@ const clone = value => JSON.parse(JSON.stringify(value));
 const patientId = 'fictional-visit-patient';
 const source = () => ({ version: 1, name: 'Fikcyjny Pacjent Wizyty', user: { age: 12, ageMonths: 0, sex: 'M', height: 145, weight: 35, measuredAtISO: '2026-10-21' } });
 
-function environment({ importer = false } = {}) {
+function environment({ importer = false, homePreview = false, storage = new Map() } = {}) {
   let account = { userId: 'fictional-owner' }, vaultEpoch = 0;
-  const locks = [], storage = new Map(), fields = new Map(), writes = vi.fn();
+  const locks = [], attributes = new Set(), listeners = new Map(), fields = new Map(), writes = vi.fn();
   for (const [id, value] of Object.entries({ name: source().name, age: '12', ageMonths: '0', sex: 'M', height: '145', weight: '35' }))
     fields.set(id, { id, value, style: {}, dataset: {}, addEventListener() {}, dispatchEvent() {}, removeAttribute() {}, setAttribute() {}, classList: { add() {}, remove() {}, contains: () => false } });
   const win = {
+    __VILDA_HOME_GABINET_PREVIEW__: homePreview,
     crypto: { randomUUID: vi.fn(() => webcrypto.randomUUID()) },
     VildaVault: {
       getCurrentUser: () => account, isUnlocked: () => !!account, onLock: fn => locks.push(fn),
@@ -19,7 +20,9 @@ function environment({ importer = false } = {}) {
       captureSyncOperationSession: () => ({ account, vaultEpoch }),
       assertSyncOperationSession: token => { if (token.account !== account || token.vaultEpoch !== vaultEpoch) throw new Error('Fikcyjna zmiana sesji'); },
     },
-    document: { readyState: 'loading', getElementById: id => fields.get(id) || null, querySelector: () => null, querySelectorAll: () => [], addEventListener() {}, dispatchEvent() {} },
+    document: { readyState: 'loading', getElementById: id => fields.get(id) || null, querySelector: () => null, querySelectorAll: () => [], dispatchEvent() {},
+      addEventListener(type, fn) { if (!listeners.has(type)) listeners.set(type, []); listeners.get(type).push(fn); },
+      documentElement: { toggleAttribute(name, value) { if (value) attributes.add(name); else attributes.delete(name); }, hasAttribute: name => attributes.has(name) } },
     sessionStorage: { getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, String(value)), removeItem: key => storage.delete(key) },
     VildaPersistence: { updateShared: writes, readClcrSession: () => null },
     setTimeout: () => 0, clearTimeout() {}, addEventListener() {}, dispatchEvent() {}, confirm: () => true,
@@ -28,6 +31,7 @@ function environment({ importer = false } = {}) {
   loadBrowserScript('vilda_visit_context.js', win);
   if (importer) loadBrowserScript('vilda_data_import_export.js', win);
   return { win, api: win.VildaVisitContext, fields, storage, writes, locks,
+    notify(type, detail) { for (const fn of listeners.get(type) || []) fn({ type, detail }); },
     changeOwner(value) { account = value == null ? null : { userId: value }; vaultEpoch++; },
     rotateSession() { vaultEpoch++; } };
 }
@@ -155,6 +159,30 @@ describe('persistent working encounter context', () => {
     expect(vault.savePatient).toHaveBeenCalledOnce();
     expect(collected.visit).toEqual({ ...data.visit, patientId });
     expect(h.win.lastLoadedData.visit).toEqual(collected.visit);
+  });
+
+  it('exposes the native restore UI in Gabinet only for an independent JSON file, including after reload', () => {
+    const opts = { importer: true, homePreview: true, storage: new Map() };
+    const h = environment(opts), fileRestore = env => env.win.document.documentElement.hasAttribute('data-home-file-restore');
+    expect(fileRestore(h)).toBe(false);
+    importFile(h, source());
+    expect(fileRestore(h)).toBe(true);
+    const reloaded = environment(opts);
+    expect(fileRestore(reloaded)).toBe(true);
+    reloaded.notify('vilda:session-changed', { loggedIn: true });
+    expect(fileRestore(reloaded)).toBe(true);
+    expect(reloaded.win.VildaDataImportExport.applyLoadedData(source(), { isSessionRestore: true })).toBe(true);
+    expect(fileRestore(reloaded)).toBe(true);
+    expect(reloaded.win.VildaDataImportExport.applyLoadedData(source())).toBe(true);
+    expect(fileRestore(reloaded)).toBe(false);
+    expect(fileRestore(environment(opts))).toBe(false);
+    importFile(reloaded, source());
+    reloaded.locks.forEach(notify => notify());
+    expect(fileRestore(reloaded)).toBe(false);
+    const classic = environment({ importer: true });
+    importFile(classic, source());
+    expect(fileRestore(classic)).toBe(false);
+    expect(classic.storage.has('vildaHomeIndependentFileRestore')).toBe(false);
   });
 
   it('JSON file rebinding uses only the local pre-apply patient target, never the exported patient ID', () => {

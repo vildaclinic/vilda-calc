@@ -43,8 +43,8 @@ describe('independent visit UI resources in one verified transport', () => {
     expect(urls).toContain('/vilda_home_gabinet_start.css?v=2');
     expect(urls).toContain('/vilda_home_gabinet_quick.js?v=1');
     expect(urls).toContain('/vilda_home_gabinet_start.js?v=2');
-    expect(urls).toContain('/vilda_home_encounter.js?v=2');
-    expect(urls).toContain('/vilda_home_gabinet.js?v=3');
+    expect(urls).toContain('/vilda_home_encounter.js?v=3');
+    expect(urls).toContain('/vilda_home_gabinet.js?v=4');
     expect(urls).toContain('/vilda_home_visit_scene.css?v=1');
     expect(urls).toContain('/vilda_home_visit_detail.css?v=1');
     expect(urls).toContain('/vilda_home_visit_projection.js?v=1');
@@ -65,9 +65,9 @@ describe('independent visit UI resources in one verified transport', () => {
     expect(urls).toContain('/vilda_home_patient_data.js?v=4');
     expect(urls).toContain('/vilda_home_patient_note_host.js?v=2');
     expect(urls).toContain('/vilda_home_patient_note_host.css?v=1');
-    expect(urls).toContain('/vilda_home_patient.js?v=4');
+    expect(urls).toContain('/vilda_home_patient.js?v=5');
     expect(urls).toContain('/vilda_home_patient.css?v=2');
-    expect(urls).toContain('/vilda_home_patient_native.js?v=4');
+    expect(urls).toContain('/vilda_home_patient_native.js?v=5');
     expect(urls).toContain('/vilda_home_patient_native.css?v=4');
     expect(urls).toContain('/vilda_patient_treatment_ui.js?v=3');
     expect(urls).toContain('/vilda_patient_treatment_ui.css?v=1');
@@ -85,7 +85,7 @@ describe('independent visit UI resources in one verified transport', () => {
     expect(urls).toContain('/vilda_home_tools_anthropometry.js?v=2');
     expect(urls).toContain('/vilda_home_tools_nutrition.js?v=1');
     expect(urls).toContain('/vilda_home_tools_intake.js?v=1');
-    expect(urls).toContain('/vilda_home_workspace.js?v=6');
+    expect(urls).toContain('/vilda_home_workspace.js?v=7');
     expect(urls).toContain('/vilda_home_workspace.css?v=7');
     expect(w.requests).toHaveLength(1);
     expect(w.requests[0].url).toBe('https://vilda.test' + scope + config.url.slice(1));
@@ -94,7 +94,8 @@ describe('independent visit UI resources in one verified transport', () => {
     for (const url of urls) {
       const response = await w.api.readFromShellCache(new Request('https://vilda.test' + scope + url.slice(1)));
       const original = readFileSync(new URL('../../' + url.slice(1).split('?')[0], import.meta.url));
-      expect(Buffer.from(await response.arrayBuffer())).toEqual(original);
+      const cachedBytes = Buffer.from(await response.arrayBuffer());
+      expect(cachedBytes.equals(original), url).toBe(true);
       expect(response.headers.get('content-type')).toBe(url.includes('.css?') ? 'text/css; charset=utf-8' : 'text/javascript; charset=utf-8');
       expect(response.headers.get('x-content-type-options')).toBe('nosniff');
       expect(Number(response.headers.get('content-length'))).toBe(original.byteLength);

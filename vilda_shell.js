@@ -169,7 +169,7 @@ if(e&&(!focused||Sl_allowFocusedResize||Sl_isPhone()&&Sl_focusedViewport>0)){
     // pozostaje zamrożona aż do blur lub następnego rzeczywistego obrotu.
     e=Sl_focusedViewport;
   }
-  Sl_allowFocusedResize=false;var r=0;try{var n=o.querySelector("header");/* P-KLAWIATURA: dolna krawedz naglowka liczona od gory dokumentu (offsetTop + wysokosc), nie sama wysokosc — body ma padding-top: env(safe-area-inset-top), wiec na iPhonie z wycieciem panel wystawal 59 px pod ekran, a cala powloka dawala sie przesunac. offsetTop nie zalezy od przewiniecia ani od transformacji naglowka. */n&&(r=Math.round((n.offsetTop||0)+n.getBoundingClientRect().height)||0)}catch{r=0}var i=F(e),u=Math.round(Math.max(e-r,240)),s=tt();if(!(u===$&&i===V&&s===K)){$=u,V=i,K=s,t.style.height=u+"px",q(i);try{o.documentElement.style.setProperty("--vilda-shell-dock-h",i+"px")}catch{}}}}}function Y(){var t=o.getElementById("mobileBottomDock");if(!(!t||t.hidden)&&!(t.classList.contains("is-hidden")||t.classList.contains("is-keyboard-hidden")))try{t.style.transform="translateZ(0)",a.requestAnimationFrame(function(){a.requestAnimationFrame(function(){t.style.transform=""})})}catch{}}var M=[".desktop-layout",".main-content",".app-shell-main","#appPanes"];/* P-KLAWIATURA-2: klawiatura liczona od najwiekszej wysokosci okna widzianej przy tej szerokosci (Kb_podstawa), nie od biezacego innerHeight. Gdyby iOS w PWA skracal przy klawiaturze takze innerHeight, St() uznawalby ja za schowana, a J() cofalby przesuniecie powloki, ktorym iOS odslonil pole — pole wracaloby pod klawiature. visualViewport podnosi podstawe tylko bez aktywnego pola; obrot ekranu (zmiana szerokosci o >4 px) liczy ja od nowa. Ten sam wzorzec co w vilda_klawiatura.js (nowaPodstawa) i ios26-ui.js. */var Kb_szer=-1,Kb_wys=0;function Kb_podstawa(t){var e=a.innerHeight||o.documentElement&&o.documentElement.clientHeight||0,r=a.innerWidth||0;Math.abs(r-Kb_szer)>4&&(Kb_szer=r,Kb_wys=0);Kb_wys=Math.max(Kb_wys,e,!U()&&t&&t.height||0);return Kb_wys}function St(){var t=null;try{t=a.visualViewport,Kb_podstawa(t)}catch{}if(!U())return!1;try{if(!t||!t.height)return!0;var e=Kb_podstawa(t);return e>0&&e-t.height>100}catch{return!0}}function wt(){var t=[0];try{t.push(a.scrollY||a.pageYOffset||0)}catch{}try{t.push(o.scrollingElement&&o.scrollingElement.scrollTop||0)}catch{}try{t.push(o.documentElement&&o.documentElement.scrollTop||0)}catch{}try{t.push(o.body&&o.body.scrollTop||0)}catch{}for(var e=0;e<M.length;e+=1)try{var r=o.querySelector(M[e]);r&&t.push(r.scrollTop||0,r.scrollLeft||0)}catch{}return Math.max.apply(null,t)}var G=0;function J(){if(!St()&&!(wt()<=0)){try{a.scrollTo({top:0,left:0,behavior:"instant"})}catch{try{a.scrollTo(0,0)}catch{}}[o.scrollingElement,o.documentElement,o.body].forEach(function(t){if(t)try{t.scrollTop&&(t.scrollTop=0),t.scrollLeft&&(t.scrollLeft=0)}catch{}}),M.forEach(function(t){try{var e=o.querySelector(t);e&&(e.scrollTop&&(e.scrollTop=0),e.scrollLeft&&(e.scrollLeft=0))}catch{}}),v()}}function j(t){a.clearTimeout(G),G=a.setTimeout(J,t||80)}function N(){return o.getElementById("appShellSkeleton")}function X(){var t=N();t&&(t.hidden=!0)}function z(){var t=N();t&&(t.hidden=!1,t.className="app-shell-skeleton",t.textContent="\u0141adowanie\u2026")}function Lt(t){var e=N();if(e){e.hidden=!1,e.className="app-shell-skeleton is-error",e.innerHTML='<div class="app-shell-error"><p class="app-shell-error__msg">Nie uda\u0142o si\u0119 za\u0142adowa\u0107 panelu. Najpewniej trwa aktualizacja aplikacji.</p><div class="app-shell-error__btns"><button type="button" id="appShellRetry">Spr\xF3buj ponownie</button><button type="button" id="appShellOpen">Otw\xF3rz bezpo\u015Brednio</button></div></div>';var r=o.getElementById("appShellRetry"),n=o.getElementById("appShellOpen");r&&r.addEventListener("click",function(){B(c)}),n&&n.addEventListener("click",function(){try{a.location.href=d[y(c)].dockPath}catch{}})}}function g(t){var e=l[t];e&&(e.timer&&a.clearTimeout(e.timer),e.timer=a.setTimeout(function(){c===t&&!e.loaded&&Lt(t)},Et))}function Sw_embeddedDocument(frame){try{var doc=frame.contentDocument;return doc&&doc.documentElement&&doc.documentElement.classList.contains("vilda-embedded")?doc:null}catch{return null}}var Z=!1;function kt(){if(!Z){Z=!0;var t=a.navigator;if(!(!t||!t.serviceWorker||!t.serviceWorker.getRegistration)){var e=function(r){if(r&&typeof r.postMessage=="function")try{r.postMessage({type:"SKIP_WAITING"})}catch{}};try{t.serviceWorker.getRegistration().then(function(r){if(r){r.waiting&&e(r.waiting);try{r.update&&r.update()}catch{}typeof r.addEventListener=="function"&&r.addEventListener("updatefound",function(){var n=r.installing;!n||typeof n.addEventListener!="function"||n.addEventListener("statechange",function(){n.state==="installed"&&t.serviceWorker.controller&&e(r.waiting||n)})})}}).catch(function(){})}catch{}}}}function Tt(t,e){if(t===c)Sp_invalidate();Sw_blockDocument(e);if(Sn_focusTarget&&Sn_focusTarget.route===t)Sn_cancelPaneFocus();if(t===c||t==="start")Sn_cancelRequest();Sn_quietClose(t);e.navigationGeneration+=1;e.loaded=!1,kt(),c===t&&(z(),e.retried||(e.retried=!0,a.setTimeout(function(){c===t&&!e.loaded&&B(t)},1500)),g(t))}function _(t){if(t=y(t),l[t])return l[t];var e=o.getElementById("appPanes");if(!e)return null;var r=o.createElement("iframe");r.className="app-pane",r.title=d[t].title,r.setAttribute("loading","eager"),r.setAttribute("referrerpolicy","same-origin"),r.hidden=!0;var n={frame:r,loaded:!1,timer:0,retried:!1,navigationGeneration:0,loadedDocument:null};return r.addEventListener("load",function(){n.przewiniecie=null;var doc=Sw_embeddedDocument(r);if(!doc){Tt(t,n);return}if(doc===n.writerBlockedDocument)return;n.navigationGeneration=Sw_documentGeneration(n,doc),n.loadedDocument=doc,n.writerBlockedDocument=null,n.loaded=!0,Sm_bind(n),Sp_bind(n),c===t&&Dpd_invalidate(),n.sessionStamp=c===t?Gp_s():null,n.retried=!1,n.timer&&(a.clearTimeout(n.timer),n.timer=0),n._dockSpacerH=null,q(V>=0?V:F());try{doc.addEventListener("focusout",Sl_focusOut)}catch{}c===t&&(X(),Sl_syncRouteGeometry(),at(),ut(),dt(),vt()),Sn_tryFocusPane(),Sn_deliverTarget(),c===t&&Sf_arm(),Pt()}),r.src=d[t].src,e.appendChild(r),l[t]=n,n}var At=3,Pl_task=null,Pl_generation=0;
+  Sl_allowFocusedResize=false;var r=0;try{var n=o.querySelector("header");/* P-KLAWIATURA: dolna krawedz naglowka liczona od gory dokumentu (offsetTop + wysokosc), nie sama wysokosc — body ma padding-top: env(safe-area-inset-top), wiec na iPhonie z wycieciem panel wystawal 59 px pod ekran, a cala powloka dawala sie przesunac. offsetTop nie zalezy od przewiniecia ani od transformacji naglowka. */n&&(r=Math.round((n.offsetTop||0)+n.getBoundingClientRect().height)||0)}catch{r=0}var i=F(e),u=Math.round(Math.max(e-r,240)),s=tt();if(!(u===$&&i===V&&s===K)){$=u,V=i,K=s,t.style.height=u+"px",q(i);try{o.documentElement.style.setProperty("--vilda-shell-dock-h",i+"px")}catch{}}}}}function Y(){var t=o.getElementById("mobileBottomDock");if(!(!t||t.hidden)&&!(t.classList.contains("is-hidden")||t.classList.contains("is-keyboard-hidden")))try{t.style.transform="translateZ(0)",a.requestAnimationFrame(function(){a.requestAnimationFrame(function(){t.style.transform=""})})}catch{}}var M=[".desktop-layout",".main-content",".app-shell-main","#appPanes"];/* P-KLAWIATURA-2: klawiatura liczona od najwiekszej wysokosci okna widzianej przy tej szerokosci (Kb_podstawa), nie od biezacego innerHeight. Gdyby iOS w PWA skracal przy klawiaturze takze innerHeight, St() uznawalby ja za schowana, a J() cofalby przesuniecie powloki, ktorym iOS odslonil pole — pole wracaloby pod klawiature. visualViewport podnosi podstawe tylko bez aktywnego pola; obrot ekranu (zmiana szerokosci o >4 px) liczy ja od nowa. Ten sam wzorzec co w vilda_klawiatura.js (nowaPodstawa) i ios26-ui.js. */var Kb_szer=-1,Kb_wys=0;function Kb_podstawa(t){var e=a.innerHeight||o.documentElement&&o.documentElement.clientHeight||0,r=a.innerWidth||0;Math.abs(r-Kb_szer)>4&&(Kb_szer=r,Kb_wys=0);Kb_wys=Math.max(Kb_wys,e,!U()&&t&&t.height||0);return Kb_wys}function St(){var t=null;try{t=a.visualViewport,Kb_podstawa(t)}catch{}if(!U())return!1;try{if(!t||!t.height)return!0;var e=Kb_podstawa(t);return e>0&&e-t.height>100}catch{return!0}}function wt(){var t=[0];try{t.push(a.scrollY||a.pageYOffset||0)}catch{}try{t.push(o.scrollingElement&&o.scrollingElement.scrollTop||0)}catch{}try{t.push(o.documentElement&&o.documentElement.scrollTop||0)}catch{}try{t.push(o.body&&o.body.scrollTop||0)}catch{}for(var e=0;e<M.length;e+=1)try{var r=o.querySelector(M[e]);r&&t.push(r.scrollTop||0,r.scrollLeft||0)}catch{}return Math.max.apply(null,t)}var G=0;function J(){if(!St()&&!(wt()<=0)){try{a.scrollTo({top:0,left:0,behavior:"instant"})}catch{try{a.scrollTo(0,0)}catch{}}[o.scrollingElement,o.documentElement,o.body].forEach(function(t){if(t)try{t.scrollTop&&(t.scrollTop=0),t.scrollLeft&&(t.scrollLeft=0)}catch{}}),M.forEach(function(t){try{var e=o.querySelector(t);e&&(e.scrollTop&&(e.scrollTop=0),e.scrollLeft&&(e.scrollLeft=0))}catch{}}),v()}}function j(t){a.clearTimeout(G),G=a.setTimeout(J,t||80)}function N(){return o.getElementById("appShellSkeleton")}function X(){var t=N();t&&(t.hidden=!0)}function z(){var t=N();t&&(t.hidden=!1,t.className="app-shell-skeleton",t.textContent="\u0141adowanie\u2026")}function Lt(t){var e=N();if(e){e.hidden=!1,e.className="app-shell-skeleton is-error",e.innerHTML='<div class="app-shell-error"><p class="app-shell-error__msg">Nie uda\u0142o si\u0119 za\u0142adowa\u0107 panelu. Najpewniej trwa aktualizacja aplikacji.</p><div class="app-shell-error__btns"><button type="button" id="appShellRetry">Spr\xF3buj ponownie</button><button type="button" id="appShellOpen">Otw\xF3rz bezpo\u015Brednio</button></div></div>';var r=o.getElementById("appShellRetry"),n=o.getElementById("appShellOpen");r&&r.addEventListener("click",function(){B(c)}),n&&n.addEventListener("click",function(){try{a.location.href=d[y(c)].dockPath}catch{}})}}function g(t){var e=l[t];e&&(e.timer&&a.clearTimeout(e.timer),e.timer=a.setTimeout(function(){c===t&&!e.loaded&&Lt(t)},Et))}function Sw_embeddedDocument(frame){try{var doc=frame.contentDocument;return doc&&doc.documentElement&&doc.documentElement.classList.contains("vilda-embedded")?doc:null}catch{return null}}var Z=!1;function kt(){if(!Z){Z=!0;var t=a.navigator;if(!(!t||!t.serviceWorker||!t.serviceWorker.getRegistration)){var e=function(r){if(r&&typeof r.postMessage=="function")try{r.postMessage({type:"SKIP_WAITING"})}catch{}};try{t.serviceWorker.getRegistration().then(function(r){if(r){r.waiting&&e(r.waiting);try{r.update&&r.update()}catch{}typeof r.addEventListener=="function"&&r.addEventListener("updatefound",function(){var n=r.installing;!n||typeof n.addEventListener!="function"||n.addEventListener("statechange",function(){n.state==="installed"&&t.serviceWorker.controller&&e(r.waiting||n)})})}}).catch(function(){})}catch{}}}}function Tt(t,e){if(t===c)Sp_invalidate();Sw_blockDocument(e);if(Sn_focusTarget&&Sn_focusTarget.route===t)Sn_cancelPaneFocus();if(t===c||t==="start")Sn_cancelRequest();Sn_quietClose(t);e.navigationGeneration+=1;e.loaded=!1,kt(),c===t&&(z(),e.retried||(e.retried=!0,a.setTimeout(function(){c===t&&!e.loaded&&B(t)},1500)),g(t))}function _(t){if(t=y(t),l[t])return l[t];var e=o.getElementById("appPanes");if(!e)return null;var r=o.createElement("iframe");r.className="app-pane",r.title=d[t].title,r.setAttribute("loading","eager"),r.setAttribute("referrerpolicy","same-origin"),r.hidden=!0;var n={frame:r,loaded:!1,timer:0,retried:!1,navigationGeneration:0,loadedDocument:null};return r.addEventListener("load",function(){n.przewiniecie=null;var doc=Sw_embeddedDocument(r);if(!doc){Tt(t,n);return}if(doc===n.writerBlockedDocument)return;n.navigationGeneration=Sw_documentGeneration(n,doc),n.loadedDocument=doc,n.writerBlockedDocument=null,n.loaded=!0,Sm_bind(n),Sp_bind(n),c===t&&Dpd_invalidate(),n.sessionStamp=c===t?Gp_s():null,n.retried=!1,n.timer&&(a.clearTimeout(n.timer),n.timer=0),n._dockSpacerH=null,q(V>=0?V:F());try{doc.addEventListener("focusout",Sl_focusOut)}catch{}c===t&&(X(),Sl_syncRouteGeometry(),at(),ut(),dt(),vt()),Sn_tryFocusPane(),Sn_deliverTarget(),c===t&&Sf_arm(),Pt()}),r.src=Sn_initialPaneSrc(t),e.appendChild(r),l[t]=n,n}var At=3,Pl_task=null,Pl_generation=0;
 function tt(){return Object.keys(l).length}
 /* Preloading is optional background work. A route request cancels its queued
    slot; the visible pane must finish loading before another pane starts. */
@@ -673,6 +673,38 @@ function Sp_presentation(){
 /* Menu actions follow the visible, ready form. Never retain an enabled Save
    from the previous pane while the next one is loading or is a different tool. */
 var T=null,R=["saveDataBtnSidebar","addVisitNoteBtnSidebar","patientDocumentsBtnSidebar"];
+// DocPro owns its edited controls. The hidden Start pane owns the explicitly
+// opened encounter. Neither a shared patient ID nor session storage grants Save.
+function Sm_captureVisitWriter(win){
+  try{
+    var source=Dpd_source(),entry=l.start,frame=entry&&entry.frame,home=frame&&frame.contentWindow;
+    if(a.__VILDA_HOME_GABINET_PREVIEW__!==true||!source||source.route!=="docpro"||source.win!==win||
+        !entry.loaded||entry.stale||!frame.isConnected||!home||Gp5_obcy(home))return null;
+    var encounter=home.VildaHomeEncounter,id=Ss_patientId(),api=win.VildaDataImportExport,status=win.VildaSaveStatusIndicator;
+    if(!id||!encounter?.canSave(id)||!api||!status)return null;
+    var visitId=encounter.state(id).visitId,hostOwner=Sp_account(a),sourceOwner=Sp_account(win),homeOwner=Sp_account(home);
+    if(!visitId||!hostOwner||sourceOwner?.userId!==hostOwner.userId||homeOwner?.userId!==hostOwner.userId)return null;
+    function isCurrent(){
+      var visit=win.VildaVisitContext?.capture(null,{patientId:id,readOnly:true});
+      return Dpd_current(source)&&entry===l.start&&entry.loaded&&!entry.stale&&frame.contentWindow===home&&
+        home.VildaHomeEncounter===encounter&&!Gp5_obcy(home)&&Sp_sameAccount(a,hostOwner)&&
+        Sp_sameAccount(home,homeOwner)&&Sp_sameAccount(win,sourceOwner)&&win.VildaDataImportExport===api&&
+        win.VildaSaveStatusIndicator===status&&Ss_patientId()===id&&encounter.canSave(id)&&
+        encounter.state(id).visitId===visitId&&visit?.patientId===id&&visit.visitId===visitId;
+    }
+    // A just-submitted native save can still be publishing the sidebar state.
+    // Only this pane's committed receipt and unchanged form cover that interval.
+    function showSavedHistory(receipt,submitted){
+      function stillSubmitted(){
+        if(!isCurrent()||receipt?.referenceVerified!==true||receipt.patientId!==id||!status.isSubmittedFormCurrent(submitted))return false;
+        var witness=api.getCommittedSaveWitness({patientId:id,snapshotId:receipt.snapshotId,applySequence:api.getApplyLoadedDataSequence()});
+        return witness?.payload?.visit?.visitId===visitId;
+      }
+      return stillSubmitted()&&Sn_homePatient("card",id,{sourceWindow:win,restoreLatest:true},stillSubmitted);
+    }
+    return isCurrent()?{win,home,encounter,status,isCurrent,showSavedHistory}:null;
+  }catch{return null}
+}
 function Sm_actionSource(id){
   var owner=Dpd_source();
   return owner&&owner.doc.getElementById(id);
@@ -685,6 +717,7 @@ function st(){
     var source=Sm_actionSource(id);
     if(!source){
       var reason=c==="start"||c==="docpro"?"Trwa przygotowywanie formularza.":"Zapis danych jest dostępny na stronie głównej i w DocPro.";
+      if(a.__VILDA_HOME_GABINET_PREVIEW__===true&&id==="saveDataBtnSidebar"&&c!=="start")reason="Zapis wizyty jest dostępny w Gabinecie.";
       button.setAttribute("aria-disabled","true");button.removeAttribute("disabled");
       button.setAttribute("data-tip",reason);button.setAttribute("title",reason);
       return;
@@ -922,6 +955,7 @@ function Sn_plainClick(event,anchor){
 function Sn_cancelRequest(keep){
   if(!Sn_request||Sn_request===keep)return;
   if(Sn_request.timer)a.clearTimeout(Sn_request.timer);
+  if(Sn_request.resolve)Sn_request.resolve(false);
   Sn_request=null;
 }
 function Sn_closeFormulaSearch(route,reason){
@@ -1037,6 +1071,148 @@ function Sn_historyEvent(){
     try{var clean=Object.assign({},current);delete clean.shellAuthId;delete clean.shellAuthOwner;a.history.replaceState(clean,"",a.location.href)}catch{}
   }
 }
+// A standalone preview may arrive with its original deep link. Consume that
+// already requested path once on the matching pane, before its native boot.
+function Sn_initialPaneSrc(route){
+  var normal=d[route].src;
+  if(!Sn_hasHomeNavigation())return normal;
+  try{
+    var state=a.history.state;
+    if(state?.shellView!==route||typeof state.homePreviewPaneTarget!=="string")return normal;
+    var url=new a.URL(state.homePreviewPaneTarget,a.location.href),expected=new a.URL(normal,a.location.href);
+    var clean=Object.assign({},state);delete clean.homePreviewPaneTarget;
+    a.history.replaceState(clean,"",a.location.href);
+    if(url.origin!==expected.origin||url.pathname!==expected.pathname)return normal;
+    url.searchParams.set("embedded","1");
+    return url.pathname+url.search+url.hash;
+  }catch{return normal}
+}
+function Sn_hasHomeNavigation(){
+  if(a.__VILDA_HOME_GABINET_PREVIEW__===true)return true;
+  try{return Gp_w("start")?.__VILDA_HOME_GABINET_PREVIEW__===true}catch{return false}
+}
+var Sn_homeDirectory=null,Sn_homeReturn=null;
+function Sn_forgetDirectory(){
+  var directory=Sn_homeDirectory;
+  Sn_homeDirectory=null;
+  if(directory)directory.doc.removeEventListener("vilda:auth-hidden",directory.close);
+}
+function Sn_claimHomeDirectory(win){
+  var directory=Sn_homeDirectory;
+  if(!directory||c!=="start"||win!==Gp_w("start")||win.document!==directory.doc)return false;
+  Sn_forgetDirectory();return true;
+}
+function Sn_watchHomeDirectory(win){
+  Sn_forgetDirectory();
+  var from=Sn_homeReturn;
+  if(!from||from.route!==b)return;
+  var directory={doc:win.document,close:function(){
+    if(Sn_homeDirectory!==directory)return;
+    Sn_forgetDirectory();
+    if(c!=="start"||Sn_homeReturn!==from)return;
+    Sn_homeReturn=null;b=null;
+    if(Sp_sameAccount(a,from.owner))P(from.route,false);
+  }};
+  Sn_homeDirectory=directory;
+  directory.doc.addEventListener("vilda:auth-hidden",directory.close);
+}
+function Sn_homeNotice(text){
+  var win=Gp_w(c);
+  try{(win?.VildaDymek||a.VildaDymek)?.pokaz(text,{ton:"uwaga"})}catch{}
+}
+// A directory is read-only. If the clinical form cannot safely leave the
+// foreground, display the same directory there until the clinician picks a
+// person. Only that later selection can replace a patient's working data.
+function Sn_keepDirectoryHere(win){
+  var indicator=win.VildaSaveStatusIndicator;
+  if(c==="start"||!win.VildaUnsavedGuard||typeof indicator?.getCurrentDecision!=="function")return false;
+  var decision=indicator.getCurrentDecision();
+  return !decision?.ready||!["saved","hidden"].includes(decision.state)||win.ClcrVisitSave?.hasUnsavedMeasurement?.()===true;
+}
+function Sn_homePatient(kind,id,options,ownSaveCurrent){
+  options=options||{};
+  if(!Sn_hasHomeNavigation()||kind!=="list"&&(typeof id!=="string"||!id))return Promise.resolve(false);
+  var sourceRoute=c,source=Gp_w(c),owner=Sp_account(a),sourceAccount=source&&Sp_account(source),writer=source&&Sw_capture(source);
+  // These four embedded tools use the session bridge without a native vault.
+  // Only the authenticated host may navigate; Start verifies its own account
+  // before opening any record. A present, locked or foreign vault never falls back.
+  var bridge=!source?.VildaVault&&["homa","steroidy","edu","cukrzyca"].includes(sourceRoute)&&source?.VildaSession;
+  function sourceCurrent(){
+    if(sourceAccount)return sourceAccount.userId===owner.userId&&Sp_sameAccount(source,sourceAccount);
+    return !!(bridge&&source.VildaSession===bridge&&!source.VildaVault&&bridge.hasSessionKey?.()&&
+      bridge.isLoggedIn?.()&&!Sp_sessionUnavailable(source));
+  }
+  if(!writer||!owner||!sourceCurrent()||options.sourceWindow&&options.sourceWindow!==a&&options.sourceWindow!==source){
+    Sn_homeNotice("Nie można potwierdzić aktywnego konta i formularza.");
+    return Promise.resolve(false);
+  }
+  var origin=c==="start"?b:c;
+  Sn_cancelRequest();
+  return new Promise(function(resolve){
+    var request={origin:origin,timer:0,elapsed:0,activationReady:false,resolve:resolve,homeSource:sourceRoute!=="start"?{route:sourceRoute,owner:owner}:null};
+    Sn_request=request;
+    function current(){
+      return Sn_request===request&&Sp_sameAccount(a,owner)&&sourceCurrent()&&
+        (!options.isCurrent||options.isCurrent()===true);
+    }
+    function finish(ok){
+      if(Sn_request!==request)return;
+      if(request.timer)a.clearTimeout(request.timer);
+      Sn_request=null;
+      if(!ok&&origin&&sourceRoute!=="start"&&request.activationReady&&c==="start"){
+        if(Sp_sameAccount(a,owner))Ft();else{b=null;Sn_homeReturn=null}
+      }
+      resolve(ok);
+    }
+    function arrive(){
+      if(!current()){finish(false);return}
+      if(!request.activationReady||Sn_pendingBack||c!=="start"){wait();return}
+      var win=mt(),pane=win&&Sw_capture(win),scope=win&&Sp_account(win);
+      if(win&&scope&&scope.userId!==owner.userId){finish(false);return}
+      var screen=win&&win.document.querySelector("[data-vhome-screen]");
+      // Reactivation restores the warm frame asynchronously. Opening a patient
+      // during that restore can mistake an existing visit for a new selection.
+      if(!pane||!scope||typeof win.VildaHomeGabinet?.openPatient!=="function"||!screen||
+        kind!=="list"&&(win.__vildaPersistRestoring||win.VildaDataImportExport?.isMainSessionRestorePending?.())){wait();return}
+      var isCurrent=function(){return current()&&Sw_current(pane,win)&&Sp_sameAccount(win,scope)};
+      if(!isCurrent()){finish(false);return}
+      if(kind==="list"){
+        if(sourceRoute!=="start")Sn_watchHomeDirectory(win);
+        win.VildaAuthUI.showPatientsList();finish(true);return;
+      }
+      Promise.resolve(win.VildaHomeGabinet.openPatient(id,{intent:options.intent==="new"?"new":"browse",
+        section:options.section,restoreLatest:options.restoreLatest===true,focusNoteId:options.focusNoteId,onApply:options.onApply,isCurrent:isCurrent})).then(function(ok){
+          finish(ok===true&&isCurrent());
+        }).catch(function(){finish(false)});
+    }
+    function wait(){
+      request.elapsed+=C;
+      if(request.elapsed>=ht){Sn_homeNotice("Nie udało się przygotować karty pacjenta. Spróbuj ponownie.");finish(false);return}
+      request.timer=a.setTimeout(activate,C);
+    }
+    function activate(){
+      try{arrive()}catch{finish(false)}
+    }
+    function navigate(){
+      if(!current()||!Sw_current(writer,source)||ownSaveCurrent&&!ownSaveCurrent()){finish(false);return}
+      if(sourceRoute==="start")request.activationReady=true;
+      else P("start",true,null,request);
+      activate();
+    }
+    try{
+      if(kind==="list"&&source.VildaAuthUI?.showPatientsList&&Sn_keepDirectoryHere(source)){
+        source.VildaAuthUI.showPatientsList();finish(true);return;
+      }
+      if(!ownSaveCurrent&&sourceRoute!=="start"&&kind!=="list"&&
+        (id!==Ss_patientId()||options.intent==="new"||options.restoreLatest===true)&&Sn_keepDirectoryHere(source)){
+        if(source.document.querySelector(".vug-backdrop")){finish(false);return}
+        source.VildaUnsavedGuard.run({reason:"load",onProceed:navigate,onCancel:function(){finish(false)}});
+        return;
+      }
+      navigate();
+    }catch{finish(false)}
+  });
+}
 function Sn_openPatient(kind,id,onTimeout,tab){
   var origin=c&&c!=="start"?c:Sn_request?Sn_request.origin:null;
   Sn_cancelRequest();
@@ -1087,6 +1263,8 @@ function P(t,e,href,request,options){
     }
   }
   Sn_cancelRequest(request);Sn_cancelPaneFocus();
+  Sn_forgetDirectory();
+  if(!request&&Sn_homeReturn){Sn_homeReturn=null;b=null}
   var transfer=Sn_calendarNavigation(t,href,options),descriptor=transfer&&transfer.descriptor,returning=!!(transfer&&options&&options.searchCalendarReturn);
   Sn_target=null;
   var focusPane=!!(options&&options.focusPane);
@@ -1110,14 +1288,22 @@ function P(t,e,href,request,options){
   try{replaceEntry?a.history.replaceState(state,"","#/"+t):a.history.pushState(state,"","#/"+t)}catch{}
   if(focusPane)Sn_focusTarget={route:t};
   w(t,request,descriptor);
-  if(request&&Sn_request===request){request.activationReady=true;b=request.origin}
+  if(request&&Sn_request===request){request.activationReady=true;b=request.origin;if(request.homeSource)Sn_homeReturn=request.homeSource}
   Sn_setTarget(t,state,!!target,returning);
   if(transfer&&Sn_calendarCurrent(transfer)){
     if(returning)Sn_calendarResume(transfer);else transfer.phase="calendar";
   }
 }
-var ht=12e3,C=150;function mt(){try{var t=l.start;if(!t||!t.loaded||!t.frame)return null;var e=t.frame.contentWindow;if(!e)return null;var r=e.VildaAuthUI&&(typeof e.VildaAuthUI.isBootReady!=="function"||e.VildaAuthUI.isBootReady())&&typeof e.VildaAuthUI.showPatientsList=="function"&&typeof e.applyLoadedData=="function"&&e.VildaVault&&typeof e.VildaVault.isUnlocked=="function"&&e.VildaVault.isUnlocked();return r?e:null}catch{return null}}function xt(t){Sn_openPatient("list",null,t)}
-function Ht(t,opts){if(t)Sn_openPatient("card",t,null,opts&&typeof opts.activeTab==="string"&&opts.activeTab?opts.activeTab:null)}
+var ht=12e3,C=150;function mt(){try{var t=l.start;if(!t||!t.loaded||!t.frame)return null;var e=t.frame.contentWindow;if(!e)return null;var r=e.VildaAuthUI&&(typeof e.VildaAuthUI.isBootReady!=="function"||e.VildaAuthUI.isBootReady())&&typeof e.VildaAuthUI.showPatientsList=="function"&&typeof e.applyLoadedData=="function"&&e.VildaVault&&typeof e.VildaVault.isUnlocked=="function"&&e.VildaVault.isUnlocked();return r?e:null}catch{return null}}function xt(onTimeout,options){
+  if(Sn_hasHomeNavigation())return Sn_homePatient("list",null,options);
+  Sn_openPatient("list",null,onTimeout);
+}
+function Ht(id,options){
+  if(!id)return;
+  if(Sn_hasHomeNavigation())return Sn_homePatient("card",id,{intent:"browse",section:options?.activeTab,
+    focusNoteId:options?.focusNoteId,sourceWindow:options?.sourceWindow});
+  Sn_openPatient("card",id,null,options&&typeof options.activeTab==="string"&&options.activeTab?options.activeTab:null);
+}
 function Wt(t){
   var e=t.target,r=e&&e.closest?e.closest("#mobileBottomDock .mobile-bottom-dock__item[href], .sidebar-nav a[href], .chrome-drawer-nav a[href], .chrome-menu-footer a[href]"):null;
   if(!r||!Sn_plainClick(t,r))return;
@@ -1131,4 +1317,16 @@ function Wt(t){
       &&(win.VildaHomeGabinet.showStart()||active.d.querySelector("[data-vhome-screen]")))return;
   }
   P(n,true,r.getAttribute("href"),null,{focusPane:drawer&&wasOpen});
-}function pt(){o.documentElement.classList.add("vilda-shell-host");try{a.history&&"scrollRestoration"in a.history&&(a.history.scrollRestoration="manual")}catch{}J(),o.addEventListener("scroll",function(){j(80)},{passive:!0,capture:!0}),a.addEventListener("pageshow",function(){j(40)});try{o.body&&o.body.classList.remove("js-loading")}catch{}Rt();var t=/^#\//.test(String(a.location.hash||"")),e=t?W():"start";if(!t)try{a.history.replaceState({shellView:e},"","#/"+e)}catch{}w(e),Sn_setTarget(e,Sn_entryState(e)),v();Sl_noteMode();Sl_watchGeometry();o.addEventListener("vilda:phone-layout-changed",Sl_phoneLayout);a.addEventListener("pointerdown",Sn_cancelPaneFocus,!0),a.addEventListener("keydown",Sn_cancelPaneFocus,!0),o.addEventListener("click",Wt,!0),a.addEventListener("popstate",Sn_historyEvent),a.addEventListener("hashchange",function(){var i=String(a.location.hash||"").match(/^#\/([a-z]+)/);i&&Object.prototype.hasOwnProperty.call(d,i[1])&&Sn_historyEvent()}),a.addEventListener("vilda:ga-ready",function(){c&&ot(c)});try{typeof a.Proxy=="function"&&!a.VildaSaveStatusIndicator&&(a.VildaSaveStatusIndicator=new a.Proxy({},{get:function(i,u){var s=Dt();if(s!=null){var f=s[u];return typeof f=="function"?f.bind(s):f}if(u==="getState")return function(){return"hidden"}}}))}catch{}a.addEventListener("resize",Sl_resize),a.addEventListener("resize",Mz),a.addEventListener("orientationchange",Sl_orientation),a.visualViewport&&a.visualViewport.addEventListener&&a.visualViewport.addEventListener("resize",Sl_viewportResize),a.addEventListener("pageshow",function(){v(),c&&w(c)}),o.addEventListener("visibilitychange",function(){o.hidden||(v(),Y(),ft(),Pl_schedule())}),a.addEventListener("storage",function(i){try{if(i&&(i.key==="vildaCurrentPatientId"||i.key==="vilda:sharedLoadSeq"))Sm_dirty();if(!i||i.key!=="vilda:sharedLoadSeq")return;var u=String(i.newValue||""),s=u.lastIndexOf(":");if(s<=0)return;var f=u.slice(0,s),h="";try{var L=a.VildaPersistence;L&&typeof L.getTabId=="function"&&(h=L.getTabId()),!h&&a.sessionStorage&&(h=a.sessionStorage.getItem("vildaTabIdV1")||"")}catch{h=""}if(!h||f!==h)return;It()}catch{}});var r=0,n=a.setInterval(function(){et(c),Sl_watchGeometry(),v(),r+=1,r>12&&a.clearInterval(n)},150)}o.readyState==="loading"?o.addEventListener("DOMContentLoaded",pt):pt();function Ft(t){var e=b;if(b=null,e&&e!=="start"&&Object.prototype.hasOwnProperty.call(d,e))return P(e,!0),!0;if(typeof t=="function")try{t()}catch{}return!1}function Ut(){return b||null}a.VildaShell={getSidebarPresentation:Sp_presentation,canClearLockedSessionIdentity:Sw_identityCleanup,captureSessionWriter:Sw_capture,isSessionWriterCurrent:Sw_current,captureSessionWriterMessage:Sw_message,isSessionWriterMessageCurrent:Sw_messageCurrent,navigate:P,getCurrentRoute:function(){return c},returnFromSearchCalendar:Sn_returnFromSearchCalendar,reloadForAppUpdate:Su_reloadForAppUpdate,isAppUpdateReloadPending:Su_isAppUpdateReloadPending,isPatientDocumentsSourceCurrent:Dpd_isSourceCurrent,protokolPanelu:1,removeUserWaiting:Bkr_czekanieUsuwania,cancelPendingPaneFocus:Sn_cancelPaneFocus,show:w,reload:B,routes:d,openPatientsInStart:xt,openPatientCardInStart:Ht,keyForHref:O,returnFromPatientCard:Ft,peekPatientReturnRoute:Ut,ensureAuthHistory:Sn_ensureAuthHistory,releaseAuthHistory:Sn_releaseAuthHistory,isAuthHistoryCurrent:Sn_isAuthHistoryCurrent}})(window);
+}function pt(){o.documentElement.classList.add("vilda-shell-host");try{a.history&&"scrollRestoration"in a.history&&(a.history.scrollRestoration="manual")}catch{}J(),o.addEventListener("scroll",function(){j(80)},{passive:!0,capture:!0}),a.addEventListener("pageshow",function(){j(40)});try{o.body&&o.body.classList.remove("js-loading")}catch{}Rt();var t=/^#\//.test(String(a.location.hash||"")),e=t?W():"start";if(!t)try{a.history.replaceState({shellView:e},"","#/"+e)}catch{}w(e),Sn_setTarget(e,Sn_entryState(e)),v();Sl_noteMode();Sl_watchGeometry();o.addEventListener("vilda:phone-layout-changed",Sl_phoneLayout);a.addEventListener("pointerdown",Sn_cancelPaneFocus,!0),a.addEventListener("keydown",Sn_cancelPaneFocus,!0),o.addEventListener("click",Wt,!0),a.addEventListener("popstate",Sn_historyEvent),a.addEventListener("hashchange",function(){var i=String(a.location.hash||"").match(/^#\/([a-z]+)/);i&&Object.prototype.hasOwnProperty.call(d,i[1])&&Sn_historyEvent()}),a.addEventListener("vilda:ga-ready",function(){c&&ot(c)});try{typeof a.Proxy=="function"&&!a.VildaSaveStatusIndicator&&(a.VildaSaveStatusIndicator=new a.Proxy({},{get:function(i,u){var s=Dt();if(s!=null){var f=s[u];return typeof f=="function"?f.bind(s):f}if(u==="getState")return function(){return"hidden"}}}))}catch{}a.addEventListener("resize",Sl_resize),a.addEventListener("resize",Mz),a.addEventListener("orientationchange",Sl_orientation),a.visualViewport&&a.visualViewport.addEventListener&&a.visualViewport.addEventListener("resize",Sl_viewportResize),a.addEventListener("pageshow",function(){v(),c&&w(c)}),o.addEventListener("visibilitychange",function(){o.hidden||(v(),Y(),ft(),Pl_schedule())}),a.addEventListener("storage",function(i){try{if(i&&(i.key==="vildaCurrentPatientId"||i.key==="vilda:sharedLoadSeq"))Sm_dirty();if(!i||i.key!=="vilda:sharedLoadSeq")return;var u=String(i.newValue||""),s=u.lastIndexOf(":");if(s<=0)return;var f=u.slice(0,s),h="";try{var L=a.VildaPersistence;L&&typeof L.getTabId=="function"&&(h=L.getTabId()),!h&&a.sessionStorage&&(h=a.sessionStorage.getItem("vildaTabIdV1")||"")}catch{h=""}if(!h||f!==h)return;It()}catch{}});var r=0,n=a.setInterval(function(){et(c),Sl_watchGeometry(),v(),r+=1,r>12&&a.clearInterval(n)},150)}o.readyState==="loading"?o.addEventListener("DOMContentLoaded",pt):pt();function Ft(fallback){
+  var route=Ut(),wasHome=!!Sn_homeReturn;
+  b=null;Sn_homeReturn=null;Sn_forgetDirectory();
+  if(route&&route!=="start"&&Object.hasOwn(d,route)){P(route,!wasHome);return true}
+  if(typeof fallback==="function")try{fallback()}catch{}
+  return false;
+}
+function Ut(){
+  if(Sn_homeReturn&&(c!=="start"||b!==Sn_homeReturn.route||!Sp_sameAccount(a,Sn_homeReturn.owner))){
+    b=null;Sn_homeReturn=null;Sn_forgetDirectory();
+  }
+  return b||null;
+}a.VildaShell={captureHomeVisitWriter:Sm_captureVisitWriter,getSidebarPresentation:Sp_presentation,canClearLockedSessionIdentity:Sw_identityCleanup,captureSessionWriter:Sw_capture,isSessionWriterCurrent:Sw_current,captureSessionWriterMessage:Sw_message,isSessionWriterMessageCurrent:Sw_messageCurrent,navigate:P,getCurrentRoute:function(){return c},returnFromSearchCalendar:Sn_returnFromSearchCalendar,reloadForAppUpdate:Su_reloadForAppUpdate,isAppUpdateReloadPending:Su_isAppUpdateReloadPending,isPatientDocumentsSourceCurrent:Dpd_isSourceCurrent,protokolPanelu:1,removeUserWaiting:Bkr_czekanieUsuwania,cancelPendingPaneFocus:Sn_cancelPaneFocus,show:w,reload:B,routes:d,claimHomeDirectory:Sn_claimHomeDirectory,hasHomePatientNavigation:Sn_hasHomeNavigation,openHomePatient:function(id,options){return Sn_homePatient("card",id,options)},openPatientsInStart:xt,openPatientCardInStart:Ht,keyForHref:O,returnFromPatientCard:Ft,peekPatientReturnRoute:Ut,ensureAuthHistory:Sn_ensureAuthHistory,releaseAuthHistory:Sn_releaseAuthHistory,isAuthHistoryCurrent:Sn_isAuthHistoryCurrent}})(window);
