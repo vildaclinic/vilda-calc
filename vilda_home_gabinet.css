@@ -17,6 +17,11 @@ html:has([data-vhome-screen]) { scrollbar-gutter: stable; }
   box-sizing: border-box;
   padding-inline: max(var(--mobile-dock-side-gap,.75rem),calc(env(safe-area-inset-left,0px) + .35rem)) max(var(--mobile-dock-side-gap,.75rem),calc(env(safe-area-inset-right,0px) + .35rem));
 }
+@media (min-width: 992px) {
+  html.vilda-form-layout:not(.vilda-embedded):not(.vilda-shell-embedded):not(.vilda-phone) .main-content[data-vhome-screen]:not([data-vhome-screen="start"]) > :is(#vhomeGabinet, #vhomeGabinetAnalysis) {
+    padding-inline: var(--space-4px);
+  }
+}
 /* The desktop shell already reserves the right gutter outside the frame. */
 html.vilda-form-host-desktop .main-content[data-vhome-screen]:not([data-vhome-screen="start"],[data-vhome-screen="registration"]) > :is(#vhomeGabinet, #vhomeGabinetAnalysis) {
   padding-inline: calc(var(--chrome-form-gap) + var(--space-4px)) var(--space-4px) !important;
