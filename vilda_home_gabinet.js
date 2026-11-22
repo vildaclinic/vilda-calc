@@ -119,7 +119,6 @@
   function destroyPicker() {
     picker?.destroy();
     picker = null;
-    landing.replaceChildren();
   }
   function detach(force) {
     return !w.VildaHomePatient?.isInlineOpen?.() || w.VildaHomePatient.closeInline(force) !== false;

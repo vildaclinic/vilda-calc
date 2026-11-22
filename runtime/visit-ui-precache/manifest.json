@@ -163,24 +163,24 @@
       "sha256": "2aa85262895ffbd588895685a0ec2e0c45da3d51d8f201500fef99b5c9db1fc3"
     },
     {
-      "path": "vilda_home_gabinet_start.css?v=4",
-      "sha256": "8992712b47459f589968043113156ca8ecb8364cc622adc97ecc58f89d0d1fa0"
+      "path": "vilda_home_gabinet_start.css?v=5",
+      "sha256": "67da45866cccafed4085ac1736b2af22015b1512a4df7591b9d53fee23a29874"
     },
     {
       "path": "vilda_home_gabinet_quick.js?v=1",
       "sha256": "87575cac6078f869b8ed5742c4d3ec4f9969b4bcaec2e1464758d83fa85464db"
     },
     {
-      "path": "vilda_home_gabinet_start.js?v=5",
-      "sha256": "e5965be95b79aed4dfdd3df9e349245a1381ebe9a03ca36cee445dea3769d25a"
+      "path": "vilda_home_gabinet_start.js?v=6",
+      "sha256": "50d857396aaf3812f5f33c78a668c7699a587b995577e1f7351f9edd01ace17b"
     },
     {
       "path": "vilda_home_encounter.js?v=6",
       "sha256": "fec69f9d1515304840064807be122549908d2c785187f5f6f16a970be8d51b81"
     },
     {
-      "path": "vilda_home_gabinet.js?v=8",
-      "sha256": "104fcd0a0aebf94ca205999796e10f4aa92d3120330819617d368c106fc719da"
+      "path": "vilda_home_gabinet.js?v=9",
+      "sha256": "dfb93577745334971453926c98c907d887d36e6155de26738e860a90a0ff4bbf"
     },
     {
       "path": "vilda_home_visit_scene.css?v=2",
@@ -224,9 +224,9 @@
     }
   ],
   "pack": {
-    "path": "runtime/visit-ui-precache/precache-ca025a921eb2.json",
-    "sha256": "ca025a921eb24238d63032970527fc02f9294e6d2fdd8fe20a1ef39cde5e6c9d",
-    "byteLength": 2019960
+    "path": "runtime/visit-ui-precache/precache-a3104ff8571a.json",
+    "sha256": "a3104ff8571ac3ab24b568ad3d8a1d2405128e74249bc96da086487f0c1022f2",
+    "byteLength": 2020665
   },
   "historicalPacks": [
     {
@@ -628,6 +628,11 @@
       "path": "runtime/visit-ui-precache/precache-4ae0e8f244be.json",
       "sha256": "4ae0e8f244be6ccba158eaf9116c8de91d8b07834dceb6130f9ddf97e032a264",
       "byteLength": 2019936
+    },
+    {
+      "path": "runtime/visit-ui-precache/precache-ca025a921eb2.json",
+      "sha256": "ca025a921eb24238d63032970527fc02f9294e6d2fdd8fe20a1ef39cde5e6c9d",
+      "byteLength": 2019960
     }
   ]
 }

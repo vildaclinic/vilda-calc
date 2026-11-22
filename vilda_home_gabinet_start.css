@@ -15,7 +15,7 @@ html.vilda-embedded.vilda-form-host-desktop [data-vhome-screen="office"]:has(#vh
 
 /* The landing and calculator share a shadow root. Avoid styling the unrelated
    global patient search, which also uses short vgs-prefixed class names. */
-.vhome-gabinet-start { display: block; min-width: 0; }
+.vhome-gabinet-start { min-width: 0; }
 .vgs-start, .vgs-dialog {
   --vgs-ink: #203e45;
   --vgs-muted: #526b70;
