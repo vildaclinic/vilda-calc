@@ -7,6 +7,7 @@
   let root, main, header, landing, overview, analysis, picker, historyHost, historyView;
   let account = null, screen = 'start', target = null, section = 'antro';
   let sequence = 0, selecting = false, frame = 0, pendingNote = null;
+  let rapid = null, rapidHeader, entryView = 'launch';
   const labels = {overview: 'Przegląd', analysis: 'Analiza'};
   const startVisitLabel = 'Rozpocznij nową wizytę';
   const paths = {
@@ -50,6 +51,7 @@
     header.querySelector('#gbVisitActions').hidden = !open;
   }
   function visitMeasurementsReadOnly() {
+    if (isRapidIntake()) return !!rapid.receipt || rapid.busy;
     if (!root || !target || screen === 'start') return false;
     const mode = w.VildaHomeEncounter.state(target).mode;
     return !owns(target) || (mode !== 'new' && mode !== 'edit');
@@ -162,6 +164,7 @@
   function setScreen(value) {
     const fields = d.getElementById('vhomeVisitFields');
     if (fields) fields.disabled = visitMeasurementsReadOnly();
+    analysis.setAttribute('aria-labelledby', value === 'rapid' ? 'gbRapidTitle' : 'vhomeGabinetAnalysisTab');
     if (value) main.dataset.vhomeScreen = value;
     else delete main.dataset.vhomeScreen;
     const pane = w.frameElement;
@@ -171,7 +174,7 @@
     if (!root) return;
     const nextAccount = access();
     if (account !== nextAccount) {
-      sequence++; selecting = false; pendingNote = null; dismissHistory(); detach(true); destroyPicker();
+      sequence++; selecting = false; pendingNote = null; dismissHistory(); detach(true); destroyPicker(); clearRapidUI(); entryView = 'launch';
       target = null; screen = 'start'; section = 'antro'; account = nextAccount;
       header.querySelector('h1').textContent = '';
       header.querySelector('.gb-identity-meta').textContent = '';
@@ -187,10 +190,24 @@
       dismissHistory(); detach(true); target = null; screen = 'start';
     }
     root.hidden = false;
+    if (isRapidIntake() && selected()) { clearRapidUI(); screen = 'start'; }
+    if (isRapidIntake()) {
+      installRapid(); setScreen('rapid');
+      main.toggleAttribute('data-rapid-saved', !!rapid.receipt);
+      main.toggleAttribute('data-rapid-sex-pending', !field('sex'));
+      header.hidden = overview.hidden = landing.hidden = true; rapidHeader.hidden = false;
+      if (picker) destroyPicker();
+      return;
+    }
+    rapidHeader.hidden = true;
     if (!target || screen === 'start') {
       setScreen('start');
       header.hidden = overview.hidden = true; landing.hidden = false;
-      if (!picker) picker = w.VildaHomeGabinetStart.mount(landing, {onSelect: selectPatient});
+      if (!picker) picker = w.VildaHomeGabinetStart.mount(landing, {onSelect:selectPatient,
+        initialView:entryView, onViewChange: view => { entryView = view; },
+        onRapid:enterRapid, onNewPatient: () => w.VildaAuthUI.showGabinetNewPatient({
+          onPatient: id => openPatient(id), onReturn: () => picker?.refresh()
+        })});
       return;
     }
     if (!owns(target)) {
@@ -222,15 +239,17 @@
   function schedule() {
     if (!frame) frame = w.requestAnimationFrame(() => { frame = 0; render(); });
   }
-  function showStart() {
-    if (!account || !detach(false)) return false;
+  function showStart(view = 'launch') {
+    if (!account || !leaveRapidIntake() || !detach(false)) return false;
+    entryView = view === 'office' ? 'office' : 'launch';
+    if (picker) picker.showView(entryView);
     dismissHistory();
     sequence++; selecting = false; pendingNote = null; target = null; section = 'antro'; screen = 'start';
     showMessage(''); render();
     return true;
   }
   function closePatientCard() {
-    if (!showStart()) return false;
+    if (!showStart('office')) return false;
     const shell = w.parent?.VildaShell;
     if (shell?.peekPatientReturnRoute?.()) shell.returnFromPatientCard();
     return true;
@@ -259,7 +278,7 @@
   }
   function showOverview(key, focusNoteId) {
     const id = selected();
-    if (!owns(id)) return false;
+    if (!owns(id) || !leaveRapidIntake()) return false;
     dismissHistory();
     if (key && target === id && screen === 'overview' && w.VildaHomePatient.isInlineOpen()) {
       if (!w.VildaHomePatient.selectInline(key)) return false;
@@ -278,6 +297,7 @@
     const intent = options.intent || 'browse', key = options.section || 'antro';
     const isCurrent = options.isCurrent || (() => true);
     if (!id || selecting || !account || !['browse','new'].includes(intent) || !isCurrent()) return false;
+    if (!leaveRapidIntake()) return false;
     const same = owns(id);
     const encounter = w.VildaHomeEncounter.state(id);
     // A restored tab has no authority to present a historical form as the
@@ -304,6 +324,179 @@
       if (generation === sequence) { selecting = false; schedule(); }
     }
   }
+  function isRapidIntake() { return screen === 'rapid' && !!rapid; }
+  function hasRapidDraft() { return isRapidIntake() && !rapid.receipt && rapid.dirty; }
+  function currentRapid(item) {
+    if (!item || rapid !== item || screen !== 'rapid' || selected() || account !== access() ||
+        w.VildaPanelPacjent?.nieaktualny() || w.frameElement?.classList.contains('app-pane') && w.parent.VildaShell?.getCurrentRoute() !== 'start') return false;
+    try { w.VildaVault.assertSyncOperationSession(item.session); return true; } catch (_) { return false; }
+  }
+  function clearRapidUI() {
+    if (rapid) for (const id of ['firstName','lastName','age','ageMonths','height','weight']) d.getElementById(id)?.setCustomValidity('');
+    for (const id of ['firstName','lastName']) d.getElementById(id)?.removeAttribute('aria-required');
+    rapid = null;
+    const dialog = d.getElementById('gbRapidMatches');
+    if (dialog.open) dialog.close();
+    dialog.replaceChildren();
+    main.removeAttribute('data-rapid-saved');
+    main.removeAttribute('data-rapid-sex-pending');
+    analysis.inert = false;
+    rapidHeader.hidden = true;
+    const receipt = analysis.querySelector('[data-rapid-receipt]');
+    if (receipt) {
+      receipt.hidden = true;
+      for (const node of receipt.querySelectorAll('h3,p,dd')) node.textContent = '';
+    }
+  }
+  function leaveRapidIntake() {
+    if (!isRapidIntake()) return true;
+    if (rapid.busy || hasRapidDraft() && !w.confirm('Opuścić Szybką ścieżkę i odrzucić niezapisane dane pacjenta?')) return false;
+    // An external patient selection already owns the form; never clear that record.
+    if (currentRapid(rapid) && !w.VildaDataImportExport.clearAllData()) return false;
+    clearRapidUI(); screen = 'start';
+    schedule();
+    return true;
+  }
+  function setValue(id, value) {
+    const input = d.getElementById(id);
+    input.value = String(value);
+    input.dispatchEvent(new w.Event('input', {bubbles:true}));
+    input.dispatchEvent(new w.Event('change', {bubbles:true}));
+  }
+  function resetRapidForm(session) {
+    if (!w.VildaDataImportExport.clearAllData() || selected() || w.VildaPanelPacjent?.nieaktualny()) return false;
+    clearRapidUI(); w.VildaVault.assertSyncOperationSession(session);
+    const visit = w.VildaVisitContext.beginNew({});
+    rapid = {visit, session, busy:false, dirty:false, receipt:null, choice:null};
+    screen = 'rapid'; target = null; pendingNote = null; dismissHistory();
+    for (const id of ['firstName','lastName']) d.getElementById(id).setAttribute('aria-required', 'true');
+    setValue('sex', '');
+    w.VildaPolaTozsamosci?.odswiez?.();
+    render();
+    w.VildaHomeWorkspace.refresh();
+    d.dispatchEvent(new w.CustomEvent('vilda:home-encounter-changed'));
+    w.scrollTo(0, 0); d.getElementById('firstName').focus({preventScroll:true});
+    return true;
+  }
+  async function enterRapid() {
+    if (!account || selecting || !detach(false)) return false;
+    const session = w.VildaVault.captureSyncOperationSession(), generation = ++sequence;
+    const allowed = () => generation === sequence && account === access() && screen === 'start' &&
+      (!w.frameElement?.classList.contains('app-pane') || w.parent.VildaShell?.getCurrentRoute() === 'start');
+    // Switching from a chart or a parked draft follows the usual unsaved-work decision.
+    if (selected() || w.VildaDataImportExport.anyDataEntered()) {
+      const proceed = await new Promise(resolve => {
+        w.VildaUnsavedGuard.run({reason:'load', onProceed:() => resolve(true), onCancel:() => resolve(false)});
+      });
+      if (!proceed || !allowed()) return false;
+    }
+    w.VildaVault.assertSyncOperationSession(session);
+    return allowed() && resetRapidForm(session);
+  }
+  function validateRapid() {
+    const required = {firstName:'Wpisz imię pacjenta.', lastName:'Wpisz nazwisko pacjenta.',
+      age:'Wpisz wiek pacjenta.', weight:'Wpisz masę ciała pacjenta.', height:'Wpisz wzrost pacjenta.'};
+    for (const id of ['firstName','lastName','age','ageMonths','weight','height']) {
+      const input = d.getElementById(id);
+      input.setCustomValidity(required[id] && !field(id) ? required[id] : '');
+      if (!input.reportValidity()) { input.focus(); return false; }
+    }
+    return true;
+  }
+  function rapidAction(text, action, primary = false) {
+    const button = d.createElement('button');
+    button.type = 'button'; button.textContent = text; button.className = primary ? 'gb-rapid-button gb-rapid-primary' : 'gb-rapid-button';
+    button.onclick = action;
+    return button;
+  }
+  function chooseRapid(item, candidates) {
+    const dialog = d.getElementById('gbRapidMatches');
+    dialog.innerHTML = '<h2 id="gbRapidMatchTitle">Pacjent o tym samym imieniu i nazwisku</h2><p>Wybierz kartotekę, do której chcesz dodać wizytę, lub utwórz osobną.</p><div class="gb-match-list"></div><div class="gb-match-actions"></div>';
+    const choose = choice => {
+      dialog.close();
+      if (currentRapid(item)) { item.choice = choice; saveRapid(); }
+    };
+    for (const candidate of candidates) {
+      const option = rapidAction(candidate.name, () => choose({patientId:candidate.patientId}));
+      const detail = d.createElement('small');
+      detail.textContent = [candidate.dobISO && 'ur. ' + candidate.dobISO.split('-').reverse().join('.'),
+        Number.isFinite(candidate.age) && w.VildaDobAge.describeAge({years:candidate.age, ageMonths:candidate.ageMonths || 0}),
+        {F:'płeć żeńska',M:'płeć męska'}[candidate.sex], candidate.shortId && 'ID ' + candidate.shortId].filter(Boolean).join(' · ');
+      option.append(detail); dialog.querySelector('.gb-match-list').append(option);
+    }
+    const cancel = rapidAction('Anuluj', () => dialog.close());
+    dialog.querySelector('.gb-match-actions').append(cancel, rapidAction('Utwórz osobną kartotekę', () => choose({newPatient:true})));
+    dialog.showModal(); cancel.focus();
+  }
+  async function saveRapid() {
+    const item = rapid;
+    if (!currentRapid(item) || item.busy || item.receipt ||
+        Array.from(d.querySelectorAll('dialog[open], .vug-backdrop, .vilda-auth-patients, .vilda-auth-screen'))
+          .some(element => element.getClientRects().length) ||
+        !validateRapid()) return false;
+    if (analysis.contains(d.activeElement)) d.activeElement.blur();
+    const choice = item.choice;
+    item.busy = true; analysis.inert = true; showMessage('');
+    let result;
+    try {
+      result = await w.VildaRapidPatientSave.save({session:item.session,visit:item.visit,choice,isCurrent:() => currentRapid(item)});
+      if (!currentRapid(item)) return false;
+    } catch (error) {
+      if (currentRapid(item)) showMessage(error?.message || 'Nie udało się zapisać pacjenta. Spróbuj ponownie.');
+      return false;
+    } finally {
+      item.busy = false;
+      if (rapid === item) analysis.inert = false;
+    }
+    if (result.status === 'choose') { item.choice = null; chooseRapid(item, result.candidates); return false; }
+    if (result.status === 'mismatch') {
+      const candidate = result.candidate;
+      if (candidate.dobISO && Number.isFinite(candidate.age)) {
+        setValue('age', candidate.age); setValue('ageMonths', candidate.ageMonths || 0);
+      }
+      if (candidate.sex) setValue('sex', candidate.sex);
+      item.choice = {patientId:candidate.patientId,confirmMismatch:true};
+      showMessage('Wczytano dane dostępne w kartotece. Sprawdź wyniki i ponownie wybierz „Zapisz pacjenta”.');
+      analysis.querySelector('[data-rapid-save]').focus();
+      return false;
+    }
+    if (result.status !== 'saved' || !result.patientId || !result.snapshotId) {
+      showMessage('Nie udało się potwierdzić zapisu wizyty. Spróbuj ponownie.');
+      return false;
+    }
+    item.receipt = result;
+    const receipt = analysis.querySelector('[data-rapid-receipt]');
+    receipt.querySelector('h3').textContent = patientName();
+    receipt.querySelector('p').textContent = choice?.patientId ? 'Dodano wizytę do wybranej kartoteki.' : 'Utworzono kartotekę i zapisano pierwszą wizytę.';
+    receipt.querySelector('[data-rapid-weight]').textContent = field('weight').replace('.', ',') + ' kg';
+    receipt.querySelector('[data-rapid-height]').textContent = field('height').replace('.', ',') + ' cm';
+    receipt.hidden = false;
+    render(); d.dispatchEvent(new w.CustomEvent('vilda:home-encounter-changed'));
+    w.scrollTo(0,0); receipt.querySelector('[data-rapid-next]').focus({preventScroll:true});
+    return true;
+  }
+  function installRapid() {
+    const content = analysis.querySelector('.vhome-form-content');
+    if (!content || content.querySelector('[data-rapid-save]')) return;
+    const save = rapidAction('Zapisz pacjenta', saveRapid, true);
+    save.dataset.rapidSave = ''; content.append(save);
+    const receipt = d.createElement('section');
+    receipt.dataset.rapidReceipt = ''; receipt.hidden = true;
+    receipt.innerHTML = '<h2>Zapisano wizytę</h2><h3></h3><p></p><dl><div><dt>Masa ciała</dt><dd data-rapid-weight></dd></div><div><dt>Wzrost</dt><dd data-rapid-height></dd></div></dl><div class="gb-receipt-actions"></div>';
+    const next = rapidAction('Następny pacjent', () => {
+      if (!currentRapid(rapid) || !rapid.receipt) return;
+      showMessage(''); resetRapidForm(rapid.session);
+    }, true);
+    next.dataset.rapidNext = '';
+    const open = rapidAction('Otwórz kartę pacjenta', async () => {
+      if (!currentRapid(rapid) || !rapid.receipt) return;
+      const id = rapid.receipt.patientId;
+      if (!leaveRapidIntake()) return;
+      if (!await openPatient(id)) { showMessage('Wizyta została zapisana. Otwórz kartotekę, wybierając pacjenta w Gabinecie.'); }
+    });
+    receipt.querySelector('.gb-receipt-actions').append(next,open);
+    content.after(receipt);
+  }
   function install() {
     analysis = d.getElementById('calcForm')?.closest('.container');
     if (root || !analysis || !w.VildaHomeGabinetStart || !w.VildaHomeEncounter) return;
@@ -319,10 +512,36 @@
       '<div class="gb-patient-nav"><div class="gb-patient-tabs" role="tablist" aria-label="Karta pacjenta"></div>' +
       '<div class="gb-visit-actions" role="group" aria-label="Działania wizyty" hidden><button type="button" data-visit-actions aria-expanded="false" aria-controls="gbVisitActions">Działania <span aria-hidden="true">⌄</span></button>' +
       '<div id="gbVisitActions" hidden><button type="button" data-trash-visit>Przenieś wizytę do kosza</button></div></div></div></div>' +
-      '<div class="vhome-gabinet-message" role="status"></div><div id="vhomePatientOverview" hidden></div><section id="vhomeVisitHistory" hidden aria-label="Historia wizyt"></section>';
+      '<div id="gbRapidHeader" hidden><nav class="gb-rapid-crumb" aria-label="Ścieżka nawigacji"><button type="button" data-rapid-start>' + icon('home') +
+        'Start</button>' + icon('chevron') + '<span>Szybka ścieżka</span></nav><h1 id="gbRapidTitle">Analiza</h1></div>' +
+      '<dialog id="gbRapidMatches" aria-labelledby="gbRapidMatchTitle"></dialog><div class="vhome-gabinet-message" role="status"></div><div id="vhomePatientOverview" hidden></div><section id="vhomeVisitHistory" hidden aria-label="Historia wizyt"></section>';
     analysis.before(root);
     header = d.getElementById('vhomeGabinetHeader'); landing = d.getElementById('vhomeGabinetStart'); overview = d.getElementById('vhomePatientOverview');
     historyHost = d.getElementById('vhomeVisitHistory');
+    rapidHeader = d.getElementById('gbRapidHeader');
+    rapidHeader.querySelector('[data-rapid-start]').onclick = () => showStart();
+    installRapid();
+    d.addEventListener('vilda:home-workspace-ready', installRapid);
+    const onRapidEdit = event => {
+      if (!isRapidIntake() || rapid.receipt || rapid.busy) return;
+      const input = event.target;
+      if (input.id === 'sex') main.toggleAttribute('data-rapid-sex-pending', !field('sex'));
+      if (!event.isTrusted) return;
+      if (analysis.contains(input) || input.closest?.('.vhome-detail-dialog')) {
+        if (!rapid.dirty) {
+          rapid.dirty = true; d.dispatchEvent(new w.CustomEvent('vilda:home-encounter-changed'));
+        }
+        if (['firstName','lastName','age','ageMonths','sex','dobInput'].includes(input.id)) rapid.choice = null;
+        if (analysis.contains(input) && input.validity?.customError) input.setCustomValidity('');
+      }
+    };
+    for (const name of ['input','change']) d.addEventListener(name, onRapidEdit);
+    analysis.addEventListener('keydown', event => {
+      if (event.key === 'Enter' && !event.isComposing && !event.repeat && isRapidIntake() && !rapid.receipt &&
+          event.target.closest('#vhomeVisitFields') && event.target.matches('input')) {
+        event.preventDefault(); saveRapid();
+      }
+    });
     if (w.frameElement?.classList.contains('app-pane')) {
       const decorRail = w.parent.matchMedia('(min-width: 1400px)');
       const syncHeaderWidth = () => header.toggleAttribute('data-decor-rail', decorRail.matches);
@@ -391,6 +610,7 @@
     if (!account || selecting || !root) return;
     const id = event.detail?.patientId || selected();
     if (!id) return;
+    if (isRapidIntake()) clearRapidUI();
     if (id !== target || screen === 'start') {
       dismissHistory(); detach(true); pendingNote = null; target = id; screen = 'overview'; section = 'antro';
     }
@@ -403,6 +623,7 @@
   w.addEventListener('pageshow', schedule);
   w.addEventListener('pagehide', () => { dismissHistory(); if (main) setScreen(null); sequence++; selecting = false; detach(true); if (picker) destroyPicker(); });
   w.VildaHomeGabinet = Object.freeze({
+    isRapidIntake, hasRapidDraft, leaveRapidIntake, saveRapid,
     capturePatientScreen,
     showStart, showAnalysis, selectPatient, openPatient, prepareLabEntry, visitMeasurementsReadOnly, openVisitHistory, openOverview: (key = 'antro') => showOverview(key),
     openReminders: () => screen !== 'start' && showOverview('reminders'),

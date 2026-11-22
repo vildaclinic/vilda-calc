@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { createFictionalVault, readyForPatient, shellFrame } from '../support/centile-live-fixture.mjs';
+import { choosePatient } from '../support/gabinet-patient-fixture.mjs';
 import { visibleChromeMenu } from '../support/chrome-menu-fixture.mjs';
 
 test.use({ serviceWorkers: 'block' });
@@ -43,13 +44,6 @@ async function selectFromDatabase(page, firstName) {
 
 async function clickDirectoryRow(directory, firstName) {
   await directory.locator('.pt-row', { hasText: firstName }).locator('.pt-row-open').click();
-}
-
-async function selectFromLanding(start, name) {
-  const landing = start.locator('#vhomeGabinetStart');
-  await landing.getByRole('searchbox').fill(name);
-  await landing.locator('#vgs-results').getByRole('button', { name: new RegExp(name) }).click();
-  await expect(start.locator('#vhomePatientOverview > .vilda-auth-card')).toBeVisible({ timeout: 15_000 });
 }
 
 async function openDocPro(page) {
@@ -117,7 +111,7 @@ test('Gabinet opens the selected patient in Overview from the sidebar database o
 
 test('DocPro keeps an active visit on cancellation and saves its local measurements once before switching patients', async ({ page }) => {
   const { start, ids } = await prepareGabinet(page);
-  await selectFromLanding(start, 'Antoni');
+  await choosePatient(start, 'Antoni');
   const beforeA = await savedVisits(start, ids.a), beforeB = await savedVisits(start, ids.b);
   const header = start.locator('#vhomeGabinetHeader');
   await header.getByRole('button', { name: 'Rozpocznij nową wizytę', exact: true }).click();
@@ -159,7 +153,7 @@ test('DocPro keeps an active visit on cancellation and saves its local measureme
 for (const visitKind of ['new', 'edit']) {
   test(`Gabinet keeps the ${visitKind} visit and its measurements when the physician cancels a patient change`, async ({ page }) => {
     const { start, ids } = await prepareGabinet(page);
-    await selectFromLanding(start, 'Antoni');
+    await choosePatient(start, 'Antoni');
     const beforeA = await savedVisits(start, ids.a), beforeB = await savedVisits(start, ids.b);
     const header = start.locator('#vhomeGabinetHeader');
     const saveLabel = visitKind === 'new' ? 'Zapisz wizytę' : 'Zapisz zmiany';
@@ -217,3 +211,27 @@ for (const visitKind of ['new', 'edit']) {
     await expectNoLegacyChooser(page);
   });
 }
+
+test('leaving rapid intake keeps a cancelled draft and clears discarded values before DocPro opens', async ({ page }) => {
+  const { start } = await prepareGabinet(page);
+  await start.locator('[data-entry="rapid"]').click();
+  const name = start.locator('#firstName');
+  await expect(name).toBeEditable();
+  await name.fill('Szkic');
+  const menu = await visibleChromeMenu(page);
+  const link = menu.locator('a[href="docpro.html"]');
+  const confirmLeave = page.waitForEvent('dialog').then(async dialog => {
+    expect(dialog.message()).toContain('niezapisane dane');
+    await dialog.dismiss();
+  });
+  await Promise.all([confirmLeave, link.click()]);
+  await expect(name).toHaveValue('Szkic');
+  await expect(page).toHaveURL(/#\/start$/);
+  const menuAfterCancel = await visibleChromeMenu(page);
+  const discard = page.waitForEvent('dialog').then(dialog => dialog.accept());
+  await Promise.all([discard, menuAfterCancel.locator('a[href="docpro.html"]').click()]);
+  const docpro = await shellFrame(page, 'DocPro');
+  await readyForPatient(docpro);
+  await expect(docpro.locator('#firstName')).toHaveValue('');
+  expect(await docpro.evaluate(() => sessionStorage.getItem('vildaCurrentPatientId'))).toBeNull();
+});

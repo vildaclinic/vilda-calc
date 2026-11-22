@@ -412,3 +412,140 @@
   w.VildaHomeEncounter = Object.freeze({load, start, state, save, canSave, history, guardLeave, consumeChoice, optionalField, revisionTarget, saved, captureBinding, ensureRecorded,
     captureVisitTrash, restoreTrashedVisit, isIdentityOnly});
 })(window, document);
+
+/* A blank rapid intake belongs to the open account and carries its own visit
+ * UUID. The native encrypted patient store is written only on explicit Save. */
+(function (w, d) {
+  'use strict';
+  if (w.__VILDA_HOME_GABINET_PREVIEW__ !== true) return;
+  const drafts = new WeakMap();
+  function sexCode(value) { return value === 'K' ? 'F' : ['F', 'M'].includes(value) ? value : ''; }
+  function read(visit) {
+    const form = w.VildaDataImportExport;
+    if (!form.getSaveReadiness().ready) throw new Error('Poczekaj na zakończenie wczytywania formularza.');
+    const payload = form.captureCurrentUserDataReadOnly();
+    if (payload.patientId || payload.visit?.patientId || payload.visit && payload.visit.visitId !== visit.visitId || payload.user?.dobISO) {
+      throw new Error('Otwórz pustą Szybką ścieżkę, aby zapisać nową wizytę.');
+    }
+    const user = payload.user;
+    if (!user?.firstName?.trim() || !user.lastName?.trim()) throw new Error('Wpisz imię i nazwisko pacjenta.');
+    if (!Number.isInteger(user.age) || user.age < 0 || user.age > 130 ||
+        !Number.isInteger(user.ageMonths ?? 0) || (user.ageMonths ?? 0) < 0 || (user.ageMonths ?? 0) > 11 ||
+        !Number.isFinite(user.height) || user.height <= 0 || !Number.isFinite(user.weight) || user.weight <= 0) {
+      throw new Error('Sprawdź wiek, masę ciała i wzrost pacjenta.');
+    }
+    user.firstName = user.firstName.trim(); user.lastName = user.lastName.trim();
+    user.sex = sexCode(d.getElementById('sex')?.value);
+    user.measuredAtISO = visit.clinicalDateISO;
+    payload.name = [user.lastName, user.firstName].join(' ');
+    payload.visit = {...visit};
+    return payload;
+  }
+  function matches(vault, rows, payload) {
+    const key = vault.normalizePatientName, user = payload.user;
+    return rows.filter(({header: h}) => h && !h.external && (h.firstName && h.lastName
+      ? key(h.firstName) === key(user.firstName) && key(h.lastName) === key(user.lastName)
+      : key(h.name) === key(payload.name))).map(({patientId, header, lastSavedAtISO}) => {
+      const dobISO = header.dobISO || '', known = dobISO && vault.calcAgeFromDOB(dobISO, payload.visit.clinicalDateISO);
+      const sex = sexCode(header.sex), age = known ? known.years : header.age ?? null;
+      const ageMonths = known ? known.ageMonths : header.ageMonths ?? null;
+      const mismatch = Boolean((sex && user.sex !== sex) || (known && (age !== user.age ||
+        (age < 18 || user.ageMonths > 0) && ageMonths !== (user.ageMonths || 0))));
+      return {patientId, name: header.name, dobISO, age, ageMonths, sex, mismatch,
+        shortId: vault.shortHashOfPatientId(patientId), lastSavedAtISO};
+    });
+  }
+  function retainPatientFacts(payload, previous) {
+    if (previous.guardian) payload.guardian = previous.guardian;
+    if (previous.clinical) payload.clinical = previous.clinical;
+    for (const key of ['perinatal', 'birth']) {
+      if (!payload[key] && previous[key]) payload[key] = previous[key];
+    }
+    for (const key of ['ghTherapyPoints', 'obesityTherapyPoints', 'bisphosTherapyPoints']) {
+      if (!payload[key]?.length && previous[key]?.length) payload[key] = previous[key];
+    }
+    for (const field of ['motherHeight', 'fatherHeight']) {
+      if (payload.advanced && !payload.advanced[field] && previous.advanced?.[field]) {
+        payload.advanced[field] = previous.advanced[field];
+      }
+    }
+    // Archive the previous visit's current measurement using the same clinical
+    // rules as the native new-visit action, including bone age and GH markers.
+    w.VildaDataImportExport._ensureCurrentMeasurementInHistory(previous);
+    const bone = w.VildaBoneAge, known = bone.readPayload(previous), enteredBone = bone.readPayload(payload);
+    if (payload.advanced && (known.current || known.last)) {
+      const context = {version:1, current:enteredBone.current, last:enteredBone.last || known.current || known.last};
+      payload.advanced.boneAgeContext = context;
+      payload.advanced.boneAgeYears = bone.currentYearsFor(payload.advanced, payload.user.age * 12 + (payload.user.ageMonths || 0));
+      if (!payload.advanced.data) payload.advanced.data = {};
+      payload.advanced.data.boneAgeContext = context;
+      payload.advanced.data.boneAgeMonths = Math.round((context.current || context.last).years * 12);
+    }
+    for (const key of ['advanced', 'growthBasic']) {
+      const prior = previous[key]?.data?.measurements;
+      if (!prior?.length) continue;
+      const section = payload[key] || (payload[key] = {}), data = section.data || (section.data = {});
+      const entered = Array.isArray(data.measurements) ? data.measurements : [];
+      const age = row => Number.isFinite(row.ageMonths) ? row.ageMonths : Math.round(row.ageYears * 12);
+      const same = (a, b) => age(a) === age(b) && a.height === b.height && a.weight === b.weight;
+      data.measurements = entered.concat(prior.filter(row => !entered.some(item => same(item, row))));
+    }
+  }
+  async function persist(options, state, vault, assertCurrent) {
+    const {visit, choice} = options;
+    assertCurrent();
+    const payload = read(visit);
+    // Resolve identity from a complete decrypted directory. A failed read must
+    // never masquerade as zero matching people and create a duplicate.
+    const rows = await vault.listPatientDirectory({isCurrent: () => { assertCurrent(); return true; }});
+    assertCurrent();
+    const candidates = matches(vault, rows, payload);
+    const candidate = choice?.patientId && candidates.find(row => row.patientId === choice.patientId);
+    if (choice?.patientId && !candidate || candidates.length && !candidate && !choice?.newPatient) return {status:'choose', candidates};
+    if (candidate?.mismatch) return {status:'mismatch', candidate};
+    const rapidVisit = {assertCurrent, explicitNew: choice?.newPatient === true};
+    const saveOptions = {rapidVisit, dedup:false, forceNew:!candidate};
+    if (candidate) {
+      // The latest write guards this patient record; the latest clinical visit
+      // supplies its longitudinal facts even when an older visit was saved later.
+      const [latest, visits] = await Promise.all([vault.getLatestSnapshot(candidate.patientId), vault.getPatientVisits(candidate.patientId)]);
+      assertCurrent();
+      if (!latest?.payload || !latest.snapshotId) throw new Error('Kartoteka zmieniła się. Wybierz pacjenta ponownie.');
+      const updated = matches(vault, [{patientId:candidate.patientId,header:{...latest.payload.user,name:latest.payload.name}}], payload)[0];
+      if (!updated || candidate.dobISO !== updated.dobISO || candidate.sex !== updated.sex) return {status:'choose', candidates};
+      if (candidate.dobISO) payload.user.dobISO = candidate.dobISO;
+      if (candidate.sex) payload.user.sex = candidate.sex;
+      const source = w.VildaHomeVisitComparisonModel.latest(candidate.patientId, visits);
+      if (visits.length && !source) throw new Error('Nie udało się wskazać aktualnej wizyty pacjenta.');
+      if (source) {
+        retainPatientFacts(payload, source.payload);
+        rapidVisit.source = {snapshotId:source.snapshotId, revision:source.rev || 0, updatedAtISO:source.updatedAtISO};
+      }
+      // Default anti-clobber uses the technical head. The clinical source above
+      // already supplies growth history and previous bone age for this new visit.
+      saveOptions.skipAdvancedAntiClobber = true;
+      Object.assign(rapidVisit, {patientId:candidate.patientId,snapshotId:latest.snapshotId,revision:latest.rev || 0});
+      saveOptions.patientId = candidate.patientId;
+    }
+    assertCurrent();
+    const result = await vault.savePatient(payload, saveOptions);
+    assertCurrent();
+    state.receipt = {status:'saved',patientId:result.patientId,snapshotId:result.snapshotId};
+    return state.receipt;
+  }
+  function save(options) {
+    const vault = w.VildaVault, visit = options?.visit;
+    const assertCurrent = () => {
+      vault.assertSyncOperationSession(options.session);
+      if (!vault.isUnlocked() || !options.isCurrent() || w.sessionStorage.getItem('vildaCurrentPatientId') ||
+        !visit || visit.origin !== 'explicit' || visit.patientId || !visit.visitId) throw new Error('Szybka ścieżka nie jest już aktywna.');
+    };
+    assertCurrent();
+    const state = drafts.get(visit) || {};
+    drafts.set(visit, state);
+    if (state.receipt) return Promise.resolve(state.receipt);
+    if (!state.pending) state.pending = persist(options, state, vault, assertCurrent).finally(() => { state.pending = null; });
+    return state.pending;
+  }
+  w.VildaRapidPatientSave = Object.freeze({save});
+})(window, document);

@@ -1046,8 +1046,20 @@ function Sn_releaseAuthHistory(win,options){
   Sn_pendingBack={navigation:null};
   try{a.history.back()}catch{Sn_pendingBack=null}
 }
+// The other clinical panes rehydrate the shared main form when activated.
+function Sn_leaveRapid(route){
+  if(c!=="start"||route===c)return true;
+  var win=Gp_w("start"),home=win?.__VILDA_HOME_GABINET_PREVIEW__===true&&win.VildaHomeGabinet;
+  return !home?.isRapidIntake?.()||home.leaveRapidIntake()===true;
+}
 function Sn_historyEvent(){
-  var route=W(),state=Sn_entryState(route),auth=Sn_auth,pending=Sn_pendingBack;
+  var route=W();
+  if(!Sn_leaveRapid(route)){
+    // Back/hash already changed the address. Retain the active, unsaved form.
+    a.history.pushState({shellView:c,shellNavId:++Sn_navSerial},"","#/"+c);
+    return;
+  }
+  var state=Sn_entryState(route),auth=Sn_auth,pending=Sn_pendingBack;
   Sn_pendingBack=null;
   var left=auth&&state.shellAuthId!==auth.id;
   var transfer=Sn_calendarTransfer,returning=!!(Sn_calendarCurrent(transfer)&&transfer.phase==="calendar"&&c==="terminarz"&&route===transfer.sourceRoute&&state.shellNavId===transfer.sourceEntry);
@@ -1247,6 +1259,7 @@ function Nt(t,descriptor){Sn_quietClose(y(t),descriptor)}
 var labNavigationSequence=0;
 function P(t,e,href,request,options){
   t=y(t);
+  if(!Sn_leaveRapid(t))return;
   var labRequest=++labNavigationSequence;
   if(t==="lab"&&c==="start"){
     var source=Gp_w("start"),home=source&&source.__VILDA_HOME_GABINET_PREVIEW__===true&&source.VildaHomeGabinet;

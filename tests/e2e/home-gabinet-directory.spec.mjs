@@ -38,6 +38,11 @@ test('Gabinet isolates search and quick inputs, and drops delayed records on vau
   await page.evaluate(() => {
     window.landing = window.VildaHomeGabinetStart.mount(document.querySelector('main'), {onSelect:(id,mode)=>{ window.picked = [id,mode]; }});
   });
+  const entries = page.locator('[data-entry]');
+  await expect(entries).toHaveCount(4);
+  expect(await entries.evaluateAll(items => items.map(item => item.dataset.entry))).toEqual(['office','new','rapid','quick']);
+  await expect(page.getByRole('searchbox')).toBeHidden();
+  await entries.first().click();
   await expect(page.getByText('Kontrola',{exact:true})).toBeVisible();
   await expect(page.getByText('Nieobecność',{exact:true})).toHaveCount(0);
   const search = page.getByRole('searchbox');

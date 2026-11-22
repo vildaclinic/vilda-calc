@@ -630,3 +630,20 @@ html.vilda-home-workspace dialog.vhome-patient-native-dialog.clcr-record-dialog 
 .vilda-home-workspace.vhome-device-compact .vhome-growth-card { height: auto; min-height: 0; max-height: none; align-self: start; }
 .vilda-home-workspace.vhome-device-compact .vhome-growth-heading { flex-basis: auto; min-height: 0; padding-block: var(--space-10px); }
 .vilda-home-workspace.vhome-device-compact .vhome-growth-bottom { margin-top: 0; }
+
+/* This projection replaces classified results until the user chooses a
+   reference sex. A select immediately controls visibility, including restore. */
+.vilda-home-workspace #vhomeRawSummary { display: none; }
+.vilda-home-workspace:has(#sex option[data-vhome-unspecified-sex]:checked) #vhomeRawSummary {
+  display: block; padding: var(--space-20px); margin: 0; text-align: left;
+}
+#vhomeRawSummary h3 { margin: 0 0 var(--space-12px); }
+#vhomeRawSummary p { margin: var(--space-8px) 0 0; }
+#vhomeRawSummary .vhome-raw-value { font-weight: 650; font-size: 1.2rem; font-variant-numeric: tabular-nums; }
+#vhomeRawSummary .vhome-raw-value:empty { display: none; }
+.vilda-home-workspace:has(#sex option[data-vhome-unspecified-sex]:checked)
+:is(#currentSummaryWrap, #prevSummaryWrap, #vhomeGenerateCharts, #vhomeGrowthCard, #vhomeDietCard,
+    .vhome-reference, .vhome-extra-data, #metabolicSummaryBtn, .vhome-down-shortcut,
+    [data-home-tool="whr"], [data-home-tool="wfh"], [data-home-tool="circumferences"],
+    [data-home-tool="nutrition"], [data-home-tool="intake"]) { display: none !important; }
+.vilda-home-workspace:has(#sex option[data-vhome-unspecified-sex]:checked) .vhome-form-actions { grid-template-columns: 1fr; }

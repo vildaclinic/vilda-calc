@@ -19,9 +19,12 @@ export async function prepareGabinet(page) {
 
 export async function choosePatient(frame, firstName) {
   const start = frame.locator('#vhomeGabinetStart');
-  await expect(start).toBeVisible();
-  await start.getByRole('searchbox').fill(firstName);
+  const office = start.locator('[data-entry="office"]');
+  const search = start.getByRole('searchbox');
+  await expect(office.or(search).filter({ visible: true })).toBeVisible();
+  if (await office.isVisible()) await office.click();
+  await search.fill(firstName);
   await start.locator('#vgs-results').getByRole('button', { name: new RegExp(firstName) }).click();
-  await expect(frame.locator('#vhomePatientOverview')).toBeVisible({ timeout: 15_000 });
+  await expect(frame.locator('#vhomePatientOverview > .vilda-auth-card')).toBeVisible({ timeout: 15_000 });
   await expect(frame.locator('#vhomeGabinetHeader')).toContainText(firstName);
 }

@@ -4,7 +4,7 @@ html:has([data-vhome-screen]) { scrollbar-gutter: stable; }
 [data-vhome-screen="history"] #vhomePatientOverview,
 [data-vhome-screen] #vhomeGabinet[hidden],
 #vhomeGabinet [hidden],
-[data-vhome-screen]:not([data-vhome-screen="analysis"]) > #vhomeGabinetAnalysis,
+[data-vhome-screen]:not([data-vhome-screen="analysis"],[data-vhome-screen="rapid"]) > #vhomeGabinetAnalysis,
 [data-vhome-screen] .vhome-visit-heading,
 [data-vhome-screen] #vhomeAnalysisHeading,
 [data-vhome-screen] #vhomePatientCard { display: none !important; }
@@ -14,14 +14,14 @@ html:has([data-vhome-screen]) { scrollbar-gutter: stable; }
 #vhomeGabinet { color: #23444c; font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; min-width: 0; }
 /* The form in the neighbouring Analysis panel takes its gutter from the
  * outer shell. Its desktop rail can leave a narrow embedded viewport. */
-.main-content:is([data-vhome-screen="overview"],[data-vhome-screen="analysis"],[data-vhome-screen="history"]) { background: #f4f7f8 !important; }
+.main-content:is([data-vhome-screen="overview"],[data-vhome-screen="analysis"],[data-vhome-screen="rapid"],[data-vhome-screen="history"]) { background: #f4f7f8 !important; }
 #vhomeGabinetHeader, #vhomePatientOverview, #vhomeVisitHistory { width: 100%; min-width: 0; box-sizing: border-box; }
 @media (max-width: 991.98px) {
-  :is([data-vhome-screen="overview"],[data-vhome-screen="analysis"],[data-vhome-screen="history"]) > #vhomeGabinet {
+  :is([data-vhome-screen="overview"],[data-vhome-screen="analysis"],[data-vhome-screen="rapid"],[data-vhome-screen="history"]) > #vhomeGabinet {
     padding-inline: max(var(--mobile-dock-side-gap,.75rem),calc(env(safe-area-inset-left,0px) + .35rem)) max(var(--mobile-dock-side-gap,.75rem),calc(env(safe-area-inset-right,0px) + .35rem));
   }
 }
-html.vilda-form-host-desktop :is([data-vhome-screen="overview"],[data-vhome-screen="analysis"],[data-vhome-screen="history"]) > #vhomeGabinet { padding-inline: var(--chrome-form-gap) 0; }
+html.vilda-form-host-desktop :is([data-vhome-screen="overview"],[data-vhome-screen="analysis"],[data-vhome-screen="rapid"],[data-vhome-screen="history"]) > #vhomeGabinet { padding-inline: var(--chrome-form-gap) 0; }
 #vhomeGabinetHeader { margin-bottom: 1.15rem; font: 1rem/1.52 Inter, system-ui, -apple-system, "Segoe UI", sans-serif; }
 #vhomeGabinetHeader :is(.gb-header-top,.gb-person-line,.gb-breadcrumb,.gb-patient-tabs,button) { display: flex; align-items: center; }
 #vhomeGabinetHeader .gb-header-top { justify-content: space-between; gap: var(--space-0-5); margin-bottom: var(--space-0-55); }
@@ -167,3 +167,45 @@ html.vilda-home-workspace #vhomeVisitTrashConfirm .vhome-dialog-apply { backgrou
 #vhomeVisitTrash .vht-list li div { display: grid; gap: var(--space-4px); }
 #vhomeVisitTrash .vht-list span { color: var(--text-muted); font-variant-numeric: tabular-nums; }
 #vhomeVisitTrash .vht-list button { width: auto; min-height: 44px; margin: 0; padding: var(--space-8px) var(--space-14px); color: var(--primary) !important; background: var(--bg) !important; border: var(--border-hairline) solid var(--line) !important; border-radius: var(--radius-8) !important; box-shadow: none !important; }
+
+/* Rapid intake uses the same clinical form and result cards as a saved visit. */
+.gb-rapid-crumb { display: flex; align-items: center; gap: var(--space-8px); margin: 0; color: var(--text-muted); font-size: .94rem; }
+#gbRapidHeader .gb-rapid-crumb button {
+  display: inline-flex; align-items: center; gap: var(--space-6px); width: auto; min-height: 44px; margin: 0; padding: 0;
+  font: inherit; font-weight: 630; color: var(--primary) !important; background: transparent !important; border: 0 !important; box-shadow: none !important;
+}
+#gbRapidHeader h1 { margin: var(--space-4px) 0 var(--space-16px); color: var(--text-heading); font: 680 clamp(1.5rem,2.1vw,2rem)/1.18 Inter,system-ui,sans-serif; text-align: start; }
+[data-rapid-save], [data-rapid-receipt][hidden], [data-vhome-screen="rapid"] #userSection :is(.vhome-form-actions, label:has(#dobInput), #dobClear),
+[data-vhome-screen="rapid"] #userSection label:has(#firstName,#lastName) > span[style],
+[data-vhome-screen="rapid"] #userSection .vhome-card-heading > span,
+[data-rapid-saved] #userSection .vhome-form-content,
+[data-rapid-saved] #vhomeGabinetAnalysis :is(.vhome-main-cards,#vhomeOtherTools) { display: none !important; }
+[data-vhome-screen="rapid"] #userSection [data-rapid-save] { display: block !important; width: 100%; margin-top: var(--space-16px); }
+.gb-rapid-button, #gbRapidMatches button {
+  min-height: 44px; width: auto; box-sizing: border-box; padding: var(--space-10px) var(--space-16px); margin: 0;
+  color: var(--primary) !important; background: var(--card) !important; border: var(--border-hairline) solid var(--line) !important;
+  border-radius: var(--radius-8) !important; font: 620 1rem/1.3 Inter,system-ui,sans-serif; box-shadow: none !important;
+}
+.gb-rapid-button.gb-rapid-primary { background: var(--primary) !important; border-color: var(--primary) !important; color: white !important; }
+.gb-rapid-button:focus-visible, #gbRapidMatches button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+[data-rapid-receipt] { padding: var(--space-20px); color: var(--text); }
+[data-rapid-receipt] :is(h2,h3,dd) { margin: 0; color: var(--text-heading); text-align: start; }
+[data-rapid-receipt] h2 { font-size: 1.22rem; }
+[data-rapid-receipt] h3 { margin-top: var(--space-16px); font-size: 1.08rem; }
+[data-rapid-receipt] p { margin: var(--space-6px) 0; }
+[data-rapid-receipt] dl { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: var(--space-12px); padding-block: var(--space-14px); border-block: var(--border-hairline) solid var(--line); }
+[data-rapid-receipt] dt { color: var(--text-muted); }
+[data-rapid-receipt] dd { font-size: 1.13rem; font-weight: 650; }
+.gb-receipt-actions, .gb-match-actions { display: flex; flex-wrap: wrap; gap: var(--space-8px); }
+.gb-receipt-actions button { flex: 1 1 12rem; }
+#gbRapidMatches {
+  width: min(34rem,calc(100% - 2rem)); max-height: calc(100dvh - 2rem); box-sizing: border-box;
+  padding: var(--space-20px); border: var(--border-hairline) solid var(--line); border-radius: var(--radius-11);
+  background: var(--card); color: var(--text); box-shadow: var(--shadow); font: 1rem/1.5 Inter,system-ui,sans-serif;
+}
+#gbRapidMatches::backdrop { background: rgb(18 42 49 / 36%); }
+#gbRapidMatches h2 { margin: 0; color: var(--text-heading); font-size: 1.22rem; text-align: start; }
+#gbRapidMatches p { margin: var(--space-8px) 0 var(--space-16px); }
+.gb-match-list { display: grid; gap: var(--space-6px); margin-bottom: var(--space-18px); }
+#gbRapidMatches .gb-match-list button { width: 100%; text-align: start; overflow-wrap: anywhere; }
+.gb-match-list small { display: block; margin-top: var(--space-4px); color: var(--text-muted); font-weight: 440; }

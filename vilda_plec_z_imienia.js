@@ -326,7 +326,7 @@
   /* Pacjent z kartoteki albo pola zablokowane przez kogokolwiek — moduł nie ma tu nic do roboty. */
   function zablokowane() {
     var plec = pole(ID.plec);
-    if (!plec || plec.disabled) return true;
+    if (!plec || plec.disabled || w.VildaHomeGabinet?.isRapidIntake?.()) return true;
     var imie = pole(ID.imie);
     var nazwisko = pole(ID.nazwisko);
     if ((imie && imie.readOnly) || (nazwisko && nazwisko.readOnly)) return true;
