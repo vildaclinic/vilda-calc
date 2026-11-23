@@ -613,7 +613,7 @@ test('Edytuj pacjenta saves identity and guardian independently and preserves th
   await history.locator(`.vhs-list button[data-visit-id="${historical.visitId}"]`).click();
   const detail = frame.locator('#vhomeVisitDetail');
   await expect(detail).toBeVisible();
-  await expect(detail.locator('.vd-identity > p')).toContainText('12 lat 0 mies.');
+  await expect(detail.locator('.vhome-dialog-heading').getByText(/12 lat 0 mies\./u)).toBeVisible();
   await expect(detail.locator('dl').filter({ has: frame.locator('dt', { hasText: /^Płeć$/ }) })).toContainText('Chłopiec / mężczyzna');
   const original = before.visits.find(row => row.visitId === historical.visitId).payload.user;
   expect(original).toMatchObject({ firstName: 'Antoni', age: 12, ageMonths: 0, dobISO: '2013-06-17', sex: 'M' });
