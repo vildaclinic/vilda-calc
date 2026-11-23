@@ -9,7 +9,9 @@ import { loadBrowserScript } from '../support/load-browser-script.mjs';
 // docs/clinical/ALGORITHMS.md). Monitor DocPro: pole „Program terapeutyczny” (#therProg, poza edycją punktu) i wiersz
 // „Program terapeutyczny: …” nad tabelą punktów biorą PROGRAM BIEŻĄCY bieżącego kursu — tę samą regułę co Karta pacjenta
 // (Gp_biezacy w vilda_auth_ui.js, P-GH-PREPARAT-BIEZACY), nie program Włączenia. Lista preparatów karty (#therDrug) idzie
-// za programem pola. Edycja punktu, pusta lista, blokada pola i kursy — bez zmian.
+// za programem pola. Edycja punktu, pusta lista, blokada pola i kursy — bez zmian [od P-GH-PROGRAM-EDYCJA (2026-11-23,
+// pytanie 17): przy edycji pole i zapis — program edytowanego punktu (tests/unit/gh-program-edycja.test.mjs); dwa testy
+// edycji niżej mają zmienione oczekiwanie z powodem w nazwie].
 // Testy wołają PRAWDZIWY kod: funkcje czytelnej części gh_therapy_monitor.js i blok Gw_*/Gp_* wycięte z produkcyjnych
 // plików (spójność reguł), cały monitor w atrapie DOM (tests/support/gh-monitor-atrapa.mjs). Dane wyłącznie FIKCYJNE.
 
@@ -161,6 +163,13 @@ function atrapa(punkty, opcje = {}) {
   return a;
 }
 const dotad = (punkty, opcje = {}) => atrapa(punkty, { ...opcje, zrodla: { 'gh_therapy_monitor.js': MONITOR_DOTAD } });
+// Pole przy edycji sprzed P-GH-PROGRAM-EDYCJA (audyt 77cb60dc): ghProgramPola przy edycji — dawne wyrażenie (program
+// Włączenia kursu edytowanego punktu); reszta kodu identyczna (pozostałe wpięcia P-GH-PROGRAM-EDYCJA nie biorą udziału w tych
+// testach — pełny wariant „przed”: tests/unit/gh-program-edycja.test.mjs).
+const POLE_EDYCJI = 'x != null ? ghProgramEdycji(Gwk, dotad) :';
+expect(MONITOR.split(POLE_EDYCJI).length - 1, POLE_EDYCJI).toBe(1);
+const MONITOR_PRZED_EDYCJA = MONITOR.replace(POLE_EDYCJI, 'x != null ? dotad :');
+const przedEdycja = (punkty, opcje = {}) => atrapa(punkty, { ...opcje, zrodla: { 'gh_therapy_monitor.js': MONITOR_PRZED_EDYCJA } });
 const wierszProgramu = (a) => {
   const tr = a.pole('ghTherapyTbody').querySelectorAll('tr').find((x) => x.classList.contains('gh-program-row'));
   return tr ? tr.textContent : null;
@@ -248,7 +257,8 @@ describe('P-GH-PROGRAM-BIEZACY — monitor DocPro: pole, wiersz programu, nowy p
   });
 
   // S1–S3 (przegląd 2026-11-23): bieżący preparat rhGH, a program pola IGF-1 — z zapisu z programem IGF-1 przy Genotropinie
-  // (S1, np. sprzed tej zmiany), z edycji ostatniej Kontynuacji (S2, pytanie 17) albo z zapasu przy luce w programie (S3).
+  // (S1, np. sprzed tej zmiany), z edycji ostatniej Kontynuacji (S2, pytanie 17 — od P-GH-PROGRAM-EDYCJA edycja tego stanu
+  // już nie tworzy, test S2 niżej) albo z zapasu przy luce w programie (S3).
   // Program pola i rodzaj preparatu sobie przeczą: lista preparatów karty bez przeliczania i bez zdarzeń — jak dotąd.
   const S1 = [P('s1-w', 'start', 7, 0, INC, 'IGF-1'), P('s1-k1', 'continue', 7, 6, GEN, 'IGF-1'), P('s1-k2', 'continue', 8, 0, GEN, 'IGF-1')];
   const S3 = PRZYPADKI['luka B: Kontynuacje Genotropin bez programu'][0];
@@ -273,25 +283,34 @@ describe('P-GH-PROGRAM-BIEZACY — monitor DocPro: pole, wiersz programu, nowy p
       expect(kartaGh(a).lek).toBe(GEN);
     });
 
-  it('S2 I→G, karta na Genotropin 12 mg: edycja ostatniej Kontynuacji zapisana bez zmian (program IGF-1 — pytanie 17) — karta zostaje przy Genotropin, Kontynuacja z karty jak dotąd', () => {
+  // S2 — zmienione oczekiwanie od P-GH-PROGRAM-EDYCJA (decyzja właściciela 2026-11-23, pytanie 17): edycja ostatniej
+  // Kontynuacji Genotropin bez zmian zapisuje jej program (SNP), więc stanu „Genotropin z programem IGF-1” edycja już nie
+  // tworzy. Dotąd (audyt 77cb60dc, monitor przedEdycja) zapisywała IGF-1 z Włączenia: pole IGF-1, następna Kontynuacja
+  // z karty — IGF-1. Karta w obu wersjach zostaje przy Genotropinie, bez zdarzeń.
+  it('S2 I→G, karta na Genotropin 12 mg: edycja ostatniej Kontynuacji bez zmian zapisuje SNP (od P-GH-PROGRAM-EDYCJA; dotąd IGF-1 — pytanie 17) — pole SNP, karta zostaje przy Genotropin bez zdarzeń, Kontynuacja z karty SNP', () => {
     const a = atrapa(I_DO_G);
-    const b = dotad(I_DO_G);
-    for (const m of [a, b]) {
+    const c = przedEdycja(I_DO_G);
+    for (const m of [a, c]) {
       m.ustaw('therDrug', GEN);
       odswiez(m);
       m.edytuj('ig-k2', {}, 'continue');
       expect(m.stan().komunikat).toBeNull();
-      expect(m.stan().okno[2]).toMatchObject({ id: 'ig-k2', drug: GEN, program: 'IGF-1' });
       expect(m.zdarzeniaKarty).toEqual([]);
     }
-    expect(pole(a)).toEqual({ program: 'IGF-1', zablokowane: true, wiersz: 'Program terapeutyczny: IGF-1' });
-    expect(pole(a)).toEqual(pole(b));
-    expect(kartaGh(a)).toEqual(kartaGh(b));
+    expect(a.stan().okno[2]).toMatchObject({ id: 'ig-k2', drug: GEN, program: 'SNP' });
+    expect(c.stan().okno[2]).toMatchObject({ id: 'ig-k2', drug: GEN, program: 'IGF-1' });
+    expect(a.stan().okno[2]).toEqual({ ...c.stan().okno[2], program: 'SNP' });
+    expect(pole(a)).toEqual({ program: 'SNP', zablokowane: true, wiersz: 'Program terapeutyczny: SNP' });
+    expect(pole(c)).toEqual({ program: 'IGF-1', zablokowane: true, wiersz: 'Program terapeutyczny: IGF-1' });
+    expect(kartaGh(a)).toEqual(kartaGh(c));
     expect(kartaGh(a).lek).toBe(GEN);
     a.dodajZKarty('continue', karta(8, 6));
-    b.dodajZKarty('continue', karta(8, 6));
-    expect(ostatni(a)).toEqual(ostatni(b));
-    expect(ostatni(a)).toMatchObject({ drug: GEN, program: 'IGF-1' });
+    c.dodajZKarty('continue', karta(8, 6));
+    expect(a.zdarzeniaKarty).toEqual([]);
+    expect(ostatni(a)).toMatchObject({ type: 'continue', ageYears: 8, ageMonths: 6, drug: GEN, program: 'SNP' });
+    expect(ostatni(c)).toMatchObject({ drug: GEN, program: 'IGF-1' });
+    expect(ostatni(a)).toEqual({ ...ostatni(c), program: 'SNP' });
+    expect(kartaGh(a).lek).toBe(GEN);
   });
 
   it('bez modułu kursów: I→G — SNP (cała lista wg wieku)', () => {
@@ -306,7 +325,7 @@ describe('P-GH-PROGRAM-BIEZACY — monitor DocPro: pole, wiersz programu, nowy p
   });
 });
 
-describe('P-GH-PROGRAM-BIEZACY — edycja punktu i pusta lista bez zmian', () => {
+describe('P-GH-PROGRAM-BIEZACY — edycja punktu (od P-GH-PROGRAM-EDYCJA: program edytowanego punktu) i pusta lista', () => {
   it('I→G, edycja Włączenia Increlex: pole IGF-1 podczas edycji (lista preparatów karty nietknięta); po zapisie edycji — SNP, Włączenie dalej IGF-1', () => {
     const a = atrapa(I_DO_G);
     a.zdarzeniaKarty.length = 0;
@@ -321,16 +340,21 @@ describe('P-GH-PROGRAM-BIEZACY — edycja punktu i pusta lista bez zmian', () =>
     expect(pole(a)).toEqual({ program: 'SNP', zablokowane: true, wiersz: 'Program terapeutyczny: SNP' });
   });
 
-  it('edycja Kontynuacji Genotropin w I→G: pole jak dotąd (program Włączenia kursu — stan obecny, pytanie 17), zapis jak dotąd', () => {
+  // Zmienione oczekiwanie od P-GH-PROGRAM-EDYCJA (decyzja właściciela 2026-11-23, pytanie 17): pole podczas edycji i zapis —
+  // program edytowanego punktu (SNP); dotąd (audyt 77cb60dc i przed P-GH-PROGRAM-BIEZACY) program Włączenia kursu (IGF-1).
+  // Pozostałe przypadki edycji: tests/unit/gh-program-edycja.test.mjs.
+  it('edycja Kontynuacji Genotropin w I→G: pole i zapis — program punktu SNP (od P-GH-PROGRAM-EDYCJA; dotąd program Włączenia kursu IGF-1 — pytanie 17)', () => {
     const a = atrapa(I_DO_G);
     const b = dotad(I_DO_G);
-    a.edytuj('ig-k1');
-    b.edytuj('ig-k1');
-    expect(a.pole('therProg').value).toBe('IGF-1');
-    expect(a.pole('therProg').value).toBe(b.pole('therProg').value);
-    a.kliknij('btnGhContinue');
-    b.kliknij('btnGhContinue');
-    expect(a.stan().okno[1]).toEqual(b.stan().okno[1]);
+    const c = przedEdycja(I_DO_G);
+    for (const m of [a, b, c]) m.edytuj('ig-k1');
+    expect(a.pole('therProg').value).toBe('SNP');
+    expect(b.pole('therProg').value).toBe('IGF-1');
+    expect(c.pole('therProg').value).toBe('IGF-1');
+    for (const m of [a, b, c]) m.kliknij('btnGhContinue');
+    expect(a.stan().okno[1]).toEqual({ ...b.stan().okno[1], program: 'SNP' });
+    expect(b.stan().okno[1].program).toBe('IGF-1');
+    expect(c.stan().okno[1]).toEqual(b.stan().okno[1]);
   });
 
   it('pusta lista: pole odblokowane (P-GH-PROGRAM-ODBLOKUJ), bez wiersza programu i bez przeliczania listy preparatów', () => {

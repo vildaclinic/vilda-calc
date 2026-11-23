@@ -8,6 +8,11 @@ import { G1, G_DO_I, INC_PACJENT, I_DO_G } from '../support/karta-leczenie.mjs';
 // Włączenia; lista preparatów, podpowiedź dawki, nowy punkt z karty, formularz wsteczny i wizyta kontrolna w Terminarzu
 // idą za polem. Dotąd (audyt e163b85a) po Włączeniu Increlex (IGF-1) i Kontynuacjach Genotropin (SNP) — IGF-1.
 // Listę punktów zasiewamy w pamięci modułu, jak inne testy GH. Dane wyłącznie FIKCYJNE; własne konto sejfu.
+// P-GH-PROGRAM-EDYCJA (decyzja właściciela 2026-11-23: „popraw edycję punktu (pytanie 17)”): przy edycji punktu pole
+// i program zapisany edycją = program edytowanego punktu (bez programu — program bieżący kursu z chwili punktu), nie
+// program Włączenia — GPB-9, GPB-10 i zmienione GPB-7. Dotąd (audyt 77cb60dc) edycja Kontynuacji Genotropin po I→G
+// zapisywała IGF-1. Po przeglądzie (2026-11-23) — GPB-11: punkt bez programu bierze rodzaj z preparatu wybranego
+// w formularzu edycji, a formularz wsteczny otwarty w trakcie edycji — program i lek bieżący kursu.
 test.use({ serviceWorkers: 'block' });
 
 const LEKI_RHGH = ['Omnitrope 5 mg', 'Omnitrope 10 mg', 'Genotropin 5,3 mg', 'Genotropin 12 mg', 'Ngenla 24 mg', 'Ngenla 60 mg'];
@@ -236,7 +241,8 @@ test('GPB-5 I→G z sejfu: wczytanie pacjenta na DocPro, karta i „Monitorowani
 });
 
 // S1–S2 (przegląd 2026-11-23): bieżący preparat rhGH (Genotropin), a program pola IGF-1 — zapis Genotropinu z programem
-// IGF-1 (S1) albo edycja ostatniej Kontynuacji zapisana bez zmian (S2, program z Włączenia przy edycji — pytanie 17).
+// IGF-1 (S1) albo edycja ostatniej Kontynuacji zapisana bez zmian (S2, program z Włączenia przy edycji — pytanie 17;
+// od P-GH-PROGRAM-EDYCJA edycja tego stanu już nie tworzy — GPB-7 zmieniony).
 // Program pola przeczy rodzajowi preparatu: karta zostaje przy Genotropinie, bez przeliczania listy — jak dotąd.
 const PK = (id, type, lata, mies, drug, program) => ({
   id, type, ageYears: lata, ageMonths: mies, weight: 18 + 2 * (lata - 7), height: 110 + 5 * (lata - 7),
@@ -260,7 +266,10 @@ test('GPB-6 S1 Genotropin z programem IGF-1, karta na Genotropin 12 mg: pole IGF
   expect((await karta(page)).lek).toBe('Genotropin 12 mg');
 });
 
-test('GPB-7 S2 I→G, karta na Genotropin 12 mg: edycja ostatniej Kontynuacji zapisana bez zmian (program IGF-1) — karta i data kontroli bez zmian; Kontynuacja z karty — Genotropin', async ({ page }) => {
+// GPB-7 — zmienione oczekiwanie od P-GH-PROGRAM-EDYCJA (pytanie 17): edycja zapisuje program punktu (SNP), więc nie tworzy
+// już stanu „Genotropin z programem IGF-1”; pole wraca do SNP, Kontynuacja z karty — SNP (dotąd IGF-1 w punkcie, polu
+// i w następnej Kontynuacji). Karta i data kontroli bez zmian — jak dotąd.
+test('GPB-7 S2 I→G, karta na Genotropin 12 mg: edycja ostatniej Kontynuacji zapisana bez zmian — od P-GH-PROGRAM-EDYCJA program SNP (dotąd IGF-1); karta i data kontroli bez zmian; Kontynuacja z karty — Genotropin, SNP', async ({ page }) => {
   test.setTimeout(150_000);
   await docPro(page, I_DO_G.ghTherapyPoints, { program: 'SNP', lek: 'Genotropin 12 mg', data: DATA });
   expect(await karta(page)).toEqual({ program: 'SNP', zablokowane: true, wiersz: 'Program terapeutyczny: SNP', leki: LEKI_RHGH, lek: 'Genotropin 12 mg' });
@@ -272,14 +281,15 @@ test('GPB-7 S2 I→G, karta na Genotropin 12 mg: edycja ostatniej Kontynuacji za
     if (b) b.click();
   });
   await expect(page.locator('#ghTherapyEditContainer')).toBeVisible();
+  await expect(page.locator('#therProg')).toHaveValue('SNP');
   await page.click('#btnGhContinue'); // zapis edycji bez zmian
   await expect(page.locator('#ghTherapyEditContainer')).toBeHidden();
-  expect(await page.evaluate(() => window.ghTherapyPoints.find((p) => p.id === 'ig-c2'))).toMatchObject({ drug: 'Genotropin 12 mg', program: 'IGF-1' });
-  expect(await karta(page)).toEqual({ program: 'IGF-1', zablokowane: true, wiersz: 'Program terapeutyczny: IGF-1', leki: LEKI_RHGH, lek: 'Genotropin 12 mg' });
+  expect(await page.evaluate(() => window.ghTherapyPoints.find((p) => p.id === 'ig-c2'))).toMatchObject({ drug: 'Genotropin 12 mg', program: 'SNP' });
+  expect(await karta(page)).toEqual({ program: 'SNP', zablokowane: true, wiersz: 'Program terapeutyczny: SNP', leki: LEKI_RHGH, lek: 'Genotropin 12 mg' });
   expect((await dawkaIData(page)).data).toBe(przed.data);
   await page.click('#btnGhContinue');
   await expect.poll(() => page.evaluate(() => window.ghTherapyPoints.length)).toBe(4);
-  expect(await ostatni(page)).toEqual({ type: 'continue', ageYears: 8, ageMonths: 6, drug: 'Genotropin 12 mg', program: 'IGF-1' });
+  expect(await ostatni(page)).toEqual({ type: 'continue', ageYears: 8, ageMonths: 6, drug: 'Genotropin 12 mg', program: 'SNP' });
 });
 
 test('GPB-8 G→I z sejfu: wczytanie przy karcie z listą rhGH — IGF-1, Increlex 40 mg, 0,08 mg/kg/d; stan zapisu pacjenta „zapisano” (zdarzenia karty nie są zmianą danych pacjenta)', async ({ page }) => {
@@ -311,4 +321,123 @@ test('GPB-8 G→I z sejfu: wczytanie przy karcie z listą rhGH — IGF-1, Increl
   expect((await dawkaIData(page)).dawka).toBe('0.08');
   await page.waitForTimeout(1500);
   expect(await page.evaluate(() => window.VildaSaveStatusIndicator.getState())).toBe('saved');
+});
+
+// Edycja punktu z tabeli: „Edytuj” w wierszu i „Rozumiem” w nakładce, jak lekarz.
+async function edytuj(page, id) {
+  await page.click(`.edit-gh-pt-btn[data-id="${id}"]`);
+  await page.evaluate(() => {
+    const o = document.getElementById('ghEditOverlay');
+    const b = o && Array.from(o.querySelectorAll('button')).find((x) => x.textContent === 'Rozumiem');
+    if (b) b.click();
+  });
+  await expect(page.locator('#ghTherapyEditContainer')).toBeVisible();
+}
+const formularzEdycji = (page) => page.evaluate(() => ({
+  program: document.getElementById('therProg').value,
+  zablokowane: document.getElementById('therProg').disabled,
+  leki: [...document.getElementById('ghEditDrug').options].map((o) => o.value),
+  lek: document.getElementById('ghEditDrug').value,
+}));
+const punkt = (page, id) => page.evaluate((x) => window.ghTherapyPoints.find((p) => p.id === x), id);
+
+test('GPB-9 I→G, edycja Kontynuacji Genotropin 7;6 bez zmian: pole SNP podczas edycji (dotąd IGF-1), zapis z SNP, karta — SNP i Genotropin 12 mg; usunięcie edytowanego punktu kończy edycję, pole SNP, Kontynuacja z karty SNP', async ({ page }) => {
+  test.setTimeout(150_000);
+  const bledy = [];
+  page.on('pageerror', (e) => bledy.push(String(e && e.message)));
+  await docPro(page, I_DO_G.ghTherapyPoints, { program: 'IGF-1' });
+  const oryginal = await punkt(page, 'ig-c1');
+  await edytuj(page, 'ig-c1');
+  expect(await formularzEdycji(page)).toEqual({ program: 'SNP', zablokowane: true, leki: LEKI_RHGH, lek: 'Genotropin 12 mg' });
+  await page.click('#btnGhContinue'); // zapis edycji bez zmian
+  await expect(page.locator('#ghTherapyEditContainer')).toBeHidden();
+  await expect(page.locator('#ghInfoOverlay')).toHaveCount(0);
+  // Punkt jak przed edycją: program SNP (dotąd IGF-1); dawka podawana z formularza wraca jako doseAbs, a dose = doseAbs
+  // / masa (zapis edycji jak dotąd).
+  const zapisany = await punkt(page, 'ig-c1');
+  expect(zapisany).toMatchObject({ ...oryginal, program: 'SNP', dose: zapisany.dose, doseAbs: zapisany.doseAbs });
+  expect(zapisany.doseAbs).toBeCloseTo(oryginal.doseAbs, 9);
+  expect(zapisany.dose).toBeCloseTo(oryginal.doseAbs / oryginal.weight, 9);
+  expect(await karta(page)).toEqual({ program: 'SNP', zablokowane: true, wiersz: 'Program terapeutyczny: SNP', leki: LEKI_RHGH, lek: 'Genotropin 12 mg' });
+
+  // Koniec edycji bez zapisu: usunięcie edytowanego punktu (przycisk „Usuń” w wierszu i w nakładce).
+  await edytuj(page, 'ig-c2');
+  await expect(page.locator('#therProg')).toHaveValue('SNP');
+  await page.click('.delete-gh-pt-btn[data-id="ig-c2"]');
+  await page.evaluate(() => {
+    const b = Array.from(document.querySelectorAll('#ghDeleteOverlay button')).find((x) => x.textContent === 'Usuń');
+    b.click();
+  });
+  await expect.poll(() => page.evaluate(() => window.ghTherapyPoints.map((p) => p.id))).toEqual(['ig-s', 'ig-c1']);
+  await expect(page.locator('#ghTherapyEditContainer')).toBeHidden();
+  expect(await karta(page)).toEqual({ program: 'SNP', zablokowane: true, wiersz: 'Program terapeutyczny: SNP', leki: LEKI_RHGH, lek: 'Genotropin 12 mg' });
+  await page.click('#btnGhContinue');
+  await expect.poll(() => page.evaluate(() => window.ghTherapyPoints.length)).toBe(3);
+  expect(await ostatni(page)).toEqual({ type: 'continue', ageYears: 8, ageMonths: 6, drug: 'Genotropin 12 mg', program: 'SNP' });
+  expect(bledy).toEqual([]);
+});
+
+// Punkt bez programu i punkt niespójny (fikcyjne zapisy w starym kształcie).
+const BEZ_PROGRAMU = [I_DO_G.ghTherapyPoints[0], I_DO_G.ghTherapyPoints[1], { ...I_DO_G.ghTherapyPoints[2], program: null }];
+
+test('GPB-10 punkt bez programu (ostatnia Kontynuacja Genotropin po I→G): pole SNP — program bieżący kursu z chwili punktu, wszystkie preparaty z Genotropin 12 mg, zapis SNP (dotąd IGF-1); punkt niespójny (Genotropin z programem IGF-1) — pole IGF-1, bez cichej poprawki, zapis bez zmian odmawia jak dotąd, karta bez zmian', async ({ page }) => {
+  test.setTimeout(150_000);
+  await docPro(page, BEZ_PROGRAMU, { program: 'SNP', lek: 'Genotropin 12 mg' });
+  await edytuj(page, 'ig-c2');
+  expect(await formularzEdycji(page)).toEqual({ program: 'SNP', zablokowane: true, leki: [...LEKI_RHGH, 'Increlex 40 mg'], lek: 'Genotropin 12 mg' });
+  await page.click('#btnGhContinue');
+  await expect(page.locator('#ghTherapyEditContainer')).toBeHidden();
+  expect(await punkt(page, 'ig-c2')).toMatchObject({ drug: 'Genotropin 12 mg', program: 'SNP' });
+
+  // Punkt niespójny: lista preparatów edycji programu IGF-1 (Increlex 40 mg) nie ma Genotropinu — preparat pusty, zapis
+  // odmawia komunikatem (jak dotąd); punkt, karta i lista bez zmian.
+  await page.evaluate((lista) => {
+    window.VildaPersistence.writeModuleJSON('GH_THERAPY_POINTS', lista, { force: true });
+    window.refreshGHTherapyMonitor();
+  }, S1);
+  await expect(page.locator('#ghTherapyTbody .edit-gh-pt-btn')).toHaveCount(3);
+  const przedEdycja = await karta(page);
+  expect(przedEdycja).toEqual({ program: 'IGF-1', zablokowane: true, wiersz: 'Program terapeutyczny: IGF-1', leki: LEKI_RHGH, lek: 'Genotropin 12 mg' });
+  await edytuj(page, 's1-k2');
+  expect(await formularzEdycji(page)).toEqual({ program: 'IGF-1', zablokowane: true, leki: ['Increlex 40 mg'], lek: '' });
+  await page.click('#btnGhContinue');
+  await expect(page.locator('#ghInfoOverlay')).toContainText('Wybierz program i preparat');
+  expect(await page.evaluate(() => window.ghTherapyPoints)).toEqual(S1);
+  expect((await karta(page)).lek).toBe('Genotropin 12 mg');
+});
+
+test('GPB-11 punkt bez programu po I→G: wybór Increlex 40 mg w formularzu edycji — pole od razu IGF-1, zapis Increlex 40 mg + IGF-1 (przed przeglądem: SNP); formularz wsteczny otwarty w trakcie edycji Włączenia Increlex — program i lek bieżący (SNP, Genotropin 12 mg; dotąd IGF-1, Increlex 40 mg)', async ({ page }) => {
+  test.setTimeout(150_000);
+  const bledy = [];
+  page.on('pageerror', (e) => bledy.push(String(e && e.message)));
+  await docPro(page, BEZ_PROGRAMU, { program: 'SNP', lek: 'Genotropin 12 mg' });
+  await edytuj(page, 'ig-c2');
+  await expect(page.locator('#therProg')).toHaveValue('SNP');
+  await page.selectOption('#ghEditDrug', 'Increlex 40 mg');
+  await expect(page.locator('#therProg')).toHaveValue('IGF-1');
+  await expect(page.locator('#therProg')).toBeDisabled();
+  await page.selectOption('#ghEditDrug', 'Genotropin 12 mg');
+  await expect(page.locator('#therProg')).toHaveValue('SNP');
+  await page.selectOption('#ghEditDrug', 'Increlex 40 mg');
+  await page.fill('#ghEditDose', '0.8');
+  await page.click('#btnGhContinue');
+  await expect(page.locator('#ghTherapyEditContainer')).toBeHidden();
+  await expect(page.locator('#ghInfoOverlay')).toHaveCount(0);
+  expect(await punkt(page, 'ig-c2')).toMatchObject({ drug: 'Increlex 40 mg', program: 'IGF-1' });
+
+  // Formularz wsteczny otwarty w trakcie edycji Włączenia Increlex: nowy punkt — program i lek bieżący kursu.
+  await page.evaluate((lista) => {
+    window.VildaPersistence.writeModuleJSON('GH_THERAPY_POINTS', lista, { force: true });
+    window.refreshGHTherapyMonitor();
+  }, I_DO_G.ghTherapyPoints);
+  await expect(page.locator('#ghTherapyTbody .edit-gh-pt-btn')).toHaveCount(3);
+  await edytuj(page, 'ig-s');
+  await expect(page.locator('#therProg')).toHaveValue('IGF-1');
+  await page.click('#btnGhRetro');
+  await expect(page.locator('#ghTherapyRetroContainer')).toBeVisible();
+  await expect(page.locator('#ghRetroProg')).toHaveValue('SNP');
+  await expect(page.locator('#ghRetroDrug')).toHaveValue('Genotropin 12 mg');
+  await expect(page.locator('#ghTherapyEditContainer')).toBeVisible();
+  await expect(page.locator('#therProg')).toHaveValue('IGF-1');
+  expect(bledy).toEqual([]);
 });

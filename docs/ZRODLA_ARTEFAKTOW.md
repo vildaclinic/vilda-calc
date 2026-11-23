@@ -2820,6 +2820,50 @@ na listach z innym programem ostatniego punktu mają dziś program bieżący (`w
 w `tests/scripts/gh-punkty-wzorzec.mjs`), a skrót z programem cofniętym do programu Włączenia = skrót BAZA. Wersje `?v=`,
 precache i `SW_VERSION` ustawił `npm run podbij-wersje`.
 
+## Łatka P-GH-PROGRAM-EDYCJA — DocPro: edycja punktu GH zachowuje program punktu (`gh_therapy_monitor.js` 66 → 67, 2026-11-23, decyzja właściciela, pytanie 17)
+
+Czytelne źródło reguły: `gh_therapy_monitor.js`, czytelna część na górze pliku — nowy blok P-GH-PROGRAM-EDYCJA (komentarz
+i funkcja `ghProgramEdycji(Gwk, dotad)`) zaraz po `ghProgramPola` (blok P-GH-PROGRAM-BIEZACY). `ghProgramPola` przy edycji
+punktu (`x != null`) woła `ghProgramEdycji` zamiast zwracać dawne wyrażenie: program edytowanego punktu (pierwszy
+o równym `String(id)` na liście, jak `O()`), bez programu — `ghProgramBiezacy` na punktach kursu punktu wg wieku do
+niego włącznie (kilka kursów — kurs z `Gwk.wgPunktu`; jeden kurs albo brak modułu kursów — `ghPunktyBiezacegoKursu(null,
+lista)`; punkt spoza kursów — sam punkt; edytowany punkt z lekiem z formularza edycji, `Gpv("ghEditDrug")`), bez tego
+— `dotad` (dawne wyrażenie); punktu nie ma na liście (usunięty w trakcie edycji) — `ghProgramWiersza`, jak poza edycją.
+Po przeglądzie w tym samym bloku: `ghZmianaPreparatuEdycji` (słuchacz `change` na dokumencie, instalowany raz przy
+starcie skryptu z flagą `window.__ghProgramEdycjiBound`, jak inne słuchacze monitora: zmiana `#ghEditDrug` w trakcie
+edycji punktu bez programu → `F()`), `ghPoKoncuEdycji` (`F()` po zakończeniu edycji tam, gdzie dotąd po `Gek()` nie
+było `F()`) i `ghWstecznyZKarty` z `ghProgramPozaEdycji` (formularz wsteczny w trakcie edycji — program, który pole pokazuje poza
+edycją, i lek bieżący kursu). Dopiski
+w komentarzach P-GH-WZNOWIENIE (część 2), `ghProgramKursu`, `ghKursProgramu` i P-GH-PROGRAM-BIEZACY („Edycja punktu —
+bez zmian”). Opis: `docs/clinical/ALGORITHMS.md`, wpis P-GH-PROGRAM-EDYCJA. Zminifikowane ciało: `F()` od
+P-GH-PROGRAM-BIEZACY woła już `ghProgramPola` (bez nowej kotwicy); po przeglądzie cztery kotwice występujące dokładnie
+raz (niżej). Skrypt łatki (Python, `zamien` z licznikiem kotwicy: `patch_monitor.py` + `ge_monitor_blok.js`, poza
+repozytorium) odtwarza wynik z `origin/audyt` 77cb60dc; bez ponownej minifikacji.
+
+```
+// gh_therapy_monitor.js — czytelna część:
+// 1. ghProgramPola: return x != null ? dotad : ghProgramWiersza(Gwk, dotad);
+//    → return x != null ? ghProgramEdycji(Gwk, dotad) : ghProgramWiersza(Gwk, dotad);
+//    a zaraz po funkcji blok P-GH-PROGRAM-EDYCJA (komentarz + ghProgramEdycji)
+// 1a. zdarzenie storage vildaCurrentPatientId: try{Gea()||Gek()}… → try{Gea()||(Gek(),/* P-GH-PROGRAM-EDYCJA */ghPoKoncuEdycji())}…
+//     i() (formularz wsteczny): …if(a){try{D()}catch{} → …if(a){const Gxe=x!=null;try{D()}catch{}Gxe&&x==null&&ghPoKoncuEdycji();
+//     ghAddRetroPoint: function(){D(); → function(){const Gxe=x!=null;D();Gxe&&x==null&&ghPoKoncuEdycji();
+// 1b. ghOpenRetroForm: o.value=d.value||"" → o.value=ghWstecznyZKarty("program",d.value||"");
+//     n(o?o.value:"",l?l.value:null) → n(o?o.value:"",ghWstecznyZKarty("lek",l?l.value:null))
+// 2.–5. dopiski [od P-GH-PROGRAM-EDYCJA (2026-11-23): …] w komentarzach P-GH-WZNOWIENIE (część 2), ghProgramKursu,
+//    ghKursProgramu i P-GH-PROGRAM-BIEZACY
+// Kontrola: tests/unit/gh-program-edycja.test.mjs cofa wszystkie wpięcia (ZAMIANY_PRZED, zachowanie 77cb60dc), kontrola
+//   negatywna złotej siatki — 'x != null ? ghProgramEdycji(Gwk, dotad) :' → 'x != null ? dotad :'.
+```
+
+**Granice.** Bez nowego pliku ładowanego przez strony i bez stylów (`tests/fixtures/style-elementow.json` bez zmian).
+`vilda_gh_punkty.js` (zapis i walidacja), `vilda_auth_ui.js` (Karta), `gh_igf_therapy.js`, `vilda_gh_punkt_z_wiersza.js`
+(panel wiersza), lista preparatów formularza edycji (`O()`), `ghPreparatyKarty`, blokada pola, kursy i sejf — bez zmian.
+Złota siatka punktów (`tests/fixtures/gh-punkty-wzorzec.json`) bez zmian pliku: zapisy edycji punktu o innym programie
+niż Włączenie mają dziś program edytowanego punktu (`wplywProgramuEdycji`, `zProgramemEdytowanego` w
+`tests/scripts/gh-punkty-wzorzec.mjs`), a skrót z programem cofniętym do programu Włączenia = skrót BAZA. Wersje `?v=`,
+precache i `SW_VERSION` ustawił `npm run podbij-wersje`.
+
 ## Trwała tożsamość wizyt — źródło i granica artefaktu sejfu
 
 Zmiana funkcjonalna `P-TRWALE-WIZYTY` ma bazę `audyt` z commita

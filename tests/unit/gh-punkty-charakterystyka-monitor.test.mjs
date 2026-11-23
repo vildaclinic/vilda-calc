@@ -479,12 +479,15 @@ describe('Edycja istniejącego punktu', () => {
   // Trzeci punkt (Kontynuacja 8 l. 6 mies.) jest młodszy niż edytowany: od P-GH-WZNOWIENIE, część 2 Zakończenie musi być
   // ostatnim punktem kursu (dotąd ten test brał Kontynuację 10 l. 0 mies., po której zapis Zakończenia też przechodził).
   const WCZESNIEJSZA = punkt('fikc-kont-8', 'continue', { ageYears: 8, ageMonths: 6, weight: 30, height: 127, doseAbs: 0.75 });
-  it('program z #therProg, czyli z punktu Włączenia (R9) — stan obecny — do decyzji (pytanie 17); typ z przycisku; id, pozycja, obce pole i kolejność kluczy zostają, doseAbs dopisane na końcu', () => {
+  // R9 — od P-GH-PROGRAM-EDYCJA (decyzja właściciela 2026-11-23, pytanie 17) zmienione oczekiwanie: program z #therProg
+  // to program edytowanego punktu (PWS), nie program Włączenia (dotąd SNP — edycja zmieniała program, którego lekarz nie
+  // dotknął).
+  it('program z #therProg = program edytowanego punktu (od P-GH-PROGRAM-EDYCJA, pytanie 17; dotąd z punktu Włączenia, R9); typ z przycisku; id, pozycja, obce pole i kolejność kluczy zostają, doseAbs dopisane na końcu', () => {
     const atrapa = utworzAtrapeMonitoraGh({ punkty: [WLACZENIE, SRODKOWY, WCZESNIEJSZA] });
 
     atrapa.edytuj(SRODKOWY.id);
-    // O() wpisuje program punktu, ale F() zaraz nadpisuje #therProg programem Włączenia i blokuje pole.
-    expect(atrapa.pole('therProg').value).toBe('SNP');
+    // O() wpisuje program punktu, a F() go zostawia i blokuje pole (dotąd F() nadpisywało go programem Włączenia — SNP).
+    expect(atrapa.pole('therProg').value).toBe('PWS');
     expect(atrapa.pole('therProg').disabled).toBe(true);
     // Dawka podawana w formularzu: bez doseAbs liczona z dose × masa (0,03 × 30).
     expect(atrapa.pole('ghEditDose').value).toBe('0.9');
@@ -500,7 +503,7 @@ describe('Edycja istniejącego punktu', () => {
     expect(s.okno[2]).toEqual(WCZESNIEJSZA);
     expect(Object.keys(s.okno[1])).toEqual([...Object.keys(SRODKOWY), 'doseAbs']);
     expect(s.okno[1]).toEqual({
-      ...SRODKOWY, type: 'end', weight: 32, dose: 0.03, program: 'SNP', doseAbs: 0.96,
+      ...SRODKOWY, type: 'end', weight: 32, dose: 0.03, program: 'PWS', doseAbs: 0.96,
     });
     expect(s.modul).toEqual(s.okno);
     expect(s.edycjaWidoczna).toBe(false);
@@ -524,7 +527,10 @@ describe('Edycja istniejącego punktu', () => {
     }]);
   });
 
-  it('bez punktu Włączenia program pochodzi z pierwszego punktu po sortowaniu (od P-GH-WZNOWIENIE, część 2 wg wieku; dotąd typ, potem wiek — przy samych Kontynuacjach ta sama kolejność) — stan obecny — do decyzji (pytanie 17)', () => {
+  // Od P-GH-PROGRAM-EDYCJA (pytanie 17) zmienione oczekiwanie: program edytowanego punktu (SNP). Dotąd bez punktu Włączenia
+  // program pochodził z pierwszego punktu po sortowaniu (od P-GH-WZNOWIENIE, część 2 wg wieku; wcześniej typ, potem wiek —
+  // przy samych Kontynuacjach ta sama kolejność), czyli z młodszego punktu: PWS.
+  it('bez punktu Włączenia — program edytowanego punktu (od P-GH-PROGRAM-EDYCJA, pytanie 17; dotąd z pierwszego punktu po sortowaniu wg wieku — PWS)', () => {
     const mlodszy = punkt('fikc-mlodszy', 'continue', { ageYears: 8, program: 'PWS' });
     const starszy = punkt('fikc-starszy', 'continue', { ageYears: 10, program: 'SNP' });
     // Kolejność w tablicy: starszy przed młodszym; F() sortuje po wieku.
@@ -533,6 +539,6 @@ describe('Edycja istniejącego punktu', () => {
     const wpisy = atrapa.edytuj(starszy.id, { ghEditHeight: '137' }, 'continue');
 
     expect(rodzaje(wpisy)).toEqual(['E', 'M', 'E', 'BC']);
-    expect(atrapa.stan().okno).toEqual([{ ...starszy, height: 137, program: 'PWS' }, mlodszy]);
+    expect(atrapa.stan().okno).toEqual([{ ...starszy, height: 137, program: 'SNP' }, mlodszy]);
   });
 });
