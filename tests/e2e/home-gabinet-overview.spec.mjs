@@ -51,21 +51,19 @@ async function hitTestPositions(locator) {
 }
 
 async function scrollToVisibleFooter(frame, screen, requireOverflow = false) {
-  await frame.evaluate(() => {
+  await expect.poll(() => frame.locator('.site-footer').evaluate(async footer => {
     const scroller = document.scrollingElement;
     scroller.scrollTo({ top: scroller.scrollHeight, behavior: 'instant' });
-  });
-  await expect.poll(() => frame.evaluate(() => {
-    const scroller = document.scrollingElement;
-    return Math.round(scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop);
-  }), { message: 'Rzeczywisty koniec przewijania · ' + screen }).toBe(0);
-  const footer = await frame.locator('.site-footer').evaluate(node => {
-    const { top, bottom } = node.getBoundingClientRect();
-    return { top, bottom, viewportHeight: innerHeight, scroll: document.scrollingElement.scrollTop };
-  });
-  expect(footer.top, 'Widoczna stopka · ' + screen).toBeGreaterThanOrEqual(0);
-  expect(footer.bottom, 'Cała stopka mieści się w widoku · ' + screen).toBeLessThanOrEqual(footer.viewportHeight + 0.5);
-  if (requireOverflow) expect(footer.scroll, 'Przewinięta treść · ' + screen).toBeGreaterThan(100);
+    await new Promise(resolve => requestAnimationFrame(resolve));
+    const { top, bottom } = footer.getBoundingClientRect();
+    return {
+      atEnd: Math.abs(scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop) <= 1,
+      footerInView: top >= -0.5 && bottom <= innerHeight + 0.5,
+      enoughScroll: scroller.scrollTop > 100,
+    };
+  }), { message: 'Stopka przy rzeczywistym końcu przewijania · ' + screen }).toEqual(expect.objectContaining({
+    atEnd: true, footerInView: true, ...(requireOverflow ? { enoughScroll: true } : {}),
+  }));
 }
 
 test('the outer header stays visible and aligned while switching or scrolling Gabinet screens', async ({ page }) => {
@@ -116,7 +114,8 @@ test('the outer header stays visible and aligned while switching or scrolling Ga
     await expect(start.locator('.vgs-office-grid')).toBeVisible();
     await checkScroll('Gabinet', width < 500);
     await choosePatient(frame, 'Antoni');
-    await checkScroll('Przegląd');
+    await expect(frame.locator('#vhomePatientOverview .vhome-native-patient-card')).toBeVisible();
+    await checkScroll('Przegląd', false, patientBack);
     await analysis.click();
     await expect(analysis).toHaveAttribute('aria-selected', 'true');
     await checkScroll('Analiza', true, width > 991 ? patientBack.or(analysis) : patientBack);
