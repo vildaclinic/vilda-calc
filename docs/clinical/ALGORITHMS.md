@@ -44417,9 +44417,19 @@ wpisy po niej.
   włącznie): żeton „◇ w odcinku N pomiar(y) od pacjenta” i linijka pod „Dziś” w wierszu „Waga” z ostatnią z nich.
   **Zmiana w tabeli zostaje liczona między pomiarami z wizyt.**
 
-**Poza zakresem (bez zmian):** kafelek tempa w „Status” Karty, PDF z Karty, DocPro, siatka Palczewskiej 1–18 lat
-i strona „standardowa” PDF, karta „Obliczenia wzrostowe” (tryb podstawowy), „Analiza punktu pomiarowego” dla bloku
-z dziennika. Sejf i zapis bez zmian.
+**Poza zakresem (bez zmian):** kafelek tempa w „Status” Karty, PDF z Karty, strona „standardowa” PDF, karta
+„Obliczenia wzrostowe” (tryb podstawowy), „Analiza punktu pomiarowego” dla bloku z dziennika. Sejf i zapis bez zmian.
+
+**Uzupełnienie 2026-11-23 (P-OTYLOSC-STRONA-2, polecenie właściciela):**
+- **PDF siatek Palczewskiej** (przycisk „Generuj siatkę” przy źródle Palczewska — wcześniej bez rombów, także 0–3 lata):
+  puste romby i legenda „dane z gabinetu” / „dane od pacjenta” — na stronie wagi (pionowo, legenda pod wykresem) albo
+  pod stopką strony poziomej; ramka podsumowania bez zmian.
+- **DocPro** (sprostowanie: wpis wyżej wymieniał DocPro jako bez zmian, a DocPro ładuje te same pliki): linijka pod
+  „Waga”, romby na siatce „Podsumowania wyników”, **analiza trajektorii karty zaawansowanej z wpisami (wariant B)**,
+  „Porównanie” i PDF działają jak na stronie głównej; bloków „pomiar od pacjenta” w „Poprzednich pomiarach” DocPro nie ma.
+  Ten sam wpływ kliniczny co na stronie głównej: analiza trajektorii karty zaawansowanej w DocPro liczy z masami od pacjenta.
+  **Decyzja właściciela 2026-11-23:** „zostaw tak jak na str. głównej” — DocPro liczy analizę trajektorii karty
+  zaawansowanej z masami od pacjenta (wariant B), tak jak strona główna i Karta pacjenta.
 
 **Przypadki syntetyczne** (dane fikcyjne; Testowa Zuzanna ur. 11.04.2013; wizyty 11 l. 63,0 kg, 12 l. 70,5, 13 l. 80,0;
 bieżący pomiar 13 l. 6 mies. 75,2 kg (13.10.2026); masy od pacjenta 10.07 (77,8), 12.08 (76,9), 12.11.2026 (74,6)):
@@ -44444,7 +44454,8 @@ i zmiana w „Porównaniu” liczą się jak dotąd z pomiarów wizyt. Progi bez
 - `tests/unit/otylosc-strona.test.mjs` (14): `pomiaryStrony` na prawdziwym sejfie (bez dziennika, inny pacjent,
   `doWiekuMies`, wpis z gabinetu), `pomiaryOdcinka` i opisy, `analyze` z flagą karty zaawansowanej i bez, podgląd
   siatki z prawdziwymi producentami (`reported`, `probe`), źródła łatek, czyste funkcje `VildaAdvDziennik`.
-- e2e `tests/e2e/otylosc-strona.spec.mjs` ST-1…ST-5.
+- e2e `tests/e2e/otylosc-strona.spec.mjs` ST-1…ST-8 (ST-6/ST-7 — PDF siatki Palczewskiej 1–18 lat pionowo i poziomo,
+  z dziennikiem i bez; ST-8 — DocPro).
 
 **Wdrożenie.** Od razu przy wydaniu; sejf bez zmian. **Cofnięcie** = rewert PR: siatki i analiza znów tylko z wizyt.
 
