@@ -35,6 +35,24 @@
     return 'partial';
   }
 
+  // P-SGA-KAFEL-NORMY (decyzja właściciela 2026-11-23): SGA to masa i/lub długość < −2 SDS,
+  // więc wynik dodatni według jednej z wybranych norm nie znika przez to, że inna norma
+  // ocenia inaczej albo nie ma pomiaru. Kafel mówi wtedy „Tak” i nazywa normy z wynikiem
+  // dodatnim oraz parametr; szczegóły każdej normy zostają w oknie i w kopiowanym tekście.
+  const SOURCE_SHORT = { niklasson: 'Niklasson', intergrowth: 'INTERGROWTH-21st', malewski: 'Malewski' };
+
+  function positiveParameter(summary) {
+    if (summary.weightStatus === 'TAK' && summary.lengthStatus === 'TAK') return 'masa i długość';
+    return summary.weightStatus === 'TAK' ? 'masa' : 'długość';
+  }
+
+  function partlyPositiveSubtitle(sources) {
+    const positive = sources.filter(source => sourceVerdict(source) === 'yes');
+    return 'wg ' + positive.length + ' z ' + sources.length + ' norm: ' + positive
+      .map(source => (SOURCE_SHORT[source.sourceKey] || source.title) + ' (' + positiveParameter(source.summary) + ')')
+      .join(', ');
+  }
+
   function positiveSubtitle(sources) {
     if (sources.length !== 1) return 'Wynik według ' + sources.length + ' źródeł';
     const summary = sources[0].summary;
@@ -86,10 +104,10 @@
     const verdicts = saved.sources.map(sourceVerdict);
     if (verdicts.every(verdict => verdict === 'yes')) {
       model.tone = 'alert'; model.value = 'Tak'; model.subtitle = positiveSubtitle(saved.sources);
+    } else if (verdicts.includes('yes')) {
+      model.tone = 'alert'; model.value = 'Tak'; model.subtitle = partlyPositiveSubtitle(saved.sources);
     } else if (verdicts.every(verdict => verdict === 'no')) {
       model.tone = 'ok'; model.value = 'Nie'; model.subtitle = 'Masa i długość bez cech SGA';
-    } else if (verdicts.includes('yes') && verdicts.includes('no')) {
-      model.value = 'Różne oceny'; model.subtitle = 'Sprawdź wyniki dla wybranych norm';
     } else if (new Set(verdicts).size > 1) {
       model.subtitle = 'Niepełna ocena dla części norm';
     } else {

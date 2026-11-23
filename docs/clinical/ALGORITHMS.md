@@ -47206,3 +47206,66 @@ dopiskach w bloku).
 `vilda_height_velocity.js` 3 → 4, `vilda_growth_prediction_validation.js` 14 → 15, `vilda_chrome.js` 322 → 323
 i `vilda_session_bridge.js` 238 → 239 (wstrzykują pliki z nowym `?v=`), SW 1.1.577 → 1.1.578 — `npm run podbij-wersje`. Łatka zminifikowanych miejsc: `docs/ZRODLA_ARTEFAKTOW.md`, „Łatka P-STATUS-KAFLE-ROWNE”.
 Bez nowego pliku w pamięci offline.
+
+## P-SGA-KAFEL-NORMY — Karta pacjenta: kafel SGA nie chowa wyniku dodatniego według części norm (SW 1.1.579, `vilda_patient_sga_model.js` 2, 2026-11-23)
+
+**Zmiana kliniczna: TAK — zmienia się wniosek pokazany na kafelku SGA (i w oknie szczegółów oraz w kopiowanym
+podsumowaniu), gdy wybrane normy oceniają różnie.** Obliczenia SDS, tabele norm, próg **< −2 SDS** (ostry) i ocena
+każdej normy osobno (`summary` silnika urodzeniowego `sga_birth_module.js`) — bez zmian. Zmienia się tylko łączenie
+ocen kilku norm w jeden napis na kafelku.
+
+**Zgłoszenie i decyzja właściciela (2026-11-23).** Pacjent z samą masą urodzeniową, SGA według Malewskiego; kafel
+pokazywał „Do oceny / Niepełna ocena dla części norm”. Właściciel wybrał: gdy co najmniej jedna z wybranych norm daje
+SGA, kafel jest czerwony, „Tak”, a podpis nazywa normy z wynikiem dodatnim i parametr — także gdy inna norma SGA
+wyklucza (dotąd bursztynowe „Różne oceny”, GROWTH-BIRTH-STATUS).
+
+**Źródło.** Definicja SGA: masa i/lub długość urodzeniowa co najmniej 2 SD poniżej średniej dla wieku ciążowego —
+Clayton PE i wsp. Management of the child born small for gestational age through to adulthood: a consensus statement
+of the International Societies of Pediatric Endocrinology and the Growth Hormone Research Society. J Clin Endocrinol
+Metab 2007;92(3):804–810, PMID 17200164, DOI 10.1210/jc.2006-2017. Ta sama reguła („TAK” po masie albo długości daje
+wynik dodatni) była już stosowana dla każdej normy osobno (`sourceVerdict`); teraz obowiązuje też między normami.
+Normy, populacje i jednostki bez zmian: Niklasson/Albertsson-Wikland 2008, INTERGROWTH-21st (Villar i wsp. 2014/2016),
+Malewski i wsp. (polska populacja 1986–1994, 22–43 tyg., tylko masa); masa w gramach, długość w centymetrach, pełne
+tygodnie i dni ciąży.
+
+**Przyczyna.** `build()` w `vilda_patient_sga_model.js` łączył werdykty norm (`yes` / `no` / `partial`): „Tak” tylko
+przy `yes` we wszystkich normach, „Różne oceny” przy `yes` + `no`, a `yes` + `partial` (np. Malewski TAK, inna norma:
+masa NIE i brak długości) spadało do „Do oceny / Niepełna ocena dla części norm”. Przy samej masie inne normy są
+zawsze `partial` (długość „Brak danych”), a u Malewskiego długość jest zawsze „Niedostępne w tym źródle”.
+
+**Reguła (kolejność gałęzi).**
+1. Wszystkie normy `yes` — „Tak”, czerwony, podpis jak dotąd („Masa poniżej −2 SDS” / „Wynik według N źródeł”).
+2. Co najmniej jedna `yes` — „Tak”, czerwony, podpis „wg K z N norm: ” + normy z wynikiem dodatnim, każda z parametrem
+   w nawiasie: „masa”, „długość” albo „masa i długość” (nazwy: Niklasson, INTERGROWTH-21st, Malewski).
+3. Wszystkie `no` — „Nie”, turkusowy (bez zmian).
+4. `no` + `partial` — „Do oceny / Niepełna ocena dla części norm” (bez zmian).
+5. Same `partial` — „Do oceny / Niepełne dane do oceny SGA” (bez zmian).
+
+**Przypadki syntetyczne (prawdziwy kalkulator, `tests/support/sga-birth-runtime.mjs`).**
+- dziewczynka 33+0 tyg., 1150 g, bez długości; INTERGROWTH + Malewski → INTERGROWTH SDS −2,00 (NIE, próg ostry),
+  Malewski −3,46 (TAK) → dotąd „Do oceny / Niepełna ocena dla części norm”, teraz „Tak / wg 1 z 2 norm: Malewski (masa)”;
+- to samo z trzema normami → Niklasson −4,51 TAK, INTERGROWTH NIE, Malewski TAK → „Tak / wg 2 z 3 norm: Niklasson
+  (masa), Malewski (masa)”;
+- chłopiec 34+2 tyg., 1500 g / 48 cm; Niklasson + INTERGROWTH → Niklasson masa TAK, INTERGROWTH NIE/NIE → dotąd
+  „Różne oceny”, teraz „Tak / wg 1 z 2 norm: Niklasson (masa)”;
+- chłopiec 34+2 tyg., 1650 g / 41 cm, trzy normy → „Tak / wg 2 z 3 norm: Niklasson (masa i długość), INTERGROWTH-21st
+  (długość)”;
+- chłopiec 34+2 tyg., 2700 g / 48 cm, trzy normy → bez wyniku dodatniego, jak dotąd „Do oceny / Niepełna ocena dla
+  części norm”.
+
+**Strażnicy.** `tests/unit/patient-sga-model.test.mjs` (dwa testy dawnej reguły przepisane na decyzję właściciela,
+dwa nowe; nowe przypadki czerwone na modelu sprzed zmiany: 3 z 4, czwarty to kontrola bez wyniku dodatniego);
+`tests/e2e/karta-pacjenta-sga.spec.mjs` (nowy: prawdziwy formularz, zapis i Karta — kafel „Tak”, podpis
+„wg 1 z 2 norm: Malewski (masa)”, czerwony, ten sam wniosek w oknie szczegółów).
+
+## P-WALIDACJA-KAFEL-KROTKO — Karta pacjenta: krótki podpis kafla „Walidacja prognoz” bez prognoz (SW 1.1.579, `vilda_growth_prediction_validation.js` 16, 2026-11-23)
+
+**Zmiana kliniczna: NIE.** Warunek pokazania kafla (żaden punkt nie ma wartości żadnej metody) bez zmian. Podpis
+„za mało danych do prognoz — uzupełnij wiek kostny i/lub wzrost rodziców” zastąpiony krótszym „uzupełnij wiek kostny lub
+wzrost rodziców” (decyzja właściciela 2026-11-23), żeby kafel nie wydłużał rzędu w Statusie (P-STATUS-KAFLE-ROWNE).
+Łatka zminifikowanego miejsca: `docs/ZRODLA_ARTEFAKTOW.md`, „Łatka P-WALIDACJA-KAFEL-KROTKO”. Strażnik:
+`tests/unit/status-kafle-rowne.test.mjs`.
+
+**Wersje (P-SGA-KAFEL-NORMY i P-WALIDACJA-KAFEL-KROTKO, jeden PR).** `vilda_patient_sga_model.js` 1 → 2,
+`vilda_growth_prediction_validation.js` 15 → 16, `vilda_chrome.js` 323 → 324 i `vilda_session_bridge.js` 239 → 240
+(wstrzykują pliki z nowym `?v=`), SW 1.1.578 → 1.1.579 — `npm run podbij-wersje`. Bez nowego pliku w pamięci offline.
