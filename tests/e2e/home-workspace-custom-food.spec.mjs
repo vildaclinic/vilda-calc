@@ -1,7 +1,38 @@
 import { expect, test } from '@playwright/test';
 import { createFictionalVault, loadPatient, readyForPatient, shellFrame } from '../support/centile-live-fixture.mjs';
+import { choosePatient, prepareGabinet } from '../support/gabinet-patient-fixture.mjs';
 
 test.use({ serviceWorkers: 'block', reducedMotion: 'reduce' });
+
+test('przelicza posiłek w podglądzie bez zastosowania go w zapisanej wizycie', async ({ page }) => {
+  const { frame, ids } = await prepareGabinet(page);
+  await choosePatient(frame, 'Antoni');
+  await frame.getByRole('tab', { name: 'Analiza', exact: true }).click();
+  await frame.locator('#vhomeOtherToolsToggle').click();
+  const persisted = () => frame.evaluate(async id => ({
+    foods: VildaPersistence.readMainSession()?.foods ?? null,
+    snapshots: (await VildaVault.getPatient(id)).snapshots,
+    nativeRows: document.querySelector('#foodList')?.childElementCount,
+  }), ids.a);
+  const before = await persisted();
+
+  await frame.locator('[data-home-tool="food"]').click();
+  const dialog = frame.locator('#vhomeToolDialog');
+  const draft = dialog.frameLocator('iframe[data-home-tool-draft]');
+  await expect(draft.getByText('Obliczenie robocze. Wynik dostępny w tym oknie.')).toBeVisible();
+  await expect(dialog.locator('.vhome-dialog-apply')).toBeDisabled();
+  await expect(dialog.locator('.vhome-dialog-apply')).toBeHidden();
+  const editor = draft.locator('.vhome-tool-food-manual');
+  await editor.getByText('Dodaj własny produkt', { exact: true }).click();
+  await editor.getByRole('textbox', { name: 'Produkt', exact: true }).fill('Fikcyjny jogurt');
+  await editor.getByRole('spinbutton', { name: 'Porcja · g', exact: true }).fill('75');
+  await editor.getByRole('spinbutton', { name: 'Energia · kcal/100 g' }).fill('160');
+  await editor.getByRole('button', { name: 'Dodaj własny produkt do posiłku' }).click();
+  await expect(draft.locator('.vhome-tool-food-total')).toContainText(/120\s*kcal/);
+  await dialog.locator('.vhome-dialog-cancel').click();
+  await expect(dialog).toBeHidden();
+  expect(await persisted()).toEqual(before);
+});
 
 test('własne produkty zachowują dane z etykiety po zastosowaniu i odtworzeniu wizyty', async ({ page }) => {
   test.setTimeout(150_000);

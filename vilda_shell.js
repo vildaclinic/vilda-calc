@@ -709,7 +709,13 @@ function Sm_actionSource(id){
   var owner=Dpd_source();
   return owner&&owner.doc.getElementById(id);
 }
+// Presentation only: the DocPro adapter independently asks the existing native
+// writer boundary about the visible document whenever encounter/pane state moves.
+function Sm_refreshDocproVisitAccess(){
+  try{l.docpro?.frame?.contentWindow?.VildaDocproVisitGuard?.refresh()}catch{}
+}
 function st(){
+  Sm_refreshDocproVisitAccess();
   Dpd_mirror();
   R.forEach(function(id){
     if(id==="patientDocumentsBtnSidebar")return;
@@ -795,6 +801,10 @@ function Sm_bind(entry){
   var doc=entry&&entry.frame&&entry.frame.contentDocument;
   if(!doc||entry.summaryDocument===doc||typeof doc.addEventListener!=="function")return;
   entry.summaryDocument=doc;
+  ["vilda:home-encounter-changed","vilda:auth-boot-settled","vilda:session-changed",
+    "vilda:patient-loaded","vilda:user-state-cleared","vilda:main-session-restored"].forEach(function(type){
+    doc.addEventListener(type,Sm_refreshDocproVisitAccess,true);
+  });
   ["input","change","vilda:patient-loaded","vilda:patient-cleared","vilda:user-state-cleared","vildaProAccessChanged"].forEach(function(type){doc.addEventListener(type,Sm_dirty,true)});
   Sm_dirty();
 }

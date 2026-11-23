@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { createFictionalVault, fictionalPatient, loadPatient, readyForPatient, shellFrame } from '../support/centile-live-fixture.mjs';
+import { prepareGabinet, choosePatient } from '../support/gabinet-patient-fixture.mjs';
 
 test.use({ serviceWorkers: 'block', reducedMotion: 'reduce' });
 test.setTimeout(240_000);
@@ -149,6 +150,72 @@ async function expectOriginalNodes(frame) {
   expect(await frame.evaluate(ids => ids.every(id => document.getElementById(id) === window.__homeDietNodes[id])
     && ids.every(id => document.querySelectorAll('[id="' + id + '"]').length === 1), IDS)).toBe(true);
 }
+
+test('home diet: Gabinet browse preserves the stored plan and editing a saved visit restores Apply', async ({ page }) => {
+  const { frame } = await prepareGabinet(page);
+  const payload = fictionalPatient({ firstName: 'Dietetyczny', age: 13, sex: 'M', height: 155, weight: 75 });
+  payload.plan = { palFactor: 1.4, palWybrany: true, dietLevel: 'light', dietaWybrana: true };
+  const id = await frame.evaluate(async value => {
+    const id = crypto.randomUUID();
+    value.visit = VildaVisitContext.create({ patientId: id, clinicalDateISO: '2026-06-17' });
+    await VildaVault.savePatient(value, { patientId: id, dedup: false });
+    return id;
+  }, payload);
+  await readyForPatient(frame);
+  await choosePatient(frame, 'Dietetyczny');
+  const header = frame.locator('#vhomeGabinetHeader');
+  await header.getByRole('tab', { name: 'Analiza', exact: true }).click();
+  await frame.evaluate(() => VildaPatientReportLoader.ensure());
+  await expect(frame.locator('#vhomeDietCard')).toBeVisible();
+  await expect.poll(() => frame.evaluate(id => VildaHomeEncounter.state(id).mode, id)).toBe('browse');
+  await expect(frame.locator('#palFactor')).toHaveValue('1.4');
+  await expect(frame.locator('#dietLevel')).toHaveValue('light');
+  const saved = () => frame.evaluate(id => VildaVault.getPatient(id).then(patient => patient.snapshots), id);
+  const storedBefore = await saved(), before = await snapshot(frame, id);
+  const readonly = await show(frame);
+  for (const control of await readonly.locator('[data-home-diet-field]').all()) await expect(control).not.toBeEditable();
+  expect(await apply(readonly).isVisible() && await apply(readonly).isEnabled()).toBe(false);
+  await expect(readonly.locator('#vhomeDietPlanSummary')).toBeVisible();
+  await expect(readonly.locator('#vhomeDietPlanSummary')).toContainText(/1[,.]4/);
+  await expect(generate(readonly)).toBeEnabled();
+  await generate(readonly).click();
+  const report = await openReport(frame, readonly);
+  expect(await report.locator('.vhome-diet-native-energy').textContent()).toBe(await frame.locator('#dietEnergyResult').textContent());
+  await report.getByRole('button', { name: 'Wróć do planu', exact: true }).click();
+  await expect(report).toBeHidden();
+  await page.keyboard.press('Escape');
+  await expect(readonly).toBeHidden();
+  await frame.waitForFunction(() => !String(history.state?.vildaHomeDialog || '').startsWith('diet-'));
+  expect(await snapshot(frame, id)).toEqual(before);
+  expect(await saved()).toEqual(storedBefore);
+
+  // An unsaved legacy checkbox must not reuse the already generated report.
+  const hydration = await frame.locator('#hydrationFlag').isChecked();
+  await frame.evaluate(value => { document.getElementById('hydrationFlag').checked = !value; }, hydration);
+  const fallback = await show(frame);
+  await expect(fallback.locator('#vhomeDietPlanSummary')).toContainText(/1[,.]4/);
+  await expect(fallback.locator('#vhomeDietPlanSummary')).toContainText('Wariant diety · lekka');
+  await expect(generate(fallback)).toBeHidden();
+  await page.keyboard.press('Escape');
+  await expect(fallback).toBeHidden();
+  await frame.evaluate(value => { document.getElementById('hydrationFlag').checked = value; }, hydration);
+  await frame.waitForFunction(() => !String(history.state?.vildaHomeDialog || '').startsWith('diet-'));
+  expect(await snapshot(frame, id)).toEqual(before);
+  expect(await saved()).toEqual(storedBefore);
+
+  await header.getByRole('button', { name: /^Otwórz wizytę z / }).click();
+  const visit = frame.locator('#vhomeVisitDetail');
+  await visit.getByRole('button', { name: 'Edytuj wizytę', exact: true }).click();
+  await expect.poll(() => frame.evaluate(id => VildaHomeEncounter.state(id).mode, id)).toBe('edit');
+  const editable = await show(frame);
+  await expect(draft(editable, 'palFactor')).toBeEnabled();
+  await expect(apply(editable)).toBeVisible();
+  await draft(editable, 'palFactor').selectOption('1.8');
+  await apply(editable).click();
+  await expect(frame.locator('#palFactor')).toHaveValue('1.8');
+  await expect.poll(() => frame.evaluate(() => VildaPersistence.readMainSession()?.plan?.palFactor)).toBe(1.8);
+  expect(await saved()).toEqual(storedBefore);
+});
 
 test('home diet: isolated assumptions and movement drafts cancel without clinical, storage or clipboard writes', async ({ page }) => {
   const { frame, id } = await setup(page);

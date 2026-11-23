@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { createFictionalVault, fictionalPatient, loadPatient, shellFrame, readyForPatient } from '../support/centile-live-fixture.mjs';
+import { prepareGabinet, choosePatient } from '../support/gabinet-patient-fixture.mjs';
+import { visibleChromeMenu } from '../support/chrome-menu-fixture.mjs';
 
 test.use({ serviceWorkers: 'block', contextOptions: { reducedMotion: 'reduce' } });
 test.setTimeout(240_000);
@@ -38,6 +40,75 @@ async function compareSources(dialog) {
   for (const source of ['intergrowth', 'malewski']) await dialog.locator(`[data-home-birth-source][value="${source}"]`).check();
   await expect(dialog.locator('.sga-birth-compare-table')).toHaveCount(4);
 }
+
+test('home perinatal: Gabinet browse is read-only in Start and DocPro, and a new visit restores editing', async ({ page }) => {
+  const { frame } = await prepareGabinet(page);
+  const payload = { ...fictionalPatient({ firstName: 'Perinatalny' }), perinatal: PERINATAL,
+    birth: { sourceChoice: 'niklasson', sourceKeys: ['niklasson'], sex: 'male', weeks: '34', days: '2',
+      weight: '1650', length: '41', head: '29', hasComputed: false } };
+  const id = await frame.evaluate(async value => {
+    const id = crypto.randomUUID();
+    value.visit = VildaVisitContext.create({ patientId: id, clinicalDateISO: '2026-06-17' });
+    await VildaVault.savePatient(value, { patientId: id, dedup: false });
+    return id;
+  }, payload);
+  await readyForPatient(frame);
+  await choosePatient(frame, 'Perinatalny');
+  const header = frame.locator('#vhomeGabinetHeader');
+  await header.getByRole('tab', { name: 'Analiza', exact: true }).click();
+  await expect.poll(() => frame.evaluate(id => VildaHomeEncounter.state(id).mode, id)).toBe('browse');
+  const saved = () => frame.evaluate(id => VildaVault.getPatient(id).then(patient => patient.snapshots), id);
+  const storedBefore = await saved();
+  async function docpro() {
+    const menu = await visibleChromeMenu(page);
+    await menu.locator('a[href="docpro.html"]').click();
+    const owner = await shellFrame(page, 'DocPro');
+    await readyForPatient(owner);
+    const confirm = owner.locator('#professionalConfirmBtn');
+    if (await confirm.isVisible()) await confirm.click();
+    return owner;
+  }
+  const readonlyDocpro = await docpro();
+  await expect(readonlyDocpro.locator('#height')).not.toBeEditable();
+  await expect(readonlyDocpro.locator('#weight')).not.toBeEditable();
+  await expect(readonlyDocpro.locator('#sgaBirthWeight')).not.toBeEditable();
+  await expect(readonlyDocpro.locator('#sgaBirthWeeks')).toBeDisabled();
+  await (await visibleChromeMenu(page)).locator('a[href="index.html"]').click();
+  await header.getByRole('tab', { name: 'Analiza', exact: true }).click();
+  await expect(frame.locator('#vhomePerinatalButton')).toBeEnabled();
+
+  const before = await snapshot(frame);
+  const readonly = await show(frame);
+  await expect(field(readonly, 'weight')).toHaveValue('1650');
+  await expect(readonly.locator('[data-home-birth-field]:enabled, [data-home-birth-source]:enabled')).toHaveCount(0);
+  await expect(save(readonly)).toBeHidden();
+  await expect(readonly.getByRole('button', { name: 'Wyczyść dane okołoporodowe', exact: true })).toBeHidden();
+  await expect(readonly.locator('[data-home-birth-results]')).toBeVisible();
+  await readonly.locator('.vhome-dialog-cancel').click();
+  await expect(readonly).toBeHidden();
+  await frame.waitForFunction(() => !String(history.state?.vildaHomeDialog || '').startsWith('perinatal-'));
+  expect(await snapshot(frame)).toEqual(before);
+  expect(await saved()).toEqual(storedBefore);
+
+  await header.getByRole('button', { name: 'Rozpocznij nową wizytę', exact: true }).click();
+  await expect.poll(() => frame.evaluate(id => VildaHomeEncounter.state(id).mode, id)).toBe('new');
+  const editable = await show(frame);
+  await expect(field(editable, 'weight')).toBeEditable();
+  await expect(field(editable, 'weeks')).toBeEnabled();
+  await expect(save(editable)).toBeVisible();
+  await field(editable, 'weight').fill('1700');
+  await save(editable).click();
+  await expect(editable).toBeHidden();
+  await expect.poll(() => frame.evaluate(() => VildaPersistence.readMainSession()?.birth?.weight)).toBe('1700');
+  expect(await saved()).toEqual(storedBefore);
+
+  const editableDocpro = await docpro();
+  await expect(editableDocpro.locator('#height')).toBeEditable();
+  await expect(editableDocpro.locator('#weight')).toBeEditable();
+  await expect(editableDocpro.locator('#sgaBirthWeight')).toHaveValue('1700');
+  await expect(editableDocpro.locator('#sgaBirthWeight')).toHaveJSProperty('readOnly', false);
+  expect(await saved()).toEqual(storedBefore);
+});
 
 test('home perinatal: pure live preview, native results, symmetric shortcuts and cancel preserve all data', async ({ page }) => {
   const { frame } = await open(page);

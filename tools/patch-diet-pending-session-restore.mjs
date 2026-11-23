@@ -40,6 +40,13 @@ function vildaRememberPendingDietRestore(plan) {
     pending.observer.observe(field, { childList: true, subtree: true });
   }
 }
+function vildaTakePendingManualDiet(field) {
+  const pending = vildaPendingDietRestore;
+  if (!pending || pending.field !== field || r.document.getElementById("dietLevel") !== field) return null;
+  const mounted = vildaDietSelectorInitialized(field, pending.observer ? pending.observer.takeRecords() : []);
+  vildaClearPendingDietRestore();
+  return !mounted && pending.dietaWybrana && r.__vildaDietLevelTouched === true ? pending.dietLevel : null;
+}
 function vildaDietPlanForCapture(readOnly) {
   const field = r.document && r.document.getElementById("dietLevel");
   // A synchronous save can precede the observer microtask after options have
@@ -65,7 +72,15 @@ function once(source, before, after) {
   return source.replace(before, after);
 }
 export function patchDietPendingSessionRestore(source) {
-  if (source.includes('/* P-DIET-PENDING-RESTORE: source')) return source;
+  const apiAnchor = 'captureCurrentUserDataReadOnly:captureCurrentUserDataReadOnly,';
+  if (!source.includes('takePendingManualDiet:vildaTakePendingManualDiet,')) {
+    source = once(source, apiAnchor, apiAnchor + 'takePendingManualDiet:vildaTakePendingManualDiet,');
+  }
+  if (source.includes('/* P-DIET-PENDING-RESTORE: source')) {
+    const block = /\/\* P-DIET-PENDING-RESTORE: source[^]*?\/\* P-DIET-PENDING-RESTORE: end \*\/\n/g;
+    if (Array.from(source.matchAll(block)).length !== 1) throw new Error('Expected one pending diet restoration block');
+    return source.replace(block, () => pendingDietRestoreSource);
+  }
   source = once(source, 'function vildaDietaPoWczytaniu(p){', pendingDietRestoreSource + 'function vildaDietaPoWczytaniu(p){vildaRememberPendingDietRestore(p);');
   source = once(source, 'dietLevel:(f("dietLevel")||{}).value||null,/* P-DIETA-AUDYT2 A1 */dietaWybrana:r.__vildaDietLevelTouched===!0', '...vildaDietPlanForCapture(readOnlyCapture)');
   source = once(source, 'function Rt(e){invalidateSaveScope();saveClearDepth+=1;try{beginGrowthHistoryRestore(null);', 'function Rt(e){invalidateSaveScope();saveClearDepth+=1;try{beginGrowthHistoryRestore(null);vildaClearPendingDietRestore();');
