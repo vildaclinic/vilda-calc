@@ -461,8 +461,9 @@ async function saveReminderOnly(page) {
   const workspace = frame.locator('#vhomePatientOverview');
   await workspace.getByRole('tab', { name: 'Przypomnienia', exact: true }).click();
   const trigger = frame.locator('#vhomePatientRemindersSlot').getByRole('button', { name: 'Dodaj przypomnienie', exact: true });
-  await openHistoryFromHeader(header);
+  await trigger.click();
   const dialog = page.locator('dialog.vhome-reminders-dialog');
+  await expect(dialog).toBeVisible({ timeout: 15_000 });
   const text = 'Fikcyjna kontrola wizyta bez pomiaru';
   await dialog.getByLabel('Treść przypomnienia', { exact: true }).fill(text);
   const date = new Date().toISOString().slice(0, 10);
