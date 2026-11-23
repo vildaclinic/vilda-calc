@@ -236,7 +236,7 @@ html.vilda-embedded.vilda-form-host-desktop #vhomeGabinetHeader[data-decor-rail]
   #vhomeGabinetHeader .gb-patient-tabs { gap: 0; }
   #vhomeGabinetHeader .gb-patient-tabs button { flex: 1; padding-inline: var(--space-0-35); }
 }
-@media (max-width: 415px) {
+@media (max-width: 420px) {
   #vhomeGabinetHeader .gb-card-actions button { gap: var(--space-0-3); padding-inline: .36rem; }
   #vhomeGabinetHeader .gb-visit-context { column-gap: var(--space-0-4); }
 }
